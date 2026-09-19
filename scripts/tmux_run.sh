@@ -14,5 +14,5 @@ if tmux list-windows -t jev -F '#W' | grep -qx "$name"; then
 fi
 cmd=$(printf '%q ' "$@")
 tmux new-window -d -t jev -n "$name" \
-  "bash -lc 'cd $repo && $cmd; echo; echo \"==> exited with \$? at \$(date +%H:%M:%S)\"; exec bash'"
+  "bash -lc 'cd $repo && $cmd; rc=\$?; echo; echo \"==> exited with \$rc at \$(date +%H:%M:%S)\"; exec bash'"
 echo "started jev:$name -> tmux attach -t jev, then select window $name"
