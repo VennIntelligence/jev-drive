@@ -51,7 +51,7 @@ one() {
     fi
     mv "$part" "$f"
     local dt=$((SECONDS - t0)) mb; mb=$(( (size - have0) / 1000000 ))
-    log "got  $name ${mb} MB in ${dt}s ($(( mb / (dt > 0 ? dt : 1) )) MB/s, verified)"
+    log "got  $name ${mb} MB in ${dt}s ($(awk -v m="$mb" -v t="$dt" 'BEGIN{printf "%.1f", m/(t>0?t:1)}') MB/s, verified)"
     event download_end "\"file\": \"$name\", \"bytes\": $((size - have0)), \"secs\": $dt"
   fi
   t0=$SECONDS; mkdir -p "$dest"
