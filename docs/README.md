@@ -6,6 +6,7 @@ One line per doc. Add a line here whenever you add a doc.
 |---|---|
 | [remote-box.md](remote-box.md) | you need to log in to or use the GPU box |
 | [network-proxy.md](network-proxy.md) | a download fails or is slow on the box |
+| [storage.md](storage.md) | you need to decide where models, data or checkpoints go |
 
 Rules:
 - One topic per file.
