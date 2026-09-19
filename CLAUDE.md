@@ -2,6 +2,8 @@
 
 Autonomous driving project (VennIntelligence).
 Everything in this repo is English: code, comments, logs, docs, commit messages.
+Exception: `research/`, `todos/` and `tmp/` are working notes for people and are written in Chinese.
+Once a conclusion is settled, write the final English version in `docs/` or in code.
 
 ## Workflow
 - Edit and commit locally, push to GitHub. The GPU box only pulls from GitHub.

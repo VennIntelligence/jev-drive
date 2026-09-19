@@ -1,6 +1,6 @@
 # todos/
 
-Short experiment plans. One file per plan, named `YYYY-MM-DD-<slug>.md`.
-Copy `TEMPLATE.md` to start a new one.
+简单的实验规划书。一个计划一个文件，命名 `YYYY-MM-DD-<slug>.md`。
+新建时复制 `TEMPLATE.md`。
 
-Throwaway files go in `tmp/` (gitignored), not here.
+用中文写。临时、随手的东西放 `tmp/`（已 gitignore），不要放这里。

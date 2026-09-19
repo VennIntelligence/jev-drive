@@ -1,21 +1,21 @@
-# <Plan title>
+# <计划标题>
 
-Status: draft | running | done | dropped
-Topic: ../research/<topic>.md
+状态: draft | running | done | dropped
+主题: ../research/<topic>.md
 
-## Goal
-What question does this answer? One or two sentences.
+## 目标
+这个实验回答什么问题？一两句话。
 
 ## Setup
-- Data:
-- Model / checkpoint:
-- Compute budget:
+- 数据:
+- 模型 / checkpoint:
+- 算力预算:
 
-## Steps
+## 步骤
 - [ ] ...
 
-## Success criteria
-What result counts as "worked" or "didn't work"?
+## 成功标准
+跑之前写死：什么结果算"成立"，什么算"不成立"。
 
-## Results
-Fill in when done. Link to run dirs on the box.
+## 结果
+跑完再填。附上 box 上 run dir 的路径。
