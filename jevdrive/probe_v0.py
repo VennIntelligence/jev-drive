@@ -3,12 +3,15 @@
   uv run python -m jevdrive.probe_v0                        # whole chain on nuScenes mini
   uv run python -m jevdrive.probe_v0 --version v1.0-trainval
   uv run python -m jevdrive.probe_v0 --steps bench          # extraction speed / VRAM sweep only
+  uv run python -m jevdrive.probe_v0 --version v1.0-trainval --steps index,labels,features --qwen-layers 36
+                                                            # all-layer features only (probe v1 prep)
 Outputs go to $DATA_DIR/runs/probe_v0/<version>/<timestamp>/: log.txt, events.jsonl, tb/ (docs/long-runs.md),
 results.{csv,md}, timings.json, bench.json.
 Features are cached under processed/ and reused unless --force.
 """
 import argparse
 import json
+import shutil
 import time
 
 from . import features, labels, nuscenes_index, probe
@@ -26,8 +29,14 @@ def main():
     ap.add_argument("--dino-batch-size", type=int, default=64)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--qwen-width", type=int, default=None, help="resize frames to this width first (default native)")
+    ap.add_argument("--qwen-layers", type=int, default=4, help="evenly spaced LLM layers to probe (36 = all)")
+    ap.add_argument("--min-free-gb", type=float, default=20, help="refuse to start with less free space on $DATA_DIR")
     ap.add_argument("--force", action="store_true", help="recompute cached features")
     a = ap.parse_args()
+
+    free_gb = shutil.disk_usage(features.processed_dir(a.version)).free / 2**30
+    if free_gb < a.min_free_gb:
+        raise SystemExit(f"only {free_gb:.0f} GB free on $DATA_DIR, need {a.min_free_gb:.0f} (--min-free-gb)")
 
     rl = RunLog("probe_v0", a.version)
     run_dir, log = rl.dir, rl.log
@@ -44,7 +53,7 @@ def main():
             labels.run(a.version)
         elif step == "features":
             for b in a.backbones.split(","):
-                kw = {"width": a.qwen_width} if b == "qwen" else {}
+                kw = {"width": a.qwen_width, "n_layer_probes": a.qwen_layers} if b == "qwen" else {}
                 bs = a.qwen_batch_size if b == "qwen" else a.dino_batch_size
                 timings[f"features_{b}_meta"] = features.run(a.version, b, bs, a.workers, a.force, rl, **kw)
         elif step == "probe":

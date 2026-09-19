@@ -8,7 +8,8 @@ qwen    Qwen3-VL-4B-Instruct, BF16. Input is the chat template with the image on
           Lxx_last     same, last token
 dinov2  DINOv2 ViT-B/14 on the full frame resized to 252x448 (no center crop): cls, patch_mean
 
-Layout: processed/nuscenes/<version>/features/<backbone>/{index.parquet, <name>.npy (n, d) float16, meta.json}.
+Layout: processed/nuscenes/<version>/features/<set>/{index.parquet, <name>.npy (n, d) float16, meta.json},
+where <set> is the backbone name plus a suffix for non-default input width (e.g. qwen_w800).
 Images are decoded and preprocessed in DataLoader workers; pinned batches overlap H2D copies with compute.
 """
 import gc
@@ -158,11 +159,19 @@ def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = Non
             "bytes_per_sample": sum(a.dtype.itemsize * a.shape[1] for a in arrays.values())}
 
 
+def set_name(backbone: str, width: int | None = None, **_) -> str:
+    return f"{backbone}_w{width}" if width else backbone
+
+
 def run(version: str, backbone: str, batch_size: int, workers: int, force: bool = False, rl=None, **kw) -> dict:
-    out = processed_dir(version) / "features" / backbone
+    kw = {k: v for k, v in kw.items() if v is not None}
+    out = processed_dir(version) / "features" / set_name(backbone, **kw)
     if (out / "meta.json").exists() and not force:
-        log.info("%s features exist at %s, skipping (use --force to redo)", backbone, out)
-        return json.loads((out / "meta.json").read_text())
+        meta = json.loads((out / "meta.json").read_text())
+        if all(meta.get(k) == v for k, v in kw.items()):
+            log.info("%s features exist at %s, skipping (use --force to redo)", out.name, out)
+            return meta
+        log.info("%s features at %s were made with other args, recomputing", out.name, out)
     kf = pd.read_parquet(processed_dir(version) / "keyframes.parquet")
     out.mkdir(parents=True, exist_ok=True)
     (out / "meta.json").unlink(missing_ok=True)
@@ -170,12 +179,12 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     t0 = time.perf_counter()
     fx = BACKBONES[backbone](**kw)
     load_s = time.perf_counter() - t0
-    stats = extract(fx, kf.path, batch_size, workers, out, rl, f"features/{backbone}")
+    stats = extract(fx, kf.path, batch_size, workers, out, rl, f"features/{out.name}")
     kf[["sample_token", "sd_token"]].to_parquet(out / "index.parquet")
     meta = {"backbone": backbone, "model": QWEN if backbone == "qwen" else DINO, "load_s": load_s, **stats,
-            "features": sorted(p.stem for p in out.glob("*.npy")), **{k: v for k, v in kw.items() if v is not None}}
+            "features": sorted(p.stem for p in out.glob("*.npy")), **kw}
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
-    log.info("%s: %d frames, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/sample -> %s", backbone, stats["n"],
+    log.info("%s: %d frames, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/sample -> %s", out.name, stats["n"],
              stats["ms_per_frame"], stats["peak_vram_gb"], stats["bytes_per_sample"] / 1024, out)
     del fx
     free_gpu()
