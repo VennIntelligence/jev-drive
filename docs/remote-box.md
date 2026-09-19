@@ -2,12 +2,15 @@
 
 Read this when you need to log in to or use the GPU box.
 
-- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth). User `ujs`, one RTX 4090 D (24 GB).
-- CPU and RAM: the host has 128 cores and ~500 GB, but our container's cgroup allows **16 cores**
-  (`/sys/fs/cgroup/cpu.max` = `1600000 100000`) and **62 GB RAM** (`memory.max`). `nproc` and `os.cpu_count()`
-  still report 128, so size thread and process pools with `jevdrive.common.n_cpus()`, not the host count.
+- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth; now `connect.westd.seetacloud.com`, port 41708).
+  User `ujs`, one RTX PRO 6000 Blackwell Server Edition (96 GB, sm_120), driver 595.71, CUDA 13.2.
+- Region: West-D (`$AutoDLRegion` = `west-D`). See [storage.md](storage.md) for why it matters.
+- CPU and RAM: the host has 208 cores and ~1 TB, but our container's cgroup allows **25 cores**
+  (`/sys/fs/cgroup/cpu.max` = `2500000 100000`) and **120 GB RAM** (`memory.max`). `os.cpu_count()` can report
+  the host count, so size thread and process pools with `jevdrive.common.n_cpus()`, not the host count.
+- Speed: Qwen3-VL-4B features at 800 px run at 21.1 ms/frame (8.8 GB peak VRAM); the old 4090 D did 30.8.
 - Shell: interactive login is fish. Scripts and `ssh autodl '<cmd>'` run bash.
-- Disk: the system disk is 30 GB, keep it empty. Put everything in `~/data`, see [storage.md](storage.md).
+- Disk: the system disk is 30 GB, keep it empty. The data disk is 2.5 TB. Put everything in `~/data`, see [storage.md](storage.md).
   Caches (HF, torch, pip, uv, modelscope) already point there.
 - Public datasets: `/autodl-pub` (read-only). Check it before downloading big data.
 - Code: `~/data/jev-drive`. Update with `git pull`. It uses a read-only deploy key (ssh alias `github-jev-drive`),
@@ -16,4 +19,4 @@ Read this when you need to log in to or use the GPU box.
 - Tools: tmux, ranger, btop, nvtop, fish, uv, opencode (opencode has no API key yet).
 - A re-created instance loses users, keys and packages, and the host and port change. Re-check this page then.
 
-Last verified: 2026-09-19
+Last verified: 2026-09-20

@@ -27,7 +27,7 @@ Add new models to `scripts/download_models.sh`.
 
 ## Public data
 
-`/autodl-pub/data` (read-only, region West-B) already has nuScenes (full, 549G of `.tgz`), KITTI,
+`/autodl-pub/data` (read-only; West-B and West-D both checked) already has nuScenes (full, 549G of `.tgz`), KITTI,
 SemanticKITTI, cityscapes and more. They are archives: extract what you need into `datasets/`.
 `scripts/extract_nuscenes.sh mini` or `trainval [member ...]` -> `datasets/nuscenes`
 (default member `samples/CAM_FRONT`, ~6 GB; the full trainval is 300 GB+).
@@ -35,6 +35,7 @@ Do not download these again.
 
 ## Region
 
-The box is in West-B. autodl-fs only mounts inside one region, so rent multi-GPU boxes in West-B too.
+The box is in West-D (moved from West-B on 2026-09-20). autodl-fs only mounts inside one region,
+so rent multi-GPU boxes in West-D too. autodl-fs is not turned on yet (`/root/autodl-fs` does not exist).
 
-Last verified: 2026-09-19
+Last verified: 2026-09-20
