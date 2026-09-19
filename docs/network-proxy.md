@@ -8,6 +8,8 @@ Try in this order. Never use both in one shell.
 2. `proxy_on`: Clash in global mode, auto-picks a Japan/Singapore node. Undo: `proxy_off`.
 
 Notes:
+- HF downloads through either proxy fail with `CAS Client Error ... 401 Unauthorized` (Xet storage).
+  Set `HF_HUB_DISABLE_XET=1`. `scripts/download_models.sh` already does.
 - `proxy_on` starts Clash if needed. Also available: `clash-start`, `clash-stop`, `clash-status`.
 - Clash does not survive an instance restart. Run `proxy_on` again.
 - Config lives in `~/data/clash/` and contains node credentials. Never put it in the repo.
