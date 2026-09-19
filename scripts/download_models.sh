@@ -18,6 +18,8 @@ if [[ -f /etc/network_turbo && -z "${https_proxy:-}" ]]; then
   set +u
   source /etc/network_turbo >/dev/null
   set -u
+  # Xet storage returns 401 through the turbo proxy; plain HTTP downloads work.
+  export HF_HUB_DISABLE_XET=1
 fi
 
 for repo in "${MODELS[@]}"; do
