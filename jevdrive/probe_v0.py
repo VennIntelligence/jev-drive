@@ -51,7 +51,7 @@ def main():
         elif step == "probe":
             probe.run(a.version, run_dir)
         elif step == "bench":
-            rows = features.bench(a.version, "qwen", [(1, 0), (1, 8), (4, 8), (8, 16), (16, 16)], width=a.qwen_width)
+            rows = features.bench(a.version, "qwen", [(1, 0), (1, 8), (8, 16), (16, 16)], width=a.qwen_width)
             rows += features.bench(a.version, "dinov2", [(1, 0), (64, 16)])
             (run_dir / "bench.json").write_text(json.dumps(rows, indent=2))
         else:

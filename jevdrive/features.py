@@ -11,6 +11,7 @@ dinov2  DINOv2 ViT-B/14 on the full frame resized to 252x448 (no center crop): c
 Layout: processed/nuscenes/<version>/features/<backbone>/{index.parquet, <name>.npy (n, d) float16, meta.json}.
 Images are decoded and preprocessed in DataLoader workers; pinned batches overlap H2D copies with compute.
 """
+import gc
 import json
 import os
 import time
@@ -112,6 +113,12 @@ class DinoFeatures:
 BACKBONES = {"qwen": QwenFeatures, "dinov2": DinoFeatures}
 
 
+def free_gpu():
+    """Call after dropping a backbone: its forward hooks form a reference cycle, so collect explicitly."""
+    gc.collect()
+    torch.cuda.empty_cache()
+
+
 def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = None) -> dict:
     """Run `fx` over all frames; write float16 arrays to out_dir (None = benchmark only). Returns timing stats."""
     loader = DataLoader(Frames(paths, fx.transform), batch_size=batch_size, num_workers=workers, collate_fn=fx.collate,
@@ -162,7 +169,7 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     log.info("%s: %d frames, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/sample -> %s", backbone, stats["n"],
              stats["ms_per_frame"], stats["peak_vram_gb"], stats["bytes_per_sample"] / 1024, out)
     del fx
-    torch.cuda.empty_cache()
+    free_gpu()
     return meta
 
 
@@ -177,5 +184,5 @@ def bench(version: str, backbone: str, configs: list[tuple[int, int]], n: int = 
                  r["peak_vram_gb"])
         rows.append(r)
     del fx
-    torch.cuda.empty_cache()
+    free_gpu()
     return rows
