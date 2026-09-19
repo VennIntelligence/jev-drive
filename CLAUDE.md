@@ -1,0 +1,21 @@
+# jev-drive
+
+Autonomous driving project (VennIntelligence).
+Everything in this repo is English: code, comments, logs, docs, commit messages.
+
+## Workflow
+- Edit and commit locally, push to GitHub. The GPU box only pulls from GitHub.
+- Data, checkpoints and envs stay on the remote data disk, never in git.
+- Never commit secrets: passwords, keys, proxy configs, subscription URLs.
+
+## Git
+- Remote: `git@github-venn:VennIntelligence/jev-drive.git` (use the `github-venn` alias, not github.com).
+- Branch: `main`. Commits are authored as Gaochengzhi (GitHub noreply email), set per repo, not globally.
+
+## Docs
+Start at [docs/README.md](docs/README.md).
+- GPU box (login, disk, tools): [docs/remote-box.md](docs/remote-box.md)
+- A download fails on the box: [docs/network-proxy.md](docs/network-proxy.md)
+  (try `source /etc/network_turbo` first, then `proxy_on`)
+
+Adding a doc: one topic per file, add a line to `docs/README.md`.

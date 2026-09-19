@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Data, checkpoints and experiment outputs (live on the remote data disk)
+data/
+datasets/
+checkpoints/
+runs/
+outputs/
+wandb/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# Secrets and local config
+.env
+.env.*
+*.pem
+*.key
+*.secret
+clash/
+config.yaml
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
