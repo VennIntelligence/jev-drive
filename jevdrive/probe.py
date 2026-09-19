@@ -4,6 +4,8 @@ Every feature set gets the same probe: standardize -> multinomial logistic regre
 scene-grouped inner CV on the training scenes (neg log-loss). Two protocols:
   val   official split: fit on train scenes, evaluate on val scenes
   loso  leave-one-scene-out over all scenes, predictions pooled (more eval samples, still few scenes)
+Baselines: majority (train class prior, Laplace-smoothed), ego (same probe on past ego state) and ego_rule
+(no training: extrapolate the current yaw rate over the horizon and apply the label thresholds).
 Metrics on all eval samples and on the hard subset (|current yaw rate| small, see labels.py).
 """
 from pathlib import Path
@@ -18,7 +20,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .common import CLASSES, get_logger, processed_dir
-from .labels import EGO_COLS
+from .labels import EGO_COLS, HORIZON, N, THRESH_DEG
 
 log = get_logger(__name__)
 K = len(CLASSES)
@@ -39,13 +41,22 @@ def load_features(version: str, tokens: pd.Series) -> dict[str, np.ndarray]:
     return feats
 
 
+def ego_rule(yaw_rate_now: np.ndarray, eps: float = 0.05) -> np.ndarray:
+    """One-hot (eps-smoothed) turn class from constant-yaw-rate extrapolation; its NLL only reflects eps."""
+    dyaw = yaw_rate_now * HORIZON
+    return np.eye(K)[np.select([dyaw > THRESH_DEG, dyaw < -THRESH_DEG], [0, 2], 1)] * (1 - K * eps) + eps
+
+
 def fit_predict(X: np.ndarray | None, y: np.ndarray, groups: np.ndarray, tr: np.ndarray, te: np.ndarray) -> np.ndarray:
     """Class probabilities (len(te), K) from a probe fit on `tr`. X=None is the class-prior baseline."""
     if X is None:
         p = np.bincount(y[tr], minlength=K) + 1.0
         return np.tile(p / p.sum(), (len(te), 1))
+    if X.ndim == 1:  # 1-D input = current yaw rate for the ego_rule baseline
+        return ego_rule(X[te])
     inner = list(GroupKFold(n_splits=min(4, len(np.unique(groups[tr])))).split(tr, groups=groups[tr]))
-    clf = make_pipeline(StandardScaler(), LogisticRegressionCV(Cs=CS, cv=inner, scoring="neg_log_loss", max_iter=3000))
+    clf = make_pipeline(StandardScaler(), LogisticRegressionCV(
+        Cs=CS, cv=inner, scoring="neg_log_loss", l1_ratios=(0.0,), max_iter=3000, use_legacy_attributes=False))
     clf.fit(X[tr], y[tr])
     p = np.full((len(te), K), EPS)
     p[:, clf.classes_] = clf.predict_proba(X[te])
@@ -64,8 +75,8 @@ def run(version: str, out_dir: Path, n_jobs: int = -1) -> pd.DataFrame:
     y, groups, hard = lab.label.to_numpy(), lab.scene.to_numpy(), lab.hard.to_numpy()
     ego = lab[EGO_COLS].to_numpy(np.float32)
     feats = load_features(version, lab.sample_token)
-    sets = {"majority": None, "ego": ego, **feats, **{f"{k}+ego": np.hstack([v, ego]) for k, v in feats.items()
-                                                      if k.startswith("qwen/")}}
+    sets = {"majority": None, "ego_rule": lab[f"yaw_rate_{N - 1}"].to_numpy(), "ego": ego, **feats,
+            **{f"{k}+ego": np.hstack([v, ego]) for k, v in feats.items() if k.startswith("qwen/")}}
 
     folds = {"val": [(np.flatnonzero(lab.split == "train"), np.flatnonzero(lab.split == "val"))]}
     folds["loso"] = [(np.flatnonzero(groups != s), np.flatnonzero(groups == s)) for s in np.unique(groups)]
