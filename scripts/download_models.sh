@@ -39,7 +39,7 @@ export HF_HUB_DISABLE_XET=1
 for repo in "${MODELS[@]}"; do
   echo "==> $repo"
   # hf-mirror returns 403 for some junk files (e.g. .DS_Store in Qwen-Drive); skip them.
-  hf download "$repo" --max-workers "${JEV_HF_WORKERS:-2}" --exclude '.DS_Store' '.ms_upload_cache/*' '.ms_upload_cache'
+  hf download "$repo" --max-workers "${JEV_HF_WORKERS:-2}" --exclude '.DS_Store' --exclude '.ms_upload_cache*'
 done
 
 echo "==> done, cache size:"

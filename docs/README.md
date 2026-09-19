@@ -9,6 +9,7 @@ One line per doc. Add a line here whenever you add a doc.
 | [storage.md](storage.md) | you need to decide where models, data or checkpoints go |
 | [python-env.md](python-env.md) | you need to run project code on the box or add a dependency |
 | [long-runs.md](long-runs.md) | you start a job that takes more than a minute, or need its logs or curves |
+| [navsim.md](navsim.md) | you need the NAVSIM / OpenScene data on the box, or need to re-download it |
 
 Rules:
 - One topic per file.
