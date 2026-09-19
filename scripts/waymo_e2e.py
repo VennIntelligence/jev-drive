@@ -495,7 +495,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("download")
-    d.add_argument("splits", nargs="*", default=list(SPLITS), choices=SPLITS)
+    d.add_argument("splits", nargs="*", choices=SPLITS, help="default: all, in this order")
     d.add_argument("--root", default=str(Path(os.environ.get("DATA_DIR", ".")) / "datasets" / "waymo_e2e"))
     d.add_argument("--route", choices=("direct", "proxy"), default="direct", help="data path; token always via proxy")
     d.add_argument("--proxy", default="http://127.0.0.1:7890")
@@ -507,6 +507,8 @@ def main():
     i = sub.add_parser("inspect")
     i.add_argument("file")
     a = p.parse_args()
+    if a.cmd == "download":
+        a.splits = a.splits or list(SPLITS)
     sys.exit(download(a) if a.cmd == "download" else inspect(a))
 
 
