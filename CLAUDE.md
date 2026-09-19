@@ -18,6 +18,14 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
   run independent work in parallel across cores (one job per file/archive/shard),
   keep hot data in RAM, batch on the GPU and overlap I/O with compute.
 
+## Research notes (`research/`, `todos/`)
+Written for people to read and discuss. Full rules: [research/README.md](research/README.md).
+- Chinese natural-language prose, not keyword dumps. Technical terms stay in English.
+- Gloss every term on its first use in each doc, in one short clause; use it bare after that.
+- Show comparisons and results as tables. Use figures where a trend or distribution matters.
+- Figures are publication quality (CVPR paper style): English labels, shared style and palette,
+  each followed by 1-3 sentences saying what to look at.
+
 ## Git
 - Remote: `git@github-venn:VennIntelligence/jev-drive.git` (use the `github-venn` alias, not github.com).
 - Branch: `main`. Commits are authored as Gaochengzhi (GitHub noreply email), set per repo, not globally.
