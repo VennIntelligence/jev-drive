@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Download the pretrained models this project uses into the HF cache ($HF_HOME).
+# Download the pretrained models this project uses into the HF cache ($HF_HOME),
+# plus a few large baselines from ModelScope into $DATA_DIR/models/<name> (MS_MODELS).
 # Run on the GPU box, ideally inside tmux. Safe to re-run: finished files are skipped.
-# Usage: scripts/download_models.sh [repo ...]      (default: every repo in MODELS)
+# Usage: scripts/download_models.sh [repo ...]      (default: every repo in MODELS and MS_MODELS)
+#        scripts/download_models.sh ms:<repo> ...  (one ModelScope repo)
 # Source: hf-mirror.com by default (domestic, fast). JEV_HF_VIA=turbo uses huggingface.co via network_turbo.
 # JEV_HF_WORKERS (default 2) caps concurrent files so parallel dataset downloads are not starved.
 set -euo pipefail
@@ -13,11 +15,27 @@ MODELS=(
   Qwen/Qwen3-VL-32B-Instruct
   facebook/dinov2-base
   # Baselines benchmarked in docs/baselines.md
-  Qwen/Qwen-Drive-1.0-4B
   nvidia/diffusiongemma-26B-A4B-it-NVFP4   # openjev
   # Not downloaded on purpose: Zewei-Zhou/AutoVLA (academic/nonprofit-only license, see docs/baselines.md)
 )
-(( $# )) && MODELS=("$@")
+# From ModelScope: hf-mirror redirects these to Xet's US CDN (~0.3 MB/s here), ModelScope is domestic.
+MS_MODELS=(
+  Qwen/Qwen-Drive-1.0-4B   # -> $DATA_DIR/models/Qwen-Drive-1.0-4B
+)
+if (( $# )); then
+  MODELS=() MS_MODELS=()
+  for r in "$@"; do [[ $r == ms:* ]] && MS_MODELS+=("${r#ms:}") || MODELS+=("$r"); done
+fi
+
+: "${DATA_DIR:?DATA_DIR is not set, see docs/storage.md}"
+if (( ${#MS_MODELS[@]} )); then
+  command -v modelscope >/dev/null || uv tool install modelscope
+  for repo in "${MS_MODELS[@]}"; do
+    echo "==> modelscope $repo"
+    (unset http_proxy https_proxy; modelscope download --model "$repo" --local_dir "$DATA_DIR/models/${repo#*/}" \
+      --exclude '.DS_Store' --max-workers "${JEV_HF_WORKERS:-2}")
+  done
+fi
 
 : "${HF_HOME:?HF_HOME is not set, see docs/storage.md}"
 
