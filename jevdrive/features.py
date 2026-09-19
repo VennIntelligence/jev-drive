@@ -12,6 +12,7 @@ Layout: processed/nuscenes/<version>/features/<backbone>/{index.parquet, <name>.
 Images are decoded and preprocessed in DataLoader workers; pinned batches overlap H2D copies with compute.
 """
 import json
+import os
 import time
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from .common import dataroot, get_logger, processed_dir
 
+os.environ.setdefault("HF_HUB_OFFLINE", "1")  # weights come from scripts/download_models.sh; the hub hangs from the box
 log = get_logger(__name__)
 QWEN, DINO = "Qwen/Qwen3-VL-4B-Instruct", "facebook/dinov2-base"
 DEV = "cuda"
