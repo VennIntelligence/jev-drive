@@ -21,7 +21,8 @@ extract() {  # <archive> [member ...]
 
 mkdir -p "$dst"
 pids=()
-trap 'kill "${pids[@]}" 2>/dev/null || true' EXIT  # no orphan tars if one fails
+# If one tar fails, kill the others (they are children of the extract subshells).
+trap 'p=$(jobs -p | paste -sd,); [[ -z $p ]] || pkill -P "$p" || true' EXIT
 case "$split" in
   mini)
     extract "$src/Mini/v1.0-mini.tgz" & pids+=($!) ;;
