@@ -15,6 +15,7 @@ dependencies = [
   "pyarrow>=17",
   "orjson>=3.10",
   "pillow>=10",
+  "tabulate>=0.10.0",
 ]
 
 [tool.uv]
