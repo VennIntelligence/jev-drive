@@ -5,6 +5,8 @@ Everything in this repo is English: code, comments, logs, docs, commit messages.
 
 ## Workflow
 - Edit and commit locally, push to GitHub. The GPU box only pulls from GitHub.
+- After every change: commit, push, then pull on the box (`ssh autodl 'cd ~/data/jev-drive && git pull'`).
+  Scripts run on the box, so it must never lag behind `main`.
 - Data, checkpoints and envs stay on the remote data disk, never in git.
 - Never commit secrets: passwords, keys, proxy configs, subscription URLs.
 
