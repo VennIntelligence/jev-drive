@@ -29,10 +29,10 @@ fi
 
 : "${DATA_DIR:?DATA_DIR is not set, see docs/storage.md}"
 if (( ${#MS_MODELS[@]} )); then
-  command -v modelscope >/dev/null || uv tool install modelscope
+  command -v modelscope >/dev/null || uv tool install modelscope-hub   # the CLI lives in modelscope-hub
   for repo in "${MS_MODELS[@]}"; do
     echo "==> modelscope $repo"
-    (unset http_proxy https_proxy; modelscope download --model "$repo" --local_dir "$DATA_DIR/models/${repo#*/}" \
+    (unset http_proxy https_proxy; modelscope download "$repo" --local-dir "$DATA_DIR/models/${repo#*/}" \
       --exclude '.DS_Store' --max-workers "${JEV_HF_WORKERS:-2}")
   done
 fi
