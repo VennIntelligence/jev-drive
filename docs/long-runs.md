@@ -1,0 +1,38 @@
+# Long runs
+
+Read this when you start anything on the box that takes more than about a minute.
+
+## Where it runs
+
+- Always inside the box's tmux session `jev`, one window per job, named after the job.
+  Never in a bare `ssh autodl '...'`: the job dies with the connection.
+- Start it with `scripts/tmux_run.sh <name> <command ...>`. It uses a bash login shell (a plain tmux
+  shell does not have `$DATA_DIR`), runs from the repo root, and keeps the window open afterwards
+  with the exit code.
+- Do not touch windows you did not start.
+
+## What it writes
+
+Every run gets its own directory `$DATA_DIR/runs/<experiment>/<tag>/<YYYYmmdd-HHMMSS>/`
+(in Python: `jevdrive.runlog.RunLog("<experiment>", "<tag>")`) with three outputs:
+
+| Output | For | Content |
+|---|---|---|
+| terminal (tmux window) | people watching live | log lines plus `tqdm` progress bars with rate and ETA |
+| `log.txt` | people reading later | the same log lines, without progress bars |
+| `events.jsonl` | scripts and agents | one JSON object per line, flushed per line: `{"t": <unix time>, "kind": ..., ...}`. Kinds used so far: `start`, `step_start`, `step_end`, `scalar`, `probe_result`, `end` |
+| `tb/` | curves | TensorBoard scalars, only for values that mean something (loss, metrics, metric vs layer, throughput), not bare progress |
+
+Results (`results.csv`, `timings.json`, ...) go in the same directory.
+To follow a run from a script: `tail -f .../events.jsonl`, or poll for the `end` event.
+
+## TensorBoard
+
+- Ours: `scripts/tensorboard.sh` starts it in window `jev:tb`, port 6006, logdir `$DATA_DIR/runs`
+  (all experiments at once; filter runs by path in the UI).
+- Open it through AutoDL's "custom service" (port 6006) in the console, or
+  `ssh -N -L 6006:localhost:6006 autodl` and then http://localhost:6006.
+- AutoDL's default TensorBoard (port 6007, `/root/tf-logs`) runs as root under supervisord.
+  Our user has no root, so it cannot be killed or pointed elsewhere. Ignore it.
+
+Last verified: 2026-09-19

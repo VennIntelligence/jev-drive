@@ -22,6 +22,7 @@ import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
+from tqdm import tqdm
 
 from .common import dataroot, get_logger, processed_dir
 
@@ -119,17 +120,24 @@ def free_gpu():
     torch.cuda.empty_cache()
 
 
-def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = None) -> dict:
-    """Run `fx` over all frames; write float16 arrays to out_dir (None = benchmark only). Returns timing stats."""
+def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = None, rl=None, tag: str = "") -> dict:
+    """Run `fx` over all frames; write float16 arrays to out_dir (None = benchmark only). Returns timing stats.
+    With a RunLog `rl`, per-batch throughput goes to TensorBoard / events.jsonl under `tag`."""
     loader = DataLoader(Frames(paths, fx.transform), batch_size=batch_size, num_workers=workers, collate_fn=fx.collate,
                         pin_memory=workers > 0, prefetch_factor=4 if workers else None)
     arrays, i, t_first = {}, 0, None
     torch.cuda.synchronize()
     torch.cuda.reset_peak_memory_stats()
-    t0 = time.perf_counter()
+    t0 = t_prev = time.perf_counter()
+    bar = tqdm(total=len(paths), desc=tag or "extract", unit="frame", dynamic_ncols=True)
     for batch in loader:
         feats = {k: v.to(torch.float16).cpu().numpy() for k, v in fx(batch).items()}
         n = len(next(iter(feats.values())))
+        bar.update(n)
+        if rl is not None:
+            t_now = time.perf_counter()
+            rl.scalar(f"{tag}/frames_per_s", n / (t_now - t_prev), i + n)
+            t_prev = t_now
         if out_dir is not None:
             for k, v in feats.items():
                 if k not in arrays:
@@ -140,6 +148,7 @@ def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = Non
             t_first = time.perf_counter()
             n_first = n
     wall = time.perf_counter() - t0
+    bar.close()
     for a in arrays.values():
         a.flush()
     steady = (time.perf_counter() - t_first) / max(i - n_first, 1)
@@ -149,7 +158,7 @@ def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = Non
             "bytes_per_sample": sum(a.dtype.itemsize * a.shape[1] for a in arrays.values())}
 
 
-def run(version: str, backbone: str, batch_size: int, workers: int, force: bool = False, **kw) -> dict:
+def run(version: str, backbone: str, batch_size: int, workers: int, force: bool = False, rl=None, **kw) -> dict:
     out = processed_dir(version) / "features" / backbone
     if (out / "meta.json").exists() and not force:
         log.info("%s features exist at %s, skipping (use --force to redo)", backbone, out)
@@ -161,7 +170,7 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     t0 = time.perf_counter()
     fx = BACKBONES[backbone](**kw)
     load_s = time.perf_counter() - t0
-    stats = extract(fx, kf.path, batch_size, workers, out)
+    stats = extract(fx, kf.path, batch_size, workers, out, rl, f"features/{backbone}")
     kf[["sample_token", "sd_token"]].to_parquet(out / "index.parquet")
     meta = {"backbone": backbone, "model": QWEN if backbone == "qwen" else DINO, "load_s": load_s, **stats,
             "features": sorted(p.stem for p in out.glob("*.npy")), **{k: v for k, v in kw.items() if v is not None}}
@@ -173,13 +182,13 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     return meta
 
 
-def bench(version: str, backbone: str, configs: list[tuple[int, int]], n: int = 96, **kw) -> list[dict]:
+def bench(version: str, backbone: str, configs: list[tuple[int, int]], n: int = 96, rl=None, **kw) -> list[dict]:
     """Extraction speed and peak VRAM for (batch_size, workers) configs on the first n frames; nothing is saved."""
     paths = pd.read_parquet(processed_dir(version) / "keyframes.parquet").path[:n]
     fx = BACKBONES[backbone](**kw)
     rows = []
     for bs, w in configs:
-        r = {"backbone": backbone, **extract(fx, paths, bs, w)}
+        r = {"backbone": backbone, **extract(fx, paths, bs, w, rl=rl, tag=f"bench/{backbone}_bs{bs}_w{w}")}
         log.info("bench %s bs=%d workers=%d: %.1f ms/frame, peak VRAM %.2f GB", backbone, bs, w, r["ms_per_frame"],
                  r["peak_vram_gb"])
         rows.append(r)

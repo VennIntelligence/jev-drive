@@ -18,6 +18,7 @@ from sklearn.metrics import accuracy_score, f1_score, log_loss
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from tqdm import tqdm
 
 from .common import CLASSES, get_logger, processed_dir
 from .labels import EGO_COLS, HORIZON, N, THRESH_DEG
@@ -70,7 +71,7 @@ def metrics(y: np.ndarray, p: np.ndarray) -> dict:
             "turn_recall": (pred[turn] == y[turn]).mean() if turn.any() else np.nan, "n": len(y), "n_turn": int(turn.sum())}
 
 
-def run(version: str, out_dir: Path, n_jobs: int = -1) -> pd.DataFrame:
+def run(version: str, out_dir: Path, n_jobs: int = -1, rl=None) -> pd.DataFrame:
     lab = pd.read_parquet(processed_dir(version) / "labels.parquet")
     y, groups, hard = lab.label.to_numpy(), lab.scene.to_numpy(), lab.hard.to_numpy()
     ego = lab[EGO_COLS].to_numpy(np.float32)
@@ -82,7 +83,9 @@ def run(version: str, out_dir: Path, n_jobs: int = -1) -> pd.DataFrame:
     folds["loso"] = [(np.flatnonzero(groups != s), np.flatnonzero(groups == s)) for s in np.unique(groups)]
     tasks = [(name, proto, tr, te) for name in sets for proto, fs in folds.items() for tr, te in fs]
     log.info("probing %d feature sets x %s folds = %d fits", len(sets), {k: len(v) for k, v in folds.items()}, len(tasks))
-    probs = Parallel(n_jobs=n_jobs)(delayed(fit_predict)(sets[n], y, groups, tr, te) for n, _, tr, te in tasks)
+    jobs = Parallel(n_jobs=n_jobs, return_as="generator")(
+        delayed(fit_predict)(sets[n], y, groups, tr, te) for n, _, tr, te in tasks)
+    probs = list(tqdm(jobs, total=len(tasks), desc="probe fits", dynamic_ncols=True))
 
     rows, preds = [], {}
     for (name, proto, _, te), p in zip(tasks, probs):
@@ -92,10 +95,26 @@ def run(version: str, out_dir: Path, n_jobs: int = -1) -> pd.DataFrame:
         for subset, m in (("all", slice(None)), ("hard", hard[te])):
             rows.append({"set": name, "protocol": proto, "subset": subset, **metrics(y[te][m], p[m])})
     res = pd.DataFrame(rows)
+    if rl is not None:
+        log_layer_curves(res, rl)
     res.to_csv(out_dir / "results.csv", index=False)
     (out_dir / "results.md").write_text(to_markdown(res))
     log.info("results -> %s\n%s", out_dir, to_markdown(res))
     return res
+
+
+def log_layer_curves(res: pd.DataFrame, rl):
+    """Qwen metric vs depth as TensorBoard curves (step = LLM layer, 0 = merger output), plus one event per row."""
+    for r in res.to_dict("records"):
+        rl.event("probe_result", **r)
+    q = res[res.set.str.fullmatch(r"qwen/(L\d+_\w+|vis_mean)(\+ego)?")]
+    for r in q.to_dict("records"):
+        feat, ego = r["set"].removeprefix("qwen/").split("+")[0], "+ego" if r["set"].endswith("+ego") else ""
+        layer, pool = (0, "mean") if feat == "vis_mean" else (int(feat[1:3]), feat[4:])
+        for m in ("acc", "macro_f1", "nll", "brier"):
+            rl.scalar(f"probe_{r['protocol']}_{r['subset']}/{m}/qwen_{pool}{ego}", r[m], layer)
+            if pool == "mean" and layer == 0:  # vis_mean anchors both pooling curves at depth 0
+                rl.scalar(f"probe_{r['protocol']}_{r['subset']}/{m}/qwen_last{ego}", r[m], layer)
 
 
 def to_markdown(res: pd.DataFrame) -> str:

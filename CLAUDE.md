@@ -11,6 +11,9 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
   Scripts run on the box, so it must never lag behind `main`.
 - Data, checkpoints and envs stay on the remote data disk, never in git.
 - Never commit secrets: passwords, keys, proxy configs, subscription URLs.
+- Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,
+  and writes `log.txt` (human), `events.jsonl` (machine) and `tb/` (TensorBoard curves) to its run dir.
+  See [docs/long-runs.md](docs/long-runs.md).
 
 ## Code
 - Write expert-level code: efficient, compact, readable, with clear logic.

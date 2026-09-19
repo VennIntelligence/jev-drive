@@ -3,16 +3,16 @@
   uv run python -m jevdrive.probe_v0                        # whole chain on nuScenes mini
   uv run python -m jevdrive.probe_v0 --version v1.0-trainval
   uv run python -m jevdrive.probe_v0 --steps bench          # extraction speed / VRAM sweep only
-Outputs go to $DATA_DIR/runs/probe_v0/<version>/<timestamp>/ (log, results.{csv,md}, timings.json, bench.json).
+Outputs go to $DATA_DIR/runs/probe_v0/<version>/<timestamp>/: log.txt, events.jsonl, tb/ (docs/long-runs.md),
+results.{csv,md}, timings.json, bench.json.
 Features are cached under processed/ and reused unless --force.
 """
 import argparse
 import json
-import logging
 import time
 
 from . import features, labels, nuscenes_index, probe
-from .common import data_dir, get_logger
+from .runlog import RunLog
 
 STEPS = ("index", "labels", "features", "probe")
 
@@ -29,16 +29,15 @@ def main():
     ap.add_argument("--force", action="store_true", help="recompute cached features")
     a = ap.parse_args()
 
-    run_dir = data_dir() / "runs" / "probe_v0" / a.version / time.strftime("%Y%m%d-%H%M%S")
-    run_dir.mkdir(parents=True)
-    log = get_logger("probe_v0")
-    logging.getLogger().addHandler(fh := logging.FileHandler(run_dir / "log.txt"))
-    fh.setFormatter(logging.getLogger().handlers[0].formatter)
+    rl = RunLog("probe_v0", a.version)
+    run_dir, log = rl.dir, rl.log
     log.info("args %s -> %s", vars(a), run_dir)
+    rl.event("start", args=vars(a))
 
     steps, timings, t_all = a.steps.split(","), {}, time.perf_counter()
     for step in steps:
         t0 = time.perf_counter()
+        rl.event("step_start", step=step)
         if step == "index":
             nuscenes_index.run(a.version)
         elif step == "labels":
@@ -47,20 +46,24 @@ def main():
             for b in a.backbones.split(","):
                 kw = {"width": a.qwen_width} if b == "qwen" else {}
                 bs = a.qwen_batch_size if b == "qwen" else a.dino_batch_size
-                timings[f"features_{b}_meta"] = features.run(a.version, b, bs, a.workers, a.force, **kw)
+                timings[f"features_{b}_meta"] = features.run(a.version, b, bs, a.workers, a.force, rl, **kw)
         elif step == "probe":
-            probe.run(a.version, run_dir)
+            probe.run(a.version, run_dir, rl=rl)
         elif step == "bench":
-            rows = features.bench(a.version, "qwen", [(1, 0), (1, 8), (8, 16), (16, 16)], width=a.qwen_width)
-            rows += features.bench(a.version, "dinov2", [(1, 0), (64, 16)])
+            rows = features.bench(a.version, "qwen", [(1, 0), (1, 8), (8, 16), (16, 16)], rl=rl,
+                                  width=a.qwen_width)
+            rows += features.bench(a.version, "dinov2", [(1, 0), (64, 16)], rl=rl)
             (run_dir / "bench.json").write_text(json.dumps(rows, indent=2))
         else:
             raise ValueError(f"unknown step {step}")
         timings[f"{step}_s"] = time.perf_counter() - t0
         log.info("step %s done in %.1fs", step, timings[f"{step}_s"])
+        rl.event("step_end", step=step, seconds=timings[f"{step}_s"])
     timings["total_s"] = time.perf_counter() - t_all
     (run_dir / "timings.json").write_text(json.dumps(timings, indent=2))
     log.info("all steps done in %.1fs -> %s", timings["total_s"], run_dir)
+    rl.event("end", timings=timings)
+    rl.close()
 
 
 if __name__ == "__main__":

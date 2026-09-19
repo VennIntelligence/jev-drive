@@ -8,6 +8,7 @@ One line per doc. Add a line here whenever you add a doc.
 | [network-proxy.md](network-proxy.md) | a download fails or is slow on the box |
 | [storage.md](storage.md) | you need to decide where models, data or checkpoints go |
 | [python-env.md](python-env.md) | you need to run project code on the box or add a dependency |
+| [long-runs.md](long-runs.md) | you start a job that takes more than a minute, or need its logs or curves |
 
 Rules:
 - One topic per file.
