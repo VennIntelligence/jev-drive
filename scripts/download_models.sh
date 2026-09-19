@@ -5,6 +5,7 @@ set -euo pipefail
 
 MODELS=(
   Qwen/Qwen3-VL-4B-Instruct
+  facebook/dinov2-base
 )
 
 : "${HF_HOME:?HF_HOME is not set, see docs/storage.md}"
