@@ -2,7 +2,10 @@
 
 Read this when you need to log in to or use the GPU box.
 
-- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth). User `ujs`, one RTX 4090 D (24 GB), 128 cores, ~500 GB RAM.
+- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth). User `ujs`, one RTX 4090 D (24 GB).
+- CPU and RAM: the host has 128 cores and ~500 GB, but our container's cgroup allows **16 cores**
+  (`/sys/fs/cgroup/cpu.max` = `1600000 100000`) and **62 GB RAM** (`memory.max`). `nproc` and `os.cpu_count()`
+  still report 128, so size thread and process pools with `jevdrive.common.n_cpus()`, not the host count.
 - Shell: interactive login is fish. Scripts and `ssh autodl '<cmd>'` run bash.
 - Disk: the system disk is 30 GB, keep it empty. Put everything in `~/data`, see [storage.md](storage.md).
   Caches (HF, torch, pip, uv, modelscope) already point there.
