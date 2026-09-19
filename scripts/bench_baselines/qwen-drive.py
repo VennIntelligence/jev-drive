@@ -1,7 +1,7 @@
 """Latency of Qwen-Drive-1.0-4B as released (QwenLM/Qwen-Drive-1.0 @ 28091c1), batch 1.
 
 Run on the box from the qwen-drive venv (see setup_qwen_drive.sh):
-  $DATA_DIR/envs/qwen-drive/bin/python scripts/bench_baselines/qwen_drive.py [--iters 200]
+  $DATA_DIR/envs/qwen-drive/bin/python scripts/bench_baselines/qwen-drive.py [--iters 200]
 Input: WOD-E2E demo scene 1 shipped with the repo (3 cameras x 4 frames, JPEG on disk, ego history, route).
 Timed span = model.run(mode, scene): JPEG decode + resize + tokenize (CPU), vision encoder, prefill,
 reasoning decode (reasoning mode only), flow-matching Planning Expert steps, copy of the trajectory to CPU.
