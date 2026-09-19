@@ -15,10 +15,10 @@ git -C "$tp/openjev" checkout -q $openjev_commit
 [[ -d $tp/vllm-openjev ]] || git clone --filter=blob:none https://github.com/razorback16/vllm "$tp/vllm-openjev"
 git -C "$tp/vllm-openjev" checkout -q $vllm_commit
 unset http_proxy https_proxy
-[[ -x $env/bin/python ]] || uv venv -p 3.12 "$env"
+[[ -x $env/bin/python ]] || (cd /tmp && uv venv -p 3.12 "$env")
 export VIRTUAL_ENV=$env UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple UV_CONCURRENT_DOWNLOADS=3
 cd "$tp/vllm-openjev"
-VLLM_USE_PRECOMPILED=1 VLLM_PRECOMPILED_WHEEL_COMMIT=$vllm_base uv pip install --index-strategy unsafe-best-match \
-  --extra-index-url https://flashinfer.ai/whl/ .
+# flashinfer-python/-cubin come from PyPI: the flashinfer.ai index only redirects to GitHub releases, which time out here.
+VLLM_USE_PRECOMPILED=1 VLLM_PRECOMPILED_WHEEL_COMMIT=$vllm_base uv pip install .
 uv pip install "$tp/openjev" httpx pillow
 "$env/bin/python" -c "import torch, vllm; print(torch.__version__, vllm.__version__, torch.cuda.get_device_capability())"
