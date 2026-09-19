@@ -61,12 +61,12 @@ class QwenFeatures:
         if self.width:
             img = img.resize((self.width, round(img.height * self.width / img.width)), Image.BICUBIC)
         b = self.proc(text=[self.prompt], images=[img], return_tensors="pt")
-        return b["input_ids"][0], b["pixel_values"], b["image_grid_thw"][0]
+        return b["input_ids"][0], b["mm_token_type_ids"][0], b["pixel_values"], b["image_grid_thw"][0]
 
     @staticmethod
     def collate(items):
-        ids, pv, grid = zip(*items)
-        return torch.stack(ids), torch.cat(pv), torch.stack(grid)  # all frames share one size: no padding
+        ids, mm, pv, grid = zip(*items)
+        return torch.stack(ids), torch.stack(mm), torch.cat(pv), torch.stack(grid)  # one frame size: no padding
 
     def _visual_hook(self, _, __, out):
         b = len(self.mask)
@@ -83,10 +83,10 @@ class QwenFeatures:
 
     @torch.inference_mode()
     def __call__(self, batch):
-        ids, pv, grid = (t.to(DEV, non_blocking=True) for t in batch)
+        ids, mm, pv, grid = (t.to(DEV, non_blocking=True) for t in batch)
         self.mask, self.out = ids == self.image_token_id, {}
-        self.model(input_ids=ids, attention_mask=torch.ones_like(ids), pixel_values=pv, image_grid_thw=grid,
-                   use_cache=False)
+        self.model(input_ids=ids, attention_mask=torch.ones_like(ids), mm_token_type_ids=mm, pixel_values=pv,
+                   image_grid_thw=grid, use_cache=False)
         return self.out
 
 
