@@ -54,7 +54,7 @@ scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route proxy --stre
 
 - Idempotent and resumable: files in `manifest.csv` whose slim file exists are skipped, and complete raw shards
   left in `raw/` are slimmed without re-downloading. Just rerun it.
-- Pipeline (`scripts/waymo_e2e.py`): 32 range-GET streams into a sparse `.part` file per shard, then one process
+- Pipeline (`scripts/waymo_e2e.py`): 64 range-GET streams into a sparse `.part` file per shard, then one process
   per shard checks md5 and TFRecord CRCs, drops the other five cameras, re-reads and verifies the slim copy
   (same frames, same kept cameras), then deletes the raw shard. Slimming runs at ~420 MB/s per process,
   so the network is always the bottleneck.
@@ -70,10 +70,13 @@ scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route proxy --stre
 
 - The box's total download bandwidth is capped at ~18 MB/s, shared by all jobs (measured 2026-09-20).
 - Google OAuth (`oauth2.googleapis.com`) is unreachable directly; `storage.googleapis.com` is reachable.
-  So the token always comes through Clash, and the data goes direct (default `--route direct`).
+  So the token always comes through Clash, and the data goes direct (default `--route direct`, 64 streams).
+  Bulk data also stays off Clash so it does not burn the proxy subscription's traffic.
 - Measured alone: direct 2.7 MB/s per stream, 15.8 MB/s with 32 streams; Clash 12.9 MB/s single stream,
   16.4 MB/s with 16 streams; AutoDL turbo 0.07 MB/s (unusable). Direct and Clash both reach the cap.
-  With another download running, each job gets a share of the ~18 MB/s.
+  With another download running (NAVSIM from hf-mirror, domestic), each job gets a share of the ~18 MB/s,
+  and the lossy direct route gets a small one: direct 32 streams 2.0 MB/s, direct 64 streams 5.0 MB/s,
+  Clash 16 streams 7.6 MB/s. `--route proxy` gets more of the cap but only takes it from the other job.
 - A full run (1.65 TB) takes ~26 h at the cap.
 
 ## gcloud login

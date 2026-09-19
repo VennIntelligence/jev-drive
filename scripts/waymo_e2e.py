@@ -499,7 +499,7 @@ def main():
     d.add_argument("--root", default=str(Path(os.environ.get("DATA_DIR", ".")) / "datasets" / "waymo_e2e"))
     d.add_argument("--route", choices=("direct", "proxy"), default="direct", help="data path; token always via proxy")
     d.add_argument("--proxy", default="http://127.0.0.1:7890")
-    d.add_argument("--streams", type=int, default=32, help="concurrent range GETs")
+    d.add_argument("--streams", type=int, default=64, help="concurrent range GETs")
     d.add_argument("--chunk-mb", type=int, default=32)
     d.add_argument("--max-dl-shards", type=int, default=3, help="shards downloading at once")
     d.add_argument("--slim-workers", type=int, default=0, help="0: cgroup cores - 4")
@@ -509,7 +509,14 @@ def main():
     a = p.parse_args()
     if a.cmd == "download":
         a.splits = a.splits or list(SPLITS)
-    sys.exit(download(a) if a.cmd == "download" else inspect(a))
+    if a.cmd == "inspect":
+        sys.exit(inspect(a))
+    try:
+        sys.exit(download(a))
+    except KeyboardInterrupt:  # download threads are not daemons: skip joining them; rerun resumes
+        log.warning("interrupted; partial shards are discarded on the next run")
+        logging.shutdown()
+        os._exit(130)
 
 
 if __name__ == "__main__":
