@@ -2,6 +2,15 @@
 
 Read this when a download fails or is slow on the box.
 
+## Default: direct
+
+- Shells start with no proxy. Turn one on only for the command that needs it, then turn it off.
+- Scripts set their own proxy and never rely on the caller's shell.
+- Domestic traffic (Aliyun Drive, ModelScope, pip/uv mirrors) must go direct. A proxy only slows it down.
+- Clash may keep running in the background. Only processes with `http(s)_proxy` set use it (no TUN mode).
+
+## When a download is slow
+
 Try in this order. Never use both in one shell.
 1. `source /etc/network_turbo`: AutoDL's built-in proxy, GitHub and HuggingFace only.
    Undo: `unset http_proxy https_proxy`.
