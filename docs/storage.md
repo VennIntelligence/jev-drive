@@ -29,7 +29,8 @@ Add new models to `scripts/download_models.sh`.
 
 `/autodl-pub/data` (read-only, region West-B) already has nuScenes (full, 549G of `.tgz`), KITTI,
 SemanticKITTI, cityscapes and more. They are archives: extract what you need into `datasets/`.
-nuScenes mini: `scripts/extract_nuscenes.sh mini` -> `datasets/nuscenes`.
+`scripts/extract_nuscenes.sh mini` or `trainval [member ...]` -> `datasets/nuscenes`
+(default member `samples/CAM_FRONT`, ~6 GB; the full trainval is 300 GB+).
 Do not download these again.
 
 ## Region

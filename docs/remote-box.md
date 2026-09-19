@@ -2,7 +2,7 @@
 
 Read this when you need to log in to or use the GPU box.
 
-- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth). User `ujs`, one RTX 4090 D (24 GB).
+- Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth). User `ujs`, one RTX 4090 D (24 GB), 128 cores, ~500 GB RAM.
 - Shell: interactive login is fish. Scripts and `ssh autodl '<cmd>'` run bash.
 - Disk: the system disk is 30 GB, keep it empty. Put everything in `~/data`, see [storage.md](storage.md).
   Caches (HF, torch, pip, uv, modelscope) already point there.
