@@ -34,3 +34,6 @@ config.yaml
 .DS_Store
 .idea/
 .vscode/
+
+# Scratch space, safe to delete anytime
+tmp/
