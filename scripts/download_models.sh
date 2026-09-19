@@ -14,6 +14,9 @@ MODELS=(
   facebook/dinov2-base
   # Baselines benchmarked in docs/baselines.md
   Qwen/Qwen-Drive-1.0-4B
+  nvidia/diffusiongemma-26B-A4B-it-NVFP4   # openjev
+  Zewei-Zhou/AutoVLA                       # NAVSIM checkpoint, academic-only license
+  Qwen/Qwen2.5-VL-3B-Instruct              # AutoVLA base (processor and config)
 )
 (( $# )) && MODELS=("$@")
 
