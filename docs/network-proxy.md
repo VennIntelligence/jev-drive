@@ -28,6 +28,22 @@ data costs about 120 GB of quota. Check the remaining quota before a bulk transf
 running out also breaks Google OAuth token refresh, which only works through the proxy, and that
 stops a Waymo download from resuming at all.
 
+## Sharing the link between jobs
+
+The box's egress tops out at about 18 MB/s, and neither route nor Clash node changes that ceiling,
+only how it is shared. The link is shared per TCP stream, not per job: a job with 8 concurrent
+downloads and a job with 2 do not get half each. On 2026-09-20 the NAVSIM download held 8 streams
+and got 3-4 MB/s while the other two jobs took ~9 MB/s; adding 6 more streams gained 6.1 MB/s, of
+which ~3 was unused headroom and the rest came out of the other jobs. So raise the stream count of
+the job that matters, and keep the total near the ceiling instead of above it.
+
+How to measure (60 s, while everything keeps running):
+```bash
+a=$(awk '/eth0/{print $2}' /proc/net/dev); s0=$(du -sb <my dir> | cut -f1); sleep 60
+b=$(awk '/eth0/{print $2}' /proc/net/dev); s1=$(du -sb <my dir> | cut -f1)
+echo "box $(( (b-a)/60000000 )) MB/s, mine $(( (s1-s0)/60000000 )) MB/s"
+```
+
 Notes:
 - HF downloads through either proxy fail with `CAS Client Error ... 401 Unauthorized` (Xet storage).
   Set `HF_HUB_DISABLE_XET=1`. `scripts/download_models.sh` already does.
@@ -39,4 +55,4 @@ Notes:
 - New nodes: regenerate the config locally from the subscription (kept outside the repo),
   then `scp -C` it to `~/data/clash/config.yaml`.
 
-Last verified: 2026-09-19
+Last verified: 2026-09-20
