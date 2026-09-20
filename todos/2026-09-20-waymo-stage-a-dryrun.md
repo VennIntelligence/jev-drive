@@ -54,7 +54,9 @@ DiD 不显著而两边 delta 都显著为负，诚实的结论就是**"视觉带
 - Head: 固定轨迹词表 + 线性分类器，K ≥ 1024（[decisions 8](../research/decisions.md)），
   ego/intent 用 **late fusion**（[decisions 10](../research/decisions.md)），
   另外并排报 ridge 连续回归。
-- 算力预算: feature 抽取 **0.8–1.4 h**（见下面第 4 节的账），head 训练约 15 min，单卡。
+- 对照 backbone（**次要表，不在关键路径上**，见第 5 节）：DINOv2、V-JEPA 2、SigLIP2。
+- 算力预算: 主线 feature 抽取 **0.8–1.4 h**（见第 4 节的账），head 训练约 15 min，单卡。
+  对照 backbone 另算，**主线 DiD 出来之后再跑**。
 - 前提: val 下载完成。下载由另一个 session 管，**本计划不碰网络**。
 
 ## 1. 数据切分：sequence-disjoint，且按 cluster 分层
@@ -159,6 +161,51 @@ pre-onset 帧）都只依赖单帧自己的 past/future 和 shard 内的信息�
 frame_name → row 的稳定映射，并在已有 index 里跳过），那点工作量超过它能省下的 1 h。
 所以：等 val 完成，一次抽完。如果下载比预期慢很多，再回头做增量那件事。
 
+## 5. 对照 backbone：三个各回答一个问题，但都不在关键路径上
+
+[decisions 12](../research/decisions.md) 把 DINOv3 换掉了（访问申请被作者拒绝，不绕道第三方转存）。
+替换的三个都没有门禁，每个回答一个具体问题：
+
+| backbone | checkpoint | 回答什么问题 | 输入 |
+|:--|:--|:--|:--|
+| DINOv2 | `facebook/dinov2-base` | 纯视觉的单帧自监督能做到多少？（nuScenes 上已有对照） | 单帧 |
+| **V-JEPA 2** | `facebook/vjepa2-vitl-fpc64-256` | **时间预训练能不能补上单帧缺的那一块？** | **clip** |
+| SigLIP2 | `google/siglip2-so400m-patch14-384` | 增益来自语言对齐，还是来自视觉预训练本身？ | 单帧 |
+
+### V-JEPA 2 怎么喂，以及它测的到底是什么
+
+V-JEPA 2 要的是 **clip 不是帧**（`fpc64` = 每个 clip 64 帧，256×256）。这件事必须摆在明面上：
+
+- **给它的历史窗口，就是我们打算给 Stage B 的那个窗口。** 控制的变量是**时间跨度**，不是帧数：
+  用 `waymo.history_rows(df, n_back, stride)` 取同一个跨度（比如 stride 5 = 0.5 s、n_back 7，
+  span 3.5 s），再在这个跨度内采满 64 帧喂给它。跨度对齐之后，
+  帧率和它预训练时不一致（表观运动速度被改变了），**这是一个已知的 distribution shift，要写进实验细节**。
+  另外并排跑一行它的原生 6.4 s clip，让读者看得到多出来的跨度值多少。
+- **所以这一行不能读成"V-JEPA 2 是不是更好的 backbone"。** 它比 Qwen 单帧多拿了历史，
+  赢了也可能整个是 history 效应而不是 backbone 效应。**唯一能把两者分开的办法是给 Qwen
+  同样的窗口**，那就是 Stage B 的事。这一行诚实的读法是：
+  **"在 Stage A 的代价下，喂进时间信息到底值不值"**——正好是 Stage B 立不立项的前置证据。
+- 相机：只喂 FRONT。64 帧 × 3 相机的解码量不现实，而且 V-JEPA 2 是单视角模型。
+  这又是一个和主线（front3）不同的变量，同样要在表里写明。
+
+### 代价（**都是估算，没实测**，跑之前先 benchmark）
+
+| backbone | tokens/样本 | 估计 ms/样本 | 23 k 样本 | 主要瓶颈 |
+|:--|--:|--:|--:|:--|
+| DINOv2 ViT-B/14，front3 | 3 × ~1000 | ~5 | ~2 min | 解码 |
+| SigLIP2 so400m 384，front3 | 3 × 729 | ~20–40 | 0.1–0.3 h | 计算 |
+| V-JEPA 2 ViT-L fpc64，front only | ~8192 | ~100–200 | **0.6–1.3 h** | **64 帧 JPEG 解码** |
+
+V-JEPA 2 每个样本要解 **64 张 JPEG**（主线每帧只解 3 张），I/O 是 20 倍。
+如果实测下来太贵，先把训练半边降到 1 Hz，**评测侧的 pre-onset 和 straight 两个子集一帧不减**——
+DiD 的 power 全在评测侧。
+
+### 排期：主线先跑，对照后补
+
+[decisions 3d](../research/decisions.md) 的 DiD 是关键路径，**对照表不是**。
+所以顺序是：先把 Qwen-vs-ego 的主线跑完、把 3d 回填掉，再跑对照。
+**如果把 V-JEPA 2 接进来会推迟 DiD，那就先不接。**
+
 ## 步骤
 
 - [ ] 0. 等 val 下载完成（另一个 session 管），`waymo.build_index()` 重建索引，`waymo.check()` 全绿
@@ -171,10 +218,13 @@ frame_name → row 的稳定映射，并在已有 index 里跳过），那点工
       加 pre-onset / straight / 全体 / turning 四行并排；所有主张引 paired delta + CI
       （按 sequence bootstrap，两个子集共享一次重采样）
 - [ ] 7. A→B 和 B→A 两个方向都跑，两份结果都报
-- [ ] 8. **就地回填 [decisions 3d](../research/decisions.md) 的「结果」字段**：
+- [ ] 8. **（关键路径的终点）就地回填 [decisions 3d](../research/decisions.md) 的「结果」字段**：
       **DiD 及其 CI**、pre-onset 的 paired delta 及其 CI、两边的 n、
       实际 CI 半宽与 0.037 m 预估的对照、落在预登记表的哪一行；
       不新开条目。同时把 3c 里视觉侧的那一半标上"已在半 val 上预演"
+- [ ] 9.（8 完成之后才做）对照 backbone：先 benchmark 三个的实际 ms/样本，再跑 DINOv2 和 SigLIP2
+      （单帧，和主线同一套 head 和 split），最后接 V-JEPA 2
+- [ ] 10. 对照表：每个 backbone 一行，V-JEPA 2 额外标注它的历史跨度、帧率和只用 FRONT 这三件事
 
 ## 成功标准
 
@@ -199,6 +249,8 @@ frame_name → row 的稳定映射，并在已有 index 里跳过），那点工
 - 不碰网络，不下载任何东西。
 - 不抽 train split 的 feature（还没下完）。
 - 不做 refinement、不做 temporal head（Stage B 的事）、不做 gate。
+- 不因为对照 backbone 推迟主线：DiD 先出来。
+- 不去找 DINOv3 的第三方转存——作者是明确拒绝（decisions 12）。
 - 不提交 test（每 30 天 6 次，等论文的数字出来再用）。
 
 ## 结果
