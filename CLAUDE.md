@@ -32,12 +32,19 @@ Written for people to read and discuss. Full rules: [research/README.md](researc
 - Figures are publication quality (CVPR paper style): English labels, shared style and palette,
   each followed by 1-3 sentences saying what to look at.
 
+## Results, figures and what lives where
+- Figures, docs and small result files (results.csv/md, metrics, timings) are pulled to this Mac and
+  committed. Checkpoints, features, raw data and everything large stay on the box, see docs/storage.md.
+- Every figure is collected by a doc that shows it and says what to look at: a figure with no doc and a
+  doc pointing at a missing figure are both bugs. Moving, renaming or deleting one means fixing the other.
+- [README.md](README.md) is the top-level index: every doc is reachable from it. Keep it current.
+
 ## Git
 - Remote: `git@github-venn:VennIntelligence/jev-drive.git` (use the `github-venn` alias, not github.com).
 - Branch: `main`. Commits are authored as Gaochengzhi (GitHub noreply email), set per repo, not globally.
 
 ## Docs
-Start at [docs/README.md](docs/README.md).
+Start at [README.md](README.md), the index of every doc; how-to docs are under [docs/README.md](docs/README.md).
 - GPU box (login, disk, tools): [docs/remote-box.md](docs/remote-box.md)
 - A download fails on the box: [docs/network-proxy.md](docs/network-proxy.md)
   (try `source /etc/network_turbo` first, then `proxy_on`)
