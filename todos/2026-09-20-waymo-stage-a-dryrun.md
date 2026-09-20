@@ -102,14 +102,13 @@ RFS 的有效样本从 240 变成 479。**两个方向的结果必须都报**，
   | ego-only → late fusion 加视觉 | **pre-onset** | ADE@5s（**决定性的那一格**，回填 decisions 3d） |
   | ego-only → late fusion 加视觉 | 全体评测帧 | RFS，ADE@5s |
   | ego-only → late fusion 加视觉 | turning | ADE@5s |
-
-  **这三行要并排报，不能只报 pre-onset 那一行。** 一个孤零零的子集数字没法判断它是真信号
-  还是子集噪声；全体和 turning 两行提供量级参照，三行的符号是否一致本身就是一个可信度信号。
   | CTRV → ego-only | pre-onset / 全体 | ADE@5s（复现 decisions 3c 的 40 倍差距） |
   | ridge 回归 → 词表分类 | 全体 | RFS，ADE@5s |
   | K=1024 → 4096 → 8192 | 全体 | RFS，trust-region miss，oracle |
 
   每一行都要带该子集的 **n**，这样 power 不够的时候一眼看得出来。
+  **前三行要并排报，不能只报 pre-onset 那一行。** 一个孤零零的子集数字没法判断它是真信号
+  还是子集噪声；全体评测半边和 turning 两行提供量级参照，三行的符号是否一致本身就是一个可信度信号。
 - **词表**：只用训练半边的 future 做 k-means，评测半边不参与。K 扫 {1024, 4096, 8192}，
   每个 K 报 oracle minADE **和** trust-region 覆盖率（`traj.vocab_coverage`，
   Waymo 上 `region_for(5, 4)` 自动退回官方的 (3 s, 1.0 m) 和 (5 s, 1.8 m)）。
