@@ -43,6 +43,15 @@ showed the total flat at 12.3 MB/s and most of the gain taken from a job we had 
 down. For anything running for hours, sample at least 90 s after the change has settled, and measure
 every competing job in the same window, not only your own.
 
+**At busy hours the link is zero-sum, and slightly worse.** Measured the same day across a change:
+one job gained 1.9 MB/s, the other lost 2.9, and the total fell from 12.6 to 11.6 MB/s. Past some
+point extra streams cost aggregate throughput, so the 18 MB/s ceiling is not reachable by adding
+streams. Decide who should win and say so; do not expect to find spare capacity.
+
+**A stream is not a stream.** Per-stream yield depends on the route: 16 proxy streams each carried
+less than 8 direct ones, so the direct job held nearly twice the share at half the stream count.
+Compare per-stream yield by route before changing counts.
+
 How to measure (while everything keeps running; `<my dir>` per job, one sample per job):
 ```bash
 a=$(awk '/eth0/{print $2}' /proc/net/dev); s0=$(du -sb <my dir> | cut -f1); sleep 60
