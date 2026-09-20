@@ -184,13 +184,21 @@ pooling 这一半倒是被加强了：mean pooling 在轨迹上稳定好于 last
 
 ## 6. 下载顺序和带宽
 
-**决定**：box 的下载串行执行，顺序是 navsim → HF 模型（Qwen3-VL-32B、AutoVLA）→ Waymo val → Waymo small。
+**决定**（2026-09-20 11:20 修订）：Waymo val 和 navsim **并行**跑，HF 模型排在 navsim 之后。
 Waymo train 要等 val 完成后再确认，test 最后（提交限制是每 30 天 6 次，不急）。
+
+原来的决定是全部串行（navsim → HF → val → small）。改的原因：navsim 还剩 257 GB、约 10.5 小时，
+串行的话 val 要到次日凌晨 4 点才完整，而**项目最关键的一次测量**（pre-onset 子集上视觉有没有增量，
+见第 3c 条）正卡在 val 上。并行之后两边各拿约一半带宽，val 约 9 小时、navsim 约 21 小时。
+这是用 navsim 的延迟换关键测量提前，由用户拍板。
 
 **理由**：box 的总下行带宽只有约 12–18 MB/s，所有任务共享。并行跑的时候 Waymo 只有 1.3 MB/s，
 ETA 336 小时；串行之后单个任务能拿到约 10–16 MB/s。
 
-**状态**：已确认（队列在 box 上 `$DATA_DIR/tmp/dlq.sh`，窗口 `jev:dlq`）。
+**状态**：已确认。串行仍然是默认做法（并行时每个任务只拿一半带宽，总时间不会变短）；
+只有当某个下载卡住关键路径时才破例并行，并在这里记一笔。
+
+队列在 box 上 `$DATA_DIR/tmp/dlq.sh`（窗口 `jev:dlq`，现在只负责 HF），Waymo 在 `jev:waymo`。
 
 ---
 
