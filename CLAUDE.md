@@ -14,6 +14,8 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 - Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,
   and writes `log.txt` (human), `events.jsonl` (machine) and `tb/` (TensorBoard curves) to its run dir.
   See [docs/long-runs.md](docs/long-runs.md).
+- While a long job runs cleanly, report every 3-5 hours, not per file or step.
+  Report at once only for an error, a stall, a decision, or completion.
 
 ## Code
 - Write expert-level code: efficient, compact, readable, with clear logic.

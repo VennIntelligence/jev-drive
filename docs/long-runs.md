@@ -26,6 +26,12 @@ Every run gets its own directory `$DATA_DIR/runs/<experiment>/<tag>/<YYYYmmdd-HH
 Results (`results.csv`, `timings.json`, ...) go in the same directory.
 To follow a run from a script: `tail -f .../events.jsonl`, or poll for the `end` event.
 
+## Reporting while it runs
+
+An agent babysitting a long job reports on a **3-5 hour** cadence, not per file or per step.
+Report immediately only when something needs a decision: an error, a stall, a route or budget
+change, or the job finishing. A silent job that is making progress needs no message.
+
 ## TensorBoard
 
 - Ours: `scripts/tensorboard.sh` starts it in window `jev:tb`, port 6006, logdir `$DATA_DIR/runs`
@@ -35,4 +41,4 @@ To follow a run from a script: `tail -f .../events.jsonl`, or poll for the `end`
 - AutoDL's default TensorBoard (port 6007, `/root/tf-logs`) runs as root under supervisord.
   Our user has no root, so it cannot be killed or pointed elsewhere. Ignore it.
 
-Last verified: 2026-09-19
+Last verified: 2026-09-20
