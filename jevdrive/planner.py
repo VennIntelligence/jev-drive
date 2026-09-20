@@ -45,8 +45,11 @@ PCA_DIM, INNER_FRAC = 64, 0.2
 HIDDEN, DROPOUT, MLP_EPOCHS, MLP_BS, MLP_LR, MLP_WD = 512, 0.1, 40, 512, 1e-3, 1e-2
 MAX_ITER, LBFGS_COPIES = 600, 26  # L-BFGS iterations; float32 copies of the parameters it keeps
 TOPK = (1, 5, 10)
-CI_COLS = ("ade", "fde")
-COLS = ["ade", "fde", "ade@1s", "fde@1s", "ade@2s", "fde@2s", "minade1", "minade5", "minade10", "minfde10"]
+# Waymo's RFS floors any prediction that leaves the raters' trust region, and about half of the ego-only
+# predictions are floored, so the miss rate leads the table and RFS will slot in in front of it on Waymo.
+COLS = ["miss", "miss10", "ade", "fde", "ade@1s", "fde@1s", "ade@2s", "fde@2s", "minade1", "minade5",
+        "minade10", "minfde10"]
+CI_COLS = ("ade", "fde", "miss")
 
 
 class Split:
@@ -259,9 +262,11 @@ class Heads:
         return pred(mlp_predict(net, self.X, sp.val)), {"epochs": ep, "sel_ade": s}
 
 
-def eval_preds(preds: np.ndarray, gt: np.ndarray, rate: float) -> dict[str, np.ndarray]:
-    """Per-sample metrics of (n, kmax, T, 2) predictions ordered by score: top-1 ADE/FDE plus minADE/minFDE."""
-    return traj.sample_metrics(preds[:, 0], gt, rate) | traj.min_metrics(preds, gt, TOPK)
+def eval_preds(preds: np.ndarray, gt: np.ndarray, rate: float, speed: np.ndarray, region) -> dict[str, np.ndarray]:
+    """Per-sample metrics of (n, kmax, T, 2) predictions ordered by score: the trust-region miss rate (the
+    stand-in for Waymo's floored fraction), the top-1 ADE/FDE and minADE/minFDE over the top k."""
+    return (traj.region_metrics(preds, gt, speed, rate, region, TOPK) | traj.sample_metrics(preds[:, 0], gt, rate)
+            | traj.min_metrics(preds, gt, TOPK))
 
 
 def add(rows: list, per_sample: dict, m: dict[str, np.ndarray], scenes: np.ndarray, **fields) -> dict:
@@ -269,8 +274,8 @@ def add(rows: list, per_sample: dict, m: dict[str, np.ndarray], scenes: np.ndarr
     ci = {f"{c}_{b}": v for c in CI_COLS if c in m for b, v in zip(("lo", "hi"), traj.boot_ci(m[c], scenes))}
     rows.append({**fields, "n": len(scenes), **{k: float(v.mean()) for k, v in m.items()}, **ci})
     per_sample[(fields["head"], fields["features"], fields["K"])] = m
-    log.info("%-12s %-24s K=%-5s ADE %.3f FDE %.3f minADE10 %.3f", fields["head"], fields["features"],
-             fields["K"], rows[-1].get("ade", np.nan), rows[-1].get("fde", np.nan),
+    log.info("%-12s %-24s K=%-5s miss %.3f ADE %.3f FDE %.3f minADE10 %.3f", fields["head"], fields["features"],
+             fields["K"], rows[-1].get("miss", np.nan), rows[-1].get("ade", np.nan), rows[-1].get("fde", np.nan),
              rows[-1].get("minade10", np.nan))
     return rows[-1]
 
@@ -294,6 +299,9 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     sp = Split(lab, seed)
     log.info("%s", sp)
     scenes_val, gt = sp.scenes[sp.val], fut[sp.val]
+    speed_val, region = np.linalg.norm(vel[sp.val], axis=1), traj.region_for(horizon, rate)
+    log.info("trust region: %s (lateral half-width, m), longitudinal %gx, speed-scaled as the official RFS",
+             ", ".join(f"{t:.1f}s: {w:.2f}" for t, w in region), traj.LON_MULT)
     n, T = len(lab), fut.shape[1]
     F = torch.as_tensor(fut.reshape(n, -1), device=DEV)
     ego = torch.as_tensor(lab[EGO_COLS].to_numpy(np.float32), device=DEV)
@@ -310,18 +318,20 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     # --- baselines without image features ----------------------------------------------------------
     for name, p in (("const_velocity", traj.const_velocity(vel, horizon, rate)),
                     ("const_turn_rate", traj.const_turn_rate(vel, yaw_rate, horizon, rate))):
-        add(rows, per_sample, eval_preds(p[sp.val][:, None], gt, rate), scenes_val, head=name, features="-", K=0)
+        add(rows, per_sample, eval_preds(p[sp.val][:, None], gt, rate, speed_val, region), scenes_val,
+            head=name, features="-", K=0)
     mean_traj = fut[sp.train].mean(0)
-    add(rows, per_sample, eval_preds(np.repeat(mean_traj[None, None], len(sp.val), 0), gt, rate), scenes_val,
-        head="mean_traj", features="-", K=0)
+    add(rows, per_sample, eval_preds(np.repeat(mean_traj[None, None], len(sp.val), 0), gt, rate, speed_val,
+                                     region), scenes_val, head="mean_traj", features="-", K=0)
     for k in ks:
         cnt = np.bincount(tgt[k][0][sp.train, 0], minlength=k)
         top = vocab[k].reshape(k, T, 2)[cnt.argsort()[::-1][:max(TOPK)].copy()].cpu().numpy()
-        add(rows, per_sample, eval_preds(np.repeat(top[None], len(sp.val), 0), gt, rate), scenes_val,
-            head="majority", features="-", K=k)
+        add(rows, per_sample, eval_preds(np.repeat(top[None], len(sp.val), 0), gt, rate, speed_val, region),
+            scenes_val, head="majority", features="-", K=k)
         o = traj.oracle_metrics(vocab[k], gt)
-        add(rows, per_sample, {"ade": o["oracle_ade"], "fde": o["oracle_fde"]}, scenes_val,
-            head="oracle", features="-", K=k)
+        add(rows, per_sample, {"ade": o["oracle_ade"], "fde": o["oracle_fde"],
+                               "miss": traj.vocab_coverage(vocab[k], gt, speed_val, rate, region)},
+            scenes_val, head="oracle", features="-", K=k)
 
     # --- one pass over every feature set: linear regression and linear vocabulary classifier ---------
     src = probe.feature_sources(version, lab.sample_token, pattern)
@@ -341,7 +351,7 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
                      "cls_soft": lambda: h.cls(soft[k], vocab[k])}[w]()
             if w == "cls" and name == "ego":
                 ego_scores[k] = h.scores
-            r = add(rows, per_sample, eval_preds(p, gt, rate), scenes_val, head=w, features=name,
+            r = add(rows, per_sample, eval_preds(p, gt, rate, speed_val, region), scenes_val, head=w, features=name,
                     K=k if "cls" in w else 0, seconds=time.perf_counter() - t0,
                     **{f"fit_{a}": b for a, b in st.items()})
             if rl is not None:
@@ -379,8 +389,9 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     lam = cur[(cur["head"] == "ridge") & (cur["features"] == "ego")].fit_lam.iloc[0]
     base = linear_apply(ridge_solve(Xe, F, sp.train, [lam]), Xe, np.arange(n))[0]
     p, st = Heads(Xi, sp, (F - base).reshape(n, T, 2).cpu().numpy(), F - base, rate).ridge()
-    add(rows, per_sample, eval_preds(p + base[sp.val].reshape(-1, 1, T, 2).cpu().numpy(), gt, rate), scenes_val,
-        head="ridge_late", features=best + "+ego", K=0, **{f"fit_{a}": b for a, b in st.items()})
+    add(rows, per_sample, eval_preds(p + base[sp.val].reshape(-1, 1, T, 2).cpu().numpy(), gt, rate, speed_val,
+                                     region), scenes_val, head="ridge_late", features=best + "+ego", K=0,
+        **{f"fit_{a}": b for a, b in st.items()})
     del Xe, Xi
     torch.cuda.empty_cache()
 
@@ -428,9 +439,15 @@ def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int) -> pd.Da
             continue
         d = per_sample[b]["ade"] - per_sample[a]["ade"]
         lo, hi = traj.boot_ci(d, scenes)
-        out.append({"comparison": what, "from": f"{a[0]} {a[1]}", "to": f"{b[0]} {b[1]}",
-                    "ade_from": per_sample[a]["ade"].mean(), "ade_to": per_sample[b]["ade"].mean(),
-                    "delta": d.mean(), "lo": lo, "hi": hi})
+        r = {"comparison": what, "from": f"{a[0]} {a[1]}", "to": f"{b[0]} {b[1]}",
+             "ade_from": per_sample[a]["ade"].mean(), "ade_to": per_sample[b]["ade"].mean(),
+             "delta": d.mean(), "lo": lo, "hi": hi}
+        if "miss" in per_sample[a] and "miss" in per_sample[b]:
+            dm = per_sample[b]["miss"] - per_sample[a]["miss"]
+            r |= {"miss_from": per_sample[a]["miss"].mean(), "miss_to": per_sample[b]["miss"].mean(),
+                  "dmiss": dm.mean(), "miss_lo": traj.boot_ci(dm, scenes)[0],
+                  "miss_hi": traj.boot_ci(dm, scenes)[1]}
+        out.append(r)
     return pd.DataFrame(out)
 
 
@@ -457,16 +474,23 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | 
                + ci.set_index(["head", "features"])[["ADE", "FDE"]].to_markdown() + "\n")
     if pairs is not None and len(pairs):
         t = pairs.assign(**{"dADE [95 % CI]": lambda d: d.apply(
-            lambda r: f"{r.delta:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]", axis=1)})
+            lambda r: f"{r.delta:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]", axis=1),
+            "dmiss [95 % CI]": lambda d: d.apply(
+                lambda r: f"{r.dmiss:+.3f} [{r.miss_lo:+.3f}, {r.miss_hi:+.3f}]"
+                if pd.notna(r.get("dmiss", np.nan)) else "", axis=1)})
         out.append("### Paired differences (same val frames, scenes resampled; negative = better)\n\n"
-                   + t.set_index("comparison")[["from", "to", "ade_from", "ade_to", "dADE [95 % CI]"]]
+                   + t.set_index("comparison")[["from", "to", "miss_from", "miss_to", "dmiss [95 % CI]",
+                                                "ade_from", "ade_to", "dADE [95 % CI]"]]
                    .to_markdown(floatfmt=".3f") + "\n")
     return "\n".join(out)
 
 
 @torch.inference_mode()
-def bench_heads(d: int, T: int, ks=(64, 256, 1024, 4096, 8192), reps: int = 1000, warmup: int = 100) -> list[dict]:
+def bench_heads(d: int, T: int, ks=(64, 256, 1024, 4096, 8192), reps: int = 1000, warmup: int = 100,
+                runs: int = 3) -> list[dict]:
     """Batch-1 latency of the head itself, warm: score every anchor, take the top 10 and read off the waypoints.
+    The protocol is the one research/lit asks for so the number is comparable: 100 warm-up calls, `reps`
+    synchronised serial requests, `runs` independent repeats (whose spread is reported).
     Feature extraction is measured separately (features.bench); this is only what the head adds on top."""
     x, out = torch.randn(1, d, device=DEV), []
     for name, K in [("ridge", 0), ("mlp_reg", 0)] + [(h, k) for k in ks for h in ("cls", "mlp_cls")]:
@@ -482,14 +506,17 @@ def bench_heads(d: int, T: int, ks=(64, 256, 1024, 4096, 8192), reps: int = 1000
         for _ in range(warmup):
             f()
         torch.cuda.synchronize()
-        ts = np.empty(reps)
-        for i in range(reps):
-            t0 = time.perf_counter()
-            f()
-            torch.cuda.synchronize()
-            ts[i] = (time.perf_counter() - t0) * 1e3
-        out.append({"head": name, "K": K, "params_m": params, "mean_ms": float(ts.mean()),
-                    "p50_ms": float(np.percentile(ts, 50)), "p95_ms": float(np.percentile(ts, 95))})
-        log.info("head latency %-8s K=%-5d %6.3f ms mean, p50 %6.3f, p95 %6.3f", name, K, ts.mean(),
-                 out[-1]["p50_ms"], out[-1]["p95_ms"])
+        ts = np.empty((runs, reps))
+        for r in range(runs):
+            for i in range(reps):
+                t0 = time.perf_counter()
+                f()
+                torch.cuda.synchronize()
+                ts[r, i] = (time.perf_counter() - t0) * 1e3
+        out.append({"head": name, "K": K, "params_m": params, "runs": runs, "reps": reps,
+                    "mean_ms": float(ts.mean()), "p50_ms": float(np.percentile(ts, 50)),
+                    "p95_ms": float(np.percentile(ts, 95)), "p99_ms": float(np.percentile(ts, 99)),
+                    "run_spread_ms": float(ts.mean(1).ptp())})
+        log.info("head latency %-8s K=%-5d %6.3f ms mean, p50 %6.3f, p95 %6.3f, spread over %d runs %6.4f",
+                 name, K, ts.mean(), out[-1]["p50_ms"], out[-1]["p95_ms"], runs, out[-1]["run_spread_ms"])
     return out

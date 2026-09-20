@@ -17,9 +17,11 @@ import pandas as pd
 import torch
 
 from .common import get_logger, processed_dir
+from .waymo import _rater_frames  # the trust-region geometry, ported bit-exactly from the official RFS
 
 log = get_logger(__name__)
 HORIZON, RATE, VEL_DT = 3.0, 2.0, 0.5  # s, Hz, s (window the current velocity and yaw rate are read over)
+LON_MULT, SPEED_REF = 4.0, (1.4, 11.0)  # longitudinal / lateral threshold ratio, and the speed scale's ends
 DEV = "cuda"
 
 
@@ -119,6 +121,59 @@ def soft_target(err: np.ndarray, tau: float) -> np.ndarray:
     """Hydra-MDP-style soft imitation target over the m nearest anchors: softmax(-mean displacement / tau)."""
     w = np.exp(-(err - err[:, :1]) / tau)
     return w / w.sum(1, keepdims=True)
+
+
+def region_for(horizon: float, rate: float) -> tuple[tuple[float, float], ...]:
+    """Check times and lateral half-widths of the trust region, (seconds, metres).
+
+    Waymo's Rater Feedback Score checks 3 s and 5 s against +-1.0 m and +-1.8 m lateral (four times that
+    longitudinally, and both shrunk to half at walking speed), and floors a prediction that is outside at
+    either horizon. Those two points lie on thr(t) = 0.4 t - 0.2, which is what we evaluate at half and full
+    horizon on a shorter one: nuScenes' 3 s becomes 1.5 s / 0.4 m and 3 s / 1.0 m. At a 5 s horizon this
+    returns the official pair unchanged.
+    On nuScenes the region is built around the single logged future, not around three rater trajectories, so
+    a miss here is a stand-in for the floored fraction, not RFS."""
+    ts = (3.0, 5.0) if horizon >= 5 else (horizon / 2, horizon)
+    return tuple((t, 0.4 * t - 0.2) for t in ts)
+
+
+def region_norm(pred: np.ndarray, ref: np.ndarray, speed: np.ndarray, rate: float, region) -> np.ndarray:
+    """Largest normalised trust-region distance from each of `pred` (n, I, T, 2) to `ref` (n, T, 2), measured
+    at the region's check times in `ref`'s own longitudinal / lateral frame with the official speed scaling.
+    Returns (n, I); <= 1 means the prediction is inside the region, i.e. it would not be floored."""
+    pred, ref = np.asarray(pred, np.float64), np.asarray(ref, np.float64)
+    if pred.ndim == 3:
+        pred = pred[:, None]
+    lng, lat = _rater_frames(ref[:, None])
+    v = pred[:, None] - ref[:, None, None]  # (n, 1, I, T, 2)
+    k = [int(round(t * rate)) - 1 for t, _ in region]
+    d_lng = np.abs((lng[:, :, None] * v).sum(-1))[..., k]  # (n, 1, I, len(region))
+    d_lat = np.abs((lat[:, :, None] * v).sum(-1))[..., k]
+    lo, hi = SPEED_REF
+    scale = np.clip(0.5 + 0.5 * (np.asarray(speed, np.float64) - lo) / (hi - lo), 0.5, 1.0)[:, None]
+    lat_thr = scale * np.array([w for _, w in region])
+    return np.maximum(d_lng / (lat_thr * LON_MULT)[:, None, None], d_lat / lat_thr[:, None, None]).max(-1)[:, 0]
+
+
+def region_metrics(preds: np.ndarray, gt: np.ndarray, speed: np.ndarray, rate: float, region,
+                   ks=(1, 5, 10)) -> dict[str, np.ndarray]:
+    """Per sample: 1.0 when every one of the top-k predictions falls outside the trust region. `miss` (k = 1)
+    is what the prediction we would actually submit costs; on Waymo this is the floored fraction."""
+    norm = region_norm(preds, gt, speed, rate, region)
+    kmax = preds.shape[1]
+    return {("miss" if k == 1 else f"miss{k}"): (norm[:, :min(k, kmax)].min(1) > 1.0).astype(float) for k in ks}
+
+
+def vocab_coverage(anchors: torch.Tensor, gt: np.ndarray, speed: np.ndarray, rate: float, region,
+                   budget: int = 2**21) -> np.ndarray:
+    """Per sample: 1.0 when no anchor in the whole vocabulary lands inside the trust region. This is the
+    coverage floor in the metric's own terms, next to the oracle minADE."""
+    A = anchors.reshape(len(anchors), -1, 2).cpu().numpy().astype(np.float64)
+    chunk, out = max(8, budget // len(A)), []
+    for a in range(0, len(gt), chunk):
+        g = gt[a:a + chunk]
+        out.append(region_norm(np.broadcast_to(A, (len(g), *A.shape)), g, speed[a:a + chunk], rate, region).min(1))
+    return (np.concatenate(out) > 1.0).astype(float)
 
 
 def sample_metrics(pred: np.ndarray, gt: np.ndarray, rate: float) -> dict[str, np.ndarray]:

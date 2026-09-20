@@ -37,7 +37,8 @@ def main():
     ap.add_argument("--ref-set", default=None, help="skip picking the reference set on the inner split")
     ap.add_argument("--exit-layer", type=int, default=22, help="layer the extraction benchmark truncates at")
     ap.add_argument("--threads", type=int, default=common.n_cpus(), help="torch CPU threads (default: CPU quota)")
-    ap.add_argument("--bench-reps", type=int, default=1000)
+    ap.add_argument("--bench-reps", type=int, default=1000, help="batch-1 head calls per timing run")
+    ap.add_argument("--bench-frames", type=int, default=512, help="frames per extraction-speed measurement")
     a = ap.parse_args()
     torch.set_num_threads(a.threads)
     ks = tuple(int(k) for k in a.ks.split(","))
@@ -62,7 +63,8 @@ def main():
             rows = []
             for n_layers in (36, a.exit_layer):  # full depth vs stopping the decoder at the layer we read
                 rows += [{"layers": n_layers, **r} for r in features.bench(
-                    a.version, "qwen", [(1, 0), (8, 16)], rl=rl, width=800, layers=[n_layers])]
+                    a.version, "qwen", [(1, 0), (8, 16)], n=a.bench_frames, rl=rl, width=800,
+                    layers=[n_layers])]
             (run_dir / "bench.json").write_text(json.dumps(rows, indent=2))
         else:
             raise ValueError(f"unknown step {step}")

@@ -63,30 +63,34 @@ def layer_curve(res: pd.DataFrame, out_dir, k_ref: int):
 
 
 def k_sweep(res: pd.DataFrame, out_dir, best: str):
-    """What the vocabulary costs (oracle) and what the scorer loses on top of it, against K."""
+    """What the vocabulary costs and what the scorer loses on top of it, in displacement and in the
+    trust-region miss rate that stands in for Waymo's floored fraction."""
+    o = res[res["head"] == "oracle"].sort_values("K")
+    cls = res[(res["head"] == "cls") & (res["features"] == best)].sort_values("K")
+    base = [("const. turn rate", ("const_turn_rate", "-"), COLOR["baseline"], "--"),
+            ("ego-state ridge", ("ridge", "ego"), "#333333", ":")]
     with mpl.rc_context(STYLE):
-        fig, ax = plt.subplots(figsize=(COL, 2.2))
-        o = res[res["head"] == "oracle"].sort_values("K")
-        ax.plot(o.K, o.ade, "-o", color=COLOR["oracle"], label="oracle (best anchor)")
-        for head, c, lb in (("cls", COLOR["qwen_mean"], "classifier, top-1"),
-                            ("cls", COLOR["qwen_last"], "classifier, minADE over top 10")):
-            q = res[(res["head"] == head) & (res["features"] == best)].sort_values("K")
-            ax.plot(q.K, q.ade if "top-1" in lb else q.minade10, "-o", color=c, label=lb)
-        for name, c, ls in (("const. turn rate", COLOR["baseline"], "--"), ("ego-state ridge", "#333333", ":")):
-            v = res[res["head"] == ("const_turn_rate" if "turn" in name else "ridge")]
-            v = v[v["features"] == ("-" if "turn" in name else "ego")]
-            if len(v):
-                ax.axhline(v.ade.iloc[0], color=c, ls=ls, label=name)
-        ax.set_xscale("log", base=2)
-        ax.set_yscale("log")
-        ax.set_xticks(sorted(o.K.unique()))
-        ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-        ax.set_yticks([0.1, 0.2, 0.5, 1, 2, 4])
-        ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-        ax.set_xlabel("vocabulary size $K$")
-        ax.set_ylabel("ADE at 3 s (m)")
-        ax.grid(True, which="major")
-        ax.legend(loc="lower left")
+        fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.2))
+        for ax, col, top, lab in ((axes[0], "ade", "minade10", "ADE at 3 s (m)"),
+                                  (axes[1], "miss", "miss10", "outside the trust region (fraction)")):
+            ax.plot(o.K, o[col], "-o", color=COLOR["oracle"], label="vocabulary floor (best anchor)")
+            ax.plot(cls.K, cls[col], "-o", color=COLOR["qwen_mean"], label="classifier, top-1")
+            ax.plot(cls.K, cls[top], "-o", color=COLOR["qwen_last"], label="classifier, best of top 10")
+            for name, key, c, ls in base:
+                v = res[(res["head"] == key[0]) & (res["features"] == key[1])]
+                if len(v):
+                    ax.axhline(v[col].iloc[0], color=c, ls=ls, label=name)
+            ax.set_xscale("log", base=2)
+            ax.set_yscale("log")
+            ax.set_xticks(sorted(o.K.unique()))
+            ax.get_xaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+            ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
+            ax.set_xlabel("vocabulary size $K$")
+            ax.set_ylabel(lab)
+            ax.grid(True, which="major")
+        axes[0].set_yticks([0.1, 0.2, 0.5, 1, 2, 4])
+        axes[1].set_yticks([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])
+        axes[0].legend(loc="lower left")
         save(fig, out_dir, "k_sweep")
 
 
