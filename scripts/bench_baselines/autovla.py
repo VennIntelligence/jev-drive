@@ -43,7 +43,8 @@ sys.modules["models.utils.score"] = stub
 from models.autovla import AutoVLA  # noqa: E402
 
 p = argparse.ArgumentParser()
-p.add_argument("--checkpoint", default=str(DATA / "models/AutoVLA/AutoVLA_PDMS_89.ckpt"))
+ckpt = sorted((DATA / "cache/huggingface/hub/models--Zewei-Zhou--AutoVLA/snapshots").glob("*/AutoVLA_PDMS_89.ckpt"))
+p.add_argument("--checkpoint", default=str(ckpt[0]) if ckpt else None, required=not ckpt)
 p.add_argument("--base-model", default=str(DATA / "models/Qwen2.5-VL-3B-Instruct"))
 p.add_argument("--config", default=str(SRC / "config/training/qwen2.5-vl-3B-nuplan-grpo-cot.yaml"))
 p.add_argument("--scene-index", type=int, default=1)
