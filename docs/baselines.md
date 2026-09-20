@@ -8,12 +8,14 @@ precision and preprocessing, no tuning. 20 warmup + 200 timed requests, each bra
 `74cf0a3e1a537277b1258a683de98b4f-149` that ships with Qwen-Drive (3 front cameras x 4 frames, JPEG on disk).
 CPU threads: `OMP_NUM_THREADS=4` (the box is shared; torch would otherwise size its pool from the host's 208 cores).
 Raw outputs: `$DATA_DIR/runs/bench_baselines/<model>/<tag>/<time>/{summary,times_ms}.json`.
+Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill`, `stage-flow-expert`, `preprocess-only`);
+`--only stages` re-runs just those.
 
 ## Results
 
 | Model / mode | Source (commit) | License, gating | Runs | Venv | Mean / p50 / p95 ms | Peak VRAM | Timed span | Notes |
 |---|---|---|---|---|---:|---|---|---|
-| Qwen-Drive-1.0-4B, direct planning, planner-sft, 1 sample | [QwenLM/Qwen-Drive-1.0](https://github.com/QwenLM/Qwen-Drive-1.0) `28091c1`; weights `Qwen/Qwen-Drive-1.0-4B` rev `2848408` (ModelScope copy, sha256 = HF) | Apache-2.0, not gated | yes | `envs/qwen-drive` | 702 / 699 / 746 | 12.3 GB alloc, 13.0 GB reserved | `model.run()`: JPEG decode + resize + tokenize on CPU (214 ms), vision encoder on 12 frames (61 ms), LLM prefill of 3383 tokens (~120 ms), 10 flow-matching steps (265 ms), 0 generated tokens | bf16, flash_attention_2, torch 2.8.0 cu128 as pinned (already has sm_120) |
+| Qwen-Drive-1.0-4B, direct planning, planner-sft, 1 sample | [QwenLM/Qwen-Drive-1.0](https://github.com/QwenLM/Qwen-Drive-1.0) `28091c1`; weights `Qwen/Qwen-Drive-1.0-4B` rev `2848408` (ModelScope copy, sha256 = HF) | Apache-2.0, not gated | yes | `envs/qwen-drive` | 702 / 699 / 746 | 12.3 GB alloc, 13.0 GB reserved | `model.run()`: JPEG decode + resize + tokenize on CPU (214 ms), vision encoder on 12 frames (61 ms), LLM prefill of 3383 tokens (120 ms), 10 flow-matching steps (262 ms), 0 generated tokens | bf16, flash_attention_2, torch 2.8.0 cu128 as pinned (already has sm_120) |
 | same, 6 samples | same | same | yes | same | 688 / 686 / 705 | same | same, 6 trajectories batched in the expert | cost of extra samples is within noise |
 | Qwen-Drive, reasoning planning, planner-rl, 1 sample | same | same | yes | same | 1258 / 1249 / 1329 | 11.2 GB alloc | as direct, plus greedy decode of 18 tokens (think block + 13-token rationale, ~30 ms/token) and the turn-closing forward | the mode the card recommends for planner-rl; rationale: "Turn left at the clear intersection and accelerate to the target speed." |
 | same, 6 samples | same | same | yes | same | 1245 / 1243 / 1259 | same | same | |
@@ -35,7 +37,7 @@ and openjev's single read over three camera images costs ~0.3 s; both are far fr
 Obvious inefficiencies seen (not fixed; the numbers above are as released; speedups are rough estimates, not measured):
 - Qwen-Drive CPU preprocessing is 214 ms of the 700 (PIL decode and two bicubic resizes of 12 frames on CPU).
   GPU decode and resize would take ~20-30 ms: about -180 ms.
-- Qwen-Drive's flow expert takes 265 ms for 10 steps of a 32-layer, 1024-wide expert over ~66 query tokens.
+- Qwen-Drive's flow expert takes 262 ms for 10 steps of a 32-layer, 1024-wide expert over ~66 query tokens.
   It is eager PyTorch at batch 1 and launch-bound; CUDA graphs or `torch.compile` would likely bring it to 30-50 ms.
 - Qwen-Drive's reasoning decode runs at ~30 ms/token through eager HF `generate`. A CUDA-graph decoder (vLLM, SGLang,
   static cache + compile) typically does 5-10 ms/token for a 4B model: about -400 ms in reasoning mode.
