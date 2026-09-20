@@ -89,7 +89,8 @@ meta = {"source": "ucla-mobility/AutoVLA@ba34eed, Zewei-Zhou/AutoVLA AutoVLA_PDM
 
 model = AutoVLA(config, device="cuda")
 if args.checkpoint != "none":  # "none" runs the base model, to check the plumbing without the checkpoint
-    state = torch.load(args.checkpoint, map_location="cuda", weights_only=False)["state_dict"]
+    # Load on CPU: the Lightning checkpoint is fp32 and 16 GB, and the card is shared.
+    state = torch.load(args.checkpoint, map_location="cpu", weights_only=False)["state_dict"]
     missing, unexpected = model.load_state_dict({k.replace("autovla.", ""): v for k, v in state.items()},
                                                 strict=False)
     print(f"loaded checkpoint: {len(missing)} missing, {len(unexpected)} unexpected keys")
@@ -101,7 +102,10 @@ for tag, use_cot in (("cot", True), ("nocot", False)):
         continue
     model.use_cot = use_cot
     with torch.no_grad():
-        traj, text = model.predict(features)
+        try:
+            traj, text = model.predict(features)
+        except TypeError as error:  # no action tokens in the reply: wrong or missing checkpoint
+            raise SystemExit(f"{tag}: the model produced no action tokens ({error}); check --checkpoint") from error
         print(f"[{tag}] trajectory {tuple(traj.shape)}, endpoint {np.round(traj[-1].cpu().numpy(), 2).tolist()}\n"
               f"  output: {text!r}")
         bench("autovla", tag, lambda: model.predict(features), warmup=args.warmup, iters=args.iters,
