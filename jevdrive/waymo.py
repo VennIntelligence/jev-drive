@@ -303,15 +303,17 @@ def past_kinematics(past: np.ndarray, k: int = 4) -> dict[str, np.ndarray]:
 
 
 def _arc(v: np.ndarray, a: np.ndarray, w: np.ndarray, t: np.ndarray) -> np.ndarray:
-    """Positions on a constant-turn-rate arc from the origin heading +x, speed v + a t. For |w| -> 0 this is
-    the straight constant-acceleration line; the arc form ignores a (closed form would need Fresnel integrals)."""
-    s = v[:, None] * t + 0.5 * a[:, None] * t ** 2
-    wt = w[:, None] * t
-    small = np.abs(w)[:, None] * t[-1] < 1e-3
-    r = np.where(small, 1.0, v[:, None] / np.where(np.abs(w)[:, None] < 1e-9, 1e-9, w[:, None]))
-    x = np.where(small, s, r * np.sin(wt))
-    y = np.where(small, 0.0, r * (1 - np.cos(wt)))
-    return np.stack([x, y], -1)
+    """Positions on a constant-turn-rate arc from the origin heading +x, with speed v + a t: the closed form of
+    integrating (v + a s) (cos ws, sin ws). Below |w t| = 1e-3 the straight line is used instead, which is that
+    integral's limit and avoids cancelling cos(wt) - 1. float64 throughout, because past_states are float32."""
+    v, a, w = (np.asarray(x, np.float64)[:, None] for x in (v, a, w))
+    t, wt = t.astype(np.float64), w * t.astype(np.float64)
+    small = np.abs(wt[:, -1:]) < 1e-3
+    ws = np.where(small, 1.0, w)                   # keep the division finite where the limit is used anyway
+    sin, cos = np.sin(wt), np.cos(wt)
+    x = np.where(small, v * t + 0.5 * a * t ** 2, v / ws * sin + a / ws * (t * sin + (cos - 1) / ws))
+    y = np.where(small, 0.0, v / ws * (1 - cos) + a / ws * (sin / ws - t * cos))
+    return np.stack([x, y], -1).astype(np.float32)
 
 
 def baselines(past: np.ndarray, k: int = 4) -> dict[str, np.ndarray]:
@@ -319,7 +321,7 @@ def baselines(past: np.ndarray, k: int = 4) -> dict[str, np.ndarray]:
     t = np.arange(1, N_FUTURE + 1) * DT
     z, kin = np.zeros(len(past)), past_kinematics(past, k)
     return {"zero": np.zeros((len(past), N_FUTURE, 2), np.float32),
-            "cv_vel": kin["v_vec"][:, None, :] * t[None, :, None],
+            "cv_vel": (kin["v_vec"][:, None, :] * t[None, :, None]).astype(np.float32),
             "cv": _arc(kin["v"], z, z, t),
             "ca": _arc(kin["v"], kin["a"], z, t),
             "ctrv": _arc(kin["v"], z, kin["w"], t),
