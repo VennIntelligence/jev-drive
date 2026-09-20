@@ -59,13 +59,13 @@ def main():
                         pattern=pattern, ref_set=a.ref_set)
         elif step == "bench":
             lat = planner.bench_heads(2560, traj.n_waypoints(a.horizon, a.rate), ks, reps=a.bench_reps)
-            (run_dir / "latency.json").write_text(json.dumps(lat, indent=2))
+            (run_dir / "latency.json").write_text(json.dumps(lat, indent=2, default=float))
             rows = []
             for n_layers in (36, a.exit_layer):  # full depth vs stopping the decoder at the layer we read
                 rows += [{"layers": n_layers, **r} for r in features.bench(
                     a.version, "qwen", [(1, 0), (8, 16)], n=a.bench_frames, rl=rl, width=800,
                     layers=[n_layers])]
-            (run_dir / "bench.json").write_text(json.dumps(rows, indent=2))
+            (run_dir / "bench.json").write_text(json.dumps(rows, indent=2, default=float))
         else:
             raise ValueError(f"unknown step {step}")
         timings[f"{step}_s"] = time.perf_counter() - t0
