@@ -255,4 +255,52 @@ DiD 的 power 全在评测侧。
 
 ## 结果
 
-（跑完再填。box 上的 run dir 路径写在这里。）
+### 词表表（2026-09-20，**不需要任何 feature，已经跑完**）
+
+run: box 上 `$DATA_DIR/runs/waymo_stage_a/half_val/20260920-152600/`，
+一条命令重跑：`scripts/waymo_stage_a.sh`。当时 val 下到 **29 个 shard / 33 208 帧 / 163 个 rater 帧**
+（完整 val 是 93 个 shard / 约 107 k 帧 / 479 个 rater 帧），所以**这是彩排，不是最终数**。
+
+切分（cluster 分层、按 sequence 数配平，479 个 sequence 的 cluster 映射从一开始就是全的，所以**这个切分现在就定死了**，
+不会随下载变动）：
+
+| 半边 | sequences | clusters | frames | rater frames | pre-onset | straight | turning |
+|:--|--:|--:|--:|--:|--:|--:|--:|
+| 0（fit） | 241 | 10 | 16 704 | 80 | 233 | 7 180 | 1 643 |
+| 1（eval） | 238 | 10 | 16 504 | 83 | 256 | 7 363 | 1 791 |
+
+词表在 fit 半边的 logged future 上做 k-means，全部指标在 eval 半边上算：
+
+| K | oracle minADE (m) | oracle minFDE (m) | **没有任何 anchor 能进任一 rater 信任域的帧占比** | oracle minADE / pre-onset | oracle minADE / straight |
+|--:|--:|--:|--:|--:|--:|
+| 64 | 1.115 | 1.802 | **0.096** | 1.766 | 1.015 |
+| 256 | 0.748 | 1.064 | **0.036** | 1.160 | 0.658 |
+| 1024 | 0.551 | 0.663 | **0.000** | 0.904 | 0.475 |
+| 4096 | 0.440 | 0.456 | 0.000 | 0.725 | 0.361 |
+| 8192 | 0.407 | 0.407 | 0.000 | 0.689 | 0.328 |
+
+n：oracle 那几列 16 504 帧，覆盖率那一列只有 **83** 个 rater 帧（RFS 只能在这些帧上算）。
+
+**三条结论。**
+
+1. **nuScenes 上那个"两个口径给出不同 K 结论"的发现，在真的 RFS 几何上复现了。**
+   K=64 的 oracle minADE 是 1.115 m，比任何 head 实际能做到的都好得多，看上去够用；
+   但 **9.6% 的 rater 帧无论选哪条 anchor 都进不了任何信任域**，直接被压到 4.0 分。
+   K=256 还有 3.6%，K=1024 降到 0/83。所以 **K ≥ 1024** 这条（[decisions 8](../research/decisions.md)）
+   现在有 Waymo 自己的证据，不再只是从 nuScenes 外推。
+2. **0/83 不等于 0。** 83 帧里 0 个失败，单侧 95% 上界是 **3.5%**（1 − 0.05^(1/83)）。
+   完整 val 有 479 个 rater 帧、eval 半边约 240，那时才能把上界压到 1% 左右。这一格要重算。
+3. **词表对 pre-onset 子集系统性地更差**：每个 K 上 pre-onset 的 oracle minADE 都是 straight 的
+   **1.7–2.1 倍**（K=8192 时 0.689 对 0.328）。也就是说"还没起手但要转"的未来轨迹离任何簇心都更远——
+   它们本来就是少数派，而 k-means 的目标是总体均方位移，会主动牺牲它们。
+   **这是一个设计杠杆，不只是一个观察**：如果最后 pre-onset 是论文的主战场，
+   词表可以按子集重采样之后再聚，或者给 pre-onset 单独留一部分 anchor。
+   代价是整体 oracle 变差。**还没试，属于推测**，验证方法是同样的表加一行"按 pre-onset 重采样后聚类"。
+
+Waymo 的信任域比 nuScenes 那个 stand-in 宽松（K=64 时 9.6% 对 16.2%），符合预期：
+Waymo 有 3 条 rater 轨迹可选，阈值在 5 s 处也更大。两个数不能直接比，只能各自内部比。
+
+### 还没跑的
+
+- feature 抽取：`jevdrive.waymo features_inc` 正在按 shard 增量跑（见下），完了才能跑 head。
+- 整条 entry-3d 的彩排（head + RFS + DiD）：等 feature。
