@@ -23,6 +23,8 @@ import sys
 import types
 from pathlib import Path
 
+import ast
+
 import numpy as np
 import torch
 import yaml
@@ -54,29 +56,31 @@ config = yaml.safe_load(open(args.config))
 config["model"]["pretrained_model_path"] = args.base_model
 config["model"]["codebook_cache_path"] = str(SRC / config["model"]["codebook_cache_path"])
 
-# The demo scene: 3 views x 4 frames, and the ego history that scene logged (0.5 s steps).
+# The demo scene: 3 views x 4 frames at 2 Hz, plus the ego state that scene logged.
 scene = [json.loads(line) for line in open(FRAMES / "planning_scenes.jsonl")][args.scene_index]
 images = [c["image"] for m in scene["messages"] for c in m["content"] if "image" in c]
 assert len(images) == 12, images
-hist = np.asarray(eval(scene["trajectory"])["hist_traj"], dtype=float)  # [n, 3] (x, y, heading), 10 Hz
-vel = np.linalg.norm(hist[-1, :2] - hist[-2, :2]) / 0.1
-prev_vel = np.linalg.norm(hist[-2, :2] - hist[-3, :2]) / 0.1
+trajectory = ast.literal_eval(scene["trajectory"])
+ego = trajectory["ego_status"]
+command = ("go straight", "turn left", "turn right")[int(trajectory["nav_command"])]
 features = {
     "images": {"front_camera": [str(FRAMES / i) for i in images[0:4]],
                "front_left_camera": [str(FRAMES / i) for i in images[4:8]],
                "front_right_camera": [str(FRAMES / i) for i in images[8:12]]},
-    "vehicle_velocity": float(vel),
-    "vehicle_acceleration": float((vel - prev_vel) / 0.1),
-    "driving_command": "go straight",  # the scene's Waymo nav command
+    # The NAVSIM feature builder passes the ego velocity and acceleration vectors; predict() takes their norm.
+    "vehicle_velocity": ego["ego_velocity"],
+    "vehicle_acceleration": ego["ego_acceleration"],
+    "driving_command": command,
     "sensor_data_path": None,
 }
-print(f"scene {json.loads(scene['meta_info'].replace(chr(39), chr(34)))['token']}: "
-      f"v {features['vehicle_velocity']:.2f} m/s, a {features['vehicle_acceleration']:.2f} m/s^2")
+token = ast.literal_eval(scene["meta_info"])["token"]
+print(f"scene {token}: v {np.linalg.norm(ego['ego_velocity']):.2f} m/s, "
+      f"a {np.linalg.norm(ego['ego_acceleration']):.2f} m/s^2, command {command!r}")
 
 meta = {"source": "ucla-mobility/AutoVLA@ba34eed, Zewei-Zhou/AutoVLA AutoVLA_PDMS_89.ckpt (NAVSIM, RFT/GRPO)",
         "dtype": "bfloat16", "base_model": "Qwen2.5-VL-3B-Instruct", "licence": "UCLA Academic Software License",
         "changed_vs_pins": "torch 2.4.0 -> 2.8.0+cu128, torchvision 0.19.0 -> 0.23.0, python 3.9 -> 3.12 (sm_120)",
-        "generation": config["inference"]["sample"]}
+        "generation": config["inference"]["sample"], "scene": token, "driving_command": command}
 
 model = AutoVLA(config, device="cuda")
 state = torch.load(args.checkpoint, map_location="cuda", weights_only=False)["state_dict"]

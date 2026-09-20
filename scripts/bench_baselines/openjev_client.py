@@ -34,7 +34,8 @@ DRIVE_Q = {
                      "criteria": {"accelerate": "speed up", "keep": "keep speed", "decelerate": "slow down", "stop": "stop"}},
     "yield": {"type": "noul", "instructions": "Another road user requires the ego vehicle to yield or stop"},
 }
-STATE = "Cameras: front, front-left, front-right, current frame. Ego speed 8.2 m/s. Route command: go straight."
+# Ego state and route command of the same WOD-E2E demo scene the other baselines use.
+STATE = "Cameras: front, front-left, front-right, current frame. Ego speed 0.06 m/s. Route command: turn left."
 README_Q = {  # the openjev README benchmark: 3 text questions
     "urgent": {"type": "noul", "instructions": "Does the customer need a reply within the hour?"},
     "team": {"type": "choice", "instructions": "Which team should handle it?",
