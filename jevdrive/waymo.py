@@ -28,6 +28,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from .common import data_dir, get_logger, n_cpus
 
@@ -40,6 +41,16 @@ INTENTS = ("UNKNOWN", "GO_STRAIGHT", "GO_LEFT", "GO_RIGHT")
 CAMS = ("front", "front_left", "front_right")   # CameraName 1, 2, 3 -- the three kept by the slim step
 CAM_IDS = dict(zip((1, 2, 3), CAMS))
 PAST_FIELDS = ("pos_x", "pos_y", "vel_x", "vel_y", "accel_x", "accel_y")
+# Rater Feedback Score, verbatim from waymo_open_dataset/metrics/python/rater_feedback_utils.py
+RFS_HORIZONS = (3, 5)                  # seconds at which the trust region is checked
+RFS_FREQ = 4                           # Hz
+RFS_BASE_THRESHOLDS = (1.0, 1.8)       # metres at 3 s / 5 s, before multipliers and the speed scale
+RFS_MULTIPLIERS = (1.0, 4.0)           # (lateral, longitudinal)
+RFS_DECAY, RFS_FLOOR, RFS_N_RATER = 0.1, 4.0, 3
+TURN_YAW_RATE = 0.1                    # rad/s over the past window; above this a frame counts as turning
+CLUSTERS = ("Construction", "Interections", "Pedestrian", "Cyclist", "Multi-Lane Maneuvers",
+            "Single-Lane Maneuvers", "Cut_ins", "Foreign Object Debris", "Special Vehicles", "Spotlight",
+            "Others")  # the 11 leaderboard clusters, spelled as val_sequence_name_to_scenario_cluster.json does
 SPAN_COLS = [f"{c}_{s}" for c in CAMS for s in ("off", "len")]
 SCALAR_COLS = (["sequence", "frame", "split", "shard", "rec_off", "rec_len"] + SPAN_COLS
                + ["intent", "has_future", "n_pref"])
@@ -94,7 +105,7 @@ def scan_shard(path: str, cache: str) -> dict:
     plus the flattened past and future states. Runs in its own process (one shard per core)."""
     E2EDFrame = e2ed_frame()
     name, t0 = Path(path).name, time.perf_counter()
-    rows, ego, nbytes = [], [], 0
+    rows, ego, rater, nbytes = [], [], [], 0
     with open(path, "rb", buffering=1 << 20) as f:
         for off, rec in _records(f):
             fr = E2EDFrame.FromString(rec)
@@ -113,6 +124,10 @@ def scan_shard(path: str, cache: str) -> dict:
                 c = CAM_IDS[im.name]
                 spans[f"{c}_off"], spans[f"{c}_len"], hint = off + o, n, o + n
             seq, _, frame = fr.frame.context.name.rpartition("-")
+            rated = [t for t in fr.preference_trajectories if t.preference_score >= 0]
+            rater.append(json.dumps({"score": [t.preference_score for t in rated],
+                                     "pos_x": [list(t.pos_x) for t in rated],
+                                     "pos_y": [list(t.pos_y) for t in rated]}) if rated else "")
             ps, fs = fr.past_states, fr.future_states
             past = np.zeros((N_PAST, len(PAST_FIELDS)), np.float32)
             got = np.array([getattr(ps, k) for k in PAST_FIELDS], np.float32).T
@@ -121,15 +136,15 @@ def scan_shard(path: str, cache: str) -> dict:
             gotf = np.array([fs.pos_x, fs.pos_y, fs.pos_z], np.float32).T.reshape(-1, 3)
             fut[:len(gotf)] = gotf[:N_FUTURE]
             rows.append((seq, int(frame), split_of(name), name, off, len(rec), *spans.values(),
-                         fr.intent, len(gotf) == N_FUTURE,
-                         sum(t.preference_score >= 0 for t in fr.preference_trajectories)))
+                         fr.intent, len(gotf) == N_FUTURE, len(rated)))
             ego.append(np.concatenate([past.ravel(), fut.ravel()]))
     df = pd.DataFrame(rows, columns=SCALAR_COLS)
-    df["ego"] = ego
+    df["ego"], df["rater"] = ego, rater
     tmp = Path(cache).with_suffix(".tmp")
     df.to_parquet(tmp, index=False)
     tmp.rename(cache)
-    return {"shard": name, "frames": len(df), "bytes": nbytes, "seconds": round(time.perf_counter() - t0, 2)}
+    return {"shard": name, "frames": len(df), "rated": int((df.rater != "").sum()), "bytes": nbytes,
+            "seconds": round(time.perf_counter() - t0, 2)}
 
 
 def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame:
@@ -139,7 +154,11 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     shards = sorted(p for p in shard_dir().glob("*.tfrecord-*") if p.is_file())
     if not shards:
         raise SystemExit(f"no slim shards in {shard_dir()}")
-    todo = [p for p in shards if force or not (cache_dir / f"{p.name}.parquet").exists()]
+    def stale(p: Path) -> bool:
+        c = cache_dir / f"{p.name}.parquet"
+        return not c.exists() or "rater" not in pq.read_schema(c).names  # self-migrating cache format
+
+    todo = [p for p in shards if force or stale(p)]
     log.info("%d slim shards, %d already indexed, %d to scan", len(shards), len(shards) - len(todo), len(todo))
     if todo:
         w = min(workers or max(1, n_cpus() // 2), len(todo))
@@ -148,8 +167,8 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
             futs = [ex.submit(scan_shard, str(p), str(cache_dir / f"{p.name}.parquet")) for p in todo]
             for i, f in enumerate(futs):
                 done.append(r := f.result())
-                log.info("[%d/%d] %s: %d frames, %.2f GB in %.1f s", i + 1, len(todo), r["shard"], r["frames"],
-                         r["bytes"] / 1e9, r["seconds"])
+                log.info("[%d/%d] %s: %d frames (%d rated), %.2f GB in %.1f s", i + 1, len(todo), r["shard"],
+                         r["frames"], r["rated"], r["bytes"] / 1e9, r["seconds"])
         dt, gb = time.perf_counter() - t0, sum(r["bytes"] for r in done) / 1e9
         log.info("scanned %d shards, %d frames, %.1f GB in %.1f s with %d workers (%.2f GB/s, %.0f frames/s)",
                  len(done), sum(r["frames"] for r in done), gb, dt, w, gb / dt, sum(r["frames"] for r in done) / dt)
@@ -157,8 +176,10 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     parts = [pd.read_parquet(cache_dir / f"{p.name}.parquet") for p in shards]
     df = pd.concat(parts, ignore_index=True)
     ego = np.stack(df.pop("ego").to_numpy()).astype(np.float32)
+    rater = df.pop("rater").to_numpy()
     df = df.sort_values(["split", "sequence", "frame"], kind="stable", ignore_index=False)
-    ego, df = ego[df.index.to_numpy()], df.reset_index(drop=True)
+    order = df.index.to_numpy()          # position in the concatenated caches, for every sorted row
+    ego, rater, df = ego[order], rater[order], df.reset_index(drop=True)
     cluster = shard_dir() / "val_sequence_name_to_scenario_cluster.json"
     if cluster.exists():
         c = {k: v["scenario_cluster"] for k, v in json.loads(cluster.read_bytes()).items()}
@@ -169,8 +190,17 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     df.to_parquet(root / "index.parquet", index=False)
     np.save(root / "past.npy", ego[:, :N_PAST * len(PAST_FIELDS)].reshape(-1, N_PAST, len(PAST_FIELDS)))
     np.save(root / "future.npy", ego[:, N_PAST * len(PAST_FIELDS):].reshape(-1, N_FUTURE, 3))
-    log.info("index: %d frames, %d sequences, splits %s -> %s", len(df), df.sequence.nunique(),
-             df.split.value_counts().to_dict(), root)
+
+    rows = []                # one row per (frame, rater trajectory): 3 per scored frame, a few hundred in all
+    for i in np.flatnonzero(rater != ""):
+        r = json.loads(rater[i])
+        rows += [{"row": int(i), "traj": j, "score": float(sc), "pos_x": np.array(x, np.float32),
+                  "pos_y": np.array(y, np.float32)}
+                 for j, (sc, x, y) in enumerate(zip(r["score"], r["pos_x"], r["pos_y"]))]
+    pd.DataFrame(rows, columns=["row", "traj", "score", "pos_x", "pos_y"]).to_parquet(root / "rater.parquet",
+                                                                                      index=False)
+    log.info("index: %d frames, %d sequences, splits %s, %d rater-scored frames -> %s", len(df),
+             df.sequence.nunique(), df.split.value_counts().to_dict(), df.n_pref.gt(0).sum(), root)
     return df
 
 
@@ -338,18 +368,137 @@ def ade_fde(pred: np.ndarray, gt: np.ndarray, horizons=(3.0, 5.0)) -> dict[str, 
 
 
 def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val") -> pd.DataFrame:
-    """ADE/FDE of every ego-only baseline on the frames of `split` that have a future, overall and per intent."""
+    """ADE/FDE of every ego-only baseline on the frames of `split` that have a future: overall, per intent, and
+    on the turning subsets -- by intent (GO_LEFT or GO_RIGHT) and by measured yaw rate over the past window.
+    The turning subsets are where a visual model should show its increment, so they get their own columns."""
     m = (df.split == split).to_numpy() & df.has_future.to_numpy()
     gt, preds = future_xy(future[m]), baselines(past[m])
-    intent = df.intent.to_numpy()[m]
+    intent, w = df.intent.to_numpy()[m], np.abs(past_kinematics(past[m])["w"])
+    subsets = {"straight": intent == 1, "left": intent == 2, "right": intent == 3,
+               "turn_intent": np.isin(intent, (2, 3)), "turn_yaw": w >= TURN_YAW_RATE,
+               "straight_yaw": w < TURN_YAW_RATE}
     rows = []
     for name, p in preds.items():
         r = {"baseline": name, "n": int(m.sum()), **ade_fde(p, gt)}
-        for i, label in enumerate(INTENTS):
-            if (s := intent == i).any():
-                r[f"ade5_{label.removeprefix('GO_').lower()}"] = round(ade_fde(p[s], gt[s])["ade5"], 3)
+        r |= {f"ade5_{k}": round(ade_fde(p[v], gt[v])["ade5"], 3) for k, v in subsets.items() if v.any()}
         rows.append(r)
-    return pd.DataFrame(rows).round(4)
+    out = pd.DataFrame(rows).round(4)
+    out.attrs["subset_sizes"] = {k: int(v.sum()) for k, v in subsets.items()}
+    return out
+
+
+# ---------------------------------------------------------------- Rater Feedback Score (the official metric)
+
+def load_rater() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The rater-scored frames: (rows into the index, trajectories (n, 3, 20, 2), scores (n, 3)).
+    Trajectories are truncated / padded to 3 x 20 waypoints the way the official metric does before scoring:
+    repeat the last waypoint, then the last trajectory (with its label)."""
+    t = pd.read_parquet(out_dir() / "rater.parquet")
+    rows, traj, scores, raw_len = [], [], [], []
+    for row, g in t.groupby("row", sort=True):
+        xy = [np.stack([x, y], -1) for x, y in zip(g.pos_x, g.pos_y)]
+        sc, raw_len = list(g.score), raw_len + [len(p) for p in xy]
+        xy = [np.concatenate([p[:N_FUTURE], np.repeat(p[-1:], max(0, N_FUTURE - len(p)), 0)]) for p in xy]
+        while len(xy) < RFS_N_RATER:
+            xy, sc = xy + xy[-1:], sc + sc[-1:]
+        rows.append(row), traj.append(np.stack(xy[:RFS_N_RATER])), scores.append(sc[:RFS_N_RATER])
+    if not rows:
+        return np.zeros(0, int), np.zeros((0, RFS_N_RATER, N_FUTURE, 2), np.float32), np.zeros((0, RFS_N_RATER))
+    load_rater.waypoints = pd.Series(raw_len).value_counts().sort_index().to_dict()  # lengths before padding
+    return np.array(rows), np.stack(traj).astype(np.float32), np.array(scores, np.float64)
+
+
+def init_speed(past: np.ndarray) -> np.ndarray:
+    """Speed at t=0 as the metric defines it: the norm of the last past velocity sample."""
+    return np.linalg.norm(past[:, -1, 2:4], axis=-1)
+
+
+def _rater_frames(traj: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Unit longitudinal and lateral direction at each waypoint of each rater trajectory: the displacement from
+    the previous waypoint with the origin prepended, carried forward wherever the car did not move (and +x if
+    it never moved); lateral is that rotated 90 degrees counter-clockwise."""
+    d = np.diff(np.pad(traj.astype(np.float64), ((0, 0), (0, 0), (1, 0), (0, 0))), axis=-2)  # (B, P, T, 2)
+    zero = np.linalg.norm(d, axis=-1) == 0
+    d[..., 0, :] = np.where(zero[..., :1], np.array([1.0, 0.0]), d[..., 0, :])
+    zero[..., 0] = False
+    src = np.maximum.accumulate(np.where(zero, 0, np.arange(d.shape[-2])), axis=-1)
+    d = np.take_along_axis(d, src[..., None], axis=-2)
+    lng = d / np.linalg.norm(d, axis=-1, keepdims=True)
+    return lng, np.stack([-lng[..., 1], lng[..., 0]], -1)
+
+
+def rater_feedback_score(pred: np.ndarray, traj: np.ndarray, scores: np.ndarray, speed: np.ndarray,
+                         probs: np.ndarray | None = None, decay: float = RFS_DECAY,
+                         floor: float = RFS_FLOOR, details: bool = False):
+    """Official WOD-E2E Rater Feedback Score, per frame.
+
+    Ported from waymo_open_dataset/metrics/python/rater_feedback_utils.py, and bit-identical to it when both
+    are given float64 (the official code inherits the caller's dtype, so on raw proto float32 it differs from
+    this in the 7th decimal; we promote, which is the more accurate of the two).
+    `pred` is (n, I, 20, 2) candidate trajectories with weights `probs` (n, I) -- the challenge takes one
+    trajectory, so I = 1 and prob 1. `traj` (n, 3, 20, 2) and `scores` (n, 3) are the rater trajectories and
+    their 0-10 labels, `speed` (n,) the speed at t=0.
+
+    A candidate is measured against every rater trajectory at 3 s and 5 s, in that trajectory's own
+    longitudinal / lateral frame. The trust region is +-1.0 m lateral and +-4.0 m longitudinal at 3 s
+    (1.8 / 7.2 m at 5 s), shrunk linearly to half at 1.4 m/s and below. Inside it a candidate simply takes that
+    rater's label; outside, the label is multiplied by 0.1 per threshold of overshoot (the larger of the two
+    normalised distances), the best rater is taken at each horizon, and the two horizons are averaged.
+    A candidate that is not inside some single rater's region at both horizons still gets the floor score 4.
+    With `details`, also returns the (n, I) mask of candidates that were fully inside some rater's region --
+    which is not the same as scoring above the floor, since a rater label can itself be below 4.
+    """
+    pred, traj, scores = np.asarray(pred, np.float64), np.asarray(traj, np.float64), np.asarray(scores, np.float64)
+    if pred.ndim == 3:
+        pred = pred[:, None]
+    lng, lat = _rater_frames(traj)
+    v = pred[:, None] - traj[:, :, None]                                         # (n, P, I, T, 2)
+    k = np.array(RFS_HORIZONS) * RFS_FREQ - 1
+    d_lng = np.abs((lng[:, :, None] * v).sum(-1))[..., k]                        # (n, P, I, 2)
+    d_lat = np.abs((lat[:, :, None] * v).sum(-1))[..., k]
+    scale = np.clip(0.5 + 0.5 * (np.asarray(speed, np.float64) - 1.4) / (11 - 1.4), 0.5, 1.0)[:, None]
+    base = np.array(RFS_BASE_THRESHOLDS)
+    lat_thr, lng_thr = (scale * (base * m) for m in RFS_MULTIPLIERS)   # (n, 2); this operand order is the
+    #                    official one, and float multiplication is not associative, so it is worth keeping
+    norm = np.maximum(d_lng / lng_thr[:, None, None], d_lat / lat_thr[:, None, None])
+    inside = (norm <= 1.0).all(-1).any(1)                                        # (n, I)
+    per = (scores[..., None, None] * decay ** np.maximum(norm - 1.0, 0.0)).max(1).mean(-1)    # (n, I)
+    per = np.where(inside, per, np.maximum(per, floor))
+    probs = np.full(pred.shape[:2], 1 / pred.shape[1]) if probs is None else np.asarray(probs, np.float64)
+    score = (per * probs).sum(-1)
+    return (score, inside) if details else score
+
+
+def rfs_by_cluster(score: np.ndarray, cluster: np.ndarray) -> tuple[float, pd.Series]:
+    """Leaderboard aggregation: mean per scenario cluster, then an unweighted mean over the clusters present
+    (E2EDMetrics.average_score is "the final score averaged over all scenario clusters")."""
+    per = pd.Series(score).groupby(pd.Series(cluster, dtype=str)).mean()
+    return float(per.mean()), per
+
+
+def rater_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray) -> pd.DataFrame:
+    """RFS and the official ADE (against the highest-scored rater trajectory) for every ego-only baseline,
+    plus the logged future and the rater trajectories themselves as reference points."""
+    rows_i, traj, scores = load_rater()
+    if not len(rows_i):
+        raise SystemExit("no rater-scored frames in the index yet")
+    speed, cluster = init_speed(past[rows_i]), df.cluster.astype(str).to_numpy()[rows_i]
+    best = traj[np.arange(len(traj)), scores.argmax(1)]
+    preds = {"logged_future": future_xy(future[rows_i]), "rater_best": best,
+             "rater_worst": traj[np.arange(len(traj)), scores.argmin(1)],
+             **{k: v[rows_i] for k, v in baselines(past).items()}}
+    out = []
+    for name, p in preds.items():
+        rfs, inside = rater_feedback_score(p, traj, scores, speed, details=True)
+        avg, per = rfs_by_cluster(rfs, cluster)
+        d = np.linalg.norm(p - best, axis=-1)                    # official ADE: vs the top-rated trajectory
+        out.append({"trajectory": name, "n": len(rfs), "rfs": round(avg, 4), "rfs_frame_mean": round(rfs.mean(), 4),
+                    "rfs_min": round(rfs.min(), 2), "in_trust_region": round(float(inside.mean()), 3),
+                    "ade3_rater": round(d[:, :RFS_HORIZONS[0] * RFS_FREQ].mean(), 3),
+                    "ade5_rater": round(d.mean(), 3),
+                    "ade5_logged": round(np.linalg.norm(p - future_xy(future[rows_i]), axis=-1).mean(), 3),
+                    **{c: round(per.get(c, float("nan")), 2) for c in per.index}})
+    return pd.DataFrame(out)
 
 
 # ---------------------------------------------------------------- frozen features (reuses jevdrive.features)
@@ -516,14 +665,23 @@ def report(df=None, past=None, future=None) -> dict:
     past, future = load_ego() if past is None else (past, future)
     seq, hist = sequence_stats(df), history_report(df)
     base = baseline_table(df, past, future)
-    for k, t in (("sequences", seq), ("history", hist), ("baselines", base)):
-        t.to_csv(out_dir("report") / f"{k}.csv", index=False)
+    rater = rater_table(df, past, future) if (out_dir() / "rater.parquet").exists() and df.n_pref.any() else None
+    for k, t in (("sequences", seq), ("history", hist), ("baselines", base), ("rater", rater)):
+        if t is not None:
+            t.to_csv(out_dir("report") / f"{k}.csv", index=False)
     log.info("sequences:\n%s", seq.to_string(index=False))
     log.info("intent x split:\n%s", pd.crosstab(df.split, df.intent.map(dict(enumerate(INTENTS))), margins=True))
     log.info("image-history completeness (share of frames whose whole window resolves):\n%s",
              hist.to_string(index=False))
-    log.info("ego-only baselines on val (m):\n%s", base.to_string(index=False))
-    return {"sequences": seq, "history": hist, "baselines": base}
+    log.info("ego-only baselines on val (m), subset sizes %s:\n%s", base.attrs["subset_sizes"],
+             base.to_string(index=False))
+    if rater is not None:
+        log.info("rater trajectories: %d scored frames x %d, raw waypoint counts %s (padded to %d)",
+                 rater.n.iloc[0], RFS_N_RATER, getattr(load_rater, "waypoints", {}), N_FUTURE)
+        log.info("Rater Feedback Score on the %d rater-scored val frames (rfs = mean over scenario clusters, "
+                 "the leaderboard number; ade*_rater = against the top-rated trajectory, as the official ADE "
+                 "is defined):\n%s", rater.n.iloc[0], rater.to_string(index=False))
+    return {"sequences": seq, "history": hist, "baselines": base, "rater": rater}
 
 
 def check(n: int = 64) -> None:
@@ -576,6 +734,33 @@ def check(n: int = 64) -> None:
         assert ade_fde(b["cv"][straight], gt[straight])["ade5"] < ade_fde(b["cv"], gt)["ade5"], \
             "CV must be better on straight frames"
         log.info("check: baselines ordered as expected (%d val frames, %d near-straight)", m.sum(), straight.sum())
+
+    rows_i, traj, scores = load_rater()
+    if len(rows_i):
+        assert np.array_equal(rows_i, np.flatnonzero(df.n_pref.to_numpy() > 0)), "rater.parquet is misaligned"
+        for i in rng.choice(len(rows_i), min(8, len(rows_i)), replace=False):   # against the raw records
+            r = df.iloc[rows_i[i]]
+            with open(shard_dir() / str(r.shard), "rb") as f:
+                f.seek(r.rec_off)
+                fr = E2EDFrame.FromString(f.read(r.rec_len))
+            raw = [t for t in fr.preference_trajectories if t.preference_score >= 0]
+            assert sorted(t.preference_score for t in raw) == sorted(scores[i]), (r.sequence, scores[i])
+            n = min(len(raw[0].pos_x), N_FUTURE)         # shorter ones are padded by repeating the last waypoint
+            assert np.allclose(np.array(raw[0].pos_x, np.float32)[:n], traj[i, 0, :n, 0], atol=1e-6)
+            assert (traj[i, 0, n:, 0] == traj[i, 0, n - 1, 0]).all()
+            assert np.allclose(np.array(fr.future_states.pos_x, np.float32), future[rows_i[i], :, 0], atol=1e-6)
+        log.info("check: rater trajectories line up with the index and the raw records on %d frames", len(rows_i))
+        sp = init_speed(past[rows_i])
+        for j in range(RFS_N_RATER):                 # a rater trajectory scores at least its own label
+            got = rater_feedback_score(traj[:, j], traj, scores, sp)
+            assert (got >= scores[:, j] - 1e-6).all() and (got <= 10 + 1e-6).all(), (got.min(), got.max())
+        far = rater_feedback_score(traj[:, 0] + 1e4, traj, scores, sp)
+        assert np.allclose(far, RFS_FLOOR), far[:3]  # far from every rater trajectory -> exactly the floor
+        lf = rater_feedback_score(future_xy(future[rows_i]), traj, scores, sp)
+        zero = rater_feedback_score(np.zeros_like(traj[:, 0]), traj, scores, sp)
+        assert lf.mean() > zero.mean(), (lf.mean(), zero.mean())
+        log.info("check: RFS on %d rater-scored frames -- logged future %.3f, standing still %.3f, "
+                 "rater trajectories score their own labels back", len(rows_i), lf.mean(), zero.mean())
 
     names = submission_frames()
     traj = np.tile(np.stack([np.arange(1, N_FUTURE + 1) * DT * 10, np.zeros(N_FUTURE)], -1), (len(names), 1, 1))

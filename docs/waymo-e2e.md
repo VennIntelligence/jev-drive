@@ -41,7 +41,9 @@ Slim/raw ratio: 0.44, so front3 is ~0.73 TB in total (val shard 0: 2.62 GB -> 1.
   +x forward, +y left, origin at the rear axle middle.
 - `future_states`: 20 steps (5 s at 4 Hz) of pos x/y/z only; empty in test.
 - `intent`: UNKNOWN / GO_STRAIGHT / GO_LEFT / GO_RIGHT (val shard 0: 84% straight, 7% left, 9% right).
-- `preference_trajectories`: up to 3 rated 21-point trajectories, score 0-10, invalid ones score -1.
+- `preference_trajectories`: 3 rated 21-point trajectories with scores 0-10, on **exactly one frame per val
+  sequence** (at the 12 s mark); every other frame carries 3 placeholders scored -1. This is what the official
+  Rater Feedback Score is computed against -- see "Rater Feedback Score" below. Train and test have none.
 
 Inspect a shard: `scripts/download_waymo_e2e.sh inspect <tfrecord>`.
 
@@ -112,7 +114,8 @@ Outputs, under `$DATA_DIR/processed/waymo_e2e/`:
 | `shards/<shard>.parquet` | per-shard scan cache. A shard that has one is never read again |
 | `index.parquet` | one row per frame, sorted by (split, sequence, frame) |
 | `past.npy`, `future.npy` | `(n, 16, 6)` and `(n, 20, 3)` float32, row-aligned with the index |
-| `report/*.csv` | the three tables below, as of the last `report` |
+| `rater.parquet` | the rater-scored trajectories: one row per (frame, trajectory), with the index row it belongs to |
+| `report/*.csv` | the tables below, as of the last `report` |
 | `features/<set>/` | `<name>.npy` float16 + `index.parquet` + `meta.json`, same layout as `processed/nuscenes/<version>/features/` |
 | `submissions/` | `E2EDChallengeSubmission` tar.gz files |
 
@@ -128,7 +131,7 @@ One process per shard walks the TFRecord framing, parses each `E2EDFrame` once a
 | `front_off/len`, `front_left_*`, `front_right_*` | byte span of each JPEG **inside the shard file**, so one camera is one `pread` plus `Image.open`, with no protobuf and no full-record read. Found at index time by searching the record for the parsed JPEG bytes and verifying the whole slice |
 | `intent` | 0 UNKNOWN, 1 GO_STRAIGHT, 2 GO_LEFT, 3 GO_RIGHT |
 | `has_future` | 20 future steps present (false for the whole test split) |
-| `n_pref` | preference trajectories with a score >= 0 |
+| `n_pref` | rated trajectories with a score >= 0: 3 on one frame per val sequence, 0 everywhere else |
 | `cluster` | val scenario cluster, from `val_sequence_name_to_scenario_cluster.json` |
 
 The ego states go to `past.npy` / `future.npy` instead of into the index, which keeps the index around 30 bytes
@@ -200,31 +203,95 @@ missing history; the tolerance and padding rules exist so that experiments can s
 `baselines()` builds five trajectories from the past states alone, in the submission frame. ADE/FDE against the
 logged future, in metres, on the 13 759 val frames downloaded so far:
 
-| baseline | ADE@3s | FDE@3s | ADE@5s | FDE@5s | ADE@5s straight | left | right |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 |
-| cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 |
-| cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 |
-| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 |
-| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 |
-| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** |
+ADE@5s is also broken out on the subsets where a visual model should show its increment: by intent, and by
+measured yaw rate over the past window (`turn_yaw` is `|yaw rate| >= 0.1 rad/s`). Subset sizes: straight
+11 693, left 1 046, right 1 020, turn by intent 2 066, turn by yaw 2 657, straight by yaw 11 102.
 
-This is our development metric and **is not the leaderboard's ADE**: the official secondary metric scores
-against the highest-rated rater trajectory on the official test split, and val's `preference_trajectories` are
-almost all invalid (score -1), so RFS cannot be computed locally at all.
+| baseline | ADE@3s | FDE@3s | ADE@5s | FDE@5s | straight | left | right | turn (intent) | turn (yaw) | straight (yaw) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 | 6.96 | 7.10 | 16.04 |
+| cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 | 4.00 | 3.56 | 2.62 |
+| cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 | 3.98 | 3.54 | 2.63 |
+| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 | 4.17 | 3.58 | 2.42 |
+| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 | **2.92** | **3.04** | 2.60 |
+| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** | 2.95 | 3.11 | **2.39** |
 
-Read the table as the bar a visual model has to clear, and take it seriously: **CTRA reaches 2.53 m ADE@5s
-from the ego state alone**, below the best published official-test ADE (RAP 2.65, Poutine 2.74). The protocols
-differ, so this is not a like-for-like win -- but it does mean a mean ADE will never show a visual gain, and
-that any ADE we report has to come with the same-split ego-only number next to it.
+**This ADE is against the logged future and is not the leaderboard's ADE** -- see the next section, where the
+same baselines are scored against the top-rated rater trajectory, which is how the official ADE is defined.
+Against the log, the ego state alone gets to 2.53 m at 5 s; against the rater trajectory it gets 3.5-3.9 m
+while the log itself gets 2.63 m. Do not compare the numbers in this table with a leaderboard row.
 
 Two places where the baselines are visibly weak, and where a visual model should be measured:
 
-- **Turns.** Constant velocity costs 4.84 m on GO_RIGHT against 2.60 m on GO_STRAIGHT; a constant turn rate
-  brings GO_RIGHT to 3.61 m. Always report ADE per intent and per scenario cluster, never the mean alone.
+- **Turns.** Constant velocity costs 4.84 m on GO_RIGHT against 2.60 m on GO_STRAIGHT, and 3.54 m on the
+  yaw-rate turning subset against 2.63 m off it; a constant turn rate brings GO_RIGHT to 3.61 m. Always report
+  ADE per intent and per scenario cluster, never the mean alone.
 - **The long horizon.** Extrapolating acceleration wins at 3 s (0.83 m) and loses at 5 s (FDE 7.71 m against
   CTRV's 7.23 m), because nothing in the ego state says when the car will stop. That is exactly what the
   cameras are for.
+
+### Rater Feedback Score: computable locally, on one frame per val sequence
+
+**RFS -- the metric the leaderboard actually ranks on -- can be computed on val, and we compute it.** The
+earlier reading that val's `preference_trajectories` are "almost all invalid" was right about the count and
+wrong about the conclusion: they are rare **by design**, not missing.
+
+| | |
+|---|---|
+| Rater-scored frames | exactly **one per val sequence**, with exactly 3 rated trajectories, scores 0-10 |
+| Where | frame index **147-150**, i.e. the 12 s mark -- the same point in the clip as the 1 505 test submission frames |
+| On disk now | 68 frames, from 68 distinct sequences, spread over all 12 downloaded shards |
+| When val is complete | **479** -- one per sequence. 479 x 13.8% coverage = 66 expected, 68 observed |
+| Waypoints per rated trajectory | 21 for 197 of the 204, and 7-20 for the rest; the metric truncates to 20 and pads short ones by repeating the last waypoint |
+| Clusters present | 10 of the 11; val has no `Spotlight` sequences |
+
+This is not a proxy. It is the real metric, on the same protocol shape as the test set (one frame per clip at
+12 s), on a split with published labels. The only limitation is sample size: 479 frames when val finishes,
+68 today, and some scenario clusters will hold only a handful of frames.
+
+`rater_feedback_score()` is a port of
+`waymo_open_dataset/metrics/python/rater_feedback_utils.py` and is **bit-identical to it** when both are given
+float64 (the official code inherits the caller's dtype, so fed raw proto float32 it differs from ours in the
+7th decimal; we promote, which is the more accurate of the two). Constants, verbatim from that file: trust
+region checked at **3 s and 5 s**, base thresholds **1.0 m / 1.8 m**, multiplied by **1.0 lateral and 4.0
+longitudinal**, scaled by `clip(0.5 + 0.5 (v - 1.4) / 9.6, 0.5, 1)` on the speed at t=0, decay **0.1** per
+threshold of overshoot, floor **4.0** for a candidate not fully inside any single rater's region at both
+horizons. Per frame: the best rater at each horizon, then the mean of the two horizons. The leaderboard number
+is the mean per scenario cluster, then an unweighted mean over clusters (`E2EDMetrics.average_score`).
+
+On the 68 rater-scored val frames we have:
+
+| trajectory | RFS (cluster mean) | RFS (frame mean) | in trust region | ADE@3s | ADE@5s |
+|---|---:|---:|---:|---:|---:|
+| top-rated rater trajectory | 9.53 | 9.50 | 1.00 | 0 | 0 |
+| **logged future** | **8.08** | **8.21** | 0.78 | 1.44 | **2.63** |
+| worst-rated rater trajectory | 7.74 | 7.52 | 1.00 | 1.23 | 3.29 |
+| ca | **7.23** | 6.97 | 0.52 | 1.52 | 3.66 |
+| cv | 7.19 | **7.00** | 0.53 | 1.63 | 3.51 |
+| cv_vel | 7.08 | 6.97 | 0.54 | 1.62 | 3.50 |
+| ctra | 6.66 | 6.82 | 0.49 | 1.55 | 3.89 |
+| ctrv | 6.64 | 6.97 | 0.53 | 1.63 | 3.61 |
+| zero (stand still) | 5.00 | 5.21 | 0.29 | 7.49 | 12.73 |
+
+ADE here is against the **top-rated rater trajectory**, which is the official definition
+(`E2EDMetrics.ade_at_three_sec`: "we compute per frame ADE using the ground truth trajectory with the highest
+rater score"). Three things follow, and they change how we should read the leaderboard:
+
+- **The logged future scores 2.63 m ADE@5s, and published official-test ADEs are 2.65 (RAP) to 2.94
+  (Poutine-Base).** On the official ADE the field is already at "predicts the log perfectly" level, so ADE has
+  almost no headroom left and is a poor thing to optimise. RFS has headroom: the logged future is at 8.08-8.21
+  and the best public test RFS is 8.043.
+- **Ego-only is at RFS ~7.1-7.2 and ADE ~3.5 m.** Against the rater trajectory the ego-only baselines are
+  ~0.9 m worse than both SOTA and the log, which is the gap vision has to close -- unlike the log-ADE table
+  above, where ego-only looked deceptively competitive. Published RFS for comparison: RAP 8.043,
+  Poutine 7.986, AutoVLA 7.556, OpenEMMA 5.158.
+- **Half of every ego-only prediction falls outside every rater's trust region** and is floored at 4.0. That
+  is where the score is lost, and it is a much sharper training signal than a mean displacement.
+
+Caveats on the 68-frame number: the cluster mean is noisy because some clusters hold 1-2 frames (`Cut_ins` 1,
+`Construction` 2, `Others` 2), which is why the frame mean is reported next to it and why `ctrv`/`ctra` rank
+below `cv`/`ca` on the cluster mean but tie on the frame mean. Treat per-cluster values as indicative until
+val is fully downloaded, and prefer the frame mean while n is small.
 
 ### Frozen features
 
@@ -307,7 +374,9 @@ The test quota is 6 submissions per 30 days, so nothing here ever uploads: it on
 their byte spans have the expected `context.name`, that the stored JPEG spans are byte-identical to the parsed
 images and decode at 972x1079, that the past position at t=0 is the origin, that test futures are hidden and
 train/val futures are not, that history windows stay inside the sequence and in the past with `dt` matching the
-frame indices, that the baselines are ordered as they should be, and that a submission round-trips.
+frame indices, that the baselines are ordered as they should be, that the rater trajectories line up with the
+index and the raw records and that RFS gives a rater trajectory its own label back, exactly 4.0 to anything far
+away, and more to the logged future than to standing still, and that a submission round-trips.
 
 
 Last verified: 2026-09-20
