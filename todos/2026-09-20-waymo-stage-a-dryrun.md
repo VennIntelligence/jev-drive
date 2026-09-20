@@ -19,6 +19,18 @@ Waymo train split 还没下载，是剩下最大的一项。所以这一版**把
 
 这次测量在 [decisions 3d](../research/decisions.md) 里**已经预登记**：
 测什么、带什么限定条件、四种可能结果各怎么读，都在拿到数字之前写死了。
+
+**主量是 difference-of-differences（DiD），不是 onset 上的 delta。**
+planner v0 已经证明这两者会给出不同答案：onset 上 ΔADE 显著为负（−0.033，CI [−0.065, −0.003] 不跨零），
+但四个子集的 Δ 几乎一模一样（−0.029 / −0.026 / −0.033 / −0.029），
+所以"增量集中在 ego prior 最弱处"这个主张**并不能从一个显著的 onset delta 推出来**。要报的是
+
+> **DiD = (pre-onset 上的 vision−ego delta) − (straight 上的 vision−ego delta)**，带自己的 paired bootstrap CI。
+
+DiD 显著为负才支持 [decisions 1](../research/decisions.md) 的框架；
+DiD 不显著而两边 delta 都显著为负，诚实的结论就是**"视觉带来一个均匀的小增量"**——
+弱得多的故事，论文按那个写，并且要重新评估这个项目值不值得继续。
+所以 **straight 子集是对照臂，必须和 pre-onset 一起抽、一起报**，不是可选项。
 **跑之前先读那一条**，跑完之后**就地回填它的「结果」字段**（不要新开一条），
 填进去的必须包括：paired delta、它的 sequence-bootstrap CI、n、CI 半宽，
 以及明确落在那张表的哪一行。如果 CI 半宽大于要分辨的效应量，就直接写 **underpowered**，
@@ -99,16 +111,23 @@ RFS 的有效样本从 240 变成 479。**两个方向的结果必须都报**，
 
   | 对比 | 在哪个子集上 | 指标 |
   |:--|:--|:--|
-  | ego-only → late fusion 加视觉 | **pre-onset** | ADE@5s（**决定性的那一格**，回填 decisions 3d） |
+  | **DiD = pre-onset 的 delta − straight 的 delta** | — | **ADE@5s（主量，回填 decisions 3d）** |
+  | ego-only → late fusion 加视觉 | **pre-onset** | ADE@5s |
+  | ego-only → late fusion 加视觉 | **straight**（DiD 的对照臂） | ADE@5s |
   | ego-only → late fusion 加视觉 | 全体评测帧 | RFS，ADE@5s |
   | ego-only → late fusion 加视觉 | turning | ADE@5s |
   | CTRV → ego-only | pre-onset / 全体 | ADE@5s（复现 decisions 3c 的 40 倍差距） |
   | ridge 回归 → 词表分类 | 全体 | RFS，ADE@5s |
   | K=1024 → 4096 → 8192 | 全体 | RFS，trust-region miss，oracle |
 
-  每一行都要带该子集的 **n**，这样 power 不够的时候一眼看得出来。
-  **前三行要并排报，不能只报 pre-onset 那一行。** 一个孤零零的子集数字没法判断它是真信号
-  还是子集噪声；全体评测半边和 turning 两行提供量级参照，三行的符号是否一致本身就是一个可信度信号。
+  每一行都要带该子集的 **n** 和 **CI 半宽**，这样 power 不够的时候一眼看得出来。
+  **DiD 那一行是主量，但它下面四行必须并排报，不能只报 DiD 或只报 pre-onset。**
+  单独一个子集的数字没法判断它是真信号还是子集噪声；straight 是 DiD 的对照臂，
+  全体和 turning 提供量级参照，几行的符号是否一致本身就是一个可信度信号。
+
+  代码已经就位：`jevdrive/planner.py` 的 `did()` 和 `jevdrive/traj.py` 的 `boot_did()`。
+  两个子集共享 sequence，所以 bootstrap 必须**同一次重采样同时作用在两边**（已经这么实现），
+  否则会低估相关性、把 CI 算窄。
 - **词表**：只用训练半边的 future 做 k-means，评测半边不参与。K 扫 {1024, 4096, 8192}，
   每个 K 报 oracle minADE **和** trust-region 覆盖率（`traj.vocab_coverage`，
   Waymo 上 `region_for(5, 4)` 自动退回官方的 (3 s, 1.0 m) 和 (5 s, 1.8 m)）。
@@ -148,10 +167,13 @@ frame_name → row 的稳定映射，并在已有 index 里跳过），那点工
 - [ ] 3. `extract_features`：`qwen_front3` native，只抽目标帧，存 L19–L22 的 mean（加 vis_mean 做对照）
 - [ ] 4. 词表：训练半边 k-means，K ∈ {1024, 4096, 8192}，报 oracle minADE + trust-region 覆盖率
 - [ ] 5. Head：cls（late fusion 加 ego+intent）、ridge、以及 ego-only / CTRV / CV baseline
-- [ ] 6. 评测：RFS 领头 + ADE 并排 + pre-onset 的 ADE；所有主张引 paired delta + CI（按 sequence bootstrap）
+- [ ] 6. 评测：RFS 领头 + ADE 并排；**DiD（pre-onset 减 straight）作为主量**，
+      加 pre-onset / straight / 全体 / turning 四行并排；所有主张引 paired delta + CI
+      （按 sequence bootstrap，两个子集共享一次重采样）
 - [ ] 7. A→B 和 B→A 两个方向都跑，两份结果都报
 - [ ] 8. **就地回填 [decisions 3d](../research/decisions.md) 的「结果」字段**：
-      paired delta、sequence-bootstrap CI、n、CI 半宽、落在预登记表的哪一行；
+      **DiD 及其 CI**、pre-onset 的 paired delta 及其 CI、两边的 n、
+      实际 CI 半宽与 0.037 m 预估的对照、落在预登记表的哪一行；
       不新开条目。同时把 3c 里视觉侧的那一半标上"已在半 val 上预演"
 
 ## 成功标准
@@ -159,11 +181,17 @@ frame_name → row 的稳定映射，并在已有 index 里跳过），那点工
 跑之前写死：
 
 1. **链路**：一条命令从索引跑到 RFS 表，`--horizon 5 --rate 4` 之外不需要改 planner 的代码。
-2. **power**：pre-onset 子集上 ΔADE@5s 的 CI 半宽 **< 0.15 m**。
-   达不到就说明连 Waymo val 的一半也不够，必须等 train split，这本身就是一个要记下来的结论。
-3. **方向性结论**：pre-onset 上 vision-minus-ego 的 ΔADE 按 [decisions 3d](../research/decisions.md)
-   那张预登记的表来判，四种读法在拿到数字之前已经定死，**不许事后挑说法**。
-   CI 跨零且区间宽只能记为 underpowered，不许写成"视觉没用"。
+2. **power**：按 [decisions 3d](../research/decisions.md) 的预估，
+   pre-onset 约 1750 帧、按 √n 从 nuScenes 的 0.031 m（n=135）缩放是 0.278 倍，
+   Waymo 的 ADE 尺度又大约 3 倍，相抵后 delta 的半宽约 **0.026 m**，DiD 再乘 √2 约 **0.037 m**。
+   也就是说**只有真实 DiD 明显大于 0.04 m 才判得出来**。
+   跑完**必须把实际半宽填进去和这个预估对照**；实际半宽如果和效应同量级，
+   那是预登记表的**第四行（测不动）**，不是 null。
+   nuScenes 上实测的 DiD 半宽作为标定点写在 [planner v0](2026-09-20-planner-v0.md) 里。
+3. **方向性结论**：按 [decisions 3d](../research/decisions.md) 那张预登记的表来判，
+   四种读法在拿到数字之前已经定死，**不许事后挑说法**。框架成立与否**由 DiD 决定**：
+   DiD 显著为负 → 框架成立；DiD 不显著而两边 delta 都显著为负 → 结论是"均匀的小增量"，
+   论文按弱故事写；CI 跨零且区间宽 → underpowered，不许写成"视觉没用"。
 4. **一致性**：A→B 和 B→A 两个方向的 ΔADE 符号一致，量级在彼此的 CI 内。不一致说明切分或流程有问题。
 
 ## 不做
