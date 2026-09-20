@@ -205,19 +205,26 @@ logged future, in metres, on the 13 759 val frames downloaded so far:
 | zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 |
 | cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 |
 | cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 |
-| ca (+ longitudinal acceleration) | **0.923** | **2.545** | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 |
-| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | 7.226 | 2.65 | 2.22 | 3.63 |
-| ctra (turn rate + acceleration) | 1.059 | 2.744 | **2.678** | **7.217** | 2.64 | **2.22** | **3.62** |
+| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 |
+| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 |
+| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** |
 
 This is our development metric and **is not the leaderboard's ADE**: the official secondary metric scores
 against the highest-rated rater trajectory on the official test split, and val's `preference_trajectories` are
 almost all invalid (score -1), so RFS cannot be computed locally at all.
 
-Read the table as the bar a visual model has to clear. CTRA at **2.68 m ADE@5s** and plain constant velocity at
-**2.81 m** are close enough to the published official-test ADEs (RAP 2.65, Poutine 2.74) that a mean ADE will
-not show a visual gain, whatever the protocol difference. The gap lives in the turns: constant velocity costs
-4.84 m on GO_RIGHT against 2.60 m on GO_STRAIGHT, and a constant turn rate brings GO_RIGHT down to 3.62 m.
-Report ADE per intent and per scenario cluster, never the mean alone.
+Read the table as the bar a visual model has to clear, and take it seriously: **CTRA reaches 2.53 m ADE@5s
+from the ego state alone**, below the best published official-test ADE (RAP 2.65, Poutine 2.74). The protocols
+differ, so this is not a like-for-like win -- but it does mean a mean ADE will never show a visual gain, and
+that any ADE we report has to come with the same-split ego-only number next to it.
+
+Two places where the baselines are visibly weak, and where a visual model should be measured:
+
+- **Turns.** Constant velocity costs 4.84 m on GO_RIGHT against 2.60 m on GO_STRAIGHT; a constant turn rate
+  brings GO_RIGHT to 3.61 m. Always report ADE per intent and per scenario cluster, never the mean alone.
+- **The long horizon.** Extrapolating acceleration wins at 3 s (0.83 m) and loses at 5 s (FDE 7.71 m against
+  CTRV's 7.23 m), because nothing in the ego state says when the car will stop. That is exactly what the
+  cameras are for.
 
 ### Frozen features
 
@@ -234,9 +241,51 @@ cross-camera attention in the LLM layers -- and that is free, because the three 
 The front cameras are portrait 972x1079, so the size knob is `--long-side` (the longer side), not width.
 Measured on val, 256 frames, 8 DataLoader workers, with three downloads running:
 
-PLACEHOLDER_BENCH
+| set | cameras | input | tokens/frame | ms/frame (3 runs) | peak VRAM | bytes/frame |
+|---|---|---|---:|---:|---:|---:|
+| `qwen_front3` **(default)** | 3, one forward | native 972x1079 | 3060 | 127 - 216 | 9.8 GB | 47 KB |
+| `qwen_front3_l800` | 3, one forward | long side 800 | 1725 | 75 - 134 | 9.2 GB | 47 KB |
+| `qwen_front3sep` | 3, one forward each | native | 3 x 1020 | 170 - 246 | 8.8 GB | 141 KB |
+| `qwen_front3sep_l800` | 3, one forward each | long side 800 | 3 x 575 | 104 - 138 | 8.6 GB | 141 KB |
+| `qwen_front` | FRONT only | native | 1020 | 69 - 82 | 8.8 GB | 47 KB |
+| `qwen_front_l800` | FRONT only | long side 800 | 575 | 31 - 44 | 8.6 GB | 47 KB |
 
-PLACEHOLDER_BENCH_TEXT
+**Read the ranges, not the numbers.** The card is shared -- another agent's `jevdrive.planner_v0` held ~7 GB of
+it for part of this -- and the same six configurations, run three times, moved by up to 1.7x. Token counts,
+VRAM and bytes are exact; ms/frame is "about this, on a busy box". Benchmark again on a quiet card before
+quoting a latency anywhere.
+
+Batch size does not change throughput at all -- one frame at 3060 tokens already fills the GPU. Measured back
+to back in one run, batches of 1, 2, 4 and 8 gave 216, 219, 216 and 211 ms/frame. Only memory moves: peak VRAM
+8.7 / 9.1 / 9.7 / 11.2 GB, and **batch 16 was killed by the host OOM killer**, because 8 DataLoader workers
+prefetching 4 batches each hold ~40 GB of pixel values (one native front3 frame is ~76 MB of them). Batch 4 is
+the default; raise the batch only together with fewer workers or a smaller prefetch.
+
+**Default: `front3`, three cameras in one forward, native pixels.** The choice is not about speed. Joint and
+per-camera forwards are within ~25% of each other in both directions across runs, for a clear reason: the joint
+pass does 3x the self-attention work of the three separate passes together (3060 tokens instead of 3 x 1020),
+and the separate passes do 3x the kernel launches, so which wins depends on how loaded the card is. What is not
+close is that per-camera **triples the stored features** (141 KB vs 47 KB a frame) and throws away the
+cross-camera attention, which is the only reason to hand the model the side views at all. Dropping to the front
+camera alone is 2-3x cheaper, but that is an ablation, not a default: the side views are what the turning
+frames need, and turning frames are where the ego-only baselines above are weakest. `--long-side 800` is the
+cheap fallback -- 0.6x the time for exactly the same stored bytes -- if the full extraction turns out not to fit.
+
+Extrapolated to the whole dataset -- **~726 k frames** (val 107 k, train ~414 k, test ~205 k, from the 2.27 MB
+of raw bytes per frame that both the val and test shards show), at 47 KB of float16 features per frame and
+127-216 ms a frame:
+
+| Part | frames | GPU time at the default | features |
+|---|---:|---:|---:|
+| val, every frame | 107 k | 3.8 - 6.4 h | 5.0 GB |
+| train, every frame | 414 k | 14.6 - 24.8 h | 19.4 GB |
+| test, every frame | 205 k | 7.2 - 12.3 h | 9.6 GB |
+| test, only the 1 505 submission frames | 1.5 k | ~4 min | 0.07 GB |
+| **whole dataset** | **726 k** | **26 - 44 h** | **34 GB** |
+
+So the feature cache is not a storage problem at all, and one pass over everything is one to two days of a
+shared GPU. Two obvious savings if that is too much: extract test only for the submission frames and their
+history, and subsample train (every 5th index is 2 Hz and cuts it to 3 - 5 h).
 
 ### Submission
 
