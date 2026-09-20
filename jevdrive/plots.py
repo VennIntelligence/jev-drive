@@ -98,3 +98,39 @@ def run(res: pd.DataFrame, out_dir, best: str, k_ref: int):
     layer_curve(res, out_dir, k_ref)
     k_sweep(res, out_dir, best)
     return [out_dir / f"{n}.png" for n in ("layer_curve", "k_sweep")]
+
+
+def probe_layer_curve(res: pd.DataFrame, out_dir, protocol: str = "kfold"):
+    """Turn-probe NLL against Qwen decoder depth, for every input width, next to the baselines.
+    Left: all samples. Right: the hard subset (the ego is not turning yet), where vision has to do the work.
+    """
+    r = res[res.protocol == protocol]
+    wide = r.pivot_table(index="set", columns="subset", values="nll")
+    line = lambda name: wide.loc[name] if name in wide.index else None  # noqa: E731
+    with mpl.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.1))
+        for ax, subset in zip(axes, ("all", "hard")):
+            for width, ls in (("qwen", "-"), ("qwen_w800", "--")):
+                for pool in ("mean", "last"):
+                    q = wide[wide.index.str.fullmatch(rf"{width}/L\d+_{pool}")].copy()
+                    if not len(q):
+                        continue
+                    layer = q.index.str.extract(r"/L(\d+)_")[0].astype(int)
+                    q = q.assign(layer=layer.to_numpy()).sort_values("layer")
+                    ax.plot(q.layer, q[subset], ls, marker="o", color=COLOR[f"qwen_{pool}"],
+                            label=f"Qwen {pool}-pooled, {'1600' if width == 'qwen' else '800'} px")
+            for name, key, c, ls in (("Qwen ViT output", "qwen/vis_mean", COLOR["vision"], "--"),
+                                     ("DINOv2 patch mean", "dinov2/patch_mean", COLOR["dinov2"], "--"),
+                                     ("ego state only", "ego", COLOR["baseline"], ":"),
+                                     ("majority class", "majority", COLOR["baseline"], "-.")):
+                v = line(key)
+                if v is not None:
+                    ax.axhline(v[subset], color=c, ls=ls, label=name)
+            ax.set_xlabel("Qwen3-VL decoder layer")
+            ax.set_title("all samples" if subset == "all" else "hard subset (not turning yet)", fontsize=8)
+            ax.grid(True, axis="y")
+        axes[0].set_ylabel("turn NLL (nats, lower is better)")
+        axes[1].set_ylabel("turn NLL (nats)")
+        axes[0].legend(loc="upper center", ncol=2, fontsize=5.5)
+        save(fig, out_dir, "probe_layer_curve")
+    return out_dir / "probe_layer_curve.png"
