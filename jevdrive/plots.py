@@ -58,7 +58,8 @@ def layer_curve(res: pd.DataFrame, out_dir, k_ref: int):
                          f"{f' (K = {k_ref})' if head == 'cls' else ''}", fontsize=8)
             ax.grid(True, axis="y")
         axes[0].set_ylabel("ADE at 3 s (m)")
-        axes[0].legend(loc="upper right", ncol=1)
+        h, l = axes[0].get_legend_handles_labels()  # one legend under both panels: inside, it covers L19-L31
+        fig.legend(h, l, loc="upper center", bbox_to_anchor=(0.5, 0.02), ncol=len(l), columnspacing=1.2)
         save(fig, out_dir, "layer_curve")
 
 

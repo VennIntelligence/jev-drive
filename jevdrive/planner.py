@@ -398,16 +398,21 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     res = pd.DataFrame(rows)
     pairs = paired(per_sample, scenes_val, best, k_ref)
     pairs.to_csv(out_dir / "paired.csv", index=False)
+    keys = [("const_turn_rate", "-", 0), ("ridge", "ego", 0), ("cls", "ego", k_ref), ("ridge", best, 0),
+            ("cls", best, k_ref), ("ridge_late", best + "+ego", 0), ("cls_late", best + "+ego_late", k_ref),
+            ("oracle", "-", k_ref)]
+    sub = by_subset(per_sample, subsets(lab, sp.val), scenes_val, keys)
+    sub.to_csv(out_dir / "subsets.csv", index=False)
     res.to_csv(out_dir / "results.csv", index=False)
     np.savez_compressed(out_dir / "per_sample.npz", scenes=scenes_val,
                         **{"|".join(map(str, k)) + "|" + m: v for k, d in per_sample.items() for m, v in d.items()})
-    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref, pairs))
+    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref, pairs, sub))
     try:
         from . import plots  # matplotlib comes in with nuscenes-devkit; a broken figure must not lose the table
         plots.run(res, out_dir, best, k_ref)
     except Exception as e:  # noqa: BLE001
         log.warning("figures failed: %s", e)
-    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref, pairs))
+    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref, pairs, sub))
     if rl is not None:
         for r in res.to_dict("records"):
             rl.event("planner_result", **r)
@@ -416,6 +421,35 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
             bb, feat = r["features"].split("/")
             rl.scalar(f"planner_ade/{bb}_{feat[4:]}", r["ade"], int(feat[1:3]))
     return res
+
+
+SUBSETS = ("all", "turning", "onset", "straight")
+
+
+def subsets(lab: pd.DataFrame, rows: np.ndarray) -> dict[str, np.ndarray]:
+    """Masks over the evaluated rows. The ego-state prior is strong on nuScenes exactly because most frames
+    continue what the car is already doing, so the visual increment has to show up where it does not:
+    `turning` is a turn within the horizon (labels.py, |yaw change| > 5 deg) and `onset` is the subset of
+    those where the car is not turning yet (|yaw rate now| < 1 deg/s), i.e. the manoeuvre has not started."""
+    turn, hard = lab.label.to_numpy()[rows] != 1, lab.hard.to_numpy()[rows]
+    return {"all": np.ones(len(rows), bool), "turning": turn, "onset": turn & hard, "straight": ~turn}
+
+
+def by_subset(per_sample: dict, masks: dict[str, np.ndarray], scenes: np.ndarray, keys) -> pd.DataFrame:
+    """The headline metrics of `keys` again, on each subset, with the same scene bootstrap."""
+    out = []
+    for k in keys:
+        if k not in per_sample:
+            continue
+        m = per_sample[k]
+        for name, sel in masks.items():
+            r = {"head": k[0], "features": k[1], "K": k[2], "subset": name, "n": int(sel.sum())}
+            for c in ("miss", "ade", "fde"):
+                if c in m:
+                    lo, hi = traj.boot_ci(m[c][sel], scenes[sel])
+                    r |= {c: m[c][sel].mean(), f"{c}_lo": lo, f"{c}_hi": hi}
+            out.append(r)
+    return pd.DataFrame(out)
 
 
 def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int) -> pd.DataFrame:
@@ -456,7 +490,8 @@ def _tab(df: pd.DataFrame, index) -> str:
     return t.to_markdown(floatfmt=".3f")
 
 
-def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | None = None) -> str:
+def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | None = None,
+                sub: pd.DataFrame | None = None) -> str:
     head, feat = res["head"], res["features"]
     main = feat.isin((best, best + "+ego", best + "+ego_late", "ego", "-")) & res.K.isin((0, k_ref))
     out = [f"n = {int(res.n.iloc[0])} val samples; reference feature set `{best}`, reference K = {k_ref}. "
@@ -482,6 +517,14 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | 
                    + t.set_index("comparison")[["from", "to", "miss_from", "miss_to", "dmiss [95 % CI]",
                                                 "ade_from", "ade_to", "dADE [95 % CI]"]]
                    .to_markdown(floatfmt=".3f") + "\n")
+    if sub is not None and len(sub):
+        w = sub.pivot_table(index=["head", "features"], columns="subset", values=["miss", "ade"], sort=False)
+        w = w[[(m, s) for m in ("miss", "ade") for s in SUBSETS if (m, s) in w]]
+        n = sub.groupby("subset", sort=False)["n"].first()
+        out.append("### By subset (n: " + ", ".join(f"{k} {v}" for k, v in n.items())
+                   + ")\n\nThe ego-state prior is strong where the car simply continues; `onset` is the "
+                     "subset where a turn has not started yet, which is where vision has to pay off.\n\n"
+                   + w.to_markdown(floatfmt=".3f") + "\n")
     return "\n".join(out)
 
 
