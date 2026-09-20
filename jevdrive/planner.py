@@ -43,7 +43,7 @@ LAM_CLS = np.logspace(-6, 1, 8)  # L2 on the mean cross-entropy
 SOFT_M, SOFT_TAU = 5, 0.5  # soft target: m nearest anchors, softmax(-RMS displacement / tau metres)
 PCA_DIM, INNER_FRAC = 64, 0.2
 HIDDEN, DROPOUT, MLP_EPOCHS, MLP_BS, MLP_LR, MLP_WD = 512, 0.1, 40, 512, 1e-3, 1e-2
-MAX_ITER, MAX_BATCH_PARAMS = 600, 6e7  # L-BFGS iterations, and parameters solved in one batch
+MAX_ITER, LBFGS_COPIES = 600, 26  # L-BFGS iterations; float32 copies of the parameters it keeps
 TOPK = (1, 5, 10)
 CI_COLS = ("ade", "fde")
 COLS = ["ade", "fde", "ade@1s", "fde@1s", "ade@2s", "fde@2s", "minade1", "minade5", "minade10", "minfde10"]
@@ -109,13 +109,16 @@ def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarr
     """Multinomial logistic regression over K anchors on `rows`: mean cross-entropy to the (possibly soft)
     target `tgt` = (anchor ids (n, m), weights (n, m)) plus lam/2 |W|^2, every lam in as few batches as fit."""
     d, n, D = X.shape[1], len(rows), (X.shape[1] + 1) * K
-    Xr, group = X[rows].contiguous(), max(1, int(MAX_BATCH_PARAMS // D))
+    Xr = X[rows].contiguous()
+    # L-BFGS keeps ~LBFGS_COPIES float32 copies of every problem's parameters (history m = 10, iterate,
+    # gradients): batch as many lambdas as half the free VRAM holds, so K = 8192 still solves in one or two go.
+    group = max(1, min(len(lams), int(0.5 * torch.cuda.mem_get_info()[0] // (LBFGS_COPIES * 4 * D))))
     ti = torch.as_tensor(tgt[0][rows], device=DEV, dtype=torch.long)
     tw = torch.as_tensor(tgt[1][rows], device=DEV, dtype=torch.float32)
     out, iters = [], []
     for g in range(0, len(lams), group):
         lam = torch.as_tensor(np.asarray(lams[g:g + group], np.float32), device=DEV)
-        chunk = max(256, int(2**25 // (len(lam) * K)))
+        chunk = max(256, int(2**27 // (len(lam) * K)))
 
         def fun(v, ids, lam=lam, chunk=chunk):
             p = len(ids)
