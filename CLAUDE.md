@@ -33,15 +33,6 @@ Written for people to read and discuss. Full rules: [research/README.md](researc
   each followed by 1-3 sentences saying what to look at.
 
 ## Before a long run
-- Estimate wall time first. Anything above ~3 h gets a profiling pass before it starts: measure on a
-  subset, find the actual bottleneck (disk, RAM, CPU, GPU compute, GPU memory, network), then tune for it.
-- Tune the defaults for our box, not for a generic machine: batch size, DataLoader workers, prefetch,
-  dtype, chunk sizes. Derive limits at runtime (`jevdrive.common.n_cpus()`, free VRAM, free disk) so the
-  code still runs elsewhere, but leave OUR best values as the defaults.
-- Verify the optimized code gives the same results (numerical equivalence on a subset), then record the
-  before/after numbers and the bottleneck in the run's todo.
-
-## Before a long run
 Applies to OUR code only. Third-party libraries and other people's reproduction or baseline code are run
 as they ship: measure them, do not rewrite them.
 - Estimate wall time first. Anything above ~3 h gets a profiling pass before it starts: measure on a
