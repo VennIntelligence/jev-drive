@@ -396,12 +396,13 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     torch.cuda.empty_cache()
 
     res = pd.DataFrame(rows)
-    pairs = paired(per_sample, scenes_val, best, k_ref)
+    masks = subsets(lab, sp.val)
+    pairs = paired(per_sample, scenes_val, best, k_ref, masks)
     pairs.to_csv(out_dir / "paired.csv", index=False)
     keys = [("const_turn_rate", "-", 0), ("ridge", "ego", 0), ("cls", "ego", k_ref), ("ridge", best, 0),
             ("cls", best, k_ref), ("ridge_late", best + "+ego", 0), ("cls_late", best + "+ego_late", k_ref),
             ("oracle", "-", k_ref)]
-    sub = by_subset(per_sample, subsets(lab, sp.val), scenes_val, keys)
+    sub = by_subset(per_sample, masks, scenes_val, keys)
     sub.to_csv(out_dir / "subsets.csv", index=False)
     res.to_csv(out_dir / "results.csv", index=False)
     np.savez_compressed(out_dir / "per_sample.npz", scenes=scenes_val,
@@ -452,10 +453,13 @@ def by_subset(per_sample: dict, masks: dict[str, np.ndarray], scenes: np.ndarray
     return pd.DataFrame(out)
 
 
-def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int) -> pd.DataFrame:
-    """The comparisons the write-up has to make, as paired differences of per-sample ADE with a scene
-    bootstrap. Paired is the right test here: the same val frames go through both heads, so the scene-to-scene
-    variance that dominates each mean cancels."""
+def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int,
+           masks: dict[str, np.ndarray] | None = None) -> pd.DataFrame:
+    """The comparisons the write-up has to make, as paired differences of per-sample metrics with a scene
+    bootstrap, on every subset. Paired is the only right test here: the same val frames go through both
+    heads, so the scene-to-scene variance that dominates each mean cancels, and two overlapping per-row
+    intervals say nothing about whether the difference is real. Every claim we make cites a row of this
+    table, not two rows of the CI table."""
     comparisons = [
         ("what one frame of vision buys, with no ego state", ("mean_traj", "-", 0), ("ridge", best, 0)),
         ("what the current ego state buys over CTRV", ("const_turn_rate", "-", 0), ("ridge", "ego", 0)),
@@ -471,17 +475,17 @@ def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int) -> pd.Da
     for what, a, b in comparisons:
         if a not in per_sample or b not in per_sample:
             continue
-        d = per_sample[b]["ade"] - per_sample[a]["ade"]
-        lo, hi = traj.boot_ci(d, scenes)
-        r = {"comparison": what, "from": f"{a[0]} {a[1]}", "to": f"{b[0]} {b[1]}",
-             "ade_from": per_sample[a]["ade"].mean(), "ade_to": per_sample[b]["ade"].mean(),
-             "delta": d.mean(), "lo": lo, "hi": hi}
-        if "miss" in per_sample[a] and "miss" in per_sample[b]:
-            dm = per_sample[b]["miss"] - per_sample[a]["miss"]
-            r |= {"miss_from": per_sample[a]["miss"].mean(), "miss_to": per_sample[b]["miss"].mean(),
-                  "dmiss": dm.mean(), "miss_lo": traj.boot_ci(dm, scenes)[0],
-                  "miss_hi": traj.boot_ci(dm, scenes)[1]}
-        out.append(r)
+        for name, sel in (masks or {"all": np.ones(len(scenes), bool)}).items():
+            r = {"comparison": what, "subset": name, "n": int(sel.sum()),
+                 "from": f"{a[0]} {a[1]}", "to": f"{b[0]} {b[1]}"}
+            for c in ("miss", "ade"):
+                if c not in per_sample[a] or c not in per_sample[b]:
+                    continue
+                x, y = per_sample[a][c][sel], per_sample[b][c][sel]
+                lo, hi = traj.boot_ci(y - x, scenes[sel])
+                r |= {f"{c}_from": x.mean(), f"{c}_to": y.mean(), f"d{c}": (y - x).mean(),
+                      f"d{c}_lo": lo, f"d{c}_hi": hi}
+            out.append(r)
     return pd.DataFrame(out)
 
 
@@ -509,14 +513,22 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | 
                + ci.set_index(["head", "features"])[["ADE", "FDE"]].to_markdown() + "\n")
     if pairs is not None and len(pairs):
         t = pairs.assign(**{"dADE [95 % CI]": lambda d: d.apply(
-            lambda r: f"{r.delta:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]", axis=1),
+            lambda r: f"{r.dade:+.3f} [{r.dade_lo:+.3f}, {r.dade_hi:+.3f}]", axis=1),
             "dmiss [95 % CI]": lambda d: d.apply(
-                lambda r: f"{r.dmiss:+.3f} [{r.miss_lo:+.3f}, {r.miss_hi:+.3f}]"
+                lambda r: f"{r.dmiss:+.3f} [{r.dmiss_lo:+.3f}, {r.dmiss_hi:+.3f}]"
                 if pd.notna(r.get("dmiss", np.nan)) else "", axis=1)})
+        cols = ["miss_from", "miss_to", "dmiss [95 % CI]", "ade_from", "ade_to", "dADE [95 % CI]"]
+        a = t[t.subset == "all"]
         out.append("### Paired differences (same val frames, scenes resampled; negative = better)\n\n"
-                   + t.set_index("comparison")[["from", "to", "miss_from", "miss_to", "dmiss [95 % CI]",
-                                                "ade_from", "ade_to", "dADE [95 % CI]"]]
-                   .to_markdown(floatfmt=".3f") + "\n")
+                   "Every claim cites a row here. Two overlapping per-row intervals in the table above do "
+                   "not settle a paired comparison.\n\n"
+                   + a.set_index("comparison")[["from", "to"] + cols].to_markdown(floatfmt=".3f") + "\n")
+        m = t[t.subset != "all"]
+        if len(m):
+            out.append("### The same paired differences on the manoeuvre subsets\n\nA small subset makes "
+                       "the interval wide, not the difference absent: read the width before the sign.\n\n"
+                       + m.set_index(["comparison", "subset"])[["n"] + cols].to_markdown(floatfmt=".3f")
+                       + "\n")
     if sub is not None and len(sub):
         w = sub.pivot_table(index=["head", "features"], columns="subset", values=["miss", "ade"], sort=False)
         w = w[[(m, s) for m in ("miss", "ade") for s in SUBSETS if (m, s) in w]]

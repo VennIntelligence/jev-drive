@@ -26,6 +26,9 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 
 ## Research notes (`research/`, `todos/`)
 Written for people to read and discuss. Full rules: [research/README.md](research/README.md).
+- Results land in [research/decisions.md](research/decisions.md) as they arrive, not when the experiment
+  is finally over. A wrong entry is corrected in place - say what it used to claim and why it changed -
+  never left standing with a new paragraph appended under it. Evidence getting weaker demotes an entry.
 - Chinese natural-language prose, not keyword dumps. Technical terms stay in English.
 - Gloss every term on its first use in each doc, in one short clause; use it bare after that.
 - Show comparisons and results as tables. Use figures where a trend or distribution matters.
