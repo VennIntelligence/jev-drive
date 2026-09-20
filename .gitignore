@@ -40,3 +40,6 @@ tmp/
 
 # Deep research reports: large, externally generated, kept on disk only
 research/lit/
+
+# Figures: only the PNG is committed, the PDF stays local (research/README.md)
+research/figs/**/*.pdf
