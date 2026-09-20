@@ -723,6 +723,82 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
     return meta
 
 
+def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None = None, batch_size: int = 4,
+                        workers: int | None = None, splits=("val",), n_layer_probes: int = 4, rl=None,
+                        compile: bool = True, shards: list[str] | None = None, rows=None) -> dict:
+    """Frozen features one input shard at a time, into `features/<set>/<shard>/`.
+
+    `extract_features` writes one dense array for the whole selection, so a partial run cannot be resumed and
+    two partial runs cannot be merged -- which forces the download to finish before extraction can start.
+    Here each shard is a unit: its own arrays, its own index.parquet and its own meta.json, written only once
+    the shard is done. A shard already carrying meta.json is skipped, so this can be re-run as shards land, a
+    crash costs one shard, and the full-split run starts from whatever is already built.
+    `rows` optionally restricts to a subset of the index (the frames a measurement needs).
+    """
+    df = load_index()
+    df = df[df.split.isin(splits)]
+    if rows is not None:
+        df = df.loc[df.index.intersection(np.asarray(rows))]
+    name = set_name(cams, separate, long_side)
+    root = out_dir("features", name)
+    todo = sorted(shards if shards is not None else df.shard.unique())
+    todo = [sh for sh in todo if not (root / str(sh) / "meta.json").exists()]
+    log.info("%s: %d shards to extract, %d already done", name, len(todo),
+             df.shard.nunique() - len(todo))
+    if not todo:
+        return {"set": name, "shards_done": 0}
+
+    from . import features as F
+    fx = F.QwenFeatures(n_layer_probes=n_layer_probes, long_side=long_side,
+                        n_images=1 if separate else len(cams), compile=compile)
+    done, t0 = [], time.perf_counter()
+    for sh in todo:
+        part = df[df.shard == sh]
+        items, idx = feature_items(part, cams, separate)
+        dst = root / str(sh)
+        dst.mkdir(parents=True, exist_ok=True)
+        stats = F.extract(fx, items, batch_size, max(1, n_cpus() // 2) if workers is None else workers,
+                          dst, rl, f"waymo/{name}/{sh}", dataset=Shards)
+        idx.to_parquet(dst / "index.parquet", index=False)
+        (dst / "meta.json").write_text(json.dumps(
+            {"set": name, "shard": str(sh), "cams": list(cams), "separate": separate,
+             "long_side": long_side, "tokens_per_forward": int(fx.n_image_tokens), **stats}, indent=2))
+        done.append(sh)
+        log.info("%s/%s: %d rows, %.1f ms/frame (%d/%d shards)", name, sh, stats["n"],
+                 stats["ms_per_frame"] * (len(cams) if separate else 1), len(done), len(todo))
+    del fx
+    F.free_gpu()
+    return {"set": name, "shards_done": len(done), "seconds": time.perf_counter() - t0}
+
+
+def load_features(name: str, arrays: list[str] | None = None, rows=None):
+    """Concatenate a shard-keyed feature set back into (index, {array: (n, d) float16}).
+
+    Shards are read in sorted order and the returned index carries the global `row`, so alignment with
+    load_index() is by that column and never by position. With `rows`, only those global rows are kept.
+    """
+    root = out_dir("features", name)
+    parts = sorted(d for d in root.iterdir() if d.is_dir() and (d / "meta.json").exists())
+    if not parts:
+        raise FileNotFoundError(f"no completed shards under {root}")
+    idx = pd.concat([pd.read_parquet(d / "index.parquet").assign(shard=d.name) for d in parts],
+                    ignore_index=True)
+    names = arrays or sorted(p.stem for p in parts[0].glob("*.npy"))
+    keep = np.ones(len(idx), bool) if rows is None else np.isin(idx.row.to_numpy(), np.asarray(rows))
+    out = {}
+    for a in names:
+        blocks, off = [], 0
+        for d in parts:
+            n = len(pd.read_parquet(d / "index.parquet", columns=["row"]))
+            m = keep[off:off + n]
+            if m.any():
+                blocks.append(np.load(d / f"{a}.npy", mmap_mode="r")[m])
+            off += n
+        out[a] = np.concatenate(blocks) if blocks else np.zeros((0, 0), np.float16)
+    log.info("%s: %d shards, %d rows, arrays %s", name, len(parts), int(keep.sum()), names)
+    return idx[keep].reset_index(drop=True), out
+
+
 # ---------------------------------------------------------------- challenge submission
 
 SUBMISSION_META = {"account_name": "", "unique_method_name": "", "authors": [], "affiliation": "",
@@ -949,7 +1025,7 @@ def check(n: int = 64) -> None:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=("index", "report", "check", "features", "bench"))
+    ap.add_argument("cmd", choices=("index", "report", "check", "features", "features_inc", "bench"))
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--force", action="store_true", help="index: rescan every shard")
     ap.add_argument("--cams", default="front3", choices=("front3", "front"))
@@ -972,6 +1048,8 @@ def main():
         check()
     elif a.cmd == "features":
         extract_features(limit=a.limit, **kw)
+    elif a.cmd == "features_inc":  # one shard at a time, resumable: run it again as more shards land
+        print(json.dumps(extract_incremental(**kw), indent=2))
     elif a.cmd == "bench":
         from .runlog import RunLog
         rl, rows = RunLog("waymo", "bench"), []
