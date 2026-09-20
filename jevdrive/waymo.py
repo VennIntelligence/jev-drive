@@ -353,6 +353,8 @@ class Shards:
     """Dataset over slim shards: pread the JPEG byte spans the index recorded, decode, hand to fx.transform.
     No protobuf and no full-record read in the DataLoader workers."""
 
+    MAX_FDS = 16  # items are ordered by shard, so a worker only needs the few it is currently reading
+
     def __init__(self, items, transform):
         from PIL import Image
         self.items, self.transform, self.fds, self._open = items, transform, {}, Image.open
@@ -364,23 +366,30 @@ class Shards:
         path, spans = self.items[i]
         fd = self.fds.get(path)
         if fd is None:
+            if len(self.fds) >= self.MAX_FDS:
+                os.close(self.fds.pop(next(iter(self.fds))))
             fd = self.fds[path] = os.open(path, os.O_RDONLY)
         return self.transform([self._open(io.BytesIO(os.pread(fd, n, o))).convert("RGB") for o, n in spans])
 
 
 def feature_items(df: pd.DataFrame, cams=CAMS, separate: bool = False) -> tuple[list, pd.DataFrame]:
     """(items for `Shards`, row index). One item per frame, or -- with `separate` -- one per (frame, camera),
-    so that each camera gets its own forward pass and its own feature row."""
+    so that each camera gets its own forward pass and its own feature row. Items are ordered by (shard, offset):
+    the DataLoader hands each worker a strided run of them, so every worker reads one shard forwards at a time.
+    `index.parquet` carries the frame name and the row into the global index, so the order costs nothing."""
+    df = df.sort_values(["shard", "rec_off"], kind="stable")
     shard = (shard_dir().as_posix() + "/" + df.shard.astype(str)).to_numpy()
+    row_of = df.index.to_numpy()
+    df = df.reset_index(drop=True)
     spans = {c: df[[f"{c}_off", f"{c}_len"]].to_numpy() for c in cams}
     if separate:
         items = [(shard[i], [tuple(spans[c][i])]) for i in range(len(df)) for c in cams]
-        idx = pd.DataFrame({"row": np.repeat(np.arange(len(df)), len(cams)), "cam": list(cams) * len(df)})
+        idx = pd.DataFrame({"row": np.repeat(row_of, len(cams)), "cam": list(cams) * len(df)})
     else:
         items = [(shard[i], [tuple(spans[c][i]) for c in cams]) for i in range(len(df))]
-        idx = pd.DataFrame({"row": np.arange(len(df)), "cam": ",".join(cams)})
+        idx = pd.DataFrame({"row": row_of, "cam": ",".join(cams)})
     name = (df.sequence.astype(str) + "-" + df.frame.map("{:03d}".format)).to_numpy()
-    idx.insert(0, "frame_name", name[idx.row])
+    idx.insert(0, "frame_name", np.repeat(name, len(cams)) if separate else name)
     return items, idx
 
 
@@ -396,7 +405,7 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
     Layout matches processed/nuscenes/<version>/features/<set>/: <name>.npy float16 + index.parquet + meta.json."""
     from . import features as F
     df = load_index()
-    df = df[df.split.isin(splits)].reset_index(drop=True)
+    df = df[df.split.isin(splits)]          # keep the index: `row` in index.parquet is the global frame row
     if limit:
         df = df.iloc[:limit]
     items, idx = feature_items(df, cams, separate)
@@ -497,10 +506,13 @@ def read_submission(path) -> tuple[list[str], np.ndarray, dict]:
 # ---------------------------------------------------------------- reports and checks
 
 def report(df=None, past=None, future=None) -> dict:
+    """Print, and keep in processed/waymo_e2e/report/, what the downloaded shards currently say."""
     df = load_index() if df is None else df
     past, future = load_ego() if past is None else (past, future)
     seq, hist = sequence_stats(df), history_report(df)
     base = baseline_table(df, past, future)
+    for k, t in (("sequences", seq), ("history", hist), ("baselines", base)):
+        t.to_csv(out_dir("report") / f"{k}.csv", index=False)
     log.info("sequences:\n%s", seq.to_string(index=False))
     log.info("intent x split:\n%s", pd.crosstab(df.split, df.intent.map(dict(enumerate(INTENTS))), margins=True))
     log.info("image-history completeness (share of frames whose whole window resolves):\n%s",
@@ -603,22 +615,27 @@ def main():
         extract_features(limit=a.limit, **kw)
     elif a.cmd == "bench":
         from .runlog import RunLog
-        rl = RunLog("waymo", "bench")
-        rows = []
-        for cs, sep in ((CAMS, False), (CAMS, True), (("front",), False)):
+        rl, rows = RunLog("waymo", "bench"), []
+
+        def one(cs, sep, ls, bs):
+            m = extract_features(cams=cs, separate=sep, long_side=ls, batch_size=bs, workers=a.workers,
+                                 limit=a.limit or 96, splits=tuple(a.splits.split(",")), save=False, rl=rl,
+                                 compile=not a.no_compile)
+            per_frame = len(cs) if sep else 1        # a sample is one forward; a frame may need three of them
+            rows.append({**m, "ms_per_frame": m["ms_per_frame"] * per_frame,
+                         "frames_per_s": m["frames_per_s"] / per_frame,
+                         "bytes_per_frame": m["bytes_per_sample"] * per_frame})
+            rl.event("bench", **{k: v for k, v in rows[-1].items() if not isinstance(v, list)})
+
+        for cs, sep in ((CAMS, False), (CAMS, True), (("front",), False)):   # which input, at one batch size
             for ls in (None, 800):
-                m = extract_features(cams=cs, separate=sep, long_side=ls, batch_size=a.batch_size,
-                                     workers=a.workers, limit=a.limit or 96, splits=tuple(a.splits.split(",")),
-                                     save=False, rl=rl, compile=not a.no_compile)
-                per_frame = len(cs) if sep else 1        # a "sample" is one forward, a frame may need three
-                rows.append({**m, "ms_per_frame": m["ms_per_frame"] * per_frame,
-                             "frames_per_s": m["frames_per_s"] / per_frame,
-                             "bytes_per_frame": m["bytes_per_sample"] * per_frame})
-                rl.event("bench", **{k: v for k, v in rows[-1].items() if not isinstance(v, list)})
+                one(cs, sep, ls, a.batch_size)
+        for bs in (1, 2, 8, 16):                                             # batch size, on the default input
+            one(CAMS, False, None, bs)
         (rl.dir / "bench.json").write_text(json.dumps(rows, indent=2, default=float))
-        log.info("feature-extraction bench (per frame, batch %d):\n%s", a.batch_size,
-                 pd.DataFrame(rows)[["set", "tokens_per_frame", "ms_per_frame", "frames_per_s", "peak_vram_gb",
-                                     "bytes_per_frame"]].round(2).to_string(index=False))
+        log.info("feature-extraction bench (per frame):\n%s",
+                 pd.DataFrame(rows)[["set", "batch_size", "tokens_per_frame", "ms_per_frame", "frames_per_s",
+                                     "peak_vram_gb", "bytes_per_frame"]].round(2).to_string(index=False))
         rl.close()
 
 

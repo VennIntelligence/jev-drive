@@ -369,6 +369,11 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     np.savez_compressed(out_dir / "per_sample.npz", scenes=scenes_val,
                         **{"|".join(map(str, k)) + "|" + m: v for k, d in per_sample.items() for m, v in d.items()})
     (out_dir / "results.md").write_text(to_markdown(res, best, k_ref))
+    try:
+        from . import plots  # matplotlib comes in with nuscenes-devkit; a broken figure must not lose the table
+        plots.run(res, out_dir, best, k_ref)
+    except Exception as e:  # noqa: BLE001
+        log.warning("figures failed: %s", e)
     log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref))
     if rl is not None:
         for r in res.to_dict("records"):
