@@ -260,14 +260,16 @@ navsim 走 hf-mirror 是国内线路，单连接就很稳；Waymo 走 direct 到
 gcloud 刷 OAuth token 也只能走代理，token 一过期，Waymo 下载连续传都做不了，必须先续费。
 **从 box 上读不到剩余流量**：`~/data/clash/config.yaml` 里是静态节点列表，没有订阅 URL，
 所以拿不到 `subscription-userinfo` 头。mihomo 自己的计数（`127.0.0.1:9090/connections`）只有本次启动以来的用量，
-2026-09-20 11:40 时是 down 10.9 GB。**剩余流量要人去机场面板看**，做 train 的决定前必须先看一眼。
+2026-09-20 11:40 时是 down 10.9 GB。**订阅总量是 1 TB**（用户 2026-09-20 确认）。算一下：val 这次约 227 GB，之后还剩约 770 GB。
+这个数字直接否掉了下面的选项 B——全量 train 走代理要 1.2 TB，**装不下**。
+选项 C（约 460 GB）走代理装得下，但会吃掉剩余流量的六成。做 train 决定前再确认一次当时的余额。
 
 **Waymo train 的计划（2026-09-20 定，等 val 落地后再决定，三个选项并列，不要只在其中两个里挑）**：
 
 | 选项 | 数据量 | 时间 | 代价 |
 |---|---|---|---|
 | A. 全量 train 走 direct | 原始 1.2 TB，slim 后约 520 GB | 独占带宽约 22 h | 不烧代理流量；但 direct 在有竞争时会被压到 1 MB/s 级别 |
-| B. 全量 train 走代理 | 同上 | 约 55 h（按 6.2 MB/s） | **1.2 TB 代理流量**，是 val 那次的五倍多 |
+| B. 全量 train 走代理 | 同上 | 约 55 h（按 6.2 MB/s） | **不可行**：要 1.2 TB 代理流量，超过 1 TB 的订阅总量 |
 | C. 部分 train 走 direct | 约 100 个 shard、原始 460 GB | 独占带宽约 9 h | 数据少，但薄 head 大概率够用 |
 
 选项 C 来自 b5：head 只是 frozen feature 上的线性层或浅 MLP，feature 在 2 Hz 上抽，
