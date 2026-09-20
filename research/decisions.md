@@ -249,6 +249,13 @@ Waymo train 要等 val 完成后再确认，test 最后（提交限制是每 30 
 **理由**：box 的总下行带宽只有约 12–18 MB/s，所有任务共享。并行跑的时候 Waymo 只有 1.3 MB/s，
 ETA 336 小时；串行之后单个任务能拿到约 10–16 MB/s。
 
+**2026-09-20 11:30 再修订：Waymo 改走 Clash 代理。** 并行之后实测发现「各拿一半」不成立：
+navsim 走 hf-mirror 是国内线路，单连接就很稳；Waymo 走 direct 到 GCS 是丢包的跨境线路，抢不过，
+实测 navsim 4.65 / Waymo 1.16 MB/s，val ETA 44 h，比串行还慢。把 navsim 并发从 8 降到 3 没用（1.31）。
+改成 `--route proxy --streams 16` 后 Waymo 到 6.2 MB/s，val ETA 约 9 h。
+**代价：val 的约 227 GB 要走代理订阅的流量**，用户明确拍板"时间最值钱"，接受这个代价。
+注意这条推翻了 `docs/waymo-e2e.md` 里"bulk data 不走 Clash 以免烧流量"的默认做法，属于一次性破例。
+
 **Waymo train 的计划（2026-09-20 定，等 val 落地后执行）**：等 val、small 下完且 navsim 也结束之后，
 让 train **独占带宽**跑一整天，不插进现在的并行里——再加一家会拖慢 val，而 val 是关键路径。
 按已下的 13 个 val shard 实测外推：train 约 263 个 shard、原始约 1.2 TB，slim 后约 520 GB（比例 0.441，
