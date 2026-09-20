@@ -365,15 +365,15 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     out.mkdir(parents=True, exist_ok=True)
     (out / "meta.json").unlink(missing_ok=True)
 
-    idx, items, ds = kf[["sample_token", "sd_token"]], kf.path, Frames
+    idx, items, ds, args = kf[["sample_token", "sd_token"]], kf.path, Frames, dict(kw)
     if backbone == "vjepa2":  # a clip per keyframe, from sweeps/CAM_FRONT
         cam = pd.read_parquet(processed_dir(version) / "cam_front.parquet")
-        items, full = clip_paths(kf, cam, kw.get("frames", CLIP_FRAMES), kw.pop("span", CLIP_SPAN))
+        items, full = clip_paths(kf, cam, kw.get("frames", CLIP_FRAMES), kw.get("span", CLIP_SPAN))
         idx, ds = idx.assign(clip_full=full), Clips
-        kw = {k: v for k, v in kw.items() if k != "span"}
+        args.pop("span", None)  # clip_paths' argument, not the model's; `kw` still carries it into meta
 
     t0 = time.perf_counter()
-    fx = BACKBONES[backbone](**kw)
+    fx = BACKBONES[backbone](**args)
     load_s = time.perf_counter() - t0
     stats = extract(fx, items, batch_size, workers, out, rl, f"features/{out.name}", dataset=ds)
     idx.to_parquet(out / "index.parquet")
