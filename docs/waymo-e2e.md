@@ -148,8 +148,11 @@ Sequences, on the shards downloaded so far:
 
 | split | shards | of | frames | sequences | frames/seq | frame min | frame max | gap = 1 | gap median | coverage |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| val | 12 | 93 | 13 759 | 479 | 28.7 | 0 | 238 | 0.136 | 5 | 0.138 |
+| val | 29 | 93 | 33 208 | 479 | 69.3 | 0 | 238 | 0.317 | 2 | 0.317 |
 | test | 1 | 266 | 738 | 580 | 1.3 | 8 | 149 | 0.006 | 35.5 | 0.099 |
+
+Every number below that depends on how much is downloaded is stamped **at 29 of 93 val shards**; rerun
+`scripts/waymo_prepare.sh` to refresh them.
 
 `coverage` is the share of the source 10 Hz grid that the downloaded shards hold, and `gap` is the step between
 consecutive indexed frames of one sequence. Coverage tracks `shards / of` almost exactly, which says that
@@ -204,14 +207,19 @@ windows. Never credit a model with history it was not shown.
 
 Completeness on the val shards present, and what the shortfall is made of:
 
-| n_back | stride | span | **complete** | span inside clip | missing shards | at full val | (old rule: within tol) |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 1 | 0.1 s | 0.1248 | 0.9998 | 0.8750 | 0.9998 | 0.1248 |
-| 1 | 5 | 0.5 s | 0.1140 | 0.9984 | 0.8845 | 0.9984 | 0.4582 |
-| 3 | 5 | 1.5 s | 0.0020 | 0.9761 | 0.9741 | 0.9761 | 0.1031 |
-| 3 | 10 | 3.0 s | 0.0017 | 0.9216 | 0.9200 | 0.9216 | 0.4023 |
-| 3 | 20 | 6.0 s | 0.0007 | 0.7813 | 0.7806 | 0.7813 | 0.6025 |
-| 7 | 5 | 3.5 s | 0.0000 | 0.8982 | 0.8982 | 0.8982 | 0.0047 |
+| n_back | stride | span | complete @ 12 shards | **complete @ 29 shards** | span inside clip | missing shards | at full val | (old rule: within tol) |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 1 | 0.1 s | 0.1248 | **0.3054** | 0.9999 | 0.6945 | 0.9999 | 0.3054 |
+| 1 | 5 | 0.5 s | 0.1140 | **0.2946** | 0.9993 | 0.7047 | 0.9993 | 0.8106 |
+| 3 | 5 | 1.5 s | 0.0020 | **0.0288** | 0.9766 | 0.9478 | 0.9766 | 0.5540 |
+| 3 | 10 | 3.0 s | 0.0017 | **0.0253** | 0.9211 | 0.8959 | 0.9211 | 0.8175 |
+| 3 | 20 | 6.0 s | 0.0007 | **0.0227** | 0.7859 | 0.7632 | 0.7859 | 0.7490 |
+| 7 | 5 | 3.5 s | 0.0000 | **0.0003** | 0.8991 | 0.8988 | 0.8991 | 0.2581 |
+
+The two `complete` columns are the attribution checking itself: 17 val shards landed between them, coverage
+went 0.138 -> 0.317, and single-slot completeness went 0.125 -> 0.305, tracking coverage almost exactly, while
+`span inside clip` did not move at all (0.9998 -> 0.9999). Completeness is a download property; the ceiling is
+geometry.
 
 **Which is which: essentially all of it is missing shards, none of it is clip geometry.** `span inside clip`
 -- the requested span lies within the index range the split is known to reach -- is 78-100%, and
@@ -221,17 +229,17 @@ on 92%, a 3.5 s seven-frame window on 90%, and a 6 s window on 78%. The clip onl
 where the target frame is too near the start of its clip.
 
 **The last column is the correction.** The earlier version of this table quoted "within tol" as completeness.
-It was crediting padding: at a 6 s span it claimed 0.603 where the strict answer is 0.0007, an 860x
-overstatement, and at 0.5 s it claimed 0.458 against 0.114. Those numbers should not have been reported as
-completeness and are kept here only to show the size of the error.
+It was crediting padding: at a 6 s span it now claims 0.749 where the strict answer is 0.0227, a 33x
+overstatement, and at 0.5 s 0.811 against 0.295. Those numbers should never have been reported as completeness
+and are kept only to show the size of the error.
 
 **Clip-set discipline.** When any row of a comparison table consumes image history, the **whole** table --
 ego-only rows included -- must be restricted to the strictly complete set, because a padded window did not see
 the history charged to it and rows scored on different frame sets are not comparable. `eval_set(df, split,
 clip=(n_back, stride))` is that restriction and `baseline_table` / `subset_table` take a `clip` argument.
-Today it leaves **1 649** val frames for a 1x5 window, **29** for 3x5 and **24** for 3x10, so
-**history-consuming experiments have to wait for more val shards**; the ego-only tables in this doc use no
-clip restriction and say so.
+At 29 shards it leaves **9 997** val frames for a 1x5 window, **978** for 3x5 and **858** for 3x10 -- enough
+for a first multi-frame run, and growing with every shard. The ego-only tables in this doc use no clip
+restriction, because no row in them consumes history.
 
 ### Targets and inputs
 
@@ -253,17 +261,17 @@ clip restriction and say so.
 logged future, in metres, on the 13 759 val frames downloaded so far:
 
 ADE@5s is also broken out per subset (`subsets()`), defined in the spirit of `jevdrive/labels.py` so the
-nuScenes and Waymo tables line up. Sizes: straight 11 693, left 1 046, right 1 020, turn by intent 2 066,
-already turning 1 436, straight 5 979, **pre-onset 226**.
+nuScenes and Waymo tables line up. Sizes: straight 28 333, left 2 449, right 2 426, turn by intent 4 875,
+already turning 3 434, straight 14 543, **pre-onset 489**.
 
 | baseline | ADE@3s | FDE@3s | ADE@5s | FDE@5s | straight | left | right | turn (intent) | already turning | straight | **pre-onset** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 | 6.96 | 12.47 | 20.96 | 11.48 |
-| cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 | 4.00 | 5.34 | 2.66 | 4.21 |
-| cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 | 3.98 | 5.30 | 2.67 | 4.22 |
-| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 | 4.17 | 5.44 | **2.12** | 3.98 |
-| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 | **2.92** | **4.28** | 2.67 | 4.19 |
-| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** | 2.95 | 4.41 | 2.13 | **3.95** |
+| zero (stand still) | 8.899 | 16.393 | 14.328 | 27.185 | 15.58 | 5.53 | 8.63 | 7.07 | 12.49 | 20.91 | 11.50 |
+| cv_vel (given velocity vector) | 1.159 | 2.941 | 2.809 | 7.330 | 2.59 | 3.19 | 5.01 | 4.09 | 5.47 | 2.66 | 4.25 |
+| cv (speed along the heading) | 1.162 | 2.948 | 2.815 | 7.342 | 2.60 | 3.17 | 4.99 | 4.08 | 5.43 | 2.67 | 4.25 |
+| ca (+ longitudinal acceleration) | 0.919 | 2.537 | 2.641 | 7.761 | 2.36 | 3.37 | 5.19 | 4.28 | 5.62 | **2.11** | 3.96 |
+| ctrv (constant turn rate) | 1.064 | 2.756 | 2.683 | **7.208** | 2.64 | **2.19** | 3.73 | **2.96** | **4.28** | 2.68 | 4.22 |
+| ctra (turn rate + acceleration) | **0.813** | **2.336** | **2.505** | 7.642 | 2.43 | 2.25 | **3.68** | 2.96 | 4.36 | 2.11 | **3.93** |
 
 **This ADE is against the logged future and is not the leaderboard's ADE** -- see the next section, where the
 same baselines are scored against the top-rated rater trajectory, which is how the official ADE is defined.
@@ -303,34 +311,38 @@ Thresholds, and what each leaves to score (`onset_sweep()`):
 
 | yaw rate < | bearing > | horizon | frames | share of val | rater-scored | at full val | turn intent |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| **1.0** | **5** | **3 s** | **226** | 1.6% | **2** | **14** | 0.56 |
-| 1.0 | 8 | 3 s | 125 | 0.9% | 1 | 7 | 0.82 |
-| 1.0 | 5 | 5 s | 446 | 3.2% | 3 | 21 | 0.34 |
-| 2.0 | 5 | 3 s | 358 | 2.6% | 2 | 14 | 0.53 |
-| 3.0 | 5 | 3 s | 461 | 3.4% | 3 | 21 | 0.50 |
-| 3.0 | 5 | 5 s | 861 | 6.3% | 5 | 35 | 0.30 |
+| **1.0** | **5** | **3 s** | **489** | 1.5% | **2** | **6** | 0.57 |
+| 1.0 | 8 | 3 s | 279 | 0.8% | 1 | 3 | 0.81 |
+| 1.0 | 5 | 5 s | 1 006 | 3.0% | 4 | 12 | 0.33 |
+| 1.0 | 12 | 5 s | 448 | 1.4% | 2 | 6 | 0.74 |
+| 2.0 | 5 | 3 s | 800 | 2.4% | 3 | 9 | 0.52 |
+| 2.0 | 8 | 3 s | 453 | 1.4% | 1 | 3 | 0.78 |
 
-**RFS cannot be reported on this subset, now or realistically ever.** Only 2 of the 68 rater-scored frames we
-hold fall in it, and scaling to a complete val split gives **14 frames at the default thresholds, 35 at the
+**RFS cannot be reported on this subset, now or realistically ever.** Only 2 of the 163 rater-scored frames we
+hold fall in it, and scaling to a complete val split gives **6 frames at the default thresholds, 12 at the
 loosest** -- because rater labels exist on exactly one frame per sequence and that frame is not chosen to be a
-pre-onset moment. So the pre-onset argument has to be made on **ADE**, where the subset is 226 frames today
-and about **1 750 at full val** (1.6% of 106 671). RFS stays the metric for the split as a whole.
+pre-onset moment. Going from 68 to 163 rater-scored frames did not add a single pre-onset one, which sharpened
+the projection from 14 to 6 rather than improving it. So the pre-onset argument has to be made on **ADE**,
+where the subset is 489 frames today and about **1 570 at full val** (1.5% of 106 671). RFS stays the metric
+for the split as a whole.
 
 The ADE version says the same thing the nuScenes recall number says:
 
 | baseline | all | already turning | **pre-onset** | straight |
 |---|---:|---:|---:|---:|
-| cv (no yaw rate) | 2.807 | 5.303 | 4.216 | 2.667 |
-| ctrv (+ yaw rate) | 2.687 | 4.277 | 4.192 | 2.674 |
-| **what the yaw rate buys** | -0.120 | **-1.026** | **-0.024** | +0.007 |
-| ca (no yaw rate) | 2.645 | 5.443 | 3.975 | 2.121 |
-| ctra (+ yaw rate) | 2.533 | 4.411 | 3.946 | 2.127 |
-| **what the yaw rate buys** | -0.112 | **-1.032** | **-0.029** | +0.006 |
+| frames | 33 208 | 3 434 | 489 | 14 543 |
+| cv (no yaw rate) | 2.815 | 5.432 | 4.252 | 2.670 |
+| ctrv (+ yaw rate) | 2.683 | 4.278 | 4.221 | 2.678 |
+| **what the yaw rate buys** | -0.132 | **-1.154** | **-0.031** | +0.008 |
+| ca (no yaw rate) | 2.641 | 5.616 | 3.962 | 2.106 |
+| ctra (+ yaw rate) | 2.505 | 4.359 | 3.926 | 2.114 |
+| **what the yaw rate buys** | -0.136 | **-1.257** | **-0.036** | +0.008 |
 
-Knowing the current yaw rate is worth **1.03 m of ADE@5s while the car is already turning, and 0.02 m before
-the turn starts** -- a 40x difference. The ego state carries the turn only once the turn is underway; at the
-moment before onset it is blind, exactly as on nuScenes. That is the cell a camera has to win, and the one to
-put in the paper. Per-subset numbers with RFS next to ADE are in `processed/waymo_e2e/report/subsets.csv`.
+Knowing the current yaw rate is worth **1.15-1.26 m of ADE@5s while the car is already turning, and 0.03 m
+before the turn starts** -- a 37x difference. The ego state carries the turn only once the turn is underway;
+at the moment before onset it is blind, exactly as on nuScenes. That is the cell a camera has to win, and the
+one to put in the paper. Per-subset numbers with RFS next to ADE are in
+`processed/waymo_e2e/report/subsets.csv`.
 
 ### Rater Feedback Score: computable locally, on one frame per val sequence
 
@@ -342,14 +354,14 @@ wrong about the conclusion: they are rare **by design**, not missing.
 |---|---|
 | Rater-scored frames | exactly **one per val sequence**, with exactly 3 rated trajectories, scores 0-10 |
 | Where | frame index **147-150**, i.e. the 12 s mark -- the same point in the clip as the 1 505 test submission frames |
-| On disk now | 68 frames, from 68 distinct sequences, spread over all 12 downloaded shards |
-| When val is complete | **479** -- one per sequence. 479 x 13.8% coverage = 66 expected, 68 observed |
-| Waypoints per rated trajectory | 21 for 197 of the 204, and 7-20 for the rest; the metric truncates to 20 and pads short ones by repeating the last waypoint |
+| On disk now | **163** frames, from 163 distinct sequences, spread over all 29 downloaded shards |
+| When val is complete | **479** -- one per sequence. 479 x 31.7% coverage = 152 expected, 163 observed (and at 12 shards it was 66 expected, 68 observed) |
+| Waypoints per rated trajectory | 21 for the large majority, 7-20 for a handful; the metric truncates to 20 and pads short ones by repeating the last waypoint |
 | Clusters present | 10 of the 11; val has no `Spotlight` sequences |
 
-This is not a proxy. It is the real metric, on the same protocol shape as the test set (one frame per clip at
-12 s), on a split with published labels. The only limitation is sample size: 479 frames when val finishes,
-68 today, and some scenario clusters will hold only a handful of frames.
+This is not a proxy. It is the real metric, on the same protocol shape as the test set (one frame per clip),
+on a split with published labels. The only limitation is sample size: 479 frames when val finishes, 163 today,
+and some scenario clusters will hold only a handful of frames.
 
 `rater_feedback_score()` is a port of
 `waymo_open_dataset/metrics/python/rater_feedback_utils.py` and is **bit-identical to it** when both are given
@@ -361,39 +373,38 @@ threshold of overshoot, floor **4.0** for a candidate not fully inside any singl
 horizons. Per frame: the best rater at each horizon, then the mean of the two horizons. The leaderboard number
 is the mean per scenario cluster, then an unweighted mean over clusters (`E2EDMetrics.average_score`).
 
-On the 68 rater-scored val frames we have:
+On the 163 rater-scored val frames we have:
 
 | trajectory | RFS (cluster mean) | RFS (frame mean) | in trust region | ADE@3s | ADE@5s |
 |---|---:|---:|---:|---:|---:|
-| top-rated rater trajectory | 9.53 | 9.50 | 1.00 | 0 | 0 |
-| **logged future** | **8.08** | **8.21** | 0.78 | 1.44 | **2.63** |
-| worst-rated rater trajectory | 7.74 | 7.52 | 1.00 | 1.23 | 3.29 |
-| ca | **7.23** | 6.97 | 0.52 | 1.52 | 3.66 |
-| cv | 7.19 | **7.00** | 0.53 | 1.63 | 3.51 |
-| cv_vel | 7.08 | 6.97 | 0.54 | 1.62 | 3.50 |
-| ctra | 6.66 | 6.82 | 0.49 | 1.55 | 3.89 |
-| ctrv | 6.64 | 6.97 | 0.53 | 1.63 | 3.61 |
-| zero (stand still) | 5.00 | 5.21 | 0.29 | 7.49 | 12.73 |
+| top-rated rater trajectory | 9.48 | 9.45 | 1.00 | 0 | 0 |
+| **logged future** | **8.13** | **8.04** | 0.76 | 1.25 | **2.45** |
+| worst-rated rater trajectory | 7.69 | 7.46 | 1.00 | 1.19 | 3.34 |
+| cv_vel | **6.89** | 6.78 | 0.52 | 1.50 | 3.38 |
+| cv | 6.87 | **6.78** | 0.52 | 1.52 | 3.41 |
+| ca | 6.74 | 6.59 | 0.47 | 1.38 | 3.63 |
+| ctrv | 6.69 | 6.72 | 0.50 | 1.50 | 3.45 |
+| ctra | 6.63 | 6.54 | 0.45 | 1.38 | 3.72 |
+| zero (stand still) | 5.34 | 5.38 | 0.29 | 6.48 | 11.07 |
 
 ADE here is against the **top-rated rater trajectory**, which is the official definition
 (`E2EDMetrics.ade_at_three_sec`: "we compute per frame ADE using the ground truth trajectory with the highest
 rater score"). Three things follow, and they change how we should read the leaderboard:
 
-- **The logged future scores 2.63 m ADE@5s, and published official-test ADEs are 2.65 (RAP) to 2.94
+- **The logged future scores 2.45 m ADE@5s, and published official-test ADEs are 2.65 (RAP) to 2.94
   (Poutine-Base).** On the official ADE the field is already at "predicts the log perfectly" level, so ADE has
-  almost no headroom left and is a poor thing to optimise. RFS has headroom: the logged future is at 8.08-8.21
+  almost no headroom left and is a poor thing to optimise. RFS has headroom: the logged future is at 8.04-8.13
   and the best public test RFS is 8.043.
-- **Ego-only is at RFS ~7.1-7.2 and ADE ~3.5 m.** Against the rater trajectory the ego-only baselines are
-  ~0.9 m worse than both SOTA and the log, which is the gap vision has to close -- unlike the log-ADE table
+- **Ego-only is at RFS ~6.6-6.9 and ADE ~3.4-3.7 m.** Against the rater trajectory the ego-only baselines are
+  ~1 m worse than both SOTA and the log, which is the gap vision has to close -- unlike the log-ADE table
   above, where ego-only looked deceptively competitive. Published RFS for comparison: RAP 8.043,
   Poutine 7.986, AutoVLA 7.556, OpenEMMA 5.158.
-- **Half of every ego-only prediction falls outside every rater's trust region** and is floored at 4.0. That
-  is where the score is lost, and it is a much sharper training signal than a mean displacement.
+- **About half of every ego-only prediction falls outside every rater's trust region** and is floored at 4.0.
+  That is where the score is lost, and it is a much sharper training signal than a mean displacement.
 
-Caveats on the 68-frame number: the cluster mean is noisy because some clusters hold 1-2 frames (`Cut_ins` 1,
-`Construction` 2, `Others` 2), which is why the frame mean is reported next to it and why `ctrv`/`ctra` rank
-below `cv`/`ca` on the cluster mean but tie on the frame mean. Treat per-cluster values as indicative until
-val is fully downloaded, and prefer the frame mean while n is small.
+Caveats: the cluster mean is still noisy because the thinnest clusters hold only a handful of frames, which is
+why the frame mean sits next to it. Between 68 and 163 frames every row moved by less than 0.4 RFS and the
+ordering held, so the picture is stable, but treat per-cluster values as indicative until val is complete.
 
 ### Frozen features
 
