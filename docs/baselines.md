@@ -26,6 +26,7 @@ Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill
 | openjev, README text benchmark (3 text questions) | same | same | yes | same | 174 / 208 / 225 | same | same, 171 input tokens, no image | fast mode (57/200, one read) 74 ms matches the README's 94 ms p50; most requests trigger re-reads here |
 | AutoVLA (Qwen2.5-VL-3B + action tokens), adaptive-CoT prompt and fast-thinking prompt | [ucla-mobility/AutoVLA](https://github.com/ucla-mobility/AutoVLA) `ba34eed`; weights `Zewei-Zhou/AutoVLA` `AutoVLA_PDMS_89.ckpt` (NAVSIM, RFT/GRPO), base `Qwen/Qwen2.5-VL-3B-Instruct` | UCLA Academic Software License: academic / non-profit use only, no redistribution of derivatives (the user confirmed our use is academic); weights not gated | venv and entry point ready, waiting for the checkpoint (16 GB, in the box's download queue) | `envs/autovla` | pending | pending | `AutoVLA.predict()`: JPEG decode + resize (qwen_vl_utils, CPU), Qwen2.5-VL vision tower, prefill, decode of the optional chain-of-thought and the action tokens, detokenizing to a trajectory | `scripts/bench_baselines/autovla.py` is a minimal single-sample entry point (the release ships only a NAVSIM agent); it builds the same feature dict their feature builder produces and stubs `models.utils.score`, which drags in navsim + nuplan-devkit and is only used by the GRPO reward |
 | Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
+| facebook/vjepa2-vitl-fpc64-256, google/siglip2-so400m-patch14-384 | HF | Apache-2.0 / Apache-2.0, not gated | load check pending (queued download) | `envs/jevdrive` (ours) | not benchmarked | | one forward on the demo frames | backbone controls for our own pipeline, not competitors: V-JEPA 2 is video-pretrained (can one frame answer what happens before a maneuver starts?) and SigLIP2 separates language alignment from pure vision. They replace DINOv3, see decision 12 |
 | Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | download still running (~66 GB at ~1.7 MB/s; the box link is shared) | same | not benchmarked | | same | the load check runs by itself when the download ends (tmux `jev:bl-backbone-check`) and writes `$DATA_DIR/runs/bench_baselines/backbones/load_check_32b.txt` |
 
 Sanity check, not latency: the bundled `scripts/demo.py` on the same scene gives VQA text, 6 direct and 6
@@ -51,18 +52,18 @@ Obvious inefficiencies seen (not fixed; the numbers above are as released; speed
 
 | Item | Status | Why |
 |---|---|---|
-| RAP (2510.04333) | code public ([vita-epfl/RAP](https://github.com/vita-epfl/RAP) `5fd8630`, Apache-2.0), checkpoints `Lanl11/RAP_ckpts` (Waymo 10.6 GB, not gated) | **Blocked by a gated dependency**: the model builds its encoder with `AutoModel.from_pretrained("facebook/dinov3-vith16plus-pretrain-lvd1689m")`, which needs a manual license click on HF. No single-sample entry point (Waymo/NAVSIM cache + submission scripts); pins torch 2.1.0 cu121 and mmcv 2.1.0 (rebuild needed for sm_120). |
+| RAP (2510.04333) | code public ([vita-epfl/RAP](https://github.com/vita-epfl/RAP) `5fd8630`, Apache-2.0), checkpoints `Lanl11/RAP_ckpts` (Waymo 10.6 GB, not gated) | **Not runnable for us, cited only.** Its encoder initialises from `facebook/dinov3-vith16plus-pretrain-lvd1689m`; our access request was rejected by the authors and HF does not allow resubmitting, and we do not route around a deliberate denial through re-uploads (decision 12 in `research/decisions.md`). We quote its published test scores instead. It also ships no single-sample entry point and pins torch 2.1.0 cu121 / mmcv 2.1.0, which would need a rebuild for sm_120. |
 | Poutine (2506.11234) | no code, no weights found | nothing public (arXiv, author pages, GitHub, HF). |
 | FROST-Drive (2601.03460) | no code, no weights found | nothing public. |
 | MindVLA-U1 (2605.12624) | no code, no weights found | project page mind-omni.github.io has no code or download links. |
 | hr98w/jev-visual (`19af545`, MIT) | Apple MLX only | depends on `mlx` / `mlx-vlm` with 4-bit MLX weights; no torch or CUDA path. Would need a port. |
-| DINOv3 ViT-L/16, ViT-B/16 (`facebook/dinov3-vit{l,b}16-pretrain-lvd1689m`) | gated (manual) | **Needs a license click on HF** by a human, then add to `scripts/download_models.sh`. |
 
 ## Still open
 
 - AutoVLA: checkpoint downloading (queued behind NAVSIM on the box's shared 12-18 MB/s link); then
   `$DATA_DIR/envs/autovla/bin/python scripts/bench_baselines/autovla.py` gives both modes.
 - Qwen3-VL-32B: same queue; its load check needs ~66 GB of VRAM, so run it when the card is free.
+- V-JEPA 2 and SigLIP2: queued behind it, then a load check in our venv (no latency run, they are controls).
 - The openjev rows were measured with a placeholder ego state in the prompt ("8.2 m/s, go straight");
   the committed client now uses the demo scene's own state ("0.06 m/s, turn left"), two words apart and the same
   token count to within a few tokens. Re-run when the card is free if you want the numbers to match the script exactly.
