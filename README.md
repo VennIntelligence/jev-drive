@@ -8,6 +8,7 @@ This file is the top-level index: every doc in the repo is reachable from here.
 |---|---|
 | [docs/README.md](docs/README.md) | how-to docs: the GPU box, storage, Python env, data, long runs, baselines |
 | [research/README.md](research/README.md) | research topics and the writing conventions for them |
+| [research/decisions.md](research/decisions.md) | the shared decision log: what we decided, why, and whether it is still provisional |
 | [research/frozen-vlm-planner.md](research/frozen-vlm-planner.md) | current main topic: frozen VLM + thin head trajectory planning |
 | [research/qwen-latent-driving.md](research/qwen-latent-driving.md) | layer probe study, now the analysis part of the main topic |
 | [research/lit/](research/lit) | literature and deep-research reports |
