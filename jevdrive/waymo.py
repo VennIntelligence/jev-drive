@@ -101,10 +101,13 @@ def scan_shard(path: str, cache: str) -> dict:
             mv, nbytes = memoryview(rec), nbytes + len(rec)
             spans, hint = dict.fromkeys(SPAN_COLS, 0), 0
             for im in fr.frame.images:
-                jpeg, n = im.image, len(im.image)
+                jpeg = im.image
+                n = len(jpeg)
                 o = rec.find(jpeg[:256], hint)          # images are stored in field order: start where the last ended
                 while o >= 0 and mv[o:o + n] != jpeg:
                     o = rec.find(jpeg[:256], o + 1)
+                if o < 0 and hint:                      # not in field order after all: search the whole record
+                    o = rec.find(jpeg)
                 if o < 0:
                     raise ValueError(f"{name}: camera {im.name} JPEG not found in its own record")
                 c = CAM_IDS[im.name]
@@ -218,7 +221,7 @@ def history_rows(df: pd.DataFrame, n_back: int, stride: int, tol: int | None = N
     exact (m, n_back+1) bool: resolved by rule 1). Slot 0 is the target and is always exact.
     """
     tol = stride // 2 if tol is None else tol
-    seq = df.sequence.astype("category").cat.codes.to_numpy(np.int64)
+    seq = (df.split.astype(str) + "/" + df.sequence.astype(str)).astype("category").cat.codes.to_numpy(np.int64)
     frame = df.frame.to_numpy(np.int64)
     key = seq * (1 << 20) + frame
     order = np.argsort(key, kind="stable")

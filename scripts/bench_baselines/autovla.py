@@ -84,10 +84,12 @@ meta = {"source": "ucla-mobility/AutoVLA@ba34eed, Zewei-Zhou/AutoVLA AutoVLA_PDM
         "generation": config["inference"]["sample"], "scene": token, "driving_command": command}
 
 model = AutoVLA(config, device="cuda")
-state = torch.load(args.checkpoint, map_location="cuda", weights_only=False)["state_dict"]
-missing, unexpected = model.load_state_dict({k.replace("autovla.", ""): v for k, v in state.items()}, strict=False)
-print(f"loaded checkpoint: {len(missing)} missing, {len(unexpected)} unexpected keys")
-del state
+if args.checkpoint != "none":  # "none" runs the base model, to check the plumbing without the checkpoint
+    state = torch.load(args.checkpoint, map_location="cuda", weights_only=False)["state_dict"]
+    missing, unexpected = model.load_state_dict({k.replace("autovla.", ""): v for k, v in state.items()},
+                                                strict=False)
+    print(f"loaded checkpoint: {len(missing)} missing, {len(unexpected)} unexpected keys")
+    del state
 model.eval()
 
 for tag, use_cot in (("cot", True), ("nocot", False)):
