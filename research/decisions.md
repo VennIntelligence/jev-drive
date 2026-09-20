@@ -29,6 +29,14 @@ Qwen 中间层是 0.246。详见 [qwen-latent-driving.md](qwen-latent-driving.md
 并且 nuScenes 那个 0.192 → 0.185 的增量要有 scene-level bootstrap CI 支撑。
 现在的差距很小，还没做 CI，有可能不显著。
 
+**2026-09-20 补充证据（planner v0，见 [todos/2026-09-20-planner-v0.md](../todos/2026-09-20-planner-v0.md)）**：
+CI 做了，用的是 paired scene bootstrap。全体 val 样本上视觉**是显著的但很小**：late fusion 把 ADE
+从 0.772 降到 0.743（−0.029 m，CI [−0.040, −0.019]），trust-region miss 从 0.367 降到 0.338
+（−0.029，CI [−0.052, −0.012]）。但在 pre-maneuver-onset 子集上**看不到增量**：ADE 1.331 → 1.297，
+两条 CI 大幅重叠，miss 反而从 0.889 变成 0.919。这个子集在 nuScenes 上只有 135 个样本，
+CI 半宽 ±0.15 m，测不动 3% 量级的差异。所以框架本身不变，但**「onset 上视觉有增量」这一半仍然是未验证的**，
+要靠 Waymo。
+
 ---
 
 ## 2. 指标：RFS 优先，ADE 并列汇报
@@ -138,6 +146,12 @@ pooling 用 image-token mean，不用 last token。
 **怎么才能定下来**：planner 的 layer curve 上，这个倒 U 形要弱得多（轨迹回归上 L13–L22 只是略好）。
 所以「中间层最好」在转向分类上成立，在轨迹回归上还不确定。需要 Waymo 的 layer curve 确认。
 
+**2026-09-20 补充证据（planner v0）**：轨迹回归上最好的是 L19 mean（ADE 3.250 m），L13–L22 都在
+3.25–3.27，L01 是 3.445、L36 是 3.380，确实是同一个方向的浅 U，最好层和 probe 的 L20–L24 重合。
+但最好和最差只差 0.2 m，而 bootstrap CI 半宽约 ±0.27 m，**单看轨迹任务不足以支撑选层**。
+pooling 这一半倒是被加强了：mean pooling 在轨迹上稳定好于 last token（回归差 0.15 m、分类差 0.3 m），
+和转向 probe 的结论相反（那里深层 last token 的 NLL 最好），说明读哪个 token 要看下游任务。
+
 ---
 
 ## 6. 下载顺序和带宽
@@ -160,3 +174,58 @@ ETA 336 小时；串行之后单个任务能拿到约 10–16 MB/s。
 **理由**：多个 session 同时编辑同一个文件会互相覆盖，git 层面看不出冲突。
 
 **状态**：已确认。
+
+---
+
+## 8. 轨迹词表的 K 至少取 1024
+
+**决定**：trajectory vocabulary 的 K 取 1024 起步，Waymo 上从 {1024, 4096, 8192} 里选，不再考虑 64/256。
+并且每次 K sweep 都要同时报 **oracle minADE** 和 **trust-region 覆盖率**（整个词表里没有任何一条 anchor
+能落进信任域的帧占比）。
+
+**理由**：两个口径给出的结论不一样。nuScenes 上 K=64 的 oracle minADE 已经是 0.390 m，
+远好于实际做到的 3.7 m，看起来 64 条就够；但按信任域看，K=64 有 **16.2%** 的帧无论怎么选都会出界，
+K=256 是 5.5%，K=1024 才降到 1.0%，K=8192 是 0.2%。Waymo 的 RFS 会把出界的帧直接压到下限 4.0，
+所以那 16% 是白送掉的分。ADE 口径完全看不见这件事。
+另外：分类器自己的误差在 K=64…8192 之间基本不动（ADE 3.73→4.22，miss 0.776→0.772），
+**误差全部来自 ranking，不是 coverage**，所以加大 K 的唯一理由就是覆盖率。
+数据见 [todos/2026-09-20-planner-v0.md](../todos/2026-09-20-planner-v0.md) 的 K sweep 表。
+
+**状态**：待定。
+
+**怎么才能定下来**：nuScenes 的信任域是围着单条 logged future 建的，比 Waymo 的三条 rater 轨迹严格。
+在 Waymo 上用真 RFS 重做一次 K sweep，看覆盖率的拐点落在哪里。
+
+---
+
+## 9. ego state 和图像特征一律用 late fusion 拼
+
+**决定**：把 ego state 和 frozen 图像 feature 合起来的时候用 **late fusion**——先训一个 ego-only head，
+把它的输出（回归的预测值 / 分类器的 logit）当成冻结的 offset，图像 head 只学残差。
+不要把两块特征直接拼（哪怕图像那块先 PCA 降到 64 维）。
+
+**理由**：probe v0 就发现 2560 维图像会把 11 维 ego 淹掉，当时提了 PCA 降维和 late fusion 两个修法。
+planner v0 两个都试了：PCA 拼接在回归上没有收益（ADE 0.772 → 0.783，paired +0.012，不显著），
+在分类上是灾难（miss 0.363 → 0.644，ADE 0.847 → 1.906）。原因是一个共用的 L2 强度没法同时正则
+两块尺度完全不同的特征。late fusion 则是唯一显著为正的做法（ADE −0.029 m，miss −0.029）。
+
+**状态**：已确认（在 nuScenes 上；实现是 `jevdrive/planner.py` 的 `ridge_late` 和 `cls_late`）。
+
+---
+
+## 10. 固定词表分类 vs 连续回归，取舍要按指标说
+
+**决定**：不要笼统说「分类比回归差」。同 backbone、同特征下，分类在**位移口径**上输、
+在**信任域口径**上赢，报的时候两个都给。
+
+**理由**：nuScenes 上同一套 `L22_mean` 特征，分类比 ridge 回归的 ADE 差 0.512 m（约 16%，
+CI [+0.254, +0.748]），但 trust-region miss 低 9.5 个百分点（CI [−0.136, −0.059]），两边都显著。
+ADE 奖励条件均值，而回归 head 输出的就是均值；信任域是「要么进要么出」，
+一条平均出来的折中轨迹既不像直行也不像转弯，两边都不沾。分类器输出的是真实存在过的一个 mode。
+Waymo 上官方 ADE 已经饱和（logged future 自己 2.63，最好的 test 是 2.65）而 RFS 还有空间，
+所以这个取舍对我们有利。
+
+**状态**：待定。
+
+**怎么才能定下来**：在 Waymo 上用真 RFS 做同一组对照。如果 RFS 上分类也赢，这就是论文里
+「为什么用固定词表」最强的一条论据。
