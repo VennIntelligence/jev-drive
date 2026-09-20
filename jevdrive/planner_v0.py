@@ -35,6 +35,9 @@ def main():
     ap.add_argument("--qwen-set", default="qwen_w800", help="cached Qwen feature set (input width) to sweep")
     ap.add_argument("--sets", default="", help="regex over '<set>/<array>' overriding --layers / --qwen-set")
     ap.add_argument("--ref-set", default=None, help="skip picking the reference set on the inner split")
+    ap.add_argument("--clip-set", default=None,
+                    help="a clip backbone's feature set (e.g. vjepa2): restrict every head to the frames "
+                         "whose clip is full, so the video and single-frame controls see the same rows")
     ap.add_argument("--exit-layer", type=int, default=22, help="layer the extraction benchmark truncates at")
     ap.add_argument("--threads", type=int, default=common.n_cpus(), help="torch CPU threads (default: CPU quota)")
     ap.add_argument("--bench-reps", type=int, default=1000, help="batch-1 head calls per timing run")
@@ -56,7 +59,7 @@ def main():
         rl.event("step_start", step=step)
         if step == "plan":
             planner.run(a.version, run_dir, rl=rl, horizon=a.horizon, rate=a.rate, ks=ks, k_ref=a.k_ref,
-                        pattern=pattern, ref_set=a.ref_set)
+                        pattern=pattern, ref_set=a.ref_set, clip_set=a.clip_set)
         elif step == "bench":
             lat = planner.bench_heads(2560, traj.n_waypoints(a.horizon, a.rate), ks, reps=a.bench_reps)
             (run_dir / "latency.json").write_text(json.dumps(lat, indent=2, default=float))

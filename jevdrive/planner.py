@@ -33,7 +33,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from tqdm import tqdm
 
 from . import probe, traj
-from .common import get_logger
+from .common import get_logger, processed_dir
 from .labels import EGO_COLS
 
 log = get_logger(__name__)
@@ -291,11 +291,25 @@ def load(name: str, src: dict, ego: torch.Tensor, sp: Split) -> torch.Tensor:
     return X
 
 
+def clip_full_rows(version: str, clip_set: str, lab: pd.DataFrame) -> np.ndarray:
+    """Mask of rows whose clip backbone got a real clip rather than a padded one. A video backbone can only
+    be compared against the single-frame ones on frames where all of them saw what they were meant to see,
+    so the whole table restricts to these rows, not just that backbone's own line."""
+    idx = pd.read_parquet(processed_dir(version) / "features" / clip_set / "index.parquet")
+    keep = idx.set_index("sample_token").clip_full.reindex(lab.sample_token).fillna(False).to_numpy(bool)
+    log.info("clip set %s: %d / %d rows have a full clip; the whole comparison restricts to them",
+             clip_set, int(keep.sum()), len(keep))
+    return keep
+
+
 def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: float = traj.RATE,
         ks=(64, 256, 1024, 4096, 8192), k_ref: int = 1024, pattern: str = ".*", ref_set: str | None = None,
-        seed: int = 0) -> pd.DataFrame:
+        seed: int = 0, clip_set: str | None = None) -> pd.DataFrame:
     """The whole planner evaluation: vocabulary sweep, layer curve, head comparison and baselines."""
     lab, fut, vel, yaw_rate = traj.build(version, horizon, rate)
+    if clip_set:
+        keep = clip_full_rows(version, clip_set, lab)
+        lab, fut, vel, yaw_rate = lab[keep].reset_index(drop=True), fut[keep], vel[keep], yaw_rate[keep]
     sp = Split(lab, seed)
     log.info("%s", sp)
     scenes_val, gt = sp.scenes[sp.val], fut[sp.val]
