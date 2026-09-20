@@ -61,7 +61,11 @@ config["model"]["codebook_cache_path"] = str(SRC / config["model"]["codebook_cac
 scene = [json.loads(line) for line in open(FRAMES / "planning_scenes.jsonl")][args.scene_index]
 images = [c["image"] for m in scene["messages"] for c in m["content"] if "image" in c]
 assert len(images) == 12, images
-trajectory = ast.literal_eval(scene["trajectory"])
+def unpack(value):  # some fields are JSON objects, others a Python repr in a string
+    return ast.literal_eval(value) if isinstance(value, str) else value
+
+
+trajectory = unpack(scene["trajectory"])
 ego = trajectory["ego_status"]
 command = ("go straight", "turn left", "turn right")[int(trajectory["nav_command"])]
 features = {
@@ -74,7 +78,7 @@ features = {
     "driving_command": command,
     "sensor_data_path": None,
 }
-token = ast.literal_eval(scene["meta_info"])["token"]
+token = unpack(scene["meta_info"])["token"]
 print(f"scene {token}: v {np.linalg.norm(ego['ego_velocity']):.2f} m/s, "
       f"a {np.linalg.norm(ego['ego_acceleration']):.2f} m/s^2, command {command!r}")
 
