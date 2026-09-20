@@ -31,6 +31,7 @@
 | Backbone | Qwen3-VL-4B-Instruct，bf16，**完全冻结**，无 LoRA、无 SFT、无 RL | 特征可以一次性抽完缓存，训练只在薄 head 上，单卡可复现 |
 | 取哪一层 | LLM 中层（nuScenes 上 L19-L22 最好，Waymo 上重测） | 见"已知结论" |
 | 输入 | 前 3 个相机（FRONT / FRONT_LEFT / FRONT_RIGHT）+ ego past state + intent | Waymo E2E 官方提供的输入 |
+| 对照 backbone | DINOv2（单帧自监督）、V-JEPA 2（视频自监督）、SigLIP2（图文预训练） | 见下面「对照 backbone 怎么选」 |
 | Head | 在 K 条 anchor trajectory 上打分，取 argmax；可选一步 refinement | Jev-style 的"一次决策"，K 从 3 类 maneuver 换成 K 条轨迹 |
 | 输出 | 未来 5 s、4 Hz、20 个 XY waypoint | Waymo E2E 提交格式 |
 
@@ -66,6 +67,23 @@ Trajectory vocabulary 这个做法本身不是我们发明的，Hydra-MDP（arXi
 三条：layer curve 是干净的倒 U，LLM 中层比它自己的 vision encoder 高约 10 个点，比 DINOv2 高约 6 个点，
 末层又还回去；全集被 ego 惯性统治（图像最好 0.66 < ego-only 0.77）；视觉的增量集中在
 hard subset（当前还没开始转、但未来要转的样本）上。第三条正是 claim 1 要在 Waymo 上重做的事。
+
+## 对照 backbone 怎么选
+
+原计划里的 DINOv3 用不了：**访问申请被作者拒绝**（2026-09-20，理由未给；社区记录显示 Meta 系门禁
+对中国大陆申请普遍拒绝）。被拒之后不能重新申请，我们也不去找第三方转存——作者是明确拒绝，
+绕过去在合规上站不住，论文里也不好写。详见 [decisions.md](decisions.md) 第 12 条。
+
+替换成三个都没有门禁的 backbone，而且这三个各自回答一个具体问题，不是凑数：
+
+| backbone | 回答什么问题 |
+|---|---|
+| DINOv2（已在盘上） | 纯视觉的单帧自监督特征能做到多少？probe v1 和 planner v0 的对照就是它 |
+| **V-JEPA 2** | **时间预训练能不能补上单帧缺的那一块？** 单帧结构上估不出速度，而我们的核心争议正是
+"转弯开始之前视觉够不够"。这个对照比 DINOv3 更贴题 |
+| SigLIP2 | 增益来自语言对齐，还是来自视觉预训练本身？ |
+
+V-JEPA 2 这一条其实比原计划更强：文献里 Drive-JEPA 那条线用的就是它，对照有现成的外部参照。
 
 ## Benchmark
 

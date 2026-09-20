@@ -6,9 +6,10 @@
 #        scripts/download_models.sh ms:<repo> ...  (one ModelScope repo)
 # Source: hf-mirror.com by default (domestic, fast). JEV_HF_VIA=turbo uses huggingface.co via network_turbo.
 # JEV_HF_WORKERS (default 2) caps concurrent files so parallel dataset downloads are not starved.
-# Gated repos (e.g. DINOv3) need a token: put HUGGING_FACE=hf_... in $DATA_DIR/jev-drive/.env
-# (git-ignored, chmod 600). Never echo it; a 403 on a gated repo usually means the access request
-# is still pending, not that the token is wrong.
+# A gated repo needs a token: put HUGGING_FACE=hf_... in $DATA_DIR/jev-drive/.env (git-ignored,
+# chmod 600). Never echo it; a 403 on a gated repo usually means the access request is still
+# pending, not that the token is wrong. Nothing here is gated today: DINOv3 was rejected by its
+# authors (see research/decisions.md entry 12), so we use ungated backbones instead.
 set -euo pipefail
 
 MODELS=(
@@ -17,8 +18,8 @@ MODELS=(
   Qwen/Qwen3-VL-8B-Instruct
   Qwen/Qwen3-VL-32B-Instruct
   facebook/dinov2-base
-  facebook/dinov3-vitb16-pretrain-lvd1689m   # gated: needs an approved access request
-  facebook/dinov3-vitl16-pretrain-lvd1689m   # gated: needs an approved access request
+  facebook/vjepa2-vitl-fpc64-256           # video SSL control: does temporal pretraining buy what one frame cannot?
+  google/siglip2-so400m-patch14-384        # image-text control: separates language alignment from pure vision
   # Baselines benchmarked in docs/baselines.md
   nvidia/diffusiongemma-26B-A4B-it-NVFP4   # openjev
   Zewei-Zhou/AutoVLA                       # AutoVLA NAVSIM checkpoint (UCLA academic licence: academic use only)
