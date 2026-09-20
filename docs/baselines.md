@@ -23,7 +23,7 @@ Raw outputs: `$DATA_DIR/runs/bench_baselines/<model>/<tag>/<time>/{summary,times
 | openjev, front camera only, fresh frames | same | same | yes | same | 230 / 181 / 352 | same | same, 501 input tokens | 134/200 at ~177 ms, rest ~338 ms |
 | openjev, README text benchmark (3 text questions) | same | same | yes | same | 174 / 208 / 225 | same | same, 171 input tokens, no image | fast mode (57/200, one read) 74 ms matches the README's 94 ms p50; most requests trigger re-reads here |
 | Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
-| Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | download still running (~66 GB at ~1.7 MB/s; the box link is shared) | same | not benchmarked | | same | same |
+| Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | download still running (~66 GB at ~1.7 MB/s; the box link is shared) | same | not benchmarked | | same | the load check runs by itself when the download ends (tmux `jev:bl-backbone-check`) and writes `$DATA_DIR/runs/bench_baselines/backbones/load_check_32b.txt` |
 
 Sanity check, not latency: the bundled `scripts/demo.py` on the same scene gives VQA text, 6 direct and 6
 reasoning trajectories, ADE 0.225 m / FDE 0.992 m (direct) and 0.242 m / 1.072 m (reasoning) against the logged
