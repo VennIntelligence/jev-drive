@@ -79,16 +79,20 @@ class Clips(Dataset):
 def clip_paths(kf: pd.DataFrame, cam: pd.DataFrame, frames: int = CLIP_FRAMES, span: float = CLIP_SPAN,
                tol: float | None = None):
     """For every keyframe, `frames` CAM_FRONT image paths evenly spaced over the `span` seconds of history
-    ending at it, each taken as the nearest actual frame to the requested time (CAM_FRONT runs at ~12 Hz once
-    sweeps are extracted, so the default tolerance is half that step).
+    ending at it, each taken as the nearest actual frame to the requested time.
 
-    Slots before the start of the scene clamp to its first frame, which is the usual "repeat the oldest"
-    padding. Returns (paths (n, frames) object array, full (n,) bool: every slot resolved within `tol`).
-    Rows are kept either way and stay aligned with `kf`, so a partial clip is marked, never dropped."""
-    tol = span / frames / 2 if tol is None else tol
+    A clip counts as full when its whole span lies inside the scene and every slot landed within `tol` of the
+    time asked for (default one native frame step: at ~12 Hz the requested spacing is itself about one step,
+    so the phase drifts across the clip and half a step is fractionally too tight to ever hold).
+    Slots before the start of the scene clamp to its first frame -- the usual "repeat the oldest" padding.
+    Returns (paths (n, frames) object array, full (n,) bool). Rows are kept either way and stay aligned with
+    `kf`, so a padded clip is marked, never dropped.
+    """
+    step = float(np.median(np.diff(np.sort(cam.timestamp.to_numpy() * 1e-6))))
+    tol = step if tol is None else tol
     want = np.arange(frames) * (span / (frames - 1)) - span  # -span .. 0
     out = np.empty((len(kf), frames), object)
-    full = np.zeros(len(kf), bool)
+    full, err = np.zeros(len(kf), bool), np.zeros(len(kf))
     by_scene = dict(tuple(cam.groupby("scene")))
     for scene, g in kf.groupby("scene"):
         c = by_scene[scene]
@@ -96,10 +100,12 @@ def clip_paths(kf: pd.DataFrame, cam: pd.DataFrame, frames: int = CLIP_FRAMES, s
         t = kf.timestamp.to_numpy()[g.index][:, None] * 1e-6 + want
         j = np.clip(np.searchsorted(ts, t), 1, len(ts) - 1)
         j = np.where(np.abs(ts[j - 1] - t) <= np.abs(ts[j] - t), j - 1, j)
-        out[g.index] = paths[j]
-        full[g.index] = (np.abs(ts[j] - t) <= tol).all(1)
-    log.info("clips: %d frames over %.2f s, %d / %d keyframes have every slot within %.0f ms",
-             frames, span, int(full.sum()), len(kf), tol * 1e3)
+        d = np.abs(ts[j] - t)
+        out[g.index], err[g.index] = paths[j], d.max(1)
+        full[g.index] = (d.max(1) <= tol) & (t[:, 0] >= ts[0] - tol)
+    log.info("clips: %d frames over %.2f s (native step %.0f ms), %d / %d keyframes cover the whole span "
+             "within %.0f ms; worst slot error %.0f ms, median %.0f ms", frames, span, step * 1e3,
+             int(full.sum()), len(kf), tol * 1e3, err.max() * 1e3, float(np.median(err)) * 1e3)
     return out, full
 
 
