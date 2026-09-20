@@ -37,3 +37,6 @@ config.yaml
 
 # Scratch space, safe to delete anytime
 tmp/
+
+# Deep research reports: large, externally generated, kept on disk only
+research/lit/
