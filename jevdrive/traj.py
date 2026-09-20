@@ -216,3 +216,24 @@ def boot_ci(v: np.ndarray, scenes: np.ndarray, b: int = 1000, seed: int = 0, alp
     idx = np.random.default_rng(seed).integers(len(uniq), size=(b, len(uniq)))
     m = s[idx].sum(1) / n[idx].sum(1)
     return float(np.quantile(m, alpha / 2)), float(np.quantile(m, 1 - alpha / 2))
+
+
+def boot_did(v: np.ndarray, scenes: np.ndarray, hi: np.ndarray, lo: np.ndarray, b: int = 1000,
+             seed: int = 0, alpha: float = 0.05):
+    """mean(v[hi]) - mean(v[lo]) and its CI, under one joint resample of scenes.
+
+    `v` is already a paired per-sample difference (method B minus method A on the same frames), so this is a
+    difference of differences: it asks whether the gain on the `hi` subset exceeds the gain on `lo`. A
+    significant delta on `hi` alone does not answer that -- planner v0 had every subset moving by the same
+    0.03 m. The two subsets share scenes, so they are resampled together; draws that leave either subset
+    empty are dropped."""
+    codes, uniq = pd.factorize(scenes)
+    k = len(uniq)
+    sums = [np.bincount(codes, v * m, k) for m in (hi, lo)]
+    cnts = [np.bincount(codes, m.astype(float), k) for m in (hi, lo)]
+    idx = np.random.default_rng(seed).integers(k, size=(b, k))
+    n_hi, n_lo = cnts[0][idx].sum(1), cnts[1][idx].sum(1)
+    ok = (n_hi > 0) & (n_lo > 0)
+    d = sums[0][idx].sum(1)[ok] / n_hi[ok] - sums[1][idx].sum(1)[ok] / n_lo[ok]
+    point = v[hi].mean() - v[lo].mean()
+    return float(point), float(np.quantile(d, alpha / 2)), float(np.quantile(d, 1 - alpha / 2))

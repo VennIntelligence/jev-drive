@@ -404,16 +404,19 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
             ("oracle", "-", k_ref)]
     sub = by_subset(per_sample, masks, scenes_val, keys)
     sub.to_csv(out_dir / "subsets.csv", index=False)
+    dd = did(per_sample, scenes_val, masks, best, k_ref)
+    if len(dd):
+        dd.to_csv(out_dir / "did.csv", index=False)
     res.to_csv(out_dir / "results.csv", index=False)
     np.savez_compressed(out_dir / "per_sample.npz", scenes=scenes_val,
                         **{"|".join(map(str, k)) + "|" + m: v for k, d in per_sample.items() for m, v in d.items()})
-    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref, pairs, sub))
+    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref, pairs, sub, dd))
     try:
         from . import plots  # matplotlib comes in with nuscenes-devkit; a broken figure must not lose the table
         plots.run(res, out_dir, best, k_ref)
     except Exception as e:  # noqa: BLE001
         log.warning("figures failed: %s", e)
-    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref, pairs, sub))
+    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref, pairs, sub, dd))
     if rl is not None:
         for r in res.to_dict("records"):
             rl.event("planner_result", **r)
@@ -489,13 +492,46 @@ def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int,
     return pd.DataFrame(out)
 
 
+DID = ("onset", "straight")  # the subset the framing is about, and the arm it has to beat
+
+
+def did(per_sample: dict, scenes: np.ndarray, masks: dict[str, np.ndarray], best: str, k_ref: int,
+        pair=DID) -> pd.DataFrame:
+    """Difference-of-differences: is the paired gain on `pair[0]` larger than the gain on `pair[1]`?
+
+    This is the quantity the ego-prior framing actually rests on (decisions 3d). A significant delta on the
+    weak-prior subset does not establish it: planner v0 found every subset moving by the same amount, so the
+    increment is uniform, and only the DiD tells those two readings apart."""
+    hi, lo = masks.get(pair[0]), masks.get(pair[1])
+    if hi is None or lo is None or not hi.any() or not lo.any():
+        return pd.DataFrame()
+    out = []
+    for what, a, b in (("vision on top of the ego state (late fusion)",
+                        ("ridge", "ego", 0), ("ridge_late", best + "+ego", 0)),
+                       ("vision on top of the ego classifier (late fusion)",
+                        ("cls", "ego", k_ref), ("cls_late", best + "+ego_late", k_ref)),
+                       ("vision with no ego state at all", ("mean_traj", "-", 0), ("ridge", best, 0))):
+        if a not in per_sample or b not in per_sample:
+            continue
+        r = {"comparison": what, "hi": pair[0], "lo": pair[1], "n_hi": int(hi.sum()), "n_lo": int(lo.sum())}
+        for c in ("miss", "ade"):
+            if c not in per_sample[a] or c not in per_sample[b]:
+                continue
+            v = per_sample[b][c] - per_sample[a][c]
+            point, cl, ch = traj.boot_did(v, scenes, hi, lo)
+            r |= {f"d{c}_hi": v[hi].mean(), f"d{c}_lo": v[lo].mean(), f"did_{c}": point,
+                  f"did_{c}_ci_lo": cl, f"did_{c}_ci_hi": ch, f"did_{c}_halfwidth": (ch - cl) / 2}
+        out.append(r)
+    return pd.DataFrame(out)
+
+
 def _tab(df: pd.DataFrame, index) -> str:
     t = df.set_index(index)[[c for c in COLS if c in df and df[c].notna().any()]]
     return t.to_markdown(floatfmt=".3f")
 
 
 def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | None = None,
-                sub: pd.DataFrame | None = None) -> str:
+                sub: pd.DataFrame | None = None, dd: pd.DataFrame | None = None) -> str:
     head, feat = res["head"], res["features"]
     main = feat.isin((best, best + "+ego", best + "+ego_late", "ego", "-")) & res.K.isin((0, k_ref))
     out = [f"n = {int(res.n.iloc[0])} val samples; reference feature set `{best}`, reference K = {k_ref}. "
@@ -529,6 +565,18 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | 
                        "the interval wide, not the difference absent: read the width before the sign.\n\n"
                        + m.set_index(["comparison", "subset"])[["n"] + cols].to_markdown(floatfmt=".3f")
                        + "\n")
+    if dd is not None and len(dd):
+        d = dd.assign(**{f"DiD {c} [95 % CI]": (lambda c: lambda x: x.apply(
+            lambda r: f"{r['did_' + c]:+.3f} [{r['did_' + c + '_ci_lo']:+.3f}, "
+                      f"{r['did_' + c + '_ci_hi']:+.3f}] (half-width {r['did_' + c + '_halfwidth']:.3f})",
+            axis=1))(c) for c in ("ade", "miss") if f"did_{c}" in dd})
+        hi, lo = dd.hi.iloc[0], dd.lo.iloc[0]
+        out.append(f"### Difference of differences: does the gain on `{hi}` exceed the gain on `{lo}`?\n\n"
+                   "A significant paired delta on the weak-prior subset does not say the increment is "
+                   "concentrated there; only this does. Read the half-width against the effect before "
+                   "reading the sign.\n\n"
+                   + d.set_index("comparison")[["n_hi", "n_lo", "dade_hi", "dade_lo", "DiD ade [95 % CI]",
+                                                "DiD miss [95 % CI]"]].to_markdown(floatfmt=".3f") + "\n")
     if sub is not None and len(sub):
         w = sub.pivot_table(index=["head", "features"], columns="subset", values=["miss", "ade"], sort=False)
         w = w[[(m, s) for m in ("miss", "ade") for s in SUBSETS if (m, s) in w]]
