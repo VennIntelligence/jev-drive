@@ -38,8 +38,8 @@ from .labels import EGO_COLS
 
 log = get_logger(__name__)
 DEV = "cuda"
-LAM_RIDGE = np.logspace(-4, 3, 15)  # L2 on the mean squared error; features are standardised
-LAM_CLS = np.logspace(-6, 1, 8)  # L2 on the mean cross-entropy
+LAM_RIDGE = np.logspace(-6, 3, 19)  # L2 on the mean squared error; features are standardised
+LAM_CLS = np.logspace(-7, 1, 9)  # L2 on the mean cross-entropy
 SOFT_M, SOFT_TAU = 5, 0.5  # soft target: m nearest anchors, softmax(-RMS displacement / tau metres)
 PCA_DIM, INNER_FRAC = 64, 0.2
 HIDDEN, DROPOUT, MLP_EPOCHS, MLP_BS, MLP_LR, MLP_WD = 512, 0.1, 40, 512, 1e-3, 1e-2
@@ -105,9 +105,11 @@ def linear_apply(W: torch.Tensor, X: torch.Tensor, rows: np.ndarray) -> torch.Te
 
 
 def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarray, lams, K: int,
-             max_iter: int = MAX_ITER) -> tuple[torch.Tensor, dict]:
+             max_iter: int = MAX_ITER, offset: torch.Tensor | None = None) -> tuple[torch.Tensor, dict]:
     """Multinomial logistic regression over K anchors on `rows`: mean cross-entropy to the (possibly soft)
-    target `tgt` = (anchor ids (n, m), weights (n, m)) plus lam/2 |W|^2, every lam in as few batches as fit."""
+    target `tgt` = (anchor ids (n, m), weights (n, m)) plus lam/2 |W|^2, every lam in as few batches as fit.
+    A frozen `offset` (n, K) is added to the logits, which makes this a late fusion: the head only has to
+    learn what the model behind the offset gets wrong."""
     d, n, D = X.shape[1], len(rows), (X.shape[1] + 1) * K
     Xr = X[rows].contiguous()
     # L-BFGS keeps ~LBFGS_COPIES float32 copies of every problem's parameters (history m = 10, iterate,
@@ -115,6 +117,7 @@ def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarr
     group = max(1, min(len(lams), int(0.5 * torch.cuda.mem_get_info()[0] // (LBFGS_COPIES * 4 * D))))
     ti = torch.as_tensor(tgt[0][rows], device=DEV, dtype=torch.long)
     tw = torch.as_tensor(tgt[1][rows], device=DEV, dtype=torch.float32)
+    off = None if offset is None else offset[rows].contiguous()
     out, iters = [], []
     for g in range(0, len(lams), group):
         lam = torch.as_tensor(np.asarray(lams[g:g + group], np.float32), device=DEV)
@@ -129,7 +132,8 @@ def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarr
                 x = Xr[a:a + chunk]
                 i2 = ti[a:a + chunk].unsqueeze(0).expand(p, -1, -1).contiguous()
                 w2 = tw[a:a + chunk].unsqueeze(0).expand(p, -1, -1).contiguous()
-                logp = (x @ W[:, :d] + W[:, d].unsqueeze(1)).log_softmax(-1)  # (p, chunk, K)
+                z = x @ W[:, :d] + W[:, d].unsqueeze(1)  # (p, chunk, K)
+                logp = (z if off is None else z + off[a:a + chunk]).log_softmax(-1)
                 loss -= (logp.gather(2, i2) * w2).sum((1, 2)).double()
                 r = logp.exp_().scatter_add_(2, i2, -w2)  # softmax - target
                 gV += x.T @ r
@@ -147,11 +151,15 @@ def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarr
                             "not_converged": int((it >= max_iter).sum())}
 
 
-def cls_topk(W: torch.Tensor, X: torch.Tensor, rows: np.ndarray, kmax: int, chunk: int = 1024) -> np.ndarray:
+def cls_topk(W: torch.Tensor, X: torch.Tensor, rows: np.ndarray, kmax: int, chunk: int = 1024,
+             offset: torch.Tensor | None = None) -> np.ndarray:
     """Top-kmax anchor ids by score, (len(rows), P, kmax), best first."""
     out = []
     for a in range(0, len(rows), chunk):
-        s = linear_apply(W, X, rows[a:a + chunk])
+        r = rows[a:a + chunk]
+        s = linear_apply(W, X, r)
+        if offset is not None:
+            s = s + offset[r]
         out.append(s.topk(min(kmax, s.shape[-1]), dim=-1).indices.permute(1, 0, 2).cpu().numpy())
     return np.concatenate(out)
 
@@ -218,16 +226,17 @@ class Heads:
         pv = linear_apply(W, self.X, sp.val).reshape(-1, self.T, 2).cpu().numpy()
         return pv[:, None], {"lam": float(LAM_RIDGE[best]), "sel_ade": s[best]}
 
-    def cls(self, tgt, anchors: torch.Tensor, kmax: int = max(TOPK)):
+    def cls(self, tgt, anchors: torch.Tensor, kmax: int = max(TOPK), offset=None, keep=False):
         sp, K = self.sp, len(anchors)
         A = anchors.reshape(K, -1, 2).cpu().numpy()
-        W, st = ce_solve(self.X, tgt, sp.fit, LAM_CLS, K)
-        top = cls_topk(W, self.X, sp.sel, 1)
+        W, st = ce_solve(self.X, tgt, sp.fit, LAM_CLS, K, offset=offset)
+        top = cls_topk(W, self.X, sp.sel, 1, offset=offset)
         s = [self._ade(A[top[:, i, 0]], sp.sel) for i in range(len(LAM_CLS))]
         best = _pick(s, LAM_CLS, "cls")
         del W
-        W, st2 = ce_solve(self.X, tgt, sp.train, [LAM_CLS[best]], K)
-        pv = A[cls_topk(W, self.X, sp.val, kmax)[:, 0]]
+        W, st2 = ce_solve(self.X, tgt, sp.train, [LAM_CLS[best]], K, offset=offset)
+        pv = A[cls_topk(W, self.X, sp.val, kmax, offset=offset)[:, 0]]
+        self.scores = linear_apply(W, self.X, np.arange(len(self.X)))[0] if keep else None
         del W
         torch.cuda.empty_cache()
         return pv, {"lam": float(LAM_CLS[best]), "sel_ade": s[best], **{f"sel_{k}": v for k, v in st.items()},
@@ -319,13 +328,19 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     names = ["ego", *src]
     log.info("%d feature sets: %s", len(names), ", ".join(names))
 
+    ego_scores = {}  # k -> the ego-only classifier's logits on every row, the offset cls_late starts from
+
     def run_heads(name, X, which, k=k_ref):
         h = Heads(X, sp, fut, F, rate)
         for w in which:
             t0 = time.perf_counter()
             p, st = {"ridge": lambda: h.ridge(), "mlp_reg": lambda: h.mlp(),
-                     "mlp_cls": lambda: h.mlp(vocab[k], tgt[k]), "cls": lambda: h.cls(tgt[k], vocab[k]),
+                     "mlp_cls": lambda: h.mlp(vocab[k], tgt[k]),
+                     "cls": lambda: h.cls(tgt[k], vocab[k], keep=(name == "ego")),
+                     "cls_late": lambda: h.cls(tgt[k], vocab[k], offset=ego_scores[k]),
                      "cls_soft": lambda: h.cls(soft[k], vocab[k])}[w]()
+            if w == "cls" and name == "ego":
+                ego_scores[k] = h.scores
             r = add(rows, per_sample, eval_preds(p, gt, rate), scenes_val, head=w, features=name,
                     K=k if "cls" in w else 0, seconds=time.perf_counter() - t0,
                     **{f"fit_{a}": b for a, b in st.items()})
@@ -356,6 +371,8 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     torch.cuda.empty_cache()
     run_heads(best + "+ego", load(best + "+ego", src, ego, sp), ("ridge", "cls", "mlp_reg"))
     torch.cuda.empty_cache()
+    run_heads(best + "+ego_late", load(best, src, ego, sp), ("cls_late",))  # ego logits as a frozen offset
+    torch.cuda.empty_cache()
 
     # late fusion: the image head regresses what the ego-only ridge gets wrong
     Xe, Xi = load("ego", src, ego, sp), load(best, src, ego, sp)
@@ -368,16 +385,18 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     torch.cuda.empty_cache()
 
     res = pd.DataFrame(rows)
+    pairs = paired(per_sample, scenes_val, best, k_ref)
+    pairs.to_csv(out_dir / "paired.csv", index=False)
     res.to_csv(out_dir / "results.csv", index=False)
     np.savez_compressed(out_dir / "per_sample.npz", scenes=scenes_val,
                         **{"|".join(map(str, k)) + "|" + m: v for k, d in per_sample.items() for m, v in d.items()})
-    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref))
+    (out_dir / "results.md").write_text(to_markdown(res, best, k_ref, pairs))
     try:
         from . import plots  # matplotlib comes in with nuscenes-devkit; a broken figure must not lose the table
         plots.run(res, out_dir, best, k_ref)
     except Exception as e:  # noqa: BLE001
         log.warning("figures failed: %s", e)
-    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref))
+    log.info("results -> %s\n%s", out_dir, to_markdown(res, best, k_ref, pairs))
     if rl is not None:
         for r in res.to_dict("records"):
             rl.event("planner_result", **r)
@@ -388,14 +407,41 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     return res
 
 
+def paired(per_sample: dict, scenes: np.ndarray, best: str, k_ref: int) -> pd.DataFrame:
+    """The comparisons the write-up has to make, as paired differences of per-sample ADE with a scene
+    bootstrap. Paired is the right test here: the same val frames go through both heads, so the scene-to-scene
+    variance that dominates each mean cancels."""
+    comparisons = [
+        ("what one frame of vision buys, with no ego state", ("mean_traj", "-", 0), ("ridge", best, 0)),
+        ("what the current ego state buys over CTRV", ("const_turn_rate", "-", 0), ("ridge", "ego", 0)),
+        ("vision on top of the ego state (late fusion)", ("ridge", "ego", 0), ("ridge_late", best + "+ego", 0)),
+        ("vision on top of the ego state (PCA concat)", ("ridge", "ego", 0), ("ridge", best + "+ego", 0)),
+        ("vision on top of the ego classifier (late fusion)",
+         ("cls", "ego", k_ref), ("cls_late", best + "+ego_late", k_ref)),
+        ("cost of the vocabulary: cls vs ridge, same features", ("ridge", best, 0), ("cls", best, k_ref)),
+        ("cost of the vocabulary: cls vs ridge, ego state", ("ridge", "ego", 0), ("cls", "ego", k_ref)),
+        ("soft target vs nearest-anchor target", ("cls", best, k_ref), ("cls_soft", best, k_ref)),
+    ]
+    out = []
+    for what, a, b in comparisons:
+        if a not in per_sample or b not in per_sample:
+            continue
+        d = per_sample[b]["ade"] - per_sample[a]["ade"]
+        lo, hi = traj.boot_ci(d, scenes)
+        out.append({"comparison": what, "from": f"{a[0]} {a[1]}", "to": f"{b[0]} {b[1]}",
+                    "ade_from": per_sample[a]["ade"].mean(), "ade_to": per_sample[b]["ade"].mean(),
+                    "delta": d.mean(), "lo": lo, "hi": hi})
+    return pd.DataFrame(out)
+
+
 def _tab(df: pd.DataFrame, index) -> str:
     t = df.set_index(index)[[c for c in COLS if c in df and df[c].notna().any()]]
     return t.to_markdown(floatfmt=".3f")
 
 
-def to_markdown(res: pd.DataFrame, best: str, k_ref: int) -> str:
+def to_markdown(res: pd.DataFrame, best: str, k_ref: int, pairs: pd.DataFrame | None = None) -> str:
     head, feat = res["head"], res["features"]
-    main = feat.isin((best, best + "+ego", "ego", "-")) & res.K.isin((0, k_ref))
+    main = feat.isin((best, best + "+ego", best + "+ego_late", "ego", "-")) & res.K.isin((0, k_ref))
     out = [f"n = {int(res.n.iloc[0])} val samples; reference feature set `{best}`, reference K = {k_ref}. "
            "Regression heads have a single mode, so their minADE_k does not fall with k.\n"]
     k = res[head.isin(("oracle", "majority")) | ((head.isin(("cls", "cls_soft"))) & (feat == best))]
@@ -409,6 +455,12 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int) -> str:
         FDE=lambda d: d.apply(lambda r: f"{r.fde:.3f} [{r.fde_lo:.3f}, {r.fde_hi:.3f}]", axis=1))
     out.append("### Scene-bootstrap 95 % CI\n\n"
                + ci.set_index(["head", "features"])[["ADE", "FDE"]].to_markdown() + "\n")
+    if pairs is not None and len(pairs):
+        t = pairs.assign(**{"dADE [95 % CI]": lambda d: d.apply(
+            lambda r: f"{r.delta:+.3f} [{r.lo:+.3f}, {r.hi:+.3f}]", axis=1)})
+        out.append("### Paired differences (same val frames, scenes resampled; negative = better)\n\n"
+                   + t.set_index("comparison")[["from", "to", "ade_from", "ade_to", "dADE [95 % CI]"]]
+                   .to_markdown(floatfmt=".3f") + "\n")
     return "\n".join(out)
 
 
