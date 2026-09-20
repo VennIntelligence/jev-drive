@@ -299,7 +299,8 @@ gcloud 刷 OAuth token 也只能走代理，token 一过期，Waymo 下载连续
 | 🇯🇵日本东京06-0.1 倍（高速专线） | 9.73 MB/s |
 
 已把 GLOBAL 固定到东京 01。val 的 227 GB 因此只折算约 **23 GB** 额度。
-**以后所有大流量都要先确认走的是 0.1 倍节点**：`curl -s --noproxy '*' http://127.0.0.1:9090/proxies/GLOBAL`。
+**以后所有大流量都要先确认走的是 0.1 倍节点**，操作步骤和这四个实测数字已经写进
+[../docs/network-proxy.md](../docs/network-proxy.md) 的 "Picking a Clash node"，那里是操作手册，这里只留结论。
 注意名字里的线路标签（电信联通推荐、高速专线推荐）不等于吞吐，这次「高速专线」反而最慢，要实测。
 
 **Waymo train 的计划（2026-09-20 定，等 val 落地后再决定，三个选项并列，不要只在其中两个里挑）**：
