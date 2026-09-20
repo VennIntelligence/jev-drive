@@ -43,11 +43,18 @@ Qwen 中间层是 0.246。详见 [qwen-latent-driving.md](qwen-latent-driving.md
 
 **2026-09-20 补充证据（planner v0，见 [todos/2026-09-20-planner-v0.md](../todos/2026-09-20-planner-v0.md)）**：
 CI 做了，用的是 paired scene bootstrap。全体 val 样本上视觉**是显著的但很小**：late fusion 把 ADE
-从 0.772 降到 0.743（−0.029 m，CI [−0.040, −0.019]），trust-region miss 从 0.367 降到 0.338
-（−0.029，CI [−0.052, −0.012]）。但在 pre-maneuver-onset 子集上**看不到增量**：ADE 1.331 → 1.297，
-两条 CI 大幅重叠，miss 反而从 0.889 变成 0.919。这个子集在 nuScenes 上只有 135 个样本，
-CI 半宽 ±0.15 m，测不动 3% 量级的差异。所以框架本身不变，但**「onset 上视觉有增量」这一半仍然是未验证的**，
-要靠 Waymo。
+从 0.772 降到 0.743（ΔADE −0.029 m，CI [−0.040, −0.019]），trust-region miss 从 0.367 降到 0.338
+（−0.029，CI [−0.052, −0.012]）。
+
+pre-maneuver-onset 子集（n=135）上，**先按两行各自的 CI 读会读反**：1.331 [1.177,1.488] 对
+1.297 [1.148,1.456] 大幅重叠，看上去没有增量；配对之后 ΔADE = **−0.033，CI [−0.065, −0.003]，不跨零**。
+但这**不**说明增量集中在 onset——四个子集的 ΔADE 几乎一样（all −0.029、turning −0.026、
+onset −0.033、straight −0.029），**增量是均匀的**，probe 那个"集中在 hard subset"的模式没有复现；
+而且信任域口径下 onset 是反的（Δmiss **+0.030**，CI [+0.000, +0.065]）。
+真正要问的"onset 的增量是否大于 straight 的"是一个 difference-of-differences，
+ΔADE 的 CI 半宽 0.031 m 和效应 0.033 m 同量级，n=135 撑不起来，**underpowered by construction**。
+
+所以框架本身不变，**「onset 上视觉有额外增量」这一半仍然未测定**，按第 3d 条在 Waymo 上定。
 
 ---
 
