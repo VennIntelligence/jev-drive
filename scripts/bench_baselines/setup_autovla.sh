@@ -21,7 +21,7 @@ git -C "$src" checkout -q $commit
 export VIRTUAL_ENV=$env UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple UV_CONCURRENT_DOWNLOADS=3
 uv pip install torch==2.8.0 torchvision==0.23.0
 uv pip install transformers==4.49.0 tokenizers==0.21.1 accelerate==1.5.2 qwen-vl-utils==0.0.10 \
-  pytorch-lightning==2.2.1 "numpy<2" pyyaml pillow av
+  pytorch-lightning==2.2.1 "numpy<2" pyyaml pillow av "setuptools<81"   # PL 2.2.1 still imports pkg_resources
 "$env/bin/python" - <<'PY'
 import torch, transformers, pytorch_lightning
 print(torch.__version__, transformers.__version__, pytorch_lightning.__version__, torch.cuda.get_device_capability())
