@@ -39,11 +39,11 @@ from .labels import EGO_COLS
 log = get_logger(__name__)
 DEV = "cuda"
 LAM_RIDGE = np.logspace(-4, 3, 15)  # L2 on the mean squared error; features are standardised
-LAM_CLS = np.logspace(-5, 0, 6)  # L2 on the mean cross-entropy
+LAM_CLS = np.logspace(-6, 1, 8)  # L2 on the mean cross-entropy
 SOFT_M, SOFT_TAU = 5, 0.5  # soft target: m nearest anchors, softmax(-RMS displacement / tau metres)
 PCA_DIM, INNER_FRAC = 64, 0.2
 HIDDEN, DROPOUT, MLP_EPOCHS, MLP_BS, MLP_LR, MLP_WD = 512, 0.1, 40, 512, 1e-3, 1e-2
-MAX_ITER, MAX_BATCH_PARAMS = 400, 6e7  # L-BFGS iterations, and parameters solved in one batch
+MAX_ITER, MAX_BATCH_PARAMS = 600, 6e7  # L-BFGS iterations, and parameters solved in one batch
 TOPK = (1, 5, 10)
 CI_COLS = ("ade", "fde")
 COLS = ["ade", "fde", "ade@1s", "fde@1s", "ade@2s", "fde@2s", "minade1", "minade5", "minade10", "minfde10"]
@@ -187,6 +187,14 @@ def mlp_predict(net: torch.nn.Module, X: torch.Tensor, rows: np.ndarray, chunk: 
     return torch.cat([net(X[b]) for b in torch.as_tensor(rows, device=DEV).split(chunk)])
 
 
+def _pick(scores, lams, what: str) -> int:
+    """Index of the best inner-val score, warning when it sits on the edge of the lambda grid."""
+    i = int(np.argmin(scores))
+    if i in (0, len(lams) - 1):
+        log.warning("%s picked lambda=%.3g at the edge of the grid (inner-val ADE %.3f)", what, lams[i], scores[i])
+    return i
+
+
 class Heads:
     """The trainable heads on one feature matrix, sharing a split, the targets and a vocabulary."""
 
@@ -202,7 +210,7 @@ class Heads:
         W = ridge_solve(self.X, self.Y, sp.fit, LAM_RIDGE)
         p = linear_apply(W, self.X, sp.sel).reshape(len(LAM_RIDGE), -1, self.T, 2).cpu().numpy()
         s = [self._ade(p[i], sp.sel) for i in range(len(LAM_RIDGE))]
-        best = int(np.argmin(s))
+        best = _pick(s, LAM_RIDGE, "ridge")
         W = ridge_solve(self.X, self.Y, sp.train, [LAM_RIDGE[best]])
         pv = linear_apply(W, self.X, sp.val).reshape(-1, self.T, 2).cpu().numpy()
         return pv[:, None], {"lam": float(LAM_RIDGE[best]), "sel_ade": s[best]}
@@ -213,7 +221,7 @@ class Heads:
         W, st = ce_solve(self.X, tgt, sp.fit, LAM_CLS, K)
         top = cls_topk(W, self.X, sp.sel, 1)
         s = [self._ade(A[top[:, i, 0]], sp.sel) for i in range(len(LAM_CLS))]
-        best = int(np.argmin(s))
+        best = _pick(s, LAM_CLS, "cls")
         del W
         W, st2 = ce_solve(self.X, tgt, sp.train, [LAM_CLS[best]], K)
         pv = A[cls_topk(W, self.X, sp.val, kmax)[:, 0]]
@@ -291,6 +299,9 @@ def run(version: str, out_dir, rl=None, horizon: float = traj.HORIZON, rate: flo
     for name, p in (("const_velocity", traj.const_velocity(vel, horizon, rate)),
                     ("const_turn_rate", traj.const_turn_rate(vel, yaw_rate, horizon, rate))):
         add(rows, per_sample, eval_preds(p[sp.val][:, None], gt, rate), scenes_val, head=name, features="-", K=0)
+    mean_traj = fut[sp.train].mean(0)
+    add(rows, per_sample, eval_preds(np.repeat(mean_traj[None, None], len(sp.val), 0), gt, rate), scenes_val,
+        head="mean_traj", features="-", K=0)
     for k in ks:
         cnt = np.bincount(tgt[k][0][sp.train, 0], minlength=k)
         top = vocab[k].reshape(k, T, 2)[cnt.argsort()[::-1][:max(TOPK)].copy()].cpu().numpy()
@@ -379,7 +390,7 @@ def to_markdown(res: pd.DataFrame, best: str, k_ref: int) -> str:
     main = feat.isin((best, best + "+ego", "ego", "-")) & res.K.isin((0, k_ref))
     out = [f"n = {int(res.n.iloc[0])} val samples; reference feature set `{best}`, reference K = {k_ref}. "
            "Regression heads have a single mode, so their minADE_k does not fall with k.\n"]
-    k = res[head.isin(("oracle", "majority")) | ((head == "cls") & (feat == best))]
+    k = res[head.isin(("oracle", "majority")) | ((head.isin(("cls", "cls_soft"))) & (feat == best))]
     out.append("### Vocabulary sweep (oracle = best anchor in the vocabulary)\n\n"
                + _tab(k.sort_values(["K", "head"]), ["K", "head"]) + "\n")
     c = res[head.isin(("ridge", "cls")) & (feat != "ego") & res.K.isin((0, k_ref))]

@@ -379,8 +379,8 @@ def feature_items(df: pd.DataFrame, cams=CAMS, separate: bool = False) -> tuple[
     else:
         items = [(shard[i], [tuple(spans[c][i]) for c in cams]) for i in range(len(df))]
         idx = pd.DataFrame({"row": np.arange(len(df)), "cam": ",".join(cams)})
-    idx["frame_name"] = df.sequence.astype(str).to_numpy()[idx.row] + "-" + \
-        df.frame.to_numpy()[idx.row].astype("U").astype(object).map(lambda s: s.zfill(3))
+    name = (df.sequence.astype(str) + "-" + df.frame.map("{:03d}".format)).to_numpy()
+    idx.insert(0, "frame_name", name[idx.row])
     return items, idx
 
 
@@ -394,8 +394,6 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
                      n_layer_probes: int = 4, rl=None, compile: bool = True) -> dict:
     """Frozen Qwen3-VL features for every indexed frame, with jevdrive.features doing the model work.
     Layout matches processed/nuscenes/<version>/features/<set>/: <name>.npy float16 + index.parquet + meta.json."""
-    import torch
-
     from . import features as F
     df = load_index()
     df = df[df.split.isin(splits)].reset_index(drop=True)
@@ -408,7 +406,7 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
     fx = F.QwenFeatures(n_layer_probes=n_layer_probes, long_side=long_side, n_images=1 if separate else len(cams),
                         compile=compile)
     load_s = time.perf_counter() - t0
-    stats = F.extract(fx, items, batch_size, n_cpus() if workers is None else workers, dst, rl,
+    stats = F.extract(fx, items, batch_size, max(1, n_cpus() // 2) if workers is None else workers, dst, rl,
                       f"waymo/{name}", dataset=Shards)
     tokens = int(fx.n_image_tokens)
     meta = {"set": name, "model": F.QWEN, "cams": list(cams), "separate": separate, "long_side": long_side,
@@ -607,19 +605,20 @@ def main():
         from .runlog import RunLog
         rl = RunLog("waymo", "bench")
         rows = []
-        for cs, sep in ((cams, a.separate), (("front",), False)):
+        for cs, sep in ((CAMS, False), (CAMS, True), (("front",), False)):
             for ls in (None, 800):
-                for bs in ({1, a.batch_size} if not rows else {a.batch_size}):
-                    m = extract_features(cams=cs, separate=sep, long_side=ls, batch_size=bs, workers=a.workers,
-                                         limit=a.limit or 96, splits=tuple(a.splits.split(",")), save=False,
-                                         rl=rl, compile=not a.no_compile)
-                    rows.append(m)
-                    rl.event("bench", **{k: v for k, v in m.items() if not isinstance(v, list)})
-        t = pd.DataFrame(rows)[["set", "batch_size", "tokens_per_frame", "ms_per_frame", "frames_per_s",
-                                "peak_vram_gb", "bytes_per_sample"]]
-        t["ms_per_frame"] = t.ms_per_frame * np.where(pd.DataFrame(rows).separate, len(cams), 1)
+                m = extract_features(cams=cs, separate=sep, long_side=ls, batch_size=a.batch_size,
+                                     workers=a.workers, limit=a.limit or 96, splits=tuple(a.splits.split(",")),
+                                     save=False, rl=rl, compile=not a.no_compile)
+                per_frame = len(cs) if sep else 1        # a "sample" is one forward, a frame may need three
+                rows.append({**m, "ms_per_frame": m["ms_per_frame"] * per_frame,
+                             "frames_per_s": m["frames_per_s"] / per_frame,
+                             "bytes_per_frame": m["bytes_per_sample"] * per_frame})
+                rl.event("bench", **{k: v for k, v in rows[-1].items() if not isinstance(v, list)})
         (rl.dir / "bench.json").write_text(json.dumps(rows, indent=2, default=float))
-        log.info("feature-extraction bench:\n%s", t.round(2).to_string(index=False))
+        log.info("feature-extraction bench (per frame, batch %d):\n%s", a.batch_size,
+                 pd.DataFrame(rows)[["set", "tokens_per_frame", "ms_per_frame", "frames_per_s", "peak_vram_gb",
+                                     "bytes_per_frame"]].round(2).to_string(index=False))
         rl.close()
 
 

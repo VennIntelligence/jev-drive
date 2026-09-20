@@ -196,7 +196,7 @@ def extract(fx, items, batch_size: int, workers: int, out_dir: Path | None = Non
     items = list(items)
     loader = DataLoader(dataset(items, fx.transform), batch_size=batch_size, num_workers=workers,
                         collate_fn=fx.collate, pin_memory=workers > 0, prefetch_factor=4 if workers else None)
-    arrays, i, t_first, n_first = {}, 0, None, 0
+    arrays, cols, i, t_first, n_first = {}, {}, 0, None, 0
 
     def write(host, done, i, cols):
         done.synchronize()
@@ -243,7 +243,7 @@ def extract(fx, items, batch_size: int, workers: int, out_dir: Path | None = Non
     return {"n": i, "batch_size": batch_size, "workers": workers, "wall_s": wall, "ms_per_frame": 1e3 * steady,
             "frames_per_s": 1 / steady, "peak_vram_gb": torch.cuda.max_memory_allocated() / 2**30,
             "peak_vram_reserved_gb": torch.cuda.max_memory_reserved() / 2**30,
-            "bytes_per_sample": sum(a.dtype.itemsize * a.shape[1] for a in arrays.values())}
+            "bytes_per_sample": 2 * sum(b - a for a, b in cols.values())}  # float16, whether or not it is stored
 
 
 def set_name(backbone: str, width: int | None = None, long_side: int | None = None, **_) -> str:
