@@ -36,7 +36,9 @@ log = get_logger(__name__)
 
 DT = 0.25                      # ego state and trajectory step, s (4 Hz)
 N_PAST, N_FUTURE = 16, 20      # past (-4 s, 0], future (0, 5 s]
-FRAME_DT = 0.1                 # one context.name index step, s (source ~10 Hz)
+FRAME_DT = 0.1                 # seconds per context.name index step, MEASURED from the ego trajectories
+#                                (10.00 Hz, IQR ~0 over 22 464 frame pairs) -- see docs/waymo-e2e.md.
+#                                Every timing field in WOD-E2E is zeroed, so this cannot be read off a frame.
 INTENTS = ("UNKNOWN", "GO_STRAIGHT", "GO_LEFT", "GO_RIGHT")
 CAMS = ("front", "front_left", "front_right")   # CameraName 1, 2, 3 -- the three kept by the slim step
 CAM_IDS = dict(zip((1, 2, 3), CAMS))
@@ -241,21 +243,27 @@ def sequence_stats(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def history_rows(df: pd.DataFrame, n_back: int, stride: int, tol: int | None = None,
+def history_rows(df: pd.DataFrame, n_back: int, stride: int, tol: int = 0,
                  targets: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Row positions of an image-history window for each target frame.
 
-    The window asks for the target frame plus `n_back` earlier frames of the same sequence, `stride` source
-    indices (0.1 s each) apart. The shards are a shuffled subset, so a requested index may be absent. Policy:
-      1. exact index if it is indexed;
-      2. else the nearest indexed frame of the same sequence within +/- `tol` indices (default stride // 2),
-         never at or after the target frame, older preferred on a tie;
-      3. else carry the previous (newer) slot forward -- the usual "repeat the last frame" padding, which for
-         slot 1 means repeating the target frame itself.
-    Returns (rows (m, n_back+1) int64 into `df`, dt (m, n_back+1) float32 actual time offset in seconds,
-    exact (m, n_back+1) bool: resolved by rule 1). Slot 0 is the target and is always exact.
+    The window asks for the target frame plus `n_back` earlier frames of the same sequence, `stride` frame
+    indices apart. Because `frame` is an integer index and `stride` counts indices, `frame - k * stride` is
+    exact arithmetic: unlike a time-based request against irregular timestamps, there is no phase to drift, so
+    a slot either exists or does not. A slot can still be absent because its shard is not downloaded.
+
+    **`tol` defaults to 0, and a window is only complete when every slot is an exact hit.** Two fallbacks exist
+    but neither counts as history:
+      1. with `tol > 0`, the nearest indexed frame of the same sequence within +/- `tol` indices, never at or
+         after the target, older preferred on a tie;
+      2. otherwise the previous (newer) slot is repeated, which for slot 1 repeats the target itself.
+    Both are padding. They keep the returned array rectangular; they do not give the model the frame it asked
+    for. Use `exact` (or `history_set`) to drop or mask those samples -- never credit a model with history it
+    was not shown.
+
+    Returns (rows (m, n_back+1) int64 into `df`, dt (m, n_back+1) float32 real time offset in seconds,
+    exact (m, n_back+1) bool). Slot 0 is the target and is always exact.
     """
-    tol = stride // 2 if tol is None else tol
     seq = (df.split.astype(str) + "/" + df.sequence.astype(str)).astype("category").cat.codes.to_numpy(np.int64)
     frame = df.frame.to_numpy(np.int64)
     key = seq * (1 << 20) + frame
@@ -291,15 +299,41 @@ def history_rows(df: pd.DataFrame, n_back: int, stride: int, tol: int | None = N
     return rows, dt, got
 
 
+def history_set(df: pd.DataFrame, n_back: int, stride: int, targets: np.ndarray | None = None) -> np.ndarray:
+    """Mask over `targets` (default: all rows) of frames whose window is strictly complete -- every slot a real
+    indexed frame of the same sequence. Restrict a *whole* comparison table to this set whenever any row
+    consumes image history, not just the row that consumes it: a padded window did not see the history we would
+    otherwise charge to it, and rows evaluated on different frame sets are not comparable."""
+    return history_rows(df, n_back, stride, targets=targets)[2].all(1)
+
+
+def span_inside(df: pd.DataFrame, n_back: int, stride: int) -> np.ndarray:
+    """Whether the whole requested span lies inside the clip at all, judged by the lowest frame index the
+    split is known to reach (val 0, test 8). A frame failing this can never have its window, however much
+    more of the split is downloaded; a frame passing it but missing slots is waiting on a shard."""
+    lo = df.groupby("split", observed=True).frame.transform("min").to_numpy()
+    return df.frame.to_numpy() - n_back * stride >= lo
+
+
 def history_report(df: pd.DataFrame, windows=((1, 1), (1, 5), (3, 5), (3, 10), (3, 20), (7, 5))) -> pd.DataFrame:
-    """Share of target frames whose window is exactly complete, and complete once the tolerance rule is used."""
+    """Strict completeness per window, and what the shortfall is made of.
+
+    `complete` is the only number to quote: every slot a real frame. `span_inside` is the ceiling the clip
+    geometry allows, so `missing_shards = span_inside - complete` is the part that will fill in as the
+    download finishes, and `span_inside` is what `complete` becomes when the split is fully on disk.
+    `with_tol` is the degraded variant (nearest frame within stride // 2) and is reported only to show how
+    much of the apparent completeness that rule was inventing."""
     rows = []
     for n_back, stride in windows:
-        _, _, got = history_rows(df, n_back, stride, tol=0)
-        _, _, got_tol = history_rows(df, n_back, stride)
+        _, _, got = history_rows(df, n_back, stride)
+        _, _, got_tol = history_rows(df, n_back, stride, tol=stride // 2)
+        inside, complete = span_inside(df, n_back, stride), got.all(1)
         rows.append({"n_back": n_back, "stride": stride, "span_s": round(n_back * stride * FRAME_DT, 2),
-                     "exact": round(got.all(1).mean(), 4), "within_tol": round(got_tol.all(1).mean(), 4),
-                     "slots_exact": round(got[:, 1:].mean(), 4), "slots_within_tol": round(got_tol[:, 1:].mean(), 4)})
+                     "complete": round(complete.mean(), 4), "span_inside": round(inside.mean(), 4),
+                     "missing_shards": round((inside & ~complete).mean(), 4),
+                     "at_full_split": round(inside.mean(), 4),
+                     "slots_exact": round(got[:, 1:].mean(), 4),
+                     "with_tol": round(got_tol.all(1).mean(), 4)})
     return pd.DataFrame(rows)
 
 
@@ -430,11 +464,21 @@ def ade_fde(pred: np.ndarray, gt: np.ndarray, horizons=(3.0, 5.0)) -> dict[str, 
     return out
 
 
-def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val") -> pd.DataFrame:
+def eval_set(df: pd.DataFrame, split: str = "val", clip: tuple[int, int] | None = None) -> np.ndarray:
+    """The frames a comparison table is computed on: `split`, with a future, and -- if any row of the table
+    consumes image history -- only frames whose `clip = (n_back, stride)` window is strictly complete.
+    The clip restriction applies to **every** row, including the ego-only ones: rows scored on different frame
+    sets are not comparable, and a padded window is not history."""
+    m = (df.split == split).to_numpy() & df.has_future.to_numpy()
+    return m & history_set(df, *clip) if clip else m
+
+
+def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val",
+                   clip: tuple[int, int] | None = None) -> pd.DataFrame:
     """ADE/FDE of every ego-only baseline on the frames of `split` that have a future: overall, per intent, and
     on the turning subsets -- by intent (GO_LEFT or GO_RIGHT) and by measured yaw rate over the past window.
     The turning subsets are where a visual model should show its increment, so they get their own columns."""
-    m = (df.split == split).to_numpy() & df.has_future.to_numpy()
+    m = eval_set(df, split, clip)
     gt, preds = future_xy(future[m]), baselines(past[m])
     sub = {k: v[m] for k, v in subsets(df, past, future).items() if k != "all"}
     rows = []
@@ -444,6 +488,7 @@ def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split
         rows.append(r)
     out = pd.DataFrame(rows).round(4)
     out.attrs["subset_sizes"] = {k: int(v.sum()) for k, v in sub.items()}
+    out.attrs["clip"] = clip
     return out
 
 
@@ -562,10 +607,10 @@ def rater_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray) -> pd.Da
 
 
 def subset_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val",
-                 names=("cv", "ca", "ctrv", "ctra")) -> pd.DataFrame:
+                 names=("cv", "ca", "ctrv", "ctra"), clip: tuple[int, int] | None = None) -> pd.DataFrame:
     """The ego-only baselines on each frame subset, with ADE against the log, and -- on whatever part of the
     subset is rater-scored -- RFS and the official ADE against the top-rated trajectory, side by side."""
-    m = (df.split == split).to_numpy() & df.has_future.to_numpy()
+    m = eval_set(df, split, clip)
     rows_i, traj, scores = load_rater()
     rated = np.zeros(len(df), bool)
     rated[rows_i] = True
@@ -765,8 +810,9 @@ def report(df=None, past=None, future=None) -> dict:
             t.to_csv(out_dir("report") / f"{k}.csv", index=False)
     log.info("sequences:\n%s", seq.to_string(index=False))
     log.info("intent x split:\n%s", pd.crosstab(df.split, df.intent.map(dict(enumerate(INTENTS))), margins=True))
-    log.info("image-history completeness (share of frames whose whole window resolves):\n%s",
-             hist.to_string(index=False))
+    log.info("image-history completeness: `complete` = every slot a real frame (the only number to quote); "
+             "`at_full_split` = what it becomes once the split is downloaded; `with_tol` = what the old "
+             "nearest-within-stride/2 rule was crediting:\n%s", hist.to_string(index=False))
     log.info("ego-only baselines on val (m), subset sizes %s:\n%s", base.attrs["subset_sizes"],
              base.to_string(index=False))
     if rater is not None:
@@ -775,6 +821,10 @@ def report(df=None, past=None, future=None) -> dict:
         log.info("Rater Feedback Score on the %d rater-scored val frames (rfs = mean over scenario clusters, "
                  "the leaderboard number; ade*_rater = against the top-rated trajectory, as the official ADE "
                  "is defined):\n%s", rater.n.iloc[0], rater.to_string(index=False))
+        log.info("clip sets: a table with any history-consuming row must be restricted to strictly complete "
+                 "windows (pass clip=(n_back, stride)); today that leaves %s val frames for the windows above",
+                 {f"{n}x{st}": int(history_set(df, n, st)[(df.split == "val").to_numpy()].sum())
+                  for n, st in ((1, 5), (3, 5), (3, 10))})
         log.info("pre-maneuver-onset subset (not turning yet, turns within the horizon) at a few thresholds; "
                  "`rated` is what limits RFS there:\n%s", sweep.to_string(index=False))
         log.info("ego-only baselines per subset (defaults: onset = |yaw rate| < %.1f deg/s and |bearing| > "
@@ -824,7 +874,13 @@ def check(n: int = 64) -> None:
     assert (np.diff(fr, axis=1) <= 0).all() and (fr <= fr[:, :1]).all(), "history is not in the past"
     assert got[:, 0].all() and (dt[:, 0] == 0).all()
     assert np.isclose(dt, (fr - fr[:, :1]) * FRAME_DT).all()
-    log.info("check: history windows stay in the sequence, in the past, and their dt matches the frame indices")
+    strict = history_set(df, 3, 5)
+    assert strict.sum() and (fr[strict] == fr[strict][:, :1] - np.arange(4) * 5).all(), \
+        "a window in the strict set must hit every requested index exactly"
+    assert (history_rows(df, 3, 5, tol=2)[2].all(1) >= strict).all(), "tolerance must only ever add frames"
+    assert (strict <= span_inside(df, 3, 5)).all(), "a complete window must lie inside the clip"
+    log.info("check: history windows stay in the sequence and in the past, dt matches the frame indices, and "
+             "the %d strictly complete windows hit every requested index exactly", int(strict.sum()))
 
     m = (df.split == "val").to_numpy() & df.has_future.to_numpy()
     if m.any():

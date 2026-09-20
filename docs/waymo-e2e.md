@@ -32,8 +32,10 @@ Slim/raw ratio: 0.44, so front3 is ~0.73 TB in total (val shard 0: 2.62 GB -> 1.
 
 - Each record is one `E2EDFrame` (`waymo_open_dataset/protos/end_to_end_driving_data.proto`). A shard holds
   independent frames of many sequences in shuffled order (val shard 0: 1150 frames from 425 sequences).
-  `frame.context.name` is `<sequence id>-<frame index>` (index 8..237), so the source runs at ~10 Hz over ~20 s,
-  but the shards are sparse samples, not video. `timestamp_micros` and image `pose_timestamp` are zeroed.
+  `frame.context.name` is `<sequence id>-<frame index>` (val 0..238, test 8..149), and the shards are sparse
+  samples of it, not video. Every timing field is zeroed -- `timestamp_micros`, `pose_timestamp`,
+  `camera_trigger_time`, `camera_readout_done_time` -- so the index interval has to be measured, not assumed;
+  it is **0.1000 s (10.00 Hz)**, see "How long is one frame index?" below.
 - 8 cameras per frame, JPEG, in every split. FRONT, FRONT_LEFT, FRONT_RIGHT, SIDE_LEFT, SIDE_RIGHT: 972x1079
   (portrait); REAR_LEFT, REAR_RIGHT: 972x587; REAR: 972x551. ~330 KB per front JPEG.
   `context.camera_calibrations` has intrinsics, extrinsics, width, height, rolling shutter direction.
@@ -125,7 +127,7 @@ One process per shard walks the TFRecord framing, parses each `E2EDFrame` once a
 
 | Column | Content |
 |---|---|
-| `sequence`, `frame` | `context.name` split at the last `-`. The frame index is at the source ~10 Hz, so a step of 1 is 0.1 s |
+| `sequence`, `frame` | `context.name` split at the last `-`. One index step is 0.1000 s, measured (below), not assumed |
 | `split`, `shard` | |
 | `rec_off`, `rec_len` | byte span of the record payload: `f.seek(rec_off); E2EDFrame.FromString(f.read(rec_len))` |
 | `front_off/len`, `front_left_*`, `front_right_*` | byte span of each JPEG **inside the shard file**, so one camera is one `pread` plus `Image.open`, with no protobuf and no full-record read. Found at index time by searching the record for the parsed JPEG bytes and verifying the whole slice |
@@ -155,34 +157,81 @@ consecutive indexed frames of one sequence. Coverage tracks `shards / of` almost
 of every clip**: val runs from index 0 to 238 (~24 s) and test stops at 149, the 12 s mark after which the test
 future is hidden. Sequences are dense in the dataset; they are sparse only in what is on disk right now.
 
+### How long is one frame index? 0.1000 s, measured
+
+Every timing field in WOD-E2E is zeroed -- `timestamp_micros`, `pose_timestamp`, `camera_trigger_time`,
+`camera_readout_done_time` are all 0 (only `shutter`, the 10 ms exposure, survives). So the interval between
+consecutive `context.name` indices cannot be read off a frame and **must be measured**. Do not assume it.
+
+`scripts/waymo_prepare.sh` does not need it to build the index, but every window expressed in seconds does, so
+it was measured from the ego trajectories: arc length along the ego path is frame-independent, and for two
+frames A and B of one sequence with index gap `d`, the distance A covers in the 3.75 s ending at `d * dt` must
+equal the distance B's own `past_states` cover over their whole 3.75 s window. A's path is known over
+[-3.75, +5] s from `past_states` + `future_states`, so solving that equation gives `d * dt` directly.
+
+Over **22 464 frame pairs** on val, restricted to frames whose speed actually changes (a constant speed dates
+nothing): **dt = 0.1000 s, i.e. 10.00 Hz**, with an interquartile range of ~0 and the same answer at every gap
+size from 2 to 40 indices. `FRAME_DT = 0.1` is therefore measured, not nominal.
+
+One thing this does **not** reconcile: at 10 Hz the val index range 0-238 is 23.8 s of frames and the test
+range 8-149 is 14.1 s, neither of which matches the challenge page's "20 s clips, first 12 s visible". The test
+submission frames sit at index 148-150, i.e. 14.8-15.0 s after the clip's first indexed frame, which is
+exactly 5 s -- one prediction horizon -- before the end of a 20 s clip. Treat the measured 10.00 Hz as solid
+and the mapping from index to wall-clock position in the clip as unresolved; nothing we compute depends on it.
+
 ### Image history
 
 `history_rows(df, n_back, stride)` returns, for each target frame, the rows of the target plus `n_back` earlier
-frames of the same sequence, `stride` source indices (0.1 s each) apart, the real `dt` of each slot, and which
-slots were exact. A requested index can be missing because its shard is not downloaded, so:
+frames of the same sequence, `stride` frame indices apart, the real `dt` of each slot, and which slots were
+exact.
 
-1. take the exact index if it is indexed;
-2. else the nearest indexed frame of the same sequence within +/- `tol` indices (default `stride // 2`), never
-   at or after the target, older preferred on a tie;
-3. else repeat the previous (newer) slot -- ordinary last-frame padding, which for slot 1 repeats the target.
+**Waymo cannot drift out of phase.** `frame` is an integer index and `stride` counts indices, so
+`frame - k * stride` is exact arithmetic. This is the one place where a time-based request against irregular
+timestamps goes wrong -- the requested interval and the native interval are never quite equal, the phase walks,
+and a half-step tolerance eventually cannot hold, which is what bit the nuScenes V-JEPA clips. Here a slot
+simply exists or does not.
 
-`dt` is the real offset, so a model can use it (or drop the sample) instead of trusting the nominal stride, and
-`exact` says which slots came from rule 1.
+**What did need fixing is the definition of complete.** A window is complete only when **every slot is an exact
+hit**; `tol` now defaults to 0. Two fallbacks remain so the returned array stays rectangular, and neither is
+history:
 
-Completeness on the val shards present, as the share of target frames whose whole window resolves:
+1. with `tol > 0`, the nearest indexed frame of the same sequence within +/- `tol` indices, never at or after
+   the target, older preferred on a tie;
+2. otherwise the previous (newer) slot is repeated -- last-frame padding, which for slot 1 repeats the target.
 
-| n_back | stride | span | exact | within tol | slots exact | slots within tol |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 1 | 0.1 s | 0.125 | 0.125 | 0.125 | 0.125 |
-| 1 | 5 | 0.5 s | 0.114 | 0.458 | 0.114 | 0.458 |
-| 3 | 5 | 1.5 s | 0.002 | 0.103 | 0.114 | 0.450 |
-| 3 | 10 | 3.0 s | 0.002 | 0.402 | 0.110 | 0.681 |
-| 3 | 20 | 6.0 s | 0.001 | 0.603 | 0.100 | 0.757 |
-| 7 | 5 | 3.5 s | 0.000 | 0.005 | 0.110 | 0.429 |
+`exact` says which slots are real and `history_set(df, n_back, stride)` is the mask of strictly complete
+windows. Never credit a model with history it was not shown.
 
-These numbers are a property of **the download, not of the dataset**: `exact` is close to `coverage ** n_back`,
-so it climbs to ~1 for every window once val's 93 shards are on disk. Nothing in the plan has to work around
-missing history; the tolerance and padding rules exist so that experiments can start before the download ends.
+Completeness on the val shards present, and what the shortfall is made of:
+
+| n_back | stride | span | **complete** | span inside clip | missing shards | at full val | (old rule: within tol) |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 1 | 0.1 s | 0.1248 | 0.9998 | 0.8750 | 0.9998 | 0.1248 |
+| 1 | 5 | 0.5 s | 0.1140 | 0.9984 | 0.8845 | 0.9984 | 0.4582 |
+| 3 | 5 | 1.5 s | 0.0020 | 0.9761 | 0.9741 | 0.9761 | 0.1031 |
+| 3 | 10 | 3.0 s | 0.0017 | 0.9216 | 0.9200 | 0.9216 | 0.4023 |
+| 3 | 20 | 6.0 s | 0.0007 | 0.7813 | 0.7806 | 0.7813 | 0.6025 |
+| 7 | 5 | 3.5 s | 0.0000 | 0.8982 | 0.8982 | 0.8982 | 0.0047 |
+
+**Which is which: essentially all of it is missing shards, none of it is clip geometry.** `span inside clip`
+-- the requested span lies within the index range the split is known to reach -- is 78-100%, and
+`missing shards` accounts for virtually the whole gap down to `complete`. So `at full val` equals
+`span inside clip`: once the 93 val shards are down, a 1.5 s window is complete on 98% of frames, a 3 s window
+on 92%, a 3.5 s seven-frame window on 90%, and a 6 s window on 78%. The clip only ever bites at long spans,
+where the target frame is too near the start of its clip.
+
+**The last column is the correction.** The earlier version of this table quoted "within tol" as completeness.
+It was crediting padding: at a 6 s span it claimed 0.603 where the strict answer is 0.0007, an 860x
+overstatement, and at 0.5 s it claimed 0.458 against 0.114. Those numbers should not have been reported as
+completeness and are kept here only to show the size of the error.
+
+**Clip-set discipline.** When any row of a comparison table consumes image history, the **whole** table --
+ego-only rows included -- must be restricted to the strictly complete set, because a padded window did not see
+the history charged to it and rows scored on different frame sets are not comparable. `eval_set(df, split,
+clip=(n_back, stride))` is that restriction and `baseline_table` / `subset_table` take a `clip` argument.
+Today it leaves **1 649** val frames for a 1x5 window, **29** for 3x5 and **24** for 3x10, so
+**history-consuming experiments have to wait for more val shards**; the ego-only tables in this doc use no
+clip restriction and say so.
 
 ### Targets and inputs
 
