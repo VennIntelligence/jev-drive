@@ -760,9 +760,10 @@ def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None
         stats = F.extract(fx, items, batch_size, max(1, n_cpus() // 2) if workers is None else workers,
                           dst, rl, f"waymo/{name}/{sh}", dataset=Shards)
         idx.to_parquet(dst / "index.parquet", index=False)
-        (dst / "meta.json").write_text(json.dumps(
-            {"set": name, "shard": str(sh), "cams": list(cams), "separate": separate,
-             "long_side": long_side, "tokens_per_forward": int(fx.n_image_tokens), **stats}, indent=2))
+        (dst / "meta.json").write_text(json.dumps(  # default=float: `stats` carries numpy scalars, and
+            {"set": name, "shard": str(sh), "cams": list(cams), "separate": separate,  # this file is the
+             "long_side": long_side, "tokens_per_forward": int(fx.n_image_tokens),     # shard's done-marker
+             **stats}, indent=2, default=float))
         done.append(sh)
         log.info("%s/%s: %d rows, %.1f ms/frame (%d/%d shards)", name, sh, stats["n"],
                  stats["ms_per_frame"] * (len(cams) if separate else 1), len(done), len(todo))
