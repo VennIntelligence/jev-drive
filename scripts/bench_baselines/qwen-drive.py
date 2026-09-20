@@ -86,6 +86,22 @@ for tag, planner, mode, n in runs:
           extra=lambda r: {"generated_tokens": generated["n"] if r.reasoning is not None else 0,
                            "answer_tokens": len(tok.encode(r.reasoning)) if r.reasoning else 0})
 
+# Breakdown of the GPU side, using the model's own internal steps (nothing rewritten).
+if not args.only or args.only == "stages":
+    inp = model.processor(scene, with_reasoning=False, device="cpu")
+    inp = {k: v.to("cuda") if torch.is_tensor(v) else v for k, v in inp.items()}
+    with torch.no_grad():
+        bench("qwen-drive-1.0-4b", "stage-vision", lambda: model.vlm.model.get_image_features(
+            pixel_values=inp["pixel_values"], image_grid_thw=inp["image_grid_thw"]),
+            warmup=args.warmup, iters=args.iters, meta={**meta, "note": "vision encoder only, 12 frames"})
+        bench("qwen-drive-1.0-4b", "stage-vision-prefill", lambda: model._prefill(inp),
+              warmup=args.warmup, iters=args.iters, meta={**meta, "note": "vision encoder + LLM prefill"})
+        cache, anchor = model._prefill(inp)
+        bench("qwen-drive-1.0-4b", "stage-flow-expert", lambda: model._plan_from_cache(
+            cache, anchor, inp, 1, cfg.num_inference_steps, 0),
+            warmup=args.warmup, iters=args.iters,
+            meta={**meta, "note": f"Planning Expert only, {cfg.num_inference_steps} flow steps, cache reused"})
+
 # Breakdown: CPU preprocessing alone (JPEG decode, resize, patchify, tokenize), part of every timed span above.
 if not args.only or args.only == "preprocess":
     bench("qwen-drive-1.0-4b", "preprocess-only", lambda: model.processor(scene, with_reasoning=True, device="cpu"),
