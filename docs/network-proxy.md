@@ -16,6 +16,18 @@ Try in this order. Never use both in one shell.
    Undo: `unset http_proxy https_proxy`.
 2. `proxy_on`: Clash in global mode, auto-picks a Japan/Singapore node. Undo: `proxy_off`.
 
+## Picking a Clash node
+
+Node names carry a traffic multiplier (1x, 0.1x) and sometimes a label such as "dedicated line".
+Neither predicts throughput, so measure before committing a large transfer. Measured 2026-09-20
+against a live download: 1x AWS Singapore 8.44 MB/s, 0.1x Tokyo-01 11.96, 0.1x US-02 11.79,
+0.1x Tokyo-06 "high-speed dedicated line" 9.73. The cheapest node was also the fastest.
+
+The multiplier is what the subscription bills, not what you transfer: on a 0.1x node, 1.2 TB of
+data costs about 120 GB of quota. Check the remaining quota before a bulk transfer, because
+running out also breaks Google OAuth token refresh, which only works through the proxy, and that
+stops a Waymo download from resuming at all.
+
 Notes:
 - HF downloads through either proxy fail with `CAS Client Error ... 401 Unauthorized` (Xet storage).
   Set `HF_HUB_DISABLE_XET=1`. `scripts/download_models.sh` already does.
