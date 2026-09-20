@@ -25,6 +25,13 @@ STYLE = {"font.family": "serif", "font.serif": ["STIXGeneral", "Times New Roman"
          "savefig.pad_inches": 0.01, "axes.prop_cycle": mpl.cycler(color=OKABE_ITO)}
 
 
+def legend_below(fig, ax, ncol: int | None = None):
+    """One legend for the whole figure, under the panels: inside the axes it sits on the curves."""
+    h, l = ax.get_legend_handles_labels()
+    fig.legend(h, l, loc="upper center", bbox_to_anchor=(0.5, 0.0), ncol=ncol or len(l), columnspacing=1.4,
+               handlelength=1.8, borderaxespad=0.6)
+
+
 def save(fig, out_dir, name: str):
     for ext in ("pdf", "png"):
         fig.savefig(out_dir / f"{name}.{ext}")
@@ -36,7 +43,7 @@ def layer_curve(res: pd.DataFrame, out_dir, k_ref: int):
     with mpl.rc_context(STYLE):
         fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.1), sharey=True)
         for ax, head in zip(axes, ("cls", "ridge")):
-            r = res[(res["head"] == head) & res["features"].str.contains("/L")]
+            r = res[(res["head"] == head) & res["features"].str.contains("/L") & res["K"].isin((0, k_ref))]
             for pool in ("mean", "last"):
                 q = r[r["features"].str.endswith("_" + pool)].copy()
                 if not len(q):
@@ -58,8 +65,7 @@ def layer_curve(res: pd.DataFrame, out_dir, k_ref: int):
                          f"{f' (K = {k_ref})' if head == 'cls' else ''}", fontsize=8)
             ax.grid(True, axis="y")
         axes[0].set_ylabel("ADE at 3 s (m)")
-        h, l = axes[0].get_legend_handles_labels()  # one legend under both panels: inside, it covers L19-L31
-        fig.legend(h, l, loc="upper center", bbox_to_anchor=(0.5, 0.02), ncol=len(l), columnspacing=1.2)
+        legend_below(fig, axes[0])  # inside the axes it covers layers 19-31
         save(fig, out_dir, "layer_curve")
 
 
@@ -91,7 +97,7 @@ def k_sweep(res: pd.DataFrame, out_dir, best: str):
             ax.grid(True, which="major")
         axes[0].set_yticks([0.1, 0.2, 0.5, 1, 2, 4])
         axes[1].set_yticks([0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])
-        axes[0].legend(loc="lower left")
+        legend_below(fig, axes[0])
         save(fig, out_dir, "k_sweep")
 
 
