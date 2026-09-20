@@ -121,8 +121,13 @@ ADE 那边没有这个问题：现在 226 帧，完整 val 约 1750 帧，够用
 pre-onset 子集上，视觉**没有**增量（ADE 1.331 → 1.297，CI 大幅重叠；trust-region miss 反而从
 0.889 升到 0.919）。这和 probe v1 在 hard subset 上的结论（turn recall 0.010 → 0.246）相反。
 两者的差别是任务不同：probe 问「会不会转」，planner 问「轨迹长什么样」。
-但 n 只有 135、CI 半宽 ±0.15 m，nuScenes 上这个子集根本测不动。**Waymo 上约 1750 帧时必须重做，
-这是整个项目最关键的一次测量。**
+但 n 只有 135、CI 半宽 ±0.15 m，要判别的差距是 0.034 m——**nuScenes 在这个子集上是先天测不动的
+（underpowered by construction）**。所以这个 null **不是**「视觉在 onset 前没用」的证据，
+以后任何人引用它都必须带上这句话。
+
+**Waymo 上约 1750 帧时必须重做，这是整个项目最关键的一次测量。** 做的时候有一个方法要求：
+**要报 vision 相对 ego 的 paired delta 本身的 CI，不是两行各自的 CI**。
+两行的 CI 重叠并不能判定 paired 比较的结果，planner v0 已经有的 paired scene-bootstrap 就是对的工具。
 
 ---
 
