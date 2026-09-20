@@ -16,11 +16,12 @@ MODELS=(
   facebook/dinov2-base
   # Baselines benchmarked in docs/baselines.md
   nvidia/diffusiongemma-26B-A4B-it-NVFP4   # openjev
-  # Not downloaded on purpose: Zewei-Zhou/AutoVLA (academic/nonprofit-only license, see docs/baselines.md)
+  Zewei-Zhou/AutoVLA                       # AutoVLA NAVSIM checkpoint (UCLA academic licence: academic use only)
 )
 # From ModelScope: hf-mirror redirects these to Xet's US CDN (~0.3 MB/s here), ModelScope is domestic.
 MS_MODELS=(
-  Qwen/Qwen-Drive-1.0-4B   # -> $DATA_DIR/models/Qwen-Drive-1.0-4B
+  Qwen/Qwen-Drive-1.0-4B          # -> $DATA_DIR/models/Qwen-Drive-1.0-4B
+  Qwen/Qwen2.5-VL-3B-Instruct     # AutoVLA's base model -> $DATA_DIR/models/Qwen2.5-VL-3B-Instruct
 )
 if (( $# )); then
   MODELS=() MS_MODELS=()
