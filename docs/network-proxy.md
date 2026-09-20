@@ -33,15 +33,21 @@ stops a Waymo download from resuming at all.
 The box's egress tops out at about 18 MB/s, and neither route nor Clash node changes that ceiling,
 only how it is shared. The link is shared per TCP stream, not per job: a job with 8 concurrent
 downloads and a job with 2 do not get half each. On 2026-09-20 the NAVSIM download held 8 streams
-and got 3-4 MB/s while the other two jobs took ~9 MB/s; adding 6 more streams gained 6.1 MB/s, of
-which ~3 was unused headroom and the rest came out of the other jobs. So raise the stream count of
-the job that matters, and keep the total near the ceiling instead of above it.
+and got 3-4 MB/s while the other two jobs took ~9 MB/s. So raise the stream count of the job that
+matters, and keep the total near the ceiling instead of above it.
 
-How to measure (60 s, while everything keeps running):
+**A one-minute test overstates free headroom.** New streams are still ramping and the existing ones
+have not backed off yet, so the burst reads as headroom. The same day, a 60 s test said 6 extra
+streams gained 6.1 MB/s with no cost to the other jobs; a 90 s steady-state sample after the change
+showed the total flat at 12.3 MB/s and most of the gain taken from a job we had agreed not to slow
+down. For anything running for hours, sample at least 90 s after the change has settled, and measure
+every competing job in the same window, not only your own.
+
+How to measure (while everything keeps running; `<my dir>` per job, one sample per job):
 ```bash
 a=$(awk '/eth0/{print $2}' /proc/net/dev); s0=$(du -sb <my dir> | cut -f1); sleep 60
 b=$(awk '/eth0/{print $2}' /proc/net/dev); s1=$(du -sb <my dir> | cut -f1)
-echo "box $(( (b-a)/60000000 )) MB/s, mine $(( (s1-s0)/60000000 )) MB/s"
+echo "box $(( (b-a)/60000000 )) MB/s, mine $(( (s1-s0)/60000000 )) MB/s"  # repeat over 90 s+
 ```
 
 Notes:
