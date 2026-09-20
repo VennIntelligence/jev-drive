@@ -8,6 +8,14 @@ qwen    Qwen3-VL-4B-Instruct, BF16. Input is the chat template with the image on
                        (layers 1-3: before that layer's DeepStack visual injection is added)
           Lxx_last     same, last token
 dinov2  DINOv2 ViT-B/14 on the full frame resized to 252x448 (no center crop): cls, patch_mean
+siglip2 SigLIP2 so400m/14 at its native 384x384: pooled (the attention-pooling head the model is trained
+        with) and patch_mean. The frame is squashed to a square, as SigLIP2 was pretrained; keeping the
+        aspect would mean padding, which is not what it saw.
+vjepa2  V-JEPA 2 ViT-L, the one control that takes a *clip*: CLIP_FRAMES frames spanning CLIP_SPAN seconds
+        of history, ending at the keyframe, read from sweeps/CAM_FRONT at ~12 Hz (Clips). Pooled over all
+        tokens, and over the last frame's tokens alone. Its row is confounded with history by construction
+        (decisions 12): it sees time that the single-frame backbones do not, so it is evidence about
+        feeding time, not a backbone ranking.
 
 Layout: processed/nuscenes/<version>/features/<set>/{index.parquet, <name>.npy (n, d) float16, meta.json},
 where <set> is the backbone name plus a suffix for non-default input size (e.g. qwen_w800).
@@ -37,6 +45,8 @@ from .common import dataroot, get_logger, processed_dir
 os.environ.setdefault("HF_HUB_OFFLINE", "1")  # weights come from scripts/download_models.sh; the hub hangs from the box
 log = get_logger(__name__)
 QWEN, DINO = "Qwen/Qwen3-VL-4B-Instruct", "facebook/dinov2-base"
+SIGLIP, VJEPA = "google/siglip2-so400m-patch14-384", "facebook/vjepa2-vitl-fpc64-256"
+CLIP_FRAMES, CLIP_SPAN = 64, 5.25  # V-JEPA 2's native frames per clip, and the history they span at ~12 Hz
 DEV = "cuda"
 
 
@@ -51,6 +61,46 @@ class Frames(Dataset):
 
     def __getitem__(self, i):
         return self.transform(Image.open(dataroot() / self.paths[i]).convert("RGB"))
+
+
+class Clips(Dataset):
+    """nuScenes: one clip of image paths per sample, for backbones that take a video."""
+
+    def __init__(self, clips, transform):
+        self.clips, self.transform = [list(c) for c in clips], transform
+
+    def __len__(self):
+        return len(self.clips)
+
+    def __getitem__(self, i):
+        return self.transform([Image.open(dataroot() / p).convert("RGB") for p in self.clips[i]])
+
+
+def clip_paths(kf: pd.DataFrame, cam: pd.DataFrame, frames: int = CLIP_FRAMES, span: float = CLIP_SPAN,
+               tol: float | None = None):
+    """For every keyframe, `frames` CAM_FRONT image paths evenly spaced over the `span` seconds of history
+    ending at it, each taken as the nearest actual frame to the requested time (CAM_FRONT runs at ~12 Hz once
+    sweeps are extracted, so the default tolerance is half that step).
+
+    Slots before the start of the scene clamp to its first frame, which is the usual "repeat the oldest"
+    padding. Returns (paths (n, frames) object array, full (n,) bool: every slot resolved within `tol`).
+    Rows are kept either way and stay aligned with `kf`, so a partial clip is marked, never dropped."""
+    tol = span / frames / 2 if tol is None else tol
+    want = np.arange(frames) * (span / (frames - 1)) - span  # -span .. 0
+    out = np.empty((len(kf), frames), object)
+    full = np.zeros(len(kf), bool)
+    by_scene = dict(tuple(cam.groupby("scene")))
+    for scene, g in kf.groupby("scene"):
+        c = by_scene[scene]
+        ts, paths = c.timestamp.to_numpy() * 1e-6, c.path.to_numpy()
+        t = kf.timestamp.to_numpy()[g.index][:, None] * 1e-6 + want
+        j = np.clip(np.searchsorted(ts, t), 1, len(ts) - 1)
+        j = np.where(np.abs(ts[j - 1] - t) <= np.abs(ts[j] - t), j - 1, j)
+        out[g.index] = paths[j]
+        full[g.index] = (np.abs(ts[j] - t) <= tol).all(1)
+    log.info("clips: %d frames over %.2f s, %d / %d keyframes have every slot within %.0f ms",
+             frames, span, int(full.sum()), len(kf), tol * 1e3)
+    return out, full
 
 
 def _vision_attention(self, hidden_states, cu_seqlens, position_embeddings, **_):
@@ -178,7 +228,53 @@ class DinoFeatures:
         return {"cls": h[:, 0], "patch_mean": h[:, 1:].mean(1)}
 
 
-BACKBONES = {"qwen": QwenFeatures, "dinov2": DinoFeatures}
+class SiglipFeatures:
+    """SigLIP2 vision tower at its native square input. Separates language alignment from pure vision."""
+
+    def __init__(self, size: int = 384):
+        from torchvision.transforms import v2
+        from transformers import AutoModel
+        self.model = AutoModel.from_pretrained(SIGLIP, dtype=torch.bfloat16).vision_model.to(DEV).eval()
+        self.tf = v2.Compose([v2.PILToTensor(), v2.Resize((size, size), antialias=True),
+                              v2.ToDtype(torch.float32, scale=True), v2.Normalize([0.5] * 3, [0.5] * 3)])
+
+    def transform(self, img):
+        return self.tf(img)
+
+    collate = staticmethod(torch.stack)
+
+    @torch.inference_mode()
+    def __call__(self, x):
+        o = self.model(pixel_values=x.to(DEV, torch.bfloat16, non_blocking=True))
+        return {"pooled": o.pooler_output.float(), "patch_mean": o.last_hidden_state.float().mean(1)}
+
+
+class VJepaFeatures:
+    """V-JEPA 2 over a clip of CLIP_FRAMES frames. `transform` receives the clip as a list of PIL images."""
+
+    def __init__(self, size: int = 256, frames: int = CLIP_FRAMES):
+        from torchvision.transforms import v2
+        from transformers import AutoModel
+        self.model = AutoModel.from_pretrained(VJEPA, dtype=torch.bfloat16).to(DEV).eval()
+        self.frames = frames
+        self.tf = v2.Compose([v2.PILToTensor(), v2.Resize((size, size), antialias=True),
+                              v2.ToDtype(torch.float32, scale=True),
+                              v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+
+    def transform(self, imgs):
+        assert len(imgs) == self.frames, f"{len(imgs)} frames but the model wants {self.frames}"
+        return torch.stack([self.tf(i) for i in imgs])  # (T, 3, H, W)
+
+    collate = staticmethod(torch.stack)
+
+    @torch.inference_mode()
+    def __call__(self, x):
+        h = self.model.get_vision_features(x.to(DEV, torch.bfloat16, non_blocking=True)).float()
+        per_frame = h.shape[1] // (self.frames // 2)  # tubelets of 2 frames, so the last tubelet is "now"
+        return {"mean": h.mean(1), "last_mean": h[:, -per_frame:].mean(1)}
+
+
+BACKBONES = {"qwen": QwenFeatures, "dinov2": DinoFeatures, "siglip2": SiglipFeatures, "vjepa2": VJepaFeatures}
 
 
 def free_gpu():
@@ -263,12 +359,20 @@ def run(version: str, backbone: str, batch_size: int, workers: int, force: bool 
     out.mkdir(parents=True, exist_ok=True)
     (out / "meta.json").unlink(missing_ok=True)
 
+    idx, items, ds = kf[["sample_token", "sd_token"]], kf.path, Frames
+    if backbone == "vjepa2":  # a clip per keyframe, from sweeps/CAM_FRONT
+        cam = pd.read_parquet(processed_dir(version) / "cam_front.parquet")
+        items, full = clip_paths(kf, cam, kw.get("frames", CLIP_FRAMES), kw.pop("span", CLIP_SPAN))
+        idx, ds = idx.assign(clip_full=full), Clips
+        kw = {k: v for k, v in kw.items() if k != "span"}
+
     t0 = time.perf_counter()
     fx = BACKBONES[backbone](**kw)
     load_s = time.perf_counter() - t0
-    stats = extract(fx, kf.path, batch_size, workers, out, rl, f"features/{out.name}")
-    kf[["sample_token", "sd_token"]].to_parquet(out / "index.parquet")
-    meta = {"backbone": backbone, "model": QWEN if backbone == "qwen" else DINO, "load_s": load_s, **stats,
+    stats = extract(fx, items, batch_size, workers, out, rl, f"features/{out.name}", dataset=ds)
+    idx.to_parquet(out / "index.parquet")
+    meta = {"backbone": backbone, "model": {"qwen": QWEN, "dinov2": DINO, "siglip2": SIGLIP,
+                                            "vjepa2": VJEPA}[backbone], "load_s": load_s, **stats,
             "features": sorted(p.stem for p in out.glob("*.npy")), **kw}
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
     log.info("%s: %d frames, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/sample -> %s", out.name, stats["n"],

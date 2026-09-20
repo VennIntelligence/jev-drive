@@ -3,6 +3,8 @@
 We skip the devkit's NuScenes class: it loads every annotation table, which is slow on trainval.
 Outputs (under processed/nuscenes/<version>/):
   keyframes.parquet  one row per CAM_FRONT keyframe: scene, split, sample/sd tokens, timestamp, pose, image path
+  cam_front.parquet  every CAM_FRONT frame, keyframes and sweeps alike (~12 Hz), for video backbones that
+                     want a clip rather than a frame; only usable once sweeps/CAM_FRONT is extracted
   ego_traj.parquet   per-scene ego pose at LIDAR_TOP rate (20 Hz), yaw unwrapped within each scene
 """
 from concurrent.futures import ThreadPoolExecutor
@@ -56,18 +58,23 @@ def build_index(version: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     traj["yaw"] = traj.groupby("scene").yaw.transform(np.unwrap)
 
     split = scene_splits(version)
-    kf = sd[(sd.channel == "CAM_FRONT") & sd.is_key_frame]
-    kf = kf.assign(split=kf.scene.map(split).fillna("test"), path=kf.filename)[
-        ["scene", "split", "sample_token", "token", "timestamp", "x", "y", "yaw", "path"]]
-    kf = kf.rename(columns={"token": "sd_token"}).sort_values(["scene", "timestamp"], ignore_index=True)
-    return kf, traj
+    cam = sd[sd.channel == "CAM_FRONT"]
+    cam = cam.assign(split=cam.scene.map(split).fillna("test"), path=cam.filename)[
+        ["scene", "split", "sample_token", "token", "timestamp", "x", "y", "yaw", "path", "is_key_frame"]]
+    cam = cam.rename(columns={"token": "sd_token"}).sort_values(["scene", "timestamp"], ignore_index=True)
+    kf = cam[cam.is_key_frame].drop(columns="is_key_frame").reset_index(drop=True)
+    return kf, traj, cam
 
 
 def run(version: str) -> pd.DataFrame:
-    kf, traj = build_index(version)
+    kf, traj, cam = build_index(version)
     out = processed_dir(version)
     kf.to_parquet(out / "keyframes.parquet")
+    cam.to_parquet(out / "cam_front.parquet")
     traj.to_parquet(out / "ego_traj.parquet")
-    log.info("%s: %d scenes, %d CAM_FRONT keyframes (%s), %d trajectory poses -> %s", version, kf.scene.nunique(),
-             len(kf), kf.split.value_counts().to_dict(), len(traj), out)
+    log.info("%s: %d scenes, %d CAM_FRONT keyframes (%s), %d CAM_FRONT frames in all (%.1f Hz), "
+             "%d trajectory poses -> %s", version, kf.scene.nunique(), len(kf),
+             kf.split.value_counts().to_dict(), len(cam),
+             len(cam) / max(1e-9, (cam.groupby("scene").timestamp.max() - cam.groupby("scene").timestamp.min())
+                            .sum() * 1e-6), len(traj), out)
     return kf

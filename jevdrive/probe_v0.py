@@ -27,9 +27,11 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", default="v1.0-mini", choices=list(nuscenes_index.SPLITS))
     ap.add_argument("--steps", default=",".join(STEPS), help=f"comma list of {STEPS} and/or bench")
-    ap.add_argument("--backbones", default="dinov2,qwen")
+    ap.add_argument("--backbones", default="dinov2,qwen",
+                    help="comma list of " + ",".join(features.BACKBONES) + "; vjepa2 needs sweeps/CAM_FRONT")
     ap.add_argument("--qwen-batch-size", type=int, default=8)
-    ap.add_argument("--dino-batch-size", type=int, default=64)
+    ap.add_argument("--dino-batch-size", type=int, default=64, help="also used for siglip2")
+    ap.add_argument("--clip-batch-size", type=int, default=2, help="vjepa2: a batch is this many 64-frame clips")
     ap.add_argument("--workers", type=int, default=common.n_cpus(), help="DataLoader workers (default: CPU quota)")
     ap.add_argument("--qwen-width", default="native",
                     help="comma list of input widths, one feature set each; 'native' keeps 1600 px (set qwen)")
@@ -62,7 +64,7 @@ def main():
             for b in a.backbones.split(","):
                 for w in widths if b == "qwen" else [None]:
                     kw = {"width": w, "n_layer_probes": a.qwen_layers} if b == "qwen" else {}
-                    bs = a.qwen_batch_size if b == "qwen" else a.dino_batch_size
+                    bs = {"qwen": a.qwen_batch_size, "vjepa2": a.clip_batch_size}.get(b, a.dino_batch_size)
                     meta = features.run(a.version, b, bs, a.workers, a.force, rl, **kw)
                     timings[f"features_{features.set_name(b, **kw)}_meta"] = meta
         elif step == "probe":
