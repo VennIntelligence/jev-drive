@@ -155,14 +155,16 @@ pooling 用 image-token mean，不用 last token。
 中层也确实好过自家 ViT（3.438）和 DINOv2（3.592）；但**U 只有 0.2 m 深，而 CI 半宽是 ±0.27 m**，
 这张表自己撑不住选层。层位的依据目前主要来自 probe。需要 Waymo 的 layer curve 确认。
 
-另外 pooling 的结论在两个任务上相反：planner 上 mean pooling 稳定好于 last token（回归差 0.15 m、
-分类差 0.3 m），probe 上是 last 更好。按任务选，不要跨任务照搬。
+pooling 的结论两个任务其实一致：**mean 都好于 last**。planner 上回归差 0.15 m、分类差 0.3 m；
+probe v1 上 mean 在每一层都更低（全体最好 0.400 对 0.421，hard subset 0.213 对 0.224）。
+（"probe 上 last 更好"是 v0 在 mini 上的结论，那时 val 不到 100 个样本，trainval 上被推翻了。）
 
 **2026-09-20 补充证据（planner v0）**：轨迹回归上最好的是 L19 mean（ADE 3.250 m），L13–L22 都在
 3.25–3.27，L01 是 3.445、L36 是 3.380，确实是同一个方向的浅 U，最好层和 probe 的 L20–L24 重合。
 但最好和最差只差 0.2 m，而 bootstrap CI 半宽约 ±0.27 m，**单看轨迹任务不足以支撑选层**。
 pooling 这一半倒是被加强了：mean pooling 在轨迹上稳定好于 last token（回归差 0.15 m、分类差 0.3 m），
-和转向 probe 的结论相反（那里深层 last token 的 NLL 最好），说明读哪个 token 要看下游任务。
+**和 probe v1 在 trainval 上的结论方向一致**（mean 在每一层都优于 last）。
+所以 mean pooling 这条可以当成跨任务成立的结论。
 
 ---
 
