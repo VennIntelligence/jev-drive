@@ -73,13 +73,16 @@ jobs_for() {
   local part=$1
   if [[ $part == maps ]]; then
     # S3 is unreachable direct from the box; this 1 GB file is the only one that needs Clash.
-    local route=direct size
-    size=$(curl -sfIL -m 20 "$MAPS_URL" | awk 'tolower($1)=="content-length:"{s=$2} END{print s+0}') || true
-    if [[ -z $size || $size == 0 ]]; then
-      clash-start >/dev/null && route=clash
-      size=$(curl -sfIL -m 30 -x "$CLASH" "$MAPS_URL" | awk 'tolower($1)=="content-length:"{s=$2} END{print s+0}')
+    local name=nuplan-maps-v1.1.zip route=direct size=0
+    if [[ ! -e $STATE/$name.done ]]; then
+      size=$(curl -sfIL -m 20 "$MAPS_URL" | awk 'tolower($1)=="content-length:"{s=$2} END{print s+0}' || true)
+      if [[ -z $size || $size == 0 ]]; then
+        route=clash; clash-start >/dev/null || log "clash-start failed, trying the proxy anyway"
+        size=$(curl -sfIL -m 30 -x "$CLASH" "$MAPS_URL" | awk 'tolower($1)=="content-length:"{s=$2} END{print s+0}' || true)
+        [[ -n $size && $size != 0 ]] || { log "cannot reach the maps host direct or through clash, skipping maps"; return 0; }
+      fi
     fi
-    printf '%s\t%s\t%s\t-\t%s\t0\t%s\n' nuplan-maps-v1.1.zip "$MAPS_URL" "$size" "$ROOT" "$route"
+    printf '%s\t%s\t%s\t-\t%s\t0\t%s\n' "$name" "$MAPS_URL" "$size" "$ROOT" "$route"
     return
   fi
   local dir pat dest strip
