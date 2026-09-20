@@ -141,6 +141,22 @@ def to_markdown(res: pd.DataFrame) -> str:
             + t.to_markdown(floatfmt=".4f") + "\n")
 
 
+def feature_status(name: str = "qwen_front3", split: str = "val") -> dict:
+    """What the pipeline can see, not just what it did: shards sitting on disk, shards the index knows
+    about, shards whose features are built. A pass that reports "0 to extract, 29 done" looks healthy when
+    the truth is "42 shards sitting there unseen", so the loop prints all three every time."""
+    on_disk = len([p for p in waymo.shard_dir().glob(f"{split}_*.tfrecord-*") if p.is_file()])
+    try:
+        df = waymo.load_index()
+        df = df[df.split == split]
+        indexed, frames = df.shard.nunique(), len(df)
+    except (FileNotFoundError, OSError):
+        indexed, frames = 0, 0
+    root = waymo.out_dir("features", name)
+    built = len([d for d in root.iterdir() if d.is_dir() and (d / "meta.json").exists()]) if root.exists() else 0
+    return {"on_disk": on_disk, "indexed": indexed, "built": built, "frames_indexed": frames}
+
+
 def main():
     import argparse
     from .runlog import RunLog
@@ -148,7 +164,12 @@ def main():
     ap.add_argument("--steps", default="split,vocab", help="comma list of split,vocab")
     ap.add_argument("--ks", default="64,256,1024,4096,8192")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--set", default="qwen_front3", help="status: the feature set to count")
     a = ap.parse_args()
+    if a.steps == "status":  # no RunLog: this is polled every few minutes by the extraction loop
+        st = feature_status(a.set)
+        print(" ".join(str(st[k]) for k in ("on_disk", "indexed", "built", "frames_indexed")))
+        return
     rl = RunLog("waymo_stage_a", "half_val")
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
