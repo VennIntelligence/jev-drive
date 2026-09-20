@@ -2,13 +2,13 @@
 
 Read this when you need a competitor's latency on our card, want to re-run one, or wonder why a baseline is missing.
 
-All numbers: RTX PRO 6000 Blackwell (sm_120), batch 1, serial requests, the release's own code, weights,
-precision and preprocessing, no tuning. 20 warmup + 200 timed requests, each bracketed by `torch.cuda.synchronize()`
-(openjev: one blocking HTTP round trip). Same input everywhere: the WOD-E2E demo scene
-`74cf0a3e1a537277b1258a683de98b4f-149` that ships with Qwen-Drive (3 front cameras x 4 frames, JPEG on disk).
+Protocol, shared by every row: one RTX PRO 6000 Blackwell (sm_120), **batch 1**, serial requests, the release's own
+code, weights, precision and preprocessing, no tuning. 20 warmup then **200 timed** requests, each bracketed by
+`torch.cuda.synchronize()` (openjev: one blocking HTTP round trip); the table reports **mean / p50 / p95** in ms,
+peak VRAM of the process, and the timed span in its own column. Same input everywhere: the WOD-E2E demo scene
+`74cf0a3e1a537277b1258a683de98b4f-149` that ships with Qwen-Drive (3 front cameras x 4 frames of JPEG on disk,
+its logged ego state of 0.06 m/s and its route command, turn left).
 CPU threads: `OMP_NUM_THREADS=4` (the box is shared; torch would otherwise size its pool from the host's 208 cores).
-Every row below shares that protocol: one RTX PRO 6000 Blackwell, batch 1, serial requests, mean / p50 / p95 over
-200 timed requests after 20 warmup, peak VRAM of the process, and the timed span named in its own column.
 Raw outputs: `$DATA_DIR/runs/bench_baselines/<model>/<tag>/<time>/{summary,times_ms}.json`.
 Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill`, `stage-flow-expert`, `preprocess-only`);
 `--only stages` re-runs just those.
@@ -29,14 +29,14 @@ Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill
 | openjev, README text benchmark (3 text questions) | same | same | yes | same | 147 / 151 / 215 | same | same, 171 input tokens, no image | the 24/200 requests that need one read only take 47 ms; the README quotes 94 ms p50 on the same card |
 | Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
 | facebook/vjepa2-vitl-fpc64-256, google/siglip2-so400m-patch14-384 | HF | Apache-2.0 / Apache-2.0, not gated | load check pending (queued download) | `envs/jevdrive` (ours) | not benchmarked | | one forward on the demo frames | backbone controls for our own pipeline, not competitors: V-JEPA 2 is video-pretrained (can one frame answer what happens before a maneuver starts?) and SigLIP2 separates language alignment from pure vision. They replace DINOv3, see decision 12 |
-| Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | download still running (~66 GB at ~1.7 MB/s; the box link is shared) | same | not benchmarked | | same | the load check runs by itself when the download ends (tmux `jev:bl-backbone-check`) and writes `$DATA_DIR/runs/bench_baselines/backbones/load_check_32b.txt` |
+| Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | download in the box's shared queue (~66 GB, 45 GB in) | same | not benchmarked | | same | the load check runs by itself when the download ends (tmux `jev:bl-backbone-check`) and writes `$DATA_DIR/runs/bench_baselines/backbones/load_check_32b.txt` |
 
 Sanity check, not latency: the bundled `scripts/demo.py` on the same scene gives VQA text, 6 direct and 6
 reasoning trajectories, ADE 0.225 m / FDE 0.992 m (direct) and 0.242 m / 1.072 m (reasoning) against the logged
 future. Output in `$DATA_DIR/runs/bench_baselines/qwen-drive-1.0-4b/demo/demo.txt`.
 
 What to read from it: Qwen-Drive's as-released pipeline costs ~0.7 s without reasoning and ~1.25 s with it,
-and openjev's single read over three camera images costs ~0.3 s; both are far from a 10 Hz budget as released.
+and openjev's decision over three camera images ~0.47 s; all three are far from a 10 Hz budget as released.
 
 Obvious inefficiencies seen (not fixed; the numbers above are as released; speedups are rough estimates, not measured):
 - Qwen-Drive CPU preprocessing is 214 ms of the 700 (PIL decode and two bicubic resizes of 12 frames on CPU).
@@ -47,8 +47,9 @@ Obvious inefficiencies seen (not fixed; the numbers above are as released; speed
   static cache + compile) typically does 5-10 ms/token for a 4B model: about -400 ms in reasoning mode.
   Together: roughly 0.25 s direct and 0.35 s reasoning.
 - openjev: latency is mostly the number of reads, which the server's re-read policy picks (`OPENJEV_AUTO_MAX`,
-  `OPENJEV_AUTO_THRESHOLD`). vLLM's scheduler and the async API are CPU-heavy; the box's CPU was shared with
-  two data jobs during the run, which may inflate the tails.
+  `OPENJEV_AUTO_THRESHOLD`); on this scene one answer stays uncertain, so every request pays four reads.
+  A caller that accepts a single read would see roughly the 1-read cost (47 ms on the text benchmark).
+  vLLM's scheduler and the async API are also CPU-heavy, and the box's CPU is shared with the dataset jobs.
 
 ## Not run
 
