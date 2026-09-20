@@ -33,6 +33,14 @@ Kill by PID, or kill the tmux window you started. Never `pkill -f <script name>`
 that script, including other people's supervisors and your own `ssh` command.
 Several jobs share this box, so a stray `pkill` takes out work that is not yours.
 
+## Committing from a shared tree
+
+Several sessions and agents edit this working tree at once, so a commit must name its paths:
+`git add <path> ...` or `git commit -- <path> ...`. Never `git add -A` and never `git commit -a`:
+they sweep in whatever another session happens to have open, and the change lands on `main`
+under a message that does not describe it. Nothing is lost when it happens, but the history lies.
+Check `git status` before committing, and `git pull --rebase` before pushing.
+
 ## Reporting while it runs
 
 An agent babysitting a long job reports on a **3-5 hour** cadence, not per file or per step.
