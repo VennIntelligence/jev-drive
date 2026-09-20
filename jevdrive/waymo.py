@@ -47,7 +47,12 @@ RFS_FREQ = 4                           # Hz
 RFS_BASE_THRESHOLDS = (1.0, 1.8)       # metres at 3 s / 5 s, before multipliers and the speed scale
 RFS_MULTIPLIERS = (1.0, 4.0)           # (lateral, longitudinal)
 RFS_DECAY, RFS_FLOOR, RFS_N_RATER = 0.1, 4.0, 3
-TURN_YAW_RATE = 0.1                    # rad/s over the past window; above this a frame counts as turning
+# Frame subsets, in the spirit of jevdrive/labels.py so the nuScenes and Waymo tables line up.
+TURN_YAW_RATE = 5.0                    # deg/s; above this the car is already turning now
+ONSET_YAW_RATE = 1.0                   # deg/s; below this it is "not turning yet" (labels.py HARD_YAW_RATE)
+ONSET_BEARING = 5.0                    # deg of chord bearing; above this it does turn within the horizon
+ONSET_HORIZON = 3.0                    # s, the shorter of the two RFS horizons
+MIN_PAST_DISP, MIN_CHORD = 1.0, 3.0    # m; below these the yaw rate / bearing are noise rather than signal
 CLUSTERS = ("Construction", "Interections", "Pedestrian", "Cyclist", "Multi-Lane Maneuvers",
             "Single-Lane Maneuvers", "Cut_ins", "Foreign Object Debris", "Special Vehicles", "Spotlight",
             "Others")  # the 11 leaderboard clusters, spelled as val_sequence_name_to_scenario_cluster.json does
@@ -358,6 +363,64 @@ def baselines(past: np.ndarray, k: int = 4) -> dict[str, np.ndarray]:
             "ctra": _arc(kin["v"], kin["a"], kin["w"], t)}
 
 
+def future_maneuver(future: np.ndarray, horizon: float = ONSET_HORIZON) -> tuple[np.ndarray, ...]:
+    """How far the future departs from straight ahead, from positions alone (Waymo stores no future yaw):
+    the bearing of the chord from the origin to the waypoint at `horizon`, that waypoint's lateral offset, and
+    the chord length. For a constant-curvature arc the bearing is half the heading change, so it plays the role
+    `dyaw_future_deg` plays in jevdrive/labels.py -- but unlike per-step heading differencing it does not blow
+    up when the car barely moves, and on Waymo that matters: differencing gives a 99th percentile of 358 deg of
+    "heading change" over 2 s on val, which is pure noise from near-zero displacements.
+    """
+    k = int(round(horizon / DT)) - 1
+    x, y = future[:, k, 0].astype(np.float64), future[:, k, 1].astype(np.float64)
+    return np.degrees(np.arctan2(y, x)), y, np.hypot(x, y)
+
+
+def subsets(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, horizon: float = ONSET_HORIZON,
+            yaw_rate: float = ONSET_YAW_RATE, bearing: float = ONSET_BEARING) -> dict[str, np.ndarray]:
+    """Boolean masks over all index rows. Beyond the intent splits:
+
+      turn_yaw      already turning now: |yaw rate| >= TURN_YAW_RATE
+      straight_yaw  not turning now and not turning later
+      pre_onset     the Waymo version of the nuScenes "hard" subset (jevdrive/labels.py): the car is **not
+                    turning yet** (|yaw rate| < `yaw_rate`) but it **does** turn within `horizon`
+                    (|chord bearing| > `bearing`). This is where ego state cannot know the answer and the
+                    cameras have to, so it is the subset a visual model is judged on.
+
+    The yaw rate and the bearing both come from positions, so each carries a validity guard: the car must have
+    moved MIN_PAST_DISP over the last second and MIN_CHORD over the horizon. Frames failing a guard are in no
+    yaw-based subset rather than in a noisy one; test frames (no future) fall out through the chord guard.
+    """
+    w = np.abs(np.degrees(past_kinematics(past)["w"]))
+    w_ok = np.linalg.norm(past[:, -1, :2] - past[:, -5, :2], axis=-1) >= MIN_PAST_DISP
+    b, _, chord = future_maneuver(future, horizon)
+    b_ok = chord >= MIN_CHORD
+    intent, turning_now, turning_later = df.intent.to_numpy(), w_ok & (w >= TURN_YAW_RATE), b_ok & (np.abs(b) > bearing)
+    return {"all": np.ones(len(df), bool), "straight": intent == 1, "left": intent == 2, "right": intent == 3,
+            "turn_intent": np.isin(intent, (2, 3)), "turn_yaw": turning_now,
+            "straight_yaw": w_ok & (w < yaw_rate) & b_ok & ~turning_later,
+            "pre_onset": w_ok & (w < yaw_rate) & turning_later}
+
+
+def onset_sweep(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val") -> pd.DataFrame:
+    """Frames and rater-scored frames in the pre-onset subset at a few thresholds. The rater-scored count is
+    what limits RFS there, so it is projected to a complete val split as well."""
+    m = (df.split == split).to_numpy() & df.has_future.to_numpy()
+    rated = np.zeros(len(df), bool)
+    rated[load_rater()[0]] = True
+    n_rated = int((rated & m).sum())
+    rows = []
+    for yaw in (1.0, 2.0, 3.0):
+        for h, bear in ((3.0, 5.0), (3.0, 8.0), (5.0, 5.0), (5.0, 12.0)):
+            sub = subsets(df, past, future, h, yaw, bear)["pre_onset"] & m
+            r = int((sub & rated).sum())
+            rows.append({"yaw_rate_below": yaw, "bearing_above": bear, "horizon_s": h, "frames": int(sub.sum()),
+                         "share": round(sub.sum() / m.sum(), 4), "rated": r,
+                         "rated_at_full_val": round(r * 479 / max(n_rated, 1)),
+                         "turn_intent": round(float(np.isin(df.intent.to_numpy()[sub], (2, 3)).mean()), 3)})
+    return pd.DataFrame(rows)
+
+
 def ade_fde(pred: np.ndarray, gt: np.ndarray, horizons=(3.0, 5.0)) -> dict[str, float]:
     d = np.linalg.norm(pred - gt, axis=-1)
     out = {}
@@ -373,17 +436,14 @@ def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split
     The turning subsets are where a visual model should show its increment, so they get their own columns."""
     m = (df.split == split).to_numpy() & df.has_future.to_numpy()
     gt, preds = future_xy(future[m]), baselines(past[m])
-    intent, w = df.intent.to_numpy()[m], np.abs(past_kinematics(past[m])["w"])
-    subsets = {"straight": intent == 1, "left": intent == 2, "right": intent == 3,
-               "turn_intent": np.isin(intent, (2, 3)), "turn_yaw": w >= TURN_YAW_RATE,
-               "straight_yaw": w < TURN_YAW_RATE}
+    sub = {k: v[m] for k, v in subsets(df, past, future).items() if k != "all"}
     rows = []
     for name, p in preds.items():
         r = {"baseline": name, "n": int(m.sum()), **ade_fde(p, gt)}
-        r |= {f"ade5_{k}": round(ade_fde(p[v], gt[v])["ade5"], 3) for k, v in subsets.items() if v.any()}
+        r |= {f"ade5_{k}": round(ade_fde(p[v], gt[v])["ade5"], 3) for k, v in sub.items() if v.any()}
         rows.append(r)
     out = pd.DataFrame(rows).round(4)
-    out.attrs["subset_sizes"] = {k: int(v.sum()) for k, v in subsets.items()}
+    out.attrs["subset_sizes"] = {k: int(v.sum()) for k, v in sub.items()}
     return out
 
 
@@ -498,6 +558,36 @@ def rater_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray) -> pd.Da
                     "ade5_rater": round(d.mean(), 3),
                     "ade5_logged": round(np.linalg.norm(p - future_xy(future[rows_i]), axis=-1).mean(), 3),
                     **{c: round(per.get(c, float("nan")), 2) for c in per.index}})
+    return pd.DataFrame(out)
+
+
+def subset_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val",
+                 names=("cv", "ca", "ctrv", "ctra")) -> pd.DataFrame:
+    """The ego-only baselines on each frame subset, with ADE against the log, and -- on whatever part of the
+    subset is rater-scored -- RFS and the official ADE against the top-rated trajectory, side by side."""
+    m = (df.split == split).to_numpy() & df.has_future.to_numpy()
+    rows_i, traj, scores = load_rater()
+    rated = np.zeros(len(df), bool)
+    rated[rows_i] = True
+    at_row = {int(r): i for i, r in enumerate(rows_i)}
+    preds, gt = baselines(past), future_xy(future)
+    out = []
+    for sub_name, sub in subsets(df, past, future).items():
+        sub = sub & m
+        sel = np.flatnonzero(sub & rated)
+        j = np.array([at_row[int(i)] for i in sel], int)
+        for name in names:
+            p = preds[name]
+            r = {"subset": sub_name, "baseline": name, "frames": int(sub.sum()), "rated": len(sel),
+                 **{k: round(v, 3) for k, v in ade_fde(p[sub], gt[sub]).items()}}
+            if len(sel) >= 1:
+                rfs = rater_feedback_score(p[sel], traj[j], scores[j], init_speed(past[sel]))
+                best = traj[j, scores[j].argmax(1)]
+                r |= {"rfs_frame_mean": round(float(rfs.mean()), 3),
+                      "ade5_rater": round(float(np.linalg.norm(p[sel] - best, axis=-1).mean()), 3),
+                      "logged_rfs": round(float(rater_feedback_score(gt[sel], traj[j], scores[j],
+                                                                     init_speed(past[sel])).mean()), 3)}
+            out.append(r)
     return pd.DataFrame(out)
 
 
@@ -665,8 +755,12 @@ def report(df=None, past=None, future=None) -> dict:
     past, future = load_ego() if past is None else (past, future)
     seq, hist = sequence_stats(df), history_report(df)
     base = baseline_table(df, past, future)
-    rater = rater_table(df, past, future) if (out_dir() / "rater.parquet").exists() and df.n_pref.any() else None
-    for k, t in (("sequences", seq), ("history", hist), ("baselines", base), ("rater", rater)):
+    has_rater = (out_dir() / "rater.parquet").exists() and df.n_pref.any()
+    rater = rater_table(df, past, future) if has_rater else None
+    sweep = onset_sweep(df, past, future) if has_rater else None
+    bysub = subset_table(df, past, future) if has_rater else None
+    for k, t in (("sequences", seq), ("history", hist), ("baselines", base), ("rater", rater),
+                 ("onset_sweep", sweep), ("subsets", bysub)):
         if t is not None:
             t.to_csv(out_dir("report") / f"{k}.csv", index=False)
     log.info("sequences:\n%s", seq.to_string(index=False))
@@ -681,7 +775,13 @@ def report(df=None, past=None, future=None) -> dict:
         log.info("Rater Feedback Score on the %d rater-scored val frames (rfs = mean over scenario clusters, "
                  "the leaderboard number; ade*_rater = against the top-rated trajectory, as the official ADE "
                  "is defined):\n%s", rater.n.iloc[0], rater.to_string(index=False))
-    return {"sequences": seq, "history": hist, "baselines": base, "rater": rater}
+        log.info("pre-maneuver-onset subset (not turning yet, turns within the horizon) at a few thresholds; "
+                 "`rated` is what limits RFS there:\n%s", sweep.to_string(index=False))
+        log.info("ego-only baselines per subset (defaults: onset = |yaw rate| < %.1f deg/s and |bearing| > "
+                 "%.1f deg at %.1f s):\n%s", ONSET_YAW_RATE, ONSET_BEARING, ONSET_HORIZON,
+                 bysub.to_string(index=False))
+    return {"sequences": seq, "history": hist, "baselines": base, "rater": rater, "onset_sweep": sweep,
+            "subsets": bysub}
 
 
 def check(n: int = 64) -> None:
@@ -761,6 +861,19 @@ def check(n: int = 64) -> None:
         assert lf.mean() > zero.mean(), (lf.mean(), zero.mean())
         log.info("check: RFS on %d rater-scored frames -- logged future %.3f, standing still %.3f, "
                  "rater trajectories score their own labels back", len(rows_i), lf.mean(), zero.mean())
+
+    sub = subsets(df, past, future)
+    val = (df.split == "val").to_numpy() & df.has_future.to_numpy()
+    assert not (sub["pre_onset"] & sub["turn_yaw"]).any(), "a frame cannot be both pre-onset and already turning"
+    assert not (sub["pre_onset"] & sub["straight_yaw"]).any()
+    assert not sub["pre_onset"][~val].any(), "pre-onset needs a future, so it must be val/train only"
+    b = np.abs(future_maneuver(future)[0])
+    assert b[sub["pre_onset"]].min() > ONSET_BEARING and sub["pre_onset"].sum() > 0
+    turn_rate = np.isin(df.intent.to_numpy()[sub["pre_onset"]], (2, 3)).mean()
+    straight_rate = np.isin(df.intent.to_numpy()[sub["straight_yaw"]], (2, 3)).mean()
+    assert turn_rate > 10 * straight_rate, (turn_rate, straight_rate)   # the definition must track intent
+    log.info("check: pre-onset subset has %d frames, %.0f%% with a turn intent, against %.1f%% on the "
+             "straight subset", sub["pre_onset"].sum(), 100 * turn_rate, 100 * straight_rate)
 
     names = submission_frames()
     traj = np.tile(np.stack([np.arange(1, N_FUTURE + 1) * DT * 10, np.zeros(N_FUTURE)], -1), (len(names), 1, 1))

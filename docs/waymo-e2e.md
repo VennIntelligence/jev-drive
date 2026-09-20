@@ -115,7 +115,7 @@ Outputs, under `$DATA_DIR/processed/waymo_e2e/`:
 | `index.parquet` | one row per frame, sorted by (split, sequence, frame) |
 | `past.npy`, `future.npy` | `(n, 16, 6)` and `(n, 20, 3)` float32, row-aligned with the index |
 | `rater.parquet` | the rater-scored trajectories: one row per (frame, trajectory), with the index row it belongs to |
-| `report/*.csv` | the tables below, as of the last `report` |
+| `report/*.csv` | the tables below, as of the last `report`: sequences, history, baselines, rater, onset_sweep, subsets |
 | `features/<set>/` | `<name>.npy` float16 + `index.parquet` + `meta.json`, same layout as `processed/nuscenes/<version>/features/` |
 | `submissions/` | `E2EDChallengeSubmission` tar.gz files |
 
@@ -203,18 +203,18 @@ missing history; the tolerance and padding rules exist so that experiments can s
 `baselines()` builds five trajectories from the past states alone, in the submission frame. ADE/FDE against the
 logged future, in metres, on the 13 759 val frames downloaded so far:
 
-ADE@5s is also broken out on the subsets where a visual model should show its increment: by intent, and by
-measured yaw rate over the past window (`turn_yaw` is `|yaw rate| >= 0.1 rad/s`). Subset sizes: straight
-11 693, left 1 046, right 1 020, turn by intent 2 066, turn by yaw 2 657, straight by yaw 11 102.
+ADE@5s is also broken out per subset (`subsets()`), defined in the spirit of `jevdrive/labels.py` so the
+nuScenes and Waymo tables line up. Sizes: straight 11 693, left 1 046, right 1 020, turn by intent 2 066,
+already turning 1 436, straight 5 979, **pre-onset 226**.
 
-| baseline | ADE@3s | FDE@3s | ADE@5s | FDE@5s | straight | left | right | turn (intent) | turn (yaw) | straight (yaw) |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 | 6.96 | 7.10 | 16.04 |
-| cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 | 4.00 | 3.56 | 2.62 |
-| cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 | 3.98 | 3.54 | 2.63 |
-| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 | 4.17 | 3.58 | 2.42 |
-| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 | **2.92** | **3.04** | 2.60 |
-| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** | 2.95 | 3.11 | **2.39** |
+| baseline | ADE@3s | FDE@3s | ADE@5s | FDE@5s | straight | left | right | turn (intent) | already turning | straight | **pre-onset** |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| zero (stand still) | 8.890 | 16.380 | 14.315 | 27.156 | 15.61 | 5.52 | 8.44 | 6.96 | 12.47 | 20.96 | 11.48 |
+| cv_vel (given velocity vector) | 1.156 | 2.932 | 2.801 | 7.316 | 2.59 | 3.16 | 4.87 | 4.00 | 5.34 | 2.66 | 4.21 |
+| cv (speed along the heading) | 1.159 | 2.939 | 2.807 | 7.326 | 2.60 | 3.14 | 4.84 | 3.98 | 5.30 | 2.67 | 4.22 |
+| ca (+ longitudinal acceleration) | 0.923 | 2.545 | 2.645 | 7.762 | 2.38 | 3.36 | 4.99 | 4.17 | 5.44 | **2.12** | 3.98 |
+| ctrv (constant turn rate) | 1.065 | 2.758 | 2.687 | **7.226** | 2.65 | **2.22** | 3.63 | **2.92** | **4.28** | 2.67 | 4.19 |
+| ctra (turn rate + acceleration) | **0.825** | **2.366** | **2.533** | 7.711 | 2.46 | 2.30 | **3.61** | 2.95 | 4.41 | 2.13 | **3.95** |
 
 **This ADE is against the logged future and is not the leaderboard's ADE** -- see the next section, where the
 same baselines are scored against the top-rated rater trajectory, which is how the official ADE is defined.
@@ -223,12 +223,65 @@ while the log itself gets 2.63 m. Do not compare the numbers in this table with 
 
 Two places where the baselines are visibly weak, and where a visual model should be measured:
 
-- **Turns.** Constant velocity costs 4.84 m on GO_RIGHT against 2.60 m on GO_STRAIGHT, and 3.54 m on the
-  yaw-rate turning subset against 2.63 m off it; a constant turn rate brings GO_RIGHT to 3.61 m. Always report
-  ADE per intent and per scenario cluster, never the mean alone.
+- **Turns, and especially turns that have not started.** See the next section -- this is the sharpest cell in
+  the table, and the direct analogue of the nuScenes hard-subset result.
 - **The long horizon.** Extrapolating acceleration wins at 3 s (0.83 m) and loses at 5 s (FDE 7.71 m against
   CTRV's 7.23 m), because nothing in the ego state says when the car will stop. That is exactly what the
   cameras are for.
+
+### The pre-maneuver-onset subset
+
+`jevdrive/labels.py` calls a nuScenes frame **hard** when the car is not turning yet (`|current yaw rate| <
+1 deg/s`) but turns within the horizon. On that subset the ego-state probe's turn recall collapses to 0.010
+while mid-layer Qwen features reach 0.246 ([research/qwen-latent-driving.md](../research/qwen-latent-driving.md)).
+`subsets()["pre_onset"]` is the Waymo version of it, with the same structure and thresholds picked from Waymo:
+
+| | |
+|---|---|
+| Not turning yet | `\|yaw rate\| < 1.0 deg/s` over the past window -- the same cut as nuScenes, and it lands in the same place: it keeps 60% of usable Waymo val frames against nuScenes' 64% |
+| Turns later | `\|bearing\| > 5 deg` at 3 s, the bearing of the chord from the origin to the waypoint at the horizon |
+| Guards | the car must have moved >= 1 m in the last second and >= 3 m over the horizon |
+
+**Why the bearing and not a heading change.** Waymo stores no future yaw, only positions, so the heading has to
+be derived. Differencing consecutive future waypoints -- the obvious way, and what `labels.py` can afford with
+20 Hz nuScenes poses -- is unusable here: at 4 Hz with a car that is often nearly stopped, its 99th percentile
+is **358 deg of "heading change" over 2 s** on val, pure noise from near-zero displacements. The chord bearing
+is one `atan2` on the endpoint, equals half the heading change for a constant-curvature arc, and degrades
+gracefully. It validates against intent: the pre-onset subset is **56% GO_LEFT/GO_RIGHT** against **0.3%** on
+the straight subset, and `check` asserts that separation.
+
+Thresholds, and what each leaves to score (`onset_sweep()`):
+
+| yaw rate < | bearing > | horizon | frames | share of val | rater-scored | at full val | turn intent |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| **1.0** | **5** | **3 s** | **226** | 1.6% | **2** | **14** | 0.56 |
+| 1.0 | 8 | 3 s | 125 | 0.9% | 1 | 7 | 0.82 |
+| 1.0 | 5 | 5 s | 446 | 3.2% | 3 | 21 | 0.34 |
+| 2.0 | 5 | 3 s | 358 | 2.6% | 2 | 14 | 0.53 |
+| 3.0 | 5 | 3 s | 461 | 3.4% | 3 | 21 | 0.50 |
+| 3.0 | 5 | 5 s | 861 | 6.3% | 5 | 35 | 0.30 |
+
+**RFS cannot be reported on this subset, now or realistically ever.** Only 2 of the 68 rater-scored frames we
+hold fall in it, and scaling to a complete val split gives **14 frames at the default thresholds, 35 at the
+loosest** -- because rater labels exist on exactly one frame per sequence and that frame is not chosen to be a
+pre-onset moment. So the pre-onset argument has to be made on **ADE**, where the subset is 226 frames today
+and about **1 750 at full val** (1.6% of 106 671). RFS stays the metric for the split as a whole.
+
+The ADE version says the same thing the nuScenes recall number says:
+
+| baseline | all | already turning | **pre-onset** | straight |
+|---|---:|---:|---:|---:|
+| cv (no yaw rate) | 2.807 | 5.303 | 4.216 | 2.667 |
+| ctrv (+ yaw rate) | 2.687 | 4.277 | 4.192 | 2.674 |
+| **what the yaw rate buys** | -0.120 | **-1.026** | **-0.024** | +0.007 |
+| ca (no yaw rate) | 2.645 | 5.443 | 3.975 | 2.121 |
+| ctra (+ yaw rate) | 2.533 | 4.411 | 3.946 | 2.127 |
+| **what the yaw rate buys** | -0.112 | **-1.032** | **-0.029** | +0.006 |
+
+Knowing the current yaw rate is worth **1.03 m of ADE@5s while the car is already turning, and 0.02 m before
+the turn starts** -- a 40x difference. The ego state carries the turn only once the turn is underway; at the
+moment before onset it is blind, exactly as on nuScenes. That is the cell a camera has to win, and the one to
+put in the paper. Per-subset numbers with RFS next to ADE are in `processed/waymo_e2e/report/subsets.csv`.
 
 ### Rater Feedback Score: computable locally, on one frame per val sequence
 
