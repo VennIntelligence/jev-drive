@@ -26,6 +26,13 @@ Every run gets its own directory `$DATA_DIR/runs/<experiment>/<tag>/<YYYYmmdd-HH
 Results (`results.csv`, `timings.json`, ...) go in the same directory.
 To follow a run from a script: `tail -f .../events.jsonl`, or poll for the `end` event.
 
+## Stopping a job
+
+Kill by PID, or kill the tmux window you started. Never `pkill -f <script name>`:
+`-f` matches the whole command line, so it also kills every wrapper whose argv mentions
+that script, including other people's supervisors and your own `ssh` command.
+Several jobs share this box, so a stray `pkill` takes out work that is not yours.
+
 ## Reporting while it runs
 
 An agent babysitting a long job reports on a **3-5 hour** cadence, not per file or per step.
