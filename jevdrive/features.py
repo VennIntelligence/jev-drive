@@ -10,9 +10,12 @@ qwen    Qwen3-VL-4B-Instruct, BF16. Input is the chat template with the image on
 dinov2  DINOv2 ViT-B/14 on the full frame resized to 252x448 (no center crop): cls, patch_mean
 
 Layout: processed/nuscenes/<version>/features/<set>/{index.parquet, <name>.npy (n, d) float16, meta.json},
-where <set> is the backbone name plus a suffix for non-default input width (e.g. qwen_w800).
+where <set> is the backbone name plus a suffix for non-default input size (e.g. qwen_w800).
 Images are decoded and preprocessed in DataLoader workers; pinned batches overlap H2D copies with compute, and
 results go back to the host asynchronously and are written by a separate thread, so the GPU never waits on I/O.
+
+QwenFeatures also takes several images per forward (`n_images`), which jevdrive.waymo uses for the three
+Waymo front cameras; `extract` takes the Dataset class, so another dataset only has to supply items and a reader.
 """
 import gc
 import json
@@ -38,6 +41,8 @@ DEV = "cuda"
 
 
 class Frames(Dataset):
+    """nuScenes: one image file per sample, read from `dataroot()`."""
+
     def __init__(self, paths, transform):
         self.paths, self.transform = list(paths), transform
 
@@ -65,17 +70,20 @@ class QwenFeatures:
     per-layer pooling happens inline and nothing forces a host sync. Every frame has the same size and prompt,
     so position ids, rotary tables and the image-token span are computed once per batch shape."""
 
-    def __init__(self, n_layer_probes: int = 4, width: int | None = None, compile: bool = True):
+    def __init__(self, n_layer_probes: int = 4, width: int | None = None, long_side: int | None = None,
+                 n_images: int = 1, compile: bool = True, layers: list[int] | None = None):
         from transformers import AutoModelForImageTextToText, AutoProcessor
         self.proc = AutoProcessor.from_pretrained(QWEN)
         model = AutoModelForImageTextToText.from_pretrained(QWEN, dtype=torch.bfloat16, attn_implementation="sdpa")
         self.model = model.model.to(DEV).eval()  # skip lm_head: we only need hidden states
         self.image_token_id = model.config.image_token_id
-        self.prompt = self.proc.apply_chat_template([{"role": "user", "content": [{"type": "image"}]}],
-                                                    add_generation_prompt=True, tokenize=False)
-        self.width = width
+        self.prompt = self.proc.apply_chat_template(
+            [{"role": "user", "content": [{"type": "image"}] * n_images}], add_generation_prompt=True, tokenize=False)
+        self.width, self.long_side, self.n_images, self.n_image_tokens = width, long_side, n_images, 0
         n = model.config.text_config.num_hidden_layers
-        self.layers = np.linspace(0, n, n_layer_probes + 1).round().astype(int)[1:].tolist()  # e.g. 9 18 27 36
+        # `layers` names the decoder layers to read explicitly, otherwise they are evenly spaced (e.g. 9 18 27 36).
+        # The forward stops after the deepest one either way, so layers=[L] is a real early exit at layer L.
+        self.layers = list(layers or np.linspace(0, n, n_layer_probes + 1).round().astype(int)[1:].tolist())
         vis, lm = self.model.visual, self.model.language_model
         for blk in vis.blocks:
             blk.attn.forward = types.MethodType(_vision_attention, blk.attn)
@@ -85,16 +93,21 @@ class QwenFeatures:
         self.vis_blocks, self.lm_layers = [wrap(b) for b in vis.blocks], [wrap(l) for l in lm.layers[:max(self.layers)]]
         self.static = {}
 
+    def _resize(self, img):
+        """`long_side` fixes the longer side (portrait or landscape), `width` the width. Neither: native pixels."""
+        s = self.long_side / max(img.size) if self.long_side else self.width / img.width if self.width else None
+        return img.resize((round(img.width * s), round(img.height * s)), Image.BICUBIC) if s else img
+
     def transform(self, img):
-        if self.width:
-            img = img.resize((self.width, round(img.height * self.width / img.width)), Image.BICUBIC)
-        b = self.proc(text=[self.prompt], images=[img], return_tensors="pt")
-        return b["input_ids"][0], b["mm_token_type_ids"][0], b["pixel_values"], b["image_grid_thw"][0]
+        imgs = [self._resize(i) for i in (img if isinstance(img, (list, tuple)) else [img])]
+        assert len(imgs) == self.n_images, f"{len(imgs)} images but the prompt has {self.n_images}"
+        b = self.proc(text=[self.prompt], images=imgs, return_tensors="pt")
+        return b["input_ids"][0], b["mm_token_type_ids"][0], b["pixel_values"], b["image_grid_thw"]
 
     @staticmethod
     def collate(items):
         ids, mm, pv, grid = zip(*items)
-        return torch.stack(ids), torch.stack(mm), torch.cat(pv), torch.stack(grid)  # one frame size: no padding
+        return torch.stack(ids), torch.stack(mm), torch.cat(pv), torch.cat(grid)  # one frame size: no padding
 
     def _static(self, key, ids, mm, grid):
         """Batch-shape constants, from the same transformers helpers the stock forward calls on every batch."""
@@ -108,21 +121,21 @@ class QwenFeatures:
             pos_embeds = (vis.pos_embed(idx) * w[:, :, None]).sum(1).to(torch.bfloat16)
             rot = vis.rotary_pos_emb(pos_embeds, get_vision_position_ids(grid, vis.spatial_merge_size))
             cu_seqlens, _ = get_vision_attention_seqlens(grid, cfg)
-            img = (ids[0] == self.image_token_id).nonzero().squeeze(1)
-            span = slice(int(img[0]), int(img[-1]) + 1)
-            assert span.stop - span.start == len(img) and (ids == ids[0]).all(), "frames must share one prompt layout"
+            ipos = (ids[0] == self.image_token_id).nonzero().squeeze(1)  # not contiguous for n_images > 1
+            assert (ids == ids[0]).all(), "frames must share one prompt layout"
+            self.n_image_tokens = int(ipos.numel())
             emb = self.model.get_input_embeddings()(ids)
             pos = self.model.compute_3d_position_ids(input_ids=ids, inputs_embeds=emb, image_grid_thw=grid,
                                                      attention_mask=torch.ones_like(ids), mm_token_type_ids=mm)
             lm_rot = self.model.language_model.rotary_emb(emb, pos)
-            self.static[key] = pos_embeds, rot, cu_seqlens, span, lm_rot
+            self.static[key] = pos_embeds, rot, cu_seqlens, ipos, lm_rot
         return self.static[key]
 
     @torch.inference_mode()
     def __call__(self, batch) -> dict[str, torch.Tensor]:
-        key = (*batch[0].shape, *batch[3][0].tolist())  # from the host copy: no sync
+        key = (*batch[0].shape, *batch[3].shape, *batch[3][0].tolist())  # from the host copy: no sync
         ids, mm, pv, grid = (t.to(DEV, non_blocking=True) for t in batch)
-        pos_embeds, rot, cu_seqlens, span, lm_rot = self._static(key, ids, mm, grid)
+        pos_embeds, rot, cu_seqlens, ipos, lm_rot = self._static(key, ids, mm, grid)
         vis, lm, b = self.model.visual, self.model.language_model, len(ids)
 
         x = vis.patch_embed(pv) + pos_embeds
@@ -135,14 +148,14 @@ class QwenFeatures:
         out = {"vit_mean": x.view(b, -1, x.shape[-1]).float().mean(1), "vis_mean": img.float().mean(1)}
 
         h = lm.embed_tokens(ids)
-        h[:, span] = img
+        h[:, ipos] = img
         for i, layer in enumerate(self.lm_layers):
             h = layer(h, position_embeddings=lm_rot)  # attention_mask=None -> causal SDPA, as for an all-ones mask
             if i + 1 in self.layers:
-                out[f"L{i + 1:02d}_mean"] = h[:, span].sum(1, dtype=torch.float32) / (span.stop - span.start)
+                out[f"L{i + 1:02d}_mean"] = h[:, ipos].sum(1, dtype=torch.float32) / ipos.numel()
                 out[f"L{i + 1:02d}_last"] = h[:, -1].float()
             if i < len(deepstack):  # DeepStack: early ViT features are added to the image tokens after layers 1-3
-                h[:, span] += deepstack[i]
+                h[:, ipos] += deepstack[i]
         return out
 
 
@@ -174,13 +187,15 @@ def free_gpu():
     torch.cuda.empty_cache()
 
 
-def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = None, rl=None, tag: str = "") -> dict:
-    """Run `fx` over all frames; write float16 arrays to out_dir (None = benchmark only). Returns timing stats.
+def extract(fx, items, batch_size: int, workers: int, out_dir: Path | None = None, rl=None, tag: str = "",
+            dataset=Frames) -> dict:
+    """Run `fx` over all items of `dataset`; write float16 arrays to out_dir (None = benchmark only).
     With a RunLog `rl`, per-batch throughput goes to TensorBoard / events.jsonl under `tag`.
     Each batch's features are packed into one float16 tensor and copied to pinned host memory without blocking;
     a writer thread waits for that copy and fills the memmaps while the GPU already runs the next batches."""
-    loader = DataLoader(Frames(paths, fx.transform), batch_size=batch_size, num_workers=workers, collate_fn=fx.collate,
-                        pin_memory=workers > 0, prefetch_factor=4 if workers else None)
+    items = list(items)
+    loader = DataLoader(dataset(items, fx.transform), batch_size=batch_size, num_workers=workers,
+                        collate_fn=fx.collate, pin_memory=workers > 0, prefetch_factor=4 if workers else None)
     arrays, i, t_first, n_first = {}, 0, None, 0
 
     def write(host, done, i, cols):
@@ -189,13 +204,13 @@ def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = Non
             return
         for k, (a, b) in cols.items():
             if k not in arrays:
-                arrays[k] = np.lib.format.open_memmap(out_dir / f"{k}.npy", "w+", np.float16, (len(paths), b - a))
+                arrays[k] = np.lib.format.open_memmap(out_dir / f"{k}.npy", "w+", np.float16, (len(items), b - a))
             arrays[k][i:i + len(host)] = host[:, a:b].numpy()
 
     torch.cuda.synchronize()
     torch.cuda.reset_peak_memory_stats()
     t0 = t_prev = time.perf_counter()
-    bar = tqdm(total=len(paths), desc=tag or "extract", unit="frame", dynamic_ncols=True)
+    bar = tqdm(total=len(items), desc=tag or "extract", unit="frame", dynamic_ncols=True)
     with ThreadPoolExecutor(1) as writer:
         pending = []
         for batch in loader:
@@ -231,8 +246,8 @@ def extract(fx, paths, batch_size: int, workers: int, out_dir: Path | None = Non
             "bytes_per_sample": sum(a.dtype.itemsize * a.shape[1] for a in arrays.values())}
 
 
-def set_name(backbone: str, width: int | None = None, **_) -> str:
-    return f"{backbone}_w{width}" if width else backbone
+def set_name(backbone: str, width: int | None = None, long_side: int | None = None, **_) -> str:
+    return backbone + (f"_w{width}" if width else "") + (f"_l{long_side}" if long_side else "")
 
 
 def run(version: str, backbone: str, batch_size: int, workers: int, force: bool = False, rl=None, **kw) -> dict:
