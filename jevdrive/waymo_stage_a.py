@@ -175,6 +175,27 @@ def rfs_rows(df, rows):
     return pos[ok].astype(int), rtraj[ok], scores[ok]
 
 
+def ridge_cv(X, Y, sp, fut, folds: int = 4, seed: int = 0):
+    """Ridge with the L2 strength chosen by `folds`-fold sequence-grouped CV inside the fit half.
+
+    A single 20 % holdout is what planner.Heads.ridge does and it is enough on nuScenes' 700 training
+    scenes. Here the fit half is 241 sequences, one holdout is 48 of them, and that was not representative:
+    direction 1 picked the bottom of the grid on an inner-val ADE of 1.80 and then scored 3.54 on the
+    evaluation half, while direction 0 picked a middling lambda and scored 1.88. Averaging the selection
+    over folds costs one extra eigendecomposition per fold and removes that lottery."""
+    from sklearn.model_selection import GroupKFold
+    d, T = X.shape[1], fut.shape[1]
+    score = np.zeros(len(planner.LAM_RIDGE))
+    for tr, te in GroupKFold(folds).split(sp.train, groups=sp.seq[sp.train]):
+        W = planner.ridge_solve(X, Y, sp.train[tr], planner.LAM_RIDGE)
+        p = planner.linear_apply(W, X, sp.train[te]).reshape(len(planner.LAM_RIDGE), -1, T, 2).cpu().numpy()
+        score += [np.linalg.norm(p[i] - fut[sp.train[te]], axis=-1).mean() for i in range(len(score))]
+    best = planner._pick(score / folds, planner.LAM_RIDGE, "ridge (grouped CV)")
+    W = planner.ridge_solve(X, Y, sp.train, [planner.LAM_RIDGE[best]])
+    pv = planner.linear_apply(W, X, sp.val).reshape(-1, T, 2).cpu().numpy()
+    return pv[:, None], {"lam": float(planner.LAM_RIDGE[best]), "sel_ade": float(score[best] / folds)}, W
+
+
 def heads(Xi, Xe, sp, fut, F, k_ref, vocab, tgt, rate=waymo.RFS_FREQ):
     """ego-only and vision-on-top-of-ego, as regression and as vocabulary classification.
 
@@ -185,12 +206,11 @@ def heads(Xi, Xe, sp, fut, F, k_ref, vocab, tgt, rate=waymo.RFS_FREQ):
     T = fut.shape[1]
     out = {}
     he = planner.Heads(Xe, sp, fut, F, rate)
-    p_ego, st_ego = he.ridge()
+    p_ego, st_ego, W_ego = ridge_cv(Xe, F, sp, fut)
     out["ridge ego"] = (p_ego, st_ego)
-    base = planner.linear_apply(planner.ridge_solve(Xe, F, sp.train, [st_ego["lam"]]), Xe,
-                                np.arange(len(Xe)))[0]
+    base = planner.linear_apply(W_ego, Xe, np.arange(len(Xe)))[0]
     res_fut = (F - base).reshape(-1, T, 2).cpu().numpy()
-    p_lat, st_lat = planner.Heads(Xi, sp, res_fut, F - base, rate).ridge()
+    p_lat, st_lat, _ = ridge_cv(Xi, F - base, sp, res_fut)
     out["ridge_late vision+ego"] = (p_lat + base[sp.val].reshape(-1, 1, T, 2).cpu().numpy(), st_lat)
 
     p_ec, st_ec = he.cls(tgt, vocab, keep=True)
