@@ -199,7 +199,7 @@ policy 在独立进程里（CARLA 客户端是 py3.8，torch 是 py3.11），走
 
 | # | Bench2Drive 的做法 | 我们的做法 | 影响 |
 |---|---|---|---|
-| 1 | 起完 server **硬等 `time.sleep(30)`** 再连 | `carla_server.sh` 每 2 s 探一次 TCP 端口，**端口一开就连** | **端口打开 ≠ server 就绪。** README 明写 "*sleep* is important to avoid crash of CARLA"，并说慢机器要把这个 sleep 调大。Town12 是最重的地图，我们很可能在它还没初始化完就连上去建相机 |
+| 1 | 起完 server **硬等 `time.sleep(30)`** 再连 | `carla_server.sh` 每 2 s 探一次 TCP 端口，**端口一开就连** | **端口打开 ≠ server 就绪。** README 明写 "*sleep* is important to avoid crash of CARLA"，并说慢机器要把这个 sleep 调大。Town12 是最重的地图，我们很可能在它还没初始化完就连上去建相机。**30 s 是他们机器上的数，不是通用值**——README 自己说慢机器要调大，而我们的卡还被特征抽取占着，所以**要一直扫到 60 s**（用户的判断也是 60） |
 | 2 | `load_world` 失败**重试最多 20 次**（`num_max_restarts = 20`） | 一次失败就算失败 | 他们把「起不来」当成常态，我们当成异常 |
 | 3 | 用 **`-graphicsadapter=<rank>`** 选卡 | 没有选卡参数 | README：**CARLA 不受 `CUDA_VISIBLE_DEVICES` 控制**，只认 `-graphicsadapter`；而且映射可能是错位的（4 卡时 GPU1 要写 2、GPU2 写 3、GPU3 写 4）。**以后上 2–4 张卡时这条是必须的** |
 | 4 | `find_free_port(args.port)`，README 说**避免小于 10000 的端口**（"<10000 could be unsafe"） | RPC 2000+50i，**TM 8000+50i，全在 10000 以下** | 我们今天那 12 次 TM 端口冲突，可能不只是间距问题，还是端口段选错了 |
