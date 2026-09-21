@@ -380,8 +380,12 @@ class Runner(object):
     def run_once(self, wi, server, rid, attempt):
         adir = self.out / "attempts" / rid / ("%d" % attempt)
         adir.mkdir(parents=True, exist_ok=True)
+        # The traffic manager's RPC server lives in the *client* process, so a route that is still
+        # dying holds its port and the next attempt fails with "bind error" before it ticks once.
+        # Take the first free port instead of insisting on one.
+        tm_port = next(p for p in range(server.tm_port, server.tm_port + 400, 4) if port_free(p))
         cmd = [PYTHON, str(HERE / "b2d_route.py"), "--routes", self.a.routes, "--route-id", rid,
-               "--port", str(server.port), "--tm-port", str(server.tm_port),
+               "--port", str(server.port), "--tm-port", str(tm_port),
                "--out", str(adir), "--rig", self.a.rig, "--width", str(self.a.width),
                "--height", str(self.a.height), "--policy", self.a.policy,
                "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate)]
@@ -393,7 +397,8 @@ class Runner(object):
         if self.a.max_ticks:
             cmd += ["--max-ticks", str(self.a.max_ticks)]
 
-        self.event("route_start", worker=wi, route_id=rid, attempt=attempt, port=server.port)
+        self.event("route_start", worker=wi, route_id=rid, attempt=attempt, port=server.port,
+                   tm_port=tm_port)
         t0 = time.time()
         log = open(str(adir / "route.log"), "wb")
         proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
