@@ -20,6 +20,7 @@ import io
 import json
 import os
 import struct
+import subprocess
 import sys
 import tarfile
 import time
@@ -661,6 +662,33 @@ class Shards:
         return self.transform([self._open(io.BytesIO(os.pread(fd, n, o))).convert("RGB") for o, n in spans])
 
 
+def loader_workers(workers: int | None = None) -> int:
+    """DataLoader workers for feature extraction. Decoding and preprocessing one three-camera item costs
+    ~63 ms of one core and the GPU consumes one every ~125 ms (todos/2026-09-21-waymo-train-features.md),
+    so two workers already keep the GPU fed; six is a 3x margin and leaves the rest of the box to whatever
+    else is running -- on this box, usually the download that is producing the shards."""
+    return workers if workers is not None else max(2, min(6, n_cpus() // 4))
+
+
+def feature_status(name: str = "qwen_front3", split: str = "val") -> dict:
+    """What the pipeline can see, not just what it did: shards sitting on disk, shards the index knows
+    about, shards whose features are built, and how many the split has in total. A pass that reports
+    "0 to extract, 29 done" looks healthy when the truth is "42 shards sitting there unseen", so every
+    pass prints all of them. `split` also filters the built count: one feature set holds every split."""
+    on_disk = sorted(p.name for p in shard_dir().glob(f"{split}_*.tfrecord-*") if p.is_file())
+    try:
+        df = load_index()
+        df = df[df.split == split]
+        indexed, frames = int(df.shard.nunique()), len(df)
+    except (FileNotFoundError, OSError):
+        indexed, frames = 0, 0
+    root = out_dir("features", name)
+    built = [d for d in root.iterdir() if d.is_dir() and d.name.startswith(split)
+             and (d / "meta.json").exists()] if root.exists() else []
+    return {"on_disk": len(on_disk), "indexed": indexed, "built": len(built), "frames_indexed": frames,
+            "of": int(on_disk[0].rsplit("-of-", 1)[1]) if on_disk else 0}
+
+
 def feature_items(df: pd.DataFrame, cams=CAMS, separate: bool = False) -> tuple[list, pd.DataFrame]:
     """(items for `Shards`, row index). One item per frame, or -- with `separate` -- one per (frame, camera),
     so that each camera gets its own forward pass and its own feature row. Items are ordered by (shard, offset):
@@ -704,7 +732,7 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
     fx = F.QwenFeatures(n_layer_probes=n_layer_probes, long_side=long_side, n_images=1 if separate else len(cams),
                         compile=compile)
     load_s = time.perf_counter() - t0
-    stats = F.extract(fx, items, batch_size, max(1, n_cpus() // 2) if workers is None else workers, dst, rl,
+    stats = F.extract(fx, items, batch_size, loader_workers(workers), dst, rl,
                       f"waymo/{name}", dataset=Shards)
     tokens = int(fx.n_image_tokens)
     meta = {"set": name, "model": F.QWEN, "cams": list(cams), "separate": separate, "long_side": long_side,
@@ -725,7 +753,8 @@ def extract_features(cams=CAMS, separate: bool = False, long_side: int | None = 
 
 def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None = None, batch_size: int = 4,
                         workers: int | None = None, splits=("val",), n_layer_probes: int = 4, rl=None,
-                        compile: bool = True, shards: list[str] | None = None, rows=None) -> dict:
+                        compile: bool = True, shards: list[str] | None = None, rows=None,
+                        fx=None, skip=()) -> dict:
     """Frozen features one input shard at a time, into `features/<set>/<shard>/`.
 
     `extract_features` writes one dense array for the whole selection, so a partial run cannot be resumed and
@@ -734,6 +763,8 @@ def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None
     the shard is done. A shard already carrying meta.json is skipped, so this can be re-run as shards land, a
     crash costs one shard, and the full-split run starts from whatever is already built.
     `rows` optionally restricts to a subset of the index (the frames a measurement needs).
+    `fx` reuses an already-loaded model (what `watch_incremental` does); `skip` names shards to leave alone.
+    A shard that raises is logged and the pass moves on: one unreadable shard must not block the rest.
     """
     df = load_index()
     df = df[df.split.isin(splits)]
@@ -742,34 +773,131 @@ def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None
     name = set_name(cams, separate, long_side)
     root = out_dir("features", name)
     todo = sorted(shards if shards is not None else df.shard.unique())
-    todo = [sh for sh in todo if not (root / str(sh) / "meta.json").exists()]
+    todo = [sh for sh in todo if not (root / str(sh) / "meta.json").exists() and sh not in skip]
     log.info("%s: %d shards to extract, %d already done", name, len(todo),
              df.shard.nunique() - len(todo))
     if not todo:
-        return {"set": name, "shards_done": 0}
+        return {"set": name, "shards_done": 0, "shards": [], "failed": [], "frames": 0, "seconds": 0.0}
 
     from . import features as F
-    fx = F.QwenFeatures(n_layer_probes=n_layer_probes, long_side=long_side,
-                        n_images=1 if separate else len(cams), compile=compile)
-    done, t0 = [], time.perf_counter()
+    own = fx is None
+    if own:
+        fx = make_features(cams, separate, long_side, n_layer_probes, compile)
+    done, failed, frames, t0 = [], [], 0, time.perf_counter()
     for sh in todo:
         part = df[df.shard == sh]
         items, idx = feature_items(part, cams, separate)
         dst = root / str(sh)
         dst.mkdir(parents=True, exist_ok=True)
-        stats = F.extract(fx, items, batch_size, max(1, n_cpus() // 2) if workers is None else workers,
-                          dst, rl, f"waymo/{name}/{sh}", dataset=Shards)
+        try:
+            stats = F.extract(fx, items, batch_size, loader_workers(workers),
+                              dst, rl, f"waymo/{name}/{sh}", dataset=Shards)
+        except Exception as e:  # a corrupt or half-written shard must not block the 262 good ones
+            failed.append(str(sh))
+            log.warning("%s/%s: %s: %s -- skipping this shard for now", name, sh, type(e).__name__, e)
+            continue
         idx.to_parquet(dst / "index.parquet", index=False)
         (dst / "meta.json").write_text(json.dumps(  # default=float: `stats` carries numpy scalars, and
             {"set": name, "shard": str(sh), "cams": list(cams), "separate": separate,  # this file is the
              "long_side": long_side, "tokens_per_forward": int(fx.n_image_tokens),     # shard's done-marker
              **stats}, indent=2, default=float))
-        done.append(sh)
-        log.info("%s/%s: %d rows, %.1f ms/frame (%d/%d shards)", name, sh, stats["n"],
+        done.append(str(sh))
+        frames += int(stats["n"])
+        log.info("%s/%s: %d rows, %.1f ms/frame (%d/%d shards this pass)", name, sh, stats["n"],
                  stats["ms_per_frame"] * (len(cams) if separate else 1), len(done), len(todo))
+        if rl is not None:
+            rl.event("shard_done", set=name, shard=str(sh), rows=int(stats["n"]),
+                     ms_per_frame=stats["ms_per_frame"], pass_shards=len(done), pass_todo=len(todo))
+    if own:
+        del fx
+        F.free_gpu()
+    return {"set": name, "shards_done": len(done), "shards": done, "failed": failed, "frames": frames,
+            "seconds": time.perf_counter() - t0}
+
+
+def make_features(cams=CAMS, separate: bool = False, long_side: int | None = None, n_layer_probes: int = 4,
+                  compile: bool = True):
+    """The frozen backbone, built the one way every Waymo feature set is built."""
+    from . import features as F
+    return F.QwenFeatures(n_layer_probes=n_layer_probes, long_side=long_side,
+                          n_images=1 if separate else len(cams), compile=compile)
+
+
+def reindex(workers: int | None = None) -> bool:
+    """Re-run the frame index in a separate process.
+
+    A separate process because the caller is usually holding the model on the GPU and `build_index` forks a
+    process pool, which must not inherit a CUDA context.
+    """
+    cmd = [sys.executable, "-m", __spec__.name, "index"] + (["--workers", str(workers)] if workers else [])
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode:
+        log.warning("index failed (rc %d): %s", r.returncode, (r.stderr or "").strip()[-500:])
+    return r.returncode == 0
+
+
+def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None = None, batch_size: int = 4,
+                      workers: int | None = None, splits=("val",), n_layer_probes: int = 4, rl=None,
+                      compile: bool = True, interval: int = 600, passes: int = 2000,
+                      index_workers: int | None = 8, stall_s: int = 3600) -> dict:
+    """Extract features as shards land, and keep doing it while the download runs.
+
+    Every pass re-runs the index BEFORE deciding what to extract. Without that the loop is incremental only
+    with respect to extraction, not with respect to arrival: it asks the index what exists, the index still
+    describes the shards it was built from, and the loop sleeps happily while new shards pile up unseen.
+    That cost us two idle hours once; the fix is the first line of the loop body.
+
+    The model is loaded and compiled once for the whole run, not once per pass. When extraction has caught up
+    with the download the two rates are within a shard of each other, so a pass is a single shard and a
+    reload each time would be pure overhead.
+
+    Each pass logs what it SAW -- shards on disk, indexed, built -- and not only what it did, and warns when
+    shards sit on disk unbuilt while nothing moves. A shard that fails twice is set aside, loudly, so that
+    one bad file cannot hold up the split.
+    """
+    split = splits[0]
+    name = set_name(cams, separate, long_side)
+    fx = make_features(cams, separate, long_side, n_layer_probes, compile)
+    bad, skip, idle, frames, i, t0 = {}, set(), 0, 0, 0, time.perf_counter()
+    for i in range(1, passes + 1):
+        reindex(index_workers)                          # pick up whatever landed since the last pass
+        before = feature_status(name, split)
+        r = extract_incremental(cams=cams, separate=separate, long_side=long_side, batch_size=batch_size,
+                                workers=workers, splits=splits, rl=rl, fx=fx, skip=skip)
+        st = feature_status(name, split)
+        frames += r["frames"]
+        for sh in r["failed"]:
+            bad[sh] = bad.get(sh, 0) + 1
+            if bad[sh] >= 2:
+                skip.add(sh)
+                log.warning("%s: shard %s failed %d times, setting it aside; it will need a look", name, sh,
+                            bad[sh])
+        rate = frames / max(time.perf_counter() - t0, 1e-9)
+        log.info("pass %d: %d/%d %s shards on disk, %d indexed, %d built (+%d this pass, %d frames); "
+                 "%.1f frames/s over the run, %d frames done", i, st["on_disk"], st["of"], split,
+                 st["indexed"], st["built"], st["built"] - before["built"], r["frames"], rate, frames)
+        if rl is not None:
+            rl.event("pass", i=i, split=split, **st, built_delta=st["built"] - before["built"],
+                     frames_this_pass=r["frames"], frames_total=frames, frames_per_s=rate,
+                     failed=r["failed"], set_aside=sorted(skip))
+        if st["built"] > before["built"] or st["indexed"] > before["indexed"]:
+            idle = 0
+        else:
+            idle += interval
+            if st["on_disk"] > st["built"]:
+                log.warning("%d %s shards on disk are not built and nothing moved for %d min",
+                            st["on_disk"] - st["built"], split, idle // 60)
+            if idle >= stall_s:
+                log.warning("no progress for %d min; is the download still running?", idle // 60)
+        if st["of"] and st["built"] + len(skip) >= st["of"]:
+            log.info("all %d %s shards built; stopping", st["of"], split)
+            break
+        time.sleep(interval)
     del fx
+    from . import features as F
     F.free_gpu()
-    return {"set": name, "shards_done": len(done), "seconds": time.perf_counter() - t0}
+    return {"set": name, "split": split, "passes": i, "frames": frames, "built": feature_status(name, split),
+            "set_aside": sorted(skip), "seconds": time.perf_counter() - t0}
 
 
 def load_features(name: str, arrays: list[str] | None = None, frames=None):
@@ -1041,6 +1169,11 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="first N frames only")
     ap.add_argument("--splits", default="val")
     ap.add_argument("--no-compile", action="store_true")
+    ap.add_argument("--watch", type=int, default=0,
+                    help="features_inc: seconds between passes; 0 runs a single pass and exits")
+    ap.add_argument("--passes", type=int, default=2000, help="features_inc --watch: pass limit")
+    ap.add_argument("--index-workers", type=int, default=8,
+                    help="features_inc --watch: processes for the per-pass index rescan")
     a = ap.parse_args()
     cams = CAMS if a.cams == "front3" else ("front",)
     kw = dict(cams=cams, separate=a.separate, long_side=a.long_side or None, batch_size=a.batch_size,
@@ -1055,7 +1188,20 @@ def main():
     elif a.cmd == "features":
         extract_features(limit=a.limit, **kw)
     elif a.cmd == "features_inc":  # one shard at a time, resumable: run it again as more shards land
-        print(json.dumps(extract_incremental(**kw), indent=2))
+        if not a.watch:
+            print(json.dumps(extract_incremental(**kw), indent=2))
+        else:                         # ... or let it run itself while the download feeds it
+            from .runlog import RunLog
+            rl = RunLog("waymo_e2e", "features_" + a.splits.replace(",", "_"))
+            rl.log.info("args %s -> %s", vars(a), rl.dir)
+            rl.event("start", args=vars(a))
+            try:
+                out = watch_incremental(interval=a.watch, passes=a.passes, index_workers=a.index_workers,
+                                        rl=rl, **kw)
+                rl.event("end", **{k: v for k, v in out.items() if k != "built"}, **out["built"])
+                print(json.dumps(out, indent=2))
+            finally:
+                rl.close()
     elif a.cmd == "bench":
         from .runlog import RunLog
         rl, rows = RunLog("waymo", "bench"), []
