@@ -231,11 +231,19 @@ watchdog 在这里赚回了自己：server 死了之后 route 进程会挂在一
 
 ### 3.11 小时里最大的那块水分
 
-**209 条完成的路线里 118 条（56%）撞满了 4000 tick 上限，中位数正好是 4000。**
-而路线平均只有约 100 m，6 m/s 开完约 330 tick。
-stand-in 故意开得烂（速度保持 + 朝下一个 waypoint 打方向，不看灯不看车），卡住之后一路跑到上限。
-**换一个真能开完路线的 policy，省下来的时间会超过这份文档里任何一项工程优化。**
-3.11 小时该读成「一个烂司机的上界」，不是仿真器的地板。
+查 leaderboard 自己的 records（220 条的 `results.json`）：
+**118 条 `Failed - TickRuntime`（撞 4000 tick 上限）、90 条 `Failed - Agent got blocked`、
+1 条 route deviation，成功 0 条。** route completion 均值 **10.9%**，最好的一条 20.1%。
+**没有任何一条路线是因为车开到了终点而结束的。**
+路线平均约 105 m，6 m/s 开完约 330 tick，而实测中位数正好是 4000。
+
+**换一个真能开完路线的 policy，省下来的时间会超过这份文档里任何一项工程优化的总和。**
+按 600–1200 tick/路线算，同样 8 个 worker 是 **1.0–1.5 小时**；到那时每条路线约 70 s 的固定开销
+（world load + scenario build + teardown，按 town mix 加权）就占到 30–50%，成为下一个该打的目标。
+3.11 小时该读成「一个永远开不到终点的司机的上界」，不是仿真器的地板。
+
+其中有一部分是我们自己的：`AutonomousAgent.set_global_plan` 给 agent 的是
+`downsample_route(…, 50)`，所以 `_steer_to_route` 是照着一条稀疏路线在打方向，转不过弯。
 
 下一步的控制器不用自己写：CARLA 自带
 `$CARLA_ROOT/PythonAPI/carla/agents/navigation/controller.py` 里的 `VehiclePIDController`

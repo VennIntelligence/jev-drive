@@ -344,12 +344,22 @@ Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
 
 ### Three things that would move the measured number, in order
 
-- **56% of the finished routes (118 of 209) hit the leaderboard's 4000-tick cap**, and the median
-  route is exactly 4000 ticks. The stand-in driver holds 6 m/s and steers at the next waypoint; it
-  gets stuck and then runs to the cap. The routes themselves average about 100 m, which is roughly
-  330 ticks at that speed. **A driver that actually completes routes would cut this round by more
-  than any optimisation in this document**, and the 3.1 h should be read as the cost of a bad
-  driver, not a floor.
+- **The stand-in completed none of the 220 routes, and that is most of the 3.1 hours.** The
+  leaderboard's own records: 118 `Failed - TickRuntime` (the 4000-tick cap), 90 `Failed - Agent got
+  blocked`, 1 route deviation, **zero successes**. Mean route completion **10.9%**, best route
+  20.1%. Every route either ran to the cap or sat still for 60 s; none of them ended because the
+  car arrived. Routes average about 105 m, roughly 330 ticks at the stand-in's 6 m/s, against a
+  measured median of exactly 4000. **A driver that finishes routes would cut this round by more
+  than every optimisation in this document put together** - at 600-1200 ticks per route the same
+  pool gives 1.0-1.5 h, at which point the fixed per-route overhead (about 70 s of world load,
+  scenario build and teardown, averaged over the town mix) is 30-50% of the total and becomes the
+  next thing worth attacking. **Read 3.1 h as the cost of a driver that never arrives, not as the
+  simulator's floor.**
+
+  Part of why it never arrives is ours: `AutonomousAgent.set_global_plan` hands the agent
+  `downsample_route(..., 50)`, so `_steer_to_route` aims at a sparse route and cannot take corners.
+  [research/trajectory-to-control.md](../research/trajectory-to-control.md) works out what should
+  replace it.
 - **Ten workers instead of eight** is about 23% on Town12, and is available whenever this card is
   not shared - see the Large Map ladder above for why we did not take it here.
 - **`--cache-lights`**, now that the scenario tree is 36% of a Town13 tick and the CPU binds.
@@ -522,12 +532,11 @@ once.
 
 ## What these numbers do not cover
 
-- **The stand-in agent drives badly on purpose, and it dominates the 3.1 hours.** It holds 6 m/s
-  and steers at the next route waypoint; 56% of the finished routes ran to the 4000-tick cap and
-  the median route is exactly 4000 ticks, against roughly 330 ticks to cover a 100 m route at that
-  speed. Cost per tick is what these numbers measure well. **Cost per round is measured with a
-  driver that mostly gets stuck**, so treat 3.1 h as an upper bound with a large, policy-shaped
-  term in it, not as the simulator's floor.
+- **The stand-in agent drives badly on purpose, and it dominates the 3.1 hours.** It completed
+  zero of 220 routes at a mean route completion of 10.9%; every route ended at the tick cap or
+  blocked. Cost per tick is what these numbers measure well. **Cost per round is measured with a
+  driver that never arrives**, so treat 3.1 h as an upper bound with a large, policy-shaped term in
+  it, not as the simulator's floor.
 - **Nothing here says anything about driving scores.** Every number is wall clock. The policy
   consumes real Qwen3-VL features at the real cost and throws them away; the control comes from
   the speed-hold stand-in.

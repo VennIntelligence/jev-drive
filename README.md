@@ -12,6 +12,7 @@ This file is the top-level index: every doc in the repo is reachable from here.
 | [research/frozen-vlm-planner.md](research/frozen-vlm-planner.md) | current main topic: frozen VLM + thin head trajectory planning |
 | [research/qwen-latent-driving.md](research/qwen-latent-driving.md) | layer probe study, now the analysis part of the main topic |
 | [research/survey-thin-head.md](research/survey-thin-head.md) | literature survey for group meetings: world models, VLAs, thin heads, the Waymo E2E leaderboard and how crowded the line is |
+| [research/trajectory-to-control.md](research/trajectory-to-control.md) | how a planner's trajectory becomes CARLA's 20 Hz `VehicleControl`: what CARLA ships, what the Bench2Drive baselines and openpilot do, who learns what, and the recommendation |
 | [research/lit/](research/lit) | literature and deep-research reports |
 | [research/figs/](research/figs) | figures referenced by the research docs and todos (PNG, committed) |
 | [todos/README.md](todos/README.md) | experiment plans, one file per plan |
