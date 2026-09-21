@@ -262,10 +262,15 @@ verified by breaking a run on purpose rather than by reading the documentation.
 
 - **A crash costs one route.** Killing a worker's CARLA server mid-route did not disturb the other
   three workers; that worker restarted its server and retried the route.
-- **The watchdog watches ticks, not processes.** When the server was killed, the route process
-  stayed perfectly alive, blocked inside an RPC with a 300 s timeout. Process liveness would have
-  said everything was fine. The heartbeat the tick loop writes did not advance, and the route was
-  killed and retried after 90 s.
+- **The watchdog watches ticks, not the route process.** When the server was killed, the route
+  process stayed perfectly alive, blocked inside an RPC with a 300 s timeout. Its liveness would
+  have said everything was fine. The heartbeat the tick loop writes did not advance, and the route
+  was killed and retried after 90 s.
+- **It also watches the server, which is the cheap half.** A dead server means the route is over
+  whatever the client thinks, and the client will otherwise sit on its RPC until `client_timeout`
+  expires - in the Town12 camera crashes that was most of the five to seven minutes each one cost.
+  Watching the server process turns that into one poll interval, about 5 s, on every crash. The
+  heartbeat check stays for what process death cannot see: a server that is alive and wedged.
 - **Resume works after a crash, not only after a clean exit.** SIGKILLing the whole runner, then
   re-running the identical command: the nine finished routes were skipped, the stale claim left by
   the dead process was stolen, and only the unfinished route was redone. A third run is a no-op.
@@ -310,6 +315,32 @@ over routes, so silently dropping the routes that would not finish computes a nu
 subset that cannot be compared with anyone else's. This run is the example: read only
 `routes_finished`, and you would report a score over 38 of 44 routes chosen by which worker happened
 to break.
+
+### Recycling a server before it dies (off by default, on purpose)
+
+`--recycle-routes N` stops and restarts a worker's server every N route attempts however healthy it
+looks. It is complementary to everything above: resume handles a crash that has happened, recycling
+tries to get ahead of the slow death that precedes many of them.
+
+**It defaults to off because the interval is a measurement we have not made.** The arithmetic sets
+the price but not the benefit: a recycle costs a server start plus a world load, 30-60 s, against
+about four minutes per route per worker, so recycling every route is 15-25% overhead and every
+fifth route is 3-5%. Whether that buys anything depends entirely on how the failure rate grows with
+the number of consecutive routes one server has served. If failures cluster after some number of
+routes, recycling just before it is nearly free; if the rate is flat, recycling only costs.
+
+Every run now records the raw material for that curve: each attempt carries the server's age in
+routes served and in seconds, and `summary.json` reports `by_server_age` as attempts and failures
+per age bucket. **One run is not the curve** - our own 44-route run says nothing about it, because
+all 12 of its restarts were our own port reuse rather than UE4 decay. Accumulate across runs with
+the port spacing fixed, then set N.
+
+### Port slots are 50 apart
+
+A CARLA server claims several ports above its RPC port and the traffic manager wants room of its
+own, so server index *i* gets RPC `2000 + 50i` and traffic manager `8000 + 50i`, the same spacing
+`scripts/carla_server.sh` uses. The 44-route run used 4, which is how two worker slots were lost to
+a traffic-manager bind error.
 
 ### Multi-GPU
 

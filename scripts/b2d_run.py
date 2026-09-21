@@ -12,7 +12,11 @@ The properties this exists for, in the order they matter:
       those and redoes everything else. Nothing relies on the leaderboard's own `--resume`, whose
       checkpoint is rewritten by the process that is crashing.
   R3  slow is not hung. The watchdog reads the heartbeat the tick loop writes and asks whether
-      ticks advanced, not whether the process is alive.
+      ticks advanced, not whether the process is alive. It also watches the *server*: when the
+      server process is gone the route is killed at once instead of waiting out the client's RPC
+      timeout, which is most of the wall clock of a crashed route.
+  R7  a server that has not died yet is still recycled, optionally, every `--recycle-routes` N
+      routes. Off by default: see the note on that flag for why the interval is a measurement.
   R4/R5 every attempt keeps its own directory with the route result, the leaderboard checkpoint and
       the server log at the time it died.
   R6  `summary.json` reports attempts per route and which routes never finished. Read it before
@@ -24,7 +28,7 @@ directory - one per card, or one per machine on a shared filesystem. The bookkee
 across them: `done/<id>.json` means finished on *any* card, and a route is claimed with an
 exclusive `claims/<id>.lock` before it starts, so two cards never run the same route. A claim whose
 owner died is stolen after `--claim-stale-s`. Give each card its own `--server-index` (ports are
-2000+4i) and its own `--gpu-rank`.
+2000+50i) and its own `--gpu-rank`.
 
     scripts/b2d_run.py --out $DATA_DIR/runs/b2d/base55 --workers 4 --towns base --rig front3 \
         --policy sleep --infer-ms 129
@@ -48,6 +52,11 @@ CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", DATA_DIR / "third_party/carla/CAR
 BENCH2DRIVE = Path(os.environ.get("BENCH2DRIVE_ROOT", DATA_DIR / "third_party/Bench2Drive"))
 PYTHON = str(DATA_DIR / "envs/carla/bin/python")
 HERE = Path(__file__).resolve().parent
+# A CARLA server claims several ports above its RPC port (streaming, secondary), and the traffic
+# manager wants room of its own, so the slots are 50 apart - the same spacing scripts/carla_server.sh
+# uses. Our first 44-route run used 4 and lost two worker slots to a traffic-manager bind error.
+PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
+
 # Towns the base 0.9.15 package actually ships, read off a running server with
 # `client.get_available_maps()`. Town06, Town07 and Town11-15 are in AdditionalMaps, which is
 # deliberately not downloaded (the Waymo training split owns the link), so those routes are out of
@@ -68,12 +77,24 @@ def parse_args():
     p.add_argument("--stagger-s", type=float, default=20.0,
                    help="gap between server launches; launching a pool at once costs 17%% "
                         "throughput and half-fails (docs/carla.md)")
-    p.add_argument("--server-index", type=int, default=0, help="first CARLA server index; port 2000+4i")
+    p.add_argument("--server-index", type=int, default=0,
+                   help="first CARLA server index; rpc port 2000+50i, as scripts/carla_server.sh")
     p.add_argument("--gpu-rank", type=int, default=0, help="which card this runner's servers use")
     p.add_argument("--claim-stale-s", type=float, default=7200.0,
                    help="a claim older than this is assumed to belong to a dead runner")
     p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
     p.add_argument("--max-attempts", type=int, default=3)
+    p.add_argument("--recycle-routes", type=int, default=0,
+                   help="R7: stop and restart a worker's server every N routes even when it looks "
+                        "healthy, to get ahead of UE4's slow death instead of paying for the crash. "
+                        "0 (default) is off ON PURPOSE: a recycle costs 30-60 s against about four "
+                        "minutes per route per worker, so every route is 15-25%% overhead and every "
+                        "fifth is 3-5%%. Whether that buys anything depends on how the crash rate "
+                        "grows with the number of consecutive route attempts one server has "
+                        "served (a failed attempt counts, which recycles a suspect server sooner), "
+                        "which "
+                        "summary.json now reports as by_server_age. Set N from that curve, not from "
+                        "taste.")
     p.add_argument("--stall-s", type=float, default=240.0, help="no tick progress for this long = hung")
     p.add_argument("--route-timeout-s", type=float, default=5400.0)
     p.add_argument("--fresh", action="store_true", help="ignore existing results and redo everything")
@@ -153,8 +174,10 @@ class Server(object):
         self.index = index
         self.gpu_rank = gpu_rank
         self.stride = stride or 1
-        self.port = 2000 + 4 * index
-        self.tm_port = 8000 + index
+        self.routes_served = 0   # how many routes this process has run; the R7 curve needs it
+        self.started_at = None
+        self.port = PORT_BASE + PORT_STRIDE * index
+        self.tm_port = TM_BASE + PORT_STRIDE * index
         self.log_dir = Path(log_dir)
         self.quality = quality
         self.proc = None
@@ -173,6 +196,7 @@ class Server(object):
                  "-graphicsadapter=%d" % self.gpu_rank],
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
         (self.log_dir / ("carla-%d.pid" % self.index)).write_text(str(self.proc.pid))
+        self.started_at, self.routes_served = time.time(), 0
         deadline = time.time() + timeout
         while time.time() < deadline:
             if not port_free(self.port):
@@ -191,8 +215,8 @@ class Server(object):
         to work."""
         self.stop()
         self.index += self.stride
-        self.port = 2000 + 4 * self.index
-        self.tm_port = 8000 + self.index
+        self.port = PORT_BASE + PORT_STRIDE * self.index
+        self.tm_port = TM_BASE + PORT_STRIDE * self.index
 
     def alive(self):
         return self.proc is not None and self.proc.poll() is None
@@ -347,6 +371,7 @@ class Runner(object):
                         self.staggered_start(server)
                         self.learn_maps(server)
                     ok, record = self.run_once(wi, server, rid, attempt)
+                    server.routes_served += 1
                     if ok:
                         (self.out / "done" / (rid + ".json")).write_text(json.dumps(record, indent=2))
                         finished = True
@@ -361,6 +386,11 @@ class Runner(object):
                 self.release(rid)
                 if not finished:
                     self.event("route_abandoned", route_id=rid, attempts=self.a.max_attempts)
+                if self.a.recycle_routes and server.routes_served >= self.a.recycle_routes:
+                    self.event("server_recycled", worker=wi, index=server.index,
+                               routes_served=server.routes_served,
+                               age_s=round(time.time() - (server.started_at or time.time())))
+                    server.stop()  # the next route starts it again, under the stagger lock
         finally:
             server.stop()
 
@@ -396,7 +426,8 @@ class Runner(object):
         # The traffic manager's RPC server lives in the *client* process, so a route that is still
         # dying holds its port and the next attempt fails with "bind error" before it ticks once.
         # Take the first free port instead of insisting on one.
-        tm_port = next(p for p in range(server.tm_port, server.tm_port + 400, 4) if port_free(p))
+        # Stay inside this server's own 50-port block so the scan cannot wander into a neighbour's.
+        tm_port = next(p for p in range(server.tm_port, server.tm_port + PORT_STRIDE) if port_free(p))
         cmd = [PYTHON, str(HERE / "b2d_route.py"), "--routes", self.a.routes, "--route-id", rid,
                "--port", str(server.port), "--tm-port", str(tm_port),
                "--out", str(adir), "--rig", self.a.rig, "--width", str(self.a.width),
@@ -416,11 +447,15 @@ class Runner(object):
         log = open(str(adir / "route.log"), "wb")
         proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
         (adir / "route.pid").write_text(str(proc.pid))
-        reason = self.supervise(proc, adir, t0)
+        reason = self.supervise(proc, adir, t0, server)
         log.close()
 
         record = {"route_id": rid, "attempt": attempt, "wall_s": round(time.time() - t0, 1),
-                  "worker": wi, "server_index": server.index, "server_log": str(server.log)}
+                  "worker": wi, "server_index": server.index, "server_log": str(server.log),
+                  # R7's raw material: how many route attempts this server process had already
+                  # served before this one, and how long it had been up. summary.json bins on them.
+                  "server_age_routes": server.routes_served,
+                  "server_age_s": round(time.time() - (server.started_at or time.time()))}
         rfile = adir / "route_result.json"
         if rfile.exists():
             try:
@@ -441,13 +476,23 @@ class Runner(object):
         elif "status" not in record:
             record["status"] = "no_result_file"
         record["returncode"] = proc.returncode
+        # The route process cannot know which server it ran on or how old that server was, so the
+        # runner writes its own view beside the route's. summary.json bins on it (R7).
+        (adir / "attempt.json").write_text(json.dumps(
+            dict((k, v) for k, v in record.items() if k != "profile"), indent=2))
         ok = record["status"] == "finished"
         self.event("route_end", worker=wi, route_id=rid, attempt=attempt,
                    status=record["status"], wall_s=record["wall_s"], ticks=record.get("ticks"))
         return ok, record
 
-    def supervise(self, proc, adir, t0):
-        """Return None if the process exited on its own, else why we killed it."""
+    def supervise(self, proc, adir, t0, server=None):
+        """Return None if the process exited on its own, else why we killed it.
+
+        Two conditions, and the cheap one first. When the server process is gone the route is
+        finished whatever it thinks: the client will sit on its RPC until `client_timeout`
+        expires, which in the Town12 camera crashes was most of the five to seven minutes each
+        one cost. Killing on a dead server turns that into seconds. The heartbeat check stays for
+        the case the cheap one cannot see - a server that is alive and wedged."""
         beat = adir / "heartbeat.json"
         last_ticks, last_change = -1, time.time()
         while True:
@@ -456,6 +501,9 @@ class Runner(object):
                 return None
             except subprocess.TimeoutExpired:
                 pass
+            if server is not None and server.proc is not None and not server.alive():
+                self.kill(proc)
+                return "server_died_rc%s" % server.proc.returncode
             now = time.time()
             ticks = None
             if beat.exists():
@@ -495,18 +543,16 @@ class Runner(object):
             tries = []
             for adir in sorted((self.out / "attempts" / rid).glob("*"),
                                key=lambda p: int(p.name) if p.name.isdigit() else 0):
-                f = adir / "route_result.json"
-                if not f.exists():
+                runner = _read_json(adir / "attempt.json")
+                d = runner or _read_json(adir / "route_result.json")
+                if d is None:
                     tries.append({"attempt": adir.name, "status": "no result file"})
-                    continue
-                try:
-                    d = json.loads(f.read_text())
-                except ValueError:
-                    tries.append({"attempt": adir.name, "status": "unreadable"})
                     continue
                 tries.append({"attempt": adir.name, "status": d.get("status"),
                               "wall_s": d.get("wall_s"),
-                              "ticks": d.get("profile", {}).get("ticks")})
+                              "ticks": d.get("ticks", d.get("profile", {}).get("ticks")),
+                              "killed": d.get("killed"),
+                              "server_age_routes": d.get("server_age_routes")})
             if tries:
                 history[rid] = tries
                 restarts += len(tries) - 1
@@ -530,9 +576,37 @@ class Runner(object):
             "wall_s_median": _median(walls),
             "ticks_total": sum(ticks),
             "s_per_tick_median": round(_median(walls) / max(1, _median(ticks)), 4) if ticks else None,
+            "by_server_age": _by_server_age(history),
         }
         (self.out / "summary.json").write_text(json.dumps(summary, indent=2))
         self.event("summary", **dict((k, v) for k, v in summary.items() if k != "attempts"))
+
+
+def _read_json(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _by_server_age(history):
+    """R7's curve: does a server get more likely to fail the longer it has been serving routes?
+
+    Buckets are the number of routes the server had already run when this attempt started. Read
+    `failed / attempts` per bucket; a rate that climbs with age is the argument for recycling, a
+    flat one says recycling only costs. One run is not the curve - accumulate across runs before
+    setting --recycle-routes. Attempts whose age was not recorded (older runs) are left out."""
+    buckets = {}
+    for tries in history.values():
+        for t in tries:
+            age = t.get("server_age_routes")
+            if age is None:
+                continue
+            b = buckets.setdefault(str(age), {"attempts": 0, "failed": 0})
+            b["attempts"] += 1
+            if t.get("status") != "finished":
+                b["failed"] += 1
+    return dict(sorted(buckets.items(), key=lambda kv: int(kv[0])))
 
 
 def _median(xs):

@@ -26,6 +26,9 @@ CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", DATA_DIR / "third_party/carla/CAR
 BENCH2DRIVE = Path(os.environ.get("BENCH2DRIVE_ROOT", DATA_DIR / "third_party/Bench2Drive"))
 PYTHON = str(DATA_DIR / "envs/carla/bin/python")
 HERE = Path(__file__).resolve().parent
+# Port slots 50 apart, as scripts/carla_server.sh and scripts/b2d_run.py: a CARLA server claims
+# several ports above its RPC port, and the traffic manager needs room of its own.
+PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
 
 # Each variant is the argument list that differs from `base`. Grouped by the question it answers.
 VARIANTS = [
@@ -100,7 +103,7 @@ def parse_args():
 
 def start_server(index, quality, log):
     env = dict(os.environ, VK_ICD_FILENAMES="/etc/vulkan/icd.d/nvidia_icd.json")
-    port = 2000 + 4 * index
+    port = PORT_BASE + PORT_STRIDE * index
     with open(log, "wb") as fh:
         proc = subprocess.Popen(
             [str(CARLA_ROOT / "CarlaUE4.sh"), "-RenderOffScreen", "-nosound",
@@ -139,8 +142,9 @@ def main():
             ensure_server()
             vout = out / name
             cmd = [PYTHON, str(HERE / "b2d_route.py"), "--routes", a.routes,
-                   "--route-id", a.route_id, "--port", str(2000 + 4 * a.server_index),
-                   "--tm-port", str(8000 + a.server_index), "--out", str(vout),
+                   "--route-id", a.route_id,
+                   "--port", str(PORT_BASE + PORT_STRIDE * a.server_index),
+                   "--tm-port", str(TM_BASE + PORT_STRIDE * a.server_index), "--out", str(vout),
                    "--max-ticks", str(a.ticks)] + extra + a.extra.split()
             print("\n=== %s ===\n%s" % (name, " ".join(cmd)), flush=True)
             with open(str(vout.parent / (name + ".log")), "wb") as fh:
