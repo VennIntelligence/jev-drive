@@ -196,7 +196,13 @@ class StubAgent(AutonomousAgent):
             pending = self._pending
 
         def work():
-            ctrl = self.run_step(input_data, GameTime.get_time())
+            try:
+                ctrl = self.run_step(input_data, GameTime.get_time())
+            except BaseException as exc:  # noqa: BLE001 - re-raised on the main thread below
+                with self._lock:
+                    pending["error"] = exc
+                    pending["done"] = True
+                return
             with self._lock:
                 pending["control"] = ctrl
                 pending["done"] = True
@@ -204,10 +210,17 @@ class StubAgent(AutonomousAgent):
         threading.Thread(target=work, daemon=True).start()
 
     def _collect(self):
+        done = None
         with self._lock:
             if self._pending is not None and self._pending["done"]:
-                self._control = self._pending["control"]
-                self._pending = None
+                done, self._pending = self._pending, None
+        if done is None or not done.get("done"):
+            return
+        # A policy thread that dies quietly is the worst outcome: the route keeps running on the
+        # last control and finishes with a plausible-looking time that measured nothing.
+        if "error" in done:
+            raise RuntimeError("policy failed in the overlap thread: %r" % (done["error"],))
+        self._control = done["control"]
 
     def run_step(self, input_data, timestamp):
         if self.policy == "sleep":

@@ -153,6 +153,10 @@ def _agent_summary(agent, drop):
             out[key + "_ms_mean"] = round(1e3 * sum(xs) / len(xs), 3)
             out[key + "_ms_median"] = round(1e3 * xs[len(xs) // 2], 3)
     xs = agent.timings.get("server_infer_ms") or []
+    # policy_ticks counts submissions; this counts inferences that actually came back. They differ
+    # when the policy is slower than its decimation period and a frame is skipped, and a zero here
+    # against a non-zero policy_ticks means the policy never ran at all.
+    out["policy_done"] = len(xs)
     if xs:
         out["server_infer_ms_mean"] = round(sum(xs) / len(xs), 2)
     return out

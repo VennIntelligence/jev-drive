@@ -24,6 +24,7 @@ import os
 import socket
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -132,25 +133,37 @@ def main():
         Path(a.ready_file).write_text("ready")
     print("policy server ready on %s" % a.socket, flush=True)
 
-    while True:
-        conn, _ = srv.accept()
+    # One connection per worker, so the server has to be able to hold several at once. Serving
+    # them from a single accept loop looks fine with one worker and silently starves workers 2..N
+    # with four - their requests sit in the backlog, their inference never returns, and the agent
+    # drives on a stale control while reporting nothing wrong.
+    gpu = threading.Lock()
+
+    def serve(conn):
         try:
             while True:
                 head = recv_exactly(conn, 20)
                 if head is None:
-                    break
+                    return
                 n, w, h, nbytes = struct.unpack("<IIIQ", head)
                 payload = recv_exactly(conn, nbytes)
                 if payload is None:
-                    break
+                    return
                 t0 = time.perf_counter()
                 per = h * w * 3
                 arrays = [np.frombuffer(payload, dtype=np.uint8, count=per,
                                         offset=i * per).reshape(h, w, 3) for i in range(n)]
-                infer(arrays)
+                with gpu:  # one model, one card: the forwards serialise anyway, do it explicitly
+                    infer(arrays)
                 conn.sendall(struct.pack("<f", 1e3 * (time.perf_counter() - t0)))
+        except (OSError, struct.error):
+            return
         finally:
             conn.close()
+
+    while True:
+        conn, _ = srv.accept()
+        threading.Thread(target=serve, args=(conn,), daemon=True).start()
 
 
 if __name__ == "__main__":
