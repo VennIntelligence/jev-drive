@@ -44,8 +44,8 @@ FOLDS = 4
 
 S_KINDS = ("ego", "ctrv", "cv")          # primary first; the two kinematic ones are controls
 PRIMARY = "ego"
-FAMILY_SCHEMES = {"ego": ("lin", "sq", "a1", "a4", "top50", "top25"),
-                  "ctrv": ("lin", "sq", "top25"), "cv": ("lin", "sq", "top25")}
+FAMILY_SCHEMES = {"ego": ("lin", "sq", "a1", "a4", "top25"),      # primary family, full set bar the median cut
+                  "ctrv": ("lin", "top25"), "cv": ("lin", "top25")}  # controls: linear and the hard quartile
 
 
 def ade(pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
