@@ -460,11 +460,87 @@ def decile_report(per: dict, ctx: dict, scopes=("all", "straight_yaw")) -> pd.Da
     return pd.DataFrame(rows)
 
 
+def rater_bins(set_name: str = "qwen_front3", layer: str = sa.LAYER, seed: int = 0, folds: int = FOLDS,
+               q: int = 5, q_pooled: int = 10):
+    """Is the top s_ego bin unpredictable, or only unpredicted? Ask the raters, who fitted nothing.
+
+    Stratifying the evaluation half by its *realised* s_ego puts the frames with the most irreducible error
+    into the top bin by construction, so the inverted U of `decile_report` has a selection caveat: "vision
+    does not buy the large departures" could be "nothing observable at t = 0 buys them". The logged future
+    and the rater scores depend on no fitted model, so they separate the two. If the raters disagree with
+    what the driver actually did in the top bin, that bin is multi-modal and ADE against the log is the wrong
+    target there; if the log stays highly rated, the departures are legible to humans and the miss is ours.
+
+    Everything here is CPU: the ego head is 100-dimensional, and the image head is refitted with numpy at the
+    lambda the GPU run selected, which the caller checks against that run's RFS before reading the bins.
+    """
+    df, rows, fut, ego, img, sub, past = sa.load_all(set_name, layer, seed)
+    halves = sa.val_halves(df, seed)
+    h = df.sequence.map(halves).to_numpy()[rows]
+    seq = df.sequence.to_numpy()[rows]
+    pos, rtraj, scores = sa.rfs_rows(df, rows)
+    speed = waymo.init_speed(past[rows])
+    best = rtraj[np.arange(len(pos)), scores.argmax(1)]
+    log_rfs = waymo.rater_feedback_score(fut[pos], rtraj, scores, speed[pos])
+    log_ade = ade(fut[pos], best)
+    out, pooled_s = [], np.full(len(rows), np.nan)
+    for d in (0, 1):
+        sp = sa.Halves(df, seq, h == d, h == (1 - d), seed)
+        s = ego_surprise(ego, fut, sp, folds)
+        pooled_s[sp.val] = s[sp.val]                       # every frame scored by the half that did not fit it
+        ev = np.isin(pos, sp.val)                          # rater frames of this direction's evaluation half
+        preds = _cpu_heads(ego, img, fut, sp, seed)
+        for name, p in preds.items():
+            r = waymo.rater_feedback_score(p[pos[ev]], rtraj[ev], scores[ev], speed[pos[ev]])
+            out += _bin_rows(s[pos[ev]], q, d, name, rfs=r, floored=(r <= waymo.RFS_FLOOR + 1e-9),
+                             ade_rater=ade(p[pos[ev]], best[ev]))
+        out += _bin_rows(s[pos[ev]], q, d, "logged_future", rfs=log_rfs[ev],
+                         floored=(log_rfs[ev] <= waymo.RFS_FLOOR + 1e-9), ade_rater=log_ade[ev])
+    out += _bin_rows(pooled_s[pos], q_pooled, -1, "logged_future", rfs=log_rfs,
+                     floored=(log_rfs <= waymo.RFS_FLOOR + 1e-9), ade_rater=log_ade)
+    return pd.DataFrame(out)
+
+
+def _bin_rows(s: np.ndarray, q: int, direction: int, name: str, **cols) -> list:
+    """One row per quantile bin of `s`, with the mean of every column and the bin's edges and count."""
+    edge = np.quantile(s, np.linspace(0, 1, q + 1))
+    b = np.clip(np.searchsorted(edge[1:-1], s, "right"), 0, q - 1)
+    return [{"direction": direction, "series": name, "bins": q, "bin": i, "n": int((b == i).sum()),
+             "s_lo": float(s[b == i].min()), "s_hi": float(s[b == i].max()),
+             **{k: float(v[b == i].mean()) for k, v in cols.items()}} for i in range(q) if (b == i).any()]
+
+
+def _cpu_heads(ego: np.ndarray, img, fut: np.ndarray, sp, seed: int = 0) -> dict:
+    """`ridge ego` and arm A refitted in numpy, at the lambda each picked by grouped CV on the fit half."""
+    from sklearn.model_selection import GroupKFold
+    T, lams = fut.shape[1], planner.LAM_RIDGE
+    Y = fut.reshape(len(fut), -1)
+    out = {}
+    for name, X0 in (("ridge ego", np.asarray(ego, np.float32)),
+                     ("A ridge_late uniform", np.asarray(img, np.float32))):
+        mu, sd = X0[sp.train].mean(0), X0[sp.train].std(0)
+        X = (X0 - mu) / np.where(sd > 1e-6, sd, 1)
+        tgt = Y if name == "ridge ego" else Y - out["ridge ego"].reshape(len(Y), -1)
+        score = np.zeros(len(lams))
+        for a, b in GroupKFold(4).split(sp.train, groups=sp.seq[sp.train]):
+            W = ridge_np(X, tgt, sp.train[a], lams)
+            te = sp.train[b]
+            p = (X[te] @ W[:, :-1] + W[:, -1, None]).reshape(len(lams), -1, T, 2)
+            score += [ade(p[i], tgt[te].reshape(-1, T, 2)).mean() for i in range(len(lams))]
+        i = planner._pick(score / 4, lams, f"{name} (cpu)")
+        W = ridge_np(X, tgt, sp.train, [lams[i]])
+        p = (X @ W[0, :-1] + W[0, -1]).reshape(-1, T, 2)
+        out[name] = p if name == "ridge ego" else p + out["ridge ego"]
+        log.info("%s (cpu refit): lambda %.3g, eval ADE %.4f", name, lams[i], ade(out[name][sp.val],
+                                                                                 fut[sp.val]).mean())
+    return out
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--steps", default="surprise,arms", help="comma list of surprise,arms")
+    ap.add_argument("--steps", default="surprise,arms", help="comma list of surprise,arms,rater_bins")
     ap.add_argument("--layer", default=sa.LAYER)
     ap.add_argument("--feature-set", default="qwen_front3")
     ap.add_argument("--directions", default="0,1")
@@ -497,6 +573,8 @@ def main():
             torch.cuda.empty_cache()
         _write(rl, (("arms", res), ("paired", pairs), ("did", dids), ("schemes", bs),
                     ("surprise", rep), ("noise_check", nz), ("deciles", dcs)))
+    if "rater_bins" in a.steps:
+        _write(rl, (("rater_bins", [rater_bins(a.feature_set, a.layer, a.seed, a.folds)]),))
     rl.event("end")
     rl.close()
 
