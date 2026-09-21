@@ -48,10 +48,12 @@ CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", DATA_DIR / "third_party/carla/CAR
 BENCH2DRIVE = Path(os.environ.get("BENCH2DRIVE_ROOT", DATA_DIR / "third_party/Bench2Drive"))
 PYTHON = str(DATA_DIR / "envs/carla/bin/python")
 HERE = Path(__file__).resolve().parent
-# Towns in the base 0.9.15 package. Town11-15 need AdditionalMaps, which is deliberately not
-# downloaded (the Waymo training split owns the link), so those routes are out of scope here.
-BASE_TOWNS = {"Town01", "Town02", "Town03", "Town04", "Town05", "Town06", "Town07",
-              "Town10HD", "Town10HD_Opt"}
+# Towns the base 0.9.15 package actually ships, read off a running server with
+# `client.get_available_maps()`. Town06, Town07 and Town11-15 are in AdditionalMaps, which is
+# deliberately not downloaded (the Waymo training split owns the link), so those routes are out of
+# scope. This list is the fallback; the run re-checks it against the live server, because being
+# wrong about it costs three failed attempts per route and looks like a flaky simulator.
+BASE_TOWNS = {"Town01", "Town02", "Town03", "Town04", "Town05", "Town10HD", "Town10HD_Opt"}
 
 
 def parse_args():
@@ -92,16 +94,18 @@ def parse_args():
 
 
 def select_routes(routes_xml, towns, route_ids, limit):
+    """Returns [(route_id, town)]."""
+    root = ET.parse(routes_xml).getroot()
+    town_of = dict((r.get("id"), r.get("town")) for r in root.findall("route"))
     if route_ids:
-        wanted = [r.strip() for r in route_ids.split(",") if r.strip()]
+        wanted = [(r.strip(), town_of.get(r.strip())) for r in route_ids.split(",") if r.strip()]
     else:
         allowed = None
         if towns == "base":
             allowed = BASE_TOWNS
         elif towns != "all":
             allowed = set(towns.split(","))
-        root = ET.parse(routes_xml).getroot()
-        wanted = [r.get("id") for r in root.findall("route")
+        wanted = [(r.get("id"), r.get("town")) for r in root.findall("route")
                   if allowed is None or r.get("town") in allowed]
     return wanted[:limit] if limit else wanted
 
@@ -176,6 +180,8 @@ class Runner(object):
         self.events = open(str(self.out / "events.jsonl"), "a", buffering=1)
         self.lock = threading.Lock()
         self.queue = list(routes)
+        self.available_maps = None
+        self.no_map = []
         self.attempts = {}
         self.claimed = set()
         self.stop_flag = False
@@ -194,7 +200,11 @@ class Runner(object):
     def next_route(self):
         with self.lock:
             while self.queue:
-                rid = self.queue.pop(0)
+                rid, town = self.queue.pop(0)
+                if self.available_maps is not None and town not in self.available_maps:
+                    self.no_map.append(rid)
+                    self.event("skip", route_id=rid, town=town, reason="map not installed")
+                    continue
                 if not self.a.fresh and (self.out / "done" / (rid + ".json")).exists():
                     self.event("skip", route_id=rid, reason="already done")
                     continue
@@ -263,6 +273,7 @@ class Runner(object):
                     if not server.alive():
                         self.event("server_start", worker=wi, index=server.index, port=server.port)
                         self.staggered_start(server)
+                        self.learn_maps(server)
                     ok, record = self.run_once(wi, server, rid, attempt)
                     self.note_attempt(rid, attempt, record)
                     if ok:
@@ -279,6 +290,24 @@ class Runner(object):
                     self.event("route_abandoned", route_id=rid, attempts=self.a.max_attempts)
         finally:
             server.stop()
+
+    def learn_maps(self, server):
+        """Ask the server which maps it has, once. A route whose town is not installed is not a
+        failure to retry, it is out of scope, and it has to be reported as such rather than
+        dropped (research/carla-efficiency.md R6)."""
+        if self.available_maps is not None:
+            return
+        import carla
+        try:
+            client = carla.Client("127.0.0.1", server.port)
+            client.set_timeout(60.0)
+            maps = set(m.split("/")[-1] for m in client.get_available_maps())
+        except Exception as e:
+            self.event("map_probe_failed", error=str(e))
+            return
+        with self.lock:
+            self.available_maps = maps | set(m.replace("_Opt", "") for m in maps)
+        self.event("maps", maps=sorted(maps))
 
     def staggered_start(self, server):
         with self.start_lock:
@@ -383,6 +412,7 @@ class Runner(object):
                 r["route_id"] for r in records)),
             "routes_finished": len(records),
             "routes_never_finished": never,
+            "routes_skipped_no_map": sorted(set(self.no_map)),
             "restarts": restarts,
             "attempts": self.attempts,
             "wall_s_total": round(sum(r.get("wall_s", 0) for r in records), 1),
@@ -404,7 +434,8 @@ def main():
     if not routes:
         print("no routes selected", file=sys.stderr)
         return 2
-    print("%d routes, %d workers -> %s" % (len(routes), a.workers, a.out), flush=True)
+    print("%d routes, %d workers, gpu %d -> %s" % (len(routes), a.workers, a.gpu_rank, a.out),
+          flush=True)
     Runner(a, routes).run()
     return 0
 
