@@ -63,8 +63,12 @@ def collect(out):
     rows = []
     for rdir in sorted((Path(out) / "attempts").glob("*")):
         for adir in sorted(rdir.glob("*"), key=lambda p: int(p.name) if p.name.isdigit() else 0):
-            d = read_json(adir / "attempt.json")
-            prof = (read_json(adir / "route_result.json") or {}).get("profile", {})
+            route = read_json(adir / "route_result.json") or {}
+            prof = route.get("profile", {})
+            # attempt.json is the runner's view (which server, how old); route_result.json is the
+            # route's own. Runs made before attempt.json existed only have the latter, and a run
+            # killed between the two has only the latter too, so fall back rather than drop it.
+            d = read_json(adir / "attempt.json") or (route or None)
             if d is None:
                 rows.append({"route_id": rdir.name, "attempt": int(adir.name or 1),
                              "status": "no result file"})
