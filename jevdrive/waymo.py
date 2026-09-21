@@ -614,6 +614,9 @@ def rater_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray) -> pd.Da
         d = np.linalg.norm(p - best, axis=-1)                    # official ADE: vs the top-rated trajectory
         out.append({"trajectory": name, "n": len(rfs), "rfs": round(avg, 4), "rfs_frame_mean": round(rfs.mean(), 4),
                     "rfs_min": round(rfs.min(), 2), "in_trust_region": round(float(inside.mean()), 3),
+                    # the floor only binds when the decayed score is itself below it, so this is strictly
+                    # smaller than 1 - in_trust_region. Same definition as waymo_stage_a's `floored`.
+                    "floored": round(float((rfs <= RFS_FLOOR + 1e-9).mean()), 3),
                     "ade3_rater": round(d[:, :RFS_HORIZONS[0] * RFS_FREQ].mean(), 3),
                     "ade5_rater": round(d.mean(), 3),
                     "ade5_logged": round(np.linalg.norm(p - future_xy(future[rows_i]), axis=-1).mean(), 3),
