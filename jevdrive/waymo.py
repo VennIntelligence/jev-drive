@@ -737,7 +737,10 @@ def feature_status(name: str = "qwen_front3", split: str = "val") -> dict:
     about, shards whose features are built, and how many the split has in total. A pass that reports
     "0 to extract, 29 done" looks healthy when the truth is "42 shards sitting there unseen", so every
     pass prints all of them. `split` also filters the built count: one feature set holds every split."""
-    on_disk = sorted(p.name for p in shard_dir().glob(f"{split}_*.tfrecord-*") if p.is_file())
+    # `split_of`, not a f"{split}_*" glob: the train shards are named `training_...`, so that glob matched
+    # nothing and reported an empty split -- no total to stop at and no unbuilt count to warn about.
+    on_disk = sorted(p.name for p in shard_dir().glob("*.tfrecord-*")
+                     if p.is_file() and split_of(p.name) == split)
     try:
         df = load_index()
         df = df[df.split == split]
@@ -745,7 +748,7 @@ def feature_status(name: str = "qwen_front3", split: str = "val") -> dict:
     except (FileNotFoundError, OSError):
         indexed, frames = 0, 0
     root = out_dir("features", name)
-    built = [d for d in root.iterdir() if d.is_dir() and d.name.startswith(split)
+    built = [d for d in root.iterdir() if d.is_dir() and split_of(d.name) == split
              and (d / "meta.json").exists()] if root.exists() else []
     return {"on_disk": len(on_disk), "indexed": indexed, "built": len(built), "frames_indexed": frames,
             "of": int(on_disk[0].rsplit("-of-", 1)[1]) if on_disk else 0}
@@ -913,14 +916,21 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
     with the download the two rates are within a shard of each other, so a pass is a single shard and a
     reload each time would be pure overhead.
 
-    Each pass logs what it SAW -- shards on disk, indexed, built -- and not only what it did, and warns when
-    shards sit on disk unbuilt while nothing moves. A shard that fails twice is set aside, loudly, so that
-    one bad file cannot hold up the split.
+    Each pass logs what it SAW -- shards on disk, indexed, built -- and not only what it did. A shard that
+    fails twice is set aside, loudly, so that one bad file cannot hold up the split.
+
+    Idling is the normal state here, not a fault: extraction takes ~3.4 min a shard and the download has
+    delivered one every 11 - 13 min, so the run is download-bound and the card is quiet most of the time. So
+    the alarm is a multiple of the cadence this run has actually measured rather than a fixed hour, and it
+    distinguishes the two failures that matter -- shards arriving and not being built (we are stuck) from
+    nothing arriving at all (the download died) -- because in a download-bound run the second one otherwise
+    looks exactly like healthy idling.
     """
     split = splits[0]
     name = set_name(cams, separate, long_side)
     fx = make_features(cams, separate, long_side, n_layer_probes, compile)
-    bad, skip, idle, frames, i, t0 = {}, set(), 0, 0, 0, time.perf_counter()
+    bad, skip, frames, i, t0 = {}, set(), 0, 0, time.perf_counter()
+    built0, last_arrival, last_built = feature_status(name, split)["built"], t0, t0
     for i in range(1, passes + 1):
         reindex(index_workers)                          # pick up whatever landed since the last pass
         before = feature_status(name, split)
@@ -934,23 +944,28 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
                 skip.add(sh)
                 log.warning("%s: shard %s failed %d times, setting it aside; it will need a look", name, sh,
                             bad[sh])
-        rate = frames / max(time.perf_counter() - t0, 1e-9)
+        now = time.perf_counter()
+        last_arrival = now if st["on_disk"] > before["on_disk"] else last_arrival
+        last_built = now if st["built"] > before["built"] else last_built
+        rate = frames / max(now - t0, 1e-9)
+        cadence = (now - t0) / max(st["built"] - built0, 1)   # seconds per shard this run has actually seen
         log.info("pass %d: %d/%d %s shards on disk, %d indexed, %d built (+%d this pass, %d frames); "
-                 "%.1f frames/s over the run, %d frames done", i, st["on_disk"], st["of"], split,
-                 st["indexed"], st["built"], st["built"] - before["built"], r["frames"], rate, frames)
+                 "%.1f frames/s over the run, %d frames done, a shard every %.0f min", i, st["on_disk"],
+                 st["of"], split, st["indexed"], st["built"], st["built"] - before["built"], r["frames"],
+                 rate, frames, cadence / 60)
         if rl is not None:
             rl.event("pass", i=i, split=split, **st, built_delta=st["built"] - before["built"],
                      frames_this_pass=r["frames"], frames_total=frames, frames_per_s=rate,
-                     failed=r["failed"], set_aside=sorted(skip))
-        if st["built"] > before["built"] or st["indexed"] > before["indexed"]:
-            idle = 0
-        else:
-            idle += interval
-            if st["on_disk"] > st["built"]:
-                log.warning("%d %s shards on disk are not built and nothing moved for %d min",
-                            st["on_disk"] - st["built"], split, idle // 60)
-            if idle >= stall_s:
-                log.warning("no progress for %d min; is the download still running?", idle // 60)
+                     failed=r["failed"], set_aside=sorted(skip), quiet_min=(now - last_built) / 60,
+                     cadence_min=cadence / 60)
+        alarm = max(stall_s, 4 * cadence)          # four missed shards, never less than `stall_s`
+        if st["on_disk"] > st["built"] and now - last_built > alarm:
+            log.warning("%d %s shards sit on disk unbuilt and nothing has been built for %.0f min; "
+                        "extraction looks stuck", st["on_disk"] - st["built"], split, (now - last_built) / 60)
+        elif st["built"] >= st["on_disk"] and now - last_arrival > alarm:
+            log.warning("no new %s shard for %.0f min, and everything on disk is built (a shard has been "
+                        "landing every %.0f min); is the download still running?", split,
+                        (now - last_arrival) / 60, cadence / 60)
         if st["of"] and st["built"] + len(skip) >= st["of"]:
             log.info("all %d %s shards built; stopping", st["of"], split)
             break
