@@ -45,6 +45,11 @@ VARIANTS = [
     ("fastcopy", ["--rig", "front3", "--fast-copy"]),
     ("zerocopy", ["--rig", "front3", "--zero-copy"]),
     ("nospectator", ["--rig", "front3", "--no-spectator"]),
+    ("cachelights", ["--rig", "front3", "--cache-lights"]),
+    ("small_dec4", ["--rig", "front3", "--width", "800", "--height", "450", "--decimate", "4",
+                    "--zero-copy", "--no-spectator"]),
+    ("small_dec4_lights", ["--rig", "front3", "--width", "800", "--height", "450",
+                           "--decimate", "4", "--zero-copy", "--no-spectator", "--cache-lights"]),
     # the policy's real control rate instead of the simulator's tick rate
     ("dec2", ["--rig", "front3", "--decimate", "2"]),
     ("dec4", ["--rig", "front3", "--decimate", "4"]),
@@ -73,6 +78,8 @@ VARIANTS = [
     # not depend on resolution) and it deletes the resize, which is most of the policy's latency.
     ("gpu_qwen_small", ["--rig", "front3", "--width", "800", "--height", "450",
                         "--decimate", "4", "--overlap", "--zero-copy", "--no-spectator"]),
+    ("gpu_qwen_final", ["--rig", "front3", "--width", "800", "--height", "450", "--decimate", "4",
+                        "--overlap", "--zero-copy", "--no-spectator", "--cache-lights"]),
 ]
 
 

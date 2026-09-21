@@ -89,6 +89,7 @@ def parse_args():
     p.add_argument("--no-spectator", action="store_true")
     p.add_argument("--fast-copy", action="store_true")
     p.add_argument("--zero-copy", action="store_true")
+    p.add_argument("--cache-lights", action="store_true")
     p.add_argument("--max-ticks", type=int, default=0)
     return p.parse_args()
 
@@ -386,7 +387,7 @@ class Runner(object):
                "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate)]
         if self.a.policy_socket:
             cmd += ["--policy-socket", self.a.policy_socket]
-        for flag in ("overlap", "no_spectator", "fast_copy", "zero_copy"):
+        for flag in ("overlap", "no_spectator", "fast_copy", "zero_copy", "cache_lights"):
             if getattr(self.a, flag):
                 cmd.append("--" + flag.replace("_", "-"))
         if self.a.max_ticks:

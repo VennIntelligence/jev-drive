@@ -19,6 +19,14 @@ Optimisations (each behind its own flag, all off by default)
   * zero_copy     - no copy at all: keep the `carla.Image` alive and hand out a view of its buffer.
                     Correct only because the leaderboard consumes each frame before the next one
                     arrives; the reference is dropped when the next frame for that tag lands.
+  * cache_lights  - the street-light half of `RouteLightsBehavior` without the per-tick RPCs. On a
+                    night route this one behaviour is the largest Python item in the whole run
+                    (measured: 17.8 ms of a 71 ms tick, 14.5% of total wall clock), because it
+                    re-fetches every street light in the map over RPC on every tick, measures each
+                    one's distance in a Python loop, and re-sends `turn_on`/`turn_off` for lights
+                    that are already in that state. Street lights do not move, so the list and the
+                    positions are fetched once; only lights whose state actually changes are sent.
+                    Same lights end up on, so the rendered image is the same.
   * sensor_tick   - let a camera spec carry `sensor_tick`. The leaderboard builds each sensor's
                     blueprint attributes from a hard-coded whitelist per sensor type
                     (agent_wrapper.py `_preprocess_sensor_spec`) which has no `sensor_tick` for any
@@ -112,11 +120,64 @@ class TickProfile(object):
         return out
 
 
-def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, sensor_tick=False):
+def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, sensor_tick=False,
+            cache_lights=False):
     _patch_tick(profile, no_spectator)
     _patch_callback(profile, fast_copy, zero_copy)
     if sensor_tick:
         _patch_sensor_tick()
+    if cache_lights:
+        _patch_lights()
+
+
+def _patch_lights():
+    from srunner.scenariomanager.lights_sim import RouteLightsBehavior
+
+    def turn_close_lights_on(self, location):
+        if getattr(self, "_cached_lights", None) is None:
+            lights = list(self._light_manager.get_all_lights())
+            self._cached_lights = lights
+            self._light_xyz = np.array([[l.location.x, l.location.y, l.location.z]
+                                        for l in lights], dtype=np.float64)
+            self._light_on = np.array([bool(l.is_on) for l in lights])
+            self._vehicle_state = {}
+        radius = max(self._radius,
+                     self._radius_increase * CarlaDataProvider.get_velocity(self._ego_vehicle))
+
+        here = np.array([location.x, location.y, location.z])
+        want = np.linalg.norm(self._light_xyz - here, axis=1) <= radius
+        turn_on = [l for l, w, o in zip(self._cached_lights, want, self._light_on) if w and not o]
+        turn_off = [l for l, w, o in zip(self._cached_lights, want, self._light_on) if o and not w]
+        if turn_on:
+            self._light_manager.turn_on(turn_on)
+        if turn_off:
+            self._light_manager.turn_off(turn_off)
+        self._light_on = want
+
+        # Vehicles: CarlaDataProvider already holds this tick's transforms, so asking the server
+        # for each actor's location again is a round trip for data we have. The light state is only
+        # written when it changes.
+        for vehicle in CarlaDataProvider.get_all_actors().filter("*vehicle.*"):
+            if vehicle.attributes.get("role_name") != "scenario":
+                continue
+            loc = CarlaDataProvider.get_location(vehicle)
+            if loc is None:
+                continue
+            near = loc.distance(location) <= radius
+            if self._vehicle_state.get(vehicle.id) == near:
+                continue
+            try:
+                lights = vehicle.get_light_state()
+                lights = (lights | self._vehicle_lights) if near else (lights & ~self._vehicle_lights)
+                vehicle.set_light_state(carla.VehicleLightState(lights))
+                self._vehicle_state[vehicle.id] = near
+            except RuntimeError:
+                pass
+
+        lights = self._ego_vehicle.get_light_state()
+        self._ego_vehicle.set_light_state(carla.VehicleLightState(lights | self._vehicle_lights))
+
+    RouteLightsBehavior._turn_close_lights_on = turn_close_lights_on
 
 
 def _patch_sensor_tick():

@@ -66,6 +66,7 @@ def parse_args():
     p.add_argument("--no-spectator", action="store_true")
     p.add_argument("--fast-copy", action="store_true")
     p.add_argument("--zero-copy", action="store_true")
+    p.add_argument("--cache-lights", action="store_true")
     # profiling
     p.add_argument("--max-ticks", type=int, default=0, help="stop the route early, for profiling")
     p.add_argument("--drop-ticks", type=int, default=20, help="warmup ticks excluded from the profile")
@@ -97,7 +98,8 @@ def main():
 
     profile = b2d_hooks.TickProfile(heartbeat_path=str(out / "heartbeat.json"))
     b2d_hooks.install(profile, no_spectator=a.no_spectator, fast_copy=a.fast_copy,
-                      zero_copy=a.zero_copy, sensor_tick=a.decimate > 1)
+                      zero_copy=a.zero_copy, sensor_tick=a.decimate > 1,
+                      cache_lights=a.cache_lights)
     _patch_setup_simulation(LeaderboardEvaluator, a)
     if a.max_ticks:
         _patch_tick_limit(ScenarioManager, a.max_ticks)
