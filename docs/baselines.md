@@ -151,6 +151,9 @@ What the feature-extraction path has to respect:
   - `scripts/tmux_run.sh bl-qd env OMP_NUM_THREADS=4 $DATA_DIR/envs/qwen-drive/bin/python scripts/bench_baselines/qwen-drive.py`
   - `scripts/tmux_run.sh bl-openjev scripts/bench_baselines/openjev.sh`
   - `scripts/tmux_run.sh bl-autovla env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python scripts/bench_baselines/autovla.py`
+  - the Waymo reasoning-rate run: sample first (`UV_PROJECT_ENVIRONMENT=$DATA_DIR/envs/jevdrive PYTHONPATH=. uv run
+    --no-sync python scripts/bench_baselines/autovla_waymo_sample.py`, ~570 MB of JPEGs), then
+    `scripts/tmux_run.sh bl-av-waymo env OMP_NUM_THREADS=4 $DATA_DIR/envs/autovla/bin/python scripts/bench_baselines/autovla_waymo.py`
 - `scripts/bench_baselines/_bench.py` is the shared timer (stdlib + torch, so it runs in every venv).
 
 Last verified: 2026-09-20

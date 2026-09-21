@@ -12,8 +12,8 @@ Sampling rule: of the val frames whose 4-frame image window at stride 5 (0.5 s, 
 strictly complete for all three cameras, take `--per-stratum` frames per stratum uniformly without
 replacement, at most one per sequence, with `--seed`.
 
-  cd ~/data/jev-drive && UV_PROJECT_ENVIRONMENT=$DATA_DIR/envs/jevdrive uv run --no-sync \
-    python scripts/bench_baselines/autovla_waymo_sample.py
+  cd ~/data/jev-drive && UV_PROJECT_ENVIRONMENT=$DATA_DIR/envs/jevdrive PYTHONPATH=. uv run --no-sync \
+    python scripts/bench_baselines/autovla_waymo_sample.py    # ~570 MB of JPEGs into $DATA_DIR/processed/autovla_waymo
 """
 from __future__ import annotations
 
