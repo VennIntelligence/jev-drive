@@ -272,6 +272,10 @@ saturation. Read the server log before concluding anything from a startup `Signa
 2026-09-22, one command, unattended, exit 0. 209 routes finished, 11 never did, 245 attempts,
 633,881 ticks, 56.6 aggregate ticks/s. Worker occupancy 0.97.
 
+One row per attempt is in `research/results/b2d/full220-results.csv` (route, town, status, wall,
+ticks, the tick profile, and which server of what age ran it); `full220-summary.json` beside it is
+the runner's own summary. Everything in this section is `scripts/b2d_report.py` over that run.
+
 This replaces the extrapolation this section used to carry, which said ~1.1 h. **It was optimistic
 by 2.8x**, and it was optimistic in exactly the place it flagged: it assumed Town12 and Town13
 cost what Town01-10HD costs.
