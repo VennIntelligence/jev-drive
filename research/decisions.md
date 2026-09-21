@@ -98,7 +98,16 @@ ADE 只作为并列数字报出来。
 
 **理由**：官方 ADE 是对着评分最高的 rater 轨迹算的。logged future 本身得分 2.63 m，
 而公开最好的 test ADE 是 2.65 m，说明 ADE 已经饱和，只用 ego 的 baseline 也能逼到一米以内。
-另外约一半的 ego-only 预测落在所有 rater trust region 之外，被罚到 4.0，RFS 那里才有空间。
+另外约一半的 ego-only 预测落在所有 rater trust region 之外（`cv` 上 in-trust-region 是 0.551），
+RFS 那里才有空间。**"落在外面"不等于"被罚到 4.0"，这两个量不能混用**：
+实现里是 `per = np.where(inside, per, np.maximum(per, floor))`，也就是**落在外面的候选取
+「衰减后的分」和 4.0 的较大者——floor 是把分数抬上去的下界，不是惩罚**；
+反过来，落在里面的候选如果 rater label 本身低于 4，分数也可以低于 4。
+所以 floored fraction（分数恰好等于 4.0）必须单独算，不能用 1 − in_trust_region 代替。
+*这一句改写过*：原来写的是"约一半……被罚到 4.0"，把 in-trust-region 的补集当成了 floored，方向也说反了。
+社区三个独立实现报 constant-velocity 在 val 上 RFS 7.00/7.022/7.057 且 **floor rate 0/479**，
+而我们的 stage-A 学出来的 ego-only head floor 率 23.6–25.6%——这个对比只有在两边都用
+floored fraction 时才成立，a4 正在补这一列。
 `jevdrive/waymo.py` 里有官方 RFS 的 bit-exact 移植。
 
 **状态**：待定。
