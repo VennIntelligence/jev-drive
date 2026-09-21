@@ -105,12 +105,28 @@ batch size 变了，GEMM 的 tiling 和 kernel 选择就变，误差沿 36 层�
 （`vit_mean`、`vis_mean`、`L09/L18/L27/L36` 的 `_mean` 和 `_last`），
 并且和 val 用的是同一条解码 / 预处理 / batch 路径——已经用逐位比较证明过。
 
-## 时间预算
+## 时间预算（2026-09-22 00:20 更正，原估计错了一天多）
 
-- 每个 shard 约 1574 帧 × 0.13 s ≈ 3.4 min；263 个 shard 合计约 **14.5 h** 纯 GPU 时间
-- 下载每 4.5 min 出一个 shard，比抽取慢，所以抽取追得上：74 个 shard 的存量要 4.2 h 清完，
-  之后跟着下载走。`INTERVAL=300` 的睡眠让稳态下最多积压约 4 个 shard，下载结束后再补约 15 min
+- 每个 shard 约 1574 帧 × 0.13 s ≈ 3.4 min；263 个 shard 合计约 **14.5 h** 纯 GPU 时间。这一条没变
+- **原来写的"下载每 4.5 min 一个 shard、抽取追得上、次日 08:00 收工"是错的。** 错在直接信了 download
+  的 status 行：那个 MB/s 和 ETA 是**累计平均**，被最初几小时的高速度拖住，不描述当前链路。
+  实测瞬时速率一整晚在掉：19:19 是 6.3 MB/s，21:00 是 5.4，22:50 是 4.3（22:20-22:50 半小时
+  371.7 → 379.5 GB）。status 行同一时刻报的是 9.0 MB/s、ETA 17.3 h
+- 按 4.3 MB/s 算，剩下的 155 个 shard 约 550 GB，还要 **约 35 h**，也就是后天上午收工。
+  用户决定不折腾更快的代理节点，就按这个数排期
+- 所以**整个 run 是 download-bound**：一个 shard 到货要 11-13 min，抽它只要 3.4 min，
+  抽取永远在等下载，**GPU 大部分时间是空的**，收工时间等于下载收工时间
+- `INTERVAL` 从 300 改成 900：追不追得上不由它决定，但每个 pass 都会重建
+  index.parquet / past.npy / future.npy / rater.parquet 四个文件，间隔拉长三倍就把这个
+  churn 降到三分之一（blast radius 见 docs/waymo-e2e.md）
 - 特征体积：47 KB/帧 × 41.4 万帧 ≈ **19.4 GB**
+
+## 两个已修的 watcher 缺陷（2026-09-22）
+
+| 缺陷 | 后果 | 修法 |
+|---|---|---|
+| `feature_status` 用 `f"{split}_*.tfrecord-*"` glob，train 的分片叫 `training_...`，匹配不上 | 整晚报 "0/0 shards on disk"；没有 split 总数，`built >= of` 的停止条件永远不成立，263 个 shard 抽完之后会**永远每隔 INTERVAL 重建一次 index** | 改用 `split_of()`，别再从 glob 里重造一遍这个映射 |
+| stall 告警假定抽取是慢的一侧 | 实际是 download-bound，空闲是常态。固定的"60 min 没进展"迟早误报；而"有分片没建"这个条件在抽取跟得上时永远不成立——**下载死了看起来和健康空闲一模一样** | 阈值改成本次 run 实测 cadence 的 4 倍（不低于 `stall_s`），并把两种故障分开报：有货不抽 vs 没货可抽 |
 
 ## 结果
 

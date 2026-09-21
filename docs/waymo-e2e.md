@@ -82,6 +82,13 @@ scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route proxy --stre
 - 2026-09-20, under contention from another bulk download: direct 32 streams 2.0 MB/s, direct 64 5.0,
   Clash 16 7.6. Alone that day both routes reached ~16 MB/s, so direct is only competitive on an idle link.
 - A full run (1.65 TB) takes ~30 h at 15 MB/s; the training split alone (941 GB) ~17.5 h.
+- **The download's own `status` line reports a cumulative average, so it lags a decaying link badly.** Its
+  MB/s is total bytes over total elapsed, and its ETA follows: with a fast first few hours it read 9.0 MB/s
+  and "17.3 h to go" at a moment when the link had actually been doing 4.3 MB/s for half an hour, an ETA
+  understated by more than a day. For the rate that matters, difference two `status` events in
+  `events.jsonl`: `gb` over `t`, half an hour apart. The train split ran at 13.5 MB/s in the early evening,
+  6.3 at 19:19, 5.4 at 21:00 and 4.3 by 22:50 on the same node, so the instantaneous rate is worth
+  re-measuring before quoting any finish time.
 
 ## gcloud login
 
@@ -498,10 +505,22 @@ A shard is the unit of work: its own arrays, its own `index.parquet`, and a `met
 is finished, which is also its done-marker. So a crash costs one shard, and `load_features` merges whatever is
 finished, keyed on `frame_name` (never on `row`, which is a position into an index that grows).
 
-The model is loaded and compiled once for the whole run rather than once per pass. Extraction takes ~3.4 min
-per 1 574-frame shard against a ~4.5 min download cadence, so once it has caught up a pass is a single shard,
-and a reload each time would be pure overhead. With `INTERVAL=300` the steady state lags the download by about
-four shards.
+The model is loaded and compiled once for the whole run rather than once per pass, because a pass is often a
+single shard and a reload each time would be pure overhead.
+
+**Expect to be download-bound, and set `INTERVAL` to roughly the arrival cadence.** Extraction is a fixed
+~3.4 min per 1 574-frame shard; the download is the variable side, and it decayed badly over one night --
+13.5 MB/s and a shard every 4.5 min at the start, 4.3 MB/s and a shard every 11 - 13 min by midnight. So the
+card sits idle most of the time and the run finishes when the download does. A short `INTERVAL` buys nothing
+once that is true and costs something real: every pass rebuilds the four index files under any other reader
+(above), so `INTERVAL=900` against a ~13 min cadence rather than `INTERVAL=300` cuts that churn threefold for
+the same wall time.
+
+That also means **an idle card is the normal state and not a stall**. The watcher's alarm is therefore a
+multiple of the shard cadence the run has actually measured, not a fixed hour, and it separates the two
+failures worth waking someone for: shards arriving and not being built (extraction is stuck) versus nothing
+arriving at all (the download died). In a download-bound run the second one otherwise looks exactly like
+healthy idling, which is why "shards on disk are unbuilt" alone is not enough of a test.
 
 **What this does to everything else on the box.** The re-index at the top of every pass rewrites
 `index.parquet`, `past.npy`, `future.npy` and `rater.parquet` together, so while the watcher runs those four
