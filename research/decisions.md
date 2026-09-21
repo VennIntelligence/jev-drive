@@ -974,3 +974,87 @@ trajectory-following 而非 adaptive decision-making。**我们很可能复现�
 
 **下一步的先决条件**：**先读 DriveZero 和 WA-JEPA 全文**。这两篇决定我们还剩多少 novelty，
 在读完之前不要写主题文档，也不要开始抽特征。
+
+---
+
+## 20. L0：intervention 信息是「线性存在但被均匀目标低估」，还是「根本不在特征里」（**预登记，B/C/D 数字待填**）
+
+**这条在看到任何 B/C/D 数字之前写下来。** 第 3d 条测出的 DiD 为正——视觉的增量在 pre-onset 上
+**比在 straight 上更小**——有两种完全不同的解释，而它们指向的下一步实验是相反的：
+
+1. **readout 层面**：判断「要不要转」的信息其实线性可读出（linear probe 意义上：冻结 backbone、
+   只训一个线性 head，用来测信息在不在特征里），只是 ridge 的均匀 MSE 目标被 9 万多帧直行样本主导，
+   1510 帧 pre-onset 在损失里几乎没有权重，所以 head 学不到它。那么改目标（加权、换更强的 head）就该有收益。
+2. **representation 层面**：Qwen3-VL 的 frozen feature 里本来就没有这个信息的线性方向，
+   换目标、换 head 都没用，下一步必须动表征（换层、换 encoder、finetune、时序输入），不是动 head。
+
+**L0 就是用来把这两条分开的。** 它不新抽任何特征、不碰 RFS scorer、不动闭环，全部在第 3d 条那套
+半 val 设置里跑：val 按 sequence 对半切，一半 fit 一半 eval，λ 用 fit 半内部的 sequence-grouped CV 选，
+两个方向都报。base 统一是 `ridge ego`，所以 ΔADE = arm − ego，逐帧配对。
+
+**kinematic surprise（本条的加权变量）**：`s_i = ADE(真实 future_i, CV 外推_i)`，5 s horizon，
+CV 用 `jevdrive/waymo.py` 里 `baselines()["cv"]`，即「保持当前速度、yaw rate 取零」的直线外推，
+和 3c 条那张 baseline 表用的是同一个。权重在 fit 半上归一化到均值 1。
+
+### Arms
+
+| arm | 内容 |
+|:--|:--|
+| A | **复现**：均匀 `ridge_late`，必须在 bootstrap 噪声内重现 3d 的数字，否则停下来报告，不往下做 |
+| B | **surprise 加权**：WLS（把 X、Y 的行乘 √w_i），w_i ∈ {s/mean(s), (s/mean(s))², 1+α·s/mean(s)（α=1,4），以及硬筛：只留 fit 半 s 中位数以上 / 75 分位以上的帧} |
+| C | **只在 pre-onset 上 fit**：`ridge_late` 只用 fit 半的 pre-onset 帧训练，在 eval 半的 pre-onset 上评估。这是「线性读出这批冻结特征」在这个子集上的**上界** |
+| D | **更强的 head**：`jevdrive/planner.py` 里已有的 MLP head，均匀 vs B 里最好的那套加权 |
+
+B 里「最好的那套」由 **fit 半内部的 grouped CV 上的 pre-onset ADE（不加权）** 选出，
+**不允许**看 eval 半的结果来选。
+
+**token attention head 这一支直接 deferred**：缓存下来的 feature 是 per-frame pooled 向量
+（`L{09,18,27,36}_{mean,last}` 每个 2560 维、`vis_mean` 2560、`vit_mean` 1024，全是 (n, d) float16），
+**没有存 spatial token**，所以 attention pooling 无从做起，要做得重新抽一遍特征，超出 L0 的范围。
+
+### 判据（跑之前写死）
+
+**实用效应门槛：pre-onset 的 ΔADE 要达到 −0.05 m 才算有实用增益。** 理由是 pre-onset 的 ADE 本身约 1.3 m，
+0.05 m 约合 4%；而 3d 半 val 上 delta 的 CI 半宽实测 0.045 m，比这个门槛更小的效应这套设置根本判不动。
+落在 [−0.05, +0.05] 之内的一律按「没有实用增益」读。
+
+| 分支 | 触发条件 | 结论与下一步 |
+|:--|:--|:--|
+| **分支 1（readout 层面）** | 某个 B 方案或 C 在**两个方向上**都给出 pre-onset ΔADE ≤ −0.05 m 且 CI 不跨零，**并且** DiD 移动到 ≤ 0 | 信息线性存在于冻结特征里，均匀目标确实低估了它。下一步在 head/目标层面做 |
+| **分支 2（representation 层面）** | 连 C（只在 pre-onset 上 fit）都把 pre-onset ΔADE 留在 [−0.05, +0.05] 之内 | 线性读出这批冻结特征在这个子集上已经**榨干**了，下一步必须动表征，不是动 head |
+
+**零和检查（两个分支都要做）**：pre-onset 的增益必须和 straight_yaw 的 ΔADE 损失并排报。
+如果 pre-onset 赚到的被 straight 亏掉的等量或更多地抵消，就要明确写一句
+**「重新加权只是把误差在子集之间搬了个家」**，不能只报赚的那一半。
+
+**这条不是押注**：它不预测哪个分支会中，它的作用是让下一次实验的方向在看到数字之前就被定死。
+
+### 跑之前就能算出来的两件事（CPU，已测）
+
+**一、s 的分布：s 主要衡量的是「刹车/起步」，不是「转不转」。** 完整 val 106 360 帧：
+
+| 子集 | n | mean s | q10 | q50 | q90 | q99 | 纵向分量 | 横向分量 | 横向占比 |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| all | 106 360 | 2.81 | 0.21 | 1.95 | 6.64 | 11.71 | 2.33 | 0.82 | 0.29 |
+| pre_onset | 1 510 | 4.25 | 1.65 | 3.84 | 7.57 | 10.94 | 2.80 | 2.67 | 0.63 |
+| straight_yaw | 46 580 | 2.67 | 0.37 | 1.79 | 6.22 | 11.70 | 2.60 | 0.24 | 0.09 |
+| turn_yaw | 11 060 | 5.37 | 1.67 | 4.80 | 9.94 | 13.91 | 2.48 | 4.09 | 0.76 |
+
+s 的顶层 decile（阈值 6.64 m，10 637 帧）里 pre_onset 只占 **2.2%**（val 底噪 1.4%，富集仅 1.6 倍），
+turn_yaw 占 33.0%（底噪 10.4%），straight_yaw 占 36.9%，还有 27.9% 三个子集都不属于。
+`corr(s, |a0|) = 0.49`，`corr(s, v0) = 0.07`——**s 和纵向加速度强相关，和是否处在转弯决策点只是弱相关**。
+所以 B 的加权与其说是「加权 intervention」，不如说是「加权刹车和起步」。这是 L0 设计本身的一个弱点，
+先记在这里，结果怎样都不改判据。
+
+**二、噪声检查：val 里 s 最高的 50 帧，没有一帧是数据 artifact。** 逐帧看了 ego history 的
+速度跳变、重复点、future 的速度剖面和 rater 状态：`past_jump`（相邻 0.25 s 区间的速度差）最大 1.47 m/s，
+val 的 99.9 分位是 1.84，全部在正常范围；重复点 0 帧；第 13 条那套「精确命中」的历史完整性问题在这里
+不适用，因为 past_states 是每帧直接从 tfrecord 里读出来的 16×0.25 s，不是跨帧拼的窗口。
+这 50 帧只来自 **6 个 sequence**（相邻帧高度自相关），平均 v0 = 11.2 m/s、a0 = −1.46 m/s²，
+横向分量只占 5%——它们全是**急减速**，外加一个从静止起步冲到 17 m/s 的路口场景
+（那条 sequence 的 yaw rate 估计是 ±290°/s 的噪声，但 `subsets()` 的 validity guard 已经把它挡在所有
+yaw 子集之外，不影响任何子集数字）。**artifact 计数：0/50。** 真正的威胁不是脏数据，是上面第一点：
+s 选出来的是纵向事件，不是决策点。
+
+**状态**：预登记，**待定**。A 复现之后跑 B/C/D，结果填进本条。
+
