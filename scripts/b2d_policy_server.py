@@ -63,30 +63,38 @@ def build(a):
     from PIL import Image
     from jevdrive.features import DinoFeatures, QwenFeatures
 
-    if a.backbone == "dinov2":
-        fx = DinoFeatures()
+    split = {"transform_ms": [], "forward_ms": []}
 
+    def timed(make_batch):
         def infer(arrays):
-            batch = fx.collate([fx.transform(Image.fromarray(arrays[0][:, :, ::-1]))])
+            t0 = time.perf_counter()
+            batch = make_batch(arrays)
+            t1 = time.perf_counter()
             fx(batch)
             torch.cuda.synchronize()
+            split["transform_ms"].append(1e3 * (t1 - t0))
+            split["forward_ms"].append(1e3 * (time.perf_counter() - t1))
+        return infer
+
+    if a.backbone == "dinov2":
+        fx = DinoFeatures()
+        infer = timed(lambda arrays: fx.collate(
+            [fx.transform(Image.fromarray(arrays[0][:, :, ::-1]))]))
     else:
         fx = QwenFeatures(width=a.width, n_images=a.n_images, compile=a.compile,
                           layers=[int(x) for x in a.layers.split(",")])
+        # CARLA hands out BGRA; the [:, :, ::-1] view is what the processor resizes, so the
+        # channel flip never materialises an array of its own.
+        infer = timed(lambda arrays: QwenFeatures.collate(
+            [fx.transform([Image.fromarray(x[:, :, ::-1]) for x in arrays[:a.n_images]])]))
 
-        def infer(arrays):
-            imgs = [Image.fromarray(x[:, :, ::-1]) for x in arrays[:a.n_images]]  # CARLA is BGRA
-            batch = QwenFeatures.collate([fx.transform(imgs)])
-            fx(batch)
-            torch.cuda.synchronize()
-
-    return fx, infer
+    return fx, infer, split
 
 
 def main():
     a = parse_args()
     import numpy as np
-    fx, infer = build(a)
+    fx, infer, split = build(a)
 
     # Warm up: the first calls build the batch-shape constants and, with compile, the graphs.
     dummy = [np.zeros((900, 1600, 3), dtype=np.uint8) for _ in range(max(1, a.n_images))]
@@ -102,8 +110,12 @@ def main():
             infer(dummy)
             ts.append(1e3 * (time.perf_counter() - t0))
         ts.sort()
-        print("local forward: median %.1f ms, min %.1f, max %.1f over %d"
-              % (ts[len(ts) // 2], ts[0], ts[-1], len(ts)), flush=True)
+        med = lambda xs: sorted(xs)[len(xs) // 2]
+        n = len(split["forward_ms"])
+        print("local: total median %.1f ms (min %.1f max %.1f), transform %.1f, forward %.1f, "
+              "over %d" % (ts[len(ts) // 2], ts[0], ts[-1],
+                           med(split["transform_ms"][-a.bench:]),
+                           med(split["forward_ms"][-a.bench:]), len(ts)), flush=True)
         return 0
 
     if os.path.exists(a.socket):
