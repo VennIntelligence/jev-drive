@@ -1,6 +1,6 @@
 # Large Map 的闭环成本，以及 220 条路线实测
 
-状态: 进行中（2026-09-22 夜）。
+状态: **已完成**（2026-09-22 夜，01:17–04:24）。
 目标文档: [docs/bench2drive-cost.md](../docs/bench2drive-cost.md)。
 背景: [research/carla-efficiency.md](../research/carla-efficiency.md)。
 
@@ -142,4 +142,111 @@ CommonUnixCrashHandler: Signal=11
 
 ## 结果 2：220 条全量实测
 
-（进行中，01:17 启动，8 个 worker）
+**11196 s = 3.11 小时**，01:17:23 → 04:24:09，8 个 worker，一条命令无人值守，exit 0。
+209/220 条完成，245 次 attempt，25 次重启，633881 个 tick，总吞吐 56.6 tick/s，worker 占用率 0.97。
+原始数据：`research/results/b2d/full220-results.csv`（每次 attempt 一行）和 `full220-summary.json`。
+
+**对预测**：事前写下的区间是 1.5–3.5 h、中心 2.5 h。实测 3.11 h，落在区间内、偏上。
+per-tick 的预测 Town12 1.5×，实测 1.65×，方向和机制都对，量偏乐观。
+文档里原来那个「约 1.1 小时」**乐观了 2.8 倍**。
+
+### 每个 town 的成本
+
+| town | 路线 | ms/tick | `world_tick` | tree | tick/路线 | wall/路线 | 占整轮 |
+|:--|--:|--:|--:|--:|--:|--:|--:|
+| **Town13** | 47 | **156.8** | 94.5 | **55.9** | 2845 | 584.7 s | 33% |
+| **Town12** | 104 | **106.2** | 73.9 | 29.2 | 3141 | 408.6 s | 50% |
+| Town15 | 7 | 64.5 | 55.8 | 7.4 | 3635 | 258.5 s | 2% |
+| Town11 | 7 | 56.3 | 33.9 | 20.9 | 3754 | 251.4 s | 2% |
+| Town05 | 9 | 74.1 | 58.6 | 14.0 | 3742 | 293.6 s | 3% |
+| Town10HD | 4 | 78.4 | 57.9 | 19.1 | 2681 | 233.0 s | 1% |
+| Town06 | 6 | 65.5 | 52.4 | 11.7 | 3131 | 208.4 s | 1% |
+| Town03 | 11 | 63.8 | 53.6 | 9.0 | 3022 | 214.0 s | 3% |
+| Town07 | 5 | 62.6 | 52.3 | 9.3 | 1984 | 139.5 s | 1% |
+| Town04 | 12 | 60.3 | 48.6 | 10.4 | 2892 | 184.6 s | 3% |
+| Town01 | 4 | 55.8 | 44.4 | 10.5 | 1327 | 91.3 s | 0.4% |
+| Town02 | 4 | 50.6 | 43.7 | 5.9 | 2042 | 129.1 s | 0.6% |
+
+**这一轮最该记的一条：「Large Map」是错的分组。**
+Town11 和 Town15 一样流式加载 tile，却是 0.94×，和小地图没区别；
+贵的只有 Town12（1.65×）和 Town13（2.44×）这两张具体的图，它们占 69% 的路线、**83% 的 wall clock**。
+「Large Map 贵 1.80×」这个合并数字只在「151 条恰好落在那两张贵图上」的意义上成立。
+以后写图的名字。
+
+**Town13 比 Town12 贵的那一截在 scenario tree 上**（55.9 对 29.2 ms，占一个 tick 的 36%），
+不在 `world_tick` 上。那就是 `RouteLightsBehavior._turn_close_lights_on` 每 tick 把全图路灯
+重取一遍——Town13 路灯最多。**所以 `--cache-lights` 要重测**：它当初在小地图单实例上被否掉
+（省下的 Python 原样回到阻塞等待里），但现在它是 Town13 一个 tick 的三分之一，
+而且 8 worker 下 CPU 真的超订（load 中位 31.8、p90 47.0 对 25 核）。
+
+### 可靠性（R6）：11 条路线跑不完，全在 Town12/Town13
+
+`3048, 11715, 11755, 23687, 23708`（Town12）、`3785, 3800, 23670, 23695, 24041, 24071`（Town13）。
+
+- 每条三次 attempt，每次都在**全新 server、不同端口段**上，
+  每次都在**成功跑了 150–360 s 之后** `Signal=11 / CommonUnixCrashHandler` 崩掉，
+  日志里**没有** bind error。同一批 server 上前后跑的别的路线都好好的。
+- 36 次失败 attempt **全部**是 `server_died_rc139`，只有这一种失败模式。
+- 按 town：Town12 5/104、Town13 6/47、**其余 69 条一条没失败**（Town01–10HD 只有 2 次无关紧要的重启）。
+- 代价：24.1 worker-hours 里的 2.17 h（9.0%）。
+
+**这是 sensor-dormancy segfault（Bench2Drive #235 / carla #7772）第一次在未经修改的官方
+leaderboard 路径上复现出来。** 之前一直够不着它，因为地图没装。
+
+**论文口径**：这台机器上的 Bench2Drive 分数最多是 **209/220** 条上的分数，
+而哪 209 条是 CARLA 决定的、不是 policy 决定的。必须和分数一起报出来。
+
+watchdog 在这里赚回了自己：server 死了之后 route 进程会挂在一个 300 s 超时的 RPC 上，
+盯 server 进程把每次崩溃从五分钟变成一个 5 s 的轮询。
+
+### R7：245 次 attempt，不支持定期回收
+
+| server age（已跑路线数） | attempts | failed | 失败率 |
+|--:|--:|--:|--:|
+| 0 | 44 | 23 | 52% |
+| 1 | 21 | 3 | 14% |
+| 2–9 | 127 | 2 | 1.6% |
+| 10–22 | 53 | 8 | 15% |
+
+**age 0 那 52% 是选择效应，不是「新 server 不可靠」**：一条路线崩了就换 server，
+所以崩溃路线的每次重试都落在 age 0；11 条注定失败的路线贡献了 36 次失败里的 33 次。
+该读的是 age 2–9：127 次 attempt、2 次失败、**平的**。
+失败是**十一条具体路线的属性，不是 server 跑久了的属性**。
+`--recycle-routes` 继续关着——这次是有证据地关着。
+要推翻它需要：把这 11 条已知坏路线排除之后仍然看到失败率随 age 上升——而这一轮做不到，
+因为排除之后几乎不剩失败。
+
+### 负载条件（数字的一部分）
+
+| | |
+|---|---|
+| GPU 利用率 | 中位 100%，10 分位 65% |
+| VRAM | 中位 67.9 GB、p90 74.8、峰值 78.8（共 96） |
+| load average | 中位 31.8、p90 47.0、峰值 72.1（对 25 核） |
+| 同卡的 Waymo 特征抽取 | ~3.4 min burst / ~15 min，占空比约 23% |
+| 同机的 Waymo 下载 | 32 streams，占满网络也吃 CPU |
+| policy server | Qwen3-VL-4B 常驻约 9.6 GB 显存，8 个 worker 共用 |
+
+**独占这台机器会明显更快，但我们没测快多少。**
+
+### 3.11 小时里最大的那块水分
+
+**209 条完成的路线里 118 条（56%）撞满了 4000 tick 上限，中位数正好是 4000。**
+而路线平均只有约 100 m，6 m/s 开完约 330 tick。
+stand-in 故意开得烂（速度保持 + 朝下一个 waypoint 打方向，不看灯不看车），卡住之后一路跑到上限。
+**换一个真能开完路线的 policy，省下来的时间会超过这份文档里任何一项工程优化。**
+3.11 小时该读成「一个烂司机的上界」，不是仿真器的地板。
+
+下一步的控制器不用自己写：CARLA 自带
+`$CARLA_ROOT/PythonAPI/carla/agents/navigation/controller.py` 里的 `VehiclePIDController`
+（纵向 + 横向两个 PID），外面还有 `local_planner.py` / `basic_agent.py`。
+它在 tarball 的 `PythonAPI/carla` 里，不在我们 import 的 PyPI wheel 里，加一条 `sys.path` 就能用。
+轨迹表示怎么映射到 CARLA 的控制序列，另开了一份研究笔记。
+
+## 落到哪里了
+
+- `docs/bench2drive-cost.md`：全量实测、per-town 成本、并发梯子、R6/R7，以及被这一轮推翻的三条旧结论。
+- `docs/carla.md`：sensor-dormancy segfault 在官方路径上可达；启动 segfault 是端口嫌疑；显存只在小地图上过剩。
+- `research/carla-efficiency.md`、`research/decisions.md` 第 17 条：就地修正，写清原来说的是什么、为什么改。
+- `research/results/b2d/full220-results.csv`：每次 attempt 一行，245 行。
+- 代码：`scripts/b2d_report.py`（新，只读），`scripts/b2d_run.py` 的 pgid 修复。

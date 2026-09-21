@@ -1,0 +1,2535 @@
+{
+  "routes_requested": 220,
+  "routes_finished": 209,
+  "routes_skipped_no_map": [],
+  "routes_never_finished": [
+    "3048",
+    "3785",
+    "3800",
+    "11715",
+    "11755",
+    "23670",
+    "23687",
+    "23695",
+    "23708",
+    "24041",
+    "24071"
+  ],
+  "repeat_offenders": [
+    "11715",
+    "11755",
+    "23658",
+    "23670",
+    "23687",
+    "23695",
+    "23708",
+    "24041",
+    "24071",
+    "24224",
+    "25857",
+    "3048",
+    "3785",
+    "3800"
+  ],
+  "restarts": 25,
+  "attempts": {
+    "1711": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 197.2,
+        "ticks": 1479,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1773": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 488.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1790": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 630.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1792": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 452.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1825": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 430.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1833": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 144.6,
+        "ticks": 1294,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1852": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 186.7,
+        "ticks": 1301,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "1956": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 501.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "2050": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 590.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2082": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 442.2,
+        "ticks": 2207,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2084": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 706.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2086": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 513.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2091": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 364.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2115": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 405.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2127": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 193.2,
+        "ticks": 1313,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2129": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 210.6,
+        "ticks": 1309,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2143": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 206.8,
+        "ticks": 1319,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "2144": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 293.2,
+        "ticks": 1803,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2164": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 207.2,
+        "ticks": 1313,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2201": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 551.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2204": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 502.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2215": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 654.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2273": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 335.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2283": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 593.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2286": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 235.7,
+        "ticks": 1475,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2373": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 234.8,
+        "ticks": 1408,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "2390": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 190.0,
+        "ticks": 1379,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2397": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 196.8,
+        "ticks": 1307,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2403": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 153.6,
+        "ticks": 1455,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2416": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 240.4,
+        "ticks": 2215,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2509": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 415.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2513": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 280.4,
+        "ticks": 1484,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2534": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 402.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2539": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 355.0,
+        "ticks": 1954,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2554": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 387.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2606": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 361.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2643": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 233.2,
+        "ticks": 1303,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "2664": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 423.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2668": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 251.4,
+        "ticks": 2258,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2709": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 302.2,
+        "ticks": 2099,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2715": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 367.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "2790": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 524.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "2802": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 491.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2844": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 334.4,
+        "ticks": 2402,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2847": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 192.6,
+        "ticks": 1294,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2881": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 631.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2903": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 460.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2913": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 179.0,
+        "ticks": 1304,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "2943": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 656.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "2989": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 431.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3048": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 155.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 6
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 155.1,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 170.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "3072": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 217.2,
+        "ticks": 1414,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3074": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 330.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3080": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 185.1,
+        "ticks": 1498,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "3086": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 507.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3090": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 625.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3093": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 757.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3099": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 686.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3100": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 555.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3144": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 463.9,
+        "ticks": 3065,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3178": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 187.9,
+        "ticks": 1389,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "3184": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 201.2,
+        "ticks": 1363,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3189": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 208.2,
+        "ticks": 1299,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "3248": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 236.7,
+        "ticks": 1306,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3255": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 208.0,
+        "ticks": 1308,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3307": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 637.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "3364": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 258.9,
+        "ticks": 1307,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3373": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 356.1,
+        "ticks": 1405,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3378": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 557.1,
+        "ticks": 2642,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3380": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 825.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3410": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 432.9,
+        "ticks": 1910,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3436": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 958.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3457": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 692.0,
+        "ticks": 2649,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "3464": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 638.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3472": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 462.0,
+        "ticks": 1748,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3476": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 819.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3482": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 872.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3514": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 705.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "3520": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 699.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3540": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 442.3,
+        "ticks": 1674,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3561": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 713.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3564": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 849.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3572": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 776.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "3575": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 339.0,
+        "ticks": 1450,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3666": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 808.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "3670": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 809.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "3676": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 620.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "3697": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 415.9,
+        "ticks": 1835,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "3708": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 445.1,
+        "ticks": 1526,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "3712": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 399.8,
+        "ticks": 1318,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3717": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 499.0,
+        "ticks": 1395,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "3731": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 977.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "3737": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 607.8,
+        "ticks": 2435,
+        "killed": null,
+        "server_age_routes": 12
+      }
+    ],
+    "3749": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 604.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 12
+      }
+    ],
+    "3785": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 360.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 11
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 340.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 335.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "3800": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 315.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 12
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 285.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 310.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "3813": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 356.3,
+        "ticks": 1408,
+        "killed": null,
+        "server_age_routes": 12
+      }
+    ],
+    "3865": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 399.9,
+        "ticks": 1848,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "3869": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 973.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "3876": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 455.0,
+        "ticks": 1302,
+        "killed": null,
+        "server_age_routes": 13
+      }
+    ],
+    "3890": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 802.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 13
+      }
+    ],
+    "3904": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 409.9,
+        "ticks": 1281,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "3905": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 457.2,
+        "ticks": 2052,
+        "killed": null,
+        "server_age_routes": 13
+      }
+    ],
+    "3936": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 728.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "4183": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 518.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 14
+      }
+    ],
+    "4468": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 566.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "4669": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 420.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "4683": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 450.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 14
+      }
+    ],
+    "4937": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 370.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "10857": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 535.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 12
+      }
+    ],
+    "11381": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 618.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 14
+      }
+    ],
+    "11715": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 150.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 15
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 155.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 165.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "11755": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 235.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 1
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 245.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 240.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "14194": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 443.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "14842": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 641.3,
+        "ticks": 3494,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "14862": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 631.3,
+        "ticks": 3941,
+        "killed": null,
+        "server_age_routes": 15
+      }
+    ],
+    "14909": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 561.3,
+        "ticks": 3723,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "17563": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 550.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 13
+      }
+    ],
+    "17569": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 444.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "17598": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 763.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "17635": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 422.8,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 15
+      }
+    ],
+    "17655": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 598.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 12
+      }
+    ],
+    "17752": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 651.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "18252": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 383.6,
+        "ticks": 1995,
+        "killed": null,
+        "server_age_routes": 16
+      }
+    ],
+    "18305": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 176.2,
+        "ticks": 1317,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "18311": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 179.4,
+        "ticks": 1323,
+        "killed": null,
+        "server_age_routes": 14
+      }
+    ],
+    "18356": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 540.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "20920": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 349.5,
+        "ticks": 2606,
+        "killed": null,
+        "server_age_routes": 16
+      }
+    ],
+    "23658": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 230.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 1
+      },
+      {
+        "attempt": "2",
+        "status": "finished",
+        "wall_s": 427.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "23659": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 385.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 15
+      }
+    ],
+    "23670": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 250.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 17
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 235.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 245.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "23687": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 350.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 1
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 375.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 330.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "23695": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 175.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 13
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 165.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 195.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "23700": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 410.4,
+        "ticks": 2469,
+        "killed": null,
+        "server_age_routes": 17
+      }
+    ],
+    "23708": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 135.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 10
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 140.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 160.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "23771": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 413.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 16
+      }
+    ],
+    "23901": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 378.7,
+        "ticks": 2840,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "23910": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 298.1,
+        "ticks": 2397,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "23918": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 596.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 18
+      }
+    ],
+    "23930": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 417.9,
+        "ticks": 3348,
+        "killed": null,
+        "server_age_routes": 17
+      }
+    ],
+    "24041": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 220.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 5
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 225.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 215.3,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "24071": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 170.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "2",
+        "status": "server_died_rc139",
+        "wall_s": 175.2,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      },
+      {
+        "attempt": "3",
+        "status": "server_died_rc139",
+        "wall_s": 160.4,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 0
+      }
+    ],
+    "24078": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 281.6,
+        "ticks": 1658,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24092": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 474.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24098": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 465.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "24206": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 340.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "24211": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 88.7,
+        "ticks": 1330,
+        "killed": null,
+        "server_age_routes": 18
+      }
+    ],
+    "24224": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 20.1,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 19
+      },
+      {
+        "attempt": "2",
+        "status": "finished",
+        "wall_s": 92.8,
+        "ticks": 1400,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24240": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 413.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 19
+      }
+    ],
+    "24252": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 295.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24258": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 245.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "24294": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 90.0,
+        "ticks": 1434,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24330": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 153.9,
+        "ticks": 1321,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "24333": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 327.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "24340": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 95.3,
+        "ticks": 1402,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "24367": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 128.0,
+        "ticks": 1328,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "24757": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 297.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "24759": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 227.5,
+        "ticks": 2701,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "24781": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 125.2,
+        "ticks": 1308,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "24784": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 258.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "24785": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 155.3,
+        "ticks": 1329,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "24795": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 235.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "24816": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 138.3,
+        "ticks": 1863,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "24841": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 73.6,
+        "ticks": 1354,
+        "killed": null,
+        "server_age_routes": 20
+      }
+    ],
+    "25300": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 241.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "25318": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 408.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "25358": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 125.1,
+        "ticks": 1459,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "25378": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 296.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 21
+      }
+    ],
+    "25381": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 417.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "25383": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 378.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "25424": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 288.0,
+        "ticks": 3986,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "25439": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 250.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "25845": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 229.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "25854": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 239.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "25857": [
+      {
+        "attempt": "1",
+        "status": "server_died_rc139",
+        "wall_s": 15.1,
+        "ticks": null,
+        "killed": "server_died_rc139",
+        "server_age_routes": 22
+      },
+      {
+        "attempt": "2",
+        "status": "finished",
+        "wall_s": 225.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 0
+      }
+    ],
+    "25863": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 185.0,
+        "ticks": 1972,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "25865": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 282.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "25896": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 116.7,
+        "ticks": 1326,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "25928": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 145.7,
+        "ticks": 2295,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "25951": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 198.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "25955": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 243.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "25968": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 68.4,
+        "ticks": 1334,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "25975": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 110.1,
+        "ticks": 1301,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "26393": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 231.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "26394": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 288.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "26396": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 215.5,
+        "ticks": 2980,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "26401": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 220.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 1
+      }
+    ],
+    "26405": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 102.8,
+        "ticks": 1445,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "26406": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 77.9,
+        "ticks": 1345,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "26408": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 191.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "26418": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 279.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "26435": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 301.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "26456": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 161.7,
+        "ticks": 3177,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "26458": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 88.8,
+        "ticks": 1315,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "26944": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 94.0,
+        "ticks": 1356,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "26950": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 110.7,
+        "ticks": 1348,
+        "killed": null,
+        "server_age_routes": 2
+      }
+    ],
+    "26956": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 201.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "26966": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 357.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "26990": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 332.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "27018": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 284.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 5
+      }
+    ],
+    "27494": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 237.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "27506": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 347.6,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 3
+      }
+    ],
+    "27515": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 84.9,
+        "ticks": 1529,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "27529": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 93.7,
+        "ticks": 1329,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "27532": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 222.1,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "27582": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 247.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "28035": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 77.8,
+        "ticks": 1316,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "28048": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 75.0,
+        "ticks": 1336,
+        "killed": null,
+        "server_age_routes": 9
+      }
+    ],
+    "28087": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 322.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "28093": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 232.4,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "28099": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 246.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "28111": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 80.8,
+        "ticks": 1349,
+        "killed": null,
+        "server_age_routes": 6
+      }
+    ],
+    "28154": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 269.2,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "28198": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 235.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 10
+      }
+    ],
+    "28210": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 388.9,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 4
+      }
+    ],
+    "28219": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 366.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ],
+    "28229": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 369.0,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 8
+      }
+    ],
+    "28241": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 336.3,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "28243": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 358.7,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 11
+      }
+    ],
+    "28330": [
+      {
+        "attempt": "1",
+        "status": "finished",
+        "wall_s": 320.5,
+        "ticks": 4000,
+        "killed": null,
+        "server_age_routes": 7
+      }
+    ]
+  },
+  "wall_s_total": 78961.9,
+  "wall_s_median": 356.1,
+  "ticks_total": 633881,
+  "s_per_tick_median": 0.089,
+  "by_server_age": {
+    "0": {
+      "attempts": 44,
+      "failed": 23
+    },
+    "1": {
+      "attempts": 21,
+      "failed": 3
+    },
+    "2": {
+      "attempts": 18,
+      "failed": 0
+    },
+    "3": {
+      "attempts": 18,
+      "failed": 0
+    },
+    "4": {
+      "attempts": 18,
+      "failed": 0
+    },
+    "5": {
+      "attempts": 17,
+      "failed": 1
+    },
+    "6": {
+      "attempts": 16,
+      "failed": 1
+    },
+    "7": {
+      "attempts": 15,
+      "failed": 0
+    },
+    "8": {
+      "attempts": 13,
+      "failed": 0
+    },
+    "9": {
+      "attempts": 12,
+      "failed": 0
+    },
+    "10": {
+      "attempts": 12,
+      "failed": 1
+    },
+    "11": {
+      "attempts": 9,
+      "failed": 1
+    },
+    "12": {
+      "attempts": 6,
+      "failed": 1
+    },
+    "13": {
+      "attempts": 5,
+      "failed": 1
+    },
+    "14": {
+      "attempts": 4,
+      "failed": 0
+    },
+    "15": {
+      "attempts": 4,
+      "failed": 1
+    },
+    "16": {
+      "attempts": 3,
+      "failed": 0
+    },
+    "17": {
+      "attempts": 3,
+      "failed": 1
+    },
+    "18": {
+      "attempts": 2,
+      "failed": 0
+    },
+    "19": {
+      "attempts": 2,
+      "failed": 1
+    },
+    "20": {
+      "attempts": 1,
+      "failed": 0
+    },
+    "21": {
+      "attempts": 1,
+      "failed": 0
+    },
+    "22": {
+      "attempts": 1,
+      "failed": 1
+    }
+  }
+}
