@@ -4,9 +4,10 @@ Read this when you need to know what a Bench2Drive closed-loop evaluation costs 
 where that time goes, or how to run one without losing the run to a crash.
 [carla.md](carla.md) covers getting a CARLA server up at all; this doc is about the loop.
 
-**One-line answer: a 220-route round is about an hour and a half of wall clock on this one card
-once the agent is wired to the simulator properly, against roughly 15 hours if it is wired the way
-Bench2Drive ships - and in neither case is our model what you are paying for.**
+**One-line answer: a 220-route round is 3.1 hours of wall clock on this one card, measured end to
+end at eight workers, against roughly 15 hours wired the way Bench2Drive ships - and in neither
+number is our model what you are paying for.** Two thirds of those 3.1 hours are Town12 and
+Town13. Eleven of the 220 routes never finish, on stock CARLA, for a reason that is not ours.
 
 ## How these numbers were made
 
@@ -23,6 +24,7 @@ and any measurement can be re-run against it.
 | `scripts/b2d_run.py` | many routes: server pool, watchdog, retries, resume, summary |
 | `scripts/b2d_sweep.py` | one route under each configuration, printing the comparison table |
 | `scripts/b2d_policy_server.py` | real frozen features (DINOv2 / Qwen3-VL) in the project's 3.11 env |
+| `scripts/b2d_report.py` | read-only: a run's cost, reliability and server-age curve **per town** |
 
 The tick loop is timed by a line-for-line copy of `ScenarioManager._tick_scenario` carrying a
 `perf_counter` around each phase. The copy is guarded by the md5 of the original source, so if
@@ -30,7 +32,12 @@ Bench2Drive changes the loop the run aborts instead of profiling something that 
 Image deserialisation is timed inside the CARLA client worker thread where it actually happens.
 
 Unless stated: route 24240 (Town10HD), 300 ticks after 20 warmup ticks, 20 Hz synchronous,
-`-quality-level=Epic`, one CARLA instance, an otherwise idle box.
+`-quality-level=Epic`, one CARLA instance, an otherwise idle box. **The 220-route round and the
+Large Map ladder are the exceptions and say so where they appear: they ran on a shared card and are
+not comparable with the idle-box tables.**
+
+`scripts/b2d_report.py` is the read-only reporter that joins a run's per-attempt records back to
+the town in the route XML; every per-town table below comes from it.
 
 **Noise band: the same configuration measured three times gave 158.8, 170.6 and 170.4 ms per tick,
 a spread of 7%.** Nothing below about 8% in the tables below is a result.
@@ -211,49 +218,156 @@ everything, only the instance count changing:
 **Six and eight instances run cleanly. The sixth server does not segfault; it segfaulted under a
 saturating load.** At eight, VRAM is 59 of 96 GB, GPU utilisation about 67%, and the CPU is the
 binding constraint at a load average of 23.8 against the cgroup's 25 cores - which is where the
-diminishing returns come from (1.24x per-instance slowdown for 2x the instances). Eight is the
-practical ceiling here, and it is a CPU ceiling.
-
-This is the one place where the 96 GB card earns something: only because the per-instance load is
-small enough that many instances fit. A card with a quarter of the memory would still hold eight of
-these.
+diminishing returns come from (1.24x per-instance slowdown for 2x the instances).
 
 Servers must still be started staggered; four launched at once cost a world-load timeout and 17%
 throughput. `b2d_run.py` serialises its launches by `--stagger-s` (default 20 s).
 
-## What a 220-route round would cost
+### On a Large Map the ceiling is lower, and it is the first thing this card has bound
 
-Measured: **44 routes, four workers, real Qwen3-VL in the loop, 0.71 h of wall clock** (42 of 44
-routes finished; see the reliability section). Mean 2615 ticks and 121.7 s per route, mean 45.8 ms
-per tick, and world loading is negligible because consecutive routes in a worker reuse the loaded
-map.
+The table above is Town10HD. The same ladder on Town12 - the same 24 routes at every instance
+count, 800 ticks each, the same optimised configuration, on a shared card:
 
-Extrapolating to 220 routes at 575,300 ticks (220 x the measured mean):
+| Instances | ms/tick per instance | aggregate ticks/s | VRAM (median) | load avg | failures |
+|---:|---:|---:|---:|---:|---:|
+| 4 | 84.5 | 25.3 | 42.1 GB | 17.6 | 0 |
+| 6 | 84.1 | **37.7** | 54.4 GB | 23.5 | 0 |
+| 8 | 102.5 | 43.5 | 72.0 GB | 23.0 | 0 |
+| 10 | 101.6 | 53.4 | **83.5 GB (peak 87.4)** | **27.7 (peak 38.9)** | 1 |
 
-| Configuration | Instances | aggregate ticks/s | 220 routes |
-|---|---:|---:|---:|
-| Bench2Drive as shipped, our 3-camera rig, Qwen3-VL every tick at 1600x900 | 4 | 5.9 | **~15 h** |
-| optimised: 800x450, every 4th tick, overlapped, zero-copy | 4 | 87.4 | 1.8 h |
-| optimised | 8 | 146.7 | **~1.1 h** |
+Aggregate is `N x 800 / wall per route`, the throughput with every worker busy; the startup stagger
+is amortised over a real round, not over 24 routes.
 
-The unoptimised figure is the single-instance 520.9 ms/tick of `gpu_qwen` scaled by the 3.07x
-four-instance curve that configuration actually achieves; the optimised ones are measured
-end-to-end. The ratio between them, on the same route and the same card, is **13.9x**.
+**The free step is four to six: the per-instance cost does not move at all** (84.5 -> 84.1) for 1.49x
+the throughput. Six to eight costs 22% per instance to gain 15%.
 
-Read that as: **a Bench2Drive round is a couple of hours, and the difference between a couple of
-hours and two days is entirely in how the agent is wired to the simulator.** Four RTX PRO 6000s
-divide it again, since routes shard cleanly.
+**Ten instances is where the 96 GB card finally binds.** Each Town12 server holds about 6.3 GB, so
+ten of them plus the policy server sit at 83.5 GB with peaks at 87.4; twelve do not fit. The load
+average is over the cgroup's 25 cores as well. So the sentence this document used to carry - that the
+card is over-provisioned for closed-loop work and a quarter of the memory would do - **is true only
+for the small towns it was measured on.**
 
-Four things make the real number larger than 1.1 h, and they should be stated with it:
+Eight is the operating point we run, not ten: ten is about 23% faster but leaves the Waymo feature
+extraction sharing this card no room for its bursts.
 
-- **Town12 and Town13 are 151 of the 220 routes** and are far larger maps with tile streaming. None
-  of them can run here. If they are twice the per-tick cost of Town01-10HD, the round is 3-4 h.
-- **A competent policy drives further.** Thirteen of the 38 routes hit the leaderboard's 4000-tick
-  cap with our deliberately poor stand-in driver; a policy that completes routes uses fewer ticks,
-  but one that drives well and far may use more.
-- **A six-camera BEV agent** (UniAD, VAD) pays 263.3 ms/tick against our 158.3 at 1600x900, and adds
-  a lidar. Roughly double.
-- **Restarts.** The 44-route run lost 25 minutes of worker time to hangs; see below.
+### A server that segfaults at startup is a port problem until proven otherwise
+
+Both startup segfaults in that ladder carried the same three lines in the server log:
+
+```
+LowLevelFatalError [File:Unknown] [Line: 136]
+Exception thrown: bind: Address already in use
+Signal 11 caught.
+```
+
+**CARLA does not report a busy port, it dies on it.** Both were our own: the ladder ran its steps
+back to back on one port block, and the previous step's sockets were still in `TIME_WAIT`. This is
+the same hazard [carla.md](carla.md) documents for the traffic manager, and it means the "sixth
+server segfaults at startup" in that document is a port-reuse suspect too, not evidence about
+saturation. Read the server log before concluding anything from a startup `Signal=11`.
+
+## What a 220-route round costs, measured
+
+**All 220 routes, eight workers, real Qwen3-VL in the loop: 11,196 s = 3.11 h**, 01:17 to 04:24 on
+2026-09-22, one command, unattended, exit 0. 209 routes finished, 11 never did, 245 attempts,
+633,881 ticks, 56.6 aggregate ticks/s. Worker occupancy 0.97.
+
+This replaces the extrapolation this section used to carry, which said ~1.1 h. **It was optimistic
+by 2.8x**, and it was optimistic in exactly the place it flagged: it assumed Town12 and Town13
+cost what Town01-10HD costs.
+
+### Where the 3.1 hours went
+
+Per-tick cost is each route's own tick profile with the first 20 ticks dropped; wall per route
+includes the world load, the scenario build and the teardown.
+
+| Town | Routes | ms/tick | `world_tick` | tree | ticks/route | wall/route | share of the round |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **Town13** | 47 | **156.8** | 94.5 | 55.9 | 2845 | 584.7 s | 33% |
+| **Town12** | 104 | **106.2** | 73.9 | 29.2 | 3141 | 408.6 s | 50% |
+| Town15 | 7 | 64.5 | 55.8 | 7.4 | 3635 | 258.5 s | 2% |
+| Town11 | 7 | 56.3 | 33.9 | 20.9 | 3754 | 251.4 s | 2% |
+| Town05 | 9 | 74.1 | 58.6 | 14.0 | 3742 | 293.6 s | 3% |
+| Town10HD | 4 | 78.4 | 57.9 | 19.1 | 2681 | 233.0 s | 1% |
+| Town06 | 6 | 65.5 | 52.4 | 11.7 | 3131 | 208.4 s | 1% |
+| Town03 | 11 | 63.8 | 53.6 | 9.0 | 3022 | 214.0 s | 3% |
+| Town07 | 5 | 62.6 | 52.3 | 9.3 | 1984 | 139.5 s | 1% |
+| Town04 | 12 | 60.3 | 48.6 | 10.4 | 2892 | 184.6 s | 3% |
+| Town01 | 4 | 55.8 | 44.4 | 10.5 | 1327 | 91.3 s | 0.4% |
+| Town02 | 4 | 50.6 | 43.7 | 5.9 | 2042 | 129.1 s | 0.6% |
+
+**Town12 and Town13 are 69% of the routes and 83% of the wall clock.** Nothing else in the mix
+matters to the total.
+
+### "Large Map" is the wrong predictor; Town12 and Town13 are the right one
+
+All four of Town11, Town12, Town13 and Town15 stream tiles and are Large Maps, and that is how this
+document used to group them. The measurement does not support the grouping:
+
+| Group | ms/tick | vs the small-town mean |
+|---|---:|---:|
+| small towns (Town01-10HD), 55 routes | 64.3 | 1.00x |
+| Town11 and Town15, 14 routes | 60.4 | **0.94x** |
+| Town12, 104 routes | 106.2 | **1.65x** |
+| Town13, 47 routes | 156.8 | **2.44x** |
+
+Town11 and Town15 are Large Maps that cost nothing extra. **Say Town12 and Town13, not "Large
+Maps".** Quote 1.80x only for the four together (115.5 against 64.3), and only because 151 of the
+220 routes happen to be in the two expensive ones.
+
+### What the extra cost is made of
+
+Once the optimised configuration removes the sensor wait (0.03 ms/tick), what is left is
+`world.tick()` and the scenario tree, and both grow:
+
+- **`world_tick` carries it.** 94.5 ms on Town13 and 73.9 on Town12 against 44-59 on the small
+  towns. This is the tile streaming plus the render wait that decimation pushes into the step.
+- **The scenario tree is what makes Town13 worse than Town12**: 55.9 ms against 29.2 and 6-19 in
+  the small towns. `RouteLightsBehavior._turn_close_lights_on` re-fetches every street light in the
+  map over RPC on every tick (see the Cython section above), and Town13 has the most of them.
+  **This finally makes `--cache-lights` worth re-measuring**: it was rejected at one instance on a
+  small town, where the freed Python reappeared in the blocking wait, but here it is 36% of a
+  Town13 tick and the CPU is genuinely oversubscribed (load median 31.8, p90 47.0 against 25 cores).
+
+### The comparison that still stands
+
+| Configuration | Instances | 220 routes |
+|---|---:|---:|
+| Bench2Drive as shipped, our 3-camera rig, Qwen3-VL every tick at 1600x900 | 4 | **~15 h** (extrapolated) |
+| optimised: 800x450, every 4th tick, overlapped, zero-copy | 8 | **3.11 h** (measured) |
+
+Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
+
+### Three things that would move the measured number, in order
+
+- **56% of the finished routes (118 of 209) hit the leaderboard's 4000-tick cap**, and the median
+  route is exactly 4000 ticks. The stand-in driver holds 6 m/s and steers at the next waypoint; it
+  gets stuck and then runs to the cap. The routes themselves average about 100 m, which is roughly
+  330 ticks at that speed. **A driver that actually completes routes would cut this round by more
+  than any optimisation in this document**, and the 3.1 h should be read as the cost of a bad
+  driver, not a floor.
+- **Ten workers instead of eight** is about 23% on Town12, and is available whenever this card is
+  not shared - see the Large Map ladder above for why we did not take it here.
+- **`--cache-lights`**, now that the scenario tree is 36% of a Town13 tick and the CPU binds.
+
+A six-camera BEV agent (UniAD, VAD) pays 263.3 ms/tick against our 158.3 at 1600x900 and adds a
+lidar, so roughly double, in the other direction.
+
+### Load conditions, which are part of the number
+
+The card was **shared for the whole run** and the numbers are not comparable with anything measured
+idle:
+
+| | |
+|---|---|
+| Waymo feature extraction | ~3.4 min bursts every ~15 min, about a 23% duty cycle, on the same GPU |
+| Waymo download | 32 streams, saturating the network and taking CPU |
+| policy server | Qwen3-VL-4B resident, ~9.6 GB VRAM, shared by all eight workers |
+| GPU utilisation | median 100%, 10th percentile 65% |
+| VRAM | median 67.9 GB, p90 74.8, peak 78.8 of 96 |
+| load average | median 31.8, p90 47.0, peak 72.1 against the cgroup's 25 cores |
+
+An idle box would be meaningfully faster; we have not measured how much.
 
 ## Reliability, which is the part that decides whether any of this matters
 
@@ -307,8 +421,40 @@ on the first attempt.
 
 **So the honest statement about stability is: in 3.5 worker-hours on the base-package towns, CARLA
 itself did not crash, hang or segfault once.** Every restart in that run was caused by our own port
-reuse. That is a real result, but it is a narrow one - see the limits below, in particular that the
-known Town12 sensor-dormancy segfault cannot be reached without AdditionalMaps.
+reuse. That is a real result, but it is a narrow one, and the full 220-route round below shows how
+narrow: on Town12 and Town13, CARLA crashes for reasons that are not ours at all.
+
+### What the full 220-route round did: eleven routes cannot be run
+
+| | |
+|---|---|
+| routes finished | **209 of 220**, first pass, unattended, exit 0 |
+| routes that never finished | **11**, all Town12 or Town13 |
+| attempts | 245 for 220 routes; 25 restarts |
+| failed attempts | 36, **every single one `server_died_rc139`** - the server segfaulted |
+| worker time lost to them | 2.17 h of 24.10 worker-hours, **9.0%** |
+
+The eleven: `3048, 11715, 11755, 23687, 23708` on Town12 and `3785, 3800, 23670, 23695, 24041,
+24071` on Town13. Failure rate by town is 5 of 104 on Town12, 6 of 47 on Town13, **0 of 69
+everywhere else** - Town11, Town15 and all eight small towns finished every route on the first
+attempt, with two lone restarts in the whole of Town01-10HD.
+
+**These are CARLA's, not ours.** Each of the eleven was tried three times, each time on a freshly
+started server on a different port block, and each time the server died with `Signal=11 /
+CommonUnixCrashHandler` after 150-360 s of *successful* ticking - not at startup, and with no
+`bind` error anywhere in the log. Every other route on the same servers, before and after, ran
+fine. That is the **Town12/Town13 sensor-dormancy segfault** (Bench2Drive #235, upstream carla
+#7772, both open), reproduced for the first time through the unmodified leaderboard rather than
+through a script of ours.
+
+**So a Bench2Drive score on this simulator is a score over at most 209 of 220 routes**, and which
+209 is a property of CARLA, not of the policy. That has to be in the paper. It also means the
+comparison to published numbers needs a note: anyone reporting all 220 either got luckier, ran a
+patched CARLA, or dropped the failures silently.
+
+The watchdog earned its keep here. A dead server leaves the route process blocked in an RPC with a
+300 s timeout; watching the *server process* turned each of those 36 crashes into a kill within one
+5 s poll instead of five minutes of nothing.
 
 **Report the restart count and the repeat offenders with any Bench2Drive score.** Scores aggregate
 over routes, so silently dropping the routes that would not finish computes a number on a selected
@@ -331,9 +477,29 @@ routes, recycling just before it is nearly free; if the rate is flat, recycling 
 
 Every run now records the raw material for that curve: each attempt carries the server's age in
 routes served and in seconds, and `summary.json` reports `by_server_age` as attempts and failures
-per age bucket. **One run is not the curve** - our own 44-route run says nothing about it, because
-all 12 of its restarts were our own port reuse rather than UE4 decay. Accumulate across runs with
-the port spacing fixed, then set N.
+per age bucket.
+
+The 220-route round is the first run with enough attempts to look at, and **it does not support
+recycling**:
+
+| Server age (routes already served) | Attempts | Failed | Rate |
+|---:|---:|---:|---:|
+| 0 | 44 | 23 | 52% |
+| 1 | 21 | 3 | 14% |
+| 2-9 | 127 | 2 | 1.6% |
+| 10-22 | 53 | 8 | 15% |
+
+The 52% at age 0 is **not** a fresh-server problem, it is a selection effect and the most important
+thing to understand before reading this table: a failing route moves its worker to a new server, so
+every retry of a crashing route is an age-0 attempt. The eleven doomed routes contribute 33 of the
+36 failures and most of them land in that bucket.
+
+Read the flat 1.6% across ages 2-9 instead, and the 15% at 10-22 with the sample sizes attached (53
+attempts, 8 failures, and those are again the doomed routes arriving late). **There is no visible
+decay with server age in 245 attempts.** The failures are a property of eleven specific routes, not
+of how long a server has been up, so `--recycle-routes` stays off: on this evidence it would only
+cost. What would change that is a rate that climbs with age once the eleven known-bad routes are
+excluded - which this run cannot show, because excluding them leaves almost no failures at all.
 
 ### Port slots are 50 apart
 
@@ -352,34 +518,34 @@ once.
 
 ## What these numbers do not cover
 
-- **Only 44 of the 220 routes can run here.** The base 0.9.15 package ships Town01-05 and Town10HD
-  only - `client.get_available_maps()` says so, and Town06 and Town07 are *not* in it, contrary to
-  the obvious assumption. The other 176 routes need AdditionalMaps (6.9 GB), which is deliberately
-  not downloaded. Town12 and Town13, which are 151 of the 220, are much larger maps with tile
-  streaming; their per-tick cost is unknown and the extrapolation above assumes they behave like
-  Town01-10HD, which is optimistic.
-- **The Town12 sensor-dormancy segfault could not be reached**, because Town12 is not installed.
-  It remains an open risk for 104 of the 220 routes (decisions 16).
-- **One route, one map, for the profile.** Route 24240 in Town10HD. The scenario tree cost in
-  particular depends on the route's scenarios and on whether it is a night route.
-- **The stand-in agent drives badly on purpose.** It holds 6 m/s and steers at the next route
-  waypoint. Cost per tick is what is being measured, not driving quality; but a competent policy
-  drives further per route and therefore takes more ticks, so a real evaluation is longer than the
-  extrapolation from these routes at the same ms/tick.
-- **`--cache-lights` is measured at one instance only** and rejected there. Whether the CPU it
-  frees is worth anything at eight instances, where the CPU is what binds, is untested and is the
-  obvious next measurement.
+- **The stand-in agent drives badly on purpose, and it dominates the 3.1 hours.** It holds 6 m/s
+  and steers at the next route waypoint; 56% of the finished routes ran to the 4000-tick cap and
+  the median route is exactly 4000 ticks, against roughly 330 ticks to cover a 100 m route at that
+  speed. Cost per tick is what these numbers measure well. **Cost per round is measured with a
+  driver that mostly gets stuck**, so treat 3.1 h as an upper bound with a large, policy-shaped
+  term in it, not as the simulator's floor.
+- **Nothing here says anything about driving scores.** Every number is wall clock. The policy
+  consumes real Qwen3-VL features at the real cost and throws them away; the control comes from
+  the speed-hold stand-in.
+- **The profile decomposition is one route on one map.** Route 24240 in Town10HD. The per-town
+  table above is from the full round and is broad; the phase-by-phase breakdown at the top of this
+  document is not.
+- **`--cache-lights` is still measured at one instance only** and rejected there. The 220-route
+  round makes it the obvious next measurement rather than a curiosity: the scenario tree is 36% of
+  a Town13 tick and the CPU is oversubscribed at eight workers. Untested, do not assume.
 - **No lidar or radar.** The Bench2Drive rig for UniAD/VAD adds a 64-channel lidar, which is
   another sensor on the same per-sensor cost and is not in any number here.
-- **The stability result is 3.5 worker-hours, not overnight.** No CARLA crash, hang or segfault in
-  that window on Town01-10HD; the known failure at hour three of a long single-GPU run
-  (decisions 16) is not excluded by it.
-- **Nothing here says anything about driving scores.** Every number is wall clock. The stand-in
-  policy consumes features and throws them away.
-- **The instance sweep used the first 12 and 16 base-town routes**, compared route-by-route against
-  the same routes in the four-worker run. It is not the full 44 at each instance count.
+- **The card was shared for every number in this document.** A Waymo feature extraction at a ~23%
+  duty cycle and a 32-stream download ran throughout. How much an idle box would buy is unmeasured;
+  the load average alone (median 31.8 against 25 cores) says it is not nothing.
+- **The Large Map ladder is Town12 only**, 24 routes at 800 ticks each. Town13 is more expensive
+  per tick and holds more VRAM, so the ten-instance ceiling measured on Town12 is probably lower on
+  Town13. We ran the round at eight and did not find out.
 - **The policy is one process for all workers.** Inference serialises through one model on one
   card, which is the right design on one GPU but means the ladder numbers do not separate model
   latency from queueing behind other workers.
+- **One round is not a failure rate.** Eleven routes failed all three attempts and every other
+  route finished first time. Whether the same eleven fail next time, or whether it is eleven *of*
+  a larger susceptible set, needs a second round.
 
-Last verified: 2026-09-21
+Last verified: 2026-09-22
