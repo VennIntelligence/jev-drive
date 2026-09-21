@@ -54,7 +54,11 @@ def parse_args():
     p.add_argument("--route-ids", default="", help="comma-separated route ids, overrides --towns")
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--out", required=True)
-    p.add_argument("--workers", type=int, default=4)
+    p.add_argument("--workers", type=int, default=4, help="4 is the measured operating point; "
+                   "5 is slower and a 6th server segfaults at startup (docs/carla.md)")
+    p.add_argument("--stagger-s", type=float, default=20.0,
+                   help="gap between server launches; launching a pool at once costs 17%% "
+                        "throughput and half-fails (docs/carla.md)")
     p.add_argument("--server-index", type=int, default=0, help="first CARLA server index; port 2000+4i")
     p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
     p.add_argument("--max-attempts", type=int, default=3)
@@ -163,6 +167,10 @@ class Runner(object):
         self.queue = list(routes)
         self.attempts = {}
         self.stop_flag = False
+        # Servers must not be launched simultaneously: four at once produced a world-load timeout
+        # and 17% less throughput than the same four staggered by 20 s.
+        self.start_lock = threading.Lock()
+        self.last_start = 0.0
 
     def event(self, kind, **kw):
         rec = dict(kw)
@@ -207,7 +215,7 @@ class Runner(object):
                         return
                     if not server.alive():
                         self.event("server_start", worker=wi, index=server.index, port=server.port)
-                        server.start()
+                        self.staggered_start(server)
                     ok, record = self.run_once(wi, server, rid, attempt)
                     self.note_attempt(rid, attempt, record)
                     if ok:
@@ -218,6 +226,14 @@ class Runner(object):
                     server.stop()
         finally:
             server.stop()
+
+    def staggered_start(self, server):
+        with self.start_lock:
+            wait = self.a.stagger_s - (time.time() - self.last_start)
+            if wait > 0:
+                time.sleep(wait)
+            server.start()
+            self.last_start = time.time()
 
     def note_attempt(self, rid, attempt, record):
         with self.lock:
