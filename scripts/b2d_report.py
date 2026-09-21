@@ -70,8 +70,13 @@ def collect(out):
             # killed between the two has only the latter too, so fall back rather than drop it.
             d = read_json(adir / "attempt.json") or (route or None)
             if d is None:
+                # Neither file exists yet. attempt.json is written when the attempt ends and
+                # route_result.json when the route process exits, so this is an attempt still in
+                # flight - not a failure. Reporting it as one makes every live run look broken:
+                # a mid-run report of the 220-route round listed eight running Town13 routes as
+                # "never finished".
                 rows.append({"route_id": rdir.name, "attempt": int(adir.name or 1),
-                             "status": "no result file"})
+                             "status": "running"})
                 continue
             rows.append({
                 "route_id": rdir.name, "attempt": int(adir.name or 1),
@@ -142,21 +147,26 @@ def reliability(rows, town_of):
     for r in rows:
         t = town_of.get(r["route_id"], "?")
         b = by_town.setdefault(t, {"attempts": 0, "routes": set(), "finished": set(),
-                                   "failed_attempts": 0})
+                                   "running": set(), "failed_attempts": 0})
         b["attempts"] += 1
         b["routes"].add(r["route_id"])
         if r["status"] == "finished":
             b["finished"].add(r["route_id"])
+        elif r["status"] == "running":
+            b["running"].add(r["route_id"])
         else:
             b["failed_attempts"] += 1
-    lines = ["| town | routes | finished | attempts | failed attempts | restarts | never finished |",
-             "|---|--:|--:|--:|--:|--:|---|"]
+    lines = ["| town | routes | finished | running | attempts | failed attempts | restarts | "
+             "never finished |",
+             "|---|--:|--:|--:|--:|--:|--:|---|"]
     for t in sorted(by_town, key=lambda t: (t not in LARGE_MAPS, t)):
         b = by_town[t]
-        never = sorted(b["routes"] - b["finished"])
-        lines.append("| %s | %d | %d | %d | %d | %d | %s |" % (
-            t, len(b["routes"]), len(b["finished"]), b["attempts"], b["failed_attempts"],
-            b["attempts"] - len(b["routes"]), ", ".join(never) or "-"))
+        # A route with an attempt still in flight has not failed and has not finished; it is
+        # neither a restart nor a never-finished. Only a completed run has an empty `running`.
+        never = sorted(b["routes"] - b["finished"] - b["running"])
+        lines.append("| %s | %d | %d | %d | %d | %d | %d | %s |" % (
+            t, len(b["routes"]), len(b["finished"]), len(b["running"]), b["attempts"],
+            b["failed_attempts"], b["attempts"] - len(b["routes"]), ", ".join(never) or "-"))
     return "\n".join(lines)
 
 
@@ -168,6 +178,9 @@ def server_age(rows):
         if age is None:
             continue
         b = buckets.setdefault(age, {"attempts": 0, "failed": 0})
+        # (an attempt still in flight is skipped below, before it is counted)
+        if r["status"] == "running":
+            continue
         b["attempts"] += 1
         if r["status"] != "finished":
             b["failed"] += 1
