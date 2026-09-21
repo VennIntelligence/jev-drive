@@ -110,6 +110,35 @@ def select_routes(routes_xml, towns, route_ids, limit):
     return wanted[:limit] if limit else wanted
 
 
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def cmdline(pid):
+    try:
+        with open("/proc/%d/cmdline" % pid, "rb") as fh:
+            return fh.read().decode("utf-8", "replace").replace("\0", " ")
+    except (OSError, IOError):
+        return ""
+
+
+def kill_group(pid, why=""):
+    """Kill a process group by pid, after checking what that pid actually is. Never pkill -f:
+    -f matches our own command line and other sessions' (docs/long-runs.md)."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(os.getpgid(pid), sig)
+        except OSError:
+            return
+        time.sleep(2)
+        if not pid_alive(pid):
+            return
+
+
 def port_free(port):
     with socket.socket() as s:
         return s.connect_ex(("127.0.0.1", port)) != 0
@@ -141,6 +170,7 @@ class Server(object):
                  "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality,
                  "-graphicsadapter=%d" % self.gpu_rank],
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
+        (self.log_dir / ("carla-%d.pid" % self.index)).write_text(str(self.proc.pid))
         deadline = time.time() + timeout
         while time.time() < deadline:
             if not port_free(self.port):
@@ -182,6 +212,7 @@ class Runner(object):
         self.queue = list(routes)
         self.available_maps = None
         self.no_map = []
+        self.reap_orphans()
         self.attempts = {}
         self.claimed = set()
         self.stop_flag = False
@@ -189,6 +220,25 @@ class Runner(object):
         # and 17% less throughput than the same four staggered by 20 s.
         self.start_lock = threading.Lock()
         self.last_start = 0.0
+
+    def reap_orphans(self):
+        """A runner that is SIGKILLed leaves its CARLA servers and route processes behind, holding
+        the ports the next run wants. Recorded pids make that recoverable without pattern-matching
+        command lines: check that the pid really is the thing we started, then kill its group."""
+        for pidfile in sorted(self.out.glob("servers/*.pid")) + sorted(
+                self.out.glob("attempts/*/*/route.pid")):
+            try:
+                pid = int(pidfile.read_text().strip())
+            except (OSError, ValueError):
+                continue
+            cmd = cmdline(pid)
+            if pid_alive(pid) and ("CarlaUE4" in cmd or "b2d_route.py" in cmd):
+                self.event("orphan_killed", pid=pid, cmd=cmd[:120])
+                kill_group(pid)
+            try:
+                pidfile.unlink()
+            except OSError:
+                pass
 
     def event(self, kind, **kw):
         rec = dict(kw)
@@ -227,7 +277,14 @@ class Runner(object):
                 age = time.time() - path.stat().st_mtime
             except OSError:
                 return False
-            if age < self.a.claim_stale_s:
+            owner = {}
+            try:
+                owner = json.loads(path.read_text())
+            except (OSError, ValueError):
+                pass
+            mine = owner.get("host") == socket.gethostname()
+            dead = mine and not pid_alive(int(owner.get("pid", -1)))
+            if not dead and age < self.a.claim_stale_s:
                 return False
             self.event("claim_stolen", route_id=rid, age_s=round(age))
             fd = os.open(str(path), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
@@ -343,6 +400,7 @@ class Runner(object):
         t0 = time.time()
         log = open(str(adir / "route.log"), "wb")
         proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
+        (adir / "route.pid").write_text(str(proc.pid))
         reason = self.supervise(proc, adir, t0)
         log.close()
 
