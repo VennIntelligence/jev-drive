@@ -153,7 +153,20 @@ invalid one (#0).
 This is the sensor-dormancy crash of Bench2Drive #235 / carla #7772.
 
 **What is established:** the mechanism above, from the backtrace; and that the unmodified
-leaderboard runs Town12 routes on this box without hitting it.
+leaderboard runs *most* Town12 routes on this box without hitting it.
+
+**It does hit it, on a minority of routes.** A full 220-route round on 2026-09-22
+([bench2drive-cost.md](bench2drive-cost.md)) finished 209 and lost **eleven, every one of them
+Town12 or Town13**: `3048, 11715, 11755, 23687, 23708` and `3785, 3800, 23670, 23695, 24041,
+24071`. Each was attempted three times, each time on a freshly started server on a different port
+block, and each time the server died with `Signal=11 / CommonUnixCrashHandler` **after 150-360 s of
+successful ticking** - not at startup, and with no `bind` error in the log. Every other route on
+those same servers ran fine, and Town11, Town15 and all eight small towns lost nothing.
+
+So the honest status is: the crash is reachable through the official path, it is route-dependent
+rather than map-wide, and **a Bench2Drive score measured here covers at most 209 of the 220
+routes**. Which 209 is a property of CARLA, not of the policy, and it belongs in any reported
+score.
 
 **What is not:** which difference between our client and theirs is responsible. We diffed the
 leaderboard's world setup against `carla_bench.py` and tested the candidates on the failing cell
@@ -243,9 +256,20 @@ idle card. Not a closed-loop rate, and never validated on a Large Map.
 One instance: 4.5 cores, 8.0 GB VRAM, 4.1 GB RAM. Concurrency on Town10HD_Opt peaked at **four**
 instances (86.5 FPS aggregate, 3.07x) and fell at five; a sixth server segfaulted at startup. At
 five instances VRAM was 31% used and CPU 16.7 of 25 cores while the GPU sat at 99%, so the GPU binds
-first and the 96 GB card is over-provisioned for this. Starting instances simultaneously made one
-time out during `load_world`; staggering them 20 s apart fixed it and raised aggregate throughput
-from 74.2 to 86.5.
+first. Starting instances simultaneously made one time out during `load_world`; staggering them
+20 s apart fixed it and raised aggregate throughput from 74.2 to 86.5.
+
+Two corrections to that paragraph, both from 2026-09-22 and both in
+[bench2drive-cost.md](bench2drive-cost.md):
+
+- **"A sixth server segfaulted at startup" is not evidence about saturation.** Two startup
+  segfaults in a later ladder carried `LowLevelFatalError ... bind: Address already in use`
+  immediately before `Signal 11 caught`, and both were our own port reuse. **CARLA does not report
+  a busy port, it dies on it.** Read the server log before reading a startup `Signal=11` as a
+  concurrency limit.
+- **"The 96 GB card is over-provisioned for this" holds only for the small towns it was measured
+  on.** A Town12 server holds about 6.3 GB, so ten instances sit at 83.5 GB with peaks at 87.4 and
+  twelve do not fit. On Town12, VRAM is the binding constraint, not the GPU and not the cores.
 
 **From the real leaderboard via `scripts/b2d_run.py`** - closed-loop, real routes, blocking sensor
 waits and the scenario tree included. These are the numbers that count. See
