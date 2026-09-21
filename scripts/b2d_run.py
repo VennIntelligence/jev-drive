@@ -213,10 +213,10 @@ class Runner(object):
         # only reachable when there is something to resume from, i.e. never in a first run.
         self.lock = threading.RLock()
         self.queue = list(routes)
+        self.requested = list(routes)
         self.available_maps = None
         self.no_map = []
         self.reap_orphans()
-        self.attempts = {}
         self.claimed = set()
         self.stop_flag = False
         # Servers must not be launched simultaneously: four at once produced a world-load timeout
@@ -335,7 +335,6 @@ class Runner(object):
                         self.staggered_start(server)
                         self.learn_maps(server)
                     ok, record = self.run_once(wi, server, rid, attempt)
-                    self.note_attempt(rid, attempt, record)
                     if ok:
                         (self.out / "done" / (rid + ".json")).write_text(json.dumps(record, indent=2))
                         finished = True
@@ -376,12 +375,6 @@ class Runner(object):
                 time.sleep(wait)
             server.start()
             self.last_start = time.time()
-
-    def note_attempt(self, rid, attempt, record):
-        with self.lock:
-            self.attempts.setdefault(rid, []).append(
-                {"attempt": attempt, "status": record.get("status"), "wall_s": record.get("wall_s"),
-                 "ticks": record.get("ticks")})
 
     def run_once(self, wi, server, rid, attempt):
         adir = self.out / "attempts" / rid / ("%d" % attempt)
@@ -464,24 +457,55 @@ class Runner(object):
                 continue
 
     def summarise(self):
-        done = sorted((self.out / "done").glob("*.json"))
-        records = [json.loads(p.read_text()) for p in done]
-        never = sorted(set(self.attempts) - set(r["route_id"] for r in records))
-        restarts = sum(max(0, len(v) - 1) for v in self.attempts.values())
+        """Built from what is on disk, not from this process's memory: a run that resumes after a
+        crash must still report the whole history, including the attempts its predecessor made.
+        R6 in research/carla-efficiency.md - the number of restarts and the routes that never
+        finished are results, not logistics, because a score over the routes that happened to
+        finish is a score on a selected subset."""
+        requested = [rid for rid, _ in self.requested]
+        history, restarts = {}, 0
+        for rid in requested:
+            tries = []
+            for adir in sorted((self.out / "attempts" / rid).glob("*"),
+                               key=lambda p: int(p.name) if p.name.isdigit() else 0):
+                f = adir / "route_result.json"
+                if not f.exists():
+                    tries.append({"attempt": adir.name, "status": "no result file"})
+                    continue
+                try:
+                    d = json.loads(f.read_text())
+                except ValueError:
+                    tries.append({"attempt": adir.name, "status": "unreadable"})
+                    continue
+                tries.append({"attempt": adir.name, "status": d.get("status"),
+                              "wall_s": d.get("wall_s"),
+                              "ticks": d.get("profile", {}).get("ticks")})
+            if tries:
+                history[rid] = tries
+                restarts += len(tries) - 1
+        done = {}
+        for rid in requested:
+            f = self.out / "done" / (rid + ".json")
+            if f.exists():
+                done[rid] = json.loads(f.read_text())
+        never = [r for r in requested if r not in done and r not in self.no_map]
+        walls = [r.get("wall_s", 0) for r in done.values()]
+        ticks = [r.get("profile", {}).get("ticks", 0) for r in done.values()]
         summary = {
-            "routes_requested": len(self.attempts) + len(records) - len(set(self.attempts) & set(
-                r["route_id"] for r in records)),
-            "routes_finished": len(records),
-            "routes_never_finished": never,
+            "routes_requested": len(requested),
+            "routes_finished": len(done),
             "routes_skipped_no_map": sorted(set(self.no_map)),
+            "routes_never_finished": never,
+            "repeat_offenders": sorted(r for r, t in history.items() if len(t) > 1),
             "restarts": restarts,
-            "attempts": self.attempts,
-            "wall_s_total": round(sum(r.get("wall_s", 0) for r in records), 1),
-            "wall_s_median": _median([r.get("wall_s", 0) for r in records]),
-            "ticks_total": sum(r.get("profile", {}).get("ticks", 0) for r in records),
+            "attempts": history,
+            "wall_s_total": round(sum(walls), 1),
+            "wall_s_median": _median(walls),
+            "ticks_total": sum(ticks),
+            "s_per_tick_median": round(_median(walls) / max(1, _median(ticks)), 4) if ticks else None,
         }
         (self.out / "summary.json").write_text(json.dumps(summary, indent=2))
-        self.event("summary", **{k: v for k, v in summary.items() if k != "attempts"})
+        self.event("summary", **dict((k, v) for k, v in summary.items() if k != "attempts"))
 
 
 def _median(xs):
