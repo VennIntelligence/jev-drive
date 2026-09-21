@@ -208,7 +208,10 @@ class Runner(object):
         for sub in ("done", "attempts", "servers", "claims"):
             (self.out / sub).mkdir(parents=True, exist_ok=True)
         self.events = open(str(self.out / "events.jsonl"), "a", buffering=1)
-        self.lock = threading.Lock()
+        # Reentrant: next_route() holds the lock and logs an event, and event() locks too. With a
+        # plain Lock the second resume run deadlocked on the first "already done" skip - which is
+        # only reachable when there is something to resume from, i.e. never in a first run.
+        self.lock = threading.RLock()
         self.queue = list(routes)
         self.available_maps = None
         self.no_map = []
