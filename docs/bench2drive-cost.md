@@ -4,8 +4,9 @@ Read this when you need to know what a Bench2Drive closed-loop evaluation costs 
 where that time goes, or how to run one without losing the run to a crash.
 [carla.md](carla.md) covers getting a CARLA server up at all; this doc is about the loop.
 
-**One-line answer: with the optimisations below, a 220-route round is a long day on this one card,
-not a week - and the simulator, not our model, is what you are paying for.**
+**One-line answer: a 220-route round is about an hour and a half of wall clock on this one card
+once the agent is wired to the simulator properly, against roughly 15 hours if it is wired the way
+Bench2Drive ships - and in neither case is our model what you are paying for.**
 
 ## How these numbers were made
 
@@ -190,23 +191,69 @@ the contention mostly disappears with it, and the stand-in and the real model ag
 
 **A cheap backbone, done right, runs faster than real time (1.13x). Our actual model runs at 0.70x.**
 
-## Parallelism
+## Parallelism: the ceiling is a property of the configuration, not of the box
 
-Measured separately (see [carla.md](carla.md)): **four instances is the operating point** at 86.5
-aggregate FPS against 28.2 for one, a 3.07x scaling; five is slower (82.0) and a sixth server
-segfaults during startup. The GPU binds at 99% from four instances on, while VRAM peaks at 30 of
-96 GB and CPU at 16.7 of 25 cores. Servers must be started staggered - four launched at once cost a
-world-load timeout and 17% throughput.
+[carla.md](carla.md) reports four instances as the operating point - 86.5 aggregate FPS against
+28.2 for one - with five slower and **a sixth server segfaulting during startup**. That was measured
+with one camera rendering at 1600x900 on every tick, which puts the GPU at 99% from four instances
+on.
 
-Two cautions when combining that curve with the tables above. It was measured with a bare tick loop
-and one camera in an empty Town10HD_Opt, not with the leaderboard, a full scenario set and three
-cameras; and with a real policy on the same card, inference competes with rendering rather than
-adding capacity beside it. The end-to-end four-worker number in the next section is the one to
-quote.
+Run the optimised configuration instead (three cameras at 800x450, rendered every fourth tick, real
+Qwen3-VL in the loop) and the GPU is no longer saturated, and the ceiling moves. Same routes, same
+everything, only the instance count changing:
+
+| Instances | ms/tick per instance | aggregate ticks/s | vs 4 | failures |
+|---:|---:|---:|---:|---:|
+| 4 | 45.8 | 87.4 | 1.00x | 0 |
+| 6 | 50.2 | 119.5 | **1.37x** | 0 |
+| 8 | 54.5 | 146.7 | **1.62x** | 0 |
+
+**Six and eight instances run cleanly. The sixth server does not segfault; it segfaulted under a
+saturating load.** At eight, VRAM is 59 of 96 GB, GPU utilisation about 67%, and the CPU is the
+binding constraint at a load average of 23.8 against the cgroup's 25 cores - which is where the
+diminishing returns come from (1.24x per-instance slowdown for 2x the instances). Eight is the
+practical ceiling here, and it is a CPU ceiling.
+
+This is the one place where the 96 GB card earns something: only because the per-instance load is
+small enough that many instances fit. A card with a quarter of the memory would still hold eight of
+these.
+
+Servers must still be started staggered; four launched at once cost a world-load timeout and 17%
+throughput. `b2d_run.py` serialises its launches by `--stagger-s` (default 20 s).
 
 ## What a 220-route round would cost
 
-(Filled in from the 44-route run; see below.)
+Measured: **44 routes, four workers, real Qwen3-VL in the loop, 0.71 h of wall clock** (42 of 44
+routes finished; see the reliability section). Mean 2615 ticks and 121.7 s per route, mean 45.8 ms
+per tick, and world loading is negligible because consecutive routes in a worker reuse the loaded
+map.
+
+Extrapolating to 220 routes at 575,300 ticks (220 x the measured mean):
+
+| Configuration | Instances | aggregate ticks/s | 220 routes |
+|---|---:|---:|---:|
+| Bench2Drive as shipped, our 3-camera rig, Qwen3-VL every tick at 1600x900 | 4 | 5.9 | **~15 h** |
+| optimised: 800x450, every 4th tick, overlapped, zero-copy | 4 | 87.4 | 1.8 h |
+| optimised | 8 | 146.7 | **~1.1 h** |
+
+The unoptimised figure is the single-instance 520.9 ms/tick of `gpu_qwen` scaled by the 3.07x
+four-instance curve that configuration actually achieves; the optimised ones are measured
+end-to-end. The ratio between them, on the same route and the same card, is **13.9x**.
+
+Read that as: **a Bench2Drive round is a couple of hours, and the difference between a couple of
+hours and two days is entirely in how the agent is wired to the simulator.** Four RTX PRO 6000s
+divide it again, since routes shard cleanly.
+
+Four things make the real number larger than 1.1 h, and they should be stated with it:
+
+- **Town12 and Town13 are 151 of the 220 routes** and are far larger maps with tile streaming. None
+  of them can run here. If they are twice the per-tick cost of Town01-10HD, the round is 3-4 h.
+- **A competent policy drives further.** Thirteen of the 38 routes hit the leaderboard's 4000-tick
+  cap with our deliberately poor stand-in driver; a policy that completes routes uses fewer ticks,
+  but one that drives well and far may use more.
+- **A six-camera BEV agent** (UniAD, VAD) pays 263.3 ms/tick against our 158.3 at 1600x900, and adds
+  a lidar. Roughly double.
+- **Restarts.** The 44-route run lost 25 minutes of worker time to hangs; see below.
 
 ## Reliability, which is the part that decides whether any of this matters
 
@@ -234,9 +281,35 @@ argument for doing so: the runner deadlocked on its first "already done" route (
 lock, reachable only on a second run), and the summary reported zero restarts for a run that had
 restarted a server.
 
+### What an unattended run actually did
+
+44 routes, four workers, 0.71 h, unattended:
+
+| | |
+|---|---|
+| routes finished | 38 of 44 on the first pass, 42 of 44 after one resume |
+| restarts | 12 |
+| worker time lost to hangs | about 25 min of the 2.8 worker-hours |
+| routes that never finished | 24224, 24841 - **and both ran first time, unretried, on a fresh server index** |
+
+Every failure was the same one, and it was not CARLA's: a route that is still dying holds the
+traffic manager's RPC port (the TM server lives in the *client* process), the next attempt fails
+with a bind error before it ticks once, and because the retry reuses the same port it then hangs
+for the full watchdog timeout. Four workers lost slots this way and the routes assigned to them
+were abandoned after three attempts each. The fix is two lines - take the first free TM port, and
+move a failing worker to the next server index - and the two "never finished" routes then completed
+on the first attempt.
+
+**So the honest statement about stability is: in 3.5 worker-hours on the base-package towns, CARLA
+itself did not crash, hang or segfault once.** Every restart in that run was caused by our own port
+reuse. That is a real result, but it is a narrow one - see the limits below, in particular that the
+known Town12 sensor-dormancy segfault cannot be reached without AdditionalMaps.
+
 **Report the restart count and the repeat offenders with any Bench2Drive score.** Scores aggregate
 over routes, so silently dropping the routes that would not finish computes a number on a selected
-subset that cannot be compared with anyone else's.
+subset that cannot be compared with anyone else's. This run is the example: read only
+`routes_finished`, and you would report a score over 38 of 44 routes chosen by which worker happened
+to break.
 
 ### Multi-GPU
 
@@ -252,7 +325,7 @@ once.
   only - `client.get_available_maps()` says so, and Town06 and Town07 are *not* in it, contrary to
   the obvious assumption. The other 176 routes need AdditionalMaps (6.9 GB), which is deliberately
   not downloaded. Town12 and Town13, which are 151 of the 220, are much larger maps with tile
-  streaming; their per-tick cost is unknown and the extrapolation below assumes they behave like
+  streaming; their per-tick cost is unknown and the extrapolation above assumes they behave like
   Town01-10HD, which is optimistic.
 - **The Town12 sensor-dormancy segfault could not be reached**, because Town12 is not installed.
   It remains an open risk for 104 of the 220 routes (decisions 16).
@@ -263,8 +336,19 @@ once.
   drives further per route and therefore takes more ticks, so a real evaluation is longer than the
   extrapolation from these routes at the same ms/tick.
 - **`--cache-lights` is measured at one instance only** and rejected there. Whether the CPU it
-  frees is worth anything at four instances is untested.
+  frees is worth anything at eight instances, where the CPU is what binds, is untested and is the
+  obvious next measurement.
 - **No lidar or radar.** The Bench2Drive rig for UniAD/VAD adds a 64-channel lidar, which is
   another sensor on the same per-sensor cost and is not in any number here.
+- **The stability result is 3.5 worker-hours, not overnight.** No CARLA crash, hang or segfault in
+  that window on Town01-10HD; the known failure at hour three of a long single-GPU run
+  (decisions 16) is not excluded by it.
+- **Nothing here says anything about driving scores.** Every number is wall clock. The stand-in
+  policy consumes features and throws them away.
+- **The instance sweep used the first 12 and 16 base-town routes**, compared route-by-route against
+  the same routes in the four-worker run. It is not the full 44 at each instance count.
+- **The policy is one process for all workers.** Inference serialises through one model on one
+  card, which is the right design on one GPU but means the ladder numbers do not separate model
+  latency from queueing behind other workers.
 
 Last verified: 2026-09-21
