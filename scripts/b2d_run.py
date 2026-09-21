@@ -181,6 +181,7 @@ class Server(object):
         self.log_dir = Path(log_dir)
         self.quality = quality
         self.proc = None
+        self.pgid = None
         self.log = None
         self.starts = 0
 
@@ -195,6 +196,9 @@ class Server(object):
                  "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality,
                  "-graphicsadapter=%d" % self.gpu_rank],
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
+        # setsid in preexec_fn makes the child its own group leader, so pgid == pid. Record it:
+        # stop() must not look it up later, when the wrapper may already be gone.
+        self.pgid = self.proc.pid
         (self.log_dir / ("carla-%d.pid" % self.index)).write_text(str(self.proc.pid))
         self.started_at, self.routes_served = time.time(), 0
         deadline = time.time() + timeout
@@ -225,16 +229,28 @@ class Server(object):
         if self.proc is None:
             return
         for sig in (signal.SIGTERM, signal.SIGKILL):
+            # Kill the group by the pgid recorded at launch, never by looking it up now.
+            # `CarlaUE4.sh` is a wrapper that execs nothing: the real binary is its child, and
+            # when the binary crashes the wrapper exits first. os.getpgid(wrapper) then raises
+            # ESRCH, the loop breaks, and the server binary survives its own runner - one did,
+            # holding an RPC port and 6 GB of VRAM for half an hour. setsid made the wrapper a
+            # group leader, so its pid IS the pgid and stays valid for as long as any member of
+            # the group is alive.
             try:
-                os.killpg(os.getpgid(self.proc.pid), sig)
+                os.killpg(self.pgid, sig)
             except OSError:
                 break
             try:
                 self.proc.wait(timeout=10)
-                break
             except subprocess.TimeoutExpired:
                 continue
-        self.proc = None
+            # The wrapper is reaped; the binary may not be. Poll the group rather than trust it.
+            time.sleep(1)
+            try:
+                os.killpg(self.pgid, 0)
+            except OSError:
+                break
+        self.proc, self.pgid = None, None
 
 
 class Runner(object):
@@ -523,9 +539,11 @@ class Runner(object):
 
     @staticmethod
     def kill(proc):
+        # proc.pid is the pgid: preexec_fn=os.setsid made it a group leader. Do not call
+        # os.getpgid here - see Server.stop() for what happens when the leader has already exited.
         for sig in (signal.SIGTERM, signal.SIGKILL):
             try:
-                os.killpg(os.getpgid(proc.pid), sig)
+                os.killpg(proc.pid, sig)
                 proc.wait(timeout=10)
                 return
             except (OSError, subprocess.TimeoutExpired):
