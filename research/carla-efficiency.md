@@ -234,10 +234,18 @@ policy 在独立进程里（CARLA 客户端是 py3.8，torch 是 py3.11），走
 ## 别人是怎么起 server 的（Bench2Drive 自己的代码和 README）
 
 用户的提示：去看别人的启动代码。看了之后，**我们和 Bench2Drive 的启动方式有五处不同，
-其中第一处很可能就是 Town12 崩溃的原因**。
+而**其中第 0 行是我们最初漏掉的那一处**（第 1 行已被实测否掉）。
+
+**用户的判断（这是当前最强的一条推理）**：官方代码原则上不应该有问题——
+Bench2Drive 的 104 条 Town12 路线是有人跑过、发表过的。
+**所以崩溃几乎必然在我们自己的 `carla_bench.py` 里，不在 CARLA 或 Town12 里。**
+这把问题从"调试 CARLA"变成"逐条 diff 我们和官方路径的差异"，后者便宜得多。
+**决定性的测试是：用未经修改的 Bench2Drive leaderboard（`b2d_run.py`）跑一条 Town12 路线。**
+它通过，就结案——bug 是我们的。
 
 | # | Bench2Drive 的做法 | 我们的做法 | 影响 |
 |---|---|---|---|
+| **0** | 用**完整构造**的 `carla.WorldSettings(..., deterministic_ragdolls=True, spectator_as_ego=False)` | 只设 `synchronous_mode` 和 `fixed_delta_seconds`，**`spectator_as_ego` 留在默认 True** | **Large Map 专有的设置**：`spectator_as_ego=True` 时 spectator 会被当作一个 ego 参与 tile 流式加载和 actor dormancy。在 Town12 上 spectator 和 hero 不在同一处，就会让 tile 和 actor 状态围着两个位置来回变。**这是我们和官方之间最贴近 Large Map 的一处差异**，而且是一行 |
 | 1 | 起完 server **硬等 `time.sleep(30)`** 再连 | `carla_server.sh` 每 2 s 探一次 TCP 端口，**端口一开就连** | **值得采纳（README 给的理由成立），但已实测证明它不是 Town12 崩溃的原因**——见下面一段 |
 | 2 | `load_world` 失败**重试最多 20 次**（`num_max_restarts = 20`） | 一次失败就算失败 | 他们把「起不来」当成常态，我们当成异常 |
 | 3 | 用 **`-graphicsadapter=<rank>`** 选卡 | 没有选卡参数 | README：**CARLA 不受 `CUDA_VISIBLE_DEVICES` 控制**，只认 `-graphicsadapter`；而且映射可能是错位的（4 卡时 GPU1 要写 2、GPU2 写 3、GPU3 写 4）。**以后上 2–4 张卡时这条是必须的** |
