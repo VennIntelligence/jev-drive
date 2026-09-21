@@ -151,7 +151,7 @@ server dies during startup with `Signal=11` / `CommonUnixCrashHandler`, so it is
 a slow start.
 
 Neither the cores nor the VRAM we sized the box around is the constraint: at five instances VRAM
-is 31% used and CPU is 16.7 of 25 cores. The GPU saturates first, and past saturation CARLA falls
+is 31% used and CPU is 16.7 of 25 cores. (That 16.7 is with all five clients driving; idle servers ticking between routes draw 13.3. Both are well under the quota, which is the point.) The GPU saturates first, and past saturation CARLA falls
 over rather than degrading gracefully. **The 96 GB card is heavily over-provisioned for this
 workload** - a much smaller GPU would hit the same four-instance limit.
 
