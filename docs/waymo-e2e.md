@@ -503,6 +503,25 @@ per 1 574-frame shard against a ~4.5 min download cadence, so once it has caught
 and a reload each time would be pure overhead. With `INTERVAL=300` the steady state lags the download by about
 four shards.
 
+**What this does to everything else on the box.** The re-index at the top of every pass rewrites
+`index.parquet`, `past.npy`, `future.npy` and `rater.parquet` together, so while the watcher runs those four
+files change every few minutes and the index grows (261 497 to 272 458 rows over one afternoon). Two
+consequences for anything else reading the processed tree at the same time:
+
+- The four files are written in place, one after another, not published atomically. A reader can load one
+  from before a rebuild and another from after it, and nothing in the files says so.
+- `rater.parquet`'s `row` column is a **position** into the index as it stood when that rebuild happened. Mix
+  vintages and the rater trajectories sit beside the wrong frames. This is the bug the per-shard feature
+  memmaps had before they were keyed on `frame_name`, in a different file, and it fails quietly:
+  `waymo_stage_a.rfs_rows` drops out-of-range rows without complaining, so a corrupted RFS column can be
+  produced with no error at all.
+
+So **pin a snapshot before reading the processed tree alongside the watcher**:
+`DATA_DIR=$(scripts/snapshot_processed.sh <name>) python -m jevdrive.waymo_l0 ...` copies the four files,
+checks they agree with each other, and symlinks everything else (the per-shard feature directories are
+append-only and immutable once written, so they need no copy). Reading the feature shards alone is always
+safe; it is the four index files that move.
+
 ### Where the extraction time goes
 
 Profiled on a quiet card while the train download was running (2026-09-21,
