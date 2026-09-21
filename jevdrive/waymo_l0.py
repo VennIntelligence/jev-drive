@@ -356,7 +356,8 @@ def run_direction(direction: int, set_name: str = "qwen_front3", layer: str = sa
 
 
 def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Per arm by subset (ADE, RFS where the raters are), the paired delta against `ridge ego`, and the DiD.
+    """Per arm by subset (ADE, RFS where the raters are), the paired delta against `ridge ego`, the DiD, and
+    the same deltas stratified by the evaluation half's s_ego decile.
 
     Every arm is paired against the same base, so the deltas across arms are comparable frame by frame. RFS
     is reported overall only: decision 3b settled that the pre-onset subset holds 6 rater frames in the whole
@@ -368,10 +369,10 @@ def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
     pos, rtraj, scores = sa.rfs_rows(ctx["df"], ctx["rows"][v])
     speed = waymo.init_speed(ctx["past"][ctx["rows"][v]])
     cluster = ctx["df"].cluster.astype(str).to_numpy()[ctx["rows"][v]]
-    ade, rows_out = {}, []
+    per, rows_out = {}, []
     for name, (p, st) in preds.items():
         e = np.linalg.norm(p[:, 0] - gt, axis=-1).mean(1)
-        ade[name] = e
+        per[name] = e
         r = {"arm": name, "direction": ctx["direction"], **{f"fit_{k}": q for k, q in st.items()}}
         for sn, m in masks.items():
             r[f"ade_{sn}"], r[f"n_{sn}"] = e[m].mean(), int(m.sum())
@@ -390,11 +391,11 @@ def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
     for name in preds:
         if name == BASE:
             continue
-        d = ade[name] - ade[BASE]
+        d = per[name] - per[BASE]
         for sn, m in masks.items():
             lo, hi = traj.boot_ci(d[m], sq[m])
             pairs.append({"direction": ctx["direction"], "arm": name, "subset": sn, "n": int(m.sum()),
-                          "ade_base": ade[BASE][m].mean(), "ade_arm": ade[name][m].mean(),
+                          "ade_base": per[BASE][m].mean(), "ade_arm": per[name][m].mean(),
                           "dade": d[m].mean(), "lo": lo, "hi": hi, "halfwidth": (hi - lo) / 2})
         hi_m, lo_m = masks["pre_onset"], masks["straight_yaw"]
         point, cl, ch = traj.boot_did(d, sq, hi_m, lo_m)
@@ -404,7 +405,12 @@ def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
                      "halfwidth": (ch - cl) / 2})
         log.info("dir %d %-22s pre_onset %+.4f  straight %+.4f  DiD %+.4f [%+.4f, %+.4f]", ctx["direction"],
                  name, d[hi_m].mean(), d[lo_m].mean(), point, cl, ch)
-    return pd.DataFrame(rows_out), pd.DataFrame(pairs), pd.DataFrame(dids)
+    dec = decile_report(per, ctx)
+    for name in dec.arm.unique():
+        g = dec[(dec.arm == name) & (dec.scope == "all")].sort_values("decile")
+        log.info("dir %d %-22s relative gain by s_ego decile: %s", ctx["direction"], name,
+                 " ".join(f"{x:+.3f}" for x in g.rel_gain))
+    return pd.DataFrame(rows_out), pd.DataFrame(pairs), pd.DataFrame(dids), dec
 
 
 def _write(rl, tables):
@@ -414,6 +420,44 @@ def _write(rl, tables):
         t.to_csv(rl.dir / f"{name}.csv", index=False)
         rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
         rl.event(name, rows=t.to_dict("records"))
+
+
+def decile_report(per: dict, ctx: dict, scopes=("all", "straight_yaw")) -> pd.DataFrame:
+    """Every arm against the base, stratified by the evaluation half's own s_ego decile.
+
+    The pre-onset subset turned out to be a poor stand-in for "where the ego prior fails": s_ego enriches it
+    only 1.47x, and the prior's largest residuals are braking and launching, not turning (decisions 20). The
+    decile cut puts the whole intervention mass on the axis instead -- about 5 000 evaluation frames in the
+    top decile against 750 pre-onset ones -- and the s_ego used here comes from the model fitted on the fit
+    half, so it is out-of-sample on every frame it stratifies.
+
+    The quantity to read is the *relative* gain, not the absolute one: a high-s_ego frame mechanically has
+    more error available to remove, so an absolute delta that grows with the decile says nothing on its own.
+    The bootstrap resamples sequences, exactly as everywhere else; the relative interval is the absolute one
+    divided by that decile's ego ADE, which is a constant within the decile.
+    """
+    sp, seq, s = ctx["sp"], ctx["seq"], ctx["s"][PRIMARY]
+    v, sq, sv = sp.val, seq[sp.val], s[sp.val]
+    q = np.quantile(sv, np.linspace(0, 1, 11))
+    dec = np.clip(np.searchsorted(q[1:-1], sv, "right"), 0, 9)
+    rows = []
+    for scope in scopes:
+        sm = ctx["sub"][scope][v]
+        for name, e in per.items():
+            if name == BASE:
+                continue
+            d = e - per[BASE]
+            for i in range(10):
+                m = sm & (dec == i)
+                if not m.any():
+                    continue
+                lo, hi = traj.boot_ci(d[m], sq[m])
+                b = per[BASE][m].mean()
+                rows.append({"direction": ctx["direction"], "arm": name, "scope": scope, "decile": i,
+                             "n": int(m.sum()), "s_ego_lo": float(sv[m].min()), "s_ego_hi": float(sv[m].max()),
+                             "ade_base": b, "ade_arm": e[m].mean(), "dade": d[m].mean(), "lo": lo, "hi": hi,
+                             "rel_gain": d[m].mean() / b, "rel_lo": lo / b, "rel_hi": hi / b})
+    return pd.DataFrame(rows)
 
 
 def main():
@@ -443,16 +487,16 @@ def main():
             nz.append(noise_check(df, rows, past, fut, s, sub, d))
         _write(rl, (("surprise", rep), ("noise_check", nz)))
     if "arms" in a.steps:
-        res, pairs, dids, bs, rep, nz = [], [], [], [], [], []
+        res, pairs, dids, bs, rep, nz, dcs = [], [], [], [], [], [], []
         for d in (int(x) for x in a.directions.split(",")):
             preds, ctx, b, rp, nzd = run_direction(d, a.feature_set, a.layer, a.seed, a.folds, rl)
-            r, p_, dd = evaluate(preds, ctx)
-            for lst, x in ((res, r), (pairs, p_), (dids, dd), (bs, b), (rep, rp), (nz, nzd)):
+            r, p_, dd, dec = evaluate(preds, ctx)
+            for lst, x in ((res, r), (pairs, p_), (dids, dd), (bs, b), (rep, rp), (nz, nzd), (dcs, dec)):
                 lst.append(x)
             del preds
             torch.cuda.empty_cache()
         _write(rl, (("arms", res), ("paired", pairs), ("did", dids), ("schemes", bs),
-                    ("surprise", rep), ("noise_check", nz)))
+                    ("surprise", rep), ("noise_check", nz), ("deciles", dcs)))
     rl.event("end")
     rl.close()
 
