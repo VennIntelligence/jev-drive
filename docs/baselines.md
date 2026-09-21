@@ -28,11 +28,11 @@ Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill
 | openjev, same, identical request repeated | same | same | yes | same | 347 / 358 / 385 | same | same, but the vLLM prefix cache holds the images | not representative of driving (every frame is new) |
 | openjev, front camera only, fresh frames | same | same | yes | same | 345 / 345 / 371 | same | same, 502 input tokens | |
 | openjev, README text benchmark (3 text questions) | same | same | yes | same | 147 / 151 / 215 | same | same, 171 input tokens, no image | the 24/200 requests that need one read only take 47 ms; the README quotes 94 ms p50 on the same card |
+| Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
 | Qwen/Qwen3-VL-32B-Instruct (bf16) | HF rev `0cfaf48` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 62.7 GB alloc | load plus one 40-token caption of one frame | fits the 96 GB card at bf16 with ~33 GB to spare; 37 s from cold cache to caption |
 | facebook/vjepa2-vitl-fpc64-256 (bf16) | HF rev `b3c1679` | Apache-2.0, not gated | yes (load check only) | same | not benchmarked | 0.7 GB alloc | one forward of a 4-frame clip | video control, see "Backbone controls" below: 48 ms per 4-frame clip (12 ms/frame), 512 tokens x 1024 |
 | google/siglip2-so400m-patch14-384 (bf16) | HF rev `e8e4872` | Apache-2.0, not gated | yes (load check only) | same | not benchmarked | 2.2 GB alloc | one forward of one frame | image-text control: 12.4 ms/frame, 729 tokens x 1152 |
 | facebook/dinov2-base (bf16) | HF | Apache-2.0, not gated | yes (load check only) | same | not benchmarked | 0.2 GB alloc | one forward of one frame | single-frame self-supervised control: 3.1 ms/frame, 257 tokens x 768 |
-| Qwen/Qwen3-VL-8B-Instruct (bf16) | HF rev `0c351dd` | Apache-2.0, not gated | yes (load check only) | `envs/jevdrive` (ours) | not benchmarked | 16.7 GB alloc | one 40-token caption of one camera frame | our own feature backbone: `uv run python scripts/bench_baselines/load_backbones.py <repo>` (needs `HF_HUB_OFFLINE=1`) |
 
 Sanity check, not latency: the bundled `scripts/demo.py` on the same scene gives VQA text, 6 direct and 6
 reasoning trajectories, ADE 0.225 m / FDE 0.992 m (direct) and 0.242 m / 1.072 m (reasoning) against the logged
