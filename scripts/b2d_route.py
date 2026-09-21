@@ -69,6 +69,10 @@ def parse_args():
     # profiling
     p.add_argument("--max-ticks", type=int, default=0, help="stop the route early, for profiling")
     p.add_argument("--drop-ticks", type=int, default=20, help="warmup ticks excluded from the profile")
+    p.add_argument("--cprofile", action="store_true",
+                   help="also write a cProfile of the whole run. Use it to attribute the Python "
+                        "phases to functions, never for absolute timings: the profiler itself "
+                        "roughly doubles per-tick Python cost.")
     return p.parse_args()
 
 
@@ -103,6 +107,11 @@ def main():
     t0 = time.time()
     record = {"route_id": a.route_id, "status": "harness_error", "wall_s": 0.0}
     rc = 2
+    prof = None
+    if a.cprofile:
+        import cProfile
+        prof = cProfile.Profile()
+        prof.enable()
     try:
         evaluator = LeaderboardEvaluator(args, stats)
         crashed = evaluator.run(args)
@@ -116,6 +125,11 @@ def main():
         print(record["traceback"], flush=True)
         rc = 2
     finally:
+        if prof is not None:
+            import pstats
+            prof.disable()
+            with open(str(out / "cprofile.txt"), "w") as fh:
+                pstats.Stats(prof, stream=fh).sort_stats("tottime").print_stats(45)
         record["wall_s"] = round(time.time() - t0, 1)
         record["profile"] = profile.summary(drop=a.drop_ticks)
         record["config"] = vars(a)
