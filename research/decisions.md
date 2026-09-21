@@ -106,9 +106,43 @@ RFS 那里才有空间。**"落在外面"不等于"被罚到 4.0"，这两个量
 所以 floored fraction（分数恰好等于 4.0）必须单独算，不能用 1 − in_trust_region 代替。
 *这一句改写过*：原来写的是"约一半……被罚到 4.0"，把 in-trust-region 的补集当成了 floored，方向也说反了。
 社区三个独立实现报 constant-velocity 在 val 上 RFS 7.00/7.022/7.057 且 **floor rate 0/479**，
-而我们的 stage-A 学出来的 ego-only head floor 率 23.6–25.6%——这个对比只有在两边都用
-floored fraction 时才成立，a4 正在补这一列。
+而我们的 stage-A 学出来的 ego-only head floor 率 23.6–25.6%。
 `jevdrive/waymo.py` 里有官方 RFS 的 bit-exact 移植。
+
+**2026-09-21 实测，这一列补完了（完整 val，479 个 rater 帧，`report/rater.csv`）**：
+
+| 轨迹 | RFS (cluster) | in_trust_region | **floored** |
+|:--|--:|--:|--:|
+| rater_best | 9.587 | 1.000 | **0.000** |
+| logged_future | 8.131 | 0.772 | **0.094** |
+| rater_worst | 7.715 | 1.000 | 0.029 |
+| cv_vel | 7.116 | 0.564 | 0.263 |
+| **cv（零参数）** | **7.103** | 0.551 | **0.271** |
+| ctrv | 7.018 | 0.524 | 0.259 |
+| ca | 6.845 | 0.491 | 0.307 |
+| ctra | 6.803 | 0.472 | 0.286 |
+| zero（原地不动） | 5.383 | 0.280 | 0.618 |
+
+**结论一：社区那个 0/479 在我们的口径下复现不出来，而且「学出来的 head 有 physics 没有的失效模式」
+这个假设是错的——方向反了。** 我们的零参数 `cv` floor 率是 **27.1%**，而 stage-A 学出来的
+ego-only head 是 23.6–25.6%，**学出来的比免费物理还略好一点**，不是更差。
+两边用的是同一个定义（`sc <= RFS_FLOOR + 1e-9`，`waymo_stage_a.py` 和 `waymo.py` 共用）。
+RFS 均值这一侧我们和社区是**吻合**的（7.103 对 7.00/7.022/7.057），所以分歧只在 floor rate 的定义上，
+不在 RFS 实现上。**在弄清他们怎么数之前，不要引用那个 0/479，也不要拿它质疑我们的 ego baseline。**
+*这一段推翻的是 2026-09-21 早些时候的说法*：当时把 24% 当成「bug 形状的异常、要先修」，
+依据是社区的 0%；补完这一列之后没有异常可修。
+
+**结论二：floored 按机动强烈分层，但分层的方向是「已经在转」，不是「转之前」。**
+`cv` 的 floor 率：turn_yaw（已经在转）**86.3%**、right 62.1%、turn_intent 48.1%、
+straight 24.6%、straight_yaw **17.9%**。这是第 3c 条「ego state 在转弯时才值钱」的镜像：
+从一个正在转的状态做匀速外推，5 s 后偏到所有 trust region 之外。
+pre_onset 是 50%，**但 n=6，不能用**（见第 3b 条）。
+
+**结论三（新，值得单独报）：logged future 自己也被 floor 了 9.4%。**
+车实际开出来的那条轨迹，在约十一分之一的 rater 帧上落在所有 rater 的 trust region 之外
+且衰减到 4 以下。rater_best 是 0.0%、rater_worst 是 2.9%，作为内部一致性检查通过。
+顺带坐实了社区那份 repo 存疑的一点：**RFS 确实可以低于 4**（`rfs_min` 多行是 3.0），
+因为 rater label 本身可以低于 4，我们的实现早就是这样写的。
 
 **状态**：待定。
 
