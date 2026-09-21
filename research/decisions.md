@@ -903,3 +903,74 @@ NeurIPS checklist 自承 *"did not report error bars"*，官方数字本身还�
 ablation 用官方 Dev10（10 条，约 7 GPU·h，官方 README 推荐）；显式披露 crash/retry 不要静默记 0；
 **v0.0.3 与 v0.0.4 的数字不可混排**（中段 ±10 DS 乱跳，TCP 与 UniAD 的相对次序会反转，
 且外部团队至今无人在 v0.0.4 上发表）。
+
+---
+
+## 19. real↔sim 迁移已经有人做了，但做在 neural simulator 上；HUGSIM 是我们缺的那一列 control
+
+**决定**：如果做「driving pretraining 能不能扛住 freezing 和 domain shift」这条线，
+**评测必须是 NAVSIM + HUGSIM + Bench2Drive 三列，不是 NAVSIM + Bench2Drive 两列**。
+同时，**不要再说「没人评测过 real-video pretraining 的闭环迁移」**——说过头了，会被一击打掉。
+
+**理由**：2026-09-21 第三轮 deep research 的第四份报告
+（`research/lit/2026-09-21-round3-sim-real-transfer.md`，不进 git）。
+**覆盖度限定**：该 agent 的 WebSearch 配额在启动前已耗尽，全部结果来自 arXiv API + 定向 WebFetch，
+**偏 arXiv**，workshop proceedings 和 project page 那一层没扫到。下面的「没人做过」都带这个限定。
+
+**(a) 「没人做过」这个说法被证伪了，但有一个更窄的版本是真的。**
+
+| 精确命题 | 裁决 |
+|:--|:--|
+| 没人把 real-video-pretrained encoder 放进 CARLA closed-loop | **假**——Drive-JEPA 就是（330 h real video → Bench2Drive DS 64.52） |
+| 没人评测 real-video pretraining 的闭环迁移 | **假**——WA-JEPA 在 HUGSIM 上 zero-shot HD-Score 0.4462；DriveZero 在 HUGSIM；VaVAM 在 NeuroNCAP |
+| **没人在 CARLA setting 下 ablate encoder 的 pretraining source** | **真** |
+| **没人在冻结条件下做这件事** | **真**——Drive-JEPA 的 ViT 是 lr 1e-5 微调的 |
+| **没人量化 real→CARLA 的 feature-space gap** | **真**——扫了约 24 篇相关工作，driving 场景下零 |
+
+**(b) 两篇几乎就是我们的设计，novelty 必须相对它们重新定位。**
+- **DriveZero**（[2609.06055](https://arxiv.org/abs/2609.06055)，2026-09-05）：DINOv3 + SigLIP2 + SAM +
+  Depth-Anything-V2，**四个全部冻结**，接薄 head，在 **HUGSIM 闭环** + NAVSIM + nuPlan 上评测。
+  和我们的差别只有两点：simulator 选了 HUGSIM 不是 CARLA，以及**它把多个 VFM 并起来用，
+  没有做 per-encoder 的横向 ablation**。
+- **WA-JEPA**（[2608.20974](https://arxiv.org/abs/2608.20974)）：nuPlan video 上的 JEPA 预训练，
+  **HUGSIM 上 "without HUGSIM-specific fine-tuning"**，HD-Score 0.4462（best）。
+  这是 real-video pretraining 零样本闭环迁移的直接证据。
+
+**(c) sim→real 方向证据充分且基本为正，没有一篇报负。**
+JiSAM（[2503.08422](https://arxiv.org/abs/2503.08422)）用 CARLA LiDAR 预训练 + **2.5% real labels**
+就达到 full-real 水平；LEAD（[2512.20563](https://arxiv.org/abs/2512.20563)，CVPR 2026）一套 pipeline
+在 Bench2Drive 95 DS 和 NAVSIM/Waymo 上同时 gain。
+但 JiSAM 明说 **naive 迁移会失败**，要靠 domain-aware 设计救——说明 gap 确实大。
+
+**(d) CARLA 不是「太 OOD 以至于结果没信息量」，这一点之前没验过。**
+Bench2Drive 分数跨度 38.65（VAD）到 95.59（LEAD），**有分辨力**；而且 real internet VL 预训练的
+SimLingo 能到 **86.55**，所以「real pretraining 在 CARLA 里天然废掉」是错的。
+**但 SimLingo 是微调的**，而微调过的 Drive-JEPA（real driving video）只有 64.52。
+这 31 分**不能归因于 domain gap**——LEAD 用 privileged expert 蒸馏 + 自采数据，架构和训练规模都不同。
+**没有任何 controlled comparison 把 "pretraining domain" 这个变量隔离出来过，这正是空白所在。**
+
+**(e) 为什么必须加 HUGSIM 这一列（本条最实用的部分）。**
+只有 NAVSIM + Bench2Drive 两列时，**任何掉分都可以被 reviewer 解释成「闭环本来就更难」**，
+而不是 domain shift——这个反驳我们答不了。**HUGSIM 是闭环但 render 自真实数据（3DGS 重建
+KITTI-360 / Waymo / nuScenes / PandaSet），它正好把「闭环难」和「合成图像难」两个混淆因素分开。**
+所以**最干净的对比对是 HUGSIM vs Bench2Drive，不是 NAVSIM vs Bench2Drive。**
+
+可行性：MIT license、ungated、**重建好的 scenario 官方已放出，不用自己跑 3DGS 训练**；
+3DGS 光栅化单卡 real-time，96 GB 远超需求；400+ scenario 跑一轮是**小时级**。
+而且 DriveZero、WA-JEPA、Latent-WAM、MM-Future 都在 HD-Score 上有数，**我们的结果直接可比，
+不用自建 baseline**。对照：NeuroNCAP 场景太窄（三类）且公开 baseline 只有 UniAD；
+**AlpaSim 没有公开释出**；DriveArena 的 code 状态不明。
+
+**(f) 一条必须提前准备的反向证据。**
+VaViM/VaVAM（[2502.15672](https://arxiv.org/abs/2502.15672)）发现 **scaling real-video pretraining
+会改善 open-loop，但 NeuroNCAP 上的 collision rate 反而上升**，作者归因于 overfit 到
+trajectory-following 而非 adaptive decision-making。**我们很可能复现出同样的反转。**
+那不是坏消息——它就是论文的 punchline——但要在开跑之前想好怎么解释，不要到 rebuttal 才第一次遇到。
+建议按第 3d 条的办法**预登记**：反转出现怎么写、不出现怎么写，跑之前写死。
+
+**状态**：文献事实**已确认**（带 (a) 的覆盖度限定）。
+由此产生的实验设计要求——**三列而不是两列**——**已决定**。
+**整条线做不做仍未决定**，那要和第 18 条一起给用户定。
+
+**下一步的先决条件**：**先读 DriveZero 和 WA-JEPA 全文**。这两篇决定我们还剩多少 novelty，
+在读完之前不要写主题文档，也不要开始抽特征。
