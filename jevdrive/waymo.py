@@ -309,10 +309,17 @@ def history_set(df: pd.DataFrame, n_back: int, stride: int, targets: np.ndarray 
 
 
 def span_inside(df: pd.DataFrame, n_back: int, stride: int) -> np.ndarray:
-    """Whether the whole requested span lies inside the clip at all, judged by the lowest frame index the
-    split is known to reach (val 0, test 8). A frame failing this can never have its window, however much
-    more of the split is downloaded; a frame passing it but missing slots is waiting on a shard."""
-    lo = df.groupby("split", observed=True).frame.transform("min").to_numpy()
+    """Whether the whole requested span lies inside the clip at all, judged by the lowest frame index that
+    sequence is known to reach. A frame failing this can never have its window, however much more of the split
+    is downloaded; a frame passing it but missing slots is waiting on a shard.
+
+    Sequences differ in length (val runs 199-229 frames at the 10th and 90th percentile), so the bound has to
+    be per sequence: a split-level bound counts a short sequence's early frames as reachable and leaves a few
+    percent of "missing shards" that no download can ever fill. While a split is still downloading this is
+    conservative in the other direction -- the earliest frame of a sequence may simply not be on disk yet --
+    so the split minimum is used as a floor, which is exact once the split is complete."""
+    lo = np.maximum(df.groupby("sequence", observed=True).frame.transform("min").to_numpy(),
+                    df.groupby("split", observed=True).frame.transform("min").to_numpy())
     return df.frame.to_numpy() - n_back * stride >= lo
 
 
