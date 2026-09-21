@@ -647,6 +647,7 @@ def subset_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: 
                 rfs = rater_feedback_score(p[sel], traj[j], scores[j], init_speed(past[sel]))
                 best = traj[j, scores[j].argmax(1)]
                 r |= {"rfs_frame_mean": round(float(rfs.mean()), 3),
+                      "floored": round(float((rfs <= RFS_FLOOR + 1e-9).mean()), 3),
                       "ade5_rater": round(float(np.linalg.norm(p[sel] - best, axis=-1).mean()), 3),
                       "logged_rfs": round(float(rater_feedback_score(gt[sel], traj[j], scores[j],
                                                                      init_speed(past[sel])).mean()), 3)}
