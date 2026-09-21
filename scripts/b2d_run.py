@@ -1,0 +1,344 @@
+#!/usr/bin/env python
+"""Run a set of Bench2Drive routes with per-route isolation, a tick-progress watchdog and resume.
+See research/carla-efficiency.md, section "可靠性和续跑".
+
+The properties this exists for, in the order they matter:
+
+  R1  a crash costs one route, not the run. One process and one CARLA server per worker; the route
+      runs in a child process, so a segfault in the CARLA client library kills that child only, and
+      the worker restarts its server and moves on.
+  R2  resume works after a crash, not only after a clean exit. A route is "done" iff
+      `done/<id>.json` exists, written after the route finished. Re-running the same command skips
+      those and redoes everything else. Nothing relies on the leaderboard's own `--resume`, whose
+      checkpoint is rewritten by the process that is crashing.
+  R3  slow is not hung. The watchdog reads the heartbeat the tick loop writes and asks whether
+      ticks advanced, not whether the process is alive.
+  R4/R5 every attempt keeps its own directory with the route result, the leaderboard checkpoint and
+      the server log at the time it died.
+  R6  `summary.json` reports attempts per route and which routes never finished. Read it before
+      quoting a score: a score computed over the routes that happened to finish is a score on a
+      selected subset.
+
+    scripts/b2d_run.py --out $DATA_DIR/runs/b2d/base55 --workers 4 --towns base --rig front3 \
+        --policy sleep --infer-ms 129
+
+Python 3.8: runs in envs/carla.
+"""
+import argparse
+import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+DATA_DIR = Path(os.environ["DATA_DIR"])
+CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", DATA_DIR / "third_party/carla/CARLA_0.9.15"))
+BENCH2DRIVE = Path(os.environ.get("BENCH2DRIVE_ROOT", DATA_DIR / "third_party/Bench2Drive"))
+PYTHON = str(DATA_DIR / "envs/carla/bin/python")
+HERE = Path(__file__).resolve().parent
+# Towns in the base 0.9.15 package. Town11-15 need AdditionalMaps, which is deliberately not
+# downloaded (the Waymo training split owns the link), so those routes are out of scope here.
+BASE_TOWNS = {"Town01", "Town02", "Town03", "Town04", "Town05", "Town06", "Town07",
+              "Town10HD", "Town10HD_Opt"}
+
+
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--routes", default=str(BENCH2DRIVE / "leaderboard/data/bench2drive220.xml"))
+    p.add_argument("--towns", default="base", help="'base', 'all', or a comma-separated list")
+    p.add_argument("--route-ids", default="", help="comma-separated route ids, overrides --towns")
+    p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--out", required=True)
+    p.add_argument("--workers", type=int, default=4)
+    p.add_argument("--server-index", type=int, default=0, help="first CARLA server index; port 2000+4i")
+    p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
+    p.add_argument("--max-attempts", type=int, default=3)
+    p.add_argument("--stall-s", type=float, default=240.0, help="no tick progress for this long = hung")
+    p.add_argument("--route-timeout-s", type=float, default=5400.0)
+    p.add_argument("--fresh", action="store_true", help="ignore existing results and redo everything")
+    # passed through to b2d_route.py
+    p.add_argument("--rig", default="front3")
+    p.add_argument("--width", type=int, default=1600)
+    p.add_argument("--height", type=int, default=900)
+    p.add_argument("--policy", default="none")
+    p.add_argument("--infer-ms", type=float, default=0.0)
+    p.add_argument("--policy-socket", default="")
+    p.add_argument("--decimate", type=int, default=1)
+    p.add_argument("--overlap", action="store_true")
+    p.add_argument("--no-spectator", action="store_true")
+    p.add_argument("--fast-copy", action="store_true")
+    p.add_argument("--zero-copy", action="store_true")
+    p.add_argument("--max-ticks", type=int, default=0)
+    return p.parse_args()
+
+
+def select_routes(routes_xml, towns, route_ids, limit):
+    if route_ids:
+        wanted = [r.strip() for r in route_ids.split(",") if r.strip()]
+    else:
+        allowed = None
+        if towns == "base":
+            allowed = BASE_TOWNS
+        elif towns != "all":
+            allowed = set(towns.split(","))
+        root = ET.parse(routes_xml).getroot()
+        wanted = [r.get("id") for r in root.findall("route")
+                  if allowed is None or r.get("town") in allowed]
+    return wanted[:limit] if limit else wanted
+
+
+def port_free(port):
+    with socket.socket() as s:
+        return s.connect_ex(("127.0.0.1", port)) != 0
+
+
+class Server(object):
+    """One headless CARLA server. Owns the process group so it can be killed without pkill -f,
+    which docs/long-runs.md forbids for good reason."""
+
+    def __init__(self, index, log_dir, quality):
+        self.index = index
+        self.port = 2000 + 4 * index
+        self.tm_port = 8000 + index
+        self.log_dir = Path(log_dir)
+        self.quality = quality
+        self.proc = None
+        self.log = None
+        self.starts = 0
+
+    def start(self, timeout=180.0):
+        self.stop()
+        self.starts += 1
+        self.log = self.log_dir / ("carla-%d-%d.log" % (self.index, self.starts))
+        env = dict(os.environ, VK_ICD_FILENAMES="/etc/vulkan/icd.d/nvidia_icd.json")
+        with open(self.log, "wb") as fh:
+            self.proc = subprocess.Popen(
+                [str(CARLA_ROOT / "CarlaUE4.sh"), "-RenderOffScreen", "-nosound",
+                 "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality],
+                stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if not port_free(self.port):
+                time.sleep(3)  # the port opens slightly before the RPC server is usable
+                return True
+            if self.proc.poll() is not None:
+                raise RuntimeError("CARLA server %d died at startup, see %s" % (self.index, self.log))
+            time.sleep(2)
+        self.stop()
+        raise RuntimeError("CARLA server %d never opened port %d" % (self.index, self.port))
+
+    def alive(self):
+        return self.proc is not None and self.proc.poll() is None
+
+    def stop(self):
+        if self.proc is None:
+            return
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(os.getpgid(self.proc.pid), sig)
+            except OSError:
+                break
+            try:
+                self.proc.wait(timeout=10)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        self.proc = None
+
+
+class Runner(object):
+    def __init__(self, a, routes):
+        self.a = a
+        self.out = Path(a.out)
+        (self.out / "done").mkdir(parents=True, exist_ok=True)
+        (self.out / "attempts").mkdir(parents=True, exist_ok=True)
+        (self.out / "servers").mkdir(parents=True, exist_ok=True)
+        self.events = open(str(self.out / "events.jsonl"), "a", buffering=1)
+        self.lock = threading.Lock()
+        self.queue = list(routes)
+        self.attempts = {}
+        self.stop_flag = False
+
+    def event(self, kind, **kw):
+        rec = dict(kw)
+        rec["t"], rec["kind"] = time.time(), kind
+        with self.lock:
+            self.events.write(json.dumps(rec) + "\n")
+        print(json.dumps(rec), flush=True)
+
+    def next_route(self):
+        with self.lock:
+            while self.queue:
+                rid = self.queue.pop(0)
+                if not self.a.fresh and (self.out / "done" / (rid + ".json")).exists():
+                    self.event("skip", route_id=rid, reason="already done")
+                    continue
+                return rid
+            return None
+
+    def run(self):
+        threads = [threading.Thread(target=self.worker, args=(i,), daemon=True)
+                   for i in range(self.a.workers)]
+        for t in threads:
+            t.start()
+        try:
+            for t in threads:
+                while t.is_alive():
+                    t.join(timeout=1.0)
+        except KeyboardInterrupt:
+            self.stop_flag = True
+            raise
+        self.summarise()
+
+    def worker(self, wi):
+        server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality)
+        try:
+            while not self.stop_flag:
+                rid = self.next_route()
+                if rid is None:
+                    return
+                for attempt in range(1, self.a.max_attempts + 1):
+                    if self.stop_flag:
+                        return
+                    if not server.alive():
+                        self.event("server_start", worker=wi, index=server.index, port=server.port)
+                        server.start()
+                    ok, record = self.run_once(wi, server, rid, attempt)
+                    self.note_attempt(rid, attempt, record)
+                    if ok:
+                        (self.out / "done" / (rid + ".json")).write_text(json.dumps(record, indent=2))
+                        break
+                    # Anything that is not a clean finish means the server is suspect: a hung or
+                    # segfaulted server answers RPCs for a while and then fails the next route too.
+                    server.stop()
+        finally:
+            server.stop()
+
+    def note_attempt(self, rid, attempt, record):
+        with self.lock:
+            self.attempts.setdefault(rid, []).append(
+                {"attempt": attempt, "status": record.get("status"), "wall_s": record.get("wall_s"),
+                 "ticks": record.get("ticks")})
+
+    def run_once(self, wi, server, rid, attempt):
+        adir = self.out / "attempts" / rid / ("%d" % attempt)
+        adir.mkdir(parents=True, exist_ok=True)
+        cmd = [PYTHON, str(HERE / "b2d_route.py"), "--routes", self.a.routes, "--route-id", rid,
+               "--port", str(server.port), "--tm-port", str(server.tm_port),
+               "--out", str(adir), "--rig", self.a.rig, "--width", str(self.a.width),
+               "--height", str(self.a.height), "--policy", self.a.policy,
+               "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate)]
+        if self.a.policy_socket:
+            cmd += ["--policy-socket", self.a.policy_socket]
+        for flag in ("overlap", "no_spectator", "fast_copy", "zero_copy"):
+            if getattr(self.a, flag):
+                cmd.append("--" + flag.replace("_", "-"))
+        if self.a.max_ticks:
+            cmd += ["--max-ticks", str(self.a.max_ticks)]
+
+        self.event("route_start", worker=wi, route_id=rid, attempt=attempt, port=server.port)
+        t0 = time.time()
+        log = open(str(adir / "route.log"), "wb")
+        proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
+        reason = self.supervise(proc, adir, t0)
+        log.close()
+
+        record = {"route_id": rid, "attempt": attempt, "wall_s": round(time.time() - t0, 1),
+                  "worker": wi, "server_index": server.index, "server_log": str(server.log)}
+        rfile = adir / "route_result.json"
+        if rfile.exists():
+            try:
+                record.update(json.loads(rfile.read_text()))
+            except ValueError:
+                record["status"] = "unreadable_result"
+        record["ticks"] = record.get("profile", {}).get("ticks")
+        if reason:
+            record["status"] = reason
+        elif "status" not in record:
+            record["status"] = "no_result_file"
+        record["returncode"] = proc.returncode
+        ok = record["status"] == "finished"
+        self.event("route_end", worker=wi, route_id=rid, attempt=attempt,
+                   status=record["status"], wall_s=record["wall_s"], ticks=record.get("ticks"))
+        return ok, record
+
+    def supervise(self, proc, adir, t0):
+        """Return None if the process exited on its own, else why we killed it."""
+        beat = adir / "heartbeat.json"
+        last_ticks, last_change = -1, time.time()
+        while True:
+            try:
+                proc.wait(timeout=5)
+                return None
+            except subprocess.TimeoutExpired:
+                pass
+            now = time.time()
+            ticks = None
+            if beat.exists():
+                try:
+                    ticks = json.loads(beat.read_text()).get("ticks")
+                except ValueError:
+                    ticks = None
+            if ticks is not None and ticks != last_ticks:
+                last_ticks, last_change = ticks, now
+            stalled = now - last_change
+            if stalled > self.a.stall_s:
+                self.kill(proc)
+                return "hung_no_tick_progress_%ds" % int(stalled)
+            if now - t0 > self.a.route_timeout_s:
+                self.kill(proc)
+                return "route_timeout"
+
+    @staticmethod
+    def kill(proc):
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(os.getpgid(proc.pid), sig)
+                proc.wait(timeout=10)
+                return
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+
+    def summarise(self):
+        done = sorted((self.out / "done").glob("*.json"))
+        records = [json.loads(p.read_text()) for p in done]
+        never = sorted(set(self.attempts) - set(r["route_id"] for r in records))
+        restarts = sum(max(0, len(v) - 1) for v in self.attempts.values())
+        summary = {
+            "routes_requested": len(self.attempts) + len(records) - len(set(self.attempts) & set(
+                r["route_id"] for r in records)),
+            "routes_finished": len(records),
+            "routes_never_finished": never,
+            "restarts": restarts,
+            "attempts": self.attempts,
+            "wall_s_total": round(sum(r.get("wall_s", 0) for r in records), 1),
+            "wall_s_median": _median([r.get("wall_s", 0) for r in records]),
+            "ticks_total": sum(r.get("profile", {}).get("ticks", 0) for r in records),
+        }
+        (self.out / "summary.json").write_text(json.dumps(summary, indent=2))
+        self.event("summary", **{k: v for k, v in summary.items() if k != "attempts"})
+
+
+def _median(xs):
+    xs = sorted(x for x in xs if x)
+    return round(xs[len(xs) // 2], 1) if xs else 0.0
+
+
+def main():
+    a = parse_args()
+    routes = select_routes(a.routes, a.towns, a.route_ids, a.limit)
+    if not routes:
+        print("no routes selected", file=sys.stderr)
+        return 2
+    print("%d routes, %d workers -> %s" % (len(routes), a.workers, a.out), flush=True)
+    Runner(a, routes).run()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
