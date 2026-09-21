@@ -820,3 +820,84 @@ Town01–05 和 Town10HD，**Town06/07 也不在里面**，220 条里只有 44 �
 **状态**：成本结论已确认（在 base-package 路线上）；**要不要做闭环仍未决定**。
 要定下来还需要：AdditionalMaps 6.9 GB（Town12/13 是 151 条，地图大得多，按贵一倍算 3–4 小时），
 以及一次真正跨夜的无人值守运行。
+
+---
+
+## 18. Bench2Drive 上「低延迟」不再是卖点，latency injection 已被做过两次
+
+**决定**：**不要把「我们的 head 快」或「闭环里注入真实延迟」写成论文的 contribution。**
+[frozen-vlm-planner.md](frozen-vlm-planner.md) 的 claim 4（效率）要按这一条重写或删掉。
+闭环要不要做，从此是一个纯粹的「值不值」问题，不再有「我们有独家角度」这个理由撑着。
+
+**理由**：2026-09-21 第三轮 deep research（原始报告在 `research/lit/2026-09-21-round3-*.md`，不进 git）。
+下面每一条都有出处，出处写在报告里。
+
+**(a) benchmark 很挤，而且顶部饱和。** 社区 leaderboard **101 条**（2025 年 49、2026 年 49），
+近 12 个月 arXiv **114 篇**，近 3 个月 **28 篇**，其中 VLA 一线 34 篇。
+HiDrive 明说 *"increasingly saturated, SOTA achieving near-perfect scores"*。
+更难的派生榜已经在围它：Safe2Drive 把 LEAD 从 94.70 打到 39.95、SimLingo 85.07 打到 41.00；
+Fail2Drive（Geiger 组）做 paired-route 泛化，SOTA 平均 SR 掉 22.8%，直指 *"success may reflect memorization"*。
+
+**(b) 快 = 差 这条 trade-off 在 2026 年翻转了，Pareto front 已经在我们的目标区间。**
+
+| 方法 | 延迟 | DS / SR |
+|:--|--:|:--|
+| ADT (2606.02105) | 19.2 ms | 77.90 / 55.00 |
+| **FIVE-VLA (2609.18623，2026-09-16)** | **33 ms (A100)** | **90.95 / 77.27** |
+| SimLingo-BASE | 41.1 ms | 85.94 / 66.82 |
+| ORION (7B) | 806 ms | 77.74 / 54.62 |
+
+我们实测的 batch 1 约 33 ms，**和 FIVE-VLA 同一格而分数差一大截**，不构成 contribution。
+而且同一篇论文内部加算力买不到分数：ETA 从 102 ms 降到 50 ms 只掉 4.8 DS，
+把 encoder 从 308M 放大到 1011M 反而 −1.1 DS；LinkVLA 从 361 ms 降到 48 ms 反而 +0.35 DS。
+
+**(c) 我们「竞品都是 0.5–1.4 s」这个前提只对 7B 以上成立。** 1–4B 级别别人自己报的是
+**150–300 ms**（AutoVLA 147 ms、DriveVLM-Dual 300 ms、Alpamayo+FlashDrive 151 ms）。
+我们在 [docs/baselines.md](../docs/baselines.md) 测到 AutoVLA 1362 ms，那是 eager HF `generate`
+的工程问题，不是路线差异——第 11 条已经写了「这些数字是 as released」，
+但**不能据此说 VLA 这条路线本身慢**。这是对第 11 条叙事的限定，不是推翻它。
+
+**(d) frozen backbone 和 anchor scoring 两件都已经被单独做过，而且分数很高。**
+
+| 方法 | 冻什么 / 词表 | Bench2Drive DS / SR |
+|:--|:--|:--|
+| BLUE (2606.08684, EMNLP26) | 整个 SimLingo VLA 冻死，只训 **0.11M** | **90.58 / 76.18** |
+| AnchorVLA (2607.03182) | stage-2 backbone 冻结，**K=100 k-means anchors** | **89.92 / 77.28** |
+| SparseDriveV2 (2603.29163, ECCV26) | ResNet-34 + **262,144 anchors** | **89.15 / 70.00** |
+| Orion-Lite (2604.08266) | EVA-02-L + QT-Former 冻结，0.1B head | 80.57 / 55.45 |
+
+三项交叉（**通用** frozen encoder × k-means 词表 × 闭环）确实没人凑齐过，
+但那是三个已知组件的拼装，不是新机制。
+
+**(e) 「闭环注入真实延迟」被 scoop 两次，其中一次是 Bench2Drive 原班人马。**
+- **RTS**（2601.07393，2026-01）改 CARLA 同步模式，*"dynamically records the forward inference time
+  of the algorithm and returns it to the ScenarioManager"*，就在 Bench2Drive 220 条上跑。
+  还给出了 fixed-delay 做不出的结论：*"models with long-tailed latency distributions exhibit
+  noticeably lower Driving Scores"*——**这正是我们本来想讲的故事**。
+- **Bench2Drive-Robust**（2605.18059，2026-05，Xiaosong Jia / Junchi Yan，代码公开）注入
+  固定延迟：SimLingo 从 85.94 掉到 **28.45**（100 ms）。**它的 repo 里已经有 `INFERENCE_LATENCY_MODE`
+  的 measured 模式**，论文原文说主表用 fixed delay 是 *"to ensure comparable severity across
+  models and machines"*——而这正是审稿人会拿来打我们的那条理由。
+
+**(f) 现实落点。** 榜首比的是 data pipeline 不是 architecture：官方板 top-2（TFv6、SimLingo）
+**都不用 Bench2Drive 训练集**，用自采的 PDM-Lite / LEAD 数据（SimLingo 310 万样本、8×A100）。
+用 B2D Base（1000 clips）训的方法全在中下段：Drive-π0 69.71、DriveTransformer 60.20、UniAD 38.69。
+**最接近我们架构的已发表点是 Drive-JEPA：DS 64.52 / SR 36.82，而且它的 encoder 是微调的、不是冻结的。**
+所以 frozen + 词表 + B2D Base 的预期区间是 **DS 55–70 / SR 30–45**，在 101 条里排中段，
+**单凭这个数字不可发表**。
+
+**状态**：**已确认**（文献事实，不是我们的测量）。由此产生的判断——claim 4 要重写——**已决定**。
+**闭环要不要做仍未决定**，但理由变了：不再是第 16、17 条的「能不能跑得起」（能，且便宜），
+而是「跑出来能说什么」。第 16 条那个 Town12 顾虑也不再是拦路虎（b5 2026-09-21 查明是首次
+`ImportAssets.sh` 之后冷 shader 缓存导致的 300 s 超时，无 sensor 加载 36 s 成功）。
+
+**怎么才能翻案**：如果我们能证明 measured-latency 模式下**榜单会重排**（SimLingo 100 ms 就塌到
+28.45 这个 cliff 强烈暗示会），那仍是一篇论文——但那是把 (e) 的两篇合起来跑，
+新意在**硬件归一化协议**（攻他们放弃 measured 模式的那个唯一理由），不在 latency injection 本身。
+
+**若仍要做 Bench2Drive**：锁 CARLA 0.9.15；**至少 3 seeds 并报 per-seed std**
+（官方是单次跑，issue #233 同 route 同 model 两次跑出 **21.14 对 100.0**，
+NeurIPS checklist 自承 *"did not report error bars"*，官方数字本身还含人工 retry）；
+ablation 用官方 Dev10（10 条，约 7 GPU·h，官方 README 推荐）；显式披露 crash/retry 不要静默记 0；
+**v0.0.3 与 v0.0.4 的数字不可混排**（中段 ±10 DS 乱跳，TCP 与 UniAD 的相对次序会反转，
+且外部团队至今无人在 v0.0.4 上发表）。
