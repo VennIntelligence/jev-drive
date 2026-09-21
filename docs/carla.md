@@ -1,10 +1,12 @@
 # CARLA
 
-Read this when you need a CARLA simulator on the box, or want to know what a closed-loop
-Bench2Drive evaluation would cost us.
+Read this when you need a CARLA simulator on the box.
+[bench2drive-cost.md](bench2drive-cost.md) is the doc for what a closed-loop run costs;
+this one is about getting a server up and the traps in doing so.
 
-**Status: CARLA 0.9.15 runs headless on our Blackwell card and renders real frames on the GPU.**
-Closed-loop evaluation is technically possible here. We have not decided to do it.
+**Status: CARLA 0.9.15 runs headless on our Blackwell card and renders real frames on the GPU.
+A real Bench2Drive route runs end to end on Town12, the heaviest map.** All 220 routes are
+available. We have not decided to run them.
 
 ## Vulkan in the container: the one hard blocker, and its fix
 
@@ -21,17 +23,18 @@ ERROR: [Loader Message] Code 0 : loader_scanned_icd_add: Could not get 'vkCreate
 ```
 
 Calling the ICD entry points by hand showed `vk_icdNegotiateLoaderICDInterfaceVersion` returning
-`-3` (`VK_ERROR_INITIALIZATION_FAILED`) for every interface version 1-7. So the driver was refusing
-to initialise, not failing to negotiate a version. `strace` gave the reason: NVIDIA's Vulkan driver
-`dlopen`s `libEGL.so.1`, and GLVND's EGL dispatch library was not installed. Only the vendor library
-`libEGL_nvidia.so.0` was there.
+`-3` (`VK_ERROR_INITIALIZATION_FAILED`) for every interface version 1-7, so the driver was refusing
+to initialise rather than failing to negotiate a version. `strace` gave the reason: NVIDIA's Vulkan
+driver `dlopen`s `libEGL.so.1`, and GLVND's EGL dispatch library was not installed. Only the vendor
+library `libEGL_nvidia.so.0` was there.
 
-**Installing `libegl1` fixes it.** Nothing else was needed.
+**Installing `libegl1` fixes it.** Nothing else was needed. We have not found this published
+anywhere, and it is a plausible cause of the "incompatible vulkan driver found" reports from other
+RTX 50-series users (carla #9502, #9725).
 
 **Do not rebuild the Vulkan loader.** Ubuntu 22.04 ships loader 1.3.204, which looks far too old for
-a driver advertising Vulkan 1.4.329, so it is the obvious suspect. It is not the problem: we built
-loader 1.4.313 from source first and it failed in exactly the same way. The stock `libvulkan1` works
-once `libegl1` is present.
+a driver advertising Vulkan 1.4.329, so it is the obvious suspect. It is not: we built loader
+1.4.313 from source first and it failed identically. Stock `libvulkan1` works once `libegl1` is in.
 
 Packages added as root, all from the Huawei Cloud mirror already in `/etc/apt/sources.list`:
 
@@ -42,58 +45,154 @@ Packages added as root, all from the Huawei Cloud mirror already in `/etc/apt/so
 | `vulkan-tools` | `vulkaninfo`, to check the above |
 | `libsdl2-2.0-0`, `libomp5`, `xdg-user-dirs` | CARLA's own runtime dependencies |
 
-Check with `vulkaninfo --summary`. It must list `NVIDIA RTX PRO 6000 Blackwell Server Edition`,
-Vulkan 1.4.329, driver 595.71.05.
+Check with `vulkaninfo --summary`: it must list `NVIDIA RTX PRO 6000 Blackwell Server Edition`,
+Vulkan 1.4.329, driver 595.71.05. A re-created instance loses all of this; re-run the apt install.
 
 `vulkan-tools` pulls in `mesa-vulkan-drivers`, which adds `llvmpipe` as a second Vulkan device.
-CARLA will happily pick it and render on the CPU, so `scripts/carla_server.sh` pins
-`VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`.
-
-A re-created instance loses all of this. Re-run the apt install.
+CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`.
 
 ## Traps
 
-Each of these cost us time; none is guessable.
-
+- **A traffic-manager port outlives the server that owned it.** The most expensive trap here. An
+  unattended 44-route run needed 12 restarts and *all 12* were traffic-manager port reuse; CARLA
+  never crashed. Kill a server, start another on the same RPC port, and the next client's
+  `get_trafficmanager()` fails with `trying to create rpc server for traffic manager; but the system
+  failed to create because of bind error`. It reads exactly like a server crash, and it masquerades
+  as whatever you were testing - it wasted two cells of a spawn experiment here by failing before
+  the spawn was reached. Our scripts space RPC ports 50 apart (`2000 + 50i`, TM `8000 + 50i`); they
+  used 4, which is the same hazard. `scripts/carla_bench.py --tm-port` overrides it for consecutive
+  runs on one RPC port.
+  Bench2Drive spaces its task ports **150** apart and its README says to avoid ports below 10000
+  ("<10000 could be unsafe"). Our TM ports at `8000 + 50i` are inside that range, so moving both
+  ranges above 10000 is still worth doing; the wider spacing alone may not be the whole fix.
 - **`SDL_VIDEODRIVER=offscreen` breaks CARLA.** It exits 1 immediately, printing nothing past
-  `Disabling core dumps.`. `-RenderOffScreen` already does the headless part and SDL is not involved.
-  Unset it, or use `dummy`. Setting it is a natural thing to try, which is why it is listed first.
+  `Disabling core dumps.`. `-RenderOffScreen` already does the headless part; SDL is not involved.
+  Unset it, or use `dummy`. Setting it is a natural thing to try, which is why it is listed here.
+- **`-quality-level=Low` with `-RenderOffScreen` segfaults** (carla #4940, #4966, #7675). We run
+  `Epic`. `scripts/b2d_run.py` exposes `--quality Low`; do not use it.
+- **CARLA ignores `CUDA_VISIBLE_DEVICES`.** Select the GPU with `-graphicsadapter=<rank>`, which is
+  a Vulkan physical-device index. Bench2Drive's README warns the mapping can be off by one or more:
+  on a 4-GPU box they saw GPU0 -> 0, GPU1 -> 2, GPU2 -> 3, GPU3 -> 4. Irrelevant on our one card,
+  load-bearing the moment we use two.
+- **CARLA silently resets `tile_stream_distance` and `actor_active_distance` on every
+  `load_world`.** The leaderboard re-applies both (650 m) after each load, with the comment "Large
+  Map settings are always reset, for some reason". On Large Maps (Town11/12/13/15) these govern
+  actor dormancy, and getting them wrong crashes the server - see the Town12 section below.
+- **An open RPC port is not a ready server.** Bench2Drive sleeps a flat 30 s after starting the
+  server before connecting, and retries `load_world` up to 20 times (and the traffic manager 40),
+  treating a server that will not come up as routine. Our `carla_server.sh` returns as soon as the
+  port accepts, which is 4-7 s. The port check is a liveness gate, not a readiness one.
 - **A healthy server prints nothing.** Shipping builds stop at `Disabling core dumps.` and stay
   silent. Silence is not a hang.
-- **`Exiting abnormally (error code: 143)` is not a crash.** 143 is `128 + SIGTERM`: something
-  killed it, usually your own `timeout`. A real startup failure exits 1 within about four seconds.
+- **`Exiting abnormally (error code: 143)` is not a crash.** 143 is `128 + SIGTERM`, usually your
+  own `timeout`. A real startup failure exits 1 within about four seconds.
+- **`alive=0` plus a client RPC timeout is ambiguous.** A dead server and a healthy one you gave up
+  on look identical from the client. Check the server log for `Signal=11` /
+  `CommonUnixCrashHandler`, or sample the process, before concluding anything. This signature misled
+  us twice in one night.
 - **Do not use `setsid cmd &` and then watch `$!`.** `setsid` forks, the parent exits at once, and
-  the liveness check watches a dead PID while CARLA runs fine. This made us report a crash twice.
+  the liveness check watches a dead PID while CARLA runs fine.
 - **Never `pgrep -f`/`pkill -f` a pattern that appears in your own command line.** We killed our own
-  ssh session with `pgrep -f carla-releases`, the same hazard `long-runs.md` describes. Use
-  `pgrep -x curl`, explicit PIDs, or a process group.
-- **A traffic manager port outlives the server that owned it.** This is the single most expensive
-  trap here: an unattended 44-route run needed 12 restarts and *all 12* were traffic-manager port
-  reuse - CARLA itself never crashed once. Kill a server and start another on the same RPC port, and
-  the new client's `get_trafficmanager()` on the derived port fails with
-  `trying to create rpc server for traffic manager; but the system failed to create because of bind
-  error`. It looks exactly like a server crash and it is not. It also masquerades as whatever you
-  were testing: it wasted a Town12 spawn experiment here by failing before the spawn was reached.
-  Bench2Drive spaces its task ports **150 apart**, which reads as over-caution until you hit this.
-  Our scripts now space RPC ports 50 apart (`2000 + 50i`, traffic manager `8000 + 50i`); they used
-  to use 4, which is the same hazard, so do not run servers back to back on a narrow spacing.
-  `scripts/carla_bench.py --tm-port` overrides it when you need consecutive runs on one RPC port.
-- **Stop sensors before destroying actors.** A camera callback that fires on a destroyed sensor
-  throws inside a CARLA worker thread; an uncaught exception there calls `terminate()` and aborts
-  the whole client. Call `sensor.stop()` on every sensor, `world.tick()` once to drain in-flight
-  callbacks, then destroy via `client.apply_batch_sync`. Report results before tearing down, so a
-  cleanup fault cannot cost a finished measurement.
+  ssh session with `pgrep -f carla-releases`, the hazard `long-runs.md` describes. Use `pgrep -x`,
+  explicit PIDs, or a process group.
+- **Stop sensors before destroying actors.** A camera callback firing on a destroyed sensor throws
+  inside a CARLA worker thread; an uncaught exception there calls `terminate()` and aborts the
+  client. `sensor.stop()` on every sensor, `world.tick()` once to drain, then
+  `client.apply_batch_sync`. Report results before tearing down.
 
-Two things we suspected and disproved, recorded so nobody re-investigates them: the `CarlaUE4.sh`
-wrapper's `echo \"$0\" | xargs readlink -f` line looks broken but is harmless (`xargs` strips the
-literal quotes; all five launch variants worked), and the Vulkan loader version was not the problem.
+Debugging aids that do **not** work here, so nobody spends the time: the container surfaces no host
+kernel messages, so `dmesg` never shows the segfault; and UE4 writes no crash report
+(`CarlaUE4/Saved/Crashes` never appears) because its own handler suppresses core dumps and
+re-raises. A real backtrace needs `gdb` with `-nocrashhandler`.
+
+## Town12 and Large Maps
+
+Town12 (104 of the 220 routes) and Town13 (47) are Large Maps with streamed tiles and actor
+dormancy. A real Bench2Drive route runs on Town12 end to end through the unmodified leaderboard:
+route 1711 finished in 288 s over 1283 ticks with zero restarts.
+
+Attaching a sensor on a Large Map with the wrong world settings segfaults the server. The backtrace
+is specific - the spawn-actor RPC runs a dormancy pass, dormancy *destroys* a sensor, and
+`ASensor::EndPlay` dereferences an invalid stream token:
+
+Verbatim, from `gdb` with `-nocrashhandler` (paths under `Plugins/Carla/...` abbreviated, nothing
+else changed), so the reading can be checked rather than taken on trust:
+
+```
+#0  carla::streaming::detail::token_type::operator carla::streaming::Token() const ()
+#1  carla::streaming::detail::Stream<...MultiStreamState>::token (this=0x7ff401a41e40)
+        at .../carla/streaming/detail/Stream.h:36
+#2  FDataStreamTmpl<...>::GetToken (this=0x7ff401a41e38)
+        at .../Carla/Source/Carla/Sensor/DataStream.h:55
+#3  ASensor::EndPlay (this=0x7ff401a41c00, EndPlayReason=<optimized out>)
+        at .../Carla/Source/Carla/Sensor/Sensor.cpp:120
+#4  AActor::RouteEndPlay (this=0x7ff401a41c00, EndPlayReason=EEndPlayReason::Destroyed)
+        at Runtime/Engine/Private/Actor.cpp:2257
+#5  AActor::Destroyed (this=0x7ff401a41c00)          at Runtime/Engine/Private/Actor.cpp:2332
+#6  UWorld::DestroyActor (ThisActor=0x7ff401a41c00)  at Runtime/Engine/Private/LevelActor.cpp:708
+#7  AActor::Destroy (this=0x7ff401a41c00, bNetForce=false, bShouldModifyLevel=true)
+        at Runtime/Engine/Private/Actor.cpp:4056
+#8  FCarlaActor::PutActorToSleep (this=0x7ff9e5d0cb20, CarlaEpisode=0x7ffab3b3c800)
+        at .../Carla/Source/Carla/Actor/CarlaActor.cpp:161
+#9  FActorRegistry::PutActorToSleep (Id=<optimized out>, CarlaEpisode=0x7ffab3b3c800)
+        at .../Carla/Source/Carla/Actor/ActorRegistry.cpp:198
+#10 UCarlaEpisode::PutActorToSleep (this=0x7ffd70b7e220, ActorId=8)
+        at .../Carla/Source/Carla/Game/CarlaEpisode.h:282
+#11 FCarlaServer::FPimpl::BindActions()::$_46::operator()(carla::rpc::ActorDescription,
+        carla::geom::Transform const&, unsigned int, carla::rpc::AttachmentType) const
+        (InAttachmentType=carla::rpc::AttachmentType::Rigid)
+        at .../Carla/Source/Carla/Server/CarlaServer.cpp:767
+```
+
+Read bottom-up: #11 is the spawn-actor RPC handler with `AttachmentType::Rigid`, i.e. the
+`spawn_actor(..., attach_to=ego)` call. Inside it CARLA runs a dormancy pass and puts ActorId 8 to
+sleep (#10-#8); sleeping an actor *destroys* it (#7-#4); destruction routes `EndPlay` into
+`ASensor::EndPlay` (#3), which asks the sensor's data stream for its token (#2-#1) and faults on an
+invalid one (#0).
+
+This is the sensor-dormancy crash of Bench2Drive #235 / carla #7772.
+
+**What is established:** the mechanism above, from the backtrace; and that the unmodified
+leaderboard runs Town12 routes on this box without hitting it.
+
+**What is not:** which difference between our client and theirs is responsible. We diffed the
+leaderboard's world setup against `carla_bench.py` and tested the candidates on the failing cell
+(Town12, one camera, no traffic, fresh server and distinct TM port per cell):
+
+| Cell | Result |
+|---|---|
+| baseline (`synchronous_mode` + `fixed_delta_seconds` only) | crash |
+| `+ spectator_as_ego=False` | crash |
+| `+ tile_stream_distance=650`, `actor_active_distance=650` | crash |
+| full bundle: both of the above, `deterministic_ragdolls=True`, `reset_all_traffic_lights()`, settle tick | crash |
+| `spectator_as_ego=False` repeat | crash |
+
+So the world settings are **not** the fix, and neither single line is. The remaining differences we
+did not test are the order of operations (`_setup_simulation` applies `WorldSettings` to the world
+*before* loading, then `load_world(town, reset_settings=False)`; ours loads first and applies
+after), the 30 s readiness sleep, `-graphicsadapter`, `find_free_port`,
+`set_hybrid_physics_mode(True)`, `set_random_device_seed()`, and the fact that the leaderboard
+creates its sensors through `AgentWrapper` inside a `RouteScenario` rather than directly. The
+`reset_settings=False` ordering is the most promising of those and was not reached.
+
+**Practical guidance until someone finishes this:** for anything on a Large Map, go through the
+leaderboard (`scripts/b2d_run.py`), which works. Do not write direct client code against Town12/13
+and expect it to survive attaching a sensor.
+
+One paragraph on how this was found, because the shape of the mistake is the lesson. Our own
+`scripts/carla_bench.py` crashed on Town12 and we spent hours treating it as a property of CARLA:
+four hypotheses - the map cannot load, spawn clearance, background traffic dormancy, server
+readiness - each fitting the observed pattern, each tested with paired designs, each dead. Running
+one official route settled the question in five minutes, and the working reference had been on disk
+the whole time. Official code that other people have published results with should be the first
+thing you run, not the last.
 
 ## Python client
 
-The tarball ships **cp27 and cp37 wheels and eggs only** - there is no cp38 artifact, despite
-Bench2Drive's README saying "python 3.8 also works well". Bench2Drive's own install (a `carla.pth`
-pointing at the shipped egg) therefore pins Python 3.7, while Bench2DriveZoo's `INSTALL.md` insists
-on 3.8. Resolve it with the PyPI wheel, which does have cp38:
+The tarball ships **cp27 and cp37 wheels and eggs only** - no cp38, despite Bench2Drive's README
+saying "python 3.8 also works well". Their own install (a `carla.pth` pointing at the shipped egg)
+therefore pins 3.7, while Bench2DriveZoo's `INSTALL.md` insists on 3.8. Use the PyPI wheel, which
+has cp38:
 
 ```bash
 uv venv --python 3.8 $DATA_DIR/envs/carla
@@ -101,7 +200,7 @@ VIRTUAL_ENV=$DATA_DIR/envs/carla uv pip install \
   --default-index https://mirrors.aliyun.com/pypi/simple carla==0.9.15 numpy'<1.25' pillow
 ```
 
-Keep this venv separate from `envs/jevdrive` (Python 3.11): the 0.9.15 client cannot coexist with it.
+Keep this venv separate from `envs/jevdrive` (Python 3.11).
 
 ## Starting and stopping a server
 
@@ -113,7 +212,8 @@ scripts/carla_server.sh stop 0      # omit the index to stop every server we sta
 
 It launches `CarlaUE4.sh -RenderOffScreen -nosound -carla-rpc-port=<port> -quality-level=Epic`,
 pins the NVIDIA ICD, and waits for the RPC port. Stopping kills the process group, never `pkill -f`.
-Logs go to `$DATA_DIR/runs/carla/carla-<i>.log`.
+Logs go to `$DATA_DIR/runs/carla/carla-<i>.log`. It does **not** implement Bench2Drive's 30 s
+readiness sleep or their load retries; add those before trusting it for unattended runs.
 
 Check a server really renders, rather than trusting a successful connect:
 
@@ -121,20 +221,18 @@ Check a server really renders, rather than trusting a successful connect:
 $DATA_DIR/envs/carla/bin/python scripts/carla_bench.py --port 2000 --town Town10HD_Opt
 ```
 
-It spawns a vehicle and cameras and reports per-camera pixel mean/std/unique counts, exiting
-non-zero if every camera's std is below 1.0. A server rendering through `lavapipe` on the CPU, or
-failing to render at all, answers RPCs perfectly happily and hands out uniform buffers; pixel
-statistics are the only check that catches it.
+It reports per-camera pixel mean/std/unique counts and exits non-zero if every camera's std is below
+1.0. A server rendering through `lavapipe` on the CPU answers RPCs happily and hands out uniform
+buffers; pixel statistics are the only check that catches it.
 
-## Measured throughput
+## Numbers, and where each came from
 
-Town10HD_Opt, 40 background vehicles, synchronous 20 Hz, `-quality-level=Epic`, one instance,
-**idle card**. "Real-time factor" is simulated seconds per wall second; 1.0 means the simulator
-keeps up with the 20 Hz clock.
+Two different things have been measured, and they are not comparable. Read the source column before
+quoting any of it.
 
-These are server-stepping rates with a non-blocking consumer, not closed-loop rates; see the cost
-section below. They are also measured on an otherwise idle GPU, so they are not comparable with
-anything measured while a training or feature job shares the card.
+**From `scripts/carla_bench.py`** - a server-side ceiling on **Town10HD_Opt only**, with a
+non-blocking consumer (the camera callback keeps whatever arrived; it never waits), on an otherwise
+idle card. Not a closed-loop rate, and never validated on a Large Map.
 
 | Cameras | Resolution | FPS | Real-time factor |
 |---|---|---|---|
@@ -142,86 +240,35 @@ anything measured while a training or feature job shares the card.
 | 6 | 1600x900 | 9.6 | 0.48 |
 | 6 | 800x600 | 10.5 | 0.52 |
 
-**Camera count dominates, resolution barely matters.** Cutting six cameras from 1600x900 to
-800x600 is a 4x reduction in pixels and buys 9% more throughput. The cost is per-sensor overhead,
-not GPU fill rate. A six-camera agent (UniAD, VAD) runs at about half real time no matter how far
-you cut resolution; the only lever that helps is fewer cameras.
+One instance: 4.5 cores, 8.0 GB VRAM, 4.1 GB RAM. Concurrency on Town10HD_Opt peaked at **four**
+instances (86.5 FPS aggregate, 3.07x) and fell at five; a sixth server segfaulted at startup. At
+five instances VRAM was 31% used and CPU 16.7 of 25 cores while the GPU sat at 99%, so the GPU binds
+first and the 96 GB card is over-provisioned for this. Starting instances simultaneously made one
+time out during `load_world`; staggering them 20 s apart fixed it and raised aggregate throughput
+from 74.2 to 86.5.
 
-One instance uses **4.5 cores, 8.0 GB VRAM, 4.1 GB RAM**.
+**From the real leaderboard via `scripts/b2d_run.py`** - closed-loop, real routes, blocking sensor
+waits and the scenario tree included. These are the numbers that count. See
+[bench2drive-cost.md](bench2drive-cost.md); as a single anchor, Town12 route 1711 took 288 s for
+1283 ticks (0.225 s/tick) with one instance and no policy in the loop.
 
-## Parallelism: the GPU binds first, and then it crashes
-
-One camera at 1600x900, 40 vehicles, clients staggered 20 s apart.
-
-| Instances | Aggregate FPS | Scaling | VRAM | GPU util |
-|---|---|---|---|---|
-| 1 | 28.2 | 1.00x | 6.8 GB | 48% |
-| 2 | 46.8 | 1.66x | 14.1 GB | 77% |
-| 4 | **86.5** | 3.07x | 27.5 GB | 94% |
-| 5 | 82.0 | 2.91x | 30 GB | 99% |
-| 6 | - | - | - | sixth server segfaults at startup |
-
-**Four instances is the operating point.** Throughput peaks there and *falls* at five. A sixth
-server dies during startup with `Signal=11` / `CommonUnixCrashHandler`, so it is a hard limit, not
-a slow start.
-
-Neither the cores nor the VRAM we sized the box around is the constraint: at five instances VRAM
-is 31% used and CPU is 16.7 of 25 cores. (That 16.7 is with all five clients driving; idle servers ticking between routes draw 13.3. Both are well under the quota, which is the point.) The GPU saturates first, and past saturation CARLA falls
-over rather than degrading gracefully. **The 96 GB card is heavily over-provisioned for this
-workload** - a much smaller GPU would hit the same four-instance limit.
-
-**Stagger instance startup.** Starting four clients at once made one of them time out during
-`load_world`; staggering them 20 s apart made all four succeed *and* raised aggregate throughput
-from 74.2 to 86.5. Bench2Drive's own multi-task script staggers by 5 s and its evaluator sleeps 30 s
-after spawning each server, which suggests its authors hit this too. `scripts/carla_parallel.sh`
-does the staggering.
-
-## What a Bench2Drive evaluation would cost
-
-**See [bench2drive-cost.md](bench2drive-cost.md).** It measures the real closed loop on real routes
-and supersedes the estimate this doc used to carry.
-
-The numbers in this doc are a **server-side ceiling, not a closed-loop rate**, and the two are far
-apart. `scripts/carla_bench.py` registers a camera callback that keeps whatever frame has arrived
-and never blocks, so it measures how fast the server can step. A real agent blocks in
-`SensorInterface.get_data` until every frame for the tick has landed, and also pays for the scenario
-tree. Measured in that loop, one camera at 1600x900 is 0.54x real time against the 1.42x below, and
-six cameras 0.19x against 0.48x - roughly 3x apart, in the direction you would expect.
-
-Use this doc's numbers for sizing servers and instances. Use bench2drive-cost.md for what a run
-costs.
-
-The per-sensor conclusion agrees from both sides, which is the useful part: here, four times fewer
-pixels bought 9%; there, sixteen times fewer bought 3%. Both are at or inside that doc's stated
-7-8% noise band, so read our 9% as "no effect" too. The cost is a fixed per-camera, per-tick render
-and readback. Render fewer cameras; resolution will not save you.
-
-## What the smoke test does not prove
-
-It proves rendering works. It does not prove a 220-route run survives, and two known problems are
-out of its reach:
-
-- **Sensor-dormancy segfault** (Bench2Drive #235, upstream carla #7772, both open): a non-hero
-  actor carrying sensors entering dormancy crashes the server. It affects Town12, which is 104 of
-  the 220 routes. Reproduces on stock 0.9.15, binary and source build alike.
-- **Long unattended runs hang** on Town12/Town13 (Bench2Drive #234), for the model and the expert.
-
-Neither is Blackwell-specific. Bench2Drive's README recommends looping the evaluation until it
-completes, because "CARLA is easy to crash", and ships `tools/clean_carla.sh` for the wreckage.
+The closed loop is roughly **3x slower** than the server-side ceiling above (1 camera: 0.54x real
+time there against 1.42x here), because four fifths of a tick is one blocking wait for camera
+frames. Both agree on the useful conclusion: cost is per-sensor, not per-pixel. Cutting pixels 4x
+bought 9% here and 16x bought 3% there, both inside that doc's 7-8% noise band. Render fewer
+cameras; resolution will not save you.
 
 ## Prerequisites for a real evaluation
 
 | Item | Size | Status |
 |---|---|---|
-| `CARLA_0.9.15.tar.gz` | 7.81 GiB (8,386,636,048 B) | **done**, extracted to 19 GB |
-| `AdditionalMaps_0.9.15.tar.gz` | 6.87 GiB (7,375,946,087 B) | **done**, downloaded and imported |
-| Bench2Drive repo (branch `0.0.4`) | 145 MB | **done**, `$DATA_DIR/third_party/Bench2Drive` |
-| Python 3.8 client venv | small | **done**, `$DATA_DIR/envs/carla` |
-| Bench2Drive **training** dataset | 400 GB - 7.3 TB | **not needed** and not downloaded |
+| `CARLA_0.9.15.tar.gz` | 7.81 GiB | done, extracted to 19 GB |
+| `AdditionalMaps_0.9.15.tar.gz` | 6.87 GiB | done, downloaded and imported |
+| Bench2Drive repo (branch `0.0.4`) | 145 MB | done, `$DATA_DIR/third_party/Bench2Drive` |
+| Python 3.8 client venv | small | done, `$DATA_DIR/envs/carla` |
+| Bench2Drive **training** dataset | 400 GB - 7.3 TB | **not needed**, not downloaded |
 
-**Downloading AdditionalMaps is not enough - it has to be imported.** The tarball must be moved
-into `CARLA_0.9.15/Import/` and installed, or the extra towns simply are not there and a route
-referencing Town12 fails to load:
+Downloading AdditionalMaps is not enough - it must be imported, or the extra towns are simply absent:
 
 ```bash
 scripts/download_carla.sh maps
@@ -229,7 +276,7 @@ mv $DATA_DIR/third_party/carla/AdditionalMaps_0.9.15.tar.gz $CARLA_ROOT/Import/
 cd $CARLA_ROOT && bash ImportAssets.sh      # consumes the tarball, takes a few minutes
 ```
 
-**AdditionalMaps is not optional.** The 220 routes break down by town as:
+It is also not optional. The 220 routes by town:
 
 | Town | Routes | In base package? |
 |---|---|---|
@@ -239,21 +286,15 @@ cd $CARLA_ROOT && bash ImportAssets.sh      # consumes the tarball, takes a few 
 | Town15 | 7 | no |
 | Town01-10 | 55 | yes |
 
-So 165 of 220 routes need the extra 6.87 GiB. The base package alone covers 55 routes and is enough
-for smoke tests and throughput work, which is why we ran today's measurements on Town10HD_Opt.
+So 165 of 220 routes need it. Installed maps are now Town01-07, 10, 11, 12, 13, 15.
 
 The harness needs no other downloads: Bench2Drive vendors `leaderboard/` (22.6 MB) and
-`scenario_runner/` (39.2 MB) in-tree, and they are **modified** - `leaderboard_evaluator.py` spawns
-CARLA itself with `-RenderOffScreen` and `--gpu-rank`, and `scenario_manager.py` adds the 4000-tick
-cap. Do not replace them with upstream `leaderboard-2.0`. There are no separate scenario JSON files
-either: Leaderboard 2.0 inlines scenario triggers and weather into the route XML, so
-`bench2drive220.xml` (677 KB) is the whole definition.
+`scenario_runner/` (39.2 MB) in-tree, and both are **modified** - `leaderboard_evaluator.py` spawns
+CARLA itself with `-RenderOffScreen` and `--gpu-rank`, and `scenario_manager.py` adds a 4000-tick
+route cap. Do not replace them with upstream `leaderboard-2.0`. There are no separate scenario JSON
+files: Leaderboard 2.0 inlines scenario triggers and weather into the route XML, so
+`bench2drive220.xml` (677 KB) is the whole definition. Evaluation needs no clip from the training
+dataset; an agent wanting BEV/map ground truth would need `Bench2Drive-Map-V0.0.4`, a separate
+decision.
 
-Evaluation needs no clip from the training dataset. A camera-in/control-out agent reads the route
-XML and the vendored `srunner` and nothing else. An agent needing BEV/map ground truth would need
-`Bench2Drive-Map-V0.0.4`, which is a separate decision.
-
-Note `-graphicsadapter=N` selects a Vulkan physical device, not a CUDA device, and is unrelated to
-`CUDA_VISIBLE_DEVICES`. We have one GPU so it does not matter here, but it does on a multi-GPU box.
-
-Last verified: 2026-09-21
+Last verified: 2026-09-22
