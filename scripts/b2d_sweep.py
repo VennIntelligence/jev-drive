@@ -33,6 +33,10 @@ VARIANTS = [
     ("norig", ["--rig", "none"]),
     ("front1", ["--rig", "front1"]),
     ("base", ["--rig", "front3"]),
+    # Repeats of `base`, to size the run-to-run noise. Without them a 5% "improvement" cannot be
+    # told from the same configuration measured twice.
+    ("base2", ["--rig", "front3"]),
+    ("base3", ["--rig", "front3"]),
     ("b2d6", ["--rig", "b2d6"]),
     # is the cost per pixel or per sensor?
     ("front3_800x450", ["--rig", "front3", "--width", "800", "--height", "450"]),
@@ -53,6 +57,16 @@ VARIANTS = [
                                 "--decimate", "4", "--overlap"]),
     ("policy129_all", ["--rig", "front3", "--policy", "sleep", "--infer-ms", "129",
                        "--decimate", "4", "--overlap", "--zero-copy", "--no-spectator"]),
+    # the ladder of real models (research/carla-efficiency.md). These need a policy server:
+    #   b2d_policy_server.py --socket /tmp/b2d-policy.sock --backbone qwen
+    # and then --extra "--policy gpu --policy-socket /tmp/b2d-policy.sock".
+    # The stand-in above leaves the GPU idle; these compete with the renderer for the same card,
+    # which is the difference between an optimistic floor and the real cost.
+    ("gpu_dino", ["--rig", "front1"]),
+    ("gpu_qwen", ["--rig", "front3"]),
+    ("gpu_qwen_dec4", ["--rig", "front3", "--decimate", "4"]),
+    ("gpu_qwen_all", ["--rig", "front3", "--decimate", "4", "--overlap", "--zero-copy",
+                      "--no-spectator"]),
 ]
 
 

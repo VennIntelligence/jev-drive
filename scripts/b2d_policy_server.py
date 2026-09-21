@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Serve frozen Qwen3-VL features to the closed-loop agent over a unix socket.
+"""Serve real frozen features to the closed-loop agent over a unix socket.
 
 The CARLA client wheel only exists for Python 3.7/3.8 (docs/carla.md) and torch for this card only
 exists in the project's 3.11 env, so a policy in the loop is two processes whether we like it or
@@ -7,14 +7,17 @@ not. This is that second process, and it is also what makes the measurement hone
 stand-in leaves the GPU idle, while the real thing competes with CARLA's renderer for the same
 card. The difference between the two is exactly the question "does closed-loop take hours or days".
 
+Backbones, matching the ladder in research/carla-efficiency.md:
+  dinov2  DINOv2 ViT-B/14 on the front camera. A cheap backbone in the loop.
+  qwen    Qwen3-VL-4B, the decoder truncated at `--layers`. What we would actually run.
+
     $DATA_DIR/envs/jevdrive/bin/python scripts/b2d_policy_server.py \
-        --socket /tmp/b2d-policy-0.sock --width 800 --n-images 3
+        --socket /tmp/b2d-policy-0.sock --backbone qwen --width 1200 --n-images 3 --layers 18
 
 Protocol, deliberately minimal: the client sends
-    <uint32 n_images><uint32 width><uint32 height><uint64 nbytes><nbytes of BGRA planes>
-and gets back one float32, the server-side latency in milliseconds. Payload size at 3x1600x900 is
-about 17 MiB per frame; `--recv-width` downsamples on this side only to show what the transfer
-costs, never to change what the model sees.
+    <uint32 n_images><uint32 width><uint32 height><uint64 nbytes><nbytes of BGR planes>
+and gets back one float32, the server-side latency in milliseconds. One frame of three 1600x900
+cameras is 12.9 MiB on the wire; `--bench` reports how much of the latency that transfer is.
 """
 import argparse
 import os
@@ -30,10 +33,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--socket", required=True)
-    p.add_argument("--width", type=int, default=800, help="model input width (decisions 4)")
+    p.add_argument("--backbone", default="qwen", choices=["qwen", "dinov2"])
+    p.add_argument("--width", type=int, default=1200,
+                   help="qwen: model input width. 1200 on a 16:9 frame gives ~1020 tokens per "
+                        "camera, matching the 3060 tokens/frame of the Waymo front3 default "
+                        "(docs/waymo-e2e.md), so the latency is comparable to the 129 ms we quote")
     p.add_argument("--n-images", type=int, default=3)
-    p.add_argument("--layers", default="18", help="comma-separated decoder layers to read")
+    p.add_argument("--layers", default="18", help="qwen: decoder layers to read; the deepest one "
+                                                  "is where the forward stops (decisions 5)")
     p.add_argument("--compile", action="store_true", help="torch.compile; costs minutes at startup")
+    p.add_argument("--bench", type=int, default=0, help="run N local forwards and exit")
     p.add_argument("--ready-file", default="")
     return p.parse_args()
 
@@ -49,28 +58,53 @@ def recv_exactly(conn, n):
     return b"".join(parts)
 
 
+def build(a):
+    import torch
+    from PIL import Image
+    from jevdrive.features import DinoFeatures, QwenFeatures
+
+    if a.backbone == "dinov2":
+        fx = DinoFeatures()
+
+        def infer(arrays):
+            batch = fx.collate([fx.transform(Image.fromarray(arrays[0][:, :, ::-1]))])
+            fx(batch)
+            torch.cuda.synchronize()
+    else:
+        fx = QwenFeatures(width=a.width, n_images=a.n_images, compile=a.compile,
+                          layers=[int(x) for x in a.layers.split(",")])
+
+        def infer(arrays):
+            imgs = [Image.fromarray(x[:, :, ::-1]) for x in arrays[:a.n_images]]  # CARLA is BGRA
+            batch = QwenFeatures.collate([fx.transform(imgs)])
+            fx(batch)
+            torch.cuda.synchronize()
+
+    return fx, infer
+
+
 def main():
     a = parse_args()
     import numpy as np
-    import torch
-    from PIL import Image
-    from jevdrive.features import QwenFeatures
+    fx, infer = build(a)
 
-    feats = QwenFeatures(width=a.width, n_images=a.n_images, compile=a.compile,
-                         layers=[int(x) for x in a.layers.split(",")])
-
-    def infer(arrays):
-        imgs = [Image.fromarray(arr[:, :, ::-1]) for arr in arrays]  # CARLA hands out BGRA
-        batch = QwenFeatures.collate([feats.transform(imgs)])
-        out = feats(batch)
-        torch.cuda.synchronize()
-        return out
-
-    # Warm up: the first call builds the batch-shape constants and, with compile, the graphs.
-    dummy = [np.zeros((900, 1600, 3), dtype=np.uint8) for _ in range(a.n_images)]
+    # Warm up: the first calls build the batch-shape constants and, with compile, the graphs.
+    dummy = [np.zeros((900, 1600, 3), dtype=np.uint8) for _ in range(max(1, a.n_images))]
     for _ in range(3):
         infer(dummy)
-    print("policy server ready on %s" % a.socket, flush=True)
+    if a.backbone == "qwen":
+        print("qwen image tokens per frame: %d" % fx.n_image_tokens, flush=True)
+
+    if a.bench:
+        ts = []
+        for _ in range(a.bench):
+            t0 = time.perf_counter()
+            infer(dummy)
+            ts.append(1e3 * (time.perf_counter() - t0))
+        ts.sort()
+        print("local forward: median %.1f ms, min %.1f, max %.1f over %d"
+              % (ts[len(ts) // 2], ts[0], ts[-1], len(ts)), flush=True)
+        return 0
 
     if os.path.exists(a.socket):
         os.unlink(a.socket)
@@ -79,6 +113,7 @@ def main():
     srv.listen(8)
     if a.ready_file:
         Path(a.ready_file).write_text("ready")
+    print("policy server ready on %s" % a.socket, flush=True)
 
     while True:
         conn, _ = srv.accept()
@@ -92,12 +127,10 @@ def main():
                 if payload is None:
                     break
                 t0 = time.perf_counter()
-                arrays = []
                 per = h * w * 3
-                for i in range(n):
-                    arrays.append(np.frombuffer(payload, dtype=np.uint8, count=per,
-                                                offset=i * per).reshape(h, w, 3))
-                infer(arrays[:a.n_images])
+                arrays = [np.frombuffer(payload, dtype=np.uint8, count=per,
+                                        offset=i * per).reshape(h, w, 3) for i in range(n)]
+                infer(arrays)
                 conn.sendall(struct.pack("<f", 1e3 * (time.perf_counter() - t0)))
         finally:
             conn.close()

@@ -97,7 +97,7 @@ def main():
 
     profile = b2d_hooks.TickProfile(heartbeat_path=str(out / "heartbeat.json"))
     b2d_hooks.install(profile, no_spectator=a.no_spectator, fast_copy=a.fast_copy,
-                      zero_copy=a.zero_copy)
+                      zero_copy=a.zero_copy, sensor_tick=a.decimate > 1)
     _patch_setup_simulation(LeaderboardEvaluator, a)
     if a.max_ticks:
         _patch_tick_limit(ScenarioManager, a.max_ticks)

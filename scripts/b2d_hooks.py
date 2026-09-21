@@ -19,6 +19,14 @@ Optimisations (each behind its own flag, all off by default)
   * zero_copy     - no copy at all: keep the `carla.Image` alive and hand out a view of its buffer.
                     Correct only because the leaderboard consumes each frame before the next one
                     arrives; the reference is dropped when the next frame for that tag lands.
+  * sensor_tick   - let a camera spec carry `sensor_tick`. The leaderboard builds each sensor's
+                    blueprint attributes from a hard-coded whitelist per sensor type
+                    (agent_wrapper.py `_preprocess_sensor_spec`) which has no `sensor_tick` for any
+                    sensor, so an agent cannot ask for its cameras at less than the tick rate: the
+                    attribute is silently dropped and every camera renders 20 times a second
+                    whatever the agent asked for. Without this patch, decimation saves nothing -
+                    measured, the frames still arrive and the wait simply moves from the sensor
+                    queue into the next `world.tick()`.
 
 Python 3.8: runs in envs/carla.
 """
@@ -104,9 +112,25 @@ class TickProfile(object):
         return out
 
 
-def install(profile, no_spectator=False, fast_copy=False, zero_copy=False):
+def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, sensor_tick=False):
     _patch_tick(profile, no_spectator)
     _patch_callback(profile, fast_copy, zero_copy)
+    if sensor_tick:
+        _patch_sensor_tick()
+
+
+def _patch_sensor_tick():
+    from leaderboard.autoagents.agent_wrapper import AgentWrapper
+
+    original = AgentWrapper._preprocess_sensor_spec
+
+    def preprocess(self, sensor_spec):
+        type_, id_, transform, attributes = original(self, sensor_spec)
+        if "sensor_tick" in sensor_spec:
+            attributes["sensor_tick"] = str(sensor_spec["sensor_tick"])
+        return type_, id_, transform, attributes
+
+    AgentWrapper._preprocess_sensor_spec = preprocess
 
 
 def _patch_callback(profile, fast_copy, zero_copy):
