@@ -63,10 +63,16 @@ VARIANTS = [
     # The stand-in above leaves the GPU idle; these compete with the renderer for the same card,
     # which is the difference between an optimistic floor and the real cost.
     ("gpu_dino", ["--rig", "front1"]),
+    ("gpu_dino_small", ["--rig", "front1", "--width", "448", "--height", "252",
+                        "--decimate", "4", "--overlap", "--zero-copy"]),
     ("gpu_qwen", ["--rig", "front3"]),
     ("gpu_qwen_dec4", ["--rig", "front3", "--decimate", "4"]),
     ("gpu_qwen_all", ["--rig", "front3", "--decimate", "4", "--overlap", "--zero-copy",
                       "--no-spectator"]),
+    # Render straight at the model's input size. Free on the simulator side (per-camera cost does
+    # not depend on resolution) and it deletes the resize, which is most of the policy's latency.
+    ("gpu_qwen_small", ["--rig", "front3", "--width", "800", "--height", "450",
+                        "--decimate", "4", "--overlap", "--zero-copy", "--no-spectator"]),
 ]
 
 
