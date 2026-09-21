@@ -192,6 +192,23 @@ policy 在独立进程里（CARLA 客户端是 py3.8，torch 是 py3.11），走
 扫出来必然是「1.5/2.0/2.5 都不崩」，看上去像净空解决了问题，
 而实际上那个配置在任何高度都不崩。扫描已改打到真正会崩的 `cam1-tr0`。
 
+## 别人是怎么起 server 的（Bench2Drive 自己的代码和 README）
+
+用户的提示：去看别人的启动代码。看了之后，**我们和 Bench2Drive 的启动方式有五处不同，
+其中第一处很可能就是 Town12 崩溃的原因**。
+
+| # | Bench2Drive 的做法 | 我们的做法 | 影响 |
+|---|---|---|---|
+| 1 | 起完 server **硬等 `time.sleep(30)`** 再连 | `carla_server.sh` 每 2 s 探一次 TCP 端口，**端口一开就连** | **端口打开 ≠ server 就绪。** README 明写 "*sleep* is important to avoid crash of CARLA"，并说慢机器要把这个 sleep 调大。Town12 是最重的地图，我们很可能在它还没初始化完就连上去建相机 |
+| 2 | `load_world` 失败**重试最多 20 次**（`num_max_restarts = 20`） | 一次失败就算失败 | 他们把「起不来」当成常态，我们当成异常 |
+| 3 | 用 **`-graphicsadapter=<rank>`** 选卡 | 没有选卡参数 | README：**CARLA 不受 `CUDA_VISIBLE_DEVICES` 控制**，只认 `-graphicsadapter`；而且映射可能是错位的（4 卡时 GPU1 要写 2、GPU2 写 3、GPU3 写 4）。**以后上 2–4 张卡时这条是必须的** |
+| 4 | `find_free_port(args.port)`，README 说**避免小于 10000 的端口**（"<10000 could be unsafe"） | RPC 2000+50i，**TM 8000+50i，全在 10000 以下** | 我们今天那 12 次 TM 端口冲突，可能不只是间距问题，还是端口段选错了 |
+| 5 | 不传 `-quality-level`（即默认 Epic） | 显式传 `Epic` | 等价，但注意 issue #4940 / #7675：**`-quality-level=Low` 配 `-RenderOffScreen` 会 segfault**，所以 `b2d_run.py` 的 `--quality Low` 选项是个陷阱 |
+
+另外 README 还有两条和我们已经踩到的坑对上了：
+**"CARLA is easy to crash"，官方建议是无限重启直到评测跑完**（正是我们的 R2/R7）；
+**`tools/clean_carla.sh` 要反复用，有些 CARLA 进程很难杀干净**。
+
 ## 用户的既有经验（待验证的线索，不是结论）
 
 - **spawn 的落点和高度会直接崩掉 server。** 海拔低于某个位置就崩；实践做法是把 actor 放在
