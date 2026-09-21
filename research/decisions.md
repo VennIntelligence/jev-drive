@@ -545,6 +545,19 @@ batch 1 下 launch overhead 占主导，截断省不下来。
 我们关心的那些**。我们的系统是一次 forward 加一个打分，**延迟与输入无关**，p95 和 p50 几乎相同
 （planner v0 实测 head 的 p95 ≈ p50）。这一点值得在效率那张表里单独说，不要只比 mean。
 
+**竞品实测汇总（2026-09-21，全部在同一张 RTX PRO 6000、batch 1、20 warmup + 200 timed）**：
+
+| 系统 | 延迟 mean | 备注 |
+|---|--:|---|
+| Qwen-Drive-1.0-4B，直接规划 | 702 ms | |
+| Qwen-Drive-1.0-4B，带 reasoning | 1258 ms | |
+| AutoVLA（Qwen2.5-VL-3B） | 1362 ms | **而且这还是它自己选择「不思考」的场景**，真正走 CoT 会到几秒 |
+| openjev（DiffusionGemma-26B-A4B） | 471 ms | 输出不是轨迹，只是几个选项 |
+
+**没有一个接近 10 Hz。** 而且开销全在通用部件上——预处理、vision tower、prefill、逐 token decode——
+**不在 planning head 里**。我们的 head 不到 0.1 ms，所以这条线的论点不依赖精度结论，
+在第 1 条被证伪之后它反而是最稳的那部分。
+
 **状态**：已确认（数字来自实测，口径的定义是我们自己的选择）。
 
 ---
