@@ -13,9 +13,18 @@ sequence-grouped half-val split:
   C  `ridge_late` fitted on the fit half's pre-onset frames only -- the upper bound of a linear readout there
   D  the MLP head of jevdrive/planner.py, uniform and under the best B weighting
 
-The kinematic surprise is s_i = ADE(logged future, constant-velocity extrapolation) over the 5 s horizon,
-using the same `waymo.baselines()["cv"]` arc the baseline tables use. An attention-pooling arm is not possible
-here: the cached features are per-frame pooled vectors, not spatial tokens.
+Surprise means "what the prior cannot predict", so which prior it is measured against decides what the
+weighting actually emphasises. Three definitions are carried, all as ADE over the 5 s horizon:
+
+  s_ego   against the `ridge ego` prediction itself, out-of-fold on the fit half -- the primary definition,
+          because it is the residual of exactly the prior every arm is measured against
+  s_ctrv  against the constant-turn-rate constant-speed arc, the best zero-parameter prior available
+  s_cv    against the constant-speed zero-yaw-rate arc: a control, and a deliberately poor one -- it calls an
+          ongoing turn surprising although the yaw-rate history predicts it, and its magnitude is dominated
+          by longitudinal braking (decisions 20)
+
+An attention-pooling arm is not possible here: the cached features are per-frame pooled vectors, not spatial
+tokens.
 """
 import numpy as np
 import pandas as pd
@@ -31,83 +40,167 @@ BASE = "ridge ego"
 FOLDS = 4
 
 
-# ---------------------------------------------------------------- kinematic surprise
+# ---------------------------------------------------------------- surprise
 
-def surprise(past: np.ndarray, future: np.ndarray) -> np.ndarray:
-    """s_i: ADE over the 5 s horizon between the logged future and the constant-velocity extrapolation.
+S_KINDS = ("ego", "ctrv", "cv")          # primary first; the two kinematic ones are controls
+PRIMARY = "ego"
+FAMILY_SCHEMES = {"ego": ("lin", "sq", "a1", "a4", "top50", "top25"),
+                  "ctrv": ("lin", "sq", "top25"), "cv": ("lin", "sq", "top25")}
 
-    `cv` is the constant-speed, zero-yaw-rate arc, i.e. a straight line at the speed estimated from the last
-    second of ego history -- the same baseline decisions 3c's table is built on. The error it leaves is
-    dominated by longitudinal events (braking, launching) rather than by turning; decisions 20 records that.
+
+def ade(pred: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    """Per-frame ADE over the whole horizon between two (n, T, 2) trajectory sets."""
+    return np.linalg.norm(pred - gt, axis=-1).mean(1)
+
+
+def ridge_np(X: np.ndarray, Y: np.ndarray, rows: np.ndarray, lams) -> np.ndarray:
+    """planner.ridge_solve on the CPU, for the 100-dimensional ego input only.
+
+    The ego head is small enough (d = 100) that the whole selection runs in numpy in under a second, which is
+    what makes s_ego computable without touching the GPU. The arithmetic is the same: centre, eigendecompose
+    the gram, and read every lambda off one decomposition.
     """
-    return np.linalg.norm(waymo.baselines(past)["cv"] - waymo.future_xy(future), axis=-1).mean(1)
+    a, b = X[rows].astype(np.float64), Y[rows].astype(np.float64)
+    mx, my = a.mean(0), b.mean(0)
+    a, b = a - mx, b - my
+    ev, V = np.linalg.eigh(a.T @ a)
+    z = V.T @ (a.T @ b)
+    W = np.stack([V @ (z / (ev[:, None] + lam * len(rows))) for lam in lams])
+    return np.concatenate([W, (my - mx @ W)[:, None]], 1)
 
 
-def surprise_report(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: str = "val") -> pd.DataFrame:
-    """Per subset: n, the s quantiles, the longitudinal/lateral split of the CV error, and the share of the
-    top-decile-s frames the subset holds against its own base rate in the split."""
-    m0 = (df.split == split).to_numpy() & df.has_future.to_numpy()
-    err = waymo.baselines(past)["cv"] - waymo.future_xy(future)
-    s, lon, lat = surprise(past, future), np.abs(err[..., 0]).mean(1), np.abs(err[..., 1]).mean(1)
-    top = m0 & (s >= np.quantile(s[m0], 0.9))
+def ego_surprise(ego: np.ndarray, fut: np.ndarray, sp, folds: int = FOLDS) -> np.ndarray:
+    """s_ego: how far the logged future falls from what the *ego readout itself* predicts.
+
+    This is the definition the experiment is actually about -- the residual of the prior the arms are measured
+    against -- so it has to be honest on both halves: the fit half gets out-of-fold predictions from the same
+    sequence-grouped folds the lambda selection uses, and the evaluation half gets the model fitted on the
+    whole fit half. Using in-sample predictions on the fit half would make the best-fitted frames look
+    unsurprising and quietly bias every weighting towards whatever the ridge happened to miss.
+
+    Lambda is picked exactly as jevdrive/waymo_stage_a.ridge_cv picks it: mean ADE over the held-out folds.
+    """
+    from sklearn.model_selection import GroupKFold
+    T, lams = fut.shape[1], planner.LAM_RIDGE
+    mu, sd = ego[sp.train].mean(0), ego[sp.train].std(0)
+    X = (ego - mu) / np.where(sd > 1e-6, sd, 1)
+    Y = fut.reshape(len(fut), -1)
+    oof = np.zeros((len(lams), len(fut), T, 2), np.float32)
+    score = np.zeros(len(lams))
+    for a, b in GroupKFold(folds).split(sp.train, groups=sp.seq[sp.train]):
+        W = ridge_np(X, Y, sp.train[a], lams)
+        te = sp.train[b]
+        p = (X[te] @ W[:, :-1] + W[:, -1, None]).reshape(len(lams), -1, T, 2)
+        oof[:, te] = p
+        score += [ade(p[i], fut[te]).mean() for i in range(len(lams))]
+    best = planner._pick(score / folds, lams, "ego surprise (grouped CV)")
+    W = ridge_np(X, Y, sp.train, [lams[best]])
+    oof[best, sp.val] = (X[sp.val] @ W[0, :-1] + W[0, -1]).reshape(-1, T, 2)
+    log.info("s_ego: lambda %.3g, held-out ADE %.3f over %d fit frames, %d eval frames",
+             lams[best], score[best] / folds, len(sp.train), len(sp.val))
+    return ade(oof[best], fut)
+
+
+def surprise_set(past: np.ndarray, fut: np.ndarray, ego: np.ndarray, sp, folds: int = FOLDS):
+    """The three surprise definitions and the error field each one is the ADE of.
+
+    s_cv is the original control: the constant-speed, zero-yaw-rate arc, which calls an ongoing turn
+    surprising even though the yaw-rate history predicts it perfectly. s_ctrv uses the constant-turn-rate
+    constant-speed arc instead -- the best zero-parameter prior available -- and s_ego uses the experiment's
+    own ego ridge. Only s_ego is "what the prior the arms are measured against cannot predict".
+    """
+    b = waymo.baselines(past)
+    err = {"cv": b["cv"] - fut, "ctrv": b["ctrv"] - fut}
+    s = {k: ade(b[k], fut) for k in ("cv", "ctrv")}
+    s["ego"] = ego_surprise(ego, fut, sp, folds)
+    return {k: s[k] for k in S_KINDS}, err
+
+
+def surprise_report(s: dict, err: dict, sub: dict, direction: int) -> pd.DataFrame:
+    """Per surprise definition and subset: n, the s quantiles, the longitudinal/lateral decomposition of the
+    prior's error, and how much the top decile of s enriches the subset over its own base rate."""
     qs = (0.1, 0.25, 0.5, 0.75, 0.9, 0.99)
-    sub, rows = waymo.subsets(df, past, future), []
-    for k in SUBSETS:
-        m = m0 & sub[k]
-        rows.append({"subset": k, "n": int(m.sum()), "s_mean": s[m].mean(),
-                     **{f"s_q{int(q * 100)}": v for q, v in zip(qs, np.quantile(s[m], qs))},
-                     "cv_lon": lon[m].mean(), "cv_lat": lat[m].mean(), "lat_share": lat[m].mean() / s[m].mean(),
-                     "base_rate": m.sum() / m0.sum(), "share_of_top_decile": (top & m).sum() / top.sum(),
-                     "recall_of_subset": (top & m).sum() / max(m.sum(), 1)})
+    rows = []
+    for kind, sv in s.items():
+        top = sv >= np.quantile(sv, 0.9)
+        for k in SUBSETS:
+            m = sub[k]
+            r = {"direction": direction, "kind": kind, "subset": k, "n": int(m.sum()), "s_mean": sv[m].mean(),
+                 **{f"s_q{int(q * 100)}": v for q, v in zip(qs, np.quantile(sv[m], qs))},
+                 "base_rate": m.mean(), "share_of_top_decile": (top & m).sum() / top.sum(),
+                 "enrichment": ((top & m).sum() / top.sum()) / max(m.mean(), 1e-9),
+                 "recall_of_subset": (top & m).sum() / max(m.sum(), 1)}
+            if kind in err:   # the ego prior's error field is not a closed form, so only the arcs decompose
+                lon, lat = np.abs(err[kind][..., 0]).mean(1), np.abs(err[kind][..., 1]).mean(1)
+                r |= {"lon": lon[m].mean(), "lat": lat[m].mean(), "lat_share": lat[m].mean() / sv[m].mean()}
+            rows.append(r)
     return pd.DataFrame(rows)
 
 
-def noise_check(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, n: int = 50,
-                split: str = "val") -> pd.DataFrame:
-    """The `n` highest-surprise frames with the diagnostics that would expose an artifact rather than an event.
+def surprise_corr(s: dict, past: np.ndarray, rows: np.ndarray, direction: int) -> pd.DataFrame:
+    """Correlation of each surprise definition with the two kinematic quantities that would explain it away:
+    |longitudinal acceleration| (braking and launching) and speed."""
+    kin = waymo.past_kinematics(past[rows])
+    return pd.DataFrame([{"direction": direction, "kind": k,
+                          "corr_abs_a0": float(np.corrcoef(v, np.abs(kin["a"]))[0, 1]),
+                          "corr_v0": float(np.corrcoef(v, kin["v"])[0, 1])} for k, v in s.items()])
+
+
+def noise_check(df: pd.DataFrame, rows: np.ndarray, past: np.ndarray, fut: np.ndarray, s: dict, sub: dict,
+                direction: int, n: int = 50) -> pd.DataFrame:
+    """The `n` highest-surprise frames of each definition, with the diagnostics that would expose an artifact
+    rather than an event.
 
     An artifact would show up as a discontinuous ego history (a speed jump between consecutive 0.25 s
     intervals far outside the split's own distribution, or repeated positions from padding) or as a future
     that is not physically reachable. Decision 13's exact-hit history rule does not apply: `past_states` is
-    read per frame from the tfrecord, not assembled across frames, so no window can be padded here.
+    read per frame from the tfrecord, not assembled across frames, so no window here can be padded.
     """
-    m0 = (df.split == split).to_numpy() & df.has_future.to_numpy()
-    s, kin = surprise(past, future), waymo.past_kinematics(past)
-    step = np.linalg.norm(np.diff(past[:, :, :2], axis=1), axis=-1)
+    p, kin = past[rows], waymo.past_kinematics(past[rows])
+    step = np.linalg.norm(np.diff(p[:, :, :2], axis=1), axis=-1)
     jump = np.abs(np.diff(step / waymo.DT, axis=1)).max(1)
-    gt = waymo.future_xy(future)
-    fspd = np.linalg.norm(np.diff(np.concatenate([np.zeros((len(gt), 1, 2), np.float32), gt], 1), axis=1),
+    fspd = np.linalg.norm(np.diff(np.concatenate([np.zeros((len(fut), 1, 2), np.float32), fut], 1), axis=1),
                           axis=-1) / waymo.DT
     rated = np.zeros(len(df), bool)
     rated[waymo.load_rater()[0]] = True
-    sub = waymo.subsets(df, past, future)
-    o = np.flatnonzero(m0)[np.argsort(-s[m0])[:n]]
-    lim = float(np.quantile(jump[m0], 0.999))
-    out = pd.DataFrame({"sequence": df.sequence.to_numpy()[o], "frame": df.frame.to_numpy()[o], "s": s[o],
-                        "v0": kin["v"][o], "a0": kin["a"][o], "yaw_rate_deg": np.degrees(kin["w"][o]),
-                        "past_speed_jump": jump[o], "past_dup_steps": (step[o] < 1e-6).sum(1),
-                        "future_speed_max": fspd[o].max(1), "rater": rated[o],
-                        **{k: sub[k][o] for k in ("pre_onset", "straight_yaw", "turn_yaw")},
-                        "cluster": df.cluster.to_numpy()[o]})
-    out["artifact"] = (out.past_speed_jump > lim) | (out.past_dup_steps > 0) | ~np.isfinite(out.s)
-    log.info("noise check: %d/%d of the top-s frames look like artifacts (past speed jump above the split's "
-             "99.9th percentile %.2f m/s, or padded history); %d distinct sequences, %d rater frames",
-             int(out.artifact.sum()), n, lim, out.sequence.nunique(), int(out.rater.sum()))
-    return out
+    rated = rated[rows]
+    lim = float(np.quantile(jump, 0.999))
+    out = []
+    for kind, sv in s.items():
+        o = np.argsort(-sv)[:n]
+        t = pd.DataFrame({"direction": direction, "kind": kind, "sequence": df.sequence.to_numpy()[rows][o],
+                          "frame": df.frame.to_numpy()[rows][o], "s": sv[o], "v0": kin["v"][o],
+                          "a0": kin["a"][o], "yaw_rate_deg": np.degrees(kin["w"][o]),
+                          "past_speed_jump": jump[o], "past_dup_steps": (step[o] < 1e-6).sum(1),
+                          "future_speed_max": fspd[o].max(1), "rater": rated[o],
+                          **{k: sub[k][o] for k in ("pre_onset", "straight_yaw", "turn_yaw")},
+                          "cluster": df.cluster.to_numpy()[rows][o]})
+        t["artifact"] = (t.past_speed_jump > lim) | (t.past_dup_steps > 0) | ~np.isfinite(t.s)
+        log.info("noise check %-4s: %d/%d artifacts (past speed jump over the 99.9th percentile %.2f m/s, or "
+                 "padded history); %d sequences, %d rater frames, %d pre_onset, %d turn_yaw", kind,
+                 int(t.artifact.sum()), n, lim, t.sequence.nunique(), int(t.rater.sum()),
+                 int(t.pre_onset.sum()), int(t.turn_yaw.sum()))
+        out.append(t)
+    return pd.concat(out, ignore_index=True)
 
 
 # ---------------------------------------------------------------- weighted ridge
 
-def weight_schemes(s: np.ndarray, fit: np.ndarray) -> dict[str, np.ndarray]:
-    """The weightings of decisions 20, each normalised to mean 1 over the fit half.
+def weight_schemes(s: dict, fit: np.ndarray) -> dict[str, np.ndarray]:
+    """The weightings of decisions 20, one family per surprise definition, all normalised to mean 1 on the
+    fit half.
 
-    `s` is scaled by its own fit-half mean first, so every scheme is a function of the relative surprise and
-    none of them depends on the metre scale of the split.
+    Each family scales its own s by its own fit-half mean first, so a scheme is a function of the relative
+    surprise and never of the metre scale of that definition. The primary family is `ego`; `ctrv` and `cv`
+    are carried as controls with the reduced set of schemes, which is what keeps the wall time in range.
     """
-    r = s / s[fit].mean()
-    out = {"uniform": np.ones_like(r), "lin": r, "sq": r ** 2, "a1": 1 + r, "a4": 1 + 4 * r,
-           "top50": (s >= np.quantile(s[fit], 0.5)).astype(np.float64),
-           "top25": (s >= np.quantile(s[fit], 0.75)).astype(np.float64)}
+    out = {"uniform": np.ones(len(s[PRIMARY]))}
+    for kind, names in FAMILY_SCHEMES.items():
+        r = s[kind] / s[kind][fit].mean()
+        cand = {"lin": r, "sq": r ** 2, "a1": 1 + r, "a4": 1 + 4 * r,
+                "top50": (s[kind] >= np.quantile(s[kind][fit], 0.5)).astype(np.float64),
+                "top25": (s[kind] >= np.quantile(s[kind][fit], 0.75)).astype(np.float64)}
+        out |= {f"{kind}:{nm}": cand[nm] for nm in names}
     return {k: (w / w[fit].mean()).astype(np.float32) for k, w in out.items()}
 
 
@@ -203,7 +296,9 @@ def mlp_late(Xi, sp, res_fut, R, w: torch.Tensor, seed: int = 0):
 
 def run_direction(direction: int, set_name: str = "qwen_front3", layer: str = sa.LAYER, seed: int = 0,
                   folds: int = FOLDS, rl=None) -> tuple[dict, dict, pd.DataFrame]:
-    """All of L0's arms for one direction of the half-val split. Returns (predictions, context, B table)."""
+    """All of L0's arms for one direction of the half-val split.
+
+    Returns (predictions, context, the weighting table, the surprise report, the noise check)."""
     df, rows, fut, ego, img, sub, past = sa.load_all(set_name, layer, seed)
     halves = sa.val_halves(df, seed)
     h = df.sequence.map(halves).to_numpy()[rows]
@@ -213,7 +308,7 @@ def run_direction(direction: int, set_name: str = "qwen_front3", layer: str = sa
     log.info("direction %d: fit %d frames / %d sequences, eval %d / %d", direction, len(sp.train),
              len(np.unique(seq[sp.train])), len(sp.val), len(np.unique(seq[sp.val])))
 
-    s = surprise(past[rows], fut)
+    s, err = surprise_set(past[rows], fut, ego, sp, folds)
     pre = sub["pre_onset"]
     F = torch.as_tensor(fut.reshape(n, -1), device=DEV)
     Xe = planner.standardize(torch.as_tensor(ego, device=DEV), sp.train)
@@ -241,8 +336,9 @@ def run_direction(direction: int, set_name: str = "qwen_front3", layer: str = sa
         if rl is not None:
             rl.event("scheme", **brows[-1])
     b = pd.DataFrame(brows)
-    best = b[b.scheme != "uniform"].sort_values("sel_pre_ade").scheme.iloc[0]
-    log.info("dir %d: B scheme chosen on the fit half alone: %s", direction, best)
+    prim = b[b.scheme.str.startswith(f"{PRIMARY}:")]
+    best = prim.sort_values("sel_pre_ade").scheme.iloc[0]
+    log.info("dir %d: B scheme chosen on the fit half alone, primary family %s: %s", direction, PRIMARY, best)
 
     w1 = torch.ones(n, device=DEV)
     p, st, _ = wridge_cv(Xi, R, sp, res_fut, w1, pre, folds, rows=np.flatnonzero(pre))
@@ -251,9 +347,12 @@ def run_direction(direction: int, set_name: str = "qwen_front3", layer: str = sa
         p, st = mlp_late(Xi, sp, res_fut, R, wv, seed)
         preds[arm] = (p + off, st)
 
+    rep = surprise_report(s, err, sub, direction)
+    rep = rep.merge(surprise_corr(s, past, rows, direction), on=["direction", "kind"], how="left")
+    nz = noise_check(df, rows, past, fut, s, sub, direction)
     ctx = {"df": df, "rows": rows, "fut": fut, "sub": sub, "seq": seq, "sp": sp, "past": past,
            "direction": direction, "s": s, "best_scheme": best}
-    return preds, ctx, b
+    return preds, ctx, b, rep, nz
 
 
 def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -308,6 +407,15 @@ def evaluate(preds: dict, ctx: dict) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
     return pd.DataFrame(rows_out), pd.DataFrame(pairs), pd.DataFrame(dids)
 
 
+def _write(rl, tables):
+    """Concatenate each table over the directions, write it as CSV next to the log, and log it."""
+    for name, parts in tables:
+        t = pd.concat(parts, ignore_index=True)
+        t.to_csv(rl.dir / f"{name}.csv", index=False)
+        rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
+        rl.event(name, rows=t.to_dict("records"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
@@ -322,30 +430,29 @@ def main():
     rl = RunLog("waymo_l0", "surprise_weighting")
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
-    if "surprise" in a.steps:
-        df = waymo.load_index()
-        past, future = waymo.load_ego()
-        rep = surprise_report(df, past, future)
-        nz = noise_check(df, past, future)
-        rep.to_csv(rl.dir / "surprise.csv", index=False)
-        nz.to_csv(rl.dir / "noise_check.csv", index=False)
-        rl.log.info("surprise\n%s", rep.to_markdown(index=False, floatfmt=".3f"))
-        rl.log.info("noise check\n%s", nz.to_markdown(index=False, floatfmt=".2f"))
-        rl.event("surprise", rows=rep.to_dict("records"), artifacts=int(nz.artifact.sum()), n=len(nz))
-        del df, past, future
-    if "arms" in a.steps:
-        res, pairs, dids, bs = [], [], [], []
+    if "surprise" in a.steps and "arms" not in a.steps:   # the surprise tables without fitting any head
+        rep, nz = [], []
+        df, rows, fut, ego, _, sub, past = sa.load_all(a.feature_set, "vit_mean", a.seed)
+        h0 = df.sequence.map(sa.val_halves(df, a.seed)).to_numpy()[rows]
         for d in (int(x) for x in a.directions.split(",")):
-            preds, ctx, b = run_direction(d, a.feature_set, a.layer, a.seed, a.folds, rl)
+            h = h0
+            sp = sa.Halves(df, df.sequence.to_numpy()[rows], h == d, h == (1 - d), a.seed)
+            s, err = surprise_set(past[rows], fut, ego, sp, a.folds)
+            rep.append(surprise_report(s, err, sub, d).merge(surprise_corr(s, past, rows, d),
+                                                             on=["direction", "kind"], how="left"))
+            nz.append(noise_check(df, rows, past, fut, s, sub, d))
+        _write(rl, (("surprise", rep), ("noise_check", nz)))
+    if "arms" in a.steps:
+        res, pairs, dids, bs, rep, nz = [], [], [], [], [], []
+        for d in (int(x) for x in a.directions.split(",")):
+            preds, ctx, b, rp, nzd = run_direction(d, a.feature_set, a.layer, a.seed, a.folds, rl)
             r, p_, dd = evaluate(preds, ctx)
-            res.append(r), pairs.append(p_), dids.append(dd), bs.append(b)
+            for lst, x in ((res, r), (pairs, p_), (dids, dd), (bs, b), (rep, rp), (nz, nzd)):
+                lst.append(x)
             del preds
             torch.cuda.empty_cache()
-        for name, t in (("arms", res), ("paired", pairs), ("did", dids), ("schemes", bs)):
-            t = pd.concat(t, ignore_index=True)
-            t.to_csv(rl.dir / f"{name}.csv", index=False)
-            rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
-            rl.event(name, rows=t.to_dict("records"))
+        _write(rl, (("arms", res), ("paired", pairs), ("did", dids), ("schemes", bs),
+                    ("surprise", rep), ("noise_check", nz)))
     rl.event("end")
     rl.close()
 
