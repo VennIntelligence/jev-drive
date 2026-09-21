@@ -93,10 +93,18 @@ class StubAgent(AutonomousAgent):
         global LAST_AGENT
         LAST_AGENT = self
         self.track = Track.SENSORS
+        # Bench2Drive rewrites --agent-config to "<path>+<route name>" before calling setup
+        # (leaderboard_evaluator.py:363), so the path it hands over is not a file. Splitting on
+        # '+' is the only way to get the config back; an agent that trusts the argument silently
+        # runs on its defaults, which is how the first sweep measured the same rig four times.
+        path = (path_to_conf_file or "").split("+")[0]
         cfg = {}
-        if path_to_conf_file and os.path.isfile(path_to_conf_file):
-            with open(path_to_conf_file) as fh:
+        if path and os.path.isfile(path):
+            with open(path) as fh:
                 cfg = json.load(fh)
+        else:
+            raise RuntimeError("agent config %r not readable; refusing to run on defaults"
+                               % path_to_conf_file)
         self.cfg = cfg
         self.n_cam = RIGS[cfg.get("rig", "front3")]
         self.width = int(cfg.get("width", 1600))

@@ -19,6 +19,13 @@ The properties this exists for, in the order they matter:
       quoting a score: a score computed over the routes that happened to finish is a score on a
       selected subset.
 
+Multi-GPU is route sharding, not a split simulation, so several runners may share one `--out`
+directory - one per card, or one per machine on a shared filesystem. The bookkeeping is idempotent
+across them: `done/<id>.json` means finished on *any* card, and a route is claimed with an
+exclusive `claims/<id>.lock` before it starts, so two cards never run the same route. A claim whose
+owner died is stolen after `--claim-stale-s`. Give each card its own `--server-index` (ports are
+2000+4i) and its own `--gpu-rank`.
+
     scripts/b2d_run.py --out $DATA_DIR/runs/b2d/base55 --workers 4 --towns base --rig front3 \
         --policy sleep --infer-ms 129
 
@@ -60,6 +67,9 @@ def parse_args():
                    help="gap between server launches; launching a pool at once costs 17%% "
                         "throughput and half-fails (docs/carla.md)")
     p.add_argument("--server-index", type=int, default=0, help="first CARLA server index; port 2000+4i")
+    p.add_argument("--gpu-rank", type=int, default=0, help="which card this runner's servers use")
+    p.add_argument("--claim-stale-s", type=float, default=7200.0,
+                   help="a claim older than this is assumed to belong to a dead runner")
     p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
     p.add_argument("--max-attempts", type=int, default=3)
     p.add_argument("--stall-s", type=float, default=240.0, help="no tick progress for this long = hung")
@@ -105,8 +115,9 @@ class Server(object):
     """One headless CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality):
+    def __init__(self, index, log_dir, quality, gpu_rank=0):
         self.index = index
+        self.gpu_rank = gpu_rank
         self.port = 2000 + 4 * index
         self.tm_port = 8000 + index
         self.log_dir = Path(log_dir)
@@ -123,7 +134,8 @@ class Server(object):
         with open(self.log, "wb") as fh:
             self.proc = subprocess.Popen(
                 [str(CARLA_ROOT / "CarlaUE4.sh"), "-RenderOffScreen", "-nosound",
-                 "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality],
+                 "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality,
+                 "-graphicsadapter=%d" % self.gpu_rank],
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -159,13 +171,13 @@ class Runner(object):
     def __init__(self, a, routes):
         self.a = a
         self.out = Path(a.out)
-        (self.out / "done").mkdir(parents=True, exist_ok=True)
-        (self.out / "attempts").mkdir(parents=True, exist_ok=True)
-        (self.out / "servers").mkdir(parents=True, exist_ok=True)
+        for sub in ("done", "attempts", "servers", "claims"):
+            (self.out / sub).mkdir(parents=True, exist_ok=True)
         self.events = open(str(self.out / "events.jsonl"), "a", buffering=1)
         self.lock = threading.Lock()
         self.queue = list(routes)
         self.attempts = {}
+        self.claimed = set()
         self.stop_flag = False
         # Servers must not be launched simultaneously: four at once produced a world-load timeout
         # and 17% less throughput than the same four staggered by 20 s.
@@ -186,8 +198,40 @@ class Runner(object):
                 if not self.a.fresh and (self.out / "done" / (rid + ".json")).exists():
                     self.event("skip", route_id=rid, reason="already done")
                     continue
+                if not self.claim(rid):
+                    self.event("skip", route_id=rid, reason="claimed by another runner")
+                    continue
                 return rid
             return None
+
+    def claim(self, rid):
+        """O_EXCL is the whole mechanism: on one filesystem it is atomic between processes and
+        between machines, which is what makes several cards safe to point at one --out."""
+        path = self.out / "claims" / (rid + ".lock")
+        body = json.dumps({"host": socket.gethostname(), "pid": os.getpid(), "t": time.time(),
+                           "gpu_rank": self.a.gpu_rank}).encode()
+        try:
+            fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        except OSError:
+            try:
+                age = time.time() - path.stat().st_mtime
+            except OSError:
+                return False
+            if age < self.a.claim_stale_s:
+                return False
+            self.event("claim_stolen", route_id=rid, age_s=round(age))
+            fd = os.open(str(path), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(body)
+        self.claimed.add(rid)
+        return True
+
+    def release(self, rid):
+        try:
+            os.unlink(str(self.out / "claims" / (rid + ".lock")))
+        except OSError:
+            pass
+        self.claimed.discard(rid)
 
     def run(self):
         threads = [threading.Thread(target=self.worker, args=(i,), daemon=True)
@@ -204,14 +248,17 @@ class Runner(object):
         self.summarise()
 
     def worker(self, wi):
-        server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality)
+        server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality,
+                        self.a.gpu_rank)
         try:
             while not self.stop_flag:
                 rid = self.next_route()
                 if rid is None:
                     return
+                finished = False
                 for attempt in range(1, self.a.max_attempts + 1):
                     if self.stop_flag:
+                        self.release(rid)
                         return
                     if not server.alive():
                         self.event("server_start", worker=wi, index=server.index, port=server.port)
@@ -220,10 +267,16 @@ class Runner(object):
                     self.note_attempt(rid, attempt, record)
                     if ok:
                         (self.out / "done" / (rid + ".json")).write_text(json.dumps(record, indent=2))
+                        finished = True
                         break
                     # Anything that is not a clean finish means the server is suspect: a hung or
                     # segfaulted server answers RPCs for a while and then fails the next route too.
                     server.stop()
+                # Release either way: the claim exists to stop two runners racing, not to record
+                # the outcome. A route that never finished must be retryable by the next run.
+                self.release(rid)
+                if not finished:
+                    self.event("route_abandoned", route_id=rid, attempts=self.a.max_attempts)
         finally:
             server.stop()
 
