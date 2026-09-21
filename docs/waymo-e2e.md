@@ -232,17 +232,16 @@ points lower. The projection used the *split's* lowest frame index as the clip s
 not the same length (199 frames at the 10th percentile, 229 at the 90th), so short sequences' early frames were
 counted as reachable. `span_inside` now bounds per sequence, which is what made the decomposition above exact.
 
-**Which is which: essentially all of it is missing shards, none of it is clip geometry.** `span inside clip`
--- the requested span lies within the index range the split is known to reach -- is 78-100%, and
-`missing shards` accounts for virtually the whole gap down to `complete`. So `at full val` equals
-`span inside clip`: once the 93 val shards are down, a 1.5 s window is complete on 98% of frames, a 3 s window
-on 92%, a 3.5 s seven-frame window on 90%, and a 6 s window on 78%. The clip only ever bites at long spans,
-where the target frame is too near the start of its clip.
+**Which is which** depends on where the split is. While one is downloading the shortfall is almost entirely
+missing shards -- train, at 89 of 263, is complete on 0.334 of frames against a 0.9998 ceiling. Once it
+finishes the shortfall is entirely clip geometry: on val `missing shards` is 0.000-0.001, and what is left is
+target frames sitting too near the start of their own clip for the span to fit. Only long spans bite.
 
-**The last column is the correction.** The earlier version of this table quoted "within tol" as completeness.
-It was crediting padding: at a 6 s span it now claims 0.749 where the strict answer is 0.0227, a 33x
-overstatement, and at 0.5 s 0.811 against 0.295. Those numbers should never have been reported as completeness
-and are kept only to show the size of the error.
+**The tolerance rule would still be crediting padding here.** On complete val, "nearest frame within
+`stride // 2`" reports 0.9864 / 0.9412 / 0.8871 / 0.7747 for the 0.5 s, 1.5 s, 3 s and 6 s windows against
+strict answers of 0.9774 / 0.9321 / 0.8644 / 0.7292. The gap is smaller than it was on a sparse split -- where
+it reached 33x -- but it never goes to zero, because the rule is happy to substitute a neighbouring frame for
+one that genuinely does not exist. Those numbers are not completeness at any download level.
 
 **Clip-set discipline.** When any row of a comparison table consumes image history, the **whole** table --
 ego-only rows included -- must be restricted to the strictly complete set, because a padded window did not see
