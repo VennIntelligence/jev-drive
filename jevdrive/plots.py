@@ -149,6 +149,10 @@ def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B
     Left panel all evaluation frames, right panel straight_yaw only, so that a lateral confound cannot be
     the explanation. Both directions of the half-val split are drawn, solid and dashed. Bands are the paired
     sequence-bootstrap 95 % interval of the absolute delta, divided by that decile's ego ADE.
+
+    The y axis is clipped: in the lowest deciles the ego prior is already almost exact and vision costs 40 to
+    250 % of a very small error, which would flatten the whole range that carries the result. Curves leaving
+    the top of the axis are annotated with their value.
     """
     lab = {"A ridge_late uniform": "ridge$_{late}$ uniform", "B ego:a1": r"ridge$_{late}$ $1+s_{ego}$",
            "D mlp uniform": "MLP uniform"}
@@ -168,10 +172,17 @@ def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B
                             label=lab[arm] if d == 0 else None)
                     if d == 0:
                         ax.fill_between(x, 100 * g.rel_lo, 100 * g.rel_hi, color=col[arm], alpha=0.15, lw=0)
+            ax.set_ylim(32, -14)
+            for arm in arms:      # say where the clipped curves actually are
+                g = dec[(dec.scope == scope) & (dec.arm == arm) & (dec.direction == 0)].sort_values("decile")
+                off = g[100 * g.rel_gain > 32]
+                if len(off):
+                    ax.annotate(f"{100 * off.rel_gain.iloc[0]:+.0f}%", (off.decile.iloc[0] + 1, 32),
+                                xytext=(0, 2), textcoords="offset points", ha="center", va="bottom",
+                                color=col[arm], fontsize=6, annotation_clip=False)
             ax.set_xlabel(r"decile of $s_{ego}$ on the evaluation half")
             ax.set_xticks(range(1, 11))
             ax.text(0.03, 0.06, title, transform=ax.transAxes)
         axes[0].set_ylabel("relative gain over ego (%)")
-        axes[0].invert_yaxis()
         legend_below(fig, axes[0])
         save(fig, out_dir, "l0-decile-relative-gain")
