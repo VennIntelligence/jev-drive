@@ -67,7 +67,9 @@ failed=()
 for repo in "${MODELS[@]}"; do
   echo "==> $repo"
   # hf-mirror returns 403 for some junk files (e.g. .DS_Store in Qwen-Drive); skip them.
-  if ! hf download "$repo" --max-workers "${JEV_HF_WORKERS:-2}" --exclude '.DS_Store' --exclude '.ms_upload_cache*'; then
+  # original/ holds a second, non-HF copy of the weights that transformers never reads (V-JEPA 2: 5 GB).
+  if ! hf download "$repo" --max-workers "${JEV_HF_WORKERS:-2}" --exclude '.DS_Store' \
+       --exclude '.ms_upload_cache*' --exclude 'original/*'; then
     failed+=("$repo")   # one gated repo must not abort the rest
   fi
 done
