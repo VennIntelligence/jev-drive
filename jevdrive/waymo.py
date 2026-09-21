@@ -1129,10 +1129,10 @@ def check(n: int = 64) -> None:
                  "rater trajectories score their own labels back", len(rows_i), lf.mean(), zero.mean())
 
     sub = subsets(df, past, future)
-    val = (df.split == "val").to_numpy() & df.has_future.to_numpy()
     assert not (sub["pre_onset"] & sub["turn_yaw"]).any(), "a frame cannot be both pre-onset and already turning"
     assert not (sub["pre_onset"] & sub["straight_yaw"]).any()
-    assert not sub["pre_onset"][~val].any(), "pre-onset needs a future, so it must be val/train only"
+    assert not sub["pre_onset"][~df.has_future.to_numpy()].any(), \
+        "a frame with no future cannot be known to turn later, so test frames cannot be pre-onset"
     b = np.abs(future_maneuver(future)[0])
     assert b[sub["pre_onset"]].min() > ONSET_BEARING and sub["pre_onset"].sum() > 0
     turn_rate = np.isin(df.intent.to_numpy()[sub["pre_onset"]], (2, 3)).mean()
