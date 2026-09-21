@@ -963,9 +963,12 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
         last_arrival = now if st["on_disk"] > before["on_disk"] else last_arrival
         last_built = now if st["built"] > before["built"] else last_built
         rate = frames / max(now - t0, 1e-9)
-        cadence = (now - t0) / max(st["built"] - built0, 1)   # seconds per shard this run has actually seen
+        # Seconds per shard BUILT. While a backlog drains that is the extraction rate; once the run is
+        # download-bound, built tracks arrival and it becomes the arrival rate. Say "built", not "arriving":
+        # read as arrival during a drain it says the download is fast when it is not.
+        cadence = (now - t0) / max(st["built"] - built0, 1)
         log.info("pass %d: %d/%d %s shards on disk, %d indexed, %d built (+%d this pass, %d frames); "
-                 "%.1f frames/s over the run, %d frames done, a shard every %.0f min", i, st["on_disk"],
+                 "%.1f frames/s over the run, %d frames done, a shard built every %.0f min", i, st["on_disk"],
                  st["of"], split, st["indexed"], st["built"], st["built"] - before["built"], r["frames"],
                  rate, frames, cadence / 60)
         if rl is not None:
@@ -978,8 +981,8 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
             log.warning("%d %s shards sit on disk unbuilt and nothing has been built for %.0f min; "
                         "extraction looks stuck", st["on_disk"] - st["built"], split, (now - last_built) / 60)
         elif st["built"] >= st["on_disk"] and now - last_arrival > alarm:
-            log.warning("no new %s shard for %.0f min, and everything on disk is built (a shard has been "
-                        "landing every %.0f min); is the download still running?", split,
+            log.warning("no new %s shard for %.0f min, and everything on disk is built (this run has been "
+                        "building one every %.0f min); is the download still running?", split,
                         (now - last_arrival) / 60, cadence / 60)
         if st["of"] and st["built"] + len(skip) >= st["of"]:
             log.info("all %d %s shards built; stopping", st["of"], split)
