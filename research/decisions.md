@@ -551,8 +551,12 @@ batch 1 下 launch overhead 占主导，截断省不下来。
 |---|--:|---|
 | Qwen-Drive-1.0-4B，直接规划 | 702 ms | |
 | Qwen-Drive-1.0-4B，带 reasoning | 1258 ms | |
-| AutoVLA（Qwen2.5-VL-3B） | 1362 ms | **而且这还是它自己选择「不思考」的场景**，真正走 CoT 会到几秒 |
+| AutoVLA（Qwen2.5-VL-3B） | 1362 ms | **它在 Waymo val 上从不走 CoT**（150/150，见第 15 条），所以 1362 ms 就是它的全部延迟，没有更慢的档 |
 | openjev（DiffusionGemma-26B-A4B） | 471 ms | 输出不是轨迹，只是几个选项 |
+
+那行备注原来写的是「这还是它自己选择『不思考』的场景，真正走 CoT 会到几秒」。
+那是**猜测**，已被第 15 条的实测否掉：150 帧 think rate = 0，think block 逐字节相同，
+延迟平坦、p99 只比中位数高 10%。**AutoVLA 没有「更慢的档」，只有这一档。**
 
 **没有一个接近 10 Hz。** 而且开销全在通用部件上——预处理、vision tower、prefill、逐 token decode——
 **不在 planning head 里**。我们的 head 不到 0.1 ms，所以这条线的论点不依赖精度结论，
