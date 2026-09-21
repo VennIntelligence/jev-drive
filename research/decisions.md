@@ -979,6 +979,8 @@ trajectory-following 而非 adaptive decision-making。**我们很可能复现�
 
 ## 20. L0：intervention 信息是「线性存在但被均匀目标低估」，还是「根本不在特征里」（**预登记，B/C/D 数字待填**）
 
+> **2026-09-21 就地修正**：surprise 的定义从单一的 CV 外推改成三个（主定义 s_ego），原因写在下面的「kinematic surprise」一段里。**判据、0.05 m 门槛、两个分支一个字没改。**
+
 **这条在看到任何 B/C/D 数字之前写下来。** 第 3d 条测出的 DiD 为正——视觉的增量在 pre-onset 上
 **比在 straight 上更小**——有两种完全不同的解释，而它们指向的下一步实验是相反的：
 
@@ -992,9 +994,33 @@ trajectory-following 而非 adaptive decision-making。**我们很可能复现�
 半 val 设置里跑：val 按 sequence 对半切，一半 fit 一半 eval，λ 用 fit 半内部的 sequence-grouped CV 选，
 两个方向都报。base 统一是 `ridge ego`，所以 ΔADE = arm − ego，逐帧配对。
 
-**kinematic surprise（本条的加权变量）**：`s_i = ADE(真实 future_i, CV 外推_i)`，5 s horizon，
-CV 用 `jevdrive/waymo.py` 里 `baselines()["cv"]`，即「保持当前速度、yaw rate 取零」的直线外推，
-和 3c 条那张 baseline 表用的是同一个。权重在 fit 半上归一化到均值 1。
+**kinematic surprise s_i（本条的加权变量）**：**2026-09-21 修正——原来只用一个定义，是错的，改成三个。**
+原文写的是 `s_i = ADE(真实 future_i, CV 外推_i)`，CV 用 `waymo.baselines()["cv"]`，即「保持当前速度、
+yaw rate 取零」的直线外推。**问题在于 surprise 的定义只有相对某个 prior 才有意义，而 CV 是个错的 prior**：
+一辆已经在转弯的车，对直线外推来说「很意外」，但对 yaw rate 历史来说完全可以预测。
+于是 s_cv 把「manoeuvre 的延续」和「真正偏离先验的事件」混在一起，量级上又被纵向刹车主导
+（见下面测出来的表）。**这不是细节，是定义错误**，所以在跑任何 B/C/D 之前改掉。
+
+现在并行带三个定义，都是 5 s horizon 上的 ADE：
+
+| 记号 | prior | 角色 |
+|:--|:--|:--|
+| **s_ego** | `ridge ego` 自己的预测，fit 半上用 sequence-grouped inner fold **out-of-fold** 算，eval 半用整个 fit 半训出来的模型 | **主定义**。它正好是「所有 arm 被拿来比较的那个 prior 预测不了的部分」 |
+| s_ctrv | `baselines()["ctrv"]`，恒速恒 yaw rate 的圆弧，我们手上最好的零参数 prior | control |
+| s_cv | `baselines()["cv"]`，恒速零 yaw rate 的直线 | control，而且是故意留着的差 prior |
+
+s_ego 在 fit 半上必须 out-of-fold，否则被拟合得最好的那些帧会显得「不意外」，加权就会悄悄偏向
+ridge 恰好没拟合上的东西。λ 的选法和 `waymo_stage_a.ridge_cv` 完全一样（held-out fold 上的平均 ADE）。
+ego 输入只有 100 维，整套 s_ego 在 CPU 上用 numpy 一秒内算完，不占 GPU。
+
+**B 的加权按定义分成三族**：主族是 `ego`（schemes：lin、sq、a1、a4、top25），
+control 族 `ctrv` 和 `cv` 各只带 lin 和 top25。判据和下面的 0.05 m 门槛**一个字没改**，
+但**分支判定和 arm D 的加权选择只看 `ego` 族**，两个 control 族只用来对照。
+（相对最初的登记，为了把 wall time 压在 30 min 以内，砍掉的是 scheme 不是 arm：
+ego 族去掉了 top50 这个中位数硬切，两个 control 族去掉了 sq。）
+
+权重在 fit 半上归一化到均值 1；每族先用自己的 fit 半均值把 s 归一，所以 scheme 只是相对 surprise 的函数，
+和这个定义本身的米制尺度无关。
 
 ### Arms
 
@@ -1029,32 +1055,55 @@ B 里「最好的那套」由 **fit 半内部的 grouped CV 上的 pre-onset ADE
 
 **这条不是押注**：它不预测哪个分支会中，它的作用是让下一次实验的方向在看到数字之前就被定死。
 
-### 跑之前就能算出来的两件事（CPU，已测）
+### 跑之前就能算出来的三件事（CPU，已测；run: box 上 `$DATA_DIR/runs/waymo_l0/surprise_weighting/20260921-224822/`）
 
-**一、s 的分布：s 主要衡量的是「刹车/起步」，不是「转不转」。** 完整 val 106 360 帧：
+**一、预登记的期待没有兑现：换成 s_ego 之后，pre_onset 的富集不升反降。**
+修正 s 的定义时写下的期待是「s_ego 对 pre_onset 的富集应该明显高于 s_cv 的 1.6 倍，对 turn_yaw 明显低于 3.2 倍」。
+turn_yaw 那一半兑现了，pre_onset 那一半**没有**。下表的 enrichment 是「s 的顶层 decile 里该子集占的比例
+÷ 该子集在 val 里的基础比例」，1.0 表示完全不富集（方向 0；方向 1 差别在 0.02 以内）：
 
-| 子集 | n | mean s | q10 | q50 | q90 | q99 | 纵向分量 | 横向分量 | 横向占比 |
-|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| all | 106 360 | 2.81 | 0.21 | 1.95 | 6.64 | 11.71 | 2.33 | 0.82 | 0.29 |
-| pre_onset | 1 510 | 4.25 | 1.65 | 3.84 | 7.57 | 10.94 | 2.80 | 2.67 | 0.63 |
-| straight_yaw | 46 580 | 2.67 | 0.37 | 1.79 | 6.22 | 11.70 | 2.60 | 0.24 | 0.09 |
-| turn_yaw | 11 060 | 5.37 | 1.67 | 4.80 | 9.94 | 13.91 | 2.48 | 4.09 | 0.76 |
+| s 定义 | all 的 mean s | pre_onset mean / enrichment | straight_yaw mean / enrichment | turn_yaw mean / enrichment | corr(s,\|a0\|) | corr(s,v0) |
+|:--|--:|--:|--:|--:|--:|--:|
+| **s_ego**（主） | 1.85 | 2.51 / **1.47** | 1.82 / 0.92 | 2.41 / **1.65** | 0.34 | 0.13 |
+| s_ctrv | 2.69 | 4.22 / **1.80** | 2.68 / 0.97 | 4.30 / 2.11 | 0.53 | 0.07 |
+| s_cv | 2.81 | 4.25 / 1.52 | 2.67 / 0.84 | 5.37 / **3.17** | 0.49 | 0.07 |
 
-s 的顶层 decile（阈值 6.64 m，10 637 帧）里 pre_onset 只占 **2.2%**（val 底噪 1.4%，富集仅 1.6 倍），
-turn_yaw 占 33.0%（底噪 10.4%），straight_yaw 占 36.9%，还有 27.9% 三个子集都不属于。
-`corr(s, |a0|) = 0.49`，`corr(s, v0) = 0.07`——**s 和纵向加速度强相关，和是否处在转弯决策点只是弱相关**。
-所以 B 的加权与其说是「加权 intervention」，不如说是「加权刹车和起步」。这是 L0 设计本身的一个弱点，
-先记在这里，结果怎样都不改判据。
+读法：换掉 CV 这个差 prior 确实把 turn_yaw 的虚假富集从 3.17 压到 1.65——**「已经在转」的确不再被算成意外**。
+但 pre_onset 的富集三个定义都在 **1.5–1.8** 之间，s_ego 甚至是三者里最低的 1.47。
+`corr(s_ego, |a0|)` 从 0.49 降到 0.34，仍然是单一最强的相关量。
 
-**二、噪声检查：val 里 s 最高的 50 帧，没有一帧是数据 artifact。** 逐帧看了 ego history 的
-速度跳变、重复点、future 的速度剖面和 rater 状态：`past_jump`（相邻 0.25 s 区间的速度差）最大 1.47 m/s，
-val 的 99.9 分位是 1.84，全部在正常范围；重复点 0 帧；第 13 条那套「精确命中」的历史完整性问题在这里
-不适用，因为 past_states 是每帧直接从 tfrecord 里读出来的 16×0.25 s，不是跨帧拼的窗口。
-这 50 帧只来自 **6 个 sequence**（相邻帧高度自相关），平均 v0 = 11.2 m/s、a0 = −1.46 m/s²，
-横向分量只占 5%——它们全是**急减速**，外加一个从静止起步冲到 17 m/s 的路口场景
-（那条 sequence 的 yaw rate 估计是 ±290°/s 的噪声，但 `subsets()` 的 validity guard 已经把它挡在所有
-yaw 子集之外，不影响任何子集数字）。**artifact 计数：0/50。** 真正的威胁不是脏数据，是上面第一点：
-s 选出来的是纵向事件，不是决策点。
+**这本身是一条关于 ego prior 的结论，要记下来**：ridge ego 在 pre_onset 上的残差，相对它在全集上的残差
+只高 36%（2.51 对 1.85）。第 3c 条说的是「yaw rate 这一个量在 onset 前不值钱」，
+而这里说的是**整个 100 维 ego readout 在 onset 前并没有特别地「瞎」**——它在那里的误差和它在刹车、
+起步时的误差是同一个量级。所以「用 surprise 加权就能把 intervention 帧挑出来」这个前提，
+在任何一个 prior 下都只成立到 1.5 倍的程度。B 这条臂的证据力因此比设计时以为的弱，
+**结果是什么都不改判据**：B 出 null 不能直接读成「均匀目标没问题」，只能读成
+「按 surprise 加权没用」，真正给上界的是 C。
 
-**状态**：预登记，**待定**。A 复现之后跑 B/C/D，结果填进本条。
+CV 误差的纵向/横向分解也支持同一件事（s_ego 的误差场不是闭式，无法这样分解）：
+s_cv 在全集上 lon 2.33 / lat 0.82，在 straight_yaw 上 lat 只占 9%，在 turn_yaw 上占 76%。
+s_ctrv 把 turn_yaw 的 lat 从 4.09 降到 2.37，正是它该修掉的那部分。
+
+**二、噪声检查：s_cv 和 s_ctrv 的 top-50 里没有 artifact，但 s_ego 的 top-50 里有 7 个。**
+判据是 ego history 的速度跳变（相邻 0.25 s 区间的速度差）超过 val 的 99.9 分位 1.84 m/s，或者历史里有重复点。
+第 13 条那套「精确命中」的历史完整性问题在这里不适用：`past_states` 是每帧直接从 tfrecord 读出来的
+16×0.25 s，不是跨帧拼的窗口，不存在 padding。
+
+| s 定义 | artifact | 覆盖的 sequence 数 | 平均 v0 | 平均 a0 | 最大 past_speed_jump | pre_onset | turn_yaw | rater 帧 |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|
+| s_ego | **7 / 50** | 19 | 6.99 | −3.30 | 2.05 | 0 | 7 | 0 |
+| s_ctrv | 0 / 50 | 7 | 10.08 | −0.74 | 1.47 | 0 | 23 | 1 |
+| s_cv | 0 / 50 | 6 | 11.21 | −1.46 | 1.47 | 0 | 18 | 1 |
+
+两个运动学定义的 top-50 只来自 6–7 个 sequence（相邻帧高度自相关），全是急减速，外加一个从静止起步
+冲到 17 m/s 的路口场景（那条 sequence 的 yaw rate 估计是 ±290°/s 的噪声，但 `subsets()` 的 validity guard
+已经把它挡在所有 yaw 子集之外）。s_ego 的尾巴不一样：它散在 19 个 sequence 上，平均减速度 −3.3 m/s²，
+**而且开始捡到历史本身就不连续的帧**——ridge 是在拟合这段历史的，历史一跳，残差就大。
+7 帧放在 53 000 帧的加权拟合里改变不了任何系数，所以不做过滤（过滤是没登记过的改动），
+但这说明**以后要是把 s_ego 当采样器或者当硬筛用，必须先做这个清洗**。
+
+**三、三个定义下，pre_onset 的 top-decile 命中率都极低**：顶层 decile 里 pre_onset 只占 2.1%–2.6%。
+换句话说，无论用哪个 prior，「高 surprise」都不是「pre-onset」的好代理。
+
+**状态**：预登记，**待定**。s 的定义已于 2026-09-21 就地修正（原文用的单一 CV 定义是错的，理由见上），判据未动。A 复现之后跑 B/C/D，结果填进本条。
 
