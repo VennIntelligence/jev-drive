@@ -195,9 +195,17 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     for c in ("split", "shard", "cluster"):
         if c in df:
             df[c] = df[c].astype("category")
-    df.to_parquet(root / "index.parquet", index=False)
-    np.save(root / "past.npy", ego[:, :N_PAST * len(PAST_FIELDS)].reshape(-1, N_PAST, len(PAST_FIELDS)))
-    np.save(root / "future.npy", ego[:, N_PAST * len(PAST_FIELDS):].reshape(-1, N_FUTURE, 3))
+    # These four files describe one index, and a rebuild runs every few minutes for as long as
+    # `features_inc --watch` is feeding on a download. Written straight into place, each one is unreadable
+    # while it is being written and the set is inconsistent for the whole length of the rebuild, so a
+    # concurrent reader can hold one file from before it and another from after it with nothing in the files
+    # to reveal the mixture. Build all four aside and rename them in instead.
+    tmp = {n: root / f".{n}.tmp" for n in ("index.parquet", "past.npy", "future.npy", "rater.parquet")}
+    df.to_parquet(tmp["index.parquet"], index=False)
+    with open(tmp["past.npy"], "wb") as f:   # an explicit handle: np.save appends .npy to a bare tmp name
+        np.save(f, ego[:, :N_PAST * len(PAST_FIELDS)].reshape(-1, N_PAST, len(PAST_FIELDS)))
+    with open(tmp["future.npy"], "wb") as f:
+        np.save(f, ego[:, N_PAST * len(PAST_FIELDS):].reshape(-1, N_FUTURE, 3))
 
     rows, names = [], frame_names(df)   # one row per (frame, rater trajectory): 3 per scored frame
     for i in np.flatnonzero(rater != ""):
@@ -208,7 +216,14 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     # `frame_name` is the key. `row` stays for readers that predate this column, and is only valid against
     # the index written in this same call.
     pd.DataFrame(rows, columns=["row", "frame_name", "traj", "score", "pos_x", "pos_y"]) \
-        .to_parquet(root / "rater.parquet", index=False)
+        .to_parquet(tmp["rater.parquet"], index=False)
+    # A rename is atomic per file, which does NOT make the set of four atomic: a reader can still land
+    # between two of them. What it buys is the size of that window -- microseconds instead of the seconds to
+    # minutes a rebuild takes -- and it removes the torn-file case entirely, since no reader ever sees a
+    # half-written file. A job that needs a guaranteed-consistent set of all four still pins one with
+    # scripts/snapshot_processed.sh, which copies and then checks that they agree.
+    for n, path in tmp.items():
+        os.replace(path, root / n)
     log.info("index: %d frames, %d sequences, splits %s, %d rater-scored frames -> %s", len(df),
              df.sequence.nunique(), df.split.value_counts().to_dict(), df.n_pref.gt(0).sum(), root)
     return df
