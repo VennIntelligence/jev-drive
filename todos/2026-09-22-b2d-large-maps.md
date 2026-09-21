@@ -88,6 +88,58 @@ Town12 的渲染残余应该一样（同样 3 相机、同样 800×450、同样 
 **预测区间：1.5–3.5 h，中心 2.5 h。** 超过 3 h 的部分就是 CLAUDE.md 说要先 profile 的那段，
 而这一轮的 profiling pass 就是下面的并发梯子本身。
 
-## 结果
+## 结果 1：Town12 上的并发梯子（2026-09-22 00:28–01:15）
 
-（待填）
+同样 24 条 Town12 路线（在 104 条里均匀取），`--max-ticks 800`，优化配置，共享卡。
+
+| 实例数 | 24 条的 wall | ms/tick（每实例） | 理想占用下的总 tick/s | 端到端 tick/s | VRAM 中位 | load 中位 | 真失败 |
+|--:|--:|--:|--:|--:|--:|--:|--:|
+| 4 | 898 s | 84.5 | 25.3 | 21.4 | 42.1 GB | 17.6 | 0 |
+| 6 | 635 s | 84.1 | 37.7 | 30.2 | 54.4 GB | 23.5 | 0 |
+| 8 | 606 s | 102.5 | 43.5 | 31.7 | 72.0 GB | 23.0 | 0（1 次是端口复用，见下） |
+| 10 | 572 s | 101.6 | 53.4 | 33.6 | **83.5 GB（峰值 87.4）** | **27.7（峰值 38.9）** | 1 |
+
+「理想占用」= N × 800 / 每条路线的 wall，即所有 worker 都在跑路线时的吞吐；
+「端到端」= 24×800 / 整步 wall，被 20 s×N 的错峰启动稀释，24 条路线摊不开。
+**220 条的跑批该看前者**，因为启动只付一次。
+
+三条结论：
+
+1. **膝盖在 4→6 之间。** 4→6 per-instance 成本完全不变（84.5 → 84.1），吞吐 1.49×，
+   等于白拿。6→8 per-instance 涨 22%，吞吐只多 15%；8→10 per-instance 不变但 VRAM 到顶。
+2. **这一次是显存先到顶，第一次。** 10 个实例时 VRAM 中位 83.5 GB、峰值 87.4 GB（96 GB 的卡），
+   每个 Town12 实例约 6.3 GB。12 个就装不下。
+   `research/carla-efficiency.md` 里「这张卡在闭环上过剩」这句话**只对小地图成立**；
+   Large Map 上它是真的会被用满的。同时 load 到 27.7/25，CPU 也超订了。
+3. **选 8，不选 10。** 10 比 8 快约 23%，但把 VRAM 吃到 87/96 GB，
+   而同一张卡上还有 Waymo 特征抽取在按 burst 要显存——为了 20% 的吞吐去赌一天的活不值得。
+
+### 那个 segfault 不是并发上限，是端口复用
+
+N=8 和 N=10 各有一次 `server_died_rc139`（139 = 128+11，SIGSEGV）。
+两次都是 server index 45，server 日志里写得很清楚：
+
+```
+LowLevelFatalError [File:Unknown] [Line: 136]
+Exception thrown: bind: Address already in use
+Signal 11 caught.
+CommonUnixCrashHandler: Signal=11
+```
+
+**CARLA 在启动时端口被占就会 segfault**，不是优雅报错。
+梯子是一步接一步跑的、复用同一个端口段，上一步的 server 刚停、端口还在 TIME_WAIT。
+
+这直接影响 `docs/carla.md` 里那条「第 6 个 server 在饱和负载下 segfault」：
+**那很可能也是端口复用，不是 GPU 饱和。** 启动时的 segfault 在排除掉端口之前不能当成并发上限。
+
+### 顺手修掉的一个我们自己的 bug
+
+梯子结束后有一个 CARLA server 活过了启动它的 runner，占着端口和 6 GB 显存半小时。
+原因：`CarlaUE4.sh` 是个 wrapper，真正的二进制是它的子进程；二进制 segfault 时 wrapper 先退出，
+`Server.stop()` 里的 `os.getpgid(wrapper_pid)` 抛 ESRCH，循环 break，二进制就活下来了。
+修法是在启动时把 pgid 记下来（`setsid` 让 wrapper 就是 group leader），停的时候按记下来的 pgid 杀。
+`Runner.kill()` 有同一个问题，一起修了。**下一步那个泄漏的 server 正是它自己制造的 bind error 的来源。**
+
+## 结果 2：220 条全量实测
+
+（进行中，01:17 启动，8 个 worker）
