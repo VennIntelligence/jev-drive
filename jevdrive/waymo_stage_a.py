@@ -153,11 +153,13 @@ def load_all(set_name: str = "qwen_front3", layer: str = LAYER, seed: int = 0):
     df = waymo.load_index()
     past, future = waymo.load_ego()
     idx, arrs = waymo.load_features(set_name, [layer])
-    have = np.zeros(len(df), bool)
-    have[idx.row.to_numpy()] = True
-    keep = (df.split == "val").to_numpy() & df.has_future.to_numpy() & have
+    # join on frame_name: `row` is a position into the index as it was when the shard was extracted
+    fname = (df.sequence.astype(str) + "-" + df.frame.map("{:03d}".format)).to_numpy()
+    at = pd.Series(np.arange(len(idx)), index=idx.frame_name.to_numpy())
+    pos = at.reindex(fname).to_numpy()
+    keep = (df.split == "val").to_numpy() & df.has_future.to_numpy() & ~np.isnan(pos)
     rows = np.flatnonzero(keep)
-    order = pd.Series(np.arange(len(idx)), index=idx.row.to_numpy()).reindex(rows).to_numpy()
+    order = pos[rows].astype(int)
     sub = {k: v[rows] for k, v in waymo.subsets(df, past, future).items()}
     ego = np.concatenate([waymo.ego_state(past[rows]), waymo.intent_onehot(df.iloc[rows])], 1)
     log.info("rows: %d val frames with a future and a feature (%d indexed); subsets %s", len(rows), len(df),

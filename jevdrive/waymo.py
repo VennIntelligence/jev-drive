@@ -772,11 +772,13 @@ def extract_incremental(cams=CAMS, separate: bool = False, long_side: int | None
     return {"set": name, "shards_done": len(done), "seconds": time.perf_counter() - t0}
 
 
-def load_features(name: str, arrays: list[str] | None = None, rows=None):
+def load_features(name: str, arrays: list[str] | None = None, frames=None):
     """Concatenate a shard-keyed feature set back into (index, {array: (n, d) float16}).
 
-    Shards are read in sorted order and the returned index carries the global `row`, so alignment with
-    load_index() is by that column and never by position. With `rows`, only those global rows are kept.
+    Alignment is by `frame_name`, which is the submission id and is stable. The `row` column is *not* a key:
+    it is a position into the index as it stood when that shard was extracted, and the index grows as shards
+    land, so a shard built at 29 shards carries row ids that mean something else at 93. Keying on it silently
+    mismatches features and targets. `frames` keeps only the named frames.
     """
     root = out_dir("features", name)
     parts = sorted(d for d in root.iterdir() if d.is_dir() and (d / "meta.json").exists())
@@ -785,7 +787,9 @@ def load_features(name: str, arrays: list[str] | None = None, rows=None):
     idx = pd.concat([pd.read_parquet(d / "index.parquet").assign(shard=d.name) for d in parts],
                     ignore_index=True)
     names = arrays or sorted(p.stem for p in parts[0].glob("*.npy"))
-    keep = np.ones(len(idx), bool) if rows is None else np.isin(idx.row.to_numpy(), np.asarray(rows))
+    keep = np.ones(len(idx), bool) if frames is None else np.isin(idx.frame_name.to_numpy(),
+                                                                  np.asarray(frames))
+    keep &= ~idx.frame_name.duplicated().to_numpy()  # a shard re-extracted under a different index
     out = {}
     for a in names:
         blocks, off = [], 0
@@ -796,7 +800,8 @@ def load_features(name: str, arrays: list[str] | None = None, rows=None):
                 blocks.append(np.load(d / f"{a}.npy", mmap_mode="r")[m])
             off += n
         out[a] = np.concatenate(blocks) if blocks else np.zeros((0, 0), np.float16)
-    log.info("%s: %d shards, %d rows, arrays %s", name, len(parts), int(keep.sum()), names)
+    log.info("%s: %d shards, %d rows (%d duplicate frame names dropped), arrays %s", name, len(parts),
+             int(keep.sum()), int(idx.frame_name.duplicated().sum()), names)
     return idx[keep].reset_index(drop=True), out
 
 
