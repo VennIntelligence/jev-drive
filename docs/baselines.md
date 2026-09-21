@@ -22,8 +22,8 @@ Stage breakdowns are tags of the same run (`stage-vision`, `stage-vision-prefill
 | Qwen-Drive, reasoning planning, planner-rl, 1 sample | same | same | yes | same | 1258 / 1249 / 1329 | 11.2 GB alloc | as direct, plus greedy decode of 18 tokens (think block + 13-token rationale, ~30 ms/token) and the turn-closing forward | the mode the card recommends for planner-rl; rationale: "Turn left at the clear intersection and accelerate to the target speed." |
 | same, 6 samples | same | same | yes | same | 1245 / 1243 / 1259 | same | same | |
 | Qwen-Drive, reasoning planning, planner-sft, 1 sample | same | same | yes | same | 1327 / 1243 / 1690 | same | same | p95 tail from CPU contention with other jobs on the box |
-| AutoVLA (Qwen2.5-VL-3B + action tokens), released adaptive-CoT prompt | [ucla-mobility/AutoVLA](https://github.com/ucla-mobility/AutoVLA) `ba34eed`; weights `Zewei-Zhou/AutoVLA` `AutoVLA_PDMS_89.ckpt` (NAVSIM, RFT/GRPO), base `Qwen/Qwen2.5-VL-3B-Instruct` | UCLA Academic Software License: academic / non-profit only, no redistribution of derivatives (our use is academic); weights not gated | yes | `envs/autovla` | 1362 / 1355 / 1418 | 8.6 GB alloc | `AutoVLA.predict()`: JPEG decode and resize of 3 x 4 frames (qwen_vl_utils, CPU), Qwen2.5-VL vision tower, prefill of 1281 tokens (792 of them image tokens, 3 clips at grid 2x24x22), decode of 44 tokens, detokenizing the action tokens to a 10-point trajectory | torch 2.8.0+cu128 instead of their 2.4.0 (sm_120), everything else at their pins. On this scene the adaptive model writes "This is a straightforward scenario, and a direct decision can be made" and skips the chain of thought, so this row is its **fast path**; a scene that triggers real reasoning decodes hundreds of tokens instead of 44, at ~30 ms/token |
-| AutoVLA, fast-thinking prompt (their no-CoT system prompt) | same | same | yes | same | 1407 / 1368 / 1719 | same | same, prefill of 1013 tokens (shorter system prompt) | the checkpoint is the CoT-trained RFT model, so it still emits the same short think-then-answer block: on this scene the two prompts differ by 268 prefill tokens and nothing else, which is why the latency is the same to within noise |
+| AutoVLA (Qwen2.5-VL-3B + action tokens), released adaptive-CoT prompt | [ucla-mobility/AutoVLA](https://github.com/ucla-mobility/AutoVLA) `ba34eed`; weights `Zewei-Zhou/AutoVLA` `AutoVLA_PDMS_89.ckpt` (NAVSIM, RFT/GRPO), base `Qwen/Qwen2.5-VL-3B-Instruct` | UCLA Academic Software License: academic / non-profit only, no redistribution of derivatives (our use is academic); weights not gated | yes | `envs/autovla` | 1362 / 1355 / 1418 | 8.6 GB alloc | `AutoVLA.predict()`: JPEG decode and resize of 3 x 4 frames (qwen_vl_utils, CPU), Qwen2.5-VL vision tower, prefill of 1281 tokens (792 of them image tokens, 3 clips at grid 2x24x22), decode of 44 tokens, detokenizing the action tokens to a 10-point trajectory | torch 2.8.0+cu128 instead of their 2.4.0 (sm_120), everything else at their pins. the adaptive model skips the chain of thought here, and on 150 sampled Waymo val frames it never took the reasoning path either (below), so this is the only path the released checkpoint uses |
+| AutoVLA, fast-thinking prompt (their no-CoT system prompt) | same | same | yes | same | 1407 / 1368 / 1719 | same | same, prefill of 1013 tokens (shorter system prompt) | the checkpoint is the CoT-trained RFT model, so it still emits the same short think-then-answer block: the two prompts differ by 268 prefill tokens and nothing else, which is why the latency is the same to within noise |
 | openjev (DiffusionGemma-26B-A4B NVFP4), 3 front cameras + 3 driving questions, fresh frames | [razorback16/openjev](https://github.com/razorback16/openjev) `91d5005` + vLLM fork `razorback16/vllm` `9bbf741` (precompiled kernels of `2c88fb1`); weights `nvidia/diffusiongemma-26B-A4B-it-NVFP4` rev `ec4ff3d` | Apache-2.0 (code and weights), not gated | yes | `envs/openjev` | 471 / 470 / 502 | vLLM preallocates 0.9 x 96 GB (87.0 GB used); weights ~18 GB | one HTTP round trip to `/v1/systemone` on localhost: base64 decode, Gemma image preprocessing, vision tower, prefill of 1016 input tokens, one read-only denoise step of a 64-token canvas, plus the automatic re-reads when an answer's entropy > 0.1 | not a planner: answers 2 choice + 1 yes/no questions, current frames only, no history. Answers `turn_left` (confidence 0.99, the scene's route command) but is unsure about the longitudinal action (0.10), so every request re-reads: the latency is tight, not bimodal |
 | openjev, same, identical request repeated | same | same | yes | same | 347 / 358 / 385 | same | same, but the vLLM prefix cache holds the images | not representative of driving (every frame is new) |
 | openjev, front camera only, fresh frames | same | same | yes | same | 345 / 345 / 371 | same | same, 502 input tokens | |
@@ -41,8 +41,9 @@ future. Output in `$DATA_DIR/runs/bench_baselines/qwen-drive-1.0-4b/demo/demo.tx
 What to read from it: nothing released here is close to a 10 Hz budget as it ships. Qwen-Drive costs ~0.70 s without
 reasoning and ~1.26 s with it, AutoVLA ~1.36 s even when it decides not to reason, and openjev ~0.47 s for three
 categorical decisions that are not a trajectory at all. Two second-order points matter as much as the ranking:
-**latency is input-dependent** (openjev goes 333 -> 471 ms when the ego state makes an answer uncertain and the
-server re-reads; AutoVLA would go from 44 decoded tokens to hundreds on a scene it decides to think about), and
+**latency is input-dependent where the system reacts to its own uncertainty at run time** (openjev goes
+333 -> 471 ms once a realistic ego state makes one answer uncertain and the server re-reads), while a gate frozen
+at training time gives no such spread (AutoVLA never reasons on 150 sampled Waymo val frames, see below), and
 **the cost is in the generic parts**, not in the planning head: preprocessing, the vision tower, prefill, and
 token-by-token decode through eager `generate`.
 
@@ -58,6 +59,49 @@ Obvious inefficiencies seen (not fixed; the numbers above are as released; speed
   `OPENJEV_AUTO_THRESHOLD`); on this scene one answer stays uncertain, so every request pays four reads.
   A caller that accepts a single read would see roughly the 1-read cost (47 ms on the text benchmark).
   vLLM's scheduler and the async API are also CPU-heavy, and the box's CPU is shared with the dataset jobs.
+
+## AutoVLA's adaptive reasoning never fires on Waymo val
+
+AutoVLA's selling point is adaptive reasoning: the RFT stage is supposed to teach it to think only when a scene
+needs it, which would make its latency input-dependent. Measured on WOD-E2E val, it does not think at all.
+
+Frames come from **our own subset definitions** (`jevdrive.waymo.subsets`), not from the authors' evaluation
+setup: `scripts/bench_baselines/autovla_waymo_sample.py` takes val frames whose 4-frame image window at
+0.5 s spacing is strictly complete for all three cameras, and samples 50 per stratum uniformly without
+replacement, at most one frame per sequence, seed 0. Strata: `straight_yaw` (not turning now or within 3 s),
+`turn_yaw` (already turning, |yaw rate| >= 5 deg/s), `pre_onset` (not turning yet, |yaw rate| < 1 deg/s, but
+turning within 3 s: where the ego prior cannot know the answer). Everything about the model is as released:
+their adaptive-CoT prompt, their generation settings, batch 1, one timed call per frame with
+`torch.cuda.synchronize()` around it. Because the frames differ, the spread here is input dependence, not
+run-to-run noise.
+
+| Stratum | Frames | Think rate | Decoded tokens | Mean / p50 / p95 / p99 ms | Max ms |
+|---|---:|---:|---|---:|---:|
+| all | 150 | **0 %** (0/150; 95 % upper bound 2 %) | 44, always | 1399 / 1387 / 1493 / 1525 | 1566 |
+| straight_yaw | 50 | 0 % | 44 | 1389 / 1382 / 1450 / 1508 | 1512 |
+| turn_yaw | 50 | 0 % | 44 | 1394 / 1386 / 1471 / 1519 | 1522 |
+| pre_onset | 50 | 0 % | 44 | 1416 / 1408 / 1500 / 1548 | 1566 |
+
+Every one of the 150 outputs is the same shape: a 14-token think block whose text is byte-identical every time
+("This is a straightforward scenario, and a direct decision can be made"), then 10 action tokens. Peak VRAM
+8.6 GB. The trajectories themselves do vary sensibly with the input (right-turn frames end 10-11 m to the right,
+straight frames within 1 m of centre, reach scales with speed), so this is the model's own decision, not a
+broken input path.
+
+What to take from it:
+- **AutoVLA has no reasoning tail on this distribution.** Its latency is flat at ~1.4 s, p99 within 10 % of the
+  median, whatever the scene. The gate that was supposed to make it adaptive is saturated at "do not think".
+- **The gate saves nothing here**, because the 1.4 s is prefill plus 44 tokens; skipping reasoning does not buy
+  a fast mode, it only avoids a slower one.
+- It was RFT-trained on nuPlan with an explicit CoT-length penalty and evaluated there; on Waymo, which is out
+  of that distribution, the decision collapses to one answer. That is a data point for the gate question we
+  deferred to a second paper: a gate trained as a cost penalty on one dataset need not transfer as a
+  *when-to-think* policy on another. We have not checked whether it thinks more often on nuPlan or NAVSIM.
+- It also means the input-dependence column in the table above belongs to openjev, not to AutoVLA: openjev's
+  latency moves with the input because its re-read policy reacts to the model's own uncertainty at run time,
+  while AutoVLA's decision is frozen.
+
+Raw output: `$DATA_DIR/runs/bench_baselines/autovla/waymo-val-strata/<time>/{summary,frames}.json`.
 
 ## Backbone controls: how to feed them
 
@@ -95,9 +139,8 @@ What the feature-extraction path has to respect:
 
 ## Still open
 
-- AutoVLA's reasoning path is unmeasured: the released checkpoint skips the chain of thought on this scene.
-  Timing it needs a scene it decides to think about (a busy intersection), which also makes the point about
-  input-dependent latency quantitative.
+- Whether AutoVLA reasons on nuPlan or NAVSIM, the distribution it was RFT-trained and evaluated on. On Waymo
+  val it never does (below), so the cost of its reasoning path is still unmeasured anywhere.
 - Nothing else is blocked. RAP stays cited-only (below).
 
 ## Reproduce
