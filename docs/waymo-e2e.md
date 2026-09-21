@@ -522,13 +522,24 @@ failures worth waking someone for: shards arriving and not being built (extracti
 arriving at all (the download died). In a download-bound run the second one otherwise looks exactly like
 healthy idling, which is why "shards on disk are unbuilt" alone is not enough of a test.
 
+**Two invisible bugs once combined into a third, worse one, which is why both matter.** `feature_status`
+globbed `f"{split}_*.tfrecord-*"`, which matches `val_` and `test_` but not the train shards, named
+`training_...`; so `of` was 0 for train and the stop condition `built >= of` could never be satisfied. On
+its own that is a watcher that does not know when to stop. Combined with an alarm shaped so that idling
+looked healthy, it is a watcher that, **after all 263 shards were built and everyone had stopped watching,
+would have gone on rebuilding the four index files every interval forever** -- firing the hazard above
+continuously, unattended, with nothing in any log saying so. Neither bug alone would have been noticed. When
+this loop is given a new split, check that `feature_status` reports a non-zero `of` for it before trusting
+the run to end by itself.
+
 **What this does to everything else on the box.** The re-index at the top of every pass rewrites
 `index.parquet`, `past.npy`, `future.npy` and `rater.parquet` together, so while the watcher runs those four
 files change every few minutes and the index grows (261 497 to 272 458 rows over one afternoon). Two
 consequences for anything else reading the processed tree at the same time:
 
-- The four files are written in place, one after another, not published atomically. A reader can load one
-  from before a rebuild and another from after it, and nothing in the files says so.
+- The four are built aside and renamed in back to back, so no reader ever sees a half-written file and the
+  inconsistent window is microseconds rather than the whole length of a rebuild. **That is a smaller window,
+  not a guarantee**: four renames are not one atomic act, and a reader can still land between two of them.
 - `rater.parquet`'s `row` column is a **position** into the index as it stood when that rebuild happened. Mix
   vintages and the rater trajectories sit beside the wrong frames. This is the bug the per-shard feature
   memmaps had before they were keyed on `frame_name`, in a different file, and it fails quietly:
