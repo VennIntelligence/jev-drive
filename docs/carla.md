@@ -67,6 +67,17 @@ Each of these cost us time; none is guessable.
 - **Never `pgrep -f`/`pkill -f` a pattern that appears in your own command line.** We killed our own
   ssh session with `pgrep -f carla-releases`, the same hazard `long-runs.md` describes. Use
   `pgrep -x curl`, explicit PIDs, or a process group.
+- **A traffic manager port outlives the server that owned it.** This is the single most expensive
+  trap here: an unattended 44-route run needed 12 restarts and *all 12* were traffic-manager port
+  reuse - CARLA itself never crashed once. Kill a server and start another on the same RPC port, and
+  the new client's `get_trafficmanager()` on the derived port fails with
+  `trying to create rpc server for traffic manager; but the system failed to create because of bind
+  error`. It looks exactly like a server crash and it is not. It also masquerades as whatever you
+  were testing: it wasted a Town12 spawn experiment here by failing before the spawn was reached.
+  Bench2Drive spaces its task ports **150 apart**, which reads as over-caution until you hit this.
+  Our scripts now space RPC ports 50 apart (`2000 + 50i`, traffic manager `8000 + 50i`); they used
+  to use 4, which is the same hazard, so do not run servers back to back on a narrow spacing.
+  `scripts/carla_bench.py --tm-port` overrides it when you need consecutive runs on one RPC port.
 - **Stop sensors before destroying actors.** A camera callback that fires on a destroyed sensor
   throws inside a CARLA worker thread; an uncaught exception there calls `terminate()` and aborts
   the whole client. Call `sensor.stop()` on every sensor, `world.tick()` once to drain in-flight
@@ -95,7 +106,7 @@ Keep this venv separate from `envs/jevdrive` (Python 3.11): the 0.9.15 client ca
 ## Starting and stopping a server
 
 ```bash
-scripts/carla_server.sh start 0     # index 0 -> rpc port 2000; index i -> 2000 + 4i
+scripts/carla_server.sh start 0     # index 0 -> rpc port 2000; index i -> 2000 + 50i
 scripts/carla_server.sh status
 scripts/carla_server.sh stop 0      # omit the index to stop every server we started
 ```
@@ -117,9 +128,13 @@ statistics are the only check that catches it.
 
 ## Measured throughput
 
-Town10HD_Opt, 40 background vehicles, synchronous 20 Hz, `-quality-level=Epic`, one instance.
-"Real-time factor" is simulated seconds per wall second; 1.0 means the simulator keeps up with
-the 20 Hz clock.
+Town10HD_Opt, 40 background vehicles, synchronous 20 Hz, `-quality-level=Epic`, one instance,
+**idle card**. "Real-time factor" is simulated seconds per wall second; 1.0 means the simulator
+keeps up with the 20 Hz clock.
+
+These are server-stepping rates with a non-blocking consumer, not closed-loop rates; see the cost
+section below. They are also measured on an otherwise idle GPU, so they are not comparable with
+anything measured while a training or feature job shares the card.
 
 | Cameras | Resolution | FPS | Real-time factor |
 |---|---|---|---|
@@ -163,28 +178,23 @@ does the staggering.
 
 ## What a Bench2Drive evaluation would cost
 
-Not measured - we have run no routes. This is arithmetic on the numbers above, and the assumptions
-are the load-bearing part.
+**See [bench2drive-cost.md](bench2drive-cost.md).** It measures the real closed loop on real routes
+and supersedes the estimate this doc used to carry.
 
-Assumptions: 220 routes; 20 Hz; `scenario_manager.py` caps a route at 4000 ticks (200 simulated
-seconds); routes are short (mean 105 m, median 104 m, measured from `bench2drive220.xml`), so a
-typical route is perhaps 1000 ticks, with 4000 the worst case. Four concurrent instances.
+The numbers in this doc are a **server-side ceiling, not a closed-loop rate**, and the two are far
+apart. `scripts/carla_bench.py` registers a camera callback that keeps whatever frame has arrived
+and never blocks, so it measures how fast the server can step. A real agent blocks in
+`SensorInterface.get_data` until every frame for the tick has landed, and also pays for the scenario
+tree. Measured in that loop, one camera at 1600x900 is 0.54x real time against the 1.42x below, and
+six cameras 0.19x against 0.48x - roughly 3x apart, in the direction you would expect.
 
-| Agent | Sim throughput | 220 routes @ 1000 ticks | @ 4000 ticks |
-|---|---|---|---|
-| 1 camera | 86.5 ticks/s (measured) | 0.7 h | 2.8 h |
-| 6 cameras | ~24 ticks/s (**extrapolated**, not measured at N=4) | 2.5 h | 10 h |
+Use this doc's numbers for sizing servers and instances. Use bench2drive-cost.md for what a run
+costs.
 
-That is the simulator floor with a free agent. A real agent costs more, and the way it costs more
-matters: **CARLA already saturates the GPU at four instances**, so model inference competes with
-rendering on the same card. Running a heavy BEV model means fewer CARLA instances, not the same
-number plus inference.
-
-For calibration, published numbers: carla_garage reports ~4 h for TransFuser++ on **8x 2080Ti**
-(≈32 GPU-hours), and the Bench2Drive authors report "several days" on 4x A6000 for UniAD/VAD-class
-models. Scaled to our single card at four instances, expect **roughly a day for a light agent and
-several days for a six-camera BEV model**. Use the 10-route Dev10 subset
-(`drivetransformer_bench2drive_dev10.xml`) to bring a pipeline up; it exists for exactly this.
+The per-sensor conclusion agrees from both sides, which is the useful part: here, four times fewer
+pixels bought 9%; there, sixteen times fewer bought 3%. Both are at or inside that doc's stated
+7-8% noise band, so read our 9% as "no effect" too. The cost is a fixed per-camera, per-tick render
+and readback. Render fewer cameras; resolution will not save you.
 
 ## What the smoke test does not prove
 
@@ -204,10 +214,20 @@ completes, because "CARLA is easy to crash", and ships `tools/clean_carla.sh` fo
 | Item | Size | Status |
 |---|---|---|
 | `CARLA_0.9.15.tar.gz` | 7.81 GiB (8,386,636,048 B) | **done**, extracted to 19 GB |
-| `AdditionalMaps_0.9.15.tar.gz` | 6.87 GiB (7,375,946,087 B) | **paused at 4.98 GB**, resume with `scripts/download_carla.sh maps` |
+| `AdditionalMaps_0.9.15.tar.gz` | 6.87 GiB (7,375,946,087 B) | **done**, downloaded and imported |
 | Bench2Drive repo (branch `0.0.4`) | 145 MB | **done**, `$DATA_DIR/third_party/Bench2Drive` |
 | Python 3.8 client venv | small | **done**, `$DATA_DIR/envs/carla` |
 | Bench2Drive **training** dataset | 400 GB - 7.3 TB | **not needed** and not downloaded |
+
+**Downloading AdditionalMaps is not enough - it has to be imported.** The tarball must be moved
+into `CARLA_0.9.15/Import/` and installed, or the extra towns simply are not there and a route
+referencing Town12 fails to load:
+
+```bash
+scripts/download_carla.sh maps
+mv $DATA_DIR/third_party/carla/AdditionalMaps_0.9.15.tar.gz $CARLA_ROOT/Import/
+cd $CARLA_ROOT && bash ImportAssets.sh      # consumes the tarball, takes a few minutes
+```
 
 **AdditionalMaps is not optional.** The 220 routes break down by town as:
 

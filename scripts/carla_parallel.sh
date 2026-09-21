@@ -15,7 +15,7 @@ nvidia-smi --query-gpu=memory.used --format=csv,noheader > "$out/vram_before_cli
 # Bench2Drive's own multi-task script staggers too (sleep 5 between tasks).
 for i in $(seq 0 $((n - 1))); do
   "$DATA_DIR/envs/carla/bin/python" "$here/carla_bench.py" \
-    --port $((2000 + 4 * i)) --tag "n$n-i$i" "$@" >"$out/client-$i.log" 2>&1 &
+    --port $((2000 + 50 * i)) --tag "n$n-i$i" "$@" >"$out/client-$i.log" 2>&1 &
   sleep 20
 done
 sleep 45 && nvidia-smi --query-gpu=memory.used,utilization.gpu --format=csv,noheader >"$out/gpu_under_load.txt" &

@@ -29,6 +29,12 @@ def parse_args():
     p.add_argument("--ticks", type=int, default=400)
     p.add_argument("--warmup", type=int, default=40)
     p.add_argument("--tag", default="")
+    p.add_argument("--tm-port", type=int, default=0,
+                   help="traffic manager port; 0 derives it from --port. A TM port lingers after "
+                        "its server dies, so consecutive runs on one rpc port need distinct values")
+    p.add_argument("--spawn-lift", type=float, default=0.0,
+                   help="raise every spawn transform by this many metres and let the actor settle; "
+                        "on large maps (Town12/13) spawning too low segfaults the server")
     return p.parse_args()
 
 
@@ -46,14 +52,30 @@ def main():
 
     bp = world.get_blueprint_library()
     spawns = world.get_map().get_spawn_points()
-    ego = world.spawn_actor(bp.filter("vehicle.lincoln.mkz_2017")[0], spawns[0])
+
+    def lifted(tf):
+        if not a.spawn_lift:
+            return tf
+        return carla.Transform(
+            carla.Location(tf.location.x, tf.location.y, tf.location.z + a.spawn_lift),
+            tf.rotation)
+
+    # try_spawn_actor returns None for a placement the server rejects; spawn_actor raises, and on a
+    # large map a bad placement can take the server down instead.
+    ego = None
+    for sp in spawns:
+        ego = world.try_spawn_actor(bp.filter("vehicle.lincoln.mkz_2017")[0], lifted(sp))
+        if ego is not None:
+            break
+    if ego is None:
+        print("FAIL: no spawn point accepted the ego"); return 1
     actors = [ego]
 
-    tm = client.get_trafficmanager(8000 + (a.port - 2000) // 4)
+    tm = client.get_trafficmanager(a.tm_port or (8000 + (a.port - 2000)))
     tm.set_synchronous_mode(True)
     ego.set_autopilot(True, tm.get_port())
     for sp in spawns[1:1 + a.traffic]:
-        v = world.try_spawn_actor(bp.filter("vehicle.*")[0], sp)
+        v = world.try_spawn_actor(bp.filter("vehicle.*")[0], lifted(sp))
         if v:
             v.set_autopilot(True, tm.get_port())
             actors.append(v)

@@ -3,14 +3,16 @@
 # Usage: scripts/carla_server.sh start [index]   # index 0,1,2... -> rpc port 2000+4*index
 #        scripts/carla_server.sh stop  [index]   # omit index to stop every server we started
 #        scripts/carla_server.sh status
-# One server per index: RPC port 2000+4i, streaming port +1, secondary +2, traffic manager 8000+i.
+# One server per index: RPC port 2000+50i, traffic manager 8000+50i. The 50-port spacing is not
+# cosmetic: a CARLA server claims several ports above its RPC port, and a traffic manager port
+# OUTLIVES the server that owned it. See docs/carla.md.
 set -euo pipefail
 
 CARLA_ROOT=${CARLA_ROOT:-$DATA_DIR/third_party/carla/CARLA_0.9.15}
 RUN_DIR=${CARLA_RUN_DIR:-$DATA_DIR/runs/carla}
 QUALITY=${CARLA_QUALITY:-Epic}
 
-port_of() { echo $((2000 + 4 * $1)); }
+port_of() { echo $((2000 + 50 * $1)); }
 
 start() {
   local i=${1:-0} port; port=$(port_of "$i")
