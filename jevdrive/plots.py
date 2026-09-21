@@ -141,3 +141,37 @@ def probe_layer_curve(res: pd.DataFrame, out_dir, protocol: str = "kfold"):
         axes[0].legend(loc="upper center", ncol=2, fontsize=5.5)
         save(fig, out_dir, "probe_layer_curve")
     return out_dir / "probe_layer_curve.png"
+
+
+def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B ego:a1", "D mlp uniform")):
+    """Relative gain of each arm over the ego ridge against the evaluation half's own s_ego decile.
+
+    Left panel all evaluation frames, right panel straight_yaw only, so that a lateral confound cannot be
+    the explanation. Both directions of the half-val split are drawn, solid and dashed. Bands are the paired
+    sequence-bootstrap 95 % interval of the absolute delta, divided by that decile's ego ADE.
+    """
+    lab = {"A ridge_late uniform": "ridge$_{late}$ uniform", "B ego:a1": r"ridge$_{late}$ $1+s_{ego}$",
+           "D mlp uniform": "MLP uniform"}
+    col = {"A ridge_late uniform": COLOR["qwen_mean"], "B ego:a1": COLOR["vision"],
+           "D mlp uniform": COLOR["oracle"]}
+    with mpl.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.3), sharey=True)
+        for ax, scope, title in zip(axes, ("all", "straight_yaw"), ("all frames", "straight frames only")):
+            ax.axhline(0, color=COLOR["baseline"], lw=0.6, zorder=1)
+            for arm in arms:
+                for d, ls in ((0, "-"), (1, "--")):
+                    g = dec[(dec.scope == scope) & (dec.arm == arm) & (dec.direction == d)].sort_values("decile")
+                    if not len(g):
+                        continue
+                    x = g.decile.to_numpy() + 1
+                    ax.plot(x, 100 * g.rel_gain, ls, color=col[arm], marker="o" if d == 0 else None,
+                            label=lab[arm] if d == 0 else None)
+                    if d == 0:
+                        ax.fill_between(x, 100 * g.rel_lo, 100 * g.rel_hi, color=col[arm], alpha=0.15, lw=0)
+            ax.set_xlabel(r"decile of $s_{ego}$ on the evaluation half")
+            ax.set_xticks(range(1, 11))
+            ax.text(0.03, 0.06, title, transform=ax.transAxes)
+        axes[0].set_ylabel("relative gain over ego (%)")
+        axes[0].invert_yaxis()
+        legend_below(fig, axes[0])
+        save(fig, out_dir, "l0-decile-relative-gain")
