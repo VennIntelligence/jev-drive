@@ -438,8 +438,14 @@ quoting a latency anywhere.
 Batch size does not change throughput at all -- one frame at 3060 tokens already fills the GPU. Measured back
 to back in one run, batches of 1, 2, 4 and 8 gave 216, 219, 216 and 211 ms/frame. Only memory moves: peak VRAM
 8.7 / 9.1 / 9.7 / 11.2 GB, and **batch 16 was killed by the host OOM killer**, because 8 DataLoader workers
-prefetching 4 batches each hold ~40 GB of pixel values (one native front3 frame is ~76 MB of them). Batch 4 is
-the default; raise the batch only together with fewer workers or a smaller prefetch.
+prefetching 4 batches each hold ~40 GB of pixel values (one native front3 frame is ~76 MB of them).
+
+**Batch size does change the features, so it is not a free knob: leave it at 4.** Re-extracting 128 frames of
+an already-built val shard and comparing with what is on disk, batch 4 reproduces all ten arrays bit for bit,
+while batch 8 reproduces none of them -- a different batch shape picks different GEMM tiling, and the error
+compounds through 36 decoder layers to a mean relative deviation of 2.0e-2 on `L36_last`, far above float16
+storage noise. Two feature sets built at different batch sizes cannot be compared, and it buys nothing anyway
+(125.0 vs 125.7 ms/frame). Everything under `qwen_front3` -- val, train and test -- is built at batch 4.
 
 **Default: `front3`, three cameras in one forward, native pixels.** The choice is not about speed. Joint and
 per-camera forwards are within ~25% of each other in both directions across runs, for a clear reason: the joint
@@ -458,7 +464,7 @@ of raw bytes per frame that both the val and test shards show), at 47 KB of floa
 | Part | frames | GPU time at the default | features |
 |---|---:|---:|---:|
 | val, every frame | 107 k | 3.8 - 6.4 h | 5.0 GB |
-| train, every frame | 414 k | 14.6 - 24.8 h | 19.4 GB |
+| train, every frame | 414 k | 14.6 - 24.8 h (14.5 h measured) | 19.4 GB |
 | test, every frame | 205 k | 7.2 - 12.3 h | 9.6 GB |
 | test, only the 1 505 submission frames | 1.5 k | ~4 min | 0.07 GB |
 | **whole dataset** | **726 k** | **26 - 44 h** | **34 GB** |
@@ -466,6 +472,59 @@ of raw bytes per frame that both the val and test shards show), at 47 KB of floa
 So the feature cache is not a storage problem at all, and one pass over everything is one to two days of a
 shared GPU. Two obvious savings if that is too much: extract test only for the submission frames and their
 history, and subsample train (every 5th index is 2 Hz and cuts it to 3 - 5 h).
+
+### Extracting as shards land
+
+`scripts/tmux_run.sh wfeat-train env INTERVAL=300 scripts/waymo_features_watch.sh train` extracts a split
+while it is still downloading. The script only sets the environment; the loop is
+`jevdrive.waymo features_inc --watch`, and each pass **re-runs the index before deciding what to extract**.
+That order is the whole point: a loop that is incremental in extraction but not in arrival asks the index what
+exists, gets the answer the index was built with, and sleeps while new shards pile up unseen. Each pass logs
+what it saw -- shards on disk, shards indexed, shards built, out of the split's total -- not only what it did,
+and warns when shards sit unbuilt while nothing moves. A shard that raises is logged and skipped so it cannot
+block the rest; one that fails twice is set aside loudly.
+
+A shard is the unit of work: its own arrays, its own `index.parquet`, and a `meta.json` written only when it
+is finished, which is also its done-marker. So a crash costs one shard, and `load_features` merges whatever is
+finished, keyed on `frame_name` (never on `row`, which is a position into an index that grows).
+
+The model is loaded and compiled once for the whole run rather than once per pass. Extraction takes ~3.4 min
+per 1 574-frame shard against a ~4.5 min download cadence, so once it has caught up a pass is a single shard,
+and a reload each time would be pure overhead. With `INTERVAL=300` the steady state lags the download by about
+four shards.
+
+### Where the extraction time goes
+
+Profiled on a quiet card while the train download was running (2026-09-21,
+[todos/2026-09-21-waymo-train-features.md](../todos/2026-09-21-waymo-train-features.md)). Per frame, meaning
+three cameras in one forward:
+
+| Stage | ms | Where it runs |
+|---|---:|---|
+| `pread` the three JPEG spans | 0.1 | DataLoader worker |
+| JPEG decode, 3 x 972x1079 | 17.8 | DataLoader worker |
+| Qwen processor (smart_resize to 960x1088, normalise, patchify) | 38.6 | DataLoader worker |
+| **one item, decode + processor** | **63.1** | one core |
+| GPU forward, compiled, batch 4 | **132.0** | GPU |
+| GPU forward, uncompiled, batch 4 | 183.4 | GPU (so `torch.compile` is worth 28%) |
+
+**This path is GPU-bound, not preprocessing-bound.** The GPU wants an item every 132 ms and one core produces
+one every 63 ms, so two workers already keep it fed; end-to-end throughput (125 - 132 ms/frame) equals the
+forward alone, i.e. I/O and preprocessing are fully hidden. `loader_workers()` therefore defaults to
+`max(2, min(6, n_cpus() // 4))` = 6 here, a 3x margin that leaves the other 19 cores to whatever is
+downloading the shards; the old `n_cpus() // 2` = 12 bought nothing.
+
+Inside the forward, at batch 8: ViT 44.5 ms, the 36 decoder layers 72.8 ms, merger + DeepStack + pooling +
+H2D 10.3 ms. The decoder part is ~3.0 B non-embedding parameters over 3 074 tokens, i.e. ~18.4 TFLOP in
+72.8 ms = **253 TFLOPS bf16, at this card's dense roofline**. There is nothing left to win in the pipeline:
+the only ways to go faster are fewer tokens (lower resolution) or fewer layers (a real early exit), and both
+change the stored features.
+
+One lead that did **not** pay off, recorded so it is not chased again: Pillow can have libjpeg decode at 1/2,
+1/4 or 1/8 scale via `img.draft("RGB", (w, h))`, which cut a Qwen policy's latency sharply elsewhere in this
+project. It does not apply here. `smart_resize` maps the native 972x1079 front camera to 960x1088, so there is
+no downscale for `draft` to exploit -- the 1/2 draft is 486x540 and would have to be interpolated back up,
+changing every feature -- and it would only save 3-5 ms of CPU that is already hidden behind the GPU.
 
 ### Submission
 
