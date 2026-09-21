@@ -149,9 +149,10 @@ class Server(object):
     """One headless CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality, gpu_rank=0):
+    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0):
         self.index = index
         self.gpu_rank = gpu_rank
+        self.stride = stride or 1
         self.port = 2000 + 4 * index
         self.tm_port = 8000 + index
         self.log_dir = Path(log_dir)
@@ -182,6 +183,16 @@ class Server(object):
             time.sleep(2)
         self.stop()
         raise RuntimeError("CARLA server %d never opened port %d" % (self.index, self.port))
+
+    def move(self):
+        """Take the next port slot. Twice in the 44-route run a worker's slot became unusable -
+        every attempt on it hung before the route printed a line, while the same routes ran first
+        time on a fresh slot - so a worker that fails a route does not keep asking the same ports
+        to work."""
+        self.stop()
+        self.index += self.stride
+        self.port = 2000 + 4 * self.index
+        self.tm_port = 8000 + self.index
 
     def alive(self):
         return self.proc is not None and self.proc.poll() is None
@@ -320,7 +331,7 @@ class Runner(object):
 
     def worker(self, wi):
         server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality,
-                        self.a.gpu_rank)
+                        self.a.gpu_rank, stride=self.a.workers)
         try:
             while not self.stop_flag:
                 rid = self.next_route()
@@ -342,7 +353,9 @@ class Runner(object):
                         break
                     # Anything that is not a clean finish means the server is suspect: a hung or
                     # segfaulted server answers RPCs for a while and then fails the next route too.
-                    server.stop()
+                    # Come back on a different port as well, in case the slot is what is broken.
+                    server.move()
+                    self.event("server_moved", worker=wi, index=server.index, port=server.port)
                 # Release either way: the claim exists to stop two runners racing, not to record
                 # the outcome. A route that never finished must be retryable by the next run.
                 self.release(rid)
@@ -416,7 +429,15 @@ class Runner(object):
                 record["status"] = "unreadable_result"
         record["ticks"] = record.get("profile", {}).get("ticks")
         if reason:
-            record["status"] = reason
+            # A route can write its result and then hang on the way out - the CARLA client's
+            # threads do not always stop - so a kill does not mean the route failed. Keep what the
+            # route said about itself and record the kill beside it.
+            record["killed"] = reason
+            record.setdefault("status", reason)
+            if record["status"] == "harness_error":
+                pass  # the route's own verdict is the more informative one
+            elif "profile" not in record:
+                record["status"] = reason
         elif "status" not in record:
             record["status"] = "no_result_file"
         record["returncode"] = proc.returncode
