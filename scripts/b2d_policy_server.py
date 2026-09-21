@@ -43,6 +43,10 @@ def parse_args():
                                                   "is where the forward stops (decisions 5)")
     p.add_argument("--compile", action="store_true", help="torch.compile; costs minutes at startup")
     p.add_argument("--bench", type=int, default=0, help="run N local forwards and exit")
+    p.add_argument("--bench-size", default="1600x900",
+                   help="size of the frames the bench feeds in. CARLA's per-camera cost is "
+                        "independent of resolution, so rendering straight at the model's input "
+                        "size is free on the simulator side and removes the resize here")
     p.add_argument("--ready-file", default="")
     return p.parse_args()
 
@@ -97,7 +101,8 @@ def main():
     fx, infer, split = build(a)
 
     # Warm up: the first calls build the batch-shape constants and, with compile, the graphs.
-    dummy = [np.zeros((900, 1600, 3), dtype=np.uint8) for _ in range(max(1, a.n_images))]
+    bw, bh = (int(x) for x in a.bench_size.split("x"))
+    dummy = [np.zeros((bh, bw, 3), dtype=np.uint8) for _ in range(max(1, a.n_images))]
     for _ in range(3):
         infer(dummy)
     if a.backbone == "qwen":
