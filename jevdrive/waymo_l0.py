@@ -162,7 +162,7 @@ def noise_check(df: pd.DataFrame, rows: np.ndarray, past: np.ndarray, fut: np.nd
     fspd = np.linalg.norm(np.diff(np.concatenate([np.zeros((len(fut), 1, 2), np.float32), fut], 1), axis=1),
                           axis=-1) / waymo.DT
     rated = np.zeros(len(df), bool)
-    rated[waymo.load_rater()[0]] = True
+    rated[waymo.load_rater(df)[0]] = True
     rated = rated[rows]
     lim = float(np.quantile(jump, 0.999))
     out = []

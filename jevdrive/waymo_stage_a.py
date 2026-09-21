@@ -58,7 +58,7 @@ def half_report(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, halves: 
     val = (df.split == "val").to_numpy() & df.has_future.to_numpy()
     sub = waymo.subsets(df, past, future)
     rater = np.zeros(len(df), bool)
-    rater[waymo.load_rater()[0]] = True
+    rater[waymo.load_rater(df)[0]] = True
     rows = []
     for i in (0, 1):
         m = val & (h == i)
@@ -69,11 +69,12 @@ def half_report(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, halves: 
     return pd.DataFrame(rows)
 
 
-def vocab_coverage_rfs(anchors: torch.Tensor, rows: np.ndarray, chunk: int = 8) -> np.ndarray:
+def vocab_coverage_rfs(anchors: torch.Tensor, rows: np.ndarray, df: pd.DataFrame | None = None,
+                       chunk: int = 8) -> np.ndarray:
     """Per rater-scored frame: 1.0 when no anchor in the whole vocabulary lands inside any rater's trust
     region, i.e. the frame is floored whatever the scorer picks. This is the coverage floor in the metric's
-    own terms and it is what the oracle minADE cannot see."""
-    r, rtraj, scores = waymo.load_rater()
+    own terms and it is what the oracle minADE cannot see. `df` is the index `rows` indexes."""
+    r, rtraj, scores = waymo.load_rater(df)
     keep = np.isin(r, rows)
     r, rtraj, scores = r[keep], rtraj[keep], scores[keep]
     if not len(r):
@@ -109,7 +110,7 @@ def vocab_sweep(ks=(64, 256, 1024, 4096, 8192), seed: int = 0, out_dir=None, rl=
     for k in ks:
         C = traj.kmeans(F, k, seed=seed)
         o = traj.oracle_metrics(C, gt)
-        cov = vocab_coverage_rfs(C, ev)
+        cov = vocab_coverage_rfs(C, ev, df)
         r = {"K": k, "n_eval": len(ev), "n_rater": len(cov),
              "oracle_minade": o["oracle_ade"].mean(), "oracle_minfde": o["oracle_fde"].mean(),
              "rfs_uncoverable": cov.mean() if len(cov) else np.nan}
@@ -168,8 +169,11 @@ def load_all(set_name: str = "qwen_front3", layer: str = LAYER, seed: int = 0):
 
 
 def rfs_rows(df, rows):
-    """(positions into `rows`, rater trajectories, scores) for the rater-scored frames among them."""
-    r, rtraj, scores = waymo.load_rater()
+    """(positions into `rows`, rater trajectories, scores) for the rater-scored frames among them.
+
+    Rater frames outside `rows` are dropped here on purpose: one half of the split holds half of them. The
+    check that the index and the rater file belong together lives in waymo.load_rater."""
+    r, rtraj, scores = waymo.load_rater(df)
     pos = pd.Series(np.arange(len(rows)), index=rows).reindex(r).to_numpy()
     ok = ~np.isnan(pos)
     return pos[ok].astype(int), rtraj[ok], scores[ok]

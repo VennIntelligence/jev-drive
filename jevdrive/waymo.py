@@ -199,14 +199,16 @@ def build_index(workers: int | None = None, force: bool = False) -> pd.DataFrame
     np.save(root / "past.npy", ego[:, :N_PAST * len(PAST_FIELDS)].reshape(-1, N_PAST, len(PAST_FIELDS)))
     np.save(root / "future.npy", ego[:, N_PAST * len(PAST_FIELDS):].reshape(-1, N_FUTURE, 3))
 
-    rows = []                # one row per (frame, rater trajectory): 3 per scored frame, a few hundred in all
+    rows, names = [], frame_names(df)   # one row per (frame, rater trajectory): 3 per scored frame
     for i in np.flatnonzero(rater != ""):
         r = json.loads(rater[i])
-        rows += [{"row": int(i), "traj": j, "score": float(sc), "pos_x": np.array(x, np.float32),
-                  "pos_y": np.array(y, np.float32)}
+        rows += [{"row": int(i), "frame_name": names[i], "traj": j, "score": float(sc),
+                  "pos_x": np.array(x, np.float32), "pos_y": np.array(y, np.float32)}
                  for j, (sc, x, y) in enumerate(zip(r["score"], r["pos_x"], r["pos_y"]))]
-    pd.DataFrame(rows, columns=["row", "traj", "score", "pos_x", "pos_y"]).to_parquet(root / "rater.parquet",
-                                                                                      index=False)
+    # `frame_name` is the key. `row` stays for readers that predate this column, and is only valid against
+    # the index written in this same call.
+    pd.DataFrame(rows, columns=["row", "frame_name", "traj", "score", "pos_x", "pos_y"]) \
+        .to_parquet(root / "rater.parquet", index=False)
     log.info("index: %d frames, %d sequences, splits %s, %d rater-scored frames -> %s", len(df),
              df.sequence.nunique(), df.split.value_counts().to_dict(), df.n_pref.gt(0).sum(), root)
     return df
@@ -354,6 +356,15 @@ def history_report(df: pd.DataFrame, windows=((1, 1), (1, 5), (3, 5), (3, 10), (
 
 # ---------------------------------------------------------------- targets, inputs, ego-only baselines
 
+def frame_names(df: pd.DataFrame) -> np.ndarray:
+    """The submission id of every indexed frame, `<sequence>-<frame:03d>`.
+
+    This is the only stable key into the index: a row position is a position into the index *as it stood*
+    when it was written, and `build_index` renumbers every row each time a shard lands.
+    """
+    return (df.sequence.astype(str) + "-" + df.frame.map("{:03d}".format)).to_numpy()
+
+
 def future_xy(future: np.ndarray) -> np.ndarray:
     """(n, 20, 2) submission-convention waypoints: current rear-axle ego frame, +x forward, +y left,
     first point at t + 0.25 s. future_states is already in that frame, so this only drops z."""
@@ -456,7 +467,7 @@ def onset_sweep(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: s
     what limits RFS there, so it is projected to a complete val split as well."""
     m = (df.split == split).to_numpy() & df.has_future.to_numpy()
     rated = np.zeros(len(df), bool)
-    rated[load_rater()[0]] = True
+    rated[load_rater(df)[0]] = True
     n_rated = int((rated & m).sum())
     rows = []
     for yaw in (1.0, 2.0, 3.0):
@@ -509,11 +520,44 @@ def baseline_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split
 
 # ---------------------------------------------------------------- Rater Feedback Score (the official metric)
 
-def load_rater() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_rater(df: pd.DataFrame | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """The rater-scored frames: (rows into the index, trajectories (n, 3, 20, 2), scores (n, 3)).
+
     Trajectories are truncated / padded to 3 x 20 waypoints the way the official metric does before scoring:
-    repeat the last waypoint, then the last trajectory (with its label)."""
+    repeat the last waypoint, then the last trajectory (with its label).
+
+    The returned rows are positions into the *current* index, resolved through `frame_name`. They have to be:
+    `build_index` rewrites index.parquet, past.npy, future.npy and rater.parquet together every time a shard
+    lands, and a reader that picked up the index before such a rebuild and this file after it pairs rater
+    trajectories with the wrong frames -- silently, because nothing downstream can tell. Pass the `df` you
+    are actually working with, so the check is against that index and not against a newer one on disk.
+
+    A rater.parquet written before the `frame_name` column existed can only be checked, not repaired: its
+    row positions are verified against the index's own `n_pref` and a mismatch raises rather than returning
+    plausible-looking garbage.
+    """
     t = pd.read_parquet(out_dir() / "rater.parquet")
+    df = load_index() if df is None else df
+    if "frame_name" in t.columns:
+        at = pd.Series(np.arange(len(df)), index=frame_names(df))
+        pos = at.reindex(t.frame_name.to_numpy()).to_numpy()
+        if np.isnan(pos).any():
+            miss = pd.unique(t.frame_name.to_numpy()[np.isnan(pos)])
+            raise RuntimeError(
+                f"{out_dir() / 'rater.parquet'} names {len(miss)} frames that {out_dir() / 'index.parquet'} "
+                f"does not contain, e.g. {list(miss[:3])}. The two files describe different datasets, not "
+                f"just a different row numbering: re-run reindex so that both are written together.")
+        t = t.assign(row=pos.astype(int))
+    elif len(t):
+        want, got = np.flatnonzero(df.n_pref.to_numpy() > 0), np.sort(t.row.unique())
+        if not np.array_equal(got, want):
+            raise RuntimeError(
+                f"{out_dir() / 'rater.parquet'} and {out_dir() / 'index.parquet'} were written at different "
+                f"times, so scoring against them would pair rater trajectories with the wrong frames. This "
+                f"rater file predates the frame_name column, so it can only be keyed by row position, and "
+                f"its {len(got)} positions no longer match the index's {len(want)} rated frames "
+                f"(build_index renumbers every row each time a shard lands). Pin a snapshot with "
+                f"scripts/snapshot_processed.sh, or re-run reindex so that both files are written together.")
     rows, traj, scores, raw_len = [], [], [], []
     for row, g in t.groupby("row", sort=True):
         xy = [np.stack([x, y], -1) for x, y in zip(g.pos_x, g.pos_y)]
@@ -599,7 +643,7 @@ def rfs_by_cluster(score: np.ndarray, cluster: np.ndarray) -> tuple[float, pd.Se
 def rater_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray) -> pd.DataFrame:
     """RFS and the official ADE (against the highest-scored rater trajectory) for every ego-only baseline,
     plus the logged future and the rater trajectories themselves as reference points."""
-    rows_i, traj, scores = load_rater()
+    rows_i, traj, scores = load_rater(df)
     if not len(rows_i):
         raise SystemExit("no rater-scored frames in the index yet")
     speed, cluster = init_speed(past[rows_i]), df.cluster.astype(str).to_numpy()[rows_i]
@@ -629,7 +673,7 @@ def subset_table(df: pd.DataFrame, past: np.ndarray, future: np.ndarray, split: 
     """The ego-only baselines on each frame subset, with ADE against the log, and -- on whatever part of the
     subset is rater-scored -- RFS and the official ADE against the top-rated trajectory, side by side."""
     m = eval_set(df, split, clip)
-    rows_i, traj, scores = load_rater()
+    rows_i, traj, scores = load_rater(df)
     rated = np.zeros(len(df), bool)
     rated[rows_i] = True
     at_row = {int(r): i for i, r in enumerate(rows_i)}
@@ -1119,7 +1163,7 @@ def check(n: int = 64) -> None:
             "CV must be better on straight frames"
         log.info("check: baselines ordered as expected (%d val frames, %d near-straight)", m.sum(), straight.sum())
 
-    rows_i, traj, scores = load_rater()
+    rows_i, traj, scores = load_rater(df)
     if len(rows_i):
         assert np.array_equal(rows_i, np.flatnonzero(df.n_pref.to_numpy() > 0)), "rater.parquet is misaligned"
         for i in rng.choice(len(rows_i), min(8, len(rows_i)), replace=False):   # against the raw records
