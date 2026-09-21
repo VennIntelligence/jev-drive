@@ -11,6 +11,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import torch
 from PIL import Image
 from transformers import AutoConfig, AutoImageProcessor, AutoModel, AutoModelForImageTextToText, AutoProcessor
@@ -30,23 +31,46 @@ def caption(repo):
     return model, repr(proc.decode(out[0, inputs["input_ids"].shape[1]:], skip_special_tokens=True))
 
 
-def encode(repo, video):
+def encode(repo, video, frames):
+    """Plain encoders: report how the input is built, what comes out, and what one forward costs."""
     model = AutoModel.from_pretrained(repo, dtype=torch.bfloat16).to("cuda").eval()
     if video:  # V-JEPA 2 and friends take a clip [B, T, C, H, W]
         from transformers import AutoVideoProcessor
 
         proc = AutoVideoProcessor.from_pretrained(repo)
-        inputs = proc(videos=[[torch.from_numpy(__import__("numpy").asarray(f)).permute(2, 0, 1) for f in front]],
-                      return_tensors="pt").to("cuda", torch.bfloat16)
+        clip = [np.asarray(f) for f in front]
+        inputs = proc(videos=[clip], return_tensors="pt").to("cuda", torch.bfloat16)
     else:
         proc = AutoImageProcessor.from_pretrained(repo)
         inputs = proc(images=front[-1], return_tensors="pt").to("cuda", torch.bfloat16)
-    with torch.no_grad():
-        out = model(**inputs)
-    state = getattr(out, "last_hidden_state", None)
-    if state is None:  # dual encoders return one embedding per tower
-        state = getattr(out, "image_embeds", None)
-    return model, f"features {tuple(state.shape)}" if state is not None else f"output {type(out).__name__}"
+    shapes = {k: tuple(v.shape) for k, v in inputs.items() if torch.is_tensor(v)}
+    norm = {k: getattr(proc, k, None) for k in ("image_mean", "image_std", "size", "crop_size", "do_normalize")}
+
+    def forward():
+        with torch.no_grad():
+            if hasattr(model, "get_image_features") and not video:  # dual encoders (SigLIP2)
+                return model.vision_model(**inputs), model.get_image_features(**inputs)
+            return (model(**inputs),)
+
+    for _ in range(3):
+        forward()
+    torch.cuda.synchronize()
+    t0 = time.perf_counter()
+    for _ in range(10):
+        out = forward()
+    torch.cuda.synchronize()
+    ms = (time.perf_counter() - t0) / 10 * 1e3
+    heads = []
+    for o in out:
+        if torch.is_tensor(o):
+            heads.append(f"pooled {tuple(o.shape)}")
+        else:
+            for name in ("last_hidden_state", "pooler_output", "image_embeds"):
+                t = getattr(o, name, None)
+                if t is not None:
+                    heads.append(f"{name} {tuple(t.shape)}")
+    return model, (f"inputs {shapes}, {ms:.1f} ms per forward ({ms / frames:.1f} ms/frame), "
+                   f"{', '.join(heads)}, preprocessing {norm}")
 
 
 for repo in sys.argv[1:]:
@@ -56,7 +80,8 @@ for repo in sys.argv[1:]:
     if any("ImageTextToText" in k or "ConditionalGeneration" in k for k in kinds):
         model, what = caption(repo)
     else:
-        model, what = encode(repo, video="vjepa" in config.model_type or hasattr(config, "frames_per_clip"))
+        video = "vjepa" in config.model_type or hasattr(config, "frames_per_clip")
+        model, what = encode(repo, video, frames=len(front) if video else 1)
     print(f"{repo} ({config.model_type}): ok in {time.time() - t0:.0f} s, "
           f"peak {torch.cuda.max_memory_allocated() / 2**30:.1f} GB: {what}", flush=True)
     del model
