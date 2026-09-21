@@ -177,9 +177,20 @@ policy 在独立进程里（CARLA 客户端是 py3.8，torch 是 py3.11），走
 
 **结论：Town12 没问题，220 条路线全部可用。** 用**未经修改的 Bench2Drive leaderboard**
 跑 Town12 的 route 1711，288.2 s / 1283 tick 正常跑完，零重启。
-崩溃在我们自己写的 `scripts/carla_bench.py` 里——它只设了 `synchronous_mode` 和
-`fixed_delta_seconds`，漏掉了官方 `WorldSettings` 里 Large Map 相关的部分
-（`spectator_as_ego=False` 等，完整 diff 见下一节）。
+崩溃在我们自己写的 `scripts/carla_bench.py` 里，**但具体是哪一行还没查出来**。
+gdb（`-nocrashhandler`）拿到的 backtrace 给出了机制：**spawn-actor 的 RPC 内部触发 dormancy pass
+→ `PutActorToSleep` 销毁 sensor → `ASensor::EndPlay` 解引用一个失效的 stream token**。
+就是 Bench2Drive #235 / carla #7772。
+
+**照抄官方的 world settings 并不能修好它**——五格全崩：baseline、只加 `spectator_as_ego=False`、
+只加 `tile_stream_distance`/`actor_active_distance=650`、以及完整 bundle。
+*这一条改写过*：本文档上一版写的是"漏掉了官方 `WorldSettings` 里 Large Map 相关的部分"，
+那是在只跑通官方路线、还没做 diff 隔离时写的，**被自己的隔离实验否掉了**。
+
+**唯一没测到的高嫌疑项是操作顺序**：leaderboard 是**先 apply `WorldSettings`、再
+`load_world(reset_settings=False)`**；我们是先 load、再 apply。
+这和"CARLA 每次 `load_world` 都会静默重置 Large Map 设置"正好咬合——
+按我们的顺序，设置可能在 load 之后又被重置掉了。一行的事，但没试。
 **这期间给出过的每一个路线数上限（69、116）都是错的，因为量的是我们自己的 bug。**
 
 **为什么值得保留这一段**：过程里死了四个假设——地图加载不了、spawn 净空（H7）、
