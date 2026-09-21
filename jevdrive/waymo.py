@@ -323,19 +323,26 @@ def history_report(df: pd.DataFrame, windows=((1, 1), (1, 5), (3, 5), (3, 10), (
     geometry allows, so `missing_shards = span_inside - complete` is the part that will fill in as the
     download finishes, and `span_inside` is what `complete` becomes when the split is fully on disk.
     `with_tol` is the degraded variant (nearest frame within stride // 2) and is reported only to show how
-    much of the apparent completeness that rule was inventing."""
+    much of the apparent completeness that rule was inventing.
+
+    Reported **per split**, because the splits are downloaded at different rates and a pooled number is
+    meaningless: with val complete and train a third down, a pooled `complete` is just their mixing ratio.
+    """
     rows = []
     for n_back, stride in windows:
         _, _, got = history_rows(df, n_back, stride)
         _, _, got_tol = history_rows(df, n_back, stride, tol=stride // 2)
         inside, complete = span_inside(df, n_back, stride), got.all(1)
-        rows.append({"n_back": n_back, "stride": stride, "span_s": round(n_back * stride * FRAME_DT, 2),
-                     "complete": round(complete.mean(), 4), "span_inside": round(inside.mean(), 4),
-                     "missing_shards": round((inside & ~complete).mean(), 4),
-                     "at_full_split": round(inside.mean(), 4),
-                     "slots_exact": round(got[:, 1:].mean(), 4),
-                     "with_tol": round(got_tol.all(1).mean(), 4)})
-    return pd.DataFrame(rows)
+        for sp, m in sorted(df.groupby("split", observed=True).groups.items()):
+            m = df.index.get_indexer(m)
+            rows.append({"split": sp, "n_back": n_back, "stride": stride,
+                         "span_s": round(n_back * stride * FRAME_DT, 2),
+                         "complete": round(complete[m].mean(), 4), "span_inside": round(inside[m].mean(), 4),
+                         "missing_shards": round((inside & ~complete)[m].mean(), 4),
+                         "at_full_split": round(inside[m].mean(), 4),
+                         "slots_exact": round(got[m][:, 1:].mean(), 4),
+                         "with_tol": round(got_tol.all(1)[m].mean(), 4)})
+    return pd.DataFrame(rows).sort_values(["split", "n_back", "stride"], ignore_index=True)
 
 
 # ---------------------------------------------------------------- targets, inputs, ego-only baselines
