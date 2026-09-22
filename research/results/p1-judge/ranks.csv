@@ -1,0 +1,18 @@
+judge,n,ranking,pre_onset_n,pre_onset_halfwidth,agrees_with_reference
+ADE vs log (all),106360,A ridge_late uniform > B ego:a1 > D mlp uniform > ridge ego > cls_late vision+ego > D mlp ego:a1 > cls ego > C pre_onset fit,1510,0.5028698736011157,True
+ADE vs log (dec1-9),95724,A ridge_late uniform > ridge ego > B ego:a1 > D mlp uniform > C pre_onset fit > D mlp ego:a1 > cls_late vision+ego > cls ego,1510,0.5028698736011157,False
+ADE vs log (dec10),10636,cls_late vision+ego > cls ego > D mlp ego:a1 > B ego:a1 > D mlp uniform > A ridge_late uniform > C pre_onset fit > ridge ego,1510,0.5028698736011157,False
+ADE vs log (pre_onset),1510,A ridge_late uniform > C pre_onset fit > D mlp uniform > ridge ego > B ego:a1 > D mlp ego:a1 > cls_late vision+ego > cls ego,1510,0.5028698736011157,False
+ADE vs log (dec1-9 pre_onset),1291,A ridge_late uniform > ridge ego > C pre_onset fit > D mlp uniform > B ego:a1 > D mlp ego:a1 > cls_late vision+ego > cls ego,1510,0.5028698736011157,False
+ADE vs log (rater credible),434,A ridge_late uniform > B ego:a1 > ridge ego > D mlp uniform > cls_late vision+ego > cls ego > C pre_onset fit > D mlp ego:a1,1510,0.5028698736011157,False
+minADE1 (all),106360,A ridge_late uniform > B ego:a1 > D mlp uniform > ridge ego > cls_late vision+ego > cls ego > D mlp ego:a1 > C pre_onset fit,1510,0.5002543413588507,False
+minADE3 (all),106360,cls_late vision+ego > cls ego > A ridge_late uniform > D mlp uniform > B ego:a1 > ridge ego > D mlp ego:a1 > C pre_onset fit,1510,0.2517698295080637,False
+minADE6 (all),106360,cls_late vision+ego > cls ego > A ridge_late uniform > D mlp uniform > B ego:a1 > ridge ego > D mlp ego:a1 > C pre_onset fit,1510,0.2411315846416789,False
+minADE3 (pre_onset),1510,cls_late vision+ego > cls ego > C pre_onset fit > A ridge_late uniform > D mlp uniform > ridge ego > B ego:a1 > D mlp ego:a1,1510,0.2517698295080637,False
+minADE6 (pre_onset),1510,cls_late vision+ego > cls ego > A ridge_late uniform > D mlp uniform > C pre_onset fit > ridge ego > B ego:a1 > D mlp ego:a1,1510,0.2411315846416789,False
+RFS (rater),479,cls ego > cls_late vision+ego > ridge ego > A ridge_late uniform > B ego:a1 > D mlp uniform > D mlp ego:a1 > C pre_onset fit,6,1.0805475951313857,False
+RFS (rater credible),434,cls ego > cls_late vision+ego > ridge ego > A ridge_late uniform > B ego:a1 > D mlp uniform > D mlp ego:a1 > C pre_onset fit,6,1.0805475951313857,False
+RFS (dec10),90,cls ego > cls_late vision+ego > ridge ego > A ridge_late uniform > B ego:a1 > D mlp uniform > D mlp ego:a1 > C pre_onset fit,6,1.0805475951313857,False
+ADE vs rater_best (rater),479,A ridge_late uniform > B ego:a1 > ridge ego > D mlp uniform > cls_late vision+ego > cls ego > C pre_onset fit > D mlp ego:a1,6,1.0117896216611069,False
+ADE vs rater_best (rater credible),434,A ridge_late uniform > B ego:a1 > ridge ego > D mlp uniform > cls_late vision+ego > cls ego > C pre_onset fit > D mlp ego:a1,6,1.0117896216611069,False
+ADE vs rater_best (dec10),90,cls ego > cls_late vision+ego > B ego:a1 > D mlp ego:a1 > D mlp uniform > A ridge_late uniform > ridge ego > C pre_onset fit,6,1.0117896216611069,False

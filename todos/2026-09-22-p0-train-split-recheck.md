@@ -1,6 +1,6 @@
 # P0：train split 复核 3d 和 L0（train 训 head，完整 val 评）
 
-状态: running
+状态: done
 主题: ../research/frozen-vlm-planner.md
 
 ## 目标
@@ -128,7 +128,7 @@ x86 上对 denormal 的乘加要走微码，慢两个数量级。同一个 GEMM�
 
 ## 结果
 
-**2026-09-22 跑完（ridge / MLP 部分；分类头还在跑）。**
+**2026-09-22 跑完。**
 run dir：`$DATA_DIR/runs/waymo_p0/train_split/20260922-175708/`，
 snapshot `snapshots/p0-20260922-175427`，CPU、tmux 窗口 `p0`。
 小表拉回 `research/results/p0-train-split/`，图 [research/figs/p0-decile-relative-gain.png](../research/figs/p0-decile-relative-gain.png)。
@@ -159,8 +159,14 @@ pre_onset 1510 帧、straight_yaw 46 580 帧、turn_yaw 11 060 帧、rater 479 �
 | 载入 356 个 shard 的 `L18_mean` | 1–3 min | **6 s** |
 | s_ego + ridge ego + A / B / C | < 5 min | **1 min 50 s** |
 | arm D（MLP × 2） | 20–60 min | **10 min 35 s** |
-| 分类头（`cls ego` + `cls_late`，9 个 λ） | 3–4 h | 见下 |
+| 分类头（`cls ego` + `cls_late`，9 个 λ） | 3–4 h | **3 h 41 min**（ego 45 min，late 2 h 56 min） |
 
 前三项都比估计快，主要是 25 核的 float32 GEMM 实测 2.4–3.0 TFLOPS，比按经验假设的 1 TFLOPS 快三倍。
 **MLP 的 early stopping 停在第 1 个 epoch**（40 个里），所以它也比估计快——这本身是个结果，
 写进第 20 条了。
+
+分类头的两条结果写进了第 3d 条和第 20 条：
+`cls_late` 相对 `cls ego` 的 DiD 是 **−0.240 [−0.618, −0.022]**（符号和 ridge 相反，但半宽 0.298
+比效应还大，而且两个分类头在 pre_onset 上的绝对 ADE 都比 `ridge ego` 差，所以是在填词表自己的坑）；
+RFS 上 `cls ego` 7.343 / `cls_late` 7.292 **赢过** `ridge ego` 7.056，而 ADE 差 0.14 m——
+半 val 上是反过来的，十倍数据之后分类头才追上。
