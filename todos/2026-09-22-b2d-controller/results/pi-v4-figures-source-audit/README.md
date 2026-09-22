@@ -1,0 +1,1 @@
+Late archive of final PI figure helper sources. Both Python files match SHA256 recorded when figures were made; every source and declared output hash verified. verification.json preserves report hash and input list; figure-file-index.json includes all final figure files and supplemental analyses. Figure edition remains unchanged.

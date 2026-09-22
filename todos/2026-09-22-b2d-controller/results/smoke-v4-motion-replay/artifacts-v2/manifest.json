@@ -1,0 +1,154 @@
+{
+  "command": [
+    "todos/2026-09-22-b2d-controller/results/smoke-v4-motion-replay/replay.py",
+    "--capture",
+    "/data/runs/b2d/controller/smoke-v4-capture",
+    "--failed",
+    "/data/runs/b2d/controller/smoke-v4",
+    "--adapter-source",
+    "scripts/b2d_controller_adapter.py",
+    "--out",
+    "todos/2026-09-22-b2d-controller/results/smoke-v4-motion-replay/artifacts-v2"
+  ],
+  "python": "3.8.20 (default, Oct  2 2024, 16:34:12) \n[Clang 18.1.8 ]",
+  "numpy": "1.23.5",
+  "snapshots": [
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/smoke-v4-motion-replay/replay.py",
+      "archived": "source/replay.py",
+      "sha256": "f057a8187d216846cc017abc1bbfed8fb39add9921b5e100e24a0d76f054aa57"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_adapter.py",
+      "archived": "source/frozen_adapter.py",
+      "sha256": "072ffa4f0dd7c1fdc7fc75433ffa8311e93992e404cfdbcfc57dc8b51cb48a76"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_adapter.py",
+      "archived": "source/candidate_adapter.py",
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller.py",
+      "archived": "source/frozen_controller.py",
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/motion.jsonl",
+      "archived": "inputs/motion.jsonl",
+      "sha256": "996786ae60c3415dcad66270f7fba4b86a47929e2173afdca55ef5e2920dbc78"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/control.jsonl",
+      "archived": "inputs/control.jsonl",
+      "sha256": "60390c2bd91365fd90acee6380427dc4e0af1101907b8eeb567a11cb8cc584f5"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/trajectories.jsonl",
+      "archived": "inputs/trajectories.jsonl",
+      "sha256": "58e835bbf220c2bcbfb7749740c9277aad4c2d0b4402a0c23410b71edc654ac7"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route_reference.json",
+      "archived": "inputs/route_reference.json",
+      "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/agent_config.json",
+      "archived": "inputs/agent_config.json",
+      "sha256": "af2e0dbc9f04ce695f495945e56d9fd88cf6112f086d55e467a51a2d1b66bf11"
+    },
+    {
+      "original": "/data/runs/b2d/controller/smoke-v4-capture/provenance/inputs/01-candidate-pursuit.json",
+      "archived": "inputs/controller_config.json",
+      "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "candidate_compass_prediction.jsonl",
+      "bytes": 256148,
+      "sha256": "ea2308f65dda7539ca6dd0520adb51f7670a42541b032b3c6ceede66eea2aec7"
+    },
+    {
+      "path": "failed-run-inventories.json",
+      "bytes": 35483,
+      "sha256": "a9d3e1acdf2e62879c288a8209fe51fb01361e751f44f8e766d9d97c3d2843a9"
+    },
+    {
+      "path": "frozen_a1b50ed.jsonl",
+      "bytes": 240295,
+      "sha256": "fac5e0be2331d9f26891e980cb16329c7792b62466d85542a6871a611663a2ca"
+    },
+    {
+      "path": "inputs/agent_config.json",
+      "bytes": 416,
+      "sha256": "af2e0dbc9f04ce695f495945e56d9fd88cf6112f086d55e467a51a2d1b66bf11"
+    },
+    {
+      "path": "inputs/control.jsonl",
+      "bytes": 354218,
+      "sha256": "60390c2bd91365fd90acee6380427dc4e0af1101907b8eeb567a11cb8cc584f5"
+    },
+    {
+      "path": "inputs/controller_config.json",
+      "bytes": 609,
+      "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+    },
+    {
+      "path": "inputs/motion.jsonl",
+      "bytes": 80891,
+      "sha256": "996786ae60c3415dcad66270f7fba4b86a47929e2173afdca55ef5e2920dbc78"
+    },
+    {
+      "path": "inputs/route_reference.json",
+      "bytes": 9122,
+      "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+    },
+    {
+      "path": "inputs/trajectories.jsonl",
+      "bytes": 60843,
+      "sha256": "58e835bbf220c2bcbfb7749740c9277aad4c2d0b4402a0c23410b71edc654ac7"
+    },
+    {
+      "path": "source/__pycache__/candidate_adapter.cpython-38.pyc",
+      "bytes": 18344,
+      "sha256": "98845ef90e2be997438286c93719dd46129996fb13681b2a6f7c4dc2c5e48225"
+    },
+    {
+      "path": "source/__pycache__/frozen_adapter.cpython-38.pyc",
+      "bytes": 17145,
+      "sha256": "5ca41e1d3a3bd00678688594f0643007e59e0e7418c11d11974a105a09adb1cf"
+    },
+    {
+      "path": "source/__pycache__/frozen_controller.cpython-38.pyc",
+      "bytes": 14810,
+      "sha256": "ff719a92bc2485dedc6e0c4afeda7c78e489c7db1ee3096dd00c7d9fe3324f4a"
+    },
+    {
+      "path": "source/candidate_adapter.py",
+      "bytes": 23822,
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "path": "source/frozen_adapter.py",
+      "bytes": 21827,
+      "sha256": "072ffa4f0dd7c1fdc7fc75433ffa8311e93992e404cfdbcfc57dc8b51cb48a76"
+    },
+    {
+      "path": "source/frozen_controller.py",
+      "bytes": 19759,
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+    },
+    {
+      "path": "source/replay.py",
+      "bytes": 10783,
+      "sha256": "f057a8187d216846cc017abc1bbfed8fb39add9921b5e100e24a0d76f054aa57"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 3102,
+      "sha256": "cb4e0d0bffb445fb360a95fd933a2d3eda9047c408e58758ed0aab422718e7d0"
+    }
+  ]
+}

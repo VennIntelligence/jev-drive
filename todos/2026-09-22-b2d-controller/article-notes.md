@@ -1,6 +1,6 @@
 # 从定时轨迹到闭环控制：实验记录与文章素材
 
-状态：实验进行中。这里集中记录可以写进文章的证据、反例和数据来源；最终默认选择等待完整配对结果。
+状态（2026-09-23 JST）：保留各阶段实验与反例；v4开发矩阵已完成，正式路线验收仍未完成，尚未推荐新默认。本文早期表格是对应版本的历史结果，不能与后续配置混为一轮。
 
 ## 已验证的部分
 
@@ -56,7 +56,7 @@ pursuit在26966的p95为0.9827m，接近1m门槛，不能称作有很大余量�
 | 第二次开发 | `development2` | 验证器在4.95s误判9例blocked；12例原轨迹全部保留 |
 | 最终开发验证 | `development3` | 修复验证器后重跑的12例；不得拿最好的路线拼成一轮 |
 | 完整smoke | `smoke` | pursuit2390官方completion100、score100，216tick；仅route诊断 |
-| Dev10首轮 | `dev10` | 3preset×10route、seed0；当前仍运行，所有失败/重试计入 |
+| Dev10首轮 | `dev10` | 3preset×10route、seed0已完成；各9/10驾驶完成，所有失败/重试计入 |
 | 第一、第二版图片 | `figures`、`figures-v2` | 当时已完成部分的快照；不会覆盖为最终图 |
 
 除第一行外目录均相对于`/data/runs/b2d/controller/`。早期开发不是每次都保存了逐文件源码快照；
@@ -132,3 +132,33 @@ pursuit全程横向误差未优于CARLA，平均completion又略低于TCP，因�
 原始49个用例的13,726条逐tick轨迹保存在`offline-traced`，重新汇总除CPU计时外与旧结果逐项精确相同；
 [核验记录](results/offline-trace-verification.json)、[PDF](figures/offline/offline-ablations.pdf)、
 [来源与代码哈希](figures/offline/provenance.json)。复现脚本为[scripts/b2d_controller_offline_plot.py](../../scripts/b2d_controller_offline_plot.py)。
+
+
+## 后续反馈迭代与当前验收边界（2026-09-23）
+
+[第二轮完整实验记录](iteration-v2.md)保留轨迹起点/定时修复、additive与max前视比较、6m/s直路与S弯速度隔离，以及两次固定PI开发试验。
+v2的20例有15例通过全部G2门槛；首个PI(Kp=1、Ki=.25)的18例有13例通过；降低到固定Kp=.5、Ki=.25后，v4的18例有17例通过。
+三个数字均是开发gate通过数，不是官方成功率。v4的CARLA+共享PI与pursuit max分别通过全部六组条件，pursuit additive仍有一例横向门槛失败；完整矩阵不丢弃这一列。
+
+[最终v4开发结果](results/development-v4-closed/summary.json)、[完整PI配对图表](results/pi-v4-figures-01/README.md)、
+[开发raw索引](results/development-v4-file-index.json)与[绘图源码/哈希核验](results/pi-v4-figures-source-audit/README.md)提供对应证据。
+max分支是开发集上选定的正式对照候选，CARLA参考同样使用PI(.5,.25)，TCP参考保留vendor纵向；不能把共享PI参考写成旧vendor CARLA。
+
+随后定位集成修复的11项专项测试与126项完整测试通过，运动日志首次失败及修正记录也全部保留在[新验证目录](results/verification-v4-pose/README.md)。
+软件测试和G2通过不替代正式场景验收。恢复smoke位于`/data/runs/b2d/controller/smoke-v4-recovery`；本笔记不预先声明其成功，也不把尚未齐备的G4组当最终对照。
+原smoke失败尝试保留，正式参数不依据Dev10逐路线调整。
+
+## 分数、驾驶完成与舒适性分别报告
+
+锁定Bench2Drive版本的Driving Score由route completion乘infraction penalty组成；碰撞之外，还包括红灯、停车标志、出界和其他规则事件。
+因此B2D并非只看碰撞。[固定版本统计源码](https://github.com/Thinklab-SJTU/Bench2Drive/blob/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/leaderboard/leaderboard/utils/statistics_manager.py)。
+
+本项目的driving_completed只表示官方completion达到100%。严格Success Rate的官方记录规则还要求状态为Completed或Perfect，且除min_speed_infractions外没有其他非空违规列表。
+完整220聚合脚本的分母写死220；Dev10按10条计算时称“子集诊断SR”，不称官方full220成绩。驶到终点、无违规成功、harness结束和通过G2是四个不同概念。
+[固定版本SR源码](https://github.com/Thinklab-SJTU/Bench2Drive/blob/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/tools/merge_route_json.py)。
+
+Driving Smoothness另由独立脚本根据加速度、jerk和yaw类指标计算，不直接进入上述DS公式。当前速度RMS≤.5m/s是本地跟踪验收门槛，不能用它代替官方舒适性；制动脉冲变小或换挡减少也不自动证明Smoothness分数提高。
+[固定版本舒适性脚本](https://github.com/Thinklab-SJTU/Bench2Drive/blob/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/tools/efficiency_smoothness_benchmark.py)。
+
+后续日志补充完整真值运动学字段，并明确角速度单位和时间步，供分开的物理诊断及指定版本脚本复算。旧run缺少必要原始向量，不能事后用速度差分无损补出官方metric_info。
+版本实现中的导数/单位疑点仅在[纵向分析附录](agents/v2-longitudinal.md)及[源码观察存档](results/scoring-source-observations/README.md)说明；不据此修改vendor，也不作为本文主要性能收益结论。

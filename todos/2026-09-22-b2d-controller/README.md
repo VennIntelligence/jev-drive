@@ -5,6 +5,7 @@
 | 文件 | 用途 |
 |---|---|
 | [plan.md](plan.md) | 已接受的方向、T0–T8 任务和 G1–G5 验收 |
+| [iteration-v2.md](iteration-v2.md) | v2–v4闭环反馈、PI调节、舒适性与集成异常证据 |
 | [progress.md](progress.md) | 主代理维护的进展、决策、阻塞和交付索引 |
 | [article-notes.md](article-notes.md) | 文章素材、实测表、反例、图与原始来源；进行中结果明确标记 |
 | [contract.md](contract.md) | 模块间接口和 telemetry 字段约定 |

@@ -1,0 +1,13 @@
+test_actual_archived_configuration_must_match_frozen_bytes (test_b2d_controller_g4.G4Tests) ... ok
+test_expected_routes_missing_and_duplicate_groups_rejected (test_b2d_controller_g4.G4Tests) ... ok
+test_full_completion_is_not_strict_success (test_b2d_controller_g4.G4Tests) ... ok
+test_min_speed_is_exempt_but_failed_status_is_not (test_b2d_controller_g4.G4Tests) ... ok
+test_missing_or_capped_data_stays_unavailable (test_b2d_controller_g4.G4Tests) ... ok
+test_only_selected_record_and_equal_seed_mean (test_b2d_controller_g4.G4Tests) ... ok
+test_three_groups_per_seed_and_both_seeds_required (test_b2d_controller_g4.G4Tests) ... ok
+test_unknown_blocked_requires_evidence_not_inferred_from_counts (test_b2d_controller_g4.G4Tests) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.001s
+
+OK

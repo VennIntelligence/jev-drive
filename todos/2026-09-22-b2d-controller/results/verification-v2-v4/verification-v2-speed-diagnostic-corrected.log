@@ -1,0 +1,24 @@
+test_archive_runs_exact_loaded_bytes_after_source_changes (test_b2d_controller_matrix.MatrixTests) ... ok
+test_invalid_matrix_inputs_fail_before_server_import (test_b2d_controller_matrix.MatrixTests) ... ok
+test_legacy_and_explicit_default (test_b2d_controller_matrix.MatrixTests) ... ok
+test_order_and_physics_are_per_case (test_b2d_controller_matrix.MatrixTests) ... ok
+test_analytic_delayed_reprojection (test_b2d_controller.ControllerTests) ... ok
+test_curve_uses_kmh (test_b2d_controller.ControllerTests) ... ok
+test_delayed_speed_window_uses_age (test_b2d_controller.ControllerTests) ... ok
+test_diagnostic_snapshot (test_b2d_controller.ControllerTests) ... ok
+test_future_history_and_clock (test_b2d_controller.ControllerTests) ... ok
+test_fuzz_output_invariants (test_b2d_controller.ControllerTests) ... ok
+test_interpolated_source_pose (test_b2d_controller.ControllerTests) ... ok
+test_invalid_stale_order_reset (test_b2d_controller.ControllerTests) ... ok
+test_left_right_mirror_and_limits (test_b2d_controller.ControllerTests) ... ok
+test_pid_vendor_scalar_sources (test_b2d_controller.ControllerTests) ... ok
+test_repeated_points_and_behind (test_b2d_controller.ControllerTests) ... ok
+test_stop_hold_latch_and_release (test_b2d_controller.ControllerTests) ... ok
+test_hold_drift_missing_heading_and_wrong_frames_fail (test_b2d_controller.ValidationMetricTests) ... ok
+test_independent_truth_projection (test_b2d_controller.ValidationMetricTests) ... ok
+test_null_speed_and_empty_metrics (test_b2d_controller.ValidationMetricTests) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.123s
+
+OK

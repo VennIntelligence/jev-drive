@@ -1,0 +1,39 @@
+{
+  "captured_utc": "2026-09-22T15:28:16.284591+00:00",
+  "date_jst": "2026-09-23",
+  "files": [
+    {
+      "original": "/data/runs/b2d/controller/verification-v4-pose-integration.log",
+      "archived": "verification-v4-pose-integration.log",
+      "bytes": 1330,
+      "sha256": "ba0b9e4d93bc2aa56562c59aa52d78e34c61f6d5a6403dda580760edfca2ba56",
+      "test_summary": "Ran 11 tests in 0.056s",
+      "result": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v4-pose-full.log",
+      "archived": "verification-v4-pose-full.log",
+      "bytes": 15936,
+      "sha256": "6d16aca99349c8b8dda405da8d71ebe28771c8936fe6fd1299e251064ca35ae2",
+      "test_summary": "Ran 126 tests in 1.338s",
+      "result": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-motion-capture.log",
+      "archived": "verification-motion-capture.log",
+      "bytes": 2000,
+      "sha256": "36c63820d873ce0b2533639049512593027eb9187d253e0332f37670b0f1fa82",
+      "test_summary": "Ran 10 tests in 0.044s",
+      "result": "FAILED (errors=1)"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-motion-capture-corrected.log",
+      "archived": "verification-motion-capture-corrected.log",
+      "bytes": 1132,
+      "sha256": "8d5ff2cc65e5dbbfd0ed522716e928a3e77d1eafcb8b883dad6e812b40b20ce4",
+      "test_summary": "Ran 10 tests in 0.052s",
+      "result": "OK"
+    }
+  ],
+  "no_overwrites": true
+}

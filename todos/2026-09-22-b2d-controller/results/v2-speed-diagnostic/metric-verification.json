@@ -1,0 +1,50 @@
+[
+  {
+    "route": "1773",
+    "preset": "carla",
+    "official_speed_rms_mps": 0.6284915311465784,
+    "recomputed_3d_fixed_cruise": 0.6284915311465784,
+    "diagnostic_signed_speed_fixed_cruise": 0.6286230403701926,
+    "diagnostic_3d_dynamic_reference": 0.6282895319596316
+  },
+  {
+    "route": "1773",
+    "preset": "tcp",
+    "official_speed_rms_mps": 0.6116222639146198,
+    "recomputed_3d_fixed_cruise": 0.6116222639146197,
+    "diagnostic_signed_speed_fixed_cruise": 0.6116799703752411,
+    "diagnostic_3d_dynamic_reference": 0.6115065143563292
+  },
+  {
+    "route": "1773",
+    "preset": "pursuit",
+    "official_speed_rms_mps": 0.6916927963157463,
+    "recomputed_3d_fixed_cruise": 0.6916927963157463,
+    "diagnostic_signed_speed_fixed_cruise": 0.6917608715659175,
+    "diagnostic_3d_dynamic_reference": 0.6915399881750114
+  },
+  {
+    "route": "17563",
+    "preset": "carla",
+    "official_speed_rms_mps": 0.6302755884231467,
+    "recomputed_3d_fixed_cruise": 0.6302755884231467,
+    "diagnostic_signed_speed_fixed_cruise": 0.6328592773140731,
+    "diagnostic_3d_dynamic_reference": 0.6299821376972213
+  },
+  {
+    "route": "17563",
+    "preset": "tcp",
+    "official_speed_rms_mps": 0.6223592838215517,
+    "recomputed_3d_fixed_cruise": 0.6223592838215518,
+    "diagnostic_signed_speed_fixed_cruise": 0.6262964324307394,
+    "diagnostic_3d_dynamic_reference": 0.6224218737088274
+  },
+  {
+    "route": "17563",
+    "preset": "pursuit",
+    "official_speed_rms_mps": 0.6731519543192416,
+    "recomputed_3d_fixed_cruise": 0.6731519543192416,
+    "diagnostic_signed_speed_fixed_cruise": 0.6757641235393227,
+    "diagnostic_3d_dynamic_reference": 0.6731010078537815
+  }
+]

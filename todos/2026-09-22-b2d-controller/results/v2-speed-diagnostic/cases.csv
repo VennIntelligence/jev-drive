@@ -1,0 +1,7 @@
+route_id,preset,cruise_mps,status,speed_rms_mps,cross_track_rms_m,cross_track_p95_m,ticks,failed_gates,source
+1773,carla,6.0,completed,0.6284915311465784,0.04539125868105484,0.07800254099091798,658,cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla
+1773,tcp,6.0,completed,0.6116222639146198,0.07833062855569652,0.16914448817624517,638,cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/tcp
+1773,pursuit,6.0,completed,0.6916927963157463,0.060564178877810335,0.10640252909380496,660,cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit
+17563,carla,6.0,completed,0.6302755884231467,0.187018893004755,0.5141456191355831,591,cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla
+17563,tcp,6.0,completed,0.6223592838215517,0.6957156639153074,1.643780856906411,585,full_lateral_rms;full_lateral_p95;cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/tcp
+17563,pursuit,6.0,completed,0.6731519543192416,0.19100035152942405,0.427942682624433,589,cruise_speed,/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit

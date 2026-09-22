@@ -1,0 +1,15 @@
+test_cardinal_heading_left_positive_and_rear_offset (test_b2d_controller_agent.AdapterTests) ... ok
+test_gps_projection_multiple_latitudes_and_route_orientations (test_b2d_controller_agent.AdapterTests) ... ok
+test_motion_exact_camera_coherent_and_late_packets_retained (test_b2d_controller_agent.AdapterTests) ... ok
+test_pose_filter_reduces_seeded_noise_without_truth (test_b2d_controller_agent.AdapterTests) ... ok
+test_route_projection_monotonic_bounded_and_endpoint (test_b2d_controller_agent.AdapterTests) ... ok
+test_signed_standstill_jitter_preserves_real_reverse_fault (test_b2d_controller_agent.AdapterTests) ... ok
+test_terminal_parking_latch_rejects_off_path_and_survives_noise (test_b2d_controller_agent.AdapterTests) ... ok
+test_truth_logger_frame_alignment_and_nonmutation (test_b2d_controller_agent.AdapterTests) ... ok
+test_every_tick_step_decimated_update_and_truth_noninterference (test_b2d_controller_agent.AgentTests) ... ok
+test_vendor_route_before_setup_lifecycle (test_b2d_controller_agent.AgentTests) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.052s
+
+OK

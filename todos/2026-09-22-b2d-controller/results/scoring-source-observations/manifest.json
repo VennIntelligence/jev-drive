@@ -1,0 +1,34 @@
+{
+  "captured_utc": "2026-09-22T14:52:17.249946+00:00",
+  "bench2drive_commit_from_existing_plan": "7ec25d1c9f7522d923ce5f3420986cef1cb2d956",
+  "sources": [
+    {
+      "path": "tools/efficiency_smoothness_benchmark.py",
+      "local_original": "/data/third_party/Bench2Drive/tools/efficiency_smoothness_benchmark.py",
+      "sha256": "d5742725312a461c9877519ed79319f06e076ac6590e77312b740d3e0bb12b7f",
+      "bytes": 9497,
+      "official_url": "https://raw.githubusercontent.com/Thinklab-SJTU/Bench2Drive/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/tools/efficiency_smoothness_benchmark.py",
+      "official_bytes_verification": "not_available: direct urllib download HTTP403; public smoothness source opened through web tool and inspected, no byte hash comparison claimed"
+    },
+    {
+      "path": "leaderboard/leaderboard/autoagents/autonomous_agent.py",
+      "local_original": "/data/third_party/Bench2Drive/leaderboard/leaderboard/autoagents/autonomous_agent.py",
+      "sha256": "73877bd22ba5e15b693d89677bdb007cc1ee39bc78dd185319b23baae2feb578",
+      "bytes": 5431,
+      "official_url": "https://raw.githubusercontent.com/Thinklab-SJTU/Bench2Drive/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/leaderboard/leaderboard/autoagents/autonomous_agent.py",
+      "official_bytes_verification": "not_available: direct urllib download HTTP403; public smoothness source opened through web tool and inspected, no byte hash comparison claimed"
+    },
+    {
+      "path": "leaderboard/leaderboard/utils/statistics_manager.py",
+      "local_original": "/data/third_party/Bench2Drive/leaderboard/leaderboard/utils/statistics_manager.py",
+      "sha256": "7230cf3d612002402d1a31814402f22417f51ea6b83c7e94cadbf7b2f428a046",
+      "bytes": 25123,
+      "official_url": "https://raw.githubusercontent.com/Thinklab-SJTU/Bench2Drive/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/leaderboard/leaderboard/utils/statistics_manager.py",
+      "official_bytes_verification": "not_available: direct urllib download HTTP403; public smoothness source opened through web tool and inspected, no byte hash comparison claimed"
+    }
+  ],
+  "carla_api": {
+    "url": "https://carla.readthedocs.io/en/0.9.15/python_api/#carla.Actor",
+    "verification": "web tool opened official documentation; get_angular_velocity return unit deg/s; no HTML snapshot/hash"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "tests": 8,
+  "all_pass": true,
+  "partial_cli_status": "incomplete_comparison",
+  "sources": {
+    "scripts/b2d_controller_g4.py": "7fa27b88bc269ffe4553fbec94e1ad7205e785602803ce8f6d53818ba19d8fa7",
+    "scripts/test_b2d_controller_g4.py": "53ef8a0b9c525e24ab6a8d3ea3b7e744c76ffabccacc91e2142963a56b736ed8"
+  },
+  "note": "Partial smoke group intentionally evaluated against expected Dev10 route IDs; never a formal result."
+}

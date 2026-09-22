@@ -1,0 +1,149 @@
+test_analytic_delayed_reprojection (test_b2d_controller.ControllerTests) ... ok
+test_curve_uses_kmh (test_b2d_controller.ControllerTests) ... ok
+test_delayed_speed_window_uses_age (test_b2d_controller.ControllerTests) ... ok
+test_diagnostic_snapshot (test_b2d_controller.ControllerTests) ... ok
+test_future_history_and_clock (test_b2d_controller.ControllerTests) ... ok
+test_fuzz_output_invariants (test_b2d_controller.ControllerTests) ... ok
+test_interpolated_source_pose (test_b2d_controller.ControllerTests) ... ok
+test_invalid_stale_order_reset (test_b2d_controller.ControllerTests) ... ok
+test_left_right_mirror_and_limits (test_b2d_controller.ControllerTests) ... ok
+test_pid_vendor_scalar_sources (test_b2d_controller.ControllerTests) ... ok
+test_repeated_points_and_behind (test_b2d_controller.ControllerTests) ... ok
+test_stop_hold_latch_and_release (test_b2d_controller.ControllerTests) ... ok
+test_hold_drift_missing_heading_and_wrong_frames_fail (test_b2d_controller.ValidationMetricTests) ... ok
+test_independent_truth_projection (test_b2d_controller.ValidationMetricTests) ... ok
+test_null_speed_and_empty_metrics (test_b2d_controller.ValidationMetricTests) ... ok
+test_cardinal_heading_left_positive_and_rear_offset (test_b2d_controller_agent.AdapterTests) ... ok
+test_gps_projection_multiple_latitudes_and_route_orientations (test_b2d_controller_agent.AdapterTests) ... ok
+test_motion_exact_camera_coherent_and_late_packets_retained (test_b2d_controller_agent.AdapterTests) ... ok
+test_pose_filter_reduces_seeded_noise_without_truth (test_b2d_controller_agent.AdapterTests) ... ok
+test_route_projection_monotonic_bounded_and_endpoint (test_b2d_controller_agent.AdapterTests) ... ok
+test_signed_standstill_jitter_preserves_real_reverse_fault (test_b2d_controller_agent.AdapterTests) ... ok
+test_terminal_parking_latch_rejects_off_path_and_survives_noise (test_b2d_controller_agent.AdapterTests) ... ok
+test_truth_logger_frame_alignment_and_nonmutation (test_b2d_controller_agent.AdapterTests) ... ok
+test_every_tick_step_decimated_update_and_truth_noninterference (test_b2d_controller_agent.AgentTests) ... ok
+test_vendor_route_before_setup_lifecycle (test_b2d_controller_agent.AgentTests) ... ok
+test_inventory_preserves_failed_and_partial_logs (test_b2d_controller_archive.ArchiveTests) ... ok
+test_snapshot_preserves_dirty_bytes_and_detects_runtime_drift (test_b2d_controller_archive.ArchiveTests) ... ok
+test_b2d_controller_campaign (unittest.loader._FailedTest) ... ERROR
+test_g2_preserves_each_source_and_failure (test_b2d_controller_compare.CompareTests) ... ok
+test_harness_cap_prevents_complete_comparison (test_b2d_controller_compare.CompareTests) ... ok
+test_pending_presets_keep_all_requested_routes_and_no_winner (test_b2d_controller_compare.CompareTests) ... ok
+test_snapshot_outputs_finite_json_and_all_attempts_csv (test_b2d_controller_compare.CompareTests) ... ok
+test_vendor_cap_is_terminal_failure_and_best_retry_never_selected (test_b2d_controller_compare.CompareTests) ... ok
+test_archive_runs_exact_loaded_bytes_after_source_changes (test_b2d_controller_matrix.MatrixTests) ... ok
+test_invalid_matrix_inputs_fail_before_server_import (test_b2d_controller_matrix.MatrixTests) ... ok
+test_legacy_and_explicit_default (test_b2d_controller_matrix.MatrixTests) ... ok
+test_order_and_physics_are_per_case (test_b2d_controller_matrix.MatrixTests) ... ok
+test_partial_duplicate_and_failed_campaign_are_not_final_figures (test_b2d_controller_matrix_plot.FigureSelectionTests) ... ok
+test_signed_errors_and_missing_values (test_b2d_controller_matrix_plot.FigureSelectionTests) ... ok
+test_actual_elapsed_and_all_safe_paths_clear_bias (test_b2d_controller_pi.PITests) ... ok
+test_frozen_vendor_outputs_and_default_unchanged (test_b2d_controller_pi.PITests) ... ok
+test_independent_plant_steps_delay_hold_and_deceleration (test_b2d_controller_pi.PITests) ... ok
+test_saturation_does_not_charge_and_reversed_error_unwinds (test_b2d_controller_pi.PITests) ... ok
+test_zero_trajectory_holds_then_restarts_without_bias (test_b2d_controller_pi.PITests) ... ok
+test_default_outputs_exactly_match_frozen_v3 (test_b2d_controller_pi_gains.PIGainTests) ... ok
+test_gains_are_instance_local_and_preserve_units (test_b2d_controller_pi_gains.PIGainTests) ... ok
+test_helpers_accept_explicit_gains (test_b2d_controller_pi_gains.PIGainTests) ... ok
+test_invalid_gains_rejected_for_both_modes (test_b2d_controller_pi_gains.PIGainTests) ... ok
+test_integral_is_cleared_by_each_safety_boundary (test_b2d_controller_pi_review.IndependentPIReview) ... ok
+test_pi_integral_depends_on_elapsed_time_not_tick_partition (test_b2d_controller_pi_review.IndependentPIReview) ... ok
+test_saturated_launch_has_no_latent_throttle_and_respects_limits (test_b2d_controller_pi_review.IndependentPIReview) ... ok
+test_vendor_outputs_equal_frozen_replay (test_b2d_controller_pi_review.IndependentPIReview) ... ok
+test_8mps_has_no_origin_bridge_spike (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_almost_sideways_terminal_connector_is_flagged (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_mirrored_left_right_positions_and_heading (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_opposite_heading_cusp_is_rejected_even_when_collinear (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_rejoin_returns_to_immutable_route_with_forward_tangent (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_short_remainder_reports_curvature_not_false_zero (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_start_behind_route_does_not_inflate_speed (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_terminal_opposite_final_tangent_cusp_stops_explicitly (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_terminal_same_extended_endpoint_without_early_stop (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_tight_original_curve_is_retained_with_diagnostics (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_wrong_progress_cannot_fold_backward_rejoin (test_b2d_controller_rejoin.RejoinTests) ... ok
+test_event_snapshot_preserves_statistics_semantics (test_b2d_controller_report.CLIAndEventTests) ... ok
+test_invalid_cli_fails_before_server_start (test_b2d_controller_report.CLIAndEventTests) ... ok
+test_runner_passes_options_to_route_and_agent (test_b2d_controller_report.CLIAndEventTests) ... pygame 2.6.1 (SDL 2.28.4, Python 3.8.20)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+{"worker": 0, "route_id": "1", "attempt": 1, "port": 2000, "tm_port": 8000, "t": 1790089088.0617154, "kind": "route_start"}
+{"worker": 0, "route_id": "1", "attempt": 1, "status": "finished", "wall_s": 10, "ticks": 4, "t": 1790089088.0618446, "kind": "route_end"}
+ok
+test_finished_is_not_completion_or_minimum_speed_penalty (test_b2d_controller_report.ReportTests) ... ok
+test_first_finished_not_best_and_all_retry_wall_is_counted (test_b2d_controller_report.ReportTests) ... ok
+test_live_server_age_does_not_divide_by_zero (test_b2d_controller_report.ReportTests) ... ok
+test_partial_corrupt_missing_and_capped_results_remain_visible (test_b2d_controller_report.ReportTests) ... ok
+test_pre_collision_requires_frame_evidence (test_b2d_controller_report.ReportTests) ... ok
+test_telemetry_metrics_use_truth_and_validate_frames (test_b2d_controller_report.ReportTests) ... ok
+test_vendor_tick_runtime_is_effective_cap_without_harness_cap (test_b2d_controller_report.ReportTests) ... ok
+test_weighted_and_route_equal_metrics_differ (test_b2d_controller_report.ReportTests) ... ok
+test_cancellation_and_exception_stop_external_server (test_b2d_controller_report.ReusableServerTests) ... {"worker": 0, "error": "Traceback (most recent call last):\n  File \"/data/worktrees/jev-drive-controller-v2/scripts/b2d_run.py\", line 476, in worker\n    ok, record = self.run_once(wi, server, rid, attempt)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1081, in __call__\n    return self._mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1085, in _mock_call\n    return self._execute_mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1140, in _execute_mock_call\n    raise effect\nRuntimeError: failed route\n", "t": 1790089088.0707092, "kind": "worker_error"}
+ok
+test_default_runner_still_owns_final_stop (test_b2d_controller_report.ReusableServerTests) ... ok
+test_exhausted_failure_stops_external_server (test_b2d_controller_report.ReusableServerTests) ... {"worker": 0, "index": 1, "port": 2050, "t": 1790089088.0728414, "kind": "server_moved"}
+{"route_id": "1", "attempts": 1, "t": 1790089088.0728645, "kind": "route_abandoned"}
+ok
+test_external_server_survives_two_sequential_runners (test_b2d_controller_report.ReusableServerTests) ... ok
+test_provided_pid_is_not_reaped_as_orphan (test_b2d_controller_report.ReusableServerTests) ... ok
+test_recovered_failure_moves_then_returns_live_server (test_b2d_controller_report.ReusableServerTests) ... {"worker": 0, "index": 1, "port": 2050, "t": 1790089088.077014, "kind": "server_moved"}
+{"worker": 0, "index": 1, "port": 2050, "t": 1790089088.0770252, "kind": "server_start"}
+ok
+test_recycle_still_stops_external_server (test_b2d_controller_report.ReusableServerTests) ... {"worker": 0, "index": 0, "routes_served": 1, "age_s": 0, "t": 1790089088.078152, "kind": "server_recycled"}
+ok
+test_server_constructs_own_log_directory_without_starting (test_b2d_controller_report.ReusableServerTests) ... ok
+test_stop_flag_stops_external_server_even_without_route (test_b2d_controller_report.ReusableServerTests) ... ok
+test_validate_external_list_before_side_effects (test_b2d_controller_report.ReusableServerTests) ... ok
+test_complete_five_seconds_and_grade (test_b2d_controller_slope.SlopeMetricTests) ... ok
+test_no_slope_is_explicitly_untested_without_server_ownership (test_b2d_controller_slope.SlopeMetricTests) ... ok
+test_return_motion_and_high_speed_are_not_hidden (test_b2d_controller_slope.SlopeMetricTests) ... ok
+test_reverse_is_preserved_and_drift_fails (test_b2d_controller_slope.SlopeMetricTests) ... ok
+test_static_drivable_selection (test_b2d_controller_slope.SlopeMetricTests) ... ok
+test_camera_overlay_uses_matching_historical_prediction (test_b2d_preview.PreviewTests) ... ok
+test_origin_is_fixed_without_recentring_prediction (test_b2d_preview.PreviewTests) ... ok
+test_projection_axis (test_b2d_preview.PreviewTests) ... ok
+test_session_marks_end (test_b2d_preview.PreviewTests) ... ok
+test_transport_latest_noncontiguous_and_restart (test_b2d_preview.PreviewTests) ... ok
+test_cancel_overrides_child_finished (test_b2d_runtime.CancellationTests) ... {"worker": 0, "route_id": "1711", "attempt": 1, "port": 2000, "tm_port": 8000, "t": 1790089088.095747, "kind": "route_start"}
+{"worker": 0, "route_id": "1711", "attempt": 1, "status": "cancelled_by_user", "wall_s": 0.0, "ticks": 12, "t": 1790089088.0958736, "kind": "route_end"}
+ok
+test_evaluator_signal_is_recorded_and_delegated (test_b2d_runtime.CancellationTests) ... ok
+test_interrupt_waits_for_worker_cleanup_and_writes_summary (test_b2d_runtime.CancellationTests) ... {"reason": "user interrupt; stopping workers", "t": 1790089088.0973597, "kind": "interrupted"}
+{"routes_requested": 1, "routes_finished": 0, "routes_skipped_no_map": [], "routes_never_finished": ["1711"], "repeat_offenders": [], "restarts": 0, "wall_s_total": 0, "wall_s_median": 0.0, "ticks_total": 0, "s_per_tick_median": null, "by_server_age": {}, "t": 1790089088.1075006, "kind": "summary"}
+ok
+test_worker_error_releases_claim_and_fails_run (test_b2d_runtime.CancellationTests) ... {"worker": 0, "index": 0, "port": 2000, "t": 1790089088.1086497, "kind": "server_start"}
+{"worker": 0, "error": "Traceback (most recent call last):\n  File \"/data/worktrees/jev-drive-controller-v2/scripts/b2d_run.py\", line 472, in worker\n    self.staggered_start(server)\n  File \"/data/worktrees/jev-drive-controller-v2/scripts/b2d_run.py\", line 536, in staggered_start\n    server.start()\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1081, in __call__\n    return self._mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1085, in _mock_call\n    return self._execute_mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1140, in _execute_mock_call\n    raise effect\nRuntimeError: test startup failure\n", "t": 1790089088.108756, "kind": "worker_error"}
+{"routes_requested": 1, "routes_finished": 0, "routes_skipped_no_map": [], "routes_never_finished": ["1711"], "repeat_offenders": [], "restarts": 0, "wall_s_total": 0, "wall_s_median": 0.0, "ticks_total": 0, "s_per_tick_median": null, "by_server_age": {}, "t": 1790089088.3089588, "kind": "summary"}
+ok
+test_external_agent_and_config_reach_leaderboard (test_b2d_runtime.ExternalAgentTests) ... ok
+test_dense_plan_survives_base_downsampling (test_b2d_runtime.SteeringTests) ... ok
+test_forward_turn_has_correct_sign (test_b2d_runtime.SteeringTests) ... ok
+test_passed_origin_is_not_a_steering_target (test_b2d_runtime.SteeringTests) ... ok
+test_progress_never_goes_backwards (test_b2d_runtime.SteeringTests) ... ok
+test_color_and_pipeline_pixel_equivalence (test_b2d_sensor_pipeline.PipelineTests) ... ok
+test_generic_non_image_data_and_optional_display (test_b2d_sensor_pipeline.PipelineTests) ... ok
+test_only_requested_frame_is_submitted (test_b2d_sensor_pipeline.PipelineTests) ... ok
+test_worker_failure_is_not_hidden (test_b2d_sensor_pipeline.PipelineTests) ... ok
+
+======================================================================
+ERROR: test_b2d_controller_campaign (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_b2d_controller_campaign
+Traceback (most recent call last):
+  File "/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/loader.py", line 436, in _find_test_path
+    module = self._get_module_from_name(name)
+  File "/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/loader.py", line 377, in _get_module_from_name
+    __import__(name)
+  File "/data/worktrees/jev-drive-controller-v2/scripts/test_b2d_controller_campaign.py", line 7, in <module>
+    from b2d_controller_campaign import resolve_configs, archived_configs
+  File "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_campaign.py", line 19, in <module>
+    from b2d_run import Runner, Server, parse_args as runner_args, select_routes
+  File "/data/worktrees/jev-drive-controller-v2/scripts/b2d_run.py", line 55, in <module>
+    DATA_DIR = Path(os.environ["DATA_DIR"])
+  File "/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/os.py", line 675, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'DATA_DIR'
+
+
+----------------------------------------------------------------------
+Ran 107 tests in 1.312s
+
+FAILED (errors=1)

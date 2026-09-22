@@ -1,0 +1,1 @@
+Closed v4 development matrix: 18 completed, 17 pass all gates. Single end event and absent recorded server94 PID188112 verified before inventory. Raw files unchanged. Full index: ../development-v4-file-index.json. Summary/gpu are byte-identical copies. Formal qualification is separate.
