@@ -43,7 +43,7 @@ SUBSETS = sa.SUBSETS
 BASE = "ridge ego"
 SUBSET_FILE = "p2p3_v1"
 TARGET_N = 20_000
-KEEP_ALL = ("pre_onset", "turn_yaw")   # subsets kept whole; rater frames are added separately
+QUOTA = {"turn_yaw": 4_000, "straight_yaw": 10_000}   # capped strata; pre-onset and rater frames are kept whole
 
 
 # ---------------------------------------------------------------- context and subset
@@ -78,28 +78,42 @@ def s_ego_full(ctx: dict, direction: int, folds: int = l0.FOLDS) -> np.ndarray:
     return l0.ego_surprise(ctx["ego"], ctx["fut"], sp, folds)
 
 
-def choose_subset(ctx: dict, target: int = TARGET_N, seed: int = 0) -> np.ndarray:
+def _take(seq: np.ndarray, pool: np.ndarray, n: int, seed: int) -> np.ndarray:
+    """`n` rows drawn from `pool` (positions), the same share out of every sequence.
+
+    Sampling per sequence rather than globally is not cosmetic: the bootstrap resamples sequences and RFS
+    averages per scenario cluster, so a draw that empties some sequences costs resolution in both.
+    """
+    if n >= len(pool):
+        return pool
+    codes = pd.factorize(seq[pool])[0]
+    order = np.lexsort((np.random.default_rng(seed).random(len(pool)), codes))   # random within a sequence
+    start = np.flatnonzero(np.r_[True, np.diff(codes[order]) != 0])
+    rank = np.empty(len(pool), np.int64)
+    rank[order] = np.arange(len(pool)) - np.repeat(start, np.diff(np.r_[start, len(pool)]))
+    quota = np.ceil(np.bincount(codes) * (n / len(pool))).astype(int)[codes]
+    return pool[rank < quota]
+
+
+def choose_subset(ctx: dict, target: int = TARGET_N, quota: dict = QUOTA, seed: int = 0) -> np.ndarray:
     """Boolean mask over the context rows: the frames P2(c) and all of P3 re-extract features for.
 
-    Kept whole: every pre-onset frame (the numerator of the judgement), every rater-scored frame (the whole
-    of RFS) and every already-turning frame (decision 3c's control arm). The remainder is filled by sampling
-    *sequences' frames in proportion*, so that the padding is spread over all 479 sequences rather than
-    concentrated in whichever ones happen to sort first: an evaluation half short of sequences is short of
-    bootstrap units, and RFS averages per scenario cluster.
+    Kept whole: every pre-onset frame and every rater-scored frame. Those two carry the judgement -- the
+    pre-onset paired delta and RFS -- so the subset must not cost them a single frame, and it does not: all
+    1510 and all 479 are in.
+
+    Everything else is capped, and the caps are set by what each stratum is *for*. `straight_yaw` is the DiD's
+    control arm, and in the full half-val its 23 612 evaluation frames contributed almost no variance; cutting
+    it to a few thousand would widen the DiD until it said nothing, so it gets the larger quota. `turn_yaw` is
+    only decision 3c's already-turning control and needs enough frames to be read, not all 11 060 of them.
+    The remainder fills up to `target` from the frames in no yaw subset, which is what keeps the overall ADE
+    column representative of val rather than of its manoeuvres.
     """
-    keep = ctx["rater"].copy()
-    for k in KEEP_ALL:
-        keep |= ctx["sub"][k]
-    need = max(target - int(keep.sum()), 0)
+    keep = ctx["rater"] | ctx["sub"]["pre_onset"]
+    for i, (k, n) in enumerate(quota.items()):
+        keep[_take(ctx["seq"], np.flatnonzero(ctx["sub"][k] & ~keep), n, seed + i)] = True
     rest = np.flatnonzero(~keep)
-    if need:
-        codes = pd.factorize(ctx["seq"][rest])[0]
-        order = np.lexsort((np.random.default_rng(seed).random(len(rest)), codes))  # random within sequence
-        start = np.flatnonzero(np.r_[True, np.diff(codes[order]) != 0])
-        rank = np.empty(len(rest), np.int64)
-        rank[order] = np.arange(len(rest)) - np.repeat(start, np.diff(np.r_[start, len(rest)]))
-        quota = need / len(rest)                              # the same share of every sequence's spare frames
-        keep[rest[rank < np.ceil(np.bincount(codes) * quota).astype(int)[codes]]] = True
+    keep[_take(ctx["seq"], rest, max(target - int(keep.sum()), 0), seed + len(quota))] = True
     log.info("subset: %d frames (%d sequences) of %d; %s", int(keep.sum()),
              len(np.unique(ctx["seq"][keep])), len(keep),
              {k: int((ctx["sub"][k] & keep).sum()) for k in SUBSETS} | {"rater": int((ctx["rater"] & keep).sum())})
