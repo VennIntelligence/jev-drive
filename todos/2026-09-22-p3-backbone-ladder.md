@@ -1,6 +1,6 @@
 # P3：backbone 阶梯（换表征，同一个子集、同一套 head、同一个 judge）
 
-状态: running
+状态: done
 主题: ../research/survey-counterfactual-video-gen.md
 
 ## 目标
@@ -405,11 +405,11 @@ RFS 并排；全集 ADE 是侧栏；循环性限定随引用），**−0.05 m �
       但 decile 曲线的形状第一次变了（第 10 档的掉落被压平、见顶右移）**，见 decisions 第 24 条
 - [x] (d) 的数字已写进 decisions 第 24 条
 - [x] (a) 的数字已补进第 24 条
-- [ ] (b)(c) 的数字补进第 24 条
+- [x] (c) 的数字已补进第 24 条；(b) 延后
 - [x] d' 阶梯：(d'1) 三相机、(d'2) clip 8、(d'3) clip 16、(d'5) late fusion —— 全部完成，全部不过门槛
 - [x] d' 阶梯：(d'4) ViT-g —— 已完成；方向不一致未收敛，见 decisions 第 24 条
-- [ ] (d'') Qwen3-VL-4B 原生 video：200 帧 profiling → 全量 → head
-- [ ] (d''') train split 判决：抽 ViT-L 和 ViT-g 的 trainval 特征 → `--steps p3train`
+- [x] (d'') Qwen3-VL-4B 原生 video —— **唯一两个方向 CI 都不跨零的 arm**，2 h 11 min
+- [x] (d''') train split 判决 —— 点估计塌到 −0.030、CI 跨零，**测不动**；瓶颈是 val 只有 479 个 sequence
 - [x] (d'6) V-JEPA 2.1 —— **跳过**：没有官方权重，只有第三方转存，按第 12 条的规矩不用
 
 ## 结果

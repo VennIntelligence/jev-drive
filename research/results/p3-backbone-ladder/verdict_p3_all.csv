@@ -1,0 +1,14 @@
+arm,meets_both_directions
+A ridge_late pooled (qwen4b L18),False
+a qwen32b L32_last,False
+a qwen32b L32_mean,False
+a qwen32b L50_last,False
+a qwen32b L50_mean,False
+c wan s0.2_b15_mean,False
+c wan s0.2_b20_mean,False
+c wan s0.8_b15_mean,False
+c wan s0.8_b20_mean,False
+d vjepa2 last_mean,False
+d vjepa2 mean,False
+d2 qwenvid L18_last,False
+d2 qwenvid L18_mean,False
