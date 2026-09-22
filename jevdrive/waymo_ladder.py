@@ -1000,7 +1000,8 @@ def s_ego_from_p0(ctx: dict) -> np.ndarray:
         return s_ego_full(ctx, 0)
     z = np.load(Path(run) / "preds.npz", allow_pickle=True)
     at = pd.Series(z["s_ego"], index=z["frame_name"].astype(str))
-    s = at.reindex(ctx["fname"]).to_numpy()
+    # .copy(): reindex can hand back a read-only view, and the fill below writes into it
+    s = np.array(at.reindex(ctx["fname"]).to_numpy(), dtype=np.float64, copy=True)
     miss = np.isnan(s)
     if miss.any():                       # P0 evaluated val only, so train rows have no s_ego from it
         log.info("s_ego from P0 covers %d/%d rows; the rest are fitted rows and are not stratified",
