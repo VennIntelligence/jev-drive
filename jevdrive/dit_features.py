@@ -30,6 +30,11 @@ import torch
 
 from .common import data_dir, get_logger
 
+# The weights are on the data disk and the box reaches the hub only through a proxy this process does not
+# set. Without this, `from_pretrained` HEAD-requests huggingface.co for files it already has, and on a
+# window with no proxy that is five retries and a hard failure -- which is exactly how the Wan probe died
+# and stalled the whole P3 queue on 2026-09-23.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 log = get_logger(__name__)
 DEV = "cuda"
 WAN = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
@@ -51,8 +56,9 @@ def prompt_cache(repo: str, prompt: str = NEUTRAL_PROMPT):
     if f.exists():
         return torch.load(f, map_location="cpu")
     from transformers import AutoTokenizer, UMT5EncoderModel
-    tok = AutoTokenizer.from_pretrained(repo, subfolder="tokenizer")
-    enc = UMT5EncoderModel.from_pretrained(repo, subfolder="text_encoder", dtype=torch.bfloat16).to(DEV).eval()
+    tok = AutoTokenizer.from_pretrained(repo, subfolder="tokenizer", local_files_only=True)
+    enc = UMT5EncoderModel.from_pretrained(repo, subfolder="text_encoder", dtype=torch.bfloat16,
+                                        local_files_only=True).to(DEV).eval()
     b = tok([prompt], padding="max_length", max_length=512, truncation=True, return_tensors="pt").to(DEV)
     with torch.inference_mode():
         h = enc(b.input_ids, attention_mask=b.attention_mask).last_hidden_state
@@ -73,9 +79,11 @@ class WanDiTFeatures:
         from torchvision.transforms import v2
         self.model_id, self.n_images, self.sigmas, self.seed = repo, n_images, tuple(sigmas), seed
         self.n_image_tokens = 0
-        self.vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=torch.float32).to(DEV).eval()
+        self.vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=torch.float32,
+                                                    local_files_only=True).to(DEV).eval()
         self.tr = WanTransformer3DModel.from_pretrained(repo, subfolder="transformer",
-                                                        torch_dtype=torch.bfloat16).to(DEV).eval()
+                                                        torch_dtype=torch.bfloat16,
+                                                        local_files_only=True).to(DEV).eval()
         n = len(self.tr.blocks)
         self.taps = sorted({min(int(round(t * n)), n - 1) for t in taps})
         self.buf = {}
