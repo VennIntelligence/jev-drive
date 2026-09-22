@@ -846,15 +846,23 @@ def extract_qwenvid(rl=None, batch_size: int = 2, limit: int | None = None, fram
                                frames_per_clip=frames, clip_stride=stride, complete=int(full.sum()))
 
 
-def extract_wan(rl=None, batch_size: int = 2, limit: int | None = None, **kw):
-    """P3(c): Wan2.2-TI2V-5B's DiT, one forward per camera per noise level, over the frozen subset."""
+def extract_wan(rl=None, batch_size: int = 2, limit: int | None = None, cams=("front",), **kw):
+    """P3(c): Wan2.2-TI2V-5B's DiT, one forward per camera per noise level, over the frozen subset.
+
+    `cams` defaults to the front camera alone, not to all three. That is a deliberate deviation from the
+    rest of the ladder and it is there to make the comparison like-for-like: the V-JEPA arm that carries
+    the signal, arm (d), is front-only too, so a three-camera Wan would differ from it in two ways at once.
+    It also costs a third as much -- two transformer forwards and one VAE encode per frame instead of six
+    and three. The three-camera pass is kept as a follow-up, worth paying for only if front-only shows
+    something on pre-onset.
+    """
     from .dit_features import WanDiTFeatures
     ctx = base_context()
     keep = load_subset(ctx)
     rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
-    fx = WanDiTFeatures(**kw)
+    fx = WanDiTFeatures(n_images=len(cams), **kw)
     name = P3_SETS["c wan"][0] + ("_probe" if limit else "")
-    return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
+    return waymo.extract_subset(name, fx, rows, cams=tuple(cams), batch_size=batch_size, rl=rl)
 
 
 VJEPA_VARIANTS = {                      # arm key -> (set name, camera, frames, stride, checkpoint)
