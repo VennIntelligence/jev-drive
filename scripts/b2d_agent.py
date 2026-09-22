@@ -19,6 +19,11 @@ configured through the JSON file passed as `--agent-config`:
 runs inference in a background thread, so the simulator keeps ticking while the policy thinks and
 the new control lands one inference later - which is what a real vehicle does anyway.
 
+`drive: controller` instead collects exact motion frames and controls every tick,
+with synchronous dense-route trajectories every N ticks. It currently requires
+`policy: none`, an explicit measured `controller_config` JSON, and attempt `out`.
+Its cameras remain decimated optional observations, and truth is evaluation-only.
+
 Everything except `policy: none` is off by default, so the unoptimised path stays reproducible.
 Python 3.8: this runs in envs/carla, not in the project env.
 """
@@ -124,8 +129,140 @@ class StubAgent(AutonomousAgent):
         # timings the hooks collect around this call.
         self.timings = {"sensor_wait": [], "infer": [], "agent_total": [], "policy_ticks": 0,
                         "server_infer_ms": []}
+        self._telemetry = self._trajectory_log = None
+        if self.drive == "controller":
+            self._setup_controller(cfg)
         if self.policy == "gpu":
             self._client = PolicyClient(cfg["policy_socket"])
+
+    def _setup_controller(self, cfg):
+        from b2d_controller import Controller
+        from b2d_controller_adapter import FrameRouter
+        if self.policy != "none":
+            raise ValueError("controller mode currently requires policy=none route trajectories")
+        config_path = cfg.get("controller_config")
+        if not config_path:
+            raise ValueError("controller mode requires measured controller_config JSON")
+        with open(config_path) as fh:
+            parameters = json.load(fh)
+        self._adapter_parameters = parameters.pop("adapter", {})
+        for key in ("rear_axle_offset_m", "gnss_x_m", "pose_gnss_gain", "pose_heading_gain",
+                    "route_end_extension_m", "truth_logging", "route_stop_deceleration"):
+            if key in parameters:
+                self._adapter_parameters[key] = parameters.pop(key)
+        for key, value in {"gnss_x_m": -1.4, "pose_gnss_gain": .05,
+                           "pose_heading_gain": .1, "route_end_extension_m": 3.,
+                           "truth_logging": True, "route_stop_deceleration": 2.}.items():
+            self._adapter_parameters.setdefault(key, value)
+        parameters.pop("metadata", None)
+        parameters.pop("preset", None)
+        if "rear_axle_offset_m" not in self._adapter_parameters:
+            raise ValueError("controller config needs measured rear_axle_offset_m")
+        self._controller = Controller(preset=cfg.get("controller_preset", "carla"), **parameters)
+        self._frame_router = FrameRouter([camera[0] for camera in CAMERAS[:self.n_cam]])
+        self._pose_filter = self._route_adapter = self._truth_logger = None
+        self._trajectory_frame = None
+        self.timings["controller_step_ms"] = []
+        out = cfg.get("out")
+        if not out:
+            raise ValueError("controller mode requires attempt output directory")
+        os.makedirs(out, exist_ok=True)
+        self._telemetry = open(os.path.join(out, "control.jsonl"), "w", buffering=1)
+        self._trajectory_log = open(os.path.join(out, "trajectories.jsonl"), "w", buffering=1)
+        # Locked Bench2Drive constructs the agent, sets its route, then calls setup.
+        if getattr(self, "_drive_plan", None):
+            self._setup_controller_route(self._drive_gps_plan, self._drive_plan)
+
+    def _setup_controller_route(self, gps_plan, world_plan):
+        from b2d_controller_adapter import GPSProjector, PoseFilter, RouteAdapter, TruthLogger
+        world = np.array([[tf.location.x, tf.location.y] for tf, _ in world_plan])
+        gps = np.array([[point["lat"], point["lon"]] for point, _ in gps_plan])
+        projector = GPSProjector(gps, world)
+        settings = self._adapter_parameters
+        rear = float(settings["rear_axle_offset_m"])
+        self._pose_filter = PoseFilter(projector, rear, settings.get("gnss_x_m", -1.4),
+                                       settings.get("pose_gnss_gain", .05),
+                                       settings.get("pose_heading_gain", .1))
+        self._route_adapter = RouteAdapter(world, self.cfg.get("cruise_mps", 8.),
+                                            settings.get("route_end_extension_m", 3.),
+                                            settings.get("route_stop_deceleration", 2.))
+        if settings.get("truth_logging", True):
+            def hero_provider():
+                hero = getattr(self, "hero_actor", None)
+                if hero is None:
+                    self.get_hero()
+                    hero = getattr(self, "hero_actor", None)
+                return hero
+            self._truth_logger = TruthLogger(hero_provider, self._route_adapter, rear)
+        self._controller.reset()
+        self._tick = 0
+        self._trajectory_frame = None
+        # A fresh route must not consume camera packets or held controls from its
+        # predecessor when callers reuse an agent instance.
+        from b2d_controller_adapter import FrameRouter
+        self._frame_router = FrameRouter([camera[0] for camera in CAMERAS[:self.n_cam]])
+        self._control = carla.VehicleControl(throttle=0., steer=0., brake=1.)
+        with open(os.path.join(self.cfg["out"], "route_reference.json"), "w") as fh:
+            json.dump({"world_xy": world.tolist(), "gps_lat_lon": gps.tolist(),
+                       "source": "diagnostic_dense_global_plan_gps_world_pairs",
+                       "gps_scale": projector.scale, "gps_offset": projector.offset.tolist(),
+                       "gps_projection_max_residual_m": projector.max_residual_m,
+                       "rear_axle_offset_m": rear, "adapter": settings}, fh, indent=2)
+
+    def _controller_call(self):
+        from b2d_controller_adapter import controller_speed
+        t0 = time.perf_counter()
+        self._tick += 1
+        frame, timestamp = int(GameTime.get_frame()), float(GameTime.get_time())
+        if self._pose_filter is None:
+            raise RuntimeError("Controller route was not initialized")
+        input_data = self._frame_router.read(self.sensor_interface, frame)
+        t_wait = time.perf_counter() - t0
+        imu = input_data["IMU"][1]
+        raw_speed = float(input_data["SPEED"][1]["speed"])
+        speed = controller_speed(raw_speed)
+        # Stock 0.9.15 calibration-units: gyro z vs world yaw derivative r=.999946,
+        # median ratio=.9999977. Internal y-left therefore flips the sensor sign.
+        world_yaw_rate = float(imu[5])
+        yaw_rate = -world_yaw_rate
+        xy, yaw = self._pose_filter.update(input_data["GPS"][1], float(imu[6]),
+                                           speed, world_yaw_rate, timestamp)
+        route_cross = self._route_adapter.project(xy, yaw, speed, timestamp)
+        t_infer = 0.
+        if (self._tick - 1) % self.decimate == 0:
+            t = time.perf_counter()
+            trajectory = self._route_adapter.trajectory(xy, yaw)
+            accepted = self._controller.update(trajectory, timestamp)
+            self._trajectory_frame = frame
+            self._trajectory_log.write(json.dumps({"frame": frame, "sim_time": timestamp,
+                "pose_xy": xy.tolist(), "pose_yaw": yaw, "accepted": accepted,
+                "trajectory_xy": trajectory.tolist()}, allow_nan=False) + "\n")
+            t_infer = time.perf_counter() - t
+            self.timings["policy_ticks"] += 1
+        t = time.perf_counter()
+        throttle, steer, brake = self._controller.step(timestamp, speed, yaw_rate)
+        step_ms = (time.perf_counter() - t) * 1000.
+        self._control = carla.VehicleControl(throttle=float(throttle), steer=float(steer),
+                                              brake=float(brake))
+        record = dict(self._controller.diagnostics)
+        record.update(frame=frame, sim_time=timestamp, speed_mps=speed, raw_speed_mps=raw_speed,
+                      yaw_rate_rps=yaw_rate,
+                      throttle=float(throttle), steer=float(steer), brake=float(brake),
+                      trajectory_frame=self._trajectory_frame,
+                      sensor_frames={key: int(value[0]) for key, value in input_data.items()},
+                      pose_xy=xy.tolist(), pose_yaw=yaw, raw_pose_xy=self._pose_filter.raw_xy.tolist(),
+                      route_cross_track_m=route_cross, route_progress_m=self._route_adapter.progress,
+                      route_terminal_hold=self._route_adapter.terminal_hold,
+                      route_endpoint_distance_m=self._route_adapter.endpoint_distance_m,
+                      controller_step_ms=step_ms)
+        if self._truth_logger is not None:
+            record.update(self._truth_logger.measure(frame, xy.copy(), self._pose_filter.raw_xy.copy(), yaw))
+        self._telemetry.write(json.dumps(record, allow_nan=False) + "\n")
+        self.timings["sensor_wait"].append(t_wait)
+        self.timings["infer"].append(t_infer)
+        self.timings["controller_step_ms"].append(step_ms)
+        self.timings["agent_total"].append(time.perf_counter() - t0)
+        return self._control
 
     def sensors(self):
         sensors = []
@@ -144,7 +281,8 @@ class StubAgent(AutonomousAgent):
             {"type": "sensor.other.imu", "x": -1.4, "y": 0.0, "z": 0.0,
              "roll": 0.0, "pitch": 0.0, "yaw": 0.0, "sensor_tick": DELTA, "id": "IMU"},
             {"type": "sensor.other.gnss", "x": -1.4, "y": 0.0, "z": 0.0,
-             "roll": 0.0, "pitch": 0.0, "yaw": 0.0, "sensor_tick": 0.01, "id": "GPS"},
+             "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
+             "sensor_tick": DELTA if self.drive == "controller" else 0.01, "id": "GPS"},
             {"type": "sensor.speedometer", "reading_frequency": 20, "id": "SPEED"},
         ]
         return sensors
@@ -154,11 +292,16 @@ class StubAgent(AutonomousAgent):
         # The base class downsamples to 50 m, which cuts corners when used for steering.
         # Keep the supplied dense route for this diagnostic driver, with monotonic progress.
         self._drive_plan = list(global_plan_world_coord)
+        self._drive_gps_plan = list(global_plan_gps)
         self._route_index = 0
+        if getattr(self, "drive", None) == "controller" and hasattr(self, "_controller"):
+            self._setup_controller_route(global_plan_gps, global_plan_world_coord)
 
     # The base class prints one wallclock line per tick and always calls get_data(). We need the
     # per-phase split and the decimation, so this call is reimplemented rather than wrapped.
     def __call__(self):
+        if self.drive == "controller":
+            return self._controller_call()
         t0 = time.perf_counter()
         self._tick += 1
         run_policy = (self._tick - 1) % self.decimate == 0
@@ -291,6 +434,9 @@ class StubAgent(AutonomousAgent):
         return float(np.clip(ang, -1.0, 1.0))
 
     def destroy(self):
+        for log in (getattr(self, "_telemetry", None), getattr(self, "_trajectory_log", None)):
+            if log is not None:
+                log.close()
         if self._client is not None:
             try:
                 self._client.sock.close()
