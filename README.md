@@ -14,6 +14,7 @@ This file is the top-level index: every doc in the repo is reachable from here.
 | [research/survey-thin-head.md](research/survey-thin-head.md) | literature survey for group meetings: world models, VLAs, thin heads, the Waymo E2E leaderboard and how crowded the line is |
 | [research/trajectory-to-control.md](research/trajectory-to-control.md) | how a planner's trajectory becomes CARLA's 20 Hz `VehicleControl`: what CARLA ships, what the Bench2Drive baselines and openpilot do, who learns what, and the recommendation |
 | [research/survey-counterfactual-video-gen.md](research/survey-counterfactual-video-gen.md) | literature status as of 2026-09-22: counterfactual pair evaluation and training, generative editing of real frames, video-generation models as planner representations, MiniMax H3 facts; what is done and what is still open |
+| [research/prediag-2026-09/](research/prediag-2026-09/README.md) | the September 2026 pre-diagnostic round before method selection: train-split recheck, judge proposal, readout ladder, backbone ladder, CARLA gap and paired exam; results and decile figures collected in one place |
 | [research/articles/](research/articles/) | curated deep-dive articles and primers for humans (e.g. [trajectory-to-control](research/articles/trajectory-to-control/)) |
 | [research/lit/](research/lit) | literature and deep-research reports |
 | [research/figs/](research/figs) | figures referenced by the research docs and todos (PNG, committed) |
