@@ -1,0 +1,67 @@
+{
+  "carla": {
+    "metric_protocol": "exact existing gate: independent reference>=cruise-.1, elapsed>=5s; error=true speed minus fixed cruise6m/s",
+    "samples": 318,
+    "speed_rms_mps": 0.663271268879291,
+    "signed_speed_error_mean_mps": -0.4076050641355085,
+    "actual_speed_mean_mps": 5.592394935864492,
+    "speed_below5p5_fraction": 0.5062893081761006,
+    "speed_above6p5_fraction": 0.0220125786163522,
+    "command_speed_mean_mps": 6.062392949653839,
+    "controller_trajectory_derivative_mean_mps": 6.097302212049695,
+    "brake_positive_fraction": 0.24213836477987422,
+    "brake_full_fraction": 0.09119496855345911,
+    "failed_gates": [
+      "cruise_speed"
+    ],
+    "sources": {
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/validation_trace.json": "04c24e2a3003b6f75adff585bd7458942040844ea136096e027bb0e9bf50a66a",
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/control.jsonl": "250837388e17403afb88ff7a325b32c5b2f204076f218f43477df612f2106854",
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/validation.json": "5942a1e0eb304640c83a4834a2bb5885ae0c09824b33eabd7c938024311273ce"
+    }
+  },
+  "tcp": {
+    "metric_protocol": "exact existing gate: independent reference>=cruise-.1, elapsed>=5s; error=true speed minus fixed cruise6m/s",
+    "samples": 303,
+    "speed_rms_mps": 0.9215698647016686,
+    "signed_speed_error_mean_mps": 0.23941767239442646,
+    "actual_speed_mean_mps": 6.239417672394427,
+    "speed_below5p5_fraction": 0.2739273927392739,
+    "speed_above6p5_fraction": 0.3795379537953795,
+    "command_speed_mean_mps": 6.77834320958617,
+    "controller_trajectory_derivative_mean_mps": 7.119019484870673,
+    "brake_positive_fraction": 0.08250825082508251,
+    "brake_full_fraction": 0.08250825082508251,
+    "failed_gates": [
+      "full_lateral_rms",
+      "full_lateral_p95",
+      "cruise_speed"
+    ],
+    "sources": {
+      "/data/runs/b2d/controller/development-s-v1/17563/tcp/validation_trace.json": "4b3101cc38f80a8816453799cb2221cb465731898ef1674c037d6c2e1884f79f",
+      "/data/runs/b2d/controller/development-s-v1/17563/tcp/control.jsonl": "7a19a38f043cce128b0f0e0358b052febdf2dad143f8be6db7fc8f66f36e025d",
+      "/data/runs/b2d/controller/development-s-v1/17563/tcp/validation.json": "46f1428709df07a7cd9441db52b4350d718a5e2d74996b4e504d9df41e864f1b"
+    }
+  },
+  "pursuit": {
+    "metric_protocol": "exact existing gate: independent reference>=cruise-.1, elapsed>=5s; error=true speed minus fixed cruise6m/s",
+    "samples": 319,
+    "speed_rms_mps": 0.6363210535788577,
+    "signed_speed_error_mean_mps": -0.4051611004316085,
+    "actual_speed_mean_mps": 5.5948388995683915,
+    "speed_below5p5_fraction": 0.4702194357366771,
+    "speed_above6p5_fraction": 0.006269592476489028,
+    "command_speed_mean_mps": 6.008897099487624,
+    "controller_trajectory_derivative_mean_mps": 6.02208312480966,
+    "brake_positive_fraction": 0.2413793103448276,
+    "brake_full_fraction": 0.10658307210031348,
+    "failed_gates": [
+      "cruise_speed"
+    ],
+    "sources": {
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation_trace.json": "4c35c4bf38136962ad915f6bc32f6ca430108728c006b77eb8880dbceda255b0",
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/control.jsonl": "516bddf260b97d3801d27b793ab192d0a9b6fa60819157cd36287ff79f681c83",
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation.json": "252a01e12cec06fcd06ff5ad36ea1279f2aca05dcbad525e396579b5a5155a1b"
+    }
+  }
+}

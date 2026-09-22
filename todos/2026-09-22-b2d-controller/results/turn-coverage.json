@@ -1,0 +1,542 @@
+{
+  "schema_version": 1,
+  "generated_unix_s": 1790087012.0305653,
+  "method": {
+    "input": "static world_xy reference only, no measured ego heading or GPS noise",
+    "coordinates": "CARLA world XY: positive signed turn is right; negative is left",
+    "resampling_step_m": 1.0,
+    "tangent_chord_m": 5.0,
+    "raw_segment_note": "Raw heading can suffer tiny-segment reversals; classification uses resampled five-meter chords.",
+    "curvature_lobe_deadband_deg_per_m": 0.15,
+    "reported_lobe_min_degrees": 3.0,
+    "major_lobe_min_degrees": 10.0,
+    "S_definition": "At least one major left lobe and one major right lobe in sequence.",
+    "endpoint_note": "Five-meter chords omit approximately2.5m of tangent coverage at each endpoint; net turn differs slightly from raw segments."
+  },
+  "entries": [
+    {
+      "dataset": "G2_development3",
+      "route_id": "1773",
+      "source": "/data/runs/b2d/controller/development3/1773/pursuit/route_reference.json",
+      "source_sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "geometry": {
+        "input_points": 67,
+        "removed_near_duplicate_points": 0,
+        "length_m": 132.00021200610053,
+        "raw_segment_net_turn_deg": -0.0017485228544662959,
+        "five_m_chord_net_turn_deg": -0.0003496337938699881,
+        "positive_cumulative_turn_deg": 0.01014146252821778,
+        "negative_cumulative_turn_deg": -0.010491096322087768,
+        "total_absolute_turn_deg": 0.020632558850305547,
+        "lobes": [],
+        "major_lobes": [],
+        "alternating_curvature_coverage": false,
+        "shape": "approximately_straight",
+        "maximum_five_m_chord_curvature_proxy_per_m": 6.103496180243084e-06,
+        "lateral_acceleration_proxy_at_8mps": 0.0003906237555355574,
+        "lateral_acceleration_proxy_at_6mps": 0.00021972586248875103
+      }
+    },
+    {
+      "dataset": "G2_development3",
+      "route_id": "24240",
+      "source": "/data/runs/b2d/controller/development3/24240/pursuit/route_reference.json",
+      "source_sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "geometry": {
+        "input_points": 81,
+        "removed_near_duplicate_points": 0,
+        "length_m": 100.238435334058,
+        "raw_segment_net_turn_deg": -89.92962039526988,
+        "five_m_chord_net_turn_deg": -89.91481724965051,
+        "positive_cumulative_turn_deg": 8.766948228563395e-05,
+        "negative_cumulative_turn_deg": -89.91490491913281,
+        "total_absolute_turn_deg": 89.91499258861508,
+        "lobes": [
+          {
+            "start_arc_m": 19.5,
+            "end_arc_m": 96.5,
+            "signed_turn_deg": -89.74065716906614,
+            "direction": "left"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 19.5,
+            "end_arc_m": 96.5,
+            "signed_turn_deg": -89.74065716906614,
+            "direction": "left"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.024373004781960417,
+        "lateral_acceleration_proxy_at_8mps": 1.5598723060454667,
+        "lateral_acceleration_proxy_at_6mps": 0.877428172150575
+      }
+    },
+    {
+      "dataset": "G2_development3",
+      "route_id": "25854",
+      "source": "/data/runs/b2d/controller/development3/25854/pursuit/route_reference.json",
+      "source_sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "geometry": {
+        "input_points": 115,
+        "removed_near_duplicate_points": 0,
+        "length_m": 131.30210920195867,
+        "raw_segment_net_turn_deg": 54.01360418399613,
+        "five_m_chord_net_turn_deg": 51.548436573182016,
+        "positive_cumulative_turn_deg": 51.552211843675224,
+        "negative_cumulative_turn_deg": -0.0037752704932149175,
+        "total_absolute_turn_deg": 51.555987114168445,
+        "lobes": [
+          {
+            "start_arc_m": 2.5,
+            "end_arc_m": 38.5,
+            "signed_turn_deg": 51.499969189256845,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 2.5,
+            "end_arc_m": 38.5,
+            "signed_turn_deg": 51.499969189256845,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.031159525407180148,
+        "lateral_acceleration_proxy_at_8mps": 1.9942096260595294,
+        "lateral_acceleration_proxy_at_6mps": 1.1217429146584854
+      }
+    },
+    {
+      "dataset": "G2_development3",
+      "route_id": "26966",
+      "source": "/data/runs/b2d/controller/development3/26966/pursuit/route_reference.json",
+      "source_sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "geometry": {
+        "input_points": 56,
+        "removed_near_duplicate_points": 2,
+        "length_m": 77.40649077278199,
+        "raw_segment_net_turn_deg": 90.57680172132861,
+        "five_m_chord_net_turn_deg": 90.57693324557204,
+        "positive_cumulative_turn_deg": 90.5773065565154,
+        "negative_cumulative_turn_deg": -0.000373310943366744,
+        "total_absolute_turn_deg": 90.57767986745877,
+        "lobes": [
+          {
+            "start_arc_m": 27.5,
+            "end_arc_m": 48.5,
+            "signed_turn_deg": 90.57695471084743,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 27.5,
+            "end_arc_m": 48.5,
+            "signed_turn_deg": 90.57695471084743,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.14659445673584104,
+        "lateral_acceleration_proxy_at_8mps": 9.382045231093826,
+        "lateral_acceleration_proxy_at_6mps": 5.277400442490277
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "2050",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/2050/1/route_reference.json",
+      "source_sha256": "1448d2ba60185562db71629ea0cfb04ac462f56772abe107c0cb3c0f595643e5",
+      "geometry": {
+        "input_points": 72,
+        "removed_near_duplicate_points": 2,
+        "length_m": 78.53469910059133,
+        "raw_segment_net_turn_deg": 90.13288734796102,
+        "five_m_chord_net_turn_deg": 90.13288733250545,
+        "positive_cumulative_turn_deg": 91.46191804880029,
+        "negative_cumulative_turn_deg": -1.3290307162948207,
+        "total_absolute_turn_deg": 92.7909487650951,
+        "lobes": [
+          {
+            "start_arc_m": 25.5,
+            "end_arc_m": 49.5,
+            "signed_turn_deg": 91.30486569795268,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 25.5,
+            "end_arc_m": 49.5,
+            "signed_turn_deg": 91.30486569795268,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.0965931678487969,
+        "lateral_acceleration_proxy_at_8mps": 6.181962742323002,
+        "lateral_acceleration_proxy_at_6mps": 3.4773540425566885
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "2084",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/2084/2/route_reference.json",
+      "source_sha256": "b2c39d045fb07f698d0e726aff9d9bef49707557e9ccf8f5849d842d19a415ec",
+      "geometry": {
+        "input_points": 79,
+        "removed_near_duplicate_points": 2,
+        "length_m": 79.16104236713743,
+        "raw_segment_net_turn_deg": -90.44761032914661,
+        "five_m_chord_net_turn_deg": -90.45040808012115,
+        "positive_cumulative_turn_deg": 0.038781648106351534,
+        "negative_cumulative_turn_deg": -90.48918972822749,
+        "total_absolute_turn_deg": 90.52797137633385,
+        "lobes": [
+          {
+            "start_arc_m": 29.5,
+            "end_arc_m": 45.5,
+            "signed_turn_deg": -90.44664191952734,
+            "direction": "left"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 29.5,
+            "end_arc_m": 45.5,
+            "signed_turn_deg": -90.44664191952734,
+            "direction": "left"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.1697425023430723,
+        "lateral_acceleration_proxy_at_8mps": 10.863520149956628,
+        "lateral_acceleration_proxy_at_6mps": 6.110730084350603
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "25318",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/25318/1/route_reference.json",
+      "source_sha256": "c4e086603ddd36153bb81c9c2868be22d68b51b7877c8d168076076c9d9edd8a",
+      "geometry": {
+        "input_points": 109,
+        "removed_near_duplicate_points": 0,
+        "length_m": 141.7829132788291,
+        "raw_segment_net_turn_deg": -57.23543051984648,
+        "five_m_chord_net_turn_deg": -55.80673619365743,
+        "positive_cumulative_turn_deg": 0.00017693281676441826,
+        "negative_cumulative_turn_deg": -55.80691312647419,
+        "total_absolute_turn_deg": 55.80709005929096,
+        "lobes": [
+          {
+            "start_arc_m": 30.5,
+            "end_arc_m": 138.5,
+            "signed_turn_deg": -55.66837440241102,
+            "direction": "left"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 30.5,
+            "end_arc_m": 138.5,
+            "signed_turn_deg": -55.66837440241102,
+            "direction": "left"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.009848650308714624,
+        "lateral_acceleration_proxy_at_8mps": 0.6303136197577359,
+        "lateral_acceleration_proxy_at_6mps": 0.35455141111372646
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "27529",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/27529/1/route_reference.json",
+      "source_sha256": "1fdfc6bd4b16fd94fa634f059381be97569914288cef8524b8164aa6c9e613e2",
+      "geometry": {
+        "input_points": 65,
+        "removed_near_duplicate_points": 2,
+        "length_m": 69.90570452221202,
+        "raw_segment_net_turn_deg": 90.57089978086361,
+        "five_m_chord_net_turn_deg": 90.57142300488314,
+        "positive_cumulative_turn_deg": 90.57247778898828,
+        "negative_cumulative_turn_deg": -0.0010547841051172524,
+        "total_absolute_turn_deg": 90.57353257309337,
+        "lobes": [
+          {
+            "start_arc_m": 22.5,
+            "end_arc_m": 39.5,
+            "signed_turn_deg": 90.5709909350816,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 22.5,
+            "end_arc_m": 39.5,
+            "signed_turn_deg": 90.5709909350816,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.14889603323630318,
+        "lateral_acceleration_proxy_at_8mps": 9.529346127123404,
+        "lateral_acceleration_proxy_at_6mps": 5.360257196506915
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "28154",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/28154/1/route_reference.json",
+      "source_sha256": "8a87a5b504a6ec0cbc2dd5557a64ba5a0ccb9d7e51f0ebda20dbf3751222759f",
+      "geometry": {
+        "input_points": 159,
+        "removed_near_duplicate_points": 4,
+        "length_m": 154.2712252328607,
+        "raw_segment_net_turn_deg": 57.21221279141541,
+        "five_m_chord_net_turn_deg": 54.761963404170224,
+        "positive_cumulative_turn_deg": 55.53097168376962,
+        "negative_cumulative_turn_deg": -0.7690082795994061,
+        "total_absolute_turn_deg": 56.29997996336904,
+        "lobes": [
+          {
+            "start_arc_m": 110.5,
+            "end_arc_m": 151.5,
+            "signed_turn_deg": 54.70881362859587,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 110.5,
+            "end_arc_m": 151.5,
+            "signed_turn_deg": 54.70881362859587,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": false,
+        "shape": "single_direction_bend",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.02507208453707799,
+        "lateral_acceleration_proxy_at_8mps": 1.6046134103729914,
+        "lateral_acceleration_proxy_at_6mps": 0.9025950433348077
+      }
+    },
+    {
+      "dataset": "preselected_holdout",
+      "route_id": "3072",
+      "source": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/3072/1/route_reference.json",
+      "source_sha256": "f199d4c12b9916fea25d24dab5a1aaa70740dfe9495db68fa7c417885461a647",
+      "geometry": {
+        "input_points": 127,
+        "removed_near_duplicate_points": 2,
+        "length_m": 136.99001586994655,
+        "raw_segment_net_turn_deg": 0.0069941061714914625,
+        "five_m_chord_net_turn_deg": 0.001398817433169049,
+        "positive_cumulative_turn_deg": 0.03344417919833137,
+        "negative_cumulative_turn_deg": -0.03204536176516232,
+        "total_absolute_turn_deg": 0.06548954096349369,
+        "lobes": [],
+        "major_lobes": [],
+        "alternating_curvature_coverage": false,
+        "shape": "approximately_straight",
+        "maximum_five_m_chord_curvature_proxy_per_m": 4.9787283895152974e-05,
+        "lateral_acceleration_proxy_at_8mps": 0.0031863861692897903,
+        "lateral_acceleration_proxy_at_6mps": 0.001792342220225507
+      }
+    },
+    {
+      "dataset": "existing_Dev10_alternating_example",
+      "route_id": "17569",
+      "source": "/data/runs/b2d/controller/dev10/pursuit-seed0/attempts/17569/1/route_reference.json",
+      "source_sha256": "f54d6073a126c1dfbbda309b62f7916245ccffde31e2160844b66de7fb9ba632",
+      "geometry": {
+        "input_points": 103,
+        "removed_near_duplicate_points": 4,
+        "length_m": 115.20645314480157,
+        "raw_segment_net_turn_deg": 0.0,
+        "five_m_chord_net_turn_deg": -0.004287579859454013,
+        "positive_cumulative_turn_deg": 70.08750955956538,
+        "negative_cumulative_turn_deg": -70.09179713942484,
+        "total_absolute_turn_deg": 140.17930669899022,
+        "lobes": [
+          {
+            "start_arc_m": 37.5,
+            "end_arc_m": 43.5,
+            "signed_turn_deg": -35.15663121529,
+            "direction": "left"
+          },
+          {
+            "start_arc_m": 43.5,
+            "end_arc_m": 49.5,
+            "signed_turn_deg": 35.15767656032366,
+            "direction": "right"
+          },
+          {
+            "start_arc_m": 83.5,
+            "end_arc_m": 89.5,
+            "signed_turn_deg": -34.82297171083279,
+            "direction": "left"
+          },
+          {
+            "start_arc_m": 89.5,
+            "end_arc_m": 95.5,
+            "signed_turn_deg": 34.821284435632464,
+            "direction": "right"
+          }
+        ],
+        "major_lobes": [
+          {
+            "start_arc_m": 37.5,
+            "end_arc_m": 43.5,
+            "signed_turn_deg": -35.15663121529,
+            "direction": "left"
+          },
+          {
+            "start_arc_m": 43.5,
+            "end_arc_m": 49.5,
+            "signed_turn_deg": 35.15767656032366,
+            "direction": "right"
+          },
+          {
+            "start_arc_m": 83.5,
+            "end_arc_m": 89.5,
+            "signed_turn_deg": -34.82297171083279,
+            "direction": "left"
+          },
+          {
+            "start_arc_m": 89.5,
+            "end_arc_m": 95.5,
+            "signed_turn_deg": 34.821284435632464,
+            "direction": "right"
+          }
+        ],
+        "alternating_curvature_coverage": true,
+        "shape": "alternating_lane_changes_or_S",
+        "maximum_five_m_chord_curvature_proxy_per_m": 0.12657724760229483,
+        "lateral_acceleration_proxy_at_8mps": 8.100943846546869,
+        "lateral_acceleration_proxy_at_6mps": 4.556780913682614
+      }
+    }
+  ],
+  "conclusions": {
+    "g2_turning_present": true,
+    "g2_S_coverage": false,
+    "preselected_holdout_S_coverage": false,
+    "g2_25854": "Single continuous right bend, not an S. Positive51.55deg with negligible opposite-sign turn on five-meter chords.",
+    "campaign_S_coverage": "Dev1017569 has substantial alternating lane-change curvature, but does not replace scenario-free G2 S acceptance.",
+    "missing_gate": "Add a frozen scenario-free S/lane-change validation before declaring the G2 shape suite complete."
+  },
+  "supplemental_candidate": {
+    "route_id": "17563",
+    "town": "Town12",
+    "source_xml": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml",
+    "source_xml_sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+    "route_element_sha256": "2dba1d81ae0b594b2bdcb5fe795bdb00793296f34b017437de0c8f89487fe186",
+    "scenario_types": [
+      "SequentialLaneChange"
+    ],
+    "geometry": {
+      "input_points": 24,
+      "removed_near_duplicate_points": 0,
+      "length_m": 117.17471318716534,
+      "raw_segment_net_turn_deg": -6.8699981119611966e-12,
+      "five_m_chord_net_turn_deg": 0.03966149675811792,
+      "positive_cumulative_turn_deg": 78.8136841503462,
+      "negative_cumulative_turn_deg": -78.77402265358809,
+      "total_absolute_turn_deg": 157.5877068039343,
+      "lobes": [
+        {
+          "start_arc_m": 27.5,
+          "end_arc_m": 37.5,
+          "signed_turn_deg": -35.488998170111856,
+          "direction": "left"
+        },
+        {
+          "start_arc_m": 38.5,
+          "end_arc_m": 48.5,
+          "signed_turn_deg": 35.49585725659373,
+          "direction": "right"
+        },
+        {
+          "start_arc_m": 78.5,
+          "end_arc_m": 84.5,
+          "signed_turn_deg": -35.689049259971235,
+          "direction": "left"
+        },
+        {
+          "start_arc_m": 84.5,
+          "end_arc_m": 90.5,
+          "signed_turn_deg": 34.420191933107205,
+          "direction": "right"
+        }
+      ],
+      "major_lobes": [
+        {
+          "start_arc_m": 27.5,
+          "end_arc_m": 37.5,
+          "signed_turn_deg": -35.488998170111856,
+          "direction": "left"
+        },
+        {
+          "start_arc_m": 38.5,
+          "end_arc_m": 48.5,
+          "signed_turn_deg": 35.49585725659373,
+          "direction": "right"
+        },
+        {
+          "start_arc_m": 78.5,
+          "end_arc_m": 84.5,
+          "signed_turn_deg": -35.689049259971235,
+          "direction": "left"
+        },
+        {
+          "start_arc_m": 84.5,
+          "end_arc_m": 90.5,
+          "signed_turn_deg": 34.420191933107205,
+          "direction": "right"
+        }
+      ],
+      "alternating_curvature_coverage": true,
+      "shape": "alternating_lane_changes_or_S",
+      "maximum_five_m_chord_curvature_proxy_per_m": 0.12865785105812533,
+      "lateral_acceleration_proxy_at_8mps": 8.234102467720021,
+      "lateral_acceleration_proxy_at_6mps": 4.631682638092512
+    },
+    "selection": "Static geometry only; not in Dev10 or preselected holdout, no controller outcome used.",
+    "proposed_protocol": "Supplemental scenario-free G2 route with frozen controller parameters; all three presets; cruise6mps predeclared for geometric feasibility.",
+    "requires_confirmation": "Audit the CARLA-interpolated dense reference after setup. XML geometry is not a guarantee the resolved map route is identical.",
+    "curvature_limit": "Five-meter chord is a smoothed proxy, not exact road curvature or measured available tire friction. At8mps this candidate is stress-like;6mps proxy stays below5mps2.",
+    "extracted_xml": "todos/2026-09-22-b2d-controller/results/supplemental-s.xml",
+    "extracted_xml_sha256": "d012120d75784dc3d8d6b253bfddd24ae28b1278c29d1c0e2763804bea111730",
+    "removed_scenarios": [
+      {
+        "name": "SequentialLaneChange_1",
+        "type": "SequentialLaneChange"
+      }
+    ],
+    "extraction": "Exact locked route17563 attributes, weather and waypoint elements preserved; only scenario children removed.",
+    "frozen_baseline_protocol": {
+      "cruise_mps": 6.0,
+      "presets": [
+        "carla",
+        "tcp",
+        "pursuit"
+      ],
+      "controller_parameters": "unchanged v1 frozen config",
+      "selection_timing": "Chosen from static geometry before supplemental outcomes;6mps gives4.63mps2 smoothed lateral-acceleration proxy vs8.23 at8mps.",
+      "purpose": "Close missing scenario-free alternating-curvature G2 coverage; not used to tune v1."
+    }
+  }
+}
