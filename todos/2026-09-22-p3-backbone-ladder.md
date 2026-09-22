@@ -74,7 +74,13 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 因为 DriveLaW 的「t=1」和 2502.07001 的「timestep≈200/1000」在 flow matching 的参数化下
 指的是**相反的两端**，与其挑一个读法不如两个都测。
 
-**(d) V-JEPA 2**：`jevdrive/features.py` 里已有 `VJepaFeatures`，但它是 64 帧的 `fpc64` 权重。
+**(d) V-JEPA 2**：第一次跑**崩了，原因值得单独记**：clip reader 假定「一个 sequence 待在一个 shard 里」，
+于是拿目标帧那个文件去读历史帧的字节区间，读出来的根本不是 JPEG。
+**实际上 Waymo 的一个 sequence 会横跨多个 shard**——同一条 sequence 的第 29 帧在 shard 58、
+第 31 帧在 shard 91。修法是每个 slot 自带自己的路径，`Shards` 按需开多个 fd。
+子集里 **19 663 / 20 237** 帧有严格完整的 4 帧窗口。
+
+`jevdrive/features.py` 里已有 `VJepaFeatures`，但它是 64 帧的 `fpc64` 权重。
 这里喂 **4 帧 clip**（tubelet 是 2 帧，4 帧 = 2 个 tubelet），
 **这是一个已知的 distribution shift，读结果时必须带上**；另外它只吃 FRONT 一路相机，
 而主线是 front3，这两个变量都要写进表里（第 12 条的原话：这一行不能读成「谁是更好的 backbone」）。
@@ -89,9 +95,9 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 
 ## 时间与存储预算（跑之前估；每个 arm 先用约 200 帧实测再改这张表）
 
-| arm | ms/帧（估） | 2 万帧墙钟（估） | 特征体积 | 依据 |
-|:--|--:|--:|--:|:--|
-| a Qwen3-VL-32B | **约 1000** | **约 6 h** | 4 × 5120 × 2 B = 41 KB/帧 → **0.8 GB** | 4B 实测 125 ms/帧（ViT 44.5 + LLM 72.8 + 其余）；32B 的 LLM 约 8 倍参数、跑到第 50/64 层，ViT 也更大 |
+| arm | ms/帧（估） | ms/帧（实测，200 帧） | 2 万帧墙钟 | 特征体积 | 依据 |
+|:--|--:|--:|--:|--:|:--|
+| a Qwen3-VL-32B | 约 1000 | **621.2**（峰值显存 63.8 GB，3060 token/帧，batch 4，权重用 `device_map="cuda"` 直接流进卡里） | **3.5 h** | 53 504 B/帧 → **1.08 GB**（`L32/L50` 的 `_mean`/`_last` 各 5120 维，外加 `vis_mean`/`vit_mean`） | 估计偏保守一倍：只跑到第 50 层是真正的 early exit，省掉 64 层里的 14 层 |
 | b H3 DiT | 30–100 / forward | 20–60 min（每个噪声水平） | 2 层 × d × 2 B，约 **0.2 GB** | h3-deployment 6.1 的推算，**未实测** |
 | c Wan2.2-5B | 同量级 | 20–60 min | 约 0.2 GB | — |
 | d V-JEPA 2 ViT-L | 约 25 | 约 10 min | 2 × 1024 × 2 B = 4 KB/帧 → **80 MB** | ViT-L、4 帧、256²，比 Qwen 的 3060 token 小一个量级 |
@@ -145,7 +151,8 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 
 ## 步骤
 
-- [ ] (a) 200 帧 profiling → 全量抽取 → 跑 head
+- [x] (a) 200 帧 profiling：**621.2 ms/帧**，峰值显存 63.8 GB，52.2 KB/帧 → 全量 3.5 h
+- [ ] (a) 全量抽取 → 跑 head
 - [ ] (b) 下载 → 工程（两小时上限）→ profiling → 抽取 → 跑 head
 - [ ] (c) 同上
 - [ ] (d) profiling → 抽取 → 跑 head
