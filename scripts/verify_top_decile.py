@@ -337,16 +337,18 @@ def rfs_no_padded_horizon(pred, traj, scores, speed, raw_len):
 
 # ---------------------------------------------------------------- contact sheets
 
-def read_jpeg(d, row, cam="front"):
+def read_jpeg(d, row, cam="front", max_px=560):
     from PIL import Image
     shard = waymo.shard_dir() / str(d["df"].shard.to_numpy()[row])
     off = int(d["df"][f"{cam}_off"].to_numpy()[row])
     n = int(d["df"][f"{cam}_len"].to_numpy()[row])
     fd = os.open(shard, os.O_RDONLY)
     try:
-        return Image.open(io.BytesIO(os.pread(fd, n, off))).convert("RGB")
+        im = Image.open(io.BytesIO(os.pread(fd, n, off))).convert("RGB")
     finally:
         os.close(fd)
+    im.thumbnail((max_px, max_px))      # the cells are ~3 in wide; full resolution only bloats the PNG
+    return im
 
 
 def contact_sheet(d, t, sel, out, name, ncol=4):
@@ -402,7 +404,9 @@ def contact_sheet(d, t, sel, out, name, ncol=4):
                           f"ADE {r.log_ade_best:.1f} m, {'inside' if r.log_inside else 'outside'}",
                           fontsize=7, pad=2)
             bev.legend(fontsize=5.5, loc="upper left", handlelength=1.2, labelspacing=0.2)
-        plots.save(fig, out, name)
+        fig.savefig(out / f"{name}.pdf")                 # vector for the paper
+        fig.savefig(out / f"{name}.png", dpi=110)        # preview: research/figs keeps PNGs under ~500 KB
+        plt.close(fig)
     log.info("wrote %s", out / f"{name}.png")
 
 
