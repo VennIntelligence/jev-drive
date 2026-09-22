@@ -1,0 +1,1950 @@
+{
+  "created_utc": "2026-09-22T14:40:53.778113+00:00",
+  "cases": 35,
+  "v2_required_cases": 20,
+  "selection": {
+    "routes": [
+      "1773",
+      "17563",
+      "24240",
+      "26966",
+      "25854"
+    ],
+    "presets": [
+      "carla",
+      "tcp",
+      "pursuit"
+    ],
+    "cruise_mps": {
+      "default": 8,
+      "17563": 6
+    },
+    "selection": "fixed before v2 results; all cases and failures retained",
+    "baseline": "development3 plus scenario-cleared supplemental S v1",
+    "paired_comparisons": [
+      "v1 vs v2 base: adapter/path generation revision",
+      "v2 pursuit additive vs max: matched controller lookahead ablation"
+    ]
+  },
+  "metric_rules": {
+    "authoritative_gates": "unaltered stored validation.json gates",
+    "cte": "independent true rear-axle projection; full RMS/p95 reproduced within 1e-9",
+    "moving_mask": "absolute true signed speed >=0.5 m/s; no startup exclusion; supplementary only",
+    "cruise": "stored independent truth cruise RMS after fixed 5s startup allowance",
+    "rejoin": "count each plan once; False curvature_bound_satisfied is concern; absent in v1 is unassessed",
+    "reference_matching": "all presets/versions original world_xy equal within 1e-6 m on each route",
+    "timing": "controller_step_ms only, excludes adapter trajectory generation and simulator",
+    "coordinates": "rigid route-origin transform, initial-forward x and initial-left y; equal axis scale"
+  },
+  "limits": [
+    "Diagnostic map routes with privileged references, not leaderboard scores.",
+    "One deterministic run per case; no uncertainty estimates or generalization claims.",
+    "Moving-mask sample populations can differ; failed short runs are not comparable exposure.",
+    "v1 to v2 changes path generation and is not a controller-only causal effect."
+  ],
+  "gate_totals": {
+    "v1": {
+      "total": 15,
+      "passed": 11
+    },
+    "v2": {
+      "total": 15,
+      "passed": 11
+    },
+    "v2max": {
+      "total": 5,
+      "passed": 4
+    }
+  },
+  "matched": [
+    {
+      "comparison": "adapter_revision",
+      "route_id": "1773",
+      "preset": "carla",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.03985076788006684,
+      "full_cte_rms_m_after": 0.037118082090734326,
+      "full_cte_rms_m_delta_after_minus_before": -0.0027326857893325146,
+      "full_cte_p95_m_before": 0.07011572143872641,
+      "full_cte_p95_m_after": 0.06841705442582573,
+      "full_cte_p95_m_delta_after_minus_before": -0.0016986670129006815,
+      "moving_cte_rms_m_before": 0.042550440176002326,
+      "moving_cte_rms_m_after": 0.0394632905468169,
+      "moving_cte_rms_m_delta_after_minus_before": -0.0030871496291854233,
+      "cruise_speed_rms_mps_before": 0.2211600633226624,
+      "cruise_speed_rms_mps_after": 0.22769226746084317,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.006532204138180786,
+      "endpoint_error_m_before": 0.2244270956554546,
+      "endpoint_error_m_after": 0.15797066461132953,
+      "endpoint_error_m_delta_after_minus_before": -0.06645643104412507,
+      "controller_step_median_ms_before": 0.15455949869647156,
+      "controller_step_median_ms_after": 0.14833400200586766,
+      "controller_step_median_ms_delta_after_minus_before": -0.006225496690603904,
+      "controller_step_p95_ms_before": 0.22949540143599734,
+      "controller_step_p95_ms_after": 0.2059739999822341,
+      "controller_step_p95_ms_delta_after_minus_before": -0.023521401453763247
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "1773",
+      "preset": "tcp",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.11008515728879159,
+      "full_cte_rms_m_after": 0.07387638608379157,
+      "full_cte_rms_m_delta_after_minus_before": -0.03620877120500002,
+      "full_cte_p95_m_before": 0.2377481284309077,
+      "full_cte_p95_m_after": 0.16542597836101988,
+      "full_cte_p95_m_delta_after_minus_before": -0.07232215006988782,
+      "moving_cte_rms_m_before": 0.1250184392637272,
+      "moving_cte_rms_m_after": 0.08455413602614455,
+      "moving_cte_rms_m_delta_after_minus_before": -0.04046430323758264,
+      "cruise_speed_rms_mps_before": 0.18383393376863846,
+      "cruise_speed_rms_mps_after": 0.20246233649792714,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.018628402729288673,
+      "endpoint_error_m_before": 0.06683439646625852,
+      "endpoint_error_m_after": 0.1288365933524075,
+      "endpoint_error_m_delta_after_minus_before": 0.06200219688614897,
+      "controller_step_median_ms_before": 0.14397250015463214,
+      "controller_step_median_ms_after": 0.1535164992674254,
+      "controller_step_median_ms_delta_after_minus_before": 0.009543999112793244,
+      "controller_step_p95_ms_before": 0.22290900051302742,
+      "controller_step_p95_ms_after": 0.21453155422932466,
+      "controller_step_p95_ms_delta_after_minus_before": -0.008377446283702766
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "1773",
+      "preset": "pursuit",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.045859338471581794,
+      "full_cte_rms_m_after": 0.04230393577958821,
+      "full_cte_rms_m_delta_after_minus_before": -0.0035554026919935866,
+      "full_cte_p95_m_before": 0.07787807730976283,
+      "full_cte_p95_m_after": 0.0715056215947536,
+      "full_cte_p95_m_delta_after_minus_before": -0.0063724557150092315,
+      "moving_cte_rms_m_before": 0.04909245039104654,
+      "moving_cte_rms_m_after": 0.043291647193192874,
+      "moving_cte_rms_m_delta_after_minus_before": -0.005800803197853664,
+      "cruise_speed_rms_mps_before": 0.2216097865147679,
+      "cruise_speed_rms_mps_after": 0.2230767251716312,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.0014669386568633147,
+      "endpoint_error_m_before": 0.14093242328410116,
+      "endpoint_error_m_after": 0.19257334860083433,
+      "endpoint_error_m_delta_after_minus_before": 0.05164092531673317,
+      "controller_step_median_ms_before": 0.14833400018687826,
+      "controller_step_median_ms_after": 0.1517389973741956,
+      "controller_step_median_ms_delta_after_minus_before": 0.003404997187317349,
+      "controller_step_p95_ms_before": 0.2254409497254527,
+      "controller_step_p95_ms_after": 0.207697601581458,
+      "controller_step_p95_ms_delta_after_minus_before": -0.017743348143994697
+    },
+    {
+      "comparison": "matched_lookahead_ablation",
+      "route_id": "1773",
+      "preset": "pursuit",
+      "before": "v2",
+      "after": "v2max",
+      "cruise_mps": 8.0,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.04230393577958821,
+      "full_cte_rms_m_after": 0.04547082425782011,
+      "full_cte_rms_m_delta_after_minus_before": 0.003166888478231905,
+      "full_cte_p95_m_before": 0.0715056215947536,
+      "full_cte_p95_m_after": 0.08292990238106394,
+      "full_cte_p95_m_delta_after_minus_before": 0.011424280786310345,
+      "moving_cte_rms_m_before": 0.043291647193192874,
+      "moving_cte_rms_m_after": 0.048544863536896174,
+      "moving_cte_rms_m_delta_after_minus_before": 0.0052532163437033,
+      "cruise_speed_rms_mps_before": 0.2230767251716312,
+      "cruise_speed_rms_mps_after": 0.21996501177643032,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.003111713395200888,
+      "endpoint_error_m_before": 0.19257334860083433,
+      "endpoint_error_m_after": 0.18784860647168947,
+      "endpoint_error_m_delta_after_minus_before": -0.0047247421291448655,
+      "controller_step_median_ms_before": 0.1517389973741956,
+      "controller_step_median_ms_after": 0.15126999642234296,
+      "controller_step_median_ms_delta_after_minus_before": -0.00046900095185264945,
+      "controller_step_p95_ms_before": 0.207697601581458,
+      "controller_step_p95_ms_after": 0.20689879893325266,
+      "controller_step_p95_ms_delta_after_minus_before": -0.0007988026482053379
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "17563",
+      "preset": "carla",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 6.0,
+      "before_pass": false,
+      "after_pass": false,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "cruise_speed",
+      "after_failed_gates": "cruise_speed",
+      "full_cte_rms_m_before": 0.18895094050773328,
+      "full_cte_rms_m_after": 0.18611255158692644,
+      "full_cte_rms_m_delta_after_minus_before": -0.0028383889208068447,
+      "full_cte_p95_m_before": 0.5202805748223919,
+      "full_cte_p95_m_after": 0.51516321036181,
+      "full_cte_p95_m_delta_after_minus_before": -0.0051173644605818636,
+      "moving_cte_rms_m_before": 0.21176264783051382,
+      "moving_cte_rms_m_after": 0.20893179751640165,
+      "moving_cte_rms_m_delta_after_minus_before": -0.0028308503141121766,
+      "cruise_speed_rms_mps_before": 0.663271268879291,
+      "cruise_speed_rms_mps_after": 0.6389039693870894,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.02436729949220162,
+      "endpoint_error_m_before": 0.22029252550685266,
+      "endpoint_error_m_after": 0.25940408532214126,
+      "endpoint_error_m_delta_after_minus_before": 0.039111559815288605,
+      "controller_step_median_ms_before": 0.11857199569931254,
+      "controller_step_median_ms_after": 0.12670249998336658,
+      "controller_step_median_ms_delta_after_minus_before": 0.008130504284054041,
+      "controller_step_p95_ms_before": 0.19995239708805454,
+      "controller_step_p95_ms_after": 0.1849937470979057,
+      "controller_step_p95_ms_delta_after_minus_before": -0.014958649990148842
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "17563",
+      "preset": "tcp",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 6.0,
+      "before_pass": false,
+      "after_pass": false,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "full_lateral_rms,full_lateral_p95,cruise_speed",
+      "after_failed_gates": "full_lateral_rms,full_lateral_p95,cruise_speed",
+      "full_cte_rms_m_before": 0.9051409326681112,
+      "full_cte_rms_m_after": 0.6957156639153074,
+      "full_cte_rms_m_delta_after_minus_before": -0.20942526875280387,
+      "full_cte_p95_m_before": 1.8941938084154313,
+      "full_cte_p95_m_after": 1.643780856906411,
+      "full_cte_p95_m_delta_after_minus_before": -0.2504129515090203,
+      "moving_cte_rms_m_before": 1.012888133349662,
+      "moving_cte_rms_m_after": 0.7820750104843412,
+      "moving_cte_rms_m_delta_after_minus_before": -0.23081312286532074,
+      "cruise_speed_rms_mps_before": 0.9215698647016686,
+      "cruise_speed_rms_mps_after": 0.6223592838215517,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.29921058088011687,
+      "endpoint_error_m_before": 0.8860243307435474,
+      "endpoint_error_m_after": 0.21822221068527847,
+      "endpoint_error_m_delta_after_minus_before": -0.6678021200582689,
+      "controller_step_median_ms_before": 0.1293599998462014,
+      "controller_step_median_ms_after": 0.12430000060703605,
+      "controller_step_median_ms_delta_after_minus_before": -0.005059999239165336,
+      "controller_step_p95_ms_before": 0.20460680243559184,
+      "controller_step_p95_ms_after": 0.179604603908956,
+      "controller_step_p95_ms_delta_after_minus_before": -0.02500219852663585
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "17563",
+      "preset": "pursuit",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 6.0,
+      "before_pass": false,
+      "after_pass": false,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "cruise_speed",
+      "after_failed_gates": "cruise_speed",
+      "full_cte_rms_m_before": 0.18905214010360266,
+      "full_cte_rms_m_after": 0.1954286708006344,
+      "full_cte_rms_m_delta_after_minus_before": 0.006376530697031729,
+      "full_cte_p95_m_before": 0.44232928438953883,
+      "full_cte_p95_m_after": 0.45569127365299206,
+      "full_cte_p95_m_delta_after_minus_before": 0.013361989263453222,
+      "moving_cte_rms_m_before": 0.21239884170844106,
+      "moving_cte_rms_m_after": 0.21964674692549277,
+      "moving_cte_rms_m_delta_after_minus_before": 0.007247905217051709,
+      "cruise_speed_rms_mps_before": 0.6363210535788577,
+      "cruise_speed_rms_mps_after": 0.6443963143653287,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.008075260786471028,
+      "endpoint_error_m_before": 0.26593054153310075,
+      "endpoint_error_m_after": 0.26657390584259105,
+      "endpoint_error_m_delta_after_minus_before": 0.0006433643094903019,
+      "controller_step_median_ms_before": 0.11922600242542103,
+      "controller_step_median_ms_after": 0.11047999942093156,
+      "controller_step_median_ms_delta_after_minus_before": -0.008746003004489467,
+      "controller_step_p95_ms_before": 0.19051680283155287,
+      "controller_step_p95_ms_after": 0.1655644991842564,
+      "controller_step_p95_ms_delta_after_minus_before": -0.024952303647296475
+    },
+    {
+      "comparison": "matched_lookahead_ablation",
+      "route_id": "17563",
+      "preset": "pursuit",
+      "before": "v2",
+      "after": "v2max",
+      "cruise_mps": 6.0,
+      "before_pass": false,
+      "after_pass": false,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "cruise_speed",
+      "after_failed_gates": "cruise_speed",
+      "full_cte_rms_m_before": 0.1954286708006344,
+      "full_cte_rms_m_after": 0.1543226995945846,
+      "full_cte_rms_m_delta_after_minus_before": -0.04110597120604978,
+      "full_cte_p95_m_before": 0.45569127365299206,
+      "full_cte_p95_m_after": 0.38060444643464375,
+      "full_cte_p95_m_delta_after_minus_before": -0.0750868272183483,
+      "moving_cte_rms_m_before": 0.21964674692549277,
+      "moving_cte_rms_m_after": 0.17299077374061564,
+      "moving_cte_rms_m_delta_after_minus_before": -0.04665597318487713,
+      "cruise_speed_rms_mps_before": 0.6443963143653287,
+      "cruise_speed_rms_mps_after": 0.7547347732038965,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.11033845883856774,
+      "endpoint_error_m_before": 0.26657390584259105,
+      "endpoint_error_m_after": 0.2812230822623201,
+      "endpoint_error_m_delta_after_minus_before": 0.01464917641972907,
+      "controller_step_median_ms_before": 0.11047999942093156,
+      "controller_step_median_ms_after": 0.1249939996341709,
+      "controller_step_median_ms_delta_after_minus_before": 0.014514000213239342,
+      "controller_step_p95_ms_before": 0.1655644991842564,
+      "controller_step_p95_ms_after": 0.17808974916988518,
+      "controller_step_p95_ms_delta_after_minus_before": 0.012525249985628789
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "24240",
+      "preset": "carla",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.12849802391582105,
+      "full_cte_rms_m_after": 0.13200230127848128,
+      "full_cte_rms_m_delta_after_minus_before": 0.0035042773626602353,
+      "full_cte_p95_m_before": 0.24177870418570085,
+      "full_cte_p95_m_after": 0.24391722306062272,
+      "full_cte_p95_m_delta_after_minus_before": 0.002138518874921863,
+      "moving_cte_rms_m_before": 0.15061887815528863,
+      "moving_cte_rms_m_after": 0.1537205379629192,
+      "moving_cte_rms_m_delta_after_minus_before": 0.00310165980763058,
+      "cruise_speed_rms_mps_before": 0.22639193465377125,
+      "cruise_speed_rms_mps_after": 0.22177933717656934,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.004612597477201913,
+      "endpoint_error_m_before": 0.08572056391818059,
+      "endpoint_error_m_after": 0.07952746150361902,
+      "endpoint_error_m_delta_after_minus_before": -0.0061931024145615715,
+      "controller_step_median_ms_before": 0.09310399946116377,
+      "controller_step_median_ms_after": 0.09830199996940792,
+      "controller_step_median_ms_delta_after_minus_before": 0.005198000508244149,
+      "controller_step_p95_ms_before": 0.1588997489307075,
+      "controller_step_p95_ms_after": 0.15103040350368246,
+      "controller_step_p95_ms_delta_after_minus_before": -0.007869345427025026
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "24240",
+      "preset": "tcp",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.16460395154790755,
+      "full_cte_rms_m_after": 0.19841951630455867,
+      "full_cte_rms_m_delta_after_minus_before": 0.03381556475665112,
+      "full_cte_p95_m_before": 0.36394688117440704,
+      "full_cte_p95_m_after": 0.5043170976779217,
+      "full_cte_p95_m_delta_after_minus_before": 0.1403702165035146,
+      "moving_cte_rms_m_before": 0.18620778028305499,
+      "moving_cte_rms_m_after": 0.23415112585172626,
+      "moving_cte_rms_m_delta_after_minus_before": 0.047943345568671275,
+      "cruise_speed_rms_mps_before": 0.19027495490692847,
+      "cruise_speed_rms_mps_after": 0.19528296846480683,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.00500801355787836,
+      "endpoint_error_m_before": 0.11507459297868558,
+      "endpoint_error_m_after": 0.09160034059550479,
+      "endpoint_error_m_delta_after_minus_before": -0.023474252383180794,
+      "controller_step_median_ms_before": 0.10362600005464628,
+      "controller_step_median_ms_after": 0.0997139941318892,
+      "controller_step_median_ms_delta_after_minus_before": -0.003912005922757089,
+      "controller_step_p95_ms_before": 0.1747734007949475,
+      "controller_step_p95_ms_after": 0.1565681974170729,
+      "controller_step_p95_ms_delta_after_minus_before": -0.018205203377874596
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "24240",
+      "preset": "pursuit",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.09932043651723829,
+      "full_cte_rms_m_after": 0.09917910721808287,
+      "full_cte_rms_m_delta_after_minus_before": -0.00014132929915541825,
+      "full_cte_p95_m_before": 0.17692864701481367,
+      "full_cte_p95_m_after": 0.1815314575923397,
+      "full_cte_p95_m_delta_after_minus_before": 0.00460281057752604,
+      "moving_cte_rms_m_before": 0.11365797993968846,
+      "moving_cte_rms_m_after": 0.1142590847609792,
+      "moving_cte_rms_m_delta_after_minus_before": 0.000601104821290735,
+      "cruise_speed_rms_mps_before": 0.22645855549247884,
+      "cruise_speed_rms_mps_after": 0.24139377530801345,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.014935219815534612,
+      "endpoint_error_m_before": 0.08150552278368815,
+      "endpoint_error_m_after": 0.11654655021660816,
+      "endpoint_error_m_delta_after_minus_before": 0.03504102743292001,
+      "controller_step_median_ms_before": 0.09466100163990632,
+      "controller_step_median_ms_after": 0.09902799865812995,
+      "controller_step_median_ms_delta_after_minus_before": 0.004366997018223628,
+      "controller_step_p95_ms_before": 0.1687919997493736,
+      "controller_step_p95_ms_after": 0.15299934930226297,
+      "controller_step_p95_ms_delta_after_minus_before": -0.015792650447110618
+    },
+    {
+      "comparison": "matched_lookahead_ablation",
+      "route_id": "24240",
+      "preset": "pursuit",
+      "before": "v2",
+      "after": "v2max",
+      "cruise_mps": 8.0,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.09917910721808287,
+      "full_cte_rms_m_after": 0.0823043431029986,
+      "full_cte_rms_m_delta_after_minus_before": -0.016874764115084276,
+      "full_cte_p95_m_before": 0.1815314575923397,
+      "full_cte_p95_m_after": 0.16117302726842128,
+      "full_cte_p95_m_delta_after_minus_before": -0.02035843032391843,
+      "moving_cte_rms_m_before": 0.1142590847609792,
+      "moving_cte_rms_m_after": 0.09194665567734785,
+      "moving_cte_rms_m_delta_after_minus_before": -0.022312429083631347,
+      "cruise_speed_rms_mps_before": 0.24139377530801345,
+      "cruise_speed_rms_mps_after": 0.21980631858473687,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.021587456723276582,
+      "endpoint_error_m_before": 0.11654655021660816,
+      "endpoint_error_m_after": 0.08863351255630175,
+      "endpoint_error_m_delta_after_minus_before": -0.02791303766030641,
+      "controller_step_median_ms_before": 0.09902799865812995,
+      "controller_step_median_ms_after": 0.09944500197889283,
+      "controller_step_median_ms_delta_after_minus_before": 0.0004170033207628876,
+      "controller_step_p95_ms_before": 0.15299934930226297,
+      "controller_step_p95_ms_after": 0.15855230012675742,
+      "controller_step_p95_ms_delta_after_minus_before": 0.005552950824494446
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "26966",
+      "preset": "carla",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.2014797465633913,
+      "full_cte_rms_m_after": 0.24846644971726817,
+      "full_cte_rms_m_delta_after_minus_before": 0.046986703153876874,
+      "full_cte_p95_m_before": 0.4414657699470773,
+      "full_cte_p95_m_after": 0.727401589586038,
+      "full_cte_p95_m_delta_after_minus_before": 0.28593581963896064,
+      "moving_cte_rms_m_before": 0.2420808111905953,
+      "moving_cte_rms_m_after": 0.29705247912754595,
+      "moving_cte_rms_m_delta_after_minus_before": 0.05497166793695066,
+      "cruise_speed_rms_mps_before": 0.2205837181188913,
+      "cruise_speed_rms_mps_after": 0.23800313741945558,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.017419419300564287,
+      "endpoint_error_m_before": 0.1925152537012054,
+      "endpoint_error_m_after": 0.23068306712343684,
+      "endpoint_error_m_delta_after_minus_before": 0.03816781342223144,
+      "controller_step_median_ms_before": 0.08626250019005965,
+      "controller_step_median_ms_after": 0.08782450095168315,
+      "controller_step_median_ms_delta_after_minus_before": 0.0015620007616234943,
+      "controller_step_p95_ms_before": 0.1546639501611935,
+      "controller_step_p95_ms_after": 0.14524354883178597,
+      "controller_step_p95_ms_delta_after_minus_before": -0.009420401329407524
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "26966",
+      "preset": "tcp",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": false,
+      "after_pass": false,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "full_lateral_rms,full_lateral_p95,cruise_speed",
+      "after_failed_gates": "full_lateral_rms,full_lateral_p95",
+      "full_cte_rms_m_before": 0.7027817917414994,
+      "full_cte_rms_m_after": 1.1161287771687103,
+      "full_cte_rms_m_delta_after_minus_before": 0.41334698542721093,
+      "full_cte_p95_m_before": 1.5253825283157498,
+      "full_cte_p95_m_after": 3.1163200715158235,
+      "full_cte_p95_m_delta_after_minus_before": 1.5909375432000736,
+      "moving_cte_rms_m_before": 0.8121689991914828,
+      "moving_cte_rms_m_after": 1.3281604911715164,
+      "moving_cte_rms_m_delta_after_minus_before": 0.5159914919800336,
+      "cruise_speed_rms_mps_before": 0.6962484823734936,
+      "cruise_speed_rms_mps_after": 0.21655297457211475,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.4796955078013788,
+      "endpoint_error_m_before": 0.4565909974214617,
+      "endpoint_error_m_after": 0.27524220685800527,
+      "endpoint_error_m_delta_after_minus_before": -0.18134879056345643,
+      "controller_step_median_ms_before": 0.08781500218901783,
+      "controller_step_median_ms_after": 0.08808950224192813,
+      "controller_step_median_ms_delta_after_minus_before": 0.0002745000529102981,
+      "controller_step_p95_ms_before": 0.1412550023815129,
+      "controller_step_p95_ms_after": 0.1314229975832859,
+      "controller_step_p95_ms_delta_after_minus_before": -0.00983200479822699
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "26966",
+      "preset": "pursuit",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.3422457596555988,
+      "full_cte_rms_m_after": 0.3390580384910568,
+      "full_cte_rms_m_delta_after_minus_before": -0.003187721164541968,
+      "full_cte_p95_m_before": 0.9827232620898847,
+      "full_cte_p95_m_after": 0.9729289916915533,
+      "full_cte_p95_m_delta_after_minus_before": -0.009794270398331362,
+      "moving_cte_rms_m_before": 0.4093086253385097,
+      "moving_cte_rms_m_after": 0.401782377785193,
+      "moving_cte_rms_m_delta_after_minus_before": -0.007526247553316712,
+      "cruise_speed_rms_mps_before": 0.26657532856058697,
+      "cruise_speed_rms_mps_after": 0.22706521704972318,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.03951011151086378,
+      "endpoint_error_m_before": 0.22429597626234657,
+      "endpoint_error_m_after": 0.1536498376291057,
+      "endpoint_error_m_delta_after_minus_before": -0.07064613863324087,
+      "controller_step_median_ms_before": 0.08663799962960184,
+      "controller_step_median_ms_after": 0.08729850014788099,
+      "controller_step_median_ms_delta_after_minus_before": 0.0006605005182791501,
+      "controller_step_p95_ms_before": 0.14204840117599812,
+      "controller_step_p95_ms_after": 0.1376114996674005,
+      "controller_step_p95_ms_delta_after_minus_before": -0.004436901508597629
+    },
+    {
+      "comparison": "matched_lookahead_ablation",
+      "route_id": "26966",
+      "preset": "pursuit",
+      "before": "v2",
+      "after": "v2max",
+      "cruise_mps": 8.0,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.3390580384910568,
+      "full_cte_rms_m_after": 0.2581925807509396,
+      "full_cte_rms_m_delta_after_minus_before": -0.08086545774011722,
+      "full_cte_p95_m_before": 0.9729289916915533,
+      "full_cte_p95_m_after": 0.7638080590769623,
+      "full_cte_p95_m_delta_after_minus_before": -0.20912093261459108,
+      "moving_cte_rms_m_before": 0.401782377785193,
+      "moving_cte_rms_m_after": 0.3010343374341461,
+      "moving_cte_rms_m_delta_after_minus_before": -0.1007480403510469,
+      "cruise_speed_rms_mps_before": 0.22706521704972318,
+      "cruise_speed_rms_mps_after": 0.22819898986637002,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.0011337728166468386,
+      "endpoint_error_m_before": 0.1536498376291057,
+      "endpoint_error_m_after": 0.22794661264158353,
+      "endpoint_error_m_delta_after_minus_before": 0.07429677501247783,
+      "controller_step_median_ms_before": 0.08729850014788099,
+      "controller_step_median_ms_after": 0.0857760023791343,
+      "controller_step_median_ms_delta_after_minus_before": -0.001522497768746689,
+      "controller_step_p95_ms_before": 0.1376114996674005,
+      "controller_step_p95_ms_after": 0.14008220605319366,
+      "controller_step_p95_ms_delta_after_minus_before": 0.0024707063857931644
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "25854",
+      "preset": "carla",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.1144271726507664,
+      "full_cte_rms_m_after": 0.1112825379034118,
+      "full_cte_rms_m_delta_after_minus_before": -0.003144634747354602,
+      "full_cte_p95_m_before": 0.2700785345833077,
+      "full_cte_p95_m_after": 0.26753883913040283,
+      "full_cte_p95_m_delta_after_minus_before": -0.0025396954529048887,
+      "moving_cte_rms_m_before": 0.12472034211491151,
+      "moving_cte_rms_m_after": 0.12163199994787371,
+      "moving_cte_rms_m_delta_after_minus_before": -0.003088342167037794,
+      "cruise_speed_rms_mps_before": 0.23425695618590725,
+      "cruise_speed_rms_mps_after": 0.21799105025807688,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.016265905927830365,
+      "endpoint_error_m_before": 0.12418426050853769,
+      "endpoint_error_m_after": 0.08521787193190614,
+      "endpoint_error_m_delta_after_minus_before": -0.03896638857663155,
+      "controller_step_median_ms_before": 0.09215200043399818,
+      "controller_step_median_ms_after": 0.09010750000015832,
+      "controller_step_median_ms_delta_after_minus_before": -0.0020445004338398576,
+      "controller_step_p95_ms_before": 0.14941549870854942,
+      "controller_step_p95_ms_after": 0.14278435373853424,
+      "controller_step_p95_ms_delta_after_minus_before": -0.006631144970015185
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "25854",
+      "preset": "tcp",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.12402418595827001,
+      "full_cte_rms_m_after": 0.15431992784648063,
+      "full_cte_rms_m_delta_after_minus_before": 0.030295741888210617,
+      "full_cte_p95_m_before": 0.27823544080620044,
+      "full_cte_p95_m_after": 0.34312494415564854,
+      "full_cte_p95_m_delta_after_minus_before": 0.0648895033494481,
+      "moving_cte_rms_m_before": 0.13887791162242352,
+      "moving_cte_rms_m_after": 0.1729178027740402,
+      "moving_cte_rms_m_delta_after_minus_before": 0.03403989115161668,
+      "cruise_speed_rms_mps_before": 0.19607634558647946,
+      "cruise_speed_rms_mps_after": 0.19368167914688003,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.00239466643959943,
+      "endpoint_error_m_before": 0.0907687094676814,
+      "endpoint_error_m_after": 0.10622526458422907,
+      "endpoint_error_m_delta_after_minus_before": 0.015456555116547671,
+      "controller_step_median_ms_before": 0.09337799929198809,
+      "controller_step_median_ms_after": 0.09214499732479453,
+      "controller_step_median_ms_delta_after_minus_before": -0.0012330019671935588,
+      "controller_step_p95_ms_before": 0.1462300009734463,
+      "controller_step_p95_ms_after": 0.13415699795586988,
+      "controller_step_p95_ms_delta_after_minus_before": -0.012073003017576411
+    },
+    {
+      "comparison": "adapter_revision",
+      "route_id": "25854",
+      "preset": "pursuit",
+      "before": "v1",
+      "after": "v2",
+      "cruise_mps": 8,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.11126470588197433,
+      "full_cte_rms_m_after": 0.11167761338248024,
+      "full_cte_rms_m_delta_after_minus_before": 0.00041290750050590463,
+      "full_cte_p95_m_before": 0.2534353691369422,
+      "full_cte_p95_m_after": 0.26030784360077686,
+      "full_cte_p95_m_delta_after_minus_before": 0.006872474463834655,
+      "moving_cte_rms_m_before": 0.12504332291924378,
+      "moving_cte_rms_m_after": 0.1254520017076897,
+      "moving_cte_rms_m_delta_after_minus_before": 0.0004086787884459153,
+      "cruise_speed_rms_mps_before": 0.22031235568439567,
+      "cruise_speed_rms_mps_after": 0.21859570962847893,
+      "cruise_speed_rms_mps_delta_after_minus_before": -0.0017166460559167318,
+      "endpoint_error_m_before": 0.056352072078976634,
+      "endpoint_error_m_after": 0.045002803793617784,
+      "endpoint_error_m_delta_after_minus_before": -0.01134926828535885,
+      "controller_step_median_ms_before": 0.0884000000951346,
+      "controller_step_median_ms_after": 0.09174549995805137,
+      "controller_step_median_ms_delta_after_minus_before": 0.0033454998629167676,
+      "controller_step_p95_ms_before": 0.14076339939492755,
+      "controller_step_p95_ms_after": 0.14354479972098486,
+      "controller_step_p95_ms_delta_after_minus_before": 0.0027814003260573095
+    },
+    {
+      "comparison": "matched_lookahead_ablation",
+      "route_id": "25854",
+      "preset": "pursuit",
+      "before": "v2",
+      "after": "v2max",
+      "cruise_mps": 8.0,
+      "before_pass": true,
+      "after_pass": true,
+      "before_status": "completed",
+      "after_status": "completed",
+      "before_failed_gates": "",
+      "after_failed_gates": "",
+      "full_cte_rms_m_before": 0.11167761338248024,
+      "full_cte_rms_m_after": 0.09763866195303848,
+      "full_cte_rms_m_delta_after_minus_before": -0.014038951429441754,
+      "full_cte_p95_m_before": 0.26030784360077686,
+      "full_cte_p95_m_after": 0.2158926027944768,
+      "full_cte_p95_m_delta_after_minus_before": -0.04441524080630005,
+      "moving_cte_rms_m_before": 0.1254520017076897,
+      "moving_cte_rms_m_after": 0.1085858027608811,
+      "moving_cte_rms_m_delta_after_minus_before": -0.01686619894680859,
+      "cruise_speed_rms_mps_before": 0.21859570962847893,
+      "cruise_speed_rms_mps_after": 0.23808361968057298,
+      "cruise_speed_rms_mps_delta_after_minus_before": 0.01948791005209405,
+      "endpoint_error_m_before": 0.045002803793617784,
+      "endpoint_error_m_after": 0.05568500891830132,
+      "endpoint_error_m_delta_after_minus_before": 0.010682205124683535,
+      "controller_step_median_ms_before": 0.09174549995805137,
+      "controller_step_median_ms_after": 0.09054350084625185,
+      "controller_step_median_ms_delta_after_minus_before": -0.0012019991117995232,
+      "controller_step_p95_ms_before": 0.14354479972098486,
+      "controller_step_p95_ms_after": 0.12952464530826546,
+      "controller_step_p95_ms_delta_after_minus_before": -0.014020154412719393
+    }
+  ],
+  "matrix": {
+    "routes_source": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/development-with-s.xml",
+    "routes_sha256": "a0cf075147bc68bb3d75df26708afdd26c680ff65ce50c5fb91d4122587e6078",
+    "ordering": "route_then_variant_then_preset",
+    "cases": [
+      {
+        "variant": "baseline",
+        "preset": "carla",
+        "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-base.json",
+        "controller_config_sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+        "rear_axle_offset_m": -1.388633220199954,
+        "stop_deceleration_mps2": 2.0,
+        "archived_controller_config": "/data/runs/b2d/controller/development-v2/inputs/controller-baseline.json"
+      },
+      {
+        "variant": "baseline",
+        "preset": "tcp",
+        "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-base.json",
+        "controller_config_sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+        "rear_axle_offset_m": -1.388633220199954,
+        "stop_deceleration_mps2": 2.0,
+        "archived_controller_config": "/data/runs/b2d/controller/development-v2/inputs/controller-baseline.json"
+      },
+      {
+        "variant": "baseline",
+        "preset": "pursuit",
+        "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-base.json",
+        "controller_config_sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+        "rear_axle_offset_m": -1.388633220199954,
+        "stop_deceleration_mps2": 2.0,
+        "archived_controller_config": "/data/runs/b2d/controller/development-v2/inputs/controller-baseline.json"
+      },
+      {
+        "variant": "max",
+        "preset": "pursuit",
+        "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-max.json",
+        "controller_config_sha256": "16eff9b3ed0a4f2377c8ef4c8899291d2a8cd1a106c01d4bf8400a5516245c3d",
+        "rear_axle_offset_m": -1.388633220199954,
+        "stop_deceleration_mps2": 2.0,
+        "archived_controller_config": "/data/runs/b2d/controller/development-v2/inputs/controller-max.json"
+      }
+    ],
+    "route_cruises_mps": {
+      "default": 8,
+      "17563": 6
+    },
+    "variant_directories": true
+  },
+  "sources": [
+    {
+      "path": "/data/runs/b2d/controller/development-v2/summary.json",
+      "sha256": "01f4cfa60bfde2000d09d5518855f1dbc9a617f7baab9702d923a8fdeecf4198",
+      "bytes": 87863
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/events.jsonl",
+      "sha256": "136d9b18fa6418c71b249d932963ac55c34619a07a3b2d4501a811bb0bacc44e",
+      "bytes": 106525
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/matrix.json",
+      "sha256": "7b8fdba8b54e680dd32c0927a5103a9d7671baacf667dd87dca24c8ac72bb56d",
+      "bytes": 2398
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/controller-baseline.json",
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "bytes": 328
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/variants.json",
+      "sha256": "7188b1d5e69b6bf56530f27e65d4e0b15c6fbbccfda82a8eeac983b9eb93af9b",
+      "bytes": 423
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/routes.xml",
+      "sha256": "a0cf075147bc68bb3d75df26708afdd26c680ff65ce50c5fb91d4122587e6078",
+      "bytes": 15414
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/route-cruises.json",
+      "sha256": "6be11d966b6439daf126014bdb5897428acf2d6f39667b0586c1bb0c925c3b9b",
+      "bytes": 33
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/controller-max.json",
+      "sha256": "16eff9b3ed0a4f2377c8ef4c8899291d2a8cd1a106c01d4bf8400a5516245c3d",
+      "bytes": 351
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/provenance/manifest.json",
+      "sha256": "d5bc8dc008d4930728f1a85645ae782eefbe255c47d4fa3f1d5535ad560cbd0f",
+      "bytes": 9286
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/provenance/manifest.json",
+      "sha256": "6c883d7ef3e38760ac6cfbdf7c79b08d71f80aa9a59facfd0b06e83c2874114b",
+      "bytes": 7889
+    },
+    {
+      "path": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_matrix_plot.py",
+      "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180",
+      "bytes": 20125
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/validation.json",
+      "sha256": "419cbfd3c9a2e0fcd85d2d509889a0436fefb6b0aad27090d1aa3563939f03cd",
+      "bytes": 3649
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/validation_trace.json",
+      "sha256": "7629987407d3e330c8d3e18ff088d1cb4dee60723f3256d82912d957e66f7b4c",
+      "bytes": 272144
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/control.jsonl",
+      "sha256": "ec803fac21d617022232f791e37793b3c1e069ded2c5f9125dc3bca81543c4f8",
+      "bytes": 712464
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/trajectories.jsonl",
+      "sha256": "48b974a363f2b753b8b9ec6d5ca18ff7a415e43358f54bb6e8b7c47f98e5760d",
+      "bytes": 121923
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/carla/agent_config.json",
+      "sha256": "4076c3d83b4dc2010d65e9584461431732144fac16400a08bae5eb9b4f2d9d03",
+      "bytes": 314
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation.json",
+      "sha256": "fa519830aff1d8191050eea32690bea1255b718e9ef9c46c9f6111b900c0fd5b",
+      "bytes": 4115
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation_trace.json",
+      "sha256": "c044c27e1593429e1ba2115631fea22d46866ef863adc51eba34574e10f82015",
+      "bytes": 276756
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/control.jsonl",
+      "sha256": "2b71dd95a492e8df3c3437c2e119cc8c63b3829561577b748ac79b7f5b8e1512",
+      "bytes": 879267
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/trajectories.jsonl",
+      "sha256": "8d6f1aa8e1735d948cc1f15f0d27084d3bbad0b9709b347e9ae28b1a681b9613",
+      "bytes": 163374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/agent_config.json",
+      "sha256": "f22bc057daeb9b48ad9ea9ce846408698881d5dec3bbbf131342a171a6754e2d",
+      "bytes": 339
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/validation.json",
+      "sha256": "6c7b02adc4b87a3bf785f3f894ef5acbf4fb9ba46f7f8024ae2ce4caf7b54049",
+      "bytes": 3650
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/validation_trace.json",
+      "sha256": "d88383853ebfe37fcdedd75ed603d25fe49588a1015b6e6802cd70a9b5063909",
+      "bytes": 271809
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/control.jsonl",
+      "sha256": "96a4a1f36ee0c33aed07b59f1be1cb478199418da94ceca7046776d1ae5301f9",
+      "bytes": 706314
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/trajectories.jsonl",
+      "sha256": "c1045c4a84f15a518371c90e6a400d71254d2a94f683db52c9963c0b545135a3",
+      "bytes": 120157
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/tcp/agent_config.json",
+      "sha256": "76714c069535d57ef5cc6b5b8068de6e53a383b2faea45dd3983e1dca7daec1e",
+      "bytes": 310
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/validation.json",
+      "sha256": "48305b924204617a28f3a53d7c02d73305de88094ad10f91313aa5ead9cf878c",
+      "bytes": 4122
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/validation_trace.json",
+      "sha256": "90f0b3a157682ad69d1a1dd9f8605e93490460ea0f32de85dbc34a1d383976b8",
+      "bytes": 271459
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/control.jsonl",
+      "sha256": "a12e4b9388686fc3905d511ac1bcedc5170e8b564f77fd30d8a06b02a56fab26",
+      "bytes": 856695
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/trajectories.jsonl",
+      "sha256": "b42c3c44b78ee1ba16b9a38c8e96de26e515a91cb25f88532c2959458d45f3b3",
+      "bytes": 158433
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/tcp/agent_config.json",
+      "sha256": "cd6e592c76421998f6cebc043b51abcbf88b0baec637b24057e22286ae7c5356",
+      "bytes": 335
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/validation.json",
+      "sha256": "f00f70b954366fbf130281a5cf255211979d085a5a73b66b3a5b9b61f49beb5b",
+      "bytes": 3651
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/validation_trace.json",
+      "sha256": "7588c463b4373b27eebb114b46e6ba27d892f499dde3a945b0f2788c1e34fa5a",
+      "bytes": 272590
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/control.jsonl",
+      "sha256": "97d5a5127364dc5b9c2847fe93eaba9cd39483eb47618e8d3818d53731046bc6",
+      "bytes": 715437
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/trajectories.jsonl",
+      "sha256": "73d4a6c7d03bc45c06d0410877256514316de56ab03350e457d0bf00f2645960",
+      "bytes": 121922
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/1773/pursuit/agent_config.json",
+      "sha256": "8e0db333d72d16c7aff8548020031fa5cbed02f41a4bd7c19d5f97e47785bd14",
+      "bytes": 318
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation.json",
+      "sha256": "1dee23554a5c792e6d70389b8c0767e26bb56e43d68ea4da1837c75b3a41ca67",
+      "bytes": 4114
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation_trace.json",
+      "sha256": "465c51d916e7a0d48c87bdb2245b2105eae458851ea70456332e0534f2d0e1b8",
+      "bytes": 270690
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/control.jsonl",
+      "sha256": "6241777656af987455a6d4dc0245a6fbe55df183ea7e3c2a0d74db44b7190333",
+      "bytes": 862094
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/trajectories.jsonl",
+      "sha256": "fa90269f3780e59251863a6796d24a567bca031d9d8c8ed5dd0aa08d43262762",
+      "bytes": 159134
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/agent_config.json",
+      "sha256": "15ad54605dc539b7f516d8b0a0fa984a990b0985500b63153ecb799e64e6c222",
+      "bytes": 343
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/validation.json",
+      "sha256": "c5c96ee046d134127f52bf0bac868fdd92a8e8d5ea2ea03031516085bce6afc6",
+      "bytes": 4102
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/validation_trace.json",
+      "sha256": "8f6d9bee0b04465bca78dfc17d0857e86020d833824282dc41c1d2d88c14bb2c",
+      "bytes": 270824
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/control.jsonl",
+      "sha256": "87f44f675702653590510000f3f2bd47081904b839645a5568a6165945b7ffad",
+      "bytes": 860042
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/trajectories.jsonl",
+      "sha256": "6d12e2148d7c49faf193f5ba1feca599e07070bfd1b10b3fd7444d3cf296a5e3",
+      "bytes": 159079
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/agent_config.json",
+      "sha256": "a378d12258297e2ee522122b0be2b98abe2dbbfa7513b6673db3c711109e9763",
+      "bytes": 333
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/validation.json",
+      "sha256": "5942a1e0eb304640c83a4834a2bb5885ae0c09824b33eabd7c938024311273ce",
+      "bytes": 3637
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/validation_trace.json",
+      "sha256": "04c24e2a3003b6f75adff585bd7458942040844ea136096e027bb0e9bf50a66a",
+      "bytes": 297379
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/control.jsonl",
+      "sha256": "250837388e17403afb88ff7a325b32c5b2f204076f218f43477df612f2106854",
+      "bytes": 778503
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/trajectories.jsonl",
+      "sha256": "e5ae014bd274e2b581aecc4f15ce7b85973e3e3d8f7cbeda29c9c7a10b8bc7f6",
+      "bytes": 133778
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/carla/agent_config.json",
+      "sha256": "52fe50a8edd4497313857a0a2dd71002277e878c973684949c75634e520e739b",
+      "bytes": 321
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation.json",
+      "sha256": "4ecd9744c1942bbb8834dcd085e21c86ef355be45256671cba0fd5de80e20a9b",
+      "bytes": 4104
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation_trace.json",
+      "sha256": "c6a694202110ff52cb6aae99ebfb571ad03ffdfe95e22b11850c27f95c5fde48",
+      "bytes": 300960
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/control.jsonl",
+      "sha256": "401ac763fd85f073ed3701fc7c374c35769e31adcfdb8b31b28e358e028401d8",
+      "bytes": 960750
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/trajectories.jsonl",
+      "sha256": "151a347fd518180e5781b005e63da95bd5995c71f6efb7c32e2143997680e3a1",
+      "bytes": 178103
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/agent_config.json",
+      "sha256": "89f9df72d33524120a561d9c6d82fff8a9f06d8543090757b2491ed840659c1b",
+      "bytes": 340
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/validation.json",
+      "sha256": "46f1428709df07a7cd9441db52b4350d718a5e2d74996b4e504d9df41e864f1b",
+      "bytes": 3625
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/validation_trace.json",
+      "sha256": "4b3101cc38f80a8816453799cb2221cb465731898ef1674c037d6c2e1884f79f",
+      "bytes": 274836
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/control.jsonl",
+      "sha256": "7a19a38f043cce128b0f0e0358b052febdf2dad143f8be6db7fc8f66f36e025d",
+      "bytes": 724393
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/trajectories.jsonl",
+      "sha256": "7893968906c6a7590366e22da24a26f1fa6f6383a41b801dfde798c83522bd75",
+      "bytes": 139594
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/tcp/agent_config.json",
+      "sha256": "be072745a201172f8002679b2530c45275ac47ca69f79865e68f3a93619c6110",
+      "bytes": 317
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/validation.json",
+      "sha256": "6007524c9b8b27350f67a56f0d0ff03898631082076e4af69108afb194217cbd",
+      "bytes": 4096
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/validation_trace.json",
+      "sha256": "41569b6f4854b64ec3671918a9d426a6560b39c2855305084bd0f65015a3e5a7",
+      "bytes": 297441
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/control.jsonl",
+      "sha256": "7a8c70124f8d51c42753aaaf6f774c9e2e9ba765a3e8860d10b330dac70c2f73",
+      "bytes": 944704
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/trajectories.jsonl",
+      "sha256": "bd8a000569c772688fbb2dbdbaae5936f94dba625438daec2cb2422a8a1ff822",
+      "bytes": 174971
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/tcp/agent_config.json",
+      "sha256": "1a8345e77b6025269669a4b47f7eb0047ca2f0b9ac4dc29dc5f65dd84a11e0f6",
+      "bytes": 336
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation.json",
+      "sha256": "252a01e12cec06fcd06ff5ad36ea1279f2aca05dcbad525e396579b5a5155a1b",
+      "bytes": 3643
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation_trace.json",
+      "sha256": "4c35c4bf38136962ad915f6bc32f6ca430108728c006b77eb8880dbceda255b0",
+      "bytes": 297493
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/control.jsonl",
+      "sha256": "516bddf260b97d3801d27b793ab192d0a9b6fa60819157cd36287ff79f681c83",
+      "bytes": 781601
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/trajectories.jsonl",
+      "sha256": "9f3f30f5ae6cb143e3c5b2666c9e25ab2c12b6de8e1be75b19bdab5fc0297813",
+      "bytes": 133331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/agent_config.json",
+      "sha256": "34be1f212eaee078dd0027cd4e25b4b37b5689576f23704cfb8e3216ede52d51",
+      "bytes": 325
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation.json",
+      "sha256": "b01d485d262c23e3f74c7c5fe02dc49f243968a74fe730794508acf448514fea",
+      "bytes": 4109
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation_trace.json",
+      "sha256": "c84f07283639e25e6c39a6fcce548068a9955b5c401fa94d28cd9995176c275f",
+      "bytes": 300669
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/control.jsonl",
+      "sha256": "2ffd8b203c5bba6183fa68236ab6a3d0d1e894c4337c8f450cddeeecf84126e4",
+      "bytes": 960587
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/trajectories.jsonl",
+      "sha256": "833d209410cb2d3eb628b8bcbc0f46343012cecec8361ec84868907d2e64ef4d",
+      "bytes": 177589
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/agent_config.json",
+      "sha256": "e73b8f3b281ba2db7b6edfbfccfe911f857384e048445695a098a29a886f981e",
+      "bytes": 344
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation.json",
+      "sha256": "48734632f3964a70a58f0edd74ff5ae3ca4a23df02c85dc7c0903f3f1a4ddc15",
+      "bytes": 4100
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation_trace.json",
+      "sha256": "779328e35374f2ee543a180c324bd6b096f31bc8a09458c0d9a8d6b99ba9c1c6",
+      "bytes": 303753
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/control.jsonl",
+      "sha256": "969478e818b7722fe800dc6283b5ef70e81621e0c287a3dc4d3b467cbe6cdd64",
+      "bytes": 965989
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/trajectories.jsonl",
+      "sha256": "757c1dcbfcd9457161deaffc056efa3b11b742fa322e14f4adaf9a8f792173be",
+      "bytes": 179496
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/agent_config.json",
+      "sha256": "4db21a24761c2a84c8670ed193c36f8b178438ea6322245bb08aa916c23d10fd",
+      "bytes": 334
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/validation.json",
+      "sha256": "e1c5e485750475bbfe3f0f89b016a05d54f410870e92f72597d679c6d8f19670",
+      "bytes": 3640
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/validation_trace.json",
+      "sha256": "6dd230a9b94deb42e8144f05250f0535a630e6afa6d24299c89a654865927668",
+      "bytes": 231824
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/control.jsonl",
+      "sha256": "2ce94f7e23f84512e152a503b0824cef7d63a7d12d5dead6d5f571fa414a3dd9",
+      "bytes": 603121
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/trajectories.jsonl",
+      "sha256": "88c26c2ff92581d8670ecd900c4617869856d8a1258f7d7ed1da071abf8f82c5",
+      "bytes": 99457
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/carla/agent_config.json",
+      "sha256": "308181f7ad89217e0d1195f195f5c8d77603b42ac09437089547444e619b09b5",
+      "bytes": 315
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/validation.json",
+      "sha256": "a01c7a5c02d0c0d10ea469baf48bce81030aa17b7dec3fe13c191112060bfd4f",
+      "bytes": 4110
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/validation_trace.json",
+      "sha256": "45a2e394c2fab284fa6be3ff7eeaf5493f144746d91990b6136ac47ab7ffed8a",
+      "bytes": 231690
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/control.jsonl",
+      "sha256": "4f62807e22a78cb9e3e9122272bea2fb4056938084379e8f701fc0b96e6cca8d",
+      "bytes": 731361
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/trajectories.jsonl",
+      "sha256": "5e809e6077ddf1ffda10a835169c44288525bbe4a797f1c403432328158d86c3",
+      "bytes": 131698
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/agent_config.json",
+      "sha256": "14868caf1f9f8b15ee5b15f8a7d2d1aa7f12496bc311e62b84c8e89eda278b1b",
+      "bytes": 340
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/validation.json",
+      "sha256": "ccac3add100bf40cdda62ee2e8449e485e2ad2e211ecf3aa7fe976c7d8e6beed",
+      "bytes": 3640
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/validation_trace.json",
+      "sha256": "e8249683892c06a4ae451786336c0ba4e239acfc5775e8cdb2f665b0bb017614",
+      "bytes": 230932
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/control.jsonl",
+      "sha256": "429a30e472798bab775b2d1b3f6724c11b612bdfe1cf707e97c153d0a2fab0e1",
+      "bytes": 597442
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/trajectories.jsonl",
+      "sha256": "18ba05cb611245161550ba71dfcdb18b75baf1e2d0f2ed892c246a903e8bb5cf",
+      "bytes": 99317
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/tcp/agent_config.json",
+      "sha256": "43597acf4f16d08216164748fc8f84cbfdbd101ab91ac896dfa0e320d3febb29",
+      "bytes": 311
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/validation.json",
+      "sha256": "7dfb3826824b6e08fccd8448c9a41f7edd86f4e11d05023f6618cbef5e002dd4",
+      "bytes": 4106
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/validation_trace.json",
+      "sha256": "275c6d6d03380da63d4df143569909159739ed222355e8d49196e4af06d72c2a",
+      "bytes": 231610
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/control.jsonl",
+      "sha256": "3132c4b8f82025f31fafe3d1489552e663c0872d30600b599bf7f41fb5c93396",
+      "bytes": 726550
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/trajectories.jsonl",
+      "sha256": "4886273581616e207e85ff9271e6870795ddaeabbb95df27da495999fef543e4",
+      "bytes": 131459
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/tcp/agent_config.json",
+      "sha256": "cfb7ef21fc8f580d97c8ade1c79a31026ddda31350c8e5b9d24bc47bafd13b5c",
+      "bytes": 336
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/validation.json",
+      "sha256": "190d8dfeeb75b67ff98e5e9cce8b1ae16ab49d4fdca7927cbdeb8cc2a043bda2",
+      "bytes": 3659
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/validation_trace.json",
+      "sha256": "07c513ff24b1e5e4b4904db2840cf15afb870bf1add012dc463b3a436ba1fef4",
+      "bytes": 231303
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/control.jsonl",
+      "sha256": "1d8f0f338d04e8b59fa1ed5d0cb2d55dc5168ece4352b90b712adfba8f2ffb1a",
+      "bytes": 602286
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/trajectories.jsonl",
+      "sha256": "b394ec60b98fe396c939d501fbeb8e0c09e54cc248b10eee30871359dce7e2be",
+      "bytes": 99109
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/24240/pursuit/agent_config.json",
+      "sha256": "0b9081d427a8036976224c1745496478977f779071f128159c9c75411dfe2fbc",
+      "bytes": 319
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/validation.json",
+      "sha256": "e9b66e9440d7914fee27c724c38aa5764fae11d8839f7cb8113ed16d60d0ac84",
+      "bytes": 4113
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/validation_trace.json",
+      "sha256": "e5fbaa67b1ccbec5c4d3d29a5864c13cc14c344bff332cfac7dffc106fe41eeb",
+      "bytes": 232201
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/control.jsonl",
+      "sha256": "e1a8380ddb8d5e73d3e53883f920a065e639af89984c2c6228e9b1ec8baef704",
+      "bytes": 732693
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/trajectories.jsonl",
+      "sha256": "2df9af192913fda4256d03976064a812055c0e8f5b5ea5f50a562e6eb982c074",
+      "bytes": 131464
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/agent_config.json",
+      "sha256": "8a64fd7c6e61030a42fc852ef0f3d10808dc8ab2a95a2512da701af040e61c51",
+      "bytes": 344
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/validation.json",
+      "sha256": "3c3942cca88f9ec7471dc8ac9af84d3696757a8d22738f5ab12bbf24fc274a5e",
+      "bytes": 4103
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/validation_trace.json",
+      "sha256": "b8e4ec0fa6644f3845de4c2efc782151333568ec5782a014c146e5195c811e28",
+      "bytes": 233010
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/control.jsonl",
+      "sha256": "15e91aabb08aadafe7a8cf6b118b4fd187c164575e54c675f1e118374179e56c",
+      "bytes": 734330
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/trajectories.jsonl",
+      "sha256": "fe9eb9d7fc57f4d66a87617363d389b1909e3db68339d9e321bc688c3ab4a9fb",
+      "bytes": 132489
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/agent_config.json",
+      "sha256": "5829f80f12f72ab268bfcd4a4758b8ce26775b9e275b1480dfe4c098e4fee300",
+      "bytes": 334
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/validation.json",
+      "sha256": "4a59f954f3efe4ec63f09fc2070d7ea2e1dc6e54766576d2388e3b6c55033f9a",
+      "bytes": 3630
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/validation_trace.json",
+      "sha256": "ad2960d69e7d37e7dcdc61b1a081fb1181fe450a24f05aa512f21677406b23ab",
+      "bytes": 200105
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/control.jsonl",
+      "sha256": "5ab7c7f76127cd3f61e5b6a518f45ee238d133d44c114684ce12b86b96275d75",
+      "bytes": 519078
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/trajectories.jsonl",
+      "sha256": "115e1d163c7cd217852a8d677049fcd72d0814c45e971df4fb963a837c1090a1",
+      "bytes": 85174
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/carla/agent_config.json",
+      "sha256": "9a3348d1988cef200a8d7e954acdcd2e0a03fcc2ffc54638d5999db56ec88e76",
+      "bytes": 315
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/validation.json",
+      "sha256": "e2ff5d527c495139968eb65bcfcfcd272d06db36c7864f6b55aee1060fa4858e",
+      "bytes": 4108
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/validation_trace.json",
+      "sha256": "7979d849d7ceee1547fcce564b9e49a9dae121675de7b3a9451eec73e30da42b",
+      "bytes": 199578
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/control.jsonl",
+      "sha256": "2518dada1a5a41ffc25ba9b2bddc40e5d7f7097f9158e7f3efb84c02715acd6f",
+      "bytes": 626398
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/trajectories.jsonl",
+      "sha256": "0a59a47abcbfead8b5e35383dcfca5c7043da4cb0355bd6cf7d5103b7972a059",
+      "bytes": 112309
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/agent_config.json",
+      "sha256": "0719bb25eb01211b2344f9473ec0fb0f260b0bcc5c0c7d61f650a4b974727d1b",
+      "bytes": 340
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/validation.json",
+      "sha256": "b504568d6a3e369d28f9d8515b4b59bd4f7aca11f4d2a776de2a89066bf0a3c8",
+      "bytes": 3631
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/validation_trace.json",
+      "sha256": "5220124a473f349cef0b6b0f73893e722ded40c1eee308114cf3c2747912d4bd",
+      "bytes": 191041
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/control.jsonl",
+      "sha256": "05e1b3ddf3f218ea85de74e89f423633be3426596abde0a3455cb209577b1d9f",
+      "bytes": 497846
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/trajectories.jsonl",
+      "sha256": "2626847f5a66853e431f3ebe368c05afc2bd47ca33a219463b68e1ef372db764",
+      "bytes": 82491
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/tcp/agent_config.json",
+      "sha256": "4286c90b65a2040a3ebe6adcb731eecc401d91ec350b5f3fab900ca91ae9c9c8",
+      "bytes": 311
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/validation.json",
+      "sha256": "ede27912de362a5d553e5e92ebde2b49b4a5473e6a738f77ab13f232545a6682",
+      "bytes": 4093
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/validation_trace.json",
+      "sha256": "f0be646bf9218adb0ad175c33a4580e8b495947e6d9375ef209080851c61dfc8",
+      "bytes": 207165
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/control.jsonl",
+      "sha256": "de8e4e72ebaa0ad7503fad4e100a4ae2251ff27d09eab74dd071169859540896",
+      "bytes": 647941
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/trajectories.jsonl",
+      "sha256": "d323d8b65426ad6f76996ffe1038eb9fbdf01573b4bbe87c9883e979a0521ce3",
+      "bytes": 116812
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/tcp/agent_config.json",
+      "sha256": "56d6ac7fb582a92a874b8ec8dd226bd02ea578b16d5f91e0532ada517445871f",
+      "bytes": 336
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/validation.json",
+      "sha256": "acd70f0a9b29d7837759a6e3f969730c2767ee09b0f114695cbb8af92a403a34",
+      "bytes": 3641
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/validation_trace.json",
+      "sha256": "228c7ad304c82599a4c763f597fde3a46072307be52cd78e3590c0b8cdbabdf9",
+      "bytes": 200585
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/control.jsonl",
+      "sha256": "b8c691de1082ca8716c0f00d78c36281c63b3f31bc10bcb08c68c676ff36ee6b",
+      "bytes": 519347
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/trajectories.jsonl",
+      "sha256": "82d8b4d846aede5d41b71eac37265ce9dcc67ef1f34824918cf2d8db829be772",
+      "bytes": 85311
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/26966/pursuit/agent_config.json",
+      "sha256": "0322c095714ad05e43dbfa953f80d98a74edabd4978d22770f069d991ee3d668",
+      "bytes": 319
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/validation.json",
+      "sha256": "010f7de8f452da4a49272af4f8de4be48a99597eb90588f7a24833845c8415ee",
+      "bytes": 4097
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/validation_trace.json",
+      "sha256": "e920ea7b527556231b6428c14256c2f6f2d671ba06a0bb84114440179ac6522d",
+      "bytes": 207617
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/control.jsonl",
+      "sha256": "df9041b7def34e42a95b65bd1c78d660e996a14a02c23a26b54a8b13345469c7",
+      "bytes": 652873
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/trajectories.jsonl",
+      "sha256": "6a824ed9015325e3ea3c67421223dea6381599fb09c5d349a74ceddbde256a68",
+      "bytes": 117356
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/agent_config.json",
+      "sha256": "e8d9c14de059a455b806cba9e0099bbf6c1899f47511ea73680aaeeaea0cfb9e",
+      "bytes": 344
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/validation.json",
+      "sha256": "fd9d0fcfdad0937153bb30213d1b39eeec45ea44cd50ca1bf6d8d68d2950e3fe",
+      "bytes": 4096
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/validation_trace.json",
+      "sha256": "e37a5ef6392c2a483fdfa6530e96fb376fc81a94f467efd7032e2ecc269d7ffb",
+      "bytes": 203015
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/control.jsonl",
+      "sha256": "afe13dd16242c544829ad4e309e1ae52a86ff7a6547cfeba6babe46341f0a2ab",
+      "bytes": 636685
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/trajectories.jsonl",
+      "sha256": "a5cb8757c631734b584ce552ddad243febda5cac3aef736f4cfec7f50b20e711",
+      "bytes": 114559
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/agent_config.json",
+      "sha256": "68128c4624c7abd21db68f9ed6848b99bd205ff36afc7293ed015197d8fba269",
+      "bytes": 334
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/validation.json",
+      "sha256": "221cd1877cbf95e9559709f7fef3ec941d82a39c7de33dfb74c88142070f91f2",
+      "bytes": 3643
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/validation_trace.json",
+      "sha256": "ede1ea0dca4b88a18603546f8b5502c235e13bcb79ec5aa1baa67429395aecde",
+      "bytes": 270213
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/control.jsonl",
+      "sha256": "5c2b099a91a796fb2439e743d90178677f58b897ae07df55bf156ac835e6de29",
+      "bytes": 708127
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/trajectories.jsonl",
+      "sha256": "cd4ab79c0cf079b7b5918b1c82d1db1d13f3c86cdefa7c48fa8c1c050df33b1a",
+      "bytes": 120216
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/carla/agent_config.json",
+      "sha256": "0a18a27f3d589e6b8b1fc4ddb9991075e7c7bbf27e6327201a01845528e9de60",
+      "bytes": 315
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/validation.json",
+      "sha256": "1b7b2b7c63a955a70081c3011fff49a69f84761679e2bf4151a1897e3e0636b2",
+      "bytes": 4110
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/validation_trace.json",
+      "sha256": "59cadc88b3760c8ce3ad9351b2dbb5ca1b695c14585e1abccd5e320f92be4980",
+      "bytes": 273125
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/control.jsonl",
+      "sha256": "4a011b016f80cd2ca9296c3c0d387c9f5c5905eabb986b83291e0739da07ea77",
+      "bytes": 867751
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/trajectories.jsonl",
+      "sha256": "8357159847001a1c7b2c89a948dedbccd07ee4576982ea43b6ae0c980efde3ac",
+      "bytes": 159892
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/agent_config.json",
+      "sha256": "d656ea4c7a857040661bb3c56187e2be3608714f3a8fe07b7b7baae9d7a928a6",
+      "bytes": 340
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/validation.json",
+      "sha256": "3d5f87ef09d2633d6e1d71bd1fb3bf7d928501b7b5cbd438761d6436d7304f91",
+      "bytes": 3645
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/validation_trace.json",
+      "sha256": "96a9c501cd95aed5f7589aa454dce07c88d9377cf434f43a60ed5e755150d277",
+      "bytes": 269262
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/control.jsonl",
+      "sha256": "eebdea81e5991f1110937b5d32f2b0cabf7344640f7f00dc9ef82e4b400fe9cd",
+      "bytes": 701216
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/trajectories.jsonl",
+      "sha256": "b6b047ef82a9dcf8beb61521c9bae558a34c8f5d467debab0b1c4a61d3483203",
+      "bytes": 119797
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/tcp/agent_config.json",
+      "sha256": "4997045b3d6bfebed60b207c2447b55aa3aed3181ac8e2853c06fd2539eee48b",
+      "bytes": 311
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/validation.json",
+      "sha256": "aaad7916318beb5f47ab1d783307ad6a89a75578b4bcdd4ec397912407191c85",
+      "bytes": 4111
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/validation_trace.json",
+      "sha256": "9e94d81263216ed464eec2aecb0be5db6ba70664c5b7685e06253d0d6fab2067",
+      "bytes": 270018
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/control.jsonl",
+      "sha256": "574b7cc0d72e2900f7e48427ed7f612847b893a49eb754c736f794eb0290ee4d",
+      "bytes": 854481
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/trajectories.jsonl",
+      "sha256": "c41ffd6ff6c46b4651130807e9f80ca918c269f0921bb7ba50ad7860a08726a2",
+      "bytes": 158010
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/tcp/agent_config.json",
+      "sha256": "6a3eb3ef4f9354db20650db61af4becb8577ecf022464c3b7a4a54a08a373a40",
+      "bytes": 336
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/validation.json",
+      "sha256": "7fa5c08889e5a281ebc1cb4c569d55dd6d4c07132c1bc26ba2fc8f749eba8d61",
+      "bytes": 3651
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/validation_trace.json",
+      "sha256": "b918019e7f13d729bcdf4ca42ffc00016a7e5a09fb34e4e2de66ec1e35efda50",
+      "bytes": 273417
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/control.jsonl",
+      "sha256": "e6cdb292d4667c263cae94ce93155030305d0ecf195bdeadb197a4a3e750cb24",
+      "bytes": 718298
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/trajectories.jsonl",
+      "sha256": "6db4899a08293ea1760a23334cdcfe5a50a300817c76b90c9349fff8f4f56786",
+      "bytes": 122188
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development3/25854/pursuit/agent_config.json",
+      "sha256": "885104187d87dd7c1b52930399b6362e81a8fa014c9e5454b45447f0261d5da0",
+      "bytes": 319
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/validation.json",
+      "sha256": "715d63f9a169eb4c76f02920be5a938c40493aa798acd76214dee943d50a39fd",
+      "bytes": 4126
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/validation_trace.json",
+      "sha256": "8cdc4c915d8771ef0ce4b2d71d27ff042f16cdfe2b927b1c66a9f425d5547900",
+      "bytes": 275717
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/control.jsonl",
+      "sha256": "b12b24aac56aac9cc3bc0a1dc3af22c0e0c925be23c2344dbb611fedf623a69c",
+      "bytes": 878294
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/trajectories.jsonl",
+      "sha256": "ee7b8cda537278aec11549ab8e72cf4ab996ff7a11d2331310ab21c39c193ed2",
+      "bytes": 161228
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/agent_config.json",
+      "sha256": "07ff883b4ecb12f2c40b7ce1b3d425b8f54ccb2b9bd16c92a648feb634b6e48c",
+      "bytes": 344
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/validation.json",
+      "sha256": "a409189c7569fb994c9a0a8d661ed39f007a4915445bc527493c1a506d914590",
+      "bytes": 4106
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/validation_trace.json",
+      "sha256": "e63d4f9ac669fa7f2b8ac5a2622d0519783943ff4021e2a70aa202827a5b83c8",
+      "bytes": 275731
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/control.jsonl",
+      "sha256": "ad2b143611a403fc570f9957be337b1d5fe1f552c3769da90b4209e82f248526",
+      "bytes": 877104
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/trajectories.jsonl",
+      "sha256": "e069652103d88b130fadc75c71ae15d9f0e379dea5b33e20c41ef992c1e82049",
+      "bytes": 161131
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/agent_config.json",
+      "sha256": "47d8f8017cec52de13f68bd071472ad378380a5e575a3894aab473e28f3d5b95",
+      "bytes": 334
+    }
+  ],
+  "outputs": [
+    {
+      "path": "cases.csv",
+      "sha256": "c74269913894da51ea9e797ce7165a36f2f959f87729476c7621247d5fb01a23"
+    },
+    {
+      "path": "matched-comparisons.csv",
+      "sha256": "80fab920dd0f3c0202d77e86a2fe3548d54a2cffb8b8228a9325cbfc64ca5d68"
+    },
+    {
+      "path": "five-route-trajectories.png",
+      "sha256": "c7d2cd7c9f5f54028f5c23adc737e71ef409ca66bc1da82f50d3fab271b0b4a4"
+    },
+    {
+      "path": "five-route-trajectories.pdf",
+      "sha256": "322f4c2b84445862408896db1b6c6c86239ebc3506c38d74e820ff983f8ea1de"
+    },
+    {
+      "path": "errors-speed-comparison.png",
+      "sha256": "bf47b0f374e8c5a6e24d36d3d8955ec01ccd957c8173deb32380986a2e7930ba"
+    },
+    {
+      "path": "errors-speed-comparison.pdf",
+      "sha256": "79aa278c39431dd78672a3bb98d88dd5cd6bfa7b2f8102898bb549441c3a8611"
+    },
+    {
+      "path": "pursuit-error-speed-traces.png",
+      "sha256": "635263f25cfed01c2ef5a19d7e2ae102a5c0c8be2c19483ed6886616aad160c3"
+    },
+    {
+      "path": "pursuit-error-speed-traces.pdf",
+      "sha256": "5da18c3d9245cc5de35178e7c00c60cb07bb7605b92a05e9cb411eab59227f42"
+    }
+  ]
+}
