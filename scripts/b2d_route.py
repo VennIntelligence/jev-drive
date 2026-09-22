@@ -111,6 +111,8 @@ def main():
     add_bench2drive_to_path(a.bench2drive)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    # External experiment agents can keep telemetry with this exact attempt.
+    os.environ['B2D_ATTEMPT_OUT'] = str(out)
 
     import carla  # noqa: F401  (import after the path is set up, so the wheel is the one used)
     import b2d_hooks
@@ -137,7 +139,7 @@ def main():
 
     args = _leaderboard_args(a, cfg_path, out)
     stats = StatisticsManager(args.checkpoint, args.debug_checkpoint)
-    if a.drive == "controller":
+    if a.drive == "controller" or os.environ.get('B2D_CAPTURE_CRITERION_EVENTS') == '1':
         _capture_criterion_events(stats, out)
     t0 = time.time()
     record = {"route_id": a.route_id, "status": "harness_error", "wall_s": 0.0}

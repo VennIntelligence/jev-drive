@@ -136,6 +136,7 @@ class VisualTCPAgent(TCPAgent):
         start = time.perf_counter()
         self._inferred = False
         control = super().run_step(input_data, timestamp)
+        control = self._postprocess_control(control, input_data, timestamp)
         core_ms = (time.perf_counter() - start) * 1000
         gpu_ms = 0.0
         if self._inferred:
@@ -173,6 +174,10 @@ class VisualTCPAgent(TCPAgent):
                       preview_ms=(time.perf_counter() - begin_preview) * 1000)
         self._samples.append(sample)
         self._recent.append(sample)
+        return control
+
+    def _postprocess_control(self, control, input_data, timestamp):
+        """Explicit extension point; the visual-only agent preserves native control."""
         return control
 
     def save(self, tick_data):
