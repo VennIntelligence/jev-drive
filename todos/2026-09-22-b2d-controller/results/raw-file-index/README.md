@@ -18,3 +18,19 @@
 | [development S v1](development-s-v1.json) | 新增17563真实S弯的3例完整原始记录，全部速度gate失败 |
 
 用于轨迹/控制曲线的数值数据已保留；本轮未录制相机RGB流或视频。早期开发源代码追溯的限制见[文章素材](../../article-notes.md)。
+
+
+## 反馈迭代封存
+
+| 索引 | 数据 |
+|---|---|
+| [v2开发](../development-v2-post-verification-file-index.json) | 20例，含复核后新增文件；原版索引另存 |
+| [6m/s诊断](development-v2-speed-diagnostic.json) | 直线与S弯六例，速度/挡位/应用控制量 |
+| [v3开发](../development-v3-post-verification-file-index.json) | 首个PI的18例，含全部失败；原版索引另存 |
+| [v4开发](../development-v4-file-index.json) | 低Kp唯一复验18例 |
+| [首个PI G1](pi-g1-v1.json)、[低Kp G1](pi-g1-kp05.json) | 完整合成动态与停车数据 |
+| [几何重放](rejoin-replay-v1.json) | 开环输入/输出及来源，不替代闭环 |
+| [失败smoke与输入重放](../smoke-v4-motion-replay/README.md) | 两次失败目录各有完整索引，两版重放均保留 |
+| [恢复smoke](smoke-v4-recovery.json) | 完整213帧官方路线、原始motion及审计来源 |
+
+正式formal-v4仍在运行，不能把增长中的目录称为已封存；结束后另建全文件索引。
