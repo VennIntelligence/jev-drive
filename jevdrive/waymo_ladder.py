@@ -28,12 +28,13 @@ without refitting anything.
 """
 import hashlib
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 
-from . import planner, traj, waymo, waymo_l0 as l0, waymo_stage_a as sa
+from . import planner, traj, waymo, waymo_l0 as l0, waymo_p1, waymo_stage_a as sa
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
@@ -601,12 +602,14 @@ def gate_report(sctx: dict) -> pd.DataFrame:
 
 
 def save_preds(rl, preds: dict, sctx: dict, tag: str = ""):
-    """Per-frame predictions of every arm, keyed by frame name, so P1's judge can be applied without refitting."""
+    """Per-frame predictions of every arm, in the schema `waymo_p1.load_run` reads, so decision 22's judge
+    can be applied later without refitting anything."""
+    v = sctx["sp"].val
     np.savez_compressed(rl.dir / f"{tag}_preds_dir{sctx['direction']}.npz",
-                        frame_name=sctx["fname"][sctx["sp"].val].astype(str),
-                        s_ego=sctx["s"][sctx["sp"].val].astype(np.float32),
-                        gt=sctx["fut"][sctx["sp"].val].astype(np.float32),
-                        **{k: v.astype(np.float32) for k, v in preds.items()})
+                        frame_name=sctx["fname"][v].astype(str), sequence=sctx["seq"][v].astype(str),
+                        s_ego=sctx["s"][v].astype(np.float32), fut=sctx["fut"][v].astype(np.float32),
+                        speed=waymo.init_speed(sctx["past"][sctx["rows"][v]]).astype(np.float32),
+                        **{f"pred_{k}": q.astype(np.float32) for k, q in preds.items()})
 
 
 def write_tables(rl, tables: dict[str, list], tag: str = ""):
@@ -914,23 +917,115 @@ def shape_change(dec: pd.DataFrame, lo: int = 4, tol: float = 2.0) -> pd.DataFra
     return pd.DataFrame(rows)
 
 
+# ---------------------------------------------------------------- decision 22's judge, applied after the fact
+
+DEC19 = "s_ego deciles 1-9"
+CIRCULAR = ("s_ego binning is circular: the bins come from the residual of `ridge ego`, the very base every "
+            "arm is measured against. Decision 22 keeps it because the non-circular check (rater-credible "
+            "frames) gave the same ordering, but the qualifier travels with every citation of these numbers.")
+
+
+def _preds_files(run_dir, tag: str):
+    return sorted(Path(run_dir).glob(f"{tag}_preds_dir*.npz"))
+
+
+def rejudge(run_dir, tag: str, seed: int = 0) -> dict[str, pd.DataFrame]:
+    """Re-report a ladder run under decision 22's judge, from the saved per-frame predictions.
+
+    Nothing is refitted: the arms' predictions, their s_ego and the logged future are all on disk, and the
+    rater arrays and manoeuvre subsets are joined back on by frame name. What changes is only what is
+    reported and where:
+
+      headline   ADE against the log on **s_ego deciles 1-9**, for pre_onset and straight_yaw, with the DiD
+                 computed on the same restriction
+      top bin    decile 10 on its own rows, under RFS and ADE-against-rater_best -- never ADE-against-log,
+                 because there the logged future itself scores 5.92 and is floored 41.7 % of the time
+      beside     RFS on every rater frame of the subset, always
+      side       the old all-frames ADE, kept as a column and no longer the headline
+    """
+    df = waymo.load_index()
+    past, future = waymo.load_ego()
+    sub_all = waymo.subsets(df, past, future)
+    fname_all = waymo.frame_names(df)
+    at = pd.Series(np.arange(len(df)), index=fname_all)
+    r, rtraj, rscore = waymo.load_rater(df)
+    rname = fname_all[r]
+    rows = []
+    for f in _preds_files(run_dir, tag):
+        d = np.load(f, allow_pickle=True)
+        direction = int(f.stem.rsplit("dir", 1)[1])
+        fn = d["frame_name"].astype(str)
+        idx = at.reindex(fn).to_numpy().astype(int)
+        seq, gt, s = df.sequence.to_numpy()[idx], d["fut"], d["s_ego"]
+        speed = d["speed"] if "speed" in d.files else waymo.init_speed(past[idx])
+        sub = {k: sub_all[k][idx] for k in SUBSETS}
+        dec = np.clip(np.searchsorted(np.quantile(s, np.linspace(0, 1, 11))[1:-1], s, "right"), 0, 9)
+        keep19 = dec <= 8
+        pos = pd.Series(np.arange(len(fn)), index=fn).reindex(rname).to_numpy()   # rater frames present here
+        ok = ~np.isnan(pos)
+        rp, rt, rs = pos[ok].astype(int), rtraj[ok], rscore[ok]
+        best = rt[np.arange(len(rp)), rs.argmax(1)]
+        arms = [k[5:] for k in d.files if k.startswith("pred_")]
+        base = d[f"pred_{BASE}"]
+        e_base, rfs_base = l0.ade(base, gt), waymo.rater_feedback_score(base[rp], rt, rs, speed[rp])
+        ar_base = l0.ade(base[rp], best)
+        top_r = dec[rp] == 9
+        for arm in arms:
+            if arm == BASE:
+                continue
+            p = d[f"pred_{arm}"]
+            e, rfs = l0.ade(p, gt), waymo.rater_feedback_score(p[rp], rt, rs, speed[rp])
+            ar = l0.ade(p[rp], best)
+            row = {"direction": direction, "arm": arm}
+            for sn in ("pre_onset", "straight_yaw", "all"):
+                for scope, m in ((DEC19, sub[sn] & keep19), ("all deciles (side column)", sub[sn])):
+                    rows.append({**row, "judge": "ADE vs log", "scope": scope, "subset": sn,
+                                 **waymo_p1.paired(e, e_base, seq, m)})
+            hi_m, lo_m = sub["pre_onset"] & keep19, sub["straight_yaw"] & keep19
+            point, cl, ch = traj.boot_did(e - e_base, seq, hi_m, lo_m)
+            rows.append({**row, "judge": "DiD", "scope": DEC19, "subset": "pre_onset - straight_yaw",
+                         "n": int(hi_m.sum()), "value": np.nan, "delta": point, "lo": cl, "hi": ch,
+                         "halfwidth": (ch - cl) / 2})
+            rows.append({**row, "judge": "RFS", "scope": "rater frames (subset)", "subset": "all",
+                         **waymo_p1.paired(rfs, rfs_base, seq[rp], np.ones(len(rp), bool))})
+            rows.append({**row, "judge": "RFS", "scope": "decile 10 only", "subset": "all",
+                         **waymo_p1.paired(rfs, rfs_base, seq[rp], top_r)})
+            rows.append({**row, "judge": "ADE vs rater_best", "scope": "decile 10 only", "subset": "all",
+                         **waymo_p1.paired(ar, ar_base, seq[rp], top_r)})
+        log.info("%s dir %d: %d frames, %d in deciles 1-9, %d rater frames (%d in decile 10)", tag,
+                 direction, len(fn), int(keep19.sum()), len(rp), int(top_r.sum()))
+    t = pd.DataFrame(rows)
+    head = t[(t.judge == "ADE vs log") & (t.scope == DEC19) & (t.subset == "pre_onset")].copy()
+    head["meets_threshold"] = (head.delta <= -0.05) & (head.hi < 0)
+    both = head.groupby("arm").meets_threshold.all()
+    return {"rejudge": t, "pre_onset_dec19": head,
+            "verdict": pd.DataFrame({"arm": both.index, "meets_both_directions": both.to_numpy()})}
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,grid,gridcheck,qwen32b,vjepa2,wan")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,rejudge,grid,gridcheck,qwen32b,vjepa2,wan")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
     ap.add_argument("--batch-size", type=int, default=4)
     ap.add_argument("--sets", default=None, help="p3 / p3d: comma list of arm keys to include")
     ap.add_argument("--variant", default=None, help="vjepa2: a key of VJEPA_VARIANTS to extract")
+    ap.add_argument("--run", default=None, help="rejudge: the run directory holding <tag>_preds_dir*.npz")
     a = ap.parse_args()
     rl = RunLog("waymo_ladder", a.tag or a.steps.replace(",", "-"))
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
     steps = a.steps.split(",")
+    if "rejudge" in steps:
+        for name, t in rejudge(a.run, a.tag or "p2c", a.seed).items():
+            t.to_csv(rl.dir / f"{name}.csv", index=False)
+            rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
+            rl.event(name, rows=t.to_dict("records"))
+        rl.log.info("qualifier: %s", CIRCULAR)
     if "grid" in steps:
         rl.event("extract", **extract_grid(rl, a.batch_size, a.limit))
     if "qwen32b" in steps:
