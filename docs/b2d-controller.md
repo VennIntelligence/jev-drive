@@ -23,6 +23,23 @@ controller.reset()                       # required between routes
 | Agent | Exact current GPS/IMU/SPEED every tick; `--decimate 4` gives synchronous 5 Hz route replanning and 20 Hz control |
 | Cameras | Decimated separately; only coherent same-frame camera sets are exposed, optional for `policy=none` |
 
+The exercised route-oracle path is:
+
+```mermaid
+flowchart LR
+    S[GNSS and IMU, 20 Hz] --> P[Sensor pose filter]
+    R[Dense diagnostic route] --> A[Timed route adapter, 5 Hz]
+    P --> A
+    A --> U[Controller trajectory update]
+    U --> C[Controller step, 20 Hz]
+    M[Measured speed and gyro] --> C
+    C --> V[CARLA vehicle]
+    V -. evaluation only .-> T[Frame-aligned truth logger]
+    T --> E[Tracking and failure reports]
+```
+
+Camera observations are optional in this path. No neural planner supplies the trajectory here. Existing real TCP smoke runs use a different agent and do not validate replacing its controller.
+
 The origin is prepended as an auxiliary timed trajectory point. Callers must make the first future point consistent with motion from this origin; its distance divided by 0.25 s affects the speed command. The initial route adapter violated this boundary when the vehicle was offset from the route. The revised adapter builds a path from estimated rear-axle position and heading back to the unchanged dense reference, then samples it by traveled arc length. A finite 6–18 m join search limits added curvature where possible and logs unresolved concerns; it does not prove dynamic feasibility. This changes commanded path geometry and can weaken short-lookahead feedback, so it requires its own closed-loop comparison. Command-speed error remains distinct from independent route-speed error. Near speed reads `[age, age+0.25]`; the reference-window option reads `[age+0.25, age+1.0]`.
 
 The optional `longitudinal_mode="pi"` uses a separate SI-unit PI controller with conditional anti-windup. Its default proportional and integral gains are 1.0 and 0.25; explicit `pi_kp` and `pi_ki` configuration records identify experimental variants. The signed output is normalized pedal demand, not acceleration. Integral state clears on reset, stationary holding and safety braking. PI mode also rejects motion gaps over 0.2 s; normal 20 Hz operation is unchanged. Vendor mode retains the original CARLA/TCP discrete PID semantics and outputs. Passing synthetic PI tests does not validate CARLA transmission behavior.
