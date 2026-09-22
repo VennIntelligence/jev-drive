@@ -64,3 +64,70 @@ plant 力学是明确标记的 synthetic：油门系数3、刹车系数8、阻�
 主代理运行CARLA；此子任务未启动任何server。原 handoff feedforward+bearing PID 消融暂缓，优先完成实际阻塞的 G2 修正。
 
 G2 修正交回之后补完原 handoff 横向公式离线消融（生产 Controller 未更改）：R20 / 6m/s，左右镜像，同样 max lookahead + reference speed、相同历史和投影，pursuit RMS 0.00852m，pursuit + 完整 CARLA bearing PID 为 0.12843m；速度 RMS 两者均0.04445m/s。额外 PID 令此例误差约15倍，但两者都低于0.2m，不能说此例已不稳定。`offline-selftest.json.original_bearing_pid_ablation` 保存公式、参数、限定和所有行。消融精确复现原横向相加公式，统一使用修正后的时间/投影，不冒称完整复现原文未指定的 waypoint-index 细节。
+
+## 可选实车坡道保持 helper
+
+新增 `scripts/b2d_controller_slope.py` 与 `scripts/test_b2d_controller_slope.py`。API：
+
+```python
+from b2d_controller_slope import run
+summary = run(client, "/data/runs/b2d/controller/calibration/controller_config.json", out)
+```
+
+调用方必须在自己的评测 actor 清理后调用。helper 不启动/停止进程，只管理自己创建的 `slope_diagnostic` MKZ；恢复最终地图的 world settings。如果当前地图找不到 drivable |pitch|>=3° 位置，可查询并加载 Town12（若已有 vehicle 会破坏调用方状态，则拒绝地图替换并标明 untested）。地图可能改变，已在接口 docstring 明示。
+
+静态位置去重，最多8个候选；只对 spawn 不可用、实际坡度不足或无法安定的 setup 重试，已经测得的 hold 失败不会另挑更好的位置覆盖。先settle至少2s且连续1s speed<.1，再记录整整5s（101个20Hz样本）的真实后轴3D最大两点距离、速度范数、完整带符号速度与坡度/grade。门槛：全段实际|pitch|>=3°、位移<=.1m、speed<.1m/s。100个样本仅4.95s，测试明确判失败。
+
+控制器用5Hz全零轨迹、20Hz step；其输入 speed 是物理速度范数以满足非负API，评测 signed velocity 不做deadband或截断，负值全部保留。该工具明确是 privileged stationary-trajectory plant diagnostic，验证刹车保持，不能替代接近停车或sensor-score实验。
+
+输出 `summary.json`、`slope.jsonl`、`events.jsonl`、`log.txt`。无合适坡度返回明确 untested。5/5离线测试通过（含无服务器所有权的fakeclient、signed reverse/位移超限、返回原点却中间漂移、坡度不足、4.95s边界）。未运行CARLA，等待主代理在复用server上按需调用。
+
+## 冻结 Dev10 seed0 失败分析（只读）
+
+产物：`results/failure-analysis.json`；完整30个官方结果（carla/tcp/pursuit各10），另保留TCP27494首次`server_died_rc139`基础设施失败（22s、无官方record），不混入成功次数。没有更改冻结controller/adapter/report。
+
+### 25424：支持“中心线路径穿过施工障碍”归因
+
+| preset | 官方completion/status | 首次静态碰撞frame | 碰撞前truth横向RMS | 连续\|raw速度\|<.5区间 | 区间真实净位移 |
+|---|---|---:|---:|---|---:|
+| carla |47.26 / Failed-TickRuntime|3282|.0454m|3303–7123，191.05s|.169m|
+| tcp |49.14 / Failed-TickRuntime|15955|.1031m|15982–19797，190.80s|.0627m|
+| pursuit |47.26 / Failed-TickRuntime|4953|.0550m|4973–8794，191.10s|.2026m|
+
+三个preset都碰到`static.prop.trafficwarning`。碰撞前最近一次记录的20点世界轨迹位于原dense route上（最大重建偏差接近浮点零），没有绕障参考。停滞中位油门.75，真值横向误差很小，说明此例的主要问题是未规划绕障，不能自动判横向controller跟丢。源码`ConstructionObstacleTwoWays`明确要求占用对向车道，warning prop沿施工车道布置，与事件吻合。
+
+严格限制：criterion message中的x/y是**ego actor位置**，已核对`atomic_criteria.py`；不是障碍物中心。日志没有other actor的连续位姿、bbox或contact force，因而只标`path_through_obstacle_supported`，不假称重建了精确多边形相交。官方失败全部保留。
+
+4000tick来自锁定版本scenario_manager本身的固定保护门槛，hooks保留了同一逻辑；CLI max_ticks=0 / capped=False仅表示没有另加tick cap，不能解释为不存在任何上游上限。
+
+### 2091：碰撞后约180s低进展，原因保守保留
+
+三个preset均官方Completed100%，tick分别3868/3881/3871（carla/tcp/pursuit）。首次车辆碰撞frame7507/20240/9241。连续\|raw speed\|<.5m/s分别177.9/179.15/178.95s，净位移.410/5.298/.519m，之后才继续完成。
+
+统一窗口“首碰撞+2s到最后sample-10s”的truth cross-track p95：carla .843m、tcp 1.866m、pursuit .202m。碰撞前RMS分别.121/.157/.065m。说明TCP碰撞后恢复/侧向运动更差，不能把这条路线所有损失都从controller责任中排除。没有其他车辆占用/移除时间序列，不推断何时脱困由何机制触发。归类`collision_associated_long_dwell`，控制恢复与外部接触各自贡献仍unknown。
+
+### 状态/定位异常
+
+30条内没有`trajectory_behind`或stale。invalid_motion tick总数carla881、tcp977、pursuit873；25424就占651/702/683，主要是碰撞接触中出现小负signed速度触发非负输入防护（例如carla -.057到-.010m/s），而非已证实的NaN/Inf。2091负向速度幅度更大（carla最小约-3.57m/s），不能静默夹成零。
+
+25381三个preset都在起步有2tick invalid_motion和2tick trajectory_outside_history，随后正常恢复并完成。所有异常区间frame边界与示例保留在JSON。全30条pose_error最大.51274m，未出现>1m定位跳变，因此没有证据把长停滞归因为大的定位发散。
+
+### origin → firstpoint 速度桥接限制
+
+3514三个preset第一条轨迹完全相同：firstpoint=[3.474663,3.376833]m，norm/.25=19.380933m/s，下一条future→future段却为8m/s。真实起始route横向偏差3.14558m，pose error仅.41219m，主要来自ParkingExit的初始几何错位。控制器将ego原点加作t=0，第一段因此包含接回centerline的空间间隙，不能解释为单纯8m/s巡航。
+
+5Hz replan使每个20Hz控制tick的age始终<.2s，reference_speed一直处在这个+.25s首段；near目标是首段与下一段的混合。target/reference两个diagnostic同源，彼此一致不能证明“配置8m/s已被准确跟踪”。bridge>8.5m/s的replan数：carla1811/2779、tcp1997/2801、pursuit1607/2779，主要长停滞与起步贡献；逐路线数值均保存。
+
+这不证明实际车速达到19.38m/s。起步时8与19.38的目标都会把油门限到.75，因此不能仅用首个数字尖峰断言它改变了第一步执行或造成碰撞。本轮冻结数据保留原行为；应在后续版本单独定义空间连接与定时速度，并重跑完整对照，不能在本轮中途修后混合统计。
+
+## 成本文档与 Tokyo 环境文档
+
+已更新 `docs/bench2drive-cost.md` 和 `docs/tokyo-box.md`，只引用Dev10 seed0冻结30条结果及1次基础设施失败；seed1/保留集没有混入。每preset区分全部、官方Completed和Failed的tick min/median/max；600–1200预测实际每组7条低于600、1条区间内、2条超过1200。Tokyo物理GPU1 /3090、windowed Epic、policy-none、front3 800×450、5Hz与旧GPUbox模型/8worker数据分开。
+
+从原始attempt/profile/event重算：finalized attempt总wall1027.0s；TCP崩溃attempt22.0s；初始化/readiness+preflight7.088s；restart→retry7.008s；其余runner/report约11.553s。manifest→end marker共1074.650s/17.91min。**最终server.stop在end marker之后且没有单独计时，所以未冒充包含退出清理的完整进程wall。**
+
+profile按每条自己的ticks_used×total_ms_mean计算，共409.354s；finalized attempt余项617.646s含setup/cleanup、首20tick及未计时工作，不能全叫启动成本。各presetweighted ms/tick为12.345/12.760/12.337。Town04 TCP27494在第18次attempt崩溃，记录server_age_routes17，原server复用跨preset；重启并换端口后复跑成功。只说明此次观察，不推断固定寿命或最优回收间隔。
+
+旧“分数最多209/220”“这些失败完全不是我们的问题”“11条路线不能运行”的绝对结论均改为旧run观察范围和根因限制；也移除3.1h是普遍上界的暗示。文档明确禁止把新Tokyo数字直接外推full220或归因成controller-only加速。用户目视看到的后续seed1交叉口碰撞停滞标记为独立观察，不计作新的定量测量。
+
+本次检查：两文档相对链接目标均存在；数据表与原始JSON/事件重算一致。未运行CARLA、未操作git、未修改其他代理文件。

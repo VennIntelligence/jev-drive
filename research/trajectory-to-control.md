@@ -1,6 +1,6 @@
 # 轨迹怎么变成 CARLA 的控制量
 
-状态: 实施中，2026-09-22 修订。原设计已纠正，车辆常数已实测；控制与 Dev10 验收尚未完成。
+状态: 实施中，2026-09-22 修订。独立控制验证与Dev10首轮已完成，第二seed和保留集运行中；尚无默认替代或模型分数提升结论。
 背景: [carla-efficiency.md](carla-efficiency.md)（成本）、[frozen-vlm-planner.md](frozen-vlm-planner.md)（planner 输出什么）、
 [decisions.md](decisions.md) 第 16–18 条（闭环要不要做）。
 
@@ -252,7 +252,7 @@ Bench2Drive 是城区、限速 30–60 km/h。这不是控制器的事，是 hea
 | 决策延迟（overlap） | 源帧时间与控制时间独立记录，不预设恰为1–2 tick | 需实测age，并在固定协议下比较；延迟对分数的净影响不先下结论 |
 | ego 位姿 | GNSS/IMU/speed融合；hero真值仅写诊断日志，不参与控制 | 仅移除 transform 不足以证明可提交；dense route 本身是诊断 oracle，正式 planner 须单独核对输入协议 |
 | GNSS | route driver 用于定位，原始/融合后误差同帧对后轴真值报告 median/p90/p95 | 经纬度噪声换算不能代替定位标定 |
-| 红灯 / 前车规则 | **不做**。Bench2DriveZoo 的 UniAD/VAD 也没有 | 可比。加了就是在评一个 rule-based 系统 |
+| 红灯 / 前车决策 | 本轮route oracle不做让行/避碰；真实模型可以在输出轨迹中做这些决策，并不需要显式规则 | 旧稿仅凭“都没有手写规则”称可比不成立。当前policy=none的驾驶成绩不能与完整模型比较 |
 | `max_brake 1.0` | 增益，不是语义 | 可比 |
 | `MinimumSpeedRouteTest` | 固定 B2D 0.0.4 的 penalty 字典是 `[0.7, "unused"]`；criterion 定期生成事件 | 报原始事件数、percentage及官方整体penalty；事件或criterion FAILURE不能直接解释为爬行扣分 |
 
@@ -304,10 +304,26 @@ Dev10 carla/tcp各10条；pursuit通过前置门槛后加入，默认与最强�
 | 项 | 状态 | 下一步 |
 |---|---|---|
 | MKZ 2020 几何与转向曲线单位 | 已实测；见上方常数与 calibration-units 原始文件 | 继续检查真实响应与G2动态误差，失效sweep不拟合 |
-| CARLA/TCP/pursuit 在8–14 m/s是否稳 | 尚未通过本轮完整验收 | G1/G2物理可行路径；定位误差先修 |
-| 每条路线多少tick | 600–1200仍是旧预算假设 | 分完成/失败、地图、场景、seed实测分布；提前失败不算加速 |
-| GNSS raw/fused pose误差 | 独立定位标定与route数据待汇总 | 同frame、同后轴定义报告median/p90/p95 |
+| CARLA/TCP/pursuit 控制能力 | 离线R20m/6m/s RMS=.4671/.1546/.0091m；实车开发CARLA与pursuit各4/4通过、TCP26966失败 | 实车未覆盖所有8–14m/s工况；第二seed/保留集不用于调参 |
+| 每条路线多少tick | Dev10seed0每组7条<600、1条600–1200、2条>1200；失败25424为4000tick | 旧600–1200预算不能约束碰撞停滞；见完整成本表 |
+| GNSS raw/fused pose误差 | G2全部12例融合p90≤.425m，pursuit为.167–.392m；raw/fused完整分位数已存档 | 真值与控制分离；碰撞中负速度故障单独保留 |
 | Waymo词表CARLA覆盖与停车决策 | 未验证 | 固定planner的后续闭环，不由route诊断代替 |
+
+## 当前实验结果与数据边界
+
+Dev10seed0三组均9/10驾驶完成。路线均值横向RMS为CARLA .2711m、TCP .4947m、pursuit .2951m；
+平均completion为94.726%、94.914%、94.726%。因此pursuit尚无满足预定门槛的默认替代证据。
+完整表、图、源文件哈希与失败尝试在[文章素材](../todos/2026-09-22-b2d-controller/article-notes.md)，
+成本分解在[Tokyo实测段](../docs/bench2drive-cost.md#tokyo-controller-diagnostic-complete-dev10-seed0-2026-09-22)。
+
+当前实际模型为policy=none。TCP只是控制器适配preset，未运行TCP神经网络。
+2091路口的事件确认自车与背景车碰撞；没有让行规划使其与单纯横向跟踪试验不同，不能把碰撞全归因于PID。
+25424施工场景的中心线碰撞后长期停滞；全部失败仍计入分母，没有剔除这些路线来改善主分数。
+
+还发现一个输入边界：停车起步或路线偏移时，ego原点到首个future waypoint的连接段可把轨迹导数推到配置巡航速度以上。
+例如3514首点距原点4.845m，按0.25s解释为19.381m/s，而后续点段仍为8m/s。
+命令与该reference的误差是同一输入轨迹语义，不能代替G2独立真值巡航指标；三组冻结同一实现，原数据不篡改。
+正式接入planner前，空间路线的诊断适配器与可执行定时轨迹的边界需要单独处理。
 
 ## 会推翻候选选择的证据
 
