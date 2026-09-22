@@ -67,7 +67,28 @@
 | b H3 DiT | 30–100 / forward | 20–60 min（每个噪声水平） | 2 层 × d × 2 B，约 **0.2 GB** | h3-deployment 6.1 的推算，**未实测** |
 | c Wan2.2-5B | 同量级 | 20–60 min | 约 0.2 GB | — |
 | d V-JEPA 2 ViT-L | 约 25 | 约 10 min | 2 × 1024 × 2 B = 4 KB/帧 → **80 MB** | ViT-L、4 帧、256²，比 Qwen 的 3060 token 小一个量级 |
-| 下载 | — | H3 约 40 GB、Wan 约 28 GB，按 docs/network-proxy.md 的 10 MB/s 估 **1.1 h / 0.8 h** | — | 代理链路上限约 18 MB/s 且是共享的 |
+| 下载 | — | 见下 | — | — |
+
+### 下载这一项估错了，就地更正（2026-09-22 18:20）
+
+三件事和估计不一样：
+
+1. **(a) 不用下**。`Qwen/Qwen3-VL-32B-Instruct` 已经在 box 的 HF cache 里，76 GB、14 个 shard 齐全。
+   P3 最贵的那个 arm 因此没有下载成本。
+2. **链路只有 3–5 MB/s，不是 10**。turbo（`source /etc/network_turbo`）对 Wan 的 CDN 一直 SSL handshake
+   超时，hf-mirror.com 只有 0.1 MB/s，最后走 Clash（`proxy_on`）拿到 3 MB/s 独占时 5 MB/s。
+   **`tmux_run.sh` 跑的脚本是非交互 bash，不读 `~/.bashrc`，所以 `proxy_on` 是 command not found** ——
+   脚本里必须自己 `source ~/.bashrc`。
+3. **H3 没有 pruned 版可下**。官方 repo 里 `FL2VA/transformer` 是 **61.7 GB**（13 个 shard），
+   `FL2VA/video_vae` 9.7 GB，合计约 **71 GB**；lit 里说的「pruned bf16 40.2 GB」只在
+   `Comfy-Org/MiniMax-H3` 有（`minimax_h3_fl2va_pruned_bf16.safetensors` 37.5 GB），
+   但那是 ComfyUI 的单文件排布，要自己做 key 映射才能进 diffusers 的 `MiniMaxH3Transformer3DModel`。
+   **H3 的 text encoder 不用下**：它就是 Qwen3-VL-32B，我们已经有了，而固定中性 prompt 的 conditioner
+   state 正好可以用本地这份 32B 预先编码一次。
+
+于是下载预算变成：**Wan 约 23 GB（transformer + vae），H3 约 71 GB**，按 5 MB/s 串行是 **1.3 h + 4 h**。
+两个一起下会平分链路（docs/network-proxy.md：链路是零和的），所以按顺序下，Wan 先——
+它和 H3 共用同一套抽特征配方，先把便宜的那条调通再上贵的。
 
 **只有 (a) 超过 3 h**，所以只有它按 CLAUDE.md 必须先做 profiling pass；
 其余每个 arm 也一律先测 200 帧，把实测写回这张表再开全量。

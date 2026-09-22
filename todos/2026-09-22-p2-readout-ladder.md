@@ -132,10 +132,10 @@ Qwen3-VL 的 `smart_resize` 把 972×1079 的相机图放到 **960×1088**，pat
 
 ## 时间与存储预算（跑之前估，跑完就地更正）
 
-| 步骤 | 估计 | 依据 |
-|---|---:|---|
-| (b) ridge，10 240 维，2 个 stride × 2 方向 × (5 次 eigh + gram) | **约 1 h** GPU | gram 是 5×10⁴ × 10 240²，约 1.0e13 FLOP，TF32 下约 100 s 一次 |
-| (c) 抽 20k 帧的 token grid | **约 35 min** GPU | 现有 pipeline 125 ms/帧跑到 L36；只跑到 L18 是真正的 early exit，LLM 那半省一半，估 90–100 ms/帧 |
+| 步骤 | 估计 | 实测 | 依据 |
+|---|---:|---:|---|
+| (b) ridge，10 240 维，2 个 stride × 2 方向 × (5 次 eigh + gram) | 约 1 h GPU | **12 min**（17:59–18:11，含 arm A 的复现） | 估计偏保守：`gram_eigh` 在 GPU 上累 gram、在 CPU 上做 float64 eigh，10 240³ 在 25 核上约 35 s |
+| (c) 抽 20k 帧的 token grid | 约 35 min GPU | **30 min**（88.7 ms/帧，峰值显存 9.72 GB，737.0 KB/帧） | 现有 pipeline 125 ms/帧跑到 L36；只跑到 L18 是真正的 early exit |
 | (c) attention / transformer head | **约 1.5 h** GPU | 14.7 GB fp16 整个放进显存，一次 epoch 是 1 万行 × 144 token 的 attention，秒级 |
 | (d) | 约 30 min | 同上 |
 | **合计** | **约 3.5–4 h** | 单个 arm 都不到 3 h，按 CLAUDE.md 只需在 (c) 抽取前做一次 200 帧的 profiling |
@@ -164,9 +164,10 @@ RFS 5.92、41.7% 被压到下限，「对着 log 算 ADE」在那里不是好目
 
 ## 步骤
 
-- [ ] 冻结共用子集，写 `p2p3_v1.parquet`，计数提交
-- [ ] (b) 完整半 val 上跑 b2 / b3 + 同帧集上的 arm A
-- [ ] (c) 200 帧 profiling，核对 pooled 逐位相同
+- [x] 冻结共用子集，写 `p2p3_v1.parquet`（20 237 帧 / 479 sequence），计数提交
+- [x] **arm A 的复现**：在完整 106 360 帧上和第 20 条逐位相同（λ=10、pre-onset −0.0274 / −0.0427、DiD +0.0980 / +0.0288）
+- [x] (b) 完整半 val 上跑 b2 / b3 + 同帧集上的 arm A —— **买不回 pre-onset**，见 decisions 第 23 条
+- [x] (c) 200 帧 profiling：**200/200 行和盘上的 `qwen_front3` 逐位相同，max |Δ| = 0.0**
 - [ ] (c) 抽 2 万帧 token grid
 - [ ] (c) attention / transformer / MLP 对照三个 head
 - [ ] (d)
