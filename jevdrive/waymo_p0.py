@@ -178,10 +178,12 @@ def save_preds(preds: dict, ctx: dict, out_dir, vocab=None) -> None:
     if vocab is not None:
         extra["vocab"] = vocab.reshape(len(vocab), -1, 2).cpu().numpy().astype(np.float32)
     np.savez_compressed(
-        out_dir / "preds.npz", frame_name=waymo.frame_names(ctx["df"])[rows[sp.val]],
-        sequence=ctx["seq"][sp.val], s_ego=ctx["s"]["ego"][sp.val], fut=ctx["fut"][sp.val],
+        out_dir / "preds.npz",
+        # pandas hands back object arrays of Python strings, which npz can only store as a pickle
+        frame_name=waymo.frame_names(ctx["df"])[rows[sp.val]].astype("U"),
+        sequence=ctx["seq"][sp.val].astype("U"), s_ego=ctx["s"]["ego"][sp.val], fut=ctx["fut"][sp.val],
         speed=waymo.init_speed(ctx["past"][rows[sp.val]]),
-        cluster=ctx["df"].cluster.astype(str).to_numpy()[rows[sp.val]],
+        cluster=ctx["df"].cluster.astype(str).to_numpy()[rows[sp.val]].astype("U"),
         **{f"sub_{k}": ctx["sub"][k][sp.val] for k in SUBSETS},
         **{f"pred_{name}": p[:, 0].astype(np.float32) for name, (p, _) in preds.items()}, **extra)
     log.info("per-frame predictions of %d arms on %d evaluation frames -> %s", len(preds), len(sp.val),

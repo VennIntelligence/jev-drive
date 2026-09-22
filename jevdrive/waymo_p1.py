@@ -39,7 +39,9 @@ CREDIBLE_RFS = 7.0                 # decision 20's own cut: the deciles whose lo
 
 def load_run(run_dir) -> dict:
     """The per-frame predictions P0 wrote, plus the rater arrays joined onto the same frames."""
-    z = np.load(run_dir / "preds.npz", allow_pickle=False)
+    # allow_pickle because a run made before `save_preds` cast its string columns stored them as object
+    # arrays; the file is one of our own run directories, not foreign input
+    z = np.load(run_dir / "preds.npz", allow_pickle=True)
     d = {k: z[k] for k in z.files}
     arms = [k[len("pred_"):] for k in z.files if k.startswith("pred_")]
     df = waymo.load_index()
