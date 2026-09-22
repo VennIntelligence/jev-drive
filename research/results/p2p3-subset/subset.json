@@ -1,0 +1,14 @@
+{
+  "name": "p2p3_v1",
+  "frames": 20237,
+  "sequences": 479,
+  "sha256_frame_names": "6e6c17b8899b7e5c9ae1716c3f87e70e7c912a43995727fa9f3012bc5bdb7cc5",
+  "rater": 479,
+  "pre_onset": 1510,
+  "straight_yaw": 11975,
+  "turn_yaw": 4461,
+  "half0_frames": 9910,
+  "half1_frames": 10327,
+  "half0_sequences": 241,
+  "half1_sequences": 238
+}
