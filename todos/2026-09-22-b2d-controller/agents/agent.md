@@ -49,3 +49,15 @@ DATA_DIR=/data /data/envs/carla/bin/python -m unittest discover -s scripts -p te
 - route reset 同时清空 tick/decimation phase、camera frame cache、trajectory frame、旧控制、pose filter、Controller、route parking latch。
 
 新增边界/停车/完整 reset 回归，adapter/agent **10/10**。主代理随后将新建 development2 验证，旧 attempt 不覆盖。
+
+## development2 独立审阅
+
+12 个 route×preset 共 **5713 tick**：无 invalid_motion/stale/invalid_trajectory，无 motion frame 或 truth frame 错位，无 frame gap；所有 trajectory 最大 age=.1500000022 s。reason：tracking 4502、stationary_trajectory 1197、stop_hold 2、trajectory_behind 12（全部 TCP/26966）。后者发生在终点，truth lateral≈-.42 至 -.45 m，定位误差 .03–.15 m，endpoint 被投影到车后方，制动 fail-safe 生效。
+
+9 个案例的 blocked 不是实际路径堵塞：validation 在 100 个低速样本（时间跨度只有 99×.05=4.95 s）时抢先判 blocked，距所需 5 s hold 尚差一个 tick；终点误差 .056–.234 m、实测 hold 位移 <.001 m。主代理已收到修改建议：hold_start 非空时不进入 blocked 检查。旧结果仍完整保留。
+
+TCP/26966 的真正失败：lateral RMS=.7028 m、p95=1.5254 m，以及 cruise speed gate。Pursuit 四条 RMS≈.046/.099/.342/.111 m；26966 p95=.9827 m 接近 1 m 门槛，不能夸大余量。定位 p90 最差约 .3923 m（pursuit）。
+
+终点 parking flag 比每 4 tick 的 trajectory 更新可能早 1–2 tick，因此 3 个案例有 terminal_hold=true 时旧 throttle 尚未替换；已提议停车状态切换即时更新一次 reference，常规更新仍维持每 4 tick。
+
+TruthLogger 的 rear axle xy 真值投影增加 cos(pitch)，避免坡道 pose 误差偏差；新增 15° fake snapshot 检查，adapter/agent 10/10。此修改不会热更新 development2 已载入代码，后续 run 生效。独立 G2 validation 原本已按完整 forward vector 处理 pitch。

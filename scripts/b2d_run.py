@@ -213,6 +213,7 @@ class Server(object):
         self.port = PORT_BASE + PORT_STRIDE * index
         self.tm_port = TM_BASE + PORT_STRIDE * index
         self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         self.quality = quality
         self.proc = None
         self.pgid = None
@@ -296,7 +297,21 @@ class Server(object):
 
 
 class Runner(object):
-    def __init__(self, a, routes):
+    """Route campaign worker pool.
+
+    ``servers`` optionally lends one existing Server per worker. Successful runs return the
+    live objects to the caller, which owns final stop(). Failures and cancellation still stop
+    suspect servers, and retry/recycle may restart or move their ports. Reuse sequentially:
+    a Server must never have simultaneous Runner owners or concurrent caller operations.
+    """
+
+    def __init__(self, a, routes, servers=None):
+        self._external_servers = tuple(servers) if servers is not None else None
+        if self._external_servers is not None:
+            if len(self._external_servers) != a.workers:
+                raise ValueError("servers must contain exactly one Server per worker")
+            if len(set(id(server) for server in self._external_servers)) != a.workers:
+                raise ValueError("each worker must have a distinct Server object")
         self.a = a
         self.out = Path(a.out)
         for sub in ("done", "attempts", "servers", "claims"):
@@ -329,11 +344,15 @@ class Runner(object):
         """A runner that is SIGKILLed leaves its CARLA servers and route processes behind, holding
         the ports the next run wants. Recorded pids make that recoverable without pattern-matching
         command lines: check that the pid really is the thing we started, then kill its group."""
+        supplied_pids = {server.proc.pid for server in self._external_servers or ()
+                         if server.proc is not None and server.alive()}
         for pidfile in sorted(self.out.glob("servers/*.pid")) + sorted(
                 self.out.glob("attempts/*/*/route.pid")):
             try:
                 pid = int(pidfile.read_text().strip())
             except (OSError, ValueError):
+                continue
+            if pid in supplied_pids:
                 continue
             cmd = cmdline(pid)
             if pid_alive(pid) and ("CarlaUE4" in cmd or "b2d_route.py" in cmd):
@@ -428,9 +447,14 @@ class Runner(object):
         return 1 if self.worker_errors or self.summary["routes_never_finished"] else 0
 
     def worker(self, wi):
-        server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality,
-                        self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed)
+        externally_owned = self._external_servers is not None
+        server = self._external_servers[wi] if externally_owned else Server(
+            self.a.server_index + wi, self.out / "servers", self.a.quality,
+            self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed)
+        abnormal_exit = False
         try:
+            if externally_owned and server.alive():
+                self.learn_maps(server)
             while not self.stop_flag:
                 rid = self.next_route()
                 if rid is None:
@@ -456,6 +480,7 @@ class Runner(object):
                         finished = True
                         break
                     if self.stop_flag or record["status"] == "cancelled_by_user":
+                        abnormal_exit = True
                         self.release(rid)
                         return
                     # Anything that is not a clean finish means the server is suspect: a hung or
@@ -467,6 +492,7 @@ class Runner(object):
                 # the outcome. A route that never finished must be retryable by the next run.
                 self.release(rid)
                 if not finished:
+                    abnormal_exit = True
                     self.event("route_abandoned", route_id=rid, attempts=self.a.max_attempts)
                 if self.a.recycle_routes and server.routes_served >= self.a.recycle_routes:
                     self.event("server_recycled", worker=wi, index=server.index,
@@ -474,13 +500,15 @@ class Runner(object):
                                age_s=round(time.time() - (server.started_at or time.time())))
                     server.stop()  # the next route starts it again, under the stagger lock
         except Exception:
+            abnormal_exit = True
             error = traceback.format_exc()
             self.worker_errors.append(error)
             self.event("worker_error", worker=wi, error=error)
         finally:
             if 'rid' in locals() and rid is not None:
                 self.release(rid)
-            server.stop()
+            if not externally_owned or abnormal_exit or self.stop_flag:
+                server.stop()
 
     def learn_maps(self, server):
         """Ask the server which maps it has, once. A route whose town is not installed is not a

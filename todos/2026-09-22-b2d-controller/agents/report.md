@@ -41,3 +41,11 @@ Ran 9 tests in 0.216s — OK
 ## 根代理追加分工：research修订
 
 已更新 `research/trajectory-to-control.md`：修正aim_y与法向cross-track、CARLA加法lookahead、FF+完整bearing PID重复转向、绝对时间速度裁剪、CARLA/TCP离散语义、MinimumSpeed unused、finished≠completion与成本预算边界；替换原“半天/必能跑完”建议为共享计划G1–G4。写入实际MKZ轮距/后轴偏移/70°/km/h转向曲线，直接读calibration-units JSON核对；明确10 m/s右转sweep速度塌陷不可拟合，不宣称真实plant精确或Dev10已通过。
+
+## 根代理追加分工：复用 CARLA server 的 Python API
+
+`Runner(a, routes, servers=None)` 现接受每 worker 一个已有 `Server` 对象。传入列表长度不匹配或同一对象重复时，在创建输出文件前拒绝；未传参数的CLI行为保持原样。外部所有的server在成功/正常退出后继续存活，跨preset/seed顺序复用；campaign调用者负责最终 `stop()`。worker取消、异常或重试耗尽时仍停止；重试move与recycle按现有策略执行，可改变该对象端口/进程。重试后成功会返还仍活着的新server。
+
+`Server`构造时创建自己的log目录；Runner回收孤儿时排除传入且仍活着的server PID，避免同log目录顺序复用误杀。外部server开始工作前照常探测可用地图。**同一个Server不可交给多个同时运行的Runner，也不可在Runner运行中由campaign并发操作**；API为同进程顺序campaign设计，不宣称跨进程所有权锁。
+
+新增10项假server测试覆盖两个runner顺序复用、默认最终cleanup、失败恢复move/restart、失败耗尽、取消/异常、stop flag、recycle、PID保护、参数校验及目录创建。2026-09-22本地回归：report suite 20/20（0.022s），runtime 9/9（0.217s）；未启动live server。

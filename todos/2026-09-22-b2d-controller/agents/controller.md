@@ -48,3 +48,19 @@ plant 力学是明确标记的 synthetic：油门系数3、刹车系数8、阻�
 坡道仅单位级静摩擦演示：有足够 brake 保持，去掉 brake 会负向运动；因此不依赖 v=max(v,0) 假定。然而这不是 CARLA 坡度停车验收。
 
 补充：diagnostics 返回脱离内部状态的只读语义快照，测试证明调用方改 reason/aim list 不影响控制器。results 新增 additive/max 两条预先声明 lookahead 的 R20、6/8m/s 对照；默认保持 additive，未据此调参。
+
+
+## G2 validator 二次任务
+
+主代理授权后接管并修复 `scripts/b2d_controller_validate.py`，已交回：
+
+- 独立 true pose / route progress 投影，完全不读取 estimated route.progress；另报 segment Euclidean distance，避免 normal distance 掩盖端点方向错误。真值后轴使用含 pitch 的 forward vector。
+- full / steady lateral 分开，G2 lateral gate 用 full；恒速指标固定前5s起步豁免，基于真值剩余距离的制动参考，另报全部 cruise/reference/command 误差。
+- None target、无 telemetry、无 heading、错位 frame 都显式失败，不抛 TypeError；raw/fused pose、heading 分布、sample count 均有。
+- 停车保持记录5s真实后轴的最大两点距离，gate<=.1m；速度用3D真实范数，因此不能在侧滑/倒溜时误判停住。
+- 异常 case、map setup失败、cleanup失败与半写入 telemetry 保存后继续，取消保留当前结果。config只读取一次；同地图复用 world，同次任务共用 server。
+- 15/15离线测试通过（原12 + G2三项 fixture）：验证漂移.15m即使speed<.1仍失败、缺heading失败、错frame失败、None速度安全、空结果不冒充成功。
+
+主代理运行CARLA；此子任务未启动任何server。原 handoff feedforward+bearing PID 消融暂缓，优先完成实际阻塞的 G2 修正。
+
+G2 修正交回之后补完原 handoff 横向公式离线消融（生产 Controller 未更改）：R20 / 6m/s，左右镜像，同样 max lookahead + reference speed、相同历史和投影，pursuit RMS 0.00852m，pursuit + 完整 CARLA bearing PID 为 0.12843m；速度 RMS 两者均0.04445m/s。额外 PID 令此例误差约15倍，但两者都低于0.2m，不能说此例已不稳定。`offline-selftest.json.original_bearing_pid_ablation` 保存公式、参数、限定和所有行。消融精确复现原横向相加公式，统一使用修正后的时间/投影，不冒称完整复现原文未指定的 waypoint-index 细节。

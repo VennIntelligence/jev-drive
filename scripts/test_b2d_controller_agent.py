@@ -134,6 +134,10 @@ class AdapterTests(unittest.TestCase):
         result = logger.measure(20, xy, raw, 0)
         self.assertAlmostEqual(result['pose_error_m'], 0)
         self.assertAlmostEqual(result['truth_cross_track_m'], 0)
+        transform.rotation.pitch = 15.
+        transform.location.x = 10. + 1.4 * math.cos(math.radians(15.))
+        pitched = logger.measure(20, xy, raw, 0)
+        self.assertAlmostEqual(pitched['pose_error_m'], 0)
         snapshot.frame = 21
         self.assertEqual(logger.measure(20, xy, raw, 0)['truth_error'], 'frame_mismatch')
 

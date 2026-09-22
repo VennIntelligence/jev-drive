@@ -255,7 +255,8 @@ class TruthLogger:
                 return {'truth_frame': frame, 'truth_error': 'actor_unavailable'}
             tf = actor.get_transform()
             truth_yaw = math.radians(tf.rotation.yaw)
-            truth = np.array([tf.location.x, tf.location.y]) + self.rear_offset * np.array([
+            truth_pitch = math.radians(getattr(tf.rotation, 'pitch', 0.))
+            truth = np.array([tf.location.x, tf.location.y]) + self.rear_offset * math.cos(truth_pitch) * np.array([
                 math.cos(truth_yaw), math.sin(truth_yaw)])
             _, cross = self.route.nearest(truth, truth_yaw, max(0, self.route.progress - 10),
                                           min(self.route.arc[-1], self.route.progress + 10))

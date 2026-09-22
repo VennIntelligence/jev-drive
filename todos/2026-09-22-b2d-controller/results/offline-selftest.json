@@ -49,12 +49,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.444341669253223,
       "lateral_rms_m": 0.46707434282963844,
       "lateral_p95_m": 0.4692274460734371,
       "reference_speed_rms_mps": 0.13895908492879247,
       "command_speed_rms_mps": 0.06125119480134799,
-      "controller_p99_ms": 0.08971553999999995,
+      "controller_p99_ms": 0.09737240999999992,
       "reason_counts": {
         "tracking": 280
       },
@@ -75,12 +76,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.444341669253223,
       "lateral_rms_m": 0.46707434282963844,
       "lateral_p95_m": 0.4692274460734371,
       "reference_speed_rms_mps": 0.13895908492879247,
       "command_speed_rms_mps": 0.06125119480134799,
-      "controller_p99_ms": 0.08888876999999995,
+      "controller_p99_ms": 0.08708181,
       "reason_counts": {
         "tracking": 280
       },
@@ -101,12 +103,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "fixed4",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.17791356562329738,
       "lateral_rms_m": 0.15457732235432228,
       "lateral_p95_m": 0.26481010188052334,
       "reference_speed_rms_mps": 0.049946309067706786,
       "command_speed_rms_mps": 0.041346053879671184,
-      "controller_p99_ms": 0.08915511999999998,
+      "controller_p99_ms": 0.08872901,
       "reason_counts": {
         "tracking": 280
       },
@@ -127,12 +130,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "fixed4",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.17791356562329738,
       "lateral_rms_m": 0.15457732235432228,
       "lateral_p95_m": 0.26481010188052334,
       "reference_speed_rms_mps": 0.049946309067706786,
       "command_speed_rms_mps": 0.041346053879671184,
-      "controller_p99_ms": 0.08883380999999997,
+      "controller_p99_ms": 0.08857124999999996,
       "reason_counts": {
         "tracking": 280
       },
@@ -153,12 +157,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.008482574206009452,
       "lateral_rms_m": 0.009058789875330882,
       "lateral_p95_m": 0.009633576295681224,
       "reference_speed_rms_mps": 0.007057612185299645,
       "command_speed_rms_mps": 0.047200331171830395,
-      "controller_p99_ms": 0.08588701999999998,
+      "controller_p99_ms": 0.08627589000000001,
       "reason_counts": {
         "tracking": 280
       },
@@ -179,12 +184,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.008482574206009452,
       "lateral_rms_m": 0.009058789875330882,
       "lateral_p95_m": 0.009633576295681224,
       "reference_speed_rms_mps": 0.007057612185299645,
       "command_speed_rms_mps": 0.047200331171830395,
-      "controller_p99_ms": 0.11803990999999998,
+      "controller_p99_ms": 0.08737031999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -311,12 +317,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.0008948545632928858,
       "lateral_rms_m": 0.0009253927477664598,
       "lateral_p95_m": 0.0010870550718896864,
       "reference_speed_rms_mps": 0.0022407290263783642,
       "command_speed_rms_mps": 0.015813183756123277,
-      "controller_p99_ms": 0.08290122999999998,
+      "controller_p99_ms": 0.09139145999999995,
       "reason_counts": {
         "tracking": 280
       },
@@ -337,12 +344,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.009129790012101919,
       "lateral_rms_m": 0.008975222925725708,
       "lateral_p95_m": 0.0193934093592242,
       "reference_speed_rms_mps": 0.014401512167244524,
       "command_speed_rms_mps": 0.014349429240844418,
-      "controller_p99_ms": 0.08350321,
+      "controller_p99_ms": 0.08575052999999998,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -366,12 +374,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.0004557568190882378,
       "lateral_rms_m": 0.0004897483499240459,
       "lateral_p95_m": 0.0005245342963217326,
       "reference_speed_rms_mps": 0.002242363212567472,
       "command_speed_rms_mps": 0.01581745845995334,
-      "controller_p99_ms": 0.08900735999999995,
+      "controller_p99_ms": 0.08692212999999997,
       "reason_counts": {
         "tracking": 280
       },
@@ -392,12 +401,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.0045468683593781895,
       "lateral_rms_m": 0.004469782407378523,
       "lateral_p95_m": 0.009649780574410372,
       "reference_speed_rms_mps": 0.01436273032315685,
       "command_speed_rms_mps": 0.014349709515262259,
-      "controller_p99_ms": 0.08589183999999997,
+      "controller_p99_ms": 0.08825551,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -421,12 +431,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.008482574206009452,
       "lateral_rms_m": 0.009058789875330882,
       "lateral_p95_m": 0.009633576295681224,
       "reference_speed_rms_mps": 0.007057612185299645,
       "command_speed_rms_mps": 0.047200331171830395,
-      "controller_p99_ms": 0.08526270999999999,
+      "controller_p99_ms": 0.08578834999999996,
       "reason_counts": {
         "tracking": 280
       },
@@ -447,12 +458,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.053851919090202906,
       "lateral_rms_m": 0.023986934893907148,
       "lateral_p95_m": 0.0650754091637322,
       "reference_speed_rms_mps": 0.04444065079100614,
       "command_speed_rms_mps": 0.0430345023152028,
-      "controller_p99_ms": 0.08285141,
+      "controller_p99_ms": 0.08452591,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -476,12 +488,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.004318223392395197,
       "lateral_rms_m": 0.0045497693569334936,
       "lateral_p95_m": 0.004710882401587568,
       "reference_speed_rms_mps": 0.006714333142760047,
       "command_speed_rms_mps": 0.04739383800201914,
-      "controller_p99_ms": 0.08273562,
+      "controller_p99_ms": 0.08389613999999997,
       "reason_counts": {
         "tracking": 280
       },
@@ -502,12 +515,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.02446421077735257,
       "lateral_rms_m": 0.010542129035241779,
       "lateral_p95_m": 0.028420117481337895,
       "reference_speed_rms_mps": 0.04339355712357976,
       "command_speed_rms_mps": 0.04304200148905976,
-      "controller_p99_ms": 0.08526213999999996,
+      "controller_p99_ms": 0.08505612999999998,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -531,12 +545,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.015223183088543275,
       "lateral_rms_m": 0.016195032228193722,
       "lateral_p95_m": 0.01709493022641482,
       "reference_speed_rms_mps": 0.01064622719731132,
       "command_speed_rms_mps": 0.06266599844413553,
-      "controller_p99_ms": 0.08454151999999998,
+      "controller_p99_ms": 0.08373582999999998,
       "reason_counts": {
         "tracking": 280
       },
@@ -557,12 +572,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.08996917348211367,
       "lateral_rms_m": 0.034116009827627365,
       "lateral_p95_m": 0.04199082271175328,
       "reference_speed_rms_mps": 0.060678620431721904,
       "command_speed_rms_mps": 0.057345737822452225,
-      "controller_p99_ms": 0.08473354999999995,
+      "controller_p99_ms": 0.08432762999999997,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -586,12 +602,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.007747528892560549,
       "lateral_rms_m": 0.008097593353536721,
       "lateral_p95_m": 0.008378028153481765,
       "reference_speed_rms_mps": 0.008998668275275096,
       "command_speed_rms_mps": 0.06312436073823323,
-      "controller_p99_ms": 0.08322669999999999,
+      "controller_p99_ms": 0.08384351,
       "reason_counts": {
         "tracking": 280
       },
@@ -612,12 +629,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.04040580278076538,
       "lateral_rms_m": 0.01566384315972474,
       "lateral_p95_m": 0.019479494184558986,
       "reference_speed_rms_mps": 0.058196058688064385,
       "command_speed_rms_mps": 0.05736276084913245,
-      "controller_p99_ms": 0.08398421999999998,
+      "controller_p99_ms": 0.08364872999999998,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -641,12 +659,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.017481805119283572,
       "lateral_rms_m": 0.01817651688424827,
       "lateral_p95_m": 0.018798429734550835,
       "reference_speed_rms_mps": 0.014141554024095525,
       "command_speed_rms_mps": 0.0944032768253323,
-      "controller_p99_ms": 0.08323310999999999,
+      "controller_p99_ms": 0.10769044999999997,
       "reason_counts": {
         "tracking": 280
       },
@@ -667,12 +686,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.07685835590178766,
       "lateral_rms_m": 0.009059130887187869,
       "lateral_p95_m": 0.02158198129692117,
       "reference_speed_rms_mps": 0.09118380391140875,
       "command_speed_rms_mps": 0.08840633770602309,
-      "controller_p99_ms": 0.08450121999999999,
+      "controller_p99_ms": 0.08408159999999999,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -696,12 +716,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.02248590463242853,
       "lateral_rms_m": 0.023322754728086755,
       "lateral_p95_m": 0.024020055187360966,
       "reference_speed_rms_mps": 0.01718840597029708,
       "command_speed_rms_mps": 0.11001477134336018,
-      "controller_p99_ms": 0.08395841,
+      "controller_p99_ms": 0.08267141999999998,
       "reason_counts": {
         "tracking": 280
       },
@@ -722,12 +743,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.10302031543399881,
       "lateral_rms_m": 0.024809934675766653,
       "lateral_p95_m": 0.04641836132943523,
       "reference_speed_rms_mps": 0.12454804780330023,
       "command_speed_rms_mps": 0.12050335034200538,
-      "controller_p99_ms": 0.08637281,
+      "controller_p99_ms": 0.08272821999999999,
       "reason_counts": {
         "no_trajectory": 6,
         "tracking": 274
@@ -751,12 +773,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.17042077322497756,
       "lateral_rms_m": 0.018611961358939364,
       "lateral_p95_m": 0.03699778815746182,
       "reference_speed_rms_mps": 0.00803772079659318,
       "command_speed_rms_mps": 0.04707087986031801,
-      "controller_p99_ms": 0.08233983999999997,
+      "controller_p99_ms": 0.08332161999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -777,12 +800,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.0835719080248244,
       "lateral_rms_m": 0.01585039221342583,
       "lateral_p95_m": 0.040273953027745245,
       "reference_speed_rms_mps": 0.008009285363529326,
       "command_speed_rms_mps": 0.04702039357127562,
-      "controller_p99_ms": 0.08408002999999997,
+      "controller_p99_ms": 0.0830024,
       "reason_counts": {
         "tracking": 280
       },
@@ -803,12 +827,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.08199455058501738,
       "lateral_rms_m": 0.011317034504442975,
       "lateral_p95_m": 0.02416112231832253,
       "reference_speed_rms_mps": 0.007533807716223449,
       "command_speed_rms_mps": 0.047421216835756334,
-      "controller_p99_ms": 0.08233259,
+      "controller_p99_ms": 0.08352301,
       "reason_counts": {
         "tracking": 280
       },
@@ -829,12 +854,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.15455067363760114,
       "lateral_rms_m": 0.013796392466096053,
       "lateral_p95_m": 0.018314751377701555,
       "reference_speed_rms_mps": 0.011711563698960677,
       "command_speed_rms_mps": 0.04753919413918905,
-      "controller_p99_ms": 0.08302741999999998,
+      "controller_p99_ms": 0.08425512999999998,
       "reason_counts": {
         "tracking": 280
       },
@@ -855,12 +881,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.09290920326477033,
       "lateral_rms_m": 0.09799717169275261,
       "lateral_p95_m": 0.1006096298208293,
       "reference_speed_rms_mps": 0.02933371130819986,
       "command_speed_rms_mps": 0.043655457696936587,
-      "controller_p99_ms": 0.08415181000000001,
+      "controller_p99_ms": 0.0838396,
       "reason_counts": {
         "tracking": 280
       },
@@ -881,12 +908,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.08871785171018967,
       "lateral_rms_m": 0.09310223377523107,
       "lateral_p95_m": 0.09773781426770274,
       "reference_speed_rms_mps": 0.03016034131146551,
       "command_speed_rms_mps": 0.0543244175567351,
-      "controller_p99_ms": 0.08265451999999998,
+      "controller_p99_ms": 0.08488562999999998,
       "reason_counts": {
         "tracking": 280
       },
@@ -907,12 +935,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.07760586156421347,
       "lateral_rms_m": 0.0813735944077519,
       "lateral_p95_m": 0.08526070573791475,
       "reference_speed_rms_mps": 0.026695457046076284,
       "command_speed_rms_mps": 0.053373724999093944,
-      "controller_p99_ms": 0.08318440999999999,
+      "controller_p99_ms": 0.08399191,
       "reason_counts": {
         "tracking": 280
       },
@@ -933,12 +962,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.08618071186961988,
       "lateral_rms_m": 0.09093158032765926,
       "lateral_p95_m": 0.0934231686791959,
       "reference_speed_rms_mps": 0.02726646458538952,
       "command_speed_rms_mps": 0.04382895069210879,
-      "controller_p99_ms": 0.08444691999999998,
+      "controller_p99_ms": 0.08300179999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -959,12 +989,13 @@
       "steering_delay_s": 0.15,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.030414931650400972,
       "lateral_rms_m": 0.009677787385257727,
       "lateral_p95_m": 0.014010694018488755,
       "reference_speed_rms_mps": 0.007136677636837248,
       "command_speed_rms_mps": 0.04716795622158397,
-      "controller_p99_ms": 0.08370952999999998,
+      "controller_p99_ms": 0.0845978,
       "reason_counts": {
         "tracking": 280
       },
@@ -1007,12 +1038,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.0345110970661013,
       "lateral_rms_m": 0.036434053477065874,
       "lateral_p95_m": 0.03825369426599945,
       "reference_speed_rms_mps": 0.024791365630993826,
       "command_speed_rms_mps": 0.0929158107124451,
-      "controller_p99_ms": 0.08208880999999998,
+      "controller_p99_ms": 0.08372879999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -1033,12 +1065,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.04442739909958739,
       "lateral_rms_m": 0.046756131162358626,
       "lateral_p95_m": 0.04937619759243361,
       "reference_speed_rms_mps": 0.03530380156180448,
       "command_speed_rms_mps": 0.10794693911906898,
-      "controller_p99_ms": 0.08310103999999997,
+      "controller_p99_ms": 0.0835258,
       "reason_counts": {
         "tracking": 280
       },
@@ -1061,12 +1094,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.008482574206009452,
       "lateral_rms_m": 0.009058789875330882,
       "lateral_p95_m": 0.009633576295681224,
       "reference_speed_rms_mps": 0.007057612185299645,
       "command_speed_rms_mps": 0.047200331171830395,
-      "controller_p99_ms": 0.08575387999999992,
+      "controller_p99_ms": 0.08414379999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -1087,12 +1121,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "max",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.008768740579222126,
       "lateral_rms_m": 0.009054719562924623,
       "lateral_p95_m": 0.009094902094073553,
       "reference_speed_rms_mps": 0.007069561586022196,
       "command_speed_rms_mps": 0.04720395988441399,
-      "controller_p99_ms": 0.08357682999999998,
+      "controller_p99_ms": 0.08407701999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -1113,12 +1148,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "additive",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.015223183088543275,
       "lateral_rms_m": 0.016195032228193722,
       "lateral_p95_m": 0.01709493022641482,
       "reference_speed_rms_mps": 0.01064622719731132,
       "command_speed_rms_mps": 0.06266599844413553,
-      "controller_p99_ms": 0.08527428999999999,
+      "controller_p99_ms": 0.08362291999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -1139,12 +1175,13 @@
       "steering_delay_s": 0.0,
       "speed_window": "near",
       "lookahead": "max",
+      "experiment": "production_controller",
       "lateral_rms_full_m": 0.015600378790707746,
       "lateral_rms_m": 0.016107676905689466,
       "lateral_p95_m": 0.01617911510182992,
       "reference_speed_rms_mps": 0.010658674258697353,
       "command_speed_rms_mps": 0.0626787866926358,
-      "controller_p99_ms": 0.08542000999999999,
+      "controller_p99_ms": 0.08463601999999999,
       "reason_counts": {
         "tracking": 280
       },
@@ -1152,6 +1189,128 @@
       "main_pass": true
     }
   ],
+  "original_bearing_pid_ablation": {
+    "rows": [
+      {
+        "kind": "circle",
+        "preset": "pursuit",
+        "speed_mps": 6.0,
+        "radius_m": 20.0,
+        "sign": 1.0,
+        "delay_s": 0.0,
+        "lateral_offset_m": 0.0,
+        "heading_offset_deg": 0.0,
+        "wheelbase_gain": 1.0,
+        "steering_gain": 1.0,
+        "steering_delay_s": 0.0,
+        "speed_window": "reference",
+        "lookahead": "max",
+        "experiment": "production_controller",
+        "lateral_rms_full_m": 0.008297515878522257,
+        "lateral_rms_m": 0.008517306989147932,
+        "lateral_p95_m": 0.009187606432815087,
+        "reference_speed_rms_mps": 0.04444538950543779,
+        "command_speed_rms_mps": 0.043039238379080205,
+        "controller_p99_ms": 0.0842858,
+        "reason_counts": {
+          "tracking": 280
+        },
+        "physics_lateral_acceleration_mps2": 1.8,
+        "main_pass": true
+      },
+      {
+        "kind": "circle",
+        "preset": "pursuit",
+        "speed_mps": 6.0,
+        "radius_m": 20.0,
+        "sign": 1.0,
+        "delay_s": 0.0,
+        "lateral_offset_m": 0.0,
+        "heading_offset_deg": 0.0,
+        "wheelbase_gain": 1.0,
+        "steering_gain": 1.0,
+        "steering_delay_s": 0.0,
+        "speed_window": "reference",
+        "lookahead": "max",
+        "experiment": "original_full_bearing_pid_sum",
+        "lateral_rms_full_m": 0.12450776713218174,
+        "lateral_rms_m": 0.12842847033995525,
+        "lateral_p95_m": 0.12864956875334493,
+        "reference_speed_rms_mps": 0.044445389505438034,
+        "command_speed_rms_mps": 0.043039238379080275,
+        "controller_p99_ms": 0.09871912999999997,
+        "reason_counts": {
+          "tracking": 280
+        },
+        "physics_lateral_acceleration_mps2": 1.8,
+        "main_pass": true
+      },
+      {
+        "kind": "circle",
+        "preset": "pursuit",
+        "speed_mps": 6.0,
+        "radius_m": 20.0,
+        "sign": -1.0,
+        "delay_s": 0.0,
+        "lateral_offset_m": 0.0,
+        "heading_offset_deg": 0.0,
+        "wheelbase_gain": 1.0,
+        "steering_gain": 1.0,
+        "steering_delay_s": 0.0,
+        "speed_window": "reference",
+        "lookahead": "max",
+        "experiment": "production_controller",
+        "lateral_rms_full_m": 0.008297515878522257,
+        "lateral_rms_m": 0.008517306989147932,
+        "lateral_p95_m": 0.009187606432815087,
+        "reference_speed_rms_mps": 0.04444538950543779,
+        "command_speed_rms_mps": 0.043039238379080205,
+        "controller_p99_ms": 0.08458974999999996,
+        "reason_counts": {
+          "tracking": 280
+        },
+        "physics_lateral_acceleration_mps2": 1.8,
+        "main_pass": true
+      },
+      {
+        "kind": "circle",
+        "preset": "pursuit",
+        "speed_mps": 6.0,
+        "radius_m": 20.0,
+        "sign": -1.0,
+        "delay_s": 0.0,
+        "lateral_offset_m": 0.0,
+        "heading_offset_deg": 0.0,
+        "wheelbase_gain": 1.0,
+        "steering_gain": 1.0,
+        "steering_delay_s": 0.0,
+        "speed_window": "reference",
+        "lookahead": "max",
+        "experiment": "original_full_bearing_pid_sum",
+        "lateral_rms_full_m": 0.12450776713218174,
+        "lateral_rms_m": 0.12842847033995525,
+        "lateral_p95_m": 0.12864956875334493,
+        "reference_speed_rms_mps": 0.044445389505438034,
+        "command_speed_rms_mps": 0.043039238379080275,
+        "controller_p99_ms": 0.09937911999999999,
+        "reason_counts": {
+          "tracking": 280
+        },
+        "physics_lateral_acceleration_mps2": 1.8,
+        "main_pass": true
+      }
+    ],
+    "formula": "CARLA_steer = -atan(L*2*y/(x*x+y*y))/(max_angle*curve(v)) - CARLA_PID(atan2(y,x))",
+    "pid": {
+      "kp": 1.95,
+      "ki": 0.05,
+      "kd": 0.2,
+      "window": 10,
+      "dt_s": 0.05
+    },
+    "held_identical": "max(3,.5v) lookahead, reference speed window, measured geometry, pose/history, projection and shared output limits",
+    "scope": "Exact original lateral sum isolated; shared corrected time/projection implementation, not a claim of reproducing unspecified original waypoint indexing."
+  },
   "synthetic_static_hold": {
     "speed_mps": -0.0,
     "displacement_m": -0.0,

@@ -8,7 +8,7 @@ import math
 import time
 from collections import deque
 import numpy as np
-from b2d_controller import Controller
+from b2d_controller import Controller, WindowPID
 
 DT = .05
 WHEELBASE = 2.8604714913890885
@@ -66,11 +66,45 @@ def _local(world, state):
     return (world - state[:2]) @ np.array([[c, -s], [s, c]])
 
 
+
+class _BearingPIDExperiment(Controller):
+    """Offline-only exact handoff lateral sum, under identical common plumbing.
+
+The full CARLA bearing PID is added to pursuit before the shared slew/steer
+limits. This class is never available as a production preset.
+"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.extra_bearing_pid = WindowPID(1.95, .05, .2, 10, dt=self.dt)
+
+    def step(self, now, speed, yaw_rate):
+        previous_steer = self._last_steer
+        previous_time = self._last_time
+        throttle, steer, brake = super().step(now, speed, yaw_rate)
+        diagnostics = self.diagnostics
+        if diagnostics['reason'] != 'tracking' or diagnostics.get('aim_xy') is None:
+            return throttle, steer, brake
+        x, y = diagnostics['aim_xy']
+        pid = -self.extra_bearing_pid.step(math.atan2(y, x))
+        combined = diagnostics['raw_steer'] + pid
+        elapsed = self.dt if previous_time is None else now - previous_time
+        steer = float(np.clip(combined, previous_steer - self.steer_rate * elapsed,
+                              previous_steer + self.steer_rate * elapsed))
+        steer = float(np.clip(steer, -self.max_steer, self.max_steer))
+        self._last_steer = steer
+        self._last_control = (throttle, steer, brake)
+        self._diagnostics.update(experiment='original_handoff_full_bearing_pid_sum',
+                                 pursuit_steer=diagnostics['raw_steer'], bearing_pid_steer=pid,
+                                 raw_steer=combined)
+        return self._last_control
+
+
 def circle(preset, speed=6., radius=20., sign=1., delay=.0,
            lateral_offset=0., heading_offset=0., wheelbase_gain=1.,
            steering_gain=1., steering_delay=0., speed_window='near',
-           duration=14., lookahead=None):
-    ctrl = Controller(preset, speed_window=speed_window, lookahead=lookahead)
+           duration=14., lookahead=None, bearing_pid=False):
+    controller_class = _BearingPIDExperiment if bearing_pid else Controller
+    ctrl = controller_class(preset, speed_window=speed_window, lookahead=lookahead)
     state = np.array([0., lateral_offset, heading_offset, speed])
     queued, controls = deque(), deque()
     lateral, speeds, command_errors, timings = [], [], [], []
@@ -108,6 +142,7 @@ def circle(preset, speed=6., radius=20., sign=1., delay=.0,
                   heading_offset_deg=math.degrees(heading_offset), wheelbase_gain=wheelbase_gain,
                   steering_gain=steering_gain, steering_delay_s=steering_delay,
                   speed_window=speed_window, lookahead=ctrl.lookahead,
+                  experiment='original_full_bearing_pid_sum' if bearing_pid else 'production_controller',
                   lateral_rms_full_m=_rms(lateral), lateral_rms_m=_rms(lateral[warmup:]),
                   lateral_p95_m=float(np.percentile(np.abs(lateral[warmup:]), 95)),
                   reference_speed_rms_mps=_rms(speeds[warmup:]),
@@ -222,6 +257,8 @@ def run_suite():
         robust.append(circle('pursuit', wheelbase_gain=gain))
         robust.append(circle('pursuit', steering_gain=gain))
     robust.append(circle('pursuit', steering_delay=.15))
+    bearing_pid_ablation = [circle('pursuit', sign=sign, lookahead='max', speed_window='reference', bearing_pid=enabled)
+                            for sign in (1., -1.) for enabled in (False, True)]
     lookahead_comparison = [circle('pursuit', speed=speed, lookahead=rule)
                             for speed in (6., 8.) for rule in ('additive', 'max')]
     s_curves = [s_curve(delay=delay) for delay in (0., .3)]
@@ -241,6 +278,11 @@ def run_suite():
                              'Static friction unit exercise is not a measured CARLA slope test.'],
                 main=main, speed_window_comparison=stops, robustness=robust, s_curves=s_curves, saturation=saturation,
                 lookahead_comparison=lookahead_comparison,
+                original_bearing_pid_ablation=dict(rows=bearing_pid_ablation,
+                    formula='CARLA_steer = -atan(L*2*y/(x*x+y*y))/(max_angle*curve(v)) - CARLA_PID(atan2(y,x))',
+                    pid=dict(kp=1.95, ki=.05, kd=.2, window=10, dt_s=.05),
+                    held_identical='max(3,.5v) lookahead, reference speed window, measured geometry, pose/history, projection and shared output limits',
+                    scope='Exact original lateral sum isolated; shared corrected time/projection implementation, not a claim of reproducing unspecified original waypoint indexing.'),
                 synthetic_static_hold=dict(speed_mps=hold_v, displacement_m=hold_dx, unbraked_reverse_mps=reverse_v),
                 candidate_main_pass=all(row['main_pass'] for row in candidate),
                 candidate_delay_pass=all(row.get('delay_pass', True) for row in robust))

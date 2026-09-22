@@ -177,5 +177,143 @@ class CLIAndEventTests(unittest.TestCase):
             self.assertEqual(json.loads((Path(tmp) / "criterion_events.json").read_text())["events"][0]["frame"], 4)
 
 
+class FakeServer:
+    def __init__(self):
+        self.index, self.port, self.tm_port = 0, 2000, 8000
+        self.routes_served, self.started_at = 0, time.time()
+        self.proc = None
+        self.running = True
+        self.stops = self.starts = self.moves = 0
+
+    def alive(self):
+        return self.running
+
+    def stop(self):
+        self.stops += 1
+        self.running = False
+
+    def start(self):
+        self.starts += 1
+        self.running = True
+        self.routes_served = 0
+
+    def move(self):
+        self.stop()
+        self.moves += 1
+        self.index += 1
+        self.port += 50
+        self.tm_port += 50
+
+
+class ReusableServerTests(unittest.TestCase):
+    def runner(self, root, servers, flags=()):
+        args = b2d_run.parse_args(["--out", str(root), "--workers", "1", "--stagger-s", "0"] + list(flags))
+        return b2d_run.Runner(args, [("1", "Town01")], servers=servers)
+
+    def work(self, runner, outcomes):
+        with patch.object(runner, "learn_maps"), patch.object(runner, "run_once", side_effect=outcomes):
+            runner.worker(0)
+        runner.events.close()
+
+    def test_external_server_survives_two_sequential_runners(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            for name in ("carla", "pursuit"):
+                runner = self.runner(Path(tmp) / name, [server])
+                self.work(runner, [(True, {"status": "finished"})])
+                self.assertFalse(runner.claimed)
+            self.assertTrue(server.alive())
+            self.assertEqual(server.routes_served, 2)
+            self.assertEqual(server.stops, 0)
+            self.assertEqual(server.starts, 0)
+            server.stop()  # The campaign caller owns final cleanup.
+            self.assertFalse(server.alive())
+
+    def test_default_runner_still_owns_final_stop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            runner = self.runner(Path(tmp), None)
+            with patch.object(b2d_run, "Server", return_value=server):
+                self.work(runner, [(True, {"status": "finished"})])
+            self.assertEqual(server.stops, 1)
+
+    def test_recovered_failure_moves_then_returns_live_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            runner = self.runner(Path(tmp), [server])
+            self.work(runner, [(False, {"status": "crashed"}), (True, {"status": "finished"})])
+            self.assertEqual(server.moves, 1)
+            self.assertEqual(server.starts, 1)
+            self.assertEqual(server.stops, 1)
+            self.assertTrue(server.alive())
+
+    def test_exhausted_failure_stops_external_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            runner = self.runner(Path(tmp), [server], ["--max-attempts", "1"])
+            self.work(runner, [(False, {"status": "crashed"})])
+            self.assertEqual(server.moves, 1)
+            self.assertFalse(server.alive())
+            self.assertFalse(runner.claimed)
+
+    def test_cancellation_and_exception_stop_external_server(self):
+        for outcomes in ([(False, {"status": "cancelled_by_user"})], RuntimeError("failed route")):
+            with self.subTest(outcomes=outcomes), tempfile.TemporaryDirectory() as tmp:
+                server = FakeServer()
+                runner = self.runner(Path(tmp), [server])
+                self.work(runner, outcomes)
+                self.assertFalse(server.alive())
+                self.assertFalse(runner.claimed)
+                self.assertEqual(server.stops, 1)
+
+    def test_stop_flag_stops_external_server_even_without_route(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            runner = self.runner(Path(tmp), [server])
+            runner.stop_flag = True
+            self.work(runner, [])
+            self.assertFalse(server.alive())
+
+    def test_recycle_still_stops_external_server(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            runner = self.runner(Path(tmp), [server], ["--recycle-routes", "1"])
+            self.work(runner, [(True, {"status": "finished"})])
+            self.assertEqual(server.stops, 1)
+            self.assertFalse(server.alive())
+
+    def test_provided_pid_is_not_reaped_as_orphan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            server.proc = SimpleNamespace(pid=12345678)
+            path = Path(tmp) / "servers" / "carla-0.pid"
+            path.parent.mkdir()
+            path.write_text(str(server.proc.pid))
+            with patch.object(b2d_run, "pid_alive", return_value=True), \
+                    patch.object(b2d_run, "cmdline", return_value="CarlaUE4"), \
+                    patch.object(b2d_run, "kill_group") as kill:
+                runner = self.runner(Path(tmp), [server])
+            runner.events.close()
+            kill.assert_not_called()
+            self.assertTrue(path.exists())
+
+    def test_validate_external_list_before_side_effects(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = FakeServer()
+            with self.assertRaises(ValueError):
+                self.runner(Path(tmp) / "invalid", [])
+            args = b2d_run.parse_args(["--out", str(Path(tmp) / "invalid"), "--workers", "2"])
+            with self.assertRaises(ValueError):
+                b2d_run.Runner(args, [], servers=[server, server])
+            self.assertFalse((Path(tmp) / "invalid").exists())
+
+    def test_server_constructs_own_log_directory_without_starting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "campaign" / "servers"
+            server = b2d_run.Server(90, path, "Epic")
+            self.assertTrue(path.is_dir())
+            self.assertIsNone(server.proc)
+
+
 if __name__ == "__main__":
     unittest.main()

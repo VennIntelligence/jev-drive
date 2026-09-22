@@ -197,5 +197,64 @@ class ControllerTests(unittest.TestCase):
                 json.dumps(ctrl.diagnostics, allow_nan=False)
 
 
+class ValidationMetricTests(unittest.TestCase):
+    def fixture(self):
+        rows, records = [], []
+        for tick in range(221):
+            t = tick * .05
+            moving = tick < 120
+            rows.append(dict(frame=tick + 1, elapsed_s=t, sim_time=t,
+                             speed=8. if moving else 0., reference_speed_mps=8. if moving else 0.,
+                             cross_track_m=.1, projection_distance_m=.1,
+                             endpoint_error_m=20. if moving else .1, pitch_deg=3.,
+                             truth_xy=[8. * min(t, 6.), .1]))
+            records.append(dict(frame=tick + 1, truth_frame=tick + 1,
+                                speed_mps=8. if moving else 0., target_speed_mps=None,
+                                pose_error_m=.1, raw_pose_error_m=.3,
+                                pose_heading_error_rad=math.radians(.2)))
+        return rows, records
+
+    def test_independent_truth_projection(self):
+        from b2d_controller_validate import TruthProjection
+        projection = TruthProjection([[0., 0.], [10., 0.], [10., 10.]])
+        result = projection.measure(np.array([3., .2]), 0., 6.)
+        self.assertAlmostEqual(result['progress_m'], 3.)
+        self.assertAlmostEqual(result['cross_track_m'], -.2)
+        self.assertAlmostEqual(result['projection_distance_m'], .2)
+        # Evaluation uses only its own true progress; no agent object exists.
+        result = projection.measure(np.array([4., .3]), 0., 6.)
+        self.assertAlmostEqual(result['progress_m'], 4.)
+
+    def test_null_speed_and_empty_metrics(self):
+        from b2d_controller_validate import summarize
+        rows, records = self.fixture()
+        result = summarize(rows, records, 8., 2., 'completed', [], 120)
+        self.assertTrue(result['gate_pass'])
+        self.assertIsNone(result['command_speed_all']['rms'])
+        self.assertEqual(result['cruise_speed_after_5s']['count'], 20)
+        empty = summarize([], [], 8., 2., 'error', [], None)
+        self.assertFalse(empty['gate_pass'])
+        json.dumps(empty, allow_nan=False)
+
+    def test_hold_drift_missing_heading_and_wrong_frames_fail(self):
+        from b2d_controller_validate import summarize
+        rows, records = self.fixture()
+        for tick, row in enumerate(rows[120:]):
+            row['truth_xy'][0] += .0015 * tick
+            row['speed'] = .03
+        result = summarize(rows, records, 8., 2., 'completed', [], 120)
+        self.assertFalse(result['gates']['hold_displacement'])
+        self.assertAlmostEqual(result['stop_hold_displacement_m'], .15)
+        rows, records = self.fixture()
+        for record in records:
+            record.pop('pose_heading_error_rad')
+        self.assertFalse(summarize(rows, records, 8., 2., 'completed', [], 120)['gates']['heading'])
+        rows, records = self.fixture()
+        for record in records:
+            record['frame'] += 1000
+            record['truth_frame'] += 1000
+        self.assertFalse(summarize(rows, records, 8., 2., 'completed', [], 120)['gates']['telemetry_complete'])
+
+
 if __name__ == '__main__':
     unittest.main()
