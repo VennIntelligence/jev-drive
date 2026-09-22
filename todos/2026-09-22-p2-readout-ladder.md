@@ -68,6 +68,7 @@ ego ridge 在 fit 半上用 sequence-grouped inner fold 算 out-of-fold，eval �
 | **c-tf** | 同上，外加 ego state 当一个 token | 2 层小 transformer |
 | **c-mlp** | L18_mean（2560） | compute-matched MLP（对照，和 L0 的 arm D 同族） |
 | **d** | b + c 一起 | attention pooling + 时间拼接 |
+| **e** | grid 或 pooled | **gated residual head**，见下面单开的一节 |
 
 ### (b) 的帧间隔：10 Hz 下取不到正好 0.25 s
 
@@ -102,6 +103,32 @@ Qwen3-VL 的 `smart_resize` 把 972×1079 的相机图放到 **960×1088**，pat
 在 50 GB 的预算之内，而且 30/6 = 5、34/8 = 4.25，`adaptive_avg_pool2d` 处理非整除没有问题。
 同一次抽取**同时存 pooled 的 L18_mean**，用来和盘上已有的 `qwen_front3` 逐位核对：
 如果不一致，说明这条新路径改了特征定义，(c) 和 A 就不可比，必须先修好再往下跑。
+
+### (e) gated residual head（2026-09-22 追加，优先级最低，排在其他所有 arm 之后）
+
+第 25 条（方法假设：continuation prior + reaction decoder，由干预对的差分监督）需要一个
+**「没有干预对」的对照**，(e) 就是它。它**只用真实数据训练，不用任何配对样本**：
+
+> 输出 = **ego prior**（`ridge ego` 的预测）+ **g(x) · Δ(x)**
+
+- Δ(x) 是视觉修正项。两个变体：**用 (c) 的那个 attention-pooling head**，以及**用 pooled 特征的 MLP**
+- g(x) ∈ [0, 1] 是从同一批特征出来的**标量 gate**，带 **L1 稀疏惩罚**。
+  惩罚强度扫 2–3 档，**按 fit 半内部 grouped CV 上的 pre-onset ADE 选**，
+  **绝不允许看 eval 半**——这是 L0 里 B 那条臂用过的同一条纪律
+- 协议、子集、judge 和 arm A 完全相同
+
+**要报的量（两个方向都报）**：pre-onset ΔADE 及 CI、straight ΔADE、DiD，
+外加 **gate 的激活情况**：mean g 和 g > 0.5 的比例，分别在 **pre_onset / straight_yaw / 每个 s_ego decile** 上。
+
+**预写的读法（跑之前写死）**：
+
+| 结果 | 判定 |
+|:--|:--|
+| g **优先**在 pre-onset / 高 s_ego 的帧上打开，**并且** pre-onset ΔADE 在两个方向上都 ≤ −0.05 m、CI 不跨零 | **这是一条反对第 25 条的结果**：真实数据就足以学会「在该反应的地方反应」，**干预对的必要性要重新论证**。要明明白白地写出来，不许含糊 |
+| g 的激活率在 pre-onset 和 straight_yaw 之间分不开，或者 pre-onset ΔADE 留在 [−0.05, +0.05] | 第 20 条推出来的**预期结局**：真实数据里 g 学不会在正确的地方开。这正是第 25 条要干预对的理由，(e) 成为它的 baseline |
+| g 几乎处处为零（L1 压死了） | 惩罚太强，是超参问题不是结论。报最弱那一档的数字，并说明 |
+
+**它很便宜，但不许插队**：要在 P3 的抽取都排上之后再跑，不能拖慢阶梯。
 
 ## 时间与存储预算（跑之前估，跑完就地更正）
 
@@ -143,6 +170,7 @@ RFS 5.92、41.7% 被压到下限，「对着 log 算 ADE」在那里不是好目
 - [ ] (c) 抽 2 万帧 token grid
 - [ ] (c) attention / transformer / MLP 对照三个 head
 - [ ] (d)
+- [ ] (e) gated residual head（最后跑，见第 25 条）
 - [ ] 数字写进 decisions 第 23 条
 
 ## 结果
