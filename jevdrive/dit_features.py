@@ -43,6 +43,21 @@ SIGMAS = (0.2, 0.8)          # flow-matching noise levels: the two readings of "
 TAPS = (0.5, 2 / 3)          # fraction of the transformer's depth
 
 
+def snapshot_dir(repo: str) -> str:
+    """The local snapshot directory for an already-downloaded repo.
+
+    Everything downstream loads from **directory paths**, never from `repo` + `subfolder`. Offline, the
+    latter still goes through the hub resolver, and `AutoTokenizer` in particular then probes optional
+    files (`added_tokens.json` and friends) that were never downloaded and so carry no `.no_exist` marker
+    in the cache; the resolver cannot prove their absence without asking, and raises
+    "couldn't connect ... couldn't find them in the cached files". Handing it a plain directory skips the
+    resolver entirely. The text-encoder config happens to load fine either way, which is what made this
+    look like a missing-file problem rather than a lookup problem.
+    """
+    from huggingface_hub import snapshot_download
+    return snapshot_download(repo, local_files_only=True)
+
+
 def prompt_cache(repo: str, prompt: str = NEUTRAL_PROMPT):
     """The text conditioner's state for one fixed prompt, encoded once and reused.
 
@@ -56,9 +71,9 @@ def prompt_cache(repo: str, prompt: str = NEUTRAL_PROMPT):
     if f.exists():
         return torch.load(f, map_location="cpu")
     from transformers import AutoTokenizer, UMT5EncoderModel
-    tok = AutoTokenizer.from_pretrained(repo, subfolder="tokenizer", local_files_only=True)
-    enc = UMT5EncoderModel.from_pretrained(repo, subfolder="text_encoder", dtype=torch.bfloat16,
-                                        local_files_only=True).to(DEV).eval()
+    snap = snapshot_dir(repo)
+    tok = AutoTokenizer.from_pretrained(f"{snap}/tokenizer")
+    enc = UMT5EncoderModel.from_pretrained(f"{snap}/text_encoder", dtype=torch.bfloat16).to(DEV).eval()
     b = tok([prompt], padding="max_length", max_length=512, truncation=True, return_tensors="pt").to(DEV)
     with torch.inference_mode():
         h = enc(b.input_ids, attention_mask=b.attention_mask).last_hidden_state
@@ -79,11 +94,11 @@ class WanDiTFeatures:
         from torchvision.transforms import v2
         self.model_id, self.n_images, self.sigmas, self.seed = repo, n_images, tuple(sigmas), seed
         self.n_image_tokens = 0
-        self.vae = AutoencoderKLWan.from_pretrained(repo, subfolder="vae", torch_dtype=torch.float32,
-                                                    local_files_only=True).to(DEV).eval()
-        self.tr = WanTransformer3DModel.from_pretrained(repo, subfolder="transformer",
-                                                        torch_dtype=torch.bfloat16,
-                                                        local_files_only=True).to(DEV).eval()
+        snap = snapshot_dir(repo)
+        self.vae = AutoencoderKLWan.from_pretrained(f"{snap}/vae",
+                                                    torch_dtype=torch.float32).to(DEV).eval()
+        self.tr = WanTransformer3DModel.from_pretrained(f"{snap}/transformer",
+                                                        torch_dtype=torch.bfloat16).to(DEV).eval()
         n = len(self.tr.blocks)
         self.taps = sorted({min(int(round(t * n)), n - 1) for t in taps})
         self.buf = {}
