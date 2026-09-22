@@ -1,0 +1,2184 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/dev10",
+  "captured_at": 1790085251.5703297,
+  "files": [
+    {
+      "path": "carla-seed0/all-attempts.csv",
+      "bytes": 22483,
+      "sha256": "ca87fc93f05e8467ce40f5b6663097a7358cdd176ca391416d3cd2bf051ac28a"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "d707c73526848e9426f57e618c61f3009973a4f09fc82666e8806bcc9132d52e"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/attempt.json",
+      "bytes": 2800,
+      "sha256": "7291ba96bce54e0b39e0bca1cfa6da6549d9b26795eee5a2131fcf3c9c38f29c"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/control.jsonl",
+      "bytes": 465583,
+      "sha256": "0cc0093e8e59277364a5373fdab9c457f1dfcbf97bae53e83aa86287580000af"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/criterion_events.json",
+      "bytes": 3053,
+      "sha256": "94a549e9e52cf3adfe86155115a91f1f163c251ee9f7eec2d382119444599388"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "4289a8a6360ba927bf328302a1e1ac9f1f713ec0102ce5459494d9eb9c7ec8c4"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/results.json",
+      "bytes": 5470,
+      "sha256": "460099b53f5503c1569d806b9f198a69c37efd2a243be1ba0e34dc1441785ace"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/route.log",
+      "bytes": 3930,
+      "sha256": "e9a891ad0410de7dd6600fccf1e175b49ab07bce524c0438a23be4f42f56ea66"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/route.pid",
+      "bytes": 6,
+      "sha256": "fe14edf06f9b3a1cad939f57a2505ba088b901a26dda56ea6c655fe8352d147e"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/route_reference.json",
+      "bytes": 13625,
+      "sha256": "f54d6073a126c1dfbbda309b62f7916245ccffde31e2160844b66de7fb9ba632"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/route_result.json",
+      "bytes": 3575,
+      "sha256": "ab32079bf3a12e65c9691306f27a2d1276f7d4ab50914c8c534d20665a573fb7"
+    },
+    {
+      "path": "carla-seed0/attempts/17569/1/trajectories.jsonl",
+      "bytes": 85181,
+      "sha256": "3a09b40cc0aa09a8c9fc9b8fbf1ea69c6115a139edd1d93d52dada11c2ec5bb9"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/agent_config.json",
+      "bytes": 375,
+      "sha256": "fe9f3074ff41b5d8720c6614698fefac24e7dfc84a1314924d23b5a99fad7393"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/attempt.json",
+      "bytes": 2798,
+      "sha256": "a7f749a6cfef88fc111bceda798ee2d74841105838db05e8193a28de82a7fa27"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/control.jsonl",
+      "bytes": 5174366,
+      "sha256": "1b40a87515a6bfc67fb35c5fe8e1667f8dcb313871e75230891078fbf25703a2"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/criterion_events.json",
+      "bytes": 3335,
+      "sha256": "118b5da0bf6e68b34c18b4a26e5ecfabf817185ee30c2b32459b5aaabd2747d8"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "957f17f8079bee24bd055c9e379088555076763df820cdeb4fbcbd34c6145018"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/results.json",
+      "bytes": 5690,
+      "sha256": "0f8200e5b5dbd676d608b97865ac37afa80ef646c8c2c2ce03bf8e5b51f47f5c"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/route.log",
+      "bytes": 4386,
+      "sha256": "0628afbda6471eb986d58467fb1610df0ec98d0fd0c73cb5de8b316bb8b352c7"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/route.pid",
+      "bytes": 6,
+      "sha256": "1f6162fc8a3be62be7cd6d17892191dc4d242efe66f3b94583009bca0afeb039"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/route_reference.json",
+      "bytes": 8578,
+      "sha256": "9e292ecc11d3da0ad0cd49a508bd37151f2dcd3a1b3e199f18a3ed3bd5270c96"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/route_result.json",
+      "bytes": 3574,
+      "sha256": "64b3ca67622267a41addc16a68421a7da683ffc5f79f9777e8c4040831c6f410"
+    },
+    {
+      "path": "carla-seed0/attempts/2091/1/trajectories.jsonl",
+      "bytes": 962782,
+      "sha256": "6112b679b4c5ba0b9a0b7a3ba2bbf1dd4bfabf94ca229dce39aeb1802f895c79"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "d8606ac7e6ef29fd13af0633a73b89c3507a292c36cd8fafe7a4c5e175878a22"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/attempt.json",
+      "bytes": 2799,
+      "sha256": "fadaac44dfac161cc6e89a58612d4ed0e25caab51861406e942f2cedddbcac02"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/control.jsonl",
+      "bytes": 418076,
+      "sha256": "374b42229ebace131ed45e166140412cc68aa32b83a3714a9a8610f8c7a5f933"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/criterion_events.json",
+      "bytes": 2962,
+      "sha256": "01a248276643d06dd21e8ae3fb3bd75c9242b9b31dab186062580b8d9e2ddc59"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/heartbeat.json",
+      "bytes": 38,
+      "sha256": "ba17afc9d671ad5106f03abb6fa19310442e54ceb3881a344b135517691eed70"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/results.json",
+      "bytes": 5393,
+      "sha256": "7dc684dd99cbcebd908e810a2051bee06298dd9b158b6cb4be1869267a7b06cc"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/route.log",
+      "bytes": 4211,
+      "sha256": "cb055982e61162c957bf8a2bedc25b67935cac220f03a80dee97d3f8767d2ffc"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/route.pid",
+      "bytes": 6,
+      "sha256": "e6d19d816fbf2cc7aa9e1f7f18f37a548b6be3d70fe9a61ba278b5a278edfe90"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/route_reference.json",
+      "bytes": 10829,
+      "sha256": "f69c85710aa1c0655050547f5cb9cbd933ea57e0d0a15a9967845e9feb995c7f"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/route_result.json",
+      "bytes": 3570,
+      "sha256": "6653ef082cb36c902e36f80efa8f8f066833025d0a3460d2b004aef6484b6453"
+    },
+    {
+      "path": "carla-seed0/attempts/25378/1/trajectories.jsonl",
+      "bytes": 73995,
+      "sha256": "5044495bbb9c6f33831e446a7ed05bd602798ba9d04a4bb029ba10d4380c8c0b"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "0dbfaec9f381910b9f03a94997ebae234ad7c423601527058a254a01026264e9"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/attempt.json",
+      "bytes": 2800,
+      "sha256": "8eb1d399abad24dba7dc12a8100d80572ba6cb528ade9fce82377db5b7a0032b"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/control.jsonl",
+      "bytes": 575400,
+      "sha256": "fd59a47a93e9c9ae74411b74b3864b4c05c34ac161067daa03a92c1f9e048fdd"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/criterion_events.json",
+      "bytes": 3183,
+      "sha256": "5619214abeba17abf9da326fbc0d4d9ea6470e645a087d5e33883bc6a46b9c45"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "8c8331127d016099e5ac7bd7c63aa2535a043e8eac37f8afc22d10baa46a6e0a"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/results.json",
+      "bytes": 5547,
+      "sha256": "4d40fec33d88f9a35ff278a85cc1c2a67af45297e34e26d5f1543e57e04331a5"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/route.log",
+      "bytes": 3977,
+      "sha256": "35493eb33e09681a9f15c08eddc9be9efac653f7a867fab99e135136e01bb80c"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/route.pid",
+      "bytes": 6,
+      "sha256": "27891b412ed71d8544f8dfe2c31a477e815b8ef4a12bd4e348689cfa8f05d331"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/route_reference.json",
+      "bytes": 18763,
+      "sha256": "4a441ac4cff4867af1a673570d9309a7fdaf8de4a7bce0a2b17996c8891cb6a4"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/route_result.json",
+      "bytes": 3572,
+      "sha256": "f47f28f4e45482132c639a881b93a72dc193af8a2a9e4e5465018413f0133fd5"
+    },
+    {
+      "path": "carla-seed0/attempts/25381/1/trajectories.jsonl",
+      "bytes": 101653,
+      "sha256": "6288ee9451b48ffba015fab733a00a09e0f3ff8b89760e689311c97ac1908766"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "b991a43e8412ef67baadd5174893f5ad910718bcca6a71fa74623c3f02c2e15e"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/attempt.json",
+      "bytes": 2801,
+      "sha256": "214a6c76fad4d81b4303960b2301d26785504a946735ab5826f7ba546ac132bc"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/control.jsonl",
+      "bytes": 5470158,
+      "sha256": "9a053a5470de7b1045a422b7d53a1dd9bc1080a36b1d14ba814fb31dc6632521"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/criterion_events.json",
+      "bytes": 1465,
+      "sha256": "a0fce95b0a1e72d8dabce417e0cec21a51cfc0ebd85afa7ef59c3619ec8ae613"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "b7b021140e17b5f1e03e0b79649ed8b4c32abac0e3dd782fb7019f1c8937c525"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/results.json",
+      "bytes": 4757,
+      "sha256": "61ab9b31e8a0c185f49ee6c95cb8c35e25a25dd70727ec7ed15fe015dcc484c9"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/route.log",
+      "bytes": 3930,
+      "sha256": "41b182a10b490dcb216e476f95b6d9157dabbb17d2a2f471935753c21e899501"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/route.pid",
+      "bytes": 6,
+      "sha256": "29282237cd26bb5632c48639338c600ddced778c0a51a0ead1dac0100d78f033"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/route_reference.json",
+      "bytes": 10134,
+      "sha256": "0bc58aa67f539472046f36859b5eb9128a9633db68ae74c36ee9dffb797b0e34"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/route_result.json",
+      "bytes": 3569,
+      "sha256": "97db14eac6db27240e20b58287d584042f652bcd380043404edf7f5265d1fe0b"
+    },
+    {
+      "path": "carla-seed0/attempts/25424/1/trajectories.jsonl",
+      "bytes": 1009015,
+      "sha256": "21399515ff12778a140dec4728c4300cf4c1cf795da124475e7842674bebdbd2"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "a497ea60bae6bbd7298a49d13225bc6ce3f732339edbf866f622920c40b166bf"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/attempt.json",
+      "bytes": 2799,
+      "sha256": "042ee83b8b2a8973e4c18821c893a72ff31263a8d3b386168b7df105f469c5df"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/control.jsonl",
+      "bytes": 551613,
+      "sha256": "f16bde91f67d482d3a844af88bf39e0e7d9fd7cc489a18e7c2ee35dcb6e98393"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/criterion_events.json",
+      "bytes": 2702,
+      "sha256": "4b4543c58184fbb72dd434ebadf5bb4fa15d6c9d0d77dd061711ce10f3b15ae7"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "e662e624dba62c14a4c3b870e6f8e6940ad9d96ebbdf901112ad3e71a52f0a38"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/results.json",
+      "bytes": 5203,
+      "sha256": "c190166cdac6a43cc3ba3eb21be653c5ad6a077e16aaf9a4864f94dcfcc8967f"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/route.log",
+      "bytes": 3774,
+      "sha256": "fc7a0600993185e82699639e08b8b7fbf307f609e6188b19aff948ebda9fb586"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/route.pid",
+      "bytes": 6,
+      "sha256": "eeb161c47cdca7789ba2ffad3bf570fa4de81cf1263fb6e37579acddd4ffc0cf"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/route_reference.json",
+      "bytes": 9223,
+      "sha256": "7bcd7175783175405f73efdd9f27e952599a48fbdf6152eb7735ee08a29f1540"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/route_result.json",
+      "bytes": 3570,
+      "sha256": "2daf7b3655059710b4c7b85fd898835b694f8fabf8510b018687d6c02dc0006e"
+    },
+    {
+      "path": "carla-seed0/attempts/26405/1/trajectories.jsonl",
+      "bytes": 97278,
+      "sha256": "49149f0abc5d04224b3b30c33f53071a50f194fed1685c7670cf1c397382a414"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "da398de9be55160b926298132ec8aaeb65eeae86c65d3b26c74a130f04ab9fab"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/attempt.json",
+      "bytes": 2800,
+      "sha256": "f5691fe2acac19ea8bdc88f9feb74fd6a9a050c2881e8b17a73798f21990930c"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/control.jsonl",
+      "bytes": 678254,
+      "sha256": "1d314ca8382c385226f5d9e80c59761517638c6c03e7d3b95374184940aac0f0"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/criterion_events.json",
+      "bytes": 2768,
+      "sha256": "29e7b8b3fb75d9c77b88a66f12d7256480c673e841f8fe560ddff3cb2c84d871"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "12163b3a3976602b484340106fc254a173f981d9ac6247b817e7ed50e1a260a5"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/results.json",
+      "bytes": 5295,
+      "sha256": "1aefb201decf0a6bef800bdeae4406d9e5132ccef6e96186848849815ebe0be1"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/route.log",
+      "bytes": 5376,
+      "sha256": "21d531f5f1168959d21ff95bd07819c8a7b4a7b7e7b93d6ebd413a29c1088684"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/route.pid",
+      "bytes": 6,
+      "sha256": "7cdf6833bb15b0ed0dd96cd7ec6ca6006022dd74c659f65f4bc3219e5e9ed449"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/route_reference.json",
+      "bytes": 8412,
+      "sha256": "a7276ce05ec92621bf318be6c07feadc36ba462a24c685735b1505f2d9c468bf"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/route_result.json",
+      "bytes": 3571,
+      "sha256": "f680d61e12ba7fac4ec1dc0125c8303a3b1c9a36effc6684f30076b5d46915ff"
+    },
+    {
+      "path": "carla-seed0/attempts/27494/1/trajectories.jsonl",
+      "bytes": 119031,
+      "sha256": "5709b8e351b5968783d3a30d8f2606f3174a287f2f07b836a3e44d23bae2a43f"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/agent_config.json",
+      "bytes": 376,
+      "sha256": "7fc1e2f8ccbcf7b0df77d57e919e20b600cc739467bcc47c4775f9031724f137"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/attempt.json",
+      "bytes": 2799,
+      "sha256": "65cda134afdc75e5ffe239e03dc4419e9c58e302a4346ff42fcd96d26796fdff"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/control.jsonl",
+      "bytes": 365490,
+      "sha256": "8a800040fd6b92f542f92751050855281392680c6d092dac671bf04a4a509256"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/criterion_events.json",
+      "bytes": 3020,
+      "sha256": "f7a55558472e6511f1775c7992e951f67087b78bf156bd4876c5827da4f3ff7c"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "a6a4a5c74db3c36696fea99a5e54e9b1d1c9496689314a4e365c17c3ec34059e"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/results.json",
+      "bytes": 5450,
+      "sha256": "0a221ea5666b056935a9dbc194522cd1b2835e11457cf84ff181a3b1cbf32ae4"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/route.log",
+      "bytes": 4023,
+      "sha256": "d5a8e3c528b100958f52320b08f650792b574530843f2befd6dfff3a8a6f7689"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/route.pid",
+      "bytes": 6,
+      "sha256": "f96de55c615fd1f8708f78fabdc064496e54a4b169ab88757d08e9e27b9138df"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/route_reference.json",
+      "bytes": 10546,
+      "sha256": "baecb111c1540dfda53034a9ac83baeb581a2d9dc7294fc2466e149c89adcf34"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/route_result.json",
+      "bytes": 3567,
+      "sha256": "8b4596719ce54900a4b38caec10ac0393df2accb6d68ebb3367b7f7132e13aac"
+    },
+    {
+      "path": "carla-seed0/attempts/28198/1/trajectories.jsonl",
+      "bytes": 64484,
+      "sha256": "401a5f3ea15066e08ba7b41e1d03971d79924b4b8e2573b4253eac1b2aa8763a"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/agent_config.json",
+      "bytes": 375,
+      "sha256": "e00f1d453c7f3b22fc748eabfa49c983fa44283f539a600853be37e45054ec9a"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/attempt.json",
+      "bytes": 2798,
+      "sha256": "eeee854385ed66adcf139fc042c109ca5ae48e6604cc708224434a9b3b74d974"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/control.jsonl",
+      "bytes": 943352,
+      "sha256": "12422348ddf488a1a110f7f510614c03b8c18c28d2d9e4ecbe4055c56809de10"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/criterion_events.json",
+      "bytes": 3705,
+      "sha256": "51d70dedb967d66545b38d825bce50e312c4d333414d7ea7f696d06de89086ac"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "ea5898bb670e4312130a0896e79f3d5434aeeeb392d8635435c8f9cb334da415"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/results.json",
+      "bytes": 5960,
+      "sha256": "c5235fcdf1c993f5c72b442784db1c995d06af0558b28d5e3b24817d999d1861"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/route.log",
+      "bytes": 3771,
+      "sha256": "f9ca708e0a8ead29dbeb6b0a568d8e728f2ff811148c34d2f3707a317fc86401"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/route.pid",
+      "bytes": 6,
+      "sha256": "63573e929a9bbbb2f1778ced788691301f4a406d1609650fa0b685059108f92b"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/route_reference.json",
+      "bytes": 15056,
+      "sha256": "4722cd81442c3ca6ca84a507ecfaeebc9f90fc939936945a7064332239ce8b73"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/route_result.json",
+      "bytes": 3567,
+      "sha256": "6b040b56393be0fe1f5b1b0a65b3145298b39e27fa46ae9eb7daa443684c3885"
+    },
+    {
+      "path": "carla-seed0/attempts/3255/1/trajectories.jsonl",
+      "bytes": 179059,
+      "sha256": "f7be80e2f310f414661ffda6febe47a69cd8adba44aa206a0c411a4bc66fee3c"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/agent_config.json",
+      "bytes": 375,
+      "sha256": "03ab8ec00dfccb33384d5d023122c6a6683ee61094bce1ef5920c6feed3e2a98"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/attempt.json",
+      "bytes": 2797,
+      "sha256": "cbb021af0f70df6729ed3a168d29febb87788bbaa3f14076773a1c8ef0d66dd1"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/control.jsonl",
+      "bytes": 573438,
+      "sha256": "d017b2bff6acd4b66ebf53d77aff359be3e77d5b75bba61dfec530229b263886"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/criterion_events.json",
+      "bytes": 3159,
+      "sha256": "55a935f5b9953b9509b8c122e0c8387d0f2fdabfa01782b8ecca32fb11b21551"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "c8453a9a41aeba545fda05b4e78352c564c420b1a647d562bbdbb00e51bd2850"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/results.json",
+      "bytes": 5535,
+      "sha256": "1fd3e80a6cd5059cbc86b5db15e5d5d5da8978e89276eb1486a9bb7af4d6cb77"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/route.log",
+      "bytes": 3973,
+      "sha256": "8e7b0e7753e999f077b3401bd917df1b6603ddfef14fc3ba3d2b6b6d6b3ae1f3"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/route.pid",
+      "bytes": 6,
+      "sha256": "00be0f0c4ee2d85f8431b1d1eec320630263912d144ace715a95d56555fd55b3"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/route_reference.json",
+      "bytes": 16934,
+      "sha256": "7da5fb0778f4cc75a1d4270db2a5daab207fe0f94ce353c6eef36bdff3a3834b"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/route_result.json",
+      "bytes": 3569,
+      "sha256": "e758c8380b8142ebf4515d95b981fc7175f98cd1a8e965e7b249c54edd9d84b2"
+    },
+    {
+      "path": "carla-seed0/attempts/3514/1/trajectories.jsonl",
+      "bytes": 106094,
+      "sha256": "37f076bfa3fd9aa1682171e07e590a92895d594b3104226cd7ce10799e0f7e40"
+    },
+    {
+      "path": "carla-seed0/controller-report.json",
+      "bytes": 177780,
+      "sha256": "701f7cdcf4cf684cc9c606e8c3b6dd393107073f72bfbdd0e72db4af087204c1"
+    },
+    {
+      "path": "carla-seed0/done/17569.json",
+      "bytes": 3786,
+      "sha256": "f58c16292326647376ebbd5f2eeb9cfd74a7f240b16de5836949808e21171342"
+    },
+    {
+      "path": "carla-seed0/done/2091.json",
+      "bytes": 3786,
+      "sha256": "c3993cb61190d9fc054ebda3a05d9564402e1a2da36423bab8c7c28987cfb8ea"
+    },
+    {
+      "path": "carla-seed0/done/25378.json",
+      "bytes": 3781,
+      "sha256": "6730f4fa4a97d9341e7a6185d0102844bb5a9906bc28c6613b1b97a09a7ec080"
+    },
+    {
+      "path": "carla-seed0/done/25381.json",
+      "bytes": 3783,
+      "sha256": "b44527d7068a098ac8216aa59730af112960939558bb9f74906ef8aad2824d58"
+    },
+    {
+      "path": "carla-seed0/done/25424.json",
+      "bytes": 3781,
+      "sha256": "9eb7242ceca94c2627f13e361febf1f224f20229ad73aba32d9e8a9a9fd6873b"
+    },
+    {
+      "path": "carla-seed0/done/26405.json",
+      "bytes": 3781,
+      "sha256": "e8625ce7a6784caba18e6203eac6ed602ac2e8c8e1adb9ad19734f356c68ab81"
+    },
+    {
+      "path": "carla-seed0/done/27494.json",
+      "bytes": 3782,
+      "sha256": "e90b61debf981a7e07b83c5b1e96aa68d139c22332292350951dab703017376f"
+    },
+    {
+      "path": "carla-seed0/done/28198.json",
+      "bytes": 3778,
+      "sha256": "3ef7ac53c96522f7a5acef02aae1ddedee43995d46d6ba9005de151685ea4d5b"
+    },
+    {
+      "path": "carla-seed0/done/3255.json",
+      "bytes": 3778,
+      "sha256": "b54f54359462246652e888ce08df53b23061caf88cda5a1401f6a6f21b2fc1ab"
+    },
+    {
+      "path": "carla-seed0/done/3514.json",
+      "bytes": 3779,
+      "sha256": "dc7364aec2f5eb60add7d302b6c350b1b88a2377362ac39b1a2c45d9b8a95649"
+    },
+    {
+      "path": "carla-seed0/events.jsonl",
+      "bytes": 3666,
+      "sha256": "4705f25362d3bf8ea996c95c4e853a14aaa320390e6d768a54e3314f7d98c68f"
+    },
+    {
+      "path": "carla-seed0/invocations/1790084159286006-142481.json",
+      "bytes": 1725,
+      "sha256": "50431e1db8fd0d712a6f49b281fd1dedc51032f44c0044e55e147076e379fbf6"
+    },
+    {
+      "path": "carla-seed0/report.txt",
+      "bytes": 1902,
+      "sha256": "ba9d6fc4b9626d7c38ac9da1cd5de68217be229c8d4a5b30a69861eabfa6e23a"
+    },
+    {
+      "path": "carla-seed0/summary.json",
+      "bytes": 2807,
+      "sha256": "6a4ccdc62e625dc648106b7a6826543682418e09b665a0d7b97284e470496f16"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 964,
+      "sha256": "f54c7583f15ed5c71a21b20caeeec1d1a13601bb2b41b8016ba09c3e758030e9"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "e39c9da241a4fa9641200d728c36fe51cbd33e58458bf485dc1d0ea7b4a1164b"
+    },
+    {
+      "path": "groups.json",
+      "bytes": 374,
+      "sha256": "92713ff84d20445e046c0372e3bd22ab687bf0f1490064ec39909ecef3319d96"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 12473,
+      "sha256": "c4eea714bfc4e8b193ca9a289e1c2de6f2cec1deb817c8f7a616f6803abc7d7d"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 565,
+      "sha256": "6e509b5ef31babd67c5d26c3740a427a351c3d13df8aa7e9fde45d6855b87786"
+    },
+    {
+      "path": "provenance-capture.log",
+      "bytes": 2782,
+      "sha256": "b923dc122888dd277f99962257176ed4ae1821931c03af966da41f539b207bdf"
+    },
+    {
+      "path": "provenance-retrospective/inputs/00-drivetransformer_bench2drive_dev10.xml",
+      "bytes": 34173,
+      "sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327"
+    },
+    {
+      "path": "provenance-retrospective/inputs/01-controller_config.json",
+      "bytes": 328,
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57"
+    },
+    {
+      "path": "provenance-retrospective/manifest.json",
+      "bytes": 8245,
+      "sha256": "0ea931137dc2e9fb45112e4919d74aa0f28f939d65d0d4637a386eb2962aa88e"
+    },
+    {
+      "path": "provenance-retrospective/runtime-verification.json",
+      "bytes": 1806,
+      "sha256": "39b8b7ca42e62acff3e6828d1f17233d4ab1ca714fab5d651793829f16573c19"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_agent.py",
+      "bytes": 22248,
+      "sha256": "76a3f751d919f5aecc812d49a3c647501baef82060bedddc9e02162b50fc550b"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_calibrate.py",
+      "bytes": 10951,
+      "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller.py",
+      "bytes": 16225,
+      "sha256": "040978cc60dce63b525c8835b00031e754fec887ef96330ed1e3c8b1bc2cad63"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_adapter.py",
+      "bytes": 13220,
+      "sha256": "96f118b15f4777000aceea2d9048b9e2f4591ef94d3584f3a3cd1f1f6c1d1542"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_archive.py",
+      "bytes": 5713,
+      "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_campaign.py",
+      "bytes": 7047,
+      "sha256": "88713f15119d77acdfc5e07ff5804c40292ad88ab8100e784073098ce7c13b09"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_compare.py",
+      "bytes": 17630,
+      "sha256": "79cdd1a6834741f063b2292d848ff20080b28071d338e6d844ada6dcaea35255"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_plot.py",
+      "bytes": 20653,
+      "sha256": "db1e13c0bd1f2daccf21a58bb9ff722b949932558b25a651bde7384f3fe4c9a1"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_selftest.py",
+      "bytes": 15901,
+      "sha256": "416f1fdea96ea4e765f100c4d2f57b8c4c0c43b69c902d3c8c67a2d7d33913b8"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_slope.py",
+      "bytes": 14937,
+      "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_controller_validate.py",
+      "bytes": 21468,
+      "sha256": "e87cfb6ed480d3f0d48fa4fdb7365898961103eb6b74605bec3e4a902b19d641"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_hooks.py",
+      "bytes": 13526,
+      "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_optimization_report.py",
+      "bytes": 3961,
+      "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_policy_server.py",
+      "bytes": 7177,
+      "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_report.py",
+      "bytes": 28194,
+      "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_route.py",
+      "bytes": 13659,
+      "sha256": "1af7f1c00d6a1f5b71ddee930cdc4cd39f72847ed647eb2b87c1a3d64354d086"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_run.py",
+      "bytes": 38719,
+      "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_sweep.py",
+      "bytes": 9557,
+      "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_tcp_preprocess.py",
+      "bytes": 1336,
+      "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_tcp_visual_agent.py",
+      "bytes": 10485,
+      "sha256": "66a5b583ae09fea83739296fca761a71f33460285c4d626f9824a508778f35f5"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/b2d_viewer.py",
+      "bytes": 8713,
+      "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/drive_runtime/__init__.py",
+      "bytes": 216,
+      "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/drive_runtime/preview.py",
+      "bytes": 4460,
+      "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/drive_runtime/sensors.py",
+      "bytes": 3601,
+      "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller.py",
+      "bytes": 12626,
+      "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller_agent.py",
+      "bytes": 14670,
+      "sha256": "04e9cd5c23cbae3cb5da098a9d9eca6e7e51aec5682b194b51c67b93365143a8"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller_archive.py",
+      "bytes": 2388,
+      "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller_compare.py",
+      "bytes": 5343,
+      "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller_report.py",
+      "bytes": 16719,
+      "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_controller_slope.py",
+      "bytes": 4232,
+      "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_preview.py",
+      "bytes": 3149,
+      "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_runtime.py",
+      "bytes": 5891,
+      "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69"
+    },
+    {
+      "path": "provenance-retrospective/source/scripts/test_b2d_sensor_pipeline.py",
+      "bytes": 4240,
+      "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0"
+    },
+    {
+      "path": "provenance-retrospective/source.patch",
+      "bytes": 10525,
+      "sha256": "577e76f152458fd1e3e6f0a1faa32f6e4ee09fe403a68f27737fb9e7c5233855"
+    },
+    {
+      "path": "pursuit-seed0/all-attempts.csv",
+      "bytes": 22596,
+      "sha256": "8eb35e725c7a3e18ce8ec4e16d3cf205208f13e91ae82a8ec45f2237c2678af7"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "dc4d536a9a4c74d04ffeae618e24a99c0f2eb96abf3c24c9cd2e59c6e95ff8bc"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/attempt.json",
+      "bytes": 2805,
+      "sha256": "272208c14493374115f20efcdc96a15b9f7badab550c2dac6a1a79f87ec2d55c"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/control.jsonl",
+      "bytes": 463873,
+      "sha256": "6e1bbf12f10c7778662c9d2ef3120afa007ca05766c94ffa0658240fd31b580d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/criterion_events.json",
+      "bytes": 3053,
+      "sha256": "e0fb71b40e3c76e49c943179a6744be7f9eae3660e210a444b696e3120465658"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "b1af617fb3b3a554bd27e8a690007f59cc1e1034b5d98c669f3c3627a01a5b90"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/results.json",
+      "bytes": 5468,
+      "sha256": "22edd76fc999be31c1436e3b87feec579b40df4bda9183b5573a9ffcc3473321"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/route.log",
+      "bytes": 3930,
+      "sha256": "7276378cffb8969eac70f419c0398255282c9d58a72d430f2fbb9dce333063f1"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/route.pid",
+      "bytes": 6,
+      "sha256": "f3908e4ba73551b1adce002eea1acde6aac7e259219e745d17823d196c463e1f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/route_reference.json",
+      "bytes": 13625,
+      "sha256": "f54d6073a126c1dfbbda309b62f7916245ccffde31e2160844b66de7fb9ba632"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/route_result.json",
+      "bytes": 3578,
+      "sha256": "04d34fcf41962fd550abdfa859981a357b40e80fe3237c664723661997afca10"
+    },
+    {
+      "path": "pursuit-seed0/attempts/17569/1/trajectories.jsonl",
+      "bytes": 83977,
+      "sha256": "841ffd1ec0598a1ebb0e57ad442749e73759a69f07e18bf12b0c1973aa7b25a5"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/agent_config.json",
+      "bytes": 379,
+      "sha256": "62f0f02fe130c9bd5eebb0bc32ee59cc2c4f29f0162f6bdcb022bcdf242eb3eb"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/attempt.json",
+      "bytes": 2803,
+      "sha256": "264240f9e974b226eb88cb681ef1dbc940940da5a6e49e10e74927307205c585"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/control.jsonl",
+      "bytes": 5203421,
+      "sha256": "3e24f76d54bf0f520b5793057e84ac32f5ca4c85f2cee9bf004e99aa9b8042f1"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/criterion_events.json",
+      "bytes": 3355,
+      "sha256": "d76d123b5d0486163b8b0421b6c13f7de02f8f13418d68f7d795cb709a0a54a8"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "979ebb745236c8d4fe718a9281002d637433eb153825200a282543ab5b7acce9"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/results.json",
+      "bytes": 5702,
+      "sha256": "30a4478a37fd5a5910997bf080658470115a20c8eb0cd217ca0dc6d4e432d762"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/route.log",
+      "bytes": 4489,
+      "sha256": "0291d4cfe60620dbb3399725a91c8beb3af7cb21f37bb07404156130a66c6b04"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/route.pid",
+      "bytes": 6,
+      "sha256": "fdd316f378eeeb73fe608373d12dff410034dccff3c477b3bdfac5a5ca6342bc"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/route_reference.json",
+      "bytes": 8578,
+      "sha256": "9e292ecc11d3da0ad0cd49a508bd37151f2dcd3a1b3e199f18a3ed3bd5270c96"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/route_result.json",
+      "bytes": 3571,
+      "sha256": "ab8222facc5f997d0b3d1b690bea5cfd4720fb2e27c7a026a25137c8ad0677aa"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2091/1/trajectories.jsonl",
+      "bytes": 961814,
+      "sha256": "7acd6f72014635f642297c41ca614b6a17fdbad50b3b7c0038328b88bfda1ae8"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "7d4bd8d30db0d53c08b38429195ff62c97dbe503d1e8142f32b7a034d5e2f392"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/attempt.json",
+      "bytes": 2803,
+      "sha256": "5d6cb07c75af7f1421458853ee9920eb48d1757ae79f254fc7609825b15f7d02"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/control.jsonl",
+      "bytes": 417975,
+      "sha256": "b8c5ce16f194e5ab1277161b3a5be8852235b086abf5c934c17c2e68bf114782"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/criterion_events.json",
+      "bytes": 2954,
+      "sha256": "3d89df061406c806ae6b0b50ea50c41a5b07544cfae60b6d436c4552eebfe46d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/heartbeat.json",
+      "bytes": 37,
+      "sha256": "4dc28637edbadd794ebfe98ee63ab294a01f324295c0056fe333bcc6c766900a"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/results.json",
+      "bytes": 5389,
+      "sha256": "1e033f5fe7b82e06c04c2402ff611488c2c56777dad4f51a2f764f87b4752a96"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/route.log",
+      "bytes": 4211,
+      "sha256": "cc052d613f02b40b5c473a8180c1bd6a0033ef72959955114486d3eacc74799d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/route.pid",
+      "bytes": 6,
+      "sha256": "033d2c3c1426ed9c17ad339538a1f107c1d0d053ef4462c7bb8376e407fa314d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/route_reference.json",
+      "bytes": 10829,
+      "sha256": "f69c85710aa1c0655050547f5cb9cbd933ea57e0d0a15a9967845e9feb995c7f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/route_result.json",
+      "bytes": 3574,
+      "sha256": "6d0f664459350ffbca8badcc06424e75be235d9b0557346e872e52949258a185"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25378/1/trajectories.jsonl",
+      "bytes": 73852,
+      "sha256": "23bf790b9c35789777634418252c37990f2cb41df97eb95949fbd4de358320b7"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "11ceea8318f452a25ee830dda1e26822836f7afa6b83e99b3f6e32f2fc5fd59c"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/attempt.json",
+      "bytes": 2805,
+      "sha256": "396e7d61d4d9ae0cb3c3156fea7dd6be840fbbb5dc375f6d57672df6f3a76531"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/control.jsonl",
+      "bytes": 577930,
+      "sha256": "a82484b5db6a58145e7d8050dfc408fc6df69addde7e4f9cba2bf24441ee3854"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/criterion_events.json",
+      "bytes": 2994,
+      "sha256": "2da50f396334eee1db6bab6aad4cab7cbbd8a95ebd14be3eb64ce5b6b629735b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/heartbeat.json",
+      "bytes": 38,
+      "sha256": "90df85761508634b252e92b7d7072571f6ccbd0aa9ffc99fe3f73e039cfbe8db"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/results.json",
+      "bytes": 5388,
+      "sha256": "2f44968f7d40b634a88763930037e5b75a8c5cd181ce906d254c788bd489e69a"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/route.log",
+      "bytes": 3977,
+      "sha256": "a1853d7e2f2543b5478465f27dfb9143ced4a6c7838e493e706f1c4e194dbb6f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/route.pid",
+      "bytes": 6,
+      "sha256": "dbf8e8d08fb2923a3adfbfd116ddbc5609cacd9110f96ee809ba7eb1a7c844c2"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/route_reference.json",
+      "bytes": 18763,
+      "sha256": "4a441ac4cff4867af1a673570d9309a7fdaf8de4a7bce0a2b17996c8891cb6a4"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/route_result.json",
+      "bytes": 3576,
+      "sha256": "2676dbe78172a087f6ec0b770108dbc3a489a2042561e9e6a6cdf058e44560d8"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25381/1/trajectories.jsonl",
+      "bytes": 102439,
+      "sha256": "64f6a5d8e84487c22c6af12e8f60496b5fdedaf3ce7de92a67fe1426c669b078"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "bbb4ad0325b2262632d2874318b0e92773f5dc62515fe8e837d2b17dc8769680"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/attempt.json",
+      "bytes": 2807,
+      "sha256": "623451925c5ed4fad47f4aa242b62ef15e5ef4120549e437d59f8f5f1b8e3462"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/control.jsonl",
+      "bytes": 5447643,
+      "sha256": "3a77b4315e1020d1e0d7b3a8df79260cf381206dad128d1f5f02432095e0eb53"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/criterion_events.json",
+      "bytes": 1463,
+      "sha256": "f05726d2907d2b26161a2043a5ce9d66eab55e6b9732c5bfa387a4592e22de2f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "8ba3e93a979ff1e3704019c67192b306e18294b086518c4b32e773b48d7b78b3"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/results.json",
+      "bytes": 4756,
+      "sha256": "73a9f4665845e5c62bf4d9c5f475ba27a5e4c54ebdcef6108b15d869114680be"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/route.log",
+      "bytes": 3930,
+      "sha256": "c8ecbcaece76e454b1eecff31f907456df7d2343dc6d57bb7821e040f7f77819"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/route.pid",
+      "bytes": 6,
+      "sha256": "437ae498d774f1ef828f973620b277f6c7cfb7e2926acbf45a10c0341720b742"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/route_reference.json",
+      "bytes": 10134,
+      "sha256": "0bc58aa67f539472046f36859b5eb9128a9633db68ae74c36ee9dffb797b0e34"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/route_result.json",
+      "bytes": 3577,
+      "sha256": "f360f659ac1bd7ba6b35b9f5dfcf64d04987b27651a41953fea848ba3afd2a0d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/25424/1/trajectories.jsonl",
+      "bytes": 1006694,
+      "sha256": "968806814e91ad1df30a450a6a2262558743c40fa319625787457785f450e6db"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "2777fe485eb8e48e8454aafb591fa848638fc9f036f3a19082eda87b102d4102"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/attempt.json",
+      "bytes": 2804,
+      "sha256": "165faf8ed2a4c89b68ea38a893094fe3f6cb110eafc935c15c5d711138afc004"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/control.jsonl",
+      "bytes": 557193,
+      "sha256": "af6d8bae2ddc4f34f111f4c5424da918fa2fbb1b311dc1c816d6f9bf98de3d4b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/criterion_events.json",
+      "bytes": 2706,
+      "sha256": "6ee38b90cb55ffaab9e664d67d2ec874013d14b357ed059dfc1ccd10851fc180"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "37da14f6fefb59618090bbec4ada83a23cb1a8a2d6e239e45bad87c065e740db"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/results.json",
+      "bytes": 5205,
+      "sha256": "e1f42165fb3b1d8a1772693bbb9000147ddafe476bfec72790ae3e88861d1d38"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/route.log",
+      "bytes": 3773,
+      "sha256": "90a69715ec7ff7e76211667d317a4b6f7e7db0895f0d67663d7f8a572344fc01"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/route.pid",
+      "bytes": 6,
+      "sha256": "5ec6d0d1ddb612b776182707a62b53363c6f0a8bbd7f477d983d9719575f96bf"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/route_reference.json",
+      "bytes": 9223,
+      "sha256": "7bcd7175783175405f73efdd9f27e952599a48fbdf6152eb7735ee08a29f1540"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/route_result.json",
+      "bytes": 3571,
+      "sha256": "a18308ef826c4eebc6a50ce52391e0ad605aae1c99584cddf415da4bf5ef4c99"
+    },
+    {
+      "path": "pursuit-seed0/attempts/26405/1/trajectories.jsonl",
+      "bytes": 96906,
+      "sha256": "9cfc44c462592d577a804bb7217167c6a96abdf1dd3429136c10d68ce85d861f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "f772d3b3639e7eee183c154b0579d31112fa2c0a0403f24ee96851d60b7b4dfb"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/attempt.json",
+      "bytes": 2806,
+      "sha256": "e54d50934915a6d2c37c68dc69ef9e7fb08e24de5e1b3ca179d7249d20d98253"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/control.jsonl",
+      "bytes": 681850,
+      "sha256": "07c632676295974a3ed82cedd4e55e66e68571cd917018e4567f3e4580230a32"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/criterion_events.json",
+      "bytes": 2775,
+      "sha256": "4b74354e54a484c1d2559cbf295d5b63915f4c3c84d812d69405e77a067ddab2"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "b66330118b460642b7a823f4312474c5c0b7b7d6d764eed3ba13063688ab8bc6"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/results.json",
+      "bytes": 5299,
+      "sha256": "0e1af1e1c396c29fee0284212c7e1b5e37e09af142580bbb59987e5fed9b29f0"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/route.log",
+      "bytes": 5076,
+      "sha256": "93a42d42fb26f84fb28c79bdfb98191745b2effd4e347ede3c34676f9fea10a2"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/route.pid",
+      "bytes": 6,
+      "sha256": "5c11244f7873e4a265430e58c16e1fb9d7f8f585323b3b4da7e706cb2e6e9f96"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/route_reference.json",
+      "bytes": 8412,
+      "sha256": "a7276ce05ec92621bf318be6c07feadc36ba462a24c685735b1505f2d9c468bf"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/route_result.json",
+      "bytes": 3577,
+      "sha256": "b58a47834bc113f79c7793cd038bc087b596ff0be6894c15f4aa66a0af50bfed"
+    },
+    {
+      "path": "pursuit-seed0/attempts/27494/1/trajectories.jsonl",
+      "bytes": 119642,
+      "sha256": "a75e20bdef86daeab6ac7243326cab4cdd5d32530158a0849a046126d2d4c930"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/agent_config.json",
+      "bytes": 380,
+      "sha256": "c07142b1dad595ee8fb9d641ba0afbdadd3bfc6e7b937081bdefc33e03e6a643"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/attempt.json",
+      "bytes": 2805,
+      "sha256": "1720a7c67848bc2145cd7571082a9154f04092692e7dea80a4833a1813d1ef9b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/control.jsonl",
+      "bytes": 372062,
+      "sha256": "5361799a50c41bf2cb0b0439392c7556af15bc14442af9c8be0c83ece03c5c64"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/criterion_events.json",
+      "bytes": 3016,
+      "sha256": "c723a67c43302b90d757c2f17fe19b4f9628898c88dd3c920b16237036cb309b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "e4e353175ec7f84d05fd597f109105fb665e772d32ba713f3d3033816f89a3f6"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/results.json",
+      "bytes": 5446,
+      "sha256": "ed98835401cb9e4e3ee829ee5bd206f00d1fe57bc8086046e877043d7c7a0da8"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/route.log",
+      "bytes": 4023,
+      "sha256": "91367d00b247b9a4b6439e42d413ac4c239162722e11360010d8d8e08fb38523"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/route.pid",
+      "bytes": 6,
+      "sha256": "842c932783f4b93fce4206cdfe7ba2b22ee60eafaba27fe67e0e1367c8340d9b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/route_reference.json",
+      "bytes": 10546,
+      "sha256": "baecb111c1540dfda53034a9ac83baeb581a2d9dc7294fc2466e149c89adcf34"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/route_result.json",
+      "bytes": 3575,
+      "sha256": "76dc67b120811e95b9ebae3fefcb39b99019a9e21cd2f4d787069d5760f7351e"
+    },
+    {
+      "path": "pursuit-seed0/attempts/28198/1/trajectories.jsonl",
+      "bytes": 64285,
+      "sha256": "756bb31e79e1a69305720bf82fb50837dda452845cdf6a72ab0ab8f539206765"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/agent_config.json",
+      "bytes": 379,
+      "sha256": "801cd73fa7245355b74db6ed2adac0776bf22b62ca5875da042c2a1cbcf63085"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/attempt.json",
+      "bytes": 2802,
+      "sha256": "107f062c5d24386713d2ffabe6c88565453f607d5d760c20e4e151806f45ecfd"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/control.jsonl",
+      "bytes": 947957,
+      "sha256": "d149a9479f091e18540f2e1d41b88de870317b58cab8e7977acaa47b98b69b9b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/criterion_events.json",
+      "bytes": 3718,
+      "sha256": "eace671578092c9bc85e18a527e34010dfb05237a6babfcf7aba78a5638e6e8a"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "149a6a806c50b268c4c25013e8547d15457cdab6db9216df8378f6e55a6f304f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/results.json",
+      "bytes": 5964,
+      "sha256": "7853d171fa8995f381b6cfc5e6d3b52badcc0f31f7c472d00faf3bc39ec592e7"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/route.log",
+      "bytes": 3770,
+      "sha256": "dec3c8a7861774b0f2a065e1316764007062265834716f25cf235c6e7345b887"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/route.pid",
+      "bytes": 6,
+      "sha256": "f0c2b1faedb81d531869dd48328ef5174ff5e5fc2b2b116c8261712294f820c3"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/route_reference.json",
+      "bytes": 15056,
+      "sha256": "4722cd81442c3ca6ca84a507ecfaeebc9f90fc939936945a7064332239ce8b73"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/route_result.json",
+      "bytes": 3572,
+      "sha256": "aa04bdcf439cf4ab0d65e3be5a201f8e541d01742eaea86c8702aa1094ea9b1e"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3255/1/trajectories.jsonl",
+      "bytes": 178899,
+      "sha256": "efec31c5673d6f4a4ad60e0f0c5333e5c3dc0ee0bb76d4e6fb75060646c27310"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/agent_config.json",
+      "bytes": 379,
+      "sha256": "ecbf2e092333d8dfaa94720f627dfdab47f22fe4e876e807e46a291bd5e1ed50"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/attempt.json",
+      "bytes": 2802,
+      "sha256": "1800ded22e82634cc12f53253653b0f6a77dbcb42ab5f1b423835948ef0aa2d2"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/control.jsonl",
+      "bytes": 565024,
+      "sha256": "e0617c27214b34b684f7c9ad11f3bf2435cb778ec39aa2cd6cb8b02d76caade1"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/criterion_events.json",
+      "bytes": 3182,
+      "sha256": "de737ca356555a103a342e688093b00cae51c1029373efb072d2d4774f0a8924"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "d0ea4d4719589cc96173d98470c4746ea2cc05d5738fe98f3526d8c47226024d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/results.json",
+      "bytes": 5534,
+      "sha256": "936df4082bd1ebe4f3dd15f32a5a7d751a5c6a6a04eae66e4ca5cc3eefc8f171"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/route.log",
+      "bytes": 3973,
+      "sha256": "66fa5934ec772131566bc2b89b6996166e4bc03a7734b94f7e3519b7e6c4fb28"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/route.pid",
+      "bytes": 6,
+      "sha256": "d5d9f43693b1aeae88196bbf251ba3695053bc1bbdf38b42cee751502e46bdc2"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/route_reference.json",
+      "bytes": 16934,
+      "sha256": "7da5fb0778f4cc75a1d4270db2a5daab207fe0f94ce353c6eef36bdff3a3834b"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/route_result.json",
+      "bytes": 3573,
+      "sha256": "78eb52e149eeaf6dc192986a810a5228849c48dc9467995fe77384d1f3c247b7"
+    },
+    {
+      "path": "pursuit-seed0/attempts/3514/1/trajectories.jsonl",
+      "bytes": 103849,
+      "sha256": "80c459e69082d85413ffc2d6f359540def5f2bc13ab63727ed07ebb93bcec09a"
+    },
+    {
+      "path": "pursuit-seed0/controller-report.json",
+      "bytes": 177719,
+      "sha256": "e9967038946d92539db7960a2ed37dbd50b5c87f34a9c38f81d7e9fcd74e2064"
+    },
+    {
+      "path": "pursuit-seed0/done/17569.json",
+      "bytes": 3790,
+      "sha256": "7a441961a646a35a30d56ea274034e04c73ac0376567eec5e4094c062bfb4a02"
+    },
+    {
+      "path": "pursuit-seed0/done/2091.json",
+      "bytes": 3783,
+      "sha256": "f915dc9e1ea2a56be3cbc1b428d9065fa03eebe5439709e1c8b9209fb490484d"
+    },
+    {
+      "path": "pursuit-seed0/done/25378.json",
+      "bytes": 3785,
+      "sha256": "762def6ac3a8755cde20603081ee3b9099a5267cfa1545b549f756cee73fff84"
+    },
+    {
+      "path": "pursuit-seed0/done/25381.json",
+      "bytes": 3787,
+      "sha256": "5c0543d9cbd81532a2f02b00ed311e58133e6ff39966da5d4fe0054831ebef96"
+    },
+    {
+      "path": "pursuit-seed0/done/25424.json",
+      "bytes": 3789,
+      "sha256": "181117371a07094047ee764ebb74b593d897ce9241d955f3d6584460bb5a76a2"
+    },
+    {
+      "path": "pursuit-seed0/done/26405.json",
+      "bytes": 3782,
+      "sha256": "91076cc8cca26066ff8430ecbbc3b714f78b390024c7b06672994c63e1c6240a"
+    },
+    {
+      "path": "pursuit-seed0/done/27494.json",
+      "bytes": 3789,
+      "sha256": "650e7983086831beeb2baa2122ec7b68da9c12363c85241c366a0e9bc74b7570"
+    },
+    {
+      "path": "pursuit-seed0/done/28198.json",
+      "bytes": 3787,
+      "sha256": "1ff326daf889194abccb658301f0f1d27daef0315b6f474aebbb148888eebf5c"
+    },
+    {
+      "path": "pursuit-seed0/done/3255.json",
+      "bytes": 3783,
+      "sha256": "6c1ab84b53879f1ff7af20120588ce599835f3831fe44d6822613e6d0cf93102"
+    },
+    {
+      "path": "pursuit-seed0/done/3514.json",
+      "bytes": 3784,
+      "sha256": "080d6c54c3425ef1b5572e09024f2e3d554a146c5b8b6132ef3f399d317b36af"
+    },
+    {
+      "path": "pursuit-seed0/events.jsonl",
+      "bytes": 3666,
+      "sha256": "0d8edf4038bb72c5fbb6344492071020fca8af044d686c27d04ae5b50b83c228"
+    },
+    {
+      "path": "pursuit-seed0/invocations/1790084881203883-142481.json",
+      "bytes": 1729,
+      "sha256": "fb6ad166f7f52b39472b7d51e20512f343f3bf1d01d2a0caafeb25435b65b107"
+    },
+    {
+      "path": "pursuit-seed0/report.txt",
+      "bytes": 1911,
+      "sha256": "f7466fe666eaef2a14095b1222f3c64f7fef28c5053886a85fb306f7a30f1ce7"
+    },
+    {
+      "path": "pursuit-seed0/summary.json",
+      "bytes": 2812,
+      "sha256": "3c307ec1553a816babeef436c609496e232d2606ef469e2e756f522f42f95c04"
+    },
+    {
+      "path": "servers/carla-74-1.log",
+      "bytes": 1606,
+      "sha256": "9c005954fd55aa890b06bd29d0e4eec42bc04c09b1e1df03103ba815869d385e"
+    },
+    {
+      "path": "servers/carla-74.pid",
+      "bytes": 6,
+      "sha256": "ad826d20c41a1fe4da7273687db4343e1475729b90667323dd055af06983ea31"
+    },
+    {
+      "path": "servers/carla-75-2.log",
+      "bytes": 746,
+      "sha256": "feac6e7335c97f2c59f9bff0a32b47a56e52099c2ed7974128583cbae52cd49f"
+    },
+    {
+      "path": "servers/carla-75.pid",
+      "bytes": 6,
+      "sha256": "602c52008fad317fa48ba8461590b51089bf61b3fdff2af6f61b24a9fbe78964"
+    },
+    {
+      "path": "tcp-seed0/all-attempts.csv",
+      "bytes": 24249,
+      "sha256": "38ad76bf8a33662dc14a1e537114f9cad0f48fcd77aaf9098e0d037d73bf777b"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "3e5b60f676cb4066b086efe679ddd8e84b81e3aa82485c72fdd1536d796118c2"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/attempt.json",
+      "bytes": 2794,
+      "sha256": "08e8ee7b713cac25ffb76d2874cd00cefcd6e91bcbac6fe38ab76bf980be2881"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/control.jsonl",
+      "bytes": 444858,
+      "sha256": "82cff1c2dea8b5c00807f8469c495dddef387ef2669501ba2e8824fdca15d27f"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/criterion_events.json",
+      "bytes": 3242,
+      "sha256": "5bc5b68f4f39c79c010a6ae5cb6bd38e36ff18e4ea1f5b277e7f75895cdf011f"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "2aeca8b6e7a119a7a0bc11a5c4977f94eb91932984e237ebb10eaa109e55e49a"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/results.json",
+      "bytes": 5624,
+      "sha256": "f21ee565b82be49b1d69dee9579856f7c50e5048815b46c34beb2eeb05a49eea"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/route.log",
+      "bytes": 3977,
+      "sha256": "6cd52326943f6e0c6a417854f4324a7e309a87d410d6dedd0ff43065934a3074"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/route.pid",
+      "bytes": 6,
+      "sha256": "570dc3276788d57e7fd6f9917003b6b5774d6388552e5a65aa32cb7ff33a356c"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/route_reference.json",
+      "bytes": 13625,
+      "sha256": "f54d6073a126c1dfbbda309b62f7916245ccffde31e2160844b66de7fb9ba632"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/route_result.json",
+      "bytes": 3568,
+      "sha256": "bd260d3f0f76c519c11362fd28d61346d0daadfbde826c532c81d3e53761deaa"
+    },
+    {
+      "path": "tcp-seed0/attempts/17569/1/trajectories.jsonl",
+      "bytes": 82190,
+      "sha256": "3eed09d8b49a38e6e5036fbf609f3f86e029bdc4ee5f6ed8a8772d5d107eb872"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/agent_config.json",
+      "bytes": 371,
+      "sha256": "f358b9566619c4b649dd74d64283b7bb761771dcb4207ef353387f9924278b98"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/attempt.json",
+      "bytes": 2796,
+      "sha256": "f4b51d5b49da0006b00eae89ffe60db12054e04f0925261a7eadcd6fd8a7fa1e"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/control.jsonl",
+      "bytes": 5249862,
+      "sha256": "30d786a835613028debd2d9bf97a83c20b23512456ad60b4a104532dafd6059e"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/criterion_events.json",
+      "bytes": 3938,
+      "sha256": "b6b61529d2e70646e2b66dc3713e55ce6a88f9ccec2c3e9c6f1fd5a6719ac40d"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "3a8008771b899ee45c174e4fb13478362f5835b81d4854114e3be0652b9732b8"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/results.json",
+      "bytes": 6158,
+      "sha256": "36fe1db79e6715c9308f71f92d6a3b492481731e60e9a620143cc0fbb8400881"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/route.log",
+      "bytes": 4489,
+      "sha256": "5b5645d07143306fd636885cf7ad196c718c2fda4e25eaa94f42ec61feb5a279"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/route.pid",
+      "bytes": 6,
+      "sha256": "f91c39c44040c7ca03ebebcb8e6de66c8543a20e2166e5906a59dc5066854ed2"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/route_reference.json",
+      "bytes": 8578,
+      "sha256": "9e292ecc11d3da0ad0cd49a508bd37151f2dcd3a1b3e199f18a3ed3bd5270c96"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/route_result.json",
+      "bytes": 3569,
+      "sha256": "e182b9b7f9579df58963cbb81699ab0cfb3b4581a8012fd830c62c9878abc5e5"
+    },
+    {
+      "path": "tcp-seed0/attempts/2091/1/trajectories.jsonl",
+      "bytes": 972203,
+      "sha256": "222ecd23815d8ab6429a519f01f931c9552b804f5461024535d3b3e5e2ae1fcd"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "5bcfc020f91fa9dd6d09ab93cf8e26e17e03c82ede9c9131e7bb58382bf2223a"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/attempt.json",
+      "bytes": 2796,
+      "sha256": "b1364b12d649dc7885190178964ac118c5351240856d0d9f45e866723cc013e1"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/control.jsonl",
+      "bytes": 419185,
+      "sha256": "909cd1d826f504bc597ac1507435c6513dcc6a9c7209c9f82845f62bb8947580"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/criterion_events.json",
+      "bytes": 2976,
+      "sha256": "ef11aec7b575f3dbd4460150c104fb4155f3f9111b52593149027993f80c507c"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "3f44c817ecf988a14f4b4b50df8636395acb82d237146e614a8608775641127e"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/results.json",
+      "bytes": 5390,
+      "sha256": "a80be1efb23a665784017da7f559f9ce5fe04e7562b79c5fa37c78fb6b8f0967"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/route.log",
+      "bytes": 4211,
+      "sha256": "6e1f5bb9f51a4cae0d4ccf2d11d0c134c2c1272fc9acf79a6442cdd602fba0d0"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/route.pid",
+      "bytes": 6,
+      "sha256": "03bbe3d8cb51934a705dc3642c0fd8af8f9a51594b080c55e4cc49df8a9d0839"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/route_reference.json",
+      "bytes": 10829,
+      "sha256": "f69c85710aa1c0655050547f5cb9cbd933ea57e0d0a15a9967845e9feb995c7f"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/route_result.json",
+      "bytes": 3567,
+      "sha256": "97ffc05e86d4da8a92bbbcd856ba060ef0b92cae295fe925c065a5f026eb950e"
+    },
+    {
+      "path": "tcp-seed0/attempts/25378/1/trajectories.jsonl",
+      "bytes": 74695,
+      "sha256": "7957ec06e904afeccefd9635821bc937d68eab888a687fafd995c6f69a7dbbc4"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "3226f33baf4111ef496a847657e336191cc24165f085a42bc6db1e90881120b4"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/attempt.json",
+      "bytes": 2796,
+      "sha256": "ec14c7eea21b82d2445e760f68893fbd3134b709c92ce667a55d685483a3e676"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/control.jsonl",
+      "bytes": 568802,
+      "sha256": "0f5cab3aa68289d24fab35a4c7b5a60419477b443acec19d27c7f227fa8f572a"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/criterion_events.json",
+      "bytes": 3205,
+      "sha256": "dff16cc88292d53e75540ea0c2659c93acff0975c14e5bf855de1800ad7d2a39"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "2209b8d2ac25db7e461e2f130dffa548c5bc5bc1915cb15a6de1e2ed345dbcb4"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/results.json",
+      "bytes": 5546,
+      "sha256": "fa2c5eb4ec5d84b38253f3fcd399381f5e1b0eddaac69033748af46519512330"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/route.log",
+      "bytes": 3976,
+      "sha256": "2c335ae4a5704fa76c53ef1aff874f6524b57ddc811f19789a8d16f190113582"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/route.pid",
+      "bytes": 6,
+      "sha256": "737e7d05d3bf141840ea6bad8d4d3c5a9f3588cd2c865abee9fb44a136300caf"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/route_reference.json",
+      "bytes": 18763,
+      "sha256": "4a441ac4cff4867af1a673570d9309a7fdaf8de4a7bce0a2b17996c8891cb6a4"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/route_result.json",
+      "bytes": 3567,
+      "sha256": "41e852662df1b0da842d37f70f7c15179a1e33830217eae5f9119cad0a9a87c8"
+    },
+    {
+      "path": "tcp-seed0/attempts/25381/1/trajectories.jsonl",
+      "bytes": 100101,
+      "sha256": "18cd22f55fb046dd565fa437cc8457f48a88e5bf89019421997d1bd3316c421e"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "21d308f8478f1780d809720bc35b02d9928ffb5dd759e1065b1210c911be9040"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/attempt.json",
+      "bytes": 2800,
+      "sha256": "db62f1f2adf42bd92cca7b814d405eb38672be8f7ac760203c6b88558894cba0"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/control.jsonl",
+      "bytes": 5467119,
+      "sha256": "c73c34d801340b9e5f30d1d7fcdea2e58e3f4b08c034ff61555ace6b65cc6541"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/criterion_events.json",
+      "bytes": 1475,
+      "sha256": "2be1a3d4d464df03f04d16714add5d2c59c0db6623320234f2170f4f345c6531"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "de62cbfa666f8b0cb0bcc10ccc83ee30dd3620c97fb8939c215e99175d85f33e"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/results.json",
+      "bytes": 4760,
+      "sha256": "cbb56656a95a6b9e5f99300ed6aaf72e07e197083ac5aaa640b243aa63aaf1fe"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/route.log",
+      "bytes": 3929,
+      "sha256": "a3f795a2a48325eceed14565a3531c7864d9c44701382313cd078ce6d592ba3d"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/route.pid",
+      "bytes": 6,
+      "sha256": "8bef4210291abbc082f42f85fbf57823db3fec55d52bcf123b44f4e6540398a0"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/route_reference.json",
+      "bytes": 10134,
+      "sha256": "0bc58aa67f539472046f36859b5eb9128a9633db68ae74c36ee9dffb797b0e34"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/route_result.json",
+      "bytes": 3572,
+      "sha256": "ec520eef82964e91a2caa023d8a29aa9955fa300aa85d0cc2e81bd6c77b53d72"
+    },
+    {
+      "path": "tcp-seed0/attempts/25424/1/trajectories.jsonl",
+      "bytes": 1029674,
+      "sha256": "69ca5d0a4fec2517e0628baaefafe54dab5fe18b6b24a6683a3f3fb7fef1ff9a"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "e10ed2e7606b40791055d3ec010aafa018f742de816a76329ae2cd0821e452cc"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/attempt.json",
+      "bytes": 2797,
+      "sha256": "88a9e965f1adce90ef2f2839e5e72f159fab8bc0cce4cf247af5f16bcc0b00ec"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/control.jsonl",
+      "bytes": 551161,
+      "sha256": "3776a7076b508939959fe4c393f43ba838e8c58fe49cafd8fd47aa7d6d34996b"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/criterion_events.json",
+      "bytes": 2726,
+      "sha256": "32f2ebd308e9c68cd49f167834dce66881615c7de2a29fabaf7473dd7bc23ca9"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "a1b80fedbb3b81f601e6dc27a8a61e39751a3fdf6ea932e393714dd338e2c91d"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/results.json",
+      "bytes": 5206,
+      "sha256": "77dd798d3ef57b206bbed862322c5f14574e80dce90e54e9ce16f28edc34cd15"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/route.log",
+      "bytes": 3773,
+      "sha256": "e5d1c2a60c9dd06efab062767b1908fb7cad221e14b6bb60a92b003e4a139444"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/route.pid",
+      "bytes": 6,
+      "sha256": "1157035a975a4bc49cb09428786c870ebc9dd6b7d76b54f97f1dfd90e93e73f9"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/route_reference.json",
+      "bytes": 9223,
+      "sha256": "7bcd7175783175405f73efdd9f27e952599a48fbdf6152eb7735ee08a29f1540"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/route_result.json",
+      "bytes": 3565,
+      "sha256": "7eee501ea7e64646e37d72310b277794a8f97d76acb422d363035328e998b3a6"
+    },
+    {
+      "path": "tcp-seed0/attempts/26405/1/trajectories.jsonl",
+      "bytes": 98226,
+      "sha256": "1587bbb82934411eaa36bfd2bbe04ed46018af2b99f500ff025e3132787391fc"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "4ec6fbf3212cd88842f6b9c7aa9a9aed7324e60080236578577720ff94d5f2a5"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/attempt.json",
+      "bytes": 323,
+      "sha256": "edb90bc151c0dd98ab5383834ca32c6f87f434dd3585ee0d26e466992718da78"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/control.jsonl",
+      "bytes": 17033,
+      "sha256": "2df011982349f59f3f02928071291629cd3e71a3502f7b745b3b608873b798da"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/heartbeat.json",
+      "bytes": 37,
+      "sha256": "2fa51ab7d371fcab99e4da7221a6c4ef0bde41bbcbc38667a1da31f217db9812"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/results.json",
+      "bytes": 400,
+      "sha256": "9c1ca0155aeebf6cd96b9d9887eadee13e3e0fb6d8b541d5613277f390bc598c"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/route.log",
+      "bytes": 161,
+      "sha256": "50b5601f952f1267bbd2c31485819d1d3a583da36abb2d9dafd378b6d3477d13"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/route.pid",
+      "bytes": 6,
+      "sha256": "5e280e669e89aeb45647f60d49e5296583818f7e908a545e395f1bff703b5a77"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/route_reference.json",
+      "bytes": 8412,
+      "sha256": "a7276ce05ec92621bf318be6c07feadc36ba462a24c685735b1505f2d9c468bf"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/1/trajectories.jsonl",
+      "bytes": 3029,
+      "sha256": "a763f0c05a28a182b2a785a05cabb4fe2eb7614d3e4f49a1ee05f1690c94d49a"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/agent_config.json",
+      "bytes": 372,
+      "sha256": "c13cd3cb6dece2fa92a4f41ca55337cb22e048c9c62d9855634b686941b0960d"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/attempt.json",
+      "bytes": 2795,
+      "sha256": "a723247ea18c3ea3e565cc16b9bfd501ab44f6e030d462e754b489d1f6e6ccb8"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/control.jsonl",
+      "bytes": 664235,
+      "sha256": "b43ffaf7a8e644523dae8a0c2d04dd1111d769d7d811850c9732e3851096f86c"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/criterion_events.json",
+      "bytes": 2737,
+      "sha256": "392f17fecd7cc2b581e96eb0fcdc53065d8b499e48eaeca130fa0033e12a9e65"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/heartbeat.json",
+      "bytes": 39,
+      "sha256": "470e1ebf718a30bccd368497c1c14b42f813a5aca93a3332067937a5b4c9feae"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/results.json",
+      "bytes": 5295,
+      "sha256": "124c4e81b99bdf550b718cfa93674f8cb2a72bcddcb16b7f4e37e4428c73fbf9"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/route.log",
+      "bytes": 5175,
+      "sha256": "f99583fc512a46d0442bfb9e5a7f292f4a32ef70c156c8c5ada74dbdaaceba7c"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/route.pid",
+      "bytes": 6,
+      "sha256": "63079ec0d1a321595646814664ba357588a0b02774dc57d37bde7d74e5a86a01"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/route_reference.json",
+      "bytes": 8412,
+      "sha256": "a7276ce05ec92621bf318be6c07feadc36ba462a24c685735b1505f2d9c468bf"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/route_result.json",
+      "bytes": 3564,
+      "sha256": "968478f57794c49b2293bbc334ae4aebbc6a0d0ca9d39bb62bb681d5c43da710"
+    },
+    {
+      "path": "tcp-seed0/attempts/27494/2/trajectories.jsonl",
+      "bytes": 118724,
+      "sha256": "6ced2345e74400274b6c1929835bfd7a98cd575c434b30c0b8a2137d2bbef8eb"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/agent_config.json",
+      "bytes": 372,
+      "sha256": "2473fc71de8a9d8b3e56429f48601e8a0114ac0bffa543724477f3659e7ff475"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/attempt.json",
+      "bytes": 2795,
+      "sha256": "f84cdf74bdc4610cd92ced2ee4472f46fd0235bdb44d42422366886641af8d61"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/control.jsonl",
+      "bytes": 363748,
+      "sha256": "6024d08e3b0bfe3214958b31e7c9fc2e2f6f6e1d633d4f031fe6a038014ff867"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/criterion_events.json",
+      "bytes": 2995,
+      "sha256": "62629ac7f2a0339a07375206d02b305121d042b4b8f2231f8da9a6f38279e4d9"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/heartbeat.json",
+      "bytes": 38,
+      "sha256": "10163a7a6b0f44325eedce09c493508e22b806131ea6fed58df263c7c43e61f3"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/results.json",
+      "bytes": 5445,
+      "sha256": "a86e14dbbc0d1f207e6d9a60c7cf1101f53763844b06936134b1baa11d5ceb50"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/route.log",
+      "bytes": 4023,
+      "sha256": "25d4d42f70fc87685932c680541cd6304c3445e91877b309d484651de424fb09"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/route.pid",
+      "bytes": 6,
+      "sha256": "f3a88f69ad587372fbbd25f2341a0d2b1c00e1c8238cececaf5d3a6b6747ca72"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/route_reference.json",
+      "bytes": 10546,
+      "sha256": "baecb111c1540dfda53034a9ac83baeb581a2d9dc7294fc2466e149c89adcf34"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/route_result.json",
+      "bytes": 3566,
+      "sha256": "0809206a1c495c3b7e070ec6be180f6b13153485fa98e7f27b13a5d7e3b5d4d6"
+    },
+    {
+      "path": "tcp-seed0/attempts/28198/1/trajectories.jsonl",
+      "bytes": 64149,
+      "sha256": "63a02d955a51bf37567ac417c7148f21747a6f2741c46cbd931d788ef58e9119"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/agent_config.json",
+      "bytes": 371,
+      "sha256": "fd82ee3805c23dff5d81d63837357a1576e1381f8455a5a8014f2c651da8094b"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/attempt.json",
+      "bytes": 2793,
+      "sha256": "d63677f1e92c15541c1e6907ec97c1510efb855074c62b8953eaf907cf481e7e"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/control.jsonl",
+      "bytes": 942169,
+      "sha256": "28a102fb0f0f5bf30eb90effc6c598fd6c7d7fb7d86305a479153f5fa40f2c8e"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/criterion_events.json",
+      "bytes": 3742,
+      "sha256": "124fc1a014f7667809a769a54167e657fb3bba60d8b0fd96f343fe202d40fd9a"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "57ca76ebad29fb8fc96535d13c280f2e56d25ae60c651b7ea8897589408f56e2"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/results.json",
+      "bytes": 5962,
+      "sha256": "30df5ce8253dea4866cfb516c97e69b8638ab5886515f24e94f35df0bd6d6e92"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/route.log",
+      "bytes": 3770,
+      "sha256": "0b0be4c06f818a67b054ddeecf55d41e4435ec289c75bd4a0b307022e60bedf0"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/route.pid",
+      "bytes": 6,
+      "sha256": "764e5e7e5aa14ff63715a54ff91b93c0e7a72a6ff1284ed58cfc056bd6b6bf7b"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/route_reference.json",
+      "bytes": 15056,
+      "sha256": "4722cd81442c3ca6ca84a507ecfaeebc9f90fc939936945a7064332239ce8b73"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/route_result.json",
+      "bytes": 3562,
+      "sha256": "71ad6a0e6669a49eadd0fd02b63f1ce79bc0cab0be5ca0c3bcda2dc9ffeaf0d2"
+    },
+    {
+      "path": "tcp-seed0/attempts/3255/1/trajectories.jsonl",
+      "bytes": 176330,
+      "sha256": "4e139dc4c5547e4d841e1d385674c20eb5e8632e9d0f300ae539a05c1db80362"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/agent_config.json",
+      "bytes": 371,
+      "sha256": "359cbbd7e51c6767e9db3fbcb7c2851ae39290b3b555ab7d374120e43e7e5ce6"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/attempt.json",
+      "bytes": 2795,
+      "sha256": "9b105b68fbdf915e26594122e8bab310a25fa4209994cecda89c597599cb761a"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/control.jsonl",
+      "bytes": 675618,
+      "sha256": "9ea38ab2b5aef04a1a39b36830e3e19c08ecfb3ea5008e2dc590544c4b11f58b"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/criterion_events.json",
+      "bytes": 3205,
+      "sha256": "a55944c624a857e021dd0f7b50a0ba1e15db311429547df4a0e313730e6dee35"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "1f75b46a95bdaf83a8f7328638565eeca89e05fbced9109d616d083d166cdc3a"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/results.json",
+      "bytes": 5535,
+      "sha256": "65b496cb89827291e0a87dd111b82a3f6a00030ff9cf804245c7c1d52679bc5f"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/route.log",
+      "bytes": 3973,
+      "sha256": "0275acb332dbb1ac02709c2e067b1985ba40ea27438a95bb2bc865586df37068"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/route.pid",
+      "bytes": 6,
+      "sha256": "008f4edd3903973e0a11368d37b0aafd57c9befc577e276f117a5cb201dfc215"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/route_reference.json",
+      "bytes": 16934,
+      "sha256": "7da5fb0778f4cc75a1d4270db2a5daab207fe0f94ce353c6eef36bdff3a3834b"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/route_result.json",
+      "bytes": 3565,
+      "sha256": "e3ecb1d75736f1006184c970fee6cabf03ee42a257d90f4297d2b13b6f0dae34"
+    },
+    {
+      "path": "tcp-seed0/attempts/3514/1/trajectories.jsonl",
+      "bytes": 123297,
+      "sha256": "8b9a3ebb42c24271b32826002763021bce7c15fb6f98367faf452da043095748"
+    },
+    {
+      "path": "tcp-seed0/controller-report.json",
+      "bytes": 185623,
+      "sha256": "b918ddae373040d4c8a3680315e6d4fbd704a1425186b668d8d9a5b87306b0fc"
+    },
+    {
+      "path": "tcp-seed0/done/17569.json",
+      "bytes": 3778,
+      "sha256": "afa36f5656743b2d66eec31f905a4a0110c6edf2939f7edc74326cb31e3488d8"
+    },
+    {
+      "path": "tcp-seed0/done/2091.json",
+      "bytes": 3782,
+      "sha256": "540fe3b86d445feaba5e17a5403c1392c9287f387c99d71dd9ec700d6fdde038"
+    },
+    {
+      "path": "tcp-seed0/done/25378.json",
+      "bytes": 3779,
+      "sha256": "dca8d7f5833a1dd63ea3fbd8f788f79b6c6d51977efac19f998b2ac3fd794ae6"
+    },
+    {
+      "path": "tcp-seed0/done/25381.json",
+      "bytes": 3779,
+      "sha256": "8a9845ff6384a1a927ba9500c3dd1e9678ab55d78ceeca7529751de0746565fa"
+    },
+    {
+      "path": "tcp-seed0/done/25424.json",
+      "bytes": 3785,
+      "sha256": "a030f82591bbb39eb9b7896f9c2c5d425cc3fecfff5f90650e21c6719b2151d0"
+    },
+    {
+      "path": "tcp-seed0/done/26405.json",
+      "bytes": 3777,
+      "sha256": "8b946038a6066609e6ed4fc681e9108f9ace3116b530e9c411945364aac37901"
+    },
+    {
+      "path": "tcp-seed0/done/27494.json",
+      "bytes": 3774,
+      "sha256": "83036183f4c93a93c52ef0c97b1f3d972ce1394a10a34fff3e1a5404967d7486"
+    },
+    {
+      "path": "tcp-seed0/done/28198.json",
+      "bytes": 3776,
+      "sha256": "df37265791d5e04efcf30871321cba9b1deb7d74cc456e6b0217310a25223b28"
+    },
+    {
+      "path": "tcp-seed0/done/3255.json",
+      "bytes": 3774,
+      "sha256": "a54b3d2155e75e011a5ef3e188021abaf99acdadc856660bf83a4c8192145589"
+    },
+    {
+      "path": "tcp-seed0/done/3514.json",
+      "bytes": 3777,
+      "sha256": "d312150882298c6bacdbd0b53523d7acbdbed54814bf9fcbf7b673322faf057b"
+    },
+    {
+      "path": "tcp-seed0/events.jsonl",
+      "bytes": 4177,
+      "sha256": "e3c18bf0360546d51503ccd85099528bb28ae56b673c9f595fcc7e8f85df7076"
+    },
+    {
+      "path": "tcp-seed0/invocations/1790084502237427-142481.json",
+      "bytes": 1721,
+      "sha256": "8999315213a1d18ab1ab354c7e411356a53343e978d4415c5f68d4aaec3fcf8e"
+    },
+    {
+      "path": "tcp-seed0/report.txt",
+      "bytes": 1924,
+      "sha256": "90c8b91c0daddf31f39ec1c480aa4ca2423628919cd4e05941d9af07a6df49ee"
+    },
+    {
+      "path": "tcp-seed0/summary.json",
+      "bytes": 3091,
+      "sha256": "826e22ef3ec83732cede9719f3c733e8695b84e248cf7449d860cf5cb2162430"
+    }
+  ],
+  "file_count": 435,
+  "total_bytes": 56412296
+}

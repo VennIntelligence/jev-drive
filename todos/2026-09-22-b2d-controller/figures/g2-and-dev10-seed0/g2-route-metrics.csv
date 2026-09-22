@@ -1,0 +1,13 @@
+route_id,preset,town,status,gate_pass,failed_gates,cross_track_rms_m,cross_track_p95_m,pose_p90_m,raw_pose_p90_m,ticks,source
+1773,carla,Town12,completed,True,,0.03985076788006684,0.07011572143872641,0.18877005653276735,1.171544479411093,534,/data/runs/b2d/controller/development3/summary.json
+1773,tcp,Town12,completed,True,,0.11008515728879159,0.2377481284309077,0.19526662250781515,1.174227915067728,532,/data/runs/b2d/controller/development3/summary.json
+1773,pursuit,Town12,completed,True,,0.045859338471581794,0.07787807730976283,0.19116324310587457,1.1715316659492445,534,/data/runs/b2d/controller/development3/summary.json
+24240,carla,Town10HD,completed,True,,0.12849802391582105,0.24177870418570085,0.1698300829883922,1.170607630889327,454,/data/runs/b2d/controller/development3/summary.json
+24240,tcp,Town10HD,completed,True,,0.16460395154790755,0.36394688117440704,0.1706840354009519,1.1722617303101732,453,/data/runs/b2d/controller/development3/summary.json
+24240,pursuit,Town10HD,completed,True,,0.09932043651723829,0.17692864701481367,0.16736296332808748,1.1722641022619842,453,/data/runs/b2d/controller/development3/summary.json
+26966,carla,Town05,completed,True,,0.2014797465633913,0.4414657699470773,0.3656607567100399,1.156227504932216,392,/data/runs/b2d/controller/development3/summary.json
+26966,tcp,Town05,completed,False,full_lateral_rms;full_lateral_p95;cruise_speed,0.7027817917414994,1.5253825283157498,0.4242393045593081,1.1737000516843528,382,/data/runs/b2d/controller/development3/summary.json
+26966,pursuit,Town05,completed,True,,0.3422457596555988,0.9827232620898847,0.3922940831806071,1.171844467631483,393,/data/runs/b2d/controller/development3/summary.json
+25854,carla,Town03,completed,True,,0.1144271726507664,0.2700785345833077,0.18817725095124765,1.1756585846935603,530,/data/runs/b2d/controller/development3/summary.json
+25854,tcp,Town03,completed,True,,0.12402418595827001,0.27823544080620044,0.1917051964302452,1.1757603874590243,529,/data/runs/b2d/controller/development3/summary.json
+25854,pursuit,Town03,completed,True,,0.11126470588197433,0.2534353691369422,0.18858133499033847,1.1677569817998705,537,/data/runs/b2d/controller/development3/summary.json

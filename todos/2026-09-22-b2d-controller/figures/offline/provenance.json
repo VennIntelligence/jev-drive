@@ -1,0 +1,16 @@
+{
+  "trace_directory": "/data/runs/b2d/controller/offline-traced",
+  "trace_case_ids": [
+    "011-stop-f53d438afb9e4f7c",
+    "012-stop-9511a8a309642799",
+    "038-circle-a45a37d277bd9dac",
+    "039-circle-7e0050d339698d5a",
+    "040-circle-54d2b810b89f7d7d",
+    "041-circle-6629f24d75175a5b"
+  ],
+  "input_manifest_sha256": "90e7f80df6493c8a4dd35e66a5c7f67340b417c475ada3cfe843b2929b127626",
+  "script_sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae",
+  "circle_protocol": "6m/s, R20m, left/right, max lookahead, future speed window; only full bearing PID sum differs",
+  "stop_protocol": "same pursuit plant, near vs future window; analytic8m/s then3s deceleration then hold",
+  "source": "Complete previously recorded raw traces; summary RMS copied unchanged from case results."
+}
