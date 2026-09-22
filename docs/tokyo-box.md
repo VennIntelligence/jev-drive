@@ -86,7 +86,7 @@ Clash Verge runs on the desktop: mixed port **7890**, **mode `global`**, externa
 `~/.local/share/io.github.clash-verge-rev.clash-verge-rev/clash-verge.yaml`; it is not written down
 here and must not be committed.
 
-Two things about global mode that cost an hour here:
+Three things about global mode that cost an hour here:
 
 - **In global mode there is no direct traffic.** Everything, including a plain `curl` with no
   proxy variables set, goes through whatever node the `GLOBAL` selector points at, because Clash
@@ -118,6 +118,12 @@ Two things about global mode that cost an hour here:
   12 s benchmark ranks nothing that matters. **Make the downloader rotate the node on every stall**
   (`--speed-limit 300000 --speed-time 15` plus a `PUT` to the selector on each retry) instead of
   picking a winner up front. The "0.01x, good for downloading" nodes were the slowest on offer.
+
+- **GitHub over SSH works only on `DIRECT`.** Every proxy node tried closes port 22
+  (`Connection closed by 198.18.0.7 port 22` — the fake IP gives away that it never left the
+  tunnel). So `git pull` here means setting the selector to `DIRECT` first, where it works fine.
+  Python packages are the opposite case: install from **official PyPI through the proxy**, because
+  in global mode a domestic mirror is routed abroad too and `mirrors.aliyun.com` just times out.
 
 ## CARLA and Bench2Drive on this box
 
