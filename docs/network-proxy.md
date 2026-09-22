@@ -30,36 +30,34 @@ data costs about 120 GB of quota. Check the remaining quota before a bulk transf
 running out also breaks Google OAuth token refresh, which only works through the proxy, and that
 stops a Waymo download from resuming at all.
 
-## The link is not the bottleneck; huggingface_hub's Xet path is (2026-09-22)
+## Turbo is broken for the HF CDN, and a 60 s test lied to me again (2026-09-22)
 
-Measured on one file (`MiniMaxAI/MiniMax-H3` transformer shard 2), 60 s each, both routes:
+Two separate findings; the second one is a warning about this page's own advice.
 
-| route | throughput |
-|---|---:|
-| `source /etc/network_turbo` | **0.15 MB/s** (9 MB in 60 s) |
-| `proxy_on` (Clash), plain `curl` on `resolve/main` | **25.9 MB/s** |
-| `proxy_on`, `huggingface_hub.snapshot_download` | **3 MB/s** |
-| `proxy_on`, `snapshot_download` with `HF_HUB_ENABLE_HF_TRANSFER=1` | **3 MB/s** (no change) |
+**1. `source /etc/network_turbo` is not slow for HuggingFace, it is failing.** Measured against one file
+(`MiniMaxAI/MiniMax-H3` transformer shard 2), 60 s: **0.15 MB/s** (9 MB), with repeated
+`SSL handshake timed out` and `peer closed connection without sending complete message body`.
+`proxy_on` on the same file in the same minute: **25.9 MB/s**. So for HuggingFace, skip step 1 and go
+straight to `proxy_on`; the "turbo first" order above still holds for GitHub.
 
-Three things follow, and the first two contradict what this page said before.
+**2. That 25.9 MB/s was a burst, and I believed it.** Sustained over 90 s, every route settles at the
+same **3 MB/s**:
 
-1. **Turbo is dead for the HF CDN right now**, not merely slower: it fails with repeated
-   `SSL handshake timed out` / `peer closed connection without sending complete message body`.
-   The "try turbo first" order above still holds for GitHub; for HuggingFace, go straight to `proxy_on`.
-2. **The 18 MB/s ceiling is not what a single stream sees today**: one curl got 25.9 MB/s.
-3. **`snapshot_download` is 8x slower than the link on the same route.** The window prints
-   `Reconstructing (incomplete total...)`, which is the **Xet** path, and it keeps restarting transfers.
-   `HF_HUB_DISABLE_XET=1` did **not** suppress it and `hf_transfer` does **not** bypass it.
+| how | 60 s burst | 90 s sustained |
+|---|---:|---:|
+| `proxy_on`, one `curl` on `resolve/main` | **25.9 MB/s** | — |
+| `proxy_on`, four parallel `curl`s | — | **3 MB/s** |
+| `proxy_on`, `snapshot_download` (Xet path) | — | 3 MB/s |
+| `proxy_on`, `snapshot_download` + `HF_HUB_ENABLE_HF_TRANSFER=1` | — | 3 MB/s |
 
-**So do not size a download budget from `du -sh` of the HF cache while `snapshot_download` runs.**
-That is how 25.9 MB/s got written down as "3-5 MB/s" and a 71 GB model got budgeted at 4-6 h.
-For a large model, fetch the files directly instead (`scripts/`-less one-liner kept in the P3 todo):
+**So the downloader is not the bottleneck and the link really is about 3 MB/s under load.** I briefly
+concluded the opposite from the 60 s number and started rewriting the download tooling around it. The
+paragraph three sections down — *"A one-minute test overstates free headroom... for anything running for
+hours, sample at least 90 s after the change has settled"* — already said exactly this. **Read it before
+quoting a throughput number, including one you measured yourself.**
 
-```bash
-curl -sL --fail -C - --retry 5 -o "$out" "https://huggingface.co/$repo/resolve/main/$path"
-```
-
-four at a time, into a plain directory that `from_pretrained` is then pointed at.
+What does follow: size a budget from a 90 s sample, and do not bother swapping `snapshot_download` for
+curl or `hf_transfer` to go faster, because it will not.
 
 ## Sharing the link between jobs
 
