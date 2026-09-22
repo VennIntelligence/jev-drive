@@ -405,7 +405,7 @@ def contact_sheet(d, t, sel, out, name, ncol=4):
                           fontsize=7, pad=2)
             bev.legend(fontsize=5.5, loc="upper left", handlelength=1.2, labelspacing=0.2)
         fig.savefig(out / f"{name}.pdf")                 # vector for the paper
-        fig.savefig(out / f"{name}.png", dpi=110)        # preview: research/figs keeps PNGs under ~500 KB
+        fig.savefig(out / f"{name}.png", dpi=90)         # preview: research/figs keeps PNGs under ~500 KB
         plt.close(fig)
     log.info("wrote %s", out / f"{name}.png")
 
