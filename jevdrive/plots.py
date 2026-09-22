@@ -186,3 +186,43 @@ def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B
         legend_below(fig, axes[0])
         save(fig, out_dir, name)
     return out_dir / f"{name}.png"
+
+
+LADDER_COLOR = [COLOR["qwen_mean"], COLOR["vision"], COLOR["oracle"], COLOR["dinov2"], COLOR["qwen_last"],
+                "#CC79A7", "#56B4E9", "#000000"]
+
+
+def ladder_decile_curve(dec: pd.DataFrame, out_dir, name: str, arms=None, ylim=(48, -16),
+                        directions=((0, "-"), (1, "--"))):
+    """The P2 / P3 version of `l0_decile_curve`, for tables written by jevdrive.waymo_ladder.
+
+    Same figure, different column convention: the ladder writes `decile` as 1-10 and `rel_gain` already in
+    per cent, so neither is shifted or rescaled here. Arms are coloured in the order they are given, with
+    the pooled arm A first so that it reads as the reference curve in every panel.
+
+    What to look at is the *shape*: whether the relative gain stops falling in the top deciles. Decile 10
+    decides nothing -- decision 20 showed with the raters that the logged future is itself contested there.
+    """
+    arms = list(arms or dec.arm.unique())
+    col = {a: LADDER_COLOR[i % len(LADDER_COLOR)] for i, a in enumerate(arms)}
+    with mpl.rc_context(STYLE):
+        fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.4), sharey=True)
+        for ax, scope, title in zip(axes, ("all", "straight_yaw"), ("all frames", "straight frames only")):
+            ax.axhline(0, color=COLOR["baseline"], lw=0.6, zorder=1)
+            for arm in arms:
+                for i, (d, ls) in enumerate(directions):
+                    g = dec[(dec.scope == scope) & (dec.arm == arm) & (dec.direction == d)].sort_values("decile")
+                    if not len(g):
+                        continue
+                    ax.plot(g.decile, g.rel_gain, ls, color=col[arm], marker="o" if not i else None,
+                            label=arm if not i else None)
+                    if not i:
+                        ax.fill_between(g.decile, g.rel_lo, g.rel_hi, color=col[arm], alpha=0.13, lw=0)
+            ax.set_ylim(*ylim)
+            ax.set_xlabel(r"decile of $s_{ego}$ on the evaluation half")
+            ax.set_xticks(range(1, 11))
+            ax.text(0.03, 0.06, title, transform=ax.transAxes)
+        axes[0].set_ylabel("relative gain over ego (%)")
+        legend_below(fig, axes[0], ncol=min(len(arms), 3))
+        save(fig, out_dir, name)
+    return out_dir / f"{name}.png"
