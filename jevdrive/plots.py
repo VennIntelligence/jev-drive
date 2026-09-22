@@ -150,7 +150,8 @@ ARM_COLOR = {"A ridge_late uniform": COLOR["qwen_mean"], "B ego:a1": COLOR["visi
 
 
 def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B ego:a1", "D mlp uniform"),
-                    directions=((0, "-"), (1, "--")), name: str = "l0-decile-relative-gain"):
+                    directions=((0, "-"), (1, "--")), name: str = "l0-decile-relative-gain",
+                    ylim=(32, -14), xlabel: str = r"decile of $s_{ego}$ on the evaluation half"):
     """Relative gain of each arm over the ego ridge against the evaluation set's own s_ego decile.
 
     Left panel all evaluation frames, right panel straight_yaw only, so that a lateral confound cannot be
@@ -177,8 +178,8 @@ def l0_decile_curve(dec: pd.DataFrame, out_dir, arms=("A ridge_late uniform", "B
                             label=lab[arm] if not i else None)
                     if not i:
                         ax.fill_between(x, 100 * g.rel_lo, 100 * g.rel_hi, color=col[arm], alpha=0.15, lw=0)
-            ax.set_ylim(32, -14)
-            ax.set_xlabel(r"decile of $s_{ego}$ on the evaluation half")
+            ax.set_ylim(*ylim)
+            ax.set_xlabel(xlabel)
             ax.set_xticks(range(1, 11))
             ax.text(0.03, 0.06, title, transform=ax.transAxes)
         axes[0].set_ylabel("relative gain over ego (%)")
