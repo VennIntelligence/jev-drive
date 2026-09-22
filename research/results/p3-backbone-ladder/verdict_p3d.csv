@@ -1,0 +1,8 @@
+arm,meets_both_directions
+A ridge_late pooled (qwen4b L18),False
+"d vjepa2 (front, 4 frames)",False
+d1 vjepa2 3 cameras,False
+d2 vjepa2 clip 8,False
+d3 vjepa2 clip 16,False
+d4 vjepa2 ViT-g,False
+d5 late fusion vjepa2 + qwen,False
