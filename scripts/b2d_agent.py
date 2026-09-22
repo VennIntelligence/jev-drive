@@ -43,6 +43,21 @@ from srunner.scenariomanager.timer import GameTime
 
 DELTA = 0.05  # the leaderboard fixes 20 Hz
 
+
+def motion_json(value):
+    """Preserve invalid numeric inputs as explicit strings in strict JSON logs."""
+    if isinstance(value, np.ndarray):
+        return motion_json(value.tolist())
+    if isinstance(value, np.generic):
+        return motion_json(value.item())
+    if isinstance(value, dict):
+        return {key: motion_json(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [motion_json(item) for item in value]
+    if isinstance(value, float) and not np.isfinite(value):
+        return repr(value)
+    return value
+
 # The Bench2Drive evaluation rig, copied from Bench2Drive/tools/data_collect.py so the extrinsics
 # and FOVs match the official one. Cost depends on count and resolution, not on pose, but a rig
 # that differs from the published one invites the question.
@@ -129,7 +144,7 @@ class StubAgent(AutonomousAgent):
         # timings the hooks collect around this call.
         self.timings = {"sensor_wait": [], "infer": [], "agent_total": [], "policy_ticks": 0,
                         "server_infer_ms": []}
-        self._telemetry = self._trajectory_log = None
+        self._telemetry = self._trajectory_log = self._motion_log = None
         if self.drive == "controller":
             self._setup_controller(cfg)
         if self.policy == "gpu":
@@ -169,6 +184,7 @@ class StubAgent(AutonomousAgent):
         os.makedirs(out, exist_ok=True)
         self._telemetry = open(os.path.join(out, "control.jsonl"), "w", buffering=1)
         self._trajectory_log = open(os.path.join(out, "trajectories.jsonl"), "w", buffering=1)
+        self._motion_log = open(os.path.join(out, "motion.jsonl"), "w", buffering=1)
         # Locked Bench2Drive constructs the agent, sets its route, then calls setup.
         if getattr(self, "_drive_plan", None):
             self._setup_controller_route(self._drive_gps_plan, self._drive_plan)
@@ -218,6 +234,11 @@ class StubAgent(AutonomousAgent):
             raise RuntimeError("Controller route was not initialized")
         input_data = self._frame_router.read(self.sensor_interface, frame)
         t_wait = time.perf_counter() - t0
+        self._motion_log.write(json.dumps(motion_json(dict(
+            frame=frame, sim_time=timestamp,
+            sensors={key: dict(frame=int(input_data[key][0]), data=input_data[key][1])
+                     for key in ("GPS", "IMU", "SPEED")},
+            nonfinite_encoding="nan/inf/-inf strings")), allow_nan=False) + "\n")
         imu = input_data["IMU"][1]
         raw_speed = float(input_data["SPEED"][1]["speed"])
         speed = controller_speed(raw_speed)
@@ -436,7 +457,8 @@ class StubAgent(AutonomousAgent):
         return float(np.clip(ang, -1.0, 1.0))
 
     def destroy(self):
-        for log in (getattr(self, "_telemetry", None), getattr(self, "_trajectory_log", None)):
+        for log in (getattr(self, "_telemetry", None), getattr(self, "_trajectory_log", None),
+                    getattr(self, "_motion_log", None)):
             if log is not None:
                 log.close()
         if self._client is not None:

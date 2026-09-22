@@ -254,6 +254,7 @@ class AgentTests(unittest.TestCase):
         agent._truth_logger = truth
         agent._telemetry = io.StringIO()
         agent._trajectory_log = io.StringIO()
+        agent._motion_log = io.StringIO()
         agent.timings = {'policy_ticks': 0, 'sensor_wait': [], 'infer': [],
                          'controller_step_ms': [], 'agent_total': []}
         controls = []
