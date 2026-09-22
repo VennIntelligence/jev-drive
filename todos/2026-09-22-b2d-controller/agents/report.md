@@ -49,3 +49,15 @@ Ran 9 tests in 0.216s — OK
 `Server`构造时创建自己的log目录；Runner回收孤儿时排除传入且仍活着的server PID，避免同log目录顺序复用误杀。外部server开始工作前照常探测可用地图。**同一个Server不可交给多个同时运行的Runner，也不可在Runner运行中由campaign并发操作**；API为同进程顺序campaign设计，不宣称跨进程所有权锁。
 
 新增10项假server测试覆盖两个runner顺序复用、默认最终cleanup、失败恢复move/restart、失败耗尽、取消/异常、stop flag、recycle、PID保护、参数校验及目录创建。2026-09-22本地回归：report suite 20/20（0.022s），runtime 9/9（0.217s）；未启动live server。
+
+## Dev10多组比较与速度语义核查
+
+新增 `scripts/b2d_controller_compare.py`，读取多个 `--campaign` 路径下的group report；未完成group从partial attempt只读重建。manifest里预定的preset×seed×route全保留，未开始pursuit也显示10条缺失。输出`comparison.json/md`、正式`routes.csv`及保留全部重试的`attempts.csv`。按相同route XML SHA256和seed形成配对，只在carla/tcp两组均有完整官方结果后给“最强观测参考”；按均值completion、真正完成条数、原始blocked+deviation、carla最终平局规则排序。这不自动宣布默认，因为G1/G2、两seed、保留集及失败归因仍另验。重复来源不挑最高分；G2各summary独立保留全部case和失败gate。
+
+JSON/CSV包含全程/首碰撞前truth CTE、两种速度error、raw/fused pose、heading、age、step cost、ticks成功/失败分布；缺失infra计数留null与覆盖数，所有已完成官方失败仍留在分母。source report路径/SHA、campaign记录commit、route SHA、配置当前SHA和reporter源码SHA均保留；当前hash不冒称启动时snapshot。
+
+根代理指出B2D内建4000 tick上限：`Failed - TickRuntime`现单列`official_tick_runtime`，`harness_capped`仅表示人为profile截断，`capped`为两者或。根代理保留旧report、决定versioned重算；compare可直接从旧版明确官方status升级这一标记。**官方TickRuntime仍是最终驾驶失败，不因为capped而从completion对照剔除**；人工harness cap阻止完整对照选择。`b2d_report.py`另修缺失infra list不再默认0。
+
+速度核查证据：carla-seed0/3514第一条trajectory[0]=[3.474663,3.376833]；后续点间隔2m，固定巡航8m/s，但controller加入t0=[0,0]后首段速度为norm(first)/.25=19.38m/s。每.2s重规划使reference导数长期读取这个首段，横向/后轴错位可抬高速度命令。3514全程actual/reference/command均值6.39/8.97/8.61m/s；blocked的25424分别.26/8.94/8.66。报告数字算术正确，但reference是controller输入轨迹的定时导数，不能叫独立的8m/s巡航真值；G2 validator独立cruise指标另列。根代理确认不在冻结Dev10中途修改adapter/controller或回算“修正”旧指标。
+
+验证：compare新5项fixture通过（0.007s），report累计21项通过（0.021s）。已生成`results/comparison-interim/`中间快照，当时carla10/10官方结果、TCP9/10、pursuit0/10，参考选择ready=false；这是活跃运行中间观察，不代表最终对照。

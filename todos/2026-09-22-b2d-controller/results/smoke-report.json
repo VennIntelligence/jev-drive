@@ -1,0 +1,670 @@
+{
+  "schema_version": 1,
+  "attempts": [
+    {
+      "route_id": "2390",
+      "attempt": 1,
+      "status": "finished",
+      "killed": null,
+      "wall_s": 29.3,
+      "ticks": 216,
+      "ticks_used": 196,
+      "total_ms": 17.418,
+      "world_tick_ms": 13.272,
+      "tree_ms": 2.979,
+      "agent_ms": 0.948,
+      "mib_in": 234.8,
+      "server_age_routes": 0,
+      "server_index": 66,
+      "preset": "pursuit",
+      "seed": 0,
+      "tick_cap_configured": 0,
+      "capped": false,
+      "process_returncode": 0,
+      "harness_finished": true,
+      "results_state": "ok",
+      "official_status": "Completed",
+      "completion": 100,
+      "driving_completed": true,
+      "official_finalized": true,
+      "official_records": [
+        {
+          "index": 0,
+          "route_id": "RouteScenario_2390_rep0",
+          "scenario_name": "VanillaNonSignalizedTurn_1",
+          "weather_id": "18",
+          "save_name": "RouteScenario_2390_rep0_Town12_VanillaNonSignalizedTurn_1_18_09_22_22_24_43",
+          "status": "Completed",
+          "num_infractions": 18,
+          "infractions": {
+            "collisions_layout": [],
+            "collisions_pedestrian": [],
+            "collisions_vehicle": [],
+            "red_light": [],
+            "stop_infraction": [],
+            "outside_route_lanes": [],
+            "min_speed_infractions": [
+              "Average speed is 107.61% of the surrounding traffic's one",
+              "Average speed is 132.7% of the surrounding traffic's one",
+              "Average speed is 160.2% of the surrounding traffic's one",
+              "Average speed is 185.39% of the surrounding traffic's one",
+              "Average speed is 188.39% of the surrounding traffic's one",
+              "Average speed is 186.41% of the surrounding traffic's one",
+              "Average speed is 170.93% of the surrounding traffic's one",
+              "Average speed is 152.79% of the surrounding traffic's one",
+              "Average speed is 149.47% of the surrounding traffic's one",
+              "Average speed is 256.28% of the surrounding traffic's one",
+              "Average speed is 316.68% of the surrounding traffic's one",
+              "Average speed is 256.96% of the surrounding traffic's one",
+              "Average speed is 193.02% of the surrounding traffic's one",
+              "Average speed is 199.29% of the surrounding traffic's one",
+              "Average speed is 144.08% of the surrounding traffic's one",
+              "Average speed is 117.3% of the surrounding traffic's one",
+              "Average speed is 83.04% of the surrounding traffic's one",
+              "Average speed is 83.04% of the surrounding traffic's one"
+            ],
+            "yield_emergency_vehicle_infractions": [],
+            "scenario_timeouts": [],
+            "route_dev": [],
+            "vehicle_blocked": [],
+            "route_timeout": []
+          },
+          "scores": {
+            "score_route": 100,
+            "score_penalty": 1.0,
+            "score_composed": 100.0
+          },
+          "meta": {
+            "route_length": 64.834,
+            "duration_game": 10.8,
+            "duration_system": 5.636
+          },
+          "town_name": "Town12"
+        }
+      ],
+      "score_composed": 100.0,
+      "score_penalty": 1.0,
+      "scenario": "VanillaNonSignalizedTurn_1",
+      "infractions": {
+        "collisions_layout": [],
+        "collisions_pedestrian": [],
+        "collisions_vehicle": [],
+        "red_light": [],
+        "stop_infraction": [],
+        "outside_route_lanes": [],
+        "min_speed_infractions": [
+          "Average speed is 107.61% of the surrounding traffic's one",
+          "Average speed is 132.7% of the surrounding traffic's one",
+          "Average speed is 160.2% of the surrounding traffic's one",
+          "Average speed is 185.39% of the surrounding traffic's one",
+          "Average speed is 188.39% of the surrounding traffic's one",
+          "Average speed is 186.41% of the surrounding traffic's one",
+          "Average speed is 170.93% of the surrounding traffic's one",
+          "Average speed is 152.79% of the surrounding traffic's one",
+          "Average speed is 149.47% of the surrounding traffic's one",
+          "Average speed is 256.28% of the surrounding traffic's one",
+          "Average speed is 316.68% of the surrounding traffic's one",
+          "Average speed is 256.96% of the surrounding traffic's one",
+          "Average speed is 193.02% of the surrounding traffic's one",
+          "Average speed is 199.29% of the surrounding traffic's one",
+          "Average speed is 144.08% of the surrounding traffic's one",
+          "Average speed is 117.3% of the surrounding traffic's one",
+          "Average speed is 83.04% of the surrounding traffic's one",
+          "Average speed is 83.04% of the surrounding traffic's one"
+        ],
+        "yield_emergency_vehicle_infractions": [],
+        "scenario_timeouts": [],
+        "route_dev": [],
+        "vehicle_blocked": [],
+        "route_timeout": []
+      },
+      "minimum_speed_events": 18,
+      "minimum_speed_percentages": [
+        107.61,
+        132.7,
+        160.2,
+        185.39,
+        188.39,
+        186.41,
+        170.93,
+        152.79,
+        149.47,
+        256.28,
+        316.68,
+        256.96,
+        193.02,
+        199.29,
+        144.08,
+        117.3,
+        83.04,
+        83.04
+      ],
+      "minimum_speed_penalty_mode": "unused (Bench2Drive 0.0.4)",
+      "minimum_speed_penalty": null,
+      "minimum_speed_penalty_note": "Not independently serialized; no penalty inferred from events.",
+      "sim_time_s": 10.8,
+      "vehicle_blocked": 0,
+      "route_dev": 0,
+      "collisions_layout": 0,
+      "collisions_pedestrian": 0,
+      "collisions_vehicle": 0,
+      "route_timeout": 0,
+      "scenario_timeouts": 0,
+      "telemetry_quality": {
+        "state": "ok",
+        "lines": 216,
+        "valid_rows": 216,
+        "invalid_lines": 0,
+        "nonmonotonic_frames": 0,
+        "nonmonotonic_time": 0,
+        "missing_frames": 0,
+        "sensor_frame_mismatch": 0,
+        "invalid_controls": 0,
+        "truth_frame_mismatch": 0,
+        "missing_fields": {}
+      },
+      "tracking": {
+        "truth_cross_track_m": {
+          "n": 216,
+          "min": -0.09704397238649679,
+          "max": 0.880979348282398,
+          "sum_squared": 27.57880390574651,
+          "rms": 0.35732288999137657,
+          "median": 0.008570194108214604,
+          "p90": 0.7617646399957883,
+          "p95": 0.7918298061550485,
+          "p99": 0.8741599936045407,
+          "abs_p95": 0.7918298061550485,
+          "abs_max": 0.880979348282398
+        },
+        "route_cross_track_m": {
+          "n": 216,
+          "min": -0.34523812123436837,
+          "max": 0.7355526457511125,
+          "sum_squared": 16.742825768150727,
+          "rms": 0.2784117135825234,
+          "median": 0.03265782431931022,
+          "p90": 0.5617585612129452,
+          "p95": 0.6178408596249801,
+          "p99": 0.6972816208847783,
+          "abs_p95": 0.6178408596249801,
+          "abs_max": 0.7355526457511125
+        },
+        "cross_track_m": {
+          "n": 216,
+          "min": -0.2030367910961631,
+          "max": 0.40110667322514126,
+          "sum_squared": 1.898875059827586,
+          "rms": 0.09376080332389718,
+          "median": 0.0,
+          "p90": 0.1453964498552474,
+          "p95": 0.23784323502443616,
+          "p99": 0.34310494597699487,
+          "abs_p95": 0.23784323502443616,
+          "abs_max": 0.40110667322514126
+        },
+        "heading_error_rad": {
+          "n": 216,
+          "min": -0.350229423373609,
+          "max": 0.2108537958524715,
+          "sum_squared": 3.599092012705444,
+          "rms": 0.1290831632002581,
+          "median": -0.012069773358878107,
+          "p90": 0.06985658074492004,
+          "p95": 0.10149832445457524,
+          "p99": 0.18252287234126685,
+          "abs_p95": 0.30090208276833963,
+          "abs_max": 0.350229423373609
+        },
+        "raw_pose_error_m": {
+          "n": 216,
+          "min": 0.034076798979735916,
+          "max": 1.6590882552595618,
+          "sum_squared": 123.23382438651369,
+          "rms": 0.7553323538366261,
+          "median": 0.6844295278198571,
+          "p90": 1.098223776657647,
+          "p95": 1.267960612458319,
+          "p99": 1.5453801478940488,
+          "abs_p95": 1.267960612458319,
+          "abs_max": 1.6590882552595618
+        },
+        "pose_error_m": {
+          "n": 216,
+          "min": 0.005747649237113041,
+          "max": 0.5073837450584621,
+          "sum_squared": 10.53614072614277,
+          "rms": 0.22085839193405807,
+          "median": 0.20262064681703312,
+          "p90": 0.3138855446005161,
+          "p95": 0.33935018895905017,
+          "p99": 0.4982255693874569,
+          "abs_p95": 0.33935018895905017,
+          "abs_max": 0.5073837450584621
+        },
+        "pose_heading_error_rad": {
+          "n": 216,
+          "min": -0.0035671405243729026,
+          "max": 0.0033184304030209333,
+          "sum_squared": 0.0005690688114821576,
+          "rms": 0.0016231382661178052,
+          "median": 2.0757787263514516e-05,
+          "p90": 0.002704562822158696,
+          "p95": 0.002960349872035639,
+          "p99": 0.0032277727528756905,
+          "abs_p95": 0.0032973601403429864,
+          "abs_max": 0.0035671405243729026
+        },
+        "trajectory_age_s": {
+          "n": 216,
+          "min": 0.0,
+          "max": 0.15000000223517418,
+          "sum_squared": 1.8900000563263906,
+          "rms": 0.09354143606322456,
+          "median": 0.07500000111758709,
+          "p90": 0.15000000223517418,
+          "p95": 0.15000000223517418,
+          "p99": 0.15000000223517418,
+          "abs_p95": 0.15000000223517418,
+          "abs_max": 0.15000000223517418
+        },
+        "controller_step_ms": {
+          "n": 216,
+          "min": 0.10915999882854521,
+          "max": 0.3051389976462815,
+          "sum_squared": 6.541076046609549,
+          "rms": 0.1740194226948366,
+          "median": 0.15243000052578282,
+          "p90": 0.23584950031363405,
+          "p95": 0.2592917498986935,
+          "p99": 0.2902729020206607,
+          "abs_p95": 0.2592917498986935,
+          "abs_max": 0.3051389976462815
+        },
+        "command_speed_error_mps": {
+          "n": 216,
+          "min": -12.186361649075142,
+          "max": 0.3775661871811513,
+          "sum_squared": 2905.249537083725,
+          "rms": 3.667455430997162,
+          "median": -0.33357586815465456,
+          "p90": 0.09433480924498117,
+          "p95": 0.16024722815985903,
+          "p99": 0.3215421138843285,
+          "abs_p95": 10.283675974492878,
+          "abs_max": 12.186361649075142
+        },
+        "reference_speed_error_mps": {
+          "n": 216,
+          "min": -12.186361649075142,
+          "max": 0.2072952470509435,
+          "sum_squared": 3503.700431597604,
+          "rms": 4.0275098176752335,
+          "median": -0.3593220651903146,
+          "p90": 0.04513513007838643,
+          "p95": 0.09950720406804092,
+          "p99": 0.18912213396398908,
+          "abs_p95": 11.790856554588103,
+          "abs_max": 12.186361649075142
+        }
+      },
+      "before_collision": {
+        "truth_cross_track_m": {
+          "n": 216,
+          "min": -0.09704397238649679,
+          "max": 0.880979348282398,
+          "sum_squared": 27.57880390574651,
+          "rms": 0.35732288999137657,
+          "median": 0.008570194108214604,
+          "p90": 0.7617646399957883,
+          "p95": 0.7918298061550485,
+          "p99": 0.8741599936045407,
+          "abs_p95": 0.7918298061550485,
+          "abs_max": 0.880979348282398
+        },
+        "route_cross_track_m": {
+          "n": 216,
+          "min": -0.34523812123436837,
+          "max": 0.7355526457511125,
+          "sum_squared": 16.742825768150727,
+          "rms": 0.2784117135825234,
+          "median": 0.03265782431931022,
+          "p90": 0.5617585612129452,
+          "p95": 0.6178408596249801,
+          "p99": 0.6972816208847783,
+          "abs_p95": 0.6178408596249801,
+          "abs_max": 0.7355526457511125
+        },
+        "cross_track_m": {
+          "n": 216,
+          "min": -0.2030367910961631,
+          "max": 0.40110667322514126,
+          "sum_squared": 1.898875059827586,
+          "rms": 0.09376080332389718,
+          "median": 0.0,
+          "p90": 0.1453964498552474,
+          "p95": 0.23784323502443616,
+          "p99": 0.34310494597699487,
+          "abs_p95": 0.23784323502443616,
+          "abs_max": 0.40110667322514126
+        },
+        "heading_error_rad": {
+          "n": 216,
+          "min": -0.350229423373609,
+          "max": 0.2108537958524715,
+          "sum_squared": 3.599092012705444,
+          "rms": 0.1290831632002581,
+          "median": -0.012069773358878107,
+          "p90": 0.06985658074492004,
+          "p95": 0.10149832445457524,
+          "p99": 0.18252287234126685,
+          "abs_p95": 0.30090208276833963,
+          "abs_max": 0.350229423373609
+        },
+        "raw_pose_error_m": {
+          "n": 216,
+          "min": 0.034076798979735916,
+          "max": 1.6590882552595618,
+          "sum_squared": 123.23382438651369,
+          "rms": 0.7553323538366261,
+          "median": 0.6844295278198571,
+          "p90": 1.098223776657647,
+          "p95": 1.267960612458319,
+          "p99": 1.5453801478940488,
+          "abs_p95": 1.267960612458319,
+          "abs_max": 1.6590882552595618
+        },
+        "pose_error_m": {
+          "n": 216,
+          "min": 0.005747649237113041,
+          "max": 0.5073837450584621,
+          "sum_squared": 10.53614072614277,
+          "rms": 0.22085839193405807,
+          "median": 0.20262064681703312,
+          "p90": 0.3138855446005161,
+          "p95": 0.33935018895905017,
+          "p99": 0.4982255693874569,
+          "abs_p95": 0.33935018895905017,
+          "abs_max": 0.5073837450584621
+        },
+        "pose_heading_error_rad": {
+          "n": 216,
+          "min": -0.0035671405243729026,
+          "max": 0.0033184304030209333,
+          "sum_squared": 0.0005690688114821576,
+          "rms": 0.0016231382661178052,
+          "median": 2.0757787263514516e-05,
+          "p90": 0.002704562822158696,
+          "p95": 0.002960349872035639,
+          "p99": 0.0032277727528756905,
+          "abs_p95": 0.0032973601403429864,
+          "abs_max": 0.0035671405243729026
+        },
+        "trajectory_age_s": {
+          "n": 216,
+          "min": 0.0,
+          "max": 0.15000000223517418,
+          "sum_squared": 1.8900000563263906,
+          "rms": 0.09354143606322456,
+          "median": 0.07500000111758709,
+          "p90": 0.15000000223517418,
+          "p95": 0.15000000223517418,
+          "p99": 0.15000000223517418,
+          "abs_p95": 0.15000000223517418,
+          "abs_max": 0.15000000223517418
+        },
+        "controller_step_ms": {
+          "n": 216,
+          "min": 0.10915999882854521,
+          "max": 0.3051389976462815,
+          "sum_squared": 6.541076046609549,
+          "rms": 0.1740194226948366,
+          "median": 0.15243000052578282,
+          "p90": 0.23584950031363405,
+          "p95": 0.2592917498986935,
+          "p99": 0.2902729020206607,
+          "abs_p95": 0.2592917498986935,
+          "abs_max": 0.3051389976462815
+        },
+        "command_speed_error_mps": {
+          "n": 216,
+          "min": -12.186361649075142,
+          "max": 0.3775661871811513,
+          "sum_squared": 2905.249537083725,
+          "rms": 3.667455430997162,
+          "median": -0.33357586815465456,
+          "p90": 0.09433480924498117,
+          "p95": 0.16024722815985903,
+          "p99": 0.3215421138843285,
+          "abs_p95": 10.283675974492878,
+          "abs_max": 12.186361649075142
+        },
+        "reference_speed_error_mps": {
+          "n": 216,
+          "min": -12.186361649075142,
+          "max": 0.2072952470509435,
+          "sum_squared": 3503.700431597604,
+          "rms": 4.0275098176752335,
+          "median": -0.3593220651903146,
+          "p90": 0.04513513007838643,
+          "p95": 0.09950720406804092,
+          "p99": 0.18912213396398908,
+          "abs_p95": 11.790856554588103,
+          "abs_max": 12.186361649075142
+        }
+      },
+      "before_collision_state": "available",
+      "first_collision_frame": null,
+      "reasons": {
+        "tracking": 216
+      },
+      "stale_ticks": 0,
+      "saturation_fraction": 0.6064814814814815,
+      "telemetry_duration_s": 10.750000160187483,
+      "low_progress_segments": [],
+      "partial": false,
+      "town": "Town12",
+      "selected_attempt": true,
+      "retry_count": 0,
+      "all_attempt_wall_s": 29.3
+    }
+  ],
+  "by_preset_seed": {
+    "pursuit/seed=0": {
+      "routes": 1,
+      "attempts": 1,
+      "retries": 0,
+      "harness_finished": 1,
+      "driving_completed": 1,
+      "missing_official_results": 0,
+      "completion_mean_observed": 100.0,
+      "completion_observed_routes": 1,
+      "all_attempt_wall_s": 29.3,
+      "retry_wall_s": 0,
+      "capped": 0,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.35732288999137657,
+            "route_mean_rms": 0.35732288999137657
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.35732288999137657,
+            "route_mean_rms": 0.35732288999137657
+          }
+        },
+        "route_cross_track_m": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.2784117135825234,
+            "route_mean_rms": 0.2784117135825234
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.2784117135825234,
+            "route_mean_rms": 0.2784117135825234
+          }
+        },
+        "cross_track_m": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.09376080332389718,
+            "route_mean_rms": 0.09376080332389718
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.09376080332389718,
+            "route_mean_rms": 0.09376080332389718
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.1290831632002581,
+            "route_mean_rms": 0.1290831632002581
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.1290831632002581,
+            "route_mean_rms": 0.1290831632002581
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.7553323538366261,
+            "route_mean_rms": 0.7553323538366261
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.7553323538366261,
+            "route_mean_rms": 0.7553323538366261
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.22085839193405807,
+            "route_mean_rms": 0.22085839193405807
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.22085839193405807,
+            "route_mean_rms": 0.22085839193405807
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.0016231382661178052,
+            "route_mean_rms": 0.0016231382661178052
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.0016231382661178052,
+            "route_mean_rms": 0.0016231382661178052
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.09354143606322456,
+            "route_mean_rms": 0.09354143606322456
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.09354143606322456,
+            "route_mean_rms": 0.09354143606322456
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.1740194226948366,
+            "route_mean_rms": 0.1740194226948366
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 0.1740194226948366,
+            "route_mean_rms": 0.1740194226948366
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 3.667455430997162,
+            "route_mean_rms": 3.667455430997162
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 3.667455430997162,
+            "route_mean_rms": 3.667455430997162
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 4.0275098176752335,
+            "route_mean_rms": 4.0275098176752335
+          },
+          "before_collision": {
+            "samples": 216,
+            "routes_with_samples": 1,
+            "tick_weighted_rms": 4.0275098176752335,
+            "route_mean_rms": 4.0275098176752335
+          }
+        }
+      },
+      "tick_distribution_completed": {
+        "n": 1,
+        "min": 216,
+        "max": 216,
+        "sum_squared": 46656,
+        "rms": 216.0,
+        "median": 216.0,
+        "p90": 216.0,
+        "p95": 216.0,
+        "p99": 216.0,
+        "abs_p95": 216.0,
+        "abs_max": 216
+      },
+      "tick_distribution_incomplete": {
+        "n": 0,
+        "min": null,
+        "max": null,
+        "sum_squared": 0,
+        "rms": null,
+        "median": null,
+        "p90": null,
+        "p95": null,
+        "p99": null,
+        "abs_p95": null,
+        "abs_max": null
+      },
+      "selection_policy": "first harness-finished attempt, else latest; all attempts retained"
+    }
+  }
+}

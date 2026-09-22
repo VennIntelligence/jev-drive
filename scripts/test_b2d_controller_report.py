@@ -122,6 +122,19 @@ class ReportTests(unittest.TestCase):
             self.assertEqual(summary["before_collision"]["truth_cross_track_m"]["n"], 2)
             self.assertEqual(summary["tracking"]["truth_cross_track_m"]["n"], 3)
 
+    def test_vendor_tick_runtime_is_effective_cap_without_harness_cap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            adir = fixture(Path(tmp), completion=42)
+            data = report.read_json(adir / "results.json")
+            data["_checkpoint"]["records"][0]["status"] = "Failed - TickRuntime"
+            write(adir / "results.json", data)
+            row = report.collect(tmp)[0]
+            self.assertTrue(row["official_tick_runtime"])
+            self.assertTrue(row["capped"])
+            self.assertFalse(row["harness_capped"])
+            self.assertEqual(row["completion"], 42)
+            self.assertTrue(row["official_finalized"])
+
     def test_live_server_age_does_not_divide_by_zero(self):
         self.assertIn("server age", report.server_age([{"server_age_routes": 0, "status": "running"}]))
 

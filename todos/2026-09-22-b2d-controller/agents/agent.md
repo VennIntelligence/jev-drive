@@ -61,3 +61,31 @@ TCP/26966 的真正失败：lateral RMS=.7028 m、p95=1.5254 m，以及 cruise s
 终点 parking flag 比每 4 tick 的 trajectory 更新可能早 1–2 tick，因此 3 个案例有 terminal_hold=true 时旧 throttle 尚未替换；已提议停车状态切换即时更新一次 reference，常规更新仍维持每 4 tick。
 
 TruthLogger 的 rear axle xy 真值投影增加 cos(pitch)，避免坡道 pose 误差偏差；新增 15° fake snapshot 检查，adapter/agent 10/10。此修改不会热更新 development2 已载入代码，后续 run 生效。独立 G2 validation 原本已按完整 forward vector 处理 pitch。
+
+## 可复现出图与文章素材
+
+新增 `scripts/b2d_controller_plot.py`，依赖当前 `/data/envs/carla/bin/python` 已有的 NumPy、Matplotlib，无 pandas/CARLA/network 依赖。
+
+调用：
+
+```
+/data/envs/carla/bin/python scripts/b2d_controller_plot.py \
+  --development /data/runs/b2d/controller/development3 \
+  --campaign /data/runs/b2d/controller/dev10 \
+  --out /data/runs/b2d/controller/figures-final
+```
+
+`--campaign` 可以是包含多个 preset/seed 子目录的总目录，也可直接指定一个 controller-report.json；目录模式递归读取已生成的 report。默认示例路线是预定的 26966，不按成绩自动挑选。
+
+交付四类英文图，每类 PNG 300 dpi 与矢量 PDF：
+
+1. 全部 G2 路线的 truth CTE RMS / pose p90，失败 case 用 hatch 标记。
+2. Dev10 逐路线 completion/full truth CTE/precollision truth CTE，全部 attempt 写入 CSV；按 reporter 明确的 selected_attempt 画连接线，retry 仍以 x 显示，missing 留 NA。
+3. G2 route26966 全部三个 preset 的完整真值后轴轨迹与原始 dense reference overlay，包括 TCP 失败轨迹。
+4. 同一路线完整 speed/endpoint distance/throttle 时间曲线，标注第一次真实低速到达，没有裁掉不好的减速段。
+
+全部图标注 `Diagnostic route oracle; policy = none`。五个相邻 CSV 保存每个绘制数值和轨迹/停车完整原始样本。plot-source-manifest.json 保存所有输入的绝对路径/SHA256/字节数、summary/trace JSON 快照、脚本自身完整源码快照及 hash、依赖版本、图与 CSV 的 hash/行数/列名、失败与缺失的保留规则。
+
+已生成初始 `/data/runs/b2d/controller/figures` 和防覆盖检查用 `/data/runs/b2d/controller/figures-v2`，各 4 组图/5 CSV/无 warning；当前包含 G2 12case 与 CARLA seed0 Dev10 10attempt。已目视检查四类图，并验证 CSV 行数/hash。
+
+用户要求保留中间产物后，CLI **拒绝非空输出目录**，exit 2，并明确要求新版本 `--out`。通过再次调用 figures-v2 验证拒绝覆盖且 manifest 字节完全不变；脚本 snapshot 字节与执行版本一致。后续请用 figures-v3/final 等新目录，不能覆盖初始图。

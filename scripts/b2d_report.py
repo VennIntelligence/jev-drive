@@ -93,7 +93,7 @@ def official_result(adir):
         records = (raw.get("_checkpoint") or {}).get("records") or []
         state = "empty_records" if not records else "ok"
     result = {"results_state": state, "official_status": None, "completion": None,
-              "driving_completed": None, "official_finalized": False, "official_records": records}
+              "driving_completed": None, "official_finalized": False, "official_tick_runtime": False, "official_records": records}
     if not records:
         return result
     # One route per process is the harness contract. Never silently select a best record.
@@ -112,11 +112,11 @@ def official_result(adir):
             match = re.search(r"([-+]?\d+(?:\.\d+)?)\s*%", event)
             if match:
                 percentages.append(float(match.group(1)))
-    result.update({"official_finalized": r.get("status") not in (None, "Started"), "official_status": r.get("status"), "completion": scores.get("score_route"),
+    result.update({"official_tick_runtime": "tickruntime" in str(r.get("status", "")).lower().replace(" ", ""), "official_finalized": r.get("status") not in (None, "Started"), "official_status": r.get("status"), "completion": scores.get("score_route"),
                    "score_composed": scores.get("score_composed"),
                    "score_penalty": scores.get("score_penalty"),
                    "scenario": r.get("scenario_name"), "infractions": infractions,
-                   "minimum_speed_events": len(minimum), "minimum_speed_percentages": percentages,
+                   "minimum_speed_events": len(minimum) if "min_speed_infractions" in infractions else None, "minimum_speed_percentages": percentages,
                    "minimum_speed_penalty_mode": "unused (Bench2Drive 0.0.4)",
                    "minimum_speed_penalty": None,
                    "minimum_speed_penalty_note": "Not independently serialized; no penalty inferred from events.",
@@ -125,7 +125,7 @@ def official_result(adir):
     result["driving_completed"] = finite(completion) and completion >= 100
     for key in ("vehicle_blocked", "route_dev", "collisions_layout", "collisions_pedestrian",
                 "collisions_vehicle", "route_timeout", "scenario_timeouts"):
-        result[key] = len(infractions.get(key, []))
+        result[key] = len(infractions[key]) if isinstance(infractions.get(key), list) else None
     return result
 
 
@@ -268,6 +268,8 @@ def collect(out):
                 row["status"] = "unreadable_result"
             official = official_result(adir)
             row.update(official)
+            row["harness_capped"] = row["capped"]
+            row["capped"] = bool(row["harness_capped"] or row["official_tick_runtime"])
             row.update(telemetry(adir, official))
             row["partial"] = (row["status"] != "finished" or row["capped"] or official["results_state"] != "ok"
                               or not official.get("official_finalized")
@@ -477,7 +479,7 @@ def main():
         cols = ["route_id", "town", "attempt", "status", "killed", "wall_s", "ticks", "total_ms",
                 "world_tick_ms", "tree_ms", "agent_ms", "mib_in", "server_age_routes",
                 "server_index", "preset", "seed", "scenario", "official_status", "completion",
-                "score_composed", "score_penalty", "driving_completed", "results_state", "capped",
+                "score_composed", "score_penalty", "driving_completed", "results_state", "capped", "harness_capped", "official_tick_runtime",
                 "partial", "selected_attempt", "retry_count", "all_attempt_wall_s", "vehicle_blocked",
                 "route_dev", "collisions_layout", "collisions_vehicle", "collisions_pedestrian",
                 "minimum_speed_events", "minimum_speed_percentages", "minimum_speed_penalty_mode",
