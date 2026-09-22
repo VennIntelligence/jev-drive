@@ -1,0 +1,181 @@
+{
+  "controller": {
+    "carla": {
+      "preset": "carla",
+      "wheelbase": 2.8604714913890885,
+      "lookahead": "additive",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lateral_pid": {
+        "kp": 1.95,
+        "ki": 0.05,
+        "kd": 0.2,
+        "window": 10,
+        "semantics": "carla",
+        "dt": 0.05
+      },
+      "longitudinal_pid": {
+        "kp": 1.0,
+        "ki": 0.05,
+        "kd": 0.0,
+        "window": 10,
+        "semantics": "carla",
+        "dt": 0.05
+      }
+    },
+    "tcp": {
+      "preset": "tcp",
+      "wheelbase": 2.8604714913890885,
+      "lookahead": "fixed4",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lateral_pid": {
+        "kp": 0.75,
+        "ki": 0.75,
+        "kd": 0.3,
+        "window": 40,
+        "semantics": "tcp",
+        "dt": 0.05
+      },
+      "longitudinal_pid": {
+        "kp": 5.0,
+        "ki": 0.5,
+        "kd": 1.0,
+        "window": 40,
+        "semantics": "tcp",
+        "dt": 0.05
+      }
+    },
+    "pursuit": {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "lookahead": "additive",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lateral_pid": {
+        "kp": 1.95,
+        "ki": 0.05,
+        "kd": 0.2,
+        "window": 10,
+        "semantics": "carla",
+        "dt": 0.05
+      },
+      "longitudinal_pid": {
+        "kp": 1.0,
+        "ki": 0.05,
+        "kd": 0.0,
+        "window": 10,
+        "semantics": "carla",
+        "dt": 0.05
+      },
+      "lateral_pid_used": false
+    }
+  },
+  "adapter": {
+    "rear_axle_offset_m": -1.388633220199954,
+    "gnss_x_m": -1.4,
+    "pose_gnss_gain": 0.05,
+    "pose_heading_gain": 0.1,
+    "route_end_extension_m": 3.0,
+    "truth_logging": true,
+    "route_stop_deceleration": 2.0
+  },
+  "pipeline": {
+    "policy": "none",
+    "cruise_mps": 8,
+    "rig": "front3",
+    "width": 800,
+    "height": 450,
+    "decimate": 4,
+    "control_hz": 20,
+    "trajectory_hz": 5,
+    "quality": "Epic",
+    "windowed": true,
+    "workers": 1
+  },
+  "runtime_commit": "18571c0",
+  "source_sha256": {
+    "scripts/b2d_controller.py": "040978cc60dce63b525c8835b00031e754fec887ef96330ed1e3c8b1bc2cad63",
+    "scripts/b2d_agent.py": "76a3f751d919f5aecc812d49a3c647501baef82060bedddc9e02162b50fc550b",
+    "scripts/b2d_controller_adapter.py": "96f118b15f4777000aceea2d9048b9e2f4591ef94d3584f3a3cd1f1f6c1d1542"
+  },
+  "note": "Expanded after execution from unchanged frozen runtime and saved route_reference; actual invocation/config files remain the authoritative run inputs."
+}

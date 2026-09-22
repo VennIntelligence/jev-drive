@@ -131,3 +131,34 @@ profile按每条自己的ticks_used×total_ms_mean计算，共409.354s；finaliz
 旧“分数最多209/220”“这些失败完全不是我们的问题”“11条路线不能运行”的绝对结论均改为旧run观察范围和根因限制；也移除3.1h是普遍上界的暗示。文档明确禁止把新Tokyo数字直接外推full220或归因成controller-only加速。用户目视看到的后续seed1交叉口碰撞停滞标记为独立观察，不计作新的定量测量。
 
 本次检查：两文档相对链接目标均存在；数据表与原始JSON/事件重算一致。未运行CARLA、未操作git、未修改其他代理文件。
+
+## 转弯覆盖只读审计
+
+产物 `results/turn-coverage.json`。只用静态reference world_xy，按1m弧长重采样、5m chord算路径切线；不使用车辆实际heading或GPS。CARLA世界坐标正转角=右转。弧段累计至少10°且存在左右两种符号才算明显交替曲率。
+
+| G2 route | 5m chord净转角 | 正累计 / 负累计 | 结论 |
+|---|---:|---:|---|
+|1773|约0°|+.010 / -.010°|直路|
+|24240|-89.915°|约0 / -89.915°|左转|
+|26966|+90.577°|+90.577 / 约0°|右转|
+|25854|+51.548°|+51.552 / -.0038°|单方向弯道，**不是S**|
+
+六条预选holdout（2050、2084、25318、27529、28154、3072）也只有单方向弯或直路，无左右各>=10°的交替弧段。因此不能说测试全是直线，但确实缺G2专用的无交互S验收。Dev10中17569实际dense reference有+70.09/-70.09°的交替换道曲率，说明完整campaign已有非直线交替路径；它不能替代无交互G2。
+
+已按静态XML几何选定补充候选17563（Town12 SequentialLaneChange，117.175m；不在Dev10或预选holdout）：四个明显弧段约−35.49/+35.50/−35.69/+34.42°。原始XML文件及route element的SHA256写入JSON。该路线是交替换道形状，适合作S/lane-change控制试验；不是声称街道本身必有连续弯曲。
+
+5m chord最大曲率代理约.1287/m，对应8m/s侧加速度代理8.23m/s²，6m/s时4.63m/s²。已建议主代理在看结果前预定6m/s、冻结全部控制器参数、三个preset各跑一次scenario-free补测；8m/s只能另列stress。此代理是平滑几何估计，不是精确曲率或轮胎极限。CARLA实际插值dense route生成后仍需确认交替弧段存在。
+
+没有更改任何core/report/其他doc、没有CARLA或git操作。
+
+补充S基线输入已提取：`results/supplemental-s.xml`，SHA256 `d012120d75784dc3d8d6b253bfddd24ae28b1278c29d1c0e2763804bea111730`。逐字节校验waypoints element与锁定原XML一致，route attributes/weather保留，仅清空一个SequentialLaneChange scenario。`turn-coverage.json`记录提取hash以及先验6m/s、三个preset、冻结v1控制参数协议。主代理安排运行，当前primary baseline core未改。
+
+v2独立设计审阅已提前发送给agent子代理：不能通过平移整条轨迹抹掉实际横向偏移；几何回归路径与定时速度信息应分开，元数据仍须使用同一源时间并覆盖延迟/乱序/NaN/停车释放测试；20×2原API应保留明确定义的兼容行为。显式速度信息可以修复诊断速度，但不能把初始偏离3m的参考自动变成动力学可行轨迹。
+
+### V2 adapter review and controlled matrix extension
+
+- Supplemental S route 17563 extracted from the locked XML into `results/supplemental-s.xml`, preserving weather/waypoints and clearing only the scenario child. `results/turn-coverage.json` records source/output hashes and the geometry-based, predeclared 6 m/s choice for all three frozen presets.
+- Read-only v2 adapter review exposed collinear cusp masking in three-point curvature and misleading zero-curvature reports for two-point terminal/short-remainder paths. Agent added minimum 33 samples, terminal heading-aware Hermite geometry, honest curvature concerns and standard-branch folding rejection, with fixtures. Terminal Hermite reversal is a separate final edge; communicated to agent/root for its owned patch. Geometry revision changes the commanded path as well as eliminating the artificial first-point speed bridge; do not attribute it solely to the controller.
+- Implemented matrix CLI only in `/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_validate.py`: optional `--variants` ordered label→{absolute controller_config, presets}; optional `--route-cruises` route→positive speed plus default. Loop order remains route then variant then preset on one server/world, with fresh actors/agent per case. Legacy paths remain route/preset; matrix paths route/variant/preset. Independent truth gates unchanged.
+- Every case uses its own rear axle and stop deceleration, reports config source/hash, variant and cruise, and runs exact archived configuration bytes. Inputs and expanded ordering are archived in `inputs/`. Malformed inputs fail before simulator imports/start.
+- Validation: existing 15 controller/metric tests plus four new matrix parsing/order/isolation tests pass under CARLA Python 3.8, with no server. Handed back and frozen before root's 20-case launch.

@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2026-09-22T14:31:40.033595+00:00",
+  "arguments": {
+    "development": "/data/runs/b2d/controller/development3",
+    "campaign": "/data/runs/b2d/controller/confirmation/holdout",
+    "label": "Holdout",
+    "campaign_only": true,
+    "out": "/home/ujs/mycode/jev-drive/todos/2026-09-22-b2d-controller/figures/v1-holdout",
+    "route_id": "26966"
+  },
+  "dependencies": {
+    "numpy": "1.23.5",
+    "matplotlib": "3.7.5"
+  },
+  "protocol": "Diagnostic route oracle; policy = none",
+  "inclusion": "Every supplied G2 case and campaign attempt is exported. Failures are not excluded. Campaign selected_attempt determines the connected series; retries remain x markers. Missing metrics stay empty/NaN, never become zero. No confidence intervals from unreplicated runs.",
+  "sources": [
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/controller-report.json",
+      "sha256": "b5d3a32dc351e591e2965729eaccdb266371959d715df4a3ca0abed4b709a22a",
+      "bytes": 110507,
+      "snapshot": "sources/b5d3a32dc351-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/2050/1/control.jsonl",
+      "sha256": "75a5818dedc8a13c51852769e9f60ea24c3d5aae6e26d24c71b31eaf37e9c79c",
+      "bytes": 339470
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/2084/1/control.jsonl",
+      "sha256": "45d1d1ee428440115bde9ab13bef276ec3bd5765662989afd0e594169540599e",
+      "bytes": 346119
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/25318/1/control.jsonl",
+      "sha256": "21c2eafd5fba8f957c23c9fdf6d1af0f85d452acbc6e928f4dcf647206a05ba6",
+      "bytes": 5693652
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/27529/1/control.jsonl",
+      "sha256": "ad4fac32317a8de5bbea37d2718e6fff18fc92ca5e881f98b6463a63fd518b49",
+      "bytes": 433996
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/28154/1/control.jsonl",
+      "sha256": "6b4c07b8c943f584e8fedaa0f4dc0d7ac643d4432212999ddc84911c0c6cc713",
+      "bytes": 879402
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/carla-seed0/attempts/3072/1/control.jsonl",
+      "sha256": "1b652c7f1445fc161a08d81cb0c6b9c749d265d39c414386f1d9741239bc4675",
+      "bytes": 550395
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/controller-report.json",
+      "sha256": "0b940ef4ef14fc9f744a28acdb0cfd600b612e3fe5ab002d1c788befb9e40178",
+      "bytes": 111459,
+      "snapshot": "sources/0b940ef4ef14-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/2050/1/control.jsonl",
+      "sha256": "318b9974734ab2b56f4daa8c378a992fba8644f9f4dece9c994b77a573ddc1b9",
+      "bytes": 345786
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/2084/2/control.jsonl",
+      "sha256": "025b5cdea8ce439d35acf40200e415de78636bd3dbd699abba885cf9ee88800d",
+      "bytes": 345141
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/25318/1/control.jsonl",
+      "sha256": "724dd1b91a4254177c491a0ba83f4e29b51ad2ef9de233f14ce8966c827d7a92",
+      "bytes": 5605280
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/27529/1/control.jsonl",
+      "sha256": "dd12140201c6a361e47fa8c58432360059e3728198e6eb89f6cf9dcc828664ff",
+      "bytes": 435032
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/28154/1/control.jsonl",
+      "sha256": "3e1cb19490b853608a023515cc27677e0572a24aa695322209589aa53cceba86",
+      "bytes": 873286
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/3072/1/control.jsonl",
+      "sha256": "ace9e6233feba3f126e4f7766611d38dadf97d0dd5a4b9bb3f34a9377319a3f2",
+      "bytes": 549542
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/controller-report.json",
+      "sha256": "90e7c7025b397a7791135f5b0ef038ec9a0ecd001c1a57edccdcad0cb7acc8f3",
+      "bytes": 110705,
+      "snapshot": "sources/90e7c7025b39-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/2050/1/control.jsonl",
+      "sha256": "682bac0430b32eaf4cb30f08071612142f6b68242521a454945f21f0efdeb565",
+      "bytes": 338131
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/2084/1/control.jsonl",
+      "sha256": "b87ee540c671c5f685aa105eed44984710aa11428463dfb55f08b912778a20a9",
+      "bytes": 3172798
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/25318/1/control.jsonl",
+      "sha256": "fdac1a295eccfd4e25d5f84d708c89dcd9d9e84226bf43df0351d6788ddd8efa",
+      "bytes": 5648117
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/27529/1/control.jsonl",
+      "sha256": "029838f8e567c857559f79bc9d4da42446785313aa72dff37cdf75b344d2df04",
+      "bytes": 817103
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/28154/1/control.jsonl",
+      "sha256": "5b60fa8f12ccdf0cf13a7a0a16f8deacb764dbde36d908fd93d29feae7532233",
+      "bytes": 881061
+    },
+    {
+      "path": "/data/runs/b2d/controller/confirmation/holdout/tcp-seed0/attempts/3072/1/control.jsonl",
+      "sha256": "ab4189496d17a0d7c7bde240994f410987e3dc9d02eb0b7d32ca63ce809857ff",
+      "bytes": 541215
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/scripts/b2d_controller_plot.py",
+      "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64",
+      "bytes": 21406,
+      "snapshot": "sources/0b3c339251f0-b2d_controller_plot.py"
+    }
+  ],
+  "figures": [
+    {
+      "name": "campaign-completion-tracking",
+      "outputs": [
+        {
+          "path": "campaign-completion-tracking.png",
+          "sha256": "9ea56fe05bf2a29c51b299e108a057dc42fe99dae485d5d3d223ff2a75c23620"
+        },
+        {
+          "path": "campaign-completion-tracking.pdf",
+          "sha256": "e019309e0bf441c048fbef0fe360fe43d3086f54235a257a029b4dcdd6281fd9"
+        }
+      ],
+      "data": [
+        "campaign-all-attempts.csv"
+      ],
+      "note": "All 19 attempts; x = retry; NA = unavailable; pre-collision uses recorded event frames"
+    }
+  ],
+  "csv_data": [
+    {
+      "path": "campaign-all-attempts.csv",
+      "rows": 19,
+      "columns": [
+        "route_id",
+        "preset",
+        "seed",
+        "attempt",
+        "selected_attempt",
+        "official_status",
+        "process_status",
+        "completion_pct",
+        "full_cte_rms_m",
+        "precollision_cte_rms_m",
+        "precollision_state",
+        "full_cte_samples",
+        "precollision_cte_samples",
+        "driving_completed",
+        "capped",
+        "report_source",
+        "telemetry_source"
+      ],
+      "sha256": "fc4fdd8ab4e44fd06b59a046447c45af70e04c5f37ec31b107c9b4477123d374"
+    }
+  ],
+  "warnings": [
+    "Campaign telemetry unavailable: /data/runs/b2d/controller/confirmation/holdout/pursuit-seed0/attempts/2084/1/control.jsonl"
+  ]
+}

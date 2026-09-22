@@ -61,3 +61,24 @@ Dev10 seed0当前：CARLA9/10完成、均值94.726%；TCP9/10、94.914%。TCP组
 发现route adapter的起点连接段可将输入轨迹导数推高于配置8m/s；全组冻结相同实现，原速度记录不篡改，
 明确区分该轨迹导数与G2独立真值巡航速度。真实planner接入前需单独解决空间路线到可行定时轨迹的边界。
 用户将稍后自行GH登录；本地提交继续，push权限阻塞不重复请求或尝试。
+
+
+## v1完整证据封存；v2独立开发继续
+
+2026-09-22：两轮Dev10+6条保留集均结束，完整[78行正式结果/81次attempt](results/v1-full/README.md)已生成到新目录。
+Dev10三组两seed均9/10完成；保留集三组5/6、均值completion89.2817%，pursuit全程CTE0.56793m仍差于CARLA0.44881m。
+保留集pursuit/2084首attempt在telemetry前server rc139，重试成功；v1总计3次额外基础设施attempt全部保留。
+新[保留集图](figures/v1-holdout/README.md)保留19次attempt和缺失提示，先前图表不覆盖。
+
+实际Town04坡度6.357°/11.14%，pursuit全零轨迹静止保持5s通过，101帧位移/速度记录均0；仅验证settle后制动保持，
+不冒称坡道接近停车或sensor-score验收。[坡道summary](results/v1-full/slope-summary.json)。
+
+新增真实S弯Town12/17563@6m/s三组到终点且无碰撞，但CARLA/TCP/pursuit独立巡航RMS分别0.66327/0.92157/0.63632m/s，
+均高于0.5门槛；TCP横向RMS0.90514m/p951.89419m也失败。重算旧validator口径与summary精确一致，不能归咎报告速度定义错误。
+[S弯summary与速度诊断](results/v1-full/README.md)。
+
+确认两阶段结束事件和旧server PID消失后，新增[confirmation](results/raw-file-index/confirmation-v1.json)与
+[S弯](results/raw-file-index/development-s-v1.json)逐文件SHA256索引，分别679/62个文件；无原始证据改写。
+
+v1现在明确作为冻结基线，无合格新默认。v2在`/data/worktrees/jev-drive-controller-v2`独立开发，处理轨迹桥接和后续有限lookahead对照；
+v1的失败与保留集不因v2工作重标为成功，也不用于逐路线调参。本次仅补文章、索引和图表，不改控制代码、不开CARLA、不做git操作。
