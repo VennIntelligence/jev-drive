@@ -212,6 +212,12 @@ def main():
         save_preds(preds, ctx, rl.dir, vocab)
         l0._write(rl, (("arms", [res]), ("paired", [pairs]), ("did", [dids]), ("deciles", [dec]),
                        ("schemes", [schemes])))
+        try:   # a broken figure must not lose the tables
+            from . import plots
+            plots.l0_decile_curve(dec, rl.dir, [a for a in plots.ARM_LABEL if a in preds],
+                                  ((-1, "-"),), "p0-decile-relative-gain")
+        except Exception as e:  # noqa: BLE001
+            log.warning("figure failed: %s", e)
 
     report()
     if "cls" in a.steps:
