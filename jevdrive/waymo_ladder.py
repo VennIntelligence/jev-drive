@@ -178,9 +178,14 @@ def standardize_np(X: np.ndarray, rows: np.ndarray) -> torch.Tensor:
 
 
 def ridge_arm(X: np.ndarray):
-    """The linear arm: ridge_late on `X`, lambda by the same grouped CV every other ridge in the project uses."""
-    def fit(sp, R, res_fut, seed):
-        Xi = standardize_np(X, sp.train)
+    """The linear arm: ridge_late on `X`, lambda by the same grouped CV every other ridge in the project uses.
+
+    `X` is indexed by the whole context; `sel` cuts it down to the rows this run fits and evaluates on, which
+    is what `sp` indexes. Slicing here rather than at the call site keeps every arm's feature matrix defined
+    once, over all of val, however the ladder restricts the rows.
+    """
+    def fit(sel, sp, R, res_fut, seed):
+        Xi = standardize_np(X[sel], sp.train)
         p, st, _ = sa.ridge_cv(Xi, R, sp, res_fut)
         del Xi
         torch.cuda.empty_cache()
@@ -290,10 +295,10 @@ def grid_arm(G: np.ndarray, n_tok: int, kind: str = "attn", side: np.ndarray | N
     """
     d = G.shape[1] // n_tok
 
-    def fit(sp, R, res_fut, seed):
-        X = torch.from_numpy(np.ascontiguousarray(G)).to(DEV).view(-1, n_tok, d)
+    def fit(sel, sp, R, res_fut, seed):
+        X = torch.from_numpy(np.ascontiguousarray(G[sel])).to(DEV).view(-1, n_tok, d)
         mu, sd = _chan_stats(X, sp.train)                     # chunked: a float32 copy of the fit half is 15 GB
-        S = standardize_np(side, sp.train) if side is not None else None
+        S = standardize_np(side[sel], sp.train) if side is not None else None
         ds = 0 if S is None else S.shape[1]
         if kind == "attn":
             make = lambda: AttnPool(d, R.shape[1], d_side=ds)                                 # noqa: E731
@@ -311,8 +316,8 @@ def grid_arm(G: np.ndarray, n_tok: int, kind: str = "attn", side: np.ndarray | N
 def mlp_arm(X: np.ndarray):
     """The compute-matched control: planner's MLP on the pooled vector. Same optimiser, same schedule, same
     early stopping as the token heads, so a win for those is a win for attention and not for capacity."""
-    def fit(sp, R, res_fut, seed):
-        Xi = standardize_np(X, sp.train)
+    def fit(sel, sp, R, res_fut, seed):
+        Xi = standardize_np(X[sel], sp.train)
         p, st = _train(lambda: planner._mlp(Xi.shape[1], R.shape[1]), lambda net, b: net(Xi[b]),
                        sp, R, res_fut, seed)
         del Xi
@@ -349,7 +354,7 @@ def run_direction(ctx: dict, keep: np.ndarray, arms: dict, direction: int, s_ful
 
     preds, stats = {BASE: p_ego[:, 0]}, {BASE: st_ego}
     for name, fit in arms.items():
-        p, st = fit(sp, R, res_fut, ctx["seed"])
+        p, st = fit(sel, sp, R, res_fut, ctx["seed"])
         preds[name], stats[name] = p + off, st
         log.info("dir %d %-28s fitted: %s", direction, name, {k: round(v, 5) if isinstance(v, float) else v
                                                               for k, v in st.items()})
@@ -535,6 +540,16 @@ def p2b(ctx: dict, rl, strides=(2, 3), n_back: int = 3):
     return run_ladder(lambda k: arms, "p2b", ok, ctx, rl=rl)
 
 
+def repro(ctx: dict, rl):
+    """Arm A on every context row: this must reproduce decision 3d / L0's arm A before anything else is read.
+
+    L0 recorded lambda 10, inner-val residual ADE 1.7818 (direction 0) and pre-onset dADE -0.0274 against
+    straight -0.1254. Anything else means the ladder's plumbing is not the plumbing entry 20 was measured
+    with, and no number below it can be compared with that entry.
+    """
+    return run_ladder(lambda k: {"A ridge_late pooled": ridge_arm(ctx["pooled"])}, "repro", None, ctx, rl=rl)
+
+
 def p2c(ctx: dict, keep: np.ndarray, rl, stride: int = 2, n_back: int = 3):
     """(c) and (d): the token-grid heads, their compute-matched control and the two combined, on the subset."""
     g = align(ctx, GRID_SET, [GRID_ARRAY])
@@ -629,7 +644,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,p2b,p2c,p3,grid,qwen32b,vjepa2")
+                    help="comma list of subset,repro,p2b,p2c,p3,grid,qwen32b,vjepa2")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -646,12 +661,14 @@ def main():
         rl.event("extract", **extract_qwen32b(rl, a.batch_size, a.limit))
     if "vjepa2" in steps:
         rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
-    if {"subset", "p2b", "p2c", "p3"} & set(steps):
+    if {"subset", "repro", "p2b", "p2c", "p3"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:
             summary = write_subset(ctx, choose_subset(ctx, seed=a.seed))
             (rl.dir / "subset.json").write_text(json.dumps(summary, indent=2))
             rl.event("subset", **summary)
+        if "repro" in steps:
+            repro(ctx, rl)
         if "p2b" in steps:
             p2b(ctx, rl)
         if "p2c" in steps:
