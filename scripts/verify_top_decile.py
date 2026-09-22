@@ -195,9 +195,10 @@ def load(set_name="qwen_front3", seed=0):
     feat_idx = pd.concat([pd.read_parquet(d / "index.parquet", columns=["frame_name"])
                           for d in sorted(waymo.out_dir("features", set_name).iterdir())
                           if d.is_dir() and (d / "meta.json").exists()], ignore_index=True)
-    have = set(feat_idx.frame_name)
     name = waymo.frame_names(df)
-    keep = (df.split == "val").to_numpy() & df.has_future.to_numpy() & np.isin(name, list(have))
+    # a hashed membership test: np.isin on object arrays sorts them and costs minutes at this size
+    has_feature = pd.Index(name).isin(pd.Index(feat_idx.frame_name.to_numpy()))
+    keep = (df.split == "val").to_numpy() & df.has_future.to_numpy() & has_feature
     rows = np.flatnonzero(keep)
     ego = np.concatenate([waymo.ego_state(past[rows]), waymo.intent_onehot(df.iloc[rows])], 1).astype(np.float64)
     fut = waymo.future_xy(future[rows]).astype(np.float64)
