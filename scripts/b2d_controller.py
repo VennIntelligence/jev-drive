@@ -42,14 +42,15 @@ class WindowPID:
 
 
 class ConditionalPI:
-    """Fixed SI-unit PI candidate, independent of both vendor buffer algorithms.
+    """SI-unit PI candidate, independent of both vendor buffer algorithms.
 
     Error is m/s, integral stores actuator effort. Conditional integration stops
     charging into saturation and permits unwinding when error changes direction.
     """
-    KP, KI = 1.0, .25
-
-    def __init__(self, lower=-1., upper=.75):
+    def __init__(self, lower=-1., upper=.75, kp=1., ki=.25):
+        if not np.isfinite([kp, ki]).all() or kp <= 0 or ki <= 0:
+            raise ValueError('PI gains must be positive and finite')
+        self.kp, self.ki = float(kp), float(ki)
         self.lower, self.upper = float(lower), float(upper)
         self.reset()
 
@@ -61,13 +62,13 @@ class ConditionalPI:
     def step(self, error, elapsed):
         if not np.isfinite([error, elapsed]).all() or elapsed <= 0:
             raise ValueError('PI requires finite error and positive elapsed time')
-        candidate = self.integral + self.KI * error * elapsed
-        raw = self.KP * error + candidate
+        candidate = self.integral + self.ki * error * elapsed
+        raw = self.kp * error + candidate
         self.integration_limited = bool((raw > self.upper and error > 0)
                                         or (raw < self.lower and error < 0))
         if not self.integration_limited:
             self.integral = float(np.clip(candidate, self.lower, self.upper))
-        self.raw_effort = float(self.KP * error + self.integral)
+        self.raw_effort = float(self.kp * error + self.integral)
         return float(np.clip(self.raw_effort, self.lower, self.upper))
 
 
@@ -92,7 +93,7 @@ class Controller:
                  steering_curve=None, lookahead=None, speed_window='near', dt=.05,
                  trajectory_dt=.25, stale_timeout=.5, history_seconds=2.,
                  max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.,
-                 longitudinal_mode='vendor'):
+                 longitudinal_mode='vendor', pi_kp=1., pi_ki=.25):
         if longitudinal_mode not in ('vendor', 'pi'):
             raise ValueError('longitudinal_mode must be vendor or pi')
         self.longitudinal_mode = longitudinal_mode
@@ -128,7 +129,7 @@ class Controller:
         tcp = preset == 'tcp'
         self.lateral = WindowPID(.75, .75, .3, 40, 'tcp', dt) if tcp else WindowPID(1.95, .05, .2, 10, dt=dt)
         self.longitudinal = WindowPID(5., .5, 1., 40, 'tcp', dt) if tcp else WindowPID(1., .05, 0., 10, dt=dt)
-        self.longitudinal_pi = ConditionalPI(-self.max_brake, self.max_throttle)
+        self.longitudinal_pi = ConditionalPI(-self.max_brake, self.max_throttle, kp=pi_kp, ki=pi_ki)
         self.reset()
 
     @property
@@ -329,7 +330,7 @@ class Controller:
             self._diagnostics.update(longitudinal_integral_effort=self.longitudinal_pi.integral,
                                      longitudinal_unsaturated_effort=self.longitudinal_pi.raw_effort,
                                      longitudinal_integration_limited=self.longitudinal_pi.integration_limited,
-                                     longitudinal_kp=self.longitudinal_pi.KP, longitudinal_ki=self.longitudinal_pi.KI)
+                                     longitudinal_kp=self.longitudinal_pi.kp, longitudinal_ki=self.longitudinal_pi.ki)
         elif self.preset == 'tcp':
             brake = float(desired < .4 or speed > desired * 1.1)
             throttle = float(np.clip(self.longitudinal.step(np.clip(desired - speed, 0., .25)), 0., self.max_throttle))

@@ -180,9 +180,9 @@ limits. This class is never available as a production preset.
 def circle(preset, speed=6., radius=20., sign=1., delay=.0,
            lateral_offset=0., heading_offset=0., wheelbase_gain=1.,
            steering_gain=1., steering_delay=0., speed_window='near',
-           duration=14., lookahead=None, bearing_pid=False, trace=None, longitudinal_mode='vendor'):
+           duration=14., lookahead=None, bearing_pid=False, trace=None, longitudinal_mode='vendor', pi_kp=1., pi_ki=.25):
     controller_class = _BearingPIDExperiment if bearing_pid else Controller
-    ctrl = controller_class(preset, speed_window=speed_window, lookahead=lookahead, longitudinal_mode=longitudinal_mode)
+    ctrl = controller_class(preset, speed_window=speed_window, lookahead=lookahead, longitudinal_mode=longitudinal_mode, pi_kp=pi_kp, pi_ki=pi_ki)
     state = np.array([0., lateral_offset, heading_offset, speed])
     queued, controls = deque(), deque()
     lateral, speeds, command_errors, timings = [], [], [], []
@@ -256,8 +256,8 @@ def _stop_reference(t):
     return position, speed
 
 
-def stop(preset, speed_window='near', trace=None, longitudinal_mode='vendor'):
-    ctrl = Controller(preset, speed_window=speed_window, longitudinal_mode=longitudinal_mode)
+def stop(preset, speed_window='near', trace=None, longitudinal_mode='vendor', pi_kp=1., pi_ki=.25):
+    ctrl = Controller(preset, speed_window=speed_window, longitudinal_mode=longitudinal_mode, pi_kp=pi_kp, pi_ki=pi_ki)
     state = np.array([0., 0., 0., 8.])
     motion_speed, motion_yaw = 8., 0.
     errors, command_errors, positions, speeds, decel_errors = [], [], [], [], []
@@ -317,9 +317,9 @@ def stop(preset, speed_window='near', trace=None, longitudinal_mode='vendor'):
 
 
 
-def s_curve(preset='pursuit', delay=0., trace=None, longitudinal_mode='vendor'):
+def s_curve(preset='pursuit', delay=0., trace=None, longitudinal_mode='vendor', pi_kp=1., pi_ki=.25):
     """Sine centerline: independent Newton projection on y=2 sin(x/12)."""
-    ctrl = Controller(preset, longitudinal_mode=longitudinal_mode)
+    ctrl = Controller(preset, longitudinal_mode=longitudinal_mode, pi_kp=pi_kp, pi_ki=pi_ki)
     state = np.array([0., 0., math.atan(2. / 12.), 6. * math.sqrt(1. + (2. / 12.) ** 2)])
     motion_speed, motion_yaw = state[3], 0.
     queue = deque()

@@ -12,8 +12,8 @@ from b2d_controller import Controller
 from b2d_controller_selftest import _longitudinal, _TraceSuite, circle, stop, s_curve
 
 
-def speed_steps(actuator_delay=0., trace=None):
-    controller = Controller('pursuit', longitudinal_mode='pi')
+def speed_steps(actuator_delay=0., trace=None, pi_kp=1., pi_ki=.25):
+    controller = Controller('pursuit', longitudinal_mode='pi', pi_kp=pi_kp, pi_ki=pi_ki)
     speed, position = 0., 0.
     queue, samples = deque(), []
     delay_ticks = int(round(actuator_delay / .05))
@@ -50,21 +50,28 @@ def speed_steps(actuator_delay=0., trace=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--pi-kp', type=float, default=1.)
+    parser.add_argument('--pi-ki', type=float, default=.25)
     args = parser.parse_args()
+    try:
+        Controller(longitudinal_mode='pi', pi_kp=args.pi_kp, pi_ki=args.pi_ki)
+    except ValueError as exc:
+        parser.error(str(exc))
+    gains = dict(pi_kp=args.pi_kp, pi_ki=args.pi_ki)
     if args.out.exists():
         parser.error('output exists; use a new versioned path')
     sink = _TraceSuite(args.out)
     cases = []
     try:
         for preset in ('carla', 'tcp', 'pursuit'):
-            cases.append(sink.wrap(stop)(preset, longitudinal_mode='pi'))
+            cases.append(sink.wrap(stop)(preset, longitudinal_mode='pi', **gains))
         for sign in (-1., 1.):
             for delay in (0., .1, .3):
-                cases.append(sink.wrap(circle)('pursuit', sign=sign, delay=delay, longitudinal_mode='pi'))
-        cases.append(sink.wrap(circle)('pursuit', lateral_offset=.5, heading_offset=np.deg2rad(5), longitudinal_mode='pi'))
-        cases.append(sink.wrap(s_curve)('pursuit', longitudinal_mode='pi'))
+                cases.append(sink.wrap(circle)('pursuit', sign=sign, delay=delay, longitudinal_mode='pi', **gains))
+        cases.append(sink.wrap(circle)('pursuit', lateral_offset=.5, heading_offset=np.deg2rad(5), longitudinal_mode='pi', **gains))
+        cases.append(sink.wrap(s_curve)('pursuit', longitudinal_mode='pi', **gains))
         for delay in (0., .1, .2):
-            cases.append(sink.wrap(speed_steps)(actuator_delay=delay))
+            cases.append(sink.wrap(speed_steps)(actuator_delay=delay, **gains))
     finally:
         sink.events.close()
     source_dir = args.out / 'source'; source_dir.mkdir()
@@ -73,7 +80,7 @@ def main():
         source = Path(__file__).with_name(name); destination = source_dir / name
         shutil.copyfile(str(source), str(destination))
         sources.append({'path': name, 'sha256': hashlib.sha256(destination.read_bytes()).hexdigest()})
-    result = {'longitudinal_mode': 'pi', 'kp': 1., 'ki': .25,
+    result = {'longitudinal_mode': 'pi', 'kp': args.pi_kp, 'ki': args.pi_ki,
               'plant': 'synthetic 3*throttle - .08*speed - 8*brake with static friction; no gears',
               'cases': cases, 'sources': sources,
               'pass': all(row.get('main_pass', row.get('pass_accuracy', False)) for row in cases)}
