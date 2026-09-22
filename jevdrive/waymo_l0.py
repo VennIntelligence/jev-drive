@@ -186,16 +186,18 @@ def noise_check(df: pd.DataFrame, rows: np.ndarray, past: np.ndarray, fut: np.nd
 
 # ---------------------------------------------------------------- weighted ridge
 
-def weight_schemes(s: dict, fit: np.ndarray) -> dict[str, np.ndarray]:
+def weight_schemes(s: dict, fit: np.ndarray, families: dict | None = None) -> dict[str, np.ndarray]:
     """The weightings of decisions 20, one family per surprise definition, all normalised to mean 1 on the
     fit half.
 
     Each family scales its own s by its own fit-half mean first, so a scheme is a function of the relative
     surprise and never of the metre scale of that definition. The primary family is `ego`; `ctrv` and `cv`
     are carried as controls with the reduced set of schemes, which is what keeps the wall time in range.
+    `families` narrows that to the schemes a caller actually wants (P0 repeats only the one the fit half
+    chose), and it then needs only those definitions of s.
     """
     out = {"uniform": np.ones(len(s[PRIMARY]))}
-    for kind, names in FAMILY_SCHEMES.items():
+    for kind, names in (families or FAMILY_SCHEMES).items():
         r = s[kind] / s[kind][fit].mean()
         cand = {"lin": r, "sq": r ** 2, "a1": 1 + r, "a4": 1 + 4 * r,
                 "top50": (s[kind] >= np.quantile(s[kind][fit], 0.5)).astype(np.float64),
