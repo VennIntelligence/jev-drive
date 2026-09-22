@@ -729,14 +729,21 @@ class Shards:
     def __len__(self):
         return len(self.items)
 
-    def __getitem__(self, i):
-        path, spans = self.items[i]
+    def _fd(self, path):
         fd = self.fds.get(path)
         if fd is None:
             if len(self.fds) >= self.MAX_FDS:
                 os.close(self.fds.pop(next(iter(self.fds))))
             fd = self.fds[path] = os.open(path, os.O_RDONLY)
-        return self.transform([self._open(io.BytesIO(os.pread(fd, n, o))).convert("RGB") for o, n in spans])
+        return fd
+
+    def __getitem__(self, i):
+        path, spans = self.items[i]
+        # One path for every span (a frame's cameras are one record) or one path per span (a clip: a Waymo
+        # sequence is NOT confined to a single shard, so consecutive frames often live in different files).
+        paths = [path] * len(spans) if isinstance(path, str) else path
+        return self.transform([self._open(io.BytesIO(os.pread(self._fd(p), n, o))).convert("RGB")
+                               for p, (o, n) in zip(paths, spans)])
 
 
 def loader_workers(workers: int | None = None) -> int:
@@ -993,6 +1000,74 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
     F.free_gpu()
     return {"set": name, "split": split, "passes": i, "frames": frames, "built": feature_status(name, split),
             "set_aside": sorted(skip), "seconds": time.perf_counter() - t0}
+
+
+def clip_items(df: pd.DataFrame, rows, n_back: int, stride: int, cam: str = "front"):
+    """(items for `Shards`, index, complete mask) for a clip of `n_back`+1 frames ending at each row.
+
+    **A Waymo sequence is not confined to one shard**: consecutive frames of the same sequence routinely sit
+    in different files (frame 29 in shard 58 and frame 31 in shard 91 of the same sequence, for instance), so
+    every slot carries its own path and `Shards` opens one file descriptor per distinct shard in the clip.
+    Only strictly complete windows are offered (decision 13); the caller carries the mask so that the whole
+    comparison table can be restricted to the same frames.
+    """
+    hist, _, got = history_rows(df, n_back, stride, targets=np.asarray(rows))
+    full = got.all(1)
+    hist = hist[full][:, ::-1]                       # oldest first, which is the order a clip is read in
+    shard = (shard_dir().as_posix() + "/" + df.shard.astype(str)).to_numpy()
+    off, ln = df[f"{cam}_off"].to_numpy(), df[f"{cam}_len"].to_numpy()
+    items = [([shard[k] for k in h], [(int(off[k]), int(ln[k])) for k in h]) for h in hist]
+    idx = pd.DataFrame({"frame_name": frame_names(df)[hist[:, -1]], "row": hist[:, -1], "cam": cam})
+    log.info("clips: %d/%d target rows have a complete %d x %d-frame window", int(full.sum()), len(full),
+             n_back + 1, stride)
+    return items, idx, full
+
+
+def extract_subset(name: str, fx, rows, cams=CAMS, separate: bool = False, batch_size: int = 4,
+                   workers: int | None = None, rl=None, force: bool = False) -> dict:
+    """Extract one already-built backbone `fx` over a fixed set of index rows, into `features/<name>/`.
+
+    The shard-keyed layout of `extract_incremental` exists so that a split can be built while it downloads.
+    A diagnostic subset is the opposite case: the rows are chosen once, frozen in a file and never grow, so
+    one flat directory with one index.parquet is both simpler and faster to load. `meta.json` is written last
+    and is the done-marker, exactly as for a shard.
+    """
+    from . import features as F
+    dst = out_dir("features", name)
+    if (dst / "meta.json").exists() and not force:
+        log.info("%s already built at %s, skipping", name, dst)
+        return json.loads((dst / "meta.json").read_text())
+    df = load_index()
+    part = df.loc[df.index.intersection(np.asarray(rows))]
+    items, idx = feature_items(part, cams, separate)
+    return extract_items(name, fx, items, idx, batch_size, workers, rl,
+                         cams=list(cams), separate=separate, frames=len(part))
+
+
+def extract_items(name: str, fx, items, idx: pd.DataFrame, batch_size: int = 4, workers: int | None = None,
+                  rl=None, **meta_extra) -> dict:
+    """The write half of `extract_subset`, for callers that build their own items (clips, one camera, ...)."""
+    from . import features as F
+    dst = out_dir("features", name)
+    dst.mkdir(parents=True, exist_ok=True)
+    (dst / "meta.json").unlink(missing_ok=True)
+    stats = F.extract(fx, items, batch_size, loader_workers(workers), dst, rl, f"waymo/{name}", dataset=Shards)
+    idx.to_parquet(dst / "index.parquet", index=False)
+    meta = {"set": name, "rows": len(items), "model": getattr(fx, "model_id", type(fx).__name__),
+            "tokens_per_forward": int(getattr(fx, "n_image_tokens", 0)), **meta_extra,
+            "features": sorted(q.stem for q in dst.glob("*.npy")), **stats}
+    (dst / "meta.json").write_text(json.dumps(meta, indent=2, default=float))
+    log.info("%s: %d rows, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/frame -> %s", name, stats["n"],
+             stats["ms_per_frame"], stats["peak_vram_gb"], stats["bytes_per_sample"] / 1024, dst)
+    return meta
+
+
+def load_flat_features(name: str, arrays: list[str] | None = None):
+    """(index, {array: memmap}) for a set built by `extract_subset`: one directory, one index.parquet."""
+    d = out_dir("features", name)
+    idx = pd.read_parquet(d / "index.parquet")
+    names = arrays or sorted(p.stem for p in d.glob("*.npy"))
+    return idx, {a: np.load(d / f"{a}.npy", mmap_mode="r") for a in names}
 
 
 def load_features(name: str, arrays: list[str] | None = None, frames=None):
