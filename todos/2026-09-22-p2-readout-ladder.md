@@ -135,7 +135,7 @@ Qwen3-VL 的 `smart_resize` 把 972×1079 的相机图放到 **960×1088**，pat
 | 步骤 | 估计 | 实测 | 依据 |
 |---|---:|---:|---|
 | (b) ridge，10 240 维，2 个 stride × 2 方向 × (5 次 eigh + gram) | 约 1 h GPU | **12 min**（17:59–18:11，含 arm A 的复现） | 估计偏保守：`gram_eigh` 在 GPU 上累 gram、在 CPU 上做 float64 eigh，10 240³ 在 25 核上约 35 s |
-| (c) 抽 20k 帧的 token grid | 约 35 min GPU | **30 min**（88.7 ms/帧，峰值显存 9.72 GB，737.0 KB/帧） | 现有 pipeline 125 ms/帧跑到 L36；只跑到 L18 是真正的 early exit |
+| (c) 抽 20k 帧的 token grid | 约 35 min GPU | **30.8 min**（20 237 帧，90.86 ms/帧，峰值显存 9.72 GB，754 688 B/帧，batch 4、6 workers，合计 15 GB） | 现有 pipeline 125 ms/帧跑到 L36；只跑到 L18 是真正的 early exit |
 | (c) attention / transformer head | **约 1.5 h** GPU | 14.7 GB fp16 整个放进显存，一次 epoch 是 1 万行 × 144 token 的 attention，秒级 |
 | (d) | 约 30 min | 同上 |
 | **合计** | **约 3.5–4 h** | 单个 arm 都不到 3 h，按 CLAUDE.md 只需在 (c) 抽取前做一次 200 帧的 profiling |
@@ -168,7 +168,7 @@ RFS 5.92、41.7% 被压到下限，「对着 log 算 ADE」在那里不是好目
 - [x] **arm A 的复现**：在完整 106 360 帧上和第 20 条逐位相同（λ=10、pre-onset −0.0274 / −0.0427、DiD +0.0980 / +0.0288）
 - [x] (b) 完整半 val 上跑 b2 / b3 + 同帧集上的 arm A —— **买不回 pre-onset**，见 decisions 第 23 条
 - [x] (c) 200 帧 profiling：**200/200 行和盘上的 `qwen_front3` 逐位相同，max |Δ| = 0.0**
-- [ ] (c) 抽 2 万帧 token grid
+- [x] (c) 抽 2 万帧 token grid —— 20 237 帧、15 GB、30.8 min
 - [ ] (c) attention / transformer / MLP 对照三个 head
 - [ ] (d)
 - [ ] (e) gated residual head（最后跑，见第 25 条）
