@@ -14,7 +14,7 @@
 | # | 预诊断 | 回答 | 状态 |
 |---|---|---|---|
 | P0 | train split 复核 3d / L0 | 半 val 的结论在 10 倍数据下站不站得住 | **已测**（分类头的 RFS 行在跑） |
-| P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，提案待拍板** |
+| P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，口径已定（第 22 条）** |
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
 | P3 | backbone 阶梯 | 表征换谁 | (d) V-JEPA 2 已测；(a) 32B 抽取中；(b) H3、(c) Wan 待下载；(d') V-JEPA 2 ladder 已排 |
 | P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | 待做，等 GPU 空 |
@@ -47,7 +47,7 @@ train 415 663 帧 / 2037 个 sequence 训，val 106 360 帧 / 479 个 sequence �
 在 C 的 n_fit 涨九倍后仍成立；「MLP 过拟合」那句被就地改成「归因于样本量是错的」，10 倍数据下它仍不比 A 好，
 且 early stopping 停在第 1 个 epoch。RFS 上视觉仍无增益，n 从 237/242 涨到 479，CI 半宽约 ±0.09。
 
-## P1：judge 口径，提案待拍板
+## P1：judge 口径，已定
 
 同一批 train 训出来的逐帧预测，换四种 judge 各评一遍（Δ = arm − ridge ego，ADE 负为好，RFS 正为好）：
 
@@ -64,10 +64,10 @@ train 415 663 帧 / 2037 个 sequence 训，val 106 360 帧 / 479 个 sequence �
 −0.427 撑起来的，第 1–9 档它比 ego 差；第 10 档里 ADE 降 0.309 m 换不来 RFS 的认可（−0.048，方向还是负的）。
 只有 RFS 把 ego 排第一，分歧只在 ego 与 A 这一对上。
 
-提案（第 22 条，待用户接受）：主判用 ADE vs log 限制在 s_ego 第 1–9 档，第 10 档单独一行用 RFS 和 ADE vs rater_best 报，
+定下来的口径（第 22 条，用户 2026-09-22 采纳）：主判用 ADE vs log 限制在 s_ego 第 1–9 档，第 10 档单独一行用 RFS 和 ADE vs rater_best 报，
 RFS 并排必报。理由是只有它在 pre-onset 上有 power（n=1510，半宽 0.05–0.09；rater 口径在 pre-onset 上只有 6 帧）。
 已知弱点：s_ego 分档是循环的（它是 base 自己的残差），缓解是 rater 认可帧那一行给出同一排序。
-在拍板之前，P2 / P3 同时按两套口径报。
+现行的全集 ADE 只作为对照并排；已落地的 arm 按新口径重报，见 P2 / P3 末尾。
 
 ## P2：读出阶梯，没有任何一档买回 pre-onset
 
@@ -148,13 +148,13 @@ P2(e) 对第 25 条的意义：gated residual head 的 gate 在真实数据上**
 
 抽取成本：V-JEPA 2 8.1 ms / 帧（0.75 GB 显存），Qwen-4B 网格 90.9 ms / 帧，Qwen-32B 621 ms / 帧（63.8 GB 显存）。
 
-在跑和已排：(a) Qwen3-VL-32B 第 32、50 层，约 3.5 h；(d') V-JEPA 2 ladder：三相机、8 / 16 帧、ViT-g、2.1 版、
-与 Qwen L18 的 late fusion，回答方向不一致是不是单相机和样本量造成的；(b) H3 DiT 和 (c) Wan2.2-5B 卡在下载
+在跑和已排：(a) Qwen3-VL-32B 第 32、50 层，约 3.5 h；(d') V-JEPA 2 ladder：三相机（拼接）、8 / 16 帧、ViT-g、
+与 Qwen L18 的 late fusion（2.1 版跳过：hub 上只有第三方转传，按第 12 条的出处规矩不用），回答方向不一致是不是单相机和样本量造成的；(b) H3 DiT 和 (c) Wan2.2-5B 卡在下载
 （3–5 MB/s，71 GB 和 23 GB），抽取代码已写好，噪声水平扫 σ ∈ {0.2, 0.8} 两端。
 
 ## 到目前为止对选型的含义
 
-- judge：等第 22 条拍板；在此之前双口径并报。
+- judge：第 22 条已定，主判限 s_ego 第 1–9 档，第 10 档单独报，RFS 并排。
 - readout：不换。pooled ridge 是这批特征上最好的读出，非线性 head 在这个数据量上只有损失。按第 22 条口径重报后差距更大。
 - 表征：时间要长进表征里，不能拼在读出端；JEPA 式的视频表征是第一个候选，但它在可信九档上的增益只在一个方向成立，两方向都成立的只有第 10 档朝 rater 偏好的移动；生成式（H3、Wan）待比；
   Qwen-32B 回答「放大同族 backbone 有没有用」。
