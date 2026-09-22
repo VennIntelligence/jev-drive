@@ -635,7 +635,7 @@ GRID_ARRAY = LAYER.split("_")[0] + "_grid"
 P3_SETS = {                          # arm -> (feature set on disk, the arrays to read)
     "a qwen32b": ("qwen32b_front3_p3", ["L32_mean", "L32_last", "L50_mean", "L50_last"]),
     "b h3": ("h3_dit_p3", None),
-    "c wan": ("wan22_dit_p3", None),
+    "c wan": ("wan22_dit_p3", None),   # arrays named by noise level and block, discovered on disk
     "d vjepa2": ("vjepa2_p3", ["mean", "last_mean"]),
 }
 
@@ -770,6 +770,17 @@ def extract_qwen32b(rl=None, batch_size: int = 4, limit: int | None = None,
     return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
 
 
+def extract_wan(rl=None, batch_size: int = 2, limit: int | None = None, **kw):
+    """P3(c): Wan2.2-TI2V-5B's DiT, one forward per camera per noise level, over the frozen subset."""
+    from .dit_features import WanDiTFeatures
+    ctx = base_context()
+    keep = load_subset(ctx)
+    rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
+    fx = WanDiTFeatures(**kw)
+    name = P3_SETS["c wan"][0] + ("_probe" if limit else "")
+    return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
+
+
 def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frames: int = 4, stride: int = 2):
     """P3(d): V-JEPA 2 ViT-L over a short clip ending at the frame -- decision 12's video self-supervised control.
 
@@ -794,7 +805,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,gridcheck,qwen32b,vjepa2")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,gridcheck,qwen32b,vjepa2,wan")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -813,6 +824,8 @@ def main():
         rl.event("grid_check", **grid_check())
     if "vjepa2" in steps:
         rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
+    if "wan" in steps:
+        rl.event("extract", **extract_wan(rl, a.batch_size, a.limit))
     if {"subset", "repro", "p2b", "p2c", "p2e", "p3"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:

@@ -81,7 +81,7 @@ class WanDiTFeatures:
         self.buf = {}
         for i in self.taps:
             self.tr.blocks[i].register_forward_hook(self._hook(i))
-        z = self.vae.config.z_dim
+        z = getattr(self.vae.config, "z_dim", None) or self.tr.config.in_channels
         m, sd = self.vae.config.get("latents_mean"), self.vae.config.get("latents_std")
         self.mean = torch.tensor(m, device=DEV).view(1, z, 1, 1, 1) if m else torch.zeros(1, device=DEV)
         self.inv_std = 1.0 / torch.tensor(sd, device=DEV).view(1, z, 1, 1, 1) if sd else torch.ones(1, device=DEV)
