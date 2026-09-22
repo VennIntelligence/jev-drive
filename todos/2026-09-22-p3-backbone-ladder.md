@@ -66,6 +66,36 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 
 所以 (b) 的风险**不在工程，在下载**：71 GB。
 
+#### (c) 跑起来之前卡了两次，两次都不是模型的问题（2026-09-23）
+
+**第一次 00:46**：`from_pretrained` 去 HEAD `huggingface.co` 要一个**盘上已经有**的 VAE index，
+而那个窗口没有 proxy，于是 `[Errno 101] Network is unreachable` 重试五次、gate 退出 1、**队列停了 55 min**。
+`jevdrive/features.py` 一直有 `os.environ.setdefault("HF_HUB_OFFLINE", "1")`，`dit_features.py` 没有。
+
+**第二次 01:41**：加了 `HF_HUB_OFFLINE=1` 和 `local_files_only=True` 之后仍然失败，
+这次是 **`AutoTokenizer`**：离线状态下 `repo + subfolder=` 还是走 hub resolver，
+而 resolver 会去探 `added_tokens.json` 这类**从来没下载过、因而 cache 里也没有 `.no_exist` 标记**的可选文件；
+它没法在不联网的情况下证明这些文件不存在，就报
+`couldn't connect ... couldn't find them in the cached files`。
+**text_encoder 的 config 用同样的方式却加载正常**，所以第一眼看上去像「文件缺失」，其实是「查找方式不对」。
+
+**修法**：`snapshot_dir(repo)` 用 `snapshot_download(repo, local_files_only=True)` 解析出快照目录，
+**四个 `from_pretrained` 全部改成传本地目录路径**（`f"{snap}/tokenizer"` 等），去掉 `subfolder=`，
+整个 resolver 就绕过去了。另外 gate 脚本**同时**导出 `HF_HUB_OFFLINE=1` **并** source proxy——
+两个都要：前者让不必要的探测不发生，后者让真正需要下载的东西能下得到。
+
+**还真缺了一个文件**：最早那次 Wan 下载的 `allow_patterns` 是
+`transformer/* vae/* *.json tokenizer/*`，**不含 text_encoder 的权重**。
+`text_encoder/` 底下只有 config 和 index，三个 `model-0000{1,2,3}-of-00003.safetensors`（11.4 GB）
+是真的没有，`prompt_cache` 要它们来编码那个固定的中性 prompt。已补下，三个 shard 齐了。
+
+**实测（200 帧 probe，2026-09-23 02:43）**：**743.7 ms/帧、峰值显存 24.32 GB、72.0 KB/帧**，
+30 个 block 里 tap 第 15 和第 20 层，σ ∈ {0.2, 0.8}，latent `z_dim` 48，
+prompt state 形状 (1, 512, 4096) 已缓存复用。
+每帧是 **3 相机 × 2 个噪声水平 = 6 次 transformer forward + 3 次 VAE encode**，
+折合约 **124 ms/forward**，比 lit 对 H3 的推算（30–100 ms）高一些。
+**全量 20 237 帧约 4.2 h、约 1.5 GB**；这个数是在 d''' 的 ViT-g 抽取同时在跑时测的，所以是上界。
+
 **(c) Wan2.2-TI2V-5B**：同 (b) 的配方，作为便宜的生成式对照（DriveWAM 的基座，24 GB 可跑）。
 实测配置（写死在 `jevdrive/dit_features.py`）：`WanTransformer3DModel` **30 层、hidden 3072、
 `patch_size=(1,2,2)`、VAE `z_dim=48`**，tap 取第 15 和第 20 层；
