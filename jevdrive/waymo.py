@@ -729,14 +729,21 @@ class Shards:
     def __len__(self):
         return len(self.items)
 
-    def __getitem__(self, i):
-        path, spans = self.items[i]
+    def _fd(self, path):
         fd = self.fds.get(path)
         if fd is None:
             if len(self.fds) >= self.MAX_FDS:
                 os.close(self.fds.pop(next(iter(self.fds))))
             fd = self.fds[path] = os.open(path, os.O_RDONLY)
-        return self.transform([self._open(io.BytesIO(os.pread(fd, n, o))).convert("RGB") for o, n in spans])
+        return fd
+
+    def __getitem__(self, i):
+        path, spans = self.items[i]
+        # One path for every span (a frame's cameras are one record) or one path per span (a clip: a Waymo
+        # sequence is NOT confined to a single shard, so consecutive frames often live in different files).
+        paths = [path] * len(spans) if isinstance(path, str) else path
+        return self.transform([self._open(io.BytesIO(os.pread(self._fd(p), n, o))).convert("RGB")
+                               for p, (o, n) in zip(paths, spans)])
 
 
 def loader_workers(workers: int | None = None) -> int:
@@ -998,16 +1005,18 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
 def clip_items(df: pd.DataFrame, rows, n_back: int, stride: int, cam: str = "front"):
     """(items for `Shards`, index, complete mask) for a clip of `n_back`+1 frames ending at each row.
 
-    A sequence lives inside one shard, so the whole clip is a list of byte spans into the same file and the
-    reader needs no change. Only strictly complete windows are offered (decision 13); the caller carries the
-    mask so that the comparison table can be restricted to the same frames for every arm.
+    **A Waymo sequence is not confined to one shard**: consecutive frames of the same sequence routinely sit
+    in different files (frame 29 in shard 58 and frame 31 in shard 91 of the same sequence, for instance), so
+    every slot carries its own path and `Shards` opens one file descriptor per distinct shard in the clip.
+    Only strictly complete windows are offered (decision 13); the caller carries the mask so that the whole
+    comparison table can be restricted to the same frames.
     """
     hist, _, got = history_rows(df, n_back, stride, targets=np.asarray(rows))
     full = got.all(1)
     hist = hist[full][:, ::-1]                       # oldest first, which is the order a clip is read in
     shard = (shard_dir().as_posix() + "/" + df.shard.astype(str)).to_numpy()
     off, ln = df[f"{cam}_off"].to_numpy(), df[f"{cam}_len"].to_numpy()
-    items = [(shard[h[-1]], [(int(off[k]), int(ln[k])) for k in h]) for h in hist]
+    items = [([shard[k] for k in h], [(int(off[k]), int(ln[k])) for k in h]) for h in hist]
     idx = pd.DataFrame({"frame_name": frame_names(df)[hist[:, -1]], "row": hist[:, -1], "cam": cam})
     log.info("clips: %d/%d target rows have a complete %d x %d-frame window", int(full.sum()), len(full),
              n_back + 1, stride)
