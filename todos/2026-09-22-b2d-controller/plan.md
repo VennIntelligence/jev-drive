@@ -246,7 +246,7 @@ report 从 `results.json` 重建官方分数与事件，从 telemetry 重建跟�
 Tokyo/3090 与 GPU box、policy=none 与真实推理、窗口与离屏均分表。
 用 Dev10 更新的是 route driver 的范围；220 条估计按地图和场景构成加权并列假设，不把简单 `×22` 当实测。
 
-`research/results/b2d/controller/` 收录小型 results.csv、summary.json、manifest 与参数；完整日志和录像留 `/data`。
+按用户批准的文件夹交付方式，`todos/2026-09-22-b2d-controller/results/`收录摘要、CSV、manifest、参数与绘图索引，`figures/`收录图。原提议的research/results路径不再另建重复副本；完整原始日志与大型逐帧证据留/data。
 更新 research 的错误结论、车辆常数和反证条款；更新 `docs/bench2drive-cost.md`，新坑写 `docs/tokyo-box.md`。
 最终回报列出 selftest 数字、所有 Dev10 行、默认选择、pose 误差、版本、commit hash、偏离原计划及未完成项。
 

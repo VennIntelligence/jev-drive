@@ -1,6 +1,6 @@
 # 轨迹怎么变成 CARLA 的控制量
 
-状态：2026-09-23修订。v1完整基线、v2–v4开发与恢复smoke已结束；v4正式双seed对照运行中，首轮已不满足默认替代条件。真实模型上的新控制器收益尚未验证。
+状态：2026-09-23修订。v1完整基线、v2–v4开发与恢复smoke已结束；v4正式双seed对照60条全部结束，不满足默认替代条件。真实模型上的新控制器收益尚未验证。
 背景: [carla-efficiency.md](carla-efficiency.md)（成本）、[frozen-vlm-planner.md](frozen-vlm-planner.md)（planner 输出什么）、
 [decisions.md](decisions.md) 第 16–18 条（闭环要不要做）。
 
@@ -343,6 +343,11 @@ v3 PI Kp=1、Ki=.25未消除全部波动；唯一追加的Kp=.5复验中，CARLA
 旧tcp-smoke/tcp-fast确实加载过真实TCP checkpoint，但本轮route oracle尚未做真实TCP的新旧控制器对照。
 后续应冻结模型checkpoint、相机输入与推理节拍，比较轨迹跟踪、速度稳定、转弯、停车和舒适性，驾驶得分作为另一个观察量。
 TCP原生waypoint时域和学习的control branch须先明确，不得凭空补出5s轨迹后声称只换了控制器。
+
+正式结果已完成：候选16/20驶完全程，对CARLA横向＋同一PI的17/20；全程横向RMS为.402600m对.363227m，高10.84%。
+候选DS均值59.147虽高于参考53.811，仍不满足默认替代条件。保留CLI carla/vendor，PI/max作为显式可选配置；
+不再追加未触发的保留集，也不把未执行的G2 seed1补充复跑记为通过。
+[最终报告与全部验收偏离](../todos/2026-09-22-b2d-controller/final-report.md)已封存；下一阶段先做真实TCP纵向两组、三路线的小规模对照。
 
 ## 会推翻候选选择的证据
 

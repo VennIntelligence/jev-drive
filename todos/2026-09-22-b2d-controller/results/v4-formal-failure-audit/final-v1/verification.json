@@ -1,0 +1,23 @@
+{
+  "final_source_inputs_verified": 549,
+  "final_source_bytes": 188939685,
+  "helper_and_archived_report_hashes_verified": true,
+  "outputs": {
+    "finalize.py": {
+      "sha256": "a780b25bf6e6d5a2b494fae7b0d7065a7a6cb81d179170fa816f2d8ae1060c1f",
+      "bytes": 5579
+    },
+    "selected-60-attribution.csv": {
+      "sha256": "2f63de32e948f73d5f453f41622c9f9f03784c263dccaf1a42e9991623db9e71",
+      "bytes": 43953
+    },
+    "manifest.json": {
+      "sha256": "57b9e4209b744e4541d7f9f3dd00c11bdd1f6a442cafcc6c70ff975e156e8edd",
+      "bytes": 784
+    },
+    "all-attempt-attribution.csv": {
+      "sha256": "be3e80953098cd63e0907000acf4c241a4d2cb67e187bb47cd64e41e81f84e50",
+      "bytes": 44110
+    }
+  }
+}

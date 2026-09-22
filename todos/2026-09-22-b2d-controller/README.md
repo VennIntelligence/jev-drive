@@ -1,9 +1,10 @@
 # B2D controller 实践
 
-状态：v1证据已冻结归档，独立v2开发继续；当前没有合格的新默认配置。用户已于2026-09-22授权多个子代理协作，集中保存中间记录和共享结果。
+状态：v1–v4开发、正式60条对照与坡道检查结束，证据已归档；没有合格的新默认配置，真实TCP新旧控制器对照尚未执行。用户已于2026-09-22授权多个子代理协作，集中保存中间记录和共享结果。
 
 | 文件 | 用途 |
 |---|---|
+| [final-report.md](final-report.md) | 本轮最终结论、完整正式表、验收与下一步 |
 | [plan.md](plan.md) | 已接受的方向、T0–T8 任务和 G1–G5 验收 |
 | [iteration-v2.md](iteration-v2.md) | v2–v4闭环反馈、PI调节、舒适性与集成异常证据 |
 | [progress.md](progress.md) | 主代理维护的进展、决策、阻塞和交付索引 |
@@ -13,7 +14,7 @@
 | `results/` | 可提交的 manifest、标定与实验摘要、小型 CSV/JSON |
 | [results/raw-file-index](results/raw-file-index/README.md) | 已结束阶段的逐文件SHA256与原始路径，包括失败尝试 |
 
-原始日志、逐 tick 数据和录像：`/data/runs/b2d/controller/`。文件名标明阶段、preset 和 seed。
+原始日志和逐 tick 数值数据（本轮未录制RGB或视频）：`/data/runs/b2d/controller/`。文件名标明阶段、preset 和 seed。
 主代理独占 CARLA server 生命周期和 git 操作；各子代理只改分配的源码文件，交叉修改先沟通。
 每项结果注明是否为解析计算、离线模拟或 CARLA 实测；失败结果保留。
 每个阶段完成后向用户报告简短结果。原始输出、汇总和图片均使用新目录；已有中间版本不覆盖。

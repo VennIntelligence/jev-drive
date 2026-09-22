@@ -265,3 +265,19 @@ Driving Smoothness另由独立脚本根据加速度、jerk和yaw类指标计算�
 
 后续日志补充完整真值运动学字段，并明确角速度单位和时间步，供分开的物理诊断及指定版本脚本复算。旧run缺少必要原始向量，不能事后用速度差分无损补出官方metric_info。
 版本实现中的导数/单位疑点仅在[纵向分析附录](agents/v2-longitudinal.md)及[源码观察存档](results/scoring-source-observations/README.md)说明；不据此修改vendor，也不作为本文主要性能收益结论。
+
+
+## 本轮最终正式对照与文章落点
+
+全部60条、63次attempt已结束，候选不替换默认。[最终结论与完整六组表](final-report.md)集中说明验收、版本和偏离；
+上文v1与中间开发数据继续保留其阶段语义，不改写成v4结果。
+
+一个与驾驶表现直接相关的反例：pursuit max＋PI的DS均值59.147高于CARLA＋PI的53.811，
+却只有16/20驶完全程（参考17/20），全程横向RMS也高10.84%。不能把单项DS当成整体更好。
+开发集纵向jerk改善25.9%与正式交互失败是并存的结果；真实TCP新旧控制器对照仍未执行。
+
+![Frozen v4 official-route diagnostics](figures/formal-v4/campaign-completion-tracking.png)
+
+图中CARLA/PURSUIT均使用PI .5/.25，TCP为vendor preset；全部失败和碰撞前指标并列。
+[绘图源、CSV及PDF](figures/formal-v4/README.md)、[G4审计](results/formal-v4-g4/README.md)、
+[失败归因](results/v4-formal-failure-audit/README.md)、[成本](results/formal-v4-cost/README.md)。

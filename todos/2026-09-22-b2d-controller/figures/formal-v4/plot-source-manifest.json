@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "generated_utc": "2026-09-22T16:05:47.851891+00:00",
+  "arguments": {
+    "development": "/data/runs/b2d/controller/development-v4",
+    "campaign": "/data/runs/b2d/controller/formal-v4",
+    "label": "Frozen v4 route oracle",
+    "campaign_only": true,
+    "out": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/figures/formal-v4",
+    "route_id": "26966"
+  },
+  "dependencies": {
+    "numpy": "1.23.5",
+    "matplotlib": "3.7.5"
+  },
+  "protocol": "Diagnostic route oracle; policy = none",
+  "inclusion": "Every supplied G2 case and campaign attempt is exported. Failures are not excluded. Campaign selected_attempt determines the connected series; retries remain x markers. Missing metrics stay empty/NaN, never become zero. No confidence intervals from unreplicated runs.",
+  "sources": [
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/controller-report.json",
+      "sha256": "80ff79dbe3f0c279ad700d1863005e2a1ab5e063e7a88b51ca98da42ef6a584a",
+      "bytes": 179094,
+      "snapshot": "sources/80ff79dbe3f0-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/17569/1/control.jsonl",
+      "sha256": "a348431db1c5d9df618cf37dbc8b5f5afc5040b95a72a1a610ecce1304e5485e",
+      "bytes": 685434
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/2091/1/control.jsonl",
+      "sha256": "a25401a8004ff071fc3018078f940922127d12854aa3f6e8fb16a92b00e1bd5a",
+      "bytes": 7243502
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/25378/1/control.jsonl",
+      "sha256": "dfb68ac1e502328d77b3d121c7ed1c8ec1148d3a988c04522951b84202c55041",
+      "bytes": 610673
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/25381/1/control.jsonl",
+      "sha256": "76d5d44b451cc0687fc6fd7f2e05f34e7a6aa8eade243efa7b2ef8c546f7f7a0",
+      "bytes": 833599
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/25424/1/control.jsonl",
+      "sha256": "e8f2c9f5b65e760473b49c46186b97b2320d1bfa959756b084a1c58656c4954b",
+      "bytes": 8013151
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/26405/1/control.jsonl",
+      "sha256": "ace2bdbe156a663c8b0b75a176ebb9f2c665dff9abc2526280b56e98cb76fcc5",
+      "bytes": 806459
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/27494/1/control.jsonl",
+      "sha256": "f82cc5bcc28968faf0d87aad70e1dcc18cd5a928b1f0a0b6b9c8cde519acee87",
+      "bytes": 992688
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/28198/1/control.jsonl",
+      "sha256": "2d3eeda011f60801e4cb4c1ab4e0aa98720a59dfa9cefa1ca87419ac4940c880",
+      "bytes": 536982
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3255/1/control.jsonl",
+      "sha256": "4df454b0c883cbd6e3cf883d43ecaa879eca71b8b30e353d1f9129230c469e1d",
+      "bytes": 1408835
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3514/1/control.jsonl",
+      "sha256": "3436194342cbbdbd7c605e8902a3e816a6cb90497bfdf6de27332d13c867cbd8",
+      "bytes": 1388013
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/controller-report.json",
+      "sha256": "d0b77976cfc4ca546892f0aa301e64c6ee96ce07065daad55a641214d1f2ccbe",
+      "bytes": 179315,
+      "snapshot": "sources/d0b77976cfc4-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/17569/1/control.jsonl",
+      "sha256": "1688f18652cb03eccdc80167ae66b763497ffe22a289f191d2121bd497cd3ebe",
+      "bytes": 683567
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/2091/1/control.jsonl",
+      "sha256": "678e96386265248272fd7a804f05ff5f37cda07c519703a212064a23fa9934a5",
+      "bytes": 7472480
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/25378/1/control.jsonl",
+      "sha256": "9b4e2860de2e04d9427cd50a081dba22b65430ebcd76548eb1cd79ea9b1b114e",
+      "bytes": 610689
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/25381/1/control.jsonl",
+      "sha256": "25b664a42c1676e2e011f312223ef629e474f3517d4b527b968cdbfa8d7cb643",
+      "bytes": 833624
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/25424/1/control.jsonl",
+      "sha256": "f1dda548c4a78a37b19c280d99bededa020a7d2159f8da913691447d18aa8a80",
+      "bytes": 7994499
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/26405/1/control.jsonl",
+      "sha256": "655deb28f37c4cdd2ba4bddd3c2818fd8abf6015e42b0eb2aa3f64b3a63c7cf8",
+      "bytes": 807582
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/27494/1/control.jsonl",
+      "sha256": "c6418e20713c38196bb86114394d5b738a3e2864cc067ec9b02fc9c9910369c3",
+      "bytes": 991044
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/28198/1/control.jsonl",
+      "sha256": "cbda6bc3c6fc305a2f452d904f7de7c85ab30629bd4f20fd212efad8339756e5",
+      "bytes": 538706
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3255/2/control.jsonl",
+      "sha256": "8d89f0d9bbaea2bb9fd9beaf85eca13a6b16f261f2ad1eeb3aa4540231355a86",
+      "bytes": 1405092
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3514/1/control.jsonl",
+      "sha256": "b57fb6faf72ec41f8c2a116f16fe1a5ddde0bed97eb3d56400806d8369381a86",
+      "bytes": 1397611
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/controller-report.json",
+      "sha256": "413b3609cc5656835d39a3ac8b047d26bc6182b7f804bd18c69c1c57e816975e",
+      "bytes": 179192,
+      "snapshot": "sources/413b3609cc56-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/17569/1/control.jsonl",
+      "sha256": "18c114f275fd10165ceecad0f114f06e7d49d6b08adf95417f665112b0042b0f",
+      "bytes": 685374
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/2091/1/control.jsonl",
+      "sha256": "21c7d37c42b76fcea04618cc330e88e19f47f2e1f53f62c39c10a2a47f34f4af",
+      "bytes": 8010120
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25378/1/control.jsonl",
+      "sha256": "67eb09899132474d21b06a73b3ced4adcfd5c7cdb92287fc6ec38e51e5193dd2",
+      "bytes": 609798
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25381/1/control.jsonl",
+      "sha256": "e81f1ede4fff7b4f6bb5c215fc2a68e27f9c2cdcc1ef3921a6a0c584b0695534",
+      "bytes": 832793
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25424/1/control.jsonl",
+      "sha256": "032691842bbc9523abcfbb0ee1a73b47834ec183da8d6193d739e761b11e2032",
+      "bytes": 7965611
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/26405/1/control.jsonl",
+      "sha256": "5b390e98ecce2c96f57491a083b36113b722dd0e18f9bb19431bc6c7be554f6d",
+      "bytes": 809999
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/27494/1/control.jsonl",
+      "sha256": "fbc6d5e2d8e03d965f02a6842dfa4753dbffc55e1885ecb54652eb1044db13ae",
+      "bytes": 995786
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/28198/1/control.jsonl",
+      "sha256": "5b28f31baa9fcda71489d3adeae987ca89c4dd5c01d07a5fb89b1c023224f53f",
+      "bytes": 544949
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3255/1/control.jsonl",
+      "sha256": "e1e8c8fb11d08c482f85f02cdc6c46f7213f504340b1c0dfeaf03fb96ccfd32d",
+      "bytes": 1397262
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3514/1/control.jsonl",
+      "sha256": "d1a17a493e306458dcc8132a95316ab3a59b7c7f877adcaaa642ceaba68078d2",
+      "bytes": 1466738
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/controller-report.json",
+      "sha256": "438276cce76bbdc5b2a45f37a40e20a598d1682f4c705293335daa88a083a12e",
+      "bytes": 179198,
+      "snapshot": "sources/438276cce76b-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/17569/1/control.jsonl",
+      "sha256": "f0ae75c6b7b59998f6a8e92dda880ee20c4b9477c7850d4733affddfecf14bd0",
+      "bytes": 688069
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/2091/1/control.jsonl",
+      "sha256": "e005eb96af0d9387df31ca68ba265aac56ecd062cc73675e695cc81ee6c367e7",
+      "bytes": 8004494
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/25378/1/control.jsonl",
+      "sha256": "00dfb323176cb8fab5a429dd43873589e13bb9d6d0992018c2816522674d0d2d",
+      "bytes": 609813
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/25381/1/control.jsonl",
+      "sha256": "ae51cf4788374866783b80a453a0a8a5e9df263dc1b04daff48819556a2dc98b",
+      "bytes": 832818
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/25424/1/control.jsonl",
+      "sha256": "3b5bca92544442d2475a59374b3e30f7019dbf1e18cc0e847a790a0308ba9cc6",
+      "bytes": 7966533
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/26405/1/control.jsonl",
+      "sha256": "a7634ccb81b6527e5f9475854910e6a27b6477d37a3e0ff193eba30c2f7e53b6",
+      "bytes": 807558
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/27494/1/control.jsonl",
+      "sha256": "bb4e58a9f94b8686eb6a9c8f8fbfa1136f4633dc32a28b8cf1a30c5337696282",
+      "bytes": 995776
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/28198/1/control.jsonl",
+      "sha256": "743dad6ad08e69d9abc5c4611577fe07570b16c1ae45d8cc1531421a88f699a1",
+      "bytes": 545008
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3255/1/control.jsonl",
+      "sha256": "1d2f8cdc9dded04ad51865e56209adf5e1e39a51e448162b7d5e519215a72c8c",
+      "bytes": 1400503
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3514/1/control.jsonl",
+      "sha256": "c27afdcfb914808aca700f3eb6ce11a0ae69eba14c54d76f84d75d4775708129",
+      "bytes": 1463238
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/controller-report.json",
+      "sha256": "beafdc9387e31e79a0a76643449138b35ac23ff457db0c9bcce7ba772970772e",
+      "bytes": 176460,
+      "snapshot": "sources/beafdc9387e3-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/17569/1/control.jsonl",
+      "sha256": "65d4ce8ce2fe6956c003baf0d7f61a6691da3b8c85800e84c80dbf49cb4dbca3",
+      "bytes": 630828
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/2091/2/control.jsonl",
+      "sha256": "3e92738099592780539698b56c1e533646573d30e1461a65410e372bdb639934",
+      "bytes": 539779
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/25378/1/control.jsonl",
+      "sha256": "6ea021e4dfeeab796d6ee56526147be00c461a7f598961c7053a993ec4806de4",
+      "bytes": 565092
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/25381/1/control.jsonl",
+      "sha256": "c96f4f6f625c11b776bfa966644744ef9384bcb4445cf991d38ed2025c3546d6",
+      "bytes": 771917
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/25424/1/control.jsonl",
+      "sha256": "33ea6bf948ca76541ba230b9b689273c99cddc9490efe51fb8504609903d930d",
+      "bytes": 7514684
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/26405/1/control.jsonl",
+      "sha256": "46ab50f2987cb5cbe105c3d38587cda9020284d3e3698ec2cde6e74eca82b6d8",
+      "bytes": 747442
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/27494/1/control.jsonl",
+      "sha256": "0807acb081ededbe233974ee903795f17dc8fa4a5f5879a9d60064a038ee056a",
+      "bytes": 914838
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/28198/1/control.jsonl",
+      "sha256": "d8b0285a15bcb7b425de64b8dbde1dd44c9368667f98e46a176f5517cfec2c84",
+      "bytes": 503764
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3255/1/control.jsonl",
+      "sha256": "d219e7e24b2bb022f7e9aacf21deecc23fb9b92ceaf0954214e0bb0ec153141d",
+      "bytes": 1297602
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3514/1/control.jsonl",
+      "sha256": "848320b4bb29992f615cdf292f2a82406fc3cf391fc36058dec84ae7fad207b5",
+      "bytes": 7447468
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/controller-report.json",
+      "sha256": "a4c5accff88588c32b46ae88dccaf06d3f1e98837a66ab7a5a4eacaa5331dea4",
+      "bytes": 176482,
+      "snapshot": "sources/a4c5accff885-controller-report.json"
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/17569/1/control.jsonl",
+      "sha256": "fe85188a6db8c7f6e3e00a2acb3684d90301930dbe960b548897535ac7d75df0",
+      "bytes": 632615
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/2091/1/control.jsonl",
+      "sha256": "a36d98114c2a0c86a58b6264d85e4e414d67c76e3fd9757b8aa04c25beda2ebd",
+      "bytes": 544587
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/25378/1/control.jsonl",
+      "sha256": "72a614c049227416fdf394ea186f5abf3736a11ee49629032cebd79a430c611b",
+      "bytes": 563944
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/25381/1/control.jsonl",
+      "sha256": "d1e5201a2ba6512cedf3b4f700febed220963275ae95da95101c70b802a52457",
+      "bytes": 771942
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/25424/1/control.jsonl",
+      "sha256": "659cf11d3057eb382adf27106756e52b33121d55194c635685a47487403ad6fe",
+      "bytes": 7517126
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/26405/1/control.jsonl",
+      "sha256": "f3e98f48eabf48af718707640a87c4f66bd1eb5ee1ef05bb178434183e8db71d",
+      "bytes": 749714
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/27494/2/control.jsonl",
+      "sha256": "36a03685186d4393bd5532ac54551afb86111b46c92f6c7ae9b579da8cd9c36e",
+      "bytes": 902220
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/28198/1/control.jsonl",
+      "sha256": "524f7291834584e0d7c0fc7c07cfaf32a6df1793d1af1aef2bf4e7ce42bed9ff",
+      "bytes": 501794
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3255/1/control.jsonl",
+      "sha256": "3eae36e8a346ff3437c9180463e6a478b37070b3578400cb5e86e098c62a7986",
+      "bytes": 1300569
+    },
+    {
+      "path": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3514/1/control.jsonl",
+      "sha256": "194b245b6e0b7a5500a1cf28ab729bb2091bc1a41ec9f98b0651fdb00760ca6e",
+      "bytes": 7448760
+    },
+    {
+      "path": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_plot.py",
+      "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64",
+      "bytes": 21406,
+      "snapshot": "sources/0b3c339251f0-b2d_controller_plot.py"
+    }
+  ],
+  "figures": [
+    {
+      "name": "campaign-completion-tracking",
+      "outputs": [
+        {
+          "path": "campaign-completion-tracking.png",
+          "sha256": "95c02aae3ea94fcc56a4609d53dd15cba14d36b62f7db92189025be0c195eab9"
+        },
+        {
+          "path": "campaign-completion-tracking.pdf",
+          "sha256": "acd82cea44a1100f89d65b96fc003a6f5344ddcc5e941dd61ceb262350ded67f"
+        }
+      ],
+      "data": [
+        "campaign-all-attempts.csv"
+      ],
+      "note": "All 63 attempts; x = retry; NA = unavailable; pre-collision uses recorded event frames"
+    }
+  ],
+  "csv_data": [
+    {
+      "path": "campaign-all-attempts.csv",
+      "rows": 63,
+      "columns": [
+        "route_id",
+        "preset",
+        "seed",
+        "attempt",
+        "selected_attempt",
+        "official_status",
+        "process_status",
+        "completion_pct",
+        "full_cte_rms_m",
+        "precollision_cte_rms_m",
+        "precollision_state",
+        "full_cte_samples",
+        "precollision_cte_samples",
+        "driving_completed",
+        "capped",
+        "report_source",
+        "telemetry_source"
+      ],
+      "sha256": "02d502be2aa59d435c2db960c783893445f6a34872b0c503876f7f5065529507"
+    }
+  ],
+  "warnings": [
+    "Campaign telemetry unavailable: /data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3255/1/control.jsonl",
+    "Campaign telemetry unavailable: /data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/2091/1/control.jsonl",
+    "Campaign telemetry unavailable: /data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/27494/1/control.jsonl"
+  ]
+}

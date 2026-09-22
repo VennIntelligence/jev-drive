@@ -381,3 +381,9 @@ server death. No fixed recycling interval has been established by this one crash
 The seed0 core remained frozen during the comparison; later confirmation and holdout results
 belong in their own evidence records. Intermediate failures, source snapshots and precise
 provenance limits are indexed by the article notes.
+
+### Controller feedback iteration: compass dropout and completed reuse audit
+
+The later v4 smoke reproduced a single nonfinite IMU compass value at simulation time 9.10 s while GNSS, gyro and speed remained finite. Log raw motion before pose validation. The initialized filter now predicts heading from the gyro for at most 0.2 s, records degraded observations, and skips compass correction; an uninitialized or longer dropout brakes and resets history. A fresh valid pose forces a new trajectory. The recovery smoke completed 100%, and 126 regression tests passed. This is bounded sensor recovery, not simulator-truth substitution.
+
+The completed v4 campaign reused its server across all six groups and restarted only after three recorded rc139 failures. All failed attempts remain archived. This observation still does not establish a fixed safe process lifetime. Its 11 official TickRuntime failures all had contact before prolonged low speed; zero official blocked/deviation events must not be reported as zero real stalls, and ego-only logs do not establish collision responsibility. See the [final report](../todos/2026-09-22-b2d-controller/final-report.md) for the 60 selected records, 63 attempts and all intermediate evidence.

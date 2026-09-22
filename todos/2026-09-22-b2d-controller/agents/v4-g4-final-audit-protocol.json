@@ -1,0 +1,14 @@
+{
+  "date_jst": "2026-09-23",
+  "scope": "Final wrapper adds original-plan checks absent from helper; no runtime/script changes",
+  "full_matrix": "3 presets x 2 TM seeds x 10 Dev10 routes",
+  "completion": "Each seed candidate mean completion >= max(CARLA,TCP) mean completion. This does not change fixed lateral reference.",
+  "lateral_reference": "Frozen CARLA lateral + PI Kp.5 Ki.25 additive",
+  "lateral": "Full-route RMS mean equally weighted across requested routes/seeds, candidate <= .8 * reference; before-collision shown separately and never substituted.",
+  "speed": "Trajectory-reference RMS route mean candidate <= reference + .1; keep independent cruise and official comfort distinction.",
+  "failure_counts": "Show incomplete route IDs/counts for every preset/seed; compare candidate against each reference and against the reference(s) with maximal mean completion in that seed. Root reviews original no-increased-failure rule before adoption.",
+  "failure_causes": "Official blocked/deviation plus observed stalls, TickRuntime and long low-progress require evidence labels controller/external/unknown; zero official blocked does not prove no stalls.",
+  "strict_sr": "Selected official status Completed/Perfect AND no nonempty infraction list except min_speed_infractions. Requested subset denominator10; not full220.",
+  "no_partial_selection": true,
+  "no_new_default_from_helper_alone": true
+}

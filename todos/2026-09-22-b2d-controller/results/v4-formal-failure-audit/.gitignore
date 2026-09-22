@@ -1,0 +1,2 @@
+# Full intermediate contexts live on the data disk; see README and relocation manifest.
+/snapshots

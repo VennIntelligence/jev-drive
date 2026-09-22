@@ -33,4 +33,5 @@
 | [失败smoke与输入重放](../smoke-v4-motion-replay/README.md) | 两次失败目录各有完整索引，两版重放均保留 |
 | [恢复smoke](smoke-v4-recovery.json) | 完整213帧官方路线、原始motion及审计来源 |
 
-正式formal-v4仍在运行，不能把增长中的目录称为已封存；结束后另建全文件索引。
+[正式formal-v4全文件索引](formal-v4.json)在结束并确认server停止后生成：904文件、191186801字节，包含60条选中结果及3次基础设施attempt。
+[失败归因的中间快照及迁移验证](../v4-formal-failure-audit/README.md)另存，历史版本与哈希不改写。

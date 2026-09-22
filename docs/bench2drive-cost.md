@@ -639,3 +639,24 @@ once.
   time, or whether this was part of a larger susceptible set, needs repeated evaluation.
 
 Last verified: 2026-09-22
+
+## Tokyo frozen v4 controller comparison (2026-09-23)
+
+The complete three-configuration, two-TM-seed Dev10 comparison selected 60 official records from 63 attempts: 49 driving-completed routes and 11 TickRuntime failures. This is a route-oracle diagnostic (`policy=none`), with 20 Hz motion/control and 5 Hz front-three cameras/route references, 800×450, windowed Epic, stock CARLA 0.9.15, and Bench2Drive 0.0.4 (`7ec25d1c9f7522d923ce5f3420986cef1cb2d956`). Rendering used Tokyo physical GPU 1. All three configurations shared the route adapter; CARLA lateral and pursuit max used PI(.5,.25), while TCP retained vendor longitudinal control.
+
+| Group | Completed | Ticks min / median / max | Selected attempt wall | Extra infrastructure wall | Profiled ms/tick | Control p99 ms |
+|---|---:|---:|---:|---:|---:|---:|
+| CARLA + PI, seed0 | 9/10 | 252 / 430.5 / 4000 | 346.8 s | 0 s | 12.644 | .256 |
+| TCP vendor, seed0 | 8/10 | 259 / 389.5 / 4000 | 350.3 s | 19.0 s | 12.947 | .254 |
+| pursuit max + PI, seed0 | 8/10 | 255 / 432 / 4000 | 357.9 s | 0 s | 13.064 | .255 |
+| CARLA + PI, seed1 | 8/10 | 252 / 430.5 / 4000 | 348.9 s | 49.1 s | 12.548 | .255 |
+| TCP vendor, seed1 | 8/10 | 259 / 389.5 / 4000 | 345.5 s | 20.0 s | 12.888 | .253 |
+| pursuit max + PI, seed1 | 8/10 | 255 / 432 / 4000 | 357.3 s | 0 s | 12.994 | .255 |
+
+Manifest start to end event took **2247.413 s (37.46 min)**; final server shutdown is excluded. Selected attempts sum to 2106.7 s, and three rc139 infrastructure attempts add 88.1 s. The selected profiled loop sum is 860.017 s, computed from profiled tick counts times rounded mean tick costs. The remaining selected 1246.683 s mixes setup, cleanup, unprofiled warmup and untimed work; it is not a standalone startup measurement. Another 52.613 s outside attempts includes readiness, restarts, reports and the separate slope hold.
+
+All failed selected routes consumed 4000 profiled ticks. Completed routes range from 252 to 3882 ticks, so a fixed short-route estimate misses collision-associated delays. There are 68142 logged control ticks, including 1200 warmup ticks excluded from the profile denominator. No neural inference cost was measured, and these numbers do not establish real TCP or full220 wall time. The candidate failed its driving acceptance conditions despite a higher mean DS.
+
+[Reproduction helper, exact CSV and input hashes](../todos/2026-09-22-b2d-controller/results/formal-v4-cost/README.md) and [final driving report](../todos/2026-09-22-b2d-controller/final-report.md) preserve the measurement boundary. This section supplements the earlier frozen v1 measurement without relabeling its costs.
+
+Last verified: 2026-09-23

@@ -1927,12 +1927,12 @@ TCP=.4947m。pursuit没有同时改善所有预定指标，不能因为方法新
 |---|---|---|
 | 车辆几何/单位与控制契约 | 已确认 | MKZ轴距2.86047m、转向曲线km/h、后轴指标与双频率已验证；不等于精确轮胎模型 |
 | 原相加式与独立pursuit | 已确认，限定离线消融 | 相加式误差更大，但两者在该消融都过.2m；不写“必然失稳” |
-| 新默认与跑榜收益 | v1不合格，v2开发中 | 两seed与保留集已完成，不支持替换；补充S弯三组速度gate均失败。route oracle没有真实planner，不能宣布分数改进 |
+| 新默认与跑榜收益 | v1不合格；后续v4也不合格，见第27条 | 两seed与保留集已完成，不支持替换；补充S弯三组速度gate均失败。route oracle没有真实planner，不能宣布分数改进 |
 
 已发现route adapter的当前位置至首点连接段可推高轨迹导数，配置8m/s不代表每帧reference8m/s；
 独立G2真值巡航误差与Dev10输入轨迹导数误差必须分开。此限制留在数据里，不通过改指标隐藏。
 
-**下一步**：按[迭代验收方案](../todos/2026-09-22-b2d-controller/plan.md)先修复原点连接引起的速度膨胀，在无交互开发集隔离比较轨迹生成与lookahead。
+**当时的下一步（现已完成，最终结果见第27条）**：按[迭代验收方案](../todos/2026-09-22-b2d-controller/plan.md)先修复原点连接引起的速度膨胀，在无交互开发集隔离比较轨迹生成与lookahead。
 单测/开环重放仅验几何和接口；必须以CARLA闭环验证、冻结后配对回归决定资格。已有保留集再次运行叫复验，不能冒称盲测；不降低原门槛。真实planner收益另做固定checkpoint的controller-only对照。
 完整数字、图、失败归因与原始路径见[文章素材](../todos/2026-09-22-b2d-controller/article-notes.md)。
 
@@ -1941,7 +1941,9 @@ TCP=.4947m。pursuit没有同时改善所有预定指标，不能因为方法新
 
 2026-09-23：v2修复轨迹起点定时，v3/v4根据真实CARLA速度反馈做有限PI迭代。
 Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive急弯p95仍失败；
-候选与参考在60条正式Dev10前冻结，正式结果未齐，暂不更换CLI默认。
+候选与参考在60条正式Dev10前冻结，现已全部完成：49/60驶完全程，11条TickRuntime，另保留3次基础设施失败。
+候选16/20完成，对CARLA横向＋同一PI的17/20；全程横向RMS高10.84%，不满足替代门槛，保留CLI carla/vendor。
+候选DS均值59.147高于参考53.811，正说明得分上涨不足以证明驾驶表现更好。
 
 **决定**：按用户要求，目标是轨迹跟踪、速度稳定、转弯与停车表现；不把DS上涨作为唯一价值。
 原版本DS是完成度乘违规惩罚，不直接惩罚急加减速/jerk；Driving Smoothness另算。
@@ -1950,3 +1952,7 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 **边界**：本轮policy=none，只验证route oracle控制。之前真实TCP smoke未比较新控制器，不能代替真实模型对照。
 真实TCP需保留checkpoint、输入、推理频率，明确原生waypoint坐标/时域及control branch，避免把模型或适配变化算成控制收益。
 证据见[反馈迭代](../todos/2026-09-22-b2d-controller/iteration-v2.md)和[舒适性数据](../todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/README.md)。
+
+本阶段实施与证据归档结束，[最终报告](../todos/2026-09-22-b2d-controller/final-report.md)列出全部验收结果与协议偏离。
+下一步先保持真实TCP的checkpoint、原生转向与20Hz推理不变，只比较纵向vendor/PI，三条路线共六例；
+[接入方案](../todos/2026-09-22-b2d-controller/agents/tcp-controller-integration-plan.md)已准备，模型对照尚未执行。
