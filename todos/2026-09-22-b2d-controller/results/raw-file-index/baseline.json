@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/baseline",
+  "captured_at": 1790086081.988937,
+  "files": [
+    {
+      "path": "final-tests.log",
+      "bytes": 3736,
+      "sha256": "74173fe72dbb7ace6b95687439de4a91e92d479d6adc8d3c0c89aa30927c6454"
+    },
+    {
+      "path": "integration-tests.log",
+      "bytes": 2471,
+      "sha256": "816ae2c99215678253115ea18375e0ce0f532e150f5510025134d489a704f9f5"
+    },
+    {
+      "path": "pre-controller.patch",
+      "bytes": 32985,
+      "sha256": "b37abe7e0a5c00b4db50ae27988a226251a7f8dda826271a6bb1879abd2261a7"
+    }
+  ],
+  "file_count": 3,
+  "total_bytes": 39192
+}

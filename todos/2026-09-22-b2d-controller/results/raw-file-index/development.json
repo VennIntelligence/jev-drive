@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/development",
+  "captured_at": 1790086082.012012,
+  "files": [
+    {
+      "path": "1773/carla/agent_config.json",
+      "bytes": 313,
+      "sha256": "f66c42f084025e33e5a38fea921e60fb86d8b07895d1f939206dd203f8c3a202"
+    },
+    {
+      "path": "1773/carla/control.jsonl",
+      "bytes": 802108,
+      "sha256": "d066d9b5032a0cb2892b3221c19fcf54d5ccf0fdeba5ac31a4d5c80c8a67718f"
+    },
+    {
+      "path": "1773/carla/route_reference.json",
+      "bytes": 9259,
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "1773/carla/trajectories.jsonl",
+      "bytes": 171356,
+      "sha256": "cc98282798b0d6908b2a042a3f9daf3285413b70f10ff9b429a13c50bf5a1516"
+    },
+    {
+      "path": "1773/carla/validation_trace.json",
+      "bytes": 132943,
+      "sha256": "339af47f9bce6f28a4860359199ea1f67178c2e5b8bbb28c70187ce6c628c3d7"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 1889,
+      "sha256": "cc1434d0155584a9f93a548a88c57e756190e770f0446fb55217c4dddbfbf0ad"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "ea9f56e107d1cec03f77ecdc3af424460a25cf0b26ff7b239ec72e302a59f538"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 1889,
+      "sha256": "cc1434d0155584a9f93a548a88c57e756190e770f0446fb55217c4dddbfbf0ad"
+    },
+    {
+      "path": "servers/carla-64-1.log",
+      "bytes": 175,
+      "sha256": "9ec998cdb61f4c120e038757243680c4a12a6f59bceb5fd062e4bf89d930da5f"
+    },
+    {
+      "path": "servers/carla-64.pid",
+      "bytes": 6,
+      "sha256": "7b89cadcf42869b72e2d9c17e28bfa4597defa4428b152f2b8c6b45cfff9ed78"
+    }
+  ],
+  "file_count": 10,
+  "total_bytes": 1120034
+}

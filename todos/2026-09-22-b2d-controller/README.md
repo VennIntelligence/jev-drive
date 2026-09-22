@@ -10,6 +10,7 @@
 | [contract.md](contract.md) | 模块间接口和 telemetry 字段约定 |
 | `agents/` | 各子代理独立维护自己的开发记录，避免并发覆盖 |
 | `results/` | 可提交的 manifest、标定与实验摘要、小型 CSV/JSON |
+| [results/raw-file-index](results/raw-file-index/README.md) | 已结束阶段的逐文件SHA256与原始路径，包括失败尝试 |
 
 原始日志、逐 tick 数据和录像：`/data/runs/b2d/controller/`。文件名标明阶段、preset 和 seed。
 主代理独占 CARLA server 生命周期和 git 操作；各子代理只改分配的源码文件，交叉修改先沟通。
