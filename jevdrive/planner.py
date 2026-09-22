@@ -44,6 +44,7 @@ SOFT_M, SOFT_TAU = 5, 0.5  # soft target: m nearest anchors, softmax(-RMS displa
 PCA_DIM, INNER_FRAC = 64, 0.2
 HIDDEN, DROPOUT, MLP_EPOCHS, MLP_BS, MLP_LR, MLP_WD = 512, 0.1, 40, 512, 1e-3, 1e-2
 MAX_ITER, LBFGS_COPIES = 600, 26  # L-BFGS iterations; float32 copies of the parameters it keeps
+CPU_SOLVE_BUDGET = 24 << 30  # bytes ce_solve may batch lambdas into when it runs on the CPU
 TOPK = (1, 5, 10)
 # Waymo's RFS floors any prediction that leaves the raters' trust region, and about half of the ego-only
 # predictions are floored, so the miss rate leads the table and RFS will slot in in front of it on Waymo.
@@ -116,8 +117,11 @@ def ce_solve(X: torch.Tensor, tgt: tuple[np.ndarray, np.ndarray], rows: np.ndarr
     d, n, D = X.shape[1], len(rows), (X.shape[1] + 1) * K
     Xr = X[rows].contiguous()
     # L-BFGS keeps ~LBFGS_COPIES float32 copies of every problem's parameters (history m = 10, iterate,
-    # gradients): batch as many lambdas as half the free VRAM holds, so K = 8192 still solves in one or two go.
-    group = max(1, min(len(lams), int(0.5 * torch.cuda.mem_get_info()[0] // (LBFGS_COPIES * 4 * D))))
+    # gradients): batch as many lambdas as half the free memory holds, so K = 8192 still solves in one or two
+    # go. On the CPU (the train-split recheck runs there, the GPU being busy) there is no mem_get_info, so a
+    # fixed budget stands in; it only sizes a batch, never changes the solution.
+    free = torch.cuda.mem_get_info()[0] if X.is_cuda else CPU_SOLVE_BUDGET
+    group = max(1, min(len(lams), int(0.5 * free // (LBFGS_COPIES * 4 * D))))
     ti = torch.as_tensor(tgt[0][rows], device=DEV, dtype=torch.long)
     tw = torch.as_tensor(tgt[1][rows], device=DEV, dtype=torch.float32)
     off = None if offset is None else offset[rows].contiguous()
