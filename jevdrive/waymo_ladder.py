@@ -1026,8 +1026,11 @@ def main():
     rl.event("start", args=vars(a))
     steps = a.steps.split(",")
     if "rejudge" in steps:
-        for name, t in rejudge(a.run, a.tag or "p2c", a.seed).items():
-            t.to_csv(rl.dir / f"{name}.csv", index=False)
+        # written next to the run they re-report, so a run directory always carries its own verdict
+        tag = a.tag or "p2c"
+        for name, t in rejudge(a.run, tag, a.seed).items():
+            for out in (rl.dir / f"{name}.csv", Path(a.run) / f"{name}_{tag}.csv"):
+                t.to_csv(out, index=False)
             rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
             rl.event(name, rows=t.to_dict("records"))
         rl.log.info("qualifier: %s", CIRCULAR)
