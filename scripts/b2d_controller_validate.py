@@ -5,10 +5,12 @@ Privileged route geometry and truth are diagnostic inputs. Truth measurement nev
 changes agent state. This tool produces controller validation, not leaderboard scores.
 """
 import argparse
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import time
@@ -138,27 +140,118 @@ def summarize(rows, records, cruise, stop_deceleration, status, collisions, hold
     return summary
 
 
+
+def load_matrix(controller_config, presets, variants_path=None, route_cruises_path=None,
+                cruise_mps=8.):
+    """Read/validate every case input once, before starting any simulator process.
+
+    Mapping insertion order is the declared variant order; each variant's preset
+    order is retained. The caller repeats this list inside each route loop.
+    """
+    if variants_path:
+        variants = json.loads(Path(variants_path).read_text())
+        if not isinstance(variants, dict) or not variants:
+            raise ValueError('--variants must be a nonempty label-to-config object')
+    else:
+        if not controller_config:
+            raise ValueError('--controller-config is required unless --variants is supplied')
+        variants = {'default': {'controller_config': controller_config,
+                                'presets': presets.split(',')}}
+    cases = []
+    for label, variant in variants.items():
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*', label):
+            raise ValueError('Variant label must be a safe directory name: %r' % label)
+        if not isinstance(variant, dict) or set(variant) != {'controller_config', 'presets'}:
+            raise ValueError('Each variant needs controller_config and presets only')
+        raw_path = variant['controller_config']
+        if not isinstance(raw_path, str) or not raw_path:
+            raise ValueError('controller_config must be a path string')
+        if variants_path and not Path(raw_path).is_absolute():
+            raise ValueError('Variant controller_config must be an absolute path')
+        config_path = Path(raw_path).resolve()
+        config_bytes = config_path.read_bytes()
+        parameters = json.loads(config_bytes)
+        if not isinstance(parameters, dict):
+            raise ValueError('Controller config must be an object')
+        adapter = dict(parameters.get('adapter', {}))
+        adapter.update({k: v for k, v in parameters.items() if k in
+                        ('rear_axle_offset_m', 'route_stop_deceleration')})
+        rear = float(adapter['rear_axle_offset_m'])
+        deceleration = float(adapter.get('route_stop_deceleration', 2.))
+        if not math.isfinite(rear) or not math.isfinite(deceleration) or deceleration <= 0:
+            raise ValueError('Invalid rear axle or stop deceleration configuration')
+        selected = variant['presets']
+        if (not isinstance(selected, list) or not selected
+                or any(x not in ('carla', 'tcp', 'pursuit') for x in selected)
+                or len(selected) != len(set(selected))):
+            raise ValueError('presets must be a nonempty unique list of carla/tcp/pursuit')
+        for preset in selected:
+            cases.append(dict(variant=label, preset=preset, controller_config=str(config_path),
+                              controller_config_sha256=hashlib.sha256(config_bytes).hexdigest(),
+                              config_bytes=config_bytes, rear_axle_offset_m=rear,
+                              stop_deceleration_mps2=deceleration))
+    cruises = json.loads(Path(route_cruises_path).read_text()) if route_cruises_path else {}
+    if not isinstance(cruises, dict):
+        raise ValueError('--route-cruises must map route IDs (or default) to positive speeds')
+    cruises.setdefault('default', cruise_mps)
+    for key, value in cruises.items():
+        if (not isinstance(key, str) or not key or isinstance(value, bool)
+                or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0):
+            raise ValueError('Route cruise speeds must be finite and positive')
+    return cases, cruises
+
+
+def archive_matrix(out, routes_path, cases, cruises, variants_path=None, route_cruises_path=None):
+    """Run against archived config bytes, so later source edits cannot alter a case."""
+    inputs = out / 'inputs'
+    inputs.mkdir(parents=True, exist_ok=True)
+    routes_bytes = routes_path.read_bytes()
+    (inputs / 'routes.xml').write_bytes(routes_bytes)
+    for name, source in [('variants.json', variants_path), ('route-cruises.json', route_cruises_path)]:
+        if source:
+            (inputs / name).write_bytes(Path(source).read_bytes())
+    manifest_cases = []
+    for case in cases:
+        archived = inputs / ('controller-%s.json' % case['variant'])
+        archived.write_bytes(case['config_bytes'])
+        case['archived_controller_config'] = str(archived.resolve())
+        manifest_cases.append({k: v for k, v in case.items() if k != 'config_bytes'})
+    manifest = dict(routes_source=str(routes_path), routes_sha256=hashlib.sha256(routes_bytes).hexdigest(),
+                    ordering='route_then_variant_then_preset', cases=manifest_cases,
+                    route_cruises_mps=cruises, variant_directories=bool(variants_path))
+    (inputs / 'matrix.json').write_text(json.dumps(manifest, indent=2, allow_nan=False))
+    return manifest
+
+
+def case_metadata(case, route, cruise):
+    return dict(route_id=route.get('id'), town=route.get('town'), preset=case['preset'],
+                variant=case['variant'], controller_config=case['controller_config'],
+                archived_controller_config=case['archived_controller_config'],
+                controller_config_sha256=case['controller_config_sha256'], cruise_mps=cruise,
+                rear_axle_offset_m=case['rear_axle_offset_m'],
+                stop_deceleration_mps2=case['stop_deceleration_mps2'])
+
+
 def main():
     p = argparse.ArgumentParser(__doc__)
     p.add_argument('--routes', required=True)
     p.add_argument('--out', required=True)
-    p.add_argument('--controller-config', required=True)
+    p.add_argument('--controller-config')
+    p.add_argument('--variants', help='JSON label -> {controller_config: absolute path, presets: list}')
+    p.add_argument('--route-cruises', help='JSON route ID -> cruise m/s, optional default key')
     p.add_argument('--presets', default='carla,tcp,pursuit')
     p.add_argument('--server-index', type=int, default=64)
     p.add_argument('--cruise-mps', type=float, default=8)
     p.add_argument('--max-ticks', type=int, default=1800)
     p.add_argument('--rig', default='none')
     a = p.parse_args()
-    routes_path, out, config_path = [Path(x).resolve() for x in (a.routes, a.out, a.controller_config)]
+    routes_path, out = [Path(x).resolve() for x in (a.routes, a.out)]
+    cases, cruises = load_matrix(a.controller_config, a.presets, a.variants,
+                                 a.route_cruises, a.cruise_mps)
     root = ET.parse(str(routes_path)).getroot()
-    controller_parameters = json.loads(config_path.read_text())
-    adapter_parameters = dict(controller_parameters.get('adapter', {}))
-    adapter_parameters.update({k: v for k, v in controller_parameters.items() if k in
-                               ('rear_axle_offset_m', 'route_stop_deceleration')})
-    rear = float(adapter_parameters['rear_axle_offset_m'])
-    stop_deceleration = float(adapter_parameters.get('route_stop_deceleration', 2.))
     out.mkdir(parents=True, exist_ok=True)
     (out / 'servers').mkdir(exist_ok=True)
+    matrix_manifest = archive_matrix(out, routes_path, cases, cruises, a.variants, a.route_cruises)
     from b2d_run import Server
     from b2d_route import add_bench2drive_to_path
     add_bench2drive_to_path('/data/third_party/Bench2Drive')
@@ -187,7 +280,7 @@ def main():
         raise KeyboardInterrupt()
 
     signal.signal(signal.SIGTERM, interrupt)
-    event('start', configuration=vars(a), pid=os.getpid(), protocol='no_background_diagnostic')
+    event('start', configuration=vars(a), matrix=matrix_manifest, pid=os.getpid(), protocol='no_background_diagnostic')
     try:
         server.start()
         gpu = subprocess.check_output(['nvidia-smi', '--query-compute-apps=pid,gpu_uuid,used_memory', '--format=csv'], text=True)
@@ -196,6 +289,7 @@ def main():
         client = carla.Client('localhost', server.port)
         client.set_timeout(90)
         for route in root.findall('route'):
+            cruise = float(cruises.get(route.get('id'), cruises['default']))
             try:
                 world = client.get_world()
                 if world.get_map().name.split('/')[-1] != route.get('town'):
@@ -219,11 +313,16 @@ def main():
                 # A failed map/interpolation setup still represents every planned
                 # preset on this route; save those missing cases, then continue.
                 setup_traceback = traceback.format_exc()
-                for preset in a.presets.split(','):
-                    run = out / route.get('id') / preset
+                for case in cases:
+                    preset = case['preset']
+                    metadata = case_metadata(case, route, cruise)
+                    run = out / route.get('id')
+                    if a.variants:
+                        run = run / case['variant']
+                    run = run / preset
                     run.mkdir(parents=True, exist_ok=True)
-                    summary = summarize([], [], a.cruise_mps, stop_deceleration, 'setup_error', [], None)
-                    summary.update(route_id=route.get('id'), town=route.get('town'), preset=preset,
+                    summary = summarize([], [], cruise, case['stop_deceleration_mps2'], 'setup_error', [], None)
+                    summary.update(**metadata,
                                    exception=repr(exc), wall_s=0., cleanup_errors=[], telemetry_parse_errors=[])
                     (run / 'exception.txt').write_text(setup_traceback)
                     (run / 'validation.json').write_text(json.dumps(summary, indent=2, allow_nan=False))
@@ -231,18 +330,25 @@ def main():
                     event('route_end', **summary)
                 (out / 'summary.json').write_text(json.dumps(results, indent=2, allow_nan=False))
                 continue
-            for preset in a.presets.split(','):
-                run = out / route.get('id') / preset
+            for case in cases:
+                preset = case['preset']
+                rear = case['rear_axle_offset_m']
+                stop_deceleration = case['stop_deceleration_mps2']
+                metadata = case_metadata(case, route, cruise)
+                run = out / route.get('id')
+                if a.variants:
+                    run = run / case['variant']
+                run = run / preset
                 run.mkdir(parents=True, exist_ok=True)
                 cfg = dict(rig=a.rig, width=800, height=450, policy='none', drive='controller', decimate=4,
-                           controller_preset=preset, controller_config=str(config_path), out=str(run), cruise_mps=a.cruise_mps)
+                           controller_preset=preset, controller_config=case['archived_controller_config'], out=str(run), cruise_mps=cruise)
                 cfg_path = run / 'agent_config.json'
                 cfg_path.write_text(json.dumps(cfg, indent=2))
                 actor = agent = wrapper = collision_sensor = None
                 started = time.perf_counter()
                 rows, collisions = [], []
                 status, hold_start, case_error = 'tick_cap', None, None
-                event('route_start', route_id=route.get('id'), preset=preset, town=route.get('town'))
+                event('route_start', **metadata)
                 try:
                     GameTime.restart()
                     spawn = carla.Transform(dense[0][0].location + carla.Location(z=.5), dense[0][0].rotation)
@@ -283,13 +389,13 @@ def main():
                             first_time = sim_time
                         projection = truth_projection.measure(truth, yaw, speed)
                         remaining = float(np.linalg.norm(truth - truth_projection.points[-1]))
-                        reference_speed = min(a.cruise_mps, math.sqrt(2. * stop_deceleration * projection['remaining_along_m']))
+                        reference_speed = min(cruise, math.sqrt(2. * stop_deceleration * projection['remaining_along_m']))
                         rows.append(dict(tick=tick, frame=snapshot.frame, sim_time=sim_time, elapsed_s=sim_time - first_time,
                                          speed=speed, signed_speed=velocity.dot(forward), truth_xy=truth.tolist(),
                                          pitch_deg=tf.rotation.pitch, endpoint_error_m=remaining,
                                          reference_speed_mps=reference_speed, **projection))
                         if tick % 100 == 0:
-                            event('tick', route_id=route.get('id'), preset=preset, ticks=tick + 1, speed=speed, progress_m=projection['progress_m'])
+                            event('tick', route_id=route.get('id'), variant=case['variant'], preset=preset, ticks=tick + 1, speed=speed, progress_m=projection['progress_m'])
                         if remaining < 1. and speed < .1:
                             if hold_start is None:
                                 hold_start = tick
@@ -334,8 +440,8 @@ def main():
                                 records.append(record)
                             except (TypeError, ValueError) as exc:
                                 parse_errors.append(dict(line=index + 1, error=repr(exc)))
-                    summary = summarize(rows, records, a.cruise_mps, stop_deceleration, status, collisions, hold_start)
-                    summary.update(route_id=route.get('id'), town=route.get('town'), preset=preset,
+                    summary = summarize(rows, records, cruise, stop_deceleration, status, collisions, hold_start)
+                    summary.update(**metadata,
                                    wall_s=time.perf_counter() - started, exception=case_error,
                                    cleanup_errors=cleanup_errors, telemetry_parse_errors=parse_errors)
                     if parse_errors or cleanup_errors:

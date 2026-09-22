@@ -169,6 +169,15 @@ class RouteAdapter:
         self.segments = np.diff(points, axis=0)
         self.lengths = np.linalg.norm(self.segments, axis=1)
         self.arc = np.r_[0, np.cumsum(self.lengths)]
+        # Smooth the given route through its existing points, retaining those
+        # points unchanged for independent reference/error evaluation.
+        self._route_slopes = np.empty_like(self.points)
+        self._route_slopes[0] = self.segments[0] / self.lengths[0]
+        self._route_slopes[-1] = self.segments[-1] / self.lengths[-1]
+        if len(self.points) > 2:
+            self._route_slopes[1:-1] = ((self.points[2:] - self.points[:-2]) /
+                                      (self.arc[2:] - self.arc[:-2])[:, None])
+        self.rejoin_diagnostics = {}
         self.progress = 0.
         self.cruise = float(cruise_mps)
         self.deceleration = float(stop_deceleration)
@@ -218,12 +227,137 @@ class RouteAdapter:
             self.terminal_hold = True
         return cross_track
 
+    def _reference_curve(self, stations):
+        """C1 Hermite interpolation through the immutable dense reference points."""
+        stations = np.clip(np.asarray(stations, dtype=float), 0., self.arc[-1])
+        indices = np.clip(np.searchsorted(self.arc, stations, side='right') - 1,
+                          0, len(self.lengths) - 1)
+        length = self.lengths[indices, None]
+        u = ((stations - self.arc[indices]) / self.lengths[indices])[:, None]
+        a, b = self.points[indices], self.points[indices + 1]
+        da, db = self._route_slopes[indices], self._route_slopes[indices + 1]
+        positions = ((2*u**3 - 3*u**2 + 1) * a + (u**3 - 2*u**2 + u) * length * da
+                     + (-2*u**3 + 3*u**2) * b + (u**3 - u**2) * length * db)
+        derivative = ((6*u**2 - 6*u) * a / length + (3*u**2 - 4*u + 1) * da
+                      + (-6*u**2 + 6*u) * b / length + (3*u**2 - 2*u) * db)
+        return positions, derivative
+
+    @staticmethod
+    def _sampled_curvature(points):
+        """Three-point circumcircle curvature, measured on the constructed path."""
+        if len(points) < 3:
+            return np.zeros(0)
+        a, b = np.diff(points, axis=0)[:-1], np.diff(points, axis=0)[1:]
+        denominator = np.linalg.norm(a, axis=1) * np.linalg.norm(b, axis=1) * np.linalg.norm(a + b, axis=1)
+        return 2. * np.abs(a[:, 0] * b[:, 1] - a[:, 1] * b[:, 0]) / np.maximum(denominator, 1e-12)
+
+    def _rejoin_path(self, xy, yaw):
+        """Join actual ego position/heading to the route without a timed teleport.
+
+        Quintic position/tangent corrections decay along the route, rather than
+        connecting a chord across its turns. A finite 6--18 m search limits added
+        curvature where feasible. Curvature is a geometric diagnostic, not a
+        proof of feasible tire forces at the configured cruise speed.
+        """
+        xy = np.asarray(xy, dtype=float)
+        if xy.shape != (2,) or not np.isfinite(np.r_[xy, yaw]).all():
+            raise ValueError('Nonfinite route rejoin pose')
+        remaining = max(0., float(self.arc[-1] - self.progress))
+        forward = np.array([math.cos(yaw), math.sin(yaw)])
+        if remaining < 1e-6:
+            endpoint = self.points[-1]
+            delta = endpoint - xy
+            if np.linalg.norm(delta) < 1e-6:
+                self.rejoin_diagnostics = {'reason': 'at_endpoint', 'join_length_m': 0.,
+                    'max_rejoin_curvature_inv_m': 0., 'reference_curvature_inv_m': 0.,
+                    'curvature_bound_satisfied': True, 'path_length_m': 0.}
+                return np.array([xy, endpoint])
+            # No arc remains to build a forward join. Returning a stationary
+            # reference is an explicit stop request, not a fictitious timed jump
+            # to a target beside or behind the axle.
+            if np.dot(delta, forward) <= 0:
+                self.rejoin_diagnostics = {'reason': 'terminal_target_not_forward',
+                    'join_length_m': 0., 'max_rejoin_curvature_inv_m': None,
+                    'reference_curvature_inv_m': None, 'curvature_bound_satisfied': False,
+                    'path_length_m': 0., 'endpoint_distance_m': float(np.linalg.norm(delta))}
+                return np.array([xy, xy])
+            distance = float(np.linalg.norm(delta))
+            u = np.linspace(0., 1., 33)[:, None]
+            final_tangent = self.segments[-1] / self.lengths[-1]
+            connector = ((2*u**3 - 3*u**2 + 1) * xy + (u**3 - 2*u**2 + u) * distance * forward
+                         + (-2*u**3 + 3*u**2) * endpoint + (u**3 - u**2) * distance * final_tangent)
+            increments = np.diff(connector, axis=0)
+            # Circumcircle curvature is zero at a perfectly collinear reversal.
+            # Such a cusp is not a usable forward path, even with finite points.
+            if (np.any(np.sum(increments[:-1] * increments[1:], axis=1) <= 0.)
+                    or np.any(np.linalg.norm(increments, axis=1) < 1e-10)):
+                self.rejoin_diagnostics = {'reason': 'terminal_connector_reversal',
+                    'join_length_m': distance, 'max_rejoin_curvature_inv_m': None,
+                    'reference_curvature_inv_m': 0., 'curvature_bound_satisfied': False,
+                    'path_length_m': 0., 'endpoint_distance_m': distance}
+                return np.array([xy, xy])
+            curvature = float(np.max(self._sampled_curvature(connector)))
+            self.rejoin_diagnostics = {'reason': 'terminal_forward_connector' if curvature <= .2 else 'terminal_curvature_concern',
+                'join_length_m': distance, 'max_rejoin_curvature_inv_m': curvature,
+                'reference_curvature_inv_m': 0., 'curvature_limit_inv_m': .2,
+                'curvature_bound_satisfied': curvature <= .2,
+                'path_length_m': float(np.sum(np.linalg.norm(np.diff(connector, axis=0), axis=1)))}
+            return connector
+        origin, origin_derivative = self._reference_curve(np.array([self.progress]))
+        offset = xy - origin[0]
+        derivative_correction = forward - origin_derivative[0]
+        minimum = min(remaining, max(6., min(12., self.cruise), 2. * np.linalg.norm(offset)))
+        maximum = min(remaining, 18.)
+        minimum = min(minimum, maximum)
+        joins = np.unique(np.r_[minimum, np.linspace(minimum, maximum, 4)])
+        # <=0.2 m sampling resolves the smooth blend; all original dense knots
+        # remain available separately for route projection and truth metrics.
+        offsets = np.linspace(0., remaining, max(33, int(math.ceil(remaining / .2)) + 1))
+        base, derivatives = self._reference_curve(self.progress + offsets)
+        reference_curvature = self._sampled_curvature(base)
+        path = None
+        for join_length in joins:
+            u = np.clip(offsets / join_length, 0., 1.)
+            weight = 1. - 10*u**3 + 15*u**4 - 6*u**5
+            tangent_weight = join_length * (u - 6*u**3 + 8*u**4 - 3*u**5)
+            candidate = base + weight[:, None] * offset + tangent_weight[:, None] * derivative_correction
+            candidate[0], candidate[-1] = xy, self.points[-1]
+            lengths = np.linalg.norm(np.diff(candidate, axis=0), axis=1)
+            increments = np.diff(candidate, axis=0)
+            reference_tangents = derivatives[:-1] + derivatives[1:]
+            if (not np.isfinite(candidate).all() or float(np.sum(lengths)) < 1e-6
+                    or np.dot(candidate[1] - candidate[0], forward) <= 0
+                    or np.any(np.sum(increments * reference_tangents, axis=1) < -1e-5)):
+                continue
+            local = offsets[1:-1] <= join_length + .2
+            curvature = self._sampled_curvature(candidate)
+            maximum_curvature = float(np.max(curvature[local])) if local.any() else 0.
+            reference_maximum = float(np.max(reference_curvature[local])) if local.any() else 0.
+            curvature_limit = max(.2, reference_maximum + .08)
+            satisfied = maximum_curvature <= curvature_limit
+            path = candidate
+            self.rejoin_diagnostics = {'reason': 'rejoin' if satisfied else 'rejoin_curvature_concern',
+                'join_length_m': float(join_length), 'max_rejoin_curvature_inv_m': maximum_curvature,
+                'reference_curvature_inv_m': reference_maximum, 'curvature_limit_inv_m': curvature_limit,
+                'curvature_bound_satisfied': bool(satisfied), 'path_length_m': float(np.sum(lengths)),
+                'initial_offset_m': float(np.linalg.norm(offset))}
+            if satisfied:
+                break
+        if path is None:
+            raise ValueError('No finite nondegenerate forward route rejoin could be constructed')
+        return path
+
     def trajectory(self, xy, yaw):
         if self.terminal_hold:
+            self.rejoin_diagnostics = {'reason': 'terminal_hold', 'join_length_m': 0.,
+                'max_rejoin_curvature_inv_m': 0., 'reference_curvature_inv_m': 0.,
+                'curvature_bound_satisfied': True, 'path_length_m': 0.}
             return np.zeros((20, 2))
-        # Exact constant-deceleration terminal profile, reaching beyond the official
-        # endpoint so rear-axle stopping cannot prevent actor-based completion.
-        remaining = max(0., self.arc[-1] - self.progress)
+        path = self._rejoin_path(xy, yaw)
+        path_arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
+        remaining = float(path_arc[-1])
+        # Keep the configured cruise/deceleration profile, but parameterize it
+        # by actual rejoin-path distance from ego to the unchanged endpoint.
         speed = min(self.cruise, math.sqrt(2. * self.deceleration * remaining))
         times = np.arange(1, 21) * .25
         braking_distance = speed * speed / (2. * self.deceleration)
@@ -231,8 +365,8 @@ class RouteAdapter:
         cruise_part = np.minimum(times, cruise_time) * speed
         braking_time = np.minimum(np.maximum(times - cruise_time, 0), speed / self.deceleration)
         distance = cruise_part + speed * braking_time - .5 * self.deceleration * braking_time ** 2
-        arc = np.minimum(self.progress + distance, self.arc[-1])
-        world = np.column_stack([np.interp(arc, self.arc, self.points[:, i]) for i in (0, 1)])
+        arc = np.minimum(distance, remaining)
+        world = np.column_stack([np.interp(arc, path_arc, path[:, i]) for i in (0, 1)])
         return world_to_local(world, xy, yaw)
 
 

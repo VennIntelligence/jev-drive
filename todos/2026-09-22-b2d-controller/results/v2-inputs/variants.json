@@ -1,0 +1,16 @@
+{
+  "baseline": {
+    "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-base.json",
+    "presets": [
+      "carla",
+      "tcp",
+      "pursuit"
+    ]
+  },
+  "max": {
+    "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v2-inputs/controller-max.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

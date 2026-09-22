@@ -236,7 +236,8 @@ class StubAgent(AutonomousAgent):
             self._trajectory_frame = frame
             self._trajectory_log.write(json.dumps({"frame": frame, "sim_time": timestamp,
                 "pose_xy": xy.tolist(), "pose_yaw": yaw, "accepted": accepted,
-                "trajectory_xy": trajectory.tolist()}, allow_nan=False) + "\n")
+                "trajectory_xy": trajectory.tolist(),
+                "route_rejoin": dict(self._route_adapter.rejoin_diagnostics)}, allow_nan=False) + "\n")
             t_infer = time.perf_counter() - t
             self.timings["policy_ticks"] += 1
         t = time.perf_counter()
@@ -254,6 +255,7 @@ class StubAgent(AutonomousAgent):
                       route_cross_track_m=route_cross, route_progress_m=self._route_adapter.progress,
                       route_terminal_hold=self._route_adapter.terminal_hold,
                       route_endpoint_distance_m=self._route_adapter.endpoint_distance_m,
+                      route_rejoin=dict(self._route_adapter.rejoin_diagnostics),
                       controller_step_ms=step_ms)
         if self._truth_logger is not None:
             record.update(self._truth_logger.measure(frame, xy.copy(), self._pose_filter.raw_xy.copy(), yaw))
