@@ -85,10 +85,23 @@ class TCPControlComparisonTests(unittest.TestCase):
 
     def test_reverse_is_not_silently_clipped(self):
         c = TCPControlComparison()
-        r = self.step(c, 0., speed=-.00001)
+        r = self.step(c, 0., speed=-.01)
         self.assertEqual(r['diagnostics']['reason'], 'reverse_motion')
-        self.assertEqual(r['diagnostics']['speed_mps'], -.00001)
+        self.assertEqual(r['diagnostics']['speed_mps'], -.01)
         self.assertEqual(r['pi_common_control'], [0., -.123, 1.])
+
+    def test_numerical_standstill_does_not_override_native_restart(self):
+        c = TCPControlComparison()
+        for i, speed in enumerate((-.00005, .00005, -.009999, .009999)):
+            r = self.step(c, i * .05, speed=speed, desired=.8, throttle=.75)
+            self.assertEqual(r['diagnostics']['reason'], 'tracking')
+            self.assertEqual(r['diagnostics']['raw_speed_mps'], speed)
+            self.assertEqual(r['diagnostics']['speed_mps'], 0.)
+            self.assertTrue(r['diagnostics']['standstill_deadband_applied'])
+            self.assertEqual(r['native_common_control'], [.75, -.123, 0.])
+            self.assertGreater(r['pi_common_control'][0], 0.)
+            self.assertEqual(r['pi_common_control'][2], 0.)
+        self.assertAlmostEqual(c.pi.integral, .25 * .8 * .2)
 
     def test_gap_boundary_and_regression_reset(self):
         c = TCPControlComparison()

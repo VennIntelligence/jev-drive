@@ -18,7 +18,9 @@ class TCPControlComparison:
     use actual elapsed simulation time. Equal timestamps (within 1e-8 s) are
     idempotent. Regression or gaps above .2 s brake/reset, anchoring the next tick
     at the rejected finite timestamp. Invalid motion/controls also brake/reset;
-    a nonfinite timestamp clears the clock. No reverse-speed clipping is applied.
+    a nonfinite timestamp clears the clock. Numerical resting speeds with
+    abs(speed)<.01 m/s are zeroed; raw speed remains in diagnostics. Larger
+    reverse speed is still a fault, matching the existing route-agent boundary.
     Valid native steering is passed through exactly, including during safe brake.
     """
     nominal_dt = .05
@@ -68,6 +70,9 @@ class TCPControlComparison:
         now, speed, desired, throttle, steer, brake = map(self._number, (
             timestamp, speed_mps, desired_speed_mps,
             native_throttle, native_steer, native_brake))
+        raw_speed = speed
+        if math.isfinite(speed) and abs(speed) < .01:
+            speed = 0.
         native = [throttle, steer, brake]
         elapsed = self.nominal_dt if self._last_time is None else now - self._last_time
         reason = None
@@ -106,5 +111,7 @@ class TCPControlComparison:
             common = self._envelope(throttle, steer, brake)
             self._last_time = now
             result = self._result(native, common, candidate, reason, elapsed, desired, speed)
+        result['diagnostics'].update(raw_speed_mps=self._logged(raw_speed),
+                                     standstill_deadband_applied=math.isfinite(raw_speed) and raw_speed != speed)
         self._last_result = copy.deepcopy(result)
         return result
