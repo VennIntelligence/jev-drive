@@ -181,6 +181,60 @@ def load_stub_agent():
 
 
 class AgentTests(unittest.TestCase):
+    def test_compass_dropout_brakes_after_bound_and_replans_on_recovery(self):
+        module, clock = load_stub_agent()
+        agent = module.StubAgent()
+        points = np.array([[0., 0.], [100., 0.]])
+        gps = gps_from_world(points)
+        agent.set_global_plan([({'lat': p[0], 'lon': p[1]}, None) for p in gps],
+            [(SimpleNamespace(location=SimpleNamespace(x=x, y=y)), None) for x, y in points])
+        with tempfile.TemporaryDirectory() as temp:
+            parameters = Path(temp) / 'controller.json'
+            parameters.write_text(json.dumps({'rear_axle_offset_m': -1.4,
+                'truth_logging': False, 'longitudinal_mode': 'pi', 'pi_kp': .5, 'pi_ki': .25}))
+            config = Path(temp) / 'agent.json'
+            config.write_text(json.dumps({'drive': 'controller', 'rig': 'none', 'policy': 'none',
+                'controller_preset': 'pursuit', 'controller_config': str(parameters),
+                'decimate': 4, 'out': temp}))
+            agent.setup(str(config))
+            agent.sensor_interface = SimpleNamespace(_data_buffers=Queue(), _queue_timeout=.01)
+            try:
+                controls = []
+                for tick in range(11):
+                    clock.frame, clock.timestamp = 100 + tick, tick * .05
+                    compass = float('nan') if 1 <= tick <= 6 else math.pi / 2
+                    measurement = gps_from_world([[tick * .1, 0.]])[0]
+                    speed = float('nan') if tick == 9 else 2.
+                    if tick == 8:
+                        measurement[0] = float('nan')
+                    imu = np.array([0., 0., 0., 0., 0., 0., compass])
+                    for tag, data in [('GPS', measurement), ('IMU', imu), ('SPEED', {'speed': speed})]:
+                        agent.sensor_interface._data_buffers.put((tag, clock.frame, data))
+                    ctrl = agent._controller_call()
+                    controls.append((ctrl.throttle, ctrl.steer, ctrl.brake))
+                    if tick in (5, 6, 8, 9):
+                        self.assertEqual(controls[-1], (0., 0., 1.))
+                        self.assertIsNone(agent._pose_filter.t)
+                        self.assertIsNone(agent._controller.diagnostics['trajectory_time'])
+                records = [json.loads(line) for line in (Path(temp) / 'control.jsonl').read_text().splitlines()]
+                motions = [json.loads(line) for line in (Path(temp) / 'motion.jsonl').read_text().splitlines()]
+                trajectories = [json.loads(line) for line in (Path(temp) / 'trajectories.jsonl').read_text().splitlines()]
+                self.assertEqual(len(records), 11)
+                self.assertEqual(len(motions), 11)
+                self.assertTrue(all(records[i]['pose_status']['degraded'] for i in range(1, 5)))
+                self.assertTrue(all(records[i]['reason'] == 'invalid_pose' for i in (5, 6, 8, 9)))
+                self.assertEqual(motions[1]['sensors']['IMU']['data'][6], 'nan')
+                self.assertEqual(records[9]['speed_mps'], 'nan')
+                # Tick 7 is outside the ordinary 4-tick planning phase: it must
+                # still create a fresh trajectory before any resumed actuation.
+                self.assertEqual(records[7]['trajectory_frame'], 107)
+                self.assertEqual(records[10]['trajectory_frame'], 110)
+                self.assertIn(107, [row['frame'] for row in trajectories])
+                self.assertTrue(np.isfinite(controls).all())
+                self.assertEqual(len(agent.timings['agent_total']), 11)
+            finally:
+                agent.destroy()
+
     def test_vendor_route_before_setup_lifecycle(self):
         module, _ = load_stub_agent()
         agent = module.StubAgent()

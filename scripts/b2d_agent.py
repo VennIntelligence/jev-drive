@@ -246,11 +246,34 @@ class StubAgent(AutonomousAgent):
         # median ratio=.9999977. Internal y-left therefore flips the sensor sign.
         world_yaw_rate = float(imu[5])
         yaw_rate = -world_yaw_rate
-        xy, yaw = self._pose_filter.update(input_data["GPS"][1], float(imu[6]),
-                                           speed, world_yaw_rate, timestamp)
+        try:
+            xy, yaw = self._pose_filter.update(input_data["GPS"][1], float(imu[6]),
+                                               speed, world_yaw_rate, timestamp)
+        except ValueError as exc:
+            # A pose that cannot be bounded must not propagate into a trajectory.
+            # Retain the raw input above and make the stopped tick explicit.
+            pose_status = dict(self._pose_filter.diagnostics)
+            self._pose_filter.reset()
+            self._controller.reset()
+            self._trajectory_frame = None
+            self._route_adapter.last_time = None
+            self._control = carla.VehicleControl(throttle=0., steer=0., brake=1.)
+            record = dict(self._controller.diagnostics)
+            record.update(frame=frame, sim_time=timestamp, reason="invalid_pose",
+                          pose_error=str(exc), pose_status=pose_status,
+                          speed_mps=speed, raw_speed_mps=raw_speed, yaw_rate_rps=yaw_rate,
+                          throttle=0., steer=0., brake=1., trajectory_frame=None,
+                          sensor_frames={key: int(value[0]) for key, value in input_data.items()},
+                          pose_xy=None, pose_yaw=None, controller_step_ms=0.)
+            self._telemetry.write(json.dumps(motion_json(record), allow_nan=False) + "\n")
+            self.timings["sensor_wait"].append(t_wait)
+            self.timings["infer"].append(0.)
+            self.timings["controller_step_ms"].append(0.)
+            self.timings["agent_total"].append(time.perf_counter() - t0)
+            return self._control
         route_cross = self._route_adapter.project(xy, yaw, speed, timestamp)
         t_infer = 0.
-        if (self._tick - 1) % self.decimate == 0:
+        if self._trajectory_frame is None or (self._tick - 1) % self.decimate == 0:
             t = time.perf_counter()
             trajectory = self._route_adapter.trajectory(xy, yaw)
             accepted = self._controller.update(trajectory, timestamp)
@@ -273,6 +296,7 @@ class StubAgent(AutonomousAgent):
                       trajectory_frame=self._trajectory_frame,
                       sensor_frames={key: int(value[0]) for key, value in input_data.items()},
                       pose_xy=xy.tolist(), pose_yaw=yaw, raw_pose_xy=self._pose_filter.raw_xy.tolist(),
+                      pose_status=dict(self._pose_filter.diagnostics),
                       route_cross_track_m=route_cross, route_progress_m=self._route_adapter.progress,
                       route_terminal_hold=self._route_adapter.terminal_hold,
                       route_endpoint_distance_m=self._route_adapter.endpoint_distance_m,

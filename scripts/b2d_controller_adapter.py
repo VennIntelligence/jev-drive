@@ -77,31 +77,69 @@ class PoseFilter:
         if (not np.all(np.isfinite([self.rear_offset, self.gnss_x, self.gain, self.heading_gain]))
                 or not 0 < self.gain <= 1 or not 0 < self.heading_gain <= 1):
             raise ValueError('Pose filter gains must be in (0,1]')
+        self.reset()
+
+    def reset(self):
+        """Forget localization history; recovery requires a fully valid pose."""
         self.xy = self.yaw = self.t = self.raw_xy = None
         self.previous_speed = None
+        self._last_compass_time = None
+        self._diagnostics = dict(reason='no_pose', degraded=False,
+                                 compass_valid=False, compass_age_s=None)
+
+    @property
+    def diagnostics(self):
+        return dict(self._diagnostics)
+
+    def _fail(self, reason, message):
+        self._diagnostics['reason'] = reason
+        raise ValueError(message)
 
     def update(self, gps, compass, speed, world_yaw_rate, timestamp):
-        values = np.r_[np.asarray(gps)[:2], compass, speed, world_yaw_rate, timestamp]
+        # Captured smoke input contained an isolated nonfinite compass; its
+        # simulator-side cause is unproven. Only heading has a bounded fallback. GPS,
+        # speed, gyro and time remain mandatory, and truth is never consulted.
+        compass_valid = bool(np.isfinite(compass))
+        age = (float(timestamp) - self._last_compass_time
+               if self._last_compass_time is not None and np.isfinite(timestamp) else None)
+        self._diagnostics = dict(reason='tracking', degraded=False,
+                                 compass_valid=compass_valid,
+                                 compass_age_s=0. if compass_valid else age)
+        values = np.r_[np.asarray(gps)[:2], speed, world_yaw_rate, timestamp]
         if not np.all(np.isfinite(values)):
-            raise ValueError('Nonfinite motion sensor')
-        observed_yaw = compass_to_yaw(compass)
+            self._fail('invalid_motion', 'Nonfinite motion sensor other than compass')
+        if self.t is not None:
+            dt = float(timestamp) - self.t
+            if dt <= 0 or dt > .2:
+                self._fail('timestamp_discontinuity', 'Motion sensor timestamp discontinuity')
+        if not compass_valid:
+            if self.t is None or self._last_compass_time is None:
+                self._fail('compass_uninitialized', 'Missing compass before pose initialization')
+            if age > .2 + 1e-8:
+                self._fail('compass_dropout_timeout', 'Compass dropout exceeds 0.2 seconds')
+            self._diagnostics.update(reason='compass_dropout_prediction', degraded=True)
+            # Gyro prediction also supplies the GNSS lever-arm heading. There
+            # is no compass correction on this tick, nor a fabricated compass.
+            observed_yaw = wrap(self.yaw + float(world_yaw_rate) * dt)
+        else:
+            observed_yaw = compass_to_yaw(compass)
         raw = self.projector.project(gps)
         raw += (self.rear_offset - self.gnss_x) * np.array([
             math.cos(observed_yaw), math.sin(observed_yaw)])
         if self.t is None:
             self.xy, self.yaw = raw.copy(), observed_yaw
         else:
-            dt = float(timestamp) - self.t
-            if dt <= 0 or dt > .2:
-                raise ValueError('Motion sensor timestamp discontinuity')
             turn = float(world_yaw_rate) * dt
             middle = self.yaw + .5 * turn
             distance = .5 * (float(speed) + self.previous_speed) * dt
             self.xy += distance * np.array([math.cos(middle), math.sin(middle)])
             self.yaw = wrap(self.yaw + turn)
-            self.yaw = wrap(self.yaw + self.heading_gain * wrap(observed_yaw - self.yaw))
+            if compass_valid:
+                self.yaw = wrap(self.yaw + self.heading_gain * wrap(observed_yaw - self.yaw))
             self.xy += self.gain * (raw - self.xy)
         self.raw_xy, self.t, self.previous_speed = raw, float(timestamp), float(speed)
+        if compass_valid:
+            self._last_compass_time = float(timestamp)
         return self.xy.copy(), self.yaw
 
 
