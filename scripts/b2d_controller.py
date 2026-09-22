@@ -93,7 +93,8 @@ class Controller:
                  steering_curve=None, lookahead=None, speed_window='near', dt=.05,
                  trajectory_dt=.25, stale_timeout=.5, history_seconds=2.,
                  max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.,
-                 longitudinal_mode='vendor', pi_kp=1., pi_ki=.25):
+                 longitudinal_mode='vendor', pi_kp=1., pi_ki=.25,
+                 max_lookahead_time_s=.5):
         if longitudinal_mode not in ('vendor', 'pi'):
             raise ValueError('longitudinal_mode must be vendor or pi')
         self.longitudinal_mode = longitudinal_mode
@@ -104,6 +105,12 @@ class Controller:
         self.lookahead = lookahead or ('fixed4' if preset == 'tcp' else 'additive')
         if self.lookahead not in ('additive', 'max', 'fixed4'):
             raise ValueError('lookahead must be additive, max or fixed4')
+        try:
+            self.max_lookahead_time_s = float(max_lookahead_time_s)
+        except (TypeError, ValueError, OverflowError):
+            raise ValueError('max_lookahead_time_s must be positive and finite')
+        if not math.isfinite(self.max_lookahead_time_s) or self.max_lookahead_time_s <= 0.:
+            raise ValueError('max_lookahead_time_s must be positive and finite')
         values = [wheelbase, max_steer_deg, dt, trajectory_dt, stale_timeout,
                   history_seconds, max_throttle, max_brake, max_steer, steer_rate]
         if not np.all(np.isfinite(values)) or min(values) <= 0:
@@ -310,7 +317,8 @@ class Controller:
         if not np.any(points[1:, 0] > 1e-6) and desired > .05:
             return self._safe('trajectory_behind', elapsed)
         station, cross_track, heading = geometry
-        distance = {'additive': 3. + .5 * speed, 'max': max(3., .5 * speed), 'fixed4': 4.}[self.lookahead]
+        distance = {'additive': 3. + .5 * speed,
+                    'max': max(3., self.max_lookahead_time_s * speed), 'fixed4': 4.}[self.lookahead]
         aim_station = min(station + distance, self._arc[-1])
         aim = np.array([np.interp(aim_station, self._arc, points[:, axis]) for axis in (0, 1)])
         bearing = math.atan2(aim[1], aim[0])
