@@ -1045,7 +1045,23 @@ CIRCULAR = ("s_ego binning is circular: the bins come from the residual of `ridg
 
 
 def _preds_files(run_dir, tag: str):
-    return sorted(Path(run_dir).glob(f"{tag}_preds_dir*.npz"))
+    """The prediction files of a run, falling back to whatever prefix is actually there.
+
+    A run directory is named by `--tag`, but the prediction files are named by the *ladder's* internal tag
+    -- `p3(...)` writes `p3_preds_dir*.npz` however the run directory is called. So `--tag p3-qwenvid`
+    found nothing and the caller then died eight lines later on an empty DataFrame with
+    "'DataFrame' object has no attribute 'judge'". Match the asked-for prefix first, then anything.
+    """
+    d = Path(run_dir)
+    f = sorted(d.glob(f"{tag}_preds_dir*.npz"))
+    if not f:
+        f = sorted(d.glob("*_preds_dir*.npz"))
+        if f:
+            log.warning("no %s_preds_dir*.npz in %s; using %s instead", tag, d,
+                        ", ".join(q.name for q in f))
+    if not f:
+        raise FileNotFoundError(f"no *_preds_dir*.npz in {d}: nothing to re-judge")
+    return f
 
 
 def rejudge(run_dir, tag: str, seed: int = 0) -> dict[str, pd.DataFrame]:
