@@ -40,6 +40,37 @@ class WindowPID:
         return float(np.clip(value, -1., 1.)) if self.semantics == 'carla' else float(value)
 
 
+
+class ConditionalPI:
+    """Fixed SI-unit PI candidate, independent of both vendor buffer algorithms.
+
+    Error is m/s, integral stores actuator effort. Conditional integration stops
+    charging into saturation and permits unwinding when error changes direction.
+    """
+    KP, KI = 1.0, .25
+
+    def __init__(self, lower=-1., upper=.75):
+        self.lower, self.upper = float(lower), float(upper)
+        self.reset()
+
+    def reset(self):
+        self.integral = 0.
+        self.raw_effort = 0.
+        self.integration_limited = False
+
+    def step(self, error, elapsed):
+        if not np.isfinite([error, elapsed]).all() or elapsed <= 0:
+            raise ValueError('PI requires finite error and positive elapsed time')
+        candidate = self.integral + self.KI * error * elapsed
+        raw = self.KP * error + candidate
+        self.integration_limited = bool((raw > self.upper and error > 0)
+                                        or (raw < self.lower and error < 0))
+        if not self.integration_limited:
+            self.integral = float(np.clip(candidate, self.lower, self.upper))
+        self.raw_effort = float(self.KP * error + self.integral)
+        return float(np.clip(self.raw_effort, self.lower, self.upper))
+
+
 def advance_pose(pose, speed, yaw_rate, dt):
     """Exact constant-twist SE(2) integration, including the zero-turn limit."""
     x, y, yaw = pose
@@ -60,7 +91,11 @@ class Controller:
     def __init__(self, preset='carla', wheelbase=2.8604714913890885, max_steer_deg=69.99999237060547,
                  steering_curve=None, lookahead=None, speed_window='near', dt=.05,
                  trajectory_dt=.25, stale_timeout=.5, history_seconds=2.,
-                 max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.):
+                 max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.,
+                 longitudinal_mode='vendor'):
+        if longitudinal_mode not in ('vendor', 'pi'):
+            raise ValueError('longitudinal_mode must be vendor or pi')
+        self.longitudinal_mode = longitudinal_mode
         if preset not in ('carla', 'tcp', 'pursuit'):
             raise ValueError('unknown controller preset')
         if speed_window not in ('near', 'reference'):
@@ -93,6 +128,7 @@ class Controller:
         tcp = preset == 'tcp'
         self.lateral = WindowPID(.75, .75, .3, 40, 'tcp', dt) if tcp else WindowPID(1.95, .05, .2, 10, dt=dt)
         self.longitudinal = WindowPID(5., .5, 1., 40, 'tcp', dt) if tcp else WindowPID(1., .05, 0., 10, dt=dt)
+        self.longitudinal_pi = ConditionalPI(-self.max_brake, self.max_throttle)
         self.reset()
 
     @property
@@ -106,6 +142,7 @@ class Controller:
     def reset(self):
         self.lateral.reset()
         self.longitudinal.reset()
+        self.longitudinal_pi.reset()
         self._history = deque()
         self._pose = np.zeros(3)
         self._last_time = None
@@ -123,7 +160,10 @@ class Controller:
         return dict(trajectory_time=self._source_time, trajectory_age_s=None,
                     target_speed_mps=None, reference_speed_mps=None, aim_xy=None,
                     cross_track_m=None, heading_error_rad=None, reason=reason,
-                    update_rejection=self._rejection)
+                    update_rejection=self._rejection,
+                    longitudinal_mode=self.longitudinal_mode,
+                    longitudinal_integral_effort=self.longitudinal_pi.integral if self.longitudinal_mode == 'pi' else None,
+                    longitudinal_effort=None)
 
     def update(self, traj_xy, t_frame):
         try:
@@ -209,6 +249,10 @@ class Controller:
         return points, (station, cross_track, heading)
 
     def _safe(self, reason, elapsed=None):
+        if self.longitudinal_mode == 'pi':
+            self.longitudinal_pi.reset()
+            self._diagnostics['longitudinal_integral_effort'] = 0.
+        self._diagnostics['longitudinal_effort'] = -float(self.max_brake)
         self._diagnostics['reason'] = reason
         amount = self.steer_rate * (self.dt if elapsed is None else elapsed)
         self._last_steer = float(np.clip(0., self._last_steer - amount, self._last_steer + amount))
@@ -232,6 +276,13 @@ class Controller:
         if self._last_time is not None and elapsed <= 1e-8:
             self._diagnostics['reason'] = 'duplicate_tick'
             return self._last_control
+        if self.longitudinal_mode == 'pi' and self._last_time is not None and elapsed > .2 + 1e-8:
+            # A missing motion interval is not an opportunity to integrate a
+            # large unobserved PI correction or accept an invented pose history.
+            self.reset()
+            self._last_time = now
+            self._history.append((now, self._pose.copy(), speed, yaw_rate))
+            return self._safe('motion_gap')
         if self._last_time is not None:
             self._pose = advance_pose(self._pose, speed, yaw_rate, elapsed)
         self._history.append((now, self._pose.copy(), speed, yaw_rate))
@@ -272,7 +323,14 @@ class Controller:
         steer = float(np.clip(raw_steer, self._last_steer - self.steer_rate * elapsed,
                               self._last_steer + self.steer_rate * elapsed))
         steer = float(np.clip(steer, -self.max_steer, self.max_steer))
-        if self.preset == 'tcp':
+        if self.longitudinal_mode == 'pi':
+            effort = self.longitudinal_pi.step(desired - speed, elapsed)
+            throttle, brake = max(effort, 0.), max(-effort, 0.)
+            self._diagnostics.update(longitudinal_integral_effort=self.longitudinal_pi.integral,
+                                     longitudinal_unsaturated_effort=self.longitudinal_pi.raw_effort,
+                                     longitudinal_integration_limited=self.longitudinal_pi.integration_limited,
+                                     longitudinal_kp=self.longitudinal_pi.KP, longitudinal_ki=self.longitudinal_pi.KI)
+        elif self.preset == 'tcp':
             brake = float(desired < .4 or speed > desired * 1.1)
             throttle = float(np.clip(self.longitudinal.step(np.clip(desired - speed, 0., .25)), 0., self.max_throttle))
             brake = min(brake, self.max_brake)
@@ -295,6 +353,10 @@ class Controller:
         if self._stop_latched or (desired < .05 and speed < .1):
             throttle, brake, reason = 0., self.max_brake, 'stop_hold'
             self._diagnostics['target_speed_mps'] = 0.
+            if self.longitudinal_mode == 'pi':
+                self.longitudinal_pi.reset()
+                self._diagnostics['longitudinal_integral_effort'] = 0.
+        self._diagnostics['longitudinal_effort'] = float(throttle - brake)
         self._diagnostics.update(aim_xy=aim.tolist(), cross_track_m=cross_track,
                                 heading_error_rad=heading, reason=reason,
                                 raw_steer=float(raw_steer), steer_limited=abs(steer - raw_steer) > 1e-8,

@@ -1,0 +1,23 @@
+{
+  "stage": "Bounded true PI longitudinal candidate",
+  "gains": "Kp=1.0 pedal per m/s; Ki=0.25 pedal per m, fixed before results",
+  "controller_baseline": "vendor mode remains unchanged; same v2 adapter",
+  "changes_not_combined": [
+    "gear override",
+    "feedforward",
+    "cruise speed tuning",
+    "steering gain tuning"
+  ],
+  "cases": 18,
+  "routes": [
+    "1773@8",
+    "1773@6",
+    "17563@6",
+    "24240@8",
+    "26966@8",
+    "25854@8"
+  ],
+  "same_map_reuse": true,
+  "acceptance": "Unchanged G2 gates on every case; primary 5-route lateral selection rules unchanged; straight6 additionally required",
+  "failed_cases": "All cases retained; no selection by favorable stop time"
+}

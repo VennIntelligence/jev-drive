@@ -386,6 +386,9 @@ def main():
                         # Full forward-vector offset includes pitch, important for
                         # evaluating rear-axle location during the slope hold test.
                         forward = tf.get_forward_vector()
+                        right = tf.get_right_vector()
+                        acceleration = actor_snapshot.get_acceleration()
+                        angular_velocity = actor_snapshot.get_angular_velocity()
                         truth = np.array([tf.location.x + rear * forward.x, tf.location.y + rear * forward.y])
                         speed = math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2)
                         sim_time = float(snapshot.timestamp.elapsed_seconds)
@@ -400,6 +403,13 @@ def main():
                                          applied_control=dict(throttle=applied.throttle, brake=applied.brake,
                                                               steer=applied.steer, gear=applied.gear,
                                                               manual_gear_shift=applied.manual_gear_shift),
+                                         plant_kinematics=dict(
+                                             acceleration_mps2=[acceleration.x, acceleration.y, acceleration.z],
+                                             angular_velocity_deg_s=[angular_velocity.x, angular_velocity.y, angular_velocity.z],
+                                             forward_vector=[forward.x, forward.y, forward.z],
+                                             right_vector=[right.x, right.y, right.z],
+                                             location_m=[tf.location.x, tf.location.y, tf.location.z],
+                                             rotation_deg=[tf.rotation.roll, tf.rotation.pitch, tf.rotation.yaw]),
                                          reference_speed_mps=reference_speed, **projection))
                         if tick % 100 == 0:
                             event('tick', route_id=route.get('id'), variant=case['variant'], preset=preset, ticks=tick + 1, speed=speed, progress_m=projection['progress_m'])
