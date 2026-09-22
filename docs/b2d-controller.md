@@ -77,6 +77,19 @@ DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_co
   --slope-check --out /data/runs/b2d/controller/campaign-v2
 ```
 
+The frozen v4 comparison uses distinct per-preset configurations:
+
+```bash
+DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
+  --routes /data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml \
+  --presets carla,tcp,pursuit --seeds 0,1 --server-index 96 \
+  --controller-config todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json \
+  --preset-configs todos/2026-09-22-b2d-controller/results/v4-freeze/preset-configs.json \
+  --slope-check --out /data/runs/b2d/controller/formal-v4-reproduction
+```
+
+Run it through `scripts/tmux_run.sh`, with `DISPLAY=:0` and the pinned CARLA/B2D environment. The archived mapping contains absolute paths to the isolated experiment checkout. For a different checkout, create a new mapping with its absolute paths to the same three config files; preserve the original mapping as provenance. CARLA uses additive lateral PID with PI .5/.25, TCP uses vendor longitudinal control, and pursuit uses max lookahead with PI .5/.25. The general single-config example above does not reproduce this comparison.
+
 The campaign owns one server across groups, resets worlds through the evaluator, snapshots source/config bytes, and generates a report for each group. `--slope-check` measures stationary full-brake holding separately; it is not an additional closed-loop route score. `finished` means the evaluator returned, not that driving completed. Read official completion/status from `results.json`. Default `--max-ticks 0` adds no artificial cap, but the pinned evaluator still has its built-in `tick_count > 4000` TickRuntime limit. Keep that failure distinct from a user-specified smoke cap.
 
 **Preserve and plot.** Raw attempts contain `motion.jsonl` (including explicitly encoded nonfinite inputs), `control.jsonl`, `trajectories.jsonl`, `route_reference.json`, official results, events, and timing logs. Keep `/data/runs/b2d/controller/development*`, campaign groups, failed attempts, and all figure editions. Capture source bytes before a standalone run; inventory only after the run is stopped:

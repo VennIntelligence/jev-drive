@@ -1,6 +1,6 @@
 # 轨迹怎么变成 CARLA 的控制量
 
-状态: 实施中，2026-09-22 修订。独立控制验证与Dev10首轮已完成，第二seed和保留集运行中；尚无默认替代或模型分数提升结论。
+状态：2026-09-23修订。v1完整基线、v2–v4开发与恢复smoke已结束；v4正式双seed对照运行中，首轮已不满足默认替代条件。真实模型上的新控制器收益尚未验证。
 背景: [carla-efficiency.md](carla-efficiency.md)（成本）、[frozen-vlm-planner.md](frozen-vlm-planner.md)（planner 输出什么）、
 [decisions.md](decisions.md) 第 16–18 条（闭环要不要做）。
 
