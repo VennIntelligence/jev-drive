@@ -128,11 +128,15 @@ class QwenFeatures:
 
     def __init__(self, n_layer_probes: int = 4, width: int | None = None, long_side: int | None = None,
                  n_images: int = 1, compile: bool = True, layers: list[int] | None = None,
-                 model_id: str = QWEN, grid_hw: tuple[int, int] | None = None, pooled: bool = True):
+                 model_id: str = QWEN, grid_hw: tuple[int, int] | None = None, pooled: bool = True,
+                 device_map: str | None = None):
         from transformers import AutoModelForImageTextToText, AutoProcessor
         self.proc = AutoProcessor.from_pretrained(model_id)
         self.model_id, self.grid_hw, self.pooled = model_id, grid_hw, pooled
-        model = AutoModelForImageTextToText.from_pretrained(model_id, dtype=torch.bfloat16, attn_implementation="sdpa")
+        # device_map streams the shards straight onto the card. The 32B checkpoint is 64 GB in bf16, and
+        # loading it to host memory first would blow past the RAM this box can spare while another job runs.
+        model = AutoModelForImageTextToText.from_pretrained(model_id, dtype=torch.bfloat16,
+                                                            attn_implementation="sdpa", device_map=device_map)
         self.model = model.model.to(DEV).eval()  # skip lm_head: we only need hidden states
         self.image_token_id = model.config.image_token_id
         self.prompt = self.proc.apply_chat_template(

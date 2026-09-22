@@ -764,7 +764,8 @@ def extract_qwen32b(rl=None, batch_size: int = 4, limit: int | None = None,
     ctx = base_context()
     keep = load_subset(ctx)
     rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
-    fx = F.QwenFeatures(layers=list(layers), n_images=3, model_id=model_id, compile=False)
+    fx = F.QwenFeatures(layers=list(layers), n_images=3, model_id=model_id, compile=False,
+                        device_map="cuda")
     name = P3_SETS["a qwen32b"][0] + ("_probe" if limit else "")
     return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
 
