@@ -84,10 +84,26 @@ DiD 两个方向都是**正的**，方向 0 显著（**+0.098 [+0.041, +0.158]**
 框架的新说法应该是：**视觉买到的是整体上的小幅改善，而在 ego prior 失效的时刻它同样帮不上忙。**
 这句话本身是一个有价值的负面结论，但它撑不起原来那篇论文的主张。
 
-**状态改为：已证伪（待 train split 复核）。** 复核的理由不是不甘心，而是 head 只在 239 个 sequence
-上训练过，train split 有约 2037 个，多一个数量级。
-如果 Waymo 上 DiD 在位移口径不显著、在 RFS 口径又是正的（更差），那就不是"故事变弱"，
-而是**这个子集上视觉有害**，第 1 条要推翻重写。
+**2026-09-22 train split 复核：结论不变，而且更强。** 原来这里写的是
+「**状态改为：已证伪（待 train split 复核）**」，保留的理由是 head 只在 239 个 val sequence 上训过，
+train split 有 2037 个，多一个数量级。**现在 train 的特征抽完了，整套重做了一遍**
+（head 在 train 415 663 帧 / 2037 个 sequence 上训，在完整 val 106 360 帧 / 479 个 sequence 上评，
+协议其余部分一个字没改，见 [todos/2026-09-22-p0-train-split-recheck.md](../todos/2026-09-22-p0-train-split-recheck.md)）：
+
+| 量 | 半 val 预演（方向 0 / 方向 1） | **train 训、完整 val 评** |
+|:--|:--|:--|
+| DiD（ridge_late） | +0.098 [+0.041, +0.158] / +0.029 [−0.036, +0.091] | **+0.111 [+0.059, +0.162]** |
+| 全集 delta | −0.078 / −0.034 | **−0.068 [−0.085, −0.052]** |
+| pre-onset delta（n） | −0.027（791）/ −0.043（719） | **−0.016 [−0.062, +0.030]（1510）** |
+| straight delta（n） | −0.125（23 612）/ −0.072（22 968） | **−0.127 [−0.158, −0.099]（46 580）** |
+
+**DiD 仍然显著为正，点估计还略大。** 十倍训练数据没有把增量搬回 pre-onset，反而把 straight 上的增量
+坐实了（−0.127，CI 很窄），而 pre-onset 上的增量仍然和零无法区分。
+所以**「视觉的增量恰恰在 ego prior 最弱的地方最小」这句话不再带任何 train split 的保留**。
+
+**状态：已证伪（train split 复核已完成，2026-09-22）。** 要改写的仍然是「增量在哪里」而不是
+「有没有增量」：全集 −0.068、straight −0.127、turning −0.055 都显著，视觉确实买到了东西，
+只是买不到我们押注的那一格。
 
 ---
 
@@ -325,10 +341,47 @@ Waymo 这边两臂的 delta 本身都更嘈杂。
 相对量级上也一样：方向 0 的相对增益 pre-onset −1.0%、straight −7.0%，方向 1 −1.9% 对 −3.9%，
 **不是 pre-onset 基数大造成的假象**。
 
-**状态**：**已确认**——DiD 显著为正（方向 0）、两个方向同号，第 1 条"增量集中在 ego prior 最弱处"的
-框架**在 Waymo 半 val 上被证伪**。按 3d 事先写死的读法，论文要改成弱故事，并重新评估项目价值。
-但注意限定条件：这是 **val-internal 预演**，head 只在 239 个 sequence 上训练。
-train split 下完之后必须整套重做，那时训练数据多一个数量级，结论**有可能**变。
+### train split 复核（2026-09-22）：结论确认，限定条件取消
+
+上面那一段的最后一句是「train split 下完之后必须整套重做」。**做了。**
+head 在 **train split 全部 415 663 帧 / 2037 个 sequence** 上训，在**完整 val 106 360 帧 / 479 个
+sequence** 上评；特征集、层、late fusion、λ 的 4 折 sequence-grouped CV、paired sequence bootstrap、
+子集定义全部沿用，**只换训练数据**。run：box 上
+`$DATA_DIR/runs/waymo_p0/train_split/20260922-175708/`，计划见
+[todos/2026-09-22-p0-train-split-recheck.md](../todos/2026-09-22-p0-train-split-recheck.md)。
+训练 sequence 从 239 涨到 2037（8.5 倍），pre-onset 评估帧从 719–791 涨到 **1510**。
+
+| 量 | 半 val 方向 0 | 半 val 方向 1 | **train 训、完整 val 评** | 半宽 |
+|:--|:--|:--|:--|--:|
+| **DiD（主量）** | +0.098 [+0.041, +0.158] | +0.029 [−0.036, +0.091] | **+0.111 [+0.059, +0.162]** | 0.051 |
+| pre-onset delta | −0.027 [−0.073, +0.017] | −0.043 [−0.090, +0.006] | **−0.016 [−0.062, +0.030]** | 0.046 |
+| straight delta | −0.125 [−0.162, −0.091] | −0.072 [−0.112, −0.033] | **−0.127 [−0.158, −0.099]** | 0.029 |
+| 全集 delta | −0.078 [−0.101, −0.058] | −0.034 [−0.056, −0.012] | **−0.068 [−0.085, −0.052]** | 0.017 |
+| turning delta | — | — | **−0.055 [−0.081, −0.032]** | 0.025 |
+| ego-only 的 val ADE | 1.883 | 1.854 | **1.834** | — |
+
+**三件事都没变，而且都更干净。**
+
+1. **DiD 显著为正**，点估计 +0.111 比半 val 两个方向都大，CI 完全在零的右边。
+   十倍训练数据没有把增量搬回 pre-onset。
+2. **pre-onset 的 delta 仍然不显著，而且落在预登记表的第三行（真 null）**：CI 上界 +0.030、
+   下界 −0.062，**排除了 straight 那一档的增益（−0.127）**。这不是「测不动」——半宽 0.046 远小于
+   要分辨的 0.111。第 3c 条的证伪条件**第二次触发**。
+3. **视觉整体有用这件事更结实了**：straight 的 −0.127 CI 宽度只有 0.059，全集 −0.068 宽度 0.034。
+
+**power 复核**：pre-onset delta 的半宽预估（按 n=1510 从 nuScenes 的标定外推）是
+0.029 × √(1750/1510) = **0.031**，实测 **0.046**，比预估宽 1.5 倍。半 val 那次也是 1.5 倍
+（预估 0.043、实测 0.045–0.048 —— 那次刚好吻合，这次没有）。差别在于 Waymo 的逐帧 ADE 在
+sequence 内部高度相关，n 涨 2 倍不等于有效 n 涨 2 倍。**结论不受影响**（0.046 ≪ 0.111），
+但以后按 √n 外推 Waymo 的 power 要打 1.5 倍的折。
+
+**ego-only 基线的健全性检查通过**：train 训出来的 `ridge ego` 在完整 val 上 ADE 1.834，
+比半 val 的 1.883 / 1.854 略好（训练数据多），量级相同。流程没有跑偏。
+
+**状态**：**已确认（train split，不再带预演的限定条件）**——DiD 显著为正，
+第 1 条「增量集中在 ego prior 最弱处」的框架**在 Waymo 上被证伪**。
+按 3d 事先写死的读法，论文要改成弱故事，并重新评估项目价值。
+上面那段半 val 的数字保留，是因为它是这个结论第一次出现的地方；**要引用的是这一段的数字**。
 
 ---
 
@@ -1333,3 +1386,84 @@ per-direction（rater 帧 237/242，按五分位；ego 和 arm A 是用 numpy �
 要动的是表征——换层/换 encoder、给时序输入、或者 finetune。
 限定条件和第 3d 条一样：head 只在 239 个 sequence 上训练，train split 下完之后要整套重做。
 
+
+## 21. 论文是 AD 方法论文，不是诊断论文；round-4 文献现状与方法选型的预诊断
+
+**决定**（用户 2026-09-22 明确）：**这是一篇自动驾驶方法论文。交付物是一个在闭环里开得更好、
+而且好在正确地方（可见因素要求改变动作的时刻）的 driver**，主表是 Bench2Drive（按第 19 条再加 HUGSIM、NAVSIM 两列）。
+「planner 不看可见因素」「视频生成模型不编码物理」这类诊断只做动机，一张图，不做主句——
+两句都已经有人说了（见下）。**方法尚未选型，不进入预登记 todo 阶段**；先用开环预诊断把选型定下来。
+
+**理由**：round-4 四份 deep research（原始报告 `research/lit/2026-09-22-round4-*.md`，不进 git；
+汇总在 [survey-counterfactual-video-gen.md](survey-counterfactual-video-gen.md)，带覆盖度限定：
+WebSearch 配额耗尽、arXiv 429，是定向检索不是穷举）。会改变做法的文献事实：
+
+| 事实 | 出处 | 对我们的含义 |
+|---|---|---|
+| 编辑真实帧造反事实对、跨 6 个公开 checkpoint 的 model-agnostic 考试已做；只有 1.9% 算 genuine avoidance，clearance 变化中位数 ≤ 0.03 m | 2609.22582（2026-09-18）；机制源头 2003.02425（IROS 2020） | 「考卷」和「无关外观变化不应翻转」的对照都不能再当贡献；效应量 0.03 m 是对任何配对实验的噪声警告 |
+| 仿真里物理渲染、ego state 逐帧对齐、正确动作由 privileged expert 两侧重跑给出的配对：没人做过；闭环 per-pair 定向翻转率：没人做过 | Fail2Drive 2604.08535 是闭环发散的 route 对且禁止训练；2608.11601 改的是 ego action | 标签来源是仅存的 novelty 支点 |
+| 用配对干预样本训 planner 已做（CF-Driver），但无配对结构的 loss、无 hard-mining 对照；双差目标零命中 | 2409.17605；CRAFT 2605.04470 只到内层括号 | 训练侧的新意只能是 loss 的配对结构加对 reweighting 的对照；先例 Keyframe-Focused IL 2106.06452 用纯加权就解决过 copycat |
+| video latent 喂 planner 赢 VLM hidden state +2.6 PDMS（NAVSIM，非冻结）；frozen probing 下生成模型在 intuitive physics 上随机水平 | DriveLaW 2512.23421；2606.09646；Physics-IQ 2501.09038 | 视频生成模型是一次 backbone 实验，不是方向；tap 在高噪声端、约 2/3 深度 |
+| MiniMax H3 开权重，理解侧就是 Qwen3-VL-32B 第 50 层；「24 GB 实时」不成立（差 35–90 倍）；取 DiT 特征便宜，当 editor 不能用 | HF model card；SGLang 实测；2609.18323 | 新东西只在 33B DiT 里 |
+
+**状态**：方向**已决定**；文献事实**已确认**（带覆盖度限定）；**方法选型待定**。
+
+**怎么才能定下来**：GPU box 现在闲着（2026-09-22 晚：0 MiB、0%，Waymo train 特征 263/263 shard 已抽完，
+val 93/93；盘上只有 `qwen_front3` 一套特征，pooled 向量、无 spatial token；1.3 TB 空闲），闭环组件在 Tokyo box 做。
+下面这些**开环**预诊断按顺序跑，每个只回答一个选型问题，跑之前在各自的 todo 里写判据：
+
+| # | 预诊断 | 回答的选型问题 | 文献已知的部分 | 我们不知道的部分 | 成本 |
+|---|---|---|---|---|---|
+| P0 | train split 复核 3d / L0（train 训、完整 val 评） | 第 1、3d、20 条在 10 倍数据下还成不成立 | — | 全部 | CPU 分钟级，特征已在盘上 |
+| P1 | 评测口径：把 L0 的 arm 在「rater 认可的帧」和 minADE-k 口径下重算 | 高 s_ego 段用什么当 judge（第 20 条留下的要求） | 无 | 全部 | CPU 小时级 |
+| P2 | 读出阶梯：同一 Qwen3-VL-4B，pooled 线性 → 空间 token 网格 + attention head → 加 4 帧历史特征 | 失败在 readout / 输入还是在表征（第 20 条 deferred 的那一支；文献里最可能先触发的停止条件） | 2603.06054 的 perceptual vs cognitive 二分；2507.13942 说 video 预训练优于 image | 我们这批特征上 attention head 和时序输入各买回多少 pre-onset | 重抽一个分层子集（约 2 万帧）存网格 token，约 1 h GPU；head 小时级 |
+| P3 | backbone 阶梯：Qwen3-VL-32B 第 50 层、H3 DiT、Wan2.2-TI2V-5B、V-JEPA 2，同一子集、同一 judge | 表征换谁 | DriveLaW 的并排、2606.09646 的物理 probing、tap 规则 | pre-onset Δ 和 s_ego decile 曲线形状是否改变 | 32B 约 5 h；H3 约 1 h 加一天工程；Wan、V-JEPA 各小时级 |
+| P4 | CARLA 特征差距与词表覆盖：headless 用特权 autopilot 沿 20 条路线出约 2 千帧，抽特征，测 Waymo↔CARLA 的 domain classifier AUC、词表对 autopilot 轨迹的 oracle minADE、head 的 anchor 分布 | Waymo 训的 head 在 CARLA 上能不能用；sim 配对能不能当这个 head 的考卷和教材 | 第 19 条：没人量过 real→CARLA 的 feature-space gap | 全部 | 半天，CARLA 在 GPU box 上现成 |
+| P5 | 开环配对考试 v0：CARLA 里 5 个 scenario family、特权 driver 开到同一时刻 t、只差一处可见因素，加 null pair；测 flip 率、false-flip 率、token 上因素的 probe | 教材作用在 head、表征还是数据 | 2609.22582 在真实编辑帧上的 1.9%；2606.14438 的 CRI | 我们的 head 在有标准答案的 sim 对上的 flip；probe 与 flip 的分离 | 1–2 天工程，分钟级计算；不需要控制器 |
+
+P1 先于 P2、P3，因为它定 judge。P4 先于 P5，因为 P5 的意义取决于 P4。
+P0 一旦否定第 20 条的分支 2，P2 的优先级要重排。
+
+**会推翻这个决定的证据**：P5 里我们的 head 在 sim 对上 flip 率与 2609.22582 的 1.9% 同量级、
+且 null pair 的 false-flip 与之不可分——那时「在正确的地方变好」测不出来，方法论文的主结果没有地板可站，
+要先解决测量问题再谈方法。
+
+## 25. 方法假设：jev 是「反应通道」——continuation prior + reaction decoder，由干预对的差分监督
+
+（第 22–24 条已留给 P1 / P2 / P3 的结果，由跑它们的 agent 填写。）
+
+**决定**（2026-09-22，设计假设，尚未验证）：论文的方法把 planner 的输出显式拆成两项：
+
+| 部件 | 做什么 | 训练信号 | 频率 |
+|---|---|---|---|
+| continuation prior | 从 ego 历史外推（ctrv 一类的闭式先验，或 ridge ego） | 普通 imitation，或闭式 | 20 Hz，零成本 |
+| **reaction decoder（jev）** | 读冻结大模型的 spatial token，输出对 prior 的修正：该不该刹、往哪偏、改多少 | **干预对的差分**：只有 x⁺ / x⁻ 之间的输出差有标签，直行帧上修正项被约束为零 | 20 Hz，thin；token 缓存后毫秒级 |
+| attention 定位 | reaction decoder 的 cross-attention 落在哪 | x⁺ 与 x⁻ 的 token 差图直接给出因果物体位置，当 attention 的监督目标 | — |
+
+**理由**：第 3d、20 条量出来的失败可以写成「延续当前运动的部分」淹没了「因为看到了什么而改变的部分」——
+均匀 imitation 下 9 万帧直行对 1500 帧 pre-onset，线性读出在后者上榨干（L0 分支 2）。
+一个头同时学两件事学不到第二件；把第二件单独拆成一个只在配对差上有标签的 thin decoder，
+三件事就从训练的性质变成模型的性质：反应通道**只在该反应的地方非零**（null pair 上可以直接测激活）；
+attention 落在因果物体上（Kim & Canny 2017 量过注意力 58–62% 是 spurious，对照现成）；
+thin 保证 20 Hz，而 Bench2Drive-Robust（2605.18059）说 100 ms 延迟能把 SimLingo 从 86 打到 28，
+**反应通道的速度在闭环里第一次有分数含义**（第 11 条「head 免费」由此进论文，第 18 条「快不是卖点」不变：快只是一格，不是主句）。
+这样第 21 条的训练信号（配对差分，对照 hard mining）不再是孤立的 loss，而是被这个结构承载。
+
+**近邻（写 claim 时必须认）**：RAP（2207.09705）预测 residual action 对付 copycat；ChauffeurNet（1812.03079）past-motion dropout；
+gaze-supervised attention（Kim & Canny 1703.10631 一系）；dual-system fast / slow（DriveVLM-Dual、AdaThinkDrive、2607.15621）。
+我们的差别是三条同时成立：prior 是显式运动学先验而非上一帧动作；修正项的标签来自 simulator 里 expert 两侧重跑的干预对；
+attention 目标来自配对差图而非人眼。
+
+**状态**：**待定**（设计假设）。第 21 条的「AD 方法论文」不变，本条是它的方法零件。
+
+**怎么才能定下来**（都接在正在跑的预诊断上，不另开线）：
+- P2（第 23 条）的 attention head 是 reaction decoder 没有配对监督的原型：它若买回一部分 pre-onset，是结构成立的第一个证据；
+  若完全不动，结构本身不解决表征问题，要先看 P3。
+- P2 追加一个 arm（e）：**gated residual head**，输出 = ego prior + g(x)·Δ(x)，g ∈ [0,1] 带 L1 稀疏，只用真实数据训。
+  它是「没有干预对」的对照：报 g 在 pre-onset / 高 s_ego 档的激活率对直行帧的激活率，以及 pre-onset Δ。
+  预期（第 20 条推出来的）：真实数据里 g 学不会在正确的地方开，这正是要干预对的理由；若它学会了，配对监督的必要性要重新论证。
+- P5 造出的 pair 同时给出差分标签和 attention 目标；配对监督版对 (e) 的差值就是主结果的开环版本。
+- P3 决定 token 从哪个 backbone 来。
+
+**会推翻本条的证据**：(e) 在真实数据上就把 g 开在正确的地方且 pre-onset 过 −0.05 m 门槛（那配对监督不是必要的）；
+或 P5 里配对监督版对 (e) 没有可测的差别（那结构没有承载信号）；或 attention 监督相对无监督 attention 没有收益且定位不比 saliency 好。
