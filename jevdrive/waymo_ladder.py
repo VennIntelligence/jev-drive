@@ -174,6 +174,25 @@ class Aligned:
         return np.asarray(self.arr[self.pos[sel]])
 
 
+class Concat:
+    """Several feature matrices side by side, addressed by context row. `X[sel]` concatenates the slices.
+
+    Used by the three-camera V-JEPA arm (one matrix per camera) and by the late-fusion arm (V-JEPA beside
+    Qwen). Concatenation, not averaging, is deliberate for the cameras: pre-onset is about *which way* the
+    car is going to turn, so the left and right views carry the signal itself and averaging them destroys it.
+    """
+
+    def __init__(self, parts):
+        self.parts = list(parts)
+        self.shape = (len(self.parts[0]), sum(p.shape[1] for p in self.parts))
+
+    def __len__(self):
+        return self.shape[0]
+
+    def __getitem__(self, sel):
+        return np.concatenate([np.asarray(p[sel], np.float32) for p in self.parts], 1)
+
+
 def align(ctx: dict, set_name: str, arrays: list[str] | None = None, flat: bool = True) -> dict:
     """Another feature set's arrays, addressed by the context rows. `covered` says which rows it has."""
     idx, arrs = (waymo.load_flat_features if flat else waymo.load_features)(set_name, arrays)
@@ -810,7 +829,18 @@ def extract_wan(rl=None, batch_size: int = 2, limit: int | None = None, **kw):
     return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
 
 
-def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frames: int = 4, stride: int = 2):
+VJEPA_VARIANTS = {                      # arm key -> (set name, camera, frames, stride, checkpoint)
+    "d vjepa2":        ("vjepa2_p3",      "front",       4,  2, None),
+    "d1 vjepa2 fl":    ("vjepa2_p3_fl",   "front_left",  4,  2, None),
+    "d1 vjepa2 fr":    ("vjepa2_p3_fr",   "front_right", 4,  2, None),
+    "d2 vjepa2 clip8": ("vjepa2_p3_f8",   "front",       8,  2, None),
+    "d3 vjepa2 clip16": ("vjepa2_p3_f16", "front",      16,  2, None),
+    "d4 vjepa2 vitg":  ("vjepa2g_p3",     "front",       4,  2, "facebook/vjepa2-vitg-fpc64-256"),
+}
+
+
+def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frames: int = 4, stride: int = 2,
+                   cam: str = "front", name: str | None = None, model_id: str | None = None):
     """P3(d): V-JEPA 2 ViT-L over a short clip ending at the frame -- decision 12's video self-supervised control.
 
     Two things about this row have to travel with its number, exactly as decision 12 says. The checkpoint is
@@ -822,11 +852,66 @@ def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frame
     ctx = base_context()
     keep = load_subset(ctx)
     rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
-    items, idx, full = waymo.clip_items(ctx["df"], rows, frames - 1, stride)
-    fx = F.VJepaFeatures(frames=frames)
-    name = P3_SETS["d vjepa2"][0] + ("_probe" if limit else "")
-    return waymo.extract_items(name, fx, items, idx, batch_size, rl=rl, cams=["front"], frames_per_clip=frames,
+    items, idx, full = waymo.clip_items(ctx["df"], rows, frames - 1, stride, cam)
+    fx = F.VJepaFeatures(frames=frames, **({"model_id": model_id} if model_id else {}))
+    name = (name or P3_SETS["d vjepa2"][0]) + ("_probe" if limit else "")
+    return waymo.extract_items(name, fx, items, idx, batch_size, rl=rl, cams=[cam], frames_per_clip=frames,
                                clip_stride=stride, complete=int(full.sum()), requested=len(rows))
+
+
+def p3d(ctx: dict, keep: np.ndarray, rl, variants: list[str] | None = None):
+    """The V-JEPA 2 ladder: one variable moved at a time off arm (d), plus late fusion with Qwen.
+
+    Every variant that is on disk joins the table; the rows are the intersection of what all of them cover,
+    so the arms are compared on the same frames (decision 13, and the same discipline as P2(b)).
+    """
+    want = variants or ["d vjepa2", "d1 vjepa2 fl", "d1 vjepa2 fr", "d2 vjepa2 clip8", "d3 vjepa2 clip16",
+                        "d4 vjepa2 vitg"]
+    got, keep = {}, keep.copy()
+    for k in want:
+        st = VJEPA_VARIANTS[k][0]
+        try:
+            a = align(ctx, st, ["mean"])
+        except (FileNotFoundError, OSError) as e:
+            log.warning("%s: %s not on disk (%s) -- skipping", k, st, e)
+            continue
+        got[k], keep = a, keep & a["covered"]
+    arms = {"A ridge_late pooled (qwen4b L18)": ridge_arm(ctx["pooled"])}
+    if "d vjepa2" in got:
+        arms["d vjepa2 (front, 4 frames)"] = ridge_arm(got["d vjepa2"]["mean"])
+        arms["d5 late fusion vjepa2 + qwen"] = ridge_arm(Concat([got["d vjepa2"]["mean"], ctx["pooled"]]))
+    if all(k in got for k in ("d vjepa2", "d1 vjepa2 fl", "d1 vjepa2 fr")):
+        arms["d1 vjepa2 3 cameras"] = ridge_arm(Concat([got[k]["mean"] for k in
+                                                        ("d vjepa2", "d1 vjepa2 fl", "d1 vjepa2 fr")]))
+    for k, label in (("d2 vjepa2 clip8", "d2 vjepa2 clip 8"), ("d3 vjepa2 clip16", "d3 vjepa2 clip 16"),
+                     ("d4 vjepa2 vitg", "d4 vjepa2 ViT-g")):
+        if k in got:
+            arms[label] = ridge_arm(got[k]["mean"])
+    log.info("P3(d'): %d arms over %d frames", len(arms), int(keep.sum()))
+    return run_ladder(lambda k: arms, "p3d", keep, ctx, rl=rl)
+
+
+def shape_change(dec: pd.DataFrame, lo: int = 4, tol: float = 2.0) -> pd.DataFrame:
+    """The pre-registered shape test: is the top decile's relative gain within `tol` points of the best bin?
+
+    "Best" is the most negative relative gain over deciles `lo`..10, which is where the logged future is a
+    target worth fitting (decision 20 disqualified bin 10 from deciding whether an arm buys anything, but it
+    is exactly the bin this test is about, so it takes part here).
+    """
+    rows = []
+    for (d, arm, scope), g in dec.groupby(["direction", "arm", "scope"]):
+        g = g[g.decile >= lo]
+        if g.empty:
+            continue
+        best = g.rel_gain.min()
+        top = g[g.decile == 10].rel_gain
+        if top.empty:
+            continue
+        rows.append({"direction": d, "arm": arm, "scope": scope,
+                     "peak_decile": int(g.loc[g.rel_gain.idxmin(), "decile"]), "peak_rel_gain": best,
+                     "decile10_rel_gain": float(top.iloc[0]), "gap": float(top.iloc[0]) - best,
+                     "shape_change": bool(float(top.iloc[0]) - best <= tol)})
+    return pd.DataFrame(rows)
 
 
 def main():
@@ -834,12 +919,13 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,gridcheck,qwen32b,vjepa2,wan")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,grid,gridcheck,qwen32b,vjepa2,wan")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
     ap.add_argument("--batch-size", type=int, default=4)
-    ap.add_argument("--sets", default=None, help="p3: comma list of arm keys to include")
+    ap.add_argument("--sets", default=None, help="p3 / p3d: comma list of arm keys to include")
+    ap.add_argument("--variant", default=None, help="vjepa2: a key of VJEPA_VARIANTS to extract")
     a = ap.parse_args()
     rl = RunLog("waymo_ladder", a.tag or a.steps.replace(",", "-"))
     rl.log.info("args %s -> %s", vars(a), rl.dir)
@@ -852,10 +938,11 @@ def main():
     if "gridcheck" in steps:
         rl.event("grid_check", **grid_check())
     if "vjepa2" in steps:
-        rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
+        st, cam, fr, sd, mid = VJEPA_VARIANTS[a.variant or "d vjepa2"]
+        rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit, fr, sd, cam, st, mid))
     if "wan" in steps:
         rl.event("extract", **extract_wan(rl, a.batch_size, a.limit))
-    if {"subset", "repro", "p2b", "p2c", "p2e", "p3"} & set(steps):
+    if {"subset", "repro", "p2b", "p2c", "p2e", "p3", "p3d"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:
             summary = write_subset(ctx, choose_subset(ctx, seed=a.seed))
@@ -871,6 +958,12 @@ def main():
             p2e(ctx, load_subset(ctx), rl)
         if "p3" in steps:
             p3(ctx, load_subset(ctx), rl, a.sets.split(",") if a.sets else None)
+        if "p3d" in steps:
+            out = p3d(ctx, load_subset(ctx), rl, a.sets.split(",") if a.sets else None)
+            sc = shape_change(out["deciles"])
+            sc.to_csv(rl.dir / "p3d_shape.csv", index=False)
+            rl.log.info("p3d shape test\n%s", sc.to_markdown(index=False, floatfmt=".2f"))
+            rl.event("shape", rows=sc.to_dict("records"))
     rl.event("end")
     rl.close()
 

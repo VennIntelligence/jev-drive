@@ -282,11 +282,11 @@ class SiglipFeatures:
 class VJepaFeatures:
     """V-JEPA 2 over a clip of CLIP_FRAMES frames. `transform` receives the clip as a list of PIL images."""
 
-    def __init__(self, size: int = 256, frames: int = CLIP_FRAMES):
+    def __init__(self, size: int = 256, frames: int = CLIP_FRAMES, model_id: str = VJEPA):
         from torchvision.transforms import v2
         from transformers import AutoModel
-        self.model = AutoModel.from_pretrained(VJEPA, dtype=torch.bfloat16).to(DEV).eval()
-        self.frames = frames
+        self.model = AutoModel.from_pretrained(model_id, dtype=torch.bfloat16).to(DEV).eval()
+        self.model_id, self.frames = model_id, frames
         self.tf = v2.Compose([v2.PILToTensor(), v2.Resize((size, size), antialias=True),
                               v2.ToDtype(torch.float32, scale=True),
                               v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
