@@ -96,3 +96,8 @@ CARLA横向配相同PI参考也6/6通过，additive pursuit为5/6。Dev10前已�
 
 另完成18对v3/v4全程物理舒适性诊断，纵向加速度RMS下降21.5%、纵向jerk下降25.9%，横向加速度上升2.0%。
 这不是官方Smoothness或DS；[全部样本、图与口径](results/comfort-v3-v4-v1/README.md)已保留。
+
+
+00:27起：恢复版smoke官方100/100通过后，冻结60条formal-v4启动。第一组CARLA横向+PI参考seed0于00:33完成，
+9/10驾驶完成，346.8s全部attempt耗时；25424施工碰撞后达到4000tick的官方TickRuntime。
+完整三组/双seed未齐，不提前宣布候选优势或新默认；实际模型对照边界见[迭代记录](iteration-v2.md)。

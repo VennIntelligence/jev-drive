@@ -1935,3 +1935,18 @@ TCP=.4947m。pursuit没有同时改善所有预定指标，不能因为方法新
 **下一步**：按[迭代验收方案](../todos/2026-09-22-b2d-controller/plan.md)先修复原点连接引起的速度膨胀，在无交互开发集隔离比较轨迹生成与lookahead。
 单测/开环重放仅验几何和接口；必须以CARLA闭环验证、冻结后配对回归决定资格。已有保留集再次运行叫复验，不能冒称盲测；不降低原门槛。真实planner收益另做固定checkpoint的controller-only对照。
 完整数字、图、失败归因与原始路径见[文章素材](../todos/2026-09-22-b2d-controller/article-notes.md)。
+
+
+## 27. 控制器收益按驾驶表现分项验证，不以DS替代舒适性
+
+2026-09-23：v2修复轨迹起点定时，v3/v4根据真实CARLA速度反馈做有限PI迭代。
+Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive急弯p95仍失败；
+候选与参考在60条正式Dev10前冻结，正式结果未齐，暂不更换CLI默认。
+
+**决定**：按用户要求，目标是轨迹跟踪、速度稳定、转弯与停车表现；不把DS上涨作为唯一价值。
+原版本DS是完成度乘违规惩罚，不直接惩罚急加减速/jerk；Driving Smoothness另算。
+18对完整v3/v4物理诊断中纵向jerk RMS均值下降25.9%，横向加速度RMS上升2.0%，不能声称普遍更舒适。
+
+**边界**：本轮policy=none，只验证route oracle控制。之前真实TCP smoke未比较新控制器，不能代替真实模型对照。
+真实TCP需保留checkpoint、输入、推理频率，明确原生waypoint坐标/时域及control branch，避免把模型或适配变化算成控制收益。
+证据见[反馈迭代](../todos/2026-09-22-b2d-controller/iteration-v2.md)和[舒适性数据](../todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/README.md)。

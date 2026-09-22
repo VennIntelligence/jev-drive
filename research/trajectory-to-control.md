@@ -48,8 +48,9 @@ MIT license，四个文件。这是在 box 上读源码得到的，不是文档�
 | max_throttle / max_brake / max_steering | 0.75 / **0.3** / 0.8 |
 | 目标速度 | 20 km/h 固定，或 `follow_speed_limits` |
 
-两点值得记：纵向 K_P=1.0 配 km/h 的 error 意味着差 1 km/h 就给满油门上限，实际是 bang-bang；
-`max_brake=0.3` 是巡航用的软刹车，Bench2Drive 的 cut-in / 行人场景要的急刹它给不出，用的时候要提到 1.0。
+纵向K_P=1.0配km/h误差时，差1km/h的比例项就超过.75油门上限，较大误差容易饱和；
+这不能推出所有tick都是bang-bang（只切换最大动作），实际占比应从完整控制记录测量。
+原max_brake=.3限制制动权限；本轮统一上限1.0，但有完整制动权限不等于已经验证紧急避碰。
 
 ### `local_planner.py`：目标 waypoint 和目标速度怎么选
 
@@ -104,17 +105,17 @@ TCP、carla_garage、SimLingo、CaRL 各自的 main）。报的是**他们做了
 
 三件事从这张表里读出来：
 
-1. **发表过的 Bench2Drive 数字全都来自 trajectory → 固定 PID → control。** 唯一的例外是 CaRL，
-   它是 RL 训出来的、直接出控制量，代价是没有任何开环可比性。
+1. 本表调研的多种方法使用trajectory→固定PID→control；TCP另有学习的control branch混合，CaRL直接预测控制量。
+   这份来源集合不足以概括所有Bench2Drive方法，比较时也不能把完整TCP等同单一PID。
 2. **这套 PID 是同一份代码传下来的**：TransFuser CVPR'21 的 `PIDController` 逐字复制到 TCP、InterFuser、
    LAV、ThinkTwice、Bench2DriveZoo。`speed 5.0 / 0.5 / 1.0`、`brake_ratio 1.1`、`clip_delta 0.25`、
    `max_throttle 0.75` 五年没动过。它和 CARLA 自带的那个都是角度/速度误差反馈，但离散语义不同：CARLA 的积分为 sum(error)×dt、
    微分为差分/dt；TCP 用零填充窗 mean(error)、微分不除dt，且角度归一化到/90°、aim固定4 m。
    两者不能只换增益和窗口就声称复现。
-3. **它们的纵向实际上都是 bang-bang**：`delta ≤ 0.25` 而 K_P=5，P 项上限 1.25，油门几乎总在 0.75 饱和；
-   brake 是布尔量，clip 之后是 0 或 1。UniAD 的 agent 还硬编码 `speed > 5 m/s → throttle = 0`，
-   把它封在 18 km/h 以下。所以"baseline 的控制器"没有什么精细可言，
-   这些来源不能证明控制器不影响分数；实际影响需要固定同一个 planner 做 controller-only 对照。
+3. TCP式纵向中，delta上限.25与K_P=5使比例项上限达到1.25，高于.75油门限幅；
+   brake为布尔量。但油门是否经常饱和取决于实际误差，不能仅凭增益就断言“几乎总在饱和”。
+   原调研记录的UniAD实现还在speed>5m/s时清油门，这是代码中的油门规则，并不是车速必然不超过5m/s的证明。
+   本轮6m/s真实仿真确实发现速度与踏板循环；对真实模型驾驶表现的影响仍须固定planner做controller-only对照。
 
 另一个对我们直接有用的事实：**Bench2DriveZoo 的 AD-MLP 是每 10 tick 推理一次、中间 hold**，
 UniAD/VAD 是每 tick。也就是说 Bench2Drive 对 agent 的推理频率没有规定，5 Hz 的 replan
@@ -323,9 +324,25 @@ Dev10两个TM seed三组均9/10驾驶完成，两轮误差几乎一致；这里�
 还发现一个输入边界：停车起步或路线偏移时，ego原点到首个future waypoint的连接段可把轨迹导数推到配置巡航速度以上。
 例如3514首点距原点4.845m，按0.25s解释为19.381m/s，而后续点段仍为8m/s。
 命令与该reference的误差是同一输入轨迹语义，不能代替G2独立真值巡航指标；三组冻结同一实现，原数据不篡改。
-v2正在修复该空间路线至定时轨迹的边界：从估计后轴位置及heading构造重接路径，再按路径弧长定时，保持原巡航/减速与控制参数。原dense route继续用作独立真值误差参考，修复后仍须实际闭环验证。
+v2随后修复了该空间路线至定时轨迹的边界：从估计后轴位置及heading构造重接路径，再按路径弧长定时，保持原巡航/减速与控制参数。原dense route继续用作独立真值误差参考，修复后的完整开发验证见下节。
 
 覆盖审计发现原四条G2与六条保留集均无足够交替曲率。新增开发S弯17563@6m/s三组都完成，但CARLA/TCP/pursuit速度RMS为.663/.922/.636m/s，均超过.5；TCP横向RMS也达到.905m。不能把此前4/4描述成完整S弯验收通过。另在实际6.357°坡上完成5s静止制动诊断，真值位移0m；它只证明静止hold，不证明坡上接近与减速过程。
+
+## v2–v4闭环反馈与驾驶表现目标（2026-09-23）
+
+空间路线定时已修复：从估计ego后轴与航向重接原dense route，再按弧长采样。此后六项G2开发条件包含实际S弯与6m/s直线。
+v3 PI Kp=1、Ki=.25未消除全部波动；唯一追加的Kp=.5复验中，CARLA横向配PI与pursuit max均6/6通过，pursuit additive仍5/6。
+候选pursuit max已在正式Dev10前冻结；不依据正式结果继续调增益。[完整迭代和图](../todos/2026-09-22-b2d-controller/iteration-v2.md)。
+
+新smoke在罗盘NaN处暴露未处理异常。最长.2s的陀螺仪预测及超时制动/复位修复后，126项测试通过，原2390闭环完成100%，
+一帧降级后恢复，控制p99=.265ms。此处既保留失败输入，也保留重放与新的闭环结果，不能只写最后成功。
+
+用户明确目标是驾驶表现，不要求Driving Score必然提高。DS不直接惩罚加速度/jerk；官方Smoothness另算。
+18对完整v3/v4闭环案例的纵向jerk RMS等权均值下降25.9%，横向加速度RMS上升2.0%，说明收益必须分项报告。
+[物理诊断完整数据](../todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/README.md)不是官方舒适性分数，也不是模型收益证明。
+旧tcp-smoke/tcp-fast确实加载过真实TCP checkpoint，但本轮route oracle尚未做真实TCP的新旧控制器对照。
+后续应冻结模型checkpoint、相机输入与推理节拍，比较轨迹跟踪、速度稳定、转弯、停车和舒适性，驾驶得分作为另一个观察量。
+TCP原生waypoint时域和学习的control branch须先明确，不得凭空补出5s轨迹后声称只换了控制器。
 
 ## 会推翻候选选择的证据
 
