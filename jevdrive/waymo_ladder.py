@@ -615,7 +615,14 @@ def run_ladder(arms_for: callable, tag: str, keep: np.ndarray | None, ctx: dict,
             save_preds(rl, preds, sctx, tag)
         del preds
         torch.cuda.empty_cache()
-    return write_tables(rl, tables, tag) if rl is not None else tables
+    if rl is None:
+        return tables
+    out = write_tables(rl, tables, tag)
+    if "deciles" in out and len(out["deciles"]):
+        from . import plots
+        f = plots.ladder_decile_curve(out["deciles"], rl.dir, f"{tag}-decile-relative-gain")
+        rl.log.info("figure: %s", f)
+    return out
 
 
 # ---------------------------------------------------------------- P2(b): temporal pooled input
