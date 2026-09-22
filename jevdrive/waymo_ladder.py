@@ -153,21 +153,38 @@ def load_subset(ctx: dict, name: str = SUBSET_FILE) -> np.ndarray:
     return keep
 
 
+class Aligned:
+    """Another feature set's array addressed by *context row*, without materialising the full length.
+
+    The obvious implementation -- scatter the set's rows into a zero array as long as the context -- costs
+    106 360 x 368 640 x 2 bytes for the token grid, which is 78 GB of RAM for 20 237 rows of real data. This
+    keeps the compact array on disk as a memmap and carries the row map, so `X[sel]` reads exactly the rows
+    the split asks for and nothing else. Rows the set does not cover map to -1 and must be excluded by the
+    caller through `covered` before any arm sees them.
+    """
+
+    def __init__(self, arr, pos: np.ndarray):
+        self.arr, self.pos = arr, pos
+        self.shape = (len(pos), arr.shape[1])
+
+    def __len__(self):
+        return len(self.pos)
+
+    def __getitem__(self, sel):
+        return np.asarray(self.arr[self.pos[sel]])
+
+
 def align(ctx: dict, set_name: str, arrays: list[str] | None = None, flat: bool = True) -> dict:
-    """Another feature set's arrays, reordered onto the context rows. Rows the set does not cover come back
-    as NaN-free zeros and are reported: the caller restricts the comparison to `covered` itself."""
+    """Another feature set's arrays, addressed by the context rows. `covered` says which rows it has."""
     idx, arrs = (waymo.load_flat_features if flat else waymo.load_features)(set_name, arrays)
     arrays = arrays or sorted(arrs)
     at = pd.Series(np.arange(len(idx)), index=idx.frame_name.to_numpy())
     pos = at.reindex(ctx["fname"]).to_numpy()
     covered = ~np.isnan(pos)
-    out = {"covered": covered}
-    for a in arrays:
-        x = np.zeros((len(ctx["fname"]), arrs[a].shape[1]), np.float16)
-        x[covered] = np.asarray(arrs[a])[pos[covered].astype(int)]
-        out[a] = x
+    ipos = np.where(covered, np.nan_to_num(pos, nan=0), 0).astype(np.int64)
+    out = {"covered": covered} | {a: Aligned(arrs[a], ipos) for a in arrays}
     log.info("%s: %d/%d context rows covered, arrays %s", set_name, int(covered.sum()), len(covered),
-             {a: out[a].shape[1] for a in arrays})
+             {a: arrs[a].shape[1] for a in arrays})
     return out
 
 
@@ -317,7 +334,7 @@ def grid_arm(G: np.ndarray, n_tok: int, kind: str = "attn", side: np.ndarray | N
     d = G.shape[1] // n_tok
 
     def fit(sel, sp, R, res_fut, seed, pre=None):
-        X = torch.from_numpy(np.ascontiguousarray(G[sel])).to(DEV).view(-1, n_tok, d)
+        X = torch.from_numpy(np.ascontiguousarray(G[sel])).to(DEV).view(-1, n_tok, d)   # (n_sel, N, d) fp16
         mu, sd = _chan_stats(X, sp.train)                     # chunked: a float32 copy of the fit half is 15 GB
         S = standardize_np(side[sel], sp.train) if side is not None else None
         ds = 0 if S is None else S.shape[1]
