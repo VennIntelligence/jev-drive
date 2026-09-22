@@ -1,6 +1,6 @@
 # 轨迹怎么变成 CARLA 的控制量
 
-状态: 设计结论，2026-09-22。写给要实现 `scripts/b2d_agent.py` 里那个 stand-in driver 的替代品的人。
+状态: 实施中，2026-09-22 修订。原设计已纠正，车辆常数已实测；控制与 Dev10 验收尚未完成。
 背景: [carla-efficiency.md](carla-efficiency.md)（成本）、[frozen-vlm-planner.md](frozen-vlm-planner.md)（planner 输出什么）、
 [decisions.md](decisions.md) 第 16–18 条（闭环要不要做）。
 
@@ -16,8 +16,8 @@ CARLA 的 leaderboard 每个 tick（20 Hz，`fixed_delta_seconds = 0.05`）要�
 取 argmax**，输出是 Waymo 格式的 5 s、4 Hz、20 个 (x, y)，ego frame，原点在后轴，x 向前 y 向左，
 第一个点在 t + 0.25 s（`jevdrive/traj.py`）。K ≥ 1024（decisions 第 8 条）。
 
-结论先写在前面：**用 CARLA 自带的 `VehiclePIDController` 的结构，参数从它自己的默认值起步，
-控制器保持固定、不学；轨迹在 5 Hz 更新、由控制器用 dead reckoning 重投影后在 20 Hz 跟踪。
+结论先写在前面：**控制器保持固定、不学；CARLA/TCP 风格 PID 与独立 pure pursuit 经过分层验证后选择默认。
+轨迹在 5 Hz 更新、由控制器按时间裁剪并用 dead reckoning 重投影后在 20 Hz 跟踪。
 "好模型自己学会用控制器"这句话是对的，但它说的是 head 通过固定控制器做 closed-loop fine-tuning，
 不是把控制器做成可学的。** 下面是理由和边界。
 
@@ -67,10 +67,25 @@ MIT license，四个文件。这是在 box 上读源码得到的，不是文档�
 
 ### 车和物理
 
-leaderboard 的 ego 是 `vehicle.lincoln.mkz_2020`。steer 命令乘以前轮的 `max_steer_angle` 得到转角，
-再被 `steering_curve` 按速度打折；PhysX 在 0.05 s 内做 substep。轴距、最大转角、`steering_curve` 的具体值
-**这次没有查**（要一个活着的 server 调 `get_physics_control()`，本文档不起 server），
-见最后一节。它们只影响 feedforward 那一项，不影响结论。
+本地 Bench2Drive 0.0.4、官方 leaderboard-2.0 和 master 的 RouteScenario 都固定请求
+`vehicle.lincoln.mkz_2020`，本轮按这个 blueprint 标定。2026-09-22 的实测记录位于
+`/data/runs/b2d/controller/calibration-units/`（physics、response、steering_unit_probe、controller_config）。
+
+| 量 | 本次测量 |
+|---|---:|
+| 轴距 | 2.8604714914 m |
+| 后轴相对 actor 原点的 x 偏移 | −1.3886332202 m |
+| 最大前轮转角 | 69.9999924° |
+| steering_curve | (0,1)、(20,0.9)、(60,0.8)、(120,0.7) |
+| steering_curve 横轴单位 | **km/h**；活体诊断曲线探针已核验 |
+
+探针临时使用 [(0,1),(10,0.1)] 曲线，在约2 m/s、steer=0.05时观察到约1.22°前轮角，
+符合按7.2 km/h读取约0.35倍率的量级；若横轴是m/s会预测约2.87°。这验证单位，不能据此声称
+实际转向完全等于理想自行车。原始响应记录仍存在左右差异、轮胎侧偏与速度跟踪偏差；目标10 m/s
+的右转 sweep 实际均速仅0.021 m/s，属于失效采样，不能拿它拟合正常巡航转向增益。
+
+三个常数提供几何起点；转角执行响应、道路坡度、轮胎动力学、GNSS误差都需独立验证。
+不再使用“CARLA plant 完全已知，因此 feedforward 近乎精确”的前提。
 
 ## 别人怎么做
 
@@ -93,12 +108,13 @@ TCP、carla_garage、SimLingo、CaRL 各自的 main）。报的是**他们做了
    它是 RL 训出来的、直接出控制量，代价是没有任何开环可比性。
 2. **这套 PID 是同一份代码传下来的**：TransFuser CVPR'21 的 `PIDController` 逐字复制到 TCP、InterFuser、
    LAV、ThinkTwice、Bench2DriveZoo。`speed 5.0 / 0.5 / 1.0`、`brake_ratio 1.1`、`clip_delta 0.25`、
-   `max_throttle 0.75` 五年没动过。它和 CARLA 自带的那个在结构上是同一个东西（角度误差 PID + 速度误差 PID），
-   区别只在积分是滑动窗均值、error 归一化到 /90°、aim point 固定 4 m 而不是随速度变。
+   `max_throttle 0.75` 五年没动过。它和 CARLA 自带的那个都是角度/速度误差反馈，但离散语义不同：CARLA 的积分为 sum(error)×dt、
+   微分为差分/dt；TCP 用零填充窗 mean(error)、微分不除dt，且角度归一化到/90°、aim固定4 m。
+   两者不能只换增益和窗口就声称复现。
 3. **它们的纵向实际上都是 bang-bang**：`delta ≤ 0.25` 而 K_P=5，P 项上限 1.25，油门几乎总在 0.75 饱和；
    brake 是布尔量，clip 之后是 0 或 1。UniAD 的 agent 还硬编码 `speed > 5 m/s → throttle = 0`，
    把它封在 18 km/h 以下。所以"baseline 的控制器"没有什么精细可言，
-   分数差异来自 planner 和数据，不来自控制器，这一点对我们是好消息。
+   这些来源不能证明控制器不影响分数；实际影响需要固定同一个 planner 做 controller-only 对照。
 
 另一个对我们直接有用的事实：**Bench2DriveZoo 的 AD-MLP 是每 10 tick 推理一次、中间 hold**，
 UniAD/VAD 是每 tick。也就是说 Bench2Drive 对 agent 的推理频率没有规定，5 Hz 的 replan
@@ -118,12 +134,9 @@ comma.ai 的 openpilot 是"真车上的 trajectory → control"的参照。它�
 | 频率 | 模型 20 Hz，控制 100 Hz，中间是 zero-order hold + 限幅（横向 jerk ≤ 5/v²、横向加速度 ≤ 3 m/s²） | 舒适、法规 |
 | 谁被训练 | **没有任何东西是穿过真车控制器训练的。** 0.11 起 policy 在一个 learned simulator 里训，动作经过一个**手写的** Vehicle Model（含延迟和 domain randomization）变成位姿，真车上的 torque PID、lagd、torqued 都不在 loop 里 | — |
 
-放到 CARLA 里看，这张表右边一列几乎全部是 CARLA 没有的问题：状态精确、车辆模型已知且确定、
-执行器延迟是零（tick k 的 control 在 tick k+1 的物理里生效）、没有横坡、没有 EPS。
-把这些去掉，openpilot 的控制器退化成 `κ_des → steer angle`（他们自己的 `LatControlAngle` 就是这个）
-加 `accel = a_target`。**真正剩下的、值得借的结构只有两条**：目标量按"延迟之后那一刻"定义，
-以及决策频率低于执行频率时用 hold + 限幅衔接。这两条在下面的推荐里都用上了。
-
+CARLA 不需要复现真实 EPS 的所有复杂性，但模拟器仍有转向执行响应、轮胎侧偏、坡度和噪声；
+本轮传感器路径也不直接获得精确状态。可以借用的结构是目标量按对应时间定义、低频决策与高频执行分开，
+不能从“仿真”直接推出零延迟、无横坡或纯前馈足够。
 openpilot 还回答了"谁学什么"这个问题的一半：即使是真车，他们也选择**固定控制器 + policy 在仿真里
 学会对着这个固定的动作语义开车**，而不是学控制器。这和"好模型自己学会用控制器"是同一个意思。
 
@@ -144,24 +157,23 @@ planner 误差，闭环数字才解释得清。
 
 逐条说：
 
-**A 是 baseline 全体的做法，也是我们唯一保留开环可比性的做法。** 它的"手调"其实不存在：
-CARLA 和 TCP 两组增益都在，两组都在这台车上跑过成千上万条路线。它把学习负担全放在 head 上，
+**A 是本轮起点，保留 planner 输出与开环指标的可比性。** CARLA/TCP 提供已有参考增益，
+但统一轨迹采样、坐标、延迟和限幅后的适配仍须验证。它把学习负担全放在 head 上，
 而 head 的学习信号来自开环数据。要让"模型学会用控制器"，正确的动作是**之后**对 head 做
 closed-loop fine-tuning（在 CARLA 里跑、控制器固定、以 driving score 或 DAgger 式的 expert 标签作信号），
 而不是换控制器。我们的输出是 K-way 的 argmax，这件事反而顺手：**动作空间是 K 个离散 anchor，
 policy gradient 直接可用**，AnchorVLA（decisions 第 18 (d) 条，K=100 anchors 上做 RL）就是这么做的。
 
-**B 在 CARLA 里没有东西可学。** 可学控制器的价值在于吸收 plant 的未知（openpilot 那张表的右列），
-CARLA 的 plant 是已知的、确定的、可以写成一个 kinematic bicycle 加 `steering_curve`。
-一个学出来的控制器最后学到的就是这个模型，我们可以直接写下来当 feedforward。它的代价却是实打实的：
-head 一旦穿过控制器训练，Waymo 上的 RFS 就不再描述部署的那个 head。
+**B 本轮不选。** 学习控制器可能吸收模型误差，但 CARLA 的实际动力学不能简单等同自行车模型；
+是否值得学习须先量化固定控制器的残差。当前优先把坐标、时间、定位和固定控制基线做清楚。
+head 一旦穿过控制器训练，还需要重新报告部署 head 的开环指标。
 
 **C 是 CaRL 的路，对我们不可行也不值得。** 不可行：Qwen3-VL-4B 单次 60–140 ms，20 Hz 要 50 ms；
 每 tick 推理的实测是 0.096× 实时。不值得：control 是 Lincoln MKZ 2020 在 PhysX 里的 throttle/brake 语义，
 是所有表示里最不可迁移的一种，Waymo 和 NAVSIM 上都没有对应标签，整篇论文的开环部分就没了。
 
-**D 的实际用途比看上去小。** residual 能修的是"控制器跟不上轨迹"，而在已知 plant 上 feedforward
-已经把这一项修掉了。它可能修的另一件事是"head 系统性地晚刹车"，但那是 planner 的缺陷，
+**D 留作后续消融。** residual 能修的是"控制器跟不上轨迹"；先实测固定几何/反馈控制的剩余误差，
+不能假定 feedforward 已经修完。若它补的是"head 系统性地晚刹车"，那是 planner 的缺陷，
 在控制器里补上等于把它从开环指标里藏起来。留作 ablation 的选项，不进主数字。
 
 ### K 词表这个输出形状意味着什么
@@ -188,46 +200,47 @@ Bench2Drive 是城区、限速 30–60 km/h。这不是控制器的事，是 hea
 
 ## 推荐
 
-**用 A。控制器固定，结构取 CARLA 的 `VehiclePIDController`，参数从 `LocalPlanner` 的默认值起步，
-再加一项按已知车辆模型算的 feedforward。**
+**固定控制器、不训练控制器的方向保留；先做独立 CARLA/TCP PID 参考与 pure pursuit 候选，
+经过离线、无交互 CARLA、完整路线三层验证后再选默认。** 原稿的 pure pursuit + aim-bearing PID
+不作为默认：两项都根据前方目标点角度转向，不能把后者解释为只修跟踪残差。
 
-具体形状（写给下一步实现的人；不改 `b2d_agent.py` 的接口，新文件）：
+实现与协作材料集中在 [controller 工作目录](../todos/2026-09-22-b2d-controller/README.md)，
+完整任务、验证、验收门槛见 [plan.md](../todos/2026-09-22-b2d-controller/plan.md)，
+接口见 [contract.md](../todos/2026-09-22-b2d-controller/contract.md)。
 
-| 步骤 | 做法 | 来源 |
-|---|---|---|
-| 输入 | 5 Hz：一条 (20, 2) 的 ego-frame 轨迹加它对应的帧的时间戳。20 Hz：speedometer 的前向速度、IMU 的 yaw rate | 都是 `Track.SENSORS` 允许的 |
-| 重投影 | 每个 20 Hz tick 用 `v·dt` 和 `ω·dt` 做 dead reckoning（用运动学推算当前位姿），把轨迹从"拍摄那一刻的 ego frame"转到"现在的 ego frame" | openpilot 的 `action_t` 思路，只是延迟已知 |
-| aim point | 沿轨迹弧长插值，取 `max(3.0, 0.5·v)` m 处的点 | `LocalPlanner` 的 `min_distance` 规则 |
-| 横向 | steer = feedforward + PID。feedforward：pure pursuit 曲率 `κ = 2y / (x² + y²)`，转成前轮转角 `δ = atan(κ·L)`，除以 `max_steer_angle` 和 `steering_curve(v)`。PID：CARLA 的 1.95 / 0.05 / 0.2 作用在到 aim point 的角度误差上；每 tick 变化 ≤ 0.1，限幅 0.8 | `controller.py` |
-| 纵向 | 目标速度 = 重投影后轨迹在 0.25–1.0 s 之间的弧长 / 0.75 s；PID 1.0 / 0.05 / 0（km/h）；`max_throttle 0.75`，**`max_brake 1.0`**（不是 0.3） | `controller.py`，刹车上限改 |
-| 停车 | 目标速度 < 0.4 m/s 时 brake = 1、throttle = 0 | TCP 的 `brake_speed` |
-| 不做 | 任何基于特权 actor 的红灯 / 前车规则；任何 residual | 见下面的语义一节 |
+| 部件 | 本轮定义 |
+|---|---|
+| 输入 | `update(traj_xy, t_frame)`：20×2、4 Hz 时间采样、5 s horizon，5 Hz 更新；`step(t_now, speed_mps, yaw_rate_rps)`：20 Hz 返回 throttle/steer/brake |
+| 坐标 | 后轴原点，x 前 y 左；内部 yaw rate 左转正，CARLA steer 右转正，仅在边界转换 |
+| 延迟 | 保留运动历史，从 trajectory 源帧到当前帧完整 SE(2) 重投影；同/倒序、未来、超出历史、stale 参考有明确 reason |
+| lookahead | CARLA 风格为 `3 + 0.5v`，TCP 风格固定 4 m；`max(3, 0.5v)` 是另一个候选，不能标为 CARLA 默认；从当前位置在剩余路径的局部投影起算弧长 |
+| 横向参考 | CARLA 角度 PID 1.95/0.05/0.2；TCP 归一化角度 PID 0.75/0.75/0.3，各自保留来源离散语义 |
+| 横向候选 | 单独 pure pursuit：κ=2y/(x²+y²)，δ=atan(Lκ)，经测得转向映射变成 steer；不叠加到 aim point 的角度 PID |
+| 纵向 | CARLA 1.0/0.05/0、km/h 误差，与 TCP 5/0.5/1、clipped delta/布尔制动分别作为适配对照；三种 preset 的速度读法在对照时固定 |
+| 速度窗口 | 以绝对 trajectory 时间读取 `[age, age+0.25]`；原 `[age+0.25, age+1]` 作为可选 reference，单独比较停车误差 |
+| 输出边界 | throttle≤0.75、brake≤1、|steer|≤0.8、每 0.05 s Δsteer≤0.1，油门和刹车互斥；统一限幅使 TCP 适配版不等同官方完整控制分支 |
+| 主横向指标 | 后轴到 route/reference 的有符号法向距离；aim_xy/bearing 仅诊断，truth/estimated/短时 controller cross-track 分开 |
+| 第一阶段输入 | policy=none 的 dense-route 诊断轨迹，每 4 tick 同步生成；真实 planner 输出接口稍后独立接入 |
 
-每条选择背后的算术：
+**aim point 的 y 不是横向跟踪误差。** 半径 20 m 的圆弧，即使车在圆上完全贴合，前方弧长 3 m
+的目标点也有 y=20×(1−cos(3/20))=0.2246 m，bearing=0.075 rad。
+以它做误差会把完美跟踪判失败；把完整 CARLA P 项叠加到 pure pursuit 还会额外给出 0.14625 steer。
+若后续需要 feedforward + feedback，feedback 应根据真正的 cross-track 和路径切线 heading error 定义，
+先独立证明作用，不能沿用这个相加式。
 
-**5 Hz 决策、20 Hz 执行，中间靠控制器重投影，而不是靠别的。** 现在的配置（decimate 4 + overlap）里，
-tick k 拍的帧，结果在 tick k+1 或 k+2 落地，然后用到 tick k+5，所以一条轨迹被执行时的年龄是
-0.05–0.30 s 的仿真时间。这个年龄有两部分。第一部分是几何的：ego 已经动了。不重投影的话，
-8 m/s 直行 0.3 s 是 2.4 m，"0.5 s 后的点"变成了"0.2 s 后的点"，lookahead 短了一半；
-转弯时 yaw rate 20°/s 累积 6° = 0.105 rad，直接进横向 PID 是 0.2 的 steer，每 4 tick 抖一次。
-重投影之后这一部分归零：IMU gyro 噪声 0.001 rad/s，0.3 s 积出 0.0003 rad；speedometer 是精确的前向速度，
-位置误差 < 1 cm。第二部分是决策的：0.3 s 前还没开始刹的前车现在刹了，这条轨迹不知道。
-这一部分任何控制器都修不了，它是 replan 频率的代价，真车上一样有，而且 AD-MLP 的 0.5 s 比我们的更长。
-所以：**重投影是必须的、便宜的、够用的；决策延迟留给 head 和 replan 频率，不要试图在控制器里补。**
+**几何补偿和时间补偿是两件事。** 刚体变换不会改变相邻点距离；因此把旧轨迹重投影后仍取原第1–4点，
+目标速度仍来自旧时间段。必须按 `age=t_now−t_frame` 裁剪/插值时间窗口。8 m/s 在3 s内匀减速时，
+未来0.25–1 s的平均速度比当前参考速度低约1.67 m/s，追上自己的 command 不代表按原定时轨迹停车。
+报告同时给相对 command 与原定时 reference 的速度 RMS，并独立验收停点误差。
 
-**feedforward 值得写，因为它是 CARLA 相对真车唯一的免费午餐。** 已知轴距和最大转角，pure pursuit 的
-steer 在 CARLA 里就是接近精确的开环解，PID 只剩下修 `steering_curve` 和轮胎侧偏的小残差。
-Bench2DriveZoo 的 PID 不带 feedforward，所以要靠 K_P 0.75 硬拉，代价是 4 m aim point 上的震荡；
-PDM-Lite 用更长的 lookahead（2.4–10.5 m）换稳定。feedforward 让我们两头都不用选。
-需要的三个常数（轴距、`max_steer_angle`、`steering_curve`）一次 `get_physics_control()` 就有。
+**20 Hz 控制需要每 tick 的运动输入。** 原 decimate+overlap stub 在非 policy tick 保持旧控制，
+不能直接声称已有 20 Hz 重投影控制环。本轮主线程每 tick 收 SPEED/IMU/GNSS、推进位姿和 step，
+轨迹源 frame/time 在采样时冻结；相机包独立按完整帧路由。后台推理不写 PID 状态。
+原稿预计0.05–0.30 s age及厘米级补偿精度只是估计；本轮需要用延迟注入和同帧定位真值实测。
 
-**目标速度从轨迹的弧长读，不从相邻两点读。** TCP 系用 `|wp1 − wp0| × 2` 这种单段差分，在 0.5 s 采样上
-噪声很大，这是它们 brake 要做成布尔量、throttle 要 clip 到 0.25 delta 的原因之一。我们是 4 Hz，
-0.25–1.0 s 之间三段的弧长平均把这个噪声压掉了；而且用重投影后的轨迹，目标速度本身就带着"延迟之后"的语义。
-
-**为什么起点是 CARLA 的增益而不是 TCP 的。** 两组都是在这台车上验证过的；CARLA 的那组 error 单位是
-物理单位（rad、km/h），配 feedforward 更自然；TCP 的那组是为没有 feedforward 的情况调的。
-实现里把两组都做成 config，Dev10 上各跑一遍，选跟踪误差小的。这不是研究问题，是半天的事。
+**不能仅凭已有增益宣布适配成功。** 原模型输出点间隔、aim 规则、TCP 的 control branch 混合、
+状态输入与我们不同。先在独立无交互路线验证坐标、定位和 plant 响应，再比较控制方法，
+最后在 Dev10 保留所有交互失败；不根据单条结果无限调参。
 
 ### 这会改变评测的哪些语义
 
@@ -235,13 +248,13 @@ PDM-Lite 用更长的 lookahead（2.4–10.5 m）换稳定。feedforward 让我�
 
 | 项 | 我们的做法 | 和公开数字可比吗 |
 |---|---|---|
-| 推理频率 5 Hz，control 20 Hz | agent 侧的选择，仿真仍 20 Hz | **可比**。AD-MLP 2 Hz、InterFuser 10 Hz 都有发表数字；leaderboard 没有规定 |
-| 决策延迟 1–2 tick（overlap） | 比标准协议**更严**：标准是 tick k 的帧、tick k 的控制 | 可比，对我们不利，如实写 |
-| ego 位姿 | speedometer + IMU 做 dead reckoning，**不用** `hero_actor.get_transform()` | `Track.SENSORS` 合规。**现在的 `_steer_to_route` 用的是特权 transform，必须换掉** |
-| GNSS | 不用，或只用于沿 route 的粗定位。leaderboard 的 GNSS 噪声 5e-6°，按纬度折算约 0.5 m（自己算的，未抽样验证） | 和 baseline 相同的传感器 |
+| 推理频率 5 Hz，control 20 Hz | agent 侧的选择，仿真仍 20 Hz | 低频推理有先例；正式对照需固定并记录传感器协议与执行节拍 |
+| 决策延迟（overlap） | 源帧时间与控制时间独立记录，不预设恰为1–2 tick | 需实测age，并在固定协议下比较；延迟对分数的净影响不先下结论 |
+| ego 位姿 | GNSS/IMU/speed融合；hero真值仅写诊断日志，不参与控制 | 仅移除 transform 不足以证明可提交；dense route 本身是诊断 oracle，正式 planner 须单独核对输入协议 |
+| GNSS | route driver 用于定位，原始/融合后误差同帧对后轴真值报告 median/p90/p95 | 经纬度噪声换算不能代替定位标定 |
 | 红灯 / 前车规则 | **不做**。Bench2DriveZoo 的 UniAD/VAD 也没有 | 可比。加了就是在评一个 rule-based 系统 |
 | `max_brake 1.0` | 增益，不是语义 | 可比 |
-| `MinimumSpeedRouteTest` | leaderboard 会惩罚爬行；目标速度不能保守到常低于限速 | 提醒，不是变更 |
+| `MinimumSpeedRouteTest` | 固定 B2D 0.0.4 的 penalty 字典是 `[0.7, "unused"]`；criterion 定期生成事件 | 报原始事件数、percentage及官方整体penalty；事件或criterion FAILURE不能直接解释为爬行扣分 |
 
 ### 一个能开的 driver 对成本的影响
 
@@ -250,15 +263,14 @@ PDM-Lite 用更长的 lookahead（2.4–10.5 m）换稳定。feedforward 让我�
 | 量 | 值 |
 |---|---:|
 | 路线长度（`bench2drive220.xml` 的 waypoint 折线） | 均值 105 m，中位 104，p10 65，p90 139，最长 222；合计 23.1 km |
-| 跑完的路线 | 209 / 220 |
+| harness finished 的路线（不等同驾驶完成） | 209 / 220 |
 | 撞到 4000 tick 上限的 | **118 / 209 = 56%** |
 | 没撞上限的 91 条 | tick 数 1281–2701，均值 1779，**与路线长度不相关**（r = −0.01），下限正好是 `ActorBlockedTest` 的 60 s = 1200 tick |
 | 所有路线的 tick 均值 | 3033 |
 | 每 tick 均值（共享卡） | 124.6 ms |
 | 每条路线 tick 之外的固定开销 | 68.5 s（中位） |
 
-读法：stand-in **一条路线也没有真正跑完**。一半在原地蹭着凑满 4000 tick，另一半卡住 60 s 被
-`AgentBlockedTest` 终止。所以 3033 tick 这个均值和路线长度没有任何关系，它量的是两个 failure mode 的时长。
+读法：旧稿把这些短/长耗时直接归因为 blocked/capped；这个解释必须用官方 status、completion 和事件核对。这些数字提示计时被失败/截断主导；runner finished 仅表示 evaluator 返回。真实完成率必须重读各 attempt 的 results.json，不能把 finished 当跑完或仅凭 tick 数反推出所有驾驶状态。
 
 一个能开的 driver：105 m 在 8 m/s 上是 13 s，加起步、一个场景交互（红灯、cut-in、行人）10–30 s，
 按 600–1200 tick 估（30–60 s，Bench2Drive 的路线就是这样设计的短路线）。每条路线 wall =
@@ -270,48 +282,49 @@ tick × 124.6 ms + 68.5 s，8 个 worker：
 | 能开的，悲观 | 1200 | **1.4 h** | 31% |
 | 能开的，乐观 | 600 | **1.1 h** | 48% |
 
-也就是说**换 driver 比这篇文档之前的任何一项优化都省得多（2–3×），而且换完之后下一个瓶颈就是每条路线
-68 s 的固定开销**（world reload、scenario 构建、server 错峰），不再是 tick。这个估计的两个边界：
+上表是旧硬件/worker协议下的预算假设，**不是更换控制器已经取得2–3×收益**。固定开销可能占比上升，
+但Tokyo单GPU、不同地图和路线失败分布需重新实测。这个估计的两个边界：
 一个真开得好的 driver 不会卡住，但会守红灯、会让行，tick 可能高于 1200；一个开得差的 head 仍会撞上限，
 数字会回到 3 h。
 
-### 第一步
+### 实施顺序与验收
 
-一个 py3.8、只依赖 numpy 的 `scripts/b2d_controller.py`，接口是 `update(traj_xy, t_frame)`（5 Hz）和
-`step(speed, yaw_rate) -> VehicleControl`（20 Hz），内容就是上面那张表。验证不需要 planner：
+本轮按 [plan.md](../todos/2026-09-22-b2d-controller/plan.md) 的 T0–T8 实施：基线归档、车辆与定位标定、
+NumPy controller、独立控制验证、双频率 agent、CLI/报告、完整 smoke、Dev10/保留路线、冻结配置与结论。
+route 是控制诊断输入，不含避障/让行；中心线可能穿过 ConstructionObstacleTwoWays 等场景障碍物，
+不能预先承诺能跑完，或把任何 blocked 都归咎 lookahead。
 
-1. 先用 route 本身当"轨迹"。`set_global_plan` 重载一下保留 downsample 之前的 1 m 间距 route
-   （现在 stand-in 拿到的是 `downsample_route(…, 50)` 之后 50 m 一个点的版本，这也是它转不过弯的原因之一），
-   取 ego 前方 5 s、按限速的匀速轨迹喂给控制器。这个 driver 不看红灯不看车，会撞，但**能跑完路线**，
-   而且它的 tick 数就是上面那张表里"能开的 driver"的下界，把成本模型修准。
-2. Dev10（官方推荐的 10 条 ablation 子集，约 10 分钟）上报：route completion、横向跟踪误差（aim point 处的
-   横向偏差 RMS）、速度跟踪误差、是否触发 `AgentBlockedTest`，CARLA 增益和 TCP 增益各一遍。
-3. 然后才接 planner：policy server 把选中的 anchor（20×2）回传，替换掉现在"算完就扔"的那条路径。
+先用独立解析圆弧/停车轨迹验收，再在无交互 CARLA 开发路线验收，最后完整无cap smoke与原版Dev10。
+Dev10 carla/tcp各10条；pursuit通过前置门槛后加入，默认与最强参考再做seed=1完整配对及预定6条保留路线。
+全部attempt、驾驶失败、基础设施失败、缺失/截断都进报告，不能只展示成功片段或挑最佳重试。
+只有之后固定planner/checkpoint/input做controller-only替换，才能讨论跑榜分数提升。
 
-工作量一天以内。要记进 todo 的数字：Dev10 上的 tick/路线、两组增益的跟踪误差、220 条的新 wall clock。
+## 已查清与仍待验证
 
-## 没查清的，和怎么查清
-
-| 项 | 状态 | 怎么定 |
+| 项 | 状态 | 下一步 |
 |---|---|---|
-| MKZ 2020 的轴距、`max_steer_angle`、`steering_curve` | 未查（不起 server） | 下次任何 server 活着时 `vehicle.get_physics_control()` 一行 |
-| CARLA 的增益在 8–14 m/s 上是否稳（`LocalPlanner` 默认 20 km/h） | 未测 | 第一步的 Dev10，两组增益对比 |
-| 能开的 driver 每条路线多少 tick | 估 600–1200 | 第一步的 route-following run 给下界，接 planner 后给真值 |
-| GNSS 噪声 5e-6° ≈ 0.5 m 这个换算 | 自己算的 | 抽 100 个样本看 std；只影响要不要用 GNSS 做粗定位 |
-| Bench2DriveZoo 的 waypoint 轴向（index 1 是否 forward） | 未逐行验证 | 与我们无关，只在复现 UniAD 数字时要对 |
-| Waymo 词表在 CARLA 城区分布上的 coverage | 未量 | 用 route-following run 记录的 ego 轨迹反查 oracle minADE，同 planner v0 的 K sweep 口径 |
-| head 在 CARLA 红灯前会不会选"停住"的 anchor | 不是控制器问题 | 闭环分数本身 |
+| MKZ 2020 几何与转向曲线单位 | 已实测；见上方常数与 calibration-units 原始文件 | 继续检查真实响应与G2动态误差，失效sweep不拟合 |
+| CARLA/TCP/pursuit 在8–14 m/s是否稳 | 尚未通过本轮完整验收 | G1/G2物理可行路径；定位误差先修 |
+| 每条路线多少tick | 600–1200仍是旧预算假设 | 分完成/失败、地图、场景、seed实测分布；提前失败不算加速 |
+| GNSS raw/fused pose误差 | 独立定位标定与route数据待汇总 | 同frame、同后轴定义报告median/p90/p95 |
+| Waymo词表CARLA覆盖与停车决策 | 未验证 | 固定planner的后续闭环，不由route诊断代替 |
 
-## 会推翻这个推荐的证据
+## 会推翻候选选择的证据
 
-- Dev10 上 route-following driver 的横向跟踪误差 > 0.5 m 或触发 `AgentBlockedTest`，且两组增益都如此：
-  那说明 CARLA 的 PID 结构在这个 lookahead 上不够，换成 PDM-Lite 的长 lookahead + 它的增益（同为固定 PID，
-  推荐不变，参数变）。
-- 接上 planner 之后，闭环失败集中在"轨迹合理但跟丢"而不是"轨迹本身错"（看 aim point 偏差和 anchor 选择的
-  逐 tick 记录能分开）：那时 D（residual）才值得做，而且要作为 ablation 单列。
-- 决定做 closed-loop fine-tuning：控制器仍然固定，变的是 head 的训练信号，推荐不变。
+- 两个PID在**无交互、物理可行、定位已达标**路径都RMS>0.5 m或发生控制导致blocked，才触发PDM-Lite对照；
+  Dev10路径穿障碍或时间/定位错误不是换PID的充分理由。
+- 独立pursuit未通过G1/G2，或复跑完成率/控制失败劣于最强参考，不选为默认。近似持平时保留通过门槛的简单参考。
+- 合理轨迹反复跟丢且固定控制已定位明确剩余误差，才考虑residual，并单列ablation；证据用后轴cross-track、
+  路径切线heading、真实轨迹与事件时间，不用aim_y当跟踪误差。
+- closed-loop fine-tuning可以改变head的训练信号；控制器是否固定及版本必须随结果报告。
 
 ## 参考
+
+本轮新增本地证据：Bench2Drive `0.0.4` / `7ec25d1c9f7522d923ce5f3420986cef1cb2d956` 的
+`leaderboard/leaderboard/scenarios/route_scenario.py`（固定MKZ请求）、`utils/statistics_manager.py`（MinimumSpeed unused、真实results语义）、
+`scenario_runner/srunner/scenariomanager/scenarioatomics/atomic_criteria.py`（定期最低速度事件）；
+CARLA实测为 `/data/runs/b2d/controller/calibration-units/`。以下外部agent条目为原research来源记录，
+本轮主要重核本地锁定版本，不声称重新审查其所有最新分支。
 
 - CARLA `PythonAPI/carla/agents/navigation/{controller,local_planner,basic_agent,behavior_agent}.py`，0.9.15，box 上读的。
 - Bench2DriveZoo `team_code/pid_controller.py`、`uniad_b2d_agent.py`、`vad_b2d_agent.py`（分支 `uniad/vad`）；

@@ -1,0 +1,30 @@
+{
+  "development": [
+    "1773",
+    "24240",
+    "26966",
+    "25854"
+  ],
+  "holdout": [
+    "3072",
+    "2084",
+    "2050",
+    "25318",
+    "28154",
+    "27529"
+  ],
+  "holdout_basis": [
+    "Town12 straight",
+    "Town12 left turn",
+    "Town12 right turn",
+    "Town05 compound bend",
+    "Town10HD curved route",
+    "Town04 right turn"
+  ],
+  "bench2drive_commit": "7ec25d1c9f7522d923ce5f3420986cef1cb2d956",
+  "dev10_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+  "full220_sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+  "note": "Development geometries omit scenario triggers; direct validation creates no background actors. Holdout keeps official scenarios.",
+  "development_sha256": "4c756c14b716183266dd860f61b77caa5bfb2542b043ecfaa9792bfea45924e3",
+  "holdout_sha256": "cc0b69d0c59b4492ea265feb3d1b6f9a906f02d23f13986aae15533ffae5f9e7"
+}
