@@ -398,16 +398,20 @@ def gated_arm(X: np.ndarray, kind: str = "mlp", n_tok: int | None = None, l1s=(0
     d = X.shape[1] // n_tok if n_tok else X.shape[1]
 
     def fit(sel, sp, R, res_fut, seed, pre=None):
+        # The token grid stays float16 on the card and is cast one batch at a time: a float32 copy of all
+        # 20 237 x 144 x 2560 is 29.8 GB, which is what OOM'd this arm the first time round while the 32B
+        # extraction held 64 GB.
         Z = torch.from_numpy(np.ascontiguousarray(X[sel])).to(DEV)
-        Z = Z.view(-1, n_tok, d).float() if n_tok else Z.float()
         if n_tok:
+            Z = Z.view(-1, n_tok, d)
             mu, sd = _chan_stats(Z, sp.train)
-            Z = (Z - mu) / sd
+            take = lambda b: (Z[b].float() - mu) / sd        # noqa: E731
         else:
-            Z = planner.standardize(Z, sp.train)
+            Z = planner.standardize(Z.float(), sp.train)
+            take = lambda b: Z[b]                            # noqa: E731
         best, out = None, None
         for l1 in l1s:
-            p, st = _train(lambda: GatedResidual(kind, d, R.shape[1], l1), lambda net, b: net(Z[b]),
+            p, st = _train(lambda: GatedResidual(kind, d, R.shape[1], l1), lambda net, b: net(take(b)),
                            sp, R, res_fut, seed, pre=pre)
             score = st["sel_pre_ade"] if np.isfinite(st["sel_pre_ade"]) else st["sel_ade"]
             log.info("  (e) %s l1=%.0e: inner-val pre-onset ADE %.4f (overall %.4f), mean gate %.3f",
