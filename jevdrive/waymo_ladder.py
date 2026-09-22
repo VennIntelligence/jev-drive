@@ -297,15 +297,17 @@ def _train(make_net, forward, sp, R, res_fut, seed: int, epochs: int = planner.M
     _, (s, ep, s_pre) = run(sp.fit, epochs, sp.sel)
     net, _ = run(sp.train, ep, None)
     net.eval()
+    out, gates = [], []
     with torch.inference_mode():
-        out = [forward(net, c) for c in torch.as_tensor(sp.val, device=DEV).split(2048)]
+        for c in torch.as_tensor(sp.val, device=DEV).split(2048):
+            out.append(forward(net, c))
+            if hasattr(net, "last_gate"):     # arm (e): the gate is a reported quantity, not a detail
+                gates.append(net.last_gate)
     p = torch.cat([_pred(o) for o in out])
     st = {"epochs": ep, "sel_ade": s, "sel_pre_ade": s_pre,
           "params": sum(q.numel() for q in net.parameters())}
-    if hasattr(net, "gate_of"):                     # arm (e): the gate is a reported quantity, not a detail
-        with torch.inference_mode():
-            st["gate"] = torch.cat([net.gate_of(c) for c in torch.as_tensor(sp.val, device=DEV).split(2048)]
-                                   ).float().cpu().numpy()
+    if gates:
+        st["gate"] = torch.cat(gates).float().cpu().numpy()
     del net
     torch.cuda.empty_cache()
     return p.reshape(-1, T, 2).float().cpu().numpy(), st
@@ -379,13 +381,11 @@ class GatedResidual(torch.nn.Module):
         a = (k @ self.q / self.dk ** 0.5).softmax(-1)
         return self.drop((a.unsqueeze(-1) * k).sum(1))
 
-    def gate_of(self, b_x):
-        return torch.sigmoid(self.gate(self.encode(b_x))).squeeze(-1)
-
     def forward(self, x):
         z = self.encode(x)
         g = torch.sigmoid(self.gate(z))
-        return g * self.delta(z), self.l1 * g.abs().mean()
+        self.last_gate = g.detach().squeeze(-1)    # read back by _train; the caller holds the features
+        return g * self.delta(z), self.l1 * g.mean()
 
 
 def gated_arm(X: np.ndarray, kind: str = "mlp", n_tok: int | None = None, l1s=(0.0, 1e-3, 1e-2)):
