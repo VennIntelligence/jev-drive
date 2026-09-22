@@ -40,6 +40,7 @@ Python 3.8: runs in envs/carla.
 """
 import argparse
 import json
+import math
 import os
 import signal
 import socket
@@ -69,7 +70,7 @@ PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
 BASE_TOWNS = {"Town01", "Town02", "Town03", "Town04", "Town05", "Town10HD", "Town10HD_Opt"}
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--routes", default=str(BENCH2DRIVE / "leaderboard/data/bench2drive220.xml"))
     p.add_argument("--towns", default="base", help="'base', 'all', or a comma-separated list")
@@ -113,17 +114,38 @@ def parse_args():
     p.add_argument("--rig", default="front3")
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
+    p.add_argument("--tm-seed", type=int, default=0)
+    p.add_argument("--drive", default="route", choices=["straight", "route", "controller"])
     p.add_argument("--policy", default="none")
     p.add_argument("--infer-ms", type=float, default=0.0)
     p.add_argument("--policy-socket", default="")
     p.add_argument("--decimate", type=int, default=1)
     p.add_argument("--overlap", action="store_true")
+    p.add_argument("--controller-preset", default="carla", choices=["carla", "tcp", "pursuit"])
+    p.add_argument("--cruise-mps", type=float, default=8.0)
+    p.add_argument("--controller-config", default="", help="controller parameter JSON path")
     p.add_argument("--no-spectator", action="store_true")
     p.add_argument("--fast-copy", action="store_true")
     p.add_argument("--zero-copy", action="store_true")
     p.add_argument("--cache-lights", action="store_true")
     p.add_argument("--max-ticks", type=int, default=0)
-    return p.parse_args()
+    a = p.parse_args(argv)
+    if not math.isfinite(a.cruise_mps) or a.cruise_mps <= 0:
+        p.error("--cruise-mps must be finite and positive")
+    if a.decimate < 1:
+        p.error("--decimate must be positive")
+    if a.drive == "controller" and (a.policy != "none" or a.agent):
+        p.error("--drive controller currently requires --policy none and the built-in agent")
+    if a.controller_config:
+        path = Path(a.controller_config).resolve()
+        try:
+            params = json.loads(path.read_text())
+        except (OSError, ValueError) as exc:
+            p.error("invalid --controller-config: %s" % exc)
+        if not isinstance(params, dict):
+            p.error("--controller-config must contain a JSON object")
+        a.controller_config = str(path)
+    return a
 
 
 def select_routes(routes_xml, towns, route_ids, limit):
@@ -286,6 +308,12 @@ class Runner(object):
         self.lock = threading.RLock()
         self.queue = list(routes)
         self.requested = list(routes)
+        manifest = {"config": vars(a), "routes": [{"route_id": rid, "town": town} for rid, town in routes]}
+        # Unique invocation files preserve shards and resume history sharing the output directory.
+        mdir = self.out / "invocations"
+        mdir.mkdir(exist_ok=True)
+        (mdir / ("%d-%d.json" % (int(time.time() * 1e6), os.getpid()))).write_text(
+            json.dumps(manifest, indent=2))
         self.available_maps = None
         self.no_map = []
         self.reap_orphans()
@@ -492,7 +520,11 @@ class Runner(object):
                "--port", str(server.port), "--tm-port", str(tm_port),
                "--out", str(adir), "--rig", self.a.rig, "--width", str(self.a.width),
                "--height", str(self.a.height), "--policy", self.a.policy,
-               "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate)]
+               "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate),
+               "--drive", self.a.drive, "--controller-preset", self.a.controller_preset,
+               "--cruise-mps", str(self.a.cruise_mps), "--tm-seed", str(self.a.tm_seed)]
+        if self.a.controller_config:
+            cmd += ["--controller-config", self.a.controller_config]
         if self.a.policy_socket:
             cmd += ["--policy-socket", self.a.policy_socket]
         if self.a.agent:

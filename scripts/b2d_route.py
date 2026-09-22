@@ -17,6 +17,7 @@ Python 3.8: runs in envs/carla.
 """
 import argparse
 import json
+import math
 import os
 import signal
 import sys
@@ -43,7 +44,7 @@ def add_bench2drive_to_path(root):
     os.chdir(root)
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser()
     b2d_default = str(Path(os.environ.get("DATA_DIR", "")) / "third_party/Bench2Drive")
     p.add_argument("--bench2drive", default=os.environ.get("BENCH2DRIVE_ROOT", b2d_default))
@@ -65,7 +66,10 @@ def parse_args():
     p.add_argument("--policy-socket", default="")
     p.add_argument("--decimate", type=int, default=1)
     p.add_argument("--overlap", action="store_true")
-    p.add_argument("--drive", default="route", choices=["straight", "route"])
+    p.add_argument("--controller-preset", default="carla", choices=["carla", "tcp", "pursuit"])
+    p.add_argument("--cruise-mps", type=float, default=8.0)
+    p.add_argument("--controller-config", default="", help="controller parameter JSON path")
+    p.add_argument("--drive", default="route", choices=["straight", "route", "controller"])
     # optimisation flags, all off by default so the unoptimised path stays the reference
     p.add_argument("--no-spectator", action="store_true")
     p.add_argument("--fast-copy", action="store_true")
@@ -78,7 +82,23 @@ def parse_args():
                    help="also write a cProfile of the whole run. Use it to attribute the Python "
                         "phases to functions, never for absolute timings: the profiler itself "
                         "roughly doubles per-tick Python cost.")
-    return p.parse_args()
+    a = p.parse_args(argv)
+    if not math.isfinite(a.cruise_mps) or a.cruise_mps <= 0:
+        p.error("--cruise-mps must be finite and positive")
+    if a.decimate < 1:
+        p.error("--decimate must be positive")
+    if a.drive == "controller" and (a.policy != "none" or a.agent):
+        p.error("--drive controller currently requires --policy none and the built-in agent")
+    if a.controller_config:
+        path = Path(a.controller_config).resolve()
+        try:
+            params = json.loads(path.read_text())
+        except (OSError, ValueError) as exc:
+            p.error("invalid --controller-config: %s" % exc)
+        if not isinstance(params, dict):
+            p.error("--controller-config must contain a JSON object")
+        a.controller_config = str(path)
+    return a
 
 
 def main():
@@ -100,7 +120,9 @@ def main():
 
     cfg = {"rig": a.rig, "width": a.width, "height": a.height, "policy": a.policy,
            "infer_ms": a.infer_ms, "decimate": a.decimate, "overlap": a.overlap,
-           "drive": a.drive, "policy_socket": a.policy_socket}
+           "drive": a.drive, "policy_socket": a.policy_socket,
+           "controller_preset": a.controller_preset, "cruise_mps": a.cruise_mps,
+           "controller_config": a.controller_config, "tm_seed": a.tm_seed, "out": a.out}
     cfg_path = out / "agent_config.json"
     cfg_path.write_text(json.dumps(cfg))
 
@@ -115,6 +137,8 @@ def main():
 
     args = _leaderboard_args(a, cfg_path, out)
     stats = StatisticsManager(args.checkpoint, args.debug_checkpoint)
+    if a.drive == "controller":
+        _capture_criterion_events(stats, out)
     t0 = time.time()
     record = {"route_id": a.route_id, "status": "harness_error", "wall_s": 0.0}
     rc = 2
@@ -152,6 +176,8 @@ def main():
         record["wall_s"] = round(time.time() - t0, 1)
         record["profile"] = profile.summary(drop=a.drop_ticks)
         record["config"] = vars(a)
+        record["tick_cap_configured"] = a.max_ticks
+        record["capped"] = bool(a.max_ticks and profile.ticks >= a.max_ticks)
         if evaluator is not None:
             record["sensors"] = evaluator.sensors
         if not a.agent:
@@ -163,6 +189,29 @@ def main():
         print(json.dumps({"route_id": a.route_id, "status": record["status"],
                           "wall_s": record["wall_s"], "ticks": profile.ticks}), flush=True)
     return rc
+
+
+def _capture_criterion_events(stats, out):
+    """Snapshot existing evaluator events with frames; never alter criteria or control."""
+    original = stats.compute_route_statistics
+
+    def compute(*args, **kwargs):
+        try:
+            events = []
+            scenario = getattr(stats, "_scenario", None)
+            for node in scenario.get_criteria() if scenario is not None else []:
+                for event in node.events:
+                    data = event.get_dict() or {}
+                    events.append({"type": event.get_type().name, "frame": event.get_frame(),
+                                   "message": event.get_message(),
+                                   "percentage": data.get("percentage")})
+            (out / "criterion_events.json").write_text(json.dumps({"state": "ok", "events": events}))
+        except Exception as exc:
+            # Diagnostic serialization must never turn a driving result into a runtime failure.
+            print("criterion event snapshot failed: %s" % exc, flush=True)
+        return original(*args, **kwargs)
+
+    stats.compute_route_statistics = compute
 
 
 def _patch_signal_handler(evaluator_class):
