@@ -1023,6 +1023,27 @@ def clip_items(df: pd.DataFrame, rows, n_back: int, stride: int, cam: str = "fro
     return items, idx, full
 
 
+def multicam_clip_items(df: pd.DataFrame, rows, n_back: int, stride: int, cams=CAMS):
+    """(items, index, complete mask) where each item is one clip *per camera*, oldest frame first.
+
+    `Shards` reads a flat list of spans, so the cameras are laid end to end and the transform reshapes; a
+    sequence crosses shards, so every span carries its own path (see `clip_items`).
+    """
+    hist, _, got = history_rows(df, n_back, stride, targets=np.asarray(rows))
+    full = got.all(1)
+    hist = hist[full][:, ::-1]
+    shard = (shard_dir().as_posix() + "/" + df.shard.astype(str)).to_numpy()
+    off = {c: df[f"{c}_off"].to_numpy() for c in cams}
+    ln = {c: df[f"{c}_len"].to_numpy() for c in cams}
+    items = [([shard[k] for _ in cams for k in h],
+              [(int(off[c][k]), int(ln[c][k])) for c in cams for k in h]) for h in hist]
+    idx = pd.DataFrame({"frame_name": frame_names(df)[hist[:, -1]], "row": hist[:, -1],
+                        "cam": ",".join(cams)})
+    log.info("multi-camera clips: %d/%d target rows have a complete %d x %d-frame window over %d cameras",
+             int(full.sum()), len(full), n_back + 1, stride, len(cams))
+    return items, idx, full
+
+
 def extract_subset(name: str, fx, rows, cams=CAMS, separate: bool = False, batch_size: int = 4,
                    workers: int | None = None, rl=None, force: bool = False) -> dict:
     """Extract one already-built backbone `fx` over a fixed set of index rows, into `features/<name>/`.

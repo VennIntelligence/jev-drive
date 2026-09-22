@@ -681,6 +681,7 @@ def temporal_arm(ctx: dict, stride: int, n_back: int = 3, layer: str = LAYER):
 # ---------------------------------------------------------------- the two ladders
 
 GRID_SET = "qwen_grid_p2"            # P2(c): the token-grid extraction over the frozen subset
+QWENVID_SET = "qwenvid_p3"           # P3(d''): Qwen3-VL-4B over the same clip, through its video path
 GRID_TOKENS = 3 * 6 * 8              # three cameras, each token map pooled to 6 x 8
 GRID_ARRAY = LAYER.split("_")[0] + "_grid"
 P3_SETS = {                          # arm -> (feature set on disk, the arrays to read)
@@ -688,6 +689,7 @@ P3_SETS = {                          # arm -> (feature set on disk, the arrays t
     "b h3": ("h3_dit_p3", None),
     "c wan": ("wan22_dit_p3", None),   # arrays named by noise level and block, discovered on disk
     "d vjepa2": ("vjepa2_p3", ["mean", "last_mean"]),
+    "d2 qwenvid": (QWENVID_SET, ["L18_mean", "L18_last"]),
 }
 
 
@@ -819,6 +821,29 @@ def extract_qwen32b(rl=None, batch_size: int = 4, limit: int | None = None,
                         device_map="cuda")
     name = P3_SETS["a qwen32b"][0] + ("_probe" if limit else "")
     return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
+
+
+def extract_qwenvid(rl=None, batch_size: int = 2, limit: int | None = None, frames: int = 4,
+                    stride: int = 2, cams=waymo.CAMS):
+    """P3(d''): the same clip V-JEPA 2 gets, through Qwen3-VL-4B's own video path.
+
+    Same frames, same stride, same three cameras and the same layer as `qwen_front3`, so the only thing
+    that differs from arm A is that the frames arrive as a video rather than as independent images. The
+    `Shards` reader hands over `len(cams) * frames` images in camera-major order; the transform folds them
+    back into one clip per camera.
+    """
+    from . import features as F
+    ctx = base_context()
+    keep = load_subset(ctx)
+    rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
+    items, idx, full = waymo.multicam_clip_items(ctx["df"], rows, frames - 1, stride, cams)
+    layer = int(LAYER[1:3])
+    fx = F.QwenVideoFeatures(frames=frames, n_videos=len(cams), layers=[layer], compile=False)
+    fx.transform = (lambda t: lambda imgs: t([imgs[i * frames:(i + 1) * frames] for i in range(len(cams))]))(
+        fx.transform)
+    name = QWENVID_SET + ("_probe" if limit else "")
+    return waymo.extract_items(name, fx, items, idx, batch_size, rl=rl, cams=list(cams),
+                               frames_per_clip=frames, clip_stride=stride, complete=int(full.sum()))
 
 
 def extract_wan(rl=None, batch_size: int = 2, limit: int | None = None, **kw):
@@ -1012,7 +1037,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,rejudge,grid,gridcheck,qwen32b,vjepa2,wan")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,rejudge,grid,gridcheck,qwen32b,vjepa2,wan,qwenvid")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -1045,6 +1070,8 @@ def main():
         rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit, fr, sd, cam, st, mid))
     if "wan" in steps:
         rl.event("extract", **extract_wan(rl, a.batch_size, a.limit))
+    if "qwenvid" in steps:
+        rl.event("extract", **extract_qwenvid(rl, a.batch_size, a.limit))
     if {"subset", "repro", "p2b", "p2c", "p2e", "p3", "p3d"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:

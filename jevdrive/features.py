@@ -239,6 +239,57 @@ class QwenFeatures:
         return torch.nn.functional.adaptive_avg_pool2d(x, (H, W)).permute(0, 2, 3, 1).reshape(b, -1)
 
 
+class QwenVideoFeatures(QwenFeatures):
+    """Qwen3-VL over a *clip*, through its own video path, instead of over independent frames.
+
+    P3(d'') exists to separate two things that arm (d) confounds: V-JEPA 2 beats the single-frame arms and it
+    differs from them in two ways at once -- it is trained with a JEPA objective **and** it is shown time. Put
+    the same clip through Qwen3-VL's video path and the objective is held fixed while the input changes, so a
+    move on pre-onset attributable to time alone would show up here too.
+
+    The difference from the image path is not cosmetic. Qwen3-VL's ViT folds `temporal_patch_size` frames
+    into the patch embedding, so a T-frame clip costs T times the patches but only T/2 the LLM tokens of T
+    independent images: the video path is the model's own notion of a moving scene, not T pictures.
+    `grid_thw` carries t > 1 and the placeholder is the video token, and everything else -- the merger, the
+    DeepStack injections, the per-layer pooling -- is the same code as the image path, so `Lxx_mean` from this
+    class is the same statistic over the same residual stream as `qwen_front3`'s.
+    """
+
+    def __init__(self, frames: int = 4, n_videos: int = 3, **kw):
+        self.frames, self.n_videos = frames, n_videos
+        super().__init__(n_images=n_videos, **kw)
+        self.prompt = self.proc.apply_chat_template(
+            [{"role": "user", "content": [{"type": "video"}] * n_videos}], add_generation_prompt=True,
+            tokenize=False)
+        cfg = self.model.config if hasattr(self.model, "config") else None
+        self.image_token_id = getattr(cfg, "video_token_id", None) or self.image_token_id
+
+    def transform(self, clips):
+        """`clips` is one list of PIL frames per camera, oldest first, as `waymo.Shards` hands them over."""
+        vids = [[self._resize(f) for f in c] for c in clips]
+        assert len(vids) == self.n_videos and all(len(v) == self.frames for v in vids), \
+            f"expected {self.n_videos} clips of {self.frames} frames, got {[len(v) for v in vids]}"
+        b = self.proc(text=[self.prompt], videos=vids, return_tensors="pt")
+        return b["input_ids"][0], b["mm_token_type_ids"][0], b["pixel_values_videos"], b["video_grid_thw"]
+
+    def _static(self, key, ids, mm, grid):
+        """Same constants as the image path, but the 3D position ids are told these are videos."""
+        if key in self.static:
+            return self.static[key]
+        real, self.model.compute_3d_position_ids = self.model.compute_3d_position_ids, None
+
+        def as_video(input_ids, inputs_embeds, image_grid_thw, attention_mask, mm_token_type_ids):
+            return real(input_ids=input_ids, inputs_embeds=inputs_embeds, video_grid_thw=image_grid_thw,
+                        attention_mask=attention_mask, mm_token_type_ids=mm_token_type_ids)
+
+        self.model.compute_3d_position_ids = lambda **kw: as_video(**kw)
+        try:
+            out = super()._static(key, ids, mm, grid)
+        finally:
+            self.model.compute_3d_position_ids = real
+        return out
+
+
 class DinoFeatures:
     def __init__(self, size=(252, 448)):
         from torchvision.transforms import v2
