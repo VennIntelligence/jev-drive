@@ -89,3 +89,17 @@ TruthLogger 的 rear axle xy 真值投影增加 cos(pitch)，避免坡道 pose �
 已生成初始 `/data/runs/b2d/controller/figures` 和防覆盖检查用 `/data/runs/b2d/controller/figures-v2`，各 4 组图/5 CSV/无 warning；当前包含 G2 12case 与 CARLA seed0 Dev10 10attempt。已目视检查四类图，并验证 CSV 行数/hash。
 
 用户要求保留中间产物后，CLI **拒绝非空输出目录**，exit 2，并明确要求新版本 `--out`。通过再次调用 figures-v2 验证拒绝覆盖且 manifest 字节完全不变；脚本 snapshot 字节与执行版本一致。后续请用 figures-v3/final 等新目录，不能覆盖初始图。
+
+## 简明英文使用文档
+
+新增 `docs/b2d-controller.md` 并在 `docs/README.md` 添加索引，约 880 words，覆盖纯 NumPy API、后轴坐标/时间节拍、MKZ 标定值、policy-none route oracle 与 truth 边界、origin bridge 造成 trajectory speed 不等于配置巡航速度、当前默认 carla 尚无合格替代、官方 4000 tick 上限与人工 cap 区别、单路 smoke/双 seed campaign/holdout/slope-check 命令、版本化 source snapshot/inventory/plot 归档。
+
+仅引用已完成 G2 development3 与 smoke2390 的结果；最终结论链接工作目录 article-notes.md。通过只读 `--help` 核对新增 CLI，验证示例 Controller import 与所有文档链接，无 CARLA/git 操作。
+
+注意 plot 对目录递归读取所有 report，包含 nested holdout；为避免把 holdout 混在 Dev10 标题下，文档示例用明确的单组 report 文件，并要求组合 Dev10 图使用仅含 Dev10 reports 的目录。当前任务未修改 plot/runtime core。
+
+## Dataset 出图边界修正
+
+按主代理新任务更新 plot discovery：目录模式只读取直接 `*-seed*/controller-report.json`，不递归进入 holdout/archive。新增 `--label`（默认 Dev10）；holdout 使用自己的根目录和 `--label Holdout`。输出名称改为 dataset-neutral `campaign-completion-tracking.{png,pdf}`、`campaign-all-attempts.csv`，其余 G2 素材名称不变。
+
+临时最小 fixture 验证 primary root 排除 nested holdout/archive、holdout root 可单独发现、明确 report 文件可读取；3 项通过。仅检查 CLI 和来源发现，未重新生成任何 G2 图或覆盖已有 edition。同步修改 docs 使用说明。

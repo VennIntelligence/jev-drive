@@ -12,6 +12,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import shlex
 
 import matplotlib
 matplotlib.use('Agg')
@@ -33,6 +34,12 @@ def sort_id(value):
 
 def metric(row, section, name='truth_cross_track_m', statistic='rms'):
     return ((row.get(section) or {}).get(name) or {}).get(statistic)
+
+
+def campaign_reports(campaign):
+    """Keep one dataset boundary: direct preset/seed groups, never nested holdout."""
+    campaign = Path(campaign)
+    return sorted(campaign.glob('*-seed*/controller-report.json')) if campaign.is_dir() else [campaign]
 
 
 class Archive:
@@ -113,8 +120,10 @@ class Archive:
                   'This output is immutable to the plot CLI: use a new versioned --out directory for subsequent campaigns.',
                   'Raw trajectories/telemetry remain at the paths in the manifest. All raw samples used by the trajectory and stop plots are also exported to CSV.', '',
                   'Run:', '', '```bash', '/data/envs/carla/bin/python scripts/b2d_controller_plot.py ' +
-                  '--development ' + str(self.arguments['development']) + ' --campaign ' + str(self.arguments['campaign']) +
-                  ' --out ' + str(self.out) + ' --route-id ' + self.arguments['route_id'], '```', '']
+                  '--development ' + shlex.quote(str(self.arguments['development'])) +
+                  ' --campaign ' + shlex.quote(str(self.arguments['campaign'])) +
+                  ' --out ' + shlex.quote(str(self.out)) + ' --route-id ' + shlex.quote(self.arguments['route_id']) +
+                  ' --label ' + shlex.quote(self.arguments['label']), '```', '']
         (self.out / 'README.md').write_text('\n'.join(readme))
         print(json.dumps({'out': str(self.out), 'figures': len(self.figures), 'csvs': len(self.csvs),
                           'warnings': self.warnings}, indent=2))
@@ -160,8 +169,8 @@ def g2_plot(archive, development):
     return cases
 
 
-def campaign_plot(archive, campaign):
-    reports = sorted(campaign.rglob('controller-report.json')) if campaign.is_dir() else [campaign]
+def campaign_plot(archive, campaign, label='Dev10'):
+    reports = campaign_reports(campaign)
     rows = []
     for report in reports:
         content = archive.read(report)
@@ -186,7 +195,7 @@ def campaign_plot(archive, campaign):
                          'driving_completed': attempt.get('driving_completed'), 'capped': attempt.get('capped'),
                          'report_source': str(report.resolve()), 'telemetry_source': str(raw.resolve())})
     fields = list(rows[0]) if rows else ['route_id', 'preset', 'completion_pct']
-    data = archive.csv('dev10-all-attempts', rows, fields)
+    data = archive.csv('campaign-all-attempts', rows, fields)
     if not rows:
         archive.warnings.append('No campaign attempts found; campaign figures not generated')
         return
@@ -223,15 +232,15 @@ def campaign_plot(archive, campaign):
     axes[0].set_ylabel('Official completion (%)'); axes[0].set_ylim(-3, 105)
     axes[1].set_ylabel('Full-route truth CTE RMS (m)')
     axes[2].set_ylabel('Pre-collision truth CTE RMS (m)')
-    axes[2].set_xticks(x); axes[2].set_xticklabels(routes, rotation=35, ha='right'); axes[2].set_xlabel('Dev10 route ID')
+    axes[2].set_xticks(x); axes[2].set_xticklabels(routes, rotation=35, ha='right'); axes[2].set_xlabel('%s route ID' % label)
     for ax in axes:
         ax.grid(alpha=.2); ax.set_axisbelow(True)
     for ax in axes[1:]:
         ax.set_ylim(bottom=0)
     axes[0].legend(fontsize=8, ncol=min(4, len(groups)))
-    fig.suptitle('Dev10 diagnostic campaign: completion and route tracking', fontsize=13)
+    fig.suptitle('%s diagnostic campaign: completion and route tracking' % label, fontsize=13)
     fig.tight_layout(rect=(0, .055, 1, .96))
-    archive.save(fig, 'dev10-completion-tracking', [data],
+    archive.save(fig, 'campaign-completion-tracking', [data],
                  'All %d attempts; x = retry; NA = unavailable; pre-collision uses recorded event frames' % len(rows))
 
 
@@ -323,7 +332,10 @@ def trace_plots(archive, development, route_id, cases):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--development', type=Path, required=True, help='Directory containing G2 summary.json and route/preset traces')
-    parser.add_argument('--campaign', type=Path, required=True, help='Campaign root searched for controller-report.json, or one report file')
+    parser.add_argument('--campaign', type=Path, required=True,
+                        help='Dataset root with direct *-seed*/controller-report.json groups, or one report file; nested datasets excluded')
+    parser.add_argument('--label', default='Dev10', help='Campaign dataset title, e.g. Dev10 or Holdout')
+    parser.add_argument('--campaign-only', action='store_true', help='Skip unchanged G2 figures for subsequent datasets')
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--route-id', default='26966', help='Predeclared illustrative route; default26966 includes all3presets')
     args = parser.parse_args()
@@ -337,9 +349,11 @@ def main():
         archive = Archive(args.out, args)
     except FileExistsError as exc:
         parser.error(str(exc))
-    cases = g2_plot(archive, Path(args.development))
-    campaign_plot(archive, Path(args.campaign))
-    trace_plots(archive, Path(args.development), args.route_id, cases)
+    if not args.campaign_only:
+        cases = g2_plot(archive, Path(args.development))
+    campaign_plot(archive, Path(args.campaign), args.label)
+    if not args.campaign_only:
+        trace_plots(archive, Path(args.development), args.route_id, cases)
     archive.finish()
 
 

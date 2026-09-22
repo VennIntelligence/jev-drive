@@ -62,6 +62,13 @@ def main():
     manifest=dict(config=vars(a),git_commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
                   started=time.time(),server_reuse='one process across preset/seed groups; worlds reset by evaluator')
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2))
+    if a.holdout_routes:
+        holdout_manifest=dict(manifest)
+        holdout_manifest['config']=dict(manifest['config'],routes=str(Path(a.holdout_routes).resolve()),
+                                        seeds=str(a.holdout_seed),out=str(out/'holdout'))
+        holdout_manifest['parent_campaign']=str(out)
+        (out/'holdout').mkdir()
+        (out/'holdout'/'manifest.json').write_text(json.dumps(holdout_manifest,indent=2))
 
     def event(kind,**fields):
         row=dict(t=time.time(),kind=kind,**fields);events.write(json.dumps(row)+'\n');print(json.dumps(row),flush=True)

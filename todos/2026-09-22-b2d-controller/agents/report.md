@@ -61,3 +61,15 @@ JSON/CSV包含全程/首碰撞前truth CTE、两种速度error、raw/fused pose�
 速度核查证据：carla-seed0/3514第一条trajectory[0]=[3.474663,3.376833]；后续点间隔2m，固定巡航8m/s，但controller加入t0=[0,0]后首段速度为norm(first)/.25=19.38m/s。每.2s重规划使reference导数长期读取这个首段，横向/后轴错位可抬高速度命令。3514全程actual/reference/command均值6.39/8.97/8.61m/s；blocked的25424分别.26/8.94/8.66。报告数字算术正确，但reference是controller输入轨迹的定时导数，不能叫独立的8m/s巡航真值；G2 validator独立cruise指标另列。根代理确认不在冻结Dev10中途修改adapter/controller或回算“修正”旧指标。
 
 验证：compare新5项fixture通过（0.007s），report累计21项通过（0.021s）。已生成`results/comparison-interim/`中间快照，当时carla10/10官方结果、TCP9/10、pursuit0/10，参考选择ready=false；这是活跃运行中间观察，不代表最终对照。
+
+## 离线原始trace与论文图（根代理追加）
+
+`scripts/b2d_controller_selftest.py`新增独立CLI `--trace-dir`（也可调用`run_suite(trace_dir=...)`）；原`b2d_controller.py --selftest`入口保持不变，不接受新flag。trace root必须不存在，case/manifest/summary文件exclusive-create，不覆盖旧运行。case ID由固定suite顺序+kind+完整默认参数SHA构成，重复参数case仍有不同ordinal，不相互覆盖。
+
+每个trajectory test tick保存后轴plant前/后状态、motion观测、生成world/local轨迹与source/release时间、实际接收trajectory、command/applied control（含转向延迟）、controller diagnostics、独立解析error。circle的CPU timing仍只包住step；写盘发生在计时外。起点、延迟、plant与指标公式不变；没有用trace指标替换原结果。静态摩擦两项标量unit exercise仍在summary内，它们没有虚构成20Hz轨迹测试。
+
+运行产物：`/data/runs/b2d/controller/offline-traced/`，49个trajectory case、13726条逐tick记录，约25MB；`manifest.json`/`cases.jsonl`含身份与hash，`summary.json`含原aggregate，`source/`保存本次执行的selftest/controller精确源码。运行仅数秒，不需要tmux，不涉及CARLA。
+
+`verification.json`证据：与共享`results/offline-selftest.json`递归比较，仅排除`controller_p99_ms`，其余全部值**精确相同**（非近似）；原summary SHA256=`1309de125f9bcc6034e6d9daca79c449fe9483a7247671a47b78be81774d7043`。49个文件hash/行数/单调tick、前后plant state连续性验证通过；从原始行重算圆弧/S弯lateral RMS与stop-position通过；重复同trace-dir CLI明确退出2拒绝覆盖。
+
+新增`scripts/b2d_controller_offline_plot.py`，只读trace并核对SHA，生成publication PNG/PDF与provenance，figure目录也必须新建。实际图在`offline-traced/figures/offline-ablations.{png,pdf}`，已视觉检查：上排pursuit near/future window停车速度与位置error；下排左右圆弧PP与完整bearing-PID相加的原始误差及固定2s transient后的RMS。所有曲线来自保留的raw tick，柱高直接取原summary；图明确标为synthetic而非CARLA实测。左右镜像曲线重合但均保留，使用实/虚线与各自柱子，不删其中一侧。

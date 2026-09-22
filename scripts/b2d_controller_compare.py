@@ -17,7 +17,7 @@ import b2d_report as report
 
 INFRACTIONS = ("vehicle_blocked", "route_dev", "collisions_layout", "collisions_vehicle",
                "collisions_pedestrian", "route_timeout", "scenario_timeouts", "minimum_speed_events")
-METRICS = ("truth_cross_track_m", "command_speed_error_mps", "reference_speed_error_mps",
+METRICS = ("truth_cross_track_m", "heading_error_rad", "command_speed_error_mps", "reference_speed_error_mps",
            "pose_error_m", "raw_pose_error_m", "pose_heading_error_rad", "trajectory_age_s", "controller_step_ms")
 
 
@@ -211,12 +211,18 @@ def read_g2(paths):
 def flatten(row):
     out = {key: row.get(key) for key in ("group", "route_id", "town", "scenario", "preset", "seed", "attempt",
            "selected_attempt", "retry_count", "status", "official_status", "completion", "driving_completed",
-           "results_state", "partial", "capped", "harness_capped", "official_tick_runtime", "ticks", "wall_s", "all_attempt_wall_s", "source_commit", "source_directory") + INFRACTIONS}
+           "results_state", "partial", "capped", "harness_capped", "official_tick_runtime", "ticks", "wall_s", "all_attempt_wall_s",
+           "score_composed", "score_penalty", "minimum_speed_penalty", "minimum_speed_penalty_mode",
+           "sim_time_s", "total_ms", "world_tick_ms", "tree_ms", "agent_ms", "server_age_routes",
+           "stale_ticks", "saturation_fraction", "first_collision_frame", "before_collision_state",
+           "source_commit", "source_directory") + INFRACTIONS}
     out["telemetry_quality"] = json.dumps(row.get("telemetry_quality"), sort_keys=True)
+    for key in ("minimum_speed_percentages", "low_progress_segments", "reasons"):
+        out[key] = json.dumps(row.get(key), sort_keys=True)
     for key in METRICS:
         for scope in ("tracking", "before_collision"):
             metric = (row.get(scope) or {}).get(key) or {}
-            for field in ("n", "rms", "p90", "abs_p95"):
+            for field in ("n", "rms", "median", "p90", "p95", "p99", "abs_p95", "abs_max"):
                 out["%s_%s_%s" % (scope, key, field)] = metric.get(field)
     return out
 
