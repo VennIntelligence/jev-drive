@@ -146,8 +146,9 @@ def judges(d: dict, arms: list[str] | None = None) -> pd.DataFrame:
 
 
 def ranks(t: pd.DataFrame, arms: list[str], pairs=None) -> pd.DataFrame:
-    """One row per (judge, scope): the arms best-first, and whether that order matches the reference judge,
-    ADE against the log on every evaluation frame.
+    """One row per (judge, scope): the arms best first (`a > b` reads "a is judged better than b", whichever
+    direction that judge's numbers run), and whether that order matches the reference judge, ADE against the
+    log on every evaluation frame.
 
     RFS is the one judge where larger is better, so it is ordered the other way; everything else is a
     displacement in metres. `pre_onset_halfwidth` is the widest paired interval any arm has on the
@@ -159,11 +160,14 @@ def ranks(t: pd.DataFrame, arms: list[str], pairs=None) -> pd.DataFrame:
         q = t[(t.judge == judge) & (t.scope == scope) & t.arm.isin(arms)].dropna(subset=["value"])
         if not len(q):
             continue
-        pre = t[(t.judge == judge) & t.scope.str.contains("pre_onset") & (t.arm != BASE)
-                & t.arm.isin(arms)]
+        # the pre-onset row of this judge's own domain: every frame for a displacement judge, the six rater
+        # frames decision 3b counted for a rater judge
+        pre = t[(t.judge == judge) & t.scope.isin(("pre_onset", "rater pre_onset")) & (t.arm != BASE)
+                & t.arm.isin(arms)].dropna(subset=["halfwidth"])
+        pre = pre[pre.n == pre.n.max()] if len(pre) else pre
         out.append({"judge": f"{judge} ({scope})", "n": int(q.n.iloc[0]),
-                    "ranking": " < ".join(q.sort_values("value", ascending=judge != "RFS").arm),
-                    "pre_onset_n": int(pre.n.max()) if len(pre) else 0,
+                    "ranking": " > ".join(q.sort_values("value", ascending=judge != "RFS").arm),
+                    "pre_onset_n": int(pre.n.iloc[0]) if len(pre) else 0,
                     "pre_onset_halfwidth": float(pre.halfwidth.max()) if len(pre) else np.nan})
     res = pd.DataFrame(out)
     if len(res) and (res.judge == REFERENCE).any():
