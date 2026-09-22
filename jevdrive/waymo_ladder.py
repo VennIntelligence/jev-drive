@@ -184,7 +184,7 @@ def ridge_arm(X: np.ndarray):
     is what `sp` indexes. Slicing here rather than at the call site keeps every arm's feature matrix defined
     once, over all of val, however the ladder restricts the rows.
     """
-    def fit(sel, sp, R, res_fut, seed):
+    def fit(sel, sp, R, res_fut, seed, pre=None):
         Xi = standardize_np(X[sel], sp.train)
         p, st, _ = sa.ridge_cv(Xi, R, sp, res_fut)
         del Xi
@@ -234,10 +234,22 @@ class TokenTransformer(torch.nn.Module):
         return self.out(self.enc(h)[:, 0])
 
 
-def _train(make_net, forward, sp, R, res_fut, seed: int, epochs: int = planner.MLP_EPOCHS):
+def _pred(o):
+    return o[0] if isinstance(o, tuple) else o
+
+
+def _train(make_net, forward, sp, R, res_fut, seed: int, epochs: int = planner.MLP_EPOCHS,
+           pre: np.ndarray | None = None):
     """planner.Heads.mlp's recipe for any net: early-stop on the sequence-grouped inner split of the fit half,
-    then refit on the whole fit half for that many epochs. Nothing here sees the evaluation half."""
+    then refit on the whole fit half for that many epochs. Nothing here sees the evaluation half.
+
+    `pre` (a pre-onset mask over all rows) adds `sel_pre_ade`: the pre-onset ADE on the inner split at the
+    epoch early stopping chose. It selects nothing here -- the stopping rule is the overall inner-val ADE,
+    as for every other head -- but arm (e) uses it to pick its L1 strength, which is the quantity decision 20
+    pre-registered for choosing among L0's weighting schemes.
+    """
     T = res_fut.shape[1]
+    pm = None if pre is None else pre[sp.sel]
 
     def run(rows, n_ep, sel):
         torch.manual_seed(seed)
@@ -245,32 +257,40 @@ def _train(make_net, forward, sp, R, res_fut, seed: int, epochs: int = planner.M
         opt = torch.optim.AdamW(net.parameters(), lr=planner.MLP_LR, weight_decay=planner.MLP_WD)
         sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, n_ep)
         r = torch.as_tensor(rows, device=DEV)
-        best = (np.inf, n_ep)
+        best = (np.inf, n_ep, float("nan"))
         for ep in range(n_ep):
             net.train()
             for b in r[torch.randperm(len(r), device=DEV)].split(planner.MLP_BS):
                 opt.zero_grad(set_to_none=True)
-                (forward(net, b) - R[b]).pow(2).mean().backward()
+                o = forward(net, b)
+                p_, pen = o if isinstance(o, tuple) else (o, 0.0)
+                ((p_ - R[b]).pow(2).mean() + pen).backward()
                 opt.step()
             sched.step()
             if sel is not None:
                 net.eval()
                 with torch.inference_mode():
-                    p = torch.cat([forward(net, c) for c in torch.as_tensor(sel, device=DEV).split(2048)])
-                e = float(np.linalg.norm(p.reshape(-1, T, 2).float().cpu().numpy() - res_fut[sel],
-                                         axis=-1).mean())
-                best = min(best, (e, ep + 1))
+                    p = torch.cat([_pred(forward(net, c)) for c in torch.as_tensor(sel, device=DEV).split(2048)])
+                d = np.linalg.norm(p.reshape(-1, T, 2).float().cpu().numpy() - res_fut[sel], axis=-1).mean(1)
+                best = min(best, (float(d.mean()), ep + 1,
+                                  float(d[pm].mean()) if pm is not None and pm.any() else float("nan")))
         return net, best
 
-    _, (s, ep) = run(sp.fit, epochs, sp.sel)
+    _, (s, ep, s_pre) = run(sp.fit, epochs, sp.sel)
     net, _ = run(sp.train, ep, None)
     net.eval()
     with torch.inference_mode():
-        p = torch.cat([forward(net, c) for c in torch.as_tensor(sp.val, device=DEV).split(2048)])
-    n_par = sum(q.numel() for q in net.parameters())
+        out = [forward(net, c) for c in torch.as_tensor(sp.val, device=DEV).split(2048)]
+    p = torch.cat([_pred(o) for o in out])
+    st = {"epochs": ep, "sel_ade": s, "sel_pre_ade": s_pre,
+          "params": sum(q.numel() for q in net.parameters())}
+    if hasattr(net, "gate_of"):                     # arm (e): the gate is a reported quantity, not a detail
+        with torch.inference_mode():
+            st["gate"] = torch.cat([net.gate_of(c) for c in torch.as_tensor(sp.val, device=DEV).split(2048)]
+                                   ).float().cpu().numpy()
     del net
     torch.cuda.empty_cache()
-    return p.reshape(-1, T, 2).float().cpu().numpy(), {"epochs": ep, "sel_ade": s, "params": n_par}
+    return p.reshape(-1, T, 2).float().cpu().numpy(), st
 
 
 def _chan_stats(X: torch.Tensor, rows: np.ndarray, chunk: int = 1024):
@@ -295,7 +315,7 @@ def grid_arm(G: np.ndarray, n_tok: int, kind: str = "attn", side: np.ndarray | N
     """
     d = G.shape[1] // n_tok
 
-    def fit(sel, sp, R, res_fut, seed):
+    def fit(sel, sp, R, res_fut, seed, pre=None):
         X = torch.from_numpy(np.ascontiguousarray(G[sel])).to(DEV).view(-1, n_tok, d)
         mu, sd = _chan_stats(X, sp.train)                     # chunked: a float32 copy of the fit half is 15 GB
         S = standardize_np(side[sel], sp.train) if side is not None else None
@@ -313,10 +333,79 @@ def grid_arm(G: np.ndarray, n_tok: int, kind: str = "attn", side: np.ndarray | N
     return fit
 
 
+class GatedResidual(torch.nn.Module):
+    """Arm (e): output = g(x) * delta(x), with g a scalar gate in [0, 1] and an L1 penalty on it.
+
+    The whole head predicts the correction to the ego prior, exactly as every other arm does, but it is
+    forced to factor that correction into "how much to react" and "what the reaction is". Decision 25 wants
+    to know whether real data alone teaches the gate *where* to open; the L1 term is what makes the question
+    meaningful, because without it the gate can sit at 1 everywhere and the arm is just the ungated head.
+    """
+
+    def __init__(self, kind: str, d: int, out: int, l1: float, dk: int = 256, drop: float = planner.DROPOUT):
+        super().__init__()
+        self.kind, self.l1, self.dk = kind, l1, dk
+        if kind == "attn":
+            self.proj = torch.nn.Linear(d, dk)
+            self.q = torch.nn.Parameter(torch.randn(dk) * 0.02)
+        else:
+            self.proj = torch.nn.Sequential(torch.nn.Linear(d, planner.HIDDEN), torch.nn.GELU(),
+                                            torch.nn.Linear(planner.HIDDEN, dk))
+        self.drop = torch.nn.Dropout(drop)
+        self.delta, self.gate = torch.nn.Linear(dk, out), torch.nn.Linear(dk, 1)
+
+    def encode(self, x):
+        if self.kind != "attn":
+            return self.drop(self.proj(x))
+        k = self.proj(x)
+        a = (k @ self.q / self.dk ** 0.5).softmax(-1)
+        return self.drop((a.unsqueeze(-1) * k).sum(1))
+
+    def gate_of(self, b_x):
+        return torch.sigmoid(self.gate(self.encode(b_x))).squeeze(-1)
+
+    def forward(self, x):
+        z = self.encode(x)
+        g = torch.sigmoid(self.gate(z))
+        return g * self.delta(z), self.l1 * g.abs().mean()
+
+
+def gated_arm(X: np.ndarray, kind: str = "mlp", n_tok: int | None = None, l1s=(0.0, 1e-3, 1e-2)):
+    """Arm (e), with the L1 strength chosen inside the fit half on pre-onset ADE and never on the eval half.
+
+    The selection quantity is the one decision 20 pre-registered for choosing among L0's B schemes: the
+    unweighted pre-onset ADE over the fit half's own grouped folds. Here it is approximated by the inner
+    split `sp.sel` restricted to its pre-onset frames, which is the same discipline at a tenth of the cost.
+    """
+    d = X.shape[1] // n_tok if n_tok else X.shape[1]
+
+    def fit(sel, sp, R, res_fut, seed, pre=None):
+        Z = torch.from_numpy(np.ascontiguousarray(X[sel])).to(DEV)
+        Z = Z.view(-1, n_tok, d).float() if n_tok else Z.float()
+        if n_tok:
+            mu, sd = _chan_stats(Z, sp.train)
+            Z = (Z - mu) / sd
+        else:
+            Z = planner.standardize(Z, sp.train)
+        best, out = None, None
+        for l1 in l1s:
+            p, st = _train(lambda: GatedResidual(kind, d, R.shape[1], l1), lambda net, b: net(Z[b]),
+                           sp, R, res_fut, seed, pre=pre)
+            score = st["sel_pre_ade"] if np.isfinite(st["sel_pre_ade"]) else st["sel_ade"]
+            log.info("  (e) %s l1=%.0e: inner-val pre-onset ADE %.4f (overall %.4f), mean gate %.3f",
+                     kind, l1, score, st["sel_ade"], float(st["gate"].mean()))
+            if best is None or score < best:
+                best, out = score, (p, {"l1": l1, "head": f"gated-{kind}", "d": d, **st})
+        del Z
+        torch.cuda.empty_cache()
+        return out
+    return fit
+
+
 def mlp_arm(X: np.ndarray):
     """The compute-matched control: planner's MLP on the pooled vector. Same optimiser, same schedule, same
     early stopping as the token heads, so a win for those is a win for attention and not for capacity."""
-    def fit(sel, sp, R, res_fut, seed):
+    def fit(sel, sp, R, res_fut, seed, pre=None):
         Xi = standardize_np(X[sel], sp.train)
         p, st = _train(lambda: planner._mlp(Xi.shape[1], R.shape[1]), lambda net, b: net(Xi[b]),
                        sp, R, res_fut, seed)
@@ -352,15 +441,18 @@ def run_direction(ctx: dict, keep: np.ndarray, arms: dict, direction: int, s_ful
     res_fut = R.reshape(-1, T, 2).cpu().numpy()
     off = base[sp.val].reshape(-1, T, 2).cpu().numpy()
 
-    preds, stats = {BASE: p_ego[:, 0]}, {BASE: st_ego}
+    preds, stats, gates = {BASE: p_ego[:, 0]}, {BASE: st_ego}, {}
     for name, fit in arms.items():
-        p, st = fit(sel, sp, R, res_fut, ctx["seed"])
+        p, st = fit(sel, sp, R, res_fut, ctx["seed"], ctx["sub"]["pre_onset"][sel])
+        gate = st.pop("gate", None)
+        if gate is not None:
+            gates[name] = gate
         preds[name], stats[name] = p + off, st
         log.info("dir %d %-28s fitted: %s", direction, name, {k: round(v, 5) if isinstance(v, float) else v
                                                               for k, v in st.items()})
         if rl is not None:
             rl.event("arm_fit", direction=direction, arm=name, **st)
-    sctx = {"sel": sel, "sp": sp, "seq": seq, "fut": fut, "direction": direction,
+    sctx = {"sel": sel, "sp": sp, "seq": seq, "fut": fut, "direction": direction, "gates": gates,
             "sub": {k: ctx["sub"][k][sel] for k in SUBSETS}, "rows": ctx["rows"][sel],
             "fname": ctx["fname"][sel], "s": s_full[sel], "df": df, "past": ctx["past"]}
     return preds, sctx, pd.DataFrame([{"direction": direction, "arm": k, **v} for k, v in stats.items()])
@@ -446,6 +538,27 @@ def deciles(per: dict, sctx: dict, scopes=("all", "straight_yaw")) -> pd.DataFra
     return pd.DataFrame(rows)
 
 
+def gate_report(sctx: dict) -> pd.DataFrame:
+    """Arm (e)'s gate: mean g and the fraction above 0.5, by subset and by s_ego decile.
+
+    This is the table decision 25 asks for. The question is not whether the gate is open on average but
+    whether it is open *preferentially* where the ego prior is about to be wrong -- pre-onset frames and the
+    top s_ego deciles -- against straight frames, when nothing but real data trained it.
+    """
+    sp, sv = sctx["sp"], sctx["s"][sctx["sp"].val]
+    q = np.quantile(sv, np.linspace(0, 1, 11))
+    dec = np.clip(np.searchsorted(q[1:-1], sv, "right"), 0, 9)
+    rows = []
+    for name, g in sctx["gates"].items():
+        groups = {k: sctx["sub"][k][sp.val] for k in SUBSETS}
+        groups |= {f"s_ego decile {i + 1}": dec == i for i in range(10)}
+        for k, m in groups.items():
+            if m.any():
+                rows.append({"direction": sctx["direction"], "arm": name, "group": k, "n": int(m.sum()),
+                             "gate_mean": float(g[m].mean()), "gate_open": float((g[m] > 0.5).mean())})
+    return pd.DataFrame(rows)
+
+
 def save_preds(rl, preds: dict, sctx: dict, tag: str = ""):
     """Per-frame predictions of every arm, keyed by frame name, so P1's judge can be applied without refitting."""
     np.savez_compressed(rl.dir / f"{tag}_preds_dir{sctx['direction']}.npz",
@@ -458,6 +571,9 @@ def save_preds(rl, preds: dict, sctx: dict, tag: str = ""):
 def write_tables(rl, tables: dict[str, list], tag: str = ""):
     out = {}
     for name, parts in tables.items():
+        parts = [q for q in parts if len(q)]
+        if not parts:
+            continue
         t = pd.concat(parts, ignore_index=True)
         t.to_csv(rl.dir / f"{tag}_{name}.csv", index=False)
         rl.log.info("%s %s\n%s", tag, name, t.to_markdown(index=False, floatfmt=".4f"))
@@ -468,13 +584,14 @@ def write_tables(rl, tables: dict[str, list], tag: str = ""):
 
 def run_ladder(arms_for: callable, tag: str, keep: np.ndarray | None, ctx: dict, directions=(0, 1), rl=None):
     """Both directions of one ladder. `arms_for(keep_mask)` builds the arm dict once the rows are known."""
-    tables = {k: [] for k in ("arms", "paired", "did", "deciles", "fits")}
+    tables = {k: [] for k in ("arms", "paired", "did", "deciles", "fits", "gates")}
     for d in directions:
         s = s_ego_full(ctx, d)
         k = np.ones(len(ctx["fname"]), bool) if keep is None else keep
         preds, sctx, fits = run_direction(ctx, k, arms_for(k), d, s, rl)
         a, p, dd, dec = judge(preds, sctx)
-        for name, t in (("arms", a), ("paired", p), ("did", dd), ("deciles", dec), ("fits", fits)):
+        for name, t in (("arms", a), ("paired", p), ("did", dd), ("deciles", dec), ("fits", fits),
+                        ("gates", gate_report(sctx))):
             tables[name].append(t)
         if rl is not None:
             save_preds(rl, preds, sctx, tag)
@@ -564,6 +681,16 @@ def p2c(ctx: dict, keep: np.ndarray, rl, stride: int = 2, n_back: int = 3):
     return run_ladder(lambda k: arms, "p2c", keep, ctx, rl=rl)
 
 
+def p2e(ctx: dict, keep: np.ndarray, rl):
+    """(e): the gated residual head, in both its trunks, against arm A on the same frames (decision 25)."""
+    g = align(ctx, GRID_SET, [GRID_ARRAY])
+    keep = keep & g["covered"]
+    arms = {"A ridge_late pooled": ridge_arm(ctx["pooled"]),
+            "e gated pooled-mlp": gated_arm(ctx["pooled"], "mlp"),
+            "e gated attn grid": gated_arm(g[GRID_ARRAY], "attn", GRID_TOKENS)}
+    return run_ladder(lambda k: arms, "p2e", keep, ctx, rl=rl)
+
+
 def p3(ctx: dict, keep: np.ndarray, rl, sets: list[str] | None = None):
     """The backbone ladder: arm A recomputed on the subset, plus one ridge_late arm per extracted set.
 
@@ -644,7 +771,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p3,grid,qwen32b,vjepa2")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,qwen32b,vjepa2")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -661,7 +788,7 @@ def main():
         rl.event("extract", **extract_qwen32b(rl, a.batch_size, a.limit))
     if "vjepa2" in steps:
         rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
-    if {"subset", "repro", "p2b", "p2c", "p3"} & set(steps):
+    if {"subset", "repro", "p2b", "p2c", "p2e", "p3"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:
             summary = write_subset(ctx, choose_subset(ctx, seed=a.seed))
@@ -673,6 +800,8 @@ def main():
             p2b(ctx, rl)
         if "p2c" in steps:
             p2c(ctx, load_subset(ctx), rl)
+        if "p2e" in steps:
+            p2e(ctx, load_subset(ctx), rl)
         if "p3" in steps:
             p3(ctx, load_subset(ctx), rl, a.sets.split(",") if a.sets else None)
     rl.event("end")
