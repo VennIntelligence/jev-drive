@@ -1,0 +1,5 @@
+{
+  "carla": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/reference-carla-pi.json",
+  "tcp": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/reference-tcp.json",
+  "pursuit": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json"
+}

@@ -1,0 +1,19 @@
+{
+  "frozen_runtime": "d140e30",
+  "candidate": "pursuit, max lookahead, PI Kp=.5 Ki=.25",
+  "references": {
+    "carla": "CARLA lateral PID with same PI Kp=.5 Ki=.25, additive lookahead; not vendor longitudinal",
+    "tcp": "TCP adapted vendor lateral/longitudinal, fixed4 lookahead"
+  },
+  "common_pipeline": "same v2 ego-start route rejoin and sensor-derived pose",
+  "selection": "max passes all6 including straight6; additive fails26966 p95; conditional one-qualified-branch in v2-analysis; no further parameter changes from Dev10",
+  "g3": "one original complete2390 smoke, no artificial cap, front3 rig",
+  "g4": "all originalDev10 routes x3presets xTM seeds0,1 =60; officialcompletion andscores, allattempts retained",
+  "randomness": "OnlyTrafficManager seed changes; sensor/global RNG notallcontrolled; notindependentfullrandomization",
+  "acceptance": "Original G4 completion/blocked/deviation/speed/lateral thresholds retained; driving_completed is not officialSuccessRate",
+  "slope": "candidate configuration stationaryhold afterprimarycampaign",
+  "holdout": "existing6routes alreadyseen, anyrepeat is confirmation rather thanblindtest; conditional on qualification",
+  "no_planner": "policy=none routeoracle; no claim leaderboard score improvement",
+  "smoke_xml_source": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml",
+  "source_sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88"
+}
