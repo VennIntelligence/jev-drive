@@ -297,6 +297,44 @@ def decile_table(t, col="s_ego", q=10, label="s_ego"):
     return pd.DataFrame(rows)
 
 
+# ---------------------------------------------------------------- padding and the log's membership
+
+def raw_waypoint_counts():
+    """Per rater-scored frame: how many waypoints each rated trajectory really has before the metric pads it.
+
+    WOD issue #985: rated trajectories shorter than 20 waypoints are padded by repeating the last one, which
+    parks them at a standstill for the rest of the horizon and makes the 5 s check reward slow candidates.
+    """
+    t = pd.read_parquet(waymo.out_dir() / "rater.parquet")
+    out = {}
+    for fn, g in t.groupby("frame_name", sort=False):
+        out[fn] = [len(p) for p in g.pos_x]
+    return out
+
+
+def rfs_no_padded_horizon(pred, traj, scores, speed, raw_len):
+    """RFS with every (rater, horizon) pair whose waypoint is padding left out of the comparison.
+
+    `raw_len` is (n, P). A horizon at index k is real for a rater only when that rater's trajectory actually
+    reaches it (raw_len > k). Raters with no real horizon left do not compete; frames with no rater left at
+    all fall back to the ordinary score.
+    """
+    r = rfs(pred, traj, scores, speed)
+    k = np.array([int(round(h * FREQ)) - 1 for h in HORIZ_S])
+    valid = np.asarray(raw_len)[:, :, None] > k[None, None, :]              # (n, P, H)
+    norm = np.where(valid, r["norm"], np.nan)
+    with np.errstate(invalid="ignore"):
+        ok = (np.nan_to_num(norm, nan=0.0) <= 1.0) | ~valid
+        inside = (ok.all(-1) & valid.any(-1)).any(-1)
+        per = np.where(valid, r["per"], -np.inf)
+        best = per.max(1)                                                   # (n, H), -inf where no rater
+        keep = np.isfinite(best)
+        score = np.where(keep.any(-1), np.nansum(np.where(keep, best, 0), -1) / np.maximum(keep.sum(-1), 1),
+                         r["score"])
+    score = np.where(inside, score, np.maximum(score, FLOOR))
+    return {"score": score, "inside": inside}
+
+
 # ---------------------------------------------------------------- contact sheets
 
 def read_jpeg(d, row, cam="front"):
@@ -422,6 +460,40 @@ def main():
     ab = pd.DataFrame(ab)
     ab.to_csv(out / "ab_split.csv", index=False)
     log.info("outside vs inside:\n%s", ab.round(3).to_string(index=False))
+
+    # --- padding (WOD issue #985) and whether the logged future is one of the rated trajectories
+    counts = raw_waypoint_counts()
+    raw = np.array([(lambda c: (c + c[-1:] * 3)[:3])(counts[f]) for f in t.frame_name], float)
+    t["n_rater_raw"] = [len(counts[f]) for f in t.frame_name]
+    t["n_padded"] = (raw < 20).sum(1)
+    t["any_padded"] = t.n_padded > 0
+    log_xy = d["fut"][d["pos"]]
+    # if the log were one of the rated proposals it would coincide with one of them waypoint for waypoint
+    t["min_max_dev_to_rated"] = np.linalg.norm(log_xy[:, None] - d["rtraj"], axis=-1).max(-1).min(-1)
+    r_nop = rfs_no_padded_horizon(log_xy, d["rtraj"], d["scores"],
+                                  waymo.init_speed(d["past"][d["rows"][d["pos"]]]), raw)
+    t["log_rfs_no_padded_horizon"] = r_nop["score"]
+    t["log_floored_no_padded_horizon"] = r_nop["score"] <= FLOOR + 1e-9
+    pad = []
+    for name, m in (("decile 10", b == 9), ("deciles 1-9", b < 9), ("all", np.ones(len(t), bool))):
+        g = t[m]
+        clean = g[~g.any_padded]
+        pad.append({"group": name, "n": int(m.sum()),
+                    "traj_shorter_than_20": float((raw[m] < 20).mean()),
+                    "frames_with_any_padded": float(g.any_padded.mean()),
+                    "n_clean": len(clean),
+                    "log_rfs": g.log_rfs.mean(), "log_floored": g.log_floored.mean(),
+                    "log_rfs_clean": clean.log_rfs.mean(), "log_floored_clean": clean.log_floored.mean(),
+                    "log_ade_best_clean": clean.log_ade_best.mean(),
+                    "log_rfs_no_padded_horizon": g.log_rfs_no_padded_horizon.mean(),
+                    "log_floored_no_padded_horizon": g.log_floored_no_padded_horizon.mean(),
+                    "log_equals_a_rated_traj": float((g.min_max_dev_to_rated < 0.1).mean()),
+                    "min_max_dev_to_rated_p01": float(g.min_max_dev_to_rated.quantile(0.01)),
+                    "min_max_dev_to_rated_median": float(g.min_max_dev_to_rated.median())})
+    pad = pd.DataFrame(pad)
+    pad.to_csv(out / "padding.csv", index=False)
+    log.info("padding and log membership:\n%s", pad.round(3).to_string(index=False))
+    t.to_csv(out / "rater_frames.csv", index=False)
 
     rng = np.random.default_rng(a.seed)
     top = np.flatnonzero(b == 9)
