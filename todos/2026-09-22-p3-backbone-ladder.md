@@ -100,7 +100,7 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 | a Qwen3-VL-32B | 约 1000 | **621.2**（峰值显存 63.8 GB，3060 token/帧，batch 4，权重用 `device_map="cuda"` 直接流进卡里） | **3.5 h** | 53 504 B/帧 → **1.08 GB**（`L32/L50` 的 `_mean`/`_last` 各 5120 维，外加 `vis_mean`/`vit_mean`） | 估计偏保守一倍：只跑到第 50 层是真正的 early exit，省掉 64 层里的 14 层 |
 | b H3 DiT | 30–100 / forward | 20–60 min（每个噪声水平） | 2 层 × d × 2 B，约 **0.2 GB** | h3-deployment 6.1 的推算，**未实测** |
 | c Wan2.2-5B | 同量级 | 20–60 min | 约 0.2 GB | — |
-| d V-JEPA 2 ViT-L | 约 25 | 约 10 min | 2 × 1024 × 2 B = 4 KB/帧 → **80 MB** | ViT-L、4 帧、256²，比 Qwen 的 3060 token 小一个量级 |
+| d V-JEPA 2 ViT-L | 约 25 | **8.1 实测** | **2.7 min**（19 663 帧，峰值显存 0.75 GB） | 4.0 KB/帧 → **80 MB** | ViT-L、4 帧、256²，比 Qwen 的 3060 token 小一个量级；比估计还快 3 倍 |
 | 下载 | — | 见下 | — | — |
 
 ### 下载这一项估错了，就地更正（2026-09-22 18:20）
@@ -155,8 +155,10 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 - [ ] (a) 全量抽取 → 跑 head
 - [ ] (b) 下载 → 工程（两小时上限）→ profiling → 抽取 → 跑 head
 - [ ] (c) 同上
-- [ ] (d) profiling → 抽取 → 跑 head
-- [ ] 数字写进 decisions 第 24 条
+- [x] (d) 抽取 + head —— **pre-onset 上方向 1 过门槛（−0.115）、方向 0 没过（−0.018），所以规则不触发；
+      但 decile 曲线的形状第一次变了（第 10 档的掉落被压平、见顶右移）**，见 decisions 第 24 条
+- [x] (d) 的数字已写进 decisions 第 24 条
+- [ ] (a)(b)(c) 的数字补进第 24 条
 
 ## 结果
 
