@@ -956,7 +956,11 @@ def rejudge(run_dir, tag: str, seed: int = 0) -> dict[str, pd.DataFrame]:
         direction = int(f.stem.rsplit("dir", 1)[1])
         fn = d["frame_name"].astype(str)
         idx = at.reindex(fn).to_numpy().astype(int)
-        seq, gt, s = df.sequence.to_numpy()[idx], d["fut"], d["s_ego"]
+        # Runs made before save_preds adopted waymo_p1's schema stored the future as `gt` and the arms
+        # under their bare names; both layouts are read here so nothing has to be recomputed.
+        META = ("frame_name", "sequence", "s_ego", "fut", "gt", "speed")
+        gt = d["fut"] if "fut" in d.files else d["gt"]
+        seq, s = df.sequence.to_numpy()[idx], d["s_ego"]
         speed = d["speed"] if "speed" in d.files else waymo.init_speed(past[idx])
         sub = {k: sub_all[k][idx] for k in SUBSETS}
         dec = np.clip(np.searchsorted(np.quantile(s, np.linspace(0, 1, 11))[1:-1], s, "right"), 0, 9)
@@ -965,15 +969,16 @@ def rejudge(run_dir, tag: str, seed: int = 0) -> dict[str, pd.DataFrame]:
         ok = ~np.isnan(pos)
         rp, rt, rs = pos[ok].astype(int), rtraj[ok], rscore[ok]
         best = rt[np.arange(len(rp)), rs.argmax(1)]
-        arms = [k[5:] for k in d.files if k.startswith("pred_")]
-        base = d[f"pred_{BASE}"]
+        pref = "pred_" if any(k.startswith("pred_") for k in d.files) else ""
+        arms = [k[len(pref):] for k in d.files if k.startswith(pref) and k[len(pref):] not in META]
+        base = d[f"{pref}{BASE}"]
         e_base, rfs_base = l0.ade(base, gt), waymo.rater_feedback_score(base[rp], rt, rs, speed[rp])
         ar_base = l0.ade(base[rp], best)
         top_r = dec[rp] == 9
         for arm in arms:
             if arm == BASE:
                 continue
-            p = d[f"pred_{arm}"]
+            p = d[f"{pref}{arm}"]
             e, rfs = l0.ade(p, gt), waymo.rater_feedback_score(p[rp], rt, rs, speed[rp])
             ar = l0.ade(p[rp], best)
             row = {"direction": direction, "arm": arm}
