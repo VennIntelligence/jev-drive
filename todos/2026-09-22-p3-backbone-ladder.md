@@ -96,6 +96,23 @@ prompt state 形状 (1, 512, 4096) 已缓存复用。
 折合约 **124 ms/forward**，比 lit 对 H3 的推算（30–100 ms）高一些。
 **全量 20 237 帧约 4.2 h、约 1.5 GB**；这个数是在 d''' 的 ViT-g 抽取同时在跑时测的，所以是上界。
 
+#### (c) 改成**只跑 front 一路相机**，三相机版延后（2026-09-23，用户决定）
+
+**理由是可比性，不只是省时间**：真正带信号的 V-JEPA arm——(d)——**本来就只看 front 一路**。
+如果 Wan 用三相机跑，它和 (d) 就同时差两件事（表征 + 看到多少场景），
+**那个差值就不能归因给「生成式 vs JEPA」了**。front-only 让这一格是 like-for-like 的。
+
+顺带代价也降到三分之一：每帧从 **6 次 transformer forward + 3 次 VAE encode** 降到 **2 + 1**，
+按 probe 实测的 743.7 ms/帧折算，front-only 估 **约 250 ms/帧、全量约 1.4 h**（而不是 4.2 h）。
+
+**三相机那版不是取消，是延后**：只有在 front-only 在 pre-onset 上**显示出东西**时才值得补跑。
+如果 front-only 也是空的，再花 3 倍的时间去跑三相机不会改变结论。
+
+#### 队列顺序 2026-09-23 02:45 调整：**d'' 排到 Wan 前面**
+
+d'' 回答的是「起作用的因子是时间还是 JEPA」，这一问决定下一步做什么；
+Wan 提供的是生成式那一列的一个数据点。**前者比后者更值钱，所以先跑。**
+
 **(c) Wan2.2-TI2V-5B**：同 (b) 的配方，作为便宜的生成式对照（DriveWAM 的基座，24 GB 可跑）。
 实测配置（写死在 `jevdrive/dit_features.py`）：`WanTransformer3DModel` **30 层、hidden 3072、
 `patch_size=(1,2,2)`、VAE `z_dim=48`**，tap 取第 15 和第 20 层；
@@ -364,7 +381,9 @@ RFS 并排；全集 ADE 是侧栏；循环性限定随引用），**−0.05 m �
 
 ## 步骤
 
-现在的队列顺序：**(c) Wan → (d'') Qwen 原生 video → (d''') train split 判决**；(b) 延后，d' 和 ViT-g 已完成。
+现在的队列顺序：**(d'') Qwen 原生 video → (c) Wan（front-only）→ (d''') train split 判决**；
+(b) 延后，d' 和 ViT-g 已完成。每个 stage 的起止和退出码追加到 `$DATA_DIR/runs/waymo_ladder/QUEUE_STATUS`，
+一次读取就能看出哪个 gate 非零退出——这是 2026-09-23 两次「gate 退出 1 但没人看见」各损失约一小时之后加的。
 
 - [x] (a) 200 帧 profiling：**621.2 ms/帧**，峰值显存 63.8 GB，52.2 KB/帧 → 全量 3.5 h
 - [x] (a) 全量抽取（20 237 帧、633.0 ms/帧、3 h 33 min、1.08 GB）→ head：**四个 tap 全不过门槛，也不比 4B 好；scaling null**
