@@ -153,10 +153,11 @@ def load_subset(ctx: dict, name: str = SUBSET_FILE) -> np.ndarray:
     return keep
 
 
-def align(ctx: dict, set_name: str, arrays: list[str], flat: bool = True) -> dict[str, np.ndarray]:
+def align(ctx: dict, set_name: str, arrays: list[str] | None = None, flat: bool = True) -> dict:
     """Another feature set's arrays, reordered onto the context rows. Rows the set does not cover come back
     as NaN-free zeros and are reported: the caller restricts the comparison to `covered` itself."""
     idx, arrs = (waymo.load_flat_features if flat else waymo.load_features)(set_name, arrays)
+    arrays = arrays or sorted(arrs)
     at = pd.Series(np.arange(len(idx)), index=idx.frame_name.to_numpy())
     pos = at.reindex(ctx["fname"]).to_numpy()
     covered = ~np.isnan(pos)
