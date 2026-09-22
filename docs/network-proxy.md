@@ -30,6 +30,37 @@ data costs about 120 GB of quota. Check the remaining quota before a bulk transf
 running out also breaks Google OAuth token refresh, which only works through the proxy, and that
 stops a Waymo download from resuming at all.
 
+## The link is not the bottleneck; huggingface_hub's Xet path is (2026-09-22)
+
+Measured on one file (`MiniMaxAI/MiniMax-H3` transformer shard 2), 60 s each, both routes:
+
+| route | throughput |
+|---|---:|
+| `source /etc/network_turbo` | **0.15 MB/s** (9 MB in 60 s) |
+| `proxy_on` (Clash), plain `curl` on `resolve/main` | **25.9 MB/s** |
+| `proxy_on`, `huggingface_hub.snapshot_download` | **3 MB/s** |
+| `proxy_on`, `snapshot_download` with `HF_HUB_ENABLE_HF_TRANSFER=1` | **3 MB/s** (no change) |
+
+Three things follow, and the first two contradict what this page said before.
+
+1. **Turbo is dead for the HF CDN right now**, not merely slower: it fails with repeated
+   `SSL handshake timed out` / `peer closed connection without sending complete message body`.
+   The "try turbo first" order above still holds for GitHub; for HuggingFace, go straight to `proxy_on`.
+2. **The 18 MB/s ceiling is not what a single stream sees today**: one curl got 25.9 MB/s.
+3. **`snapshot_download` is 8x slower than the link on the same route.** The window prints
+   `Reconstructing (incomplete total...)`, which is the **Xet** path, and it keeps restarting transfers.
+   `HF_HUB_DISABLE_XET=1` did **not** suppress it and `hf_transfer` does **not** bypass it.
+
+**So do not size a download budget from `du -sh` of the HF cache while `snapshot_download` runs.**
+That is how 25.9 MB/s got written down as "3-5 MB/s" and a 71 GB model got budgeted at 4-6 h.
+For a large model, fetch the files directly instead (`scripts/`-less one-liner kept in the P3 todo):
+
+```bash
+curl -sL --fail -C - --retry 5 -o "$out" "https://huggingface.co/$repo/resolve/main/$path"
+```
+
+four at a time, into a plain directory that `from_pretrained` is then pointed at.
+
 ## Sharing the link between jobs
 
 The box's egress tops out at about 18 MB/s, and neither route nor Clash node changes that ceiling,
@@ -72,4 +103,4 @@ Notes:
 - New nodes: regenerate the config locally from the subscription (kept outside the repo),
   then `scp -C` it to `~/data/clash/config.yaml`.
 
-Last verified: 2026-09-20
+Last verified: 2026-09-22
