@@ -127,10 +127,12 @@ class QwenFeatures:
     so position ids, rotary tables and the image-token span are computed once per batch shape."""
 
     def __init__(self, n_layer_probes: int = 4, width: int | None = None, long_side: int | None = None,
-                 n_images: int = 1, compile: bool = True, layers: list[int] | None = None):
+                 n_images: int = 1, compile: bool = True, layers: list[int] | None = None,
+                 model_id: str = QWEN, grid_hw: tuple[int, int] | None = None, pooled: bool = True):
         from transformers import AutoModelForImageTextToText, AutoProcessor
-        self.proc = AutoProcessor.from_pretrained(QWEN)
-        model = AutoModelForImageTextToText.from_pretrained(QWEN, dtype=torch.bfloat16, attn_implementation="sdpa")
+        self.proc = AutoProcessor.from_pretrained(model_id)
+        self.model_id, self.grid_hw, self.pooled = model_id, grid_hw, pooled
+        model = AutoModelForImageTextToText.from_pretrained(model_id, dtype=torch.bfloat16, attn_implementation="sdpa")
         self.model = model.model.to(DEV).eval()  # skip lm_head: we only need hidden states
         self.image_token_id = model.config.image_token_id
         self.prompt = self.proc.apply_chat_template(
@@ -203,16 +205,34 @@ class QwenFeatures:
         img = vis.merger(x).view(b, -1, lm.config.hidden_size)
         out = {"vit_mean": x.view(b, -1, x.shape[-1]).float().mean(1), "vis_mean": img.float().mean(1)}
 
+        if not self.pooled:
+            out = {}
         h = lm.embed_tokens(ids)
         h[:, ipos] = img
         for i, layer in enumerate(self.lm_layers):
             h = layer(h, position_embeddings=lm_rot)  # attention_mask=None -> causal SDPA, as for an all-ones mask
             if i + 1 in self.layers:
-                out[f"L{i + 1:02d}_mean"] = h[:, ipos].sum(1, dtype=torch.float32) / ipos.numel()
-                out[f"L{i + 1:02d}_last"] = h[:, -1].float()
+                if self.pooled:
+                    out[f"L{i + 1:02d}_mean"] = h[:, ipos].sum(1, dtype=torch.float32) / ipos.numel()
+                    out[f"L{i + 1:02d}_last"] = h[:, -1].float()
+                if self.grid_hw is not None:
+                    out[f"L{i + 1:02d}_grid"] = self._grid(h[:, ipos], grid)
             if i < len(deepstack):  # DeepStack: early ViT features are added to the image tokens after layers 1-3
                 h[:, ipos] += deepstack[i]
         return out
+
+    def _grid(self, tok: torch.Tensor, grid: torch.Tensor) -> torch.Tensor:
+        """Per-camera token map average-pooled to `grid_hw`, flattened to one row.
+
+        `tok` is (b, n_images * gh * gw, d) with the cameras laid out one after another in the order the
+        prompt lists them, and `grid` holds each image's patch grid, which the merger halves in both axes.
+        Pooling on the GPU keeps the stored feature at 144 x 2560 per frame instead of 3060 x 2560: the same
+        spatial layout at 1/21 of the bytes, which is what makes a 20k-frame grid cache 15 GB instead of 314.
+        """
+        b, d, (H, W) = len(tok), tok.shape[-1], self.grid_hw
+        gh, gw = int(grid[0, 1]) // 2, int(grid[0, 2]) // 2
+        x = tok.view(b * self.n_images, gh, gw, d).permute(0, 3, 1, 2).float()
+        return torch.nn.functional.adaptive_avg_pool2d(x, (H, W)).permute(0, 2, 3, 1).reshape(b, -1)
 
 
 class DinoFeatures:

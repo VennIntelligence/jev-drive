@@ -995,6 +995,45 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
             "set_aside": sorted(skip), "seconds": time.perf_counter() - t0}
 
 
+def extract_subset(name: str, fx, rows, cams=CAMS, separate: bool = False, batch_size: int = 4,
+                   workers: int | None = None, rl=None, force: bool = False) -> dict:
+    """Extract one already-built backbone `fx` over a fixed set of index rows, into `features/<name>/`.
+
+    The shard-keyed layout of `extract_incremental` exists so that a split can be built while it downloads.
+    A diagnostic subset is the opposite case: the rows are chosen once, frozen in a file and never grow, so
+    one flat directory with one index.parquet is both simpler and faster to load. `meta.json` is written last
+    and is the done-marker, exactly as for a shard.
+    """
+    from . import features as F
+    dst = out_dir("features", name)
+    if (dst / "meta.json").exists() and not force:
+        log.info("%s already built at %s, skipping", name, dst)
+        return json.loads((dst / "meta.json").read_text())
+    df = load_index()
+    part = df.loc[df.index.intersection(np.asarray(rows))]
+    items, idx = feature_items(part, cams, separate)
+    dst.mkdir(parents=True, exist_ok=True)
+    (dst / "meta.json").unlink(missing_ok=True)
+    stats = F.extract(fx, items, batch_size, loader_workers(workers), dst, rl, f"waymo/{name}", dataset=Shards)
+    idx.to_parquet(dst / "index.parquet", index=False)
+    meta = {"set": name, "cams": list(cams), "separate": separate, "frames": len(part), "rows": len(items),
+            "model": getattr(fx, "model_id", type(fx).__name__),
+            "tokens_per_forward": int(getattr(fx, "n_image_tokens", 0)),
+            "features": sorted(p.stem for p in dst.glob("*.npy")), **stats}
+    (dst / "meta.json").write_text(json.dumps(meta, indent=2, default=float))
+    log.info("%s: %d rows, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/frame -> %s", name, stats["n"],
+             stats["ms_per_frame"], stats["peak_vram_gb"], stats["bytes_per_sample"] / 1024, dst)
+    return meta
+
+
+def load_flat_features(name: str, arrays: list[str] | None = None):
+    """(index, {array: memmap}) for a set built by `extract_subset`: one directory, one index.parquet."""
+    d = out_dir("features", name)
+    idx = pd.read_parquet(d / "index.parquet")
+    names = arrays or sorted(p.stem for p in d.glob("*.npy"))
+    return idx, {a: np.load(d / f"{a}.npy", mmap_mode="r") for a in names}
+
+
 def load_features(name: str, arrays: list[str] | None = None, frames=None):
     """Concatenate a shard-keyed feature set back into (index, {array: (n, d) float16}).
 
