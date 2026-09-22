@@ -11,12 +11,14 @@ b2d_run.py drives this; running it by hand is how you profile a single route.
         --port 2000 --tm-port 8000 --out $DATA_DIR/runs/b2d/probe \
         --rig front3 --policy sleep --infer-ms 129
 
-Exit codes: 0 route finished (whatever its score), 1 route failed, 2 harness/setup failure.
+Exit codes: 0 route finished (whatever its score), 1 route failed, 2 harness/setup failure,
+128 + signal number if interrupted.
 Python 3.8: runs in envs/carla.
 """
 import argparse
 import json
 import os
+import signal
 import sys
 import time
 import traceback
@@ -53,6 +55,8 @@ def parse_args():
     p.add_argument("--timeout", type=float, default=300.0)
     p.add_argument("--out", required=True, help="directory for this attempt's outputs")
     # agent / policy
+    p.add_argument("--agent", default="", help="external leaderboard agent .py (default: cost stub)")
+    p.add_argument("--agent-config", default="", help="external agent config/checkpoint path")
     p.add_argument("--rig", default="front3", choices=["none", "front1", "front3", "b2d6"])
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
@@ -80,6 +84,10 @@ def parse_args():
 def main():
     a = parse_args()
     a.routes, a.out = str(Path(a.routes).resolve()), str(Path(a.out).resolve())
+    if a.agent:
+        a.agent = str(Path(a.agent).resolve())
+        if a.agent_config:
+            a.agent_config = str(Path(a.agent_config).resolve())
     add_bench2drive_to_path(a.bench2drive)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -101,6 +109,7 @@ def main():
                       zero_copy=a.zero_copy, sensor_tick=a.decimate > 1,
                       cache_lights=a.cache_lights)
     _patch_setup_simulation(LeaderboardEvaluator, a)
+    _patch_signal_handler(LeaderboardEvaluator)
     if a.max_ticks:
         _patch_tick_limit(ScenarioManager, a.max_ticks)
 
@@ -110,15 +119,23 @@ def main():
     record = {"route_id": a.route_id, "status": "harness_error", "wall_s": 0.0}
     rc = 2
     prof = None
+    evaluator = None
     if a.cprofile:
         import cProfile
         prof = cProfile.Profile()
         prof.enable()
     try:
         evaluator = LeaderboardEvaluator(args, stats)
+        signal.signal(signal.SIGTERM, evaluator._signal_handler)
         crashed = evaluator.run(args)
-        record["status"] = "crashed" if crashed else "finished"
-        rc = 1 if crashed else 0
+        interrupted = getattr(evaluator, "_jev_interrupt_signal", None)
+        if interrupted is not None:
+            record["status"] = "cancelled_by_user"
+            record["interrupt_signal"] = interrupted
+            rc = 128 + interrupted
+        else:
+            record["status"] = "crashed" if crashed else "finished"
+            rc = 1 if crashed else 0
     except SystemExit as e:  # the evaluator's own early exits
         record["status"] = "exit_%s" % e.code
         rc = 1
@@ -135,14 +152,29 @@ def main():
         record["wall_s"] = round(time.time() - t0, 1)
         record["profile"] = profile.summary(drop=a.drop_ticks)
         record["config"] = vars(a)
-        import b2d_agent
-        agent = b2d_agent.LAST_AGENT
-        if agent is not None:
-            record["agent"] = _agent_summary(agent, a.drop_ticks)
+        if evaluator is not None:
+            record["sensors"] = evaluator.sensors
+        if not a.agent:
+            import b2d_agent
+            agent = b2d_agent.LAST_AGENT
+            if agent is not None:
+                record["agent"] = _agent_summary(agent, a.drop_ticks)
         (out / "route_result.json").write_text(json.dumps(record, indent=2))
         print(json.dumps({"route_id": a.route_id, "status": record["status"],
                           "wall_s": record["wall_s"], "ticks": profile.ticks}), flush=True)
     return rc
+
+
+def _patch_signal_handler(evaluator_class):
+    # Bench2Drive's handler stops the scenario normally and run() then returns False,
+    # just as it does at a natural end. Preserve the signal so it cannot mean "finished".
+    original = evaluator_class._signal_handler
+
+    def interrupted(self, signum, frame):
+        self._jev_interrupt_signal = signum
+        return original(self, signum, frame)
+
+    evaluator_class._signal_handler = interrupted
 
 
 def _agent_summary(agent, drop):
@@ -166,8 +198,8 @@ def _leaderboard_args(a, cfg_path, out):
     ns = argparse.Namespace(
         host="127.0.0.1", port=a.port, traffic_manager_port=a.tm_port, traffic_manager_seed=a.tm_seed,
         debug=0, record="", timeout=a.timeout, routes=a.routes, routes_subset=a.route_id,
-        repetitions=1, agent=str(Path(__file__).resolve().parent / "b2d_agent.py"),
-        agent_config=str(cfg_path), track="SENSORS", resume=False,
+        repetitions=1, agent=a.agent or str(Path(__file__).resolve().parent / "b2d_agent.py"),
+        agent_config=a.agent_config if a.agent else str(cfg_path), track="SENSORS", resume=False,
         checkpoint=str(out / "results.json"), debug_checkpoint=str(out / "live_results.txt"),
         gpu_rank=0)
     return ns

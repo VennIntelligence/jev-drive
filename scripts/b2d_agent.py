@@ -149,6 +149,13 @@ class StubAgent(AutonomousAgent):
         ]
         return sensors
 
+    def set_global_plan(self, global_plan_gps, global_plan_world_coord):
+        super().set_global_plan(global_plan_gps, global_plan_world_coord)
+        # The base class downsamples to 50 m, which cuts corners when used for steering.
+        # Keep the supplied dense route for this diagnostic driver, with monotonic progress.
+        self._drive_plan = list(global_plan_world_coord)
+        self._route_index = 0
+
     # The base class prints one wallclock line per tick and always calls get_data(). We need the
     # per-phase split and the decimation, so this call is reimplemented rather than wrapped.
     def __call__(self):
@@ -257,14 +264,31 @@ class StubAgent(AutonomousAgent):
         tf = hero.get_transform()
         here = np.array([tf.location.x, tf.location.y])
         yaw = np.deg2rad(tf.rotation.yaw)
-        for wp, _ in self._global_plan_world_coord:
-            tgt = np.array([wp.location.x, wp.location.y])
-            if np.linalg.norm(tgt - here) > 6.0:
-                d = tgt - here
-                ang = np.arctan2(d[1], d[0]) - yaw
-                ang = (ang + np.pi) % (2 * np.pi) - np.pi
-                return float(np.clip(ang, -1.0, 1.0))
-        return 0.0
+        plan = getattr(self, "_drive_plan", self._global_plan_world_coord)
+        if not plan:
+            return 0.0
+
+        def point(i):
+            loc = plan[i][0].location
+            return np.array([loc.x, loc.y])
+
+        # Advance to the next local distance minimum, never back to a passed waypoint.
+        # Searching the whole route can jump across a hairpin or a later crossing.
+        i = getattr(self, "_route_index", 0)
+        while i + 1 < len(plan) and np.linalg.norm(point(i + 1) - here) <= np.linalg.norm(point(i) - here):
+            i += 1
+        self._route_index = i
+        target = i
+        distance = 0.0
+        while target + 1 < len(plan) and distance < 6.0:
+            distance += np.linalg.norm(point(target + 1) - point(target))
+            target += 1
+        d = point(target) - here
+        if np.linalg.norm(d) < 0.5:
+            return 0.0
+        ang = np.arctan2(d[1], d[0]) - yaw
+        ang = (ang + np.pi) % (2 * np.pi) - np.pi
+        return float(np.clip(ang, -1.0, 1.0))
 
     def destroy(self):
         if self._client is not None:
