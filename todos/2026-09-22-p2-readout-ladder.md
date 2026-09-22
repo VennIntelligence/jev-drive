@@ -171,8 +171,8 @@ RFS 5.92、41.7% 被压到下限，「对着 log 算 ADE」在那里不是好目
 - [x] (c) 抽 2 万帧 token grid —— 20 237 帧、15 GB、30.8 min
 - [x] (c) attention / transformer / MLP 对照三个 head —— **没买回 pre-onset，比 pooled ridge 更差**
 - [x] (d) —— 同上
-- [ ] (e) gated residual head（最后跑，见第 25 条）
-- [ ] 数字写进 decisions 第 23 条
+- [x] (e) gated residual head —— **gate 学会了「什么时候该开」（沿 s_ego decile 单调上升），但开了不买东西**，见 decisions 第 23 条的 (e)
+- [x] 数字写进 decisions 第 23 条
 
 ## 结果
 
