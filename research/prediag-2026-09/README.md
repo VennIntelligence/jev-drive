@@ -18,7 +18,7 @@
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
 | P3 | backbone 阶梯 | 表征换谁 | (d) V-JEPA 2 已测；(a) 32B 抽取中；(b) H3、(c) Wan 待下载；(d') V-JEPA 2 ladder 已排 |
 | P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | 待做，等 GPU 空 |
-| P5 | 开环配对考试 v0 | 教材作用在 head、表征还是数据 | 待做，依赖 P4 |
+| P5 | 开环配对考试 v0 | 教材作用在 head、表征还是数据；VLM 零样本 meta-action 一列决定标签来源（第 25 条） | 待做，依赖 P4 |
 
 术语，本文各用一次：**pre-onset** 是车还没开始转、ego 运动看不出意图的帧；**s_ego** 是 ego-only 读出模型自己的
 5 s 残差，衡量「先验失灵的程度」；**DiD** 是 pre-onset 上的 vision − ego 增量减去直行帧上的同一增量，

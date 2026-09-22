@@ -1523,7 +1523,7 @@ val 93/93；盘上只有 `qwen_front3` 一套特征，pooled 向量、无 spatia
 | P2 | 读出阶梯：同一 Qwen3-VL-4B，pooled 线性 → 空间 token 网格 + attention head → 加 4 帧历史特征 | 失败在 readout / 输入还是在表征（第 20 条 deferred 的那一支；文献里最可能先触发的停止条件） | 2603.06054 的 perceptual vs cognitive 二分；2507.13942 说 video 预训练优于 image | 我们这批特征上 attention head 和时序输入各买回多少 pre-onset | 重抽一个分层子集（约 2 万帧）存网格 token，约 1 h GPU；head 小时级 |
 | P3 | backbone 阶梯：Qwen3-VL-32B 第 50 层、H3 DiT、Wan2.2-TI2V-5B、V-JEPA 2，同一子集、同一 judge | 表征换谁 | DriveLaW 的并排、2606.09646 的物理 probing、tap 规则 | pre-onset Δ 和 s_ego decile 曲线形状是否改变 | 32B 约 5 h；H3 约 1 h 加一天工程；Wan、V-JEPA 各小时级 |
 | P4 | CARLA 特征差距与词表覆盖：headless 用特权 autopilot 沿 20 条路线出约 2 千帧，抽特征，测 Waymo↔CARLA 的 domain classifier AUC、词表对 autopilot 轨迹的 oracle minADE、head 的 anchor 分布 | Waymo 训的 head 在 CARLA 上能不能用；sim 配对能不能当这个 head 的考卷和教材 | 第 19 条：没人量过 real→CARLA 的 feature-space gap | 全部 | 半天，CARLA 在 GPU box 上现成 |
-| P5 | 开环配对考试 v0：CARLA 里 5 个 scenario family、特权 driver 开到同一时刻 t、只差一处可见因素，加 null pair；测 flip 率、false-flip 率、token 上因素的 probe | 教材作用在 head、表征还是数据 | 2609.22582 在真实编辑帧上的 1.9%；2606.14438 的 CRI | 我们的 head 在有标准答案的 sim 对上的 flip；probe 与 flip 的分离 | 1–2 天工程，分钟级计算；不需要控制器 |
+| P5 | 开环配对考试 v0：CARLA 里 5 个 scenario family、特权 driver 开到同一时刻 t、只差一处可见因素，加 null pair；测 flip 率、false-flip 率、token 上因素的 probe，以及 VLM（4B、32B）零样本 meta-action 的答对率（第 25 条的第二个标签来源） | 教材作用在 head、表征还是数据 | 2609.22582 在真实编辑帧上的 1.9%；2606.14438 的 CRI | 我们的 head 在有标准答案的 sim 对上的 flip；probe 与 flip 的分离 | 1–2 天工程，分钟级计算；不需要控制器 |
 
 P1 先于 P2、P3，因为它定 judge。P4 先于 P5，因为 P5 的意义取决于 P4。
 P0 一旦否定第 20 条的分支 2，P2 的优先级要重排。
@@ -1982,7 +1982,25 @@ attention 目标来自配对差图而非人眼。
   也就是「什么时候该反应」真实数据教得会；不会的是 Δ(x)，「该怎么反应」。
   所以本条要配对监督的理由应当改写在 Δ 上，不在 g 上。）**
 - P5 造出的 pair 同时给出差分标签和 attention 目标；配对监督版对 (e) 的差值就是主结果的开环版本。
+  P5 同时加一列 **VLM 零样本 meta-action**（Qwen3-VL-4B 和 32B 各一次，不训练）：在 x⁺ / x⁻ 上直接问「该不该停、该往哪让」，
+  expert 的重跑结果当裁判，报答对率和 flip 率。它决定下面「第二个标签来源」这条线开不开。
 - P3 决定 token 从哪个 backbone 来。
+
+**第二个标签来源（2026-09-22 用户提出，与 expert 标签并列，由 P5 的 VLM 考试二选一）**：
+引入大模型和视频模型的理由本来就是它们已经从巨量语料里学到了东西，我们要做的是**激发**而不是重新塑造。
+「行人快下路缘了，该减速」这类老司机判断在 VLM 的语言侧是有的，只是推理时被绕过（第 15 条：AutoVLA 在分布外从不思考），
+也没有接到 20 Hz 的动作上。于是把 VLM 当**慢老师**、reaction decoder 当**快学生**：
+
+1. 配对场景上零样本问 VLM 该不该停、该往哪让（CoLT-Drive 式的 meta-action 考试），不训练；
+2. 仿真里的 privileged expert **只当裁判**，验 VLM 说得对不对，不当数据源；
+3. VLM 答对的那部分，用它自己的回答当 Δ 的标签蒸馏进薄 head。
+
+这样智能来源全是预训练语料，仿真只负责把问题问干净，数据量是「够蒸馏一条规则」的几千对，训练是分钟级，
+不进入「fine-tune VLA 吃几百万 expert 帧、以周计」的 regime（SimLingo 310 万样本、8×A100 是那一档）。
+近邻是 DriveVLM-Dual、Senna、「Think at 5 Hz, Act at 20 Hz」（2607.15621）这一族的 fast / slow，
+区别是老师的判断在配对上被 expert 裁判过。**开关**：P5 那一列的答对率低于门槛（数字进 P5 的 todo 时定），这条线关掉，
+标签回到 expert 重跑；答对率够，reaction decoder 的主标签来自 VLM，expert 只出现在评测里。
+两个来源共用同一个 head、同一批 pair、同一个 judge，所以是一次实验里的两列，不是两条线。
 
 **会推翻本条的证据**：(e) 在真实数据上就把 g 开在正确的地方且 pre-onset 过 −0.05 m 门槛（那配对监督不是必要的）；
 或 P5 里配对监督版对 (e) 没有可测的差别（那结构没有承载信号）；或 attention 监督相对无监督 attention 没有收益且定位不比 saliency 好。
