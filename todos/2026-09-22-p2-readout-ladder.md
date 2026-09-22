@@ -169,8 +169,8 @@ RFS 5.92、41.7% 被压到下限，「对着 log 算 ADE」在那里不是好目
 - [x] (b) 完整半 val 上跑 b2 / b3 + 同帧集上的 arm A —— **买不回 pre-onset**，见 decisions 第 23 条
 - [x] (c) 200 帧 profiling：**200/200 行和盘上的 `qwen_front3` 逐位相同，max |Δ| = 0.0**
 - [x] (c) 抽 2 万帧 token grid —— 20 237 帧、15 GB、30.8 min
-- [ ] (c) attention / transformer / MLP 对照三个 head
-- [ ] (d)
+- [x] (c) attention / transformer / MLP 对照三个 head —— **没买回 pre-onset，比 pooled ridge 更差**
+- [x] (d) —— 同上
 - [ ] (e) gated residual head（最后跑，见第 25 条）
 - [ ] 数字写进 decisions 第 23 条
 
