@@ -131,6 +131,27 @@ lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一
 **失败就记录、不阻塞**：一个模型下不下来、跑不起来，**最多调两小时**，
 然后把「具体哪一步失败、报什么错」写进结果一节，换下一个 arm。
 
+## (b) 延后（2026-09-22）
+
+**(b) MiniMax H3：**延后，下载已停、半截文件已删（用户 2026-09-22 决定）**。**
+
+理由是 (a) 的结果直接推出来的，不是嫌它贵：**H3 的理解侧就是 Qwen3-VL-32B 的第 50 层，
+而 (a) 已经把那一层在 pre-onset 上测成了零**（四个 tap 八个数字全在 −0.036 到 +0.006 之间）。
+所以 H3 唯一还能提供的是**「生成式 DiT 值多少」这一个数据点**，
+而 **Wan2.2-TI2V-5B 已经在盘上**，用同一套配方回答的是同一个问题，代价小一个数量级
+（23 GB 对 71 GB，5B 对 33B）。先用 Wan 把生成式那一列填上。
+
+**已做的清理**：`p3-dl-h3` 窗口关掉，`$DATA_DIR/models/MiniMax-H3`（2.3 GB，直连 curl 那份）
+和 `$HF_HOME/hub/models--MiniMaxAI--MiniMax-H3`（1.4 GB，早先 `snapshot_download` 那份）都删了，
+**不留半截下载在盘上**，共腾出 3.7 GB。
+
+**如果 Wan 测出信号，再回来做 H3 时走这条路**：不要下 71 GB 的全权重，下
+`Comfy-Org/MiniMax-H3` 的 **`minimax_h3_fl2va_pruned_fp8_scaled.safetensors`（19.52 GB）
+加 `vae/minimax_h3_video_vae_fp16.safetensors`（4.85 GB），合计约 26 GB**。
+代价是它是 **ComfyUI 的单文件排布**，要自己写 key 映射才能进 diffusers 的
+`MiniMaxH3Transformer3DModel`；接口那一侧已经查清楚（见本 todo 上面「H3 的工程量」一段），
+缺的只是这个 loader。按实测 3 MB/s，26 GB 约 2.4 h。
+
 ## 预写的读表（和 P2 共用，门槛来自第 20 条，一字不改）
 
 **一个 arm「买回了 pre-onset」，当且仅当它的 pre-onset ΔADE ≤ −0.05 m
@@ -269,9 +290,11 @@ RFS 并排；全集 ADE 是侧栏；循环性限定随引用），**−0.05 m �
 
 ## 步骤
 
+现在的队列顺序：**d' 的 V-JEPA 变体 → ViT-g → (c) Wan → (d'') Qwen 原生 video**；(b) 延后。
+
 - [x] (a) 200 帧 profiling：**621.2 ms/帧**，峰值显存 63.8 GB，52.2 KB/帧 → 全量 3.5 h
 - [x] (a) 全量抽取（20 237 帧、633.0 ms/帧、3 h 33 min、1.08 GB）→ head：**四个 tap 全不过门槛，也不比 4B 好；scaling null**
-- [ ] (b) 下载 → 工程（两小时上限）→ profiling → 抽取 → 跑 head
+- [~] (b) **延后**，下载已停、半截文件已删；理由和 fallback 见下面「(b) 延后」一段
 - [ ] (c) 同上
 - [x] (d) 抽取 + head —— **pre-onset 上方向 1 过门槛（−0.115）、方向 0 没过（−0.018），所以规则不触发；
       但 decile 曲线的形状第一次变了（第 10 档的掉落被压平、见顶右移）**，见 decisions 第 24 条
@@ -280,7 +303,7 @@ RFS 并排；全集 ADE 是侧栏；循环性限定随引用），**−0.05 m �
 - [ ] (b)(c) 的数字补进第 24 条
 - [ ] d' 阶梯：(d'1) 三相机、(d'2) clip 8、(d'3) clip 16、(d'5) late fusion —— 不需要下载，先跑
 - [ ] d' 阶梯：(d'4) ViT-g —— 等 Wan 下完再下这 19.19 GB
-- [ ] (d'') Qwen3-VL-4B 原生 video：200 帧 profiling → 全量 → head。**排在 Wan 和 H3 之后**
+- [ ] (d'') Qwen3-VL-4B 原生 video：200 帧 profiling → 全量 → head
 - [x] (d'6) V-JEPA 2.1 —— **跳过**：没有官方权重，只有第三方转存，按第 12 条的规矩不用
 
 ## 结果
