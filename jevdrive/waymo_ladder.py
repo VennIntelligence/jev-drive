@@ -630,7 +630,7 @@ def run_ladder(arms_for: callable, tag: str, keep: np.ndarray | None, ctx: dict,
     """Both directions of one ladder. `arms_for(keep_mask)` builds the arm dict once the rows are known."""
     tables = {k: [] for k in ("arms", "paired", "did", "deciles", "fits", "gates")}
     for d in directions:
-        s = s_ego_full(ctx, d)
+        s = s_ego_from_p0(ctx) if ctx.get("p0_run") is not None else s_ego_full(ctx, d)
         k = np.ones(len(ctx["fname"]), bool) if keep is None else keep
         preds, sctx, fits = run_direction(ctx, k, arms_for(k), d, s, rl)
         a, p, dd, dec = judge(preds, sctx)
@@ -867,8 +867,15 @@ VJEPA_VARIANTS = {                      # arm key -> (set name, camera, frames, 
 }
 
 
+def trainval_rows(ctx_df, past, future):
+    """Every train and val row with a usable future, the row set `waymo_p0.load_all` fits and evaluates on."""
+    keep = ctx_df.split.isin(("train", "val")).to_numpy() & ctx_df.has_future.to_numpy()
+    return np.flatnonzero(keep)
+
+
 def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frames: int = 4, stride: int = 2,
-                   cam: str = "front", name: str | None = None, model_id: str | None = None):
+                   cam: str = "front", name: str | None = None, model_id: str | None = None,
+                   split: str = "subset"):
     """P3(d): V-JEPA 2 ViT-L over a short clip ending at the frame -- decision 12's video self-supervised control.
 
     Two things about this row have to travel with its number, exactly as decision 12 says. The checkpoint is
@@ -877,12 +884,22 @@ def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frame
     the scene. The row is evidence about feeding time at Stage-A cost, not a backbone ranking.
     """
     from . import features as F
-    ctx = base_context()
-    keep = load_subset(ctx)
-    rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
-    items, idx, full = waymo.clip_items(ctx["df"], rows, frames - 1, stride, cam)
+    if split == "trainval":                 # the train-split test: fit on train, evaluate on all of val
+        df = waymo.load_index()
+        past, future = waymo.load_ego()
+        rows = trainval_rows(df, past, future)
+        log.info("trainval rows: %d (train %d, val %d)", len(rows),
+                 int((df.split.to_numpy()[rows] == "train").sum()),
+                 int((df.split.to_numpy()[rows] == "val").sum()))
+    else:
+        ctx = base_context()
+        df = ctx["df"]
+        rows = ctx["rows"][load_subset(ctx)]
+    rows = rows[:limit] if limit else rows
+    items, idx, full = waymo.clip_items(df, rows, frames - 1, stride, cam)
     fx = F.VJepaFeatures(frames=frames, **({"model_id": model_id} if model_id else {}))
-    name = (name or P3_SETS["d vjepa2"][0]) + ("_probe" if limit else "")
+    name = (name or P3_SETS["d vjepa2"][0]) + ("_trainval" if split == "trainval" else "") \
+        + ("_probe" if limit else "")
     return waymo.extract_items(name, fx, items, idx, batch_size, rl=rl, cams=[cam], frames_per_clip=frames,
                                clip_stride=stride, complete=int(full.sum()), requested=len(rows))
 
@@ -940,6 +957,74 @@ def shape_change(dec: pd.DataFrame, lo: int = 4, tol: float = 2.0) -> pd.DataFra
                      "decile10_rel_gain": float(top.iloc[0]), "gap": float(top.iloc[0]) - best,
                      "shape_change": bool(float(top.iloc[0]) - best <= tol)})
     return pd.DataFrame(rows)
+
+
+def train_context(seed: int = 0, feature_set: str = "qwen_front3", layer: str = LAYER,
+                  p0_run=None) -> dict:
+    """The P0 protocol as a ladder context: fit on every train frame, evaluate on every val frame.
+
+    Same rows and same join as `waymo_p0.load_all`, so the numbers land beside P0's rather than beside a
+    second, slightly different row set. `half` is 0 for train and 1 for val, which makes `run_direction`
+    with direction 0 exactly "fit on train, evaluate on val" -- one direction, because there is only one
+    real split, so the half-val ladder's direction disagreement cannot arise here at all. That is the whole
+    point of the test.
+
+    `p0_run` reuses the s_ego that P0 computed rather than recomputing it, so the decile axis is P0's axis.
+    """
+    from . import waymo_p0 as p0
+    df, rows, fut, ego, img, sub, past, split = p0.load_all(feature_set, layer)
+    fname = waymo.frame_names(df)[rows]
+    rated = np.zeros(len(df), bool)
+    rated[waymo.load_rater(df)[0]] = True
+    ctx = {"df": df, "rows": rows, "fname": fname, "fut": fut, "ego": ego, "pooled": np.asarray(img),
+           "sub": sub, "past": past, "seq": df.sequence.to_numpy()[rows],
+           "half": (split == "val").astype(int), "rater": rated[rows], "seed": seed, "p0_run": p0_run}
+    log.info("train context: %d rows (%d train, %d val), %d rater frames", len(rows),
+             int((ctx["half"] == 0).sum()), int((ctx["half"] == 1).sum()), int(ctx["rater"].sum()))
+    return ctx
+
+
+def s_ego_from_p0(ctx: dict) -> np.ndarray:
+    """P0's own s_ego, joined on frame name. Falls back to recomputing it if that run is not given."""
+    run = ctx.get("p0_run")
+    if not run:
+        log.warning("no P0 run given; recomputing s_ego on this context instead of reusing P0's")
+        return s_ego_full(ctx, 0)
+    z = np.load(Path(run) / "preds.npz", allow_pickle=True)
+    at = pd.Series(z["s_ego"], index=z["frame_name"].astype(str))
+    s = at.reindex(ctx["fname"]).to_numpy()
+    miss = np.isnan(s)
+    if miss.any():                       # P0 evaluated val only, so train rows have no s_ego from it
+        log.info("s_ego from P0 covers %d/%d rows; the rest are fitted rows and are not stratified",
+                 int((~miss).sum()), len(s))
+        s[miss] = np.nanmedian(s)
+    return s
+
+
+def p3train(ctx: dict, rl, sets: list[str] | None = None):
+    """The train-split test: does the V-JEPA effect survive when the half-val split is removed?
+
+    One direction, ~10x the fitting data, evaluated on the whole of val. Arms are decision 22's judge
+    applied to `ridge ego`, arm A (Qwen pooled L18), V-JEPA ViT-L and ViT-g, and the late fusion of
+    V-JEPA with Qwen.
+    """
+    arms = {"A ridge_late pooled (qwen4b L18)": ridge_arm(ctx["pooled"])}
+    keep = np.ones(len(ctx["fname"]), bool)
+    got = {}
+    for key in (sets or ["d vjepa2", "d4 vjepa2 vitg"]):
+        st = VJEPA_VARIANTS[key][0] + "_trainval"
+        try:
+            a = align(ctx, st, ["mean"])
+        except (FileNotFoundError, OSError) as e:
+            log.warning("%s: %s not on disk (%s) -- skipping", key, st, e)
+            continue
+        got[key], keep = a, keep & a["covered"]
+        arms[f"{key} (train fit)"] = ridge_arm(a["mean"])
+    if "d vjepa2" in got:
+        arms["d5 late fusion vjepa2 + qwen"] = ridge_arm(Concat([got["d vjepa2"]["mean"], ctx["pooled"]]))
+    log.info("p3train: %d arms over %d rows (%d evaluated)", len(arms), int(keep.sum()),
+             int((keep & (ctx["half"] == 1)).sum()))
+    return run_ladder(lambda k: arms, "p3train", keep, ctx, directions=(0,), rl=rl)
 
 
 # ---------------------------------------------------------------- decision 22's judge, applied after the fact
@@ -1037,7 +1122,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,rejudge,grid,gridcheck,qwen32b,vjepa2,wan,qwenvid")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,p3d,rejudge,p3train,grid,gridcheck,qwen32b,vjepa2,wan,qwenvid")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -1045,6 +1130,9 @@ def main():
     ap.add_argument("--sets", default=None, help="p3 / p3d: comma list of arm keys to include")
     ap.add_argument("--variant", default=None, help="vjepa2: a key of VJEPA_VARIANTS to extract")
     ap.add_argument("--run", default=None, help="rejudge: the run directory holding <tag>_preds_dir*.npz")
+    ap.add_argument("--split", default="subset", choices=("subset", "trainval"),
+                    help="vjepa2: the frozen diagnostic subset, or every train+val frame")
+    ap.add_argument("--p0-run", default=None, help="p3train: the P0 run whose s_ego is reused")
     a = ap.parse_args()
     rl = RunLog("waymo_ladder", a.tag or a.steps.replace(",", "-"))
     rl.log.info("args %s -> %s", vars(a), rl.dir)
@@ -1067,11 +1155,14 @@ def main():
         rl.event("grid_check", **grid_check())
     if "vjepa2" in steps:
         st, cam, fr, sd, mid = VJEPA_VARIANTS[a.variant or "d vjepa2"]
-        rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit, fr, sd, cam, st, mid))
+        rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit, fr, sd, cam, st, mid, a.split))
     if "wan" in steps:
         rl.event("extract", **extract_wan(rl, a.batch_size, a.limit))
     if "qwenvid" in steps:
         rl.event("extract", **extract_qwenvid(rl, a.batch_size, a.limit))
+    if "p3train" in steps:
+        p3train(train_context(a.seed, p0_run=a.p0_run), rl,
+                a.sets.split(",") if a.sets else None)
     if {"subset", "repro", "p2b", "p2c", "p2e", "p3", "p3d"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:
