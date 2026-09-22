@@ -360,19 +360,22 @@ def contact_sheet(d, t, sel, out, name, ncol=4):
 
     nrow = int(np.ceil(len(sel) / ncol))
     with mpl.rc_context(plots.STYLE):
-        fig = plt.figure(figsize=(3.4 * ncol, 3.5 * nrow))
+        fig = plt.figure(figsize=(3.4 * ncol, 4.0 * nrow))
         outer = fig.add_gridspec(nrow, ncol, hspace=0.30, wspace=0.18)
         for j, i in enumerate(sel):
             r = t.iloc[i]
             row = d["rows"][d["pos"][i]]
-            inner = outer[j // ncol, j % ncol].subgridspec(2, 1, height_ratios=[1.0, 1.25], hspace=0.05)
+            inner = outer[j // ncol, j % ncol].subgridspec(2, 1, height_ratios=[1.35, 1.0], hspace=0.22)
             ax = fig.add_subplot(inner[0])
             ax.imshow(read_jpeg(d, row))
             ax.set_xticks([]), ax.set_yticks([])
             for s in ax.spines.values():
                 s.set_visible(True)
-            ax.set_title(f"[{j + 1}] {r.sequence[:10]} f{r.frame}  v={r.speed:.1f} m/s  "
-                         f"{r.cluster}", fontsize=7, pad=2)
+            ax.set_title(f"[{j + 1}] {r.cluster}, v = {r.speed:.1f} m/s, $a_0$ = {r.a0:+.1f} m/s$^2$\n"
+                         f"log RFS {r.log_rfs:.1f}{' (floored)' if r.log_floored else ''}, "
+                         f"ADE {r.log_ade_best:.1f} m, "
+                         f"{'inside a trust region' if r.log_inside else 'outside every trust region'}",
+                         fontsize=6.5, pad=3)
 
             bev = fig.add_subplot(inner[1])
             log_xy = d["fut"][d["pos"][i]]
@@ -398,11 +401,10 @@ def contact_sheet(d, t, sel, out, name, ncol=4):
             bev.plot([0], [0], "o", color="#000000", ms=3)
             bev.set_aspect("equal")
             bev.grid(True, ls=":")
-            bev.set_xlabel("lateral (m)")
-            bev.set_ylabel("longitudinal (m)")
-            bev.set_title(f"log RFS {r.log_rfs:.1f}{' (floored)' if r.log_floored else ''}, "
-                          f"ADE {r.log_ade_best:.1f} m, {'inside' if r.log_inside else 'outside'}",
-                          fontsize=7, pad=2)
+            bev.set_xlabel("lateral (m)", labelpad=1)
+            bev.set_ylabel("longitudinal (m)", labelpad=1)
+            span = max(8.0, np.abs(np.concatenate([traj[:, :, 1].ravel(), log_xy[:, 1]])).max() + 2)
+            bev.set_xlim(-span, span)
             bev.legend(fontsize=5.5, loc="upper left", handlelength=1.2, labelspacing=0.2)
         fig.savefig(out / f"{name}.pdf")                 # vector for the paper
         fig.savefig(out / f"{name}.png", dpi=90)         # preview: research/figs keeps PNGs under ~500 KB
