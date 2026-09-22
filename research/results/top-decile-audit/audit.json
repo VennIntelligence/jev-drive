@@ -1,0 +1,13 @@
+{
+  "n_rater_frames": 479,
+  "rfs_port_max_abs_diff": 0.0,
+  "rfs_vs_waymo_upstream_max_abs_diff": 0.0,
+  "top_decile": {
+    "n": 48,
+    "rfs": 5.791980621855327,
+    "floored": 0.4166666666666667,
+    "ade_best": 7.979556083767037,
+    "s_lo": 5.502200560124606,
+    "s_hi": 14.218866412157386
+  }
+}
