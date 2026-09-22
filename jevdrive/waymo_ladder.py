@@ -730,6 +730,28 @@ def extract_grid(rl=None, batch_size: int = 4, limit: int | None = None, grid_hw
                                 batch_size=batch_size, rl=rl)
 
 
+def grid_check(name: str = GRID_SET + "_probe") -> dict:
+    """Does the grid extraction produce the same features as the cached set, or different ones?
+
+    The grid run stops the decoder at LAYER and pools differently, but `L18_mean` should come out of it
+    exactly as it came out of the `qwen_front3` run: same decode, same smart-resize, same batch size, same
+    kernels. If it does not, the grid arm is not looking at arm A's features and the two are not comparable,
+    which is the one thing that would invalidate all of P2(c). Reported as the max absolute difference and
+    the share of rows that are bit-for-bit identical.
+    """
+    idx, arrs = waymo.load_flat_features(name, ["L18_mean"])
+    ref_idx, ref = waymo.load_features("qwen_front3", ["L18_mean"])
+    at = pd.Series(np.arange(len(ref_idx)), index=ref_idx.frame_name.to_numpy())
+    pos = at.reindex(idx.frame_name.to_numpy()).to_numpy()
+    a = np.asarray(arrs["L18_mean"]).astype(np.float32)
+    b = np.asarray(ref["L18_mean"])[pos.astype(int)].astype(np.float32)
+    d = np.abs(a - b)
+    out = {"n": len(a), "identical_rows": int((d == 0).all(1).sum()),
+           "max_abs_diff": float(d.max()), "mean_rel_diff": float(d.mean() / np.abs(b).mean())}
+    log.info("grid check against qwen_front3: %s", out)
+    return out
+
+
 def extract_qwen32b(rl=None, batch_size: int = 4, limit: int | None = None,
                     layers=(32, 50), model_id: str = "Qwen/Qwen3-VL-32B-Instruct"):
     """P3(a): Qwen3-VL-32B down the same path as `qwen_front3` -- three cameras, the same smart-resize to
@@ -771,7 +793,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="subset",
-                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,qwen32b,vjepa2")
+                    help="comma list of subset,repro,p2b,p2c,p2e,p3,grid,gridcheck,qwen32b,vjepa2")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -786,6 +808,8 @@ def main():
         rl.event("extract", **extract_grid(rl, a.batch_size, a.limit))
     if "qwen32b" in steps:
         rl.event("extract", **extract_qwen32b(rl, a.batch_size, a.limit))
+    if "gridcheck" in steps:
+        rl.event("grid_check", **grid_check())
     if "vjepa2" in steps:
         rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
     if {"subset", "repro", "p2b", "p2c", "p2e", "p3"} & set(steps):
