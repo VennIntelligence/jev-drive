@@ -373,6 +373,10 @@ def main():
                         snapshot = world.get_snapshot()
                         GameTime.on_carla_tick(snapshot.timestamp)
                         CarlaDataProvider.on_carla_tick()
+                        # Read-only plant diagnostics before applying this tick's
+                        # new command. Report the API field without assuming it
+                        # alone proves an internal transmission state transition.
+                        applied = actor.get_control()
                         control = agent()
                         actor.apply_control(control)
                         actor_snapshot = snapshot.find(actor.id)
@@ -393,6 +397,9 @@ def main():
                         rows.append(dict(tick=tick, frame=snapshot.frame, sim_time=sim_time, elapsed_s=sim_time - first_time,
                                          speed=speed, signed_speed=velocity.dot(forward), truth_xy=truth.tolist(),
                                          pitch_deg=tf.rotation.pitch, endpoint_error_m=remaining,
+                                         applied_control=dict(throttle=applied.throttle, brake=applied.brake,
+                                                              steer=applied.steer, gear=applied.gear,
+                                                              manual_gear_shift=applied.manual_gear_shift),
                                          reference_speed_mps=reference_speed, **projection))
                         if tick % 100 == 0:
                             event('tick', route_id=route.get('id'), variant=case['variant'], preset=preset, ticks=tick + 1, speed=speed, progress_m=projection['progress_m'])

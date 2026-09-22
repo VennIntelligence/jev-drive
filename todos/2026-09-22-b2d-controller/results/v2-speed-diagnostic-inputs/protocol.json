@@ -1,0 +1,16 @@
+{
+  "purpose": "Isolate 6 m/s speed regime from S geometry before changing longitudinal gains",
+  "routes": [
+    "1773",
+    "17563"
+  ],
+  "cruise_mps": 6,
+  "presets": [
+    "carla",
+    "tcp",
+    "pursuit"
+  ],
+  "controller_change": false,
+  "new_diagnostic": "Read actor.get_control before current command; reported gear is diagnostic only",
+  "frozen_controller_commit": "9462b6e"
+}
