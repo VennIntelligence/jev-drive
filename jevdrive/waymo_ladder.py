@@ -605,11 +605,31 @@ def extract_qwen32b(rl=None, batch_size: int = 4, limit: int | None = None,
     return waymo.extract_subset(name, fx, rows, batch_size=batch_size, rl=rl)
 
 
+def extract_vjepa2(rl=None, batch_size: int = 8, limit: int | None = None, frames: int = 4, stride: int = 2):
+    """P3(d): V-JEPA 2 ViT-L over a short clip ending at the frame -- decision 12's video self-supervised control.
+
+    Two things about this row have to travel with its number, exactly as decision 12 says. The checkpoint is
+    `fpc64`, trained on 64-frame clips, and it is fed 4 (two tubelets): a known distribution shift, not a
+    neutral setting. And V-JEPA takes one camera where the rest of the ladder takes three, so it sees less of
+    the scene. The row is evidence about feeding time at Stage-A cost, not a backbone ranking.
+    """
+    from . import features as F
+    ctx = base_context()
+    keep = load_subset(ctx)
+    rows = ctx["rows"][keep][:limit] if limit else ctx["rows"][keep]
+    items, idx, full = waymo.clip_items(ctx["df"], rows, frames - 1, stride)
+    fx = F.VJepaFeatures(frames=frames)
+    name = P3_SETS["d vjepa2"][0] + ("_probe" if limit else "")
+    return waymo.extract_items(name, fx, items, idx, batch_size, rl=rl, cams=["front"], frames_per_clip=frames,
+                               clip_stride=stride, complete=int(full.sum()), requested=len(rows))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--steps", default="subset", help="comma list of subset,p2b,p2c,p3,grid,qwen32b")
+    ap.add_argument("--steps", default="subset",
+                    help="comma list of subset,p2b,p2c,p3,grid,qwen32b,vjepa2")
     ap.add_argument("--tag", default=None, help="run directory tag; defaults to the step list")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--limit", type=int, default=None, help="profiling: extract only this many frames")
@@ -624,6 +644,8 @@ def main():
         rl.event("extract", **extract_grid(rl, a.batch_size, a.limit))
     if "qwen32b" in steps:
         rl.event("extract", **extract_qwen32b(rl, a.batch_size, a.limit))
+    if "vjepa2" in steps:
+        rl.event("extract", **extract_vjepa2(rl, a.batch_size, a.limit))
     if {"subset", "p2b", "p2c", "p3"} & set(steps):
         ctx = base_context(a.seed)
         if "subset" in steps:

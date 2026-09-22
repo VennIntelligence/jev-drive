@@ -995,6 +995,25 @@ def watch_incremental(cams=CAMS, separate: bool = False, long_side: int | None =
             "set_aside": sorted(skip), "seconds": time.perf_counter() - t0}
 
 
+def clip_items(df: pd.DataFrame, rows, n_back: int, stride: int, cam: str = "front"):
+    """(items for `Shards`, index, complete mask) for a clip of `n_back`+1 frames ending at each row.
+
+    A sequence lives inside one shard, so the whole clip is a list of byte spans into the same file and the
+    reader needs no change. Only strictly complete windows are offered (decision 13); the caller carries the
+    mask so that the comparison table can be restricted to the same frames for every arm.
+    """
+    hist, _, got = history_rows(df, n_back, stride, targets=np.asarray(rows))
+    full = got.all(1)
+    hist = hist[full][:, ::-1]                       # oldest first, which is the order a clip is read in
+    shard = (shard_dir().as_posix() + "/" + df.shard.astype(str)).to_numpy()
+    off, ln = df[f"{cam}_off"].to_numpy(), df[f"{cam}_len"].to_numpy()
+    items = [(shard[h[-1]], [(int(off[k]), int(ln[k])) for k in h]) for h in hist]
+    idx = pd.DataFrame({"frame_name": frame_names(df)[hist[:, -1]], "row": hist[:, -1], "cam": cam})
+    log.info("clips: %d/%d target rows have a complete %d x %d-frame window", int(full.sum()), len(full),
+             n_back + 1, stride)
+    return items, idx, full
+
+
 def extract_subset(name: str, fx, rows, cams=CAMS, separate: bool = False, batch_size: int = 4,
                    workers: int | None = None, rl=None, force: bool = False) -> dict:
     """Extract one already-built backbone `fx` over a fixed set of index rows, into `features/<name>/`.
@@ -1012,14 +1031,22 @@ def extract_subset(name: str, fx, rows, cams=CAMS, separate: bool = False, batch
     df = load_index()
     part = df.loc[df.index.intersection(np.asarray(rows))]
     items, idx = feature_items(part, cams, separate)
+    return extract_items(name, fx, items, idx, batch_size, workers, rl,
+                         cams=list(cams), separate=separate, frames=len(part))
+
+
+def extract_items(name: str, fx, items, idx: pd.DataFrame, batch_size: int = 4, workers: int | None = None,
+                  rl=None, **meta_extra) -> dict:
+    """The write half of `extract_subset`, for callers that build their own items (clips, one camera, ...)."""
+    from . import features as F
+    dst = out_dir("features", name)
     dst.mkdir(parents=True, exist_ok=True)
     (dst / "meta.json").unlink(missing_ok=True)
     stats = F.extract(fx, items, batch_size, loader_workers(workers), dst, rl, f"waymo/{name}", dataset=Shards)
     idx.to_parquet(dst / "index.parquet", index=False)
-    meta = {"set": name, "cams": list(cams), "separate": separate, "frames": len(part), "rows": len(items),
-            "model": getattr(fx, "model_id", type(fx).__name__),
-            "tokens_per_forward": int(getattr(fx, "n_image_tokens", 0)),
-            "features": sorted(p.stem for p in dst.glob("*.npy")), **stats}
+    meta = {"set": name, "rows": len(items), "model": getattr(fx, "model_id", type(fx).__name__),
+            "tokens_per_forward": int(getattr(fx, "n_image_tokens", 0)), **meta_extra,
+            "features": sorted(q.stem for q in dst.glob("*.npy")), **stats}
     (dst / "meta.json").write_text(json.dumps(meta, indent=2, default=float))
     log.info("%s: %d rows, %.1f ms/frame, peak VRAM %.2f GB, %.1f KB/frame -> %s", name, stats["n"],
              stats["ms_per_frame"], stats["peak_vram_gb"], stats["bytes_per_sample"] / 1024, dst)
