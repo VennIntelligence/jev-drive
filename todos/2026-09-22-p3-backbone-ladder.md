@@ -44,7 +44,35 @@
   绕开 diffusers 那套把 `num_frames` 卡到 17n+5、一次 5–15 s 的 blocks，直接调 transformer
 - 在约 1/2 和 2/3 深度 hook，token mean-pool 成向量；便宜的话扫两个噪声水平
 
+#### H3 的工程量：比 lit 估的小，diffusers 0.40 已经把整条路铺好了（2026-09-22 查证）
+
+lit 6.1 说「绕开 blocks 自己拼 `denoiser_input_fields` 是本方案唯一真正的工程量」。
+实际查 `diffusers==0.40.0` 的源码，**接口是完全公开且带文档的**，不需要猜：
+
+- `MiniMaxH3Transformer3DModel.__init__` 的默认值就是官方配置：**50 层、hidden 5376、
+  `text_dim = 5120`**。`text_dim` 正好是 Qwen3-VL-32B 的 hidden size，
+  **这是第 21 条那条「理解侧就是 Qwen3-VL-32B 第 50 层」的代码级佐证**。tap 取第 25 和第 33 层。
+- `forward` 要 `hidden_states, audio_hidden_states, encoder_hidden_states, timestep, timestep_indices,
+  token_tags, position_ids, video_indices, audio_indices, text_indices`。
+- 这些索引不用自己推导：
+  `diffusers.modular_pipelines.minimax_h3.before_denoise` 里的
+  **`build_packed_sequence` 是一个 `@staticmethod`**，签名是
+  `(text_token_tags, num_latent_frames, latent_height, latent_width, num_audio_latents,
+  patch_size, audio_channels, audio_tag, video_tag, keyframe_anchors)`，
+  直接返回 `position_ids, token_tags, video_indices, audio_indices, text_indices, ...`。
+  **单帧、无音频、无 keyframe 条件**就是
+  `num_latent_frames=1, num_audio_latents=0, keyframe_anchors=()`——
+  `17n+5` 那条限制在 blocks 里，不在 transformer 里，这样绕开就没有了。
+
+所以 (b) 的风险**不在工程，在下载**：71 GB。
+
 **(c) Wan2.2-TI2V-5B**：同 (b) 的配方，作为便宜的生成式对照（DriveWAM 的基座，24 GB 可跑）。
+实测配置（写死在 `jevdrive/dit_features.py`）：`WanTransformer3DModel` **30 层、hidden 3072、
+`patch_size=(1,2,2)`、VAE `z_dim=48`**，tap 取第 15 和第 20 层；
+三个相机**一个一个过**（拼成 16:9 会把 3.3:1 的长条横向压掉近一半），
+三个 pooled 向量拼成一行；噪声**两档都抽**（σ=0.2 和 0.8），
+因为 DriveLaW 的「t=1」和 2502.07001 的「timestep≈200/1000」在 flow matching 的参数化下
+指的是**相反的两端**，与其挑一个读法不如两个都测。
 
 **(d) V-JEPA 2**：`jevdrive/features.py` 里已有 `VJepaFeatures`，但它是 64 帧的 `fpc64` 权重。
 这里喂 **4 帧 clip**（tubelet 是 2 帧，4 帧 = 2 个 tubelet），
