@@ -1879,7 +1879,7 @@ RFS 5.92、41.7% 被压到下限、对 rater_best 的 ADE 7.82 m）。也就是�
 
 **方法**：P1 不训练任何东西。它拿 P0 存下来的逐帧预测（`preds.npz`，train 训、完整 val 评，
 见第 3d / 20 条的复核段），换四种 judge 各评一遍。run：
-`$DATA_DIR/runs/waymo_p1/judge/20260922-181809/`，小表在 `research/results/p1-judge/`。
+`$DATA_DIR/runs/waymo_p1/judge/20260922-215303/`，小表在 `research/results/p1-judge/`。
 
 ### 四个 judge 各自说什么（Δ = arm − `ridge ego`，负=arm 更好；RFS 相反，正=更好）
 
