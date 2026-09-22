@@ -1,0 +1,9 @@
+{
+  "t": 1790098572.9859648,
+  "reason": "Agent-initiated stop for numerical standstill negative-speed false reverse guard; not user cancellation",
+  "source": "/data/runs/b2d/tcp-controller/paired-v1/1773-native_common/attempts/1773/1/tcp-control.jsonl",
+  "captured_lines": 1300,
+  "captured_last_frame": 4415,
+  "captured_sha256": "c5337dcc48392b99222b47236c0607534939424307ba71b0abc24969bef4697b",
+  "action": "preserve paired-v1; correct common guard and rerun all six in paired-v2"
+}

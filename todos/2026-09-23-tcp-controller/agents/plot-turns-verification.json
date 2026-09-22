@@ -1,0 +1,12 @@
+{
+  "plot_script_sha256": "c8a14ff739318dd16563442607ea4990996a484f2aaa288433da581f1fd59893",
+  "fixture": "/tmp/turns-plot-fixture-ir3gs9nn",
+  "fixture_is_not_trial": true,
+  "tests": [
+    "7PNG+7PDF+3CSV generation on identical old-log aliases",
+    "visual inspection26966 six-panel figure:units/signs/legends readable",
+    "frozen helper/dependency/window hashes unchanged"
+  ],
+  "python": "/data/envs/carla/bin/python",
+  "matplotlib": "3.7.5"
+}

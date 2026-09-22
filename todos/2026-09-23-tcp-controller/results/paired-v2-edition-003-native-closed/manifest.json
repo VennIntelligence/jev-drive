@@ -1,0 +1,52 @@
+{
+  "source_sha256": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe"
+  },
+  "inputs": {
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/criterion_events.json": "94189ef1f747f3218f8761dda0cfb9e8e2994117452e5f6298d745a89f4469c1",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-control.jsonl": "d273c16eda3e4a4c6cff88668fd95a7b4757c115295959eb9f65f0c731f1141f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/attempt.json": "ac2665a9cf11c7016b20781eb19f80533d7cdd674b30b905dbdc2b8aa28b92d4",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/results.json": "2cb68824d2759a30b5ff65c709d6391efedaa028f244bc28d20e7c5cdc0b1182",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-setup.json": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/criterion_events.json": "406274239ce288562dafb5e0291957e6b5f7867be552528afdf565cc4e2c38ac",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-control.jsonl": "282766c2497fe9b09a39cc0e0cf56ca628d553bc5665d56fe5cb4f05e1d02535",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/attempt.json": "e6e392bafdfb2cc1a3195a1dfd4709babf05ce637caca038d7bc8b8c807e391e",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/results.json": "9687dda93e171cc379a6c851a5f415ac8813b3012267f56c816528206fd70034",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-setup.json": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/criterion_events.json": "97a677fdefd9852ee50e0323f978f1fbf50bf8177614dac304167adea4a0973a",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/tcp-control.jsonl": "7f2d6db4c6bd4d199f0d9c111ce5b39e740b1e97690e0ca9cd6cb886678ccd11",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/attempt.json": "79c11f2d1063d259e3ff1f05b2413aa84a27bfcf8ed1489f337b574bfdbaec22",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/tcp-route-reference.json": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/results.json": "c49c96ffd58ff740b96ff76ab3019604c34cd82f8aa017b92d5e40719be66d44",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/tcp-setup.json": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/criterion_events.json": "dea50d4f957e73732e56f18d303eade73c818fdf0f9d73a114d7be75b14bf3aa",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/tcp-control.jsonl": "9ff1aa5f53c295b375ce3e9c1d60cbb43cb33a05f6c505a6af34f9377a648dbe",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/attempt.json": "ce4e7ca00927192dad36536eb66d1ba4a6cebdcab279d5788aa82df311738f63",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/tcp-route-reference.json": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/results.json": "9c681a0f0aedef617cdf6f9a69b11dda909c73e4d17197163bf1e07dbebe3790",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/tcp-setup.json": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/criterion_events.json": "bcf9d5b479e9b6bdd3626fcf8fc797ce60886bcc430da0c964a9acd4217f39c0",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/tcp-control.jsonl": "95d4efb7280af1b2f720d24282250f772e632049bbf176b431bc77235251b171",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/attempt.json": "cbcb453c0afc9932caeac8bce8ff0a64a6f378647effd52700cf814fda5ddc33",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/tcp-route-reference.json": "5c2e494c1b6104d7a951069abc1ff586c1ad92fa0ef57b552fc5a4a9101f983c",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/results.json": "069bafd03ae13b1e58de5a375f713a141a70eae672f2c14922cce59c48c3ec3d",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/tcp-setup.json": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033"
+  },
+  "outputs": {
+    "1773-native_common.json": "797bb600e3ba80e9d971469ab3f4604d4d93c391d9c62b0c04beefc65b1a27e3",
+    "24211-pi_common-frames.csv": "eb0444a194c33875d110dd38c93afb9b7ca3db045514a3e8eed76afb93e8bace",
+    "24211-pi_common.json": "f5faf087726326b98759e6e248cc486d70e01374da71e67d0aa075f4578692fa",
+    "cases.csv": "b68619c75f4371a238bb07e17df8ac53b4ef767cb82fac1cbff2899c7a6d0280",
+    "analysis-source.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe",
+    "1711-pi_common.json": "18c8fd942f9742ad526130c5f3ee10f9862bc20a5509b1e5f9d1969d7c805551",
+    "comparison.json": "0ef5dd84d0092daf739db631283342be309c7f9cd3650280cd6d1fa4643e47a6",
+    "1711-native_common.json": "4d1912190b4be831911e175fa66391500a1fff54eb6c535eb8868300caaebc61",
+    "1711-pi_common-frames.csv": "24b21e7ab5f48f94c58747a70c1acd75723cff605e1538f2392dbf942c14e32c",
+    "1711-native_common-frames.csv": "d80273827bdc101a2999dff3c5a2d12275276347124ba98ed9547b288bc943e1",
+    "24211-native_common.json": "0010f9ba48e3b80bf5102fd1fec92cef2169c615cc410950c96d301c9fb20b85",
+    "1773-native_common-frames.csv": "fc12014e3379387b5b1fddfff6659cc41241ab0c1c5872e5e7247975c946b4fe",
+    "24211-native_common-frames.csv": "55f7650a560be5fd2c9254ace27e571848dddb076c1e26249cff18d5e887c25a"
+  }
+}

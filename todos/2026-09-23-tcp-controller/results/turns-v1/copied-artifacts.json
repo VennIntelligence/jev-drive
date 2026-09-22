@@ -1,0 +1,140 @@
+{
+  "files": {
+    "analysis/metrics.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/metrics.csv",
+      "sha256": "1593a2d5e29d05eaf77eddf1be9c6ce4e76293eb670faef509fba7d2f84d8366",
+      "bytes": 81857
+    },
+    "analysis/recovery.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/recovery.csv",
+      "sha256": "d2fa2653944ca009c36ef3f901929a2fd804fc870942453e35853dab41871109",
+      "bytes": 586
+    },
+    "analysis/cases.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/cases.csv",
+      "sha256": "a53bfcd10b241ee4415ecb91e1ad966004d37ba9673fa73cd053312573c613ea",
+      "bytes": 28549
+    },
+    "analysis/required-conditions.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/required-conditions.json",
+      "sha256": "d39977d86e1fb42eb107b3d0b64dddc41940b9eaf75832f59417afb38682354f",
+      "bytes": 28452
+    },
+    "analysis/coverage.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/coverage.json",
+      "sha256": "2a36a95d19f2a5df5160caeec7dfb9ba4f3e6b896470105e65d84b1831d7c215",
+      "bytes": 3547
+    },
+    "analysis/control-reasons.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/control-reasons.json",
+      "sha256": "cbb9133249b1ec9d21249bf6370c470dc390c134048dcc91fd0c6d5a28f8182a",
+      "bytes": 4210
+    },
+    "analysis/manifest.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/manifest.json",
+      "sha256": "f9d1c283d7b417a367ff543cd00845623edcf35b002f2c2ba3a3018491e9bb34",
+      "bytes": 10734
+    },
+    "figures/route-24240-full.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-full.pdf",
+      "sha256": "80348b886578041bc13fccafbf96e9d994566937b971603eba6c96573015613e",
+      "bytes": 28425
+    },
+    "figures/route-17563-full.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-full.png",
+      "sha256": "293611b27c1931098c9a158a99fb0367d4ee4e8674ffce51eb5011b6d7beb664",
+      "bytes": 247760
+    },
+    "figures/route-17563-full.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-full.pdf",
+      "sha256": "a7531c1818b70e040ecacd15d9cced086ccf404efaf0395690b8458b6cd5a415",
+      "bytes": 31342
+    },
+    "figures/route-26966-window-1.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-window-1.pdf",
+      "sha256": "660e855c77b83188752fed822f85d503c0576157fb3ddc44fb68889512b492fe",
+      "bytes": 29641
+    },
+    "figures/route-17563-window-1.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-window-1.png",
+      "sha256": "e2231963b9d5747ebc443951dad53b2bdd8c3f91f8e91ca32c059696c1a6036f",
+      "bytes": 493603
+    },
+    "figures/route-17563-window-2.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-window-2.png",
+      "sha256": "7d6766b5cce0771cee476adf879052603f9b6c074f89ee31abd487e56d4ce2c4",
+      "bytes": 544691
+    },
+    "figures/route-26966-full.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-full.pdf",
+      "sha256": "d712b450f4f0ccc61834da92b2aa6aee1c36add34c698e54d8c84bf12493c1d0",
+      "bytes": 25053
+    },
+    "figures/route-26966-window-1.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-window-1.png",
+      "sha256": "01b60756b97e16c9095be49cf7bdb9225f983b583bf170e66293a2fbcf5264bc",
+      "bytes": 553507
+    },
+    "figures/route-24240-full.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-full.png",
+      "sha256": "37bee0b18fffc6015ca6a2b1ff4a248f311c37c85aa99d81f88372cee44c3b84",
+      "bytes": 236082
+    },
+    "figures/route-24240-window-1.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-window-1.png",
+      "sha256": "5461e073a24a7aefdec03a14fdfe5bbc89c0e8638eddcff7570e3ba7caa2e74a",
+      "bytes": 618542
+    },
+    "figures/route-24240-window-1.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-window-1.pdf",
+      "sha256": "807d2bb605218e3ab24b6e11991b47ae301580a34b0fe047ce280bea48123013",
+      "bytes": 35775
+    },
+    "figures/route-26966-full.png": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-full.png",
+      "sha256": "1835eb875c53b827a32a518d89a2fc2895c53c12ec0a789473e531cbab709cbf",
+      "bytes": 219587
+    },
+    "figures/route-17563-window-2.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-window-2.pdf",
+      "sha256": "fdda5f4641c59d30a8e1e8bc638edfa8d38f8557c3adb1cec8d665c89fbd36b6",
+      "bytes": 29729
+    },
+    "figures/route-17563-window-1.pdf": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-window-1.pdf",
+      "sha256": "fe4f90d17518800a6d97be12eda6305a54b58e5be9b1f4d061054f258c4051f7",
+      "bytes": 29494
+    },
+    "figures/plot-source-manifest.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-figures-v1/plot-source-manifest.json",
+      "sha256": "24eeef326f1f5d25b740a0c4802c2503aa0a2e781ee499509013d57995f1ffe4",
+      "bytes": 8543
+    },
+    "replan-diagnostic/per-window-replan.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-replan-diagnostic-v1/per-window-replan.csv",
+      "sha256": "2f4a63fc553682638923c966badc0591fc92d07da249557cf0b53032fb1b779e",
+      "bytes": 551
+    },
+    "replan-diagnostic/top5-rate-events.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-replan-diagnostic-v1/top5-rate-events.csv",
+      "sha256": "2be02b542e77d7b6411aa2e63b6bcc129ae38fa064af792154f10fea3b077577",
+      "bytes": 7749
+    },
+    "replan-diagnostic/manifest.json": {
+      "source": "/data/runs/b2d/controller/turns-v1-replan-diagnostic-v1/manifest.json",
+      "sha256": "2758126cb819bfcbb69f9938a3c849ba24a93c16269720c39f47746e4f0e4ab7",
+      "bytes": 2293
+    },
+    "all-126-conditions.csv": {
+      "source": "/data/runs/b2d/controller/turns-v1-analysis-v1/required-conditions.json",
+      "sha256": "29e68c03035299a1b8a62e548fc82a6dd632c6b6930161f6fce3a8e676f57df8",
+      "bytes": 11070
+    }
+  },
+  "total_bytes": 3311372,
+  "external_full_samples": [
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-samples.csv",
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-samples.csv",
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-samples.csv"
+  ]
+}

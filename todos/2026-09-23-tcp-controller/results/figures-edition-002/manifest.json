@@ -1,0 +1,30 @@
+{
+  "analysis_edition": "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analysis-edition-001",
+  "sources": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analysis-edition-001/comparison.json": "e444c5e5593a92d4f1f7377f082fd2f9f37d504ce098e4dadda9d8077d6f1ee4",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analysis-edition-001/24211-native_common-frames.csv": "5fa1259c8c4b49649277aa4960d480d4616df83c7e6710b33ee4a360652b62e2",
+    "/data/runs/b2d/tcp-controller/paired-v1/24211-native_common/attempts/24211/1/tcp-control.jsonl": "a15ab44b55b0e03ed27e64d511731985417e119de2a74467c7cc299c5555107a",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analysis-edition-001/24211-pi_common-frames.csv": "0d48d27049fdffd2ad0e48dfd61cecb549ae2ba84c9107ce41709bc406fcd6c9",
+    "/data/runs/b2d/tcp-controller/paired-v1/24211-pi_common/attempts/24211/1/tcp-control.jsonl": "3005758f81a9156a42598fe63dd42e19929eaf997b85c1caf6ce5a2201b9cec9",
+    "/data/runs/b2d/tcp-controller/paired-v1/24211-native_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v1/24211-pi_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/plot_tcp.py": "23c6a9455c90f256af1dda6f617a1bee86294581fb830a906d48d6dda28430fb",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "f9d6251b8ce2fc77458c8e95ccb80113b53e5a172ac3bb159fc4a5d4ef0c0e91"
+  },
+  "outputs": {
+    "24211-world-predictions.png": "5ac3723378ed5bc1ab7594c18747889426b995843357b5984fcce1f64d4ee7d3",
+    "README.md": "db4a2beaa904b5441d015b6671d73c0ffa04a406e8b0d57c72f97ac6ce05660c",
+    "prediction-samples.csv": "0bcd4c05b576648c6f6fc6cc65787a201131c58a6134b173b0049501739f057c",
+    "24211-behavior.pdf": "2140b90556bfab589631e36bdd183eb8fbb3d92b2e88cd9bd25af14ab2a2fcc2",
+    "24211-world-predictions.pdf": "b87c9e171411a37dd23bd7f41bbbc69e7492fcee604415e1c5f2bc70a1234d3a",
+    "plot_tcp.py": "23c6a9455c90f256af1dda6f617a1bee86294581fb830a906d48d6dda28430fb",
+    "analyze_tcp.py": "f9d6251b8ce2fc77458c8e95ccb80113b53e5a172ac3bb159fc4a5d4ef0c0e91",
+    "24211-behavior.png": "4ee753a4745ac8cb46b09fc516f00caa9c95b95c14bb469796e576cfa03bed42"
+  },
+  "prediction_sampling_s": 2.0,
+  "prediction_origin_hypotheses_m": [
+    0.0,
+    -1.4
+  ],
+  "body_orientation": "Contemporaneous truth rotation, visualization hypothesis only"
+}

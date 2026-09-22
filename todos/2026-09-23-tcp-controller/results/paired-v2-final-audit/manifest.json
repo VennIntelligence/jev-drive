@@ -1,0 +1,24 @@
+{
+  "sources": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-final/manifest.json": "573554592371f0d6a8b65a2a9731016f94ace3f53bfb480b083f8561a6c6df2f",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-stall-final/manifest.json": "16341a9caeced2018cd2c527e5796a634fc69ee22ca6cc7c5c5da3b918099435",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-figures-final/manifest.json": "1a4202f3fce8720baf7d20ea40a90b78f2ae1e6d684904bbff5b3b489274cc79",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/protocol.md": "a9e6a2d979bb9d76d0aa43ce94ae46608ff69b66a35dd7f7abc6d8ccfcdad2a3",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/protocol-v2.md": "87359b5c7a80db572d86a5b72b684aa8da1232a20b3ba1602bae9913edce1ace",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/TCP-final-report.md": "981234f1eb94c7f9aa0345e5eb92de95062269d3e2c25c29297823f87799ed1a",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/README.md": "6d6223525631447667a8a5ae9550644bc1aadc6395bf27ac8923924e9a0301ce",
+    "/data/runs/b2d/tcp-controller/paired-v2/manifest.json": "09b2d211c0219cd5330be696e849eaa26f10c7166e7c9676807e4ee4ad6c38a0",
+    "/data/runs/b2d/tcp-controller/paired-v2/groups.json": "2a09b20e4d9025c9e4165201bce0cd031fb92b4f9c5ea6096de733ccc3cd9f70",
+    "/data/runs/b2d/tcp-controller/paired-v2/provenance/manifest.json": "e1ca08a28832f427034d9338a642d8ad7ab4b5c6ed74908527c33fdcf345bfb9"
+  },
+  "outputs": {
+    "write-final-report.py": "0f4fab7c4f7e274a158a12f6874c330960c6e4305bc4b08c4404841cf86f5efa",
+    "campaign-groups.json": "2a09b20e4d9025c9e4165201bce0cd031fb92b4f9c5ea6096de733ccc3cd9f70",
+    "acceptance.json": "bd24e8ba3f06a7e6412458aac3a4f16eb7e37062c82ffe0a94e768cdd8b6efab",
+    "verification.json": "8e90ac1d12f31a43d27551e0976fb08ae99a61050a588f7fe456b90743ac5126",
+    "campaign-manifest.json": "09b2d211c0219cd5330be696e849eaa26f10c7166e7c9676807e4ee4ad6c38a0",
+    "campaign-provenance.json": "e1ca08a28832f427034d9338a642d8ad7ab4b5c6ed74908527c33fdcf345bfb9"
+  },
+  "raw_root": "/data/runs/b2d/tcp-controller/paired-v2",
+  "all_earlier_editions_preserved": true
+}

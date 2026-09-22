@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/tcp-controller/preflight-v1",
+  "captured_at": 1790100376.3385918,
+  "files": [
+    {
+      "path": "campaign-help.log",
+      "bytes": 395,
+      "sha256": "84ecc4f3334220d46cf531144a83ff34f9ae32fffd502fa0f791df46356d02cc"
+    },
+    {
+      "path": "carla-environment-final.txt",
+      "bytes": 1055,
+      "sha256": "ac2473443f79eadd5d5277c2220073709df851a17ea6ae86e8a32e5f40989f27"
+    },
+    {
+      "path": "carla-environment.txt",
+      "bytes": 655,
+      "sha256": "57d70250d600e1c3e23460884a461c36a062b0f32a621dee09a5a5181854eafe"
+    },
+    {
+      "path": "logging-dependencies-pypi.log",
+      "bytes": 1097,
+      "sha256": "a3268ca0159608523387309ad35507a72d0137db43ef18365808b3a996cc3d0f"
+    },
+    {
+      "path": "logging-dependencies-uv.log",
+      "bytes": 893,
+      "sha256": "f079a99f0b5caaf32574c2c02be1de86c3a5cb2303c4bacf745e4fe541efff25"
+    },
+    {
+      "path": "logging-dependencies.log",
+      "bytes": 75,
+      "sha256": "daeeaf75915730a6dc398ac2ce2fe36c57fbb81b2755791692bdba1aaa70be83"
+    },
+    {
+      "path": "model.json",
+      "bytes": 730,
+      "sha256": "87a753cd3f986a58344210ce57e8a72a5f132013165ff41beefccfe630fa0ff0"
+    },
+    {
+      "path": "model.log",
+      "bytes": 1211,
+      "sha256": "6bd08e58449b4d805c339dd6941ada6f31bbb42cee3a209fc406bc558c7e37bc"
+    },
+    {
+      "path": "runtime-tests.log",
+      "bytes": 2053,
+      "sha256": "c99e56606f6f9ae3b3da2c236f5b13e2572856a6903ce597984de67a1554895f"
+    },
+    {
+      "path": "tcp-environment.txt",
+      "bytes": 1189,
+      "sha256": "4988c0c17e03659c045ace7895053ba356c06f3887461686af3bc4d02226c44a"
+    },
+    {
+      "path": "tcp-tests-final.log",
+      "bytes": 115,
+      "sha256": "8165b0d3d37c6a3e82a71b7c90652fc8c9a7f5da334589ba6860fd104c96c33b"
+    },
+    {
+      "path": "tcp-tests.log",
+      "bytes": 112,
+      "sha256": "8a59b606868acbad76259a0c1bdbaae21475951c09be73fe19f18573e16270b3"
+    }
+  ],
+  "file_count": 12,
+  "total_bytes": 9580
+}

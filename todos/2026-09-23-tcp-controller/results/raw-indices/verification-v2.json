@@ -1,0 +1,50 @@
+[
+  {
+    "index": "paired-v1-inventory.json",
+    "root": "/data/runs/b2d/tcp-controller/paired-v1",
+    "files": 162,
+    "bytes": 15007021,
+    "mismatches": [],
+    "index_sha256": "4c855ce5c9e87b29b90b617b9e4d46a1914bd1c1bf3046cf9cc39b5b0cae30e5"
+  },
+  {
+    "index": "paired-v2-inventory.json",
+    "root": "/data/runs/b2d/tcp-controller/paired-v2",
+    "files": 183,
+    "bytes": 45695185,
+    "mismatches": [],
+    "index_sha256": "c52aedd25b3d812def9a5eeedb879e6883c69407109178c30b1bc678e86b6a85"
+  },
+  {
+    "index": "preflight-v1-inventory.json",
+    "root": "/data/runs/b2d/tcp-controller/preflight-v1",
+    "files": 12,
+    "bytes": 9580,
+    "mismatches": [],
+    "index_sha256": "d20abd6e6315d648412140beb63f705c377e1f5a9d21bb1e45f3cf8cd3668fb5"
+  },
+  {
+    "index": "standstill-replay-v1-inventory.json",
+    "root": "/data/runs/b2d/tcp-controller/standstill-replay-v1",
+    "files": 11,
+    "bytes": 5096683,
+    "mismatches": [],
+    "index_sha256": "4a3e526126cbf821affd207c8d1d34bb25c28eeedebd2e409f00d272a02e360d"
+  },
+  {
+    "index": "turns-candidate-g1-v1-inventory.json",
+    "root": "/data/runs/b2d/controller/turns-candidate-g1-v1",
+    "files": 27,
+    "bytes": 11551097,
+    "mismatches": [],
+    "index_sha256": "437299198bdf124c6b9fb7d300ad0e21238e546f28fa49a775ca4f395b780074"
+  },
+  {
+    "index": "turns-v1-inventory.json",
+    "root": "/data/runs/b2d/controller/turns-v1",
+    "files": 127,
+    "bytes": 11472524,
+    "mismatches": [],
+    "index_sha256": "64e879086adc132715eb8de74abad4a9aa81e746bfb3fdd5b7e28c3be59f1ce4"
+  }
+]

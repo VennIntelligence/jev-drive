@@ -1,0 +1,151 @@
+{
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/plot_turns.py": {
+      "sha256": "c8a14ff739318dd16563442607ea4990996a484f2aaa288433da581f1fd59893",
+      "bytes": 9275
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/turns-analysis-freeze-v2/analyze_turns.py": {
+      "sha256": "8e0f3238bdb9af5d2969a7562a88f4701860cf602a4ad7b5d552efeda3f0ef64",
+      "bytes": 24113
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562
+    },
+    "/data/runs/b2d/controller/turns-v1-analysis-v1/manifest.json": {
+      "sha256": "f9d1c283d7b417a367ff543cd00845623edcf35b002f2c2ba3a3018491e9bb34",
+      "bytes": 10734
+    },
+    "/data/runs/b2d/controller/turns-v1-analysis-v1/required-conditions.json": {
+      "sha256": "d39977d86e1fb42eb107b3d0b64dddc41940b9eaf75832f59417afb38682354f",
+      "bytes": 28452
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/control.jsonl": {
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06",
+      "bytes": 746478
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/validation_trace.json": {
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63",
+      "bytes": 442547
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/agent_config.json": {
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/turns-v1/inputs/controller-baseline-max.json": {
+      "sha256": "9431873074a120acc7caa49da3baf2d5f3c071d5a4663bd44639ead09fd4de32",
+      "bytes": 444
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/control.jsonl": {
+      "sha256": "2c7fc4fecc8d16dce5e724a3776ff939e9a5bbfb56d70a13d3c6697a2788395e",
+      "bytes": 745810
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/validation_trace.json": {
+      "sha256": "a4e5b121c52c35ede3d4fa97c5bee38b531d6daa26b54f609a8b72635dc746fd",
+      "bytes": 443983
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/agent_config.json": {
+      "sha256": "4532344ae6fbce2a1a51e6a38468b7cc950ff931e133ca009437fe3a29217998",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/turns-v1/inputs/controller-short-max.json": {
+      "sha256": "bffb11cbb54faad09ab612983d2c089d96eae3903cdce8658a393d99d23ac7b9",
+      "bytes": 446
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/control.jsonl": {
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f",
+      "bytes": 1098293
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/validation_trace.json": {
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373",
+      "bytes": 637982
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/agent_config.json": {
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/control.jsonl": {
+      "sha256": "7166f33b793e325c786cbd3595910f1ea59f457aea82307e2b5a4b0370a8d2ba",
+      "bytes": 1096256
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/validation_trace.json": {
+      "sha256": "86b7aee57978809a5fe4533d44653c67a459afffda60d6353937be1580af0e20",
+      "bytes": 638523
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/agent_config.json": {
+      "sha256": "8c954c8b93b16d7b63f91b38e0cc8e8c8dfadc01a9c58511480d8c01364f1af8",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/control.jsonl": {
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0",
+      "bytes": 841248
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/validation_trace.json": {
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a",
+      "bytes": 498192
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/agent_config.json": {
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/control.jsonl": {
+      "sha256": "f94eeaf0fa3722cc027cb7b7e0c764284c6305b33144e8de3ff0a32a9a3f2c5d",
+      "bytes": 839550
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/validation_trace.json": {
+      "sha256": "f076e02f581ba11032f1559f0c4b5d71acd08c4397dedad3ea175343279310dd",
+      "bytes": 497688
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/agent_config.json": {
+      "sha256": "3c0f3243e36554905ac98171b58bf17b8432642639f4763dd063310c2fd5b974",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    }
+  },
+  "outputs": {
+    "route-26966-full.png": "1835eb875c53b827a32a518d89a2fc2895c53c12ec0a789473e531cbab709cbf",
+    "route-26966-full.pdf": "d712b450f4f0ccc61834da92b2aa6aee1c36add34c698e54d8c84bf12493c1d0",
+    "route-26966-samples.csv": "67e3b973ce677ec52a7d3619f1a3981b433648869e4636966e3163aa56a855d1",
+    "route-26966-window-1.png": "01b60756b97e16c9095be49cf7bdb9225f983b583bf170e66293a2fbcf5264bc",
+    "route-26966-window-1.pdf": "660e855c77b83188752fed822f85d503c0576157fb3ddc44fb68889512b492fe",
+    "route-17563-full.png": "293611b27c1931098c9a158a99fb0367d4ee4e8674ffce51eb5011b6d7beb664",
+    "route-17563-full.pdf": "a7531c1818b70e040ecacd15d9cced086ccf404efaf0395690b8458b6cd5a415",
+    "route-17563-samples.csv": "1eca6aedb64db56ff231fafa0e1ef4e37115bacd9d8286e57d176c9110531a34",
+    "route-17563-window-1.png": "e2231963b9d5747ebc443951dad53b2bdd8c3f91f8e91ca32c059696c1a6036f",
+    "route-17563-window-1.pdf": "fe4f90d17518800a6d97be12eda6305a54b58e5be9b1f4d061054f258c4051f7",
+    "route-17563-window-2.png": "7d6766b5cce0771cee476adf879052603f9b6c074f89ee31abd487e56d4ce2c4",
+    "route-17563-window-2.pdf": "fdda5f4641c59d30a8e1e8bc638edfa8d38f8557c3adb1cec8d665c89fbd36b6",
+    "route-24240-full.png": "37bee0b18fffc6015ca6a2b1ff4a248f311c37c85aa99d81f88372cee44c3b84",
+    "route-24240-full.pdf": "80348b886578041bc13fccafbf96e9d994566937b971603eba6c96573015613e",
+    "route-24240-samples.csv": "32b2251e567a3b70a8b86023e25ac4846e2b837408c5a4e28ad8e325bb119cbc",
+    "route-24240-window-1.png": "5461e073a24a7aefdec03a14fdfe5bbc89c0e8638eddcff7570e3ba7caa2e74a",
+    "route-24240-window-1.pdf": "807d2bb605218e3ab24b6e11991b47ae301580a34b0fe047ce280bea48123013"
+  },
+  "analysis": "/data/runs/b2d/controller/turns-v1-analysis-v1",
+  "run_root": "/data/runs/b2d/controller/turns-v1",
+  "protocol": "Frozen four station windows; all complete-route rows and all window rows. No moving-only plot. Each run window-entry time aligned independently. CTE LEFT positive, emitted steer/accel RIGHT positive. Jerk=world acceleration derivative projected on current right vector.",
+  "caveats": "Signals are unfiltered. Same-frame applied_control is previous command and is not plotted as tracking error. Full CSV preserves frame/time and missing derivative NaN. No model or official-score claim."
+}

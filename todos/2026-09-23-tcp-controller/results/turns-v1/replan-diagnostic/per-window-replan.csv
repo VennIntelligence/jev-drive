@@ -1,0 +1,9 @@
+route,variant,segment,count,trajectory_update_count,emitted_rate_p90,high_rate_count,high_rate_on_update_count,rejoin_concern_count
+17563,baseline-max,1,70,18,1.5403306588360595,7,5,0
+17563,baseline-max,2,71,17,1.9613450841005151,8,5,0
+17563,short-max,1,70,18,1.4523444437624704,7,5,0
+17563,short-max,2,71,17,1.8959816524592599,8,5,0
+24240,baseline-max,1,117,30,0.14838824225879763,12,11,0
+24240,short-max,1,117,30,0.2686933844155573,12,12,0
+26966,baseline-max,1,70,18,0.6540871074680069,7,5,0
+26966,short-max,1,71,18,0.646359594136917,8,7,0

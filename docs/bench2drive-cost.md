@@ -4,7 +4,7 @@ Read this when you need to know what a Bench2Drive closed-loop evaluation costs 
 where that time goes, or how to run one without losing the run to a crash.
 [carla.md](carla.md) covers getting a CARLA server up at all; this doc is about the loop.
 
-Two distinct experiments are recorded here. The earlier GPU-box full220 run took **3.11 hours**
+Several distinct experiments are recorded here. The earlier GPU-box full220 run took **3.11 hours**
 at eight workers with real Qwen3-VL feature extraction and a stand-in driver; 209 evaluator
 processes finished, which did not mean 209 driving successes. The later Tokyo controller
 Dev10 seed0 diagnostic logged **17.91 minutes through the completion marker for three sets
@@ -658,5 +658,24 @@ Manifest start to end event took **2247.413 s (37.46 min)**; final server shutdo
 All failed selected routes consumed 4000 profiled ticks. Completed routes range from 252 to 3882 ticks, so a fixed short-route estimate misses collision-associated delays. There are 68142 logged control ticks, including 1200 warmup ticks excluded from the profile denominator. No neural inference cost was measured, and these numbers do not establish real TCP or full220 wall time. The candidate failed its driving acceptance conditions despite a higher mean DS.
 
 [Reproduction helper, exact CSV and input hashes](../todos/2026-09-22-b2d-controller/results/formal-v4-cost/README.md) and [final driving report](../todos/2026-09-22-b2d-controller/final-report.md) preserve the measurement boundary. This section supplements the earlier frozen v1 measurement without relabeling its costs.
+
+Last verified: 2026-09-23
+
+
+## Tokyo actual TCP paired comparison (2026-09-23)
+
+The revised six-case campaign used the real TCP checkpoint, three native 1600×900 cameras and 20 Hz inference/control, with one CARLA process on physical GPU 1. Manifest start through completion took **1280.562 s (21.34 minutes)**, excluding final server shutdown. All six attempts produced official results without infrastructure retries: four completed drives and two 4000-tick obstacle failures. Total telemetry was 9813 ticks and 9807 actual network forwards; each route retained its neutral initialization tick. The 9693 profiled ticks exclude the first 20 per attempt.
+
+| Route | Native / PI ticks | Native / PI supervised attempt wall | Native / PI mean profiled loop | Native / PI mean GPU forward |
+| --- | --- | --- | --- | --- |
+| 24211 | 393 / 401 | 25.573 / 33.423 s | 51.538 / 57.516 ms | 4.089 / 4.540 ms |
+| 1711 | 520 / 499 | 79.033 / 79.533 s | 89.709 / 89.936 ms | 4.381 / 4.423 ms |
+| 1773 | 4000 / 4000 | 505.683 / 549.493 s | 118.095 / 129.479 ms | 6.555 / 7.252 ms |
+
+Supervised attempt intervals sum to 1272.738 s, group intervals to 1273.145 s. The `attempt.json` field `wall_s` is overwritten by the evaluator's `route_result` in this runner version and totals 1267.6 s; it is not the complete supervised process interval. The steady profiled sample total is approximately 1114.416 s. Its 153.184 s difference from recorded evaluator wall includes unprofiled warmup, setup, cleanup and other untimed work, and must not be called pure startup. The two obstacle failures consume 1055.176 s of supervised attempt time; failed driving dominates this sample's cost.
+
+The GPU-forward measurements use existing model phase instrumentation. GPU work, preprocessing, policy and sensor waiting have overlapping accounting boundaries and cannot all be added as independent costs. A single archived live GPU sample confirms both TCP and CARLA on the intended GPU; it is not full-run utilization monitoring. Both experimental arms remove the official final low-speed throttle cap, so historical official TCP route durations are not a matched PI or harness speedup baseline. These results also cannot be compared as a speedup against the no-model oracle campaigns above.
+
+[Recompute script, exact six-row CSV and source hashes](../todos/2026-09-23-tcp-controller/results/paired-v2-cost/README.md), [driving contract and interpretation](b2d-tcp-controller.md).
 
 Last verified: 2026-09-23

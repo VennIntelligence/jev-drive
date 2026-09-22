@@ -1,0 +1,18 @@
+{
+  "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "todos/2026-09-23-tcp-controller/results",
+    "-p",
+    "test_analyze_tcp.py",
+    "-v"
+  ],
+  "returncode": 0,
+  "sources": {
+    "todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "f9d6251b8ce2fc77458c8e95ccb80113b53e5a172ac3bb159fc4a5d4ef0c0e91",
+    "todos/2026-09-23-tcp-controller/results/test_analyze_tcp.py": "0c3b80b1ba952cbaa6b2d56d7a9f13b61bf7bbf3a693fcddeeee791bdaffe554"
+  }
+}

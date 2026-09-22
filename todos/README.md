@@ -1,8 +1,10 @@
 # todos/
 
-简单的实验规划书。一个计划一个文件，命名 `YYYY-MM-DD-<slug>.md`。
+实验规划与执行记录。简单计划使用 `YYYY-MM-DD-<slug>.md`；需要协作、日志与图表的实验使用同名文件夹。
 新建时复制 `TEMPLATE.md`。
 
 用中文写。临时、随手的东西放 `tmp/`（已 gitignore），不要放这里。
 
-- [2026-09-22 B2D controller](2026-09-22-b2d-controller.md)：轨迹控制器的实现任务、分层验证、Dev10 对照与验收方案（draft）。
+- [2026-09-22 B2D controller](2026-09-22-b2d-controller.md)：已完成轨迹控制器实施、反馈迭代与Dev10验收；无合格替代默认，全部结果见目录。
+
+- [2026-09-23 真实TCP与转弯控制](2026-09-23-tcp-controller/README.md)：真实模型纵向对照、静止速度反馈修复，以及按转弯窗口单独优化横向。

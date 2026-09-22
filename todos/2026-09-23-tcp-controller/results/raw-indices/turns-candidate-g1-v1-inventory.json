@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/turns-candidate-g1-v1",
+  "captured_at": 1790099878.161878,
+  "files": [
+    {
+      "path": "001-circle-1bd8c403ef50961c.jsonl",
+      "bytes": 609169,
+      "sha256": "950a4d213ca5e12e2d1ca4df1d5cf1b8179e2edb2c070a9b3285f94dae740fed"
+    },
+    {
+      "path": "002-circle-f5fdaefbe6462fb3.jsonl",
+      "bytes": 605040,
+      "sha256": "3e7b88d10af21ab0fd8214541b875a2d31b16a2c4c604867c7f47b96b402b8a8"
+    },
+    {
+      "path": "003-circle-c55f3ab5e567bc5f.jsonl",
+      "bytes": 603853,
+      "sha256": "f8bd1e81d20298d27ae9cbff1708e447697eeeb6d1048321253a65fb3096ad4e"
+    },
+    {
+      "path": "004-circle-14ce7b03c7327c09.jsonl",
+      "bytes": 599256,
+      "sha256": "aa05caec98861e2b7cfd7dff81d2033d7bf4aa080cca41db67a673c5da90c306"
+    },
+    {
+      "path": "005-circle-aab8d3c020d746e2.jsonl",
+      "bytes": 610206,
+      "sha256": "ffea6b1c8b749c07bc0a911c25cb0950666efbba4269d93cb6fd43f7dcac921f"
+    },
+    {
+      "path": "006-circle-ab171a2f74baa500.jsonl",
+      "bytes": 606608,
+      "sha256": "a560e66556eebe32ccf3df83a2215a29908a075911b21023aed3c72aa6c3ccbb"
+    },
+    {
+      "path": "007-circle-e3af8a2b1ca4bd93.jsonl",
+      "bytes": 604884,
+      "sha256": "c70ed5f21664c65d78fb4443cbb25faf619477c58ca98c6d088bb135c88f31c6"
+    },
+    {
+      "path": "008-circle-c1d4b5691711577a.jsonl",
+      "bytes": 600831,
+      "sha256": "3f6b0840001bd38556af15a48f21b2aac88dced821db60d1bd1265a5d82d677c"
+    },
+    {
+      "path": "009-circle-ee01e8b661fe5e3f.jsonl",
+      "bytes": 605060,
+      "sha256": "7d36b349afd6051d9fccd8c1606e8b004d4ed6b2a6ca065aafbfabb8028f93f4"
+    },
+    {
+      "path": "010-circle-d6223bcbc740a2df.jsonl",
+      "bytes": 605023,
+      "sha256": "388bfc9873a95960b8cbfbf09258dc382e67a6ae84c9c17e578ca8ba7ae6e1c7"
+    },
+    {
+      "path": "011-circle-56a9c79fe4cf7942.jsonl",
+      "bytes": 604974,
+      "sha256": "d7c0828a658afcbb17ce0bb186c5dd8e27939502b1feb88ebe9beeabe8e64ab8"
+    },
+    {
+      "path": "012-circle-b40e6f9ef702a6b9.jsonl",
+      "bytes": 604915,
+      "sha256": "f6d491ec4b12ff6060890cb8a9a2a405c53fddcccffbb46f563aeb9e6509c009"
+    },
+    {
+      "path": "013-s_curve-939dbbf1959332cb.jsonl",
+      "bytes": 828330,
+      "sha256": "abfe4cb157688412c1626b485394bae9e6cbcb2f998e0ea01d684f2d0ad32a81"
+    },
+    {
+      "path": "014-s_curve-99bb948c848a8263.jsonl",
+      "bytes": 824789,
+      "sha256": "bb25ed9772554ddd4d0cec34ae9a0c5c95f5792e7e8525b1c079029389cb581a"
+    },
+    {
+      "path": "015-stop-57eca3018a5b2de5.jsonl",
+      "bytes": 372049,
+      "sha256": "7edd6818ef0ceb311eeb7654aeb71cd7cff3bcf4aefbb817f1c0c9b2bf004245"
+    },
+    {
+      "path": "016-speed_steps-10a225906c9f8fa0.jsonl",
+      "bytes": 722378,
+      "sha256": "38ef4efb798f3ccfe509388189888225815e1027d4645ccc2a2c4ca951c52289"
+    },
+    {
+      "path": "017-speed_steps-ed29f5a623cd1c95.jsonl",
+      "bytes": 721994,
+      "sha256": "2eddcdd910fda3b570d85b6cd3d4d170ce02bfc4fb43ef702ce62f6785b1f0a7"
+    },
+    {
+      "path": "018-speed_steps-56d28aedb477afe4.jsonl",
+      "bytes": 721574,
+      "sha256": "1c873f13718cf5c1fe2cdf303e23a8be9215304ac906fd47a4d2d1c961a814bd"
+    },
+    {
+      "path": "cases.jsonl",
+      "bytes": 21314,
+      "sha256": "f9f73bbd24c37b2f29bbe7934d1c5531046b49c91e292ab7092bddebbfb3847a"
+    },
+    {
+      "path": "hashes.json",
+      "bytes": 2738,
+      "sha256": "b32e02b55bf87305f64ae6d74f8043c8a275933fa590e5c65fe84b8c33215f41"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 806,
+      "sha256": "46220c0b69a629a6624d56a1569c5eb1adada252db0c84e1ebf0df292e3ebcee"
+    },
+    {
+      "path": "source/b2d_controller.py",
+      "bytes": 20234,
+      "sha256": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b"
+    },
+    {
+      "path": "source/b2d_controller_pi_selftest.py",
+      "bytes": 4770,
+      "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+    },
+    {
+      "path": "source/b2d_controller_selftest.py",
+      "bytes": 24759,
+      "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+    },
+    {
+      "path": "source/b2d_controller_turn_selftest.py",
+      "bytes": 4688,
+      "sha256": "92dd8657892d3d1e5accea9e28394683c527ca07747ef4ba926422f3bdf13515"
+    },
+    {
+      "path": "source/test_b2d_controller_turns.py",
+      "bytes": 3981,
+      "sha256": "1771bbe4f88bf28cdd0b721de4d49254f1a1367c84ecd717af821e20f5b5e513"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 16874,
+      "sha256": "edbb52cc0fa01dc6cb399944c0e4bb9b762f89f8fd3c6e07889403f272698c02"
+    }
+  ],
+  "file_count": 27,
+  "total_bytes": 11551097
+}

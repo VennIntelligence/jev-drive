@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/tcp-controller/standstill-replay-v1",
+  "captured_at": 1790100376.3585572,
+  "files": [
+    {
+      "path": "__pycache__/new-control.cpython-38.pyc",
+      "bytes": 4909,
+      "sha256": "acd6adfbd7a5765fb8976833619d3149991b2773e97ad1e3e7d8bd7a0eef0524"
+    },
+    {
+      "path": "__pycache__/old-control.cpython-38.pyc",
+      "bytes": 4598,
+      "sha256": "7af1894f37bde9f7350a924fc59b1017a8bbc43bd64a48b726f12a657203cfd3"
+    },
+    {
+      "path": "captured-motion-prefix.jsonl",
+      "bytes": 4886771,
+      "sha256": "c5337dcc48392b99222b47236c0607534939424307ba71b0abc24969bef4697b"
+    },
+    {
+      "path": "intervention.json",
+      "bytes": 489,
+      "sha256": "11e6b0c76853a9bd88ddb6d093c24e312c2c880713a9a740a0c794b2986ac40e"
+    },
+    {
+      "path": "new-control.py",
+      "bytes": 5476,
+      "sha256": "22035972c64114175fb70e76552c254ab54d60b9c8fc5e39c62b27bf2ef5391a"
+    },
+    {
+      "path": "old-control.py",
+      "bytes": 5035,
+      "sha256": "421f7e0e309a7e692ec301ba08d011e305a9d2c4836b2ddcc0f05d0fc4277dd2"
+    },
+    {
+      "path": "replay.csv",
+      "bytes": 186118,
+      "sha256": "24374da1535e3052492e6fde9e4a90f496da3a0e5880eaef3551ba28d039ce64"
+    },
+    {
+      "path": "replay.py",
+      "bytes": 2356,
+      "sha256": "f4f9384afd69b24808563464028034067220a12734b4443cbef965ab404efef1"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 699,
+      "sha256": "fde2ff8163ab2b5cc230a8a255de02eae83edaa6c051dd29c17e25da55c3fca7"
+    },
+    {
+      "path": "tests-final.log",
+      "bytes": 116,
+      "sha256": "7ca2e8b6fddca26de9cb7248dd537c5c30d717a4572e4516e9a9607f667cfa52"
+    },
+    {
+      "path": "tests.log",
+      "bytes": 116,
+      "sha256": "1800239262ea27b940bc2d76c3b70587f21e2a5bf1e86ff7e0867864cab662b7"
+    }
+  ],
+  "file_count": 11,
+  "total_bytes": 5096683
+}

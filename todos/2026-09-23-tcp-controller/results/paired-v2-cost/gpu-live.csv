@@ -1,0 +1,3 @@
+pid, gpu_uuid, used_gpu_memory [MiB]
+240765, GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1, 5659 MiB
+242199, GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1, 648 MiB

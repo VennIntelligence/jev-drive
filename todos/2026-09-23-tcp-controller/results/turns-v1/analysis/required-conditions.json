@@ -1,0 +1,999 @@
+{
+  "status": "fail",
+  "required_conditions": [
+    {
+      "condition": "G2/26966/baseline-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/26966/baseline-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/26966/baseline-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/26966/baseline-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/26966/baseline-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/26966/baseline-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/26966/baseline-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/26966/baseline-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/26966/baseline-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/26966/baseline-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/26966/baseline-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/26966/baseline-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/26966/baseline-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/26966/baseline-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "G2/26966/short-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/26966/short-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/26966/short-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/26966/short-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/26966/short-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/26966/short-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/26966/short-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/26966/short-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/26966/short-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/26966/short-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/26966/short-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/26966/short-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/26966/short-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/26966/short-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "G2/17563/baseline-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/17563/baseline-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/17563/baseline-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/17563/baseline-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/17563/baseline-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/17563/baseline-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/17563/baseline-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/17563/baseline-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/17563/baseline-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/17563/baseline-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/17563/baseline-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/17563/baseline-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/17563/baseline-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/17563/baseline-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "G2/17563/short-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/17563/short-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/17563/short-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/17563/short-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/17563/short-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/17563/short-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/17563/short-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/17563/short-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/17563/short-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/17563/short-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/17563/short-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/17563/short-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/17563/short-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/17563/short-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "G2/24240/baseline-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/24240/baseline-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/24240/baseline-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/24240/baseline-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/24240/baseline-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/24240/baseline-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/24240/baseline-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/24240/baseline-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/24240/baseline-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/24240/baseline-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/24240/baseline-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/24240/baseline-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/24240/baseline-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/24240/baseline-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "G2/24240/short-max/completed",
+      "status": "pass",
+      "source": "validation.json:gates.completed"
+    },
+    {
+      "condition": "G2/24240/short-max/no_collision",
+      "status": "pass",
+      "source": "validation.json:gates.no_collision"
+    },
+    {
+      "condition": "G2/24240/short-max/full_lateral_rms",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_rms"
+    },
+    {
+      "condition": "G2/24240/short-max/full_lateral_p95",
+      "status": "pass",
+      "source": "validation.json:gates.full_lateral_p95"
+    },
+    {
+      "condition": "G2/24240/short-max/cruise_speed",
+      "status": "pass",
+      "source": "validation.json:gates.cruise_speed"
+    },
+    {
+      "condition": "G2/24240/short-max/pose",
+      "status": "pass",
+      "source": "validation.json:gates.pose"
+    },
+    {
+      "condition": "G2/24240/short-max/heading",
+      "status": "pass",
+      "source": "validation.json:gates.heading"
+    },
+    {
+      "condition": "G2/24240/short-max/endpoint",
+      "status": "pass",
+      "source": "validation.json:gates.endpoint"
+    },
+    {
+      "condition": "G2/24240/short-max/hold_duration",
+      "status": "pass",
+      "source": "validation.json:gates.hold_duration"
+    },
+    {
+      "condition": "G2/24240/short-max/hold_displacement",
+      "status": "pass",
+      "source": "validation.json:gates.hold_displacement"
+    },
+    {
+      "condition": "G2/24240/short-max/hold_speed",
+      "status": "pass",
+      "source": "validation.json:gates.hold_speed"
+    },
+    {
+      "condition": "G2/24240/short-max/telemetry_complete",
+      "status": "pass",
+      "source": "validation.json:gates.telemetry_complete"
+    },
+    {
+      "condition": "case/24240/short-max/no_invalid_control",
+      "status": "pass"
+    },
+    {
+      "condition": "case/24240/short-max/complete_frames_and_truth",
+      "status": "pass"
+    },
+    {
+      "condition": "coverage/26966/baseline-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 70,
+        "observed_count": 70,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "coverage/26966/short-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 71,
+        "observed_count": 71,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "turn/26966/1/cte_p95_delta",
+      "status": "pass",
+      "field": "cte_m_p95_abs",
+      "band": "window",
+      "baseline": 0.8492240582260485,
+      "candidate": 0.7850252369821791,
+      "comparison": "<=",
+      "limit": 0.8992240582260486,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/cte_peak_delta",
+      "status": "pass",
+      "field": "cte_m_max_abs",
+      "band": "window",
+      "baseline": 0.8564581437705158,
+      "candidate": 0.789405290497388,
+      "comparison": "<=",
+      "limit": 0.9564581437705157,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/heading_p95_delta",
+      "status": "pass",
+      "field": "heading_deg_p95_abs",
+      "band": "window",
+      "baseline": 4.271546829218098,
+      "candidate": 4.672709579465755,
+      "comparison": "<=",
+      "limit": 5.271546829218098,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/speed_error_rms_delta",
+      "status": "pass",
+      "field": "speed_error_mps_rms",
+      "band": "window",
+      "baseline": 0.14987791495845978,
+      "candidate": 0.1552490945120819,
+      "comparison": "<=",
+      "limit": 0.2498779149584598,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/actual_speed_mean_drop",
+      "status": "pass",
+      "field": "actual_speed_mean_mps",
+      "band": "window",
+      "baseline": 7.885128023256182,
+      "candidate": 7.886925072179737,
+      "comparison": ">=",
+      "limit": 7.685128023256182,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/lateral_accel_p95_ratio",
+      "status": "pass",
+      "field": "lateral_accel_mps2_p95_abs",
+      "band": "window",
+      "baseline": 8.598158694119283,
+      "candidate": 9.197800085900095,
+      "comparison": "<=",
+      "limit": 9.457974563531211,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/26966/1/emitted_rate_p95_ratio",
+      "status": "fail",
+      "field": "steer_rate_per_s_p95_abs",
+      "band": "window",
+      "baseline": 0.80010558695692,
+      "candidate": 1.0797112162864542,
+      "comparison": "<=",
+      "limit": 0.9601267043483039,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/26966/1/primary_rms_15percent",
+      "status": "fail",
+      "field": "cte_m_rms",
+      "band": "window",
+      "baseline": 0.5586937052558099,
+      "candidate": 0.5164470635353623,
+      "comparison": "<=",
+      "limit": 0.4748896494674384,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/primary_p95_no_increase",
+      "status": "pass",
+      "field": "cte_m_p95_abs",
+      "band": "window",
+      "baseline": 0.8492240582260485,
+      "candidate": 0.7850252369821791,
+      "comparison": "<=",
+      "limit": 0.8492240582260485,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/26966/1/post10m_rms_no_increase",
+      "status": "pass",
+      "field": "cte_m_rms",
+      "band": "post10m",
+      "baseline": 0.31704522217735676,
+      "candidate": 0.2856098851589848,
+      "comparison": "<=",
+      "limit": 0.31704522217735676,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "coverage/17563/baseline-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 70,
+        "observed_count": 70,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "coverage/17563/short-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 70,
+        "observed_count": 70,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "turn/17563/1/cte_p95_delta",
+      "status": "pass",
+      "field": "cte_m_p95_abs",
+      "band": "window",
+      "baseline": 0.4670307119640378,
+      "candidate": 0.45430918356300015,
+      "comparison": "<=",
+      "limit": 0.5170307119640378,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/1/cte_peak_delta",
+      "status": "pass",
+      "field": "cte_m_max_abs",
+      "band": "window",
+      "baseline": 0.5862662292077391,
+      "candidate": 0.5728035920601502,
+      "comparison": "<=",
+      "limit": 0.686266229207739,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/1/heading_p95_delta",
+      "status": "pass",
+      "field": "heading_deg_p95_abs",
+      "band": "window",
+      "baseline": 3.8667923747290076,
+      "candidate": 3.692350094241852,
+      "comparison": "<=",
+      "limit": 4.866792374729007,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/1/speed_error_rms_delta",
+      "status": "pass",
+      "field": "speed_error_mps_rms",
+      "band": "window",
+      "baseline": 0.12433694973141789,
+      "candidate": 0.12099820436480173,
+      "comparison": "<=",
+      "limit": 0.22433694973141788,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/1/actual_speed_mean_drop",
+      "status": "pass",
+      "field": "actual_speed_mean_mps",
+      "band": "window",
+      "baseline": 5.966108828411489,
+      "candidate": 5.9661989665997295,
+      "comparison": ">=",
+      "limit": 5.766108828411489,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/1/lateral_accel_p95_ratio",
+      "status": "fail",
+      "field": "lateral_accel_mps2_p95_abs",
+      "band": "window",
+      "baseline": 5.8278060058439305,
+      "candidate": 6.613695390874286,
+      "comparison": "<=",
+      "limit": 6.410586606428324,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/17563/1/emitted_rate_p95_ratio",
+      "status": "pass",
+      "field": "steer_rate_per_s_p95_abs",
+      "band": "window",
+      "baseline": 2.0,
+      "candidate": 1.963999585136391,
+      "comparison": "<=",
+      "limit": 2.4,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/17563/1/other_window_rms_delta",
+      "status": "pass",
+      "field": "cte_m_rms",
+      "band": "window",
+      "baseline": 0.22524996129433336,
+      "candidate": 0.22072606914248594,
+      "comparison": "<=",
+      "limit": 0.25524996129433336,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "coverage/17563/baseline-max/2",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 71,
+        "observed_count": 71,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "coverage/17563/short-max/2",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 71,
+        "observed_count": 71,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "turn/17563/2/cte_p95_delta",
+      "status": "pass",
+      "field": "cte_m_p95_abs",
+      "band": "window",
+      "baseline": 0.4835864785848576,
+      "candidate": 0.5047897000083821,
+      "comparison": "<=",
+      "limit": 0.5335864785848576,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/2/cte_peak_delta",
+      "status": "pass",
+      "field": "cte_m_max_abs",
+      "band": "window",
+      "baseline": 0.5617301049506033,
+      "candidate": 0.5985107317631179,
+      "comparison": "<=",
+      "limit": 0.6617301049506032,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/2/heading_p95_delta",
+      "status": "pass",
+      "field": "heading_deg_p95_abs",
+      "band": "window",
+      "baseline": 5.773899005711279,
+      "candidate": 5.82684602377288,
+      "comparison": "<=",
+      "limit": 6.773899005711279,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/2/speed_error_rms_delta",
+      "status": "pass",
+      "field": "speed_error_mps_rms",
+      "band": "window",
+      "baseline": 0.14884672560768292,
+      "candidate": 0.12754799492365368,
+      "comparison": "<=",
+      "limit": 0.24884672560768292,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/2/actual_speed_mean_drop",
+      "status": "pass",
+      "field": "actual_speed_mean_mps",
+      "band": "window",
+      "baseline": 6.00115055859443,
+      "candidate": 6.001164047322483,
+      "comparison": ">=",
+      "limit": 5.80115055859443,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/17563/2/lateral_accel_p95_ratio",
+      "status": "pass",
+      "field": "lateral_accel_mps2_p95_abs",
+      "band": "window",
+      "baseline": 6.907109573218639,
+      "candidate": 6.914734856306857,
+      "comparison": "<=",
+      "limit": 7.5978205305405035,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/17563/2/emitted_rate_p95_ratio",
+      "status": "pass",
+      "field": "steer_rate_per_s_p95_abs",
+      "band": "window",
+      "baseline": 2.0,
+      "candidate": 2.0,
+      "comparison": "<=",
+      "limit": 2.4,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/17563/2/other_window_rms_delta",
+      "status": "pass",
+      "field": "cte_m_rms",
+      "band": "window",
+      "baseline": 0.2734101602558478,
+      "candidate": 0.26877897342903806,
+      "comparison": "<=",
+      "limit": 0.30341016025584777,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "coverage/24240/baseline-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 117,
+        "observed_count": 117,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "coverage/24240/short-max/1",
+      "status": "pass",
+      "evidence": {
+        "expected_count": 117,
+        "observed_count": 117,
+        "minimum_count": 20,
+        "missing_counts": {
+          "cte": 0,
+          "heading": 0,
+          "rate": 0,
+          "raw_steer": 0,
+          "actual_speed": 0,
+          "reference_speed": 0,
+          "speed_error": 0,
+          "lateral_accel": 0,
+          "lateral_jerk": 0
+        },
+        "entered": true,
+        "exited": true,
+        "complete_frames_and_truth": true,
+        "complete": true
+      }
+    },
+    {
+      "condition": "turn/24240/1/cte_p95_delta",
+      "status": "pass",
+      "field": "cte_m_p95_abs",
+      "band": "window",
+      "baseline": 0.17990790927514175,
+      "candidate": 0.1700757823212959,
+      "comparison": "<=",
+      "limit": 0.22990790927514176,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/24240/1/cte_peak_delta",
+      "status": "pass",
+      "field": "cte_m_max_abs",
+      "band": "window",
+      "baseline": 0.18263325542188472,
+      "candidate": 0.17183438084501856,
+      "comparison": "<=",
+      "limit": 0.2826332554218847,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/24240/1/heading_p95_delta",
+      "status": "pass",
+      "field": "heading_deg_p95_abs",
+      "band": "window",
+      "baseline": 1.7011047879041499,
+      "candidate": 1.7877087317522216,
+      "comparison": "<=",
+      "limit": 2.70110478790415,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/24240/1/speed_error_rms_delta",
+      "status": "pass",
+      "field": "speed_error_mps_rms",
+      "band": "window",
+      "baseline": 0.15322330478854518,
+      "candidate": 0.15329551922428078,
+      "comparison": "<=",
+      "limit": 0.25322330478854516,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/24240/1/actual_speed_mean_drop",
+      "status": "pass",
+      "field": "actual_speed_mean_mps",
+      "band": "window",
+      "baseline": 7.882531342060794,
+      "candidate": 7.882550101726907,
+      "comparison": ">=",
+      "limit": 7.682531342060794,
+      "near_zero_baseline_threshold": null
+    },
+    {
+      "condition": "turn/24240/1/lateral_accel_p95_ratio",
+      "status": "pass",
+      "field": "lateral_accel_mps2_p95_abs",
+      "band": "window",
+      "baseline": 1.9532004894671726,
+      "candidate": 2.028770784152267,
+      "comparison": "<=",
+      "limit": 2.14852053841389,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/24240/1/emitted_rate_p95_ratio",
+      "status": "fail",
+      "field": "steer_rate_per_s_p95_abs",
+      "band": "window",
+      "baseline": 0.2183799830629378,
+      "candidate": 0.37794082811260254,
+      "comparison": "<=",
+      "limit": 0.26205597967552535,
+      "near_zero_baseline_threshold": 0.01
+    },
+    {
+      "condition": "turn/24240/1/other_window_rms_delta",
+      "status": "pass",
+      "field": "cte_m_rms",
+      "band": "window",
+      "baseline": 0.10780673813751082,
+      "candidate": 0.1010372049355794,
+      "comparison": "<=",
+      "limit": 0.13780673813751082,
+      "near_zero_baseline_threshold": null
+    }
+  ],
+  "minimum_window_samples": 20,
+  "near_zero_ratio_baseline": {
+    "lateral_accel_mps2": 0.01,
+    "emitted_steer_rate_per_s": 0.01
+  },
+  "original_g2_thresholds": {
+    "completed": true,
+    "no_collision": true,
+    "full_lateral_rms_m": 0.5,
+    "full_lateral_p95_m": 1.0,
+    "cruise_speed_rms_after5s_mps": 0.5,
+    "pose_p90_m": 0.5,
+    "pose_heading_p90_deg": 1.0,
+    "endpoint_m": 1.0,
+    "hold_duration_min_s": 5.0,
+    "hold_displacement_max_m": 0.1,
+    "hold_speed_strict_max_mps": 0.1,
+    "telemetry_complete": true
+  },
+  "scope": "开发必要条件；jerk/恢复仅报告；不代表默认控制器资格或真实TCP收益"
+}

@@ -15,6 +15,7 @@ One line per doc. Add a line here whenever you add a doc.
 | [carla.md](carla.md) | you need a CARLA simulator on the box, or want the cost of a Bench2Drive evaluation |
 | [bench2drive-cost.md](bench2drive-cost.md) | you need to run a Bench2Drive closed-loop evaluation, or what one costs and why |
 | [b2d-controller.md](b2d-controller.md) | you need the fixed controller API, diagnostic campaigns, acceptance boundaries, or preserved plots |
+| [b2d-tcp-controller.md](b2d-tcp-controller.md) | you need the actual TCP longitudinal comparison, its shared execution limits, or telemetry contract |
 | [driving-runtime.md](driving-runtime.md) | you need reusable frame/preview helpers or want to connect another driving model |
 | [tokyo-python-optimization.md](tokyo-python-optimization.md) | you need the measured TCP Python optimizations and their switches |
 | [navsim.md](navsim.md) | you need the NAVSIM / OpenScene data on the box, or need to re-download it |

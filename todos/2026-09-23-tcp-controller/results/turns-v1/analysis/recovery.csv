@@ -1,0 +1,9 @@
+route,variant,preset,segment,kind,core_exited,recovery_time_s,recovery_censored,padded_window_exited
+26966,baseline-max,pursuit,1,right-sharp,True,,True,True
+26966,short-max,pursuit,1,right-sharp,True,,True,True
+17563,baseline-max,pursuit,1,S,True,0.05000000074505806,False,True
+17563,baseline-max,pursuit,2,S,True,0.7000000104308128,False,True
+17563,short-max,pursuit,1,S,True,0.05000000074505806,False,True
+17563,short-max,pursuit,2,S,True,0.6000000089406967,False,True
+24240,baseline-max,pursuit,1,left,True,0.0,False,True
+24240,short-max,pursuit,1,left,True,0.0,False,True

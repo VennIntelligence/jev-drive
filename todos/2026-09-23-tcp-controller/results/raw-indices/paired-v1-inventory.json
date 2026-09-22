@@ -1,0 +1,819 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/tcp-controller/paired-v1",
+  "captured_at": 1790098648.3851395,
+  "files": [
+    {
+      "path": "1711-native_common/attempts/1711/1/agent_config.json",
+      "bytes": 327,
+      "sha256": "afe43fc5a0f4066390fb48887ba0c5726c765e456922fa36ca1f2de3492710e8"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/attempt.json",
+      "bytes": 2742,
+      "sha256": "1a9892b43b3ce58df1e4a99f2b70b3c4b814a3cd0ff04263485a93e67dff716a"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/criterion_events.json",
+      "bytes": 2978,
+      "sha256": "ce6080f70732d809041be80175381ab8c7b1bbd6cde91fca32bf26a71826f06e"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "7486decf4dc9d57a18748f21edb7bc7c5c2216de6b23ad8deb4193831a2ea381"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/results.json",
+      "bytes": 5392,
+      "sha256": "b6021cdb1accae331d4a87f1525e29d82748342ed658445644e75c26533bbd53"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/route.log",
+      "bytes": 4697,
+      "sha256": "bbaf14a9bc77b11c177cc1711b65deb1bc7093bc8fc5d6793073a4daee8fb581"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/route.pid",
+      "bytes": 6,
+      "sha256": "de1c9b335a45fcd6504f1b4244b61dca458a6f0fca55b4a1b3ebc94f0c5ac0d3"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/route_result.json",
+      "bytes": 3513,
+      "sha256": "b4bad1f415aa999277a16d3425f6af0ef6544fc7031d3ff703b0a536453078e4"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/tcp-control.jsonl",
+      "bytes": 1728687,
+      "sha256": "95ad146895c8c5ff5da1667ace25eb1f35a64e199a5c5f285c48cf1287a11790"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/tcp-route-reference.json",
+      "bytes": 392,
+      "sha256": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a"
+    },
+    {
+      "path": "1711-native_common/attempts/1711/1/tcp-setup.json",
+      "bytes": 908,
+      "sha256": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033"
+    },
+    {
+      "path": "1711-native_common/done/1711.json",
+      "bytes": 3734,
+      "sha256": "32f9d19823d11bdaa9c53fa3dcf03c44cbafc561d19df223f8e70d13e950ec55"
+    },
+    {
+      "path": "1711-native_common/events.jsonl",
+      "bytes": 868,
+      "sha256": "359aa9e32f1b552639db3a89107f097d214b75cde557410eaae3bb59628b6329"
+    },
+    {
+      "path": "1711-native_common/invocations/1790098229382494-236232.json",
+      "bytes": 1201,
+      "sha256": "aff425f8594d4174056326526084adbd99b3a996c2fa2e88c52b70d05fcf27db"
+    },
+    {
+      "path": "1711-native_common/live/performance-RouteScenario_1711_rep0_Town12_ParkingCutIn_1_15_09_23_02_30_34.json",
+      "bytes": 496,
+      "sha256": "d3d333925f0b765391303ba61d869e4c50852a135293733189f4191a634224ed"
+    },
+    {
+      "path": "1711-native_common/live/sensor-trace-RouteScenario_1711_rep0_Town12_ParkingCutIn_1_15_09_23_02_30_34.json",
+      "bytes": 269401,
+      "sha256": "d8a99051526974d05a7c99fb91b107b71b0b7f2d12c86c2d31ceda048da97f94"
+    },
+    {
+      "path": "1711-native_common/live/status.json",
+      "bytes": 2122,
+      "sha256": "a108b4b20c96ba998073f031a4615a4a8f57076a718a9f3cfb187bb59cc6c571"
+    },
+    {
+      "path": "1711-native_common/live/telemetry.jsonl",
+      "bytes": 98236,
+      "sha256": "928c7744f3c96a44f4f97f8952549e644d9cc3cc313bf439938bbb0701c83689"
+    },
+    {
+      "path": "1711-native_common/summary.json",
+      "bytes": 552,
+      "sha256": "b6920f262b0f016f1baea3c61d4b3a772582085f607840b8198f391a378a7493"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/agent_config.json",
+      "bytes": 323,
+      "sha256": "c094e77986a84003388fa47de0fa4211db97e039e8fc8cf96ee4d4dbc6b9b565"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/attempt.json",
+      "bytes": 2738,
+      "sha256": "42b6a7129d4db5c7cfdc51de10337d656baa62645807828f094fd08a38426e88"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/criterion_events.json",
+      "bytes": 2982,
+      "sha256": "8f7a5a4cb55605acb0d795cdd77dcfc4cf01f50a27452406f28cfddd4f90026e"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "9280b719be496844a558b0dac0d99bdbb84314057edd543749697f257dafe29c"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/results.json",
+      "bytes": 5396,
+      "sha256": "523626126fb3e151895b39dc156c2123188e63a5c556726885cd252caac1bff3"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/route.log",
+      "bytes": 4697,
+      "sha256": "c370aafd7ab5cb8b10928ea6c96846a30f0363583577f77c15392e7c41c6215e"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/route.pid",
+      "bytes": 6,
+      "sha256": "9d24c88d23e50bf022d738821cfa42a4b77e2fb91a799756e351284832a67fed"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/route_result.json",
+      "bytes": 3507,
+      "sha256": "04653f694b61ee1050bd604498e1fd1f64c4fb2eea516b56e04b51a5429c0ef4"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/tcp-control.jsonl",
+      "bytes": 1673190,
+      "sha256": "36fe877a5d9c808a83a102b02edfebc0e05179142f69bcb77a8ca8573a8c84b9"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/tcp-route-reference.json",
+      "bytes": 392,
+      "sha256": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a"
+    },
+    {
+      "path": "1711-pi_common/attempts/1711/1/tcp-setup.json",
+      "bytes": 904,
+      "sha256": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374"
+    },
+    {
+      "path": "1711-pi_common/done/1711.json",
+      "bytes": 3728,
+      "sha256": "53f4dd5a5f2e887effa9a502dec4ff2ebc5fd12cbf3bbbabb316499f71603207"
+    },
+    {
+      "path": "1711-pi_common/events.jsonl",
+      "bytes": 869,
+      "sha256": "76af4c448c41a49bd7b59ce1028fe532a4dba9125ecf94d8afc177248f348673"
+    },
+    {
+      "path": "1711-pi_common/invocations/1790098309337550-236232.json",
+      "bytes": 1197,
+      "sha256": "62681b4e094510dd340310decb81494ed36a6d05cf25d0aae64b9514ffb18136"
+    },
+    {
+      "path": "1711-pi_common/live/performance-RouteScenario_1711_rep0_Town12_ParkingCutIn_1_15_09_23_02_31_56.json",
+      "bytes": 497,
+      "sha256": "d7153fa10181d9160d080ac00870b7f7d3b79e8ef2be9a4094bc344f33439858"
+    },
+    {
+      "path": "1711-pi_common/live/sensor-trace-RouteScenario_1711_rep0_Town12_ParkingCutIn_1_15_09_23_02_31_56.json",
+      "bytes": 259524,
+      "sha256": "330b494c8550aa3838f7ec25a9e387bcc2a05772e4018920df68a0e297cd3e80"
+    },
+    {
+      "path": "1711-pi_common/live/status.json",
+      "bytes": 2132,
+      "sha256": "14d4c7e1427fe0d9f728689b32055e703a5c9f1187eed351bf19b699177d1d6c"
+    },
+    {
+      "path": "1711-pi_common/live/telemetry.jsonl",
+      "bytes": 96496,
+      "sha256": "79431d1cdb679a37fd092aca09e4b21f5bee65af8e94b9de11395b5b227fa8d8"
+    },
+    {
+      "path": "1711-pi_common/summary.json",
+      "bytes": 552,
+      "sha256": "f1279df7e270a9bb58e5e18ebe1689bf8dd1b9a59d03679d7cc76a70809f962b"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/agent_config.json",
+      "bytes": 327,
+      "sha256": "3ae77eaca91f65de92b1d57a03d895db6f7e03ad4f4eea61e8f8a5d6fd985a8a"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/attempt.json",
+      "bytes": 2813,
+      "sha256": "1385b32a1bbc8b7b593a5d0faac81e51cbcbb6740a071b03f7e60dbebd2b57df"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/criterion_events.json",
+      "bytes": 1048,
+      "sha256": "0dc5af1018e9f1fa197d74f86f4dd0f0e35b72e3fe9a023b7405659d1351ad20"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/heartbeat.json",
+      "bytes": 40,
+      "sha256": "817016cb7f26d4bda1b1bc5f72d597bf73e54da700e6c0610653f03426059eae"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/results.json",
+      "bytes": 4476,
+      "sha256": "a8386a2d0da784d46d03d20f0e6c72a36917cfd2f25593201ed0593ad4017153"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/route.log",
+      "bytes": 4869,
+      "sha256": "2639ca52c175b32f7206734367452f7e3f288df0dda7134223f7bcbf09693e08"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/route.pid",
+      "bytes": 6,
+      "sha256": "d38556cd3ac261cfe288d40b96471d95c20f64d53626b99c9dc278ce654a1b54"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/route_result.json",
+      "bytes": 3553,
+      "sha256": "e206490da820d79a5dea38556a34e199d9bbc6c7ffcf72a013c4b97faf3d5bf6"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/tcp-control.jsonl",
+      "bytes": 4913453,
+      "sha256": "36b7f3e2adce35687990aaf0d9c49f47421fc174e2584d57e2d72c9204cd05b9"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/tcp-route-reference.json",
+      "bytes": 388,
+      "sha256": "5c2e494c1b6104d7a951069abc1ff586c1ad92fa0ef57b552fc5a4a9101f983c"
+    },
+    {
+      "path": "1773-native_common/attempts/1773/1/tcp-setup.json",
+      "bytes": 908,
+      "sha256": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033"
+    },
+    {
+      "path": "1773-native_common/events.jsonl",
+      "bytes": 972,
+      "sha256": "6d5934b4ddafd52525fb6ca2d4f617b258ce15763ae9a1902d4bda43a78e48a2"
+    },
+    {
+      "path": "1773-native_common/invocations/1790098389685459-236232.json",
+      "bytes": 1201,
+      "sha256": "88be35772a90ad10ff3c6ccf48dbee6c93a745bfab87817349ac14f155a8a412"
+    },
+    {
+      "path": "1773-native_common/live/performance-RouteScenario_1773_rep0_Town12_ParkedObstacle_1_25_09_23_02_33_16.json",
+      "bytes": 495,
+      "sha256": "221732b65654c095f617c91dcade6ff50a1cb028d52b5b8a666be60be95c5bc2"
+    },
+    {
+      "path": "1773-native_common/live/sensor-trace-RouteScenario_1773_rep0_Town12_ParkedObstacle_1_25_09_23_02_33_16.json",
+      "bytes": 670606,
+      "sha256": "db72e5d3b4416502db53ae9c597571d3d1afd6a6685bbc7492b70d6748170c5d"
+    },
+    {
+      "path": "1773-native_common/live/status.json",
+      "bytes": 2215,
+      "sha256": "f415921d08efac82796c185345fc1cc046db1b7796700a750eb2be087eebd834"
+    },
+    {
+      "path": "1773-native_common/live/telemetry.jsonl",
+      "bytes": 320905,
+      "sha256": "8519b8ca256b9a43b9e93e4feac280474599c434815607519bf5f901f10fc8f0"
+    },
+    {
+      "path": "1773-native_common/summary.json",
+      "bytes": 584,
+      "sha256": "e0e5a5c8019b66754b7b2f5c02612d73374d2c3fe9e007c092b0234e2f3a77fb"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/agent_config.json",
+      "bytes": 329,
+      "sha256": "38da7e3bf5bb65b0668b6ecf2e927f3d555dc53c145a573363f1e749fbfb5fea"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/attempt.json",
+      "bytes": 2745,
+      "sha256": "5dc76232ce8a90d8763c1f3158168fb985fd9d86b80e2c3c37668125597d2fb8"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/criterion_events.json",
+      "bytes": 2690,
+      "sha256": "43399ff6bac6b63447f3d4524d7ddb6b277f091a6a5b523b8859185accfb5030"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/heartbeat.json",
+      "bytes": 38,
+      "sha256": "75028d33b8a11ac777384f343aad1389d06575e3694a769f6d363b08cae750f6"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/results.json",
+      "bytes": 5248,
+      "sha256": "a5b1c36e31270005a77960cbc364277e73501a520f4b271be440cd4443c4cf97"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/route.log",
+      "bytes": 4720,
+      "sha256": "bc2d04b23f625cdcd7f9b062aaa6e659ecad1798169956a0f862d0569ef8d9fb"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/route.pid",
+      "bytes": 6,
+      "sha256": "e3ec50493749d3824a0ff13f87bdaeafe11faf94e3d17fdff8f6a9a6adef6200"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/route_result.json",
+      "bytes": 3515,
+      "sha256": "cf0af152755e1cb66e96d6b0bf235353a5083a73a3d989c10a7be8e44ee73d14"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/tcp-control.jsonl",
+      "bytes": 1607504,
+      "sha256": "a15ab44b55b0e03ed27e64d511731985417e119de2a74467c7cc299c5555107a"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/tcp-route-reference.json",
+      "bytes": 335,
+      "sha256": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f"
+    },
+    {
+      "path": "24211-native_common/attempts/24211/1/tcp-setup.json",
+      "bytes": 908,
+      "sha256": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033"
+    },
+    {
+      "path": "24211-native_common/done/24211.json",
+      "bytes": 3735,
+      "sha256": "680368f231c90200117de53437b2a05b7c51cf54db662a5f65c2216708abddb1"
+    },
+    {
+      "path": "24211-native_common/events.jsonl",
+      "bytes": 869,
+      "sha256": "f627f2bbab40eb6f5d7da2c57f37dbc5ff25bbc1952bb6649ea1b77ee277b2fb"
+    },
+    {
+      "path": "24211-native_common/invocations/1790098167189298-236232.json",
+      "bytes": 1204,
+      "sha256": "7e05f172271a339d5d7215ede2d648fc06bd039144953321b64b2e8452e20725"
+    },
+    {
+      "path": "24211-native_common/live/performance-RouteScenario_24211_rep0_Town01_DynamicObjectCrossing_1_15_09_23_02_29_28.json",
+      "bytes": 498,
+      "sha256": "1080929c4f0d5e8053723e8e7e51db38f4e3547d27340dd843b54463e01ec2f8"
+    },
+    {
+      "path": "24211-native_common/live/sensor-trace-RouteScenario_24211_rep0_Town01_DynamicObjectCrossing_1_15_09_23_02_29_28.json",
+      "bytes": 248052,
+      "sha256": "2d80487637d4df9722128262a67ec6778d67096b3e68542e18234caf6980f243"
+    },
+    {
+      "path": "24211-native_common/live/status.json",
+      "bytes": 2142,
+      "sha256": "aeb259b525cbb6d84ce21b5e4bb60ff9b6a4fccdad38bd32e9b483dc445b1124"
+    },
+    {
+      "path": "24211-native_common/live/telemetry.jsonl",
+      "bytes": 55757,
+      "sha256": "a610bb26a2f4745701166e909013961d3071045aaea88417fac43145edcf026c"
+    },
+    {
+      "path": "24211-native_common/summary.json",
+      "bytes": 553,
+      "sha256": "7a52b19394f6cae615aadeff7ab58869244a6f70a5e197bdb4497cb274f7795d"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/agent_config.json",
+      "bytes": 325,
+      "sha256": "e08b5b95d0981c9df8a2d1fed4e80f4ca833c86331163854cf7f1a3c755cc486"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/attempt.json",
+      "bytes": 2741,
+      "sha256": "700f4e687c22253335a1c6ec6b0a1cffac373b57057bc8ca3cae8edf3bb91843"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/criterion_events.json",
+      "bytes": 2706,
+      "sha256": "7fe6508ac63a240f81a4e1603f2d255af58cfb45ef89052fb965678d1f363a47"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "a6e67f73cbaab68c119c07ef427ceae686589e969009b12949cdc121e8c7bee5"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/results.json",
+      "bytes": 5247,
+      "sha256": "f217e8a7ae0308234c27ca6ef8f20cb6aefb0ca43cf8e17077e387e2b8ea3692"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/route.log",
+      "bytes": 4719,
+      "sha256": "cb477fe3d4db8a97d496092c993b5d1743d43af6ad8cb01502a3009ee0695c5a"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/route.pid",
+      "bytes": 6,
+      "sha256": "73e4f5350ac3dc5b132d2b19557997f6cfcfad7a86d44bab2a21e38db7d7cd26"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/route_result.json",
+      "bytes": 3506,
+      "sha256": "8455e2a996ca2d15cc0e7f1b630989b4095ddf2d8292c560751bef8f18897902"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/tcp-control.jsonl",
+      "bytes": 1328335,
+      "sha256": "3005758f81a9156a42598fe63dd42e19929eaf997b85c1caf6ce5a2201b9cec9"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/tcp-route-reference.json",
+      "bytes": 335,
+      "sha256": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f"
+    },
+    {
+      "path": "24211-pi_common/attempts/24211/1/tcp-setup.json",
+      "bytes": 904,
+      "sha256": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374"
+    },
+    {
+      "path": "24211-pi_common/done/24211.json",
+      "bytes": 3726,
+      "sha256": "2936f015e5eeca82ba0ba353c62b4365f816b85b6957f14d65d5d20140f14653"
+    },
+    {
+      "path": "24211-pi_common/events.jsonl",
+      "bytes": 871,
+      "sha256": "b2c097098ece32f20f57d35d343eb6a15bbaf24a4a5249fa6e9a8ee730273581"
+    },
+    {
+      "path": "24211-pi_common/invocations/1790098197887747-236232.json",
+      "bytes": 1200,
+      "sha256": "d7cd40ade3d155d27a6ddc44e6d52d517512ecd17c5ff2fca43ae405c6a44e2f"
+    },
+    {
+      "path": "24211-pi_common/live/performance-RouteScenario_24211_rep0_Town01_DynamicObjectCrossing_1_15_09_23_02_30_02.json",
+      "bytes": 498,
+      "sha256": "e30ab1864e95d506908bd007e01c359916e2625ecc9ed4f8f5ddca1111bbc205"
+    },
+    {
+      "path": "24211-pi_common/live/sensor-trace-RouteScenario_24211_rep0_Town01_DynamicObjectCrossing_1_15_09_23_02_30_02.json",
+      "bytes": 204028,
+      "sha256": "a23e87f1887543cafb11c0f0263a7cc5f50ab646c3a9bcbada2a268d8bdc25fa"
+    },
+    {
+      "path": "24211-pi_common/live/status.json",
+      "bytes": 2150,
+      "sha256": "c626f35ba19ec0596bedf5e0d34f2c5274f4c4b0c7d8137fe3d5c6de0a6076ce"
+    },
+    {
+      "path": "24211-pi_common/live/telemetry.jsonl",
+      "bytes": 51549,
+      "sha256": "f3736cae4d63daca6cb7ae888785bfd09e8167e9d073d1b3eb417f43baafe4e6"
+    },
+    {
+      "path": "24211-pi_common/summary.json",
+      "bytes": 553,
+      "sha256": "6fb14faa2f0690468a7b3206e99bd0f3c0212610db9e7da3b5f897bcad555c5b"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 1711,
+      "sha256": "fbc8a783603c7ae342cb8b2356fad45b56cb4e275f926d1393097cf173952982"
+    },
+    {
+      "path": "groups.json",
+      "bytes": 915,
+      "sha256": "c177291014aeae0c49bc4df7a4313205d13ef01e952d6ec2e8e13ef9b46690b5"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 6603,
+      "sha256": "af200b68f82c00b371db22ed2bec90ed7a4197020933aa494d6601c70ac5ea83"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 1274,
+      "sha256": "6849782e401142cb2373b5ab687097c0c35d0156eab295d69c03f34d792044b4"
+    },
+    {
+      "path": "provenance/inputs/00-bench2drive220.xml",
+      "bytes": 693537,
+      "sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88"
+    },
+    {
+      "path": "provenance/inputs/01-protocol.md",
+      "bytes": 12536,
+      "sha256": "a9e6a2d979bb9d76d0aa43ce94ae46608ff69b66a35dd7f7abc6d8ccfcdad2a3"
+    },
+    {
+      "path": "provenance/inputs/02-tcp_b2d_agent.py",
+      "bytes": 12628,
+      "sha256": "091b664963c6d7fca75c501df7945684759952614edd934b127b43b9db8e0bcc"
+    },
+    {
+      "path": "provenance/inputs/03-planner.py",
+      "bytes": 3573,
+      "sha256": "ebf18b02a64a63ad20c8fbf2bb865971810b4fbd1e40f6c9f19ad4434584a253"
+    },
+    {
+      "path": "provenance/inputs/04-model.py",
+      "bytes": 11620,
+      "sha256": "575ce747444ccb7cf288690393eb48963225668948d84ce5c293b667af522645"
+    },
+    {
+      "path": "provenance/inputs/05-config.py",
+      "bytes": 1762,
+      "sha256": "9bd25c9f61b2b568ba00cdb9f3b8a5e685487f662fbcefe8839f8652016d80fa"
+    },
+    {
+      "path": "provenance/manifest.json",
+      "bytes": 11688,
+      "sha256": "a43574ea7c9c201e87961b1889e2793383640ed2b5750f542d58e55e1c40a222"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_agent.py",
+      "bytes": 25013,
+      "sha256": "a3a2e2c81477014363add29e406666353ca557a6fbe1a75def012881238b8dc9"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_calibrate.py",
+      "bytes": 10951,
+      "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller.py",
+      "bytes": 19759,
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_adapter.py",
+      "bytes": 23822,
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_archive.py",
+      "bytes": 5713,
+      "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_campaign.py",
+      "bytes": 11048,
+      "sha256": "d998034e45155e0cb00d7480978320330054d54b227beb36b863b009869453c9"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_compare.py",
+      "bytes": 18579,
+      "sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_g4.py",
+      "bytes": 13371,
+      "sha256": "7fa27b88bc269ffe4553fbec94e1ad7205e785602803ce8f6d53818ba19d8fa7"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_matrix_plot.py",
+      "bytes": 20125,
+      "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_offline_plot.py",
+      "bytes": 6435,
+      "sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_pi_plot.py",
+      "bytes": 19762,
+      "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_pi_selftest.py",
+      "bytes": 4770,
+      "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_plot.py",
+      "bytes": 21406,
+      "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_rejoin_replay.py",
+      "bytes": 7859,
+      "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_selftest.py",
+      "bytes": 24759,
+      "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_slope.py",
+      "bytes": 14937,
+      "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_validate.py",
+      "bytes": 28887,
+      "sha256": "811db36489d8d3d86c3b806b3c25ee6f00a8dc6b33c578a919dd311337fac38f"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_hooks.py",
+      "bytes": 13526,
+      "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_optimization_report.py",
+      "bytes": 3961,
+      "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_policy_server.py",
+      "bytes": 7177,
+      "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_report.py",
+      "bytes": 28194,
+      "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_route.py",
+      "bytes": 13838,
+      "sha256": "05b835efe52f6cf4523b271a1227549d76a407fb8750517fa272dd23527c7263"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_run.py",
+      "bytes": 38719,
+      "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_sweep.py",
+      "bytes": 9557,
+      "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_campaign.py",
+      "bytes": 6539,
+      "sha256": "7ef373b4bcb5f3ff6343eb5044453bcd700aab63d5d16f12b3d9c0ac58b17a53"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_comparison_agent.py",
+      "bytes": 10905,
+      "sha256": "041b2c15fb263c910dd14386b024c073cbd2d0e92fe01c10d82b2d44b93ae078"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_control.py",
+      "bytes": 5035,
+      "sha256": "421f7e0e309a7e692ec301ba08d011e305a9d2c4836b2ddcc0f05d0fc4277dd2"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_preprocess.py",
+      "bytes": 1336,
+      "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_visual_agent.py",
+      "bytes": 10741,
+      "sha256": "d9af5252985af9659f9163a90543b2c6d13613eb4c37518a4ff07dfd3e03116c"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_viewer.py",
+      "bytes": 8713,
+      "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/__init__.py",
+      "bytes": 216,
+      "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/preview.py",
+      "bytes": 4460,
+      "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/sensors.py",
+      "bytes": 3601,
+      "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller.py",
+      "bytes": 12626,
+      "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_agent.py",
+      "bytes": 18296,
+      "sha256": "e771f97f8762595821db03d516982235bf794d914e5b05f71ce290f49c2f778d"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_archive.py",
+      "bytes": 2388,
+      "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_campaign.py",
+      "bytes": 7288,
+      "sha256": "f1912fe767898d4336dba9af81fa1bbf9043232f4627fc601d16cad2f0240808"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_compare.py",
+      "bytes": 5343,
+      "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_g4.py",
+      "bytes": 5152,
+      "sha256": "53ef8a0b9c525e24ab6a8d3ea3b7e744c76ffabccacc91e2142963a56b736ed8"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_matrix.py",
+      "bytes": 3936,
+      "sha256": "ba514c5ade74dab88f3557f0360c5a39326f4bb2fa6445b8086f0249da1df4d3"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_matrix_plot.py",
+      "bytes": 1651,
+      "sha256": "4d4809a1d59437ade0653ed752525964d25b0b22e885a853a9e7b5c2a60d07d3"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi.py",
+      "bytes": 3739,
+      "sha256": "1b0e18412637ca7b02d7ee5066b1892e9767438c1a3c05841e2f3761760638d8"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi_gains.py",
+      "bytes": 2883,
+      "sha256": "3bfb00db43d69aa6c28dbdc000e94cb0a972d7f3f0f07f252120acca2e727887"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi_review.py",
+      "bytes": 4830,
+      "sha256": "ac7a7af14ae930f75bad754567091c5d152ea2449ad48d53e947671dc7ca36af"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pose_dropout.py",
+      "bytes": 7502,
+      "sha256": "8848f2001838b3f679cb10e812998b1815b9ff92eed7af6cf8056f358301b6e6"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_rejoin.py",
+      "bytes": 7011,
+      "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_report.py",
+      "bytes": 16719,
+      "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_slope.py",
+      "bytes": 4232,
+      "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_preview.py",
+      "bytes": 3149,
+      "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_runtime.py",
+      "bytes": 5891,
+      "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_sensor_pipeline.py",
+      "bytes": 4240,
+      "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_tcp_comparison_agent.py",
+      "bytes": 13579,
+      "sha256": "7052e3b6ff432b7bb3e9f61cc8a734089b84552e525e8d44a06b81dc761a1a3e"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_tcp_control.py",
+      "bytes": 5787,
+      "sha256": "9b795040e826c609d9e7d0c2cb14331848fd931b833643abacb11be47e5d0a26"
+    },
+    {
+      "path": "provenance/source.patch",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "servers/carla-101-1.log",
+      "bytes": 167,
+      "sha256": "8c98e7da3a09250fb7438af8de60739b1ef320b0615b245ff34df7f83bacc82a"
+    },
+    {
+      "path": "servers/carla-101.pid",
+      "bytes": 6,
+      "sha256": "2545ff6beefd2de1006fe110d0e8dc6391aa2c8f7add2249f78e526741a76c81"
+    },
+    {
+      "path": "tb/events.out.tfevents.1790098160.tokyo-devbox.236232.0",
+      "bytes": 440,
+      "sha256": "a4142f0775bf933e45f72ebcb09e2ee2bc1edc8a31acbdc81ade444df0d86de0"
+    }
+  ],
+  "file_count": 162,
+  "total_bytes": 15007021
+}

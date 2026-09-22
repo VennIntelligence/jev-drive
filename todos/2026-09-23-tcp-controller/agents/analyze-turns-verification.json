@@ -1,0 +1,12 @@
+{
+  "helper_sha256": "cdd839b6d89d7ae65f82eebd88781f1b544e3758f8b24858f00fe8c39602a244",
+  "frozen_csv_hashes_rechecked": 8,
+  "tests": [
+    "left-positive CTE fixture",
+    "consecutive-frame steer rate and gap missingness",
+    "missing6case matrix refuses output",
+    "temporary old-v4 aliases produce80rows and identical-input equivalence;not turns-v1 results",
+    "existing output refusal"
+  ],
+  "notes": "Temporary fixture outputs removed; original CSV/manifest unchanged."
+}
