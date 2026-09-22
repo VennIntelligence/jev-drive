@@ -128,7 +128,39 @@ x86 上对 denormal 的乘加要走微码，慢两个数量级。同一个 GEMM�
 
 ## 结果
 
-见 [decisions 3d](../research/decisions.md) 和 [decisions 20](../research/decisions.md) 的
-「train split 复核」段，小表在 `research/results/p0-train-split/`，图在
-[research/figs/p0-decile-relative-gain.png](../research/figs/p0-decile-relative-gain.png)。
-run dir：`$DATA_DIR/runs/waymo_p0/train_split/20260922-183146/`（arms + cls）。
+**2026-09-22 跑完（ridge / MLP 部分；分类头还在跑）。**
+run dir：`$DATA_DIR/runs/waymo_p0/train_split/20260922-175708/`，
+snapshot `snapshots/p0-20260922-175427`，CPU、tmux 窗口 `p0`。
+小表拉回 `research/results/p0-train-split/`，图 [research/figs/p0-decile-relative-gain.png](../research/figs/p0-decile-relative-gain.png)。
+
+规模：train 415 663 帧 / 2037 个 sequence 训，完整 val 106 360 帧 / 479 个 sequence 评，
+pre_onset 1510 帧、straight_yaw 46 580 帧、turn_yaw 11 060 帧、rater 479 帧。
+
+| 量 | 半 val（方向 0 / 1） | **train 训、完整 val 评** |
+|:--|:--|:--|
+| DiD | +0.098 / +0.029 | **+0.111 [+0.059, +0.162]** |
+| pre-onset Δ | −0.027 / −0.043 | **−0.016 [−0.062, +0.030]** |
+| straight Δ | −0.125 / −0.072 | **−0.127 [−0.158, −0.099]** |
+| 全集 Δ | −0.078 / −0.034 | **−0.068 [−0.085, −0.052]** |
+| C 的 pre-onset Δ（n_fit） | −0.036（约 750）/ −0.080 | **−0.016 [−0.089, +0.050]（6786）** |
+| D MLP 均匀的 pre-onset Δ | +0.248 / +0.030 | **−0.000 [−0.063, +0.057]** |
+| RFS：ego → A | 7.258 → 7.265 / 7.112 → 7.096 | **7.056 → 6.968**（n=479，paired Δ −0.087 [−0.183, +0.004]） |
+
+按预登记的「什么结果改哪一条」表：**DiD 显著为正 → 第 3d 条保持已确认、限定条件升级；
+第 1 条去掉「待 train split 复核」**；**C 落在 [−0.05, +0.05] → 第 20 条分支 2 确认**；
+**D 仍比 A 差 → 「MLP 过拟合」那句就地修正为「归因于样本量是错的」**；
+**decile 仍是倒 U → 第 20 条那一节确认**；**RFS 仍无增益 → 该句确认，n 从 237/242 涨到 479**。
+三条都已就地回填。
+
+### 实际 wall time vs 估计
+
+| 步骤 | 估计 | 实测 |
+|:--|--:|--:|
+| 载入 356 个 shard 的 `L18_mean` | 1–3 min | **6 s** |
+| s_ego + ridge ego + A / B / C | < 5 min | **1 min 50 s** |
+| arm D（MLP × 2） | 20–60 min | **10 min 35 s** |
+| 分类头（`cls ego` + `cls_late`，9 个 λ） | 3–4 h | 见下 |
+
+前三项都比估计快，主要是 25 核的 float32 GEMM 实测 2.4–3.0 TFLOPS，比按经验假设的 1 TFLOPS 快三倍。
+**MLP 的 early stopping 停在第 1 个 epoch**（40 个里），所以它也比估计快——这本身是个结果，
+写进第 20 条了。
