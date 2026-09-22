@@ -9,6 +9,15 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 - Edit and commit locally, push to GitHub. The GPU box only pulls from GitHub.
 - After every change: commit, push, then pull on the box (`ssh autodl 'cd ~/data/jev-drive && git pull'`).
   Scripts run on the box, so it must never lag behind `main`.
+- The box is a tool for running experiments and nothing else. Research notes, figures, literature material and
+  anything else unrelated to running an experiment live on this Mac, which is their source of truth. Never back
+  them up or copy them to the box (no scp/rsync): a second copy drifts and leaves the two sides inconsistent.
+  A change that touches only `research/`, `todos/` or `tmp/` needs no pull on the box; tracked files there
+  arrive with the next ordinary `git pull` and that is all.
+- There is a second box, the Tokyo box (`ssh ujs@100.108.238.8`), and it has a monitor. It is for *looking*:
+  CARLA in a window, a manual drive, a screenshot or recording of a route. Experiments still run on the GPU box.
+  **Its GPU 0 is broken — use GPU 1 only, and CARLA's `-graphicsadapter` rank is inverted there**
+  (`-graphicsadapter=0` is the good card). See [docs/tokyo-box.md](docs/tokyo-box.md).
 - Data, checkpoints and envs stay on the remote data disk, never in git.
 - Never commit secrets: passwords, keys, proxy configs, subscription URLs.
 - Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,
@@ -61,6 +70,7 @@ as they ship: measure them, do not rewrite them.
 ## Docs
 Start at [README.md](README.md), the index of every doc; how-to docs are under [docs/README.md](docs/README.md).
 - GPU box (login, disk, tools): [docs/remote-box.md](docs/remote-box.md)
+- Tokyo box (the one with a monitor, for looking at CARLA): [docs/tokyo-box.md](docs/tokyo-box.md)
 - A download fails on the box: [docs/network-proxy.md](docs/network-proxy.md)
   (try `source /etc/network_turbo` first, then `proxy_on`)
 

@@ -1,6 +1,8 @@
 # Remote box
 
 Read this when you need to log in to or use the GPU box.
+There are two boxes now: this one runs the experiments, and [tokyo-box.md](tokyo-box.md) is the one
+with a monitor, for looking at CARLA with your own eyes.
 
 - Login: `ssh autodl` (alias in local `~/.ssh/config`, key auth; now `connect.westd.seetacloud.com`, port 41708).
   User `ujs`, one RTX PRO 6000 Blackwell Server Edition (96 GB, sm_120), driver 595.71, CUDA 13.2.

@@ -1,6 +1,8 @@
 # Network proxy
 
 Read this when a download fails or is slow on the box.
+This page is about the GPU box. The Tokyo box runs Clash in *global* mode, where none of the advice
+below holds — see the network section of [tokyo-box.md](tokyo-box.md).
 
 ## Default: direct
 
