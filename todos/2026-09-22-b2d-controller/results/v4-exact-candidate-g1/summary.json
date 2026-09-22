@@ -1,0 +1,1419 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-09-22T15:53:51.154745+00:00",
+  "evidence_stage": "supplementary configuration coverage AFTER formal-v4 started; not retrospective pre-run evidence",
+  "configuration": {
+    "wheelbase": 2.8604714913890885,
+    "max_steer_deg": 69.99999237060547,
+    "steering_curve": [
+      [
+        0.0,
+        1.0
+      ],
+      [
+        20.0,
+        0.8999999761581421
+      ],
+      [
+        60.0,
+        0.800000011920929
+      ],
+      [
+        120.0,
+        0.699999988079071
+      ]
+    ],
+    "longitudinal_mode": "pi",
+    "lookahead": "max",
+    "pi_kp": 0.5,
+    "pi_ki": 0.25,
+    "preset": "pursuit"
+  },
+  "constructor_assertions_passed": 16,
+  "constructed_controllers": [
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    },
+    {
+      "preset": "pursuit",
+      "wheelbase": 2.8604714913890885,
+      "max_steer_deg": 69.99999237060547,
+      "steering_curve": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          20.0,
+          0.8999999761581421
+        ],
+        [
+          60.0,
+          0.800000011920929
+        ],
+        [
+          120.0,
+          0.699999988079071
+        ]
+      ],
+      "lookahead": "max",
+      "speed_window": "near",
+      "dt": 0.05,
+      "trajectory_dt": 0.25,
+      "stale_timeout": 0.5,
+      "history_seconds": 2.0,
+      "max_throttle": 0.75,
+      "max_brake": 1.0,
+      "max_steer": 0.8,
+      "steer_rate": 2.0,
+      "longitudinal_mode": "pi",
+      "pi_kp": 0.5,
+      "pi_ki": 0.25
+    }
+  ],
+  "sources": [
+    {
+      "original": "/data/runs/b2d/controller/formal-v4/provenance/source/scripts/b2d_controller.py",
+      "archived": "source/b2d_controller.py",
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_selftest.py",
+      "archived": "source/b2d_controller_selftest.py",
+      "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_pi_selftest.py",
+      "archived": "source/b2d_controller_pi_selftest.py",
+      "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json",
+      "archived": "source/candidate-pursuit.json",
+      "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+    }
+  ],
+  "plant": "Independent synthetic kinematic bicycle; 3*throttle - .08*speed - 8*brake with static friction; no gears or CARLA tire dynamics",
+  "limitations": [
+    "Original helper analytic 20-point future paths are generated from analytic functions, not padded native TCP outputs.",
+    "Plant steering curve uses original helper rounded measured constants; controller uses exact archived candidate constants.",
+    "No CARLA, sensors, real TCP model, scenario interactions, or real slope validation.",
+    "This configuration supplement does not override failed formal G4 or qualify a default."
+  ],
+  "cases": [
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": -1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.008775394201694951,
+      "lateral_rms_m": 0.009062825569923489,
+      "lateral_p95_m": 0.009273821939540915,
+      "reference_speed_rms_mps": 0.02764146818876416,
+      "command_speed_rms_mps": 0.03452897795304142,
+      "controller_p99_ms": 0.11888897999999995,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": -1.0,
+      "delay_s": 0.1,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.01151392431678396,
+      "lateral_rms_m": 0.009303049887576366,
+      "lateral_p95_m": 0.01099121260730733,
+      "reference_speed_rms_mps": 0.09375525747667728,
+      "command_speed_rms_mps": 0.09216051994022163,
+      "controller_p99_ms": 0.10598744999999993,
+      "reason_counts": {
+        "no_trajectory": 2,
+        "tracking": 278
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": -1.0,
+      "delay_s": 0.3,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.031667031044064035,
+      "lateral_rms_m": 0.003352305772001223,
+      "lateral_p95_m": 0.0063951317142285176,
+      "reference_speed_rms_mps": 0.041059213525065835,
+      "command_speed_rms_mps": 0.04147851682256287,
+      "controller_p99_ms": 0.10740477999999992,
+      "reason_counts": {
+        "no_trajectory": 6,
+        "tracking": 274
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.008775394201694951,
+      "lateral_rms_m": 0.009062825569923489,
+      "lateral_p95_m": 0.009273821939540915,
+      "reference_speed_rms_mps": 0.02764146818876416,
+      "command_speed_rms_mps": 0.03452897795304142,
+      "controller_p99_ms": 0.11890364999999999,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.1,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.01151392431678396,
+      "lateral_rms_m": 0.009303049887576366,
+      "lateral_p95_m": 0.01099121260730733,
+      "reference_speed_rms_mps": 0.09375525747667728,
+      "command_speed_rms_mps": 0.09216051994022163,
+      "controller_p99_ms": 0.12344902999999981,
+      "reason_counts": {
+        "no_trajectory": 2,
+        "tracking": 278
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.3,
+      "lateral_offset_m": 0.0,
+      "heading_offset_deg": 0.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.031667031044064035,
+      "lateral_rms_m": 0.003352305772001223,
+      "lateral_p95_m": 0.0063951317142285176,
+      "reference_speed_rms_mps": 0.041059213525065835,
+      "command_speed_rms_mps": 0.04147851682256287,
+      "controller_p99_ms": 0.11629907999999992,
+      "reason_counts": {
+        "no_trajectory": 6,
+        "tracking": 274
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": -0.5,
+      "heading_offset_deg": -5.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.11885997394967915,
+      "lateral_rms_m": 0.009881443816630173,
+      "lateral_p95_m": 0.01158045978441978,
+      "reference_speed_rms_mps": 0.015755802853504225,
+      "command_speed_rms_mps": 0.047076370216134554,
+      "controller_p99_ms": 0.11056556999999996,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": -0.5,
+      "heading_offset_deg": 5.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.0740485698739726,
+      "lateral_rms_m": 0.009161233449729874,
+      "lateral_p95_m": 0.009133411167916704,
+      "reference_speed_rms_mps": 0.007233206366451683,
+      "command_speed_rms_mps": 0.03239040033623888,
+      "controller_p99_ms": 0.11916810999999998,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": 0.5,
+      "heading_offset_deg": -5.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.07092769769867129,
+      "lateral_rms_m": 0.009061882621503406,
+      "lateral_p95_m": 0.010096498925020292,
+      "reference_speed_rms_mps": 0.0360888059636191,
+      "command_speed_rms_mps": 0.04232618769228264,
+      "controller_p99_ms": 0.1488411699999995,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "circle",
+      "preset": "pursuit",
+      "speed_mps": 6.0,
+      "radius_m": 20.0,
+      "sign": 1.0,
+      "delay_s": 0.0,
+      "lateral_offset_m": 0.5,
+      "heading_offset_deg": 5.0,
+      "wheelbase_gain": 1.0,
+      "steering_gain": 1.0,
+      "steering_delay_s": 0.0,
+      "speed_window": "near",
+      "lookahead": "max",
+      "experiment": "production_controller",
+      "lateral_rms_full_m": 0.10074881356543186,
+      "lateral_rms_m": 0.00899348172191863,
+      "lateral_p95_m": 0.01011423216481262,
+      "reference_speed_rms_mps": 0.041295936493269826,
+      "command_speed_rms_mps": 0.05426825210826703,
+      "controller_p99_ms": 0.11856852999999998,
+      "reason_counts": {
+        "tracking": 280
+      },
+      "physics_lateral_acceleration_mps2": 1.8,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "s_curve",
+      "preset": "pursuit",
+      "delay_s": 0.0,
+      "lateral_rms_full_m": 0.003908362246031166,
+      "lateral_rms_m": 0.0038527657935348686,
+      "reference_speed_rms_mps": 0.02393424106531127,
+      "pass_accuracy": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "s_curve",
+      "preset": "pursuit",
+      "delay_s": 0.3,
+      "lateral_rms_full_m": 0.00956212362304166,
+      "lateral_rms_m": 0.009981782907378814,
+      "reference_speed_rms_mps": 0.03170160386577335,
+      "pass_accuracy": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "stop",
+      "preset": "pursuit",
+      "speed_window": "near",
+      "reference_speed_rms_mps": 0.06514746708465827,
+      "deceleration_speed_rms_mps": 0.1122204239487845,
+      "command_speed_rms_mps": 0.25329207660218367,
+      "stop_position_error_m": -0.028329416532010043,
+      "hold_displacement_m": 0.0,
+      "hold_max_speed_mps": 0.0,
+      "hold_duration_s": 5.0,
+      "actual_stop_time_s": 6.050000000000001,
+      "speed_at_planned_stop_mps": 0.07246596048234764,
+      "deceleration_start_s": 3.0,
+      "planned_stop_time_s": 6.0,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "speed_steps",
+      "longitudinal_mode": "pi",
+      "actuator_delay_s": 0.0,
+      "steady_speed_rms_mps": 0.007257248920222507,
+      "parked_displacement_m": 0.0,
+      "parked_max_speed_mps": 0.0,
+      "ticks": 920,
+      "integral_max_abs": 0.30487211893150407,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "speed_steps",
+      "longitudinal_mode": "pi",
+      "actuator_delay_s": 0.1,
+      "steady_speed_rms_mps": 0.004638679597490819,
+      "parked_displacement_m": 0.0,
+      "parked_max_speed_mps": 0.0,
+      "ticks": 920,
+      "integral_max_abs": 0.2919788543292123,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    },
+    {
+      "kind": "speed_steps",
+      "longitudinal_mode": "pi",
+      "actuator_delay_s": 0.2,
+      "steady_speed_rms_mps": 0.0022895549957425393,
+      "parked_displacement_m": 0.0,
+      "parked_max_speed_mps": 0.0,
+      "ticks": 920,
+      "integral_max_abs": 0.27910624526251576,
+      "main_pass": true,
+      "effective_candidate": {
+        "wheelbase": 2.8604714913890885,
+        "max_steer_deg": 69.99999237060547,
+        "steering_curve": [
+          [
+            0.0,
+            1.0
+          ],
+          [
+            20.0,
+            0.8999999761581421
+          ],
+          [
+            60.0,
+            0.800000011920929
+          ],
+          [
+            120.0,
+            0.699999988079071
+          ]
+        ],
+        "longitudinal_mode": "pi",
+        "lookahead": "max",
+        "pi_kp": 0.5,
+        "pi_ki": 0.25,
+        "preset": "pursuit"
+      }
+    }
+  ],
+  "pass_count": 16,
+  "pass": true,
+  "raw_trace_directory": "/data/runs/b2d/controller/v4-exact-candidate-g1/traces"
+}
