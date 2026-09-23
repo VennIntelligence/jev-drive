@@ -51,6 +51,8 @@ TFv6 actor-origin、y-right 的 8 点先取反 y，中心差分求未来切向�
 
 `OPENBLAS_CORETYPE=Barcelona`：原控制器 143 项通过、1 项 skip；TCP 17/17；W2 坐标与四臂/后处理测试 9/9；route-cluster bootstrap 测试 1/1。`scripts/b2d_tfv6_analyze.py` 已对四臂 smoke 生成 `cases.csv`、`paired.csv`、`tracking.csv`、`summary.json` 与两张图，位于 `/data/runs/b2d/tfv6-w2/smoke/analysis/`。该 smoke 只有一个 (route, seed)，bootstrap CI 退化为点值，绝不作为效应结论。
 
+额外 A arm 的 sensor-pose smoke（同一 route/seed）产生 247 帧，逐帧 `sensor_rear_pose.status` 可用，确认 TFv6 actor-origin GNSS 的 fixed-k logging 路径。它同样不计入正式结果。
+
 Dev10 route 25378、TM seed 0，四臂均跑到官方 100% completion；官方 DS 均为 70（YieldToEmergencyVehicleTest），属于 smoke，不计入正式结果。`route_result.json` 的 route wall、tick 与 profiler：
 
 | arm | ticks | route wall s | mean profiled tick ms | mean agent ms | DS / RC |
@@ -84,5 +86,7 @@ Dev10 官方 TFv6 已完成的 25378、25381、27494 三条基线样本合计 11
 | 合计 | 202 | 2.63 h | 约 3–6 h，按正式首批实测更新 |
 
 v1 保留集 XML 是 `todos/2026-09-22-b2d-controller/results/holdout.xml`，ID 为 **3072、2084、2050、25318、28154、27529**。正式 runner 会跳过有 `done.json` 的 case，按 route/seed 排序、每组四臂连跑，独立 `log.txt`、`events.jsonl`、tqdm 进度条，并为每个 attempt 保存 runner、CARLA、逐帧与官方统计。`scripts/b2d_tfv6_analyze.py` 对 DS/RC/完成/SR/逐项每 km 违规做配对，DS 95% CI 按 route cluster bootstrap 10000 次；跟踪仅计划速度 >1 m/s，第一次碰撞前后分列。
+
+`scripts/b2d_tfv6_formal.py` 串行执行 1、1r、分析、2、分析；正式 runner 强制要求 Mac 提供的 frozen protocol commit，并逐字节核对该 commit 与本 worktree 的 protocol，防止冻结前误启动。level 3 无入口。
 
 **停止点。** 尚未开始任何 level 1、1r、2 正式 case；等待 Mac 审核、冻结协议 commit 与 `GO`。

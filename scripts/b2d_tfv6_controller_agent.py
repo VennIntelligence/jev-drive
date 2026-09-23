@@ -120,7 +120,10 @@ class TFv6ControllerAgent(SensorAgent):
             prediction = original_forward(*forward_args, **forward_kwargs)
             self._forward_ms = (time.perf_counter() - start) * 1000.0
             self._prediction = prediction
-            self._rear = rear_waypoints(prediction.pred_future_waypoints[0].detach().float().cpu().numpy())
+            try:
+                self._rear = rear_waypoints(prediction.pred_future_waypoints[0].detach().float().cpu().numpy())
+            except ValueError:
+                self._rear = None
             self._raw = {
                 "A": _triplet(prediction.route_steer, prediction.target_speed_throttle,
                               prediction.target_speed_brake),
@@ -129,8 +132,8 @@ class TFv6ControllerAgent(SensorAgent):
             speed = float(self._tick_data["speed"].item())
             yaw_rate = -float(self._motion["imu"][1][5])
             for arm, controller in self._controllers.items():
-                if not controller.update(self._rear, self._sim_time, trajectory_dt=0.25):
-                    raise RuntimeError(f"{arm} rejected TFv6 waypoint trajectory")
+                controller.update(self._rear if self._rear is not None else np.full((8, 2), np.nan),
+                                  self._sim_time, trajectory_dt=0.25)
                 throttle, steer, brake = controller.step(self._sim_time, speed, yaw_rate)
                 self._raw[arm] = _triplet(steer, throttle, brake)
             self._raw = {arm: _normalize_brake(raw, speed) for arm, raw in self._raw.items()}

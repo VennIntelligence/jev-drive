@@ -6,6 +6,7 @@ import json
 import math
 from pathlib import Path
 import sys
+import xml.etree.ElementTree as ET
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -117,14 +118,14 @@ def frame_metrics(frame_path, infraction_path, arm):
     return output
 
 
-def bootstrap(paired, comparison):
-    rows = [r for r in paired if r["comparison"] == comparison and r["ds_diff"] is not None]
+def bootstrap(paired, comparison, field="ds_diff"):
+    rows = [r for r in paired if r["comparison"] == comparison and r[field] is not None]
     routes = sorted(set(r["route"] for r in rows), key=int)
     if not routes:
         return {"mean": None, "ci_low": None, "ci_high": None, "n_pairs": 0, "n_routes": 0}
-    route_values = {route: np.asarray([r["ds_diff"] for r in rows if r["route"] == route])
+    route_values = {route: np.asarray([r[field] for r in rows if r["route"] == route])
                     for route in routes}
-    values = np.asarray([r["ds_diff"] for r in rows])
+    values = np.asarray([r[field] for r in rows])
     rng = np.random.default_rng(20260923)
     samples = np.empty(BOOTSTRAPS)
     for i in range(BOOTSTRAPS):
@@ -178,7 +179,19 @@ def analyze(run_roots, output, extra=None):
     index = {(row["level"], row["route"], row["seed"], row["arm"]): row for row in cases}
     paired = []
     missing = []
-    for level, route, seed in sorted({key[:3] for key in index}, key=lambda x: (x[0], int(x[1]), x[2])):
+    expected = {key[:3] for key in index}
+    for root in run_roots:
+        if root.name not in ("level1", "level1r", "level2") or not root.exists():
+            continue
+        level = root.name.removeprefix("level")
+        xml_path = (Path(__file__).resolve().parents[1] /
+                    "todos/2026-09-22-b2d-controller/results/holdout.xml"
+                    if level == "2" else
+                    Path("/data/runs/b2d/tfv6-repro/runtime/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml"))
+        for node in ET.parse(xml_path).getroot():
+            for seed in ((0,) if level == "1r" else (0, 1, 2)):
+                expected.add((level, node.attrib["id"], seed))
+    for level, route, seed in sorted(expected, key=lambda x: (x[0], int(x[1]), x[2])):
         arms_present = {arm for l, r, s, arm in index if (l, r, s) == (level, route, seed)}
         if arms_present != ({"A"} if level == "1r" else set("ABCD")):
             missing.append({"level": level, "route": route, "seed": seed,
@@ -202,6 +215,19 @@ def analyze(run_roots, output, extra=None):
                                    for a, b in PAIRS} for level in ("smoke", "1", "2")},
                "combined": {f"{a}-{b}": bootstrap([r for r in paired if r["level"] in ("1", "2")], f"{a}-{b}")
                             for a, b in PAIRS}}
+    secondary_fields = [key for key in paired[0] if key.endswith("_diff") and key != "ds_diff"] if paired else []
+    summary["secondary"] = {
+        level: {comparison: {field: bootstrap([r for r in paired if level == "combined" or r["level"] == level],
+                                                 comparison, field)
+                             for field in secondary_fields}
+                for comparison in ("C-B", "A-B", "D-C")}
+        for level in ("1", "2", "combined")}
+    summary["arm_counts"] = {
+        level: {arm: {"cases": sum(r["level"] == level and r["arm"] == arm for r in cases),
+                      "completed": sum(r["level"] == level and r["arm"] == arm and r["completed"] for r in cases),
+                      "sr": sum(r["level"] == level and r["arm"] == arm and r["sr"] for r in cases)}
+                for arm in "ABCD"}
+        for level in ("1", "1r", "2")}
     repeat = []
     for key, rerun in index.items():
         if key[0] == "1r":

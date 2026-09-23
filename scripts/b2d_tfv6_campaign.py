@@ -104,6 +104,7 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks):
                    OPENBLAS_CORETYPE="Barcelona", OMP_NUM_THREADS="4",
                    PYTHONPATH=str(DATA / "third_party/lead-cvpr2026"),
                    B2D_W2_LOG_DIR=str(attempt_dir),
+                   SAVE_PATH=str(attempt_dir),
                    LEAD_CLOSED_LOOP_CONFIG="sensor_agent_creeping=True use_kalman_filter=True slower_for_stop_sign=True")
         command = [str(PYTHON), str(ROOT / "scripts/b2d_run.py"), "--routes", str(xml_path),
                    "--route-ids", route, "--out", str(run_dir), "--workers", "1",
@@ -164,9 +165,19 @@ def main():
     parser.add_argument("--arm", choices=tuple("ABCD"), help="one smoke arm")
     parser.add_argument("--smoke-replicas", type=int, default=1,
                         help="independent TM seeds for concurrency measurement")
+    parser.add_argument("--frozen-protocol-commit", default="",
+                        help="required before formal levels")
     args = parser.parse_args()
     if not 1 <= args.concurrency <= 3:
         parser.error("concurrency must be 1, 2 or 3")
+    if args.level != "smoke":
+        if not args.frozen_protocol_commit:
+            parser.error("formal levels require Mac's frozen protocol commit")
+        protocol = "todos/2026-09-23-tfv6-controller/protocol.md"
+        frozen = subprocess.run(["git", "show", f"{args.frozen_protocol_commit}:{protocol}"],
+                                cwd=ROOT, capture_output=True)
+        if frozen.returncode or frozen.stdout != (ROOT / protocol).read_bytes():
+            parser.error("frozen protocol commit is missing or differs from worktree")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     xml_path = HOLDOUT if args.level == "2" else DEV10
