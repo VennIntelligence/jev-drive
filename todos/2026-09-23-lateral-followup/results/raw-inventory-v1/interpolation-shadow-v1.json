@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/interpolation-shadow-v1",
+  "captured_at": 1790131817.0477493,
+  "files": [
+    {
+      "path": "manifest.json",
+      "bytes": 4158,
+      "sha256": "ac4a5579b51e25ce253a665be8a0787d9dca1d3917da4f3515ce1cab58d47b3e"
+    },
+    {
+      "path": "per-frame-shadow.csv",
+      "bytes": 256899,
+      "sha256": "3365240a0da19d77c405a60711e7fd3e63d0a2960d56a0ff8552c9fe998942cf"
+    },
+    {
+      "path": "per-update-shadow.csv",
+      "bytes": 22030,
+      "sha256": "a0159a70e5cc46cec3af996dcbf3e055b4744c2aecdf828cf54a81094fef19e0"
+    },
+    {
+      "path": "source/b2d_controller.py",
+      "bytes": 20234,
+      "sha256": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b"
+    },
+    {
+      "path": "source/circle_sampling.py",
+      "bytes": 4299,
+      "sha256": "4a0dce35a21a5acc6ce27dd4654fdebe09bdc16d3fcade403156f194a3081740"
+    },
+    {
+      "path": "source/interpolation_shadow.py",
+      "bytes": 8310,
+      "sha256": "0c0bfda3fa26cc610bf5acfd3604675f50e1468ce74ed08c06e4dfb688c0b53c"
+    },
+    {
+      "path": "source/replay_controller_updates.py",
+      "bytes": 12704,
+      "sha256": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 459,
+      "sha256": "1516f64df32b21da156fdec5a95971b48e5b91ef4da6507da265e3947e363524"
+    },
+    {
+      "path": "window-summary.csv",
+      "bytes": 1061,
+      "sha256": "4ee388c82f85d90823e2e11433f65a43a8d0bc322ec4dac64bee58d07120a797"
+    }
+  ],
+  "file_count": 9,
+  "total_bytes": 330154
+}

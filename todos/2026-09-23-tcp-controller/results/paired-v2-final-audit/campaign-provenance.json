@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "captured_at": 1790098716.895645,
+  "capture_timing": "before_run",
+  "repositories": {
+    "project": {
+      "path": "/home/ujs/mycode/jev-drive",
+      "commit": "c09c9688d491859a0d8d9e97c5409a65670add12",
+      "status": "M todos/2026-09-23-tcp-controller/README.md\n?? todos/2026-09-23-tcp-controller/agents/\n?? todos/2026-09-23-tcp-controller/results/analysis-contract.md\n?? todos/2026-09-23-tcp-controller/results/analysis-edition-001/\n?? todos/2026-09-23-tcp-controller/results/analysis-tests-v1/\n?? todos/2026-09-23-tcp-controller/results/analysis-tests-v2/\n?? todos/2026-09-23-tcp-controller/results/analyze_tcp.py\n?? todos/2026-09-23-tcp-controller/results/figures-edition-001/\n?? todos/2026-09-23-tcp-controller/results/figures-edition-002/\n?? todos/2026-09-23-tcp-controller/results/plot_tcp.py\n?? todos/2026-09-23-tcp-controller/results/test_analyze_tcp.py\n?? todos/2026-09-23-tcp-controller/turn-window-appendix.md"
+    },
+    "bench2drive": {
+      "path": "/data/third_party/Bench2Drive",
+      "commit": "7ec25d1c9f7522d923ce5f3420986cef1cb2d956",
+      "status": ""
+    },
+    "tcp": {
+      "path": "/data/third_party/Bench2DriveZoo",
+      "commit": "8a08b07883f10b7d83f6bf5dd475bda91a91c50a",
+      "status": ""
+    }
+  },
+  "python": "3.8.20 (default, Oct  2 2024, 16:34:12) \n[Clang 18.1.8 ]",
+  "executable": "/data/envs/carla/bin/python",
+  "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.2.5",
+  "argv": [
+    "scripts/b2d_tcp_campaign.py",
+    "--out",
+    "/data/runs/b2d/tcp-controller/paired-v2",
+    "--server-index",
+    "102",
+    "--protocol",
+    "todos/2026-09-23-tcp-controller/protocol-v2.md"
+  ],
+  "sources": [
+    {
+      "path": "scripts/b2d_agent.py",
+      "sha256": "a3a2e2c81477014363add29e406666353ca557a6fbe1a75def012881238b8dc9",
+      "bytes": 25013
+    },
+    {
+      "path": "scripts/b2d_calibrate.py",
+      "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c",
+      "bytes": 10951
+    },
+    {
+      "path": "scripts/b2d_controller.py",
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb",
+      "bytes": 19759
+    },
+    {
+      "path": "scripts/b2d_controller_adapter.py",
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585",
+      "bytes": 23822
+    },
+    {
+      "path": "scripts/b2d_controller_archive.py",
+      "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6",
+      "bytes": 5713
+    },
+    {
+      "path": "scripts/b2d_controller_campaign.py",
+      "sha256": "d998034e45155e0cb00d7480978320330054d54b227beb36b863b009869453c9",
+      "bytes": 11048
+    },
+    {
+      "path": "scripts/b2d_controller_compare.py",
+      "sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098",
+      "bytes": 18579
+    },
+    {
+      "path": "scripts/b2d_controller_g4.py",
+      "sha256": "7fa27b88bc269ffe4553fbec94e1ad7205e785602803ce8f6d53818ba19d8fa7",
+      "bytes": 13371
+    },
+    {
+      "path": "scripts/b2d_controller_matrix_plot.py",
+      "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180",
+      "bytes": 20125
+    },
+    {
+      "path": "scripts/b2d_controller_offline_plot.py",
+      "sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae",
+      "bytes": 6435
+    },
+    {
+      "path": "scripts/b2d_controller_pi_plot.py",
+      "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f",
+      "bytes": 19762
+    },
+    {
+      "path": "scripts/b2d_controller_pi_selftest.py",
+      "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c",
+      "bytes": 4770
+    },
+    {
+      "path": "scripts/b2d_controller_plot.py",
+      "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64",
+      "bytes": 21406
+    },
+    {
+      "path": "scripts/b2d_controller_rejoin_replay.py",
+      "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2",
+      "bytes": 7859
+    },
+    {
+      "path": "scripts/b2d_controller_selftest.py",
+      "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea",
+      "bytes": 24759
+    },
+    {
+      "path": "scripts/b2d_controller_slope.py",
+      "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb",
+      "bytes": 14937
+    },
+    {
+      "path": "scripts/b2d_controller_validate.py",
+      "sha256": "811db36489d8d3d86c3b806b3c25ee6f00a8dc6b33c578a919dd311337fac38f",
+      "bytes": 28887
+    },
+    {
+      "path": "scripts/b2d_hooks.py",
+      "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639",
+      "bytes": 13526
+    },
+    {
+      "path": "scripts/b2d_optimization_report.py",
+      "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf",
+      "bytes": 3961
+    },
+    {
+      "path": "scripts/b2d_policy_server.py",
+      "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc",
+      "bytes": 7177
+    },
+    {
+      "path": "scripts/b2d_report.py",
+      "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a",
+      "bytes": 28194
+    },
+    {
+      "path": "scripts/b2d_route.py",
+      "sha256": "05b835efe52f6cf4523b271a1227549d76a407fb8750517fa272dd23527c7263",
+      "bytes": 13838
+    },
+    {
+      "path": "scripts/b2d_run.py",
+      "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31",
+      "bytes": 38719
+    },
+    {
+      "path": "scripts/b2d_sweep.py",
+      "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23",
+      "bytes": 9557
+    },
+    {
+      "path": "scripts/b2d_tcp_campaign.py",
+      "sha256": "7ef373b4bcb5f3ff6343eb5044453bcd700aab63d5d16f12b3d9c0ac58b17a53",
+      "bytes": 6539
+    },
+    {
+      "path": "scripts/b2d_tcp_comparison_agent.py",
+      "sha256": "041b2c15fb263c910dd14386b024c073cbd2d0e92fe01c10d82b2d44b93ae078",
+      "bytes": 10905
+    },
+    {
+      "path": "scripts/b2d_tcp_control.py",
+      "sha256": "22035972c64114175fb70e76552c254ab54d60b9c8fc5e39c62b27bf2ef5391a",
+      "bytes": 5476
+    },
+    {
+      "path": "scripts/b2d_tcp_preprocess.py",
+      "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315",
+      "bytes": 1336
+    },
+    {
+      "path": "scripts/b2d_tcp_visual_agent.py",
+      "sha256": "d9af5252985af9659f9163a90543b2c6d13613eb4c37518a4ff07dfd3e03116c",
+      "bytes": 10741
+    },
+    {
+      "path": "scripts/b2d_viewer.py",
+      "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86",
+      "bytes": 8713
+    },
+    {
+      "path": "scripts/drive_runtime/__init__.py",
+      "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840",
+      "bytes": 216
+    },
+    {
+      "path": "scripts/drive_runtime/preview.py",
+      "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1",
+      "bytes": 4460
+    },
+    {
+      "path": "scripts/drive_runtime/sensors.py",
+      "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08",
+      "bytes": 3601
+    },
+    {
+      "path": "scripts/test_b2d_controller.py",
+      "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b",
+      "bytes": 12626
+    },
+    {
+      "path": "scripts/test_b2d_controller_agent.py",
+      "sha256": "e771f97f8762595821db03d516982235bf794d914e5b05f71ce290f49c2f778d",
+      "bytes": 18296
+    },
+    {
+      "path": "scripts/test_b2d_controller_archive.py",
+      "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba",
+      "bytes": 2388
+    },
+    {
+      "path": "scripts/test_b2d_controller_campaign.py",
+      "sha256": "f1912fe767898d4336dba9af81fa1bbf9043232f4627fc601d16cad2f0240808",
+      "bytes": 7288
+    },
+    {
+      "path": "scripts/test_b2d_controller_compare.py",
+      "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132",
+      "bytes": 5343
+    },
+    {
+      "path": "scripts/test_b2d_controller_g4.py",
+      "sha256": "53ef8a0b9c525e24ab6a8d3ea3b7e744c76ffabccacc91e2142963a56b736ed8",
+      "bytes": 5152
+    },
+    {
+      "path": "scripts/test_b2d_controller_matrix.py",
+      "sha256": "ba514c5ade74dab88f3557f0360c5a39326f4bb2fa6445b8086f0249da1df4d3",
+      "bytes": 3936
+    },
+    {
+      "path": "scripts/test_b2d_controller_matrix_plot.py",
+      "sha256": "4d4809a1d59437ade0653ed752525964d25b0b22e885a853a9e7b5c2a60d07d3",
+      "bytes": 1651
+    },
+    {
+      "path": "scripts/test_b2d_controller_pi.py",
+      "sha256": "1b0e18412637ca7b02d7ee5066b1892e9767438c1a3c05841e2f3761760638d8",
+      "bytes": 3739
+    },
+    {
+      "path": "scripts/test_b2d_controller_pi_gains.py",
+      "sha256": "3bfb00db43d69aa6c28dbdc000e94cb0a972d7f3f0f07f252120acca2e727887",
+      "bytes": 2883
+    },
+    {
+      "path": "scripts/test_b2d_controller_pi_review.py",
+      "sha256": "ac7a7af14ae930f75bad754567091c5d152ea2449ad48d53e947671dc7ca36af",
+      "bytes": 4830
+    },
+    {
+      "path": "scripts/test_b2d_controller_pose_dropout.py",
+      "sha256": "8848f2001838b3f679cb10e812998b1815b9ff92eed7af6cf8056f358301b6e6",
+      "bytes": 7502
+    },
+    {
+      "path": "scripts/test_b2d_controller_rejoin.py",
+      "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0",
+      "bytes": 7011
+    },
+    {
+      "path": "scripts/test_b2d_controller_report.py",
+      "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53",
+      "bytes": 16719
+    },
+    {
+      "path": "scripts/test_b2d_controller_slope.py",
+      "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820",
+      "bytes": 4232
+    },
+    {
+      "path": "scripts/test_b2d_preview.py",
+      "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2",
+      "bytes": 3149
+    },
+    {
+      "path": "scripts/test_b2d_runtime.py",
+      "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69",
+      "bytes": 5891
+    },
+    {
+      "path": "scripts/test_b2d_sensor_pipeline.py",
+      "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0",
+      "bytes": 4240
+    },
+    {
+      "path": "scripts/test_b2d_tcp_comparison_agent.py",
+      "sha256": "7052e3b6ff432b7bb3e9f61cc8a734089b84552e525e8d44a06b81dc761a1a3e",
+      "bytes": 13579
+    },
+    {
+      "path": "scripts/test_b2d_tcp_control.py",
+      "sha256": "300677d26d1b03b0ee1e736f9f6f63b4bb49e1af02534443f3a6bb8b5216526b",
+      "bytes": 6580
+    }
+  ],
+  "inputs": [
+    {
+      "original": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml",
+      "archived": "inputs/00-bench2drive220.xml",
+      "sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+      "bytes": 693537
+    },
+    {
+      "original": "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/protocol-v2.md",
+      "archived": "inputs/01-protocol-v2.md",
+      "sha256": "87359b5c7a80db572d86a5b72b684aa8da1232a20b3ba1602bae9913edce1ace",
+      "bytes": 13799
+    },
+    {
+      "original": "/data/third_party/Bench2DriveZoo/team_code/tcp_b2d_agent.py",
+      "archived": "inputs/02-tcp_b2d_agent.py",
+      "sha256": "091b664963c6d7fca75c501df7945684759952614edd934b127b43b9db8e0bcc",
+      "bytes": 12628
+    },
+    {
+      "original": "/data/third_party/Bench2DriveZoo/team_code/planner.py",
+      "archived": "inputs/03-planner.py",
+      "sha256": "ebf18b02a64a63ad20c8fbf2bb865971810b4fbd1e40f6c9f19ad4434584a253",
+      "bytes": 3573
+    },
+    {
+      "original": "/data/third_party/Bench2DriveZoo/TCP/model.py",
+      "archived": "inputs/04-model.py",
+      "sha256": "575ce747444ccb7cf288690393eb48963225668948d84ce5c293b667af522645",
+      "bytes": 11620
+    },
+    {
+      "original": "/data/third_party/Bench2DriveZoo/TCP/config.py",
+      "archived": "inputs/05-config.py",
+      "sha256": "9bd25c9f61b2b568ba00cdb9f3b8a5e685487f662fbcefe8839f8652016d80fa",
+      "bytes": 1762
+    }
+  ],
+  "environment": {
+    "DATA_DIR": "/data",
+    "CARLA_ROOT": null,
+    "BENCH2DRIVE_ROOT": null,
+    "CUDA_VISIBLE_DEVICES": "1",
+    "DISPLAY": ":0"
+  }
+}

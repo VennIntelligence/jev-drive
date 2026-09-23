@@ -1,0 +1,805 @@
+[
+  {
+    "root": "/data/runs/b2d/controller/smoke-v4",
+    "captured_at_unix": 1790090672.924964,
+    "last_event": {
+      "t": 1790089761.3863385,
+      "kind": "end",
+      "status": "completed",
+      "groups": 1
+    },
+    "stopped_evidence": [
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/route.pid",
+        "pid": 191033,
+        "proc_exists": false
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/servers/carla-95.pid",
+        "pid": 190809,
+        "proc_exists": false
+      }
+    ],
+    "files": [
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/events.jsonl",
+        "bytes": 1356,
+        "sha256": "fa868d58679f7ddcb3997d4e5c81ec4397e3cb496b4a5668d00e24f73bbb6cca"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/gpu.txt",
+        "bytes": 96,
+        "sha256": "07d937b57115ee9e3564324cb52d6042167c0de86f25008c1b1e638d730b3a2f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/groups.json",
+        "bytes": 696,
+        "sha256": "a0048599f0021650997a599e73efde3943449160d7b2e992fb5544a6d566072f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/log.txt",
+        "bytes": 2223,
+        "sha256": "9fa0384812bbd4f54c3cee8262c398105241b991fd3fbf436245716f85bf3ed4"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/manifest.json",
+        "bytes": 1420,
+        "sha256": "cc3104dc78352c4dc0646b2e3e72add8d69516cde8f12572272c1e22304dbc68"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/inputs/00-smoke2390.xml",
+        "bytes": 1890,
+        "sha256": "b5be7a67cfc1b38f45a181a3c1462e40e907d67751251f0782e8a59ef0e1cd66"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/inputs/01-candidate-pursuit.json",
+        "bytes": 609,
+        "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/manifest.json",
+        "bytes": 11251,
+        "sha256": "c9960051eba6fc3e1802331614d453ba2792444fd4be151d21c79b19e22e2917"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_agent.py",
+        "bytes": 22407,
+        "sha256": "dce8449a33d2c9e9e0974643c380a8493758ae0a89d7f4f32ea52f99218c0d52"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_calibrate.py",
+        "bytes": 10951,
+        "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller.py",
+        "bytes": 19759,
+        "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_adapter.py",
+        "bytes": 21827,
+        "sha256": "072ffa4f0dd7c1fdc7fc75433ffa8311e93992e404cfdbcfc57dc8b51cb48a76"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_archive.py",
+        "bytes": 5713,
+        "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_campaign.py",
+        "bytes": 11048,
+        "sha256": "d998034e45155e0cb00d7480978320330054d54b227beb36b863b009869453c9"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_compare.py",
+        "bytes": 18579,
+        "sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_matrix_plot.py",
+        "bytes": 20125,
+        "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_offline_plot.py",
+        "bytes": 6435,
+        "sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_pi_plot.py",
+        "bytes": 19762,
+        "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_pi_selftest.py",
+        "bytes": 4770,
+        "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_plot.py",
+        "bytes": 21406,
+        "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_rejoin_replay.py",
+        "bytes": 7859,
+        "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_selftest.py",
+        "bytes": 24759,
+        "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_slope.py",
+        "bytes": 14937,
+        "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_controller_validate.py",
+        "bytes": 28887,
+        "sha256": "811db36489d8d3d86c3b806b3c25ee6f00a8dc6b33c578a919dd311337fac38f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_hooks.py",
+        "bytes": 13526,
+        "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_optimization_report.py",
+        "bytes": 3961,
+        "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_policy_server.py",
+        "bytes": 7177,
+        "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_report.py",
+        "bytes": 28194,
+        "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_route.py",
+        "bytes": 13659,
+        "sha256": "1af7f1c00d6a1f5b71ddee930cdc4cd39f72847ed647eb2b87c1a3d64354d086"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_run.py",
+        "bytes": 38719,
+        "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_sweep.py",
+        "bytes": 9557,
+        "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_tcp_preprocess.py",
+        "bytes": 1336,
+        "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_tcp_visual_agent.py",
+        "bytes": 10485,
+        "sha256": "66a5b583ae09fea83739296fca761a71f33460285c4d626f9824a508778f35f5"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/b2d_viewer.py",
+        "bytes": 8713,
+        "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/drive_runtime/__init__.py",
+        "bytes": 216,
+        "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/drive_runtime/preview.py",
+        "bytes": 4460,
+        "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/drive_runtime/sensors.py",
+        "bytes": 3601,
+        "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller.py",
+        "bytes": 12626,
+        "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_agent.py",
+        "bytes": 14670,
+        "sha256": "04e9cd5c23cbae3cb5da098a9d9eca6e7e51aec5682b194b51c67b93365143a8"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_archive.py",
+        "bytes": 2388,
+        "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_campaign.py",
+        "bytes": 7288,
+        "sha256": "f1912fe767898d4336dba9af81fa1bbf9043232f4627fc601d16cad2f0240808"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_compare.py",
+        "bytes": 5343,
+        "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_matrix.py",
+        "bytes": 3936,
+        "sha256": "ba514c5ade74dab88f3557f0360c5a39326f4bb2fa6445b8086f0249da1df4d3"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_matrix_plot.py",
+        "bytes": 1651,
+        "sha256": "4d4809a1d59437ade0653ed752525964d25b0b22e885a853a9e7b5c2a60d07d3"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_pi.py",
+        "bytes": 3739,
+        "sha256": "1b0e18412637ca7b02d7ee5066b1892e9767438c1a3c05841e2f3761760638d8"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_pi_gains.py",
+        "bytes": 2883,
+        "sha256": "3bfb00db43d69aa6c28dbdc000e94cb0a972d7f3f0f07f252120acca2e727887"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_pi_review.py",
+        "bytes": 4830,
+        "sha256": "ac7a7af14ae930f75bad754567091c5d152ea2449ad48d53e947671dc7ca36af"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_rejoin.py",
+        "bytes": 7011,
+        "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_report.py",
+        "bytes": 16719,
+        "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_controller_slope.py",
+        "bytes": 4232,
+        "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_preview.py",
+        "bytes": 3149,
+        "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_runtime.py",
+        "bytes": 5891,
+        "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source/scripts/test_b2d_sensor_pipeline.py",
+        "bytes": 4240,
+        "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/provenance/source.patch",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/all-attempts.csv",
+        "bytes": 4443,
+        "sha256": "0a071d3e01d792b51356c21e54a0cf1ffed48b8dce5bdbfa571e0c1b8812f53e"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/agent_config.json",
+        "bytes": 400,
+        "sha256": "11a2ae0d6232ca67ca733b104acbe25bb2c9beb02e327d26f5be5ee9a64e7af8"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/attempt.json",
+        "bytes": 2841,
+        "sha256": "05d494c4d9eb1401abc6626bccb7a8ca77332b77166af743b4c061ce33dda6e9"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/control.jsonl",
+        "bytes": 355637,
+        "sha256": "6b07c3998970fe788198a3e1ae068d717e45e7929a3e1327dcd51646ba39e17c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/criterion_events.json",
+        "bytes": 2128,
+        "sha256": "bb9b30f376e6dd598d97b20237583f6364875f23ae2b435c47cb108f533d2140"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/heartbeat.json",
+        "bytes": 39,
+        "sha256": "76d70075ad44bec2ede5e028d0a810b631417eb10dd87a1150d286d6223df170"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/results.json",
+        "bytes": 5088,
+        "sha256": "51733be7184cebfcb0548cc241c30127bb741011987021040bf1ae3f7e49bc1a"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/route.log",
+        "bytes": 5829,
+        "sha256": "0b8c20c7614c54f74cce2ea38a2658ac97bffb15adbbdd94cda1a3c0ac070ff2"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/route.pid",
+        "bytes": 6,
+        "sha256": "759dc4e6cab27d8f0b308b8ace526b71282dfd5a20732fb14e048cd1ba0749a8"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/route_reference.json",
+        "bytes": 9122,
+        "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/route_result.json",
+        "bytes": 3612,
+        "sha256": "c0aca4858c5da283e53fc8aaf971d1079a7ec451b1d0c84540cdf7b885892f5b"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/attempts/2390/1/trajectories.jsonl",
+        "bytes": 60843,
+        "sha256": "8205fcf7df3d40a7a1f188e211403c63bf3cec2516f8e24d44d3745c4bc5e73b"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/controller-report.json",
+        "bytes": 22382,
+        "sha256": "fbd9886b10aa82290af53b8ff845f9915ca81fa7cfb83346e44b7edd496634d0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/done/2390.json",
+        "bytes": 3825,
+        "sha256": "11ad856e017835e42257eb660c4388cecc7f4f52ff66a87785f07f6012a51293"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/events.jsonl",
+        "bytes": 867,
+        "sha256": "cadd01463bbf422923bb69fbdfedadf106199f781b84b75e3bba0d84309b2f51"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/invocations/1790089731271962-190796.json",
+        "bytes": 1203,
+        "sha256": "1de8422db6b5f60cd4bd6734cfa1cf2bcd159b808a66a1fdf8b7500616aa0c86"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/report.txt",
+        "bytes": 1055,
+        "sha256": "6689800799dcb6a240a2334bd4b295eb297c87596fa60cd57405cd76235c2709"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/summary.json",
+        "bytes": 551,
+        "sha256": "ec9dd600694c44f10d6b871fbd40e8f2d546411e232f8ba9bbf6906a79ceb42a"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/servers/carla-95-1.log",
+        "bytes": 130,
+        "sha256": "bcd562ad467d0956c972279568f75aabc474a29e6f5c04002a940c6459dcb99f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4/servers/carla-95.pid",
+        "bytes": 6,
+        "sha256": "bb457e88d27e40e493a5421ba2df5f978912d19eb4e9b5f4daedc2d0ad2a2095"
+      }
+    ]
+  },
+  {
+    "root": "/data/runs/b2d/controller/smoke-v4-capture",
+    "captured_at_unix": 1790090672.926684,
+    "last_event": {
+      "t": 1790090147.690067,
+      "kind": "end",
+      "status": "completed",
+      "groups": 1
+    },
+    "stopped_evidence": [
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route.pid",
+        "pid": 193522,
+        "proc_exists": false
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/servers/carla-95.pid",
+        "pid": 193276,
+        "proc_exists": false
+      }
+    ],
+    "files": [
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/events.jsonl",
+        "bytes": 1378,
+        "sha256": "bdfd30d6a659478d0e8cc92207695188244bf95ff739694cf94b5302cc0ae209"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/gpu.txt",
+        "bytes": 96,
+        "sha256": "7b83906c3c0ab8d816a0602f4e6ec49679b444b5b21fc9949b9a364f991bbd7e"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/groups.json",
+        "bytes": 711,
+        "sha256": "65954dc799ace734d4e1a29be4c4bcac9fc9e33c1bf59a8812499dedf00ea579"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/log.txt",
+        "bytes": 2247,
+        "sha256": "5be2112ec0bda45fd0c9056d582ad6cdcf48e7c00fe85c97b5fe63dab9d43218"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/manifest.json",
+        "bytes": 1443,
+        "sha256": "d07cedb3772348648f7540c89be3a5cfa699c8de6b7104283490902a51e64ccc"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/inputs/00-smoke2390.xml",
+        "bytes": 1890,
+        "sha256": "b5be7a67cfc1b38f45a181a3c1462e40e907d67751251f0782e8a59ef0e1cd66"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/inputs/01-candidate-pursuit.json",
+        "bytes": 609,
+        "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/manifest.json",
+        "bytes": 11937,
+        "sha256": "404790f08f5893caf270657c9407379c28446c5db5c3ee9cd6588c9f187b88dd"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_agent.py",
+        "bytes": 23469,
+        "sha256": "7b86f7cca217c73ae8b54e773b749d309cb1557447e24f3d02c992f8a1d9599c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_calibrate.py",
+        "bytes": 10951,
+        "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller.py",
+        "bytes": 19759,
+        "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_adapter.py",
+        "bytes": 21827,
+        "sha256": "072ffa4f0dd7c1fdc7fc75433ffa8311e93992e404cfdbcfc57dc8b51cb48a76"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_archive.py",
+        "bytes": 5713,
+        "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_campaign.py",
+        "bytes": 11048,
+        "sha256": "d998034e45155e0cb00d7480978320330054d54b227beb36b863b009869453c9"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_compare.py",
+        "bytes": 18579,
+        "sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_g4.py",
+        "bytes": 12061,
+        "sha256": "bc22411ab0eb46e9e40d1d84ce96ab88c669e735d1c2de00dd53ef9ca8036acd"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_matrix_plot.py",
+        "bytes": 20125,
+        "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_offline_plot.py",
+        "bytes": 6435,
+        "sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_pi_plot.py",
+        "bytes": 19762,
+        "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_pi_selftest.py",
+        "bytes": 4770,
+        "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_plot.py",
+        "bytes": 21406,
+        "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_rejoin_replay.py",
+        "bytes": 7859,
+        "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_selftest.py",
+        "bytes": 24759,
+        "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_slope.py",
+        "bytes": 14937,
+        "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_controller_validate.py",
+        "bytes": 28887,
+        "sha256": "811db36489d8d3d86c3b806b3c25ee6f00a8dc6b33c578a919dd311337fac38f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_hooks.py",
+        "bytes": 13526,
+        "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_optimization_report.py",
+        "bytes": 3961,
+        "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_policy_server.py",
+        "bytes": 7177,
+        "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_report.py",
+        "bytes": 28194,
+        "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_route.py",
+        "bytes": 13659,
+        "sha256": "1af7f1c00d6a1f5b71ddee930cdc4cd39f72847ed647eb2b87c1a3d64354d086"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_run.py",
+        "bytes": 38719,
+        "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_sweep.py",
+        "bytes": 9557,
+        "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_tcp_preprocess.py",
+        "bytes": 1336,
+        "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_tcp_visual_agent.py",
+        "bytes": 10485,
+        "sha256": "66a5b583ae09fea83739296fca761a71f33460285c4d626f9824a508778f35f5"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/b2d_viewer.py",
+        "bytes": 8713,
+        "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/drive_runtime/__init__.py",
+        "bytes": 216,
+        "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/drive_runtime/preview.py",
+        "bytes": 4460,
+        "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/drive_runtime/sensors.py",
+        "bytes": 3601,
+        "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller.py",
+        "bytes": 12626,
+        "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_agent.py",
+        "bytes": 14712,
+        "sha256": "c725a8adb3f723d9ec6e375aa9981f6917280341d96b1ffc98d9d0bdda91de7d"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_archive.py",
+        "bytes": 2388,
+        "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_campaign.py",
+        "bytes": 7288,
+        "sha256": "f1912fe767898d4336dba9af81fa1bbf9043232f4627fc601d16cad2f0240808"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_compare.py",
+        "bytes": 5343,
+        "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_g4.py",
+        "bytes": 4445,
+        "sha256": "0af7ac925aa1da4c4f05fa5ec8abf89f9394c79c05e1da47da0b6bc06d6f10bc"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_matrix.py",
+        "bytes": 3936,
+        "sha256": "ba514c5ade74dab88f3557f0360c5a39326f4bb2fa6445b8086f0249da1df4d3"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_matrix_plot.py",
+        "bytes": 1651,
+        "sha256": "4d4809a1d59437ade0653ed752525964d25b0b22e885a853a9e7b5c2a60d07d3"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_pi.py",
+        "bytes": 3739,
+        "sha256": "1b0e18412637ca7b02d7ee5066b1892e9767438c1a3c05841e2f3761760638d8"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_pi_gains.py",
+        "bytes": 2883,
+        "sha256": "3bfb00db43d69aa6c28dbdc000e94cb0a972d7f3f0f07f252120acca2e727887"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_pi_review.py",
+        "bytes": 4830,
+        "sha256": "ac7a7af14ae930f75bad754567091c5d152ea2449ad48d53e947671dc7ca36af"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_rejoin.py",
+        "bytes": 7011,
+        "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_report.py",
+        "bytes": 16719,
+        "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_controller_slope.py",
+        "bytes": 4232,
+        "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_preview.py",
+        "bytes": 3149,
+        "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_runtime.py",
+        "bytes": 5891,
+        "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source/scripts/test_b2d_sensor_pipeline.py",
+        "bytes": 4240,
+        "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/provenance/source.patch",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/all-attempts.csv",
+        "bytes": 4439,
+        "sha256": "764bfe2126efd23516072ded1356208f77d5b20a61cccc319ef06de4fab270f0"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/agent_config.json",
+        "bytes": 416,
+        "sha256": "af2e0dbc9f04ce695f495945e56d9fd88cf6112f086d55e467a51a2d1b66bf11"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/attempt.json",
+        "bytes": 2866,
+        "sha256": "de89cc9414a414dab41dcf2a44f865ac86c5f8a76639e550b49d4a0a71799210"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/control.jsonl",
+        "bytes": 354218,
+        "sha256": "60390c2bd91365fd90acee6380427dc4e0af1101907b8eeb567a11cb8cc584f5"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/criterion_events.json",
+        "bytes": 2128,
+        "sha256": "13de11942612ed74bb3874ed9d4f24ceb5647b9de28d658a40a180dffcd17118"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/heartbeat.json",
+        "bytes": 39,
+        "sha256": "1d0d7ca876265675cb41c4d7c3585f86ce856f58584d14ede4238cd8a2a2715a"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/motion.jsonl",
+        "bytes": 80891,
+        "sha256": "996786ae60c3415dcad66270f7fba4b86a47929e2173afdca55ef5e2920dbc78"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/results.json",
+        "bytes": 5088,
+        "sha256": "cf5baa087ee233a69b0eda596baa5be6fae3f4660e3c2416c5ea5f72be325c68"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route.log",
+        "bytes": 5828,
+        "sha256": "5a33231cf5249f9da073c903b4c94969416c79c12038ddca96d55b64e62f6a45"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route.pid",
+        "bytes": 6,
+        "sha256": "8dd59f16f4b43a10cb50dabebf98dec40e21b689774578efa2449db0b8b3242c"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route_reference.json",
+        "bytes": 9122,
+        "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/route_result.json",
+        "bytes": 3625,
+        "sha256": "1fd766b141bc69352581ccd6774161856fb14c65a5280984fab8653a89f84017"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/attempts/2390/1/trajectories.jsonl",
+        "bytes": 60843,
+        "sha256": "58e835bbf220c2bcbfb7749740c9277aad4c2d0b4402a0c23410b71edc654ac7"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/controller-report.json",
+        "bytes": 22372,
+        "sha256": "6249cfc5e2b4d6850cf614849bb0c1ebc269c8cb12f69b28625ac19c05367ee6"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/done/2390.json",
+        "bytes": 3846,
+        "sha256": "49b6592ce6f0307b0582705fd257abbdddd004fa49aba1d84ee79623f2faf992"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/events.jsonl",
+        "bytes": 869,
+        "sha256": "71e34cef54778773ef88e674176a903eb21fad3b8da50bc681833f428a0125ba"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/invocations/1790090117770974-193263.json",
+        "bytes": 1219,
+        "sha256": "2f4849be32287b6d5118efff5abeb71d20c174c256266bf041aa8614db6678fd"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/report.txt",
+        "bytes": 1071,
+        "sha256": "1119d9c9e7beacd993720d514e526735ffcbe15b83222b82351e3d0de4aa59d5"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/pursuit-seed0/summary.json",
+        "bytes": 552,
+        "sha256": "13119f8f442c57518a504a26c15eb3b39c0fa2dd1ab6099f4e802350f5389859"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/servers/carla-95-1.log",
+        "bytes": 175,
+        "sha256": "9ec998cdb61f4c120e038757243680c4a12a6f59bceb5fd062e4bf89d930da5f"
+      },
+      {
+        "path": "/data/runs/b2d/controller/smoke-v4-capture/servers/carla-95.pid",
+        "bytes": 6,
+        "sha256": "197a9dd10392721d8336071bc5d6577fd9ce29841061a86060a8dcba53d40ea0"
+      }
+    ]
+  }
+]

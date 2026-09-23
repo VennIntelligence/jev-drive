@@ -1,0 +1,42 @@
+{
+  "/data/third_party/Bench2DriveZoo/TCP/model.py": {
+    "sha256": "575ce747444ccb7cf288690393eb48963225668948d84ce5c293b667af522645",
+    "bytes": 11620
+  },
+  "/data/third_party/Bench2DriveZoo/TCP/config.py": {
+    "sha256": "9bd25c9f61b2b568ba00cdb9f3b8a5e685487f662fbcefe8839f8652016d80fa",
+    "bytes": 1762
+  },
+  "/data/third_party/Bench2DriveZoo/TCP/data.py": {
+    "sha256": "a7185775e47e8b4b98ebdc2d78d9df627eef12926f953ae0dd28b0da11520d91",
+    "bytes": 10027
+  },
+  "/data/third_party/Bench2DriveZoo/tools/gen_tcp_data.py": {
+    "sha256": "df913913b9306fd9ad0129d10d00d40a29ea85d4acd6418e6840ad463c636ea0",
+    "bytes": 12764
+  },
+  "/data/third_party/Bench2DriveZoo/team_code/tcp_b2d_agent.py": {
+    "sha256": "091b664963c6d7fca75c501df7945684759952614edd934b127b43b9db8e0bcc",
+    "bytes": 12628
+  },
+  "/data/third_party/Bench2Drive/tools/data_collect.py": {
+    "sha256": "be1d399100e20ba1809652beff5451a73af7c12a9d16bac00911dc1d9ac37b66",
+    "bytes": 87135
+  },
+  "/data/third_party/Bench2Drive/docs/anno.md": {
+    "sha256": "90c7de95fe27ec9f4300953a1e0a853c3ed78478caf5fb59cdc138eb64181364",
+    "bytes": 16738
+  },
+  "/home/ujs/mycode/jev-drive/scripts/b2d_tcp_visual_agent.py": {
+    "sha256": "d9af5252985af9659f9163a90543b2c6d13613eb4c37518a4ff07dfd3e03116c",
+    "bytes": 10741
+  },
+  "/home/ujs/mycode/jev-drive/docs/carla.md": {
+    "sha256": "a1fd2403492ee79bc304137703089b2d81c7de803d195feebde2f73ea8e77bd1",
+    "bytes": 19266
+  },
+  "/home/ujs/mycode/jev-drive/todos/2026-09-22-b2d-controller/agents/tcp-controller-integration-plan.md": {
+    "sha256": "54e28fd383148d5b377232beeb9e1c6ec4f364cb81af0addd145a0d7c790e784",
+    "bytes": 14823
+  }
+}

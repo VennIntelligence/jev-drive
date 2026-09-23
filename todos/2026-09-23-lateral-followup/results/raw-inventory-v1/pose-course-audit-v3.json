@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-course-audit-v3",
+  "captured_at": 1790131817.0622525,
+  "files": [
+    {
+      "path": "frames.csv",
+      "bytes": 749361,
+      "sha256": "5376497daf880dbe839fa4c3cc31a5b03414b56cb1745f1cfd8401853a52ffea"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 6050,
+      "sha256": "de9c1d5a9a409b1d1aabf4efb0b05dc11e3b0d75624087c2b6b1b00f625a0511"
+    },
+    {
+      "path": "outputs-sha256.json",
+      "bytes": 456,
+      "sha256": "aa9fc2d9a6df78eb56db31e531bac09df690d9b6f354b18820c26dde8d57cf0d"
+    },
+    {
+      "path": "phase-metrics.csv",
+      "bytes": 28441,
+      "sha256": "0da231b3d5e1cd3a1c7a88a7e433826b0b7492365b4e673a64faab1f6f291cdb"
+    },
+    {
+      "path": "recompute.py",
+      "bytes": 10064,
+      "sha256": "13bf1fb3d796c616a860637aa51ef8e9c9de2a7ba6ad4a2e0c2019ae23ce6ca8"
+    },
+    {
+      "path": "right-threshold-exceedances.csv",
+      "bytes": 3014,
+      "sha256": "0f2dad67b1980643309d83ee95bacf307aa39a0a913fc7af6edd23b25a594940"
+    }
+  ],
+  "file_count": 6,
+  "total_bytes": 797386
+}

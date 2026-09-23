@@ -1,0 +1,9 @@
+{
+  "successful_run_start_to_end_s": 49.767866134643555,
+  "case_validation_wall_s_sum": 19.12353350398189,
+  "prior_zero_case_startup_failure_s": 182.18247413635254,
+  "combined_recorded_run_attempt_s": 231.9503402709961,
+  "successful_run_cases": 6,
+  "prior_run_cases": 0,
+  "boundary": "Campaign start/end includes server/map setup but end precedes final server.stop; validation.wall_s spans case actor setup to cleanup and metric serialization. Neither includes analysis/driver repair time."
+}

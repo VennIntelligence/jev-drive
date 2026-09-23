@@ -1,0 +1,190 @@
+{
+  "protocol": "offline replay of baseline sensor-derived poses; no closed-loop or dynamic feasibility claim",
+  "latency_clock": "perf_counter_ns wall time; uncontrolled host load; all repetitions retained",
+  "argv": [
+    "scripts/b2d_controller_rejoin_replay.py",
+    "--source",
+    "/data/runs/b2d/controller/development3",
+    "--source",
+    "/data/runs/b2d/controller/development-s-v1",
+    "--out",
+    "/data/runs/b2d/controller/v2/rejoin-replay-v1",
+    "--cruise-mps",
+    "6",
+    "--repeats",
+    "3"
+  ],
+  "python": "3.8.20 (default, Oct  2 2024, 16:34:12) \n[Clang 18.1.8 ]",
+  "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.2.5",
+  "numpy": "1.23.5",
+  "cruise_mps": 6.0,
+  "repeats": 3,
+  "sources": [
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_adapter.py",
+      "snapshot": "source/b2d_controller_adapter.py",
+      "sha256": "072ffa4f0dd7c1fdc7fc75433ffa8311e93992e404cfdbcfc57dc8b51cb48a76"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_rejoin_replay.py",
+      "snapshot": "source/b2d_controller_rejoin_replay.py",
+      "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2"
+    },
+    {
+      "original": "/data/worktrees/jev-drive-controller-v2/scripts/test_b2d_controller_rejoin.py",
+      "snapshot": "source/test_b2d_controller_rejoin.py",
+      "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0"
+    }
+  ],
+  "inputs": [
+    {
+      "case": "development3/1773/carla",
+      "original_control": "/data/runs/b2d/controller/development3/1773/carla/control.jsonl",
+      "control_sha256": "ec803fac21d617022232f791e37793b3c1e069ded2c5f9125dc3bca81543c4f8",
+      "original_reference": "/data/runs/b2d/controller/development3/1773/carla/route_reference.json",
+      "reference_sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "compact_pose": "inputs/development3/1773/carla/pose.jsonl",
+      "compact_pose_sha256": "6ee9d0f6463778149a493fd1431823fcd0b5cf647d436f7c751494459ae2a6b6"
+    },
+    {
+      "case": "development3/1773/pursuit",
+      "original_control": "/data/runs/b2d/controller/development3/1773/pursuit/control.jsonl",
+      "control_sha256": "97d5a5127364dc5b9c2847fe93eaba9cd39483eb47618e8d3818d53731046bc6",
+      "original_reference": "/data/runs/b2d/controller/development3/1773/pursuit/route_reference.json",
+      "reference_sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "compact_pose": "inputs/development3/1773/pursuit/pose.jsonl",
+      "compact_pose_sha256": "fe8c5e2081039467343a0ec4c04317941b06c8717499977de792b532cf575211"
+    },
+    {
+      "case": "development3/1773/tcp",
+      "original_control": "/data/runs/b2d/controller/development3/1773/tcp/control.jsonl",
+      "control_sha256": "96a4a1f36ee0c33aed07b59f1be1cb478199418da94ceca7046776d1ae5301f9",
+      "original_reference": "/data/runs/b2d/controller/development3/1773/tcp/route_reference.json",
+      "reference_sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "compact_pose": "inputs/development3/1773/tcp/pose.jsonl",
+      "compact_pose_sha256": "c8bf45a7b09ff2ea02c62e28ad395ebcdf83d52848fdf1fc3429894406440f71"
+    },
+    {
+      "case": "development3/24240/carla",
+      "original_control": "/data/runs/b2d/controller/development3/24240/carla/control.jsonl",
+      "control_sha256": "2ce94f7e23f84512e152a503b0824cef7d63a7d12d5dead6d5f571fa414a3dd9",
+      "original_reference": "/data/runs/b2d/controller/development3/24240/carla/route_reference.json",
+      "reference_sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "compact_pose": "inputs/development3/24240/carla/pose.jsonl",
+      "compact_pose_sha256": "db02c275ca68ab0df8848cd723f5918ec11bd26b31d482ac1d17edf3b416b638"
+    },
+    {
+      "case": "development3/24240/pursuit",
+      "original_control": "/data/runs/b2d/controller/development3/24240/pursuit/control.jsonl",
+      "control_sha256": "1d8f0f338d04e8b59fa1ed5d0cb2d55dc5168ece4352b90b712adfba8f2ffb1a",
+      "original_reference": "/data/runs/b2d/controller/development3/24240/pursuit/route_reference.json",
+      "reference_sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "compact_pose": "inputs/development3/24240/pursuit/pose.jsonl",
+      "compact_pose_sha256": "4ac0cdce5fe262dfa4af10735157941fdc5d4842e5b01e9d32b215a490f9c734"
+    },
+    {
+      "case": "development3/24240/tcp",
+      "original_control": "/data/runs/b2d/controller/development3/24240/tcp/control.jsonl",
+      "control_sha256": "429a30e472798bab775b2d1b3f6724c11b612bdfe1cf707e97c153d0a2fab0e1",
+      "original_reference": "/data/runs/b2d/controller/development3/24240/tcp/route_reference.json",
+      "reference_sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "compact_pose": "inputs/development3/24240/tcp/pose.jsonl",
+      "compact_pose_sha256": "cf4d4b508e839598b134533c37c16d01dc88e2fdebb851530a197267c15a182f"
+    },
+    {
+      "case": "development3/25854/carla",
+      "original_control": "/data/runs/b2d/controller/development3/25854/carla/control.jsonl",
+      "control_sha256": "5c2b099a91a796fb2439e743d90178677f58b897ae07df55bf156ac835e6de29",
+      "original_reference": "/data/runs/b2d/controller/development3/25854/carla/route_reference.json",
+      "reference_sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "compact_pose": "inputs/development3/25854/carla/pose.jsonl",
+      "compact_pose_sha256": "c274c329db3e14ed1917abd86b6ff2de8b3336b28c019e2f4abc733820346b08"
+    },
+    {
+      "case": "development3/25854/pursuit",
+      "original_control": "/data/runs/b2d/controller/development3/25854/pursuit/control.jsonl",
+      "control_sha256": "e6cdb292d4667c263cae94ce93155030305d0ecf195bdeadb197a4a3e750cb24",
+      "original_reference": "/data/runs/b2d/controller/development3/25854/pursuit/route_reference.json",
+      "reference_sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "compact_pose": "inputs/development3/25854/pursuit/pose.jsonl",
+      "compact_pose_sha256": "3812905cdb1ee1ecb6330eedebbd0f732a44c6cc92cccfc708f16619306504bd"
+    },
+    {
+      "case": "development3/25854/tcp",
+      "original_control": "/data/runs/b2d/controller/development3/25854/tcp/control.jsonl",
+      "control_sha256": "eebdea81e5991f1110937b5d32f2b0cabf7344640f7f00dc9ef82e4b400fe9cd",
+      "original_reference": "/data/runs/b2d/controller/development3/25854/tcp/route_reference.json",
+      "reference_sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "compact_pose": "inputs/development3/25854/tcp/pose.jsonl",
+      "compact_pose_sha256": "544d472767b0b2dc647f2e2f93803dcd14ad8117abbd35f8e25eb8b039f449db"
+    },
+    {
+      "case": "development3/26966/carla",
+      "original_control": "/data/runs/b2d/controller/development3/26966/carla/control.jsonl",
+      "control_sha256": "5ab7c7f76127cd3f61e5b6a518f45ee238d133d44c114684ce12b86b96275d75",
+      "original_reference": "/data/runs/b2d/controller/development3/26966/carla/route_reference.json",
+      "reference_sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "compact_pose": "inputs/development3/26966/carla/pose.jsonl",
+      "compact_pose_sha256": "345e59f9a418cdd97981cfa318c823a961c4b18e67d35deffde50e03c9542413"
+    },
+    {
+      "case": "development3/26966/pursuit",
+      "original_control": "/data/runs/b2d/controller/development3/26966/pursuit/control.jsonl",
+      "control_sha256": "b8c691de1082ca8716c0f00d78c36281c63b3f31bc10bcb08c68c676ff36ee6b",
+      "original_reference": "/data/runs/b2d/controller/development3/26966/pursuit/route_reference.json",
+      "reference_sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "compact_pose": "inputs/development3/26966/pursuit/pose.jsonl",
+      "compact_pose_sha256": "5772bd1ec29aa82994e1ba8fe0defd9cafe0cbd83fdaf0452d37565fd9d0dc55"
+    },
+    {
+      "case": "development3/26966/tcp",
+      "original_control": "/data/runs/b2d/controller/development3/26966/tcp/control.jsonl",
+      "control_sha256": "05e1b3ddf3f218ea85de74e89f423633be3426596abde0a3455cb209577b1d9f",
+      "original_reference": "/data/runs/b2d/controller/development3/26966/tcp/route_reference.json",
+      "reference_sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "compact_pose": "inputs/development3/26966/tcp/pose.jsonl",
+      "compact_pose_sha256": "a041f25493283ed24b7afe203867bff9d907e8bb86c8b80f167f5b9773c438d3"
+    },
+    {
+      "case": "development-s-v1/17563/carla",
+      "original_control": "/data/runs/b2d/controller/development-s-v1/17563/carla/control.jsonl",
+      "control_sha256": "250837388e17403afb88ff7a325b32c5b2f204076f218f43477df612f2106854",
+      "original_reference": "/data/runs/b2d/controller/development-s-v1/17563/carla/route_reference.json",
+      "reference_sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "compact_pose": "inputs/development-s-v1/17563/carla/pose.jsonl",
+      "compact_pose_sha256": "cf3f0112bc25da5eb7baa37d2306bf507599a1816583352de60a0d6ddcacfabb"
+    },
+    {
+      "case": "development-s-v1/17563/pursuit",
+      "original_control": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/control.jsonl",
+      "control_sha256": "516bddf260b97d3801d27b793ab192d0a9b6fa60819157cd36287ff79f681c83",
+      "original_reference": "/data/runs/b2d/controller/development-s-v1/17563/pursuit/route_reference.json",
+      "reference_sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "compact_pose": "inputs/development-s-v1/17563/pursuit/pose.jsonl",
+      "compact_pose_sha256": "7cca34bd6bdcacca4d07f8b103617954f58b677da3f8620faa90063ae4cc1b86"
+    },
+    {
+      "case": "development-s-v1/17563/tcp",
+      "original_control": "/data/runs/b2d/controller/development-s-v1/17563/tcp/control.jsonl",
+      "control_sha256": "7a19a38f043cce128b0f0e0358b052febdf2dad143f8be6db7fc8f66f36e025d",
+      "original_reference": "/data/runs/b2d/controller/development-s-v1/17563/tcp/route_reference.json",
+      "reference_sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "compact_pose": "inputs/development-s-v1/17563/tcp/pose.jsonl",
+      "compact_pose_sha256": "bae92df8a1bee385e79a2bfb34ef02b275ed3e656b8b4207c52dc50e32d599bf"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "summary.json",
+      "sha256": "0051219f9049824a60b96cf2f525bae623fddcaa12f5695999a8432275ad21cf"
+    },
+    {
+      "path": "latency_samples.csv",
+      "sha256": "9a495b704642e52a200b429ab0ba851a31e78ba36e386ca0c36eff809a45bdba"
+    },
+    {
+      "path": "rejoin_samples.jsonl",
+      "sha256": "1c4c5128d36a1b8cde54f345089207f08f814773db0ea69a1959106a6565d919"
+    }
+  ]
+}

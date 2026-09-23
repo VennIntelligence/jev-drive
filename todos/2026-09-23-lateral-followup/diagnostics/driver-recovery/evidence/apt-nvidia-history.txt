@@ -1,0 +1,112 @@
+Start-Date: 2026-09-23  06:06:55
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:06:56
+Start-Date: 2026-09-23  06:06:58
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:00
+Start-Date: 2026-09-23  06:07:02
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:08
+Start-Date: 2026-09-23  06:07:09
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:11
+Start-Date: 2026-09-23  06:07:12
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:15
+Start-Date: 2026-09-23  06:07:16
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:21
+Start-Date: 2026-09-23  06:07:22
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:25
+Start-Date: 2026-09-23  06:07:26
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:26
+Start-Date: 2026-09-23  06:07:28
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:34
+Start-Date: 2026-09-23  06:07:35
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:44
+Start-Date: 2026-09-23  06:07:45
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:46
+Start-Date: 2026-09-23  06:07:47
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:48
+Start-Date: 2026-09-23  06:07:49
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:50
+Start-Date: 2026-09-23  06:07:51
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:54
+Start-Date: 2026-09-23  06:07:55
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:07:57
+Start-Date: 2026-09-23  06:07:59
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:08:05
+Start-Date: 2026-09-23  06:08:06
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:08:06
+Start-Date: 2026-09-23  06:08:08
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:08:12
+Start-Date: 2026-09-23  06:08:13
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:08:15
+Start-Date: 2026-09-23  06:08:16
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:08:18
+Start-Date: 2026-09-23  06:08:19
+Commandline: /usr/bin/unattended-upgrade
+Install: nvidia-firmware-580-580.173.02:amd64 (580.173.02-0ubuntu0.24.04.1, automatic)
+Upgrade: libnvidia-common-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-fbc1-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-gl-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-extra-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-compute-utils-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-dkms-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-driver-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-encode-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-utils-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), xserver-xorg-video-nvidia-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-decode-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-kernel-common-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-cfg1-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), nvidia-kernel-source-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1), libnvidia-compute-580:amd64 (580.159.03-0ubuntu0.24.04.1, 580.173.02-0ubuntu0.24.04.1)
+End-Date: 2026-09-23  06:09:08
+Start-Date: 2026-09-23  06:09:09
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:10
+Start-Date: 2026-09-23  06:09:11
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:15
+Start-Date: 2026-09-23  06:09:16
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:20
+Start-Date: 2026-09-23  06:09:21
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:23
+Start-Date: 2026-09-23  06:09:24
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:38
+Start-Date: 2026-09-23  06:09:39
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:40
+Start-Date: 2026-09-23  06:09:42
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:44
+Start-Date: 2026-09-23  06:09:46
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:48
+Start-Date: 2026-09-23  06:09:50
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:51
+Start-Date: 2026-09-23  06:09:52
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:56
+Start-Date: 2026-09-23  06:09:57
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:09:59
+Start-Date: 2026-09-23  06:10:00
+Commandline: /usr/bin/unattended-upgrade
+End-Date: 2026-09-23  06:10:00
+Start-Date: 2026-09-23  06:10:02
+Commandline: /usr/bin/unattended-upgrade
+Install: linux-objects-nvidia-580-7.0.0-31-generic:amd64 (7.0.0-31.31~24.04.1, automatic), linux-signatures-nvidia-7.0.0-31-generic:amd64 (7.0.0-31.31~24.04.1, automatic), linux-image-7.0.0-31-generic:amd64 (7.0.0-31.31~24.04.1, automatic), linux-modules-7.0.0-31-generic:amd64 (7.0.0-31.31~24.04.1, automatic), linux-modules-nvidia-580-7.0.0-31-generic:amd64 (7.0.0-31.31~24.04.1, automatic)
+Upgrade: linux-modules-nvidia-550-generic-hwe-24.04:amd64 (6.17.0-35.35~24.04.1, 7.0.0-31.31~24.04.1), linux-modules-nvidia-580-generic-hwe-24.04:amd64 (6.17.0-35.35~24.04.1, 7.0.0-31.31~24.04.1)
+Error: Sub-process /usr/bin/dpkg returned an error code (1)
+End-Date: 2026-09-23  06:10:12
+Start-Date: 2026-09-23  06:10:13
+Commandline: /usr/bin/unattended-upgrade
+Remove: nvidia-firmware-580-580.159.03:amd64 (580.159.03-0ubuntu0.24.04.1)
+Error: Sub-process /usr/bin/dpkg returned an error code (1)
+End-Date: 2026-09-23  06:10:14

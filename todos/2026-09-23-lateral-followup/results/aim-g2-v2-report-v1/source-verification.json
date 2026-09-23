@@ -1,0 +1,401 @@
+{
+  "verified": [
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/analyze_aim.py",
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v2/analyze.py",
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/turn-windows.csv",
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/routes.csv",
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/protocol.md",
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/control.jsonl",
+      "sha256": "535e4211db7da8028aa02feab2b07767c7f453b82f6c23f0c313c3f4eb86f275"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/agent_config.json",
+      "sha256": "fe6ab16b3ade9150b854c5463811b812281c713a3db8d4ba954128ed93e78494"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "0b8a5e95b8fa5967db54cb83f9a051fa688ef87ccf9c0ca712cbe85366eda88e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/validation.json",
+      "sha256": "e7b5c46bc64eda39f29984ee6e061d2dc9052fa09199d33fecf965135cf2bc05"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/inputs/controller-baseline-linear.json",
+      "sha256": "e617e4691c62ef5da92ad36de557da77cff92dce2d41ebdd101a91bb1d93a264"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "98c19764e0ce6ec8c80bd07965d4772d28e1e8495b9cc6af72e75d581eafa978"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "7f80f8823e44a0e4b04668c44349d5df023cf9c64d459a5b07b505dbe55f84cc"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "e8c587f290d407d1da4733e38c12aaf292d09b3481ff7dc222b64920d59ea362"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/validation.json",
+      "sha256": "1cd55418c1264eb7897558f2cfdf864a1768ca905214caa1c56d64b258e8bd07"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/inputs/controller-candidate-hermite.json",
+      "sha256": "0e0dad0805f15548fd669d45f57805741682b5ef18e5e07901c98ce1dc5d39c8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/control.jsonl",
+      "sha256": "d3d6a12658051611769507bfe25dabd6676623083aec575388966a6397b6f173"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/agent_config.json",
+      "sha256": "c3936b8d44961f72aeb953887b14b79fd0f668bf309c69624f118e338807340d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "8f5b57919da4e9b1fb8a9eedd072078ff014507814e7af98b7e87996d0d21491"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/validation.json",
+      "sha256": "f0fe9baabea8f915f5ae70c72acdc9d9f89f2c704669a78692818a8313d78b23"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "34ba72f61e5678a19db1eba93da99c710f7d9d338c64d1a36c6274554b70d58e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "ea93bb47dc0d3957a5a3025521a232393d6685df8523f15cfe40908c8de89450"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "dc1ad39d8c36db1e50a158113bcaee84262f65c74ea0cfd2eefcf1483a4660f3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/validation.json",
+      "sha256": "6ed904a3a461f2061a4695e3dee735ec384e88b93816af31e3fbef98881a7aab"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/control.jsonl",
+      "sha256": "d21c96a3d35d53fca9ea07716edb7b96cb4c67ed9946137d5a293a41bf7e54a4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/agent_config.json",
+      "sha256": "655ca68ab17218273ea7b1323cf8fae74b7332fbd79e9bdf779e2abd8c9cfbb9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "7a5acf607aa6e7c689fcc0ce23b75217044ed324906088280583e5d16f5309ae"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/validation.json",
+      "sha256": "73d50432730aa254879578ac4ca7d1c8bc2724a3b630a0d9ec44fdf1f2d2a620"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "0b2a6a6ba7c39306117c4302fb2f9a962705f89abb282795e39643e05a0bebc9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "11d026543354c5c289e3cd0f8adffae68464f7d211bf3d8aac191f588a16c4a4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "e86d7c3599a8834579fdae2c355a254ea163dee48173c78bea5bb0ab158eb7a6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/validation.json",
+      "sha256": "df5d2f5a16c6161991fc86791f16d0dcb047d53eca1178aa93fb511d9e8c0ab4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/coverage.json",
+      "sha256": "09000f99d9c5ecc3de8057d0b6251e2e2e5e52ec265934f64f79182d160fbfea"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/metrics.csv",
+      "sha256": "1f473ae9f44bcbc219d46f250faa4c35046ea60ff9a11f09bf1d7933ae5f54d4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/stats-source.py",
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/analysis-source.py",
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/control-reasons.json",
+      "sha256": "14cf1f8344f476d7126e64af3653a2203ba6f5e5067a6d515fbe283eefec2ff7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/frames.csv",
+      "sha256": "49f62484933df4d8805d379c14ca968b853f663fbd6f714879f258dc8bcd042e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/recovery.csv",
+      "sha256": "b65b1cf4411e7adcca95be7f8647af91245ae0b6e4486443d5f558d27109eaac"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/required-conditions.json",
+      "sha256": "c506d7eb4ec668bd71cf7a5393e7fd2de7de5f75d693025a96d4d1a2c5bac995"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/cases.csv",
+      "sha256": "4f94512e68b6c4af87d1fb036d29ef433abf3066501b574b06f2c51a8990380c"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/plot_aim.py",
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/analyze_aim.py",
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/turn-windows.csv",
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/manifest.json",
+      "sha256": "bb6309d5057847a8e63ae38dc7a533966507fb8d88d445b96416aaeed44909bf"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1/required-conditions.json",
+      "sha256": "c506d7eb4ec668bd71cf7a5393e7fd2de7de5f75d693025a96d4d1a2c5bac995"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/control.jsonl",
+      "sha256": "535e4211db7da8028aa02feab2b07767c7f453b82f6c23f0c313c3f4eb86f275"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "0b8a5e95b8fa5967db54cb83f9a051fa688ef87ccf9c0ca712cbe85366eda88e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/agent_config.json",
+      "sha256": "fe6ab16b3ade9150b854c5463811b812281c713a3db8d4ba954128ed93e78494"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/inputs/controller-baseline-linear.json",
+      "sha256": "e617e4691c62ef5da92ad36de557da77cff92dce2d41ebdd101a91bb1d93a264"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "98c19764e0ce6ec8c80bd07965d4772d28e1e8495b9cc6af72e75d581eafa978"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "e8c587f290d407d1da4733e38c12aaf292d09b3481ff7dc222b64920d59ea362"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "7f80f8823e44a0e4b04668c44349d5df023cf9c64d459a5b07b505dbe55f84cc"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/inputs/controller-candidate-hermite.json",
+      "sha256": "0e0dad0805f15548fd669d45f57805741682b5ef18e5e07901c98ce1dc5d39c8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/control.jsonl",
+      "sha256": "d3d6a12658051611769507bfe25dabd6676623083aec575388966a6397b6f173"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "8f5b57919da4e9b1fb8a9eedd072078ff014507814e7af98b7e87996d0d21491"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/agent_config.json",
+      "sha256": "c3936b8d44961f72aeb953887b14b79fd0f668bf309c69624f118e338807340d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "34ba72f61e5678a19db1eba93da99c710f7d9d338c64d1a36c6274554b70d58e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "dc1ad39d8c36db1e50a158113bcaee84262f65c74ea0cfd2eefcf1483a4660f3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "ea93bb47dc0d3957a5a3025521a232393d6685df8523f15cfe40908c8de89450"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/control.jsonl",
+      "sha256": "d21c96a3d35d53fca9ea07716edb7b96cb4c67ed9946137d5a293a41bf7e54a4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/validation_trace.json",
+      "sha256": "7a5acf607aa6e7c689fcc0ce23b75217044ed324906088280583e5d16f5309ae"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/agent_config.json",
+      "sha256": "655ca68ab17218273ea7b1323cf8fae74b7332fbd79e9bdf779e2abd8c9cfbb9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/control.jsonl",
+      "sha256": "0b2a6a6ba7c39306117c4302fb2f9a962705f89abb282795e39643e05a0bebc9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/validation_trace.json",
+      "sha256": "e86d7c3599a8834579fdae2c355a254ea163dee48173c78bea5bb0ab158eb7a6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/agent_config.json",
+      "sha256": "11d026543354c5c289e3cd0f8adffae68464f7d211bf3d8aac191f588a16c4a4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/candidate-hermite/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-26966-full.png",
+      "sha256": "bce2ad7defc90b5fa05f4ce899441ecdeb285f7569313f2d5f31a3e705b8c41c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-26966-full.pdf",
+      "sha256": "0e8d751a11c29e719e827fa6e472fdd10756cf657f857541601641e8923dd24f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-26966-samples.csv",
+      "sha256": "5c0c30bc153d920152724145ef52624a14160127c1b5dd2036584d0084060c72"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-26966-window-1.png",
+      "sha256": "18c99626d551de376eb4dbe6b52b1c48b02512893a0c6e02b2b867db6ba6b327"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-26966-window-1.pdf",
+      "sha256": "bec7b2478006d37ac0ed43f6ce836240c1c0c1728e254f16bb14eed2a3605594"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-full.png",
+      "sha256": "c69cb6e77a40463978b508ae35acfe4201eeeb47817aed3deace7eff278fb47e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-full.pdf",
+      "sha256": "5e21226e5d176d5f7a8e51afcabc31c384a767b1c8b42d3c7c37cb1bd1f28d56"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-samples.csv",
+      "sha256": "ae221da720b766dea4c6a6eaa4762df0b1b8741a2bc178aa140df9ed8455691b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-window-1.png",
+      "sha256": "f58690d81f49993ad97730e8b403637d7b7f9917f727ed087310ee87cb06b7bf"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-window-1.pdf",
+      "sha256": "bda276abf224465423889f04c270ec51a6cccfd7faaba503c1da54c347badd75"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-window-2.png",
+      "sha256": "9a65995c5f188205c9037ddb54745e5f044f40b15e5b727444f5d33783694335"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-17563-window-2.pdf",
+      "sha256": "cf34b2c34eabc1cd0eed0549654c612dd01dcb97259cee56250cc27010d25a9b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-24240-full.png",
+      "sha256": "6746d3633b2cdd4dcba03c3fa33d8447c56a29a669c3ca88e4b5dc329cf98480"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-24240-full.pdf",
+      "sha256": "c750133cc8ce67f57cf888cf0996ab83b331d1492149913ea27f64db526bb002"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-24240-samples.csv",
+      "sha256": "943b31eec016cfc2dd9de42df131a138edc295e19c542d74882bc40d6d245fc0"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-24240-window-1.png",
+      "sha256": "0a3a1b222d8d72f8678ffc2c2084ae5a4bb2856d11cc98608d3e6288a83bca7c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/route-24240-window-1.pdf",
+      "sha256": "bca3a6cb6e561d8791a222aeac6b95feb3559343b7b54683983ffb4a17bd19d7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/plot-source.py",
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1/analysis-source.py",
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    }
+  ],
+  "count": 99
+}

@@ -1,0 +1,36 @@
+{
+  "protocol": "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/protocol-v2.md",
+  "protocol_sha256": "87359b5c7a80db572d86a5b72b684aa8da1232a20b3ba1602bae9913edce1ace",
+  "all_six_closed": true,
+  "all_six_behavior_data_available": true,
+  "per_route_safety_counts": {
+    "24211": {
+      "unfinished_not_increased": true,
+      "each_official_infraction_count_not_increased": true
+    },
+    "1711": {
+      "unfinished_not_increased": true,
+      "each_official_infraction_count_not_increased": true
+    },
+    "1773": {
+      "unfinished_not_increased": true,
+      "each_official_infraction_count_not_increased": true
+    }
+  },
+  "route_equal_full_means_not_increased": {
+    "speed_error_rms": true,
+    "accel_lon_abs_p95": true,
+    "jerk_lon_abs_p95": true
+  },
+  "at_least_one_mean_lower": true,
+  "limited_further_validation_numeric_signal": true,
+  "safe_completion_improved": false,
+  "new_default_qualified": false,
+  "causal_controller_benefit_proven": false,
+  "caveats": [
+    "1773 PI contact occurs earlier and low-speed stall lasts longer.",
+    "1773 PI precontact speed error is worse despite lower full-route RMS; trajectories/world states and prefix lengths differ.",
+    "Both arms fail1773 with collision and4000-tick runtime; unknown collision responsibility.",
+    "Three routes/one seed are not a full220 leaderboard result or statistical claim."
+  ]
+}

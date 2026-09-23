@@ -1,0 +1,297 @@
+{
+  "schema_version": 1,
+  "status": "incomplete_comparison",
+  "all_six_groups_final": false,
+  "reference": "carla: shared PI Kp=.5 Ki=.25, additive; fixed on G2, not selected on Dev10",
+  "candidate": "pursuit: PI Kp=.5 Ki=.25, max lookahead",
+  "other_reference": "tcp: vendor longitudinal",
+  "groups": {
+    "pursuit-seed0": {
+      "ready": false,
+      "requested_routes": 10,
+      "official_selected_records": 1,
+      "subset_diagnostic_success_count": 0,
+      "subset_diagnostic_sr": null,
+      "driving_completed_count": 0,
+      "driving_completed_fraction": null,
+      "completion_mean": null,
+      "subset_mean_official_driving_score": null,
+      "source_report": "/data/runs/b2d/controller/smoke-v4/pursuit-seed0/controller-report.json",
+      "source_report_sha256": "fbd9886b10aa82290af53b8ff845f9915ca81fa7cfb83346e44b7edd496634d0",
+      "source_commit": "b431253160ba19233b08327fb846725797e77bbb",
+      "attempts": 1,
+      "retries": 0,
+      "failed_attempts": [
+        {
+          "route_id": "2390",
+          "attempt": 1,
+          "harness_status": "finished",
+          "official_status": "Failed - Agent crashed",
+          "completion": 86.11
+        }
+      ],
+      "infractions": {
+        "vehicle_blocked": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "route_dev": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "collisions_layout": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "collisions_vehicle": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "collisions_pedestrian": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "route_timeout": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "scenario_timeouts": {
+          "count_observed": 0,
+          "routes_observed": 1,
+          "missing_routes": 0
+        },
+        "minimum_speed_events": {
+          "count_observed": 14,
+          "routes_observed": 1,
+          "missing_routes": 0
+        }
+      },
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.2919044256712504,
+            "tick_weighted_rms": 0.2919044256712504,
+            "route_mean_p90": 0.5780266732881136,
+            "route_mean_abs_p95": 0.6373929571765246
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.2919044256712504,
+            "tick_weighted_rms": 0.2919044256712504,
+            "route_mean_p90": 0.5780266732881136,
+            "route_mean_abs_p95": 0.6373929571765246
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.02831762850284957,
+            "tick_weighted_rms": 0.02831762850284957,
+            "route_mean_p90": 0.0045489323051091405,
+            "route_mean_abs_p95": 0.07517557184065078
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.02831762850284957,
+            "tick_weighted_rms": 0.02831762850284957,
+            "route_mean_p90": 0.0045489323051091405,
+            "route_mean_abs_p95": 0.07517557184065078
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 3.0502642181914466,
+            "tick_weighted_rms": 3.0502642181914466,
+            "route_mean_p90": -0.04018592194276582,
+            "route_mean_abs_p95": 7.99979276648699
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 3.0502642181914466,
+            "tick_weighted_rms": 3.0502642181914466,
+            "route_mean_p90": -0.04018592194276582,
+            "route_mean_abs_p95": 7.99979276648699
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 3.049594109683448,
+            "tick_weighted_rms": 3.049594109683448,
+            "route_mean_p90": -0.04524770321828697,
+            "route_mean_abs_p95": 7.999731477515086
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 3.049594109683448,
+            "tick_weighted_rms": 3.049594109683448,
+            "route_mean_p90": -0.04524770321828697,
+            "route_mean_abs_p95": 7.999731477515086
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.23468261905011353,
+            "tick_weighted_rms": 0.23468261905011353,
+            "route_mean_p90": 0.3276057170389267,
+            "route_mean_abs_p95": 0.3493708759629983
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.23468261905011353,
+            "tick_weighted_rms": 0.23468261905011353,
+            "route_mean_p90": 0.3276057170389267,
+            "route_mean_abs_p95": 0.3493708759629983
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.7674829434647036,
+            "tick_weighted_rms": 0.7674829434647036,
+            "route_mean_p90": 1.1042904892762546,
+            "route_mean_abs_p95": 1.272390593598768
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.7674829434647036,
+            "tick_weighted_rms": 0.7674829434647036,
+            "route_mean_p90": 1.1042904892762546,
+            "route_mean_abs_p95": 1.272390593598768
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.0019885043363882297,
+            "tick_weighted_rms": 0.0019885043363882297,
+            "route_mean_p90": 0.0030439703332270085,
+            "route_mean_abs_p95": 0.0044234849952689
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.0019885043363882297,
+            "tick_weighted_rms": 0.0019885043363882297,
+            "route_mean_p90": 0.0030439703332270085,
+            "route_mean_abs_p95": 0.0044234849952689
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.09328267640828677,
+            "tick_weighted_rms": 0.09328267640828677,
+            "route_mean_p90": 0.15000000223517418,
+            "route_mean_abs_p95": 0.15000000223517418
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.09328267640828677,
+            "tick_weighted_rms": 0.09328267640828677,
+            "route_mean_p90": 0.15000000223517418,
+            "route_mean_abs_p95": 0.15000000223517418
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.16588635126327653,
+            "tick_weighted_rms": 0.16588635126327653,
+            "route_mean_p90": 0.21029900381108746,
+            "route_mean_abs_p95": 0.2286240051034838
+          },
+          "before_collision": {
+            "samples": 181,
+            "routes_with_samples": 1,
+            "route_mean_rms": 0.16588635126327653,
+            "tick_weighted_rms": 0.16588635126327653,
+            "route_mean_p90": 0.21029900381108746,
+            "route_mean_abs_p95": 0.2286240051034838
+          }
+        }
+      }
+    }
+  },
+  "seeds": [
+    {
+      "seed": 0,
+      "three_groups_final": false,
+      "conditions": null,
+      "missing_or_incomplete_groups": [
+        "carla-seed0",
+        "tcp-seed0",
+        "pursuit-seed0"
+      ]
+    },
+    {
+      "seed": 1,
+      "three_groups_final": false,
+      "conditions": null,
+      "missing_or_incomplete_groups": [
+        "carla-seed1",
+        "tcp-seed1",
+        "pursuit-seed1"
+      ]
+    }
+  ],
+  "aggregate_conditions": null,
+  "aggregate_metrics": null,
+  "aggregation": "Completion compared separately in both seeds; other primary numeric conditions use equally weighted route/seed observations; per-seed conditions remain diagnostic.",
+  "new_default_qualified": false,
+  "limitations": [
+    "Subset diagnostic SR uses official record status/infraction semantics with requested-route denominator; not official full220 SR.",
+    "Driving completed (completion>=100), strict SR, G2 gates and harness finished are distinct.",
+    "Official TickRuntime failures remain denominator; user harness caps prevent readiness.",
+    "First harness-finished attempt selection inherited from report; all retries and failures retained, never best attempt.",
+    "Speed comparison is trajectory-derivative reference tracking, not an independent fixed-cruise or official comfort metric.",
+    "Full-route CTE is used for the numerical 20% condition; before-collision metrics shown separately and never substituted.",
+    "All-reference-G2-failed exemption does not apply: frozen CARLA+PI reference passed G2.",
+    "Passing listed G4 conditions alone does not replace G1-G3, repeat variability review, or planned confirmation."
+  ],
+  "frozen_config_verification": [
+    {
+      "preset": "pursuit",
+      "seed": 0,
+      "valid": true,
+      "expected_sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb",
+      "actual_sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb",
+      "archived_path": "/data/runs/b2d/controller/smoke-v4/provenance/inputs/01-candidate-pursuit.json"
+    }
+  ],
+  "inputs": {
+    "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/preset-configs.json": "6bdd1bf8095693021c3d2924bd0fe9db5ce897118da10a6177e218184dbc4697",
+    "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_g4.py": "7fa27b88bc269ffe4553fbec94e1ad7205e785602803ce8f6d53818ba19d8fa7",
+    "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_compare.py": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098",
+    "/data/worktrees/jev-drive-controller-v2/scripts/b2d_report.py": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/reference-carla-pi.json": "36d1bb0478d8a4a2344f794b2f7df69a5a1040d494187f984e26fbc2ac1b5be1",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/reference-tcp.json": "9dfd8710c954bceb5ba6c24111116af06a6b3e39f0e865ff0cb614975c9d3925",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+  }
+}

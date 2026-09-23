@@ -1,0 +1,44 @@
+[
+  {
+    "target_speed": 2.0,
+    "steer": -0.15,
+    "speed_mean": 1.3272287786006927,
+    "yaw_rate_mean": -0.07904614006320151,
+    "wheel_angle_deg_mean": -10.249153232574463
+  },
+  {
+    "target_speed": 2.0,
+    "steer": 0.15,
+    "speed_mean": 1.3272756516933442,
+    "yaw_rate_mean": 0.0791037450698178,
+    "wheel_angle_deg_mean": 9.328846120834351
+  },
+  {
+    "target_speed": 6.0,
+    "steer": -0.15,
+    "speed_mean": 5.106509470939637,
+    "yaw_rate_mean": -0.2919802916887556,
+    "wheel_angle_deg_mean": -9.535093212127686
+  },
+  {
+    "target_speed": 6.0,
+    "steer": 0.15,
+    "speed_mean": 5.079773759841919,
+    "yaw_rate_mean": 0.2983667517198474,
+    "wheel_angle_deg_mean": 8.73788685798645
+  },
+  {
+    "target_speed": 10.0,
+    "steer": -0.15,
+    "speed_mean": 9.003007173538208,
+    "yaw_rate_mean": -0.47690368136156563,
+    "wheel_angle_deg_mean": -9.12366075515747
+  },
+  {
+    "target_speed": 10.0,
+    "steer": 0.15,
+    "speed_mean": 0.02572946036234498,
+    "yaw_rate_mean": 0.014248233713725245,
+    "wheel_angle_deg_mean": 9.533483076095582
+  }
+]

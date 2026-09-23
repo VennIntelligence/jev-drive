@@ -1,0 +1,15 @@
+{
+  "pi": {
+    "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v3-inputs/controller-pi.json",
+    "presets": [
+      "carla",
+      "pursuit"
+    ]
+  },
+  "pi-max": {
+    "controller_config": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v3-inputs/controller-pi-max.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

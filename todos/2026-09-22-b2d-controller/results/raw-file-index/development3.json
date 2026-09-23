@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/development3",
+  "captured_at": 1790086082.029409,
+  "files": [
+    {
+      "path": "1773/carla/agent_config.json",
+      "bytes": 314,
+      "sha256": "4076c3d83b4dc2010d65e9584461431732144fac16400a08bae5eb9b4f2d9d03"
+    },
+    {
+      "path": "1773/carla/control.jsonl",
+      "bytes": 712464,
+      "sha256": "ec803fac21d617022232f791e37793b3c1e069ded2c5f9125dc3bca81543c4f8"
+    },
+    {
+      "path": "1773/carla/route_reference.json",
+      "bytes": 9259,
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "1773/carla/trajectories.jsonl",
+      "bytes": 121923,
+      "sha256": "48b974a363f2b753b8b9ec6d5ca18ff7a415e43358f54bb6e8b7c47f98e5760d"
+    },
+    {
+      "path": "1773/carla/validation.json",
+      "bytes": 3649,
+      "sha256": "419cbfd3c9a2e0fcd85d2d509889a0436fefb6b0aad27090d1aa3563939f03cd"
+    },
+    {
+      "path": "1773/carla/validation_trace.json",
+      "bytes": 272144,
+      "sha256": "7629987407d3e330c8d3e18ff088d1cb4dee60723f3256d82912d957e66f7b4c"
+    },
+    {
+      "path": "1773/pursuit/agent_config.json",
+      "bytes": 318,
+      "sha256": "8e0db333d72d16c7aff8548020031fa5cbed02f41a4bd7c19d5f97e47785bd14"
+    },
+    {
+      "path": "1773/pursuit/control.jsonl",
+      "bytes": 715437,
+      "sha256": "97d5a5127364dc5b9c2847fe93eaba9cd39483eb47618e8d3818d53731046bc6"
+    },
+    {
+      "path": "1773/pursuit/route_reference.json",
+      "bytes": 9259,
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "1773/pursuit/trajectories.jsonl",
+      "bytes": 121922,
+      "sha256": "73d4a6c7d03bc45c06d0410877256514316de56ab03350e457d0bf00f2645960"
+    },
+    {
+      "path": "1773/pursuit/validation.json",
+      "bytes": 3651,
+      "sha256": "f00f70b954366fbf130281a5cf255211979d085a5a73b66b3a5b9b61f49beb5b"
+    },
+    {
+      "path": "1773/pursuit/validation_trace.json",
+      "bytes": 272590,
+      "sha256": "7588c463b4373b27eebb114b46e6ba27d892f499dde3a945b0f2788c1e34fa5a"
+    },
+    {
+      "path": "1773/tcp/agent_config.json",
+      "bytes": 310,
+      "sha256": "76714c069535d57ef5cc6b5b8068de6e53a383b2faea45dd3983e1dca7daec1e"
+    },
+    {
+      "path": "1773/tcp/control.jsonl",
+      "bytes": 706314,
+      "sha256": "96a4a1f36ee0c33aed07b59f1be1cb478199418da94ceca7046776d1ae5301f9"
+    },
+    {
+      "path": "1773/tcp/route_reference.json",
+      "bytes": 9259,
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "1773/tcp/trajectories.jsonl",
+      "bytes": 120157,
+      "sha256": "c1045c4a84f15a518371c90e6a400d71254d2a94f683db52c9963c0b545135a3"
+    },
+    {
+      "path": "1773/tcp/validation.json",
+      "bytes": 3650,
+      "sha256": "6c7b02adc4b87a3bf785f3f894ef5acbf4fb9ba46f7f8024ae2ce4caf7b54049"
+    },
+    {
+      "path": "1773/tcp/validation_trace.json",
+      "bytes": 271809,
+      "sha256": "d88383853ebfe37fcdedd75ed603d25fe49588a1015b6e6802cd70a9b5063909"
+    },
+    {
+      "path": "24240/carla/agent_config.json",
+      "bytes": 315,
+      "sha256": "308181f7ad89217e0d1195f195f5c8d77603b42ac09437089547444e619b09b5"
+    },
+    {
+      "path": "24240/carla/control.jsonl",
+      "bytes": 603121,
+      "sha256": "2ce94f7e23f84512e152a503b0824cef7d63a7d12d5dead6d5f571fa414a3dd9"
+    },
+    {
+      "path": "24240/carla/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "24240/carla/trajectories.jsonl",
+      "bytes": 99457,
+      "sha256": "88c26c2ff92581d8670ecd900c4617869856d8a1258f7d7ed1da071abf8f82c5"
+    },
+    {
+      "path": "24240/carla/validation.json",
+      "bytes": 3640,
+      "sha256": "e1c5e485750475bbfe3f0f89b016a05d54f410870e92f72597d679c6d8f19670"
+    },
+    {
+      "path": "24240/carla/validation_trace.json",
+      "bytes": 231824,
+      "sha256": "6dd230a9b94deb42e8144f05250f0535a630e6afa6d24299c89a654865927668"
+    },
+    {
+      "path": "24240/pursuit/agent_config.json",
+      "bytes": 319,
+      "sha256": "0b9081d427a8036976224c1745496478977f779071f128159c9c75411dfe2fbc"
+    },
+    {
+      "path": "24240/pursuit/control.jsonl",
+      "bytes": 602286,
+      "sha256": "1d8f0f338d04e8b59fa1ed5d0cb2d55dc5168ece4352b90b712adfba8f2ffb1a"
+    },
+    {
+      "path": "24240/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "24240/pursuit/trajectories.jsonl",
+      "bytes": 99109,
+      "sha256": "b394ec60b98fe396c939d501fbeb8e0c09e54cc248b10eee30871359dce7e2be"
+    },
+    {
+      "path": "24240/pursuit/validation.json",
+      "bytes": 3659,
+      "sha256": "190d8dfeeb75b67ff98e5e9cce8b1ae16ab49d4fdca7927cbdeb8cc2a043bda2"
+    },
+    {
+      "path": "24240/pursuit/validation_trace.json",
+      "bytes": 231303,
+      "sha256": "07c513ff24b1e5e4b4904db2840cf15afb870bf1add012dc463b3a436ba1fef4"
+    },
+    {
+      "path": "24240/tcp/agent_config.json",
+      "bytes": 311,
+      "sha256": "43597acf4f16d08216164748fc8f84cbfdbd101ab91ac896dfa0e320d3febb29"
+    },
+    {
+      "path": "24240/tcp/control.jsonl",
+      "bytes": 597442,
+      "sha256": "429a30e472798bab775b2d1b3f6724c11b612bdfe1cf707e97c153d0a2fab0e1"
+    },
+    {
+      "path": "24240/tcp/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "24240/tcp/trajectories.jsonl",
+      "bytes": 99317,
+      "sha256": "18ba05cb611245161550ba71dfcdb18b75baf1e2d0f2ed892c246a903e8bb5cf"
+    },
+    {
+      "path": "24240/tcp/validation.json",
+      "bytes": 3640,
+      "sha256": "ccac3add100bf40cdda62ee2e8449e485e2ad2e211ecf3aa7fe976c7d8e6beed"
+    },
+    {
+      "path": "24240/tcp/validation_trace.json",
+      "bytes": 230932,
+      "sha256": "e8249683892c06a4ae451786336c0ba4e239acfc5775e8cdb2f665b0bb017614"
+    },
+    {
+      "path": "25854/carla/agent_config.json",
+      "bytes": 315,
+      "sha256": "0a18a27f3d589e6b8b1fc4ddb9991075e7c7bbf27e6327201a01845528e9de60"
+    },
+    {
+      "path": "25854/carla/control.jsonl",
+      "bytes": 708127,
+      "sha256": "5c2b099a91a796fb2439e743d90178677f58b897ae07df55bf156ac835e6de29"
+    },
+    {
+      "path": "25854/carla/route_reference.json",
+      "bytes": 15915,
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "25854/carla/trajectories.jsonl",
+      "bytes": 120216,
+      "sha256": "cd4ab79c0cf079b7b5918b1c82d1db1d13f3c86cdefa7c48fa8c1c050df33b1a"
+    },
+    {
+      "path": "25854/carla/validation.json",
+      "bytes": 3643,
+      "sha256": "221cd1877cbf95e9559709f7fef3ec941d82a39c7de33dfb74c88142070f91f2"
+    },
+    {
+      "path": "25854/carla/validation_trace.json",
+      "bytes": 270213,
+      "sha256": "ede1ea0dca4b88a18603546f8b5502c235e13bcb79ec5aa1baa67429395aecde"
+    },
+    {
+      "path": "25854/pursuit/agent_config.json",
+      "bytes": 319,
+      "sha256": "885104187d87dd7c1b52930399b6362e81a8fa014c9e5454b45447f0261d5da0"
+    },
+    {
+      "path": "25854/pursuit/control.jsonl",
+      "bytes": 718298,
+      "sha256": "e6cdb292d4667c263cae94ce93155030305d0ecf195bdeadb197a4a3e750cb24"
+    },
+    {
+      "path": "25854/pursuit/route_reference.json",
+      "bytes": 15915,
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "25854/pursuit/trajectories.jsonl",
+      "bytes": 122188,
+      "sha256": "6db4899a08293ea1760a23334cdcfe5a50a300817c76b90c9349fff8f4f56786"
+    },
+    {
+      "path": "25854/pursuit/validation.json",
+      "bytes": 3651,
+      "sha256": "7fa5c08889e5a281ebc1cb4c569d55dd6d4c07132c1bc26ba2fc8f749eba8d61"
+    },
+    {
+      "path": "25854/pursuit/validation_trace.json",
+      "bytes": 273417,
+      "sha256": "b918019e7f13d729bcdf4ca42ffc00016a7e5a09fb34e4e2de66ec1e35efda50"
+    },
+    {
+      "path": "25854/tcp/agent_config.json",
+      "bytes": 311,
+      "sha256": "4997045b3d6bfebed60b207c2447b55aa3aed3181ac8e2853c06fd2539eee48b"
+    },
+    {
+      "path": "25854/tcp/control.jsonl",
+      "bytes": 701216,
+      "sha256": "eebdea81e5991f1110937b5d32f2b0cabf7344640f7f00dc9ef82e4b400fe9cd"
+    },
+    {
+      "path": "25854/tcp/route_reference.json",
+      "bytes": 15915,
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "25854/tcp/trajectories.jsonl",
+      "bytes": 119797,
+      "sha256": "b6b047ef82a9dcf8beb61521c9bae558a34c8f5d467debab0b1c4a61d3483203"
+    },
+    {
+      "path": "25854/tcp/validation.json",
+      "bytes": 3645,
+      "sha256": "3d5f87ef09d2633d6e1d71bd1fb3bf7d928501b7b5cbd438761d6436d7304f91"
+    },
+    {
+      "path": "25854/tcp/validation_trace.json",
+      "bytes": 269262,
+      "sha256": "96a9c501cd95aed5f7589aa454dce07c88d9377cf434f43a60ed5e755150d277"
+    },
+    {
+      "path": "26966/carla/agent_config.json",
+      "bytes": 315,
+      "sha256": "9a3348d1988cef200a8d7e954acdcd2e0a03fcc2ffc54638d5999db56ec88e76"
+    },
+    {
+      "path": "26966/carla/control.jsonl",
+      "bytes": 519078,
+      "sha256": "5ab7c7f76127cd3f61e5b6a518f45ee238d133d44c114684ce12b86b96275d75"
+    },
+    {
+      "path": "26966/carla/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "26966/carla/trajectories.jsonl",
+      "bytes": 85174,
+      "sha256": "115e1d163c7cd217852a8d677049fcd72d0814c45e971df4fb963a837c1090a1"
+    },
+    {
+      "path": "26966/carla/validation.json",
+      "bytes": 3630,
+      "sha256": "4a59f954f3efe4ec63f09fc2070d7ea2e1dc6e54766576d2388e3b6c55033f9a"
+    },
+    {
+      "path": "26966/carla/validation_trace.json",
+      "bytes": 200105,
+      "sha256": "ad2960d69e7d37e7dcdc61b1a081fb1181fe450a24f05aa512f21677406b23ab"
+    },
+    {
+      "path": "26966/pursuit/agent_config.json",
+      "bytes": 319,
+      "sha256": "0322c095714ad05e43dbfa953f80d98a74edabd4978d22770f069d991ee3d668"
+    },
+    {
+      "path": "26966/pursuit/control.jsonl",
+      "bytes": 519347,
+      "sha256": "b8c691de1082ca8716c0f00d78c36281c63b3f31bc10bcb08c68c676ff36ee6b"
+    },
+    {
+      "path": "26966/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "26966/pursuit/trajectories.jsonl",
+      "bytes": 85311,
+      "sha256": "82d8b4d846aede5d41b71eac37265ce9dcc67ef1f34824918cf2d8db829be772"
+    },
+    {
+      "path": "26966/pursuit/validation.json",
+      "bytes": 3641,
+      "sha256": "acd70f0a9b29d7837759a6e3f969730c2767ee09b0f114695cbb8af92a403a34"
+    },
+    {
+      "path": "26966/pursuit/validation_trace.json",
+      "bytes": 200585,
+      "sha256": "228c7ad304c82599a4c763f597fde3a46072307be52cd78e3590c0b8cdbabdf9"
+    },
+    {
+      "path": "26966/tcp/agent_config.json",
+      "bytes": 311,
+      "sha256": "4286c90b65a2040a3ebe6adcb731eecc401d91ec350b5f3fab900ca91ae9c9c8"
+    },
+    {
+      "path": "26966/tcp/control.jsonl",
+      "bytes": 497846,
+      "sha256": "05e1b3ddf3f218ea85de74e89f423633be3426596abde0a3455cb209577b1d9f"
+    },
+    {
+      "path": "26966/tcp/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "26966/tcp/trajectories.jsonl",
+      "bytes": 82491,
+      "sha256": "2626847f5a66853e431f3ebe368c05afc2bd47ca33a219463b68e1ef372db764"
+    },
+    {
+      "path": "26966/tcp/validation.json",
+      "bytes": 3631,
+      "sha256": "b504568d6a3e369d28f9d8515b4b59bd4f7aca11f4d2a776de2a89066bf0a3c8"
+    },
+    {
+      "path": "26966/tcp/validation_trace.json",
+      "bytes": 191041,
+      "sha256": "5220124a473f349cef0b6b0f73893e722ded40c1eee308114cf3c2747912d4bd"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 50053,
+      "sha256": "a7ef26faa68f1c57d397ccf24898a4a2acabaf6de8bb82a22b1cc9f40fd3604f"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "3363be6ecaa171db8da3871aa4ce4e2920c899f27db00f96c0d33bd24544b583"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 50053,
+      "sha256": "a7ef26faa68f1c57d397ccf24898a4a2acabaf6de8bb82a22b1cc9f40fd3604f"
+    },
+    {
+      "path": "servers/carla-72-1.log",
+      "bytes": 167,
+      "sha256": "8c98e7da3a09250fb7438af8de60739b1ef320b0615b245ff34df7f83bacc82a"
+    },
+    {
+      "path": "servers/carla-72.pid",
+      "bytes": 6,
+      "sha256": "9fb394cd44158a75b760c18c4d39123d0369c583a83159191253733724476a3e"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 46996,
+      "sha256": "bf2b60e273a6d996cd0e0873d93394f972bda091d603a8365125ac3174b11ec3"
+    }
+  ],
+  "file_count": 78,
+  "total_bytes": 12122205
+}

@@ -1,0 +1,17 @@
+{
+  "verified_at_unix": 1790093662.814796,
+  "raw_files_verified": 904,
+  "raw_bytes": 191186801,
+  "g4_output_hashes_verified": 8,
+  "cost_inputs_verified": 247,
+  "local_links_checked": 222,
+  "source_tests": "126 passed; see results/verification-v4-pose; no runtime edits since freeze",
+  "preexisting_unrelated_missing_links": [
+    [
+      "research/decisions.md",
+      "survey-counterfactual-video-gen.md"
+    ]
+  ],
+  "new_missing_links": [],
+  "carla_and_campaign_processes_running": false
+}

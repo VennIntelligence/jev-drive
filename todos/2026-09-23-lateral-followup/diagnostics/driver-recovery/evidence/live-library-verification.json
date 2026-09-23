@@ -1,0 +1,44 @@
+{
+  "t": 1790130008.3210428,
+  "pid": 384002,
+  "libraries": [
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libGLX_nvidia.so.580.159.03",
+      "sha256": "e8cb4f84d23ebb6d23e105d6ef977ba91f7da1bab35a3b8e82747bad775e50e8"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-allocator.so.580.159.03",
+      "sha256": "098608ac94590c8205bc579216c3d85336d1967f28d203d118e417b3e15b11a0"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-glcore.so.580.159.03",
+      "sha256": "f2ccf73a79db2e75b69724e2f625c27c478e3b0014517fb829640e7477503dd9"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-glsi.so.580.159.03",
+      "sha256": "fdd6cdb479c7f1f752af6ff0f883e6734aef78c50dbffd83e1a6b5891a4475aa"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-glvkspirv.so.580.159.03",
+      "sha256": "9f0f8aeac9fba4e96c60a9d538e4cde9339140ae6379258de5757bedfcda8224"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-gpucomp.so.580.159.03",
+      "sha256": "e4e64720e278ced3a000d785f345716cbca17085e36447fa32038b3f412e45d9"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-rtcore.so.580.159.03",
+      "sha256": "bc25950e84f43aa78c13767386fa9219bdefb548fceb925c6e3c75f4b14429bf"
+    },
+    {
+      "path": "/data/tools/nvidia-userspace-580.159.03/isolated/lib/libnvidia-tls.so.580.159.03",
+      "sha256": "7d7fcf25c5a172e852bb3fe754e6dc23fad42cd833c39ef9cb7e5f3221bb5080"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libvulkan.so.1.3.275",
+      "sha256": "e833b010f814b72c6aca0300c8b5f19b6106ffa06c24ddc95a293970c7d6058e"
+    }
+  ],
+  "new_580_173_library_loaded": false,
+  "private_GLX_loaded": true
+}

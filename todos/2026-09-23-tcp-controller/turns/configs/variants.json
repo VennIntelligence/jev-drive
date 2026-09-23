@@ -1,0 +1,14 @@
+{
+  "baseline-max": {
+    "controller_config": "/data/worktrees/jev-drive-controller-turns/todos/2026-09-23-tcp-controller/turns/configs/baseline-max.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "short-max": {
+    "controller_config": "/data/worktrees/jev-drive-controller-turns/todos/2026-09-23-tcp-controller/turns/configs/short-max.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

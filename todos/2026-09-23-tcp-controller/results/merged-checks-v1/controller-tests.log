@@ -1,0 +1,13 @@
+....................................................................................{"worker": 0, "route_id": "1", "attempt": 1, "port": 2000, "tm_port": 8000, "t": 1790100171.0308878, "kind": "route_start"}
+{"worker": 0, "route_id": "1", "attempt": 1, "status": "finished", "wall_s": 10, "ticks": 4, "t": 1790100171.0310152, "kind": "route_end"}
+.........{"worker": 0, "error": "Traceback (most recent call last):\n  File \"/home/ujs/mycode/jev-drive/scripts/b2d_run.py\", line 476, in worker\n    ok, record = self.run_once(wi, server, rid, attempt)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1081, in __call__\n    return self._mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1085, in _mock_call\n    return self._execute_mock_call(*args, **kwargs)\n  File \"/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/mock.py\", line 1140, in _execute_mock_call\n    raise effect\nRuntimeError: failed route\n", "t": 1790100171.0403645, "kind": "worker_error"}
+..{"worker": 0, "index": 1, "port": 2050, "t": 1790100171.0425084, "kind": "server_moved"}
+{"route_id": "1", "attempts": 1, "t": 1790100171.042531, "kind": "route_abandoned"}
+...{"worker": 0, "index": 1, "port": 2050, "t": 1790100171.0465286, "kind": "server_moved"}
+{"worker": 0, "index": 1, "port": 2050, "t": 1790100171.0465398, "kind": "server_start"}
+.{"worker": 0, "index": 0, "routes_served": 1, "age_s": 0, "t": 1790100171.047643, "kind": "server_recycled"}
+.............
+----------------------------------------------------------------------
+Ran 112 tests in 1.122s
+
+OK

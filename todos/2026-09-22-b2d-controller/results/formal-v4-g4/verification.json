@@ -1,0 +1,19 @@
+{
+  "selected_attempt_records_reconciled": 60,
+  "required_routes": 60,
+  "all_attempts": 63,
+  "all_six_config_hashes_match": true,
+  "all_report_hashes_match": true,
+  "all_strict_sr_records_match": true,
+  "no_result_overwrites": true,
+  "files": {
+    "g4.json": "2f972173342d62772de2231b02e1cbaf7b1d6c6a333fd6b4f69cf982a416a67e",
+    "README.md": "833829c8b6663e4b171f0da726b3fc7e002c8c8633d10172158053cfcf260110",
+    "selected-60-attribution.csv": "2f63de32e948f73d5f453f41622c9f9f03784c263dccaf1a42e9991623db9e71",
+    "FINAL-AUDIT.md": "2f28a99e3b8ef8eaf00614bd14e113082fd1233e7d4227b4e26f427a09950b59",
+    "final_audit.py": "fbdc1e6d6c635c25b9aa8f500a19cd038c7634c710b1d41ba073155c044e917b",
+    "all-attempt-attribution.csv": "be3e80953098cd63e0907000acf4c241a4d2cb67e187bb47cd64e41e81f84e50",
+    "manual-qualification.json": "a583be133597abd7fccb1a5ffc0539a97ef27f874fff7849bfe34cecdcfdf972",
+    "six-group-table.csv": "479272b03a503e7ecbb3a378b05d157b27621e4b7ff0c0f63c41bebbb1a17316"
+  }
+}

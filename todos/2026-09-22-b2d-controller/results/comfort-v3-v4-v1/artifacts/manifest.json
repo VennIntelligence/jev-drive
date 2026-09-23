@@ -1,0 +1,458 @@
+{
+  "command": [
+    "todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/analyze.py",
+    "--v3",
+    "/data/runs/b2d/controller/development-v3",
+    "--v4",
+    "/data/runs/b2d/controller/development-v4",
+    "--out",
+    "todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/artifacts"
+  ],
+  "python": "3.8.20 (default, Oct  2 2024, 16:34:12) \n[Clang 18.1.8 ]",
+  "numpy": "1.23.5",
+  "matplotlib": "3.7.5",
+  "inputs": [
+    {
+      "path": "/data/runs/b2d/controller/development-v3/summary.json",
+      "sha256": "6286e50dc3ea170d8ab1b5c3ed7eaf35a73bb4e98cdf1adceb96c6b94d7634ef",
+      "bytes": 79021
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi-max/pursuit/validation_trace.json",
+      "sha256": "e6d70c68b04020f0562997c9910401b78dc08cde52c0fefa5bf98e27f06a6820",
+      "bytes": 672232
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi-max/pursuit/validation.json",
+      "sha256": "f1d32bc1708b920fa3a04d038d4cdc1cd4ddc37d4d0dc4ce1c88c1d174d170b1",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/inputs/controller-pi-max.json",
+      "sha256": "c4e227db83aeecb76f42ae197a28a622ef20d0dcec981b80c2e2635e97523fb5",
+      "bytes": 380
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi/carla/validation_trace.json",
+      "sha256": "830feda5e8effeae07b5d926d6b4a37b93a55fcffcd5091f1d926e40edb55790",
+      "bytes": 644618
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi/carla/validation.json",
+      "sha256": "e8baac2edabe261de132bb9b2aa854b9a0f2531dab7ecb333c4d2b3ab0910062",
+      "bytes": 4098
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/inputs/controller-pi.json",
+      "sha256": "40a603653f0a19923fb47f68f8bf271a5f49f042d5c742a497b9a3f6c93fe79a",
+      "bytes": 358
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi/pursuit/validation_trace.json",
+      "sha256": "b93afd60e5965de6ea2bae0d70e4e9ac01a6d02c6087befba63365a49c5998c3",
+      "bytes": 649172
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/17563/pi/pursuit/validation.json",
+      "sha256": "1d78474567352d66fc90b9270bd59e5958680e11ec56350573a1480cebf143c1",
+      "bytes": 4098
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi-max/pursuit/validation_trace.json",
+      "sha256": "3fc1782941446f000685b61cb4ea1acf139e6b1b82e12560969a0b8895fecb64",
+      "bytes": 734843
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi-max/pursuit/validation.json",
+      "sha256": "3fa47e1d394ad87bda4d455c2bc566ea43f99b2ceeda95603d5dae26884beef6",
+      "bytes": 4117
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi/carla/validation_trace.json",
+      "sha256": "1626b871ce3e41ddfc4f466ae2d51a4253a3c7d545bd9dfc772cc8524a15dd33",
+      "bytes": 732337
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi/carla/validation.json",
+      "sha256": "b6f0927b5d27132107f3faf31f303207060d17004e2e42270f092267cda55d5f",
+      "bytes": 4111
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi/pursuit/validation_trace.json",
+      "sha256": "783c06d916378f6c05461c49a1968413f5cc16907e33d80786eecf0f6382256a",
+      "bytes": 745325
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773-speed6/pi/pursuit/validation.json",
+      "sha256": "df5ceb2a3e32d803d45851fd98e0a8cb52f9ec488323bfbf54749cafe2b97d90",
+      "bytes": 4103
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi-max/pursuit/validation_trace.json",
+      "sha256": "8f4c4456f5fd8d5ff3063af8665899da04a9658d75cf91907ab8e88101ba0839",
+      "bytes": 596277
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi-max/pursuit/validation.json",
+      "sha256": "9ddd074f419d8409eb4a86614af847faeb21d80bfdee04b2bb6fd009c574cecf",
+      "bytes": 4113
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi/carla/validation_trace.json",
+      "sha256": "892afcd7bc827eeaa0698cc77a7db157a53bcff297ea0a4aeabe512d8aa5570b",
+      "bytes": 597754
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi/carla/validation.json",
+      "sha256": "011436b7860052877725668c5a4d9254a63c5ddbb302ab87d857dc2a78421acc",
+      "bytes": 4102
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi/pursuit/validation_trace.json",
+      "sha256": "6401335d74d83fe2f0405dc337018202fec8e060b6e2fec7f1ba064ffeaa1c41",
+      "bytes": 597347
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/1773/pi/pursuit/validation.json",
+      "sha256": "2fdc9305019198d50b8ecba9620b136b4a5778bfe1b62b6a5d8b1ee4ec79237d",
+      "bytes": 4104
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi-max/pursuit/validation_trace.json",
+      "sha256": "9756b4737223beab499881d615bfcb8e2892f94e6c7cf569494616b412794d36",
+      "bytes": 502846
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi-max/pursuit/validation.json",
+      "sha256": "0440aba5b90a0c8eec4b56b870d776be094139adb620b4edb396ede445aa0a1a",
+      "bytes": 4118
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi/carla/validation_trace.json",
+      "sha256": "e540a8e684f60fbda2c047b7582538dffc7cff0c874a79bd7e83b6c89e99eab6",
+      "bytes": 497240
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi/carla/validation.json",
+      "sha256": "24e42bd0c55c1ee09eea6d012fdf348be77abfab2e40ed43ca9acc0e117046d2",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi/pursuit/validation_trace.json",
+      "sha256": "bdaa2edf00ee70e9b8d74071f8dea3836e944869eb76f60831f9e9fa5e344cc8",
+      "bytes": 503068
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/24240/pi/pursuit/validation.json",
+      "sha256": "47806851c0a6a191d9801d9ccdbec0d66b56f682c1de43f8ab6059286f5a1ba8",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi-max/pursuit/validation_trace.json",
+      "sha256": "027c118a68bc892cc03cf6a01adf7119ab782c06aa2db715888d17ce395116ae",
+      "bytes": 601384
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi-max/pursuit/validation.json",
+      "sha256": "e015b92829222d875bd54768f5f55914bc403baf58eee19be7edf6717c21f9c1",
+      "bytes": 4115
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi/carla/validation_trace.json",
+      "sha256": "37125c9d2ffeb184fd22a59164f3ff1bfcf8fa979d2f588c228124419151d8f0",
+      "bytes": 597043
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi/carla/validation.json",
+      "sha256": "8bf5f9145797ae4c7f5e3ee484e0167de5978923152ed4060ef96d5247a07139",
+      "bytes": 4102
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi/pursuit/validation_trace.json",
+      "sha256": "58e527ce7a0cfa6640d4a23e5a661b295ad26755f0630f58c1fcd1cb221148d5",
+      "bytes": 601224
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/25854/pi/pursuit/validation.json",
+      "sha256": "0330247c5246b4a573c887e6c709d62e034f7deb6851e0bb2b1a8a8ffd0c7e18",
+      "bytes": 4103
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi-max/pursuit/validation_trace.json",
+      "sha256": "155c6b5ce34717657986ee6e065c1c9edc03e7e72d5a3dd7958db1f81ce0e1e8",
+      "bytes": 448213
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi-max/pursuit/validation.json",
+      "sha256": "243289af2f60cecafc4aac712b747a87d5abe89c25207ffb2fa5429f6edc28e6",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi/carla/validation_trace.json",
+      "sha256": "a79d8cd621328739f1ef08f8ce77858bb37caabd304dc9b2c641f3e78336b8cd",
+      "bytes": 435479
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi/carla/validation.json",
+      "sha256": "308b84dc79ccca992951ee0dd3dc2e7baf4b85483dc3e8bfbd462e4445a7fd0c",
+      "bytes": 4091
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi/pursuit/validation_trace.json",
+      "sha256": "76e6e41fce75c323fab9f77b32a6a1a3e307bd5a193599d7f95f48b08f8cf520",
+      "bytes": 437480
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v3/26966/pi/pursuit/validation.json",
+      "sha256": "e011f0f0e4d3ca7b3348cebe074bd0334edee834191207b27fc2b045a6d87b86",
+      "bytes": 4092
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/summary.json",
+      "sha256": "8e4811a4addf80e1de70a39531629c4b2a379b97d2f65b5be4433cfae91b33f5",
+      "bytes": 79139
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/validation_trace.json",
+      "sha256": "ccdbe626a40ea3dc0a4f636b66f2d824bd4f0cbbcd478619f8713cd138c906b3",
+      "bytes": 638367
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/validation.json",
+      "sha256": "27c6d36f9e902e6a217efaccba6f33a3fae16e9ed09403524e5e7e5a2f6de206",
+      "bytes": 4120
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/controller-pi-max.json",
+      "sha256": "f28fe826e8572aab6e10d3a02d5e7b2ec3cc357977dea378b8ce24cf02a99e18",
+      "bytes": 413
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/validation_trace.json",
+      "sha256": "0fe5a719975f34653c25a862003099cc0be05c920a99a7fa453d29ba3ad5c0c6",
+      "bytes": 633292
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/validation.json",
+      "sha256": "7844a217ba4ba38b1d8f652572de997827ef99b849f2de30fa422c56da274731",
+      "bytes": 4108
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/controller-pi.json",
+      "sha256": "1d2b1e025a01e30e8e7d0f93150c5f5de397282f0a709b1e6798e917b76aff93",
+      "bytes": 391
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/validation_trace.json",
+      "sha256": "238a6208b9104afbf02db74d97ad8367e1057bf7bf36bb74a75aa413568263c6",
+      "bytes": 638346
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/validation.json",
+      "sha256": "21f7e19739bf1304afbd3c79f4eea404ff12c65eb33c7c298b6db46185736e53",
+      "bytes": 4108
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/validation_trace.json",
+      "sha256": "734dd3ba5d583de1e713671d794d6deaa34a0eabbc109a874b059be21011d14a",
+      "bytes": 707479
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/validation.json",
+      "sha256": "625de19d8e4fb5d6f44caf930219262567caa94189581acc86632f2f0b4f89d1",
+      "bytes": 4132
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/validation_trace.json",
+      "sha256": "edc72366525509b647901700ccb817cc08b8332c9ee329be3c2313c86f57b998",
+      "bytes": 705600
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/validation.json",
+      "sha256": "d654216a5154b2f56e4142dbdc13c34e8cfdadc5a53fd93d25d5793c3522aaad",
+      "bytes": 4123
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/validation_trace.json",
+      "sha256": "911a0cf95fe525df015e8d7a083cb050a82050f6f3cf79e3c91e253e193cb8d7",
+      "bytes": 707371
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/validation.json",
+      "sha256": "fe8545d2ff444f0821296e1d7386a2896f0c43b57ebab2498ef2d46574ee2194",
+      "bytes": 4123
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/validation_trace.json",
+      "sha256": "dc04e0f7b8a10c224fca8a9ca6e0099a4f2b2b2290cf2fb330d7a1e3cd9a86b3",
+      "bytes": 599781
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/validation.json",
+      "sha256": "e0b9a7229435f17d2419839bfa99f2e06d3f9c8e5faea25b3957bb585be0480d",
+      "bytes": 4124
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/validation_trace.json",
+      "sha256": "acc220d25e3cb27bf9707af84cb6d10bdb3fed67c3b685be177580a5ed90871b",
+      "bytes": 599433
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/validation.json",
+      "sha256": "fac29a5436ba8a31cbe0a4ca65e89988e90930cf3d9942da7a01cc8cf7721e75",
+      "bytes": 4108
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/validation_trace.json",
+      "sha256": "50ab209d83e1cf1abf6260cc321dfea17be538123e4abfbb3768ec2c4194b554",
+      "bytes": 599875
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/validation.json",
+      "sha256": "16606a14bf29a9242ba944bfbb1fd18fe104cd7c5da6088ea24892a78c510b32",
+      "bytes": 4108
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/validation_trace.json",
+      "sha256": "b466ef447965b0482e442ac1d5b34552123c26c1a727093289d8c2ff3de2a09b",
+      "bytes": 498391
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/validation.json",
+      "sha256": "42b7134364558a68080366be4ef727de67841e7baca688b967e5c9aedb17103a",
+      "bytes": 4116
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/validation_trace.json",
+      "sha256": "f0370bfa0334de5e43540a3a8fa257a79e98bee6103faac99680269e383982c5",
+      "bytes": 501259
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/validation.json",
+      "sha256": "fca2eba9b23541fc4f65fec8d5bd3f30ca67a21a2e497cc8eec5a77bea59362b",
+      "bytes": 4095
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/validation_trace.json",
+      "sha256": "4d325f1cfb4f28c0f198836910505406a65ff60fa28492705387cf4e64081bcb",
+      "bytes": 497482
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/validation.json",
+      "sha256": "3333caefcc669abe54c2d08827e798df641819487efbae4d0e2e900f1cc1946d",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/validation_trace.json",
+      "sha256": "52ca8d91c4c2d0b3a8968b87dda5a732b4c7070b95987da676a61f9818f150b0",
+      "bytes": 597184
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/validation.json",
+      "sha256": "00dd3138846ff2481a23c9b5b8bbc6ce4996a9e442cca4c5a30f3d52b2461368",
+      "bytes": 4119
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/validation_trace.json",
+      "sha256": "1511b5c5cb5b2546995fb7b04041c4478de5df2ae2a33f095cecfe410a39dd22",
+      "bytes": 596839
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/validation.json",
+      "sha256": "972d91c6edde517f8c01986cfea3ca2f9d66bd13ecd9534c4809004f908d7ae4",
+      "bytes": 4105
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/validation_trace.json",
+      "sha256": "899a8a81fd3ac5d72b3a5585600536d41f3db9415eb97ac661dcad9cfa22cb6d",
+      "bytes": 597786
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/validation.json",
+      "sha256": "52b37230464824de6681083b344a1936144e8958e951264a6dce8b7a5187f186",
+      "bytes": 4101
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/validation_trace.json",
+      "sha256": "7eaba32d534254b4f8de4d7fb084373597834d1b0b140bcf2e4800bb9932247d",
+      "bytes": 442421
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/validation.json",
+      "sha256": "877d17ad893017337ab971d2d063fab65f2404baad787cb2f0c6c0034870ece7",
+      "bytes": 4118
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/validation_trace.json",
+      "sha256": "5ebdb428727848b45cab435d0cfe78f8fa038f89c8a5025f85ac7255c9ca2706",
+      "bytes": 426648
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/validation.json",
+      "sha256": "ffb5ffdb5481f15f413b0f1238ef76e6643a025e6f6dd2b432fda5b2f0a169d7",
+      "bytes": 4086
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/validation_trace.json",
+      "sha256": "427214d452b9ae8afabe6941df961f3d470d728294b3b764a177edffe6c0137d",
+      "bytes": 437947
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/validation.json",
+      "sha256": "9574027a5cd8125f1a1a3fce32cd526417c310cbc9fcd0f64a5422a0bbf5dc70",
+      "bytes": 4094
+    }
+  ],
+  "outputs": [
+    {
+      "path": "analyze.py",
+      "sha256": "10caadd3d81686d19af867d02adbbe3919a2ca9873c7085e195f75f8f64eddb5",
+      "bytes": 11979
+    },
+    {
+      "path": "distributions-raw.pdf",
+      "sha256": "b5b387aa0fe2498e1b2b37f5045bdbcbcbe4979e1d4c10f111a3f335a24165fd",
+      "bytes": 59861
+    },
+    {
+      "path": "distributions-raw.png",
+      "sha256": "ba496facbdc676c1bc57c9a25bd65390177f12612f3ffcc20e716b64e8db549a",
+      "bytes": 342225
+    },
+    {
+      "path": "paired-rms-box5.pdf",
+      "sha256": "a3a58c690bab5aa56a50c518e019bb8eadd2748eddec6e8db399e1b08ece97d9",
+      "bytes": 23680
+    },
+    {
+      "path": "paired-rms-box5.png",
+      "sha256": "0fa26f354052c2f6e2b79caeecc43e583eee413ff5f793f38a9aec032e869e0a",
+      "bytes": 882096
+    },
+    {
+      "path": "paired-rms-raw.pdf",
+      "sha256": "17fbb12dd218ca48d23a591cf2fcf4bde0f124f1d0be321934e1e6061c6e5563",
+      "bytes": 23976
+    },
+    {
+      "path": "paired-rms-raw.png",
+      "sha256": "4d6ce9c61396396b7e3b768dfc9dacb13184db43b41f5938ab48df1c31839f2c",
+      "bytes": 979323
+    },
+    {
+      "path": "per-case.csv",
+      "sha256": "d4567e81eafda6dac8367d3cf843b00650d67fc5c7440c50ebf24f0424bb4cc4",
+      "bytes": 80711
+    },
+    {
+      "path": "samples.csv",
+      "sha256": "3e9ab848bf570e173a635dc8a534b0f65549dcc7f0dad11ad29e0b1ee6211e15",
+      "bytes": 8312450
+    },
+    {
+      "path": "summary.json",
+      "sha256": "ff993c4d4978114c26e91a0e9f5d53870608cf5ef83782a2123341d44b1e756d",
+      "bytes": 9891
+    }
+  ]
+}

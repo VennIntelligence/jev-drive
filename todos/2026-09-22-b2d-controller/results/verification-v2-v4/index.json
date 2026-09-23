@@ -1,0 +1,79 @@
+{
+  "captured_utc": "2026-09-22T15:03:14.266720+00:00",
+  "review_date_jst": "2026-09-23",
+  "scope": "Existing logs only; later logs must use new filenames and append a new manifest edition, not overwrite this capture",
+  "files": [
+    {
+      "original": "/data/runs/b2d/controller/verification-v2-freeze.log",
+      "archived": "verification-v2-freeze.log",
+      "bytes": 12298,
+      "sha256": "0940f1871792afc09611a28f8c169c73d1ca1cb9ea119b70be694b1eec592b3f",
+      "test_summary": "Ran 91 tests in 0.581s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v2-pre-matrix.log",
+      "archived": "verification-v2-pre-matrix.log",
+      "bytes": 11823,
+      "sha256": "50c19bfcd84ae09ee58bede4e9ae8e5fd4e85eebde9912d03b422594b60013db",
+      "test_summary": "Ran 86 tests in 0.565s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v2-speed-diagnostic-corrected.log",
+      "archived": "verification-v2-speed-diagnostic-corrected.log",
+      "bytes": 1650,
+      "sha256": "f843d73cf4c52d68c32e2eab35258ba9e648f14444059fa2712d7ce05d54c17a",
+      "test_summary": "Ran 19 tests in 0.123s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v2-speed-diagnostic.log",
+      "archived": "verification-v2-speed-diagnostic.log",
+      "bytes": 1108,
+      "sha256": "7bc87224d7c0f63212af491c0f6cc8b43ef96b9d10112f288e7a51250243d8e0",
+      "test_summary": "Ran 5 tests in 0.002s",
+      "status": "FAILED"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v3-freeze.log",
+      "archived": "verification-v3-freeze.log",
+      "bytes": 13447,
+      "sha256": "5bdc5cdd46f4f18d4ea56f4ddb7d4b7883f004a80d1c4baf3d2af66980aebecb",
+      "test_summary": "Ran 102 tests in 0.942s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v3-pre-freeze.log",
+      "archived": "verification-v3-pre-freeze.log",
+      "bytes": 12979,
+      "sha256": "871daa57fd9e398a494115769e414c273b85723865ac6a2954f83ea466e07c6f",
+      "test_summary": "Ran 97 tests in 0.840s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v4-freeze-corrected.log",
+      "archived": "verification-v4-freeze-corrected.log",
+      "bytes": 14374,
+      "sha256": "b1029dec95bb56a577d3db22e959afd7eae45f0058b01b7b21aecbdb3e74f1bc",
+      "test_summary": "Ran 111 tests in 1.328s",
+      "status": "OK"
+    },
+    {
+      "original": "/data/runs/b2d/controller/verification-v4-freeze.log",
+      "archived": "verification-v4-freeze.log",
+      "bytes": 15237,
+      "sha256": "654d20d7be622e6de32c9d35bdb5aff17d15dcb70feac312f7c5708b86951a46",
+      "test_summary": "Ran 107 tests in 1.312s",
+      "status": "FAILED"
+    },
+    {
+      "original": "/data/runs/b2d/controller/v2/pi-g1-kp05.log",
+      "archived": "pi-g1-kp05.log",
+      "bytes": 9727,
+      "sha256": "d3d79609e9c28c89a8de775a74bb0af0d977a03aed2d2505326e23f0657b6153",
+      "test_summary": null,
+      "status": "see_log"
+    }
+  ]
+}

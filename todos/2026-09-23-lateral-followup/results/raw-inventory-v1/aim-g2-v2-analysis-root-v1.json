@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1",
+  "captured_at": 1790131817.0328782,
+  "files": [
+    {
+      "path": "analysis-source.py",
+      "bytes": 30606,
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "cases.csv",
+      "bytes": 29685,
+      "sha256": "4f94512e68b6c4af87d1fb036d29ef433abf3066501b574b06f2c51a8990380c"
+    },
+    {
+      "path": "control-reasons.json",
+      "bytes": 4268,
+      "sha256": "14cf1f8344f476d7126e64af3653a2203ba6f5e5067a6d515fbe283eefec2ff7"
+    },
+    {
+      "path": "coverage.json",
+      "bytes": 3591,
+      "sha256": "09000f99d9c5ecc3de8057d0b6251e2e2e5e52ec265934f64f79182d160fbfea"
+    },
+    {
+      "path": "frames.csv",
+      "bytes": 1539400,
+      "sha256": "49f62484933df4d8805d379c14ca968b853f663fbd6f714879f258dc8bcd042e"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 11791,
+      "sha256": "bb6309d5057847a8e63ae38dc7a533966507fb8d88d445b96416aaeed44909bf"
+    },
+    {
+      "path": "metrics.csv",
+      "bytes": 84366,
+      "sha256": "1f473ae9f44bcbc219d46f250faa4c35046ea60ff9a11f09bf1d7933ae5f54d4"
+    },
+    {
+      "path": "recovery.csv",
+      "bytes": 630,
+      "sha256": "b65b1cf4411e7adcca95be7f8647af91245ae0b6e4486443d5f558d27109eaac"
+    },
+    {
+      "path": "required-conditions.json",
+      "bytes": 35635,
+      "sha256": "c506d7eb4ec668bd71cf7a5393e7fd2de7de5f75d693025a96d4d1a2c5bac995"
+    },
+    {
+      "path": "stats-source.py",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    }
+  ],
+  "file_count": 10,
+  "total_bytes": 1750866
+}

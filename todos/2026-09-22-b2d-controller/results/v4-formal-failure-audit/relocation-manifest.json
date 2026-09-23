@@ -1,0 +1,14 @@
+{
+  "relocated_at_unix": 1790093180.9915743,
+  "original_path": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/snapshots",
+  "archived_path": "/data/runs/b2d/controller/formal-v4-failure-audit/snapshots",
+  "original_alias": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/snapshots",
+  "alias_type": "directory symlink; keep untracked",
+  "historical_manifests": "unchanged; original raw subfolder remains resolvable through alias",
+  "files": 166,
+  "bytes": 218331316,
+  "every_file_hash_verified_before_after": true,
+  "inventory_path": "/data/runs/b2d/controller/formal-v4-failure-audit/inventory.json",
+  "inventory_sha256": "f0f4d5c2d990ef9172eee684dbad1f4ff9e8cc4d99364e7cb83bb8d2bbb89995",
+  "final_csv": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/final-v1/selected-60-attribution.csv"
+}

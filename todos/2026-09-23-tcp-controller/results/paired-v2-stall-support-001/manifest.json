@@ -1,0 +1,11 @@
+{
+  "sources": {
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/tcp-control.jsonl": "95d4efb7280af1b2f720d24282250f772e632049bbf176b431bc77235251b171",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-stall-edition-001/segments.csv": "673273ebc1b8e10db3d3d38e7130ac6e5c955e031aa297190d9be58042349211"
+  },
+  "outputs": {
+    "collision-plus-minus-1s.jsonl": "00c7be935f8091d865505e0528bde270fd560184fa40cc30ad2cf438b7f143ff",
+    "README.md": "31f287de11625bf225c0fe3c70d616ab4105e94266733a39fb72cccd7c64833d",
+    "verification.json": "8aa1a00462ee2ae574021646df9cc81b60f7c1fcce4dfe09d2d0d0b79ee9b1d4"
+  }
+}

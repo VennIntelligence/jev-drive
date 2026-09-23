@@ -1,0 +1,1055 @@
+{
+  "route_id": "1711",
+  "arm": "pi_common",
+  "attempt_path": "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1",
+  "official": {
+    "index": 0,
+    "route_id": "RouteScenario_1711_rep0",
+    "scenario_name": "ParkingCutIn_1",
+    "weather_id": "15",
+    "save_name": "RouteScenario_1711_rep0_Town12_ParkingCutIn_1_15_09_23_02_31_56",
+    "status": "Completed",
+    "num_infractions": 20,
+    "infractions": {
+      "collisions_layout": [],
+      "collisions_pedestrian": [],
+      "collisions_vehicle": [],
+      "red_light": [],
+      "stop_infraction": [],
+      "outside_route_lanes": [],
+      "min_speed_infractions": [
+        "Average speed is 82.17% of the surrounding traffic's one",
+        "Average speed is 91.7% of the surrounding traffic's one",
+        "Average speed is 154.91% of the surrounding traffic's one",
+        "Average speed is 180.19% of the surrounding traffic's one",
+        "Average speed is 151.16% of the surrounding traffic's one",
+        "Average speed is 79.67% of the surrounding traffic's one",
+        "Average speed is 57.1% of the surrounding traffic's one",
+        "Average speed is 85.93% of the surrounding traffic's one",
+        "Average speed is 105.33% of the surrounding traffic's one",
+        "Average speed is 163.25% of the surrounding traffic's one",
+        "Average speed is 334.12% of the surrounding traffic's one",
+        "Average speed is 158.38% of the surrounding traffic's one",
+        "Average speed is 118.28% of the surrounding traffic's one",
+        "Average speed is 96.91% of the surrounding traffic's one",
+        "Average speed is 127.95% of the surrounding traffic's one",
+        "Average speed is 117.19% of the surrounding traffic's one",
+        "Average speed is 76.56% of the surrounding traffic's one",
+        "Average speed is 179.02% of the surrounding traffic's one",
+        "Average speed is 103.99% of the surrounding traffic's one",
+        "Average speed is 103.99% of the surrounding traffic's one"
+      ],
+      "yield_emergency_vehicle_infractions": [],
+      "scenario_timeouts": [],
+      "route_dev": [],
+      "vehicle_blocked": [],
+      "route_timeout": []
+    },
+    "scores": {
+      "score_route": 100,
+      "score_penalty": 1.0,
+      "score_composed": 100.0
+    },
+    "meta": {
+      "route_length": 133.138,
+      "duration_game": 25.25,
+      "duration_system": 47.047
+    },
+    "town_name": "Town12"
+  },
+  "attempt": {
+    "route_id": "1711",
+    "attempt": 1,
+    "wall_s": 79.1,
+    "worker": 0,
+    "server_index": 101,
+    "server_log": "/data/runs/b2d/tcp-controller/paired-v1/servers/carla-101-1.log",
+    "server_age_routes": 3,
+    "server_age_s": 229,
+    "status": "finished",
+    "config": {
+      "bench2drive": "/data/third_party/Bench2Drive",
+      "routes": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml",
+      "route_id": "1711",
+      "port": 7050,
+      "tm_port": 13050,
+      "tm_seed": 0,
+      "timeout": 300.0,
+      "out": "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1",
+      "agent": "/home/ujs/mycode/jev-drive/scripts/b2d_tcp_comparison_agent.py",
+      "agent_config": "/data/models/bench2drive/tcp/tcp_b2d.ckpt",
+      "rig": "front3",
+      "width": 1600,
+      "height": 900,
+      "policy": "none",
+      "infer_ms": 0.0,
+      "policy_socket": "",
+      "decimate": 1,
+      "overlap": false,
+      "controller_preset": "carla",
+      "cruise_mps": 8.0,
+      "controller_config": "",
+      "drive": "route",
+      "no_spectator": true,
+      "fast_copy": false,
+      "zero_copy": true,
+      "cache_lights": false,
+      "max_ticks": 0,
+      "drop_ticks": 20,
+      "cprofile": false
+    },
+    "tick_cap_configured": 0,
+    "capped": false,
+    "sensors": [
+      {
+        "type": "sensor.camera.rgb",
+        "x": 0.8,
+        "y": 0.0,
+        "z": 1.6,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "width": 1600,
+        "height": 900,
+        "fov": 70,
+        "id": "CAM_FRONT"
+      },
+      {
+        "type": "sensor.camera.rgb",
+        "x": 0.27,
+        "y": -0.55,
+        "z": 1.6,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": -55.0,
+        "width": 1600,
+        "height": 900,
+        "fov": 70,
+        "id": "CAM_FRONT_LEFT"
+      },
+      {
+        "type": "sensor.camera.rgb",
+        "x": 0.27,
+        "y": 0.55,
+        "z": 1.6,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 55.0,
+        "width": 1600,
+        "height": 900,
+        "fov": 70,
+        "id": "CAM_FRONT_RIGHT"
+      },
+      {
+        "type": "sensor.other.imu",
+        "x": -1.4,
+        "y": 0.0,
+        "z": 0.0,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "sensor_tick": 0.05,
+        "id": "IMU"
+      },
+      {
+        "type": "sensor.other.gnss",
+        "x": -1.4,
+        "y": 0.0,
+        "z": 0.0,
+        "roll": 0.0,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "sensor_tick": 0.01,
+        "id": "GPS"
+      },
+      {
+        "type": "sensor.speedometer",
+        "reading_frequency": 20,
+        "id": "SPEED"
+      },
+      {
+        "type": "sensor.camera.rgb",
+        "x": -6.0,
+        "y": 0.0,
+        "z": 3.5,
+        "roll": 0.0,
+        "pitch": -15.0,
+        "yaw": 0.0,
+        "width": 640,
+        "height": 360,
+        "fov": 90.0,
+        "id": "bev"
+      }
+    ],
+    "ticks": 505,
+    "returncode": 0
+  },
+  "terminal_official_record": true,
+  "full": {
+    "speed_error_mps": {
+      "n": 504,
+      "mean": -0.7021628394670562,
+      "rms": 1.5759299201555879,
+      "p05": -3.6773375355193676,
+      "p95": 1.5053804939493323,
+      "abs_p95": 3.7766588409344246,
+      "max_abs": 5.698222578663159
+    },
+    "input_speed_error_mps": {
+      "n": 504,
+      "mean": -0.7021628394670554,
+      "rms": 1.5759299201555879,
+      "p05": -3.6773375355193676,
+      "p95": 1.5053804939493325,
+      "abs_p95": 3.7766588409344246,
+      "max_abs": 5.698222578663159
+    },
+    "speed_truth_mps": {
+      "n": 505,
+      "mean": 5.244653412397977,
+      "rms": 5.6429409574574585,
+      "p05": 1.0712190741618444,
+      "p95": 7.744691858048316,
+      "abs_p95": 7.744691858048316,
+      "max_abs": 7.935306580019742
+    },
+    "desired_speed_mps": {
+      "n": 504,
+      "mean": 5.957222125635892,
+      "rms": 6.178936433753967,
+      "p05": 2.8820346226294835,
+      "p95": 7.914698259035745,
+      "abs_p95": 7.914698259035745,
+      "max_abs": 8.2678861618042
+    },
+    "desired_recompute_error_mps": {
+      "n": 504,
+      "mean": -4.406028888298288e-10,
+      "rms": 9.989244698731871e-08,
+      "p05": -1.6171572090328822e-07,
+      "p95": 1.7468783424234853e-07,
+      "abs_p95": 2.0173371506615451e-07,
+      "max_abs": 3.086825950404659e-07
+    },
+    "target_change_rate_mps2": {
+      "n": 503,
+      "mean": 0.0032070000172514496,
+      "rms": 15.598522363867993,
+      "p05": -24.814682272851247,
+      "p95": 23.739904049934374,
+      "abs_p95": 33.22584404708179,
+      "max_abs": 70.71937813282939
+    },
+    "accel_lon_mps2": {
+      "n": 505,
+      "mean": 0.20448151757478963,
+      "rms": 4.223342793004726,
+      "p05": -3.656404861229613,
+      "p95": 4.290926719017156,
+      "abs_p95": 6.567245079189576,
+      "max_abs": 26.476962007439344
+    },
+    "accel_lat_mps2": {
+      "n": 505,
+      "mean": -0.0013530999944774346,
+      "rms": 1.047888740933626,
+      "p05": -1.8395795512193691,
+      "p95": 1.738076307883154,
+      "abs_p95": 2.4643081028683795,
+      "max_abs": 4.704423349152496
+    },
+    "jerk_lon_mps3": {
+      "n": 504,
+      "mean": -0.06291049647246376,
+      "rms": 60.29549837492907,
+      "p05": -49.9193089421254,
+      "p95": 32.64371305756428,
+      "abs_p95": 89.3237428996089,
+      "max_abs": 668.1314879666885
+    },
+    "jerk_lat_mps3": {
+      "n": 504,
+      "mean": -0.06254988742508627,
+      "rms": 34.48950950652757,
+      "p05": -56.98755073166785,
+      "p95": 56.85174654100229,
+      "abs_p95": 81.27888846051549,
+      "max_abs": 138.75027269803786
+    },
+    "jerk_world_norm_mps3": {
+      "n": 504,
+      "mean": 40.446310514970804,
+      "rms": 69.47278351108422,
+      "p05": 4.0720418351183865,
+      "p95": 123.5015767852667,
+      "abs_p95": 123.5015767852667,
+      "max_abs": 668.551615526936
+    },
+    "body_accel_lon_derivative_mps3": {
+      "n": 504,
+      "mean": -0.04841245244501165,
+      "rms": 60.296713053090194,
+      "p05": -49.95742344569461,
+      "p95": 32.64621495761233,
+      "abs_p95": 89.32136598636869,
+      "max_abs": 668.136768265493
+    },
+    "steer_rate_per_s": {
+      "n": 504,
+      "mean": 0.0070287960288037046,
+      "rms": 0.8663525141297563,
+      "p05": -1.3852634055873243,
+      "p95": 1.2785893758224034,
+      "abs_p95": 1.900052791088032,
+      "max_abs": 4.828613775542173
+    },
+    "throttle": {
+      "n": 505,
+      "mean": 0.48280945401269904,
+      "rms": 0.5477860181166073,
+      "p05": 0.0,
+      "p95": 0.75,
+      "abs_p95": 0.75,
+      "max_abs": 0.75
+    },
+    "brake": {
+      "n": 505,
+      "mean": 0.05627771716675546,
+      "rms": 0.20859359044742665,
+      "p05": 0.0,
+      "p95": 0.5991813302040079,
+      "abs_p95": 0.5991813302040079,
+      "max_abs": 1.0
+    },
+    "native_steer_difference": {
+      "n": 504,
+      "mean": -5.4988948290216025e-12,
+      "rms": 7.871535730681281e-10,
+      "p05": -1.2563065650283978e-09,
+      "p95": 1.0036477791214295e-09,
+      "abs_p95": 1.7334749451841652e-09,
+      "max_abs": 6.126695234476287e-09
+    },
+    "selected_branch_max_diff": {
+      "n": 504,
+      "mean": 6.4770352308390646e-09,
+      "rms": 9.901511188090175e-09,
+      "p05": 2.7659041582691482e-11,
+      "p95": 2.4294908784749934e-08,
+      "abs_p95": 2.4294908784749934e-08,
+      "max_abs": 2.9737681872532562e-08
+    },
+    "applied_pedals_previous_command_max_diff": {
+      "n": 504,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_throttle_difference": {
+      "n": 505,
+      "mean": 0.4125065614038267,
+      "rms": 0.47986199804588364,
+      "p05": 0.0,
+      "p95": 0.6999999992549419,
+      "abs_p95": 0.6999999992549419,
+      "max_abs": 0.6999999992549419
+    },
+    "official_tail_steer_difference": {
+      "n": 505,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_brake_difference": {
+      "n": 505,
+      "mean": -0.04273218382334355,
+      "rms": 0.17559689605287643,
+      "p05": -0.382497227191925,
+      "p95": 0.0,
+      "abs_p95": 0.38249722719192497,
+      "max_abs": 1.0
+    },
+    "rows": 505,
+    "speed_error_coverage": 0.998019801980198,
+    "simultaneous_pedals": 0,
+    "steer_saturated_ticks": 0,
+    "throttle_saturated_ticks": 155,
+    "brake_positive_ticks": 53,
+    "gear_transitions": 17
+  },
+  "before_collision": {
+    "speed_error_mps": {
+      "n": 504,
+      "mean": -0.7021628394670562,
+      "rms": 1.5759299201555879,
+      "p05": -3.6773375355193676,
+      "p95": 1.5053804939493323,
+      "abs_p95": 3.7766588409344246,
+      "max_abs": 5.698222578663159
+    },
+    "input_speed_error_mps": {
+      "n": 504,
+      "mean": -0.7021628394670554,
+      "rms": 1.5759299201555879,
+      "p05": -3.6773375355193676,
+      "p95": 1.5053804939493325,
+      "abs_p95": 3.7766588409344246,
+      "max_abs": 5.698222578663159
+    },
+    "speed_truth_mps": {
+      "n": 505,
+      "mean": 5.244653412397977,
+      "rms": 5.6429409574574585,
+      "p05": 1.0712190741618444,
+      "p95": 7.744691858048316,
+      "abs_p95": 7.744691858048316,
+      "max_abs": 7.935306580019742
+    },
+    "desired_speed_mps": {
+      "n": 504,
+      "mean": 5.957222125635892,
+      "rms": 6.178936433753967,
+      "p05": 2.8820346226294835,
+      "p95": 7.914698259035745,
+      "abs_p95": 7.914698259035745,
+      "max_abs": 8.2678861618042
+    },
+    "desired_recompute_error_mps": {
+      "n": 504,
+      "mean": -4.406028888298288e-10,
+      "rms": 9.989244698731871e-08,
+      "p05": -1.6171572090328822e-07,
+      "p95": 1.7468783424234853e-07,
+      "abs_p95": 2.0173371506615451e-07,
+      "max_abs": 3.086825950404659e-07
+    },
+    "target_change_rate_mps2": {
+      "n": 503,
+      "mean": 0.0032070000172514496,
+      "rms": 15.598522363867993,
+      "p05": -24.814682272851247,
+      "p95": 23.739904049934374,
+      "abs_p95": 33.22584404708179,
+      "max_abs": 70.71937813282939
+    },
+    "accel_lon_mps2": {
+      "n": 505,
+      "mean": 0.20448151757478963,
+      "rms": 4.223342793004726,
+      "p05": -3.656404861229613,
+      "p95": 4.290926719017156,
+      "abs_p95": 6.567245079189576,
+      "max_abs": 26.476962007439344
+    },
+    "accel_lat_mps2": {
+      "n": 505,
+      "mean": -0.0013530999944774346,
+      "rms": 1.047888740933626,
+      "p05": -1.8395795512193691,
+      "p95": 1.738076307883154,
+      "abs_p95": 2.4643081028683795,
+      "max_abs": 4.704423349152496
+    },
+    "jerk_lon_mps3": {
+      "n": 504,
+      "mean": -0.06291049647246376,
+      "rms": 60.29549837492907,
+      "p05": -49.9193089421254,
+      "p95": 32.64371305756428,
+      "abs_p95": 89.3237428996089,
+      "max_abs": 668.1314879666885
+    },
+    "jerk_lat_mps3": {
+      "n": 504,
+      "mean": -0.06254988742508627,
+      "rms": 34.48950950652757,
+      "p05": -56.98755073166785,
+      "p95": 56.85174654100229,
+      "abs_p95": 81.27888846051549,
+      "max_abs": 138.75027269803786
+    },
+    "jerk_world_norm_mps3": {
+      "n": 504,
+      "mean": 40.446310514970804,
+      "rms": 69.47278351108422,
+      "p05": 4.0720418351183865,
+      "p95": 123.5015767852667,
+      "abs_p95": 123.5015767852667,
+      "max_abs": 668.551615526936
+    },
+    "body_accel_lon_derivative_mps3": {
+      "n": 504,
+      "mean": -0.04841245244501165,
+      "rms": 60.296713053090194,
+      "p05": -49.95742344569461,
+      "p95": 32.64621495761233,
+      "abs_p95": 89.32136598636869,
+      "max_abs": 668.136768265493
+    },
+    "steer_rate_per_s": {
+      "n": 504,
+      "mean": 0.0070287960288037046,
+      "rms": 0.8663525141297563,
+      "p05": -1.3852634055873243,
+      "p95": 1.2785893758224034,
+      "abs_p95": 1.900052791088032,
+      "max_abs": 4.828613775542173
+    },
+    "throttle": {
+      "n": 505,
+      "mean": 0.48280945401269904,
+      "rms": 0.5477860181166073,
+      "p05": 0.0,
+      "p95": 0.75,
+      "abs_p95": 0.75,
+      "max_abs": 0.75
+    },
+    "brake": {
+      "n": 505,
+      "mean": 0.05627771716675546,
+      "rms": 0.20859359044742665,
+      "p05": 0.0,
+      "p95": 0.5991813302040079,
+      "abs_p95": 0.5991813302040079,
+      "max_abs": 1.0
+    },
+    "native_steer_difference": {
+      "n": 504,
+      "mean": -5.4988948290216025e-12,
+      "rms": 7.871535730681281e-10,
+      "p05": -1.2563065650283978e-09,
+      "p95": 1.0036477791214295e-09,
+      "abs_p95": 1.7334749451841652e-09,
+      "max_abs": 6.126695234476287e-09
+    },
+    "selected_branch_max_diff": {
+      "n": 504,
+      "mean": 6.4770352308390646e-09,
+      "rms": 9.901511188090175e-09,
+      "p05": 2.7659041582691482e-11,
+      "p95": 2.4294908784749934e-08,
+      "abs_p95": 2.4294908784749934e-08,
+      "max_abs": 2.9737681872532562e-08
+    },
+    "applied_pedals_previous_command_max_diff": {
+      "n": 504,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_throttle_difference": {
+      "n": 505,
+      "mean": 0.4125065614038267,
+      "rms": 0.47986199804588364,
+      "p05": 0.0,
+      "p95": 0.6999999992549419,
+      "abs_p95": 0.6999999992549419,
+      "max_abs": 0.6999999992549419
+    },
+    "official_tail_steer_difference": {
+      "n": 505,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_brake_difference": {
+      "n": 505,
+      "mean": -0.04273218382334355,
+      "rms": 0.17559689605287643,
+      "p05": -0.382497227191925,
+      "p95": 0.0,
+      "abs_p95": 0.38249722719192497,
+      "max_abs": 1.0
+    },
+    "rows": 505,
+    "speed_error_coverage": 0.998019801980198,
+    "simultaneous_pedals": 0,
+    "steer_saturated_ticks": 0,
+    "throttle_saturated_ticks": 155,
+    "brake_positive_ticks": 53,
+    "gear_transitions": 17
+  },
+  "first_collision_frame": null,
+  "events_state": "ok",
+  "moving_diagnostic": {
+    "speed_error_mps": {
+      "n": 488,
+      "mean": -0.5882294380867668,
+      "rms": 1.3938068066154574,
+      "p05": -2.6435432154290104,
+      "p95": 1.5575226468713574,
+      "abs_p95": 2.8491794591979036,
+      "max_abs": 4.564341597942594
+    },
+    "input_speed_error_mps": {
+      "n": 488,
+      "mean": -0.588229438086766,
+      "rms": 1.3938068066154572,
+      "p05": -2.6435432154290095,
+      "p95": 1.5575226468713568,
+      "abs_p95": 2.8491794591979045,
+      "max_abs": 4.564341597942594
+    },
+    "speed_truth_mps": {
+      "n": 488,
+      "mean": 5.4250268573701454,
+      "rms": 5.740313039027816,
+      "p05": 1.8610269031124624,
+      "p95": 7.750242511807433,
+      "abs_p95": 7.750242511807433,
+      "max_abs": 7.935306580019742
+    },
+    "desired_speed_mps": {
+      "n": 488,
+      "mean": 6.013256295456912,
+      "rms": 6.228627052062706,
+      "p05": 2.932811751961708,
+      "p95": 7.925653171539307,
+      "abs_p95": 7.925653171539307,
+      "max_abs": 8.2678861618042
+    },
+    "desired_recompute_error_mps": {
+      "n": 488,
+      "mean": -1.6832310044878981e-10,
+      "rms": 1.0093267343441714e-07,
+      "p05": -1.6421739115202172e-07,
+      "p95": 1.7586473268771383e-07,
+      "abs_p95": 2.0245826233278307e-07,
+      "max_abs": 3.086825950404659e-07
+    },
+    "target_change_rate_mps2": {
+      "n": 488,
+      "mean": 0.031190106964193644,
+      "rms": 15.699985508077802,
+      "p05": -24.98389063799545,
+      "p95": 23.879113874647295,
+      "abs_p95": 33.55729537868556,
+      "max_abs": 70.71937813282939
+    },
+    "accel_lon_mps2": {
+      "n": 488,
+      "mean": 0.20720904136324075,
+      "rms": 4.238898481528229,
+      "p05": -3.631832319453239,
+      "p95": 4.2687896364239375,
+      "abs_p95": 6.447729424275273,
+      "max_abs": 26.476962007439344
+    },
+    "accel_lat_mps2": {
+      "n": 488,
+      "mean": -0.0010099668874080313,
+      "rms": 1.065901256041476,
+      "p05": -1.8782395472324673,
+      "p95": 1.7556988289828364,
+      "abs_p95": 2.4743186284650354,
+      "max_abs": 4.704423349152496
+    },
+    "jerk_lon_mps3": {
+      "n": 488,
+      "mean": -1.4511932917472599,
+      "rms": 58.33531899069669,
+      "p05": -53.08504374021073,
+      "p95": 30.671232202415126,
+      "abs_p95": 86.00294206865547,
+      "max_abs": 668.1314879666885
+    },
+    "jerk_lat_mps3": {
+      "n": 488,
+      "mean": -0.0663855572198821,
+      "rms": 35.047869290237415,
+      "p05": -58.78548683854427,
+      "p95": 57.186136277293905,
+      "abs_p95": 81.35130278398465,
+      "max_abs": 138.75027269803786
+    },
+    "jerk_world_norm_mps3": {
+      "n": 488,
+      "mean": 40.3618218532664,
+      "rms": 68.06408644799632,
+      "p05": 5.068202224354785,
+      "p95": 120.10762957431999,
+      "abs_p95": 120.10762957431999,
+      "max_abs": 668.551615526936
+    },
+    "body_accel_lon_derivative_mps3": {
+      "n": 488,
+      "mean": -1.4362616930069076,
+      "rms": 58.336502694154674,
+      "p05": -53.09988006353277,
+      "p95": 30.695839707741456,
+      "abs_p95": 86.00780639968424,
+      "max_abs": 668.136768265493
+    },
+    "steer_rate_per_s": {
+      "n": 488,
+      "mean": 0.0067001638973809684,
+      "rms": 0.8795608600420549,
+      "p05": -1.41301344371567,
+      "p95": 1.3190227438655076,
+      "abs_p95": 1.9098878013359335,
+      "max_abs": 4.828613775542173
+    },
+    "throttle": {
+      "n": 488,
+      "mean": 0.4756379058359374,
+      "rms": 0.5411136132835571,
+      "p05": 0.0,
+      "p95": 0.75,
+      "abs_p95": 0.75,
+      "max_abs": 0.75
+    },
+    "brake": {
+      "n": 488,
+      "mean": 0.05823821141231866,
+      "rms": 0.21219577749615806,
+      "p05": 0.0,
+      "p95": 0.6141480773687361,
+      "abs_p95": 0.6141480773687361,
+      "max_abs": 1.0
+    },
+    "native_steer_difference": {
+      "n": 488,
+      "mean": -9.408678696142729e-12,
+      "rms": 7.984223571666458e-10,
+      "p05": -1.2675941945400337e-09,
+      "p95": 1.0602786780500287e-09,
+      "abs_p95": 1.740925143281502e-09,
+      "max_abs": 6.126695234476287e-09
+    },
+    "selected_branch_max_diff": {
+      "n": 488,
+      "mean": 6.673520714873735e-09,
+      "rms": 1.0059189072771621e-08,
+      "p05": 3.3452643465655554e-11,
+      "p95": 2.4326830661003385e-08,
+      "abs_p95": 2.4326830661003385e-08,
+      "max_abs": 2.9737681872532562e-08
+    },
+    "applied_pedals_previous_command_max_diff": {
+      "n": 488,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_throttle_difference": {
+      "n": 488,
+      "mean": 0.41927937967306744,
+      "rms": 0.48617315861930205,
+      "p05": 0.0,
+      "p95": 0.6999999992549419,
+      "abs_p95": 0.6999999992549419,
+      "max_abs": 0.6999999992549419
+    },
+    "official_tail_steer_difference": {
+      "n": 488,
+      "mean": 0.0,
+      "rms": 0.0,
+      "p05": 0.0,
+      "p95": 0.0,
+      "abs_p95": 0.0,
+      "max_abs": 0.0
+    },
+    "official_tail_brake_difference": {
+      "n": 488,
+      "mean": -0.04422080498112396,
+      "rms": 0.17862926566405357,
+      "p05": -0.38845228850841523,
+      "p95": 0.0,
+      "abs_p95": 0.388452288508415,
+      "max_abs": 1.0
+    },
+    "rows": 488,
+    "speed_error_coverage": 1.0,
+    "simultaneous_pedals": 0,
+    "steer_saturated_ticks": 0,
+    "throttle_saturated_ticks": 140,
+    "brake_positive_ticks": 53,
+    "gear_transitions": 16
+  },
+  "predicted_stop_diagnostic": {
+    "speed_error_mps": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "input_speed_error_mps": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "speed_truth_mps": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "desired_speed_mps": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "desired_recompute_error_mps": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "target_change_rate_mps2": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "accel_lon_mps2": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "accel_lat_mps2": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "jerk_lon_mps3": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "jerk_lat_mps3": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "jerk_world_norm_mps3": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "body_accel_lon_derivative_mps3": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "steer_rate_per_s": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "throttle": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "brake": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "native_steer_difference": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "selected_branch_max_diff": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "applied_pedals_previous_command_max_diff": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "official_tail_throttle_difference": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "official_tail_steer_difference": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "official_tail_brake_difference": {
+      "n": 0,
+      "mean": null,
+      "rms": null,
+      "p05": null,
+      "p95": null,
+      "abs_p95": null,
+      "max_abs": null
+    },
+    "rows": 0,
+    "speed_error_coverage": null,
+    "simultaneous_pedals": 0,
+    "steer_saturated_ticks": 0,
+    "throttle_saturated_ticks": 0,
+    "brake_positive_ticks": 0,
+    "gear_transitions": 0
+  },
+  "low_speed_runs_ge_5s": [],
+  "quality": {
+    "parse_errors": [],
+    "truth_unavailable_ticks": 0,
+    "nonnominal_intervals": 0,
+    "unexpected_arm_ticks": 0,
+    "native_pid_calls_recorded_ticks": 504,
+    "prediction_missing_ticks": 1,
+    "initialization_neutral_ticks": 1,
+    "prediction_fault_ticks": 0,
+    "reason_counts": {
+      "initialization_or_missing": 1,
+      "tracking": 504
+    },
+    "native_pid_call_counts": {
+      "None": 1,
+      "0": 0,
+      "1": 504
+    },
+    "forward_call_counts": {
+      "None": 0,
+      "0": 1,
+      "1": 504
+    },
+    "raw_speed_nonfinite_ticks": 0,
+    "raw_imu_missing_or_nonfinite_ticks": 0,
+    "raw_waypoints_invalid_ticks": 0,
+    "raw_target_invalid_ticks": 0,
+    "negative_raw_speed_ticks": 0,
+    "tiny_negative_raw_speed_ticks": 0,
+    "required_sensor_alignment_ticks": 505,
+    "required_sensor_frame_coverage": {
+      "GPS": {
+        "missing": 0,
+        "mismatch": 0
+      },
+      "IMU": {
+        "missing": 0,
+        "mismatch": 0
+      },
+      "SPEED": {
+        "missing": 0,
+        "mismatch": 0
+      },
+      "CAM_FRONT": {
+        "missing": 0,
+        "mismatch": 0
+      },
+      "CAM_FRONT_LEFT": {
+        "missing": 0,
+        "mismatch": 0
+      },
+      "CAM_FRONT_RIGHT": {
+        "missing": 0,
+        "mismatch": 0
+      }
+    },
+    "model_rgb_hash_missing_ticks": 0,
+    "prediction_frame_provenance": "Same run_step row; sensor frames and exactly-one forward/captured PID are logged. No independent network source-frame field exists; optional asynchronous bev excluded.",
+    "control_float_tolerance": 1e-07,
+    "native_steer_over_tolerance_ticks": 0,
+    "selected_branch_over_tolerance_ticks": 0,
+    "official_tail_difference_note": "Selected minus official-tail throttle/brake can differ intentionally due to shared envelope. Only small steer/selected-branch differences within1e-7 are treated as numeric storage tolerance; raw differences retained.",
+    "source_changed_during_read": []
+  },
+  "source_sha256": {
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/criterion_events.json": "8f7a5a4cb55605acb0d795cdd77dcfc4cf01f50a27452406f28cfddd4f90026e",
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/tcp-control.jsonl": "36fe877a5d9c808a83a102b02edfebc0e05179142f69bcb77a8ca8573a8c84b9",
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/attempt.json": "42b6a7129d4db5c7cfdc51de10337d656baa62645807828f094fd08a38426e88",
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/tcp-route-reference.json": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a",
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/results.json": "523626126fb3e151895b39dc156c2123188e63a5c556726885cd252caac1bff3",
+    "/data/runs/b2d/tcp-controller/paired-v1/1711-pi_common/attempts/1711/1/tcp-setup.json": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374"
+  }
+}

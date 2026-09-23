@@ -1,0 +1,130 @@
+{
+  "status": "passed",
+  "reason": null,
+  "gate_pass": true,
+  "initial_map": "Carla/Maps/Town04",
+  "map": "Carla/Maps/Town04",
+  "client_version": "0.9.15",
+  "server_version": "0.9.15",
+  "gates": {
+    "duration": true,
+    "displacement": true,
+    "speed": true,
+    "measured_slope": true
+  },
+  "samples": 101,
+  "duration_s": 5.000000074505806,
+  "displacement_m": 0.0,
+  "max_speed_mps": 0.0,
+  "min_signed_speed_mps": 0.0,
+  "max_signed_speed_mps": 0.0,
+  "reverse_samples": 0,
+  "pitch_median_deg": 6.356993198394775,
+  "min_abs_pitch_deg": 6.356993198394775,
+  "grade_percent": 11.140798171244775,
+  "displacement_definition": "maximum_pairwise_3D_rear_axle_distance",
+  "endpoint_displacement_m": 0.0,
+  "site": {
+    "road_id": 34,
+    "lane_id": 2,
+    "s": 70.0,
+    "map_pitch_deg": 5.592681884765625,
+    "spawn_xyz": [
+      126.37608337402344,
+      -74.25383758544922,
+      5.423262596130371
+    ],
+    "status": "passed",
+    "hold": {
+      "status": "passed",
+      "gate_pass": true,
+      "gates": {
+        "duration": true,
+        "displacement": true,
+        "speed": true,
+        "measured_slope": true
+      },
+      "samples": 101,
+      "duration_s": 5.000000074505806,
+      "displacement_m": 0.0,
+      "max_speed_mps": 0.0,
+      "min_signed_speed_mps": 0.0,
+      "max_signed_speed_mps": 0.0,
+      "reverse_samples": 0,
+      "pitch_median_deg": 6.356993198394775,
+      "min_abs_pitch_deg": 6.356993198394775,
+      "grade_percent": 11.140798171244775,
+      "displacement_definition": "maximum_pairwise_3D_rear_axle_distance",
+      "endpoint_displacement_m": 0.0
+    }
+  },
+  "attempts": [
+    {
+      "road_id": 34,
+      "lane_id": 2,
+      "s": 70.0,
+      "map_pitch_deg": 5.592681884765625,
+      "spawn_xyz": [
+        126.37608337402344,
+        -74.25383758544922,
+        5.423262596130371
+      ],
+      "status": "passed",
+      "hold": {
+        "status": "passed",
+        "gate_pass": true,
+        "gates": {
+          "duration": true,
+          "displacement": true,
+          "speed": true,
+          "measured_slope": true
+        },
+        "samples": 101,
+        "duration_s": 5.000000074505806,
+        "displacement_m": 0.0,
+        "max_speed_mps": 0.0,
+        "min_signed_speed_mps": 0.0,
+        "max_signed_speed_mps": 0.0,
+        "reverse_samples": 0,
+        "pitch_median_deg": 6.356993198394775,
+        "min_abs_pitch_deg": 6.356993198394775,
+        "grade_percent": 11.140798171244775,
+        "displacement_definition": "maximum_pairwise_3D_rear_axle_distance",
+        "endpoint_displacement_m": 0.0
+      }
+    }
+  ],
+  "wall_s": 0.41474493900022935,
+  "controller_parameters": {
+    "wheelbase": 2.8604714913890885,
+    "max_steer_deg": 69.99999237060547,
+    "steering_curve": [
+      [
+        0.0,
+        1.0
+      ],
+      [
+        20.0,
+        0.8999999761581421
+      ],
+      [
+        60.0,
+        0.800000011920929
+      ],
+      [
+        120.0,
+        0.699999988079071
+      ]
+    ],
+    "preset": "pursuit",
+    "dt": 0.05
+  },
+  "rear_axle_offset_m": -1.388633220199954,
+  "protocol": "privileged_stationary_trajectory_plant_diagnostic",
+  "server_owned": false,
+  "cleanup_errors": [],
+  "limitations": [
+    "Fullzero trajectories test brake holding after settling, not approach braking.",
+    "True state enters this plant diagnostic only; it is not a sensor-score test."
+  ]
+}

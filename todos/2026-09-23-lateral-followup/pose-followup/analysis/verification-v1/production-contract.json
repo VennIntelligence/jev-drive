@@ -1,0 +1,80 @@
+{
+  "complete": true,
+  "cases": [
+    {
+      "route": "26966",
+      "variant": "baseline-zero",
+      "frames": 387,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    },
+    {
+      "route": "26966",
+      "variant": "candidate-fixed-k",
+      "frames": 387,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "baseline-zero",
+      "frames": 434,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "candidate-fixed-k",
+      "frames": 434,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "baseline-zero",
+      "frames": 559,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "candidate-fixed-k",
+      "frames": 559,
+      "complete": true,
+      "sensor_replay_complete": true,
+      "errors": [],
+      "missing_single_field_rejected": true,
+      "max_independent_pose_difference_m": 0.0
+    }
+  ],
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/scripts/b2d_controller_adapter.py": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/verify_production_contract.py": "232394b72dbd516b73b60ec732e0d74bcaa883b5a8b6abdcf01e1efee711910a",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/pose_contract.py": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/control.jsonl": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/motion.jsonl": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/route_reference.json": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/control.jsonl": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/motion.jsonl": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/route_reference.json": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/control.jsonl": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/motion.jsonl": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/route_reference.json": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+  },
+  "scope": "Offline PoseFilter-produced pose/status fixture only. Historical controls are placeholders, not counterfactual closed-loop controls. No truth fed to producer or independent audit; no CARLA."
+}

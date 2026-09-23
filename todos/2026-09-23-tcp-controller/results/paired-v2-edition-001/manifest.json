@@ -1,0 +1,28 @@
+{
+  "source_sha256": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe"
+  },
+  "inputs": {
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/criterion_events.json": "94189ef1f747f3218f8761dda0cfb9e8e2994117452e5f6298d745a89f4469c1",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-control.jsonl": "d273c16eda3e4a4c6cff88668fd95a7b4757c115295959eb9f65f0c731f1141f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/attempt.json": "ac2665a9cf11c7016b20781eb19f80533d7cdd674b30b905dbdc2b8aa28b92d4",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/results.json": "2cb68824d2759a30b5ff65c709d6391efedaa028f244bc28d20e7c5cdc0b1182",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-setup.json": "ab58b277ce7fd0c00aa99a4f10ba2dae91855a185b6c836d64fb9b062de0d033",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/criterion_events.json": "406274239ce288562dafb5e0291957e6b5f7867be552528afdf565cc4e2c38ac",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-control.jsonl": "282766c2497fe9b09a39cc0e0cf56ca628d553bc5665d56fe5cb4f05e1d02535",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/attempt.json": "e6e392bafdfb2cc1a3195a1dfd4709babf05ce637caca038d7bc8b8c807e391e",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/results.json": "9687dda93e171cc379a6c851a5f415ac8813b3012267f56c816528206fd70034",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-setup.json": "77e9994665c0a2cfbd8ddcfdf642e66b08f08a4f43f1eb33ff586f32fab26374"
+  },
+  "outputs": {
+    "24211-pi_common-frames.csv": "eb0444a194c33875d110dd38c93afb9b7ca3db045514a3e8eed76afb93e8bace",
+    "24211-pi_common.json": "f5faf087726326b98759e6e248cc486d70e01374da71e67d0aa075f4578692fa",
+    "cases.csv": "69727bb5c1a5a10537f01f3d2ab9ad76d5dacb32f8ff91d1de3396fa4fd505c3",
+    "analysis-source.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe",
+    "comparison.json": "baa247600731ba429519a200650c78ebb7eab86570c2eea7d6f663eac4dab197",
+    "24211-native_common.json": "0010f9ba48e3b80bf5102fd1fec92cef2169c615cc410950c96d301c9fb20b85",
+    "24211-native_common-frames.csv": "55f7650a560be5fd2c9254ace27e571848dddb076c1e26249cff18d5e887c25a"
+  }
+}

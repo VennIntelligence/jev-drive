@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/smoke-v4-recovery",
+  "captured_at": 1790091895.9393504,
+  "files": [
+    {
+      "path": "events.jsonl",
+      "bytes": 1381,
+      "sha256": "2cd512979521bd7be242859c77cec35f7d8811edd7294b60ef98901d47540bac"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "d3b637b92da4ee483f0a92052cd878b7385a34b062e9df61a7f5a68771ea2dc3"
+    },
+    {
+      "path": "groups.json",
+      "bytes": 714,
+      "sha256": "1788ed9a526a4bc7e8b7b7a32bc06e947f777a5aceb7c1af040ccd64cd15bbf6"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 2248,
+      "sha256": "9d9a3a1a18af0eb2bce58c56af7c2d8151c9852bcb2a15517a57f4f5707f7863"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 1447,
+      "sha256": "c43864e04fea6532320c61ec6894525b4ef379410249aa1e3dd003369167489f"
+    },
+    {
+      "path": "provenance/inputs/00-smoke2390.xml",
+      "bytes": 1890,
+      "sha256": "b5be7a67cfc1b38f45a181a3c1462e40e907d67751251f0782e8a59ef0e1cd66"
+    },
+    {
+      "path": "provenance/inputs/01-candidate-pursuit.json",
+      "bytes": 609,
+      "sha256": "7cd5737bb2720bdadf3d2ae8a6a386f2ab22fc2b0f30496c9719062a7333c4eb"
+    },
+    {
+      "path": "provenance/manifest.json",
+      "bytes": 12309,
+      "sha256": "a268757f092f1eb434df25cce766523583c9ff40965458964706020897c98367"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_agent.py",
+      "bytes": 25013,
+      "sha256": "a3a2e2c81477014363add29e406666353ca557a6fbe1a75def012881238b8dc9"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_calibrate.py",
+      "bytes": 10951,
+      "sha256": "6991694a24f9fc828555c307016e5ca4896abb137288ae36c2a70c6b4e920b6c"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller.py",
+      "bytes": 19759,
+      "sha256": "648d95807fa385754eb863786ee91dce091425709da0c8bccf5dfe00526624cb"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_adapter.py",
+      "bytes": 23822,
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_archive.py",
+      "bytes": 5713,
+      "sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_campaign.py",
+      "bytes": 11048,
+      "sha256": "d998034e45155e0cb00d7480978320330054d54b227beb36b863b009869453c9"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_compare.py",
+      "bytes": 18579,
+      "sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_g4.py",
+      "bytes": 13371,
+      "sha256": "7fa27b88bc269ffe4553fbec94e1ad7205e785602803ce8f6d53818ba19d8fa7"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_matrix_plot.py",
+      "bytes": 20125,
+      "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_offline_plot.py",
+      "bytes": 6435,
+      "sha256": "2dff22683a03f9b988b75ffae7153475d23d814c54b9053bf2ac67156f4c14ae"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_pi_plot.py",
+      "bytes": 19762,
+      "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_pi_selftest.py",
+      "bytes": 4770,
+      "sha256": "72868576bc638e95fdaaf746d4736128ac1f2e2df8ec53668bcd1babf04c102c"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_plot.py",
+      "bytes": 21406,
+      "sha256": "0b3c339251f032e6ddfe53f7b34dbd4a9cc252a4021c21741eff933fa0a3ef64"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_rejoin_replay.py",
+      "bytes": 7859,
+      "sha256": "88e5d8a88d79b4462b582a3aef026713d3e2b990faa35e46b652d30a120d8db2"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_selftest.py",
+      "bytes": 24759,
+      "sha256": "2759b487020f87133ec83e4083739afbb85640009939f66c3339b128266ab3ea"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_slope.py",
+      "bytes": 14937,
+      "sha256": "ad7c7f16eca5a0c2f00aea50fa62e27e00a4521a2bd9d83c5718afaf8ce42beb"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_controller_validate.py",
+      "bytes": 28887,
+      "sha256": "811db36489d8d3d86c3b806b3c25ee6f00a8dc6b33c578a919dd311337fac38f"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_hooks.py",
+      "bytes": 13526,
+      "sha256": "fa5d1ea63f77b29665fc74c236153a79cec2cb7a33349d512bac16de88904639"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_optimization_report.py",
+      "bytes": 3961,
+      "sha256": "431f238107d407661e069631cc38df794e3d63f1934f116ad63fb582bb9b4ecf"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_policy_server.py",
+      "bytes": 7177,
+      "sha256": "a4fce6416286835abc43de4e81ead93afb82ad033cfc69f4cc4a0477e8f893bc"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_report.py",
+      "bytes": 28194,
+      "sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_route.py",
+      "bytes": 13659,
+      "sha256": "1af7f1c00d6a1f5b71ddee930cdc4cd39f72847ed647eb2b87c1a3d64354d086"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_run.py",
+      "bytes": 38719,
+      "sha256": "1c83fd0383048d57ea2645d6e43af6e76806a7b0216868c21b08711cfad6ca31"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_sweep.py",
+      "bytes": 9557,
+      "sha256": "4520489bd8b41a240d63ae39c06393a99b2f812c79b37cd437e4c68bd32eec23"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_preprocess.py",
+      "bytes": 1336,
+      "sha256": "622e1a2135e3c808206e6ad29e1d792feeb2710103a3f4bc2e0c0a5b10649315"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_tcp_visual_agent.py",
+      "bytes": 10485,
+      "sha256": "66a5b583ae09fea83739296fca761a71f33460285c4d626f9824a508778f35f5"
+    },
+    {
+      "path": "provenance/source/scripts/b2d_viewer.py",
+      "bytes": 8713,
+      "sha256": "ce5f26cfeb91433e88f2c33f7ccaa2feee1e38c72cee306f3e5cc6b8e6413a86"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/__init__.py",
+      "bytes": 216,
+      "sha256": "fd230fe8f627877a710461455ae3b7ebd690bb29f9b4b46e249c18111f268840"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/preview.py",
+      "bytes": 4460,
+      "sha256": "496a79aee819edcbd0139252418f4d8005ab4f3977938e58a5e1dfa03f7822c1"
+    },
+    {
+      "path": "provenance/source/scripts/drive_runtime/sensors.py",
+      "bytes": 3601,
+      "sha256": "01a1ddd93002360773aab139d0de2572d219b14d25a68bc20beeb8c669143c08"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller.py",
+      "bytes": 12626,
+      "sha256": "569e8be7c6c5e8853e8d1c6968b464364cbc6fa48c6b89e8b479c342460a097b"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_agent.py",
+      "bytes": 18296,
+      "sha256": "e771f97f8762595821db03d516982235bf794d914e5b05f71ce290f49c2f778d"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_archive.py",
+      "bytes": 2388,
+      "sha256": "2a49682a97ec97850ebfaf66e1540e599e9bd94e5583e5f8a93faff9bf5fd1ba"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_campaign.py",
+      "bytes": 7288,
+      "sha256": "f1912fe767898d4336dba9af81fa1bbf9043232f4627fc601d16cad2f0240808"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_compare.py",
+      "bytes": 5343,
+      "sha256": "c0b2806711f1bb26ad95dd19e1438061b230d3ea00894bda45e8e0c6e45d7132"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_g4.py",
+      "bytes": 5152,
+      "sha256": "53ef8a0b9c525e24ab6a8d3ea3b7e744c76ffabccacc91e2142963a56b736ed8"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_matrix.py",
+      "bytes": 3936,
+      "sha256": "ba514c5ade74dab88f3557f0360c5a39326f4bb2fa6445b8086f0249da1df4d3"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_matrix_plot.py",
+      "bytes": 1651,
+      "sha256": "4d4809a1d59437ade0653ed752525964d25b0b22e885a853a9e7b5c2a60d07d3"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi.py",
+      "bytes": 3739,
+      "sha256": "1b0e18412637ca7b02d7ee5066b1892e9767438c1a3c05841e2f3761760638d8"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi_gains.py",
+      "bytes": 2883,
+      "sha256": "3bfb00db43d69aa6c28dbdc000e94cb0a972d7f3f0f07f252120acca2e727887"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pi_review.py",
+      "bytes": 4830,
+      "sha256": "ac7a7af14ae930f75bad754567091c5d152ea2449ad48d53e947671dc7ca36af"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_pose_dropout.py",
+      "bytes": 7502,
+      "sha256": "8848f2001838b3f679cb10e812998b1815b9ff92eed7af6cf8056f358301b6e6"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_rejoin.py",
+      "bytes": 7011,
+      "sha256": "5c3480d5c3793df9f3e19aab366143ff2a4066c4949e31aa48a5a25c640950e0"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_report.py",
+      "bytes": 16719,
+      "sha256": "e2b1cbe579bb11e88db774c517d6845472fcec0d7212f90a44d93cc4bdc90c53"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_controller_slope.py",
+      "bytes": 4232,
+      "sha256": "3579535c966f37a90a9dce4ff4b18df9a863adc6946b36c087d92778ad114820"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_preview.py",
+      "bytes": 3149,
+      "sha256": "41d589245d485f1086ca67fbf0e69c41ff8ae1f0a7bf81f3cb8a3d465df1aca2"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_runtime.py",
+      "bytes": 5891,
+      "sha256": "5fa99f7d78f7f52a828db8e6fe23b5d84f674204e4c2ef42bd5e0941ca54da69"
+    },
+    {
+      "path": "provenance/source/scripts/test_b2d_sensor_pipeline.py",
+      "bytes": 4240,
+      "sha256": "db0866ca986afbce967d2a0cdb976992cbae42601b3c23c0f5ddf6bc1b5f48a0"
+    },
+    {
+      "path": "provenance/source.patch",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pursuit-seed0/all-attempts.csv",
+      "bytes": 4460,
+      "sha256": "65b7f2b1b71aed0942577d24397f1ba4efc19654a4433b353379c99807d4235f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/agent_config.json",
+      "bytes": 418,
+      "sha256": "f8771f9a5aa881b2280aabe3379a4578a3ac74a6eeb937841ab98eb2f9108fd7"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/attempt.json",
+      "bytes": 2868,
+      "sha256": "d806bf9e8c4a6aafa1f74bcb2893d4299fa932a1098e63eccc240fd329a9b6bd"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/control.jsonl",
+      "bytes": 437935,
+      "sha256": "a70c5abc156f3ee4f0d4db6b0f784b1213cc4e80e0cc996c20c2f360b003d172"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/criterion_events.json",
+      "bytes": 2690,
+      "sha256": "e839acfc7b91e91f434ee3adb7e9b4533e703bcbabd734aadcdc9b93b188a77d"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/heartbeat.json",
+      "bytes": 39,
+      "sha256": "908b4df942a1c2766566c317c2fd62333235c96cca64a12336de468eabb86bff"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/motion.jsonl",
+      "bytes": 94741,
+      "sha256": "e4e74c1e223aa7018ad98f463907380c999a9798d15ed75ff7202098a4b6f045"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/results.json",
+      "bytes": 5230,
+      "sha256": "7c395062605bb54d01446b155994681d93eb764af2cb7e43368ae717da35879f"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/route.log",
+      "bytes": 4386,
+      "sha256": "019ab2c676e576a5349dbc5a86f0fa5a1dc4d00d670417faa84d7da6f43c3269"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/route.pid",
+      "bytes": 6,
+      "sha256": "9b3a48653d2cbe581c4459531c301e4f8e6c77acc32bf6634ff3654aa71a07c1"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/route_reference.json",
+      "bytes": 9122,
+      "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/route_result.json",
+      "bytes": 3629,
+      "sha256": "b893f97416aa3f5c2d63f2f3984cef7e9f57b748b04f7ac42e652dc5e06b68cc"
+    },
+    {
+      "path": "pursuit-seed0/attempts/2390/1/trajectories.jsonl",
+      "bytes": 71536,
+      "sha256": "9874f0152578e843a16ab88a4098036178e9fe016fd6636da72406acec135086"
+    },
+    {
+      "path": "pursuit-seed0/controller-report.json",
+      "bytes": 23014,
+      "sha256": "975b53894e1d32461021df73fd0255c0b01573423ee26489cc2359782c459906"
+    },
+    {
+      "path": "pursuit-seed0/done/2390.json",
+      "bytes": 3851,
+      "sha256": "89440c066392e63164ddcec981711e4ad9f03e8b19d6f8dbe59d7bc46bc03678"
+    },
+    {
+      "path": "pursuit-seed0/events.jsonl",
+      "bytes": 867,
+      "sha256": "d9e7521577036f96b08cd745f6536b6cb2ee88051aeeedf6479166f47f506812"
+    },
+    {
+      "path": "pursuit-seed0/invocations/1790090753193711-196834.json",
+      "bytes": 1221,
+      "sha256": "d0ee064eab4e5e4386fd84c970cf9774f6cf033cce5fffcee9e1bc28bd1b19b1"
+    },
+    {
+      "path": "pursuit-seed0/report.txt",
+      "bytes": 1074,
+      "sha256": "4ab07d66845f45defab0cfe89a408328b582f120a786252c365df35e7f2a125c"
+    },
+    {
+      "path": "pursuit-seed0/summary.json",
+      "bytes": 552,
+      "sha256": "7cc99adba16c9c79cb54ba360f12bd089be20ac18cb587b83994c94194c2e788"
+    },
+    {
+      "path": "servers/carla-95-1.log",
+      "bytes": 130,
+      "sha256": "bcd562ad467d0956c972279568f75aabc474a29e6f5c04002a940c6459dcb99f"
+    },
+    {
+      "path": "servers/carla-95.pid",
+      "bytes": 6,
+      "sha256": "d8dde053d4f2457c6772f242a1bacf3b6004dd1ead43d3e467244f7d259e86dd"
+    }
+  ],
+  "file_count": 78,
+  "total_bytes": 1226145
+}

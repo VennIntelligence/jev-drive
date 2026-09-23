@@ -1,0 +1,160 @@
+{
+  "inputs": {
+    "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml": {
+      "sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+      "bytes": 693537
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/lateral_windows.py": {
+      "sha256": "59ce157df50c44b48d7a6e52351d470540311743f9b6abc5e4f0221784e468bf",
+      "bytes": 7685
+    },
+    "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    "/data/runs/b2d/controller/development-v4/17563/pi/carla/validation_trace.json": {
+      "sha256": "0fe5a719975f34653c25a862003099cc0be05c920a99a7fa453d29ba3ad5c0c6",
+      "bytes": 633292
+    },
+    "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/validation_trace.json": {
+      "sha256": "238a6208b9104afbf02db74d97ad8367e1057bf7bf36bb74a75aa413568263c6",
+      "bytes": 638346
+    },
+    "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/validation_trace.json": {
+      "sha256": "ccdbe626a40ea3dc0a4f636b66f2d824bd4f0cbbcd478619f8713cd138c906b3",
+      "bytes": 638367
+    },
+    "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/route_reference.json": {
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/route_reference.json": {
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb",
+      "bytes": 9259
+    },
+    "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    "/data/runs/b2d/controller/development-v4/24240/pi/carla/validation_trace.json": {
+      "sha256": "f0370bfa0334de5e43540a3a8fa257a79e98bee6103faac99680269e383982c5",
+      "bytes": 501259
+    },
+    "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/validation_trace.json": {
+      "sha256": "4d325f1cfb4f28c0f198836910505406a65ff60fa28492705387cf4e64081bcb",
+      "bytes": 497482
+    },
+    "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/validation_trace.json": {
+      "sha256": "b466ef447965b0482e442ac1d5b34552123c26c1a727093289d8c2ff3de2a09b",
+      "bytes": 498391
+    },
+    "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/route_reference.json": {
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13",
+      "bytes": 15915
+    },
+    "/data/runs/b2d/controller/development-v4/25854/pi/carla/validation_trace.json": {
+      "sha256": "1511b5c5cb5b2546995fb7b04041c4478de5df2ae2a33f095cecfe410a39dd22",
+      "bytes": 596839
+    },
+    "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/validation_trace.json": {
+      "sha256": "899a8a81fd3ac5d72b3a5585600536d41f3db9415eb97ac661dcad9cfa22cb6d",
+      "bytes": 597786
+    },
+    "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/validation_trace.json": {
+      "sha256": "52ca8d91c4c2d0b3a8968b87dda5a732b4c7070b95987da676a61f9818f150b0",
+      "bytes": 597184
+    },
+    "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/development-v4/26966/pi/carla/validation_trace.json": {
+      "sha256": "5ebdb428727848b45cab435d0cfe78f8fa038f89c8a5025f85ac7255c9ca2706",
+      "bytes": 426648
+    },
+    "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/validation_trace.json": {
+      "sha256": "427214d452b9ae8afabe6941df961f3d470d728294b3b764a177edffe6c0137d",
+      "bytes": 437947
+    },
+    "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/validation_trace.json": {
+      "sha256": "7eaba32d534254b4f8de4d7fb084373597834d1b0b140bcf2e4800bb9932247d",
+      "bytes": 442421
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/17569/1/route_reference.json": {
+      "sha256": "f54d6073a126c1dfbbda309b62f7916245ccffde31e2160844b66de7fb9ba632",
+      "bytes": 13625
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/17569/1/control.jsonl": {
+      "sha256": "18c114f275fd10165ceecad0f114f06e7d49d6b08adf95417f665112b0042b0f",
+      "bytes": 685374
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/2091/1/route_reference.json": {
+      "sha256": "9e292ecc11d3da0ad0cd49a508bd37151f2dcd3a1b3e199f18a3ed3bd5270c96",
+      "bytes": 8578
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/2091/1/control.jsonl": {
+      "sha256": "21c7d37c42b76fcea04618cc330e88e19f47f2e1f53f62c39c10a2a47f34f4af",
+      "bytes": 8010120
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25378/1/route_reference.json": {
+      "sha256": "f69c85710aa1c0655050547f5cb9cbd933ea57e0d0a15a9967845e9feb995c7f",
+      "bytes": 10829
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25381/1/route_reference.json": {
+      "sha256": "4a441ac4cff4867af1a673570d9309a7fdaf8de4a7bce0a2b17996c8891cb6a4",
+      "bytes": 18763
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25424/1/route_reference.json": {
+      "sha256": "0bc58aa67f539472046f36859b5eb9128a9633db68ae74c36ee9dffb797b0e34",
+      "bytes": 10134
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/26405/1/route_reference.json": {
+      "sha256": "7bcd7175783175405f73efdd9f27e952599a48fbdf6152eb7735ee08a29f1540",
+      "bytes": 9223
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/27494/1/route_reference.json": {
+      "sha256": "a7276ce05ec92621bf318be6c07feadc36ba462a24c685735b1505f2d9c468bf",
+      "bytes": 8412
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/27494/1/control.jsonl": {
+      "sha256": "fbc6d5e2d8e03d965f02a6842dfa4753dbffc55e1885ecb54652eb1044db13ae",
+      "bytes": 995786
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/28198/1/route_reference.json": {
+      "sha256": "baecb111c1540dfda53034a9ac83baeb581a2d9dc7294fc2466e149c89adcf34",
+      "bytes": 10546
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/28198/1/control.jsonl": {
+      "sha256": "5b28f31baa9fcda71489d3adeae987ca89c4dd5c01d07a5fb89b1c023224f53f",
+      "bytes": 544949
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3255/1/route_reference.json": {
+      "sha256": "4722cd81442c3ca6ca84a507ecfaeebc9f90fc939936945a7064332239ce8b73",
+      "bytes": 15056
+    },
+    "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3514/1/route_reference.json": {
+      "sha256": "7da5fb0778f4cc75a1d4270db2a5daab207fe0f94ce353c6eef36bdff3a3834b",
+      "bytes": 16934
+    }
+  },
+  "outputs": {
+    "turn-windows.csv": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+    "routes.csv": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+    "frame-windows.csv": "4be69d179c7b54c8506aabcfa4a534e108b00855a932af33b60393fc77612495"
+  },
+  "protocol": {
+    "arc_step_m": 0.5,
+    "heading_chord_m": 5.0,
+    "curvature_threshold_inv_m": 0.02,
+    "merge_gap_m": 3.0,
+    "min_absolute_heading_deg": 15.0,
+    "padding_m": 5.0,
+    "s_each_direction_min_deg": 15.0,
+    "sharp_net_heading_deg": 60.0,
+    "sharp_peak_curvature_inv_m": 0.08,
+    "moving_speed_mps": 2.0,
+    "frame_mapping": "independent nearest projection of recorded truth rear-axle xy; diagnostic only"
+  },
+  "scope": "G2 all three available variants; Dev10 pursuit seed0 attempt1 only as frame index, not outcome comparison",
+  "limitations": "Polyline smoothing depends on sparse route geometry. No turn window is not proof of no obstacle avoidance. World xy positive heading is CARLA right. Frame IDs are run-specific."
+}

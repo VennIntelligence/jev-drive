@@ -1,0 +1,2594 @@
+{
+  "v1_s_carla": {
+    "cruise_mps": 6.0,
+    "gate_speed_error": {
+      "n": 318,
+      "mean": -0.4076050641355085,
+      "rms": 0.663271268879291,
+      "minimum": -1.679553150893124,
+      "maximum": 0.8617865109797336,
+      "p05": -0.988087918150159,
+      "median": -0.5119636915275909,
+      "p95": 0.37827273972330866
+    },
+    "stable_target_speed_error": {
+      "n": 172,
+      "mean": -0.42775532342581457,
+      "rms": 0.6369260945624501,
+      "minimum": -1.0101165273607169,
+      "maximum": 0.5216481879793822,
+      "p05": -0.9728882718883799,
+      "median": -0.5450434663405788,
+      "p95": 0.3489970204257103
+    },
+    "target": {
+      "n": 318,
+      "mean": 6.062392949653839,
+      "rms": 6.0647178992203195,
+      "minimum": 5.7476704857117245,
+      "maximum": 7.120163577456271,
+      "p05": 5.982457486578245,
+      "median": 6.006054709603902,
+      "p95": 6.433259038382543
+    },
+    "pitch_deg": {
+      "n": 318,
+      "mean": 0.03915044905191526,
+      "rms": 0.1906453682681108,
+      "minimum": -0.5044299364089966,
+      "maximum": 0.4051668047904968,
+      "p05": -0.20245601460337637,
+      "median": 0.014715641736984253,
+      "p95": 0.36380043923854816
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.08636576363631084,
+    "measured_acceleration_mps2": {
+      "n": 318,
+      "mean": 0.006633630044025377,
+      "rms": 4.012575239305703,
+      "minimum": -14.666896391191813,
+      "maximum": 14.726869540535912,
+      "p05": -5.291706987013365,
+      "median": -0.42478827567579813,
+      "p95": 9.276899970261743
+    },
+    "brake_fraction": 0.24213836477987422,
+    "full_brake_fraction": 0.09119496855345911,
+    "full_throttle_fraction": 0.6352201257861635,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.650000084191561,
+        "duration_s": 0.25,
+        "onset_speed": 6.123829890580615,
+        "peak_after_brake_speed": 6.326617808845012,
+        "onset_to_peak_s": 0.1,
+        "release_t": 5.900000087916851,
+        "release_speed": 6.007613201280402,
+        "minimum_after_release_speed": 5.02288008702,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9847331142604023
+      },
+      {
+        "start_t": 6.750000100582838,
+        "duration_s": 0.25,
+        "onset_speed": 6.067153214792833,
+        "peak_after_brake_speed": 6.369363378171213,
+        "onset_to_peak_s": 0.1,
+        "release_t": 7.000000104308128,
+        "release_speed": 5.986438260182181,
+        "minimum_after_release_speed": 5.002753712863964,
+        "release_to_minimum_s": 0.45,
+        "release_to_minimum_drop_mps": 0.9836845473182176
+      },
+      {
+        "start_t": 7.900000117719173,
+        "duration_s": 0.35000000000000003,
+        "onset_speed": 6.700899154716113,
+        "peak_after_brake_speed": 6.861786510979734,
+        "onset_to_peak_s": 0.05,
+        "release_t": 8.25000012293458,
+        "release_speed": 5.444126001118998,
+        "minimum_after_release_speed": 4.320446849106876,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 1.123679152012122
+      },
+      {
+        "start_t": 9.250000137835741,
+        "duration_s": 0.25,
+        "onset_speed": 6.460996897426888,
+        "peak_after_brake_speed": 6.507530690840666,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.500000141561031,
+        "release_speed": 6.073282200351361,
+        "minimum_after_release_speed": 5.011183320815724,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 1.062098879535637
+      },
+      {
+        "start_t": 10.350000154227018,
+        "duration_s": 0.25,
+        "onset_speed": 6.226567405782514,
+        "peak_after_brake_speed": 6.29712495696424,
+        "onset_to_peak_s": 0.05,
+        "release_t": 10.600000157952309,
+        "release_speed": 5.868355965520048,
+        "minimum_after_release_speed": 5.0302689627160975,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8380870028039507
+      },
+      {
+        "start_t": 11.400000169873238,
+        "duration_s": 0.25,
+        "onset_speed": 6.1056839713793885,
+        "peak_after_brake_speed": 6.340694348993571,
+        "onset_to_peak_s": 0.1,
+        "release_t": 11.650000173598528,
+        "release_speed": 5.984775892134105,
+        "minimum_after_release_speed": 5.031190984131714,
+        "release_to_minimum_s": 0.55,
+        "release_to_minimum_drop_mps": 0.9535849080023908
+      },
+      {
+        "start_t": 12.500000186264515,
+        "duration_s": 0.25,
+        "onset_speed": 6.246576291049979,
+        "peak_after_brake_speed": 6.3161061196764505,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.750000189989805,
+        "release_speed": 5.889212349330286,
+        "minimum_after_release_speed": 4.994542357904616,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8946699914256699
+      },
+      {
+        "start_t": 13.550000201910734,
+        "duration_s": 0.25,
+        "onset_speed": 6.133701581684185,
+        "peak_after_brake_speed": 6.360225896452556,
+        "onset_to_peak_s": 0.1,
+        "release_t": 13.800000205636024,
+        "release_speed": 5.994896926970714,
+        "minimum_after_release_speed": 4.996455054237482,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.998441872733232
+      },
+      {
+        "start_t": 14.650000218302011,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.203310172709817,
+        "peak_after_brake_speed": 6.4404830319895146,
+        "onset_to_peak_s": 0.1,
+        "release_t": 14.95000022277236,
+        "release_speed": 5.8883604486908405,
+        "minimum_after_release_speed": 5.023252885817259,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8651075628735816
+      },
+      {
+        "start_t": 15.750000234693289,
+        "duration_s": 0.25,
+        "onset_speed": 6.037744842584849,
+        "peak_after_brake_speed": 6.377668864694933,
+        "onset_to_peak_s": 0.1,
+        "release_t": 16.00000023841858,
+        "release_speed": 6.0134224238950065,
+        "minimum_after_release_speed": 5.016685178666664,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9967372452283421
+      },
+      {
+        "start_t": 16.850000251084566,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 6.196636320081075,
+        "peak_after_brake_speed": 6.457098932759422,
+        "onset_to_peak_s": 0.1,
+        "release_t": 17.00000025331974,
+        "release_speed": 6.378871821024433,
+        "minimum_after_release_speed": 6.137283594599903,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.24158822642452993
+      },
+      {
+        "start_t": 17.350000258535147,
+        "duration_s": 0.2,
+        "onset_speed": 6.3055048256746185,
+        "peak_after_brake_speed": 6.307965942585525,
+        "onset_to_peak_s": 0.05,
+        "release_t": 17.55000026151538,
+        "release_speed": 6.020605578172431,
+        "minimum_after_release_speed": 5.040955881391986,
+        "release_to_minimum_s": 0.5,
+        "release_to_minimum_drop_mps": 0.9796496967804442
+      },
+      {
+        "start_t": 18.350000273436308,
+        "duration_s": 0.25,
+        "onset_speed": 6.302337229353799,
+        "peak_after_brake_speed": 6.378167019493699,
+        "onset_to_peak_s": 0.05,
+        "release_t": 18.600000277161598,
+        "release_speed": 5.910878792334176,
+        "minimum_after_release_speed": 5.009403974055496,
+        "release_to_minimum_s": 0.45,
+        "release_to_minimum_drop_mps": 0.9014748182786807
+      },
+      {
+        "start_t": 19.450000289827585,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.3723506045606895,
+        "peak_after_brake_speed": 6.521648187979382,
+        "onset_to_peak_s": 0.05,
+        "release_t": 19.750000294297934,
+        "release_speed": 5.825311019379305,
+        "minimum_after_release_speed": 4.989883472639283,
+        "release_to_minimum_s": 0.45,
+        "release_to_minimum_drop_mps": 0.8354275467400223
+      },
+      {
+        "start_t": 20.60000030696392,
+        "duration_s": 0.35000000000000003,
+        "onset_speed": 6.181054392885689,
+        "peak_after_brake_speed": 6.313969088197295,
+        "onset_to_peak_s": 0.05,
+        "release_t": 20.950000312179327,
+        "release_speed": 4.776668423186683,
+        "minimum_after_release_speed": 4.065105323143815,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.7115631000428682
+      }
+    ],
+    "pulse_duration": {
+      "n": 15,
+      "mean": 0.26000000000000006,
+      "rms": 0.2645751311064591,
+      "minimum": 0.15000000000000002,
+      "maximum": 0.35000000000000003,
+      "p05": 0.18500000000000003,
+      "median": 0.25,
+      "p95": 0.35000000000000003
+    },
+    "onset_to_peak": {
+      "n": 15,
+      "mean": 0.07333333333333333,
+      "rms": 0.07745966692414835,
+      "minimum": 0.05,
+      "maximum": 0.1,
+      "p05": 0.05,
+      "median": 0.05,
+      "p95": 0.1
+    },
+    "release_to_minimum": {
+      "n": 15,
+      "mean": 0.36000000000000004,
+      "rms": 0.37682887362833545,
+      "minimum": 0.15000000000000002,
+      "maximum": 0.55,
+      "p05": 0.18500000000000003,
+      "median": 0.35000000000000003,
+      "p95": 0.515
+    },
+    "release_to_minimum_drop": {
+      "n": 15,
+      "mean": 0.8913685109640063,
+      "rms": 0.913380925990733,
+      "minimum": 0.24158822642452993,
+      "maximum": 1.123679152012122,
+      "p05": 0.5705706379573667,
+      "median": 0.9535849080023908,
+      "p95": 1.0805729612785824
+    },
+    "full_throttle_under_target_plateaus": [
+      {
+        "start_t": 5.050000075250864,
+        "duration_s": 0.55,
+        "first_speed": 5.3158077703106486,
+        "last_speed": 5.2145490462149695
+      },
+      {
+        "start_t": 6.150000091642141,
+        "duration_s": 0.55,
+        "first_speed": 5.378181940204493,
+        "last_speed": 5.145639125676074
+      },
+      {
+        "start_t": 7.250000108033419,
+        "duration_s": 0.4,
+        "first_speed": 5.315337039624269,
+        "last_speed": 5.307492511703861
+      },
+      {
+        "start_t": 8.25000012293458,
+        "duration_s": 0.9,
+        "first_speed": 5.444126001118998,
+        "last_speed": 5.570675602234361
+      },
+      {
+        "start_t": 9.650000143796206,
+        "duration_s": 0.65,
+        "first_speed": 5.489729285128239,
+        "last_speed": 5.437755673965053
+      },
+      {
+        "start_t": 10.800000160932541,
+        "duration_s": 0.55,
+        "first_speed": 5.399687931616235,
+        "last_speed": 5.104882291033604
+      },
+      {
+        "start_t": 11.900000177323818,
+        "duration_s": 0.55,
+        "first_speed": 5.31500113831019,
+        "last_speed": 5.4049122214192025
+      },
+      {
+        "start_t": 12.950000192970037,
+        "duration_s": 0.55,
+        "first_speed": 5.398720222881626,
+        "last_speed": 5.074237713521963
+      },
+      {
+        "start_t": 14.000000208616257,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.486343331816579,
+        "last_speed": 5.2309567249398805
+      },
+      {
+        "start_t": 15.150000225752592,
+        "duration_s": 0.55,
+        "first_speed": 5.246826554785639,
+        "last_speed": 5.198587440987751
+      },
+      {
+        "start_t": 16.00000023841858,
+        "duration_s": 0.8,
+        "first_speed": 6.0134224238950065,
+        "last_speed": 5.168923348154835
+      },
+      {
+        "start_t": 17.75000026449561,
+        "duration_s": 0.5,
+        "first_speed": 5.553058874036121,
+        "last_speed": 5.0617997407198905
+      },
+      {
+        "start_t": 18.80000028014183,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.353377173413565,
+        "last_speed": 5.454407152862086
+      },
+      {
+        "start_t": 19.900000296533108,
+        "duration_s": 0.65,
+        "first_speed": 5.49245676868007,
+        "last_speed": 5.254890349153607
+      }
+    ],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/validation_trace.json": "04c24e2a3003b6f75adff585bd7458942040844ea136096e027bb0e9bf50a66a",
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/control.jsonl": "250837388e17403afb88ff7a325b32c5b2f204076f218f43477df612f2106854",
+      "/data/runs/b2d/controller/development-s-v1/17563/carla/validation.json": "5942a1e0eb304640c83a4834a2bb5885ae0c09824b33eabd7c938024311273ce"
+    }
+  },
+  "v1_s_pursuit": {
+    "cruise_mps": 6.0,
+    "gate_speed_error": {
+      "n": 319,
+      "mean": -0.4051611004316085,
+      "rms": 0.6363210535788577,
+      "minimum": -2.3427537912291823,
+      "maximum": 0.5285536953147574,
+      "p05": -0.9696696602541479,
+      "median": -0.38096852590642083,
+      "p95": 0.32185068956720614
+    },
+    "stable_target_speed_error": {
+      "n": 147,
+      "mean": -0.4743203522126086,
+      "rms": 0.6608788844351958,
+      "minimum": -1.4365785685521848,
+      "maximum": 0.40242799190069434,
+      "p05": -0.9848702220501858,
+      "median": -0.6796926941259507,
+      "p95": 0.30795153674378184
+    },
+    "target": {
+      "n": 319,
+      "mean": 6.008897099487624,
+      "rms": 6.010911778635772,
+      "minimum": 5.094205413602624,
+      "maximum": 6.892196232644814,
+      "p05": 5.84224685826035,
+      "median": 6.007098255003257,
+      "p95": 6.178363821729988
+    },
+    "pitch_deg": {
+      "n": 319,
+      "mean": 0.03580509130173322,
+      "rms": 0.1732305070921523,
+      "minimum": -0.5266758799552917,
+      "maximum": 0.40703827142715454,
+      "p05": -0.20820123255252837,
+      "median": 0.01172060426324606,
+      "p95": 0.3404200285673141
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.09017448867762769,
+    "measured_acceleration_mps2": {
+      "n": 319,
+      "mean": -0.11662967144708974,
+      "rms": 4.090848602122163,
+      "minimum": -22.84201017481692,
+      "maximum": 13.263642829142466,
+      "p05": -5.4389481120780285,
+      "median": -0.38490413410848134,
+      "p95": 7.6005502678672965
+    },
+    "brake_fraction": 0.2413793103448276,
+    "full_brake_fraction": 0.10658307210031348,
+    "full_throttle_fraction": 0.6332288401253918,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.650000084191561,
+        "duration_s": 0.25,
+        "onset_speed": 6.115322192453403,
+        "peak_after_brake_speed": 6.320526126017372,
+        "onset_to_peak_s": 0.1,
+        "release_t": 5.900000087916851,
+        "release_speed": 6.004415092313616,
+        "minimum_after_release_speed": 5.0393491652016635,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9650659271119526
+      },
+      {
+        "start_t": 6.750000100582838,
+        "duration_s": 0.25,
+        "onset_speed": 6.1047550333545875,
+        "peak_after_brake_speed": 6.3714317003499366,
+        "onset_to_peak_s": 0.1,
+        "release_t": 7.000000104308128,
+        "release_speed": 5.994147988892359,
+        "minimum_after_release_speed": 5.008481837288159,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9856661516041996
+      },
+      {
+        "start_t": 7.800000116229057,
+        "duration_s": 0.2,
+        "onset_speed": 5.613688247623839,
+        "peak_after_brake_speed": 6.091825349850244,
+        "onset_to_peak_s": 0.1,
+        "release_t": 8.00000011920929,
+        "release_speed": 5.903219853604486,
+        "minimum_after_release_speed": 4.114477298038326,
+        "release_to_minimum_s": 0.1,
+        "release_to_minimum_drop_mps": 1.7887425555661594
+      },
+      {
+        "start_t": 8.800000131130219,
+        "duration_s": 0.2,
+        "onset_speed": 5.964093522519608,
+        "peak_after_brake_speed": 6.125877419238927,
+        "onset_to_peak_s": 0.1,
+        "release_t": 9.00000013411045,
+        "release_speed": 5.9223091692939756,
+        "minimum_after_release_speed": 5.5989614845702365,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3233476847237391
+      },
+      {
+        "start_t": 9.500000141561031,
+        "duration_s": 0.2,
+        "onset_speed": 6.171541094988179,
+        "peak_after_brake_speed": 6.208929364030146,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.700000144541264,
+        "release_speed": 5.926882392176472,
+        "minimum_after_release_speed": 5.013915180639503,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9129672115369685
+      },
+      {
+        "start_t": 10.500000156462193,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.287853011435241,
+        "peak_after_brake_speed": 6.528553695314757,
+        "onset_to_peak_s": 0.1,
+        "release_t": 10.800000160932541,
+        "release_speed": 5.971523969593779,
+        "minimum_after_release_speed": 5.024100420574114,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.947423549019665
+      },
+      {
+        "start_t": 11.650000173598528,
+        "duration_s": 0.25,
+        "onset_speed": 6.1651560098608345,
+        "peak_after_brake_speed": 6.328644191452663,
+        "onset_to_peak_s": 0.05,
+        "release_t": 11.900000177323818,
+        "release_speed": 5.971800199925601,
+        "minimum_after_release_speed": 5.001480435543599,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9703197643820021
+      },
+      {
+        "start_t": 12.750000189989805,
+        "duration_s": 0.25,
+        "onset_speed": 6.2037988640883235,
+        "peak_after_brake_speed": 6.326677540394958,
+        "onset_to_peak_s": 0.05,
+        "release_t": 13.000000193715096,
+        "release_speed": 5.9220770160732705,
+        "minimum_after_release_speed": 5.008603491960944,
+        "release_to_minimum_s": 0.5,
+        "release_to_minimum_drop_mps": 0.9134735241123266
+      },
+      {
+        "start_t": 13.850000206381083,
+        "duration_s": 0.25,
+        "onset_speed": 6.203898182794559,
+        "peak_after_brake_speed": 6.305017946307388,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.100000210106373,
+        "release_speed": 5.89282804269135,
+        "minimum_after_release_speed": 5.032336444557715,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8604915981336347
+      },
+      {
+        "start_t": 14.900000222027302,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.038386679185195,
+        "peak_after_brake_speed": 6.359695893629111,
+        "onset_to_peak_s": 0.1,
+        "release_t": 15.20000022649765,
+        "release_speed": 5.921342069878747,
+        "minimum_after_release_speed": 5.030967859396702,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8903742104820456
+      },
+      {
+        "start_t": 16.00000023841858,
+        "duration_s": 0.2,
+        "onset_speed": 6.034578672572631,
+        "peak_after_brake_speed": 6.303742882231093,
+        "onset_to_peak_s": 0.1,
+        "release_t": 16.20000024139881,
+        "release_speed": 6.137540693851438,
+        "minimum_after_release_speed": 5.759524287370035,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.3780164064814029
+      },
+      {
+        "start_t": 16.700000248849392,
+        "duration_s": 0.1,
+        "onset_speed": 6.0880828414171075,
+        "peak_after_brake_speed": 6.0880828414171075,
+        "onset_to_peak_s": 0.0,
+        "release_t": 16.800000250339508,
+        "release_speed": 5.96485514826389,
+        "minimum_after_release_speed": 5.690444837446421,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.27441031081746914
+      },
+      {
+        "start_t": 17.30000025779009,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.3554613762549605,
+        "peak_after_brake_speed": 6.514482824315608,
+        "onset_to_peak_s": 0.1,
+        "release_t": 17.600000262260437,
+        "release_speed": 5.969149041799142,
+        "minimum_after_release_speed": 5.048624477817193,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.9205245639819486
+      },
+      {
+        "start_t": 18.350000273436308,
+        "duration_s": 0.2,
+        "onset_speed": 6.1875532154043915,
+        "peak_after_brake_speed": 6.288397585532484,
+        "onset_to_peak_s": 0.05,
+        "release_t": 18.55000027641654,
+        "release_speed": 6.001868145217018,
+        "minimum_after_release_speed": 5.039940261645134,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9619278835718843
+      },
+      {
+        "start_t": 19.400000289082527,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.06708704200482,
+        "peak_after_brake_speed": 6.363747439870063,
+        "onset_to_peak_s": 0.1,
+        "release_t": 19.700000293552876,
+        "release_speed": 5.924042430118802,
+        "minimum_after_release_speed": 5.07824272548355,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8457997046352519
+      },
+      {
+        "start_t": 20.500000305473804,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.195074913471471,
+        "peak_after_brake_speed": 6.436936412275338,
+        "onset_to_peak_s": 0.1,
+        "release_t": 20.800000309944153,
+        "release_speed": 5.313361889703252,
+        "minimum_after_release_speed": 3.624294828018135,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 1.689067061685117
+      }
+    ],
+    "pulse_duration": {
+      "n": 16,
+      "mean": 0.240625,
+      "rms": 0.24653853654145028,
+      "minimum": 0.1,
+      "maximum": 0.30000000000000004,
+      "p05": 0.17500000000000002,
+      "median": 0.25,
+      "p95": 0.30000000000000004
+    },
+    "onset_to_peak": {
+      "n": 16,
+      "mean": 0.07812500000000001,
+      "rms": 0.08385254915624211,
+      "minimum": 0.0,
+      "maximum": 0.1,
+      "p05": 0.037500000000000006,
+      "median": 0.1,
+      "p95": 0.1
+    },
+    "release_to_minimum": {
+      "n": 16,
+      "mean": 0.3,
+      "rms": 0.31770662567847086,
+      "minimum": 0.1,
+      "maximum": 0.5,
+      "p05": 0.1375,
+      "median": 0.30000000000000004,
+      "p95": 0.42500000000000004
+    },
+    "release_to_minimum_drop": {
+      "n": 16,
+      "mean": 0.9142261317403604,
+      "rms": 0.9939354653693399,
+      "minimum": 0.27441031081746914,
+      "maximum": 1.7887425555661594,
+      "p05": 0.3111133412471716,
+      "median": 0.9169990440471376,
+      "p95": 1.7139859351553777
+    },
+    "full_throttle_under_target_plateaus": [
+      {
+        "start_t": 5.000000074505806,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.4845380875992165,
+        "last_speed": 5.191509119425154
+      },
+      {
+        "start_t": 6.150000091642141,
+        "duration_s": 0.55,
+        "first_speed": 5.392004661689912,
+        "last_speed": 5.167547381190209
+      },
+      {
+        "start_t": 7.250000108033419,
+        "duration_s": 0.55,
+        "first_speed": 5.300031970508326,
+        "last_speed": 5.084385373175442
+      },
+      {
+        "start_t": 8.050000119954348,
+        "duration_s": 0.65,
+        "first_speed": 5.2004022562647165,
+        "last_speed": 5.4764766592602205
+      },
+      {
+        "start_t": 9.00000013411045,
+        "duration_s": 0.30000000000000004,
+        "first_speed": 5.9223091692939756,
+        "last_speed": 5.619879463174903
+      },
+      {
+        "start_t": 9.900000147521496,
+        "duration_s": 0.55,
+        "first_speed": 5.476532792766923,
+        "last_speed": 5.434263136970676
+      },
+      {
+        "start_t": 11.000000163912773,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.354265432979207,
+        "last_speed": 5.489423963326779
+      },
+      {
+        "start_t": 12.10000018030405,
+        "duration_s": 0.55,
+        "first_speed": 5.466076339718611,
+        "last_speed": 5.137638776323681
+      },
+      {
+        "start_t": 13.200000196695328,
+        "duration_s": 0.55,
+        "first_speed": 5.364336157859875,
+        "last_speed": 5.043864296454179
+      },
+      {
+        "start_t": 14.300000213086605,
+        "duration_s": 0.55,
+        "first_speed": 5.319773576515411,
+        "last_speed": 5.246071790760216
+      },
+      {
+        "start_t": 15.350000228732824,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.488195683698398,
+        "last_speed": 5.1820668350254095
+      },
+      {
+        "start_t": 17.75000026449561,
+        "duration_s": 0.55,
+        "first_speed": 5.337421658130884,
+        "last_speed": 5.320307305874049
+      },
+      {
+        "start_t": 18.80000028014183,
+        "duration_s": 0.55,
+        "first_speed": 5.502170575904756,
+        "last_speed": 5.214156410786117
+      },
+      {
+        "start_t": 19.900000296533108,
+        "duration_s": 0.55,
+        "first_speed": 5.380802643241505,
+        "last_speed": 5.214437028838507
+      },
+      {
+        "start_t": 20.800000309944153,
+        "duration_s": 0.5,
+        "first_speed": 5.313361889703252,
+        "last_speed": 4.447207149077389
+      }
+    ],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation_trace.json": "4c35c4bf38136962ad915f6bc32f6ca430108728c006b77eb8880dbceda255b0",
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/control.jsonl": "516bddf260b97d3801d27b793ab192d0a9b6fa60819157cd36287ff79f681c83",
+      "/data/runs/b2d/controller/development-s-v1/17563/pursuit/validation.json": "252a01e12cec06fcd06ff5ad36ea1279f2aca05dcbad525e396579b5a5155a1b"
+    }
+  },
+  "v2_s_carla": {
+    "cruise_mps": 6.0,
+    "gate_speed_error": {
+      "n": 320,
+      "mean": -0.43045705532740364,
+      "rms": 0.6389039693870894,
+      "minimum": -1.0353110560503627,
+      "maximum": 0.5863625062215139,
+      "p05": -0.9726919774176201,
+      "median": -0.5399734110464021,
+      "p95": 0.34365063254930367
+    },
+    "stable_target_speed_error": {
+      "n": 272,
+      "mean": -0.42066864282223015,
+      "rms": 0.6321192318051047,
+      "minimum": -1.0353110560503627,
+      "maximum": 0.5863625062215139,
+      "p05": -0.9732981452474379,
+      "median": -0.5193454300391869,
+      "p95": 0.3464878135599207
+    },
+    "target": {
+      "n": 320,
+      "mean": 5.991026714198862,
+      "rms": 5.991115817783643,
+      "minimum": 5.634204451179684,
+      "maximum": 5.999999993713021,
+      "p05": 5.95499655582791,
+      "median": 5.999965892952304,
+      "p95": 5.999998917003382
+    },
+    "pitch_deg": {
+      "n": 320,
+      "mean": 0.03430562644862221,
+      "rms": 0.17525081782223684,
+      "minimum": -0.24120812118053436,
+      "maximum": 0.41785046458244324,
+      "p05": -0.19527885615825652,
+      "median": -0.006119849160313606,
+      "p95": 0.3417252779006958
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.07154238508751166,
+    "measured_acceleration_mps2": {
+      "n": 320,
+      "mean": -0.03174136470222248,
+      "rms": 3.7272116029141698,
+      "minimum": -8.11921881323265,
+      "maximum": 13.334359283708075,
+      "p05": -5.417068595040526,
+      "median": -0.34830793507278024,
+      "p95": 8.461932013430616
+    },
+    "brake_fraction": 0.225,
+    "full_brake_fraction": 0.090625,
+    "full_throttle_fraction": 0.640625,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.700000084936619,
+        "duration_s": 0.2,
+        "onset_speed": 6.15968403389978,
+        "peak_after_brake_speed": 6.270604149673651,
+        "onset_to_peak_s": 0.05,
+        "release_t": 5.900000087916851,
+        "release_speed": 5.991946560624467,
+        "minimum_after_release_speed": 5.028390772632766,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9635557879917016
+      },
+      {
+        "start_t": 6.750000100582838,
+        "duration_s": 0.25,
+        "onset_speed": 6.030032967336416,
+        "peak_after_brake_speed": 6.351641647748821,
+        "onset_to_peak_s": 0.1,
+        "release_t": 7.000000104308128,
+        "release_speed": 6.0127722399024535,
+        "minimum_after_release_speed": 5.050655280151884,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9621169597505697
+      },
+      {
+        "start_t": 7.850000116974115,
+        "duration_s": 0.25,
+        "onset_speed": 6.217849305301375,
+        "peak_after_brake_speed": 6.342613842744985,
+        "onset_to_peak_s": 0.1,
+        "release_t": 8.100000120699406,
+        "release_speed": 5.909198115274424,
+        "minimum_after_release_speed": 5.027309018411343,
+        "release_to_minimum_s": 0.45,
+        "release_to_minimum_drop_mps": 0.8818890968630804
+      },
+      {
+        "start_t": 8.950000133365393,
+        "duration_s": 0.25,
+        "onset_speed": 6.35820890833996,
+        "peak_after_brake_speed": 6.483986237935944,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.200000137090683,
+        "release_speed": 5.988167256751822,
+        "minimum_after_release_speed": 5.005385179954443,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9827820767973794
+      },
+      {
+        "start_t": 10.100000150501728,
+        "duration_s": 0.25,
+        "onset_speed": 6.12350375675044,
+        "peak_after_brake_speed": 6.3219181616184486,
+        "onset_to_peak_s": 0.1,
+        "release_t": 10.350000154227018,
+        "release_speed": 5.959538295090365,
+        "minimum_after_release_speed": 5.0342596792758645,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9252786158145003
+      },
+      {
+        "start_t": 11.150000166147947,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.202369833356408,
+        "peak_after_brake_speed": 6.4101360888209555,
+        "onset_to_peak_s": 0.1,
+        "release_t": 11.450000170618296,
+        "release_speed": 5.8852052710901495,
+        "minimum_after_release_speed": 4.9996281993713385,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.885577071718811
+      },
+      {
+        "start_t": 12.300000183284283,
+        "duration_s": 0.25,
+        "onset_speed": 6.135775129786753,
+        "peak_after_brake_speed": 6.322240514271311,
+        "onset_to_peak_s": 0.1,
+        "release_t": 12.550000187009573,
+        "release_speed": 5.976872805203616,
+        "minimum_after_release_speed": 4.984377626388623,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9924951788149929
+      },
+      {
+        "start_t": 13.350000198930502,
+        "duration_s": 0.25,
+        "onset_speed": 6.09803763494995,
+        "peak_after_brake_speed": 6.343295984922976,
+        "onset_to_peak_s": 0.1,
+        "release_t": 13.600000202655792,
+        "release_speed": 5.990270840823558,
+        "minimum_after_release_speed": 5.029856368977005,
+        "release_to_minimum_s": 0.45,
+        "release_to_minimum_drop_mps": 0.960414471846553
+      },
+      {
+        "start_t": 14.45000021532178,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.113028551375147,
+        "peak_after_brake_speed": 6.47143744614979,
+        "onset_to_peak_s": 0.1,
+        "release_t": 14.750000219792128,
+        "release_speed": 5.90476419142594,
+        "minimum_after_release_speed": 4.984719530954054,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.9200446604718859
+      },
+      {
+        "start_t": 15.650000233203173,
+        "duration_s": 0.25,
+        "onset_speed": 6.29470017919033,
+        "peak_after_brake_speed": 6.357764590378896,
+        "onset_to_peak_s": 0.05,
+        "release_t": 15.900000236928463,
+        "release_speed": 5.90913602538437,
+        "minimum_after_release_speed": 4.983277082716012,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.9258589426683583
+      },
+      {
+        "start_t": 16.75000024959445,
+        "duration_s": 0.25,
+        "onset_speed": 6.150842081325775,
+        "peak_after_brake_speed": 6.2766973099181715,
+        "onset_to_peak_s": 0.05,
+        "release_t": 17.00000025331974,
+        "release_speed": 5.886885667442209,
+        "minimum_after_release_speed": 5.019737567998438,
+        "release_to_minimum_s": 0.5,
+        "release_to_minimum_drop_mps": 0.8671480994437717
+      },
+      {
+        "start_t": 17.80000026524067,
+        "duration_s": 0.25,
+        "onset_speed": 6.113187039943697,
+        "peak_after_brake_speed": 6.340772369048435,
+        "onset_to_peak_s": 0.1,
+        "release_t": 18.05000026896596,
+        "release_speed": 5.983940579614134,
+        "minimum_after_release_speed": 5.010027120556131,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9739134590580028
+      },
+      {
+        "start_t": 18.900000281631947,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.24963127133369,
+        "peak_after_brake_speed": 6.586362506221514,
+        "onset_to_peak_s": 0.1,
+        "release_t": 19.200000286102295,
+        "release_speed": 5.984190172838963,
+        "minimum_after_release_speed": 4.964688943949637,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 1.0195012288893253
+      },
+      {
+        "start_t": 20.050000298768282,
+        "duration_s": 0.25,
+        "onset_speed": 6.123473558745612,
+        "peak_after_brake_speed": 6.3503889374495195,
+        "onset_to_peak_s": 0.1,
+        "release_t": 20.300000302493572,
+        "release_speed": 5.985071225690217,
+        "minimum_after_release_speed": 4.998557352912035,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9865138727781826
+      }
+    ],
+    "pulse_duration": {
+      "n": 14,
+      "mean": 0.2571428571428571,
+      "rms": 0.25842932164465066,
+      "minimum": 0.2,
+      "maximum": 0.30000000000000004,
+      "p05": 0.2325,
+      "median": 0.25,
+      "p95": 0.30000000000000004
+    },
+    "onset_to_peak": {
+      "n": 14,
+      "mean": 0.08571428571428574,
+      "rms": 0.08864052604279185,
+      "minimum": 0.05,
+      "maximum": 0.1,
+      "p05": 0.05,
+      "median": 0.1,
+      "p95": 0.1
+    },
+    "release_to_minimum": {
+      "n": 14,
+      "mean": 0.37142857142857133,
+      "rms": 0.37559476643242595,
+      "minimum": 0.30000000000000004,
+      "maximum": 0.5,
+      "p05": 0.30000000000000004,
+      "median": 0.35000000000000003,
+      "p95": 0.46749999999999997
+    },
+    "release_to_minimum_drop": {
+      "n": 14,
+      "mean": 0.946220680207651,
+      "rms": 0.9472618540889624,
+      "minimum": 0.8671480994437717,
+      "maximum": 1.0195012288893253,
+      "p05": 0.8767297477663223,
+      "median": 0.9612657157985613,
+      "p95": 1.0019472963410092
+    },
+    "full_throttle_under_target_plateaus": [
+      {
+        "start_t": 5.100000075995922,
+        "duration_s": 0.55,
+        "first_speed": 5.320211622548364,
+        "last_speed": 5.242839472522504
+      },
+      {
+        "start_t": 6.150000091642141,
+        "duration_s": 0.55,
+        "first_speed": 5.486891456949398,
+        "last_speed": 5.164100568762313
+      },
+      {
+        "start_t": 7.250000108033419,
+        "duration_s": 0.55,
+        "first_speed": 5.265843192562077,
+        "last_speed": 5.275160555725365
+      },
+      {
+        "start_t": 8.300000123679638,
+        "duration_s": 0.4,
+        "first_speed": 5.423667950369519,
+        "last_speed": 5.457477282042159
+      },
+      {
+        "start_t": 9.400000140070915,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.484914857238817,
+        "last_speed": 5.037895584534902
+      },
+      {
+        "start_t": 10.55000015720725,
+        "duration_s": 0.55,
+        "first_speed": 5.419386016645252,
+        "last_speed": 5.358021390730882
+      },
+      {
+        "start_t": 11.650000173598528,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.378035951457799,
+        "last_speed": 5.47639428268281
+      },
+      {
+        "start_t": 12.750000189989805,
+        "duration_s": 0.55,
+        "first_speed": 5.463818960451447,
+        "last_speed": 5.188789325083202
+      },
+      {
+        "start_t": 13.850000206381083,
+        "duration_s": 0.55,
+        "first_speed": 5.330557300351738,
+        "last_speed": 5.387253583522337
+      },
+      {
+        "start_t": 14.95000022277236,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.339355343490487,
+        "last_speed": 5.064343601923812
+      },
+      {
+        "start_t": 16.100000239908695,
+        "duration_s": 0.55,
+        "first_speed": 5.298598914438941,
+        "last_speed": 5.156163876943097
+      },
+      {
+        "start_t": 17.200000256299973,
+        "duration_s": 0.55,
+        "first_speed": 5.392155482034906,
+        "last_speed": 5.055533103340029
+      },
+      {
+        "start_t": 18.30000027269125,
+        "duration_s": 0.55,
+        "first_speed": 5.277730249681786,
+        "last_speed": 5.445390384454698
+      },
+      {
+        "start_t": 19.400000289082527,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.338151324924037,
+        "last_speed": 5.0578095132484115
+      },
+      {
+        "start_t": 20.500000305473804,
+        "duration_s": 0.35000000000000003,
+        "first_speed": 5.495694928576277,
+        "last_speed": 5.31922991413601
+      }
+    ],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation_trace.json": "c6a694202110ff52cb6aae99ebfb571ad03ffdfe95e22b11850c27f95c5fde48",
+      "/data/runs/b2d/controller/development-v2/17563/baseline/carla/control.jsonl": "401ac763fd85f073ed3701fc7c374c35769e31adcfdb8b31b28e358e028401d8",
+      "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation.json": "4ecd9744c1942bbb8834dcd085e21c86ef355be45256671cba0fd5de80e20a9b"
+    }
+  },
+  "v2_s_pursuit": {
+    "cruise_mps": 6.0,
+    "gate_speed_error": {
+      "n": 321,
+      "mean": -0.4402629080262548,
+      "rms": 0.6443963143653287,
+      "minimum": -1.0322632495710131,
+      "maximum": 0.5391615110819377,
+      "p05": -0.9722435544488999,
+      "median": -0.5621124692460464,
+      "p95": 0.3282526733705673
+    },
+    "stable_target_speed_error": {
+      "n": 272,
+      "mean": -0.44948215275036457,
+      "rms": 0.648474458259842,
+      "minimum": -1.0322632495710131,
+      "maximum": 0.4984341534972332,
+      "p05": -0.9726336442683499,
+      "median": -0.6171964486759736,
+      "p95": 0.3202085376529524
+    },
+    "target": {
+      "n": 321,
+      "mean": 5.990055345331783,
+      "rms": 5.990144412870759,
+      "minimum": 5.686440148561457,
+      "maximum": 5.999999967276348,
+      "p05": 5.946090401056434,
+      "median": 5.9998286059809995,
+      "p95": 5.999996763127787
+    },
+    "pitch_deg": {
+      "n": 321,
+      "mean": 0.034040363314086455,
+      "rms": 0.17373410277950443,
+      "minimum": -0.25393959879875183,
+      "maximum": 0.40133506059646606,
+      "p05": -0.19323286414146423,
+      "median": 0.0012977358419448137,
+      "p95": 0.3471375107765198
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.06871474273656615,
+    "measured_acceleration_mps2": {
+      "n": 321,
+      "mean": 0.03340598543430371,
+      "rms": 3.7934709419970414,
+      "minimum": -7.008099450256857,
+      "maximum": 13.746476584204181,
+      "p05": -5.177514642383443,
+      "median": -0.29453890421464735,
+      "p95": 9.385850480809754
+    },
+    "brake_fraction": 0.2367601246105919,
+    "full_brake_fraction": 0.09345794392523364,
+    "full_throttle_fraction": 0.6199376947040498,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.600000083446503,
+        "duration_s": 0.25,
+        "onset_speed": 6.078574176201615,
+        "peak_after_brake_speed": 6.347698854969725,
+        "onset_to_peak_s": 0.1,
+        "release_t": 5.850000087171793,
+        "release_speed": 6.003879378882424,
+        "minimum_after_release_speed": 4.998399783517319,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 1.005479595365105
+      },
+      {
+        "start_t": 6.70000009983778,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.042196035725122,
+        "peak_after_brake_speed": 6.3526736783645905,
+        "onset_to_peak_s": 0.1,
+        "release_t": 7.000000104308128,
+        "release_speed": 5.908224257680598,
+        "minimum_after_release_speed": 5.0277564455511,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8804678121294982
+      },
+      {
+        "start_t": 7.800000116229057,
+        "duration_s": 0.35000000000000003,
+        "onset_speed": 6.025118194002963,
+        "peak_after_brake_speed": 6.539161511081938,
+        "onset_to_peak_s": 0.1,
+        "release_t": 8.150000121444464,
+        "release_speed": 5.833884107099031,
+        "minimum_after_release_speed": 5.002632288536896,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8312518185621354
+      },
+      {
+        "start_t": 9.00000013411045,
+        "duration_s": 0.2,
+        "onset_speed": 6.247476430825173,
+        "peak_after_brake_speed": 6.306351460189627,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.200000137090683,
+        "release_speed": 6.011039296094199,
+        "minimum_after_release_speed": 5.006713003234767,
+        "release_to_minimum_s": 0.55,
+        "release_to_minimum_drop_mps": 1.0043262928594325
+      },
+      {
+        "start_t": 10.05000014975667,
+        "duration_s": 0.25,
+        "onset_speed": 6.121401465493312,
+        "peak_after_brake_speed": 6.3410823351341925,
+        "onset_to_peak_s": 0.1,
+        "release_t": 10.30000015348196,
+        "release_speed": 5.987614299516005,
+        "minimum_after_release_speed": 5.010749536451658,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9768647630643468
+      },
+      {
+        "start_t": 11.150000166147947,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.233876007521974,
+        "peak_after_brake_speed": 6.491539428443196,
+        "onset_to_peak_s": 0.1,
+        "release_t": 11.450000170618296,
+        "release_speed": 5.935584566114841,
+        "minimum_after_release_speed": 4.995579914969043,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.9400046511457978
+      },
+      {
+        "start_t": 12.300000183284283,
+        "duration_s": 0.25,
+        "onset_speed": 6.171659133840206,
+        "peak_after_brake_speed": 6.289696234826518,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.550000187009573,
+        "release_speed": 5.893888261699838,
+        "minimum_after_release_speed": 5.051649672459314,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.842238589240524
+      },
+      {
+        "start_t": 13.350000198930502,
+        "duration_s": 0.25,
+        "onset_speed": 6.076806259091317,
+        "peak_after_brake_speed": 6.302572024415902,
+        "onset_to_peak_s": 0.1,
+        "release_t": 13.600000202655792,
+        "release_speed": 5.99839625151549,
+        "minimum_after_release_speed": 5.026094564289704,
+        "release_to_minimum_s": 0.4,
+        "release_to_minimum_drop_mps": 0.9723016872257855
+      },
+      {
+        "start_t": 14.500000216066837,
+        "duration_s": 0.25,
+        "onset_speed": 6.223288469779876,
+        "peak_after_brake_speed": 6.323970584060766,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.750000219792128,
+        "release_speed": 5.9062916188985755,
+        "minimum_after_release_speed": 5.029163123372502,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8771284955260734
+      },
+      {
+        "start_t": 15.550000231713057,
+        "duration_s": 0.25,
+        "onset_speed": 6.133331612442046,
+        "peak_after_brake_speed": 6.34213914942144,
+        "onset_to_peak_s": 0.1,
+        "release_t": 15.800000235438347,
+        "release_speed": 5.966446638379071,
+        "minimum_after_release_speed": 5.013354153831552,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9530924845475193
+      },
+      {
+        "start_t": 16.650000248104334,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.069462586814904,
+        "peak_after_brake_speed": 6.327966691027759,
+        "onset_to_peak_s": 0.1,
+        "release_t": 16.950000252574682,
+        "release_speed": 5.836720419602857,
+        "minimum_after_release_speed": 4.980042798884299,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8566776207185578
+      },
+      {
+        "start_t": 17.75000026449561,
+        "duration_s": 0.25,
+        "onset_speed": 6.255101376429339,
+        "peak_after_brake_speed": 6.375042678217521,
+        "onset_to_peak_s": 0.05,
+        "release_t": 18.0000002682209,
+        "release_speed": 5.9599255965265066,
+        "minimum_after_release_speed": 4.967736750428987,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9921888460975197
+      },
+      {
+        "start_t": 18.85000028088689,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.120258759391566,
+        "peak_after_brake_speed": 6.367909778823153,
+        "onset_to_peak_s": 0.1,
+        "release_t": 19.150000285357237,
+        "release_speed": 5.855571753635469,
+        "minimum_after_release_speed": 4.990855284580584,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8647164690548852
+      },
+      {
+        "start_t": 19.950000297278166,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.02535709949416,
+        "peak_after_brake_speed": 6.356940041884896,
+        "onset_to_peak_s": 0.1,
+        "release_t": 20.250000301748514,
+        "release_speed": 5.930428134581456,
+        "minimum_after_release_speed": 4.999224315461642,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9312038191198146
+      }
+    ],
+    "pulse_duration": {
+      "n": 14,
+      "mean": 0.2714285714285714,
+      "rms": 0.2738612787525831,
+      "minimum": 0.2,
+      "maximum": 0.35000000000000003,
+      "p05": 0.2325,
+      "median": 0.25,
+      "p95": 0.3175
+    },
+    "onset_to_peak": {
+      "n": 14,
+      "mean": 0.08571428571428573,
+      "rms": 0.08864052604279185,
+      "minimum": 0.05,
+      "maximum": 0.1,
+      "p05": 0.05,
+      "median": 0.1,
+      "p95": 0.1
+    },
+    "release_to_minimum": {
+      "n": 14,
+      "mean": 0.35,
+      "rms": 0.35556795613296127,
+      "minimum": 0.30000000000000004,
+      "maximum": 0.55,
+      "p05": 0.30000000000000004,
+      "median": 0.35000000000000003,
+      "p95": 0.45249999999999996
+    },
+    "release_to_minimum_drop": {
+      "n": 14,
+      "mean": 0.9234244960469281,
+      "rms": 0.9254120184115286,
+      "minimum": 0.8312518185621354,
+      "maximum": 1.005479595365105,
+      "p05": 0.838393219503088,
+      "median": 0.9356042351328062,
+      "p95": 1.0047299487364179
+    },
+    "full_throttle_under_target_plateaus": [
+      {
+        "start_t": 5.000000074505806,
+        "duration_s": 0.55,
+        "first_speed": 5.3848593406167335,
+        "last_speed": 5.067176999096228
+      },
+      {
+        "start_t": 6.100000090897083,
+        "duration_s": 0.55,
+        "first_speed": 5.284830070761256,
+        "last_speed": 5.162738143519442
+      },
+      {
+        "start_t": 7.200000107288361,
+        "duration_s": 0.35000000000000003,
+        "first_speed": 5.316671709272981,
+        "last_speed": 5.396800362104745
+      },
+      {
+        "start_t": 8.300000123679638,
+        "duration_s": 0.65,
+        "first_speed": 5.432286343474008,
+        "last_speed": 5.407058165745377
+      },
+      {
+        "start_t": 9.450000140815973,
+        "duration_s": 0.55,
+        "first_speed": 5.363570312855703,
+        "last_speed": 5.049986405957209
+      },
+      {
+        "start_t": 10.55000015720725,
+        "duration_s": 0.55,
+        "first_speed": 5.280868758815344,
+        "last_speed": 5.434868162765025
+      },
+      {
+        "start_t": 11.650000173598528,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.346601835358336,
+        "last_speed": 5.2090519392116255
+      },
+      {
+        "start_t": 12.750000189989805,
+        "duration_s": 0.55,
+        "first_speed": 5.492962938445504,
+        "last_speed": 5.136032889254468
+      },
+      {
+        "start_t": 13.850000206381083,
+        "duration_s": 0.55,
+        "first_speed": 5.380747762031319,
+        "last_speed": 5.172773807444445
+      },
+      {
+        "start_t": 14.95000022277236,
+        "duration_s": 0.55,
+        "first_speed": 5.3773206765887185,
+        "last_speed": 5.087139582298917
+      },
+      {
+        "start_t": 16.050000239163637,
+        "duration_s": 0.55,
+        "first_speed": 5.278068496489332,
+        "last_speed": 5.1944762503810615
+      },
+      {
+        "start_t": 17.150000255554914,
+        "duration_s": 0.55,
+        "first_speed": 5.256049152217869,
+        "last_speed": 5.263504623488462
+      },
+      {
+        "start_t": 18.250000271946192,
+        "duration_s": 0.55,
+        "first_speed": 5.243594642449093,
+        "last_speed": 5.121526728479993
+      },
+      {
+        "start_t": 19.35000028833747,
+        "duration_s": 0.55,
+        "first_speed": 5.281057210229505,
+        "last_speed": 5.151339688803599
+      },
+      {
+        "start_t": 20.450000304728746,
+        "duration_s": 0.55,
+        "first_speed": 5.3441908830549485,
+        "last_speed": 5.081276514489167
+      }
+    ],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation_trace.json": "c84f07283639e25e6c39a6fcce548068a9955b5c401fa94d28cd9995176c275f",
+      "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/control.jsonl": "2ffd8b203c5bba6183fa68236ab6a3d0d1e894c4337c8f450cddeeecf84126e4",
+      "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation.json": "b01d485d262c23e3f74c7c5fe02dc49f243968a74fe730794508acf448514fea"
+    }
+  },
+  "v2_s_pursuit_max": {
+    "cruise_mps": 6.0,
+    "gate_speed_error": {
+      "n": 327,
+      "mean": -0.5104002914864123,
+      "rms": 0.7547347732038965,
+      "minimum": -2.078128894953693,
+      "maximum": 0.5738860432519379,
+      "p05": -1.417947086695164,
+      "median": -0.6846357350991017,
+      "p95": 0.3471962458537528
+    },
+    "stable_target_speed_error": {
+      "n": 281,
+      "mean": -0.5245190011564365,
+      "rms": 0.773849118047515,
+      "minimum": -2.078128894953693,
+      "maximum": 0.5738860432519379,
+      "p05": -1.6322325855421589,
+      "median": -0.6738298099425304,
+      "p95": 0.3374715689027541
+    },
+    "target": {
+      "n": 327,
+      "mean": 5.989530379012757,
+      "rms": 5.98962177377302,
+      "minimum": 5.668463743883874,
+      "maximum": 5.999999968206212,
+      "p05": 5.933493961877428,
+      "median": 5.999931972206533,
+      "p95": 5.999998240167005
+    },
+    "pitch_deg": {
+      "n": 327,
+      "mean": 0.029129314393254384,
+      "rms": 0.1962372252183674,
+      "minimum": -0.5191353559494019,
+      "maximum": 0.42012491822242737,
+      "p05": -0.22393661439418794,
+      "median": 0.0005532453069463372,
+      "p95": 0.3522505849599838
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.08888347805786244,
+    "measured_acceleration_mps2": {
+      "n": 327,
+      "mean": -0.0034787668209178384,
+      "rms": 4.283860520190584,
+      "minimum": -22.188551574576838,
+      "maximum": 13.614074917071282,
+      "p05": -4.733564522071243,
+      "median": -0.20756203359832526,
+      "p95": 8.908723795179036
+    },
+    "brake_fraction": 0.22935779816513763,
+    "full_brake_fraction": 0.09785932721712538,
+    "full_throttle_fraction": 0.6636085626911316,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.600000083446503,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.227651831798329,
+        "peak_after_brake_speed": 6.401076720442757,
+        "onset_to_peak_s": 0.1,
+        "release_t": 5.900000087916851,
+        "release_speed": 5.883716561207498,
+        "minimum_after_release_speed": 5.034420333304492,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8492962279030056
+      },
+      {
+        "start_t": 6.70000009983778,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.101067443951525,
+        "peak_after_brake_speed": 6.36886801427254,
+        "onset_to_peak_s": 0.1,
+        "release_t": 7.000000104308128,
+        "release_speed": 5.854822850898504,
+        "minimum_after_release_speed": 4.98655105731526,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8682717935832445
+      },
+      {
+        "start_t": 7.850000116974115,
+        "duration_s": 0.25,
+        "onset_speed": 6.194329981565715,
+        "peak_after_brake_speed": 6.528929207287279,
+        "onset_to_peak_s": 0.1,
+        "release_t": 8.100000120699406,
+        "release_speed": 5.448757106739537,
+        "minimum_after_release_speed": 4.17039477725404,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 1.278362329485497
+      },
+      {
+        "start_t": 9.150000136345625,
+        "duration_s": 0.25,
+        "onset_speed": 6.281467552387384,
+        "peak_after_brake_speed": 6.362235729000079,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.400000140070915,
+        "release_speed": 5.926150001601442,
+        "minimum_after_release_speed": 5.00682329393307,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9193267076683727
+      },
+      {
+        "start_t": 10.200000151991844,
+        "duration_s": 0.25,
+        "onset_speed": 6.087103179577433,
+        "peak_after_brake_speed": 6.335232401169989,
+        "onset_to_peak_s": 0.1,
+        "release_t": 10.450000155717134,
+        "release_speed": 5.990880339848575,
+        "minimum_after_release_speed": 5.0139548739060995,
+        "release_to_minimum_s": 0.5,
+        "release_to_minimum_drop_mps": 0.9769254659424753
+      },
+      {
+        "start_t": 11.300000168383121,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.1917965517343685,
+        "peak_after_brake_speed": 6.573886043251938,
+        "onset_to_peak_s": 0.1,
+        "release_t": 11.60000017285347,
+        "release_speed": 5.9814969342096065,
+        "minimum_after_release_speed": 4.989497106466029,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.9919998277435775
+      },
+      {
+        "start_t": 12.500000186264515,
+        "duration_s": 0.25,
+        "onset_speed": 6.2256482531971535,
+        "peak_after_brake_speed": 6.332799575613786,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.750000189989805,
+        "release_speed": 5.91834539958385,
+        "minimum_after_release_speed": 5.054581313072311,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.863764086511539
+      },
+      {
+        "start_t": 13.600000202655792,
+        "duration_s": 0.25,
+        "onset_speed": 6.0935603953903685,
+        "peak_after_brake_speed": 6.355482729577105,
+        "onset_to_peak_s": 0.1,
+        "release_t": 13.850000206381083,
+        "release_speed": 5.996262690477629,
+        "minimum_after_release_speed": 5.011730021472996,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.9845326690046328
+      },
+      {
+        "start_t": 14.70000021904707,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.1141023576244935,
+        "peak_after_brake_speed": 6.3312663557765605,
+        "onset_to_peak_s": 0.1,
+        "release_t": 15.000000223517418,
+        "release_speed": 5.833819436825811,
+        "minimum_after_release_speed": 5.032846821941351,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8009726148844605
+      },
+      {
+        "start_t": 15.800000235438347,
+        "duration_s": 0.25,
+        "onset_speed": 6.13354260697788,
+        "peak_after_brake_speed": 6.373906949037295,
+        "onset_to_peak_s": 0.05,
+        "release_t": 16.050000239163637,
+        "release_speed": 5.861871610831294,
+        "minimum_after_release_speed": 5.020578917651025,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8412926931802689
+      },
+      {
+        "start_t": 16.850000251084566,
+        "duration_s": 0.25,
+        "onset_speed": 6.083325829649484,
+        "peak_after_brake_speed": 6.297642966975051,
+        "onset_to_peak_s": 0.1,
+        "release_t": 17.100000254809856,
+        "release_speed": 5.838250455582459,
+        "minimum_after_release_speed": 5.024214405506346,
+        "release_to_minimum_s": 0.5,
+        "release_to_minimum_drop_mps": 0.8140360500761137
+      },
+      {
+        "start_t": 17.950000267475843,
+        "duration_s": 0.30000000000000004,
+        "onset_speed": 6.204800889967765,
+        "peak_after_brake_speed": 6.513840129786988,
+        "onset_to_peak_s": 0.1,
+        "release_t": 18.250000271946192,
+        "release_speed": 5.229457272931054,
+        "minimum_after_release_speed": 3.921871105046307,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 1.3075861678847467
+      },
+      {
+        "start_t": 19.30000028759241,
+        "duration_s": 0.25,
+        "onset_speed": 6.185850499146134,
+        "peak_after_brake_speed": 6.295428723384304,
+        "onset_to_peak_s": 0.05,
+        "release_t": 19.5500002913177,
+        "release_speed": 5.8847516216413505,
+        "minimum_after_release_speed": 5.042357521291568,
+        "release_to_minimum_s": 0.35000000000000003,
+        "release_to_minimum_drop_mps": 0.8423941003497823
+      },
+      {
+        "start_t": 20.40000030398369,
+        "duration_s": 0.25,
+        "onset_speed": 6.2564975139732235,
+        "peak_after_brake_speed": 6.343889291444839,
+        "onset_to_peak_s": 0.05,
+        "release_t": 20.65000030770898,
+        "release_speed": 5.895464507063789,
+        "minimum_after_release_speed": 5.006831030283921,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.8886334767798676
+      }
+    ],
+    "pulse_duration": {
+      "n": 14,
+      "mean": 0.26785714285714285,
+      "rms": 0.26892643710023856,
+      "minimum": 0.25,
+      "maximum": 0.30000000000000004,
+      "p05": 0.25,
+      "median": 0.25,
+      "p95": 0.30000000000000004
+    },
+    "onset_to_peak": {
+      "n": 14,
+      "mean": 0.08214285714285716,
+      "rms": 0.08556534679079245,
+      "minimum": 0.05,
+      "maximum": 0.1,
+      "p05": 0.05,
+      "median": 0.1,
+      "p95": 0.1
+    },
+    "release_to_minimum": {
+      "n": 14,
+      "mean": 0.33928571428571425,
+      "rms": 0.348209706929603,
+      "minimum": 0.2,
+      "maximum": 0.5,
+      "p05": 0.2325,
+      "median": 0.35000000000000003,
+      "p95": 0.5
+    },
+    "release_to_minimum_drop": {
+      "n": 14,
+      "mean": 0.9448138722141132,
+      "rms": 0.957283205889593,
+      "minimum": 0.8009726148844605,
+      "maximum": 1.3075861678847467,
+      "p05": 0.809463847759035,
+      "median": 0.878452635181556,
+      "p95": 1.2885906729252345
+    },
+    "full_throttle_under_target_plateaus": [
+      {
+        "start_t": 5.000000074505806,
+        "duration_s": 0.55,
+        "first_speed": 5.31419672512692,
+        "last_speed": 5.233082511294704
+      },
+      {
+        "start_t": 6.050000090152025,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.453081285219814,
+        "last_speed": 5.177224479354659
+      },
+      {
+        "start_t": 7.200000107288361,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.30495154309648,
+        "last_speed": 5.305549552574145
+      },
+      {
+        "start_t": 8.100000120699406,
+        "duration_s": 0.9500000000000001,
+        "first_speed": 5.448757106739537,
+        "last_speed": 5.15363784867199
+      },
+      {
+        "start_t": 9.600000143051147,
+        "duration_s": 0.55,
+        "first_speed": 5.398653780714269,
+        "last_speed": 5.0912502503065795
+      },
+      {
+        "start_t": 10.700000159442425,
+        "duration_s": 0.55,
+        "first_speed": 5.30739799655138,
+        "last_speed": 5.470406236044214
+      },
+      {
+        "start_t": 11.800000175833702,
+        "duration_s": 0.65,
+        "first_speed": 5.3789236272552285,
+        "last_speed": 5.44240477162951
+      },
+      {
+        "start_t": 13.000000193715096,
+        "duration_s": 0.55,
+        "first_speed": 5.32617019005747,
+        "last_speed": 5.313812402537303
+      },
+      {
+        "start_t": 14.050000209361315,
+        "duration_s": 0.6000000000000001,
+        "first_speed": 5.47571455890958,
+        "last_speed": 5.111568637360207
+      },
+      {
+        "start_t": 15.20000022649765,
+        "duration_s": 0.55,
+        "first_speed": 5.31692892365266,
+        "last_speed": 5.144720687272952
+      },
+      {
+        "start_t": 16.25000024214387,
+        "duration_s": 0.55,
+        "first_speed": 5.38363717069414,
+        "last_speed": 5.0851868503609134
+      },
+      {
+        "start_t": 17.30000025779009,
+        "duration_s": 0.4,
+        "first_speed": 5.315364264900898,
+        "last_speed": 5.400443603274968
+      },
+      {
+        "start_t": 18.250000271946192,
+        "duration_s": 1.0,
+        "first_speed": 5.229457272931054,
+        "last_speed": 5.231554381817052
+      },
+      {
+        "start_t": 19.750000294297934,
+        "duration_s": 0.55,
+        "first_speed": 5.480819399298907,
+        "last_speed": 5.080646036853548
+      },
+      {
+        "start_t": 20.85000031068921,
+        "duration_s": 0.45,
+        "first_speed": 5.311956381129782,
+        "last_speed": 5.255421920012489
+      }
+    ],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation_trace.json": "779328e35374f2ee543a180c324bd6b096f31bc8a09458c0d9a8d6b99ba9c1c6",
+      "/data/runs/b2d/controller/development-v2/17563/max/pursuit/control.jsonl": "969478e818b7722fe800dc6283b5ef70e81621e0c287a3dc4d3b467cbe6cdd64",
+      "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation.json": "48734632f3964a70a58f0edd74ff5ae3ca4a23df02c85dc7c0903f3f1a4ddc15"
+    }
+  },
+  "v2_straight8_carla": {
+    "cruise_mps": 8.0,
+    "gate_speed_error": {
+      "n": 242,
+      "mean": -0.16247736678246585,
+      "rms": 0.22769226746084317,
+      "minimum": -0.40371849792108083,
+      "maximum": 0.1124204315836046,
+      "p05": -0.3733402156752071,
+      "median": -0.17981321237935788,
+      "p95": 0.08223596464077568
+    },
+    "stable_target_speed_error": {
+      "n": 234,
+      "mean": -0.1617440146043679,
+      "rms": 0.2275845950437066,
+      "minimum": -0.40193713236248296,
+      "maximum": 0.1124204315836046,
+      "p05": -0.37285795579401293,
+      "median": -0.17981321237935788,
+      "p95": 0.08336803104611981
+    },
+    "target": {
+      "n": 242,
+      "mean": 7.995565641074388,
+      "rms": 7.995624934459538,
+      "minimum": 7.676524803026792,
+      "maximum": 7.999999997432905,
+      "p05": 7.9998909309556305,
+      "median": 7.999993970771518,
+      "p95": 7.999999945064033
+    },
+    "pitch_deg": {
+      "n": 242,
+      "mean": -0.02649630612380079,
+      "rms": 0.07127826445848552,
+      "minimum": -0.1585969775915146,
+      "maximum": 0.11215169727802277,
+      "p05": -0.12556379623711109,
+      "median": -0.03268586844205856,
+      "p95": 0.079966826364398
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.027154432256293395,
+    "measured_acceleration_mps2": {
+      "n": 242,
+      "mean": -0.001161291195335843,
+      "rms": 1.7636892191438458,
+      "minimum": -3.866796994602364,
+      "maximum": 2.844446470275006,
+      "p05": -2.506690286318145,
+      "median": -0.06221062377495201,
+      "p95": 2.6295639008952842
+    },
+    "brake_fraction": 0.22727272727272727,
+    "full_brake_fraction": 0.0,
+    "full_throttle_fraction": 0.4628099173553719,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.200000077486038,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.023659791396787,
+        "peak_after_brake_speed": 8.095735701493624,
+        "onset_to_peak_s": 0.05,
+        "release_t": 5.350000079721212,
+        "release_speed": 7.966776349223063,
+        "minimum_after_release_speed": 7.62660191613397,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3401744330890928
+      },
+      {
+        "start_t": 5.800000086426735,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.043126081991394,
+        "peak_after_brake_speed": 8.107149368880458,
+        "onset_to_peak_s": 0.05,
+        "release_t": 5.950000088661909,
+        "release_speed": 7.957886916576756,
+        "minimum_after_release_speed": 7.634259828957175,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.32362708761958103
+      },
+      {
+        "start_t": 6.400000095367432,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.058384174294407,
+        "peak_after_brake_speed": 8.102530067849754,
+        "onset_to_peak_s": 0.05,
+        "release_t": 6.550000097602606,
+        "release_speed": 7.938867982621397,
+        "minimum_after_release_speed": 7.637830063381103,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.30103791924029366
+      },
+      {
+        "start_t": 7.000000104308128,
+        "duration_s": 0.1,
+        "onset_speed": 8.06589251611056,
+        "peak_after_brake_speed": 8.0862256524647,
+        "onset_to_peak_s": 0.05,
+        "release_t": 7.1000001057982445,
+        "release_speed": 7.9877578007622185,
+        "minimum_after_release_speed": 7.6336750539328735,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.35408274682934504
+      },
+      {
+        "start_t": 7.550000112503767,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.04104115157898,
+        "peak_after_brake_speed": 8.085182685979163,
+        "onset_to_peak_s": 0.05,
+        "release_t": 7.700000114738941,
+        "release_speed": 7.944668845810359,
+        "minimum_after_release_speed": 7.6525915848172605,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.29207726099309816
+      },
+      {
+        "start_t": 8.150000121444464,
+        "duration_s": 0.1,
+        "onset_speed": 8.07446572464305,
+        "peak_after_brake_speed": 8.07446572464305,
+        "onset_to_peak_s": 0.0,
+        "release_t": 8.25000012293458,
+        "release_speed": 7.971748804080391,
+        "minimum_after_release_speed": 7.648268490131697,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3234803139486946
+      },
+      {
+        "start_t": 8.700000129640102,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.052270035466721,
+        "peak_after_brake_speed": 8.10023290191629,
+        "onset_to_peak_s": 0.05,
+        "release_t": 8.850000131875277,
+        "release_speed": 7.934716343458592,
+        "minimum_after_release_speed": 7.637392680714374,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.2973236627442182
+      },
+      {
+        "start_t": 9.300000138580799,
+        "duration_s": 0.1,
+        "onset_speed": 8.06227289979782,
+        "peak_after_brake_speed": 8.07776687383554,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.400000140070915,
+        "release_speed": 7.979151423397806,
+        "minimum_after_release_speed": 7.64698472420312,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3321666991946852
+      },
+      {
+        "start_t": 9.850000146776438,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.04594897262134,
+        "peak_after_brake_speed": 8.055328894390843,
+        "onset_to_peak_s": 0.05,
+        "release_t": 10.000000149011612,
+        "release_speed": 7.9019272837608945,
+        "minimum_after_release_speed": 7.626618432319982,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.2753088514409123
+      },
+      {
+        "start_t": 10.450000155717134,
+        "duration_s": 0.1,
+        "onset_speed": 8.079117385991658,
+        "peak_after_brake_speed": 8.079117385991658,
+        "onset_to_peak_s": 0.0,
+        "release_t": 10.55000015720725,
+        "release_speed": 7.981477126382475,
+        "minimum_after_release_speed": 7.620016406001805,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.3614607203806699
+      },
+      {
+        "start_t": 11.000000163912773,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.011648977128322,
+        "peak_after_brake_speed": 8.095188088072145,
+        "onset_to_peak_s": 0.05,
+        "release_t": 11.150000166147947,
+        "release_speed": 7.977024817051163,
+        "minimum_after_release_speed": 7.621199635467829,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.35582518158333354
+      },
+      {
+        "start_t": 11.60000017285347,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.021864216738589,
+        "peak_after_brake_speed": 8.09732563040542,
+        "onset_to_peak_s": 0.05,
+        "release_t": 11.750000175088644,
+        "release_speed": 7.96938637346075,
+        "minimum_after_release_speed": 7.632487190446767,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.33689918301398336
+      },
+      {
+        "start_t": 12.200000181794167,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.045407428769431,
+        "peak_after_brake_speed": 8.108256056841457,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.35000018402934,
+        "release_speed": 7.956643906444415,
+        "minimum_after_release_speed": 7.6289111688012925,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3277327376431227
+      },
+      {
+        "start_t": 12.800000190734863,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.059982667329963,
+        "peak_after_brake_speed": 8.112420431583605,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.950000192970037,
+        "release_speed": 7.947366491821164,
+        "minimum_after_release_speed": 7.637694121078782,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.30967237074238163
+      },
+      {
+        "start_t": 13.40000019967556,
+        "duration_s": 0.1,
+        "onset_speed": 8.060647824293945,
+        "peak_after_brake_speed": 8.09150877573883,
+        "onset_to_peak_s": 0.05,
+        "release_t": 13.500000201165676,
+        "release_speed": 8.002687778025345,
+        "minimum_after_release_speed": 7.62913416341644,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.37355361460890535
+      },
+      {
+        "start_t": 14.000000208616257,
+        "duration_s": 0.1,
+        "onset_speed": 8.078965004284582,
+        "peak_after_brake_speed": 8.079292018792678,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.100000210106373,
+        "release_speed": 7.970707227014058,
+        "minimum_after_release_speed": 7.641591754895483,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.32911547211857517
+      },
+      {
+        "start_t": 14.550000216811895,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.051521935205715,
+        "peak_after_brake_speed": 8.054534644832332,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.70000021904707,
+        "release_speed": 7.896681897535959,
+        "minimum_after_release_speed": 7.621884797904952,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.27479709963100696
+      },
+      {
+        "start_t": 15.150000225752592,
+        "duration_s": 0.1,
+        "onset_speed": 8.07893888726058,
+        "peak_after_brake_speed": 8.07893888726058,
+        "onset_to_peak_s": 0.0,
+        "release_t": 15.250000227242708,
+        "release_speed": 7.989725704019117,
+        "minimum_after_release_speed": 7.607790606938886,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.38193509708023043
+      },
+      {
+        "start_t": 15.750000234693289,
+        "duration_s": 0.1,
+        "onset_speed": 8.086216371935006,
+        "peak_after_brake_speed": 8.086216371935006,
+        "onset_to_peak_s": 0.0,
+        "release_t": 15.850000236183405,
+        "release_speed": 7.991554771608135,
+        "minimum_after_release_speed": 7.598062867637517,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.3934919039706184
+      },
+      {
+        "start_t": 16.350000243633986,
+        "duration_s": 0.1,
+        "onset_speed": 8.082390909159097,
+        "peak_after_brake_speed": 8.082390909159097,
+        "onset_to_peak_s": 0.0,
+        "release_t": 16.4500002451241,
+        "release_speed": 7.9979836901962456,
+        "minimum_after_release_speed": 7.596281502078919,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.4017021881173264
+      },
+      {
+        "start_t": 16.900000251829624,
+        "duration_s": 0.25,
+        "onset_speed": 7.961982358912885,
+        "peak_after_brake_speed": 8.014862767383699,
+        "onset_to_peak_s": 0.05,
+        "release_t": 17.150000255554914,
+        "release_speed": 7.458923493678409,
+        "minimum_after_release_speed": 6.8801189071173985,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.5788045865610103
+      }
+    ],
+    "pulse_duration": {
+      "n": 21,
+      "mean": 0.13333333333333336,
+      "rms": 0.13801311186847087,
+      "minimum": 0.1,
+      "maximum": 0.25,
+      "p05": 0.1,
+      "median": 0.15000000000000002,
+      "p95": 0.15000000000000002
+    },
+    "onset_to_peak": {
+      "n": 21,
+      "mean": 0.038095238095238106,
+      "rms": 0.043643578047198484,
+      "minimum": 0.0,
+      "maximum": 0.05,
+      "p05": 0.0,
+      "median": 0.05,
+      "p95": 0.05
+    },
+    "release_to_minimum": {
+      "n": 21,
+      "mean": 0.2119047619047619,
+      "rms": 0.21408720964441882,
+      "minimum": 0.15000000000000002,
+      "maximum": 0.25,
+      "p05": 0.15000000000000002,
+      "median": 0.2,
+      "p95": 0.25
+    },
+    "release_to_minimum_drop": {
+      "n": 21,
+      "mean": 0.34591757764528974,
+      "rms": 0.3515588327583103,
+      "minimum": 0.27479709963100696,
+      "maximum": 0.5788045865610103,
+      "p05": 0.2753088514409123,
+      "median": 0.3321666991946852,
+      "p95": 0.4017021881173264
+    },
+    "full_throttle_under_target_plateaus": [],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation_trace.json": "c044c27e1593429e1ba2115631fea22d46866ef863adc51eba34574e10f82015",
+      "/data/runs/b2d/controller/development-v2/1773/baseline/carla/control.jsonl": "2b71dd95a492e8df3c3437c2e119cc8c63b3829561577b748ac79b7f5b8e1512",
+      "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation.json": "fa519830aff1d8191050eea32690bea1255b718e9ef9c46c9f6111b900c0fd5b"
+    }
+  },
+  "v2_straight8_pursuit": {
+    "cruise_mps": 8.0,
+    "gate_speed_error": {
+      "n": 242,
+      "mean": -0.15787517290964478,
+      "rms": 0.2230767251716312,
+      "minimum": -0.43641845573529636,
+      "maximum": 0.11213873279434061,
+      "p05": -0.3626978284318455,
+      "median": -0.18026095553287913,
+      "p95": 0.08618094272580848
+    },
+    "stable_target_speed_error": {
+      "n": 233,
+      "mean": -0.1579900633195418,
+      "rms": 0.22305662823210112,
+      "minimum": -0.37078522145859694,
+      "maximum": 0.11213873279434061,
+      "p05": -0.36250777725395905,
+      "median": -0.1808222775881374,
+      "p95": 0.08704898165932877
+    },
+    "target": {
+      "n": 242,
+      "mean": 7.995323986778542,
+      "rms": 7.995389340237194,
+      "minimum": 7.661507337076776,
+      "maximum": 7.999999931694417,
+      "p05": 7.999852168157045,
+      "median": 7.9999895912140335,
+      "p95": 7.999999689876187
+    },
+    "pitch_deg": {
+      "n": 242,
+      "mean": -0.026844278922976063,
+      "rms": 0.07016643445641478,
+      "minimum": -0.15384317934513092,
+      "maximum": 0.11103154718875885,
+      "p05": -0.12294203415513039,
+      "median": -0.030425076372921467,
+      "p95": 0.07734027728438378
+    },
+    "max_abs_pitch_gravity_component_mps2": 0.026340505160156177,
+    "measured_acceleration_mps2": {
+      "n": 242,
+      "mean": -0.016047531550335767,
+      "rms": 1.7620150128643044,
+      "minimum": -3.8550615498320084,
+      "maximum": 2.808137677102458,
+      "p05": -2.5703430390581588,
+      "median": 0.09345517666825565,
+      "p95": 2.7480610879875513
+    },
+    "brake_fraction": 0.24380165289256198,
+    "full_brake_fraction": 0.0,
+    "full_throttle_fraction": 0.4462809917355372,
+    "cruise_reasons": [
+      "tracking"
+    ],
+    "gear_recorded": false,
+    "brake_pulses": [
+      {
+        "start_t": 5.250000078231096,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.038897145165437,
+        "peak_after_brake_speed": 8.103862829047406,
+        "onset_to_peak_s": 0.05,
+        "release_t": 5.4000000804662704,
+        "release_speed": 7.957892947199305,
+        "minimum_after_release_speed": 7.636073745477759,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.32181920172154577
+      },
+      {
+        "start_t": 5.850000087171793,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.057421260584608,
+        "peak_after_brake_speed": 8.103508814511697,
+        "onset_to_peak_s": 0.05,
+        "release_t": 6.000000089406967,
+        "release_speed": 7.935112208623483,
+        "minimum_after_release_speed": 7.633944135768236,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.3011680728552468
+      },
+      {
+        "start_t": 6.45000009611249,
+        "duration_s": 0.1,
+        "onset_speed": 8.067396335048548,
+        "peak_after_brake_speed": 8.086258849000076,
+        "onset_to_peak_s": 0.05,
+        "release_t": 6.550000097602606,
+        "release_speed": 7.98639161204575,
+        "minimum_after_release_speed": 7.637252224787479,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.34913938725827176
+      },
+      {
+        "start_t": 7.000000104308128,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.042740766989226,
+        "peak_after_brake_speed": 8.075969032304947,
+        "onset_to_peak_s": 0.05,
+        "release_t": 7.1500001065433025,
+        "release_speed": 7.931941668282368,
+        "minimum_after_release_speed": 7.6571231725667195,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.27481849571564876
+      },
+      {
+        "start_t": 7.550000112503767,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.011296776020078,
+        "peak_after_brake_speed": 8.088234180648207,
+        "onset_to_peak_s": 0.05,
+        "release_t": 7.700000114738941,
+        "release_speed": 7.964228872041166,
+        "minimum_after_release_speed": 7.637284894188347,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.32694397785281915
+      },
+      {
+        "start_t": 8.150000121444464,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.055758540013493,
+        "peak_after_brake_speed": 8.109021060904713,
+        "onset_to_peak_s": 0.05,
+        "release_t": 8.300000123679638,
+        "release_speed": 7.945033339262573,
+        "minimum_after_release_speed": 7.639093714055088,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.3059396252074853
+      },
+      {
+        "start_t": 8.75000013038516,
+        "duration_s": 0.1,
+        "onset_speed": 8.062366572101485,
+        "peak_after_brake_speed": 8.090123201051744,
+        "onset_to_peak_s": 0.05,
+        "release_t": 8.850000131875277,
+        "release_speed": 7.99566246854891,
+        "minimum_after_release_speed": 7.6344625261191235,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3611999424297867
+      },
+      {
+        "start_t": 9.300000138580799,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.028211546516395,
+        "peak_after_brake_speed": 8.080287057478158,
+        "onset_to_peak_s": 0.05,
+        "release_t": 9.450000140815973,
+        "release_speed": 7.9522681193673685,
+        "minimum_after_release_speed": 7.653194923917806,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.29907319544956223
+      },
+      {
+        "start_t": 9.900000147521496,
+        "duration_s": 0.1,
+        "onset_speed": 8.06956744326994,
+        "peak_after_brake_speed": 8.06956744326994,
+        "onset_to_peak_s": 0.0,
+        "release_t": 10.000000149011612,
+        "release_speed": 7.979078720177596,
+        "minimum_after_release_speed": 7.635351784168891,
+        "release_to_minimum_s": 0.25,
+        "release_to_minimum_drop_mps": 0.3437269360087054
+      },
+      {
+        "start_t": 10.450000155717134,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.038444906813123,
+        "peak_after_brake_speed": 8.102929510019447,
+        "onset_to_peak_s": 0.05,
+        "release_t": 10.600000157952309,
+        "release_speed": 7.956903390141818,
+        "minimum_after_release_speed": 7.637830885685875,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.31907250445594304
+      },
+      {
+        "start_t": 11.050000164657831,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.057572676700962,
+        "peak_after_brake_speed": 8.100522983528295,
+        "onset_to_peak_s": 0.05,
+        "release_t": 11.200000166893005,
+        "release_speed": 7.930778623048906,
+        "minimum_after_release_speed": 7.632794380185707,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.29798424286319847
+      },
+      {
+        "start_t": 11.650000173598528,
+        "duration_s": 0.1,
+        "onset_speed": 8.070448782340646,
+        "peak_after_brake_speed": 8.084700723514718,
+        "onset_to_peak_s": 0.05,
+        "release_t": 11.750000175088644,
+        "release_speed": 7.982195419288098,
+        "minimum_after_release_speed": 7.6398522264169735,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3423431928711249
+      },
+      {
+        "start_t": 12.200000181794167,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.043862831625146,
+        "peak_after_brake_speed": 8.067874578931193,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.35000018402934,
+        "release_speed": 7.919419593534723,
+        "minimum_after_release_speed": 7.658393449206821,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.26102614432790183
+      },
+      {
+        "start_t": 12.750000189989805,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.025920656326146,
+        "peak_after_brake_speed": 8.093153082537725,
+        "onset_to_peak_s": 0.05,
+        "release_t": 12.90000019222498,
+        "release_speed": 7.956831749872997,
+        "minimum_after_release_speed": 7.640202180369473,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.31662956950352417
+      },
+      {
+        "start_t": 13.350000198930502,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.057266148952927,
+        "peak_after_brake_speed": 8.097388028806474,
+        "onset_to_peak_s": 0.05,
+        "release_t": 13.500000201165676,
+        "release_speed": 7.927216084958881,
+        "minimum_after_release_speed": 7.631349398885718,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.2958666860731629
+      },
+      {
+        "start_t": 13.950000207871199,
+        "duration_s": 0.1,
+        "onset_speed": 8.073020055788874,
+        "peak_after_brake_speed": 8.084046781666832,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.050000209361315,
+        "release_speed": 7.9794258571685015,
+        "minimum_after_release_speed": 7.640173654857415,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3392522023110862
+      },
+      {
+        "start_t": 14.500000216066837,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.045222879884506,
+        "peak_after_brake_speed": 8.063495388299566,
+        "onset_to_peak_s": 0.05,
+        "release_t": 14.650000218302011,
+        "release_speed": 7.912679293543224,
+        "minimum_after_release_speed": 7.647865396210165,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.2648138973330596
+      },
+      {
+        "start_t": 15.050000224262476,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.014973045802327,
+        "peak_after_brake_speed": 8.090689873402093,
+        "onset_to_peak_s": 0.05,
+        "release_t": 15.20000022649765,
+        "release_speed": 7.965346701554707,
+        "minimum_after_release_speed": 7.6361839842046635,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.32916271735004354
+      },
+      {
+        "start_t": 15.650000233203173,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.056534152968583,
+        "peak_after_brake_speed": 8.11213873279434,
+        "onset_to_peak_s": 0.05,
+        "release_t": 15.800000235438347,
+        "release_speed": 7.949991839988679,
+        "minimum_after_release_speed": 7.637630441784504,
+        "release_to_minimum_s": 0.2,
+        "release_to_minimum_drop_mps": 0.3123613982041755
+      },
+      {
+        "start_t": 16.25000024214387,
+        "duration_s": 0.15000000000000002,
+        "onset_speed": 8.060106077285216,
+        "peak_after_brake_speed": 8.096494280294854,
+        "onset_to_peak_s": 0.05,
+        "release_t": 16.400000244379044,
+        "release_speed": 7.921643840033323,
+        "minimum_after_release_speed": 7.629214778541403,
+        "release_to_minimum_s": 0.15000000000000002,
+        "release_to_minimum_drop_mps": 0.2924290614919203
+      },
+      {
+        "start_t": 16.800000250339508,
+        "duration_s": 0.2,
+        "onset_speed": 7.998523704623535,
+        "peak_after_brake_speed": 8.054147840666115,
+        "onset_to_peak_s": 0.05,
+        "release_t": 17.00000025331974,
+        "release_speed": 7.756334621756304,
+        "minimum_after_release_speed": 7.145076910659557,
+        "release_to_minimum_s": 0.30000000000000004,
+        "release_to_minimum_drop_mps": 0.611257711096747
+      }
+    ],
+    "pulse_duration": {
+      "n": 21,
+      "mean": 0.14047619047619048,
+      "rms": 0.1426784596817013,
+      "minimum": 0.1,
+      "maximum": 0.2,
+      "p05": 0.1,
+      "median": 0.15000000000000002,
+      "p95": 0.15000000000000002
+    },
+    "onset_to_peak": {
+      "n": 21,
+      "mean": 0.04761904761904763,
+      "rms": 0.048795003647426664,
+      "minimum": 0.0,
+      "maximum": 0.05,
+      "p05": 0.05,
+      "median": 0.05,
+      "p95": 0.05
+    },
+    "release_to_minimum": {
+      "n": 21,
+      "mean": 0.19523809523809527,
+      "rms": 0.19820624179302299,
+      "minimum": 0.15000000000000002,
+      "maximum": 0.30000000000000004,
+      "p05": 0.15000000000000002,
+      "median": 0.2,
+      "p95": 0.25
+    },
+    "release_to_minimum_drop": {
+      "n": 21,
+      "mean": 0.32695372201814094,
+      "rms": 0.3341126717660822,
+      "minimum": 0.26102614432790183,
+      "maximum": 0.611257711096747,
+      "p05": 0.2648138973330596,
+      "median": 0.31662956950352417,
+      "p95": 0.3611999424297867
+    },
+    "full_throttle_under_target_plateaus": [],
+    "source_sha256": {
+      "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation_trace.json": "465c51d916e7a0d48c87bdb2245b2105eae458851ea70456332e0534f2d0e1b8",
+      "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/control.jsonl": "6241777656af987455a6d4dc0245a6fbe55df183ea7e3c2a0d74db44b7190333",
+      "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation.json": "1dee23554a5c792e6d70389b8c0767e26bb56e43d68ea4da1837c75b3a41ca67"
+    }
+  }
+}

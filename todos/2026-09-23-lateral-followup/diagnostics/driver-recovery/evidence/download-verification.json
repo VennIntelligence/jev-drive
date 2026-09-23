@@ -1,0 +1,8 @@
+{
+  "t": 1790129887.3534296,
+  "file": "/data/tools/nvidia-userspace-580.159.03/NVIDIA-Linux-x86_64-580.159.03-complete.run",
+  "bytes": 398016015,
+  "sha256": "32c85d99b0f640c9501f61b39ddad208fd0288d015c4fbc5fd0435c07783fa77",
+  "matches_official": true,
+  "source": "https://download.nvidia.com/XFree86/Linux-x86_64/580.159.03/NVIDIA-Linux-x86_64-580.159.03.run.sha256sum"
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/controller-update-replay-v1",
+  "captured_at": 1790131817.0456727,
+  "files": [
+    {
+      "path": "full-replay.jsonl",
+      "bytes": 2626379,
+      "sha256": "861845ee2ebdf18653ae6ef521482a8772e028810adcce7fdb01c42b285c3aa0"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 7751,
+      "sha256": "e5322b296d52360cbe352241b5d56cef124f40cfbde43763165fdfb1be6bb93f"
+    },
+    {
+      "path": "per-update-counterfactual.csv",
+      "bytes": 322794,
+      "sha256": "e02c63acea73aaa4573527430df09828a03c19408d897e531a23bf64c70ab402"
+    },
+    {
+      "path": "replay-verification.json",
+      "bytes": 2576,
+      "sha256": "5acbdb79f2c80b46c758f85aa25917482cbb26aa435be3505e27dba929a24af5"
+    },
+    {
+      "path": "source/b2d_controller.py",
+      "bytes": 20234,
+      "sha256": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b"
+    },
+    {
+      "path": "source/replay_controller_updates.py",
+      "bytes": 12704,
+      "sha256": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2"
+    },
+    {
+      "path": "top5-update-effects.csv",
+      "bytes": 21525,
+      "sha256": "0cd757ba4f10380744f951df451af3b7bb14d8c5446afb533bd80a2ca235a4c1"
+    },
+    {
+      "path": "window-summary.csv",
+      "bytes": 4377,
+      "sha256": "00661d45c178df8d3d816a9a5913a645424c6b3f0a50f152e1eb96550fad865b"
+    }
+  ],
+  "file_count": 8,
+  "total_bytes": 3018340
+}

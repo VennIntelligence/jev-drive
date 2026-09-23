@@ -1,0 +1,7 @@
+{
+  "all_4000_frames": true,
+  "fixed_bins_sum_4000": true,
+  "prefix_and_after_sum_4000": true,
+  "all_low_speed_spans_ge5": true,
+  "all_available_arbitration_matches": true
+}

@@ -1,0 +1,25 @@
+{
+  "local_document_links_checked": 200,
+  "missing_links": [],
+  "authored_documents_only": "Symlink aliases resolve to separately checked canonical documents; frozen source snapshots excluded from navigation audit",
+  "raw_inventory_files": 1387,
+  "raw_inventory_directories": 28,
+  "all_raw_hashes_verified": true,
+  "runtime_and_input_snapshots_verified": [
+    "aim-g2-v2",
+    "pose-g2-v1"
+  ],
+  "current_runtime_matches_latest_snapshot": true,
+  "controller_tests_passed": 125,
+  "analysis_tests_passed": 15,
+  "whitespace_check": {
+    "authored_and_frozen_source_passed": true,
+    "csv_crlf_preserved": true,
+    "verbatim_system_logs_excluded": [
+      "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/carla-process-maps.txt",
+      "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/kernel-driver.txt",
+      "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/log.txt"
+    ],
+    "reason": "Captured kernel/proc/download output retained byte-for-byte; no source whitespace failures"
+  }
+}

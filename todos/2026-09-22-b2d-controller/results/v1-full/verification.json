@@ -1,0 +1,22 @@
+{
+  "official_rows": 78,
+  "attempt_rows": 81,
+  "groups": 9,
+  "all_official_groups_finalized": true,
+  "official_completion100_rows": 69,
+  "infrastructure_retry_attempts": 3,
+  "copies": {
+    "slope-summary.json": {
+      "source": "/data/runs/b2d/controller/confirmation/slope/summary.json",
+      "sha256": "723549ceb86d3d21df1fc4b1a77b104561b3d6e7eb3ac7915acfc24fdfb8ca06",
+      "exact_copy": true
+    },
+    "s-curve-summary.json": {
+      "source": "/data/runs/b2d/controller/development-s-v1/summary.json",
+      "sha256": "850050c6ee68444f73078ec0c43249853e2420c1132df6bd6a0570e924c145be",
+      "exact_copy": true
+    }
+  },
+  "plot_warning_expected": "pursuit holdout2084 attempt1 failed before control telemetry; raw missingness retained",
+  "scope": "v1 frozen baseline; no qualified new default; v2 separate development"
+}

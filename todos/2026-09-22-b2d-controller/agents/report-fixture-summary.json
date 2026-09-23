@@ -1,0 +1,202 @@
+{
+  "evidence_type": "synthetic fixture; not CARLA measurements",
+  "summary": {
+    "pursuit/seed=0": {
+      "routes": 3,
+      "attempts": 3,
+      "retries": 1,
+      "harness_finished": 2,
+      "driving_completed": 1,
+      "missing_official_results": 1,
+      "completion_mean_observed": 65.5,
+      "completion_observed_routes": 2,
+      "all_attempt_wall_s": 30,
+      "retry_wall_s": 10,
+      "capped": 0,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.2,
+            "route_mean_rms": 0.2
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.2,
+            "route_mean_rms": 0.2
+          }
+        },
+        "route_cross_track_m": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 50.0,
+            "route_mean_rms": 50.0
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 50.0,
+            "route_mean_rms": 50.0
+          }
+        },
+        "cross_track_m": {
+          "tracking": {
+            "samples": 0,
+            "routes_with_samples": 0,
+            "tick_weighted_rms": null,
+            "route_mean_rms": null
+          },
+          "before_collision": {
+            "samples": 0,
+            "routes_with_samples": 0,
+            "tick_weighted_rms": null,
+            "route_mean_rms": null
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "samples": 0,
+            "routes_with_samples": 0,
+            "tick_weighted_rms": null,
+            "route_mean_rms": null
+          },
+          "before_collision": {
+            "samples": 0,
+            "routes_with_samples": 0,
+            "tick_weighted_rms": null,
+            "route_mean_rms": null
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.3,
+            "route_mean_rms": 0.3
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.3,
+            "route_mean_rms": 0.3
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.1,
+            "route_mean_rms": 0.1
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.1,
+            "route_mean_rms": 0.1
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.01,
+            "route_mean_rms": 0.01
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.01,
+            "route_mean_rms": 0.01
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.05,
+            "route_mean_rms": 0.05
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.05,
+            "route_mean_rms": 0.05
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.2,
+            "route_mean_rms": 0.2
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 0.2,
+            "route_mean_rms": 0.2
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 1.0,
+            "route_mean_rms": 1.0
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 1.0,
+            "route_mean_rms": 1.0
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 2.0,
+            "route_mean_rms": 2.0
+          },
+          "before_collision": {
+            "samples": 8,
+            "routes_with_samples": 2,
+            "tick_weighted_rms": 2.0,
+            "route_mean_rms": 2.0
+          }
+        }
+      },
+      "tick_distribution_completed": {
+        "n": 1,
+        "min": 4,
+        "max": 4,
+        "sum_squared": 16,
+        "rms": 4.0,
+        "median": 4.0,
+        "p90": 4.0,
+        "p95": 4.0,
+        "p99": 4.0,
+        "abs_p95": 4.0,
+        "abs_max": 4
+      },
+      "tick_distribution_incomplete": {
+        "n": 1,
+        "min": 4,
+        "max": 4,
+        "sum_squared": 16,
+        "rms": 4.0,
+        "median": 4.0,
+        "p90": 4.0,
+        "p95": 4.0,
+        "p99": 4.0,
+        "abs_p95": 4.0,
+        "abs_max": 4
+      },
+      "selection_policy": "first harness-finished attempt, else latest; all attempts retained"
+    }
+  },
+  "csv_rows": 4
+}

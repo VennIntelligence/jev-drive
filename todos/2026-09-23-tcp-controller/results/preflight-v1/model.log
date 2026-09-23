@@ -1,0 +1,38 @@
+/data/envs/b2d-tcp/lib/python3.8/site-packages/torch/nn/functional.py:1347: UserWarning: dropout2d: Received a 2-D input to dropout2d, which is deprecated and will result in an error in a future release. To retain the behavior and silence this warning, please use dropout instead. Note that dropout2d exists to provide channel-wise dropout on inputs with 2 spatial dimensions, a channel dimension, and an optional batch dimension (i.e. 3D or 4D inputs).
+  warnings.warn(warn_msg)
+{
+  "timestamp": 1790097626.7307458,
+  "checkpoint_sha256": "e6573ff1f8ea910b9a53eddfb68f69cac469bf5bfa253a516578f6126110b4fe",
+  "missing_keys": [],
+  "unexpected_keys": [],
+  "parameters": 26593444,
+  "torch": "2.2.2+cu121",
+  "device": "NVIDIA GeForce RTX 3090",
+  "prediction": [
+    [
+      [
+        -0.4642021656036377,
+        -0.01377810537815094
+      ],
+      [
+        0.30578505992889404,
+        -0.045828238129615784
+      ],
+      [
+        2.4127702713012695,
+        -0.222482368350029
+      ],
+      [
+        5.533096790313721,
+        -0.5577027201652527
+      ]
+    ]
+  ],
+  "native_control": [
+    -2.9740678236276805e-08,
+    0.75,
+    0.0
+  ],
+  "synthetic_input": true,
+  "not_driving_validation": true
+}

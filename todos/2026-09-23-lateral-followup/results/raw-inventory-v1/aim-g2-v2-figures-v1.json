@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1",
+  "captured_at": 1790131817.0383403,
+  "files": [
+    {
+      "path": "analysis-source.py",
+      "bytes": 30606,
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "plot-source-manifest.json",
+      "bytes": 9409,
+      "sha256": "e9840ba79a9a15bddd04f792c84b98588d92b5955a82469dd5c7bfc5d2ecd834"
+    },
+    {
+      "path": "plot-source.py",
+      "bytes": 10584,
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "route-17563-full.pdf",
+      "bytes": 32633,
+      "sha256": "5e21226e5d176d5f7a8e51afcabc31c384a767b1c8b42d3c7c37cb1bd1f28d56"
+    },
+    {
+      "path": "route-17563-full.png",
+      "bytes": 250121,
+      "sha256": "c69cb6e77a40463978b508ae35acfe4201eeeb47817aed3deace7eff278fb47e"
+    },
+    {
+      "path": "route-17563-samples.csv",
+      "bytes": 681600,
+      "sha256": "ae221da720b766dea4c6a6eaa4762df0b1b8741a2bc178aa140df9ed8455691b"
+    },
+    {
+      "path": "route-17563-window-1.pdf",
+      "bytes": 34720,
+      "sha256": "bda276abf224465423889f04c270ec51a6cccfd7faaba503c1da54c347badd75"
+    },
+    {
+      "path": "route-17563-window-1.png",
+      "bytes": 719037,
+      "sha256": "f58690d81f49993ad97730e8b403637d7b7f9917f727ed087310ee87cb06b7bf"
+    },
+    {
+      "path": "route-17563-window-2.pdf",
+      "bytes": 34928,
+      "sha256": "cf34b2c34eabc1cd0eed0549654c612dd01dcb97259cee56250cc27010d25a9b"
+    },
+    {
+      "path": "route-17563-window-2.png",
+      "bytes": 735640,
+      "sha256": "9a65995c5f188205c9037ddb54745e5f044f40b15e5b727444f5d33783694335"
+    },
+    {
+      "path": "route-24240-full.pdf",
+      "bytes": 29232,
+      "sha256": "c750133cc8ce67f57cf888cf0996ab83b331d1492149913ea27f64db526bb002"
+    },
+    {
+      "path": "route-24240-full.png",
+      "bytes": 234736,
+      "sha256": "6746d3633b2cdd4dcba03c3fa33d8447c56a29a669c3ca88e4b5dc329cf98480"
+    },
+    {
+      "path": "route-24240-samples.csv",
+      "bytes": 524930,
+      "sha256": "943b31eec016cfc2dd9de42df131a138edc295e19c542d74882bc40d6d245fc0"
+    },
+    {
+      "path": "route-24240-window-1.pdf",
+      "bytes": 43521,
+      "sha256": "bca3a6cb6e561d8791a222aeac6b95feb3559343b7b54683983ffb4a17bd19d7"
+    },
+    {
+      "path": "route-24240-window-1.png",
+      "bytes": 796478,
+      "sha256": "0a3a1b222d8d72f8678ffc2c2084ae5a4bb2856d11cc98608d3e6288a83bca7c"
+    },
+    {
+      "path": "route-26966-full.pdf",
+      "bytes": 25355,
+      "sha256": "0e8d751a11c29e719e827fa6e472fdd10756cf657f857541601641e8923dd24f"
+    },
+    {
+      "path": "route-26966-full.png",
+      "bytes": 214699,
+      "sha256": "bce2ad7defc90b5fa05f4ce899441ecdeb285f7569313f2d5f31a3e705b8c41c"
+    },
+    {
+      "path": "route-26966-samples.csv",
+      "bytes": 464442,
+      "sha256": "5c0c30bc153d920152724145ef52624a14160127c1b5dd2036584d0084060c72"
+    },
+    {
+      "path": "route-26966-window-1.pdf",
+      "bytes": 35024,
+      "sha256": "bec7b2478006d37ac0ed43f6ce836240c1c0c1728e254f16bb14eed2a3605594"
+    },
+    {
+      "path": "route-26966-window-1.png",
+      "bytes": 724998,
+      "sha256": "18c99626d551de376eb4dbe6b52b1c48b02512893a0c6e02b2b867db6ba6b327"
+    }
+  ],
+  "file_count": 20,
+  "total_bytes": 5632693
+}

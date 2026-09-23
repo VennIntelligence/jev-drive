@@ -1,0 +1,96 @@
+{
+  "capture_rows": 182,
+  "recorded_control_rows": 181,
+  "first_frame": 321,
+  "last_frame": 502,
+  "first_sim_time": 0.05000000074505806,
+  "last_sim_time": 9.100000135600567,
+  "first_to_last_span_s": 9.050000134855509,
+  "observed_compass_age_at_final_s": 0.05000000074505806,
+  "actual_dropout_duration": "unknown: capture ends on first invalid sample; no recovery recorded",
+  "bad_rows": [
+    {
+      "row": 181,
+      "frame": 502,
+      "sim_time": 9.100000135600567,
+      "fields": [
+        {
+          "field": "sensors.IMU.data[6]",
+          "encoded_value": "nan"
+        }
+      ]
+    }
+  ],
+  "comparison": {
+    "frozen_a1b50ed": {
+      "rows": 182,
+      "compared_pose_controls": 181,
+      "compared_trajectories": 46,
+      "max_pose_abs_error": 0.0,
+      "max_control_abs_error": 0.0,
+      "max_trajectory_abs_error_m": 0.0,
+      "final": {
+        "frame": 502,
+        "sim_time": 9.100000135600567,
+        "recorded_control_available": false,
+        "status": "exception",
+        "error": "Nonfinite motion sensor",
+        "pose_diagnostics": null
+      }
+    },
+    "candidate_compass_prediction": {
+      "rows": 182,
+      "compared_pose_controls": 181,
+      "compared_trajectories": 46,
+      "max_pose_abs_error": 0.0,
+      "max_control_abs_error": 0.0,
+      "max_trajectory_abs_error_m": 0.0,
+      "final": {
+        "frame": 502,
+        "sim_time": 9.100000135600567,
+        "recorded_control_available": false,
+        "status": "finite_output",
+        "pose_xy": [
+          2385.5188681267064,
+          2334.529240067929
+        ],
+        "pose_yaw": 1.571098431778414,
+        "throttle": 0.18336438047442183,
+        "steer": 0.005286244687455283,
+        "brake": 0.0,
+        "controller_diagnostics": {
+          "trajectory_time": 9.050000134855509,
+          "trajectory_age_s": 0.05000000074505806,
+          "target_speed_mps": 6.724651208669984,
+          "reference_speed_mps": 6.824651145157562,
+          "aim_xy": [
+            3.5601760778296323,
+            -0.012676544070233341
+          ],
+          "cross_track_m": 0.00031783283276939266,
+          "heading_error_rad": -0.0005627567517645265,
+          "reason": "tracking",
+          "update_rejection": null,
+          "longitudinal_mode": "pi",
+          "longitudinal_integral_effort": 0.3812460986084343,
+          "longitudinal_effort": 0.18336438047442183,
+          "longitudinal_unsaturated_effort": 0.18336438047442183,
+          "longitudinal_integration_limited": false,
+          "longitudinal_kp": 0.5,
+          "longitudinal_ki": 0.25,
+          "raw_steer": 0.005286244687455283,
+          "steer_limited": false,
+          "lookahead_m": 3.5602073224690045,
+          "speed_window": "near"
+        },
+        "pose_diagnostics": {
+          "reason": "compass_dropout_prediction",
+          "degraded": true,
+          "compass_valid": false,
+          "compass_age_s": 0.05000000074505806
+        }
+      }
+    }
+  },
+  "scope": "Open-loop same-input replay; only adapter differs, frozen controller retained; no future plant/official completion claim"
+}

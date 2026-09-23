@@ -1,0 +1,4165 @@
+{
+  "schema_version": 1,
+  "comparison_code_sha256": "1ca93a76f976e4f930d1d05a46e121a0d0c9022ca92f778f8c19893a4e8bb098",
+  "report_code_sha256": "500eb9f5118bff9a2c4bd11ffee05c77939e71c5b8f0c0bb0f0f4c56f112ed7a",
+  "groups": [
+    {
+      "group": "dev10/carla-seed0",
+      "campaign": "/data/runs/b2d/controller/dev10",
+      "preset": "carla",
+      "seed": 0,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/dev10/carla-seed0/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "701f7cdcf4cf684cc9c606e8c3b6dd393107073f72bfbdd0e72db4af087204c1",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/dev10",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "0",
+          "server_index": 74,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8
+        },
+        "git_commit": "18571c0b71d7218891641f8c6bbc12d4925e8b4c",
+        "started": 1790084152.2501712,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 10,
+        "retries": 0,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.726,
+        "completion_mean_all_routes": 94.726,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 47.26
+          }
+        ],
+        "all_attempt_wall_s": 339.1,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11103,
+        "selected_ticks": {
+          "n": 10,
+          "min": 253,
+          "max": 4000,
+          "sum_squared": 32400271,
+          "rms": 1800.007527762037,
+          "median": 405.0,
+          "p90": 3881.2,
+          "p95": 3940.6,
+          "p99": 3988.12,
+          "abs_p95": 3940.6,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 253,
+          "max": 3868,
+          "sum_squared": 16400271,
+          "rms": 1349.9082684883938,
+          "median": 395.0,
+          "p90": 1329.6000000000006,
+          "p95": 2598.799999999999,
+          "p99": 3614.16,
+          "abs_p95": 2598.799999999999,
+          "abs_max": 3868
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 7,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11103,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.2711415449857949,
+              "tick_weighted_rms": 0.4066576432783106,
+              "route_mean_p90": 0.17171172238249194,
+              "route_mean_abs_p95": 0.6346541677365042
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.43504618825294833,
+              "tick_weighted_rms": 0.39206608400161896,
+              "route_mean_p90": -0.1569141046037662,
+              "route_mean_abs_p95": 0.5921865684802883
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10220,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1162516609546004,
+              "tick_weighted_rms": 0.15931747652836362,
+              "route_mean_p90": 0.09798093080781511,
+              "route_mean_abs_p95": 0.2559029926444798
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.15200663062904934,
+              "tick_weighted_rms": 0.13410153144535508,
+              "route_mean_p90": 0.12083928804147934,
+              "route_mean_abs_p95": 0.261809637029895
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10220,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.0566430686402075,
+              "tick_weighted_rms": 7.489643248606192,
+              "route_mean_p90": -1.5945998409532165,
+              "route_mean_abs_p95": 9.977163349128551
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.220485653910901,
+              "tick_weighted_rms": 4.318407456580423,
+              "route_mean_p90": -1.0770617230767243,
+              "route_mean_abs_p95": 11.860551939793979
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10220,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.46914952342805,
+              "tick_weighted_rms": 7.796971462088062,
+              "route_mean_p90": -1.6399280330083967,
+              "route_mean_abs_p95": 11.449176774098323
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.975196314970888,
+              "tick_weighted_rms": 4.9188059342944435,
+              "route_mean_p90": -1.4646974895540203,
+              "route_mean_abs_p95": 13.710371248711263
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11103,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.13712224487620617,
+              "tick_weighted_rms": 0.12431074856721189,
+              "route_mean_p90": 0.21089805012199392,
+              "route_mean_abs_p95": 0.25687804535985126
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1743075437466623,
+              "tick_weighted_rms": 0.161838763980212,
+              "route_mean_p90": 0.2687524681028667,
+              "route_mean_abs_p95": 0.315711065463598
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11103,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.73123130744702,
+              "tick_weighted_rms": 0.7347507425409653,
+              "route_mean_p90": 1.0999571032575342,
+              "route_mean_abs_p95": 1.246809276766321
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7275643073702759,
+              "tick_weighted_rms": 0.727436807648846,
+              "route_mean_p90": 1.063959244306187,
+              "route_mean_abs_p95": 1.2099251304936187
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11103,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0015289619744462263,
+              "tick_weighted_rms": 0.0013592339276238723,
+              "route_mean_p90": 0.001045388904958111,
+              "route_mean_abs_p95": 0.0030967681522948752
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0016427850444358995,
+              "tick_weighted_rms": 0.0014934908234570873,
+              "route_mean_p90": 0.0009400240757189903,
+              "route_mean_abs_p95": 0.00331161664765948
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10220,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09339051060759376,
+              "tick_weighted_rms": 0.09340797173531658,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0930524448906112,
+              "tick_weighted_rms": 0.09328752916758731,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11103,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16307920582820185,
+              "tick_weighted_rms": 0.15793915179337606,
+              "route_mean_p90": 0.214750929553702,
+              "route_mean_abs_p95": 0.23733643971354462
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16428310742545277,
+              "tick_weighted_rms": 0.16217588003510536,
+              "route_mean_p90": 0.21086396984173916,
+              "route_mean_abs_p95": 0.23430729956089635
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "dev10/tcp-seed0",
+      "campaign": "/data/runs/b2d/controller/dev10",
+      "preset": "tcp",
+      "seed": 0,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/dev10/tcp-seed0/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "b918ddae373040d4c8a3680315e6d4fbd704a1425186b668d8d9a5b87306b0fc",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/dev10",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "0",
+          "server_index": 74,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8
+        },
+        "git_commit": "18571c0b71d7218891641f8c6bbc12d4925e8b4c",
+        "started": 1790084152.2501712,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 11,
+        "retries": 1,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.914,
+        "completion_mean_all_routes": 94.914,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 49.14
+          },
+          {
+            "route_id": "27494",
+            "attempt": 1,
+            "harness_status": "server_died_rc139",
+            "official_status": null,
+            "completion": null
+          }
+        ],
+        "all_attempt_wall_s": 367.90000000000003,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11189,
+        "selected_ticks": {
+          "n": 10,
+          "min": 254,
+          "max": 4000,
+          "sum_squared": 32567871,
+          "rms": 1804.6570588341708,
+          "median": 432.0,
+          "p90": 3892.9,
+          "p95": 3946.45,
+          "p99": 3989.29,
+          "abs_p95": 3946.45,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 254,
+          "max": 3881,
+          "sum_squared": 16567871,
+          "rms": 1356.7883237836163,
+          "median": 392.0,
+          "p90": 1331.4000000000005,
+          "p95": 2606.199999999999,
+          "p99": 3626.04,
+          "abs_p95": 2606.199999999999,
+          "abs_max": 3881
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 2,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 10,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11189,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.4947393090356241,
+              "tick_weighted_rms": 0.9921220579947719,
+              "route_mean_p90": 0.15875276596548452,
+              "route_mean_abs_p95": 0.9582419070838997
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.544888816528012,
+              "tick_weighted_rms": 0.49782754489579983,
+              "route_mean_p90": -0.11966284067602118,
+              "route_mean_abs_p95": 0.8559979514802631
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10210,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16158958578773586,
+              "tick_weighted_rms": 0.19979793902258502,
+              "route_mean_p90": 0.230014899914769,
+              "route_mean_abs_p95": 0.3099452135896382
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1723859212405718,
+              "tick_weighted_rms": 0.16345790765848262,
+              "route_mean_p90": 0.24658940159238324,
+              "route_mean_abs_p95": 0.293287380837264
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10210,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.33945232329392,
+              "tick_weighted_rms": 8.150307404084678,
+              "route_mean_p90": -1.5544051057844785,
+              "route_mean_abs_p95": 10.136125019454042
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.198963361308199,
+              "tick_weighted_rms": 4.36249167924362,
+              "route_mean_p90": -0.8954441877024099,
+              "route_mean_abs_p95": 11.922009331514644
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10210,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.80780206497531,
+              "tick_weighted_rms": 8.73568158569613,
+              "route_mean_p90": -1.6741012750836077,
+              "route_mean_abs_p95": 11.55955067027145
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.95005004621359,
+              "tick_weighted_rms": 4.971260890031158,
+              "route_mean_p90": -1.2357247595461576,
+              "route_mean_abs_p95": 13.753691842292454
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11189,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1433189232936573,
+              "tick_weighted_rms": 0.12953135996577153,
+              "route_mean_p90": 0.2208904587122146,
+              "route_mean_abs_p95": 0.2719755825753719
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.17775384669279823,
+              "tick_weighted_rms": 0.16649359650411613,
+              "route_mean_p90": 0.2801637785345906,
+              "route_mean_abs_p95": 0.3248839746162224
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11189,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7317419112297051,
+              "tick_weighted_rms": 0.7347101342904871,
+              "route_mean_p90": 1.101132070103326,
+              "route_mean_abs_p95": 1.2474540579512994
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7264254158491299,
+              "tick_weighted_rms": 0.7259465650059873,
+              "route_mean_p90": 1.0555449754754624,
+              "route_mean_abs_p95": 1.2055785023755623
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11189,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.001657333711614605,
+              "tick_weighted_rms": 0.0017876772442877908,
+              "route_mean_p90": 0.0017138440443559728,
+              "route_mean_abs_p95": 0.003165869680452327
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0014132409937467093,
+              "tick_weighted_rms": 0.0015857355412329658,
+              "route_mean_p90": 0.0012641120869738207,
+              "route_mean_abs_p95": 0.002821148057987524
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10210,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0934220810360302,
+              "tick_weighted_rms": 0.0934694231892897,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09305109095451804,
+              "tick_weighted_rms": 0.09325746526330869,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11189,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1790648370796397,
+              "tick_weighted_rms": 0.1747157160189747,
+              "route_mean_p90": 0.21755346984718926,
+              "route_mean_abs_p95": 0.24151821962732362
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1683246944630569,
+              "tick_weighted_rms": 0.16499648030828654,
+              "route_mean_p90": 0.21818775978317717,
+              "route_mean_abs_p95": 0.24434722485239035
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "dev10/pursuit-seed0",
+      "campaign": "/data/runs/b2d/controller/dev10",
+      "preset": "pursuit",
+      "seed": 0,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/dev10/pursuit-seed0/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "e9967038946d92539db7960a2ed37dbd50b5c87f34a9c38f81d7e9fcd74e2064",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/dev10",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "0",
+          "server_index": 74,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8
+        },
+        "git_commit": "18571c0b71d7218891641f8c6bbc12d4925e8b4c",
+        "started": 1790084152.2501712,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 10,
+        "retries": 0,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.726,
+        "completion_mean_all_routes": 94.726,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 47.26
+          }
+        ],
+        "all_attempt_wall_s": 341.99999999999994,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11105,
+        "selected_ticks": {
+          "n": 10,
+          "min": 256,
+          "max": 4000,
+          "sum_squared": 32423209,
+          "rms": 1800.6445790327418,
+          "median": 401.5,
+          "p90": 3883.9,
+          "p95": 3941.95,
+          "p99": 3988.39,
+          "abs_p95": 3941.95,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 256,
+          "max": 3871,
+          "sum_squared": 16423209,
+          "rms": 1350.851953398299,
+          "median": 397.0,
+          "p90": 1331.8000000000006,
+          "p95": 2601.3999999999987,
+          "p99": 3617.08,
+          "abs_p95": 2601.3999999999987,
+          "abs_max": 3871
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 6,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.295069665253391,
+              "tick_weighted_rms": 0.28869074500928593,
+              "route_mean_p90": 0.09163520860872522,
+              "route_mean_abs_p95": 0.6651728597019384
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.43444227290286463,
+              "tick_weighted_rms": 0.3906943071315364,
+              "route_mean_p90": -0.22061204846148028,
+              "route_mean_abs_p95": 0.5820725378843257
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.11538383078421273,
+              "tick_weighted_rms": 0.11650025578764744,
+              "route_mean_p90": 0.1877100543467422,
+              "route_mean_abs_p95": 0.24218746919839068
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.13479609665326303,
+              "tick_weighted_rms": 0.11269556059349896,
+              "route_mean_p90": 0.15638119458008837,
+              "route_mean_abs_p95": 0.21446200778477068
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.058696327770936,
+              "tick_weighted_rms": 7.412867135977625,
+              "route_mean_p90": -1.5733925401164868,
+              "route_mean_abs_p95": 10.0499564253298
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.057904725682578,
+              "tick_weighted_rms": 4.142438732283764,
+              "route_mean_p90": -1.0209274934281916,
+              "route_mean_abs_p95": 11.666775295326701
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.482955165590899,
+              "tick_weighted_rms": 7.692707060471866,
+              "route_mean_p90": -1.60372123912503,
+              "route_mean_abs_p95": 11.53244581083688
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.789466525575145,
+              "tick_weighted_rms": 4.721080138598247,
+              "route_mean_p90": -1.3294185939990084,
+              "route_mean_abs_p95": 13.420140931114684
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.13859034211337568,
+              "tick_weighted_rms": 0.1250454787662257,
+              "route_mean_p90": 0.21347192906495055,
+              "route_mean_abs_p95": 0.25879241665296815
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1700441498399281,
+              "tick_weighted_rms": 0.15678398223498616,
+              "route_mean_p90": 0.26080111052836386,
+              "route_mean_abs_p95": 0.3079004959903423
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7315680352757762,
+              "tick_weighted_rms": 0.7349357211591175,
+              "route_mean_p90": 1.1003361947631491,
+              "route_mean_abs_p95": 1.2470373648697184
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7291014340831534,
+              "tick_weighted_rms": 0.7332524505618877,
+              "route_mean_p90": 1.0670902825082258,
+              "route_mean_abs_p95": 1.2112195315463563
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0010490520379475492,
+              "tick_weighted_rms": 0.0009517915515560661,
+              "route_mean_p90": 0.0008516711013922198,
+              "route_mean_abs_p95": 0.002279733159282515
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.001040370379561044,
+              "tick_weighted_rms": 0.0009758798815808109,
+              "route_mean_p90": 0.0005661028367744826,
+              "route_mean_abs_p95": 0.002189577038132659
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0934802220742357,
+              "tick_weighted_rms": 0.0935401297919044,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09323564314190992,
+              "tick_weighted_rms": 0.0933753815795549,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16645220972362512,
+              "tick_weighted_rms": 0.16108142270779632,
+              "route_mean_p90": 0.22095658980106236,
+              "route_mean_abs_p95": 0.24373115496928222
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1682320664923392,
+              "tick_weighted_rms": 0.1666645826697101,
+              "route_mean_p90": 0.21979883997119032,
+              "route_mean_abs_p95": 0.2413762350442994
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "confirmation/carla-seed1",
+      "campaign": "/data/runs/b2d/controller/confirmation",
+      "preset": "carla",
+      "seed": 1,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/confirmation/carla-seed1/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "e574ce443fe101b22499fe6a17d0cef7790761a060d6341dffcdb5553d056e54",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/confirmation",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "1",
+          "server_index": 80,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8,
+          "holdout_routes": "todos/2026-09-22-b2d-controller/results/holdout.xml",
+          "holdout_seed": 0,
+          "slope_check": true
+        },
+        "git_commit": "5f7cb0cf271b6bfd8e1e287c51ec8de3757267db",
+        "started": 1790085232.5695848,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 10,
+        "retries": 0,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.726,
+        "completion_mean_all_routes": 94.726,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 47.26
+          }
+        ],
+        "all_attempt_wall_s": 337.5,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11100,
+        "selected_ticks": {
+          "n": 10,
+          "min": 253,
+          "max": 4000,
+          "sum_squared": 32396110,
+          "rms": 1799.8919412009154,
+          "median": 405.0,
+          "p90": 3881.2,
+          "p95": 3940.6,
+          "p99": 3988.12,
+          "abs_p95": 3940.6,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 253,
+          "max": 3868,
+          "sum_squared": 16396110,
+          "rms": 1349.737011421114,
+          "median": 395.0,
+          "p90": 1327.2000000000007,
+          "p95": 2597.5999999999985,
+          "p99": 3613.9199999999996,
+          "abs_p95": 2597.5999999999985,
+          "abs_max": 3868
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 7,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11100,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.2711682702962765,
+              "tick_weighted_rms": 0.40671378223694676,
+              "route_mean_p90": 0.17173218535848744,
+              "route_mean_abs_p95": 0.6346558259244566
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.43504618825294833,
+              "tick_weighted_rms": 0.39206608400161896,
+              "route_mean_p90": -0.1569141046037662,
+              "route_mean_abs_p95": 0.5921865684802883
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10217,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.11627943602893098,
+              "tick_weighted_rms": 0.15934378524721216,
+              "route_mean_p90": 0.098075093742236,
+              "route_mean_abs_p95": 0.2559218999585259
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.15200663062904934,
+              "tick_weighted_rms": 0.13410153144535508,
+              "route_mean_p90": 0.12083928804147934,
+              "route_mean_abs_p95": 0.261809637029895
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10217,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.056237325696357,
+              "tick_weighted_rms": 7.489812298223651,
+              "route_mean_p90": -1.596222864172142,
+              "route_mean_abs_p95": 9.977380844228053
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.220485653910901,
+              "tick_weighted_rms": 4.318407456580423,
+              "route_mean_p90": -1.0770617230767243,
+              "route_mean_abs_p95": 11.860551939793979
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10217,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.468823501084957,
+              "tick_weighted_rms": 7.797193565911298,
+              "route_mean_p90": -1.6416744926626443,
+              "route_mean_abs_p95": 11.449215346200818
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.975196314970888,
+              "tick_weighted_rms": 4.9188059342944435,
+              "route_mean_p90": -1.4646974895540203,
+              "route_mean_abs_p95": 13.710371248711263
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11100,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1371035381995169,
+              "tick_weighted_rms": 0.12430172854884068,
+              "route_mean_p90": 0.2108354246555088,
+              "route_mean_abs_p95": 0.2568951755246343
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1743075437466623,
+              "tick_weighted_rms": 0.161838763980212,
+              "route_mean_p90": 0.2687524681028667,
+              "route_mean_abs_p95": 0.315711065463598
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11100,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7310717776426526,
+              "tick_weighted_rms": 0.7346693292955999,
+              "route_mean_p90": 1.0993300880756602,
+              "route_mean_abs_p95": 1.246699236186864
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7275643073702759,
+              "tick_weighted_rms": 0.727436807648846,
+              "route_mean_p90": 1.063959244306187,
+              "route_mean_abs_p95": 1.2099251304936187
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11100,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.001528666517455798,
+              "tick_weighted_rms": 0.0013591935213491235,
+              "route_mean_p90": 0.00103872422592171,
+              "route_mean_abs_p95": 0.0030966619290224043
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0016427850444358995,
+              "tick_weighted_rms": 0.0014934908234570873,
+              "route_mean_p90": 0.0009400240757189903,
+              "route_mean_abs_p95": 0.00331161664765948
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10217,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09340157558652727,
+              "tick_weighted_rms": 0.09341513610559202,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2029,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0930524448906112,
+              "tick_weighted_rms": 0.09328752916758731,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11100,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16490312203938312,
+              "tick_weighted_rms": 0.16177583372805118,
+              "route_mean_p90": 0.21779500970296795,
+              "route_mean_abs_p95": 0.23913620007078856
+            },
+            "before_collision": {
+              "samples": 2033,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1691236425964897,
+              "tick_weighted_rms": 0.16626805180506252,
+              "route_mean_p90": 0.218239390051167,
+              "route_mean_abs_p95": 0.24556555055823992
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "confirmation/tcp-seed1",
+      "campaign": "/data/runs/b2d/controller/confirmation",
+      "preset": "tcp",
+      "seed": 1,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/confirmation/tcp-seed1/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "ca17d78603c17c9ed87efed8fcf12b76ee8a0d6ee45147d2faf3f22c903040da",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/confirmation",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "1",
+          "server_index": 80,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8,
+          "holdout_routes": "todos/2026-09-22-b2d-controller/results/holdout.xml",
+          "holdout_seed": 0,
+          "slope_check": true
+        },
+        "git_commit": "5f7cb0cf271b6bfd8e1e287c51ec8de3757267db",
+        "started": 1790085232.5695848,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 11,
+        "retries": 1,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.914,
+        "completion_mean_all_routes": 94.914,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "17569",
+            "attempt": 1,
+            "harness_status": "server_died_rc139",
+            "official_status": null,
+            "completion": null
+          },
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 49.14
+          }
+        ],
+        "all_attempt_wall_s": 376.2,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11201,
+        "selected_ticks": {
+          "n": 10,
+          "min": 254,
+          "max": 4000,
+          "sum_squared": 32661159,
+          "rms": 1807.239856798206,
+          "median": 432.0,
+          "p90": 3903.7,
+          "p95": 3951.85,
+          "p99": 3990.37,
+          "abs_p95": 3951.85,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 254,
+          "max": 3893,
+          "sum_squared": 16661159,
+          "rms": 1360.6027667504168,
+          "median": 392.0,
+          "p90": 1333.8000000000006,
+          "p95": 2613.3999999999987,
+          "p99": 3637.08,
+          "abs_p95": 2613.3999999999987,
+          "abs_max": 3893
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 2,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 9,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11201,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.49457526148887887,
+              "tick_weighted_rms": 0.9920534347559166,
+              "route_mean_p90": 0.15925302604122155,
+              "route_mean_abs_p95": 0.958238661903905
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.544888816528012,
+              "tick_weighted_rms": 0.49782754489579983,
+              "route_mean_p90": -0.11966284067602118,
+              "route_mean_abs_p95": 0.8559979514802631
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10222,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16147919565617758,
+              "tick_weighted_rms": 0.19936599989129453,
+              "route_mean_p90": 0.23004594908949585,
+              "route_mean_abs_p95": 0.31005620724634053
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1723859212405718,
+              "tick_weighted_rms": 0.16345790765848262,
+              "route_mean_p90": 0.24658940159238324,
+              "route_mean_abs_p95": 0.293287380837264
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10222,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.338797950173858,
+              "tick_weighted_rms": 8.149817905938642,
+              "route_mean_p90": -1.5527246841369238,
+              "route_mean_abs_p95": 10.136049612951274
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.198963361308199,
+              "tick_weighted_rms": 4.36249167924362,
+              "route_mean_p90": -0.8954441877024099,
+              "route_mean_abs_p95": 11.922009331514644
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10222,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.806975823895127,
+              "tick_weighted_rms": 8.73485513962741,
+              "route_mean_p90": -1.6697372869264264,
+              "route_mean_abs_p95": 11.559498791680598
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.95005004621359,
+              "tick_weighted_rms": 4.971260890031158,
+              "route_mean_p90": -1.2357247595461576,
+              "route_mean_abs_p95": 13.753691842292454
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11201,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.14314805080052478,
+              "tick_weighted_rms": 0.12892104989186765,
+              "route_mean_p90": 0.22084619938732053,
+              "route_mean_abs_p95": 0.2718014382822167
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.17775384669279823,
+              "tick_weighted_rms": 0.16649359650411613,
+              "route_mean_p90": 0.2801637785345906,
+              "route_mean_abs_p95": 0.3248839746162224
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11201,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.731762394882093,
+              "tick_weighted_rms": 0.7348384644163037,
+              "route_mean_p90": 1.101177475310151,
+              "route_mean_abs_p95": 1.247520887485622
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7264254158491299,
+              "tick_weighted_rms": 0.7259465650059873,
+              "route_mean_p90": 1.0555449754754624,
+              "route_mean_abs_p95": 1.2055785023755623
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11201,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0016677019981203567,
+              "tick_weighted_rms": 0.0018331661091036755,
+              "route_mean_p90": 0.0017125588757743466,
+              "route_mean_abs_p95": 0.0031666715215516936
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0014132409937467093,
+              "tick_weighted_rms": 0.0015857355412329658,
+              "route_mean_p90": 0.0012641120869738207,
+              "route_mean_abs_p95": 0.002821148057987524
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10222,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09342208766119843,
+              "tick_weighted_rms": 0.09346950776050737,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2003,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09305109095451804,
+              "tick_weighted_rms": 0.09325746526330869,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11201,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16339529350824367,
+              "tick_weighted_rms": 0.160582772608747,
+              "route_mean_p90": 0.21600672971544554,
+              "route_mean_abs_p95": 0.23707465963525465
+            },
+            "before_collision": {
+              "samples": 2007,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16550331269674057,
+              "tick_weighted_rms": 0.16316774435370468,
+              "route_mean_p90": 0.21607794984447537,
+              "route_mean_abs_p95": 0.23473788012779545
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "confirmation/pursuit-seed1",
+      "campaign": "/data/runs/b2d/controller/confirmation",
+      "preset": "pursuit",
+      "seed": 1,
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "source_report": "/data/runs/b2d/controller/confirmation/pursuit-seed1/controller-report.json",
+      "source_mode": "saved_report",
+      "source_report_sha256": "4c399a557ee06e8b101e3d5ba52cc8f65441a4bbf1513239992597a71e01c6a4",
+      "controller_config_sha256_at_report_time": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57",
+      "manifest": {
+        "config": {
+          "routes": "/data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml",
+          "out": "/data/runs/b2d/controller/confirmation",
+          "controller_config": "/data/runs/b2d/controller/calibration/controller_config.json",
+          "presets": "carla,tcp,pursuit",
+          "seeds": "1",
+          "server_index": 80,
+          "round_timeout_s": 3600,
+          "cruise_mps": 8,
+          "holdout_routes": "todos/2026-09-22-b2d-controller/results/holdout.xml",
+          "holdout_seed": 0,
+          "slope_check": true
+        },
+        "git_commit": "5f7cb0cf271b6bfd8e1e287c51ec8de3757267db",
+        "started": 1790085232.5695848,
+        "server_reuse": "one process across preset/seed groups; worlds reset by evaluator"
+      },
+      "summary": {
+        "requested_routes": 10,
+        "attempts": 10,
+        "retries": 0,
+        "official_finalized_routes": 10,
+        "data_complete": true,
+        "harness_finished": 10,
+        "true_completed": 9,
+        "completion_mean_observed": 94.726,
+        "completion_mean_all_routes": 94.726,
+        "missing_official_route_ids": [],
+        "capped_route_ids": [
+          "25424"
+        ],
+        "harness_capped_route_ids": [],
+        "official_tick_runtime_route_ids": [
+          "25424"
+        ],
+        "failed_route_ids": [
+          "25424"
+        ],
+        "failed_attempts": [
+          {
+            "route_id": "25424",
+            "attempt": 1,
+            "harness_status": "finished",
+            "official_status": "Failed - TickRuntime",
+            "completion": 47.26
+          }
+        ],
+        "all_attempt_wall_s": 341.7,
+        "unknown_wall_attempts": 0,
+        "all_attempt_ticks": 11105,
+        "selected_ticks": {
+          "n": 10,
+          "min": 256,
+          "max": 4000,
+          "sum_squared": 32423209,
+          "rms": 1800.6445790327418,
+          "median": 401.5,
+          "p90": 3883.9,
+          "p95": 3941.95,
+          "p99": 3988.39,
+          "abs_p95": 3941.95,
+          "abs_max": 4000
+        },
+        "completed_ticks": {
+          "n": 9,
+          "min": 256,
+          "max": 3871,
+          "sum_squared": 16423209,
+          "rms": 1350.851953398299,
+          "median": 397.0,
+          "p90": 1331.8000000000006,
+          "p95": 2601.3999999999987,
+          "p99": 3617.08,
+          "abs_p95": 2601.3999999999987,
+          "abs_max": 3871
+        },
+        "incomplete_ticks": {
+          "n": 1,
+          "min": 4000,
+          "max": 4000,
+          "sum_squared": 16000000,
+          "rms": 4000.0,
+          "median": 4000.0,
+          "p90": 4000.0,
+          "p95": 4000.0,
+          "p99": 4000.0,
+          "abs_p95": 4000.0,
+          "abs_max": 4000
+        },
+        "precollision_unavailable_routes": [],
+        "infractions": {
+          "vehicle_blocked": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_dev": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_layout": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_vehicle": {
+            "count_observed": 6,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "collisions_pedestrian": {
+            "count_observed": 1,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "route_timeout": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "scenario_timeouts": {
+            "count_observed": 0,
+            "routes_observed": 10,
+            "missing_routes": 0
+          },
+          "minimum_speed_events": {
+            "count_observed": 181,
+            "routes_observed": 10,
+            "missing_routes": 0
+          }
+        },
+        "metrics": {
+          "truth_cross_track_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.295069665253391,
+              "tick_weighted_rms": 0.28869074500928593,
+              "route_mean_p90": 0.09163520860872522,
+              "route_mean_abs_p95": 0.6651728597019384
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.43444227290286463,
+              "tick_weighted_rms": 0.3906943071315364,
+              "route_mean_p90": -0.22061204846148028,
+              "route_mean_abs_p95": 0.5820725378843257
+            }
+          },
+          "heading_error_rad": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.11538383078421273,
+              "tick_weighted_rms": 0.11650025578764744,
+              "route_mean_p90": 0.1877100543467422,
+              "route_mean_abs_p95": 0.24218746919839068
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.13479609665326303,
+              "tick_weighted_rms": 0.11269556059349896,
+              "route_mean_p90": 0.15638119458008837,
+              "route_mean_abs_p95": 0.21446200778477068
+            }
+          },
+          "command_speed_error_mps": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.058696327770936,
+              "tick_weighted_rms": 7.412867135977625,
+              "route_mean_p90": -1.5733925401164868,
+              "route_mean_abs_p95": 10.0499564253298
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.057904725682578,
+              "tick_weighted_rms": 4.142438732283764,
+              "route_mean_p90": -1.0209274934281916,
+              "route_mean_abs_p95": 11.666775295326701
+            }
+          },
+          "reference_speed_error_mps": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.482955165590899,
+              "tick_weighted_rms": 7.692707060471866,
+              "route_mean_p90": -1.60372123912503,
+              "route_mean_abs_p95": 11.53244581083688
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 5.789466525575145,
+              "tick_weighted_rms": 4.721080138598247,
+              "route_mean_p90": -1.3294185939990084,
+              "route_mean_abs_p95": 13.420140931114684
+            }
+          },
+          "pose_error_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.13859034211337568,
+              "tick_weighted_rms": 0.1250454787662257,
+              "route_mean_p90": 0.21347192906495055,
+              "route_mean_abs_p95": 0.25879241665296815
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1700441498399281,
+              "tick_weighted_rms": 0.15678398223498616,
+              "route_mean_p90": 0.26080111052836386,
+              "route_mean_abs_p95": 0.3079004959903423
+            }
+          },
+          "raw_pose_error_m": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7315680352757762,
+              "tick_weighted_rms": 0.7349357211591175,
+              "route_mean_p90": 1.1003361947631491,
+              "route_mean_abs_p95": 1.2470373648697184
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.7291014340831534,
+              "tick_weighted_rms": 0.7332524505618877,
+              "route_mean_p90": 1.0670902825082258,
+              "route_mean_abs_p95": 1.2112195315463563
+            }
+          },
+          "pose_heading_error_rad": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0010490520379475492,
+              "tick_weighted_rms": 0.0009517915515560661,
+              "route_mean_p90": 0.0008516711013922198,
+              "route_mean_abs_p95": 0.002279733159282515
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.001040370379561044,
+              "tick_weighted_rms": 0.0009758798815808109,
+              "route_mean_p90": 0.0005661028367744826,
+              "route_mean_abs_p95": 0.002189577038132659
+            }
+          },
+          "trajectory_age_s": {
+            "tracking": {
+              "samples": 10230,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.0934802220742357,
+              "tick_weighted_rms": 0.0935401297919044,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            },
+            "before_collision": {
+              "samples": 2215,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.09323564314190992,
+              "tick_weighted_rms": 0.0933753815795549,
+              "route_mean_p90": 0.15000000223517418,
+              "route_mean_abs_p95": 0.15000000223517418
+            }
+          },
+          "controller_step_ms": {
+            "tracking": {
+              "samples": 11105,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.16545931201040953,
+              "tick_weighted_rms": 0.1590935203955631,
+              "route_mean_p90": 0.21421229954285081,
+              "route_mean_abs_p95": 0.2342559950739087
+            },
+            "before_collision": {
+              "samples": 2219,
+              "routes_with_samples": 10,
+              "route_mean_rms": 0.1671472781255976,
+              "tick_weighted_rms": 0.1640229468449046,
+              "route_mean_p90": 0.21474230037711095,
+              "route_mean_abs_p95": 0.2452083501884772
+            }
+          }
+        }
+      }
+    }
+  ],
+  "paired": [
+    {
+      "left": "dev10/carla-seed0",
+      "right": "dev10/tcp-seed0",
+      "seed": 0,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": 0.18800000000000025,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.22359776404982928
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.10984262827506372
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.045337924833135465
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.020379290611522476
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.28280925465371226
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0215222926027022
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.33865254154725905
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.025146268757297197
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.006196678417451108
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0034463029461359413
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0005106037826851262
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0011388915211459794
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00012837173716837868
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.00022954405068918992
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 3.157042843643931e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -1.3539360931458244e-06
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.015985631251437846
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.004041587037604111
+          }
+        }
+      }
+    },
+    {
+      "left": "dev10/carla-seed0",
+      "right": "dev10/pursuit-seed0",
+      "seed": 0,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": 0.0,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.02392812026759622
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006039153500837655
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.000867830170387679
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.017210533975786292
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.002053259130727003
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1625809282283241
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.013805642162848297
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.18572978939574275
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0014680972371695106
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.004263393906734196
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00033672782875630023
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.001537126712877568
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0004799099364986771
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006024146648748555
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 8.971146664192991e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00018319825129874123
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0033730038954232684
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0039489590668864314
+          }
+        }
+      }
+    },
+    {
+      "left": "dev10/tcp-seed0",
+      "right": "dev10/pursuit-seed0",
+      "seed": 0,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": -0.18800000000000025,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.19966964378223298
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1104465436251475
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.04620575500352314
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.037589824587308765
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.28075599552298525
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1410586356256219
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.32484689938441075
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.16058352063844555
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.004728581180281598
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.007709696852870138
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.00017387595392882594
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.002676018234023547
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006082816736670556
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0003728706141856655
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 5.81410382054906e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00018455218739188705
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.012612627356014577
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -9.262797071767914e-05
+          }
+        }
+      }
+    },
+    {
+      "left": "confirmation/carla-seed1",
+      "right": "confirmation/tcp-seed1",
+      "seed": 1,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": 0.18800000000000025,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.22340699119260238
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.10984262827506372
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.045199759627246594
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.020379290611522476
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.2825606244775011
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0215222926027022
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.3381523228101681
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.025146268757297197
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.006044512601007865
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0034463029461359413
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0006906172394405385
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0011388915211459794
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00013903548066455904
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.00022954405068918992
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 2.051207467115429e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -1.3539360931458244e-06
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0015078285311394713
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0036203298997491418
+          }
+        }
+      }
+    },
+    {
+      "left": "confirmation/carla-seed1",
+      "right": "confirmation/pursuit-seed1",
+      "seed": 1,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": 0.0,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.023901394957114564
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006039153500837655
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0008956052447182644
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.017210533975786292
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0024590020745773877
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1625809282283241
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.014131664505940566
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.18572978939574275
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0014868039138587793
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.004263393906734196
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0004962576331237201
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.001537126712877568
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.00047961447950824865
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006024146648748555
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 7.864648770842392e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00018319825129874123
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0005561899710263607
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.001976364470892114
+          }
+        }
+      }
+    },
+    {
+      "left": "confirmation/tcp-seed1",
+      "right": "confirmation/pursuit-seed1",
+      "seed": 1,
+      "expected_routes": 10,
+      "paired_final_routes": 10,
+      "missing_pair_route_ids": [],
+      "complete_pair": true,
+      "completion_delta_right_minus_left": -0.18800000000000025,
+      "metrics": {
+        "truth_cross_track_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.19950559623548775
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1104465436251475
+          }
+        },
+        "heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.04609536487196486
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.037589824587308765
+          }
+        },
+        "command_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.2801016224029237
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.1410586356256219
+          }
+        },
+        "reference_speed_error_mps": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.32402065830422755
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.16058352063844555
+          }
+        },
+        "pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.004557708687149086
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.007709696852870138
+          }
+        },
+        "raw_pose_error_m": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0001943596063168185
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.002676018234023547
+          }
+        },
+        "pose_heading_error_rad": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0006186499601728076
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": -0.0003728706141856655
+          }
+        },
+        "trajectory_age_s": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 5.8134413037269625e-05
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.00018455218739188705
+          }
+        },
+        "controller_step_ms": {
+          "tracking": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.002064018502165832
+          },
+          "before_collision": {
+            "paired_routes": 10,
+            "mean_rms_delta": 0.0016439654288570276
+          }
+        }
+      }
+    }
+  ],
+  "strongest_references": [
+    {
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "seed": 0,
+      "ready": true,
+      "strongest_observed_reference": "dev10/tcp-seed0",
+      "rule": "complete paired groups only; mean completion, then completed count, then raw blocked+deviation, then carla",
+      "not_default_selection": "G1/G2, two seeds, holdout and failure attribution remain required"
+    },
+    {
+      "dataset_sha256": "6dc398c3835578f026d6268c9a8db4bcabf2113a2f9a141611b66fe48bc68327",
+      "seed": 1,
+      "ready": true,
+      "strongest_observed_reference": "confirmation/tcp-seed1",
+      "rule": "complete paired groups only; mean completion, then completed count, then raw blocked+deviation, then carla",
+      "not_default_selection": "G1/G2, two seeds, holdout and failure attribution remain required"
+    }
+  ],
+  "g2": [
+    {
+      "source": "/data/runs/b2d/controller/development3/summary.json",
+      "sha256": "bf2b60e273a6d996cd0e0873d93394f972bda091d603a8365125ac3174b11ec3",
+      "state": "ok",
+      "by_preset": {
+        "carla": {
+          "cases": 4,
+          "passed_cases": 4,
+          "all_recorded_gates_pass": true,
+          "failed_cases": [],
+          "scope": "recorded development cases; slope/held-out gate coverage is not inferred"
+        },
+        "tcp": {
+          "cases": 4,
+          "passed_cases": 3,
+          "all_recorded_gates_pass": false,
+          "failed_cases": [
+            {
+              "route_id": "26966",
+              "failed_gates": [
+                "full_lateral_rms",
+                "full_lateral_p95",
+                "cruise_speed"
+              ],
+              "exception": null
+            }
+          ],
+          "scope": "recorded development cases; slope/held-out gate coverage is not inferred"
+        },
+        "pursuit": {
+          "cases": 4,
+          "passed_cases": 4,
+          "all_recorded_gates_pass": true,
+          "failed_cases": [],
+          "scope": "recorded development cases; slope/held-out gate coverage is not inferred"
+        }
+      },
+      "cases": [
+        {
+          "status": "completed",
+          "ticks": 534,
+          "collisions": [],
+          "cross_track_rms_m": 0.03985076788006684,
+          "cross_track_p95_m": 0.07011572143872641,
+          "cross_track_full": {
+            "count": 534,
+            "rms": 0.03985076788006684,
+            "median": 0.03066829156601212,
+            "p90": 0.060690929906258954,
+            "p95": 0.07011572143872641,
+            "max": 0.10342583819854285
+          },
+          "cross_track_steady": {
+            "count": 494,
+            "rms": 0.04042842818525152,
+            "median": 0.03066829156601212,
+            "p90": 0.060574411171786725,
+            "p95": 0.06965259051708314,
+            "max": 0.10342583819854285
+          },
+          "projection_distance_full": {
+            "count": 534,
+            "rms": 0.2733393336599429,
+            "median": 0.030668949991106788,
+            "p90": 0.07096104729333057,
+            "p95": 0.24239463358780997,
+            "max": 1.3886332451400052
+          },
+          "speed_rms_mps": 0.2211600633226624,
+          "cruise_speed_after_5s": {
+            "count": 241,
+            "rms": 0.2211600633226624,
+            "median": 0.17354394457345634,
+            "p90": 0.35729738182765747,
+            "p95": 0.36338179510982194,
+            "max": 0.4050927188198843
+          },
+          "cruise_speed_all": {
+            "count": 341,
+            "rms": 2.232200237871402,
+            "median": 0.2326918586964517,
+            "p90": 3.7048187527328684,
+            "p95": 6.697680023059234,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 534,
+            "rms": 1.9005772714129447,
+            "median": 0.34029984875675234,
+            "p90": 2.588339986996867,
+            "p95": 5.299796997209442,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 534,
+            "rms": 2.525559284492752,
+            "median": 0.14824597083904756,
+            "p90": 2.199264696597867,
+            "p95": 6.38377743452149,
+            "max": 13.33101669341564
+          },
+          "pose_p90_m": 0.18877005653276735,
+          "fused_pose": {
+            "count": 534,
+            "rms": 0.13640307727126108,
+            "median": 0.10137450161962341,
+            "p90": 0.18877005653276735,
+            "p95": 0.24605618026741571,
+            "max": 0.5076071005468162
+          },
+          "raw_pose": {
+            "count": 534,
+            "rms": 0.7762028464087168,
+            "median": 0.6605741600486165,
+            "p90": 1.171544479411093,
+            "p95": 1.2974963700801936,
+            "max": 1.8772797305037607
+          },
+          "pose_heading_deg": {
+            "count": 534,
+            "rms": 0.03194441004713839,
+            "median": 0.011212832028227416,
+            "p90": 0.053479591306938454,
+            "p95": 0.07415518064530537,
+            "max": 0.14197674220428466
+          },
+          "endpoint_error_m": 0.2244270956554546,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0009749375107585557,
+          "stop_hold_max_speed_mps": 0.004416704542258688,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.16342342377236854,
+            "median": 0.1557624489068985,
+            "p90": 0.1557624489068985,
+            "p95": 0.19446229934692383,
+            "max": 0.2903445065021515
+          },
+          "final_pitch_deg": -0.1557624489068985,
+          "telemetry_count": 534,
+          "truth_aligned_count": 534,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "1773",
+          "town": "Town12",
+          "preset": "carla",
+          "wall_s": 11.801775856998574,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 532,
+          "collisions": [],
+          "cross_track_rms_m": 0.11008515728879159,
+          "cross_track_p95_m": 0.2377481284309077,
+          "cross_track_full": {
+            "count": 532,
+            "rms": 0.11008515728879159,
+            "median": 0.05071235089904662,
+            "p90": 0.20943781055768895,
+            "p95": 0.2377481284309077,
+            "max": 0.2628261709400686
+          },
+          "cross_track_steady": {
+            "count": 492,
+            "rms": 0.11414324242141859,
+            "median": 0.05368796037243158,
+            "p90": 0.21497589663937489,
+            "p95": 0.23873047006966056,
+            "max": 0.2628261709400686
+          },
+          "projection_distance_full": {
+            "count": 532,
+            "rms": 0.29184614148876603,
+            "median": 0.05533437779588987,
+            "p90": 0.23812078642847972,
+            "p95": 0.2894729443906524,
+            "max": 1.3886332451400052
+          },
+          "speed_rms_mps": 0.18383393376863846,
+          "cruise_speed_after_5s": {
+            "count": 239,
+            "rms": 0.18383393376863846,
+            "median": 0.13863954579615623,
+            "p90": 0.29338586476449874,
+            "p95": 0.30446390306476323,
+            "max": 0.34049189153695636
+          },
+          "cruise_speed_all": {
+            "count": 339,
+            "rms": 2.232820961109194,
+            "median": 0.1677805270158199,
+            "p90": 3.7281244284206445,
+            "p95": 6.727254953618766,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 532,
+            "rms": 1.8047673232469355,
+            "median": 0.26094037054967517,
+            "p90": 1.1096850587618359,
+            "p95": 5.306847095886125,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 532,
+            "rms": 2.4905065093069774,
+            "median": 0.11614478972148756,
+            "p90": 0.8276658164507043,
+            "p95": 6.429155892357235,
+            "max": 13.3310155675571
+          },
+          "pose_p90_m": 0.19526662250781515,
+          "fused_pose": {
+            "count": 532,
+            "rms": 0.13707720231718443,
+            "median": 0.10117071638691083,
+            "p90": 0.19526662250781515,
+            "p95": 0.24110426363256662,
+            "max": 0.5076071017930431
+          },
+          "raw_pose": {
+            "count": 532,
+            "rms": 0.7769083936118314,
+            "median": 0.6612596735079393,
+            "p90": 1.174227915067728,
+            "p95": 1.2983432477574688,
+            "max": 1.8775553633044024
+          },
+          "pose_heading_deg": {
+            "count": 532,
+            "rms": 0.03256655656054894,
+            "median": 0.014764269717112852,
+            "p90": 0.06078046232991343,
+            "p95": 0.06608483494597477,
+            "max": 0.12862763040810815
+          },
+          "endpoint_error_m": 0.06683439646625852,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0005870948214521862,
+          "stop_hold_max_speed_mps": 0.012030291240254508,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.13403491126872502,
+            "median": 0.13061369955539703,
+            "p90": 0.13061369955539703,
+            "p95": 0.15499064326286316,
+            "max": 0.19888143241405487
+          },
+          "final_pitch_deg": -0.13061369955539703,
+          "telemetry_count": 532,
+          "truth_aligned_count": 532,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "1773",
+          "town": "Town12",
+          "preset": "tcp",
+          "wall_s": 11.509247133999452,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 534,
+          "collisions": [],
+          "cross_track_rms_m": 0.045859338471581794,
+          "cross_track_p95_m": 0.07787807730976283,
+          "cross_track_full": {
+            "count": 534,
+            "rms": 0.045859338471581794,
+            "median": 0.03565914167246341,
+            "p90": 0.06517522350678147,
+            "p95": 0.07787807730976283,
+            "max": 0.1288755825343372
+          },
+          "cross_track_steady": {
+            "count": 494,
+            "rms": 0.0467436750425659,
+            "median": 0.03565914167246341,
+            "p90": 0.06517522350678147,
+            "p95": 0.07787807730976283,
+            "max": 0.1288755825343372
+          },
+          "projection_distance_full": {
+            "count": 534,
+            "rms": 0.27392606241868106,
+            "median": 0.03565914167246341,
+            "p90": 0.07820087576090366,
+            "p95": 0.2434404814656578,
+            "max": 1.3886332451400052
+          },
+          "speed_rms_mps": 0.2216097865147679,
+          "cruise_speed_after_5s": {
+            "count": 241,
+            "rms": 0.2216097865147679,
+            "median": 0.16692054637094422,
+            "p90": 0.3579122995070705,
+            "p95": 0.3653743303440189,
+            "max": 0.3902869519944554
+          },
+          "cruise_speed_all": {
+            "count": 341,
+            "rms": 2.2303365001979176,
+            "median": 0.23216918452268498,
+            "p90": 3.6815395607458727,
+            "p95": 6.774871772658755,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 534,
+            "rms": 1.831806425875199,
+            "median": 0.3301797841655496,
+            "p90": 1.3239422897516946,
+            "p95": 5.285224424108454,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 534,
+            "rms": 2.494609398949448,
+            "median": 0.13260647324034425,
+            "p90": 1.1188806185777402,
+            "p95": 6.377905350023399,
+            "max": 13.3310155675571
+          },
+          "pose_p90_m": 0.19116324310587457,
+          "fused_pose": {
+            "count": 534,
+            "rms": 0.13654780845464323,
+            "median": 0.10216098707678423,
+            "p90": 0.19116324310587457,
+            "p95": 0.24568166725275709,
+            "max": 0.5076071017930431
+          },
+          "raw_pose": {
+            "count": 534,
+            "rms": 0.7762019311508089,
+            "median": 0.6607173498699734,
+            "p90": 1.1715316659492445,
+            "p95": 1.2974725479392653,
+            "max": 1.8772617429567509
+          },
+          "pose_heading_deg": {
+            "count": 534,
+            "rms": 0.025277499891219586,
+            "median": 0.008389704301472196,
+            "p90": 0.03425186409694106,
+            "p95": 0.05616517987848881,
+            "max": 0.1646527002645185
+          },
+          "endpoint_error_m": 0.14093242328410116,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.000516840145945503,
+          "stop_hold_max_speed_mps": 0.0017248101914969108,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.1357512351765434,
+            "median": 0.13100984692573547,
+            "p90": 0.13100984692573547,
+            "p95": 0.15628838539123535,
+            "max": 0.21893487870693207
+          },
+          "final_pitch_deg": -0.13100984692573547,
+          "telemetry_count": 534,
+          "truth_aligned_count": 534,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "1773",
+          "town": "Town12",
+          "preset": "pursuit",
+          "wall_s": 12.093778365997423,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 454,
+          "collisions": [],
+          "cross_track_rms_m": 0.12849802391582105,
+          "cross_track_p95_m": 0.24177870418570085,
+          "cross_track_full": {
+            "count": 454,
+            "rms": 0.12849802391582105,
+            "median": 0.0908303532093746,
+            "p90": 0.2089984356896602,
+            "p95": 0.24177870418570085,
+            "max": 0.27318532232069026
+          },
+          "cross_track_steady": {
+            "count": 414,
+            "rms": 0.13455530890980436,
+            "median": 0.11022191139725476,
+            "p90": 0.2116261354928976,
+            "p95": 0.24365966495672087,
+            "max": 0.27318532232069026
+          },
+          "projection_distance_full": {
+            "count": 454,
+            "rms": 0.3199414678424644,
+            "median": 0.11330988512596668,
+            "p90": 0.24886305971069034,
+            "p95": 0.7148549324928042,
+            "max": 1.388633253108599
+          },
+          "speed_rms_mps": 0.22639193465377125,
+          "cruise_speed_after_5s": {
+            "count": 160,
+            "rms": 0.22639193465377125,
+            "median": 0.18203917419830784,
+            "p90": 0.3598076105257007,
+            "p95": 0.36857100114266594,
+            "max": 0.3950614500282281
+          },
+          "cruise_speed_all": {
+            "count": 260,
+            "rms": 2.5529369568212807,
+            "median": 0.2546020944642864,
+            "p90": 5.440076874585533,
+            "p95": 7.490858235301062,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 454,
+            "rms": 1.9635236407734526,
+            "median": 0.3419367843570429,
+            "p90": 2.541713610079465,
+            "p95": 6.021172119520995,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 454,
+            "rms": 2.528197670019587,
+            "median": 0.12535465070275087,
+            "p90": 2.551380245202652,
+            "p95": 7.57944719056645,
+            "max": 12.184778377185962
+          },
+          "pose_p90_m": 0.1698300829883922,
+          "fused_pose": {
+            "count": 454,
+            "rms": 0.12799325479454401,
+            "median": 0.09308594583678859,
+            "p90": 0.1698300829883922,
+            "p95": 0.20556591559041285,
+            "max": 0.5075688839609119
+          },
+          "raw_pose": {
+            "count": 454,
+            "rms": 0.7771468688156051,
+            "median": 0.6596531722178045,
+            "p90": 1.170607630889327,
+            "p95": 1.28849803328233,
+            "max": 1.877236561906061
+          },
+          "pose_heading_deg": {
+            "count": 454,
+            "rms": 0.06222565052237316,
+            "median": 0.03288420991414324,
+            "p90": 0.10248133478213488,
+            "p95": 0.13600863517558376,
+            "max": 0.2010731905714386
+          },
+          "endpoint_error_m": 0.08572056391818059,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0005006113938192249,
+          "stop_hold_max_speed_mps": 0.00245575709836684,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.052519124679921966,
+            "median": 0.04684143513441086,
+            "p90": 0.04684143513441086,
+            "p95": 0.0715872123837471,
+            "max": 0.1285441517829895
+          },
+          "final_pitch_deg": -0.04684143513441086,
+          "telemetry_count": 454,
+          "truth_aligned_count": 454,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "24240",
+          "town": "Town10HD",
+          "preset": "carla",
+          "wall_s": 1.6195426890008093,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 453,
+          "collisions": [],
+          "cross_track_rms_m": 0.16460395154790755,
+          "cross_track_p95_m": 0.36394688117440704,
+          "cross_track_full": {
+            "count": 453,
+            "rms": 0.16460395154790755,
+            "median": 0.0939770738795276,
+            "p90": 0.2378832688876533,
+            "p95": 0.36394688117440704,
+            "max": 0.5272457483397383
+          },
+          "cross_track_steady": {
+            "count": 413,
+            "rms": 0.1723813770970537,
+            "median": 0.09550982839827356,
+            "p90": 0.24517212884784478,
+            "p95": 0.391633692030066,
+            "max": 0.5272457483397383
+          },
+          "projection_distance_full": {
+            "count": 453,
+            "rms": 0.3364084252396447,
+            "median": 0.09769611701674372,
+            "p90": 0.4075484510425004,
+            "p95": 0.7147050381972241,
+            "max": 1.388633253108599
+          },
+          "speed_rms_mps": 0.19027495490692847,
+          "cruise_speed_after_5s": {
+            "count": 159,
+            "rms": 0.19027495490692847,
+            "median": 0.14145903501682078,
+            "p90": 0.29981346136803594,
+            "p95": 0.3308820548582032,
+            "max": 0.4680443748795309
+          },
+          "cruise_speed_all": {
+            "count": 259,
+            "rms": 2.55407465790673,
+            "median": 0.18709585425369646,
+            "p90": 5.459086726508913,
+            "p95": 7.526925084077761,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 453,
+            "rms": 1.958439261807568,
+            "median": 0.2869908078080905,
+            "p90": 2.5881117604487858,
+            "p95": 5.9996270865942,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 453,
+            "rms": 2.5290584872262825,
+            "median": 0.12323166258611629,
+            "p90": 2.599927959859623,
+            "p95": 7.56606004348271,
+            "max": 12.184667653022297
+          },
+          "pose_p90_m": 0.1706840354009519,
+          "fused_pose": {
+            "count": 453,
+            "rms": 0.13070883146227996,
+            "median": 0.09738971925482826,
+            "p90": 0.1706840354009519,
+            "p95": 0.20415715045637153,
+            "max": 0.5075688839609119
+          },
+          "raw_pose": {
+            "count": 453,
+            "rms": 0.7770580861800915,
+            "median": 0.6590055257309505,
+            "p90": 1.1722617303101732,
+            "p95": 1.2890034251692093,
+            "max": 1.877236956237202
+          },
+          "pose_heading_deg": {
+            "count": 453,
+            "rms": 0.040624234612407044,
+            "median": 0.017363628968305303,
+            "p90": 0.07146005904718875,
+            "p95": 0.09006265973700257,
+            "max": 0.15358675605819982
+          },
+          "endpoint_error_m": 0.11507459297868558,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.00036421015430047925,
+          "stop_hold_max_speed_mps": 0.007228643625929064,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.05721374942453831,
+            "median": 0.05367845296859741,
+            "p90": 0.05367845296859741,
+            "p95": 0.06597962230443954,
+            "max": 0.11544384807348251
+          },
+          "final_pitch_deg": -0.05367845296859741,
+          "telemetry_count": 453,
+          "truth_aligned_count": 453,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "24240",
+          "town": "Town10HD",
+          "preset": "tcp",
+          "wall_s": 1.4840710639982717,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 453,
+          "collisions": [],
+          "cross_track_rms_m": 0.09932043651723829,
+          "cross_track_p95_m": 0.17692864701481367,
+          "cross_track_full": {
+            "count": 453,
+            "rms": 0.09932043651723829,
+            "median": 0.07604741803311378,
+            "p90": 0.15222105148356038,
+            "p95": 0.17692864701481367,
+            "max": 0.21464950051797388
+          },
+          "cross_track_steady": {
+            "count": 413,
+            "rms": 0.10400691455444226,
+            "median": 0.08602951798863583,
+            "p90": 0.153823760084655,
+            "p95": 0.18429358017973288,
+            "max": 0.21464950051797388
+          },
+          "projection_distance_full": {
+            "count": 453,
+            "rms": 0.3090415797884503,
+            "median": 0.08894855856824521,
+            "p90": 0.18806749360205113,
+            "p95": 0.7022102916971833,
+            "max": 1.388633253108599
+          },
+          "speed_rms_mps": 0.22645855549247884,
+          "cruise_speed_after_5s": {
+            "count": 161,
+            "rms": 0.22645855549247884,
+            "median": 0.16656825328577618,
+            "p90": 0.3496632573574603,
+            "p95": 0.35953371205377227,
+            "max": 0.5326021370471707
+          },
+          "cruise_speed_all": {
+            "count": 261,
+            "rms": 2.5449356925316673,
+            "median": 0.24676389305253288,
+            "p90": 5.4234788736175865,
+            "p95": 7.4848598326407245,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 453,
+            "rms": 1.963358366128845,
+            "median": 0.3415639178816221,
+            "p90": 2.5962045022674327,
+            "p95": 6.0070417491789705,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 453,
+            "rms": 2.5287556080547233,
+            "median": 0.13001341685387757,
+            "p90": 2.606513225103575,
+            "p95": 7.531754342429212,
+            "max": 12.184730555306022
+          },
+          "pose_p90_m": 0.16736296332808748,
+          "fused_pose": {
+            "count": 453,
+            "rms": 0.12803848661641667,
+            "median": 0.09412975630702204,
+            "p90": 0.16736296332808748,
+            "p95": 0.20468564230174616,
+            "max": 0.5075688839609119
+          },
+          "raw_pose": {
+            "count": 453,
+            "rms": 0.7770577197559656,
+            "median": 0.6590066793436733,
+            "p90": 1.1722641022619842,
+            "p95": 1.2890034731573405,
+            "max": 1.8772436045461982
+          },
+          "pose_heading_deg": {
+            "count": 453,
+            "rms": 0.045332846682182106,
+            "median": 0.01214459291458015,
+            "p90": 0.06683078932110555,
+            "p95": 0.09880823013234992,
+            "max": 0.23567968232401262
+          },
+          "endpoint_error_m": 0.08150552278368815,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0008851752618407309,
+          "stop_hold_max_speed_mps": 0.02207132966966728,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.03933089032664826,
+            "median": 0.022430339828133583,
+            "p90": 0.03546233847737312,
+            "p95": 0.08477630466222763,
+            "max": 0.14904837310314178
+          },
+          "final_pitch_deg": -0.022430339828133583,
+          "telemetry_count": 453,
+          "truth_aligned_count": 453,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "24240",
+          "town": "Town10HD",
+          "preset": "pursuit",
+          "wall_s": 1.445751940998889,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 392,
+          "collisions": [],
+          "cross_track_rms_m": 0.2014797465633913,
+          "cross_track_p95_m": 0.4414657699470773,
+          "cross_track_full": {
+            "count": 392,
+            "rms": 0.2014797465633913,
+            "median": 0.06330381783178127,
+            "p90": 0.2943115974404375,
+            "p95": 0.4414657699470773,
+            "max": 0.8301950588232472
+          },
+          "cross_track_steady": {
+            "count": 352,
+            "rms": 0.21232864306607588,
+            "median": 0.06330381783178127,
+            "p90": 0.29748028639431084,
+            "p95": 0.4932723327110052,
+            "max": 0.8301950588232472
+          },
+          "projection_distance_full": {
+            "count": 392,
+            "rms": 0.37494120574110873,
+            "median": 0.06330381783178127,
+            "p90": 0.5847789263616816,
+            "p95": 0.9995585924587274,
+            "max": 1.3886332408656976
+          },
+          "speed_rms_mps": 0.2205837181188913,
+          "cruise_speed_after_5s": {
+            "count": 99,
+            "rms": 0.2205837181188913,
+            "median": 0.17617940433542856,
+            "p90": 0.3563549851144636,
+            "p95": 0.38093853617253715,
+            "max": 0.465365554178625
+          },
+          "cruise_speed_all": {
+            "count": 199,
+            "rms": 2.916813377818777,
+            "median": 0.261567091208037,
+            "p90": 6.4299396822609,
+            "p95": 7.998945215247338,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 392,
+            "rms": 2.1460784040640823,
+            "median": 0.4250726617649976,
+            "p90": 2.7890619335791134,
+            "p95": 6.4568089828074315,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 392,
+            "rms": 2.9147732914156355,
+            "median": 0.10834507312709629,
+            "p90": 2.793705840355371,
+            "p95": 9.209237389417018,
+            "max": 13.341636190294166
+          },
+          "pose_p90_m": 0.3656607567100399,
+          "fused_pose": {
+            "count": 392,
+            "rms": 0.20962659300559375,
+            "median": 0.12364645619616912,
+            "p90": 0.3656607567100399,
+            "p95": 0.417321437063327,
+            "max": 0.6045418524014513
+          },
+          "raw_pose": {
+            "count": 392,
+            "rms": 0.7701334954774093,
+            "median": 0.6570883505809596,
+            "p90": 1.156227504932216,
+            "p95": 1.2894934937636984,
+            "max": 1.8772343922784038
+          },
+          "pose_heading_deg": {
+            "count": 392,
+            "rms": 0.105923559529924,
+            "median": 0.01916757854126824,
+            "p90": 0.19261731435754967,
+            "p95": 0.24631825824514023,
+            "max": 0.43940939354265335
+          },
+          "endpoint_error_m": 0.1925152537012054,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.00038052325804496486,
+          "stop_hold_max_speed_mps": 0.008638990676114393,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.05415084728239836,
+            "median": 0.05108298361301422,
+            "p90": 0.05108298361301422,
+            "p95": 0.0627216249704361,
+            "max": 0.1070563793182373
+          },
+          "final_pitch_deg": -0.05108298361301422,
+          "telemetry_count": 392,
+          "truth_aligned_count": 392,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "26966",
+          "town": "Town05",
+          "preset": "carla",
+          "wall_s": 1.2160793300026853,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 382,
+          "collisions": [],
+          "cross_track_rms_m": 0.7027817917414994,
+          "cross_track_p95_m": 1.5253825283157498,
+          "cross_track_full": {
+            "count": 382,
+            "rms": 0.7027817917414994,
+            "median": 0.4215567488330334,
+            "p90": 1.2821541605043334,
+            "p95": 1.5253825283157498,
+            "max": 2.0709938301784807
+          },
+          "cross_track_steady": {
+            "count": 342,
+            "rms": 0.7426729874726722,
+            "median": 0.4215567488330334,
+            "p90": 1.3186094898137413,
+            "p95": 1.5656268919180047,
+            "max": 2.0709938301784807
+          },
+          "projection_distance_full": {
+            "count": 382,
+            "rms": 0.7783669312865773,
+            "median": 0.4565909974214617,
+            "p90": 1.3886332408656976,
+            "p95": 1.5253825283157498,
+            "max": 2.0709938301784807
+          },
+          "speed_rms_mps": 0.6962484823734936,
+          "cruise_speed_after_5s": {
+            "count": 104,
+            "rms": 0.6962484823734936,
+            "median": 0.3699785033061791,
+            "p90": 1.2817930662623578,
+            "p95": 1.3891982472241466,
+            "max": 1.5465311437624987
+          },
+          "cruise_speed_all": {
+            "count": 204,
+            "rms": 2.915899209324507,
+            "median": 0.3832426759774159,
+            "p90": 6.358879030323204,
+            "p95": 7.9987887373127124,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 382,
+            "rms": 2.1743871954609952,
+            "median": 0.22690444430897783,
+            "p90": 2.8641283835651126,
+            "p95": 6.497321484971674,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 382,
+            "rms": 2.990555236560626,
+            "median": 0.2862935116904075,
+            "p90": 2.8692449967348836,
+            "p95": 9.239940921477862,
+            "max": 13.341636190294166
+          },
+          "pose_p90_m": 0.4242393045593081,
+          "fused_pose": {
+            "count": 382,
+            "rms": 0.23893204149312858,
+            "median": 0.12659513522131505,
+            "p90": 0.4242393045593081,
+            "p95": 0.5836577773522308,
+            "max": 0.6722999160894875
+          },
+          "raw_pose": {
+            "count": 382,
+            "rms": 0.7739834808150854,
+            "median": 0.6588218292891326,
+            "p90": 1.1737000516843528,
+            "p95": 1.2944830660006648,
+            "max": 1.8772332056082328
+          },
+          "pose_heading_deg": {
+            "count": 382,
+            "rms": 0.21353980322508506,
+            "median": 0.048136479378181496,
+            "p90": 0.4042301717643965,
+            "p95": 0.50292773294269,
+            "max": 0.6325455779827613
+          },
+          "endpoint_error_m": 0.4565909974214617,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0003527040306438517,
+          "stop_hold_max_speed_mps": 0.010612900108412662,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.028641292652143897,
+            "median": 0.02325679361820221,
+            "p90": 0.02325679361820221,
+            "p95": 0.05432049185037613,
+            "max": 0.08194177597761154
+          },
+          "final_pitch_deg": -0.02325679361820221,
+          "telemetry_count": 382,
+          "truth_aligned_count": 382,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": false,
+            "full_lateral_p95": false,
+            "cruise_speed": false,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": false,
+          "route_id": "26966",
+          "town": "Town05",
+          "preset": "tcp",
+          "wall_s": 1.0877131779998308,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 393,
+          "collisions": [],
+          "cross_track_rms_m": 0.3422457596555988,
+          "cross_track_p95_m": 0.9827232620898847,
+          "cross_track_full": {
+            "count": 393,
+            "rms": 0.3422457596555988,
+            "median": 0.09505330928192549,
+            "p90": 0.6211882091066625,
+            "p95": 0.9827232620898847,
+            "max": 1.2114785538109052
+          },
+          "cross_track_steady": {
+            "count": 353,
+            "rms": 0.3609465626555612,
+            "median": 0.09505330928192549,
+            "p90": 0.6954434164300395,
+            "p95": 1.0092947918758082,
+            "max": 1.2114785538109052
+          },
+          "projection_distance_full": {
+            "count": 393,
+            "rms": 0.4653876225810544,
+            "median": 0.0950533092819255,
+            "p90": 0.9909379112825483,
+            "p95": 1.2035664262883052,
+            "max": 1.3886332408656976
+          },
+          "speed_rms_mps": 0.26657532856058697,
+          "cruise_speed_after_5s": {
+            "count": 102,
+            "rms": 0.26657532856058697,
+            "median": 0.2034111886361356,
+            "p90": 0.4088970216577669,
+            "p95": 0.5215978365766398,
+            "max": 0.6199982737532936
+          },
+          "cruise_speed_all": {
+            "count": 202,
+            "rms": 2.8959026299572135,
+            "median": 0.2889781637196962,
+            "p90": 6.324324902033549,
+            "p95": 7.9988911371436355,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 393,
+            "rms": 2.147462685241967,
+            "median": 0.46057891790294825,
+            "p90": 2.8036821343942404,
+            "p95": 6.368606200020448,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 393,
+            "rms": 2.9075665484962183,
+            "median": 0.13498613417139893,
+            "p90": 2.8060531806141857,
+            "p95": 9.18274749502367,
+            "max": 13.341636190294166
+          },
+          "pose_p90_m": 0.3922940831806071,
+          "fused_pose": {
+            "count": 393,
+            "rms": 0.20859161568608744,
+            "median": 0.12356922745809866,
+            "p90": 0.3922940831806071,
+            "p95": 0.44140396681651095,
+            "max": 0.5496190124245676
+          },
+          "raw_pose": {
+            "count": 393,
+            "rms": 0.7728107148938168,
+            "median": 0.658174506141718,
+            "p90": 1.171844467631483,
+            "p95": 1.3015477006555651,
+            "max": 1.8772429613831978
+          },
+          "pose_heading_deg": {
+            "count": 393,
+            "rms": 0.09448636726774032,
+            "median": 0.014920722479370192,
+            "p90": 0.19138372524929542,
+            "p95": 0.24116526937009808,
+            "max": 0.33883803325711626
+          },
+          "endpoint_error_m": 0.22429597626234657,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.00047750177242050513,
+          "stop_hold_max_speed_mps": 0.004017766387455329,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.05902667997823228,
+            "median": 0.05399264395236969,
+            "p90": 0.05399264395236969,
+            "p95": 0.08160026371479034,
+            "max": 0.12949354946613312
+          },
+          "final_pitch_deg": -0.05399264395236969,
+          "telemetry_count": 393,
+          "truth_aligned_count": 393,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "26966",
+          "town": "Town05",
+          "preset": "pursuit",
+          "wall_s": 1.1186634879995836,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 530,
+          "collisions": [],
+          "cross_track_rms_m": 0.1144271726507664,
+          "cross_track_p95_m": 0.2700785345833077,
+          "cross_track_full": {
+            "count": 530,
+            "rms": 0.1144271726507664,
+            "median": 0.07201162190459649,
+            "p90": 0.20674255580354284,
+            "p95": 0.2700785345833077,
+            "max": 0.2972471133548057
+          },
+          "cross_track_steady": {
+            "count": 490,
+            "rms": 0.11802417897459612,
+            "median": 0.07201162190459649,
+            "p90": 0.21608406930428242,
+            "p95": 0.2780904406455454,
+            "max": 0.2972471133548057
+          },
+          "projection_distance_full": {
+            "count": 530,
+            "rms": 0.2944278893187173,
+            "median": 0.07201162190459649,
+            "p90": 0.2711545168292688,
+            "p95": 0.32183778756340636,
+            "max": 1.3880700967916408
+          },
+          "speed_rms_mps": 0.23425695618590725,
+          "cruise_speed_after_5s": {
+            "count": 239,
+            "rms": 0.23425695618590725,
+            "median": 0.1586525604607738,
+            "p90": 0.375945505133792,
+            "p95": 0.38308233854234414,
+            "max": 0.405884962863559
+          },
+          "cruise_speed_all": {
+            "count": 339,
+            "rms": 2.2456807598433595,
+            "median": 0.23984125053291194,
+            "p90": 3.786916272523283,
+            "p95": 6.737332879603321,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 530,
+            "rms": 1.8283368700818714,
+            "median": 0.3375830860872382,
+            "p90": 1.056871648637775,
+            "p95": 5.374751871038332,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 530,
+            "rms": 2.739709049358559,
+            "median": 0.13298254919946784,
+            "p90": 0.859618544582281,
+            "p95": 6.789300214227485,
+            "max": 15.372148285657941
+          },
+          "pose_p90_m": 0.18817725095124765,
+          "fused_pose": {
+            "count": 530,
+            "rms": 0.13668317033745903,
+            "median": 0.10357815267950865,
+            "p90": 0.18817725095124765,
+            "p95": 0.23973052801392977,
+            "max": 0.5075807557668843
+          },
+          "raw_pose": {
+            "count": 530,
+            "rms": 0.777384458634254,
+            "median": 0.6612374836012562,
+            "p90": 1.1756585846935603,
+            "p95": 1.298954388470789,
+            "max": 1.8772386979271132
+          },
+          "pose_heading_deg": {
+            "count": 530,
+            "rms": 0.04015172205083286,
+            "median": 0.014808977998163955,
+            "p90": 0.06651839419284394,
+            "p95": 0.08931841959239013,
+            "max": 0.1586832040432173
+          },
+          "endpoint_error_m": 0.12418426050853769,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0009162731565015505,
+          "stop_hold_max_speed_mps": 0.0026587285029408716,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.03856968483733093,
+            "median": 0.02084573544561863,
+            "p90": 0.026241585612297058,
+            "p95": 0.08013177663087845,
+            "max": 0.16266094148159027
+          },
+          "final_pitch_deg": -0.02084573544561863,
+          "telemetry_count": 530,
+          "truth_aligned_count": 530,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "25854",
+          "town": "Town03",
+          "preset": "carla",
+          "wall_s": 1.6709240179989138,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 529,
+          "collisions": [],
+          "cross_track_rms_m": 0.12402418595827001,
+          "cross_track_p95_m": 0.27823544080620044,
+          "cross_track_full": {
+            "count": 529,
+            "rms": 0.12402418595827001,
+            "median": 0.05919767462353844,
+            "p90": 0.24513435019355548,
+            "p95": 0.27823544080620044,
+            "max": 0.31248054316670637
+          },
+          "cross_track_steady": {
+            "count": 489,
+            "rms": 0.12865657031383418,
+            "median": 0.05919767462353844,
+            "p90": 0.25197469839225334,
+            "p95": 0.2798146064875111,
+            "max": 0.31248054316670637
+          },
+          "projection_distance_full": {
+            "count": 529,
+            "rms": 0.29875460774947227,
+            "median": 0.05919767462353845,
+            "p90": 0.2788081014433678,
+            "p95": 0.32816712511162,
+            "max": 1.3880700967916408
+          },
+          "speed_rms_mps": 0.19607634558647946,
+          "cruise_speed_after_5s": {
+            "count": 238,
+            "rms": 0.19607634558647946,
+            "median": 0.1454020044793829,
+            "p90": 0.31789978782616946,
+            "p95": 0.33828709894663606,
+            "max": 0.3957323012090086
+          },
+          "cruise_speed_all": {
+            "count": 338,
+            "rms": 2.245177024548182,
+            "median": 0.17692693474239052,
+            "p90": 3.8023598109302106,
+            "p95": 6.751708621989233,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 529,
+            "rms": 1.8189086496520879,
+            "median": 0.2613518878028769,
+            "p90": 1.1343494729813395,
+            "p95": 5.375579574922933,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 529,
+            "rms": 2.7421353404530646,
+            "median": 0.1251088600207595,
+            "p90": 0.9197822185814661,
+            "p95": 6.822838998399003,
+            "max": 15.372148285657941
+          },
+          "pose_p90_m": 0.1917051964302452,
+          "fused_pose": {
+            "count": 529,
+            "rms": 0.1393883121125991,
+            "median": 0.103663096967412,
+            "p90": 0.1917051964302452,
+            "p95": 0.25872526380139393,
+            "max": 0.5075807557668843
+          },
+          "raw_pose": {
+            "count": 529,
+            "rms": 0.7775702916188673,
+            "median": 0.6611152749146165,
+            "p90": 1.1757603874590243,
+            "p95": 1.299315614014965,
+            "max": 1.877235329122103
+          },
+          "pose_heading_deg": {
+            "count": 529,
+            "rms": 0.030233923860950966,
+            "median": 0.015253199736551093,
+            "p90": 0.05229450078370744,
+            "p95": 0.05985398661135494,
+            "max": 0.10977946272957237
+          },
+          "endpoint_error_m": 0.0907687094676814,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.00039858122029037634,
+          "stop_hold_max_speed_mps": 0.00822177036214893,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.055534088607258246,
+            "median": 0.05173185095191002,
+            "p90": 0.05173185095191002,
+            "p95": 0.07119788974523544,
+            "max": 0.11467886716127396
+          },
+          "final_pitch_deg": -0.05173185095191002,
+          "telemetry_count": 529,
+          "truth_aligned_count": 529,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "25854",
+          "town": "Town03",
+          "preset": "tcp",
+          "wall_s": 1.5974511489985161,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        },
+        {
+          "status": "completed",
+          "ticks": 537,
+          "collisions": [],
+          "cross_track_rms_m": 0.11126470588197433,
+          "cross_track_p95_m": 0.2534353691369422,
+          "cross_track_full": {
+            "count": 537,
+            "rms": 0.11126470588197433,
+            "median": 0.052483289696134625,
+            "p90": 0.1994630707612099,
+            "p95": 0.2534353691369422,
+            "max": 0.3376553743640358
+          },
+          "cross_track_steady": {
+            "count": 497,
+            "rms": 0.11504697874738605,
+            "median": 0.05503875402691431,
+            "p90": 0.20248598215905214,
+            "p95": 0.25847736429451434,
+            "max": 0.3376553743640358
+          },
+          "projection_distance_full": {
+            "count": 537,
+            "rms": 0.29212639589432626,
+            "median": 0.05794472518651564,
+            "p90": 0.25459742906555255,
+            "p95": 0.3408619285003383,
+            "max": 1.3880700967916408
+          },
+          "speed_rms_mps": 0.22031235568439567,
+          "cruise_speed_after_5s": {
+            "count": 240,
+            "rms": 0.22031235568439567,
+            "median": 0.1767323850072957,
+            "p90": 0.35486625812375455,
+            "p95": 0.3597399455258551,
+            "max": 0.39242675532814
+          },
+          "cruise_speed_all": {
+            "count": 340,
+            "rms": 2.2415270831221665,
+            "median": 0.22894343991394717,
+            "p90": 3.745573211841069,
+            "p95": 6.774785422154106,
+            "max": 8.0
+          },
+          "reference_speed_all": {
+            "count": 537,
+            "rms": 1.8036978132403567,
+            "median": 0.32462078635640523,
+            "p90": 1.1009618607883191,
+            "p95": 5.293872012726025,
+            "max": 8.0
+          },
+          "command_speed_all": {
+            "count": 537,
+            "rms": 2.7262105444727025,
+            "median": 0.14031691011157132,
+            "p90": 0.9591580236946315,
+            "p95": 6.540595651184036,
+            "max": 15.372148285657941
+          },
+          "pose_p90_m": 0.18858133499033847,
+          "fused_pose": {
+            "count": 537,
+            "rms": 0.13700269644632093,
+            "median": 0.1028575385335354,
+            "p90": 0.18858133499033847,
+            "p95": 0.24298603069367583,
+            "max": 0.5075807557668843
+          },
+          "raw_pose": {
+            "count": 537,
+            "rms": 0.7759123142475153,
+            "median": 0.660315393448861,
+            "p90": 1.1677569817998705,
+            "p95": 1.296437157699419,
+            "max": 1.8772398863542932
+          },
+          "pose_heading_deg": {
+            "count": 537,
+            "rms": 0.03573397047963879,
+            "median": 0.012638931943027032,
+            "p90": 0.051955761427632384,
+            "p95": 0.0699055966179752,
+            "max": 0.19726329313798976
+          },
+          "endpoint_error_m": 0.056352072078976634,
+          "stop_hold_s": 5.000000074505806,
+          "stop_hold_displacement_m": 0.0004479852830430318,
+          "stop_hold_max_speed_mps": 0.01202073976242476,
+          "hold_pitch_deg": {
+            "count": 101,
+            "rms": 0.04946367410423262,
+            "median": 0.04601498320698738,
+            "p90": 0.04601498320698738,
+            "p95": 0.06444966048002243,
+            "max": 0.10275336354970932
+          },
+          "final_pitch_deg": -0.04601498320698738,
+          "telemetry_count": 537,
+          "truth_aligned_count": 537,
+          "telemetry_frames_monotonic": true,
+          "metric_protocol": {
+            "lateral_gate": "full_route_independent_truth_projection",
+            "lateral_steady_warmup_s": 2.0,
+            "cruise_startup_allowance_s": 5.0,
+            "cruise_reference": "truth_remaining_distance_constant_deceleration",
+            "stop_deceleration_mps2": 2.0,
+            "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+          },
+          "gates": {
+            "completed": true,
+            "no_collision": true,
+            "full_lateral_rms": true,
+            "full_lateral_p95": true,
+            "cruise_speed": true,
+            "pose": true,
+            "heading": true,
+            "endpoint": true,
+            "hold_duration": true,
+            "hold_displacement": true,
+            "hold_speed": true,
+            "telemetry_complete": true
+          },
+          "gate_pass": true,
+          "route_id": "25854",
+          "town": "Town03",
+          "preset": "pursuit",
+          "wall_s": 1.6176203489994805,
+          "exception": null,
+          "cleanup_errors": [],
+          "telemetry_parse_errors": []
+        }
+      ]
+    }
+  ],
+  "selection_policy": "first harness-finished attempt else latest; all attempts in attempts.csv",
+  "failure_attribution": "raw blocked/deviation are retained; controller-caused attribution remains unknown",
+  "minimum_speed": "B2D 0.0.4 unused; raw counts retained, no inferred per-event penalty",
+  "reference_speed_semantics": "Derivative of timed controller input including origin-to-first-point bridge; not independent route cruise truth. Startup/lateral route offset can inflate reference and command speed. Recorded values retained.",
+  "cap_semantics": "capped = harness_capped or official_tick_runtime; official TickRuntime failures remain in finalized-route denominator"
+}

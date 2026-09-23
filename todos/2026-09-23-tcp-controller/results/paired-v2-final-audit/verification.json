@@ -1,0 +1,14 @@
+{
+  "paired-v2-final_hashes_match": true,
+  "paired-v2-stall-final_hashes_match": true,
+  "paired-v2-figures-final_hashes_match": true,
+  "native_common_fixed_bins_4000": true,
+  "native_common_prefix_and_after_4000": true,
+  "native_common_arbitration_consistent": true,
+  "pi_common_fixed_bins_4000": true,
+  "pi_common_prefix_and_after_4000": true,
+  "pi_common_arbitration_consistent": true,
+  "six_cases_all_data_available": true,
+  "all_checks_pass": true,
+  "hash_references_verified": 103
+}

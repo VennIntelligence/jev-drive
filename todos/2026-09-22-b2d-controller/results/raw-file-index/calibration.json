@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/calibration",
+  "captured_at": 1790086082.0439653,
+  "files": [
+    {
+      "path": "controller_config.json",
+      "bytes": 328,
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 1366,
+      "sha256": "43eb0d311585608008021872e2af0a3d9fa858f90a6a6db38df1a7f7602f8edb"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "ec9226bd6ca85d38f6c300c6d73564e1757ee773cbe17952ddd396e8705e4e89"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 1366,
+      "sha256": "43eb0d311585608008021872e2af0a3d9fa858f90a6a6db38df1a7f7602f8edb"
+    },
+    {
+      "path": "physics.json",
+      "bytes": 5251,
+      "sha256": "7a288dd3139201fa4683119b64c502cdf8cc8b6a43eae1c1d1f4a1bdf308d8e9"
+    },
+    {
+      "path": "response.jsonl",
+      "bytes": 212034,
+      "sha256": "1f9e305ca2875758385c61b638444b09ac4fe32a8d94f94c35cbd17d4cfddb50"
+    },
+    {
+      "path": "response_summary.json",
+      "bytes": 1082,
+      "sha256": "cfca5eed42946d48c03091b6dced6a0426d6b3b37a83c83e212e10620f56a90c"
+    },
+    {
+      "path": "servers/carla-60-1.log",
+      "bytes": 130,
+      "sha256": "bcd562ad467d0956c972279568f75aabc474a29e6f5c04002a940c6459dcb99f"
+    },
+    {
+      "path": "servers/carla-60.pid",
+      "bytes": 6,
+      "sha256": "7691db625429f479e851b5344882d4f73dc2c22397f12dba94ffa0b8c8f79b70"
+    }
+  ],
+  "file_count": 9,
+  "total_bytes": 221659
+}

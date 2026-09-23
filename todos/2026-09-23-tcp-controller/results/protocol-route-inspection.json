@@ -1,0 +1,43 @@
+{
+  "source": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml",
+  "source_sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+  "method": "Read-only XML polyline geometry; no CARLA map interpolation or live traffic observation",
+  "routes": [
+    {
+      "route_id": "1711",
+      "town": "Town12",
+      "scenario_types": [
+        "ParkingCutIn"
+      ],
+      "xml_positions": 68,
+      "planar_polyline_length_m": 134.0124921972504,
+      "segment_heading_span_deg": 2.8624052261124064,
+      "max_anchor_distance_from_endpoint_chord_m": 0.07462634616502553,
+      "observation": "XML positions are nearly collinear; no evidence of a road bend in these anchors. Interaction-driven avoidance may still turn the vehicle."
+    },
+    {
+      "route_id": "1773",
+      "town": "Town12",
+      "scenario_types": [
+        "ParkedObstacle"
+      ],
+      "xml_positions": 68,
+      "planar_polyline_length_m": 134.00499687890016,
+      "segment_heading_span_deg": 2.8624052261124064,
+      "max_anchor_distance_from_endpoint_chord_m": 0.06567156864388654,
+      "observation": "XML positions are nearly collinear; no evidence of a road bend in these anchors. Interaction-driven avoidance may still turn the vehicle."
+    },
+    {
+      "route_id": "24211",
+      "town": "Town01",
+      "scenario_types": [
+        "DynamicObjectCrossing"
+      ],
+      "xml_positions": 68,
+      "planar_polyline_length_m": 134.00000000000003,
+      "segment_heading_span_deg": 0.0,
+      "max_anchor_distance_from_endpoint_chord_m": 0.0,
+      "observation": "XML positions are nearly collinear; no evidence of a road bend in these anchors. Interaction-driven avoidance may still turn the vehicle."
+    }
+  ]
+}

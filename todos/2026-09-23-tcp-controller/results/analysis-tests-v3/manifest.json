@@ -1,0 +1,8 @@
+{
+  "returncode": 0,
+  "outputs": {
+    "tests.log": "db25736f3ba6fa8f9dc270e3b51c90929c07ee27a5223a1bbd5f10e3d3828983",
+    "test_analyze_tcp.py": "55cd384f5e3f8ecc33999001936277b45bfb7599b2590e45d6c787512729f113",
+    "analyze_tcp.py": "3ca38a90bb93fd6a1e9db3f4002e10efa2b0b1d3f2054406704c8590be175faa"
+  }
+}

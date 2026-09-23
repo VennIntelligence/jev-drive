@@ -1,0 +1,12 @@
+{
+  "samples": 657,
+  "baseline_fit_samples": 328,
+  "short_held_out_samples": 329,
+  "all_window_frames_retained": true,
+  "within_window_frames_consecutive": true,
+  "target_matches_propagation_within": 1e-12,
+  "prediction_and_residual_match_within": 1e-12,
+  "baseline_only_coefficient_reproduced": true,
+  "window_rms_matches_archived_summary_within": 1e-12,
+  "raw_source_hashes_verified": 39
+}

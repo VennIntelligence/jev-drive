@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/calibration-units",
+  "captured_at": 1790086081.987448,
+  "files": [
+    {
+      "path": "controller_config.json",
+      "bytes": 328,
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 1499,
+      "sha256": "ecb343fd8c166d9a406d190fcbad03c882c7a62cb4e69f614e2571e11b2bc9fd"
+    },
+    {
+      "path": "gpu.txt",
+      "bytes": 96,
+      "sha256": "5cf611dc672ad6b29d8ecce762fdb183326740a0dd1276a572bc813896364baf"
+    },
+    {
+      "path": "imu_samples.json",
+      "bytes": 66874,
+      "sha256": "aeca6490d7335c1273fb2e4b3ae7a0fc9f91889808a93fab91dc35fe9fbb77bc"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 1499,
+      "sha256": "ecb343fd8c166d9a406d190fcbad03c882c7a62cb4e69f614e2571e11b2bc9fd"
+    },
+    {
+      "path": "physics.json",
+      "bytes": 5252,
+      "sha256": "67c5e7a13f4ad150378f95023fb2e89290b5a32afe5848717ae904969410b539"
+    },
+    {
+      "path": "response.jsonl",
+      "bytes": 224240,
+      "sha256": "06c15d5566ca3ba046f63694ef7b0b18bf58284f4a5e8076643530746718b559"
+    },
+    {
+      "path": "response_summary.json",
+      "bytes": 1086,
+      "sha256": "8faa40a5f0718cdb8abd3f519df0cec1018de9af9a5f616b086c8dbbca201a5a"
+    },
+    {
+      "path": "servers/carla-62-1.log",
+      "bytes": 130,
+      "sha256": "bcd562ad467d0956c972279568f75aabc474a29e6f5c04002a940c6459dcb99f"
+    },
+    {
+      "path": "servers/carla-62.pid",
+      "bytes": 6,
+      "sha256": "b63f02504b5d7b80ebcbd52a6a9f748e5f5f6c7b08167aa6788456f019df3135"
+    },
+    {
+      "path": "steering_unit_probe.json",
+      "bytes": 2668,
+      "sha256": "d06267aba6293ce427fa10b0044fd3f97b112bdf0afc6ae68d167f90bb17a95e"
+    }
+  ],
+  "file_count": 11,
+  "total_bytes": 303678
+}

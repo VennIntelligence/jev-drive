@@ -1,0 +1,20 @@
+test_common_configuration_cannot_tune_another_parameter (test_pose_analysis.PoseContractTests) ... ok
+test_deleted_motion_frame_and_stale_sensor_timestamp_fail (test_pose_analysis.PoseContractTests) ... ok
+test_delta_sign_and_post_gnss_injection_detected (test_pose_analysis.PoseContractTests) ... ok
+test_distinct_time_origins_require_constant_offset (test_pose_analysis.PoseContractTests) ... ok
+test_each_required_field_missing_fails (test_pose_analysis.PoseContractTests) ... ok
+test_fault_reasons_and_safe_stop_distinguished (test_pose_analysis.PoseContractTests) ... ok
+test_first_tick_cannot_claim_interval (test_pose_analysis.PoseContractTests) ... ok
+test_fixed_and_disabled_mean_motion_formula (test_pose_analysis.PoseContractTests) ... ok
+test_linear_mode_required_when_aim_evaluated (test_pose_analysis.PoseContractTests) ... ok
+test_missing_mode_or_config_coefficient_fail (test_pose_analysis.PoseContractTests) ... ok
+test_same_metrics_only_primary_right_benefit_fails (test_pose_analysis.PoseContractTests) ... ok
+test_signed_pose_error_left_positive (test_pose_analysis.PoseContractTests) ... ok
+test_truth_is_not_audit_input (test_pose_analysis.PoseContractTests) ... ok
+test_world_jerk_not_derivative_of_rotating_projection (test_pose_analysis.PoseContractTests) ... ok
+test_wrong_coefficient_sign_and_mean_convention_fail (test_pose_analysis.PoseContractTests) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 0.005s
+
+OK

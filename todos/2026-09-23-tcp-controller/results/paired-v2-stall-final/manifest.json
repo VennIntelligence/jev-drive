@@ -1,0 +1,20 @@
+{
+  "sources": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-final/comparison.json": "f4088384c611cde48909a110ea991c5dc234afddf4d4ac7bb8fc80ce17996d3b",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common/attempts/1773/1/tcp-control.jsonl": "95d4efb7280af1b2f720d24282250f772e632049bbf176b431bc77235251b171",
+    "/data/runs/b2d/tcp-controller/paired-v2/1773-pi_common/attempts/1773/1/tcp-control.jsonl": "f915a5902d42e5e33d67a3690fd0ee43b531cc0ca900a14ebfeedacd2ce472bc",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/audit_tcp_stall.py": "623f6d5c39701acc286f081f6557543420ab907e8603e7c2c0001d7f10c72a32",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe",
+    "/data/third_party/Bench2DriveZoo/TCP/model.py": "575ce747444ccb7cf288690393eb48963225668948d84ce5c293b667af522645",
+    "/data/third_party/Bench2DriveZoo/TCP/config.py": "9bd25c9f61b2b568ba00cdb9f3b8a5e685487f662fbcefe8839f8652016d80fa"
+  },
+  "outputs": {
+    "frames.csv": "831379bf9185fa97e1129132c73553d986d33cef40beea555a09bb9db12d996c",
+    "vendor-config.py": "9bd25c9f61b2b568ba00cdb9f3b8a5e685487f662fbcefe8839f8652016d80fa",
+    "audit_tcp_stall.py": "623f6d5c39701acc286f081f6557543420ab907e8603e7c2c0001d7f10c72a32",
+    "README.md": "1c393abf919a835f9d77485b0c222355e995ff58cc1a7502898f17daab6adb03",
+    "vendor-model.py": "575ce747444ccb7cf288690393eb48963225668948d84ce5c293b667af522645",
+    "analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe",
+    "segments.csv": "c1b49ab10e567874d18f23b9ec284ae87fe886259f6609eb3299c07f7e9f734b"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "captured_at": 1790130078.2018566,
+  "files": [
+    {
+      "path": "apt-nvidia-history.txt",
+      "sha256": "459d56b48acd2ca8e85b1d99806a22307ff7a0e7d3dab94d63da8f1fb3ae6b5c",
+      "bytes": 5859
+    },
+    {
+      "path": "carla-process-maps.txt",
+      "sha256": "75a87e12c1046fc9e2b584439a8bb57ee3fae99a0599a0fa8ec5b5945b96864b",
+      "bytes": 125003
+    },
+    {
+      "path": "current-system-nvml.txt",
+      "sha256": "ee073341d25ca8cc525dd222479f54f52367b1d15e0b8b7bfc60ebe2f30bd446",
+      "bytes": 89
+    },
+    {
+      "path": "download-events.jsonl",
+      "sha256": "3391d975e374a82d3344db301a0161e9b40afcc4f2fe25511e2f853037942a32",
+      "bytes": 4613
+    },
+    {
+      "path": "download-intervention.json",
+      "sha256": "00d3ef5534d110464559445ae6864bbf0178888e5f919b225d27dd71b37a0c72",
+      "bytes": 297
+    },
+    {
+      "path": "download-repair-events.jsonl",
+      "sha256": "f798e21529c007509b5f970b6e5f03329ee178cf0162b502e5546e3085682177",
+      "bytes": 5284
+    },
+    {
+      "path": "download-repair.py",
+      "sha256": "704483c73d1c2313acd189dc3d662041a53d601fed50cf8ac9973722556365f2",
+      "bytes": 1194
+    },
+    {
+      "path": "download-verification.json",
+      "sha256": "316c2685c0f3f2359331e329333c6e55de174bcf744f4db3b37a2e376d1d89c5",
+      "bytes": 377
+    },
+    {
+      "path": "download.py",
+      "sha256": "796a3d103e33344a690c26f21941a9092f44bd731c6d1474bdc5b9fcafcea56c",
+      "bytes": 1126
+    },
+    {
+      "path": "extract-log.txt",
+      "sha256": "5d357b63f0fb53b8be27d3e978e99a4635900e6bbc889e24f034bf5c45076c95",
+      "bytes": 1402
+    },
+    {
+      "path": "gpu-recovered.csv",
+      "sha256": "f893248c2191451f7f3dbab26a555a7bd37c8edd3fa42dbfdcac7060c0d7770c",
+      "bytes": 244
+    },
+    {
+      "path": "isolated/env.sh",
+      "sha256": "98d528fbf56af63df5e62a1a9bbaf033a372403778decd8af3c80b5de8af82b4",
+      "bytes": 538
+    },
+    {
+      "path": "isolated/manifest.json",
+      "sha256": "911f3311ca383ea6ef79cf34998fd289c72d7f200d11627496143993b8a3ef8c",
+      "bytes": 24753
+    },
+    {
+      "path": "isolated/static-verification.json",
+      "sha256": "779f1ac781b88c9a095fef9b82efdef4b5513bfdda0bd3d2ff05bb893075b31f",
+      "bytes": 216
+    },
+    {
+      "path": "kernel-driver.txt",
+      "sha256": "f3422a696d13b652c20e0f955e52178a280a08f5207b7ff7a89fffb10db585b2",
+      "bytes": 156
+    },
+    {
+      "path": "live-library-verification.json",
+      "sha256": "a8e24f85f692042cb9bc35216c385dbe0a548c68c3229cfd6ed3433c0014f047",
+      "bytes": 1872
+    },
+    {
+      "path": "log.txt",
+      "sha256": "d4510e816c84b381208fe9d84dabcbb32310688feae4e2bf17b88de0465dc27f",
+      "bytes": 868
+    },
+    {
+      "path": "official.sha256sum",
+      "sha256": "1db6d63073f462e580cec2259f316c13f0ed636d42a2f486f78ad13c724b324c",
+      "bytes": 101
+    },
+    {
+      "path": "repair-log.txt",
+      "sha256": "816593c3e891236d38e2466691a5d8cf237f81d7b43be06bc18e3774b4d5e207",
+      "bytes": 1615
+    }
+  ]
+}

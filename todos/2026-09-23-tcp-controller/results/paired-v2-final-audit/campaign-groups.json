@@ -1,0 +1,44 @@
+[
+  {
+    "route": "24211",
+    "arm": "native_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common",
+    "returncode": 0,
+    "wall_s": 25.629178047180176
+  },
+  {
+    "route": "24211",
+    "arm": "pi_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common",
+    "returncode": 0,
+    "wall_s": 33.43535375595093
+  },
+  {
+    "route": "1711",
+    "arm": "native_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common",
+    "returncode": 0,
+    "wall_s": 79.08216786384583
+  },
+  {
+    "route": "1711",
+    "arm": "pi_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common",
+    "returncode": 0,
+    "wall_s": 79.68371367454529
+  },
+  {
+    "route": "1773",
+    "arm": "native_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/1773-native_common",
+    "returncode": 0,
+    "wall_s": 505.73484802246094
+  },
+  {
+    "route": "1773",
+    "arm": "pi_common",
+    "out": "/data/runs/b2d/tcp-controller/paired-v2/1773-pi_common",
+    "returncode": 0,
+    "wall_s": 549.5795102119446
+  }
+]

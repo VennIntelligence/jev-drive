@@ -1,0 +1,94 @@
+{
+  "total_frames": 2761,
+  "exactly_equal": true,
+  "checks": [
+    {
+      "route": "26966",
+      "variant": "baseline-max",
+      "frames": 387,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    },
+    {
+      "route": "26966",
+      "variant": "short-max",
+      "frames": 388,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "baseline-max",
+      "frames": 434,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "short-max",
+      "frames": 434,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "baseline-max",
+      "frames": 559,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "short-max",
+      "frames": 559,
+      "default_pose_unequal_values": 0,
+      "candidate_shadow_unequal_values": 0,
+      "heading_unequal_values": 0,
+      "raw_pose_unequal_values": 0,
+      "candidate_shadow_max_abs_error_m": 0.0
+    }
+  ],
+  "coefficient": 0.010659832,
+  "shadow": "/data/runs/b2d/controller/lateral-followup/pose-compensation-replay-v1",
+  "inputs": {
+    "/data/runs/b2d/controller/lateral-followup/pose-compensation-replay-v1/frames.csv": "3302c28ad60b5c010accddf7216822a2119d3463487a64fdbea6172c733f54dc",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/route_reference.json": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/motion.jsonl": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/control.jsonl": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06",
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/route_reference.json": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/motion.jsonl": "ea49bde7dcaa2cce9718b7333fdc1c62d0baaf6421ad22ce91c2a30089722191",
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/control.jsonl": "2c7fc4fecc8d16dce5e724a3776ff939e9a5bbfb56d70a13d3c6697a2788395e",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/route_reference.json": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/motion.jsonl": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/control.jsonl": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0",
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/route_reference.json": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/motion.jsonl": "cd45f3dc5547758092171e0aacccd77f3ff5ad1d1842b4294cd5a1929f645efd",
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/control.jsonl": "f94eeaf0fa3722cc027cb7b7e0c764284c6305b33144e8de3ff0a32a9a3f2c5d",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/route_reference.json": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/motion.jsonl": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/control.jsonl": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f",
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/route_reference.json": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/motion.jsonl": "da8453f1056497e2de80b16aab727eccd5d0b57dd27a9d994aaa1105a6bcd9ad",
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/control.jsonl": "7166f33b793e325c786cbd3595910f1ea59f457aea82307e2b5a4b0370a8d2ba",
+    "/home/ujs/mycode/jev-drive/scripts/b2d_controller_adapter.py": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e",
+    "/home/ujs/mycode/jev-drive/scripts/b2d_agent.py": "f470df21512fc3959a0fffd2032a481ae99579be45b889a441c7877ece4e2bbe",
+    "/home/ujs/mycode/jev-drive/scripts/test_b2d_controller_pose_lateral.py": "c53d87c8a3524f05db4b991ee79f7113909a18e4b27c113b475d50c75af938ca",
+    "todos/2026-09-23-lateral-followup/diagnostics/verify_pose_lateral.py": "6bc34a0373ed560916bb5c8a5582b55ddd1f2fe10edea2a13424dcf61579c3d8"
+  },
+  "scope": "Production PoseFilter only, using complete original GPS/IMU/SPEED. Exact default vs original log; fixed k vs independently written pre-implementation shadow. No new physical/controller execution."
+}

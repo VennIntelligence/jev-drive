@@ -1,0 +1,14 @@
+{
+  "baseline-linear": {
+    "controller_config": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/configs/baseline-linear.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "candidate-hermite": {
+    "controller_config": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/configs/candidate-hermite.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

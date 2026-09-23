@@ -1,0 +1,69 @@
+{
+  "created_utc": "2026-09-23T02:37:04.007895+00:00",
+  "source_files": {
+    "analyze_pose.py": {
+      "sha256": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d",
+      "bytes": 34102,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/analyze_pose.py"
+    },
+    "pose_contract.py": {
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58",
+      "bytes": 11690,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/pose_contract.py"
+    },
+    "test_pose_analysis.py": {
+      "sha256": "345c3a2bcd6616c755ce52f0b6a392b9149579f57ee52015f056ec2e364f492d",
+      "bytes": 6698,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/test_pose_analysis.py"
+    },
+    "verify_analysis.py": {
+      "sha256": "acbba64ca2e2efbe4d7b5b2b4220581c36448c304318e53a99f04a2c5fd659c2",
+      "bytes": 3630,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_analysis.py"
+    },
+    "verify_sensor_replay.py": {
+      "sha256": "8de7fc0e53641e0721ca230095d74f0f8806edad292f42092f4d122629147bdc",
+      "bytes": 2084,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_sensor_replay.py"
+    },
+    "verify_production_contract.py": {
+      "sha256": "232394b72dbd516b73b60ec732e0d74bcaa883b5a8b6abdcf01e1efee711910a",
+      "bytes": 3656,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_production_contract.py"
+    },
+    "README.md": {
+      "sha256": "8368f6f27f3076733867a02fb5f52bbfd6d9a9bcce8c587c5074a14aad3bbf6a",
+      "bytes": 5219,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/README.md"
+    },
+    "lateral-evidence-v1/routes.csv": {
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+      "bytes": 3293,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/routes.csv"
+    },
+    "lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/turn-windows.csv"
+    },
+    "lateral-evidence-v2/analyze.py": {
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+      "bytes": 10894,
+      "snapshot": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v2/analyze.py"
+    }
+  },
+  "protocol": {
+    "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/protocol.md",
+    "sha256": "1db58374c580f796990e91c623fae42435563d98bb33b074ff4d3c52e83e7ff9"
+  },
+  "required_live_conditions": 156,
+  "verification_files": {
+    "metrics-fixtures.json": "96e18860dd83dcb9524fcd20f5f3323a40428d033bd92b5cf36d0122c1e75fd0",
+    "unit-tests.log": "160488454ba963a8c6351fa5c8623fd83a8d0422c6e42a57ba5433a502c54bf3",
+    "production-contract.json": "e9d44f6b60f634a0a98ba2dadf1ad1821bf7c62dfe97c94eb2f7f11ee86cfa24",
+    "sensor-replay.json": "fc15f9e226e3a4a1a519c2656a483aac7f1c85e83884d4678762784b01732f72",
+    "production-adapter-source.py": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e",
+    "verification-index.json": "630c1ae34391fa6622ceb9bfbfcb57037368a939a0d5ce29d03ab6518b3fd780"
+  },
+  "scope": "Read-only independent pose acceptance, no CARLA; reviewed fixed thresholds; plot freeze separately owned by report agent."
+}

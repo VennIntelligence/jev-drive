@@ -1,0 +1,1000 @@
+{
+  "figure_report": "todos/2026-09-22-b2d-controller/results/pi-v4-figures-01/report.json",
+  "report_sha256": "161c9a9ee15a16b6dfe850ed7ce79f01a5329c4ecab3b2682bb45d38e02be6f7",
+  "source_checks": [
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/variants.json",
+      "sha256": "d3e8e912b6a0632f91369e488aaf15cbee36af7c1e37b422be0e26fefd05f571"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/routes.xml",
+      "sha256": "5d900bac96a17a3702a4a879542f762a5b595cc722cf0400a09d7583097f378e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/route-cruises.json",
+      "sha256": "4eef432b3d9227ce17b36c9fb40184f04b8866cfc940e7f5382dc74c54a708b7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/controller-pi.json",
+      "sha256": "1d2b1e025a01e30e8e7d0f93150c5f5de397282f0a709b1e6798e917b76aff93"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/matrix.json",
+      "sha256": "6f24b8f19dbd6c885c702c6e9863be82c4e6432bc0a529c1c41dc56bb6ad4bbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/inputs/controller-pi-max.json",
+      "sha256": "f28fe826e8572aab6e10d3a02d5e7b2ec3cc357977dea378b8ce24cf02a99e18"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/provenance/manifest.json",
+      "sha256": "702fa8c8b607c178551d8c09770d2c0c185cd1f1793ee2e0769c3639080057d2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/summary.json",
+      "sha256": "8e4811a4addf80e1de70a39531629c4b2a379b97d2f65b5be4433cfae91b33f5"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/events.jsonl",
+      "sha256": "944099c448617d71dd3558b4e49aaf2b394f6b7859e18be41e101241d3b01c17"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/controller-baseline.json",
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/variants.json",
+      "sha256": "7188b1d5e69b6bf56530f27e65d4e0b15c6fbbccfda82a8eeac983b9eb93af9b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/routes.xml",
+      "sha256": "a0cf075147bc68bb3d75df26708afdd26c680ff65ce50c5fb91d4122587e6078"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/route-cruises.json",
+      "sha256": "6be11d966b6439daf126014bdb5897428acf2d6f39667b0586c1bb0c925c3b9b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/matrix.json",
+      "sha256": "7b8fdba8b54e680dd32c0927a5103a9d7671baacf667dd87dca24c8ac72bb56d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/inputs/controller-max.json",
+      "sha256": "16eff9b3ed0a4f2377c8ef4c8899291d2a8cd1a106c01d4bf8400a5516245c3d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/provenance/manifest.json",
+      "sha256": "d5bc8dc008d4930728f1a85645ae782eefbe255c47d4fa3f1d5535ad560cbd0f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/summary.json",
+      "sha256": "01f4cfa60bfde2000d09d5518855f1dbc9a617f7baab9702d923a8fdeecf4198"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/events.jsonl",
+      "sha256": "136d9b18fa6418c71b249d932963ac55c34619a07a3b2d4501a811bb0bacc44e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/inputs/routes.xml",
+      "sha256": "6c3c8c0a4f3d602f7b2d3be815d9240c9fbdd4c7be3637173749e959b7f919e7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/inputs/controller-default.json",
+      "sha256": "d0b43e5816d56af1750a3d055fb2530ffa2fbd8b9331acec1b80f1fcc3732b57"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/inputs/matrix.json",
+      "sha256": "e38337df1762051b23e5494adcd1dd2a2d2dc25fc4ad91b570463ebdebf16d29"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/provenance/manifest.json",
+      "sha256": "4128382ce16d68be2df8f08e14d126d4fb2db84234bfaf91249bf0342872012a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/summary.json",
+      "sha256": "472b39d4bccf9d2a18cbeea24248e23f89b3e8a63f2717643e26ac9d959f374b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/events.jsonl",
+      "sha256": "9f4ca65040da9b9699869f575a4745b3e0855d30b0fb83e92abfd3f894c1c60b"
+    },
+    {
+      "path": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_pi_plot.py",
+      "sha256": "18683332754aac51430aff63971415be4fe5f13d4eced05b65f369428be3a00f"
+    },
+    {
+      "path": "/data/worktrees/jev-drive-controller-v2/scripts/b2d_controller_matrix_plot.py",
+      "sha256": "a28a25150ccd864ccef920dc491655e79541bb2c9770e3bf3dff5154d09b7180"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/validation.json",
+      "sha256": "fac29a5436ba8a31cbe0a4ca65e89988e90930cf3d9942da7a01cc8cf7721e75"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/validation_trace.json",
+      "sha256": "acc220d25e3cb27bf9707af84cb6d10bdb3fed67c3b685be177580a5ed90871b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/control.jsonl",
+      "sha256": "9b5f016969c53696d120b496fa7ff39f96ac255032ea7f5c632ef7652496b57f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/trajectories.jsonl",
+      "sha256": "c76e212ba9f7b22add6289926848925410fbf62e6915c1af9ba315948ef00b96"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/carla/agent_config.json",
+      "sha256": "88b9ec276abbb2c4396ee285a6b1a45c8c9196aa9f1158eed4d93be18b7c1cc8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation.json",
+      "sha256": "fa519830aff1d8191050eea32690bea1255b718e9ef9c46c9f6111b900c0fd5b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/validation_trace.json",
+      "sha256": "c044c27e1593429e1ba2115631fea22d46866ef863adc51eba34574e10f82015"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/control.jsonl",
+      "sha256": "2b71dd95a492e8df3c3437c2e119cc8c63b3829561577b748ac79b7f5b8e1512"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/trajectories.jsonl",
+      "sha256": "8d6f1aa8e1735d948cc1f15f0d27084d3bbad0b9709b347e9ae28b1a681b9613"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/carla/agent_config.json",
+      "sha256": "f22bc057daeb9b48ad9ea9ce846408698881d5dec3bbbf131342a171a6754e2d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/validation.json",
+      "sha256": "16606a14bf29a9242ba944bfbb1fd18fe104cd7c5da6088ea24892a78c510b32"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/validation_trace.json",
+      "sha256": "50ab209d83e1cf1abf6260cc321dfea17be538123e4abfbb3768ec2c4194b554"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/control.jsonl",
+      "sha256": "7b53d62fbeb68e1bb6db6116a5149147f41cd4d7243baf76b09a9ec949d798a2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/trajectories.jsonl",
+      "sha256": "2efc9c07806149521b2a27751999376a248def011da2b373b1eb5082cc11a7e2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi/pursuit/agent_config.json",
+      "sha256": "6bbada2ec2dbf2c728d7fe4e82203f63bc5100e7b1b6b873cae6b18e8716a06b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation.json",
+      "sha256": "1dee23554a5c792e6d70389b8c0767e26bb56e43d68ea4da1837c75b3a41ca67"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/validation_trace.json",
+      "sha256": "465c51d916e7a0d48c87bdb2245b2105eae458851ea70456332e0534f2d0e1b8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/control.jsonl",
+      "sha256": "6241777656af987455a6d4dc0245a6fbe55df183ea7e3c2a0d74db44b7190333"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/trajectories.jsonl",
+      "sha256": "fa90269f3780e59251863a6796d24a567bca031d9d8c8ed5dd0aa08d43262762"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/baseline/pursuit/agent_config.json",
+      "sha256": "15ad54605dc539b7f516d8b0a0fa984a990b0985500b63153ecb799e64e6c222"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/validation.json",
+      "sha256": "e0b9a7229435f17d2419839bfa99f2e06d3f9c8e5faea25b3957bb585be0480d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/validation_trace.json",
+      "sha256": "dc04e0f7b8a10c224fca8a9ca6e0099a4f2b2b2290cf2fb330d7a1e3cd9a86b3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/control.jsonl",
+      "sha256": "3abc15331aa5d919d9f403e6e20579ac91c70de524b0f067a7c0bce18293911c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "aa1e0673707ef77370109c5c8640807e4efe6e4a9613830223a4523a46de9c6a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773/pi-max/pursuit/agent_config.json",
+      "sha256": "46debfb44a63796fdec4531d8bfc1496e3fb16f36f211f8c2ac22645a1fc7e6b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/validation.json",
+      "sha256": "c5c96ee046d134127f52bf0bac868fdd92a8e8d5ea2ea03031516085bce6afc6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/validation_trace.json",
+      "sha256": "8f6d9bee0b04465bca78dfc17d0857e86020d833824282dc41c1d2d88c14bb2c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/control.jsonl",
+      "sha256": "87f44f675702653590510000f3f2bd47081904b839645a5568a6165945b7ffad"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/trajectories.jsonl",
+      "sha256": "6d12e2148d7c49faf193f5ba1feca599e07070bfd1b10b3fd7444d3cf296a5e3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/1773/max/pursuit/agent_config.json",
+      "sha256": "a378d12258297e2ee522122b0be2b98abe2dbbfa7513b6673db3c711109e9763"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/validation.json",
+      "sha256": "d654216a5154b2f56e4142dbdc13c34e8cfdadc5a53fd93d25d5793c3522aaad"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/validation_trace.json",
+      "sha256": "edc72366525509b647901700ccb817cc08b8332c9ee329be3c2313c86f57b998"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/control.jsonl",
+      "sha256": "d556e88ae05e8df767a17d2f32b0a43f395d3a068445b30815a43ddace904b45"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/trajectories.jsonl",
+      "sha256": "283759e098f0bab9275001925f306478285c001b1e5b77278f7b0fa34644d518"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/carla/agent_config.json",
+      "sha256": "e9178cd1531dc19b0ccf2fb759e747fa2388e87960fb74d9c8767261f8d024bb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/validation.json",
+      "sha256": "54b6ba6822dc0d30674e1f01261407cc66a35370abd864a4cd39dae93adba5b9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/validation_trace.json",
+      "sha256": "fffe5dfe21d70bc8478bf58278bb2c204c29976a75a56307bfb12d3b02aca1d6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/control.jsonl",
+      "sha256": "d8f1d20dbb066357f0ead168c9514bb84bcdca33cb46d5c462235bc198b087b1"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/trajectories.jsonl",
+      "sha256": "7214201cbbde5f267b46d755fef5455d959436c5460351ddc3aad6180f5e9853"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/carla/agent_config.json",
+      "sha256": "63b47c62fcd42565fee4eec95622c824a5632e50091d4dda25bc7fa4ae8122d6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/validation.json",
+      "sha256": "fe8545d2ff444f0821296e1d7386a2896f0c43b57ebab2498ef2d46574ee2194"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/validation_trace.json",
+      "sha256": "911a0cf95fe525df015e8d7a083cb050a82050f6f3cf79e3c91e253e193cb8d7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/control.jsonl",
+      "sha256": "7723b1ed804f12a9119c80277d33d40293e34f7f059b29e63a05474c1104e88c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/trajectories.jsonl",
+      "sha256": "22b2b63e793409e0884f508684b500ce1876bf0befb1b271e4a72510d8843452"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi/pursuit/agent_config.json",
+      "sha256": "031b40bad01ae4503262c48f3f8078436d4b41e774bdc56ec40545fafcc9e6c4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/validation.json",
+      "sha256": "909e14f93ec6dfe2ee7ce5fca5c854f87d74d855913165ef17f63997d96d1843"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/validation_trace.json",
+      "sha256": "489041966908f6a70d1e5040c070fac75af2baef732f206c79f4c361f8ec6415"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/control.jsonl",
+      "sha256": "02e02f28494fffd8b5ee939ee6b539a1251762968123ad5345966291c330082e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/trajectories.jsonl",
+      "sha256": "d5687e8065fa5965cbba9336735699a4d2128b8546dda96118ad02890ca5ccc5"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/1773/pursuit/agent_config.json",
+      "sha256": "07f9294c361f589d1d366b41b98a8f34feb6d2cdb4c9d78c2abd392475776b64"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/validation.json",
+      "sha256": "625de19d8e4fb5d6f44caf930219262567caa94189581acc86632f2f0b4f89d1"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/validation_trace.json",
+      "sha256": "734dd3ba5d583de1e713671d794d6deaa34a0eabbc109a874b059be21011d14a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/control.jsonl",
+      "sha256": "f29d14cf81a0e81d53870dab9b2ebd1b1ce5cebe6d99b0ddabc18eb1e49db08d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "51b01127ead433bf881a6cc7e3ade7da2c6accf550d6660452033cd7f17cc103"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/route_reference.json",
+      "sha256": "ff6572db3f5f21f0e4121a0ab451eb23437717ff466337d3f4a4822903729fdb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/1773-speed6/pi-max/pursuit/agent_config.json",
+      "sha256": "200a60f2a99e27976e8b0fd1f7712259470bed4f84beab30ef341c655ad7ff6d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/validation.json",
+      "sha256": "7844a217ba4ba38b1d8f652572de997827ef99b849f2de30fa422c56da274731"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/validation_trace.json",
+      "sha256": "0fe5a719975f34653c25a862003099cc0be05c920a99a7fa453d29ba3ad5c0c6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/control.jsonl",
+      "sha256": "98577076a94eea9678b56d9af234be3fe26972ed428da37cce3dd1fede47e61f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/trajectories.jsonl",
+      "sha256": "a69142c254a42cc2b6e150d18514c88ba1e2e9295af9edf79c943a9743f118d7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/carla/agent_config.json",
+      "sha256": "bb946fd55ea34dc537ff5eaee38c024bc1a485e85422a9148ca1761c17f6a2dc"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation.json",
+      "sha256": "4ecd9744c1942bbb8834dcd085e21c86ef355be45256671cba0fd5de80e20a9b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/validation_trace.json",
+      "sha256": "c6a694202110ff52cb6aae99ebfb571ad03ffdfe95e22b11850c27f95c5fde48"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/control.jsonl",
+      "sha256": "401ac763fd85f073ed3701fc7c374c35769e31adcfdb8b31b28e358e028401d8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/trajectories.jsonl",
+      "sha256": "151a347fd518180e5781b005e63da95bd5995c71f6efb7c32e2143997680e3a1"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/carla/agent_config.json",
+      "sha256": "89f9df72d33524120a561d9c6d82fff8a9f06d8543090757b2491ed840659c1b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/validation.json",
+      "sha256": "f3e226ba3772e4f4e65488f132224edb0213bcd051518d3446e2fea8175c0e5b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/validation_trace.json",
+      "sha256": "7c7837f3b1b645d0b160c4f95e4bc360a6d970b0bbe7b7f1f094721ff0d5d7c3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/control.jsonl",
+      "sha256": "327d8f12897b2d3b926db4038796a4cc9a2b782710ee892e9a64162d405623d4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/trajectories.jsonl",
+      "sha256": "939d8ae278172a00afb04ec5e4b9d197dce34578cf86a71172e93ab8fce77215"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/carla/agent_config.json",
+      "sha256": "a6d6544e2428f3a36de7633414fc750ededf3df4d0b1a9f4021d0527aa149e8b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/validation.json",
+      "sha256": "21f7e19739bf1304afbd3c79f4eea404ff12c65eb33c7c298b6db46185736e53"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/validation_trace.json",
+      "sha256": "238a6208b9104afbf02db74d97ad8367e1057bf7bf36bb74a75aa413568263c6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/control.jsonl",
+      "sha256": "1470d250da8fa1b7c43a181154cf08c8d0692208d19b6acaf9ad0aa09abf7a71"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/trajectories.jsonl",
+      "sha256": "2e0a303b89325bf1b287f3e8c7461e23e876c00fc7711d8669a202d1af2d2624"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi/pursuit/agent_config.json",
+      "sha256": "c8cf7439466243dd5cfb254a46c8c85d167c1d8120af97c2021680d6d17ee1bc"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation.json",
+      "sha256": "b01d485d262c23e3f74c7c5fe02dc49f243968a74fe730794508acf448514fea"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/validation_trace.json",
+      "sha256": "c84f07283639e25e6c39a6fcce548068a9955b5c401fa94d28cd9995176c275f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/control.jsonl",
+      "sha256": "2ffd8b203c5bba6183fa68236ab6a3d0d1e894c4337c8f450cddeeecf84126e4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/trajectories.jsonl",
+      "sha256": "833d209410cb2d3eb628b8bcbc0f46343012cecec8361ec84868907d2e64ef4d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/baseline/pursuit/agent_config.json",
+      "sha256": "e73b8f3b281ba2db7b6edfbfccfe911f857384e048445695a098a29a886f981e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/validation.json",
+      "sha256": "7ae05e2b651f710656dcdcfcb6b693ddd966b8a0042e3e6df71297290b6517ad"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/validation_trace.json",
+      "sha256": "5c5a7fdb3fd8e7128e7195edbacf48e3b13cdf677abf339b834065330aed838b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/control.jsonl",
+      "sha256": "f9cd29c810533b2e18778d24f62e829775575621595186685d8795560b8b8031"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/trajectories.jsonl",
+      "sha256": "3c8bd3de8691512ac95138b89b8828b05806ad892320368695e73acf1a135c52"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2-speed-diagnostic/17563/pursuit/agent_config.json",
+      "sha256": "416077524a0ac97ac05a7804bb956632fd816e0fd814bd9338ed264d12640dc9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/validation.json",
+      "sha256": "27c6d36f9e902e6a217efaccba6f33a3fae16e9ed09403524e5e7e5a2f6de206"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/validation_trace.json",
+      "sha256": "ccdbe626a40ea3dc0a4f636b66f2d824bd4f0cbbcd478619f8713cd138c906b3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/control.jsonl",
+      "sha256": "12609c43213a0e3fd89c8bddf619680d6c4835ecb956641b803a5db1039a8074"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "cef6739a947cd3aa5da3c30c6d84b27ae1706cecb87a3de70dd1ab0cac7233f6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/agent_config.json",
+      "sha256": "c0027165bfe3c51beb90ee22161461736988212a8fa23146a0ccdf994dd5393e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation.json",
+      "sha256": "48734632f3964a70a58f0edd74ff5ae3ca4a23df02c85dc7c0903f3f1a4ddc15"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/validation_trace.json",
+      "sha256": "779328e35374f2ee543a180c324bd6b096f31bc8a09458c0d9a8d6b99ba9c1c6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/control.jsonl",
+      "sha256": "969478e818b7722fe800dc6283b5ef70e81621e0c287a3dc4d3b467cbe6cdd64"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/trajectories.jsonl",
+      "sha256": "757c1dcbfcd9457161deaffc056efa3b11b742fa322e14f4adaf9a8f792173be"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/route_reference.json",
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/17563/max/pursuit/agent_config.json",
+      "sha256": "4db21a24761c2a84c8670ed193c36f8b178438ea6322245bb08aa916c23d10fd"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/validation.json",
+      "sha256": "fca2eba9b23541fc4f65fec8d5bd3f30ca67a21a2e497cc8eec5a77bea59362b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/validation_trace.json",
+      "sha256": "f0370bfa0334de5e43540a3a8fa257a79e98bee6103faac99680269e383982c5"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/control.jsonl",
+      "sha256": "f8d2b4aa3ca4f8877ab7fe63638eafa1931f96b6a4986dc17988b122dba7cc0f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/trajectories.jsonl",
+      "sha256": "fd360fad8f512b5145714e69ebcdf5f18e3505da566fdce628c1d1a7aa58907b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/carla/agent_config.json",
+      "sha256": "fe9a810c73f2792b1e7a240a6a30deac1cb36c2d40089f72cf3497282fd9c5bd"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/validation.json",
+      "sha256": "a01c7a5c02d0c0d10ea469baf48bce81030aa17b7dec3fe13c191112060bfd4f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/validation_trace.json",
+      "sha256": "45a2e394c2fab284fa6be3ff7eeaf5493f144746d91990b6136ac47ab7ffed8a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/control.jsonl",
+      "sha256": "4f62807e22a78cb9e3e9122272bea2fb4056938084379e8f701fc0b96e6cca8d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/trajectories.jsonl",
+      "sha256": "5e809e6077ddf1ffda10a835169c44288525bbe4a797f1c403432328158d86c3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/carla/agent_config.json",
+      "sha256": "14868caf1f9f8b15ee5b15f8a7d2d1aa7f12496bc311e62b84c8e89eda278b1b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/validation.json",
+      "sha256": "3333caefcc669abe54c2d08827e798df641819487efbae4d0e2e900f1cc1946d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/validation_trace.json",
+      "sha256": "4d325f1cfb4f28c0f198836910505406a65ff60fa28492705387cf4e64081bcb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/control.jsonl",
+      "sha256": "583e44ee9d1b24de1192e2ac2ea82419e749d7d005b4817f091d2d017713bdf2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/trajectories.jsonl",
+      "sha256": "faa810658ed36b0b43b17218192f39deb5937078525a010608655fcb6fddb236"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi/pursuit/agent_config.json",
+      "sha256": "9bfeea546adc3907932857f4bf9082e84cce30bb08cf2fe430858f84bf416d77"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/validation.json",
+      "sha256": "e9b66e9440d7914fee27c724c38aa5764fae11d8839f7cb8113ed16d60d0ac84"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/validation_trace.json",
+      "sha256": "e5fbaa67b1ccbec5c4d3d29a5864c13cc14c344bff332cfac7dffc106fe41eeb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/control.jsonl",
+      "sha256": "e1a8380ddb8d5e73d3e53883f920a065e639af89984c2c6228e9b1ec8baef704"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/trajectories.jsonl",
+      "sha256": "2df9af192913fda4256d03976064a812055c0e8f5b5ea5f50a562e6eb982c074"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/baseline/pursuit/agent_config.json",
+      "sha256": "8a64fd7c6e61030a42fc852ef0f3d10808dc8ab2a95a2512da701af040e61c51"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/validation.json",
+      "sha256": "42b7134364558a68080366be4ef727de67841e7baca688b967e5c9aedb17103a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/validation_trace.json",
+      "sha256": "b466ef447965b0482e442ac1d5b34552123c26c1a727093289d8c2ff3de2a09b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/control.jsonl",
+      "sha256": "06624d6229e3b828f5cc97293d7eebc5a7e43e16d826e86d4df1d822735cabea"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "b5a91cd6cf86fa73cc2c6d8cbe3a9c5e11ba0aa6cc547868d97c630e3e7992ce"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/agent_config.json",
+      "sha256": "9462663bb97747ec31ed4a6ed7f30306a2889f3f755a4ab06d469d8d4b10fcd3"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/validation.json",
+      "sha256": "3c3942cca88f9ec7471dc8ac9af84d3696757a8d22738f5ab12bbf24fc274a5e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/validation_trace.json",
+      "sha256": "b8e4ec0fa6644f3845de4c2efc782151333568ec5782a014c146e5195c811e28"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/control.jsonl",
+      "sha256": "15e91aabb08aadafe7a8cf6b118b4fd187c164575e54c675f1e118374179e56c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/trajectories.jsonl",
+      "sha256": "fe9eb9d7fc57f4d66a87617363d389b1909e3db68339d9e321bc688c3ab4a9fb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/route_reference.json",
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/24240/max/pursuit/agent_config.json",
+      "sha256": "5829f80f12f72ab268bfcd4a4758b8ce26775b9e275b1480dfe4c098e4fee300"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/validation.json",
+      "sha256": "ffb5ffdb5481f15f413b0f1238ef76e6643a025e6f6dd2b432fda5b2f0a169d7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/validation_trace.json",
+      "sha256": "5ebdb428727848b45cab435d0cfe78f8fa038f89c8a5025f85ac7255c9ca2706"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/control.jsonl",
+      "sha256": "79c056c17517d75a99ebdd398f9b66f57cf5a245a0480d5139523b535fc900b4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/trajectories.jsonl",
+      "sha256": "03d6a8153804ead23f04d326f096cfcfcc89e480361be469703cec6e6080c825"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/carla/agent_config.json",
+      "sha256": "f09bace73a55f98537c46facad4293a98332a5178baa8df960b55feac6199c1f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/validation.json",
+      "sha256": "e2ff5d527c495139968eb65bcfcfcd272d06db36c7864f6b55aee1060fa4858e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/validation_trace.json",
+      "sha256": "7979d849d7ceee1547fcce564b9e49a9dae121675de7b3a9451eec73e30da42b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/control.jsonl",
+      "sha256": "2518dada1a5a41ffc25ba9b2bddc40e5d7f7097f9158e7f3efb84c02715acd6f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/trajectories.jsonl",
+      "sha256": "0a59a47abcbfead8b5e35383dcfca5c7043da4cb0355bd6cf7d5103b7972a059"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/carla/agent_config.json",
+      "sha256": "0719bb25eb01211b2344f9473ec0fb0f260b0bcc5c0c7d61f650a4b974727d1b"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/validation.json",
+      "sha256": "9574027a5cd8125f1a1a3fce32cd526417c310cbc9fcd0f64a5422a0bbf5dc70"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/validation_trace.json",
+      "sha256": "427214d452b9ae8afabe6941df961f3d470d728294b3b764a177edffe6c0137d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/control.jsonl",
+      "sha256": "9c04b84f15c6f8e4dc7df8f18d883ce129c934e640133e3846b9aa48c32421a4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/trajectories.jsonl",
+      "sha256": "138800102977d487cf0a221389b72effac35ee5ec0d4938c213134d418bee1db"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi/pursuit/agent_config.json",
+      "sha256": "3aa09f3e80049bfd65d8617e4ddc8c40459a5da44c2b16c58e5a062f7c11d1b5"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/validation.json",
+      "sha256": "010f7de8f452da4a49272af4f8de4be48a99597eb90588f7a24833845c8415ee"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/validation_trace.json",
+      "sha256": "e920ea7b527556231b6428c14256c2f6f2d671ba06a0bb84114440179ac6522d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/control.jsonl",
+      "sha256": "df9041b7def34e42a95b65bd1c78d660e996a14a02c23a26b54a8b13345469c7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/trajectories.jsonl",
+      "sha256": "6a824ed9015325e3ea3c67421223dea6381599fb09c5d349a74ceddbde256a68"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/baseline/pursuit/agent_config.json",
+      "sha256": "e8d9c14de059a455b806cba9e0099bbf6c1899f47511ea73680aaeeaea0cfb9e"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/validation.json",
+      "sha256": "877d17ad893017337ab971d2d063fab65f2404baad787cb2f0c6c0034870ece7"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/validation_trace.json",
+      "sha256": "7eaba32d534254b4f8de4d7fb084373597834d1b0b140bcf2e4800bb9932247d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/control.jsonl",
+      "sha256": "274147878615f9ada84dff15233cf14f66432338fac3bc1b7ed4c9e6fce2b0f6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "87bf2f1b7346764c2a9e3213ae20fea24683fd592aae22271d3e3c52e238f933"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/agent_config.json",
+      "sha256": "027a664204e035cde8182e1e591be17d9c82c33098ec4326f9dac907466b26f2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/validation.json",
+      "sha256": "fd9d0fcfdad0937153bb30213d1b39eeec45ea44cd50ca1bf6d8d68d2950e3fe"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/validation_trace.json",
+      "sha256": "e37a5ef6392c2a483fdfa6530e96fb376fc81a94f467efd7032e2ecc269d7ffb"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/control.jsonl",
+      "sha256": "afe13dd16242c544829ad4e309e1ae52a86ff7a6547cfeba6babe46341f0a2ab"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/trajectories.jsonl",
+      "sha256": "a5cb8757c631734b584ce552ddad243febda5cac3aef736f4cfec7f50b20e711"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/route_reference.json",
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/26966/max/pursuit/agent_config.json",
+      "sha256": "68128c4624c7abd21db68f9ed6848b99bd205ff36afc7293ed015197d8fba269"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/validation.json",
+      "sha256": "972d91c6edde517f8c01986cfea3ca2f9d66bd13ecd9534c4809004f908d7ae4"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/validation_trace.json",
+      "sha256": "1511b5c5cb5b2546995fb7b04041c4478de5df2ae2a33f095cecfe410a39dd22"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/control.jsonl",
+      "sha256": "31175cbeaf0d40ef8052f7b63bad25578fa6d8a31ae75b4a3ee85e87f9303d40"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/trajectories.jsonl",
+      "sha256": "872192216805bd85132c7d9c02dcb16310ec4d4b2a8e23f67fee3c283db6e9a9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/carla/agent_config.json",
+      "sha256": "cb5431392538b3965986ab283a991d75982eaf35a38f0375a188e6014d4e1536"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/validation.json",
+      "sha256": "1b7b2b7c63a955a70081c3011fff49a69f84761679e2bf4151a1897e3e0636b2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/validation_trace.json",
+      "sha256": "59cadc88b3760c8ce3ad9351b2dbb5ca1b695c14585e1abccd5e320f92be4980"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/control.jsonl",
+      "sha256": "4a011b016f80cd2ca9296c3c0d387c9f5c5905eabb986b83291e0739da07ea77"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/trajectories.jsonl",
+      "sha256": "8357159847001a1c7b2c89a948dedbccd07ee4576982ea43b6ae0c980efde3ac"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/carla/agent_config.json",
+      "sha256": "d656ea4c7a857040661bb3c56187e2be3608714f3a8fe07b7b7baae9d7a928a6"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/validation.json",
+      "sha256": "52b37230464824de6681083b344a1936144e8958e951264a6dce8b7a5187f186"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/validation_trace.json",
+      "sha256": "899a8a81fd3ac5d72b3a5585600536d41f3db9415eb97ac661dcad9cfa22cb6d"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/control.jsonl",
+      "sha256": "86abed5df7149749bcbece450f93e849c7838bad5ccdc5ba9494198337617439"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/trajectories.jsonl",
+      "sha256": "30a3817de59e9e2b38f6b06e0282bcee7f8f41912a7656eb57e0503b754c4778"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi/pursuit/agent_config.json",
+      "sha256": "93635fb8e9d4cf2267beb49c39d1ef2f24840a9747f0741b73c14f5c4356f7e9"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/validation.json",
+      "sha256": "715d63f9a169eb4c76f02920be5a938c40493aa798acd76214dee943d50a39fd"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/validation_trace.json",
+      "sha256": "8cdc4c915d8771ef0ce4b2d71d27ff042f16cdfe2b927b1c66a9f425d5547900"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/control.jsonl",
+      "sha256": "b12b24aac56aac9cc3bc0a1dc3af22c0e0c925be23c2344dbb611fedf623a69c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/trajectories.jsonl",
+      "sha256": "ee7b8cda537278aec11549ab8e72cf4ab996ff7a11d2331310ab21c39c193ed2"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/baseline/pursuit/agent_config.json",
+      "sha256": "07ff883b4ecb12f2c40b7ce1b3d425b8f54ccb2b9bd16c92a648feb634b6e48c"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/validation.json",
+      "sha256": "00dd3138846ff2481a23c9b5b8bbc6ce4996a9e442cca4c5a30f3d52b2461368"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/validation_trace.json",
+      "sha256": "52ca8d91c4c2d0b3a8968b87dda5a732b4c7070b95987da676a61f9818f150b0"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/control.jsonl",
+      "sha256": "cbb59a5b3107820ef5343713361e6235d229d1b48fd41bff668a91af6efbad0f"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/trajectories.jsonl",
+      "sha256": "97343282818ce339e0eb1cd5b44728e1391ed9540f7f66b0758f8a09341718e1"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v4/25854/pi-max/pursuit/agent_config.json",
+      "sha256": "f3f0262fc2b49e1ed3e6245e04d435f019cacb74fad89e0477b88cef9042542a"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/validation.json",
+      "sha256": "a409189c7569fb994c9a0a8d661ed39f007a4915445bc527493c1a506d914590"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/validation_trace.json",
+      "sha256": "e63d4f9ac669fa7f2b8ac5a2622d0519783943ff4021e2a70aa202827a5b83c8"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/control.jsonl",
+      "sha256": "ad2b143611a403fc570f9957be337b1d5fe1f552c3769da90b4209e82f248526"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/trajectories.jsonl",
+      "sha256": "e069652103d88b130fadc75c71ae15d9f0e379dea5b33e20c41ef992c1e82049"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/route_reference.json",
+      "sha256": "659f19ec6fded1ca2ebb13113232b3d1f7f2bdedb0edcfd5a0becf668daf2b13"
+    },
+    {
+      "path": "/data/runs/b2d/controller/development-v2/25854/max/pursuit/agent_config.json",
+      "sha256": "47d8f8017cec52de13f68bd071472ad378380a5e575a3894aab473e28f3d5b95"
+    }
+  ],
+  "output_checks": 14,
+  "note": "Late source-byte snapshot: hashes matched originals recorded at plotting time; no result/figure/raw overwritten."
+}

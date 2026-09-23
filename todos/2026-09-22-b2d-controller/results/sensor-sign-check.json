@@ -1,0 +1,7 @@
+{
+  "samples": 333,
+  "gyro_actor_correlation": 0.9999460439835652,
+  "median_ratio": 0.9999977188709811,
+  "gyro_z": "CARLA world yaw derivative, right positive",
+  "source": "/data/runs/b2d/controller/calibration-units"
+}

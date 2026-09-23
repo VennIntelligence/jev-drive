@@ -1,0 +1,53 @@
+{
+  "review_date_jst": "2026-09-23",
+  "indices": [
+    {
+      "run": "development-v2",
+      "old_index": "todos/2026-09-22-b2d-controller/results/development-v2-file-index.json",
+      "old_index_sha256": "09548a0f660163beeba606305e7af852f6a5b2685c9a2bb98de0ab56b2e644e9",
+      "old_files_verified_unchanged": 176,
+      "added_paths": [
+        "provenance/source/scripts/__pycache__/b2d_controller.cpython-38.pyc"
+      ],
+      "new_index": "todos/2026-09-22-b2d-controller/results/development-v2-post-verification-file-index.json",
+      "new_file_count": 177,
+      "new_total_bytes": 25477098,
+      "note": "Only new interpreter cache file; no old source or raw trace bytes changed. Old index preserved."
+    },
+    {
+      "run": "development-v3",
+      "old_index": "todos/2026-09-22-b2d-controller/results/development-v3-file-index.json",
+      "old_index_sha256": "948af60659fa21175c791e40ff603fb694d1bde8c58b0b5780769ebe45c7e40c",
+      "old_files_verified_unchanged": 170,
+      "added_paths": [
+        "provenance/source/scripts/__pycache__/b2d_controller.cpython-38.pyc"
+      ],
+      "new_index": "todos/2026-09-22-b2d-controller/results/development-v3-post-verification-file-index.json",
+      "new_file_count": 171,
+      "new_total_bytes": 31601570,
+      "note": "Only new interpreter cache file; no old source or raw trace bytes changed. Old index preserved."
+    },
+    {
+      "run": "pi-g1-v1",
+      "root": "/data/runs/b2d/controller/v2/pi-g1-v1",
+      "new_index": "todos/2026-09-22-b2d-controller/results/raw-file-index/pi-g1-v1.json",
+      "new_file_count": 21,
+      "new_total_bytes": 8487529
+    },
+    {
+      "run": "pi-g1-kp05",
+      "root": "/data/runs/b2d/controller/v2/pi-g1-kp05",
+      "new_index": "todos/2026-09-22-b2d-controller/results/raw-file-index/pi-g1-kp05.json",
+      "new_file_count": 21,
+      "new_total_bytes": 8494421
+    },
+    {
+      "run": "rejoin-replay-v1",
+      "root": "/data/runs/b2d/controller/v2/rejoin-replay-v1",
+      "new_index": "todos/2026-09-22-b2d-controller/results/raw-file-index/rejoin-replay-v1.json",
+      "new_file_count": 37,
+      "new_total_bytes": 3747691
+    }
+  ],
+  "verification_log_index": "todos/2026-09-22-b2d-controller/results/verification-v2-v4/index.json"
+}

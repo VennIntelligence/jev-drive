@@ -1,0 +1,23 @@
+{
+  "local_document_links_checked": 172,
+  "broken_links": 0,
+  "raw_files_checked": 522,
+  "raw_mismatches": 0,
+  "controller_tests": 112,
+  "tcp_tests": 17,
+  "turn_required_conditions": {
+    "pass": 122,
+    "fail": 4,
+    "insufficient": 0
+  },
+  "turn_independent_review": "agents/turns-final-review.md",
+  "whitespace_check": "Pass excluding exact archived third-party source bytes with original trailing spaces",
+  "unchanged_vendor_snapshots": [
+    "results/paired-v2-stall-edition-001/vendor-config.py",
+    "results/paired-v2-stall-edition-001/vendor-model.py",
+    "results/paired-v2-stall-final/vendor-config.py",
+    "results/paired-v2-stall-final/vendor-model.py"
+  ],
+  "all_experiments_ended": true,
+  "push_performed": false
+}

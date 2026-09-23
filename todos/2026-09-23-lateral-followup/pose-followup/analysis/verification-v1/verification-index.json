@@ -1,0 +1,15 @@
+{
+  "raw_fixture_editions": [
+    "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v1",
+    "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v2"
+  ],
+  "final_metrics_fixture_source": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v2/verification.json",
+  "final_metrics_fixture_sha256": "96e18860dd83dcb9524fcd20f5f3323a40428d033bd92b5cf36d0122c1e75fd0",
+  "unit_tests": 15,
+  "unit_tests_passed": true,
+  "required_live_conditions": 156,
+  "historical_zero_replay_frames": 2761,
+  "production_schema_fixture_frames": 2760,
+  "both_max_position_difference_m": 0.0,
+  "live_run_performed": false
+}

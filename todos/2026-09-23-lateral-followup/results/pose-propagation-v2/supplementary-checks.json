@@ -1,0 +1,6 @@
+{
+  "yaw_derivative_over_radians_omega_median": 1.0004060885661246,
+  "turning_intervals": 360,
+  "raw_speed_vs_signed_speed_max_abs_mps": 8.305775205386112e-07,
+  "raw_root": "/data/runs/b2d/controller/lateral-followup/pose-propagation-v2"
+}

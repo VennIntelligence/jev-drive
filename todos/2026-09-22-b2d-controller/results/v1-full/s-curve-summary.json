@@ -1,0 +1,407 @@
+[
+  {
+    "status": "completed",
+    "ticks": 585,
+    "collisions": [],
+    "cross_track_rms_m": 0.18895094050773328,
+    "cross_track_p95_m": 0.5202805748223919,
+    "cross_track_full": {
+      "count": 585,
+      "rms": 0.18895094050773328,
+      "median": 0.03639605546528102,
+      "p90": 0.30344562456984747,
+      "p95": 0.5202805748223919,
+      "max": 0.8412470770506232
+    },
+    "cross_track_steady": {
+      "count": 545,
+      "rms": 0.1955674754904525,
+      "median": 0.03858775382543794,
+      "p90": 0.33040596909141073,
+      "p95": 0.5384474245333757,
+      "max": 0.8412470770506232
+    },
+    "projection_distance_full": {
+      "count": 585,
+      "rms": 0.31979928847757527,
+      "median": 0.04132834758220854,
+      "p90": 0.4810353069278938,
+      "p95": 0.7315384695613456,
+      "max": 1.388591973675244
+    },
+    "speed_rms_mps": 0.663271268879291,
+    "cruise_speed_after_5s": {
+      "count": 318,
+      "rms": 0.663271268879291,
+      "median": 0.5450434663405788,
+      "p90": 0.9574552345194066,
+      "p95": 0.988087918150159,
+      "max": 1.679553150893124
+    },
+    "cruise_speed_all": {
+      "count": 418,
+      "rms": 1.517118727320441,
+      "median": 0.6848309110327708,
+      "p90": 1.3189776679465623,
+      "p95": 4.219613990534364,
+      "max": 6.0
+    },
+    "reference_speed_all": {
+      "count": 585,
+      "rms": 1.3569409474550278,
+      "median": 0.7751407190199835,
+      "p90": 1.0046925635622375,
+      "p95": 2.775382875985894,
+      "max": 6.0
+    },
+    "command_speed_all": {
+      "count": 585,
+      "rms": 2.113378737086062,
+      "median": 0.3401237150403098,
+      "p90": 1.1071422522861865,
+      "p95": 2.8145551560784394,
+      "max": 12.877653959722066
+    },
+    "pose_p90_m": 0.20563506145915855,
+    "fused_pose": {
+      "count": 585,
+      "rms": 0.1411650187703441,
+      "median": 0.10764361919931999,
+      "p90": 0.20563506145915855,
+      "p95": 0.2474330855145443,
+      "max": 0.5071539982707352
+    },
+    "raw_pose": {
+      "count": 585,
+      "rms": 0.7790865334148251,
+      "median": 0.6614624172305515,
+      "p90": 1.176092420675707,
+      "p95": 1.3064790977706793,
+      "max": 1.8778210363984977
+    },
+    "pose_heading_deg": {
+      "count": 585,
+      "rms": 0.10371193604950303,
+      "median": 0.040890282244208785,
+      "p90": 0.1643174254719155,
+      "p95": 0.23735070265407404,
+      "max": 0.45333600288762066
+    },
+    "endpoint_error_m": 0.22029252550685266,
+    "stop_hold_s": 5.000000074505806,
+    "stop_hold_displacement_m": 0.0005442370678128101,
+    "stop_hold_max_speed_mps": 0.004112793308675435,
+    "hold_pitch_deg": {
+      "count": 101,
+      "rms": 0.021166203044019373,
+      "median": 0.01786777377128601,
+      "p90": 0.01786777377128601,
+      "p95": 0.01786777377128601,
+      "max": 0.07061732560396194
+    },
+    "final_pitch_deg": 0.01786777377128601,
+    "telemetry_count": 585,
+    "truth_aligned_count": 585,
+    "telemetry_frames_monotonic": true,
+    "metric_protocol": {
+      "lateral_gate": "full_route_independent_truth_projection",
+      "lateral_steady_warmup_s": 2.0,
+      "cruise_startup_allowance_s": 5.0,
+      "cruise_reference": "truth_remaining_distance_constant_deceleration",
+      "stop_deceleration_mps2": 2.0,
+      "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+    },
+    "gates": {
+      "completed": true,
+      "no_collision": true,
+      "full_lateral_rms": true,
+      "full_lateral_p95": true,
+      "cruise_speed": false,
+      "pose": true,
+      "heading": true,
+      "endpoint": true,
+      "hold_duration": true,
+      "hold_displacement": true,
+      "hold_speed": true,
+      "telemetry_complete": true
+    },
+    "gate_pass": false,
+    "route_id": "17563",
+    "town": "Town12",
+    "preset": "carla",
+    "wall_s": 7.540475619003701,
+    "exception": null,
+    "cleanup_errors": [],
+    "telemetry_parse_errors": []
+  },
+  {
+    "status": "completed",
+    "ticks": 549,
+    "collisions": [],
+    "cross_track_rms_m": 0.9051409326681112,
+    "cross_track_p95_m": 1.8941938084154313,
+    "cross_track_full": {
+      "count": 549,
+      "rms": 0.9051409326681112,
+      "median": 0.23781429920387864,
+      "p90": 1.6830223298746583,
+      "p95": 1.8941938084154313,
+      "max": 2.3785271446991794
+    },
+    "cross_track_steady": {
+      "count": 509,
+      "rms": 0.939999463774718,
+      "median": 0.319289643905479,
+      "p90": 1.7377269001753586,
+      "p95": 1.9651006329465033,
+      "max": 2.3785271446991794
+    },
+    "projection_distance_full": {
+      "count": 549,
+      "rms": 1.0165255749390583,
+      "median": 0.8860243307435474,
+      "p90": 1.683028544700764,
+      "p95": 1.8941938084154313,
+      "max": 2.378527144699179
+    },
+    "speed_rms_mps": 0.9215698647016686,
+    "cruise_speed_after_5s": {
+      "count": 303,
+      "rms": 0.9215698647016686,
+      "median": 0.6547215628620453,
+      "p90": 1.4466508508759213,
+      "p95": 1.8894794839153215,
+      "max": 2.5475437548119064
+    },
+    "cruise_speed_all": {
+      "count": 403,
+      "rms": 1.6396451894648498,
+      "median": 0.7454408175969425,
+      "p90": 2.300766720446083,
+      "p95": 4.266693261557761,
+      "max": 6.0
+    },
+    "reference_speed_all": {
+      "count": 549,
+      "rms": 1.6027192710491824,
+      "median": 0.6009880300829282,
+      "p90": 2.3691528467719234,
+      "p95": 4.237083656924509,
+      "max": 6.0
+    },
+    "command_speed_all": {
+      "count": 547,
+      "rms": 2.695424904546039,
+      "median": 0.9888737784841117,
+      "p90": 3.6499834992029325,
+      "p95": 5.0594954734268125,
+      "max": 12.881960106401284
+    },
+    "pose_p90_m": 0.2918904719962478,
+    "fused_pose": {
+      "count": 549,
+      "rms": 0.18209766031864935,
+      "median": 0.13521273969169054,
+      "p90": 0.2918904719962478,
+      "p95": 0.3392403496989863,
+      "max": 0.5080358556848821
+    },
+    "raw_pose": {
+      "count": 549,
+      "rms": 0.7788278836694215,
+      "median": 0.6612610159733169,
+      "p90": 1.1768788139976634,
+      "p95": 1.3105949989040686,
+      "max": 1.8771295773306922
+    },
+    "pose_heading_deg": {
+      "count": 549,
+      "rms": 0.2754730431731016,
+      "median": 0.1383691663073165,
+      "p90": 0.48701565365915916,
+      "p95": 0.5866158343520684,
+      "max": 0.8985722842685347
+    },
+    "endpoint_error_m": 0.8860243307435474,
+    "stop_hold_s": 5.000000074505806,
+    "stop_hold_displacement_m": 0.008356694915009736,
+    "stop_hold_max_speed_mps": 0.044881095211910825,
+    "hold_pitch_deg": {
+      "count": 101,
+      "rms": 0.28315846080885776,
+      "median": 0.010655094869434834,
+      "p90": 0.21414007246494293,
+      "p95": 0.7002856135368347,
+      "max": 1.3578484058380127
+    },
+    "final_pitch_deg": -0.010655094869434834,
+    "telemetry_count": 549,
+    "truth_aligned_count": 549,
+    "telemetry_frames_monotonic": true,
+    "metric_protocol": {
+      "lateral_gate": "full_route_independent_truth_projection",
+      "lateral_steady_warmup_s": 2.0,
+      "cruise_startup_allowance_s": 5.0,
+      "cruise_reference": "truth_remaining_distance_constant_deceleration",
+      "stop_deceleration_mps2": 2.0,
+      "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+    },
+    "gates": {
+      "completed": true,
+      "no_collision": true,
+      "full_lateral_rms": false,
+      "full_lateral_p95": false,
+      "cruise_speed": false,
+      "pose": true,
+      "heading": true,
+      "endpoint": true,
+      "hold_duration": true,
+      "hold_displacement": true,
+      "hold_speed": true,
+      "telemetry_complete": true
+    },
+    "gate_pass": false,
+    "route_id": "17563",
+    "town": "Town12",
+    "preset": "tcp",
+    "wall_s": 6.430832523998106,
+    "exception": null,
+    "cleanup_errors": [],
+    "telemetry_parse_errors": []
+  },
+  {
+    "status": "completed",
+    "ticks": 585,
+    "collisions": [],
+    "cross_track_rms_m": 0.18905214010360266,
+    "cross_track_p95_m": 0.44232928438953883,
+    "cross_track_full": {
+      "count": 585,
+      "rms": 0.18905214010360266,
+      "median": 0.05155980884700476,
+      "p90": 0.25448982120367825,
+      "p95": 0.44232928438953883,
+      "max": 0.9217325408818745
+    },
+    "cross_track_steady": {
+      "count": 545,
+      "rms": 0.19566046608292978,
+      "median": 0.056926221727635264,
+      "p90": 0.25776211662041815,
+      "p95": 0.4496452005381159,
+      "max": 0.9217325408818745
+    },
+    "projection_distance_full": {
+      "count": 585,
+      "rms": 0.31976406043379196,
+      "median": 0.06108694431039031,
+      "p90": 0.4067737856027241,
+      "p95": 0.7672429419415023,
+      "max": 1.388591973675244
+    },
+    "speed_rms_mps": 0.6363210535788577,
+    "cruise_speed_after_5s": {
+      "count": 319,
+      "rms": 0.6363210535788577,
+      "median": 0.416270081288002,
+      "p90": 0.9402895178386936,
+      "p95": 0.9696696602541479,
+      "max": 2.3427537912291823
+    },
+    "cruise_speed_all": {
+      "count": 419,
+      "rms": 1.505579958365528,
+      "median": 0.5634056280788702,
+      "p90": 1.2510687835924095,
+      "p95": 4.237044629460671,
+      "max": 6.0
+    },
+    "reference_speed_all": {
+      "count": 585,
+      "rms": 1.3690134935327145,
+      "median": 0.7784486976034017,
+      "p90": 1.03062912524012,
+      "p95": 2.769053237687879,
+      "max": 6.0
+    },
+    "command_speed_all": {
+      "count": 585,
+      "rms": 2.1098720074917185,
+      "median": 0.33602645949164334,
+      "p90": 1.0064379704645345,
+      "p95": 2.7835113903196502,
+      "max": 12.881960106401284
+    },
+    "pose_p90_m": 0.20818005594573144,
+    "fused_pose": {
+      "count": 585,
+      "rms": 0.1413915458218429,
+      "median": 0.10744340110318606,
+      "p90": 0.20818005594573144,
+      "p95": 0.24751878883236111,
+      "max": 0.5080358556848821
+    },
+    "raw_pose": {
+      "count": 585,
+      "rms": 0.7790991153447094,
+      "median": 0.66138423002033,
+      "p90": 1.1760635698185153,
+      "p95": 1.3070454739551487,
+      "max": 1.8773808769931548
+    },
+    "pose_heading_deg": {
+      "count": 585,
+      "rms": 0.08433954495053445,
+      "median": 0.02659291917082061,
+      "p90": 0.14755278442566197,
+      "p95": 0.195004345676116,
+      "max": 0.43654778997628246
+    },
+    "endpoint_error_m": 0.26593054153310075,
+    "stop_hold_s": 5.000000074505806,
+    "stop_hold_displacement_m": 0.0005458948811710727,
+    "stop_hold_max_speed_mps": 0.009532302155456536,
+    "hold_pitch_deg": {
+      "count": 101,
+      "rms": 0.023557195154903256,
+      "median": 0.02106430195271969,
+      "p90": 0.02106430195271969,
+      "p95": 0.02106430195271969,
+      "max": 0.06992064416408539
+    },
+    "final_pitch_deg": 0.02106430195271969,
+    "telemetry_count": 585,
+    "truth_aligned_count": 585,
+    "telemetry_frames_monotonic": true,
+    "metric_protocol": {
+      "lateral_gate": "full_route_independent_truth_projection",
+      "lateral_steady_warmup_s": 2.0,
+      "cruise_startup_allowance_s": 5.0,
+      "cruise_reference": "truth_remaining_distance_constant_deceleration",
+      "stop_deceleration_mps2": 2.0,
+      "stop_hold_displacement": "maximum_pairwise_rear_axle_distance"
+    },
+    "gates": {
+      "completed": true,
+      "no_collision": true,
+      "full_lateral_rms": true,
+      "full_lateral_p95": true,
+      "cruise_speed": false,
+      "pose": true,
+      "heading": true,
+      "endpoint": true,
+      "hold_duration": true,
+      "hold_displacement": true,
+      "hold_speed": true,
+      "telemetry_complete": true
+    },
+    "gate_pass": false,
+    "route_id": "17563",
+    "town": "Town12",
+    "preset": "pursuit",
+    "wall_s": 6.68295223700261,
+    "exception": null,
+    "cleanup_errors": [],
+    "telemetry_parse_errors": []
+  }
+]

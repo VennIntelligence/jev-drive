@@ -1,0 +1,12 @@
+{
+  "hashes_verified": 141,
+  "status": "pass",
+  "all_126_conditions": {
+    "pass": 122,
+    "fail": 4,
+    "insufficient": 0
+  },
+  "raw_logs_modified": false,
+  "old_csvs_modified": false,
+  "report_sha256": "b47bd1437f250d2420db5435e67a91c2c4c16ac0dbd8c3c1a2ae9353d37c0f52"
+}

@@ -1,0 +1,6 @@
+{
+  "source": "/data/runs/b2d/controller/turns-v1/gpu.txt",
+  "sha256": "de19f830c0729fd2bec1d5bceb19022ece766f1039b58abd0b7be243d46151dc",
+  "content": "pid, gpu_uuid, used_gpu_memory [MiB]\n249310, GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1, 5697 MiB\n",
+  "correction": "Previous late gpu-live.csv was empty, but the validator also captured gpu.txt immediately after server start. This existing archived record independently identifies renderer on the intended GPU; it is not full-run monitoring. Prior raw bytes/inventories are unchanged."
+}

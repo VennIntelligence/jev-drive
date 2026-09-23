@@ -4,16 +4,93 @@ Read this when you need to know what a Bench2Drive closed-loop evaluation costs 
 where that time goes, or how to run one without losing the run to a crash.
 [carla.md](carla.md) covers getting a CARLA server up at all; this doc is about the loop.
 
-**One-line answer: a 220-route round is 3.1 hours of wall clock on this one card, measured end to
-end at eight workers, against roughly 15 hours wired the way Bench2Drive ships - and in neither
-number is our model what you are paying for.** Two thirds of those 3.1 hours are Town12 and
-Town13. Eleven of the 220 routes never finish, on stock CARLA, for a reason that is not ours.
+Several distinct experiments are recorded here. The earlier GPU-box full220 run took **3.11 hours**
+at eight workers with real Qwen3-VL feature extraction and a stand-in driver; 209 evaluator
+processes finished, which did not mean 209 driving successes. The later Tokyo controller
+Dev10 seed0 diagnostic logged **17.91 minutes through the completion marker for three sets
+of ten routes**, with no model inference. Hardware, driver, camera schedule and route mix differ, so these are not a speedup pair.
+
+## Tokyo controller diagnostic: complete Dev10 seed0, 2026-09-22
+
+Source: `/data/runs/b2d/controller/dev10/`, including every `attempt.json`, `route_result.json`,
+`results.json`, group `events.jsonl` and campaign `events.jsonl`/`manifest.json`.
+[Article notes and complete result tables](../todos/2026-09-22-b2d-controller/article-notes.md)
+explain controller validation and attribution; [failure evidence](../todos/2026-09-22-b2d-controller/results/failure-analysis.json)
+retains frame-level collision, motion and trajectory evidence.
+
+This is **Tokyo, one physical RTX 3090 GPU 1**, UUID
+`GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`, one windowed Epic server, stock CARLA 0.9.15,
+Bench2Drive 0.0.4 `7ec25d1c9f7522d923ce5f3420986cef1cb2d956`, Python 3.8.20,
+`policy=none`, front3 at 800×450, cameras/route plans at 5 Hz, motion/control at 20 Hz.
+A dense-route adapter supplies nominal 8 m/s trajectories without avoidance or yielding.
+The three presets share the frozen controller integration at `18571c0`; they are controller
+adaptations, rather than executions of complete vendor agents or learned checkpoints.
+
+| Preset | Official driving completion | All 10 routes: min / median / max ticks | Completed 9: min / median / max ticks | Failed 1: min / median / max ticks | Final 10 attempt wall (s) | Extra failed-attempt wall (s) | Group wall (s) |
+|---|---|---|---|---|---:|---:|---:|
+| CARLA | 9/10 | 253 / 405 / 4000 | 253 / 395 / 3868 | 4000 / 4000 / 4000 | 339.1 | 0 | 342.6 |
+| TCP | 9/10 | 254 / 432 / 4000 | 254 / 392 / 3881 | 4000 / 4000 / 4000 | 345.9 | 22.0 | 378.6 |
+| pursuit | 9/10 | 256 / 401.5 / 4000 | 256 / 397 / 3871 | 4000 / 4000 / 4000 | 342.0 | 0 | 345.3 |
+
+A finalized attempt can contain a driving failure: route 25424 reaches the upstream 4000-tick
+`TickRuntime` limit in all three presets, at 47.26%, 49.14%, 47.26% completion respectively.
+CLI `max_ticks=0` disables an additional harness cap, not that upstream limit. Route 2091 does
+complete, but only after a vehicle collision and roughly 178–179 seconds of very low progress.
+The other eight completed routes span 253–697 ticks across presets. Thus the old **600–1200
+prediction was neither a reliable lower bound nor a bound on collision-dominated routes**:
+seven routes per preset are below 600, one lies within the range, and two exceed 1200.
+Do not interpret an early driving failure as faster successful evaluation.
+
+### Measured cost decomposition
+
+Use `T_attempt = T_setup + T_ticks + T_cleanup`, then add server readiness/restarts and runner
+orchestration to obtain campaign wall. Current artifacts do not isolate setup from cleanup;
+the residual below also contains the first 20 unprofiled ticks per finalized attempt. It must
+not be relabelled as a measured server startup cost.
+
+| Preset | Profiled ticks (first 20 per attempt omitted) | Weighted profiled ms/tick | Profiled loop wall (s) | Final-attempt remainder (s) |
+|---|---:|---:|---:|---:|
+| CARLA | 10,903 | 12.345 | 134.595 | 204.505 |
+| TCP | 10,989 | 12.760 | 140.222 | 205.678 |
+| pursuit | 10,905 | 12.337 | 134.536 | 207.464 |
+
+Profiled loop wall is the sum of `ticks_used × total_ms_mean / 1000`, using each route's own
+profile. Its total is **409.354 s**. Finalized-attempt wall totals **1027.0 s**, leaving
+**617.646 s** of setup/cleanup, unprofiled warmup and untimed work. As a second boundary,
+official `meta.duration_system` totals 454.163 s; the difference from profiled loop time is not
+an independently measured initialization phase. All attempt values are saved to 0.1 s and
+phase means are rounded, so derived residuals are approximate.
+
+The **1074.650 s** from manifest start through the campaign completion event breaks down as
+follows. The final `server.stop()` runs after that event and has no separate timing in this
+snapshot; its cost is not included in this interval:
+
+- Finalized attempts: 1027.0 s, including all three 25424 driving failures.
+- TCP 27494's first, infrastructure-failed attempt: 22.0 s; its successful retry's 7.9 s is
+  already included in the finalized-attempt total.
+- Manifest start to first route group: 7.088 s, covering initial server readiness and preflight.
+- Crash restart event to retry start: 7.008 s.
+- Remaining runner/inter-group/report overhead and rounding: about 11.553 s.
+
+The first server was reused across the CARLA group and into TCP. It crashed with `Signal 11`
+on **the 18th served attempt**, TCP route 27494 in Town04 (`server_age_routes=17`, approximately
+665 s old), and the runner moved from server index 74 to 75 before retrying. The replacement
+also served the pursuit group. This is evidence that process reuse works across many routes
+and that recovery cost remains necessary; one crash does not establish an 18-route lifetime
+or a recycling interval. The process-age association alone does not establish the crash cause.
+
+These numbers include no real policy inference, use one Tokyo 3090 and include very long
+collision dwell periods with little motion. They cannot replace the older GPU-box model
+measurements, establish a controller-only speed gain, or justify a direct Dev10×22 full220
+forecast. Such a forecast needs a measured map/scenario mix, the intended planner, retry
+assumptions and complete driving outcomes. Seed1/holdout confirmation is recorded separately;
+this section remains the seed0 cost snapshot.
 
 ## How these numbers were made
 
-Everything here runs the unmodified Bench2Drive 0.0.4 leaderboard on a real route from
-`bench2drive220.xml`. Nothing in the checkout is edited; the instrumentation and every optimisation
-is a monkeypatch behind a flag (`scripts/b2d_hooks.py`), so the unoptimised path stays reproducible
+The earlier GPU-box measurements below run the Bench2Drive 0.0.4 leaderboard on routes from
+`bench2drive220.xml`. The Tokyo section above uses the original Dev10 subset. Nothing in the
+third-party checkout is edited; the instrumentation and every optimisation is a monkeypatch behind a flag (`scripts/b2d_hooks.py`), so the unoptimised path stays reproducible
 and any measurement can be re-run against it.
 
 | Script | What it is |
@@ -349,11 +426,10 @@ Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
   blocked`, 1 route deviation, **zero successes**. Mean route completion **10.9%**, best route
   20.1%. Every route either ran to the cap or sat still for 60 s; none of them ended because the
   car arrived. Routes average about 105 m, roughly 330 ticks at the stand-in's 6 m/s, against a
-  measured median of exactly 4000. **A driver that finishes routes would cut this round by more
-  than every optimisation in this document put together** - at 600-1200 ticks per route the same
-  pool gives 1.0-1.5 h, at which point the fixed per-route overhead (about 70 s of world load,
-  scenario build and teardown, averaged over the town mix) is 30-50% of the total and becomes the
-  next thing worth attacking. **Read 3.1 h as the cost of a driver that never arrives, not as the
+  measured median of exactly 4000. The earlier forecast assumed 600–1200 ticks per route and
+  estimated 1.0–1.5 h on that pool, with roughly 70 s per route outside the loop. Those were
+  driver and retry assumptions, not a measured faster full220 round. The Tokyo Dev10 snapshot
+  above exposes both much shorter routes and collision dwell well beyond that tick range. **Read 3.1 h as the cost of a driver that never arrives, not as the
   simulator's floor.**
 
   Part of why it never arrives is ours: `AutonomousAgent.set_global_plan` hands the agent
@@ -436,13 +512,14 @@ on the first attempt.
 **So the honest statement about stability is: in 3.5 worker-hours on the base-package towns, CARLA
 itself did not crash, hang or segfault once.** Every restart in that run was caused by our own port
 reuse. That is a real result, but it is a narrow one, and the full 220-route round below shows how
-narrow: on Town12 and Town13, CARLA crashes for reasons that are not ours at all.
+narrow: the later full220 run observed server-process crashes on Town12 and Town13. Those
+logs establish where the process failed, not a complete attribution of the underlying cause.
 
-### What the full 220-route round did: eleven routes cannot be run
+### What the earlier full220 round observed: eleven routes did not finish
 
 | | |
 |---|---|
-| routes finished | **209 of 220**, first pass, unattended, exit 0 |
+| evaluator processes finished | **209 of 220** in this run, unattended, runner exit 0 |
 | routes that never finished | **11**, all Town12 or Town13 |
 | attempts | 245 for 220 routes; 25 restarts |
 | failed attempts | 36, **every single one `server_died_rc139`** - the server segfaulted |
@@ -450,21 +527,21 @@ narrow: on Town12 and Town13, CARLA crashes for reasons that are not ours at all
 
 The eleven: `3048, 11715, 11755, 23687, 23708` on Town12 and `3785, 3800, 23670, 23695, 24041,
 24071` on Town13. Failure rate by town is 5 of 104 on Town12, 6 of 47 on Town13, **0 of 69
-everywhere else** - Town11, Town15 and all eight small towns finished every route on the first
-attempt, with two lone restarts in the whole of Town01-10HD.
+elsewhere** in that run. Town11, Town15 and the eight small towns eventually produced an
+evaluator result for every requested route; their restart costs still remain in the attempt log.
 
-**These are CARLA's, not ours.** Each of the eleven was tried three times, each time on a freshly
-started server on a different port block, and each time the server died with `Signal=11 /
-CommonUnixCrashHandler` after 150-360 s of *successful* ticking - not at startup, and with no
-`bind` error anywhere in the log. Every other route on the same servers, before and after, ran
-fine. That is the **Town12/Town13 sensor-dormancy segfault** (Bench2Drive #235, upstream carla
-#7772, both open), reproduced for the first time through the unmodified leaderboard rather than
-through a script of ours.
+Each of the eleven was tried three times on freshly started servers and different port blocks.
+The recorded process failures were `Signal=11 / CommonUnixCrashHandler` after 150–360 s of
+ticking, with no logged `bind` error. This distinguishes those observations from the earlier
+startup port conflict. The pattern was compared with sensor-dormancy reports in Bench2Drive
+#235 and CARLA #7772, but a shared signal and route pattern do not prove an identical root cause
+or exclude effects from sensor configuration, workload, agent behavior or integration.
 
-**So a Bench2Drive score on this simulator is a score over at most 209 of 220 routes**, and which
-209 is a property of CARLA, not of the policy. That has to be in the paper. It also means the
-comparison to published numbers needs a note: anyone reporting all 220 either got luckier, ran a
-patched CARLA, or dropped the failures silently.
+**209/220 is the observed evaluator-completion count for that run, not a simulator or scoring
+ceiling.** The same routes may behave differently on another run or configuration. Driving
+completion and score must still come from the official records; missing results and retries
+remain explicit. These logs do not justify assumptions about why another evaluation reports
+all 220 routes.
 
 The watchdog earned its keep here. A dead server leaves the route process blocked in an RPC with a
 300 s timeout; watching the *server process* turned each of those 36 crashes into a kill within one
@@ -505,15 +582,16 @@ recycling**:
 
 The 52% at age 0 is **not** a fresh-server problem, it is a selection effect and the most important
 thing to understand before reading this table: a failing route moves its worker to a new server, so
-every retry of a crashing route is an age-0 attempt. The eleven doomed routes contribute 33 of the
+every retry of a crashing route is an age-0 attempt. The eleven repeatedly failing routes contribute 33 of the
 36 failures and most of them land in that bucket.
 
 Read the flat 1.6% across ages 2-9 instead, and the 15% at 10-22 with the sample sizes attached (53
-attempts, 8 failures, and those are again the doomed routes arriving late). **There is no visible
-decay with server age in 245 attempts.** The failures are a property of eleven specific routes, not
-of how long a server has been up, so `--recycle-routes` stays off: on this evidence it would only
-cost. What would change that is a rate that climbs with age once the eleven known-bad routes are
-excluded - which this run cannot show, because excluding them leaves almost no failures at all.
+attempts, 8 failures, with route identity confounded by attempt order). This sample does not
+isolate a server-age effect well enough to choose a recycling interval. Most failures cluster
+on eleven routes in this run, but that does not prove independence from server age. Recycling
+stays off until a controlled comparison shows a benefit after accounting for map, route, policy
+and retry selection. The Tokyo seed0 crash on an 18th attempt is a separate observation, not
+such a controlled comparison.
 
 ### Port slots are 50 apart
 
@@ -533,13 +611,12 @@ once.
 ## What these numbers do not cover
 
 - **The stand-in agent drives badly on purpose, and it dominates the 3.1 hours.** It completed
-  zero of 220 routes at a mean route completion of 10.9%; every route ended at the tick cap or
-  blocked. Cost per tick is what these numbers measure well. **Cost per round is measured with a
-  driver that never arrives**, so treat 3.1 h as an upper bound with a large, policy-shaped term in
-  it, not as the simulator's floor.
-- **Nothing here says anything about driving scores.** Every number is wall clock. The policy
-  consumes real Qwen3-VL features at the real cost and throws them away; the control comes from
-  the speed-hold stand-in.
+  none of the 209 routes with finalized official records, with mean route completion 10.9%;
+  the other eleven lacked finalized results. Cost per round is tied to that driver and its
+  failures. The measured 3.1 h is neither a guaranteed upper bound nor the simulator's floor.
+- **The earlier GPU-box model runs measured inference cost, not model driving quality.**
+  Qwen3-VL features were discarded and a stand-in supplied controls. The Tokyo controller
+  section now also reports official completion, explicitly as a dense-route diagnostic.
 - **The profile decomposition is one route on one map.** Route 24240 in Town10HD. The per-town
   table above is from the full round and is broad; the phase-by-phase breakdown at the top of this
   document is not.
@@ -548,17 +625,57 @@ once.
   a Town13 tick and the CPU is oversubscribed at eight workers. Untested, do not assume.
 - **No lidar or radar.** The Bench2Drive rig for UniAD/VAD adds a 64-channel lidar, which is
   another sensor on the same per-sensor cost and is not in any number here.
-- **The card was shared for every number in this document.** A Waymo feature extraction at a ~23%
-  duty cycle and a 32-stream download ran throughout. How much an idle box would buy is unmeasured;
-  the load average alone (median 31.8 against 25 cores) says it is not nothing.
+- **The earlier full220 run shared its GPU box with other work.** Waymo feature extraction at
+  about a 23% duty cycle and a 32-stream download ran throughout that round. Its load and
+  hardware differ from the Tokyo policy-none controller run; idle-box savings were not measured.
 - **The Large Map ladder is Town12 only**, 24 routes at 800 ticks each. Town13 is more expensive
   per tick and holds more VRAM, so the ten-instance ceiling measured on Town12 is probably lower on
   Town13. We ran the round at eight and did not find out.
 - **The policy is one process for all workers.** Inference serialises through one model on one
   card, which is the right design on one GPU but means the ladder numbers do not separate model
   latency from queueing behind other workers.
-- **One round is not a failure rate.** Eleven routes failed all three attempts and every other
-  route finished first time. Whether the same eleven fail next time, or whether it is eleven *of*
-  a larger susceptible set, needs a second round.
+- **One round is not a failure rate.** Eleven routes failed all three attempts; the other
+  requested routes eventually produced evaluator results. Whether the same eleven fail next
+  time, or whether this was part of a larger susceptible set, needs repeated evaluation.
 
 Last verified: 2026-09-22
+
+## Tokyo frozen v4 controller comparison (2026-09-23)
+
+The complete three-configuration, two-TM-seed Dev10 comparison selected 60 official records from 63 attempts: 49 driving-completed routes and 11 TickRuntime failures. This is a route-oracle diagnostic (`policy=none`), with 20 Hz motion/control and 5 Hz front-three cameras/route references, 800×450, windowed Epic, stock CARLA 0.9.15, and Bench2Drive 0.0.4 (`7ec25d1c9f7522d923ce5f3420986cef1cb2d956`). Rendering used Tokyo physical GPU 1. All three configurations shared the route adapter; CARLA lateral and pursuit max used PI(.5,.25), while TCP retained vendor longitudinal control.
+
+| Group | Completed | Ticks min / median / max | Selected attempt wall | Extra infrastructure wall | Profiled ms/tick | Control p99 ms |
+|---|---:|---:|---:|---:|---:|---:|
+| CARLA + PI, seed0 | 9/10 | 252 / 430.5 / 4000 | 346.8 s | 0 s | 12.644 | .256 |
+| TCP vendor, seed0 | 8/10 | 259 / 389.5 / 4000 | 350.3 s | 19.0 s | 12.947 | .254 |
+| pursuit max + PI, seed0 | 8/10 | 255 / 432 / 4000 | 357.9 s | 0 s | 13.064 | .255 |
+| CARLA + PI, seed1 | 8/10 | 252 / 430.5 / 4000 | 348.9 s | 49.1 s | 12.548 | .255 |
+| TCP vendor, seed1 | 8/10 | 259 / 389.5 / 4000 | 345.5 s | 20.0 s | 12.888 | .253 |
+| pursuit max + PI, seed1 | 8/10 | 255 / 432 / 4000 | 357.3 s | 0 s | 12.994 | .255 |
+
+Manifest start to end event took **2247.413 s (37.46 min)**; final server shutdown is excluded. Selected attempts sum to 2106.7 s, and three rc139 infrastructure attempts add 88.1 s. The selected profiled loop sum is 860.017 s, computed from profiled tick counts times rounded mean tick costs. The remaining selected 1246.683 s mixes setup, cleanup, unprofiled warmup and untimed work; it is not a standalone startup measurement. Another 52.613 s outside attempts includes readiness, restarts, reports and the separate slope hold.
+
+All failed selected routes consumed 4000 profiled ticks. Completed routes range from 252 to 3882 ticks, so a fixed short-route estimate misses collision-associated delays. There are 68142 logged control ticks, including 1200 warmup ticks excluded from the profile denominator. No neural inference cost was measured, and these numbers do not establish real TCP or full220 wall time. The candidate failed its driving acceptance conditions despite a higher mean DS.
+
+[Reproduction helper, exact CSV and input hashes](../todos/2026-09-22-b2d-controller/results/formal-v4-cost/README.md) and [final driving report](../todos/2026-09-22-b2d-controller/final-report.md) preserve the measurement boundary. This section supplements the earlier frozen v1 measurement without relabeling its costs.
+
+Last verified: 2026-09-23
+
+
+## Tokyo actual TCP paired comparison (2026-09-23)
+
+The revised six-case campaign used the real TCP checkpoint, three native 1600×900 cameras and 20 Hz inference/control, with one CARLA process on physical GPU 1. Manifest start through completion took **1280.562 s (21.34 minutes)**, excluding final server shutdown. All six attempts produced official results without infrastructure retries: four completed drives and two 4000-tick obstacle failures. Total telemetry was 9813 ticks and 9807 actual network forwards; each route retained its neutral initialization tick. The 9693 profiled ticks exclude the first 20 per attempt.
+
+| Route | Native / PI ticks | Native / PI supervised attempt wall | Native / PI mean profiled loop | Native / PI mean GPU forward |
+| --- | --- | --- | --- | --- |
+| 24211 | 393 / 401 | 25.573 / 33.423 s | 51.538 / 57.516 ms | 4.089 / 4.540 ms |
+| 1711 | 520 / 499 | 79.033 / 79.533 s | 89.709 / 89.936 ms | 4.381 / 4.423 ms |
+| 1773 | 4000 / 4000 | 505.683 / 549.493 s | 118.095 / 129.479 ms | 6.555 / 7.252 ms |
+
+Supervised attempt intervals sum to 1272.738 s, group intervals to 1273.145 s. The `attempt.json` field `wall_s` is overwritten by the evaluator's `route_result` in this runner version and totals 1267.6 s; it is not the complete supervised process interval. The steady profiled sample total is approximately 1114.416 s. Its 153.184 s difference from recorded evaluator wall includes unprofiled warmup, setup, cleanup and other untimed work, and must not be called pure startup. The two obstacle failures consume 1055.176 s of supervised attempt time; failed driving dominates this sample's cost.
+
+The GPU-forward measurements use existing model phase instrumentation. GPU work, preprocessing, policy and sensor waiting have overlapping accounting boundaries and cannot all be added as independent costs. A single archived live GPU sample confirms both TCP and CARLA on the intended GPU; it is not full-run utilization monitoring. Both experimental arms remove the official final low-speed throttle cap, so historical official TCP route durations are not a matched PI or harness speedup baseline. These results also cannot be compared as a speedup against the no-model oracle campaigns above.
+
+[Recompute script, exact six-row CSV and source hashes](../todos/2026-09-23-tcp-controller/results/paired-v2-cost/README.md), [driving contract and interpretation](b2d-tcp-controller.md).
+
+Last verified: 2026-09-23

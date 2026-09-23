@@ -1,0 +1,91 @@
+{
+  "all_exact": true,
+  "cases": [
+    {
+      "route": "26966",
+      "variant": "baseline-max",
+      "frames": 387,
+      "trajectory_updates": 97,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    },
+    {
+      "route": "26966",
+      "variant": "short-max",
+      "frames": 388,
+      "trajectory_updates": 97,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    },
+    {
+      "route": "24240",
+      "variant": "baseline-max",
+      "frames": 434,
+      "trajectory_updates": 109,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    },
+    {
+      "route": "24240",
+      "variant": "short-max",
+      "frames": 434,
+      "trajectory_updates": 109,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    },
+    {
+      "route": "17563",
+      "variant": "baseline-max",
+      "frames": 559,
+      "trajectory_updates": 140,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    },
+    {
+      "route": "17563",
+      "variant": "short-max",
+      "frames": 559,
+      "trajectory_updates": 140,
+      "output_unequal_values": 0,
+      "diagnostic_unequal_values": 0,
+      "acceptance_mismatches": 0,
+      "maximum_output_abs_error": 0.0,
+      "maximum_diagnostic_abs_error": 0.0,
+      "field_mismatches": {},
+      "all_frames_consecutive": true,
+      "exact_replay": true
+    }
+  ],
+  "max_motion_pose_branch_difference": 0.0,
+  "max_raw_decomposition_residual": 1.1102230246251565e-16
+}

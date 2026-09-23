@@ -1,0 +1,40 @@
+{
+  "analysis_edition": "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002",
+  "sources": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002/comparison.json": "291f8308995863f5f8c3623120c3d552b1fc312a8d4c35c7ebd5b7c627c57287",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002/24211-native_common-frames.csv": "55f7650a560be5fd2c9254ace27e571848dddb076c1e26249cff18d5e887c25a",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-control.jsonl": "d273c16eda3e4a4c6cff88668fd95a7b4757c115295959eb9f65f0c731f1141f",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002/24211-pi_common-frames.csv": "eb0444a194c33875d110dd38c93afb9b7ca3db045514a3e8eed76afb93e8bace",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-control.jsonl": "282766c2497fe9b09a39cc0e0cf56ca628d553bc5665d56fe5cb4f05e1d02535",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-native_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/data/runs/b2d/tcp-controller/paired-v2/24211-pi_common/attempts/24211/1/tcp-route-reference.json": "2b6a840e31bf02b9d6ac1e5e11eb45eea71c06677c0f1ad26ed678a3a7430a2f",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002/1711-native_common-frames.csv": "d80273827bdc101a2999dff3c5a2d12275276347124ba98ed9547b288bc943e1",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/tcp-control.jsonl": "7f2d6db4c6bd4d199f0d9c111ce5b39e740b1e97690e0ca9cd6cb886678ccd11",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/paired-v2-edition-002/1711-pi_common-frames.csv": "24b21e7ab5f48f94c58747a70c1acd75723cff605e1538f2392dbf942c14e32c",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/tcp-control.jsonl": "9ff1aa5f53c295b375ce3e9c1d60cbb43cb33a05f6c505a6af34f9377a648dbe",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-native_common/attempts/1711/1/tcp-route-reference.json": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a",
+    "/data/runs/b2d/tcp-controller/paired-v2/1711-pi_common/attempts/1711/1/tcp-route-reference.json": "9b130fbfbbf4a7b33fbcad694e8d029c4a3f1b682d931998345632f35dce0d9a",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/plot_tcp.py": "e7aeb4086c7c5f692bcfdf6cdd95dc49d47d222dda7bd6b95789d2c6800e5b5b",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe"
+  },
+  "outputs": {
+    "1711-behavior.pdf": "9a55027ee7efb3bb154d49acd9850333e7e12ea453aef026807d2d79f4e7f4b6",
+    "1711-world-predictions.pdf": "c2422a3518e028e9428b9701d71dce54ab8ce9033bd49f52cb674542099e12a9",
+    "1711-behavior.png": "4d71e09666b5ef845a581f15a107cc28794e98d47f7840953003b76870517408",
+    "24211-world-predictions.png": "c9208953ca0bc9acb866d2e2c79320530174d034a196a48d5c57933fec50d909",
+    "README.md": "db4a2beaa904b5441d015b6671d73c0ffa04a406e8b0d57c72f97ac6ce05660c",
+    "1711-world-predictions.png": "ea18170f877f81c0befe364f1286bf0121713cf4c1bfd9e496b52d7b0c0fa641",
+    "prediction-samples.csv": "f3837d8b25a6d25c6bf576bf5f5b0f94e05fe8283170cd378dc7b54e07fa4ab3",
+    "24211-behavior.pdf": "97ba48cacfb476c1d265894596ed6d2070393e867f9e41a341daeec86bec292e",
+    "24211-world-predictions.pdf": "9f339ebc16383fb79c7b8c10fec2a5777bdbf417dcc54705da0a72aa35e3eb4d",
+    "plot_tcp.py": "e7aeb4086c7c5f692bcfdf6cdd95dc49d47d222dda7bd6b95789d2c6800e5b5b",
+    "analyze_tcp.py": "acc6682703eb7c049e2e9f57ba6f76bfa803f5a2dfdb3bb801afa9508a0d63fe",
+    "24211-behavior.png": "a79c06de1a4c925e58cd088041d59f00c95b642931ab2392a4161f90269c4b6a"
+  },
+  "prediction_sampling_s": 2.0,
+  "prediction_origin_hypotheses_m": [
+    0.0,
+    -1.4
+  ],
+  "body_orientation": "Contemporaneous truth rotation, visualization hypothesis only"
+}

@@ -33,10 +33,14 @@ owner died is stolen after `--claim-stale-s`. Give each card its own `--server-i
     scripts/b2d_run.py --out $DATA_DIR/runs/b2d/base55 --workers 4 --towns base --rig front3 \
         --policy sleep --infer-ms 129
 
+On a desktop host, add --windowed with DISPLAY set to the desktop (e.g. :0) to watch the
+spectator view. Windowed timings include that view's rendering cost; label them separately.
+
 Python 3.8: runs in envs/carla.
 """
 import argparse
 import json
+import math
 import os
 import signal
 import socket
@@ -44,6 +48,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -65,7 +70,7 @@ PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
 BASE_TOWNS = {"Town01", "Town02", "Town03", "Town04", "Town05", "Town10HD", "Town10HD_Opt"}
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--routes", default=str(BENCH2DRIVE / "leaderboard/data/bench2drive220.xml"))
     p.add_argument("--towns", default="base", help="'base', 'all', or a comma-separated list")
@@ -80,6 +85,8 @@ def parse_args():
     p.add_argument("--server-index", type=int, default=0,
                    help="first CARLA server index; rpc port 2000+50i, as scripts/carla_server.sh")
     p.add_argument("--gpu-rank", type=int, default=0, help="which card this runner's servers use")
+    p.add_argument("--windowed", action="store_true",
+                   help="show CARLA on DISPLAY in a 1280x720 window (default: off-screen)")
     p.add_argument("--claim-stale-s", type=float, default=7200.0,
                    help="a claim older than this is assumed to belong to a dead runner")
     p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
@@ -99,20 +106,46 @@ def parse_args():
     p.add_argument("--route-timeout-s", type=float, default=5400.0)
     p.add_argument("--fresh", action="store_true", help="ignore existing results and redo everything")
     # passed through to b2d_route.py
+    p.add_argument("--agent", default="", help="external leaderboard agent .py; keeps its own sensors "
+                   "and control logic instead of b2d_agent.py's cost-measurement stub")
+    p.add_argument("--agent-config", default="", help="external agent config/checkpoint path")
+    p.add_argument("--python", default=PYTHON, help="route subprocess interpreter; use the model's "
+                   "venv for external agents (default: envs/carla/bin/python)")
     p.add_argument("--rig", default="front3")
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
+    p.add_argument("--tm-seed", type=int, default=0)
+    p.add_argument("--drive", default="route", choices=["straight", "route", "controller"])
     p.add_argument("--policy", default="none")
     p.add_argument("--infer-ms", type=float, default=0.0)
     p.add_argument("--policy-socket", default="")
     p.add_argument("--decimate", type=int, default=1)
     p.add_argument("--overlap", action="store_true")
+    p.add_argument("--controller-preset", default="carla", choices=["carla", "tcp", "pursuit"])
+    p.add_argument("--cruise-mps", type=float, default=8.0)
+    p.add_argument("--controller-config", default="", help="controller parameter JSON path")
     p.add_argument("--no-spectator", action="store_true")
     p.add_argument("--fast-copy", action="store_true")
     p.add_argument("--zero-copy", action="store_true")
     p.add_argument("--cache-lights", action="store_true")
     p.add_argument("--max-ticks", type=int, default=0)
-    return p.parse_args()
+    a = p.parse_args(argv)
+    if not math.isfinite(a.cruise_mps) or a.cruise_mps <= 0:
+        p.error("--cruise-mps must be finite and positive")
+    if a.decimate < 1:
+        p.error("--decimate must be positive")
+    if a.drive == "controller" and (a.policy != "none" or a.agent):
+        p.error("--drive controller currently requires --policy none and the built-in agent")
+    if a.controller_config:
+        path = Path(a.controller_config).resolve()
+        try:
+            params = json.loads(path.read_text())
+        except (OSError, ValueError) as exc:
+            p.error("invalid --controller-config: %s" % exc)
+        if not isinstance(params, dict):
+            p.error("--controller-config must contain a JSON object")
+        a.controller_config = str(path)
+    return a
 
 
 def select_routes(routes_xml, towns, route_ids, limit):
@@ -167,18 +200,20 @@ def port_free(port):
 
 
 class Server(object):
-    """One headless CARLA server. Owns the process group so it can be killed without pkill -f,
+    """One CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0):
+    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=False):
         self.index = index
         self.gpu_rank = gpu_rank
+        self.windowed = windowed
         self.stride = stride or 1
         self.routes_served = 0   # how many routes this process has run; the R7 curve needs it
         self.started_at = None
         self.port = PORT_BASE + PORT_STRIDE * index
         self.tm_port = TM_BASE + PORT_STRIDE * index
         self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         self.quality = quality
         self.proc = None
         self.pgid = None
@@ -189,10 +224,18 @@ class Server(object):
         self.stop()
         self.starts += 1
         self.log = self.log_dir / ("carla-%d-%d.log" % (self.index, self.starts))
-        env = dict(os.environ, VK_ICD_FILENAMES="/etc/vulkan/icd.d/nvidia_icd.json")
+        while self.log.exists():
+            self.starts += 1
+            self.log = self.log_dir / ("carla-%d-%d.log" % (self.index, self.starts))
+        nvidia_icd = Path("/etc/vulkan/icd.d/nvidia_icd.json")
+        if not nvidia_icd.exists():
+            nvidia_icd = Path("/usr/share/vulkan/icd.d/nvidia_icd.json")
+        env = dict(os.environ, VK_ICD_FILENAMES=str(nvidia_icd))
+        display_args = (["-windowed", "-ResX=1280", "-ResY=720"] if self.windowed
+                        else ["-RenderOffScreen"])
         with open(self.log, "wb") as fh:
             self.proc = subprocess.Popen(
-                [str(CARLA_ROOT / "CarlaUE4.sh"), "-RenderOffScreen", "-nosound",
+                [str(CARLA_ROOT / "CarlaUE4.sh")] + display_args + ["-nosound",
                  "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality,
                  "-graphicsadapter=%d" % self.gpu_rank],
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
@@ -254,7 +297,21 @@ class Server(object):
 
 
 class Runner(object):
-    def __init__(self, a, routes):
+    """Route campaign worker pool.
+
+    ``servers`` optionally lends one existing Server per worker. Successful runs return the
+    live objects to the caller, which owns final stop(). Failures and cancellation still stop
+    suspect servers, and retry/recycle may restart or move their ports. Reuse sequentially:
+    a Server must never have simultaneous Runner owners or concurrent caller operations.
+    """
+
+    def __init__(self, a, routes, servers=None):
+        self._external_servers = tuple(servers) if servers is not None else None
+        if self._external_servers is not None:
+            if len(self._external_servers) != a.workers:
+                raise ValueError("servers must contain exactly one Server per worker")
+            if len(set(id(server) for server in self._external_servers)) != a.workers:
+                raise ValueError("each worker must have a distinct Server object")
         self.a = a
         self.out = Path(a.out)
         for sub in ("done", "attempts", "servers", "claims"):
@@ -266,11 +323,18 @@ class Runner(object):
         self.lock = threading.RLock()
         self.queue = list(routes)
         self.requested = list(routes)
+        manifest = {"config": vars(a), "routes": [{"route_id": rid, "town": town} for rid, town in routes]}
+        # Unique invocation files preserve shards and resume history sharing the output directory.
+        mdir = self.out / "invocations"
+        mdir.mkdir(exist_ok=True)
+        (mdir / ("%d-%d.json" % (int(time.time() * 1e6), os.getpid()))).write_text(
+            json.dumps(manifest, indent=2))
         self.available_maps = None
         self.no_map = []
         self.reap_orphans()
         self.claimed = set()
         self.stop_flag = False
+        self.worker_errors = []
         # Servers must not be launched simultaneously: four at once produced a world-load timeout
         # and 17% less throughput than the same four staggered by 20 s.
         self.start_lock = threading.Lock()
@@ -280,11 +344,15 @@ class Runner(object):
         """A runner that is SIGKILLed leaves its CARLA servers and route processes behind, holding
         the ports the next run wants. Recorded pids make that recoverable without pattern-matching
         command lines: check that the pid really is the thing we started, then kill its group."""
+        supplied_pids = {server.proc.pid for server in self._external_servers or ()
+                         if server.proc is not None and server.alive()}
         for pidfile in sorted(self.out.glob("servers/*.pid")) + sorted(
                 self.out.glob("attempts/*/*/route.pid")):
             try:
                 pid = int(pidfile.read_text().strip())
             except (OSError, ValueError):
+                continue
+            if pid in supplied_pids:
                 continue
             cmd = cmdline(pid)
             if pid_alive(pid) and ("CarlaUE4" in cmd or "b2d_route.py" in cmd):
@@ -356,29 +424,46 @@ class Runner(object):
         self.claimed.discard(rid)
 
     def run(self):
-        threads = [threading.Thread(target=self.worker, args=(i,), daemon=True)
+        threads = [threading.Thread(target=self.worker, args=(i,))
                    for i in range(self.a.workers)]
         for t in threads:
             t.start()
         try:
-            for t in threads:
-                while t.is_alive():
-                    t.join(timeout=1.0)
+            # An interrupted Thread.join can mark a still-running worker as stopped on
+            # CPython 3.8. Poll outside join; only join after the interrupt has been handled.
+            while any(t.is_alive() for t in threads):
+                time.sleep(0.2)
         except KeyboardInterrupt:
             self.stop_flag = True
-            raise
-        self.summarise()
+            self.event("interrupted", reason="user interrupt; stopping workers")
+        finally:
+            # Workers own their child groups and must finish cancellation/bookkeeping before
+            # the main process exits. Daemon threads previously left both children alive.
+            for t in threads:
+                t.join()
+            self.summarise()
+        if self.stop_flag:
+            return 130
+        return 1 if self.worker_errors or self.summary["routes_never_finished"] else 0
 
     def worker(self, wi):
-        server = Server(self.a.server_index + wi, self.out / "servers", self.a.quality,
-                        self.a.gpu_rank, stride=self.a.workers)
+        externally_owned = self._external_servers is not None
+        server = self._external_servers[wi] if externally_owned else Server(
+            self.a.server_index + wi, self.out / "servers", self.a.quality,
+            self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed)
+        abnormal_exit = False
         try:
+            if externally_owned and server.alive():
+                self.learn_maps(server)
             while not self.stop_flag:
                 rid = self.next_route()
                 if rid is None:
                     return
                 finished = False
-                for attempt in range(1, self.a.max_attempts + 1):
+                previous = [int(p.name) for p in (self.out / 'attempts' / rid).glob('*')
+                            if p.is_dir() and p.name.isdigit()]
+                first_attempt = max(previous, default=0) + 1
+                for attempt in range(first_attempt, first_attempt + self.a.max_attempts):
                     if self.stop_flag:
                         self.release(rid)
                         return
@@ -386,12 +471,18 @@ class Runner(object):
                         self.event("server_start", worker=wi, index=server.index, port=server.port)
                         self.staggered_start(server)
                         self.learn_maps(server)
+                    if self.stop_flag:
+                        return
                     ok, record = self.run_once(wi, server, rid, attempt)
                     server.routes_served += 1
                     if ok:
                         (self.out / "done" / (rid + ".json")).write_text(json.dumps(record, indent=2))
                         finished = True
                         break
+                    if self.stop_flag or record["status"] == "cancelled_by_user":
+                        abnormal_exit = True
+                        self.release(rid)
+                        return
                     # Anything that is not a clean finish means the server is suspect: a hung or
                     # segfaulted server answers RPCs for a while and then fails the next route too.
                     # Come back on a different port as well, in case the slot is what is broken.
@@ -401,14 +492,23 @@ class Runner(object):
                 # the outcome. A route that never finished must be retryable by the next run.
                 self.release(rid)
                 if not finished:
+                    abnormal_exit = True
                     self.event("route_abandoned", route_id=rid, attempts=self.a.max_attempts)
                 if self.a.recycle_routes and server.routes_served >= self.a.recycle_routes:
                     self.event("server_recycled", worker=wi, index=server.index,
                                routes_served=server.routes_served,
                                age_s=round(time.time() - (server.started_at or time.time())))
                     server.stop()  # the next route starts it again, under the stagger lock
+        except Exception:
+            abnormal_exit = True
+            error = traceback.format_exc()
+            self.worker_errors.append(error)
+            self.event("worker_error", worker=wi, error=error)
         finally:
-            server.stop()
+            if 'rid' in locals() and rid is not None:
+                self.release(rid)
+            if not externally_owned or abnormal_exit or self.stop_flag:
+                server.stop()
 
     def learn_maps(self, server):
         """Ask the server which maps it has, once. A route whose town is not installed is not a
@@ -444,13 +544,19 @@ class Runner(object):
         # Take the first free port instead of insisting on one.
         # Stay inside this server's own 50-port block so the scan cannot wander into a neighbour's.
         tm_port = next(p for p in range(server.tm_port, server.tm_port + PORT_STRIDE) if port_free(p))
-        cmd = [PYTHON, str(HERE / "b2d_route.py"), "--routes", self.a.routes, "--route-id", rid,
+        cmd = [self.a.python, str(HERE / "b2d_route.py"), "--routes", self.a.routes, "--route-id", rid,
                "--port", str(server.port), "--tm-port", str(tm_port),
                "--out", str(adir), "--rig", self.a.rig, "--width", str(self.a.width),
                "--height", str(self.a.height), "--policy", self.a.policy,
-               "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate)]
+               "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate),
+               "--drive", self.a.drive, "--controller-preset", self.a.controller_preset,
+               "--cruise-mps", str(self.a.cruise_mps), "--tm-seed", str(self.a.tm_seed)]
+        if self.a.controller_config:
+            cmd += ["--controller-config", self.a.controller_config]
         if self.a.policy_socket:
             cmd += ["--policy-socket", self.a.policy_socket]
+        if self.a.agent:
+            cmd += ["--agent", self.a.agent, "--agent-config", self.a.agent_config]
         for flag in ("overlap", "no_spectator", "fast_copy", "zero_copy", "cache_lights"):
             if getattr(self.a, flag):
                 cmd.append("--" + flag.replace("_", "-"))
@@ -489,6 +595,8 @@ class Runner(object):
                 pass  # the route's own verdict is the more informative one
             elif "profile" not in record:
                 record["status"] = reason
+            if reason == "cancelled_by_user":
+                record["status"] = reason
         elif "status" not in record:
             record["status"] = "no_result_file"
         record["returncode"] = proc.returncode
@@ -512,8 +620,17 @@ class Runner(object):
         beat = adir / "heartbeat.json"
         last_ticks, last_change = -1, time.time()
         while True:
+            if self.stop_flag:
+                # SIGINT lets the route write its partial profile. Fall back to termination
+                # if it is stuck in a native call and cannot service the signal.
+                try:
+                    os.killpg(proc.pid, signal.SIGINT)
+                    proc.wait(timeout=15)
+                except (OSError, subprocess.TimeoutExpired):
+                    self.kill(proc)
+                return "cancelled_by_user"
             try:
-                proc.wait(timeout=5)
+                proc.wait(timeout=1)
                 return None
             except subprocess.TimeoutExpired:
                 pass
@@ -597,6 +714,7 @@ class Runner(object):
             "by_server_age": _by_server_age(history),
         }
         (self.out / "summary.json").write_text(json.dumps(summary, indent=2))
+        self.summary = summary
         self.event("summary", **dict((k, v) for k, v in summary.items() if k != "attempts"))
 
 
@@ -634,14 +752,19 @@ def _median(xs):
 
 def main():
     a = parse_args()
+    if a.agent:
+        a.agent = str(Path(a.agent).resolve())
+        if a.agent_config:
+            a.agent_config = str(Path(a.agent_config).resolve())
+        print("External agent: %s (agent-defined sensors; stub rig/policy options do not apply)"
+              % a.agent, flush=True)
     routes = select_routes(a.routes, a.towns, a.route_ids, a.limit)
     if not routes:
         print("no routes selected", file=sys.stderr)
         return 2
     print("%d routes, %d workers, gpu %d -> %s" % (len(routes), a.workers, a.gpu_rank, a.out),
           flush=True)
-    Runner(a, routes).run()
-    return 0
+    return Runner(a, routes).run()
 
 
 if __name__ == "__main__":

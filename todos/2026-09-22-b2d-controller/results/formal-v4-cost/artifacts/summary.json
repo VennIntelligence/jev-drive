@@ -1,0 +1,177 @@
+{
+  "groups": [
+    {
+      "group": "carla-seed0",
+      "completed": 9,
+      "all_ticks_min_median_max": [
+        252,
+        430.5,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        252,
+        390.0,
+        3882
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 346.8,
+      "extra_attempt_wall_s": 0,
+      "group_wall_s": 350.2762372493744,
+      "profiled_ticks": 11167,
+      "profiled_loop_s": 141.1922,
+      "weighted_profiled_ms_per_tick": 12.643700188054089,
+      "selected_unseparated_remainder_s": 205.6078,
+      "controller_step_p99_ms": 0.2562444575596601
+    },
+    {
+      "group": "tcp-seed0",
+      "completed": 8,
+      "all_ticks_min_median_max": [
+        259,
+        389.5,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        259,
+        360.0,
+        694
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 350.3,
+      "extra_attempt_wall_s": 19.0,
+      "group_wall_s": 379.8466217517853,
+      "profiled_ticks": 10915,
+      "profiled_loop_s": 141.315205,
+      "weighted_profiled_ms_per_tick": 12.946880897846999,
+      "selected_unseparated_remainder_s": 208.98479500000002,
+      "controller_step_p99_ms": 0.25448373940889724
+    },
+    {
+      "group": "pursuit-seed0",
+      "completed": 8,
+      "all_ticks_min_median_max": [
+        255,
+        432.0,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        255,
+        386.5,
+        718
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 357.9,
+      "extra_attempt_wall_s": 0,
+      "group_wall_s": 361.5891625881195,
+      "profiled_ticks": 11329,
+      "profiled_loop_s": 148.00050499999998,
+      "weighted_profiled_ms_per_tick": 13.063863094712682,
+      "selected_unseparated_remainder_s": 209.899495,
+      "controller_step_p99_ms": 0.25515956338495005
+    },
+    {
+      "group": "carla-seed1",
+      "completed": 8,
+      "all_ticks_min_median_max": [
+        252,
+        430.5,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        252,
+        386.5,
+        695
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 348.9,
+      "extra_attempt_wall_s": 49.1,
+      "group_wall_s": 408.4440152645111,
+      "profiled_ticks": 11285,
+      "profiled_loop_s": 141.605933,
+      "weighted_profiled_ms_per_tick": 12.548155338945502,
+      "selected_unseparated_remainder_s": 207.29406699999998,
+      "controller_step_p99_ms": 0.25471440341789275
+    },
+    {
+      "group": "tcp-seed1",
+      "completed": 8,
+      "all_ticks_min_median_max": [
+        259,
+        389.5,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        259,
+        360.0,
+        695
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 345.5,
+      "extra_attempt_wall_s": 20.0,
+      "group_wall_s": 376.18221783638,
+      "profiled_ticks": 10916,
+      "profiled_loop_s": 140.687006,
+      "weighted_profiled_ms_per_tick": 12.888146390619275,
+      "selected_unseparated_remainder_s": 204.812994,
+      "controller_step_p99_ms": 0.25315005150332587
+    },
+    {
+      "group": "pursuit-seed1",
+      "completed": 8,
+      "all_ticks_min_median_max": [
+        255,
+        432.0,
+        4000
+      ],
+      "completed_ticks_min_median_max": [
+        255,
+        386.5,
+        718
+      ],
+      "failed_ticks_min_median_max": [
+        4000,
+        4000.0,
+        4000
+      ],
+      "selected_wall_s": 357.3,
+      "extra_attempt_wall_s": 0,
+      "group_wall_s": 360.9809317588806,
+      "profiled_ticks": 11330,
+      "profiled_loop_s": 147.21640500000004,
+      "weighted_profiled_ms_per_tick": 12.993504413062668,
+      "selected_unseparated_remainder_s": 210.08359499999997,
+      "controller_step_p99_ms": 0.2551664623752001
+    }
+  ],
+  "attempts": 63,
+  "selected_routes": 60,
+  "manifest_start_to_end_event_s": 2247.4129614830017,
+  "all_attempt_wall_s": 2194.8,
+  "campaign_non_attempt_remainder_s": 52.61296148300153,
+  "definitions": [
+    "Profiled loop uses ticks_used times rounded total_ms_mean; warmup excluded.",
+    "Selected remainder mixes setup, cleanup, unprofiled warmup and untimed work.",
+    "Campaign remainder includes initial readiness, restarts, reports and slope check.",
+    "Final server.stop is after the end event and excluded; no neural policy cost measured."
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot_pose.py": {
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c",
+      "bytes": 10551
+    },
+    "/home/ujs/mycode/jev-drive/research/plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/frames.csv": {
+      "sha256": "50cb21fb141a7e6901a2975bf31ae19234ed1f559ece16a0b32a9f11e73916ad",
+      "bytes": 3153288
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/metrics.csv": {
+      "sha256": "ebe68fff59bd1c71294dbaf39dfd8bcab388d712509345b99e1b787f268bca1b",
+      "bytes": 297988
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/cases.csv": {
+      "sha256": "e9e4b41ff26db1f33593f128899b379a1735a1eadb42554f7b0f8cf4aaa5902c",
+      "bytes": 30269
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/coverage.json": {
+      "sha256": "fddbc676aaa480bd9102a44bd37c8b20bf3aef1898310db379bbf9af7310eb84",
+      "bytes": 3583
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/required-conditions.json": {
+      "sha256": "18f7c98292b29b78d568a91d5471ed4056c9163e3f61cf2d06002d3e04e60713",
+      "bytes": 36183
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/manifest.json": {
+      "sha256": "5b7f766e5ad9baebe89827a2c3ac196dd41ad29ae85e50750b418900f7d2a9c1",
+      "bytes": 13739
+    }
+  },
+  "outputs": {
+    "four-window-summary.pdf": {
+      "sha256": "8e6b51775ab3839805a127bd35c1ea7a335ae5ced555183f0f3b4f0cf76aedba",
+      "bytes": 12773
+    },
+    "four-window-summary.png": {
+      "sha256": "c3494f6e2e1aa862b76dbdd244d064ddb0dfa3db9a447762b6df530190d2b5eb",
+      "bytes": 110251
+    },
+    "plot-data.csv": {
+      "sha256": "50cb21fb141a7e6901a2975bf31ae19234ed1f559ece16a0b32a9f11e73916ad",
+      "bytes": 3153288
+    },
+    "plot-notes.json": {
+      "sha256": "cc4085390b78b2e0f25db045b20654cc7fa63cb476003738fa04a1e76d8e5717",
+      "bytes": 5283
+    },
+    "plot-source.py": {
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c",
+      "bytes": 10551
+    },
+    "plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    },
+    "route-17563-full.pdf": {
+      "sha256": "8b23f6a7ac19c69e3ab86b52b30eb838bb3603ccb66547bb998a1ce638a9664c",
+      "bytes": 66605
+    },
+    "route-17563-full.png": {
+      "sha256": "6a24ad1087a64d290d8d0f09c7c376c9df5f94d82f32ce68bc159089f24f14e0",
+      "bytes": 497284
+    },
+    "route-17563-window-1.pdf": {
+      "sha256": "8c03f158c60c547d8502ae9b7fd754fde8074075e7a57b62ec0e087c90798100",
+      "bytes": 22840
+    },
+    "route-17563-window-1.png": {
+      "sha256": "df016a2413f50b2d961148f17e88d3ed15d7cfb00bf82a62fbe7af4632ae8e13",
+      "bytes": 437203
+    },
+    "route-17563-window-2.pdf": {
+      "sha256": "ee42fefccd1ed96650391080f6a6561db483ab9ef87a09f22db05a38e0b27833",
+      "bytes": 23138
+    },
+    "route-17563-window-2.png": {
+      "sha256": "92a86d484ef325658145bf00d2d4193d87adadcc896bf6f9165ca93f2ae4abbf",
+      "bytes": 435979
+    },
+    "route-24240-full.pdf": {
+      "sha256": "86253e56f90528d54f1bd54d125577877d17fa07304cd88dcba7bc5acdaa0cce",
+      "bytes": 53775
+    },
+    "route-24240-full.png": {
+      "sha256": "71361f544a6ae51a040956b21e7dc72e29e52451fbd4478dccbf22493321ed3a",
+      "bytes": 429148
+    },
+    "route-24240-window-1.pdf": {
+      "sha256": "7b52cee3d3706c9eedcb2680b73a0327ad235db7b33df5a060c2136e99499585",
+      "bytes": 29333
+    },
+    "route-24240-window-1.png": {
+      "sha256": "1545dade94334bae270f5d7c818f0b296fe90b5acb3eac3cffb94fbec3586b79",
+      "bytes": 513080
+    },
+    "route-26966-full.pdf": {
+      "sha256": "a9fb4a4a70c934a696588671119a1f9334eca74c89bfec6e168a7b6b095e3915",
+      "bytes": 47193
+    },
+    "route-26966-full.png": {
+      "sha256": "1e28b6cbc8dbc8c83d6d90dc7de918ceaafa8d4647dd8ce35a1c29b8d23ff506",
+      "bytes": 411910
+    },
+    "route-26966-window-1.pdf": {
+      "sha256": "2914cdd3a5cef2d50f46c89ed23be2a95733cb34f83d5b1bacc73c3faff067e8",
+      "bytes": 22832
+    },
+    "route-26966-window-1.png": {
+      "sha256": "69272755d705ce6eb07d284319ca87005e98323bf5cc4db905bf1ea45852400b",
+      "bytes": 421646
+    },
+    "summary-plot-data.csv": {
+      "sha256": "140a46b36fc798839fb0cf9c50c6030af1cb48b3a5c13342779d106334eed92e",
+      "bytes": 3620
+    },
+    "window-plot-data.csv": {
+      "sha256": "1eda7866be1bad0779d21651fddb0f3e826271f5a05b03d1eecafca7dae5a1b8",
+      "bytes": 791942
+    }
+  },
+  "retention": "No deletion; original analysis/source manifests linked by hash. Plot and style bytes archived."
+}

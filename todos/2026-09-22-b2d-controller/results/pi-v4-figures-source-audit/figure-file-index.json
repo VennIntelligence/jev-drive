@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "root": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/pi-v4-figures-01",
+  "captured_at": 1790089905.3255246,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4246,
+      "sha256": "c18ebe1d951a5efac5d8bf727505ba8fd50ba29320dc1b4722bc8a1b6392cb06"
+    },
+    {
+      "path": "cases.csv",
+      "bytes": 31501,
+      "sha256": "b36674aa5b0da456a56fe1058734ed9c526a9214525adf9730d7e9ac9bd5894d"
+    },
+    {
+      "path": "frames.csv",
+      "bytes": 4908645,
+      "sha256": "17861f4914b488686a025d718b9afdab1a9f15643e70bc17ee3bec57fe603230"
+    },
+    {
+      "path": "gear-replicates.csv",
+      "bytes": 3012,
+      "sha256": "14ecca03bd0b38dd2df52b717917640b03a7380f190abeea0a34de97b9adf4e7"
+    },
+    {
+      "path": "matched-comparisons.csv",
+      "bytes": 10826,
+      "sha256": "0f7a0731ad0e797f64cc0ebeac90daf1d17b1eef5f2b27e2dd4301e72ed51574"
+    },
+    {
+      "path": "report.json",
+      "bytes": 93002,
+      "sha256": "161c9a9ee15a16b6dfe850ed7ce79f01a5329c4ecab3b2682bb45d38e02be6f7"
+    },
+    {
+      "path": "selection-and-v3-deltas.json",
+      "bytes": 55058,
+      "sha256": "dd68df966ef40ba8e8dbb7d03750e2cf02e5eee7b5faa437a3305d98a9cc5191"
+    },
+    {
+      "path": "six-route-cte.pdf",
+      "bytes": 91987,
+      "sha256": "6079b0c3a465eb2ef1518e64a7bf0d0fd7c289189f9d37a5b58fda2c23f516e6"
+    },
+    {
+      "path": "six-route-cte.png",
+      "bytes": 1291054,
+      "sha256": "4e13f231dc956821c2995228ed0642678dda9277292bc2106f720c6659e86ad7"
+    },
+    {
+      "path": "six-route-gates.pdf",
+      "bytes": 18709,
+      "sha256": "c72577c8f1729700814c1cb9c50b4c6100fd38a1a6167a430efe71c874978f0f"
+    },
+    {
+      "path": "six-route-gates.png",
+      "bytes": 257923,
+      "sha256": "26ff07c3f4e7425a69fbe58755278763573c8e69a97df77fa2324c9f80bf716f"
+    },
+    {
+      "path": "six-route-speed-gear.pdf",
+      "bytes": 114540,
+      "sha256": "f7abd5f262ab5e0519dad6269c5219bf35dda2a51c97eeeb78f17d22b5e0d879"
+    },
+    {
+      "path": "six-route-speed-gear.png",
+      "bytes": 1871992,
+      "sha256": "daa8fdbe8dfdcdbdc73f9a74c26bef95f1f531679b9f257e00cdc25bcb1ac6cd"
+    },
+    {
+      "path": "underspeed-episodes.csv",
+      "bytes": 16407,
+      "sha256": "4ffd7058d0b7aab1dcb61583461c90908c4b06ed5b5399b9290d704b7ae92bc0"
+    },
+    {
+      "path": "v4-vs-v3.csv",
+      "bytes": 12623,
+      "sha256": "d351e4d0988330243913525d5a32cf35d38bf91f8dedc43c7e56e1a29657147e"
+    }
+  ],
+  "file_count": 15,
+  "total_bytes": 8781525
+}

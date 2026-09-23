@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/smoke",
+  "captured_at": 1790086081.9941888,
+  "files": [
+    {
+      "path": "all-attempts.csv",
+      "bytes": 4409,
+      "sha256": "6ddeabcbd212e60fbc40c5ebe8893567ef2bfc3b78450bbfe1eb1bf2a646ed79"
+    },
+    {
+      "path": "attempts/2390/1/agent_config.json",
+      "bytes": 365,
+      "sha256": "fc3baf67813560152d8e3868bbb1a61e9e32dd87b774e300e504fd92880905f3"
+    },
+    {
+      "path": "attempts/2390/1/attempt.json",
+      "bytes": 2765,
+      "sha256": "6f3deeee1abe32d39af8f65678ee22cfc1d68f0894ff9232cf2010f5d7fc1d40"
+    },
+    {
+      "path": "attempts/2390/1/control.jsonl",
+      "bytes": 299154,
+      "sha256": "f248b5e08f911483b9144e51582e6b6c0a68e27b2836d7cae3779d04f08eb36c"
+    },
+    {
+      "path": "attempts/2390/1/criterion_events.json",
+      "bytes": 2686,
+      "sha256": "9b4a87db1cf087a19436074e5421f1d18314327f1b0e80278668863d0c04ab37"
+    },
+    {
+      "path": "attempts/2390/1/heartbeat.json",
+      "bytes": 38,
+      "sha256": "d934f0ad1a445ffc020a1b87ae6dee34614ded0aa44b4c9601ec6e0fdc4d5922"
+    },
+    {
+      "path": "attempts/2390/1/results.json",
+      "bytes": 5226,
+      "sha256": "9efd1356517b4a3abc016a83b59702447e15e3fa9dbeed78ed369be67d63e5f7"
+    },
+    {
+      "path": "attempts/2390/1/route.log",
+      "bytes": 4592,
+      "sha256": "0249f249d1c3d5c1068dfb8434da154c69c93f816504e7cd229249c665405e49"
+    },
+    {
+      "path": "attempts/2390/1/route.pid",
+      "bytes": 6,
+      "sha256": "4ba5ab2a13768402a6e5432734c2fed56567ff67f1c39b5151003b1c60b0f4fc"
+    },
+    {
+      "path": "attempts/2390/1/route_reference.json",
+      "bytes": 9122,
+      "sha256": "b7878c03df1fae8dd3ec15a0dc554956ffe358113e270cdaba84ffb691582602"
+    },
+    {
+      "path": "attempts/2390/1/route_result.json",
+      "bytes": 3540,
+      "sha256": "381210e9c084127b04be1800c03c3c0d36840eec68410578ecfd7d5f1b7f4102"
+    },
+    {
+      "path": "attempts/2390/1/trajectories.jsonl",
+      "bytes": 54838,
+      "sha256": "acba477053174dcefc768c2e2915225d02f9d66ceb5f097d5759a2fdde2ca77a"
+    },
+    {
+      "path": "controller-report.json",
+      "bytes": 22901,
+      "sha256": "566fff33e561d982b918842ae583155d3241488423c66b01a99781d927b1c82e"
+    },
+    {
+      "path": "done/2390.json",
+      "bytes": 3750,
+      "sha256": "51672076aaeb9d56060194ce660c4f2ca4729305984afab7ad7c8d5ce5934551"
+    },
+    {
+      "path": "events.jsonl",
+      "bytes": 958,
+      "sha256": "7a2117ff071e1fe84b2cb990333b3ee801e3819f2c70b2944ead5b16e6e17d87"
+    },
+    {
+      "path": "invocations/1790083476255155-137733.json",
+      "bytes": 1135,
+      "sha256": "3b0f2988322a032512b1cd31ba738b8ee2f06a0c1da6f7fc130832ff3d9b77c8"
+    },
+    {
+      "path": "log.txt",
+      "bytes": 1020,
+      "sha256": "96ca97fa35e214bc60fce532a5f5738bbe31ef431a2e509bfa1d29a6e490ce96"
+    },
+    {
+      "path": "servers/carla-66-1.log",
+      "bytes": 130,
+      "sha256": "bcd562ad467d0956c972279568f75aabc474a29e6f5c04002a940c6459dcb99f"
+    },
+    {
+      "path": "servers/carla-66.pid",
+      "bytes": 6,
+      "sha256": "d8ccdb692bfaf4be9a12c89db59c518353c5f7cd6221eac0ae45d5753ce0fd36"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 552,
+      "sha256": "5978575727f592e196a88efce4d31886eb7010e35baee872e90239f5ed042a3b"
+    }
+  ],
+  "file_count": 20,
+  "total_bytes": 417193
+}

@@ -1,0 +1,9 @@
+{
+  "hash_checks": 39,
+  "pose_shadow_branches": 2076,
+  "external_bytes": 3219544,
+  "original_adapter_updates_exact": 692,
+  "controller_frames_exact": 2761,
+  "missing_truth_updates": 0,
+  "branch_motion_pose_difference": 0.0
+}

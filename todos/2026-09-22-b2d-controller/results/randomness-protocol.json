@@ -1,0 +1,16 @@
+{
+  "traffic_manager_seed": {
+    "dev10": [0, 1],
+    "holdout": [0],
+    "source": "b2d_route.py passes tm_seed to evaluator traffic_manager_seed; evaluator calls set_random_device_seed on each world load"
+  },
+  "carla_data_provider_seed": {
+    "value": 2000,
+    "source": "/data/third_party/Bench2Drive/scenario_runner/srunner/scenariomanager/carla_data_provider.py:67",
+    "reset": "Fixed vendor RandomState(2000), including cleanup; unchanged between traffic-manager seed runs"
+  },
+  "python_global_random": "Not explicitly seeded by the controller harness",
+  "numpy_global_random": "Not explicitly seeded by the controller harness; controller runtime itself has no random sampling",
+  "sensor_noise_seeds": "No explicit override in the controller agent; simulator blueprint defaults were not individually recorded",
+  "interpretation": "Two traffic-manager seeds are paired repetitions, not an exhaustive randomization of all scenario and sensor generators. CARLA determinism is not claimed."
+}

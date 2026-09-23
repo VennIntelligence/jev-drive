@@ -1,0 +1,12 @@
+{
+  "hashes_rechecked": 136,
+  "per_window_rows": 90,
+  "formal_attempts_retained": 63,
+  "tests": [
+    "finite metric magnitude and missing values",
+    "CTE sample count equals retained frame count",
+    "G2 amplitude saturation absent",
+    "all input/output hashes match recorded bytes",
+    "v1 straight and mirrored 90-degree fixtures passed earlier"
+  ]
+}

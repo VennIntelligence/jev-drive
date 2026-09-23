@@ -1,0 +1,429 @@
+{
+  "cases": [
+    {
+      "case": "development3/1773/carla",
+      "route_length_m": 132.00021200610064,
+      "source_pose_ticks": 534,
+      "replans": 134,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000003181,
+      "reasons": {
+        "rejoin": 104,
+        "rejoin_curvature_concern": 4,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 402,
+        "p50": 0.2601715,
+        "p95": 0.3554155,
+        "p99": 0.37288944,
+        "max": 0.7983
+      },
+      "active_trajectory_ms": {
+        "n": 324,
+        "p50": 0.28116050000000004,
+        "p95": 0.35689345,
+        "p99": 0.37445090999999997,
+        "max": 0.7983
+      }
+    },
+    {
+      "case": "development3/1773/pursuit",
+      "route_length_m": 132.00021200610064,
+      "source_pose_ticks": 534,
+      "replans": 134,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000003322,
+      "reasons": {
+        "rejoin": 102,
+        "rejoin_curvature_concern": 6,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 402,
+        "p50": 0.2570125,
+        "p95": 0.353438,
+        "p99": 0.38480450000000005,
+        "max": 0.423158
+      },
+      "active_trajectory_ms": {
+        "n": 324,
+        "p50": 0.2777905,
+        "p95": 0.35589735,
+        "p99": 0.38543064,
+        "max": 0.423158
+      }
+    },
+    {
+      "case": "development3/1773/tcp",
+      "route_length_m": 132.00021200610064,
+      "source_pose_ticks": 532,
+      "replans": 133,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000002838,
+      "reasons": {
+        "rejoin": 100,
+        "rejoin_curvature_concern": 8,
+        "terminal_hold": 25
+      },
+      "all_trajectory_ms": {
+        "n": 399,
+        "p50": 0.25624,
+        "p95": 0.3499701,
+        "p99": 0.36457764,
+        "max": 0.417169
+      },
+      "active_trajectory_ms": {
+        "n": 324,
+        "p50": 0.27835200000000004,
+        "p95": 0.35108135,
+        "p99": 0.36508914,
+        "max": 0.417169
+      }
+    },
+    {
+      "case": "development3/24240/carla",
+      "route_length_m": 100.23843533405801,
+      "source_pose_ticks": 454,
+      "replans": 114,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000000044,
+      "reasons": {
+        "rejoin": 80,
+        "rejoin_curvature_concern": 8,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 342,
+        "p50": 0.239529,
+        "p95": 0.32146895,
+        "p99": 0.3344673,
+        "max": 0.383054
+      },
+      "active_trajectory_ms": {
+        "n": 264,
+        "p50": 0.2613795,
+        "p95": 0.32371099999999997,
+        "p99": 0.33634156000000004,
+        "max": 0.383054
+      }
+    },
+    {
+      "case": "development3/24240/pursuit",
+      "route_length_m": 100.23843533405801,
+      "source_pose_ticks": 453,
+      "replans": 114,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.00000000000002,
+      "reasons": {
+        "rejoin": 80,
+        "rejoin_curvature_concern": 8,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 342,
+        "p50": 0.244051,
+        "p95": 0.3200235,
+        "p99": 0.3326926499999999,
+        "max": 0.444533
+      },
+      "active_trajectory_ms": {
+        "n": 264,
+        "p50": 0.26087249999999995,
+        "p95": 0.32320855,
+        "p99": 0.3396625200000001,
+        "max": 0.444533
+      }
+    },
+    {
+      "case": "development3/24240/tcp",
+      "route_length_m": 100.23843533405801,
+      "source_pose_ticks": 453,
+      "replans": 114,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.00000000000002,
+      "reasons": {
+        "rejoin": 80,
+        "rejoin_curvature_concern": 8,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 342,
+        "p50": 0.238267,
+        "p95": 0.3210404,
+        "p99": 0.33248879,
+        "max": 0.387541
+      },
+      "active_trajectory_ms": {
+        "n": 264,
+        "p50": 0.2625305,
+        "p95": 0.323466,
+        "p99": 0.33432709,
+        "max": 0.387541
+      }
+    },
+    {
+      "case": "development3/25854/carla",
+      "route_length_m": 131.3021092019586,
+      "source_pose_ticks": 530,
+      "replans": 133,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.999999999998533,
+      "reasons": {
+        "rejoin": 101,
+        "rejoin_curvature_concern": 6,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 399,
+        "p50": 0.256902,
+        "p95": 0.3500732,
+        "p99": 0.3804861799999999,
+        "max": 0.412401
+      },
+      "active_trajectory_ms": {
+        "n": 321,
+        "p50": 0.279388,
+        "p95": 0.351453,
+        "p99": 0.38501720000000006,
+        "max": 0.412401
+      }
+    },
+    {
+      "case": "development3/25854/pursuit",
+      "route_length_m": 131.3021092019586,
+      "source_pose_ticks": 537,
+      "replans": 135,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.999999999998497,
+      "reasons": {
+        "rejoin": 101,
+        "rejoin_curvature_concern": 8,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 405,
+        "p50": 0.25605,
+        "p95": 0.350806,
+        "p99": 0.37978571999999994,
+        "max": 0.415747
+      },
+      "active_trajectory_ms": {
+        "n": 327,
+        "p50": 0.278697,
+        "p95": 0.3544574,
+        "p99": 0.38095122000000003,
+        "max": 0.415747
+      }
+    },
+    {
+      "case": "development3/25854/tcp",
+      "route_length_m": 131.3021092019586,
+      "source_pose_ticks": 529,
+      "replans": 133,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.999999999998487,
+      "reasons": {
+        "rejoin": 100,
+        "rejoin_curvature_concern": 7,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 399,
+        "p50": 0.2555,
+        "p95": 0.354217,
+        "p99": 0.38915737999999944,
+        "max": 0.526564
+      },
+      "active_trajectory_ms": {
+        "n": 321,
+        "p50": 0.279628,
+        "p95": 0.35537,
+        "p99": 0.4127282000000003,
+        "max": 0.526564
+      }
+    },
+    {
+      "case": "development3/26966/carla",
+      "route_length_m": 77.40649077278198,
+      "source_pose_ticks": 392,
+      "replans": 98,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000000068,
+      "reasons": {
+        "rejoin": 67,
+        "rejoin_curvature_concern": 6,
+        "terminal_hold": 25
+      },
+      "all_trajectory_ms": {
+        "n": 294,
+        "p50": 0.2216505,
+        "p95": 0.32546335,
+        "p99": 0.33737103999999996,
+        "max": 0.359306
+      },
+      "active_trajectory_ms": {
+        "n": 219,
+        "p50": 0.250812,
+        "p95": 0.329337,
+        "p99": 0.33855004,
+        "max": 0.359306
+      }
+    },
+    {
+      "case": "development3/26966/pursuit",
+      "route_length_m": 77.40649077278198,
+      "source_pose_ticks": 393,
+      "replans": 99,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.000000000000079,
+      "reasons": {
+        "rejoin": 67,
+        "rejoin_curvature_concern": 6,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 297,
+        "p50": 0.222062,
+        "p95": 0.30574779999999996,
+        "p99": 0.33968808,
+        "max": 0.362426
+      },
+      "active_trajectory_ms": {
+        "n": 219,
+        "p50": 0.249847,
+        "p95": 0.3122483,
+        "p99": 0.34082064,
+        "max": 0.362426
+      }
+    },
+    {
+      "case": "development3/26966/tcp",
+      "route_length_m": 77.40649077278198,
+      "source_pose_ticks": 382,
+      "replans": 96,
+      "errors": [],
+      "max_timed_chord_speed_mps": 6.00000000000007,
+      "reasons": {
+        "rejoin": 58,
+        "rejoin_curvature_concern": 9,
+        "terminal_target_not_forward": 3,
+        "terminal_curvature_concern": 2,
+        "terminal_hold": 24
+      },
+      "all_trajectory_ms": {
+        "n": 288,
+        "p50": 0.2551255,
+        "p95": 0.32876629999999996,
+        "p99": 0.41312699999999974,
+        "max": 0.476748
+      },
+      "active_trajectory_ms": {
+        "n": 216,
+        "p50": 0.27551749999999997,
+        "p95": 0.34557375,
+        "p99": 0.4535189999999997,
+        "max": 0.476748
+      }
+    },
+    {
+      "case": "development-s-v1/17563/carla",
+      "route_length_m": 115.20720973419954,
+      "source_pose_ticks": 585,
+      "replans": 147,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.99999999989349,
+      "reasons": {
+        "rejoin": 114,
+        "rejoin_curvature_concern": 7,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 441,
+        "p50": 0.258951,
+        "p95": 0.333169,
+        "p99": 0.3489386000000001,
+        "max": 0.404473
+      },
+      "active_trajectory_ms": {
+        "n": 363,
+        "p50": 0.274215,
+        "p95": 0.3343638,
+        "p99": 0.35268239999999995,
+        "max": 0.404473
+      }
+    },
+    {
+      "case": "development-s-v1/17563/pursuit",
+      "route_length_m": 115.20720973419954,
+      "source_pose_ticks": 585,
+      "replans": 147,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.999999999893763,
+      "reasons": {
+        "rejoin": 114,
+        "rejoin_curvature_concern": 7,
+        "terminal_hold": 26
+      },
+      "all_trajectory_ms": {
+        "n": 441,
+        "p50": 0.255977,
+        "p95": 0.335173,
+        "p99": 0.3594236000000002,
+        "max": 0.398223
+      },
+      "active_trajectory_ms": {
+        "n": 363,
+        "p50": 0.273294,
+        "p95": 0.33647109999999997,
+        "p99": 0.3664888399999999,
+        "max": 0.398223
+      }
+    },
+    {
+      "case": "development-s-v1/17563/tcp",
+      "route_length_m": 115.20720973419954,
+      "source_pose_ticks": 549,
+      "replans": 138,
+      "errors": [],
+      "max_timed_chord_speed_mps": 5.999999999893885,
+      "reasons": {
+        "rejoin": 99,
+        "rejoin_curvature_concern": 12,
+        "terminal_target_not_forward": 27
+      },
+      "all_trajectory_ms": {
+        "n": 414,
+        "p50": 0.3074335,
+        "p95": 0.4147691499999994,
+        "p99": 0.46064097000000004,
+        "max": 0.467764
+      },
+      "active_trajectory_ms": {
+        "n": 414,
+        "p50": 0.3074335,
+        "p95": 0.4147691499999994,
+        "p99": 0.46064097000000004,
+        "max": 0.467764
+      }
+    }
+  ],
+  "case_count": 15,
+  "construction_errors": 0,
+  "all_trajectory_ms": {
+    "n": 5607,
+    "p50": 0.253062,
+    "p95": 0.3493495,
+    "p99": 0.39176977999999973,
+    "max": 0.7983
+  },
+  "active_trajectory_ms": {
+    "n": 4527,
+    "p50": 0.273434,
+    "p95": 0.3531875,
+    "p99": 0.39638667999999977,
+    "max": 0.7983
+  },
+  "cruise_mps": 6.0,
+  "max_timed_chord_speed_mps": 6.000000000003322
+}

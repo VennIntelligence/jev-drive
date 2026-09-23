@@ -1,0 +1,137 @@
+{
+  "inputs": {
+    "/data/runs/b2d/controller/turns-v1/provenance/source/scripts/b2d_controller.py": {
+      "sha256": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b",
+      "bytes": 20234
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/diagnostics/replay_controller_updates.py": {
+      "sha256": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2",
+      "bytes": 12704
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/control.jsonl": {
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06",
+      "bytes": 746478
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/trajectories.jsonl": {
+      "sha256": "e5046704a37ac0a7bf2166b2006e9cc9a66e520d7897d1a92c18dadc6ffec79e",
+      "bytes": 111238
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/agent_config.json": {
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/turns-v1/inputs/controller-baseline-max.json": {
+      "sha256": "9431873074a120acc7caa49da3baf2d5f3c071d5a4663bd44639ead09fd4de32",
+      "bytes": 444
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/control.jsonl": {
+      "sha256": "2c7fc4fecc8d16dce5e724a3776ff939e9a5bbfb56d70a13d3c6697a2788395e",
+      "bytes": 745810
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/trajectories.jsonl": {
+      "sha256": "55298020c200f3acda470efddf6190b4c4420f861d69c4f6c81139bfe9429bd8",
+      "bytes": 111166
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/agent_config.json": {
+      "sha256": "4532344ae6fbce2a1a51e6a38468b7cc950ff931e133ca009437fe3a29217998",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/turns-v1/inputs/controller-short-max.json": {
+      "sha256": "bffb11cbb54faad09ab612983d2c089d96eae3903cdce8658a393d99d23ac7b9",
+      "bytes": 446
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/control.jsonl": {
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0",
+      "bytes": 841248
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/trajectories.jsonl": {
+      "sha256": "5675bf3b2ef462e927a4fdbfd5bcb0b7b928d14441625540326f57cdb81491d1",
+      "bytes": 125390
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/agent_config.json": {
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/control.jsonl": {
+      "sha256": "f94eeaf0fa3722cc027cb7b7e0c764284c6305b33144e8de3ff0a32a9a3f2c5d",
+      "bytes": 839550
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/trajectories.jsonl": {
+      "sha256": "2f3f2465f863ace489b7fb24b7b67f431c5a0d9d1dfc3fe719e2c7c2668ec724",
+      "bytes": 125516
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/agent_config.json": {
+      "sha256": "3c0f3243e36554905ac98171b58bf17b8432642639f4763dd063310c2fd5b974",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/control.jsonl": {
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f",
+      "bytes": 1098293
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/trajectories.jsonl": {
+      "sha256": "17f1ed19416b41f148a4c52daa7ae757fb10098bac9965e50983d17b9ebe7c90",
+      "bytes": 167596
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/agent_config.json": {
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96",
+      "bytes": 340
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/control.jsonl": {
+      "sha256": "7166f33b793e325c786cbd3595910f1ea59f457aea82307e2b5a4b0370a8d2ba",
+      "bytes": 1096256
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/trajectories.jsonl": {
+      "sha256": "faa08aabd4ca58a9928d474c69a7ee77f601cc672c77bb7e5d80dbcf384ab51e",
+      "bytes": 167702
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/agent_config.json": {
+      "sha256": "8c954c8b93b16d7b63f91b38e0cc8e8c8dfadc01a9c58511480d8c01364f1af8",
+      "bytes": 334
+    },
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    }
+  },
+  "outputs": {
+    "window-summary.csv": "00661d45c178df8d3d816a9a5913a645424c6b3f0a50f152e1eb96550fad865b",
+    "per-update-counterfactual.csv": "e02c63acea73aaa4573527430df09828a03c19408d897e531a23bf64c70ab402",
+    "full-replay.jsonl": "861845ee2ebdf18653ae6ef521482a8772e028810adcce7fdb01c42b285c3aa0",
+    "top5-update-effects.csv": "0cd757ba4f10380744f951df451af3b7bb14d8c5446afb533bd80a2ca235a4c1",
+    "replay-verification.json": "5acbdb79f2c80b46c758f85aa25917482cbb26aa435be3505e27dba929a24af5",
+    "source/b2d_controller.py": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b",
+    "source/replay_controller_updates.py": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2"
+  },
+  "python": "3.8.20 (default, Oct  2 2024, 16:34:12) \n[Clang 18.1.8 ]",
+  "numpy": "1.23.5",
+  "platform": "Linux-6.17.0-35-generic-x86_64-with-glibc2.2.5",
+  "counterfactual": "At every update copy identical pre-tick controller state; actual branch accepts recorded trajectory then steps recorded current motion; alternate skips ONLY this update and steps same motion. Alternate discarded immediately.",
+  "identity": "new_raw-previous_raw=(new_raw-old_continued_raw)+(old_continued_raw-previous_raw). First/no-reference/safe branches retain missing raw; never substitute emitted command as raw demand.",
+  "truth_boundary": "Recorded truth_xy only assigns already-frozen station/window; controller sees only original trajectory/time/speed/yaw_rate.",
+  "interpretation": "Immediate controller output causal intervention on trajectory acceptance, conditional on recorded state. Not closed-loop vehicle outcome, adapter diagnosis, or future continuation. Motion term includes time/reference-age advancement and speed-dependent lookahead.",
+  "invalid_replay_policy": "If replay is not exact, summaries are diagnostic-only and exact_replay_prerequisite is false; no exact-replay claim permitted."
+}

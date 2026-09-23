@@ -1,0 +1,14 @@
+{
+  "raw_root": "/data/runs/b2d/controller/lateral-followup/aim-g1-v1",
+  "source_commit": "18d6790",
+  "runtime_sha256": "cc7a7f782ab5327bfc8730d2752bbc8af457bcc5fc17772122ed5610e0ba2004",
+  "snapshot_runtime_equal": true,
+  "post_test_change": "Only descriptive unit-test method name changed; archived pre-rename test source preserved.",
+  "summary_sha256": "2d33d56d04ebb4a88a49e69f7516c79cec891b09aadb9c87461749656e0567e5",
+  "raw_hash_index_sha256": "eaf9a9fcfe07e952fa4dcafd9b70c418fc8f47339a5fe57949837ac5aeacc4b9",
+  "controller_suite": {
+    "passed": 119,
+    "failed": 0
+  },
+  "focused_tests": 7
+}

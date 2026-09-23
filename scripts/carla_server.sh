@@ -25,7 +25,9 @@ start() {
   # pick and then render at 1 FPS on the CPU.
   # Do NOT set SDL_VIDEODRIVER=offscreen: it makes CarlaUE4 exit 1 immediately (measured).
   # -RenderOffScreen already does the headless part; SDL is not involved.
-  VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json \
+  local nvidia_icd=/etc/vulkan/icd.d/nvidia_icd.json
+  [[ -e $nvidia_icd ]] || nvidia_icd=/usr/share/vulkan/icd.d/nvidia_icd.json
+  VK_ICD_FILENAMES="$nvidia_icd" \
   setsid nohup "$CARLA_ROOT/CarlaUE4.sh" -RenderOffScreen -nosound \
     -carla-rpc-port="$port" -quality-level="$QUALITY" >"$log" 2>&1 &
   echo $! >"$pidf"   # setsid makes this pid the process-group leader, so stop() can kill the group

@@ -1,0 +1,1970 @@
+{
+  "created_at": 1790131996.9059331,
+  "source_commit": "b0830a6c21b83d5b66fddb51e51861d12d106e18",
+  "artifacts": [
+    {
+      "path": "docs/README.md",
+      "kind": "file",
+      "bytes": 2095,
+      "sha256": "de6c4f7a1360e1b43f4769538f1f11e2bf54695b54bf03372b5990bae09971ab"
+    },
+    {
+      "path": "docs/b2d-controller-lateral.md",
+      "kind": "file",
+      "bytes": 4660,
+      "sha256": "c6a76ba23a03f2988405679bf4e07f86981b3816f94543a0d20d9a204b0ba9ab"
+    },
+    {
+      "path": "docs/tokyo-box.md",
+      "kind": "file",
+      "bytes": 25865,
+      "sha256": "8b44f6da021c160a76b3ce49f65aca0ec36c9fd7315bc6dc518fda9caae64e53"
+    },
+    {
+      "path": "research/decisions.md",
+      "kind": "file",
+      "bytes": 155873,
+      "sha256": "84696846812928aad858abe1c179a174c63c6d2fd616b3384ffa4d8c2a95e500"
+    },
+    {
+      "path": "research/figs/b2d-pose-rear-lateral-rms-article-v2.png",
+      "kind": "file",
+      "bytes": 87311,
+      "sha256": "9fb8c72d8ec92ee228ea7bc3970bc9a7207effbfa78643b435b1a7e9e52ba04d"
+    },
+    {
+      "path": "research/figs/b2d-pose-rear-lateral-windows-article-v2.png",
+      "kind": "file",
+      "bytes": 384174,
+      "sha256": "918e6b806cf12323a9134016c0558ba9882ff9c93d4bdc864a136202bbe9fecb"
+    },
+    {
+      "path": "research/plot_style.py",
+      "kind": "file",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "research/trajectory-to-control.md",
+      "kind": "file",
+      "bytes": 34900,
+      "sha256": "7efe15187ad8eb0ea766a9ccf3ffebd0f06dfec76d00446fea28723b3476652e"
+    },
+    {
+      "path": "scripts/b2d_agent.py",
+      "kind": "file",
+      "bytes": 25261,
+      "sha256": "f470df21512fc3959a0fffd2032a481ae99579be45b889a441c7877ece4e2bbe"
+    },
+    {
+      "path": "scripts/b2d_controller.py",
+      "kind": "file",
+      "bytes": 24328,
+      "sha256": "cc7a7f782ab5327bfc8730d2752bbc8af457bcc5fc17772122ed5610e0ba2004"
+    },
+    {
+      "path": "scripts/b2d_controller_adapter.py",
+      "kind": "file",
+      "bytes": 26400,
+      "sha256": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e"
+    },
+    {
+      "path": "scripts/test_b2d_controller_aim.py",
+      "kind": "file",
+      "bytes": 8038,
+      "sha256": "ece116b5f5ecbf8fe540bef41b52ae1435b1b2c3c5c2efba661c443009167a09"
+    },
+    {
+      "path": "scripts/test_b2d_controller_pose_lateral.py",
+      "kind": "file",
+      "bytes": 7138,
+      "sha256": "c53d87c8a3524f05db4b991ee79f7113909a18e4b27c113b475d50c75af938ca"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/README.md",
+      "kind": "file",
+      "bytes": 4458,
+      "sha256": "d3c7c3c6a751b31f33175a7147bc445044d6064b91643da3a680f29252885a70"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/aim-analysis-review.md",
+      "kind": "file",
+      "bytes": 1729,
+      "sha256": "ac1a129f7f9bc4c54e02ea0b63d93b51210861ad8f44bbece8ccfbe4972f6b2d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/aim-implementation.md",
+      "kind": "file",
+      "bytes": 3691,
+      "sha256": "fab730ee998e29f14976a3f27a5cf6881b669634a40ab5b0fbca94469d6550c3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/controller-diagnosis.md",
+      "kind": "file",
+      "bytes": 8536,
+      "sha256": "ac68dddfcc8af903699880cda019f66a13a10b1b464fb6d84fcc1cddde81cb9d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/pose-compensation-replay.md",
+      "kind": "file",
+      "bytes": 4256,
+      "sha256": "d42a088b9ab374ad1fd75d95fbfa1fc469bc4ca5316d1e98cf62ea6f61ef35d2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/pose-lateral-regression.md",
+      "kind": "file",
+      "bytes": 4044,
+      "sha256": "9bdab5381685d1252d7d36be7e281a3560a9243766aaaf086a00856988fada29"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/agents/pose-propagation-audit.md",
+      "kind": "file",
+      "bytes": 6347,
+      "sha256": "59de8755897a7a537593547241c82bd09f06cfb9ce713537026aa3c3af16b452"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/README.md",
+      "kind": "file",
+      "bytes": 2209,
+      "sha256": "b950dda9f920a3678add1a84a8e82371b9d2a780069c3cd000d491339263fe05"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/analyze_aim.py",
+      "kind": "file",
+      "bytes": 30606,
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/freeze-v1-manifest.json",
+      "kind": "file",
+      "bytes": 3601,
+      "sha256": "0cb577128032907305ff379e305f9581dc8c261685a57b040e9e95591eac7070"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/freeze-v2-manifest.json",
+      "kind": "file",
+      "bytes": 3530,
+      "sha256": "fc60cc074fb289e55de37822e6d1e40bbb4ebf8e8fe69c39d51de40e2c93718d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/analyze_aim.py",
+      "kind": "file",
+      "bytes": 30099,
+      "sha256": "76163d66ed18bfd4e8a2a619ad4a6473d536ab6b3e413698f2ac62a9c5b0f325"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/lateral-evidence-v1/routes.csv",
+      "kind": "file",
+      "bytes": 3293,
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/lateral-evidence-v1/turn-windows.csv",
+      "kind": "file",
+      "bytes": 1562,
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/lateral-evidence-v2/analyze.py",
+      "kind": "file",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/plot_aim.py",
+      "kind": "file",
+      "bytes": 10584,
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/protocol.md",
+      "kind": "file",
+      "bytes": 13789,
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v1/test_aim_schema.py",
+      "kind": "file",
+      "bytes": 2200,
+      "sha256": "9197a8c26380eca1e2aa4df95e71626253b754365eb12fc61effb90c0ca3bef4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/analyze_aim.py",
+      "kind": "file",
+      "bytes": 30606,
+      "sha256": "c940883c4753a1a8409649272bd28be31da61f9313df6e58949ec0479745fef3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/lateral-evidence-v1/routes.csv",
+      "kind": "file",
+      "bytes": 3293,
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/lateral-evidence-v1/turn-windows.csv",
+      "kind": "file",
+      "bytes": 1562,
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/lateral-evidence-v2/analyze.py",
+      "kind": "file",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/plot_aim.py",
+      "kind": "file",
+      "bytes": 10584,
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/protocol.md",
+      "kind": "file",
+      "bytes": 13789,
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/frozen-v2/test_aim_schema.py",
+      "kind": "file",
+      "bytes": 3002,
+      "sha256": "6db204e29750b465be855602f56b6879f758e93e2b95771df9f42049dad5cf6a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/routes.csv",
+      "kind": "file",
+      "bytes": 3293,
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/turn-windows.csv",
+      "kind": "file",
+      "bytes": 1562,
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v2/analyze.py",
+      "kind": "file",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/plot_aim.py",
+      "kind": "file",
+      "bytes": 10584,
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/test_aim_schema.py",
+      "kind": "file",
+      "bytes": 3002,
+      "sha256": "6db204e29750b465be855602f56b6879f758e93e2b95771df9f42049dad5cf6a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/verification-relocation.json",
+      "kind": "file",
+      "bytes": 1477,
+      "sha256": "124dca19e551ae896bcb0a5d479db0ba3d743ed3005110b3597888e12f950a33"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/verification-v1",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/aim-helper-verification-archive/verification-v1",
+      "sha256": "d321c07fadf5a6033e6b8416ecda54ea11b3199d3485c51828f9dac4b8b8e272",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/verification-v2",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/aim-helper-verification-archive/verification-v2",
+      "sha256": "d7c3deacbea284d1d93c205f739c30d2edae6b05e6abf9726960b85909f8dfc5",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/verification-v3",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/aim-helper-verification-archive/verification-v3",
+      "sha256": "85903774c932b4de08ff3fd57d89a1b6222c71f900ad88663b2760f42f3f8ace",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/analysis/verification-v4",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/aim-helper-verification-archive/verification-v4",
+      "sha256": "6779282c0a66eb828fbbe7bfc39bf3b0d1cb54e572761a3ead8ca1d5e2aaad05",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/configs/baseline-linear.json",
+      "kind": "file",
+      "bytes": 477,
+      "sha256": "e617e4691c62ef5da92ad36de557da77cff92dce2d41ebdd101a91bb1d93a264"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/configs/candidate-hermite.json",
+      "kind": "file",
+      "bytes": 478,
+      "sha256": "0e0dad0805f15548fd669d45f57805741682b5ef18e5e07901c98ce1dc5d39c8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/configs/route-cruises.json",
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "6be11d966b6439daf126014bdb5897428acf2d6f39667b0586c1bb0c925c3b9b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/configs/variants.json",
+      "kind": "file",
+      "bytes": 377,
+      "sha256": "b5da8091c6362b42763e324264c420a328aeaf7ed4c06143a27752a3d70b5877"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/README.md",
+      "kind": "file",
+      "bytes": 11326,
+      "sha256": "6d32da8b94a385d0369d5370c3bb6a781f9d057b3dd1b0eba83b6bf93b9774b7"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/aim_closedplant.py",
+      "kind": "file",
+      "bytes": 4775,
+      "sha256": "ac4bfcb50477157b04fb7d94f8fdafbab5575d6c3e917a13cd2b644a55e465c5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/archive_phase.py",
+      "kind": "file",
+      "bytes": 2135,
+      "sha256": "555905c715772527e3f12faa621e35d9b5437ad8f9dde7211a38332bf1d9fb6c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-figures-v1/circle-sampling.pdf",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/local-diagnostic-figures-v1/diagnostics/circle-sampling-figures-v1/circle-sampling.pdf",
+      "sha256": "32f49798059b4717a01b32d6afc664065f52de89e0aba518ea479cb76b2a5a6f",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-figures-v1/circle-sampling.png",
+      "kind": "file",
+      "bytes": 295462,
+      "sha256": "a59ba49e8b063e54500434b36cea16ed03750b72911a092bbb9234f079964d03"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-figures-v1/manifest.json",
+      "kind": "file",
+      "bytes": 767,
+      "sha256": "dc622c74c3516f1c2bcd901c0e38c3d9665f4d3da44c772b947a7ec6d229cfb2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-figures-v1/plot_sampling.py",
+      "kind": "file",
+      "bytes": 2179,
+      "sha256": "6992d0298f6cd5f4515ee5d11769fe003fbb741dc7de528a88d97ff34c492cea"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-figures-v1/plotted-samples.csv",
+      "kind": "file",
+      "bytes": 5190,
+      "sha256": "cf978f888c2a288aa4884df0b913fbe3188717f5ce8ebe26b463145dcf735146"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-v1/README.md",
+      "kind": "file",
+      "bytes": 1671,
+      "sha256": "ade6b7256e037ef5b4007bfcf60845da0c882606fb96f27d2f1ccc6dbca67b49"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-v1/manifest.json",
+      "kind": "file",
+      "bytes": 442,
+      "sha256": "72266d3d89a3bccff4c0a426c726387107af7d4c8510e2e475c877f8ac9cac55"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle-sampling-v1/summary.json",
+      "kind": "file",
+      "bytes": 4598,
+      "sha256": "af7c1fe6deb452ae2c705918ed52775bfe6a67ce44fc325b8c70ce64a0d17688"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/circle_sampling.py",
+      "kind": "file",
+      "bytes": 4299,
+      "sha256": "4a0dce35a21a5acc6ce27dd4654fdebe09bdc16d3fcade403156f194a3081740"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/diagnostic-verification.json",
+      "kind": "file",
+      "bytes": 424,
+      "sha256": "adf904ab3c7847e99c9ca5f2918786f0212d57c5ca2d284deccd204747400abe"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md",
+      "kind": "file",
+      "bytes": 5364,
+      "sha256": "517706a582a95b3316240d3fb7f23933dc1e12414775002dfca95847a8b97f58"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/build_isolated.py",
+      "kind": "file",
+      "bytes": 10546,
+      "sha256": "2d3bb6f66bc76864db28a1fd5080af4f1c15dbbf3027d82a9a84c06e50a63f07"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/apt-nvidia-history.txt",
+      "kind": "file",
+      "bytes": 5859,
+      "sha256": "459d56b48acd2ca8e85b1d99806a22307ff7a0e7d3dab94d63da8f1fb3ae6b5c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/carla-process-maps.txt",
+      "kind": "file",
+      "bytes": 125003,
+      "sha256": "75a87e12c1046fc9e2b584439a8bb57ee3fae99a0599a0fa8ec5b5945b96864b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/current-system-nvml.txt",
+      "kind": "file",
+      "bytes": 89,
+      "sha256": "ee073341d25ca8cc525dd222479f54f52367b1d15e0b8b7bfc60ebe2f30bd446"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download-events.jsonl",
+      "kind": "file",
+      "bytes": 4613,
+      "sha256": "3391d975e374a82d3344db301a0161e9b40afcc4f2fe25511e2f853037942a32"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download-intervention.json",
+      "kind": "file",
+      "bytes": 297,
+      "sha256": "00d3ef5534d110464559445ae6864bbf0178888e5f919b225d27dd71b37a0c72"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download-repair-events.jsonl",
+      "kind": "file",
+      "bytes": 5284,
+      "sha256": "f798e21529c007509b5f970b6e5f03329ee178cf0162b502e5546e3085682177"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download-repair.py",
+      "kind": "file",
+      "bytes": 1194,
+      "sha256": "704483c73d1c2313acd189dc3d662041a53d601fed50cf8ac9973722556365f2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download-verification.json",
+      "kind": "file",
+      "bytes": 377,
+      "sha256": "316c2685c0f3f2359331e329333c6e55de174bcf744f4db3b37a2e376d1d89c5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/download.py",
+      "kind": "file",
+      "bytes": 1126,
+      "sha256": "796a3d103e33344a690c26f21941a9092f44bd731c6d1474bdc5b9fcafcea56c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/extract-log.txt",
+      "kind": "file",
+      "bytes": 1402,
+      "sha256": "5d357b63f0fb53b8be27d3e978e99a4635900e6bbc889e24f034bf5c45076c95"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/gpu-recovered.csv",
+      "kind": "file",
+      "bytes": 244,
+      "sha256": "f893248c2191451f7f3dbab26a555a7bd37c8edd3fa42dbfdcac7060c0d7770c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/isolated/env.sh",
+      "kind": "file",
+      "bytes": 538,
+      "sha256": "98d528fbf56af63df5e62a1a9bbaf033a372403778decd8af3c80b5de8af82b4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/isolated/manifest.json",
+      "kind": "file",
+      "bytes": 24753,
+      "sha256": "911f3311ca383ea6ef79cf34998fd289c72d7f200d11627496143993b8a3ef8c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/isolated/static-verification.json",
+      "kind": "file",
+      "bytes": 216,
+      "sha256": "779f1ac781b88c9a095fef9b82efdef4b5513bfdda0bd3d2ff05bb893075b31f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/kernel-driver.txt",
+      "kind": "file",
+      "bytes": 156,
+      "sha256": "f3422a696d13b652c20e0f955e52178a280a08f5207b7ff7a89fffb10db585b2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/live-library-verification.json",
+      "kind": "file",
+      "bytes": 1872,
+      "sha256": "a8e24f85f692042cb9bc35216c385dbe0a548c68c3229cfd6ed3433c0014f047"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/log.txt",
+      "kind": "file",
+      "bytes": 868,
+      "sha256": "d4510e816c84b381208fe9d84dabcbb32310688feae4e2bf17b88de0465dc27f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/manifest.json",
+      "kind": "file",
+      "bytes": 3000,
+      "sha256": "192490ba66b7ad621739a069c225db77382f71560b00a6f15091353c2e6c2e8c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/official.sha256sum",
+      "kind": "file",
+      "bytes": 101,
+      "sha256": "1db6d63073f462e580cec2259f316c13f0ed636d42a2f486f78ad13c724b324c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/evidence/repair-log.txt",
+      "kind": "file",
+      "bytes": 1615,
+      "sha256": "816593c3e891236d38e2466691a5d8cf237f81d7b43be06bc18e3774b4d5e207"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/figure-pdf-relocation.json",
+      "kind": "file",
+      "bytes": 1304,
+      "sha256": "1cd8876b0b4aadefc3f4df5af88376ec95fb91815ddd8b2e713dddaef076de88"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/gpu-provenance-correction.json",
+      "kind": "file",
+      "bytes": 543,
+      "sha256": "f2e227293b8d753eb2c8b0370e5f0afe1330aea7e08f95ff80364b302f5d7130"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/interpolation-shadow-v1/manifest.json",
+      "kind": "file",
+      "bytes": 4158,
+      "sha256": "ac4a5579b51e25ce253a665be8a0787d9dca1d3917da4f3515ce1cab58d47b3e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/interpolation-shadow-v1/verification.json",
+      "kind": "file",
+      "bytes": 459,
+      "sha256": "1516f64df32b21da156fdec5a95971b48e5b91ef4da6507da265e3947e363524"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/interpolation-shadow-v1/window-summary.csv",
+      "kind": "file",
+      "bytes": 1061,
+      "sha256": "4ee388c82f85d90823e2e11433f65a43a8d0bc322ec4dac64bee58d07120a797"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/interpolation_shadow.py",
+      "kind": "file",
+      "bytes": 8310,
+      "sha256": "0c0bfda3fa26cc610bf5acfd3604675f50e1468ce74ed08c06e4dfb688c0b53c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/plot_pose_regression.py",
+      "kind": "file",
+      "bytes": 8477,
+      "sha256": "59054a5c16f757ef4d38b7f0beb6f9d2d102724e673de194c58b22d8b0a71195"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/plot_pose_regression_article.py",
+      "kind": "file",
+      "bytes": 8768,
+      "sha256": "e17db4383fc717c42996c320b97b3359d5abd1c339c5bf7dfbf366859b5fa741"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/plot_sampling.py",
+      "kind": "file",
+      "bytes": 2179,
+      "sha256": "6992d0298f6cd5f4515ee5d11769fe003fbb741dc7de528a88d97ff34c492cea"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose-followup-verification.json",
+      "kind": "file",
+      "bytes": 405,
+      "sha256": "bd325bc4c306bd1ada64d49fcbe109d1790dd93e2aa1facfd3019ea5f24bcb42"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose-shadow-v1/manifest.json",
+      "kind": "file",
+      "bytes": 6405,
+      "sha256": "40840f63af103a61d14ffb939d5523f1ab267fc0f7380908700a74e34bf37975"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose-shadow-v1/verification.json",
+      "kind": "file",
+      "bytes": 1930,
+      "sha256": "ffe122c441d7af2427604bc951edf5572b79ffb1be94673856c23cdc79a40c37"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose-shadow-v1/window-summary.csv",
+      "kind": "file",
+      "bytes": 8998,
+      "sha256": "6b5f46a040936f84fe44060047b767ee5adcd7595a3d8aa2f8e8e7d762ad7e33"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose-shadow-verification.json",
+      "kind": "file",
+      "bytes": 231,
+      "sha256": "ecf95e850046b18535cfdf93f292138d3429589bee6be447727d85c0a1cbedeb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose_compensation_replay.py",
+      "kind": "file",
+      "bytes": 8768,
+      "sha256": "45d939aa103e4df3e38bb680c52d76deeaae00ce5387b695baac911e663f3b73"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose_course_audit.py",
+      "kind": "file",
+      "bytes": 10064,
+      "sha256": "13bf1fb3d796c616a860637aa51ef8e9c9de2a7ba6ad4a2e0c2019ae23ce6ca8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose_lateral_regression.py",
+      "kind": "file",
+      "bytes": 6070,
+      "sha256": "00c39edc744dc5bcb177e8b6db182b038f4c265b5533694bd065b9ff750e135e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose_propagation.py",
+      "kind": "file",
+      "bytes": 8472,
+      "sha256": "f95b9a0743a3db34c87099b274bb2d5398a76708247bfe628302e352cabe1a57"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/pose_shadow.py",
+      "kind": "file",
+      "bytes": 10381,
+      "sha256": "7d6bb92a8eb094a77b218db8c95091a25bb261a1188e1d7e649780bbfdac02cf"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/replay-v1/manifest.json",
+      "kind": "file",
+      "bytes": 7751,
+      "sha256": "e5322b296d52360cbe352241b5d56cef124f40cfbde43763165fdfb1be6bb93f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/replay-v1/replay-verification.json",
+      "kind": "file",
+      "bytes": 2576,
+      "sha256": "5acbdb79f2c80b46c758f85aa25917482cbb26aa435be3505e27dba929a24af5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/replay-v1/top5-update-effects.csv",
+      "kind": "file",
+      "bytes": 21525,
+      "sha256": "0cd757ba4f10380744f951df451af3b7bb14d8c5446afb533bd80a2ca235a4c1"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/replay-v1/window-summary.csv",
+      "kind": "file",
+      "bytes": 4377,
+      "sha256": "00661d45c178df8d3d816a9a5913a645424c6b3f0a50f152e1eb96550fad865b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/replay_controller_updates.py",
+      "kind": "file",
+      "bytes": 12704,
+      "sha256": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/diagnostics/verify_pose_lateral.py",
+      "kind": "file",
+      "bytes": 4687,
+      "sha256": "6bc34a0373ed560916bb5c8a5582b55ddd1f2fe10edea2a13424dcf61579c3d8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/expert-brief.md",
+      "kind": "file",
+      "bytes": 3182,
+      "sha256": "e50efb7db398f7a917cb3422356e0f695aafb40f07368e6764b944a671623c0e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/final-report.md",
+      "kind": "file",
+      "bytes": 7220,
+      "sha256": "3e3a85445a692d27d5e52124be05c5d472652e0c905031df8528e002274ffefc"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/final-verification.json",
+      "kind": "file",
+      "bytes": 1068,
+      "sha256": "96e289c6a47f687bff227e8d518550af51c4dda223fa51a734a1ab3b1e40ef78"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/historical-document-link-context.json",
+      "kind": "file",
+      "bytes": 1762,
+      "sha256": "e5252fb3686b7d6f8e7d20d4bfc3d87acd403d01b36aa81181214149c572d8ed"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/negative-evidence-before-live.md",
+      "kind": "file",
+      "bytes": 1274,
+      "sha256": "a013f305ad0da53b0cf0b0e4514e2f673ac6a1e4faf48eef6afa7d9f5fac4c0c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-diagnostic-figures.md",
+      "kind": "file",
+      "bytes": 958,
+      "sha256": "1b996f21791bf268a621b5962cb7020659a26c9de6d07c0957b87c553108f313"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/README.md",
+      "kind": "file",
+      "bytes": 5219,
+      "sha256": "8368f6f27f3076733867a02fb5f52bbfd6d9a9bcce8c587c5074a14aad3bbf6a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/analyze_pose.py",
+      "kind": "file",
+      "bytes": 34102,
+      "sha256": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/freeze-v1-manifest.json",
+      "kind": "file",
+      "bytes": 3896,
+      "sha256": "e69b0f52fa4b31f79fb80a11a51e0f6fd25311ad4d271ae8fa1cc4e3ea6fc10a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/README.md",
+      "kind": "file",
+      "bytes": 5219,
+      "sha256": "8368f6f27f3076733867a02fb5f52bbfd6d9a9bcce8c587c5074a14aad3bbf6a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/analyze_pose.py",
+      "kind": "file",
+      "bytes": 34102,
+      "sha256": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/routes.csv",
+      "kind": "file",
+      "bytes": 3293,
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/turn-windows.csv",
+      "kind": "file",
+      "bytes": 1562,
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v2/analyze.py",
+      "kind": "file",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/pose_contract.py",
+      "kind": "file",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/protocol.md",
+      "kind": "file",
+      "bytes": 13140,
+      "sha256": "1db58374c580f796990e91c623fae42435563d98bb33b074ff4d3c52e83e7ff9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/test_pose_analysis.py",
+      "kind": "file",
+      "bytes": 6698,
+      "sha256": "345c3a2bcd6616c755ce52f0b6a392b9149579f57ee52015f056ec2e364f492d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_analysis.py",
+      "kind": "file",
+      "bytes": 3630,
+      "sha256": "acbba64ca2e2efbe4d7b5b2b4220581c36448c304318e53a99f04a2c5fd659c2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_production_contract.py",
+      "kind": "file",
+      "bytes": 3656,
+      "sha256": "232394b72dbd516b73b60ec732e0d74bcaa883b5a8b6abdcf01e1efee711910a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/verify_sensor_replay.py",
+      "kind": "file",
+      "bytes": 2084,
+      "sha256": "8de7fc0e53641e0721ca230095d74f0f8806edad292f42092f4d122629147bdc"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/lateral-evidence-v1/routes.csv",
+      "kind": "file",
+      "bytes": 3293,
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/lateral-evidence-v1/turn-windows.csv",
+      "kind": "file",
+      "bytes": 1562,
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/lateral-evidence-v2/analyze.py",
+      "kind": "file",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-README.md",
+      "kind": "file",
+      "bytes": 2092,
+      "sha256": "d001da66589450e1ceeed8b029143781b5e037bb68bfc23f67fda242f0dd5983"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-freeze-v1.json",
+      "kind": "file",
+      "bytes": 4154,
+      "sha256": "b060ad920795e2fe08bbfc9abc2823056660f510a6bbd06e4e45e6f99644ee95"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-freeze-v2.json",
+      "kind": "file",
+      "bytes": 4136,
+      "sha256": "914bf4a3aa57bb83670f0b8b0779369ca19f299f0c283e0168811efcf6035f17"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot-README.md",
+      "kind": "file",
+      "bytes": 2017,
+      "sha256": "b839f5844c12b1fa93da347a1283ebd3e988a9d4ba5c05eb56f573aa024922c8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot-verification-summary.json",
+      "kind": "file",
+      "bytes": 1480,
+      "sha256": "43c2fd452eb47969385a1e1c0743d46e8fe26b7d27fb1cc8cae424dd29d0aef0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot_pose.py",
+      "kind": "file",
+      "bytes": 10543,
+      "sha256": "69d9145eed1b9aedace7760feb5512d3851ee66d7cb39090b2d8126b16a5dc7f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot_style.py",
+      "kind": "file",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot-README.md",
+      "kind": "file",
+      "bytes": 2092,
+      "sha256": "d001da66589450e1ceeed8b029143781b5e037bb68bfc23f67fda242f0dd5983"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot-verification-summary-v2.json",
+      "kind": "file",
+      "bytes": 1603,
+      "sha256": "85ef5afa2dad96fa84be43a771500bb527efd7dce30937c7f857b3d5d66843ae"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot_pose.py",
+      "kind": "file",
+      "bytes": 10551,
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot_style.py",
+      "kind": "file",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-relocation.json",
+      "kind": "file",
+      "bytes": 883,
+      "sha256": "e65c3e96d7212e2e9236e3d12e307d58a7533cfd82262efc308549cdec85e690"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-summary-v2.json",
+      "kind": "file",
+      "bytes": 1603,
+      "sha256": "85ef5afa2dad96fa84be43a771500bb527efd7dce30937c7f857b3d5d66843ae"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-summary.json",
+      "kind": "file",
+      "bytes": 1480,
+      "sha256": "43c2fd452eb47969385a1e1c0743d46e8fe26b7d27fb1cc8cae424dd29d0aef0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-v1",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/pose-plot-early-verification-archive/plot-verification-v1",
+      "sha256": "8e3e651f55e1bef73f4e409b79ed568aa4799b2a40c28aebe907c0e806fc00db",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-v2",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/pose-plot-early-verification-archive/plot-verification-v2",
+      "sha256": "75f5e11119b9ee2fa9f4ba75a06bb285368000fe85fd281e207b24e29a8217cc",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/plot_pose.py",
+      "kind": "file",
+      "bytes": 10551,
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/pose_contract.py",
+      "kind": "file",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/test_pose_analysis.py",
+      "kind": "file",
+      "bytes": 6698,
+      "sha256": "345c3a2bcd6616c755ce52f0b6a392b9149579f57ee52015f056ec2e364f492d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/metrics-fixtures.json",
+      "kind": "file",
+      "bytes": 8277,
+      "sha256": "96e18860dd83dcb9524fcd20f5f3323a40428d033bd92b5cf36d0122c1e75fd0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/production-adapter-source.py",
+      "kind": "file",
+      "bytes": 26400,
+      "sha256": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/production-contract.json",
+      "kind": "file",
+      "bytes": 3748,
+      "sha256": "e9d44f6b60f634a0a98ba2dadf1ad1821bf7c62dfe97c94eb2f7f11ee86cfa24"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/sensor-replay.json",
+      "kind": "file",
+      "bytes": 5323,
+      "sha256": "fc15f9e226e3a4a1a519c2656a483aac7f1c85e83884d4678762784b01732f72"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/unit-tests.log",
+      "kind": "file",
+      "bytes": 1486,
+      "sha256": "160488454ba963a8c6351fa5c8623fd83a8d0422c6e42a57ba5433a502c54bf3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verification-v1/verification-index.json",
+      "kind": "file",
+      "bytes": 666,
+      "sha256": "630c1ae34391fa6622ceb9bfbfcb57037368a939a0d5ce29d03ab6518b3fd780"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verify_analysis.py",
+      "kind": "file",
+      "bytes": 3630,
+      "sha256": "acbba64ca2e2efbe4d7b5b2b4220581c36448c304318e53a99f04a2c5fd659c2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verify_production_contract.py",
+      "kind": "file",
+      "bytes": 3656,
+      "sha256": "232394b72dbd516b73b60ec732e0d74bcaa883b5a8b6abdcf01e1efee711910a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis/verify_sensor_replay.py",
+      "kind": "file",
+      "bytes": 2084,
+      "sha256": "8de7fc0e53641e0721ca230095d74f0f8806edad292f42092f4d122629147bdc"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/analysis-review.md",
+      "kind": "file",
+      "bytes": 3706,
+      "sha256": "a5510a2a977d5d85fa83c99117061581de225f929f35ebc6976b472bd6173bbe"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/baseline-repeatability.json",
+      "kind": "file",
+      "bytes": 2155,
+      "sha256": "4676d85aeb496ed790369d98e69894e17855ab401aef3aab7287336a3b0a110d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/configs/baseline-zero.json",
+      "kind": "file",
+      "bytes": 521,
+      "sha256": "3aace8e12ed95026f8e4162d9727014502daf2026c004903a15d5dc95d104e3a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/configs/candidate-fixed-k.json",
+      "kind": "file",
+      "bytes": 529,
+      "sha256": "c68119c1f94e5f67c997b01655933a4da1e7ba18922ced9c0bb453ea4b337b61"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/configs/route-cruises.json",
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "6be11d966b6439daf126014bdb5897428acf2d6f39667b0586c1bb0c925c3b9b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/configs/variants.json",
+      "kind": "file",
+      "bytes": 401,
+      "sha256": "2ef946d057885b015bcb74802c207ac5e6c7cc3a78d60f7f047443bb262c6f4b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/course-audit.md",
+      "kind": "file",
+      "bytes": 5084,
+      "sha256": "b0ba09a1a84e17508300b782ba87c535b0188869d6877cf80fb092dd1cbdb80c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/implementation.md",
+      "kind": "file",
+      "bytes": 2925,
+      "sha256": "0298a3b43772789c6b9719b97397fde589d771df9d3af08b6d7d78e779692ea9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/protocol-draft.md",
+      "kind": "file",
+      "bytes": 11997,
+      "sha256": "2057d04faa6fcc7cc2370b66772d74b140fb3f7f27c81ef7771724ef41f7cf43"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/protocol.md",
+      "kind": "file",
+      "bytes": 13140,
+      "sha256": "1db58374c580f796990e91c623fae42435563d98bb33b074ff4d3c52e83e7ff9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/readiness-manifest.json",
+      "kind": "file",
+      "bytes": 639,
+      "sha256": "a2c8c020b67d58fcffe99a560d3f9921e56ae9e61ed28bf93bb6d84441f2bbe3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/course-audit-v3/manifest.json",
+      "kind": "file",
+      "bytes": 6050,
+      "sha256": "de9c1d5a9a409b1d1aabf4efb0b05dc11e3b0d75624087c2b6b1b00f625a0511"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/course-audit-v3/outputs-sha256.json",
+      "kind": "file",
+      "bytes": 456,
+      "sha256": "aa9fc2d9a6df78eb56db31e531bac09df690d9b6f354b18820c26dde8d57cf0d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/course-audit-v3/phase-metrics.csv",
+      "kind": "file",
+      "bytes": 28441,
+      "sha256": "0da231b3d5e1cd3a1c7a88a7e433826b0b7492365b4e673a64faab1f6f291cdb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/course-audit-v3/right-threshold-exceedances.csv",
+      "kind": "file",
+      "bytes": 3014,
+      "sha256": "0f2dad67b1980643309d83ee95bacf307aa39a0a913fc7af6edd23b25a594940"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/README.md",
+      "kind": "file",
+      "bytes": 13034,
+      "sha256": "1c5e8a7aac02d966e96a1d38c1abc9a52aa8e4c2ed17b8e3f2c42f719c6a7ba4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/all-conditions.csv",
+      "kind": "file",
+      "bytes": 10681,
+      "sha256": "c880c74117a9cedf4052d028bdb2177e196a47610b1a66243f93172bba59f672"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/analysis-manifest.json",
+      "kind": "file",
+      "bytes": 13739,
+      "sha256": "5b7f766e5ad9baebe89827a2c3ac196dd41ad29ae85e50750b418900f7d2a9c1"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/build_report.py",
+      "kind": "file",
+      "bytes": 16596,
+      "sha256": "cd5cd3d6154dc9cc9c95a45eb13e32114d23ede83324c4c2a9403406bd940c02"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/case-summary.csv",
+      "kind": "file",
+      "bytes": 1868,
+      "sha256": "876ff98c4f4f9ba3c52923dc9687556c48e66c89a8b739a7b7311dc6b9ed63fd"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/cases.csv",
+      "kind": "file",
+      "bytes": 30269,
+      "sha256": "e9e4b41ff26db1f33593f128899b379a1735a1eadb42554f7b0f8cf4aaa5902c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/control-reasons.json",
+      "kind": "file",
+      "bytes": 4645,
+      "sha256": "a4d47a18a2b1fc94e1ae307576cdae822a96f3e7cb0273fc995e842199f2850e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/cost.json",
+      "kind": "file",
+      "bytes": 303,
+      "sha256": "1b4e7cc090bb9cd277454975fa9dc02df27b04c8191920db9840610aa784a20a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/coverage.json",
+      "kind": "file",
+      "bytes": 3583,
+      "sha256": "fddbc676aaa480bd9102a44bd37c8b20bf3aef1898310db379bbf9af7310eb84"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/figures-manifest.json",
+      "kind": "file",
+      "bytes": 4897,
+      "sha256": "3b8037afc3980327ac4f8223eb041c04c464cc28a36b9d4b7bf678288b4dd697"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/four-window-summary.png",
+      "kind": "file",
+      "bytes": 110251,
+      "sha256": "c3494f6e2e1aa862b76dbdd244d064ddb0dfa3db9a447762b6df530190d2b5eb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/manifest.json",
+      "kind": "file",
+      "bytes": 5497,
+      "sha256": "a44db4ec1e0752b713ef06736d9d50a07ffa848717383c082745056d49b6b248"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/metrics.csv",
+      "kind": "file",
+      "bytes": 297988,
+      "sha256": "ebe68fff59bd1c71294dbaf39dfd8bcab388d712509345b99e1b787f268bca1b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/plot-notes.json",
+      "kind": "file",
+      "bytes": 5283,
+      "sha256": "cc4085390b78b2e0f25db045b20654cc7fa63cb476003738fa04a1e76d8e5717"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pose-contract.json",
+      "kind": "file",
+      "bytes": 1335,
+      "sha256": "0d08e475fd977bf2f07841449266934d16c4d4096de0537abba553bfbb7a013c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pose-phase-summary.csv",
+      "kind": "file",
+      "bytes": 16380,
+      "sha256": "fb9f05aa34ca7f782dc14070ecc446bf1b2a01400e0f3ce11200b1f49ceaa5d6"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/README.md",
+      "kind": "file",
+      "bytes": 12608,
+      "sha256": "1750b1fa4381374ead043fedb8f38f4d711f8c3581b82872048db220f93e3c09"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/build_report.py",
+      "kind": "file",
+      "bytes": 16215,
+      "sha256": "1646df6c7d24659e4d1865e7bfe0fd60499d1f56883f1385e4834c3b4b463228"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/case-summary.csv",
+      "kind": "symlink",
+      "target": "../case-summary.csv",
+      "sha256": "304f01b3321be26c5e4fbf6b2dd77dd824217ca770bc286bc3698572cfee40d1",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/four-window-summary.png",
+      "kind": "symlink",
+      "target": "../four-window-summary.png",
+      "sha256": "f63f18fb1432f90745954dd89922112f983b0989acef2d17d35352a49c4092d5",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/manifest.json",
+      "kind": "file",
+      "bytes": 4589,
+      "sha256": "05e995f67b8d0c702f10bb08fa1e03ab7d6c395354e27dd97587d74e96a7c08d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/metrics.csv",
+      "kind": "symlink",
+      "target": "../metrics.csv",
+      "sha256": "a6396bac4f6c2903b6ecfb0b1d187a812a656178fe652ccaaed2469a84e1d98c",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/pose-phase-summary.csv",
+      "kind": "symlink",
+      "target": "../pose-phase-summary.csv",
+      "sha256": "632b9960bbfba49e81cb1e385e3cc9351e93af51cf322e2b8fdab8dfcf41b5d7",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-17563-full.png",
+      "kind": "symlink",
+      "target": "../route-17563-full.png",
+      "sha256": "a25fb5e215e1b8e70f7725ea32f6fe6d5bfbddf48ce0fbd5bd85d2dc8671756f",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-17563-window-1.png",
+      "kind": "symlink",
+      "target": "../route-17563-window-1.png",
+      "sha256": "7d37f52528bda6eb4673c682b25d2ac5d317949f3abd5c6337232bad49b6aae7",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-17563-window-2.png",
+      "kind": "symlink",
+      "target": "../route-17563-window-2.png",
+      "sha256": "5da0664a60d23b69937846bf3568af4f9c8524585bec36eef110295462f2b5df",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-24240-full.png",
+      "kind": "symlink",
+      "target": "../route-24240-full.png",
+      "sha256": "5d11b15a551b3c83d235d07a37babbe6e9ee16147a3ae7c04a200cbd2c891e4a",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-24240-window-1.png",
+      "kind": "symlink",
+      "target": "../route-24240-window-1.png",
+      "sha256": "f7f85a30457ae3552b5cde6d1d3f236a794b57f6c9432f6ea29ec009d101d753",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-26966-full.png",
+      "kind": "symlink",
+      "target": "../route-26966-full.png",
+      "sha256": "fc562b24fe581112440926133f21cf84bc1e1ff79720e60ec02b3526254b4148",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/route-26966-window-1.png",
+      "kind": "symlink",
+      "target": "../route-26966-window-1.png",
+      "sha256": "48e0c6911a0b8d68b7c279dbd91631ea618caad0aaac44793262892e9171063b",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/pre-repeatability-note/window-comparison.csv",
+      "kind": "symlink",
+      "target": "../window-comparison.csv",
+      "sha256": "d2fa265395f93a3b4c8a40ec1aa22104299ee9bd9b91c4b0abe266c908d383a6",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/recovery.csv",
+      "kind": "file",
+      "bytes": 642,
+      "sha256": "7bf8703188e51b02d038e0729fb23ab63985ddcb561e5dadfc73b84213571598"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/required-conditions.json",
+      "kind": "file",
+      "bytes": 36183,
+      "sha256": "18f7c98292b29b78d568a91d5471ed4056c9163e3f61cf2d06002d3e04e60713"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-17563-full.png",
+      "kind": "file",
+      "bytes": 497284,
+      "sha256": "6a24ad1087a64d290d8d0f09c7c376c9df5f94d82f32ce68bc159089f24f14e0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-17563-window-1.png",
+      "kind": "file",
+      "bytes": 437203,
+      "sha256": "df016a2413f50b2d961148f17e88d3ed15d7cfb00bf82a62fbe7af4632ae8e13"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-17563-window-2.png",
+      "kind": "file",
+      "bytes": 435979,
+      "sha256": "92a86d484ef325658145bf00d2d4193d87adadcc896bf6f9165ca93f2ae4abbf"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-24240-full.png",
+      "kind": "file",
+      "bytes": 429148,
+      "sha256": "71361f544a6ae51a040956b21e7dc72e29e52451fbd4478dccbf22493321ed3a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-24240-window-1.png",
+      "kind": "file",
+      "bytes": 513080,
+      "sha256": "1545dade94334bae270f5d7c818f0b296fe90b5acb3eac3cffb94fbec3586b79"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-26966-full.png",
+      "kind": "file",
+      "bytes": 411910,
+      "sha256": "1e28b6cbc8dbc8c83d6d90dc7de918ceaafa8d4647dd8ce35a1c29b8d23ff506"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/route-26966-window-1.png",
+      "kind": "file",
+      "bytes": 421646,
+      "sha256": "69272755d705ce6eb07d284319ca87005e98323bf5cc4db905bf1ea45852400b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/verification.json",
+      "kind": "file",
+      "bytes": 18477,
+      "sha256": "9b90568c06db05100fdd3ac8b9c2522b97963dd05cddf3d61e720a680537b0b9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/pose-g2-v1/window-comparison.csv",
+      "kind": "file",
+      "bytes": 7474,
+      "sha256": "7ae8a42d330f26d62646da82f86684cad9d68e91dc6d789a6c8ed22dddc7897e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/production-equivalence-v1/outputs-sha256.json",
+      "kind": "file",
+      "bytes": 593,
+      "sha256": "2eec5eb82c44e9e620fdce5900ea00f76e98039d89aeba408b8386addb3f4b6a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/production-equivalence-v1/summary.json",
+      "kind": "file",
+      "bytes": 5590,
+      "sha256": "0979db62dba6c338b900dba4e76ec7574411b83bbb0fa99345699c6591539665"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/results/protocol.md",
+      "kind": "symlink",
+      "target": "../protocol.md",
+      "sha256": "d970c73a094c6c3e518360c4023e99caf9be21cd1777a33a101eb6a639ee3ee6",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/pose-followup/routes.xml",
+      "kind": "file",
+      "bytes": 6991,
+      "sha256": "87f3e4cce803a1c4b6240bc83fedab339eccff5545f66a31d72307c4c4df1abc"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/protocol-draft.md",
+      "kind": "file",
+      "bytes": 12911,
+      "sha256": "29a7265e99789bed7ebcaca0c1d6e13b122c225083e7b80e3b391af5ecb6b5eb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/protocol-v1.md",
+      "kind": "file",
+      "bytes": 13757,
+      "sha256": "fadae51ad40684272e0549d0dedee6cc3490f0566f11cbdbe2059fd28a1d3558"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/protocol.md",
+      "kind": "file",
+      "bytes": 13789,
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g1-v1/hashes.json",
+      "kind": "file",
+      "bytes": 4762,
+      "sha256": "eaf9a9fcfe07e952fa4dcafd9b70c418fc8f47339a5fe57949837ac5aeacc4b9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g1-v1/index.json",
+      "kind": "file",
+      "bytes": 610,
+      "sha256": "529ba3b4dbde011fd65e2a43b235105ee7e9e69d70fd009e09afed15e7ef544e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g1-v1/manifest.json",
+      "kind": "file",
+      "bytes": 774,
+      "sha256": "e5851495562dac7fdb41752fda24dafddaeaa3319fc1d7e70e3b9d80ee0ec9a9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g1-v1/summary.json",
+      "kind": "file",
+      "bytes": 84640,
+      "sha256": "2d33d56d04ebb4a88a49e69f7516c79cec891b09aadb9c87461749656e0567e5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v1-startup-failure/README.md",
+      "kind": "file",
+      "bytes": 577,
+      "sha256": "9e4b19bc2f78531b643968ceacb5777bcebc840457af128f74bb176e32d9ea4c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v1-startup-failure/events.jsonl",
+      "kind": "file",
+      "bytes": 1901,
+      "sha256": "a20af3832be0c4edf3d8dc8ccfac925c362f03fca5d85745bda29846193e7aea"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v1-startup-failure/manifest.json",
+      "kind": "file",
+      "bytes": 603,
+      "sha256": "25a49e0f67a39e2629637a36cc6f0943a1e8c3a5b06540404b93318e75e59332"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v1-startup-failure/status.json",
+      "kind": "file",
+      "bytes": 524,
+      "sha256": "45af2825181d9e710c372fd96dc1d6064e510722d4c6d4275f531b53286476c3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/README.md",
+      "kind": "file",
+      "bytes": 11116,
+      "sha256": "df2b8eff52a2fbb18f59b9a780ce12837d73585e185a7e227691c22d2b400e49"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/all-conditions.csv",
+      "kind": "file",
+      "bytes": 11765,
+      "sha256": "4694fa727bdf4d0a1199525992a36882506be6699f839951892ef518b7a704e0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/analysis-manifest.json",
+      "kind": "file",
+      "bytes": 11791,
+      "sha256": "bb6309d5057847a8e63ae38dc7a533966507fb8d88d445b96416aaeed44909bf"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/build_report.py",
+      "kind": "file",
+      "bytes": 12787,
+      "sha256": "ff05ab77d1401ee82c132f9ed785b937bb3e0c7ff9af0a0d3366606e1b79b976"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/case-summary.csv",
+      "kind": "file",
+      "bytes": 1858,
+      "sha256": "ba78f34905d2dda4b7055c0af4a477320db714f9af784eef21e453bb579e9d87"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/cases.csv",
+      "kind": "file",
+      "bytes": 29685,
+      "sha256": "4f94512e68b6c4af87d1fb036d29ef433abf3066501b574b06f2c51a8990380c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/control-reasons.json",
+      "kind": "file",
+      "bytes": 4268,
+      "sha256": "14cf1f8344f476d7126e64af3653a2203ba6f5e5067a6d515fbe283eefec2ff7"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/cost.json",
+      "kind": "file",
+      "bytes": 499,
+      "sha256": "c9459b029a09b81dcd25703e8d6d34fc9b520fcf51107b9397084efd5a676614"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/coverage.json",
+      "kind": "file",
+      "bytes": 3591,
+      "sha256": "09000f99d9c5ecc3de8057d0b6251e2e2e5e52ec265934f64f79182d160fbfea"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/manifest.json",
+      "kind": "file",
+      "bytes": 3039,
+      "sha256": "072c0660d8e8e178ee855895ebc93be5d3d8eb11959c821fe59f7a5fce122762"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/metrics.csv",
+      "kind": "file",
+      "bytes": 84366,
+      "sha256": "1f473ae9f44bcbc219d46f250faa4c35046ea60ff9a11f09bf1d7933ae5f54d4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/plot-source-manifest.json",
+      "kind": "file",
+      "bytes": 9409,
+      "sha256": "e9840ba79a9a15bddd04f792c84b98588d92b5955a82469dd5c7bfc5d2ecd834"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/recovery.csv",
+      "kind": "file",
+      "bytes": 630,
+      "sha256": "b65b1cf4411e7adcca95be7f8647af91245ae0b6e4486443d5f558d27109eaac"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/required-conditions.json",
+      "kind": "file",
+      "bytes": 35635,
+      "sha256": "c506d7eb4ec668bd71cf7a5393e7fd2de7de5f75d693025a96d4d1a2c5bac995"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/source-verification.json",
+      "kind": "file",
+      "bytes": 20717,
+      "sha256": "60ced741560fc98858c2f869a892013304dd1ca19a782cce0b9b98fec301d828"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/aim-g2-v2-report-v1/update-phase-supplement.csv",
+      "kind": "file",
+      "bytes": 4265,
+      "sha256": "4dfbfb168bd6f26731f0ff74be2be1f816dae386f3867b37eeba40ec31c13178"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-compensation-replay-v1/manifest.json",
+      "kind": "file",
+      "bytes": 5671,
+      "sha256": "cfede7b263593e20d5f3f37fc064915f48265a52a5ff65452c3be3dcd6414c44"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-compensation-replay-v1/metrics.csv",
+      "kind": "file",
+      "bytes": 14688,
+      "sha256": "42b8f650fde533a35ddc0b491b47c877ef5d418dc6ad592b88ffddce2efd2065"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-compensation-replay-v1/outputs-sha256.json",
+      "kind": "file",
+      "bytes": 527,
+      "sha256": "0e18507f89a11a5b961a025e048f44f1cfb2024e3cc32576d144d6fe31305fc4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-compensation-replay-v1/verification.json",
+      "kind": "file",
+      "bytes": 1356,
+      "sha256": "ae8031ea9327ca50a5c654bfe933fd0a03bd7cef445090f7cdddf3d3119c29c1"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-lateral-regression-v1/leave-one-window-out.csv",
+      "kind": "file",
+      "bytes": 1294,
+      "sha256": "20242f412afad2d9083995d37b3d83e8dc2fbf5c2b6c7245472ec41d5915e282"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-lateral-regression-v1/outputs-sha256.json",
+      "kind": "file",
+      "bytes": 442,
+      "sha256": "8595deb067aa846d9332a20e7b18f005ee979802fe390b2fccf24c76b138dcaf"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-lateral-regression-v1/summary.json",
+      "kind": "file",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-lateral-regression-v1/windows.csv",
+      "kind": "file",
+      "bytes": 2313,
+      "sha256": "28a06c479072a689a643a405148e0f23f89780c6b1222341d2402f1f9b328047"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-propagation-v2/inputs-sha256.json",
+      "kind": "file",
+      "bytes": 3801,
+      "sha256": "dc691e3bf22b5e52419f2a466ea1c7d6351a775f2e4c543e92fdbd832e45a2ec"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-propagation-v2/outputs-sha256.json",
+      "kind": "file",
+      "bytes": 441,
+      "sha256": "8c7a8feacb009584b22c252c6f27dd036c13a5dd79bdfddb7cb0e6e3972ca72d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-propagation-v2/supplementary-checks.json",
+      "kind": "file",
+      "bytes": 243,
+      "sha256": "295e841f6fa7575ada08704651639d351483397b361d0689fe4e0f183e0f58db"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-propagation-v2/verification.json",
+      "kind": "file",
+      "bytes": 1457,
+      "sha256": "974ed7b9e59d775c9a695abcee2fe6829e6d7bc86d706db394392c0743e7c7cb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-propagation-v2/windows.csv",
+      "kind": "file",
+      "bytes": 8003,
+      "sha256": "3c301bc53ea93ff80e85b83576c5b2bfd092795e04944020d53365de546c1ffd"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/README.md",
+      "kind": "file",
+      "bytes": 2816,
+      "sha256": "544af2c88c3ad847fd3c5b551cc2376ef420f5356afdf961ab7f16c9ab5b1760"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/export-sizes.json",
+      "kind": "file",
+      "bytes": 372,
+      "sha256": "b882ba7c741528a12520b6c7530805027d3d83df55357a97d5b5b4c756c72fa5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/fit-summary.json",
+      "kind": "file",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/manifest.json",
+      "kind": "file",
+      "bytes": 2521,
+      "sha256": "88b8d5b1a1ed073b170851c2dc64c74360b4e8021f96a1d1f56346930f22d4ff"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/plot-data.csv",
+      "kind": "file",
+      "bytes": 171689,
+      "sha256": "06e180e90b715592c0ba90807e81be9147ad85689800cd47cedcc22279403135"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/plot_pose_regression_article.py",
+      "kind": "file",
+      "bytes": 8768,
+      "sha256": "e17db4383fc717c42996c320b97b3359d5abd1c339c5bf7dfbf366859b5fa741"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/plot_style.py",
+      "kind": "file",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/raw-manifest.json",
+      "kind": "file",
+      "bytes": 8607,
+      "sha256": "e489ea5c17d69318172dcf1c3f911faafeeb867e31b83a708a890a2c9b6b1a3c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/results/pose-regression-figures-v1",
+      "kind": "symlink",
+      "target": "../../pose-regression-figures-v1",
+      "sha256": "4a4c5350ef4208b312635db6897eeac54b9ebe65f3f13b8fc559926c1491dbe0",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/rms-plot-data.csv",
+      "kind": "file",
+      "bytes": 977,
+      "sha256": "b685747eea8ac6cfd97b4794ec3696b68524eb22265d0629e151701531ee49ac"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/v1-index-snapshot.md",
+      "kind": "file",
+      "bytes": 570,
+      "sha256": "1a4240c962b63c07e022f7b95f97b21770009e94a51b071f835f9f7d14b53ec3"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/verification.json",
+      "kind": "file",
+      "bytes": 400,
+      "sha256": "7e014a7600198eec326148b610f78771d8348d1058e07812bf8ebf61dd2f74e9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/README.md",
+      "kind": "file",
+      "bytes": 4087,
+      "sha256": "2f680363c13313a9fd5b191568783fc51fcb93710bf3de2060b980843aaa90ef"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/caption-manifest.json",
+      "kind": "file",
+      "bytes": 558,
+      "sha256": "b0d23f7e472af1ac8e88883b3eb9ed454ffe329ea8f94c62e6e98825687eaa12"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/fit-summary.json",
+      "kind": "file",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/manifest.json",
+      "kind": "file",
+      "bytes": 8081,
+      "sha256": "a3760172c814962252dbf72516729b988506319d7651f71b5d78bbb0f21d075d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/plot-data.csv",
+      "kind": "file",
+      "bytes": 171689,
+      "sha256": "06e180e90b715592c0ba90807e81be9147ad85689800cd47cedcc22279403135"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/plot_pose_regression.py",
+      "kind": "file",
+      "bytes": 8477,
+      "sha256": "59054a5c16f757ef4d38b7f0beb6f9d2d102724e673de194c58b22d8b0a71195"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/propagation-recompute.py",
+      "kind": "file",
+      "bytes": 8472,
+      "sha256": "f95b9a0743a3db34c87099b274bb2d5398a76708247bfe628302e352cabe1a57"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/rear-lateral-residual-rms.pdf",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/local-diagnostic-figures-v1/results/pose-regression-figures-v1/rear-lateral-residual-rms.pdf",
+      "sha256": "e78cf925084ca8208d95ee7a888618ae6961cbaddd1271e39a083e727b537d19",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/rear-lateral-residual-rms.png",
+      "kind": "file",
+      "bytes": 152898,
+      "sha256": "3d1fc58ec64eddb3268b1ed609ec602e379e01d5398fd416135ab45072327f8d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/rear-lateral-velocity-four-windows.pdf",
+      "kind": "symlink",
+      "target": "/data/runs/b2d/controller/lateral-followup/local-diagnostic-figures-v1/results/pose-regression-figures-v1/rear-lateral-velocity-four-windows.pdf",
+      "sha256": "c23c453ca2040b01d6710c8baf638c04ca1a5e7045bff5a6b7a64e8dc5ab8d57",
+      "target_exists": true
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/rear-lateral-velocity-four-windows.png",
+      "kind": "file",
+      "bytes": 835100,
+      "sha256": "415e16aebe4c4e789b84046ddd84399acfb686a1452b9887ef89da2cdf6394ff"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/regression-recompute.py",
+      "kind": "file",
+      "bytes": 6070,
+      "sha256": "00c39edc744dc5bcb177e8b6db182b038f4c265b5533694bd065b9ff750e135e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/rms-plot-data.csv",
+      "kind": "file",
+      "bytes": 977,
+      "sha256": "b685747eea8ac6cfd97b4794ec3696b68524eb22265d0629e151701531ee49ac"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/pose-regression-figures-v1/verification.json",
+      "kind": "file",
+      "bytes": 400,
+      "sha256": "269d252e79cc54b0b4c66e0953a567cd53695fd94c4dd8ff409658a06eff0577"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g1-v1.json",
+      "kind": "file",
+      "bytes": 7916,
+      "sha256": "3260d5a96c94bea474cf7cc38c5be24f41162a1b371a928ec1e766cb2f872000"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v1.json",
+      "kind": "file",
+      "bytes": 15034,
+      "sha256": "e88c0ce5730899e4391838a2739d0df10da6c9ca22d1189978ad7670e6fe56e9"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2-analysis-root-v1.json",
+      "kind": "file",
+      "bytes": 1711,
+      "sha256": "da5644686a8b3fcaf8a07261641ec88b1040cf908b3aa032edfbb7bb211b765a"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2-figures-v1.json",
+      "kind": "file",
+      "bytes": 3369,
+      "sha256": "5b61d8f19945bfe95387ec529ed507087c5a13c33e2f5bc013e32ec38ac01b79"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2.json",
+      "kind": "file",
+      "bytes": 24877,
+      "sha256": "45b8babf84d265be00654c040e7a9ffa21323fc4f72500029cc74505d62085f0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-helper-verification-archive.json",
+      "kind": "file",
+      "bytes": 80338,
+      "sha256": "4b23bdecf07e2cfb3964dc8abafdbf2666a8228c500f2fac7c7210a94d0058ef"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/circle-sampling-v1.json",
+      "kind": "file",
+      "bytes": 947,
+      "sha256": "1fbb00b2e2b8b71341f4182ff26c3699233f20029fcbe775529e350cabe111bc"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/controller-update-replay-v1.json",
+      "kind": "file",
+      "bytes": 1479,
+      "sha256": "c90213b3f7ab193775c04f63d4a3963da1c30d698efed28d9f715de1a445df8e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/interpolation-shadow-v1.json",
+      "kind": "file",
+      "bytes": 1625,
+      "sha256": "917907eb2be4a9617c78e3af6aa49aec7b74bfebfde07f2a16fe06c8ca60e1f0"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/local-diagnostic-figures-v1.json",
+      "kind": "file",
+      "bytes": 3863,
+      "sha256": "e72cce7e77c49caafd04f35edd2d3c928331a8fc2a6c186ea5a07af6ae407af2"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-analysis-verification-v1.json",
+      "kind": "file",
+      "bytes": 28792,
+      "sha256": "9b58c372b137c24823648c5023509483e6d7733d85aa2b8445d75237e5c961b8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-analysis-verification-v2.json",
+      "kind": "file",
+      "bytes": 28792,
+      "sha256": "2cd7b9b0e897d347e2bc314452494cc0c231caacad79a630e5c97b1fd26e806e"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-compensation-replay-v1.json",
+      "kind": "file",
+      "bytes": 1255,
+      "sha256": "29332871489efcb36ab44a8a9821970902bed9e96b1f300dd1e68a35faa0cbd5"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v1.json",
+      "kind": "file",
+      "bytes": 192,
+      "sha256": "3fe37c9e5cd423d6bd47679a4b08b63971fe25750c4ccf551afad70091f6d243"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v2.json",
+      "kind": "file",
+      "bytes": 192,
+      "sha256": "66e7efc4b66cc786d91381600be62fe5cb7a8c32cd3ae75c649f7b035ec2702f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v3.json",
+      "kind": "file",
+      "bytes": 1115,
+      "sha256": "c075e534017e85cdc184d862c5790ae0f86762fcc50eccc284ab16b6cd550012"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1-analysis-v1.json",
+      "kind": "file",
+      "bytes": 2176,
+      "sha256": "58dd35d685daac8c571920434c23e56ed881f819b0cdfda49f33b679bf8d578c"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1-figures-v1.json",
+      "kind": "file",
+      "bytes": 3805,
+      "sha256": "69be51979a0cb130be67ef1733d0ecfcacfcac24d347cf3b6ed47a4463468fbf"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1.json",
+      "kind": "file",
+      "bytes": 25819,
+      "sha256": "981fbbc14208bf593f6ba055da0f9e76abb8a5baebd218e010225ada442b3b4d"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-lateral-regression-v1.json",
+      "kind": "file",
+      "bytes": 1105,
+      "sha256": "fc3a0ca85a60d1f4d7600660fc43ffa034bf28c5dd256982cb7164b9659ddfee"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-early-verification-archive.json",
+      "kind": "file",
+      "bytes": 10213,
+      "sha256": "24dfe4739905123f220765a6e8fafa7f02d8528c0bc141db868fcfb6b15aea85"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-verification-v3.json",
+      "kind": "file",
+      "bytes": 3809,
+      "sha256": "d50e54b241aa32ef083ac4497b6361800afe1a436b73ad8c70e7a3fcbc0f8ab8"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-verification-v4.json",
+      "kind": "file",
+      "bytes": 3809,
+      "sha256": "fb2a6daa9213f1189322d9413ae1455769032d375b961b6651c28480668d3fff"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-production-equivalence-v1.json",
+      "kind": "file",
+      "bytes": 1324,
+      "sha256": "a7499ebea3625035e8f80c9a91638d4139436833a2c7bac825850c86ad56a4c4"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-propagation-v1.json",
+      "kind": "file",
+      "bytes": 1097,
+      "sha256": "3c7c65570c54ea0ee5c478c62aca96dde93930481f91b31e84d79e700190445f"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-propagation-v2.json",
+      "kind": "file",
+      "bytes": 1098,
+      "sha256": "ec737afb46c7120077815b0a5a1ded07bb037063f5676dd7113800e8cb1e7b5b"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-regression-article-v2.json",
+      "kind": "file",
+      "bytes": 2419,
+      "sha256": "9c730fa5fa1dd8cad67ce95843322fdde04592e9577e7b1aa3e27aec010df621"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-shadow-v1.json",
+      "kind": "file",
+      "bytes": 1630,
+      "sha256": "809583958e9feee777d63dfd08cfc8fb458d4acf375602e03eede7f48b781184"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/summary.json",
+      "kind": "file",
+      "bytes": 11312,
+      "sha256": "a3e1249ca65ab4a77b8660179d103bc9120d824e9c51706da3f59113f679baef"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/review-sources.json",
+      "kind": "file",
+      "bytes": 1334,
+      "sha256": "5c58053277b7050d70851a41f29edcfa771762f43280c7e5746d42f206aeb8d7"
+    },
+    {
+      "path": "todos/2026-09-23-lateral-followup/routes.xml",
+      "kind": "file",
+      "bytes": 6991,
+      "sha256": "87f3e4cce803a1c4b6240bc83fedab339eccff5545f66a31d72307c4c4df1abc"
+    },
+    {
+      "path": "todos/README.md",
+      "kind": "file",
+      "bytes": 790,
+      "sha256": "fd81faefc901fb16110a53d6970d02357f573cddbc7351bd5628139732375b87"
+    }
+  ],
+  "regular_file_count": 299,
+  "symlink_count": 23,
+  "regular_bytes": 8022050,
+  "raw_inventory": "results/raw-inventory-v1/summary.json",
+  "local_only_handoff": {
+    "path": "tmp/2026-09-22-handoff-b2d-controller.md",
+    "sha256": "adb8bfcf7a46e20b9a9ed0d7241eb6941391c30656135aa9b310f4de0442aa3a"
+  },
+  "scope": "Current deliverables and captured source bytes; raw/fixture/PDF symlink targets separately inventoried on data disk. Manifest excludes itself."
+}

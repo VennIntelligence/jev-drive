@@ -1,0 +1,21 @@
+{
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/turns_replan_diagnostic.py": "41291c3b3f5660e645db3c54af62f28c9a43fd2785afb9be8582bb69770e54c7",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/lateral-evidence-v1/turn-windows.csv": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-17563-samples.csv": "1eca6aedb64db56ff231fafa0e1ef4e37115bacd9d8286e57d176c9110531a34",
+    "/data/runs/b2d/controller/turns-v1/17563/baseline-max/pursuit/control.jsonl": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f",
+    "/data/runs/b2d/controller/turns-v1/17563/short-max/pursuit/control.jsonl": "7166f33b793e325c786cbd3595910f1ea59f457aea82307e2b5a4b0370a8d2ba",
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-24240-samples.csv": "32b2251e567a3b70a8b86023e25ac4846e2b837408c5a4e28ad8e325bb119cbc",
+    "/data/runs/b2d/controller/turns-v1/24240/baseline-max/pursuit/control.jsonl": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0",
+    "/data/runs/b2d/controller/turns-v1/24240/short-max/pursuit/control.jsonl": "f94eeaf0fa3722cc027cb7b7e0c764284c6305b33144e8de3ff0a32a9a3f2c5d",
+    "/data/runs/b2d/controller/turns-v1-figures-v1/route-26966-samples.csv": "67e3b973ce677ec52a7d3619f1a3981b433648869e4636966e3163aa56a855d1",
+    "/data/runs/b2d/controller/turns-v1/26966/baseline-max/pursuit/control.jsonl": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06",
+    "/data/runs/b2d/controller/turns-v1/26966/short-max/pursuit/control.jsonl": "2c7fc4fecc8d16dce5e724a3776ff939e9a5bbfb56d70a13d3c6697a2788395e"
+  },
+  "outputs": {
+    "top5-rate-events.csv": "2be02b542e77d7b6411aa2e63b6bcc129ae38fa064af792154f10fea3b077577",
+    "per-window-replan.csv": "2f4a63fc553682638923c966badc0591fc92d07da249557cf0b53032fb1b779e"
+  },
+  "protocol": "固定窗口全帧；轨迹更新=trajectory_frame与连续上一frame不同；高变化率=本窗abs emitted rate>=p90（保留并列）；列top5只作定位，不用于改变验收。",
+  "limitation": "同期关联不能区分rejoin几何、导航进度、定位噪声和控制纠偏；不以truth诊断反推已证明原因。未修改阈值或运行控制。"
+}

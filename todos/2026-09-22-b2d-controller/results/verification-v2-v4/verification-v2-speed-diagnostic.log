@@ -1,0 +1,20 @@
+test_archive_runs_exact_loaded_bytes_after_source_changes (test_b2d_controller_matrix.MatrixTests) ... ok
+test_invalid_matrix_inputs_fail_before_server_import (test_b2d_controller_matrix.MatrixTests) ... ok
+test_legacy_and_explicit_default (test_b2d_controller_matrix.MatrixTests) ... ok
+test_order_and_physics_are_per_case (test_b2d_controller_matrix.MatrixTests) ... ok
+test_b2d_controller_metrics (unittest.loader._FailedTest) ... ERROR
+
+======================================================================
+ERROR: test_b2d_controller_metrics (unittest.loader._FailedTest)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_b2d_controller_metrics
+Traceback (most recent call last):
+  File "/home/ujs/.local/share/uv/python/cpython-3.8-linux-x86_64-gnu/lib/python3.8/unittest/loader.py", line 154, in loadTestsFromName
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'test_b2d_controller_metrics'
+
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.002s
+
+FAILED (errors=1)

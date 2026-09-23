@@ -1,0 +1,18 @@
+{
+  "files": {
+    "analyze_turns.py": "8e0f3238bdb9af5d2969a7562a88f4701860cf602a4ad7b5d552efeda3f0ef64",
+    "lateral-evidence-v2/analyze.py": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+    "lateral-evidence-v1/turn-windows.csv": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+    "lateral-evidence-v1/routes.csv": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435"
+  },
+  "tests": [
+    "速度误差与世界加速度导数单位正确",
+    "恒定世界加速度+旋转右向量的主jerk为0",
+    "trajectory_behind合法制动与非法输出区分",
+    "六个旧日志临时别名：125PASS，仅无改善的15%主目标FAIL",
+    "删validation帧：覆盖FAIL，舒适比较insufficient"
+  ],
+  "note": "仅旧日志临时别名，输出已移除；不是turns-v1结果。源码副本逐字节核验。",
+  "minimum_window_samples": 20,
+  "near_zero_ratio_baseline": 0.01
+}

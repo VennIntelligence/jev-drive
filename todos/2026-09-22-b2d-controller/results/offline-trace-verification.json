@@ -1,0 +1,15 @@
+{
+  "original_summary": "/home/ujs/mycode/jev-drive/todos/2026-09-22-b2d-controller/results/offline-selftest.json",
+  "original_sha256": "1309de125f9bcc6034e6d9daca79c449fe9483a7247671a47b78be81774d7043",
+  "traced_summary_sha256": "bfdac25fa16e6af2b5d9e778c1988b58de012eaadb3456b983634814410c8a72",
+  "exact_non_timing_equality": true,
+  "excluded_keys": [
+    "controller_p99_ms"
+  ],
+  "completed_cases": 49,
+  "raw_tick_rows": 13726,
+  "case_hashes_verified": true,
+  "plant_state_continuity_verified": true,
+  "trace_recomputed_lateral_and_stop_metrics_verified": true,
+  "overwrite_rejected": true
+}

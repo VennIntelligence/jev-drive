@@ -1,0 +1,404 @@
+{
+  "status": "original_g4_necessary_conditions_failed",
+  "new_default_qualified": false,
+  "all_required_routes_present": true,
+  "requested_routes": 60,
+  "all_attempts": 63,
+  "infra_attempts": [
+    {
+      "group": "carla-seed1",
+      "route_id": "3255",
+      "attempt": "1",
+      "harness_status": "server_died_rc139"
+    },
+    {
+      "group": "tcp-seed0",
+      "route_id": "2091",
+      "attempt": "1",
+      "harness_status": "server_died_rc139"
+    },
+    {
+      "group": "tcp-seed1",
+      "route_id": "27494",
+      "attempt": "1",
+      "harness_status": "server_died_rc139"
+    }
+  ],
+  "driving_completed": 49,
+  "strict_subset_success_count": 10,
+  "official_tickruntime_routes": 11,
+  "additional_per_seed_checks": [
+    {
+      "seed": 0,
+      "candidate_mean_completion_pct": 92.627,
+      "strongest_reference_mean_completion_pct": 94.726,
+      "strongest_completion_reference_presets": [
+        "carla"
+      ],
+      "completion_not_below_either_reference": false,
+      "candidate_minus_strongest_completion_percentage_points": -2.0990000000000038,
+      "candidate_incomplete_count": 2,
+      "incomplete_by_reference": {
+        "carla": 1,
+        "tcp": 2
+      },
+      "failure_count_not_increased_vs_each_reference": {
+        "carla": false,
+        "tcp": true
+      },
+      "failure_count_not_increased_vs_strongest_completion_reference": false
+    },
+    {
+      "seed": 1,
+      "candidate_mean_completion_pct": 92.627,
+      "strongest_reference_mean_completion_pct": 90.78999999999999,
+      "strongest_completion_reference_presets": [
+        "carla"
+      ],
+      "completion_not_below_either_reference": true,
+      "candidate_minus_strongest_completion_percentage_points": 1.8370000000000033,
+      "candidate_incomplete_count": 2,
+      "incomplete_by_reference": {
+        "carla": 2,
+        "tcp": 2
+      },
+      "failure_count_not_increased_vs_each_reference": {
+        "carla": true,
+        "tcp": true
+      },
+      "failure_count_not_increased_vs_strongest_completion_reference": true
+    }
+  ],
+  "necessary_conditions": {
+    "completion_not_below_strongest_reference_each_seed": false,
+    "failure_count_not_increased_each_seed": false,
+    "lateral_rms_reduced_20pct": false,
+    "trajectory_reference_speed_increase_le_01": true,
+    "actual_controller_caused_stall_or_deviation_not_increased": null
+  },
+  "known_low_speed_or_unfinished_unknown_causes": [
+    {
+      "group": "carla-seed0",
+      "route_id": "2091",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 179.25000267103314,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/2091/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/2091/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed0",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 190.8500028438866,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed0",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 9.100000135600567,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/27494/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/27494/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed0",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.500000230967999,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3255/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3255/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed0",
+      "route_id": "3514",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 14.150000210851431,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed0/attempts/3514/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed1",
+      "route_id": "2091",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 179.25000267103314,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/2091/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/2091/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed1",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 190.8500028438866,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed1",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 9.100000135600567,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/27494/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/27494/1/criterion_events.json"
+    },
+    {
+      "group": "carla-seed1",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.500000230967999,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3255/2/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3255/2/criterion_events.json"
+    },
+    {
+      "group": "carla-seed1",
+      "route_id": "3514",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 14.150000210851431,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/carla-seed1/attempts/3514/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed0",
+      "route_id": "2091",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 178.50000265985727,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/2091/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/2091/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed0",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 190.8500028438866,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed0",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 8.75000013038516,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/27494/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/27494/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed0",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.400000229477882,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3255/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3255/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed0",
+      "route_id": "3514",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 16.20000024139881,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed0/attempts/3514/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed1",
+      "route_id": "2091",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 178.50000265985727,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/2091/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/2091/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed1",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 190.8500028438866,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed1",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 8.75000013038516,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/27494/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/27494/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed1",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.400000229477882,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3255/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3255/1/criterion_events.json"
+    },
+    {
+      "group": "pursuit-seed1",
+      "route_id": "3514",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 16.20000024139881,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/pursuit-seed1/attempts/3514/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed0",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 191.0000028461218,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed0",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 8.75000013038516,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/27494/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/27494/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed0",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.850000236183405,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3255/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3255/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed0",
+      "route_id": "3514",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 197.85000294819474,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed0/attempts/3514/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed1",
+      "route_id": "25424",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 191.0000028461218,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/25424/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/25424/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed1",
+      "route_id": "27494",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 8.75000013038516,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/27494/2/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/27494/2/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed1",
+      "route_id": "3255",
+      "tickruntime": false,
+      "driving_completed": true,
+      "low_speed_max_s": 15.850000236183405,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3255/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3255/1/criterion_events.json"
+    },
+    {
+      "group": "tcp-seed1",
+      "route_id": "3514",
+      "tickruntime": true,
+      "driving_completed": false,
+      "low_speed_max_s": 197.85000294819474,
+      "cause": "unknown",
+      "association": "contact_before_or_during_low_speed",
+      "source_control": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3514/1/control.jsonl",
+      "source_events": "/data/runs/b2d/controller/formal-v4/tcp-seed1/attempts/3514/1/criterion_events.json"
+    }
+  ],
+  "helper_official_event_count_conditions": {
+    "completion_not_lower_each_seed": false,
+    "lateral_route_mean_rms_reduced_20pct": false,
+    "trajectory_reference_speed_rms_increase_le_01": true,
+    "controller_vehicle_blocked_not_increased": true,
+    "controller_route_dev_not_increased": true
+  },
+  "warning": "Helper official blocked/deviation counts are zero. This does not establish no real stalls or no controller-caused failures; final manual causal condition remains unknown.",
+  "sources": {
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/formal-v4-g4/g4.json": "2f972173342d62772de2231b02e1cbaf7b1d6c6a333fd6b4f69cf982a416a67e",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/final-v1/selected-60-attribution.csv": "2f63de32e948f73d5f453f41622c9f9f03784c263dccaf1a42e9991623db9e71",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/final-v1/all-attempt-attribution.csv": "be3e80953098cd63e0907000acf4c241a4d2cb67e187bb47cd64e41e81f84e50",
+    "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/final-v1/manifest.json": "57b9e4209b744e4541d7f9f3dd00c11bdd1f6a442cafcc6c70ff975e156e8edd",
+    "todos/2026-09-22-b2d-controller/results/formal-v4-g4/final_audit.py": "fbdc1e6d6c635c25b9aa8f500a19cd038c7634c710b1d41ba073155c044e917b"
+  }
+}

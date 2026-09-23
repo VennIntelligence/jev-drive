@@ -1,0 +1,26 @@
+{
+  "stage": "One bounded lower-Kp PI trial after complete v3",
+  "gains": "Kp=0.5, Ki=0.25; only Kp changed from v3",
+  "controller_baseline": "vendor mode remains unchanged; same v2 adapter",
+  "changes_not_combined": [
+    "gear override",
+    "feedforward",
+    "cruise speed tuning",
+    "steering gain tuning"
+  ],
+  "cases": 18,
+  "routes": [
+    "1773@8",
+    "1773@6",
+    "17563@6",
+    "24240@8",
+    "26966@8",
+    "25854@8"
+  ],
+  "same_map_reuse": true,
+  "acceptance": "Unchanged G2 gates on every case; primary 5-route lateral selection rules unchanged; straight6 additionally required",
+  "failed_cases": "All cases retained; no selection by favorable stop time",
+  "reason": "V3 straight6 still cycles; low-speed P saturation freezes integral, while S improves; full18 outcomes preserved",
+  "selection": "All six G2 cases per candidate required; no further gain grid authorized by this protocol",
+  "prior_run": "/data/runs/b2d/controller/development-v3"
+}

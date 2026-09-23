@@ -1,0 +1,13 @@
+{
+  "source_edition": "/data/worktrees/jev-drive-controller-v2/todos/2026-09-22-b2d-controller/results/v4-formal-failure-audit/snapshots/edition-034",
+  "source_hashes": {
+    "summary.json": "dcbe1be60d8d36617266203a22a8b2b010eaeb240b7625f9da02305b70226793",
+    "manifest.json": "3e0de7f505f4687a24c16055911c728f5c6b4f21fc251624c43e950c661e9a25",
+    "audit.py": "0ed8811ec82474d5864f7e314b5316d04ccfc228759f34f03bad5c793ee9a268",
+    "contexts.json": "ff1db129417875edecc572db393c7cb072b8b7f813308b522670d4848e41390b",
+    "all-attempt-cases.csv": "31596f2107cb2de4eec179fbf5aa7ea88d5db64f57367f4caeb20542d3bafa38"
+  },
+  "all_attempts": 63,
+  "selected_route_cases": 60,
+  "labels": "Attribution remains unknown; association labels preserve event order but do not assign fault"
+}

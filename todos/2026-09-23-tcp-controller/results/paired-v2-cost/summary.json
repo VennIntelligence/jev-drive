@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "run_root": "/data/runs/b2d/tcp-controller/paired-v2",
+  "source_commit": "c09c9688d491859a0d8d9e97c5409a65670add12",
+  "manifest_started_unix": 1790098717.0338051,
+  "end_unix": 1790099997.5957212,
+  "groups": 6,
+  "attempts": 6,
+  "retries": 0,
+  "profile_ticks": 9813,
+  "profile_ticks_used": 9693,
+  "network_forward_count": 9807,
+  "manifest_to_end_wall_s": 1280.5619161128998,
+  "manifest_to_server_ready_event_s": 7.013169288635254,
+  "group_wall_s_sum": 1273.1447715759277,
+  "attempt_wall_s_sum": 1267.6,
+  "supervised_route_event_wall_s_sum": 1272.7380592823029,
+  "supervised_minus_recorded_attempt_s": 5.138059282302947,
+  "group_minus_supervised_route_event_s": 0.40671229362487793,
+  "group_minus_attempt_wall_s": 5.544771575927825,
+  "outside_groups_wall_s": 7.417144536972046,
+  "profiled_steady_s_approx": 1114.4156340000002,
+  "attempt_minus_profiled_steady_s": 153.18436599999973,
+  "full_ticks_steady_estimate_s": 1125.141094,
+  "post_start_intergroup_accounting_s": 0.403975248336792,
+  "server_pids": [
+    240758
+  ],
+  "server_logs": [
+    "/data/runs/b2d/tcp-controller/paired-v2/servers/carla-102-1.log"
+  ],
+  "all_cuda_visible_devices_1": true,
+  "gpu_snapshot": "gpu-live.csv; a single in-run sample, not continuous monitoring",
+  "outcomes": {
+    "Completed": {
+      "attempts": 4,
+      "ticks": 1813,
+      "supervised_route_event_wall_s": 217.56189465522766,
+      "attempt_wall_s": 214.0,
+      "profiled_steady_s": 129.07111400000002
+    },
+    "Failed - TickRuntime": {
+      "attempts": 2,
+      "ticks": 8000,
+      "supervised_route_event_wall_s": 1055.1761646270752,
+      "attempt_wall_s": 1053.6,
+      "profiled_steady_s": 985.3445200000001
+    }
+  },
+  "limitations": [
+    "End event precedes finally server.stop(); final shutdown is excluded.",
+    "Recorded attempt.wall_s is overwritten by route_result.wall_s in Runner.run_once; it measures evaluator scope, not full supervised process. Event route_start/end intervals recover the larger supervised scope.",
+    "Profile means rounded to .001ms; mean*ticks_used reconstructs retained steady samples approximately.",
+    "Residual includes first20 warmup ticks, map/model/setup, teardown and unprofiled evaluator work; not pure warmup or startup.",
+    "Visual policy/preprocess/GPU event phases overlap; do not sum all phases.",
+    "No separately instrumented PI or native PID-only timing; gpu_ms measures forward CUDA event interval.",
+    "Common envelope removes official low-speed tail in both arms; historical official-tail speedup is not PI gain.",
+    "Real TCP checkpoint inference confirmed; generic attempt policy:none field is not an oracle/no-model run.",
+    "One hardware/run/seed; no full220 extrapolation or causal controller-only cost attribution."
+  ]
+}

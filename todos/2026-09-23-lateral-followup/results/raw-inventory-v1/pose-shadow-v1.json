@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-shadow-v1",
+  "captured_at": 1790131817.1182454,
+  "files": [
+    {
+      "path": "manifest.json",
+      "bytes": 6405,
+      "sha256": "40840f63af103a61d14ffb939d5523f1ab267fc0f7380908700a74e34bf37975"
+    },
+    {
+      "path": "per-update-pose-shadow.csv",
+      "bytes": 543073,
+      "sha256": "e5abaaeb85ee877935d1ca8a0eabff363ac9ecae710ba3735d3ff1ef2e25d829"
+    },
+    {
+      "path": "shadow-trajectories.jsonl",
+      "bytes": 2591997,
+      "sha256": "16163cf707dfd5781c3ec45d1c02452b01c2b3f5bd76027b87c1e140b7bc56c9"
+    },
+    {
+      "path": "source/b2d_controller.py",
+      "bytes": 20234,
+      "sha256": "701c929a6c86477d9c5d1847181b94b8ae828f9ab75951a84dbfb723a289f87b"
+    },
+    {
+      "path": "source/b2d_controller_adapter.py",
+      "bytes": 23822,
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "path": "source/pose_shadow.py",
+      "bytes": 10381,
+      "sha256": "7d6bb92a8eb094a77b218db8c95091a25bb261a1188e1d7e649780bbfdac02cf"
+    },
+    {
+      "path": "source/replay_controller_updates.py",
+      "bytes": 12704,
+      "sha256": "59e2429d706038944a67e3bbb9e9aacf8e9e7ac406d10765caf2174e34bce2c2"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 1930,
+      "sha256": "ffe122c441d7af2427604bc951edf5572b79ffb1be94673856c23cdc79a40c37"
+    },
+    {
+      "path": "window-summary.csv",
+      "bytes": 8998,
+      "sha256": "6b5f46a040936f84fe44060047b767ee5adcd7595a3d8aa2f8e8e7d762ad7e33"
+    }
+  ],
+  "file_count": 9,
+  "total_bytes": 3219544
+}

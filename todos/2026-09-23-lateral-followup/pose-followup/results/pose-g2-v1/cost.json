@@ -1,0 +1,7 @@
+{
+  "campaign_start_to_end_s": 51.327014684677124,
+  "case_wall_s_sum": 19.1228701719956,
+  "cases": 6,
+  "ticks": 2760,
+  "boundary": "campaign end precedes final server.stop; case validation.wall_s includes actor setup, cleanup, telemetry parsing and metrics; no analysis/development time included"
+}

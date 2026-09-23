@@ -1,0 +1,210 @@
+{
+  "analysis_status": "fail",
+  "legacy_fixture": false,
+  "qualification": "No decision recomputed; use frozen required-conditions.json.",
+  "sample_count": 2760,
+  "expected_cases": 6,
+  "observed_cases": 6,
+  "missing_cases": [],
+  "curves": "All original rows including startup, stationary tail, failures, and transients. No smoothing/resampling. Missing samples become gaps, never zero.",
+  "alignment": "Per-arm elapsed time from first selected sample. Window selection uses frozen independent truth station, inclusive boundaries.",
+  "signs": "CTE left-positive. Pose left error=(estimated rear XY \u2212 truth rear XY) dot truth-yaw left. Acceleration/jerk and heading right-positive.",
+  "physics": "Speed/acceleration/jerk copied from independent analysis; jerk differentiates world acceleration before projection. Speed reference dotted.",
+  "summary": "Frozen metrics.csv values copied; bars are descriptive, not extra gates. NA means missing, never passing.",
+  "window_coverage": [
+    {
+      "route": "26966",
+      "segment": 1,
+      "variant": "baseline-zero",
+      "n": 70,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "26966",
+      "segment": 1,
+      "variant": "candidate-fixed-k",
+      "n": 70,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "24240",
+      "segment": 1,
+      "variant": "baseline-zero",
+      "n": 117,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "24240",
+      "segment": 1,
+      "variant": "candidate-fixed-k",
+      "n": 117,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "17563",
+      "segment": 1,
+      "variant": "baseline-zero",
+      "n": 70,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "17563",
+      "segment": 1,
+      "variant": "candidate-fixed-k",
+      "n": 70,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "17563",
+      "segment": 2,
+      "variant": "baseline-zero",
+      "n": 71,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    },
+    {
+      "route": "17563",
+      "segment": 2,
+      "variant": "candidate-fixed-k",
+      "n": 72,
+      "nonfinite": {
+        "cte": 0,
+        "actual_speed": 0,
+        "rate": 0,
+        "lateral_accel": 0,
+        "lateral_jerk": 0,
+        "pose_position_error": 0,
+        "pose_left_error": 0,
+        "heading": 0
+      }
+    }
+  ],
+  "figures": {
+    "route-26966-full": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 411910,
+      "pdf_bytes": 47193,
+      "png_under_500KiB": true
+    },
+    "route-24240-full": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 429148,
+      "pdf_bytes": 53775,
+      "png_under_500KiB": true
+    },
+    "route-17563-full": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 497284,
+      "pdf_bytes": 66605,
+      "png_under_500KiB": true
+    },
+    "route-26966-window-1": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 421646,
+      "pdf_bytes": 22832,
+      "png_under_500KiB": true
+    },
+    "route-24240-window-1": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 513080,
+      "pdf_bytes": 29333,
+      "png_under_500KiB": false
+    },
+    "route-17563-window-1": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 437203,
+      "pdf_bytes": 22840,
+      "png_under_500KiB": true
+    },
+    "route-17563-window-2": {
+      "width_in": 6.875,
+      "height_in": 5.95,
+      "png_dpi": 300,
+      "png_bytes": 435979,
+      "pdf_bytes": 23138,
+      "png_under_500KiB": true
+    },
+    "four-window-summary": {
+      "width_in": 6.875,
+      "height_in": 4.65,
+      "png_dpi": 300,
+      "png_bytes": 110251,
+      "pdf_bytes": 12773,
+      "png_under_500KiB": true
+    }
+  }
+}
