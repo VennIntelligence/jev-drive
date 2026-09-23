@@ -36,8 +36,8 @@ def main():
     for row in csv.DictReader((args.results / 'station-profiles.csv').open()):
         profile.setdefault((row['window'], row['arm']), []).append(
             (float(row['station_m']) + .5, float(row['cte_median']), float(row['cte_q25']), float(row['cte_q75'])))
-    fig = plt.figure(figsize=(plot_style.DOUBLE_COLUMN_IN, 4.3))
-    grid = fig.add_gridspec(2, 2, width_ratios=[1., 1.25], hspace=.55, wspace=.28)
+    fig = plt.figure(figsize=(plot_style.DOUBLE_COLUMN_IN, 6.3))
+    grid = fig.add_gridspec(3, 2, width_ratios=[1., 1.25], height_ratios=[1., 1., 1.], hspace=.62, wspace=.28)
     # (a) 26966 CTE along the turn, median and IQR over the 10 perturbations.
     ax = fig.add_subplot(grid[0, 0])
     w = next(x for x in windows if x['name'] == '26966')
@@ -68,9 +68,9 @@ def main():
     ax.text(1.5, 1.02, 'development', transform=ax.get_xaxis_transform(), ha='center', fontsize=7)
     ax.text(7.5, 1.02, 'held-out', transform=ax.get_xaxis_transform(), ha='center', fontsize=7)
     plot_style.panel(ax, '(b)')
-    ax.legend(loc='upper right', ncol=2, fontsize=6.3, handlelength=1.2, columnspacing=.8)
+    handles, labels = ax.get_legend_handles_labels()
     plot_style.bars(ax)
-    # (c) Paired candidate - production difference with the registered guard.
+    # (d) Paired candidate - production difference with the registered guard.
     ax = fig.add_subplot(grid[1, 1])
     for k, (metric, limit, color) in enumerate([('cte_rms', .03, P['blue'])]):
         stats = [summary['paired']['%s|slipack-kfix-vs-prod-kfix' % n][metric] for n in names]
@@ -85,10 +85,11 @@ def main():
     ax.set_xticks(x)
     ax.set_xticklabels(names, rotation=55, ha='right')
     ax.set_ylabel(r'$\Delta$ window CTE RMS (m)')
-    plot_style.panel(ax, '(c) Paired difference, mean and 95% CI')
-    ax.legend(loc='lower right', fontsize=6.5)
+    plot_style.panel(ax, '(d) Paired CTE difference, mean and 95% CI')
+    ax.set_ylim(-.48, .06)
+    ax.legend(loc='lower right', fontsize=6.3)
     plot_style.bars(ax)
-    # (d) Heading on 26966: body vs course, and the rear sideslip that separates them.
+    # (c) Heading on 26966: body vs course, and the rear sideslip that separates them.
     ax = fig.add_subplot(grid[1, 0])
     metrics = [('body_p95_deg', 'Body'), ('course_p95_deg', 'Course'), ('beta_p95_deg', r'$\beta$ (truth)'),
                ('body_minus_beta_hat_p95_deg', r'Body $-\hat\beta$')]
@@ -100,11 +101,34 @@ def main():
     ax.set_xticks(np.arange(len(metrics)))
     ax.set_xticklabels([t for _, t in metrics])
     ax.set_ylabel('Window |angle| P95 (deg)')
-    plot_style.panel(ax, '(d) Heading metrics on 26966')
-    ax.legend(loc='upper right', fontsize=6.3)
+    plot_style.panel(ax, '(c) Heading metrics on 26966, median')
+    ax.legend(loc='upper center', fontsize=6.3, ncol=1, bbox_to_anchor=(.62, 1.02))
+    ax.set_ylim(0, 9.5)
     plot_style.bars(ax)
+    # (e) The two action guards that decide the verdict: relative change, candidate vs production.
+    ax = fig.add_subplot(grid[2, :])
+    for k, (metric, limit, color, label) in enumerate([('steer_rate_p95_ratio', .20, P['purple'], 'Emitted steer-rate P95'),
+                                                       ('lat_acc_p95_ratio', .10, P['green'], 'Lateral acceleration P95')]):
+        stats = [summary['paired']['%s|slipack-kfix-vs-prod-kfix' % n][metric] for n in names]
+        mean = 100 * np.array([s['mean'] if s['mean'] is not None else np.nan for s in stats], float)
+        lo = 100 * np.array([s['ci'][0] for s in stats], float)
+        hi = 100 * np.array([s['ci'][1] for s in stats], float)
+        xs = x + (k - .5) * .22
+        ax.errorbar(xs, mean, yerr=[mean - lo, hi - mean], fmt='o', color=color, ms=3.2, capsize=1.8, lw=.8, label=label)
+        ax.axhline(100 * limit, color=color, ls='--', lw=.7, label='Guard +%d%%' % round(100 * limit))
+    plot_style.zero_line(ax)
+    ax.axvline(3.5, color='#999999', lw=.5)
+    ax.set_xticks(x)
+    ax.set_xticklabels(names)
+    ax.set_ylabel('Relative change (%)')
+    ax.set_ylim(-10, 80)
+    plot_style.panel(ax, '(e) Action guards, slip + Ackermann vs production (fixed k), mean and 95% CI')
+    ax.legend(loc='upper right', ncol=4, fontsize=6.3)
+    plot_style.bars(ax)
+    fig.legend(handles, labels, loc='upper center', ncol=3, fontsize=6.5, bbox_to_anchor=(.5, .995),
+               handlelength=1.6, columnspacing=1.2)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    fig.subplots_adjust(left=.075, right=.99, top=.93, bottom=.13)
+    fig.subplots_adjust(left=.075, right=.99, top=.885, bottom=.045)
     print(plot_style.save(fig, args.out))
 
 

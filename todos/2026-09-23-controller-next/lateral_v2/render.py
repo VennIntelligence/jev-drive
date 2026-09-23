@@ -20,7 +20,7 @@ sys.path.insert(0, str(HERE.parents[2] / 'research'))
 import analyze  # noqa: E402
 import plot_style  # noqa: E402
 
-ARMS = [('prod-kfix', 'Production (fixed k)'), ('slipack-kfix', 'Rear-slip pursuit + Ackermann (fixed k)')]
+ARMS = [('prod-kfix', 'Production (fixed k)'), ('slipack-kfix', 'Slip + Ackermann (fixed k)')]
 STATIONS = [24., 30., 35., 40., 46., 51.]
 ROUTE = '26966'
 
