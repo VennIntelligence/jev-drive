@@ -1,0 +1,25 @@
+{
+ "candidates": {
+  "pre_onset_lateral": 625,
+  "pre_onset_start": 682,
+  "pre_onset_brake": 989,
+  "in_turn": 1252,
+  "stop_queue": 6332,
+  "straight": 2665,
+  "other": 1784
+ },
+ "N": 3000,
+ "shortfall_in_turn": 0,
+ "shortfall_straight": 0,
+ "shortfall_stop_queue": 0,
+ "shortfall_other": 0,
+ "selected": {
+  "pre_onset_lateral": 600,
+  "pre_onset_start": 225,
+  "pre_onset_brake": 225,
+  "in_turn": 750,
+  "stop_queue": 300,
+  "straight": 750,
+  "other": 150
+ }
+}
