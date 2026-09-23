@@ -94,12 +94,17 @@ class Controller:
                  trajectory_dt=.25, stale_timeout=.5, history_seconds=2.,
                  max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.,
                  longitudinal_mode='vendor', pi_kp=1., pi_ki=.25,
-                 max_lookahead_time_s=.5):
+                 max_lookahead_time_s=.5, aim_interpolation='linear'):
         if longitudinal_mode not in ('vendor', 'pi'):
             raise ValueError('longitudinal_mode must be vendor or pi')
         self.longitudinal_mode = longitudinal_mode
         if preset not in ('carla', 'tcp', 'pursuit'):
             raise ValueError('unknown controller preset')
+        if aim_interpolation not in ('linear', 'hermite'):
+            raise ValueError('aim_interpolation must be linear or hermite')
+        if aim_interpolation == 'hermite' and preset != 'pursuit':
+            raise ValueError('hermite aim_interpolation requires pursuit preset')
+        self.aim_interpolation = aim_interpolation
         if speed_window not in ('near', 'reference'):
             raise ValueError('speed_window must be near or reference')
         self.lookahead = lookahead or ('fixed4' if preset == 'tcp' else 'additive')
@@ -169,6 +174,8 @@ class Controller:
                     target_speed_mps=None, reference_speed_mps=None, aim_xy=None,
                     cross_track_m=None, heading_error_rad=None, reason=reason,
                     update_rejection=self._rejection,
+                    aim_interpolation=self.aim_interpolation,
+                    aim_interpolation_used=None, aim_interpolation_fallback=None,
                     longitudinal_mode=self.longitudinal_mode,
                     longitudinal_integral_effort=self.longitudinal_pi.integral if self.longitudinal_mode == 'pi' else None,
                     longitudinal_effort=None)
@@ -232,6 +239,71 @@ class Controller:
             return None
         return float((np.interp(b, self._times, self._arc) -
                       np.interp(a, self._times, self._arc)) / (b - a))
+
+    def _lateral_aim(self, points, station):
+        """Aim-only C1 chord-length Hermite; projection/timing stay piecewise linear.
+
+        Secant derivatives are convex weighted vector averages, so the geometry
+        commutes with rotations/translations. Repeated arc knots are removed only
+        in this interpolation view. Guards inspect the queried segment's local
+        stencil, never reject a moving path merely for a distant stationary tail.
+        """
+        linear = np.array([np.interp(station, self._arc, points[:, axis]) for axis in (0, 1)])
+        self._diagnostics.update(aim_interpolation=self.aim_interpolation,
+                                 aim_interpolation_used='linear', aim_interpolation_fallback=None)
+        if self.aim_interpolation == 'linear':
+            return linear
+
+        def fallback(reason):
+            self._diagnostics['aim_interpolation_fallback'] = reason
+            return linear
+
+        if not math.isfinite(station) or not np.isfinite(self._arc).all():
+            return fallback('nonfinite_station_or_arc')
+        if np.any(np.diff(self._arc) < 0.):
+            return fallback('nonmonotonic_arc')
+        keep = np.r_[True, np.diff(self._arc) > 1e-8]
+        arc, knots = self._arc[keep], points[keep]
+        if len(arc) <= 2:
+            return fallback('two_or_fewer_distinct_knots')
+        query = float(np.clip(station, arc[0], arc[-1]))
+        segment = min(max(0, int(np.searchsorted(arc, query, side='right')) - 1), len(arc) - 2)
+        begin, end = max(0, segment - 1), min(len(arc), segment + 3)
+        if not np.isfinite(knots[begin:end]).all():
+            return fallback('nonfinite_local_knots')
+        lengths = np.diff(arc[begin:end])
+        slopes = np.diff(knots[begin:end], axis=0) / lengths[:, None]
+        if not np.isfinite(slopes).all():
+            return fallback('nonfinite_local_tangent')
+        # A local reversal/cusp is not repaired by rounding it with a spline.
+        if len(slopes) > 1 and np.any(np.sum(slopes[:-1] * slopes[1:], axis=1) <= 0.):
+            return fallback('local_tangent_reversal')
+        local = segment - begin
+        secant = slopes[local]
+        left = secant if segment == 0 else (
+            slopes[local-1] * lengths[local] + secant * lengths[local-1]
+        ) / (lengths[local-1] + lengths[local])
+        right = secant if segment + 1 == len(arc) - 1 else (
+            secant * lengths[local+1] + slopes[local+1] * lengths[local]
+        ) / (lengths[local] + lengths[local+1])
+        if (not np.isfinite(np.r_[left, right]).all()
+                or min(float(left @ secant), float(right @ secant)) <= 0.):
+            return fallback('invalid_local_tangent')
+        h = arc[segment+1] - arc[segment]
+        u = (query - arc[segment]) / h
+        aim = ((2*u**3 - 3*u**2 + 1) * knots[segment] + (u**3 - 2*u**2 + u) * h * left
+               + (-2*u**3 + 3*u**2) * knots[segment+1] + (u**3 - u**2) * h * right)
+        # The endpoint slopes have nonnegative projection onto their chord.
+        # Keep a numerical guard on the evaluated point against backward/forward
+        # overshoot; lateral bowing is intentional (e.g. an actual circular arc).
+        chord = knots[segment+1] - knots[segment]
+        chord_squared = float(chord @ chord)
+        along = float((aim - knots[segment]) @ chord)
+        tolerance = 1e-10 * max(1., chord_squared)
+        if not np.isfinite(aim).all() or along < -tolerance or along > chord_squared + tolerance:
+            return fallback('invalid_local_interpolation')
+        self._diagnostics['aim_interpolation_used'] = 'hermite'
+        return aim
 
     def _geometry(self, age):
         points = (self._points - self._pose[:2]) @ _rotation(self._pose[2])
@@ -320,7 +392,7 @@ class Controller:
         distance = {'additive': 3. + .5 * speed,
                     'max': max(3., self.max_lookahead_time_s * speed), 'fixed4': 4.}[self.lookahead]
         aim_station = min(station + distance, self._arc[-1])
-        aim = np.array([np.interp(aim_station, self._arc, points[:, axis]) for axis in (0, 1)])
+        aim = self._lateral_aim(points, aim_station)
         bearing = math.atan2(aim[1], aim[0])
         if self.preset == 'pursuit':
             curvature = 2. * aim[1] / max(float(aim @ aim), 1e-8)
