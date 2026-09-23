@@ -209,6 +209,8 @@ class P5PairAgent(SensorAgent):
         c = self.cfg
         img = np.frombuffer(raw, np.uint8).reshape(c["render_h"] // 2, c["render_w"] // 2, 4)[self._seg_crop]
         ids = img[..., 1].astype(np.int32) + 256 * img[..., 2].astype(np.int32)
+        if os.environ.get("P5_SEG_DEBUG") and self._tick in (81, 85, 101, 121):
+            np.save(self.out / ("seg_%d.npy" % self._tick), img)
         u, n = np.unique(ids, return_counts=True)
         return {int(i): int(k) for i, k in zip(u, n) if i > 0}
 
