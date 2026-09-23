@@ -366,6 +366,16 @@ def baselines(j: pd.DataFrame) -> dict[str, pd.DataFrame]:
             "route command (CTRA long; lateral = intent)": mk(j.ctra_long.to_numpy(), intent_lat)}
 
 
+def group_masks(j: pd.DataFrame) -> dict[str, np.ndarray]:
+    """The four frame groups, plus pre_onset split by route command: where the command says go straight, the
+    route-command baseline cannot know the lateral answer and anything right has to come from the cameras."""
+    m = {g: j[g].to_numpy().astype(bool) for g in GROUPS}
+    it = j.intent.to_numpy()
+    m["pre_onset | route straight"] = m["pre_onset"] & (it == 1)
+    m["pre_onset | route turn"] = m["pre_onset"] & np.isin(it, (2, 3))
+    return m
+
+
 def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
     """Accuracy per group x axis for every VLM variant and baseline (sequence-bootstrap CIs), the paired delta of
     each VLM variant against the best baseline on the same frames, invalid rate, confusions, rater agreement."""
@@ -384,9 +394,9 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
                                          "answered": x.raw.notna().to_numpy(), "valid": valid})
     truth = {"long": j.log_long.to_numpy(), "lat3": j.log_lat3.to_numpy(), "lat": j.log_lat.to_numpy()}
     truth["joint"] = np.char.add(truth["long"].astype(str), "|" + truth["lat3"].astype(str))
+    masks = group_masks(j)
     rows, delta, conf, inv = [], [], [], []
-    for g in GROUPS:
-        m0 = j[g].to_numpy().astype(bool)
+    for g, m0 in masks.items():
         for ax, y in truth.items():
             maj = pd.Series(y[m0]).mode().iloc[0]
             cand = {f"majority ({maj})": (np.full(len(j), maj), np.ones(len(j), bool))}
@@ -409,8 +419,8 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
         ans, bad = v.answered.to_numpy(), v.answered.to_numpy() & ~v.valid.to_numpy()
         inv.append({"variant": k, "answered": int(ans.sum()), "invalid": int(bad.sum()),
                     "invalid_rate": float(bad.sum() / max(ans.sum(), 1))})
-        for g in GROUPS:
-            m = j[g].to_numpy().astype(bool) & ans
+        for g, mg in masks.items():
+            m = mg & ans
             for ax in ("long", "lat"):
                 c = pd.crosstab(pd.Series(truth[ax][m], name="judge"), pd.Series(v[ax].to_numpy()[m], name="vlm"))
                 conf.append(c.stack().rename("n").reset_index().assign(variant=k, group=g, axis=ax))
