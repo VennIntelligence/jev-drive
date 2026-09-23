@@ -599,20 +599,23 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
         add("Waymo vs CARLA, matched + centred, MLP", tap, Xm, ym, gm, center="mean", model="mlp")
         # null: a Waymo pseudo-domain of as many sequences and frames as CARLA has routes and frames, through the
         # same estimators -- what each AUC reads when there is no domain gap, at CARLA's group count
-        rng = np.random.default_rng(0)
         useq = np.unique(W["seq"])
-        pseudo = np.isin(W["seq"], rng.choice(useq, min(len(np.unique(C["seq"])), len(useq) // 3), replace=False))
-        pi = np.flatnonzero(pseudo)
-        pi = rng.choice(pi, min(len(pi), len(Xc)), replace=False)
-        rest = np.flatnonzero(~pseudo)
-        Xn = np.concatenate([Xw[rest], Xw[pi]])
-        yn = np.r_[np.zeros(len(rest)), np.ones(len(pi))].astype(np.int64)
-        gn = np.r_[W["seq"][rest], W["seq"][pi]]
-        add("null: Waymo pseudo-domain", tap, Xn, yn, gn)
-        add("null: Waymo pseudo-domain, MLP", tap, Xn, yn, gn, model="mlp")
-        add("null: Waymo pseudo-domain, centred, MLP", tap, Xn, yn, gn, center="mean", model="mlp")
-        add("null: Waymo pseudo-domain, z-scored, MLP", tap, Xn, yn, gn, center="z", model="mlp")
-        add("null: Waymo pseudo-domain, top-16 PCs", tap, Xn, yn, gn, pca_k=16)
+        for draw in range(3 if tap == TAPS[0] else 1):
+            rng = np.random.default_rng(draw)
+            pseudo = np.isin(W["seq"], rng.choice(useq, min(len(np.unique(C["seq"])), len(useq) // 3), replace=False))
+            pi = np.flatnonzero(pseudo)
+            pi = rng.choice(pi, min(len(pi), len(Xc)), replace=False)
+            rest = np.flatnonzero(~pseudo)
+            Xn = np.concatenate([Xw[rest], Xw[pi]])
+            yn = np.r_[np.zeros(len(rest)), np.ones(len(pi))].astype(np.int64)
+            gn = np.r_[W["seq"][rest], W["seq"][pi]]
+            tag = f" (draw {draw})"
+            add("null: Waymo pseudo-domain" + tag, tap, Xn, yn, gn)
+            add("null: Waymo pseudo-domain, MLP" + tag, tap, Xn, yn, gn, model="mlp")
+            add("null: Waymo pseudo-domain, centred, MLP" + tag, tap, Xn, yn, gn, center="mean", model="mlp")
+            add("null: Waymo pseudo-domain, z-scored, MLP" + tag, tap, Xn, yn, gn, center="z", model="mlp")
+            if tap == TAPS[0]:
+                add("null: Waymo pseudo-domain, top-16 PCs" + tag, tap, Xn, yn, gn, pca_k=16)
         if tap != TAPS[0]:                  # the secondary tap gets the headline rows only
             continue
         for k in (1, 4, 16, 64):
