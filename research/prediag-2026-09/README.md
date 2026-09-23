@@ -16,7 +16,7 @@
 | P0 | train split 复核 3d / L0 | 半 val 的结论在 10 倍数据下站不站得住 | **已测**（分类头的 RFS 行在跑） |
 | P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，口径已定（第 22 条）** |
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
-| P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 deferred |
+| P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做） |
 | P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | 待做，等 GPU 空 |
 | P5 | 开环配对考试 v0 | 教材作用在 head、表征还是数据；VLM 零样本 meta-action 一列决定标签来源（第 25 条） | 待做，依赖 P4 |
 
