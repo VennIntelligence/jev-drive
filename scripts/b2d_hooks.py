@@ -212,6 +212,10 @@ def track_hazards(out_dir, hide):
             loc = a.get_location()
             if h[1] is None:
                 h[1] = loc.z - 500.0
+            # The scenario's own behaviours switch physics back on when they place the actor (HighwayCutIn's
+            # ActorTransformSetter); a simulated car 500 m down then falls out of the world and on a Large Map the
+            # server segfaults (3072 / 3074, Town12). So physics is switched off again on every tick.
+            a.set_simulate_physics(False)
             if loc.z > h[1] + 1.0:
                 a.set_location(carla.Location(loc.x, loc.y, h[1]))
 
