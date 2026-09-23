@@ -927,6 +927,17 @@ def _style():
 COLORS = {"Waymo": "#0072B2", "CARLA": "#D55E00"}
 
 
+def _shrink_png(stem: Path, limit: int = 480 * 1024):
+    """Photos and dense scatters do not compress in PNG; an adaptive 256-colour palette keeps them under the
+    repo's ~500 KB rule without changing the pixel size."""
+    from PIL import Image
+    p = Path(str(stem) + ".png")
+    if p.stat().st_size > limit:
+        Image.open(p).convert("RGB").quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(
+            p, optimize=True, dpi=(300, 300))
+    return p.stat().st_size
+
+
 def fig_rig(ps, out: Path, seed: int = 3):
     """One Waymo clip's last frame and one CARLA keyframe, the three cameras side by side, at matched scale."""
     import matplotlib.pyplot as plt
@@ -956,7 +967,9 @@ def fig_rig(ps, out: Path, seed: int = 3):
             if r == 0:
                 ax.set_title(waymo.CAMS[k].replace("_", " "))
     fig.subplots_adjust(left=0.04, right=1, top=0.95, bottom=0.01)
-    return ps.save(fig, out / "p4-rig"), {"carla_frame": c_row.frame_name}
+    info = ps.save(fig, out / "p4-rig")
+    info["png_bytes"] = _shrink_png(out / "p4-rig")
+    return info, {"carla_frame": c_row.frame_name}
 
 
 def fig_gap(ps, run: Path, out: Path):
@@ -967,29 +980,40 @@ def fig_gap(ps, run: Path, out: Path):
     rng = np.random.default_rng(0)
     pw, pc = fd["pc_w"], fd["pc_c"]
     sw = rng.choice(len(pw), min(len(pw), 4000), replace=False)
-    a.scatter(pw[sw, 0], pw[sw, 1], s=2, lw=0, alpha=0.35, color=COLORS["Waymo"], label="Waymo (P3 subset)")
-    a.scatter(pc[:, 0], pc[:, 1], s=2, lw=0, alpha=0.5, color=COLORS["CARLA"], label="CARLA")
+    a.scatter(pw[sw, 0], pw[sw, 1], s=2, lw=0, alpha=0.35, color=COLORS["Waymo"], label="Waymo (P3 subset)",
+              rasterized=True)
+    a.scatter(pc[:, 0], pc[:, 1], s=2, lw=0, alpha=0.5, color=COLORS["CARLA"], label="CARLA", rasterized=True)
     a.set_xlabel("PC 1 of Waymo features")
     a.set_ylabel("PC 2")
     a.legend(markerscale=4, loc="best")
     ps.panel(a, "(a)")
-    t = q1[(q1.tap == "L18_last") & ~q1.comparison.str.contains("top-1 |top-64", regex=True)].reset_index(drop=True)
-    m = q1[q1.tap == "L18_mean"].set_index("comparison").auc
+    q = q1.copy()
+    q["comparison"] = q.comparison.str.replace(r" \(draw \d\)", "", regex=True)
+    agg = q.groupby(["comparison", "tap"], sort=False).auc.agg(["mean", "min", "max"]).reset_index()
+    keep = ~agg.comparison.str.contains("top-1 |top-64 ", regex=True)
+    t = agg[keep & (agg.tap == "L18_last")].reset_index(drop=True)
+    m = agg[agg.tap == "L18_mean"].set_index("comparison")["mean"]
     y = np.arange(len(t))[::-1]
-    ctrl = t.comparison.str.startswith(("control", "null"))
-    b.scatter(t.auc, y, s=14, color=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_last")
-    b.scatter(m.reindex(t.comparison).to_numpy(), y, s=14, facecolors="none",
-              edgecolors=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_mean")
+    ctrl = t.comparison.str.startswith(("control", "null")).to_numpy()
+    col = np.where(ctrl, ps.BASELINE, COLORS["CARLA"])
+    b.errorbar(t["mean"], y, xerr=[t["mean"] - t["min"], t["max"] - t["mean"]], fmt="none", ecolor=col, lw=0.7,
+               capsize=1.5)
+    b.scatter(t["mean"], y, s=14, color=col, zorder=3, label="L18_last")
+    b.scatter(m.reindex(t.comparison).to_numpy(), y, s=14, facecolors="none", edgecolors=col, zorder=3,
+              label="L18_mean")
     b.axvline(0.5, color="#999999", lw=0.5)
     b.set_yticks(y)
     b.set_yticklabels([c.replace("Waymo vs CARLA, ", "").replace("Waymo vs CARLA", "raw").replace("control: ", "ctrl: ")
-                       .replace(": raw", "") for c in t.comparison], fontsize=5.5)
+                       .replace(": raw", "").replace("null: Waymo pseudo-domain", "null")
+                       for c in t.comparison], fontsize=6)
     b.set_xlim(0.4, 1.01)
     b.set_xlabel("out-of-fold ROC AUC")
     b.legend(loc="lower left", fontsize=7)
     ps.panel(b, "(b)")
     fig.tight_layout(pad=0.3)
-    return ps.save(fig, out / "p4-domain-gap")
+    info = ps.save(fig, out / "p4-domain-gap")
+    info["png_bytes"] = _shrink_png(out / "p4-domain-gap")
+    return info
 
 
 def fig_transfer(ps, run: Path, out: Path):
