@@ -82,7 +82,9 @@ def main():
                  "--level", level, "--out", str(campaign), "--concurrency", "2",
                  "--server-index", "90", "--frozen-protocol-commit",
                  args.frozen_protocol_commit], out, f"level{level}")
-            roots = [out / "level1", out / "level1r"]
+            roots = [out / "level1"]
+            if level in ("1r", "2"):
+                roots.append(out / "level1r")
             if level == "2":
                 roots.append(out / "level2")
             run([sys.executable, str(ROOT / "scripts/b2d_tfv6_analyze.py"),

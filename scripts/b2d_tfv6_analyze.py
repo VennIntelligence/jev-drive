@@ -136,12 +136,36 @@ def bootstrap(paired, comparison, field="ds_diff"):
             "n_pairs": len(values), "n_routes": len(routes)}
 
 
+def collect_done_items(run_roots, extra=None):
+    # The level directory also contains preserved, voided attempts under
+    # aborted/. Only the canonical case tree is eligible for analysis.
+    paths = [path for root in run_roots
+             for path in root.glob("cases/*/route-*/seed-*/*/done.json")]
+    paths.extend(extra or ())
+    items = []
+    seen = set()
+    for path in sorted(paths):
+        item = json.loads(path.read_text())
+        level, route, seed, arm = (item[key] for key in ("level", "route", "seed", "arm"))
+        case_dir = path.parent
+        expected_case = (case_dir.parents[4] / "cases" / str(level) /
+                         f"route-{route}" / f"seed-{seed}" / str(arm))
+        if case_dir.resolve() != expected_case.resolve():
+            raise ValueError(f"Done path does not match case identity: {path}")
+        expected_run = case_dir / f"attempt-{int(item['attempt'])}" / "run"
+        if Path(item["run_dir"]).resolve() != expected_run.resolve():
+            raise ValueError(f"Done run_dir does not match selected attempt: {path}")
+        key = (str(level), str(route), int(seed), str(arm))
+        if key in seen:
+            raise ValueError(f"Duplicate case key {key}: {path}")
+        seen.add(key)
+        items.append(item)
+    return items
+
+
 def analyze(run_roots, output, extra=None):
     output.mkdir(parents=True, exist_ok=True)
-    done_paths = [path for root in run_roots for path in root.rglob("done.json")]
-    items = [json.loads(path.read_text()) for path in done_paths]
-    if extra:
-        items.extend(json.loads(path.read_text()) for path in extra)
+    items = collect_done_items(run_roots, extra)
     cases, tracking = [], []
     for item in items:
         route, seed, arm, level = (item[key] for key in ("route", "seed", "arm", "level"))
@@ -150,7 +174,7 @@ def analyze(run_roots, output, extra=None):
         report_dir = run_dir / "attempts" / route / "1"
         result_path = report_dir / "results.json"
         if not result_path.exists():
-            continue
+            raise FileNotFoundError(f"Official result missing for {route}/{seed}/{arm}: {result_path}")
         results = json.loads(result_path.read_text())
         records = results["_checkpoint"]["records"]
         if len(records) != 1:
