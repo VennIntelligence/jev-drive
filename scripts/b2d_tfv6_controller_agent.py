@@ -1,7 +1,7 @@
 """Four-arm TFv6 controller experiment; model and author postprocessors stay upstream."""
 
 from collections import deque
-from copy import copy
+from copy import copy, deepcopy
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import numpy as np
 
 from lead.inference.sensor_agent import SensorAgent
 from b2d_controller import Controller
-from b2d_controller_adapter import GPSProjector, PoseFilter
+from b2d_controller_adapter import GPSProjector, PoseFilter, controller_speed
 from b2d_tfv6_coordinates import rear_waypoints
 
 
@@ -24,6 +24,11 @@ def get_entry_point():
 
 def _triplet(steer, throttle, brake):
     return {"steer": float(steer), "throttle": float(throttle), "brake": float(brake)}
+
+
+def _logged_number(value):
+    number = float(value)
+    return number if np.isfinite(number) else str(number)
 
 
 def _normalize_brake(raw, speed):
@@ -55,6 +60,10 @@ def _configure_author_arm(config, arm):
 
 def _clone_processor(processor):
     result = copy(processor)
+    # The live instance has an adjust wrapper installed for tracing. A shallow
+    # copy retains that closure, which still calls the live processor and thus
+    # advances its state a second time during shadow replay.
+    result.__dict__.pop("adjust", None)
     if hasattr(processor, "stop_sign_buffer"):
         result.stop_sign_buffer = deque(processor.stop_sign_buffer, maxlen=processor.stop_sign_buffer.maxlen)
     return result
@@ -64,6 +73,45 @@ def _apply_postprocessors(raw, speed, force, stop):
     throttle, brake = force.adjust(float(speed), raw["throttle"], raw["brake"])
     throttle, brake = stop.adjust(float(speed), throttle, brake)
     return _triplet(raw["steer"], throttle, brake)
+
+
+def _processor_snapshot(processor):
+    return deepcopy({key: value for key, value in vars(processor).items() if key != "adjust"})
+
+
+def _state_equal(left, right, seen=None):
+    if type(left) is not type(right):
+        return False
+    if seen is None:
+        seen = set()
+    pair = (id(left), id(right))
+    if pair in seen:
+        return True
+    seen.add(pair)
+    if isinstance(left, np.ndarray):
+        return np.array_equal(left, right, equal_nan=True)
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            _state_equal(left[key], right[key], seen) for key in left)
+    if isinstance(left, (list, tuple, deque)):
+        return len(left) == len(right) and all(
+            _state_equal(a, b, seen) for a, b in zip(left, right))
+    if hasattr(left, "__dict__"):
+        return _state_equal(vars(left), vars(right), seen)
+    if hasattr(left, "__slots__"):
+        return all(_state_equal(getattr(left, key), getattr(right, key), seen)
+                   for key in left.__slots__)
+    result = left == right
+    if isinstance(result, np.ndarray):
+        return bool(np.all(result))
+    return bool(result)
+
+
+def _changed_processor_keys(snapshot, processor):
+    current = {key: value for key, value in vars(processor).items() if key != "adjust"}
+    return sorted(set(snapshot) ^ set(current)) + [
+        key for key in snapshot.keys() & current.keys()
+        if not _state_equal(snapshot[key], current[key])]
 
 
 class TFv6ControllerAgent(SensorAgent):
@@ -99,6 +147,7 @@ class TFv6ControllerAgent(SensorAgent):
                                        lateral_coefficient_s2_per_m=0.010659832)
         self._sensor_pose = None
         self._raw = self._rear = self._prediction = None
+        self._controller_reason = {}
         self._pre_force = self._pre_stop = None
         self._tick_data = None
         self._forward_ms = None
@@ -129,14 +178,16 @@ class TFv6ControllerAgent(SensorAgent):
                               prediction.target_speed_brake),
                 "B": _triplet(*self._author_waypoint_control),
             }
-            speed = float(self._tick_data["speed"].item())
+            speed = self._controller_speed
             yaw_rate = -float(self._motion["imu"][1][5])
             for arm, controller in self._controllers.items():
                 controller.update(self._rear if self._rear is not None else np.full((8, 2), np.nan),
                                   self._sim_time, trajectory_dt=0.25)
                 throttle, steer, brake = controller.step(self._sim_time, speed, yaw_rate)
                 self._raw[arm] = _triplet(steer, throttle, brake)
-            self._raw = {arm: _normalize_brake(raw, speed) for arm, raw in self._raw.items()}
+                self._controller_reason[arm] = controller.diagnostics["reason"]
+            author_speed = float(self._tick_data["speed"].item())
+            self._raw = {arm: _normalize_brake(raw, author_speed) for arm, raw in self._raw.items()}
             if self.arm in "CD":
                 chosen = _select_arm_control(self.arm, self._raw)
                 prediction.steer = chosen["steer"]
@@ -167,11 +218,12 @@ class TFv6ControllerAgent(SensorAgent):
     def run_step(self, input_data, timestamp, *args, **kwargs):
         self._motion = input_data
         self._sim_time = float(timestamp)
+        self._raw_signed_speed = float(input_data["speed"][1]["speed"])
+        self._controller_speed = controller_speed(self._raw_signed_speed)
         try:
-            speed = float(input_data["speed"][1]["speed"])
             imu = input_data["imu"][1]
             xy, yaw = self._pose_filter.update(input_data["gps"][1], float(imu[6]),
-                                                speed, float(imu[5]), self._sim_time)
+                                                self._controller_speed, float(imu[5]), self._sim_time)
             self._sensor_pose = {"xy": xy.tolist(), "yaw": yaw,
                                  "status": self._pose_filter.diagnostics}
         except ValueError as error:
@@ -179,6 +231,7 @@ class TFv6ControllerAgent(SensorAgent):
                                  "error": str(error), "status": self._pose_filter.diagnostics}
             self._pose_filter.reset()
         self._prediction = self._raw = self._rear = None
+        self._controller_reason = {}
         self._pre_force = self._pre_stop = None
         started = time.perf_counter()
         control = super().run_step(input_data, timestamp, *args, **kwargs)
@@ -201,6 +254,10 @@ class TFv6ControllerAgent(SensorAgent):
                     "angular_velocity": [angular.x, angular.y, angular.z],
                 }
         final = None
+        guard_start = time.perf_counter()
+        force_before = _processor_snapshot(self.force_move_post_processor)
+        stop_before = _processor_snapshot(self.stop_sign_post_processor)
+        guard_ms = (time.perf_counter() - guard_start) * 1000.0
         if self._raw is not None and self._pre_force is not None and self._pre_stop is not None:
             speed = float(self._tick_data["speed"].item())
             final = {arm: _apply_postprocessors(raw, speed,
@@ -208,9 +265,31 @@ class TFv6ControllerAgent(SensorAgent):
                      for arm, raw in self._raw.items()}
             if self.step < self.training_config.inital_frames_delay:
                 final = {arm: _triplet(0.0, 0.0, 1.0) for arm in ARMS}
-            observed = _triplet(control.steer, control.throttle, control.brake)
-            if any(abs(observed[key] - final[self.arm][key]) > 1e-5 for key in observed):
-                raise RuntimeError("Shadow postprocessing does not match executed control")
+        guard_start = time.perf_counter()
+        changed = {"force": _changed_processor_keys(force_before, self.force_move_post_processor),
+                   "stop": _changed_processor_keys(stop_before, self.stop_sign_post_processor)}
+        guard_ms += (time.perf_counter() - guard_start) * 1000.0
+        observed = _triplet(control.steer, control.throttle, control.brake)
+        mismatch = final is not None and any(
+            abs(observed[key] - final[self.arm][key]) > 1e-5 for key in observed)
+        if any(changed.values()) or mismatch:
+            diagnostic = "live_processor_state_changed" if any(changed.values()) else "shadow_mismatch"
+            self._frame_log.write(json.dumps({"diagnostic": diagnostic, "step": int(self.step),
+                "sim_time": self._sim_time, "arm": self.arm, "raw_control": self._raw,
+                "final_control": final, "executed_control": observed,
+                "speed": float(self._tick_data["speed"].item()) if self._tick_data is not None else None,
+                "raw_signed_speed_mps": _logged_number(self._raw_signed_speed),
+                "controller_speed_mps": _logged_number(self._controller_speed),
+                "controller_reason": self._controller_reason,
+                "changed_processor_keys": changed, "shadow_guard_ms": guard_ms,
+                "force_state": {"stuck_detector": self.force_move_post_processor.stuck_detector,
+                "force_move": self.force_move_post_processor.force_move},
+                "stop_state": {"slower_stop_sign_count": self.stop_sign_post_processor.slower_stop_sign_count,
+                "clear_stop_sign_cool_down": self.stop_sign_post_processor.clear_stop_sign_cool_down,
+                "slower_for_stop_sign_cool_down": self.stop_sign_post_processor.slower_for_stop_sign_cool_down}},
+                allow_nan=False) + "\n")
+            raise RuntimeError("Shadow replay changed live postprocessor state" if any(changed.values())
+                               else "Shadow postprocessing does not match executed control")
         prediction = self._prediction
         row = {
             "step": int(self.step), "sim_time": self._sim_time, "arm": self.arm,
@@ -221,9 +300,13 @@ class TFv6ControllerAgent(SensorAgent):
             "rear_waypoint": self._rear.tolist() if self._rear is not None else None,
             "raw_control": self._raw, "final_control": final,
             "executed_control": _triplet(control.steer, control.throttle, control.brake),
+            "raw_signed_speed_mps": _logged_number(self._raw_signed_speed),
+            "controller_speed_mps": _logged_number(self._controller_speed),
+            "controller_reason": self._controller_reason,
             "truth": truth, "forward_ms": self._forward_ms,
             "sensor_rear_pose": self._sensor_pose,
             "agent_ms": (time.perf_counter() - started) * 1000.0,
+            "shadow_guard_ms": guard_ms,
             "heuristic": {"creeping_enabled": bool(self.config_closed_loop.sensor_agent_creeping),
                           "stop_sign_enabled": bool(self.config_closed_loop.slower_for_stop_sign),
                           "creep_active": bool(self.force_move_post_processor.force_move),

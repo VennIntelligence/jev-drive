@@ -136,12 +136,36 @@ def bootstrap(paired, comparison, field="ds_diff"):
             "n_pairs": len(values), "n_routes": len(routes)}
 
 
+def collect_done_items(run_roots, extra=None):
+    # The level directory also contains preserved, voided attempts under
+    # aborted/. Only the canonical case tree is eligible for analysis.
+    paths = [path for root in run_roots
+             for path in root.glob("cases/*/route-*/seed-*/*/done.json")]
+    paths.extend(extra or ())
+    items = []
+    seen = set()
+    for path in sorted(paths):
+        item = json.loads(path.read_text())
+        level, route, seed, arm = (item[key] for key in ("level", "route", "seed", "arm"))
+        case_dir = path.parent
+        expected_case = (case_dir.parents[4] / "cases" / str(level) /
+                         f"route-{route}" / f"seed-{seed}" / str(arm))
+        if case_dir.resolve() != expected_case.resolve():
+            raise ValueError(f"Done path does not match case identity: {path}")
+        expected_run = case_dir / f"attempt-{int(item['attempt'])}" / "run"
+        if Path(item["run_dir"]).resolve() != expected_run.resolve():
+            raise ValueError(f"Done run_dir does not match selected attempt: {path}")
+        key = (str(level), str(route), int(seed), str(arm))
+        if key in seen:
+            raise ValueError(f"Duplicate case key {key}: {path}")
+        seen.add(key)
+        items.append(item)
+    return items
+
+
 def analyze(run_roots, output, extra=None):
     output.mkdir(parents=True, exist_ok=True)
-    done_paths = [path for root in run_roots for path in root.rglob("done.json")]
-    items = [json.loads(path.read_text()) for path in done_paths]
-    if extra:
-        items.extend(json.loads(path.read_text()) for path in extra)
+    items = collect_done_items(run_roots, extra)
     cases, tracking = [], []
     for item in items:
         route, seed, arm, level = (item[key] for key in ("route", "seed", "arm", "level"))
@@ -150,7 +174,7 @@ def analyze(run_roots, output, extra=None):
         report_dir = run_dir / "attempts" / route / "1"
         result_path = report_dir / "results.json"
         if not result_path.exists():
-            continue
+            raise FileNotFoundError(f"Official result missing for {route}/{seed}/{arm}: {result_path}")
         results = json.loads(result_path.read_text())
         records = results["_checkpoint"]["records"]
         if len(records) != 1:
@@ -238,15 +262,26 @@ def analyze(run_roots, output, extra=None):
     summary["same_seed_a_repeat"] = repeat
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     plot_style.apply()
-    fig, ax = plt.subplots(figsize=(plot_style.DOUBLE_COLUMN_IN, 2.8))
     routes = sorted({r["route"] for r in paired}, key=int)
+    fig, ax = plt.subplots(figsize=(plot_style.DOUBLE_COLUMN_IN,
+                                    max(3.0, .28 * len(routes) + 1.1)))
     colors = {"C-B": plot_style.PALETTE["blue"], "A-B": plot_style.PALETTE["vermillion"],
               "D-C": plot_style.PALETTE["green"]}
     for offset, (comparison, color) in enumerate(colors.items()):
-        means = [np.mean([r["ds_diff"] for r in paired if r["route"] == route and
-                          r["comparison"] == comparison]) for route in routes]
-        ax.scatter(means, np.arange(len(routes)) + (offset - 1) * .18, s=13,
-                   label=comparison, color=color)
+        means, lower, upper = [], [], []
+        for route in routes:
+            values = np.asarray([r["ds_diff"] for r in paired if r["route"] == route and
+                                 r["comparison"] == comparison])
+            mean = float(np.mean(values))
+            rng = np.random.default_rng(20260923 + int(route) + offset)
+            sampled = rng.choice(values, size=(BOOTSTRAPS, len(values)), replace=True).mean(axis=1)
+            low, high = np.percentile(sampled, (2.5, 97.5))
+            means.append(mean)
+            lower.append(max(0., mean - low))
+            upper.append(max(0., high - mean))
+        ax.errorbar(means, np.arange(len(routes)) + (offset - 1) * .18,
+                    xerr=np.asarray([lower, upper]), fmt="o", markersize=2.7,
+                    elinewidth=.6, capsize=1.5, label=comparison, color=color)
     ax.axvline(0, color=plot_style.BASELINE, lw=.6)
     ax.set_yticks(np.arange(len(routes)), routes)
     ax.set_xlabel("Paired Driving Score difference (points)")
