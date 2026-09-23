@@ -265,7 +265,8 @@ def run(rl, model_id: str = QWEN4B, variant: str = "main", groups=GROUPS, batch_
         t = t.iloc[np.random.default_rng(0).permutation(len(t))[:limit]].reset_index(drop=True)
     out = Path(out or rl.dir)
     ans = out / "answers.jsonl"
-    done = set(pd.read_json(ans, lines=True).frame_name) if ans.exists() and ans.stat().st_size else set()
+    prev = pd.read_json(ans, lines=True) if ans.exists() and ans.stat().st_size else None
+    done = set() if prev is None else set(prev.frame_name[(prev.variant == variant) & (prev.model == model_id)])
     t = t[~t.frame_name.isin(done)].reset_index(drop=True)
     cams = {"main": waymo.CAMS, "shift1": waymo.CAMS, "front": ("front",), "text": ()}[variant]
     df = waymo.load_index()
