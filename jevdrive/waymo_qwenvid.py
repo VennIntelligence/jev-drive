@@ -214,14 +214,15 @@ def run(rl, batch: int, compile: bool, workers: int, grid_hw=None, thin: int | N
     F.free_gpu()
 
 
-def subset(rl, model_id: str, layers, name: str, batch: int = 2):
-    """Another backbone over exactly the `qwenvid_p3` rows, in d''s configuration (batch 2, eager), for the
-    P3 ladder. The item list is the same, in the same order, so the two sets pair up row for row."""
+def subset(rl, model_id: str, layers, name: str, batch: int = 2, compile: bool = False):
+    """Another backbone over exactly the `qwenvid_p3` rows, for the P3 ladder. The item list is the same, in
+    the same order, so the two sets pair up row for row. d'' ran eager at batch 2; compile at batch 8 is 0.68x
+    the time and moves the pooled features by ~1e-2 relative (cos >= 0.9997, see the profile)."""
     from . import features as F
     items, idx = ref_items()
-    fx = make_fx(False, None, model_id, layers)
+    fx = make_fx(compile, None, model_id, layers)
     meta = waymo.extract_items(name, fx, items, idx, batch, rl=rl, cams=list(waymo.CAMS), frames_per_clip=FRAMES,
-                               clip_stride=STRIDE, complete=len(items), layers=list(layers))
+                               clip_stride=STRIDE, complete=len(items), layers=list(layers), compile=compile)
     del fx
     F.free_gpu()
     return meta
@@ -252,7 +253,8 @@ def main():
     if a.step == "profile":
         profile(rl, a.n, grid_hw=grid or (4, 4))
     elif a.step == "subset":
-        rl.event("extract", **subset(rl, a.model, [int(x) for x in a.layers.split(",")], a.name, a.batch_size))
+        rl.event("extract", **subset(rl, a.model, [int(x) for x in a.layers.split(",")], a.name, a.batch_size,
+                                         a.compile))
     else:
         run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
     rl.event("end")
