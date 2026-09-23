@@ -235,11 +235,39 @@ def subset(rl, model_id: str, layers, name: str, batch: int = 2, compile: bool =
     return meta
 
 
+def check(rl, name: str, taps=("L18_last", "L18_mean")):
+    """The downstream equivalence test of a new extraction against `qwenvid_p3` on the P3 val subset.
+
+    Two numbers per tap: how far the features moved (relative L2, worst row cosine), and whether that moves
+    the thing we read off them -- P3(d'')'s ridge_late row, refitted on each version under decision 22's judge.
+    The new set is shard-keyed and may still be growing; only the rows both sets cover take part.
+    """
+    ctx = lad.base_context()
+    keep = lad.load_subset(ctx)
+    a, b = lad.align(ctx, REF, list(taps)), lad.align(ctx, name, list(taps), flat=False)
+    keep &= a["covered"] & b["covered"]
+    sel = np.flatnonzero(keep)
+    for t in taps:
+        x, y = b[t][sel].astype(np.float32), a[t][sel].astype(np.float32)
+        cos = (x * y).sum(1) / (np.linalg.norm(x, axis=1) * np.linalg.norm(y, axis=1))
+        rl.event("feature_diff", tap=t, rows=len(sel), rel_l2=float(np.linalg.norm(x - y) / np.linalg.norm(y)),
+                 min_cos=float(cos.min()), median_cos=float(np.median(cos)))
+        rl.log.info("%s %s vs %s on %d rows: rel L2 %.3e, cos min %.6f median %.6f", t, name, REF, len(sel),
+                    np.linalg.norm(x - y) / np.linalg.norm(y), cos.min(), np.median(cos))
+    arms = {**{f"{REF} {t}": lad.ridge_arm(a[t]) for t in taps}, **{f"{name} {t}": lad.ridge_arm(b[t]) for t in taps}}
+    lad.run_ladder(lambda k: arms, "check", keep, ctx, rl=rl)
+    for k, t in lad.rejudge(rl.dir, "check").items():
+        t.to_csv(rl.dir / f"{k}.csv", index=False)
+    head = pd.read_csv(rl.dir / "pre_onset_dec19.csv")
+    rl.log.info("pre-onset (deciles 1-9)\n%s", head[["direction", "arm", "n", "delta", "lo", "hi"]].to_markdown(
+        index=False, floatfmt=".4f"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("profile", "run", "subset"))
+    ap.add_argument("step", choices=("profile", "run", "subset", "check"))
     ap.add_argument("--model", default=None, help="subset: HF model id")
     ap.add_argument("--layers", default="18", help="subset: comma list of decoder layers to tap")
     ap.add_argument("--n", type=int, default=240, help="profile: rows of the qwenvid_p3 item list")
@@ -262,6 +290,8 @@ def main():
     elif a.step == "subset":
         rl.event("extract", **subset(rl, a.model, [int(x) for x in a.layers.split(",")], a.name, a.batch_size,
                                          a.compile))
+    elif a.step == "check":
+        check(rl, a.name)
     else:
         run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
     rl.event("end")
