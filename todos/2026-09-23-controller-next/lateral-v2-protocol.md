@@ -1,6 +1,6 @@
 # 横向 v2：后轴速度系 pursuit + Ackermann 反解的预注册闭环检验
 
-状态: frozen（本文件随首例之前的 commit 冻结；之后只在文末"执行记录"追加，不改正文）
+状态: done（冻结于 `2372db2`；之后只在文末"执行记录"追加，正文未改）
 主题: [lateral-physics.md](lateral-physics.md)（物理推导与离线筛选），[docs/b2d-controller.md](../../docs/b2d-controller.md)（控制器栈）
 上游冻结历史: [../2026-09-23-lateral-followup/pose-followup/protocol.md](../2026-09-23-lateral-followup/pose-followup/protocol.md)（pose-g2 六例协议，本协议沿用其保护量）
 
@@ -178,4 +178,12 @@ campaign 之后，对 26966 的 p00 分别单独跑 prod-kfix 和 slipack-kfix �
 
 ## 执行记录
 
-（运行后追加）
+以下均为冻结后追加，正文未改。
+
+- 冻结 commit `2372db2`（实现 `e71e616`）。smoke（26966 × 6 臂 × p00）：prod-k0 / prod-kfix 窗口 CTE RMS .558701 / .429015，与 gpubox-port-v1 逐位一致；campaign 的 p00 与 smoke 逐位相同。
+- 首次启动：`load_perturbation` 把 |spawn_yaw_deg| 限在 1°，与本表 ±1.5° 冲突，四个 worker 未跑任何 case 即退出。修为 1 m / 5°（`a2cd3da`），目录保留为 `lateral-v2-failed-start-1`。
+- 分析实现修复（`21673cf`）：held-out 参考线逐点核对前，对运行时参考做与离线相同的重复点去除。去除前 7 条 held-out 路线因点数不同被判未覆盖；去除后 8 条全部在 0.7 mm 内一致。站距与判定规则不变。
+- worker 调度：Town12/13 两组在路线边界拆分，被中断路线的部分 case 移入 `lateral-v2-aborted/`，整条路线重跑；2084/2881 的 helper 被误杀（关闭父 tmux 窗口），中断的扰动整体移入 aborted 后续跑。每个 (扰动, 路线, 臂) 在分析目录里恰好一份。
+- Town13（23695）：CARLA server 在 GPU 满载下反复崩溃（"GameThread timed out waiting for RenderThread"），Epic、Low quality、`no_rendering_mode` 都崩，未能完成；最终 12/66 例（p00 与 p06 各 6 臂）。按本协议该窗保护记为 seed 不全（失败）。
+- 渲染：两次独立渲染与 campaign p00 同臂 CTE 逐帧差 0。
+- 结果与判定：[lateral-v2-report.md](lateral-v2-report.md)。P1、P2 与 26966 附加保护通过；24240（横向加速度 +10.5%、steer-rate +39%）、S1/S2（横向加速度 +23% / +25%）、7 个 held-out 窗中 6 个 steer-rate 超 +20%、17569 横向加速度 +36%、23695 seed 不全，**候选不通过**。不做反序确认，不升级默认。

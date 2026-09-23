@@ -1,0 +1,24 @@
+{
+ "prod-kfix": {
+  "frames": [
+   387,
+   387
+  ],
+  "max_abs_cte_diff_m": 0.0,
+  "window_cte_rms": [
+   0.429014579203219,
+   0.429014579203219
+  ]
+ },
+ "slipack-kfix": {
+  "frames": [
+   382,
+   382
+  ],
+  "max_abs_cte_diff_m": 0.0,
+  "window_cte_rms": [
+   0.04935867544685417,
+   0.04935867544685417
+  ]
+ }
+}

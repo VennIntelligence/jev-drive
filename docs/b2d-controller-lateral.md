@@ -22,6 +22,19 @@ The measured development coefficient is 0.010659832 s²/m. It is an empirical sa
 
 The 125 controller tests passed. Production replay exactly reproduced the original zero-coefficient pose and the independently written fixed-coefficient shadow across 2761 frames. This establishes implementation identity, not performance qualification.
 
+## Rear-slip pursuit and Ackermann inverse (lateral v2)
+
+Two more opt-ins, both pursuit-only, off by default and bit-identical when off (the recorded GPU-box pose-g2 replay, 2758 frames, reproduces every emitted control):
+
+- `pursuit_frame="rear_slip"` with `rear_slip_c_per_rad` (11.0 for the stock MKZ) rotates the aim point into the rear-axle velocity frame before `kappa = 2y/d²`. The sideslip is `beta = atan((v + 1 m/s) * yaw_rate / (c * 9.81))`, the PhysX linear-tyre form derived in [lateral-physics.md](../todos/2026-09-23-controller-next/lateral-physics.md), computed from SPEED and gyro only.
+- `steer_inverse="ackermann"` with `track_width_m` (1.5929 m, front wheel spacing in `calibration-physics.json`) commands the inner-wheel angle `atan2(L|kappa|, 1 - w|kappa|/2)`, because PhysX (Ackermann accuracy 1) applies the nominal angle to the inner wheel.
+
+A switch without its parameter, or a parameter without its switch, is rejected. `update(traj, t, trajectory_dt=dt)` also accepts N points at an explicit spacing (horizon N·dt, never extrapolated), for real TCP's 4 points at 0.5 s; the default call still takes exactly 20 points at 0.25 s.
+
+For experiments only: `diagnostic_truth_pose_ceiling: true` in the controller config feeds the simulator's rear-axle pose to the route adapter. It works only together with `b2d_controller_validate.py --allow-truth-pose-diagnostic`, labels every telemetry row `pose_source: truth_diagnostic_ceiling`, and raises instead of falling back when truth is missing. `b2d_controller_validate.py` also takes pre-registered run perturbations (`--perturbations`, `--perturbation-ids`: GNSS/IMU noise seeds and spawn lateral/yaw offsets; the leaderboard previously dropped `noise_seed`, so every run used seed 0), `--chase-camera` for a separate off-screen render pass, and `--no-rendering` / `--quality` for sensor-only runs on big maps.
+
+The pre-registered closed-loop test is [lateral-v2-protocol.md](../todos/2026-09-23-controller-next/lateral-v2-protocol.md); the results are in [lateral-v2-report.md](../todos/2026-09-23-controller-next/lateral-v2-report.md). With the fixed pose coefficient, both corrections together cut the 26966 window CTE RMS median from .392 to .089 m and reduced CTE in every development and held-out window. The candidate still failed the frozen action guards: emitted steer-rate P95 rose by more than 20% in 8 windows, and lateral-acceleration P95 by more than 10% in 4 windows, the truth-pose arms included. It is not a default. Town13 servers crash on the shared GPU under load, which left one held-out route incomplete.
+
 ## Local environment recovery
 
 **Tokyo box only.** Never source this on the GPU box, which has its own working driver.

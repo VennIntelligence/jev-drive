@@ -10,3 +10,5 @@
 - [2026-09-23 真实TCP与转弯控制](2026-09-23-tcp-controller/README.md)：真实模型纵向对照、静止速度反馈修复，以及按转弯窗口单独优化横向。
 
 - [2026-09-23-lateral-followup/](2026-09-23-lateral-followup/README.md)：逐弯控制诊断、Hermite负面闭环、固定后轴传播补偿及全部中间图表。
+
+- [2026-09-23 横向 v2](2026-09-23-controller-next/lateral-v2-report.md)：后轴速度系 pursuit + Ackermann 反解的预注册闭环（[协议](2026-09-23-controller-next/lateral-v2-protocol.md)）；CTE 主目标与 held-out 全部改善，动作保护量失败，候选不通过。
