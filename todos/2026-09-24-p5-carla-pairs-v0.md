@@ -227,6 +227,18 @@ Light family 在 BehaviorAgent 下可能大部分是 non-reactive，等批量的
 PDM-Lite：LEAD 的 expert 依赖作者 fork 的 `CarlaDataProvider.active_scenarios` 等字段（我们锁定的 Bench2Drive 里没有）和 `autonomous_agent_local`，
 换 fork 就等于换了 scenario 实现，与「不改 Bench2Drive」冲突，**不用，expert 是 BehaviorAgent**。
 
+## 批量中途（2026-09-24 01:00–03:10）
+
+- **HardBreakRoute 的 x⁻**：见上面 Setup 里的第二次修订。旧设计跑出的 5 个 x⁻（24330、24781、26406、3540、26456 的 seed 0）ego 在 0.9–1.2 s 分叉，全部作废重跑。
+- **大地图上藏起来的车把 server 弄崩**：HighwayCutIn 3072 / 3074（Town12）的 x⁻ 各两次 `server_died_rc139`。原因是 scenario 自己的行为在放置 cut-in 车时会把物理重新打开，
+  被我们放到地下 500 m 的车于是往下掉出世界。改为每个 tick 重新关物理（`b2d_hooks.track_hazards`），这两条在第二个 runner 里重跑。
+- **大地图上红绿灯的灯头框坐标错位**：`get_light_boxes()` 在 Town12/13 上返回的是平移过的坐标，偏移正好是 1000 m 的整数倍
+  （实测 (−1000, 5000)、(−3000, 5000)、(1000, 3000) m，加上不到 6 m 的灯臂），所以灯头投影不进画面，Light family 10 对里 9 对被判成 `never_visible`。
+  录制端改为按 1000 m 取整去掉这个平移；已跑完的 Town12/13 Light run（26 个）作废重跑。非 Light family 在大地图上的旧 run 不重跑：它们的灯只影响 light probe 的训练标签
+  （像素为 0 时标签记作缺失），所以 light probe 的训练帧来自小地图和修复之后的 run，结果里写明。
+- **吞吐**：与 qv-train 共享 GPU 时 TFv6 的 forward 在相机 tick 上 170–290 ms，Town12 一次 run 300–370 s，3 个 worker 约 28 run / h，比估计的慢约 30%。
+  qv-train 结束后第二个 runner 自动再加 3 个 worker（`jev:p5-gen2`，server index 90 起）。
+
 ## 结果
 
 （跑完再填。run dir 在 box 的 `$DATA_DIR/runs/p5_pairs/`。）
