@@ -1,6 +1,6 @@
 # P5 原型：冻结 VLM 零样本给 meta-action，不用 CARLA
 
-状态: running（预登记 2026-09-23，写于任何 VLM 回答被读之前）
+状态: done（预登记 2026-09-23，写于任何 VLM 回答被读之前；结果 2026-09-23 填完）
 主题: ../research/prediag-2026-09/README.md（P5 行）；决策背景是 ../research/decisions.md 第 25 条「第二个标签来源」
 
 ## 目标
@@ -125,13 +125,13 @@ VLM 对最好基线、VLM main 对 VLM text 都用同一帧上的配对差、同
 - [~] 4B front / shift1：**不跑了**。4B 的 main 和 text 在 pre_onset 上 97.7% 的帧给出同一个横向答案，
       也就是它的横向回答基本不看视频；对一个不看视频的模型测「扰动视频后答案变不变」，结果注定是高一致性，不提供信息
 - [x] 32B FP8 profiling（48 帧）：8.8 s/帧（batch 2）、峰值 40.8 GB、48/48 合法
-- [ ] 32B：text 全部 3758 帧（约 1 帧/s）；main 只跑 pre_onset 全部 1458 帧 + straight_yaw 随机 400 帧
+- [x] 32B：text 全部 3758 帧（约 1 帧/s）；main 只跑 pre_onset 全部 1458 帧 + straight_yaw 随机 400 帧
       （全量 3758 帧要约 9 h，而判据 1、2 只用 pre_onset，判据 3 用 straight；这是按 profiling 定的范围，不是看了结果之后缩的）
-- [ ] **post-hoc 诊断 arm「video, no route」**（lead 2026-09-23 加，**不属于预登记门槛**，结果只作解释用）：
+- [x] **post-hoc 诊断 arm「video, no route」**（lead 2026-09-23 加，**不属于预登记门槛**，结果只作解释用）：
       prompt 与 main 完全相同，只是 ego 文本里去掉 route command 那一句。4B 跑全部 pre_onset 1458 帧，
       32B-FP8 只跑 route 说直行的 588 帧。目的：把「视频里看不出横向意图」和「锚定在 route command 上」分开。
       排在 32B main 之后，不在 heads 的 train extraction 跑的时候加 GPU 竞争
-- [ ] 报告，结果填到下面
+- [x] 报告，结果填到下面
 
 ## 成功标准（跑之前写死）
 
@@ -155,8 +155,10 @@ VLM 对最好基线、VLM main 对 VLM text 都用同一帧上的配对差、同
 
 ## 结果
 
-run dir（box）：4B 的回答在 `$DATA_DIR/runs/waymo_p5vlm/q4b/answers.jsonl`，报告 `q4b-report/20260923-141828/`；
-32B 在 `q32b/`。小表拉回本地 `research/results/p5-vlm-metaaction/`。
+run dir（box）：回答在 `$DATA_DIR/runs/waymo_p5vlm/{q4b,q32b}/answers.jsonl`（每行带 raw 文本、解析结果和 reason），
+最终报告 `$DATA_DIR/runs/waymo_p5vlm/final-report/20260923-212316/`（4B 与 32B 全部 variant 在一张表里）。
+小表拉回本地 [research/results/p5-vlm-metaaction/final/](../research/results/p5-vlm-metaaction/final/)，
+各 run 的 prompt sha256、解码参数和吞吐在 `q4b/`、`q32b/` 的 `meta_*.json` / `timing_*.json`。
 
 ### 4B：四条门槛过了两条（3、4），决定性的 1、2 没过
 
@@ -200,13 +202,13 @@ rater 一致性（n=478）：lat3 对 rater_best 0.638（log 自己 0.814，是�
 
 ### 32B（FP8）：同样的失败方式，放大 8 倍没有改变什么
 
-报告 `q32b-report/20260923-183202/`。main 跑了全部 pre_onset（1458），text 跑了全部 3758 帧；straight_yaw 的 400 帧 main 在跑。
+报告 `q32b-report/20260923-192804/`。main 跑了全部 pre_onset（1458）和随机 400 帧 straight_yaw，text 跑了全部 3758 帧。
 
 | 判据 | 量 | 值 | 过没过 |
 |:--|:--|:--|:--|
 | 1 比基线强 | pre_onset lat3，32B main − route command 基线 | **−0.023 [−0.043, −0.007]** | 不过（显著更差） |
 | 2 视觉带来的 | pre_onset lat3，32B main − 32B text | **−0.023 [−0.043, −0.007]**，96.9% 的帧答案相同 | 不过 |
-| 3 直行不编反应 | straight_yaw lat3（main 400 帧） | 在跑 | — |
+| 3 直行不编反应 | straight_yaw lat3（main，随机 400 帧），32B main − route command | −0.003 [−0.008, +0.000] | 过（几乎总说 keep_lane） |
 | 4 格式 | invalid-JSON rate | 0/1458（main）、0/3758（text） | 过 |
 
 | 组 | n | 轴 | 最好基线 | 4B main | 4B text | **32B main** | 32B text |
@@ -223,7 +225,55 @@ route 说转弯的帧上反而比只看文本差 0.044 [−0.078, −0.019]。
 纵向上 32B 比 4B 答得更分散：它说 slow 的时候，真 slow 的 346 帧抓到 254 帧（recall 0.73），
 但也把 721 帧真 keep 里的 248 帧说成 slow。所以纵向准确率 0.529，比它自己的 text 版本（0.618）低
 0.089 [−0.151, −0.029]，也比 CTRA 低 0.130。**视频让 32B 更常说「减速」，但没有让它说得更准。**
+直行帧（400）上倒过来：视频让纵向比 text 高 0.060 [+0.015, +0.108]，和 CTRA 打平（+0.005 [−0.041, +0.055]）。
 去掉 judge 分辨不了的弯道或换道 band（ambiguous）之后，排序不变（最后一行），所以结论不是 judge 的弱点造成的。
 
+### post-hoc 诊断：去掉 route command（**不属于预登记门槛**）
+
+同一个 prompt，只是 ego 文本里删掉 route command 那一句，视频照旧。
+
+| 组 | n | 轴 | 4B main（有 route） | **4B noroute** | noroute − main [CI] |
+|:--|--:|:--|--:|--:|:--|
+| pre_onset | 1458 | lat3 | 0.592 | **0.062** | −0.530 [−0.602, −0.449] |
+| pre_onset，route 说转弯 | 870 | lat3 | 0.964 | **0.038** | −0.926 [−0.964, −0.879] |
+| pre_onset，route 说直行 | 588 | lat3 | 0.041 | 0.097 | +0.056 [+0.024, +0.091] |
+| pre_onset | 1458 | long | 0.519 | 0.508 | −0.011 [−0.057, +0.035] |
+
+读法：拿掉 route command 之后，4B 在 route 说转弯的 870 帧里有 803 帧（92%）答 keep_lane，
+真 turn_right 的 481 帧里只有 8 帧答对。**这些帧离转弯不到 3 s，4B 从三路视频里看不出车要转。**
+route 说直行的那一行涨了 0.056，但它不是信号：这 588 帧里它一次都没答过向右的动作，只答 keep_lane 或向左，
+而 judge 标的向右有 336 帧，所以涨的部分是「偏左」碰上了真向左的帧。纵向不受影响，说明纵向回答本来就不靠 route。
+这把两种解释分开了：4B 在 pre_onset 上失败，**不是**「看得见但被 route 锚住」，而是**视频里看不出横向意图**。
+
+32B-FP8 noroute（只跑 route 说直行的 588 帧）：lat3 从 0.046 升到 **0.148**，+0.102 [+0.048, +0.151]。
+和 4B 不同，这里有一点点真信号，但很弱：它答向左 128 次，对了 66 次（precision 0.52，这组向左的先验是 0.39），
+向左的 229 帧只抓到 66 帧（recall 0.29）；答向右 22 次，precision 0.59，和先验 0.57 一样，即向右没有信号。
+**整体 0.148 仍远低于「永远答向右」的 majority 0.571。** 纵向 −0.039 [−0.085, +0.006]，不受影响。
+所以 32B 在视频里能看出一小部分向左的换道，但被 route command 压住了；拿掉 route 之后也远不够当标签。
+
+### 结论和给 lead 的门槛提议
+
+**两个模型都没清过门槛：判据 1、2 不过，3、4 过。按跑之前写死的表，这是「1 不过、32B 也不过」那一行，
+VLM 零样本这条标签线应当关掉，reaction decoder 的标签回到 expert 重跑。** 由 lead 在第 25 条里拍板。
+
+- 在 pre_onset 上，4B 和 32B 的横向回答都是 route command 的复述（text 版本与 route 基线逐帧相同；加视频只会更差 0.02）。
+- post-hoc 诊断把原因定在「看不出」而不是「被锚住」：4B 拿掉 route 之后，离转弯不到 3 s 的帧 92% 答 keep_lane；
+  32B 在 route 说直行的帧上只有一点点向左的信号（lat3 0.148）。
+- 纵向两个模型都比 CTRA 外推差（pre_onset −0.13 到 −0.14）；视频唯一稳定的正贡献是看出「停着」
+  （4B 在 rater 帧 +0.069，32B 在直行帧 +0.060），也就是静态场景的识别，不是 onset 前的意图。
+- 格式不是问题：4B 和 32B 一共约 1.5 万个回答，没有一个不合法。
+
+**提议的门槛（给第 25 条用）**：VLM 标签来源要开，至少要同时满足：(a) pre_onset 横向比「route command + CTRA」
+这个免费基线高 ≥ 0.05 且 CI 下界 > 0；(b) 视频对 text-only 的配对增益 CI 下界 > 0；
+(c) 直行帧非劣（≤ 0.05）；(d) invalid ≤ 2%。这次 (a)(b) 的实测是 −0.02 左右，离门槛差约 0.07，
+不是差在 CI 宽度上（半宽约 0.02），而是方向就不对。
+
+**这个原型的局限，影响「关掉」这句话的范围**：judge 是 logged future，不是 expert 的反应，所以它问的是
+「能不能预见司机接下来做什么」，比 CARLA 配对里「前面有行人，该不该停」更难、更依赖意图；
+在配对上，反应的原因就在画面里，VLM 的表现可能不同。如果 lead 想保留这条线，最便宜的复测是 P4 之后
+在 20–50 个 CARLA 配对上用同一个 harness 跑 32B-FP8（7–8 s/帧，几分钟），只看纵向（该不该停）那一轴，
+因为纵向是这里唯一看得出视觉贡献的地方。这是推测，没有测。
+
 吞吐：32B FP8 main 7.9 s/帧（batch 2，GPU 和 heads、P4 共用），峰值 40.8 GB，每个回答约 53 个 token；
-text 0.94 s/帧，34.4 GB。
+text 0.94 s/帧，34.4 GB；noroute 7.6 s/帧，**峰值 45.4 GB，超了 lead 给的 40 GB**（main 是 40.8 GB，
+同样 batch 2，差别来源没查），这一点已记进报告。4B noroute 1.59 s/帧、13.5 GB。

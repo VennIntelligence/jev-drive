@@ -1,6 +1,6 @@
 {
   "model": "/home/ujs/data/models/Qwen3-VL-32B-Instruct-FP8",
-  "variant": "main",
+  "variant": "noroute",
   "cams": [
     "front",
     "front_left",
@@ -9,16 +9,11 @@
   "frames": 4,
   "stride": 2,
   "prompt_sha256": "d9c316968a80f48137fe9761a4285b00b3ab62aa5a6cb725e177cecb7c766513",
+  "route_command": false,
   "decoding": "greedy",
   "max_new_tokens": 96,
   "batch_size": 2,
-  "n_todo": 1458,
+  "n_todo": 588,
   "n_done_before": 0,
-  "frame_set": "p5vlm_v1",
-  "n": 1458,
-  "wall_s": 11589.802913345397,
-  "s_per_frame": 7.9271259121149065,
-  "gen_tokens_per_frame": 53.32167352537723,
-  "peak_vram_gb": 40.75358295440674,
-  "peak_vram_reserved_gb": 41.1328125
+  "frame_set": "p5vlm_v1"
 }

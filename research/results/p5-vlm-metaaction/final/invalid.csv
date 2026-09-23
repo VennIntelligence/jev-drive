@@ -1,5 +1,7 @@
 variant,answered,invalid,invalid_rate
 VLM Qwen3-VL-4B main,3758,0,0.0
 VLM Qwen3-VL-4B text,3758,0,0.0
+VLM Qwen3-VL-4B noroute,1458,0,0.0
 VLM Qwen3-VL-32B-FP8 text,3758,0,0.0
-VLM Qwen3-VL-32B-FP8 main,1458,0,0.0
+VLM Qwen3-VL-32B-FP8 main,1858,0,0.0
+VLM Qwen3-VL-32B-FP8 noroute,588,0,0.0

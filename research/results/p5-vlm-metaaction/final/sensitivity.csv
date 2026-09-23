@@ -4,5 +4,7 @@ arm,subset,axis,n,acc,lo,hi
 route command (CTRA long; lateral = intent),"pre_onset, unambiguous lateral",lat3,1130,0.7752212389380531,0.708878397638196,0.8336737967833696
 VLM Qwen3-VL-4B main,"pre_onset, unambiguous lateral",lat3,1130,0.7486725663716814,0.6793743682536248,0.8085504508764308
 VLM Qwen3-VL-4B text,"pre_onset, unambiguous lateral",lat3,1130,0.7743362831858407,0.7079303675048356,0.8330704391638984
+VLM Qwen3-VL-4B noroute,"pre_onset, unambiguous lateral",lat3,1130,0.05221238938053097,0.03271434403044563,0.07645551465350583
 VLM Qwen3-VL-32B-FP8 text,"pre_onset, unambiguous lateral",lat3,1130,0.7752212389380531,0.708878397638196,0.8336737967833696
 VLM Qwen3-VL-32B-FP8 main,"pre_onset, unambiguous lateral",lat3,1130,0.7424778761061946,0.6755847082785966,0.8013181051129938
+VLM Qwen3-VL-32B-FP8 noroute,"pre_onset, unambiguous lateral",lat3,266,0.17669172932330826,0.1190407772304324,0.24312742672576712
