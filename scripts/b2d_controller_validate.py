@@ -243,9 +243,10 @@ def load_perturbation(path, key):
     for name in ('gnss_noise_seed', 'imu_noise_seed'):
         if isinstance(spec[name], bool) or not isinstance(spec[name], int) or not 0 <= spec[name] < 2 ** 31:
             raise ValueError('%s must be a nonnegative int' % name)
-    for name in ('spawn_lateral_m', 'spawn_yaw_deg'):
-        if not isinstance(spec[name], (int, float)) or not math.isfinite(spec[name]) or abs(spec[name]) > 1.:
-            raise ValueError('%s must be finite with magnitude <= 1' % name)
+    for name, bound in (('spawn_lateral_m', 1.), ('spawn_yaw_deg', 5.)):
+        if (isinstance(spec[name], bool) or not isinstance(spec[name], (int, float))
+                or not math.isfinite(spec[name]) or abs(spec[name]) > bound):
+            raise ValueError('%s must be finite with magnitude <= %g' % (name, bound))
     return dict(spec, id=key)
 
 

@@ -307,16 +307,22 @@ class RunPerturbation(unittest.TestCase):
         self.assertIsNone(load_perturbation(None, None))
         with tempfile.TemporaryDirectory() as temp:
             table = Path(temp) / 'p.json'
-            good = dict(gnss_noise_seed=3, imu_noise_seed=1003, spawn_lateral_m=.2, spawn_yaw_deg=-.5)
+            good = dict(gnss_noise_seed=3, imu_noise_seed=1003, spawn_lateral_m=.2, spawn_yaw_deg=-1.418)
             table.write_text(json.dumps({'p03': good, 'p00': None, 'bad': dict(good, spawn_lateral_m=3.),
+                                         'yaw': dict(good, spawn_yaw_deg=6.),
                                          'short': dict(gnss_noise_seed=1), 'flag': dict(good, gnss_noise_seed=True)}))
             self.assertEqual(load_perturbation(str(table), 'p03'), dict(good, id='p03'))
             self.assertIsNone(load_perturbation(str(table), 'p00'))  # registered nominal anchor
-            for key in ('bad', 'short', 'flag', 'missing'):
+            for key in ('bad', 'yaw', 'short', 'flag', 'missing'):
                 with self.assertRaises(ValueError):
                     load_perturbation(str(table), key)
             with self.assertRaises(ValueError):
                 load_perturbation(None, 'p03')
+        # Every registered lateral v2 perturbation must load.
+        registered = Path(__file__).resolve().parents[1] / 'todos/2026-09-23-controller-next/lateral_v2/inputs/perturbations.json'
+        if registered.is_file():
+            for key in json.loads(registered.read_text()):
+                load_perturbation(str(registered), key)
 
     def test_spawn_offset_right_vector_and_identity(self):
         from b2d_controller_validate import perturbed_spawn
