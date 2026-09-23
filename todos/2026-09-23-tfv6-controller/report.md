@@ -1,5 +1,7 @@
 # W2：TFv6 waypoint 与 production 控制器的闭环实验
 
+> **更正（2026-09-24）**：本报告中 C、D 两臂的结果（C − B、D − C 及其机制解读）作废。协议规定的坐标变换在车辆静止时会造出假目标点，见 [diagnosis-tangent.md](diagnosis-tangent.md) 和 `research/decisions.md` 第 31 条。A − B 不受影响。下文保留原样，只作历史记录。
+
 **冻结协议** `06674d4`；**正式驾驶代码** `fdbe0c94c979e8a4d9e89b983ec244bba2d8a116`；**分析修复提交** `c7b2db2d8ec2811bb4e48dcfc1df025cd4bbd8d6`。正式驾驶于 2026-09-23/24（JST）在单张 RTX 3090、两个并行 CARLA server 上完成。下文只使用修复后的 202 个有效正式 case；逐帧与中断/作废目录保存在 `/data/runs/b2d/tfv6-w2/formal/`。
 
 ## 问题、设计与完整性
