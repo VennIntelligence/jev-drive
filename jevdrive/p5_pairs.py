@@ -335,7 +335,8 @@ def pair_case(gen: Path, case: pd.Series, worlds: dict) -> tuple[dict, list, lis
 
 
 def processed(*parts) -> Path:
-    p = data_dir() / "processed" / "carla_p5" / Path(*parts)
+    """processed/carla_p5 (P5_SET overrides it, e.g. for a dry run on the pairs finished so far)."""
+    p = data_dir() / "processed" / os.environ.get("P5_SET", "carla_p5") / Path(*parts)
     p.mkdir(parents=True, exist_ok=True)
     return p
 
