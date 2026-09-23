@@ -327,7 +327,11 @@ def main():
     p.add_argument('--quality', default='Epic', choices=('Epic', 'Low'),
                    help='server render quality; Low only to keep a big map (Town13) from starving the render '
                         'thread under GPU contention. With --rig none nothing rendered reaches the agent.')
+    p.add_argument('--no-rendering', action='store_true',
+                   help='world no_rendering_mode: physics and GNSS/IMU/speed only; needs --rig none, no chase camera')
     a = p.parse_args()
+    if a.no_rendering and (a.rig != 'none' or a.chase_camera):
+        p.error('--no-rendering needs --rig none and no --chase-camera')
 
     routes_path, out = [Path(x).resolve() for x in (a.routes, a.out)]
     cases, cruises = load_matrix(a.controller_config, a.presets, a.variants,
@@ -394,6 +398,8 @@ def main():
                 settings.max_substeps = 10
                 settings.actor_active_distance = 2000
                 settings.tile_stream_distance = 3000
+                if a.no_rendering:
+                    settings.no_rendering_mode = True
                 world.apply_settings(settings)
                 world.set_weather(carla.WeatherParameters.ClearNoon)
                 CarlaDataProvider.set_client(client)
