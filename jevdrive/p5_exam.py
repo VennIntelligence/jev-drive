@@ -291,15 +291,100 @@ def run(rl):
     return res, pa
 
 
+# ---------------------------------------------------------------- figures
+
+COLORS = {"TFv6 target speed": "#0072B2", "TFv6 waypoint speed 2 s": "#56B4E9", "ridge_late L18_last": "#D55E00",
+          "ridge_late L18_mean": "#E69F00"}
+SHORT = {"PedestrianCrossing": "PedCrossing", "DynamicObjectCrossing": "DynObjCrossing",
+         "VehicleTurningRoutePedestrian": "TurnPedestrian", "ParkingCrossingPedestrian": "ParkingPedestrian",
+         "OppositeVehicleRunningRedLight": "OppRedLightRunner", "HardBreakRoute": "HardBrake", "StaticCutIn": "StaticCutIn",
+         "ParkingCutIn": "ParkingCutIn", "HighwayCutIn": "HighwayCutIn", "Light": "Red vs green", "pooled": "Pooled"}
+
+
+def figs(run, out):
+    """Two figures from a finished exam run dir, into `out` (research/figs)."""
+    import matplotlib.pyplot as plt
+    from .p4_carla import _style
+    ps = _style()
+    fl = pd.read_csv(run / "flip_rates.csv")
+    val = pd.read_csv(run / "label_validity.csv")
+    obs = pd.read_parquet(run / "obs_scored.parquet")
+    null = pd.read_parquet(run / "null_scored.parquet")
+    tau = pd.read_json(run / "summary.json", typ="series")["tau_exp"]
+
+    # (1) directional flip rate per family and examinee, with route-bootstrap CIs
+    ex = [e for e in COLORS if e in set(fl.examinee)]
+    scopes = ["pooled"] + [f for f in val.family if f in set(fl.scope)]
+    fig, ax = plt.subplots(figsize=(ps.DOUBLE_COLUMN_IN, 2.5))
+    w = 0.8 / len(ex)
+    for j, e in enumerate(ex):
+        d = fl[fl.examinee == e].set_index("scope").reindex(scopes)
+        x = np.arange(len(scopes)) + (j - (len(ex) - 1) / 2) * w
+        ok = d.n_reactive.fillna(0).to_numpy() > 0
+        ax.bar(x[ok], d.flip_rate[ok], w, color=COLORS[e], label=e, linewidth=0)
+        ax.errorbar(x[ok], d.flip_rate[ok], yerr=[d.flip_rate[ok] - d.flip_lo[ok], d.flip_hi[ok] - d.flip_rate[ok]],
+                    fmt="none", ecolor="#333333", elinewidth=0.5, capsize=1.2)
+    n = fl[fl.examinee == ex[0]].set_index("scope").reindex(scopes).n_reactive.fillna(0).astype(int)
+    ax.set_xticks(np.arange(len(scopes)))
+    ax.set_xticklabels([f"{SHORT.get(s, s)}\n$n$={k}" for s, k in zip(scopes, n)], rotation=0, fontsize=6.5)
+    ax.set_ylabel("Directional flip rate")
+    ax.set_ylim(0, 1)
+    ax.axhline(0.5, color=ps.BASELINE, linewidth=0.5, linestyle="--")
+    ax.axhline(0.2, color=ps.BASELINE, linewidth=0.5, linestyle=":")
+    ps.bars(ax)
+    ax.legend(ncol=len(ex), loc="upper right", fontsize=7)
+    fig.tight_layout(pad=0.3)
+    ps.save(fig, out / "p5-flip-rates")
+    plt.close(fig)
+
+    # (2) expert delta on pair frames against the weather-only null
+    fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.3), gridspec_kw={"width_ratios": [1, 1.7]})
+    ax = axs[0]
+    for vals, lab, c in ((np.abs(obs.d_expert), "pair frames", "#D55E00"), (np.abs(null.d_expert), "null frames", ps.BASELINE)):
+        v = np.sort(vals.to_numpy())
+        if len(v):
+            ax.step(v, 1 - np.arange(len(v)) / len(v), where="post", color=c, label=f"{lab} ($n$={len(v)})")
+    ax.axvline(tau, color="#333333", linewidth=0.6, linestyle="--")
+    ax.set_xscale("symlog", linthresh=0.1)
+    ax.set_xlabel(r"$|\Delta_\mathrm{expert}|$ = |speed at 2 s, x$^+$ $-$ x$^-$| (m/s)")
+    ax.set_ylabel("Fraction of frames $\\geq$ x")
+    ax.legend(fontsize=7)
+    ps.panel(ax, "(a)")
+    ax = axs[1]
+    fams = [f for f in val.family if (obs.family == f).any()]
+    rng = np.random.default_rng(0)
+    for i, f in enumerate(fams):
+        v = obs.d_expert[obs.family == f].to_numpy()
+        ax.scatter(np.full(len(v), i) + rng.uniform(-0.25, 0.25, len(v)), v, s=2, color="#D55E00", alpha=0.35,
+                   linewidths=0)
+    ax.axhspan(-tau, tau, color=ps.BASELINE, alpha=0.15, linewidth=0)
+    ax.set_xticks(np.arange(len(fams)))
+    ax.set_xticklabels([SHORT.get(f, f) for f in fams], rotation=30, ha="right", fontsize=6.5)
+    ax.set_ylabel(r"$\Delta_\mathrm{expert}$ (m/s)")
+    ps.zero_line(ax)
+    ps.panel(ax, "(b)")
+    fig.tight_layout(pad=0.3)
+    ps.save(fig, out / "p5-expert-delta")
+    plt.close(fig)
+
+
 def main():
     import argparse
     from .runlog import RunLog
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["run"])
+    p.add_argument("cmd", choices=["run", "figs"])
+    p.add_argument("--run-dir", default="")
     a = p.parse_args()
-    rl = RunLog("p5_pairs", "exam")
-    run(rl)
-    rl.close()
+    if a.cmd == "run":
+        rl = RunLog("p5_pairs", "exam")
+        run(rl)
+        rl.close()
+    else:
+        from pathlib import Path
+        from .common import data_dir
+        out = data_dir() / "runs" / "p5_pairs" / "figs"
+        out.mkdir(parents=True, exist_ok=True)
+        figs(Path(a.run_dir), out)
 
 
 if __name__ == "__main__":
