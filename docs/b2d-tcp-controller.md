@@ -41,7 +41,7 @@ Run on the configured Tokyo host, from the repository root:
 
 ```bash
 scripts/tmux_run.sh tcp-comparison-new env \
-  DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 DISPLAY=:0 \
+  DATA_DIR=/data DISPLAY=:0 \
   /data/envs/carla/bin/python scripts/b2d_tcp_campaign.py \
   --out /data/runs/b2d/tcp-controller/a-new-exclusive-directory \
   --server-index 110 \

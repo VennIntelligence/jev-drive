@@ -72,10 +72,12 @@ def main():
     parser.add_argument('--dir', required=True)
     parser.add_argument('--snapshot', help='Save one rendered dashboard without grabbing X11')
     parser.add_argument('--follow-runs', help='Follow newest child run/live in a profiling series')
+    parser.add_argument('--window-size', nargs=2, type=int, default=(1600, 1120),
+                        metavar=('WIDTH', 'HEIGHT'))
     args = parser.parse_args()
     pygame.display.init()
     pygame.font.init()
-    screen = pygame.display.set_mode((1600, 1120), pygame.RESIZABLE)
+    screen = pygame.display.set_mode(tuple(args.window_size), pygame.RESIZABLE)
     pygame.display.set_caption('Bench2Drive TCP | model input + chase trajectory')
     canvas = pygame.Surface((1600, 1120))
     font = pygame.font.SysFont('DejaVu Sans', 22)
@@ -119,6 +121,8 @@ def main():
             if fresh:
                 packet = fresh  # Own bytes until all frombuffer surfaces have been replaced.
                 state = packet['state']
+                app = 'TFv6' if state.get('agent') == 'TFv6' else 'Bench2Drive TCP'
+                pygame.display.set_caption(app + ' | model input + trajectory')
                 images = {}
                 for name, spec in packet['images'].items():
                     h, w, _ = spec['shape']
@@ -129,39 +133,56 @@ def main():
                 canvas.fill((17, 21, 29))
                 age = time.time() - state.get('t', 0)
                 status = ('LIVE' if age < 3 else 'STALE') if state.get('running') else ('ENDED' if state else 'WAITING')
-                label('TCP / ' + status + '   ' + str(state.get('route', 'Waiting for agent'))[:95], (20, 12))
-                label('LEFT (model crop)', (20, 48))
-                label('FRONT (model crop)', (566, 48))
-                label('RIGHT (model crop)', (1034, 48))
-                if 'input' in images:
-                    # Preserve the existing contiguous 315/270/315 mosaic and its aspect ratio.
-                    canvas.blit(pygame.transform.scale(images['input'], (1560, 444)), (20, 80))
-                label('CHASE / yellow: prediction; white: fixed origin (flat-road projection)', (20, 540))
-                if 'chase' in images:
-                    chase = images['chase'].copy()  # Overlay never modifies shared model/sensor bytes.
-                    points = chase_waypoints(state, chase.get_width(), chase.get_height())
-                    if len(points) > 1:
-                        pygame.draw.lines(chase, (255, 220, 40), False, points, 3)
-                    for point in points:
-                        pygame.draw.circle(chase, (255, 220, 40), point, 4)
-                    if points:
-                        pygame.draw.circle(chase, (255, 255, 255), points[0], 5, 2)
-                    canvas.blit(pygame.transform.scale(chase, (880, 495)), (20, 580))
-                canvas.blit(draw_bev(state), (920, 580))
-                label('BEV / 5 m grid', (920, 540))
-                label('%.2f m/s' % state.get('speed_mps', 0), (1380, 590))
-                for i, key in enumerate(('throttle', 'brake', 'steer')):
-                    label('%s: %.2f' % (key, state.get(key, 0)), (1380, 630 + i * 32))
-                label('Step %s' % state.get('step', '-'), (1380, 740))
-                if 'chase_frame' in state:
-                    lag = state.get('frame', 0) - state['chase_frame']
-                    label('View lag %d' % lag if state['chase_frame'] >= 0 else 'View waiting', (1380, 770))
-                label('Timing (ms)', (1380, 790))
-                for i, (key, value) in enumerate(state.get('phases', {}).items()):
-                    short = {'sensor_wait_ms': 'Sensors', 'preprocess_ms': 'Preprocess',
-                             'gpu_ms': 'GPU', 'policy_ms': 'Policy', 'preview_ms': 'Preview'}.get(key, key)
-                    label('%s %.1f' % (short, value), (1380, 830 + 32 * i))
-                label('Green: ego outline / yellow: prediction / blue: supplied route (when available)', (20, 1086))
+                if state.get('agent') == 'TFv6':
+                    label('TFv6 / ' + status + '   route ' + str(state.get('route', 'Waiting for agent')), (20, 12))
+                    label('MODEL INPUT (three-camera mosaic)', (20, 48))
+                    if 'input' in images:
+                        canvas.blit(pygame.transform.scale(images['input'], (880, 293)), (20, 80))
+                    canvas.blit(draw_bev(state), (920, 80))
+                    label('MODEL OUTPUT / local actor frame', (920, 48))
+                    label('Speed %.2f m/s' % state.get('speed_mps', 0), (20, 410))
+                    label('Target %.2f m/s' % (state.get('target_speed_mps') or 0), (20, 450))
+                    for i, key in enumerate(('throttle', 'brake', 'steer')):
+                        label('%s: %.2f' % (key, state.get(key, 0)), (20, 500 + i * 36))
+                    label('Step %s   ensemble %s' % (state.get('step', '-'), state.get('ensemble_size', '-')), (20, 625))
+                    inference_ms = state.get('inference_ms')
+                    label('Inference %.1f ms' % inference_ms if inference_ms is not None else 'Inference warming up', (20, 665))
+                    label('Blue: predicted route / yellow: temporal waypoints', (20, 1060))
+                    label('Actor-origin visualization; no controller or model output is modified.', (20, 1090))
+                else:
+                    label('TCP / ' + status + '   ' + str(state.get('route', 'Waiting for agent'))[:95], (20, 12))
+                    label('LEFT (model crop)', (20, 48))
+                    label('FRONT (model crop)', (566, 48))
+                    label('RIGHT (model crop)', (1034, 48))
+                    if 'input' in images:
+                        # Preserve the existing contiguous 315/270/315 mosaic and its aspect ratio.
+                        canvas.blit(pygame.transform.scale(images['input'], (1560, 444)), (20, 80))
+                    label('CHASE / yellow: prediction; white: fixed origin (flat-road projection)', (20, 540))
+                    if 'chase' in images:
+                        chase = images['chase'].copy()  # Overlay never modifies shared model/sensor bytes.
+                        points = chase_waypoints(state, chase.get_width(), chase.get_height())
+                        if len(points) > 1:
+                            pygame.draw.lines(chase, (255, 220, 40), False, points, 3)
+                        for point in points:
+                            pygame.draw.circle(chase, (255, 220, 40), point, 4)
+                        if points:
+                            pygame.draw.circle(chase, (255, 255, 255), points[0], 5, 2)
+                        canvas.blit(pygame.transform.scale(chase, (880, 495)), (20, 580))
+                    canvas.blit(draw_bev(state), (920, 580))
+                    label('BEV / 5 m grid', (920, 540))
+                    label('%.2f m/s' % state.get('speed_mps', 0), (1380, 590))
+                    for i, key in enumerate(('throttle', 'brake', 'steer')):
+                        label('%s: %.2f' % (key, state.get(key, 0)), (1380, 630 + i * 32))
+                    label('Step %s' % state.get('step', '-'), (1380, 740))
+                    if 'chase_frame' in state:
+                        lag = state.get('frame', 0) - state['chase_frame']
+                        label('View lag %d' % lag if state['chase_frame'] >= 0 else 'View waiting', (1380, 770))
+                    label('Timing (ms)', (1380, 790))
+                    for i, (key, value) in enumerate(state.get('phases', {}).items()):
+                        short = {'sensor_wait_ms': 'Sensors', 'preprocess_ms': 'Preprocess',
+                                 'gpu_ms': 'GPU', 'policy_ms': 'Policy', 'preview_ms': 'Preview'}.get(key, key)
+                        label('%s %.1f' % (short, value), (1380, 830 + 32 * i))
+                    label('Green: ego outline / yellow: prediction / blue: supplied route (when available)', (20, 1086))
                 ratio = min(screen.get_width() / 1600, screen.get_height() / 1120)
                 size = (max(1, int(1600 * ratio)), max(1, int(1120 * ratio)))
                 screen.fill((0, 0, 0))

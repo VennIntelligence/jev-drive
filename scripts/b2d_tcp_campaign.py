@@ -29,7 +29,7 @@ def main():
     a = parser.parse_args()
     if not os.environ.get('CUDA_VISIBLE_DEVICES') and \
             len(subprocess.check_output(['nvidia-smi', '-L'], text=True).strip().splitlines()) > 1:
-        parser.error('Several GPUs visible: pin one with CUDA_VISIBLE_DEVICES (Tokyo: 1, its GPU 0 is broken)')
+        parser.error('Several GPUs visible: select the intended device with CUDA_VISIBLE_DEVICES')
     from b2d_run import B2D_ZOO, BENCH2DRIVE, DATA_DIR, Runner, Server, parse_args, select_routes
     a.routes = a.routes or str(BENCH2DRIVE/'leaderboard/data/bench2drive220.xml')
     a.checkpoint = a.checkpoint or str(DATA_DIR/'models/bench2drive/tcp/tcp_b2d.ckpt')

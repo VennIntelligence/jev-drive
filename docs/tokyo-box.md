@@ -15,45 +15,51 @@ from GPU-box model experiments ([remote-box.md](remote-box.md)).
 
 | | |
 |---|---|
-| OS / kernel | Ubuntu 24.04.3, 6.17.0-35-generic |
+| OS / kernel | Ubuntu 24.04.3, currently booted on 7.0.0-31-generic |
 | CPU / RAM | Ryzen 9 9950X, 16 cores / 32 threads; 60 GB |
-| GPU | 2x RTX 3090 24 GB, driver 580.159.03 — **only GPU 1 is usable, see below** |
+| GPU | One RTX 3090 24 GB, driver 580.173.02, PCI `02:00.0` |
 | Disks | `/` 1.8 TB (1.4 TB free), `/data` 3.6 TB (nearly empty) |
-| Desktop | Xorg + GNOME on `:0`, seat0, 4384x2466 |
+| Desktop | GNOME Wayland + Xwayland on `:0`, seat0, 3840x2160 |
 | Code | `~/mycode/jev-drive` (clean clone, `origin` is plain `github.com`) |
 | Data | `/data` — treat it as `DATA_DIR`, same layout as the GPU box |
 
-## GPU 0 is broken. Use GPU 1, and the rank is inverted
+## GPU selection (measured 2026-09-23)
 
-**GPU 0 must not be used.** Pin everything to GPU 1: `CUDA_VISIBLE_DEVICES=1` for PyTorch.
+`nvidia-smi` reports exactly one NVIDIA GeForce RTX 3090 at index 0, UUID
+`GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`, PCI `0000:02:00.0`. PyTorch reports one device,
+`torch.cuda.device_count() == 1`, named `NVIDIA GeForce RTX 3090`, with no
+`CUDA_VISIBLE_DEVICES` set. Use CUDA index 0 directly.
 
 CARLA ignores `CUDA_VISIBLE_DEVICES` and takes `-graphicsadapter=<rank>`, a Vulkan physical-device
-index. [carla.md](carla.md) warns that the rank need not match `nvidia-smi`. **On this box it is
-inverted**, measured by starting a server at each rank and reading back the GPU UUID:
+index. Two headless CARLA starts with the NVIDIA Vulkan ICD both appeared on that same UUID:
 
-| flag | lands on `nvidia-smi` index | PCI |
+| CARLA flag | observed `nvidia-smi` device | PCI |
 |---|---|---|
-| `-graphicsadapter=0` | **1** (the good card) | `0000:03:00.0` |
-| `-graphicsadapter=1` | 0 (the broken card) | `0000:01:00.0` |
+| `-graphicsadapter=0` | index 0, RTX 3090 | `0000:02:00.0` |
+| `-graphicsadapter=1` | index 0, RTX 3090 | `0000:02:00.0` |
 
-So CARLA on this box wants **`-graphicsadapter=0`**. Never assume it; confirm with
-`nvidia-smi --query-compute-apps=gpu_uuid,used_memory --format=csv` against
-`nvidia-smi --query-gpu=index,uuid --format=csv` after the server comes up. Started with no flag at
-all, CARLA happened to pick GPU 1, but that is luck, not a guarantee.
+The box now exposes only one NVIDIA card; the old second-card rank distinction no longer applies.
+Use rank 0. This is a one-card mapping;
+recheck the process UUID after driver or Vulkan changes with
+`nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv` and
+`nvidia-smi --query-gpu=index,uuid,pci.bus_id --format=csv`.
 
-## Controller experiment library environment (2026-09-23)
-
-An unattended upgrade replaced NVIDIA userspace with 580.173.02 while the loaded kernel module remained 580.159.03. This caused NVML mismatch and CARLA startup timeout. Controller diagnostics recovered with private, checksum-verified 580.159.03 vendor libraries; the host was not rebooted or reconfigured.
-
-For this loaded kernel, source `/data/tools/nvidia-userspace-580.159.03/isolated/env.sh` in the launching shell. Actual CARLA process maps and GPU UUID confirmed the private libraries and good GPU 1. The ordinary shell still has mismatched system libraries. Recheck versions after a reboot before reusing this environment. See [the recovery record](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md) for commands, failed-attempt evidence and the exact archive/library hashes.
+The former two-card notes described the removed 580.159.03 setup. They no longer describe this host.
+The running kernel module and userspace both report 580.173.02; ordinary `nvidia-smi` and PyTorch
+work. The old private userspace directory is retained for its historical evidence only and must not
+be sourced by current launch scripts. See [the recovery record](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md).
 
 ## Looking at CARLA
 
-X access from an SSH shell works with nothing but `DISPLAY=:0` — no `XAUTHORITY`, no `xhost`:
+X access uses `DISPLAY=:0`. In the current GNOME Wayland session, set `XAUTHORITY` to the file
+passed to the running Xwayland process with `-auth`; `~/.Xauthority` is stale and fails here. Do
+not enable broad `xhost` access.
 
 ```bash
 ssh ujs@100.108.238.8
 cd /data/third_party/carla/CARLA_0.9.15
+export DISPLAY=:0
+export XAUTHORITY="$(ps -C Xwayland -o args= | sed -n 's/.*-auth \([^ ]*\).*/\1/p' | head -1)"
 DISPLAY=:0 VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json \
   ./CarlaUE4.sh -windowed -ResX=1280 -ResY=720 -nosound \
                 -carla-rpc-port=3000 -quality-level=Epic -graphicsadapter=0
@@ -151,7 +157,7 @@ The runner accepts `--windowed` to show a 1280x720 spectator window on the physi
 Keep all long-running commands inside tmux session `jev`, and on this desktop use:
 
 ```bash
-DISPLAY=:0 CUDA_VISIBLE_DEVICES=1 DATA_DIR=/data \
+DISPLAY=:0 DATA_DIR=/data \
 CARLA_ROOT=/data/third_party/carla/CARLA_0.9.15 \
 BENCH2DRIVE_ROOT=/data/third_party/Bench2Drive \
   /data/envs/carla/bin/python scripts/b2d_run.py \
@@ -245,7 +251,7 @@ The learned policy is official Bench2DriveZoo `tcp/admlp` commit
 `8a08b07883f10b7d83f6bf5dd475bda91a91c50a`, using `/data/envs/b2d-tcp` and
 `/data/models/bench2drive/tcp/tcp_b2d.ckpt` (SHA256
 `e6573ff1f8ea910b9a53eddfb68f69cac469bf5bfa253a516578f6126110b4fe`).
-Set `CUDA_VISIBLE_DEVICES=1`, `IS_BENCH2DRIVE=1`, `PLANNER_TYPE=only_traj`,
+Set `IS_BENCH2DRIVE=1`, `PLANNER_TYPE=only_traj`,
 `TORCH_HOME=/data/models/torch`, and
 `PYTHONPATH=/data/third_party/Bench2DriveZoo:/data/third_party/Bench2DriveZoo/TCP`.
 Pass `--agent scripts/b2d_tcp_visual_agent.py --agent-config <checkpoint>` and

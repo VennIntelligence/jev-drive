@@ -87,3 +87,20 @@ cd ~/mycode/jev-drive && git status --short && git merge --ff-only from-mac
 ## 执行记录
 
 （执行者在此追加）
+
+### 2026-09-23 Tokyo 执行记录
+
+- 同步：执行 `git merge --ff-only from-mac`，`Already up to date`；本机未改写历史。
+- GPU/系统：实际启动内核为 `7.0.0-31-generic`，驱动 580.173.02 可正常工作；`nvidia-smi` 仅见 RTX 3090 PCI `02:00.0`，CUDA index 0。PyTorch 见 1 张卡。rank 0 与 rank 1 的 CARLA adapter 探针在固定 NVIDIA Vulkan ICD 下都落到同一张 3090；统一建议用 rank 0。没有重启或改 GRUB/apt hold，避免中断已正常工作的图形桌面和后续工作。显卡记录：`/data/runs/tfv6/gpu-map/record.json`。
+- 按实测修订 `CLAUDE.md`、Tokyo 机器说明和 CARLA/TCP 示例，移除错误的 `CUDA_VISIBLE_DEVICES=1` 及旧 GPU 排号假设。Xwayland 的认证文件动态读取，不硬编码临时路径。
+- 测试：控制器 `142 passed, 1 skipped`；TCP `17 passed`；pose 验收分析 `15 passed`。原环境未装 pytest，使用 `uv pip install --python ... pytest` 加到对应 `/data/envs/carla` 和 `/data/envs/b2d-tcp` 环境后执行。
+- TFv6：LEAD `cvpr2026` 固定在 `730bc1a2f44d5f28312dd55f0ca958e94a24c038`；环境 `/data/envs/tfv6`，Python 3.10.18、PyTorch 2.8.0+cu128；三份 seed 权重 SHA256 与 HF LFS oid 一致，三份均通过 `strict=True` dummy forward。HF timm backbone 已缓存，推理使用 `HF_HUB_OFFLINE=1`。ffmpeg 已可用。
+- W&B：作者 visualizer 顶层无条件 import `wandb`，但正常 SensorAgent 推理不会登录或调用 `wandb.log`；日志调用仅由显式 `log_wandb` 开关触发。为保持上游代码不变，在隔离 TFv6 uv 环境安装作者锁定的 wandb 包；未登录、未配置 token。
+- Bench2Drive diff：作者随仓库副本 63 MB，机器锁定副本 145 MB；`diff -qr --no-dereference` 得到 31 行差异，列在 `/data/runs/tfv6/bench2drive-diff/diff.txt`。主要包含作者/锁定副本的 evaluator、route parser、scenario parser、ability benchmark 差异；锁定副本含 v0.0.4 文档/数据和运行缓存等额外文件。未替换锁定副本。烟测单独从作者副本建立 `/data/runs/b2d/tfv6-repro/runtime/Bench2Drive`，只在此运行副本修复 Python ElementTree 移除 `getchildren()` 的兼容问题。
+- 帧率先测再跑：Epic、Town03、3 路 384×384 相机、窗口 1280×720、rank 0，40 tick warmup + 200 tick 采样为 26.51 FPS；中位 37.45 ms/tick、p95 40.23 ms，画面非黑帧。实际 TFv6 agent 含三 seed 的闭环约 0.45× 实时，profile 平均 110.9 ms/tick、p95 121.4 ms，模型前向样本约 51 ms。为遵循官方 Epic / 默认模型配置，没有改画质或模型精度参数。
+- GUI：新增 `scripts/b2d_tfv6_visual_agent.py`，以只读方式发布模型三相机输入、局部 route/waypoint、控制量和耗时；复用现有 viewer 新增 TFv6 面板。Dev10 route 25378（Town03）、TM seed 0 单路线烟测到达路线终点，255 tick、37.2 s。RouteCompletion 100%，但 MinSpeedTest 和 YieldToEmergencyVehicleTest 失败；这只是 smoke，不是成绩。截图及详细记录保存在 `/data/runs/tfv6/visualization/`，未将烟测中间结果提交到 Git。
+- 用户明确说可跳过复跑，故未执行完整 Dev10 十路线 x 两个 TM seed 的官方复现，没有生成/伪造成绩 CSV、summary 或 benchmark score。
+- Bench2Drive 差异路径明细（`diff -qr --no-dereference`）：改动文件 `README.md`、`leaderboard/leaderboard/leaderboard_evaluator.py`、`leaderboard/leaderboard/utils/route_parser.py`、`scenario_runner/srunner/tools/route_parser.py`、`scenario_runner/srunner/tools/scenario_parser.py`、`tools/ability_benchmark.py`；锁定副本额外有 `assets/v004_update_banner.png`、`B2DVisualize/`、`docs/v004_update.md`、`.git/`、`leaderboard/data/bench2drive_0.0.4_val.xml`、`leaderboard/docs/img/posts/`、`scenario_runner/srunner/metrics/data/{CriteriaFilter,DistanceBetweenVehicles,DistanceToLaneCenter}.log`、`scenario_runner/srunner/utils.py`、`tools/{make_v004_banner,occ_label_gen,occ_online_carla}.py`；另有双方不同的 `__pycache__/` 目录。完整原始差异行见 `/data/runs/tfv6/bench2drive-diff/diff.txt`。
+- tmux 清理：结束并关闭本任务已完成的 install/diff/FPS/失败尝试窗口；保留用户的 `codex`、`nvtop`，以及仍在桌面显示 TFv6 最后一帧的 `tfv6-viewer3`。当前 `jev` 窗口已确认没有遗留 CARLA server。
+- RDP 追加测试：使用 `DISPLAY=:10.0`、Epic、GPU rank 0、单个 CARLA 服务完整运行 Dev10 路线 25378（Town03）、25381（Town05）、27494（Town04），TM seed 0，无 tick 上限。三条均自然结束，分别 251/457/488 tick，总墙钟 180.6 秒；0 次基础设施重启。viewer 在 RDP 桌面显示三相机输入、waypoint、控制量。原始记录保存在 `/data/runs/b2d/tfv6-repro/rdp-full-routes-seed0/`，不入 Git。
+- 用户确认现有 7.0 内核和驱动能正常工作，旧的 6.17/GRUB 工作不再需要。本任务曾按旧任务书短暂设置四项 apt hold，在用户更新指令后已逐项取消；最终 `apt-mark showhold` 为空，无持续的 apt 策略变更。

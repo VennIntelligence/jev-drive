@@ -41,12 +41,10 @@ The pre-registered closed-loop test is [lateral-v2-protocol.md](../todos/2026-09
 
 An unattended NVIDIA userspace upgrade broke CARLA startup before any driving case. Matching 580.159.03 vendor libraries were extracted to a private directory, with the official archive checksum verified. CARLA's actual process maps and GPU UUID confirmed successful isolated recovery. No host driver installation or reboot was performed.
 
-While the loaded kernel driver is still 580.159.03, launch local experiments from a shell that sources:
-
-```bash
-source /data/tools/nvidia-userspace-580.159.03/isolated/env.sh
-```
-
-Then use `CUDA_VISIBLE_DEVICES=1`, `DISPLAY=:0` and CARLA graphics adapter 0, as documented for the [Tokyo box](tokyo-box.md). Recheck driver/library versions after any reboot. The private environment does not repair globally installed libraries. [Recovery evidence and commands](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md) preserve the failed start and successful retry separately.
+The isolated 580.159.03 userspace workaround is historical and must not be sourced by current
+launches. The running 580.173.02 kernel module matches userspace, and the single RTX 3090 is CUDA
+index 0; use `DISPLAY=:0` and CARLA graphics adapter 0. Recheck driver/library versions and the GPU
+UUID after a reboot. The [recovery record](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md)
+preserves the prior failed start and successful retry.
 
 Last verified: 2026-09-23

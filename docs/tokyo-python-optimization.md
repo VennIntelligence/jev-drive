@@ -44,8 +44,9 @@ and viewer were stopped after measurement.
 Evidence: `/data/runs/b2d/python-opt/report.md` and `measurements.json`. Same Town12 route 1711,
 350 ticks per run, first 20 excluded. Runs 0/3/5 are baselines; 1/2 and 4 are intermediate
 variants; 6/7 are the final optimization repeated. New server/port block for each run; each
-startup verified adapter 0 -> physical GPU 1 UUID `GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`.
-PyTorch is restricted with `CUDA_VISIBLE_DEVICES=1`.
+At the time of those original runs, startup verified adapter 0 -> physical GPU 1 UUID
+`GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`. The current host exposes that one RTX 3090 as CUDA
+index 0. PyTorch sees it directly; do not set `CUDA_VISIBLE_DEVICES`.
 
 Baseline observations: camera data spent approximately 0.02–0.04 ms in the Python queue,
 and image callback copies totaled approximately 0.8 ms per tick. Those are not the dominant

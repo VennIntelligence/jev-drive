@@ -16,8 +16,9 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
   arrive with the next ordinary `git pull` and that is all.
 - There is a second box, the Tokyo box (`ssh ujs@100.108.238.8`), and it has a monitor. It is for *looking*:
   CARLA in a window, a manual drive, a screenshot or recording of a route. Experiments still run on the GPU box.
-  **Its GPU 0 is broken — use GPU 1 only, and CARLA's `-graphicsadapter` rank is inverted there**
-  (`-graphicsadapter=0` is the good card). See [docs/tokyo-box.md](docs/tokyo-box.md).
+  **Tokyo currently exposes one RTX 3090 at CUDA index 0 / PCI 02:00.0; use it directly without
+  `CUDA_VISIBLE_DEVICES`. CARLA `-graphicsadapter=0` was measured on that card.** Recheck the UUID after
+  driver changes. See [docs/tokyo-box.md](docs/tokyo-box.md).
 - Data, checkpoints and envs stay on the remote data disk, never in git.
 - Never commit secrets: passwords, keys, proxy configs, subscription URLs.
 - Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,

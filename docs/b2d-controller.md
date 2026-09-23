@@ -60,10 +60,10 @@ An initialized pose filter tolerates missing compass observations for at most 0.
 
 Truth is isolated in the logger and does not influence controls. It uses matching-frame snapshots and the rear axle including pitch projection. `truth_cross_track_m` measures route tracking; estimated `route_cross_track_m` and controller-local `cross_track_m` are different metrics. The route extends 3 m beyond its official endpoint and latches parking near that endpoint. Its reference still updates on the four-tick schedule, so parking intent can precede the zero-speed reference by up to three ticks.
 
-**Reproduce.** Run from the repository root in the configured Tokyo shell (`DATA_DIR=/data`, physical GPU 1 exposed by `CUDA_VISIBLE_DEVICES=1`; local renderer rank 0). Use a fresh output directory, one worker, an unused server index, and the tmux workflow in [long-runs.md](long-runs.md). A single-route smoke is:
+**Reproduce.** Run from the repository root in the configured Tokyo shell (`DATA_DIR=/data`; the single RTX 3090 is CUDA index 0, with no visibility override; local renderer rank 0). Use a fresh output directory, one worker, an unused server index, and the tmux workflow in [long-runs.md](long-runs.md). A single-route smoke is:
 
 ```bash
-DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_run.py \
+DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_run.py \
   --routes /data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml \
   --route-ids 2390 --workers 1 --server-index 90 --gpu-rank 0 --windowed \
   --rig front3 --width 800 --height 450 --decimate 4 --zero-copy --no-spectator \
@@ -75,7 +75,7 @@ DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_ru
 A paired campaign can append the frozen holdout XML and a separate slope brake-hold check:
 
 ```bash
-DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
+DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
   --routes /data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml \
   --presets carla,tcp,pursuit --seeds 0,1 --server-index 92 \
   --controller-config todos/2026-09-22-b2d-controller/results/controller_config.json \
@@ -86,7 +86,7 @@ DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_co
 The frozen v4 comparison uses distinct per-preset configurations:
 
 ```bash
-DATA_DIR=/data CUDA_VISIBLE_DEVICES=1 /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
+DATA_DIR=/data /data/envs/carla/bin/python scripts/b2d_controller_campaign.py \
   --routes /data/third_party/Bench2Drive/leaderboard/data/drivetransformer_bench2drive_dev10.xml \
   --presets carla,tcp,pursuit --seeds 0,1 --server-index 96 \
   --controller-config todos/2026-09-22-b2d-controller/results/v4-freeze/candidate-pursuit.json \
@@ -120,11 +120,11 @@ Snapshots include source/config hashes rather than relying on HEAD alone. Plotti
 
 The controller stack runs headless on the GPU box as well as on the Tokyo box. Paths come from
 `DATA_DIR` (`CARLA_ROOT`, `BENCH2DRIVE_ROOT`, `B2D_ZOO_ROOT` override), and `Server` renders
-off-screen unless `DISPLAY` is set (`CARLA_WINDOWED=0/1` overrides). Tokyo launchers keep setting
-`DATA_DIR=/data DISPLAY=:0 CUDA_VISIBLE_DEVICES=1`; the Tokyo NVIDIA userspace workaround in
+off-screen unless `DISPLAY` is set (`CARLA_WINDOWED=0/1` overrides). Tokyo launchers set
+`DATA_DIR=/data DISPLAY=:0`; the Tokyo NVIDIA userspace workaround in
 [b2d-controller-lateral.md](b2d-controller-lateral.md) is never used on the GPU box.
 
-- **Tests.** 125 controller tests (`test_b2d_controller*.py`, `envs/carla`), 17 TCP tests
+- **Tests.** 142 controller tests passed and one skipped (`test_b2d_controller*.py`, `envs/carla`), 17 TCP tests
   (`test_b2d_tcp*.py`, `envs/b2d-tcp`) and 15 pose-analysis tests pass there. Four controller tests
   compare against goldens recorded on Tokyo bit for bit; run them with `OPENBLAS_CORETYPE=Barcelona`.
   NumPy's OpenBLAS picks its matmul kernel per CPU (Tokyo's Zen 5 falls back to `Barcelona`, the Xeon
