@@ -43,8 +43,8 @@ from lead.common.base_agent import BaseAgent
 from lead.inference.sensor_agent import SensorAgent
 
 TFV6_SPEEDS = (0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0)
-DEFAULT = dict(p4.DEFAULT, sensor_tick=0.0, max_sim_s=45.0, stuck_s=20.0, tfv6_model_dir="", actor_radius=100.0,
-               vis_radius=60.0)
+DEFAULT = dict(p4.DEFAULT, sensor_tick=0.0, max_sim_s=50.0, stuck_s=30.0, after_trigger_s=20.0, tfv6_model_dir="",
+               actor_radius=100.0, vis_radius=60.0)
 FRONT = p4.WAYMO_CAMS[0]                         # ("front", x, y, z, yaw) in Waymo's rear-axle frame
 
 
@@ -82,7 +82,7 @@ class P5PairAgent(SensorAgent):
             (self.out / "cams" / name).mkdir(parents=True, exist_ok=True)
         self.mx, self.my = p4.distortion_maps(cfg)
         self.fov = math.degrees(2 * math.atan(cfg["render_w"] / 2.0 / cfg["f"]))
-        self._tick, self._ba, self._still_since, self._pred = 0, None, None, None
+        self._tick, self._ba, self._still_since, self._pred, self._t_trig = 0, None, None, None, None
         self._kinds, self._actor_rows = {}, []
         self._t = {k: [] for k in ("tick", "tfv6", "tfv6_base", "tfv6_forward", "expert", "snapshot", "save", "visibility")}
         self._pose = open(self.out / "pose.jsonl", "w")
@@ -324,6 +324,8 @@ class P5PairAgent(SensorAgent):
             self._t["visibility"].append(time.perf_counter() - t0)
             bb = py_trees.blackboard.Blackboard()
             trig = [bool(bb.get("ScenarioRouteNumber%d" % i)) for i in range(2)]
+            if trig[0] and self._t_trig is None:
+                self._t_trig = t
             self._frames.write(json.dumps({"frame": frame, "tick": self._tick, "t": round(t, 4), "files": files,
                                            "std": std, "trig": trig, "lights": self._light_states(),
                                            "vis": vis, "lvis": lvis}) + "\n")
@@ -342,6 +344,8 @@ class P5PairAgent(SensorAgent):
         self._still_since = (self._still_since if self._still_since is not None else t) if speed < 0.2 else None
         if t > self.cfg["max_sim_s"]:
             p4.STOP.update(flag=True, why="max_sim_s")
+        elif self._t_trig is not None and t > self._t_trig + self.cfg["after_trigger_s"]:
+            p4.STOP.update(flag=True, why="after_trigger")
         elif self._still_since is not None and t - self._still_since > self.cfg["stuck_s"] and t > 10:
             p4.STOP.update(flag=True, why="stuck")
         self._t["tick"].append(time.perf_counter() - t_tick)
@@ -360,5 +364,6 @@ class P5PairAgent(SensorAgent):
         (self.out / "actor_kinds.json").write_text(json.dumps({str(k): v for k, v in self._kinds.items() if v}))
         ms = {k: round(1e3 * float(np.mean(v)), 2) for k, v in self._t.items() if v}
         (self.out / "p5_summary.json").write_text(json.dumps(
-            {"ticks": self._tick, "stop": p4.STOP["why"] or "route_end", "tfv6_errors": self._tfv6_errors,
+            {"ticks": self._tick, "stop": p4.STOP["why"] or "route_end", "t_trigger": self._t_trig,
+             "tfv6_errors": self._tfv6_errors,
              "ms_mean": ms, "ms_p95": {k: round(1e3 * float(np.percentile(v, 95)), 2) for k, v in self._t.items() if v}}))

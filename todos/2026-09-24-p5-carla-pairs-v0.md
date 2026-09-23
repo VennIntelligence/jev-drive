@@ -68,7 +68,8 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   Waymo 标定相机（与 P4 逐项相同：972 × 1079、f = 1113.5 px、Waymo 主点与径向畸变、JPEG q95），同时记 100 m 内红绿灯的状态，
   以及前视相机视锥内 60 m 内每个 actor / 红绿灯的可见性（从相机位置向目标 bbox 中心和上半部各打一条 `world.cast_ray`，
   第一个命中点落在目标 bbox 内即算没被遮挡）。另挂 TFv6 自己的传感器（3 相机、LiDAR、4 个 radar、IMU、GNSS、speedometer）做 shadow 推理，见下。
-  录制上限 45 s 仿真时间（与 P4 相同），停住 20 s 提前结束。
+  录制上限 50 s 仿真时间，停住 30 s 提前结束，scenario 触发后 20 s 结束（smoke 里 27515 在红灯前停了 20 s 以上，
+  P4 的 20 s 卡住门槛会在 scenario 发生之前就把路线截掉；触发后 20 s 足够覆盖观测窗口加 5 s 未来）。
 - **确定性检查**（每对）：t_div 是 x⁺ 与 x⁻ 的 ego 后轴位置差 ≥ 1 cm 或航向差 ≥ 0.1° 的第一个 tick。
   **因素第一次可见** t_vis：「因素元素」在 Waymo 前视相机视锥内、60 m 内、ray test 未遮挡的第一个相机帧。
   因素元素 = x⁺ 里被 x⁻ 藏起来的那些 hazard actor（HardBreakRoute：x⁺ 里与 x⁻ 同一 tick 位置差 > 0.1 m 的背景车），加上两侧状态不同的红绿灯。
