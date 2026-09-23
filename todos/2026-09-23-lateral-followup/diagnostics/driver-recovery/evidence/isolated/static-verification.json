@@ -1,0 +1,7 @@
+{
+  "status": "static_verified",
+  "libraries": 37,
+  "soname_links": 22,
+  "manifest_sha256": "911f3311ca383ea6ef79cf34998fd289c72d7f200d11627496143993b8a3ef8c",
+  "gpu_or_library_initialization_performed": false
+}

@@ -1,0 +1,71 @@
+{
+  "state": "frozen_before_first_live_case",
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/analyze_aim.py": {
+      "sha256": "76163d66ed18bfd4e8a2a619ad4a6473d536ab6b3e413698f2ac62a9c5b0f325",
+      "bytes": 30099
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/plot_aim.py": {
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42",
+      "bytes": 10584
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/test_aim_schema.py": {
+      "sha256": "9197a8c26380eca1e2aa4df95e71626253b754365eb12fc61effb90c0ca3bef4",
+      "bytes": 2200
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/routes.csv": {
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+      "bytes": 3293
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/lateral-evidence-v2/analyze.py": {
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+      "bytes": 10894
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/protocol.md": {
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143",
+      "bytes": 13789
+    }
+  },
+  "frozen_copies": {
+    "analyze_aim.py": {
+      "sha256": "76163d66ed18bfd4e8a2a619ad4a6473d536ab6b3e413698f2ac62a9c5b0f325",
+      "bytes": 30099
+    },
+    "protocol.md": {
+      "sha256": "624a72c286282efec63538e1ddaa26c05438f98cc9aa665110fd165ea30e6143",
+      "bytes": 13789
+    },
+    "plot_aim.py": {
+      "sha256": "ac4add41911b8199d03cfda8fc77cdc781e7c188810e3fb33a6d1d2a236fdd42",
+      "bytes": 10584
+    },
+    "test_aim_schema.py": {
+      "sha256": "9197a8c26380eca1e2aa4df95e71626253b754365eb12fc61effb90c0ca3bef4",
+      "bytes": 2200
+    },
+    "lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562
+    },
+    "lateral-evidence-v1/routes.csv": {
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+      "bytes": 3293
+    },
+    "lateral-evidence-v2/analyze.py": {
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+      "bytes": 10894
+    }
+  },
+  "verification": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/verification-v3/schema-tests.log": "819d6dc6ea48bd51ab9292ee854a4384ea04c12927f702011df8bcca561118ce",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/verification-v3/final-checks.json": "19e23d083062ded1a61c6e4e885c54e2d0db806e2b15e1757954cd163a2e47ca",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/verification-v3/same-analysis/required-conditions.json": "be9c7248bd12da60cf562ddd15ba09c363a3a49830627edf13805f2d00c97081",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/verification-v3/missing-frame-analysis/required-conditions.json": "6427d06ff8e85b1b2eff26bec9383ccfa10235122963181949ceceed6f6d797d",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/analysis/verification-v3/figures/plot-source-manifest.json": "c9118a8f309f6d0bf301946c3802c50a75cf0325386adb0ad7161732b296b67b"
+  },
+  "performance_conditions_unchanged": true
+}

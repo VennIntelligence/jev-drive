@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-plot-early-verification-archive",
+  "captured_at": 1790131817.10522,
+  "files": [
+    {
+      "path": "plot-verification-v1/figures/four-window-summary.pdf",
+      "bytes": 12609,
+      "sha256": "684311343362381cd85c20f623882c2ff9e7eb544b24c65c1f9ae68e29733b0a"
+    },
+    {
+      "path": "plot-verification-v1/figures/four-window-summary.png",
+      "bytes": 107432,
+      "sha256": "645f6d47d799be9d7fb717146f1220d72cb960e5ada7f8e488d4af25e6151a43"
+    },
+    {
+      "path": "plot-verification-v1/figures/manifest.json",
+      "bytes": 5221,
+      "sha256": "d2fb81bbe0ac7eb36616df925cfa8fdb24d0d99f0f9600e53848bee9dcaf501d"
+    },
+    {
+      "path": "plot-verification-v1/figures/plot-data.csv",
+      "bytes": 1643092,
+      "sha256": "ef4b555aa0de168475c2a85b035014b804f0d861fecd3ada2a8d6ad3265160f2"
+    },
+    {
+      "path": "plot-verification-v1/figures/plot-notes.json",
+      "bytes": 5306,
+      "sha256": "a88da99ca2c328361e6cd1ec2a4a97ecd6538a7592734310ed8d3029ef373dbc"
+    },
+    {
+      "path": "plot-verification-v1/figures/plot-source.py",
+      "bytes": 10275,
+      "sha256": "0a1cf0a24c34f833b0989af063c53fb3fedbc6140eb71b2ee21be3bf196f72c7"
+    },
+    {
+      "path": "plot-verification-v1/figures/plot_style.py",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-full.pdf",
+      "bytes": 44585,
+      "sha256": "1ea3b15681d056079765434d287c56e2fc1e757a6fd601f45c4817b3948ccd7d"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-full.png",
+      "bytes": 464936,
+      "sha256": "5ae4607b3c7393c641f567bde86291b14a7413656323dfbfbb9b462f37e7ca9c"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-window-1.pdf",
+      "bytes": 18984,
+      "sha256": "b20b96d680b172f00377a51161550ab3fce78497cc1f1da7e9308a7be475a11c"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-window-1.png",
+      "bytes": 368947,
+      "sha256": "3c68d3440c33208f94e4ef1c76327fc763c29d14667e4a67cea9571da3598d66"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-window-2.pdf",
+      "bytes": 19156,
+      "sha256": "824848487f780b812b10514f1cda0c6da31e1066cdc85b47791df0e3727f08a6"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-17563-window-2.png",
+      "bytes": 378869,
+      "sha256": "f1570d583094165aba786ed3a534835a150ea1a307ad9970daf23959fe233edd"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-24240-full.pdf",
+      "bytes": 37254,
+      "sha256": "505e6c0d3a9e44da8b63b13477731c2788d2535927c39997505a06c2f422f6ce"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-24240-full.png",
+      "bytes": 390995,
+      "sha256": "c5f30bee98da73febecd7fa98b69872ff40fa26e54760acb32c62f2685a9b461"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-24240-window-1.pdf",
+      "bytes": 22859,
+      "sha256": "1da5b9bf1bcc29e73d4ece9762d1f08c3948ffac5d34df0b7617c936b2b4b665"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-24240-window-1.png",
+      "bytes": 470438,
+      "sha256": "11d2f46d866f660db0121aacb32a21e2bcb6001a430c0b77ae571efd6ceea04d"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-26966-full.pdf",
+      "bytes": 34055,
+      "sha256": "1ce715bae070c863e36cd4c7e31c6519b6c32065d48f9c9eebee355b9c83a1b4"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-26966-full.png",
+      "bytes": 384993,
+      "sha256": "705598a2c0cc52808a0c1bcba69b91e188a255db56331d8860fcda2082b98441"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-26966-window-1.pdf",
+      "bytes": 19144,
+      "sha256": "e2ae2be947c482526929ae1a8cc5815ee0c7c05437fe5fedd96419da54dfc958"
+    },
+    {
+      "path": "plot-verification-v1/figures/route-26966-window-1.png",
+      "bytes": 371058,
+      "sha256": "1b7dc7b7a54e90ef746fa8577f15fcfce04e8873659e928d7ea787e0cba2fd36"
+    },
+    {
+      "path": "plot-verification-v1/figures/summary-plot-data.csv",
+      "bytes": 3613,
+      "sha256": "a490a06c96ef6bc5ea55c16a4ceb1fe062c35c79f0ed09b702afda6715fc6c73"
+    },
+    {
+      "path": "plot-verification-v1/figures/window-plot-data.csv",
+      "bytes": 427765,
+      "sha256": "cef41daf6b99010395cb5f42c9f68ab9ea9cef75ffc77cbe2fba21c8b6aac8fa"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/cases.csv",
+      "bytes": 14,
+      "sha256": "77fe9aab4fde63cdf3a9a02df497a3b86f7da79664dce0c6e62bb895ca1a4f5e"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/coverage.json",
+      "bytes": 3,
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/frames.csv",
+      "bytes": 1643092,
+      "sha256": "ef4b555aa0de168475c2a85b035014b804f0d861fecd3ada2a8d6ad3265160f2"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/manifest.json",
+      "bytes": 955,
+      "sha256": "ab9cfc158b52113700a486e8eeeb2f2515c497e964b3abe231ecb70edd9818bb"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/metrics.csv",
+      "bytes": 87453,
+      "sha256": "c8d0df90581cf072db74fcfd98170fb829ebd38f1f44f45e979456cfe5dff624"
+    },
+    {
+      "path": "plot-verification-v1/fixture-analysis/required-conditions.json",
+      "bytes": 68,
+      "sha256": "be80685b2afe54f82e577d3174bded5b37735ff20cb5e99ecea9056d5ad5463e"
+    },
+    {
+      "path": "plot-verification-v1/fixture-source.py",
+      "bytes": 2961,
+      "sha256": "d5aa403e336bdd7e2f897b88a37f88b27c70bd40f307c6d20eaa99aad89a274c"
+    },
+    {
+      "path": "plot-verification-v1/unit-checks.json",
+      "bytes": 144,
+      "sha256": "2b2fcf22c24a8b965c243981f6e5ca1e3d5c2c01685ae50dd1de57469b75d676"
+    },
+    {
+      "path": "plot-verification-v2/figures/four-window-summary.pdf",
+      "bytes": 13161,
+      "sha256": "e61e7978283a4f9a24a3ffd118d7583fcf6cc2ab72299f99da46e6c0d2e6fdc7"
+    },
+    {
+      "path": "plot-verification-v2/figures/four-window-summary.png",
+      "bytes": 116240,
+      "sha256": "10ac7cd512d4ee8eb0c23e7421d0ced55ea6bb32e2ac5a8c620a0ab2db1bf88b"
+    },
+    {
+      "path": "plot-verification-v2/figures/manifest.json",
+      "bytes": 5221,
+      "sha256": "73abaf339a663ee2c72ce631348bccbaaf1e6177c6cd2550526e9240fff22e55"
+    },
+    {
+      "path": "plot-verification-v2/figures/plot-data.csv",
+      "bytes": 1643092,
+      "sha256": "ef4b555aa0de168475c2a85b035014b804f0d861fecd3ada2a8d6ad3265160f2"
+    },
+    {
+      "path": "plot-verification-v2/figures/plot-notes.json",
+      "bytes": 5306,
+      "sha256": "c2aa915d4845a4f47fc72b57c195db845e59c65170eaf2bd48db9862012d0a3c"
+    },
+    {
+      "path": "plot-verification-v2/figures/plot-source.py",
+      "bytes": 10543,
+      "sha256": "69d9145eed1b9aedace7760feb5512d3851ee66d7cb39090b2d8126b16a5dc7f"
+    },
+    {
+      "path": "plot-verification-v2/figures/plot_style.py",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-full.pdf",
+      "bytes": 44884,
+      "sha256": "0d60ea247eabbc2868e9f6ec2d476ab15ca2be0d1ddffe642c3c5490e0edf3a6"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-full.png",
+      "bytes": 465263,
+      "sha256": "b7d742b91294c2fc5fe1b49e5480278dec8b18f003d5ed7afda36c7033d4a383"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-window-1.pdf",
+      "bytes": 19256,
+      "sha256": "b050e301453ae0225126a160e2f283014a1cd0dd4b760dc4eeee39af0a2a68b7"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-window-1.png",
+      "bytes": 372766,
+      "sha256": "da478e1935f5e3a04887183072a1bd6aa22cde989415d0567eb6eed00ad1b709"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-window-2.pdf",
+      "bytes": 19439,
+      "sha256": "0bd4f0abf8269f3d9865dabceddacf0458854d5fdbfcd433eb65b36672890c91"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-17563-window-2.png",
+      "bytes": 381589,
+      "sha256": "e29fb5f94031a5e46a59bb6d395d9aff4b50dd32ef34e810a1814751bacfe08e"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-24240-full.pdf",
+      "bytes": 37506,
+      "sha256": "f4839d132034d73644d96bcd4e43162c932f13536ee9c565a3c6c5e9a58c09f2"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-24240-full.png",
+      "bytes": 394784,
+      "sha256": "0fd948387824571383ab544fb53e12954ca001662d741a71076dc38eeed8def5"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-24240-window-1.pdf",
+      "bytes": 23174,
+      "sha256": "3d941ab0fd413376467e222fbc6e60ee921f80f95a6e017049a77e2b5e437d94"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-24240-window-1.png",
+      "bytes": 470749,
+      "sha256": "b5ec5c07cc1d948e7a193991696479b7b4af68fc93d8987548a77e33f91755eb"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-26966-full.pdf",
+      "bytes": 34395,
+      "sha256": "16fad45820cb3108a7ad7cdd1edb3134450d281af77c17dff311bc7b49c19c8b"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-26966-full.png",
+      "bytes": 388569,
+      "sha256": "b0617e23be460d6fbd16591521fac6c4af82d9ab7d725d7b16139df2ffab86bf"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-26966-window-1.pdf",
+      "bytes": 19386,
+      "sha256": "80dc187c462c461cbad61fbff6e3085914b8a51498b717591ebb4ce0ec6c5edf"
+    },
+    {
+      "path": "plot-verification-v2/figures/route-26966-window-1.png",
+      "bytes": 374521,
+      "sha256": "423629f79f15c1b8067c81f7ffe1b424b675aea9f8151193470d21d1b92fd742"
+    },
+    {
+      "path": "plot-verification-v2/figures/summary-plot-data.csv",
+      "bytes": 3613,
+      "sha256": "a490a06c96ef6bc5ea55c16a4ceb1fe062c35c79f0ed09b702afda6715fc6c73"
+    },
+    {
+      "path": "plot-verification-v2/figures/window-plot-data.csv",
+      "bytes": 427765,
+      "sha256": "cef41daf6b99010395cb5f42c9f68ab9ea9cef75ffc77cbe2fba21c8b6aac8fa"
+    }
+  ],
+  "file_count": 54,
+  "total_bytes": 12251526
+}

@@ -1,0 +1,162 @@
+{
+  "26966/baseline-zero/1": {
+    "expected_count": 70,
+    "observed_count": 70,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "26966/candidate-fixed-k/1": {
+    "expected_count": 70,
+    "observed_count": 70,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "17563/baseline-zero/1": {
+    "expected_count": 70,
+    "observed_count": 70,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "17563/baseline-zero/2": {
+    "expected_count": 71,
+    "observed_count": 71,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "17563/candidate-fixed-k/1": {
+    "expected_count": 70,
+    "observed_count": 70,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "17563/candidate-fixed-k/2": {
+    "expected_count": 72,
+    "observed_count": 72,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "24240/baseline-zero/1": {
+    "expected_count": 117,
+    "observed_count": 117,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  },
+  "24240/candidate-fixed-k/1": {
+    "expected_count": 117,
+    "observed_count": 117,
+    "minimum_count": 20,
+    "missing_counts": {
+      "cte": 0,
+      "heading": 0,
+      "rate": 0,
+      "raw_steer": 0,
+      "actual_speed": 0,
+      "reference_speed": 0,
+      "speed_error": 0,
+      "lateral_accel": 0,
+      "lateral_jerk": 0
+    },
+    "entered": true,
+    "exited": true,
+    "complete_frames_and_truth": true,
+    "complete": true
+  }
+}

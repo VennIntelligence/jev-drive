@@ -1,0 +1,235 @@
+{
+  "created_at": 1790131817.1442745,
+  "raw_root": "/data/runs/b2d/controller/lateral-followup",
+  "roots": [
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-g1-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g1-v1.json",
+      "files": 46,
+      "bytes": 24727939,
+      "inventory_sha256": "3260d5a96c94bea474cf7cc38c5be24f41162a1b371a928ec1e766cb2f872000",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v1.json",
+      "files": 83,
+      "bytes": 713658,
+      "inventory_sha256": "e88c0ce5730899e4391838a2739d0df10da6c9ca22d1189978ad7670e6fe56e9",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2.json",
+      "files": 138,
+      "bytes": 11914697,
+      "inventory_sha256": "45b8babf84d265be00654c040e7a9ffa21323fc4f72500029cc74505d62085f0",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-analysis-root-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2-analysis-root-v1.json",
+      "files": 10,
+      "bytes": 1750866,
+      "inventory_sha256": "da5644686a8b3fcaf8a07261641ec88b1040cf908b3aa032edfbb7bb211b765a",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v2-figures-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-g2-v2-figures-v1.json",
+      "files": 20,
+      "bytes": 5632693,
+      "inventory_sha256": "5b61d8f19945bfe95387ec529ed507087c5a13c33e2f5bc013e32ec38ac01b79",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/aim-helper-verification-archive",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/aim-helper-verification-archive.json",
+      "files": 405,
+      "bytes": 94979002,
+      "inventory_sha256": "4b23bdecf07e2cfb3964dc8abafdbf2666a8228c500f2fac7c7210a94d0058ef",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/circle-sampling-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/circle-sampling-v1.json",
+      "files": 5,
+      "bytes": 439046,
+      "inventory_sha256": "1fbb00b2e2b8b71341f4182ff26c3699233f20029fcbe775529e350cabe111bc",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/controller-update-replay-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/controller-update-replay-v1.json",
+      "files": 8,
+      "bytes": 3018340,
+      "inventory_sha256": "c90213b3f7ab193775c04f63d4a3963da1c30d698efed28d9f715de1a445df8e",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/interpolation-shadow-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/interpolation-shadow-v1.json",
+      "files": 9,
+      "bytes": 330154,
+      "inventory_sha256": "917907eb2be4a9617c78e3af6aa49aec7b74bfebfde07f2a16fe06c8ca60e1f0",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/local-diagnostic-figures-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/local-diagnostic-figures-v1.json",
+      "files": 19,
+      "bytes": 1577811,
+      "inventory_sha256": "e72cce7e77c49caafd04f35edd2d3c928331a8fc2a6c186ea5a07af6ae407af2",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-analysis-verification-v1.json",
+      "files": 152,
+      "bytes": 50970538,
+      "inventory_sha256": "9b58c372b137c24823648c5023509483e6d7733d85aa2b8445d75237e5c961b8",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v2",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-analysis-verification-v2.json",
+      "files": 152,
+      "bytes": 50972281,
+      "inventory_sha256": "2cd7b9b0e897d347e2bc314452494cc0c231caacad79a630e5c97b1fd26e806e",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-compensation-replay-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-compensation-replay-v1.json",
+      "files": 7,
+      "bytes": 1106207,
+      "inventory_sha256": "29332871489efcb36ab44a8a9821970902bed9e96b1f300dd1e68a35faa0cbd5",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-course-audit-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v1.json",
+      "files": 0,
+      "bytes": 0,
+      "inventory_sha256": "3fe37c9e5cd423d6bd47679a4b08b63971fe25750c4ccf551afad70091f6d243",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-course-audit-v2",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v2.json",
+      "files": 0,
+      "bytes": 0,
+      "inventory_sha256": "66e7efc4b66cc786d91381600be62fe5cb7a8c32cd3ae75c649f7b035ec2702f",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-course-audit-v3",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-course-audit-v3.json",
+      "files": 6,
+      "bytes": 797386,
+      "inventory_sha256": "c075e534017e85cdc184d862c5790ae0f86762fcc50eccc284ab16b6cd550012",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1.json",
+      "files": 143,
+      "bytes": 12861139,
+      "inventory_sha256": "981fbbc14208bf593f6ba055da0f9e76abb8a5baebd218e010225ada442b3b4d",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1-analysis-v1.json",
+      "files": 13,
+      "bytes": 4315521,
+      "inventory_sha256": "58dd35d685daac8c571920434c23e56ed881f819b0cdfda49f33b679bf8d578c",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-figures-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-g2-v1-figures-v1.json",
+      "files": 23,
+      "bytes": 7506585,
+      "inventory_sha256": "69be51979a0cb130be67ef1733d0ecfcacfcac24d347cf3b6ed47a4463468fbf",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-lateral-regression-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-lateral-regression-v1.json",
+      "files": 6,
+      "bytes": 129307,
+      "inventory_sha256": "fc3a0ca85a60d1f4d7600660fc43ffa034bf28c5dd256982cb7164b9659ddfee",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-plot-early-verification-archive",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-early-verification-archive.json",
+      "files": 54,
+      "bytes": 12251526,
+      "inventory_sha256": "24dfe4739905123f220765a6e8fafa7f02d8528c0bc141db868fcfb6b15aea85",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v3",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-verification-v3.json",
+      "files": 23,
+      "bytes": 5564719,
+      "inventory_sha256": "d50e54b241aa32ef083ac4497b6361800afe1a436b73ad8c70e7a3fcbc0f8ab8",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v4",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-plot-verification-v4.json",
+      "files": 23,
+      "bytes": 5581646,
+      "inventory_sha256": "fb2a6daa9213f1189322d9413ae1455769032d375b961b6651c28480668d3fff",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-production-equivalence-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-production-equivalence-v1.json",
+      "files": 7,
+      "bytes": 2928252,
+      "inventory_sha256": "a7499ebea3625035e8f80c9a91638d4139436833a2c7bac825850c86ad56a4c4",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-propagation-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-propagation-v1.json",
+      "files": 6,
+      "bytes": 1136126,
+      "inventory_sha256": "3c7c65570c54ea0ee5c478c62aca96dde93930481f91b31e84d79e700190445f",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-propagation-v2",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-propagation-v2.json",
+      "files": 6,
+      "bytes": 1135984,
+      "inventory_sha256": "ec737afb46c7120077815b0a5a1ded07bb037063f5676dd7113800e8cb1e7b5b",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-regression-article-v2",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-regression-article-v2.json",
+      "files": 14,
+      "bytes": 727970,
+      "inventory_sha256": "9c730fa5fa1dd8cad67ce95843322fdde04592e9577e7b1aa3e27aec010df621",
+      "verification": "all_file_hashes_match"
+    },
+    {
+      "root": "/data/runs/b2d/controller/lateral-followup/pose-shadow-v1",
+      "inventory": "todos/2026-09-23-lateral-followup/results/raw-inventory-v1/pose-shadow-v1.json",
+      "files": 9,
+      "bytes": 3219544,
+      "inventory_sha256": "809583958e9feee777d63dfd08cfc8fb458d4acf375602e03eede7f48b781184",
+      "verification": "all_file_hashes_match"
+    }
+  ],
+  "total_files": 1387,
+  "total_bytes": 306288937,
+  "counting": "Readable inventory entries, including repeated source/fixture dependency links; not deduplicated storage.",
+  "helper_sha256": "cf1bd7d3e3230f0f214c90cc67a07401688cd68aa99756163a86a5e0872b74f6",
+  "script_sha256": "555905c715772527e3f12faa621e35d9b5437ad8f9dde7211a38332bf1d9fb6c"
+}

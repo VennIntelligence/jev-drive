@@ -1,0 +1,73 @@
+{
+  "verification": [
+    {
+      "route": "26966",
+      "variant": "baseline-zero",
+      "frames": 387,
+      "frozen_heading_station_max_error": 0.0
+    },
+    {
+      "route": "26966",
+      "variant": "candidate-fixed-k",
+      "frames": 387,
+      "frozen_heading_station_max_error": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "baseline-zero",
+      "frames": 434,
+      "frozen_heading_station_max_error": 0.0
+    },
+    {
+      "route": "24240",
+      "variant": "candidate-fixed-k",
+      "frames": 434,
+      "frozen_heading_station_max_error": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "baseline-zero",
+      "frames": 559,
+      "frozen_heading_station_max_error": 0.0
+    },
+    {
+      "route": "17563",
+      "variant": "candidate-fixed-k",
+      "frames": 559,
+      "frozen_heading_station_max_error": 0.0
+    }
+  ],
+  "inputs": {
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/frames.csv": "50cb21fb141a7e6901a2975bf31ae19234ed1f559ece16a0b32a9f11e73916ad",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1/required-conditions.json": "18f7c98292b29b78d568a91d5471ed4056c9163e3f61cf2d06002d3e04e60713",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/lateral-evidence-v1/routes.csv": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/control.jsonl": "3969b46d2121330762058aceeddd93728387d0764db86cf7ec7397aade6e9f83",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/validation_trace.json": "c9752f132dfe4ee87ea36ca15a9fb5dff653aa40b8ddf259c9e60276de62238d",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/route_reference.json": "64da64077b33561080ba9f6c5fb1c7c3389b843e1aab82d806b5f9c88be3951d",
+    "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/route_reference.json": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/control.jsonl": "f2c346e0d45eaa13221b68472ef62038e6e9ead32160e17778cca9e84bfe3f2b",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/validation_trace.json": "a567b91b6eb376fc98eb19c64c1eddd7cd50c947767c1e0f35f06cc227aba6de",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/route_reference.json": "3764210ddd95614db306879f35f4df58ab6575e6cd37a888587bce9f1fc4bc25",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/control.jsonl": "6bf190e8628a8ee7a0e3d3064267ffd5000d808e5b7513d936aa04f965ede5bd",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/validation_trace.json": "6ef469cc1d1d9b18762d693a362fae98bd552036b100ae58b785a1131dea7845",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/route_reference.json": "756de075458e05b18ee9239bdacdd1867854ec4b2e1f53f2dd93a9882078989d",
+    "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/route_reference.json": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/control.jsonl": "bc8911749b9a2cd2c9cb35d8870654755a3bc6eb038be7e02367161a1ef62f22",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/validation_trace.json": "0e10106a45ed986f7c1157c07826750e50a99c50fd1755ded8666535385b58f3",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/route_reference.json": "fec6c1d17bcf27845bc745e987692120fac42495acf58dffd0fb26227c5cfda9",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/control.jsonl": "a5a240dbfaf9bbcfeded986a6c288e777058040aa34dfb23573201f61be259af",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/validation_trace.json": "0295c5e3e3d3419267c681071e34b53b1144ff2578c80ba11ff30ee612ca9d27",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/route_reference.json": "0e7807b630015643c167ca13ea827716cd60087d65cf1c575a45775b129e0828",
+    "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/route_reference.json": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/control.jsonl": "3dc24fa84299f02ada5d3eb2495f52fe02a7893f6e2fb95eeca205cdc5a09cd1",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/validation_trace.json": "2fd5036c831a9f8a65cfd91e325375a2341ccb6a93d7708c412460c839cd41b6",
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/route_reference.json": "89eba125ff965817b297ebef2c82cdcc2a87b3a50083f854efd3a421cabc1c69",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/diagnostics/pose_course_audit.py": "13bf1fb3d796c616a860637aa51ef8e9c9de2a7ba6ad4a2e0c2019ae23ce6ca8"
+  },
+  "coefficient_not_refitted": 0.010659832,
+  "body_gate_unchanged": true,
+  "right_baseline_p95_plus1_deg": 5.271546829218098,
+  "right_exceeding_frames": 8,
+  "convention": "CARLA right-positive angles. Frozen body error is current yaw/current5m-centered-reference. Interval course is atan2(current rearXY - previous rearXY), naturally centered between ticks. Aligned body and reference use wrapped midpoint yaw and nearest projection of midpoint rearXY. Course/current-reference metric retained separately to expose timing mismatch.",
+  "retention": "All fixed-window samples retained. Invalid first/gap/zero-displacement course remains in full frames with explicit reason; per-metric count shown. No low-speed rejection. No added performance gate or substitution for failed frozen body-heading condition."
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-propagation-v1",
+  "captured_at": 1790131817.11477,
+  "files": [
+    {
+      "path": "frames.csv",
+      "bytes": 1114480,
+      "sha256": "6a18efdae8f48a90b9b3b92b1bf7defb690c7a76ba7ae765686e20c626b5cdb5"
+    },
+    {
+      "path": "inputs-sha256.json",
+      "bytes": 3649,
+      "sha256": "9d1805fed31945866c295336ca7f7e8013f810316b2fb8cc0b8edbd436432bcc"
+    },
+    {
+      "path": "outputs-sha256.json",
+      "bytes": 441,
+      "sha256": "863f06a3591641ae56f40ece2d8d0e64d935e57a4d613d23dab6cf0a88b96b8b"
+    },
+    {
+      "path": "recompute.py",
+      "bytes": 8106,
+      "sha256": "d8862e98d41d8bdf4ddb2b9c0eaeae3e76b38a09ca6dc98359897c36f26fa0d3"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 1457,
+      "sha256": "974ed7b9e59d775c9a695abcee2fe6829e6d7bc86d706db394392c0743e7c7cb"
+    },
+    {
+      "path": "windows.csv",
+      "bytes": 7993,
+      "sha256": "026e17dee991c89f0cf8daee0ff2854a287feec1ca71e0485f28b0f7bbf2d977"
+    }
+  ],
+  "file_count": 6,
+  "total_bytes": 1136126
+}

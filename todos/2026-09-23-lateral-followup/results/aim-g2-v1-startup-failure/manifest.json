@@ -1,0 +1,11 @@
+{
+  "sources": {
+    "/data/runs/b2d/controller/lateral-followup/aim-g2-v1/events.jsonl": "a20af3832be0c4edf3d8dc8ccfac925c362f03fca5d85745bda29846193e7aea",
+    "/data/runs/b2d/controller/lateral-followup/aim-g2-v1/analysis-provenance/manifest.json": "29531c7fcae0f0acebe740ea82d54554a76c944f5d71d4f76089d228a8b43e83"
+  },
+  "outputs": {
+    "README.md": "9e4b19bc2f78531b643968ceacb5777bcebc840457af128f74bb176e32d9ea4c",
+    "status.json": "45af2825181d9e710c372fd96dc1d6064e510722d4c6d4275f531b53286476c3",
+    "events.jsonl": "a20af3832be0c4edf3d8dc8ccfac925c362f03fca5d85745bda29846193e7aea"
+  }
+}

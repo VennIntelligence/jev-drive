@@ -1,0 +1,39 @@
+{
+  "raw_artifact_root": "/data/runs/b2d/controller/lateral-followup/pose-regression-article-v2",
+  "raw_manifest_sha256": "e489ea5c17d69318172dcf1c3f911faafeeb867e31b83a708a890a2c9b6b1a3c",
+  "local_pngs": {
+    "/home/ujs/mycode/jev-drive/research/figs/b2d-pose-rear-lateral-windows-article-v2.png": {
+      "raw_path": "/data/runs/b2d/controller/lateral-followup/pose-regression-article-v2/rear-lateral-velocity-four-windows.png",
+      "sha256": "918e6b806cf12323a9134016c0558ba9882ff9c93d4bdc864a136202bbe9fecb"
+    },
+    "/home/ujs/mycode/jev-drive/research/figs/b2d-pose-rear-lateral-rms-article-v2.png": {
+      "raw_path": "/data/runs/b2d/controller/lateral-followup/pose-regression-article-v2/rear-lateral-residual-rms.png",
+      "sha256": "9fb8c72d8ec92ee228ea7bc3970bc9a7207effbfa78643b435b1a7e9e52ba04d"
+    }
+  },
+  "outputs": {
+    "rms-plot-data.csv": "b685747eea8ac6cfd97b4794ec3696b68524eb22265d0629e151701531ee49ac",
+    "plot-data.csv": "06e180e90b715592c0ba90807e81be9147ad85689800cd47cedcc22279403135",
+    "README.md": "544af2c88c3ad847fd3c5b551cc2376ef420f5356afdf961ab7f16c9ab5b1760",
+    "plot_pose_regression_article.py": "e17db4383fc717c42996c320b97b3359d5abd1c339c5bf7dfbf366859b5fa741",
+    "verification.json": "7e014a7600198eec326148b610f78771d8348d1058e07812bf8ebf61dd2f74e9",
+    "export-sizes.json": "b882ba7c741528a12520b6c7530805027d3d83df55357a97d5b5b4c756c72fa5",
+    "raw-manifest.json": "e489ea5c17d69318172dcf1c3f911faafeeb867e31b83a708a890a2c9b6b1a3c",
+    "plot_style.py": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+    "v1-index-snapshot.md": "1a4240c962b63c07e022f7b95f97b21770009e94a51b071f835f9f7d14b53ec3",
+    "fit-summary.json": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+  },
+  "current_index": {
+    "path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-diagnostic-figures.md",
+    "sha256": "1b996f21791bf268a621b5962cb7020659a26c9de6d07c0957b87c553108f313"
+  },
+  "v1_index_relocation": {
+    "original_path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-diagnostic-figures.md",
+    "frozen_path": "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/results/pose-regression-article-v2/v1-index-snapshot.md",
+    "sha256": "1a4240c962b63c07e022f7b95f97b21770009e94a51b071f835f9f7d14b53ec3",
+    "matches_original_caption_manifest": true
+  },
+  "numeric_csvs_byte_identical_to_v1": true,
+  "v1_artifacts_unchanged": true,
+  "frozen_hermite_files_unchanged": true
+}

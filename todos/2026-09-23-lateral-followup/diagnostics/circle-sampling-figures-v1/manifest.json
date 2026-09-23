@@ -1,0 +1,13 @@
+{
+  "source": "/data/runs/b2d/controller/lateral-followup/circle-sampling-v1",
+  "inputs": {
+    "/data/runs/b2d/controller/lateral-followup/circle-sampling-v1/frames.csv": "e3d76673f05dd24cb03eec80dc9b06c5c4b0a91f7fc67a22c24530d9f8189f39"
+  },
+  "outputs": {
+    "circle-sampling.pdf": "5c28a422754d6a949d406b849045199dfc16a36542feea355177b0334601a963",
+    "plotted-samples.csv": "cf978f888c2a288aa4884df0b913fbe3188717f5ce8ebe26b463145dcf735146",
+    "plot_sampling.py": "6992d0298f6cd5f4515ee5d11769fe003fbb741dc7de528a88d97ff34c492cea",
+    "circle-sampling.png": "a59ba49e8b063e54500434b36cea16ed03750b72911a092bbb9234f079964d03"
+  },
+  "scope": "Fixed ticks20..39 of synthetic prescribed motion; no filtered values, physical controller loop or CARLA result."
+}

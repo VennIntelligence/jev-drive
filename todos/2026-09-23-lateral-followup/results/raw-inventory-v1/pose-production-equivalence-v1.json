@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-production-equivalence-v1",
+  "captured_at": 1790131817.113764,
+  "files": [
+    {
+      "path": "frames.jsonl",
+      "bytes": 2858583,
+      "sha256": "aa605529ac91dd419cdd78f5a3ad1cafdd1b4f1425e5384c7f258bb702eb4dd2"
+    },
+    {
+      "path": "outputs-sha256.json",
+      "bytes": 593,
+      "sha256": "2eec5eb82c44e9e620fdce5900ea00f76e98039d89aeba408b8386addb3f4b6a"
+    },
+    {
+      "path": "source/b2d_agent.py",
+      "bytes": 25261,
+      "sha256": "f470df21512fc3959a0fffd2032a481ae99579be45b889a441c7877ece4e2bbe"
+    },
+    {
+      "path": "source/b2d_controller_adapter.py",
+      "bytes": 26400,
+      "sha256": "c42e219740f83490d703c9c1cc0c75bb1dbc1fd616691b5558257157147fd75e"
+    },
+    {
+      "path": "source/test_b2d_controller_pose_lateral.py",
+      "bytes": 7138,
+      "sha256": "c53d87c8a3524f05db4b991ee79f7113909a18e4b27c113b475d50c75af938ca"
+    },
+    {
+      "path": "source/verify_pose_lateral.py",
+      "bytes": 4687,
+      "sha256": "6bc34a0373ed560916bb5c8a5582b55ddd1f2fe10edea2a13424dcf61579c3d8"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 5590,
+      "sha256": "0979db62dba6c338b900dba4e76ec7574411b83bbb0fa99345699c6591539665"
+    }
+  ],
+  "file_count": 7,
+  "total_bytes": 2928252
+}

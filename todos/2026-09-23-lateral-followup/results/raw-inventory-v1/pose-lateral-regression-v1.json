@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-lateral-regression-v1",
+  "captured_at": 1790131817.096888,
+  "files": [
+    {
+      "path": "frames.csv",
+      "bytes": 107297,
+      "sha256": "16eb08ab672df9a17cb475b6277ac631d3bea3f7e570fd060d75c51af351cd83"
+    },
+    {
+      "path": "leave-one-window-out.csv",
+      "bytes": 1294,
+      "sha256": "20242f412afad2d9083995d37b3d83e8dc2fbf5c2b6c7245472ec41d5915e282"
+    },
+    {
+      "path": "outputs-sha256.json",
+      "bytes": 442,
+      "sha256": "8595deb067aa846d9332a20e7b18f005ee979802fe390b2fccf24c76b138dcaf"
+    },
+    {
+      "path": "recompute.py",
+      "bytes": 6070,
+      "sha256": "00c39edc744dc5bcb177e8b6db182b038f4c265b5533694bd065b9ff750e135e"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "windows.csv",
+      "bytes": 2313,
+      "sha256": "28a06c479072a689a643a405148e0f23f89780c6b1222341d2402f1f9b328047"
+    }
+  ],
+  "file_count": 6,
+  "total_bytes": 129307
+}

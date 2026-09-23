@@ -1,0 +1,23 @@
+[
+  {
+    "route": "26966",
+    "frames": 387,
+    "output_unequal_values": 0,
+    "diagnostic_unequal_values": 0,
+    "longitudinal_changed": false
+  },
+  {
+    "route": "24240",
+    "frames": 434,
+    "output_unequal_values": 0,
+    "diagnostic_unequal_values": 0,
+    "longitudinal_changed": false
+  },
+  {
+    "route": "17563",
+    "frames": 559,
+    "output_unequal_values": 0,
+    "diagnostic_unequal_values": 0,
+    "longitudinal_changed": false
+  }
+]

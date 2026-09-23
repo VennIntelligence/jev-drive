@@ -1,0 +1,3 @@
+index, uuid, driver_version, pci.bus_id, name
+0, GPU-0866641f-3b04-bd10-d640-21afd1f9845e, 580.159.03, 00000000:01:00.0, NVIDIA GeForce RTX 3090
+1, GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1, 580.159.03, 00000000:03:00.0, NVIDIA GeForce RTX 3090

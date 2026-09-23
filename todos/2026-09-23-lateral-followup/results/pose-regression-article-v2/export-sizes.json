@@ -1,0 +1,18 @@
+{
+  "rear-lateral-velocity-four-windows": {
+    "width_in": 6.875,
+    "height_in": 6.45,
+    "png_dpi": 300,
+    "png_bytes": 384174,
+    "pdf_bytes": 27485,
+    "png_under_500KiB": true
+  },
+  "rear-lateral-residual-rms": {
+    "width_in": 6.875,
+    "height_in": 2.5,
+    "png_dpi": 300,
+    "png_bytes": 87311,
+    "pdf_bytes": 9740,
+    "png_under_500KiB": true
+  }
+}

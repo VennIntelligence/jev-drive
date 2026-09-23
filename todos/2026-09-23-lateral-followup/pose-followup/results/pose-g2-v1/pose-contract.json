@@ -1,0 +1,62 @@
+[
+  {
+    "route": "26966",
+    "variant": "baseline-zero",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 387,
+    "control_count": 387
+  },
+  {
+    "route": "26966",
+    "variant": "candidate-fixed-k",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 387,
+    "control_count": 387
+  },
+  {
+    "route": "17563",
+    "variant": "baseline-zero",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 559,
+    "control_count": 559
+  },
+  {
+    "route": "17563",
+    "variant": "candidate-fixed-k",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 559,
+    "control_count": 559
+  },
+  {
+    "route": "24240",
+    "variant": "baseline-zero",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 434,
+    "control_count": 434
+  },
+  {
+    "route": "24240",
+    "variant": "candidate-fixed-k",
+    "preset": "pursuit",
+    "complete": true,
+    "errors": [],
+    "sensor_replay_complete": true,
+    "input_motion_count": 434,
+    "control_count": 434
+  }
+]

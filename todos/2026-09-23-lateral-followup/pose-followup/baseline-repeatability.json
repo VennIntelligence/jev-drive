@@ -1,0 +1,41 @@
+{
+  "rows": [
+    {
+      "route": "24240",
+      "earlier_frames": 434,
+      "later_frames": 434,
+      "comparison": "same within-route tick index, not absolute sensor frame",
+      "max_truth_xy_distance_m": 0.0,
+      "max_cte_difference_m": 0.0,
+      "inputs": {
+        "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/24240/baseline-linear/pursuit/validation_trace.json": "7a5acf607aa6e7c689fcc0ce23b75217044ed324906088280583e5d16f5309ae",
+        "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/validation_trace.json": "6ef469cc1d1d9b18762d693a362fae98bd552036b100ae58b785a1131dea7845"
+      }
+    },
+    {
+      "route": "26966",
+      "earlier_frames": 387,
+      "later_frames": 387,
+      "comparison": "same within-route tick index, not absolute sensor frame",
+      "max_truth_xy_distance_m": 0.0,
+      "max_cte_difference_m": 0.0,
+      "inputs": {
+        "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/26966/baseline-linear/pursuit/validation_trace.json": "0b8a5e95b8fa5967db54cb83f9a051fa688ef87ccf9c0ca712cbe85366eda88e",
+        "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/validation_trace.json": "c9752f132dfe4ee87ea36ca15a9fb5dff653aa40b8ddf259c9e60276de62238d"
+      }
+    },
+    {
+      "route": "17563",
+      "earlier_frames": 559,
+      "later_frames": 559,
+      "comparison": "same within-route tick index, not absolute sensor frame",
+      "max_truth_xy_distance_m": 0.05849730245663235,
+      "max_cte_difference_m": 0.05019533783228425,
+      "inputs": {
+        "/data/runs/b2d/controller/lateral-followup/aim-g2-v2/17563/baseline-linear/pursuit/validation_trace.json": "8f5b57919da4e9b1fb8a9eedd072078ff014507814e7af98b7e87996d0d21491",
+        "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/validation_trace.json": "0295c5e3e3d3419267c681071e34b53b1144ff2578c80ba11ff30ee612ca9d27"
+      }
+    }
+  ],
+  "scope": "Cross-stage baseline observation only; no pooling or substitution. Physical traces are not assumed identical despite zero-coefficient numerical equivalence on fixed sensor input."
+}

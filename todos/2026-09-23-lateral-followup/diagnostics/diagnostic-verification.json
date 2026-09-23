@@ -1,0 +1,13 @@
+{
+  "input_and_output_hashes_verified": 62,
+  "external_bytes": {
+    "controller-update-replay-v1": 3018340,
+    "interpolation-shadow-v1": 330154
+  },
+  "replay_all2761frames_exact": true,
+  "shadow_baseline1380frames_exact": true,
+  "replay_branch_pose_difference": 0.0,
+  "no_carla_run": true,
+  "frozen_runtime_modified": false,
+  "note": "Hermite prototype shadow四窗raw-rate P95均增加；不是闭环结果。"
+}

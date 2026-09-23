@@ -1,0 +1,18 @@
+curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to cn.download.nvidia.com:443 
+1/95 parts done
+2/95 parts done
+3/95 parts done
+4/95 parts done
+5/95 parts done
+6/95 parts done
+7/95 parts done
+8/95 parts done
+curl: (28) Operation timed out after 180001 milliseconds with 3229011 out of 4194304 bytes received
+curl: (28) Operation timed out after 180001 milliseconds with 4177920 out of 4194304 bytes received
+curl: (28) Operation timed out after 180000 milliseconds with 3458387 out of 4194304 bytes received
+curl: (28) Operation timed out after 180000 milliseconds with 3671378 out of 4194304 bytes received
+curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to cn.download.nvidia.com:443 
+9/95 parts done
+10/95 parts done
+11/95 parts done
+curl: (28) Operation timed out after 180000 milliseconds with 3720529 out of 4194304 bytes received

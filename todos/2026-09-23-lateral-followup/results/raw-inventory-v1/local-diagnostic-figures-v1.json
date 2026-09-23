@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/local-diagnostic-figures-v1",
+  "captured_at": 1790131817.0495505,
+  "files": [
+    {
+      "path": "diagnostics/circle-sampling-figures-v1/circle-sampling.pdf",
+      "bytes": 16700,
+      "sha256": "5c28a422754d6a949d406b849045199dfc16a36542feea355177b0334601a963"
+    },
+    {
+      "path": "diagnostics/circle-sampling-figures-v1/circle-sampling.png",
+      "bytes": 295462,
+      "sha256": "a59ba49e8b063e54500434b36cea16ed03750b72911a092bbb9234f079964d03"
+    },
+    {
+      "path": "diagnostics/circle-sampling-figures-v1/manifest.json",
+      "bytes": 767,
+      "sha256": "dc622c74c3516f1c2bcd901c0e38c3d9665f4d3da44c772b947a7ec6d229cfb2"
+    },
+    {
+      "path": "diagnostics/circle-sampling-figures-v1/plot_sampling.py",
+      "bytes": 2179,
+      "sha256": "6992d0298f6cd5f4515ee5d11769fe003fbb741dc7de528a88d97ff34c492cea"
+    },
+    {
+      "path": "diagnostics/circle-sampling-figures-v1/plotted-samples.csv",
+      "bytes": 5190,
+      "sha256": "cf978f888c2a288aa4884df0b913fbe3188717f5ce8ebe26b463145dcf735146"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/README.md",
+      "bytes": 4087,
+      "sha256": "2f680363c13313a9fd5b191568783fc51fcb93710bf3de2060b980843aaa90ef"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/caption-manifest.json",
+      "bytes": 558,
+      "sha256": "b0d23f7e472af1ac8e88883b3eb9ed454ffe329ea8f94c62e6e98825687eaa12"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/fit-summary.json",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/manifest.json",
+      "bytes": 8081,
+      "sha256": "a3760172c814962252dbf72516729b988506319d7651f71b5d78bbb0f21d075d"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/plot-data.csv",
+      "bytes": 171689,
+      "sha256": "06e180e90b715592c0ba90807e81be9147ad85689800cd47cedcc22279403135"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/plot_pose_regression.py",
+      "bytes": 8477,
+      "sha256": "59054a5c16f757ef4d38b7f0beb6f9d2d102724e673de194c58b22d8b0a71195"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/propagation-recompute.py",
+      "bytes": 8472,
+      "sha256": "f95b9a0743a3db34c87099b274bb2d5398a76708247bfe628302e352cabe1a57"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/rear-lateral-residual-rms.pdf",
+      "bytes": 16041,
+      "sha256": "17a8582ce702f2e97bc6b8d7adf076001ea7b7812744d68d5bf04dd2cec63de4"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/rear-lateral-residual-rms.png",
+      "bytes": 152898,
+      "sha256": "3d1fc58ec64eddb3268b1ed609ec602e379e01d5398fd416135ab45072327f8d"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/rear-lateral-velocity-four-windows.pdf",
+      "bytes": 32772,
+      "sha256": "d092ce3babca863111d6a89b4cb43b0701c71114a41ee42fc4f6c369cc1baf5e"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/rear-lateral-velocity-four-windows.png",
+      "bytes": 835100,
+      "sha256": "415e16aebe4c4e789b84046ddd84399acfb686a1452b9887ef89da2cdf6394ff"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/regression-recompute.py",
+      "bytes": 6070,
+      "sha256": "00c39edc744dc5bcb177e8b6db182b038f4c265b5533694bd065b9ff750e135e"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/rms-plot-data.csv",
+      "bytes": 977,
+      "sha256": "b685747eea8ac6cfd97b4794ec3696b68524eb22265d0629e151701531ee49ac"
+    },
+    {
+      "path": "results/pose-regression-figures-v1/verification.json",
+      "bytes": 400,
+      "sha256": "269d252e79cc54b0b4c66e0953a567cd53695fd94c4dd8ff409658a06eff0577"
+    }
+  ],
+  "file_count": 19,
+  "total_bytes": 1577811
+}

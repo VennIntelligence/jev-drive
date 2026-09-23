@@ -1,0 +1,17 @@
+{
+  "t": 1790131104.7559092,
+  "source_commit": "b0830a6",
+  "all_runtime_and_inputs_unchanged": true,
+  "controller_tests_passed": 125,
+  "analysis_tests_passed": 15,
+  "production_replay_frames": 2761,
+  "production_replay_exact": true,
+  "independent_review": "PASS; constant clock origin offset checked",
+  "analyzer_required_conditions": 156,
+  "registered_cases": 6,
+  "default_coefficient": 0,
+  "candidate_coefficient": 0.010659832,
+  "variant_order": "baseline-zero then candidate-fixed-k per route",
+  "gpu": "GPU1 GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1",
+  "raw_run": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1"
+}

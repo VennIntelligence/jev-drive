@@ -1,0 +1,13 @@
+{
+  "state": "draft-only; no experiment frozen or executed",
+  "read_sources": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/turns/protocol.md": "08bec8b1081bacaf8e6b548504b99687338ff90a5c5fff36fe43a478eabc04e4",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/turns/configs/baseline-max.json": "9431873074a120acc7caa49da3baf2d5f3c071d5a4663bd44639ead09fd4de32",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/turns/routes.xml": "87f3e4cce803a1c4b6240bc83fedab339eccff5545f66a31d72307c4c4df1abc",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/turns-final-review.md": "e005d48e38645fa7e863548af1ef51051835e9cfc9d90b55a0e9803c99246474",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/agents/turns_replan_diagnostic.py": "41291c3b3f5660e645db3c54af62f28c9a43fd2785afb9be8582bb69770e54c7",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/turns-v1/replan-diagnostic/per-window-replan.csv": "2f4a63fc553682638923c966badc0591fc92d07da249557cf0b53032fb1b779e",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-tcp-controller/results/turns-v1/analysis/recovery.csv": "d2fa2653944ca009c36ef3f901929a2fd804fc870942453e35853dab41871109"
+  },
+  "legacy_result_unchanged": "short .375 failed4conditions; baseline remainsmax .5"
+}

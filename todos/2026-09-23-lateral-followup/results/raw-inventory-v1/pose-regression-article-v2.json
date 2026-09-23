@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-regression-article-v2",
+  "captured_at": 1790131817.1169968,
+  "files": [
+    {
+      "path": "export-sizes.json",
+      "bytes": 372,
+      "sha256": "b882ba7c741528a12520b6c7530805027d3d83df55357a97d5b5b4c756c72fa5"
+    },
+    {
+      "path": "fit-summary.json",
+      "bytes": 11891,
+      "sha256": "1f164973d06d67f116b49c6ca6dae53d23180aa37af73e3311d5743ea48e35bb"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 8607,
+      "sha256": "e489ea5c17d69318172dcf1c3f911faafeeb867e31b83a708a890a2c9b6b1a3c"
+    },
+    {
+      "path": "plot-data.csv",
+      "bytes": 171689,
+      "sha256": "06e180e90b715592c0ba90807e81be9147ad85689800cd47cedcc22279403135"
+    },
+    {
+      "path": "plot_pose_regression_article.py",
+      "bytes": 8768,
+      "sha256": "e17db4383fc717c42996c320b97b3359d5abd1c339c5bf7dfbf366859b5fa741"
+    },
+    {
+      "path": "plot_style.py",
+      "bytes": 2014,
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d"
+    },
+    {
+      "path": "propagation-recompute.py",
+      "bytes": 8472,
+      "sha256": "f95b9a0743a3db34c87099b274bb2d5398a76708247bfe628302e352cabe1a57"
+    },
+    {
+      "path": "rear-lateral-residual-rms.pdf",
+      "bytes": 9740,
+      "sha256": "6cf79395e627f2e7af62a481f9406f28c30a0f31854562425bc3a9fd4ee7275b"
+    },
+    {
+      "path": "rear-lateral-residual-rms.png",
+      "bytes": 87311,
+      "sha256": "9fb8c72d8ec92ee228ea7bc3970bc9a7207effbfa78643b435b1a7e9e52ba04d"
+    },
+    {
+      "path": "rear-lateral-velocity-four-windows.pdf",
+      "bytes": 27485,
+      "sha256": "73f6b83b3f9b123fcf499c5f91b0579c6e98751508dade29a0fcd3c2de287a92"
+    },
+    {
+      "path": "rear-lateral-velocity-four-windows.png",
+      "bytes": 384174,
+      "sha256": "918e6b806cf12323a9134016c0558ba9882ff9c93d4bdc864a136202bbe9fecb"
+    },
+    {
+      "path": "regression-recompute.py",
+      "bytes": 6070,
+      "sha256": "00c39edc744dc5bcb177e8b6db182b038f4c265b5533694bd065b9ff750e135e"
+    },
+    {
+      "path": "rms-plot-data.csv",
+      "bytes": 977,
+      "sha256": "b685747eea8ac6cfd97b4794ec3696b68524eb22265d0629e151701531ee49ac"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 400,
+      "sha256": "7e014a7600198eec326148b610f78771d8348d1058e07812bf8ebf61dd2f74e9"
+    }
+  ],
+  "file_count": 14,
+  "total_bytes": 727970
+}

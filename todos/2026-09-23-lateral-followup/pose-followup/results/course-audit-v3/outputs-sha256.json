@@ -1,0 +1,7 @@
+{
+  "right-threshold-exceedances.csv": "0f2dad67b1980643309d83ee95bacf307aa39a0a913fc7af6edd23b25a594940",
+  "manifest.json": "de9c1d5a9a409b1d1aabf4efb0b05dc11e3b0d75624087c2b6b1b00f625a0511",
+  "frames.csv": "5376497daf880dbe839fa4c3cc31a5b03414b56cb1745f1cfd8401853a52ffea",
+  "phase-metrics.csv": "0da231b3d5e1cd3a1c7a88a7e433826b0b7492365b4e673a64faab1f6f291cdb",
+  "recompute.py": "13bf1fb3d796c616a860637aa51ef8e9c9de2a7ba6ad4a2e0c2019ae23ce6ca8"
+}

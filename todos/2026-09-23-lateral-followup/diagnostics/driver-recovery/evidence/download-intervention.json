@@ -1,0 +1,9 @@
+{
+  "t": 1790129800.9500613,
+  "action": "stop initial downloader and its curl children; repair waits for exit and reuses complete parts",
+  "reason": "slow partial transfers retrying 180s; switch to bounded retry-all-errors + low-speed timeout",
+  "pid": 379973,
+  "children": [
+    381638
+  ]
+}

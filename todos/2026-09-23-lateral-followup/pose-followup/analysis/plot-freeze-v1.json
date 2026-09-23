@@ -1,0 +1,114 @@
+{
+  "phase": "before first fixed-k live case",
+  "script_sha256": "69d9145eed1b9aedace7760feb5512d3851ee66d7cb39090b2d8126b16a5dc7f",
+  "shared_style_sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot_pose.py": {
+      "sha256": "69d9145eed1b9aedace7760feb5512d3851ee66d7cb39090b2d8126b16a5dc7f",
+      "bytes": 10543
+    },
+    "/home/ujs/mycode/jev-drive/research/plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-README.md": {
+      "sha256": "b839f5844c12b1fa93da347a1283ebd3e988a9d4ba5c05eb56f573aa024922c8",
+      "bytes": 2017
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-summary.json": {
+      "sha256": "43c2fd452eb47969385a1e1c0743d46e8fe26b7d27fb1cc8cae424dd29d0aef0",
+      "bytes": 1480
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v3/manifest.json": {
+      "sha256": "16f85cc820c4bd4191c212261e322e938e26f63a5ea95f32db6982bd596a3fd7",
+      "bytes": 5022
+    }
+  },
+  "snapshots": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot_pose.py": {
+      "sha256": "69d9145eed1b9aedace7760feb5512d3851ee66d7cb39090b2d8126b16a5dc7f",
+      "bytes": 10543
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot-README.md": {
+      "sha256": "b839f5844c12b1fa93da347a1283ebd3e988a9d4ba5c05eb56f573aa024922c8",
+      "bytes": 2017
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v1/plot-verification-summary.json": {
+      "sha256": "43c2fd452eb47969385a1e1c0743d46e8fe26b7d27fb1cc8cae424dd29d0aef0",
+      "bytes": 1480
+    }
+  },
+  "verification": {
+    "fixture": "agent-produced metrics-only alias, no live qualification",
+    "analysis": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v1/same-analysis",
+    "figures": "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v3",
+    "rows_preserved_exactly": 2760,
+    "figure_pairs": 8,
+    "window_counts": [
+      70,
+      70,
+      117,
+      117,
+      70,
+      70,
+      71,
+      71
+    ],
+    "max_png_bytes": 470749,
+    "fresh_directory_enforced": true,
+    "missing_frame_line_break_verified": true,
+    "missing_value_not_zero_verified": true,
+    "verdict_copied_not_recomputed": "fail",
+    "observed_field_retention": [
+      "route",
+      "variant",
+      "preset",
+      "frame",
+      "time",
+      "progress",
+      "cte",
+      "heading",
+      "speed",
+      "steer",
+      "rate",
+      "saturated",
+      "limited",
+      "reason",
+      "raw_steer",
+      "raw_rate",
+      "trajectory_frame",
+      "trajectory_updated",
+      "aim_interpolation",
+      "aim_interpolation_used",
+      "aim_interpolation_fallback",
+      "aim_fields_json",
+      "slew_clipped",
+      "amplitude_clipped",
+      "rejoin_concern",
+      "pose_position_error",
+      "raw_pose_position_error",
+      "pose_heading_error_deg",
+      "pose_world_dx",
+      "pose_world_dy",
+      "pose_left_error",
+      "pose_forward_error",
+      "pose_status_json",
+      "route_terminal_hold",
+      "actual_speed",
+      "reference_speed",
+      "speed_error",
+      "lateral_accel",
+      "longitudinal_accel",
+      "lateral_jerk",
+      "longitudinal_jerk"
+    ]
+  },
+  "historical_fixtures_preserved": [
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-v1",
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-v2"
+  ]
+}

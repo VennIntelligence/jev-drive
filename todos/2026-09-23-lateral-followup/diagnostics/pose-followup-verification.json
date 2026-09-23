@@ -1,0 +1,17 @@
+[
+  {
+    "directory": "/data/runs/b2d/controller/lateral-followup/pose-propagation-v2",
+    "checked": 5,
+    "failures": []
+  },
+  {
+    "directory": "/data/runs/b2d/controller/lateral-followup/pose-lateral-regression-v1",
+    "checked": 5,
+    "failures": []
+  },
+  {
+    "directory": "/data/runs/b2d/controller/lateral-followup/pose-compensation-replay-v1",
+    "checked": 6,
+    "failures": []
+  }
+]

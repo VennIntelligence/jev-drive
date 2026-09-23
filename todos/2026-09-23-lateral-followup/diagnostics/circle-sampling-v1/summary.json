@@ -1,0 +1,162 @@
+[
+  {
+    "radius": 8.0,
+    "speed": 6.0,
+    "sign": -1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.3432784892915798,
+    "linear_analytic_rms": 0.013653105570084631,
+    "hermite_rate_abs_p95": 0.002199159709941334,
+    "hermite_analytic_rms": 8.210006845787071e-05
+  },
+  {
+    "radius": 8.0,
+    "speed": 6.0,
+    "sign": -1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.3432784892915798,
+    "linear_analytic_rms": 0.013653105570084631,
+    "hermite_rate_abs_p95": 0.002199159709941334,
+    "hermite_analytic_rms": 8.210006845787071e-05
+  },
+  {
+    "radius": 8.0,
+    "speed": 6.0,
+    "sign": 1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.3432784892915798,
+    "linear_analytic_rms": 0.013653105570084631,
+    "hermite_rate_abs_p95": 0.002199159709941334,
+    "hermite_analytic_rms": 8.210006845787071e-05
+  },
+  {
+    "radius": 8.0,
+    "speed": 6.0,
+    "sign": 1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.3432784892915798,
+    "linear_analytic_rms": 0.013653105570084631,
+    "hermite_rate_abs_p95": 0.002199159709941334,
+    "hermite_analytic_rms": 8.210006845787071e-05
+  },
+  {
+    "radius": 8.0,
+    "speed": 8.0,
+    "sign": -1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.3488183495188113,
+    "linear_analytic_rms": 0.014059748468569045,
+    "hermite_rate_abs_p95": 0.0039886238492969905,
+    "hermite_analytic_rms": 0.00014980024252504351
+  },
+  {
+    "radius": 8.0,
+    "speed": 8.0,
+    "sign": -1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.4087401107540467,
+    "linear_analytic_rms": 0.02288646031751343,
+    "hermite_rate_abs_p95": 0.006634229470312669,
+    "hermite_analytic_rms": 0.00023730978822109189
+  },
+  {
+    "radius": 8.0,
+    "speed": 8.0,
+    "sign": 1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.3488183495188113,
+    "linear_analytic_rms": 0.014059748468569045,
+    "hermite_rate_abs_p95": 0.0039886238492969905,
+    "hermite_analytic_rms": 0.00014980024252504351
+  },
+  {
+    "radius": 8.0,
+    "speed": 8.0,
+    "sign": 1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.4087401107540467,
+    "linear_analytic_rms": 0.02288646031751343,
+    "hermite_rate_abs_p95": 0.006634229470312669,
+    "hermite_analytic_rms": 0.00023730978822109189
+  },
+  {
+    "radius": 20.0,
+    "speed": 6.0,
+    "sign": -1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.15332504367058258,
+    "linear_analytic_rms": 0.006009601679958062,
+    "hermite_rate_abs_p95": 0.00015556712850767207,
+    "hermite_analytic_rms": 5.7719333709064086e-06
+  },
+  {
+    "radius": 20.0,
+    "speed": 6.0,
+    "sign": -1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.15332504367058258,
+    "linear_analytic_rms": 0.006009601679958062,
+    "hermite_rate_abs_p95": 0.00015556712850767207,
+    "hermite_analytic_rms": 5.7719333709064086e-06
+  },
+  {
+    "radius": 20.0,
+    "speed": 6.0,
+    "sign": 1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.15332504367058258,
+    "linear_analytic_rms": 0.006009601679958062,
+    "hermite_rate_abs_p95": 0.00015556712850767207,
+    "hermite_analytic_rms": 5.7719333709064086e-06
+  },
+  {
+    "radius": 20.0,
+    "speed": 6.0,
+    "sign": 1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.15332504367058258,
+    "linear_analytic_rms": 0.006009601679958062,
+    "hermite_rate_abs_p95": 0.00015556712850767207,
+    "hermite_analytic_rms": 5.7719333709064086e-06
+  },
+  {
+    "radius": 20.0,
+    "speed": 8.0,
+    "sign": -1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.15636559854677046,
+    "linear_analytic_rms": 0.006141651296963467,
+    "hermite_rate_abs_p95": 0.00028223755752454505,
+    "hermite_analytic_rms": 1.0481111659760294e-05
+  },
+  {
+    "radius": 20.0,
+    "speed": 8.0,
+    "sign": -1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.18494943808104464,
+    "linear_analytic_rms": 0.010163716487826107,
+    "hermite_rate_abs_p95": 0.00047315118731910966,
+    "hermite_analytic_rms": 1.6834247594203334e-05
+  },
+  {
+    "radius": 20.0,
+    "speed": 8.0,
+    "sign": 1.0,
+    "coefficient": 0.5,
+    "linear_rate_abs_p95": 0.15636559854677046,
+    "linear_analytic_rms": 0.006141651296963467,
+    "hermite_rate_abs_p95": 0.00028223755752454505,
+    "hermite_analytic_rms": 1.0481111659760294e-05
+  },
+  {
+    "radius": 20.0,
+    "speed": 8.0,
+    "sign": 1.0,
+    "coefficient": 0.375,
+    "linear_rate_abs_p95": 0.18494943808104464,
+    "linear_analytic_rms": 0.010163716487826107,
+    "hermite_rate_abs_p95": 0.00047315118731910966,
+    "hermite_analytic_rms": 1.6834247594203334e-05
+  }
+]

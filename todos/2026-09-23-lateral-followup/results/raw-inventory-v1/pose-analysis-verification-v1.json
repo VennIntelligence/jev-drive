@@ -1,0 +1,769 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v1",
+  "captured_at": 1790131817.0811021,
+  "files": [
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "missing-frame/17563/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "missing-frame/17563/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "missing-frame/24240/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "missing-frame/24240/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/control.jsonl",
+      "bytes": 746478,
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "missing-frame/26966/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 744420,
+      "sha256": "f9ed3cff900e44b55e0961a67b5aef2e6d02aabdecd8806da71f24c479d0eff8"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "missing-frame/26966/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "missing-frame-analysis/analysis-source.py",
+      "bytes": 33588,
+      "sha256": "d165113595fca8c753f6649d9b92a9a14582b704ba7ab70be181eff81e224ae0"
+    },
+    {
+      "path": "missing-frame-analysis/cases.csv",
+      "bytes": 29714,
+      "sha256": "4a11501a6015ded89022ffe0bbe1dd8cc2b960c4bc6823307b305e10b8eea143"
+    },
+    {
+      "path": "missing-frame-analysis/control-reasons.json",
+      "bytes": 4645,
+      "sha256": "8f268a049d3ed8ab57521e034236de7df536054829b3a2c57d304d5c1fe98c3a"
+    },
+    {
+      "path": "missing-frame-analysis/coverage.json",
+      "bytes": 3585,
+      "sha256": "e6bc113f2a134d5f98d77f8909c9c133cff53147d71222024dafc939031eb8c2"
+    },
+    {
+      "path": "missing-frame-analysis/frames.csv",
+      "bytes": 1875323,
+      "sha256": "fbaf543d2f16cf29f4f35ebaf73ed7e1eff3117505818f91428c82b250c390ad"
+    },
+    {
+      "path": "missing-frame-analysis/manifest.json",
+      "bytes": 9342,
+      "sha256": "c87403dca9f0f2aa2024fa8f481a86a0d9eb6717d82c195202d461d32bf5eaee"
+    },
+    {
+      "path": "missing-frame-analysis/metrics.csv",
+      "bytes": 298091,
+      "sha256": "51b16d6159d8897cd4f1ce4b80c3656dfa8127df7081366e9db2e849c8e764a1"
+    },
+    {
+      "path": "missing-frame-analysis/pose-contract-source.py",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "missing-frame-analysis/pose-contract.json",
+      "bytes": 4072199,
+      "sha256": "3ab4f6d42c7ed99bf159c0cc767bbb8748e6327eb268e5388fb0a31555f8b092"
+    },
+    {
+      "path": "missing-frame-analysis/pose-recomputed.csv",
+      "bytes": 740670,
+      "sha256": "dcf3843972cff1c1cf43eb14d2cf841c9a6befc1117bc152259c6e3d5f0995ee"
+    },
+    {
+      "path": "missing-frame-analysis/recovery.csv",
+      "bytes": 622,
+      "sha256": "9153213853dad3a1ea8a3c77da49f0cddda0a7a470aab02abada2586212f4221"
+    },
+    {
+      "path": "missing-frame-analysis/required-conditions.json",
+      "bytes": 32864,
+      "sha256": "4d84c4a5cf28cd397643c3ac72cc8e8635128a65e5dc45f3cd23c011ba7a3f85"
+    },
+    {
+      "path": "missing-frame-analysis/stats-source.py",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "missing-frame.log",
+      "bytes": 149,
+      "sha256": "1d3baa80c6a45612ad50a906bd28caca70363696f99996a52799f09ee585a79a"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "missing-pose-field/17563/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "missing-pose-field/17563/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "missing-pose-field/24240/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "missing-pose-field/24240/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/control.jsonl",
+      "bytes": 746478,
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "missing-pose-field/26966/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 746478,
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "missing-pose-field/26966/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "missing-pose-field-analysis/analysis-source.py",
+      "bytes": 33588,
+      "sha256": "d165113595fca8c753f6649d9b92a9a14582b704ba7ab70be181eff81e224ae0"
+    },
+    {
+      "path": "missing-pose-field-analysis/cases.csv",
+      "bytes": 29749,
+      "sha256": "6c067549e00ad17ea5f6247c156c530da7d0a8521baec3a503f031c7d9a96da2"
+    },
+    {
+      "path": "missing-pose-field-analysis/control-reasons.json",
+      "bytes": 4645,
+      "sha256": "8f268a049d3ed8ab57521e034236de7df536054829b3a2c57d304d5c1fe98c3a"
+    },
+    {
+      "path": "missing-pose-field-analysis/coverage.json",
+      "bytes": 3583,
+      "sha256": "d6d6f7ed306eae3554093aaac8374b4d7210d83cd6ea5b434cdc8d55f0833dd5"
+    },
+    {
+      "path": "missing-pose-field-analysis/frames.csv",
+      "bytes": 1876107,
+      "sha256": "01bc0007c1b6e0bd5a2163383303c151a099d4476d970b1008369e7ec068bc7e"
+    },
+    {
+      "path": "missing-pose-field-analysis/manifest.json",
+      "bytes": 9353,
+      "sha256": "281dcb107d6197fd0a4b2b413bc0b9436b2a7d05c68af03d3153c05688c2669c"
+    },
+    {
+      "path": "missing-pose-field-analysis/metrics.csv",
+      "bytes": 298069,
+      "sha256": "27238d02ec46b84b055e29d7643d96adb4301949d1a4a2231e1285e608628daf"
+    },
+    {
+      "path": "missing-pose-field-analysis/pose-contract-source.py",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "missing-pose-field-analysis/pose-contract.json",
+      "bytes": 4064417,
+      "sha256": "23a841481ac35d9e3f2ada689e3d5198ac3beff8fb19b43d7b4df3f31723d38d"
+    },
+    {
+      "path": "missing-pose-field-analysis/pose-recomputed.csv",
+      "bytes": 741009,
+      "sha256": "b7dffe0803e3657546ac09d191247ea4d7d02a9fec6a2aad2ecf14f26912e757"
+    },
+    {
+      "path": "missing-pose-field-analysis/recovery.csv",
+      "bytes": 622,
+      "sha256": "9153213853dad3a1ea8a3c77da49f0cddda0a7a470aab02abada2586212f4221"
+    },
+    {
+      "path": "missing-pose-field-analysis/required-conditions.json",
+      "bytes": 36272,
+      "sha256": "cff915db28c92ceb128c5497e0c5703aa676cf51e59d50d48b36c3c1b3919eea"
+    },
+    {
+      "path": "missing-pose-field-analysis/stats-source.py",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "missing-pose-field.log",
+      "bytes": 154,
+      "sha256": "76f86a5e11785672dbefe7edf39bbf12def5057040d9e90ba5267d9a3d356dd0"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "same/17563/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "857f2fefa82392ab3de5c859bf7bc73faee1662e88d33dbb3b744cbbd151af96"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 1098293,
+      "sha256": "e6bfb952d20798d890f2f43b9a800f3bf2761161f2e5837c57ae6caf7d47fe2f"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 250150,
+      "sha256": "8779caa8401d4238dc25391478c6abfc20d4209712e74990edcaa9d1c9aafebd"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 13331,
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4114,
+      "sha256": "986b240fd9ce88efe10269079a441533c86755a38a814b7587ce08bbcffe5e86"
+    },
+    {
+      "path": "same/17563/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 637982,
+      "sha256": "08df186e754033c47054a0ed4108defc68e3d890504ef1fbb8dae44d2290b373"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "same/24240/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "fb5ab98d2215c1a1cc67c2ef57b11838937f537c97bb1c123fe2e31af878590a"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 841248,
+      "sha256": "b5a77f37ffa2df04d52e49dcb1fae9b340b924ef990e22bf0ac0de06f6ba33c0"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 196002,
+      "sha256": "de5078c23e2e9b0a0d77812e3df578996290344e7455bde92e9ed3811bd32801"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 11374,
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4116,
+      "sha256": "7fb2e46120b08f49ce2268a9557d8fbed79d9161da22bc2efd049eec266a4876"
+    },
+    {
+      "path": "same/24240/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 498192,
+      "sha256": "36fa035e5bf370f3687ced37865e250aec9b6d81b63f90a2585c498b3dadff4a"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/control.jsonl",
+      "bytes": 746478,
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "same/26966/baseline-zero/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/agent_config.json",
+      "bytes": 340,
+      "sha256": "93e0b3342d2a562466b2b4fdb54533f9f32df3ef4481996be6b919cc94a11e00"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/control.jsonl",
+      "bytes": 746478,
+      "sha256": "8a679618e9ffbd89a5ad8b42b99edb2b6532e0fc4f7733b11b36a6bf7d60fc06"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/motion.jsonl",
+      "bytes": 176352,
+      "sha256": "4415c1a4e6f76ab162406dfb378dcd41f30f942c42811a5e67bc04803966838b"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/route_reference.json",
+      "bytes": 8140,
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/validation.json",
+      "bytes": 4118,
+      "sha256": "cbfc261b98f816d8cd8112ec458119fb2c14ffa509214fb71e3b5b037b441f20"
+    },
+    {
+      "path": "same/26966/candidate-fixed-k/pursuit/validation_trace.json",
+      "bytes": 442547,
+      "sha256": "3e34d32ae4275f73a3bfc011e860720ea9e7034d22394063e02947c165316c63"
+    },
+    {
+      "path": "same-analysis/analysis-source.py",
+      "bytes": 33588,
+      "sha256": "d165113595fca8c753f6649d9b92a9a14582b704ba7ab70be181eff81e224ae0"
+    },
+    {
+      "path": "same-analysis/cases.csv",
+      "bytes": 29659,
+      "sha256": "974c4b367edf624e85d5f7cb718c6d9aa169a6b08158b67f2b08fc17085a6046"
+    },
+    {
+      "path": "same-analysis/control-reasons.json",
+      "bytes": 4645,
+      "sha256": "8f268a049d3ed8ab57521e034236de7df536054829b3a2c57d304d5c1fe98c3a"
+    },
+    {
+      "path": "same-analysis/coverage.json",
+      "bytes": 3583,
+      "sha256": "d6d6f7ed306eae3554093aaac8374b4d7210d83cd6ea5b434cdc8d55f0833dd5"
+    },
+    {
+      "path": "same-analysis/frames.csv",
+      "bytes": 1876107,
+      "sha256": "01bc0007c1b6e0bd5a2163383303c151a099d4476d970b1008369e7ec068bc7e"
+    },
+    {
+      "path": "same-analysis/manifest.json",
+      "bytes": 9078,
+      "sha256": "75130620b1bcfc602d94ff7015f7d933914907a17ea51525dcd0893378775dbc"
+    },
+    {
+      "path": "same-analysis/metrics.csv",
+      "bytes": 298069,
+      "sha256": "27238d02ec46b84b055e29d7643d96adb4301949d1a4a2231e1285e608628daf"
+    },
+    {
+      "path": "same-analysis/pose-contract-source.py",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "same-analysis/pose-contract.json",
+      "bytes": 4064417,
+      "sha256": "23a841481ac35d9e3f2ada689e3d5198ac3beff8fb19b43d7b4df3f31723d38d"
+    },
+    {
+      "path": "same-analysis/pose-recomputed.csv",
+      "bytes": 741009,
+      "sha256": "b7dffe0803e3657546ac09d191247ea4d7d02a9fec6a2aad2ecf14f26912e757"
+    },
+    {
+      "path": "same-analysis/recovery.csv",
+      "bytes": 622,
+      "sha256": "9153213853dad3a1ea8a3c77da49f0cddda0a7a470aab02abada2586212f4221"
+    },
+    {
+      "path": "same-analysis/required-conditions.json",
+      "bytes": 32918,
+      "sha256": "54a9dfc1a378f20bd10a4e8b3ba2b0c1861088c7c9a9cc940056a42e0e22e5fa"
+    },
+    {
+      "path": "same-analysis/stats-source.py",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    },
+    {
+      "path": "same.log",
+      "bytes": 140,
+      "sha256": "1cbf78021873ed9036ca575a60051acfd2c751821ca4391c8d7f78b9759f2215"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 8277,
+      "sha256": "96e18860dd83dcb9524fcd20f5f3323a40428d033bd92b5cf36d0122c1e75fd0"
+    },
+    {
+      "path": "verify-source.py",
+      "bytes": 3630,
+      "sha256": "acbba64ca2e2efbe4d7b5b2b4220581c36448c304318e53a99f04a2c5fd659c2"
+    }
+  ],
+  "file_count": 152,
+  "total_bytes": 50970538
+}

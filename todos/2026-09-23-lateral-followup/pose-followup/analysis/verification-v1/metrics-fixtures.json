@@ -1,0 +1,276 @@
+{
+  "same": {
+    "expected_failure_proved": true,
+    "nonpassing": [
+      {
+        "condition": "turn/26966/1/primary_cte_rms_15percent",
+        "status": "fail",
+        "field": "cte_m_rms",
+        "band": "window",
+        "baseline": 0.5586937052558099,
+        "candidate": 0.5586937052558099,
+        "comparison": "<=",
+        "limit": 0.4748896494674384,
+        "near_zero_baseline_threshold": null
+      }
+    ],
+    "live_qualification_allowed": false
+  },
+  "missing-frame": {
+    "expected_failure_proved": true,
+    "nonpassing": [
+      {
+        "condition": "case/26966/candidate-fixed-k/complete_frames_and_truth",
+        "status": "fail"
+      },
+      {
+        "condition": "coverage/26966/candidate-fixed-k/1",
+        "status": "fail",
+        "evidence": {
+          "expected_count": 70,
+          "observed_count": 69,
+          "minimum_count": 20,
+          "missing_counts": {
+            "cte": 0,
+            "heading": 0,
+            "rate": 1,
+            "raw_steer": 0,
+            "actual_speed": 0,
+            "reference_speed": 0,
+            "speed_error": 0,
+            "lateral_accel": 0,
+            "lateral_jerk": 0
+          },
+          "entered": true,
+          "exited": true,
+          "complete_frames_and_truth": false,
+          "complete": false
+        }
+      },
+      {
+        "condition": "turn/26966/1/cte_p95_delta",
+        "status": "insufficient",
+        "field": "cte_m_p95_abs",
+        "band": "window",
+        "baseline": 0.8492240582260485,
+        "candidate": 0.8494173397977642,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/cte_peak_delta",
+        "status": "insufficient",
+        "field": "cte_m_max_abs",
+        "band": "window",
+        "baseline": 0.8564581437705158,
+        "candidate": 0.8564581437705158,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/heading_p95_delta",
+        "status": "insufficient",
+        "field": "heading_deg_p95_abs",
+        "band": "window",
+        "baseline": 4.271546829218098,
+        "candidate": 4.274920887188058,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/speed_error_rms_delta",
+        "status": "insufficient",
+        "field": "speed_error_mps_rms",
+        "band": "window",
+        "baseline": 0.14987791495845978,
+        "candidate": 0.14779713842997708,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/actual_speed_mean_drop",
+        "status": "insufficient",
+        "field": "actual_speed_mean_mps",
+        "band": "window",
+        "baseline": 7.885128023256182,
+        "candidate": 7.887163881018465,
+        "comparison": ">=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/lateral_accel_p95_ratio",
+        "status": "insufficient",
+        "field": "lateral_accel_mps2_p95_abs",
+        "band": "window",
+        "baseline": 8.598158694119283,
+        "candidate": 8.601665429066431,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": 0.01
+      },
+      {
+        "condition": "turn/26966/1/emitted_rate_p95_ratio",
+        "status": "insufficient",
+        "field": "steer_rate_per_s_p95_abs",
+        "band": "window",
+        "baseline": 0.80010558695692,
+        "candidate": 0.8126091480754281,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": 0.01
+      },
+      {
+        "condition": "turn/26966/1/primary_cte_rms_15percent",
+        "status": "insufficient",
+        "field": "cte_m_rms",
+        "band": "window",
+        "baseline": 0.5586937052558099,
+        "candidate": 0.5626685747830258,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/primary_cte_p95_no_increase",
+        "status": "insufficient",
+        "field": "cte_m_p95_abs",
+        "band": "window",
+        "baseline": 0.8492240582260485,
+        "candidate": 0.8494173397977642,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      },
+      {
+        "condition": "turn/26966/1/post10m_rms_no_increase",
+        "status": "insufficient",
+        "field": "cte_m_rms",
+        "band": "post10m",
+        "baseline": 0.31704522217735676,
+        "candidate": 0.31704522217735676,
+        "comparison": "<=",
+        "limit": null,
+        "near_zero_baseline_threshold": null
+      }
+    ],
+    "live_qualification_allowed": false
+  },
+  "missing-pose-field": {
+    "expected_failure_proved": true,
+    "nonpassing": [
+      {
+        "condition": "case/26966/baseline-zero/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/26966/baseline-zero/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 3480
+      },
+      {
+        "condition": "case/26966/baseline-zero/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 387,
+        "mismatch_ticks": 387,
+        "used_or_fallback_errors": 285
+      },
+      {
+        "condition": "case/26966/candidate-fixed-k/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/26966/candidate-fixed-k/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 4128
+      },
+      {
+        "condition": "case/26966/candidate-fixed-k/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 387,
+        "mismatch_ticks": 387,
+        "used_or_fallback_errors": 285
+      },
+      {
+        "condition": "case/17563/baseline-zero/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/17563/baseline-zero/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 5028
+      },
+      {
+        "condition": "case/17563/baseline-zero/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 559,
+        "mismatch_ticks": 559,
+        "used_or_fallback_errors": 457
+      },
+      {
+        "condition": "case/17563/candidate-fixed-k/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/17563/candidate-fixed-k/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 6020
+      },
+      {
+        "condition": "case/17563/candidate-fixed-k/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 559,
+        "mismatch_ticks": 559,
+        "used_or_fallback_errors": 457
+      },
+      {
+        "condition": "case/24240/baseline-zero/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/24240/baseline-zero/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 3903
+      },
+      {
+        "condition": "case/24240/baseline-zero/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 434,
+        "mismatch_ticks": 434,
+        "used_or_fallback_errors": 336
+      },
+      {
+        "condition": "case/24240/candidate-fixed-k/common_config_contract",
+        "status": "fail"
+      },
+      {
+        "condition": "case/24240/candidate-fixed-k/pose_compensation_contract",
+        "status": "fail",
+        "error_count": 4645
+      },
+      {
+        "condition": "case/24240/candidate-fixed-k/aim_mode_evidence",
+        "status": "insufficient",
+        "missing_ticks": 434,
+        "mismatch_ticks": 434,
+        "used_or_fallback_errors": 336
+      },
+      {
+        "condition": "turn/26966/1/primary_cte_rms_15percent",
+        "status": "fail",
+        "field": "cte_m_rms",
+        "band": "window",
+        "baseline": 0.5586937052558099,
+        "candidate": 0.5586937052558099,
+        "comparison": "<=",
+        "limit": 0.4748896494674384,
+        "near_zero_baseline_threshold": null
+      }
+    ],
+    "live_qualification_allowed": true
+  }
+}

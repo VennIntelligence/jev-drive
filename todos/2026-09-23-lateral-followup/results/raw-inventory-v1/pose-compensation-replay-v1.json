@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-compensation-replay-v1",
+  "captured_at": 1790131817.060552,
+  "files": [
+    {
+      "path": "frames.csv",
+      "bytes": 1051375,
+      "sha256": "3302c28ad60b5c010accddf7216822a2119d3463487a64fdbea6172c733f54dc"
+    },
+    {
+      "path": "frozen-adapter.py",
+      "bytes": 23822,
+      "sha256": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 5671,
+      "sha256": "cfede7b263593e20d5f3f37fc064915f48265a52a5ff65452c3be3dcd6414c44"
+    },
+    {
+      "path": "metrics.csv",
+      "bytes": 14688,
+      "sha256": "42b8f650fde533a35ddc0b491b47c877ef5d418dc6ad592b88ffddce2efd2065"
+    },
+    {
+      "path": "outputs-sha256.json",
+      "bytes": 527,
+      "sha256": "0e18507f89a11a5b961a025e048f44f1cfb2024e3cc32576d144d6fe31305fc4"
+    },
+    {
+      "path": "recompute.py",
+      "bytes": 8768,
+      "sha256": "45d939aa103e4df3e38bb680c52d76deeaae00ce5387b695baac911e663f3b73"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 1356,
+      "sha256": "ae8031ea9327ca50a5c654bfe933fd0a03bd7cef445090f7cdddf3d3119c29c1"
+    }
+  ],
+  "file_count": 7,
+  "total_bytes": 1106207
+}

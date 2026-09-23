@@ -1,0 +1,8 @@
+{
+  "metrics.csv": "42b8f650fde533a35ddc0b491b47c877ef5d418dc6ad592b88ffddce2efd2065",
+  "manifest.json": "cfede7b263593e20d5f3f37fc064915f48265a52a5ff65452c3be3dcd6414c44",
+  "frames.csv": "3302c28ad60b5c010accddf7216822a2119d3463487a64fdbea6172c733f54dc",
+  "frozen-adapter.py": "4fa264b63246fc9f82b8615d089a3f6d3b9f0f957fd82ef301437575ce391585",
+  "recompute.py": "45d939aa103e4df3e38bb680c52d76deeaae00ce5387b695baac911e663f3b73",
+  "verification.json": "ae8031ea9327ca50a5c654bfe933fd0a03bd7cef445090f7cdddf3d3119c29c1"
+}

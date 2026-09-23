@@ -1,0 +1,112 @@
+{
+  "phase": "final, before first fixed-k live case",
+  "supersedes": "plot-freeze-v1.json; that pre-live source wording revision is preserved in plot-frozen-v1",
+  "script_sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c",
+  "shared_style_sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot_pose.py": {
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c",
+      "bytes": 10551
+    },
+    "/home/ujs/mycode/jev-drive/research/plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-README.md": {
+      "sha256": "d001da66589450e1ceeed8b029143781b5e037bb68bfc23f67fda242f0dd5983",
+      "bytes": 2092
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-verification-summary-v2.json": {
+      "sha256": "85ef5afa2dad96fa84be43a771500bb527efd7dce30937c7f857b3d5d66843ae",
+      "bytes": 1603
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v4/manifest.json": {
+      "sha256": "efe70e085d38554c220bb4cee55f0949b00484fd0e05b5ed049acd19a2594f04",
+      "bytes": 5022
+    }
+  },
+  "snapshots": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot_pose.py": {
+      "sha256": "71f8c5d4eccfea4fe0beb7065c11c351e6703ab8dd2a55f8117d4700faf4c62c",
+      "bytes": 10551
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot-README.md": {
+      "sha256": "d001da66589450e1ceeed8b029143781b5e037bb68bfc23f67fda242f0dd5983",
+      "bytes": 2092
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot-verification-summary-v2.json": {
+      "sha256": "85ef5afa2dad96fa84be43a771500bb527efd7dce30937c7f857b3d5d66843ae",
+      "bytes": 1603
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/plot-frozen-v2/plot_style.py": {
+      "sha256": "163c9fde3e2c5e58e6c0a8296fafbe77f597bb9f15c2e27e1324246cb3f1f84d",
+      "bytes": 2014
+    }
+  },
+  "verification": {
+    "fixture": "agent-produced metrics-only alias, no live qualification",
+    "analysis": "/data/runs/b2d/controller/lateral-followup/pose-analysis-verification-v1/same-analysis",
+    "figures": "/data/runs/b2d/controller/lateral-followup/pose-plot-verification-v4",
+    "rows_preserved_exactly": 2760,
+    "figure_pairs": 8,
+    "window_counts": [
+      70,
+      70,
+      117,
+      117,
+      70,
+      70,
+      71,
+      71
+    ],
+    "max_png_bytes": 472778,
+    "fresh_directory_enforced": true,
+    "missing_frame_line_break_verified": true,
+    "missing_value_not_zero_verified": true,
+    "verdict_copied_not_recomputed": "fail",
+    "observed_field_retention": [
+      "route",
+      "variant",
+      "preset",
+      "frame",
+      "time",
+      "progress",
+      "cte",
+      "heading",
+      "speed",
+      "steer",
+      "rate",
+      "saturated",
+      "limited",
+      "reason",
+      "raw_steer",
+      "raw_rate",
+      "trajectory_frame",
+      "trajectory_updated",
+      "aim_interpolation",
+      "aim_interpolation_used",
+      "aim_interpolation_fallback",
+      "aim_fields_json",
+      "slew_clipped",
+      "amplitude_clipped",
+      "rejoin_concern",
+      "pose_position_error",
+      "raw_pose_position_error",
+      "pose_heading_error_deg",
+      "pose_world_dx",
+      "pose_world_dy",
+      "pose_left_error",
+      "pose_forward_error",
+      "pose_status_json",
+      "route_terminal_hold",
+      "actual_speed",
+      "reference_speed",
+      "speed_error",
+      "lateral_accel",
+      "longitudinal_accel",
+      "lateral_jerk",
+      "longitudinal_jerk"
+    ],
+    "final_revision": "Pre-live wording only: pose signed left explicitly truth body left; underlying CSV identical to v3."
+  }
+}

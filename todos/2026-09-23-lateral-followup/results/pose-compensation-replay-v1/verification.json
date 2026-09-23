@@ -1,0 +1,56 @@
+[
+  {
+    "route": "26966",
+    "variant": "baseline-max",
+    "ticks": 387,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  },
+  {
+    "route": "26966",
+    "variant": "short-max",
+    "ticks": 388,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  },
+  {
+    "route": "24240",
+    "variant": "baseline-max",
+    "ticks": 434,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  },
+  {
+    "route": "24240",
+    "variant": "short-max",
+    "ticks": 434,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  },
+  {
+    "route": "17563",
+    "variant": "baseline-max",
+    "ticks": 559,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  },
+  {
+    "route": "17563",
+    "variant": "short-max",
+    "ticks": 559,
+    "zero_pose_unequal_values": 0,
+    "zero_yaw_unequal_values": 0,
+    "zero_raw_unequal_values": 0,
+    "compensated_heading_unequal_values": 0
+  }
+]

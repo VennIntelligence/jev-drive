@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "root": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1-analysis-v1",
+  "captured_at": 1790131817.0862527,
+  "files": [
+    {
+      "path": "analysis-source.py",
+      "bytes": 34102,
+      "sha256": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d"
+    },
+    {
+      "path": "cases.csv",
+      "bytes": 30269,
+      "sha256": "e9e4b41ff26db1f33593f128899b379a1735a1eadb42554f7b0f8cf4aaa5902c"
+    },
+    {
+      "path": "control-reasons.json",
+      "bytes": 4645,
+      "sha256": "a4d47a18a2b1fc94e1ae307576cdae822a96f3e7cb0273fc995e842199f2850e"
+    },
+    {
+      "path": "coverage.json",
+      "bytes": 3583,
+      "sha256": "fddbc676aaa480bd9102a44bd37c8b20bf3aef1898310db379bbf9af7310eb84"
+    },
+    {
+      "path": "frames.csv",
+      "bytes": 3153288,
+      "sha256": "50cb21fb141a7e6901a2975bf31ae19234ed1f559ece16a0b32a9f11e73916ad"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 13739,
+      "sha256": "5b7f766e5ad9baebe89827a2c3ac196dd41ad29ae85e50750b418900f7d2a9c1"
+    },
+    {
+      "path": "metrics.csv",
+      "bytes": 297988,
+      "sha256": "ebe68fff59bd1c71294dbaf39dfd8bcab388d712509345b99e1b787f268bca1b"
+    },
+    {
+      "path": "pose-contract-source.py",
+      "bytes": 11690,
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58"
+    },
+    {
+      "path": "pose-contract.json",
+      "bytes": 1335,
+      "sha256": "0d08e475fd977bf2f07841449266934d16c4d4096de0537abba553bfbb7a013c"
+    },
+    {
+      "path": "pose-recomputed.csv",
+      "bytes": 717163,
+      "sha256": "8e0342cdc2e4eaa7d37e6530b8c8fa87c298106c71ee970b27b1be5d3cc3735d"
+    },
+    {
+      "path": "recovery.csv",
+      "bytes": 642,
+      "sha256": "7bf8703188e51b02d038e0729fb23ab63985ddcb561e5dadfc73b84213571598"
+    },
+    {
+      "path": "required-conditions.json",
+      "bytes": 36183,
+      "sha256": "18f7c98292b29b78d568a91d5471ed4056c9163e3f61cf2d06002d3e04e60713"
+    },
+    {
+      "path": "stats-source.py",
+      "bytes": 10894,
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92"
+    }
+  ],
+  "file_count": 13,
+  "total_bytes": 4315521
+}

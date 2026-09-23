@@ -41,6 +41,12 @@ So CARLA on this box wants **`-graphicsadapter=0`**. Never assume it; confirm wi
 `nvidia-smi --query-gpu=index,uuid --format=csv` after the server comes up. Started with no flag at
 all, CARLA happened to pick GPU 1, but that is luck, not a guarantee.
 
+## Controller experiment library environment (2026-09-23)
+
+An unattended upgrade replaced NVIDIA userspace with 580.173.02 while the loaded kernel module remained 580.159.03. This caused NVML mismatch and CARLA startup timeout. Controller diagnostics recovered with private, checksum-verified 580.159.03 vendor libraries; the host was not rebooted or reconfigured.
+
+For this loaded kernel, source `/data/tools/nvidia-userspace-580.159.03/isolated/env.sh` in the launching shell. Actual CARLA process maps and GPU UUID confirmed the private libraries and good GPU 1. The ordinary shell still has mismatched system libraries. Recheck versions after a reboot before reusing this environment. See [the recovery record](../todos/2026-09-23-lateral-followup/diagnostics/driver-recovery/README.md) for commands, failed-attempt evidence and the exact archive/library hashes.
+
 ## Looking at CARLA
 
 X access from an SSH shell works with nothing but `DISPLAY=:0` — no `XAUTHORITY`, no `xhost`:

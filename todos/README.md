@@ -8,3 +8,5 @@
 - [2026-09-22 B2D controller](2026-09-22-b2d-controller.md)：已完成轨迹控制器实施、反馈迭代与Dev10验收；无合格替代默认，全部结果见目录。
 
 - [2026-09-23 真实TCP与转弯控制](2026-09-23-tcp-controller/README.md)：真实模型纵向对照、静止速度反馈修复，以及按转弯窗口单独优化横向。
+
+- [2026-09-23-lateral-followup/](2026-09-23-lateral-followup/README.md)：逐弯控制诊断、Hermite负面闭环、固定后轴传播补偿及全部中间图表。

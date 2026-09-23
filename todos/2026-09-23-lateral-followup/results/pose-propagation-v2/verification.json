@@ -1,0 +1,56 @@
+[
+  {
+    "route": "26966",
+    "variant": "baseline-max",
+    "frames": 387,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 4.59588231424416e-14,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  },
+  {
+    "route": "26966",
+    "variant": "short-max",
+    "frames": 388,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 4.488770466437586e-14,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  },
+  {
+    "route": "24240",
+    "variant": "baseline-max",
+    "frames": 434,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 7.35837172444187e-14,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  },
+  {
+    "route": "24240",
+    "variant": "short-max",
+    "frames": 434,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 6.216549627499623e-14,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  },
+  {
+    "route": "17563",
+    "variant": "baseline-max",
+    "frames": 559,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 3.0197165262263243e-12,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  },
+  {
+    "route": "17563",
+    "variant": "short-max",
+    "frames": 559,
+    "direct_actor_velocity_vector_archived": false,
+    "pose_recurrence_max_error_m": 3.723414575252347e-12,
+    "rear_origin_max_error_m": 0.0,
+    "gain": 0.05
+  }
+]

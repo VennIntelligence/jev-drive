@@ -1,0 +1,233 @@
+{
+  "legacy_fixture": false,
+  "run_root": "/data/runs/b2d/controller/lateral-followup/pose-g2-v1",
+  "inputs": {
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/analyze_pose.py": {
+      "sha256": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d",
+      "bytes": 34102
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/pose_contract.py": {
+      "sha256": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58",
+      "bytes": 11690
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v2/analyze.py": {
+      "sha256": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+      "bytes": 10894
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/turn-windows.csv": {
+      "sha256": "a5efd77f579f3e3c94ae738654e4a3acd67245aca51a149788f7f07fb8a50ce5",
+      "bytes": 1562
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/analysis/frozen-v1/lateral-evidence-v1/routes.csv": {
+      "sha256": "223beed013eb4c33d99b812ddd9642e3a114cb6340e2c070b469f619cfa9d435",
+      "bytes": 3293
+    },
+    "/home/ujs/mycode/jev-drive/todos/2026-09-23-lateral-followup/pose-followup/protocol.md": {
+      "sha256": "1db58374c580f796990e91c623fae42435563d98bb33b074ff4d3c52e83e7ff9",
+      "bytes": 13140
+    },
+    "/data/runs/b2d/controller/development-v4/26966/pi-max/pursuit/route_reference.json": {
+      "sha256": "3f4b77b0987bfa7689ac5e1d4752e15909e1d64cb53b09be7a4c202f12ab9979",
+      "bytes": 8140
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/control.jsonl": {
+      "sha256": "3969b46d2121330762058aceeddd93728387d0764db86cf7ec7397aade6e9f83",
+      "bytes": 903916
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/route_reference.json": {
+      "sha256": "64da64077b33561080ba9f6c5fb1c7c3389b843e1aab82d806b5f9c88be3951d",
+      "bytes": 8186
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/agent_config.json": {
+      "sha256": "faafb275972b00173c072b299a1d38554a03b5072d6c7be0e1fa0071081a4efe",
+      "bytes": 380
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/validation_trace.json": {
+      "sha256": "c9752f132dfe4ee87ea36ca15a9fb5dff653aa40b8ddf259c9e60276de62238d",
+      "bytes": 442549
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/validation.json": {
+      "sha256": "c01669c5d8d62851333d3f7583745b87f8e64ceb0c2d9476062837da1e9a53ed",
+      "bytes": 4133
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/baseline-zero/pursuit/motion.jsonl": {
+      "sha256": "03d3b7961d6dadf863235f449f0b6f4980622e0b2ca0d2ff71a4c8d6b98604ee",
+      "bytes": 176352
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/inputs/controller-baseline-zero.json": {
+      "sha256": "3aace8e12ed95026f8e4162d9727014502daf2026c004903a15d5dc95d104e3a",
+      "bytes": 521
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/control.jsonl": {
+      "sha256": "f2c346e0d45eaa13221b68472ef62038e6e9ead32160e17778cca9e84bfe3f2b",
+      "bytes": 916943
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/route_reference.json": {
+      "sha256": "3764210ddd95614db306879f35f4df58ab6575e6cd37a888587bce9f1fc4bc25",
+      "bytes": 8194
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/agent_config.json": {
+      "sha256": "0aeb486450f28c2be4e5abcb61a8a46b7ffbcb8b6253a20bcbe595d6935a6a4b",
+      "bytes": 388
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/validation_trace.json": {
+      "sha256": "a567b91b6eb376fc98eb19c64c1eddd7cd50c947767c1e0f35f06cc227aba6de",
+      "bytes": 442248
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/validation.json": {
+      "sha256": "30d88a15a0ea5fd6560609beb3fec5a1d4e09a703d9b36938a2af2a62ee2a2b9",
+      "bytes": 4141
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/26966/candidate-fixed-k/pursuit/motion.jsonl": {
+      "sha256": "a31ca2ce287c373fcb8bd2d73fedfd65ce094c00fd57d9b925fd7f30e40b5b8c",
+      "bytes": 176434
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/inputs/controller-candidate-fixed-k.json": {
+      "sha256": "c68119c1f94e5f67c997b01655933a4da1e7ba18922ced9c0bb453ea4b337b61",
+      "bytes": 529
+    },
+    "/data/runs/b2d/controller/development-v4/17563/pi-max/pursuit/route_reference.json": {
+      "sha256": "40802cbd9c03dd5b08ede26bd479920130854d9e1e41d7fff2e5df146dc1e348",
+      "bytes": 13331
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/control.jsonl": {
+      "sha256": "a5a240dbfaf9bbcfeded986a6c288e777058040aa34dfb23573201f61be259af",
+      "bytes": 1325331
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/route_reference.json": {
+      "sha256": "0e7807b630015643c167ca13ea827716cd60087d65cf1c575a45775b129e0828",
+      "bytes": 13377
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/agent_config.json": {
+      "sha256": "5158c35a493672e11379d2098c4f8b773ae5ffacffb2574f69c6caa37457e469",
+      "bytes": 380
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/validation_trace.json": {
+      "sha256": "0295c5e3e3d3419267c681071e34b53b1144ff2578c80ba11ff30ee612ca9d27",
+      "bytes": 638562
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/validation.json": {
+      "sha256": "a787d78735742de42fc112d9eca470ddc461f6c4eec138d48f5acf5d91f2a52e",
+      "bytes": 4132
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/baseline-zero/pursuit/motion.jsonl": {
+      "sha256": "4ddd7a27da3e381155c62ab41e0c45f6f5c4eec1370ffd16cddae2dff8a8a7c8",
+      "bytes": 250242
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/control.jsonl": {
+      "sha256": "3dc24fa84299f02ada5d3eb2495f52fe02a7893f6e2fb95eeca205cdc5a09cd1",
+      "bytes": 1346265
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/route_reference.json": {
+      "sha256": "89eba125ff965817b297ebef2c82cdcc2a87b3a50083f854efd3a421cabc1c69",
+      "bytes": 13385
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/agent_config.json": {
+      "sha256": "2bb5c0de2ce1d239d591acdfe0c60c52a0843119d8eb2b2a552586080c7dc952",
+      "bytes": 388
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/validation_trace.json": {
+      "sha256": "2fd5036c831a9f8a65cfd91e325375a2341ccb6a93d7708c412460c839cd41b6",
+      "bytes": 637992
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/validation.json": {
+      "sha256": "336bb6083f46058d0dddb2b50b8aea30a1bb4cf1a1f8af104f76e264886bf73b",
+      "bytes": 4153
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/17563/candidate-fixed-k/pursuit/motion.jsonl": {
+      "sha256": "f3b79d3d9f6b3bdec9eb8a87e7fbddc37b6702cc68ba362a4209ecb541d73e09",
+      "bytes": 250207
+    },
+    "/data/runs/b2d/controller/development-v4/24240/pi-max/pursuit/route_reference.json": {
+      "sha256": "7af4d030eadf4d727b984fa6ed13e22046605da56aa7bade34bedb48b8905cbb",
+      "bytes": 11374
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/control.jsonl": {
+      "sha256": "6bf190e8628a8ee7a0e3d3064267ffd5000d808e5b7513d936aa04f965ede5bd",
+      "bytes": 1017908
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/route_reference.json": {
+      "sha256": "756de075458e05b18ee9239bdacdd1867854ec4b2e1f53f2dd93a9882078989d",
+      "bytes": 11420
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/agent_config.json": {
+      "sha256": "7612c786df3a0ae87a72846f7f5a73d1c6f65c6536252cbe2ba55cec97875f19",
+      "bytes": 380
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/validation_trace.json": {
+      "sha256": "6ef469cc1d1d9b18762d693a362fae98bd552036b100ae58b785a1131dea7845",
+      "bytes": 498189
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/validation.json": {
+      "sha256": "a6de78f0767fd39280eff8763cdf4bf860effa6c1b355b3526236098cb52f106",
+      "bytes": 4132
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/baseline-zero/pursuit/motion.jsonl": {
+      "sha256": "38f781645ea9aeb145136409f858df8c9b85c02b9e5ae1d9276fdfade6f022f8",
+      "bytes": 196002
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/control.jsonl": {
+      "sha256": "bc8911749b9a2cd2c9cb35d8870654755a3bc6eb038be7e02367161a1ef62f22",
+      "bytes": 1034053
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/route_reference.json": {
+      "sha256": "fec6c1d17bcf27845bc745e987692120fac42495acf58dffd0fb26227c5cfda9",
+      "bytes": 11428
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/agent_config.json": {
+      "sha256": "b9c46d6d3ef01778584a9bbc8efee8ad2f7990d1d833cdaddd38f52a30419ae6",
+      "bytes": 388
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/validation_trace.json": {
+      "sha256": "0e10106a45ed986f7c1157c07826750e50a99c50fd1755ded8666535385b58f3",
+      "bytes": 497818
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/validation.json": {
+      "sha256": "891450ddcf4bec1edad12e408ab6c3f70fb3ce3694cf11cb05dd8562d3ccb3fb",
+      "bytes": 4142
+    },
+    "/data/runs/b2d/controller/lateral-followup/pose-g2-v1/24240/candidate-fixed-k/pursuit/motion.jsonl": {
+      "sha256": "fd403fd8a561cd698cd9bc8cea14c53be904f7da38ecf4bdc849c3228b9e082e",
+      "bytes": 196974
+    }
+  },
+  "outputs": {
+    "pose-contract.json": "0d08e475fd977bf2f07841449266934d16c4d4096de0537abba553bfbb7a013c",
+    "coverage.json": "fddbc676aaa480bd9102a44bd37c8b20bf3aef1898310db379bbf9af7310eb84",
+    "metrics.csv": "ebe68fff59bd1c71294dbaf39dfd8bcab388d712509345b99e1b787f268bca1b",
+    "stats-source.py": "fa274cb2b5891747c54a5f37139367534b380f7c11cc860cfdda6c567d9acc92",
+    "analysis-source.py": "364c5be63c63326e99c8951a46602e83839404b85f0668d7c2e66b28f84b160d",
+    "control-reasons.json": "a4d47a18a2b1fc94e1ae307576cdae822a96f3e7cb0273fc995e842199f2850e",
+    "pose-contract-source.py": "3cfd8767d6a34aa8da46d9abeaaf703c6819b02adaa14e4dc3e219fb24047c58",
+    "frames.csv": "50cb21fb141a7e6901a2975bf31ae19234ed1f559ece16a0b32a9f11e73916ad",
+    "recovery.csv": "7bf8703188e51b02d038e0729fb23ab63985ddcb561e5dadfc73b84213571598",
+    "pose-recomputed.csv": "8e0342cdc2e4eaa7d37e6530b8c8fa87c298106c71ee970b27b1be5d3cc3735d",
+    "required-conditions.json": "18f7c98292b29b78d568a91d5471ed4056c9163e3f61cf2d06002d3e04e60713",
+    "cases.csv": "e9e4b41ff26db1f33593f128899b379a1735a1eadb42554f7b0f8cf4aaa5902c"
+  },
+  "complete_input_matrix": true,
+  "missing_inputs": [],
+  "routes": [
+    "26966",
+    "17563",
+    "24240"
+  ],
+  "variants": [
+    "baseline-zero",
+    "candidate-fixed-k"
+  ],
+  "protocol": {
+    "windows": "Frozen v1: 26966 one,17563 two,24240 one; no error-based reselection",
+    "cte": "LEFT positive, opposite the historical independent v2 perpendicular sign; RMS/p95abs/maxabs unchanged",
+    "heading": "CARLA right-positive vehicle yaw minus centered5m road tangent, degrees",
+    "rate": "Emitted normalized steer difference / actual sim_time difference; only consecutive frames",
+    "physical": "Join validation_trace JSON array by frame; actual speed minus reference; accel dot right/forward; world acceleration finite difference divided by trace sim_time dt then dot CURRENT right/forward for jerk. No smoothing.",
+    "limits": "raw->slew clamp using previous emitted and actualdt->amplitude clamp. Diagnostic requested clamp stages; safe fallback may use a different branch. Same-frame applied_control is previous command, never treated as actuator error.",
+    "invalid_control": "Nonfinite/out-of-config-bounds output, pedal conflict, explicit invalid/stale/input/pose fault. trajectory_behind legal safe brake is separately indexed with station and proximity to endpoint, all its samples retained.",
+    "bands": "entry/core/exit/post10m; full_route; endpoint_last5m; terminal_hold; straight guards26966[0,19],24240[0,13],17563[0,22.5]and[53.5,68.5]",
+    "retention": "All frames incl reversal/stall; moving>=2m/s auxiliary; no pooled cross-route passing claim",
+    "recovery": "First core exit to first >=.5s consecutive absCTE<=.25m and absheading<=5deg interval before padded_end+10m; absent censored",
+    "geometry_guard": "Each case original world_xy must match canonical reference pointwise within.01m; no resampling new trajectories",
+    "candidate": "baseline-zero vs candidate-fixed-k=.010659832; both linear aim max(3m,.5s*v); original four-window guards; no Hermite action-benefit or recovery gates."
+  }
+}

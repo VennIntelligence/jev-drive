@@ -1,0 +1,13 @@
+{
+  "classification": "infrastructure_server_startup_failure",
+  "raw_root": "/data/runs/b2d/controller/lateral-followup/aim-g2-v1",
+  "event_start_epoch_s": 1790128854.411731,
+  "event_end_epoch_s": 1790129036.5942051,
+  "start_to_end_wall_s": 182.18247413635254,
+  "route_start_count": 0,
+  "route_end_count": 0,
+  "error": "RuntimeError('CARLA server 106 never opened port 7300')",
+  "behavior_comparison_available": false,
+  "not_a_controller_or_driving_failure": true,
+  "frozen_protocol_and_analysis_unchanged": true
+}
