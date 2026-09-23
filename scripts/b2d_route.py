@@ -145,6 +145,8 @@ def main():
                       cache_lights=a.cache_lights)
     if os.environ.get("B2D_RESEED_AFTER_BUILD") == "1":
         b2d_hooks.reseed_after_build(a.tm_seed)
+    if _route_attr(a.routes, a.route_id, "p5_suppress") == "1":
+        b2d_hooks.suppress_hazards(a.out)
     _patch_setup_simulation(LeaderboardEvaluator, a)
     _patch_signal_handler(LeaderboardEvaluator)
     if a.max_ticks:
@@ -204,6 +206,14 @@ def main():
         print(json.dumps({"route_id": a.route_id, "status": record["status"],
                           "wall_s": record["wall_s"], "ticks": profile.ticks}), flush=True)
     return rc
+
+
+def _route_attr(routes, route_id, key):
+    import xml.etree.ElementTree as ET
+    for r in ET.parse(routes).getroot().iter("route"):
+        if r.get("id") == route_id:
+            return r.get(key)
+    return None
 
 
 def _capture_criterion_events(stats, out):

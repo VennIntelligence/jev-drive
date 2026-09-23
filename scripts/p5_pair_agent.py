@@ -39,6 +39,7 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from srunner.scenariomanager.timer import GameTime
 
 import p4_carla_agent as p4                      # Waymo camera model, early-stop flag (patches ScenarioManager)
+from lead.common.base_agent import BaseAgent
 from lead.inference.sensor_agent import SensorAgent
 
 TFV6_SPEEDS = (0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0)
@@ -83,7 +84,7 @@ class P5PairAgent(SensorAgent):
         self.fov = math.degrees(2 * math.atan(cfg["render_w"] / 2.0 / cfg["f"]))
         self._tick, self._ba, self._still_since, self._pred = 0, None, None, None
         self._kinds, self._actor_rows = {}, []
-        self._t = {k: [] for k in ("tick", "tfv6", "tfv6_forward", "expert", "snapshot", "save", "visibility")}
+        self._t = {k: [] for k in ("tick", "tfv6", "tfv6_base", "tfv6_forward", "expert", "snapshot", "save", "visibility")}
         self._pose = open(self.out / "pose.jsonl", "w")
         self._frames = open(self.out / "frames.jsonl", "w")
         self._tf = open(self.out / "tfv6.jsonl", "w")
@@ -133,6 +134,7 @@ class P5PairAgent(SensorAgent):
         self._light_box = [np.array([b[:3] for b in l["boxes"]] or [l["loc"]], np.float64) for l in lights]
         bb = hero.bounding_box
         self._ego_ext = np.array([bb.extent.x, bb.extent.y, bb.extent.z])
+        self._ego_loc = np.array([bb.location.x, bb.location.y, bb.location.z])
         w = world.get_weather()
         meta = {"town": cmap.name, "vehicle": hero.type_id, "bbox_location": _xyz(bb.location),
                 "bbox_extent": self._ego_ext.tolist(), "rear_axle_x": p4.REAR_AXLE_X,
@@ -203,9 +205,9 @@ class P5PairAgent(SensorAgent):
             if cam.distance(p) >= d - 0.3 or inside(p):
                 continue
             q = Mego @ np.array([p.x, p.y, p.z, 1.0])
-            if (np.abs(q[:3]) <= self._ego_ext + 0.2).all():
+            if (np.abs(q[:3] - self._ego_loc) <= self._ego_ext + 0.2).all():
                 continue
-            return False, str(hit.label)
+            return False, "%s@%.1f" % (hit.label, cam.distance(p))
         return True, ""
 
     def _visibility(self, rows):
@@ -266,10 +268,20 @@ class P5PairAgent(SensorAgent):
             std.append(round(float(img[::8, ::8].std()), 2))
         return files, std
 
-    def _shadow(self, input_data, t, frame):
-        """TFv6's own run_step on its own sensors; the control it returns is discarded."""
+    def _shadow(self, input_data, t, frame, cam_tick):
+        """TFv6's own run_step on its own sensors; the control it returns is discarded.
+
+        The exam reads TFv6 at the 5 Hz camera frames only, so the full `run_step` (the author's image / LiDAR /
+        radar preprocessing and the ensemble forward, ~0.4 s a tick on this box) runs on camera ticks, and on the
+        three ticks in between only the author's `BaseAgent.tick`, which is what carries state from tick to tick:
+        the GPS filter, the ego pose history and the LiDAR / radar sweep queues. The model therefore sees exactly
+        the inputs it would see in closed loop; what is skipped only feeds its control (PID state, stop-sign and
+        creeping post-processors, the initial-frames brake), which the recorder discards anyway."""
         self._pred = None
         try:
+            if not cam_tick and self.initialized:
+                BaseAgent.tick(self, dict(input_data), use_kalman_filter=self.training_config.use_kalman_filter_for_gps)
+                return
             SensorAgent.run_step(self, dict(input_data), t)
         except Exception as e:                    # recorded, never allowed to stop the expert's drive
             self._tfv6_errors += 1
@@ -295,14 +307,15 @@ class P5PairAgent(SensorAgent):
         frame, t = GameTime.get_frame(), GameTime.get_time()
         if self._ba is None:
             self._init_world()
+        cam_tick = (self._tick - 1) % p4.CAM_TICKS == 0
         if self.tfv6:
             t0 = time.perf_counter()
-            self._shadow(input_data, t, frame)
-            self._t["tfv6"].append(time.perf_counter() - t0)
+            self._shadow(input_data, t, frame, cam_tick)
+            self._t["tfv6" if cam_tick else "tfv6_base"].append(time.perf_counter() - t0)
         t0 = time.perf_counter()
         rows = self._snapshot(frame)
         self._t["snapshot"].append(time.perf_counter() - t0)
-        if (self._tick - 1) % p4.CAM_TICKS == 0:
+        if cam_tick:
             t0 = time.perf_counter()
             files, std = self._save(frame, input_data)
             self._t["save"].append(time.perf_counter() - t0)

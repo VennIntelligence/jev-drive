@@ -149,6 +149,63 @@ def reseed_after_build(tm_seed):
     RouteScenario.__init__ = init
 
 
+def _hazards(scenario):
+    """The actor(s) a counterfactual x- world must not contain: the one that cuts in or runs the light, or the
+    walkers / two-wheelers that cross. Parked blockers, containers and props stay: they are context, not factor."""
+    for name in ("_adversary_actor", "_parked_actor", "_cut_in_vehicle"):
+        actor = getattr(scenario, name, None)
+        if actor is not None:
+            return [actor]
+    actors = [a for a in scenario.other_actors if a is not None]
+    crossing = [a for a in actors if a.type_id.startswith("walker.") or a.attributes.get("number_of_wheels") == "2"]
+    if crossing:
+        return crossing
+    if type(scenario).__name__ == "OppositeVehicleRunningRedLight":
+        return [a for a in actors if a.type_id.startswith("vehicle.")]
+    return []
+
+
+def suppress_hazards(out_dir):
+    """x- of a P5 pair (scripts/p5_pair_agent.py): the scenario runs unchanged - same actors spawned from the same
+    random stream, same trigger, same commands to the background traffic (clear the junction, leave space) - but
+    its hazard actors are kept 500 m under the road after every scenario tick, so nothing sees or meets them.
+    Deleting the scenario from the XML instead also deletes those background commands, and then the background
+    differs as soon as the scenario would have triggered. 500 m down is the scenarios' own hiding place, and every
+    privileged check (BehaviorAgent, the traffic manager) measures distance in 3-D."""
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    hidden, log = [], []
+    inner_build = RouteScenario.build_scenarios
+
+    def build(self, ego_vehicle, debug=False):
+        n0 = len(self.list_scenarios)
+        inner_build(self, ego_vehicle, debug=debug)
+        for sc in self.list_scenarios[n0:]:
+            for a in _hazards(sc):
+                a.set_simulate_physics(False)
+                hidden.append([a, None])
+                log.append({"scenario": type(sc).__name__, "id": a.id, "type_id": a.type_id,
+                            "role": a.attributes.get("role_name", "")})
+        with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
+            json.dump(log, fh)
+
+    RouteScenario.build_scenarios = build
+    inner_tick = ScenarioManager._tick_scenario
+
+    def tick(self):
+        inner_tick(self)
+        for h in hidden:
+            a = h[0]
+            if not a.is_alive:
+                continue
+            loc = a.get_location()
+            if h[1] is None:
+                h[1] = loc.z - 500.0
+            if loc.z > h[1] + 1.0:
+                a.set_location(carla.Location(loc.x, loc.y, h[1]))
+
+    ScenarioManager._tick_scenario = tick
+
+
 def _patch_lights():
     from srunner.scenariomanager.lights_sim import RouteLightsBehavior
 

@@ -27,17 +27,26 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
 
 | family | 路线（town） | x⁺ | x⁻ |
 |:--|:--|:--|:--|
-| PedestrianCrossing | 14194 (T12)、25863 (T07)、27515 (T03)、27529 (T04)、27582 (T11) | XML 原样 | 删掉该 scenario 元素 |
+| PedestrianCrossing | 14194 (T12)、25863 (T07)、27515 (T03)、27529 (T04)、27582 (T11) | XML 原样 | scenario 照常运行，hazard actor 被藏到地下（见下面的修订） |
 | DynamicObjectCrossing | 17752 (T12)、24211 (T01)、24224 (T02)、24252 (T11)、24333 (T15) | 同上 | 同上 |
 | VehicleTurningRoutePedestrian | 2164、10857、11381 (T12)、3731、3737 (T13) | 同上 | 同上 |
 | ParkingCrossingPedestrian | 3248、3255 (T13)、18252 (T12)、24206 (T03)、24294 (T02) | 同上 | 同上 |
 | OppositeVehicleRunningRedLight | 2082、2844、2847 (T12)、26944 (T04)、26950 (T03) | 同上 | 同上 |
-| HardBreakRoute | 3540 (T13)、24330 (T10HD)、24781 (T01)、26406 (T04)、26456 (T03) | 同上 | 同上 |
+| HardBreakRoute | 3540 (T13)、24330 (T10HD)、24781 (T01)、26406 (T04)、26456 (T03) | 同上 | 删掉 scenario（因素就是背景车的急刹本身） |
 | StaticCutIn | 2709、2715 (T12)、25358 (T06)、26396 (T05)、26405 (T15) | 同上 | 同上 |
 | ParkingCutIn | 1711、18305、18311、18356 (T12)、24759 (T05) | 同上 | 同上 |
 | HighwayCutIn | 2286、3072、3074、3080 (T12)、3813 (T13) | 同上 | 同上 |
 | **Light**（红灯 vs 绿灯） | Red：2373、3144 (T12)、3865、3869、3876 (T13)；Green：14842、14862、14909 (T12)、25968、25975 (T07) | scenario 类型为 `VanillaSignalizedTurnEncounterRedLight` | 同一元素改成 `...GreenLight`（Green 路线反过来构造 x⁺） |
 
+- **x⁻ 的修订（2026-09-24 00:40，第一对 smoke 之后、批量之前；判据、指标、读法一字未改）**：原设计是「XML 里删掉 scenario 元素」。
+  smoke 的第一对（27515，PedestrianCrossing，seed 0）显示这不是「只差一处」：Bench2Drive 的 scenario 触发时还会给背景车流发指令
+  （`HandleJunctionScenario` 清空路口、`LeaveSpaceInFront`、`LeaveCrossingSpace`、`RemoveRoadLane` 等，9 个 hazard family 里 8 个都有），
+  删掉 scenario 就连这些指令一起删了。实测：x⁺ 里路口被清空、ego 开到行人前才停；x⁻ 里路口没清空，ego 在 t = 4.15 s 就停在排队车后面，
+  两个世界的 ego 在行人可见之前就分叉了，而且分叉原因是背景车，不是行人。改为：**x⁻ 保留 scenario 原样运行**（同样的 actor 从同一随机流生成、
+  同样的触发、同样的背景指令），只把它的 hazard actor（横穿的行人 / 自行车、cut-in 的那辆车、闯红灯的那辆车；停着的遮挡车、集装箱等道具保留，
+  它们是情境不是因素）在每个 scenario tick 之后放到地下 500 m（`b2d_hooks.suppress_hazards`，这正是 scenario 自己在触发前藏 actor 的位置；
+  BehaviorAgent 和 Traffic Manager 的距离判断都是三维的，所以看不见也碰不到）。HardBreakRoute 的因素就是背景车急刹本身，仍用删 scenario；
+  Light 仍是红绿互换。被藏的 actor 逐 run 记在 `hidden.json`。
 - **变体**：每类只有 5 条路线（Light 10 条），不够 10 个，所以每条路线跑 3 个 `--tm-seed`（0、1、2，Traffic Manager 的随机种子，
   决定背景车流的行为）。x⁺ 与 x⁻ 用同一个 seed。于是 9 个 hazard family 各 15 对、Light 30 对，**共 165 对**。
 - **null pair**（只改外观、正确动作不变的对照）：每条路线的 x⁺（seed 0）再跑一个只换天气的版本：XML 里的 `<weathers>` 换成另一个预设
@@ -49,8 +58,8 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   理由：背景车的蓝图、颜色、出生点都从这个共享的随机数流里抽，而 scenario actor 在路线开始时就先于背景车生成
   （`INIT_THRESHOLD = 500 m`，路线都比这短），删掉一个 scenario 会让背景车流整体换一套车型，两个世界从第一帧就不一样。
   重置之后背景从同一个随机状态出发。两个世界都装这个 hook，null pair 也装。
-  已知的残留差别：x⁻ 里原来被 scenario 占的停车位可能被放上普通停放车模型；scenario 触发时会给 BackgroundActivity 发指令
-  （清路口、让出车道），所以触发后背景车流在两个世界里可以不同——这部分算进「因素」本身，逐帧报视野里有多少非 scenario actor 两侧不同。
+  已知的残留差别：背景车会对 x⁺ 里真实存在的 hazard actor 作反应（比如给行人让路），所以触发后背景车流仍可能两侧不同；
+  逐帧报视野里有多少非因素 actor 两侧位置不同，作为纯度诊断。
 - **Expert**：CARLA 0.9.15 的 `BehaviorAgent(normal)`，与 P4 完全相同（特权：读地图、所有 actor 与红绿灯，不看相机）。
   LEAD 的 PDM-Lite expert 需要作者 fork 的 leaderboard / scenario_runner 和 HD map `.h5`（box 上都没有），按任务书给 2 小时尝试，
   跑不起来就用 BehaviorAgent 并写明。**结果里标明实际用的是哪一个。**
@@ -62,7 +71,10 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   录制上限 45 s 仿真时间（与 P4 相同），停住 20 s 提前结束。
 - **确定性检查**（每对）：t_div 是 x⁺ 与 x⁻ 的 ego 后轴位置差 ≥ 1 cm 或航向差 ≥ 0.1° 的第一个 tick。
   **因素第一次可见** t_vis：「因素元素」在 Waymo 前视相机视锥内、60 m 内、ray test 未遮挡的第一个相机帧。
-  因素元素 = 只在 x⁺ 里存在的 actor（scenario 生成的），加上两侧都在但同一 tick 位置差 > 0.1 m 的 actor，加上两侧状态不同的红绿灯。
+  因素元素 = x⁺ 里被 x⁻ 藏起来的那些 hazard actor（HardBreakRoute：x⁺ 里与 x⁻ 同一 tick 位置差 > 0.1 m 的背景车），加上两侧状态不同的红绿灯。
+  其余两侧位置不同的 actor 不算因素，记作纯度诊断。
+  smoke 里同一 XML 两次运行的 ego 在起步后有毫米级漂移（27515：2 s 时 4 mm、3 s 时 1 cm），所以 1 cm / 0.1° 的门槛是会被物理噪声碰到的，照登记用，
+  null pair（同一 XML 只换天气）给出这个噪声本身的 t_div 分布。
   报 **t_div ≥ t_vis 的对的比例**；t_div < t_vis 的对丢掉并记原因：`background_drift`（scenario 触发之前 ego 就分叉）、
   `expert_reacted_before_visible`（触发之后、可见之前 expert 已经在反应，特权 expert 看得见相机看不见的东西）、`never_visible`。
 - **观测帧**：每对里 t_vis ≤ t < t_div 的所有 5 Hz 相机帧，且两个世界都有完整的 4 帧 clip（0.6 s）和完整的 5 s 未来。
