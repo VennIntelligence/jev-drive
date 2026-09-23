@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import unittest
 
 from b2d_tfv6_controller_agent import (
-    _apply_postprocessors, _clone_processor, _configure_author_arm, _normalize_brake,
-    _select_arm_control,
+    _apply_postprocessors, _changed_processor_keys, _clone_processor,
+    _configure_author_arm, _normalize_brake, _processor_snapshot, _select_arm_control,
 )
 
 
@@ -69,7 +69,7 @@ class AgentPathTests(unittest.TestCase):
 
         class StopSign:
             def __init__(self):
-                self.stop_sign_buffer = deque([object()], maxlen=1)
+                self.stop_sign_buffer = deque([SimpleNamespace(x=1.0)], maxlen=1)
                 self.calls = 0
 
             def adjust(self, speed, throttle, brake):
@@ -80,6 +80,7 @@ class AgentPathTests(unittest.TestCase):
         force_adjust, stop_adjust = force.adjust, stop.adjust
         force.adjust = lambda *args: force_adjust(*args)
         stop.adjust = lambda *args: stop_adjust(*args)
+        force_before, stop_before = _processor_snapshot(force), _processor_snapshot(stop)
         shadow_force, shadow_stop = _clone_processor(force), _clone_processor(stop)
         raw = {"steer": .0102737, "throttle": .3013387, "brake": 0.}
         actual = _apply_postprocessors(raw, .2072897, force, stop)
@@ -91,6 +92,27 @@ class AgentPathTests(unittest.TestCase):
         self.assertEqual(stop.calls, 1)
         self.assertEqual(shadow_stop.calls, 1)
         self.assertIsNot(stop.stop_sign_buffer, shadow_stop.stop_sign_buffer)
+        self.assertEqual(_changed_processor_keys(force_before, force), ["force_move"])
+        self.assertEqual(_changed_processor_keys(stop_before, stop), ["calls"])
+        after_actual_force, after_actual_stop = _processor_snapshot(force), _processor_snapshot(stop)
+        _apply_postprocessors(raw, .2072897, _clone_processor(force), _clone_processor(stop))
+        self.assertEqual(_changed_processor_keys(after_actual_force, force), [])
+        self.assertEqual(_changed_processor_keys(after_actual_stop, stop), [])
+
+    def test_guard_catches_shared_mutable_state_in_shadow(self):
+        class SharedList:
+            def __init__(self):
+                self.events = []
+
+            def adjust(self, speed, throttle, brake):
+                self.events.append("shadow")
+                return throttle, brake
+
+        live = SharedList()
+        before = _processor_snapshot(live)
+        shadow = _clone_processor(live)
+        shadow.adjust(1.0, .3, 0.)
+        self.assertEqual(_changed_processor_keys(before, live), ["events"])
 
 
 if __name__ == "__main__":

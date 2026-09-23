@@ -54,18 +54,24 @@ def run(command, out, label):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--frozen-protocol-commit", required=True)
+    parser.add_argument("--code-commit", required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--concurrency", type=int, default=2)
     args = parser.parse_args()
     if args.concurrency != 2:
         parser.error("W2 phase-1 measurement selected exactly two concurrent servers")
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True)
+    dirty = subprocess.run(["git", "diff", "--quiet", "HEAD"], cwd=ROOT)
+    if head.returncode or head.stdout.strip() != args.code_commit or dirty.returncode:
+        parser.error("Code commit does not match a clean HEAD")
     frozen = subprocess.run(["git", "show", f"{args.frozen_protocol_commit}:{PROTOCOL}"],
                             cwd=ROOT, capture_output=True)
     if frozen.returncode or frozen.stdout != (ROOT / PROTOCOL).read_bytes():
         parser.error("Frozen commit is unavailable or its protocol differs from this worktree")
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    record(out, "start", frozen_protocol_commit=args.frozen_protocol_commit, concurrency=2)
+    record(out, "start", frozen_protocol_commit=args.frozen_protocol_commit,
+           code_commit=args.code_commit, concurrency=2)
     stop = threading.Event()
     progress = threading.Thread(target=bus_progress, args=(out, stop), daemon=True)
     progress.start()

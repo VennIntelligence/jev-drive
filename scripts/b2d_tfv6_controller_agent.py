@@ -1,7 +1,7 @@
 """Four-arm TFv6 controller experiment; model and author postprocessors stay upstream."""
 
 from collections import deque
-from copy import copy
+from copy import copy, deepcopy
 import json
 import os
 from pathlib import Path
@@ -68,6 +68,45 @@ def _apply_postprocessors(raw, speed, force, stop):
     throttle, brake = force.adjust(float(speed), raw["throttle"], raw["brake"])
     throttle, brake = stop.adjust(float(speed), throttle, brake)
     return _triplet(raw["steer"], throttle, brake)
+
+
+def _processor_snapshot(processor):
+    return deepcopy({key: value for key, value in vars(processor).items() if key != "adjust"})
+
+
+def _state_equal(left, right, seen=None):
+    if type(left) is not type(right):
+        return False
+    if seen is None:
+        seen = set()
+    pair = (id(left), id(right))
+    if pair in seen:
+        return True
+    seen.add(pair)
+    if isinstance(left, np.ndarray):
+        return np.array_equal(left, right, equal_nan=True)
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            _state_equal(left[key], right[key], seen) for key in left)
+    if isinstance(left, (list, tuple, deque)):
+        return len(left) == len(right) and all(
+            _state_equal(a, b, seen) for a, b in zip(left, right))
+    if hasattr(left, "__dict__"):
+        return _state_equal(vars(left), vars(right), seen)
+    if hasattr(left, "__slots__"):
+        return all(_state_equal(getattr(left, key), getattr(right, key), seen)
+                   for key in left.__slots__)
+    result = left == right
+    if isinstance(result, np.ndarray):
+        return bool(np.all(result))
+    return bool(result)
+
+
+def _changed_processor_keys(snapshot, processor):
+    current = {key: value for key, value in vars(processor).items() if key != "adjust"}
+    return sorted(set(snapshot) ^ set(current)) + [
+        key for key in snapshot.keys() & current.keys()
+        if not _state_equal(snapshot[key], current[key])]
 
 
 class TFv6ControllerAgent(SensorAgent):
@@ -205,6 +244,10 @@ class TFv6ControllerAgent(SensorAgent):
                     "angular_velocity": [angular.x, angular.y, angular.z],
                 }
         final = None
+        guard_start = time.perf_counter()
+        force_before = _processor_snapshot(self.force_move_post_processor)
+        stop_before = _processor_snapshot(self.stop_sign_post_processor)
+        guard_ms = (time.perf_counter() - guard_start) * 1000.0
         if self._raw is not None and self._pre_force is not None and self._pre_stop is not None:
             speed = float(self._tick_data["speed"].item())
             final = {arm: _apply_postprocessors(raw, speed,
@@ -212,18 +255,28 @@ class TFv6ControllerAgent(SensorAgent):
                      for arm, raw in self._raw.items()}
             if self.step < self.training_config.inital_frames_delay:
                 final = {arm: _triplet(0.0, 0.0, 1.0) for arm in ARMS}
-            observed = _triplet(control.steer, control.throttle, control.brake)
-            if any(abs(observed[key] - final[self.arm][key]) > 1e-5 for key in observed):
-                self._frame_log.write(json.dumps({"diagnostic": "shadow_mismatch", "step": int(self.step),
-                    "sim_time": self._sim_time, "arm": self.arm, "raw_control": self._raw,
-                    "final_control": final, "executed_control": observed,
-                    "speed": speed, "force_state": {"stuck_detector": self.force_move_post_processor.stuck_detector,
-                    "force_move": self.force_move_post_processor.force_move},
-                    "stop_state": {"slower_stop_sign_count": self.stop_sign_post_processor.slower_stop_sign_count,
-                    "clear_stop_sign_cool_down": self.stop_sign_post_processor.clear_stop_sign_cool_down,
-                    "slower_for_stop_sign_cool_down": self.stop_sign_post_processor.slower_for_stop_sign_cool_down}},
-                    allow_nan=False) + "\n")
-                raise RuntimeError("Shadow postprocessing does not match executed control")
+        guard_start = time.perf_counter()
+        changed = {"force": _changed_processor_keys(force_before, self.force_move_post_processor),
+                   "stop": _changed_processor_keys(stop_before, self.stop_sign_post_processor)}
+        guard_ms += (time.perf_counter() - guard_start) * 1000.0
+        observed = _triplet(control.steer, control.throttle, control.brake)
+        mismatch = final is not None and any(
+            abs(observed[key] - final[self.arm][key]) > 1e-5 for key in observed)
+        if any(changed.values()) or mismatch:
+            diagnostic = "live_processor_state_changed" if any(changed.values()) else "shadow_mismatch"
+            self._frame_log.write(json.dumps({"diagnostic": diagnostic, "step": int(self.step),
+                "sim_time": self._sim_time, "arm": self.arm, "raw_control": self._raw,
+                "final_control": final, "executed_control": observed,
+                "speed": float(self._tick_data["speed"].item()) if self._tick_data is not None else None,
+                "changed_processor_keys": changed, "shadow_guard_ms": guard_ms,
+                "force_state": {"stuck_detector": self.force_move_post_processor.stuck_detector,
+                "force_move": self.force_move_post_processor.force_move},
+                "stop_state": {"slower_stop_sign_count": self.stop_sign_post_processor.slower_stop_sign_count,
+                "clear_stop_sign_cool_down": self.stop_sign_post_processor.clear_stop_sign_cool_down,
+                "slower_for_stop_sign_cool_down": self.stop_sign_post_processor.slower_for_stop_sign_cool_down}},
+                allow_nan=False) + "\n")
+            raise RuntimeError("Shadow replay changed live postprocessor state" if any(changed.values())
+                               else "Shadow postprocessing does not match executed control")
         prediction = self._prediction
         row = {
             "step": int(self.step), "sim_time": self._sim_time, "arm": self.arm,
@@ -237,6 +290,7 @@ class TFv6ControllerAgent(SensorAgent):
             "truth": truth, "forward_ms": self._forward_ms,
             "sensor_rear_pose": self._sensor_pose,
             "agent_ms": (time.perf_counter() - started) * 1000.0,
+            "shadow_guard_ms": guard_ms,
             "heuristic": {"creeping_enabled": bool(self.config_closed_loop.sensor_agent_creeping),
                           "stop_sign_enabled": bool(self.config_closed_loop.slower_for_stop_sign),
                           "creep_active": bool(self.force_move_post_processor.force_move),
