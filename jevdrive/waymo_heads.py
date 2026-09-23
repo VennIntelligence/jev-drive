@@ -128,12 +128,13 @@ class TruncDiffusion(torch.nn.Module):
     """Denoiser over M anchor-initialised modes: x_t (b, M, 2T) -> (x0 estimate, score) per mode."""
 
     def __init__(self, anchors: torch.Tensor, d_ego: int, d_feat: int = 0, dm: int = DM, layers: int = LAYERS,
-                 heads: int = HEADS, drop: float = DROP):
+                 heads: int = HEADS, drop: float = DROP, feat_drop: float | None = None):
         super().__init__()
         M, T2 = anchors.shape
         self.register_buffer("anchors", anchors)
         self.ego = torch.nn.Sequential(torch.nn.Linear(d_ego, dm), torch.nn.LayerNorm(dm))
-        self.feat = torch.nn.Sequential(torch.nn.Dropout(drop), torch.nn.Linear(d_feat, dm),
+        self.feat = torch.nn.Sequential(torch.nn.Dropout(drop if feat_drop is None else feat_drop),
+                                        torch.nn.Linear(d_feat, dm),
                                         torch.nn.LayerNorm(dm)) if d_feat else None
         self.inp, self.mode = torch.nn.Linear(T2, dm), torch.nn.Parameter(torch.randn(M, dm) * 0.02)
         self.temb = torch.nn.Sequential(torch.nn.Linear(dm, dm), torch.nn.SiLU(), torch.nn.Linear(dm, dm))
@@ -176,8 +177,12 @@ def ddim_sample(net: TruncDiffusion, e, f=None, gen=None):
 
 
 def diff_arm(ctx: dict, X, anchors: torch.Tensor, norm: np.ndarray, side: dict, name: str,
-             epochs: int = EPOCHS):
+             epochs: int = EPOCHS, pca: int | None = None, feat_drop: float | None = None):
     """The truncated diffusion head, conditioned on the ego state and, when `X` is given, the pooled feature.
+
+    `pca` projects the standardised feature onto its top principal components of the fit half first, and
+    `feat_drop` sets the dropout on the feature input: the two remedies for a 2560-dim condition that
+    overfits ~10k rows (Stage A2 in the todo).
 
     Same discipline as `waymo_ladder._train`: train on the fit half's inner-fit rows, pick the epoch count by
     top-1 ADE on its sequence-grouped inner-val rows, refit on the whole fit half for that many epochs, read
@@ -194,7 +199,10 @@ def diff_arm(ctx: dict, X, anchors: torch.Tensor, norm: np.ndarray, side: dict, 
         pos = torch.as_tensor(traj.nearest(G.reshape(len(sel), -1), anchors, 1)[0][:, 0], device=DEV)
         E = lad.standardize_np(ctx["ego"][sel], sp.train)
         Z = lad.standardize_np(X[sel], sp.train) if X is not None else None
-        make = lambda: TruncDiffusion(A, E.shape[1], 0 if Z is None else Z.shape[1]).to(DEV)  # noqa: E731
+        if Z is not None and pca:
+            Z = planner.standardize(planner.pca(Z, sp.train, pca), sp.train)
+        make = lambda: TruncDiffusion(A, E.shape[1], 0 if Z is None else Z.shape[1],  # noqa: E731
+                                      feat_drop=feat_drop).to(DEV)
 
         def predict(net, rows):
             net.eval()
@@ -323,18 +331,19 @@ def head_vs_ridge(run_dir, tag: str = TAG) -> pd.DataFrame:
         ego = {"ridge": lad.BASE, "cls": "cls ego K1024", "diff": f"diff ego M{DIFF_M}"}
         for tap in TAPS:
             ridge = f"A ridge_late qwenvid {tap}"
-            for fam, arm in (("cls", f"cls_late qwenvid {tap}"), ("diff", f"diff qwenvid {tap}")):
+            fams = [("cls", f"cls_late qwenvid {tap}")] + [("diff", k) for k in P if k.startswith(f"diff qwenvid {tap}")]
+            for fam, arm in fams:
                 if arm not in P or ridge not in P:
                     continue
                 for sn, m in masks.items():
-                    out.append({"direction": d, "tap": tap, "family": fam, "compare": "head top-1 - ridge_late",
+                    out.append({"direction": d, "tap": tap, "family": fam, "arm": arm, "compare": "head top-1 - ridge_late",
                                 "subset": sn, **waymo_p1.paired(ade[arm], ade[ridge], seq, m)})
                     if ego[fam] in P:
                         inc_h, inc_r = ade[arm] - ade[ego[fam]], ade[ridge] - ade[lad.BASE]
-                        out.append({"direction": d, "tap": tap, "family": fam,
+                        out.append({"direction": d, "tap": tap, "family": fam, "arm": arm,
                                     "compare": "vision increment: head family - ridge", "subset": sn,
                                     **waymo_p1.paired(inc_h, inc_r, seq, m)})
-                out.append({"direction": d, "tap": tap, "family": fam, "compare": "RFS head top-1 - ridge_late",
+                out.append({"direction": d, "tap": tap, "family": fam, "arm": arm, "compare": "RFS head top-1 - ridge_late",
                             "subset": "rater frames", **waymo_p1.paired(rfs[arm], rfs[ridge], seq[rp],
                                                                          np.ones(len(rp), bool))})
     return pd.DataFrame(out)
@@ -342,7 +351,10 @@ def head_vs_ridge(run_dir, tag: str = TAG) -> pd.DataFrame:
 
 # ---------------------------------------------------------------- driver
 
-def build_arms(ctx, feats, voc, norm, side, which, epochs):
+DIFF_VARIANTS = {"pca16": {"pca": 16}, "pca64": {"pca": 64}, "drop0.5": {"feat_drop": 0.5}}
+
+
+def build_arms(ctx, feats, voc, norm, side, which, epochs, variants=()):
     arms = {}
     for tap in TAPS:
         arms[f"A ridge_late qwenvid {tap}"] = lad.ridge_arm(feats[tap])
@@ -357,10 +369,13 @@ def build_arms(ctx, feats, voc, norm, side, which, epochs):
         for tap in TAPS:
             n = f"diff qwenvid {tap}"
             arms[n] = diff_arm(ctx, feats[tap], voc[DIFF_M], norm, side, n, epochs)
+            for v in variants:
+                arms[f"{n} {v}"] = diff_arm(ctx, feats[tap], voc[DIFF_M], norm, side, f"{n} {v}", epochs,
+                                            **DIFF_VARIANTS[v])
     return arms
 
 
-def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed: int = 0):
+def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed: int = 0, variants=()):
     ctx = lad.base_context(seed)
     keep = lad.load_subset(ctx)
     a = lad.align(ctx, lad.QWENVID_SET, list(TAPS))
@@ -374,7 +389,7 @@ def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed
     for d in directions:
         side = {"modes": {}, "pool": {}}
         s = lad.s_ego_full(ctx, d)
-        preds, sctx, fits = lad.run_direction(ctx, keep, build_arms(ctx, feats, voc, norm, side, which, epochs),
+        preds, sctx, fits = lad.run_direction(ctx, keep, build_arms(ctx, feats, voc, norm, side, which, epochs, variants),
                                               d, s, rl)
         for name, t in zip(("arms", "paired", "did", "deciles"), lad.judge(preds, sctx)):
             tables[name].append(t)
@@ -402,6 +417,7 @@ def main():
     ap.add_argument("--epochs", type=int, default=EPOCHS, help="diffusion: max epochs for early stopping")
     ap.add_argument("--tag", default="p3e-v0")
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--diff-variants", default="", help=f"comma list of {list(DIFF_VARIANTS)}")
     a = ap.parse_args()
     torch.set_num_threads(8)
     total = torch.cuda.get_device_properties(0).total_memory
@@ -409,7 +425,8 @@ def main():
     rl = RunLog("waymo_heads", a.tag)
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
-    run(rl, tuple(int(x) for x in a.directions.split(",")), tuple(a.heads.split(",")), a.epochs, a.seed)
+    run(rl, tuple(int(x) for x in a.directions.split(",")), tuple(a.heads.split(",")), a.epochs, a.seed,
+        tuple(v for v in a.diff_variants.split(",") if v))
     rl.event("end")
     rl.close()
 

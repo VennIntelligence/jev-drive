@@ -95,6 +95,17 @@ tap：4B 的 L18/36 是一半深度，2B 有 28 层，对应 **L14**（mean 和 
 **且** CI 不跨零。否则保留 4B。L21 只作为补充行报，不参与这条规则（规则按「同样相对深度」比较；
 如果只有 L21 满足，记下来交 lead，不自动换）。
 
+## Stage A2：修 diffusion 的特征接法（Stage A 落第四行后的预写下一步，跑之前写死）
+
+Stage A 里 diffusion 的坏只出在加了 2560 维 pooled 条件之后（inner split 上也一样）。按预写的下一步先修接法，
+不碰 head 其余部分，三个变体，每个 tap 各一份：`pca16` / `pca64`（fit 半上标准化后投到前 16 / 64 个主成分再标准化）、
+`drop0.5`（全 2560 维，特征输入 dropout 从 0.1 提到 0.5）。
+**选择只看 fit 半**：每个方向在三个变体里按 inner split 的 top-1 ADE 选一个，作为「修过的」`diff qwenvid`；eval 半的数全部并排报，
+但读法只用被选中的那个。判据：
+- 被选中变体的视觉增量（相对 `diff ego`，pre-onset 第 1–9 档）在两个方向上 CI 都跨零或为负 → 接法修好了（特征不再伤 head），
+  diffusion 回到第三行（数据饥饿），它的定性等 train split；
+- 仍然两个方向都显著为正 → pooled 向量这条路对这个 head 走不通，条件要换成 Stage B 存的 4×4 空间 token（train split 抽完之后）。
+
 ## 步骤
 
 - [x] `jevdrive/waymo_heads.py`：词表、`cls` / `diff` arm、两方向驱动、诊断列、第 22 条 rejudge
