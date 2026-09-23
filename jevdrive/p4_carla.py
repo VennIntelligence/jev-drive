@@ -950,7 +950,7 @@ def fig_gap(ps, run: Path, out: Path):
     import matplotlib.pyplot as plt
     q1 = pd.read_csv(run / "q1_domain_auc.csv")
     fd = np.load(run / "figdata.npz")
-    fig, (a, b) = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.6), gridspec_kw={"width_ratios": [1, 1.35]})
+    fig, (a, b) = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 3.4), gridspec_kw={"width_ratios": [1, 1.35]})
     rng = np.random.default_rng(0)
     pw, pc = fd["pc_w"], fd["pc_c"]
     sw = rng.choice(len(pw), min(len(pw), 4000), replace=False)
@@ -960,17 +960,17 @@ def fig_gap(ps, run: Path, out: Path):
     a.set_ylabel("PC 2")
     a.legend(markerscale=4, loc="best")
     ps.panel(a, "(a)")
-    t = q1[q1.tap == "L18_last"].reset_index(drop=True)
+    t = q1[(q1.tap == "L18_last") & ~q1.comparison.str.contains("top-1 |top-64", regex=True)].reset_index(drop=True)
     m = q1[q1.tap == "L18_mean"].set_index("comparison").auc
     y = np.arange(len(t))[::-1]
-    ctrl = t.comparison.str.startswith("control")
+    ctrl = t.comparison.str.startswith(("control", "null"))
     b.scatter(t.auc, y, s=14, color=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_last")
     b.scatter(m.reindex(t.comparison).to_numpy(), y, s=14, facecolors="none",
               edgecolors=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_mean")
     b.axvline(0.5, color="#999999", lw=0.5)
     b.set_yticks(y)
     b.set_yticklabels([c.replace("Waymo vs CARLA, ", "").replace("Waymo vs CARLA", "raw").replace("control: ", "ctrl: ")
-                       for c in t.comparison], fontsize=6.5)
+                       .replace(": raw", "") for c in t.comparison], fontsize=5.5)
     b.set_xlim(0.4, 1.01)
     b.set_xlabel("out-of-fold ROC AUC")
     b.legend(loc="lower left", fontsize=7)
@@ -980,34 +980,53 @@ def fig_gap(ps, run: Path, out: Path):
 
 
 def fig_transfer(ps, run: Path, out: Path):
+    """(a) vocabulary floor by speed, (b) the vision increment of ridge_late per layer, (c) layer composition."""
     import matplotlib.pyplot as plt
     fd = np.load(run / "figdata.npz")
     q3 = pd.read_csv(run / "q3_heads.csv")
-    fig, (a, b) = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.4))
+    comp = pd.read_csv(run / "composition.csv", index_col=0)
+    fig, (a, b, c) = plt.subplots(1, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2.3), gridspec_kw={"width_ratios": [1, 1.3, 1]})
     edges = np.arange(0, 22, 2)
     for name, v0, e in (("Waymo", fd["v0_w"], fd["ade_w"]), ("CARLA", fd["v0_c"], fd["ade_c"])):
         k = np.minimum(np.digitize(v0, edges) - 1, len(edges) - 2)
         mean = np.array([e[k == i].mean() if (k == i).sum() >= 10 else np.nan for i in range(len(edges) - 1)])
-        a.plot(edges[:-1] + 1, mean, marker="o", ms=3, color=COLORS[name], label=f"{name} (n={len(v0)})")
+        a.plot(edges[:-1] + 1, mean, marker="o", ms=2.5, color=COLORS[name], label=name)
     a.set_xlabel("speed at $t_0$ (m/s)")
     a.set_ylabel("oracle minADE, K=1024 (m)")
     a.legend()
     ps.panel(a, "(a)")
-    arms = ["CTRV", "ridge ego", "ridge_late L18_last", "ridge_late L18_last (per-domain std)", "cls_late L18_last K1024"]
-    lab = ["CTRV", "ridge ego", "ridge_late", "ridge_late\n(per-domain std)", "cls_late\ntop-1"]
-    g = q3[q3.subset == "all"].groupby(["domain", "arm"])
-    w = g.ade_reweighted_to_carla.mean().loc["Waymo eval half"]
-    c = g.ade.mean().loc["CARLA"]
-    x = np.arange(len(arms))
-    b.bar(x - 0.19, [w.get(k.replace(" (per-domain std)", ""), np.nan) for k in arms], 0.38, color=COLORS["Waymo"],
-          label="Waymo eval half (re-weighted to CARLA speed x manoeuvre)")
-    b.bar(x + 0.19, [c.get(k, np.nan) for k in arms], 0.38, color=COLORS["CARLA"], label="CARLA")
+    groups = ["all", "pre-onset (3 kinds)", "in_turn", "straight", "stop_queue"]
+    labels = ["all", "pre-onset", "in-turn", "straight", "stop"]
+    arm = "ridge_late L18_last"
+    d0 = q3[q3.direction == 0]
+    series = (("Waymo eval half", arm, COLORS["Waymo"], "Waymo eval half"),
+              ("CARLA", arm, COLORS["CARLA"], "CARLA"),
+              ("CARLA", arm + " (per-domain std)", ps.PALETTE["orange"], "CARLA, per-domain std"))
+    x = np.arange(len(groups))
+    for j, (dom, name, col, lab) in enumerate(series):
+        r = d0[(d0.domain == dom) & (d0.arm == name)].set_index("subset").reindex(groups)
+        b.errorbar(x + (j - 1) * 0.22, r.delta_vs_ego, yerr=[r.delta_vs_ego - r.lo, r.hi - r.delta_vs_ego], fmt="o",
+                   ms=3, color=col, capsize=1.5, lw=0.8, label=lab)
+    ps.zero_line(b)
     b.set_xticks(x)
-    b.set_xticklabels(lab, fontsize=7)
-    b.set_ylabel("ADE over 5 s (m)")
-    ps.bars(b)
-    b.legend(fontsize=6.5, loc="upper left")
+    b.set_xticklabels(labels, fontsize=7)
+    b.set_ylabel("ADE(ridge_late) $-$ ADE(ridge ego) (m)")
+    b.legend(fontsize=6.5)
     ps.panel(b, "(b)")
+    rows = [f"layer {k}" for k in LAYERS]
+    cols = ["Waymo val (all)", "Waymo P3 subset", "CARLA"]
+    bottom = np.zeros(len(cols))
+    shades = ["#0072B2", "#56B4E9", "#CC79A7", "#009E73", "#999999", "#E69F00", "#DDDDDD"]
+    for rname, col in zip(rows, shades):
+        v = comp.loc[rname, cols].astype(float).to_numpy()
+        c.bar(np.arange(len(cols)), v, bottom=bottom, color=col, width=0.6, label=rname.replace("layer ", "").replace("_", " "))
+        bottom += v
+    c.set_xticks(np.arange(len(cols)))
+    c.set_xticklabels(["Waymo\nval", "Waymo\nP3 subset", "CARLA"], fontsize=7)
+    c.set_ylabel("share of frames")
+    ps.bars(c)
+    c.legend(fontsize=5.5, loc="upper left", bbox_to_anchor=(1.0, 1.0))
+    ps.panel(c, "(c)")
     fig.tight_layout(pad=0.3)
     return ps.save(fig, out / "p4-transfer")
 
