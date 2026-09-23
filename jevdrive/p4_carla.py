@@ -129,11 +129,11 @@ def route_rows(adir: Path, rid: str, town: str):
     c = np.stack([pose.x.to_numpy(), -pose.y.to_numpy()], -1)
     head = np.stack([np.cos(th), np.sin(th)], -1)
     ra = c + REAR_AXLE_X * head
-    # Velocity as WOD-E2E has it: it equals the 0.25 s difference of the rear-axle positions (ratio 1.0000, 0.07 deg
-    # on val), so take exactly that (backward, causal) rather than the simulator's instantaneous rigid-body velocity,
-    # which carries the physics' 2 Hz wheel / suspension jitter and rear-axle side slip that Waymo's does not.
-    v_ra = (ra - np.roll(ra, STEP_TICKS, axis=0)) / (STEP_TICKS * TICK)
-    v_ra[:STEP_TICKS] = 0.0
+    # Velocity as WOD-E2E has it: an instantaneous velocity whose 0.25 s averages match the position differences
+    # (ratio 1.0000, 0.07 deg on val) and whose t0 lateral part is ~0 (std 0.018 m/s). The rear-axle position's
+    # central difference over +-1 tick (50 ms) is that; the simulator's rigid-body velocity carries physics jitter.
+    v_ra = np.zeros_like(ra)
+    v_ra[1:-1] = (ra[2:] - ra[:-2]) / (2 * TICK)
     # WOD-E2E's accel_x / accel_y are NOT m/s^2: they regress on the 0.25 s velocity difference with slope 0.243
     # (checked on val), i.e. they are the velocity change per 0.25 s step. Build the same quantity here.
     dv_step = v_ra - np.roll(v_ra, STEP_TICKS, axis=0)
@@ -696,6 +696,9 @@ def q2_vocab(W: dict, C: dict, rl) -> tuple[pd.DataFrame, dict]:
     return tab, {"anchors": anchors, "per": per}
 
 
+CLIP = "ego clipped | "
+
+
 def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tuple[pd.DataFrame, dict]:
     """Waymo-fitted heads applied to CARLA frames, per half-val direction."""
     from . import planner, traj, waymo_heads as hd, waymo_l0 as l0, waymo_stage_a as sa
@@ -773,9 +776,33 @@ def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tupl
                 per_frame[f"top1_d{d}"] = top
             del Xr, Xi, Xpd
             torch.cuda.empty_cache()
+        # Label-free guard on the ego input: clip every ego feature to the Waymo fit half's 0.5-99.5 % range. A linear
+        # ego head puts large weights on dimensions that barely vary on Waymo (the t0 lateral velocity has std
+        # 0.018 m/s), and simulator physics (side slip, collisions) sits hundreds of sigmas out there.
+        lo, hi = np.percentile(ego[sp.train], [0.5, 99.5], axis=0)
+        Xc_ = planner.standardize(torch.as_tensor(np.clip(ego, lo, hi).astype(np.float32), device="cuda"), sp.train)
+        _, _, W_c = sa.ridge_cv(Xc_, F, sp, fut)
+        base_c = planner.linear_apply(W_c, Xc_, np.arange(len(fut)))[0]
+        Rc = F - base_c
+        base_c_np = base_c.reshape(-1, 20, 2).cpu().numpy()
+        preds[CLIP + "ridge ego"] = base_c_np
+        for tap in TAPS:
+            Xr = torch.as_tensor(np.concatenate([W["X"][tap], C["X"][tap]]), device="cuda")
+            mu, sd = _std(Xr, sp.train)
+            Xi = (Xr - mu) / sd
+            _, _, Wv = sa.ridge_cv(Xi, Rc, sp, Rc.reshape(-1, 20, 2).cpu().numpy())
+            preds[CLIP + f"ridge_late {tap}"] = planner.linear_apply(Wv, Xi, np.arange(len(fut)))[0].reshape(
+                -1, 20, 2).cpu().numpy() + base_c_np
+            muc, sdc = _std(Xr, cr)
+            Xi[cr] = (Xr[cr] - muc) / sdc
+            p = preds[CLIP + f"ridge_late {tap}"].copy()
+            p[cr] = planner.linear_apply(Wv, Xi, cr)[0].reshape(-1, 20, 2).cpu().numpy() + base_c_np[cr]
+            preds[CLIP + f"ridge_late {tap} (per-domain std)"] = p
+            del Xr, Xi
+        del Xc_
+        torch.cuda.empty_cache()
         err = {k: l0.ade(v, fut) for k, v in preds.items()}
         per_frame[f"ade_d{d}"] = err
-        base_err = err["ridge ego"]
         for dom, r in (("Waymo eval half", ev), ("CARLA", cr)):
             off_i = 0 if dom.startswith("Waymo") else nW
             lay = (W if dom.startswith("Waymo") else C)["layer"][r - off_i]
@@ -785,8 +812,9 @@ def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tupl
                     continue
                 rr = r[m]
                 for arm, e in err.items():
+                    base_err = err[CLIP + "ridge ego"] if arm.startswith(CLIP) else err["ridge ego"]
                     dv = e[rr] - base_err[rr]
-                    mean, lo, hi = boot_mean(dv, seq[rr]) if arm != "ridge ego" else (0.0, 0.0, 0.0)
+                    mean, lo, hi = boot_mean(dv, seq[rr]) if not arm.endswith("ridge ego") else (0.0, 0.0, 0.0)
                     row = {"direction": d, "domain": dom, "subset": sname, "arm": arm, "n": len(rr),
                            "groups": len(np.unique(seq[rr])), "ade": float(e[rr].mean()),
                            "delta_vs_ego": mean, "lo": lo, "hi": hi}
