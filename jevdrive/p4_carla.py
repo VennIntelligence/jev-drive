@@ -14,6 +14,7 @@ Coordinates: CARLA is left-handed (+y right, yaw clockwise). Everything here is 
 Waymo convention first: +x forward, +y left, yaw counter-clockwise, origin at the rear axle.
 """
 import json
+import os
 import zlib
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -49,7 +50,8 @@ LARGE = ("Town11", "Town12", "Town13", "Town15")
 
 
 def out_dir(*parts) -> Path:
-    p = data_dir() / "processed" / "carla_p4" / Path(*parts)
+    """processed/carla_p4 (P4_SET overrides it, e.g. for a dry run on the routes finished so far)."""
+    p = data_dir() / "processed" / os.environ.get("P4_SET", "carla_p4") / Path(*parts)
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -275,13 +277,12 @@ def select_frames(lay: np.ndarray, seed: int = 0) -> tuple[np.ndarray, dict]:
 
 
 def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
-    routes = pd.read_csv(RESULTS / "routes.csv", dtype={"route_id": str})
+    routes = pd.concat([pd.read_csv(RESULTS / f, dtype={"route_id": str}) for f in ("routes.csv", "routes_wave2.csv")])
     per = []
     for rid, town in zip(routes.route_id, routes.town):
         adir = _route_attempt(gen, rid)
-        if adir is None or not (adir / "meta.json").exists():
-            log.warning("route %s: no usable attempt", rid)
-            continue
+        if adir is None or not (adir / "meta.json").exists() or not (adir / "p4_summary.json").exists():
+            continue                              # not run (wave 2, or still running) or died before writing
         r = route_rows(adir, rid, town)
         if r is None:
             log.warning("route %s: no complete keyframe window (%s)", rid, adir)
@@ -300,7 +301,7 @@ def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
     keep, info = select_frames(lay, seed)
     t["layer"], t["lateral_kind"] = lay, kind
     t, past, fut = t[keep].reset_index(drop=True), past[keep], fut[keep]
-    (RESULTS / "selection.json").write_text(json.dumps(info, indent=1))
+    (out_dir() / "selection.json").write_text(json.dumps(info, indent=1))
     log.info("selection: %s", info)
     t["v0"] = np.linalg.norm(past[:, -1, 2:4], axis=1)
     t["large_map"] = t.town.isin(LARGE)
@@ -309,7 +310,7 @@ def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
     t.to_parquet(d / "index.parquet", index=False)
     np.save(d / "past.npy", past)
     np.save(d / "future.npy", fut)
-    lk.to_csv(RESULTS / "intent_lookahead.csv", index=False)
+    lk.to_csv(out_dir() / "intent_lookahead.csv", index=False)
     log.info("index: %d keyframes from %d routes; layers %s; lateral kinds %s; intent %s; towns %s", len(t),
              t.route_id.nunique(), t.layer.value_counts().to_dict(), t.lateral_kind.value_counts().to_dict(),
              t.intent.value_counts().sort_index().to_dict(), t.town.value_counts().sort_index().to_dict())
