@@ -13,6 +13,8 @@ def rear_waypoints(actor_waypoints, rear_offset_m=REAR_OFFSET_M):
     points = points * np.array([1.0, -1.0])
     tangent = np.empty_like(points)
     previous = np.array([1.0, 0.0])
+    arc_length = np.cumsum(np.linalg.norm(
+        np.diff(np.vstack((np.zeros(2), points)), axis=0), axis=1))
     for index in range(len(points)):
         if index == 0:
             delta = points[0]
@@ -23,5 +25,5 @@ def rear_waypoints(actor_waypoints, rear_offset_m=REAR_OFFSET_M):
         norm = np.linalg.norm(delta)
         if norm >= 0.05:
             previous = delta / norm
-        tangent[index] = previous
+        tangent[index] = (1.0, 0.0) if arc_length[index] < rear_offset_m else previous
     return points - rear_offset_m * tangent + np.array([rear_offset_m, 0.0])
