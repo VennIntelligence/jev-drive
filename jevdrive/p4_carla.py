@@ -36,18 +36,16 @@ KEY_EVERY = 2                        # keyframes every 2nd camera frame, 0.4 s a
 STEP_TICKS = 5                       # 0.25 s, the WOD-E2E past / future step
 # docs/carla.md: every one of these crashed the server three times in the 220-route round
 CRASHERS = {"3048", "11715", "11755", "23687", "23708", "3785", "3800", "23670", "23695", "24041", "24071"}
-# BehaviorAgent stops behind a static blockage and never changes lane around it; these types need that.
-BLOCKING = ("Accident", "AccidentTwoWays", "ConstructionObstacle", "ConstructionObstacleTwoWays", "ParkedObstacle",
-            "ParkedObstacleTwoWays", "HazardAtSideLane", "HazardAtSideLaneTwoWays", "VehicleOpensDoorTwoWays",
-            "YieldToEmergencyVehicle", "ParkingExit", "InvadingTurn")
 TURNING = ("SignalizedJunctionLeftTurn", "SignalizedJunctionRightTurn", "NonSignalizedJunctionLeftTurn",
            "NonSignalizedJunctionRightTurn", "SignalizedJunctionLeftTurnEnterFlow",
            "NonSignalizedJunctionLeftTurnEnterFlow", "VanillaSignalizedTurnEncounterGreenLight",
            "VanillaSignalizedTurnEncounterRedLight", "VanillaNonSignalizedTurn",
            "VanillaNonSignalizedTurnEncounterStopsign", "T_Junction", "VehicleTurningRoute",
            "VehicleTurningRoutePedestrian", "BlockedIntersection", "OppositeVehicleRunningRedLight",
-           "OppositeVehicleTakingPriority", "EnterActorFlow", "CrossingBicycleFlow", "HighwayExit")
-QUOTA = {"Town12": 12, "Town13": 6}   # every other town: up to 3
+           "OppositeVehicleTakingPriority", "EnterActorFlow", "CrossingBicycleFlow")
+LANE_CHANGE = ("HighwayExit", "HighwayCutIn", "MergerIntoSlowTraffic", "MergerIntoSlowTrafficV2",
+               "InterurbanActorFlow", "InterurbanAdvancedActorFlow", "SequentialLaneChange")
+PER_TYPE = 2                          # routes per Bench2Drive scenario type in wave 1; wave 2 adds a 3rd to the above
 LARGE = ("Town11", "Town12", "Town13", "Town15")
 
 
@@ -59,34 +57,41 @@ def out_dir(*parts) -> Path:
 
 # ---------------------------------------------------------------- routes
 
-def select_routes(seed: int = 0) -> pd.DataFrame:
-    """The frozen route list: every town, Large Maps weighted up, turning scenarios first within a town."""
+def select_routes(seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(wave 1, wave 2) route lists. Wave 1: PER_TYPE routes of every Bench2Drive scenario type, towns not yet
+    used by that type first, in a seeded order. Wave 2: one more route of every junction-turn and lane-change
+    type, run only if wave 1 leaves fewer than 600 pre-onset candidates (the todo fixes this rule)."""
     root = ET.parse(data_dir() / B2D_XML).getroot()
     rows = []
     for r in root.findall("route"):
         sc = [s.get("type") for s in r.find("scenarios").findall("scenario")]
         w = r.find("weathers")
-        sun = float(w.findall("weather")[0].get("sun_altitude_angle")) if w is not None else np.nan
+        wa = w.findall("weather")[0].attrib if w is not None else {}
         pts = np.array([[float(p.get("x")), float(p.get("y"))] for p in r.find("waypoints").findall("position")])
         rows.append({"route_id": r.get("id"), "town": r.get("town"), "scenario": ",".join(sc),
-                     "length_m": float(np.linalg.norm(np.diff(pts, axis=0), axis=1).sum()), "sun_altitude": sun})
+                     "length_m": float(np.linalg.norm(np.diff(pts, axis=0), axis=1).sum()),
+                     "sun_altitude": float(wa.get("sun_altitude_angle", "nan")),
+                     "precipitation": float(wa.get("precipitation", "nan")), "fog": float(wa.get("fog_density", "nan"))})
     t = pd.DataFrame(rows)
-    ok = ~t.route_id.isin(CRASHERS) & ~t.scenario.isin(BLOCKING)
-    t = t[ok].copy()
-    t["turning"] = t.scenario.isin(TURNING)
-    rng = np.random.default_rng(seed)
-    t["r"] = rng.random(len(t))
-    pick = []
-    for town, g in t.sort_values(["turning", "r"], ascending=[False, True]).groupby("town", sort=True):
-        n = QUOTA.get(town, 3)
-        # a turning-first list, but at most 2/3 turning so a town also contributes straight driving
-        turn, rest = g[g.turning], g[~g.turning]
-        k = min(len(turn), max(n - len(rest), int(np.ceil(2 * n / 3))))
-        pick.append(pd.concat([turn.head(k), rest.head(n - k)]).head(n))
-    out = pd.concat(pick).drop(columns="r").reset_index(drop=True)
-    log.info("routes: %d of %d eligible (%d total); per town %s; turning %d", len(out), int(ok.sum()), len(ok),
-             out.town.value_counts().sort_index().to_dict(), int(out.turning.sum()))
-    return out
+    t = t[~t.route_id.isin(CRASHERS)].copy()
+    t["r"] = np.random.default_rng(seed).random(len(t))
+    w1, w2 = [], []
+    for typ, g in t.sort_values("r").groupby("scenario", sort=True):
+        order, seen = [], set()
+        for _ in range(len(g)):                       # round-robin over towns in the seeded order
+            nxt = next((i for i in g.index if i not in order and g.town[i] not in seen), None)
+            if nxt is None:
+                seen, nxt = set(), next(i for i in g.index if i not in order)
+            order.append(nxt)
+            seen.add(g.town[nxt])
+        w1 += order[:PER_TYPE]
+        if typ in TURNING + LANE_CHANGE:
+            w2 += order[PER_TYPE:PER_TYPE + 1]
+    out = [t.loc[w].drop(columns="r").reset_index(drop=True) for w in (w1, w2)]
+    for name, o in zip(("wave 1", "wave 2"), out):
+        log.info("%s: %d routes, %d types; per town %s", name, len(o), o.scenario.nunique(),
+                 o.town.value_counts().sort_index().to_dict())
+    return tuple(out)
 
 
 # ---------------------------------------------------------------- index
@@ -900,9 +905,10 @@ def main():
     a = ap.parse_args()
     if a.step == "routes":
         RESULTS.mkdir(parents=True, exist_ok=True)
-        t = select_routes()
-        t.to_csv(RESULTS / "routes.csv", index=False)
-        print(",".join(t.route_id))
+        w1, w2 = select_routes()
+        w1.to_csv(RESULTS / "routes.csv", index=False)
+        w2.to_csv(RESULTS / "routes_wave2.csv", index=False)
+        print(",".join(w1.route_id))
     elif a.step == "index":
         build_index(Path(a.gen))
     elif a.step == "extract":

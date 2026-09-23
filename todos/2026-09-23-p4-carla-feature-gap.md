@@ -36,7 +36,7 @@ Waymo 的标定从 WOD-E2E val 帧的 `context.camera_calibrations` 读出（6 �
 | 主点 | c_u = 488.1，c_v = 719.2（主点在画面下 1/3，天空多） | 渲染一张主点居中的大图（1088 × 1560，f 相同）再按 Waymo 主点裁 | 无 |
 | 畸变 | Brown 径向 k1 = −0.0736，k2 = −0.0366 | 对 pinhole 渲染图做同一组径向畸变的 remap | 切向项 Waymo 为 0，无 |
 | 安装 | 后轴前 1.52 / 1.45 / 1.48 m，离地 1.806 m，yaw 0 / +45° / −45°，横向 +0.03 / +0.15 / −0.12 m，pitch ≈ 0.2° | 按后轴换算到 CARLA 车身坐标，同样高度和 yaw，pitch 0 | 车型：CARLA 的 Lincoln MKZ 2020 对 Waymo 的 Jaguar I-PACE |
-| 帧率 | 10 Hz，clip 用 stride 2 | 相机 5 Hz（`sensor_tick` 0.2 s），clip 取连续 4 帧 | 无 |
+| 帧率 | 10 Hz，clip 用 stride 2 | 相机每 tick（20 Hz）渲染、每 4 tick 存一组（5 Hz），clip 取连续 4 组 | 无 |
 | 成像 | 真实 ISP、rolling shutter、HDR | CARLA 默认自动曝光、bloom、lens flare | **没有模仿**，这是 sim↔real 差距的一部分，本来就是要量的 |
 
 ### 驾驶者与路线
@@ -47,19 +47,52 @@ Waymo 的标定从 WOD-E2E val 帧的 `context.camera_calibrations` 读出（6 �
   但要它自己的 Python 3.10 环境和改过的 leaderboard，接入成本超出 P4 的预算，不用；Bench2Drive 官方采数据的 Think2Drive 没有公开。
   BehaviorAgent 会停在堵住车道的静态障碍后面，所以要换道绕行的 scenario 类型不选。
 - **背景交通**：leaderboard 2.0 自己的 BackgroundActivity（Traffic Manager 控制的车流）加各 route 的 scenario actor。
-- **路线**：从 `bench2drive220.xml` 里按下面的规则选，种子固定，生成前把清单冻结在 `research/results/p4-carla-gap/routes.csv`：
-  去掉 11 条已知会让服务器段错误的 Town12/13 路线（docs/carla.md），去掉 BehaviorAgent 过不去的类型
-  （Accident*、ConstructionObstacle*、ParkedObstacle*、HazardAtSideLane*、VehicleOpensDoorTwoWays、YieldToEmergencyVehicle、ParkingExit、InvadingTurn），
-  然后按 town 分层：12 个 town 每个都进，Town12 / Town13 多取，路口左右转类 scenario 优先，保证有转弯前的帧（pre-onset）。
-  Bench2Drive 的路线很短（50–160 m），一条路线只出几十个可用帧，所以用**约 48 条路线**凑约 2 千帧，而不是 20 条 × 100 帧；
-  路线多也正好让 domain classifier 的分组交叉验证有更多组。
+- **路线**（2026-09-23 按用户要求改版，改在生成任何正式数据之前；第一版 48 条、剔除障碍类的清单作废）：
+  帧不能大多是直路巡航，所以路线按 Bench2Drive 的**交互 scenario family** 来取，而不是按 town 取：
+  `bench2drive220.xml` 的 44 个 scenario 类型（路口左 / 右转、有无信号灯、停车标志、换道 / 汇入 / 驶出高速、
+  施工 / 事故 / 路边障碍、行人 / 自行车 / 车辆横穿、急刹、cut-in、闯红灯、让行等）**每类取 2 条**，
+  同一类里优先取不同 town（种子 0），去掉 11 条已知段错误的路线，共约 88 条，覆盖全部 12 个 town（含 Town12/13 和小 town），
+  天气和昼夜用各路线 XML 自带的设定（sun altitude 从 −90° 到 90°，有雨有雾），不另改。
+  清单冻结在 `research/results/p4-carla-gap/routes.csv`。**第二波（预先写死，只在第一波 pre-onset 候选帧不足 600 时启动）**：
+  路口转弯类和换道 / 汇入类每类再加第 3 条，清单同样先冻结（`routes_wave2.csv`）。
+- **expert 做不到的动作如实记**：BehaviorAgent 遇到挡住本车道的静态障碍（施工、事故、路边停车）只会停下等，不会借道绕行，
+  所以「绕障碍 nudge」这一类 pre-onset 预计几乎为零，**不拿直行帧补**，在结果里写明缺口；
+  这些路线仍然有用，它们给出「接近障碍时开始刹车」和排队停车的帧。换道只在 route plan 本身带 CHANGELANE 指令时发生。
+  LEAD 的 expert 需要 `leaderboard_autopilot` / `scenario_runner_autopilot` 两个 fork，盒子上没有（`3rd_party/` 下只有 CARLA）。
 - **记录**：每个 tick（20 Hz）记 ego 真值位姿、速度、加速度；每 0.2 s 存三相机 JPEG。
   标签按 WOD-E2E 的格式算：未来 20 个点（0.25 s 间隔到 5 s）、过去 16 个点（4 s）的位置 / 速度 / 加速度，
   全部在当前后轴坐标系里（+x 向前、+y 向左；速度和加速度也转到当前帧，与 Waymo 实测一致；
   Waymo 有 76% 的帧最后一个速度 / 加速度样本重复上一个，照抄）。intent（GO_STRAIGHT / LEFT / RIGHT）从 route plan 的路口指令取。
-- **关键帧**：从每条路线里取「过去满 4 s、未来满 5 s、clip 完整」的相机帧，间隔 0.4 s；停着不动的帧最多保留到 Waymo 子集里静止帧的比例。
+- **关键帧：按动作分层抽，配额写死**（见下一节「分层与配额」）。
 - 预算：`RESOURCE_LEDGER.md` 的 p4 流：vlm 32B 在跑时 ≤ 1 个 CARLA server（约 6 GB），之后 ≤ 2 个；≤ 6 核。
   CARLA server index 70（RPC 5500、TM 11500），和其他流不重叠。
+
+### 分层与配额（2026-09-23 按用户要求加，生成数据之前定）
+
+候选帧是每条路线里所有「clip 完整（4 帧、间隔 0.2 s）、过去满 4 s、未来满 5 s」的相机帧（0.2 s 一个）。
+每个候选帧**只按 expert 录下来的未来轨迹和 ego 历史**打标签，阈值与 Waymo judge 完全相同（`waymo.subsets`，
+第 3、3c 条的定义，`waymo_ladder` / P0 用的同一份代码），**不看特征、不看 head 输出**。按下面的优先级归到唯一一层：
+
+| 层 | 定义（Waymo 的判据原样照搬的写「同 Waymo」） | 配额（占总数 N） |
+|:--|:--|:--|
+| pre-onset，横向 | 同 Waymo `pre_onset`：过去 1 s 走了 ≥ 1 m、当前 \|yaw rate\| < 1°/s，3 s 处 chord ≥ 3 m 且 \|bearing\| > 5° | 与下面两行合计 **≥ 30%** |
+| pre-onset，起步 | 当前 v₀ < 0.5 m/s，3 s 内走出 ≥ 3 m（start-from-stop） | 同上 |
+| pre-onset，开始刹车 | v₀ ≥ 3 m/s、当前纵向加速度 ≥ −1 m/s²（还没在刹），3 s 处速度 ≤ 0.5 v₀（brake-for-agent，也含为红灯刹） | 同上 |
+| in-turn | 同 Waymo `turn_yaw`：\|yaw rate\| ≥ 5°/s | **≥ 25%** |
+| stop / queue | v₀ < 0.5 m/s 且 3 s 内移动 < 1 m | 剩余部分，≤ 15% |
+| plain straight | 同 Waymo `straight_yaw` | **≤ 30%** |
+| other | 以上都不是（弯道上的小 yaw rate、护栏条件不满足等） | ≤ 5% |
+
+横向 pre-onset 再按未来轨迹分子类，只用于报告：**路口转弯**（5 s 处航向变化 ≥ 30°）、**换道**（5 s 处横向偏移 ≥ 2 m 且航向变化 < 15°）、
+**其他横向**（绕障碍 nudge、弯道，余下的）。
+
+抽取规则：pre-onset 三行是稀缺层，**候选全要**；总数 N = min(4000, pre-onset 候选数 / 0.30)；
+其余各层按配额在该层候选里均匀随机抽（种子 0），候选不够就全要，缺口写进结果，不拿别层补。
+s_ego 式难度（用 Waymo fit 的 `ridge ego` 在每帧上的 5 s ADE，按 Waymo eval 半的十分位切档）作为每帧的一列，只报告不参与抽取。
+
+**组成对照**：CARLA 抽出来的集合与 Waymo 冻结子集并排报：v₀ 分位数、\|yaw rate\| 与 5 s 航向变化的分位数、上面七层的占比、
+s_ego 十分位占比、intent 占比、昼夜 / 天气（CARLA 侧）。**每一张结果表都带每层的 n**，AUC、词表覆盖、head 迁移除了汇总也逐层报，
+逐层时 Waymo 与 CARLA 用同一层的帧比。
 
 ### Waymo 侧
 
@@ -69,8 +102,9 @@ head 在 fit 半上拟合，在 eval 半和全部 CARLA 帧上各评一次，所
 
 ## 步骤
 
-- [ ] 冻结路线清单；2 条路线的 smoke：确认三相机同帧、图像统计正常（不是 lavapipe 的空图）、位姿与相机帧对齐、
-      ego 原点离地高度、每条路线的 wall time，据此给出总时长估计，再开全量
+- [x] 2 条路线的 smoke（第一版清单里的 28035 / 2164）：Large Map 上 `sensor_tick` 让相机不按 4 tick 触发（Town12 一条路只收到 4 组），
+      改成相机每 tick 渲染、每 4 tick 存一组：Town12 一条 21 s 的路线存 107 组、0 丢失，约 2.5 min / 路线；ego 原点在地面（bbox z = extent z）
+- [ ] 按 scenario family 冻结路线清单（约 88 条），估计 88 × 2.5 min ≈ 3.7 h（1 个 server），32B 结束后 2 个 server
 - [ ] 全量生成（`scripts/b2d_run.py --agent scripts/p4_carla_agent.py`，tmux `jev:p4-gen`，ledger 登记）
 - [ ] 建 CARLA 索引（关键帧、past / future / intent）并抽 `qwenvid` 特征（先做 16 行 Waymo 等价检查），`features/carla_p4`
 - [ ] 分析：Q1 AUC 全集 / 匹配子集 / 去均值 / PCA-k / 对照；Q2 词表覆盖；Q3 head 迁移、anchor 分布、probe 迁移
@@ -115,6 +149,9 @@ head 在 fit 半上拟合，在 eval 半和全部 CARLA 帧上各评一次，所
 | Q2 词表覆盖（v₀ 匹配） | minADE 比值 CARLA / Waymo ≤ 1.5 **且** uncoverable 比 Waymo 多 ≤ 2 个百分点 | 比值 ≤ 3 且多 ≤ 10 个百分点（补 CARLA anchor 或重聚类可救） | 比值 > 3 或多 > 10 个百分点 |
 | Q3 head 迁移 | Waymo 标准化下 CARLA 全部帧 Δ_vis ≤ 0 且 CI 上界 ≤ +0.05 m，**且** 匹配后 `ridge_late` ADE 比值 ≤ 1.5 | Waymo 标准化下不过，按域标准化后过 | 按域标准化后 Δ_vis 仍 > +0.10 m，或 ADE 比值 > 2 |
 | Q3b probe 迁移 | 两个 probe 迁移比都 ≥ 0.7 | ≥ 0.3（或按域标准化后 ≥ 0.7） | < 0.3 |
+
+Q2、Q3 的判据**同时**用在汇总（按 v₀ × 动作匹配后）和 pre-onset 层（三类合并）上，取两者中更差的那一档：
+P5 考的正是 pre-onset 这种时刻，汇总过关而 pre-onset 不过关算不过关。
 
 **总判**（对 P5 的含义）：
 
