@@ -2542,9 +2542,9 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 
 **怎么才能推翻或推进**：分别单独跑 slip-only 和 Ackermann-only 两臂，看动作代价来自哪一项；把动作保护改成绝对值，或改成参考路径本身要求的加速度，并事先登记；在 TFv6 真实轨迹上比较控制器对 DS 和违规的影响。这三件都归 Tokyo 研究线。
 
-## 31. 强 planner 下控制器没有检出可测效应；决定 TFv6 高分的是 route + target speed 表示，不是 waypoint 跟踪
+## 31. 决定 TFv6 高分的是 route + target speed 表示，不是 waypoint 跟踪；控制器主效应的 W2 数字作废，待重跑
 
-2026-09-24。**已确认：主效应未检出（不是等效）；表示效应显著。** 回答 [Tokyo 研究线任务书](../todos/remote_carla_research.md) 的 W2。
+2026-09-24。**已确认：表示效应（A − B）显著。已作废：控制器主效应（C − B、D − C）。** 本条原先写的是"强 planner 下控制器没有检出可测效应"。同日的诊断（见文末"更正"）发现，协议规定的坐标变换在车辆静止时会造出假目标点，C/D 两臂的结果因此被污染，那个结论不能成立。 回答 [Tokyo 研究线任务书](../todos/remote_carla_research.md) 的 W2。
 
 **实验**（[协议](../todos/2026-09-23-tfv6-controller/protocol.md)在第一例正式 case 之前冻结于 `06674d4`，[报告](../todos/2026-09-23-tfv6-controller/report.md)）：TFv6（`tfv6_resnet34`，三 seed ensemble，B2D 官方 DS 约 95）每 tick 输出 8 点 waypoint（+0.25…+2 s），四个臂只在"模型输出 → control"这一步不同：A 是作者原样的 route + target speed PID；B 是作者的 waypoint PID；C 是我们的 production 控制器吃同样的 8 点（actor origin 换到 rear axle、y 取反、不外推）；D 是 C 加上第 30 条的 slip frame + Ackermann。作者的 creeping、stop sign 等启发式四臂完全一致。Dev10 与 v1 保留集共 16 条路线 × 3 个 TM seed，202 个有效 case，Tokyo 单卡 3090 跑完。DS（Driving Score）配对差的 CI 按路线整组 bootstrap（cluster bootstrap，重抽路线、seed 一起带走）。
 
@@ -2554,10 +2554,13 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 | A − B | 表示：route + speed 对 waypoint | **+14.3 [+5.1, +25.9]** | +17.6 | +8.9 |
 | D − C | 第 30 条的横向修正 | −2.4 [−11.7, +5.7] | −0.2 | −6.1 |
 
-**读法。** 控制器主效应的 CI 跨零，而且两级方向相反：路线间异质性很大（26405 上 C 比 B 高 82 DS，27529、28154 上低 56–64 DS），CI 宽到 30 DS，所以只能说"没检出"，不能说"等效"。预登记的第 3 级（完整 220 条）条件不满足，没有跑。表示效应则稳定：同一个模型，用 route + target speed 走比用自己的 waypoint 走，合并高 14 DS，SR（零违规完成率）高 29 个百分点。TFv6 那个 95 分主要是解耦表示加作者 PID 挣来的；只要控制接口是 2 s 的 waypoint，换哪个控制器都追不上 A。第 30 条的横向修正在真实 planner 下看不出任何收益。同 seed 重跑 A 臂，10 条路线里 8 条 DS 完全相同，但 2091 差了 40 DS，单个 case 的 DS 噪声很大。
+**读法**（C − B、D − C 两行已作废，下面有关它们的读法只保留作历史记录）。控制器主效应的 CI 跨零，而且两级方向相反：路线间异质性很大（26405 上 C 比 B 高 82 DS，27529、28154 上低 56–64 DS），CI 宽到 30 DS，所以只能说"没检出"，不能说"等效"。预登记的第 3 级（完整 220 条）条件不满足，没有跑。表示效应则稳定：同一个模型，用 route + target speed 走比用自己的 waypoint 走，合并高 14 DS，SR（零违规完成率）高 29 个百分点。TFv6 那个 95 分主要是解耦表示加作者 PID 挣来的；只要控制接口是 2 s 的 waypoint，换哪个控制器都追不上 A。第 30 条的横向修正在真实 planner 下看不出任何收益。同 seed 重跑 A 臂，10 条路线里 8 条 DS 完全相同，但 2091 差了 40 DS，单个 case 的 DS 噪声很大。
 
 **机制（描述，不做因果判定）。** C 在一部分路线上起步困难：我们的纵向只看 0–0.25 s 首段来定期望速度，TFv6 静止时首段只对应 0.07–0.16 m/s，低于 hold 阈值，而作者 PID 用 `2·‖wp1−wp3‖` 来定速度，同一 tick 已经在给油门。70 个 ≥2 s 的停滞段里，只有 7 段是这种 launch hold，4 段是真实倒车触发 invalid_motion，其余 59 段是模型本身计划停车，或者车在给油门但没有移动（例如 25318 上长达 190 s 的停滞），光凭日志无法归因。控制层面，C/D 的纵向加速度 P95 低于 B，横向加速度和 steer-rate P95 更高。
 
 **执行中查出并修掉的三个 wrapper 缺陷**（作废的 case 全部保留在 box 的 `aborted/`）：shadow 回放通过浅拷贝改写了 live 后处理状态；signed speed 没有走 production 的 `controller_speed()` 死区；分析脚本把作废目录扫了进去。每修一个，受影响的 (路线, seed) 组整组重跑。
 
 **怎么才能推翻或推进。** 要缩窄 C − B 的 CI，得增加路线数，而不是增加 seed，因为方差主要来自路线之间；这要先决定值不值得跑 220 条。若想让我们的控制器在 waypoint 接口上接近 A，下一步应该先改纵向起步律（用多点平均速度，而不是只看首段），先登记再跑。W3（TCP 三臂）的优先级因此下调：弱 planner 上表示的影响很可能同样压过控制器的影响。
+
+**更正（2026-09-24，[切线诊断](../todos/2026-09-23-tfv6-controller/diagnosis-tangent.md)）。** 协议规定首个 waypoint 的切向取"原点 → p0"的方向，p0 距原点超过 5 cm 即采用。车辆静止时，TFv6 的近端 waypoint 会有几厘米的横向抖动，这条规则会把切向判成接近 90°。再做后轴修正 r = p − L·t + (L, 0)（L = 1.389 m，actor origin 到 rear axle 的距离），就凭空多出一个前方约 1.2 m、侧方约 1 m 的目标点，首段隐含速度从 0.7 m/s 跳到 6.7 m/s（均为中位数）。在正式 case 里，这种 phantom tick（‖r0 − p0‖ > 0.3 m 且 ‖p0‖ < 0.3 m）占 C 的 7.7%、D 的 21%，96% 发生在车速 < 0.5 m/s 时；这些 tick 上 C 有 97% 在给油门，其中 42% 同时刻 B 在刹车。典型例子是 3514：模型 target speed 为 0，C 却全油门右打撞上路缘，3/3 复现。96 个 C/D case 中有 31 个在 phantom 段后 3 s 内出现计分违规；第 2 级 C − B 的净损失里，这些关联 case 占 35%，C 有任何 phantom 的 case 占 70%。但并非所有差别都来自这里：27529 的 route deviation 在 D2 两次重跑中都没有出现 phantom。Phase 1 的坐标核对只取了行驶中的转弯段，所以没有发现这个问题。A、B 两臂执行的 control 不经过这个变换，A − B 不受影响。修正办法（弧长不到 L 时切向取车头方向）在同一批日志上离线复算，phantom 降为 0；闭环效果要重新登记后再跑 C/D 才能知道。
+
