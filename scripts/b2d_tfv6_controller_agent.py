@@ -152,6 +152,8 @@ class TFv6ControllerAgent(SensorAgent):
         self._tick_data = None
         self._forward_ms = None
         self._frame_log = open(Path(output) / "frames.jsonl", "w", buffering=1)
+        self._d2_actor_log = os.environ.get("B2D_D2_ACTORS") == "1"
+        self._d2_actor_types = []
 
         original_forward = self.closed_loop_inference.forward
         original_waypoints = self.closed_loop_inference.execute_waypoints
@@ -215,6 +217,38 @@ class TFv6ControllerAgent(SensorAgent):
         self._tick_data = result
         return result
 
+    def _nearby_actors(self, world, snapshot, ego):
+        """Read-only D2 scene context; no actor state is changed."""
+        if self.step <= 1 or self.step % 10 == 0:
+            self._d2_actor_types = [(actor.id, actor.type_id) for actor in world.get_actors()
+                                    if actor.id != self._vehicle.id and
+                                    actor.type_id.startswith(("vehicle.", "walker.", "static.", "traffic."))]
+        transform = ego.get_transform()
+        velocity = ego.get_velocity()
+        import math
+        yaw = math.radians(transform.rotation.yaw)
+        co, si = math.cos(yaw), math.sin(yaw)
+        result = []
+        for actor_id, actor_type in self._d2_actor_types:
+            other = snapshot.find(actor_id)
+            if other is None:
+                continue
+            other_transform = other.get_transform()
+            other_velocity = other.get_velocity()
+            dx = other_transform.location.x - transform.location.x
+            dy = other_transform.location.y - transform.location.y
+            distance = math.hypot(dx, dy)
+            if distance > 60:
+                continue
+            dvx = other_velocity.x - velocity.x
+            dvy = other_velocity.y - velocity.y
+            result.append({"id": int(actor_id), "type": actor_type,
+                           "relative_xy_m": [co * dx + si * dy, -si * dx + co * dy],
+                           "relative_velocity_xy_mps": [co * dvx + si * dvy,
+                                                         -si * dvx + co * dvy],
+                           "distance_m": distance})
+        return sorted(result, key=lambda item: item["distance_m"])[:8]
+
     def run_step(self, input_data, timestamp, *args, **kwargs):
         self._motion = input_data
         self._sim_time = float(timestamp)
@@ -236,8 +270,10 @@ class TFv6ControllerAgent(SensorAgent):
         started = time.perf_counter()
         control = super().run_step(input_data, timestamp, *args, **kwargs)
         truth = None
+        nearby_actors = None
         if getattr(self, "_vehicle", None) is not None:
-            snapshot = self._vehicle.get_world().get_snapshot()
+            world = self._vehicle.get_world()
+            snapshot = world.get_snapshot()
             actor = snapshot.find(self._vehicle.id)
             if actor is not None:
                 transform = actor.get_transform()
@@ -253,6 +289,11 @@ class TFv6ControllerAgent(SensorAgent):
                                                velocity.y * np.sin(np.deg2rad(transform.rotation.yaw))),
                     "angular_velocity": [angular.x, angular.y, angular.z],
                 }
+                if self._d2_actor_log:
+                    try:
+                        nearby_actors = self._nearby_actors(world, snapshot, actor)
+                    except Exception as error:
+                        nearby_actors = {"telemetry_error": str(error)}
         final = None
         guard_start = time.perf_counter()
         force_before = _processor_snapshot(self.force_move_post_processor)
@@ -304,6 +345,7 @@ class TFv6ControllerAgent(SensorAgent):
             "controller_speed_mps": _logged_number(self._controller_speed),
             "controller_reason": self._controller_reason,
             "truth": truth, "forward_ms": self._forward_ms,
+            "nearby_actors": nearby_actors,
             "sensor_rear_pose": self._sensor_pose,
             "agent_ms": (time.perf_counter() - started) * 1000.0,
             "shadow_guard_ms": guard_ms,
