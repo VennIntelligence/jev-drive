@@ -69,11 +69,14 @@ class GPSProjector:
 
 class PoseFilter:
     def __init__(self, projector, rear_axle_offset_m, gnss_x_m=-1.4,
-                 gnss_gain=.05, heading_gain=.1):
+                 gnss_gain=.05, heading_gain=.1, lateral_coefficient_s2_per_m=0.):
         self.projector = projector
         self.rear_offset = float(rear_axle_offset_m)
         self.gnss_x = float(gnss_x_m)
         self.gain, self.heading_gain = float(gnss_gain), float(heading_gain)
+        self.lateral_coefficient = float(lateral_coefficient_s2_per_m)
+        if not math.isfinite(self.lateral_coefficient) or self.lateral_coefficient < 0:
+            raise ValueError('Lateral coefficient must be finite and nonnegative')
         if (not np.all(np.isfinite([self.rear_offset, self.gnss_x, self.gain, self.heading_gain]))
                 or not 0 < self.gain <= 1 or not 0 < self.heading_gain <= 1):
             raise ValueError('Pose filter gains must be in (0,1]')
@@ -83,16 +86,29 @@ class PoseFilter:
         """Forget localization history; recovery requires a fully valid pose."""
         self.xy = self.yaw = self.t = self.raw_xy = None
         self.previous_speed = None
+        self.previous_world_gyro = None
         self._last_compass_time = None
         self._diagnostics = dict(reason='no_pose', degraded=False,
                                  compass_valid=False, compass_age_s=None)
+        self._diagnostics.update(self._lateral_diagnostics())
+
+    def _lateral_diagnostics(self):
+        return dict(lateral_coefficient_s2_per_m=self.lateral_coefficient,
+                    lateral_valid=False, lateral_reason='no_interval', lateral_dt_s=None,
+                    lateral_mean_speed_mps=None, lateral_mean_world_gyro_rps=None,
+                    lateral_midpoint_yaw_rad=None, lateral_delta_xy_m=None)
 
     @property
     def diagnostics(self):
-        return dict(self._diagnostics)
+        result = dict(self._diagnostics)
+        if result.get('lateral_delta_xy_m') is not None:
+            result['lateral_delta_xy_m'] = list(result['lateral_delta_xy_m'])
+        return result
 
     def _fail(self, reason, message):
         self._diagnostics['reason'] = reason
+        self._diagnostics.update(self._lateral_diagnostics())
+        self._diagnostics['lateral_reason'] = reason
         raise ValueError(message)
 
     def update(self, gps, compass, speed, world_yaw_rate, timestamp):
@@ -105,6 +121,7 @@ class PoseFilter:
         self._diagnostics = dict(reason='tracking', degraded=False,
                                  compass_valid=compass_valid,
                                  compass_age_s=0. if compass_valid else age)
+        self._diagnostics.update(self._lateral_diagnostics())
         values = np.r_[np.asarray(gps)[:2], speed, world_yaw_rate, timestamp]
         if not np.all(np.isfinite(values)):
             self._fail('invalid_motion', 'Nonfinite motion sensor other than compass')
@@ -132,12 +149,33 @@ class PoseFilter:
             turn = float(world_yaw_rate) * dt
             middle = self.yaw + .5 * turn
             distance = .5 * (float(speed) + self.previous_speed) * dt
+            mean_speed = .5 * (float(speed) + self.previous_speed)
+            mean_gyro = .5 * (float(world_yaw_rate) + self.previous_world_gyro)
+            lateral_delta = np.zeros(2)
+            if self.lateral_coefficient != 0.:
+                # Empirical rear-axle motion term, opt-in for measured MKZ tests.
+                # Same prior/current interval convention as the frozen replay;
+                # heading and the subsequent GNSS correction stay unchanged.
+                with np.errstate(over='ignore', invalid='ignore'):
+                    lateral_delta = (-self.lateral_coefficient * mean_speed * mean_speed
+                                     * mean_gyro * dt * np.array([-np.sin(middle), np.cos(middle)]))
+                if not np.isfinite(lateral_delta).all():
+                    self._fail('invalid_lateral_prediction', 'Nonfinite lateral propagation')
+                # All input/interval/dropout checks and prediction validation have
+                # completed before modifying any pose or motion-history state.
+                self.xy += lateral_delta
+            self._diagnostics.update(lateral_valid=True,
+                lateral_reason='applied' if self.lateral_coefficient != 0. else 'disabled',
+                lateral_dt_s=dt, lateral_mean_speed_mps=mean_speed,
+                lateral_mean_world_gyro_rps=mean_gyro, lateral_midpoint_yaw_rad=middle,
+                lateral_delta_xy_m=lateral_delta.tolist())
             self.xy += distance * np.array([math.cos(middle), math.sin(middle)])
             self.yaw = wrap(self.yaw + turn)
             if compass_valid:
                 self.yaw = wrap(self.yaw + self.heading_gain * wrap(observed_yaw - self.yaw))
             self.xy += self.gain * (raw - self.xy)
         self.raw_xy, self.t, self.previous_speed = raw, float(timestamp), float(speed)
+        self.previous_world_gyro = float(world_yaw_rate)
         if compass_valid:
             self._last_compass_time = float(timestamp)
         return self.xy.copy(), self.yaw

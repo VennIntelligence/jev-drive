@@ -162,12 +162,14 @@ class StubAgent(AutonomousAgent):
             parameters = json.load(fh)
         self._adapter_parameters = parameters.pop("adapter", {})
         for key in ("rear_axle_offset_m", "gnss_x_m", "pose_gnss_gain", "pose_heading_gain",
-                    "route_end_extension_m", "truth_logging", "route_stop_deceleration"):
+                    "route_end_extension_m", "truth_logging", "route_stop_deceleration",
+                    "pose_lateral_coefficient_s2_per_m"):
             if key in parameters:
                 self._adapter_parameters[key] = parameters.pop(key)
         for key, value in {"gnss_x_m": -1.4, "pose_gnss_gain": .05,
                            "pose_heading_gain": .1, "route_end_extension_m": 3.,
-                           "truth_logging": True, "route_stop_deceleration": 2.}.items():
+                           "truth_logging": True, "route_stop_deceleration": 2.,
+                           "pose_lateral_coefficient_s2_per_m": 0.}.items():
             self._adapter_parameters.setdefault(key, value)
         parameters.pop("metadata", None)
         parameters.pop("preset", None)
@@ -198,7 +200,8 @@ class StubAgent(AutonomousAgent):
         rear = float(settings["rear_axle_offset_m"])
         self._pose_filter = PoseFilter(projector, rear, settings.get("gnss_x_m", -1.4),
                                        settings.get("pose_gnss_gain", .05),
-                                       settings.get("pose_heading_gain", .1))
+                                       settings.get("pose_heading_gain", .1),
+                                       lateral_coefficient_s2_per_m=settings.get("pose_lateral_coefficient_s2_per_m", 0.))
         self._route_adapter = RouteAdapter(world, self.cfg.get("cruise_mps", 8.),
                                             settings.get("route_end_extension_m", 3.),
                                             settings.get("route_stop_deceleration", 2.))
