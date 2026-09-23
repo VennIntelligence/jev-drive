@@ -14,6 +14,7 @@ set -euo pipefail
 
 MODELS=(
   # Our feature backbones
+  Qwen/Qwen3-VL-2B-Instruct               # P3 ladder: the smaller end of the family (32B was a null)
   Qwen/Qwen3-VL-4B-Instruct
   Qwen/Qwen3-VL-8B-Instruct
   Qwen/Qwen3-VL-32B-Instruct
