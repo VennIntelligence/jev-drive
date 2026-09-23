@@ -424,6 +424,23 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
                               "baseline_acc": float((cand[base][0] == y)[m].mean()) if m.any() else np.nan,
                               "vlm_acc": float((cand[k][0] == y)[m].mean()) if m.any() else np.nan,
                               **_paired(cand[k][0] == y, cand[base][0] == y, seq, m)})
+    # vision contribution: each model's main minus its text-only answer, paired on frames both answered
+    vis = []
+    for k in (k for k in arms if k.startswith("VLM") and k.endswith(" main")):
+        kt = k[:-len("main")] + "text"
+        if kt not in arms:
+            continue
+        both = arms[k].answered.to_numpy() & arms[kt].answered.to_numpy()
+        for g, m0 in masks.items():
+            for ax, y in truth.items():
+                pv, pt = ((_joint(arms[x].long.to_numpy(), arms[x].lat3.to_numpy()) if ax == "joint"
+                           else arms[x][ax].to_numpy()) for x in (k, kt))
+                m = m0 & both
+                vis.append({"group": g, "axis": ax, "model": k[4:-5], "n": int(m.sum()),
+                            "main_acc": float((pv == y)[m].mean()) if m.any() else np.nan,
+                            "text_acc": float((pt == y)[m].mean()) if m.any() else np.nan,
+                            "same_answer": float((pv == pt)[m].mean()) if m.any() else np.nan,
+                            **_paired(pv == y, pt == y, seq, m)})
     for k, v in arms.items():
         if not k.startswith("VLM"):
             continue
@@ -456,6 +473,7 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
                       .rename(columns={c: "label"}).assign(group=g, axis=c)
                       for g in GROUPS for c in ("log_long", "log_lat", "log_lat3")])
     return {"accuracy": pd.DataFrame(rows), "delta_vs_best_baseline": pd.DataFrame(delta),
+            "vision_contribution": pd.DataFrame(vis),
             "invalid": pd.DataFrame(inv), "confusion": pd.concat(conf) if conf else pd.DataFrame(),
             "rater_agreement": pd.DataFrame(ragree), "sensitivity": pd.DataFrame(sens), "label_distribution": dist}
 
