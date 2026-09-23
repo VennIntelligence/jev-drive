@@ -517,7 +517,7 @@ def index(gen: Path, with_p5: bool = True):
 def extract(rl, batch: int = 2, workers: int = 4):
     """P3(d'')'s extractor over every indexed clip, in resumable chunks; P4's 3000 extracted clips are reused."""
     from . import features as F, p4_carla as p4, waymo_qwenvid as qv
-    t = pd.read_parquet(processed("index.parquet"))
+    t = pd.read_parquet(processed() / "index.parquet")
     have = pd.read_parquet(p4.out_dir("features", p4.FEATURE_SET) / "index.parquet").frame_name
     todo = t[~t.frame_name.isin(set(have))].reset_index(drop=True)
     root = processed("features")
