@@ -163,7 +163,9 @@ def route_rows(adir: Path, rid: str, town: str):
         p = _rot(ra[pk] - ra[k], th[k])
         vv, aa = _rot(v_ra[pk], th[k]), _rot(dv_step[pk], th[k])
         vv[pad], aa[pad] = 0.0, 0.0
-        vv[-1], aa[-1] = vv[-2], aa[-2]           # WOD-E2E repeats the previous sample in the last slot
+        # WOD-E2E: in 76 % of frames the t - 0.25 s slot repeats the t0 sample (their t0 lateral velocity has
+        # std 0.018 m/s, so it is the earlier slot that is overwritten, not the last one)
+        vv[-2], aa[-2] = vv[-1], aa[-1]
         past.append(np.concatenate([p, vv, aa], -1))
         fut.append(_rot(ra[fk] - ra[k], th[k]))
         files = [str(adir / frames.files[j][cam_name]) for cam_name in waymo.CAMS for j in range(i - 3, i + 1)]
