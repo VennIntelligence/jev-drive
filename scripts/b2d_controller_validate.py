@@ -223,9 +223,81 @@ def archive_matrix(out, routes_path, cases, cruises, variants_path=None, route_c
     return manifest
 
 
+PERTURBATION_KEYS = {'gnss_noise_seed', 'imu_noise_seed', 'spawn_lateral_m', 'spawn_yaw_deg'}
+
+
+def load_perturbation(path, key):
+    """One named, pre-registered run perturbation; None keeps the historical nominal run exactly."""
+    if not path:
+        if key:
+            raise ValueError('--perturbation-ids needs --perturbations')
+        return None
+    table = json.loads(Path(path).read_text())
+    if key not in table:
+        raise ValueError('perturbation %r not in %s' % (key, path))
+    spec = table[key]
+    if spec is None:  # a registered nominal anchor
+        return None
+    if not isinstance(spec, dict) or set(spec) != PERTURBATION_KEYS:
+        raise ValueError('perturbation needs exactly %s' % sorted(PERTURBATION_KEYS))
+    for name in ('gnss_noise_seed', 'imu_noise_seed'):
+        if isinstance(spec[name], bool) or not isinstance(spec[name], int) or not 0 <= spec[name] < 2 ** 31:
+            raise ValueError('%s must be a nonnegative int' % name)
+    for name in ('spawn_lateral_m', 'spawn_yaw_deg'):
+        if not isinstance(spec[name], (int, float)) or not math.isfinite(spec[name]) or abs(spec[name]) > 1.:
+            raise ValueError('%s must be finite with magnitude <= 1' % name)
+    return dict(spec, id=key)
+
+
+def perturbed_spawn(transform, perturbation, carla):
+    """Route start lifted .5 m, then shifted along its right vector and yawed (CARLA degrees)."""
+    location = transform.location + carla.Location(z=.5)
+    if perturbation is None:
+        return carla.Transform(location, transform.rotation)
+    yaw = math.radians(transform.rotation.yaw)
+    lateral = perturbation['spawn_lateral_m']
+    location += carla.Location(x=-math.sin(yaw) * lateral, y=math.cos(yaw) * lateral)
+    return carla.Transform(location, carla.Rotation(pitch=transform.rotation.pitch, roll=transform.rotation.roll,
+                                                    yaw=transform.rotation.yaw + perturbation['spawn_yaw_deg']))
+
+
+class ChaseCamera:
+    """Off-screen chase view for a separate render pass: never changes the control loop's inputs."""
+    def __init__(self, world, actor, out, carla, reference):
+        self.out = Path(out)
+        self.out.mkdir(parents=True, exist_ok=True)
+        self.world = world
+        bp = world.get_blueprint_library().find('sensor.camera.rgb')
+        for key, value in dict(image_size_x=960, image_size_y=540, fov=80).items():
+            bp.set_attribute(key, str(value))
+        view = carla.Transform(carla.Location(x=-7.5, z=4.2), carla.Rotation(pitch=-20.))
+        self.sensor = world.spawn_actor(bp, view, attach_to=actor)
+        self.sensor.listen(lambda image: image.save_to_disk(str(self.out / ('%08d.jpg' % image.frame))))
+        z = actor.get_transform().location.z + .08  # road surface under the settled vehicle
+        points = [carla.Location(x=float(x), y=float(y), z=z) for x, y in reference]
+        for a, b in zip(points, points[1:]):
+            world.debug.draw_line(a, b, thickness=.06, color=carla.Color(0, 170, 90), life_time=600.)
+        self.carla, self.z = carla, z
+
+    def mark(self, truth_xy):
+        location = self.carla.Location(x=float(truth_xy[0]), y=float(truth_xy[1]), z=self.z)
+        self.world.debug.draw_point(location, size=.06, color=self.carla.Color(220, 60, 20), life_time=600.)
+
+    def destroy(self):
+        self.sensor.stop()
+        self.sensor.destroy()
+
+
+def case_dir(out, route, case, variants):
+    run = out / case['perturbation_id'] if case.get('perturbation_id') else out
+    run = run / route.get('id')
+    return (run / case['variant'] if variants else run) / case['preset']
+
+
 def case_metadata(case, route, cruise):
     return dict(route_id=route.get('id'), town=route.get('town'), preset=case['preset'],
-                variant=case['variant'], controller_config=case['controller_config'],
+                variant=case['variant'], perturbation_id=case.get('perturbation_id'),
+                perturbation=case.get('perturbation'), controller_config=case['controller_config'],
                 archived_controller_config=case['archived_controller_config'],
                 controller_config_sha256=case['controller_config_sha256'], cruise_mps=cruise,
                 rear_axle_offset_m=case['rear_axle_offset_m'],
@@ -244,14 +316,30 @@ def main():
     p.add_argument('--cruise-mps', type=float, default=8)
     p.add_argument('--max-ticks', type=int, default=1800)
     p.add_argument('--rig', default='none')
+    p.add_argument('--perturbations', help='JSON id -> {gnss_noise_seed, imu_noise_seed, spawn_lateral_m, '
+                   'spawn_yaw_deg} or null for the nominal anchor')
+    p.add_argument('--perturbation-ids', help='comma list of keys in --perturbations; every case runs once per id, '
+                   'ids inner to routes, into <out>/<id>/<route>/...')
+    p.add_argument('--allow-truth-pose-diagnostic', action='store_true',
+                   help='DIAGNOSTIC ONLY: permit configs with diagnostic_truth_pose_ceiling (truth pose drives control)')
+    p.add_argument('--chase-camera', help='render pass only: save an off-screen chase view per tick to this directory')
     a = p.parse_args()
+
     routes_path, out = [Path(x).resolve() for x in (a.routes, a.out)]
     cases, cruises = load_matrix(a.controller_config, a.presets, a.variants,
                                  a.route_cruises, a.cruise_mps)
+    ids = a.perturbation_ids.split(',') if a.perturbation_ids else [None]
+    if len(set(ids)) != len(ids):
+        raise ValueError('duplicate perturbation id')
+    perturbations = {key: load_perturbation(a.perturbations, key) for key in ids}
+    cases = [dict(case, perturbation=perturbations[key], perturbation_id=key) for key in ids for case in cases]
     root = ET.parse(str(routes_path)).getroot()
     out.mkdir(parents=True, exist_ok=True)
     (out / 'servers').mkdir(exist_ok=True)
     matrix_manifest = archive_matrix(out, routes_path, cases, cruises, a.variants, a.route_cruises)
+    matrix_manifest['perturbations'] = perturbations
+    if a.perturbations:
+        (out / 'inputs' / 'perturbations.json').write_bytes(Path(a.perturbations).read_bytes())
     from b2d_run import BENCH2DRIVE, Server
     from b2d_route import add_bench2drive_to_path
     add_bench2drive_to_path(str(BENCH2DRIVE))
@@ -316,10 +404,7 @@ def main():
                 for case in cases:
                     preset = case['preset']
                     metadata = case_metadata(case, route, cruise)
-                    run = out / route.get('id')
-                    if a.variants:
-                        run = run / case['variant']
-                    run = run / preset
+                    run = case_dir(out, route, case, a.variants)
                     run.mkdir(parents=True, exist_ok=True)
                     summary = summarize([], [], cruise, case['stop_deceleration_mps2'], 'setup_error', [], None)
                     summary.update(**metadata,
@@ -335,23 +420,25 @@ def main():
                 rear = case['rear_axle_offset_m']
                 stop_deceleration = case['stop_deceleration_mps2']
                 metadata = case_metadata(case, route, cruise)
-                run = out / route.get('id')
-                if a.variants:
-                    run = run / case['variant']
-                run = run / preset
+                run = case_dir(out, route, case, a.variants)
                 run.mkdir(parents=True, exist_ok=True)
                 cfg = dict(rig=a.rig, width=800, height=450, policy='none', drive='controller', decimate=4,
                            controller_preset=preset, controller_config=case['archived_controller_config'], out=str(run), cruise_mps=cruise)
+                if case['perturbation'] is not None:
+                    cfg.update(gnss_noise_seed=case['perturbation']['gnss_noise_seed'],
+                               imu_noise_seed=case['perturbation']['imu_noise_seed'])
+                if a.allow_truth_pose_diagnostic:
+                    cfg['allow_truth_pose_diagnostic'] = True
                 cfg_path = run / 'agent_config.json'
                 cfg_path.write_text(json.dumps(cfg, indent=2))
-                actor = agent = wrapper = collision_sensor = None
+                actor = agent = wrapper = collision_sensor = chase = None
                 started = time.perf_counter()
                 rows, collisions = [], []
                 status, hold_start, case_error = 'tick_cap', None, None
                 event('route_start', **metadata)
                 try:
                     GameTime.restart()
-                    spawn = carla.Transform(dense[0][0].location + carla.Location(z=.5), dense[0][0].rotation)
+                    spawn = perturbed_spawn(dense[0][0], case['perturbation'], carla)
                     bp = world.get_blueprint_library().find('vehicle.lincoln.mkz_2020')
                     bp.set_attribute('role_name', 'hero')
                     actor = world.spawn_actor(bp, spawn)
@@ -367,6 +454,9 @@ def main():
                     wrapper.setup_sensors(actor)
                     collision_sensor = world.spawn_actor(world.get_blueprint_library().find('sensor.other.collision'), carla.Transform(), attach_to=actor)
                     collision_sensor.listen(lambda x: collisions.append(dict(frame=x.frame, other=x.other_actor.type_id)))
+                    if a.chase_camera:
+                        chase = ChaseCamera(world, actor, Path(a.chase_camera) / route.get('id') / case['variant'],
+                                            carla, agent._route_adapter.points)
                     first_time = None
                     for tick in range(a.max_ticks):
                         world.tick()
@@ -395,6 +485,8 @@ def main():
                         if first_time is None:
                             first_time = sim_time
                         projection = truth_projection.measure(truth, yaw, speed)
+                        if chase is not None:
+                            chase.mark(truth)
                         remaining = float(np.linalg.norm(truth - truth_projection.points[-1]))
                         reference_speed = min(cruise, math.sqrt(2. * stop_deceleration * projection['remaining_along_m']))
                         rows.append(dict(tick=tick, frame=snapshot.frame, sim_time=sim_time, elapsed_s=sim_time - first_time,
@@ -436,7 +528,8 @@ def main():
                     (run / 'exception.txt').write_text(traceback.format_exc())
                 finally:
                     cleanup_errors = []
-                    for label, cleanup in [('collision_stop', lambda: collision_sensor.stop() if collision_sensor else None),
+                    for label, cleanup in [('chase_destroy', lambda: chase.destroy() if chase else None),
+                                           ('collision_stop', lambda: collision_sensor.stop() if collision_sensor else None),
                                            ('collision_destroy', lambda: collision_sensor.destroy() if collision_sensor else None),
                                            ('wrapper_cleanup', lambda: wrapper.cleanup() if wrapper else None),
                                            ('agent_destroy', lambda: agent.destroy() if agent else None),

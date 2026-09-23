@@ -187,8 +187,11 @@ def _patch_sensor_tick():
 
     def preprocess(self, sensor_spec):
         type_, id_, transform, attributes = original(self, sensor_spec)
-        if "sensor_tick" in sensor_spec:
-            attributes["sensor_tick"] = str(sensor_spec["sensor_tick"])
+        # The same whitelist also drops `noise_seed`, so every GNSS/IMU draws the identical noise
+        # sequence (seed 0) in every run; a controller experiment passes it to perturb noise.
+        for key in ("sensor_tick", "noise_seed"):
+            if key in sensor_spec:
+                attributes[key] = str(sensor_spec[key])
         return type_, id_, transform, attributes
 
     AgentWrapper._preprocess_sensor_spec = preprocess

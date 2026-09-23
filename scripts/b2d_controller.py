@@ -1,7 +1,15 @@
 """NumPy-only trajectory control, Python 3.8 compatible.
 
-Input: 20 future rear-axle points, x forward / y left, sampled at .25 s.
+Input: 20 future rear-axle points, x forward / y left, sampled at .25 s; or, with an explicit
+per-update trajectory_dt, N points at that spacing (horizon N*dt, never extrapolated).
 Output: throttle, CARLA steer (right positive), brake. Yaw rate is left positive.
+
+Opt-in pursuit plant corrections (defaults off; off is bit-identical to the frozen controller):
+  pursuit_frame='rear_slip'  pursue along the rear-axle velocity, estimated from sensors only as
+                             beta = atan((v + 1 m/s) * yaw_rate / (c g)), the PhysX linear-tyre
+                             rear sideslip (todos/2026-09-23-controller-next/lateral-physics.md);
+  steer_inverse='ackermann'  PhysX (Ackermann accuracy 1) applies the nominal angle to the inner
+                             wheel; command cot(inner) = cot(centre) - w/(2L), centre = atan(L * kappa).
 Default geometry: stock Lincoln measured 2026-09-22, Town10HD, CARLA 0.9.15.
 Source: /data/runs/b2d/controller/calibration/controller_config.json.
 Geometry does not imply an exact bicycle model of real steering dynamics.
@@ -72,6 +80,28 @@ class ConditionalPI:
         return float(np.clip(self.raw_effort, self.lower, self.upper))
 
 
+GRAVITY = 9.81
+# PhysX gMinLatSpeedForTireModel is 1 tolerance length per second: 1 m/s in UE's centimetre world.
+PHYSX_MIN_LATERAL_SPEED = 1.
+
+
+def rear_slip_angle(speed, yaw_rate, c_per_rad):
+    """Rear-axle sideslip body-minus-course (left positive with yaw rate) of the PhysX linear tyre.
+
+    Steady cornering gives v_y,rear = -(1 + v0/v) v^2 w / (c g), so beta = atan((v + v0) w / (c g)),
+    independent of mass and CoM. Finite at standstill; inputs are measured speed and gyro only.
+    """
+    return math.atan((speed + PHYSX_MIN_LATERAL_SPEED) * yaw_rate / (c_per_rad * GRAVITY))
+
+
+def ackermann_inner_angle(curvature, wheelbase, track_width):
+    """Nominal (inner-wheel) angle whose Ackermann bicycle-centre angle yields `curvature` (signed).
+
+    cot(inner) = 1/(L|k|) - w/2L. Continuous through 0; above 90 deg only for R < w/2."""
+    magnitude = abs(curvature)
+    return math.copysign(math.atan2(wheelbase * magnitude, 1. - .5 * track_width * magnitude), curvature)
+
+
 def advance_pose(pose, speed, yaw_rate, dt):
     """Exact constant-twist SE(2) integration, including the zero-turn limit."""
     x, y, yaw = pose
@@ -94,7 +124,9 @@ class Controller:
                  trajectory_dt=.25, stale_timeout=.5, history_seconds=2.,
                  max_throttle=.75, max_brake=1., max_steer=.8, steer_rate=2.,
                  longitudinal_mode='vendor', pi_kp=1., pi_ki=.25,
-                 max_lookahead_time_s=.5, aim_interpolation='linear'):
+                 max_lookahead_time_s=.5, aim_interpolation='linear',
+                 pursuit_frame='body', rear_slip_c_per_rad=None,
+                 steer_inverse='nominal', track_width_m=None):
         if longitudinal_mode not in ('vendor', 'pi'):
             raise ValueError('longitudinal_mode must be vendor or pi')
         self.longitudinal_mode = longitudinal_mode
@@ -105,6 +137,28 @@ class Controller:
         if aim_interpolation == 'hermite' and preset != 'pursuit':
             raise ValueError('hermite aim_interpolation requires pursuit preset')
         self.aim_interpolation = aim_interpolation
+        if pursuit_frame not in ('body', 'rear_slip'):
+            raise ValueError('pursuit_frame must be body or rear_slip')
+        if steer_inverse not in ('nominal', 'ackermann'):
+            raise ValueError('steer_inverse must be nominal or ackermann')
+        if (pursuit_frame != 'body' or steer_inverse != 'nominal') and preset != 'pursuit':
+            raise ValueError('rear_slip pursuit_frame and ackermann steer_inverse require pursuit preset')
+        # A parameter without its switch (or a switch without its parameter) is a config error,
+        # never a silent no-op.
+        if (pursuit_frame == 'rear_slip') != (rear_slip_c_per_rad is not None):
+            raise ValueError('rear_slip_c_per_rad is required by, and only by, pursuit_frame=rear_slip')
+        if (steer_inverse == 'ackermann') != (track_width_m is not None):
+            raise ValueError('track_width_m is required by, and only by, steer_inverse=ackermann')
+        self.pursuit_frame, self.steer_inverse = pursuit_frame, steer_inverse
+        self.rear_slip_c_per_rad = self.track_width_m = None
+        if rear_slip_c_per_rad is not None:
+            self.rear_slip_c_per_rad = float(rear_slip_c_per_rad)
+            if not math.isfinite(self.rear_slip_c_per_rad) or self.rear_slip_c_per_rad <= 0:
+                raise ValueError('rear_slip_c_per_rad must be positive and finite')
+        if track_width_m is not None:
+            self.track_width_m = float(track_width_m)
+            if not math.isfinite(self.track_width_m) or not 0 < self.track_width_m < 2 * wheelbase:
+                raise ValueError('track_width_m must be positive, finite and below twice the wheelbase')
         if speed_window not in ('near', 'reference'):
             raise ValueError('speed_window must be near or reference')
         self.lookahead = lookahead or ('fixed4' if preset == 'tcp' else 'additive')
@@ -163,6 +217,7 @@ class Controller:
         self._pending = None
         self._points = None
         self._arc = None
+        self._point_dt = self.trajectory_dt
         self._last_steer = 0.
         self._stop_latched = False
         self._last_control = (0., 0., self.max_brake)
@@ -180,20 +235,30 @@ class Controller:
                     longitudinal_integral_effort=self.longitudinal_pi.integral if self.longitudinal_mode == 'pi' else None,
                     longitudinal_effort=None)
 
-    def update(self, traj_xy, t_frame):
+    def update(self, traj_xy, t_frame, trajectory_dt=None):
+        """Queue future points at +dt, +2dt, ... after t_frame.
+
+        Default: exactly 20 points at the constructor trajectory_dt (the frozen contract).
+        With an explicit trajectory_dt: any N >= 1 points; the horizon is N*dt and is never
+        extrapolated (e.g. TCP: 4 points at .5 s).
+        """
         try:
             points = np.asarray(traj_xy, dtype=float)
             stamp = float(t_frame)
+            dt = self.trajectory_dt if trajectory_dt is None else float(trajectory_dt)
         except (TypeError, ValueError, OverflowError):
             return self._reject('invalid_trajectory')
-        if points.shape != (20, 2) or not np.isfinite(points).all() or not math.isfinite(stamp):
+        shape_ok = (points.shape == (20, 2) if trajectory_dt is None else
+                    points.ndim == 2 and points.shape[1] == 2 and len(points) >= 1)
+        if (not shape_ok or not np.isfinite(points).all() or not math.isfinite(stamp)
+                or not math.isfinite(dt) or dt <= 0):
             return self._reject('invalid_trajectory')
         newest = self._pending[1] if self._pending is not None else self._source_time
         if newest is not None and stamp <= newest + 1e-9:
             self._rejection = 'duplicate_trajectory' if abs(stamp - newest) <= 1e-9 else 'out_of_order_trajectory'
             return False
         # Resolve the source pose only after this tick's motion was integrated.
-        self._pending = (points.copy(), stamp)
+        self._pending = (points.copy(), stamp, dt)
         return True
 
     def _reject(self, reason):
@@ -216,7 +281,7 @@ class Controller:
     def _accept_pending(self, now):
         if self._pending is None:
             return
-        points, stamp = self._pending
+        points, stamp, dt = self._pending
         self._pending = None
         if stamp > now + 1e-8:
             self._reject('future_trajectory')
@@ -228,7 +293,8 @@ class Controller:
         points = np.vstack((np.zeros(2), points))
         self._points = points @ _rotation(source_pose[2]).T + source_pose[:2]
         self._arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(points, axis=0), axis=1))]
-        self._times = np.arange(21) * self.trajectory_dt
+        self._times = np.arange(len(points)) * dt
+        self._point_dt = dt
         self._stationary_tail = bool(np.linalg.norm(points[-1] - points[-2]) < 1e-6)
         self._source_time = stamp
         self._rejection = None
@@ -309,7 +375,7 @@ class Controller:
         points = (self._points - self._pose[:2]) @ _rotation(self._pose[2])
         # Keep the segment straddling the current reference time. The origin is
         # an auxiliary timed point, never a claimed measured path-error metric.
-        first = min(int(max(age, 0.) / self.trajectory_dt), len(points) - 2)
+        first = min(int(max(age, 0.) / self._point_dt), len(points) - 2)
         segments = points[first + 1:] - points[first:-1]
         lengths = np.linalg.norm(segments, axis=1)
         usable = lengths > 1e-8
@@ -379,7 +445,7 @@ class Controller:
             return self._safe('stale_trajectory', elapsed)
         start, end = (0., .25) if self.speed_window == 'near' else (.25, 1.)
         desired = self._speed_at(age, start, end)
-        reference = self._speed_at(age, 0., min(.001, self.trajectory_dt))
+        reference = self._speed_at(age, 0., min(.001, self._point_dt))
         if desired is None or reference is None:
             return self._safe('trajectory_horizon_exhausted', elapsed)
         self._diagnostics.update(target_speed_mps=desired, reference_speed_mps=reference)
@@ -395,8 +461,21 @@ class Controller:
         aim = self._lateral_aim(points, aim_station)
         bearing = math.atan2(aim[1], aim[0])
         if self.preset == 'pursuit':
-            curvature = 2. * aim[1] / max(float(aim @ aim), 1e-8)
-            angle = math.atan(self.wheelbase * curvature)
+            target = aim
+            if self.pursuit_frame == 'rear_slip':
+                # Express the aim point in the rear-axle velocity frame, which lies -beta from the
+                # body axis: the pursuit arc must be tangent to the actual axle motion.
+                beta = rear_slip_angle(speed, yaw_rate, self.rear_slip_c_per_rad)
+                cb, sb = math.cos(beta), math.sin(beta)
+                target = np.array([cb * aim[0] - sb * aim[1], sb * aim[0] + cb * aim[1]])
+                self._diagnostics['pursuit_rear_slip_rad'] = beta
+            curvature = 2. * target[1] / max(float(target @ target), 1e-8)
+            if self.steer_inverse == 'ackermann':
+                angle = ackermann_inner_angle(curvature, self.wheelbase, self.track_width_m)
+            else:
+                angle = math.atan(self.wheelbase * curvature)
+            if self.pursuit_frame != 'body' or self.steer_inverse != 'nominal':
+                self._diagnostics.update(pursuit_curvature_inv_m=curvature, pursuit_nominal_angle_rad=angle)
             scale = float(np.interp(speed * 3.6, self.steering_curve[:, 0], self.steering_curve[:, 1]))
             raw_steer = -angle / (self.max_steer_rad * scale)
         else:

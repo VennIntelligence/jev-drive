@@ -23,6 +23,12 @@ the new control lands one inference later - which is what a real vehicle does an
 with synchronous dense-route trajectories every N ticks. It currently requires
 `policy: none`, an explicit measured `controller_config` JSON, and attempt `out`.
 Its cameras remain decimated optional observations, and truth is evaluation-only.
+The single exception is the DIAGNOSTIC-ONLY truth-pose ceiling (`diagnostic_truth_pose_ceiling`
+in the controller config): it feeds the simulator's rear-axle pose to the route adapter in place of
+the sensor pose, to bound what the controller alone can reach. It needs a second, independent
+opt-in in the agent config (`allow_truth_pose_diagnostic`, set only by
+`b2d_controller_validate.py --allow-truth-pose-diagnostic`), tags every telemetry row with
+`pose_source`, and is never a deployable candidate.
 
 Everything except `policy: none` is off by default, so the unoptimised path stays reproducible.
 Python 3.8: this runs in envs/carla, not in the project env.
@@ -163,14 +169,25 @@ class StubAgent(AutonomousAgent):
         self._adapter_parameters = parameters.pop("adapter", {})
         for key in ("rear_axle_offset_m", "gnss_x_m", "pose_gnss_gain", "pose_heading_gain",
                     "route_end_extension_m", "truth_logging", "route_stop_deceleration",
-                    "pose_lateral_coefficient_s2_per_m"):
+                    "pose_lateral_coefficient_s2_per_m", "diagnostic_truth_pose_ceiling"):
             if key in parameters:
                 self._adapter_parameters[key] = parameters.pop(key)
         for key, value in {"gnss_x_m": -1.4, "pose_gnss_gain": .05,
                            "pose_heading_gain": .1, "route_end_extension_m": 3.,
                            "truth_logging": True, "route_stop_deceleration": 2.,
-                           "pose_lateral_coefficient_s2_per_m": 0.}.items():
+                           "pose_lateral_coefficient_s2_per_m": 0.,
+                           "diagnostic_truth_pose_ceiling": False}.items():
             self._adapter_parameters.setdefault(key, value)
+        ceiling = self._adapter_parameters["diagnostic_truth_pose_ceiling"]
+        if not isinstance(ceiling, bool):
+            raise ValueError("diagnostic_truth_pose_ceiling must be a JSON boolean")
+        if ceiling and cfg.get("allow_truth_pose_diagnostic") is not True:
+            raise ValueError("diagnostic_truth_pose_ceiling feeds simulator truth to control; it also needs "
+                             "allow_truth_pose_diagnostic=true in the agent config "
+                             "(b2d_controller_validate.py --allow-truth-pose-diagnostic)")
+        self._truth_pose_ceiling = ceiling
+        if ceiling:
+            sys.stderr.write("WARNING: DIAGNOSTIC-ONLY truth-pose ceiling: control uses simulator truth pose\n")
         parameters.pop("metadata", None)
         parameters.pop("preset", None)
         if "rear_axle_offset_m" not in self._adapter_parameters:
@@ -228,6 +245,25 @@ class StubAgent(AutonomousAgent):
                        "gps_projection_max_residual_m": projector.max_residual_m,
                        "rear_axle_offset_m": rear, "adapter": settings}, fh, indent=2)
 
+    def _truth_rear_pose(self, frame):
+        """Simulator rear-axle pose at exactly this frame, for the diagnostic ceiling only."""
+        from b2d_controller_adapter import wrap
+        hero = getattr(self, "hero_actor", None)
+        if hero is None:
+            self.get_hero()
+            hero = getattr(self, "hero_actor", None)
+        if hero is None:
+            raise RuntimeError("truth-pose ceiling: hero unavailable")
+        snapshot = hero.get_world().get_snapshot()
+        actor = snapshot.find(hero.id)
+        if snapshot.frame != frame or actor is None:
+            raise RuntimeError("truth-pose ceiling: no truth at frame %s" % frame)
+        tf = actor.get_transform()
+        yaw, pitch = np.deg2rad(tf.rotation.yaw), np.deg2rad(tf.rotation.pitch)
+        rear = float(self._adapter_parameters["rear_axle_offset_m"]) * np.cos(pitch)
+        return (np.array([tf.location.x + rear * np.cos(yaw), tf.location.y + rear * np.sin(yaw)]),
+                wrap(float(yaw)))
+
     def _controller_call(self):
         from b2d_controller_adapter import controller_speed
         t0 = time.perf_counter()
@@ -274,6 +310,10 @@ class StubAgent(AutonomousAgent):
             self.timings["controller_step_ms"].append(0.)
             self.timings["agent_total"].append(time.perf_counter() - t0)
             return self._control
+        sensor_xy, sensor_yaw = xy, yaw
+        ceiling = getattr(self, "_truth_pose_ceiling", False)
+        if ceiling:
+            xy, yaw = self._truth_rear_pose(frame)
         route_cross = self._route_adapter.project(xy, yaw, speed, timestamp)
         t_infer = 0.
         if self._trajectory_frame is None or (self._tick - 1) % self.decimate == 0:
@@ -305,8 +345,13 @@ class StubAgent(AutonomousAgent):
                       route_endpoint_distance_m=self._route_adapter.endpoint_distance_m,
                       route_rejoin=dict(self._route_adapter.rejoin_diagnostics),
                       controller_step_ms=step_ms)
+        if ceiling:
+            record.update(pose_source="truth_diagnostic_ceiling", sensor_pose_xy=sensor_xy.tolist(),
+                          sensor_pose_yaw=sensor_yaw)
         if self._truth_logger is not None:
-            record.update(self._truth_logger.measure(frame, xy.copy(), self._pose_filter.raw_xy.copy(), yaw))
+            # Pose metrics always score the sensor estimate, also under the truth ceiling.
+            record.update(self._truth_logger.measure(frame, sensor_xy.copy(), self._pose_filter.raw_xy.copy(),
+                                                     sensor_yaw))
         self._telemetry.write(json.dumps(record, allow_nan=False) + "\n")
         self.timings["sensor_wait"].append(t_wait)
         self.timings["infer"].append(t_infer)
@@ -335,6 +380,11 @@ class StubAgent(AutonomousAgent):
              "sensor_tick": DELTA if self.drive == "controller" else 0.01, "id": "GPS"},
             {"type": "sensor.speedometer", "reading_frequency": 20, "id": "SPEED"},
         ]
+        # Optional per-run sensor noise seeds (b2d_hooks forwards `noise_seed`); absent = CARLA's 0.
+        for spec, key in ((sensors[-3], "imu_noise_seed"), (sensors[-2], "gnss_noise_seed")):
+            seed = getattr(self, "cfg", {}).get(key)
+            if seed is not None:
+                spec["noise_seed"] = int(seed)
         return sensors
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
