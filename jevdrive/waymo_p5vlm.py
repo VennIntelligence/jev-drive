@@ -366,6 +366,10 @@ def baselines(j: pd.DataFrame) -> dict[str, pd.DataFrame]:
             "route command (CTRA long; lateral = intent)": mk(j.ctra_long.to_numpy(), intent_lat)}
 
 
+def _joint(lng, lat3) -> np.ndarray:
+    return np.char.add(np.char.add(np.asarray(lng).astype(str), "|"), np.asarray(lat3).astype(str))
+
+
 def group_masks(j: pd.DataFrame) -> dict[str, np.ndarray]:
     """The four frame groups, plus pre_onset split by route command: where the command says go straight, the
     route-command baseline cannot know the lateral answer and anything right has to come from the cameras."""
@@ -393,7 +397,7 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
                                          "lat3": pd.Series(lat).map(LAT3_OF).fillna("invalid").to_numpy(),
                                          "answered": x.raw.notna().to_numpy(), "valid": valid})
     truth = {"long": j.log_long.to_numpy(), "lat3": j.log_lat3.to_numpy(), "lat": j.log_lat.to_numpy()}
-    truth["joint"] = np.char.add(truth["long"].astype(str), "|" + truth["lat3"].astype(str))
+    truth["joint"] = _joint(truth["long"], truth["lat3"])
     masks = group_masks(j)
     rows, delta, conf, inv = [], [], [], []
     for g, m0 in masks.items():
@@ -401,8 +405,7 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
             maj = pd.Series(y[m0]).mode().iloc[0]
             cand = {f"majority ({maj})": (np.full(len(j), maj), np.ones(len(j), bool))}
             for k, v in arms.items():
-                p = np.char.add(v.long.to_numpy().astype(str), "|" + v.lat3.to_numpy().astype(str)) \
-                    if ax == "joint" else v[ax].to_numpy()
+                p = _joint(v.long.to_numpy(), v.lat3.to_numpy()) if ax == "joint" else v[ax].to_numpy()
                 cand[k] = (p, v.answered.to_numpy())
             for k, (p, ans) in cand.items():
                 rows.append({"group": g, "axis": ax, "arm": k, **_acc(p == y, seq, m0 & ans)})
@@ -481,7 +484,7 @@ def main():
     ap.add_argument("--model", default=QWEN4B)
     ap.add_argument("--variant", default="main", choices=("main", "text", "front", "shift1"))
     ap.add_argument("--groups", default=",".join(GROUPS))
-    ap.add_argument("--batch-size", type=int, default=4)
+    ap.add_argument("--batch-size", type=int, default=3)
     ap.add_argument("--limit", type=int, default=None, help="profiling: answer only this many random frames")
     ap.add_argument("--out", default=None, help="gen: append into this run directory (resume / add a variant)")
     ap.add_argument("--run", default=None, help="report: the run directory holding answers.jsonl")
