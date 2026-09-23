@@ -289,6 +289,18 @@ class QwenVideoFeatures(QwenFeatures):
             self.model.compute_3d_position_ids = real
         return out
 
+    def _grid(self, tok: torch.Tensor, grid: torch.Tensor) -> torch.Tensor:
+        """Per-camera token map of the *last* temporal slot, average-pooled to `grid_hw`, flattened to one row.
+
+        A video's tokens are laid out (t, gh, gw) per camera. The decoder is causal and the slots are in time
+        order, so the last slot's tokens have attended to the earlier one: they are the most-informed half,
+        and keeping only them halves the stored bytes without averaging the "now" into the past.
+        """
+        b, d, (H, W) = len(tok), tok.shape[-1], self.grid_hw
+        t, gh, gw = self.frames // 2, int(grid[0, 1]) // 2, int(grid[0, 2]) // 2   # temporal_patch_size = 2
+        x = tok.view(b * self.n_videos, t, gh, gw, d)[:, -1].permute(0, 3, 1, 2).float()
+        return torch.nn.functional.adaptive_avg_pool2d(x, (H, W)).permute(0, 2, 3, 1).reshape(b, -1)
+
 
 class DinoFeatures:
     def __init__(self, size=(252, 448)):

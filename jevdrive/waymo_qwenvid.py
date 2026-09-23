@@ -1,0 +1,238 @@
+"""Qwen3-VL-4B native-video features over the Waymo train split: P3(d'')'s recipe, profiled and sharded.
+
+The recipe is `waymo_ladder.extract_qwenvid` unchanged -- a 4-frame clip at stride 2 frames per camera, three
+cameras, Qwen3-VL's own video path, decoder stopped at layer 18, `L18_mean` / `L18_last` / `vis_mean` /
+`vit_mean` pooled -- so the heads trained on it read the representation P3(d'') measured. What changes is only
+how it runs:
+
+  profile   ms/frame for a grid of (batch size, torch.compile, loader workers, spatial summary on/off) on the
+            first rows of the `qwenvid_p3` item list, a kernel breakdown from torch.profiler, the CPU cost of
+            decoding one clip, and the numerical difference of every configuration from the stored rows.
+  run       the sharded, resumable extraction: one directory per Waymo shard of the target frame under
+            `features/<set>/<shard>/`, meta.json written last as the done-marker, so an interruption costs one
+            shard and a re-run skips what is built. The P3 val subset goes first, in the same configuration,
+            so the evaluation side is never a different numerical recipe from the training side.
+
+`--grid H,W` also stores `L18_grid`: the last temporal slot's tokens of each camera pooled to H x W, the small
+spatial summary a DiffusionDrive-style head can attend to (a pooled 2560-vector is a weak condition for it).
+"""
+import json
+import time
+
+import numpy as np
+import pandas as pd
+import torch
+
+from . import waymo, waymo_ladder as lad
+from .common import data_dir, get_logger
+
+log = get_logger(__name__)
+FRAMES, STRIDE, LAYER = 4, 2, 18
+SET = "qwenvid_train"
+REF = lad.QWENVID_SET
+
+
+def make_fx(compile: bool = False, grid_hw=None):
+    """The P3(d'') feature extractor, with the decoder layers it never runs taken off the card."""
+    from . import features as F
+    fx = F.QwenVideoFeatures(frames=FRAMES, n_videos=len(waymo.CAMS), layers=[LAYER], compile=compile,
+                             grid_hw=grid_hw)
+    lm = fx.model.language_model
+    lm.layers = lm.layers[:LAYER]                   # layers 19-36 are never called: 3.4 GB of VRAM back
+    torch.cuda.empty_cache()
+    n = len(waymo.CAMS)
+    fx.transform = (lambda t: lambda imgs: t([imgs[i * FRAMES:(i + 1) * FRAMES] for i in range(n)]))(fx.transform)
+    return fx
+
+
+def clip_items(df, rows):
+    return waymo.multicam_clip_items(df, rows, FRAMES - 1, STRIDE, waymo.CAMS)
+
+
+def ref_items(n: int | None = None):
+    """The `qwenvid_p3` item list in extraction order (its first `n`), so a prefix pairs up batch for batch."""
+    ctx = lad.base_context()
+    items, idx, _ = clip_items(ctx["df"], ctx["rows"][lad.load_subset(ctx)])
+    return (items[:n], idx.iloc[:n].reset_index(drop=True)) if n else (items, idx)
+
+
+def train_rows(df, thin: int | None = None, seed_subsets=None) -> np.ndarray:
+    """Every train frame with a future; with `thin`, the stratified subsample: every pre-onset and turning
+    frame, and of the rest only those whose frame index is a multiple of `thin` (0.1 s * thin apart)."""
+    past, future = waymo.load_ego()
+    rows = np.flatnonzero((df.split == "train").to_numpy() & df.has_future.to_numpy())
+    if thin:
+        sub = seed_subsets or waymo.subsets(df, past, future)
+        keep = sub["pre_onset"][rows] | sub["turn_yaw"][rows] | (df.frame.to_numpy()[rows] % thin == 0)
+        rows = rows[keep]
+    return rows
+
+
+def compare(out_dir, idx: pd.DataFrame, arrays=("L18_mean", "L18_last", "vis_mean", "vit_mean")) -> dict:
+    """Max |diff|, relative L2 diff and bit-identical rows of freshly extracted arrays against `qwenvid_p3`."""
+    ref_idx, ref = waymo.load_flat_features(REF, list(arrays))
+    pos = pd.Series(np.arange(len(ref_idx)), index=ref_idx.frame_name.to_numpy()).reindex(idx.frame_name).to_numpy()
+    out = {}
+    for a in arrays:
+        x = np.load(out_dir / f"{a}.npy").astype(np.float32)
+        y = np.asarray(ref[a])[pos.astype(int)].astype(np.float32)
+        d = x - y
+        cos = (x * y).sum(1) / (np.linalg.norm(x, axis=1) * np.linalg.norm(y, axis=1))
+        out[a] = {"identical_rows": int((d == 0).all(1).sum()), "rows": len(x), "max_abs": float(np.abs(d).max()),
+                  "rel_l2": float(np.linalg.norm(d) / np.linalg.norm(y)), "min_cos": float(cos.min())}
+    return out
+
+
+def cpu_decode_ms(fx, items, n: int = 16) -> float:
+    """Single-core cost of reading, decoding and preprocessing one clip item (what a loader worker does)."""
+    ds = waymo.Shards(items[:n], fx.transform)
+    ds[0]
+    t = time.perf_counter()
+    for i in range(1, n):
+        ds[i]
+    return 1e3 * (time.perf_counter() - t) / (n - 1)
+
+
+def kernel_table(fx, items, batch: int, n_batches: int = 4, top: int = 15) -> pd.DataFrame:
+    """CUDA time by operator over a few steady-state batches, to name the bottleneck rather than guess it."""
+    from torch.profiler import ProfilerActivity, profile as tprof
+    from torch.utils.data import DataLoader
+    dl = DataLoader(waymo.Shards(items[:batch * (n_batches + 1)], fx.transform), batch_size=batch, num_workers=4,
+                    collate_fn=fx.collate)
+    it = iter(dl)
+    fx(next(it))                                    # warm-up outside the trace
+    torch.cuda.synchronize()
+    with tprof(activities=[ProfilerActivity.CUDA]) as p:
+        for b in it:
+            fx(b)
+        torch.cuda.synchronize()
+    ev = p.key_averages()
+    tot = sum(e.device_time_total for e in ev if e.device_time_total > 0 and not e.key.startswith("aten::"))
+    rows = [{"op": e.key[:90], "cuda_ms_per_frame": e.device_time_total / 1e3 / (batch * n_batches),
+             "share": e.device_time_total / tot} for e in ev if not e.key.startswith("aten::")]
+    return pd.DataFrame(rows).sort_values("cuda_ms_per_frame", ascending=False).head(top)
+
+
+def profile(rl, n: int = 240, batches=(2, 4, 8, 12), workers=(6, 8), grid_hw=(4, 4)):
+    """The configuration grid, each on the same first `n` rows of the `qwenvid_p3` item list."""
+    from . import features as F
+    items, idx = ref_items(n)
+    scratch = data_dir() / "scratch" / "qwenvid_profile" / rl.dir.name
+    rows = []
+    for comp in (False, True):
+        fx = make_fx(compile=comp)
+        if not comp:
+            ms = cpu_decode_ms(fx, items)
+            rl.event("cpu_decode", ms_per_item=ms)
+            rl.log.info("CPU: %.0f ms to read + decode + preprocess one 3-camera 4-frame clip item", ms)
+        for b in batches:
+            for w in (workers if b == batches[-1] else workers[:1]):
+                for g in ((None, grid_hw) if b == batches[-1] else (None,)):
+                    fx.grid_hw = g
+                    tag = f"b{b}-{'compile' if comp else 'eager'}-w{w}" + (f"-grid{g[0]}x{g[1]}" if g else "")
+                    dst = scratch / tag
+                    dst.mkdir(parents=True, exist_ok=True)
+                    torch.cuda.reset_peak_memory_stats()
+                    st = F.extract(fx, items, b, w, dst, rl, f"profile/{tag}", dataset=waymo.Shards)
+                    eq = compare(dst, idx)
+                    r = {"config": tag, "batch": b, "compile": comp, "workers": w, "grid": str(g),
+                         "ms_per_frame": st["ms_per_frame"], "peak_vram_gb": st["peak_vram_gb"],
+                         "bytes_per_frame": st["bytes_per_sample"],
+                         **{f"{a}_{k}": v for a, e in eq.items() for k, v in e.items() if k != "rows"}}
+                    rows.append(r)
+                    rl.event("profile", **r)
+                    rl.log.info("%-26s %.1f ms/frame, peak %.1f GB, %d B/frame | L18_mean identical %d/%d, "
+                                "max|d| %.3g, rel %.2e", tag, r["ms_per_frame"], r["peak_vram_gb"],
+                                r["bytes_per_frame"], eq["L18_mean"]["identical_rows"], n,
+                                eq["L18_mean"]["max_abs"], eq["L18_mean"]["rel_l2"])
+        fx.grid_hw = None
+        kt = kernel_table(fx, items, batches[-1])
+        kt.to_csv(rl.dir / f"kernels_{'compile' if comp else 'eager'}_b{batches[-1]}.csv", index=False)
+        rl.log.info("kernels (%s, batch %d)\n%s", "compile" if comp else "eager", batches[-1],
+                    kt.to_markdown(index=False, floatfmt=".3f"))
+        del fx
+        F.free_gpu()
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "profile.csv", index=False)
+    rl.log.info("profile\n%s", t.to_markdown(index=False, floatfmt=".4g"))
+    return t
+
+
+def run(rl, batch: int, compile: bool, workers: int, grid_hw=None, thin: int | None = None, name: str = SET,
+        with_val_subset: bool = True):
+    """The sharded extraction: the P3 val subset's shards first, then every train shard. A shard with
+    meta.json is skipped, so re-running resumes where the last run stopped."""
+    from . import features as F
+    df = waymo.load_index()
+    parts = []
+    if with_val_subset:
+        ctx = lad.base_context()
+        parts.append(ctx["rows"][lad.load_subset(ctx)])
+    parts.append(train_rows(df, thin))
+    rows = np.concatenate(parts)
+    items, idx, _ = clip_items(df, rows)
+    shard = df.shard.astype(str).to_numpy()[idx.row.to_numpy()]
+    split = df.split.to_numpy()[idx.row.to_numpy()]
+    val_first = sorted(set(shard[split == "val"]))
+    order = val_first + sorted(set(shard[split != "val"]))
+    root = waymo.out_dir("features", name)
+    todo = [s for s in order if not (root / s / "meta.json").exists()]
+    left = sum(int((shard == s).sum()) for s in todo)
+    log.info("%s: %d rows over %d shards (%d val-subset shards first); %d shards to do, batch %d, compile %s, "
+             "workers %d, grid %s, thin %s", name, len(items), len(order), len(val_first), len(todo), batch,
+             compile, workers, grid_hw, thin)
+    rl.event("plan", rows=len(items), shards=len(order), todo=len(todo))
+    fx = make_fx(compile, grid_hw)
+    t0, done_rows = time.perf_counter(), 0
+    for i, s in enumerate(todo):
+        m = np.flatnonzero(shard == s)
+        dst = root / s
+        dst.mkdir(parents=True, exist_ok=True)
+        st = F.extract(fx, [items[j] for j in m], batch, workers, dst, None, f"{name}/{s}", dataset=waymo.Shards)
+        idx.iloc[m].to_parquet(dst / "index.parquet", index=False)
+        (dst / "meta.json").write_text(json.dumps({"set": name, "shard": s, "recipe": "P3(d'') qwenvid",
+                                                   "frames_per_clip": FRAMES, "clip_stride": STRIDE,
+                                                   "layer": LAYER, "batch_size": batch, "compile": compile,
+                                                   "grid_hw": grid_hw, "thin": thin, **st}, indent=2, default=float))
+        done_rows += len(m)
+        el = time.perf_counter() - t0
+        eta = el / done_rows * (left - done_rows)
+        log.info("%s/%s: %d rows, %.1f ms/frame; %d/%d shards this run, %.1f h elapsed, ETA %.1f h", name, s,
+                 len(m), st["ms_per_frame"], i + 1, len(todo), el / 3600, eta / 3600)
+        rl.event("shard_done", shard=s, rows=len(m), ms_per_frame=st["ms_per_frame"], done=i + 1, of=len(todo),
+                 elapsed_h=el / 3600, eta_h=eta / 3600)
+        rl.scalar("extract/ms_per_frame", st["ms_per_frame"], i)
+    del fx
+    F.free_gpu()
+
+
+def main():
+    import argparse
+    from .runlog import RunLog
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("step", choices=("profile", "run"))
+    ap.add_argument("--n", type=int, default=240, help="profile: rows of the qwenvid_p3 item list")
+    ap.add_argument("--batch-size", type=int, default=8)
+    ap.add_argument("--compile", action="store_true")
+    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--grid", default=None, help="H,W of the per-camera spatial summary, e.g. 4,4")
+    ap.add_argument("--thin", type=int, default=None, help="run: stratified subsample, keep every n-th other frame")
+    ap.add_argument("--name", default=SET)
+    ap.add_argument("--vram-gb", type=float, default=30.0)
+    a = ap.parse_args()
+    total = torch.cuda.get_device_properties(0).total_memory
+    torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
+    grid = tuple(int(x) for x in a.grid.split(",")) if a.grid else None
+    rl = RunLog("waymo_qwenvid", a.step)
+    rl.log.info("args %s -> %s", vars(a), rl.dir)
+    rl.event("start", args=vars(a))
+    if a.step == "profile":
+        profile(rl, a.n, grid_hw=grid or (4, 4))
+    else:
+        run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
+    rl.event("end")
+    rl.close()
+
+
+if __name__ == "__main__":
+    main()
