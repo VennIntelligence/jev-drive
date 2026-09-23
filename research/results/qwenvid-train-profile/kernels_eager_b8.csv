@@ -1,0 +1,16 @@
+op,cuda_ms_per_frame,share
+void cutlass::Kernel2<cutlass_80_tensorop_bf16_s16816gemm_relu_bf16_256x128_32x3_tn_align8,291.54358321875185,0.35909796498938806
+"void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<64, 128, 128, 4, false, false",79.48055990625,0.09789722347322707
+"void at::native::elementwise_kernel<128, 2, at::native::gpu_kernel_impl_nocast<at::native:",61.33762146874966,0.07555033385931403
+"void pytorch_flash::flash_fwd_kernel<Flash_fwd_kernel_traits<128, 128, 64, 4, false, false",58.72817103124969,0.07233624033853905
+"void at::native::vectorized_elementwise_kernel<4, at::native::bfloat16_copy_kernel_cuda(at",29.881380125000348,0.036805278564168396
+"void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<float>, std:",28.799860406249802,0.035473156876524144
+void at::native::(anonymous namespace)::CatArrayBatchedCopy<at::native::(anonymous namespa,24.009440093750158,0.029572734830974532
+"void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<c10::BFloat1",22.9925504062501,0.02832021878048072
+"void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl_nocast<at::native:",20.52953931250014,0.025286496474720813
+sm80_xmma_fprop_implicit_gemm_indexed_bf16bf16_bf16f32_f32_nhwckrsc_nhwc_tilesize64x128x32,20.092115312500006,0.0247477157322213
+"void at::native::vectorized_elementwise_kernel<4, at::native::(anonymous namespace)::pow_t",19.649472468749664,0.024202506873041582
+"void at::native::vectorized_elementwise_kernel<4, at::native::GeluCUDAKernelImpl(at::Tenso",19.51002940624989,0.024030753067237575
+void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::Tenso,16.90937206250042,0.02082749011264042
+"void at::native::elementwise_kernel<128, 4, at::native::gpu_kernel_impl<at::native::direct",15.233674437499195,0.01876351188876028
+"void at::native::vectorized_elementwise_kernel<4, at::native::BinaryFunctor<c10::BFloat16,",14.149576062499968,0.017428214037191973

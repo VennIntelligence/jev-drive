@@ -1,0 +1,9 @@
+arm,meets_both_directions
+A ridge_late qwenvid L18_last,False
+A ridge_late qwenvid L18_mean,False
+cls ego K1024,False
+cls_late qwenvid L18_last,False
+cls_late qwenvid L18_mean,False
+diff ego M20,False
+diff qwenvid L18_last,False
+diff qwenvid L18_mean,False

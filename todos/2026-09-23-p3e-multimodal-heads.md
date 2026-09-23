@@ -1,6 +1,6 @@
 # P3e：多模态 head（K=1024 词表分类、anchor 截断 diffusion）接在 Qwen 原生视频特征上
 
-状态: running（Stage A 在跑；Stage B 只做 profiling，不启动全量抽取）
+状态: running（Stage A、Stage B profiling 已完成；2B 插入在跑；train split 抽取等 lead 放行）
 主题: ../research/prediag-2026-09/README.md
 
 ## 目标
@@ -44,7 +44,7 @@ P3(d″) 量出来 Qwen3-VL-4B 原生视频输入（`qwenvid_p3`）是整条阶�
 
 diffusion 配方（DiffusionDrive 的缩小版，跑之前定死）：轨迹按 train split 的 0.5–99.5 分位范围线性归一到约 [−1, 1]；
 DDPM 线性 β（1e-4 → 0.02，1000 步），训练时 t ~ U{1..50}，对 20 个 anchor 同时加噪；去噪器输出每个 mode 相对输入的 offset
-（得到 x̂₀）和一个 score；正样本是离 logged future 最近的 anchor，loss = 正样本 x̂₀ 的 L1 + score 上的 cross-entropy。
+（得到 x̂₀；跑的过程中改成相对 anchor 的 offset，见结果节）和一个 score；正样本是离 logged future 最近的 anchor，loss = 正样本 x̂₀ 的 L1 + score 上的 cross-entropy。
 推理：从 t=50 的加噪 anchor 出发，DDIM（η=0）走 50 → 25 → 0 两步，取 score 最高的 mode。
 ego 和特征各自一个 Linear + LayerNorm 投影再相加成条件 token，所以 100 维 ego 不会被 2560 维特征淹掉。
 early stopping 与 `waymo_ladder._train` 同一纪律：fit 半的 sequence-grouped inner split 上按 top-1 ADE 选 epoch 数，
@@ -97,13 +97,139 @@ tap：4B 的 L18/36 是一半深度，2B 有 28 层，对应 **L14**（mean 和 
 
 ## 步骤
 
-- [ ] `jevdrive/waymo_heads.py`：词表、`cls` / `diff` arm、两方向驱动、诊断列、第 22 条 rejudge
-- [ ] 小规模 smoke（一个方向、少 epoch）确认形状和耗时
-- [ ] Stage A 两方向全跑，结果填下面
-- [ ] Stage B：train split 视频特征抽取的 profiling（batch、attention 实现、dtype、decode worker、I/O 重叠），
-      与 `qwenvid_p3` 的重叠行做数值等价核验
-- [ ] Stage B：全量 / 分层子采样 / 加空间摘要三个选项的小时数和磁盘，交 lead 定
+- [x] `jevdrive/waymo_heads.py`：词表、`cls` / `diff` arm、两方向驱动、诊断列、第 22 条 rejudge
+- [x] 小规模 smoke（一个方向、少 epoch）确认形状和耗时
+- [x] Stage A 两方向全跑，结果填下面
+- [x] Stage B：train split 视频特征抽取的 profiling（batch、attention 实现、dtype、decode worker、I/O 重叠），
+      与 `qwenvid_p3` 的重叠行做数值等价核验（`jevdrive/waymo_qwenvid.py profile`）
+- [x] Stage B：全量 / 分层子采样 / 加空间摘要三个选项的小时数和磁盘
+- [ ] 插入：Qwen3-VL-2B 同输入的 P3 行，按上面的规则决定 train split 用 2B 还是 4B
+- [ ] lead 放行后启动 train split 抽取（`jevdrive/waymo_qwenvid.py run`，分 shard 可续跑）
 
 ## 结果
 
-跑完再填。
+### Stage A（2026-09-23）
+
+run：box 上 `$DATA_DIR/runs/waymo_heads/p3e-v0/20260923-130350/`，小表拉回 `research/results/p3e-heads/`。
+单卡与 vlm 流共享，全程约 7 min。
+
+**复现门过了**：两个 ridge 行的 pre-onset 第 1–9 档 Δ 是 −0.05312 / −0.04106（方向 0）、−0.04541 / −0.08215（方向 1），
+与 P3(d″) 的记录差 < 2e-5。
+
+**跑之前没写、跑的过程中改了的两件事**（都只看 fit 半，没有看 eval 半的数来选）：
+1. `cls_late` 的 ego offset 改成 **cross-fitted**（fit 半内 4 折 sequence-grouped，out-of-fold 的 ego logit）。
+   P0 的写法是在全部训练行上 fit 的 in-sample logit，41 万行时无害；1 万行时 ego 分类头选到网格最小的 λ、几乎背下训练行，
+   smoke 里 `cls_late` 与 `cls ego` 分不开。
+2. diffusion 的输出从 `x_t + offset` 改成 **`anchor + offset`**（`x_t` 只作为条件）。t=50 的截断噪声在这个归一化下是
+   半幅的 0.17、x 方向约 8.7 m，原写法要网络自己穿过 256 维瓶颈把噪声抵消掉，在 fit 半的 inner split 上正样本 mode 的 x̂₀
+   停在 6.1 m（原始 anchor 的 oracle 才 1.7 m）；改后同一个网络 refine 到 1.15 m。lr 3e-4/60 epoch 与 1e-3/100 epoch 在 inner split 上无差，保持默认。
+
+主表（第 22 条口径，Δ = arm − `ridge ego`；最后一列是同 tap 的 head top-1 − `ridge_late`）：
+
+| 方向 | arm | pre-onset Δ（第 1–9 档）[CI] | straight Δ | DiD | RFS Δ | top-1 − ridge_late（同 tap，pre-onset）|
+|--:|:--|:--|--:|--:|--:|:--|
+| 0 | `A ridge_late qwenvid L18_last` | −0.053 [−0.092, −0.018] | −0.033 | −0.020 | +0.016 | — |
+| 0 | `A ridge_late qwenvid L18_mean` | −0.041 [−0.083, −0.000] | −0.068 | +0.027 | −0.015 | — |
+| 0 | `cls ego K1024` | +1.057 [+0.842, +1.279] | +1.312 | −0.256 | −0.287 | — |
+| 0 | `cls_late qwenvid L18_last` | +1.056 [+0.825, +1.291] | +1.558 | −0.502 | −0.381 | +1.109 [+0.886, +1.337] |
+| 0 | `cls_late qwenvid L18_mean` | +1.020 [+0.794, +1.243] | +1.521 | −0.502 | −0.304 | +1.061 [+0.840, +1.288] |
+| 0 | `diff ego M20` | +0.524 [+0.366, +0.682] | +0.240 | +0.284 | **+0.302** | — |
+| 0 | `diff qwenvid L18_last` | +1.044 [+0.766, +1.336] | +0.877 | +0.167 | +0.067 | +1.097 [+0.831, +1.386] |
+| 0 | `diff qwenvid L18_mean` | +0.937 [+0.612, +1.205] | +0.979 | −0.042 | +0.117 | +0.978 [+0.674, +1.232] |
+| 1 | `A ridge_late qwenvid L18_last` | −0.045 [−0.075, −0.016] | −0.022 | −0.023 | −0.005 | — |
+| 1 | `A ridge_late qwenvid L18_mean` | −0.082 [−0.144, −0.016] | −0.045 | −0.037 | −0.054 | — |
+| 1 | `cls ego K1024` | +1.339 [+1.016, +1.706] | +1.242 | +0.098 | −0.382 | — |
+| 1 | `cls_late qwenvid L18_last` | +1.123 [+0.816, +1.444] | +1.285 | −0.162 | −0.416 | +1.168 [+0.870, +1.485] |
+| 1 | `cls_late qwenvid L18_mean` | +1.130 [+0.826, +1.456] | +1.274 | −0.144 | −0.378 | +1.212 [+0.927, +1.522] |
+| 1 | `diff ego M20` | +0.571 [+0.322, +0.836] | +0.141 | +0.429 | +0.119 | — |
+| 1 | `diff qwenvid L18_last` | +0.989 [+0.707, +1.310] | +0.825 | +0.164 | +0.087 | +1.035 [+0.747, +1.344] |
+| 1 | `diff qwenvid L18_mean` | +1.201 [+0.883, +1.501] | +0.983 | +0.218 | −0.152 | +1.283 [+0.971, +1.568] |
+
+n：pre-onset 625 / 640，rater 帧 237 / 242。RFS Δ 的 CI 半宽约 0.3；`diff ego` 方向 0 的 +0.302 是唯一 CI 不跨零的正 RFS（[+0.043, +0.536]）。
+
+诊断（只作诊断，不和 ridge 比）：
+
+| 方向 | arm | top-1 ADE | minADE@6 | minADE@20 | 候选池 | 池 oracle minADE（全部 / pre-onset / straight）| rater 帧无 mode 入 trust region | 池无 anchor 入 trust region | mode oracle − 池 oracle |
+|--:|:--|--:|--:|--:|:--|:--|--:|--:|--:|
+| 0 | `cls ego K1024` | 3.24 | 1.35 | 0.89 | K=1024 词表 | 0.555 / 0.759 / 0.400 | 0.068 | 0.004 | +0.339 |
+| 0 | `cls_late qwenvid L18_last` | 3.40 | 1.36 | 0.89 | K=1024 词表 | 同上 | 0.068 | 0.004 | +0.338 |
+| 0 | `diff ego M20` | 2.19 | 1.20 | 1.18 | 20 个 anchor | 1.846 / 2.580 / 1.346 | 0.139 | 0.160 | −0.670 |
+| 0 | `diff qwenvid L18_last` | 2.77 | 1.40 | 1.37 | 20 个 anchor | 同上 | 0.152 | 0.160 | −0.480 |
+| 1 | `cls ego K1024` | 3.17 | 1.32 | 0.86 | K=1024 词表 | 0.543 / 0.824 / 0.397 | 0.066 | 0.000 | +0.317 |
+| 1 | `cls_late qwenvid L18_last` | 3.21 | 1.34 | 0.86 | K=1024 词表 | 同上 | 0.066 | 0.000 | +0.318 |
+| 1 | `diff ego M20` | 2.11 | 1.13 | 1.11 | 20 个 anchor | 1.813 / 2.705 / 1.337 | 0.120 | 0.199 | −0.700 |
+| 1 | `diff qwenvid L18_last` | 2.65 | 1.37 | 1.33 | 20 个 anchor | 同上 | 0.178 | 0.199 | −0.482 |
+
+（`L18_mean` 各行与 `L18_last` 相差 ≤ 0.1，全表在 `research/results/p3e-heads/p3e_diagnostics.csv`。）
+
+视觉增量（head 家族内部 vision − ego，减去 ridge 的 vision − ego；负 = head 从特征里提得比 ridge 多）：
+
+| 方向 | tap | cls（pre-onset / straight）| diff（pre-onset / straight）|
+|--:|:--|:--|:--|
+| 0 | L18_last | +0.052 [−0.112, +0.233] / +0.279 | +0.573 [+0.292, +0.857] / +0.670 |
+| 0 | L18_mean | +0.004 [−0.148, +0.169] / +0.277 | +0.454 [+0.186, +0.723] / +0.807 |
+| 1 | L18_last | −0.171 [−0.366, +0.016] / +0.066 | +0.464 [+0.209, +0.727] / +0.706 |
+| 1 | L18_mean | −0.127 [−0.324, +0.053] / +0.078 | +0.712 [+0.422, +1.013] / +0.887 |
+
+**按预写的表读（两个 tap 给同一行，算数）**：
+- **分类头落第三行（数据饥饿的下界）**：top-1 比同 tap 的 `ridge_late` 差 1.06–1.21 m，两个方向 CI 都远离零；
+  ego-only 的 `cls ego` 相对 `ridge ego` 也差 1.06 / 1.34 m，同一个量级。所以坏在 1 万帧上训 1024 类线性 softmax
+  （λ 选到网格底、600 步不收敛），不在特征：家族内部的视觉增量和 ridge 的视觉增量打平（pre-onset 四格 CI 全跨零）。
+- **diffusion 落第四行（坏只出在加了特征之后）**：ego-only 的 `diff ego` 相对 `ridge ego` 差 +0.52 / +0.57 m，
+  但 RFS 反而 +0.30 / +0.12（方向 0 CI 不跨零）；加上 2560 维 pooled 特征后再差 0.45–0.71 m（CI 全不跨零），
+  inner split 上也是一样（`diff ego` 1.93 / 2.08 m 对 `diff qwenvid` 2.43–2.59 m）。按预写的下一步：**先修接法**
+  （pooled 条件过拟合；降维、更强正则，或者按 Stage B 的空间摘要做 token 条件），再谈 train split。
+- 附加读法：diffusion 的去噪器确实在 refine，20 个输出 mode 的 oracle 比 20 个原始 anchor 低 0.48–0.70 m；
+  K=1024 词表的 pre-onset / straight oracle 比值是 1.90 / 2.08，第 9 条的 1.7–2.1 倍原样复现；词表对 rater trust region 的
+  覆盖缺口只有 0.4% / 0.0%，但分类头实际打出的前 20 个 mode 有 6.6–7.1% 的 rater 帧一个都不入——缺口在 ranking，不在词表（第 9 条的老结论）。
+- 预期写的是「两个 head 都比 ridge 差，落第三行」：分类头应验，diffusion 比预期多一层——ego-only 的 diffusion 在 RFS 上是全表最好的，
+  坏的是特征条件。
+
+### Stage B：train split 视频特征抽取的 profiling（2026-09-23）
+
+run：box 上 `$DATA_DIR/runs/waymo_qwenvid/profile/20260923-124248/`，小表 `research/results/qwenvid-train-profile/`。
+同一批 240 行（`qwenvid_p3` 抽取顺序的前 240 行，batch 两两配对与原 run 相同）。**限定：整段 profiling 期间 vlm 流的 Qwen3-VL-4B
+在同一张卡上跑满 100%**，绝对 ms/frame 被抬高了约 1.4–2 倍（同一个 eager batch 2 配置，单独跑时 397 ms，这里 533–790 ms）；
+所以下面按「同一时段内的相对值」读，再乘回单独跑的 397 ms。
+
+| 配置 | ms/frame（共享卡，同一时段）| 相对 eager b2 | 峰值显存 | 与 `qwenvid_p3` 逐位相同的行 | `L18_mean` rel L2 / 最小 cos | `L18_last` rel L2 / 最小 cos |
+|:--|--:|--:|--:|--:|:--|:--|
+| batch 2，eager（d″ 原配置） | 790 | 1.00 | 7.0 GB | **240 / 240** | 0 / 1 | 0 / 1 |
+| batch 8，eager | 787 | 1.00 | 13.2 GB | 0 | 3.3e-3 / 0.99990 | 1.3e-2 / 0.99987 |
+| batch 2，`torch.compile` | 557 | 0.70 | 6.2 GB | 0 | 7.6e-3 / 0.99974 | 1.4e-2 / 0.99985 |
+| **batch 8，`torch.compile`** | **540** | **0.68** | 10.1 GB | 0 | 7.5e-3 / 0.99971 | 1.4e-2 / 0.99986 |
+| batch 8，compile + 4×4 空间摘要 | 492 | 0.62 | 9.9 GB | 0 | 同上 | 同上 |
+
+瓶颈（torch.profiler，batch 8，按 CUDA 时间）：**GPU 计算**。eager 下 CUDA 时间合计约等于 wall time；bf16 GEMM 占 36%（compile 后 51%），
+flash attention 17%（compile 后 25%，其中 ViT 的 head dim 64 那支是大头），其余是 elementwise，compile 把它们融掉，这就是 0.68 倍的来源。
+batch 从 2 加到 8 几乎不省（1.00 / 0.97），说明 GEMM 已经喂饱了。按 FLOP 估：每帧约 37 TFLOP GEMM（ViT 24 层 × 24 480 patch 约 15，
+LM 18 层 × 6150 token 约 22）+ 约 25 TFLOP attention（ViT 每路视频 8160 token 的全注意力约 20），合计约 62 TFLOP。
+其它几项量过、不是瓶颈：CPU 读 + 解码 + 预处理一个 clip 315–392 ms/核，6–8 个 worker 的供给是 GPU 消耗的 10 倍以上；
+cuDNN attention 对 flash 快 1–3%（交替 A/B 三轮，在噪声内），不换；pixel values 在 loader 里转 bf16 **逐位不变**
+（patch embedding 的第一步就是转 bf16），省一半 pinned RAM——第一版 profiling 在 batch 12 × 8 worker 时被 OOM kill，就是这 150 MB/item 的 float32。
+
+**数值等价**：原配置（eager、batch 2）逐位复现 `qwenvid_p3`。更快的配置都不逐位（换 batch 或 compile 改的是 kernel），
+差异是 rel L2 1e-2 量级、逐行 cos ≥ 0.9997，是 bf16 kernel 重排的量级。因此抽取任务**先用同一配置把 19 663 行 val 子集重抽一遍**
+（约占总量 5%），train 和 eval 永远出自同一个数值配方；重抽完先在新 val 特征上重跑 P3(d″) 的 ridge 行，看 Δ 是否在 CI 内不动，再放后面的 shard。
+另：eager batch 8 的 `vit_mean` 有一处尺度异常（rel L2 5.6、cos 仍为 1），compile 配置里没有（rel 9e-4），不影响选中的配置，记在这里。
+
+train split 构成（有 future、4 × 2 帧三相机窗口完整的帧，2037 个 sequence）：
+
+| 方案 | train 行 | pre-onset | turn | straight | 其它 | +val 子集后总行数 | 单独跑（270 ms/帧）| 与 vlm 共享（约 540 ms/帧）| 磁盘：pooled 四个向量 | 磁盘：+4×4 空间摘要 |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| 全量 | 403 049 | 6 654（1.7%）| 42 265（10.5%）| 189 367（47.0%）| 164 763（40.9%）| 422 712 | **31.7 h** | 63 h | 7.4 GB | 111 GB |
+| 分层 thin=4 | 137 533 | 6 654（4.8%）| 42 265（30.7%）| 47 378（34.4%）| 41 236（30.0%）| 157 196 | **11.8 h** | 24 h | 2.7 GB | 41 GB |
+| 分层 thin=3 | 166 877 | 6 654（4.0%）| 42 265（25.3%）| 63 100（37.8%）| 54 858（32.9%）| 186 540 | 14.0 h | 28 h | 3.2 GB | 49 GB |
+| 分层 thin=2 | 225 956 | 6 654（2.9%）| 42 265（18.7%）| 94 649（41.9%）| 82 388（36.5%）| 245 619 | 18.4 h | 37 h | 4.3 GB | 65 GB |
+
+分层规则（写死）：pre-onset 和 turn_yaw 帧全留；其余帧只留 frame index 是 thin 倍数的（thin=4 即每 0.4 s 一帧，Waymo 10 Hz）。
+所有 2037 个 sequence 都在。代价：训练集构成变了（thin=4 时转弯从 10.5% 涨到 30.7%、pre-onset 从 1.7% 到 4.8%），
+均匀 loss 下 head 看到的是一个偏转弯的分布；要复原全量的目标，给被稀疏的帧 thin 倍的样本权重即可（它们是等距抽样，权重精确）。
+第 20 条的教训是加权本身会动别的子集，所以两种都要报。相邻帧高度相关（0.1 s），稀疏直行帧损失的有效样本远少于名义的 3/4，
+而第 3b / 24 条说约束是 sequence 数不是帧数，这一条对子采样有利。
+
+空间摘要：每路相机取**最后一个时间位**的 L18 token（decoder 是 causal，后一个时间位已经 attend 过前一个），平均池化到 4×4，
+三相机 48 个 token × 2560 维 fp16 = 240 KB/帧。实测不增加时间（在噪声内），磁盘见上表，全量 111 GB 在 150 GB 预算内。
+
+按 lead 的规则（优化后全量 ≤ 30 h 才跑全量）：单独跑的估计 31.7 h 已经超线，而卡在接下来几小时里和 vlm 流共享、实际更慢，
+所以默认是 **thin=4 分层子采样 + 4×4 空间摘要**（单独 11.8 h，41 GB）。按 lead 后来的指示，启动前先做 2B 那一行，等放行。
