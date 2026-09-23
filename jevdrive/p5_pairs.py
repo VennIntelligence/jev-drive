@@ -1,8 +1,9 @@
 """P5 v0: counterfactual scenario pairs in CARLA and an open-loop exam on them
 (todos/2026-09-24-p5-carla-pairs-v0.md).
 
-  build     write the variant route XML (x+ as is, x- with the hazard actors suppressed (HardBreakRoute: the
-            scenario dropped; Light: red swapped for green), a weather-only null) and the case table; each variant is its own numeric route id
+  build     write the variant route XML (x+ as is, x- with the hazard actors suppressed (HardBreakRoute: its
+            brake command; Light: red swapped for green), a weather-only null) and the case table; each variant is
+            its own numeric route id
             base_id * 100 + world * 10 + tm_seed, world 1 = plus, 2 = minus, 3 = null
 
 The recorder is scripts/p5_pair_agent.py, run through scripts/b2d_run.py in envs/scout-tfv6.
@@ -65,17 +66,11 @@ def _variant(route: ET.Element, world: str, seed: int) -> ET.Element:
         want = RED if world in ("plus", "null") else GREEN
         s.set("type", want)
         s.set("name", s.get("name").replace(stype, want))
-    elif world == "minus" and stype == "HardBreakRoute":
-        # The factor is the background's hard brake itself, so x- drops the scenario. The evaluator names the
-        # route after its first scenario config, so the element stays, with a trigger point 10 km away that
-        # RouteScenario._filter_scenarios drops ("too far from the route").
-        tp = s.find("trigger_point")
-        tp.set("x", str(float(tp.get("x")) + 10000.0))
-        s.set("name", s.get("name") + "_removed")
     else:
-        # Every other scenario also commands the background (clear the junction, leave space), so deleting it
-        # changes the background too; x- keeps it and b2d_hooks.track_hazards hides its hazard actors (and
-        # names them in every world, so x+ and x- can be matched).
+        # Scenarios also command the background (clear the junction, leave space), so deleting one changes the
+        # background too, from the first tick on (smoke: 27515; HardBreakRoute diverged at 1 s). x- keeps the
+        # scenario and b2d_hooks.track_hazards hides its hazard actors, or for HardBreakRoute turns its brake
+        # command into a no-op; every world names the hazard actors, so x+ and x- can be matched.
         r.set("p5_suppress", "1" if world == "minus" else "0")
     if world == "null":
         ws = r.find("weathers")
@@ -290,7 +285,8 @@ def pair_case(gen: Path, case: pd.Series, worlds: dict) -> tuple[dict, list, lis
     if reason == "ok":
         (tp, pp, fp), (tm, pm, fm) = ra, rb
         ip, im = pd.Series(np.arange(len(tp)), tp.k), pd.Series(np.arange(len(tm)), tm.k)
-        ks = [k for k in cams if vis <= k < t_div and k in ip.index and k in im.index]
+        # k + 1 < t_div: the ego velocity at k is a central difference over k +- 1 tick, so k + 1 must be shared too
+        ks = [k for k in cams if vis <= k < t_div - 1 and k in ip.index and k in im.index]
         if ks:
             a, b = ip[ks].to_numpy(), im[ks].to_numpy()
             ta, tb = tfv6_speeds(A, ks), tfv6_speeds(B, ks)
@@ -320,7 +316,7 @@ def pair_case(gen: Path, case: pd.Series, worlds: dict) -> tuple[dict, list, lis
                 row["null_window"] = "fallback"
             (tp, pp, fp), (tn, pn, fn_) = ra, rn
             ip, iN = pd.Series(np.arange(len(tp)), tp.k), pd.Series(np.arange(len(tn)), tn.k)
-            ks = [k for k in ks if k < tdn and k in ip.index and k in iN.index]
+            ks = [k for k in ks if k < tdn - 1 and k in ip.index and k in iN.index]
             if ks:
                 a, b = ip[ks].to_numpy(), iN[ks].to_numpy()
                 ta, tn_ = tfv6_speeds(A, ks), tfv6_speeds(N, ks)

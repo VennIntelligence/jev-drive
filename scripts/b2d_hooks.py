@@ -174,6 +174,16 @@ def track_hazards(out_dir, hide):
     differs as soon as the scenario would have triggered. 500 m down is the scenarios' own hiding place, and every
     privileged check (BehaviorAgent, the traffic manager) measures distance in 3-D."""
     from leaderboard.scenarios.route_scenario import RouteScenario
+    if hide:
+        # HardBreakRoute has no hazard actor: its factor is the background's hard brake. x- keeps the scenario (and
+        # everything it does to the background at build time) and only turns that brake command into a no-op.
+        import srunner.scenarios.hard_break as hard_break
+
+        class NoStopFrontVehicles(py_trees.behaviours.Success):
+            def __init__(self, *args, **kwargs):
+                super().__init__(name="NoStopFrontVehicles")
+
+        hard_break.StopFrontVehicles = NoStopFrontVehicles
     hidden, log = [], []
     inner_build = RouteScenario.build_scenarios
 

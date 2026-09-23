@@ -32,7 +32,7 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
 | VehicleTurningRoutePedestrian | 2164、10857、11381 (T12)、3731、3737 (T13) | 同上 | 同上 |
 | ParkingCrossingPedestrian | 3248、3255 (T13)、18252 (T12)、24206 (T03)、24294 (T02) | 同上 | 同上 |
 | OppositeVehicleRunningRedLight | 2082、2844、2847 (T12)、26944 (T04)、26950 (T03) | 同上 | 同上 |
-| HardBreakRoute | 3540 (T13)、24330 (T10HD)、24781 (T01)、26406 (T04)、26456 (T03) | 同上 | 删掉 scenario（因素就是背景车的急刹本身） |
+| HardBreakRoute | 3540 (T13)、24330 (T10HD)、24781 (T01)、26406 (T04)、26456 (T03) | 同上 | scenario 照常运行，只把它的「前车急刹」指令换成空操作 |
 | StaticCutIn | 2709、2715 (T12)、25358 (T06)、26396 (T05)、26405 (T15) | 同上 | 同上 |
 | ParkingCutIn | 1711、18305、18311、18356 (T12)、24759 (T05) | 同上 | 同上 |
 | HighwayCutIn | 2286、3072、3074、3080 (T12)、3813 (T13) | 同上 | 同上 |
@@ -45,7 +45,9 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   两个世界的 ego 在行人可见之前就分叉了，而且分叉原因是背景车，不是行人。改为：**x⁻ 保留 scenario 原样运行**（同样的 actor 从同一随机流生成、
   同样的触发、同样的背景指令），只把它的 hazard actor（横穿的行人 / 自行车、cut-in 的那辆车、闯红灯的那辆车；停着的遮挡车、集装箱等道具保留，
   它们是情境不是因素）在每个 scenario tick 之后放到地下 500 m（`b2d_hooks.track_hazards`，这正是 scenario 自己在触发前藏 actor 的位置；
-  BehaviorAgent 和 Traffic Manager 的距离判断都是三维的，所以看不见也碰不到）。HardBreakRoute 的因素就是背景车急刹本身，仍用删 scenario；
+  BehaviorAgent 和 Traffic Manager 的距离判断都是三维的，所以看不见也碰不到）。HardBreakRoute 没有 hazard actor，因素是背景车的急刹本身：
+  **01:40 第二次修订**（批量刚开始，只影响这一个 family）：原来对它仍用删 scenario，批量里前 3 个 HardBreak 对的 ego 在 0.9–1.2 s（触发之前）就分叉了，
+  删 scenario 同样改变了背景；改为 scenario 照常运行、只把 `StopFrontVehicles` 换成空操作，已跑的 3 个 x⁻ 作废重跑。
   Light 仍是红绿互换。被藏的 actor 逐 run 记在 `hidden.json`。
 - **变体**：每类只有 5 条路线（Light 10 条），不够 10 个，所以每条路线跑 3 个 `--tm-seed`（0、1、2，Traffic Manager 的随机种子，
   决定背景车流的行为）。x⁺ 与 x⁻ 用同一个 seed。于是 9 个 hazard family 各 15 对、Light 30 对，**共 165 对**。
@@ -78,7 +80,7 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   null pair（同一 XML 只换天气）给出这个噪声本身的 t_div 分布。
   报 **t_div ≥ t_vis 的对的比例**；t_div < t_vis 的对丢掉并记原因：`background_drift`（scenario 触发之前 ego 就分叉）、
   `expert_reacted_before_visible`（触发之后、可见之前 expert 已经在反应，特权 expert 看得见相机看不见的东西）、`never_visible`。
-- **观测帧**：每对里 t_vis ≤ t < t_div 的所有 5 Hz 相机帧，且两个世界都有完整的 4 帧 clip（0.6 s）和完整的 5 s 未来。
+- **观测帧**：每对里 t_vis ≤ t < t_div − 1 tick 的所有 5 Hz 相机帧（ego 速度是 ±1 tick 的中心差分，所以 t + 1 tick 也必须两侧相同；dry run 里发现的），且两个世界都有完整的 4 帧 clip（0.6 s）和完整的 5 s 未来。
   这些帧上 ego 过去与现在逐 tick 相同、因素可见。null pair 的观测帧取同一路线 seed 0 那一对的观测帧时刻（再截到 x⁺ 与天气版的 t_div 之前）。
 
 ### 标签（expert 给）
