@@ -418,7 +418,7 @@ def _std(X: torch.Tensor, rows) -> tuple[torch.Tensor, torch.Tensor]:
     return mu.float(), torch.where(sd > 1e-6, sd, torch.ones_like(sd)).float()
 
 
-def logreg(X: torch.Tensor, y: torch.Tensor, lam: float, iters: int = 200, balanced: bool = True):
+def logreg(X: torch.Tensor, y: torch.Tensor, lam: float, iters: int = 100, balanced: bool = True):
     """Multinomial (or binary, as 2 classes) logistic regression by full-batch L-BFGS; returns (W, b)."""
     n, d = X.shape
     k = int(y.max()) + 1
@@ -426,7 +426,7 @@ def logreg(X: torch.Tensor, y: torch.Tensor, lam: float, iters: int = 200, balan
     wt = (n / (k * cnt))[y] if balanced else torch.ones(n, device=X.device)
     W = torch.zeros(d, k, device=X.device, requires_grad=True)
     b = torch.zeros(k, device=X.device, requires_grad=True)
-    opt = torch.optim.LBFGS([W, b], lr=1, max_iter=iters, history_size=10, line_search_fn="strong_wolfe")
+    opt = torch.optim.LBFGS([W, b], lr=1, max_iter=iters, history_size=10, tolerance_change=1e-7, line_search_fn="strong_wolfe")
 
     def closure():
         opt.zero_grad()
@@ -583,26 +583,11 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
         ym = np.r_[np.zeros(len(mw)), np.ones(len(mc))].astype(np.int64)
         gm = np.r_[W["seq"][mw], C["seq"][mc]]
         add("Waymo vs CARLA", tap, X, y, g)
-        add("Waymo vs CARLA, matched (v0 x manoeuvre)", tap, Xm, ym, gm)
+        add("Waymo vs CARLA, matched (v0 x layer)", tap, Xm, ym, gm)
         add("Waymo vs CARLA, MLP", tap, X, y, g, model="mlp")
         add("Waymo vs CARLA, per-domain centred, MLP", tap, X, y, g, center="mean", model="mlp")
         add("Waymo vs CARLA, per-domain z-scored, MLP", tap, X, y, g, center="z", model="mlp")
         add("Waymo vs CARLA, matched + centred, MLP", tap, Xm, ym, gm, center="mean", model="mlp")
-        for k in (1, 4, 16, 64):
-            add(f"Waymo vs CARLA, top-{k} Waymo PCs", tap, X, y, g, pca_k=k)
-        # per layer: Waymo frames of a layer against CARLA frames of the same layer
-        for gname in GROUPS:
-            if gname == "all":
-                continue
-            a, b = group_mask(W["layer"], gname), group_mask(C["layer"], gname)
-            if a.sum() < 30 or b.sum() < 30 or len(np.unique(C["seq"][b])) < 5:
-                continue
-            Xl = np.concatenate([Xw[a], Xc[b]])
-            yl = np.r_[np.zeros(a.sum()), np.ones(b.sum())].astype(np.int64)
-            gl = np.r_[W["seq"][a], C["seq"][b]]
-            add(f"layer {gname}: Waymo vs CARLA", tap, Xl, yl, gl, folds=min(5, len(np.unique(C["seq"][b]))))
-            add(f"layer {gname}: Waymo vs CARLA, centred, MLP", tap, Xl, yl, gl, center="mean", model="mlp",
-                folds=min(5, len(np.unique(C["seq"][b]))))
         # null: a Waymo pseudo-domain of as many sequences and frames as CARLA has routes and frames, through the
         # same estimators -- what each AUC reads when there is no domain gap, at CARLA's group count
         rng = np.random.default_rng(0)
@@ -619,6 +604,23 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
         add("null: Waymo pseudo-domain, centred, MLP", tap, Xn, yn, gn, center="mean", model="mlp")
         add("null: Waymo pseudo-domain, z-scored, MLP", tap, Xn, yn, gn, center="z", model="mlp")
         add("null: Waymo pseudo-domain, top-16 PCs", tap, Xn, yn, gn, pca_k=16)
+        if tap != TAPS[0]:                  # the secondary tap gets the headline rows only
+            continue
+        for k in (1, 4, 16, 64):
+            add(f"Waymo vs CARLA, top-{k} Waymo PCs", tap, X, y, g, pca_k=k)
+        # per layer: Waymo frames of a layer against CARLA frames of the same layer
+        for gname in GROUPS:
+            if gname == "all":
+                continue
+            a, b = group_mask(W["layer"], gname), group_mask(C["layer"], gname)
+            if a.sum() < 30 or b.sum() < 30 or len(np.unique(C["seq"][b])) < 5:
+                continue
+            Xl = np.concatenate([Xw[a], Xc[b]])
+            yl = np.r_[np.zeros(a.sum()), np.ones(b.sum())].astype(np.int64)
+            gl = np.r_[W["seq"][a], C["seq"][b]]
+            add(f"layer {gname}: Waymo vs CARLA", tap, Xl, yl, gl, folds=min(5, len(np.unique(C["seq"][b]))))
+            add(f"layer {gname}: Waymo vs CARLA, centred, MLP", tap, Xl, yl, gl, center="mean", model="mlp",
+                folds=min(5, len(np.unique(C["seq"][b]))))
         # controls: how separable are things that are one domain?
         for model, tag in (("linear", ""), ("mlp", ", MLP")):
             add("control: CARLA Large Map vs small town" + tag, tap, Xc, t.large_map.to_numpy().astype(np.int64),
