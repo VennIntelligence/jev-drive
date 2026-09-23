@@ -128,7 +128,8 @@ class TruncDiffusion(torch.nn.Module):
     """Denoiser over M anchor-initialised modes: x_t (b, M, 2T) -> (x0 estimate, score) per mode."""
 
     def __init__(self, anchors: torch.Tensor, d_ego: int, d_feat: int = 0, dm: int = DM, layers: int = LAYERS,
-                 heads: int = HEADS, drop: float = DROP, feat_drop: float | None = None):
+                 heads: int = HEADS, drop: float = DROP, feat_drop: float | None = None, d_tok: int = 0,
+                 n_tok: int = 0):
         super().__init__()
         M, T2 = anchors.shape
         self.register_buffer("anchors", anchors)
@@ -136,6 +137,11 @@ class TruncDiffusion(torch.nn.Module):
         self.feat = torch.nn.Sequential(torch.nn.Dropout(drop if feat_drop is None else feat_drop),
                                         torch.nn.Linear(d_feat, dm),
                                         torch.nn.LayerNorm(dm)) if d_feat else None
+        # spatial tokens (the per-camera 4x4 grid) join the sequence as their own tokens with a learned
+        # position each, so the mode tokens can attend to where something is rather than to one pooled vector
+        self.tok = torch.nn.Sequential(torch.nn.Dropout(drop if feat_drop is None else feat_drop),
+                                       torch.nn.Linear(d_tok, dm), torch.nn.LayerNorm(dm)) if d_tok else None
+        self.tpos = torch.nn.Parameter(torch.randn(n_tok, dm) * 0.02) if d_tok else None
         self.inp, self.mode = torch.nn.Linear(T2, dm), torch.nn.Parameter(torch.randn(M, dm) * 0.02)
         self.temb = torch.nn.Sequential(torch.nn.Linear(dm, dm), torch.nn.SiLU(), torch.nn.Linear(dm, dm))
         enc = torch.nn.TransformerEncoderLayer(dm, heads, 4 * dm, drop, batch_first=True, norm_first=True)
@@ -145,10 +151,11 @@ class TruncDiffusion(torch.nn.Module):
         torch.nn.init.zeros_(self.off.bias)
         self.dm = dm
 
-    def forward(self, xt, t, e, f=None):
+    def forward(self, xt, t, e, f=None, tok=None):
         c = self.ego(e) + (self.feat(f) if self.feat is not None else 0)
         h = self.inp(xt) + self.mode + self.temb(_t_embed(t, self.dm))[:, None]
-        z = self.norm(self.enc(torch.cat([c[:, None], h], 1))[:, 1:])
+        pre = [c[:, None]] + ([self.tok(tok) + self.tpos] if tok is not None else [])
+        z = self.norm(self.enc(torch.cat([*pre, h], 1))[:, -h.shape[1]:])
         # x0 is the mode's anchor plus a learned offset; x_t only conditions it. The first version returned
         # x_t + offset, which asks the net to cancel the truncated noise itself (at t = 50 that is ~0.17 of the
         # half-range, ~8.7 m in x) through a 256-d bottleneck: on the fit half's inner split its positive-mode
@@ -163,12 +170,12 @@ def _noised(anchors: torch.Tensor, t: torch.Tensor, gen=None) -> torch.Tensor:
 
 
 @torch.inference_mode()
-def ddim_sample(net: TruncDiffusion, e, f=None, gen=None):
+def ddim_sample(net: TruncDiffusion, e, f=None, gen=None, tok=None):
     """Two deterministic DDIM steps (eta = 0) from the anchors noised to T_TRUNC; returns (x0, score)."""
     b, ab = len(e), ABAR.to(e.device)
     x = _noised(net.anchors, torch.full((b,), DDIM_STEPS[0], device=e.device), gen)
     for i, t in enumerate(DDIM_STEPS):
-        x0, s = net(x, torch.full((b,), t, device=e.device), e, f)
+        x0, s = net(x, torch.full((b,), t, device=e.device), e, f, tok)
         if i + 1 < len(DDIM_STEPS):
             tn = DDIM_STEPS[i + 1]
             eps = (x - ab[t - 1].sqrt() * x0) / (1 - ab[t - 1]).sqrt()
@@ -176,13 +183,38 @@ def ddim_sample(net: TruncDiffusion, e, f=None, gen=None):
     return x0, s
 
 
+def load_tokens(name: str, fnames: np.ndarray, array: str = "L18_grid") -> np.ndarray:
+    """One shard-keyed array for exactly `fnames`, in that order, filled shard by shard into one float16 block.
+
+    `waymo.load_features` would concatenate every shard and the caller would then fancy-index a copy: two
+    copies of a 48 x 2560 grid over ~157k rows is ~77 GB of RAM. This holds one.
+    """
+    root = waymo.out_dir("features", name)
+    at = pd.Series(np.arange(len(fnames)), index=fnames)
+    out, got = None, np.zeros(len(fnames), bool)
+    for d in sorted(q for q in root.iterdir() if (q / "meta.json").exists()):
+        p = at.reindex(pd.read_parquet(d / "index.parquet", columns=["frame_name"]).frame_name).to_numpy()
+        ok = ~np.isnan(p)
+        if not ok.any():
+            continue
+        a = np.load(d / f"{array}.npy", mmap_mode="r")
+        out = np.empty((len(fnames), a.shape[1]), np.float16) if out is None else out
+        out[p[ok].astype(int)] = a[np.flatnonzero(ok)]
+        got[p[ok].astype(int)] = True
+    if not got.all():
+        raise RuntimeError(f"{name}/{array}: {int((~got).sum())} of {len(fnames)} rows missing")
+    return out
+
+
 def diff_arm(ctx: dict, X, anchors: torch.Tensor, norm: np.ndarray, side: dict, name: str,
-             epochs: int = EPOCHS, pca: int | None = None, feat_drop: float | None = None):
+             epochs: int = EPOCHS, pca: int | None = None, feat_drop: float | None = None,
+             grid: tuple[str, int] | None = None):
     """The truncated diffusion head, conditioned on the ego state and, when `X` is given, the pooled feature.
 
     `pca` projects the standardised feature onto its top principal components of the fit half first, and
     `feat_drop` sets the dropout on the feature input: the two remedies for a 2560-dim condition that
-    overfits ~10k rows (Stage A2 in the todo).
+    overfits ~10k rows (Stage A2 in the todo). `grid` = (feature set, tokens per row) conditions on the stored
+    spatial tokens instead, kept on the host and moved to the card one batch at a time.
 
     Same discipline as `waymo_ladder._train`: train on the fit half's inner-fit rows, pick the epoch count by
     top-1 ADE on its sequence-grouped inner-val rows, refit on the whole fit half for that many epochs, read
@@ -201,13 +233,27 @@ def diff_arm(ctx: dict, X, anchors: torch.Tensor, norm: np.ndarray, side: dict, 
         Z = lad.standardize_np(X[sel], sp.train) if X is not None else None
         if Z is not None and pca:
             Z = planner.standardize(planner.pca(Z, sp.train, pca), sp.train)
+        tokf, dt, nt = (lambda b: None), 0, 0
+        if grid:
+            H = torch.from_numpy(load_tokens(grid[0], ctx["fname"][sel]))
+            nt, dt = grid[1], H.shape[1] // grid[1]
+            s1 = torch.zeros(dt, device=DEV, dtype=torch.float64)
+            s2 = s1.clone()
+            for b in torch.as_tensor(sp.train).split(4096):
+                x = H[b].to(DEV).view(-1, dt).double()
+                s1 += x.sum(0)
+                s2 += x.square().sum(0)
+            n = len(sp.train) * nt
+            mu = (s1 / n).float()
+            sd = (s2 / n - (s1 / n).square()).clamp_min(1e-12).sqrt().float().clamp_min(1e-6)
+            tokf = lambda b: (H[b.cpu()].to(DEV, non_blocking=True).view(len(b), nt, dt).float() - mu) / sd  # noqa: E731
         make = lambda: TruncDiffusion(A, E.shape[1], 0 if Z is None else Z.shape[1],  # noqa: E731
-                                      feat_drop=feat_drop).to(DEV)
+                                      feat_drop=feat_drop, d_tok=dt, n_tok=nt).to(DEV)
 
         def predict(net, rows):
             net.eval()
             gen = torch.Generator(device=DEV).manual_seed(seed)
-            out = [ddim_sample(net, E[b], None if Z is None else Z[b], gen)
+            out = [ddim_sample(net, E[b], None if Z is None else Z[b], gen, tokf(b))
                    for b in torch.as_tensor(rows, device=DEV).split(4096)]
             x0, sc = torch.cat([o[0] for o in out]), torch.cat([o[1] for o in out])
             order = sc.argsort(1, descending=True)
@@ -225,7 +271,7 @@ def diff_arm(ctx: dict, X, anchors: torch.Tensor, norm: np.ndarray, side: dict, 
                 net.train()
                 for b in r[torch.randperm(len(r), device=DEV)].split(BS):
                     t = torch.randint(1, T_TRUNC + 1, (len(b),), device=DEV)
-                    x0, sc = net(_noised(net.anchors, t), t, E[b], None if Z is None else Z[b])
+                    x0, sc = net(_noised(net.anchors, t), t, E[b], None if Z is None else Z[b], tokf(b))
                     p = pos[b]
                     loss = ((x0[torch.arange(len(b), device=DEV), p] - Gn[b]).abs().mean()
                             + torch.nn.functional.cross_entropy(sc, p))
@@ -331,7 +377,7 @@ def head_vs_ridge(run_dir, tag: str = TAG) -> pd.DataFrame:
         ego = {"ridge": lad.BASE, "cls": "cls ego K1024", "diff": f"diff ego M{DIFF_M}"}
         for tap in TAPS:
             ridge = f"A ridge_late qwenvid {tap}"
-            fams = [("cls", f"cls_late qwenvid {tap}")] + [("diff", k) for k in P if k.startswith(f"diff qwenvid {tap}")]
+            fams = [("cls", f"cls_late qwenvid {tap}")] + [("diff", k) for k in P if k.startswith((f"diff qwenvid {tap}", "diff qwenvid L18_grid"))]
             for fam, arm in fams:
                 if arm not in P or ridge not in P:
                     continue
@@ -354,7 +400,10 @@ def head_vs_ridge(run_dir, tag: str = TAG) -> pd.DataFrame:
 DIFF_VARIANTS = {"pca16": {"pca": 16}, "pca64": {"pca": 64}, "drop0.5": {"feat_drop": 0.5}}
 
 
-def build_arms(ctx, feats, voc, norm, side, which, epochs, variants=()):
+GRID_TOKENS = 48                     # 3 cameras x 4 x 4, `waymo_qwenvid --grid 4,4`
+
+
+def build_arms(ctx, feats, voc, norm, side, which, epochs, variants=(), grid_set=None):
     arms = {}
     for tap in TAPS:
         arms[f"A ridge_late qwenvid {tap}"] = lad.ridge_arm(feats[tap])
@@ -372,14 +421,32 @@ def build_arms(ctx, feats, voc, norm, side, which, epochs, variants=()):
             for v in variants:
                 arms[f"{n} {v}"] = diff_arm(ctx, feats[tap], voc[DIFF_M], norm, side, f"{n} {v}", epochs,
                                             **DIFF_VARIANTS[v])
+        if grid_set:
+            n = "diff qwenvid L18_grid 4x4"
+            arms[n] = diff_arm(ctx, None, voc[DIFF_M], norm, side, n, epochs, grid=(grid_set, GRID_TOKENS))
     return arms
 
 
-def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed: int = 0, variants=()):
-    ctx = lad.base_context(seed)
-    keep = lad.load_subset(ctx)
-    a = lad.align(ctx, lad.QWENVID_SET, list(TAPS))
-    keep &= a["covered"]
+P0_RUN = "runs/waymo_p0/train_split/20260922-175708"
+
+
+def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed: int = 0, variants=(),
+        grid_set=None, train_set=None):
+    """Half-val (both directions) by default; with `train_set`, fit on the train rows that set covers and
+    evaluate on its val rows (one direction), exactly as `waymo_qwenvid.trainfit` does for ridge."""
+    if train_set:
+        from .common import data_dir
+        ctx = lad.train_context(seed, p0_run=data_dir() / P0_RUN)
+        a = lad.align(ctx, train_set, list(TAPS), flat=False)
+        keep, directions = a["covered"].copy(), (0,)
+        grid_set = grid_set and train_set
+    else:
+        ctx = lad.base_context(seed)
+        keep = lad.load_subset(ctx)
+        a = lad.align(ctx, lad.QWENVID_SET, list(TAPS))
+        keep &= a["covered"]
+        if grid_set:
+            keep &= lad.align(ctx, grid_set, ["L18_mean"], flat=False)["covered"]
     feats = {t: a[t] for t in TAPS}
     voc, norm = vocabularies(seed=seed)
     for k, C in voc.items():
@@ -388,9 +455,9 @@ def run(rl, directions=(0, 1), which=("cls", "diff"), epochs: int = EPOCHS, seed
     tables = {k: [] for k in ("arms", "paired", "did", "deciles", "fits", "diagnostics")}
     for d in directions:
         side = {"modes": {}, "pool": {}}
-        s = lad.s_ego_full(ctx, d)
-        preds, sctx, fits = lad.run_direction(ctx, keep, build_arms(ctx, feats, voc, norm, side, which, epochs, variants),
-                                              d, s, rl)
+        s = lad.s_ego_from_p0(ctx) if train_set else lad.s_ego_full(ctx, d)
+        preds, sctx, fits = lad.run_direction(
+            ctx, keep, build_arms(ctx, feats, voc, norm, side, which, epochs, variants, grid_set), d, s, rl)
         for name, t in zip(("arms", "paired", "did", "deciles"), lad.judge(preds, sctx)):
             tables[name].append(t)
         tables["fits"].append(fits)
@@ -418,15 +485,18 @@ def main():
     ap.add_argument("--tag", default="p3e-v0")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--diff-variants", default="", help=f"comma list of {list(DIFF_VARIANTS)}")
+    ap.add_argument("--grid-set", default=None, help="shard-keyed set with L18_grid: adds the token-conditioned arm")
+    ap.add_argument("--train-set", default=None, help="fit on train, evaluate on val, with this shard-keyed set")
+    ap.add_argument("--vram-gb", type=float, default=VRAM_BUDGET / 1e9)
     a = ap.parse_args()
     torch.set_num_threads(8)
     total = torch.cuda.get_device_properties(0).total_memory
-    torch.cuda.set_per_process_memory_fraction(min(1.0, VRAM_BUDGET / total))
+    torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
     rl = RunLog("waymo_heads", a.tag)
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
     run(rl, tuple(int(x) for x in a.directions.split(",")), tuple(a.heads.split(",")), a.epochs, a.seed,
-        tuple(v for v in a.diff_variants.split(",") if v))
+        tuple(v for v in a.diff_variants.split(",") if v), a.grid_set, a.train_set)
     rl.event("end")
     rl.close()
 

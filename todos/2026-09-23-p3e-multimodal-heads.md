@@ -106,6 +106,14 @@ Stage A 里 diffusion 的坏只出在加了 2560 维 pooled 条件之后（inner
   diffusion 回到第三行（数据饥饿），它的定性等 train split；
 - 仍然两个方向都显著为正 → pooled 向量这条路对这个 head 走不通，条件要换成 Stage B 存的 4×4 空间 token（train split 抽完之后）。
 
+## Stage A3：diffusion 改用 4×4 空间 token 条件（半 val，跑之前写死）
+
+A2 判定 pooled 向量这条路走不通，下一步是空间 token。train 抽取已经先把 P3 val 子集（19 663 行）连同 `L18_grid` 抽完了，
+所以半 val 上现在就能跑，不必等 train。arm `diff qwenvid L18_grid 4x4`：ego 条件 token + 48 个空间 token（三相机 × 4×4，
+每个 token 自己的可学位置编码，Linear 2560→256 + LayerNorm，输入 dropout 0.1）+ 20 个 mode token，其余与 `diff ego` 完全相同。
+判据同 A2：它相对 `diff ego` 的视觉增量（pre-onset 第 1–9 档）两个方向 CI 都跨零或为负 → 空间 token 至少不伤 head，
+train split 上的 (b) 用它；两个方向都显著为正 → 在 1 万帧上 token 条件也学不会，(b) 仍然跑（数据量才是被测变量），但预期下调。
+
 ## 步骤
 
 - [x] `jevdrive/waymo_heads.py`：词表、`cls` / `diff` arm、两方向驱动、诊断列、第 22 条 rejudge
