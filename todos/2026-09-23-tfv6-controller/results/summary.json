@@ -1,0 +1,1189 @@
+{
+  "missing_groups": [],
+  "bootstrap_draws": 10000,
+  "by_level": {
+    "smoke": {
+      "C-B": {
+        "mean": null,
+        "ci_low": null,
+        "ci_high": null,
+        "n_pairs": 0,
+        "n_routes": 0
+      },
+      "A-B": {
+        "mean": null,
+        "ci_low": null,
+        "ci_high": null,
+        "n_pairs": 0,
+        "n_routes": 0
+      },
+      "D-C": {
+        "mean": null,
+        "ci_low": null,
+        "ci_high": null,
+        "n_pairs": 0,
+        "n_routes": 0
+      }
+    },
+    "1": {
+      "C-B": {
+        "mean": 6.230883666666667,
+        "ci_low": -7.624128343333331,
+        "ci_high": 25.4973697,
+        "n_pairs": 30,
+        "n_routes": 10
+      },
+      "A-B": {
+        "mean": 17.5599786,
+        "ci_low": 4.407774466666667,
+        "ci_high": 34.73590747499998,
+        "n_pairs": 30,
+        "n_routes": 10
+      },
+      "D-C": {
+        "mean": -0.1796298333333328,
+        "ci_low": -6.542648066666666,
+        "ci_high": 5.465091899999999,
+        "n_pairs": 30,
+        "n_routes": 10
+      }
+    },
+    "2": {
+      "C-B": {
+        "mean": -26.68144711111111,
+        "ci_low": -47.434677333333326,
+        "ci_high": -6.600555555555555,
+        "n_pairs": 18,
+        "n_routes": 6
+      },
+      "A-B": {
+        "mean": 8.88888888888889,
+        "ci_low": 0.0,
+        "ci_high": 17.77777777777778,
+        "n_pairs": 18,
+        "n_routes": 6
+      },
+      "D-C": {
+        "mean": -6.08240888888889,
+        "ci_low": -27.821330666666668,
+        "ci_high": 12.969505044444341,
+        "n_pairs": 18,
+        "n_routes": 6
+      }
+    }
+  },
+  "combined": {
+    "C-B": {
+      "mean": -6.111240374999999,
+      "ci_low": -20.755619198958332,
+      "ci_high": 9.569736680729166,
+      "n_pairs": 48,
+      "n_routes": 16
+    },
+    "A-B": {
+      "mean": 14.308319958333334,
+      "ci_low": 5.0988400135416665,
+      "ci_high": 25.890489811979158,
+      "n_pairs": 48,
+      "n_routes": 16
+    },
+    "D-C": {
+      "mean": -2.393171979166667,
+      "ci_low": -11.685303944791668,
+      "ci_high": 5.666185739062499,
+      "n_pairs": 48,
+      "n_routes": 16
+    }
+  },
+  "secondary": {
+    "1": {
+      "C-B": {
+        "rc_diff": {
+          "mean": 2.2626666666666675,
+          "ci_low": 0.0,
+          "ci_high": 5.901333333333336,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "completed_diff": {
+          "mean": 0.06666666666666667,
+          "ci_low": 0.0,
+          "ci_high": 0.2,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "sr_diff": {
+          "mean": 0.0,
+          "ci_low": -0.3,
+          "ci_high": 0.3,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.7510101085960617,
+          "ci_low": 0.0,
+          "ci_high": 2.253030325788185,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": -0.569211897667085,
+          "ci_low": -1.707635693001255,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -1.7327311334523956,
+          "ci_low": -7.05116770152478,
+          "ci_high": 2.3207582839099543,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": 0.29655420661686127,
+          "ci_low": -2.8993030915653497,
+          "ci_high": 3.607136489923333,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 3.8706274883163396,
+          "ci_low": 0.0,
+          "ci_high": 9.863271517770185,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.4993870024544871,
+          "ci_low": -1.4981610073634613,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        }
+      },
+      "A-B": {
+        "rc_diff": {
+          "mean": 3.822666666666667,
+          "ci_low": 0.0,
+          "ci_high": 9.464666666666668,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "completed_diff": {
+          "mean": 0.1,
+          "ci_low": 0.0,
+          "ci_high": 0.23416666666665453,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "sr_diff": {
+          "mean": 0.3333333333333333,
+          "ci_low": 0.06666666666666667,
+          "ci_high": 0.6,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": -0.569211897667085,
+          "ci_low": -1.707635693001255,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -3.2623053304407317,
+          "ci_low": -7.897546698337238,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": -1.185814954813117,
+          "ci_low": -3.4349860707726396,
+          "ci_high": 0.6285513149293508,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 8.679307593058134,
+          "ci_low": 0.0,
+          "ci_high": 20.362678662121148,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.4993870024544871,
+          "ci_low": -1.4981610073634613,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        }
+      },
+      "D-C": {
+        "rc_diff": {
+          "mean": 1.5599999999999998,
+          "ci_low": 0.0,
+          "ci_high": 4.679999999999999,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "completed_diff": {
+          "mean": 0.03333333333333333,
+          "ci_low": 0.0,
+          "ci_high": 0.1,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "sr_diff": {
+          "mean": 0.0,
+          "ci_low": -0.1,
+          "ci_high": 0.1,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.2846059488335425,
+          "ci_low": 0.0,
+          "ci_high": 0.8538178465006275,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -0.22526653157127682,
+          "ci_low": -2.561453539501883,
+          "ci_high": 1.8856539447880525,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.43715273679470873,
+          "ci_low": 0.0,
+          "ci_high": 1.3114582103841264,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": -0.2846059488335425,
+          "ci_low": -0.8538178465006275,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 4.8086801047417955,
+          "ci_low": 0.0,
+          "ci_high": 14.426040314225387,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 30,
+          "n_routes": 10
+        }
+      }
+    },
+    "2": {
+      "C-B": {
+        "rc_diff": {
+          "mean": -17.44388888888889,
+          "ci_low": -33.97722222222222,
+          "ci_high": -3.6155555555555554,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "completed_diff": {
+          "mean": -0.3333333333333333,
+          "ci_low": -0.6666666666666666,
+          "ci_high": -0.05555555555555555,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "sr_diff": {
+          "mean": -0.3888888888888889,
+          "ci_low": -0.7777777777777778,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.7940251197786893,
+          "ci_low": 0.0,
+          "ci_high": 2.382075359336068,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": 2.9083298288634007,
+          "ci_low": -0.3805026613269171,
+          "ci_high": 6.599678178463872,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.7940251197786893,
+          "ci_low": 0.0,
+          "ci_high": 2.382075359336068,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": 0.7940251197786893,
+          "ci_low": 0.0,
+          "ci_high": 2.382075359336068,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": -46.519582739999514,
+          "ci_low": -97.74255155018633,
+          "ci_high": -3.8873888357209756,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_dev_per_km_diff": {
+          "mean": 2.288801444849452,
+          "ci_low": 0.0,
+          "ci_high": 5.464901923964209,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": 0.7940251197786893,
+          "ci_low": 0.0,
+          "ci_high": 2.382075359336068,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        }
+      },
+      "A-B": {
+        "rc_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "completed_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "sr_diff": {
+          "mean": 0.2222222222222222,
+          "ci_low": 0.0,
+          "ci_high": 0.4444444444444444,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -2.184520931321217,
+          "ci_low": -4.98752575248951,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        }
+      },
+      "D-C": {
+        "rc_diff": {
+          "mean": -4.468333333333333,
+          "ci_low": -21.756666666666664,
+          "ci_high": 8.415,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "completed_diff": {
+          "mean": -0.05555555555555555,
+          "ci_low": -0.3333333333333333,
+          "ci_high": 0.16666666666666666,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "sr_diff": {
+          "mean": -0.1111111111111111,
+          "ci_low": -0.3888888888888889,
+          "ci_high": 0.1111111111111111,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": -0.7940251197786893,
+          "ci_low": -2.382075359336068,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -0.3460606829464343,
+          "ci_low": -4.39105506072567,
+          "ci_high": 3.263007577023126,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 2.288801444849452,
+          "ci_low": 0.0,
+          "ci_high": 5.464901923964209,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": -0.09327391448661625,
+          "ci_low": -2.382075359336068,
+          "ci_high": 2.102253615876219,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": -2.1865940494693916,
+          "ci_low": -28.982691866313253,
+          "ci_high": 24.027657126385215,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.7940251197786893,
+          "ci_low": 0.0,
+          "ci_high": 2.382075359336068,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.7940251197786893,
+          "ci_low": -2.382075359336068,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 18,
+          "n_routes": 6
+        }
+      }
+    },
+    "combined": {
+      "C-B": {
+        "rc_diff": {
+          "mean": -5.127291666666666,
+          "ci_low": -13.535625000000001,
+          "ci_high": 1.6912500000000008,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "completed_diff": {
+          "mean": -0.08333333333333333,
+          "ci_low": -0.25052083333333286,
+          "ci_high": 0.08333333333333333,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "sr_diff": {
+          "mean": -0.14583333333333334,
+          "ci_low": -0.4166666666666667,
+          "ci_high": 0.10416666666666667,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.7671407377895471,
+          "ci_low": 0.0,
+          "ci_high": 2.0036627934516322,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": -0.35575743604192817,
+          "ci_low": -1.0672723081257844,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": 0.007666727416027937,
+          "ci_low": -3.68697346082463,
+          "ci_high": 3.1204956645835615,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.2977594199170085,
+          "ci_low": 0.0,
+          "ci_high": 0.8932782597510255,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": 0.48310579905254675,
+          "ci_low": -1.5761478423587751,
+          "ci_high": 2.6078202797256793,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": -15.025701347302103,
+          "ci_low": -39.47582786635439,
+          "ci_high": 3.1175935303226203,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.8583005418185444,
+          "ci_low": 0.0,
+          "ci_high": 2.3121199234711054,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.014357456617045941,
+          "ci_low": -0.9363506296021633,
+          "ci_high": 0.8932782597510255,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        }
+      },
+      "A-B": {
+        "rc_diff": {
+          "mean": 2.3891666666666667,
+          "ci_low": 0.0,
+          "ci_high": 6.030416666666667,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "completed_diff": {
+          "mean": 0.0625,
+          "ci_low": 0.0,
+          "ci_high": 0.16666666666666666,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "sr_diff": {
+          "mean": 0.2916666666666667,
+          "ci_low": 0.10416666666666667,
+          "ci_high": 0.5,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": -0.35575743604192817,
+          "ci_low": -1.0672723081257844,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -2.8581361807709134,
+          "ci_low": -5.97935818742949,
+          "ci_high": -0.5872638905528033,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": -0.741134346758198,
+          "ci_low": -2.149278300375814,
+          "ci_high": 0.39284457183084426,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 5.424567245661334,
+          "ci_low": 0.0,
+          "ci_high": 14.401000477779675,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.31211687653405445,
+          "ci_low": -0.9363506296021633,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        }
+      },
+      "D-C": {
+        "rc_diff": {
+          "mean": -0.7006249999999999,
+          "ci_low": -7.775833333333332,
+          "ci_high": 4.154374999999999,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "completed_diff": {
+          "mean": 0.0,
+          "ci_low": -0.10416666666666667,
+          "ci_high": 0.08333333333333333,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "sr_diff": {
+          "mean": -0.041666666666666664,
+          "ci_low": -0.16666666666666666,
+          "ci_high": 0.0625,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_layout_per_km_diff": {
+          "mean": -0.11988070189604443,
+          "ci_low": -0.8932782597510255,
+          "ci_high": 0.5336361540628922,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_pedestrian_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "collisions_vehicle_per_km_diff": {
+          "mean": -0.27056433833696086,
+          "ci_low": -2.257024543845894,
+          "ci_high": 1.6141797404528937,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "red_light_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "stop_infraction_per_km_diff": {
+          "mean": 1.1315210023152373,
+          "ci_low": 0.0,
+          "ci_high": 2.585340383967799,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "outside_route_lanes_per_km_diff": {
+          "mean": -0.21285643595344517,
+          "ci_low": -1.0711569777719896,
+          "ci_high": 0.6104663879326181,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "min_speed_infractions_per_km_diff": {
+          "mean": 2.1854522969126005,
+          "ci_low": -8.237363924477517,
+          "ci_high": 12.465566336906607,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "yield_emergency_vehicle_infractions_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "scenario_timeouts_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_dev_per_km_diff": {
+          "mean": 0.2977594199170085,
+          "ci_low": 0.0,
+          "ci_high": 0.8932782597510255,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "vehicle_blocked_per_km_diff": {
+          "mean": -0.2977594199170085,
+          "ci_low": -0.8932782597510255,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        },
+        "route_timeout_per_km_diff": {
+          "mean": 0.0,
+          "ci_low": 0.0,
+          "ci_high": 0.0,
+          "n_pairs": 48,
+          "n_routes": 16
+        }
+      }
+    }
+  },
+  "arm_counts": {
+    "1": {
+      "A": {
+        "cases": 30,
+        "completed": 30,
+        "sr": 24
+      },
+      "B": {
+        "cases": 30,
+        "completed": 27,
+        "sr": 14
+      },
+      "C": {
+        "cases": 30,
+        "completed": 29,
+        "sr": 14
+      },
+      "D": {
+        "cases": 30,
+        "completed": 30,
+        "sr": 14
+      }
+    },
+    "1r": {
+      "A": {
+        "cases": 10,
+        "completed": 10,
+        "sr": 8
+      },
+      "B": {
+        "cases": 0,
+        "completed": 0,
+        "sr": 0
+      },
+      "C": {
+        "cases": 0,
+        "completed": 0,
+        "sr": 0
+      },
+      "D": {
+        "cases": 0,
+        "completed": 0,
+        "sr": 0
+      }
+    },
+    "2": {
+      "A": {
+        "cases": 18,
+        "completed": 18,
+        "sr": 18
+      },
+      "B": {
+        "cases": 18,
+        "completed": 18,
+        "sr": 14
+      },
+      "C": {
+        "cases": 18,
+        "completed": 12,
+        "sr": 7
+      },
+      "D": {
+        "cases": 18,
+        "completed": 11,
+        "sr": 5
+      }
+    }
+  },
+  "same_seed_a_repeat": [
+    {
+      "route": "2091",
+      "seed": 0,
+      "ds_diff": 40.0
+    },
+    {
+      "route": "3255",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "3514",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "17569",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "25378",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "25381",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "25424",
+      "seed": 0,
+      "ds_diff": -3.7714320000000043
+    },
+    {
+      "route": "26405",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "27494",
+      "seed": 0,
+      "ds_diff": 0.0
+    },
+    {
+      "route": "28198",
+      "seed": 0,
+      "ds_diff": 0.0
+    }
+  ]
+}
