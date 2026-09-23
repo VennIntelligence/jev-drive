@@ -481,23 +481,31 @@ def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=None,
     its own per-dimension std. After that a linear classifier has nothing left to use (with equal class means the
     balanced logistic loss is minimised at w = 0, so it scores 0.5 by construction), so those variants are
     meaningful only with `model="mlp"`."""
-    from sklearn.model_selection import GroupKFold
+    from sklearn.model_selection import StratifiedGroupKFold
     y = np.asarray(y, np.int64)
+    folds = min(folds, *(len(np.unique(groups[y == c])) for c in (0, 1)))
+    if folds < 2:
+        return float("nan")                    # a class lives in a single group: not estimable
     Xt = torch.as_tensor(X, device=dev, dtype=torch.float32)
-    oof = np.zeros(len(y))
-    for tr, te in GroupKFold(folds).split(X, y, groups):
+    oof = np.full(len(y), np.nan)
+    for tr, te in StratifiedGroupKFold(folds, shuffle=True, random_state=seed).split(X, y, groups):
+        if len(np.unique(y[tr])) < 2:
+            continue
         mu, sd = _std(Xt, tr)
         Z = (Xt - mu) / sd
         if center:
-            # Each class is normalised with the statistics of ALL its rows (transductive, like per-domain
-            # standardisation in deployment: CARLA statistics come from CARLA frames, no task labels involved).
-            # Training-fold statistics instead would leave a class with few groups (CARLA: ~90 routes) offset
-            # in the test fold by the between-route spread, which a nonlinear classifier reads as a domain cue:
-            # a Waymo-vs-Waymo dry run gave 0.83 that way.
-            for c in (0, 1):
-                m = np.flatnonzero(y == c)
-                mc, sc = _std(Z, m)
-                Z[m] = (Z[m] - mc) / (sc if center == "z" else 1.0)
+            # Each class is normalised with its own statistics *within each split*: training rows with the training
+            # fold's, test rows with the test fold's (transductive, as per-domain standardisation is in deployment:
+            # CARLA statistics come from the CARLA frames at hand, no task labels involved). Both simpler choices
+            # are biased when a class has few groups (CARLA: ~90 routes): training-fold statistics leave the test
+            # rows offset by the between-route spread (a Waymo-vs-Waymo dry run read 0.83), all-rows statistics
+            # push the two folds to opposite sides of the mean (the null read 0.36).
+            for rows_ in (tr, te):
+                for c in (0, 1):
+                    m = rows_[y[rows_] == c]
+                    if len(m) > 1:
+                        mc, sc = _std(Z, m)
+                        Z[m] = (Z[m] - mc) / (sc if center == "z" else 1.0)
         if pca_k:
             ref = tr[y[tr] == 0]
             mref = Z[ref].mean(0)
@@ -509,7 +517,8 @@ def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=None,
             W, b = logreg(Z[tr], torch.as_tensor(y[tr], device=dev), lam)
             oof[te] = (Z[te] @ W + b).softmax(1)[:, 1].cpu().numpy()
         del Z
-    return auc(y, oof)
+    ok = ~np.isnan(oof)
+    return auc(y[ok], oof[ok]) if len(np.unique(y[ok])) == 2 else float("nan")
 
 
 def js(p: np.ndarray, q: np.ndarray, eps: float = 1e-9) -> float:
@@ -568,7 +577,6 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
 
     def add(what, tap, X, y, g, **kw):
         a = domain_auc(X, y, g, **kw)
-        kw.pop("folds", None)
         r = {"comparison": what, "tap": tap, "n0": int((y == 0).sum()), "n1": int((y == 1).sum()),
              "groups": len(np.unique(g)), "auc": a}
         rows.append(r)
@@ -619,9 +627,8 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
             Xl = np.concatenate([Xw[a], Xc[b]])
             yl = np.r_[np.zeros(a.sum()), np.ones(b.sum())].astype(np.int64)
             gl = np.r_[W["seq"][a], C["seq"][b]]
-            add(f"layer {gname}: Waymo vs CARLA", tap, Xl, yl, gl, folds=min(5, len(np.unique(C["seq"][b]))))
-            add(f"layer {gname}: Waymo vs CARLA, centred, MLP", tap, Xl, yl, gl, center="mean", model="mlp",
-                folds=min(5, len(np.unique(C["seq"][b]))))
+            add(f"layer {gname}: Waymo vs CARLA", tap, Xl, yl, gl)
+            add(f"layer {gname}: Waymo vs CARLA, centred, MLP", tap, Xl, yl, gl, center="mean", model="mlp")
         # controls: how separable are things that are one domain?
         for model, tag in (("linear", ""), ("mlp", ", MLP")):
             add("control: CARLA Large Map vs small town" + tag, tap, Xc, t.large_map.to_numpy().astype(np.int64),
