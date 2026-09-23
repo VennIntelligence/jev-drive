@@ -186,4 +186,5 @@ campaign 之后，对 26966 的 p00 分别单独跑 prod-kfix 和 slipack-kfix �
 - worker 调度：Town12/13 两组在路线边界拆分，被中断路线的部分 case 移入 `lateral-v2-aborted/`，整条路线重跑；2084/2881 的 helper 被误杀（关闭父 tmux 窗口），中断的扰动整体移入 aborted 后续跑。每个 (扰动, 路线, 臂) 在分析目录里恰好一份。
 - Town13（23695）：CARLA server 在 GPU 满载下反复崩溃（"GameThread timed out waiting for RenderThread"），Epic、Low quality、`no_rendering_mode` 都崩，未能完成；最终 12/66 例（p00 与 p06 各 6 臂）。按本协议该窗保护记为 seed 不全（失败）。
 - 渲染：两次独立渲染与 campaign p00 同臂 CTE 逐帧差 0。
+- 停止：按用户决定，本轮在此结束。所有本轮启动的 CARLA server 与 worker 均已终止，23695 不再补跑，维持 seed 不全；RESOURCE_LEDGER 中本流的条目已标 DONE/STOPPED。
 - 结果与判定：[lateral-v2-report.md](lateral-v2-report.md)。P1、P2 与 26966 附加保护通过；24240（横向加速度 +10.5%、steer-rate +39%）、S1/S2（横向加速度 +23% / +25%）、7 个 held-out 窗中 6 个 steer-rate 超 +20%、17569 横向加速度 +36%、23695 seed 不全，**候选不通过**。不做反序确认，不升级默认。
