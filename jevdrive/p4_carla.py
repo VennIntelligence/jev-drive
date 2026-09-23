@@ -948,9 +948,11 @@ def fig_rig(ps, out: Path, seed: int = 3):
     from PIL import Image
     from . import waymo_qwenvid as qv
     items, _ = qv.ref_items(400)
-    it = items[np.random.default_rng(seed).integers(len(items))]
-    ds = waymo.Shards([it], lambda imgs: imgs)
-    w_imgs = ds[0][3::4]                                   # last frame of each camera's clip
+    rng = np.random.default_rng(seed)
+    for _ in range(50):                                    # a daylight Waymo clip, to compare like with like
+        w_imgs = waymo.Shards([items[rng.integers(len(items))]], lambda imgs: imgs)[0][3::4]
+        if np.asarray(w_imgs[0].convert("L")).mean() > 90:
+            break
     t, _, _ = load_carla()
     moving = t[(t.v0 > 4) & ~t.night].reset_index(drop=True)
     c_row = moving.iloc[np.random.default_rng(seed).integers(len(moving))]
