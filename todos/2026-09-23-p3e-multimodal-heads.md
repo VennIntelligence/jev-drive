@@ -126,7 +126,7 @@ train split 上的 (b) 用它；两个方向都显著为正 → 在 1 万帧上 
 - [x] Stage A2：diffusion 条件的三个变体（结论：pooled 向量这条路走不通）
 - [x] 启动 train split 抽取（thin=4 + 4×4 空间摘要，`qwenvid_train_t4`，2026-09-23 15:11）
 - [x] val 子集 93 个 shard 抽完后：`check`（新旧 val 特征的下游等价，通过）
-- [ ] 决定性检查 (a)：`trainfit`，train 训、val 评的 d″ ridge_late（第 22 条口径）
+- [ ] 决定性检查 (a)：`trainfit`，train 训、val 评的 d″ ridge_late（第 22 条口径；66 shard 的初步版已跑，全量待 shard 到齐）
 - [ ] (b)：多模态 head 在 train 特征上重跑（diffusion 用空间 token 条件）
 
 ## 结果
@@ -342,3 +342,27 @@ run：`$DATA_DIR/runs/waymo_heads/p3e-a3/20260923-175341/`，小表 `research/re
 **按预写判据落第二行**：48 个空间 token 在 1 万帧上比 pooled 向量（视觉增量 +0.45–0.71）还伤，inner split 上同样（2.88 / 3.02 对 `diff ego` 1.94 / 2.09），
 所以不是 eval 半的偶然。与 P2(c) 的发现一致（token head 在约 1 万帧上训，坏在第 1–3 档加噪声）。(b) 仍按计划在 train 特征上跑，
 那时被测的变量就是 14 倍的训练行数；预期下调。
+
+### 决定性检查 (a)，**初步**：train 训（66/263 个 train shard）、val 评（2026-09-23 21:26）
+
+run：`$DATA_DIR/runs/waymo_qwenvid/trainfit/20260923-212558/`，小表 `research/results/p3-qwenvid-trainfit/prelim-66shards/`。
+fit：34 433 个 train 行（全部 train shard 的 25%，thin=4 的构成，均匀权重），约为半 val fit 半的 3.5 倍；
+eval：P3 val 子集 19 663 行，含 val 的全部 pre-onset（窗口完整的 1458 帧，第 1–9 档 1281 帧）和 478 个 rater 帧。
+单方向（train/val 只有一个切分）。s_ego 用 P0 的（与 d‴ 同一条轴）；decile 按 eval 行自己的分位切，与半 val 的 P3 同一做法。
+base `ridge ego` 在同一批 train 行上重拟，val 上 RFS 7.054（P0 全量 train 是 7.056）。
+
+| arm | pre-onset Δ（第 1–9 档）[CI] | pre-onset Δ（全部档，侧栏）| straight Δ | DiD | RFS Δ [CI] | floored | 第 10 档 vs rater_best |
+|:--|:--|:--|--:|--:|:--|--:|--:|
+| A pooled（4B 单帧 L18） | −0.012 [−0.064, +0.044] | −0.025 | −0.093 | +0.080 | −0.211 [−0.337, −0.090] | 0.272 | −0.113 |
+| d″ `L18_last` | −0.033 [−0.079, +0.016] | −0.064 [−0.116, −0.011] | −0.039 | +0.006 | −0.388 [−0.518, −0.256] | 0.312 | −0.189 |
+| d″ `L18_mean` | **−0.051 [−0.099, −0.003]** | −0.080 [−0.131, −0.028] | −0.087 | +0.037 | −0.417 [−0.559, −0.282] | 0.308 | −0.208 |
+
+初步读法（不是结论，train 只到四分之一）：
+- **pre-onset 上 d″ 没有像 V-JEPA 那样缩掉**：d‴ 里 V-JEPA 在 train 训之后从半 val 的 −0.101 缩到 −0.030 [−0.104, +0.041]；
+  这里 `L18_mean` 是 −0.051，CI 不跨零，按第 20 条的 −0.05 m 门槛算刚好过线（单方向），`L18_last` −0.033 跨零。同一批行上 arm A 只有 −0.012。
+  CI 半宽约 0.05，比 d‴ 的 0.054–0.072 窄一点（n 1281 对 1249，主要是 eval 端相同，窄在 fit 端）。
+- **但 RFS 反向，而且显著**：两个 d″ tap 的 RFS 相对 `ridge ego` 掉 0.39 / 0.42（CI 不跨零），floored 从 26.4% 升到 31%；A 也掉 0.21。
+  P0（全量 train、均匀构成）里 A 的 RFS Δ 是 −0.087 [−0.183, +0.004]。推测（未验证）：一部分来自 thin=4 的训练构成——转弯帧占 31%（全量 10.5%），
+  回归 head 学到的平均轨迹更偏「会转」，在 rater 的 trust region 里更容易出界；可以用 thin 倍样本权重复原全量构成来验证，全量 shard 到齐后一起跑。
+- 所以 ADE 口径上 d″ 站住了、RFS 口径上它和 A 一样（甚至更）不被 rater 认可——这正是第 22 条要求 RFS 并排必报的情形。
+全部 263 个 train shard 到齐后重跑一次（均匀 + 加权两版），那一次才是 (a) 的结果。

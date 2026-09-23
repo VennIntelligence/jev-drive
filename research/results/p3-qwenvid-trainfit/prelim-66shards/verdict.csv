@@ -1,0 +1,4 @@
+arm,meets_both_directions
+A ridge_late pooled (qwen4b L18 image),False
+d'' ridge_late L18_last,False
+d'' ridge_late L18_mean,True
