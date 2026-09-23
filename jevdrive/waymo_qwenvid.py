@@ -40,8 +40,16 @@ def make_fx(compile: bool = False, grid_hw=None, model_id: str | None = None, la
     lm = fx.model.language_model
     lm.layers = lm.layers[:max(layers)]             # the deeper layers are never called: VRAM back
     torch.cuda.empty_cache()
-    n = len(waymo.CAMS)
-    fx.transform = (lambda t: lambda imgs: t([imgs[i * FRAMES:(i + 1) * FRAMES] for i in range(n)]))(fx.transform)
+    n, t = len(waymo.CAMS), fx.transform
+
+    def transform(imgs):
+        # One clip item's pixel_values_videos is 24 480 patches x 1536 float32 = 150 MB, and the loader keeps
+        # workers x prefetch x batch of them in pinned RAM: batch 12 with 8 workers is ~58 GB and got the
+        # profiler OOM-killed. The patch embedding casts to bf16 as its first op, so casting here is exact
+        # (checked bit for bit against qwenvid_p3) and halves both the RAM and the H2D copy.
+        ids, mm, pv, grid = t([imgs[i * FRAMES:(i + 1) * FRAMES] for i in range(n)])
+        return ids, mm, pv.to(torch.bfloat16), grid
+    fx.transform = transform
     return fx
 
 
@@ -113,7 +121,7 @@ def kernel_table(fx, items, batch: int, n_batches: int = 4, top: int = 15) -> pd
     return pd.DataFrame(rows).sort_values("cuda_ms_per_frame", ascending=False).head(top)
 
 
-def profile(rl, n: int = 240, batches=(2, 4, 8, 12), workers=(6, 8), grid_hw=(4, 4)):
+def profile(rl, n: int = 240, batches=(2, 8), workers=(6,), grid_hw=(4, 4)):
     """The configuration grid, each on the same first `n` rows of the `qwenvid_p3` item list."""
     from . import features as F
     items, idx = ref_items(n)
