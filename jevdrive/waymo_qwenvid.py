@@ -263,11 +263,37 @@ def check(rl, name: str, taps=("L18_last", "L18_mean")):
         index=False, floatfmt=".4f"))
 
 
+P0_RUN = "runs/waymo_p0/train_split/20260922-175708"     # whose s_ego the decile axis reuses, as P3(d''') did
+
+
+def trainfit(rl, name: str, taps=("L18_last", "L18_mean")):
+    """The decisive test of P3(d''): fit ridge_late on the train split, evaluate on val, decision 22's judge.
+
+    P3(d''') did this for V-JEPA and the half-val effect shrank to "unmeasurable"; this is the same protocol
+    for the Qwen video features. Rows are whatever the (possibly still growing) shard-keyed set covers: the
+    train frames of the extraction and the P3 val subset, which carries every pre-onset and rater frame of
+    val, so the headline pre-onset delta is over all of them. Arm A (the single-frame pooled Qwen feature) is
+    refitted on exactly the same rows beside it. The fit rows are uniform over what was extracted, i.e. over
+    the stratified subsample when `thin` was used -- the composition the todo states.
+    """
+    ctx = lad.train_context(p0_run=data_dir() / P0_RUN)
+    b = lad.align(ctx, name, list(taps), flat=False)
+    keep = b["covered"]
+    rl.log.info("trainfit: %d train rows, %d val rows covered", int((keep & (ctx["half"] == 0)).sum()),
+                int((keep & (ctx["half"] == 1)).sum()))
+    arms = {"A ridge_late pooled (qwen4b L18 image)": lad.ridge_arm(ctx["pooled"]),
+            **{f"d'' ridge_late {t}": lad.ridge_arm(b[t]) for t in taps}}
+    lad.run_ladder(lambda k: arms, "trainfit", keep, ctx, directions=(0,), rl=rl)
+    for k, t in lad.rejudge(rl.dir, "trainfit").items():
+        t.to_csv(rl.dir / f"{k}.csv", index=False)
+        rl.log.info("%s\n%s", k, t.to_markdown(index=False, floatfmt=".4f"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("profile", "run", "subset", "check"))
+    ap.add_argument("step", choices=("profile", "run", "subset", "check", "trainfit"))
     ap.add_argument("--model", default=None, help="subset: HF model id")
     ap.add_argument("--layers", default="18", help="subset: comma list of decoder layers to tap")
     ap.add_argument("--n", type=int, default=240, help="profile: rows of the qwenvid_p3 item list")
@@ -292,6 +318,8 @@ def main():
                                          a.compile))
     elif a.step == "check":
         check(rl, a.name)
+    elif a.step == "trainfit":
+        trainfit(rl, a.name)
     else:
         run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
     rl.event("end")
