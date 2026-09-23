@@ -184,6 +184,47 @@ BehaviorAgent、b2d_hooks、lead 全能 import）。时间盒 3 小时：跑不�
 - [ ] head、probe、考试，路线 bootstrap（报告）
 - [ ] 决策第 32 条、prediag README 的 P5 一节、两张图（每 family 每考生的翻转率；expert Δ 对 null 的分布），`research/results/p5-carla-pairs/`
 
+## 2 对 smoke（2026-09-24 00:00–00:55，box 上 `runs/p5_pairs/smoke*`）
+
+跑的是 27515（PedestrianCrossing，Town03，seed 0）的 x⁺ / x⁻ / null 和 25968（Light，Town07，seed 0）的 x⁺ / x⁻。
+一路改出来的东西，按发现顺序：
+
+| 问题 | 症状 | 改法 |
+|:--|:--|:--|
+| TFv6 环境是 Python 3.10 | Bench2Drive 的 route parser 用了 3.9 删掉的 `Element.getchildren()`，evaluator 又要 `items()` 返回 list | `b2d_route.py` 在 3.9+ 用纯 Python 的 ElementTree 并补回这两个方法 |
+| x⁻ 不能没有 scenario 元素 | evaluator 用第一个 scenario 的名字给路线命名，删光就 IndexError | HardBreakRoute 的 x⁻ 保留元素、trigger 挪到 10 km 外 |
+| **删 scenario 不是「只差一处」** | 见上面「x⁻ 的修订」：x⁻ 的 ego 在 4.15 s 停在排队车后面，原因是 scenario 的背景指令没了 | x⁻ 改为 scenario 照常运行、hazard actor 藏到地下 |
+| 射线遮挡判断不可用 | `cast_ray` 在相机前 1 m 处命中无标签几何（`NONE@1.0`），几十米外的车全判成被遮挡 | 改为 instance segmentation 相机（Waymo 前视同位姿、同视场、半分辨率）：把 actor 的 3D 框投影进去，数框内同类语义、同一 instance 的像素。CARLA 的 instance id 不等于 actor id，所以必须投影 |
+| TFv6 每 tick 0.47 s | 作者的 `BaseAgent.tick` 里 RANSAC 去地面用 numba `prange`，默认线程数按宿主机的 208 核开，在 25 核的 cgroup 里严重超订 | `NUMBA_NUM_THREADS=3`：`BaseAgent.tick` 从 260 ms 降到 90 ms；只改线程数，不改作者代码 |
+| TFv6 只在 5 Hz 相机帧上读 | 作者完整的 `run_step`（预处理 + 三 seed forward）每 tick 都跑太贵 | 相机 tick 跑完整 `run_step`，其余 tick 只跑作者的 `BaseAgent.tick`（GPS 滤波、位姿历史、LiDAR / radar 队列），模型看到的输入与闭环完全一样；跳过的只喂 control（PID、停车标志、creeping），本来就丢弃 |
+| 录制停得太早 | 27515 在红灯前停了 20 s 以上，P4 的 20 s 卡住门槛在 scenario 还没演完就截断 | 触发后 20 s 结束，卡住门槛 30 s，上限 50 s |
+
+**确定性**（同一路线同一 seed）：x⁺ 对只换天气的 null，ego 在 26 s 里逐 tick 位置差 0.000 m；x⁺ 对藏了行人的 x⁻，同样 0.000 m（这一对 expert 在行人出现前就停在红灯前，所以全程没分叉）。
+只有原来那版「删 scenario」的 x⁻ 从起步后就有毫米级漂移（背景车换了一套），这正是改设计的原因。TFv6 在两个世界输入逐位相同的帧上输出一致（目标速度到 4 位小数），
+在只换天气的 null 上目标速度差 |Δ| 均值 0.04 m/s（一帧 4.5 m/s 的离群），在 x⁺ 对 x⁻（行人在 / 不在）上均值 0.16、p95 0.40、最大 7.0 m/s——
+**TFv6 对行人有反应，而 expert 此时停在红灯前没有反应**，这一对的观测帧全部是 non-reactive。
+
+**可见性**：27515 的行人 115 在 t = 6.45 s 第一次进入前视画面（3648 像素，半分辨率），111 在 8.25 s；前方灯头 50–450 像素。
+
+**25968（Light）**：红灯版在触发时把一盏灯从绿切到红，只持续 3.6 s，而且不是 ego 要服从的那盏；两个世界的 ego 全程逐 tick 相同，TFv6 输出也相同。
+Light family 在 BehaviorAgent 下可能大部分是 non-reactive，等批量的 label-validity 表说话。
+
+**耗时**（3 seed ensemble，GPU 与 qv-train 共享，1–2 个 server）：
+
+| 分项 | 每 tick ms（均值） | 说明 |
+|:--|--:|:--|
+| TFv6 相机 tick（`run_step` 全量） | 360–380 | 其中 forward 170–220 |
+| TFv6 其余 tick（`BaseAgent.tick`） | 85–100 | `NUMBA_NUM_THREADS=3` 之后；之前 250–260 |
+| JPEG 三相机 remap + 编码（相机 tick） | 65 | P4 同一份代码 |
+| 可见性（相机 tick） | 3–6 | 投影 + 分割图 |
+| expert、actor 快照 | 1–2、0.3 | |
+| 整个 agent tick | 220–300 | |
+
+一次 run 191–284 s（473–993 tick），每 worker 显存约 10 GB（CARLA 7.2–7.9 GB + TFv6 2.2 GB）。
+批量 385 次 run：06:00 前 3 个 worker（≤ 40 GB），约 3.5 min / run → 约 7.5 h；qv-train 结束后加第二个 runner（同一 `--out`，靠 claim 分路线），预计总 6–7 h。
+PDM-Lite：LEAD 的 expert 依赖作者 fork 的 `CarlaDataProvider.active_scenarios` 等字段（我们锁定的 Bench2Drive 里没有）和 `autonomous_agent_local`，
+换 fork 就等于换了 scenario 实现，与「不改 Bench2Drive」冲突，**不用，expert 是 BehaviorAgent**。
+
 ## 结果
 
 （跑完再填。run dir 在 box 的 `$DATA_DIR/runs/p5_pairs/`。）
