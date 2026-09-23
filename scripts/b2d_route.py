@@ -15,12 +15,20 @@ Exit codes: 0 route finished (whatever its score), 1 route failed, 2 harness/set
 128 + signal number if interrupted.
 Python 3.8: runs in envs/carla.
 """
+import sys
+
+if sys.version_info >= (3, 9) and "xml.etree.ElementTree" not in sys.modules:
+    # Bench2Drive 0.0.4's route parser calls Element.getchildren(), which Python 3.9 removed. The C Element
+    # cannot take a new method, so model venvs on 3.10 (TFv6) use the pure-Python ElementTree with it restored.
+    sys.modules["_elementtree"] = None
+    import xml.etree.ElementTree as _ET
+    _ET.Element.getchildren = lambda self: list(self)
+
 import argparse
 import json
 import math
 import os
 import signal
-import sys
 import time
 import traceback
 from pathlib import Path
