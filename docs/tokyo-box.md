@@ -316,7 +316,7 @@ The first frozen Dev10 controller comparison is complete under
 all evaluator-returned runs remain distinct from official driving outcomes. Source and
 validation details are in the [article notes](../todos/2026-09-22-b2d-controller/article-notes.md),
 with [cost decomposition](bench2drive-cost.md#tokyo-controller-diagnostic-complete-dev10-seed0-2026-09-22)
-and [failure evidence](../todos/2026-09-22-b2d-controller/results/failure-analysis.json).
+and failure evidence (GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`).
 
 Configuration: stock MKZ2020, stock CARLA0.9.15, Python `/data/envs/carla/bin/python`, Epic,
 windowed, front3 at 800×450, cameras/plans at 5 Hz, motion/control at 20 Hz, `policy=none`,

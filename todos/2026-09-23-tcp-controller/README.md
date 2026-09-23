@@ -20,3 +20,5 @@
 主运行原始目录为`/data/runs/b2d/tcp-controller/paired-v2`与`/data/runs/b2d/controller/turns-v1`，早期paired-v1、preflight、replay、G1和所有分析图版保留。原始大日志不进git。固定[初版TCP协议](protocol.md)与[修订协议](protocol-v2.md)不改写。
 
 真实TCP保持checkpoint、only_traj四点/2s、20Hz推理、原生横向；两臂共同移除官方尾部低速油门限制。横向六例是无背景交通的route oracle，不能当真实模型横向成绩。当前实验全部结束，没有自动追加参数搜索或反序确认。
+
+2026-09-23 起，本阶段 `results/` 下的逐帧文件（`*frames.csv`、`*samples.csv`、`*.jsonl`、`failure-analysis.json`）已移出 git，原样保存在 GPU box `$DATA_DIR/runs/b2d/controller/git-offload-v1/<仓库相对路径>`，校验和见同目录 `SHA256SUMS`。各 manifest 里记录的原路径和 SHA 不变。

@@ -84,7 +84,7 @@ summary = run(client, "/data/runs/b2d/controller/calibration/controller_config.j
 
 ## 冻结 Dev10 seed0 失败分析（只读）
 
-产物：`results/failure-analysis.json`；完整30个官方结果（carla/tcp/pursuit各10），另保留TCP27494首次`server_died_rc139`基础设施失败（22s、无官方record），不混入成功次数。没有更改冻结controller/adapter/report。
+产物：`results/failure-analysis.json`（已移出 git，GPU box：`$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`）；完整30个官方结果（carla/tcp/pursuit各10），另保留TCP27494首次`server_died_rc139`基础设施失败（22s、无官方record），不混入成功次数。没有更改冻结controller/adapter/report。
 
 ### 25424：支持“中心线路径穿过施工障碍”归因
 

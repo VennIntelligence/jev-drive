@@ -30,7 +30,7 @@ Black crosses mark a failure of any original gate, including a gate other than t
 
 - [cases.csv](cases.csv): 18 PI and 17 matched vendor cases, every original gate, full/moving CTE, speed, stopping, controller timing, rejoin concerns and descriptive speed/gear metrics.
 - [matched-comparisons.csv](matched-comparisons.csv): paired values and PI-minus-vendor differences, with the unpaired max straight6 case explicit.
-- [frames.csv](frames.csv): original frame IDs, timestamps, true speed/CTE, reported gear and commanded controls, with source directory and observation role.
+- `frames.csv` (moved out of git; GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/pi-figures-01/frames.csv`): original frame IDs, timestamps, true speed/CTE, reported gear and commanded controls, with source directory and observation role.
 - [underspeed-episodes.csv](underspeed-episodes.csv): exact first/last frames of contiguous cruise deficits exceeding 0.5 m/s; episodes lasting at least 0.25 s are counted separately.
 - [gear-replicates.csv](gear-replicates.csv): separately logged vendor S-route observations used only to supply the otherwise missing gear series.
 - [report.json](report.json): complete raw-file path/SHA-256 source index, output hashes, selection, metric definitions, limits and matched results.

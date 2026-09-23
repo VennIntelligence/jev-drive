@@ -15,7 +15,7 @@ of ten routes**, with no model inference. Hardware, driver, camera schedule and 
 Source: `/data/runs/b2d/controller/dev10/`, including every `attempt.json`, `route_result.json`,
 `results.json`, group `events.jsonl` and campaign `events.jsonl`/`manifest.json`.
 [Article notes and complete result tables](../todos/2026-09-22-b2d-controller/article-notes.md)
-explain controller validation and attribution; [failure evidence](../todos/2026-09-22-b2d-controller/results/failure-analysis.json)
+explain controller validation and attribution; failure evidence (GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`)
 retains frame-level collision, motion and trajectory evidence.
 
 This is **Tokyo, one physical RTX 3090 GPU 1**, UUID

@@ -39,6 +39,7 @@ Each edition contains:
 - `inputs/`: exact captured motion, controls, trajectories, route reference, agent configuration and archived controller configuration.
 - `source/`: the replay helper, frozen adapter, frozen controller, and exact candidate adapter bytes used for that edition.
 - `frozen_a1b50ed.jsonl` and `candidate_compass_prediction.jsonl`: every replayed frame, generated trajectories, diagnostics, comparisons and the final exception/output.
+- The per-frame `*.jsonl` files (both outputs above and `inputs/{control,motion,trajectories}.jsonl`) are moved out of git; GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/smoke-v4-motion-replay/artifacts-v{1,2}/`.
 - `failed-run-inventories.json`: every file's path, size and SHA256 in both stopped failed campaigns, including the earlier `/data/runs/b2d/controller/smoke-v4` run. The earlier run has no captured motion input and is indexed, not replayed.
 - `manifest.json`: original-to-archived input/source identities, output sizes/hashes and Python/NumPy versions.
 

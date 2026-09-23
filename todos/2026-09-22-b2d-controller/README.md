@@ -24,3 +24,5 @@ v1完整材料：[78个官方结果与81次attempt](results/v1-full/README.md)�
 [坡道保持摘要](results/v1-full/slope-summary.json)、[真实S弯失败摘要](results/v1-full/s-curve-summary.json)。
 两轮Dev10三组均9/10完成，保留集三组均5/6；坡道静止保持通过，新增S弯三组均未通过巡航速度gate。
 详细数值、原始数据边界和v2关系见[文章素材](article-notes.md#v1完整归档保留集坡道与真实s弯)。
+
+2026-09-23 起，本阶段 `results/` 下的逐帧文件（`*frames.csv`、`*samples.csv`、`*.jsonl`、`failure-analysis.json`）已移出 git，原样保存在 GPU box `$DATA_DIR/runs/b2d/controller/git-offload-v1/<仓库相对路径>`，校验和见同目录 `SHA256SUMS`。各 manifest 里记录的原路径和 SHA 不变。

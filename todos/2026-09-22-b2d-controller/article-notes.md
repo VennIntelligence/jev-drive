@@ -88,7 +88,7 @@ Dev10运行中的9个核心源码已核验与启动commit18571c0一致；当时�
 
 Dev10 seed0三组全部完成评测，使用9个与18571c0逐字节一致的核心源文件。均9/10驾驶完成；
 25424施工障碍路线均触发官方TickRuntime。碰撞后约180s内，车辆真实移动不到0.2m、横向偏差很小，
-支持中心线被障碍阻断，不能把它简单归因为跟丢路线；详细frame与真值证据见[失败分析](results/failure-analysis.json)。
+支持中心线被障碍阻断，不能把它简单归因为跟丢路线；详细frame与真值证据见失败分析（GPU box：`$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/failure-analysis.json`）。
 
 用户在观看第二seed的2091路口场景时指出，每次停滞前都在十字路口发生撞车。这是现场观察记录；
 首轮三个preset的事件帧与碰撞后约178–179s低进展提供了独立日志证据。该例最终都完成，不等于碰撞无影响；

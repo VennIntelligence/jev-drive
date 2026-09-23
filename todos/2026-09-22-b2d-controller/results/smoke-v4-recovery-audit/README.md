@@ -6,4 +6,4 @@ One raw compass NaN at frame538 (simulation9.10s) triggers one gyro-prediction t
 
 Runtime1ee2eb2, all48 archived source hashes match their manifest. The server uses physicalGPU1, RTX3090 UUIDb90dd90e-394b-7800-f23f-5892a8e3d0f1.
 
-[audit.json](audit.json) retains all checks, official infractions, exact raw source paths/SHA256 and limits. [frames.csv](frames.csv) provides the complete per-frame raw compass, motion, pose status and controls; [gpu-identity.txt](gpu-identity.txt) records physical GPU mapping. Official completion while moving is not a parking-hold test.
+[audit.json](audit.json) retains all checks, official infractions, exact raw source paths/SHA256 and limits. `frames.csv` (moved out of git; GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/smoke-v4-recovery-audit/frames.csv`) provides the complete per-frame raw compass, motion, pose status and controls; [gpu-identity.txt](gpu-identity.txt) records physical GPU mapping. Official completion while moving is not a parking-hold test.

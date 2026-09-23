@@ -44,7 +44,7 @@ The root froze pursuit/max with PI Kp=0.5, Ki=0.25 for subsequent G3/Dev10 testi
 
 - [cases.csv](cases.csv): every case/gate, lateral/speed/stop/timing/rejoin metrics.
 - [matched-comparisons.csv](matched-comparisons.csv): exact matched values and differences; unpaired max straight6 explicit.
-- [frames.csv](frames.csv): raw frame IDs, timestamps, signals, source paths and observation roles.
+- `frames.csv` (moved out of git; GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/pi-v4-figures-01/frames.csv`): raw frame IDs, timestamps, signals, source paths and observation roles.
 - [underspeed-episodes.csv](underspeed-episodes.csv): deficit interval start/end frames and durations.
 - [gear-replicates.csv](gear-replicates.csv): separate vendor S gear observations.
 - [report.json](report.json): raw source paths/SHA-256, parameters, selection, definitions and limitations.

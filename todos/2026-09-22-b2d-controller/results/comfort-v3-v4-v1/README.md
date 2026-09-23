@@ -54,7 +54,7 @@ From the isolated worktree root:
 
 The output path must not exist. Do not rerun over the preserved `artifacts` edition.
 
-- [Exact inputs and derived samples](artifacts/samples.csv): all 18,345 samples; timestamps, frames, original world acceleration, forward/right axes and angular rates, plus both derived protocols. Original angular rates retain explicit deg/s columns; a separately converted yaw rad/s column is included but unused in the acceleration/jerk conclusions.
+- Exact inputs and derived samples (moved out of git; GPU box: `$DATA_DIR/runs/b2d/controller/git-offload-v1/todos/2026-09-22-b2d-controller/results/comfort-v3-v4-v1/artifacts/samples.csv`): all 18,345 samples; timestamps, frames, original world acceleration, forward/right axes and angular rates, plus both derived protocols. Original angular rates retain explicit deg/s columns; a separately converted yaw rad/s column is included but unused in the acceleration/jerk conclusions.
 - [Per-case statistics](artifacts/per-case.csv): all 288 version/case/protocol/metric combinations, including configuration gains and existing status/gate fields.
 - [Aggregate results](artifacts/summary.json) and [source/output SHA256 manifest](artifacts/manifest.json): original raw trace, validation result, archived config and summary paths/hashes, exact helper snapshot, Python/library versions, generated artifact hashes.
 - [Raw paired figure](artifacts/paired-rms-raw.png), [PDF](artifacts/paired-rms-raw.pdf); [smoothed sensitivity](artifacts/paired-rms-box5.png), [PDF](artifacts/paired-rms-box5.pdf); [equal-case raw distributions](artifacts/distributions-raw.png), [PDF](artifacts/distributions-raw.pdf).
