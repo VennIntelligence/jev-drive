@@ -3,6 +3,7 @@ import ast
 from collections import deque
 import json
 import math
+import os
 from pathlib import Path
 import unittest
 import numpy as np
@@ -18,10 +19,13 @@ def straight(speed=6.):
 
 class ControllerTests(unittest.TestCase):
     def test_pid_vendor_scalar_sources(self):
+        data = Path(os.environ.get('DATA_DIR', '/data'))
+        carla = Path(os.environ.get('CARLA_ROOT', data / 'third_party/carla/CARLA_0.9.15'))
+        zoo = Path(os.environ.get('B2D_ZOO_ROOT', data / 'third_party/Bench2DriveZoo'))
         sources = [
-            ('/data/third_party/carla/CARLA_0.9.15/PythonAPI/carla/agents/navigation/controller.py',
+            (str(carla / 'PythonAPI/carla/agents/navigation/controller.py'),
              'PIDLongitudinalController', '_pid_control', 'carla'),
-            ('/data/third_party/Bench2DriveZoo/TCP/model.py', 'PIDController', 'step', 'tcp')]
+            (str(zoo / 'TCP/model.py'), 'PIDController', 'step', 'tcp')]
         for path, class_name, method_name, semantics in sources:
             if not Path(path).exists():
                 self.skipTest('pinned local vendor source unavailable: ' + path)

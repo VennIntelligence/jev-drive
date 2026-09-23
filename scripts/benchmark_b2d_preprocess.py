@@ -15,7 +15,8 @@ from b2d_tcp_preprocess import model_rgb
 
 
 def main():
-    source = Path('/data/third_party/Bench2DriveZoo/team_code/tcp_b2d_agent.py').read_text()
+    zoo = Path(os.environ.get('B2D_ZOO_ROOT', Path(os.environ.get('DATA_DIR', '/data')) / 'third_party/Bench2DriveZoo'))
+    source = (zoo / 'team_code/tcp_b2d_agent.py').read_text()
     tree = ast.parse(source)
     agent = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'TCPAgent')
     tick = next(n for n in agent.body if isinstance(n, ast.FunctionDef) and n.name == 'tick')

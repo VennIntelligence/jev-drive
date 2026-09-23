@@ -13,6 +13,8 @@ import time
 
 
 REPO = Path(__file__).resolve().parents[1]
+# Importing b2d_run would require DATA_DIR; this module must not. /data is the Tokyo layout.
+DATA_DIR = Path(os.environ.get('DATA_DIR', '/data'))
 RUNTIME_NAMES = {'b2d_run.py', 'b2d_route.py', 'b2d_agent.py', 'b2d_hooks.py',
                  'b2d_controller.py', 'b2d_controller_adapter.py'}
 
@@ -57,8 +59,8 @@ def snapshot(out, inputs, timing='before_run'):
         preserved_inputs.append(dict(original=str(source), archived=str(destination.relative_to(out)),
                                      sha256=digest(destination), bytes=destination.stat().st_size))
     repositories = {}
-    for name, path in [('project', REPO), ('bench2drive', Path(os.environ.get('BENCH2DRIVE_ROOT', '/data/third_party/Bench2Drive'))),
-                       ('tcp', Path('/data/third_party/Bench2DriveZoo'))]:
+    for name, path in [('project', REPO), ('bench2drive', Path(os.environ.get('BENCH2DRIVE_ROOT', DATA_DIR / 'third_party/Bench2Drive'))),
+                       ('tcp', Path(os.environ.get('B2D_ZOO_ROOT', DATA_DIR / 'third_party/Bench2DriveZoo')))]:
         try:
             repositories[name] = dict(path=str(path), commit=git('rev-parse', 'HEAD', root=path),
                                       status=git('status', '--porcelain', root=path))

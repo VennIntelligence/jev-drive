@@ -23,25 +23,28 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('--out', required=True)
     parser.add_argument('--server-index', type=int, default=101)
-    parser.add_argument('--routes', default='/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml')
-    parser.add_argument('--checkpoint', default='/data/models/bench2drive/tcp/tcp_b2d.ckpt')
+    parser.add_argument('--routes')
+    parser.add_argument('--checkpoint')
     parser.add_argument('--protocol', default='todos/2026-09-23-tcp-controller/protocol.md')
     a = parser.parse_args()
-    if os.environ.get('CUDA_VISIBLE_DEVICES') != '1':
-        parser.error('This Tokyo protocol requires physical GPU 1')
-    from b2d_run import Runner, Server, parse_args, select_routes
+    if not os.environ.get('CUDA_VISIBLE_DEVICES') and \
+            len(subprocess.check_output(['nvidia-smi', '-L'], text=True).strip().splitlines()) > 1:
+        parser.error('Several GPUs visible: pin one with CUDA_VISIBLE_DEVICES (Tokyo: 1, its GPU 0 is broken)')
+    from b2d_run import B2D_ZOO, BENCH2DRIVE, DATA_DIR, Runner, Server, parse_args, select_routes
+    a.routes = a.routes or str(BENCH2DRIVE/'leaderboard/data/bench2drive220.xml')
+    a.checkpoint = a.checkpoint or str(DATA_DIR/'models/bench2drive/tcp/tcp_b2d.ckpt')
     repo = Path(__file__).resolve().parents[1]
     out = Path(a.out).resolve()
     if out.exists() and any(out.iterdir()):
         parser.error('Use a fresh output directory; evidence is never overwritten')
     out.mkdir(parents=True, exist_ok=True)
-    env = dict(IS_BENCH2DRIVE='1', PLANNER_TYPE='only_traj', TORCH_HOME='/data/models/torch',
+    env = dict(IS_BENCH2DRIVE='1', PLANNER_TYPE='only_traj', TORCH_HOME=str(DATA_DIR/'models/torch'),
                B2D_TCP_OPTIMIZE='1', B2D_TCP_PIPELINE='1', B2D_TCP_FAST_COLOR='1',
                B2D_TCP_DEBUG_VIEWS='1', B2D_TCP_EARLY_RGB='1', B2D_ASYNC_DISPLAY='1',
                B2D_CAPTURE_CRITERION_EVENTS='1', OMP_NUM_THREADS='4', MKL_NUM_THREADS='4',
-               PYTHONPATH=str(repo/'scripts') + ':/data/third_party/Bench2DriveZoo:/data/third_party/Bench2DriveZoo/TCP')
+               PYTHONPATH=':'.join(map(str, (repo/'scripts', B2D_ZOO, B2D_ZOO/'TCP'))))
     os.environ.update(env)
-    vendor = Path('/data/third_party/Bench2DriveZoo')
+    vendor = B2D_ZOO
     inputs = [Path(a.routes), Path(a.protocol)] + [vendor/p for p in (
         'team_code/tcp_b2d_agent.py', 'team_code/planner.py', 'TCP/model.py', 'TCP/config.py')]
     provenance = snapshot(out/'provenance', inputs)
@@ -63,7 +66,7 @@ def main():
     sys.stdout = Tee(original, log)
     tb = EventFileWriter(str(out/'tb'))
     progress = tqdm(total=6, desc='TCP paired cases', file=sys.stdout)
-    server = Server(a.server_index, out/'servers', 'Epic', gpu_rank=0, windowed=True)
+    server = Server(a.server_index, out/'servers', 'Epic', gpu_rank=0)
     active = [None]
     def event(kind, **fields):
         row = dict(t=time.time(), kind=kind, **fields)
@@ -87,9 +90,9 @@ def main():
                                   B2D_PREVIEW_DIR=str(dest/'live'))
                 args = parse_args(['--routes', a.routes, '--route-ids', rid, '--towns', 'all',
                     '--workers', '1', '--out', str(dest), '--server-index', str(server.index),
-                    '--gpu-rank', '0', '--windowed', '--no-spectator', '--zero-copy',
+                    '--gpu-rank', '0'] + (['--windowed'] if server.windowed else []) + ['--no-spectator', '--zero-copy',
                     '--agent', str(repo/'scripts/b2d_tcp_comparison_agent.py'), '--agent-config', a.checkpoint,
-                    '--python', '/data/envs/b2d-tcp/bin/python', '--decimate', '1', '--tm-seed', '0',
+                    '--python', str(DATA_DIR/'envs/b2d-tcp/bin/python'), '--decimate', '1', '--tm-seed', '0',
                     '--route-timeout-s', '600', '--stall-s', '120', '--max-attempts', '2'])
                 runner = Runner(args, select_routes(args.routes, args.towns, args.route_ids, args.limit), servers=[server])
                 active[0] = runner

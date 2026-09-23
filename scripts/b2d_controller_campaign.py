@@ -127,7 +127,7 @@ def main():
     log=(out/'log.txt').open('a');events=(out/'events.jsonl').open('a',buffering=1)
     original=sys.stdout;sys.stdout=Tee(original,log)
     active=[None];round_done=threading.Event()
-    server=Server(a.server_index,out/'servers','Epic',gpu_rank=0,windowed=True)
+    server=Server(a.server_index,out/'servers','Epic',gpu_rank=0)
     manifest=dict(config=vars(a),git_commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
                   preset_controller_configs=bindings,default_controller_config=default_binding,
                   started=time.time(),server_reuse='one process across preset/seed groups; worlds reset by evaluator')
@@ -164,7 +164,7 @@ def main():
                 assert_sources_unchanged(provenance)
                 dest=group_root/('%s-seed%d'%(preset,seed))
                 args=runner_args(['--routes',str(current_routes),'--towns','all','--workers','1','--out',str(dest),
-                                  '--server-index',str(server.index),'--gpu-rank','0','--windowed',
+                                  '--server-index',str(server.index),'--gpu-rank','0']+(['--windowed'] if server.windowed else [])+[
                                   '--rig','front3','--width','800','--height','450','--decimate','4','--overlap',
                                   '--no-spectator','--zero-copy','--policy','none','--drive','controller',
                                   '--controller-preset',preset,'--controller-config',binding['archived_path'],

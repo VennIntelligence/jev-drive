@@ -252,9 +252,9 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     (out / 'servers').mkdir(exist_ok=True)
     matrix_manifest = archive_matrix(out, routes_path, cases, cruises, a.variants, a.route_cruises)
-    from b2d_run import Server
+    from b2d_run import BENCH2DRIVE, Server
     from b2d_route import add_bench2drive_to_path
-    add_bench2drive_to_path('/data/third_party/Bench2Drive')
+    add_bench2drive_to_path(str(BENCH2DRIVE))
     import carla
     from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
     from srunner.scenariomanager.timer import GameTime
@@ -263,7 +263,7 @@ def main():
     from b2d_agent import StubAgent
     import b2d_hooks
     b2d_hooks._patch_sensor_tick()
-    server = Server(a.server_index, out / 'servers', 'Epic', gpu_rank=0, windowed=True)
+    server = Server(a.server_index, out / 'servers', 'Epic', gpu_rank=0)
     log = (out / 'log.txt').open('a')
     events = (out / 'events.jsonl').open('a')
     results = []

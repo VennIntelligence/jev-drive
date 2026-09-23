@@ -61,7 +61,7 @@ def main():
         raise KeyboardInterrupt()
 
     signal.signal(signal.SIGTERM, interrupted)
-    server = Server(a.server_index, out / 'servers', 'Epic', gpu_rank=0, windowed=True)
+    server = Server(a.server_index, out / 'servers', 'Epic', gpu_rank=0)
     actors = []
     event('start', configuration=vars(a), pid=os.getpid())
     try:

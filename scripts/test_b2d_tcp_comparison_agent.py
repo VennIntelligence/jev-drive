@@ -25,7 +25,7 @@ from b2d_tcp_control import TCPControlComparison
 
 
 HERE = Path(__file__).resolve().parent
-ZOO = Path(os.environ.get('B2D_ZOO_ROOT', '/data/third_party/Bench2DriveZoo'))
+ZOO = Path(os.environ.get('B2D_ZOO_ROOT', Path(os.environ.get('DATA_DIR', '/data')) / 'third_party/Bench2DriveZoo'))
 
 
 def node(path, name, parent=None):

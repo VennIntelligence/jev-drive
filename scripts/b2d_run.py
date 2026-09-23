@@ -55,8 +55,12 @@ from pathlib import Path
 DATA_DIR = Path(os.environ["DATA_DIR"])
 CARLA_ROOT = Path(os.environ.get("CARLA_ROOT", DATA_DIR / "third_party/carla/CARLA_0.9.15"))
 BENCH2DRIVE = Path(os.environ.get("BENCH2DRIVE_ROOT", DATA_DIR / "third_party/Bench2Drive"))
+B2D_ZOO = Path(os.environ.get("B2D_ZOO_ROOT", DATA_DIR / "third_party/Bench2DriveZoo"))
 PYTHON = str(DATA_DIR / "envs/carla/bin/python")
 HERE = Path(__file__).resolve().parent
+# The Tokyo box has a monitor and shows CARLA in a window; the GPU box is headless and must render
+# off-screen. Follow DISPLAY unless CARLA_WINDOWED=0/1 says otherwise.
+WINDOWED = os.environ.get("CARLA_WINDOWED", "1" if os.environ.get("DISPLAY") else "0") == "1"
 # A CARLA server claims several ports above its RPC port (streaming, secondary), and the traffic
 # manager wants room of its own, so the slots are 50 apart - the same spacing scripts/carla_server.sh
 # uses. Our first 44-route run used 4 and lost two worker slots to a traffic-manager bind error.
@@ -203,10 +207,10 @@ class Server(object):
     """One CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=False):
+    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=None):
         self.index = index
         self.gpu_rank = gpu_rank
-        self.windowed = windowed
+        self.windowed = WINDOWED if windowed is None else windowed
         self.stride = stride or 1
         self.routes_served = 0   # how many routes this process has run; the R7 curve needs it
         self.started_at = None
