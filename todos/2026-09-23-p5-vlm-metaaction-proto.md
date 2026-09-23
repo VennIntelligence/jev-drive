@@ -198,6 +198,32 @@ rater 一致性（n=478）：lat3 对 rater_best 0.638（log 自己 0.814，是�
 吞吐：4B main 1.51 s/帧（batch 3，GPU 共享、100% 利用率；独占时 profiling 是 1.25 s/帧 @ batch 4），
 峰值 13.6 GB，每个回答约 42 个 token；text 0.14 s/帧、9.4 GB。
 
-### 32B（FP8）
+### 32B（FP8）：同样的失败方式，放大 8 倍没有改变什么
 
-在跑，结果到了填这里。
+报告 `q32b-report/20260923-183202/`。main 跑了全部 pre_onset（1458），text 跑了全部 3758 帧；straight_yaw 的 400 帧 main 在跑。
+
+| 判据 | 量 | 值 | 过没过 |
+|:--|:--|:--|:--|
+| 1 比基线强 | pre_onset lat3，32B main − route command 基线 | **−0.023 [−0.043, −0.007]** | 不过（显著更差） |
+| 2 视觉带来的 | pre_onset lat3，32B main − 32B text | **−0.023 [−0.043, −0.007]**，96.9% 的帧答案相同 | 不过 |
+| 3 直行不编反应 | straight_yaw lat3（main 400 帧） | 在跑 | — |
+| 4 格式 | invalid-JSON rate | 0/1458（main）、0/3758（text） | 过 |
+
+| 组 | n | 轴 | 最好基线 | 4B main | 4B text | **32B main** | 32B text |
+|:--|--:|:--|--:|--:|--:|--:|--:|
+| pre_onset | 1458 | lat3 | 0.612（route） | 0.592 | 0.611 | 0.588 | 0.612 |
+| pre_onset | 1458 | long | 0.658（CTRA） | 0.519 | 0.553 | 0.529 | 0.618 |
+| pre_onset，route 说直行 | 588 | lat3 | 0.571（majority） | 0.041 | 0.039 | 0.046 | 0.039 |
+| pre_onset，route 说转弯 | 870 | lat3 | 0.999（route） | 0.964 | 0.998 | 0.955 | 0.999 |
+| pre_onset，去掉 ambiguous | 1130 | lat3 | 0.775（route） | 0.749 | 0.774 | 0.742 | 0.775 |
+
+读法：32B 的 text 版本在横向上**和 route command 基线逐帧相同**（pre_onset lat3 的配对差恰好是 0）。
+加上视频之后，route 说直行的 588 帧里它有 581 帧答 keep_lane（judge 标的是 387 帧 lane change），
+route 说转弯的帧上反而比只看文本差 0.044 [−0.078, −0.019]。
+纵向上 32B 比 4B 答得更分散：它说 slow 的时候，真 slow 的 346 帧抓到 254 帧（recall 0.73），
+但也把 721 帧真 keep 里的 248 帧说成 slow。所以纵向准确率 0.529，比它自己的 text 版本（0.618）低
+0.089 [−0.151, −0.029]，也比 CTRA 低 0.130。**视频让 32B 更常说「减速」，但没有让它说得更准。**
+去掉 judge 分辨不了的弯道或换道 band（ambiguous）之后，排序不变（最后一行），所以结论不是 judge 的弱点造成的。
+
+吞吐：32B FP8 main 7.9 s/帧（batch 2，GPU 和 heads、P4 共用），峰值 40.8 GB，每个回答约 53 个 token；
+text 0.94 s/帧，34.4 GB。

@@ -1,0 +1,772 @@
+judge,vlm,n,variant,group,axis
+accelerate,accelerate,2.0,VLM Qwen3-VL-4B main,pre_onset,long
+accelerate,keep,321.0,VLM Qwen3-VL-4B main,pre_onset,long
+accelerate,slow,7.0,VLM Qwen3-VL-4B main,pre_onset,long
+accelerate,stop,25.0,VLM Qwen3-VL-4B main,pre_onset,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset,long
+keep,keep,637.0,VLM Qwen3-VL-4B main,pre_onset,long
+keep,slow,53.0,VLM Qwen3-VL-4B main,pre_onset,long
+keep,stop,31.0,VLM Qwen3-VL-4B main,pre_onset,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset,long
+slow,keep,232.0,VLM Qwen3-VL-4B main,pre_onset,long
+slow,slow,114.0,VLM Qwen3-VL-4B main,pre_onset,long
+slow,stop,0.0,VLM Qwen3-VL-4B main,pre_onset,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset,long
+stop,keep,17.0,VLM Qwen3-VL-4B main,pre_onset,long
+stop,slow,15.0,VLM Qwen3-VL-4B main,pre_onset,long
+stop,stop,4.0,VLM Qwen3-VL-4B main,pre_onset,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-4B main,pre_onset,lat
+keep_lane,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_right,keep_lane,241.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_right,nudge_left,1.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_left,keep_lane,57.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_right,keep_lane,80.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B main,pre_onset,lat
+turn_right,turn_right,490.0,VLM Qwen3-VL-4B main,pre_onset,lat
+accelerate,accelerate,1.0,VLM Qwen3-VL-4B main,straight_yaw,long
+accelerate,keep,253.0,VLM Qwen3-VL-4B main,straight_yaw,long
+accelerate,slow,20.0,VLM Qwen3-VL-4B main,straight_yaw,long
+accelerate,stop,6.0,VLM Qwen3-VL-4B main,straight_yaw,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B main,straight_yaw,long
+keep,keep,733.0,VLM Qwen3-VL-4B main,straight_yaw,long
+keep,slow,63.0,VLM Qwen3-VL-4B main,straight_yaw,long
+keep,stop,12.0,VLM Qwen3-VL-4B main,straight_yaw,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B main,straight_yaw,long
+slow,keep,147.0,VLM Qwen3-VL-4B main,straight_yaw,long
+slow,slow,51.0,VLM Qwen3-VL-4B main,straight_yaw,long
+slow,stop,1.0,VLM Qwen3-VL-4B main,straight_yaw,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B main,straight_yaw,long
+stop,keep,83.0,VLM Qwen3-VL-4B main,straight_yaw,long
+stop,slow,77.0,VLM Qwen3-VL-4B main,straight_yaw,long
+stop,stop,11.0,VLM Qwen3-VL-4B main,straight_yaw,long
+keep_lane,keep_lane,1190.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+keep_lane,nudge_left,4.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_left,keep_lane,12.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_right,keep_lane,21.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_right,nudge_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+lane_change_right,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_left,keep_lane,94.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_right,keep_lane,116.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_left,keep_lane,3.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_left,turn_left,1.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_right,keep_lane,13.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+turn_right,turn_right,3.0,VLM Qwen3-VL-4B main,straight_yaw,lat
+accelerate,accelerate,0.0,VLM Qwen3-VL-4B main,turn_yaw,long
+accelerate,keep,133.0,VLM Qwen3-VL-4B main,turn_yaw,long
+accelerate,slow,2.0,VLM Qwen3-VL-4B main,turn_yaw,long
+accelerate,stop,3.0,VLM Qwen3-VL-4B main,turn_yaw,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B main,turn_yaw,long
+keep,keep,178.0,VLM Qwen3-VL-4B main,turn_yaw,long
+keep,slow,14.0,VLM Qwen3-VL-4B main,turn_yaw,long
+keep,stop,9.0,VLM Qwen3-VL-4B main,turn_yaw,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B main,turn_yaw,long
+slow,keep,17.0,VLM Qwen3-VL-4B main,turn_yaw,long
+slow,slow,6.0,VLM Qwen3-VL-4B main,turn_yaw,long
+slow,stop,0.0,VLM Qwen3-VL-4B main,turn_yaw,long
+stop,accelerate,1.0,VLM Qwen3-VL-4B main,turn_yaw,long
+stop,keep,20.0,VLM Qwen3-VL-4B main,turn_yaw,long
+stop,slow,15.0,VLM Qwen3-VL-4B main,turn_yaw,long
+stop,stop,2.0,VLM Qwen3-VL-4B main,turn_yaw,long
+keep_lane,keep_lane,33.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+keep_lane,nudge_left,3.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+keep_lane,turn_left,3.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_left,keep_lane,34.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_left,turn_left,10.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_right,keep_lane,57.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_right,nudge_left,2.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+lane_change_right,turn_right,14.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_left,keep_lane,17.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_right,keep_lane,21.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_left,keep_lane,1.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_left,turn_left,69.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_right,keep_lane,10.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+turn_right,turn_right,124.0,VLM Qwen3-VL-4B main,turn_yaw,lat
+accelerate,accelerate,6.0,VLM Qwen3-VL-4B main,rater,long
+accelerate,keep,67.0,VLM Qwen3-VL-4B main,rater,long
+accelerate,slow,4.0,VLM Qwen3-VL-4B main,rater,long
+accelerate,stop,27.0,VLM Qwen3-VL-4B main,rater,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B main,rater,long
+keep,keep,161.0,VLM Qwen3-VL-4B main,rater,long
+keep,slow,12.0,VLM Qwen3-VL-4B main,rater,long
+keep,stop,9.0,VLM Qwen3-VL-4B main,rater,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B main,rater,long
+slow,keep,51.0,VLM Qwen3-VL-4B main,rater,long
+slow,slow,11.0,VLM Qwen3-VL-4B main,rater,long
+slow,stop,0.0,VLM Qwen3-VL-4B main,rater,long
+stop,accelerate,3.0,VLM Qwen3-VL-4B main,rater,long
+stop,keep,55.0,VLM Qwen3-VL-4B main,rater,long
+stop,slow,34.0,VLM Qwen3-VL-4B main,rater,long
+stop,stop,38.0,VLM Qwen3-VL-4B main,rater,long
+keep_lane,keep_lane,271.0,VLM Qwen3-VL-4B main,rater,lat
+keep_lane,nudge_left,5.0,VLM Qwen3-VL-4B main,rater,lat
+keep_lane,turn_left,9.0,VLM Qwen3-VL-4B main,rater,lat
+keep_lane,turn_right,3.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_left,keep_lane,21.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_left,nudge_left,1.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_right,keep_lane,37.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_right,nudge_left,1.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+lane_change_right,turn_right,2.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_left,keep_lane,43.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_right,keep_lane,32.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B main,rater,lat
+turn_left,keep_lane,5.0,VLM Qwen3-VL-4B main,rater,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+turn_left,turn_left,15.0,VLM Qwen3-VL-4B main,rater,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B main,rater,lat
+turn_right,keep_lane,9.0,VLM Qwen3-VL-4B main,rater,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-4B main,rater,lat
+turn_right,turn_right,23.0,VLM Qwen3-VL-4B main,rater,lat
+accelerate,accelerate,2.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+accelerate,keep,94.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+accelerate,slow,1.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+accelerate,stop,1.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+keep,keep,299.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+keep,slow,28.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+keep,stop,3.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+slow,keep,99.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+slow,slow,30.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+slow,stop,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+stop,keep,15.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+stop,slow,15.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+stop,stop,1.0,VLM Qwen3-VL-4B main,pre_onset | route straight,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+keep_lane,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+lane_change_right,keep_lane,241.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+lane_change_right,nudge_left,1.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+nudge_left,keep_lane,57.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+turn_right,keep_lane,50.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route straight,lat
+accelerate,keep,227.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+accelerate,slow,6.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+accelerate,stop,24.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+keep,keep,338.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+keep,slow,25.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+keep,stop,28.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+slow,keep,133.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+slow,slow,84.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+slow,stop,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+stop,keep,2.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+stop,slow,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+stop,stop,3.0,VLM Qwen3-VL-4B main,pre_onset | route turn,long
+lane_change_left,keep_lane,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+lane_change_right,keep_lane,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_left,keep_lane,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_right,keep_lane,30.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+turn_right,turn_right,490.0,VLM Qwen3-VL-4B main,pre_onset | route turn,lat
+accelerate,accelerate,11.0,VLM Qwen3-VL-4B text,pre_onset,long
+accelerate,keep,328.0,VLM Qwen3-VL-4B text,pre_onset,long
+accelerate,slow,16.0,VLM Qwen3-VL-4B text,pre_onset,long
+keep,accelerate,2.0,VLM Qwen3-VL-4B text,pre_onset,long
+keep,keep,615.0,VLM Qwen3-VL-4B text,pre_onset,long
+keep,slow,104.0,VLM Qwen3-VL-4B text,pre_onset,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B text,pre_onset,long
+slow,keep,165.0,VLM Qwen3-VL-4B text,pre_onset,long
+slow,slow,181.0,VLM Qwen3-VL-4B text,pre_onset,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B text,pre_onset,long
+stop,keep,22.0,VLM Qwen3-VL-4B text,pre_onset,long
+stop,slow,14.0,VLM Qwen3-VL-4B text,pre_onset,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-4B text,pre_onset,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_right,keep_lane,242.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_left,keep_lane,58.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_right,keep_lane,51.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B text,pre_onset,lat
+turn_right,turn_right,519.0,VLM Qwen3-VL-4B text,pre_onset,lat
+accelerate,accelerate,3.0,VLM Qwen3-VL-4B text,straight_yaw,long
+accelerate,keep,258.0,VLM Qwen3-VL-4B text,straight_yaw,long
+accelerate,slow,19.0,VLM Qwen3-VL-4B text,straight_yaw,long
+keep,accelerate,4.0,VLM Qwen3-VL-4B text,straight_yaw,long
+keep,keep,765.0,VLM Qwen3-VL-4B text,straight_yaw,long
+keep,slow,39.0,VLM Qwen3-VL-4B text,straight_yaw,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B text,straight_yaw,long
+slow,keep,163.0,VLM Qwen3-VL-4B text,straight_yaw,long
+slow,slow,36.0,VLM Qwen3-VL-4B text,straight_yaw,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B text,straight_yaw,long
+stop,keep,120.0,VLM Qwen3-VL-4B text,straight_yaw,long
+stop,slow,51.0,VLM Qwen3-VL-4B text,straight_yaw,long
+keep_lane,keep_lane,1194.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_left,keep_lane,12.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_right,keep_lane,21.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+lane_change_right,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_left,keep_lane,95.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_right,keep_lane,116.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_left,keep_lane,3.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_left,turn_left,1.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_right,keep_lane,13.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+turn_right,turn_right,3.0,VLM Qwen3-VL-4B text,straight_yaw,lat
+accelerate,accelerate,15.0,VLM Qwen3-VL-4B text,turn_yaw,long
+accelerate,keep,115.0,VLM Qwen3-VL-4B text,turn_yaw,long
+accelerate,slow,8.0,VLM Qwen3-VL-4B text,turn_yaw,long
+keep,accelerate,2.0,VLM Qwen3-VL-4B text,turn_yaw,long
+keep,keep,165.0,VLM Qwen3-VL-4B text,turn_yaw,long
+keep,slow,34.0,VLM Qwen3-VL-4B text,turn_yaw,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B text,turn_yaw,long
+slow,keep,15.0,VLM Qwen3-VL-4B text,turn_yaw,long
+slow,slow,8.0,VLM Qwen3-VL-4B text,turn_yaw,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B text,turn_yaw,long
+stop,keep,30.0,VLM Qwen3-VL-4B text,turn_yaw,long
+stop,slow,8.0,VLM Qwen3-VL-4B text,turn_yaw,long
+keep_lane,keep_lane,37.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+keep_lane,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+keep_lane,turn_left,2.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_left,keep_lane,33.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_left,nudge_right,1.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_left,turn_left,10.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_right,keep_lane,59.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_right,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+lane_change_right,turn_right,14.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_left,keep_lane,18.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_right,keep_lane,21.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_right,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_left,keep_lane,2.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_left,turn_left,68.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_right,keep_lane,1.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_right,nudge_right,0.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+turn_right,turn_right,133.0,VLM Qwen3-VL-4B text,turn_yaw,lat
+accelerate,accelerate,3.0,VLM Qwen3-VL-4B text,rater,long
+accelerate,keep,89.0,VLM Qwen3-VL-4B text,rater,long
+accelerate,slow,3.0,VLM Qwen3-VL-4B text,rater,long
+accelerate,stop,9.0,VLM Qwen3-VL-4B text,rater,long
+keep,accelerate,0.0,VLM Qwen3-VL-4B text,rater,long
+keep,keep,173.0,VLM Qwen3-VL-4B text,rater,long
+keep,slow,8.0,VLM Qwen3-VL-4B text,rater,long
+keep,stop,1.0,VLM Qwen3-VL-4B text,rater,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B text,rater,long
+slow,keep,57.0,VLM Qwen3-VL-4B text,rater,long
+slow,slow,5.0,VLM Qwen3-VL-4B text,rater,long
+slow,stop,0.0,VLM Qwen3-VL-4B text,rater,long
+stop,accelerate,2.0,VLM Qwen3-VL-4B text,rater,long
+stop,keep,109.0,VLM Qwen3-VL-4B text,rater,long
+stop,slow,17.0,VLM Qwen3-VL-4B text,rater,long
+stop,stop,2.0,VLM Qwen3-VL-4B text,rater,long
+keep_lane,keep_lane,267.0,VLM Qwen3-VL-4B text,rater,lat
+keep_lane,nudge_right,7.0,VLM Qwen3-VL-4B text,rater,lat
+keep_lane,turn_left,10.0,VLM Qwen3-VL-4B text,rater,lat
+keep_lane,turn_right,4.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_left,keep_lane,22.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_left,nudge_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_right,keep_lane,38.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_right,nudge_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B text,rater,lat
+lane_change_right,turn_right,2.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_left,keep_lane,44.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_right,keep_lane,30.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_right,nudge_right,1.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_right,turn_left,1.0,VLM Qwen3-VL-4B text,rater,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+turn_left,keep_lane,5.0,VLM Qwen3-VL-4B text,rater,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+turn_left,turn_left,15.0,VLM Qwen3-VL-4B text,rater,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B text,rater,lat
+turn_right,keep_lane,6.0,VLM Qwen3-VL-4B text,rater,lat
+turn_right,nudge_right,1.0,VLM Qwen3-VL-4B text,rater,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-4B text,rater,lat
+turn_right,turn_right,25.0,VLM Qwen3-VL-4B text,rater,lat
+accelerate,keep,96.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+accelerate,slow,2.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+keep,keep,319.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+keep,slow,11.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+slow,keep,110.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+slow,slow,19.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+stop,keep,22.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+stop,slow,9.0,VLM Qwen3-VL-4B text,pre_onset | route straight,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+lane_change_right,keep_lane,242.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+nudge_left,keep_lane,58.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+turn_right,keep_lane,50.0,VLM Qwen3-VL-4B text,pre_onset | route straight,lat
+accelerate,accelerate,11.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+accelerate,keep,232.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+accelerate,slow,14.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+keep,accelerate,2.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+keep,keep,296.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+keep,slow,93.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+slow,accelerate,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+slow,keep,55.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+slow,slow,162.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+stop,accelerate,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+stop,keep,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+stop,slow,5.0,VLM Qwen3-VL-4B text,pre_onset | route turn,long
+lane_change_left,keep_lane,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+lane_change_right,keep_lane,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_left,keep_lane,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_right,keep_lane,1.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+turn_right,turn_right,519.0,VLM Qwen3-VL-4B text,pre_onset | route turn,lat
+accelerate,accelerate,258.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+accelerate,keep,64.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+accelerate,slow,27.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+accelerate,stop,6.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+keep,accelerate,152.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+keep,keep,373.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+keep,slow,189.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+keep,stop,7.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+slow,accelerate,2.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+slow,keep,74.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+slow,slow,270.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+slow,stop,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+stop,accelerate,8.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+stop,keep,8.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+stop,slow,20.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+stop,stop,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_right,keep_lane,242.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_left,keep_lane,58.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_right,keep_lane,50.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+turn_right,turn_right,520.0,VLM Qwen3-VL-32B-FP8 text,pre_onset,lat
+accelerate,accelerate,189.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+accelerate,keep,43.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+accelerate,slow,36.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+accelerate,stop,12.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+keep,accelerate,151.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+keep,keep,489.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+keep,slow,160.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+keep,stop,8.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+slow,accelerate,5.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+slow,keep,88.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+slow,slow,106.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+slow,stop,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+stop,accelerate,26.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+stop,keep,33.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+stop,slow,112.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+stop,stop,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,long
+keep_lane,keep_lane,1194.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_left,keep_lane,12.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_right,keep_lane,21.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+lane_change_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_left,keep_lane,95.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_right,keep_lane,116.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_left,keep_lane,3.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_right,keep_lane,13.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+turn_right,turn_right,3.0,VLM Qwen3-VL-32B-FP8 text,straight_yaw,lat
+accelerate,accelerate,46.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+accelerate,keep,82.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+accelerate,slow,8.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+accelerate,stop,2.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+keep,accelerate,23.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+keep,keep,122.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+keep,slow,55.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+keep,stop,1.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+slow,keep,9.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+slow,slow,13.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+slow,stop,1.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+stop,accelerate,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+stop,keep,7.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+stop,slow,26.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+stop,stop,5.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,long
+keep_lane,keep_lane,37.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+keep_lane,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+keep_lane,turn_left,2.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_left,keep_lane,32.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_left,nudge_right,2.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_left,turn_left,10.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_right,keep_lane,58.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+lane_change_right,turn_right,15.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_left,keep_lane,18.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_right,keep_lane,21.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_left,keep_lane,2.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_left,turn_left,68.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_right,keep_lane,1.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+turn_right,turn_right,133.0,VLM Qwen3-VL-32B-FP8 text,turn_yaw,lat
+accelerate,accelerate,44.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+accelerate,keep,16.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+accelerate,slow,6.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+accelerate,stop,38.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+keep,accelerate,17.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+keep,keep,121.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+keep,slow,32.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+keep,stop,12.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+slow,accelerate,1.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+slow,keep,24.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+slow,slow,37.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+slow,stop,0.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+stop,accelerate,17.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+stop,keep,24.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+stop,slow,48.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+stop,stop,41.0,VLM Qwen3-VL-32B-FP8 text,rater,long
+keep_lane,keep_lane,273.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+keep_lane,nudge_right,1.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+keep_lane,turn_left,12.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+keep_lane,turn_right,2.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_left,keep_lane,22.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_right,keep_lane,38.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+lane_change_right,turn_right,2.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_left,keep_lane,44.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_right,keep_lane,32.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_left,keep_lane,5.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_left,turn_left,15.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_right,keep_lane,7.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+turn_right,turn_right,25.0,VLM Qwen3-VL-32B-FP8 text,rater,lat
+accelerate,accelerate,74.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+accelerate,keep,18.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+accelerate,slow,6.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+keep,accelerate,36.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+keep,keep,224.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+keep,slow,70.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+slow,accelerate,2.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+slow,keep,49.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+slow,slow,78.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+stop,accelerate,8.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+stop,keep,5.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+stop,slow,18.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+lane_change_left,keep_lane,145.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+lane_change_right,keep_lane,242.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+nudge_left,keep_lane,58.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+turn_left,keep_lane,26.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+turn_right,keep_lane,50.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route straight,lat
+accelerate,accelerate,184.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+accelerate,keep,46.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+accelerate,slow,21.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+accelerate,stop,6.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+keep,accelerate,116.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+keep,keep,149.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+keep,slow,119.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+keep,stop,7.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+slow,keep,25.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+slow,slow,192.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+slow,stop,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+stop,accelerate,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+stop,keep,3.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+stop,slow,2.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+stop,stop,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,long
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+turn_left,turn_left,343.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+turn_right,turn_right,520.0,VLM Qwen3-VL-32B-FP8 text,pre_onset | route turn,lat
+accelerate,accelerate,110.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+accelerate,keep,127.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+accelerate,slow,64.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+accelerate,stop,54.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+keep,accelerate,19.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+keep,keep,400.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+keep,slow,248.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+keep,stop,54.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+slow,keep,84.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+slow,slow,254.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+slow,stop,8.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+stop,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+stop,keep,18.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+stop,slow,11.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+stop,stop,7.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+keep_lane,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+keep_lane,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_left,keep_lane,143.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_left,nudge_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_left,turn_left,2.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_right,keep_lane,240.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_right,nudge_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_right,nudge_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_left,keep_lane,56.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_left,turn_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_left,keep_lane,38.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_left,turn_left,331.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_right,keep_lane,75.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_right,nudge_right,3.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+turn_right,turn_right,492.0,VLM Qwen3-VL-32B-FP8 main,pre_onset,lat
+accelerate,accelerate,1.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+accelerate,keep,2.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+accelerate,slow,0.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+keep,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+keep,keep,1.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+keep,slow,1.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+slow,keep,1.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+slow,slow,0.0,VLM Qwen3-VL-32B-FP8 main,rater,long
+lane_change_left,keep_lane,1.0,VLM Qwen3-VL-32B-FP8 main,rater,lat
+lane_change_right,keep_lane,3.0,VLM Qwen3-VL-32B-FP8 main,rater,lat
+nudge_left,keep_lane,1.0,VLM Qwen3-VL-32B-FP8 main,rater,lat
+turn_right,keep_lane,1.0,VLM Qwen3-VL-32B-FP8 main,rater,lat
+accelerate,accelerate,51.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+accelerate,keep,42.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+accelerate,slow,4.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+accelerate,stop,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+keep,accelerate,5.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+keep,keep,240.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+keep,slow,68.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+keep,stop,17.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+slow,keep,60.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+slow,slow,61.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+slow,stop,8.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+stop,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+stop,keep,18.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+stop,slow,11.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+stop,stop,2.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,long
+keep_lane,keep_lane,23.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+keep_lane,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+keep_lane,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+keep_lane,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+keep_lane,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_left,keep_lane,143.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_left,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_left,nudge_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_right,keep_lane,240.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_right,nudge_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_right,nudge_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+lane_change_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_left,keep_lane,56.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_left,nudge_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_left,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_left,turn_right,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_right,keep_lane,44.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_right,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+nudge_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_left,keep_lane,25.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_left,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_right,keep_lane,50.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_right,nudge_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+turn_right,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route straight,lat
+accelerate,accelerate,59.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+accelerate,keep,85.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+accelerate,slow,60.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+accelerate,stop,53.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+keep,accelerate,14.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+keep,keep,160.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+keep,slow,180.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+keep,stop,37.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+slow,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+slow,keep,24.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+slow,slow,193.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+slow,stop,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+stop,accelerate,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+stop,keep,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+stop,slow,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+stop,stop,5.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,long
+lane_change_left,keep_lane,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_left,turn_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_right,keep_lane,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_right,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_right,turn_left,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+lane_change_right,turn_right,5.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_left,keep_lane,13.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_left,nudge_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_left,turn_left,330.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_left,turn_right,0.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_right,keep_lane,25.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_right,nudge_right,3.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_right,turn_left,1.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat
+turn_right,turn_right,492.0,VLM Qwen3-VL-32B-FP8 main,pre_onset | route turn,lat

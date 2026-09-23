@@ -1,0 +1,97 @@
+group,axis,vlm,best_baseline,baseline_acc,vlm_acc,delta,d_lo,d_hi
+pre_onset,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.6584362139917695,0.5192043895747599,-0.1392318244170096,-0.22308493453923206,-0.052326913407515926
+pre_onset,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.6584362139917695,0.5534979423868313,-0.10493827160493827,-0.1831915476904878,-0.02948071907600599
+pre_onset,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.6584362139917695,0.6179698216735254,-0.04046639231824417,-0.07568386372002506,-0.003367409610464457
+pre_onset,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",0.6584362139917695,0.5288065843621399,-0.12962962962962962,-0.20088150640256472,-0.06515616603753559
+pre_onset,lat3,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.6117969821673526,0.5919067215363512,-0.019890260631001373,-0.04747044374750333,-0.0006968156845273407
+pre_onset,lat3,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.6117969821673526,0.6111111111111112,-0.0006858710562414266,-0.0021261893632100364,0.0
+pre_onset,lat3,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.6117969821673526,0.6117969821673526,0.0,0.0,0.0
+pre_onset,lat3,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.6117969821673526,0.588477366255144,-0.023319615912208505,-0.04291415694818232,-0.0067329473120450985
+pre_onset,lat,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.607681755829904,0.5877914951989026,-0.019890260631001373,-0.04747044374750333,-0.0006968156845273407
+pre_onset,lat,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.607681755829904,0.6069958847736625,-0.0006858710562414266,-0.0021261893632100364,0.0
+pre_onset,lat,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.607681755829904,0.607681755829904,0.0,0.0,0.0
+pre_onset,lat,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.607681755829904,0.5809327846364883,-0.026748971193415638,-0.046272839714398155,-0.010505546604721992
+pre_onset,joint,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.3936899862825789,0.30315500685871055,-0.09053497942386832,-0.16006425251367912,-0.022888930290640305
+pre_onset,joint,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.3936899862825789,0.3299039780521262,-0.06378600823045268,-0.12635311945594324,-0.005695101337400434
+pre_onset,joint,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.3936899862825789,0.3683127572016461,-0.025377229080932786,-0.056645955622163936,0.008529498665650016
+pre_onset,joint,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.3936899862825789,0.29492455418381347,-0.09876543209876543,-0.1616017592525002,-0.042887612284802784
+straight_yaw,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.6248285322359396,0.5459533607681756,-0.07887517146776406,-0.12277055613912231,-0.03663659769427811
+straight_yaw,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.6248285322359396,0.551440329218107,-0.07338820301783265,-0.11885314224422015,-0.03252222256620816
+straight_yaw,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.6248285322359396,0.5377229080932785,-0.08710562414266118,-0.10865210739500646,-0.0667091781120558
+straight_yaw,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",,,,,
+straight_yaw,lat3,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.821673525377229,0.8196159122085048,-0.00205761316872428,-0.005705449661698682,0.001348451434214727
+straight_yaw,lat3,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.821673525377229,0.821673525377229,0.0,0.0,0.0
+straight_yaw,lat3,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.821673525377229,0.821673525377229,0.0,0.0,0.0
+straight_yaw,lat3,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),,,,,
+straight_yaw,lat,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.821673525377229,0.8196159122085048,-0.00205761316872428,-0.005705449661698682,0.001348451434214727
+straight_yaw,lat,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.821673525377229,0.821673525377229,0.0,0.0,0.0
+straight_yaw,lat,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.821673525377229,0.821673525377229,0.0,0.0,0.0
+straight_yaw,lat,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),,,,,
+straight_yaw,joint,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.5006858710562414,0.4382716049382716,-0.062414266117969824,-0.09966648339642059,-0.023124859788011036
+straight_yaw,joint,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.5006858710562414,0.4410150891632373,-0.059670781893004114,-0.09686139046875542,-0.02200512899565454
+straight_yaw,joint,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.5006858710562414,0.42386831275720166,-0.07681755829903979,-0.09690990921680259,-0.057956467021636184
+straight_yaw,joint,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),,,,,
+turn_yaw,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.655,0.465,-0.19,-0.26137764293163934,-0.11608205937338407
+turn_yaw,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.655,0.47,-0.185,-0.2519706612015964,-0.11804963724106236
+turn_yaw,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.655,0.465,-0.19,-0.2506211572475364,-0.1300173244545504
+turn_yaw,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",,,,,
+turn_yaw,lat3,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.805,0.6275,-0.1775,-0.2584541062801932,-0.10189176554984536
+turn_yaw,lat3,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.805,0.655,-0.15,-0.231775683578582,-0.07853270594472794
+turn_yaw,lat3,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.805,0.6575,-0.1475,-0.2292678857666263,-0.07597482174688057
+turn_yaw,lat3,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",,,,,
+turn_yaw,lat,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.595,0.5675,-0.0275,-0.052635050687404525,-0.007024131017132426
+turn_yaw,lat,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.595,0.595,0.0,0.0,0.0
+turn_yaw,lat,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.595,0.595,0.0,0.0,0.0
+turn_yaw,lat,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),,,,,
+turn_yaw,joint,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.5675,0.295,-0.2725,-0.3508771929824561,-0.19678285726252312
+turn_yaw,joint,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.5675,0.2775,-0.29,-0.36149770520568036,-0.22632668026499891
+turn_yaw,joint,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.5675,0.3,-0.2675,-0.32844680931498565,-0.20689445423273764
+turn_yaw,joint,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",,,,,
+rater,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.5439330543933054,0.45188284518828453,-0.09205020920502092,-0.14196984652475084,-0.0397489539748954
+rater,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.5439330543933054,0.38284518828451886,-0.16108786610878661,-0.21340030525512488,-0.11083206143697977
+rater,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.5439330543933054,0.5083682008368201,-0.03556485355648536,-0.07970844658027074,0.012604602510460203
+rater,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",0.6666666666666666,0.3333333333333333,-0.3333333333333333,-0.6666666666666666,0.0
+rater,lat3,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.6694560669456067,0.6548117154811716,-0.014644351464435146,-0.02929023797619361,-0.0020920502092050207
+rater,lat3,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.6694560669456067,0.6506276150627615,-0.01882845188284519,-0.033542976939203356,-0.0041841004184100415
+rater,lat3,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.6694560669456067,0.6589958158995816,-0.010460251046025104,-0.020876826722338204,-0.0020964360587002098
+rater,lat3,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.0,0.0,0.0,0.0,0.0
+rater,lat,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.6652719665271967,0.6485355648535565,-0.016736401673640166,-0.02939760220125786,-0.004192652824925661
+rater,lat,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.6652719665271967,0.6443514644351465,-0.02092050209205021,-0.03563941299790356,-0.006289308176100629
+rater,lat,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.6652719665271967,0.6548117154811716,-0.010460251046025104,-0.020876826722338204,-0.0020964360587002098
+rater,lat,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.0,0.0,0.0,0.0,0.0
+rater,joint,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.3723849372384937,0.2928870292887029,-0.0794979079497908,-0.1320754716981132,-0.03144325836057825
+rater,joint,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.3723849372384937,0.20502092050209206,-0.16736401673640167,-0.21805878336681503,-0.11899791231732777
+rater,joint,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.3723849372384937,0.33263598326359833,-0.0397489539748954,-0.09375980648535565,0.012552959132654404
+rater,joint,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",0.5,0.0,-0.5,-0.8333333333333334,-0.16666666666666666
+pre_onset | route straight,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.6785714285714286,0.564625850340136,-0.11394557823129252,-0.2381275770070337,0.004691626064640874
+pre_onset | route straight,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.6785714285714286,0.5748299319727891,-0.10374149659863946,-0.21322910044500953,0.005330273969101804
+pre_onset | route straight,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.6785714285714286,0.6394557823129252,-0.0391156462585034,-0.08366554191397674,0.0
+pre_onset | route straight,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",0.6785714285714286,0.6020408163265306,-0.07653061224489796,-0.15548621120816908,0.0018024605958792425
+pre_onset | route straight,lat3,VLM Qwen3-VL-4B main,majority (right),0.5714285714285714,0.04081632653061224,-0.5306122448979592,-0.6427731610428747,-0.41804311365430147
+pre_onset | route straight,lat3,VLM Qwen3-VL-4B text,majority (right),0.5714285714285714,0.0391156462585034,-0.532312925170068,-0.6452872566280033,-0.4196372226074896
+pre_onset | route straight,lat3,VLM Qwen3-VL-32B-FP8 text,majority (right),0.5714285714285714,0.0391156462585034,-0.532312925170068,-0.6452872566280033,-0.4196372226074896
+pre_onset | route straight,lat3,VLM Qwen3-VL-32B-FP8 main,majority (right),0.5714285714285714,0.04591836734693878,-0.5255102040816326,-0.6398098147709788,-0.4126906200546684
+pre_onset | route straight,lat,VLM Qwen3-VL-4B main,majority (lane_change_right),0.41156462585034015,0.04081632653061224,-0.3707482993197279,-0.48851722839389944,-0.2590627547934036
+pre_onset | route straight,lat,VLM Qwen3-VL-4B text,majority (lane_change_right),0.41156462585034015,0.0391156462585034,-0.37244897959183676,-0.49181822711644824,-0.26208281637717123
+pre_onset | route straight,lat,VLM Qwen3-VL-32B-FP8 text,majority (lane_change_right),0.41156462585034015,0.0391156462585034,-0.37244897959183676,-0.49181822711644824,-0.26208281637717123
+pre_onset | route straight,lat,VLM Qwen3-VL-32B-FP8 main,majority (lane_change_right),0.41156462585034015,0.04251700680272109,-0.36904761904761907,-0.48938429674260964,-0.25718999274836835
+pre_onset | route straight,joint,VLM Qwen3-VL-4B main,majority (keep|right),0.304421768707483,0.030612244897959183,-0.27380952380952384,-0.36979997132205333,-0.170254241399945
+pre_onset | route straight,joint,VLM Qwen3-VL-4B text,majority (keep|right),0.304421768707483,0.023809523809523808,-0.28061224489795916,-0.37500985804416404,-0.18332074721780603
+pre_onset | route straight,joint,VLM Qwen3-VL-32B-FP8 text,majority (keep|right),0.304421768707483,0.022108843537414966,-0.282312925170068,-0.37623187958158305,-0.18781718746617995
+pre_onset | route straight,joint,VLM Qwen3-VL-32B-FP8 main,majority (keep|right),0.304421768707483,0.03231292517006803,-0.272108843537415,-0.3709829681486196,-0.17407110269099918
+pre_onset | route turn,long,VLM Qwen3-VL-4B main,"ego kinematic (CTRA extrapolation, same judge)",0.6448275862068965,0.4885057471264368,-0.15632183908045977,-0.27716750852608385,-0.03779030849444878
+pre_onset | route turn,long,VLM Qwen3-VL-4B text,"ego kinematic (CTRA extrapolation, same judge)",0.6448275862068965,0.539080459770115,-0.10574712643678161,-0.22471403854280453,-0.003156828988358748
+pre_onset | route turn,long,VLM Qwen3-VL-32B-FP8 text,"ego kinematic (CTRA extrapolation, same judge)",0.6448275862068965,0.603448275862069,-0.041379310344827586,-0.10166165179497821,0.01857202600463825
+pre_onset | route turn,long,VLM Qwen3-VL-32B-FP8 main,"ego kinematic (CTRA extrapolation, same judge)",0.6448275862068965,0.4793103448275862,-0.16551724137931034,-0.26589007744804843,-0.0643123786407767
+pre_onset | route turn,lat3,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.9988505747126437,0.964367816091954,-0.034482758620689655,-0.07684154688888838,-0.0021862218282875864
+pre_onset | route turn,lat3,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.9988505747126437,0.9977011494252873,-0.0011494252873563218,-0.003681094647352316,0.0
+pre_onset | route turn,lat3,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.9988505747126437,0.9988505747126437,0.0,0.0,0.0
+pre_onset | route turn,lat3,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.9988505747126437,0.9551724137931035,-0.04367816091954023,-0.07798918789464769,-0.018983763755486296
+pre_onset | route turn,lat,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.9919540229885058,0.957471264367816,-0.034482758620689655,-0.07684154688888838,-0.0021862218282875864
+pre_onset | route turn,lat,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.9919540229885058,0.9908045977011494,-0.0011494252873563218,-0.003681094647352316,0.0
+pre_onset | route turn,lat,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.9919540229885058,0.9919540229885058,0.0,0.0,0.0
+pre_onset | route turn,lat,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.9919540229885058,0.9448275862068966,-0.047126436781609195,-0.0827291692358285,-0.021349755338078296
+pre_onset | route turn,joint,VLM Qwen3-VL-4B main,route command (CTRA long; lateral = intent),0.6436781609195402,0.48735632183908045,-0.15632183908045977,-0.27716750852608385,-0.03779030849444878
+pre_onset | route turn,joint,VLM Qwen3-VL-4B text,route command (CTRA long; lateral = intent),0.6436781609195402,0.5367816091954023,-0.10689655172413794,-0.22471403854280453,-0.005262332085443735
+pre_onset | route turn,joint,VLM Qwen3-VL-32B-FP8 text,route command (CTRA long; lateral = intent),0.6436781609195402,0.6022988505747127,-0.041379310344827586,-0.10166165179497821,0.01857202600463825
+pre_onset | route turn,joint,VLM Qwen3-VL-32B-FP8 main,route command (CTRA long; lateral = intent),0.6436781609195402,0.4724137931034483,-0.17126436781609194,-0.2739593607789184,-0.07081892693986112
