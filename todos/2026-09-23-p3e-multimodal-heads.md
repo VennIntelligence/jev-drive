@@ -1,6 +1,6 @@
 # P3e：多模态 head（K=1024 词表分类、anchor 截断 diffusion）接在 Qwen 原生视频特征上
 
-状态: running（Stage A、Stage B profiling 已完成；2B 插入在跑；train split 抽取等 lead 放行）
+状态: running（Stage A / A2、profiling、2B 插入已完成；train split 抽取在跑，之后是 train 训的决定性检查）
 主题: ../research/prediag-2026-09/README.md
 
 ## 目标
@@ -114,8 +114,12 @@ Stage A 里 diffusion 的坏只出在加了 2560 维 pooled 条件之后（inner
 - [x] Stage B：train split 视频特征抽取的 profiling（batch、attention 实现、dtype、decode worker、I/O 重叠），
       与 `qwenvid_p3` 的重叠行做数值等价核验（`jevdrive/waymo_qwenvid.py profile`）
 - [x] Stage B：全量 / 分层子采样 / 加空间摘要三个选项的小时数和磁盘
-- [ ] 插入：Qwen3-VL-2B 同输入的 P3 行，按上面的规则决定 train split 用 2B 还是 4B
-- [ ] lead 放行后启动 train split 抽取（`jevdrive/waymo_qwenvid.py run`，分 shard 可续跑）
+- [x] 插入：Qwen3-VL-2B 同输入的 P3 行，按上面的规则决定 train split 用 2B 还是 4B（结论：保留 4B）
+- [x] Stage A2：diffusion 条件的三个变体（结论：pooled 向量这条路走不通）
+- [x] 启动 train split 抽取（thin=4 + 4×4 空间摘要，`qwenvid_train_t4`，2026-09-23 15:11）
+- [ ] val 子集 93 个 shard 抽完后：`check`（新旧 val 特征的下游等价）
+- [ ] 决定性检查 (a)：`trainfit`，train 训、val 评的 d″ ridge_late（第 22 条口径）
+- [ ] (b)：多模态 head 在 train 特征上重跑（diffusion 用空间 token 条件）
 
 ## 结果
 
@@ -244,3 +248,60 @@ train split 构成（有 future、4 × 2 帧三相机窗口完整的帧，2037 �
 
 按 lead 的规则（优化后全量 ≤ 30 h 才跑全量）：单独跑的估计 31.7 h 已经超线，而卡在接下来几小时里和 vlm 流共享、实际更慢，
 所以默认是 **thin=4 分层子采样 + 4×4 空间摘要**（单独 11.8 h，41 GB）。按 lead 后来的指示，启动前先做 2B 那一行，等放行。
+
+### 插入：Qwen3-VL-2B（2026-09-23）
+
+抽取：`qwenvid2b_p3`，19 663 行，L14 / L21 的 mean 和 last。为了赶时间用的是 compile、batch 8（d″ 是 eager、batch 2；
+4B 上同样的换法让特征动 rel L2 约 1e-2、逐行 cos ≥ 0.9997，对 ridge 的影响应远小于 CI）。1 h 29 min，与 vlm 流共享卡。
+ladder run：`$DATA_DIR/runs/waymo_ladder/p3-qwenvid2b/20260923-145747/`，4B 的两行在同一 run 里逐位复现 d″。小表 `research/results/p3-qwenvid2b/`。
+
+| 方向 | arm | pre-onset Δ（第 1–9 档）[CI] | straight Δ | DiD | RFS Δ | 第 10 档 vs rater_best |
+|--:|:--|:--|--:|--:|--:|--:|
+| 0 | 4B `L18_last`（d″） | −0.053 [−0.092, −0.018] | −0.033 | −0.020 | +0.016 | −0.186 |
+| 0 | 4B `L18_mean`（d″） | −0.041 [−0.083, −0.000] | −0.068 | +0.027 | −0.015 | −0.181 |
+| 0 | 2B `L14_last` | −0.024 [−0.042, −0.006] | −0.019 | −0.005 | +0.027 | −0.068 |
+| 0 | 2B `L14_mean` | −0.034 [−0.084, +0.012] | −0.073 | +0.040 | −0.095 | −0.199 |
+| 0 | 2B `L21_last`（补充） | −0.031 [−0.068, +0.003] | −0.028 | −0.003 | −0.028 | −0.106 |
+| 0 | 2B `L21_mean`（补充） | −0.030 [−0.073, +0.013] | −0.065 | +0.035 | −0.039 | −0.121 |
+| 1 | 4B `L18_last`（d″） | −0.045 [−0.075, −0.016] | −0.022 | −0.023 | −0.005 | −0.220 |
+| 1 | 4B `L18_mean`（d″） | −0.082 [−0.144, −0.016] | −0.045 | −0.037 | −0.054 | −0.256 |
+| 1 | 2B `L14_last` | −0.036 [−0.064, −0.006] | −0.009 | −0.027 | −0.030 | −0.156 |
+| 1 | 2B `L14_mean` | −0.083 [−0.143, −0.015] | −0.041 | −0.042 | −0.096 | −0.270 |
+| 1 | 2B `L21_last`（补充） | −0.071 [−0.113, −0.029] | −0.013 | −0.057 | −0.025 | −0.081 |
+| 1 | 2B `L21_mean`（补充） | −0.063 [−0.124, −0.003] | −0.039 | −0.023 | −0.070 | −0.225 |
+
+**按预写规则：保留 4B。** `L14_last` 方向 0 是 −0.024，比 4B 的 −0.053 差 0.029（门槛 0.01）；`L14_mean` 点估计两个方向都在 0.01 以内
+（−0.034 对 −0.041、−0.083 对 −0.082），但方向 0 的 CI 跨零（上界 +0.012）。补充的 L21 两个 tap 方向 0 的 CI 也都跨零，
+所以没有「只有 L21 满足」要交给 lead 的情况。一句话：2B 在方向 1 上和 4B 一样好，方向 0 上弱一截，**d″ 仍是唯一两个方向 CI 都不跨零的表征**；
+和 32B 的 null 合起来，Qwen3-VL 家族里 4B 是这个量上的甜点，但 2B 与 4B 的差在方向 0 上只有 1–3 cm，不宜读成「2B 更差」的强结论。
+
+吞吐（同一时段 A/B，compile、batch 8、4×4 摘要，320 行交替两轮）：4B **353 ms/帧**、10.0 GB；2B **287 ms/帧**、8.4 GB（0.81 倍）。
+2B 省得不多是因为两者的 ViT 完全一样（24 层 × 1024 维，每帧 24 480 patch，约占一半 FLOP），2B 只省在 LM 上。
+
+### Stage A2：diffusion 条件的三个变体（2026-09-23）
+
+run：`$DATA_DIR/runs/waymo_heads/p3e-a2/20260923-151546/`，小表 `research/results/p3e-heads/a2/`。
+inner split 选出的变体：方向 0 `L18_last` → `pca64`（inner top-1 2.09 m）、`L18_mean` → `pca16`（2.11）；方向 1 两个 tap 都 → `pca16`（2.29 / 2.30）。
+四个都仍比 `diff ego` 的 inner 1.93 / 2.08 m 差。
+
+| 方向 | tap | 选中的变体 | pre-onset Δ vs `ridge ego` | 视觉增量（vs `diff ego`，pre-onset）| RFS Δ |
+|--:|:--|:--|:--|:--|--:|
+| 0 | L18_last | pca64 | +0.812 [+0.593, +1.032] | +0.375 [+0.166, +0.577] | +0.250 |
+| 0 | L18_mean | pca16 | +0.666 [+0.475, +0.855] | +0.216 [+0.035, +0.407] | +0.308 |
+| 1 | L18_last | pca16 | +0.968 [+0.697, +1.264] | +0.448 [+0.220, +0.686] | +0.073 |
+| 1 | L18_mean | pca16 | +1.028 [+0.745, +1.333] | +0.545 [+0.346, +0.759] | +0.079 |
+
+**按预写的判据落第二行：视觉增量四格 CI 全为正，pooled 向量这条路对 diffusion head 走不通**，条件要换成 train split 抽出来的 4×4 空间 token。
+降维确实减轻了伤害（原版的视觉增量 +0.45–0.71，这里 +0.22–0.55），RFS 也比原版好（方向 0 的 pca 变体 RFS Δ +0.25–0.34，CI 不跨零），但没有一格翻到零以下。
+另：同一配置两次 run 之间 `diff ego` 的 pre-onset Δ 从 +0.524 变到 +0.490（GPU 非确定性），这个量级的抖动小于表里任何一个结论依赖的差。
+
+### train split 抽取已启动（2026-09-23 15:11）
+
+选择：**4B（2B 规则未过），thin=4 分层子采样 + 4×4 空间摘要**。理由：优化后的全量估计单独跑 31.7 h、按启动时的共享负载是 41 h 以上，
+都超过 30 h 的线（新预算下更多显存和 worker 不改变结论：瓶颈是 GPU 计算，batch 从 2 加到 8 只省 3%）。
+配置：compile、batch 8、8 个 loader worker、峰值显存约 10 GB；先抽 P3 val 子集的 93 个 val shard（19 663 行），再抽 263 个 train shard（137 533 行），
+合计 157 196 行，写到 `features/qwenvid_train_t4/<shard>/`，每个 shard 写完 meta.json 才算完成，重跑自动跳过已完成的 shard。
+tmux 窗口 `jev:qv-train`，run dir `$DATA_DIR/runs/waymo_qwenvid/run/20260923-151127/`。
+启动后前 13 个 shard 实测 377–447 ms/帧（卡上同时有 vlm 32B-FP8、p4 CARLA 和本流自己的 head 训练），脚本自报 ETA 约 20 h；
+vlm 32B 结束后应回到约 270–350 ms/帧，即约 12–15 h。
+ledger 行：`2026-09-23 15:11 | heads | jev:qv-train | <=50 GB (fraction-capped; uses ~10 GB) | 8 workers | ~15 h (11.8 h alone) | Qwen3-VL-4B video features, train thin=4 + P3 val subset, 4x4 grid -> features/qwenvid_train_t4 (resumable per shard)`。

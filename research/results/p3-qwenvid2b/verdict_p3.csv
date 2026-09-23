@@ -1,0 +1,8 @@
+arm,meets_both_directions
+A ridge_late pooled (qwen4b L18),False
+d2 qwenvid L18_last,False
+d2 qwenvid L18_mean,False
+d2b qwenvid2b L14_last,False
+d2b qwenvid2b L14_mean,False
+d2b qwenvid2b L21_last,False
+d2b qwenvid2b L21_mean,False
