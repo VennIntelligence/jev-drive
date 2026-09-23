@@ -117,7 +117,7 @@ Stage A 里 diffusion 的坏只出在加了 2560 维 pooled 条件之后（inner
 - [x] 插入：Qwen3-VL-2B 同输入的 P3 行，按上面的规则决定 train split 用 2B 还是 4B（结论：保留 4B）
 - [x] Stage A2：diffusion 条件的三个变体（结论：pooled 向量这条路走不通）
 - [x] 启动 train split 抽取（thin=4 + 4×4 空间摘要，`qwenvid_train_t4`，2026-09-23 15:11）
-- [ ] val 子集 93 个 shard 抽完后：`check`（新旧 val 特征的下游等价）
+- [x] val 子集 93 个 shard 抽完后：`check`（新旧 val 特征的下游等价，通过）
 - [ ] 决定性检查 (a)：`trainfit`，train 训、val 评的 d″ ridge_late（第 22 条口径）
 - [ ] (b)：多模态 head 在 train 特征上重跑（diffusion 用空间 token 条件）
 
@@ -305,3 +305,17 @@ tmux 窗口 `jev:qv-train`，run dir `$DATA_DIR/runs/waymo_qwenvid/run/20260923-
 启动后前 13 个 shard 实测 377–447 ms/帧（卡上同时有 vlm 32B-FP8、p4 CARLA 和本流自己的 head 训练），脚本自报 ETA 约 20 h；
 vlm 32B 结束后应回到约 270–350 ms/帧，即约 12–15 h。
 ledger 行：`2026-09-23 15:11 | heads | jev:qv-train | <=50 GB (fraction-capped; uses ~10 GB) | 8 workers | ~15 h (11.8 h alone) | Qwen3-VL-4B video features, train thin=4 + P3 val subset, 4x4 grid -> features/qwenvid_train_t4 (resumable per shard)`。
+
+### 下游等价核验：通过（2026-09-23 17:39）
+
+run：`$DATA_DIR/runs/waymo_qwenvid/check/20260923-173851/`。新配置（compile、batch 8）抽出的 19 663 行 val 子集对 `qwenvid_p3`：
+`L18_last` rel L2 1.4e-2、逐行 cos 最小 0.99981；`L18_mean` rel L2 7.7e-3、cos 最小 0.99898。同一个 P3(d″) ridge_late 行在两版特征上重拟：
+
+| 方向 | tap | pre-onset Δ，`qwenvid_p3` | pre-onset Δ，`qwenvid_train_t4` | DiD（旧 / 新）| RFS Δ（旧 / 新）|
+|--:|:--|:--|:--|:--|:--|
+| 0 | L18_last | −0.0531 [−0.092, −0.018] | −0.0545 [−0.094, −0.019] | −0.020 / −0.021 | +0.016 / +0.012 |
+| 0 | L18_mean | −0.0411 [−0.083, −0.000] | −0.0411 [−0.083, −0.000] | +0.027 / +0.027 | −0.015 / −0.014 |
+| 1 | L18_last | −0.0454 [−0.075, −0.016] | −0.0450 [−0.076, −0.015] | −0.023 / −0.023 | −0.005 / −0.015 |
+| 1 | L18_mean | −0.0822 [−0.144, −0.016] | −0.0825 [−0.144, −0.017] | −0.037 / −0.037 | −0.054 / −0.055 |
+
+所有 Δ 的变化 ≤ 1.4 mm，比 CI 半宽小一个数量级：快配置是同一个表征，train 侧的抽取可以直接用。
