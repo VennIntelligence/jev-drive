@@ -121,7 +121,7 @@ TICK = 0.05
 CAM_TICKS = 4
 DIV_M, DIV_DEG = 0.01, 0.1                 # ego divergence: position >= 1 cm or heading >= 0.1 deg
 ACTOR_DIFF_M = 0.1                         # a matched actor "differs" between worlds beyond this
-VIS_M = 60.0
+PX_ACTOR, PX_LIGHT = 20, 10               # visible pixels in the half-resolution segmentation view
 
 
 def attempt(gen: Path, rid: str) -> Path | None:
@@ -177,18 +177,19 @@ def _id_offset(A: dict, B: dict) -> int:
 
 
 def factor_visibility(A: dict, B: dict, family: str) -> dict:
-    """Per camera tick of A (x+): is a factor element visible, and how many non-factor actors differ in view.
+    """Per camera tick of A (x+): is a factor element visible in the front image, and how many other actors that
+    differ between the worlds are visible (the purity diagnostic).
 
     Factor elements: the hazard actors B hides (named in A's own hidden.json); for HardBreakRoute the background
-    vehicles whose position differs between the worlds; for Light the traffic lights whose state differs. The
-    rest of the actors that differ are the purity diagnostic."""
+    vehicles whose position differs between the worlds; for Light the traffic lights whose state differs.
+    Visible = at least PX_ACTOR (PX_LIGHT for a light) pixels of it in the instance-segmentation view."""
     off = _id_offset(A, B)
     hz = set(A["hazards"]) or {i - off for i in B["hazards"]}
     ka, kb = A["act"], B["act"]
     posb = {(int(k), int(i)): xyz for k, i, xyz in zip(kb["k"], kb["id"], kb["xyz"])}
     out = {}
     for k, row in A["frames"].iterrows():
-        vis = {v["id"]: v for v in row.vis}
+        px = row.px if isinstance(row.px, dict) else {}
         sel = ka["k"] == k
         differ = set()
         for i, xyz in zip(ka["id"][sel], ka["xyz"][sel]):
@@ -199,18 +200,18 @@ def factor_visibility(A: dict, B: dict, family: str) -> dict:
             factor = {i for i in differ if A["kinds"].get(str(i), ["", ""])[1] == "background"}
         else:
             factor = hz
-        light_vis = False
+        light_px = 0
         if family == "Light" and k in B["frames"].index:
-            lb = {B["light_loc"].get(int(i)): s for i, s in B["frames"].loc[k].lights.items()}
-            for lv in row.lvis:
-                loc = A["light_loc"].get(lv["id"])
-                sa, sb = row.lights.get(str(lv["id"])), lb.get(loc)
-                if lv["vis"] and sa is not None and sb is not None and sa != sb:
-                    light_vis = True
-        fv = any(vis[i]["vis"] for i in factor if i in vis) or light_vis
-        in_frustum = any(i in vis for i in factor) or light_vis
-        impure = sum(1 for i in differ - factor if i in vis and vis[i]["vis"])
-        out[int(k)] = {"factor_visible": bool(fv), "factor_in_frustum": bool(in_frustum), "impure_visible": impure,
+            lb = {B["light_loc"].get(int(i)): st for i, st in B["frames"].loc[k].lights.items()}
+            for key, n in px.items():
+                if key.startswith("L"):
+                    lid = int(key[1:])
+                    sa, sb = row.lights.get(str(lid)), lb.get(A["light_loc"].get(lid))
+                    if sa is not None and sb is not None and sa != sb:
+                        light_px = max(light_px, n)
+        fpx = max([px.get(str(i), 0) for i in factor] + [0])
+        out[int(k)] = {"factor_visible": bool(fpx >= PX_ACTOR or light_px >= PX_LIGHT), "factor_px": int(max(fpx, light_px)),
+                       "impure_visible": sum(1 for i in differ - factor if px.get(str(i), 0) >= PX_ACTOR),
                        "trig": bool(row.trig[0])}
     return out
 
@@ -300,7 +301,7 @@ def pair_case(gen: Path, case: pd.Series, worlds: dict) -> tuple[dict, list, lis
                                "v2_plus": float(v2(fp[a[j]])), "v2_minus": float(v2(fm[b[j]])),
                                "stop_plus": bool(stop3(pp[a[j]:a[j] + 1], fp[a[j]:a[j] + 1])[0]),
                                "stop_minus": bool(stop3(pm[b[j]:b[j] + 1], fm[b[j]:b[j] + 1])[0]),
-                               "impure_visible": fv[k]["impure_visible"],
+                               "impure_visible": fv[k]["impure_visible"], "factor_px": fv[k]["factor_px"],
                                **{f"tf_{c}_plus": ta.loc[k, c] for c in ta.columns},
                                **{f"tf_{c}_minus": tb.loc[k, c] for c in tb.columns}})
     row["n_obs"] = len(frames)
