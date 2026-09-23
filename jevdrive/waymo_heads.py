@@ -69,6 +69,23 @@ def vocabularies(ks=(VOCAB_K, DIFF_M), seed: int = 0) -> tuple[dict, np.ndarray]
 
 # ---------------------------------------------------------------- classification arm
 
+def _cross_fit(scores: torch.Tensor, Xe: torch.Tensor, tgt, sp, lam: float, K: int, folds: int = 4) -> torch.Tensor:
+    """The ego classifier's logits with the fit-half rows replaced by out-of-fold ones.
+
+    P0 froze the ego logits as fitted on every training row, which is harmless at 414k rows. On one fit half
+    (~10k rows) the ego classifier picks the smallest lambda and all but memorises its rows, so an in-sample
+    offset is near-perfect exactly where the vision head is trained and the head learns nothing: in the
+    smoke run `cls_late` was indistinguishable from `cls ego`. Out-of-fold offsets (sequence-grouped, at the
+    lambda the ego head chose) are what the vision head will actually face on the evaluation half.
+    """
+    from sklearn.model_selection import GroupKFold
+    out = scores.clone()
+    for tr, te in GroupKFold(folds).split(sp.train, groups=sp.seq[sp.train]):
+        W, _ = planner.ce_solve(Xe, tgt, sp.train[tr], [lam], K)
+        out[sp.train[te]] = planner.linear_apply(W, Xe, sp.train[te])[0]
+    return out
+
+
 def cls_arm(ctx: dict, X, vocab: torch.Tensor, side: dict, name: str):
     """`planner.Heads.cls` on the ladder's rows: ego-only when `X` is None, else late fusion on the ego logits.
 
@@ -82,9 +99,10 @@ def cls_arm(ctx: dict, X, vocab: torch.Tensor, side: dict, name: str):
         tgt = (ids, np.ones(ids.shape, np.float32))
         key = ("cls ego", id(sp))
         if key not in side:
-            he = planner.Heads(lad.standardize_np(ctx["ego"][sel], sp.train), sp, fut, F, waymo.RFS_FREQ)
+            Xe = lad.standardize_np(ctx["ego"][sel], sp.train)
+            he = planner.Heads(Xe, sp, fut, F, waymo.RFS_FREQ)
             pv, st = he.cls(tgt, vocab, KMAX, keep=True)
-            side[key] = (he.scores, pv, st)
+            side[key] = (_cross_fit(he.scores, Xe, tgt, sp, st["lam"], len(vocab)), pv, st)
         scores, pv, st = side[key]
         if X is not None:
             Xi = lad.standardize_np(X[sel], sp.train)
