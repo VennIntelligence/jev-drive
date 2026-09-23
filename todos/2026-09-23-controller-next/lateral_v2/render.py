@@ -63,7 +63,7 @@ def main():
             writer.write(cv2.imread(str(p)))
         writer.release()
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(2, len(STATIONS), figsize=(plot_style.DOUBLE_COLUMN_IN, 2.35))
+    fig, axes = plt.subplots(2, len(STATIONS), figsize=(plot_style.DOUBLE_COLUMN_IN, 1.66))
     for r, (label, row) in enumerate(sheet):
         for c, (station, cte, path) in enumerate(row):
             ax = axes[r, c]
@@ -75,8 +75,8 @@ def main():
             ax.set_title('s = %.0f m, CTE %+.2f m' % (station, cte), fontsize=6.5, pad=2)
             if c == 0:
                 ax.set_ylabel(label.replace(' + ', ' +\n').replace(' (', '\n('), fontsize=6.5)
-    fig.subplots_adjust(left=.075, right=.995, top=.93, bottom=.01, wspace=.03, hspace=.18)
-    fig.savefig(str(args.out / '26966-contact-sheet.png'), dpi=220)
+    fig.subplots_adjust(left=.075, right=.995, top=.9, bottom=.01, wspace=.03, hspace=.3)
+    fig.savefig(str(args.out / '26966-contact-sheet.png'), dpi=200, pil_kwargs={'optimize': True})
     (args.out / 'render-parity.json').write_text(json.dumps(parity, indent=1))
     print(json.dumps(parity, indent=1))
 
