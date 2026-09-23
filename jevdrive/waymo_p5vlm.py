@@ -130,6 +130,7 @@ def load_frames(name: str = FRAME_SET) -> pd.DataFrame:
     df = waymo.load_index()
     at = pd.Series(np.arange(len(df)), index=waymo.frame_names(df))
     t["row"] = at.reindex(t.frame_name.to_numpy()).to_numpy().astype(int)
+    t["pre_onset_route_straight"] = t.pre_onset & (t.intent == 1)    # derived, for `--groups` only
     return t
 
 
@@ -179,9 +180,10 @@ Answer with one line of strict JSON and nothing else:
 CAM_TEXT = {"front": "Front camera", "front_left": "Front-left camera", "front_right": "Front-right camera"}
 
 
-def ego_text(past: np.ndarray, intent: int) -> str:
+def ego_text(past: np.ndarray, intent: int, route: bool = True) -> str:
     """Speed now and 1/2/3 s ago, acceleration, yaw rate and heading change, and the route command: the ego
-    readout's own input, in words. `past` is (16, 6) at 4 Hz, oldest first, in the current ego frame."""
+    readout's own input, in words. `past` is (16, 6) at 4 Hz, oldest first, in the current ego frame.
+    `route=False` drops the route command sentence (the post-hoc `noroute` diagnostic)."""
     kin = waymo.past_kinematics(past[None])
     sp = np.linalg.norm(past[:, 2:4], axis=-1)
     h3 = np.degrees(np.arctan2(*(past[-1, :2] - past[-13, :2])[::-1])) if np.linalg.norm(
@@ -189,7 +191,7 @@ def ego_text(past: np.ndarray, intent: int) -> str:
     return (f"Ego state: speed now {sp[-1]:.1f} m/s; 1 s / 2 s / 3 s ago {sp[-5]:.1f} / {sp[-9]:.1f} / "
             f"{sp[-13]:.1f} m/s; acceleration {float(kin['a'][0]):+.1f} m/s^2; yaw rate "
             f"{float(np.degrees(kin['w'][0])):+.1f} deg/s (positive = turning left); direction of travel over "
-            f"the last 3 s {h3:+.0f} deg from the current heading. Route command: {INTENT_TEXT[int(intent)]}.")
+            f"the last 3 s {h3:+.0f} deg from the current heading." + (f" Route command: {INTENT_TEXT[int(intent)]}." if route else ""))
 
 
 def build_content(ego: str, cams, video: bool = True) -> list:
@@ -268,10 +270,10 @@ def run(rl, model_id: str = QWEN4B, variant: str = "main", groups=GROUPS, batch_
     prev = pd.read_json(ans, lines=True) if ans.exists() and ans.stat().st_size else None
     done = set() if prev is None else set(prev.frame_name[(prev.variant == variant) & (prev.model == model_id)])
     t = t[~t.frame_name.isin(done)].reset_index(drop=True)
-    cams = {"main": waymo.CAMS, "shift1": waymo.CAMS, "front": ("front",), "text": ()}[variant]
+    cams = {"main": waymo.CAMS, "noroute": waymo.CAMS, "shift1": waymo.CAMS, "front": ("front",), "text": ()}[variant]
     df = waymo.load_index()
     past, _ = waymo.load_ego()
-    texts = [ego_text(past[r], i) for r, i in zip(t.row, t.intent)]
+    texts = [ego_text(past[r], i, variant != "noroute") for r, i in zip(t.row, t.intent)]
     rows = t.row.to_numpy()
     if variant == "shift1":                          # the same frames, each clip ending at frame - 1
         at = pd.Series(np.arange(len(df)), index=df.sequence.astype(str) + "/" + df.frame.astype(str))
@@ -291,7 +293,7 @@ def run(rl, model_id: str = QWEN4B, variant: str = "main", groups=GROUPS, batch_
                                                         device_map="cuda").eval()
     phash = prompt_hash(proc, cams, bool(cams))
     meta = {"model": model_id, "variant": variant, "cams": list(cams), "frames": FRAMES, "stride": STRIDE,
-            "prompt_sha256": phash, "decoding": "greedy", "max_new_tokens": max_new_tokens, "batch_size": batch_size,
+            "prompt_sha256": phash, "route_command": variant != "noroute", "decoding": "greedy", "max_new_tokens": max_new_tokens, "batch_size": batch_size,
             "n_todo": len(t), "n_done_before": len(done), "frame_set": FRAME_SET}
     (out / f"meta_{variant}.json").write_text(json.dumps(meta, indent=2))
     rl.event("gen_start", **meta)
@@ -424,23 +426,26 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
                               "baseline_acc": float((cand[base][0] == y)[m].mean()) if m.any() else np.nan,
                               "vlm_acc": float((cand[k][0] == y)[m].mean()) if m.any() else np.nan,
                               **_paired(cand[k][0] == y, cand[base][0] == y, seq, m)})
-    # vision contribution: each model's main minus its text-only answer, paired on frames both answered
+    # paired variant contrasts per model, on frames both answered: main - text is the pre-registered vision
+    # contribution; noroute - main is the post-hoc "does it anchor on the route command" diagnostic
     vis = []
     for k in (k for k in arms if k.startswith("VLM") and k.endswith(" main")):
-        kt = k[:-len("main")] + "text"
-        if kt not in arms:
-            continue
-        both = arms[k].answered.to_numpy() & arms[kt].answered.to_numpy()
-        for g, m0 in masks.items():
-            for ax, y in truth.items():
-                pv, pt = ((_joint(arms[x].long.to_numpy(), arms[x].lat3.to_numpy()) if ax == "joint"
-                           else arms[x][ax].to_numpy()) for x in (k, kt))
-                m = m0 & both
-                vis.append({"group": g, "axis": ax, "model": k[4:-5], "n": int(m.sum()),
-                            "main_acc": float((pv == y)[m].mean()) if m.any() else np.nan,
-                            "text_acc": float((pt == y)[m].mean()) if m.any() else np.nan,
-                            "same_answer": float((pv == pt)[m].mean()) if m.any() else np.nan,
-                            **_paired(pv == y, pt == y, seq, m)})
+        for a_, b_, what in (("main", "text", "video - text only (bar 2)"),
+                             ("noroute", "main", "no route - with route (post-hoc)")):
+            ka, kb = k[:-len("main")] + a_, k[:-len("main")] + b_
+            if ka not in arms or kb not in arms:
+                continue
+            both = arms[ka].answered.to_numpy() & arms[kb].answered.to_numpy()
+            for g, m0 in masks.items():
+                for ax, y in truth.items():
+                    pa, pb = ((_joint(arms[x].long.to_numpy(), arms[x].lat3.to_numpy()) if ax == "joint"
+                               else arms[x][ax].to_numpy()) for x in (ka, kb))
+                    m = m0 & both
+                    vis.append({"contrast": what, "group": g, "axis": ax, "model": k[4:-5], "n": int(m.sum()),
+                                "a_acc": float((pa == y)[m].mean()) if m.any() else np.nan,
+                                "b_acc": float((pb == y)[m].mean()) if m.any() else np.nan,
+                                "same_answer": float((pa == pb)[m].mean()) if m.any() else np.nan,
+                                **_paired(pa == y, pb == y, seq, m)})
     for k, v in arms.items():
         if not k.startswith("VLM"):
             continue
@@ -509,7 +514,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--steps", default="labels", help="comma list of select,labels,gen,report,consistency")
     ap.add_argument("--model", default=QWEN4B)
-    ap.add_argument("--variant", default="main", choices=("main", "text", "front", "shift1"))
+    ap.add_argument("--variant", default="main", choices=("main", "text", "front", "shift1", "noroute"),
+                    help="noroute: post-hoc diagnostic, video with the route command removed from the ego text")
     ap.add_argument("--groups", default=",".join(GROUPS))
     ap.add_argument("--batch-size", type=int, default=3)
     ap.add_argument("--limit", type=int, default=None, help="profiling: answer only this many random frames")
