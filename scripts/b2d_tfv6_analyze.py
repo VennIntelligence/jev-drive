@@ -262,15 +262,26 @@ def analyze(run_roots, output, extra=None):
     summary["same_seed_a_repeat"] = repeat
     (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     plot_style.apply()
-    fig, ax = plt.subplots(figsize=(plot_style.DOUBLE_COLUMN_IN, 2.8))
     routes = sorted({r["route"] for r in paired}, key=int)
+    fig, ax = plt.subplots(figsize=(plot_style.DOUBLE_COLUMN_IN,
+                                    max(3.0, .28 * len(routes) + 1.1)))
     colors = {"C-B": plot_style.PALETTE["blue"], "A-B": plot_style.PALETTE["vermillion"],
               "D-C": plot_style.PALETTE["green"]}
     for offset, (comparison, color) in enumerate(colors.items()):
-        means = [np.mean([r["ds_diff"] for r in paired if r["route"] == route and
-                          r["comparison"] == comparison]) for route in routes]
-        ax.scatter(means, np.arange(len(routes)) + (offset - 1) * .18, s=13,
-                   label=comparison, color=color)
+        means, lower, upper = [], [], []
+        for route in routes:
+            values = np.asarray([r["ds_diff"] for r in paired if r["route"] == route and
+                                 r["comparison"] == comparison])
+            mean = float(np.mean(values))
+            rng = np.random.default_rng(20260923 + int(route) + offset)
+            sampled = rng.choice(values, size=(BOOTSTRAPS, len(values)), replace=True).mean(axis=1)
+            low, high = np.percentile(sampled, (2.5, 97.5))
+            means.append(mean)
+            lower.append(max(0., mean - low))
+            upper.append(max(0., high - mean))
+        ax.errorbar(means, np.arange(len(routes)) + (offset - 1) * .18,
+                    xerr=np.asarray([lower, upper]), fmt="o", markersize=2.7,
+                    elinewidth=.6, capsize=1.5, label=comparison, color=color)
     ax.axvline(0, color=plot_style.BASELINE, lw=.6)
     ax.set_yticks(np.arange(len(routes)), routes)
     ax.set_xlabel("Paired Driving Score difference (points)")
