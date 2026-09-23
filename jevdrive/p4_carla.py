@@ -729,6 +729,127 @@ def analyze(rl):
     rl.log.info("done: %s", rl.dir)
 
 
+# ---------------------------------------------------------------- figures
+
+def _style():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("plot_style", REPO / "research" / "plot_style.py")
+    ps = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ps)
+    ps.apply()
+    return ps
+
+
+COLORS = {"Waymo": "#0072B2", "CARLA": "#D55E00"}
+
+
+def fig_rig(ps, out: Path, seed: int = 3):
+    """One Waymo clip's last frame and one CARLA keyframe, the three cameras side by side, at matched scale."""
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    from . import waymo_qwenvid as qv
+    items, _ = qv.ref_items(400)
+    it = items[np.random.default_rng(seed).integers(len(items))]
+    ds = waymo.Shards([it], lambda imgs: imgs)
+    w_imgs = ds[0][3::4]                                   # last frame of each camera's clip
+    t, _, _ = load_carla()
+    moving = t[(t.v0 > 4) & ~t.night].reset_index(drop=True)
+    c_row = moving.iloc[np.random.default_rng(seed).integers(len(moving))]
+    c_imgs = [Image.open(p).convert("RGB") for p in c_row.files[3::4]]
+    order = (1, 0, 2)                                      # front_left, front, front_right on the page
+    fig, axes = plt.subplots(2, 3, figsize=(ps.DOUBLE_COLUMN_IN, 2 * ps.DOUBLE_COLUMN_IN / 3 * 1079 / 972 + 0.1),
+                             gridspec_kw={"wspace": 0.02, "hspace": 0.04})
+    for r, (name, imgs) in enumerate((("Waymo", w_imgs), ("CARLA", c_imgs))):
+        for j, k in enumerate(order):
+            ax = axes[r, j]
+            ax.imshow(imgs[k].resize((324, 360), Image.BILINEAR))
+            ax.set_xticks([]), ax.set_yticks([])
+            ax.grid(False)
+            for sp_ in ax.spines.values():
+                sp_.set_visible(False)
+            if j == 0:
+                ax.set_ylabel(name)
+            if r == 0:
+                ax.set_title(waymo.CAMS[k].replace("_", " "))
+    fig.subplots_adjust(left=0.04, right=1, top=0.95, bottom=0.01)
+    return ps.save(fig, out / "p4-rig"), {"carla_frame": c_row.frame_name}
+
+
+def fig_gap(ps, run: Path, out: Path):
+    import matplotlib.pyplot as plt
+    q1 = pd.read_csv(run / "q1_domain_auc.csv")
+    fd = np.load(run / "figdata.npz")
+    fig, (a, b) = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.6), gridspec_kw={"width_ratios": [1, 1.35]})
+    rng = np.random.default_rng(0)
+    pw, pc = fd["pc_w"], fd["pc_c"]
+    sw = rng.choice(len(pw), min(len(pw), 4000), replace=False)
+    a.scatter(pw[sw, 0], pw[sw, 1], s=2, lw=0, alpha=0.35, color=COLORS["Waymo"], label="Waymo (P3 subset)")
+    a.scatter(pc[:, 0], pc[:, 1], s=2, lw=0, alpha=0.5, color=COLORS["CARLA"], label="CARLA")
+    a.set_xlabel("PC 1 of Waymo features")
+    a.set_ylabel("PC 2")
+    a.legend(markerscale=4, loc="best")
+    ps.panel(a, "(a)")
+    t = q1[q1.tap == "L18_last"].reset_index(drop=True)
+    m = q1[q1.tap == "L18_mean"].set_index("comparison").auc
+    y = np.arange(len(t))[::-1]
+    ctrl = t.comparison.str.startswith("control")
+    b.scatter(t.auc, y, s=14, color=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_last")
+    b.scatter(m.reindex(t.comparison).to_numpy(), y, s=14, facecolors="none",
+              edgecolors=np.where(ctrl, ps.BASELINE, COLORS["CARLA"]), zorder=3, label="L18_mean")
+    b.axvline(0.5, color="#999999", lw=0.5)
+    b.set_yticks(y)
+    b.set_yticklabels([c.replace("Waymo vs CARLA, ", "").replace("Waymo vs CARLA", "raw").replace("control: ", "ctrl: ")
+                       for c in t.comparison], fontsize=6.5)
+    b.set_xlim(0.4, 1.01)
+    b.set_xlabel("out-of-fold ROC AUC")
+    b.legend(loc="lower left", fontsize=7)
+    ps.panel(b, "(b)")
+    fig.tight_layout(pad=0.3)
+    return ps.save(fig, out / "p4-domain-gap")
+
+
+def fig_transfer(ps, run: Path, out: Path):
+    import matplotlib.pyplot as plt
+    fd = np.load(run / "figdata.npz")
+    q3 = pd.read_csv(run / "q3_heads.csv")
+    fig, (a, b) = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.4))
+    edges = np.arange(0, 22, 2)
+    for name, v0, e in (("Waymo", fd["v0_w"], fd["ade_w"]), ("CARLA", fd["v0_c"], fd["ade_c"])):
+        k = np.minimum(np.digitize(v0, edges) - 1, len(edges) - 2)
+        mean = np.array([e[k == i].mean() if (k == i).sum() >= 10 else np.nan for i in range(len(edges) - 1)])
+        a.plot(edges[:-1] + 1, mean, marker="o", ms=3, color=COLORS[name], label=f"{name} (n={len(v0)})")
+    a.set_xlabel("speed at $t_0$ (m/s)")
+    a.set_ylabel("oracle minADE, K=1024 (m)")
+    a.legend()
+    ps.panel(a, "(a)")
+    arms = ["CTRV", "ridge ego", "ridge_late L18_last", "ridge_late L18_last (per-domain std)", "cls_late L18_last K1024"]
+    lab = ["CTRV", "ridge ego", "ridge_late", "ridge_late\n(per-domain std)", "cls_late\ntop-1"]
+    g = q3[q3.subset == "all"].groupby(["domain", "arm"])
+    w = g.ade_reweighted_to_carla.mean().loc["Waymo eval half"]
+    c = g.ade.mean().loc["CARLA"]
+    x = np.arange(len(arms))
+    b.bar(x - 0.19, [w.get(k.replace(" (per-domain std)", ""), np.nan) for k in arms], 0.38, color=COLORS["Waymo"],
+          label="Waymo eval half (re-weighted to CARLA speed x manoeuvre)")
+    b.bar(x + 0.19, [c.get(k, np.nan) for k in arms], 0.38, color=COLORS["CARLA"], label="CARLA")
+    b.set_xticks(x)
+    b.set_xticklabels(lab, fontsize=7)
+    b.set_ylabel("ADE over 5 s (m)")
+    ps.bars(b)
+    b.legend(fontsize=6.5, loc="upper left")
+    ps.panel(b, "(b)")
+    fig.tight_layout(pad=0.3)
+    return ps.save(fig, out / "p4-transfer")
+
+
+def figs(run: Path):
+    ps = _style()
+    out = data_dir() / "runs" / "p4_carla" / "figs"
+    out.mkdir(parents=True, exist_ok=True)
+    info = {"rig": fig_rig(ps, out), "gap": fig_gap(ps, run, out), "transfer": fig_transfer(ps, run, out)}
+    (out / "figs.json").write_text(json.dumps(info, indent=1, default=str))
+    log.info("figures in %s: %s", out, info)
+
+
 # ---------------------------------------------------------------- entry point
 
 def main():
