@@ -394,33 +394,64 @@ def auc(y: np.ndarray, s: np.ndarray) -> float:
     return float(np.mean([roc_auc_score(y == c, s[:, c]) for c in present]))
 
 
-def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=False, pca_k=None, lam=1e-3,
-               folds=5, seed=0, dev="cuda") -> float:
-    """Out-of-fold AUC of a linear classifier for label `y`, folds grouped by sequence / route.
+def mlp_scores(Ztr: torch.Tensor, ytr: np.ndarray, Zte: torch.Tensor, epochs: int = 30, seed: int = 0) -> np.ndarray:
+    """P(class 1) from a small class-balanced MLP (2560 -> 256 -> 2): the classifier that can use a difference
+    in shape (covariance) and not only a shift, which is all a linear one sees once each class is centred."""
+    torch.manual_seed(seed)
+    d = Ztr.shape[1]
+    net = torch.nn.Sequential(torch.nn.Linear(d, 256), torch.nn.GELU(), torch.nn.Dropout(0.1),
+                              torch.nn.Linear(256, 2)).to(Ztr.device)
+    opt = torch.optim.AdamW(net.parameters(), lr=1e-3, weight_decay=1e-2)
+    y = torch.as_tensor(ytr, device=Ztr.device)
+    cnt = torch.bincount(y, minlength=2).float()
+    wt = len(y) / (2 * cnt)
+    g = torch.Generator(device="cpu").manual_seed(seed)
+    for _ in range(epochs):
+        for b in torch.randperm(len(y), generator=g).split(512):
+            b = b.to(Ztr.device)
+            loss = torch.nn.functional.cross_entropy(net(Ztr[b]), y[b], weight=wt)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+    net.eval()
+    with torch.no_grad():
+        return net(Zte).softmax(1)[:, 1].cpu().numpy()
 
-    Standardisation (and the PCA, and the per-class centring) are estimated on the training folds only.
-    `center` subtracts each class's own training mean from its rows before the classifier sees them, so what is
-    left for it is everything except a translation between the classes."""
+
+def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=None, pca_k=None, lam=1e-3,
+               model="linear", folds=5, seed=0, dev="cuda") -> float:
+    """Out-of-fold AUC of a classifier for label `y`, folds grouped by sequence / route.
+
+    Standardisation, PCA and per-class normalisation are estimated on the training folds only.
+    `center="mean"` subtracts each class's own training mean from its rows, `center="z"` also divides by its own
+    per-dimension std. After that a linear classifier has nothing left to use (with equal class means the
+    balanced logistic loss is minimised at w = 0, so it scores 0.5 by construction), so those variants are
+    meaningful only with `model="mlp"`."""
     from sklearn.model_selection import GroupKFold
     y = np.asarray(y, np.int64)
     Xt = torch.as_tensor(X, device=dev, dtype=torch.float32)
     oof = np.zeros(len(y))
-    gkf = GroupKFold(folds)
-    for tr, te in gkf.split(X, y, groups):
+    for tr, te in GroupKFold(folds).split(X, y, groups):
         mu, sd = _std(Xt, tr)
         Z = (Xt - mu) / sd
         if center:
             for c in (0, 1):
                 m_tr, m_te = tr[y[tr] == c], te[y[te] == c]
-                Z[m_te] -= Z[m_tr].mean(0)
-                Z[m_tr] -= Z[m_tr].mean(0)
+                mc, sc = _std(Z, m_tr)
+                if center != "z":
+                    sc = torch.ones_like(sc)
+                Z[m_te] = (Z[m_te] - mc) / sc
+                Z[m_tr] = (Z[m_tr] - mc) / sc
         if pca_k:
             ref = tr[y[tr] == 0]
             mref = Z[ref].mean(0)
             _, _, V = torch.linalg.svd(Z[ref] - mref, full_matrices=False)
             Z = (Z - mref) @ V[:pca_k].T
-        W, b = logreg(Z[tr], torch.as_tensor(y[tr], device=dev), lam)
-        oof[te] = (Z[te] @ W + b).softmax(1)[:, 1].cpu().numpy()
+        if model == "mlp":
+            oof[te] = mlp_scores(Z[tr], y[tr], Z[te], seed=seed)
+        else:
+            W, b = logreg(Z[tr], torch.as_tensor(y[tr], device=dev), lam)
+            oof[te] = (Z[te] @ W + b).softmax(1)[:, 1].cpu().numpy()
         del Z
     return auc(y, oof)
 
@@ -483,23 +514,28 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
         X = np.concatenate([Xw, Xc])
         y = np.r_[np.zeros(len(Xw)), np.ones(len(Xc))].astype(np.int64)
         g = np.r_[W["seq"], C["seq"]]
+        Xm = np.concatenate([Xw[mw], Xc[mc]])
+        ym = np.r_[np.zeros(len(mw)), np.ones(len(mc))].astype(np.int64)
+        gm = np.r_[W["seq"][mw], C["seq"][mc]]
         add("Waymo vs CARLA", tap, X, y, g)
-        add("Waymo vs CARLA, matched (v0 x manoeuvre)", tap, np.concatenate([Xw[mw], Xc[mc]]),
-            np.r_[np.zeros(len(mw)), np.ones(len(mc))].astype(np.int64), np.r_[W["seq"][mw], C["seq"][mc]])
-        add("Waymo vs CARLA, per-domain centred", tap, X, y, g, center=True)
-        add("Waymo vs CARLA, matched + centred", tap, np.concatenate([Xw[mw], Xc[mc]]),
-            np.r_[np.zeros(len(mw)), np.ones(len(mc))].astype(np.int64), np.r_[W["seq"][mw], C["seq"][mc]],
-            center=True)
+        add("Waymo vs CARLA, matched (v0 x manoeuvre)", tap, Xm, ym, gm)
+        add("Waymo vs CARLA, MLP", tap, X, y, g, model="mlp")
+        add("Waymo vs CARLA, per-domain centred, MLP", tap, X, y, g, center="mean", model="mlp")
+        add("Waymo vs CARLA, per-domain z-scored, MLP", tap, X, y, g, center="z", model="mlp")
+        add("Waymo vs CARLA, matched + centred, MLP", tap, Xm, ym, gm, center="mean", model="mlp")
         for k in (1, 4, 16, 64):
             add(f"Waymo vs CARLA, top-{k} Waymo PCs", tap, X, y, g, pca_k=k)
-        # controls
-        add("control: CARLA Large Map vs small town", tap, Xc, t.large_map.to_numpy().astype(np.int64), C["seq"])
-        if 0 < t.night.sum() < len(t):
-            add("control: CARLA night vs day", tap, Xc, t.night.to_numpy().astype(np.int64), C["seq"])
+        # controls: how separable are things that are one domain?
+        for model, tag in (("linear", ""), ("mlp", ", MLP")):
+            add("control: CARLA Large Map vs small town" + tag, tap, Xc, t.large_map.to_numpy().astype(np.int64),
+                C["seq"], model=model)
+            if 0 < t.night.sum() < len(t):
+                add("control: CARLA night vs day" + tag, tap, Xc, t.night.to_numpy().astype(np.int64), C["seq"],
+                    model=model)
         rnd = pd.Series(W["seq"]).map(lambda q: zlib.crc32(str(q).encode()) % 2).to_numpy()
         add("control: Waymo random sequence halves", tap, Xw, rnd.astype(np.int64), W["seq"])
         vc = pd.Series(W["cluster"]).groupby(W["seq"]).first().value_counts()
-        for cl in vc.index[vc >= 25]:
+        for cl in vc.index[:4]:
             add(f"control: Waymo cluster {cl} vs rest", tap, Xw, (W["cluster"] == cl).astype(np.int64), W["seq"])
     tab = pd.DataFrame(rows)
     tab.attrs["matched_n"] = len(mw)
