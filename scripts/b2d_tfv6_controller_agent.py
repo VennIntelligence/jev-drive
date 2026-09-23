@@ -11,7 +11,7 @@ import numpy as np
 
 from lead.inference.sensor_agent import SensorAgent
 from b2d_controller import Controller
-from b2d_controller_adapter import GPSProjector, PoseFilter
+from b2d_controller_adapter import GPSProjector, PoseFilter, controller_speed
 from b2d_tfv6_coordinates import rear_waypoints
 
 
@@ -24,6 +24,11 @@ def get_entry_point():
 
 def _triplet(steer, throttle, brake):
     return {"steer": float(steer), "throttle": float(throttle), "brake": float(brake)}
+
+
+def _logged_number(value):
+    number = float(value)
+    return number if np.isfinite(number) else str(number)
 
 
 def _normalize_brake(raw, speed):
@@ -142,6 +147,7 @@ class TFv6ControllerAgent(SensorAgent):
                                        lateral_coefficient_s2_per_m=0.010659832)
         self._sensor_pose = None
         self._raw = self._rear = self._prediction = None
+        self._controller_reason = {}
         self._pre_force = self._pre_stop = None
         self._tick_data = None
         self._forward_ms = None
@@ -172,14 +178,16 @@ class TFv6ControllerAgent(SensorAgent):
                               prediction.target_speed_brake),
                 "B": _triplet(*self._author_waypoint_control),
             }
-            speed = float(self._tick_data["speed"].item())
+            speed = self._controller_speed
             yaw_rate = -float(self._motion["imu"][1][5])
             for arm, controller in self._controllers.items():
                 controller.update(self._rear if self._rear is not None else np.full((8, 2), np.nan),
                                   self._sim_time, trajectory_dt=0.25)
                 throttle, steer, brake = controller.step(self._sim_time, speed, yaw_rate)
                 self._raw[arm] = _triplet(steer, throttle, brake)
-            self._raw = {arm: _normalize_brake(raw, speed) for arm, raw in self._raw.items()}
+                self._controller_reason[arm] = controller.diagnostics["reason"]
+            author_speed = float(self._tick_data["speed"].item())
+            self._raw = {arm: _normalize_brake(raw, author_speed) for arm, raw in self._raw.items()}
             if self.arm in "CD":
                 chosen = _select_arm_control(self.arm, self._raw)
                 prediction.steer = chosen["steer"]
@@ -210,11 +218,12 @@ class TFv6ControllerAgent(SensorAgent):
     def run_step(self, input_data, timestamp, *args, **kwargs):
         self._motion = input_data
         self._sim_time = float(timestamp)
+        self._raw_signed_speed = float(input_data["speed"][1]["speed"])
+        self._controller_speed = controller_speed(self._raw_signed_speed)
         try:
-            speed = float(input_data["speed"][1]["speed"])
             imu = input_data["imu"][1]
             xy, yaw = self._pose_filter.update(input_data["gps"][1], float(imu[6]),
-                                                speed, float(imu[5]), self._sim_time)
+                                                self._controller_speed, float(imu[5]), self._sim_time)
             self._sensor_pose = {"xy": xy.tolist(), "yaw": yaw,
                                  "status": self._pose_filter.diagnostics}
         except ValueError as error:
@@ -222,6 +231,7 @@ class TFv6ControllerAgent(SensorAgent):
                                  "error": str(error), "status": self._pose_filter.diagnostics}
             self._pose_filter.reset()
         self._prediction = self._raw = self._rear = None
+        self._controller_reason = {}
         self._pre_force = self._pre_stop = None
         started = time.perf_counter()
         control = super().run_step(input_data, timestamp, *args, **kwargs)
@@ -268,6 +278,9 @@ class TFv6ControllerAgent(SensorAgent):
                 "sim_time": self._sim_time, "arm": self.arm, "raw_control": self._raw,
                 "final_control": final, "executed_control": observed,
                 "speed": float(self._tick_data["speed"].item()) if self._tick_data is not None else None,
+                "raw_signed_speed_mps": _logged_number(self._raw_signed_speed),
+                "controller_speed_mps": _logged_number(self._controller_speed),
+                "controller_reason": self._controller_reason,
                 "changed_processor_keys": changed, "shadow_guard_ms": guard_ms,
                 "force_state": {"stuck_detector": self.force_move_post_processor.stuck_detector,
                 "force_move": self.force_move_post_processor.force_move},
@@ -287,6 +300,9 @@ class TFv6ControllerAgent(SensorAgent):
             "rear_waypoint": self._rear.tolist() if self._rear is not None else None,
             "raw_control": self._raw, "final_control": final,
             "executed_control": _triplet(control.steer, control.throttle, control.brake),
+            "raw_signed_speed_mps": _logged_number(self._raw_signed_speed),
+            "controller_speed_mps": _logged_number(self._controller_speed),
+            "controller_reason": self._controller_reason,
             "truth": truth, "forward_ms": self._forward_ms,
             "sensor_rear_pose": self._sensor_pose,
             "agent_ms": (time.perf_counter() - started) * 1000.0,

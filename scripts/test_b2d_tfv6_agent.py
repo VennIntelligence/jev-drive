@@ -4,9 +4,13 @@ from collections import deque
 from types import SimpleNamespace
 import unittest
 
+import numpy as np
+
+from b2d_controller import Controller
 from b2d_tfv6_controller_agent import (
     _apply_postprocessors, _changed_processor_keys, _clone_processor,
     _configure_author_arm, _normalize_brake, _processor_snapshot, _select_arm_control,
+    controller_speed,
 )
 
 
@@ -113,6 +117,23 @@ class AgentPathTests(unittest.TestCase):
         shadow = _clone_processor(live)
         shadow.adjust(1.0, .3, 0.)
         self.assertEqual(_changed_processor_keys(before, live), ["events"])
+
+    def test_production_speed_contract_on_forward_tfv6_plan(self):
+        plan = np.column_stack((np.arange(1, 9, dtype=float) * .25, np.zeros(8)))
+        def control(raw_speed):
+            controller = Controller(preset="pursuit", longitudinal_mode="pi", lookahead="max",
+                                    pi_kp=.5, pi_ki=.25, max_lookahead_time_s=.5)
+            self.assertTrue(controller.update(plan, 0., trajectory_dt=.25))
+            result = controller.step(0., controller_speed(raw_speed), 0.)
+            return result, controller.diagnostics["reason"]
+
+        (throttle, steer, brake), reason = control(-4e-6)
+        self.assertGreater(throttle, 0.)
+        self.assertEqual(brake, 0.)
+        self.assertEqual(reason, "tracking")
+        (throttle, steer, brake), reason = control(-.5)
+        self.assertEqual((throttle, steer, brake), (0., 0., 1.))
+        self.assertEqual(reason, "invalid_motion")
 
 
 if __name__ == "__main__":
