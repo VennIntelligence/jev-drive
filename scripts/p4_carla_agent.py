@@ -106,7 +106,7 @@ class P4Agent(AutonomousAgent):
         self.mx, self.my = distortion_maps(cfg)
         self.fov = math.degrees(2 * math.atan(cfg["render_w"] / 2.0 / cfg["f"]))
         self._tick, self._ba, self._still_since, self._n_frames, self._buf = 0, None, None, 0, {}
-        self._last_cam, self._missed = None, 0
+        self._last_cam, self._last_saved, self._missed, self._arrivals = None, None, 0, []
         self._pose = open(self.out / "pose.jsonl", "w")
         self._frames = open(self.out / "frames.jsonl", "w")
         self._t_img = 0.0
@@ -115,7 +115,8 @@ class P4Agent(AutonomousAgent):
         c = self.cfg
         return [{"type": "sensor.camera.rgb", "id": name, "x": x + REAR_AXLE_X, "y": -y, "z": z - c["origin_z"],
                  "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": c["render_w"], "height": c["render_h"],
-                 "fov": self.fov, "sensor_tick": c["sensor_tick"] - 0.01} for name, x, y, z, yaw in WAYMO_CAMS]
+                 "fov": self.fov, **({"sensor_tick": c["sensor_tick"] - 0.01} if c["sensor_tick"] > 0 else {})}
+                for name, x, y, z, yaw in WAYMO_CAMS]
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
@@ -165,8 +166,11 @@ class P4Agent(AutonomousAgent):
         Town12 smoke kept 4 of ~100. Labels are joined to images by the image frame number, so a set that
         lands a tick late costs nothing."""
         si = self.sensor_interface
-        due = self._last_cam is not None and frame >= self._last_cam + CAM_TICKS
-        due = due or (self._last_cam is None and self._tick > 2 * CAM_TICKS)
+        if self.cfg["sensor_tick"] > 0:
+            due = self._last_cam is not None and frame >= self._last_cam + CAM_TICKS
+            due = due or (self._last_cam is None and self._tick > 2 * CAM_TICKS)
+        else:                                       # cameras on every tick: wait for this tick's set
+            due = self._last_cam is None or frame > self._last_cam
         deadline = time.time() + 20.0
         out = []
         while True:
@@ -181,6 +185,8 @@ class P4Agent(AutonomousAgent):
                     self._last_cam = frame          # a lost firing: expect the next one, do not wait again
                 break
             self._buf.setdefault(f, {})[tag] = data
+            if len(self._arrivals) < 4000:
+                self._arrivals.append((self._tick, frame, tag, f, round(time.time(), 3)))
             if len(self._buf[f]) == len(WAYMO_CAMS):
                 out.append((f, self._buf.pop(f)))
                 self._last_cam = f
@@ -209,7 +215,9 @@ class P4Agent(AutonomousAgent):
             self._init_driver()
         frame, t = GameTime.get_frame(), GameTime.get_time()
         for f, got in self._drain_cameras(frame):
-            self._save(f, got)
+            if self._last_saved is None or f - self._last_saved >= CAM_TICKS:
+                self._save(f, got)
+                self._last_saved = f
         control = self.run_step(None, t)
         speed = self._log_pose(frame, t, control)
         # Stop conditions: enough simulated time, or standing still for too long (a blocked lane, a jam).
@@ -232,6 +240,9 @@ class P4Agent(AutonomousAgent):
             return
         for fh in (self._pose, self._frames):
             fh.close()
+        with open(self.out / "arrivals.jsonl", "w") as fh:
+            for a in self._arrivals:
+                fh.write(json.dumps(dict(zip(("tick", "tick_frame", "tag", "frame", "wall"), a))) + "\n")
         (self.out / "p4_summary.json").write_text(json.dumps(
             {"ticks": self._tick, "camera_frames": self._n_frames, "missed_waits": self._missed, "stop": STOP["why"] or "route_end",
              "image_ms_per_frame": 1e3 * self._t_img / max(self._n_frames, 1)}))
