@@ -109,15 +109,16 @@ def probes(t, X, fold, rl) -> tuple[dict, pd.DataFrame]:
                     continue
                 mu, sd = _std(Xt, tr)
                 Z = (Xt - mu) / sd
-                y = torch.as_tensor(y_all.astype(np.int64).clip(0), device="cuda")
-                a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=0).split(tr, groups=seq[tr]))
-                fi, si = tr[a], tr[b]
+                y = torch.as_tensor(np.nan_to_num(y_all).astype(np.int64), device="cuda")
                 sel = []
-                for lam in LAMS_PROBE:
-                    Wb = logreg(Z[fi], y[fi], lam)
-                    p = (Z[si] @ Wb[0] + Wb[1]).softmax(1)[:, 1].cpu().numpy()
-                    sel.append(auc(y_all[si], p) if len(np.unique(y_all[si])) == 2 else 0.5)
-                lam = LAMS_PROBE[int(np.argmax(sel))]
+                if len(np.unique(seq[tr])) >= 5:
+                    a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=0).split(tr, groups=seq[tr]))
+                    fi, si = tr[a], tr[b]
+                    if len(np.unique(y_all[fi])) == 2 and len(np.unique(y_all[si])) == 2:
+                        for lam in LAMS_PROBE:
+                            Wb = logreg(Z[fi], y[fi], lam)
+                            sel.append(auc(y_all[si], (Z[si] @ Wb[0] + Wb[1]).softmax(1)[:, 1].cpu().numpy()))
+                lam = LAMS_PROBE[int(np.argmax(sel))] if sel else 1e-2
                 Wb = logreg(Z[tr], y[tr], lam)
                 pr = (Z @ Wb[0] + Wb[1]).softmax(1)[:, 1].cpu().numpy()
                 s[ev] = pr[ev]
