@@ -932,9 +932,13 @@ def _shrink_png(stem: Path, limit: int = 480 * 1024):
     repo's ~500 KB rule without changing the pixel size."""
     from PIL import Image
     p = Path(str(stem) + ".png")
-    if p.stat().st_size > limit:
-        Image.open(p).convert("RGB").quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(
-            p, optimize=True, dpi=(300, 300))
+    img, dpi = Image.open(p).convert("RGB"), 300
+    while p.stat().st_size > limit and dpi > 120:
+        q = img.quantize(256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+        q.save(p, optimize=True, dpi=(dpi, dpi))
+        if p.stat().st_size > limit:              # a photo grid: fewer pixels, same physical size
+            dpi = int(dpi * 0.8)
+            img = img.resize((round(img.width * 0.8), round(img.height * 0.8)), Image.LANCZOS)
     return p.stat().st_size
 
 
@@ -996,8 +1000,9 @@ def fig_gap(ps, run: Path, out: Path):
     y = np.arange(len(t))[::-1]
     ctrl = t.comparison.str.startswith(("control", "null")).to_numpy()
     col = np.where(ctrl, ps.BASELINE, COLORS["CARLA"])
-    b.errorbar(t["mean"], y, xerr=[t["mean"] - t["min"], t["max"] - t["mean"]], fmt="none", ecolor=col, lw=0.7,
-               capsize=1.5)
+    for yi, (mn, lo, hi, c) in enumerate(zip(t["mean"], t["min"], t["max"], col)):
+        if hi > lo:
+            b.errorbar(mn, y[yi], xerr=[[mn - lo], [hi - mn]], fmt="none", ecolor=c, lw=0.7, capsize=1.5)
     b.scatter(t["mean"], y, s=14, color=col, zorder=3, label="L18_last")
     b.scatter(m.reindex(t.comparison).to_numpy(), y, s=14, facecolors="none", edgecolors=col, zorder=3,
               label="L18_mean")
