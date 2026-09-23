@@ -324,6 +324,9 @@ def main():
     p.add_argument('--allow-truth-pose-diagnostic', action='store_true',
                    help='DIAGNOSTIC ONLY: permit configs with diagnostic_truth_pose_ceiling (truth pose drives control)')
     p.add_argument('--chase-camera', help='render pass only: save an off-screen chase view per tick to this directory')
+    p.add_argument('--quality', default='Epic', choices=('Epic', 'Low'),
+                   help='server render quality; Low only to keep a big map (Town13) from starving the render '
+                        'thread under GPU contention. With --rig none nothing rendered reaches the agent.')
     a = p.parse_args()
 
     routes_path, out = [Path(x).resolve() for x in (a.routes, a.out)]
@@ -352,7 +355,7 @@ def main():
     from b2d_agent import StubAgent
     import b2d_hooks
     b2d_hooks._patch_sensor_tick()
-    server = Server(a.server_index, out / 'servers', 'Epic', gpu_rank=0)
+    server = Server(a.server_index, out / 'servers', a.quality, gpu_rank=0)
     log = (out / 'log.txt').open('a')
     events = (out / 'events.jsonl').open('a')
     results = []
