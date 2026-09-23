@@ -1,0 +1,14 @@
+{
+  "model": "Qwen/Qwen3-VL-4B-Instruct",
+  "variant": "text",
+  "cams": [],
+  "frames": 4,
+  "stride": 2,
+  "prompt_sha256": "ac0fac01bfe7253b8f5d0fc5aef83d6c6b37532817f5ea2be8296c3169e7fd6e",
+  "decoding": "greedy",
+  "max_new_tokens": 96,
+  "batch_size": 16,
+  "n_todo": 3758,
+  "n_done_before": 0,
+  "frame_set": "p5vlm_v1"
+}

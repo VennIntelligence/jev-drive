@@ -1,0 +1,6 @@
+arm,subset,axis,n,acc,lo,hi
+"continuation (stop if stopped, else keep; keep_lane)","pre_onset, unambiguous lateral",lat3,1130,0.011504424778761062,0.0016379681273298295,0.025953576065551362
+"ego kinematic (CTRA extrapolation, same judge)","pre_onset, unambiguous lateral",lat3,1130,0.17168141592920355,0.13069950119290044,0.21715819154343247
+route command (CTRA long; lateral = intent),"pre_onset, unambiguous lateral",lat3,1130,0.7752212389380531,0.708878397638196,0.8336737967833696
+VLM Qwen3-VL-4B main,"pre_onset, unambiguous lateral",lat3,1130,0.7486725663716814,0.6793743682536248,0.8085504508764308
+VLM Qwen3-VL-4B text,"pre_onset, unambiguous lateral",lat3,1130,0.7743362831858407,0.7079303675048356,0.8330704391638984

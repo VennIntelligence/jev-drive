@@ -1,0 +1,24 @@
+{
+  "model": "Qwen/Qwen3-VL-4B-Instruct",
+  "variant": "main",
+  "cams": [
+    "front",
+    "front_left",
+    "front_right"
+  ],
+  "frames": 4,
+  "stride": 2,
+  "prompt_sha256": "d9c316968a80f48137fe9761a4285b00b3ab62aa5a6cb725e177cecb7c766513",
+  "decoding": "greedy",
+  "max_new_tokens": 96,
+  "batch_size": 3,
+  "n_todo": 3758,
+  "n_done_before": 0,
+  "frame_set": "p5vlm_v1",
+  "n": 3758,
+  "wall_s": 5677.748432453722,
+  "s_per_frame": 1.5102480197211259,
+  "gen_tokens_per_frame": 42.10244811069718,
+  "peak_vram_gb": 13.553378582000732,
+  "peak_vram_reserved_gb": 14.076171875
+}
