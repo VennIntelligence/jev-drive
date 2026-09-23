@@ -17,7 +17,7 @@
 | P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，口径已定（第 22 条）** |
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
 | P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做） |
-| P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | 待做，等 GPU 空 |
+| P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | **已测，按预登记判据「不可用」**：去均值后 domain AUC 仍 1.000（null 0.48），pre-onset 词表 uncoverable +35 pp，head 匹配 ADE 比值 > 2；只有「在不在动」的 probe 迁移（0.87–0.89） |
 | P5 | 开环配对考试 v0 | 教材作用在 head、表征还是数据；VLM 零样本 meta-action 一列决定标签来源（第 25 条） | 待做，依赖 P4 |
 
 术语，本文各用一次：**pre-onset** 是车还没开始转、ego 运动看不出意图的帧；**s_ego** 是 ego-only 读出模型自己的
@@ -359,10 +359,37 @@ proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 
   放大同族 backbone 没有用（32B 八个 tap 全在噪声带）。Stage B 的表征选择：Qwen3-VL-4B + 原生视频输入，再往上是给它更长的 clip。
 - 评测：pre-onset 的 power 被 479 个 val sequence 锁死，train 训多十倍数据不改半宽（d‴）。要判 0.05 m 以下的效应得改评测设计，不是加数据。
 - 反应通道（第 25 条）：「什么时候反应」真实数据学得会，「怎么反应」学不会，配对监督的靶子是后者。
-- 尚未回答：P4、P5。它们决定仿真配对对这个 head 有没有意义，等 GPU 空出来就做。
+- 仿真配对（P4）：Waymo 训的 head 不能拿 CARLA 帧来考，P5 要改成 CARLA 内训考或换真实数据渲染的配对，见下面的 P4 节。P5 尚未回答。
+
+## P4：CARLA 帧上 Waymo 的 head 读不出东西（按预登记判据「不可用」）
+
+计划、判据和全部表在 [todos/2026-09-23-p4-carla-feature-gap.md](../../todos/2026-09-23-p4-carla-feature-gap.md)。
+CARLA 0.9.15 里用特权的 `BehaviorAgent` 开 151 条 Bench2Drive 路线（按 scenario family 取，12 个 town，带背景车流），
+三台相机按 WOD-E2E 的标定复刻（972 × 1079、f = 1113.5 px、Waymo 的主点和径向畸变、同样的安装位置和 JPEG q95），
+按动作分层抽 3000 帧（pre-onset 35%、转弯中 25%、直行 25%、停车 10%），用 P3(d″) 完全相同的抽取器（16 行 Waymo 逐位一致）抽 `L18_last / L18_mean`。
+
+| 问题 | 结果 | 判据档 |
+|:--|:--|:--|
+| 特征差距 | Waymo 对 CARLA 的 AUC 在 raw、匹配、按域去均值 / z-score 的 MLP、逐层下全部 ≥ 0.999；同样组数的 Waymo 伪域 null 0.48；CARLA 内部 town 0.98、昼夜 0.995 | 不可用 |
+| 词表覆盖（K=1024） | 匹配后 minADE 比值 1.54（pre-onset 1.87），uncoverable 28.9% 对 13.6%（pre-onset 53.5% 对 18.9%）；终点 minFDE 比值只有 1.04 | 不可用 |
+| head 迁移 | Waymo 训的 `ridge ego` 在 CARLA 上外推（即便裁剪输入也比 CTRV 差），所有 head 的匹配 ADE 比值 2.5–10；视觉增量按域标准化后 ≈ 0 | 不可用 |
+| probe 迁移 | 「在不在动」0.87–0.89，「3 s 后往哪转」0.58–0.66 | 加自适应可用 |
+
+![P4 domain gap](../figs/p4-domain-gap.png)
+
+看什么：左图 CARLA 帧在 Waymo 自己的前两个主成分上挤在一个角里；右图所有 Waymo 对 CARLA 的估计量都顶在 1.0，而同样组数的 null 在 0.5 附近。
+
+![P4 transfer](../figs/p4-transfer.png)
+
+看什么：(a) 同速度下词表对 CARLA 轨迹的下限更高；(b) 视觉增量在 CARLA 上与 Waymo 同量级、按域标准化后归零——视觉特征在 CARLA 上「读不出东西」而不是「读错」；
+(c) 三个帧集合的层组成。
+
+结论：CARLA 帧在 Qwen 的视频表征里是一个自成一体的域，差距不是一个平移。**P5 不能把 Waymo 训的 head 放到 CARLA 配对上考**；
+要么在 CARLA 上训、在 CARLA 上考（放弃跨域那半句），要么换真实数据渲染的配对（第 19 条的 HUGSIM 一类）。
+限定：expert 不会绕障碍、47% 的路线有碰撞，更好的 expert 可能缩小词表和 head 的差距，但不影响特征差距那一行。
 
 ## 结果文件
 
 `research/results/p0-train-split/`、`p1-judge/`、`p2-readout-ladder/`、`p2p3-subset/`、`p3-backbone-ladder/`、
-`top-decile-audit/`；run dir 在 box 上 `$DATA_DIR/runs/waymo_p0/`、`waymo_p1/`、`waymo_ladder/`、
+`top-decile-audit/`、`p4-carla-gap/`；run dir 在 box 上 `$DATA_DIR/runs/waymo_p0/`、`waymo_p1/`、`waymo_ladder/`、
 `waymo_l0/top_decile_audit/`。

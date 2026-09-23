@@ -1,0 +1,61 @@
+comparison,tap,n0,n1,groups,auc
+Waymo vs CARLA,L18_last,19663,3000,629,1.0
+"Waymo vs CARLA, matched (v0 x layer)",L18_last,2864,2864,593,1.0
+"Waymo vs CARLA, MLP",L18_last,19663,3000,629,0.9999999999999999
+"Waymo vs CARLA, per-domain centred, MLP",L18_last,19663,3000,629,1.0
+"Waymo vs CARLA, per-domain z-scored, MLP",L18_last,19663,3000,629,1.0
+"Waymo vs CARLA, matched + centred, MLP",L18_last,2864,2864,593,0.9999946357791579
+null: Waymo pseudo-domain (draw 0),L18_last,13691,3000,479,0.5462210698025467
+"null: Waymo pseudo-domain, MLP (draw 0)",L18_last,13691,3000,479,0.541146629172449
+"null: Waymo pseudo-domain, centred, MLP (draw 0)",L18_last,13691,3000,479,0.5906635746110583
+"null: Waymo pseudo-domain, z-scored, MLP (draw 0)",L18_last,13691,3000,479,0.600510554378789
+"null: Waymo pseudo-domain, top-16 PCs (draw 0)",L18_last,13691,3000,479,0.5572161639032942
+null: Waymo pseudo-domain (draw 1),L18_last,13486,3000,479,0.47104955756587086
+"null: Waymo pseudo-domain, MLP (draw 1)",L18_last,13486,3000,479,0.4661410475060557
+"null: Waymo pseudo-domain, centred, MLP (draw 1)",L18_last,13486,3000,479,0.43616140194769887
+"null: Waymo pseudo-domain, z-scored, MLP (draw 1)",L18_last,13486,3000,479,0.4357829971822631
+"null: Waymo pseudo-domain, top-16 PCs (draw 1)",L18_last,13486,3000,479,0.4851367714667062
+null: Waymo pseudo-domain (draw 2),L18_last,13235,3000,479,0.49856844226167985
+"null: Waymo pseudo-domain, MLP (draw 2)",L18_last,13235,3000,479,0.4792660118373001
+"null: Waymo pseudo-domain, centred, MLP (draw 2)",L18_last,13235,3000,479,0.410434076312807
+"null: Waymo pseudo-domain, z-scored, MLP (draw 2)",L18_last,13235,3000,479,0.41735383452965624
+"null: Waymo pseudo-domain, top-16 PCs (draw 2)",L18_last,13235,3000,479,0.4196590353859715
+"Waymo vs CARLA, top-1 Waymo PCs",L18_last,19663,3000,629,0.6065476868568717
+"Waymo vs CARLA, top-4 Waymo PCs",L18_last,19663,3000,629,0.9543172879689436
+"Waymo vs CARLA, top-16 Waymo PCs",L18_last,19663,3000,629,0.9999985421010698
+"Waymo vs CARLA, top-64 Waymo PCs",L18_last,19663,3000,629,1.0
+layer pre-onset (3 kinds): Waymo vs CARLA,L18_last,2457,1050,491,1.0
+"layer pre-onset (3 kinds): Waymo vs CARLA, centred, MLP",L18_last,2457,1050,491,0.9999992247611295
+layer pre_onset_lateral: Waymo vs CARLA,L18_last,1458,600,277,1.0
+"layer pre_onset_lateral: Waymo vs CARLA, centred, MLP",L18_last,1458,600,277,0.999969135802469
+layer pre_onset_start: Waymo vs CARLA,L18_last,195,225,202,1.0
+"layer pre_onset_start: Waymo vs CARLA, centred, MLP",L18_last,195,225,202,0.9994757834757835
+layer pre_onset_brake: Waymo vs CARLA,L18_last,804,225,303,1.0
+"layer pre_onset_brake: Waymo vs CARLA, centred, MLP",L18_last,804,225,303,0.999983416252073
+layer in_turn: Waymo vs CARLA,L18_last,4238,750,374,1.0
+"layer in_turn: Waymo vs CARLA, centred, MLP",L18_last,4238,750,374,0.999962560956426
+layer stop_queue: Waymo vs CARLA,L18_last,612,300,232,1.0
+"layer stop_queue: Waymo vs CARLA, centred, MLP",L18_last,612,300,232,0.9999945533769063
+layer straight: Waymo vs CARLA,L18_last,10928,750,564,1.0
+"layer straight: Waymo vs CARLA, centred, MLP",L18_last,10928,750,564,0.9999971937530502
+layer other: Waymo vs CARLA,L18_last,1428,150,487,1.0
+"layer other: Waymo vs CARLA, centred, MLP",L18_last,1428,150,487,0.9999253034547152
+control: CARLA Large Map vs small town,L18_last,852,2148,150,0.9774910715066313
+control: CARLA night vs day,L18_last,2324,676,150,0.9945105867256007
+"control: CARLA Large Map vs small town, MLP",L18_last,852,2148,150,0.9612577700841922
+"control: CARLA night vs day, MLP",L18_last,2324,676,150,0.9952047199788162
+control: Waymo random sequence halves,L18_last,9229,10434,479,0.5134811495537284
+control: Waymo cluster Interections vs rest,L18_last,14891,4772,479,0.5708131505818503
+control: Waymo cluster Foreign Object Debris vs rest,L18_last,16102,3561,479,0.5668252614240215
+control: Waymo cluster Cyclist vs rest,L18_last,16833,2830,479,0.7073358762938105
+control: Waymo cluster Pedestrian vs rest,L18_last,17832,1831,479,0.5216052842489609
+Waymo vs CARLA,L18_mean,19663,3000,629,1.0
+"Waymo vs CARLA, matched (v0 x layer)",L18_mean,2864,2864,593,1.0
+"Waymo vs CARLA, MLP",L18_mean,19663,3000,629,1.0
+"Waymo vs CARLA, per-domain centred, MLP",L18_mean,19663,3000,629,0.9999991015274035
+"Waymo vs CARLA, per-domain z-scored, MLP",L18_mean,19663,3000,629,0.9999999491430607
+"Waymo vs CARLA, matched + centred, MLP",L18_mean,2864,2864,593,0.9998704053010207
+null: Waymo pseudo-domain (draw 0),L18_mean,13691,3000,479,0.5484764808998612
+"null: Waymo pseudo-domain, MLP (draw 0)",L18_mean,13691,3000,479,0.5547224697489835
+"null: Waymo pseudo-domain, centred, MLP (draw 0)",L18_mean,13691,3000,479,0.5716325323205025
+"null: Waymo pseudo-domain, z-scored, MLP (draw 0)",L18_mean,13691,3000,479,0.5651135417427506

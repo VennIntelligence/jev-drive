@@ -1,6 +1,6 @@
 # P4：CARLA 特征差距、词表覆盖与 head 迁移
 
-状态: running（预登记 2026-09-23，写于任何 CARLA 帧生成之前）
+状态: done（预登记 2026-09-23，写于任何 CARLA 帧生成之前；结果 2026-09-24 填）
 主题: ../research/prediag-2026-09/README.md（P4 行）；背景是 ../research/decisions.md 第 19、21、24、25 条
 
 ## 目标
@@ -128,11 +128,11 @@ head 在 fit 半上拟合，在 eval 半和全部 CARLA 帧上各评一次，所
 
 - [x] 2 条路线的 smoke（第一版清单里的 28035 / 2164）：Large Map 上 `sensor_tick` 让相机不按 4 tick 触发（Town12 一条路只收到 4 组），
       改成相机每 tick 渲染、每 4 tick 存一组：Town12 一条 21 s 的路线存 107 组、0 丢失，约 2.5 min / 路线；ego 原点在地面（bbox z = extent z）
-- [ ] 按 scenario family 冻结路线清单（约 88 条），估计 88 × 2.5 min ≈ 3.7 h（1 个 server），32B 结束后 2 个 server
-- [ ] 全量生成（`scripts/b2d_run.py --agent scripts/p4_carla_agent.py`，tmux `jev:p4-gen`，ledger 登记）
-- [ ] 建 CARLA 索引（关键帧、past / future / intent）并抽 `qwenvid` 特征（先做 16 行 Waymo 等价检查），`features/carla_p4`
-- [ ] 分析：Q1 AUC 全集 / 匹配子集 / 去均值 / PCA-k / 对照；Q2 词表覆盖；Q3 head 迁移、anchor 分布、probe 迁移
-- [ ] 图（`research/plot_style.py`）进 `research/figs/`，小结果进 `research/results/p4-carla-gap/`，结果填回本文
+- [x] 按 scenario family 冻结路线清单（约 88 条），估计 88 × 2.5 min ≈ 3.7 h（1 个 server），32B 结束后 2 个 server
+- [x] 全量生成（`scripts/b2d_run.py --agent scripts/p4_carla_agent.py`，tmux `jev:p4-gen`，ledger 登记）
+- [x] 建 CARLA 索引（关键帧、past / future / intent）并抽 `qwenvid` 特征（先做 16 行 Waymo 等价检查），`features/carla_p4`
+- [x] 分析：Q1 AUC 全集 / 匹配子集 / 去均值 / PCA-k / 对照；Q2 词表覆盖；Q3 head 迁移、anchor 分布、probe 迁移
+- [x] 图（`research/plot_style.py`）进 `research/figs/`，小结果进 `research/results/p4-carla-gap/`，结果填回本文
 
 ## 指标定义（跑之前写死）
 
@@ -203,4 +203,162 @@ Q3b 的 probe 迁移是这句话的直接检验。
 
 ## 结果
 
-跑完再填。run dir：`$DATA_DIR/runs/p4_carla/`。
+run dir：生成 `$DATA_DIR/runs/p4_carla/gen`（两波同一个目录），特征抽取 `runs/p4_carla/extract/`，
+分析 `runs/p4_carla/analyze/20260923-232345`，图 `runs/p4_carla/figs/`。小表在 `research/results/p4-carla-gap/`
+（`generation.csv`、`selection.json`、`composition.csv`、`q1_domain_auc.csv`、`q2_vocab.csv`、`q3_heads.csv`、
+`q3_anchor_distribution.csv`、`q3b_probes.csv`）。
+
+### 数据是怎么来的
+
+152 条路线（wave 1 按 44 个 scenario 类型各 2 条 88 条，wave 2 是路口转弯和换道 / 汇入类剩下的 64 条），151 条跑完，
+24330 两次都让服务器段错误、放弃。总 wall time 6.4 h（1 个 server，最后一个小时 2 个）。expert 是 CARLA `BehaviorAgent(normal)`：
+平均路线完成度 82%，70% 的路线开完全程，**47% 的路线至少撞过一次**（共 84 次，主要是 scenario 里故意 cut-in / 横穿的对象），
+44 条因为停住 20–30 s 被提前结束（障碍类，expert 不会借道）。所以这批 future 是「一个会停、会撞、不会绕行的特权 expert」的轨迹，不是好司机的轨迹。
+
+抽帧严格按预登记的分层配额，**每一层都抽满，没有缺口**：
+
+| 层 | 候选 | 抽中 | CARLA 占比 | Waymo val 全集 | Waymo P3 子集 |
+|:--|--:|--:|--:|--:|--:|
+| pre-onset 横向 | 625 | 600 | 20.0% | 1.4% | 7.4% |
+| pre-onset 起步 | 609 | 225 | 7.5% | 3.0% | 1.0% |
+| pre-onset 开始刹车 | 981 | 225 | 7.5% | 3.6% | 4.1% |
+| in-turn | 1237 | 750 | 25.0% | 10.1% | 21.6% |
+| stop / queue | 6427 | 300 | 10.0% | 12.5% | 3.1% |
+| plain straight | 2640 | 750 | 25.0% | 41.3% | 55.6% |
+| other | 1810 | 150 | 5.0% | 28.1% | 7.3% |
+
+3000 帧、150 条路线、12 个 town（Town12 占 52%，Large Map 合计 72%），夜晚 22.5%，有雨 41.6%。
+横向 pre-onset 里路口转弯 67% / 换道 27% / 其他横向 6%，Waymo 是 67 / 20 / 14；**绕障碍 nudge 基本没有**，
+expert 做不到，按预登记没有拿直行补。速度分布比 Waymo 窄（v₀ p50 / p90：CARLA 6.3 / 7.5 m/s，Waymo 子集 5.7 / 11.8），
+5 s 航向变化中位数 7.7° 对 2.3°（路线本来就是转弯多）。intent 的路线前瞻距离按「Waymo 上 turn-within-3s 帧里 intent 为左右转的比例 0.618」
+标定到 15 m（`intent_lookahead.csv`）。
+
+![rig](../research/figs/p4-rig.png)
+
+看什么：上排是一段白天的 Waymo clip 的最后一帧，下排是一帧 CARLA，三相机同尺寸、同焦距、同主点、同畸变。
+几何是对上的（地平线都在画面约 2/3 处，±45° 两侧相机的重叠一致）；差的是渲染本身：材质、光照、植被和天空。
+
+### Q1 特征差距：完全可分，去掉均值和尺度之后仍然完全可分
+
+主 tap `L18_last`，5 折 StratifiedGroupKFold，Waymo 19 663 帧 / 479 sequence，CARLA 3000 帧 / 150 路线：
+
+| 比较 | AUC | 对照（null = 从 Waymo 里抽和 CARLA 一样多路线、帧的伪域，3 次均值 [min, max]） |
+|:--|--:|:--|
+| raw，线性 | **1.000** | 0.505 [0.471, 0.546] |
+| 匹配 v₀ × 层（2897 对 2897） | 1.000 | — |
+| raw，MLP | 1.000 | 0.496 [0.466, 0.541] |
+| **按域去均值，MLP** | **1.000** | **0.479 [0.410, 0.591]** |
+| 按域 z-score，MLP | 1.000 | 0.485 [0.417, 0.601] |
+| 匹配 + 去均值，MLP | 1.000 | — |
+| 只用 Waymo 前 1 / 4 / 16 个主成分 | 0.607 / 0.954 / 1.000 | null 前 16 个：0.487 |
+| 逐层（pre-onset 各类、in-turn、straight、stop、other），raw 和去均值 | 全部 ≥ 0.999 | — |
+| CARLA 内部：Large Map 对 small town（线性 / MLP） | 0.977 / 0.961 | |
+| CARLA 内部：夜晚对白天 | 0.995 / 0.995 | |
+| Waymo 内部：随机 sequence 两半 | 0.513 | |
+| Waymo 内部：4 个最大 cluster 各自对其余 | 0.52–0.71 | |
+
+![domain gap](../research/figs/p4-domain-gap.png)
+
+看什么：(a) 在 Waymo 自己的前两个主成分上，CARLA 已经挤在 Waymo 云的一个角里；(b) 所有 Waymo 对 CARLA 的估计量都顶在 1.0，
+null 在 0.5 附近，所以 1.0 不是估计量的偏差；CARLA 内部 town 和昼夜也几乎完全可分，而 Waymo 内部 cluster 只有 0.52–0.71。
+读法：CARLA 帧在这个表征里是一个自成一体、内部变化也很大的区域，差距不是一个平移——**去均值（加 z-score）后比 null 高 0.52，落在「不可用」（> 0.25）**。
+4 个主成分就到 0.95，差距集中在少数几个方向上，但不止一个。
+
+### Q2 词表覆盖：匹配后比 Waymo 差，pre-onset 差得多
+
+K=1024，train split 全部 logged future 上 k-means（与 P3e 同一套）。「匹配后」= 按 CARLA 的 v₀ × 层分格给 Waymo 重新加权。
+
+| 帧 | n（W / C） | oracle minADE：CARLA / Waymo 匹配 / 比值 | oracle minFDE 比值 | uncoverable：CARLA [CI] / Waymo 匹配 / 多出 |
+|:--|:--|:--|--:|:--|
+| 全部 | 19 663 / 3000 | 0.948 / 0.617 / **1.54** | 1.04 | 28.9% [24.4, 33.6] / 13.6% / **+15.3 pp** |
+| pre-onset（三类） | 2457 / 1050 | 1.402 / 0.752 / **1.87** | 1.23 | 53.5% [47.7, 59.5] / 18.9% / **+34.6 pp** |
+| pre-onset 横向 | 1458 / 600 | 1.647 / 0.931 / 1.77 | 1.15 | 73.7% / 28.4% / +45.3 pp |
+| pre-onset 起步 | 195 / 225 | 1.171 / 0.527 / 2.23 | 1.73 | 47.1% / 10.8% / +36.3 pp |
+| pre-onset 刹车 | 804 / 225 | 0.979 / 0.500 / 1.96 | 1.20 | 6.2% / 2.0% / +4.2 pp |
+| in-turn | 4238 / 750 | 1.168 / 0.921 / 1.27 | 0.92 | 32.4% / 26.6% / +5.8 pp |
+| straight | 10 928 / 750 | 0.480 / 0.371 / 1.29 | 0.85 | 4.0% / 0.3% / +3.7 pp |
+| stop / queue | 612 / 300 | 0.035 / 0.088 / 0.40 | 0.48 | 0 / 0 / 0 |
+
+读法：终点（minFDE）基本装得下（比值 0.85–1.23），装不下的是**路径形状**：BehaviorAgent 在低速下走近 90° 的急弯、起步和刹车的速度曲线很硬，
+Waymo 司机的 5 s 轨迹里没有这种形状。按判据，汇总 +15.3 pp、pre-onset +34.6 pp，都 > 10 pp，**「不可用」**；
+minADE 比值（1.54 / 1.87）单看在「加自适应可用」（≤ 3）的范围里。
+
+### Q3 head 迁移：视觉增量不坏，坏的是 ego 先验
+
+Waymo fit 半上 fit、Waymo eval 半和全部 CARLA 帧上评。两个方向（方向 0 / 1）。「ego 裁剪」= ego 输入裁到 Waymo fit 半 0.5–99.5% 分位（无标签）。
+「匹配比值」= CARLA ADE / 同一 head 在 Waymo eval 半按 CARLA 分格重新加权后的 ADE。
+
+| arm | Waymo eval ADE（方向 0） | CARLA ADE（方向 0 / 1） | 匹配比值（方向 0 / 1） |
+|:--|--:|:--|:--|
+| CTRV（不拟合） | 3.19 | 5.60 / 5.60 | 1.35 / 1.42 |
+| `ridge ego`，原始输入 | 1.99 | 18.30 / 23.67 | 7.98 / 10.16 |
+| `ridge ego`，ego 裁剪 | 2.01 | 6.56 / 11.55 | 2.81 / 4.91 |
+| `ridge_late L18_last`，ego 裁剪 | 1.99 | 6.63 / 11.48 | 2.89 / 5.03 |
+| 同上，CARLA 特征按域标准化 | 1.99 | 6.55 / 11.55 | 2.86 / 5.07 |
+| `cls_late L18_last` top-1（K=1024） | 3.44 | 8.01 / 8.59 | 2.48 / 2.67 |
+
+视觉增量 Δ_vis = ADE(`ridge_late L18_last`) − ADE(同一 base 的 `ridge ego`)，CARLA 上按路线 bootstrap CI：
+
+| 帧 | Waymo eval（原始 / 裁剪） | CARLA 原始 ego（方向 0 / 1） | CARLA 裁剪 ego（方向 0 / 1） | CARLA 裁剪 + 按域标准化（方向 0 / 1） |
+|:--|:--|:--|:--|:--|
+| 全部 | −0.037 / −0.023 | −0.077 [−0.122, −0.032] / −0.140 | **+0.070 [+0.041, +0.098]** / −0.074 [−0.133, −0.014] | −0.006 [−0.016, +0.004] / +0.003 |
+| pre-onset（三类） | −0.139 / −0.090 | −0.166 / −0.278 | +0.009 [−0.034, +0.054] / −0.153 [−0.254, −0.061] | −0.055 [−0.071, −0.041] / −0.078 |
+| pre-onset 横向 | — / −0.035 | — | +0.036 [−0.009, +0.081] / — | −0.015 [−0.028, −0.003] / — |
+| stop / queue | — / +0.107 | — | +0.519 / — | +0.158 / — |
+
+![transfer](../research/figs/p4-transfer.png)
+
+看什么：(a) 同样速度下 CARLA 的 oracle minADE 比 Waymo 高，而且随速度上升更陡；(b) 方向 0、原始 ego 输入下的 Δ_vis，
+视觉增量在 CARLA 上和在 Waymo 上同号同量级（停车那一格除外），按域标准化后缩到 0；(c) 三个帧集合的层组成，CARLA 按配额抽，
+Waymo P3 子集是它自己的分层，val 全集是自然分布。
+
+读法：Waymo 训的 **ego 先验在 CARLA 上不成立**：Waymo 上它比 CTRV 好 37%，CARLA 上即使裁剪输入也比 CTRV 差 17%（方向 0）到 106%（方向 1），
+两个方向差一倍，说明它在外推。原因查到的是动力学：CARLA 车后轴有侧滑（t0 横向速度 p90 0.13 m/s，Waymo 0.027），
+碰撞时速度有尖峰，而线性 ego head 在 Waymo 上几乎不变的维度上权重很大。视觉增量本身没有把预测变坏：
+Waymo 标准化下两个方向一正一负、量级 0.07 m，按域标准化后是 0 ± 0.01（pre-onset 上 −0.055 / −0.078，小的改善），
+也就是说 **CARLA 帧上的视觉特征对这个 head 基本是「读不出东西」，不是「读出了错的东西」**。
+匹配比值无论哪种变体都 > 2（最好的是分类头 2.48 / 2.67），按判据 **「不可用」**。CTRV 自己的比值 1.35 / 1.42 说明 CARLA 这批 future 本身就比 Waymo 难约 40%（急停、碰撞），
+所以即使 head 完美迁移，1.5 的「可用」线也很难过——这是判据的一个已知偏紧之处，但 2.5–5 远超过这 40%。
+
+anchor 分布：`cls_late` 的 top-1 命中真值最近 anchor 的比例两域相当（CARLA 6.5 / 6.3%，Waymo 5.3 / 6.6%），
+但 CARLA 上 top-1 只用到 perplexity 118 / 130 个 anchor（Waymo 455 / 385），且和 CARLA 自己真值最近 anchor 的分布差 0.66 bit JS
+（Waymo 上这个数是 0.20）：head 在 CARLA 上塌到一小撮 Waymo 常见的 anchor 上，不跟 CARLA 的轨迹分布走。
+
+### Q3b probe 迁移：「在不在动」迁移得过去，「接下来往哪转」只迁移一半
+
+| probe（`L18_last`） | Waymo eval AUC（方向 0 / 1） | CARLA AUC | 迁移比 | 按域标准化后的迁移比 |
+|:--|:--|:--|:--|:--|
+| 行驶 vs 静止（v₀ > 2 对 < 0.5 m/s） | 0.995 / 0.998 | 0.932 / 0.942 | **0.87 / 0.89** | 0.87 / 0.89 |
+| 3 s 动作（直行 / 左 / 右） | 0.834 / 0.850 | 0.693 / 0.731 | **0.58 / 0.66** | 0.70 / 0.66 |
+
+`L18_mean` 同样的形状（0.85–0.90 与 0.53–0.68）。读法：Waymo 上学到的「运动」方向在 CARLA 上几乎原样可读；「将要转向哪边」的方向只剩一半多，
+落在「加自适应可用」一档，按域标准化在方向 0 上刚到 0.70。
+
+### 判据对照与总判
+
+| 问题 | 汇总 | pre-onset 层 | 档 |
+|:--|:--|:--|:--|
+| Q1 差距形状 | 去均值 MLP 1.000，比 null 高 0.52 | 逐层全部 ≥ 0.999 | **不可用** |
+| Q2 词表覆盖 | minADE 比 1.54、uncoverable +15.3 pp | 1.87、+34.6 pp | **不可用**（uncoverable > 10 pp） |
+| Q3 head 迁移 | 匹配比值 2.8–10（所有变体 > 2）；Δ_vis 按域标准化后 ≈ 0 | 比值 2.6–7.4 | **不可用**（比值 > 2） |
+| Q3b probe | 运动 0.87–0.89；动作 0.58–0.66 | — | **加自适应可用** |
+
+**总判：不可用。** Waymo 训的 head 在 CARLA 帧上的输出不代表它在真实数据上的行为：视觉特征在 CARLA 上被读成「没有信息」，
+ego 先验在仿真动力学上外推，词表装不下这个 expert 的 pre-onset 轨迹。能迁移的只有表征里最粗的语义方向（在不在动，其次是往哪转）。
+
+对 P5 的含义（按预登记的第三行）：「把 Waymo head 放到 CARLA 配对上考、把 flip 率当成它的性质」这句站不住。P5 要么
+(1) **在 CARLA 上训、在 CARLA 上考**，放弃跨域那半句，配对差分作用在一个 CARLA 自己的 head 上；要么
+(2) 换**真实数据渲染的配对**（第 19 条的 HUGSIM 一类），让考卷和 head 在同一个域。
+VLM 零样本 meta-action 那一列（第 25 条的第二个标签来源）不经过这个 head，不受 Q3 影响；但 Q1 说 Qwen 的表征把 CARLA 当成一个单独的域，
+Q3b 说「往哪转」的语义只迁移一半，所以 VLM 在 CARLA 配对上的答对率要在 CARLA 上单独量，不能从 Waymo 原型（P5 todo）外推。
+
+### 限定
+
+- expert 是 BehaviorAgent：不会绕障碍（nudge 一类 pre-onset 缺席），47% 的路线有碰撞，速度曲线硬。更好的 expert（LEAD 的 PDM-Lite 系）可能缩小 Q2、Q3 的差距，
+  但不会动 Q1（Q1 与轨迹无关，逐层也是 1.0）。
+- 过去历史不足 4 s 时用出生状态补（至少 1 s 真实），ego 速度用后轴位置中心差分（t0 用到 50 ms 之后的一帧）。
+- Waymo 侧的 head 只在 P3 子集的半 val（约 1 万帧）上 fit，不是 train split；P3(d″) 的 train fit 特征（`qwenvid_train_t4`）还在抽，
+  更大的 fit 可能让 ego 先验更稳，但不会让 Q1、Q2 变。
+- 路线按 family、分层配额、第二波扩大、历史补齐、录制缩短都是只看轨迹标签做的，在任何 CARLA 对 Waymo 的判据数字之前；
+  估计量的第三处修正在 12 条路线的 dry run 之后（依据是 null，见 AUC_centered 一节）；ego 约定的三处修正（加速度单位、重复格方向、速度定义）
+  在第一次完整分析之后，依据是 `ridge ego` 160 m 这种明显的 bug 信号，那次分析整体作废重跑。判据阈值从未改动。
