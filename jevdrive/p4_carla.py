@@ -129,10 +129,11 @@ def route_rows(adir: Path, rid: str, town: str):
     c = np.stack([pose.x.to_numpy(), -pose.y.to_numpy()], -1)
     head = np.stack([np.cos(th), np.sin(th)], -1)
     ra = c + REAR_AXLE_X * head
-    w = -np.radians(pose.wz.to_numpy())           # yaw rate, rad/s, counter-clockwise
-    v = np.stack([pose.vx.to_numpy(), -pose.vy.to_numpy()], -1)
-    off = REAR_AXLE_X * head
-    v_ra = v + w[:, None] * np.stack([-off[:, 1], off[:, 0]], -1)
+    # Velocity as WOD-E2E has it: it equals the 0.25 s difference of the rear-axle positions (ratio 1.0000, 0.07 deg
+    # on val), so take exactly that (backward, causal) rather than the simulator's instantaneous rigid-body velocity,
+    # which carries the physics' 2 Hz wheel / suspension jitter and rear-axle side slip that Waymo's does not.
+    v_ra = (ra - np.roll(ra, STEP_TICKS, axis=0)) / (STEP_TICKS * TICK)
+    v_ra[:STEP_TICKS] = 0.0
     # WOD-E2E's accel_x / accel_y are NOT m/s^2: they regress on the 0.25 s velocity difference with slope 0.243
     # (checked on val), i.e. they are the velocity change per 0.25 s step. Build the same quantity here.
     dv_step = v_ra - np.roll(v_ra, STEP_TICKS, axis=0)
