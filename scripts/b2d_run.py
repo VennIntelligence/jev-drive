@@ -113,6 +113,7 @@ def parse_args(argv=None):
     p.add_argument("--agent", default="", help="external leaderboard agent .py; keeps its own sensors "
                    "and control logic instead of b2d_agent.py's cost-measurement stub")
     p.add_argument("--agent-config", default="", help="external agent config/checkpoint path")
+    p.add_argument("--record-dir", default="", help="optional CARLA recorder directory")
     p.add_argument("--python", default=PYTHON, help="route subprocess interpreter; use the model's "
                    "venv for external agents (default: envs/carla/bin/python)")
     p.add_argument("--rig", default="front3")
@@ -564,6 +565,10 @@ class Runner(object):
             cmd += ["--policy-socket", self.a.policy_socket]
         if self.a.agent:
             cmd += ["--agent", self.a.agent, "--agent-config", self.a.agent_config]
+        if self.a.record_dir:
+            record_dir = adir / "recorder"
+            record_dir.mkdir(exist_ok=True)
+            cmd += ["--record-dir", str(record_dir)]
         for flag in ("overlap", "no_spectator", "fast_copy", "zero_copy", "cache_lights"):
             if getattr(self.a, flag):
                 cmd.append("--" + flag.replace("_", "-"))

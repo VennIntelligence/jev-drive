@@ -86,7 +86,7 @@ def clean_owned_server(run_dir, out):
             os.kill(pid, signal.SIGKILL)
 
 
-def case(out, xml_path, level, route, seed, arm, server_index, max_ticks):
+def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record_carla=False):
     case_dir = out / "cases" / level / f"route-{route}" / f"seed-{seed}" / arm
     done = case_dir / "done.json"
     if done.exists():
@@ -112,6 +112,8 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks):
                    "--max-attempts", "1", "--agent", str(AGENT), "--agent-config",
                    f"{WEIGHTS}+{arm}", "--python", str(PYTHON), "--tm-seed", str(seed),
                    "--max-ticks", str(max_ticks)]
+        if record_carla:
+            command += ["--record-dir", str(attempt_dir / "recorder")]
         record(out, "case_start", level=level, route=route, seed=seed, arm=arm, attempt=number)
         start = time.monotonic()
         with open(attempt_dir / "runner.log", "w") as log:

@@ -68,6 +68,7 @@ def parse_args(argv=None):
     # agent / policy
     p.add_argument("--agent", default="", help="external leaderboard agent .py (default: cost stub)")
     p.add_argument("--agent-config", default="", help="external agent config/checkpoint path")
+    p.add_argument("--record-dir", default="", help="optional CARLA recorder directory")
     p.add_argument("--rig", default="front3", choices=["none", "front1", "front3", "b2d6"])
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
@@ -272,7 +273,7 @@ def _agent_summary(agent, drop):
 def _leaderboard_args(a, cfg_path, out):
     ns = argparse.Namespace(
         host="127.0.0.1", port=a.port, traffic_manager_port=a.tm_port, traffic_manager_seed=a.tm_seed,
-        debug=0, record="", timeout=a.timeout, routes=a.routes, routes_subset=a.route_id,
+        debug=0, record=a.record_dir, timeout=a.timeout, routes=a.routes, routes_subset=a.route_id,
         repetitions=1, agent=a.agent or str(Path(__file__).resolve().parent / "b2d_agent.py"),
         agent_config=a.agent_config if a.agent else str(cfg_path), track="SENSORS", resume=False,
         checkpoint=str(out / "results.json"), debug_checkpoint=str(out / "live_results.txt"),
