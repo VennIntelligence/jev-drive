@@ -39,6 +39,7 @@ from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from srunner.scenariomanager.timer import GameTime
 
 DELTA = 0.05
+CAM_TICKS = 4                       # sensor_tick 0.2 s at 20 Hz
 REAR_AXLE_X = -1.388633220          # actor-relative rear axle of vehicle.lincoln.mkz_2020 (controller_config.json)
 # Waymo FRONT / FRONT_LEFT / FRONT_RIGHT in Waymo's vehicle frame (origin: rear axle on the ground, +y left),
 # medians over WOD-E2E val. CARLA is left-handed (+y right, yaw clockwise), so y and yaw flip sign below.
@@ -46,7 +47,7 @@ WAYMO_CAMS = (("front", 1.519, 0.026, 1.806, 0.0), ("front_left", 1.445, 0.153, 
               ("front_right", 1.482, -0.116, 1.806, -45.0))
 DEFAULT = {"out_w": 972, "out_h": 1079, "f": 1113.5, "cu": 488.1, "cv": 719.2, "k1": -0.0736, "k2": -0.0366,
            "render_w": 1088, "render_h": 1560, "jpeg_q": 95, "sensor_tick": 0.2, "max_sim_s": 150.0,
-           "stuck_s": 40.0, "behavior": "normal", "origin_z": 0.0}
+           "stuck_s": 30.0, "behavior": "normal", "origin_z": 0.0}
 STOP = {"flag": False, "why": ""}
 
 
@@ -105,6 +106,7 @@ class P4Agent(AutonomousAgent):
         self.mx, self.my = distortion_maps(cfg)
         self.fov = math.degrees(2 * math.atan(cfg["render_w"] / 2.0 / cfg["f"]))
         self._tick, self._ba, self._still_since, self._n_frames, self._buf = 0, None, None, 0, {}
+        self._last_cam, self._missed = None, 0
         self._pose = open(self.out / "pose.jsonl", "w")
         self._frames = open(self.out / "frames.jsonl", "w")
         self._t_img = 0.0
@@ -113,7 +115,7 @@ class P4Agent(AutonomousAgent):
         c = self.cfg
         return [{"type": "sensor.camera.rgb", "id": name, "x": x + REAR_AXLE_X, "y": -y, "z": z - c["origin_z"],
                  "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": c["render_w"], "height": c["render_h"],
-                 "fov": self.fov, "sensor_tick": c["sensor_tick"]} for name, x, y, z, yaw in WAYMO_CAMS]
+                 "fov": self.fov, "sensor_tick": c["sensor_tick"] - 0.01} for name, x, y, z, yaw in WAYMO_CAMS]
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
@@ -154,22 +156,36 @@ class P4Agent(AutonomousAgent):
                                      "brake": control.brake}) + "\n")
         return math.hypot(v.x, v.y)
 
-    def _drain_cameras(self):
-        """Collect whatever camera data has arrived, keyed by the image's own frame number, and return the
-        frames for which all three cameras are in. Never blocks: with `sensor_tick` the cameras report every
-        `every` ticks and may land a tick late, and the stock get_data(frame) would wait on the current frame
-        forever. Labels are later joined to images by the image frame number, so a late arrival costs nothing."""
+    def _drain_cameras(self, frame):
+        """Collect camera data keyed by the image's own frame number; return the frames all three cameras are in.
+
+        `sensor_tick` is set a little under 4 ticks, so the cameras fire on every 4th tick exactly. Once a
+        firing is due (4 ticks after the last complete set), wait for it: without the wait the simulation
+        runs ahead of a slow renderer (a Large Map on a shared card) and the server drops frames -- the first
+        Town12 smoke kept 4 of ~100. Labels are joined to images by the image frame number, so a set that
+        lands a tick late costs nothing."""
         si = self.sensor_interface
+        due = self._last_cam is not None and frame >= self._last_cam + CAM_TICKS
+        due = due or (self._last_cam is None and self._tick > 2 * CAM_TICKS)
+        deadline = time.time() + 20.0
+        out = []
         while True:
             try:
-                tag, frame, data = si._data_buffers.get_nowait()
+                if due and not out:
+                    tag, f, data = si._data_buffers.get(True, max(0.01, deadline - time.time()))
+                else:
+                    tag, f, data = si._data_buffers.get_nowait()
             except queue.Empty:
+                if due and not out:
+                    self._missed += 1
+                    self._last_cam = frame          # a lost firing: expect the next one, do not wait again
                 break
-            self._buf.setdefault(frame, {})[tag] = data
-        done = sorted(f for f, d in self._buf.items() if len(d) == len(WAYMO_CAMS))
-        out = [(f, self._buf.pop(f)) for f in done]
-        for f in [f for f in self._buf if done and f < done[-1]]:
-            del self._buf[f]                        # an incomplete set older than a complete one never completes
+            self._buf.setdefault(f, {})[tag] = data
+            if len(self._buf[f]) == len(WAYMO_CAMS):
+                out.append((f, self._buf.pop(f)))
+                self._last_cam = f
+                for old in [g for g in self._buf if g < f]:
+                    del self._buf[old]          # an incomplete set older than a complete one never completes
         return out
 
     def _save(self, frame, got):
@@ -192,7 +208,7 @@ class P4Agent(AutonomousAgent):
         if self._ba is None:
             self._init_driver()
         frame, t = GameTime.get_frame(), GameTime.get_time()
-        for f, got in self._drain_cameras():
+        for f, got in self._drain_cameras(frame):
             self._save(f, got)
         control = self.run_step(None, t)
         speed = self._log_pose(frame, t, control)
@@ -217,5 +233,5 @@ class P4Agent(AutonomousAgent):
         for fh in (self._pose, self._frames):
             fh.close()
         (self.out / "p4_summary.json").write_text(json.dumps(
-            {"ticks": self._tick, "camera_frames": self._n_frames, "stop": STOP["why"] or "route_end",
+            {"ticks": self._tick, "camera_frames": self._n_frames, "missed_waits": self._missed, "stop": STOP["why"] or "route_end",
              "image_ms_per_frame": 1e3 * self._t_img / max(self._n_frames, 1)}))
