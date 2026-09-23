@@ -183,6 +183,9 @@ def main():
                                failed=[k for k, x in v['gates'].items() if not x]))
                 f = case_frames(d)
                 runtime = np.asarray(json.loads((d / 'route_reference.json').read_text())['world_xy'], float)
+                # select_heldout.py dropped repeated leg-boundary points (<= 1e-5 m apart) from the
+                # offline reference; drop them here too before the point-by-point comparison.
+                runtime = runtime[np.r_[True, np.linalg.norm(np.diff(runtime, axis=0), axis=1) > 1e-5]]
                 for w in (w for w in windows if w['route_id'] == route):
                     m = window_metrics(f, *w['window_m'])
                     # Held-out stations were registered on the offline dense route: it must be this route.
