@@ -266,7 +266,7 @@ def check(rl, name: str, taps=("L18_last", "L18_mean")):
 P0_RUN = "runs/waymo_p0/train_split/20260922-175708"     # whose s_ego the decile axis reuses, as P3(d''') did
 
 
-def trainfit(rl, name: str, taps=("L18_last", "L18_mean")):
+def trainfit(rl, name: str, taps=("L18_last", "L18_mean"), thin: int | None = 4):
     """The decisive test of P3(d''): fit ridge_late on the train split, evaluate on val, decision 22's judge.
 
     P3(d''') did this for V-JEPA and the half-val effect shrank to "unmeasurable"; this is the same protocol
@@ -287,6 +287,47 @@ def trainfit(rl, name: str, taps=("L18_last", "L18_mean")):
     for k, t in lad.rejudge(rl.dir, "trainfit").items():
         t.to_csv(rl.dir / f"{k}.csv", index=False)
         rl.log.info("%s\n%s", k, t.to_markdown(index=False, floatfmt=".4f"))
+    if thin:
+        trainfit_weighted(rl, ctx, keep, {"A ridge_late pooled (qwen4b L18 image)": ctx["pooled"],
+                                          **{f"d'' ridge_late {t}": b[t] for t in taps}}, thin)
+
+
+def trainfit_weighted(rl, ctx: dict, keep: np.ndarray, feats: dict, thin: int):
+    """The same fit with the stratified subsample weighted back to the full train composition.
+
+    Every thinned frame (neither pre-onset nor turning) stands for `thin` frames of the split, so it gets
+    weight `thin` and the kept-whole strata weight 1: the weighted loss is then the uniform loss over all of
+    train, up to the sampling of which frame of each run of `thin` was kept. The base `ridge ego` is weighted
+    the same way, so every arm is still a correction to the prior the full split would give.
+    """
+    from . import planner, waymo_l0 as l0, waymo_stage_a as sa
+    sel = np.flatnonzero(keep)
+    seq, h, fut = ctx["seq"][sel], ctx["half"][sel], ctx["fut"][sel]
+    sp = sa.Halves(ctx["df"], seq, h == 0, h == 1, ctx["seed"])
+    sub = {k: ctx["sub"][k][sel] for k in lad.SUBSETS}
+    w = torch.as_tensor(np.where(sub["pre_onset"] | sub["turn_yaw"], 1.0, float(thin)), device=lad.DEV).float()
+    n, T = len(sel), fut.shape[1]
+    F = torch.as_tensor(fut.reshape(n, -1), device=lad.DEV)
+    Xe = planner.standardize(torch.as_tensor(ctx["ego"][sel], device=lad.DEV), sp.train)
+    p_ego, st_ego, W_ego = l0.wridge_cv(Xe, F, sp, fut, w, sub["pre_onset"])
+    base = planner.linear_apply(W_ego, Xe, np.arange(n))[0]
+    R = F - base
+    res_fut, off = R.reshape(-1, T, 2).cpu().numpy(), base[sp.val].reshape(-1, T, 2).cpu().numpy()
+    preds = {lad.BASE: p_ego[:, 0]}
+    rl.log.info("weighted (thin %d): %s lambda %.3g", thin, lad.BASE, st_ego["lam"])
+    for name, X in feats.items():
+        Xi = lad.standardize_np(X[sel], sp.train)
+        p, st, _ = l0.wridge_cv(Xi, R, sp, res_fut, w, sub["pre_onset"])
+        preds[name] = p[:, 0] + off
+        rl.log.info("weighted: %s lambda %.3g", name, st["lam"])
+        del Xi
+        torch.cuda.empty_cache()
+    sctx = {"sp": sp, "fname": ctx["fname"][sel], "seq": seq, "s": lad.s_ego_from_p0(ctx)[sel], "fut": fut,
+            "direction": 0, "past": ctx["past"], "rows": ctx["rows"][sel]}
+    lad.save_preds(rl, preds, sctx, "trainfitw")
+    for k, t in lad.rejudge(rl.dir, "trainfitw").items():
+        t.to_csv(rl.dir / f"{k}_weighted.csv", index=False)
+        rl.log.info("weighted %s\n%s", k, t.to_markdown(index=False, floatfmt=".4f"))
 
 
 def main():
@@ -319,7 +360,7 @@ def main():
     elif a.step == "check":
         check(rl, a.name)
     elif a.step == "trainfit":
-        trainfit(rl, a.name)
+        trainfit(rl, a.name, thin=a.thin)
     else:
         run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
     rl.event("end")
