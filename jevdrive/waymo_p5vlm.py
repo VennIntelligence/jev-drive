@@ -382,17 +382,23 @@ def group_masks(j: pd.DataFrame) -> dict[str, np.ndarray]:
     return m
 
 
+def load_answers(run_dirs) -> pd.DataFrame:
+    """Answers from one or more run directories (comma list), with `arm` = "<model> <variant>"."""
+    a = pd.concat([pd.read_json(Path(d) / "answers.jsonl", lines=True) for d in str(run_dirs).split(",")])
+    return a.assign(arm=a.model.str.split("/").str[-1].str.replace("-Instruct", "") + " " + a.variant)
+
+
 def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
     """Accuracy per group x axis for every VLM variant and baseline (sequence-bootstrap CIs), the paired delta of
     each VLM variant against the best baseline on the same frames, invalid rate, confusions, rater agreement."""
     j = judge_table(load_frames())
-    a = pd.read_json(Path(run_dir) / "answers.jsonl", lines=True)
+    a = load_answers(run_dir)
     seq = j.sequence.to_numpy()
     arms = baselines(j)
     for k in arms.values():
         k["answered"], k["valid"] = True, True
-    for v in variants or list(pd.unique(a.variant)):
-        x = a[a.variant == v].drop_duplicates("frame_name", keep="last").set_index("frame_name").reindex(j.frame_name)
+    for v in variants or list(pd.unique(a.arm)):
+        x = a[a.arm == v].drop_duplicates("frame_name", keep="last").set_index("frame_name").reindex(j.frame_name)
         valid = x.valid.fillna(False).astype(bool).to_numpy()
         lat = np.where(valid, x.lat.to_numpy(), "invalid")
         arms[f"VLM {v}"] = pd.DataFrame({"long": np.where(valid, x.long.to_numpy(), "invalid"), "lat": lat,
@@ -457,8 +463,9 @@ def report(run_dir, variants=None) -> dict[str, pd.DataFrame]:
 # ---------------------------------------------------------------- consistency (flip analogue)
 
 def consistency(run_dir, base: str = "main", others=("front", "shift1")) -> pd.DataFrame:
-    """Share of frames whose (long, lat) answer is unchanged under a small input perturbation, per group."""
-    a = pd.read_json(Path(run_dir) / "answers.jsonl", lines=True)
+    """Share of frames whose (long, lat) answer is unchanged under a small input perturbation, per group
+    (one model per run directory)."""
+    a = load_answers(run_dir)
     j = load_frames()
     b = a[a.variant == base].drop_duplicates("frame_name", keep="last").set_index("frame_name")
     rows = []
