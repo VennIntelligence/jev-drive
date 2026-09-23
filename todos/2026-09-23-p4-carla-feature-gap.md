@@ -115,13 +115,21 @@ head 在 fit 半上拟合，在 eval 半和全部 CARLA 帧上各评一次，所
 - **AUC_raw**：L2 logistic regression，特征按训练折标准化，5 折 GroupKFold（Waymo 按 sequence、CARLA 按 route 分组），
   out-of-fold 概率上的 ROC AUC。`L18_last`、`L18_mean` 各报一次，`L18_last` 是主 tap。
 - **AUC_matched**：同上，但只在粗化精确匹配（coarsened exact matching）后的子集上：按 v₀ 分档（每 2 m/s 一档）×
-  未来 3 s 的动作类（静止 / 直行 / 左转 / 右转，按 `waymo.subsets` 的 chord bearing 与位移判）分层，每层两边各取 min(n_W, n_C) 帧。
+  「分层与配额」一节的 7 层分格（原来写的是 4 类动作，随分层一起改成 7 层，改在任何 CARLA 特征之前），
+  每格两边各取 min(n_W, n_C) 帧。词表覆盖和 head 迁移的「匹配后」也用同一套格子给 Waymo 重新加权。
 - **AUC_centered**：每个域减去自己的均值（在训练折上估）后再训分类器。它回答「差距是不是只是一个平移」。
   **分类器用小 MLP（2560 → 256 → 2，class-balanced，30 epoch），不用线性**。原来写的是同一个线性分类器，
   这是个定义错误，在抽任何 CARLA 特征之前、用 Waymo 内部对照试跑时发现的：两类各自去均值后，
   class-balanced logistic loss 在 w = 0 处梯度为零且是凸的，线性分类器的 AUC 恒等于 0.5，量不出任何东西。
   改成 MLP 后它能用协方差（形状）上的差别。为了可比，AUC_raw 也并排报一个 MLP 版本，
   再加一个「按域 z-score（均值和逐维标准差都按域去掉）」的 MLP 版本，对应 Q3 的按域标准化。
+  第二处修正（同样在 CARLA 特征之前，用 Waymo 当假 CARLA 的试跑发现）：去均值如果用训练折上的类均值，
+  组数少的一类（CARLA 约 90 条路线）在测试折里会带着路线之间的均值差，MLP 把它当成域信号，
+  Waymo 对 Waymo 的试跑读出了 0.83。改成每类用它**全部**帧的均值（transductive，和部署时按域标准化一样，不用任何任务标签），
+  并加一行**零差距对照（null）**：从 Waymo 里随机取与 CARLA 路线数、帧数相同的 sequence 当「伪域」，
+  所有 AUC 变体都在它上面再跑一遍，读数是「没有域差距、但组数和 CARLA 一样少」时这个估计量给多少。
+  Q1 的阈值按「CARLA 的数减去 null 的数」来读：AUC_centered 的判据改为 AUC_centered − null_centered ≤ 0.10 为「加自适应可用」、
+  > 0.25 为「不可用」。
 - **AUC_PCA-k**：只用 Waymo 特征的前 k 个主成分（k = 1、4、16、64），回答差距集中在几维。
 - **对照**：CARLA 内部 Large Map（Town11/12/13/15）对 small town 的 AUC、CARLA 白天对夜晚（sun altitude < 0）的 AUC，
   这两个线性、MLP 各报一次；Waymo 内部最大的 4 个 scenario cluster 各自对其余的 AUC（按 sequence 分组）；
@@ -145,7 +153,7 @@ head 在 fit 半上拟合，在 eval 半和全部 CARLA 帧上各评一次，所
 
 | 问题 | 可用（usable） | 加自适应可用（usable with adaptation） | 不可用（not usable） |
 |:--|:--|:--|:--|
-| Q1 差距形状 | AUC_matched ≤ 0.80，或不超过最大域内对照 + 0.05 | AUC_centered（MLP）≤ 0.75（差距主要是平移，按域标准化能消掉） | AUC_centered（MLP）> 0.90（CARLA 特征在不同方向上，不只是平移） |
+| Q1 差距形状 | AUC_matched ≤ 0.80，或不超过最大域内对照 + 0.05 | AUC_centered（MLP）比 null 高 ≤ 0.10（差距主要是平移，按域标准化能消掉） | AUC_centered（MLP）比 null 高 > 0.25（CARLA 特征在不同方向上，不只是平移） |
 | Q2 词表覆盖（v₀ 匹配） | minADE 比值 CARLA / Waymo ≤ 1.5 **且** uncoverable 比 Waymo 多 ≤ 2 个百分点 | 比值 ≤ 3 且多 ≤ 10 个百分点（补 CARLA anchor 或重聚类可救） | 比值 > 3 或多 > 10 个百分点 |
 | Q3 head 迁移 | Waymo 标准化下 CARLA 全部帧 Δ_vis ≤ 0 且 CI 上界 ≤ +0.05 m，**且** 匹配后 `ridge_late` ADE 比值 ≤ 1.5 | Waymo 标准化下不过，按域标准化后过 | 按域标准化后 Δ_vis 仍 > +0.10 m，或 ADE 比值 > 2 |
 | Q3b probe 迁移 | 两个 probe 迁移比都 ≥ 0.7 | ≥ 0.3（或按域标准化后 ≥ 0.7） | < 0.3 |

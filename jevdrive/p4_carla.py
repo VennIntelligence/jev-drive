@@ -32,7 +32,6 @@ B2D_XML = "third_party/Bench2Drive/leaderboard/data/bench2drive220.xml"
 REAR_AXLE_X = -1.388633220
 TICK = 0.05
 CAM_TICKS = 4                        # the cameras report every 0.2 s = Waymo's stride 2 at 10 Hz
-KEY_EVERY = 2                        # keyframes every 2nd camera frame, 0.4 s apart
 STEP_TICKS = 5                       # 0.25 s, the WOD-E2E past / future step
 # docs/carla.md: every one of these crashed the server three times in the 220-route round
 CRASHERS = {"3048", "11715", "11755", "23687", "23708", "3785", "3800", "23670", "23695", "24041", "24071"}
@@ -220,6 +219,54 @@ def calibrate_lookahead(carla_rows: list, grid=(10, 15, 20, 30, 40, 60)) -> tupl
     return best, tab
 
 
+LAYERS = ("pre_onset_lateral", "pre_onset_start", "pre_onset_brake", "in_turn", "stop_queue", "straight", "other")
+QUOTA = {"in_turn": 0.25, "straight": 0.30, "stop_queue": 0.10, "other": 0.05}   # of N; pre-onset: every candidate
+PRE_SHARE, N_MAX = 0.30, 4000
+
+
+def layers(past: np.ndarray, fut: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """(layer, lateral pre-onset subtype) per frame, from the ego history and the recorded future only.
+
+    `pre_onset_lateral`, `in_turn` and `straight` are `waymo.subsets`' pre_onset / turn_yaw / straight_yaw verbatim
+    (the Waymo judge's definitions). The longitudinal pre-onsets are added for P4: start-from-stop (standing, then
+    >= 3 m within 3 s) and brake onset (>= 3 m/s, not yet decelerating harder than 1 m/s^2, speed at 3 s halved).
+    Priority is the order of LAYERS: a frame is in the first layer it qualifies for."""
+    n = len(past)
+    sub = waymo.subsets(pd.DataFrame({"intent": np.ones(n, np.int64)}), past, fut)
+    v0 = np.linalg.norm(past[:, -1, 2:4], axis=1)
+    a0 = past[:, -1, 4]
+    k3 = int(round(3.0 / waymo.DT)) - 1
+    d3 = np.linalg.norm(fut[:, k3, :2], axis=1)
+    v3 = np.linalg.norm(fut[:, k3, :2] - fut[:, k3 - 1, :2], axis=1) / waymo.DT
+    masks = {"pre_onset_lateral": sub["pre_onset"], "pre_onset_start": (v0 < 0.5) & (d3 >= 3.0),
+             "pre_onset_brake": (v0 >= 3.0) & (a0 >= -1.0) & (v3 <= 0.5 * v0), "in_turn": sub["turn_yaw"],
+             "stop_queue": (v0 < 0.5) & (d3 < 1.0), "straight": sub["straight_yaw"]}
+    out = np.full(n, "other", dtype=object)
+    for name in reversed(LAYERS[:-1]):
+        out[masks[name]] = name
+    seg = fut[:, -1, :2] - fut[:, -2, :2]
+    psi5 = np.degrees(np.abs(np.arctan2(seg[:, 1], seg[:, 0])))
+    y5 = np.abs(fut[:, -1, 1])
+    kind = np.where(psi5 >= 30, "junction_turn", np.where((y5 >= 2.0) & (psi5 < 15), "lane_change", "other_lateral"))
+    return out.astype(str), np.where(out == "pre_onset_lateral", kind, "").astype(str)
+
+
+def select_frames(lay: np.ndarray, seed: int = 0) -> tuple[np.ndarray, dict]:
+    """The pre-registered stratified draw: every pre-onset candidate, the other layers to their quota of N."""
+    pre = np.char.startswith(lay.astype(str), "pre_onset")
+    N = int(min(N_MAX, pre.sum() / PRE_SHARE))
+    keep = pre.copy()
+    rng = np.random.default_rng(seed)
+    info = {"candidates": {k: int((lay == k).sum()) for k in LAYERS}, "N_target": N}
+    for name, q in QUOTA.items():
+        c = np.flatnonzero(lay == name)
+        want = int(round(q * N))
+        keep[rng.choice(c, min(want, len(c)), replace=False)] = True
+        info[f"shortfall_{name}"] = max(0, want - len(c))
+    info["selected"] = {k: int((keep & (lay == k)).sum()) for k in LAYERS}
+    return keep, info
+
+
 def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
     routes = pd.read_csv(RESULTS / "routes.csv", dtype={"route_id": str})
     per = []
@@ -242,19 +289,12 @@ def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
     t = pd.concat([p[0] for p in per], ignore_index=True)
     past = np.concatenate([p[1] for p in per])
     fut = np.concatenate([p[2] for p in per])
-    # keyframes: every KEY_EVERY-th camera frame of a route, then stationary frames capped at Waymo's share
-    keep = (t.cam_index.to_numpy() % KEY_EVERY) == 0
-    v0 = np.linalg.norm(past[:, -1, 2:4], axis=1)
-    wdf = waymo.load_index()
-    wpast, _ = waymo.load_ego()
-    wval = (wdf.split == "val").to_numpy() & wdf.has_future.to_numpy()
-    w_still = float((np.linalg.norm(wpast[wval, -1, 2:4], axis=1) < 0.5).mean())
-    still = keep & (v0 < 0.5)
-    cap = int(w_still / (1 - w_still) * (keep & ~still).sum())
-    if still.sum() > cap:
-        drop = np.random.default_rng(seed).choice(np.flatnonzero(still), int(still.sum()) - cap, replace=False)
-        keep[drop] = False
+    lay, kind = layers(past, fut)
+    keep, info = select_frames(lay, seed)
+    t["layer"], t["lateral_kind"] = lay, kind
     t, past, fut = t[keep].reset_index(drop=True), past[keep], fut[keep]
+    (RESULTS / "selection.json").write_text(json.dumps(info, indent=1))
+    log.info("selection: %s", info)
     t["v0"] = np.linalg.norm(past[:, -1, 2:4], axis=1)
     t["large_map"] = t.town.isin(LARGE)
     t["night"] = t.sun_altitude < 0
@@ -263,8 +303,8 @@ def build_index(gen: Path, seed: int = 0) -> pd.DataFrame:
     np.save(d / "past.npy", past)
     np.save(d / "future.npy", fut)
     lk.to_csv(RESULTS / "intent_lookahead.csv", index=False)
-    log.info("index: %d keyframes from %d routes (%d stationary kept; Waymo val stationary share %.3f); "
-             "intent %s; towns %s", len(t), t.route_id.nunique(), int((t.v0 < 0.5).sum()), w_still,
+    log.info("index: %d keyframes from %d routes; layers %s; lateral kinds %s; intent %s; towns %s", len(t),
+             t.route_id.nunique(), t.layer.value_counts().to_dict(), t.lateral_kind.value_counts().to_dict(),
              t.intent.value_counts().sort_index().to_dict(), t.town.value_counts().sort_index().to_dict())
     return t
 
@@ -340,9 +380,10 @@ def maneuver(past: np.ndarray, fut: np.ndarray) -> np.ndarray:
     return out
 
 
-def strata(v0: np.ndarray, man: np.ndarray) -> np.ndarray:
-    """Coarsened-exact-matching cells: speed in 2 m/s bins (20+ pooled) x the 3 s manoeuvre."""
-    return np.minimum(v0 // 2, 10).astype(np.int64) * 4 + man
+def strata(v0: np.ndarray, lay: np.ndarray) -> np.ndarray:
+    """Coarsened-exact-matching cells: speed in 2 m/s bins (20+ pooled) x the layer (LAYERS)."""
+    li = pd.Categorical(lay, categories=LAYERS).codes.astype(np.int64)
+    return np.minimum(v0 // 2, 10).astype(np.int64) * len(LAYERS) + li
 
 
 def matched_sample(sw: np.ndarray, sc: np.ndarray, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
@@ -427,9 +468,9 @@ def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=None,
                model="linear", folds=5, seed=0, dev="cuda") -> float:
     """Out-of-fold AUC of a classifier for label `y`, folds grouped by sequence / route.
 
-    Standardisation, PCA and per-class normalisation are estimated on the training folds only.
-    `center="mean"` subtracts each class's own training mean from its rows, `center="z"` also divides by its own
-    per-dimension std. After that a linear classifier has nothing left to use (with equal class means the
+    Standardisation and PCA are estimated on the training folds only; per-class normalisation on all rows of the
+    class (see below). `center="mean"` subtracts each class's own mean from its rows, `center="z"` also divides by
+    its own per-dimension std. After that a linear classifier has nothing left to use (with equal class means the
     balanced logistic loss is minimised at w = 0, so it scores 0.5 by construction), so those variants are
     meaningful only with `model="mlp"`."""
     from sklearn.model_selection import GroupKFold
@@ -440,13 +481,15 @@ def domain_auc(X: np.ndarray, y: np.ndarray, groups: np.ndarray, *, center=None,
         mu, sd = _std(Xt, tr)
         Z = (Xt - mu) / sd
         if center:
+            # Each class is normalised with the statistics of ALL its rows (transductive, like per-domain
+            # standardisation in deployment: CARLA statistics come from CARLA frames, no task labels involved).
+            # Training-fold statistics instead would leave a class with few groups (CARLA: ~90 routes) offset
+            # in the test fold by the between-route spread, which a nonlinear classifier reads as a domain cue:
+            # a Waymo-vs-Waymo dry run gave 0.83 that way.
             for c in (0, 1):
-                m_tr, m_te = tr[y[tr] == c], te[y[te] == c]
-                mc, sc = _std(Z, m_tr)
-                if center != "z":
-                    sc = torch.ones_like(sc)
-                Z[m_te] = (Z[m_te] - mc) / sc
-                Z[m_tr] = (Z[m_tr] - mc) / sc
+                m = np.flatnonzero(y == c)
+                mc, sc = _std(Z, m)
+                Z[m] = (Z[m] - mc) / (sc if center == "z" else 1.0)
         if pca_k:
             ref = tr[y[tr] == 0]
             mref = Z[ref].mean(0)
@@ -476,6 +519,14 @@ def boot_mean(v: np.ndarray, groups: np.ndarray) -> tuple[float, float, float]:
 
 # ---------------------------------------------------------------- analysis
 
+GROUPS = {"all": None, "pre-onset (3 kinds)": ("pre_onset_lateral", "pre_onset_start", "pre_onset_brake"),
+          **{k: (k,) for k in LAYERS}}
+
+
+def group_mask(lay: np.ndarray, g: str) -> np.ndarray:
+    return np.ones(len(lay), bool) if GROUPS[g] is None else np.isin(lay, GROUPS[g])
+
+
 def waymo_side() -> dict:
     """The P3(d'') frames: the frozen subset rows `qwenvid_p3` covers, with their labels and halves."""
     from . import waymo_ladder as lad
@@ -487,27 +538,29 @@ def waymo_side() -> dict:
     return {"X": {t: np.asarray(b[t][sel], np.float32) for t in TAPS}, "fut": ctx["fut"][sel], "ego": ctx["ego"][sel],
             "past": ctx["past"][rows], "seq": ctx["seq"][sel], "half": ctx["half"][sel], "df": ctx["df"],
             "sub": {k: ctx["sub"][k][sel] for k in ctx["sub"]}, "cluster": ctx["df"].cluster.to_numpy()[rows],
-            "fname": ctx["fname"][sel]}
+            "fname": ctx["fname"][sel], "layer": layers(ctx["past"][rows], ctx["fut"][sel])[0]}
 
 
 def carla_side() -> dict:
     t, past, fut = load_carla()
     ego = np.concatenate([waymo.ego_state(past), np.eye(len(waymo.INTENTS), dtype=np.float32)[t.intent.to_numpy()]], 1)
     sub = waymo.subsets(pd.DataFrame({"intent": t.intent.to_numpy()}), past, fut)
+    lay = layers(past, fut)[0]
+    assert (lay == t.layer.to_numpy()).all(), "layer labels changed since the index was built"
     return {"X": load_carla_features(TAPS), "fut": fut, "ego": ego.astype(np.float32), "past": past,
-            "seq": ("carla-" + t.route_id).to_numpy(), "t": t, "sub": sub}
+            "seq": ("carla-" + t.route_id).to_numpy(), "t": t, "sub": sub, "layer": lay}
 
 
 def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
     """Domain-classifier AUCs with the shape of the gap and the within-domain controls beside them."""
-    sw, sc = strata(np.linalg.norm(W["past"][:, -1, 2:4], axis=1), maneuver(W["past"], W["fut"])), \
-        strata(C["t"].v0.to_numpy(), maneuver(C["past"], C["fut"]))
+    sw, sc = strata(np.linalg.norm(W["past"][:, -1, 2:4], axis=1), W["layer"]), strata(C["t"].v0.to_numpy(), C["layer"])
     mw, mc = matched_sample(sw, sc)
     t = C["t"]
     rows = []
 
     def add(what, tap, X, y, g, **kw):
         a = domain_auc(X, y, g, **kw)
+        kw.pop("folds", None)
         r = {"comparison": what, "tap": tap, "n0": int((y == 0).sum()), "n1": int((y == 1).sum()),
              "groups": len(np.unique(g)), "auc": a}
         rows.append(r)
@@ -530,6 +583,35 @@ def q1_domain(W: dict, C: dict, rl) -> pd.DataFrame:
         add("Waymo vs CARLA, matched + centred, MLP", tap, Xm, ym, gm, center="mean", model="mlp")
         for k in (1, 4, 16, 64):
             add(f"Waymo vs CARLA, top-{k} Waymo PCs", tap, X, y, g, pca_k=k)
+        # per layer: Waymo frames of a layer against CARLA frames of the same layer
+        for gname in GROUPS:
+            if gname == "all":
+                continue
+            a, b = group_mask(W["layer"], gname), group_mask(C["layer"], gname)
+            if a.sum() < 30 or b.sum() < 30 or len(np.unique(C["seq"][b])) < 5:
+                continue
+            Xl = np.concatenate([Xw[a], Xc[b]])
+            yl = np.r_[np.zeros(a.sum()), np.ones(b.sum())].astype(np.int64)
+            gl = np.r_[W["seq"][a], C["seq"][b]]
+            add(f"layer {gname}: Waymo vs CARLA", tap, Xl, yl, gl, folds=min(5, len(np.unique(C["seq"][b]))))
+            add(f"layer {gname}: Waymo vs CARLA, centred, MLP", tap, Xl, yl, gl, center="mean", model="mlp",
+                folds=min(5, len(np.unique(C["seq"][b]))))
+        # null: a Waymo pseudo-domain of as many sequences and frames as CARLA has routes and frames, through the
+        # same estimators -- what each AUC reads when there is no domain gap, at CARLA's group count
+        rng = np.random.default_rng(0)
+        useq = np.unique(W["seq"])
+        pseudo = np.isin(W["seq"], rng.choice(useq, min(len(np.unique(C["seq"])), len(useq) // 3), replace=False))
+        pi = np.flatnonzero(pseudo)
+        pi = rng.choice(pi, min(len(pi), len(Xc)), replace=False)
+        rest = np.flatnonzero(~pseudo)
+        Xn = np.concatenate([Xw[rest], Xw[pi]])
+        yn = np.r_[np.zeros(len(rest)), np.ones(len(pi))].astype(np.int64)
+        gn = np.r_[W["seq"][rest], W["seq"][pi]]
+        add("null: Waymo pseudo-domain", tap, Xn, yn, gn)
+        add("null: Waymo pseudo-domain, MLP", tap, Xn, yn, gn, model="mlp")
+        add("null: Waymo pseudo-domain, centred, MLP", tap, Xn, yn, gn, center="mean", model="mlp")
+        add("null: Waymo pseudo-domain, z-scored, MLP", tap, Xn, yn, gn, center="z", model="mlp")
+        add("null: Waymo pseudo-domain, top-16 PCs", tap, Xn, yn, gn, pca_k=16)
         # controls: how separable are things that are one domain?
         for model, tag in (("linear", ""), ("mlp", ", MLP")):
             add("control: CARLA Large Map vs small town" + tag, tap, Xc, t.large_map.to_numpy().astype(np.int64),
@@ -559,22 +641,23 @@ def q2_vocab(W: dict, C: dict, rl) -> tuple[pd.DataFrame, dict]:
         o = traj.oracle_metrics(anchors, D["fut"])
         unc = traj.vocab_coverage(anchors, D["fut"].astype(np.float64), v0, waymo.RFS_FREQ, region)
         per[name] = {"ade": o["oracle_ade"], "fde": o["oracle_fde"], "unc": unc, "v0": v0,
-                     "s": strata(v0, maneuver(D["past"], D["fut"])), "seq": D["seq"],
-                     "pre": D["sub"]["pre_onset"]}
+                     "s": strata(v0, D["layer"]), "seq": D["seq"], "layer": D["layer"]}
     rows = []
     cw, cc = per["Waymo"], per["CARLA"]
-    for key, what in (("ade", "oracle minADE (m)"), ("fde", "oracle minFDE (m)"), ("unc", "uncoverable share")):
-        wm, lost = reweight(cw[key], cw["s"], cc["s"])
-        r = {"metric": what, "waymo": float(cw[key].mean()), "carla": float(cc[key].mean()),
-             "carla_ci": boot_mean(cc[key], cc["seq"])[1:], "waymo_matched": wm,
-             "ratio_matched": float(cc[key].mean() / wm) if key != "unc" else np.nan,
-             "excess_pp_matched": float(100 * (cc[key].mean() - wm)) if key == "unc" else np.nan,
-             "carla_mass_unmatched": lost,
-             "waymo_pre_onset": float(cw[key][cw["pre"]].mean()), "carla_pre_onset": float(cc[key][cc["pre"]].mean())
-             if cc["pre"].any() else np.nan, "n_waymo": len(cw[key]), "n_carla": len(cc[key]),
-             "n_carla_pre_onset": int(cc["pre"].sum())}
-        rows.append(r)
-        rl.event("vocab", **r)
+    for gname in GROUPS:
+        a, b = group_mask(cw["layer"], gname), group_mask(cc["layer"], gname)
+        if not b.any():
+            continue
+        for key, what in (("ade", "oracle minADE (m)"), ("fde", "oracle minFDE (m)"), ("unc", "uncoverable share")):
+            wm, lost = reweight(cw[key][a], cw["s"][a], cc["s"][b])
+            r = {"group": gname, "metric": what, "n_waymo": int(a.sum()), "n_carla": int(b.sum()),
+                 "carla_routes": len(np.unique(cc["seq"][b])), "waymo": float(cw[key][a].mean()),
+                 "carla": float(cc[key][b].mean()), "carla_ci": boot_mean(cc[key][b], cc["seq"][b])[1:],
+                 "waymo_matched": wm, "ratio_matched": float(cc[key][b].mean() / wm) if key != "unc" else np.nan,
+                 "excess_pp_matched": float(100 * (cc[key][b].mean() - wm)) if key == "unc" else np.nan,
+                 "carla_mass_unmatched": lost}
+            rows.append(r)
+            rl.event("vocab", **r)
     tab = pd.DataFrame(rows)
     rl.log.info("vocabulary coverage\n%s", tab.to_markdown(index=False, floatfmt=".3f"))
     return tab, {"anchors": anchors, "per": per}
@@ -595,8 +678,8 @@ def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tupl
     tgt = (ids, np.ones(ids.shape, np.float32))
     A = anchors.reshape(len(anchors), -1, 2).cpu().numpy()
     rows, per_frame, anchor_rows = [], {}, []
-    sw = strata(np.linalg.norm(W["past"][:, -1, 2:4], axis=1), maneuver(W["past"], W["fut"]))
-    sc = strata(C["t"].v0.to_numpy(), maneuver(C["past"], C["fut"]))
+    sw = strata(np.linalg.norm(W["past"][:, -1, 2:4], axis=1), W["layer"])
+    sc = strata(C["t"].v0.to_numpy(), C["layer"])
     for d in (0, 1):
         isw = np.r_[np.ones(nW, bool), np.zeros(nC, bool)]
         h = np.r_[W["half"], np.full(nC, -1)]
@@ -661,11 +744,9 @@ def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tupl
         per_frame[f"ade_d{d}"] = err
         base_err = err["ridge ego"]
         for dom, r in (("Waymo eval half", ev), ("CARLA", cr)):
-            sub = {"all": np.ones(len(r), bool)}
-            src = W["sub"] if dom.startswith("Waymo") else C["sub"]
             off_i = 0 if dom.startswith("Waymo") else nW
-            for k in ("pre_onset", "straight_yaw", "turn_yaw"):
-                sub[k] = src[k][r - off_i]
+            lay = (W if dom.startswith("Waymo") else C)["layer"][r - off_i]
+            sub = {g: group_mask(lay, g) for g in GROUPS}
             for sname, m in sub.items():
                 if not m.any():
                     continue
@@ -676,18 +757,18 @@ def q3_heads(W: dict, C: dict, anchors: torch.Tensor, rl, seed: int = 0) -> tupl
                     row = {"direction": d, "domain": dom, "subset": sname, "arm": arm, "n": len(rr),
                            "groups": len(np.unique(seq[rr])), "ade": float(e[rr].mean()),
                            "delta_vs_ego": mean, "lo": lo, "hi": hi}
-                    if dom == "Waymo eval half" and sname == "all":
-                        ev_s = sw[r - off_i]
-                        row["ade_reweighted_to_carla"], row["carla_mass_unmatched"] = reweight(e[rr], ev_s, sc)
+                    if dom == "Waymo eval half":
+                        cm = group_mask(C["layer"], sname)
+                        if cm.any():
+                            row["ade_reweighted_to_carla"], row["carla_mass_unmatched"] = reweight(
+                                e[rr], sw[rr], sc[cm])
                     rows.append(row)
     tab = pd.DataFrame(rows)
-    for d in (0, 1):                                    # the matched CARLA / Waymo ADE ratio per arm
-        wv = tab[(tab.direction == d) & (tab.domain == "Waymo eval half") & (tab.subset == "all")].set_index("arm")
-        cv = tab[(tab.direction == d) & (tab.domain == "CARLA") & (tab.subset == "all")].set_index("arm")
-        for arm in cv.index:
-            tab.loc[(tab.direction == d) & (tab.domain == "CARLA") & (tab.subset == "all") & (tab.arm == arm),
-                    "ratio_vs_waymo_matched"] = cv.ade[arm] / wv.ade_reweighted_to_carla[
-                        arm.replace(" (per-domain std)", "")]
+    wv = tab[tab.domain == "Waymo eval half"].set_index(["direction", "subset", "arm"]).ade_reweighted_to_carla
+    cm = tab.domain == "CARLA"                          # the matched CARLA / Waymo ADE ratio per arm and layer
+    tab.loc[cm, "ratio_vs_waymo_matched"] = [
+        a / wv.get((d, g, arm.replace(" (per-domain std)", "")), np.nan)
+        for a, d, g, arm in zip(tab.ade[cm], tab.direction[cm], tab.subset[cm], tab.arm[cm])]
     rl.log.info("head transfer (all frames)\n%s", tab[tab.subset == "all"].to_markdown(index=False, floatfmt=".3f"))
     return tab, {"per_frame": per_frame, "anchors": pd.DataFrame(anchor_rows), "ids": ids, "nW": nW}
 
@@ -741,6 +822,45 @@ def q3b_probes(W: dict, C: dict, rl, seed: int = 0) -> pd.DataFrame:
     return tab
 
 
+def composition(W: dict, C: dict, heads: dict) -> pd.DataFrame:
+    """The three frame sets side by side: all of Waymo val, the P3 subset the heads read, and CARLA's selection."""
+    df = waymo.load_index()
+    past, future = waymo.load_ego()
+    m = (df.split == "val").to_numpy() & df.has_future.to_numpy()
+    sets = {"Waymo val (all)": (past[m], waymo.future_xy(future[m]), df.intent.to_numpy()[m], df.sequence.to_numpy()[m]),
+            "Waymo P3 subset": (W["past"], W["fut"], W["ego"][:, -4:].argmax(1), W["seq"]),
+            "CARLA": (C["past"], C["fut"], C["t"].intent.to_numpy(), C["seq"])}
+    cols = {}
+    for name, (p, f, it, sq) in sets.items():
+        v0 = np.linalg.norm(p[:, -1, 2:4], axis=1)
+        w = np.abs(np.degrees(waymo.past_kinematics(p)["w"]))
+        seg = f[:, -1, :2] - f[:, -2, :2]
+        psi5 = np.degrees(np.abs(np.arctan2(seg[:, 1], seg[:, 0])))
+        lay, kind = layers(p, f)
+        c = {"frames": len(p), "sequences / routes": len(np.unique(sq)),
+             **{f"v0 p{q} (m/s)": np.percentile(v0, q) for q in (10, 50, 90)},
+             **{f"|yaw rate| p{q} (deg/s)": np.percentile(w, q) for q in (50, 90)},
+             **{f"|heading change at 5 s| p{q} (deg)": np.percentile(psi5, q) for q in (50, 90)},
+             **{f"layer {k}": float((lay == k).mean()) for k in LAYERS},
+             **{f"lateral pre-onset: {k}": float((kind == k).sum() / max((lay == "pre_onset_lateral").sum(), 1))
+                for k in ("junction_turn", "lane_change", "other_lateral")},
+             **{f"intent {waymo.INTENTS[k]}": float((it == k).mean()) for k in (1, 2, 3)}}
+        cols[name] = c
+    # s_ego-style difficulty: the Waymo-fitted ridge ego's own 5 s ADE, in Waymo eval-half deciles (direction 0)
+    e = heads["per_frame"]["ade_d0"]["ridge ego"]
+    nW = heads["nW"]
+    ev = np.flatnonzero(W["half"] == 1)
+    edges = np.quantile(e[ev], np.linspace(0, 1, 11)[1:-1])
+    for name, vals in (("Waymo P3 subset", e[ev]), ("CARLA", e[nW:])):
+        k = np.searchsorted(edges, vals)
+        for dcl in range(10):
+            cols[name][f"s_ego decile {dcl + 1}"] = float((k == dcl).mean())
+    t = C["t"]
+    cols["CARLA"] |= {"night (sun altitude < 0)": float(t.night.mean()), "rain (precipitation > 0)": float(
+        (t.precipitation > 0).mean()), "Large Map": float(t.large_map.mean()), "towns": int(t.town.nunique())}
+    return pd.DataFrame(cols)
+
+
 def analyze(rl):
     W, C = waymo_side(), carla_side()
     rl.log.info("Waymo: %d frames / %d sequences; CARLA: %d frames / %d routes", len(W["fut"]),
@@ -754,6 +874,9 @@ def analyze(rl):
     heads["anchors"].to_csv(rl.dir / "q3_anchor_distribution.csv", index=False)
     t3b = q3b_probes(W, C, rl)
     t3b.to_csv(rl.dir / "q3b_probes.csv", index=False)
+    comp = composition(W, C, heads)
+    comp.to_csv(rl.dir / "composition.csv")
+    rl.log.info("composition\n%s", comp.to_markdown(floatfmt=".3f"))
     # what the figures need, small
     Xw, Xc = W["X"]["L18_last"], C["X"]["L18_last"]
     mu, sd = Xw.mean(0), Xw.std(0) + 1e-6
