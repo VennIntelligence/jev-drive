@@ -1,6 +1,6 @@
 # W2 协议：TFv6 轨迹 + 我们的控制器，闭环对照
 
-状态：草案，2026-09-23 由 Mac 侧写。**第 1 阶段（实现与核对）完成、Mac 侧审过并 commit 冻结之后，才能跑第一例正式 case。** 冻结前这页只能由 Mac 侧改；执行者发现需要改的地方，写进 `/data/runs/b2d/tfv6-w2/bus/status.jsonl`，不要自己改协议。
+状态：**冻结**，2026-09-23。第 1 阶段（[implementation.md](implementation.md)）已由 Mac 侧审过，冻结时做的两处澄清见文末「冻结记录」；判定规则、臂、路线、seed、指标都没有因第 1 阶段的数字而改动。此后本页不再修改，偏离写进报告。
 
 上游：[remote_carla_research.md](../remote_carla_research.md) 的 W2。W1 的结论（lateral v2 候选按冻结门槛不通过，见 [lateral-v2-report.md](../2026-09-23-controller-next/lateral-v2-report.md) 和 `research/decisions.md` 第 30 条）决定了主臂用 **production 控制器**。
 
@@ -21,7 +21,7 @@ TFv6（`tfv6_resnet34`，三 seed ensemble，B2D DS 约 95 的强 planner）输�
 
 - **主效应 = C − B**（控制器本身）。A − B 是表示（route+speed 对 waypoint）的效应，只描述。D − C 只描述，用来看 W1 的候选在真实 planner 下是否值得另开阶段。
 - 作者启发式如果是在 PID 之后覆盖 control（例如 creeping 改 throttle、紧急制动改 brake），C、D 臂在我们的控制器之后按完全相同的规则覆盖；如果某个启发式本身依赖 route 或 target speed 模态，照原样在四个臂里都执行，并在实现说明里逐条列出。任何一条启发式做不到四臂一致，停下来报告。
-- 控制器配置：C 用当前 `main` 上 `scripts/b2d_controller.py` 的默认值，D 只加上面两个 opt-in。truth-pose ceiling 一律关闭。位姿来源与 lateral v2 的生产臂一致（GNSS/IMU + fixed k），只在实现说明里写明，不另开臂。
+- 控制器配置：C 用当前 `main` 上 `scripts/b2d_controller.py` 的默认值，D 只加上面两个 opt-in。truth-pose ceiling 一律关闭。TFv6 的 waypoint 每 tick 重新规划、本身就是车体局部轨迹，所以 C、D 臂的控制不用世界位姿：`Controller` 在两次规划之间只用 SPEED 和 gyro 做短时传播。lateral v2 的 GNSS/IMU + fixed-k PoseFilter 照样运行并逐帧记录（TFv6 的 GNSS 在 actor origin，`gnss_x_m=0`，后轴 x=−1.389 m），只作诊断，不进控制。
 
 ## 轨迹接口（C、D）
 
@@ -44,7 +44,7 @@ TFv6 `pred_future_waypoints`：8 点，+0.25…+2.0 s，原点是 actor origin�
 5. **墙钟和并发**：TFv6 是第三方代码，照原样跑，不改。只测：单个 CARLA + agent 的 tick 时间、显存峰值、CPU；在 3090（24 GB）上同时跑 1、2、3 个 CARLA server 各自的吞吐，选总吞吐最高且没有崩溃的并发数。估算下面第 2、3 级的总墙钟，写进实现说明。
 6. **nondeterminism 基线**：A 臂 TM seed 0 在 Dev10 上跑两遍（这 20 次属于正式 case，在冻结之后跑，见第 2 阶段），这里只需要确认同一个 case 跑两次日志可以对齐。
 
-第 1 阶段的产出写进本目录 `implementation.md`（英文、中文都可，写实测数字），然后发信号 `NEED_GO`，等 Mac 侧冻结。
+并发数实测为 2（3 个 server 在 24 GB 上 CUDA OOM）。第 1 阶段的产出写进本目录 `implementation.md`（英文、中文都可，写实测数字），然后发信号 `NEED_GO`，等 Mac 侧冻结。
 
 ## 第 2 阶段：正式运行（冻结之后）
 
@@ -54,7 +54,7 @@ TFv6 `pred_future_waypoints`：8 点，+0.25…+2.0 s，原点是 actor origin�
 |---|---|---|---|---:|
 | 1 | Dev10（`drivetransformer_bench2drive_dev10.xml`） | 0、1、2 | A、B、C、D | 120 |
 | 1r | Dev10 | 0（重跑） | A | 10 |
-| 2 | 已有的 6 条 holdout（`todos/2026-09-22-b2d-controller` 的 v1 保留集，执行者找到 XML，路线 ID 写进 implementation.md） | 0、1、2 | A、B、C、D | 72 |
+| 2 | v1 保留集 6 条（`todos/2026-09-22-b2d-controller/results/holdout.xml`：3072、2084、2050、25318、28154、27529） | 0、1、2 | A、B、C、D | 72 |
 | 3 | B2D 完整 220 条 | — | — | 需要决策，不自动跑 |
 
 - 1r 用来量化同 seed 重跑的非确定性（DS 的重跑差分布），作为解释配对差时的噪声参照。
@@ -87,3 +87,10 @@ TFv6 `pred_future_waypoints`：8 点，+0.25…+2.0 s，原点是 actor origin�
 - `results/`：`cases.csv`（每个 case 一行：级、路线、seed、臂、DS、RC、违规分项、完成、墙钟、重跑次数）、`paired.csv`、`tracking.csv`、`summary.json`。逐帧文件留在 `/data/runs/b2d/tfv6-w2/`。
 - `figs/`：按 `research/plot_style.py`；至少一张配对 DS 差（每条路线一行，C−B、A−B、D−C 三组点和 CI），一张跟踪误差对比。
 - `report.md`：中文，表格加图，每张图后 1–3 句说明看什么。回答"问题"一节，判定按上面登记的规则。
+
+## 冻结记录
+
+2026-09-23，Mac 侧审完第 1 阶段后冻结。执行者提的两个问题的裁定：
+
+1. **位姿契约**：按上面「臂」一节改写后的表述执行。原稿写"位姿来源与 lateral v2 的生产臂一致"，这对 route oracle 成立（那里控制器要在世界系里对一条固定参考线），对每 tick 重规划的局部 waypoint 不适用；实现的做法是对的，改的是协议措辞。
+2. **坐标核对**：通过。正确变换在左、右转的 8 个 horizon 上横向误差中位数都最低；+1 s 时为左 .43 / 右 .44 m，三个错误版本是左 .77–1.69、右 .92–2.63 m。有符号中位数在 8 个 horizon 上左右各 3 正 5 负，没有随转向翻号的持续偏置。剩下的 .4 m 量级误差包含模型预测误差和 B 臂 PID 的实际跟踪误差，不归因于坐标变换。
