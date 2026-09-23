@@ -1160,7 +1160,8 @@ def main():
         analyze(rl)
         rl.close()
     else:
-        figs(Path(a.run))
+        runs = sorted((data_dir() / "runs" / "p4_carla" / "analyze").glob("*"))
+        figs(Path(a.run) if a.run else runs[-1])
 
 
 if __name__ == "__main__":
