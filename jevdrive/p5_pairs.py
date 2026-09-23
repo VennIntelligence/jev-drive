@@ -367,13 +367,216 @@ def collect(gen: Path, only: set | None = None, workers: int = 8) -> tuple[pd.Da
     return pairs, frames, nulls
 
 
+# ---------------------------------------------------------------- frames for the heads and probes
+
+TRAIN_EVERY = 8                             # ticks between P5 training frames (2.5 Hz)
+P4_STOP_KEEP = 0.25                         # share of P4's stop / queue frames kept for training
+TAPS = ("L18_last", "L18_mean")
+CHUNK = 1500
+
+
+def _p4_route(gen, rid, town):
+    from . import p4_carla as p4
+    adir = p4._route_attempt(gen, rid)
+    if adir is None or not (adir / "meta.json").exists() or not (adir / "p4_summary.json").exists():
+        return None
+    r = p4.route_rows(adir, rid, town)
+    if r is None:
+        return None
+    t, past, fut, route = r
+    t["intent"] = p4.route_intent(route, t.route_progress.to_numpy(), INTENT_LOOKAHEAD_M)
+    return t, past, fut
+
+
+def p4_rows(seed: int = 0):
+    """Every P4 frame with a complete clip / past / future, stop-and-queue frames thinned to a quarter."""
+    from joblib import Parallel, delayed
+    from . import p4_carla as p4
+    gen = data_dir() / "runs" / "p4_carla" / "gen"
+    routes = pd.concat([pd.read_csv(p4.RESULTS / f, dtype={"route_id": str}) for f in ("routes.csv", "routes_wave2.csv")])
+    per = [r for r in Parallel(8)(delayed(_p4_route)(gen, rid, town) for rid, town in zip(routes.route_id, routes.town))
+           if r is not None]
+    t = pd.concat([r[0] for r in per], ignore_index=True)
+    past, fut = np.concatenate([r[1] for r in per]), np.concatenate([r[2] for r in per])
+    lay, _ = p4.layers(past, fut)
+    keep = (lay != "stop_queue") | (np.random.default_rng(seed).random(len(t)) < P4_STOP_KEEP)
+    t = t[keep].reset_index(drop=True)
+    t = t.assign(base_id=t.route_id, source="p4", world="p4", seed=-1, role="train", layer=lay[keep])
+    return t, past[keep], fut[keep]
+
+
+def _route_geometry(W: dict):
+    import json
+    route = pd.read_json(W["dir"] / "route.json")
+    xy = route[["x", "y"]].to_numpy()
+    s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+    gov = []                                  # (route index, light id): a light's stop line lies on the route
+    for l in json.loads((W["dir"] / "lights.json").read_text()):
+        for x, y, _, yaw, *_ in l["stops"]:
+            d = np.hypot(xy[:, 0] - x, xy[:, 1] - y)
+            j = int(d.argmin())
+            if d[j] < 2.0 and abs((route.yaw[j] - yaw + 180) % 360 - 180) < 30:
+                gov.append((j, l["id"]))
+    return xy, s, sorted(gov)
+
+
+def probe_labels(W: dict, ks, hidden_world: bool) -> pd.DataFrame:
+    """Privileged per-frame labels for the probes.
+
+    hazard: a hazard actor (this world's hidden.json) shows >= PX_ACTOR pixels in the front image and is closing
+    in (distance to the ego falls faster than 0.5 m/s over the last 0.25 s); always 0 in a world that hides them.
+    light: the traffic light whose stop line is the next one on the route within 60 m, 1 red / 0 green, when it
+    shows >= PX_LIGHT pixels; NaN otherwise (yellow, not visible, no light ahead)."""
+    xy, s, gov = _route_geometry(W)
+    act, pose, fr = W["act"], W["pose"], W["frames"]
+    hz = set(W["hazards"])
+    pos = {}
+    if hz and not hidden_world:
+        m = np.isin(act["id"], list(hz))
+        for k, i, q in zip(act["k"][m], act["id"][m], act["xyz"][m]):
+            pos[(int(k), int(i))] = q[:2]
+    out = []
+    for k in ks:
+        hazard, light = 0, np.nan
+        if k in fr.index and k in pose.index:
+            px = fr.loc[k].px if isinstance(fr.loc[k].px, dict) else {}
+            e = pose.loc[k][["x", "y"]].to_numpy(float)
+            e0 = pose.loc[k - 5][["x", "y"]].to_numpy(float) if k - 5 in pose.index else e
+            for i in hz if not hidden_world else ():
+                if px.get(str(i), 0) >= PX_ACTOR and (k, i) in pos and (k - 5, i) in pos:
+                    if np.linalg.norm(pos[(k, i)] - e) - np.linalg.norm(pos[(k - 5, i)] - e0) < -0.125:
+                        hazard = 1
+            p = int(np.argmin(np.hypot(xy[:, 0] - e[0], xy[:, 1] - e[1])))
+            ahead = [(j, lid) for j, lid in gov if j >= p - 2 and s[j] - s[p] <= 60.0]
+            if ahead:
+                lid = ahead[0][1]
+                st = fr.loc[k].lights.get(str(lid))
+                if px.get("L%d" % lid, 0) >= PX_LIGHT and st in ("Red", "Green"):
+                    light = float(st == "Red")
+        out.append({"k": k, "hazard": hazard, "light": light})
+    return pd.DataFrame(out)
+
+
+def _p5_run_rows(gen: Path, rid: str, town: str, obs_names: set):
+    a = attempt(gen, rid)
+    if a is None:
+        return None
+    r = world_rows(a, rid, town)
+    if r is None:
+        return None
+    t, past, fut = r
+    base, world, seed = parse_id(rid)
+    W = load_world(a)
+    lab = probe_labels(W, t.k.tolist(), hidden_world=(world == "minus"))
+    t = t.assign(hazard=lab.hazard.to_numpy(), light=lab.light.to_numpy(), base_id=base, source="p5", world=world,
+                 seed=seed)
+    t["role"] = np.where(t.frame_name.isin(obs_names), "obs", np.where(t.k % TRAIN_EVERY == 1, "train", "skip"))
+    keep = (t.role != "skip").to_numpy()
+    return t[keep].reset_index(drop=True), past[keep], fut[keep]
+
+
+def p5_rows(gen: Path, frames: pd.DataFrame, nulls: pd.DataFrame, workers: int = 8):
+    """Observation frames (pair and null, both worlds) and 2.5 Hz training frames of every recorded P5 run."""
+    from joblib import Parallel, delayed
+    cases = pd.read_csv(RESULTS / "cases.csv", dtype=str)
+    obs = set()
+    for df, cols in ((frames, ("fn_plus", "fn_minus")), (nulls, ("fn_plus", "fn_null"))):
+        for c in cols:
+            if len(df):
+                obs |= set(df[c])
+    runs = {(r, town) for _, c in cases.iterrows() for r, town in ((c.plus, c.town), (c.minus, c.town),
+                                                                     (c.null, c.town)) if isinstance(r, str) and r}
+    per = [r for r in Parallel(workers)(delayed(_p5_run_rows)(gen, rid, town, obs) for rid, town in sorted(runs))
+           if r is not None]
+    t = pd.concat([r[0] for r in per], ignore_index=True)
+    return t, np.concatenate([r[1] for r in per]), np.concatenate([r[2] for r in per])
+
+
+def index(gen: Path, with_p5: bool = True):
+    """The frame table the features are extracted for, with ego inputs, futures and probe labels."""
+    t4, pa4, fu4 = p4_rows()
+    parts = [(t4, pa4, fu4)]
+    if with_p5:
+        pairs, frames, nulls = collect(gen)
+        d = processed()
+        pairs.to_csv(d / "pairs.csv", index=False)
+        frames.to_parquet(d / "obs.parquet", index=False)
+        nulls.to_parquet(d / "null.parquet", index=False)
+        parts.append(p5_rows(gen, frames, nulls))
+    t = pd.concat([p[0] for p in parts], ignore_index=True)
+    past, fut = np.concatenate([p[1] for p in parts]), np.concatenate([p[2] for p in parts])
+    assert t.frame_name.is_unique, "duplicate frame names"
+    d = processed()
+    t.to_parquet(d / "index.parquet", index=False)
+    np.save(d / "past.npy", past)
+    np.save(d / "future.npy", fut)
+    log.info("index: %d frames; by source/role %s", len(t), t.groupby(["source", "role"]).size().to_dict())
+    return t
+
+
+def extract(rl, batch: int = 2, workers: int = 4):
+    """P3(d'')'s extractor over every indexed clip, in resumable chunks; P4's 3000 extracted clips are reused."""
+    from . import features as F, p4_carla as p4, waymo_qwenvid as qv
+    t = pd.read_parquet(processed("index.parquet"))
+    have = pd.read_parquet(p4.out_dir("features", p4.FEATURE_SET) / "index.parquet").frame_name
+    todo = t[~t.frame_name.isin(set(have))].reset_index(drop=True)
+    root = processed("features")
+    chunks = [todo.iloc[i:i + CHUNK] for i in range(0, len(todo), CHUNK)]
+    left = [(i, c) for i, c in enumerate(chunks) if not (root / f"c{i:03d}" / "meta.json").exists()
+            or set(pd.read_parquet(root / f"c{i:03d}" / "index.parquet").frame_name) != set(c.frame_name)]
+    rl.log.info("%d frames indexed, %d reused from P4, %d in %d chunks, %d chunks to do", len(t), len(t) - len(todo),
+                len(todo), len(chunks), len(left))
+    if not left:
+        return
+    fx = qv.make_fx(compile=False)
+    for i, c in left:
+        dst = root / f"c{i:03d}"
+        dst.mkdir(parents=True, exist_ok=True)
+        st = F.extract(fx, c.files.map(list).tolist(), batch, workers, dst, rl, f"p5/c{i:03d}", dataset=p4.ClipFiles)
+        c[["frame_name"]].to_parquet(dst / "index.parquet", index=False)
+        (dst / "meta.json").write_text(pd.Series({"recipe": "P3(d'') qwenvid", "batch_size": batch, **st}).to_json())
+        rl.log.info("chunk %d: %d clips, %.1f ms/frame", i, len(c), st["ms_per_frame"])
+        rl.event("chunk_done", chunk=i, n=len(c), ms_per_frame=st["ms_per_frame"])
+
+
+def load_features(t: pd.DataFrame, taps=TAPS) -> dict:
+    """Feature rows aligned to `t` (P4's reused clips and the P5 chunks)."""
+    from . import p4_carla as p4
+    srcs = [(p4.out_dir("features", p4.FEATURE_SET), None)] + [(d, None) for d in sorted(processed("features").glob("c*"))]
+    pos, arrs = {}, {k: [] for k in taps}
+    n = 0
+    for d, _ in srcs:
+        if not (d / "index.parquet").exists():
+            continue
+        names = pd.read_parquet(d / "index.parquet").frame_name.tolist()
+        for k in taps:
+            arrs[k].append(np.load(d / f"{k}.npy", mmap_mode="r"))
+        pos.update({f: n + j for j, f in enumerate(names)})
+        n += len(names)
+    at = t.frame_name.map(pos)
+    assert at.notna().all(), f"{int(at.isna().sum())} frames without features"
+    at = at.astype(int).to_numpy()
+    return {k: np.concatenate(v)[at].astype(np.float32) for k, v in arrs.items()}
+
+
 def main():
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["build"])
+    p.add_argument("cmd", choices=["build", "index", "extract"])
+    p.add_argument("--gen", default=str(data_dir() / "runs" / "p5_pairs" / "gen"))
+    p.add_argument("--p4-only", action="store_true", help="index only P4's frames (start extracting before P5 ends)")
+    p.add_argument("--batch", type=int, default=2)
+    p.add_argument("--workers", type=int, default=4)
     a = p.parse_args()
     if a.cmd == "build":
         build()
+    elif a.cmd == "index":
+        index(Path(a.gen), with_p5=not a.p4_only)
+    elif a.cmd == "extract":
+        from .runlog import RunLog
+        rl = RunLog("p5_pairs", "extract")
+        extract(rl, a.batch, a.workers)
+        rl.close()
 
 
 if __name__ == "__main__":
