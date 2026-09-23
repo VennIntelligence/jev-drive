@@ -130,6 +130,25 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         _patch_lights()
 
 
+def reseed_after_build(tm_seed):
+    """Counterfactual pairs (scripts/p5_pair_agent.py): make the background independent of the scenarios.
+
+    Background vehicles draw their blueprints, colours and spawn points from `CarlaDataProvider._rng`, the
+    same stream the scenario actors draw from, and the scenarios are built first (RouteScenario builds every
+    scenario within 500 m at construction, which on Bench2Drive's short routes is all of them). Removing one
+    scenario from the XML therefore changes the whole background fleet. Re-seeding the stream in place right
+    after RouteScenario.__init__ makes both worlds draw the background from the same state. In place, because
+    BackgroundActivity keeps a reference to the RandomState object, created before the scenarios are built."""
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    inner = RouteScenario.__init__
+
+    def init(self, *args, **kwargs):
+        inner(self, *args, **kwargs)
+        CarlaDataProvider._rng.seed(2000 + int(tm_seed))
+
+    RouteScenario.__init__ = init
+
+
 def _patch_lights():
     from srunner.scenariomanager.lights_sim import RouteLightsBehavior
 

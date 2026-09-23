@@ -119,6 +119,8 @@ def parse_args(argv=None):
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
     p.add_argument("--tm-seed", type=int, default=0)
+    p.add_argument("--tm-seed-from-id", action="store_true",
+                   help="take each route's TM seed from the last digit of its id (P5 pair variants)")
     p.add_argument("--drive", default="route", choices=["straight", "route", "controller"])
     p.add_argument("--policy", default="none")
     p.add_argument("--infer-ms", type=float, default=0.0)
@@ -554,7 +556,8 @@ class Runner(object):
                "--height", str(self.a.height), "--policy", self.a.policy,
                "--infer-ms", str(self.a.infer_ms), "--decimate", str(self.a.decimate),
                "--drive", self.a.drive, "--controller-preset", self.a.controller_preset,
-               "--cruise-mps", str(self.a.cruise_mps), "--tm-seed", str(self.a.tm_seed)]
+               "--cruise-mps", str(self.a.cruise_mps),
+               "--tm-seed", str(int(rid[-1]) if self.a.tm_seed_from_id else self.a.tm_seed)]
         if self.a.controller_config:
             cmd += ["--controller-config", self.a.controller_config]
         if self.a.policy_socket:
