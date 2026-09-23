@@ -24,6 +24,8 @@ The 125 controller tests passed. Production replay exactly reproduced the origin
 
 ## Local environment recovery
 
+**Tokyo box only.** Never source this on the GPU box, which has its own working driver.
+
 An unattended NVIDIA userspace upgrade broke CARLA startup before any driving case. Matching 580.159.03 vendor libraries were extracted to a private directory, with the official archive checksum verified. CARLA's actual process maps and GPU UUID confirmed successful isolated recovery. No host driver installation or reboot was performed.
 
 While the loaded kernel driver is still 580.159.03, launch local experiments from a shell that sources:

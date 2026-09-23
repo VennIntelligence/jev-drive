@@ -116,4 +116,26 @@ The campaign owns one server across groups, resets worlds through the evaluator,
 
 Snapshots include source/config hashes rather than relying on HEAD alone. Plotting requires NumPy and Matplotlib and exports English PNG/PDF, exact CSV, source snapshots, and a SHA256 manifest. Nonempty plot output directories are rejected. A campaign directory includes only direct `*-seed*/controller-report.json` groups; nested holdout reports are excluded. Plot holdout separately with `--campaign /data/runs/b2d/controller/campaign-v2/holdout --label Holdout` and a new output directory. A report file selects one group. Failures/retries remain visible, missing metrics stay missing, and collision-free prefixes require recorded event frames.
 
+## Running on the GPU box
+
+The controller stack runs headless on the GPU box as well as on the Tokyo box. Paths come from
+`DATA_DIR` (`CARLA_ROOT`, `BENCH2DRIVE_ROOT`, `B2D_ZOO_ROOT` override), and `Server` renders
+off-screen unless `DISPLAY` is set (`CARLA_WINDOWED=0/1` overrides). Tokyo launchers keep setting
+`DATA_DIR=/data DISPLAY=:0 CUDA_VISIBLE_DEVICES=1`; the Tokyo NVIDIA userspace workaround in
+[b2d-controller-lateral.md](b2d-controller-lateral.md) is never used on the GPU box.
+
+- **Tests.** 125 controller tests (`test_b2d_controller*.py`, `envs/carla`), 17 TCP tests
+  (`test_b2d_tcp*.py`, `envs/b2d-tcp`) and 15 pose-analysis tests pass there. Four controller tests
+  compare against goldens recorded on Tokyo bit for bit; run them with `OPENBLAS_CORETYPE=Barcelona`.
+  NumPy's OpenBLAS picks its matmul kernel per CPU (Tokyo's Zen 5 falls back to `Barcelona`, the Xeon
+  gets `Cooperlake`) and the kernels round differently in the last bit.
+- **Variants.** `--variants` wants absolute config paths, so a frozen `variants.json` written on
+  Tokyo (`/home/ujs/mycode/...`) needs a per-box copy with the same config files; their SHA256
+  does not change.
+- **Parity.** The frozen six-case pose-g2 protocol reproduced Tokyo's four-window CTE RMS within
+  2 mm (Town10HD/Town05 identical to 1e-5 m, Town12 within 2 mm) and the same 155/156 verdict.
+  A case takes about 2.5x longer than on Tokyo (single-threaded server tick), so run cases in parallel:
+  8 servers on distinct `--server-index` values (150 ports apart) gave 20 cases/min with no failures.
+  Details: [gpubox-port.md](../todos/2026-09-23-controller-next/gpubox-port.md).
+
 Last verified: 2026-09-23
