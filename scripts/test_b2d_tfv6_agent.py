@@ -1,10 +1,12 @@
 """W2 arm routing and author postprocessor contract."""
 
+from collections import deque
 from types import SimpleNamespace
 import unittest
 
 from b2d_tfv6_controller_agent import (
-    _apply_postprocessors, _configure_author_arm, _normalize_brake, _select_arm_control,
+    _apply_postprocessors, _clone_processor, _configure_author_arm, _normalize_brake,
+    _select_arm_control,
 )
 
 
@@ -53,6 +55,42 @@ class AgentPathTests(unittest.TestCase):
     def test_author_brake_interlock_precedes_postprocessors(self):
         self.assertEqual(_normalize_brake({"steer": .3, "throttle": .5, "brake": 1.}, 0.),
                          {"steer": 0., "throttle": 0., "brake": 1.})
+
+    def test_shadow_replays_last_creep_tick_without_advancing_live_processor(self):
+        class ForceMove:
+            def __init__(self):
+                self.force_move = 1
+
+            def adjust(self, speed, throttle, brake):
+                if self.force_move:
+                    self.force_move -= 1
+                    return max(.4, throttle), 0.
+                return throttle, brake
+
+        class StopSign:
+            def __init__(self):
+                self.stop_sign_buffer = deque([object()], maxlen=1)
+                self.calls = 0
+
+            def adjust(self, speed, throttle, brake):
+                self.calls += 1
+                return throttle, brake
+
+        force, stop = ForceMove(), StopSign()
+        force_adjust, stop_adjust = force.adjust, stop.adjust
+        force.adjust = lambda *args: force_adjust(*args)
+        stop.adjust = lambda *args: stop_adjust(*args)
+        shadow_force, shadow_stop = _clone_processor(force), _clone_processor(stop)
+        raw = {"steer": .0102737, "throttle": .3013387, "brake": 0.}
+        actual = _apply_postprocessors(raw, .2072897, force, stop)
+        replay = _apply_postprocessors(raw, .2072897, shadow_force, shadow_stop)
+        self.assertEqual(actual, replay)
+        self.assertEqual(actual["throttle"], .4)
+        self.assertEqual(force.force_move, 0)
+        self.assertEqual(shadow_force.force_move, 0)
+        self.assertEqual(stop.calls, 1)
+        self.assertEqual(shadow_stop.calls, 1)
+        self.assertIsNot(stop.stop_sign_buffer, shadow_stop.stop_sign_buffer)
 
 
 if __name__ == "__main__":

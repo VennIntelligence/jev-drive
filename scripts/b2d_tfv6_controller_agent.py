@@ -55,6 +55,10 @@ def _configure_author_arm(config, arm):
 
 def _clone_processor(processor):
     result = copy(processor)
+    # The live instance has an adjust wrapper installed for tracing. A shallow
+    # copy retains that closure, which still calls the live processor and thus
+    # advances its state a second time during shadow replay.
+    result.__dict__.pop("adjust", None)
     if hasattr(processor, "stop_sign_buffer"):
         result.stop_sign_buffer = deque(processor.stop_sign_buffer, maxlen=processor.stop_sign_buffer.maxlen)
     return result
@@ -210,6 +214,15 @@ class TFv6ControllerAgent(SensorAgent):
                 final = {arm: _triplet(0.0, 0.0, 1.0) for arm in ARMS}
             observed = _triplet(control.steer, control.throttle, control.brake)
             if any(abs(observed[key] - final[self.arm][key]) > 1e-5 for key in observed):
+                self._frame_log.write(json.dumps({"diagnostic": "shadow_mismatch", "step": int(self.step),
+                    "sim_time": self._sim_time, "arm": self.arm, "raw_control": self._raw,
+                    "final_control": final, "executed_control": observed,
+                    "speed": speed, "force_state": {"stuck_detector": self.force_move_post_processor.stuck_detector,
+                    "force_move": self.force_move_post_processor.force_move},
+                    "stop_state": {"slower_stop_sign_count": self.stop_sign_post_processor.slower_stop_sign_count,
+                    "clear_stop_sign_cool_down": self.stop_sign_post_processor.clear_stop_sign_cool_down,
+                    "slower_for_stop_sign_cool_down": self.stop_sign_post_processor.slower_for_stop_sign_cool_down}},
+                    allow_nan=False) + "\n")
                 raise RuntimeError("Shadow postprocessing does not match executed control")
         prediction = self._prediction
         row = {
