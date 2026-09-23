@@ -70,7 +70,7 @@ class CampaignConfigTests(unittest.TestCase):
         routes = self.root / 'routes.xml'; routes.write_text('<routes/>')
         out = self.root / 'run'
         seen = []
-        server = SimpleNamespace(index=70, proc=SimpleNamespace(pid=123))
+        server = SimpleNamespace(index=70, windowed=False, proc=SimpleNamespace(pid=123))
         server.start = lambda: None
         server.stop = lambda: None
         server.alive = lambda: True
