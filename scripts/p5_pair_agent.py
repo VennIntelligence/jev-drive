@@ -15,8 +15,8 @@ driven by CARLA's BehaviorAgent, exactly as in P4. Outputs, in the attempt direc
   actors.npz      per tick: every vehicle and walker within 100 m (frame, id, x, y, z, yaw, vx, vy)
   actor_kinds.json  id -> type_id, role_name, bounding box
   frames.jsonl    per camera frame (5 Hz): JPEG paths, scenario trigger flags, light states within 100 m,
-                  and for every vehicle / walker / light within 60 m in the Waymo front camera's frustum:
-                  whether a ray from the camera reaches it unoccluded
+                  and the pixel count of every actor (vehicle, walker, traffic light) in an instance-segmentation
+                  view of the Waymo front image, i.e. what the camera actually sees of it
   tfv6.jsonl      per tick: TFv6 target-speed distribution and scalar, 8 waypoints, 10 route points
   cams/<cam>/<frame>.jpg   the three Waymo-calibrated cameras of P4, unchanged
 
@@ -132,6 +132,21 @@ class P5PairAgent(SensorAgent):
         (self.out / "lights.json").write_text(json.dumps(lights))
         self._light_xyz = np.array([l["loc"] for l in lights], np.float64).reshape(-1, 3)
         self._light_box = [np.array([b[:3] for b in l["boxes"]] or [l["loc"]], np.float64) for l in lights]
+        # Visibility camera: instance segmentation at the Waymo front camera's pose and field of view, at half the
+        # render resolution. Spawned here, not through the leaderboard (its sensor whitelist has no segmentation);
+        # the G and B channels carry the actor id, so a factor actor is visible iff its pixels are in the image.
+        c, (_, fx, fy, fz, _) = self.cfg, FRONT
+        bp = world.get_blueprint_library().find("sensor.camera.instance_segmentation")
+        for k, v in (("image_size_x", c["render_w"] // 2), ("image_size_y", c["render_h"] // 2), ("fov", self.fov)):
+            bp.set_attribute(k, str(v))
+        self._seg_buf = {}
+        self._seg = world.spawn_actor(bp, carla.Transform(carla.Location(x=fx + p4.REAR_AXLE_X, y=-fy, z=fz - c["origin_z"])),
+                                      attach_to=hero)
+        self._seg.listen(lambda img: self._seg_buf.__setitem__(img.frame, bytes(img.raw_data)))
+        # the part of the half-resolution render that the 972 x 1079 Waymo image crops (distortion ignored)
+        x0, y0 = (c["render_w"] - 1) / 2 - c["cu"], (c["render_h"] - 1) / 2 - c["cv"]
+        self._seg_crop = (slice(max(0, int(y0 / 2)), int((y0 + c["out_h"]) / 2)),
+                          slice(max(0, int(x0 / 2)), int((x0 + c["out_w"]) / 2)))
         bb = hero.bounding_box
         self._ego_ext = np.array([bb.extent.x, bb.extent.y, bb.extent.z])
         self._ego_loc = np.array([bb.location.x, bb.location.y, bb.location.z])
@@ -180,76 +195,22 @@ class P5PairAgent(SensorAgent):
         self._actor_rows.extend(rows)
         return rows
 
-    def _front_cam(self):
-        """World transform of the Waymo front camera and its world->camera matrix."""
-        _, x, y, z, _ = FRONT
-        tf = self._hero.get_transform()
-        loc = tf.transform(carla.Location(x=x + p4.REAR_AXLE_X, y=-y, z=z - self.cfg["origin_z"]))
-        cam = carla.Transform(loc, tf.rotation)
-        return loc, np.array(cam.get_inverse_matrix()), np.array(tf.get_inverse_matrix())
-
-    def _in_frustum(self, M, pts):
-        """Any of the world points projects inside the 972 x 1079 Waymo front image (pinhole, distortion ignored)."""
+    def _visibility(self, frame):
+        """Pixels per actor id in the instance-segmentation view of the Waymo front image (ids with >= 1 pixel).
+        Traffic lights are actors too, so a light's head shows up under its own id."""
+        deadline = time.time() + 5.0
+        while frame not in self._seg_buf and time.time() < deadline:
+            time.sleep(0.002)
+        raw = self._seg_buf.pop(frame, None)
+        for f in [f for f in self._seg_buf if f < frame]:
+            del self._seg_buf[f]
+        if raw is None:
+            return None
         c = self.cfg
-        p = (M @ np.c_[pts, np.ones(len(pts))].T)[:3]          # camera frame: x forward, y right, z up
-        ok = p[0] > 0.5
-        u = c["cu"] + c["f"] * p[1] / np.where(ok, p[0], 1)
-        v = c["cv"] - c["f"] * p[2] / np.where(ok, p[0], 1)
-        return bool((ok & (u >= 0) & (u < c["out_w"]) & (v >= 0) & (v < c["out_h"])).any())
-
-    def _ray_clear(self, cam, target, inside, Mego):
-        """A ray from the camera to `target` meets nothing before it except the target itself and the hero."""
-        d = cam.distance(target)
-        for hit in self._world.cast_ray(cam, target):
-            p = hit.location
-            if cam.distance(p) >= d - 0.3 or inside(p):
-                continue
-            q = Mego @ np.array([p.x, p.y, p.z, 1.0])
-            if (np.abs(q[:3] - self._ego_loc) <= self._ego_ext + 0.2).all():
-                continue
-            return False, "%s@%.1f" % (hit.label, cam.distance(p))
-        return True, ""
-
-    def _visibility(self, rows):
-        """Frustum and occlusion for every vehicle / walker / light within vis_radius of the front camera."""
-        cam, M, Mego = self._front_cam()
-        R = self.cfg["vis_radius"]
-        out = []
-        for _, aid, x, y, z, yaw, _, _ in rows:
-            if (x - cam.x) ** 2 + (y - cam.y) ** 2 > R * R:
-                continue
-            _, _, bb = self._kind(aid)
-            tf = carla.Transform(carla.Location(x, y, z), carla.Rotation(yaw=yaw))
-            ext = carla.Vector3D(bb[3], bb[4], bb[5])
-            box = carla.BoundingBox(carla.Location(*bb[:3]), ext)
-            corners = np.array([[v.x, v.y, v.z] for v in box.get_world_vertices(tf)])
-            centre = tf.transform(carla.Location(*bb[:3]))
-            if not self._in_frustum(M, np.r_[corners, [[centre.x, centre.y, centre.z]]]):
-                continue
-            Mi = np.array(tf.get_inverse_matrix())
-
-            def inside(p, Mi=Mi, bb=bb):
-                q = Mi @ np.array([p.x, p.y, p.z, 1.0])
-                return (np.abs(q[:3] - np.array(bb[:3])) <= np.array(bb[3:]) + 0.3).all()
-            top = centre + carla.Location(z=0.6 * bb[5])
-            res = [self._ray_clear(cam, t, inside, Mego) for t in (centre, top)]
-            out.append({"id": aid, "vis": any(r[0] for r in res), "blk": res[0][1] or res[1][1],
-                        "d": round(cam.distance(centre), 2)})
-        lights = []
-        if len(self._light_xyz):
-            near = np.flatnonzero(((self._light_xyz[:, :2] - [cam.x, cam.y]) ** 2).sum(1) <= R * R)
-            for i in near:
-                boxes = self._light_box[i]
-                if not self._in_frustum(M, boxes):
-                    continue
-                vis = False
-                for b in boxes:
-                    tgt = carla.Location(*b)
-                    vis = self._ray_clear(cam, tgt, lambda p, tgt=tgt: p.distance(tgt) < 1.0, Mego)[0]
-                    if vis:
-                        break
-                lights.append({"id": self._lights[i].id, "vis": vis, "d": round(cam.distance(carla.Location(*boxes[0])), 2)})
-        return out, lights
+        img = np.frombuffer(raw, np.uint8).reshape(c["render_h"] // 2, c["render_w"] // 2, 4)[self._seg_crop]
+        ids = img[..., 1].astype(np.int32) + 256 * img[..., 2].astype(np.int32)
+        u, n = np.unique(ids, return_counts=True)
+        return {int(i): int(k) for i, k in zip(u, n) if i > 0}
 
     def _light_states(self):
         hl = self._hero.get_location()
@@ -320,7 +281,7 @@ class P5PairAgent(SensorAgent):
             files, std = self._save(frame, input_data)
             self._t["save"].append(time.perf_counter() - t0)
             t0 = time.perf_counter()
-            vis, lvis = self._visibility(rows)
+            px = self._visibility(frame)
             self._t["visibility"].append(time.perf_counter() - t0)
             bb = py_trees.blackboard.Blackboard()
             trig = [bool(bb.get("ScenarioRouteNumber%d" % i)) for i in range(2)]
@@ -328,7 +289,7 @@ class P5PairAgent(SensorAgent):
                 self._t_trig = t
             self._frames.write(json.dumps({"frame": frame, "tick": self._tick, "t": round(t, 4), "files": files,
                                            "std": std, "trig": trig, "lights": self._light_states(),
-                                           "vis": vis, "lvis": lvis}) + "\n")
+                                           "px": px}) + "\n")
         t0 = time.perf_counter()
         control = carla.VehicleControl(throttle=0.0, steer=0.0, brake=1.0) if self._ba.done() else self._ba.run_step()
         control.manual_gear_shift = False
@@ -357,6 +318,9 @@ class P5PairAgent(SensorAgent):
             return
         for fh in (self._pose, self._frames, self._tf):
             fh.close()
+        if getattr(self, "_seg", None) is not None:
+            self._seg.stop()
+            self._seg.destroy()
         a = np.array(self._actor_rows, np.float64).reshape(-1, 8)
         np.savez_compressed(self.out / "actors.npz", frame=a[:, 0].astype(np.int64), id=a[:, 1].astype(np.int64),
                             xyz=a[:, 2:5].astype(np.float32), yaw=a[:, 5].astype(np.float32),
