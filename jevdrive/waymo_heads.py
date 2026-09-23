@@ -140,7 +140,7 @@ class TruncDiffusion(torch.nn.Module):
         enc = torch.nn.TransformerEncoderLayer(dm, heads, 4 * dm, drop, batch_first=True, norm_first=True)
         self.enc, self.norm = torch.nn.TransformerEncoder(enc, layers, enable_nested_tensor=False), torch.nn.LayerNorm(dm)
         self.off, self.score = torch.nn.Linear(dm, T2), torch.nn.Linear(dm, 1)
-        torch.nn.init.zeros_(self.off.weight)        # start as the identity on x_t: refine, don't replace
+        torch.nn.init.zeros_(self.off.weight)        # start at the anchors: refine, don't replace
         torch.nn.init.zeros_(self.off.bias)
         self.dm = dm
 
@@ -148,7 +148,11 @@ class TruncDiffusion(torch.nn.Module):
         c = self.ego(e) + (self.feat(f) if self.feat is not None else 0)
         h = self.inp(xt) + self.mode + self.temb(_t_embed(t, self.dm))[:, None]
         z = self.norm(self.enc(torch.cat([c[:, None], h], 1))[:, 1:])
-        return xt + self.off(z), self.score(z).squeeze(-1)
+        # x0 is the mode's anchor plus a learned offset; x_t only conditions it. The first version returned
+        # x_t + offset, which asks the net to cancel the truncated noise itself (at t = 50 that is ~0.17 of the
+        # half-range, ~8.7 m in x) through a 256-d bottleneck: on the fit half's inner split its positive-mode
+        # x0 stayed at 6.1 m against a raw-anchor oracle of 1.7 m. Anchored, the same net refines to 1.15 m.
+        return self.anchors + self.off(z), self.score(z).squeeze(-1)
 
 
 def _noised(anchors: torch.Tensor, t: torch.Tensor, gen=None) -> torch.Tensor:
