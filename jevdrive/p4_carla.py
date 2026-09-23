@@ -133,8 +133,10 @@ def route_rows(adir: Path, rid: str, town: str):
     v = np.stack([pose.vx.to_numpy(), -pose.vy.to_numpy()], -1)
     off = REAR_AXLE_X * head
     v_ra = v + w[:, None] * np.stack([-off[:, 1], off[:, 0]], -1)
-    a_ra = np.gradient(v_ra, TICK, axis=0)
-    a_ra = pd.DataFrame(a_ra).rolling(5, center=True, min_periods=1).mean().to_numpy()   # 0.25 s, like Waymo's
+    # WOD-E2E's accel_x / accel_y are NOT m/s^2: they regress on the 0.25 s velocity difference with slope 0.243
+    # (checked on val), i.e. they are the velocity change per 0.25 s step. Build the same quantity here.
+    dv_step = v_ra - np.roll(v_ra, STEP_TICKS, axis=0)
+    dv_step[:STEP_TICKS] = 0.0
     pos = {f: i for i, f in enumerate(full)}
 
     cam = frames.frame.to_numpy()
@@ -159,7 +161,7 @@ def route_rows(adir: Path, rid: str, town: str):
         if np.isnan(ra[idx]).any() or np.isnan(v_ra[pk]).any():
             continue
         p = _rot(ra[pk] - ra[k], th[k])
-        vv, aa = _rot(v_ra[pk], th[k]), _rot(a_ra[pk], th[k])
+        vv, aa = _rot(v_ra[pk], th[k]), _rot(dv_step[pk], th[k])
         vv[pad], aa[pad] = 0.0, 0.0
         vv[-1], aa[-1] = vv[-2], aa[-2]           # WOD-E2E repeats the previous sample in the last slot
         past.append(np.concatenate([p, vv, aa], -1))
@@ -245,7 +247,7 @@ def layers(past: np.ndarray, fut: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     n = len(past)
     sub = waymo.subsets(pd.DataFrame({"intent": np.ones(n, np.int64)}), past, fut)
     v0 = np.linalg.norm(past[:, -1, 2:4], axis=1)
-    a0 = past[:, -1, 4]
+    a0 = past[:, -1, 4] / waymo.DT              # accel_x is a velocity change per 0.25 s step (see route_rows)
     k3 = int(round(3.0 / waymo.DT)) - 1
     d3 = np.linalg.norm(fut[:, k3, :2], axis=1)
     v3 = np.linalg.norm(fut[:, k3, :2] - fut[:, k3 - 1, :2], axis=1) / waymo.DT
