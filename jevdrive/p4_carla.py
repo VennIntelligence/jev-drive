@@ -268,6 +268,54 @@ def load_carla():
     return pd.read_parquet(d / "index.parquet"), np.load(d / "past.npy"), np.load(d / "future.npy")
 
 
+# ---------------------------------------------------------------- features
+
+FEATURE_SET = "carla_p4"
+
+
+class ClipFiles(torch.utils.data.Dataset):
+    """One item = 12 JPEG paths, camera-major and oldest first, the layout `waymo.Shards` hands over."""
+
+    def __init__(self, items, transform):
+        self.items, self.transform = items, transform
+
+    def __len__(self):
+        return len(self.items)
+
+    def __getitem__(self, i):
+        from PIL import Image
+        return self.transform([Image.open(p).convert("RGB") for p in self.items[i]])
+
+
+def extract(rl, batch: int = 2, workers: int = 4, n_check: int = 16):
+    """P3(d'')'s extractor over the CARLA clips, after proving on Waymo rows that nothing but the reader changed."""
+    from . import features as F, waymo_qwenvid as qv
+    fx = qv.make_fx(compile=False)
+    items, idx = qv.ref_items(n_check)
+    chk = data_dir() / "scratch" / "p4_check" / rl.dir.name
+    chk.mkdir(parents=True, exist_ok=True)
+    F.extract(fx, items, batch, workers, chk, None, "p4/check", dataset=waymo.Shards)
+    eq = qv.compare(chk, idx)
+    rl.event("equivalence", **{k: v for k, v in eq.items()})
+    rl.log.info("equivalence on %d qwenvid_p3 rows: %s", n_check, eq)
+    t, _, _ = load_carla()
+    dst = out_dir("features", FEATURE_SET)
+    st = F.extract(fx, t.files.map(list).tolist(), batch, workers, dst, rl, "p4/carla", dataset=ClipFiles)
+    t[["frame_name", "route_id", "town"]].to_parquet(dst / "index.parquet", index=False)
+    (dst / "meta.json").write_text(json.dumps({"set": FEATURE_SET, "recipe": "P3(d'') qwenvid", "frames_per_clip": 4,
+                                               "clip_stride_s": 0.2, "layer": 18, "batch_size": batch,
+                                               "compile": False, "equivalence": eq, **st}, indent=2, default=float))
+    rl.log.info("carla features: %d clips, %.1f ms/frame, peak %.1f GB", st["n"], st["ms_per_frame"], st["peak_vram_gb"])
+
+
+def load_carla_features(taps=("L18_last", "L18_mean")) -> dict:
+    d = out_dir("features", FEATURE_SET)
+    t, _, _ = load_carla()
+    idx = pd.read_parquet(d / "index.parquet")
+    assert (idx.frame_name.to_numpy() == t.frame_name.to_numpy()).all(), "feature rows out of step with the index"
+    return {k: np.load(d / f"{k}.npy").astype(np.float32) for k in taps}
+
+
 # ---------------------------------------------------------------- entry point
 
 def main():
@@ -287,6 +335,13 @@ def main():
         print(",".join(t.route_id))
     elif a.step == "index":
         build_index(Path(a.gen))
+    elif a.step == "extract":
+        from .runlog import RunLog
+        total = torch.cuda.get_device_properties(0).total_memory
+        torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
+        rl = RunLog("p4_carla", "extract")
+        extract(rl, a.batch_size, a.workers)
+        rl.close()
     else:
         raise SystemExit(f"step {a.step} is added below")
 

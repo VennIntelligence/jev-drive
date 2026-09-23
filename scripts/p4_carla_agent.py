@@ -9,7 +9,7 @@ directory b2d_route.py exports as B2D_ATTEMPT_OUT:
   meta.json          rig, route, town, weather, vehicle geometry
   route.json         the dense route plan: x, y, z, yaw (CARLA world, left-handed) and RoadOption per point
   pose.jsonl         one line per tick (20 Hz): simulator truth of the hero -- pose, velocity, acceleration
-  frames.jsonl       one line per camera frame: frame, time, the three JPEG paths
+  frames.jsonl       one line per camera frame: image frame number, tick it was read at, JPEG paths
   cams/<cam>/<frame>.jpg
 
 The camera model reproduces Waymo's calibration (read from WOD-E2E `context.camera_calibrations`): a
@@ -117,10 +117,7 @@ class P4Agent(AutonomousAgent):
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
-        self._dense = list(global_plan_world_coord)
-        rows = [{"x": t.location.x, "y": t.location.y, "z": t.location.z, "yaw": t.rotation.yaw,
-                 "option": int(opt.value), "option_name": opt.name} for t, opt in self._dense]
-        (self.out / "route.json").write_text(json.dumps(rows))
+        self._dense = list(global_plan_world_coord)      # the leaderboard calls this before setup()
 
     def _init_driver(self):
         from agents.navigation.behavior_agent import BehaviorAgent
@@ -131,6 +128,9 @@ class P4Agent(AutonomousAgent):
         self._ba = BehaviorAgent(hero, behavior=self.cfg["behavior"], map_inst=cmap, grp_inst=object())
         plan = [(cmap.get_waypoint(t.location), opt) for t, opt in self._dense]
         self._ba.set_global_plan(plan, stop_waypoint_creation=True, clean_queue=True)
+        rows = [{"x": t.location.x, "y": t.location.y, "z": t.location.z, "yaw": t.rotation.yaw,
+                 "option": int(opt.value), "option_name": opt.name} for t, opt in self._dense]
+        (self.out / "route.json").write_text(json.dumps(rows))
         bb = hero.bounding_box
         w = CarlaDataProvider.get_world().get_weather()
         meta = {"town": cmap.name, "vehicle": hero.type_id, "bbox_location": [bb.location.x, bb.location.y, bb.location.z],
@@ -212,6 +212,8 @@ class P4Agent(AutonomousAgent):
         return control
 
     def destroy(self):
+        if not hasattr(self, "_pose"):
+            return
         for fh in (self._pose, self._frames):
             fh.close()
         (self.out / "p4_summary.json").write_text(json.dumps(
