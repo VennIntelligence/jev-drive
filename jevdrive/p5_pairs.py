@@ -215,6 +215,157 @@ def factor_visibility(A: dict, B: dict, family: str) -> dict:
     return out
 
 
+# ---------------------------------------------------------------- pairs, observation frames, labels
+
+INTENT_LOOKAHEAD_M = 15.0                   # P4's calibration (research/results/p4-carla-gap/intent_lookahead.csv)
+NULL_WINDOW_S = 6.0                         # null frames when the seed-0 pair has no observation frame (fallback)
+TFV6_SPEEDS = np.array([0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0])
+
+
+def world_rows(adir: Path, rid: str, town: str):
+    """P4's WOD-E2E-shaped rows for one recorded world: (rows with tick index k and intent, past, future)."""
+    from . import p4_carla as p4
+    r = p4.route_rows(adir, rid, town)
+    if r is None:
+        return None
+    t, past, fut, route = r
+    t["k"] = (t.t / TICK).round().astype(int)
+    t["intent"] = p4.route_intent(route, t.route_progress.to_numpy(), INTENT_LOOKAHEAD_M)
+    return t, past, fut
+
+
+def v2(fut: np.ndarray) -> np.ndarray:
+    """Speed 2 s ahead: the 1.75 -> 2.0 s displacement over 0.25 s (future index 6 -> 7)."""
+    return np.linalg.norm(fut[..., 7, :] - fut[..., 6, :], axis=-1) / 0.25
+
+
+def stop3(past: np.ndarray, fut: np.ndarray) -> np.ndarray:
+    """Speed below 0.5 m/s somewhere in the next 3 s (current speed included)."""
+    pts = np.concatenate([np.zeros_like(fut[:, :1]), fut[:, :12]], 1)
+    sp = np.linalg.norm(np.diff(pts, axis=1), axis=-1) / 0.25
+    return (np.minimum(sp.min(1), np.linalg.norm(past[:, -1, 2:4], axis=1)) < 0.5)
+
+
+def tfv6_speeds(W: dict, ks) -> pd.DataFrame:
+    """TFv6 at the given ticks: expected target speed, the decoded scalar it drives with, waypoint speed at 2 s."""
+    tf = W["tfv6"]
+    out = pd.DataFrame(index=pd.Index(ks, name="k"))
+    if not len(tf):
+        return out.assign(ts=np.nan, ts_scalar=np.nan, wp2=np.nan)
+    t = tf.reindex(ks)
+    ok = t.pred_target_speed_distribution.notna().to_numpy()
+    ts, sc, wp = np.full(len(ks), np.nan), np.full(len(ks), np.nan), np.full(len(ks), np.nan)
+    ts[ok] = [float(np.dot(d, TFV6_SPEEDS)) for d in t.pred_target_speed_distribution[ok]]
+    sc[ok] = [float(np.ravel(d)[0]) for d in t.pred_target_speed_scalar[ok]]
+    w = [np.asarray(x) for x in t.pred_future_waypoints[ok]]
+    wp[ok] = [np.linalg.norm(x[7] - x[6]) / 0.25 for x in w]
+    return out.assign(ts=ts, ts_scalar=sc, wp2=wp)
+
+
+def pair_case(gen: Path, case: pd.Series, worlds: dict) -> tuple[dict, list, list]:
+    """One case: determinism, first visibility, observation frames with expert labels and TFv6 readouts.
+
+    `worlds` caches (world dict, rows) per variant id. Returns the case row, the pair frames and the null frames."""
+    def get(rid):
+        if rid not in worlds:
+            a = attempt(gen, rid)
+            worlds[rid] = None if a is None else (load_world(a), world_rows(a, rid, case.town))
+        return worlds[rid]
+
+    row = {k: case[k] for k in ("base_id", "town", "family", "seed", "plus", "minus")}
+    P, M = get(case.plus), get(case.minus)
+    if P is None or M is None or P[1] is None or M[1] is None:
+        return {**row, "reason": "missing_run"}, [], []
+    (A, ra), (B, rb) = P, M
+    t_div, last = ego_divergence(A, B)
+    fv = factor_visibility(A, B, case.family)
+    cams = sorted(fv)
+    trig = next((k for k in cams if fv[k]["trig"]), None)
+    vis = next((k for k in cams if fv[k]["factor_visible"]), None)
+    reason = ("never_visible" if vis is None else "ok" if t_div > vis else
+              "background_drift" if trig is None or t_div < trig else "expert_reacted_before_visible")
+    row.update(t_trig=trig, t_vis=vis, t_div=t_div, t_last=last, reason=reason)
+    frames = []
+    if reason == "ok":
+        (tp, pp, fp), (tm, pm, fm) = ra, rb
+        ip, im = pd.Series(np.arange(len(tp)), tp.k), pd.Series(np.arange(len(tm)), tm.k)
+        ks = [k for k in cams if vis <= k < t_div and k in ip.index and k in im.index]
+        if ks:
+            a, b = ip[ks].to_numpy(), im[ks].to_numpy()
+            ta, tb = tfv6_speeds(A, ks), tfv6_speeds(B, ks)
+            for j, k in enumerate(ks):
+                frames.append({**{c: row[c] for c in ("base_id", "family", "seed")}, "k": k,
+                               "fn_plus": tp.frame_name.iloc[a[j]], "fn_minus": tm.frame_name.iloc[b[j]],
+                               "v0": float(np.linalg.norm(pp[a[j], -1, 2:4])),
+                               "v2_plus": float(v2(fp[a[j]])), "v2_minus": float(v2(fm[b[j]])),
+                               "stop_plus": bool(stop3(pp[a[j]:a[j] + 1], fp[a[j]:a[j] + 1])[0]),
+                               "stop_minus": bool(stop3(pm[b[j]:b[j] + 1], fm[b[j]:b[j] + 1])[0]),
+                               "impure_visible": fv[k]["impure_visible"],
+                               **{f"tf_{c}_plus": ta.loc[k, c] for c in ta.columns},
+                               **{f"tf_{c}_minus": tb.loc[k, c] for c in tb.columns}})
+    row["n_obs"] = len(frames)
+    nulls = []
+    if case.seed == 0 and isinstance(case.null, str) and case.null:
+        Nw = get(case.null)
+        if Nw is not None and Nw[1] is not None:
+            N, rn = Nw
+            tdn, _ = ego_divergence(A, N)
+            row["t_div_null"] = tdn
+            if frames:
+                ks = [f["k"] for f in frames]
+            else:
+                t0 = vis if vis is not None else trig
+                ks = [] if t0 is None else [k for k in cams if t0 <= k < t0 + NULL_WINDOW_S / TICK]
+                row["null_window"] = "fallback"
+            (tp, pp, fp), (tn, pn, fn_) = ra, rn
+            ip, iN = pd.Series(np.arange(len(tp)), tp.k), pd.Series(np.arange(len(tn)), tn.k)
+            ks = [k for k in ks if k < tdn and k in ip.index and k in iN.index]
+            if ks:
+                a, b = ip[ks].to_numpy(), iN[ks].to_numpy()
+                ta, tn_ = tfv6_speeds(A, ks), tfv6_speeds(N, ks)
+                for j, k in enumerate(ks):
+                    nulls.append({"base_id": row["base_id"], "family": row["family"], "seed": 0, "k": k,
+                                  "fn_plus": tp.frame_name.iloc[a[j]], "fn_null": tn.frame_name.iloc[b[j]],
+                                  "v2_plus": float(v2(fp[a[j]])), "v2_null": float(v2(fn_[b[j]])),
+                                  **{f"tf_{c}_plus": ta.loc[k, c] for c in ta.columns},
+                                  **{f"tf_{c}_null": tn_.loc[k, c] for c in tn_.columns}})
+            row["n_null"] = len(nulls)
+    return row, frames, nulls
+
+
+def processed(*parts) -> Path:
+    p = data_dir() / "processed" / "carla_p5" / Path(*parts)
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _collect_base(gen: Path, cases: pd.DataFrame):
+    worlds, rows, frames, nulls = {}, [], [], []
+    for _, c in cases.sort_values("seed").iterrows():
+        r, f, n = pair_case(gen, c, worlds)
+        rows.append(r)
+        frames += f
+        nulls += n
+    return rows, frames, nulls
+
+
+def collect(gen: Path, only: set | None = None, workers: int = 8) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Every case of cases.csv that has runs in `gen`: the pair table, pair frames and null frames."""
+    from joblib import Parallel, delayed
+    cases = pd.read_csv(RESULTS / "cases.csv", dtype={"base_id": str, "plus": str, "minus": str, "null": str})
+    if only:
+        cases = cases[cases.base_id.isin(only)]
+    out = Parallel(workers)(delayed(_collect_base)(gen, g) for _, g in cases.groupby("base_id"))
+    pairs = pd.DataFrame([r for o in out for r in o[0]])
+    frames = pd.DataFrame([f for o in out for f in o[1]])
+    nulls = pd.DataFrame([n for o in out for n in o[2]])
+    if len(frames):
+        frames["d_expert"] = frames.v2_plus - frames.v2_minus
+    if len(nulls):
+        nulls["d_expert"] = nulls.v2_plus - nulls.v2_null
+    return pairs, frames, nulls
+
+
 def main():
     import argparse
     p = argparse.ArgumentParser()
