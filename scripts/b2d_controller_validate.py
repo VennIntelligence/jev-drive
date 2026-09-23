@@ -327,6 +327,9 @@ def main():
     p.add_argument('--quality', default='Epic', choices=('Epic', 'Low'),
                    help='server render quality; Low only to keep a big map (Town13) from starving the render '
                         'thread under GPU contention. With --rig none nothing rendered reaches the agent.')
+    p.add_argument('--infra-retries', type=int, default=0,
+                   help='on a simulator time-out (crashed server) archive the attempt as <case>.infra-failed-<k>, '
+                        'restart the server, reload the map and rerun the same case, at most this many times')
     p.add_argument('--no-rendering', action='store_true',
                    help='world no_rendering_mode: physics and GNSS/IMU/speed only; needs --rig none, no chase camera')
     a = p.parse_args()
@@ -384,9 +387,19 @@ def main():
         event('gpu', processes=gpu)
         client = carla.Client('localhost', server.port)
         client.set_timeout(90)
+
+        def restart_server(reason, **fields):
+            # A crashed server takes its RPC state with it: new process, new client, map reloaded below.
+            event('infra_restart', reason=reason, **fields)
+            server.start()
+            fresh = carla.Client('localhost', server.port)
+            fresh.set_timeout(90)
+            return fresh
+
         for route in root.findall('route'):
             cruise = float(cruises.get(route.get('id'), cruises['default']))
-            try:
+
+            def setup_world():
                 world = client.get_world()
                 if world.get_map().name.split('/')[-1] != route.get('town'):
                     world = client.load_world(route.get('town'))
@@ -407,6 +420,10 @@ def main():
                 locations = [carla.Location(float(x.get('x')), float(x.get('y')), float(x.get('z')))
                              for x in route.findall('./waypoints/position')]
                 gps, dense = interpolate_trajectory(locations)
+                return world, gps, dense
+
+            try:
+                world, gps, dense = setup_world()
             except Exception as exc:
                 # A failed map/interpolation setup still represents every planned
                 # preset on this route; save those missing cases, then continue.
@@ -425,7 +442,9 @@ def main():
                     event('route_end', **summary)
                 (out / 'summary.json').write_text(json.dumps(results, indent=2, allow_nan=False))
                 continue
-            for case in cases:
+            queue = [(case, 1) for case in cases]
+            while queue:
+                case, attempt = queue.pop(0)
                 preset = case['preset']
                 rear = case['rear_axle_offset_m']
                 stop_deceleration = case['stop_deceleration_mps2']
@@ -572,7 +591,26 @@ def main():
                     event('route_end', **summary)
                 if status == 'cancelled':
                     raise KeyboardInterrupt()
-                world.tick()
+                crashed = status == 'error' and 'time-out' in (case_error or '')
+                if crashed and attempt <= a.infra_retries:
+                    # Infrastructure failure, not driving behaviour: keep the attempt outside the
+                    # case layout and run the identical case again on a fresh server.
+                    failed = run.with_name(run.name + '.infra-failed-%d' % attempt)
+                    run.rename(failed)
+                    results.pop()
+                    (out / 'summary.json').write_text(json.dumps(results, indent=2, allow_nan=False))
+                    client = restart_server('case_simulator_timeout', archived=str(failed), attempt=attempt)
+                    world, gps, dense = setup_world()
+                    queue.insert(0, (case, attempt + 1))
+                    continue
+                try:
+                    world.tick()
+                except RuntimeError as exc:
+                    if a.infra_retries <= 0 or 'time-out' not in repr(exc):
+                        raise
+                    # The finished case is already written; only the server is gone.
+                    client = restart_server('post_case_tick_timeout', error=repr(exc))
+                    world, gps, dense = setup_world()
         event('end', status='completed', cases=len(results), gate_pass=all(x['gate_pass'] for x in results))
     except BaseException as exc:
         event('end', status='failed', error=repr(exc))
