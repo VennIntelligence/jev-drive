@@ -120,18 +120,13 @@ class P5PairAgent(SensorAgent):
         (self.out / "route.json").write_text(json.dumps(
             [{"x": t.location.x, "y": t.location.y, "z": t.location.z, "yaw": t.rotation.yaw, "option": int(o.value),
               "option_name": o.name} for t, o in self._dense]))
+        # Traffic lights: locations now; boxes and stop waypoints the first time a light is within actor_radius,
+        # because on a Large Map a far light is dormant and the server refuses to describe it.
         self._lights = list(world.get_actors().filter("traffic.traffic_light"))
-        lights = []
-        for tl in self._lights:
-            boxes = tl.get_light_boxes()
-            stops = tl.get_stop_waypoints()
-            lights.append({"id": tl.id, "loc": _xyz(tl.get_location()),
-                           "boxes": [_xyz(b.location) + [b.extent.x, b.extent.y, b.extent.z] for b in boxes],
-                           "stops": [_xyz(w.transform.location) + [w.transform.rotation.yaw, w.road_id, w.lane_id]
-                                     for w in stops]})
-        (self.out / "lights.json").write_text(json.dumps(lights))
-        self._light_xyz = np.array([l["loc"] for l in lights], np.float64).reshape(-1, 3)
-        self._light_boxes = [np.array(l["boxes"], np.float64).reshape(-1, 6) for l in lights]
+        self._light_meta = [{"id": tl.id, "loc": _xyz(tl.get_location()), "boxes": None, "stops": None}
+                            for tl in self._lights]
+        self._light_xyz = np.array([l["loc"] for l in self._light_meta], np.float64).reshape(-1, 3)
+        self._light_boxes = [np.zeros((0, 6))] * len(self._lights)
         # Visibility camera: instance segmentation at the Waymo front camera's pose and field of view, at half the
         # render resolution. Spawned here, not through the leaderboard (its sensor whitelist has no segmentation);
         # the G and B channels carry the actor id, so a factor actor is visible iff its pixels are in the image.
@@ -264,6 +259,18 @@ class P5PairAgent(SensorAgent):
         hl = self._hero.get_location()
         near = np.flatnonzero(((self._light_xyz[:, :2] - [hl.x, hl.y]) ** 2).sum(1) <= self.cfg["actor_radius"] ** 2) \
             if len(self._light_xyz) else []
+        for i in near:
+            m = self._light_meta[i]
+            if m["boxes"] is None:
+                try:
+                    tl = self._lights[i]
+                    boxes = tl.get_light_boxes()
+                    m["stops"] = [_xyz(w.transform.location) + [w.transform.rotation.yaw, w.road_id, w.lane_id]
+                                  for w in tl.get_stop_waypoints()]
+                    m["boxes"] = [_xyz(b.location) + [b.extent.x, b.extent.y, b.extent.z] for b in boxes]
+                    self._light_boxes[i] = np.array(m["boxes"], np.float64).reshape(-1, 6)
+                except RuntimeError:              # still dormant: ask again next frame
+                    pass
         return {str(self._lights[i].id): str(self._lights[i].get_state()) for i in near}
 
     def _save(self, frame, input_data):
@@ -373,6 +380,9 @@ class P5PairAgent(SensorAgent):
         np.savez_compressed(self.out / "actors.npz", frame=a[:, 0].astype(np.int64), id=a[:, 1].astype(np.int64),
                             xyz=a[:, 2:5].astype(np.float32), yaw=a[:, 5].astype(np.float32),
                             v=a[:, 6:8].astype(np.float32))
+        if hasattr(self, "_light_meta"):
+            (self.out / "lights.json").write_text(json.dumps(
+                [dict(m, boxes=m["boxes"] or [], stops=m["stops"] or []) for m in self._light_meta]))
         (self.out / "actor_kinds.json").write_text(json.dumps({str(k): v for k, v in self._kinds.items() if v}))
         ms = {k: round(1e3 * float(np.mean(v)), 2) for k, v in self._t.items() if v}
         (self.out / "p5_summary.json").write_text(json.dumps(
