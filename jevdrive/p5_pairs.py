@@ -1,7 +1,7 @@
 """P5 v0: counterfactual scenario pairs in CARLA and an open-loop exam on them
 (todos/2026-09-24-p5-carla-pairs-v0.md).
 
-  build     write the variant route XML (x+ as is, x- with the scenario removed or the light swapped, a
+  build     write the variant route XML (x+ as is, x- with the scenario removed (trigger point moved 10 km off the route) or the light swapped, a
             weather-only null) and the case table; each variant is its own numeric route id
             base_id * 100 + world * 10 + tm_seed, world 1 = plus, 2 = minus, 3 = null
 
@@ -65,7 +65,11 @@ def _variant(route: ET.Element, world: str, seed: int) -> ET.Element:
         s.set("type", want)
         s.set("name", s.get("name").replace(stype, want))
     elif world == "minus":
-        sc.remove(s)
+        # Bench2Drive's evaluator names the route after its first scenario config, so the element has to stay; a
+        # trigger point 10 km away makes RouteScenario._filter_scenarios drop it ("too far from the route").
+        tp = s.find("trigger_point")
+        tp.set("x", str(float(tp.get("x")) + 10000.0))
+        s.set("name", s.get("name") + "_removed")
     if world == "null":
         ws = r.find("weathers")
         day = float(ws.find("weather").get("sun_altitude_angle")) > 0
