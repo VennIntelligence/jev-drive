@@ -136,7 +136,7 @@ class P5PairAgent(SensorAgent):
         self._ego_ext = np.array([bb.extent.x, bb.extent.y, bb.extent.z])
         self._ego_loc = np.array([bb.location.x, bb.location.y, bb.location.z])
         w = world.get_weather()
-        meta = {"town": cmap.name, "vehicle": hero.type_id, "bbox_location": _xyz(bb.location),
+        meta = {"town": cmap.name, "vehicle": hero.type_id, "hero_id": hero.id, "bbox_location": _xyz(bb.location),
                 "bbox_extent": self._ego_ext.tolist(), "rear_axle_x": p4.REAR_AXLE_X,
                 "weather": {k: getattr(w, k) for k in ("cloudiness", "precipitation", "precipitation_deposits",
                                                        "wind_intensity", "sun_azimuth_angle", "sun_altitude_angle",

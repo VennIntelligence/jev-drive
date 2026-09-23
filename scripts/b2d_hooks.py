@@ -165,8 +165,9 @@ def _hazards(scenario):
     return []
 
 
-def suppress_hazards(out_dir):
-    """x- of a P5 pair (scripts/p5_pair_agent.py): the scenario runs unchanged - same actors spawned from the same
+def track_hazards(out_dir, hide):
+    """P5 pairs (scripts/p5_pair_agent.py): write the scenario's hazard actors to hidden.json (every world, so x+
+    and x- name the same actors) and, in x- (`hide`), suppress them. x- runs the scenario unchanged - same actors spawned from the same
     random stream, same trigger, same commands to the background traffic (clear the junction, leave space) - but
     its hazard actors are kept 500 m under the road after every scenario tick, so nothing sees or meets them.
     Deleting the scenario from the XML instead also deletes those background commands, and then the background
@@ -181,10 +182,11 @@ def suppress_hazards(out_dir):
         inner_build(self, ego_vehicle, debug=debug)
         for sc in self.list_scenarios[n0:]:
             for a in _hazards(sc):
-                a.set_simulate_physics(False)
-                hidden.append([a, None])
+                if hide:
+                    a.set_simulate_physics(False)
+                    hidden.append([a, None])
                 log.append({"scenario": type(sc).__name__, "id": a.id, "type_id": a.type_id,
-                            "role": a.attributes.get("role_name", "")})
+                            "role": a.attributes.get("role_name", ""), "hidden": bool(hide)})
         with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
             json.dump(log, fh)
 

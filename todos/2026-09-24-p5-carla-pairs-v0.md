@@ -44,7 +44,7 @@ VLM 零样本 meta-action 那一列**不做**：它在 Waymo 上 4B 和 32B 都�
   删掉 scenario 就连这些指令一起删了。实测：x⁺ 里路口被清空、ego 开到行人前才停；x⁻ 里路口没清空，ego 在 t = 4.15 s 就停在排队车后面，
   两个世界的 ego 在行人可见之前就分叉了，而且分叉原因是背景车，不是行人。改为：**x⁻ 保留 scenario 原样运行**（同样的 actor 从同一随机流生成、
   同样的触发、同样的背景指令），只把它的 hazard actor（横穿的行人 / 自行车、cut-in 的那辆车、闯红灯的那辆车；停着的遮挡车、集装箱等道具保留，
-  它们是情境不是因素）在每个 scenario tick 之后放到地下 500 m（`b2d_hooks.suppress_hazards`，这正是 scenario 自己在触发前藏 actor 的位置；
+  它们是情境不是因素）在每个 scenario tick 之后放到地下 500 m（`b2d_hooks.track_hazards`，这正是 scenario 自己在触发前藏 actor 的位置；
   BehaviorAgent 和 Traffic Manager 的距离判断都是三维的，所以看不见也碰不到）。HardBreakRoute 的因素就是背景车急刹本身，仍用删 scenario；
   Light 仍是红绿互换。被藏的 actor 逐 run 记在 `hidden.json`。
 - **变体**：每类只有 5 条路线（Light 10 条），不够 10 个，所以每条路线跑 3 个 `--tm-seed`（0、1、2，Traffic Manager 的随机种子，

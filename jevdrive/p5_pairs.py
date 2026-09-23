@@ -71,10 +71,11 @@ def _variant(route: ET.Element, world: str, seed: int) -> ET.Element:
         tp = s.find("trigger_point")
         tp.set("x", str(float(tp.get("x")) + 10000.0))
         s.set("name", s.get("name") + "_removed")
-    elif world == "minus":
+    else:
         # Every other scenario also commands the background (clear the junction, leave space), so deleting it
-        # changes the background too; x- keeps it and b2d_hooks.suppress_hazards hides its hazard actors.
-        r.set("p5_suppress", "1")
+        # changes the background too; x- keeps it and b2d_hooks.track_hazards hides its hazard actors (and
+        # names them in every world, so x+ and x- can be matched).
+        r.set("p5_suppress", "1" if world == "minus" else "0")
     if world == "null":
         ws = r.find("weathers")
         day = float(ws.find("weather").get("sun_altitude_angle")) > 0
