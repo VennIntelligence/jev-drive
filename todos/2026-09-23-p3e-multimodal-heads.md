@@ -81,6 +81,20 @@ diffusion 的 20 个 mode 相对 20 个原始 anchor 的 oracle minADE 降了多
 预期（写在跑之前，推测）：两个 head 的 top-1 ADE 都比 `ridge_late` 差，落在第三行；
 RFS 上分类头可能打平或略好（第 10 条：分类输 ADE、赢 trust region），diffusion 的 RFS 取决于 score 学得怎样。
 
+## 插入：Qwen3-VL-2B 同样的原生视频输入（lead 2026-09-23 追加，在 train split 抽取之前）
+
+P3(a) 把 32B 量成 4B 的 clean null（「缺的不是容量」），但更小的一端没测过。如果 2B 在 pre-onset 上和 4B 一样好，
+train split 抽取就换 2B（更快、更省显存）。配置与 d″ 逐项相同：三相机、4 帧、stride 2、Qwen 自己的 video 通路、
+batch 2、不 compile，同一批 19 663 行（`qwenvid_p3` 的行），特征集 `qwenvid2b_p3`。
+tap：4B 的 L18/36 是一半深度，2B 有 28 层，对应 **L14**（mean 和 last）；再加一个更深的 **L21**（3/4 深度，mean 和 last）。
+读法与 d″ 相同：`waymo_ladder` 的 P3 ladder（ridge_late、同一个子集、同一个 `ridge ego` base），再按第 22 条 rejudge；
+4B 的 `L18_last / L18_mean` 在同一次 run 里并排重算，必须逐位复现 d″。同时记 ms/frame 和峰值显存。
+
+**决策规则（跑之前写死，lead 给定）**：2B 取代 4B 做 train split 抽取，当且仅当存在一个 2B tap，
+在**两个方向上**都满足：pre-onset（第 1–9 档）Δ 的点估计 ≤ 4B 同类 tap（mean 对 mean、last 对 last）的点估计 + 0.01 m，
+**且** CI 不跨零。否则保留 4B。L21 只作为补充行报，不参与这条规则（规则按「同样相对深度」比较；
+如果只有 L21 满足，记下来交 lead，不自动换）。
+
 ## 步骤
 
 - [ ] `jevdrive/waymo_heads.py`：词表、`cls` / `diff` arm、两方向驱动、诊断列、第 22 条 rejudge

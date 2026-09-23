@@ -690,6 +690,7 @@ P3_SETS = {                          # arm -> (feature set on disk, the arrays t
     "c wan": ("wan22_dit_p3", None),   # arrays named by noise level and block, discovered on disk
     "d vjepa2": ("vjepa2_p3", ["mean", "last_mean"]),
     "d2 qwenvid": (QWENVID_SET, ["L18_mean", "L18_last"]),
+    "d2b qwenvid2b": ("qwenvid2b_p3", ["L14_mean", "L14_last", "L21_mean", "L21_last"]),   # Qwen3-VL-2B, same clip
 }
 
 

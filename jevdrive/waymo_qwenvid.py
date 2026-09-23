@@ -32,13 +32,13 @@ SET = "qwenvid_train"
 REF = lad.QWENVID_SET
 
 
-def make_fx(compile: bool = False, grid_hw=None):
+def make_fx(compile: bool = False, grid_hw=None, model_id: str | None = None, layers=(LAYER,)):
     """The P3(d'') feature extractor, with the decoder layers it never runs taken off the card."""
     from . import features as F
-    fx = F.QwenVideoFeatures(frames=FRAMES, n_videos=len(waymo.CAMS), layers=[LAYER], compile=compile,
-                             grid_hw=grid_hw)
+    fx = F.QwenVideoFeatures(frames=FRAMES, n_videos=len(waymo.CAMS), layers=list(layers), compile=compile,
+                             grid_hw=grid_hw, **({"model_id": model_id} if model_id else {}))
     lm = fx.model.language_model
-    lm.layers = lm.layers[:LAYER]                   # layers 19-36 are never called: 3.4 GB of VRAM back
+    lm.layers = lm.layers[:max(layers)]             # the deeper layers are never called: VRAM back
     torch.cuda.empty_cache()
     n = len(waymo.CAMS)
     fx.transform = (lambda t: lambda imgs: t([imgs[i * FRAMES:(i + 1) * FRAMES] for i in range(n)]))(fx.transform)
@@ -206,11 +206,26 @@ def run(rl, batch: int, compile: bool, workers: int, grid_hw=None, thin: int | N
     F.free_gpu()
 
 
+def subset(rl, model_id: str, layers, name: str, batch: int = 2):
+    """Another backbone over exactly the `qwenvid_p3` rows, in d''s configuration (batch 2, eager), for the
+    P3 ladder. The item list is the same, in the same order, so the two sets pair up row for row."""
+    from . import features as F
+    items, idx = ref_items()
+    fx = make_fx(False, None, model_id, layers)
+    meta = waymo.extract_items(name, fx, items, idx, batch, rl=rl, cams=list(waymo.CAMS), frames_per_clip=FRAMES,
+                               clip_stride=STRIDE, complete=len(items), layers=list(layers))
+    del fx
+    F.free_gpu()
+    return meta
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("profile", "run"))
+    ap.add_argument("step", choices=("profile", "run", "subset"))
+    ap.add_argument("--model", default=None, help="subset: HF model id")
+    ap.add_argument("--layers", default="18", help="subset: comma list of decoder layers to tap")
     ap.add_argument("--n", type=int, default=240, help="profile: rows of the qwenvid_p3 item list")
     ap.add_argument("--batch-size", type=int, default=8)
     ap.add_argument("--compile", action="store_true")
@@ -228,6 +243,8 @@ def main():
     rl.event("start", args=vars(a))
     if a.step == "profile":
         profile(rl, a.n, grid_hw=grid or (4, 4))
+    elif a.step == "subset":
+        rl.event("extract", **subset(rl, a.model, [int(x) for x in a.layers.split(",")], a.name, a.batch_size))
     else:
         run(rl, a.batch_size, a.compile, a.workers, grid, a.thin, a.name)
     rl.event("end")
