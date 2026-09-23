@@ -127,6 +127,10 @@ VLM 对最好基线、VLM main 对 VLM text 都用同一帧上的配对差、同
 - [x] 32B FP8 profiling（48 帧）：8.8 s/帧（batch 2）、峰值 40.8 GB、48/48 合法
 - [ ] 32B：text 全部 3758 帧（约 1 帧/s）；main 只跑 pre_onset 全部 1458 帧 + straight_yaw 随机 400 帧
       （全量 3758 帧要约 9 h，而判据 1、2 只用 pre_onset，判据 3 用 straight；这是按 profiling 定的范围，不是看了结果之后缩的）
+- [ ] **post-hoc 诊断 arm「video, no route」**（lead 2026-09-23 加，**不属于预登记门槛**，结果只作解释用）：
+      prompt 与 main 完全相同，只是 ego 文本里去掉 route command 那一句。4B 跑全部 pre_onset 1458 帧，
+      32B-FP8 只跑 route 说直行的 588 帧。目的：把「视频里看不出横向意图」和「锚定在 route command 上」分开。
+      排在 32B main 之后，不在 heads 的 train extraction 跑的时候加 GPU 竞争
 - [ ] 报告，结果填到下面
 
 ## 成功标准（跑之前写死）
