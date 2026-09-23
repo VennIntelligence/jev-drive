@@ -34,6 +34,7 @@ REAR_AXLE_X = -1.388633220
 TICK = 0.05
 CAM_TICKS = 4                        # the cameras report every 0.2 s = Waymo's stride 2 at 10 Hz
 STEP_TICKS = 5                       # 0.25 s, the WOD-E2E past / future step
+MIN_REAL_PAST = 1.0                  # s of real history a keyframe needs; the rest of the 4 s is the spawn state
 # docs/carla.md: every one of these crashed the server three times in the 220-route round
 CRASHERS = {"3048", "11715", "11755", "23687", "23708", "3785", "3800", "23670", "23695", "24041", "24071"}
 TURNING = ("SignalizedJunctionLeftTurn", "SignalizedJunctionRightTurn", "NonSignalizedJunctionLeftTurn",
@@ -60,8 +61,8 @@ def out_dir(*parts) -> Path:
 
 def select_routes(seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(wave 1, wave 2) route lists. Wave 1: PER_TYPE routes of every Bench2Drive scenario type, towns not yet
-    used by that type first, in a seeded order. Wave 2: one more route of every junction-turn and lane-change
-    type, run only if wave 1 leaves fewer than 600 pre-onset candidates (the todo fixes this rule)."""
+    used by that type first, in a seeded order. Wave 2: every remaining route of the junction-turn and
+    lane-change types, run because wave 1 yields far fewer lateral pre-onset frames than 600 (see the todo)."""
     root = ET.parse(data_dir() / B2D_XML).getroot()
     rows = []
     for r in root.findall("route"):
@@ -87,7 +88,7 @@ def select_routes(seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
             seen.add(g.town[nxt])
         w1 += order[:PER_TYPE]
         if typ in TURNING + LANE_CHANGE:
-            w2 += order[PER_TYPE:PER_TYPE + 1]
+            w2 += order[PER_TYPE:]
     out = [t.loc[w].drop(columns="r").reset_index(drop=True) for w in (w1, w2)]
     for name, o in zip(("wave 1", "wave 2"), out):
         log.info("%s: %d routes, %d types; per town %s", name, len(o), o.scenario.nunique(),
@@ -147,20 +148,27 @@ def route_rows(adir: Path, rid: str, town: str):
             continue
         pk = k + STEP_TICKS * np.arange(-15, 1)
         fk = k + STEP_TICKS * np.arange(1, 21)
-        if pk[0] < 0 or fk[-1] >= len(full):
+        # Bench2Drive routes are short and often turn within a few seconds of the spawn, so the 4 s history is
+        # padded with the spawn state (standing still, which is where the car was) when at least MIN_REAL_PAST s
+        # are real; the Waymo guards on the last second then still see real motion.
+        pad = pk < 0
+        if k < MIN_REAL_PAST / TICK or fk[-1] >= len(full):
             continue
+        pk = np.maximum(pk, 0)
         idx = np.r_[pk, fk]
         if np.isnan(ra[idx]).any() or np.isnan(v_ra[pk]).any():
             continue
         p = _rot(ra[pk] - ra[k], th[k])
         vv, aa = _rot(v_ra[pk], th[k]), _rot(a_ra[pk], th[k])
+        vv[pad], aa[pad] = 0.0, 0.0
         vv[-1], aa[-1] = vv[-2], aa[-2]           # WOD-E2E repeats the previous sample in the last slot
         past.append(np.concatenate([p, vv, aa], -1))
         fut.append(_rot(ra[fk] - ra[k], th[k]))
         files = [str(adir / frames.files[j][cam_name]) for cam_name in waymo.CAMS for j in range(i - 3, i + 1)]
         rows.append({"frame_name": f"{rid}-{int(cam[i]):07d}", "route_id": rid, "town": town, "frame": int(cam[i]),
                      "cam_index": i, "t": float(pose.t.iloc[k]), "files": files,
-                     "route_progress": _progress(route, c[k]), "min_std": float(np.min(frames["std"][i]))})
+                     "route_progress": _progress(route, c[k]), "min_std": float(np.min(frames["std"][i])),
+                     "past_padded_s": float(pad.sum() * STEP_TICKS * TICK)})
     if not rows:
         return None
     t = pd.DataFrame(rows)
