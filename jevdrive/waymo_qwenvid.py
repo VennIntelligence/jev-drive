@@ -39,9 +39,9 @@ def make_fx(compile: bool = False, grid_hw=None, model_id: str | None = None, la
         # Every shard ends on a partial batch. With automatic dynamic shapes the second batch size would swap
         # the static batch-8 graphs for dynamic ones for the rest of the run; static graphs per size instead
         # cost one extra compile per distinct remainder (at most batch - 1 of them) and keep batch 8 static.
-        import torch._dynamo
-        torch._dynamo.config.automatic_dynamic_shapes = False
-        torch._dynamo.config.cache_size_limit = 32
+        import torch._dynamo as dynamo     # `import torch._dynamo` would make `torch` local to make_fx
+        dynamo.config.automatic_dynamic_shapes = False
+        dynamo.config.cache_size_limit = 32
     fx = F.QwenVideoFeatures(frames=FRAMES, n_videos=len(waymo.CAMS), layers=list(layers), compile=compile,
                              grid_hw=grid_hw, **({"model_id": model_id} if model_id else {}))
     lm = fx.model.language_model
