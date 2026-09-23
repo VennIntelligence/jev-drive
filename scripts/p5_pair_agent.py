@@ -131,7 +131,7 @@ class P5PairAgent(SensorAgent):
                                      for w in stops]})
         (self.out / "lights.json").write_text(json.dumps(lights))
         self._light_xyz = np.array([l["loc"] for l in lights], np.float64).reshape(-1, 3)
-        self._light_box = [np.array([b[:3] for b in l["boxes"]] or [l["loc"]], np.float64) for l in lights]
+        self._light_boxes = [np.array(l["boxes"], np.float64).reshape(-1, 6) for l in lights]
         # Visibility camera: instance segmentation at the Waymo front camera's pose and field of view, at half the
         # render resolution. Spawned here, not through the leaderboard (its sensor whitelist has no segmentation);
         # the G and B channels carry the actor id, so a factor actor is visible iff its pixels are in the image.
@@ -195,9 +195,15 @@ class P5PairAgent(SensorAgent):
         self._actor_rows.extend(rows)
         return rows
 
-    def _visibility(self, frame):
-        """Pixels per actor id in the instance-segmentation view of the Waymo front image (ids with >= 1 pixel).
-        Traffic lights are actors too, so a light's head shows up under its own id."""
+    def _visibility(self, frame, rows):
+        """What the Waymo front camera actually sees of each vehicle, walker and traffic light within vis_radius.
+
+        CARLA's instance ids are not actor ids, so each actor's 3-D box is projected into the instance-segmentation
+        view (same pose and field of view as the front camera, half resolution, cropped to the Waymo image) and the
+        visible pixels are those inside the projected box that carry the actor's semantic class (walkers 12,
+        vehicles and two-wheelers 13-19, traffic lights 7) and belong to the box's dominant instance: an actor
+        hidden behind a car contributes only the car's pixels, which belong to the car's own box. Returns
+        {actor id: pixels, "L<light id>": pixels} for the actors that project into the image at all."""
         deadline = time.time() + 5.0
         while frame not in self._seg_buf and time.time() < deadline:
             time.sleep(0.002)
@@ -207,12 +213,52 @@ class P5PairAgent(SensorAgent):
         if raw is None:
             return None
         c = self.cfg
-        img = np.frombuffer(raw, np.uint8).reshape(c["render_h"] // 2, c["render_w"] // 2, 4)[self._seg_crop]
-        ids = img[..., 1].astype(np.int32) + 256 * img[..., 2].astype(np.int32)
-        if os.environ.get("P5_SEG_DEBUG") and self._tick in (81, 85, 101, 121):
-            np.save(self.out / ("seg_%d.npy" % self._tick), img)
-        u, n = np.unique(ids, return_counts=True)
-        return {int(i): int(k) for i, k in zip(u, n) if i > 0}
+        H, W = c["render_h"] // 2, c["render_w"] // 2
+        img = np.frombuffer(raw, np.uint8).reshape(H, W, 4)
+        tag = img[..., 2]
+        inst = img[..., 1].astype(np.int32) + 256 * img[..., 0].astype(np.int32)
+        (ys, xs) = self._seg_crop
+        M = np.array(self._seg.get_transform().get_inverse_matrix())
+        fs = W / 2.0 / math.tan(math.radians(self.fov) / 2.0)
+        cam = self._seg.get_location()
+        R2 = c["vis_radius"] ** 2
+
+        def pixels(corners, classes):
+            p = (M @ np.c_[corners, np.ones(len(corners))].T)[:3]
+            if (p[0] <= 0.3).all():
+                return 0
+            p = p[:, p[0] > 0.3]
+            u, v = W / 2.0 + fs * p[1] / p[0], H / 2.0 - fs * p[2] / p[0]
+            u0, u1 = max(xs.start, int(u.min())), min(xs.stop, int(math.ceil(u.max())) + 1)
+            v0, v1 = max(ys.start, int(v.min())), min(ys.stop, int(math.ceil(v.max())) + 1)
+            if u0 >= u1 or v0 >= v1:
+                return 0
+            m = np.isin(tag[v0:v1, u0:u1], classes)
+            if not m.any():
+                return 0
+            ids, n = np.unique(inst[v0:v1, u0:u1][m], return_counts=True)
+            return int(n.max())
+
+        out = {}
+        for _, aid, x, y, z, yaw, _, _ in rows:
+            if (x - cam.x) ** 2 + (y - cam.y) ** 2 > R2:
+                continue
+            tid, _, bb = self._kind(aid)
+            tf = carla.Transform(carla.Location(x, y, z), carla.Rotation(yaw=yaw))
+            box = carla.BoundingBox(carla.Location(*bb[:3]), carla.Vector3D(*bb[3:]))
+            corners = np.array([[q.x, q.y, q.z] for q in box.get_world_vertices(tf)])
+            n = pixels(corners, (12,) if tid.startswith("walker.") else (13, 14, 15, 16, 17, 18, 19))
+            if n:
+                out[str(aid)] = n
+        near = np.flatnonzero(((self._light_xyz[:, :2] - [cam.x, cam.y]) ** 2).sum(1) <= R2) if len(self._light_xyz) else []
+        for i in near:
+            n = 0
+            for b in self._light_boxes[i]:
+                box = carla.BoundingBox(carla.Location(*b[:3]), carla.Vector3D(*b[3:]))
+                n += pixels(np.array([[q.x, q.y, q.z] for q in box.get_world_vertices(carla.Transform())]), (7,))
+            if n:
+                out["L%d" % self._lights[i].id] = n
+        return out
 
     def _light_states(self):
         hl = self._hero.get_location()
@@ -283,7 +329,7 @@ class P5PairAgent(SensorAgent):
             files, std = self._save(frame, input_data)
             self._t["save"].append(time.perf_counter() - t0)
             t0 = time.perf_counter()
-            px = self._visibility(frame)
+            px = self._visibility(frame, rows)
             self._t["visibility"].append(time.perf_counter() - t0)
             bb = py_trees.blackboard.Blackboard()
             trig = [bool(bb.get("ScenarioRouteNumber%d" % i)) for i in range(2)]
