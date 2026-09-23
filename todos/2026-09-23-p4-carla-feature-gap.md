@@ -53,7 +53,7 @@ Waymo 的标定从 WOD-E2E val 帧的 `context.camera_calibrations` 读出（6 �
   施工 / 事故 / 路边障碍、行人 / 自行车 / 车辆横穿、急刹、cut-in、闯红灯、让行等）**每类取 2 条**，
   同一类里优先取不同 town（种子 0），去掉 11 条已知段错误的路线，共约 88 条，覆盖全部 12 个 town（含 Town12/13 和小 town），
   天气和昼夜用各路线 XML 自带的设定（sun altitude 从 −90° 到 90°，有雨有雾），不另改。
-  清单冻结在 `research/results/p4-carla-gap/routes.csv`。**第二波（预先写死，只在第一波 pre-onset 候选帧不足 600 时启动）**：
+  清单冻结在 `research/results/p4-carla-gap/routes.csv`。**第二波（预先写死，只在第一波横向 pre-onset 候选帧不足 600 时启动）**：
   路口转弯类和换道 / 汇入类每类再加第 3 条，清单同样先冻结（`routes_wave2.csv`）。
 - **expert 做不到的动作如实记**：BehaviorAgent 遇到挡住本车道的静态障碍（施工、事故、路边停车）只会停下等，不会借道绕行，
   所以「绕障碍 nudge」这一类 pre-onset 预计几乎为零，**不拿直行帧补**，在结果里写明缺口；
@@ -73,24 +73,27 @@ Waymo 的标定从 WOD-E2E val 帧的 `context.camera_calibrations` 读出（6 �
 每个候选帧**只按 expert 录下来的未来轨迹和 ego 历史**打标签，阈值与 Waymo judge 完全相同（`waymo.subsets`，
 第 3、3c 条的定义，`waymo_ladder` / P0 用的同一份代码），**不看特征、不看 head 输出**。按下面的优先级归到唯一一层：
 
-| 层 | 定义（Waymo 的判据原样照搬的写「同 Waymo」） | 配额（占总数 N） |
+| 层 | 定义（Waymo 的判据原样照搬的写「同 Waymo」） | 配额 |
 |:--|:--|:--|
-| pre-onset，横向 | 同 Waymo `pre_onset`：过去 1 s 走了 ≥ 1 m、当前 \|yaw rate\| < 1°/s，3 s 处 chord ≥ 3 m 且 \|bearing\| > 5° | 与下面两行合计 **≥ 30%** |
-| pre-onset，起步 | 当前 v₀ < 0.5 m/s，3 s 内走出 ≥ 3 m（start-from-stop） | 同上 |
-| pre-onset，开始刹车 | v₀ ≥ 3 m/s、当前纵向加速度 ≥ −1 m/s²（还没在刹），3 s 处速度 ≤ 0.5 v₀（brake-for-agent，也含为红灯刹） | 同上 |
-| in-turn | 同 Waymo `turn_yaw`：\|yaw rate\| ≥ 5°/s | **≥ 25%** |
-| stop / queue | v₀ < 0.5 m/s 且 3 s 内移动 < 1 m | 剩余部分，≤ 15% |
-| plain straight | 同 Waymo `straight_yaw` | **≤ 30%** |
-| other | 以上都不是（弯道上的小 yaw rate、护栏条件不满足等） | ≤ 5% |
+| pre-onset，横向 | 同 Waymo `pre_onset`：过去 1 s 走了 ≥ 1 m、当前 \|yaw rate\| < 1°/s，3 s 处 chord ≥ 3 m 且 \|bearing\| > 5° | ≤ 600 帧（0.20 × 3000），不够全要 |
+| pre-onset，起步 | 当前 v₀ < 0.5 m/s，3 s 内走出 ≥ 3 m（start-from-stop） | ≤ 225 帧（0.075 × 3000） |
+| pre-onset，开始刹车 | v₀ ≥ 3 m/s、当前纵向加速度 ≥ −1 m/s²（还没在刹），3 s 处速度 ≤ 0.5 v₀（brake-for-agent，也含为红灯刹） | ≤ 225 帧（0.075 × 3000） |
+| in-turn | 同 Waymo `turn_yaw`：\|yaw rate\| ≥ 5°/s | 25% × N |
+| plain straight | 同 Waymo `straight_yaw` | 25% × N |
+| stop / queue | v₀ < 0.5 m/s 且 3 s 内移动 < 1 m | 10% × N |
+| other | 以上都不是（弯道上的小 yaw rate、护栏条件不满足等） | 5% × N |
+
+先抽 pre-onset 三类（各自不超过上限，候选不够就全要），**它们合起来定为 35%**，N = pre-onset 帧数 / 0.35，
+其余四层按上表占满另外 65%。这样 pre-onset ≥ 30%、in-turn ≥ 25%、plain straight ≤ 30%，剩下是停车 / 排队。
+上限是为了不让数量很多的「开始刹车」挤掉稀缺的横向 pre-onset（在 Waymo val 上试算：开始刹车占 7.5% 的帧，横向 pre-onset 只占 1.4%）。
 
 横向 pre-onset 再按未来轨迹分子类，只用于报告：**路口转弯**（5 s 处航向变化 ≥ 30°）、**换道**（5 s 处横向偏移 ≥ 2 m 且航向变化 < 15°）、
 **其他横向**（绕障碍 nudge、弯道，余下的）。
 
-抽取规则：pre-onset 三行是稀缺层，**候选全要**；总数 N = min(4000, pre-onset 候选数 / 0.30)；
-其余各层按配额在该层候选里均匀随机抽（种子 0），候选不够就全要，缺口写进结果，不拿别层补。
+抽取在每层候选里均匀随机（种子 0），候选不够就全要，缺口写进结果，不拿别层补。
 s_ego 式难度（用 Waymo fit 的 `ridge ego` 在每帧上的 5 s ADE，按 Waymo eval 半的十分位切档）作为每帧的一列，只报告不参与抽取。
 
-**组成对照**：CARLA 抽出来的集合与 Waymo 冻结子集并排报：v₀ 分位数、\|yaw rate\| 与 5 s 航向变化的分位数、上面七层的占比、
+**组成对照**：CARLA 抽出来的集合与 Waymo val 全集、Waymo 冻结子集三列并排报：v₀ 分位数、\|yaw rate\| 与 5 s 航向变化的分位数、上面七层的占比、
 s_ego 十分位占比、intent 占比、昼夜 / 天气（CARLA 侧）。**每一张结果表都带每层的 n**，AUC、词表覆盖、head 迁移除了汇总也逐层报，
 逐层时 Waymo 与 CARLA 用同一层的帧比。
 

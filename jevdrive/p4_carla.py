@@ -220,8 +220,9 @@ def calibrate_lookahead(carla_rows: list, grid=(10, 15, 20, 30, 40, 60)) -> tupl
 
 
 LAYERS = ("pre_onset_lateral", "pre_onset_start", "pre_onset_brake", "in_turn", "stop_queue", "straight", "other")
-QUOTA = {"in_turn": 0.25, "straight": 0.30, "stop_queue": 0.10, "other": 0.05}   # of N; pre-onset: every candidate
-PRE_SHARE, N_MAX = 0.30, 4000
+N_MAX = 3000
+PRE_CAP = {"pre_onset_lateral": 0.20, "pre_onset_start": 0.075, "pre_onset_brake": 0.075}   # of N_MAX
+QUOTA = {"in_turn": 0.25, "straight": 0.25, "stop_queue": 0.10, "other": 0.05}             # of N; pre-onset 0.35
 
 
 def layers(past: np.ndarray, fut: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -252,12 +253,18 @@ def layers(past: np.ndarray, fut: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def select_frames(lay: np.ndarray, seed: int = 0) -> tuple[np.ndarray, dict]:
-    """The pre-registered stratified draw: every pre-onset candidate, the other layers to their quota of N."""
-    pre = np.char.startswith(lay.astype(str), "pre_onset")
-    N = int(min(N_MAX, pre.sum() / PRE_SHARE))
-    keep = pre.copy()
+    """The pre-registered stratified draw. Pre-onset first, each kind up to its cap (lateral is the scarce one and
+    is taken whole when short; brake onsets are plentiful and must not crowd it out). The pre-onset draw is then
+    35 % of N, and the other layers fill the remaining 65 % in fixed proportions. A short layer is taken whole
+    and reported, never back-filled from another."""
     rng = np.random.default_rng(seed)
-    info = {"candidates": {k: int((lay == k).sum()) for k in LAYERS}, "N_target": N}
+    keep = np.zeros(len(lay), bool)
+    info = {"candidates": {k: int((lay == k).sum()) for k in LAYERS}}
+    for name, cap in PRE_CAP.items():
+        c = np.flatnonzero(lay == name)
+        keep[rng.choice(c, min(int(round(cap * N_MAX)), len(c)), replace=False)] = True
+    N = int(round(keep.sum() / 0.35))
+    info["N"] = N
     for name, q in QUOTA.items():
         c = np.flatnonzero(lay == name)
         want = int(round(q * N))
