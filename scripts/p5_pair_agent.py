@@ -267,7 +267,17 @@ class P5PairAgent(SensorAgent):
                     boxes = tl.get_light_boxes()
                     m["stops"] = [_xyz(w.transform.location) + [w.transform.rotation.yaw, w.road_id, w.lane_id]
                                   for w in tl.get_stop_waypoints()]
-                    m["boxes"] = [_xyz(b.location) + [b.extent.x, b.extent.y, b.extent.z] for b in boxes]
+                    # On a Large Map the boxes come back shifted by the rebased world origin, a whole multiple of
+                    # 1000 m (measured: Town12/13 offsets of (-1000, 5000), (-3000, 5000), (1000, 3000) m plus the
+                    # mast arm, which is under 6 m); the rounding removes exactly that.
+                    loc = np.array(m["loc"][:2])
+                    shift = [0.0, 0.0]
+                    if boxes:
+                        c = np.mean([[b.location.x, b.location.y] for b in boxes], 0)
+                        shift = list(np.round((loc - c) / 1000.0) * 1000.0)
+                    m["box_shift"] = shift
+                    m["boxes"] = [[round(b.location.x + shift[0], 3), round(b.location.y + shift[1], 3), round(b.location.z, 3),
+                                   b.extent.x, b.extent.y, b.extent.z] for b in boxes]
                     self._light_boxes[i] = np.array(m["boxes"], np.float64).reshape(-1, 6)
                 except RuntimeError:              # still dormant: ask again next frame
                     pass
