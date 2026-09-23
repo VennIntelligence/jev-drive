@@ -28,7 +28,8 @@ from . import traj, waymo, waymo_ladder as ladder
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
-QWEN4B, QWEN32B = "Qwen/Qwen3-VL-4B-Instruct", "Qwen/Qwen3-VL-32B-Instruct"
+QWEN4B = "Qwen/Qwen3-VL-4B-Instruct"            # bf16
+QWEN32B = "Qwen/Qwen3-VL-32B-Instruct-FP8"   # the official block-wise FP8 checkpoint: ~35 GB, fits beside other jobs
 FRAMES, STRIDE = 4, 2                 # the P3(d'') clip: 4 frames, 0.2 s apart, the last one is "now"
 FRAME_SET = "p5vlm_v1"
 TURN_N = 400                          # turn_yaw is only a sanity control: already turning, the answer is visible

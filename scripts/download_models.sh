@@ -18,6 +18,7 @@ MODELS=(
   Qwen/Qwen3-VL-4B-Instruct
   Qwen/Qwen3-VL-8B-Instruct
   Qwen/Qwen3-VL-32B-Instruct
+  Qwen/Qwen3-VL-32B-Instruct-FP8          # P5 VLM meta-action column: ~35 GB, native FP8 on Blackwell
   facebook/dinov2-base
   facebook/vjepa2-vitl-fpc64-256           # video SSL control: does temporal pretraining buy what one frame cannot?
   google/siglip2-so400m-patch14-384        # image-text control: separates language alignment from pure vision
