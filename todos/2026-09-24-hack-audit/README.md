@@ -66,19 +66,45 @@ nuScenes open-loop planning、Waymo Open Dataset E2E（WOD-E2E，RFS）、HUGSIM
 
 ## 做法
 
-分类体系采用 open coding，边读边建：
+### 组织：先备料，再并行审计，最后汇总
 
-1. 读第一个 repo 时自由记录发现，写入 `taxonomy.md`，每类一个简短定义和一个例子。
-2. 往后每个 repo，有合适的类就归进去，没有就新建；合并或拆分类别时在 `taxonomy.md` 里记一行变更日志。
-3. **全部 repo 读完后，用最终版 `taxonomy.md` 从头再过一遍所有 repo**，确保早读的 repo 没有因为当时类别还没建出来而漏记。
-   第二遍后，每个 repo 对每个最终类别都要给出 yes / no / NA。
+这个任务很大（约 30 个 repo 加论文），要分给多个子代理并行完成。所有代理在同一个共享目录 `/data/hack_audit/` 里协作，
+靠文件互相配合，不靠对话传递信息。
+
+**阶段 0：备料（主代理自己做，串行）**
+1. 检查网络：GitHub、arXiv、OpenReview、各 leaderboard 页面能否访问（2026-09-24 实测 Tokyo 上 GitHub、arXiv、OpenReview 都能直连）。
+2. 按下面的「抽样」规则写出 `out/sampling.csv`。
+3. clone 全部选中的 repo 到 `repos/<board>__<method>/`，下载论文 PDF 到 `papers/<method>.pdf`，记入 `out/repos.csv`。
+   **备料全部完成、每个 repo 和论文都确认到位之后，才进入阶段 1。** 下载失败的条目在 `repos.csv` 里标出，不阻塞其他条目。
+4. 写好 `out/INDEX.md`：一张表，每行一个审计单元（repo × 榜单），列出负责的代理、状态（todo / in-progress / done / verified）、
+   审计页链接。它是所有代理共用的任务板。
+
+**阶段 1：并行审计（多个子代理）**
+- 每个子代理领一批审计单元（建议按榜单分，一个代理负责一个榜单的 3–5 个 repo，这样同榜单的评测代码只需要读懂一次）。
+- 子代理只读代码和论文，**不运行任何东西**。每个审计单元写一页 `out/audits/<board>__<method>.md`，
+  同时向 `out/findings.jsonl` 追加发现（每行一条 JSON；多个代理同时追加时用文件锁，或者先写各自的 `out/findings/<agent>.jsonl`，最后合并）。
+- 分类体系采用 open coding：`out/taxonomy.md` 是共享的 codebook。子代理遇到现有类别装不下的发现时，
+  在 `taxonomy.md` 末尾的「提议」区追加新类别（定义 + 例子 + 提议者），不要直接改已有定义；已有类别照常使用。
+- 子代理开工时把 `INDEX.md` 里自己的单元标成 in-progress，写完标成 done。
+
+**阶段 2：统一 codebook 并重新编码（主代理或一个专门的代理）**
+- 阶段 1 全部 done 后，合并、拆分和重命名 `taxonomy.md` 里的类别，得到最终版（变更日志记在末尾）。
+- 用最终版 codebook 把全部审计单元重新过一遍，确保早期的审计没有因为当时类别还没建出来而漏记，然后填出 `out/matrix.csv`。
+  这一步同样可以按榜单并行。
+
+**阶段 3：独立复核（全新的子代理，不继承之前的上下文）**
+- 只给它 `taxonomy.md`、repo、论文和被抽中的条目，复核随机 20% 的 yes 和 10% 的 no，见「验收」第 5 条。
+
+**阶段 4：汇总（一个汇总代理）**
+- 读全部审计页、`findings.jsonl`、`matrix.csv` 和复核结果，写 `out/report.md`，并跑「验收」里的自动检查。
+
+### 读什么
 
 读代码的重点（建议，不是规定）：agent 或推理入口、输出后处理、控制器、评测配置和脚本、训练数据的 split 定义、
 config 里的 `if`/查表分支、论文里没提到的超参数。
 
-对照论文：下载论文（arXiv 或会议版本，以 repo README 里引用的为准），对每个发现检查论文是否提到它，
-引用原文位置（section / table / 附录编号）。同时核对论文报告分数的配置（seed 数、是否 ensemble、评测子集）
-与代码里默认或 README 推荐的评测配置是否一致，不一致本身就是一个发现。
+对照论文：对每个发现检查论文（正文、附录、README）是否提到它，引用原文位置（section / table / 附录编号）。
+同时核对论文报告分数时的配置（seed 数、是否 ensemble、评测子集）和代码里默认或 README 推荐的评测配置是否一致，不一致本身就是一个发现。
 
 ## 交付物
 
@@ -86,12 +112,13 @@ config 里的 `if`/查表分支、论文里没提到的超参数。
 
 | 文件 | 内容 |
 |---|---|
+| `INDEX.md` | 任务板：每个审计单元（repo × 榜单）的负责代理、状态、审计页链接；最后也作为交付物的目录 |
+| `audits/<board>__<method>.md` | 每个审计单元一页：读了哪些文件、没读哪些、整体印象、发现列表（链到 `findings.jsonl` 的 id） |
 | `sampling.csv` | 每行一个榜单条目：board, rank, method, venue/年份, score, 排行来源 URL, 快照日期, repo URL, 公开程度 A/B/C, 是否选中, 未选原因 |
 | `repos.csv` | 每个选中的 repo：repo URL, commit hash, clone 日期, 论文 URL, 对应的榜单 |
 | `taxonomy.md` | 最终分类体系：每类的定义、判定标准、正例和一个容易混淆的反例；末尾是变更日志 |
 | `findings.jsonl` | 每行一个发现，字段见下 |
 | `matrix.csv` | repo × 最终类别，取值 yes / no / NA（第二遍的结果） |
-| `repo-notes/<repo>.md` | 每个 repo 一页：整体印象，以及读了哪些文件、没读哪些文件 |
 | `report.md` | 中文总结：每个榜单最常见的几类、分类体系概览、最值得注意的 5–10 条发现、「候选实测」清单 |
 
 `findings.jsonl` 的字段：
@@ -115,7 +142,7 @@ confidence      # high / medium / low
    写一个脚本在本地 clone 上自动检查，把检查输出附在 `report.md` 末尾。
 3. `matrix.csv` 没有空格；每个 yes 在 `findings.jsonl` 里至少对应一条记录。
 4. 每条发现的 `disclosed` 和 `paper_quote` 都已填写。
-5. **独立复核**：另开一个全新的 Codex session，只给它 `taxonomy.md` 和被抽中的条目，
+5. **独立复核**：由一个不继承之前上下文的全新子代理来做，只给它 `taxonomy.md` 和被抽中的条目，
    复核随机 20% 的 yes（发现是否成立、归类是否正确）和 10% 的 no（是否确实没有）。
    一致率 ≥ 90% 才算通过，不一致的条目逐条写进 `report.md`。
 
@@ -139,14 +166,18 @@ confidence      # high / medium / low
 
 ## 启动
 
+模型用 `gpt-6-sol`，reasoning effort 设为 `ultra`（它会自动把任务分给子代理）。
+在 Tokyo box 的 tmux session `hack_audit` 里用非交互模式运行，日志写到 `/data/hack_audit/codex.log`：
+
 ```bash
 ssh ujs@100.108.238.8
 cd ~/mycode/jev-drive && git pull
-mkdir -p /data/hack_audit/{repos,out}
+mkdir -p /data/hack_audit/{repos,papers,out}
 tmux new -s hack_audit
-cd /data/hack_audit && codex
-# 在 codex 中输入：
-#   读 ~/mycode/jev-drive/todos/2026-09-24-hack-audit/README.md，按其中的目标、约束和验收完成审计。
+cd /data/hack_audit && codex exec -m gpt-6-sol -c model_reasoning_effort='"ultra"' \
+  -s workspace-write -c sandbox_workspace_write.network_access=true --skip-git-repo-check \
+  "读 ~/mycode/jev-drive/todos/2026-09-24-hack-audit/README.md，按其中的目标、约束、组织方式和验收完成审计。" \
+  2>&1 | tee -a codex.log
 ```
 
 ## 结果
