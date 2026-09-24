@@ -60,7 +60,7 @@ class Alpamayo:
             m = {"nav_text": nav, "seed": 0}
             self.plan({}, m, self.prepare(m, dict(dummy, hist=hist)))
 
-    def new_state(self):
+    def new_state(self, state=None):
         return {}
 
     def images(self, arrays):
@@ -125,11 +125,12 @@ class OpenpilotModel:
         from jevdrive.openpilot import frames as opf
         from jevdrive.openpilot.model import OPModel, T_IDXS, decode
         self.opf, self.decode, self.t_idxs = opf, decode, T_IDXS.astype(np.float32)
-        # Lebowski keeps its queues on the host: one step per 5 Hz context step, exact at that phase. small / Cinque
-        # keep them inside the ONNX on the GPU and must step at 20 Hz; their GPU state is not swapped per
-        # connection, so they serve one CARLA worker per server.
+        # Lebowski keeps its queues on the host: one step per 5 Hz context step, exact at that phase, and one model
+        # serves every connection by swapping the host queues. small / Cinque keep their queues inside the ONNX on the
+        # GPU and step at 20 Hz; each connection gets its own session (TensorRT engine from the cache, ~2.3 GB).
         self.context_rate = a.model == "lebowski"
-        self.model = OPModel(a.model, a.backend, context_rate=self.context_rate)
+        self.make = lambda: OPModel(a.model, a.backend, context_rate=self.context_rate)  # noqa: E731
+        self.model = self.make()
         w, h = rigs.OP_CAMERA_WH
         self.idx = {}
         for name, f in rigs.OP_FOCAL.items():
@@ -147,7 +148,11 @@ class OpenpilotModel:
             m = {"desire": 0, "speed": 0.0}
             self.plan(st, m, self.prepare(m, img))
 
-    def new_state(self):
+    def new_state(self, state=None):
+        if not self.context_rate:
+            m = state["model"] if state and "model" in state else (self.model if state is None else self.make())
+            m.reset()
+            return {"model": m}
         self.model.reset()
         return {k: getattr(self.model, k).copy() if hasattr(getattr(self.model, k), "copy") else getattr(self.model, k)
                 for k in self.STATE}
@@ -182,12 +187,17 @@ class OpenpilotModel:
         desire = np.zeros(8, np.float32)
         desire[int(meta.get("desire", 0))] = 1
         t1 = time.perf_counter()
-        for k in self.STATE:
-            setattr(self.model, k, state[k])
-        raw = self.model.step(img2, desire=desire, traffic=(1, 0))
-        for k in self.STATE:
-            state[k] = getattr(self.model, k)
-        d = self.decode(raw, self.model.slices, float(meta.get("speed", 0.0)))
+        if not self.context_rate:
+            m = state["model"]
+            raw = m.step(img2, desire=desire, traffic=(1, 0))
+        else:
+            m = self.model
+            for k in self.STATE:
+                setattr(m, k, state[k])
+            raw = m.step(img2, desire=desire, traffic=(1, 0))
+            for k in self.STATE:
+                state[k] = getattr(m, k)
+        d = self.decode(raw, m.slices, float(meta.get("speed", 0.0)))
         info = {"prep_ms": prep["prep_ms"], "infer_ms": 1e3 * (time.perf_counter() - t1),
                 "curvature": d["curvature"], "accel": d["accel"], "engaged": d["engaged"]}
         return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
@@ -254,7 +264,7 @@ def main():
                 meta, arrays = wire.recv(conn)
                 if meta["cmd"] == "reset":
                     with gpu:
-                        state = policy.new_state()
+                        state = policy.new_state(state if state is not None else {})
                     wire.send(conn, {"ok": True, "server": policy.meta}, {})
                     continue
                 t = time.perf_counter()

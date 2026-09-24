@@ -1,6 +1,6 @@
 # openpilot 迁移计划：从 comma 车到闭环仿真器和别的相机 rig
 
-状态: A 诊断完成、修复已实现，CARLA 复跑**按用户要求推迟**（固定控制器还在调）；B 在 comma1M 与 WOD-E2E 上完成；C 见下
+状态: A 诊断完成、修复已实现；控制器已定（Zoo 官方 PID，D 节），smoke 与全量已排进 slot `op-b2d-smoke` / `op-b2d-full`；B 在 comma1M 与 WOD-E2E 上完成；C 见下
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/trajectory-to-control.md
 相关: [openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、[B2D 考试](bench2drive.md)、[WOD-E2E 考试](wod-e2e.md)、
 [NAVSIM 考试](navsim.md)、[控制器 API](../../docs/b2d-controller.md)
@@ -333,12 +333,54 @@ openpilot 在 B2D 上是仿真 bound（推理 < 20 ms/规划）。smoke 的 s/ti
 
 跑之前先用 `shadow` 阶段实测每步渲染的 s/tick，再把这张表换成实测值；全量需用户批准。
 
+## D. 控制器换成 Bench2DriveZoo 官方 PID 之后的 smoke 与全量（预注册，写于运行之前，2026-09-25）
+
+**控制器（用户决定，偏离预注册第 3 节）。** 主控制器换成 Bench2Drive(-Zoo) 的 UniAD / VAD / TCP 基线用的官方 PID，
+原样运行：`scripts/b2d_zoo_pid.py` 是 Zoo `uniad/vad` 分支 `498c1f7` 的 `team_code/pid_controller.py` 逐字复制
+（`PIDController.control_pid`：转向 PID 0.75/0.75/0.3、窗口 40，速度 PID 5/0.5/1、窗口 40，aim point 取中点离原点
+最近 4 m 的那段，目标速度 = 相邻 waypoint 平均间距 × 2，desired speed < 0.4 m/s 或实际 > 1.1 倍刹车，油门 ≤ 0.75），
+target point 用 Zoo 自带的 `RoutePlanner(4.0, 50.0)`（与 Alpamayo 考试同一条 `controller: zoo_pid` 路径，见
+[bench2drive.md](bench2drive.md) 的偏离说明）。输入：openpilot plan 按 A2 的后轴变换后，在 0.5 … 3.0 s 取 6 个点
+（UniAD / VAD 的格式），转成 (前, 右)。调用节奏跟着规划：Cinque 每 tick 规划、每 tick 调一次（与 UniAD / VAD 相同）；
+Lebowski 5 Hz 规划、每次规划调一次、中间保持控制量（与 AD-MLP 的 2 Hz 相同）。要注意这个控制器在 target point 比
+预测的 aim 更“直”、或预测突变而 target 在前方 10 m 内时，**改用路线上的下一个点转向**，也就是说它把一部分路线信息
+直接带进了转向；UniAD / VAD 的 Bench2Drive 分数也是这样来的，所以这对 openpilot 是同等待遇，但结果要按“planner +
+这个控制器”来读，不能当成 openpilot 自己会走路口。
+
+**配对的次级控制器：openpilot 自己的执行语义（`controller: native`）。** 横向：desired curvature 经单车模型
+（轴距 2.86 m、CARLA 的转向曲线、最大转角 70°）换成方向盘，限速率 2/s；纵向：desired accel（按 modeld 做 0.3 s 平滑）
+作前馈，除以 MKZ 近似的满油门 / 满刹车加速度（3.0 / 8.0 m/s²），加 0.1 × 加速度误差的比例项（openpilot 的
+`LongControl` 默认 ki = 0，基本是纯前馈），静止且 desired accel ≤ 0.2 m/s² 时刹车保持（openpilot 的 should_stop）。
+这些数字在任何路线跑之前定死，不调。
+
+**smoke（slot `op-b2d-smoke`，GPU 0，2 个 CARLA worker）**，同样 5 条预注册路线、TM seed 0，五个阶段：
+
+| 阶段 | 模型 | 控制器 | 回答什么 |
+|---|---|---|---|
+| `zoo-lebowski` | Lebowski（预注册模型） | Zoo PID | 修复 + 新控制器后的主结果，对照 smoke 的 DS 2.7 |
+| `zoo-cinque` | Cinque v3 | Zoo PID | 全量用哪个模型 |
+| `native-cinque` | Cinque v3 | native | 主 / 次控制器配对 |
+| `fixed-lebowski` | Lebowski | 预注册的固定控制器 | 同一控制器下修复前后（只差 A2 的三项修复） |
+| `shadow-cinque` | Cinque v3 | route oracle 开车 | CARLA 画面上的开环误差（与 comma1M 比），把画面域差与闭环分开 |
+
+A3 里的 `origin-only`、`shadow-h*`、`curvature` 这次不跑（控制 smoke 在约 1 h 内），留在 `scripts/zeroshot_b2d_opfix.sh`。
+
+**全量（slot `op-b2d-full`，GPU 0，4 个 CARLA worker，220 条，`--towns all`）的选择规则，只看 smoke、在全量开始之前由
+脚本自动执行（`scripts/zeroshot_b2d_op.sh full`，结果写入 `full-choice.txt`）：**
+
+- 模型：Cinque v3（WOD-E2E 上最好）；只有当 smoke 里 `zoo-lebowski` 的平均 DS 比 `zoo-cinque` 高 ≥ 10 时改用 Lebowski。
+- native 控制器也跑 220 条：只有当 smoke 里 `native-cinque` 的平均 DS 比 `zoo-cinque` 高 ≥ 10 时才加（排在主跑之后）；
+  否则主 / 次控制器的对比只在 5 条 smoke 上报。
+- 报告：DS（均值与按路线 bootstrap 的 95% CI）、SR（按 Bench2Drive `merge_route_json.py` 定义，Wilson CI）、RC、
+  没跑完的路线数（上一轮全量有 11 条 Town12/13 路线因 CARLA 崩溃跑不完，≤ 15 条算 job 成功，分数连同完成数一起报）。
+
 ## 偏离记录（B2D 考试的 openpilot 部分）
 
 1. **（2026-09-24 21:00，修复后未看任何分数）plan 原点**：`plan_origin = rear`，理由见 A2。
 2. **（同上）相机逐帧渲染与同帧配对**：`op_camera_tick = 0.05`，规划只用 road / wide 同帧的组，理由见 A1 的时序行。
 3. **（同上）5 s 预热**：`warmup_s = 5`，理由见 A1 冷启动一行和 A2。
 4. 复跑推迟到控制器定版之后（用户决定，2026-09-24 21:00）。
+5. **（2026-09-25，运行之前）控制器**：主控制器换成 Bench2DriveZoo 官方 PID（原样运行），openpilot 自己的 curvature / accel 执行语义作配对次级，规则与全量选择见 D 节。
 
 ## 复现
 

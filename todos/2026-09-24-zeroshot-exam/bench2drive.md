@@ -2,7 +2,7 @@
 
 状态: 预注册已冻结（2026-09-24 17:20，smoke 之前；plumbing 只用来查适配，不计分）；smoke 完成；全量 220 条 Alpamayo（用户已批准，openpilot 不跑）**已暂停**，13/220 完成，见下方「全量暂停记录」
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
-**openpilot 的 smoke 分数（DS 2.7）作废**：来自适配 bug，诊断与修复见 [openpilot-migration.md](openpilot-migration.md)，复跑等控制器定版。
+**openpilot 的 smoke 分数（DS 2.7）作废**：来自适配 bug，诊断与修复见 [openpilot-migration.md](openpilot-migration.md)；修复后在 Zoo 官方 PID 下的 smoke 与 220 条全量（Cinque v3）按该文 D 节预注册。
 相关: [Alpamayo smoke](../2026-09-24-alpamayo-smoke/README.md)、[openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、
 [控制器 API](../../docs/b2d-controller.md)、[闭环成本](../../docs/bench2drive-cost.md)
 

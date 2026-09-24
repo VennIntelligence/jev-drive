@@ -138,7 +138,10 @@ class ZeroShotAgent(AutonomousAgent):
             from b2d_zoo_pid_wrap import ZooPID
             self.zoo = ZooPID()
         else:
-            assert self.cfg.get("controller", "fixed") == "fixed", self.cfg
+            assert self.cfg.get("controller", "fixed") in ("fixed", "native"), self.cfg
+        self.native = self.cfg.get("controller", "fixed") == "native"
+        self.accel_des = None                    # openpilot desired accel, smoothed as modeld does (0.3 s)
+        self.accel_meas, self.last_speed = 0.0, None
         self.out = os.environ.get("B2D_ATTEMPT_OUT") or self.cfg.get("out") or "."
         os.makedirs(os.path.join(self.out, "frames"), exist_ok=True)
         self.plan_log = open(os.path.join(self.out, "plans.jsonl"), "w", buffering=1)
@@ -236,7 +239,9 @@ class ZeroShotAgent(AutonomousAgent):
         else:
             throttle, steer, brake = self.controller.step(now, speed, -world_gyro)
             reason = self.controller.diagnostics["reason"]
-        if self.zoo is None and self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
+        if self.native:
+            throttle, steer, brake, reason = self._native_control(speed, throttle, steer, brake, reason)
+        elif self.zoo is None and self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
             steer = self._curvature_steer(speed)
         self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
@@ -271,6 +276,27 @@ class ZeroShotAgent(AutonomousAgent):
         step = self.controller.steer_rate * DELTA
         return float(np.clip(np.clip(raw, self.last_steer - step, self.last_steer + step),
                              -self.controller.max_steer, self.controller.max_steer))
+
+    # openpilot's own actuation semantics, pre-specified (not tuned on any route): lateral = desired curvature through
+    # the kinematic bicycle model (as openpilot's angle-controlled cars do); longitudinal = desired acceleration as
+    # feedforward over the MKZ's approximate full-throttle / full-brake acceleration plus a proportional term on the
+    # acceleration error (openpilot's LongControl is feedforward with ki = 0 by default), and a brake hold at
+    # standstill when the model asks to stay stopped (openpilot's should_stop).
+    NATIVE_A_THROTTLE, NATIVE_A_BRAKE, NATIVE_KP = 3.0, 8.0, 0.1
+
+    def _native_control(self, speed, throttle, steer, brake, reason):
+        if self.last_speed is not None:
+            a = (speed - self.last_speed) / DELTA
+            self.accel_meas += (1 - math.exp(-DELTA / 0.3)) * (a - self.accel_meas)
+        self.last_speed = speed
+        if self.accel_des is None or self.curvature is None:
+            return 0.0, 0.0, 1.0, "native_no_plan"
+        steer = self._curvature_steer(speed)
+        a = self.accel_des
+        if speed < 0.3 and a <= 0.2:
+            return 0.0, steer, 1.0, "native_stop"
+        pedal = a / (self.NATIVE_A_THROTTLE if a > 0 else self.NATIVE_A_BRAKE) + self.NATIVE_KP * (a - self.accel_meas)
+        return float(np.clip(pedal, 0.0, 0.75)), steer, float(np.clip(-pedal, 0.0, 1.0)), "native"
 
     def _history(self, t0):
         """16 rear-axle poses at t0 - 1.5 s ... t0 (10 Hz) in the t0 rig frame (x forward, y left, yaw CCW);
@@ -317,7 +343,13 @@ class ZeroShotAgent(AutonomousAgent):
             drive_path = self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2])
         else:
             drive_path = path
-            self.curvature = float(info["curvature"]) if "curvature" in info else None
+            if not warm:
+                self.curvature = float(info["curvature"]) if "curvature" in info else None
+                if "accel" in info:   # modeld smooths desired accel with a 0.3 s time constant
+                    dt = DELTA * self.plan_every * (1 if self.op_tick <= DELTA else self.op_tick / DELTA)
+                    a = float(info["accel"])
+                    self.accel_des = a if self.accel_des is None else \
+                        self.accel_des + (1 - math.exp(-dt / 0.3)) * (a - self.accel_des)
         zoo_meta = None
         if warm:
             accepted = False
