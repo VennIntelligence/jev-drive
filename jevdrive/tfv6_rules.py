@@ -380,6 +380,45 @@ def load_public(path: Path, label: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+PUBLIC_DIR = REPO / "research" / "results" / "b2d-family" / "public"
+# (method, run label, file under PUBLIC_DIR, source): see PUBLIC_DIR / "sources.csv" for URLs and commits.
+# "official" = the authors' own evaluation files; "user" = a third party's re-run of the released checkpoint.
+PUBLIC = [
+    ("TF++", "tfpp", "tfpp/merged.json", "official"),
+    ("PDM-Lite (privileged)", "pdm_lite", "pdm_lite/merged.json", "official"),
+    ("UniAD-Base", "uniad_base", "uniad_base/UniAD-Base.json", "official"),
+    ("UniAD-Tiny", "uniad_tiny", "uniad_tiny/UniAD-Tiny.json", "official"),
+    ("VAD", "vad", "vad/VAD.json", "official"),
+    ("TCP-traj", "tcp_traj", "tcp_traj/TCP-only-traj.json", "official"),
+    ("DriveMoE", "drivemoe.s1", "drivemoe/drivemoe_base_bf16_seed1.json", "official"),
+    ("DriveMoE", "drivemoe.s2", "drivemoe/drivemoe_base_bf16_seed2.json", "official"),
+    ("Drive-pi0", "drivepi0", "drivepi0/drivepi_base_bf16.json", "official"),
+    *[("BLUE", f"blue.r{i}", f"blue/bench2drive_merged_{i}.json", "official") for i in range(1, 7)],
+    ("ORION", "orion", "orion/ORION.json", "official"),
+    ("MindDrive", "minddrive", "minddrive/minddrive.json", "official"),
+    ("MindDrive-3B", "minddrive3b", "minddrive/minddrive_3B.json", "official"),
+    ("UniDriveVLA", "unidrivevla", "unidrivevla/merged.json", "official"),
+    ("Hydra-NeXt", "hydra_next", "hydra_next/merged_new.json", "official"),
+    ("Orion-Lite", "orion_lite.a100", "orion_lite/orion_lite_DS_SR_a100.json", "official"),
+    ("Orion-Lite", "orion_lite.a6000", "orion_lite/orion_lite_DS_SR_a6000.json", "official"),
+    ("SparseDriveV2", "sparsedrivev2", "sparsedrivev2/merged.json", "official"),
+    ("R2SE", "r2se", "r2se/sim_results_3.json", "official (anonymous upload)"),
+    ("SimLingo", "simlingo.user", "simlingo_userrerun/merged.json", "user"),
+    ("TFv6 (single ckpt)", "tfv6.user", "tfv6_lead_userrerun/per_route_merged.json", "user"),
+]
+
+
+def public_routes() -> pd.DataFrame:
+    """Every public per-route file in one table (route rows; missing routes are simply absent)."""
+    out = []
+    for method, run, f, src in PUBLIC:
+        d = load_public(PUBLIC_DIR / f, run)
+        d.insert(0, "method", method)
+        d["source"] = src
+        out.append(d)
+    return pd.concat(out, ignore_index=True)
+
+
 def family_table(routes: pd.DataFrame, runs: pd.DataFrame, only: set | None = None) -> pd.DataFrame:
     """Per run x family (ours and Bench2Drive's abilities): mean DS and SR with route-bootstrap CIs."""
     r = runs.merge(routes, on="route_id")
@@ -398,22 +437,45 @@ def family_table(routes: pd.DataFrame, runs: pd.DataFrame, only: set | None = No
     return pd.DataFrame(rows)
 
 
-def run_noise(a: pd.DataFrame, b: pd.DataFrame, routes: pd.DataFrame) -> pd.DataFrame:
-    """Run-to-run noise from two identical runs: per-route variance d^2/2, SD of a single run's mean."""
-    j = a.set_index("route_id")[["ds", "success"]].join(b.set_index("route_id")[["ds", "success"]], rsuffix="_b",
-                                                        how="inner").join(routes.set_index("route_id")[["family",
-                                                                                                         "sudden"]])
-    j["d"] = j.ds - j.ds_b
+def run_noise(runs: pd.DataFrame, routes: pd.DataFrame, method: str) -> pd.DataFrame:
+    """Run-to-run noise from k >= 2 repeated runs of one configuration (rows: run, route_id, ds, success).
+    Per route the sample variance across runs (ddof 1; for k = 2 it is d^2 / 2); the SD of one run's mean DS over
+    n routes is sqrt(sum_r s_r^2) / n. Only routes present in every run are used."""
+    w = runs.pivot_table(index="route_id", columns="run", values="ds").dropna()
+    sw = runs.pivot_table(index="route_id", columns="run", values="success", aggfunc="max").reindex(w.index)
+    j = w.join(routes.set_index("route_id")[["family", "sudden"]], how="inner")
+    cols = list(w.columns)
     out = []
     for name, h in [("all", j), ("sudden", j[j.sudden])] + [(f, j[j.family == f]) for f in FAMILY]:
         if not len(h):
             continue
-        out.append({"family": name, "n": len(h), "identical": float((h.d == 0).mean()),
-                    "mean_abs_d": float(h.d.abs().mean()), "max_abs_d": float(h.d.abs().max()),
-                    "mean_diff": float(h.d.mean()),
-                    "sd_single_run_mean": float(np.sqrt((h.d ** 2 / 2).sum()) / len(h)),
-                    "sr_flips": int((h.success != h.success_b).sum())})
+        v = h[cols].var(axis=1, ddof=1)
+        vs = (sw.loc[h.index, cols].astype(float) * 100).var(axis=1, ddof=1)
+        means = h[cols].mean(axis=0)
+        out.append({"method": method, "family": name, "k_runs": len(cols), "n": len(h),
+                    "identical_routes": float((h[cols].nunique(axis=1) == 1).mean()),
+                    "sd_single_run_mean": float(np.sqrt(v.sum()) / len(h)),
+                    "sd_single_run_sr": float(np.sqrt(vs.sum()) / len(h)),
+                    "run_means_min": float(means.min()), "run_means_max": float(means.max()),
+                    "sr_changes": int((sw.loc[h.index].nunique(axis=1) > 1).sum())})
     return pd.DataFrame(out)
+
+
+def compare(runs: pd.DataFrame, a: str, b: str, routes: pd.DataFrame, noise_sd: float,
+            groups=("all", "sudden")) -> list:
+    """Paired DS and SR difference a - b on common routes, with route-bootstrap CI and the run-to-run bar
+    2 * sqrt(2) * noise_sd (the 95% band of the difference of two single runs)."""
+    x = runs[runs.run == a].set_index("route_id")[["ds", "success"]]
+    y = runs[runs.run == b].set_index("route_id")[["ds", "success"]]
+    j = x.join(y, rsuffix="_b", how="inner").join(routes.set_index("route_id")[["family", "sudden"]], how="inner")
+    rows = []
+    for g in groups:
+        h = j if g == "all" else (j[j.sudden] if g == "sudden" else j[j.family == g])
+        ds = boot_paired(h.ds, h.ds_b)
+        sr = boot_paired(h.success.astype(float) * 100, h.success_b.astype(float) * 100)
+        rows.append({"a": a, "b": b, "group": g, "n": len(h), "dDS": ds[0], "dDS_lo": ds[1], "dDS_hi": ds[2],
+                     "dSR": sr[0], "dSR_lo": sr[1], "dSR_hi": sr[2], "noise_bar": 2 * np.sqrt(2) * noise_sd})
+    return rows
 
 
 def factorial(runs: pd.DataFrame, labels: dict) -> pd.DataFrame:
@@ -435,13 +497,87 @@ def factorial(runs: pd.DataFrame, labels: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# ---------------------------------------------------------------- report
+
+TOP = ["tfv6.user", "blue.r1", "sparsedrivev2", "simlingo.user", "r2se", "tfpp", "minddrive3b", "orion_lite.a100"]
+REPEATS = {"BLUE": [f"blue.r{i}" for i in range(1, 7)], "Orion-Lite": ["orion_lite.a100", "orion_lite.a6000"],
+           "DriveMoE": ["drivemoe.s1", "drivemoe.s2"]}
+
+
+def ours(runs_json: Path) -> pd.DataFrame:
+    """Our runner directories: runs_json = {"A1.rep0": [dir, ...], "A1.rep1": [...], "A0.rep0": [...], ...};
+    several directories per label are merged (a label's routes may be split over runners)."""
+    import json
+    spec = json.loads(Path(runs_json).read_text())
+    parts = [collect({label: Path(d)}) for label, dirs in spec.items() for d in dirs]
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
+
+
+def report(runs_json: Path | None, out: Path = RESULTS):
+    out.mkdir(parents=True, exist_ok=True)
+    routes = pd.read_csv(RESULTS / "routes.csv", dtype={"route_id": str})
+    r209 = set(routes[~routes.crasher].route_id)
+    pub = public_routes()
+    pub = pub[pub.rep == 0]
+    pub[["method", "run", "route_id", "ds", "rc", "success", "source"]].to_csv(
+        out.parent / "b2d-family" / "public_routes.csv", index=False)
+    tabs = [pub[pub.route_id.isin(r209)][["run", "route_id", "ds", "success"]]]
+    noise = [run_noise(pub[pub.route_id.isin(r209) & pub.run.isin(v)], routes, m) for m, v in REPEATS.items()]
+    top = list(TOP)
+    if runs_json is not None:
+        t = ours(runs_json)
+        t.to_csv(out / "runs.csv", index=False)
+        b2d = t[t.world == "plus"].copy()
+        b2d["run"] = "TFv6 " + b2d.arm + np.where(b2d.run.str.endswith("rep1"), " rep1", "")
+        b2d = b2d.drop_duplicates(["run", "route_id"], keep="first")
+        tabs.append(b2d[["run", "route_id", "ds", "success"]])
+        a1 = b2d[b2d.arm == "A1"]
+        if a1.run.nunique() >= 2:
+            noise.append(run_noise(a1, routes, "TFv6 A1 (ours)"))
+        pr = pairs(t[~t.run.str.endswith("rep1")], routes)
+        pr.to_csv(out / "pairs.csv", index=False)
+        if len(pr):
+            summ = pair_summary(pr)
+            summ.to_csv(out / "pair_summary.csv", index=False)
+            pair_contrasts(pr, summ).to_csv(out / "pair_contrasts.csv", index=False)
+        labels = {k: f"TFv6 {k}" for k in ARMS}
+        allr = pd.concat(tabs, ignore_index=True)
+        if all(v in set(allr.run) for v in labels.values()):
+            pair_routes = set(routes[routes.pair].route_id)
+            factorial(allr[allr.route_id.isin(pair_routes)], labels).assign(routes="pairs45").to_csv(
+                out / "factorial_pairs45.csv", index=False)
+            factorial(allr[allr.route_id.isin(r209)], labels).assign(routes="b2d209").to_csv(
+                out / "factorial_b2d209.csv", index=False)
+        top = ["TFv6 A1"] + top
+    allr = pd.concat(tabs, ignore_index=True)
+    allr = allr[allr.route_id.isin(r209)]
+    family_table(routes, allr).to_csv(out / "family.csv", index=False)
+    nz = pd.concat(noise, ignore_index=True)
+    nz.to_csv(out / "noise.csv", index=False)
+    sd_all = nz[nz.family == "all"].set_index("method").sd_single_run_mean
+    ref = float(sd_all.get("TFv6 A1 (ours)", sd_all.get("BLUE")))
+    rows = []
+    present = [x for x in top if x in set(allr.run)]
+    for i, a in enumerate(present):
+        for b in present[i + 1:]:
+            rows += compare(allr, a, b, routes, ref, groups=("all", "sudden") + SUDDEN)
+    cmp_ = pd.DataFrame(rows)
+    cmp_["noise_ref"] = "TFv6 A1 (ours)" if "TFv6 A1 (ours)" in sd_all else "BLUE"
+    cmp_.to_csv(out / "compare.csv", index=False)
+    log.info("report -> %s", out)
+    return allr
+
+
 def main():
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["build"])
+    p.add_argument("cmd", choices=["build", "report"])
+    p.add_argument("--runs", default="", help="JSON {label: [runner dirs]} of our runs")
     a = p.parse_args()
     if a.cmd == "build":
         build()
+    elif a.cmd == "report":
+        report(Path(a.runs) if a.runs else None)
 
 
 if __name__ == "__main__":
