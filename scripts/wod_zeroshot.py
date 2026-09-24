@@ -134,6 +134,18 @@ def _op(name_list, model):
     return np.stack([np.load(d / f"{n}.npz")["wod"] for n in name_list])
 
 
+P0_PREDS = "runs/waymo_p0/train_split/20260922-175708/preds.npz"  # our train-fit heads, every val frame
+P0_ARMS = {"ours ridge ego": "pred_ridge ego", "ours cls ego": "pred_cls ego",
+           "ours cls_late vision+ego": "pred_cls_late vision+ego"}
+
+
+def _ours(name_list):
+    z = np.load(Z.data_dir() / P0_PREDS, allow_pickle=True)
+    at = {str(n): i for i, n in enumerate(z["frame_name"])}
+    rows = np.array([at[n] for n in name_list])
+    return {k: z[v][rows] for k, v in P0_ARMS.items()}
+
+
 def _strat_idx(strata, B, rng):
     groups = [np.flatnonzero(strata == s) for s in np.unique(strata)]
     return [g[rng.integers(0, len(g), (B, len(g)))] for g in groups]
@@ -151,6 +163,7 @@ def cmd_score(a, log):
     base = W.baselines(past)
     cands = {"rater_best": best[:, None], "rater_worst": traj[np.arange(len(traj)), sc.argmin(1)][:, None],
              "logged_future": log_xy[:, None], "cv": base["cv"][:, None], "zero": base["zero"][:, None]}
+    cands |= {k: v[:, None] for k, v in _ours(names).items()}
     kind = {k: "baseline" for k in cands}
     cots = {}
     for v in ("nav", "nonav"):
@@ -207,7 +220,7 @@ def cmd_score(a, log):
                "ade5_rater_lo": np.percentile(q["ade5"][fidx].mean(1), 2.5),
                "ade5_rater_hi": np.percentile(q["ade5"][fidx].mean(1), 97.5), "ade5_log": q["ade5log"].mean(),
                "lon5_bias": q["lon5"].mean(), "lat5_absmean": np.abs(q["lat5"]).mean()}
-        for ref in ("cv", "logged_future"):
+        for ref in ("cv", "logged_future", "ours cls ego"):
             d = rb - cmean_boot(rows[ref]["rfs"])
             row[f"d_{ref}"], row[f"d_{ref}_lo"], row[f"d_{ref}_hi"] = (cmean(q["rfs"]) - cmean(rows[ref]["rfs"]),
                                                                       np.percentile(d, 2.5), np.percentile(d, 97.5))
@@ -236,7 +249,7 @@ def cmd_score(a, log):
     e = S["extra"]
     en = [str(x) for x in e["name"]]
     elog, eb = e["future"][..., :2], W.baselines(e["past"])
-    ex = {"cv": eb["cv"], "ctra": eb["ctra"], "zero": eb["zero"]}
+    ex = {"cv": eb["cv"], "ctra": eb["ctra"], "zero": eb["zero"], **_ours(en)}
     p, _ = _alp(en, "nav")
     if p is not None:
         ex["alpamayo_nav | E[1 sample]"] = p
