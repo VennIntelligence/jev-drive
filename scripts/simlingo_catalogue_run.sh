@@ -29,6 +29,8 @@ mkdir -p "$out/viz"
 export PYTHONPATH=$S:$S/team_code${PYTHONPATH:+:$PYTHONPATH}
 export SAVE_PATH=$out/viz CUDA_VISIBLE_DEVICES=$gpu B2D_RC_TRACE=1 B2D_CAPTURE_CRITERION_EVENTS=1
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+# torch sizes its CPU pools from the host's 208 cores (the cgroup allows 50): 465 threads per agent, measured.
+export OMP_NUM_THREADS=${AGENT_THREADS:-2} MKL_NUM_THREADS=${AGENT_THREADS:-2}
 exec "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py --routes "$routes" --towns all --out "$out" \
   --workers "$workers" --gpu-rank "$gpu" --server-index "$sidx" --tm-seed "$seed" \
   --python "$DATA_DIR/envs/simlingo/bin/python" --agent "$S/team_code/agent_simlingo.py" --agent-config "$CKPT+/run" \

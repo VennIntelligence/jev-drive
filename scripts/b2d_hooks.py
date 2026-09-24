@@ -321,25 +321,28 @@ def _patch_callback(profile, fast_copy, zero_copy):
 
 def _rc_tracer(every=20):
     """Read-only observer for the catalogue experiment (todos/2026-09-25-simlingo-catalogue), on when
-    $B2D_RC_TRACE=1, into $B2D_ATTEMPT_OUT/rc_trace.jsonl: every `every` ticks append [tick, frame, route completion %, infraction events so
-    far] from the route's own criteria, so a score under a different tick cap can be recomputed from the same
-    trajectory. Writes JSON lines, flushed, so a killed route keeps its trace."""
+    $B2D_RC_TRACE=1, into $B2D_ATTEMPT_OUT/rc_trace.jsonl: every `every` ticks append [tick, frame, route completion %,
+    infraction events so far] from the route's own criteria, so a score under a different tick cap can be recomputed
+    from the same trajectory. The tick on which RC first reads 100 is always written, with the previous tick's RC as a
+    fifth field, so a completion granted by RouteCompletionTest's percentage threshold can be told apart.
+    JSON lines, flushed, so a killed route keeps its trace."""
     if os.environ.get("B2D_RC_TRACE") != "1":
         return None
     fh = open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "rc_trace.jsonl"), "a")
+    st = {"crit": None, "prev": 0.0}
 
     def trace(manager, frame):
-        n = manager.tick_count
-        if n % every and n != 1:
-            return
-        rc, events = None, 0
-        for c in manager.scenario.get_criteria():
-            if type(c).__name__ == "RouteCompletionTest":
-                rc = c.actual_value
-            elif type(c).__name__ != "MinimumSpeedRouteTest":
-                events += len(c.events)
-        fh.write(json.dumps([n, frame, rc, events]) + "\n")
-        fh.flush()
+        if st["crit"] is None:  # the criteria tree is fixed once the route is built
+            crit = manager.scenario.get_criteria()
+            st["rc"] = next(c for c in crit if type(c).__name__ == "RouteCompletionTest")
+            st["crit"] = [c for c in crit if type(c).__name__ not in ("RouteCompletionTest", "MinimumSpeedRouteTest")]
+        n, rc = manager.tick_count, st["rc"].actual_value
+        done = rc >= 100 and st["prev"] < 100
+        if done or n % every == 0 or n == 1:
+            row = [n, frame, rc, sum(len(c.events) for c in st["crit"])]
+            fh.write(json.dumps(row + [st["prev"]] if done else row) + "\n")
+            fh.flush()
+        st["prev"] = rc
 
     return trace
 
