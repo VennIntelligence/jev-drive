@@ -57,7 +57,8 @@ class Alpamayo:
         hist = np.zeros((16, 3), np.float32)
         hist[:, 0] = np.linspace(-7.5, 0, 16)
         for nav in (None, "Turn left in 30m", None):
-            self.plan({}, {"nav_text": nav, "seed": 0}, dict(dummy, hist=hist))
+            m = {"nav_text": nav, "seed": 0}
+            self.plan({}, m, self.prepare(m, dict(dummy, hist=hist)))
 
     def new_state(self):
         return {}
@@ -73,7 +74,8 @@ class Alpamayo:
             out.append(y.round_().clamp_(0, 255).to(torch.uint8))
         return torch.stack(out)
 
-    def plan(self, state, meta, arrays):
+    def prepare(self, meta, arrays):
+        """Everything before the forward; runs outside the GPU lock so it overlaps another worker's forward."""
         torch = self.torch
         t0 = time.perf_counter()
         frames = self.images(arrays).cpu()
@@ -86,14 +88,18 @@ class Alpamayo:
                 "ego_history_xyz": torch.from_numpy(xyz).float()[None, None],
                 "ego_history_rot": torch.from_numpy(rot).float()[None, None]}
         inputs = self.infer.build_inputs(data, self.processor, nav_text=meta.get("nav_text"))
-        t1 = time.perf_counter()
-        r = self.infer.run(self.model, inputs, self.cfg, timer=None, seed=int(meta.get("seed", 0)))
+        return {"inputs": inputs, "frames": frames, "prep_ms": 1e3 * (time.perf_counter() - t0)}
+
+    def plan(self, state, meta, prep):
+        r = self.infer.run(self.model, prep["inputs"], self.cfg, timer=None, seed=int(meta.get("seed", 0)))
         xy = r["xyz"][0, :, :2].astype(np.float32)
-        info = {"cot": r["cot"][0], "n_prompt": r["n_prompt"], "prep_ms": 1e3 * (t1 - t0),
+        info = {"cot": r["cot"][0], "n_prompt": r["n_prompt"], "prep_ms": prep["prep_ms"],
                 "infer_ms": 1e3 * r["wall"]}
-        if meta.get("dump"):
-            self.dump(meta["dump"], frames, xy, meta, info)
         return info, {"xy": xy, "t": (np.arange(1, 65) * 0.1).astype(np.float32)}
+
+    def finish(self, meta, prep, info, out):
+        if meta.get("dump"):
+            self.dump(meta["dump"], prep["frames"], out["xy"], meta, info)
 
     def dump(self, path, frames, xy, meta, info):
         """Model-input images of the newest frame (2x2: cross-left, front-wide / cross-right, tele), with the
@@ -134,7 +140,8 @@ class OpenpilotModel:
         st = self.new_state()
         img = {"OP_ROAD": np.zeros((h, w, 4), np.uint8), "OP_WIDE": np.zeros((h, w, 4), np.uint8)}
         for _ in range(3):
-            self.plan(st, {"desire": 0, "speed": 0.0}, img)
+            m = {"desire": 0, "speed": 0.0}
+            self.plan(st, m, self.prepare(m, img))
 
     def new_state(self):
         self.model.reset()
@@ -161,9 +168,13 @@ class OpenpilotModel:
         out[5] = V.reshape(opf.MODEL_H // 2, opf.MODEL_W // 2)
         return out
 
-    def plan(self, state, meta, arrays):
+    def prepare(self, meta, arrays):
         t0 = time.perf_counter()
         img2 = np.stack([self.pack(arrays["OP_ROAD"], "road"), self.pack(arrays["OP_WIDE"], "wide")])
+        return {"img2": img2, "prep_ms": 1e3 * (time.perf_counter() - t0)}
+
+    def plan(self, state, meta, prep):
+        img2 = prep["img2"]
         desire = np.zeros(8, np.float32)
         desire[int(meta.get("desire", 0))] = 1
         t1 = time.perf_counter()
@@ -173,12 +184,14 @@ class OpenpilotModel:
         for k in self.STATE:
             state[k] = getattr(self.model, k)
         d = self.decode(raw, self.model.slices, float(meta.get("speed", 0.0)))
-        info = {"prep_ms": 1e3 * (t1 - t0), "infer_ms": 1e3 * (time.perf_counter() - t1),
+        info = {"prep_ms": prep["prep_ms"], "infer_ms": 1e3 * (time.perf_counter() - t1),
                 "curvature": d["curvature"], "accel": d["accel"], "engaged": d["engaged"]}
-        if meta.get("dump"):
-            self.dump(meta["dump"], img2, d["plan_pos"], meta)
         return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
                       "t": self.t_idxs}
+
+    def finish(self, meta, prep, info, out):
+        if meta.get("dump"):
+            self.dump(meta["dump"], prep["img2"], out["pos"], meta)
 
     def dump(self, path, img2, plan_pos, meta):
         """Road and wide model frames (Y) as the network sees them, with the plan projected into each."""
@@ -241,14 +254,17 @@ def main():
                     wire.send(conn, {"ok": True, "server": policy.meta}, {})
                     continue
                 t = time.perf_counter()
+                prep = policy.prepare(meta, arrays)
+                t_prep = time.perf_counter()
                 with gpu:
                     t_lock = time.perf_counter()
-                    info, out = policy.plan(state, meta, arrays)
+                    info, out = policy.plan(state, meta, prep)
                     busy = time.perf_counter() - t_lock
                 stats["calls"] += 1
                 stats["busy_s"] += busy
-                info.update(queue_ms=1e3 * (t_lock - t), server_ms=1e3 * (time.perf_counter() - t))
+                info.update(queue_ms=1e3 * (t_lock - t_prep), server_ms=1e3 * (time.perf_counter() - t))
                 wire.send(conn, info, out)
+                policy.finish(meta, prep, info, out)
                 if stats["calls"] % 200 == 0:
                     up = time.time() - stats["t0"]
                     print("calls %d, GPU-lock busy %.0f%% of %.0f s" % (stats["calls"], 100 * stats["busy_s"] / up, up),
