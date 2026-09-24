@@ -315,6 +315,9 @@ def main():
     p.add_argument('--reference-traces', help='JSON route ID -> absolute fixed expert trace path; omit for route oracle')
     p.add_argument('--reference-interface', default='nominal',
                    choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter'))
+    p.add_argument('--strict-invariants', action='store_true',
+                   help='stop after the first setup/agent/telemetry bug, retaining that case output')
+    p.add_argument('--case-list', help='JSON list of {route, perturbation_id, variant, preset} for infrastructure resume')
     p.add_argument('--presets', default='carla,tcp,pursuit')
     p.add_argument('--server-index', type=int, default=64)
     p.add_argument('--cruise-mps', type=float, default=8)
@@ -349,11 +352,27 @@ def main():
     perturbations = {key: load_perturbation(a.perturbations, key) for key in ids}
     cases = [dict(case, perturbation=perturbations[key], perturbation_id=key) for key in ids for case in cases]
     root = ET.parse(str(routes_path)).getroot()
+    requested_cases = None
+    if a.case_list:
+        raw = json.loads(Path(a.case_list).read_text())
+        if not isinstance(raw, list) or not raw:
+            raise ValueError('--case-list must be a nonempty list')
+        requested_cases = {(str(x['route']), str(x['perturbation_id']),
+                            str(x['variant']), str(x['preset'])) for x in raw}
+        if len(requested_cases) != len(raw):
+            raise ValueError('--case-list has duplicates')
+        possible = {(route.get('id'), str(case.get('perturbation_id')),
+                     case['variant'], case['preset'])
+                    for route in root.findall('route') for case in cases}
+        if not requested_cases <= possible:
+            raise ValueError('--case-list contains case outside route/variant/perturbation matrix')
     if reference_traces and set(reference_traces) != {r.get('id') for r in root.findall('route')}:
         raise ValueError('Expert reference traces must cover exactly the route XML IDs')
     out.mkdir(parents=True, exist_ok=True)
     (out / 'servers').mkdir(exist_ok=True)
     matrix_manifest = archive_matrix(out, routes_path, cases, cruises, a.variants, a.route_cruises)
+    if a.case_list:
+        (out / 'inputs' / 'case-list.json').write_bytes(Path(a.case_list).read_bytes())
     if a.reference_traces:
         (out / 'inputs' / 'reference-traces.json').write_bytes(Path(a.reference_traces).read_bytes())
     archived_traces = {}
@@ -431,6 +450,9 @@ def main():
                 # preset on this route; save those missing cases, then continue.
                 setup_traceback = traceback.format_exc()
                 for case in cases:
+                    if requested_cases is not None and (route.get('id'), str(case.get('perturbation_id')),
+                        case['variant'], case['preset']) not in requested_cases:
+                        continue
                     preset = case['preset']
                     metadata = case_metadata(case, route, cruise)
                     run = case_dir(out, route, case, a.variants)
@@ -443,8 +465,13 @@ def main():
                     results.append(summary)
                     event('route_end', **summary)
                 (out / 'summary.json').write_text(json.dumps(results, indent=2, allow_nan=False))
+                if a.strict_invariants:
+                    raise RuntimeError(f'Route setup failed before driving: {route.get("id")}: {exc!r}')
                 continue
             for case in cases:
+                if requested_cases is not None and (route.get('id'), str(case.get('perturbation_id')),
+                    case['variant'], case['preset']) not in requested_cases:
+                    continue
                 preset = case['preset']
                 rear = case['rear_axle_offset_m']
                 stop_deceleration = case['stop_deceleration_mps2']
@@ -592,6 +619,10 @@ def main():
                     (run / 'validation.json').write_text(json.dumps(summary, indent=2, allow_nan=False))
                     (out / 'summary.json').write_text(json.dumps(results, indent=2, allow_nan=False))
                     event('route_end', **summary)
+                    if a.strict_invariants and (case_error or parse_errors or cleanup_errors or
+                                                not summary['gates']['telemetry_complete']):
+                        raise RuntimeError(f'Case invariant failed: {route.get("id")}/{case["variant"]}/'
+                                           f'{case.get("perturbation_id")}: {case_error or parse_errors or cleanup_errors or "telemetry"}')
                 if status == 'cancelled':
                     raise KeyboardInterrupt()
                 world.tick()

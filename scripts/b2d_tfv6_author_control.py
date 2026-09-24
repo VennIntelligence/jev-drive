@@ -96,9 +96,10 @@ class AuthorController:
         speed = max(float(speed_mps), 0.)
         # The L1 adapter samples the same p2/p4 physical interval used by TFv6 B.
         sample_t = np.arange(1, 9) * .25
-        raw_t = np.arange(1, len(self.points)+1) * self.plan_dt
-        wp = np.column_stack((np.interp(sample_t, raw_t, self.points[:, 0]),
-                              np.interp(sample_t, raw_t, self.points[:, 1])))
+        raw_t = np.arange(len(self.points)+1) * self.plan_dt
+        path = np.vstack((np.zeros(2), self.points))
+        wp = np.column_stack((np.interp(sample_t, raw_t, path[:, 0]),
+                              np.interp(sample_t, raw_t, path[:, 1])))
         desired = float(np.linalg.norm(wp[3] - wp[1]) * 2.)
         if self.mode == 'waypoint':
             brake = desired < .4 or speed / max(desired, 1e-6) > 1.1
