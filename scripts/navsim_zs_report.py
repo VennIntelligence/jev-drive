@@ -101,7 +101,8 @@ def ade_table():
     fut = np.load(Z.root("index") / "navtest_future.npz")
     gt = dict(zip(fut["tokens"].tolist(), fut["poses"]))
     rows = []
-    for f in sorted(Z.root("preds", "navtest").glob("*.npz")):
+    files = sorted(Z.root("preds", "navtest").glob("*.npz")) + sorted(Z.root("openpilot", "navtest").glob("*_*.npz"))
+    for f in files:
         z = np.load(f)
         p = z["poses"]
         g = np.stack([gt[t] for t in z["tokens"].tolist()])
