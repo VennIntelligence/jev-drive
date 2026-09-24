@@ -1,0 +1,250 @@
+{
+ "030c760c-ae38-49aa-9ad8-f5650a545d26": [
+  "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+  "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+  "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+  "Nudge to the left to clear the construction cones blocking the right side of our lane"
+ ],
+ "75235a25-5d0f-40ad-90e1-37d2354150e8": [
+  "Nudge left due to the stopped van blocking the right side of our lane",
+  "Nudge left due to the vehicle encroaching from the right",
+  "Nudge left due to the stopped van blocking the right side of our lane",
+  "Nudge left due to the stopped van blocking the right side of our lane",
+  "Nudge left due to the stopped van blocking the right side of our lane",
+  "Nudge left due to the stopped van blocking the right side of our lane"
+ ],
+ "34276d2d-ada4-43ee-b026-837f5c9cab07": [
+  "Adapt speed for the right curve since the off-ramp bends right ahead",
+  "Adapt speed for the right curve since the off-ramp bends right ahead",
+  "Adapt speed for the right curve since the off-ramp bends right ahead",
+  "Adapt speed for the right curve since the off-ramp bends right ahead",
+  "Adapt speed for the right curve since the off-ramp bends right ahead",
+  "Adapt speed for the right curve since the off-ramp bends right ahead"
+ ],
+ "c5373751-f794-441f-a2bf-1347bc503327": [
+  "Slow down due to upcoming speed humps",
+  "Slow down due to the speed hump ahead",
+  "Slow down due to upcoming speed humps ahead",
+  "Slow down due to upcoming speed humps",
+  "Slow down due to upcoming speed humps",
+  "Slow down due to the upcoming speed humps ahead"
+ ],
+ "084a635c-da6e-46ad-8318-b6429619b7a9": [
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane"
+ ],
+ "d6749f9c-512f-486e-a4e3-668b7d816dbd": [
+  "Slow down due to the lead vehicle ahead stopping at the stop sign",
+  "Slow down due to the lead vehicle ahead stopping",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Nudge left due to the stopped lead vehicle ahead blocking our lane",
+  "Nudge left due to the stopped lead vehicle ahead",
+  "Nudge left due to the stopped lead vehicle ahead"
+ ],
+ "0ca9938e-ce18-42d8-8052-cf771fc3d926": [
+  "Stop for the red traffic light",
+  "Stop for the red traffic light",
+  "Remain stopped due to red traffic light ahead",
+  "Stop for the red traffic light ahead",
+  "Stop for the red traffic light",
+  "Stop for the red traffic light"
+ ],
+ "c86195b7-af97-4140-98c8-964a14d9a2e7": [
+  "Slow down to create a gap for merging left because our current rightmost lane becomes right\u2011turn\u2011only ahead and cars are occupying the left through lane, blocking an immediate merge.",
+  "Slow down to create a gap for merging left because our current right lane transitions into a right\u2011turn\u2011only at the upcoming intersection and vehicles are occupying the left through lane, blocking an immediate merge.",
+  "Slow down to create a gap for merging left because our current right lane becomes right\u2011turn\u2011only at the upcoming intersection, so we must move into the left\u2011through lane while matching the speed of cars already there.",
+  "Decelerate to create a gap for merging into our lane because our current right lane transitions into a right\u2011turn\u2011only lane at the upcoming intersection and we need space with vehicles already in our through lane to complete the merge safely.",
+  "Slow down to create a gap for merging into the right-turn lane because cars are occupying and passing through that right lane ahead, blocking an immediate merge toward the right-turn bay at the upcoming intersection.",
+  "Slow down to create a gap for a merge to the right because our current lane becomes a left\u2011turn\u2011only lane at the upcoming intersection and a car is traveling in our right\u2011adjacent through lane, blocking an immediate merge."
+ ],
+ "8a9d5cf6-85e0-4c6e-918f-cdbd84d87caa": [
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Maintain a safe distance from the lead vehicle since it is moving slowly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane"
+ ],
+ "0872d337-a28c-4dfa-bb36-59e5eaafb5a8": [
+  "Slow down since the straight traffic light is red",
+  "Slow down since the traffic light is red",
+  "Slow down for the red traffic light ahead since it is red",
+  "Decelerate to stop for the red traffic light ahead since it is red",
+  "Keep lane since the lane is clear ahead",
+  "Change lane to the left due to the right lane turning into a right\u2011turn\u2011only/ending lane, then continue slowing for the signalized intersection ahead."
+ ],
+ "20c9e8e3-c6b9-419f-8076-528f0fdc4df6": [
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Maintain lane and accelerate to clear the green-light intersection since our lane is open, cross traffic is stopped, and nearby vehicles (a blue car to our right and vehicles turning left are outside our path).",
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Accelerate to proceed through the intersection since the straight traffic light is green"
+ ],
+ "74589d71-b6de-4dbd-a110-ce435bdd3bed": [
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane"
+ ],
+ "a5a9d3f9-a43e-4390-bb92-c560707047b8": [
+  "Stop due to red traffic light",
+  "Stop due to red traffic light",
+  "Stop due to red traffic light",
+  "Stop due to red traffic light ahead",
+  "Stop for the red traffic light controlling our lane",
+  "Stop due to red traffic light"
+ ],
+ "5fe40623-7528-482f-918c-c69aabb1ea83": [
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since no lead vehicle is present ahead",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead"
+ ],
+ "57b1a6f4-8f76-4704-ba2e-3ece34da71ab": [
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends ahead",
+  "Adapt speed for the right curve since the lane bends right ahead"
+ ],
+ "64bea479-1f9e-4f69-8cd5-02f55c120a3f": [
+  "Keep lane since the lane is clear ahead",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead",
+  "Keep lane since the lane is clear ahead"
+ ],
+ "69ab9472-c9b4-4e16-b440-f568663649cd": [
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Keep speed through the intersection since the traffic light is green",
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Keep lane since the lane is clear ahead",
+  "Keep speed through the intersection since the traffic light is green",
+  "Keep lane since the lane is clear ahead"
+ ],
+ "9f03b975-bb97-4a63-8244-a989ceb8bdb2": [
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane"
+ ],
+ "1a3458b1-4bd7-4659-b6e4-c6435d80b987": [
+  "Accelerate to proceed through the intersection since the straight traffic light is green",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Adjust speed and keep safe distance due to the lead vehicle ahead",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+  "Adjust speed and keep safe distance due to the lead vehicle ahead"
+ ],
+ "8998837f-499c-428c-9fb8-d9a07f58d866": [
+  "Stop to yield to the pedestrian in the crosswalk",
+  "Stop due to a pedestrian walking across the crosswalk ahead",
+  "Stop to yield to the pedestrian walking across the crosswalk ahead",
+  "Stop due to a pedestrian walking across the crosswalk ahead",
+  "Stop to yield to the pedestrian walking across the crosswalk ahead",
+  "Stop due to a pedestrian walking across the crosswalk ahead"
+ ],
+ "c83c20cf-4730-4402-a402-38cd76e03306": [
+  "Stop due to the red traffic light",
+  "Stop for the red traffic light ahead",
+  "Stop due to the red traffic light",
+  "Stop due to the red traffic light",
+  "Stop for the red traffic light",
+  "Stop due to the red traffic light"
+ ],
+ "acdca4a4-0379-4bb6-853d-2b74604077e7": [
+  "Keep distance to the lead vehicle since it is moving slowly ahead",
+  "Keep distance to the lead vehicle since it is moving slowly ahead",
+  "Keep distance to the lead vehicle since it is moving slowly ahead",
+  "Keep distance to the lead vehicle since it is moving slowly ahead",
+  "Keep distance to the lead vehicle since it is moving slowly ahead",
+  "Keep distance to the lead vehicle since it is moving slowly ahead"
+ ],
+ "54f4da75-e35d-4d7c-99f5-ecb00d03a245": [
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Nudge left due to the stopped SUV encroaching from the right side of our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane"
+ ],
+ "e15f2ef5-fc2b-4a2c-9150-607dc9445d05": [
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane"
+ ],
+ "b10ecfaf-f9ea-4735-9599-499bcde2182b": [
+  "Slow down due to the speed hump ahead",
+  "Slow down due to the speed hump ahead",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Nudge left due to a vehicle encroaching from the right curb",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane"
+ ],
+ "1a1957be-699b-487f-af67-3cb650aadfa2": [
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the right curve since the lane bends right ahead",
+  "Keep lane since the lane is clear ahead",
+  "Adapt speed for the left curve since the lane bends ahead",
+  "Nudge to the left to clear the stopped vehicle blocking the right side of our lane"
+ ],
+ "cf39c723-e72a-4f71-af11-14233aef572b": [
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane",
+  "Adapt speed to maintain a safe distance from the lead vehicle since it is directly ahead in our lane"
+ ],
+ "0a1ef808-c891-4da2-919d-c44aa3be5085": [
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the left curve since the lane bends left ahead",
+  "Adapt speed for the right curve since the lane bends right ahead"
+ ],
+ "936d72e2-bf2c-44bc-be8b-6eae72cccca7": [
+  "Slow down to create a gap for merging right because a car is traveling alongside/just ahead in the right lane, blocking an immediate right-lane merge; once it passes, space opens for our intended right merge into our traffic flow after the intersection.",
+  "Slow down to create a gap for merging right because a SUV is alongside in our right lane blocking an immediate merge; once it clears, we can tuck in behind it to continue through our route.",
+  "Slow down to create a gap for merging right because a car is traveling alongside in the right lane, blocking an immediate right-lane merge; once it clears, space opens ahead for our intended right-lane merge.",
+  "Keep distance to the lead vehicle since it is directly ahead in our lane",
+  "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+  "Keep distance to the cut-in vehicle since it merges into our lane ahead"
+ ],
+ "bdf1fffb-dc4c-43fa-b067-4d669db5e0cf": [
+  "Keep distance to the lead vehicle since it is slowing for the merge ahead",
+  "Keep distance to the lead vehicle since it is slowing ahead",
+  "Keep distance to the lead vehicle since it is slowing ahead",
+  "Keep distance to the lead vehicle since it is slowing ahead for the roundabout",
+  "Keep distance to the lead vehicle since it is slowing ahead",
+  "Keep distance to the lead vehicle since it is slowing for the stop sign"
+ ],
+ "35242435-b386-476e-818e-44959f5301e7": [
+  "Nudge left due to the stopped truck blocking the right side of our lane",
+  "Nudge left due to the vehicle encroaching from the right",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Nudge left due to the stopped vehicle blocking the right side of our lane",
+  "Nudge left due to the vehicle encroaching from the right curb",
+  "Nudge left due to the stopped pickup blocking the right side of our lane"
+ ]
+}

@@ -184,7 +184,7 @@ comma 公开的效果数字都很局部：0.10 的 Space Lab 把 stop-and-go 中
 
 来源：[Alpamayo-R1 arXiv 2511.00088（2025-11）](https://arxiv.org/abs/2511.00088)、各版 HF model card、FlashDrive 第三方实测、openpilot 仓库与 HF LFS；openpilot 两列的参数量和 IO shape 是下载 ONNX 后直接读出的。Lebowski 就是 0.11.2 出货版本这一点是**按提交时间线推断**的。master 上当前的大模型是更小的 "Cinque Terre v3"（382M，HF `commaai/openpilot_driving_models`，MIT）。comma 还在 2026-09-01 公开了 `commaai/worldmodel-4B`（MIT）和对应的 autoencoder，0.11 blog 里的 2B DiT 本身没有找到公开权重。
 
-读法：Alpamayo 按公开 checkpoint 的默认配置跑不到实时，NVIDIA 的定位是 cloud teacher，车上跑的是蒸馏出来的 student，而 student 没有公开。openpilot 是真正 20 Hz 闭环的控制器，但只看前方、没有 route。两者的接口几乎不重叠：前者是多相机、带导航、10 Hz 的轨迹 planner，后者是前视、无导航、20 Hz 的 L2 控制器。
+读法：Alpamayo 按公开 checkpoint 的默认配置跑不到实时，NVIDIA 的定位是 cloud teacher，车上跑的是蒸馏出来的 student，而 student 没有公开。openpilot 是真正 20 Hz 闭环的控制器，但只看前方、没有 route。两者的接口几乎不重叠：前者是多相机、带导航、10 Hz 的轨迹 planner，后者是前视、无导航、20 Hz 的 L2 控制器。我们在自己的 RTX PRO 6000 上实测（2026-09-24，[Alpamayo smoke run](../todos/2026-09-24-alpamayo-smoke/README.md)）：Alpamayo 1.5 默认配置 batch 1 单轨迹 p50 983 ms、6 条轨迹 2722 ms，只改配置（SDPA、torch.compile、flow 5 步）能降到 697 / 2184 ms，离 10 Hz 仍差一个量级；6 条轨迹的大头是 HF generate 把图像和 prefill 重复 6 遍。
 
 ### Scaling law 在驾驶上成立吗
 

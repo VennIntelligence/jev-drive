@@ -1,0 +1,135 @@
+{
+ "default/n1": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6230891942977905
+ },
+ "expert-cuda-graph/n1": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6230891942977905
+ },
+ "compile-expert/n1": {
+  "drift_ade_m": 0.0018732635071501136,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6226544380187988
+ },
+ "flow-5/n1": {
+  "drift_ade_m": 0.17150020599365234,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.52774977684021
+ },
+ "flow-2/n1": {
+  "drift_ade_m": 0.5666236281394958,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.3648141622543335
+ },
+ "reason-cap-32/n1": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6230891942977905
+ },
+ "reason-cap-16/n1": {
+  "drift_ade_m": 2.0787549018859863,
+  "cot_identical": 0.75,
+  "minade_vs_gt_m": 2.286986827850342
+ },
+ "no-reasoning/n1": {
+  "drift_ade_m": 1.0815463066101074,
+  "cot_identical": 0.0,
+  "minade_vs_gt_m": 1.4691143035888672
+ },
+ "stack: compile-expert+flow-5/n1": {
+  "drift_ade_m": 0.1718616783618927,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.527421236038208
+ },
+ "stack + no-reasoning/n1": {
+  "drift_ade_m": 1.0363438129425049,
+  "cot_identical": 0.0,
+  "minade_vs_gt_m": 1.404739260673523
+ },
+ "compile-lm/n1": {
+  "drift_ade_m": 0.0043227169662714005,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6237757205963135
+ },
+ "default/n6": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6188420057296753
+ },
+ "expert-cuda-graph/n6": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6188420057296753
+ },
+ "compile-expert/n6": {
+  "drift_ade_m": 0.0013816016726195812,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6184260845184326
+ },
+ "flow-5/n6": {
+  "drift_ade_m": 0.17704439163208008,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6274475455284119
+ },
+ "flow-2/n6": {
+  "drift_ade_m": 0.5620718002319336,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.7610803246498108
+ },
+ "reason-cap-32/n6": {
+  "drift_ade_m": 0.0,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6188420057296753
+ },
+ "reason-cap-16/n6": {
+  "drift_ade_m": 2.3205864429473877,
+  "cot_identical": 0.75,
+  "minade_vs_gt_m": 1.1218827962875366
+ },
+ "no-reasoning/n6": {
+  "drift_ade_m": 1.2805805206298828,
+  "cot_identical": 0.0,
+  "minade_vs_gt_m": 0.5270323753356934
+ },
+ "stack: compile-expert+flow-5/n6": {
+  "drift_ade_m": 0.1770244538784027,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6281196475028992
+ },
+ "stack + no-reasoning/n6": {
+  "drift_ade_m": 1.2001478672027588,
+  "cot_identical": 0.0,
+  "minade_vs_gt_m": 0.5231952667236328
+ },
+ "sdpa/n1": {
+  "drift_ade_m": 0.013656490482389927,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6245465278625488
+ },
+ "sdpa + compile-visual+expert/n1": {
+  "drift_ade_m": 0.012853702530264854,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 1.6276699304580688
+ },
+ "sdpa/n6": {
+  "drift_ade_m": 0.016178524121642113,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6140027046203613
+ },
+ "sdpa + compile-visual+expert/n6": {
+  "drift_ade_m": 0.014681605622172356,
+  "cot_identical": 1.0,
+  "minade_vs_gt_m": 0.6205689907073975
+ },
+ "noise-floor/n1": {
+  "drift_ade_m": 1.2756675481796265,
+  "cot_identical": 0.4166666666666667
+ },
+ "noise-floor/n6": {
+  "drift_ade_m": 1.2854913473129272,
+  "cot_identical": 0.4166666666666667
+ }
+}

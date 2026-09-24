@@ -17,3 +17,4 @@
 - [2026-09-23 P4 CARLA 特征差距](2026-09-23-p4-carla-feature-gap.md)：Waymo 训的 head 在 CARLA 帧上能不能用（domain AUC、词表覆盖、head 迁移），预登记判据决定 P5 的前提。
 - [2026-09-24 P5 CARLA 配对考卷 v0](2026-09-24-p5-carla-pairs-v0.md)：Bench2Drive 10 个 family 造 165 对 ego 逐帧相同的反事实配对 + 55 个天气 null，expert 两侧重跑出标签，考 TFv6 与 CARLA 内训的 Qwen 薄 head（结论见 decisions 第 32 条）。
 - [2026-09-24 openpilot smoke run](2026-09-24-openpilot-smoke/README.md)：small / Cinque v3 / Lebowski 三个 openpilot 驾驶模型在 box 上用 onnxruntime + TensorRT 跑通（batch 1 p50 1.0 / 2.3 / 3.3 ms），数值与 CPU 参考等价，comma1M 4 段真实视频上 plan 明显好于 constant velocity；附 zero-shot 上 WOD-E2E / NAVSIM 的缺口。
+- [2026-09-24 Alpamayo 1.5 smoke run](2026-09-24-alpamayo-smoke/README.md)：10B reasoning VLA 在 box 上跑通（权重走 ModelScope、clip 按 zip 成员稀疏拉取），batch 1 默认 n=1 p50 983 ms / n=6 2722 ms，SDPA+compile+flow 5 步降到 697 / 2184 ms 且输出基本不变；31 个 clip 上 minADE_6 0.74 m（card 0.916 m）；Cosmos-Reason2-8B gate 未通过需用户 accept；附 zero-shot WOD-E2E / NAVSIM 的缺口。
