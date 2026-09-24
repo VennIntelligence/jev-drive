@@ -83,7 +83,7 @@ while [ ! -e "$D/alpamayo-full.ready" ]; do sleep 5; done
 echo "server ready, starting full run"
 
 scripts/tmux_run.sh "$RUN_WIN" env DATA_DIR="$DATA_DIR" ~/data/envs/carla/bin/python scripts/b2d_run.py \
-    --workers 4 --server-index 240 --gpu-rank "$GPU" --agent scripts/b2d_zeroshot_agent.py \
+    --towns all --workers 4 --server-index 240 --gpu-rank "$GPU" --agent scripts/b2d_zeroshot_agent.py \
     --agent-config "$D/agent-alpamayo-full.json" --decimate 2 --no-spectator --max-attempts 2 --out "$OUT"
 
 echo "run started in jev:$RUN_WIN, watching for completion (resumable: reruns skip done/<id>.json)"
