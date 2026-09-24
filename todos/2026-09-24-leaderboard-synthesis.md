@@ -1,6 +1,6 @@
 # 榜单分数与驾驶能力：综合判读（第 6 项）
 
-状态: draft，待交给综合阶段的专家
+状态: 已交付（2026-09-24）。文章在 `research/leaderboard-vs-ability.md`，45 问回应在 `research/results/leaderboard-text-analysis/synthesis_answers.md`，decisions 第 35 条（待定），图 `research/figs/lb-ability-*.png`（脚本 `scripts/make_leaderboard_ability_figs.py`）。可读性加工留给后续同事。
 主题: ../research/capability-vs-leaderboard.md
 
 ## 任务

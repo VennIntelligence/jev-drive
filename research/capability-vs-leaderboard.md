@@ -56,4 +56,7 @@ TFv6（Bench2Drive DS 约 95）有两个输出通道：
 
 ## 结果
 
-待填。
+- **榜单 hack 审计**（两轮只读材料的综合判读，2026-09-24）：见 [leaderboard-vs-ability.md](leaderboard-vs-ability.md)，45 个遗留问题的逐条回应在
+  [synthesis_answers.md](results/leaderboard-text-analysis/synthesis_answers.md)。一句话：三类榜单三种增益构成（nuScenes = ego prior，NAVSIM v2 = EPDMS 代理评分器，
+  Bench2Drive = 真能力 + 接口 + 规则）；能归到 E 层的增益全表只有四条，全在闭环或反应式协议上；上面"R 层配方不稀缺、E 层稀缺"的判断成立（decisions 第 35 条，待定）。
+- zero-shot 考试、R 层测量、E 层测量：待填。

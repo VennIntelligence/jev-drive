@@ -2671,3 +2671,31 @@ baseline 行逐位复现了第 2 条的数字。
 
 **怎么才能定下来**：(i) 换 3 个 seed 重跑 Alpamayo，看期望行的 CI 是否稳定；(ii) 做一个「只把 WOD 相机换成同样经过重投影的 PhysicalAI 图像」的
 适配损失消融，量出黑带和视差各扣多少；(iii) 用 test split 提交一次（配额每 30 天 6 次，需要用户决定）。
+
+## 35. 榜单分数里能确证属于 E 层的成分很少；高分主要由 R 层配方和 metric 代理构成（**待定**）
+
+2026-09-24。两轮只读审计（35 条 finding、1,121 行 ablation、204 个跨榜分数、113 条 issue、七榜计分代码、14 个无代码方法的 45 条论文披露）的综合判读，
+全文在 [leaderboard-vs-ability.md](leaderboard-vs-ability.md)，45 个遗留问题的逐条回应在
+[synthesis_answers.md](results/leaderboard-text-analysis/synthesis_answers.md)。没有运行任何模型或评测。
+
+**结论**（材料直接支持）：
+- (a) 三类榜单三种增益构成：nuScenes = ego-state prior（速度 ×0.5 的伤害是图像全黑的 35 倍）；NAVSIM v2 = EPDMS 代理评分器（五个基座 +TOAD 后全部收敛到 49–56，
+  只换评分器不搜索就 +10.9）；Bench2Drive = 真能力（gate、DAgger、tokenization、LiDAR、RAM）加账本外的接口与规则（第 31 条量到接口 +14 DS，规则 ≈1）。
+- (b) 跨榜排序只在同代码族内 scaling 和代际分层上一致：B2D↔Longest6 去掉 TFv6 家族和 expert 后 n=5 ρ=0.05；NAVSIM v1↔v2 顶部 n=11 ρ=0.21；
+  唯一同 checkpoint 的 RAP-DINO 从 v1 #4 掉到 v2 #13。开环 L2 与闭环 DS 无关（ρ=−0.16），与 Efficiency 同向；DS 与 Comfortness 反向。
+- (c) 全部账本里能归到 E 层的增益只有四条（FIVE-VLA RAM 的 Give_Way +26.7、RoG-DAgger 的 SR +7、TFv6 LiDAR 的 SR +6、RAP 恢复数据 v1 0.0 / v2 +4.4），
+  全部只在闭环或反应式协议上显形；nuScenes、NAVSIM v1、WOD 三个开环/代理榜上没有一条增益能归到 E 层。
+- (d) 同一个 ego prior 开环加分、闭环减分（FIVE-VLA 显式 ego 历史：NVIDIA 开环 ADE 改善，B2D −3.95 DS / SR −8.6）。
+- (e) 只有 Bench2Drive SR（和 Longest6 的 IP）可当 E 层证据；没有一个榜单单独报告"突发事件时反应对不对"。评测噪声：B2D 第 2–6 名间距 <0.7，
+  在训练 run 间 ≈1.5 的噪声内；Longest6 单次噪声 ±5–8 大于 B2D 前 7 名总差距。
+
+**对方向的含义**：[capability-vs-leaderboard.md](capability-vs-leaderboard.md) 里"R 层配方不稀缺、E 层稀缺"的判断成立。R 层直接移植（控制接口 + 作者 PID、
+route target point、path/speed 解耦、规则、测距传感器）；提取目标锁定 TFv6 waypoint 通道（第 32 条 P5 翻转 39% / 按对 73%）和 RAM 式结构；
+P5 v1 按文章 7.3 节的 12 条攻击面加固，其中四条直接从七榜盲区翻译而来（停着不动是安全的、读哪个通道答案差 20 倍、规则层替代反应、观察窗口由谁定义）。
+
+**推测**（已标明，待验证）：NAVSIM v2 前排分数里 10–15 分是"scorer 对不对准 v2 公式"；simlingo#43 里 DS +11 而 SR 一条未变，
+SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11 DS）；B2D 上 90→95 这 5 分是传感器和接口的差距而不是智能差距。
+
+**怎么才能定下来**（都未执行）：(1) TFv6 规则开/关 × 接口 A/B，P5 配对 + 220 路线；(2) SimLingo 同 ckpt 原版 vs 定制 Bench2Drive 目录各 3 次；
+(3) 同一冻结 checkpoint × {v1, v2, HUGSIM} × {官方权重, 各榜重调权重}。
+**会推翻本条的证据**：实验 (1) 里关掉规则后 target speed 通道的翻转率显著上升（"不反应"是规则掩盖的）；实验 (3) 里官方权重与重调权重的 EPDMS 差 <3。
