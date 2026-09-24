@@ -184,21 +184,22 @@ def fig_results(a):
     pub_col = {"UniAD": 0.62, "VAD-Base": 0.33, "VAD-Base (no ego in planner)": 0.54, "GoStraight": 1.08,
                "Ego-MLP": 0.37}
     S.apply()
-    fig, axes = plt.subplots(1, 2, figsize=(S.DOUBLE_COLUMN_IN, 2.2), gridspec_kw={"wspace": 0.55})
+    names = rows[::-1] + list(pub_l2)[::-1]          # ours at the bottom, published rows above
+    fig, axes = plt.subplots(1, 2, figsize=(S.DOUBLE_COLUMN_IN, 2.6), sharey=True)
+    fig.subplots_adjust(left=0.2, right=0.98, bottom=0.17, top=0.97, wspace=0.08)
     for ax, k, pub, xl in ((axes[0], "l2_avg", pub_l2, "L2, mean of 1/2/3 s (m)"),
                            (axes[1], "col_bevp_avg", pub_col, "collision, BEV-Planner def., mean of 1/2/3 s (%)")):
-        y = np.arange(len(rows))
-        for i, r in enumerate(rows):
+        for i, r in enumerate(rows[::-1]):
             q = d[d.row == r].iloc[0]
             ax.errorbar(q[k], i, xerr=[[q[k] - q[k + "_lo"]], [q[k + "_hi"] - q[k]]], fmt="o", color=col[r],
                         ms=3, capsize=1.5, lw=0.8)
-        for j, (n, v) in enumerate(pub.items()):
-            ax.axvline(v, color="#BBBBBB", lw=0.5, ls=":")
-            ax.text(v, len(rows) - 0.4 + 0.45 * (j % 2), n, rotation=0, fontsize=5.5, ha="center", color="#777777")
-        ax.set_yticks(y, rows)
+        for j, n in enumerate(list(pub)[::-1]):
+            ax.plot(pub[n], len(rows) + j, "D", mfc="white", mec=S.BASELINE, ms=3)
+        ax.axhline(len(rows) - 0.5, color="#999999", lw=0.5)
         ax.set_xlabel(xl)
-        ax.set_ylim(-0.6, len(rows) + 0.6)
         S.bars(ax)
+    axes[0].set_yticks(np.arange(len(names)), rows[::-1] + [f"{n} [pub.]" for n in list(pub_l2)[::-1]])
+    axes[0].set_ylim(-0.6, len(names) - 0.4)
     S.save(fig, FIG / "nusc-zeroshot-results")
 
 
