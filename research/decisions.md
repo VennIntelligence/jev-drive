@@ -2542,9 +2542,9 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 
 **怎么才能推翻或推进**：分别单独跑 slip-only 和 Ackermann-only 两臂，看动作代价来自哪一项；把动作保护改成绝对值，或改成参考路径本身要求的加速度，并事先登记；在 TFv6 真实轨迹上比较控制器对 DS 和违规的影响。这三件都归 Tokyo 研究线。
 
-## 31. 决定 TFv6 高分的是 route + target speed 表示，不是 waypoint 跟踪；控制器主效应的 W2 数字作废，待重跑
+## 31. 决定 TFv6 高分的是 route + target speed 表示，不是 waypoint 跟踪；修正变换后，控制器主效应仍未检出
 
-2026-09-24。**已确认：表示效应（A − B）显著。已作废：控制器主效应（C − B、D − C）。** 本条原先写的是"强 planner 下控制器没有检出可测效应"。同日的诊断（见文末"更正"）发现，协议规定的坐标变换在车辆静止时会造出假目标点，C/D 两臂的结果因此被污染，那个结论不能成立。 回答 [Tokyo 研究线任务书](../todos/remote_carla_research.md) 的 W2。
+2026-09-24。**已确认：表示效应（A − B）显著。控制器主效应（C − B）：W2 的数字作废，W2b 重跑后仍未检出（不是等效）。** 本条最初写的是"强 planner 下控制器没有检出可测效应"。同日的诊断（见文末"更正"）发现，协议规定的坐标变换在车辆静止时会造出假目标点，C/D 两臂的结果被污染，原数字作废。修正变换后按新登记的协议重跑 C/D（W2b），结论与原先相同，但现在建立在干净的数据上，数字见文末。 回答 [Tokyo 研究线任务书](../todos/remote_carla_research.md) 的 W2。
 
 **实验**（[协议](../todos/2026-09-23-tfv6-controller/protocol.md)在第一例正式 case 之前冻结于 `06674d4`，[报告](../todos/2026-09-23-tfv6-controller/report.md)）：TFv6（`tfv6_resnet34`，三 seed ensemble，B2D 官方 DS 约 95）每 tick 输出 8 点 waypoint（+0.25…+2 s），四个臂只在"模型输出 → control"这一步不同：A 是作者原样的 route + target speed PID；B 是作者的 waypoint PID；C 是我们的 production 控制器吃同样的 8 点（actor origin 换到 rear axle、y 取反、不外推）；D 是 C 加上第 30 条的 slip frame + Ackermann。作者的 creeping、stop sign 等启发式四臂完全一致。Dev10 与 v1 保留集共 16 条路线 × 3 个 TM seed，202 个有效 case，Tokyo 单卡 3090 跑完。DS（Driving Score）配对差的 CI 按路线整组 bootstrap（cluster bootstrap，重抽路线、seed 一起带走）。
 
@@ -2563,4 +2563,14 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 **怎么才能推翻或推进。** 要缩窄 C − B 的 CI，得增加路线数，而不是增加 seed，因为方差主要来自路线之间；这要先决定值不值得跑 220 条。若想让我们的控制器在 waypoint 接口上接近 A，下一步应该先改纵向起步律（用多点平均速度，而不是只看首段），先登记再跑。W3（TCP 三臂）的优先级因此下调：弱 planner 上表示的影响很可能同样压过控制器的影响。
 
 **更正（2026-09-24，[切线诊断](../todos/2026-09-23-tfv6-controller/diagnosis-tangent.md)）。** 协议规定首个 waypoint 的切向取"原点 → p0"的方向，p0 距原点超过 5 cm 即采用。车辆静止时，TFv6 的近端 waypoint 会有几厘米的横向抖动，这条规则会把切向判成接近 90°。再做后轴修正 r = p − L·t + (L, 0)（L = 1.389 m，actor origin 到 rear axle 的距离），就凭空多出一个前方约 1.2 m、侧方约 1 m 的目标点，首段隐含速度从 0.7 m/s 跳到 6.7 m/s（均为中位数）。在正式 case 里，这种 phantom tick（‖r0 − p0‖ > 0.3 m 且 ‖p0‖ < 0.3 m）占 C 的 7.7%、D 的 21%，96% 发生在车速 < 0.5 m/s 时；这些 tick 上 C 有 97% 在给油门，其中 42% 同时刻 B 在刹车。典型例子是 3514：模型 target speed 为 0，C 却全油门右打撞上路缘，3/3 复现。96 个 C/D case 中有 31 个在 phantom 段后 3 s 内出现计分违规；第 2 级 C − B 的净损失里，这些关联 case 占 35%，C 有任何 phantom 的 case 占 70%。但并非所有差别都来自这里：27529 的 route deviation 在 D2 两次重跑中都没有出现 phantom。Phase 1 的坐标核对只取了行驶中的转弯段，所以没有发现这个问题。A、B 两臂执行的 control 不经过这个变换，A − B 不受影响。修正办法（弧长不到 L 时切向取车头方向）在同一批日志上离线复算，phantom 降为 0；闭环效果要重新登记后再跑 C/D 才能知道。
+
+**W2b 重跑（[协议](../todos/2026-09-23-tfv6-controller/protocol-w2b.md)冻结于 `254dfc5`，[报告](../todos/2026-09-23-tfv6-controller/report-w2b.md)）。** 只改切向规则：从原点起算的弧长不到 L 时，切向取车头方向。C/D 按四级渐进放量重跑，共 96 个 case：S0 离线重放、S1 金丝雀、S2 小批、S3 全集，每个 case 都检查"无 phantom、无 guard 失败、日志完整"，全部通过，基础设施重试为 0。A/B 沿用 W2 的正式结果，另用新代码重跑了两个 A/B case，DS 与原结果一致。
+
+| 配对 | 第 1 级 Dev10 | 第 2 级保留集 | 合并 48 对 [95% CI] |
+|---|---:|---:|---:|
+| C − B | +12.9 [−0.0, +30.7] | −18.8 [−37.7, −4.4] | **+1.0 [−12.2, +15.4]** |
+| D − C | +1.1 | −0.6 | +0.4 [−2.7, +3.5] |
+| A − B（W2，不变） | +17.6 | +8.9 | +14.3 [+5.1, +25.9] |
+
+修正把 C 的平均 DS 从 76.0 提到 83.1，D 从 73.6 提到 83.5；W2 里 31 个与 phantom 关联的事件，在新运行中原位置附近全部消失，例如 3514 的 C/D 从 65 升到 100，28154 从 36–44 升到 100。但合并后的 C − B 仍跨零，而且两级方向相反：Dev10 上 C 更好，保留集上 C 更差。保留集上的损失主要是 RC（2084、27529 的 route deviation），Dev10 上 2091 仍然因为长时间停滞超时。按预登记规则，控制器主效应未检出，第 3 级（220 条）的条件不满足。仍然成立的是：表示方式的影响（A − B，+14）远大于控制器的影响，而且 slip + Ackermann（D − C）在真实 planner 下没有作用。剩下两个值得诊断的失败模式是保留集上的 route deviation 和 2091 的起步停滞，都还没有查明机制。
 

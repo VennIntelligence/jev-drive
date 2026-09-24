@@ -13,5 +13,5 @@
 
 - [2026-09-23 横向 v2](2026-09-23-controller-next/lateral-v2-report.md)：后轴速度系 pursuit + Ackermann 反解的预注册闭环（[协议](2026-09-23-controller-next/lateral-v2-protocol.md)）；CTE 主目标与 held-out 全部改善，动作保护量失败，候选不通过。
 
-- [2026-09-23 W2：TFv6 + 我们的控制器](2026-09-23-tfv6-controller/report.md)：TFv6 waypoint 交给 production 控制器与作者 waypoint PID 的四臂预注册闭环（[协议](2026-09-23-tfv6-controller/protocol.md)）；route+speed 表示比 waypoint 高约 14 DS；C/D 结果被静止时的坐标变换缺陷污染，作废待重跑（[诊断](2026-09-23-tfv6-controller/diagnosis-tangent.md)）。
+- [2026-09-23 W2：TFv6 + 我们的控制器](2026-09-23-tfv6-controller/report.md)：TFv6 waypoint 交给 production 控制器与作者 waypoint PID 的四臂预注册闭环（[协议](2026-09-23-tfv6-controller/protocol.md)）；route+speed 表示比 waypoint 高约 14 DS；W2 的 C/D 被静止时的坐标变换缺陷污染；修正后重跑（[W2b](2026-09-23-tfv6-controller/report-w2b.md)），C−B 合并 +1.0 [−12, +15]，仍未检出。
 - [2026-09-23 P4 CARLA 特征差距](2026-09-23-p4-carla-feature-gap.md)：Waymo 训的 head 在 CARLA 帧上能不能用（domain AUC、词表覆盖、head 迁移），预登记判据决定 P5 的前提。
