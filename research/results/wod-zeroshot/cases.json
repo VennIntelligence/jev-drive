@@ -1,0 +1,62 @@
+[
+ {
+  "panel": "a",
+  "frame": "c915f39617f62ec72eda769e337731bd-149",
+  "cluster": "Multi-Lane Maneuvers",
+  "picked_for": "alpamayo_nav",
+  "speed": 0.7393795251846313,
+  "rfs_cv": 10.0,
+  "rfs_logged_future": 9.0,
+  "rfs_alpamayo_nav": 4.0,
+  "rfs_op_cinque": 4.0,
+  "rfs_op_lebowski": 4.0,
+  "cot_nav": [
+   "Accelerate to proceed through the intersection since the traffic light turns green",
+   "Accelerate through the intersection since the traffic light is green",
+   "Accelerate to proceed through the intersection since the straight traffic light turns green",
+   "Accelerate to proceed through the intersection since the traffic light turns green",
+   "Accelerate to proceed through the intersection since the traffic light turns green",
+   "Accelerate to proceed through the intersection since the traffic light turns green"
+  ]
+ },
+ {
+  "panel": "b",
+  "frame": "0ff0c31f2673c84d4b2d5f60fcc55f11-149",
+  "cluster": "Interections",
+  "picked_for": "op_cinque",
+  "speed": 0.32734426856040955,
+  "rfs_cv": 10.0,
+  "rfs_logged_future": 10.0,
+  "rfs_alpamayo_nav": 4.0,
+  "rfs_op_cinque": 4.0,
+  "rfs_op_lebowski": 4.0,
+  "cot_nav": [
+   "Resume speed from stop since the intersection is clear",
+   "Resume speed from stop since the intersection is clear",
+   "Resume speed from stop at the stop sign since the intersection is clear",
+   "Resume speed from stop at the stop sign since the intersection is clear",
+   "Resume speed from stop at the stop sign since the intersection is clear",
+   "Resume speed from stop since the intersection is clear after stopping at the stop sign"
+  ]
+ },
+ {
+  "panel": "c",
+  "frame": "e288ca9a7a1670302270d66dd5ff60a2-149",
+  "cluster": "Foreign Object Debris",
+  "picked_for": "op_lebowski",
+  "speed": 1.3893457651138306,
+  "rfs_cv": 10.0,
+  "rfs_logged_future": 4.0,
+  "rfs_alpamayo_nav": 4.809262009962462,
+  "rfs_op_cinque": 4.0,
+  "rfs_op_lebowski": 4.0,
+  "cot_nav": [
+   "Yield to the cut-in vehicle since it is turning into our lane ahead",
+   "Slow down to yield to the cut-in vehicle from the left since it is entering our lane ahead",
+   "Yield to the cut-in vehicle since it merges into our lane ahead",
+   "Yield to the cut-in vehicle since it is turning into our lane ahead",
+   "Yield to the cut-in vehicle since it is turning across our lane ahead",
+   "Yield to the cut-in vehicle since it is turning into our lane ahead"
+  ]
+ }
+]

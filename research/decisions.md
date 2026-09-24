@@ -2629,3 +2629,45 @@ Alpamayo 1.5 DS 60.8、RC 70.1、SR 2/5（3 条走完，1 条路口方向与 nav
 openpilot Lebowski DS 2.7、RC 5.6、SR 0/5（全部在前 10 m 内驶离车道撞上静态物体后 blocked）。
 n = 5、单次、单 seed，只能说“Alpamayo 能在合成图像上闭环开车，openpilot 在这个考试上基本不能”，不能给分数排名。
 怎么定下来：全量 220 条（估计 4.3–6.6 h，等用户批准），同时报完成路线数。
+
+## 34. Zero-shot 开环：Alpamayo 1.5 和 openpilot 在 WOD-E2E val 上都明显超过 ego-only，也超过我们在 Waymo 上训的 head（**待定**）
+
+2026-09-24。预登记、适配、全部表格和失败案例在 [todos/2026-09-24-zeroshot-exam/wod-e2e.md](../todos/2026-09-24-zeroshot-exam/wod-e2e.md)
+（在看任何分数之前提交），这里只记结论。两个模型不训练、不拟合任何参数：Alpamayo 的四路 f-theta 相机由 WOD 的 7 路针孔相机纯旋转重投影得到
+（底部约 22% 看不到、填黑），openpilot 的两路 model frame 由前三路相机渲染；打分用第 2 条的 bit-exact RFS，与我们自己的 planner 同一口径，
+baseline 行逐位复现了第 2 条的数字。
+
+**结果**（val 全部 479 个 rater 帧，RFS 为榜单口径 cluster mean，95% bootstrap CI，Δ 为配对差）：
+
+| 行 | RFS [CI] | Δ vs cv [CI] | Δ vs 我们的 `cls ego` [CI] | ADE@5s vs rater_best |
+|:--|:--|:--|:--|--:|
+| logged future | 8.131 [7.93, 8.33] | +1.03 | +0.82 | 2.70 |
+| openpilot Cinque v3（382M） | **8.005** [7.79, 8.22] | +0.90 [+0.62, +1.18] | +0.69 [+0.44, +0.95] | **2.46** |
+| openpilot Lebowski（877M） | 7.886 [7.66, 8.11] | +0.78 [+0.51, +1.05] | +0.58 [+0.31, +0.83] | 2.67 |
+| Alpamayo 1.5，nav，一条采样的期望 | 7.857 [7.67, 8.04] | +0.75 [+0.50, +1.00] | +0.55 [+0.33, +0.76] | 2.75 |
+| Alpamayo 1.5，nav，medoid-of-6（非 oracle） | 8.034 [7.82, 8.25] | +0.93 [+0.66, +1.20] | +0.72 [+0.48, +0.97] | 2.57 |
+| openpilot small（30M） | 7.640 [7.41, 7.86] | +0.54 [+0.28, +0.80] | +0.33 [+0.06, +0.60] | 2.88 |
+| 我们：`cls ego` / `cls_late` vision+ego（train 训） | 7.311 / 7.301 | +0.21 / +0.20 | 0 | 3.27 / 3.23 |
+| cv | 7.103 [6.85, 7.35] | 0 | −0.21 | 3.35 |
+
+**结论**：
+
+1. **两个开源驾驶模型零样本就有明确的通用驾驶能力**：五个行对 cv 的 CI 全在 0 以上，而且都高于我们在 WOD train 上训出来的最好 head。
+   最好的 Cinque 与 logged future 的差是 −0.13 [−0.35, +0.10]，跨 0；公开榜 test 第一梯队（RAP 8.04、Poutine 7.99）落在它的 CI 里（test 与 val 不能配对，只是量级）。
+2. **Alpamayo 的导航文本没用**：nav − no-nav 在直行帧 −0.015 [−0.039, +0.008]、转弯帧 −0.016 [−0.19, +0.14]（n = 52）。
+   它的上限在「挑」：同一批 6 条样本，期望 7.86、medoid 8.03、oracle best-of-6 8.95。
+3. **输的地方很集中**：起始车速 < 0.5 m/s 的 120 帧上，所有 zero-shot 模型都不比 cv（继续停着）好；5–10 m/s 的帧上它们反而超过 logged future
+   （Cinque 8.42 对 8.01）。三个失败案例都是「停着或低速、在路口、模型选择起步而 rater 偏好继续等」。按 cluster，差距最大的是 Intersections、
+   Multi-Lane Maneuvers、Special Vehicles，也就是路线由导航决定的地方。
+4. **对 log 的 ADE 上排序反过来**（958 个随机帧）：我们 train 训的 `ridge ego` 1.91 m，Cinque 1.94、Lebowski 2.09。第 2 条和第 10 条说的
+   「回归赢 ADE、给出具体 mode 的模型赢 RFS」在一个外部模型上又复现了一次。
+
+**这对我们意味着什么（推测）**：「冻结 VLM 特征 + 薄 head」在 WOD 上的天花板（7.3 左右）低于两个现成的、没见过 Waymo 的驾驶模型。
+第 21 条的方法选型如果以 RFS 为目标，这两个模型应当作为强 baseline 进每一张表，而不只是 cv 和 log；
+把 openpilot 的 feature 或 Alpamayo 的样本当成我们 head 的输入 / proposal 来源，是比再换 backbone 更直接的下一步。
+
+**状态**：**待定**。单一 split（val）、单一 seed（Alpamayo seed 42）；适配有三处已知的系统性损失（视差、底部黑带、openpilot 相机高度），
+方向是让分数偏低，所以这些数字更像下限。Cinque 与 logged future 的差跨 0，不能说「达到 log」。
+
+**怎么才能定下来**：(i) 换 3 个 seed 重跑 Alpamayo，看期望行的 CI 是否稳定；(ii) 做一个「只把 WOD 相机换成同样经过重投影的 PhysicalAI 图像」的
+适配损失消融，量出黑带和视差各扣多少；(iii) 用 test split 提交一次（配额每 30 天 6 次，需要用户决定）。

@@ -1,6 +1,6 @@
 # Zero-shot 考试：Alpamayo 1.5 与 openpilot 在 WOD-E2E val 上的 RFS / ADE
 
-状态: running（预登记已写死，结果待填）
+状态: running（rater 帧主表已完成；ADE-extra 的 Alpamayo 行在跑）
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 
 ## 目标
@@ -213,8 +213,176 @@ K = 6 时 HF `generate` 把整段 prompt（16 张图）复制 6 份再 prefill�
 
 ## 结果
 
-（待填。）
+run：box 上 `$DATA_DIR/runs/wod_zeroshot/{openpilot,alpamayo,score}/`；小结果文件在
+[research/results/wod-zeroshot/](../../research/results/wod-zeroshot/)（`results.csv` 主表、`clusters.csv`、`intent.csv`、`nav_effect.csv`、
+`extra.csv`、`per_frame.npz` 逐帧预测与 RFS、`cot.json` Alpamayo 全部推理文本、`cases.json`）。
+所有 baseline 行都逐位复现了仓库里的数字（cv 7.103、logged future 8.131、zero 5.383、`cls ego` 7.311），说明打分管线和帧集合没有漂。
+
+### 主表：val 的 479 个 rater 帧
+
+RFS 是榜单口径（cluster mean），括号里是 95% bootstrap CI（cluster 内分层重抽 10 000 次）；Δ 是配对 bootstrap 的差。
+「floored」是分数恰好等于下限 4.0 的比例；Alpamayo 的 headline 行按预登记取「一条采样的期望」（6 条各自的 RFS 求平均），
+floored 一列对它取第 0 条样本的值（期望行的 floored 只数「6 条全被压到底」的帧，不可比）。ADE 单位 m。
+
+| 行 | RFS (cluster) [CI] | Δ vs cv [CI] | Δ vs logged future [CI] | in trust region | floored | ADE@3s / 5s vs rater_best | ADE@5s vs log |
+|---|---|---|---|---:|---:|---|---:|
+| top-rated rater 轨迹 | 9.587 | — | — | 1.000 | 0.000 | 0 / 0 | 2.70 |
+| logged future | 8.131 [7.93, 8.33] | +1.03 | 0 | 0.772 | 0.094 | 1.34 / 2.70 | 0 |
+| **openpilot Cinque v3** | **8.005** [7.79, 8.22] | **+0.90** [+0.62, +1.18] | −0.13 [−0.35, +0.10] | 0.716 | 0.100 | **1.09 / 2.46** | 2.47 |
+| **Alpamayo 1.5，no-nav** | 7.879 [7.69, 8.06] | +0.78 [+0.53, +1.02] | −0.25 [−0.46, −0.05] | 0.681 | 0.146 | 1.23 / 2.74 | 2.52 |
+| openpilot Lebowski | 7.886 [7.66, 8.11] | +0.78 [+0.51, +1.05] | −0.25 [−0.49, −0.01] | 0.666 | 0.125 | 1.21 / 2.67 | 2.65 |
+| **Alpamayo 1.5，nav** | 7.857 [7.67, 8.04] | +0.75 [+0.50, +1.00] | −0.27 [−0.48, −0.07] | 0.681 | 0.148 | 1.23 / 2.75 | 2.51 |
+| openpilot small | 7.640 [7.41, 7.86] | +0.54 [+0.28, +0.80] | −0.49 [−0.75, −0.24] | 0.653 | 0.134 | 1.33 / 2.88 | 3.15 |
+| worst-rated rater 轨迹 | 7.715 | +0.61 | −0.42 | 1.000 | 0.029 | 1.27 / 3.50 | 3.13 |
+| 我们：`cls ego`（train 训） | 7.311 [7.06, 7.56] | +0.21 [−0.03, +0.45] | −0.82 | 0.628 | 0.213 | 1.40 / 3.27 | 2.57 |
+| 我们：`cls_late` vision+ego | 7.301 [7.06, 7.55] | +0.20 | −0.83 | 0.618 | 0.207 | 1.40 / 3.23 | 2.52 |
+| cv（匀速） | 7.103 [6.85, 7.35] | 0 | −1.03 | 0.551 | 0.271 | 1.49 / 3.35 | 3.72 |
+| 我们：ridge ego | 7.059 [6.81, 7.31] | −0.04 | −1.07 | 0.539 | 0.271 | 1.33 / 3.16 | 2.43 |
+| zero（原地不动） | 5.383 | −1.72 | −2.75 | 0.280 | 0.618 | 7.25 / 12.32 | 11.41 |
+| 公开榜（**test** split，不可配对） | RAP 8.043、Poutine 7.986、AutoVLA 7.556、OpenEMMA 5.158 | | | | | RAP 2.65、Poutine 2.74（ADE@5s） | |
+
+Alpamayo 的另外几种取法（同一批 6 条样本；oracle 行用了答案，**不能**和上表比名次）：
+
+| Alpamayo 取法 | nav：RFS [CI] | no-nav：RFS [CI] | nav：ADE@5s vs rater_best |
+|---|---|---|---:|
+| 一条采样的期望（headline） | 7.857 [7.67, 8.04] | 7.879 [7.69, 8.06] | 2.75 |
+| 第 0 条样本（字面意义的一次提交） | 7.673 [7.43, 7.90] | 7.688 [7.46, 7.91] | 2.88 |
+| medoid-of-6（非 oracle） | 8.034 [7.82, 8.25] | 8.096 [7.88, 8.31] | 2.57 |
+| ORACLE best-of-6 RFS | 8.950 | 8.909 | 2.16 |
+| ORACLE minADE_6 | 8.673 | 8.635 | 1.62 |
+
+![RFS overview](../../research/figs/wod-zeroshot-rfs.png)
+
+图：各行的 RFS（cluster mean）和 95% bootstrap CI，灰色是 baseline，彩色是 zero-shot 模型；竖虚线是公开榜的 **test** 分数，只作量级参照。
+看的是：五个 zero-shot 行全部落在 cv（7.10）和 logged future（8.13）之间，最好的 Cinque 和 Alpamayo medoid 的 CI 已经盖住 logged future 和 RAP 的 8.04；
+我们自己 train 训出来的 head（7.06–7.31）在所有 zero-shot 模型之下。
+
+**读法**（按预登记的判据表）：
+
+1. **两个模型都有明确的「通用驾驶能力」增量**：五个 zero-shot 行对 cv 的配对 Δ 的 CI 全部在 0 以上（+0.54 到 +0.90）。
+   预登记表的第一行成立。而且它们都**高于我们自己在 WOD train 上训出来的最好 head**（`cls ego` 7.31）：Cinque +0.69 [+0.44, +0.95]、
+   Alpamayo nav +0.55 [+0.33, +0.76]。一个没见过 Waymo 任何一帧、没有导航、相机从 1.8 m 高的车顶被硬掰成 comma 视角的 382M 模型，
+   比我们在 Waymo 上训的 head 高 0.7 RFS。
+2. **没有一个达到 logged future**：最好的 Cinque 与 log 的 Δ 是 −0.13 [−0.35, +0.10]，CI 跨 0，所以「达到 log」这一格**没法排除但也没成立**；
+   Alpamayo headline 和 Lebowski 的 CI 整体在 0 以下。榜单第一梯队（RAP 8.04、Poutine 7.99）落在 Cinque 和 Alpamayo medoid 的 CI 里，
+   但那是 test、是各队自己挑的最好提交，只能说同量级。
+3. **官方 ADE 上，Cinque（2.46 m）比 logged future（2.70 m）还低**，Alpamayo nav 2.75、Lebowski 2.67 与 log 同量级。
+   这再次说明第 2 条「ADE 已经饱和、不能拿来排名」：一个 zero-shot 模型就能「越过完美预测 log」这条线。
+4. **Alpamayo 的样本之间差得远**：同一批 6 条，期望 7.86、第 0 条 7.67、medoid 8.03、oracle best-of-6 8.95。
+   medoid 比期望高 0.18，说明 6 条里的离群样本在拖分，一个不用答案的选择规则就能把它拉到 Cinque 的水平；
+   oracle 8.95 与 rater_best 9.59 之间只差 0.6，说明**好答案通常就在 6 条里，差的是挑**。这和 smoke run 里 seed noise floor 1.28 m 的发现一致。
+
+### nav 有没有用：没有
+
+| 组 | n | nav − no-nav（frame mean RFS）[CI] |
+|---|---:|---|
+| 直行帧（GO_STRAIGHT → "Continue straight"） | 427 | −0.015 [−0.039, +0.008] |
+| 转弯帧（GO_LEFT / GO_RIGHT → "Turn left/right"） | 52 | −0.016 [−0.190, +0.136] |
+| 全部 | 479 | −0.015 [−0.042, +0.011] |
+
+预登记的判据是「转弯帧上 > 0、直行帧上 ≈ 0」，结果是两组都 ≈ 0，转弯帧的 CI 很宽（n = 52）。
+所以**模板化、不带距离的 intent 文本没有被模型用上**，或者说 rater 帧上的转弯方向已经被图像和 egomotion 历史决定了：
+转弯帧上 Alpamayo 预测终点的平均方位角左转 +16°、右转 −20°，logged future 是 +30° / −32°，nav 与 no-nav 的差不到 1°。
+openpilot 完全没有 nav 输入，转弯帧方位角是 +18 ~ 21° / −20 ~ −21°，和 Alpamayo 一样。两类模型都**转得不够急**（约为 log 的 60%）。
+
+### 按 scenario cluster
+
+| cluster | n | logged future | cv | 我们 `cls ego` | Alpamayo nav | Cinque | Lebowski | small |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Intersections | 116 | 8.37 | 7.11 | 7.46 | 7.65 | 7.74 | 7.51 | 7.69 |
+| Foreign Object Debris | 78 | 8.35 | 6.96 | 7.33 | 7.64 | 7.81 | 7.82 | 7.92 |
+| Cyclist | 71 | 7.56 | 6.77 | 6.95 | 7.93 | **8.23** | 7.94 | 7.96 |
+| Pedestrian | 52 | 8.31 | 7.32 | 7.81 | 8.17 | 8.23 | 8.16 | 7.89 |
+| Multi-Lane Maneuvers | 42 | 8.06 | 6.84 | 7.27 | 7.60 | 7.54 | 7.32 | 7.23 |
+| Single-Lane Maneuvers | 38 | 8.83 | 6.99 | 7.38 | 7.99 | 8.11 | 8.36 | 7.67 |
+| Special Vehicles（读不动） | 25 | 8.25 | 6.66 | 7.28 | 7.59 | 7.47 | 7.23 | 7.07 |
+| Others（读不动） | 22 | 8.72 | 6.98 | 7.42 | 7.73 | 7.86 | 7.63 | 6.64 |
+| Cut-ins（读不动） | 20 | 6.02 | 8.42 | 7.25 | 8.24 | 8.77 | 8.50 | 7.81 |
+| Construction（读不动） | 15 | 8.84 | 6.99 | 6.97 | 8.03 | 8.29 | 8.39 | 8.52 |
+
+![clusters](../../research/figs/wod-zeroshot-clusters.png)
+
+图：每个 cluster 内的 frame mean RFS（n 从 116 到 15，n < 30 的格子只看方向）。看两点：zero-shot 模型在 Cyclist 上**超过 logged future**
+（Cinque 8.23 对 7.56），在 Cut-ins 上也是（log 只有 6.02，是 log 得分最低的一格）；差距最大的是 Intersections、Multi-Lane Maneuvers
+和 Special Vehicles，模型比 log 低 0.6–1.0，这几格恰好是「路线怎么走」由导航决定、而 zero-shot 模型拿不到路线的地方。
+
+### 按起始车速：停着的车是模型输的地方
+
+| 起始车速 (m/s) | n | logged future | cv | 我们 `cls ego` | Alpamayo nav | Cinque | Lebowski | small |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| < 0.5 | 120 | 8.33 | 7.65 | 7.47 | 7.55 | 7.81 | 7.59 | 7.66 |
+| 0.5–5 | 179 | 8.08 | 6.62 | 6.97 | 7.52 | 7.57 | 7.61 | 7.18 |
+| 5–10 | 118 | 8.01 | 6.87 | 7.68 | 8.19 | 8.42 | 8.32 | 8.32 |
+| > 10 | 62 | 8.47 | 7.45 | 7.54 | 8.40 | 8.37 | 7.78 | 8.07 |
+
+（frame mean，Alpamayo 取 6 条的期望。）在车基本停着（< 0.5 m/s）的 120 帧上，zero-shot 模型**不比 cv（也就是「继续停着」）好**，
+比 log 低 0.5–0.8；车动起来以后（5–10 m/s）它们反而**超过 log**（Cinque 8.42 对 8.01）。
+也就是说，这两个模型最强的是「已经在开的时候怎么开」，最弱的是「什么时候走」。下面的失败案例三个全是这一类。
+
+### 失败案例
+
+![failure cases](../../research/figs/wod-zeroshot-cases.png)
+
+图：每个模型相对 cv 丢分最多的一帧（按模型各挑一帧，sequence 互不相同）。上排是 WOD FRONT 相机（裁剪、降采样），
+下排是俯视图：粗灰线是三条 rated trajectory（末端数字是评分），黑虚线 logged future，灰线 cv，彩线是模型（Alpamayo 画全部 6 条）。
+- (a) Multi-Lane Maneuvers，车速 0.7 m/s，绿灯路口。评分最高（10）的是几乎不动的缓行，Alpamayo 6 条全部是「绿灯了，加速通过」
+  （CoC 原文 "Accelerate to proceed through the intersection since the traffic light turns green"），两个 openpilot 也都开出 35–48 m，三个模型都被压到 4.0。
+- (b) Intersections，夜间停在停止线前，0.3 m/s。rater 给「继续等」10 分、「左转」7 分；三个模型都选择直行起步
+  （Alpamayo："Resume speed from stop at the stop sign since the intersection is clear"），都是 4.0。
+- (c) Foreign Object Debris，夜间，1.4 m/s，路口前有车切入。log 右转（它本身也只有 4.0），rater 偏好直行（9）或慢速右转（10）；
+  Lebowski 和 Cinque 左转，Alpamayo 的 6 条向左、直、右散开。没有路线信息时，路口的方向本来就是一个多模态的猜测。
+
+这三帧的共同点是：从停着或低速起步、并且在路口。模型的 CoC 在 (a)(b) 都给出了一个说得通的理由（绿灯、路口清空），但 rater 的判断是还不该走；
+这是规则层面的偏好差别（Waymo 的 rater 更保守），不是看错了东西。
+
+### Alpamayo CoC 的左右方向
+
+适配器验证时看到两个左转帧的 CoC 写着 "Turn right"。在全部 479 帧 × 6 条上统计（只看 CoC 里有 "turn left/right" 且轨迹终点方位角 > 10° 的样本）：
+75 条里 67 条文本方向与轨迹一致、8 条相反，相反的 8 条全是「文本说右、轨迹向左」（其中 1 条是 "cut-in vehicle from the right ... turning into our lane"，关键词匹配把它算成了转向，真正的错配是 7 条）。所以验证帧上的现象是少数（11%），不是系统性的左右颠倒；
+上面「推测」一句就此更正为：文本侧有少量、偏向单一方向的左右错配。
+
+### 纵向偏差
+
+5 s 终点的纵向位置减 logged future 的均值：cv +1.6 m（这些 12 s 标记帧上司机平均在减速），Alpamayo +3.3 m，Cinque +0.9 m，Lebowski +0.3 m。
+Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 m，中位数 +3.9 对 +2.5）。openpilot 的相机高度问题（1.81 m 对 1.2 m）
+没有表现成大的系统性纵向偏差（Lebowski 平均 +0.3 m），所以预登记里担心的尺度偏差在这个口径下不大（推测：模型主要靠 feature 历史里的自车运动定速度，而不是靠地面几何）。
+
+### ADE-extra（958 帧，只对 logged future）
+
+（Alpamayo 这一行在跑，完成后补。）
+
+| 行 | n | ADE@3s | ADE@5s [CI，按 sequence 重抽] |
+|---|---:|---:|---|
+| cv | 958 | 1.16 | 2.83 [2.65, 3.04] |
+| ctra | 958 | 0.85 | 2.67 [2.47, 2.89] |
+| 我们：ridge ego | 958 | **0.63** | **1.91** [1.79, 2.04] |
+| 我们：`cls ego` | 958 | 0.82 | 2.05 [1.91, 2.22] |
+| 我们：`cls_late` vision+ego | 958 | 0.83 | 2.02 [1.87, 2.19] |
+| openpilot Cinque | 958 | 0.97 | 1.94 [1.80, 2.08] |
+| openpilot Lebowski | 958 | 1.07 | 2.09 [1.94, 2.25] |
+| openpilot small | 958 | 1.21 | 2.45 [2.30, 2.62] |
+
+在随机帧上对 log 算 ADE 时，排序反过来：我们 train 训的 `ridge ego` 最好（1.91 m），Cinque（1.94）与它持平，Lebowski 和我们的分类头同量级。
+这正是第 2 条说的指标冲突——回归 head 学的是条件均值、赢 ADE；zero-shot 模型输出的是「一种具体开法」、赢 RFS。
+两种口径下 zero-shot 模型都不输给我们在 Waymo 上训的东西。
+
+### Wall time
+
+| 步骤 | wall |
+|---|---|
+| GCS 抓取 5 696 条记录（12.98 GB） | 约 102 min（与下面并行） |
+| openpilot，1 437 目标 × 3 模型 | 35 min |
+| Alpamayo，479 帧 × {nav, no-nav} | 63 min（7.9 s/帧，卡上同时有另两个考试的 Alpamayo，GPU 100%） |
+| Alpamayo，958 帧 × nav | （在跑） |
+| 打分（10 000 次 bootstrap） | < 1 min |
 
 ## 偏离记录
 
-（暂无。）
+1. **Lebowski 按 5 Hz context 步进，而不是每个 WOD 帧喂两次。** 预登记写的是「每帧连喂两次得到 20 Hz」。small / Cinque 照此执行；
+   Lebowski 的时间队列在 host 上，用了 B2D 考试新加的 `OPModel(context_rate=True)`：只在输出所在的相位上每 0.2 s 走一步（帧 f、f−2、…）。
+   它的输出只依赖 t−4 与 t 两帧、t−96…t−4（步长 4）的 hidden state 和按 4 步窗口 max-pool 的 desire，所以在输出相位上与 20 Hz 逐步
+   走法数值相同（`scripts/test_zeroshot_openpilot_context.py`）；desire 全 0，这里没有别的差别。影响：Lebowski 的 GPU 时间降到 1/4，分数应当不变。
+2. **ADE-extra 的 CI 用 2 000 次按 sequence 重抽**，不是预登记的 10 000 次（代码里给这一张表设了上限）。RFS 主表是 10 000 次。
+   2 000 次对 95% percentile 区间的蒙特卡洛误差在 0.01 m 量级，不影响读法。
+3. **Alpamayo headline 行的 floored 一列取第 0 条样本**（见主表说明）。「一条采样的期望」这一行的 floored 按定义只数「6 条全被压到底」，与单轨迹行不可比。
+4. **适配器验证帧按运动学挑**（直行快 2、左转 2、右转 2、停车 1、直行中速 1），没有专门按「夜间」挑；8 帧里有 3 帧恰好是夜间。只影响看图，不影响分数。
