@@ -82,7 +82,10 @@ def sdpa_rows(I):
     r = []
     for n in (1, 6):
         b = C("sdpa", attn="sdpa", n_samples=n)
-        r += [b, replace(b, name="sdpa + compile-visual+expert", compile=("visual", "expert"))]
+        r += [b, replace(b, name="sdpa + compile-visual+expert", compile=("visual", "expert")),
+              replace(b, name="sdpa stack: compile-visual+expert+flow-5", compile=("visual", "expert"), flow_steps=5),
+              replace(b, name="sdpa stack + no-reasoning", compile=("visual", "expert"), flow_steps=5,
+                      no_reasoning=True)]
     return r + [C("sdpa + static-kv-cache", attn="sdpa", n_samples=1, static_cache=True)]
 
 
