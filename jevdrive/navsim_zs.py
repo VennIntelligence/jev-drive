@@ -145,40 +145,39 @@ class AlpamayoMaps:
 
 
 class OpenpilotMaps:
-    """CAM_F0 -> openpilot narrow (focal 910) and wide (focal 455) 512x256 model frames, calib = the NAVSIM ego
-    axes (level, straight), nearest sampling like tinygrad's warp. Y at 512x256, U/V at 256x128 from I420 planes."""
+    """CAM_F0 -> openpilot road (focal 910) and wide (focal 455) 512x256 model frames, calib = the NAVSIM ego axes
+    (level, straight). Nearest sampling at integer model pixels like tinygrad's warp; the source is libjpeg's own
+    YCbCr (no RGB round trip) and chroma is the 2x2 mean, as the WOD-E2E exam's openpilot runner."""
 
     def __init__(self, cam: dict):
         from .openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE, MODEL_W, MODEL_H
-        self.idx = []
+        uu, vv = np.meshgrid(np.arange(MODEL_W, dtype=np.float64), np.arange(MODEL_H, dtype=np.float64))
+        self.idx, self.coverage = [], []
+        w, h = NUPLAN_WH
         for Km in (MEDMODEL_K, SBIGMODEL_K):
-            per = []
-            for W, H, s in ((MODEL_W, MODEL_H, 1), (MODEL_W // 2, MODEL_H // 2, 2)):
-                # model pixel centre at plane scale s -> full-res model pixel -> device ray (x fwd, y right, z down)
-                uu, vv = np.meshgrid((np.arange(W) + .5) * s - .5, (np.arange(H) + .5) * s - .5)
-                ray_dev = np.stack([uu, vv, np.ones_like(uu)], -1) @ np.linalg.inv(Km @ VIEW_FROM_DEVICE).T
-                ray_ego = ray_dev * np.array([1., -1., -1.])
-                uv, ok, _ = project_nuplan(ray_ego, cam, 1)
-                w, h = NUPLAN_WH[0] // s, NUPLAN_WH[1] // s
-                xi = np.clip(np.rint((uv[..., 0] + .5) / s - .5), 0, w - 1).astype(np.int64)
-                yi = np.clip(np.rint((uv[..., 1] + .5) / s - .5), 0, h - 1).astype(np.int64)
-                per.append(((yi * w + xi).ravel(), ok.ravel()))
-            self.idx.append(per)
-        self.coverage = [float(p[0][1].mean()) for p in self.idx]
+            ray_dev = np.stack([uu, vv, np.ones_like(uu)], -1) @ np.linalg.inv(Km @ VIEW_FROM_DEVICE).T  # x fwd, y right, z down
+            uv, ok, _ = project_nuplan(ray_dev * np.array([1., -1., -1.]), cam, 1)
+            xi = np.clip(np.rint(uv[..., 0]), 0, w - 1).astype(np.int64)
+            yi = np.clip(np.rint(uv[..., 1]), 0, h - 1).astype(np.int64)
+            self.idx.append((yi * w + xi).ravel())
+            self.coverage.append(float(ok.mean()))
 
-    def __call__(self, rgb: np.ndarray, out: np.ndarray | None = None) -> np.ndarray:
-        """Full-res RGB CAM_F0 (1080, 1920, 3) -> (2, 6, 128, 256) uint8 [narrow, wide], frames_to_tensor packing.
-        Rays outside CAM_F0 (none for these FOVs) read black."""
-        import cv2
-        h, w = NUPLAN_WH[1], NUPLAN_WH[0]
-        yuv = cv2.cvtColor(rgb, cv2.COLOR_RGB2YUV_I420).ravel()
-        planes = (yuv[:h * w], yuv[h * w:h * w * 5 // 4], yuv[h * w * 5 // 4:])
-        out = np.empty((2, 6, 128, 256), np.uint8) if out is None else out
-        for k, ((iy, oky), (iuv, okuv)) in enumerate(self.idx):
-            Y = np.where(oky, planes[0][iy], 16).reshape(256, 512)
-            out[k, 0], out[k, 1], out[k, 2], out[k, 3] = Y[0::2, 0::2], Y[1::2, 0::2], Y[0::2, 1::2], Y[1::2, 1::2]
-            out[k, 4] = np.where(okuv, planes[1][iuv], 128).reshape(128, 256)
-            out[k, 5] = np.where(okuv, planes[2][iuv], 128).reshape(128, 256)
+    @staticmethod
+    def decode(path: str) -> np.ndarray:
+        from PIL import Image
+        im = Image.open(path)
+        im.draft("YCbCr", im.size)          # libjpeg's own YCbCr (BT.601 full range)
+        return np.asarray(im.convert("YCbCr"))
+
+    def __call__(self, ycc: np.ndarray) -> np.ndarray:
+        """Full-res YCbCr CAM_F0 (1080, 1920, 3) -> (2, 6, 128, 256) uint8 [road, wide], frames_to_tensor packing."""
+        cat = ycc.reshape(-1, 3)
+        out = np.empty((2, 6, 128, 256), np.uint8)
+        for k, idx in enumerate(self.idx):
+            p = cat[idx].reshape(256, 512, 3)
+            Y = p[..., 0]
+            uv = np.rint(p[..., 1:].reshape(128, 2, 256, 2, 2).astype(np.float32).mean((1, 3))).astype(np.uint8)
+            out[k] = np.stack([Y[0::2, 0::2], Y[1::2, 0::2], Y[0::2, 1::2], Y[1::2, 1::2], uv[..., 0], uv[..., 1]])
         return out
 
 

@@ -51,7 +51,7 @@ def build(split: str) -> list:
     out = []
     for tok in loader.tokens_stage_one:
         frames = loader.scene_frames_dicts[tok]
-        meta = {"log_name": frames[nh - 1]["log_name"], "synthetic": False,
+        meta = {"log_name": frames[nh - 1]["log_name"], "synthetic": False, "map": frames[nh - 1]["map_location"],
                 "timestamp": int(frames[nh - 1]["timestamp"])}
         out.append(entry(tok, "one", loader.get_agent_input_from_token(tok), [f["cams"] for f in frames[:nh]],
                          real_root, meta))
@@ -59,6 +59,7 @@ def build(split: str) -> list:
         with open(path, "rb") as f:
             sd = pickle.load(f)
         meta = {"log_name": log_name, "synthetic": True, "timestamp": int(sd["frames"][nh - 1]["timestamp"]),
+                "map": sd["scene_metadata"]["map_name"],
                 "original": sd["scene_metadata"].get("corresponding_original_scene")}
         out.append(entry(tok, "two", loader.get_agent_input_from_token(tok),
                          [fr["camera_dict"] for fr in sd["frames"][:nh]], syn_root, meta))
