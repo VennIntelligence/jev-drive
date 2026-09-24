@@ -1,0 +1,1 @@
+{"tau_exp":0.5,"pooled_families":["DynamicObjectCrossing","HighwayCutIn","Light","ParkingCrossingPedestrian","ParkingCutIn","StaticCutIn"],"tau TFv6 target speed":7.8527401582,"tau TFv6 waypoint speed 2 s":2.2217471651,"tau TFv6 target speed (decoded scalar)":7.8438000679,"tau ridge ego":0.0,"tau ridge_late L18_last":0.5082299829,"tau ridge_late L18_mean":0.3407775998}

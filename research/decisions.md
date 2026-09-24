@@ -2574,3 +2574,34 @@ Kp=.5、Ki=.25的pursuit max与CARLA横向PI均通过六项G2，pursuit additive
 
 修正把 C 的平均 DS 从 76.0 提到 83.1，D 从 73.6 提到 83.5；W2 里 31 个与 phantom 关联的事件，在新运行中原位置附近全部消失，例如 3514 的 C/D 从 65 升到 100，28154 从 36–44 升到 100。但合并后的 C − B 仍跨零，而且两级方向相反：Dev10 上 C 更好，保留集上 C 更差。保留集上的损失主要是 RC（2084、27529 的 route deviation），Dev10 上 2091 仍然因为长时间停滞超时。按预登记规则，控制器主效应未检出，第 3 级（220 条）的条件不满足。仍然成立的是：表示方式的影响（A − B，+14）远大于控制器的影响，而且 slip + Ackermann（D − C）在真实 planner 下没有作用。剩下两个值得诊断的失败模式是保留集上的 route deviation 和 2091 的起步停滞，都还没有查明机制。
 
+
+## 32. P5 v0：CARLA 配对考卷成立；公开 planner 只在 waypoint 上过四成，我们的 CARLA 内薄 head 翻转率为 0（**待定**）
+
+2026-09-24。计划与判据在 [todos/2026-09-24-p5-carla-pairs-v0.md](../todos/2026-09-24-p5-carla-pairs-v0.md)（生成任何 pair 之前提交），
+全部数字和读法也在那里，这里只记结论；图和表集中在 [prediag README 的 P5 一节](prediag-2026-09/README.md#p5carla-配对考卷v0)。
+
+**做了什么**：Bench2Drive 的 10 个「可见、需要反应」的 scenario family × 5 条路线 × 3 个 TM seed，共 165 对 x⁺ / x⁻，加 55 个只换天气的 null。
+两个世界只差 XML（Light 是红灯 vs 绿灯）或者 hazard actor 被藏到地下（scenario 本身照常运行，背景车收到的指令两侧相同）。
+特权的 BehaviorAgent 在两个世界各开一遍，给出 2 s 速度的差 Δ_expert；TFv6（三 seed ensemble，DS 约 95）在同样的 tick 上做 shadow 推理；
+我们的 `ridge_late`（冻结 Qwen3-VL-4B 视频特征，P3(d″) 那一套）只在 CARLA 上训练、按路线交叉拟合。
+
+**结论**：
+
+1. **考卷成立**（这是文献空白里「simulator 渲染 + ego 逐帧相同 + expert 两侧重跑出标签」的那一格）：去掉没有产生因素的 HardBreakRoute，
+   96% 的对在因素可见之后 ego 仍逐 tick 相同；null 上 Δ_expert 的 p95 是 0.04 m/s；有 503 个 expert 确实反应的帧（合并 6 个 family 490 帧 / 25 条路线）。
+   标签密度按预登记的口径刚过（合并 family 21.3%，全部 family 12.7%）。
+2. **TFv6**：主读数（目标速度）定向翻转率 **2.0% [0.0, 6.5]**，按判据是「对 DS-95 planner 也难」；但它来自噪声地板——只换天气就让这个近二值的输出在 10% 以上的帧上整档跳变。
+   副读数（waypoint 隐含的 2 s 速度）**39.4% [28.5, 50.1]**，从不往反方向翻，样本外 null false-flip 7.1%。所以**测量有地板**，第 21 条的推翻条件没有触发。
+3. **我们的 CARLA 内薄 head**：`ridge_late` 翻转率 **0%**（两个 tap），hazard probe AUC **0.635 [0.58, 0.69]**，按判据是 **representation**，
+   但贴着 0.65 的边界，且行人横穿（0.77–0.88）和高速 cut-in（0.80–0.84）两个 family 上 probe 高、翻转仍是 0，那里是 **readout**。
+   head 的 Δ 方向对了 66–70%，但量级比它自己的噪声小两个数量级：第 20 条「均匀目标把信号淹掉」的描述在 CARLA 内原样复现。
+
+**状态**：**待定**。只有一个 expert（BehaviorAgent，两个行人 family 和闯红灯 family 因此几乎没有题）、红绿灯一格只有 9 个 reactive 帧、
+TFv6 与我们的 head 用的是不同传感器。
+
+**对方法选型的含义**：第 25 条的 reaction decoder 在这里有了一个具体的开环目标——在同一批 pair 上用配对差分训 `ridge_late` 的修正项，
+看翻转率能不能从 0 走到 TFv6 waypoint 的 39%，对照是同样帧上的 hard-example 重加权（第 21 条 D1）；训练和考试必须按 family 或路线分开（Fail2Drive 的教训）。
+行人和 cut-in 两类 probe 高而翻转为 0，是配对监督最可能先见效的地方。
+
+**怎么才能推翻或推进**：换一个会提前减速的 expert（PDM-Lite 需要作者的 scenario_runner fork），看两个行人 family 能否进合并、结论是否改变；
+把 Light 扩到更多路线；给 TFv6 喂与我们相同的 Waymo 三相机不现实，反过来用 TFv6 自己的前视图抽 Qwen 特征，可以把「传感器不同」这一项拿掉。

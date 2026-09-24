@@ -18,7 +18,7 @@
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
 | P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做） |
 | P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | **已测，按预登记判据「不可用」**：去均值后 domain AUC 仍 1.000（null 0.48），pre-onset 词表 uncoverable +35 pp，head 匹配 ADE 比值 > 2；只有「在不在动」的 probe 迁移（0.87–0.89） |
-| P5 | 开环配对考试 v0 | 教材作用在 head、表征还是数据；VLM 零样本 meta-action 一列决定标签来源（第 25 条） | 待做，依赖 P4 |
+| P5 | 开环配对考试 v0（CARLA 内训、CARLA 内考） | 教材作用在 head、表征还是数据；VLM 那一列已在 Waymo 上关闭（第 25 条） | **已测（第 32 条，待定）**：考卷成立（96% 的对 ego 逐 tick 相同到因素可见之后，503 个 expert 反应帧）；TFv6 目标速度翻转 2.0%（天气噪声地板）、waypoint 39.4%；我们的 `ridge_late` 0%，hazard probe 0.635（representation，边界上；行人 / cut-in 是 readout） |
 
 术语，本文各用一次：**pre-onset** 是车还没开始转、ego 运动看不出意图的帧；**s_ego** 是 ego-only 读出模型自己的
 5 s 残差，衡量「先验失灵的程度」；**DiD** 是 pre-onset 上的 vision − ego 增量减去直行帧上的同一增量，
@@ -169,7 +169,7 @@ V-JEPA 8 ms / 帧，41.5 万帧约 1 h，已排在 Wan 和 Qwen-video 之后。
 两个方向都稳的仍只有第 10 档对 rater_best 的移动（−0.23 到 −0.48），而第 10 档现在的解释是「log 是比被打分候选更早更重的减速」，
 V-JEPA 在那里朝候选偏好的方向动。没有 arm 过 −0.05 m 两方向规则。
 
-### (d″) Qwen3-VL-4B 原生视频输入：唯一两个方向 CI 都不跨零的 arm，因素是「时间」
+### (d″) Qwen3-VL-4B 原生视频输入：两个方向 CI 都不跨零，因素是「时间」
 
 同一段 4 帧 clip（stride 2，三相机）以视频形式进 Qwen 的时间 patch 路径，每次 forward 6120 token，逐项核验等于 3 相机 × 2 个时间位 × 30×34，
 和 arm A 唯一的差别是帧的进入方式。552.6 ms / 帧，2 h 11 min。第 22 条口径：
@@ -182,8 +182,8 @@ V-JEPA 在那里朝候选偏好的方向动。没有 arm 过 −0.05 m 两方向
 | 1 | L18_mean | **−0.082 [−0.144, −0.016]** | −0.045 | −0.037 | −0.054 | −0.256 |
 
 看什么：−0.05 m 两方向规则严格说没过，每个 tap 都是一边过、另一边差 5–9 mm；但它是整个 ladder 里**唯一两个方向 CI 都不跨零**的 arm
-（A、32B 的四个 tap、V-JEPA 的六个变体都做不到），DiD 在四格里三格接近零或为负，而其它 arm 全是明显的正。
-和第 23 条的 (b) 并排是最干净的隔离：同模型、同像素、同层、同 head，帧拼在读出端是 −0.032 / −0.068（方向 0 跨零），
+（A、32B 的四个 tap、V-JEPA 的六个变体都做不到；*2026-09-23 修正*：原来写「唯一」，后来 P3e 插入的 2B 同一视频通路 `L14_last` 两个方向 CI 也不跨零，点估计更小，所以唯一的是这条视频通路而不是 d″ 这一个 arm），DiD 在四格里三格接近零或为负，而其它 arm 全是明显的正。
+和第 23 条的 (b) 并排是最干净的隔离：同模型、同像素、同层、同 head，帧拼在读出端是 −0.025 / −0.059（同子集、同口径，两个方向都跨零；*2026-09-23 修正*：原来写的 −0.032 / −0.068 是完整半 val、旧口径的数，不能和 d″ 对读），
 走 backbone 的时间 patch 是 −0.053 / −0.045（都不跨零）。**按预写的归因表，因素是时间，不是 JEPA 目标。**
 
 ### (d‴) V-JEPA 2 的 train 训裁决：不确认，但是「测不动」不是「零」
@@ -319,8 +319,9 @@ issue #985 指出部分被打分轨迹不足 20 个 waypoint，官方实现用�
 
 ![top decile](../figs/top-decile-rater-frames.png)
 
-顶档里跨 sequence 均匀取 20 帧，上排前视相机、下排 BEV（黑=logged future，三条彩色=被打分的 proposal，
-括号里是分数，虚线框是 3 s / 5 s 的 trust region）。对照组是第 1–9 档随机 10 帧，
+顶档里跨 sequence 均匀取的 20 帧都人工看过，图中是其中 9 帧（每种场景类别一帧，外加一帧 log 在 trust region 内的对照）。每格上方是三路前向相机的全景，
+下方是 BEV（向前为 x、向左为 y，两轴比例不同；黑=logged future，绿/蓝/橙=按分数排序的三条被打分 proposal，点线框是 3 s / 5 s 的 trust region）。
+图由 `scripts/make_top_decile_sheet.py` 生成。对照组是第 1–9 档随机 10 帧，
 见 [mid-decile-rater-frames.png](../figs/mid-decile-rater-frames.png)。
 
 看什么：几乎每个 floored 的格子里，黑线都在彩色线**中途就停了**，横向方向一致。场景清一色是
@@ -359,7 +360,7 @@ proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 
   放大同族 backbone 没有用（32B 八个 tap 全在噪声带）。Stage B 的表征选择：Qwen3-VL-4B + 原生视频输入，再往上是给它更长的 clip。
 - 评测：pre-onset 的 power 被 479 个 val sequence 锁死，train 训多十倍数据不改半宽（d‴）。要判 0.05 m 以下的效应得改评测设计，不是加数据。
 - 反应通道（第 25 条）：「什么时候反应」真实数据学得会，「怎么反应」学不会，配对监督的靶子是后者。
-- 仿真配对（P4）：Waymo 训的 head 不能拿 CARLA 帧来考，P5 要改成 CARLA 内训考或换真实数据渲染的配对，见下面的 P4 节。P5 尚未回答。
+- 仿真配对（P4）：Waymo 训的 head 不能拿 CARLA 帧来考，P5 已改成 CARLA 内训考（下面的 P5 节）：考卷成立，公开 planner 在 waypoint 上过四成，我们的 CARLA 内薄 head 翻转率为 0。
 
 ## P4：CARLA 帧上 Waymo 的 head 读不出东西（按预登记判据「不可用」）
 
@@ -388,8 +389,43 @@ CARLA 0.9.15 里用特权的 `BehaviorAgent` 开 151 条 Bench2Drive 路线（�
 要么在 CARLA 上训、在 CARLA 上考（放弃跨域那半句），要么换真实数据渲染的配对（第 19 条的 HUGSIM 一类）。
 限定：expert 不会绕障碍、47% 的路线有碰撞，更好的 expert 可能缩小词表和 head 的差距，但不影响特征差距那一行。
 
+## P5：CARLA 配对考卷（v0）
+
+计划、判据、全部表和中途修订在 [todos/2026-09-24-p5-carla-pairs-v0.md](../../todos/2026-09-24-p5-carla-pairs-v0.md)，结论在 [decisions.md](../decisions.md) 第 32 条。
+P4 说跨域不行，所以 P5 在 CARLA 里训、在 CARLA 里考。pair（配对：两个世界只差一处可见因素，x⁺ 有、x⁻ 没有）由 Bench2Drive 的 10 个 scenario family 造出，
+5 条路线 × 3 个 TM seed，x⁻ 让 scenario 照常运行、只把 hazard actor 藏到地下（Light 是红灯换绿灯）；null pair 只换天气。
+特权 expert（BehaviorAgent）在两个世界各开一遍，Δ_expert 是 2 s 处速度之差；定向翻转率（directional flip rate）是 expert 真反应的帧里，考生的 Δ 与 expert 同号
+且超过考生自己在 null 上的 95 分位数的比例。
+
+| 量 | 值 |
+|:--|:--|
+| 生成 | 385 / 385 次 run，8.5 h，451 次尝试 |
+| ego 逐 tick 相同到因素可见之后 | 144 / 150 对（96%，不含没有产生因素的 HardBreakRoute） |
+| expert 真反应的帧 | 503 / 3948 观测帧；合并的 6 个 family 490 帧、25 条路线 |
+| null 上的 \|Δ_expert\| p95 | 0.04 m/s（τ_exp 取下限 0.5 m/s） |
+
+| 考生 | 定向翻转率 [95% CI] | 样本外 null false-flip |
+|:--|:--|--:|
+| TFv6 目标速度（主读数） | 2.0% [0.0, 6.5] | 8.4% |
+| TFv6 waypoint 2 s 速度 | **39.4% [28.5, 50.1]** | 7.1% |
+| `ridge_late` L18_last / L18_mean | 0.0% / 0.0% | 5.3% / 5.6% |
+| hazard probe（x⁺ 对 x⁻ 的 AUC） | 0.635 [0.58, 0.69] | — |
+
+![P5 flip rates](../figs/p5-flip-rates.png)
+
+看什么：只有 TFv6 的 waypoint 读数在每个合并 family 上都明显离开 0（35–46%）且从不反向；它的目标速度读数和我们的两个 ridge head 处处是 0。
+TFv6 目标速度的 0 来自它自己的噪声地板：只换天气就让这个近二值的输出在 10% 以上的帧上整档跳变。
+
+![P5 expert delta](../figs/p5-expert-delta.png)
+
+看什么：(a) pair 帧上 13% 的 |Δ_expert| 超过 0.5 m/s，null 帧几乎全是 0；(b) 反应集中在 cut-in 和停车场行人，两个开放道路的行人 family 和闯红灯 family 几乎没有题，
+因为 BehaviorAgent 在那些时刻已经因为别的原因停着。
+
+结论：考卷能把「会反应」和「不会反应」分开（TFv6 waypoint 的 CI 下界 28.5% 远离 null）；我们的 CARLA 内薄 head 一题都没翻，
+hazard probe 贴着 0.65 的边界，按判据是 representation，行人横穿和高速 cut-in 上 probe 0.77–0.88 而翻转为 0，是 readout。
+
 ## 结果文件
 
 `research/results/p0-train-split/`、`p1-judge/`、`p2-readout-ladder/`、`p2p3-subset/`、`p3-backbone-ladder/`、
-`top-decile-audit/`、`p4-carla-gap/`；run dir 在 box 上 `$DATA_DIR/runs/waymo_p0/`、`waymo_p1/`、`waymo_ladder/`、
-`waymo_l0/top_decile_audit/`。
+`top-decile-audit/`、`p4-carla-gap/`、`p5-carla-pairs/`；run dir 在 box 上 `$DATA_DIR/runs/waymo_p0/`、`waymo_p1/`、`waymo_ladder/`、
+`waymo_l0/top_decile_audit/`、`p5_pairs/`。

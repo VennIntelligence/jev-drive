@@ -1,6 +1,6 @@
 # P5 v0：CARLA 反事实配对与开环考试
 
-状态: draft（预登记 2026-09-24，写于生成任何 pair 之前；结果栏空着）
+状态: done（预登记 2026-09-24 00:00，写于生成任何 pair 之前；中途的设计修订都写在对应位置并注明时间；结果 2026-09-24 12:30 填）
 主题: ../research/prediag-2026-09/README.md（P5 行）；决策背景 ../research/decisions.md 第 20、21、22、25、31 条
 
 ## 目标
@@ -177,14 +177,14 @@ BehaviorAgent、b2d_hooks、lead 全能 import）。时间盒 3 小时：跑不�
 
 ## 步骤
 
-- [ ] 本 todo 提交（写于任何 pair 之前）
-- [ ] XML 构造器（x⁺ / x⁻ / null，每个变体一个 route id，seed 编在 id 里）+ `_rng` 重置 hook + recorder agent（Waymo 相机、actor / 灯快照、可见性、TFv6 shadow）
-- [ ] 2 对 smoke：端到端 + 确定性检查 + TFv6 shadow 输出 + 每 tick 分项耗时 → 定 worker 数（报告）
-- [ ] PDM-Lite 的 2 小时尝试（与批量并行，结果写在这里）
-- [ ] 批量生成 385 次 run（tmux `jev:p5-gen`）→ 确定性表、label-validity 表（报告）
-- [ ] 建索引（观测帧、null 帧、训练帧），抽特征（先做 16 行 Waymo 等价检查），`processed/carla_p5/`
-- [ ] head、probe、考试，路线 bootstrap（报告）
-- [ ] 决策第 32 条、prediag README 的 P5 一节、两张图（每 family 每考生的翻转率；expert Δ 对 null 的分布），`research/results/p5-carla-pairs/`
+- [x] 本 todo 提交（写于任何 pair 之前）
+- [x] XML 构造器（x⁺ / x⁻ / null，每个变体一个 route id，seed 编在 id 里）+ `_rng` 重置 hook + recorder agent（Waymo 相机、actor / 灯快照、可见性、TFv6 shadow）
+- [x] 2 对 smoke：端到端 + 确定性检查 + TFv6 shadow 输出 + 每 tick 分项耗时 → 定 worker 数（报告）
+- [x] PDM-Lite 的 2 小时尝试（与批量并行，结果写在这里）
+- [x] 批量生成 385 次 run（tmux `jev:p5-gen`）→ 确定性表、label-validity 表（报告）
+- [x] 建索引（观测帧、null 帧、训练帧），抽特征（先做 16 行 Waymo 等价检查），`processed/carla_p5/`
+- [x] head、probe、考试，路线 bootstrap（报告）
+- [x] 决策第 32 条、prediag README 的 P5 一节、两张图（每 family 每考生的翻转率；expert Δ 对 null 的分布），`research/results/p5-carla-pairs/`
 
 ## 2 对 smoke（2026-09-24 00:00–00:55，box 上 `runs/p5_pairs/smoke*`）
 
@@ -241,4 +241,96 @@ PDM-Lite：LEAD 的 expert 依赖作者 fork 的 `CarlaDataProvider.active_scena
 
 ## 结果
 
-（跑完再填。run dir 在 box 的 `$DATA_DIR/runs/p5_pairs/`。）
+run dir（box）：生成 `$DATA_DIR/runs/p5_pairs/gen`（两个 runner 共用），特征 `processed/carla_p5/features`（抽取日志 `runs/p5_pairs/extract/`），
+考试 `runs/p5_pairs/exam/20260924-110740`，图 `runs/p5_pairs/figs`。小表在 [research/results/p5-carla-pairs/](../research/results/p5-carla-pairs/)。
+expert 是 **BehaviorAgent(normal)**（PDM-Lite 没用，理由见 smoke 一节）。VLM 列按预登记不跑（已关闭）。
+
+### 生成
+
+385 / 385 次 run 全部跑完（165 对 + 55 个 null），451 次尝试（35 次重启，全部是 server 段错误，大地图上的藏车 bug 修掉之后只剩零星的），
+两个 runner 合计 8.5 h 墙钟（06:00 前 3 个 worker，之后 6 个），每次 run 中位数 276 s，agent 每 tick 中位数 418 ms。
+Qwen 特征：P4 训练帧 6756 个新 clip（共享 GPU，613–643 ms / clip），P5 帧 20 298 个（独占 GPU，batch 4，256 ms / clip），P4 的 2773 个直接复用。
+
+### 考卷本身：label-validity 表
+
+| family | pair | 通过确定性检查 | 丢弃原因 | 观测帧 | reactive 帧 | 含 reactive 的 pair | expert 反应时 Δ 中位数 (m/s) | 进合并 |
+|:--|--:|--:|:--|--:|--:|--:|--:|:--|
+| DynamicObjectCrossing | 15 | 15 | — | 179 | 45 | 9 | −2.13 | 是 |
+| HighwayCutIn | 15 | 15 | — | 690 | 102 | 12 | −7.21 | 是 |
+| Light（红 vs 绿） | 30 | 15 | 6 never_visible、6 expert 先于可见反应、3 背景漂移 | 204 | 9 | 9 | −6.72 | 是 |
+| ParkingCrossingPedestrian | 15 | 15 | — | 199 | 76 | 15 | −4.71 | 是 |
+| ParkingCutIn | 15 | 15 | — | 546 | 135 | 15 | −1.50 | 是 |
+| StaticCutIn | 15 | 15 | — | 478 | 123 | 15 | −7.07 | 是 |
+| PedestrianCrossing | 15 | 15 | — | 725 | 3 | 3 | −0.57 | 否 |
+| VehicleTurningRoutePedestrian | 15 | 15 | — | 896 | 10 | 3 | −0.86 | 否 |
+| OppositeVehicleRunningRedLight | 15 | 9 | 6 never_visible | 31 | 0 | 0 | — | 否 |
+| HardBreakRoute | 15 | 0 | 15 never_visible（两个世界没有任何 actor 位置不同） | 0 | 0 | 0 | — | 否 |
+| **合计** | 165 | 144 | 21 | 3948 | 503 | 81 | | |
+
+读法：
+
+- **确定性**：去掉 HardBreakRoute（它的「因素」在两个世界里根本没有发生：15 对里背景车位置逐 tick 相同、ego 也相同，BehaviorAgent 前面没有会急刹的车），
+  150 对里 144 对（96%）ego 逐 tick 相同一直到因素可见之后；丢掉的 6 对全在 Light。null（只换天气）55 对里 48 对 ego 到录制结束都逐 tick 相同，
+  null 上 |Δ_expert| 的 95 分位数只有 0.04 m/s，所以 τ_exp 取的是预登记的下限 0.5 m/s。判据第一行（< 50% 就先修生成器）没有触发。
+- **标签密度**：reactive 占全部观测帧 12.7%（503 / 3948），占进合并的 6 个 family 的观测帧 21.3%（490 / 2296）。预登记的第二行写的是
+  「合并 reactive 帧 < 100，或 reactive 占观测帧 < 20%」就停，指标一节把「合并」定义为进合并的 family，所以按字面是**刚过**（21.3%）；
+  如果按全部 family 算就是不过。两种算法都写在这里，下面的考试数字只在合并的 6 个 family 上读。
+- **expert 在哪里不反应**：PedestrianCrossing 和 VehicleTurningRoutePedestrian 的行人在画面里可见的 725 / 896 帧里，expert 几乎都已经因为别的原因（红灯、排队、转弯减速）停着或很慢，
+  x⁺ 和 x⁻ 的未来 2 s 速度一样；OppositeVehicleRunningRedLight 的消防车在 BehaviorAgent 开到路口之前就过去了。这是 BehaviorAgent 做 expert 的代价，不是生成器的问题。
+- **纯度**：观测帧里有非因素 actor 两侧位置不同且可见的帧，主要在 VehicleTurningRoutePedestrian（281）和 PedestrianCrossing（81），都不进合并；合并 family 里是 80 / 2296。
+
+![expert delta](../research/figs/p5-expert-delta.png)
+
+看什么：(a) pair 帧上 |Δ_expert| 有 13% 超过 0.5 m/s，null 帧几乎全是 0，所以标签不是噪声；(b) 反应集中在 cut-in 和停车场行人三类，而且是双峰的：要么完全刹停（−7 m/s），要么还没反应。
+
+### 考生
+
+合并 6 个 family，reactive 490 帧、25 条 base 路线；CI 是路线 bootstrap 95%。τ_model 是各考生自己在 null 帧（1667 帧）上 |Δ_model| 的 95 分位数。
+
+| 考生 | τ_model (m/s) | 定向翻转率 [95% CI] | family 等权 | 反方向翻转 | 样本外 null false-flip | non-reactive 帧上的翻转 |
+|:--|--:|:--|--:|--:|--:|--:|
+| **TFv6 目标速度**（主读数，预登记） | 7.85 | **2.0% [0.0, 6.5]** | 1.4% | 0.0% | 8.4% | 1.2% |
+| TFv6 目标速度（作者解码后的标量） | 7.84 | 4.1% [0.0, 12.2] | 2.7% | 0.8% | 8.3% | 1.7% |
+| **TFv6 waypoint 隐含的 2 s 速度**（副读数） | 2.22 | **39.4% [28.5, 50.1]** | 38.3% | 0.0% | 7.1% | 12.1% |
+| `ridge ego`（地板） | 0 | 6.5% [3.7, 10.4]（泄漏，见下） | | 0.0% | 0.6% | 0.2% |
+| **`ridge_late` L18_last** | 0.51 | **0.0% [0.0, 0.0]** | 0.0% | 0.0% | 5.3% | 0.0% |
+| `ridge_late` L18_mean | 0.34 | 0.0% [0.0, 0.0] | 0.0% | 0.0% | 5.6% | 0.0% |
+
+| probe（因素本身，x⁺ 帧对 x⁻ 帧的 AUC） | 合并 [95% CI] | 各 family | 训练路线外的训练帧上 AUC |
+|:--|:--|:--|--:|
+| hazard，L18_last | **0.635 [0.581, 0.690]**（3744 帧 / 37 路线） | PedestrianCrossing 0.77、HighwayCutIn 0.84、DynamicObjectCrossing 0.62，其余 0.50–0.56 | 0.93 |
+| hazard，L18_mean | 0.635 [0.574, 0.701] | PedestrianCrossing 0.88、HighwayCutIn 0.80、其余 0.50–0.67 | 0.93 |
+| light，L18_last / L18_mean | 0.50 / 0.50（204 帧 / 4 路线） | — | 0.88 |
+
+![flip rates](../research/figs/p5-flip-rates.png)
+
+看什么：只有 TFv6 的 waypoint 读数在每个合并 family 上都明显离开 0，并且从不往反方向翻；它的目标速度读数和我们的两个 ridge head 在所有 family 上都是 0（小横线）。
+虚线是判据的 50%、点线是 20%。
+
+读法（逐条对判据）：
+
+- **TFv6，主读数（目标速度）2.0% ≤ 20%**：按预登记是「考卷对 DS-95 planner 也难」。但这一行的来源要说清楚：TFv6 的目标速度几乎是二值的
+  （刹停这一类的概率过 0.9 就解码成 0，否则是巡航速度），**只换天气**就让它在 10% 以上的 null 帧上整档跳变（|Δ| 的 90 分位数 7.6 m/s），
+  所以它的噪声地板 τ = 7.85 m/s 本身就把「翻转」堵死了；不设门槛时它的符号与 expert 一致的比例是 49.6%，等于随机。所以这一行更准确的说法是
+  「**TFv6 驾驶用的那个输出对外观的敏感度与它对因素的敏感度同量级**」，而不是「它看不见因素」。
+- **TFv6，副读数（waypoint）39.4%，落在 20–50% 区间**：按判据逐 family 读。每个合并 family 都在 35–46% 之间，没有一个 family 过 50%，也没有一个低于 20%；
+  反方向翻转 0；样本外 null false-flip 7.1%（≤ 10%）。不设门槛时符号一致 85.9%，Δ 中位数 −1.68 m/s（expert −4.27）。也就是说 TFv6 的 waypoint 头**总在正确的方向上动，但只有四成的帧动得超过它自己的天气噪声**。
+- **测量有没有地板**：没有触发「两个考生都 ≤ 10%」那一行——TFv6 waypoint 的 CI 下界 28.5% > 10%。所以这张考卷能把「会反应」和「不会反应」分开，
+  第 21 条里「flip 率与 1.9% 同量级、测不出来」那条推翻条件**没有**触发。
+- **`ridge_late`：翻转率 0%，hazard probe 0.635**：按判据落在 **representation**（probe ≤ 0.65 且翻转 ≤ 20%）。限定两句：probe 的 CI [0.58, 0.69] 跨过 0.65，
+  是贴着边界的；而且 family 之间差别很大——行人横穿（0.77 / 0.88）和高速 cut-in（0.84 / 0.80）上 probe 是高的，这两类的翻转同样是 0，
+  **在这两个 family 上读出来是 readout**（信息在特征里，head 没用上）。其余 family 的 probe 接近 0.5，是 representation。`ridge_late` 的 Δ 不是乱的：
+  符号与 expert 一致 66%（L18_mean 70%），但中位数只有 −0.004 / −0.022 m/s，比它自己在 null 上的 p95（0.51 / 0.34 m/s）小两个数量级。
+- **light probe 读不出东西**：训练帧里 89% 是红灯（BehaviorAgent 停在红灯前的帧多），Light 的观测帧只来自 4 条路线，probe 在两个世界给出同样的「红」。这一行不下结论。
+- **`ridge ego` 6.5% 是一个泄漏，不是信号**：1 cm 的分叉门槛在 20 Hz 下允许最多约 0.2 m/s 的速度差，expert 开始刹车的最后几帧 ego 输入已经不完全相同
+  （非零 Δ 的中位数 0.05 m/s，最大 0.21 m/s）。只保留 ego 输入逐位相同的 3883 / 3948 帧重算（`flip_rates_ego_identical.csv`），
+  TFv6 waypoint 38.4% [27.4, 49.0]、目标速度 2.2%、`ridge_late` 两个都是 0%，结论不变。
+
+### 限定
+
+- expert 是 BehaviorAgent：不绕行、刹车晚，两个行人 family 和闯红灯 family 因此几乎没有 reactive 帧；换一个会提前减速的 expert 可能让它们进合并。
+- HardBreakRoute 在这 15 对里完全没有产生因素，对这个 family 什么也没测到。
+- Light 只有 15 对通过、9 个 reactive 帧，红绿灯这一格（survey §7「没人做过」的那一个）在 v0 里没有量够。
+- TFv6 的输入是它自己的三相机 + LiDAR + radar，我们的 ridge head 的输入是 Waymo 标定的三相机视频；两者看到的因素像素不同，差距里有一部分是传感器不同。
+- 生成中途的设计修订（x⁻ 从删 scenario 改为藏 hazard actor、HardBreakRoute 的 x⁻、Large Map 上的藏车高度和灯头框平移）全部发生在看到任何考生数字之前，
+  受影响的 run 都作废重跑，判据和指标定义从未改动；观测帧的 `k + 1 < t_div` 是 dry run（随机特征）里发现的定义修正。
