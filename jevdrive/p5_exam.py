@@ -322,7 +322,7 @@ def figs(run, out):
     # (1) directional flip rate per family and examinee, with route-bootstrap CIs
     ex = [e for e in COLORS if e in set(fl.examinee)]
     scopes = ["pooled"] + [f for f in val.family if f in set(fl.scope)]
-    fig, ax = plt.subplots(figsize=(ps.DOUBLE_COLUMN_IN, 2.5))
+    fig, ax = plt.subplots(figsize=(ps.DOUBLE_COLUMN_IN, 2.7))
     w = 0.8 / len(ex)
     for j, e in enumerate(ex):
         d = fl[fl.examinee == e].set_index("scope").reindex(scopes)
@@ -332,14 +332,21 @@ def figs(run, out):
         ax.errorbar(x[ok], d.flip_rate[ok], yerr=[d.flip_rate[ok] - d.flip_lo[ok], d.flip_hi[ok] - d.flip_rate[ok]],
                     fmt="none", ecolor="#333333", elinewidth=0.5, capsize=1.2)
     n = fl[fl.examinee == ex[0]].set_index("scope").reindex(scopes).n_reactive.fillna(0).astype(int)
+    for j, e in enumerate(ex):                                  # a zero bar is a result, not a missing one
+        d = fl[fl.examinee == e].set_index("scope").reindex(scopes)
+        x = np.arange(len(scopes)) + (j - (len(ex) - 1) / 2) * w
+        for xi, fr, k in zip(x, d.flip_rate, d.n_reactive.fillna(0)):
+            if k > 0 and fr == 0:
+                ax.plot(xi, 0.012, marker="_", color=COLORS[e], markersize=4, mew=1.5)
     ax.set_xticks(np.arange(len(scopes)))
-    ax.set_xticklabels([f"{SHORT.get(s, s)}\n$n$={k}" for s, k in zip(scopes, n)], rotation=0, fontsize=6.5)
+    ax.set_xticklabels([f"{SHORT.get(s, s)} ($n$={k})" for s, k in zip(scopes, n)], rotation=30, ha="right", fontsize=6.5)
     ax.set_ylabel("Directional flip rate")
-    ax.set_ylim(0, 1)
+    ax.set_ylim(0, 1.18)
+    ax.set_yticks(np.arange(0, 1.01, 0.2))
     ax.axhline(0.5, color=ps.BASELINE, linewidth=0.5, linestyle="--")
     ax.axhline(0.2, color=ps.BASELINE, linewidth=0.5, linestyle=":")
     ps.bars(ax)
-    ax.legend(ncol=len(ex), loc="upper right", fontsize=7)
+    ax.legend(ncol=len(ex), loc="upper center", fontsize=7)
     fig.tight_layout(pad=0.3)
     ps.save(fig, out / "p5-flip-rates")
     plt.close(fig)
@@ -353,6 +360,7 @@ def figs(run, out):
             ax.step(v, 1 - np.arange(len(v)) / len(v), where="post", color=c, label=f"{lab} ($n$={len(v)})")
     ax.axvline(tau, color="#333333", linewidth=0.6, linestyle="--")
     ax.set_xscale("symlog", linthresh=0.1)
+    ax.set_xlim(0, 10)
     ax.set_xlabel(r"$|\Delta_\mathrm{expert}|$ = |speed at 2 s, x$^+$ $-$ x$^-$| (m/s)")
     ax.set_ylabel("Fraction of frames $\\geq$ x")
     ax.legend(fontsize=7)
