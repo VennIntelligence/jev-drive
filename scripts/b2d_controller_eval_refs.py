@@ -89,7 +89,7 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
                 break
             at = float(rng.choice(candidates))
             index = int(np.searchsorted(s, at))
-            stops.append((index, float(rng.uniform(3., 6.))))
+            stops.append((index, float(rng.uniform(2.5, 4.))))
             candidates = candidates[np.abs(candidates - at) > 30.]
         t, station, speed = time_parameterize(s, vmax, sorted(stops), 1.5, 2.5, 1.)
     else:
@@ -112,14 +112,15 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--probes', type=Path, required=True,
-                   help='validator output with one nominal-spawn probe case per route')
+                   help='b2d_controller_eval_l1_v2.py --kind probe output')
     p.add_argument('--cruises', type=Path, required=True)
     p.add_argument('--out', type=Path, required=True)
     a = p.parse_args()
     cruises = json.loads(a.cruises.read_text())
     a.out.mkdir(parents=True, exist_ok=True)
     manifest = {'ramp': {}, 'profile': {}}
-    for trace in sorted(a.probes.glob('*/*/*/*/validation_trace.json')):
+    for done in sorted(a.probes.glob('route-*/done.json')):
+        trace = Path(json.loads(done.read_text())['p00/A']) / 'validation_trace.json'
         route = trace.parents[2].name
         rows = json.loads(trace.read_text())
         world = json.loads((trace.parent / 'route_reference.json').read_text())['world_xy']
