@@ -2,6 +2,7 @@
 
   python scripts/alpamayo_fetch.py weights            # nvidia/Alpamayo-1.5-10B, ~22 GB, sha256-checked
   python scripts/alpamayo_fetch.py processor          # Qwen/Qwen3-VL-2B-Instruct tokenizer/processor configs only
+  python scripts/alpamayo_fetch.py backbone-config    # nvidia/Cosmos-Reason2-8B configs + tokenizer (no weights)
 
 Clips are not fetched here: jevdrive.alpamayo.data streams single clips out of the dataset's zip chunks.
 """
@@ -15,7 +16,9 @@ REPOS = {
     # HF metadata + sha256 from hf-mirror; the shards themselves from ModelScope's nv-community copy, because the
     # mirror redirects LFS to the HF US CDN (~0.5 MB/s per stream from the box) and ModelScope is ~6 MB/s per stream
     "weights": ("nvidia/Alpamayo-1.5-10B", ("*",), "nv-community/Alpamayo-1.5-10B"),
-    "processor": ("Qwen/Qwen3-VL-2B-Instruct", ("*.json", "*.txt", "*.jinja", "merges.txt"), None),
+    "processor": ("Qwen/Qwen3-VL-2B-Instruct", ("*.json", "*.txt", "*.jinja"), None),
+    # config.vlm_name_or_path: the model is built from this repo's config + tokenizer; no backbone weights needed
+    "backbone-config": ("nvidia/Cosmos-Reason2-8B", ("*.json", "*.txt", "*.jinja"), None),
 }
 
 if __name__ == "__main__":
