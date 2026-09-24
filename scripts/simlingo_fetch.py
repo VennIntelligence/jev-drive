@@ -29,6 +29,10 @@ if __name__ == "__main__":
         hfdl.download(args.ckpt_url, blob, e["size"], e["lfs"]["oid"], args.streams, chunk=32 << 20, headers={})
         print(f"checkpoint {e['size'] / 1e6:.0f} MB in {time.monotonic() - t0:.0f} s (sha256 ok)", flush=True)
     snap = hfdl.snapshot(*SIMLINGO, streams=args.streams)
-    base = hfdl.snapshot(*INTERNVL, streams=8, ms_repo=INTERNVL[0] if args.internvl_from_modelscope else None,
-                         absent=("processor_config.json", "preprocessor_config.json", "chat_template.json"))
+    # Small files from hf-mirror (ModelScope's copy of .gitattributes differs and breaks the read); the 1.9 GB
+    # weights from ModelScope if asked, still checked against HF's sha256.
+    hfdl.snapshot(INTERNVL[0], ("*.json", "*.py", "*.txt", "*.md", ".gitattributes"), streams=1)
+    base = hfdl.snapshot(INTERNVL[0], ("*.safetensors",), streams=8,
+                         ms_repo=INTERNVL[0] if args.internvl_from_modelscope else None,
+                         absent=("processor_config.json", "chat_template.json"))
     print(f"simlingo  {snap}\n  ckpt    {snap}/simlingo/checkpoints/epoch=013.ckpt/pytorch_model.pt\ninternvl  {base}")
