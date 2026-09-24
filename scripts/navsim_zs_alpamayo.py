@@ -188,8 +188,15 @@ def cmd_run(a, log):
     entries = [e for k, e in enumerate(idx) if k % n == i]
     out = Z.root("alpamayo", a.split) / f"{a.frames}_{a.tag}_shard{i}of{n}.jsonl"
     done = set()
-    if out.exists():
-        done = {(r["token"], r["variant"]) for r in map(json.loads, out.read_text().splitlines())}
+    if out.exists():   # resume; a line cut by a kill is dropped (and the file rewritten without it)
+        good = []
+        for line in out.read_text().splitlines():
+            try:
+                good.append(json.loads(line))
+            except json.JSONDecodeError:
+                log.info(f"dropping a truncated line in {out.name}")
+        out.write_text("".join(json.dumps(r) + "\n" for r in good))
+        done = {(r["token"], r["variant"]) for r in good}
     variants = a.variants.split(",")
     todo = [e for e in entries if any((e["token"], v) not in done for v in variants)]
     if a.limit:
