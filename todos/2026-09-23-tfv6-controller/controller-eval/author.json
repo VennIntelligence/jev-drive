@@ -1,0 +1,7 @@
+{
+  "adapter": {
+    "rear_axle_offset_m": -1.388633220199954,
+    "pose_lateral_coefficient_s2_per_m": 0.010659832,
+    "route_stop_deceleration": 2.0
+  }
+}

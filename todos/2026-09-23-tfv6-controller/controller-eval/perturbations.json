@@ -1,0 +1,33 @@
+{
+  "p00": null,
+  "p01": {
+    "gnss_noise_seed": 101,
+    "imu_noise_seed": 201,
+    "spawn_lateral_m": -0.077,
+    "spawn_yaw_deg": -0.621
+  },
+  "p02": {
+    "gnss_noise_seed": 102,
+    "imu_noise_seed": 202,
+    "spawn_lateral_m": 0.143,
+    "spawn_yaw_deg": -0.763
+  },
+  "p03": {
+    "gnss_noise_seed": 103,
+    "imu_noise_seed": 203,
+    "spawn_lateral_m": -0.003,
+    "spawn_yaw_deg": -1.418
+  },
+  "p04": {
+    "gnss_noise_seed": 104,
+    "imu_noise_seed": 204,
+    "spawn_lateral_m": 0.072,
+    "spawn_yaw_deg": 0.056
+  },
+  "p05": {
+    "gnss_noise_seed": 105,
+    "imu_noise_seed": 205,
+    "spawn_lateral_m": 0.152,
+    "spawn_yaw_deg": 0.047
+  }
+}
