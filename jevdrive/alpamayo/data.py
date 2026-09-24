@@ -15,12 +15,16 @@ from pathlib import Path
 import requests
 
 from jevdrive.common import data_dir
-from jevdrive.hfdl import auth, hf_url, repo_info
+from jevdrive.hfdl import auth, hf_url, repo_info, snapshot
 
 REPO = "nvidia/PhysicalAI-Autonomous-Vehicles"
 CAMERAS = ("camera_cross_left_120fov", "camera_front_wide_120fov", "camera_cross_right_120fov",
            "camera_front_tele_30fov")  # the 4 cameras the Alpamayo 1.5 loader uses by default
 FEATURES = ("egomotion",) + CAMERAS
+# read by PhysicalAIAVDatasetInterface.__init__; prefetched with parallel streams because hf_hub_download of these
+# Xet-backed files through hf-mirror hung at 0 bytes on the box
+METADATA = ("features.csv", "clip_index.parquet", "metadata/feature_presence.parquet",
+            "metadata/data_collection.parquet")
 
 
 def cache_dir() -> Path:
@@ -84,6 +88,7 @@ def fetch_clips(clip_ids: list[str], features=FEATURES, streams: int = 8, log=pr
     Returns {"revision", "bytes", "seconds"}. Already-present members are skipped."""
     import physical_ai_av
     rev = repo_info(REPO, dataset=True)["sha"]
+    snapshot(REPO, METADATA, dataset=True, cache_dir=cache_dir(), log=log)
     avdi = physical_ai_av.PhysicalAIAVDatasetInterface(revision=rev, cache_dir=cache_dir(),
                                                        confirm_download_threshold_gb=1.0)
     snap = cache_dir() / f"datasets--{REPO.replace('/', '--')}" / "snapshots" / rev

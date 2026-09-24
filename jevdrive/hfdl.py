@@ -120,7 +120,7 @@ def download(url: str, dst: Path, size: int | None = None, sha256: str | None = 
 
 
 def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = False, streams: int = 16,
-             ms_repo: str | None = None, log=print) -> Path:
+             ms_repo: str | None = None, cache_dir: Path | None = None, log=print) -> Path:
     """Download matching files of `repo` into the standard HF hub cache layout (blobs + snapshots/<sha>),
     sha256-checking every LFS file against the HF LFS oid, and return the snapshot dir, so that offline
     `from_pretrained(repo)` works. With `ms_repo`, files come from that ModelScope copy instead (for speed, or
@@ -129,9 +129,11 @@ def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = Fals
     from huggingface_hub.constants import HF_HUB_CACHE
     info = repo_info(repo, dataset)
     sha = info["sha"]
-    root = Path(HF_HUB_CACHE) / f"{'datasets' if dataset else 'models'}--{repo.replace('/', '--')}"
+    root = Path(cache_dir or HF_HUB_CACHE) / f"{'datasets' if dataset else 'models'}--{repo.replace('/', '--')}"
     snap = root / "snapshots" / sha
-    files = [e for e in tree(repo, dataset=dataset, recursive=True, rev=sha)
+    # list only the directories the patterns name (non-recursive), so a huge dataset repo is cheap to address
+    dirs = sorted({os.path.dirname(p) for p in patterns})
+    files = [e for d in dirs for e in tree(repo, d, dataset=dataset, rev=sha)
              if any(fnmatch(e["path"], p) for p in patterns)]
     total, t0 = sum(e["size"] for e in files), time.monotonic()
     for e in sorted(files, key=lambda e: e["size"]):
