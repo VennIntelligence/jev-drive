@@ -243,7 +243,9 @@ def pair_stats(plus: Path, other: Path, family: str, window_s: float = 15.0) -> 
     if k_trig is None:
         out["valid"] = "no_trigger"
         return out
-    out["valid"] = "ok" if k_div >= k_trig else "background_drift"
+    # README amendment 00:40: TFv6's closed loop is not bit-reproducible, so t_div is descriptive only
+    out["valid"] = "ok"
+    out["early_div"] = bool(k_div < k_trig)
     k_end = min(k_trig + int(window_s / TICK), k_last, *( [k_col] if k_col is not None else []))
     m = a[["v"]].join(b[["v"]], rsuffix="_o", how="inner").loc[k_trig:k_end]
     dv = (m.v - m.v_o).to_numpy()
@@ -259,9 +261,10 @@ def pair_stats(plus: Path, other: Path, family: str, window_s: float = 15.0) -> 
         out["ctrl_by_rule"] = bool(j.pre.loc[k_c] == j.pre_o.loc[k_c])
     rule_cols = a.loc[k_trig:k_trig + int(20 / TICK)]
     out["rule_ticks_plus"] = int(rule_cols["rule"].notna().sum()) if "rule" in rule_cols else 0
-    # on-policy open-loop readouts: identical ego, only the rendered world differs
-    pre = a.loc[k_trig:k_div - 1][["ts", "ts_exp", "wp_v2"]].join(
-        b.loc[k_trig:k_div - 1][["ts", "ts_exp", "wp_v2"]], rsuffix="_o", how="inner")
+    # on-policy open-loop readouts: (nearly) identical ego, only the rendered world differs
+    jj = a[["x", "y", "v", "ts", "ts_exp", "wp_v2"]].join(b[["x", "y", "v", "ts", "ts_exp", "wp_v2"]], rsuffix="_o",
+                                                          how="inner").loc[k_trig:]
+    pre = jj[(np.hypot(jj.x - jj.x_o, jj.y - jj.y_o) < 0.1) & ((jj.v - jj.v_o).abs() < 0.1)]
     for c in ("ts", "ts_exp", "wp_v2"):
         d = (pre[c] - pre[c + "_o"]).to_numpy(dtype=float)
         out["pre_n"] = len(d)

@@ -88,7 +88,7 @@ modality 赋值。agent 只做记录：每 tick 两个通道的控制量（作�
 ### 每对（每臂）的量
 
 - t_trig：scenario 触发时刻（blackboard `ScenarioRouteNumber0`）。
-- t_div：x⁺ 与 x⁻ 的 ego 位置差 ≥ 1 cm 或航向差 ≥ 0.1° 的第一个 tick（与 P5 相同）。t_div < t_trig 的对记 `background_drift` 丢掉。
+- t_div：x⁺ 与 x⁻ 的 ego 位置差 ≥ 1 cm 或航向差 ≥ 0.1° 的第一个 tick（与 P5 相同）。~~t_div < t_trig 的对记 `background_drift` 丢掉。~~（见下面的修订）
 - **碰撞**：从 leaderboard 的 criterion event（带 frame）里取 x⁺ 与 hazard actor（`hidden.json` 里的 id）的碰撞；
   HardBreakRoute 没有 hazard actor，取触发后与任何车辆的碰撞。t_col 是 x⁺ 里第一次这种碰撞。
 - **行为反应统计量** S = min over t ∈ W of [v⁺(t) − v_other(t)]，W = [t_trig, min(t_trig + 15 s, t_col, 两个 run 较早结束者)]，
@@ -104,6 +104,16 @@ modality 赋值。agent 只做记录：每 tick 两个通道的控制量（作�
   那个 tick，后处理前的控制是否两侧相同（相同 = 这次分叉是规则造成的）。
 - **开环读数（描述）**：t_trig ≤ t < t_div 的帧上 ego 两侧逐 tick 相同、只有图像不同，报两个通道的 Δ（target speed 标量、
   分布期望、waypoint 2 s 速度）的分布，作为 TFv6 自己开车时的「on-policy P5」。
+
+**修订（2026-09-25 00:40，smoke 之后、任何计分 run 之前；判据表一字未改）**：P5 v0 里 ego 由确定性的 BehaviorAgent 驾驶，两个世界在因素出现前逐 tick 相同；
+TFv6 自己开车时不是这样。smoke 的 27515（A1）里，x⁺ 与 x⁻ 在触发（2.45 s）之前的 1.6 s 就分叉到 1 cm：ego 输入逐位相同的第 2 个 tick，
+waypoint 读数已经相差 0.005 m/s，此后 target speed 在第 7 个 tick 差一个量化档，第 25 个 tick 两侧执行的油门不同。
+藏起来的行人两侧都在地下 100 m 以下，传感器看不到，所以这是 TFv6 闭环本身的数值不确定性（LiDAR 随机丢点或 GPU 非确定性运算，未区分），
+不是因素。按原规则「t_div < t_trig 的对记 background_drift 丢掉」会丢光所有对，所以改为：
+(i) **不按 t_div 丢对**，全部对有效，t_div 只作描述；反应统计量 S 与 τ_arm（来自天气 null）不变，它们本来就把这种噪声算进了地板；
+(ii) 加一个更纯的噪声参照：A1 在 T3 里对 209 条的重跑包含这 45 条路线，x⁺(rep0) 对 x⁺(rep1) 的 S_rep 是「什么都不变、再开一次」的差，
+报 A1 的 S_rep 分布和用它定的 τ 作为敏感性分析（主判据仍用天气 null）；
+(iii) 「开环读数」改为在两侧 ego 位置差 < 0.1 m 且速度差 < 0.1 m/s 的帧上报两个通道的 Δ，仍只作描述。
 
 所有比例按路线 bootstrap（每条路线一对，重抽 10 000 次）给 95% CI；臂间对比是同一批路线上的配对差，同样按路线重抽。
 按 family 分开报，合并按对等权。
