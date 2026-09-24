@@ -50,12 +50,13 @@ def rigs():
 # ---------------------------------------------------------------- nuPlan cameras
 
 def cams_of(cam_dict: dict, sensor_root) -> dict:
-    """OpenScene frame["cams"] (or a synthetic scene's camera_dict) -> {cam: path, R, t, K, D}."""
-    return {c: {"path": str(Path(sensor_root) / cam_dict[c]["data_path"]),
-                "R": np.asarray(cam_dict[c]["sensor2lidar_rotation"], np.float32),
-                "t": np.asarray(cam_dict[c]["sensor2lidar_translation"], np.float32),
-                "K": np.asarray(cam_dict[c]["cam_intrinsic"], np.float32),
-                "D": np.asarray(cam_dict[c]["distortion"], np.float32)} for c in NUPLAN_CAMS}
+    """OpenScene frame["cams"] (or a synthetic scene's camera_dict, lower-case keys) -> {cam: path, R, t, K, D}."""
+    cd = {k.upper(): v for k, v in cam_dict.items()}
+    return {c: {"path": str(Path(sensor_root) / cd[c]["data_path"]),
+                "R": np.asarray(cd[c]["sensor2lidar_rotation"], np.float32),
+                "t": np.asarray(cd[c]["sensor2lidar_translation"], np.float32),
+                "K": np.asarray(cd[c]["cam_intrinsic"], np.float32),
+                "D": np.asarray(cd[c]["distortion"], np.float32)} for c in NUPLAN_CAMS}
 
 
 def cam_to_ego(cam) -> np.ndarray:
