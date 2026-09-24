@@ -1,0 +1,5 @@
+direction,arm,lam,sel_ade,d
+0,ridge ego,3.1622776601683795e-05,1.6805123686790466,
+0,A ridge_late pooled (qwen4b L18),0.31622776601683794,1.6104572713375092,2560.0
+0,op-cinque temporal (train fit),0.01,1.158400982618332,512.0
+0,op-lebowski temporal (train fit),0.01,1.1873096227645874,512.0

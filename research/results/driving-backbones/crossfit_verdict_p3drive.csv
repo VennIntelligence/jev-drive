@@ -1,0 +1,5 @@
+model,arm,verdict,better_than A ridge_late pooled (qwen4b L18),better_than d2 qwenvid L18_last,worse_than A ridge_late pooled (qwen4b L18),worse_than d2 qwenvid L18_last
+openpilot small,op-small temporal,better,True,True,False,False
+openpilot Cinque,op-cinque temporal,better,True,True,False,False
+openpilot Lebowski,op-lebowski temporal,better,True,True,False,False
+Alpamayo 1.5,alp L18_mean,mixed,True,True,False,True

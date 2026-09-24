@@ -16,7 +16,7 @@
 | P0 | train split 复核 3d / L0 | 半 val 的结论在 10 倍数据下站不站得住 | **已测**（分类头的 RFS 行在跑） |
 | P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，口径已定（第 22 条）** |
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
-| P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做） |
+| P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做）；(e) 驾驶专用 backbone（2026-09-25，第 40 条）：openpilot `temporal` 比所有通用 backbone 好一个量级，train 训后 pre-onset −0.29 |
 | P4 | CARLA 特征差距与词表覆盖 | Waymo 训的 head 在 CARLA 上能不能用 | **已测，按预登记判据「不可用」**：去均值后 domain AUC 仍 1.000（null 0.48），pre-onset 词表 uncoverable +35 pp，head 匹配 ADE 比值 > 2；只有「在不在动」的 probe 迁移（0.87–0.89） |
 | P5 | 开环配对考试 v0（CARLA 内训、CARLA 内考） | 教材作用在 head、表征还是数据；VLM 那一列已在 Waymo 上关闭（第 25 条） | **已测（第 32 条，待定）**：考卷成立（96% 的对 ego 逐 tick 相同到因素可见之后，503 个 expert 反应帧）；TFv6 目标速度翻转 2.0%（天气噪声地板）、waypoint 39.4%；我们的 `ridge_late` 0%，hazard probe 0.635（representation，边界上；行人 / cut-in 是 readout） |
 
@@ -227,6 +227,17 @@ RFS 八个里七个更差（最低 −0.151）。实际执行的非 embedding �
 与 Qwen L18 的 late fusion（2.1 版跳过：hub 上只有第三方转传，按第 12 条的出处规矩不用），回答方向不一致是不是单相机和样本量造成的；(b) H3 DiT 和 (c) Wan2.2-5B 卡在下载
 （3–5 MB/s，71 GB 和 23 GB），抽取代码已写好，噪声水平扫 σ ∈ {0.2, 0.8} 两端。
 
+### (e) 驾驶专用 backbone：openpilot 的时序特征比所有通用 backbone 都好（2026-09-25，第 40 条）
+
+同一子集、同一 ridge head、同一 judge，把 openpilot（small / Cinque / Lebowski）的 `temporal` token 和 Alpamayo 1.5 的 prefill 特征接进阶梯。
+cross-fit 读数上 Cinque 的全部帧 ΔADE −0.32 m、RFS +0.29（通用 backbone −0.02 到 −0.04 m、RFS ≈ 0），train 训后 pre-onset −0.29 [−0.42, −0.17]；
+Alpamayo 中层特征只在全部帧上略好、RFS 上更差，深层 `L27_last` 是第一个两方向过门槛的 arm（次要 tap）。
+全部表、成本和等价性见 [todos/2026-09-24-driving-backbones/README.md](../../todos/2026-09-24-driving-backbones/README.md)。
+
+![driving backbones](../figs/driving-backbones-crossfit.png)
+
+看什么：(b)(c) 里 openpilot 的点离开灰色的通用 backbone 一个量级；(c) 的最下两行是 openpilot 原生 plan，冻结特征 + ridge 只拿到它一半的 RFS 增益。
+
 ## 第 10 档到底是什么（2026-09-22 独立复核）
 
 第 20 / 22 条的那句「顶档的 logged future 自己就不被 rater 认可」被用户质疑，做了一次不复用原函数的独立复核：
@@ -358,6 +369,7 @@ proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 
 - readout：不换。pooled ridge 是这批特征上最好的读出，非线性 head 在这个数据量上只有损失。按第 22 条口径重报后差距更大。
 - 表征：时间要长进 backbone 里，不能拼在读出端；做到这一点的是 **Qwen 自己的视频路径**（d″，两方向 CI 不跨零，DiD 归零），不是 JEPA（train 训后缩到 −0.03）也不是生成式 DiT（Wan 为零）。
   放大同族 backbone 没有用（32B 八个 tap 全在噪声带）。Stage B 的表征选择：Qwen3-VL-4B + 原生视频输入，再往上是给它更长的 clip。
+  *2026-09-25 修正*：上一句原来是结论，现在被 P3(e) 推翻——在驾驶视频上训过的时序表征（openpilot `temporal`）在同一 head、同一 judge 下全部帧 ΔADE −0.32 m、RFS +0.29，train 训后 pre-onset −0.29，远超 Qwen 原生视频（−0.05 / −0.02 / ≈0）；Stage B 的表征候选改为 openpilot `temporal`，Qwen 视频路径降为对照（第 40 条，待定）。
 - 评测：pre-onset 的 power 被 479 个 val sequence 锁死，train 训多十倍数据不改半宽（d‴）。要判 0.05 m 以下的效应得改评测设计，不是加数据。
 - 反应通道（第 25 条）：「什么时候反应」真实数据学得会，「怎么反应」学不会，配对监督的靶子是后者。
 - 仿真配对（P4）：Waymo 训的 head 不能拿 CARLA 帧来考，P5 已改成 CARLA 内训考（下面的 P5 节）：考卷成立，公开 planner 在 waypoint 上过四成，我们的 CARLA 内薄 head 翻转率为 0。

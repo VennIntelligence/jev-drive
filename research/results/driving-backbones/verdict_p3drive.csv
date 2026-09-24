@@ -1,0 +1,29 @@
+arm,meets_both_directions
+A ridge_late pooled (qwen4b L18),False
+alp L09_last,False
+alp L09_mean,False
+alp L18_last,False
+alp L18_mean,False
+alp L27_last,True
+alp L27_mean,False
+alp L36_last,False
+alp L36_mean,False
+alp vis_mean,False
+alp vit_mean,False
+d vjepa2 mean,False
+d2 qwenvid L18_last,False
+d2 qwenvid L18_mean,False
+fusion alp L18_mean + A,False
+fusion op-cinque temporal + A,False
+op-cinque hidden,False
+op-cinque plan,False
+op-cinque temporal,False
+op-cinque vision,False
+op-lebowski hidden,False
+op-lebowski plan,False
+op-lebowski temporal,False
+op-lebowski vision,False
+op-small hidden,False
+op-small plan,False
+op-small temporal,False
+op-small vision,False

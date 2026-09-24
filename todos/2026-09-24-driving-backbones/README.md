@@ -1,6 +1,6 @@
 # 驾驶专用 backbone 进 P3 阶梯：openpilot 与 Alpamayo 1.5 的冻结特征 + 我们的 ridge head
 
-状态: running（预登记 2026-09-24，在抽任何特征之前提交）
+状态: done（预登记 2026-09-24 22:40 提交在任何抽取之前；结果 2026-09-25 01:55）
 主题: ../../research/prediag-2026-09/README.md（P3 backbone 阶梯）、../../research/frozen-vlm-planner.md
 上游: [zero-shot WOD 考试](../2026-09-24-zeroshot-exam/wod-e2e.md)（第 34 条）、[P3 阶梯计划](../2026-09-22-p3-backbone-ladder.md)（第 24 条）
 
@@ -139,12 +139,120 @@ openpilot 的流式抽取在 train 上约 1.5 h，可以做；Alpamayo 在 52 �
 ## 步骤
 
 - [x] 预登记（本文件），提交
-- [ ] openpilot：tap ONNX、流式抽取器、等价性检查、实测成本、全量
-- [ ] Alpamayo：前三路渲染器、prefill 特征抽取器、等价性检查、实测成本、全量（两张卡）
-- [ ] `p3` 一次跑完全部行 + `rejudge`；cross-fit 合并读数、配对比较；原生 plan 参照行
-- [ ] 附带量 1、2
-- [ ] 结果写回本文件、decisions 新条目、图
+- [x] openpilot：tap ONNX、流式抽取器、等价性检查、实测成本、全量
+- [x] Alpamayo：前三路渲染器、prefill 特征抽取器、等价性检查、实测成本、全量（两张卡）
+- [x] `p3` 一次跑完全部行 + `rejudge`；cross-fit 合并读数、配对比较；原生 plan 参照行；历史 ≥ 4.8 s 的敏感性
+- [x] 附带量 1、2
+- [x] 预登记的后续：openpilot 主 tap 判「更好」，所以跑了 train 训、完整 val 评（Cinque、Lebowski）
+- [x] 结果写回本文件、decisions 第 40 条、图
 
 ## 结果
 
-（跑完再填）
+run（box）：阶梯 `$DATA_DIR/runs/drive_backbones/ladder-ladder_hist/20260925-004234/`（`p3drive` 主表 + `p3drive_hist` 敏感性），
+train 训 `$DATA_DIR/runs/drive_backbones/ladder_train/20260925-014914/`；特征在 `$DATA_DIR/processed/waymo_e2e/features/{op_small,op_cinque,op_lebowski}_p3`、
+`alpamayo15_p3`、`op_{cinque,lebowski}_p3_trainval`。小结果文件在 [research/results/driving-backbones/](../../research/results/driving-backbones/)。
+主表 19 663 帧（V-JEPA 窗口的交集，和预登记一致），cross-fit 合并后 pre-onset 第 1–9 档 1265 帧、全部第 1–9 档 17 695 帧、rater 478 帧（1 帧没有完整 V-JEPA 窗口）。
+
+### 主表：cross-fit 合并读数，Δ = arm − `ridge ego`
+
+ADE 单位 m，负为好；RFS 为 frame mean，正为好；方括号是按 sequence 重抽的 95% CI。
+
+| arm | (i) pre-onset 第 1–9 档 | (ii) 全部帧第 1–9 档 | (iii) RFS（478 rater 帧） | 侧栏：直行 |
+|:--|:--|:--|:--|--:|
+| A Qwen3-VL-4B `L18_mean` | −0.030 [−0.064, +0.006] | −0.044 [−0.063, −0.028] | −0.020 [−0.083, +0.045] | −0.070 |
+| (d″) Qwen 原生视频 `L18_last` | −0.049 [−0.073, −0.028] | −0.021 [−0.032, −0.011] | +0.005 [−0.064, +0.075] | −0.028 |
+| (d) V-JEPA 2 ViT-L | −0.049 [−0.095, +0.001] | −0.030 [−0.048, −0.013] | +0.012 [−0.102, +0.113] | −0.051 |
+| openpilot small `temporal` | −0.055 [−0.141, +0.033] | −0.201 [−0.234, −0.172] | −0.060 [−0.229, +0.093] | −0.280 |
+| **openpilot Cinque `temporal`** | **−0.141 [−0.247, −0.027]** | **−0.322 [−0.356, −0.289]** | **+0.288 [+0.122, +0.446]** | −0.380 |
+| **openpilot Lebowski `temporal`** | −0.109 [−0.232, +0.015] | **−0.316 [−0.353, −0.281]** | **+0.260 [+0.092, +0.415]** | −0.381 |
+| Alpamayo 1.5 `L18_mean` | −0.003 [−0.093, +0.096] | −0.106 [−0.136, −0.078] | −0.123 [−0.271, +0.009] | −0.155 |
+| 次要：Alpamayo `L27_last` | −0.163 [−0.254, −0.078] | −0.275 [−0.314, −0.238] | −0.076 [−0.246, +0.088] | −0.357 |
+| 次要：Alpamayo `L36_last` | −0.096 [−0.175, −0.018] | −0.222 [−0.256, −0.189] | −0.078 [−0.245, +0.076] | −0.296 |
+| 次要：Cinque `plan`（原生 plan 当特征） | −0.080 [−0.206, +0.047] | −0.295 [−0.328, −0.259] | +0.278 [+0.097, +0.452] | −0.360 |
+| fusion Cinque `temporal` ‖ A | −0.100 [−0.207, +0.015] | −0.248 [−0.282, −0.216] | +0.144 [−0.024, +0.296] | −0.296 |
+| 参照：Cinque 原生 plan（不拟合） | +0.612 | +0.412 | **+0.833 [+0.607, +1.035]** | +0.618 |
+| 参照：Lebowski 原生 plan（不拟合） | +0.892 | +0.814 | +0.708 [+0.482, +0.916] | +1.170 |
+
+全部 28 个 arm 的表（含 vision / hidden tap、Alpamayo 全部 10 个 array）在 `crossfit_vs_ego_p3drive.csv`。
+
+![crossfit](../../research/figs/driving-backbones-crossfit.png)
+
+图：三个预登记读数上各 arm 相对 `ridge ego` 的 cross-fit Δ 和 95% sequence bootstrap CI；灰色是阶梯里已有的通用 backbone，彩色是驾驶模型的主 tap。
+看两件事：(b) 里 openpilot 的三个点和 Alpamayo 离开灰色一整个量级（−0.1 到 −0.32 m 对 −0.02 到 −0.04 m）；(c) 里只有 openpilot 两个大模型的 ridge head 在 RFS 上离开 0，
+但仍然明显低于它们自己的原生 plan（最下两行）。
+
+### 判定（预登记规则，主 tap 对两个通用参照逐帧配对）
+
+| 模型（主 tap） | vs A：(i) / (ii) / (iii) | vs (d″)：(i) / (ii) / (iii) | 判定 |
+|:--|:--|:--|:--|
+| openpilot Cinque `temporal` | −0.111 [−0.229, +0.005] / **−0.278** [−0.307, −0.247] / **+0.308** [+0.135, +0.465] | −0.092 [−0.200, +0.020] / **−0.301** / **+0.283** [+0.124, +0.440] | **更好** |
+| openpilot Lebowski `temporal` | −0.079 / **−0.272** / **+0.280** [+0.111, +0.448] | −0.060 / **−0.295** / **+0.255** [+0.100, +0.408] | **更好** |
+| openpilot small `temporal` | −0.025 / **−0.157** / −0.040 | −0.006 / **−0.180** / −0.065 | **更好**（只靠 (ii)） |
+| Alpamayo 1.5 `L18_mean` | +0.027 / **−0.062** / −0.104 [−0.252, +0.028] | +0.047 / **−0.084** / **−0.128** [−0.253, −0.012] | **不同，不是更好**：全部帧上更好，RFS 上比 (d″) 差 |
+
+第 20 条的两方向门槛（pre-onset Δ ≤ −0.05 且 CI 不跨零，逐方向）：openpilot 三个 `temporal` 在方向 1 都过（−0.150 / −0.228 / −0.164），
+方向 0 都不过（−0.05 附近、CI 半宽 0.12–0.16）。**全阶梯第一个两个方向都过门槛的是 Alpamayo `L27_last`**：−0.153 [−0.287, −0.024] / −0.172 [−0.299, −0.048]。
+它是 10 个次要 array 之一，按预登记只描述、不判定，多重比较下要复现才能当真。
+
+**历史 ≥ 4.8 s 的敏感性**（14 063 帧，arm A 同样限制重算）：Cinque `temporal` 的 pre-onset Δ 从 −0.141 变成 **−0.196 [−0.331, −0.073]**，
+Lebowski −0.215 [−0.358, −0.090]，small −0.143 [−0.241, −0.047]，A −0.005、(d″) −0.024；Cinque 对 A 和 (d″) 在 (i) 上的配对差也变成 CI 不跨零（−0.191 / −0.173）。
+feature 队列填满之后，openpilot 在 pre-onset 上的优势变大、变得测得出来；Alpamayo 不变（−0.010）。
+
+**DiD 是正的**（openpilot 三个 +0.16 到 +0.30，Alpamayo `L18_mean` +0.13 / +0.18）：驾驶特征的增量主要在直行帧（纵向：前车、停车、起步），
+pre-onset 上的增量是真的但比直行上小。第 10 档对 rater_best 的 ADE：Cinque −1.20 / −1.16 m、Lebowski −1.15 / −0.99 m（A −0.05 / −0.10，(d″) −0.19 / −0.22），
+也就是多模态的顶档里它们朝 rater 偏好的那一支挪得最多，和 RFS 的增益一致。
+
+### 预登记的后续：train 训、完整 val 评（P3 train-split 协议）
+
+415 663 帧训、106 360 帧评，单方向，pre-onset 第 1–9 档 n = 1291，RFS n = 479（全部 val rater 帧）。
+
+| arm | pre-onset Δ（第 1–9 档） | 全部帧第 1–9 档 | RFS Δ | RFS（cluster mean） | 第 10 档 vs rater_best |
+|:--|:--|:--|:--|--:|--:|
+| A Qwen3-VL-4B `L18_mean` | −0.005 [−0.055, +0.047] | −0.041 | −0.104 [−0.194, −0.015] | 6.942 | −0.133 |
+| **openpilot Cinque `temporal`** | **−0.294 [−0.424, −0.168]** | **−0.318** | **+0.403 [+0.232, +0.582]** | 7.449 | −1.554 |
+| **openpilot Lebowski `temporal`** | **−0.318 [−0.449, −0.197]** | **−0.312** | **+0.417 [+0.243, +0.594]** | **7.522** | −1.326 |
+| `ridge ego`（base） | 0 | 0 | 0 | 7.065 | 0 |
+
+train 训之后 openpilot 的 pre-onset 增益**变大**（半 val −0.14 → −0.29），CI 离 −0.05 门槛很远，是这个项目第一次在 pre-onset 上测到远超门槛的表征效应；
+V-JEPA 2 在同一协议下是 −0.030 [−0.104, +0.041]（第 24 条 d‴）。RFS 7.45–7.52 超过我们此前最好的 `cls ego` 7.31（第 34 条，同 479 帧），
+但仍低于 Cinque 原生 plan 的 8.005：**冻结特征 + ridge 拿到了原生 plan 相对 `ridge ego` 增益（+0.94）的约一半**。
+
+### 附带量
+
+1. **侧面相机缺口对 Alpamayo 特征**（479 rater 帧，7 路 vs 只用前三路）：image-token 均值类 array 余弦中位数 ≥ 0.9999，但差值约等于帧间差异的 0.5–0.8 倍
+   （均值池化的帧间差异本身就小）；last-token 类余弦 0.989–0.9999，差值是帧间差异的 0.15–0.27 倍。`alp_rater7.json`。
+2. **侧面相机缺口对 Alpamayo 自己开车**（K = 6、no-nav、seed 42，同考试）：RFS cluster mean 7.879（7 路）→ **7.860（前三路）**，
+   配对 frame-mean Δ −0.019 [−0.060, +0.024]。**缺侧面视野对它的驾驶几乎没有影响**，所以 Alpamayo 特征在 ridge 下不占优不能归到输入残缺上。
+
+### 成本（优化前 / 后）与等价性
+
+| 项 | 优化前 | 优化后 | 瓶颈与做法 |
+|:--|:--|:--|:--|
+| openpilot 三模型，子集 | 考试协议逐目标暖机 10 s：20 237 × 约 101 帧 ≈ 204 万帧步，按实测 11 ms/帧·进程约 3.1 h（两进程） | 按 sequence 流式：102 623 帧，两卡各一进程 **24 min** | 暖机重复计算；流式每帧只走一次。GPU 是 batch-1 的 launch 开销，受同卡其它进程时间片影响（9 → 25 ms/帧） |
+| openpilot，train+val（后续） | — | 522 023 帧，Cinque + Lebowski，约 70 min | 首轮 6 个进程里 4 个被 OOM 杀掉：render worker 在 TensorRT session 之后 fork，每个继承约 27 GB；改成先 fork 再建 session |
+| Alpamayo prefill，一个 batch 8 | 原生 per-image SDPA 视觉注意力：视觉 180–250 ms/帧 | 同尺寸图批量 SDPA：视觉 98 ms/帧，整次 forward 296 ms/帧（空闲时实测） | 原实现每个 block 对 128 张图逐张调 SDPA、每次 host 同步 |
+| Alpamayo 端到端 | 两进程（每卡一个）约 0.6 s/帧·进程，全量估 1.7 h | 四进程（每卡两个）0.87–1.0 s/帧·进程，合计约 0.24 s/帧，**19 941 帧 87 min** | 真正的瓶颈是 CPU 上的 processor（16 张 1080p 缩放，约 0.3 s/目标，GIL），多进程比多线程好；渲染改成只采样有像素的位置 |
+
+等价性（全量之前测）：
+- openpilot：未改的 ONNX 在我们的管线里和考试逐位一致（plan 最大差 0）；加 tap 输出的 engine 与原 engine 的 plan 最大差 small 0.015、Cinque 0.125、Lebowski 0.25 m（10 s、100 m 量级的远端点，与 CUDA EP 对 TRT 的差同量级）。
+  流式与考试协议：662 个共同帧上原生轨迹的 ADE 中位数 small 0.001、Cinque 0.011、Lebowski 0.009 m（最大 0.12 m）；40 帧上四个 tap 的余弦 ≥ 0.99999。**流式与 10 s 暖机在数值上等价**，更长的历史不改变输出。
+- Alpamayo：缓存采样网格 + 稀疏采样的渲染与考试渲染器**逐像素相同**（8 帧，max |diff| = 0）；hook 池化与 `output_hidden_states` 逐位相同；
+  批量视觉注意力对原生 per-image 路径的相对 L2 差 ≤ 1.4%（last-token），batch 8 对单样本 ≤ 1.4%，都是 bf16 kernel 差异的量级。
+
+### 偏离记录
+
+1. rater 帧读数 n = 478，不是 479：主表按预登记取 V-JEPA 窗口的交集，有一个 rater 帧没有完整 4 帧 stride-2 窗口。train 训那一行是 479。
+2. train 训的后续只跑了 Cinque 和 Lebowski（预登记写的是「openpilot」），small 在子集上只在 (ii) 上更好，省掉以节省共享 box 的时间。
+3. Alpamayo 从每卡一个进程改成每卡两个进程（瓶颈在 CPU 预处理），已完成的 2 个 chunk 删掉重跑；不影响特征定义。
+4. 等价性检查的样本比预登记小：Alpamayo 用 8 帧（写的是 16），openpilot `temporal` 余弦用 40 帧（写的是 100）；前三路 cross 视图的实测覆盖率没有量，附带量 2 直接量了它对驾驶的影响。
+5. 预登记表里「更好」的第一行要求对两个参照都有读数偏向驾驶特征；openpilot small 只满足 (ii)，按字面仍判「更好」，这里单独标出。
+
+### 结论
+
+**openpilot 的 temporal 特征比阶梯里所有通用 backbone 都好，Alpamayo 的 VLM 特征不是。**
+在同一个子集、同一个 ridge head、同一个 judge 下，Cinque / Lebowski 的 512 维 `temporal` token 把全部帧 ADE 比 `ridge ego` 压低 0.32 m（通用 backbone 0.02–0.04 m），
+RFS 提高 0.26–0.29（通用 backbone 都在 0 附近），train 训后 pre-onset 也降 0.29–0.32 m、RFS +0.40–0.42。
+Alpamayo 1.5 的中层 image-token 特征（主 tap）只在全部帧 ADE 上比通用 backbone 好 0.06–0.08 m，RFS 上反而更差；它更深的 last-token（`L27_last`、`L36_last`）明显更好，
+`L27_last` 是全阶梯第一个两方向都过门槛的 arm，但它是次要 tap。
+限定：openpilot 的增益大头在直行帧（DiD 为正），它是一个在自己的视频上学了纵向动力学的时序模型，所以这一行说的是「驾驶视频上训出来的时序表征」而不单是「驾驶领域」；
+它的原生 plan 仍比 ridge 读出高 0.5 RFS，读出层还有空间。

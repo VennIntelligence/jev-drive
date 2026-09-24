@@ -1,0 +1,4 @@
+direction,arm,judge,scope,subset,n,value,delta,lo,hi,halfwidth,meets_threshold
+0,A ridge_late pooled (qwen4b L18),ADE vs log,s_ego deciles 1-9,pre_onset,1291,1.961921215057373,-0.004517572000622749,-0.05522660082094256,0.04740716218368204,0.0513168815023123,False
+0,op-cinque temporal (train fit),ADE vs log,s_ego deciles 1-9,pre_onset,1291,1.6727558374404907,-0.2936830222606659,-0.42351468663121405,-0.16766287380284947,0.12792590641418228,True
+0,op-lebowski temporal (train fit),ADE vs log,s_ego deciles 1-9,pre_onset,1291,1.6484378576278687,-0.3180011212825775,-0.4491252791486791,-0.1974361523011617,0.12584456342375872,True

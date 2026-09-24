@@ -2803,3 +2803,35 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
 **状态**：**待定**。Alpamayo 只跑了 main 的随机 1/4（显存上限决定，预登记规则）；单次、单 seed；collision 用连续几何而非 0.5 m 栅格。
 **怎么才能定下来**：Alpamayo 在 main 全量（4636）上重跑（B = 4 约 1.5 h，需 > 30 GB），并在 PhysicalAI-AV 上换一批确定不在 Alpamayo 训练集里的 clip。
 
+
+## 40. 冻结特征 + 薄 head 上，openpilot 的时序特征比所有通用 backbone 都好；Alpamayo 1.5 的 VLM 中层特征不是（**待定**）
+
+2026-09-25。预登记（抽特征之前提交）、全部表、成本与等价性在 [todos/2026-09-24-driving-backbones/README.md](../todos/2026-09-24-driving-backbones/README.md)。
+协议和第 23/24 条一字不改：`p2p3_v1` 子集、半/半 val、`ridge_late`、第 22 条 judge，arm A 与 V-JEPA 2、Qwen 原生视频在同一批 19 663 帧上重算；
+另加预登记的 cross-fit 读数（两个方向的样本外预测拼起来，每帧恰评一次）。openpilot 的输入与第 34 条考试完全相同，只是按 sequence 流式运行
+（和 10 s 暖机数值等价，原生轨迹 ADE 差中位数 ≤ 1 cm）；Alpamayo 只做 prefill，四路视图只用前三路相机渲染（缺侧面视野对它自己开车的影响实测为 −0.02 RFS，CI 跨零）。
+
+| arm（Δ vs `ridge ego`，cross-fit） | pre-onset 第 1–9 档 | 全部帧第 1–9 档 | RFS（478 rater 帧） |
+|:--|:--|:--|:--|
+| A Qwen3-VL-4B `L18_mean` | −0.030 [−0.064, +0.006] | −0.044 | −0.020 [−0.083, +0.045] |
+| (d″) Qwen 原生视频 `L18_last` | −0.049 [−0.073, −0.028] | −0.021 | +0.005 |
+| openpilot Cinque `temporal` | **−0.141 [−0.247, −0.027]** | **−0.322** | **+0.288 [+0.122, +0.446]** |
+| openpilot Lebowski `temporal` | −0.109 [−0.232, +0.015] | **−0.316** | **+0.260 [+0.092, +0.415]** |
+| Alpamayo 1.5 `L18_mean`（主 tap） | −0.003 [−0.093, +0.096] | −0.106 | −0.123 [−0.271, +0.009] |
+| Alpamayo `L27_last`（次要） | −0.163 [−0.254, −0.078] | −0.275 | −0.076 |
+
+**结论**：
+1. **openpilot 的 512 维 `temporal` token 按预登记规则判「更好」**（Cinque、Lebowski、small 三个都是）：对 A 和 (d″) 的配对差在全部帧上 −0.27 到 −0.30 m、
+   RFS 上 +0.26 到 +0.31，CI 都不跨零。预登记的后续 train 训、完整 val 评：pre-onset **−0.294 [−0.424, −0.168]**（Cinque）/ **−0.318 [−0.449, −0.197]**（Lebowski），
+   同协议下 V-JEPA 2 是 −0.030、arm A −0.005；RFS cluster mean 7.45 / 7.52，高于 `cls ego` 的 7.31。**这是项目第一次在 pre-onset 上测到远超 −0.05 m 门槛的表征效应。**
+2. **Alpamayo 1.5 的主 tap 判「不同，不是更好」**：全部帧上比 A 好 0.06 m，RFS 上比 (d″) 差 0.13。更深的 last-token 明显更好，
+   `L27_last` 是全阶梯第一个两个方向都过第 20 条门槛的 arm（−0.153 / −0.172），但它是 10 个次要 array 之一，要在独立数据上复现。
+3. 增益的形状：DiD 为正（+0.16 到 +0.30），大头在直行帧（纵向：前车、停车、起步）；第 10 档对 rater_best 的 ADE −1.0 到 −1.6 m，向 rater 偏好的一支挪。
+   冻结特征 + ridge 仍比 Cinque 的原生 plan 低约 0.5 RFS（7.45 对 8.00），拿到了原生相对 `ridge ego` 增益的一半左右。
+
+**对选型的含义（推测）**：第 21 条和 prediag 的「表征：Qwen3-VL-4B + 原生视频」要改：**在驾驶视频上训过的时序表征**（openpilot）比所有通用 backbone 都强，而且强一个量级；
+通用 VLM 做驾驶微调（Alpamayo）在中层 image token 上几乎不带来这种增益，增益在深层 last-token。下一步的候选是把 openpilot `temporal` 当 backbone 进 Stage B / 反应通道。
+
+**状态**：**待定**。子集是半 val 的 479 个 sequence；openpilot 的主结果在 train 训协议上复现且更强，但只有一个 split、一个 seed；openpilot 的特征来自它自己的训练视频，
+与 WOD 没有已知重叠（推测）。**怎么才能定下来**：(i) 在 test split 或另一个数据集（nuScenes / NAVSIM）上同样的冻结 + ridge；(ii) Alpamayo 的 `L27_last` 在 train 训协议上复现（约 20 h 抽取，要用户决定）；
+(iii) 把 openpilot `temporal` 接进 classification head（`cls ego` 那一族），看 RFS 能否接近原生 8.0。

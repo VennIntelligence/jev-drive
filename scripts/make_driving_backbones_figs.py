@@ -34,18 +34,20 @@ PANELS = [("(i) pre-onset, deciles 1-9", r"pre-onset $\Delta$ADE (m)", ROWS),
 def main():
     t = pd.read_csv(ROOT / "research/results/driving-backbones/crossfit_vs_ego_p3drive.csv")
     S.apply()
-    fig, axes = plt.subplots(1, 3, figsize=(S.DOUBLE_COLUMN_IN, 2.5), sharey=False)
+    fig, axes = plt.subplots(1, 3, figsize=(S.DOUBLE_COLUMN_IN, 2.5), sharey=True)
+    allrows = ROWS + NATIVE
+    y = np.arange(len(allrows))[::-1]
     for k, (ax, (readout, xlabel, rows)) in enumerate(zip(axes, PANELS)):
         g = t[t.readout == readout].set_index("arm")
-        rows = [r for r in rows if r[0] in g.index]
-        y = np.arange(len(rows))[::-1]
-        for yi, (arm, label, c) in zip(y, rows):
+        for yi, (arm, label, c) in zip(y, allrows):
+            if (arm, label, c) not in rows or arm not in g.index:
+                continue
             r = g.loc[arm]
             ax.errorbar(r.delta, yi, xerr=[[r.delta - r.lo], [r.hi - r.delta]], fmt="o", color=c, ms=3.2,
                         capsize=1.5, elinewidth=.8)
         ax.axvline(0, color="#999999", lw=.5, zorder=0)
         ax.set_yticks(y)
-        ax.set_yticklabels([r[1] for r in rows] if k in (0, 2) else [])
+        ax.set_yticklabels([r[1] for r in allrows])
         ax.set_xlabel(xlabel)
         ax.grid(axis="y", visible=False)
         S.panel(ax, "(" + "abc"[k] + ")")
