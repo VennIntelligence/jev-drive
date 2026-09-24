@@ -114,6 +114,16 @@ def _changed_processor_keys(snapshot, processor):
         if not _state_equal(snapshot[key], current[key])]
 
 
+def _assert_no_phantom(actor_waypoints, rear, frame_log, step, sim_time, arm):
+    p0 = np.asarray(actor_waypoints[0], dtype=float) * np.array([1.0, -1.0])
+    r0 = np.asarray(rear[0], dtype=float)
+    if np.linalg.norm(p0) < 0.3 and np.linalg.norm(r0 - p0) > 0.3:
+        frame_log.write(json.dumps({"diagnostic": "I1_phantom", "step": int(step),
+            "sim_time": float(sim_time), "arm": arm, "p0": p0.tolist(),
+            "r0": r0.tolist(), "rear_minus_actor_m": float(np.linalg.norm(r0 - p0))}) + "\n")
+        raise AssertionError("I1 phantom rear waypoint")
+
+
 class TFv6ControllerAgent(SensorAgent):
     def setup(self, path_to_conf_file, *args, **kwargs):
         parts = path_to_conf_file.split("+")
@@ -172,9 +182,13 @@ class TFv6ControllerAgent(SensorAgent):
             self._forward_ms = (time.perf_counter() - start) * 1000.0
             self._prediction = prediction
             try:
-                self._rear = rear_waypoints(prediction.pred_future_waypoints[0].detach().float().cpu().numpy())
+                actor_waypoints = prediction.pred_future_waypoints[0].detach().float().cpu().numpy()
+                self._rear = rear_waypoints(actor_waypoints)
             except ValueError:
                 self._rear = None
+            if self._rear is not None:
+                _assert_no_phantom(actor_waypoints, self._rear, self._frame_log,
+                                   self.step, self._sim_time, self.arm)
             self._raw = {
                 "A": _triplet(prediction.route_steer, prediction.target_speed_throttle,
                               prediction.target_speed_brake),

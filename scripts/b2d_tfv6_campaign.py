@@ -86,7 +86,8 @@ def clean_owned_server(run_dir, out):
             os.kill(pid, signal.SIGKILL)
 
 
-def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record_carla=False):
+def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record_carla=False,
+         invariant_check=None, abort_event=None):
     case_dir = out / "cases" / level / f"route-{route}" / f"seed-{seed}" / arm
     done = case_dir / "done.json"
     if done.exists():
@@ -94,6 +95,8 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record
         return json.loads(done.read_text())
     attempts = sorted(case_dir.glob("attempt-*/result.json"))
     for number in range(len(attempts) + 1, 5):
+        if abort_event is not None and abort_event.is_set():
+            raise RuntimeError("Stage stopped after another case failed an invariant")
         attempt_dir = case_dir / f"attempt-{number}"
         attempt_dir.mkdir(parents=True, exist_ok=True)
         run_dir = attempt_dir / "run"
@@ -117,7 +120,32 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record
         record(out, "case_start", level=level, route=route, seed=seed, arm=arm, attempt=number)
         start = time.monotonic()
         with open(attempt_dir / "runner.log", "w") as log:
-            process = subprocess.run(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            if abort_event is None:
+                returncode = subprocess.run(command, cwd=ROOT, env=env, stdout=log,
+                                            stderr=subprocess.STDOUT).returncode
+            else:
+                process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log,
+                                           stderr=subprocess.STDOUT)
+                while process.poll() is None:
+                    if abort_event.wait(1):
+                        route_pid = run_dir / "attempts" / route / "1" / "route.pid"
+                        if route_pid.exists():
+                            try:
+                                pid = int(route_pid.read_text().strip())
+                                commandline = Path(f"/proc/{pid}/cmdline").read_bytes()
+                                if b"b2d_route.py" in commandline:
+                                    os.killpg(pid, signal.SIGTERM)
+                            except (ValueError, FileNotFoundError, ProcessLookupError):
+                                pass
+                        process.terminate()
+                        try:
+                            process.wait(timeout=10)
+                        except subprocess.TimeoutExpired:
+                            process.kill()
+                            process.wait()
+                        clean_owned_server(run_dir, out)
+                        raise RuntimeError("Stage stopped after another case failed an invariant")
+                returncode = process.returncode
         clean_owned_server(run_dir, out)
         summary_path = run_dir / "summary.json"
         summary = json.loads(summary_path.read_text()) if summary_path.exists() else {}
@@ -132,11 +160,13 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record
             except (ValueError, KeyError, TypeError):
                 official_status = None
         result = {"level": level, "route": route, "seed": seed, "arm": arm,
-                  "attempt": number, "status": status, "returncode": process.returncode,
+                  "attempt": number, "status": status, "returncode": returncode,
                   "official_status": official_status,
                   "wall_s": time.monotonic() - start, "run_dir": str(run_dir)}
         atomic_json(attempt_dir / "result.json", result)
         record(out, "case_attempt_end", **result)
+        if invariant_check is not None:
+            invariant_check(result, attempt_dir, run_dir)
         official_driving_result = (official_status is not None and
                                    "agent crashed" not in official_status.lower() and
                                    "agent error" not in official_status.lower())

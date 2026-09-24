@@ -1,6 +1,8 @@
 """W2 arm routing and author postprocessor contract."""
 
 from collections import deque
+import io
+import json
 from types import SimpleNamespace
 import unittest
 
@@ -8,13 +10,24 @@ import numpy as np
 
 from b2d_controller import Controller
 from b2d_tfv6_controller_agent import (
-    _apply_postprocessors, _changed_processor_keys, _clone_processor,
+    _apply_postprocessors, _assert_no_phantom, _changed_processor_keys, _clone_processor,
     _configure_author_arm, _normalize_brake, _processor_snapshot, _select_arm_control,
     controller_speed,
 )
 
 
 class AgentPathTests(unittest.TestCase):
+    def test_i1_writes_diagnostic_before_fail_fast(self):
+        log = io.StringIO()
+        actor = np.tile([0., -.08], (8, 1))
+        rear = actor * [1., -1.]
+        rear[0] = [1.389, -1.309]
+        with self.assertRaisesRegex(AssertionError, "I1 phantom"):
+            _assert_no_phantom(actor, rear, log, 6, .35, "C")
+        row = json.loads(log.getvalue())
+        self.assertEqual((row["diagnostic"], row["step"], row["arm"]),
+                         ("I1_phantom", 6, "C"))
+
     def test_a_retains_author_route_and_target_speed(self):
         config = SimpleNamespace(steer_modality="route", throttle_modality="target_speed",
                                  brake_modality="target_speed")
