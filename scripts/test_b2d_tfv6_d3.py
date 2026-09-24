@@ -7,6 +7,7 @@ import unittest
 import json
 
 from b2d_tfv6_d3_semantic import SemanticFailure, SemanticSequence, planner_to_world
+from b2d_tfv6_d3a import world_plan
 
 
 class D3LaunchTests(unittest.TestCase):
@@ -23,6 +24,11 @@ class D3LaunchTests(unittest.TestCase):
 
 
 class D3SemanticTests(unittest.TestCase):
+    def test_model_prediction_uses_carla_lateral_axis(self):
+        frame={'truth':{'location':[10.,20.,0.],'rotation':[0.,0.,0.]},
+               'route_prediction':[[1.,-2.]]}
+        self.assertEqual(world_plan(frame,'route_prediction').tolist(),[[11.,18.]])
+
     def setUp(self):
         self.package={'dense':[{'xyz':[float(x),0.,0.]} for x in range(6)],
                       'agent_sparse_world_xy':[[1.,0.],[3.,0.],[5.,0.]],

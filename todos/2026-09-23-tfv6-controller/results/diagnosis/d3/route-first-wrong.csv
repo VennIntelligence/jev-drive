@@ -1,17 +1,17 @@
 level,route,seed,arm,window_kind,window_start_step,window_end_step,first_wrong_waypoint_step,first_wrong_route_step,command_and_target_point
-2,2084,0,C,approach,0,204,197,87,not logged in W2/W2b; D3b required
+2,2084,0,C,approach,0,204,197,86,not logged in W2/W2b; D3b required
 2,2084,0,C,pre_official_end,312,512,312,312,not logged in W2/W2b; D3b required
 2,2084,0,B,approach,122,402,319,122,not logged in W2/W2b; D3b required
 2,2084,0,D,approach,0,204,197,87,not logged in W2/W2b; D3b required
 2,2084,0,D,pre_official_end,316,516,316,316,not logged in W2/W2b; D3b required
 2,2084,1,C,approach,0,205,201,87,not logged in W2/W2b; D3b required
 2,2084,1,C,pre_official_end,3336,3536,3336,3336,not logged in W2/W2b; D3b required
-2,2084,1,B,approach,80,360,229,83,not logged in W2/W2b; D3b required
+2,2084,1,B,approach,80,360,231,82,not logged in W2/W2b; D3b required
 2,2084,1,D,approach,0,206,196,87,not logged in W2/W2b; D3b required
 2,2084,1,D,pre_official_end,322,522,322,322,not logged in W2/W2b; D3b required
 2,2084,2,C,approach,0,205,198,87,not logged in W2/W2b; D3b required
 2,2084,2,C,pre_official_end,273,473,273,273,not logged in W2/W2b; D3b required
-2,2084,2,B,approach,36,316,229,82,not logged in W2/W2b; D3b required
+2,2084,2,B,approach,36,316,230,82,not logged in W2/W2b; D3b required
 2,2084,2,D,approach,0,205,201,87,not logged in W2/W2b; D3b required
 2,2084,2,D,pre_official_end,279,479,279,279,not logged in W2/W2b; D3b required
 2,27529,0,C,approach,111,391,310,111,not logged in W2/W2b; D3b required
@@ -24,8 +24,8 @@ level,route,seed,arm,window_kind,window_start_step,window_end_step,first_wrong_w
 2,27529,1,B,approach,140,420,289,140,not logged in W2/W2b; D3b required
 2,27529,1,D,approach,102,382,305,102,not logged in W2/W2b; D3b required
 2,27529,1,D,pre_official_end,257,457,305,257,not logged in W2/W2b; D3b required
-2,27529,2,C,approach,108,388,320,108,not logged in W2/W2b; D3b required
-2,27529,2,C,pre_official_end,320,520,320,320,not logged in W2/W2b; D3b required
+2,27529,2,C,approach,108,388,329,108,not logged in W2/W2b; D3b required
+2,27529,2,C,pre_official_end,320,520,329,320,not logged in W2/W2b; D3b required
 2,27529,2,B,approach,205,485,418,205,not logged in W2/W2b; D3b required
-2,27529,2,D,approach,115,395,322,115,not logged in W2/W2b; D3b required
+2,27529,2,D,approach,115,395,328,115,not logged in W2/W2b; D3b required
 2,27529,2,D,pre_official_end,343,543,356,343,not logged in W2/W2b; D3b required

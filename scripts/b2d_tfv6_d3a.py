@@ -89,8 +89,10 @@ def world_plan(frame, key):
     xy=np.asarray(frame['truth']['location'][:2],dtype=float)
     yaw=math.radians(frame['truth']['rotation'][2]); c,s=math.cos(yaw),math.sin(yaw)
     p=np.asarray(local,dtype=float)[:,:2]
-    # TFv6 local axes: x forward, y right; CARLA world y points left at yaw=0.
-    return xy + np.column_stack((c*p[:,0]+s*p[:,1],s*p[:,0]-c*p[:,1]))
+    # TFv6 prediction axes follow CARLA's local x/y; its target point uses the
+    # same rotation in common_utils.inverse_conversion_2d. Only the controller's
+    # rear_waypoints transform flips lateral sign for its y-left convention.
+    return xy + np.column_stack((c*p[:,0]-s*p[:,1],s*p[:,0]+c*p[:,1]))
 
 
 def stall_rows(level,route,seed,arm,frames,geo):

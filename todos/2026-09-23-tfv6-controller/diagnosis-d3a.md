@@ -27,14 +27,16 @@
 
 [`route-timeline.csv`](results/diagnosis/d3/route-timeline.csv) 逐 tick 保留车速、真值坐标、到 XML 转向/trigger 距离、实际 steer、C shadow steer 是否到 .8 限幅、TFv6 route 与 waypoint 的世界坐标，以及各自到 XML 正/直行分支的距离。包含每个出事 C/D 的路口接近窗口、官方终态前 10 s 和同 seed B 的路口接近窗口。[`route-first-wrong.csv`](results/diagnosis/d3/route-first-wrong.csv) 保存以“终点到直行支路比到 XML 正支路至少近 2 m”为门槛的首次 tick，但列名中的 `wrong` **只表示此 XML 近似指标**。
 
+D3b 期间复核了坐标变换：TFv6 原始预测沿 CARLA 局部 x/y 旋转到世界系；只有控制器的后轴变换改成 y-left。早期 D3a 脚本错误地再翻一次 y，现已修正并重生上述 CSV；下表是修正后的 XML 近似指标。另见 [`d3a-dense-branch.csv`](results/diagnosis/d3/d3a-dense-branch.csv) 的 evaluator dense 几何复算；正式机制裁决以该项和 D3b 新遥测为准。
+
 | route / seed | C 官方偏离 step | D 官方偏离 step | C 路口接近窗口首次 waypoint 倾向直行 step | B 同指标 step | D 同指标 step |
 |---|---:|---:|---:|---:|---:|
 | 2084 / 0 | 512 | 516 | 197 | 319 | 197 |
-| 2084 / 1 | 3536 | 522 | 201 | 229 | 196 |
-| 2084 / 2 | 473 | 479 | 198 | 229 | 201 |
+| 2084 / 1 | 3536 | 522 | 201 | 231 | 196 |
+| 2084 / 2 | 473 | 479 | 198 | 230 | 201 |
 | 27529 / 0 | 474 | 465 | 310 | 415 | 310 |
 | 27529 / 1 | 459 | 457 | 310 | 289 | 305 |
-| 27529 / 2 | 520 | 543 | 320 | 418 | 322 |
+| 27529 / 2 | 520 | 543 | 329 | 418 | 328 |
 
 例如 27529/0/C 在 step 300 位于 `(273.3,−249.8)`、速度约 **3.26 m/s**；到 step 310 位于 `(271.4,−249.8)`、约 **3.74 m/s**，而 B 在 step 310 仍在 `(271.6,−249.8)`、仅 **0.42 m/s**。C 的 waypoint 末点从近似“正/直行分支”距离 **0.5/0.0 m** 变为 **2.3/0.1 m**。但 B 在相同 XML 转向点附近也会短时满足同一指标，表明 XML 中从直线到右转支路的约 19 m 稀疏跳段不够精细，不能把表中首次 tick 当成真实 planner 首次错误 tick。W2/W2b 日志没有模型输入的 target point、command、Kalman 状态或 RoutePlanner pop 事件；R1 与 R2 仍待 D3b 补录。已记录的 C steer 原始值与限幅标记可在相同时间线核查 R3，但规划分支尚未可靠重建，暂不裁决。
 
