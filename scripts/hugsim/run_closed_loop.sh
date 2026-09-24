@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run HUGSIM's official closed_loop.py on scenario yamls with our pipe-protocol agent (scripts/hugsim/agent_client.py).
-# Usage (on the box): GPU=1 [AD=jev POLICY=route | AD=ltf] scripts/hugsim/run_closed_loop.sh <out_root> <scenario.yaml> ...
+# Usage (on the box): [env GPU=1 AD=jev POLICY=route | AD=ltf] scripts/hugsim/run_closed_loop.sh <out_root> <scenario.yaml> ...
 #   dataset is taken from the scenario's parent dir name (nuscenes | waymo | kitti360 | pandaset).
 # Writes per scenario <out_root>/<ad>/<scene>_<mode>/{eval.json,video.mp4,data.pkl,infos.pkl,output.txt}
 # plus <out_root>/runs.csv (wall time, steps, peak simulator VRAM from nvidia-smi).

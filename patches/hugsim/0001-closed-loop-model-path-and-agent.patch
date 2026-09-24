@@ -1,0 +1,21 @@
+diff --git a/closed_loop.py b/closed_loop.py
+index e201a79..f644084 100644
+--- a/closed_loop.py
++++ b/closed_loop.py
+@@ -131,6 +131,7 @@ if __name__ == "__main__":
+     model_path = os.path.join(cfg.base.model_base, cfg.scenario.scene_name)
+     model_config = OmegaConf.load(os.path.join(model_path, 'cfg.yaml'))
+     cfg.update(model_config)
++    cfg.model_path = model_path  # jev-drive: exported cfg.yaml keeps the authors' absolute model_path
+     
+     output = os.path.join(cfg.base.output_dir, cfg.scenario.scene_name+"_"+cfg.scenario.mode)
+     os.makedirs(output, exist_ok=True)
+@@ -141,6 +142,8 @@ if __name__ == "__main__":
+         ad_path = cfg.base.vad_path
+     elif args.ad == 'ltf':
+         ad_path = cfg.base.ltf_path
++    elif f"{args.ad}_path" in cfg.base:  # jev-drive: any agent launcher named <ad>_path in the base config
++        ad_path = cfg.base[f"{args.ad}_path"]
+     else:
+         raise NotImplementedError
+     
