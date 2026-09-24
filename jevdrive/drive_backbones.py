@@ -147,7 +147,10 @@ def _write_set(name: str, fnames: np.ndarray, arrays: dict, meta: dict) -> dict:
 def finalize_op(model: str, split: str = "subset") -> dict:
     sub = "op" if split == "subset" else f"op_{split}"
     files = sorted(root(sub, model).glob("*.npz"))
-    parts = [np.load(f) for f in files]
+    parts = []
+    for f in files:                      # read and close each file: 2690 lazy NpzFiles exhaust the fd limit
+        with np.load(f) as z:
+            parts.append({k: z[k] for k in z.files})
     fn = np.concatenate([p["name"] for p in parts]).astype(str)
     arrs = {k: np.concatenate([p[k] for p in parts]) for k in OP_ARRAYS}
     arrs_native = {"wod": np.concatenate([p["wod"] for p in parts]), "hist": np.concatenate([p["hist"] for p in parts])}
