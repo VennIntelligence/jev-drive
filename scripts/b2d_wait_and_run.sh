@@ -9,9 +9,19 @@
 #       (the WOD ADE-extra job waits as a bash loop before its python process exists)
 #   (c) free VRAM >= 55 GB
 #
+# Env overrides:
+#   GPU=<rank>    which card to use (CUDA_VISIBLE_DEVICES for the Alpamayo server,
+#                 --gpu-rank / -graphicsadapter for every CARLA server). Default 0.
+#   NO_WAIT=1     skip the wait loop entirely and start immediately (e.g. once a second
+#                 card makes GPU contention moot). Default 0 (wait as below).
+#
 # Usage: scripts/tmux_run.sh b2d-alp-wait scripts/b2d_wait_and_run.sh
+#        GPU=1 NO_WAIT=1 scripts/tmux_run.sh b2d-alp-wait scripts/b2d_wait_and_run.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+GPU=${GPU:-0}
+NO_WAIT=${NO_WAIT:-0}
 
 PLAN=$DATA_DIR/runs/zeroshot-exam/gpu-plan.md
 D=$DATA_DIR/runs/zeroshot-exam/b2d

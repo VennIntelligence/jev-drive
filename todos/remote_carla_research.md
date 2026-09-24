@@ -52,7 +52,6 @@ TCP 环境只在 Tokyo 上（Python 3.8、torch 2.2，3090 上可用）。臂：
 - **先预注册再跑**：每个工作包先写协议（臂、路线、seed、指标、通过条件、继续条件），commit 冻结后才启动第一例。失败照实报告，不追加参数网格、不放宽门槛、不挑有利区间。
 - **只用 Tokyo 跑 CARLA 闭环**（RTX 3090 24 GB、32 核）。GPU box 由主线占用（特征抽取、head、VLM），这条线不要往那边派任务；确实需要时先和用户确认。
 - 报告节奏按 `CLAUDE.md`：长任务顺利时每 3–5 小时报一次；出错、卡住、需要决策或完成时立即报。
-- git：Tokyo 没有 GitHub 凭据。Tokyo 在本地 `main` 上 commit；本会话从 Mac `git fetch ssh://ujs@100.108.238.8/home/ujs/mycode/jev-drive main` 取回，合并后从 Mac push；再把新的 `main` 推到 Tokyo 的 `refs/heads/from-mac`，让它 `git merge --ff-only from-mac`。Mac 只放代码和小结果，raw 数据留在 Tokyo 的 `/data`。
 - 结论落地：阶段结论写进本目录的报告和 `research/decisions.md`（按 research/README.md 的规矩，错了就地改）；英文的使用说明更新到 `docs/b2d-controller.md`、`docs/b2d-tcp-controller.md`。
 
 ## 交付

@@ -12,6 +12,10 @@
 这里和 `todos/`、`tmp/` 都是人与人、人与 Claude 交流用的工作文档，用中文写。
 结论稳定下来之后，再在 `docs/` 或代码里写英文的正式版本。
 
+## 专栏与深度文章（`research/articles/`）
+
+面向人类阅读、系统加工后的技术深度长文（Primers & Deep Dives），每个主题以独立子文件夹（Bundle）形式存放，包含文章（`README.md`）和专属图表（`figs/`）。详见 [research/articles/README.md](articles/README.md)。
+
 ## 写作惯例（research/ 和 todos/ 通用）
 
 ### 文字
