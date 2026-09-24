@@ -1,5 +1,6 @@
 """Parallel ranged HTTP download with sha256 check (the box's link is shared per TCP stream)."""
 import hashlib
+import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -9,8 +10,10 @@ import requests
 HF_MIRROR = "https://hf-mirror.com"  # domestic HF mirror, goes direct (no proxy) on the box
 
 
-def hf_url(repo: str, path: str, dataset: bool = False, mirror: bool = True) -> str:
-    base = HF_MIRROR if mirror else "https://huggingface.co"
+def hf_url(repo: str, path: str, dataset: bool = False) -> str:
+    """hf-mirror by default (fast when it has the file cached, but a cold dataset file can trickle at
+    ~0.3 MB/s); HF_DIRECT=1 goes to huggingface.co, which on the box needs proxy_on."""
+    base = "https://huggingface.co" if os.environ.get("HF_DIRECT") else HF_MIRROR
     return f"{base}/{'datasets/' if dataset else ''}{repo}/resolve/main/{path}"
 
 

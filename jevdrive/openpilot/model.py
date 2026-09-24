@@ -9,7 +9,7 @@ Two interfaces exist (see research/lit notes on openpilot models):
             ported from compile_modeld.py at openpilot 516ec1e6.
 Output decoding is ported from parse_model_outputs.py, drive_helpers.py and modeld.get_action_from_model.
 """
-import base64, pickle
+import base64, ctypes, os, pickle
 from pathlib import Path
 
 import numpy as np
@@ -20,7 +20,23 @@ MODELS_DIR = Path.home() / "data/models/openpilot"
 T_IDXS = np.array([10.0 * (i / 32) ** 2 for i in range(33)])
 FRAME_SKIP = 4  # MODEL_RUN_FREQ 20 Hz / MODEL_CONTEXT_FREQ 5 Hz
 DT_MDL, LONG_SMOOTH_S, MIN_STABLE_DELAY, MIN_SPEED = 0.05, 0.3, 0.3, 1.0
-BACKENDS = ("cpu", "cuda", "cuda-iob", "cuda-graph", "trt", "trt-graph")
+BACKENDS = ("cpu", "cuda", "cuda-iob", "cuda-graph", "trt", "trt-fp32", "trt-graph")
+
+
+def _preload_libs():
+    """CUDA/cuDNN from the nvidia-* wheels, and TensorRT 10 from tensorrt_libs (ORT's TRT EP dlopens
+    libnvinfer.so.10 by name and does not search the wheel directory)."""
+    ort.preload_dlls()
+    try:
+        import tensorrt_libs
+    except ImportError:
+        return
+    d = os.path.dirname(tensorrt_libs.__file__)
+    for lib in ("libnvinfer.so.10", "libnvinfer_plugin.so.10", "libnvonnxparser.so.10"):
+        ctypes.CDLL(os.path.join(d, lib), mode=ctypes.RTLD_GLOBAL)
+
+
+_preload_libs()
 
 
 def prepare_onnx(name: str) -> Path:
@@ -51,7 +67,7 @@ def providers(backend: str, cache: Path):
         return [cuda, "CPUExecutionProvider"]
     cache.mkdir(parents=True, exist_ok=True)
     trt = ("TensorrtExecutionProvider", {
-        "device_id": 0, "trt_fp16_enable": True, "trt_engine_cache_enable": True,
+        "device_id": 0, "trt_fp16_enable": backend != "trt-fp32", "trt_engine_cache_enable": True,
         "trt_engine_cache_path": str(cache), "trt_timing_cache_enable": True, "trt_timing_cache_path": str(cache),
         "trt_max_workspace_size": 8 << 30, "trt_builder_optimization_level": 3,
         "trt_cuda_graph_enable": backend == "trt-graph"})
@@ -71,7 +87,7 @@ class OPModel:
         if threads:
             so.intra_op_num_threads = threads
         self.sess = ort.InferenceSession(str(prepare_onnx(name)), so,
-                                         providers=providers(backend, cache or MODELS_DIR / "trt_cache" / name))
+                                         providers=providers(backend, cache or MODELS_DIR / "trt_cache" / f"{name}-{backend}"))
         meta = self.sess.get_modelmeta().custom_metadata_map
         self.slices = pickle.loads(base64.b64decode(meta["output_slices"]))
         self.inputs = {i.name: (tuple(i.shape), np.float16 if "float16" in i.type else
