@@ -80,7 +80,9 @@ ModelScope mirror of either repo exists). Resumability is file-granularity only 
 re-fetches the whole file, cheap at this file size) rather than mid-file chunk resume, since chunking is
 what broke.
 
-At ~5 MB/s (midpoint of the 4-6 MB/s range), 63.4 GB from empty is roughly 3.5 hours.
+The 4-6 MB/s above was measured against an idle link (no other box job competing); the restarted
+production run, with ordinary box activity around it, sustained ~3 MB/s over a 180 s window. At 3 MB/s,
+63.4 GB from empty is roughly 6 hours; the actual restart resumed from 17 GB already on disk, ETA ~4-4.5 h.
 
 ## Install (Blackwell, sm_120)
 
