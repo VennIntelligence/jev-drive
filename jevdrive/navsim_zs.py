@@ -240,9 +240,9 @@ def collect_alpamayo(split: str, variant: str, frames: str, tag: str = "main") -
             r = json.loads(line)
             if r["variant"] == variant:
                 rows[r["token"]] = r["poses"]
-    tokens = [e["token"] for e in load_index(split) if e["token"] in rows or variant != "nonav" or split != "navtest"]
-    if variant == "nonav" and split == "navtest":
-        tokens = [t for t in tokens if t in nonav_subset(load_index(split))]
+    idx = load_index(split)
+    keep = nonav_subset(idx) if (variant, split) == ("nonav", "navtest") else None
+    tokens = [e["token"] for e in idx if keep is None or e["token"] in keep]
     missing = [t for t in tokens if t not in rows]
     assert not missing, f"{len(missing)} tokens missing, e.g. {missing[:3]}"
     out = root("preds", split) / f"alpamayo_{variant}_{frames}_{tag}.npz"
