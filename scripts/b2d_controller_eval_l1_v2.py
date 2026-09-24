@@ -24,11 +24,11 @@ PRESET = {'A': 'author_route', 'B': 'author_waypoint', 'C': 'pursuit', 'D': 'pur
 LOCK = threading.Lock()
 
 
-def log(out, kind, **data):
-    row = dict(t=datetime.now(timezone.utc).isoformat(), kind=kind, **data)
+def log(out, event, **data):
+    row = dict(t=datetime.now(timezone.utc).isoformat(), kind=event, **data)
     with LOCK, (out / 'events.jsonl').open('a') as f:
         f.write(json.dumps(row) + '\n')
-    print(row['t'][11:19], kind, data, flush=True)
+    print(row['t'][11:19], event, data, flush=True)
 
 
 def status(case):
@@ -118,7 +118,7 @@ def main():
     routes = ET.parse(a.routes).getroot().findall('route')
     # Big maps first so the long loads overlap with many small routes at the end.
     routes.sort(key=lambda r: r.get('town') not in ('Town12', 'Town13'))
-    log(a.out, 'start', kind=a.kind, routes=len(routes), seeds=a.seeds, arms=a.arms, workers=a.workers)
+    log(a.out, 'start', reference=a.kind, routes=len(routes), seeds=a.seeds, arms=a.arms, workers=a.workers)
     slots = list(range(a.workers))
     with ThreadPoolExecutor(a.workers) as pool:
         def job(route):
