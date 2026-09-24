@@ -14,8 +14,15 @@ from .common import data_dir, get_logger
 
 class RunLog:
     def __init__(self, *parts: str):
-        self.dir = data_dir() / "runs" / Path(*parts) / time.strftime("%Y%m%d-%H%M%S")
-        self.dir.mkdir(parents=True)
+        base = data_dir() / "runs" / Path(*parts) / time.strftime("%Y%m%d-%H%M%S")
+        self.dir, k = base, 1
+        while True:  # processes started in the same second get -2, -3, ...
+            try:
+                self.dir.mkdir(parents=True)
+                break
+            except FileExistsError:
+                k += 1
+                self.dir = base.with_name(f"{base.name}-{k}")
         self.log = get_logger(parts[0])
         fh = logging.FileHandler(self.dir / "log.txt")
         fh.setFormatter(logging.getLogger().handlers[0].formatter)
