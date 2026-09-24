@@ -218,7 +218,10 @@ def cmd_run(a, log):
     if a.claim:
         name = f"{a.claim}_{a.split}_{'-'.join(variants)}{'_' + a.subset if a.subset else ''}"
         out = odir / f"{a.frames}_{a.tag}_{a.claim}_{'-'.join(variants)}{'_' + a.subset if a.subset else ''}.jsonl"
-        source = claimed(todo, Z.root("claims", f"{a.frames}_{a.tag}_{a.split}_{'-'.join(variants)}_{a.subset or 'all'}"), 32)
+        # chunks index the full (subset) index, never the per-process to-do list, so every process agrees on them
+        need = {e["token"] for e in todo}
+        source = (e for e in claimed(idx, Z.root("claims", f"{a.frames}_{a.tag}_{a.split}_{'-'.join(variants)}_{a.subset or 'all'}_v2"), 32)
+                  if e["token"] in need)
     else:
         i, n = map(int, a.shard.split("/"))
         todo = [e for k, e in enumerate(todo) if k % n == i]
