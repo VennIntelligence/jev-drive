@@ -1,0 +1,6 @@
+run,route_id,attempts,status,ds,rc,penalty,infractions,game_s,wall_s,ticks,s_per_tick,world_tick_ms,tree_ms,agent_ms,n_plans,plan_rt_ms,infer_ms,queue_ms
+smoke-alpamayo,1711,1,Completed,100.0,100,1.0,"{""min_speed_infractions"": 20}",60.25,373.0,1205,0.3095,90.107,39.997,125.863,121,1224.3,1008.2,16.5
+smoke-alpamayo,2373,1,Failed - Agent deviated from the route,15.092,21.56,0.7,"{""min_speed_infractions"": 3, ""red_light"": 1, ""route_dev"": 1}",24.4,193.2,488,0.3959,111.746,17.047,149.511,49,1466.9,1020.2,218.5
+smoke-alpamayo,2390,1,Failed - Agent deviated from the route,28.69,28.69,1.0,"{""min_speed_infractions"": 4, ""route_dev"": 1}",48.55,300.7,971,0.3097,77.511,14.419,152.502,97,1508.5,1160.1,128.3
+smoke-alpamayo,24211,1,Completed,100.0,100,1.0,"{""min_speed_infractions"": 18}",65.8,309.5,1316,0.2352,45.311,4.645,175.195,132,1711.7,1201.6,302.1
+smoke-alpamayo,3564,1,Completed,60.0,100,0.6,"{""collisions_vehicle"": 1, ""min_speed_infractions"": 19}",54.65,330.2,1093,0.3021,44.973,51.748,130.86,110,1280.2,1012.3,72.4

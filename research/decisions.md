@@ -2620,3 +2620,12 @@ TFv6 与我们的 head 用的是不同传感器。
 
 **找比作者控制更好的执行层（Task 7、8，[plant 诊断](../todos/2026-09-23-tfv6-controller/diagnosis-plant.md)、[搜索报告](../todos/2026-09-23-tfv6-controller/controller-search.md)）。** C 确实有 plant 错配：它请求的曲率，按实测 yaw 折算，实际只实现了 0.76–0.94。但用实测的 plant map 反解，也只能补上 C 与 B 转向幅度差的 24%（D3b 出事子集里只有 6%），所以错配不是 C 转向不足的主要原因。搜索只在 Dev10 上进行，找到的最好候选是作者两套 PID 的混合：steer 取 0.5·A + 0.5·B，纵向取 A。它在 Dev10 上比 A 高 +2.7 [0, 8.1]，但这个数字就是在 Dev10 上选出来的。冻结后在保留集上，它与 A 的差是 0.00：A 和两个候选在 18 个 case 上全部 100 DS，保留集已经封顶，分不出高下。我们自己的两个控制器（C、D）在 Dev10 上比 A 低 4–5 DS。结论：在 TFv6 上还没有找到比作者 A 更好的执行层，而现有的 16 条路线对 A 这个水平已经没有区分度，再往下比，需要 A 本身会失败的更难的路线。
 
+
+## 33. Zero-shot 闭环：Alpamayo 1.5 在 Bench2Drive 上能开，openpilot 不能（**待定**，n = 5 的 smoke）
+
+两个开放模型不训练、按各自原生相机（内参、FOV、安装位置、帧率）在 CARLA 里生成输入，轨迹走同一个固定控制器
+（[预注册与结果](../todos/2026-09-24-zeroshot-exam/bench2drive.md)）。5 条预先固定的路线上：
+Alpamayo 1.5 DS 60.8、RC 70.1、SR 2/5（3 条走完，1 条路口方向与 nav 相反、1 条闯红灯后偏离）；
+openpilot Lebowski DS 2.7、RC 5.6、SR 0/5（全部在前 10 m 内驶离车道撞上静态物体后 blocked）。
+n = 5、单次、单 seed，只能说“Alpamayo 能在合成图像上闭环开车，openpilot 在这个考试上基本不能”，不能给分数排名。
+怎么定下来：全量 220 条（估计 4.3–6.6 h，等用户批准），同时报完成路线数。

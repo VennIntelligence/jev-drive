@@ -1,0 +1,6 @@
+run,route_id,attempts,status,ds,rc,penalty,infractions,game_s,wall_s,ticks,s_per_tick,world_tick_ms,tree_ms,agent_ms,n_plans,plan_rt_ms,infer_ms,queue_ms
+smoke-lebowski,1711,1,Failed - Agent got blocked,2.501353,5.35,0.467543,"{""collisions_layout"": 1, ""min_speed_infractions"": 1, ""outside_route_lanes"": 1, ""vehicle_blocked"": 1}",64.25,206.5,1285,0.1607,61.626,35.98,16.0,321,54.7,18.7,0.1
+smoke-lebowski,2373,1,Failed - Agent got blocked,6.0255,9.27,0.65,"{""collisions_layout"": 1, ""min_speed_infractions"": 1, ""vehicle_blocked"": 1}",64.25,180.9,1285,0.1408,60.925,17.082,15.42,321,52.3,17.8,0.1
+smoke-lebowski,2390,1,Failed - Agent got blocked,2.0735,3.19,0.65,"{""collisions_layout"": 1, ""vehicle_blocked"": 1}",62.3,163.5,1246,0.1312,43.1,17.002,14.796,311,50.0,13.8,0.1
+smoke-lebowski,24211,1,Failed - Agent got blocked,2.981319,6.1,0.488741,"{""collisions_layout"": 1, ""min_speed_infractions"": 1, ""outside_route_lanes"": 1, ""vehicle_blocked"": 1}",64.3,71.6,1286,0.0557,26.103,4.991,14.131,322,47.1,8.9,0.1
+smoke-lebowski,3564,1,Failed - Agent got blocked,0.0,3.98,0.0,"{""collisions_layout"": 1, ""outside_route_lanes"": 1, ""vehicle_blocked"": 1}",62.4,211.1,1248,0.1692,46.978,41.654,14.435,312,48.4,11.8,0.0
