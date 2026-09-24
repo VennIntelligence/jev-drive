@@ -18,6 +18,11 @@ case $arm in
             routes=$S/leaderboard/data/bench2drive220.xml ;;
   *) echo "arm must be official or simlingo" >&2; exit 2 ;;
 esac
+# The agent loads InternVL2-1B's conversation.py from ./pretrained/InternVL2-1B, relative to the evaluator's cwd
+# (b2d_route.py runs from the Bench2Drive root); point it at the HF-cache snapshot instead of letting it download.
+mkdir -p "$BENCH2DRIVE_ROOT/pretrained"
+ln -sfn "$(ls -d "$HF_HOME"/hub/models--OpenGVLab--InternVL2-1B/snapshots/0d75ccd166b1d0b79446ae6c5d1a4a667f1e6187)" \
+  "$BENCH2DRIVE_ROOT/pretrained/InternVL2-1B"
 out=${OUT_ROOT:-$DATA_DIR/runs/simlingo-catalogue}/$arm/seed$seed
 mkdir -p "$out/viz"
 # The agent imports simlingo_training.* and team_code.*; it writes its per-step metric dump under $SAVE_PATH.
