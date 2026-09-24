@@ -156,4 +156,10 @@ openpilot 没有 route、只看前视、context 被砍掉 70%，预期在路口 
 
 ## 偏离记录
 
-（暂无。）
+1. **（2026-09-24 19:45，在看到任何 NAVSIM 分数之前）Alpamayo no-nav 只跑 navtest 的一个子集。** 预登记里 no-nav 的 n 写的是
+   「同上」（全部 12146 个 token）。GPU 是三场考试共用的，navtest nav 两个进程并行已经要约 2.3 h（共享卡上 batch 8 每进程
+   约 1.2–1.4 s/样本），全量 no-nav 还要约 2 h，并且会把 WOD 的最后一个任务和 Bench2Drive 的 4.3 h 全量跑往后推。
+   改为：按 driving command 分层，左 / 直 / 右各用 seed 0 抽 1000 个（`jevdrive.navsim_zs.nonav_subset`，共 3000），
+   no-nav 只跑这 3000 个；nav 与 no-nav 的比较全部在这 3000 个 token 上**配对**进行，主表的 nav 分数仍是全量 12146。
+   左 / 右转 command 在子集里占 2/3（全量里只占 1/3），所以子集上的平均分不能直接和全量比，只用来做配对差。
+
