@@ -4,6 +4,8 @@
   index   val keyframe index (jevdrive.nuscenes_zs.build_index) -> $DATA_DIR/processed/nusc_zs/val_index.pkl
   sets    the pre-registered evaluation sets (main / full-history / Alpamayo subsets) -> sets.json next to it
   cv      constant-velocity baseline predictions (straight ahead at the current speed) and the logged future
+  score   every prediction file x every evaluation set: L2 / collision (VAD and BEV-Planner conventions), scene
+          bootstrap CIs, paired differences vs CV, by command -> $DATA_DIR/runs/nusc_zs/score/
 
     .venv/bin/python scripts/nusc_zs.py index
 """
@@ -82,10 +84,110 @@ def cmd_cv(a, log):
     log.info(f"cv / cvv for {len(rows['cv'])} valid samples")
 
 
+ALP_T = np.arange(1, 65) * 0.1
+ROWS = {  # row name -> prediction source; Alpamayo rows come from the JSON lines of the run
+    "logged future": "gt", "cv": "cv", "cvv": "cvv",
+    "openpilot small": "op_small_none", "openpilot Cinque": "op_cinque_none", "openpilot Lebowski": "op_lebowski_none",
+    "openpilot small + cmd": "op_small_cmd", "openpilot Cinque + cmd": "op_cinque_cmd",
+    "openpilot Lebowski + cmd": "op_lebowski_cmd",
+    "Alpamayo 1.5 nav": "alp:nav", "Alpamayo 1.5 no-nav": "alp:nonav"}
+
+
+def load_preds(idx: dict) -> dict:
+    """{source: {token: (6, 2) LIDAR_TOP points}} for every prediction file present."""
+    import json as js
+    by = {e["token"]: e for e in idx["samples"]}
+    out = {"gt": {t: e["gt"] for t, e in by.items() if e["valid"]}}
+    for f in Z.root("preds").glob("*.npz"):
+        if f.stem.endswith("_tail"):
+            continue
+        z = np.load(f)
+        out[f.stem] = dict(zip(z["tokens"].tolist(), z["pred"]))
+    for f in Z.root("alpamayo").glob("*.jsonl"):
+        for line in f.read_text().splitlines():
+            try:
+                r = js.loads(line)
+            except js.JSONDecodeError:
+                continue
+            e = by[r["token"]]
+            sc = idx["scenes"][e["scene"]]
+            xyz = np.asarray(r["xyz"])
+            out.setdefault("alp:" + r["variant"], {})[r["token"]] = Z.to_lidar_point(
+                ALP_T, xyz[:, :2], np.asarray(r["yaw"]), sc["lidar_xyz"], e["fut_t"])[0].astype(np.float32)
+    return out
+
+
+def cmd_score(a, log):
+    import pandas as pd
+    idx = Z.load_index()
+    sets = json.load(open(sets_path()))
+    by = {e["token"]: e for e in idx["samples"]}
+    preds = load_preds(idx)
+    log.info("prediction sources: " + ", ".join(f"{k} ({len(v)})" for k, v in preds.items()))
+    out = Z.root("score")
+    rng = np.random.default_rng(0)
+    rows, cmd_rows, per_sample = [], [], {}
+    for set_name in a.sets.split(","):
+        toks = sets[set_name]
+        samples = [by[t] for t in toks]
+        scene_ids = np.unique([e["scene"] for e in samples], return_inverse=True)[1]
+        n_sc = scene_ids.max() + 1
+        Bidx = rng.integers(0, n_sc, (a.boot, n_sc))
+        turn = np.array([e["cmd"] != "straight" for e in samples])
+        vals = {}
+        for row, src in ROWS.items():
+            p = preds.get(src, {})
+            if not all(t in p for t in toks):
+                continue
+            pred = np.stack([p[t] for t in toks]).astype(np.float64)
+            h = Z.horizons(Z.per_sample(pred, samples))
+            h["l2_avg"] = (h["l2_1s"] + h["l2_2s"] + h["l2_3s"]) / 3
+            h["l2pt_avg"] = (h["l2pt_1s"] + h["l2pt_2s"] + h["l2pt_3s"]) / 3
+            for c in ("col_vad", "col_bevp"):
+                h[f"{c}_avg"] = (h[f"{c}_1s"] + h[f"{c}_2s"] + h[f"{c}_3s"]) / 3
+            gt = np.stack([by[t]["gt"] for t in toks])
+            h["lon_err_3s"] = pred[:, -1, 0] - gt[:, -1, 0]
+            vals[row] = h
+            per_sample[(set_name, row)] = h
+        if "cv" not in vals:
+            continue
+
+        def boot(v):  # scene-cluster bootstrap of a per-sample mean
+            s, c = np.bincount(scene_ids, v, n_sc), np.bincount(scene_ids, None, n_sc)
+            return s[Bidx].sum(1) / c[Bidx].sum(1)
+        for row, h in vals.items():
+            r = {"set": set_name, "row": row, "n": len(toks)}
+            for k, v in h.items():
+                r[k] = float(v.mean())
+            for k in ("l2_avg", "col_vad_avg", "col_bevp_avg"):
+                r[k + "_lo"], r[k + "_hi"] = np.percentile(boot(h[k]), [2.5, 97.5])
+                d = h[k] - vals["cv"][k]
+                r["d_" + k] = float(d.mean())
+                r["d_" + k + "_lo"], r["d_" + k + "_hi"] = np.percentile(boot(d), [2.5, 97.5])
+            rows.append(r)
+            for grp, m in (("straight", ~turn), ("turn", turn)):
+                cr = {"set": set_name, "row": row, "cmd": grp, "n": int(m.sum())}
+                for k in ("l2_avg", "l2_3s", "col_vad_avg", "col_bevp_avg", "col_bevp_3s"):
+                    cr[k] = float(h[k][m].mean())
+                cmd_rows.append(cr)
+    df = pd.DataFrame(rows)
+    df.to_csv(out / "results.csv", index=False)
+    pd.DataFrame(cmd_rows).to_csv(out / "by_command.csv", index=False)
+    with open(out / "per_sample.pkl", "wb") as f:
+        pickle.dump({"sets": {k: sets[k] for k in a.sets.split(",")}, "values": per_sample}, f)
+    show = ["set", "row", "n", "l2_1s", "l2_2s", "l2_3s", "l2_avg", "d_l2_avg", "d_l2_avg_lo", "d_l2_avg_hi",
+            "col_vad_avg", "col_bevp_1s", "col_bevp_2s", "col_bevp_3s", "col_bevp_avg", "d_col_bevp_avg_lo",
+            "d_col_bevp_avg_hi"]
+    pd.set_option("display.width", 250)
+    log.info("\n" + df[show].round(3).to_string())
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("index", "cv"))
+    ap.add_argument("cmd", choices=("index", "cv", "score"))
+    ap.add_argument("--sets", default="main,valid,fullhist,quarter")
+    ap.add_argument("--boot", type=int, default=10000)
     a = ap.parse_args()
     log = RunLog("nusc_zs", a.cmd)
-    {"index": cmd_index, "cv": cmd_cv}[a.cmd](a, log)
+    {"index": cmd_index, "cv": cmd_cv, "score": cmd_score}[a.cmd](a, log)
     log.event("end")
