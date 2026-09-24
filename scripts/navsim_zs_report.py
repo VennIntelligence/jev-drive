@@ -40,7 +40,37 @@ def latest_csv(ver, split, name):
 
 
 def per_token(df):
-    return df[df["token"].str.len() < 20].copy() if df is not None else None   # drop the summary rows
+    return df[~df["token"].str.contains("_")].copy() if df is not None else None   # drop the summary rows
+
+
+def boot(x, y=None, B=2000, seed=0):
+    """95% bootstrap CI (tokens resampled) of 100 * mean(x), or of 100 * mean(x - y) for paired arrays."""
+    d = np.asarray(x, float) - (0 if y is None else np.asarray(y, float))
+    rng = np.random.default_rng(seed)
+    m = np.array([d[rng.integers(0, len(d), len(d))].mean() for _ in range(B)])
+    return tuple(100 * np.percentile(m, [2.5, 97.5]))
+
+
+def paired_table(sc):
+    """Paired differences on common tokens: Alpamayo nav - no-nav (the 3000-token subset), nav - openpilot."""
+    idx = Z.load_index("navtest")
+    cmd = {e["token"]: ["left", "straight", "right", "unknown"][int(np.argmax(e["cmd"][-1]))] for e in idx}
+    rows = []
+    for metric in ("PDMS", "EPDMS"):
+        d = sc[sc.metric == metric].pivot_table(index="token", columns="agent", values="score")
+        for a, b in (("alpamayo_nav", "alpamayo_nonav"), ("alpamayo_nav", "lebowski_none"), ("lebowski_cmd", "lebowski_none"),
+                     ("cinque_cmd", "cinque_none"), ("small_cmd", "small_none"), ("alpamayo_nav", "cv")):
+            if a not in d or b not in d:
+                continue
+            dd = d[[a, b]].dropna()
+            for c in ("all", "left", "straight", "right"):
+                g = dd if c == "all" else dd[dd.index.map(cmd) == c]
+                lo, hi = boot(g[a], g[b])
+                rows.append({"metric": metric, "a": a, "b": b, "command": c, "n": len(g), "a_mean": 100 * g[a].mean(),
+                             "b_mean": 100 * g[b].mean(), "diff": 100 * (g[a] - g[b]).mean(), "ci_lo": lo, "ci_hi": hi})
+    df = pd.DataFrame(rows)
+    df.to_csv(OUT / "paired_navtest.csv", index=False, float_format="%.2f")
+    return df
 
 
 def navtest_tables():
@@ -53,8 +83,9 @@ def navtest_tables():
             if df is None:
                 continue
             ok = df[df["valid"]]
+            lo, hi = boot(ok["score"].to_numpy())
             r = {"metric": metric, "model": model, "variant": var, "n": len(df), "n_valid": len(ok),
-                 "score": 100 * ok["score"].mean()}
+                 "score": 100 * ok["score"].mean(), "ci_lo": lo, "ci_hi": hi}
             r.update({SHORT[c]: 100 * ok[c].mean() for c in cols if c in ok})
             rows.append(r)
             ok = ok.assign(command=ok["token"].map(cmd))
@@ -78,7 +109,7 @@ def navhard_table():
         if df is None:
             continue
         summ = df[df["token"].str.startswith("extended_pdm_score")].set_index("token")
-        r = {"model": model, "variant": var, "n_tokens": int((df["token"].str.len() < 20).sum())}
+        r = {"model": model, "variant": var, "n_tokens": int((~df["token"].str.contains("_")).sum())}
         for key, lab in (("extended_pdm_score_stage_one", "stage1"), ("extended_pdm_score_stage_two", "stage2"),
                          ("extended_pdm_score_combined", "EPDMS")):
             if key in summ.index:
@@ -124,9 +155,10 @@ def md(df: pd.DataFrame, fmt: str = "{:.1f}") -> str:
 
 if __name__ == "__main__":
     res, per = navtest_tables()
+    pair = paired_table(pd.read_csv(OUT / "scores_navtest.csv.gz"))
     hard = navhard_table()
     ade = ade_table()
     (OUT / "results.md").write_text("## navtest\n\n" + md(res) + "\n\n## navtest by command\n\n" + md(per)
-                                    + "\n\n## navhard two-stage\n\n" + md(hard) + "\n\n## ADE vs log (navtest)\n\n"
+                                    + "\n\n## paired differences\n\n" + md(pair) + "\n\n## navhard two-stage\n\n" + md(hard) + "\n\n## ADE vs log (navtest)\n\n"
                                     + md(ade, "{:.3f}") + "\n")
     print((OUT / "results.md").read_text())
