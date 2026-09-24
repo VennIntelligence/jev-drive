@@ -37,3 +37,15 @@
 ## L2/L3 路线
 
 扩到 **16 条** 带 scenario 的路线：v1 的 8 条加 8 条新抽（与 L1 新抽路线不重叠），见 `l23-v2-heldout.xml`。种子 0、1；TFv6 跑 A/B/C/D，TCP 跑 N/A/B/C/D。TCP wrapper 先在 dev 路线 24240 冒烟，检查 model forward、native PID、帧对齐和实际选中 control 后才进正式批。
+
+## 冻结后的三处接口修正（2026-09-25，均在前两条 held-out 路线的逐 case 抽查中发现，此时没有任何汇总结果）
+
+第一批 ramp 在 24816、25845 跑完后抽查，A 几乎每例碰撞或 blocked。逐 tick 看原始记录后改了三处，原始尝试保留在 `void-*` 目录，之后整批从头重跑：
+
+1. **A 的 route 输入。** A 的 route PID 原生输入是与车速无关的空间 route（导航给的 1 m 间隔 checkpoint）。v1 适配器从 5 s 时间轨迹里重采样 route，低速时整条轨迹不到 1 m，8 个 checkpoint 全塌到一点，瞄点失效（v1 pilot 中 "A replay 3.0 s 撞静态物体" 即此）。现在 A 拿参考路径在自车前方 1–8 m 的几何（进度单调），目标速度仍取时间轨迹 p2–p4。
+2. **plan 刷新率。** 名义条件 plan 每 tick 刷新（20 Hz）。TFv6 闭环里 route/waypoint 每 tick 都在变（W2 日志核实），v1 的 5 Hz 让为 20 Hz 设计、带逐 tick 微分项的 A/B 每 4 tick 吃一次瞄点跳变；C 自带按位姿历史补偿过时 plan 的机制。5 Hz 过时 plan 改作接口模式 `stale_5hz`。
+3. **plan 的坐标系。** 名义条件下参考轨迹用真值后轴位姿转到车体系（理想 planner，相当于感知模型直接在车体系里出 plan）；控制器自己的车速、IMU 等输入仍是带噪估计。v1 用带 GNSS 噪声的滤波位姿转换，前方 4 m 的 route 点相邻 tick 横跳 ±0.3 m，被 A 的微分项放大成发散蛇行；TFv6 里 A 的 route 来自模型的 route head，不经过定位。经噪声位姿转换的 plan 改作接口模式 `pose_plan`。
+
+修正后两条路线 12 例：四个控制器 CTE 均 0.01–0.05 m；A/B 仍 blocked，但原因是真实缺陷：起步近全油门领先参考约 4.7 m，巡航掉速 0.15–0.7 m/s，终点前 plan 速度归零即刹停、没有位置环，停在终点前 1.4 m（A）/3.5 m（B）。报告需说明：固定时间轨迹不像闭环 planner 那样每 tick 从自车位置重规划，时间滞后分项在闭环中会被部分吸收，因此 CTE、速度误差、时间滞后三项分开报告，闭环影响由 L2 衡量。
+
+接口模式因此为 `short_2s`、`sparse_5s`、`stop_jitter`、`stale_5hz`、`pose_plan` 五种。
