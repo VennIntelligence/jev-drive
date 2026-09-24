@@ -1,0 +1,36 @@
+diff --git a/sim/hugsim_env/envs/hug_sim.py b/sim/hugsim_env/envs/hug_sim.py
+index 77932df..c80fa5f 100644
+--- a/sim/hugsim_env/envs/hug_sim.py
++++ b/sim/hugsim_env/envs/hug_sim.py
+@@ -35,7 +35,8 @@ class HUGSimEnv(gymnasium.Env):
+         
+         plan_list = cfg.scenario.plan_list
+         for control_param in plan_list:
+-            control_param[5] = os.path.join(cfg.base.realcar_path, control_param[5])
++            # jev-drive: released scenarios name assets <id>/postprocess/shadow.pth; the released 3DRealCar is <id>/{gs.pth,wlh.json}
++            control_param[5] = os.path.join(cfg.base.realcar_path, str(control_param[5]).replace("/postprocess/shadow.pth", ""))
+ 
+         # read ground infos
+         with open(os.path.join(cfg.model_path, 'ground_param.pkl'), 'rb') as f:
+diff --git a/sim/utils/agent_controller.py b/sim/utils/agent_controller.py
+index a7ff993..7ba9d5d 100644
+--- a/sim/utils/agent_controller.py
++++ b/sim/utils/agent_controller.py
+@@ -147,6 +147,8 @@ class IDM:
+ 
+         # distance between neighbors and the path
+         lookahead_path = path[nearest_index + 1:][:self.lookahead_path_length]
++        if lookahead_path.shape[0] == 1:  # jev-drive: one waypoint left gives an empty arc length below (IndexError)
++            lookahead_path = torch.cat([lookahead_path, lookahead_path])
+         lookahead_neighbors = neighbors[..., None, :].expand(
+             -1, -1, lookahead_path.shape[0], -1
+         )  # (K, T, n, 4)
+@@ -300,7 +302,7 @@ class AttackPlanner:
+ 
+ 
+ class ConstantPlanner:
+-    def __init__(self):
++    def __init__(self, **ignored):  # jev-drive: released pandaset *-medium-02 pass max_t, never implemented
+         return
+ 
+     def update(self, state, dt):
