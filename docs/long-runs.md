@@ -64,3 +64,17 @@ change, or the job finishing. A silent job that is making progress needs no mess
   Our user has no root, so it cannot be killed or pointed elsewhere. Ignore it.
 
 Last verified: 2026-09-20
+
+## Sharing the box between several agents
+
+When more than one agent (or person) runs jobs on the box at the same time:
+- `$DATA_DIR/runs/schedule.md` is the timetable: slots, owner, GPU, CARLA worker / core caps, dependencies.
+  One owner (the main session) edits it; everyone else reads it. CPU is usually the binding constraint for CARLA
+  (~3-4 cores per worker, ~12 workers on 50 cores).
+- Launch every scheduled job through `scripts/slot_run.sh <slot> [--after a,b] [--gpu N --vram-gb G] -- cmd`
+  inside tmux. It waits with plain `sleep` until the dependency sentinels `$DATA_DIR/runs/sched/<slot>.done`
+  exist (and the GPU has room), runs the command, then writes `<slot>.done` or `<slot>.failed`. A failed
+  dependency fails the dependent slot instead of starting it on bad inputs.
+- `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
+- Agents arm their slots and then stop; they watch only their own final sentinel. No polling loops in the agent
+  and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
