@@ -132,6 +132,8 @@ def per_route(df: pd.DataFrame, arm: str, col: str, crash_drop=False) -> pd.Seri
     d = df[df.arm == arm].copy()
     if col in ("ds", "rc", "cf_ds", "cf_rc"):
         d[col] = d[col].fillna(0)
+    if col in ("success", "cf_success"):
+        d[col] = d[col].fillna(False).astype(float)
     if crash_drop:
         d = d[(d.status != "Failed - Agent crashed") & (d.status != "missing")]
     return d.groupby("route_id")[col].mean().astype(float)
@@ -163,7 +165,11 @@ def analyse(df: pd.DataFrame) -> dict:
         out["arms"][arm] = a
         runs = [r["official_merge"]["DS"] for k, r in out["runs"].items() if k.startswith(arm)]
         out["noise"][arm] = {"DS_per_seed": runs, "DS_sd_across_seeds": float(np.std(runs, ddof=1)) if len(runs) > 1 else None}
-    common = sorted(set(per_route(df, "official", "ds").index) & set(per_route(df, "simlingo", "ds").index))
+    # paired contrasts only over routes that have a record in every run of both arms
+    ran = df[df.status != "missing"].groupby("route_id").apply(lambda g: set(zip(g.arm, g.seed)))
+    need = set(zip(df.arm, df.seed))
+    common = sorted(r for r, s_ in ran.items() if s_ == need)
+    out["n_paired_routes"] = len(common)
     for col, name, k in (("ds", "DS", 1), ("rc", "RC", 1), ("success", "SR", 100)):
         d = (per_route(df, "simlingo", col)[common] - per_route(df, "official", col)[common]).values * k
         out["paired"][name + " (S-O, both official merge)"] = boot(d)
