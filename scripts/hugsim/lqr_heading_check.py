@@ -71,8 +71,11 @@ def main():
         for fixed in (False, True):
             d = drive(pol, fixed, v0, n)
             d['drive'], d['controller'] = name, 'PR #57 fix' if fixed else 'official'
-            if name == 'route':  # distance to the recorded route (the env terminates at 10 m)
-                d['off_route'] = [np.min(np.linalg.norm(route.xz - p, axis=1)) for p in d[['x', 'z']].to_numpy()]
+            if name == 'route':  # distance to the recorded route (the env terminates at 10 m), and the env's own
+                dist = np.linalg.norm(route.xz[None] - d[['x', 'z']].to_numpy()[:, None], axis=2)  # end: RC >= 1,
+                d['off_route'] = dist.min(1)                              # i.e. nearest pose past 90 % of the route
+                done = np.flatnonzero(dist.argmin(1) + 1 >= 0.9 * len(route.xz))
+                d = d.iloc[:done[0] + 1] if len(done) else d
             dfs.append(d)
     df = pd.concat(dfs)
     Path(a.out).mkdir(parents=True, exist_ok=True)
