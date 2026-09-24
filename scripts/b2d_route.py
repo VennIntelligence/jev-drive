@@ -47,6 +47,10 @@ def add_bench2drive_to_path(root):
               str(Path(__file__).resolve().parent)):
         if p not in sys.path:
             sys.path.insert(0, p)
+    # $B2D_PREPEND_PATH goes in front of the Bench2Drive paths. SimLingo's vendored Bench2Drive ships its own
+    # leaderboard/team_code package (PDM-Lite files), which would otherwise shadow the agent's team_code.
+    for p in reversed([p for p in os.environ.get("B2D_PREPEND_PATH", "").split(":") if p]):
+        sys.path.insert(0, p)
     os.environ.setdefault("SCENARIO_RUNNER_ROOT", str(Path(root) / "scenario_runner"))
     os.environ.setdefault("LEADERBOARD_ROOT", str(Path(root) / "leaderboard"))
     # The evaluator reads 'leaderboard/data/weather.xml' by a relative path, so it only runs from

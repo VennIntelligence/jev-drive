@@ -26,7 +26,7 @@ ln -sfn "$(ls -d "$HF_HOME"/hub/models--OpenGVLab--InternVL2-1B/snapshots/0d75cc
 out=${OUT_ROOT:-$DATA_DIR/runs/simlingo-catalogue}/$arm/seed$seed
 mkdir -p "$out/viz"
 # The agent imports simlingo_training.* and team_code.*; it writes its per-step metric dump under $SAVE_PATH.
-export PYTHONPATH=$S:$S/team_code${PYTHONPATH:+:$PYTHONPATH}
+export PYTHONPATH=$S:$S/team_code${PYTHONPATH:+:$PYTHONPATH} B2D_PREPEND_PATH=$S
 export SAVE_PATH=$out/viz CUDA_VISIBLE_DEVICES=$gpu B2D_RC_TRACE=1 B2D_CAPTURE_CRITERION_EVENTS=1
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 # torch sizes its CPU pools from the host's 208 cores (the cgroup allows 50): 465 threads per agent, measured.
