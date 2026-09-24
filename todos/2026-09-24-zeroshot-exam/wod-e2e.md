@@ -171,7 +171,45 @@ GCS 抓取：(479 + 958) × 4 条记录 × 约 2.3 MB ≈ 13 GB，按 10 MB/s �
 
 ## 适配器验证
 
-（待填：覆盖率、四路渲染图、openpilot model frame、BEV 与图像上的轨迹叠加。）
+8 个验证帧（不在评测集里），只看图、不算分。
+
+![adapter views](../../research/figs/wod-zeroshot-adapter.png)
+
+图：验证帧 `f8af7b57…-135` 上两个模型实际看到的输入。上排和左下是 Alpamayo 的四路 f-theta 视图（由 WOD 7 路相机纯旋转重投影），
+中下、右下是 openpilot 的 road / wide model frame（由 FRONT / FRONT_LEFT / FRONT_RIGHT 渲染，只画了 RGB，实际喂的是 YCbCr 打包）。
+看三件事：相机之间的接缝处车道线和高架是连续的，说明外参、畸变和选相机的逻辑都对；地平线在各路里的高度与 PhysicalAI 的相机一致；
+三路 120° 视图底部约 22% 是黑的，这就是预登记里说的「WOD 相机光轴以下只有 18°」。
+
+| 项 | 结果 |
+|---|---|
+| Alpamayo 各路覆盖率（非黑像素，8 帧均值） | cross-left 0.746、front-wide 0.781、cross-right 0.752、front-tele 1.000；8 帧之间差别 < 0.01（WOD 的标定几乎不随 sequence 变） |
+| 缺的是什么 | 几乎全部是画面底部（光轴以下 18°–34° 的带子），外加 cross 视图上角的小块（WOD 相机光轴以上只有 33°） |
+| openpilot 两路覆盖率 | 1.000（代码里 assert 过） |
+| GPU（torch `grid_sample`）与 CPU（cv2 `remap`）两条渲染路径 | 目视一致（同一帧两张图逐路对照） |
+| 坐标符号 | 8 帧 BEV 上两类模型的预测都跟着 logged future 的左右转方向走（左转帧向左、右转帧向右），直行帧 5 s 终点与 log 差 < 2 m |
+| Alpamayo 官方加载路径 | Cosmos-Reason2-8B gate 通过后 `from_pretrained` 在线加载成功，不再需要 offline 绕法 |
+
+一个值得记下的观察（不是适配问题）：两个左转验证帧上，Alpamayo 的轨迹向左、和 log 一致，但它的 CoC 文本写的是 "Turn right at the intersection"。
+轨迹方向由 egomotion 历史和图像共同决定，文本里的左右词却反了；NVIDIA 自己的 `nav_demo_samples.json` 里也有 nav "Turn left" 配 CoC "Turn right"
+的样本。所以这像是模型文本侧的左右混淆，结果部分会在全部转弯帧上统计文本方向和轨迹方向的一致率（推测，待统计）。
+
+### 算力与 GPU 排期（与 NAVSIM、Bench2Drive 两个考试共用一张卡）
+
+共享文件 `~/data/runs/zeroshot-exam/gpu-plan.md` 上的约定：WOD 只起**一个** Alpamayo 进程（K = 6 时峰值 32 GB），
+不用 B2D 的常驻 server（它按请求串行，K = 6 的一次调用会把 B2D 的每个 tick 堵 3–5 s）；openpilot 和 Alpamayo 同时跑，不单占时段；
+B2D 的全量闭环排在 WOD 和 NAVSIM 的 Alpamayo 任务之后。实测：
+
+| 任务 | 规模 | 单价 | wall | 瓶颈 |
+|---|---|---|---|---|
+| GCS 抓取 | 5 728 条记录（1 437 个目标帧 × 4 帧），约 13 GB | 走帧头约 1 s/条（经 Clash），之后约 95 条/分钟 | 约 60 min | 网络延迟（每个 shard 要顺序读 ~1 150 个 12 字节帧头）；与下面两项重叠 |
+| openpilot 三个模型 | 1 437 目标 × 最多 101 帧 | GPU 0.83 s/目标（small 0.21、Cinque 0.46、Lebowski 0.16） | 2 124 s（1.48 s/目标） | CPU：每目标 303 张 JPEG 解码 + 重投影，16 个进程；GPU 只占 3.7 GB |
+| Alpamayo，rater 帧 × 2 变体 | 958 次 K = 6 调用 | 3.2–5.6 s/调用（卡上同时有 B2D/NAVSIM 的 Alpamayo，GPU 100%）；smoke 在空卡上是 2.2–2.4 s | 约 1 h | GPU（与另两个考试共享） |
+| Alpamayo，ADE-extra × nav | 958 次调用 | 同上 | 约 1 h | 同上 |
+
+优化只做了配置层面、输出不变的那一档（SDPA + compile vision/expert，smoke 实测 K = 6 时比默认 FA2 快 12%，drift ≤ 0.02 m）；
+K = 6 时 HF `generate` 把整段 prompt（16 张图）复制 6 份再 prefill，这 6 倍重复是最大的浪费，但要改模型代码才能去掉，
+按 CLAUDE.md「第三方代码原样跑」不动它。总 wall 时间约 2 h，低于 3 h 的 profiling 门槛。输入准备（JPEG 解码 + GPU 重投影 + processor）
+在后台线程里提前做 3 帧，与 GPU 推理重叠。
 
 ## 结果
 
