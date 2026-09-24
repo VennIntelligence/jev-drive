@@ -323,13 +323,14 @@ def _rc_tracer(every=20):
     """Read-only observer for the catalogue experiment (todos/2026-09-25-simlingo-catalogue), on when
     $B2D_RC_TRACE=1, into $B2D_ATTEMPT_OUT/rc_trace.jsonl: every `every` ticks append [tick, frame, route completion %,
     infraction events so far] from the route's own criteria, so a score under a different tick cap can be recomputed
-    from the same trajectory. The tick on which RC first reads 100 is always written, with the previous tick's RC as a
-    fifth field, so a completion granted by RouteCompletionTest's percentage threshold can be told apart.
+    from the same trajectory. The tick on which RC first reads 100 is always written, with a
+    fifth field the route's own completion percentage at that tick before RouteCompletionTest overwrote it with 100
+    (`_route_accum_perc[_index]`), so a completion granted by the percentage threshold (90 vs 99) can be told apart.
     JSON lines, flushed, so a killed route keeps its trace."""
     if os.environ.get("B2D_RC_TRACE") != "1":
         return None
     fh = open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "rc_trace.jsonl"), "a")
-    st = {"crit": None, "prev": 0.0}
+    st = {"crit": None, "prev": 0.0}  # prev: RC as read on the previous tick
 
     def trace(manager, frame):
         if st["crit"] is None:  # the criteria tree is fixed once the route is built
@@ -340,7 +341,9 @@ def _rc_tracer(every=20):
         done = rc >= 100 and st["prev"] < 100
         if done or n % every == 0 or n == 1:
             row = [n, frame, rc, sum(len(c.events) for c in st["crit"])]
-            fh.write(json.dumps(row + [st["prev"]] if done else row) + "\n")
+            if done:
+                row.append(round(st["rc"]._route_accum_perc[st["rc"]._index], 2))
+            fh.write(json.dumps(row) + "\n")
             fh.flush()
         st["prev"] = rc
 

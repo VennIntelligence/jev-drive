@@ -80,7 +80,8 @@ def counterfactual_cap(adir: Path, rec: dict, ticks: int) -> dict:
 
 
 def threshold_completion(adir: Path) -> float:
-    """RC on the tick before it first read 100; <= 99 means the 90 % threshold granted the completion."""
+    """Completion percentage when RouteCompletionTest declared success (before its override to 100); <= 99 means
+    only the 90 % threshold could have granted it."""
     rows = [r for r in read_trace(adir) if len(r) == 5]
     return rows[0][4] if rows else np.nan
 
@@ -113,7 +114,7 @@ def load(root: Path, meta: pd.DataFrame) -> pd.DataFrame:
                                    **counterfactual_cap(adir, rec, ticks), rc_before_completion=threshold_completion(adir))
                 rows.append(row)
     df = pd.DataFrame(rows).merge(meta, on="route_id", how="left")
-    df["thr_granted"] = df.rc_before_completion <= 99
+    df["thr_granted"] = df.rc_before_completion <= 99  # official needs > 99
     return df
 
 
@@ -168,7 +169,6 @@ def analyse(df: pd.DataFrame) -> dict:
         out["paired"][name + " (S-O, both official merge)"] = boot(d)
     # headline as each side reports it: O official merge vs S simlingo merge
     o = per_route(df, "official", "ds")[common]
-    s_cr = per_route(df, "simlingo", "ds", crash_drop=True)
     out["paired"]["DS headline (S simlingo merge - O official merge)"] = (
         float(df[df.arm == "simlingo"].groupby("seed").apply(lambda g: merge_scores(g, "simlingo")["DS"]).mean()
               - df[df.arm == "official"].groupby("seed").apply(lambda g: merge_scores(g, "official")["DS"]).mean()))
@@ -189,7 +189,6 @@ def analyse(df: pd.DataFrame) -> dict:
         "cf penalty recomputation max abs error (routes <= cap)": float(
             df[(df.arm == "simlingo") & (df.ticks <= CAP)].cf_check.max()),
     }
-    _ = s_cr
     return out
 
 
@@ -247,7 +246,6 @@ def figures(df: pd.DataFrame, res: dict, out: Path, repo: Path):
     ps.save(fig, out / "simlingo-catalogue-waterfall")
     plt.close(fig)
 
-    t_o = df[df.arm == "official"].groupby("route_id").ticks.median()
     t_s = df[df.arm == "simlingo"].groupby("route_id").ticks.median()
     d = per_route(df, "simlingo", "ds") - per_route(df, "official", "ds")
     j = pd.DataFrame({"ticks_s": t_s, "d": d}).dropna()
@@ -262,7 +260,6 @@ def figures(df: pd.DataFrame, res: dict, out: Path, repo: Path):
     fig.tight_layout(pad=.3)
     ps.save(fig, out / "simlingo-catalogue-routes")
     plt.close(fig)
-    _ = t_o
 
 
 def main():
