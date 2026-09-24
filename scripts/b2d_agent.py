@@ -355,9 +355,13 @@ class StubAgent(AutonomousAgent):
                 future = timestamp - self._fixed_trace_start + np.arange(1, 21) * .25
                 desired = np.column_stack((np.interp(future, times, world_xy[:, 0]),
                                            np.interp(future, times, world_xy[:, 1])))
-                trajectory = world_to_local(desired, xy, yaw)
+                # L1 ideal planner: express the plan in the true ego frame, as a perception
+                # model does; the controller's own sensor inputs stay estimated and noisy.
+                plan_xy, plan_yaw = (self._truth_rear_pose(frame) if self.cfg.get('plan_from_truth')
+                                     else (xy, yaw))
+                trajectory = world_to_local(desired, plan_xy, plan_yaw)
                 if getattr(self._controller, 'accepts_route', False):
-                    route_xy = world_to_local(self._trace_route(xy), xy, yaw)
+                    route_xy = world_to_local(self._trace_route(plan_xy), plan_xy, plan_yaw)
             interface = getattr(self, 'cfg', {}).get('reference_interface', 'nominal')
             if interface == 'nominal':
                 accepted = (self._controller.update(trajectory, timestamp, route_xy=route_xy)

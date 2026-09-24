@@ -320,6 +320,8 @@ def main():
     p.add_argument('--case-list', help='JSON list of {route, perturbation_id, variant, preset} for infrastructure resume')
     p.add_argument('--presets', default='carla,tcp,pursuit')
     p.add_argument('--server-index', type=int, default=64)
+    p.add_argument('--plan-from-truth', action='store_true',
+                   help='fixed-trace plans in the true ego frame (L1 ideal planner); control inputs stay estimated')
     p.add_argument('--decimate', type=int, default=4, help='plan refresh every N ticks (1 = 20 Hz)')
     p.add_argument('--cruise-mps', type=float, default=8)
     p.add_argument('--max-ticks', type=int, default=1800)
@@ -484,6 +486,7 @@ def main():
                            out=str(run), cruise_mps=cruise, reference_interface=a.reference_interface)
                 if archived_traces:
                     cfg['reference_trace_path'] = archived_traces[route.get('id')]
+                    cfg['plan_from_truth'] = a.plan_from_truth
                 if case['perturbation'] is not None:
                     cfg.update(gnss_noise_seed=case['perturbation']['gnss_noise_seed'],
                                imu_noise_seed=case['perturbation']['imu_noise_seed'])
