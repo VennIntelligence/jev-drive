@@ -280,9 +280,15 @@ def _nuplan_like_sources(native: dict, cams: dict, sources) -> dict:
         cal = cams[c]
         w, h = Z.NUPLAN_WH[0] // s, Z.NUPLAN_WH[1] // s
         uu, vv = np.meshgrid((np.arange(w) + .5) * s - .5, (np.arange(h) + .5) * s - .5)
-        pts = np.stack([uu, vv], -1).reshape(-1, 1, 2).astype(np.float64)
-        und = cv2.undistortPointsIter(pts, np.asarray(cal["K"], np.float64), np.asarray(cal["D"], np.float64), None, None,
-                                      (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 40, 1e-9)).reshape(h, w, 2)
+        K, (k1, k2, p1, p2, k3) = np.asarray(cal["K"], np.float64), np.asarray(cal["D"], np.float64)
+        xd, yd = (uu - K[0, 2]) / K[0, 0], (vv - K[1, 2]) / K[1, 1]
+        x, y = xd.copy(), yd.copy()
+        for _ in range(30):   # fixed-point inversion of Brown-Conrady (the image lies in its monotonic region)
+            r2 = x * x + y * y
+            rad = 1 + k1 * r2 + k2 * r2 ** 2 + k3 * r2 ** 3
+            x = (xd - 2 * p1 * x * y - p2 * (r2 + 2 * x * x)) / rad
+            y = (yd - p1 * (r2 + 2 * y * y) - 2 * p2 * x * y) / rad
+        und = np.stack([x, y], -1)
         rays = np.concatenate([und, np.ones((h, w, 1))], -1) @ Z.cam_to_ego(cal).T
         rays /= np.linalg.norm(rays, axis=-1, keepdims=True)
         img = np.zeros((h, w, 3), np.uint8)
