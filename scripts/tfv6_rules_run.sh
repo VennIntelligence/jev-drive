@@ -14,7 +14,7 @@ case $rules in
   *) echo "rules must be on|off" >&2; exit 2 ;;
 esac
 lead=$DATA_DIR/third_party/scout/lead-cvpr2026
-export LEAD_CLOSED_LOOP_CONFIG="$rc" B2D_RESEED_AFTER_BUILD=1 TFV6_AFTER_TRIGGER_S=${TFV6_AFTER_TRIGGER_S:-20} \
+export LEAD_CLOSED_LOOP_CONFIG="$rc" B2D_RESEED_AFTER_BUILD=1 B2D_CAPTURE_CRITERION_EVENTS=1 TFV6_AFTER_TRIGGER_S=${TFV6_AFTER_TRIGGER_S:-20} \
   CUDA_VISIBLE_DEVICES=$gpu LEAD_PROJECT_ROOT=$lead HF_HUB_OFFLINE=1 OMP_NUM_THREADS=2 \
   NUMBA_NUM_THREADS=${NUMBA_NUM_THREADS:-3} OPENBLAS_CORETYPE=Haswell PYTHONPATH=$lead${PYTHONPATH:+:$PYTHONPATH}
 exec $DATA_DIR/envs/carla/bin/python scripts/b2d_run.py --routes $DATA_DIR/runs/tfv6_rules/routes.xml \

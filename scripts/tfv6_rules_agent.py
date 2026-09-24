@@ -13,7 +13,7 @@ ensemble() every tick), the control chosen before the post-processors, what each
 executed control, ego truth and the positions of the scenario's hazard actors (hidden.json, written by
 b2d_hooks.track_hazards when the route carries p5_suppress).
 
-Config string (leaderboard --agent-config): "<model_dir>+<A|B>". Environment:
+Config string (leaderboard --agent-config): "<model_dir>+<A|B>" (the evaluator appends "+<save name>"). Environment:
   B2D_ATTEMPT_OUT        attempt dir (set by b2d_route.py); frames.jsonl, rules_summary.json go there
   TFV6_AFTER_TRIGGER_S   optional: end a pair-world route (id >= 100000) this many sim seconds after the
                          scenario triggers (x- and null only need the scenario window)
@@ -66,8 +66,10 @@ def _r(x, n=4):
 
 class TFv6RulesAgent(SensorAgent):
     def setup(self, path_to_conf_file, *args, **kwargs):
-        model_dir, _, arm = path_to_conf_file.partition("+")
-        self.arm = arm.upper() or "A"
+        # Bench2Drive's evaluator appends "+<save name>" to the agent config string.
+        parts = path_to_conf_file.split("+")
+        model_dir, arm = parts[0], (parts[1] if len(parts) > 1 else "A")
+        self.arm = arm.upper()
         if self.arm not in ("A", "B"):
             raise ValueError("interface arm must be A or B, got %r" % arm)
         self.out = Path(os.environ["B2D_ATTEMPT_OUT"])
