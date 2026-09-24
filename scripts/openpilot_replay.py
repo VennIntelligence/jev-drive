@@ -49,23 +49,27 @@ def run_model(m, frames, speed):
     return {k: np.asarray(v, np.float32) for k, v in out.items()}
 
 
+def at_horizon(a, h):
+    """Linear interpolation of (N, 33, ...) plan-indexed arrays at time h (s)."""
+    j = np.interp(h, T_IDXS, np.arange(33))
+    lo = int(j)
+    return a[:, lo] * (lo + 1 - j) + a[:, min(lo + 1, 32)] * (j - lo)
+
+
 def scores(gt, pred, model):
     """Plan position / speed errors at HORIZONS and action agreement, frames >= WARMUP with ground truth."""
     s = slice(WARMUP, None)
     row = dict(model=model, n=int(len(gt["speed"][s])))
     for h in HORIZONS:
-        j = np.interp(h, T_IDXS, np.arange(33))
-        at = lambda a: np.stack([np.interp(j, np.arange(33), a[..., k]) for k in range(a.shape[-1])], -1)  # noqa: E731
-        gp = at(gt["gt_pos"][s])
-        pp = at(gt["cv_pos"][s]) if model == "const-vel" else at(pred["plan_pos"][s])
-        ok = np.isfinite(gp[:, 0])
+        gp, gv = at_horizon(gt["gt_pos"][s], h), at_horizon(gt["gt_v"][s], h)
+        if model == "const-vel":
+            pp, pv = at_horizon(gt["cv_pos"][s], h), gt["speed"][s]
+        else:
+            pp, pv = at_horizon(pred["plan_pos"][s], h), at_horizon(pred["plan_vel"][s][..., 0], h)
+        ok = np.isfinite(gv)
         row[f"lon@{h:g}s"] = float(np.abs(pp[ok, 0] - gp[ok, 0]).mean())
         row[f"lat@{h:g}s"] = float(np.abs(pp[ok, 1] - gp[ok, 1]).mean())
-        gv = np.array([np.interp(j, np.arange(33), r) for r in gt["gt_v"][s]])
-        pv = gt["speed"][s] if model == "const-vel" else \
-            np.array([np.interp(j, np.arange(33), r) for r in pred["plan_vel"][s][:, :, 0]])
-        okv = np.isfinite(gv)
-        row[f"v@{h:g}s"] = float(np.abs(pv[okv] - gv[okv]).mean())
+        row[f"v@{h:g}s"] = float(np.abs(pv[ok] - gv[ok]).mean())
     if model != "const-vel":
         t = gt["t"]
         moving = gt["speed"] > 5
