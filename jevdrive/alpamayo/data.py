@@ -116,12 +116,21 @@ def fetch_clips(clip_ids: list[str], features=FEATURES, streams: int = 8, log=pr
         for n in ex.map(one, by_file.items()):
             total += n
     dt = time.monotonic() - t0
+    (cache_dir() / "revision.txt").write_text(rev)
     log(f"{len(clip_ids)} clips, {len(by_file)} chunk files, {total / 1e6:.0f} MB in {dt:.0f} s "
         f"= {total / 1e6 / max(dt, 1e-9):.1f} MB/s")
     return {"revision": rev, "bytes": total, "seconds": dt}
 
 
-def interface(revision: str):
-    """Dataset interface over the sparse cache; only clips fetched by fetch_clips are readable."""
+def interface(revision: str | None = None):
+    """Dataset interface over the sparse cache (revision of the last fetch by default); only clips fetched by
+    fetch_clips are readable."""
     import physical_ai_av
+    revision = revision or (cache_dir() / "revision.txt").read_text().strip()
     return physical_ai_av.PhysicalAIAVDatasetInterface(revision=revision, cache_dir=cache_dir())
+
+
+def load_clip(clip_id: str, avdi, t0_us: int = 5_100_000) -> dict:
+    """The official loader over our sparse cache: 4 cams x 4 frames, 16-step history, 64-step future."""
+    from alpamayo1_5.load_physical_aiavdataset import load_physical_aiavdataset
+    return load_physical_aiavdataset(clip_id, t0_us=t0_us, avdi=avdi, maybe_stream=False)
