@@ -104,7 +104,7 @@ def fig_bev(a):
     rng = np.random.default_rng(0)
     toks = [toks[k] for k in sorted(rng.choice(len(toks), min(6, len(toks)), replace=False))]
     S.apply()
-    fig, axes = plt.subplots(1, len(toks), figsize=(S.DOUBLE_COLUMN_IN, 2.5))
+    fig, axes = plt.subplots(1, len(toks), figsize=(S.DOUBLE_COLUMN_IN, 2.4))
     for ax, t in zip(np.atleast_1d(axes), toks):
         e = by[t]
         sc = idx["scenes"][e["scene"]]
@@ -132,11 +132,11 @@ def fig_bev(a):
                 _ticks(ax, rear[sel][:, :2] if rear.ndim == 2 else rear[sel], psi[sel], C[m], 1)
         ax.set_aspect("equal", "datalim")
         ax.set_title(f"{e['scene']} ({'SG' if sc['location'].startswith('singapore') else 'BOS'})", fontsize=7)
-        ax.set_xlabel("lateral (m, right +)")
     np.atleast_1d(axes)[0].set_ylabel("longitudinal (m)")
+    fig.supxlabel("lateral (m, right +)", y=0.17, fontsize=8)
     h, l = np.atleast_1d(axes)[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="upper center", bbox_to_anchor=(0.5, 0.02), ncol=4)
-    fig.subplots_adjust(bottom=0.24, wspace=0.35)
+    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=6, fontsize=6.5, handlelength=1.5)
+    fig.subplots_adjust(bottom=0.3, top=0.9, left=0.07, right=0.99, wspace=0.45)
     S.save(fig, FIG / "nusc-zeroshot-bev")
     print(toks)
 
@@ -146,27 +146,28 @@ def fig_pai(a):
     z = np.load(root / "per_clip.npz")
     prev = sorted(root.glob("frames/*/*_views.jpg"))
     S.apply()
-    fig = plt.figure(figsize=(S.DOUBLE_COLUMN_IN, 2.3))
-    gs = fig.add_gridspec(1, 3, width_ratios=[1.35, 0.6, 1.05], wspace=0.25)
+    fig = plt.figure(figsize=(S.DOUBLE_COLUMN_IN, 2.4))
+    gs = fig.add_gridspec(1, 2, width_ratios=[1.25, 1], wspace=0.22, left=0.01, right=0.99, bottom=0.3, top=0.9)
     ax0 = fig.add_subplot(gs[0])
     if prev:
         ax0.imshow(rgb(prev[0]))
-        ax0.set_title("(a) front-wide 120° (left) and openpilot road / wide (right)", fontsize=7)
+    ax0.set_title("(a) front-wide 120° (left), openpilot road / wide (right, Y)", fontsize=7)
     ax0.axis("off")
-    ax1 = fig.add_subplot(gs[2])
+    ax1 = fig.add_subplot(gs[1])
     ade = {m: np.linalg.norm(z[m] - z["gt"], axis=-1).mean(1) for m in ("lebowski", "cinque", "small")}
     ade["cv"] = np.linalg.norm(z["cv"] - z["gt"], axis=-1).mean(1)
     order = np.argsort(z["alp_mean"])
     x = np.arange(len(order))
     ax1.plot(x, z["alp_mean"][order], "o-", color=C["alp"], ms=2.5, lw=0.7, label="Alpamayo 1.5 (one sample)")
     for m in ("lebowski", "cinque", "small"):
-        ax1.plot(x, ade[m][order], "o", color=C[m], ms=2.5, label=f"openpilot {m}")
+        ax1.plot(x, ade[m][order], "o", color=C[m], ms=2.2, label=f"openpilot {m}")
     ax1.plot(x, ade["cv"][order], "x", color=C["cv"], ms=2.5, label="constant velocity")
     ax1.set_yscale("log")
     ax1.set_xlabel("clip (sorted by Alpamayo ADE)")
     ax1.set_ylabel("ADE over 6.4 s (m)")
     ax1.set_title("(b) per-clip ADE, n = 31", fontsize=7)
-    ax1.legend(loc="upper left", fontsize=6, handlelength=1.0)
+    h, l = ax1.get_legend_handles_labels()
+    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, 0.0), ncol=5, fontsize=6.5, handlelength=1.5)
     S.save(fig, FIG / "pai-openpilot")
 
 
