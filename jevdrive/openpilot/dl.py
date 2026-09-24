@@ -1,5 +1,6 @@
 """Parallel ranged HTTP download with sha256 check (the box's link is shared per TCP stream)."""
 import hashlib
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -14,7 +15,7 @@ def hf_url(repo: str, path: str, dataset: bool = False, mirror: bool = True) -> 
 
 
 def download(url: str, dst: Path, size: int | None = None, sha256: str | None = None, streams: int = 8,
-             chunk: int = 16 << 20) -> Path:
+             chunk: int = 4 << 20) -> Path:
     """Fetch url to dst using `streams` concurrent range requests; skip if dst already has the right size."""
     dst = Path(dst)
     if size is None:
@@ -30,12 +31,17 @@ def download(url: str, dst: Path, size: int | None = None, sha256: str | None = 
         b = min(a + chunk, size) - 1
         for attempt in range(8):
             try:
-                r = requests.get(url, headers={"Range": f"bytes={a}-{b}"}, timeout=60)
-                r.raise_for_status()
-                assert len(r.content) == b - a + 1, "short read"
+                buf, t0 = bytearray(), time.monotonic()
+                with requests.get(url, headers={"Range": f"bytes={a}-{b}"}, stream=True, timeout=(10, 20)) as r:
+                    r.raise_for_status()
+                    for part in r.iter_content(1 << 20):
+                        buf += part
+                        if time.monotonic() - t0 > 120:  # trickling connection: drop it and retry
+                            raise TimeoutError("slow chunk")
+                assert len(buf) == b - a + 1, "short read"
                 with open(tmp, "r+b") as f:
                     f.seek(a)
-                    f.write(r.content)
+                    f.write(buf)
                 return
             except Exception:
                 if attempt == 7:

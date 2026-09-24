@@ -118,32 +118,35 @@ def future_in_calib(meta, i, t_idxs):
 
 
 def decode_hevc(path):
-    """All frames of a raw HEVC stream as (Y, U, V) uint8 planes (no color conversion: NV12 in, NV12 out)."""
+    """Yield the frames of a raw HEVC stream as (Y, U, V) uint8 planes (no color conversion: NV12 in, NV12 out)."""
     import av
     with av.open(str(path), format="hevc") as c:
         st = c.streams.video[0]
         st.thread_type = "AUTO"
-        out = []
         for fr in c.decode(st):
             a = fr.to_ndarray(format="yuv420p")
             h, w = a.shape[0] * 2 // 3, a.shape[1]
-            out.append((a[:h], a[h:h + h // 4].reshape(h // 2, w // 2), a[h + h // 4:].reshape(h // 2, w // 2)))
-        return out
+            yield a[:h], a[h:h + h // 4].reshape(h // 2, w // 2), a[h + h // 4:].reshape(h // 2, w // 2)
 
 
-def segment_model_frames(seg_dir, meta=None):
-    """Warped + packed model inputs for a comma1M segment: (N, 2, 6, 128, 256) uint8, [road, wide]."""
+def segment_model_frames(seg_dir, meta=None, max_frames=1200):
+    """Warped + packed model inputs for a comma1M segment: (N, 2, 6, 128, 256) uint8, [road, wide].
+    Both streams are decoded in parallel and warped on the fly (a decoded 1928x1208 minute is 8 GB)."""
     seg_dir = Path(seg_dir)
     meta = meta or load_segment_meta(seg_dir)
     wh = meta["fcam_wh"]
-    f_road, f_wide = CAMERAS[wh]
-    warp_road = Warper(get_warp_matrix(meta["rpy_calib"], intrinsics(*wh, f_road), False), wh)
-    warp_wide = Warper(get_warp_matrix(meta["rpy_calib"], intrinsics(*wh, f_wide), True), wh)
+    out = np.zeros((max_frames, 2, 6, MODEL_H // 2, MODEL_W // 2), np.uint8)
+
+    def run(cam):
+        f = CAMERAS[wh][cam]
+        warp = Warper(get_warp_matrix(meta["rpy_calib"], intrinsics(*wh, f), cam == 1), wh)
+        n = 0
+        for n, planes in enumerate(decode_hevc(seg_dir / ("fcamera.hevc", "ecamera.hevc")[cam])):
+            if n >= max_frames:
+                break
+            warp(*planes, out=out[n, cam])
+        return n + 1
+
     with ThreadPoolExecutor(2) as ex:
-        road, wide = ex.map(decode_hevc, (seg_dir / "fcamera.hevc", seg_dir / "ecamera.hevc"))
-    n = min(len(road), len(wide))
-    out = np.empty((n, 2, 6, MODEL_H // 2, MODEL_W // 2), np.uint8)
-    for i in range(n):
-        warp_road(*road[i], out=out[i, 0])
-        warp_wide(*wide[i], out=out[i, 1])
-    return out, meta
+        n = min(ex.map(run, (0, 1)))
+    return out[:n], meta

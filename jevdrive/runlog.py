@@ -9,8 +9,6 @@ import logging
 import time
 from pathlib import Path
 
-from torch.utils.tensorboard import SummaryWriter
-
 from .common import data_dir, get_logger
 
 
@@ -23,15 +21,24 @@ class RunLog:
         fh.setFormatter(logging.getLogger().handlers[0].formatter)
         logging.getLogger().addHandler(fh)
         self._events = open(self.dir / "events.jsonl", "a", buffering=1)
-        self.tb = SummaryWriter(self.dir / "tb", flush_secs=10)
+        try:  # envs without torch (e.g. the onnxruntime-only openpilot env) log scalars to events.jsonl only
+            from torch.utils.tensorboard import SummaryWriter
+            self.tb = SummaryWriter(self.dir / "tb", flush_secs=10)
+        except ImportError:
+            self.tb = None
+
+    def info(self, msg: str):
+        self.log.info(msg)
 
     def event(self, kind: str, **fields):
         self._events.write(json.dumps({"t": round(time.time(), 3), "kind": kind, **fields}, default=float) + "\n")
 
     def scalar(self, tag: str, value: float, step: int):
-        self.tb.add_scalar(tag, value, step)
+        if self.tb:
+            self.tb.add_scalar(tag, value, step)
         self.event("scalar", tag=tag, value=value, step=step)
 
     def close(self):
-        self.tb.close()
+        if self.tb:
+            self.tb.close()
         self._events.close()
