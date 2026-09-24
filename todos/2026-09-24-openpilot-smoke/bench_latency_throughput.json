@@ -1,0 +1,199 @@
+{
+ "info": {
+  "onnxruntime": "1.30.0",
+  "providers": [
+   "TensorrtExecutionProvider",
+   "CUDAExecutionProvider",
+   "CPUExecutionProvider"
+  ],
+  "tensorrt": "10.16.1.11"
+ },
+ "numerics": [],
+ "latency": [
+  {
+   "model": "small",
+   "backend": "cuda-iob",
+   "n": 1000,
+   "init_s": 5.5,
+   "p50": 2.953263930976391,
+   "p99": 3.329890696331858,
+   "mean": 2.969689890742302,
+   "max": 5.707188509404659,
+   "gpu_mem_mb": 843.0
+  },
+  {
+   "model": "small",
+   "backend": "trt",
+   "n": 1000,
+   "init_s": 2.9,
+   "p50": 0.9292867034673691,
+   "p99": 1.0051982570439577,
+   "mean": 0.9387373197823763,
+   "max": 3.855641931295395,
+   "gpu_mem_mb": 915.0
+  },
+  {
+   "model": "small",
+   "backend": "trt-fp32",
+   "n": 1000,
+   "init_s": 2.2,
+   "p50": 0.9941235184669495,
+   "p99": 1.1036314722150564,
+   "mean": 1.0071862852200866,
+   "max": 1.5686489641666412,
+   "gpu_mem_mb": 981.0
+  },
+  {
+   "model": "cinque",
+   "backend": "cuda-iob",
+   "n": 1000,
+   "init_s": 7.2,
+   "p50": 4.9914587289094925,
+   "p99": 5.453256461769342,
+   "mean": 5.030026433058083,
+   "max": 15.137920156121254,
+   "gpu_mem_mb": 2135.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt",
+   "n": 1000,
+   "init_s": 39.0,
+   "p50": 2.255741972476244,
+   "p99": 2.300695823505521,
+   "mean": 2.256964957341552,
+   "max": 3.341936506330967,
+   "gpu_mem_mb": 1871.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt-fp32",
+   "n": 1000,
+   "init_s": 25.1,
+   "p50": 3.191777504980564,
+   "p99": 3.249870091676712,
+   "mean": 3.1985247787088156,
+   "max": 4.193772561848164,
+   "gpu_mem_mb": 2615.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "cuda-iob",
+   "n": 1000,
+   "init_s": 8.7,
+   "p50": 5.3885988891124725,
+   "p99": 12.022804915904995,
+   "mean": 5.585475836880505,
+   "max": 16.98836497962475,
+   "gpu_mem_mb": 3365.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt",
+   "n": 1000,
+   "init_s": 13.2,
+   "p50": 3.3347434364259243,
+   "p99": 3.3579508028924465,
+   "mean": 3.3321133675053716,
+   "max": 3.634866327047348,
+   "gpu_mem_mb": 3027.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt-fp32",
+   "n": 1000,
+   "init_s": 12.3,
+   "p50": 5.06816478446126,
+   "p99": 5.172503460198641,
+   "mean": 5.074027829803526,
+   "max": 5.32880611717701,
+   "gpu_mem_mb": 4707.0
+  }
+ ],
+ "throughput": [
+  {
+   "model": "small",
+   "backend": "trt-fp32",
+   "streams": 1,
+   "steps_per_s": 941.364177812725,
+   "gpu_mem_mb": 1053.0
+  },
+  {
+   "model": "small",
+   "backend": "trt-fp32",
+   "streams": 2,
+   "steps_per_s": 1291.386940169877,
+   "gpu_mem_mb": 1393.0
+  },
+  {
+   "model": "small",
+   "backend": "trt-fp32",
+   "streams": 4,
+   "steps_per_s": 971.2844173579153,
+   "gpu_mem_mb": 2107.0
+  },
+  {
+   "model": "small",
+   "backend": "trt-fp32",
+   "streams": 8,
+   "steps_per_s": 663.6518747856641,
+   "gpu_mem_mb": 3499.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt",
+   "streams": 1,
+   "steps_per_s": 437.61311198066625,
+   "gpu_mem_mb": 1935.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt",
+   "streams": 2,
+   "steps_per_s": 547.5729608597392,
+   "gpu_mem_mb": 2885.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt",
+   "streams": 4,
+   "steps_per_s": 239.4378028047516,
+   "gpu_mem_mb": 4857.0
+  },
+  {
+   "model": "cinque",
+   "backend": "trt",
+   "streams": 8,
+   "steps_per_s": 191.73395654652012,
+   "gpu_mem_mb": 8771.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt",
+   "streams": 1,
+   "steps_per_s": 307.66471462723547,
+   "gpu_mem_mb": 3091.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt",
+   "streams": 2,
+   "steps_per_s": 499.2232487389397,
+   "gpu_mem_mb": 4965.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt",
+   "streams": 4,
+   "steps_per_s": 250.41599297125524,
+   "gpu_mem_mb": 8749.0
+  },
+  {
+   "model": "lebowski",
+   "backend": "trt",
+   "streams": 8,
+   "steps_per_s": 214.80161053922583,
+   "gpu_mem_mb": 16281.0
+  }
+ ]
+}
