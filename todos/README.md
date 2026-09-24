@@ -24,3 +24,4 @@
 - [2026-09-24 zoo 进 CARLA](2026-09-24-zoo-in-carla.md)：已 dropped，并入进行中的 zeroshot-exam；只有「无 scenario 路段」这一项移到 R 层测量。
 - [2026-09-24 R 层测量](2026-09-24-r-layer-routine.md)：去掉 scenario 的路线上测 routine 驾驶能力，看排序是否等于榜单排序，并把 TFv6 的分数拆成接口、手写规则、网络三部分。
 - [2026-09-24 P5 v1：E 层测量](2026-09-24-p5-v1-e-layer.md)：在 v0 上加绕行类 family 和横向标签、剔除规则兜住的题、接入 PDM-Lite 与 zoo 考生，测突发事件时反应的方向和方式。
+- [2026-09-24 榜单文本分析（第二轮）](2026-09-24-leaderboard-text-analysis/README.md)：沿用 hack 审计的 36 个条目，只读文本收集正面归因账本、跨榜一致性、GitHub issue 里的复现差距、榜单指标攻击面和 C 档方法的论文披露；深度判读留给综合阶段。
