@@ -182,6 +182,9 @@ def prepared(model, inputs, entries, variants, workers, ahead=32):
 def cmd_run(a, log):
     idx = Z.load_index(a.split)
     i, n = map(int, a.shard.split("/"))
+    if a.subset == "nonav3k":
+        keep = Z.nonav_subset(idx)
+        idx = [e for e in idx if e["token"] in keep]
     entries = [e for k, e in enumerate(idx) if k % n == i]
     out = Z.root("alpamayo", a.split) / f"{a.frames}_{a.tag}_shard{i}of{n}.jsonl"
     done = set()
@@ -388,6 +391,7 @@ if __name__ == "__main__":
     r.add_argument("--batch", type=int, default=8)
     r.add_argument("--tag", default="main")
     r.add_argument("--limit", type=int, default=0)
+    r.add_argument("--subset", default="", choices=("", "nonav3k"))
     b = sub.add_parser("bench", parents=[common])
     b.add_argument("--split", default="navtest")
     b.add_argument("--n", type=int, default=64)

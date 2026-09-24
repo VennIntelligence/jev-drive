@@ -240,9 +240,23 @@ def collect_alpamayo(split: str, variant: str, frames: str, tag: str = "main") -
             r = json.loads(line)
             if r["variant"] == variant:
                 rows[r["token"]] = r["poses"]
-    tokens = [e["token"] for e in load_index(split)]
+    tokens = [e["token"] for e in load_index(split) if e["token"] in rows or variant != "nonav" or split != "navtest"]
+    if variant == "nonav" and split == "navtest":
+        tokens = [t for t in tokens if t in nonav_subset(load_index(split))]
     missing = [t for t in tokens if t not in rows]
     assert not missing, f"{len(missing)} tokens missing, e.g. {missing[:3]}"
     out = root("preds", split) / f"alpamayo_{variant}_{frames}_{tag}.npz"
     np.savez(out, tokens=np.array(tokens), poses=np.array([rows[t] for t in tokens], np.float32))
+    return out
+
+
+def nonav_subset(idx: list, per_command: int = 1000, seed: int = 0) -> set:
+    """The navtest tokens the Alpamayo no-nav variant runs on (deviation 1 in the todo doc): per_command tokens
+    drawn with seed 0 from each driving command (left / straight / right), in index order."""
+    rng = np.random.default_rng(seed)
+    out = set()
+    cmds = np.array([int(np.argmax(e["cmd"][-1])) for e in idx])
+    for c in (0, 1, 2):
+        pool = np.flatnonzero(cmds == c)
+        out |= {idx[k]["token"] for k in rng.choice(pool, min(per_command, len(pool)), replace=False)}
     return out
