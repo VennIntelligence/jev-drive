@@ -19,6 +19,9 @@ for t in "${targets[@]}"; do
   [[ -x $env/bin/python ]] || uv venv -q --python 3.10 "$env"
   # navsim's requirements minus the nuplan git pin (installed from the local tarball below)
   grep -v '^nuplan-devkit' "$src/requirements.txt" > "$env/requirements.navsim.txt"
+  # scoring needs no GPU: CPU torch (~0.2 GB) instead of the CUDA 11 wheels (~2.5 GB over a ~2 MB/s link)
+  VIRTUAL_ENV=$env uv pip install -q torch==2.0.1+cpu torchvision==0.15.2+cpu \
+    --find-links https://mirrors.aliyun.com/pytorch-wheels/cpu/
   VIRTUAL_ENV=$env uv pip install -q -r "$env/requirements.navsim.txt"
   VIRTUAL_ENV=$env uv pip install -q --no-deps -e "$tp/nuplan-devkit"
   VIRTUAL_ENV=$env uv pip install -q --no-deps -e "$src"
