@@ -1,0 +1,2135 @@
+<?xml version='1.0' encoding='utf-8'?>
+<routes><route id="24816" road_id="67" town="Town03">
+      <waypoints>
+         <position x="143.9" y="193.2" z="2.3" />
+         <position x="141.9" y="193.2" z="2.2" />
+         <position x="139.9" y="193.2" z="2.2" />
+         <position x="137.9" y="193.2" z="2.1" />
+         <position x="135.9" y="193.2" z="2.1" />
+         <position x="133.9" y="193.2" z="2.1" />
+         <position x="131.9" y="193.2" z="2.0" />
+         <position x="129.9" y="193.2" z="2.0" />
+         <position x="127.9" y="193.2" z="1.9" />
+         <position x="125.9" y="193.2" z="1.9" />
+         <position x="123.9" y="193.2" z="1.8" />
+         <position x="121.9" y="193.2" z="1.8" />
+         <position x="119.9" y="193.2" z="1.7" />
+         <position x="117.9" y="193.2" z="1.7" />
+         <position x="115.9" y="193.2" z="1.7" />
+         <position x="113.9" y="193.2" z="1.6" />
+         <position x="111.9" y="193.3" z="1.6" />
+         <position x="109.9" y="193.3" z="1.5" />
+         <position x="107.9" y="193.3" z="1.5" />
+         <position x="105.9" y="193.3" z="1.4" />
+         <position x="103.9" y="193.3" z="1.4" />
+         <position x="101.9" y="193.3" z="1.3" />
+         <position x="99.9" y="193.3" z="1.3" />
+         <position x="97.9" y="193.3" z="1.3" />
+         <position x="95.9" y="193.3" z="1.2" />
+         <position x="93.9" y="193.3" z="1.2" />
+         <position x="91.9" y="193.3" z="1.1" />
+         <position x="89.9" y="193.3" z="1.1" />
+         <position x="87.9" y="193.3" z="1.0" />
+         <position x="85.9" y="193.3" z="1.0" />
+         <position x="83.9" y="193.3" z="0.9" />
+         <position x="81.9" y="193.3" z="0.9" />
+         <position x="79.9" y="193.3" z="0.9" />
+         <position x="77.9" y="193.3" z="0.8" />
+         <position x="75.9" y="193.3" z="0.8" />
+         <position x="73.9" y="193.3" z="0.7" />
+         <position x="71.9" y="193.4" z="0.7" />
+         <position x="69.9" y="193.4" z="0.6" />
+         <position x="67.9" y="193.4" z="0.6" />
+         <position x="65.9" y="193.4" z="0.5" />
+         <position x="63.9" y="193.4" z="0.5" />
+         <position x="61.9" y="193.4" z="0.5" />
+         <position x="59.9" y="193.4" z="0.4" />
+         <position x="57.9" y="193.4" z="0.4" />
+         <position x="55.7" y="193.4" z="0.3" />
+         <position x="53.7" y="193.4" z="0.3" />
+         <position x="51.7" y="193.4" z="0.2" />
+         <position x="49.7" y="193.4" z="0.2" />
+         <position x="47.7" y="193.4" z="0.2" />
+         <position x="45.7" y="193.4" z="0.1" />
+         <position x="43.7" y="193.4" z="0.1" />
+         <position x="41.7" y="193.4" z="0.1" />
+         <position x="39.7" y="193.4" z="0.1" />
+         <position x="37.7" y="193.4" z="0.0" />
+         <position x="35.7" y="193.4" z="0.0" />
+         <position x="33.7" y="193.4" z="0.0" />
+         <position x="31.7" y="193.5" z="0.0" />
+         <position x="29.7" y="193.5" z="0.0" />
+         <position x="27.7" y="193.5" z="0.0" />
+         <position x="25.7" y="193.5" z="0.0" />
+         <position x="23.7" y="193.5" z="0.0" />
+         <position x="21.7" y="193.5" z="0.0" />
+         <position x="19.7" y="193.5" z="0.0" />
+         <position x="17.7" y="193.5" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="100.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+         <weather cloudiness="100.0" fog_density="100.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="25845" road_id="280" town="Town15">
+      <waypoints>
+         <position x="156.7" y="-460.7" z="153.0" />
+         <position x="155.2" y="-462.0" z="153.1" />
+         <position x="153.7" y="-463.3" z="153.1" />
+         <position x="152.2" y="-464.6" z="153.1" />
+         <position x="150.7" y="-465.9" z="153.1" />
+         <position x="149.1" y="-467.2" z="153.2" />
+         <position x="147.6" y="-468.5" z="153.2" />
+         <position x="146.1" y="-469.8" z="153.2" />
+         <position x="144.6" y="-471.1" z="153.3" />
+         <position x="143.1" y="-472.4" z="153.3" />
+         <position x="141.6" y="-473.7" z="153.3" />
+         <position x="140.0" y="-475.0" z="153.4" />
+         <position x="138.5" y="-476.3" z="153.4" />
+         <position x="137.0" y="-477.6" z="153.4" />
+         <position x="135.5" y="-478.9" z="153.5" />
+         <position x="134.0" y="-480.2" z="153.5" />
+         <position x="132.5" y="-481.5" z="153.5" />
+         <position x="130.9" y="-482.8" z="153.6" />
+         <position x="129.4" y="-484.1" z="153.6" />
+         <position x="127.9" y="-485.4" z="153.6" />
+         <position x="126.4" y="-486.7" z="153.7" />
+         <position x="124.9" y="-488.1" z="153.7" />
+         <position x="123.4" y="-489.4" z="153.7" />
+         <position x="121.8" y="-490.7" z="153.8" />
+         <position x="120.3" y="-492.0" z="153.8" />
+         <position x="118.8" y="-493.3" z="153.9" />
+         <position x="117.3" y="-494.6" z="153.9" />
+         <position x="115.8" y="-495.9" z="153.9" />
+         <position x="114.3" y="-497.2" z="154.0" />
+         <position x="112.7" y="-498.5" z="154.0" />
+         <position x="111.2" y="-499.8" z="154.0" />
+         <position x="109.7" y="-501.1" z="154.1" />
+         <position x="108.2" y="-502.4" z="154.1" />
+         <position x="106.7" y="-503.7" z="154.2" />
+         <position x="105.2" y="-505.0" z="154.3" />
+         <position x="103.6" y="-506.3" z="154.3" />
+         <position x="102.1" y="-507.6" z="154.4" />
+         <position x="100.6" y="-508.9" z="154.5" />
+         <position x="99.1" y="-510.2" z="154.5" />
+         <position x="97.6" y="-511.5" z="154.6" />
+         <position x="96.1" y="-512.8" z="154.7" />
+         <position x="94.6" y="-514.1" z="154.8" />
+         <position x="93.0" y="-515.4" z="154.9" />
+         <position x="91.5" y="-516.7" z="155.0" />
+         <position x="90.0" y="-518.0" z="155.1" />
+         <position x="88.5" y="-519.3" z="155.2" />
+         <position x="87.0" y="-520.6" z="155.3" />
+         <position x="85.5" y="-521.9" z="155.5" />
+         <position x="83.9" y="-523.2" z="155.6" />
+         <position x="82.4" y="-524.5" z="155.7" />
+         <position x="80.9" y="-525.9" z="155.8" />
+         <position x="79.4" y="-527.2" z="156.0" />
+         <position x="77.9" y="-528.5" z="156.1" />
+         <position x="76.3" y="-529.8" z="156.2" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="24252" road_id="315" town="Town11">
+      <waypoints>
+         <position x="-1418.2" y="-4031.6" z="164.7" />
+         <position x="-1418.3" y="-4029.6" z="164.7" />
+         <position x="-1418.5" y="-4027.6" z="164.6" />
+         <position x="-1418.6" y="-4025.6" z="164.6" />
+         <position x="-1418.7" y="-4023.6" z="164.6" />
+         <position x="-1418.9" y="-4021.6" z="164.6" />
+         <position x="-1419.0" y="-4019.6" z="164.6" />
+         <position x="-1419.1" y="-4017.6" z="164.6" />
+         <position x="-1419.2" y="-4015.6" z="164.6" />
+         <position x="-1419.2" y="-4013.5" z="164.6" />
+         <position x="-1419.3" y="-4011.5" z="164.6" />
+         <position x="-1419.4" y="-4009.5" z="164.6" />
+         <position x="-1419.4" y="-4007.6" z="164.6" />
+         <position x="-1419.5" y="-4005.5" z="164.6" />
+         <position x="-1419.5" y="-4003.5" z="164.6" />
+         <position x="-1419.6" y="-4001.5" z="164.6" />
+         <position x="-1419.6" y="-3999.5" z="164.7" />
+         <position x="-1419.6" y="-3997.5" z="164.7" />
+         <position x="-1419.6" y="-3995.5" z="164.7" />
+         <position x="-1419.6" y="-3993.5" z="164.7" />
+         <position x="-1419.6" y="-3991.5" z="164.7" />
+         <position x="-1419.6" y="-3989.5" z="164.7" />
+         <position x="-1419.6" y="-3987.5" z="164.7" />
+         <position x="-1419.6" y="-3985.5" z="164.8" />
+         <position x="-1419.5" y="-3983.4" z="164.8" />
+         <position x="-1419.5" y="-3981.4" z="164.8" />
+         <position x="-1419.4" y="-3979.4" z="164.8" />
+         <position x="-1419.4" y="-3977.4" z="164.9" />
+         <position x="-1419.3" y="-3975.4" z="164.9" />
+         <position x="-1419.2" y="-3973.4" z="164.9" />
+         <position x="-1419.1" y="-3971.4" z="165.0" />
+         <position x="-1419.0" y="-3969.4" z="165.0" />
+         <position x="-1418.9" y="-3967.4" z="165.1" />
+         <position x="-1418.8" y="-3965.4" z="165.1" />
+         <position x="-1418.7" y="-3963.4" z="165.1" />
+         <position x="-1418.6" y="-3961.4" z="165.2" />
+         <position x="-1418.5" y="-3959.4" z="165.3" />
+         <position x="-1418.3" y="-3957.4" z="165.3" />
+         <position x="-1418.2" y="-3955.4" z="165.4" />
+         <position x="-1418.0" y="-3953.4" z="165.4" />
+         <position x="-1417.8" y="-3951.4" z="165.5" />
+         <position x="-1417.7" y="-3949.4" z="165.5" />
+         <position x="-1417.5" y="-3947.4" z="165.6" />
+         <position x="-1417.3" y="-3945.4" z="165.6" />
+         <position x="-1417.1" y="-3943.4" z="165.7" />
+         <position x="-1416.9" y="-3941.4" z="165.7" />
+         <position x="-1416.7" y="-3939.4" z="165.8" />
+         <position x="-1416.5" y="-3937.4" z="165.8" />
+         <position x="-1416.2" y="-3935.4" z="165.9" />
+         <position x="-1416.0" y="-3933.4" z="165.9" />
+         <position x="-1415.7" y="-3931.4" z="166.0" />
+         <position x="-1415.5" y="-3929.4" z="166.0" />
+         <position x="-1415.2" y="-3927.5" z="166.0" />
+         <position x="-1415.0" y="-3925.5" z="166.1" />
+         <position x="-1414.7" y="-3923.5" z="166.1" />
+         <position x="-1414.4" y="-3921.5" z="166.1" />
+         <position x="-1414.1" y="-3919.5" z="166.2" />
+         <position x="-1413.8" y="-3917.5" z="166.2" />
+         <position x="-1413.5" y="-3915.5" z="166.2" />
+         <position x="-1413.2" y="-3913.5" z="166.2" />
+         <position x="-1412.9" y="-3911.6" z="166.3" />
+         <position x="-1412.5" y="-3909.6" z="166.3" />
+         <position x="-1412.2" y="-3907.6" z="166.3" />
+         <position x="-1411.8" y="-3905.6" z="166.3" />
+         <position x="-1411.5" y="-3903.7" z="166.3" />
+         <position x="-1411.1" y="-3901.7" z="166.3" />
+         <position x="-1410.7" y="-3899.7" z="166.4" />
+         <position x="-1410.4" y="-3897.7" z="166.4" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="40.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="0.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+         <weather cloudiness="40.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="0.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="26990" road_id="18" town="Town03">
+      <waypoints>
+         <position x="83.8" y="-93.5" z="8.0" />
+         <position x="83.8" y="-95.5" z="8.0" />
+         <position x="83.9" y="-97.5" z="8.0" />
+         <position x="84.0" y="-99.5" z="8.0" />
+         <position x="84.1" y="-101.5" z="8.0" />
+         <position x="84.1" y="-103.5" z="8.0" />
+         <position x="84.2" y="-105.5" z="8.0" />
+         <position x="84.3" y="-107.5" z="8.0" />
+         <position x="84.3" y="-109.5" z="8.0" />
+         <position x="84.4" y="-111.5" z="8.0" />
+         <position x="84.5" y="-113.5" z="8.0" />
+         <position x="84.5" y="-115.5" z="8.0" />
+         <position x="64.3" y="-136.9" z="7.5" />
+         <position x="62.3" y="-136.9" z="7.2" />
+         <position x="60.3" y="-137.0" z="6.9" />
+         <position x="58.3" y="-137.0" z="6.6" />
+         <position x="56.3" y="-137.1" z="6.2" />
+         <position x="54.3" y="-137.1" z="5.8" />
+         <position x="52.3" y="-137.2" z="5.4" />
+         <position x="50.3" y="-137.2" z="4.9" />
+         <position x="48.3" y="-137.2" z="4.5" />
+         <position x="46.3" y="-137.3" z="4.0" />
+         <position x="44.3" y="-137.3" z="3.6" />
+         <position x="42.3" y="-137.4" z="3.2" />
+         <position x="40.3" y="-137.4" z="2.8" />
+         <position x="38.3" y="-137.5" z="2.3" />
+         <position x="36.3" y="-137.5" z="2.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="26944" road_id="10" town="Town04">
+      <waypoints>
+         <position x="158.3" y="-169.8" z="0.2" />
+         <position x="160.3" y="-169.7" z="0.2" />
+         <position x="162.3" y="-169.7" z="0.2" />
+         <position x="164.3" y="-169.7" z="0.2" />
+         <position x="166.3" y="-169.7" z="0.2" />
+         <position x="168.3" y="-169.7" z="0.2" />
+         <position x="170.3" y="-169.7" z="0.2" />
+         <position x="172.3" y="-169.7" z="0.2" />
+         <position x="174.3" y="-169.7" z="0.2" />
+         <position x="176.3" y="-169.7" z="0.2" />
+         <position x="178.3" y="-169.6" z="0.2" />
+         <position x="180.3" y="-169.6" z="0.2" />
+         <position x="182.3" y="-169.6" z="0.2" />
+         <position x="184.3" y="-169.6" z="0.2" />
+         <position x="216.2" y="-169.4" z="0.2" />
+         <position x="218.2" y="-169.4" z="0.2" />
+         <position x="220.2" y="-169.4" z="0.2" />
+         <position x="222.2" y="-169.4" z="0.2" />
+         <position x="224.2" y="-169.4" z="0.2" />
+         <position x="226.2" y="-169.4" z="0.2" />
+         <position x="228.2" y="-169.4" z="0.2" />
+         <position x="230.2" y="-169.3" z="0.2" />
+         <position x="232.2" y="-169.3" z="0.2" />
+         <position x="234.2" y="-169.3" z="0.2" />
+         <position x="236.2" y="-169.3" z="0.2" />
+         <position x="238.2" y="-169.3" z="0.2" />
+         <position x="240.2" y="-169.3" z="0.2" />
+         <position x="242.2" y="-169.3" z="0.2" />
+         <position x="244.2" y="-169.3" z="0.2" />
+         <position x="246.2" y="-169.3" z="0.2" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="25863" road_id="14" town="Town07">
+      <waypoints>
+         <position x="-2.3" y="35.8" z="0.0" />
+         <position x="-2.3" y="33.8" z="0.0" />
+         <position x="-2.2" y="31.8" z="0.0" />
+         <position x="-2.2" y="29.8" z="0.0" />
+         <position x="-2.2" y="27.8" z="0.0" />
+         <position x="-2.2" y="25.8" z="0.0" />
+         <position x="-2.2" y="23.8" z="0.0" />
+         <position x="-2.2" y="21.8" z="0.0" />
+         <position x="-2.1" y="19.8" z="0.0" />
+         <position x="-2.1" y="17.8" z="0.0" />
+         <position x="-2.1" y="15.8" z="0.0" />
+         <position x="-2.1" y="13.8" z="0.0" />
+         <position x="-1.8" y="-20.2" z="0.0" />
+         <position x="-1.8" y="-22.2" z="0.0" />
+         <position x="-1.8" y="-24.2" z="0.0" />
+         <position x="-1.8" y="-26.2" z="0.0" />
+         <position x="-1.7" y="-28.2" z="0.0" />
+         <position x="-1.7" y="-30.2" z="0.0" />
+         <position x="-1.7" y="-32.2" z="0.0" />
+         <position x="-1.7" y="-34.2" z="0.0" />
+         <position x="-1.7" y="-36.2" z="0.0" />
+         <position x="-1.7" y="-38.2" z="0.0" />
+         <position x="-1.6" y="-40.2" z="0.0" />
+         <position x="-1.6" y="-42.2" z="0.0" />
+         <position x="-1.6" y="-44.2" z="0.0" />
+         <position x="-1.6" y="-46.2" z="0.0" />
+         <position x="-1.6" y="-48.2" z="0.0" />
+         <position x="-1.6" y="-50.2" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="25928" road_id="268" town="Town11">
+      <waypoints>
+         <position x="7615.1" y="-2382.8" z="53.4" />
+         <position x="7616.3" y="-2384.4" z="53.3" />
+         <position x="7617.5" y="-2386.0" z="53.3" />
+         <position x="7618.7" y="-2387.6" z="53.2" />
+         <position x="7619.9" y="-2389.2" z="53.2" />
+         <position x="7621.1" y="-2390.9" z="53.1" />
+         <position x="7622.2" y="-2392.5" z="53.1" />
+         <position x="7623.4" y="-2394.1" z="53.0" />
+         <position x="7624.6" y="-2395.7" z="53.0" />
+         <position x="7625.8" y="-2397.3" z="52.9" />
+         <position x="7627.0" y="-2398.9" z="52.9" />
+         <position x="7628.2" y="-2400.5" z="52.8" />
+         <position x="7629.3" y="-2402.1" z="52.8" />
+         <position x="7630.5" y="-2403.7" z="52.7" />
+         <position x="7631.7" y="-2405.3" z="52.7" />
+         <position x="7632.9" y="-2407.0" z="52.6" />
+         <position x="7634.1" y="-2408.6" z="52.6" />
+         <position x="7635.3" y="-2410.2" z="52.5" />
+         <position x="7636.5" y="-2411.8" z="52.5" />
+         <position x="7637.6" y="-2413.4" z="52.5" />
+         <position x="7638.8" y="-2415.0" z="52.4" />
+         <position x="7640.0" y="-2416.6" z="52.4" />
+         <position x="7641.2" y="-2418.2" z="52.4" />
+         <position x="7642.4" y="-2419.8" z="52.4" />
+         <position x="7643.6" y="-2421.5" z="52.3" />
+         <position x="7644.8" y="-2423.1" z="52.3" />
+         <position x="7645.9" y="-2424.7" z="52.3" />
+         <position x="7647.1" y="-2426.3" z="52.3" />
+         <position x="7648.3" y="-2427.9" z="52.3" />
+         <position x="7649.5" y="-2429.5" z="52.3" />
+         <position x="7650.7" y="-2431.1" z="52.2" />
+         <position x="7651.9" y="-2432.7" z="52.2" />
+         <position x="7653.1" y="-2434.3" z="52.2" />
+         <position x="7654.2" y="-2436.0" z="52.2" />
+         <position x="7655.4" y="-2437.6" z="52.2" />
+         <position x="7656.6" y="-2439.2" z="52.2" />
+         <position x="7657.8" y="-2440.8" z="52.2" />
+         <position x="7659.0" y="-2442.4" z="52.2" />
+         <position x="7660.2" y="-2444.0" z="52.2" />
+         <position x="7661.4" y="-2445.6" z="52.2" />
+         <position x="7662.5" y="-2447.2" z="52.3" />
+         <position x="7663.7" y="-2448.8" z="52.3" />
+         <position x="7664.9" y="-2450.4" z="52.3" />
+         <position x="7666.1" y="-2452.1" z="52.3" />
+         <position x="7667.3" y="-2453.7" z="52.4" />
+         <position x="7668.5" y="-2455.3" z="52.4" />
+         <position x="7669.7" y="-2456.9" z="52.4" />
+         <position x="7670.8" y="-2458.5" z="52.5" />
+         <position x="7672.0" y="-2460.1" z="52.5" />
+         <position x="7673.2" y="-2461.7" z="52.5" />
+         <position x="7674.4" y="-2463.3" z="52.6" />
+         <position x="7675.6" y="-2464.9" z="52.6" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="3364" town="Town13">
+         <waypoints>
+            <position x="1272.0" y="1745.1" z="148.6" />
+            <position x="1272.0" y="1743.1" z="148.6" />
+            <position x="1272.0" y="1741.1" z="148.6" />
+            <position x="1272.1" y="1739.1" z="148.6" />
+            <position x="1272.1" y="1737.1" z="148.6" />
+            <position x="1272.1" y="1735.1" z="148.6" />
+            <position x="1272.2" y="1733.1" z="148.6" />
+            <position x="1272.2" y="1731.1" z="148.6" />
+            <position x="1272.2" y="1729.1" z="148.6" />
+            <position x="1272.3" y="1727.1" z="148.6" />
+            <position x="1272.3" y="1725.1" z="148.6" />
+            <position x="1272.3" y="1723.1" z="148.6" />
+            <position x="1272.4" y="1721.1" z="148.6" />
+            <position x="1272.4" y="1719.1" z="148.6" />
+            <position x="1272.4" y="1717.1" z="148.6" />
+            <position x="1272.5" y="1715.1" z="148.6" />
+            <position x="1272.5" y="1713.1" z="148.6" />
+            <position x="1272.5" y="1711.1" z="148.6" />
+            <position x="1272.6" y="1709.1" z="148.6" />
+            <position x="1272.6" y="1707.1" z="148.6" />
+            <position x="1272.7" y="1705.1" z="148.6" />
+            <position x="1272.7" y="1703.1" z="148.6" />
+            <position x="1272.7" y="1701.1" z="148.6" />
+            <position x="1272.8" y="1699.1" z="148.6" />
+            <position x="1272.8" y="1697.1" z="148.6" />
+            <position x="1272.8" y="1695.1" z="148.6" />
+            <position x="1272.9" y="1693.1" z="148.6" />
+            <position x="1272.9" y="1691.1" z="148.6" />
+            <position x="1272.9" y="1689.1" z="148.6" />
+            <position x="1273.0" y="1687.1" z="148.6" />
+            <position x="1273.0" y="1685.1" z="148.6" />
+            <position x="1273.0" y="1683.1" z="148.6" />
+            <position x="1273.1" y="1681.1" z="148.6" />
+            <position x="1273.1" y="1679.1" z="148.6" />
+            <position x="1273.1" y="1677.1" z="148.6" />
+            <position x="1273.2" y="1675.1" z="148.6" />
+            <position x="1273.2" y="1673.1" z="148.6" />
+            <position x="1273.3" y="1671.1" z="148.6" />
+            <position x="1273.3" y="1669.1" z="148.6" />
+            <position x="1273.3" y="1667.1" z="148.6" />
+            <position x="1273.4" y="1665.1" z="148.6" />
+            <position x="1273.4" y="1663.1" z="148.7" />
+            <position x="1273.4" y="1661.1" z="148.7" />
+            <position x="1273.5" y="1659.1" z="148.7" />
+            <position x="1273.5" y="1657.1" z="148.7" />
+            <position x="1273.5" y="1655.1" z="148.7" />
+            <position x="1273.6" y="1653.1" z="148.7" />
+            <position x="1273.6" y="1651.1" z="148.7" />
+            <position x="1273.6" y="1649.1" z="148.7" />
+            <position x="1273.7" y="1647.1" z="148.7" />
+            <position x="1273.7" y="1645.1" z="148.7" />
+            <position x="1273.7" y="1643.1" z="148.7" />
+            <position x="1273.8" y="1641.1" z="148.7" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="24781" road_id="10" town="Town01">
+      <waypoints>
+         <position x="299.2" y="55.5" z="0.0" />
+         <position x="297.2" y="55.5" z="0.0" />
+         <position x="295.2" y="55.5" z="0.0" />
+         <position x="293.2" y="55.5" z="0.0" />
+         <position x="291.2" y="55.5" z="0.0" />
+         <position x="289.2" y="55.5" z="0.0" />
+         <position x="287.2" y="55.5" z="0.0" />
+         <position x="285.2" y="55.5" z="0.0" />
+         <position x="283.2" y="55.5" z="0.0" />
+         <position x="281.2" y="55.5" z="0.0" />
+         <position x="279.2" y="55.5" z="0.0" />
+         <position x="277.2" y="55.5" z="0.0" />
+         <position x="275.2" y="55.5" z="0.0" />
+         <position x="273.2" y="55.5" z="0.0" />
+         <position x="271.2" y="55.5" z="0.0" />
+         <position x="269.2" y="55.5" z="0.0" />
+         <position x="267.2" y="55.5" z="0.0" />
+         <position x="265.2" y="55.5" z="0.0" />
+         <position x="263.2" y="55.5" z="0.0" />
+         <position x="261.2" y="55.5" z="0.0" />
+         <position x="259.2" y="55.5" z="0.0" />
+         <position x="257.2" y="55.5" z="0.0" />
+         <position x="255.2" y="55.5" z="0.0" />
+         <position x="253.2" y="55.5" z="0.0" />
+         <position x="251.2" y="55.5" z="0.0" />
+         <position x="249.2" y="55.5" z="0.0" />
+         <position x="247.2" y="55.5" z="0.0" />
+         <position x="245.2" y="55.5" z="0.0" />
+         <position x="243.2" y="55.5" z="0.0" />
+         <position x="241.2" y="55.5" z="0.0" />
+         <position x="239.2" y="55.5" z="0.0" />
+         <position x="237.2" y="55.5" z="0.0" />
+         <position x="235.2" y="55.5" z="0.0" />
+         <position x="233.2" y="55.5" z="0.0" />
+         <position x="231.2" y="55.5" z="0.0" />
+         <position x="229.2" y="55.5" z="0.0" />
+         <position x="227.2" y="55.5" z="0.0" />
+         <position x="225.2" y="55.5" z="0.0" />
+         <position x="223.2" y="55.5" z="0.0" />
+         <position x="221.2" y="55.5" z="0.0" />
+         <position x="219.2" y="55.5" z="0.0" />
+         <position x="217.2" y="55.5" z="0.0" />
+         <position x="215.2" y="55.5" z="0.0" />
+         <position x="213.2" y="55.5" z="0.0" />
+         <position x="211.2" y="55.5" z="0.0" />
+         <position x="209.2" y="55.5" z="0.0" />
+         <position x="207.2" y="55.5" z="0.0" />
+         <position x="205.2" y="55.5" z="0.0" />
+         <position x="203.2" y="55.5" z="0.0" />
+         <position x="201.2" y="55.5" z="0.0" />
+         <position x="199.2" y="55.5" z="0.0" />
+         <position x="197.2" y="55.5" z="0.0" />
+         <position x="195.2" y="55.5" z="0.0" />
+         <position x="193.2" y="55.5" z="0.0" />
+         <position x="191.2" y="55.5" z="0.0" />
+         <position x="189.2" y="55.5" z="0.0" />
+         <position x="187.2" y="55.5" z="0.0" />
+         <position x="185.2" y="55.5" z="0.0" />
+         <position x="183.2" y="55.5" z="0.0" />
+         <position x="181.2" y="55.5" z="0.0" />
+         <position x="179.2" y="55.5" z="0.0" />
+         <position x="177.2" y="55.5" z="0.0" />
+         <position x="175.2" y="55.5" z="0.0" />
+         <position x="173.2" y="55.5" z="0.0" />
+         <position x="171.2" y="55.5" z="0.0" />
+         <position x="169.2" y="55.5" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="40.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="0.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+         <weather cloudiness="40.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="0.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="24784" road_id="19" town="Town02">
+      <waypoints>
+         <position x="156.8" y="302.5" z="0.0" />
+         <position x="154.8" y="302.5" z="0.0" />
+         <position x="152.8" y="302.5" z="0.0" />
+         <position x="150.8" y="302.5" z="0.0" />
+         <position x="148.8" y="302.5" z="0.0" />
+         <position x="146.8" y="302.5" z="0.0" />
+         <position x="144.8" y="302.5" z="0.0" />
+         <position x="142.8" y="302.6" z="0.0" />
+         <position x="140.8" y="302.6" z="0.0" />
+         <position x="138.8" y="302.6" z="0.0" />
+         <position x="136.8" y="302.6" z="0.0" />
+         <position x="134.8" y="302.6" z="0.0" />
+         <position x="132.8" y="302.6" z="0.0" />
+         <position x="130.8" y="302.6" z="0.0" />
+         <position x="128.8" y="302.6" z="0.0" />
+         <position x="126.8" y="302.6" z="0.0" />
+         <position x="124.8" y="302.6" z="0.0" />
+         <position x="122.8" y="302.6" z="0.0" />
+         <position x="120.8" y="302.6" z="0.0" />
+         <position x="118.8" y="302.6" z="0.0" />
+         <position x="116.8" y="302.6" z="0.0" />
+         <position x="114.8" y="302.6" z="0.0" />
+         <position x="112.8" y="302.6" z="0.0" />
+         <position x="110.8" y="302.6" z="0.0" />
+         <position x="108.8" y="302.6" z="0.0" />
+         <position x="106.8" y="302.5" z="0.0" />
+         <position x="104.8" y="302.5" z="0.0" />
+         <position x="102.8" y="302.5" z="0.0" />
+         <position x="100.8" y="302.5" z="0.0" />
+         <position x="98.8" y="302.5" z="0.0" />
+         <position x="96.8" y="302.5" z="0.0" />
+         <position x="94.8" y="302.5" z="0.0" />
+         <position x="92.8" y="302.5" z="0.0" />
+         <position x="90.8" y="302.5" z="0.0" />
+         <position x="88.8" y="302.5" z="0.0" />
+         <position x="86.8" y="302.5" z="0.0" />
+         <position x="84.8" y="302.5" z="0.0" />
+         <position x="82.8" y="302.5" z="0.0" />
+         <position x="80.8" y="302.5" z="0.0" />
+         <position x="78.8" y="302.5" z="0.0" />
+         <position x="76.8" y="302.5" z="0.0" />
+         <position x="74.8" y="302.5" z="0.0" />
+         <position x="72.8" y="302.5" z="0.0" />
+         <position x="70.8" y="302.5" z="0.0" />
+         <position x="68.8" y="302.5" z="0.0" />
+         <position x="66.8" y="302.5" z="0.0" />
+         <position x="64.8" y="302.5" z="0.0" />
+         <position x="62.8" y="302.5" z="0.0" />
+         <position x="60.8" y="302.5" z="0.0" />
+         <position x="58.8" y="302.5" z="0.0" />
+         <position x="56.8" y="302.5" z="0.0" />
+         <position x="54.8" y="302.5" z="0.0" />
+         <position x="52.8" y="302.5" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="25896" road_id="76" town="Town03">
+      <waypoints>
+         <position x="160.8" y="112.7" z="0.4" />
+         <position x="159.7" y="114.2" z="0.4" />
+         <position x="158.6" y="115.7" z="0.4" />
+         <position x="157.3" y="117.2" z="0.4" />
+         <position x="156.0" y="118.6" z="0.4" />
+         <position x="154.6" y="119.9" z="0.4" />
+         <position x="153.1" y="121.2" z="0.4" />
+         <position x="151.6" y="122.3" z="0.4" />
+         <position x="150.0" y="123.4" z="0.5" />
+         <position x="148.4" y="124.4" z="0.5" />
+         <position x="146.8" y="125.2" z="0.5" />
+         <position x="145.0" y="126.1" z="0.4" />
+         <position x="143.3" y="126.8" z="0.4" />
+         <position x="141.5" y="127.4" z="0.4" />
+         <position x="139.6" y="128.0" z="0.4" />
+         <position x="137.8" y="128.4" z="0.4" />
+         <position x="135.8" y="128.8" z="0.4" />
+         <position x="134.0" y="129.0" z="0.4" />
+         <position x="132.0" y="129.2" z="0.4" />
+         <position x="130.1" y="129.2" z="0.4" />
+         <position x="128.1" y="129.3" z="0.4" />
+         <position x="126.1" y="129.3" z="0.3" />
+         <position x="124.1" y="129.3" z="0.3" />
+         <position x="122.1" y="129.4" z="0.3" />
+         <position x="120.1" y="129.4" z="0.3" />
+         <position x="118.1" y="129.4" z="0.3" />
+         <position x="116.1" y="129.4" z="0.3" />
+         <position x="114.1" y="129.5" z="0.3" />
+         <position x="112.1" y="129.5" z="0.3" />
+         <position x="110.1" y="129.5" z="0.2" />
+         <position x="108.1" y="129.5" z="0.2" />
+         <position x="106.1" y="129.6" z="0.2" />
+         <position x="104.1" y="129.6" z="0.2" />
+         <position x="102.1" y="129.6" z="0.2" />
+         <position x="100.1" y="129.7" z="0.2" />
+         <position x="98.1" y="129.7" z="0.2" />
+         <position x="96.1" y="129.7" z="0.1" />
+         <position x="94.1" y="129.7" z="0.1" />
+         <position x="92.1" y="129.8" z="0.1" />
+         <position x="90.1" y="129.8" z="0.1" />
+         <position x="88.1" y="129.8" z="0.1" />
+         <position x="86.1" y="129.9" z="0.1" />
+         <position x="84.1" y="129.9" z="0.1" />
+         <position x="82.1" y="129.9" z="0.1" />
+         <position x="80.1" y="129.9" z="0.1" />
+         <position x="78.1" y="130.0" z="0.0" />
+         <position x="76.1" y="130.0" z="0.0" />
+         <position x="74.1" y="130.0" z="0.0" />
+         <position x="72.1" y="130.1" z="0.0" />
+         <position x="70.1" y="130.1" z="0.0" />
+         <position x="68.1" y="130.1" z="0.0" />
+         <position x="66.1" y="130.1" z="0.0" />
+         <position x="64.1" y="130.2" z="0.0" />
+         <position x="62.1" y="130.2" z="0.0" />
+         <position x="60.1" y="130.2" z="0.0" />
+         <position x="58.1" y="130.3" z="0.0" />
+         <position x="56.1" y="130.3" z="0.0" />
+         <position x="54.1" y="130.3" z="0.0" />
+         <position x="52.1" y="130.3" z="0.0" />
+         <position x="50.1" y="130.4" z="0.0" />
+         <position x="48.1" y="130.4" z="0.0" />
+         <position x="46.1" y="130.4" z="0.0" />
+         <position x="44.1" y="130.5" z="0.0" />
+         <position x="42.1" y="130.5" z="0.0" />
+         <position x="40.1" y="130.5" z="0.0" />
+         <position x="38.1" y="130.5" z="0.0" />
+         <position x="36.1" y="130.6" z="0.0" />
+         <position x="34.1" y="130.6" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="80.0" fog_density="60.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="80.0" wind_intensity="60.0" />
+         <weather cloudiness="80.0" fog_density="60.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="80.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="24785" road_id="45" town="Town04">
+      <waypoints>
+         <position x="-513.1" y="269.3" z="0.0" />
+         <position x="-512.8" y="271.7" z="0.0" />
+         <position x="-512.5" y="273.4" z="0.0" />
+         <position x="-512.0" y="275.8" z="0.0" />
+         <position x="-511.6" y="278.1" z="0.0" />
+         <position x="-511.3" y="279.8" z="0.0" />
+         <position x="-510.8" y="282.2" z="0.0" />
+         <position x="-510.2" y="284.5" z="0.0" />
+         <position x="-509.8" y="286.2" z="0.0" />
+         <position x="-509.3" y="288.5" z="0.0" />
+         <position x="-508.7" y="290.8" z="0.0" />
+         <position x="-508.2" y="292.5" z="0.0" />
+         <position x="-507.6" y="294.8" z="0.0" />
+         <position x="-506.9" y="297.1" z="0.0" />
+         <position x="-506.4" y="298.8" z="0.0" />
+         <position x="-505.6" y="301.0" z="0.0" />
+         <position x="-504.9" y="303.3" z="0.0" />
+         <position x="-504.3" y="305.0" z="0.0" />
+         <position x="-503.5" y="307.2" z="0.0" />
+         <position x="-502.7" y="309.4" z="0.0" />
+         <position x="-502.1" y="311.1" z="0.0" />
+         <position x="-501.2" y="313.3" z="0.0" />
+         <position x="-500.3" y="315.5" z="0.0" />
+         <position x="-499.6" y="317.2" z="0.0" />
+         <position x="-498.7" y="319.3" z="0.0" />
+         <position x="-497.7" y="321.5" z="0.0" />
+         <position x="-496.9" y="323.1" z="0.0" />
+         <position x="-495.9" y="325.2" z="0.0" />
+         <position x="-494.9" y="327.4" z="0.0" />
+         <position x="-494.1" y="329.0" z="0.0" />
+         <position x="-493.0" y="331.1" z="0.0" />
+         <position x="-491.9" y="333.2" z="0.0" />
+         <position x="-491.0" y="334.7" z="0.0" />
+         <position x="-489.9" y="336.8" z="0.0" />
+         <position x="-488.7" y="338.9" z="0.0" />
+         <position x="-487.8" y="340.4" z="0.0" />
+         <position x="-486.6" y="342.4" z="0.0" />
+         <position x="-485.3" y="344.4" z="0.0" />
+         <position x="-484.4" y="346.0" z="0.0" />
+         <position x="-483.1" y="347.9" z="0.0" />
+         <position x="-481.8" y="349.9" z="0.0" />
+         <position x="-480.8" y="351.4" z="0.0" />
+         <position x="-479.4" y="353.3" z="0.0" />
+         <position x="-478.0" y="355.3" z="0.0" />
+         <position x="-477.0" y="356.7" z="0.0" />
+         <position x="-475.5" y="358.6" z="0.0" />
+         <position x="-474.1" y="360.5" z="0.0" />
+         <position x="-473.0" y="361.9" z="0.0" />
+         <position x="-471.5" y="363.7" z="0.0" />
+         <position x="-470.0" y="365.6" z="0.0" />
+         <position x="-468.9" y="366.9" z="0.0" />
+         <position x="-467.3" y="368.7" z="0.0" />
+         <position x="-465.8" y="370.5" z="0.0" />
+         <position x="-464.6" y="371.8" z="0.0" />
+         <position x="-463.0" y="373.6" z="0.0" />
+         <position x="-461.3" y="375.3" z="0.0" />
+         <position x="-460.1" y="376.6" z="0.0" />
+         <position x="-458.4" y="378.3" z="0.0" />
+         <position x="-456.8" y="380.0" z="0.0" />
+         <position x="-455.5" y="381.2" z="0.0" />
+         <position x="-453.8" y="382.8" z="0.0" />
+         <position x="-452.0" y="384.5" z="0.0" />
+         <position x="-450.7" y="385.7" z="0.0" />
+         <position x="-448.9" y="387.2" z="0.0" />
+         <position x="-447.2" y="388.8" z="0.0" />
+         <position x="-445.8" y="390.0" z="0.0" />
+         <position x="-444.0" y="391.5" z="0.0" />
+         <position x="-442.1" y="393.0" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="100.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="50.0" wind_intensity="100.0" />
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="100.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="50.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="25955" road_id="19" town="Town05">
+      <waypoints>
+         <position x="155.0" y="-37.0" z="0.0" />
+         <position x="155.0" y="-39.0" z="0.0" />
+         <position x="155.0" y="-41.0" z="0.0" />
+         <position x="155.0" y="-43.0" z="0.0" />
+         <position x="155.0" y="-45.0" z="0.0" />
+         <position x="155.0" y="-47.0" z="0.0" />
+         <position x="155.0" y="-49.0" z="0.0" />
+         <position x="155.0" y="-51.0" z="0.0" />
+         <position x="155.0" y="-53.0" z="0.0" />
+         <position x="155.0" y="-55.0" z="0.0" />
+         <position x="155.0" y="-57.0" z="0.0" />
+         <position x="155.0" y="-59.0" z="0.0" />
+         <position x="155.0" y="-61.0" z="0.0" />
+         <position x="155.0" y="-63.0" z="0.0" />
+         <position x="155.0" y="-65.0" z="0.0" />
+         <position x="155.0" y="-67.0" z="0.0" />
+         <position x="155.0" y="-69.0" z="0.0" />
+         <position x="155.0" y="-71.0" z="0.0" />
+         <position x="155.0" y="-73.0" z="0.0" />
+         <position x="155.0" y="-75.0" z="0.0" />
+         <position x="154.9" y="-77.0" z="0.0" />
+         <position x="154.9" y="-79.0" z="0.0" />
+         <position x="154.9" y="-81.0" z="0.0" />
+         <position x="154.9" y="-83.0" z="0.0" />
+         <position x="154.9" y="-85.0" z="0.0" />
+         <position x="154.9" y="-87.0" z="0.0" />
+         <position x="154.9" y="-89.0" z="0.0" />
+         <position x="154.9" y="-91.0" z="0.0" />
+         <position x="154.9" y="-93.1" z="0.0" />
+         <position x="154.9" y="-95.1" z="0.0" />
+         <position x="154.7" y="-97.2" z="0.0" />
+         <position x="154.5" y="-99.2" z="0.0" />
+         <position x="154.2" y="-101.3" z="0.0" />
+         <position x="153.8" y="-103.3" z="0.0" />
+         <position x="153.3" y="-105.3" z="0.0" />
+         <position x="152.7" y="-107.3" z="0.0" />
+         <position x="152.1" y="-109.3" z="0.0" />
+         <position x="151.4" y="-111.2" z="0.0" />
+         <position x="150.6" y="-113.2" z="0.0" />
+         <position x="149.7" y="-115.0" z="0.0" />
+         <position x="148.8" y="-116.9" z="0.0" />
+         <position x="147.7" y="-118.7" z="0.0" />
+         <position x="146.6" y="-120.4" z="0.0" />
+         <position x="145.5" y="-122.1" z="0.0" />
+         <position x="144.2" y="-123.8" z="0.0" />
+         <position x="142.9" y="-125.4" z="0.0" />
+         <position x="141.5" y="-127.0" z="0.0" />
+         <position x="140.1" y="-128.5" z="0.0" />
+         <position x="138.6" y="-129.9" z="0.0" />
+         <position x="137.1" y="-131.3" z="0.0" />
+         <position x="135.5" y="-132.6" z="0.0" />
+         <position x="133.8" y="-133.8" z="0.0" />
+         <position x="132.1" y="-135.0" z="0.0" />
+         <position x="130.3" y="-136.1" z="0.0" />
+         <position x="128.5" y="-137.1" z="0.0" />
+         <position x="126.7" y="-138.1" z="0.0" />
+         <position x="124.8" y="-139.0" z="0.0" />
+         <position x="122.9" y="-139.8" z="0.0" />
+         <position x="121.0" y="-140.5" z="0.0" />
+         <position x="119.0" y="-141.1" z="0.0" />
+         <position x="117.0" y="-141.7" z="0.0" />
+         <position x="115.0" y="-142.2" z="0.0" />
+         <position x="113.1" y="-142.6" z="0.0" />
+         <position x="111.1" y="-143.1" z="0.0" />
+         <position x="109.1" y="-143.5" z="0.0" />
+         <position x="107.1" y="-143.9" z="0.0" />
+         <position x="105.2" y="-144.3" z="0.0" />
+         <position x="103.2" y="-144.7" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="26394" road_id="48" town="Town06">
+      <waypoints>
+         <position x="554.7" y="-24.3" z="0.0" />
+         <position x="552.7" y="-24.3" z="0.0" />
+         <position x="550.7" y="-24.3" z="0.0" />
+         <position x="548.6" y="-24.3" z="0.0" />
+         <position x="546.6" y="-24.3" z="0.0" />
+         <position x="544.6" y="-24.3" z="0.0" />
+         <position x="542.6" y="-24.4" z="0.0" />
+         <position x="540.6" y="-24.4" z="0.0" />
+         <position x="538.6" y="-24.4" z="0.0" />
+         <position x="536.6" y="-24.4" z="0.0" />
+         <position x="534.6" y="-24.4" z="0.0" />
+         <position x="532.6" y="-24.4" z="0.0" />
+         <position x="444.8" y="-10.6" z="0.0" />
+         <position x="442.8" y="-10.5" z="0.0" />
+         <position x="440.8" y="-10.5" z="0.0" />
+         <position x="438.8" y="-10.5" z="0.0" />
+         <position x="436.8" y="-10.5" z="0.0" />
+         <position x="434.8" y="-10.5" z="0.0" />
+         <position x="432.8" y="-10.5" z="0.0" />
+         <position x="430.8" y="-10.5" z="0.0" />
+         <position x="428.8" y="-10.5" z="0.0" />
+         <position x="426.8" y="-10.5" z="0.0" />
+         <position x="424.8" y="-10.5" z="0.0" />
+         <position x="422.8" y="-10.5" z="0.0" />
+         <position x="420.8" y="-10.5" z="0.0" />
+         <position x="418.8" y="-10.5" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="26458" road_id="3" town="Town07">
+      <waypoints>
+         <position x="-0.9" y="-123.1" z="0.0" />
+         <position x="-0.9" y="-125.1" z="0.0" />
+         <position x="-0.9" y="-127.1" z="0.0" />
+         <position x="-0.9" y="-129.1" z="0.0" />
+         <position x="-0.9" y="-131.1" z="0.0" />
+         <position x="-0.9" y="-133.1" z="0.0" />
+         <position x="-0.8" y="-135.1" z="0.0" />
+         <position x="-0.8" y="-137.1" z="0.0" />
+         <position x="-0.8" y="-139.1" z="0.0" />
+         <position x="-0.8" y="-141.1" z="0.0" />
+         <position x="-0.8" y="-143.1" z="0.0" />
+         <position x="-0.8" y="-145.1" z="0.0" />
+         <position x="-16.6" y="-161.3" z="0.1" />
+         <position x="-18.6" y="-161.3" z="0.1" />
+         <position x="-20.6" y="-161.3" z="0.1" />
+         <position x="-22.6" y="-161.3" z="0.1" />
+         <position x="-24.6" y="-161.4" z="0.1" />
+         <position x="-26.6" y="-161.4" z="0.1" />
+         <position x="-28.6" y="-161.4" z="0.1" />
+         <position x="-30.6" y="-161.4" z="0.1" />
+         <position x="-32.6" y="-161.4" z="0.1" />
+         <position x="-34.6" y="-161.5" z="0.1" />
+         <position x="-36.6" y="-161.5" z="0.1" />
+         <position x="-38.6" y="-161.5" z="0.1" />
+         <position x="-40.6" y="-161.5" z="0.1" />
+         <position x="-42.6" y="-161.5" z="0.1" />
+         <position x="-44.6" y="-161.6" z="0.1" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+         <weather cloudiness="100.0" fog_density="7.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="24340" road_id="1" town="Town10HD">
+      <waypoints>
+         <position x="43.3" y="141.1" z="0.0" />
+         <position x="45.3" y="141.1" z="0.0" />
+         <position x="47.3" y="141.1" z="0.0" />
+         <position x="49.3" y="141.1" z="0.0" />
+         <position x="51.3" y="141.1" z="0.0" />
+         <position x="53.3" y="141.2" z="0.0" />
+         <position x="55.3" y="141.2" z="0.0" />
+         <position x="57.3" y="141.2" z="0.0" />
+         <position x="59.3" y="141.2" z="0.0" />
+         <position x="61.3" y="141.2" z="0.0" />
+         <position x="63.3" y="141.2" z="0.0" />
+         <position x="65.5" y="141.2" z="0.0" />
+         <position x="67.9" y="141.1" z="0.0" />
+         <position x="70.2" y="140.9" z="0.0" />
+         <position x="72.4" y="140.5" z="0.0" />
+         <position x="74.7" y="140.0" z="0.0" />
+         <position x="76.9" y="139.4" z="0.0" />
+         <position x="79.0" y="138.7" z="0.0" />
+         <position x="81.2" y="137.9" z="0.0" />
+         <position x="83.3" y="136.9" z="0.0" />
+         <position x="85.3" y="135.9" z="0.0" />
+         <position x="87.2" y="134.7" z="0.0" />
+         <position x="89.1" y="133.4" z="0.0" />
+         <position x="91.0" y="132.0" z="0.0" />
+         <position x="92.7" y="130.5" z="0.0" />
+         <position x="94.4" y="128.9" z="0.0" />
+         <position x="95.9" y="127.3" z="0.0" />
+         <position x="97.4" y="125.6" z="0.0" />
+         <position x="98.7" y="123.8" z="0.0" />
+         <position x="100.0" y="122.0" z="0.0" />
+         <position x="101.2" y="120.2" z="0.0" />
+         <position x="102.3" y="118.2" z="0.0" />
+         <position x="103.4" y="116.3" z="0.0" />
+         <position x="104.3" y="114.3" z="0.0" />
+         <position x="105.2" y="112.3" z="0.0" />
+         <position x="106.0" y="110.2" z="0.0" />
+         <position x="106.7" y="108.1" z="0.0" />
+         <position x="107.3" y="106.0" z="0.0" />
+         <position x="107.9" y="103.8" z="0.0" />
+         <position x="108.3" y="101.7" z="0.0" />
+         <position x="108.7" y="99.5" z="0.0" />
+         <position x="109.0" y="97.3" z="0.0" />
+         <position x="109.1" y="95.1" z="0.0" />
+         <position x="109.2" y="92.9" z="0.0" />
+         <position x="109.2" y="90.9" z="0.0" />
+         <position x="109.3" y="88.9" z="0.0" />
+         <position x="109.3" y="86.9" z="0.0" />
+         <position x="109.3" y="84.9" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="10.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="10.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="27532" road_id="406" town="Town11">
+      <waypoints>
+         <position x="-1840.9" y="-10140.1" z="274.9" />
+         <position x="-1838.9" y="-10140.4" z="274.9" />
+         <position x="-1836.9" y="-10140.8" z="274.9" />
+         <position x="-1835.0" y="-10141.1" z="274.9" />
+         <position x="-1833.0" y="-10141.5" z="274.9" />
+         <position x="-1831.0" y="-10141.9" z="274.9" />
+         <position x="-1829.1" y="-10142.2" z="274.9" />
+         <position x="-1827.1" y="-10142.6" z="274.9" />
+         <position x="-1825.1" y="-10143.0" z="274.9" />
+         <position x="-1823.2" y="-10143.4" z="274.9" />
+         <position x="-1821.2" y="-10143.8" z="274.9" />
+         <position x="-1819.2" y="-10144.3" z="275.0" />
+         <position x="-1804.5" y="-10135.5" z="274.9" />
+         <position x="-1804.1" y="-10133.5" z="274.8" />
+         <position x="-1803.6" y="-10131.6" z="274.8" />
+         <position x="-1803.1" y="-10129.7" z="274.8" />
+         <position x="-1802.6" y="-10127.7" z="274.8" />
+         <position x="-1802.1" y="-10125.8" z="274.8" />
+         <position x="-1801.7" y="-10123.8" z="274.8" />
+         <position x="-1801.2" y="-10121.9" z="274.8" />
+         <position x="-1800.7" y="-10120.0" z="274.8" />
+         <position x="-1800.2" y="-10118.0" z="274.8" />
+         <position x="-1799.7" y="-10116.1" z="274.8" />
+         <position x="-1799.2" y="-10114.1" z="274.7" />
+         <position x="-1798.8" y="-10112.2" z="274.7" />
+         <position x="-1798.3" y="-10110.2" z="274.7" />
+         <position x="-1797.8" y="-10108.3" z="274.7" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="25383" road_id="137" town="Town15">
+      <waypoints>
+         <position x="1017.7" y="671.7" z="120.2" />
+         <position x="1019.2" y="670.3" z="120.2" />
+         <position x="1020.7" y="668.8" z="120.3" />
+         <position x="1022.1" y="667.5" z="120.3" />
+         <position x="1023.6" y="666.0" z="120.3" />
+         <position x="1025.1" y="664.5" z="120.3" />
+         <position x="1026.5" y="663.1" z="120.3" />
+         <position x="1027.9" y="661.5" z="120.3" />
+         <position x="1029.4" y="660.0" z="120.3" />
+         <position x="1030.7" y="658.5" z="120.3" />
+         <position x="1032.1" y="656.9" z="120.4" />
+         <position x="1033.4" y="655.4" z="120.4" />
+         <position x="1034.8" y="653.7" z="120.4" />
+         <position x="1036.0" y="652.1" z="120.4" />
+         <position x="1037.3" y="650.4" z="120.4" />
+         <position x="1038.5" y="648.8" z="120.4" />
+         <position x="1039.8" y="647.0" z="120.4" />
+         <position x="1040.9" y="645.3" z="120.5" />
+         <position x="1042.1" y="643.5" z="120.5" />
+         <position x="1043.2" y="641.8" z="120.5" />
+         <position x="1044.3" y="640.0" z="120.5" />
+         <position x="1045.3" y="638.2" z="120.5" />
+         <position x="1046.4" y="636.3" z="120.5" />
+         <position x="1047.3" y="634.6" z="120.5" />
+         <position x="1048.4" y="632.7" z="120.6" />
+         <position x="1049.2" y="630.9" z="120.6" />
+         <position x="1050.2" y="628.9" z="120.6" />
+         <position x="1051.0" y="627.1" z="120.6" />
+         <position x="1051.9" y="625.1" z="120.6" />
+         <position x="1052.7" y="623.2" z="120.6" />
+         <position x="1053.5" y="621.2" z="120.6" />
+         <position x="1054.2" y="619.3" z="120.7" />
+         <position x="1054.9" y="617.3" z="120.7" />
+         <position x="1055.5" y="615.4" z="120.7" />
+         <position x="1056.2" y="613.3" z="120.7" />
+         <position x="1056.8" y="611.4" z="120.7" />
+         <position x="1057.4" y="609.3" z="120.7" />
+         <position x="1057.9" y="607.4" z="120.7" />
+         <position x="1058.4" y="605.2" z="120.8" />
+         <position x="1058.8" y="603.3" z="120.8" />
+         <position x="1059.3" y="601.2" z="120.8" />
+         <position x="1059.7" y="599.2" z="120.8" />
+         <position x="1060.0" y="597.0" z="120.8" />
+         <position x="1060.3" y="595.1" z="120.8" />
+         <position x="1060.6" y="592.9" z="120.8" />
+         <position x="1060.9" y="590.9" z="120.8" />
+         <position x="1061.1" y="588.8" z="120.9" />
+         <position x="1061.3" y="586.8" z="120.9" />
+         <position x="1061.4" y="584.6" z="120.9" />
+         <position x="1061.5" y="582.6" z="120.9" />
+         <position x="1061.6" y="580.4" z="120.9" />
+         <position x="1061.6" y="578.4" z="120.9" />
+         <position x="1061.6" y="576.2" z="120.9" />
+         <position x="1061.6" y="574.2" z="121.0" />
+         <position x="1061.5" y="572.1" z="121.0" />
+         <position x="1061.4" y="570.1" z="121.0" />
+         <position x="1061.3" y="567.9" z="121.0" />
+         <position x="1061.1" y="565.9" z="121.0" />
+         <position x="1060.9" y="563.7" z="121.0" />
+         <position x="1060.6" y="561.7" z="121.0" />
+         <position x="1060.3" y="559.6" z="121.1" />
+         <position x="1060.0" y="557.6" z="121.1" />
+         <position x="1059.6" y="555.4" z="121.1" />
+         <position x="1059.3" y="553.5" z="121.1" />
+         <position x="1058.8" y="551.4" z="121.1" />
+         <position x="1058.4" y="549.4" z="121.1" />
+         <position x="1057.9" y="547.3" z="121.1" />
+         <position x="1057.4" y="545.4" z="121.1" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="100.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="50.0" wind_intensity="100.0" />
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="100.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="50.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="24211" road_id="6" town="Town01">
+      <waypoints>
+         <position x="125.6" y="330.6" z="0.0" />
+         <position x="127.6" y="330.6" z="0.0" />
+         <position x="129.6" y="330.6" z="0.0" />
+         <position x="131.6" y="330.6" z="0.0" />
+         <position x="133.6" y="330.6" z="0.0" />
+         <position x="135.6" y="330.6" z="0.0" />
+         <position x="137.6" y="330.6" z="0.0" />
+         <position x="139.6" y="330.6" z="0.0" />
+         <position x="141.6" y="330.6" z="0.0" />
+         <position x="143.6" y="330.6" z="0.0" />
+         <position x="145.6" y="330.6" z="0.0" />
+         <position x="147.6" y="330.6" z="0.0" />
+         <position x="149.6" y="330.6" z="0.0" />
+         <position x="151.6" y="330.6" z="0.0" />
+         <position x="153.6" y="330.6" z="0.0" />
+         <position x="155.6" y="330.6" z="0.0" />
+         <position x="157.6" y="330.6" z="0.0" />
+         <position x="159.6" y="330.6" z="0.0" />
+         <position x="161.6" y="330.6" z="0.0" />
+         <position x="163.6" y="330.6" z="0.0" />
+         <position x="165.6" y="330.6" z="0.0" />
+         <position x="167.6" y="330.6" z="0.0" />
+         <position x="169.6" y="330.6" z="0.0" />
+         <position x="171.6" y="330.6" z="0.0" />
+         <position x="173.6" y="330.6" z="0.0" />
+         <position x="175.6" y="330.6" z="0.0" />
+         <position x="177.6" y="330.6" z="0.0" />
+         <position x="179.6" y="330.6" z="0.0" />
+         <position x="181.6" y="330.6" z="0.0" />
+         <position x="183.6" y="330.6" z="0.0" />
+         <position x="185.6" y="330.6" z="0.0" />
+         <position x="187.6" y="330.6" z="0.0" />
+         <position x="189.6" y="330.6" z="0.0" />
+         <position x="191.6" y="330.6" z="0.0" />
+         <position x="193.6" y="330.6" z="0.0" />
+         <position x="195.6" y="330.6" z="0.0" />
+         <position x="197.6" y="330.6" z="0.0" />
+         <position x="199.6" y="330.6" z="0.0" />
+         <position x="201.6" y="330.6" z="0.0" />
+         <position x="203.6" y="330.6" z="0.0" />
+         <position x="205.6" y="330.6" z="0.0" />
+         <position x="207.6" y="330.6" z="0.0" />
+         <position x="209.6" y="330.6" z="0.0" />
+         <position x="211.6" y="330.6" z="0.0" />
+         <position x="213.6" y="330.6" z="0.0" />
+         <position x="215.6" y="330.6" z="0.0" />
+         <position x="217.6" y="330.6" z="0.0" />
+         <position x="219.6" y="330.6" z="0.0" />
+         <position x="221.6" y="330.6" z="0.0" />
+         <position x="223.6" y="330.6" z="0.0" />
+         <position x="225.6" y="330.6" z="0.0" />
+         <position x="227.6" y="330.6" z="0.0" />
+         <position x="229.6" y="330.6" z="0.0" />
+         <position x="231.6" y="330.6" z="0.0" />
+         <position x="233.6" y="330.6" z="0.0" />
+         <position x="235.6" y="330.6" z="0.0" />
+         <position x="237.6" y="330.6" z="0.0" />
+         <position x="239.6" y="330.6" z="0.0" />
+         <position x="241.6" y="330.6" z="0.0" />
+         <position x="243.6" y="330.6" z="0.0" />
+         <position x="245.6" y="330.6" z="0.0" />
+         <position x="247.6" y="330.6" z="0.0" />
+         <position x="249.6" y="330.6" z="0.0" />
+         <position x="251.6" y="330.6" z="0.0" />
+         <position x="253.6" y="330.6" z="0.0" />
+         <position x="255.6" y="330.6" z="0.0" />
+         <position x="257.6" y="330.6" z="0.0" />
+         <position x="259.6" y="330.6" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="50.0" precipitation_deposits="100.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="80.0" wind_intensity="80.0" />
+         <weather cloudiness="100.0" fog_density="10.0" precipitation="50.0" precipitation_deposits="100.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="80.0" wind_intensity="80.0" />
+      </weathers>
+   </route><route id="24224" road_id="12" town="Town02">
+      <waypoints>
+         <position x="157.5" y="105.4" z="0.0" />
+         <position x="155.5" y="105.4" z="0.0" />
+         <position x="153.5" y="105.4" z="0.0" />
+         <position x="151.5" y="105.4" z="0.0" />
+         <position x="149.5" y="105.4" z="0.0" />
+         <position x="147.5" y="105.4" z="0.0" />
+         <position x="145.5" y="105.4" z="0.0" />
+         <position x="143.5" y="105.4" z="0.0" />
+         <position x="141.5" y="105.4" z="0.0" />
+         <position x="139.5" y="105.4" z="0.0" />
+         <position x="137.5" y="105.4" z="0.0" />
+         <position x="135.5" y="105.4" z="0.0" />
+         <position x="133.5" y="105.4" z="0.0" />
+         <position x="131.5" y="105.4" z="0.0" />
+         <position x="129.5" y="105.4" z="0.0" />
+         <position x="127.5" y="105.4" z="0.0" />
+         <position x="125.5" y="105.4" z="0.0" />
+         <position x="123.5" y="105.4" z="0.0" />
+         <position x="121.5" y="105.4" z="0.0" />
+         <position x="119.5" y="105.4" z="0.0" />
+         <position x="117.5" y="105.4" z="0.0" />
+         <position x="115.5" y="105.4" z="0.0" />
+         <position x="113.5" y="105.4" z="0.0" />
+         <position x="111.5" y="105.4" z="0.0" />
+         <position x="109.5" y="105.4" z="0.0" />
+         <position x="107.5" y="105.4" z="0.0" />
+         <position x="105.5" y="105.4" z="0.0" />
+         <position x="103.5" y="105.4" z="0.0" />
+         <position x="101.5" y="105.4" z="0.0" />
+         <position x="99.5" y="105.4" z="0.0" />
+         <position x="97.5" y="105.4" z="0.0" />
+         <position x="95.5" y="105.4" z="0.0" />
+         <position x="93.5" y="105.4" z="0.0" />
+         <position x="91.5" y="105.4" z="0.0" />
+         <position x="89.5" y="105.4" z="0.0" />
+         <position x="87.5" y="105.4" z="0.0" />
+         <position x="85.5" y="105.4" z="0.0" />
+         <position x="83.5" y="105.4" z="0.0" />
+         <position x="81.5" y="105.4" z="0.0" />
+         <position x="79.5" y="105.4" z="0.0" />
+         <position x="77.5" y="105.4" z="0.0" />
+         <position x="75.5" y="105.4" z="0.0" />
+         <position x="73.5" y="105.4" z="0.0" />
+         <position x="71.5" y="105.4" z="0.0" />
+         <position x="69.5" y="105.4" z="0.0" />
+         <position x="67.5" y="105.4" z="0.0" />
+         <position x="65.5" y="105.4" z="0.0" />
+         <position x="63.5" y="105.4" z="0.0" />
+         <position x="61.5" y="105.4" z="0.0" />
+         <position x="59.5" y="105.4" z="0.0" />
+         <position x="57.5" y="105.4" z="0.0" />
+         <position x="55.5" y="105.4" z="0.0" />
+         <position x="53.5" y="105.4" z="0.0" />
+         <position x="51.5" y="105.4" z="0.0" />
+         <position x="49.5" y="105.4" z="0.0" />
+         <position x="47.5" y="105.4" z="0.0" />
+         <position x="45.5" y="105.4" z="0.0" />
+         <position x="43.5" y="105.4" z="0.0" />
+         <position x="41.5" y="105.4" z="0.0" />
+         <position x="39.5" y="105.4" z="0.0" />
+         <position x="37.5" y="105.4" z="0.0" />
+         <position x="35.5" y="105.4" z="0.0" />
+         <position x="33.5" y="105.4" z="0.0" />
+         <position x="31.5" y="105.5" z="0.0" />
+         <position x="29.5" y="105.5" z="0.0" />
+         <position x="27.5" y="105.5" z="0.0" />
+         <position x="25.5" y="105.5" z="0.0" />
+         <position x="23.5" y="105.5" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="26950" road_id="18" town="Town03">
+      <waypoints>
+         <position x="8.8" y="-93.8" z="0.0" />
+         <position x="8.9" y="-95.8" z="0.0" />
+         <position x="8.9" y="-97.8" z="0.0" />
+         <position x="9.0" y="-99.8" z="0.0" />
+         <position x="9.0" y="-101.8" z="0.0" />
+         <position x="9.1" y="-103.8" z="0.0" />
+         <position x="9.1" y="-105.8" z="0.0" />
+         <position x="9.2" y="-107.8" z="0.0" />
+         <position x="9.2" y="-109.8" z="0.0" />
+         <position x="9.3" y="-111.8" z="0.0" />
+         <position x="9.3" y="-113.8" z="0.0" />
+         <position x="9.4" y="-115.8" z="0.0" />
+         <position x="9.4" y="-117.8" z="0.0" />
+         <position x="25.5" y="-134.2" z="0.5" />
+         <position x="27.5" y="-134.2" z="0.7" />
+         <position x="29.5" y="-134.1" z="0.9" />
+         <position x="31.5" y="-134.1" z="1.2" />
+         <position x="33.5" y="-134.1" z="1.5" />
+         <position x="35.5" y="-134.0" z="1.8" />
+         <position x="37.5" y="-134.0" z="2.2" />
+         <position x="39.5" y="-133.9" z="2.6" />
+         <position x="41.5" y="-133.9" z="3.0" />
+         <position x="43.5" y="-133.8" z="3.5" />
+         <position x="45.5" y="-133.8" z="3.9" />
+         <position x="47.5" y="-133.8" z="4.3" />
+         <position x="49.5" y="-133.7" z="4.8" />
+         <position x="51.5" y="-133.7" z="5.2" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="25951" road_id="51" town="Town04">
+      <waypoints>
+         <position x="165.9" y="-311.2" z="0.0" />
+         <position x="163.9" y="-311.2" z="0.0" />
+         <position x="161.8" y="-311.2" z="0.0" />
+         <position x="159.8" y="-311.2" z="0.0" />
+         <position x="157.8" y="-311.1" z="0.0" />
+         <position x="155.7" y="-311.0" z="0.0" />
+         <position x="153.7" y="-310.9" z="0.0" />
+         <position x="151.6" y="-310.7" z="0.0" />
+         <position x="149.6" y="-310.4" z="0.0" />
+         <position x="147.6" y="-310.1" z="0.0" />
+         <position x="145.6" y="-309.8" z="0.0" />
+         <position x="143.6" y="-309.5" z="0.0" />
+         <position x="141.6" y="-309.1" z="0.0" />
+         <position x="139.6" y="-308.6" z="0.0" />
+         <position x="137.7" y="-308.1" z="0.0" />
+         <position x="135.7" y="-307.6" z="0.0" />
+         <position x="133.7" y="-307.0" z="0.0" />
+         <position x="131.8" y="-306.4" z="0.0" />
+         <position x="129.9" y="-305.8" z="0.0" />
+         <position x="127.9" y="-305.1" z="0.0" />
+         <position x="126.0" y="-304.4" z="0.0" />
+         <position x="124.1" y="-303.6" z="0.0" />
+         <position x="122.3" y="-302.8" z="0.0" />
+         <position x="120.4" y="-301.9" z="0.0" />
+         <position x="118.6" y="-301.1" z="0.0" />
+         <position x="116.7" y="-300.1" z="0.0" />
+         <position x="115.0" y="-299.2" z="0.0" />
+         <position x="113.2" y="-298.2" z="0.0" />
+         <position x="111.4" y="-297.2" z="0.0" />
+         <position x="109.7" y="-296.1" z="0.0" />
+         <position x="108.0" y="-295.0" z="0.0" />
+         <position x="106.3" y="-293.9" z="0.0" />
+         <position x="104.6" y="-292.7" z="0.0" />
+         <position x="103.0" y="-291.5" z="0.0" />
+         <position x="101.4" y="-290.3" z="0.0" />
+         <position x="99.7" y="-289.0" z="0.0" />
+         <position x="98.2" y="-287.7" z="0.0" />
+         <position x="96.6" y="-286.4" z="0.0" />
+         <position x="95.2" y="-285.0" z="0.0" />
+         <position x="93.6" y="-283.6" z="0.0" />
+         <position x="92.2" y="-282.2" z="0.0" />
+         <position x="90.8" y="-280.7" z="0.0" />
+         <position x="89.4" y="-279.3" z="0.0" />
+         <position x="88.0" y="-277.7" z="0.0" />
+         <position x="86.7" y="-276.2" z="0.0" />
+         <position x="85.4" y="-274.7" z="0.0" />
+         <position x="84.1" y="-273.1" z="0.0" />
+         <position x="82.8" y="-271.5" z="0.0" />
+         <position x="81.6" y="-269.9" z="0.0" />
+         <position x="80.4" y="-268.2" z="0.0" />
+         <position x="79.3" y="-266.6" z="0.0" />
+         <position x="78.1" y="-264.9" z="0.0" />
+         <position x="77.0" y="-263.2" z="0.0" />
+         <position x="75.9" y="-261.5" z="0.0" />
+         <position x="74.9" y="-259.7" z="0.0" />
+         <position x="73.9" y="-258.0" z="0.0" />
+         <position x="72.9" y="-256.2" z="0.0" />
+         <position x="71.9" y="-254.4" z="0.0" />
+         <position x="71.0" y="-252.6" z="0.0" />
+         <position x="70.1" y="-250.8" z="0.0" />
+         <position x="69.3" y="-248.9" z="0.0" />
+         <position x="68.4" y="-247.1" z="0.0" />
+         <position x="67.6" y="-245.2" z="0.0" />
+         <position x="66.9" y="-243.3" z="0.0" />
+         <position x="66.1" y="-241.4" z="0.0" />
+         <position x="65.4" y="-239.5" z="0.0" />
+         <position x="64.8" y="-237.6" z="0.0" />
+         <position x="64.1" y="-235.7" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="25857" road_id="19" town="Town05">
+      <waypoints>
+         <position x="69.9" y="-145.4" z="0.0" />
+         <position x="71.9" y="-145.2" z="0.0" />
+         <position x="73.9" y="-145.1" z="0.0" />
+         <position x="75.9" y="-144.9" z="0.0" />
+         <position x="77.8" y="-144.7" z="0.0" />
+         <position x="79.8" y="-144.5" z="0.0" />
+         <position x="81.8" y="-144.3" z="0.0" />
+         <position x="83.8" y="-144.1" z="0.0" />
+         <position x="85.7" y="-143.9" z="0.0" />
+         <position x="87.7" y="-143.6" z="0.0" />
+         <position x="89.7" y="-143.3" z="0.0" />
+         <position x="91.7" y="-143.0" z="0.0" />
+         <position x="93.6" y="-142.7" z="0.0" />
+         <position x="95.6" y="-142.4" z="0.0" />
+         <position x="97.5" y="-142.1" z="0.0" />
+         <position x="99.5" y="-141.8" z="0.0" />
+         <position x="101.5" y="-141.4" z="0.0" />
+         <position x="103.4" y="-141.1" z="0.0" />
+         <position x="105.3" y="-140.7" z="0.0" />
+         <position x="107.3" y="-140.3" z="0.0" />
+         <position x="109.3" y="-139.9" z="0.0" />
+         <position x="111.2" y="-139.5" z="0.0" />
+         <position x="113.1" y="-139.0" z="0.0" />
+         <position x="115.0" y="-138.6" z="0.0" />
+         <position x="116.9" y="-138.1" z="0.0" />
+         <position x="118.8" y="-137.5" z="0.0" />
+         <position x="120.6" y="-136.9" z="0.0" />
+         <position x="122.4" y="-136.2" z="0.0" />
+         <position x="124.2" y="-135.4" z="0.0" />
+         <position x="125.9" y="-134.6" z="0.0" />
+         <position x="127.6" y="-133.7" z="0.0" />
+         <position x="129.2" y="-132.7" z="0.0" />
+         <position x="130.8" y="-131.6" z="0.0" />
+         <position x="132.4" y="-130.5" z="0.0" />
+         <position x="133.9" y="-129.3" z="0.0" />
+         <position x="135.4" y="-128.1" z="0.0" />
+         <position x="136.8" y="-126.8" z="0.0" />
+         <position x="138.2" y="-125.4" z="0.0" />
+         <position x="139.5" y="-124.0" z="0.0" />
+         <position x="140.8" y="-122.5" z="0.0" />
+         <position x="142.0" y="-121.0" z="0.0" />
+         <position x="143.1" y="-119.4" z="0.0" />
+         <position x="144.1" y="-117.8" z="0.0" />
+         <position x="145.1" y="-116.2" z="0.0" />
+         <position x="146.1" y="-114.5" z="0.0" />
+         <position x="146.9" y="-112.8" z="0.0" />
+         <position x="147.7" y="-111.0" z="0.0" />
+         <position x="148.4" y="-109.2" z="0.0" />
+         <position x="149.1" y="-107.4" z="0.0" />
+         <position x="149.6" y="-105.5" z="0.0" />
+         <position x="150.1" y="-103.7" z="0.0" />
+         <position x="150.5" y="-101.8" z="0.0" />
+         <position x="150.9" y="-99.9" z="0.0" />
+         <position x="151.1" y="-98.0" z="0.0" />
+         <position x="151.3" y="-96.1" z="0.0" />
+         <position x="151.4" y="-94.1" z="0.0" />
+         <position x="151.4" y="-92.2" z="0.0" />
+         <position x="151.4" y="-90.2" z="0.0" />
+         <position x="151.4" y="-88.2" z="0.0" />
+         <position x="151.4" y="-86.2" z="0.0" />
+         <position x="151.4" y="-84.2" z="0.0" />
+         <position x="151.4" y="-82.2" z="0.0" />
+         <position x="151.4" y="-80.2" z="0.0" />
+         <position x="151.4" y="-78.2" z="0.0" />
+         <position x="151.5" y="-76.2" z="0.0" />
+         <position x="151.5" y="-74.2" z="0.0" />
+         <position x="151.5" y="-72.2" z="0.0" />
+         <position x="151.5" y="-70.2" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="24757" road_id="48" town="Town06">
+      <waypoints>
+         <position x="465.8" y="-24.5" z="0.0" />
+         <position x="463.8" y="-24.5" z="0.0" />
+         <position x="461.8" y="-24.5" z="0.0" />
+         <position x="459.8" y="-24.5" z="0.0" />
+         <position x="457.8" y="-24.5" z="0.0" />
+         <position x="455.8" y="-24.5" z="0.0" />
+         <position x="453.8" y="-24.5" z="0.0" />
+         <position x="451.8" y="-24.6" z="0.0" />
+         <position x="449.8" y="-24.6" z="0.0" />
+         <position x="447.8" y="-24.6" z="0.0" />
+         <position x="445.7" y="-24.6" z="0.0" />
+         <position x="443.7" y="-24.6" z="0.0" />
+         <position x="441.7" y="-24.5" z="0.0" />
+         <position x="439.7" y="-24.5" z="0.0" />
+         <position x="437.7" y="-24.5" z="0.0" />
+         <position x="435.7" y="-24.5" z="0.0" />
+         <position x="433.7" y="-24.5" z="0.0" />
+         <position x="431.7" y="-24.5" z="0.0" />
+         <position x="429.7" y="-24.5" z="0.0" />
+         <position x="427.7" y="-24.5" z="0.0" />
+         <position x="425.7" y="-24.5" z="0.0" />
+         <position x="423.7" y="-24.5" z="0.0" />
+         <position x="421.7" y="-24.5" z="0.0" />
+         <position x="419.7" y="-24.5" z="0.0" />
+         <position x="417.7" y="-24.5" z="0.0" />
+         <position x="415.7" y="-24.5" z="0.0" />
+         <position x="413.7" y="-24.4" z="0.0" />
+         <position x="411.7" y="-24.4" z="0.0" />
+         <position x="409.7" y="-24.4" z="0.0" />
+         <position x="407.7" y="-24.4" z="0.0" />
+         <position x="405.7" y="-24.4" z="0.0" />
+         <position x="403.7" y="-24.4" z="0.0" />
+         <position x="401.7" y="-24.4" z="0.0" />
+         <position x="399.7" y="-24.4" z="0.0" />
+         <position x="397.7" y="-24.4" z="0.0" />
+         <position x="395.7" y="-24.4" z="0.0" />
+         <position x="393.7" y="-24.4" z="0.0" />
+         <position x="391.7" y="-24.4" z="0.0" />
+         <position x="389.7" y="-24.4" z="0.0" />
+         <position x="387.7" y="-24.3" z="0.0" />
+         <position x="385.7" y="-24.3" z="0.0" />
+         <position x="383.7" y="-24.3" z="0.0" />
+         <position x="381.7" y="-24.3" z="0.0" />
+         <position x="379.7" y="-24.3" z="0.0" />
+         <position x="377.7" y="-24.3" z="0.0" />
+         <position x="375.7" y="-24.3" z="0.0" />
+         <position x="373.7" y="-24.3" z="0.0" />
+         <position x="371.7" y="-24.3" z="0.0" />
+         <position x="369.7" y="-24.3" z="0.0" />
+         <position x="367.7" y="-24.3" z="0.0" />
+         <position x="365.7" y="-24.3" z="0.0" />
+         <position x="363.7" y="-24.3" z="0.0" />
+         <position x="361.7" y="-24.3" z="0.0" />
+         <position x="359.7" y="-24.2" z="0.0" />
+         <position x="357.7" y="-24.2" z="0.0" />
+         <position x="355.7" y="-24.2" z="0.0" />
+         <position x="353.7" y="-24.2" z="0.0" />
+         <position x="351.7" y="-24.2" z="0.0" />
+         <position x="349.7" y="-24.2" z="0.0" />
+         <position x="347.7" y="-24.2" z="0.0" />
+         <position x="345.7" y="-24.2" z="0.0" />
+         <position x="343.7" y="-24.2" z="0.0" />
+         <position x="341.7" y="-24.2" z="0.0" />
+         <position x="339.7" y="-24.2" z="0.0" />
+         <position x="337.7" y="-24.2" z="0.0" />
+         <position x="335.7" y="-24.2" z="0.0" />
+         <position x="333.7" y="-24.2" z="0.0" />
+         <position x="331.7" y="-24.1" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="70.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="70.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="25968" road_id="25" town="Town07">
+      <waypoints>
+         <position x="-2.1" y="17.8" z="0.0" />
+         <position x="-2.1" y="15.8" z="0.0" />
+         <position x="-2.1" y="13.8" z="0.0" />
+         <position x="10.9" y="0.1" z="0.0" />
+         <position x="12.9" y="0.0" z="0.0" />
+         <position x="14.9" y="0.0" z="0.0" />
+         <position x="16.9" y="-0.0" z="0.0" />
+         <position x="18.9" y="-0.0" z="0.0" />
+         <position x="20.9" y="-0.0" z="0.0" />
+         <position x="22.9" y="-0.1" z="0.0" />
+         <position x="24.9" y="-0.1" z="0.0" />
+         <position x="26.9" y="-0.1" z="0.0" />
+         <position x="28.9" y="-0.1" z="0.0" />
+         <position x="30.9" y="-0.1" z="0.0" />
+         <position x="32.8" y="-0.1" z="0.0" />
+         <position x="34.8" y="-0.1" z="0.0" />
+         <position x="36.8" y="-0.1" z="0.0" />
+         <position x="38.8" y="-0.0" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="24330" road_id="1" town="Town10HD">
+      <waypoints>
+         <position x="43.3" y="141.1" z="0.0" />
+         <position x="45.3" y="141.1" z="0.0" />
+         <position x="47.3" y="141.1" z="0.0" />
+         <position x="49.3" y="141.1" z="0.0" />
+         <position x="51.3" y="141.1" z="0.0" />
+         <position x="53.3" y="141.2" z="0.0" />
+         <position x="55.3" y="141.2" z="0.0" />
+         <position x="57.3" y="141.2" z="0.0" />
+         <position x="59.3" y="141.2" z="0.0" />
+         <position x="61.3" y="141.2" z="0.0" />
+         <position x="63.3" y="141.2" z="0.0" />
+         <position x="65.5" y="141.2" z="0.0" />
+         <position x="67.9" y="141.1" z="0.0" />
+         <position x="70.2" y="140.9" z="0.0" />
+         <position x="72.4" y="140.5" z="0.0" />
+         <position x="74.7" y="140.0" z="0.0" />
+         <position x="76.9" y="139.4" z="0.0" />
+         <position x="79.0" y="138.7" z="0.0" />
+         <position x="81.2" y="137.9" z="0.0" />
+         <position x="83.3" y="136.9" z="0.0" />
+         <position x="85.3" y="135.9" z="0.0" />
+         <position x="87.2" y="134.7" z="0.0" />
+         <position x="89.1" y="133.4" z="0.0" />
+         <position x="91.0" y="132.0" z="0.0" />
+         <position x="92.7" y="130.5" z="0.0" />
+         <position x="94.4" y="128.9" z="0.0" />
+         <position x="95.9" y="127.3" z="0.0" />
+         <position x="97.4" y="125.6" z="0.0" />
+         <position x="98.7" y="123.8" z="0.0" />
+         <position x="100.0" y="122.0" z="0.0" />
+         <position x="101.2" y="120.2" z="0.0" />
+         <position x="102.3" y="118.2" z="0.0" />
+         <position x="103.4" y="116.3" z="0.0" />
+         <position x="104.3" y="114.3" z="0.0" />
+         <position x="105.2" y="112.3" z="0.0" />
+         <position x="106.0" y="110.2" z="0.0" />
+         <position x="106.7" y="108.1" z="0.0" />
+         <position x="107.3" y="106.0" z="0.0" />
+         <position x="107.9" y="103.8" z="0.0" />
+         <position x="108.3" y="101.7" z="0.0" />
+         <position x="108.7" y="99.5" z="0.0" />
+         <position x="109.0" y="97.3" z="0.0" />
+         <position x="109.1" y="95.1" z="0.0" />
+         <position x="109.2" y="92.9" z="0.0" />
+         <position x="109.2" y="90.9" z="0.0" />
+         <position x="109.3" y="88.9" z="0.0" />
+         <position x="109.3" y="86.9" z="0.0" />
+         <position x="109.3" y="84.9" z="0.0" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="100.0" fog_density="3.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+         <weather cloudiness="100.0" fog_density="3.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+      </weathers>
+   </route><route id="27582" road_id="414" town="Town11">
+      <waypoints>
+         <position x="6739.0" y="-1281.5" z="58.6" />
+         <position x="6738.1" y="-1279.7" z="58.5" />
+         <position x="6737.1" y="-1278.0" z="58.5" />
+         <position x="6736.2" y="-1276.2" z="58.4" />
+         <position x="6735.2" y="-1274.4" z="58.4" />
+         <position x="6734.3" y="-1272.7" z="58.4" />
+         <position x="6733.3" y="-1270.9" z="58.3" />
+         <position x="6732.4" y="-1269.2" z="58.3" />
+         <position x="6731.4" y="-1267.4" z="58.2" />
+         <position x="6730.4" y="-1265.7" z="58.2" />
+         <position x="6729.5" y="-1263.9" z="58.1" />
+         <position x="6728.5" y="-1262.2" z="58.1" />
+         <position x="6712.3" y="-1257.2" z="57.4" />
+         <position x="6710.5" y="-1258.2" z="57.4" />
+         <position x="6708.8" y="-1259.1" z="57.4" />
+         <position x="6707.0" y="-1260.1" z="57.4" />
+         <position x="6705.2" y="-1261.0" z="57.3" />
+         <position x="6703.4" y="-1261.9" z="57.3" />
+         <position x="6701.6" y="-1262.8" z="57.2" />
+         <position x="6699.9" y="-1263.7" z="57.2" />
+         <position x="6698.1" y="-1264.6" z="57.2" />
+         <position x="6696.3" y="-1265.5" z="57.1" />
+         <position x="6694.5" y="-1266.4" z="57.1" />
+         <position x="6692.6" y="-1267.3" z="57.0" />
+         <position x="6690.8" y="-1268.2" z="57.0" />
+         <position x="6689.0" y="-1269.0" z="56.9" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="25439" road_id="137" town="Town15">
+      <waypoints>
+         <position x="1000.3" y="476.1" z="121.7" />
+         <position x="1001.6" y="477.6" z="121.7" />
+         <position x="1003.0" y="479.1" z="121.7" />
+         <position x="1004.3" y="480.6" z="121.7" />
+         <position x="1005.6" y="482.1" z="121.7" />
+         <position x="1006.9" y="483.6" z="121.7" />
+         <position x="1008.2" y="485.1" z="121.7" />
+         <position x="1009.5" y="486.7" z="121.7" />
+         <position x="1010.8" y="488.2" z="121.7" />
+         <position x="1012.1" y="489.7" z="121.6" />
+         <position x="1013.4" y="491.2" z="121.6" />
+         <position x="1014.7" y="492.6" z="121.6" />
+         <position x="1016.0" y="494.1" z="121.6" />
+         <position x="1017.3" y="495.6" z="121.6" />
+         <position x="1018.5" y="497.1" z="121.6" />
+         <position x="1019.8" y="498.6" z="121.6" />
+         <position x="1021.0" y="500.1" z="121.5" />
+         <position x="1022.2" y="501.6" z="121.5" />
+         <position x="1023.4" y="503.1" z="121.5" />
+         <position x="1024.7" y="504.7" z="121.5" />
+         <position x="1025.8" y="506.2" z="121.5" />
+         <position x="1027.0" y="507.8" z="121.5" />
+         <position x="1028.2" y="509.4" z="121.5" />
+         <position x="1029.3" y="510.9" z="121.4" />
+         <position x="1030.4" y="512.5" z="121.4" />
+         <position x="1031.5" y="514.2" z="121.4" />
+         <position x="1032.6" y="515.7" z="121.4" />
+         <position x="1033.6" y="517.3" z="121.4" />
+         <position x="1034.6" y="519.0" z="121.4" />
+         <position x="1035.6" y="520.5" z="121.4" />
+         <position x="1036.6" y="522.3" z="121.4" />
+         <position x="1037.5" y="523.9" z="121.3" />
+         <position x="1038.4" y="525.6" z="121.3" />
+         <position x="1039.2" y="527.2" z="121.3" />
+         <position x="1040.1" y="529.0" z="121.3" />
+         <position x="1040.9" y="530.7" z="121.3" />
+         <position x="1041.7" y="532.5" z="121.3" />
+         <position x="1042.4" y="534.2" z="121.3" />
+         <position x="1043.2" y="536.0" z="121.2" />
+         <position x="1043.9" y="537.7" z="121.2" />
+         <position x="1044.5" y="539.6" z="121.2" />
+         <position x="1045.1" y="541.3" z="121.2" />
+         <position x="1045.8" y="543.2" z="121.2" />
+         <position x="1046.3" y="544.9" z="121.2" />
+         <position x="1046.9" y="546.9" z="121.2" />
+         <position x="1047.4" y="548.6" z="121.1" />
+         <position x="1047.9" y="550.6" z="121.1" />
+         <position x="1048.3" y="552.3" z="121.1" />
+         <position x="1048.7" y="554.3" z="121.1" />
+         <position x="1049.1" y="556.1" z="121.1" />
+         <position x="1049.4" y="558.0" z="121.1" />
+         <position x="1049.7" y="559.8" z="121.1" />
+         <position x="1050.0" y="561.8" z="121.0" />
+         <position x="1050.3" y="563.6" z="121.0" />
+         <position x="1050.5" y="565.6" z="121.0" />
+         <position x="1050.7" y="567.4" z="121.0" />
+         <position x="1050.8" y="569.4" z="121.0" />
+         <position x="1051.0" y="571.2" z="121.0" />
+         <position x="1051.1" y="573.2" z="121.0" />
+         <position x="1051.1" y="575.0" z="121.0" />
+         <position x="1051.1" y="577.0" z="120.9" />
+         <position x="1051.1" y="578.9" z="120.9" />
+         <position x="1051.1" y="580.8" z="120.9" />
+         <position x="1051.0" y="582.7" z="120.9" />
+         <position x="1050.9" y="584.7" z="120.9" />
+         <position x="1050.8" y="586.5" z="120.9" />
+         <position x="1050.6" y="588.5" z="120.9" />
+         <position x="1050.4" y="590.3" z="120.8" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+      </weathers>
+   </route><route id="2273" town="Town12">
+         <waypoints>
+            <position x="3943.6" y="2745.0" z="369.6" />
+            <position x="3943.6" y="2747.0" z="369.6" />
+            <position x="3943.6" y="2749.0" z="369.6" />
+            <position x="3943.6" y="2751.0" z="369.6" />
+            <position x="3943.6" y="2753.0" z="369.6" />
+            <position x="3943.6" y="2755.0" z="369.6" />
+            <position x="3943.6" y="2757.0" z="369.6" />
+            <position x="3943.6" y="2759.0" z="369.6" />
+            <position x="3943.6" y="2761.0" z="369.6" />
+            <position x="3943.6" y="2763.0" z="369.6" />
+            <position x="3943.6" y="2765.0" z="369.6" />
+            <position x="3943.6" y="2767.0" z="369.6" />
+            <position x="3937.7" y="2857.3" z="369.6" />
+            <position x="3937.4" y="2859.3" z="369.6" />
+            <position x="3937.0" y="2861.3" z="369.6" />
+            <position x="3936.7" y="2863.2" z="369.6" />
+            <position x="3936.3" y="2865.2" z="369.5" />
+            <position x="3935.9" y="2867.1" z="369.5" />
+            <position x="3935.5" y="2869.1" z="369.5" />
+            <position x="3935.1" y="2871.0" z="369.5" />
+            <position x="3934.7" y="2873.0" z="369.5" />
+            <position x="3934.3" y="2874.9" z="369.5" />
+            <position x="3933.9" y="2876.9" z="369.5" />
+            <position x="3933.5" y="2878.8" z="369.5" />
+            <position x="3933.0" y="2880.8" z="369.5" />
+            <position x="3932.6" y="2882.7" z="369.5" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="2903" road_id="1102" town="Town12">
+         <waypoints>
+            <position x="2230.4" y="2294.7" z="363.1" />
+            <position x="2228.4" y="2294.7" z="363.0" />
+            <position x="2226.4" y="2294.7" z="363.0" />
+            <position x="2224.4" y="2294.7" z="362.9" />
+            <position x="2222.4" y="2294.7" z="362.9" />
+            <position x="2220.4" y="2294.7" z="362.9" />
+            <position x="2218.4" y="2294.7" z="362.8" />
+            <position x="2216.4" y="2294.7" z="362.8" />
+            <position x="2214.4" y="2294.7" z="362.7" />
+            <position x="2212.4" y="2294.7" z="362.7" />
+            <position x="2210.4" y="2294.7" z="362.6" />
+            <position x="2208.4" y="2294.7" z="362.6" />
+            <position x="2206.4" y="2294.8" z="362.5" />
+            <position x="2187.9" y="2276.4" z="361.7" />
+            <position x="2187.9" y="2274.4" z="361.6" />
+            <position x="2187.9" y="2272.4" z="361.6" />
+            <position x="2187.9" y="2270.4" z="361.5" />
+            <position x="2187.9" y="2268.4" z="361.5" />
+            <position x="2187.8" y="2266.4" z="361.4" />
+            <position x="2187.8" y="2264.4" z="361.4" />
+            <position x="2187.8" y="2262.4" z="361.4" />
+            <position x="2187.8" y="2260.4" z="361.3" />
+            <position x="2187.8" y="2258.4" z="361.3" />
+            <position x="2187.8" y="2256.4" z="361.2" />
+            <position x="2187.8" y="2254.4" z="361.2" />
+            <position x="2187.8" y="2252.4" z="361.1" />
+            <position x="2187.8" y="2250.4" z="361.1" />
+            <position x="2187.7" y="2248.4" z="361.1" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+            <weather cloudiness="100.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         </weathers>
+      </route><route id="2606" road_id="467" town="Town12">
+         <waypoints>
+            <position x="1176.4" y="5254.4" z="371.2" />
+            <position x="1176.4" y="5252.4" z="371.2" />
+            <position x="1176.4" y="5250.4" z="371.2" />
+            <position x="1176.4" y="5248.4" z="371.2" />
+            <position x="1176.4" y="5246.4" z="371.2" />
+            <position x="1176.4" y="5244.4" z="371.2" />
+            <position x="1176.3" y="5242.4" z="371.2" />
+            <position x="1176.3" y="5240.4" z="371.2" />
+            <position x="1176.3" y="5238.4" z="371.2" />
+            <position x="1176.3" y="5236.4" z="371.2" />
+            <position x="1176.3" y="5234.4" z="371.2" />
+            <position x="1176.3" y="5232.4" z="371.3" />
+            <position x="1176.3" y="5230.4" z="371.3" />
+            <position x="1176.3" y="5228.4" z="371.3" />
+            <position x="1176.3" y="5226.4" z="371.3" />
+            <position x="1176.3" y="5224.4" z="371.3" />
+            <position x="1176.3" y="5222.4" z="371.3" />
+            <position x="1176.3" y="5220.4" z="371.3" />
+            <position x="1176.3" y="5218.4" z="371.3" />
+            <position x="1176.3" y="5216.4" z="371.3" />
+            <position x="1176.3" y="5214.4" z="371.3" />
+            <position x="1176.3" y="5212.4" z="371.3" />
+            <position x="1176.3" y="5210.4" z="371.3" />
+            <position x="1176.3" y="5208.4" z="371.3" />
+            <position x="1176.3" y="5206.4" z="371.3" />
+            <position x="1176.3" y="5204.4" z="371.3" />
+            <position x="1176.3" y="5202.4" z="371.3" />
+            <position x="1176.3" y="5200.4" z="371.3" />
+            <position x="1176.3" y="5198.4" z="371.3" />
+            <position x="1176.3" y="5196.4" z="371.3" />
+            <position x="1176.3" y="5194.4" z="371.3" />
+            <position x="1176.3" y="5192.4" z="371.3" />
+            <position x="1176.3" y="5190.4" z="371.3" />
+            <position x="1176.3" y="5188.4" z="371.3" />
+            <position x="1176.3" y="5186.4" z="371.3" />
+            <position x="1176.3" y="5184.4" z="371.3" />
+            <position x="1176.3" y="5182.4" z="371.3" />
+            <position x="1176.3" y="5180.4" z="371.3" />
+            <position x="1176.3" y="5178.4" z="371.3" />
+            <position x="1176.3" y="5176.4" z="371.3" />
+            <position x="1176.3" y="5174.4" z="371.3" />
+            <position x="1176.3" y="5172.4" z="371.3" />
+            <position x="1176.3" y="5170.4" z="371.3" />
+            <position x="1176.3" y="5168.4" z="371.3" />
+            <position x="1176.3" y="5166.4" z="371.3" />
+            <position x="1176.3" y="5164.4" z="371.3" />
+            <position x="1176.3" y="5162.4" z="371.3" />
+            <position x="1176.3" y="5160.4" z="371.3" />
+            <position x="1176.3" y="5158.4" z="371.4" />
+            <position x="1176.3" y="5156.4" z="371.4" />
+            <position x="1176.3" y="5154.4" z="371.4" />
+            <position x="1176.3" y="5152.4" z="371.4" />
+            <position x="1176.3" y="5150.4" z="371.4" />
+            <position x="1176.3" y="5148.4" z="371.4" />
+            <position x="1176.3" y="5146.4" z="371.4" />
+            <position x="1176.3" y="5144.4" z="371.4" />
+            <position x="1176.3" y="5142.4" z="371.4" />
+            <position x="1176.3" y="5140.4" z="371.4" />
+            <position x="1176.3" y="5138.4" z="371.4" />
+            <position x="1176.3" y="5136.4" z="371.4" />
+            <position x="1176.3" y="5134.4" z="371.4" />
+            <position x="1176.2" y="5132.4" z="371.4" />
+            <position x="1176.2" y="5130.4" z="371.4" />
+            <position x="1176.2" y="5128.4" z="371.4" />
+            <position x="1176.2" y="5126.4" z="371.4" />
+            <position x="1176.2" y="5124.4" z="371.4" />
+            <position x="1176.2" y="5122.4" z="371.4" />
+            <position x="1176.2" y="5120.4" z="371.4" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+            <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="2143" town="Town12">
+         <waypoints>
+            <position x="256.8" y="5955.7" z="360.2" />
+            <position x="256.7" y="5953.7" z="360.3" />
+            <position x="256.7" y="5951.7" z="360.3" />
+            <position x="256.6" y="5949.7" z="360.4" />
+            <position x="256.6" y="5947.7" z="360.4" />
+            <position x="256.6" y="5945.7" z="360.5" />
+            <position x="256.5" y="5943.7" z="360.5" />
+            <position x="256.5" y="5941.7" z="360.6" />
+            <position x="256.5" y="5939.7" z="360.6" />
+            <position x="256.5" y="5937.7" z="360.7" />
+            <position x="256.5" y="5935.7" z="360.7" />
+            <position x="256.5" y="5933.7" z="360.8" />
+            <position x="256.5" y="5931.7" z="360.8" />
+            <position x="241.6" y="5915.8" z="361.2" />
+            <position x="239.6" y="5915.8" z="361.2" />
+            <position x="237.6" y="5915.8" z="361.2" />
+            <position x="235.6" y="5915.8" z="361.2" />
+            <position x="233.6" y="5915.8" z="361.2" />
+            <position x="231.6" y="5915.8" z="361.2" />
+            <position x="229.6" y="5915.7" z="361.2" />
+            <position x="227.6" y="5915.7" z="361.2" />
+            <position x="225.6" y="5915.7" z="361.2" />
+            <position x="223.6" y="5915.7" z="361.2" />
+            <position x="221.6" y="5915.7" z="361.2" />
+            <position x="219.6" y="5915.6" z="361.2" />
+            <position x="217.6" y="5915.6" z="361.2" />
+            <position x="215.6" y="5915.6" z="361.2" />
+            <position x="213.6" y="5915.6" z="361.2" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="1792" town="Town12">
+         <waypoints>
+            <position x="3127.8" y="6268.0" z="372.0" />
+            <position x="3125.9" y="6267.6" z="371.9" />
+            <position x="3123.9" y="6267.3" z="371.9" />
+            <position x="3121.9" y="6267.0" z="371.8" />
+            <position x="3119.9" y="6266.7" z="371.7" />
+            <position x="3118.0" y="6266.3" z="371.6" />
+            <position x="3116.0" y="6266.0" z="371.6" />
+            <position x="3114.0" y="6265.7" z="371.5" />
+            <position x="3112.1" y="6265.4" z="371.4" />
+            <position x="3110.1" y="6265.0" z="371.4" />
+            <position x="3108.1" y="6264.7" z="371.3" />
+            <position x="3106.1" y="6264.4" z="371.3" />
+            <position x="3104.2" y="6264.1" z="371.2" />
+            <position x="3102.2" y="6263.7" z="371.2" />
+            <position x="3100.2" y="6263.4" z="371.1" />
+            <position x="3098.2" y="6263.1" z="371.1" />
+            <position x="3096.3" y="6262.8" z="371.0" />
+            <position x="3094.3" y="6262.4" z="371.0" />
+            <position x="3092.3" y="6262.1" z="370.9" />
+            <position x="3090.3" y="6261.8" z="370.9" />
+            <position x="3088.4" y="6261.5" z="370.8" />
+            <position x="3086.4" y="6261.1" z="370.8" />
+            <position x="3084.4" y="6260.8" z="370.8" />
+            <position x="3082.5" y="6260.5" z="370.7" />
+            <position x="3080.5" y="6260.2" z="370.7" />
+            <position x="3078.5" y="6259.8" z="370.7" />
+            <position x="3076.5" y="6259.5" z="370.6" />
+            <position x="3074.6" y="6259.2" z="370.6" />
+            <position x="3072.6" y="6258.9" z="370.5" />
+            <position x="3070.6" y="6258.5" z="370.5" />
+            <position x="3068.6" y="6258.2" z="370.5" />
+            <position x="3066.7" y="6257.9" z="370.5" />
+            <position x="3064.7" y="6257.6" z="370.4" />
+            <position x="3062.7" y="6257.2" z="370.4" />
+            <position x="3060.7" y="6256.9" z="370.4" />
+            <position x="3058.8" y="6256.6" z="370.4" />
+            <position x="3056.8" y="6256.3" z="370.3" />
+            <position x="3054.8" y="6255.9" z="370.3" />
+            <position x="3052.9" y="6255.6" z="370.3" />
+            <position x="3050.9" y="6255.3" z="370.3" />
+            <position x="3048.9" y="6255.0" z="370.3" />
+            <position x="3046.9" y="6254.6" z="370.3" />
+            <position x="3045.0" y="6254.3" z="370.3" />
+            <position x="3043.0" y="6254.0" z="370.3" />
+            <position x="3041.0" y="6253.7" z="370.3" />
+            <position x="3039.0" y="6253.3" z="370.3" />
+            <position x="3037.1" y="6253.0" z="370.3" />
+            <position x="3035.1" y="6252.7" z="370.3" />
+            <position x="3033.1" y="6252.4" z="370.3" />
+            <position x="3031.1" y="6252.1" z="370.3" />
+            <position x="3029.2" y="6251.7" z="370.3" />
+            <position x="3027.2" y="6251.4" z="370.3" />
+            <position x="3025.2" y="6251.1" z="370.3" />
+            <position x="3023.2" y="6250.8" z="370.3" />
+            <position x="3021.3" y="6250.4" z="370.3" />
+            <position x="3019.3" y="6250.1" z="370.3" />
+            <position x="3017.3" y="6249.8" z="370.3" />
+            <position x="3015.4" y="6249.5" z="370.3" />
+            <position x="3013.4" y="6249.1" z="370.3" />
+            <position x="3011.4" y="6248.8" z="370.3" />
+            <position x="3009.4" y="6248.5" z="370.4" />
+            <position x="3007.5" y="6248.2" z="370.4" />
+            <position x="3005.5" y="6247.8" z="370.4" />
+            <position x="3003.5" y="6247.5" z="370.4" />
+            <position x="3001.5" y="6247.2" z="370.4" />
+            <position x="2999.6" y="6246.9" z="370.5" />
+            <position x="2997.6" y="6246.5" z="370.5" />
+            <position x="2995.6" y="6246.2" z="370.5" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+            <weather cloudiness="40.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="15.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="23687" road_id="174" town="Town12">
+      <waypoints>
+         <position x="-2501.1" y="4243.9" z="365.1" />
+         <position x="-2500.8" y="4241.9" z="365.0" />
+         <position x="-2500.5" y="4239.9" z="365.0" />
+         <position x="-2500.2" y="4237.9" z="365.0" />
+         <position x="-2499.9" y="4236.0" z="365.0" />
+         <position x="-2499.6" y="4234.0" z="364.9" />
+         <position x="-2499.3" y="4232.0" z="364.9" />
+         <position x="-2499.0" y="4230.1" z="364.9" />
+         <position x="-2498.7" y="4228.1" z="364.9" />
+         <position x="-2498.3" y="4226.1" z="364.8" />
+         <position x="-2498.0" y="4224.2" z="364.8" />
+         <position x="-2497.7" y="4222.2" z="364.8" />
+         <position x="-2460.0" y="4124.7" z="363.7" />
+         <position x="-2459.0" y="4123.0" z="363.7" />
+         <position x="-2457.9" y="4121.3" z="363.6" />
+         <position x="-2456.9" y="4119.6" z="363.6" />
+         <position x="-2455.8" y="4117.9" z="363.6" />
+         <position x="-2454.7" y="4116.2" z="363.6" />
+         <position x="-2453.6" y="4114.6" z="363.6" />
+         <position x="-2452.5" y="4112.9" z="363.6" />
+         <position x="-2451.4" y="4111.3" z="363.5" />
+         <position x="-2450.3" y="4109.7" z="363.5" />
+         <position x="-2449.1" y="4108.1" z="363.5" />
+         <position x="-2447.9" y="4106.5" z="363.5" />
+         <position x="-2446.7" y="4105.0" z="363.5" />
+         <position x="-2445.4" y="4103.5" z="363.5" />
+         <position x="-2444.1" y="4102.0" z="363.4" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="70.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+         <weather cloudiness="70.0" fog_density="50.0" precipitation="60.0" precipitation_deposits="60.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="60.0" />
+      </weathers>
+   </route><route id="17598" road_id="738" town="Town12">
+         <waypoints>
+            <position x="-1281.8" y="3107.4" z="347.1" />
+            <position x="-1276.8" y="3107.5" z="347.3" />
+            <position x="-1271.8" y="3107.6" z="347.5" />
+            <position x="-1266.8" y="3107.6" z="347.7" />
+            <position x="-1261.8" y="3107.6" z="347.9" />
+            <position x="-1256.8" y="3107.5" z="348.2" />
+            <position x="-1251.8" y="3107.4" z="348.4" />
+            <position x="-1246.8" y="3107.3" z="348.7" />
+            <position x="-1241.8" y="3107.2" z="348.9" />
+            <position x="-1236.9" y="3103.5" z="349.2" />
+            <position x="-1231.9" y="3103.4" z="349.4" />
+            <position x="-1226.9" y="3103.3" z="349.7" />
+            <position x="-1221.9" y="3103.2" z="349.9" />
+            <position x="-1216.9" y="3103.1" z="350.2" />
+            <position x="-1211.9" y="3103.0" z="350.5" />
+            <position x="-1206.9" y="3102.9" z="350.7" />
+            <position x="-1201.9" y="3102.8" z="351.0" />
+            <position x="-1196.9" y="3102.7" z="351.3" />
+            <position x="-1192.0" y="3099.0" z="351.5" />
+            <position x="-1187.0" y="3098.9" z="351.8" />
+            <position x="-1182.0" y="3098.8" z="352.0" />
+            <position x="-1177.0" y="3098.7" z="352.3" />
+            <position x="-1172.0" y="3098.6" z="352.5" />
+            <position x="-1167.0" y="3098.5" z="352.7" />
+            <position x="-1162.0" y="3098.4" z="352.9" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="100.0" fog_density="3.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+            <weather cloudiness="100.0" fog_density="3.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+         </weathers>
+      </route><route id="2943" road_id="493" town="Town12">
+         <waypoints>
+            <position x="248.9" y="3846.9" z="364.0" />
+            <position x="248.9" y="3844.9" z="364.0" />
+            <position x="248.9" y="3842.9" z="364.0" />
+            <position x="248.9" y="3840.9" z="363.9" />
+            <position x="248.9" y="3838.9" z="363.9" />
+            <position x="248.9" y="3836.9" z="363.9" />
+            <position x="248.9" y="3834.9" z="363.9" />
+            <position x="248.9" y="3832.9" z="363.8" />
+            <position x="248.9" y="3830.9" z="363.8" />
+            <position x="248.9" y="3828.9" z="363.8" />
+            <position x="248.9" y="3826.9" z="363.8" />
+            <position x="248.9" y="3824.9" z="363.7" />
+            <position x="234.0" y="3809.8" z="363.5" />
+            <position x="232.0" y="3809.8" z="363.4" />
+            <position x="230.0" y="3809.8" z="363.4" />
+            <position x="228.0" y="3809.8" z="363.4" />
+            <position x="226.0" y="3809.8" z="363.5" />
+            <position x="224.0" y="3809.8" z="363.5" />
+            <position x="222.0" y="3809.8" z="363.5" />
+            <position x="220.0" y="3809.8" z="363.5" />
+            <position x="218.0" y="3809.8" z="363.5" />
+            <position x="216.0" y="3809.8" z="363.5" />
+            <position x="214.0" y="3809.8" z="363.5" />
+            <position x="212.0" y="3809.8" z="363.5" />
+            <position x="210.0" y="3809.8" z="363.5" />
+            <position x="208.0" y="3809.8" z="363.5" />
+            <position x="206.0" y="3809.8" z="363.6" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="100.0" fog_density="100.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="0" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+            <weather cloudiness="100.0" fog_density="100.0" precipitation="100.0" precipitation_deposits="90.0" route_percentage="100" sun_altitude_angle="-90.0" sun_azimuth_angle="-1.0" wetness="100.0" wind_intensity="100.0" />
+         </weathers>
+      </route><route id="24092" road_id="1349" town="Town13">
+      <waypoints>
+         <position x="-5752.0" y="4833.0" z="188.2" />
+         <position x="-5751.9" y="4831.0" z="188.2" />
+         <position x="-5751.8" y="4829.0" z="188.1" />
+         <position x="-5751.8" y="4827.0" z="188.1" />
+         <position x="-5751.7" y="4825.0" z="188.1" />
+         <position x="-5751.7" y="4823.0" z="188.1" />
+         <position x="-5751.6" y="4821.0" z="188.1" />
+         <position x="-5751.5" y="4819.0" z="188.0" />
+         <position x="-5751.5" y="4817.0" z="188.0" />
+         <position x="-5751.4" y="4815.0" z="188.0" />
+         <position x="-5751.4" y="4813.0" z="188.0" />
+         <position x="-5751.3" y="4811.0" z="187.9" />
+         <position x="-5742.2" y="4708.3" z="186.7" />
+         <position x="-5742.1" y="4706.3" z="186.7" />
+         <position x="-5742.1" y="4704.3" z="186.6" />
+         <position x="-5742.1" y="4702.3" z="186.6" />
+         <position x="-5742.0" y="4700.3" z="186.6" />
+         <position x="-5742.0" y="4698.3" z="186.6" />
+         <position x="-5741.9" y="4696.3" z="186.5" />
+         <position x="-5741.9" y="4694.3" z="186.5" />
+         <position x="-5741.9" y="4692.3" z="186.5" />
+         <position x="-5741.8" y="4690.3" z="186.5" />
+         <position x="-5741.8" y="4688.3" z="186.4" />
+         <position x="-5741.7" y="4686.3" z="186.4" />
+         <position x="-5741.7" y="4684.3" z="186.4" />
+         <position x="-5741.7" y="4682.3" z="186.3" />
+      </waypoints>
+      <weathers>
+         <weather cloudiness="50.0" fog_density="0.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="70.0" sun_azimuth_angle="0.0" wetness="0.0" wind_intensity="0.0" />
+         <weather cloudiness="50.0" fog_density="0.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="70.0" sun_azimuth_angle="0.0" wetness="0.0" wind_intensity="0.0" />
+      </weathers>
+   </route><route id="3697" road_id="52" town="Town13">
+         <waypoints>
+            <position x="-4160.8" y="3370.4" z="185.9" />
+            <position x="-4160.9" y="3368.4" z="185.9" />
+            <position x="-4160.9" y="3366.4" z="185.9" />
+            <position x="-4160.9" y="3364.4" z="185.9" />
+            <position x="-4160.9" y="3362.4" z="185.9" />
+            <position x="-4161.0" y="3360.4" z="185.9" />
+            <position x="-4161.0" y="3358.4" z="185.9" />
+            <position x="-4161.0" y="3356.4" z="185.8" />
+            <position x="-4161.0" y="3354.4" z="185.8" />
+            <position x="-4161.0" y="3352.4" z="185.8" />
+            <position x="-4161.1" y="3350.4" z="185.8" />
+            <position x="-4161.1" y="3348.4" z="185.8" />
+            <position x="-4161.1" y="3346.4" z="185.8" />
+            <position x="-4145.6" y="3332.4" z="185.7" />
+            <position x="-4143.6" y="3332.4" z="185.7" />
+            <position x="-4141.6" y="3332.4" z="185.7" />
+            <position x="-4139.6" y="3332.4" z="185.7" />
+            <position x="-4137.6" y="3332.4" z="185.7" />
+            <position x="-4135.6" y="3332.4" z="185.7" />
+            <position x="-4133.6" y="3332.4" z="185.7" />
+            <position x="-4131.6" y="3332.4" z="185.7" />
+            <position x="-4129.6" y="3332.4" z="185.6" />
+            <position x="-4127.6" y="3332.4" z="185.6" />
+            <position x="-4125.6" y="3332.4" z="185.6" />
+            <position x="-4123.6" y="3332.4" z="185.6" />
+            <position x="-4121.6" y="3332.4" z="185.6" />
+            <position x="-4119.6" y="3332.4" z="185.6" />
+            <position x="-4117.6" y="3332.4" z="185.6" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+            <weather cloudiness="5.0" fog_density="2.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="90.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="3572" road_id="1178" town="Town13">
+         <waypoints>
+            <position x="-1569.2" y="4378.2" z="154.5" />
+            <position x="-1567.3" y="4377.6" z="154.5" />
+            <position x="-1565.4" y="4377.1" z="154.4" />
+            <position x="-1563.4" y="4376.5" z="154.4" />
+            <position x="-1561.5" y="4376.0" z="154.3" />
+            <position x="-1559.6" y="4375.4" z="154.3" />
+            <position x="-1557.7" y="4374.8" z="154.2" />
+            <position x="-1555.8" y="4374.3" z="154.1" />
+            <position x="-1553.8" y="4373.7" z="154.1" />
+            <position x="-1551.9" y="4373.2" z="154.0" />
+            <position x="-1550.0" y="4372.6" z="154.0" />
+            <position x="-1548.1" y="4372.1" z="153.9" />
+            <position x="-1546.2" y="4371.5" z="153.9" />
+            <position x="-1544.2" y="4371.0" z="153.8" />
+            <position x="-1542.3" y="4370.4" z="153.8" />
+            <position x="-1540.4" y="4369.9" z="153.7" />
+            <position x="-1538.5" y="4369.3" z="153.7" />
+            <position x="-1536.5" y="4368.8" z="153.6" />
+            <position x="-1534.6" y="4368.2" z="153.6" />
+            <position x="-1532.7" y="4367.6" z="153.5" />
+            <position x="-1530.8" y="4367.1" z="153.4" />
+            <position x="-1528.9" y="4366.5" z="153.4" />
+            <position x="-1526.9" y="4366.0" z="153.3" />
+            <position x="-1525.0" y="4365.4" z="153.3" />
+            <position x="-1523.1" y="4364.9" z="153.2" />
+            <position x="-1521.2" y="4364.3" z="153.2" />
+            <position x="-1519.2" y="4363.8" z="153.1" />
+            <position x="-1517.3" y="4363.2" z="153.1" />
+            <position x="-1515.4" y="4362.7" z="153.0" />
+            <position x="-1513.5" y="4362.1" z="153.0" />
+            <position x="-1511.6" y="4361.6" z="152.9" />
+            <position x="-1509.6" y="4361.0" z="152.9" />
+            <position x="-1507.7" y="4360.5" z="152.8" />
+            <position x="-1505.8" y="4359.9" z="152.8" />
+            <position x="-1503.9" y="4359.3" z="152.7" />
+            <position x="-1501.9" y="4358.8" z="152.7" />
+            <position x="-1500.0" y="4358.2" z="152.6" />
+            <position x="-1498.1" y="4357.7" z="152.6" />
+            <position x="-1496.2" y="4357.1" z="152.5" />
+            <position x="-1494.3" y="4356.6" z="152.5" />
+            <position x="-1492.3" y="4356.0" z="152.4" />
+            <position x="-1490.4" y="4355.5" z="152.4" />
+            <position x="-1488.5" y="4354.9" z="152.3" />
+            <position x="-1486.6" y="4354.4" z="152.3" />
+            <position x="-1484.7" y="4353.8" z="152.2" />
+            <position x="-1482.7" y="4353.3" z="152.2" />
+            <position x="-1480.8" y="4352.7" z="152.1" />
+            <position x="-1478.9" y="4352.1" z="152.1" />
+            <position x="-1477.0" y="4351.6" z="152.1" />
+            <position x="-1475.0" y="4351.0" z="152.0" />
+            <position x="-1473.1" y="4350.5" z="152.0" />
+            <position x="-1471.2" y="4349.9" z="151.9" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+            <weather cloudiness="80.0" fog_density="3.0" precipitation="0.0" precipitation_deposits="50.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="20.0" wind_intensity="10.0" />
+         </weathers>
+      </route><route id="3813" road_id="1411" town="Town13">
+         <waypoints>
+            <position x="-3778.1" y="-2851.2" z="163.2" />
+            <position x="-3776.1" y="-2851.2" z="163.1" />
+            <position x="-3774.1" y="-2851.2" z="163.1" />
+            <position x="-3772.1" y="-2851.2" z="163.1" />
+            <position x="-3770.1" y="-2851.2" z="163.0" />
+            <position x="-3768.1" y="-2851.2" z="163.0" />
+            <position x="-3766.1" y="-2851.2" z="163.0" />
+            <position x="-3764.1" y="-2851.2" z="162.9" />
+            <position x="-3762.1" y="-2851.2" z="162.9" />
+            <position x="-3760.1" y="-2851.2" z="162.9" />
+            <position x="-3758.1" y="-2851.2" z="162.8" />
+            <position x="-3756.1" y="-2851.2" z="162.8" />
+            <position x="-3754.1" y="-2851.2" z="162.8" />
+            <position x="-3664.1" y="-2851.2" z="161.5" />
+            <position x="-3662.1" y="-2851.2" z="161.5" />
+            <position x="-3660.1" y="-2851.2" z="161.5" />
+            <position x="-3658.1" y="-2851.2" z="161.5" />
+            <position x="-3656.1" y="-2851.2" z="161.4" />
+            <position x="-3654.1" y="-2851.2" z="161.4" />
+            <position x="-3652.1" y="-2851.2" z="161.4" />
+            <position x="-3650.1" y="-2851.2" z="161.4" />
+            <position x="-3648.1" y="-2851.2" z="161.3" />
+            <position x="-3646.1" y="-2851.2" z="161.3" />
+            <position x="-3644.1" y="-2851.2" z="161.3" />
+            <position x="-3642.1" y="-2851.2" z="161.3" />
+            <position x="-3640.1" y="-2851.2" z="161.2" />
+            <position x="-3638.1" y="-2851.2" z="161.2" />
+            <position x="-3636.1" y="-2851.2" z="161.2" />
+         </waypoints>
+         <weathers>
+            <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="0" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+            <weather cloudiness="5.0" fog_density="50.0" precipitation="0.0" precipitation_deposits="0.0" route_percentage="100" sun_altitude_angle="45.0" sun_azimuth_angle="-1.0" wetness="0.0" wind_intensity="10.0" />
+         </weathers>
+      </route></routes>

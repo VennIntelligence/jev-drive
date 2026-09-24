@@ -12,8 +12,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path('/data')
-ROUTES = ROOT / 'todos/2026-09-23-tfv6-controller/controller-eval/l23-heldout.xml'
-ROUTE_IDS = [r.get('id') for r in ET.parse(ROUTES).getroot().findall('route')]
+ROUTES = ROOT / 'todos/2026-09-23-tfv6-controller/controller-eval/l23-v2-heldout.xml'
 
 
 def put(path, value):
@@ -139,19 +138,23 @@ def tcp_case(out, rid, seed, arm, server_index):
 
 
 def main():
+    global ROUTES
     parser = argparse.ArgumentParser()
     parser.add_argument('--planner', required=True, choices=('tfv6','tcp'))
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--server-index', type=int, default=110)
-    parser.add_argument('--route-ids', default=','.join(ROUTE_IDS))
+    parser.add_argument('--routes', type=Path, default=ROUTES)
+    parser.add_argument('--route-ids', help='default: every route in --routes')
     parser.add_argument('--seeds', default='0,1')
     parser.add_argument('--arms', help='default ABCD for TFv6, NABCD for TCP')
     a = parser.parse_args()
+    ROUTES = a.routes
     a.out.mkdir(parents=True, exist_ok=True)
-    route_ids = a.route_ids.split(',')
+    all_ids = [r.get('id') for r in ET.parse(ROUTES).getroot().findall('route')]
+    route_ids = a.route_ids.split(',') if a.route_ids else all_ids
     seeds = [int(x) for x in a.seeds.split(',')]
     arms = a.arms or ('ABCD' if a.planner == 'tfv6' else 'NABCD')
-    if not set(route_ids) <= set(ROUTE_IDS) or not set(arms) <= set('ABCD' if a.planner=='tfv6' else 'NABCD'):
+    if not set(route_ids) <= set(all_ids) or not set(arms) <= set('ABCD' if a.planner=='tfv6' else 'NABCD'):
         raise ValueError('Invalid route/arm selection')
     if a.planner == 'tfv6':
         sys.path.insert(0, str(ROOT/'scripts'))
@@ -159,7 +162,7 @@ def main():
         from b2d_tfv6_w2b import validate_attempt
     total = len(route_ids)*len(seeds)*len(arms)
     event(a.out, 'start', planner=a.planner, route_ids=route_ids, seeds=seeds,
-          arms=arms, total=total, protocol_commit='21cb250')
+          arms=arms, total=total, protocol_commit='v2')
     count = 0
     for rid in route_ids:
         for seed in seeds:

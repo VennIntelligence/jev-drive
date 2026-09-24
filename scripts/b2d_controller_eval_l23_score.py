@@ -44,29 +44,30 @@ def rear_truth(row, planner):
 
 
 def plan(row, planner, arm, speed):
+    """Tracking target plus the v2 plan-only feasibility class (protocol v2); v1's ego-based
+    class is kept as `feasible_v1` for the sensitivity table."""
     if planner == 'TFv6':
+        # Every TFv6 arm is classified on the same waypoint head, 0.25 s spacing.
+        points = row['rear_waypoint']
+        if points is None:
+            return None
+        points = np.asarray(points, float)
+        early, late = np.linalg.norm(points[1])/.5, np.linalg.norm(points[3]-points[1])/.5
+        segments = np.linalg.norm(np.diff(points,axis=0),axis=1)/.25
+        internal = float(np.max(np.abs(np.diff(segments)/.25)))
         if arm == 'A':
-            points = row['route_prediction']
-            value = row['target_speed']
-            if points is None or value is None:
+            route, value = row['route_prediction'], row['target_speed']
+            if route is None or value is None:
                 return None
-            points = np.asarray(points, float)*[1.,-1.]
-            internal = None
-            timed = None
+            value, timed, internal = float(value), None, None
         else:
-            points = row['rear_waypoint']
-            if points is None:
-                return None
-            points = np.asarray(points, float)
-            value = float(np.linalg.norm(points[3]-points[1])/.5)
-            segments = np.linalg.norm(np.diff(points,axis=0),axis=1)/.25
-            internal = float(np.max(np.abs(np.diff(segments)/.25)))
-            timed = points[1]
+            value, timed = late, points[1]
     else:
         prediction = row['prediction']
         if prediction is None:
             return None
         points = np.asarray(prediction['raw_waypoints'],float)*[1.,-1.]
+        early, late = np.linalg.norm(points[0])/.5, np.linalg.norm(points[1]-points[0])/.5
         value = float(sum(np.linalg.norm(points[i+1]-points[i]) for i in range(3))/1.5)
         segments = np.linalg.norm(np.diff(points,axis=0),axis=1)/.5
         internal = float(np.max(np.abs(np.diff(segments)/.5)))
@@ -76,11 +77,14 @@ def plan(row, planner, arm, speed):
     curve = curvature(points)
     if curve is None:
         raise ValueError('Planner prediction has fewer than four points')
+    a_plan = (late-early)/.5
+    lateral = late*late*curve if late >= .5 else 0.
     demand = (value-speed)/.5
-    lateral = value*value*curve if speed >= .5 else 0.
-    feasible = (-4. <= demand <= 3. and (internal is None or internal <= 6.) and lateral <= 6.)
-    return dict(speed=value, a_req=demand, a_internal=internal, a_lat=lateral,
-                feasible=feasible, timed=timed)
+    lateral_v1 = value*value*curve if speed >= .5 else 0.
+    return dict(speed=value, a_req=demand, a_plan=a_plan, a_lat=lateral, timed=timed,
+                feasible=bool(-4. <= a_plan <= 3. and lateral <= 6.),
+                feasible_v1=bool(-4. <= demand <= 3. and (internal is None or internal <= 6.)
+                                 and lateral_v1 <= 6.))
 
 
 def contiguous_events(mask):
@@ -200,6 +204,7 @@ def load_case(done_path,planner):
                              if key.startswith('collisions_')),
         completion=float(record['scores']['score_route']),ticks=len(rows),l2_frames=n,
         feasible_frames=int(feasible.sum()),feasible_share=float(feasible.mean()) if n else None,
+        feasible_share_v1=float(np.mean([r['feasible_v1'] for r in telemetry])) if n else None,
         feasible_disp05_mean_m=float(np.mean(timed)) if timed else None,
         feasible_speed_mae_mps=float(np.mean(np.abs(speeds[feasible]-targets[feasible]))) if feasible.any() else None,
         feasible_extra_jerk_rms_mps3=rms(jerk_delta[feasible]),
