@@ -160,6 +160,12 @@ def deltas(obs: pd.DataFrame, null: pd.DataFrame, t: pd.DataFrame, preds: dict) 
     return obs, null
 
 
+def _moved(x, tau):
+    """|Delta_model| at or above the examinee's noise floor, and not exactly zero (`ridge ego` has tau = 0)."""
+    a = np.abs(x)
+    return (a >= tau) & (a > 0)
+
+
 def exam(obs: pd.DataFrame, null: pd.DataFrame, pairs: pd.DataFrame, examinees) -> dict:
     """Every pre-registered number: label validity, tau, flip rates, false flips, per family and pooled."""
     tau_exp = max(float(np.quantile(np.abs(null.d_expert), 0.95)) if len(null) else 0.0, TAU_EXP_MIN)
@@ -200,28 +206,28 @@ def exam(obs: pd.DataFrame, null: pd.DataFrame, pairs: pd.DataFrame, examinees) 
             a = null[null.base_id.isin(halves[h])][ex].dropna()
             b = null[~null.base_id.isin(halves[h])][ex].dropna()
             if len(a) and len(b):
-                oos.append(float((np.abs(b) >= np.quantile(np.abs(a), 0.95)).mean()))
+                oos.append(float(_moved(b, np.quantile(np.abs(a), 0.95)).mean()))
         for scope, sub in [("pooled", obs[obs.family.isin(pooled_fams)])] + [(f, obs[obs.family == f]) for f in fams]:
             s = sub[sub[ex].notna()]
             r = s[s.reactive]
-            flip = ((np.sign(r[ex]) == np.sign(r.d_expert)) & (np.abs(r[ex]) >= tau)).astype(float)
-            anyflip = (np.abs(r[ex]) >= tau).astype(float)
+            flip = ((np.sign(r[ex]) == np.sign(r.d_expert)) & _moved(r[ex], tau)).astype(float)
+            anyflip = _moved(r[ex], tau).astype(float)
             nr = s[~s.reactive]
-            ff = (np.abs(nr[ex]) >= tau).astype(float)
+            ff = _moved(nr[ex], tau).astype(float)
             fr, lo, hi = boot_ratio(flip.to_numpy(), np.ones(len(r)), r.base_id.to_numpy()) if len(r) else (np.nan,) * 3
             row = {"examinee": ex, "scope": scope, "tau_model": tau, "n_reactive": len(r),
                    "routes_reactive": r.base_id.nunique(), "pairs_reactive": (r.base_id + "/" + r.seed.astype(str)).nunique(),
                    "flip_rate": fr, "flip_lo": lo, "flip_hi": hi,
                    "any_direction_rate": float(anyflip.mean()) if len(r) else np.nan,
-                   "wrong_direction_rate": float(((np.sign(r[ex]) != np.sign(r.d_expert)) & (np.abs(r[ex]) >= tau)).mean())
+                   "wrong_direction_rate": float(((np.sign(r[ex]) != np.sign(r.d_expert)) & _moved(r[ex], tau)).mean())
                    if len(r) else np.nan,
                    "n_nonreactive": len(nr), "false_flip_nonreactive": float(ff.mean()) if len(nr) else np.nan}
             if scope == "pooled":
                 n_all = null[ex].dropna()
-                row.update(false_flip_null_insample=float((np.abs(n_all) >= tau).mean()) if len(n_all) else np.nan,
+                row.update(false_flip_null_insample=float(_moved(n_all, tau).mean()) if len(n_all) else np.nan,
                            false_flip_null_oos=float(np.mean(oos)) if oos else np.nan, n_null=len(n_all))
                 # family-equal pooled flip rate
-                fam_rates = [((np.sign(g[ex]) == np.sign(g.d_expert)) & (np.abs(g[ex]) >= tau)).mean()
+                fam_rates = [((np.sign(g[ex]) == np.sign(g.d_expert)) & _moved(g[ex], tau)).mean()
                              for _, g in r.groupby("family")]
                 row["flip_rate_family_equal"] = float(np.mean(fam_rates)) if fam_rates else np.nan
             rows.append(row)
