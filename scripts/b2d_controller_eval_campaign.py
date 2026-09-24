@@ -94,7 +94,7 @@ def tcp_case(out, rid, seed, arm, server_index):
         env = os.environ.copy()
         zoo = DATA/'third_party/Bench2DriveZoo'
         env.update(DATA_DIR=str(DATA), BENCH2DRIVE_ROOT=str(DATA/'runs/b2d/tfv6-repro/runtime/Bench2Drive'),
-                   IS_BENCH2DRIVE='1', PLANNER_TYPE='only_traj', TORCH_HOME=str(DATA/'models/torch'),
+                   IS_BENCH2DRIVE='1', PLANNER_TYPE='only_traj', LEAD_PROJECT_ROOT=str(DATA/'third_party/lead-cvpr2026'), TORCH_HOME=str(DATA/'models/torch'),
                    B2D_TCP_CONTROL_ARM=arm, B2D_TCP_OPTIMIZE='1', B2D_TCP_PIPELINE='1',
                    B2D_TCP_FAST_COLOR='1', B2D_TCP_DEBUG_VIEWS='1', B2D_TCP_EARLY_RGB='1',
                    B2D_ASYNC_DISPLAY='1', B2D_CAPTURE_CRITERION_EVENTS='1',
