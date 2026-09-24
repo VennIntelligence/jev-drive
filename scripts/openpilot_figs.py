@@ -61,7 +61,7 @@ def timeline(z, models, path):
 
 
 def horizon(tables_by_h, models, path):
-    fig, axs = plt.subplots(1, 2, figsize=(ps.SINGLE_COLUMN_IN * 2, 2.0), constrained_layout=True)
+    fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.0), constrained_layout=True)
     for ax, key, lab in zip(axs, ("lat", "lon"), ("lateral", "longitudinal")):
         for m in ["const-vel", *models]:
             h, e = tables_by_h[m][key]
