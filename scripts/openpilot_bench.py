@@ -78,6 +78,9 @@ if __name__ == "__main__":
     ap.add_argument("--steps", type=int, default=100, help="sequence length for the numerics replay")
     ap.add_argument("--lat-n", type=int, default=1000)
     ap.add_argument("--streams", nargs="+", type=int, default=[1, 2, 4, 8])
+    ap.add_argument("--no-numerics", action="store_true", help="latency and throughput only")
+    ap.add_argument("--thr-backend", nargs="*", default=[], help="model=backend for the throughput test "
+                    "(default: the lowest-latency backend)")
     a = ap.parse_args()
     log = RunLog("openpilot_bench", "_".join(a.models))
     rng = np.random.default_rng(0)
@@ -86,22 +89,19 @@ if __name__ == "__main__":
         seqs["real"] = np.load(a.seg / "model_frames.npy", mmap_mode="r")[:a.steps]
     rows, lat_rows, thr_rows = [], [], []
     for name in a.models:
-        ref = {}
-        try:
-            m = OPModel(name, a.ref, threads=0)
-            ref = {s: replay(m, x) for s, x in seqs.items()}
-            ref_name = a.ref
-        except Exception as e:  # noqa: BLE001 - fp16-only graphs may lack CPU kernels
-            log.info(f"{name}: reference {a.ref} failed ({str(e)[:120]}), using cuda")
-            m = OPModel(name, "cuda")
-            ref = {s: replay(m, x) for s, x in seqs.items()}
-            ref_name = "cuda"
-        del m
+        ref, ref_name, seqs_num = {}, None, {} if a.no_numerics else seqs
+        if seqs_num:
+            try:
+                m, ref_name = OPModel(name, a.ref), a.ref
+            except Exception as e:  # noqa: BLE001 - fp16-only graphs may lack CPU kernels
+                log.info(f"{name}: reference {a.ref} failed ({str(e)[:120]}), using cuda")
+                m, ref_name = OPModel(name, "cuda"), "cuda"
+            ref = {s: replay(m, x) for s, x in seqs_num.items()}
         for b in a.backends:
             t0 = time.perf_counter()
             try:
                 m = OPModel(name, b)
-                for s, x in seqs.items():
+                for s, x in seqs_num.items():
                     raw, dec = replay(m, x)
                     rr, rd = ref[s]
                     row = dict(model=name, backend=b, ref=ref_name, seq=s, n=len(x),
@@ -118,13 +118,13 @@ if __name__ == "__main__":
                           mean=float(ts.mean()), max=float(ts.max()), gpu_mem_mb=gpu_mem_mb())
                 lat_rows.append(lr)
                 log.event("latency", **lr)
-                log.info(f"{name:9s} {b:10s} p50 {lr['p50']:.2f} ms p99 {lr['p99']:.2f} ms "
-                         f"curv max {rows[-1]['curvature_max']:.2e} accel max {rows[-1]['accel_max']:.2e}")
+                log.info(f"{name:9s} {b:10s} p50 {lr['p50']:.2f} ms p99 {lr['p99']:.2f} ms")
                 del m
             except Exception as e:  # noqa: BLE001 - record and continue with the other backends
                 log.info(f"{name} {b}: FAILED {type(e).__name__}: {str(e)[:300]}")
                 lat_rows.append(dict(model=name, backend=b, error=str(e)[:300]))
-        best = min((r for r in lat_rows if r["model"] == name and "p50" in r), key=lambda r: r["p50"])["backend"]
+        best = dict(kv.split("=") for kv in a.thr_backend).get(name) or \
+            min((r for r in lat_rows if r["model"] == name and "p50" in r), key=lambda r: r["p50"])["backend"]
         for k in a.streams:
             sps, mem = throughput(name, best, seqs.get("real", seqs["random"]), k, 300)
             thr_rows.append(dict(model=name, backend=best, streams=k, steps_per_s=sps, gpu_mem_mb=mem))

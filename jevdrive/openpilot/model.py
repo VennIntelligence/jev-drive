@@ -84,8 +84,11 @@ class OPModel:
         so = ort.SessionOptions()
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         so.log_severity_level = 3
-        if threads:
-            so.intra_op_num_threads = threads
+        # GPU sessions only need a host thread to launch kernels; ORT's default pool (all cores, spinning)
+        # makes concurrent sessions fight over the CPU
+        so.intra_op_num_threads = threads or (0 if backend == "cpu" else 1)
+        if backend != "cpu":
+            so.add_session_config_entry("session.intra_op.allow_spinning", "0")
         self.sess = ort.InferenceSession(str(prepare_onnx(name)), so,
                                          providers=providers(backend, cache or MODELS_DIR / "trt_cache" / f"{name}-{backend}"))
         meta = self.sess.get_modelmeta().custom_metadata_map
