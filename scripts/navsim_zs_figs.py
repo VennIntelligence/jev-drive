@@ -129,10 +129,68 @@ def fig_failures(sc):
     return S.save(fig, FIG / "navsim-zs-failures")
 
 
+def fig_inputs(sc=None, k=0):
+    """Adapter check: native nuPlan views vs what each model sees, for navtest token k of the index (not picked)."""
+    from jevdrive.openpilot.frames import unpack_luma
+    e = Z.load_index("navtest")[k]
+    maps = Z.AlpamayoMaps(e["cams"][-1])
+    imgs = {}
+    for c, s_ in maps.sources():
+        imgs[(c, s_)] = cv2.imread(e["cams"][-1][c]["path"], cv2.IMREAD_COLOR if s_ == 1 else cv2.IMREAD_REDUCED_COLOR_4)[..., ::-1].copy()
+    alp = maps.render(imgs).transpose(0, 2, 3, 1)
+    raw = [cv2.imread(e["cams"][-1][c]["path"], cv2.IMREAD_REDUCED_COLOR_4)[..., ::-1] for c in ("CAM_L0", "CAM_F0", "CAM_R0")]
+    op = np.load(Z.root("openpilot", "navtest") / "frames.npy", mmap_mode="r")[k, 3]
+    fig = plt.figure(figsize=(S.DOUBLE_COLUMN_IN, 3.9))
+    gs = fig.add_gridspec(3, 12, hspace=0.25, wspace=0.05, left=0.005, right=0.995, top=0.95, bottom=0.01)
+    rows = [[(raw[i], t) for i, t in enumerate(("nuPlan CAM_L0", "nuPlan CAM_F0", "nuPlan CAM_R0"))],
+            [(alp[i], t) for i, t in enumerate(("Alpamayo cross-left", "Alpamayo front-wide", "Alpamayo cross-right"))],
+            [(alp[3], "Alpamayo front-tele"), (unpack_luma(op[0]), "openpilot road frame"), (unpack_luma(op[1]), "openpilot wide frame")]]
+    for r, row in enumerate(rows):
+        for c, (im, t) in enumerate(row):
+            ax = fig.add_subplot(gs[r, 4 * c:4 * c + 4])
+            ax.imshow(im, cmap="gray" if im.ndim == 2 else None)
+            ax.set_title(t, fontsize=7, pad=2)
+            ax.set_axis_off()
+    return S.save(fig, FIG / "navsim-zs-inputs")
+
+
+def fig_bev(sc=None, n=8, seed=0):
+    """Adapter check: n random navtest tokens (seed 0), log vs predictions in the NAVSIM rear-axle frame, with the
+    4 s heading as an arrow. Up = forward (x), left = +y."""
+    idx = Z.load_index("navtest")
+    pick = np.random.default_rng(seed).choice(len(idx), n, replace=False)
+    fut = np.load(Z.root("index") / "navtest_future.npz")
+    g = dict(zip(fut["tokens"].tolist(), fut["poses"]))
+    src = {"alpamayo_nav": Z.root("preds", "navtest") / "alpamayo_nav_repeat_main.npz",
+           "lebowski_none": Z.root("openpilot", "navtest") / "lebowski_none.npz",
+           "cv": Z.root("preds", "navtest") / "cvreplay.npz"}
+    P = {}
+    for a, f in src.items():
+        z = np.load(f)
+        P[a] = dict(zip(z["tokens"].tolist(), z["poses"]))
+    fig, axes = plt.subplots(2, n // 2, figsize=(S.DOUBLE_COLUMN_IN, 3.2))
+    for ax, k in zip(axes.ravel(), pick):
+        e = idx[k]
+        t = e["token"]
+        ax.plot(-e["pose"][:, 1], e["pose"][:, 0], color="#BBBBBB", lw=0.9)
+        for a, style in (("cv", dict(color=COLORS["cv"], lw=0.8)), ("lebowski_none", dict(color=COLORS["lebowski_none"], lw=1.0)),
+                         ("alpamayo_nav", dict(color=COLORS["alpamayo_nav"], lw=1.1)), ("log", dict(color="k", ls="--", lw=0.9))):
+            p = g[t] if a == "log" else P[a][t]
+            ax.plot(np.r_[0, -p[:, 1]], np.r_[0, p[:, 0]], label=LABEL.get(a, "log"), **style)
+            ax.annotate("", xy=(-p[-1, 1] - 2 * np.sin(p[-1, 2]), p[-1, 0] + 2 * np.cos(p[-1, 2])), xytext=(-p[-1, 1], p[-1, 0]),
+                        arrowprops=dict(arrowstyle="-|>", color=style["color"], lw=0.6, mutation_scale=5))
+        ax.set_aspect("equal", adjustable="datalim")
+        ax.tick_params(labelsize=6)
+        ax.set_title(f"cmd {['L', 'S', 'R', '?'][int(np.argmax(e['cmd'][-1]))]}, {np.linalg.norm(e['vel'][-1]):.1f} m/s", fontsize=7, pad=2)
+    axes[0, 0].legend(fontsize=6, loc="upper left", handlelength=1.2)
+    fig.subplots_adjust(left=0.04, right=0.995, bottom=0.06, top=0.93, wspace=0.3, hspace=0.3)
+    return S.save(fig, FIG / "navsim-zs-bev")
+
+
 if __name__ == "__main__":
     S.apply()
     sc = scores()
-    for f in (fig_subscores, fig_command, fig_failures):
+    for f in (fig_inputs, fig_bev, fig_subscores, fig_command, fig_failures):
         try:
             print(f.__name__, f(sc))
         except Exception as ex:  # a figure whose inputs are not there yet is skipped, the others still render
