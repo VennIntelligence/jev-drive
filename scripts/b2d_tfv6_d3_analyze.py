@@ -30,6 +30,8 @@ def rows_for_case(phase,level,route,seed,arm):
     step_after_turn=None;distance_at_jump=None;first_plan_wrong=None;first_offroute=None
     max_ego_dense_distance_m=max((n['ego_dense_distance_m'] for n in nav),default=None)
     first_motion=None;nearby_vehicle_ticks=red_light_ticks=post_changed=hold_ticks=0
+    red_signal_ticks=0
+    post_longitudinal_changed_ticks=0
     plan_ticks=nav_ticks=0
     for f in frames:
         n=nav_by_step.get(f['step'])
@@ -45,13 +47,18 @@ def rows_for_case(phase,level,route,seed,arm):
         if first_motion is None and f.get('truth') and f['truth']['forward_speed_mps']>.5:
             first_motion=f['step']
         actors=f.get('nearby_actors') or []
-        if any(x['type'].startswith(('vehicle.','walker.')) and x['distance_m']<10 for x in actors):
+        if any(x['type'].startswith(('vehicle.','walker.')) and x['distance_m']<10 and
+               0<x['relative_xy_m'][0] and abs(x['relative_xy_m'][1])<3 for x in actors):
             nearby_vehicle_ticks+=1
-        if (f.get('d3_traffic_light') or {}).get('state')=='Red':red_light_ticks+=1
+        light=f.get('d3_traffic_light') or {}
+        if light.get('state')=='Red':red_signal_ticks+=1
+        if light.get('at_light') and light.get('state')=='Red':red_light_ticks+=1
         if (f.get('controller_reason') or {}).get('C')=='stop_hold':hold_ticks+=1
         raw=f.get('raw_control') or {};final=f.get('final_control') or {}
         if arm in raw and arm in final and any(abs(raw[arm][k]-final[arm][k])>1e-5 for k in ('steer','throttle','brake')):
             post_changed+=1
+        if arm in raw and arm in final and any(abs(raw[arm][k]-final[arm][k])>1e-5 for k in ('throttle','brake')):
+            post_longitudinal_changed_ticks+=1
         if bend is not None and first_plan_wrong is None and f.get('truth'):
             ego=np.asarray(f['truth']['location'][:2]);dist=float(np.linalg.norm(ego-dense[bend]))
             if dist<35:
@@ -70,8 +77,10 @@ def rows_for_case(phase,level,route,seed,arm):
             'distance_to_bend_at_target_jump_m':distance_at_jump,
             'first_dense_wrong_plan_step':first_plan_wrong,'first_ego_offroute_3m_step':first_offroute,
             'max_ego_dense_distance_m':max_ego_dense_distance_m,
-            'red_light_ticks':red_light_ticks,'near_actor_10m_ticks':nearby_vehicle_ticks,
-            'c_stop_hold_ticks':hold_ticks,'postprocessor_changed_ticks':post_changed}
+            'red_light_ticks':red_light_ticks,'red_signal_ticks':red_signal_ticks,
+            'near_actor_10m_ticks':nearby_vehicle_ticks,
+            'c_stop_hold_ticks':hold_ticks,'postprocessor_changed_ticks':post_changed,
+            'post_longitudinal_changed_ticks':post_longitudinal_changed_ticks}
 
 
 def main():

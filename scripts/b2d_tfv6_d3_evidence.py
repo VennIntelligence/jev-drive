@@ -32,6 +32,8 @@ def measurements(frame,semantic,correct,wrong):
     nav=frame.get('d3_nav') or {}
     route=world_plan(frame,'route_prediction')
     wp=world_plan(frame,'waypoint')
+    kalman=np.asarray(semantic.get('kalman_world_xy'),dtype=float)
+    gps=np.asarray(semantic.get('gps_world_xy'),dtype=float)
     result={'step':frame['step'],'sim_time_s':frame['sim_time'],
             'ego_x':frame['truth']['location'][0],'ego_y':frame['truth']['location'][1],
             'ego_speed_mps':frame['truth']['forward_speed_mps'],
@@ -40,6 +42,11 @@ def measurements(frame,semantic,correct,wrong):
             'target_dense_index':semantic.get('target_dense_index'),
             'target_dense_distance_m':semantic.get('target_dense_distance_m'),
             'target_world_xy':json.dumps(semantic.get('tfv6_target_world_xy')),
+            'selected_target_world_xy':json.dumps(semantic.get('selected_target_world_xy')),
+            'kalman_world_xy':json.dumps(semantic.get('kalman_world_xy')),
+            'gps_world_xy':json.dumps(semantic.get('gps_world_xy')),
+            'kalman_gps_delta_m':float(np.linalg.norm(kalman-gps)),
+            'selected_pop_distance_m':nav.get('selected_pop_distance'),
             'command_1based':1+(nav['command'].index(max(nav['command']))) if nav.get('command') else None,
             'next_command_1based':1+(nav['next_command'].index(max(nav['next_command']))) if nav.get('next_command') else None,
             'steer':(frame.get('executed_control') or {}).get('steer'),
@@ -55,7 +62,7 @@ def measurements(frame,semantic,correct,wrong):
 
 
 def main():
-    rows=[]
+    rows=[];timeline=[]
     for done_path in sorted((ROOT/'factorial/cases').glob('*/*/*/*/done.json')):
         done=json.loads(done_path.read_text())
         level,route,seed,arm=done['level'],done['route'],done['seed'],done['arm']
@@ -84,12 +91,32 @@ def main():
                      'event_step':step,'role':role}
                 row.update(measurements(ff[selected],ss[selected],correct,wrong))
                 rows.append(row)
+        anchor=summary['first_ego_offroute_3m_step'] or max(frames)
+        for step in range(max(0,anchor-200),min(max(frames),anchor+20)+1):
+            if step not in frames or step not in semantic:continue
+            at=semantic[step]
+            candidates=[s for s in bsemantic if s in bframes]
+            same_time=min(candidates,key=lambda s:abs(s-step))
+            same_progress=min(candidates,key=lambda s:(abs(bsemantic[s]['rc_dense_index']-at['rc_dense_index']),
+                                                     abs(s-step)))
+            for role,selected,ff,ss in [('deviation',step,frames,semantic),
+                                        ('B_same_time',same_time,bframes,bsemantic),
+                                        ('B_same_progress',same_progress,bframes,bsemantic)]:
+                row={'level':level,'route':route,'seed':seed,'deviation_arm':arm,
+                     'official_status':done['official_status'],'anchor_step':anchor,
+                     'deviation_step':step,'role':role}
+                row.update(measurements(ff[selected],ss[selected],correct,wrong))
+                timeline.append(row)
     if not rows:raise RuntimeError('No completed D3b deviation case')
     path=OUT/'d3b-deviation-evidence.csv'
     with path.open('w',newline='') as stream:
         writer=csv.DictWriter(stream,fieldnames=list(rows[0]),lineterminator='\n')
         writer.writeheader();writer.writerows(rows)
-    print({'deviation_event_comparisons':len(rows)//3,'rows':len(rows)})
+    path=OUT/'d3b-deviation-timeline.csv'
+    with path.open('w',newline='') as stream:
+        writer=csv.DictWriter(stream,fieldnames=list(timeline[0]),lineterminator='\n')
+        writer.writeheader();writer.writerows(timeline)
+    print({'deviation_event_comparisons':len(rows)//3,'timeline_rows':len(timeline)})
 
 
 if __name__=='__main__':main()
