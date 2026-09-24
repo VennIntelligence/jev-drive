@@ -8,6 +8,7 @@
 # Usage (on the box): scripts/setup_navsim_devkit.sh [navsim2|navsim1 ...]   (default: both)
 set -euo pipefail
 tp=$DATA_DIR/third_party
+export UV_INDEX_URL=${UV_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple}  # uv ignores pip.conf; pypi.org times out here
 targets=("$@")
 [[ $# -eq 0 ]] && targets=(navsim2 navsim1)
 
