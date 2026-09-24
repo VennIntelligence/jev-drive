@@ -30,7 +30,7 @@ for p in "$repo"/patches/hugsim/*.patch; do
   git -C "$HUG" apply --reverse --check "$p" 2>/dev/null || git -C "$HUG" apply "$p"
 done
 
-[[ -x $ENV/bin/python ]] || uv venv "$ENV" --python 3.12
+[[ $("$ENV/bin/python" -V 2>/dev/null) == "Python 3.12"* ]] || uv venv --clear "$ENV" --python 3.12
 echo "== torch + pure-python deps"
 pip "torch==2.8.0" "torchvision==0.23.0" "numpy>=1.26,<2" "setuptools<80" wheel ninja \
   scipy opencv-python matplotlib tqdm "roma>=1.5" "open3d==0.19.0" "gymnasium==1.1.1" "omegaconf>=2.3" \
