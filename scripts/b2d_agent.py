@@ -202,6 +202,7 @@ class StubAgent(AutonomousAgent):
             self._controller = Controller(preset=preset, **parameters)
         self._fixed_trace = None
         self._fixed_trace_start = None
+        self._trace_progress = 0.
         if cfg.get("reference_trace_path"):
             trace = json.loads(open(cfg["reference_trace_path"]).read())
             times = np.asarray(trace["elapsed_s"], float)
@@ -211,6 +212,11 @@ class StubAgent(AutonomousAgent):
                     or abs(times[0]) > 1e-6 or (np.diff(times) <= 0).any()):
                 raise ValueError("Invalid fixed expert reference trace")
             self._fixed_trace = (times, xy)
+            # Spatial path of the trace for route-input controllers (author route PID):
+            # their native route comes from navigation, independent of speed.
+            keep = np.r_[True, np.linalg.norm(np.diff(xy, axis=0), axis=1) > 1e-4]
+            path = xy[keep]
+            self._trace_path = (path, np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
         self._frame_router = FrameRouter([camera[0] for camera in CAMERAS[:self.n_cam]])
         self._pose_filter = self._route_adapter = self._truth_logger = None
         self._trajectory_frame = None
@@ -252,6 +258,7 @@ class StubAgent(AutonomousAgent):
         self._tick = 0
         self._trajectory_frame = None
         self._fixed_trace_start = None
+        self._trace_progress = 0.
         # A fresh route must not consume camera packets or held controls from its
         # predecessor when callers reuse an agent instance.
         from b2d_controller_adapter import FrameRouter
@@ -337,6 +344,7 @@ class StubAgent(AutonomousAgent):
         t_infer = 0.
         if self._trajectory_frame is None or (self._tick - 1) % self.decimate == 0:
             t = time.perf_counter()
+            route_xy = None
             if getattr(self, '_fixed_trace', None) is None:
                 trajectory = self._route_adapter.trajectory(xy, yaw)
             else:
@@ -348,9 +356,12 @@ class StubAgent(AutonomousAgent):
                 desired = np.column_stack((np.interp(future, times, world_xy[:, 0]),
                                            np.interp(future, times, world_xy[:, 1])))
                 trajectory = world_to_local(desired, xy, yaw)
+                if getattr(self._controller, 'accepts_route', False):
+                    route_xy = world_to_local(self._trace_route(xy), xy, yaw)
             interface = getattr(self, 'cfg', {}).get('reference_interface', 'nominal')
             if interface == 'nominal':
-                accepted = self._controller.update(trajectory, timestamp)
+                accepted = (self._controller.update(trajectory, timestamp, route_xy=route_xy)
+                            if route_xy is not None else self._controller.update(trajectory, timestamp))
             else:
                 if interface == 'short_2s':
                     trajectory, plan_dt = trajectory[1:8:2], .5
@@ -363,11 +374,13 @@ class StubAgent(AutonomousAgent):
                         trajectory = trajectory + rng.normal(0, .05, trajectory.shape)
                 else:
                     raise ValueError('Unknown reference_interface')
-                accepted = self._controller.update(trajectory, timestamp, trajectory_dt=plan_dt)
+                extra = {} if route_xy is None else dict(route_xy=route_xy)
+                accepted = self._controller.update(trajectory, timestamp, trajectory_dt=plan_dt, **extra)
             self._trajectory_frame = frame
             self._trajectory_log.write(json.dumps({"frame": frame, "sim_time": timestamp,
                 "pose_xy": xy.tolist(), "pose_yaw": yaw, "accepted": accepted,
                 "trajectory_xy": trajectory.tolist(),
+                "route_xy": None if route_xy is None else route_xy.tolist(),
                 "route_rejoin": dict(self._route_adapter.rejoin_diagnostics)}, allow_nan=False) + "\n")
             t_infer = time.perf_counter() - t
             self.timings["policy_ticks"] += 1
@@ -515,6 +528,20 @@ class StubAgent(AutonomousAgent):
         if "error" in done:
             raise RuntimeError("policy failed in the overlap thread: %r" % (done["error"],))
         self._control = done["control"]
+
+    def _trace_route(self, xy, spacing=1., count=8):
+        """Eight 1 m route checkpoints ahead along the fixed trace path, progress monotonic."""
+        path, arc = self._trace_path
+        start, delta = path[:-1], np.diff(path, axis=0)
+        length = np.linalg.norm(delta, axis=1)
+        window = (arc[1:] >= self._trace_progress - 2.) & (arc[:-1] <= self._trace_progress + 20.)
+        index = np.flatnonzero(window)
+        fraction = np.clip(np.sum((xy - start[index]) * delta[index], axis=1) / length[index] ** 2, 0., 1.)
+        distance = np.linalg.norm(start[index] + fraction[:, None] * delta[index] - xy, axis=1)
+        j = int(np.argmin(distance))
+        self._trace_progress = max(self._trace_progress, float(arc[index[j]] + fraction[j] * length[index[j]]))
+        stations = np.minimum(self._trace_progress + spacing * np.arange(1, count + 1), arc[-1])
+        return np.column_stack([np.interp(stations, arc, path[:, i]) for i in (0, 1)])
 
     def run_step(self, input_data, timestamp):
         if self.policy == "sleep":

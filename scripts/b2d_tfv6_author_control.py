@@ -62,6 +62,8 @@ def _author_throttle(target, speed):
 
 
 class AuthorController:
+    accepts_route = True
+
     def __init__(self, mode):
         if mode not in ('route', 'waypoint'):
             raise ValueError('mode must be route or waypoint')
@@ -74,16 +76,19 @@ class AuthorController:
 
     def reset(self):
         for controller in (self.turn, self.speed, self.route_turn): controller.reset()
-        self.points = None
+        self.points = self.route_points = None
         self.diagnostics = {'reason': 'no_plan'}
 
-    def update(self, traj_xy, t_frame, trajectory_dt=None):
+    def update(self, traj_xy, t_frame, trajectory_dt=None, route_xy=None):
+        # route_xy: optional spatial route checkpoints (local forward/left), the route PID's
+        # native input; without it the route is resampled from the time trajectory.
         points = np.asarray(traj_xy, float)
         if points.ndim != 2 or points.shape[1] != 2 or len(points) < 4 or not np.isfinite(points).all():
             self.points = None
             self.diagnostics = {'reason': 'invalid_plan'}
             return False
         self.points = points
+        self.route_points = None if route_xy is None else np.asarray(route_xy, float)
         self.t_frame = float(t_frame)
         self.plan_dt = float(trajectory_dt or .25)
         self.diagnostics = {'reason': 'tracking'}
@@ -116,7 +121,7 @@ class AuthorController:
             steer = float(np.clip(self.turn.step(angle), -1., 1.))
             brake = float(brake)
         else:
-            route = _spatial_route(wp)
+            route = _spatial_route(wp if self.route_points is None else self.route_points)
             # LEAD's route PID operates in CARLA forward/right. It chooses a
             # point index from speed and the eight 1 m checkpoints.
             index = int(min(np.clip(.9755321901954155 * speed*3.6 +
