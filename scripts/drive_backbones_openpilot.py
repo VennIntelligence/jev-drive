@@ -142,6 +142,7 @@ def main():
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--limit", type=int, default=0, help="streams (stream mode) or targets (exam mode)")
     ap.add_argument("--mode", choices=("stream", "exam"), default="stream")
+    ap.add_argument("--split", default="subset", choices=("subset", "trainval"), help="stream mode: which plan")
     ap.add_argument("--targets", default="rater", help="exam mode: 'rater' (the exam's frames on the subset) or a file")
     a = ap.parse_args()
     from jevdrive.common import data_dir
@@ -149,10 +150,10 @@ def main():
     si, sn = map(int, a.shard.split("/"))
     log = RunLog("drive_backbones", f"op-{a.mode}")
     log.event("start", args=vars(a), backends=WZ.MODELS, taps=D.OP_TAPS)
-    plan = json.loads((D.root() / "op_plan.json").read_text())
+    plan = json.loads((D.root() / D.plan_name(a.split)).read_text())
     op_calib = json.loads((Z.root() / "op_calib.json").read_text())
     spans = plan["spans"]
-    sub = "op" if a.mode == "stream" else "op_exam"
+    sub = ("op" if a.split == "subset" else f"op_{a.split}") if a.mode == "stream" else "op_exam"
     outdir = {k: D.root(sub, k) for k in a.models}
     if a.mode == "stream":
         items = [(f"{i:04d}_{s['sequence']}", s["names"], s["targets"]) for i, s in enumerate(plan["streams"])]

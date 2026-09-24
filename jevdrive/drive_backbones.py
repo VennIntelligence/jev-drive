@@ -43,16 +43,23 @@ def op_set(model: str) -> str:
 
 # ---------------------------------------------------------------- prepare (project venv)
 
-def prepare() -> dict:
-    """Write op_plan.json (streams, JPEG spans) and alp_targets.npz (target names, rows, past states)."""
+def prepare(split: str = "subset") -> dict:
+    """Write op_plan[_trainval].json (streams, JPEG spans) and, for the subset, alp_targets.npz.
+
+    split "subset": the frozen P2/P3 subset. "trainval": every train and val frame with a future (the rows
+    `waymo_p0.load_all` fits and evaluates on), for the pre-registered train-split follow-up."""
     import pandas as pd
     from . import waymo as W
     from . import waymo_ladder as L
     df = W.load_index()
-    past, _ = W.load_ego()
-    t = pd.read_parquet(L.subset_path())
+    past, future = W.load_ego()
     names = W.frame_names(df)
-    assert (names[t.row.to_numpy()] == t.frame_name.to_numpy()).all(), "subset rows moved in the index"
+    if split == "subset":
+        t = pd.read_parquet(L.subset_path())
+        assert (names[t.row.to_numpy()] == t.frame_name.to_numpy()).all(), "subset rows moved in the index"
+    else:
+        r = L.trainval_rows(df, past, future)
+        t = pd.DataFrame({"frame_name": names[r], "row": r, "sequence": df.sequence.astype(str).to_numpy()[r]})
     seq = df.sequence.astype(str).to_numpy()
     frame = df.frame.to_numpy()
     target = set(t.frame_name)
@@ -74,14 +81,20 @@ def prepare() -> dict:
                                                                    for c in W.CAMS for k in ("off", "len")]
     got = sum(len(x["targets"]) for x in streams)
     assert got == len(t), f"{got} targets in streams, {len(t)} in the subset"
-    (root() / "op_plan.json").write_text(json.dumps({"streams": streams, "spans": spans}))
+    (root() / plan_name(split)).write_text(json.dumps({"streams": streams, "spans": spans}))
+    out = {"split": split, "streams": len(streams), "stream_frames": sum(len(x["names"]) for x in streams),
+           "targets": got, "sequences": int(t.sequence.nunique())}
+    log.info("prepare: %s", out)
+    if split != "subset":
+        return out
     rows = t.row.to_numpy()
     np.savez(root() / "alp_targets.npz", name=t.frame_name.to_numpy().astype(str), row=rows,
              sequence=seq[rows], frame=frame[rows], past=past[rows])
-    out = {"streams": len(streams), "stream_frames": sum(len(x["names"]) for x in streams),
-           "targets": got, "sequences": int(t.sequence.nunique())}
-    log.info("prepare: %s", out)
     return out
+
+
+def plan_name(split: str) -> str:
+    return "op_plan.json" if split == "subset" else f"op_plan_{split}.json"
 
 
 # ---------------------------------------------------------------- finalize (project venv)
@@ -106,15 +119,18 @@ def _write_set(name: str, fnames: np.ndarray, arrays: dict, meta: dict) -> dict:
     return meta
 
 
-def finalize_op(model: str) -> dict:
-    files = sorted(root("op", model).glob("*.npz"))
+def finalize_op(model: str, split: str = "subset") -> dict:
+    sub = "op" if split == "subset" else f"op_{split}"
+    files = sorted(root(sub, model).glob("*.npz"))
     parts = [np.load(f) for f in files]
     fn = np.concatenate([p["name"] for p in parts]).astype(str)
     arrs = {k: np.concatenate([p[k] for p in parts]) for k in OP_ARRAYS}
     arrs_native = {"wod": np.concatenate([p["wod"] for p in parts]), "hist": np.concatenate([p["hist"] for p in parts])}
-    np.savez(root() / f"op_{model}_native.npz", name=fn, **arrs_native)
-    t = {f.stem: json.loads(f.read_text()) for f in sorted(root("op", model).glob("timing_*.json"))}
-    return _write_set(op_set(model), fn, arrs, {"model": model, "cams": "front,front_left,front_right", "timing": t})
+    sfx = "" if split == "subset" else f"_{split}"
+    np.savez(root() / f"op_{model}{sfx}_native.npz", name=fn, **arrs_native)
+    t = {f.stem: json.loads(f.read_text()) for f in sorted(root(sub, model).glob("timing_*.json"))}
+    return _write_set(op_set(model) + sfx, fn, arrs, {"model": model, "cams": "front,front_left,front_right",
+                                                      "timing": t})
 
 
 def finalize_alp(name: str = ALP_SET) -> dict:
@@ -164,6 +180,23 @@ def ladder(ctx: dict, keep: np.ndarray, rl, tag: str = "p3drive", min_hist: int 
         keep &= op_history(ctx) >= min_hist
     log.info("%s: %d arms over %d frames", tag, len(arms), int(keep.sum()))
     return L.run_ladder(lambda k: arms, tag, keep, ctx, rl=rl)
+
+
+P0_RUN = "/root/autodl-tmp/ujs/runs/waymo_p0/train_split/20260922-175708/"   # the s_ego the P3 train-split run reused
+
+
+def ladder_train(rl, models=("cinque", "lebowski"), p0_run: str = P0_RUN):
+    """The pre-registered follow-up: fit on every train frame, evaluate on every val frame (the P3 train-split protocol)."""
+    from . import waymo_ladder as L
+    ctx = L.train_context(p0_run=p0_run)
+    arms, keep = {REF_A: L.ridge_arm(ctx["pooled"])}, np.ones(len(ctx["fname"]), bool)
+    for m in models:
+        a = L.align(ctx, op_set(m) + "_trainval", ["temporal"])
+        keep &= a["covered"]
+        arms[f"op-{m} temporal (train fit)"] = L.ridge_arm(a["temporal"])
+    log.info("p3drive_train: %d arms over %d rows (%d evaluated)", len(arms), int(keep.sum()),
+             int((keep & (ctx["half"] == 1)).sum()))
+    return L.run_ladder(lambda k: arms, "p3drive_train", keep, ctx, directions=(0,), rl=rl)
 
 
 def _pooled(run_dir, tag: str) -> dict:
@@ -309,15 +342,22 @@ def main():
                     help="comma list of prepare,finalize_op,finalize_alp,ladder,ladder_hist,crossfit,native_front3")
     ap.add_argument("--models", default=",".join(OP_MODELS))
     ap.add_argument("--run", default=None, help="crossfit: the ladder run directory (default: this run)")
+    ap.add_argument("--split", default="subset", choices=("subset", "trainval"))
     a = ap.parse_args()
     rl = RunLog("drive_backbones", a.steps.replace(",", "-"))
     rl.event("start", args=vars(a))
     for step in a.steps.split(","):
         if step == "prepare":
-            rl.event("prepare", **prepare())
+            rl.event("prepare", **prepare(a.split))
         elif step == "finalize_op":
             for m in a.models.split(","):
-                rl.event("finalize", **finalize_op(m))
+                rl.event("finalize", **finalize_op(m, a.split))
+        elif step == "ladder_train":
+            from . import waymo_ladder as L
+            ladder_train(rl, tuple(a.models.split(",")))
+            for name, t in L.rejudge(rl.dir, "p3drive_train").items():
+                t.to_csv(rl.dir / f"{name}_p3drive_train.csv", index=False)
+                rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
         elif step == "finalize_alp":
             rl.event("finalize", **finalize_alp())
         elif step in ("ladder", "ladder_hist"):
