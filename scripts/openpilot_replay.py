@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from jevdrive.openpilot.frames import future_in_calib, load_segment_meta, segment_model_frames
+from jevdrive.openpilot.frames import future_in_calib, load_segment_meta, rot_from_euler, segment_model_frames
 from jevdrive.openpilot.model import LONG_SMOOTH_S, T_IDXS, OPModel, decode, smooth
 from jevdrive.runlog import RunLog
 
@@ -25,7 +25,10 @@ WARMUP = 100  # frames (5 s) before the 5 s feature queue is full; excluded from
 def ground_truth(meta, n):
     pos, vel = zip(*(future_in_calib(meta, i, T_IDXS) for i in range(n)))
     speed = np.linalg.norm(meta["vel"][:n], axis=1)
-    curv = -meta["omega_dev"][:n, 2] / np.maximum(speed, 1.0)  # device z is down; openpilot curvature is left-positive
+    # yaw rate about the calib-frame z (down): openpilot curvature is right-positive, as in controlsd's
+    # actual_curvature_pose = angularVelocityCalibrated.z / vEgo
+    yaw_rate = (rot_from_euler(meta["rpy_calib"]).T @ meta["omega_dev"][:n].T)[2]
+    curv = yaw_rate / np.maximum(speed, 1.0)
     accel = np.gradient(speed, meta["t_loc"][:n])
     return dict(gt_pos=np.stack(pos), gt_v=np.stack(vel), speed=speed, gt_curv=curv, gt_accel=accel)
 
