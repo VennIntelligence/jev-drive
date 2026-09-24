@@ -22,6 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / 'todos/2026-09-23-tfv6-controller/controller-eval'
 PRESET = {'A': 'author_route', 'B': 'author_waypoint', 'C': 'pursuit', 'D': 'pursuit'}
 LOCK = threading.Lock()
+# Town12/13 servers take 6-8 GB each; three at once fill a 24 GB card.
+BIG = ('Town12', 'Town13')
+BIG_SLOTS = threading.Semaphore(2)
 
 
 def log(out, event, **data):
@@ -118,8 +121,10 @@ def main():
     a = p.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     routes = ET.parse(a.routes).getroot().findall('route')
-    # Big maps first so the long loads overlap with many small routes at the end.
-    routes.sort(key=lambda r: r.get('town') not in ('Town12', 'Town13'))
+    # Alternate big and small maps so at most two big-map servers usually run at once.
+    big = [r for r in routes if r.get('town') in BIG]
+    small = [r for r in routes if r.get('town') not in BIG]
+    routes = [r for pair in zip(big, small) for r in pair] + big[len(small):] + small[len(big):]
     log(a.out, 'start', reference=a.kind, routes=len(routes), seeds=a.seeds, arms=a.arms, workers=a.workers)
     slots = list(range(a.workers))
     with ThreadPoolExecutor(a.workers) as pool:
@@ -127,6 +132,9 @@ def main():
             with LOCK:
                 slot = slots.pop()
             try:
+                if route.get('town') in BIG:
+                    with BIG_SLOTS:
+                        return run_route(a, route, a.server_base + 2 * slot)
                 return run_route(a, route, a.server_base + 2 * slot)
             finally:
                 with LOCK:
