@@ -145,7 +145,7 @@ def fig_sheet(a):
     n = len(names)
     cols = 2
     rows = (n + cols - 1) // cols
-    fig, axes = plt.subplots(rows, cols, figsize=(ps.DOUBLE_COLUMN_IN, 1.05 * rows))
+    fig, axes = plt.subplots(rows, cols, figsize=(0.72 * ps.DOUBLE_COLUMN_IN, 0.76 * rows))
     for ax, v in zip(axes.ravel(), names):
         ax.imshow(z[v], cmap="gray", vmin=0, vmax=255)
         ax.set_title(v, fontsize=7, pad=1.5)
@@ -169,7 +169,8 @@ def fig_frames(a):
     fig, axes = plt.subplots(len(ims), 1, figsize=(ps.SINGLE_COLUMN_IN, 0.9 * len(ims)))
     for ax, (t, im) in zip(axes, ims):
         ax.imshow(im, cmap="gray", vmin=0, vmax=255)
-        ax.axhline(47.6, color=ps.PALETTE["orange"], lw=0.4)
+        ax.plot([0, 511], [47.6, 47.6], color=ps.PALETTE["orange"], lw=0.4)        # road frame horizon row
+        ax.plot([512, 1023], [151.8, 151.8], color=ps.PALETTE["orange"], lw=0.4)  # wide frame horizon row
         ax.set_title(t, fontsize=7, pad=1.5)
         ax.axis("off")
     fig.tight_layout(pad=0.2)

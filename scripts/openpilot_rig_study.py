@@ -252,7 +252,8 @@ def cmd_eval(a):
         native = np.load(fdir / "native.npy", mmap_mode="r")
         n = len(native)
         gt = ground_truth(meta, n) | {"t": meta["t_loc"][:n] - meta["t_loc"][0]}
-        variants = [p.name[:-4] for p in sorted(fdir.glob("*.npy"))] + list(TIMING) + list(RESET)
+        variants = [p.name[:-4] for p in sorted(fdir.glob("*.npy")) if not p.name.startswith("pred_")] \
+            + list(TIMING) + list(RESET)
         for v in variants:
             todo = [m for m in models if (sid, v, m) not in done]
             if not todo:
