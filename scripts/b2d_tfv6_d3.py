@@ -7,10 +7,18 @@ from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
+import sys
 import threading
 import time
 
-from b2d_tfv6_campaign import DEV10, HOLDOUT, case, record
+from b2d_tfv6_campaign import DATA, DEV10, HOLDOUT, RUNTIME, case, record
+
+# The route launcher adds these three source roots before loading the agent.
+# This runner also imports an agent helper while building its own invariants.
+for source_root in (DATA/'third_party/lead-cvpr2026',
+                    RUNTIME/'leaderboard',RUNTIME/'scenario_runner'):
+    sys.path.insert(0,str(source_root))
+
 from b2d_tfv6_controller_agent import _compose_d3_arm
 from b2d_tfv6_w2b import InvariantFailure, validate_attempt
 
