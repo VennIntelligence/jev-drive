@@ -1,0 +1,24 @@
+{
+  "cases": 192,
+  "deviations": 12,
+  "deviation_routes": [
+    "2084",
+    "27529"
+  ],
+  "stalls": 115,
+  "stall_routes": [
+    "2084",
+    "2091",
+    "3255",
+    "3514",
+    "17569",
+    "25424",
+    "26405",
+    "27494",
+    "27529",
+    "28154"
+  ],
+  "route_timeline_ticks": 7019,
+  "2091_stall_ticks": 19835,
+  "geometry_note": "Junction distance uses nearest route-XML turn or scenario trigger; route branches use evaluator XML nodes as piecewise-linear approximation to its dense global plan."
+}
