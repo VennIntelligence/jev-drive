@@ -2728,7 +2728,7 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 |---|---:|---:|---:|
 | human（log，devkit） | 94.6 | 94.5 | — |
 | Alpamayo 1.5（nav） | 44.3 | 43.2 | 10.8 |
-| openpilot Lebowski / Cinque v3 / small | 50.9 / 52.1 / 47.4 | 45.5 / 46.2 / 42.5 | 10.2 / 待补 / 10.2 |
+| openpilot Lebowski / Cinque v3 / small | 50.9 / 52.1 / 47.4 | 45.5 / 46.2 / 42.5 | 10.2 / 9.3 / 10.2 |
 | constant velocity（devkit） | 20.7 | 25.9 | 11.5 |
 | 文献：TransFuser / DiffusionDrive（navtrain 训练） | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 |
 
@@ -2749,5 +2749,5 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 差别最可能来自时间轴（推测）：WOD 给模型原生帧率，NAVSIM 不给。验证办法是在 nuPlan 原始 10 Hz 传感器数据上重做 navtest 的一个子集
 （OpenScene 不含，需要另下 nuPlan sensor blobs），或反过来在 WOD 上把输入降到 2 Hz 看分数掉多少。
 
-**状态**：**待定**。单次、单 seed；EPDMS 的 devkit 版本与文献不同（我们的 human 94.5，文献常引 90.3），文献行只作量级参照；navhard 的 openpilot 部分行还在补。
+**状态**：**待定**。单次、单 seed；EPDMS 的 devkit 版本与文献不同（我们的 human 94.5，文献常引 90.3），文献行只作量级参照。
 

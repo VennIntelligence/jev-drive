@@ -1,6 +1,6 @@
 # Zero-shot 考试：Alpamayo 1.5 与 openpilot 在 NAVSIM 上的 PDMS / EPDMS
 
-状态: done（navtest 全部完成；navhard 的 openpilot cmd / Cinque 行在最后补齐，见结果表）
+状态: done
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 姊妹考试: [wod-e2e.md](wod-e2e.md)、[bench2drive.md](bench2drive.md)（同样两个模型，另外两个 agent）
 
@@ -275,12 +275,15 @@ openpilot 的 NC / DAC 略好，但 HC（与历史运动衔接）只有 45–52%
 | constant velocity | | 29.0 | 34.2 | **11.5** |
 | Alpamayo 1.5 | nav | 34.1 | 32.6 | 10.8 |
 | openpilot Lebowski | none | 31.8 | 30.2 | 10.2 |
+| openpilot Lebowski | cmd | 32.2 | 29.2 | 10.3 |
+| openpilot Cinque v3 | none | 28.1 | 29.4 | 9.3 |
+| openpilot Cinque v3 | cmd | 27.9 | 27.8 | 8.0 |
 | openpilot small | none | 28.7 | 31.5 | 10.2 |
+| openpilot small | cmd | 28.2 | 26.7 | 8.4 |
 | *文献* TransFuser / DiffusionDrive / VLM（SGDrive、ReCogDrive） | | | | 23.1 / 27.5 / 25.5、25.7 |
 
 n = 5912（450 个真实 stage-one 场景 + 5462 个 3DGS 合成的 stage-two 场景）。human agent 在 navhard 上无法打分（合成场景没有未来帧，
-devkit 的 pseudo closed-loop 聚合直接报错），所以这里没有 human 行。Lebowski cmd、Cinque 两行和 small cmd 的打分在报告写完时还在跑，
-数字会补进 `results_navhard.csv`。读法：navhard 上 zero-shot 的两个模型都**不比 constant velocity 好**，stage 2（合成的、偏离后的状态）
+devkit 的 pseudo closed-loop 聚合直接报错），所以这里没有 human 行。读法：navhard 上 zero-shot 的两个模型都**不比 constant velocity 好**，stage 2（合成的、偏离后的状态）
 对它们并不比 stage 1 更难，差距主要在 stage 1 就已经存在。
 
 ### 失败模式
