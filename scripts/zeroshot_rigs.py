@@ -112,10 +112,11 @@ def alpamayo_project(cam, xyz_rig):
 # calibration is rpy = 0.
 OP_CAMERA_WH = (1928, 1208)
 OP_FOCAL = {"road": 2648.0, "wide": 567.0}
-# Windshield top: x of the Hyperion windshield camera (same wheelbase as the MKZ), 8 cm below its height, where a
-# comma device hangs under the roof line. openpilot's nominal 1.22 m puts the MKZ hood into the road frame
-# (bottom 20%, measured in the first plumbing run); real comma road frames show no hood.
-OP_MOUNT_RIG = (1.779, 0.0, 1.35)
+# Windshield top, exactly where the Hyperion front camera sits (same wheelbase as the MKZ). Measured in the
+# plumbing runs: at openpilot's nominal 1.22 m the MKZ hood fills the bottom 20% of the road frame (real comma
+# road frames show none), and anywhere below ~1.4 m the camera is behind CARLA's tinted windshield glass, which
+# darkens the whole image.
+OP_MOUNT_RIG = (1.779, 0.0, 1.433)
 OP_CAMERA_TICK = 0.2                # 5 Hz, the model's context rate (frames t-0.2 s and t)
 
 
