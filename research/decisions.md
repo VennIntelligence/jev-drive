@@ -2621,7 +2621,7 @@ TFv6 与我们的 head 用的是不同传感器。
 **找比作者控制更好的执行层（Task 7、8，[plant 诊断](../todos/2026-09-23-tfv6-controller/diagnosis-plant.md)、[搜索报告](../todos/2026-09-23-tfv6-controller/controller-search.md)）。** C 确实有 plant 错配：它请求的曲率，按实测 yaw 折算，实际只实现了 0.76–0.94。但用实测的 plant map 反解，也只能补上 C 与 B 转向幅度差的 24%（D3b 出事子集里只有 6%），所以错配不是 C 转向不足的主要原因。搜索只在 Dev10 上进行，找到的最好候选是作者两套 PID 的混合：steer 取 0.5·A + 0.5·B，纵向取 A。它在 Dev10 上比 A 高 +2.7 [0, 8.1]，但这个数字就是在 Dev10 上选出来的。冻结后在保留集上，它与 A 的差是 0.00：A 和两个候选在 18 个 case 上全部 100 DS，保留集已经封顶，分不出高下。我们自己的两个控制器（C、D）在 Dev10 上比 A 低 4–5 DS。结论：在 TFv6 上还没有找到比作者 A 更好的执行层，而现有的 16 条路线对 A 这个水平已经没有区分度，再往下比，需要 A 本身会失败的更难的路线。
 
 
-## 33. Zero-shot 闭环：Alpamayo 1.5 在 Bench2Drive 上能开，openpilot 不能（**待定**，n = 5 的 smoke）
+## 33. Zero-shot 闭环：Alpamayo 1.5 在 Bench2Drive 上能开；openpilot 的 smoke 分数无效（适配 bug），能不能开未知（**待定**，n = 5 的 smoke）
 
 两个开放模型不训练、按各自原生相机（内参、FOV、安装位置、帧率）在 CARLA 里生成输入，轨迹走同一个固定控制器
 （[预注册与结果](../todos/2026-09-24-zeroshot-exam/bench2drive.md)）。5 条预先固定的路线上：
@@ -2629,6 +2629,12 @@ Alpamayo 1.5 DS 60.8、RC 70.1、SR 2/5（3 条走完，1 条路口方向与 nav
 openpilot Lebowski DS 2.7、RC 5.6、SR 0/5（全部在前 10 m 内驶离车道撞上静态物体后 blocked）。
 n = 5、单次、单 seed，只能说“Alpamayo 能在合成图像上闭环开车，openpilot 在这个考试上基本不能”，不能给分数排名。
 怎么定下来：全量 220 条（估计 4.3–6.6 h，等用户批准），同时报完成路线数。
+
+**更正（2026-09-25）**：本条原先写“openpilot 在这个考试上基本不能开”。逐帧复盘发现 openpilot 那一半的分数来自适配 bug，
+不代表模型：plan 的原点在相机，适配器只平移 1.78 m 就交给吃后轴轨迹的控制器，静止时等于发出 7.1 m/s 的速度指令，
+模型说“停着”的 tick 里 95.6% 在踩油门；另有相机 `sensor_tick` 抖动（comma1M 上同等抖动横向误差 +83%）。
+修复已实现，复跑等控制器定版（[openpilot-migration.md](../todos/2026-09-24-zeroshot-exam/openpilot-migration.md) A 部分），
+所以 openpilot 的 DS 2.7 作废，“能不能开”回到未知。Alpamayo 那一半不受影响。
 
 ## 34. Zero-shot 开环：Alpamayo 1.5 和 openpilot 在 WOD-E2E val 上都明显超过 ego-only，也超过我们在 Waymo 上训的 head（**待定**）
 
@@ -2699,3 +2705,13 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 **怎么才能定下来**（都未执行）：(1) TFv6 规则开/关 × 接口 A/B，P5 配对 + 220 路线；(2) SimLingo 同 ckpt 原版 vs 定制 Bench2Drive 目录各 3 次；
 (3) 同一冻结 checkpoint × {v1, v2, HUGSIM} × {官方权重, 各榜重调权重}。
 **会推翻本条的证据**：实验 (1) 里关掉规则后 target speed 通道的翻转率显著上升（"不反应"是规则掩盖的）；实验 (3) 里官方权重与重调权重的 EPDMS 差 <3。
+
+## 36. openpilot 换相机 rig 基本不掉，掉的是朝向标定和时间轴；真实数据上安装高度不重要（**待定**，comma1M 8 段 + WOD 479 帧）
+
+2026-09-25，[openpilot-migration.md](../todos/2026-09-24-zeroshot-exam/openpilot-migration.md) B 部分。在 comma1M 真实视频上合成 44 种输入
+（`jevdrive/openpilot/rigsim.py`，native 与 modeld 逐字节一致），Cinque native 2 s 横 / 纵误差 0.16 / 0.86 m（n = 8800 帧）：
+一台 60–120° pinhole、180° 鱼眼（去不去畸变）、nuPlan F0、Waymo 前三路拼接、nuScenes 式前三路、TF++ 式 110° 单相机横向都在 +8% 以内，
+分辨率、模糊、YUV range、JPEG 也是；yaw 标定错 2° 横向 ×4.6，帧时刻抖动 +83%，NAVSIM 式 2 Hz × 1.5 s 时间轴横向 ×9、纵向 ×25。
+地面平面仿真里抬高相机会让模型低估车速（1.81 m 纵向 +410%），但 WOD 真实 1.81 m 相机上纵向几乎无偏，虚拟降到 1.22 m 反而 RFS −0.45。
+含义：NAVSIM 考试的 openpilot 行按 2 Hz 输入跑，分数基本不代表模型，要回到 nuPlan 原始 10 Hz 相机；换 rig 时优先保证标定和帧时序，
+不做虚拟降高。怎么定下来：CARLA 复跑里的 `shadow` / `shadow-h*` 阶段在渲染 3D 场景上复测；再加 4–8 段 comma1M 给 small / Lebowski。
