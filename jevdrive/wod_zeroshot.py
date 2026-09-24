@@ -78,8 +78,9 @@ def build_sets(seed: int = 0) -> dict:
     check = np.array(picks)
 
     def pack(rows):
-        return dict(name=names[rows], sequence=seq[rows], frame=frame[rows], intent=df.intent.to_numpy()[rows],
-                    cluster=df.cluster.astype(str).to_numpy()[rows], shard=df.shard.astype(str).to_numpy()[rows],
+        u = lambda x: np.asarray(x, dtype=str)  # noqa: E731  (no object arrays: loadable without pickle)
+        return dict(name=u(names[rows]), sequence=u(seq[rows]), frame=frame[rows], intent=df.intent.to_numpy()[rows],
+                    cluster=u(df.cluster.astype(str).to_numpy()[rows]), shard=u(df.shard.astype(str).to_numpy()[rows]),
                     past=past[rows], future=fut[rows])
     out = {"rater": pack(rows_r) | dict(traj=traj, scores=scores), "extra": pack(extra), "check": pack(check)}
     # slim-shard JPEG spans of every frame in each sequence we touch (openpilot history), keyed by frame name
