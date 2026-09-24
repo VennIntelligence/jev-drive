@@ -20,6 +20,7 @@ One line per doc. Add a line here whenever you add a doc.
 | [driving-runtime.md](driving-runtime.md) | you need reusable frame/preview helpers or want to connect another driving model |
 | [tokyo-python-optimization.md](tokyo-python-optimization.md) | you need the measured TCP Python optimizations and their switches |
 | [navsim.md](navsim.md) | you need the NAVSIM / OpenScene data on the box, or need to re-download it |
+| [hugsim.md](hugsim.md) | you need the HUGSIM closed-loop benchmark data on the box, or need to re-download it |
 
 Rules:
 - One topic per file.
