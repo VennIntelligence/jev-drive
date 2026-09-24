@@ -54,27 +54,36 @@ def load_all(avdi, clips, log):
 
 
 def rows(I):
+    """FA2 rows. torch.compile of the vision tower is not possible under FA2 (dynamo cannot trace flash_attn's
+    varlen op), so it is tried on the SDPA load (sdpa_rows). The expert always runs SDPA and compiles here."""
     C = I.Config
-    base1, base6 = C("default", n_samples=1), C("default", n_samples=6)
     r = []
-    for b in (base1, base6):
-        n = b.n_samples
+    for b in (C("default", n_samples=1), C("default", n_samples=6)):
         r += [b, replace(b, name="expert-cuda-graph", expert_graph=True),
-              replace(b, name="compile-visual+expert", compile=("visual", "expert")),
+              replace(b, name="compile-expert", compile=("expert",)),
               replace(b, name="flow-5", flow_steps=5), replace(b, name="flow-2", flow_steps=2),
               replace(b, name="reason-cap-32", max_gen=32), replace(b, name="reason-cap-16", max_gen=16),
               replace(b, name="no-reasoning", no_reasoning=True),
-              replace(b, name="stack: graph+compile-visual+flow-5", expert_graph=True, compile=("visual",),
-                      flow_steps=5),
-              replace(b, name="stack + no-reasoning", expert_graph=True, compile=("visual",), flow_steps=5,
-                      no_reasoning=True)]
-        if n == 1:
-            r += [replace(b, name="compile-lm", compile=("lm",)), replace(b, name="static-kv-cache", static_cache=True)]
+              replace(b, name="stack: compile-expert+flow-5", compile=("expert",), flow_steps=5),
+              replace(b, name="stack + no-reasoning", compile=("expert",), flow_steps=5, no_reasoning=True)]
+        if b.n_samples == 1:
+            r += [replace(b, name="compile-lm", compile=("lm",))]
         else:  # one reasoning rollout, 6 flow samples on its KV cache (public num_traj_sets argument)
             r += [replace(b, name="1-rollout x 6 flow samples", n_samples=1, n_sets=6),
-                  replace(b, name="stack: 1-rollout x 6 + flow-5", n_samples=1, n_sets=6, flow_steps=5,
-                          compile=("visual",))]
+                  replace(b, name="stack: 1-rollout x 6 + compile-expert+flow-5", n_samples=1, n_sets=6,
+                          flow_steps=5, compile=("expert",))]
     return r
+
+
+def sdpa_rows(I):
+    """SDPA load. static-kv-cache goes last: HF generate compiles and CUDA-graphs the decoder for a static cache,
+    and when that fails it leaves the CUDA RNG in capture state, which breaks every later sampling call."""
+    C = I.Config
+    r = []
+    for n in (1, 6):
+        b = C("sdpa", attn="sdpa", n_samples=n)
+        r += [b, replace(b, name="sdpa + compile-visual+expert", compile=("visual", "expert"))]
+    return r + [C("sdpa + static-kv-cache", attn="sdpa", n_samples=1, static_cache=True)]
 
 
 def bench_rows(model, proc, I, clips, cfgs, a, log, out):
@@ -168,11 +177,12 @@ def cmd_bench(a, log):
         log.event("row", **{k: v for k, v in rec.items() if k != "compile"})
     del model
     torch.cuda.empty_cache()
-    if not a.only:
+    sd = [r for r in sdpa_rows(I) if not a.only or r.name in a.only.split(",")]
+    if sd:
         model, proc = I.load("sdpa")
-        sd = [I.Config("sdpa", attn="sdpa", n_samples=1), I.Config("sdpa", attn="sdpa", n_samples=6)]
         for rec in bench_rows(model, proc, I, clips, sd, a, log, out):
             recs.append(rec)
+            log.event("row", **{k: v for k, v in rec.items() if k != "compile"})
     dr = drift(out, list(clips), gt)
     df = pd.DataFrame(recs)
     df = df.merge(pd.DataFrame(dr).T.rename_axis("key").reset_index(), on="key", how="outer")
