@@ -5,6 +5,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -62,10 +63,18 @@ def validate_d3(result,attempt_dir,run_dir):
     sparse=json.loads(sparse_path.read_text())
     if len(package['dense'])<2 or len(sparse)!=len(package['agent_sparse_world_xy']):
         raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: invalid dense/sparse plan')
+    fit=package['planner_to_world']
+    if fit['max_residual_m']>=.1 or abs(fit['scale']-1)>=.001 or abs(fit['rotation_rad'])>=.001:
+        raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: planner/world alignment failed')
+    for j,(actual,expected) in enumerate(zip(sparse,package['agent_sparse_world_xy'])):
+        if math.dist(actual['xyz'][:2],expected)>.1 or actual['command']!=package['dense'][package['agent_sparse_dense_indices'][j]]['command']:
+            raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: agent sparse waypoint {j} differs from reconstructed evaluator route')
     checker=SemanticSequence(package)
     arm=result['arm']
     path=attempt_dir/'frames.jsonl'
     nav_count=actor_count=light_count=kalman_count=0
+    first_ego_offroute_step=None
+    max_ego_dense_distance_m=0.0
     with path.open() as stream,(attempt_dir/'d3_nav_semantic.jsonl').open('w') as semantic_out:
         for line in stream:
             f=json.loads(line)
@@ -78,6 +87,10 @@ def validate_d3(result,attempt_dir,run_dir):
                 except (SemanticFailure,KeyError,ValueError) as error:
                     raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: D3 semantic telemetry: {error}') from error
                 semantic_out.write(json.dumps(semantic)+'\n')
+                distance=semantic['ego_dense_distance_m']
+                max_ego_dense_distance_m=max(max_ego_dense_distance_m,distance)
+                if distance>3 and first_ego_offroute_step is None:
+                    first_ego_offroute_step=f['step']
             if isinstance(f.get('nearby_actors'),list):actor_count+=1
             if f.get('d3_traffic_light'):light_count+=1
             if f.get('d3_kalman'):kalman_count+=1
@@ -102,7 +115,10 @@ def validate_d3(result,attempt_dir,run_dir):
     if not recorder.exists() or not any(p.stat().st_size>0 for p in recorder.glob('*.log')):
         raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: missing CARLA recorder')
     return {**info,'d3_nav_ticks':nav_count,'d3_actor_ticks':actor_count,
-            'd3_light_ticks':light_count,'d3_kalman_ticks':kalman_count}
+            'd3_light_ticks':light_count,'d3_kalman_ticks':kalman_count,
+            'first_ego_offroute_3m_step':first_ego_offroute_step,
+            'max_ego_dense_distance_m':max_ego_dense_distance_m,
+            'official_status':result['official_status']}
 
 
 def _check_done_tree(root):

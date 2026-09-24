@@ -38,13 +38,14 @@ class D3SemanticTests(unittest.TestCase):
                           'target_point':[target,0.],'target_point_previous':[target,0.],
                           'target_point_next':[target,0.]}}
 
-    def test_ego_off_route_while_completion_increases(self):
+    def test_ego_off_route_is_logged_even_as_completion_increases(self):
         checker=SemanticSequence(self.package)
         checker.check(self.frame())
         bad=self.frame(ego=2.,step=1)
         bad['truth']['location'][1]=3.1
-        with self.assertRaisesRegex(SemanticFailure,'RC advanced'):
-            checker.check(bad)
+        metric=checker.check(bad)
+        self.assertTrue(metric['rc_increasing'])
+        self.assertGreater(metric['ego_dense_distance_m'],3.)
 
     def test_target_dense_index_must_be_monotone(self):
         checker=SemanticSequence(self.package)

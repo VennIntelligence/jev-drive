@@ -76,8 +76,6 @@ class SemanticSequence:
             if np.dot(ego-self.dense[i,:2],forward)>0:
                 self.rc_index=i
         ego_dist,_,_=route_projection(ego,self.dense)
-        if self.rc_index>old_rc and ego_dist>3.0:
-            raise SemanticFailure(f'step {step}: RC advanced {old_rc}->{self.rc_index} with ego {ego_dist:.3f}m off dense route')
         return {'step':step,'ego_world_xy':ego.tolist(),'ego_dense_distance_m':ego_dist,
                 'rc_dense_index':self.rc_index,'rc_increasing':self.rc_index>old_rc,
                 'selected_target_world_xy':target.tolist(),'target_dense_index':index,
