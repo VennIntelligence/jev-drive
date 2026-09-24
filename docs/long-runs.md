@@ -10,6 +10,13 @@ Read this when you start anything on the box that takes more than about a minute
   shell does not have `$DATA_DIR`), runs from the repo root, and keeps the window open afterwards
   with the exit code.
 - Do not touch windows you did not start.
+- Close your window when the job is done. The window stays open after exit only so you can read the exit
+  code; once you have checked it and the logs, `tmux kill-window -t jev:<name>`. This applies above all
+  to one-off downloads, smoke tests, probes and experiment runs. Keep a finished window only when there is
+  a stated reason (a viewer on the desktop, a result someone still has to read), and say so in the run's
+  todo. Before starting a batch of runs, and after finishing one, list your windows
+  (`tmux list-windows -t jev`) and close the finished ones; a window whose pane has no child process
+  (`pgrep -P <pane_pid>` is empty) is finished.
 
 ## What it writes
 
