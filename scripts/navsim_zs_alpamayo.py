@@ -124,7 +124,7 @@ def seed_of(token: str) -> int:
     return int(token[:8], 16) % (2 ** 31)
 
 
-def run_stream(model, samples, variants, B, emit, log=None):
+def run_stream(model, samples, variants, B, emit, log=None, seed_offset=0):
     """samples: iterator of Inputs outputs. Buckets by (variant, nav text) so each forward has equal-length
     prompts, runs a bucket when it has B samples, flushes the rest at the end."""
     buckets = {}
@@ -133,7 +133,7 @@ def run_stream(model, samples, variants, B, emit, log=None):
         items = buckets.pop(key)
         toks = [it[1] for it in items]
         batch = collate(toks, [it[0]["xyz"] for it in items], [it[0]["rot"] for it in items])
-        o = model(batch, seed_of(items[0][0]["token"]))
+        o = model(batch, seed_of(items[0][0]["token"]) + seed_offset)
         for i, (s, _) in enumerate(items):
             emit({"token": s["token"], "variant": key[0], "nav_text": key[1], "B": len(items),
                   "ms": 1e3 * o["wall"] / len(items), "poses": Z.alpamayo_to_navsim(o["xyz"][i], o["rot"][i]).tolist(),
@@ -230,19 +230,24 @@ def cmd_bench(a, log):
     log.info(f"prepared {len(samples)} samples in {prep_s:.1f} s ({1e3 * prep_s / len(samples):.0f} ms/sample wall, "
              f"{a.workers} threads)")
     import torch
-    rows = []
-    for B in [int(b) for b in a.batches.split(",")]:
-        for rep in range(2):  # rep 0 = warm-up (compile for this batch shape)
-            recs = []
-            torch.cuda.reset_peak_memory_stats()
-            t0 = time.time()
-            run_stream(model, iter(samples), ("nav",), B, recs.append)
-            wall = time.time() - t0
-            if rep:
-                rows.append({"B": B, "n": len(recs), "wall_s": wall, "ms_per_sample": 1e3 * wall / len(recs),
-                             "peak_gb": torch.cuda.max_memory_allocated() / 1e9})
-                log.info(json.dumps(rows[-1]))
-                np.save(log.dir / f"poses_B{B}.npy", np.array([r["poses"] for r in recs]))
+    rows, runs = [], {}
+    warm = set()
+    for spec in a.batches.split(","):          # "B" or "B:seed_offset"
+        B, off = (int(x) for x in (spec.split(":") + ["0"])[:2])
+        if B not in warm:                      # warm-up pass (compile for this batch shape)
+            run_stream(model, iter(samples), ("nav",), B, lambda r: None, seed_offset=99)
+            warm.add(B)
+        recs = []
+        torch.cuda.reset_peak_memory_stats()
+        t0 = time.time()
+        run_stream(model, iter(samples), ("nav",), B, recs.append, seed_offset=off)
+        wall = time.time() - t0
+        rows.append({"B": B, "seed_offset": off, "n": len(recs), "wall_s": wall, "ms_per_sample": 1e3 * wall / len(recs),
+                     "peak_gb": torch.cuda.max_memory_allocated() / 1e9})
+        log.info(json.dumps(rows[-1]))
+        runs[spec] = {r["token"]: r["poses"] for r in recs}
+    toks = [s["token"] for s in samples]
+    np.savez(log.dir / "poses.npz", tokens=np.array(toks), **{k.replace(":", "_"): np.array([v[t] for t in toks]) for k, v in runs.items()})
     import pandas as pd
     pd.DataFrame(rows).to_csv(log.dir / "bench.csv", index=False)
     json.dump({"prep_ms_per_sample": 1e3 * prep_s / len(samples), "workers": a.workers, "rows": rows},
