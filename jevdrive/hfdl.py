@@ -120,7 +120,8 @@ def download(url: str, dst: Path, size: int | None = None, sha256: str | None = 
 
 
 def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = False, streams: int = 16,
-             ms_repo: str | None = None, cache_dir: Path | None = None, log=print) -> Path:
+             ms_repo: str | None = None, cache_dir: Path | None = None, absent: tuple[str, ...] = (),
+             log=print) -> Path:
     """Download matching files of `repo` into the standard HF hub cache layout (blobs + snapshots/<sha>),
     sha256-checking every LFS file against the HF LFS oid, and return the snapshot dir, so that offline
     `from_pretrained(repo)` works. With `ms_repo`, files come from that ModelScope copy instead (for speed, or
@@ -153,6 +154,13 @@ def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = Fals
         link.parent.mkdir(parents=True, exist_ok=True)
         if not link.is_symlink():
             link.symlink_to(os.path.relpath(blob, link.parent))
+    # `absent`: optional files that libraries probe for (e.g. transformers asks for processor_config.json). The
+    # hub records a 404 as an empty .no_exist marker; for a gated repo whose gate is not accepted the probe gets a
+    # 403 instead and raises, so write the marker for names the listing proves are not in the repo.
+    present = {e["path"] for e in tree(repo, dataset=dataset, rev=sha)} if absent else set()
+    for name in set(absent) - present:
+        (root / ".no_exist" / sha / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / ".no_exist" / sha / name).touch()
     (root / "refs").mkdir(parents=True, exist_ok=True)
     (root / "refs" / "main").write_text(sha)
     dt = time.monotonic() - t0

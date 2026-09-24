@@ -12,6 +12,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from jevdrive.hfdl import snapshot
 
+PROBED = ("processor_config.json", "chat_template.jinja", "added_tokens.json", "special_tokens_map.json",
+          "tokenizer.model", "audio_tokenizer_config.json", "generation_config.json", "custom_generate/generate.py",
+          "preprocessor_config.json", "video_preprocessor_config.json")
+
 REPOS = {
     # HF metadata + sha256 from hf-mirror; the shards themselves from ModelScope's nv-community copy, because the
     # mirror redirects LFS to the HF US CDN (~0.5 MB/s per stream from the box) and ModelScope is ~6 MB/s per stream
@@ -29,4 +33,4 @@ if __name__ == "__main__":
     a = ap.parse_args()
     for w in a.what:
         repo, pats, ms = REPOS[w]
-        print(snapshot(repo, pats, streams=a.streams, ms_repo=ms), flush=True)
+        print(snapshot(repo, pats, streams=a.streams, ms_repo=ms, absent=PROBED if ms else ()), flush=True)
