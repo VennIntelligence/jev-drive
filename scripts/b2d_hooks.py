@@ -57,6 +57,9 @@ from srunner.scenariomanager.timer import GameTime
 
 # md5 of the Bench2Drive 0.0.4 `_tick_scenario` the instrumented copy below was derived from.
 REFERENCE_TICK_MD5 = "266b1ddfcbdbe2e9cb4f2bd8d58655a2"
+# Known variants of that source -> the tick cap they enforce. SimLingo's vendored Bench2Drive (RenzKa/simlingo
+# 743b243, based on B2D 0.0.3) is the same loop with the `tick_count > 4000` raise commented out, nothing else.
+KNOWN_TICK_SOURCES = {REFERENCE_TICK_MD5: 4000, "73adabfd3ff26160c72e1f7d1f136d5b": None}
 
 PHASES = ("world_tick", "snapshot", "provider", "agent", "control", "tree", "spectator", "total")
 
@@ -316,14 +319,41 @@ def _patch_callback(profile, fast_copy, zero_copy):
     CallBack._parse_image_cb = parse_image
 
 
+def _rc_tracer(every=20):
+    """Read-only observer for the catalogue experiment (todos/2026-09-25-simlingo-catalogue), on when
+    $B2D_RC_TRACE=1, into $B2D_ATTEMPT_OUT/rc_trace.jsonl: every `every` ticks append [tick, frame, route completion %, infraction events so
+    far] from the route's own criteria, so a score under a different tick cap can be recomputed from the same
+    trajectory. Writes JSON lines, flushed, so a killed route keeps its trace."""
+    if os.environ.get("B2D_RC_TRACE") != "1":
+        return None
+    fh = open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "rc_trace.jsonl"), "a")
+
+    def trace(manager, frame):
+        n = manager.tick_count
+        if n % every and n != 1:
+            return
+        rc, events = None, 0
+        for c in manager.scenario.get_criteria():
+            if type(c).__name__ == "RouteCompletionTest":
+                rc = c.actual_value
+            elif type(c).__name__ != "MinimumSpeedRouteTest":
+                events += len(c.events)
+        fh.write(json.dumps([n, frame, rc, events]) + "\n")
+        fh.flush()
+
+    return trace
+
+
 def _patch_tick(profile, no_spectator):
     original = inspect.getsource(ScenarioManager._tick_scenario)
     digest = hashlib.md5(original.encode()).hexdigest()
-    if digest != REFERENCE_TICK_MD5:
+    if digest not in KNOWN_TICK_SOURCES:
         raise RuntimeError(
             "Bench2Drive's _tick_scenario has changed (md5 %s, expected %s). The instrumented copy "
             "in scripts/b2d_hooks.py no longer mirrors it; re-derive it before trusting any "
             "timing." % (digest, REFERENCE_TICK_MD5))
+    tick_cap = KNOWN_TICK_SOURCES[digest]
+    rc_trace = _rc_tracer()
 
     def tick(self):
         """Line-for-line copy of Bench2Drive 0.0.4 ScenarioManager._tick_scenario with timers.
@@ -349,7 +379,7 @@ def _patch_tick(profile, no_spectator):
             self._watchdog.pause()
             t["provider"] = time.perf_counter() - t0
 
-            if self.tick_count > 4000:
+            if tick_cap is not None and self.tick_count > tick_cap:
                 raise TickRuntimeError("RuntimeError, tick_count > 4000")
 
             t0 = time.perf_counter()
@@ -386,5 +416,7 @@ def _patch_tick(profile, no_spectator):
 
             t["total"] = time.perf_counter() - t_tick0
             profile.close_tick(t)
+            if rc_trace is not None:
+                rc_trace(self, timestamp.frame)
 
     ScenarioManager._tick_scenario = tick
