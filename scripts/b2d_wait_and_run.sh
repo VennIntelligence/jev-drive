@@ -3,8 +3,11 @@
 # Bench2Drive zero-shot exam for Alpamayo 1.5 (see todos/2026-09-24-zeroshot-exam/bench2drive.md).
 # Box-side only; run inside tmux (see docs/long-runs.md). Polls every 60 s and starts nothing
 # until both conditions hold:
-#   (a) no navsim_zs_alpamayo.py and no wod_zeroshot_alpamayo.py process is running
-#   (b) free VRAM >= 55 GB
+#   (a) the NAVSIM exam has written $NAVSIM_DONE (all its Alpamayo phases finished; a bare
+#       process check is not enough because NAVSIM restarts processes between phases)
+#   (b) no navsim_zs_alpamayo.py / wod_zeroshot_alpamayo.py process and no queued WOD waiter
+#       (the WOD ADE-extra job waits as a bash loop before its python process exists)
+#   (c) free VRAM >= 55 GB
 #
 # Usage: scripts/tmux_run.sh b2d-alp-wait scripts/b2d_wait_and_run.sh
 set -euo pipefail
@@ -16,11 +19,14 @@ OUT=$D/full220-alpamayo
 SERVER_WIN=b2d-alp-server
 RUN_WIN=b2d-alp-full
 VRAM_MIN_MB=55000
+NAVSIM_DONE=$DATA_DIR/runs/zeroshot-exam/navsim-alpamayo.done
 POLL_S=60
 
 mkdir -p "$D"
 
 other_alpamayo_running() {
+    [[ -f $NAVSIM_DONE ]] || return 0
+    pgrep -f 'ADE-extra' >/dev/null 2>&1 && return 0
     pgrep -f 'navsim_zs_alpamayo\.py' >/dev/null 2>&1 && return 0
     pgrep -f 'wod_zeroshot_alpamayo\.py' >/dev/null 2>&1 && return 0
     return 1
@@ -30,7 +36,7 @@ free_vram_mb() {
     nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1
 }
 
-echo "waiting: need no navsim_zs_alpamayo.py / wod_zeroshot_alpamayo.py and >= ${VRAM_MIN_MB} MiB free VRAM"
+echo "waiting: need $NAVSIM_DONE, no NAVSIM/WOD Alpamayo process or WOD waiter, and >= ${VRAM_MIN_MB} MiB free VRAM"
 while true; do
     if ! other_alpamayo_running; then
         free=$(free_vram_mb)
