@@ -93,6 +93,31 @@ def prepare(split: str = "subset") -> dict:
     return out
 
 
+def write_calib(split: str) -> Path:
+    """Front-three calibration of every streamed sequence (op_calib_<split>.json). The exam's op_calib.json only
+    covers val; this is the same record read (`wod_zeroshot.write_op_calib`) written to our own file."""
+    from . import waymo as W
+    from . import wod_zeroshot as Z
+    plan = json.loads((root() / plan_name(split)).read_text())
+    E2ED, out = W.e2ed_frame(), {}
+    df = W.load_index()
+    key = dict(zip(W.frame_names(df), range(len(df))))
+    for st in plan["streams"]:
+        seq = st["sequence"]
+        if seq in out:
+            continue
+        r = df.iloc[key[st["names"][0]]]
+        with open(W.shard_dir() / str(r.shard), "rb") as f:
+            f.seek(int(r.rec_off))
+            fr = E2ED.FromString(f.read(int(r.rec_len))).frame
+        out[seq] = {str(c): {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in d.items()}
+                    for c, d in Z.calib_dict(fr, Z.OP_SRC).items()}
+    p = root() / f"op_calib_{split}.json"
+    p.write_text(json.dumps(out))
+    log.info("calibration of %d sequences -> %s", len(out), p)
+    return p
+
+
 def plan_name(split: str) -> str:
     return "op_plan.json" if split == "subset" else f"op_plan_{split}.json"
 
@@ -349,6 +374,8 @@ def main():
     for step in a.steps.split(","):
         if step == "prepare":
             rl.event("prepare", **prepare(a.split))
+            if a.split != "subset":
+                write_calib(a.split)
         elif step == "finalize_op":
             for m in a.models.split(","):
                 rl.event("finalize", **finalize_op(m, a.split))

@@ -152,6 +152,8 @@ def main():
     log.event("start", args=vars(a), backends=WZ.MODELS, taps=D.OP_TAPS)
     plan = json.loads((D.root() / D.plan_name(a.split)).read_text())
     op_calib = json.loads((Z.root() / "op_calib.json").read_text())
+    if a.split != "subset":
+        op_calib |= json.loads((D.root() / f"op_calib_{a.split}.json").read_text())
     spans = plan["spans"]
     sub = ("op" if a.split == "subset" else f"op_{a.split}") if a.mode == "stream" else "op_exam"
     outdir = {k: D.root(sub, k) for k in a.models}
