@@ -171,13 +171,17 @@ def main():
             items.append((n, h, [len(h) - 1]))
         items = items[si::sn]
     items = items[: a.limit or None]
-    models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
-              for k in a.models}
-    n_frames = sum(len(it[1]) for it in items)
-    log.info(f"{len(items)} {a.mode} items, {n_frames} frames, models {list(models)}, {a.workers} render workers")
-    t0, tm, n, nf = time.time(), {k: 0.0 for k in models}, 0, 0
     shard_dir = data_dir() / "datasets" / "waymo_e2e" / "front3"
     with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=(spans, op_calib, str(shard_dir))) as ex:
+        # fork the render workers before the TensorRT sessions exist: forked after, every worker carried the
+        # parent's ~27 GB of engine and CUDA mappings, and six runners pushed the box's cgroup into OOM kills
+        list(ex.map(int, range(a.workers)))
+        del plan
+        models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
+                  for k in a.models}
+        n_frames = sum(len(it[1]) for it in items)
+        log.info(f"{len(items)} {a.mode} items, {n_frames} frames, models {list(models)}, {a.workers} render workers")
+        t0, tm, n, nf = time.time(), {k: 0.0 for k in models}, 0, 0
         for key, names, targets, frames in bounded_map(ex, job, items, 2 * a.workers):
             seq = names[0].rsplit("-", 1)[0]
             dev = np.array(op_calib[seq]["1"]["extrinsic"]).reshape(4, 4)[:2, 3]
