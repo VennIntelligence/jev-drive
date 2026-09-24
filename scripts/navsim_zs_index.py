@@ -70,11 +70,33 @@ def build(split: str) -> list:
     return out
 
 
+def human_future(split: str):
+    """Logged future (8 poses @2 Hz, current rear-axle frame) of every stage-one token, for ADE and figures only
+    (never an input): $DATA_DIR/runs/navsim_zs/index/<split>_future.npz."""
+    from navsim.common.dataloader import SceneLoader
+    import navsim
+    cfg_dir = Path(navsim.__file__).parent / "planning/script/config/common/train_test_split"
+    split_cfg = OmegaConf.load(cfg_dir / f"{split}.yaml")
+    sf = OmegaConf.load(cfg_dir / "scene_filter" / f"{split_cfg.defaults[0]['scene_filter']}.yaml")
+    sf.include_synthetic_scenes = False
+    base = Path(os.environ["OPENSCENE_DATA_ROOT"])
+    loader = SceneLoader(base / "navsim_logs" / split_cfg.data_split, base / "sensor_blobs" / split_cfg.data_split,
+                         instantiate(sf))
+    toks = loader.tokens_stage_one
+    fut = np.stack([loader.get_scene_from_token(t).get_future_trajectory(8).poses for t in toks]).astype(np.float32)
+    np.savez(root("index") / f"{split}_future.npz", tokens=np.array(toks), poses=fut)
+    print(f"{split}: future of {len(toks)} tokens")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("splits", nargs="+")
+    ap.add_argument("--future", action="store_true", help="dump the logged future instead of the inputs")
     a = ap.parse_args()
     for split in a.splits:
+        if a.future:
+            human_future(split)
+            continue
         idx = build(split)
         missing = sum(not Path(c["CAM_F0"]["path"]).exists() for e in idx for c in e["cams"])
         with open(root("index") / f"{split}.pkl", "wb") as f:
