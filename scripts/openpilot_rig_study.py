@@ -243,7 +243,7 @@ def cmd_eval(a):
     if rows_path.exists():
         done = {(r["seg"], r["variant"], r["model"]) for r in map(json.loads, rows_path.open())}
     fh = rows_path.open("a")
-    for sid in segments():
+    for sid in a.segs or segments():
         fdir = ROOT / "frames" / sid
         if not (fdir / "done.json").exists():
             log.info(f"{sid}: frames missing, skipped")
@@ -366,6 +366,7 @@ if __name__ == "__main__":
     p.add_argument("--threads", type=int, default=2)
     p = sp.add_parser("eval")
     p.add_argument("--models", nargs="+", default=["small", "cinque", "lebowski"])
+    p.add_argument("--segs", nargs="*", help="segment ids (default: selected.json + extra.json)")
     sp.add_parser("bias")
     p = sp.add_parser("sheet")
     p.add_argument("--seg", required=True)

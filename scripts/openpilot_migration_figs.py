@@ -71,8 +71,9 @@ GROUPS = [
 
 def pooled(rows, keys=("lat@2s", "lon@2s", "lat@4s", "lon@4s", "curv_mae", "curv_r")):
     """Frame-weighted mean over segments per (variant, model); per-segment values kept for a paired CI."""
+    last = {(r["seg"], r["variant"], r["model"]): r for r in rows}   # a rerun's row replaces the old one
     out = {}
-    for r in rows:
+    for r in last.values():
         out.setdefault((r["variant"], r["model"]), []).append(r)
     res = {}
     for k, rs in out.items():
@@ -89,7 +90,7 @@ def fig_rigs(a):
     ps.apply()
     rows = load_rows(a.rows)
     P = pooled(rows)
-    models = ["small", "cinque", "lebowski"]
+    models = [m for m in ("small", "cinque", "lebowski") if ("native", m) in P]
     colors = {"small": ps.PALETTE["sky_blue"], "cinque": ps.PALETTE["blue"], "lebowski": ps.PALETTE["vermillion"]}
     # results table: every variant, every model, pooled, plus paired delta vs native (same segments / frames)
     table = []
@@ -129,7 +130,17 @@ def fig_rigs(a):
             ax.axvline(P[("native", m)][key], color=colors[m], lw=0.5, ls="--", zorder=1)
         ax.set_xlabel(lab)
         ax.set_xscale("log")
+        from matplotlib.ticker import FixedLocator, NullFormatter, ScalarFormatter
+        ticks = [0.2, 0.3, 0.5, 1, 2] if key == "lat@2s" else [1, 2, 3, 5, 10, 20]
+        ax.xaxis.set_major_locator(FixedLocator(ticks))
+        ax.xaxis.set_major_formatter(ScalarFormatter())
+        ax.xaxis.set_minor_formatter(NullFormatter())
         ps.bars(ax)
+        k = 0                                   # thin separators between the factor groups
+        for _, vs in GROUPS:
+            k += sum(v in variants for v in vs)
+            if 0 < k < len(variants):
+                ax.axhline(len(variants) - k - 0.5, color="#999999", lw=0.4)
     axes[0].set_yticks(y)
     axes[0].set_yticklabels(variants, fontsize=6.5)
     axes[0].legend(loc="lower right", fontsize=6.5)
