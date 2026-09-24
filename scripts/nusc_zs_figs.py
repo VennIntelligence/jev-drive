@@ -179,9 +179,9 @@ def fig_results(a):
                         "Alpamayo 1.5 nav") if r in set(d.row)]
     col = {"cv": C["cv"], "cvv": C["cv"], "openpilot small": C["small"], "openpilot Cinque": C["cinque"],
            "openpilot Lebowski": C["lebowski"], "Alpamayo 1.5 nav": C["alp"], "Alpamayo 1.5 no-nav": S.PALETTE["sky_blue"]}
-    pub_l2 = {"UniAD": 0.66, "VAD-Base": 0.37, "VAD-Base (no ego in planner)": 0.72, "GoStraight": 0.83,
+    pub_l2 = {"UniAD": 0.66, "VAD-Base": 0.37, "VAD-Base, no ego": 0.72, "GoStraight": 0.83,
               "Ego-MLP": 0.35}   # BEV-Planner Table 1, unified implementation, n = 5119
-    pub_col = {"UniAD": 0.62, "VAD-Base": 0.33, "VAD-Base (no ego in planner)": 0.54, "GoStraight": 1.08,
+    pub_col = {"UniAD": 0.62, "VAD-Base": 0.33, "VAD-Base, no ego": 0.54, "GoStraight": 1.08,
                "Ego-MLP": 0.37}
     S.apply()
     names = rows[::-1] + list(pub_l2)[::-1]          # ours at the bottom, published rows above
