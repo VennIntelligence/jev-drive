@@ -46,11 +46,26 @@ def versions() -> dict:
             "flash_attn": fa, "cudnn": torch.backends.cudnn.version(), "driver_gpu": drv}
 
 
+def hub_offline(on: bool = True):
+    """Flip HF hub + transformers to offline at runtime (both cache the env flag at import). Needed because the
+    model builds its tokenizer/config from nvidia/Cosmos-Reason2-8B, whose gate is not accepted for our account:
+    online, transformers' probe for the absent processor_config.json gets a 403 and raises. Offline, it reads the
+    files we fetched from ModelScope (scripts/alpamayo_fetch.py backbone-config) and the .no_exist markers."""
+    import huggingface_hub.constants
+    import transformers.utils.hub
+    huggingface_hub.constants.HF_HUB_OFFLINE = on
+    transformers.utils.hub._is_offline_mode = on
+
+
 def load(attn: str = "flash_attention_2"):
     from alpamayo1_5 import helper
     from alpamayo1_5.models.alpamayo1_5 import Alpamayo1_5
-    model = Alpamayo1_5.from_pretrained(REPO, dtype=torch.bfloat16, attn_implementation=attn).to("cuda").eval()
-    return model, helper.get_processor(model.tokenizer)
+    hub_offline(True)
+    try:
+        model = Alpamayo1_5.from_pretrained(REPO, dtype=torch.bfloat16, attn_implementation=attn).to("cuda").eval()
+        return model, helper.get_processor(model.tokenizer)
+    finally:
+        hub_offline(False)
 
 
 def build_inputs(data: dict, processor, no_reasoning: bool = False, nav_text: str | None = None) -> dict:
