@@ -9,7 +9,7 @@ Two interfaces exist (see research/lit notes on openpilot models):
             ported from compile_modeld.py at openpilot 516ec1e6.
 Output decoding is ported from parse_model_outputs.py, drive_helpers.py and modeld.get_action_from_model.
 """
-import base64, ctypes, os, pickle
+import base64, ctypes, hashlib, os, pickle
 from pathlib import Path
 
 import numpy as np
@@ -58,6 +58,28 @@ def prepare_onnx(name: str) -> Path:
     return dst
 
 
+def tap_onnx(name: str, tensors: list[str]) -> Path:
+    """Copy of the loadable ONNX with existing intermediate tensors appended as extra graph outputs.
+
+    Nothing is recomputed or reordered: the listed values are already produced by the graph, this only exposes
+    them. Their shapes and dtypes come from ONNX shape inference, so the IO binding can preallocate them."""
+    src = prepare_onnx(name)
+    tag = "-".join(t.replace("/", "_") for t in tensors)
+    dst = MODELS_DIR / "taps" / f"{src.stem}.{hashlib.sha1(tag.encode()).hexdigest()[:8]}.onnx"
+    if dst.exists():
+        return dst
+    m = onnx.shape_inference.infer_shapes(onnx.load(str(src)))
+    vi = {v.name: v for v in m.graph.value_info}
+    missing = [t for t in tensors if t not in vi]
+    assert not missing, f"{name}: no inferred value for {missing}"
+    m.graph.output.extend(vi[t] for t in tensors)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_suffix(".tmp")
+    onnx.save(m, str(tmp))
+    os.replace(tmp, dst)
+    return dst
+
+
 def providers(backend: str, cache: Path):
     cuda = ("CUDAExecutionProvider", {"device_id": 0, "cudnn_conv_algo_search": "EXHAUSTIVE",
                                       "enable_cuda_graph": backend == "cuda-graph"})
@@ -79,10 +101,11 @@ class OPModel:
     output vector (float32); decode() turns it into plan / action."""
 
     def __init__(self, name: str, backend: str = "cuda-iob", cache: Path | None = None, threads: int = 0,
-                 context_rate: bool = False):
+                 context_rate: bool = False, taps: list[str] | None = None):
         """context_rate: one step() per 5 Hz context step instead of per 20 Hz modeld step (external-queue models
         only). A phase-t output depends only on frames t-4 and t, hidden states t-96..t-4 (stride 4) and desire
-        max-pooled over 4-step windows aligned to t, so stepping one phase alone reproduces modeld exactly there."""
+        max-pooled over 4-step windows aligned to t, so stepping one phase alone reproduces modeld exactly there.
+        taps: intermediate tensors (ONNX value names) to expose; after each step() they are in self.tap_values."""
         assert backend in BACKENDS, backend
         self.name, self.backend = name, backend
         so = ort.SessionOptions()
@@ -93,8 +116,11 @@ class OPModel:
         so.intra_op_num_threads = threads or (0 if backend == "cpu" else 1)
         if backend != "cpu":
             so.add_session_config_entry("session.intra_op.allow_spinning", "0")
-        self.sess = ort.InferenceSession(str(prepare_onnx(name)), so,
-                                         providers=providers(backend, cache or MODELS_DIR / "trt_cache" / f"{name}-{backend}"))
+        self.taps = list(taps or [])
+        path = tap_onnx(name, self.taps) if self.taps else prepare_onnx(name)
+        cache = cache or MODELS_DIR / "trt_cache" / (f"{name}-{backend}" + (f"-{path.stem.rsplit('.', 1)[-1]}" if self.taps else ""))
+        self.sess = ort.InferenceSession(str(path), so, providers=providers(backend, cache))
+        self.tap_values = {}
         meta = self.sess.get_modelmeta().custom_metadata_map
         self.slices = pickle.loads(base64.b64decode(meta["output_slices"]))
         self.inputs = {i.name: (tuple(i.shape), np.float16 if "float16" in i.type else
@@ -128,6 +154,8 @@ class OPModel:
         ov = lambda a: ort.OrtValue.ortvalue_from_numpy(a, "cuda", 0)  # noqa: E731
         self.dev_in = {n: ov(zeros[n]) for n in self.inputs if n not in self.state_names}
         self.dev_out = ov(np.zeros(self.sess.get_outputs()[0].shape, np.float32 if self.queued else np.float16))
+        tdt = {o.name: (o.shape, np.float16 if "float16" in o.type else np.float32) for o in self.sess.get_outputs()}
+        self.dev_tap = {t: ov(np.zeros(tdt[t][0], tdt[t][1])) for t in self.taps}
         # two state buffer sets; binding k reads set k and writes set 1-k, so steps alternate k = 0, 1
         self.sets = [{n: ov(zeros[n]) for n in self.state_names} for _ in range(2)]
         self.bindings = []
@@ -136,6 +164,8 @@ class OPModel:
             for n, v in self.dev_in.items():
                 io.bind_ortvalue_input(n, v)
             io.bind_ortvalue_output(self.sess.get_outputs()[0].name, self.dev_out)
+            for t, v in self.dev_tap.items():
+                io.bind_ortvalue_output(t, v)
             for n in self.state_names:
                 io.bind_ortvalue_input(n, self.sets[k][n])
                 io.bind_ortvalue_output("next_" + n, self.sets[1 - k][n])
@@ -174,10 +204,12 @@ class OPModel:
             io, ro = self.bindings[self.n % len(self.bindings)]
             self.sess.run_with_iobinding(io, ro)
             out = self.dev_out.numpy()[0].astype(np.float32)
+            self.tap_values = {t: v.numpy().reshape(-1).astype(np.float32) for t, v in self.dev_tap.items()}
         else:
             names = [o.name for o in self.sess.get_outputs()]
             res = dict(zip(names, self.sess.run(None, f | self.state)))
             out = res[names[0]][0].astype(np.float32)
+            self.tap_values = {t: res[t].reshape(-1).astype(np.float32) for t in self.taps}
             self.state = {n: res["next_" + n] for n in self.state_names}
         if not self.queued:
             self.prev_feat = out[self.slices["hidden_state"]]
