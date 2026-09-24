@@ -1,6 +1,6 @@
 # Zero-shot 考试：Alpamayo 1.5 与 openpilot 在 NAVSIM 上的 PDMS / EPDMS
 
-状态: running（预登记已写死，结果待填）
+状态: done（navtest 全部完成；navhard 的 openpilot cmd / Cinque 行在最后补齐，见结果表）
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 姊妹考试: [wod-e2e.md](wod-e2e.md)、[bench2drive.md](bench2drive.md)（同样两个模型，另外两个 agent）
 
@@ -147,12 +147,189 @@ openpilot 没有 route、只看前视、context 被砍掉 70%，预期在路口 
 
 ## GPU 协调与吞吐
 
-三场考试共用一张 96 GB RTX PRO 6000 和 25 核，协调记录在 box 的 `~/data/runs/zeroshot-exam/gpu-plan.md`。
-（优化前后吞吐、batch 选择与最终排期在这里补。）
+三场考试共用 box，协调记录在 box 的 `~/data/runs/zeroshot-exam/gpu-plan.md`（append-only）。19:45 用户重启 box 加了第二张卡
+（之后 2 × RTX PRO 6000、50 核），NAVSIM 分到 GPU 0；22:00 前后 Bench2Drive 暂停，GPU 1 也给了开环考试。
+
+**优化**：Alpamayo 的 `sample_trajectories_from_data_with_vlm_rollout` 本身支持 batch 维，只要同一 batch 的 prompt 等长。
+我们的 wrapper 按 nav 文本分桶（同一个 nav 文本、相同的 16 张 576×320 图 → token 数完全相同），不改模型代码就能做 batch 推理。
+CPU 侧（JPEG DCT 缩放解码 + 重投影 + processor tokenize）放在 8 个线程里预取，和 GPU 重叠。
+
+| 配置（64 个 navtest token，同一时刻卡上还有 WOD 的 Alpamayo 和 3 个 openpilot 进程） | ms / 样本 | 峰值显存 |
+|---|---:|---:|
+| smoke run 参照：空卡、FA2、batch 1 | 983 | 22.1 GB |
+| SDPA + compile vision/expert，batch 1 | 2121 / 2140（两个 seed） | 24.5 GB |
+| 同上，**batch 8** | **1248 / 1439** | 35–37 GB |
+| 同上，batch 12 | 1252 | 41.8 GB |
+
+batch 8 比 batch 1 快 1.5–1.7 倍，再大不再变快，所以取 8。等价性：采样本身是随机的，只能在分布上比——同 64 个 token，
+batch 1 两个 seed 之间的 4 s ADE 中位数 0.94 m（噪声地板），batch 1 与 batch 8 之间 1.00–1.16 m，4 s 纵向终点均值差 0.7 m，
+在噪声范围内。CPU 预处理 258 ms/样本（8 线程），完全被 GPU 时间盖住。全量运行时每个进程约 1.4 s/样本（GPU 0，与 openpilot
+和 OP-MIGRATION 共卡）或 0.9 s/样本（GPU 1），2–4 个进程并行，用 32-token chunk 动态认领任务（`--claim`）让各进程同时结束。
+
+**实际墙钟**：Alpamayo 全部推理（navtest nav 12146 + no-nav 3000 + navhard 5912 = 21058 个样本）18:40–22:42，其中约 20 分钟
+因为 box 重启重跑；openpilot 三个模型 × 两个变体 × 两个 split 共 12 次运行，被 Alpamayo 挤在同一张卡上时每 token 0.3–0.5 s，
+Alpamayo 结束后 0.15 s；官方打分（metric cache 3 份 + 30 次 scoring）全部在 CPU 上，每次 navtest 打分 10–15 分钟（12–16 线程）。
 
 ## 结果
 
-（跑完再填。）
+原始 run 都在 box 的 `$DATA_DIR/runs/navsim/eval/<v>_<split>_<agent>/`；小结果文件拉回到
+[research/results/navsim-zeroshot/](../../research/results/navsim-zeroshot/)（`results_navtest.csv`、`results_navhard.csv`、
+`paired_navtest.csv`、`failures_navtest.csv`、`ade_navtest.csv`、`results.md`，以及 ablation 与 batch bench 的 csv）。
+由 `scripts/navsim_zs_report.py` / `scripts/navsim_zs_figs.py` 生成。
+
+### devkit 与回放管线的端到端检查（先于任何模型分数）
+
+第一次跑出来的 constant velocity EPDMS 是 64（DAC 1.00、EP 1.00）——明显不对。查下来是 navsim 锁定的 numpy 1.23.4 自带的
+OpenBLAS 在这台 box 的 Sapphire Rapids CPU 上选错 kernel，`inv`/`pinv` 静默给出错误结果（误差 ~1e3），PDM 的 LQR 仿真器炸到
+10^4 m/s，metric cache 里的 PDM-Closed 参考轨迹也是错的。设 `OPENBLAS_CORETYPE=Haswell` 后修复，caches 全部重建
+（`scripts/navsim_zs_score.sh` 里强制设置并在启动时自检；已写进 [docs/navsim.md](../../docs/navsim.md)）。修复后：
+
+| agent | 路径 | PDMS（v1.1） | EPDMS（v2） | 已知值 |
+|---|---|---:|---:|---|
+| constant velocity | devkit 自带 agent | **20.65** | 25.88 | PDMS 20.6（NAVSIM v1 论文；NC 68.0、DAC 57.8、EP 19.4 也逐项对上） |
+| constant velocity | 我们算出 8 个位姿 → 回放 agent | — | 25.88 | 与上一行逐位一致 |
+| human（log） | devkit 自带 agent | **94.55** | 94.51 | PDMS 94.8；EPDMS 文献常引 90.3 |
+| human（log） | logged future → 回放 agent | — | 94.51 | 与上一行一致（差 < 1e-10） |
+
+读法：v1 两个参照都对上了；回放 agent（`jevdrive/navsim_agent.py`）和坐标约定（后轴系、x 前 y 左、yaw 逆时针）没有引入任何偏差。
+human 的 EPDMS 94.5 高于文献的 90.3，是 devkit 版本差异（我们用的 main 含 2025-09 的 human-filter 修复），所以 EPDMS 之间的横向比较
+只对同一 devkit 版本成立，文献 EPDMS 数字仅作量级参照。
+
+### 适配器验证
+
+![inputs](../../research/figs/navsim-zs-inputs.png)
+
+图 1：navtest 索引里第一个 token（不是挑的）。第一行是 nuPlan 原始的 L0 / F0 / R0；第二、三行是模型真正看到的输入：
+Alpamayo 的 cross-left / front-wide / cross-right（f-theta 120°，由 nuPlan 的 F0/L0/R0/L1/R1 拼出，上下黑带是 nuPlan 垂直视场不够的部分）、
+front-tele（F0 中心放大），以及 openpilot 的 road / wide model frame（Y 通道）。几何连续（路缘、车道线在拼缝处对齐）、地平线水平、左右没有镜像。
+
+![bev](../../research/figs/navsim-zs-bev.png)
+
+图 2：seed 0 随机抽的 8 个 navtest token，NAVSIM 后轴系俯视（上 = 前，左 = +y），箭头是 4 s 处的 heading。黑虚线 log、蓝 Alpamayo（nav）、
+橙 Lebowski、灰 constant velocity、浅灰历史。看左转的两格：两个模型的弯向、曲率和 log 一致，heading 箭头沿轨迹切线；openpilot 在直行格里明显跑得更远。
+
+定量的坐标 / heading 检查（全部 12146 个 token）：
+
+| 预测 | 4 s ADE（m） | 4 s y 与 log 的相关 | 4 s yaw 与 log 的相关 | 输出 yaw 与相邻位姿运动方向之差（中位 / p95，rad） | 4 s 纵向 / log 中位比 |
+|---|---:|---:|---:|---:|---:|
+| Alpamayo nav | 3.07 | 0.66 | 0.63 | 0.004 / 0.084 | 1.18 |
+| Lebowski none | 9.29 | 0.86 | 0.83 | 0.015 / 0.198 | 1.53 |
+| constant velocity | 2.80 | — | — | 0 / 0 | 1.07 |
+
+左 / 右 command 下 4 s 横向位移的均值：Alpamayo +5.7 / −3.3 m、Lebowski +11.8 / −10.2 m、log +6.6 / −5.3 m——符号全对，所以不存在左右或 heading 约定错误。
+openpilot 的横向、纵向都被放大约 1.5 倍，和预登记里的两个偏差方向一致（见下面的折中清单）。
+
+### navtest 主表
+
+n = 12146（no-nav 为 3000 个 token 的分层子集，见偏离 1），括号是对 token 的 bootstrap 95% CI。
+
+| 模型 | 变体 | PDMS（v1.1） | EPDMS（v2） | NC | DAC | DDC | TLC | EP | TTC | LK | HC | EC |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| human（log） | | 94.6 | 94.5 | 100 | 100 | 99.8 | 100 | 87.4 | 100 | 100 | 98.1 | 90.1 |
+| constant velocity | | 20.7 | 25.9 | 68.1 | 57.8 | 84.2 | 98.1 | 77.8 | 66.9 | 82.7 | 97.9 | 55.3 |
+| **Alpamayo 1.5** | **nav** | **44.3** [43.5, 45.0] | **43.2** [42.4, 43.9] | 76.8 | 70.7 | 86.3 | 98.3 | 84.8 | 73.2 | 85.4 | 91.0 | 32.7 |
+| Alpamayo 1.5 | no-nav（3000 子集） | 41.9 | 41.6 | 81.4 | 63.9 | 82.2 | 98.4 | 81.6 | 76.7 | 83.5 | 88.5 | 29.7 |
+| **openpilot Lebowski** | **none** | **50.9** [50.2, 51.6] | **45.5** [44.7, 46.2] | 78.6 | 79.1 | 87.2 | 97.4 | 85.5 | 77.6 | 87.6 | 52.4 | 12.3 |
+| openpilot Lebowski | cmd | 49.4 | 44.3 | 78.2 | 76.9 | 86.1 | 97.4 | 85.0 | 77.2 | 86.8 | 54.0 | 12.4 |
+| **openpilot Cinque v3** | **none** | **52.1** [51.3, 52.9] | **46.2** [45.4, 46.9] | 78.4 | 75.7 | 85.1 | 96.9 | 95.2 | 75.2 | 89.6 | 52.5 | 10.0 |
+| openpilot Cinque v3 | cmd | 50.7 | 45.2 | 78.0 | 74.1 | 84.1 | 97.0 | 95.1 | 74.6 | 88.4 | 52.3 | 10.0 |
+| **openpilot small** | **none** | **47.4** [46.6, 48.2] | **42.5** [41.8, 43.3] | 71.0 | 79.5 | 89.0 | 95.6 | 95.0 | 68.3 | 91.2 | 45.3 | 12.1 |
+| openpilot small | cmd | 42.3 | 39.1 | 69.7 | 72.8 | 84.3 | 95.9 | 93.1 | 67.0 | 88.1 | 55.6 | 13.5 |
+| *文献（在 navtrain 上训练）* TransFuser | | 84.0 | 76.7 | | | | | | | | | |
+| *文献* DiffusionDrive | | 88.1 | 84.5 | | | | | | | | | |
+| *文献* VLM：AutoVLA / ReCogDrive / DriveVLA-W0 | | 89.1 / 90.8 / 90.2 | — / 83.6 / 86.1 | | | | | | | | | |
+
+sub-score 列是 EPDMS（v2）口径的均值（%）；PDMS 的 EP 定义不同（v1 相对 PDM-Closed 的比例，Alpamayo 42.6、Lebowski 49.7），不和 v2 的 EP 混排。
+文献数字取自 [research/openpilot-and-open-driving-models.md](../../research/openpilot-and-open-driving-models.md) 的表（TransFuser 的 PDMS 84.0 取自 NAVSIM v1 论文），
+不是我们重跑的，EPDMS 的 devkit 版本也可能不同。我们自己在 NAVSIM 上还没有 planner 的数字（research/decisions.md 里没有可比条目）。
+
+![subscores](../../research/figs/navsim-zs-subscores.png)
+
+图 3：navtest EPDMS 的各 sub-score 均值。两类模型的扣分结构不同：Alpamayo 主要丢在 NC / DAC / TTC（撞车、出界），comfort 类还行；
+openpilot 的 NC / DAC 略好，但 HC（与历史运动衔接）只有 45–52%、EC 只有 10–12%，是 sample-and-hold 输入下规划本身在抖。
+
+**读法**：按预登记的判读表，两个模型都落在「EPDMS < 50：适配损失主导或模型不会开车」一格。它们都明显好于 constant velocity
+（Alpamayo +17.3 EPDMS [16.5, 18.0]、+23.6 PDMS），但离在 navtrain 上训练的 TransFuser（76.7 / 84.0）差 30–40 分。
+三个 openpilot 模型（没有 route、只用前视）和 10B 的 Alpamayo 基本同分，Lebowski 甚至高 2.3 EPDMS [1.4, 3.2]、6.6 PDMS。
+
+### nav 文本与 turn desire 有没有用（配对）
+
+| 比较 | 口径 | 全部 | 左转 command | 直行 | 右转 command |
+|---|---|---:|---:|---:|---:|
+| Alpamayo nav − no-nav（3000 子集，每类 1000） | EPDMS | **−2.0** [−3.5, −0.6] | −3.8 [−6.3, −1.2] | −2.3 [−5.2, 0.8] | 0.0 [−2.2, 2.4] |
+| 同上 | PDMS | −0.5 [−2.1, 1.1] | −2.8 [−5.5, −0.1] | +1.2 [−1.5, 4.1] | +0.1 [−2.5, 2.8] |
+| Lebowski cmd − none（12146） | EPDMS | −1.2 [−1.5, −0.9] | −2.6 [−3.8, −1.4] | −0.5 | −2.7 [−4.2, −1.2] |
+| Cinque cmd − none | EPDMS | −1.0 [−1.4, −0.6] | −1.1 [−2.3, 0.1] | −1.2 | +0.1 |
+| small cmd − none | EPDMS | −3.4 [−3.9, −2.9] | −8.5 [−10.1, −7.0] | −2.3 | −1.1 |
+
+![command](../../research/figs/navsim-zs-command.png)
+
+图 4：按 driving command 分组的 EPDMS。(a) Alpamayo 在同一批 3000 个 token 上给 / 不给 nav 文本；(b) Lebowski 不给 / 给 turn desire。
+预登记的「nav 在转弯子集上显著为正」没有出现：给了 "Turn left" 反而在左转 command 上低 3.8 分。openpilot 的 turn desire
+同样一致地拖分——它在 openpilot 里本来是低速转弯 / 变道的触发信号，不是路口导航。
+
+### navhard two-stage（EPDMS）
+
+| 模型 | 变体 | stage 1 | stage 2 | EPDMS |
+|---|---|---:|---:|---:|
+| constant velocity | | 29.0 | 34.2 | **11.5** |
+| Alpamayo 1.5 | nav | 34.1 | 32.6 | 10.8 |
+| openpilot Lebowski | none | 31.8 | 30.2 | 10.2 |
+| openpilot small | none | 28.7 | 31.5 | 10.2 |
+| *文献* TransFuser / DiffusionDrive / VLM（SGDrive、ReCogDrive） | | | | 23.1 / 27.5 / 25.5、25.7 |
+
+n = 5912（450 个真实 stage-one 场景 + 5462 个 3DGS 合成的 stage-two 场景）。human agent 在 navhard 上无法打分（合成场景没有未来帧，
+devkit 的 pseudo closed-loop 聚合直接报错），所以这里没有 human 行。Lebowski cmd、Cinque 两行和 small cmd 的打分在报告写完时还在跑，
+数字会补进 `results_navhard.csv`。读法：navhard 上 zero-shot 的两个模型都**不比 constant velocity 好**，stage 2（合成的、偏离后的状态）
+对它们并不比 stage 1 更难，差距主要在 stage 1 就已经存在。
+
+### 失败模式
+
+| 预测（EPDMS） | NC 失败 | DAC 失败 | DDC 失败 | TTC 失败 | EC 失败 | NC 失败中 4 s 超出 log > 2 m 的比例（全体基线） | DAC 失败中转弯 command 的比例（全体基线） | DAC 失败的 4 s 横向误差中位（全体） |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Alpamayo nav | 24.9% | 29.4% | 17.2% | 26.8% | 55.6% | 84% (57%) | 50% (34%) | 3.2 m (0.9) |
+| Lebowski none | 22.5% | 20.9% | 15.1% | 22.4% | 72.5% | 83% (69%) | 51% (34%) | 7.6 m (1.6) |
+| Cinque none | 23.4% | 24.3% | 17.2% | 24.8% | 74.4% | 85% (78%) | 62% (34%) | 6.9 m (1.3) |
+| small none | 30.0% | 20.5% | 13.2% | 31.7% | 72.7% | 96% (86%) | 58% (34%) | 5.6 m (1.5) |
+| constant velocity | 34.6% | 42.2% | 21.5% | 33.1% | 36.9% | 69% (48%) | 49% (34%) | 3.1 m (1.0) |
+
+![failures](../../research/figs/navsim-zs-failures.png)
+
+图 5：Alpamayo（nav）的三类失败，每类取 token 排序后的前两个（不挑）：front-wide 模型输入 + 俯视（黑虚线 log、蓝预测、灰历史）。
+前两行是同一个路口左转，模型转得晚、半径大、速度快：既撞上路口的车，又出了可行驶区域；第三行是低速 / 停车的车在 log 里起步，
+模型却几乎不动。
+
+三个可以直接从数字读出的机制（前两条是结论，第三条是推测）：
+
+1. **开太快、太远，撞前车**。Alpamayo 的 4 s 纵向终点中位是 log 的 1.18 倍，NC 失败里 84% 伴随 > 2 m 的超出（全体里 57%）。
+   `repeat` 输入里 4 帧完全相同，场景看起来是静止的，模型看不到前车在减速或自己在接近，只能从 egomotion 外推；
+   PhysicalAI-AV 上时间轴这一项单独就让 4 s ADE 翻倍（0.73 → 1.42 m），和这里的症状一致。openpilot 超得更多（1.5–1.9 倍），
+   因为 sample-and-hold 让它最后一步看到的是 0.5 s 的位移却按 0.2 s 理解，速度被放大约 2.5 倍，再加上相机更高带来的尺度偏差。
+2. **转弯出界**。DAC 失败里一半是转弯 command（全体只有 1/3），失败样本的横向误差中位 3.2 m（Alpamayo）/ 7.6 m（Lebowski）。
+   Alpamayo 的转弯方向是对的，但半径和时机不对；openpilot 横向也被放大。nav 文本没有帮助（上一节）。
+3. **舒适度（openpilot）**：HC 45–52%、EC 10–12%，即计划与自车历史不衔接、相邻两帧计划不一致。推测是 1.5 s、每 0.5 s 才跳一次的
+   输入让 feature 队列处于从未见过的状态；验证办法是在 comma1M 上把 20 Hz 视频人为降成 2 Hz sample-and-hold，看 plan 的抖动是否同样出现。
+
+### 适配折中清单与偏差方向
+
+| # | 折中 | 影响的模型 | 预期偏差方向 | 证据 |
+|---|---|---|---|---|
+| 1 | 只有 2 Hz、1.5 s 历史；Alpamayo 4 个槽都放 t0 帧（静止场景） | Alpamayo | 看不到相对运动 → 跟车距离、起步判断差，NC / TTC 下降；**压低分数** | PhysicalAI-AV：4 s ADE 0.73 → 1.42 m；NC 失败 84% 伴随超出 |
+| 2 | 同上，openpilot 用 sample-and-hold 在 20 Hz 时钟上喂 2 Hz 帧、零状态、context 只有 1.5 s | openpilot | 速度被高估约 2.5 倍、plan 抖动 → 超出、EC/HC 很低；**压低分数** | 纵向中位 1.5–1.9 倍 log；EC 10–12% |
+| 3 | 纯旋转重投影，忽略相机间平移（视差） | 两者 | 近处物体位置偏；Alpamayo 的 cross 相机（0.9 m 高）差得最多；**压低** | PhysicalAI-AV 往返：+0.22 m ADE |
+| 4 | nuPlan 垂直视场 ±21° < Alpamayo ±34°，三路 120° 图上下约 36% 填黑 | Alpamayo | 丢掉近处路面和引擎盖区域；**压低** | 同上（往返包含黑边） |
+| 5 | 相机高度 1.5 m（comma 1.22 m），不做尺度修正 | openpilot | 距离估计偏大 → 纵向、横向都放大；**压低** | 横向 4 s 位移是 log 的约 1.8 倍 |
+| 6 | nav 文本没有距离（"Turn left"），训练时是 "Turn left in 11m" | Alpamayo | 模板分布外；实测 nav 比 no-nav 低 2 EPDMS，**压低 nav 行** | 配对表 |
+| 7 | openpilot 没有 route，turn desire 当导航用 | openpilot | desire 本意是低速转弯 / 变道；实测拖分 | 配对表 |
+| 8 | egomotion 从 4 个 2 Hz 位姿 Hermite 插值成 16 步 @10 Hz，z = 0、roll = pitch = 0 | Alpamayo | 几乎无影响 | PhysicalAI-AV：+0.004 m |
+| 9 | Alpamayo rig 取 PhysicalAI-AV 标定中位数（三场考试共用），不是某台车的精确标定 | Alpamayo | 亚度级，可忽略 | 标定标准差 < 1.2° |
+| 10 | n = 1、固定 seed、batch 8（与 batch 1 在噪声内一致） | Alpamayo | 无系统偏差；单样本方差比 minADE_6 大 | batch bench |
+| 11 | openpilot small 用 TensorRT 图精度、另两个用 fp16 | openpilot | 无（smoke 已验证数值等价） | openpilot smoke |
+
+所有已知折中的方向都是**让模型吃亏**；没有发现任何一项会抬高分数。所以这里的数字是「模型 + 适配损失」的下限式读数，
+不能读成两个模型能力的上限，也不能和在 navtrain 上训练的方法直接比能力。能说的是：**在 NAVSIM 标准输入（2 Hz、1.5 s）下，
+两个大型驾驶专用模型不经训练，只比 constant velocity 好 15–20 分，离 navtrain 上训练的 60M 级 specialist 还差 30–40 分；
+其中至少时间轴一项就足以让轨迹误差翻倍**。
 
 ## 偏离记录
 
@@ -162,4 +339,11 @@ openpilot 没有 route、只看前视、context 被砍掉 70%，预期在路口 
    改为：按 driving command 分层，左 / 直 / 右各用 seed 0 抽 1000 个（`jevdrive.navsim_zs.nonav_subset`，共 3000），
    no-nav 只跑这 3000 个；nav 与 no-nav 的比较全部在这 3000 个 token 上**配对**进行，主表的 nav 分数仍是全量 12146。
    左 / 右转 command 在子集里占 2/3（全量里只占 1/3），所以子集上的平均分不能直接和全量比，只用来做配对差。
+2. **（运行中）box 重启。** 19:45 用户重启 box 加卡，正在跑的任务全部被杀。Alpamayo 的输出是逐行 JSON，已写的 5336 个样本保留、
+   从断点续跑；metric cache 和 openpilot small / Cinque 的 navtest 运行从头重跑。对结果没有影响。
+3. **（运行中）分片 bug，已修复并补跑。** 为了让新加的 GPU 1 进程分摊任务，改成按 chunk 动态认领；第一版按每个进程自己的
+   待办列表切 chunk，不同时间启动的进程对 chunk 编号理解不同，漏掉了 600 个 no-nav 和 1000 个 navhard 样本（`collect_alpamayo`
+   的完整性断言抓到的）。修正为按完整索引切 chunk 后补跑。补跑的样本用的是同一套配置和 seed 规则，对结果没有系统影响。
+4. **no-nav 的打分只在 3000 个 token 上进行**（devkit 的 scene filter 限定 token），与偏离 1 一致。
+5. **navhard 没有 human 行**：devkit 的 human agent 在合成场景上没有未来帧，聚合报错；不影响模型行。
 

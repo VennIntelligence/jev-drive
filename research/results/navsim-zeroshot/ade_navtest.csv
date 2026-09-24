@@ -1,0 +1,11 @@
+pred,n,ADE4,FDE4,median_ADE4,progress_ratio
+alpamayo_nav_repeat_main,12146,3.066,7.204,2.522,1.182
+alpamayo_nonav_repeat_main,3000,3.005,7.076,2.454,1.146
+cvreplay,12146,2.797,6.752,2.611,1.071
+logreplay,12146,0.000,0.000,0.000,1.000
+cinque_cmd,12146,8.360,14.735,6.213,1.582
+cinque_none,12146,8.380,14.909,6.116,1.595
+lebowski_cmd,12146,9.136,15.728,7.202,1.474
+lebowski_none,12146,9.294,16.020,7.499,1.531
+small_cmd,12146,9.572,16.603,6.455,1.705
+small_none,12146,10.454,18.354,8.213,1.864

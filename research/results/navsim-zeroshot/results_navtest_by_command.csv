@@ -1,0 +1,61 @@
+metric,model,variant,command,n,score,EP,DAC,NC
+PDMS,human (log),,left,2501,94.39,86.64,100.00,100.00
+PDMS,human (log),,right,1575,93.00,83.27,100.00,100.00
+PDMS,human (log),,straight,8070,94.90,87.78,100.00,100.00
+PDMS,constant velocity,,left,2501,18.68,11.37,35.67,78.57
+PDMS,constant velocity,,right,1575,21.86,12.65,43.43,77.05
+PDMS,constant velocity,,straight,8070,21.03,23.26,67.52,62.99
+PDMS,Alpamayo 1.5,nav,left,2501,39.72,35.76,54.26,86.51
+PDMS,Alpamayo 1.5,nav,right,1575,40.84,35.31,59.11,84.51
+PDMS,Alpamayo 1.5,nav,straight,8070,46.37,46.08,77.98,72.26
+PDMS,Alpamayo 1.5,no-nav,left,1000,40.22,37.03,55.10,87.40
+PDMS,Alpamayo 1.5,no-nav,right,1000,41.94,35.25,59.60,85.15
+PDMS,Alpamayo 1.5,no-nav,straight,1000,43.47,43.93,77.10,71.50
+PDMS,openpilot Lebowski,none,left,2501,47.45,44.77,65.13,84.39
+PDMS,openpilot Lebowski,none,right,1575,53.95,49.91,73.33,86.70
+PDMS,openpilot Lebowski,none,straight,8070,51.37,51.12,84.57,75.13
+PDMS,openpilot Lebowski,cmd,left,2501,44.13,39.56,60.46,83.33
+PDMS,openpilot Lebowski,cmd,right,1575,50.08,44.99,67.37,85.78
+PDMS,openpilot Lebowski,cmd,straight,8070,50.84,50.41,83.84,75.01
+PDMS,openpilot Cinque v3,none,left,2501,38.08,39.46,51.46,79.47
+PDMS,openpilot Cinque v3,none,right,1575,48.57,48.28,60.76,84.10
+PDMS,openpilot Cinque v3,none,straight,8070,57.09,62.15,86.18,76.91
+PDMS,openpilot Cinque v3,cmd,left,2501,35.85,37.22,49.46,78.47
+PDMS,openpilot Cinque v3,cmd,right,1575,47.78,47.91,59.62,85.02
+PDMS,openpilot Cinque v3,cmd,straight,8070,55.80,60.70,84.60,76.39
+PDMS,openpilot small,none,left,2501,46.14,46.72,63.97,83.05
+PDMS,openpilot small,none,right,1575,48.51,47.05,66.16,81.05
+PDMS,openpilot small,none,straight,8070,47.49,53.30,86.90,65.23
+PDMS,openpilot small,cmd,left,2501,32.46,30.82,47.10,76.85
+PDMS,openpilot small,cmd,right,1575,43.76,39.29,57.59,84.19
+PDMS,openpilot small,cmd,straight,8070,45.13,50.27,83.73,64.58
+EPDMS,human (log),,left,2501,92.10,87.29,100.00,100.00
+EPDMS,human (log),,right,1575,91.88,83.67,100.00,100.00
+EPDMS,human (log),,straight,8070,95.77,88.20,100.00,100.00
+EPDMS,constant velocity,,left,2501,20.51,68.85,35.67,78.63
+EPDMS,constant velocity,,right,1575,23.08,65.13,43.43,77.08
+EPDMS,constant velocity,,straight,8070,28.09,82.97,67.52,63.03
+EPDMS,Alpamayo 1.5,nav,left,2501,37.39,81.97,54.26,86.55
+EPDMS,Alpamayo 1.5,nav,right,1575,37.70,75.04,59.11,84.48
+EPDMS,Alpamayo 1.5,nav,straight,8070,46.03,87.65,77.98,72.29
+EPDMS,Alpamayo 1.5,no-nav,left,1000,39.37,82.34,55.10,87.55
+EPDMS,Alpamayo 1.5,no-nav,right,1000,38.81,74.59,59.60,85.15
+EPDMS,Alpamayo 1.5,no-nav,straight,1000,46.54,87.96,77.10,71.45
+EPDMS,openpilot Lebowski,none,left,2501,39.48,84.84,65.13,84.55
+EPDMS,openpilot Lebowski,none,right,1575,44.87,82.35,73.33,86.79
+EPDMS,openpilot Lebowski,none,straight,8070,47.45,86.28,84.57,75.22
+EPDMS,openpilot Lebowski,cmd,left,2501,36.91,83.11,60.46,83.43
+EPDMS,openpilot Lebowski,cmd,right,1575,42.16,82.48,67.37,85.84
+EPDMS,openpilot Lebowski,cmd,straight,8070,46.97,86.02,83.84,75.11
+EPDMS,openpilot Cinque v3,none,left,2501,29.61,94.62,51.46,79.65
+EPDMS,openpilot Cinque v3,none,right,1575,39.58,91.97,60.76,84.25
+EPDMS,openpilot Cinque v3,none,straight,8070,52.57,96.07,86.18,76.93
+EPDMS,openpilot Cinque v3,cmd,left,2501,28.48,94.65,49.46,78.65
+EPDMS,openpilot Cinque v3,cmd,right,1575,39.67,91.93,59.62,85.14
+EPDMS,openpilot Cinque v3,cmd,straight,8070,51.41,95.81,84.60,76.41
+EPDMS,openpilot small,none,left,2501,37.50,90.93,63.97,83.19
+EPDMS,openpilot small,none,right,1575,41.59,87.54,66.16,81.11
+EPDMS,openpilot small,none,straight,8070,44.26,97.69,86.90,65.24
+EPDMS,openpilot small,cmd,left,2501,28.97,87.29,47.10,76.99
+EPDMS,openpilot small,cmd,right,1575,40.48,84.30,57.59,84.22
+EPDMS,openpilot small,cmd,straight,8070,42.01,96.58,83.73,64.58

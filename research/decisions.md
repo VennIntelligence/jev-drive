@@ -2715,3 +2715,39 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 地面平面仿真里抬高相机会让模型低估车速（1.81 m 纵向 +410%），但 WOD 真实 1.81 m 相机上纵向几乎无偏，虚拟降到 1.22 m 反而 RFS −0.45。
 含义：NAVSIM 考试的 openpilot 行按 2 Hz 输入跑，分数基本不代表模型，要回到 nuPlan 原始 10 Hz 相机；换 rig 时优先保证标定和帧时序，
 不做虚拟降高。怎么定下来：CARLA 复跑里的 `shadow` / `shadow-h*` 阶段在渲染 3D 场景上复测；再加 4–8 段 comma1M 给 small / Lebowski。
+
+
+## 37. Zero-shot 开环：在 NAVSIM 的 2 Hz 输入下，Alpamayo 1.5 与 openpilot 都只比 constant velocity 高 15–20 分，离 navtrain 上训的 specialist 差 30–40 分（**待定**）
+
+2026-09-25。预登记（看任何分数之前提交）、适配验证、全部表格和图在 [todos/2026-09-24-zeroshot-exam/navsim.md](../todos/2026-09-24-zeroshot-exam/navsim.md)，这里只记结论。
+两个模型不训练、不拟合参数；打分用官方 navsim devkit（v1.1 出 PDMS，main @ 0a380a9 出 EPDMS），原样运行，我们只加了一个按 token 回放离线轨迹的 agent。
+
+**结果**（navtest 全量 n = 12146，n = 1 条轨迹、无 oracle）：
+
+| | PDMS | EPDMS | navhard EPDMS |
+|---|---:|---:|---:|
+| human（log，devkit） | 94.6 | 94.5 | — |
+| Alpamayo 1.5（nav） | 44.3 | 43.2 | 10.8 |
+| openpilot Lebowski / Cinque v3 / small | 50.9 / 52.1 / 47.4 | 45.5 / 46.2 / 42.5 | 10.2 / 待补 / 10.2 |
+| constant velocity（devkit） | 20.7 | 25.9 | 11.5 |
+| 文献：TransFuser / DiffusionDrive（navtrain 训练） | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 |
+
+1. **两个模型都会开，但远没到 specialist 的水平**：比 constant velocity 高 17–20 EPDMS（CI 宽约 ±1），navhard 上则不比 constant velocity 好。
+   10B 的 Alpamayo 和 30M–877M、没有 route、只看前视的 openpilot 基本同分。
+2. **nav 文本没用**：同一批 3000 个 token 上 Alpamayo nav − no-nav = −2.0 EPDMS [−3.5, −0.6]，左转 command 上 −3.8；
+   openpilot 的 turn desire 也一致拖分（−1.0 到 −3.4）。
+3. **失败集中在撞前车（NC 失败 25%，其中 84% 伴随 4 s 终点超出 log > 2 m）和转弯出界（DAC 失败 29%，一半是转弯 command）**；
+   openpilot 另有计划抖动（EC 10–12%）。
+4. **这是下限式读数**：所有已知适配折中都让模型吃亏，最大的一项是 NAVSIM 只给 1.5 s、2 Hz 的历史——在 PhysicalAI-AV 原生数据上，
+   只把时间轴换成 NAVSIM 式就让 Alpamayo 的 4 s ADE 从 0.73 m 翻倍到 1.42 m；Alpamayo 看到 4 张相同的帧，openpilot 看到被放大约 2.5 倍的速度。
+   坐标、heading、回放管线都做了端到端验证（log 与 CV 经回放 agent 逐位复现 devkit 分数，v1 的 CV 20.65 / human 94.55 对上论文的 20.6 / 94.8）。
+
+附带发现（已确认，写进 [docs/navsim.md](../docs/navsim.md)）：navsim 锁定的 numpy 1.23.4 的 OpenBLAS 在本机 Sapphire Rapids 上静默算错矩阵逆，
+不设 `OPENBLAS_CORETYPE=Haswell` 时所有 NAVSIM 分数都是看似合理的垃圾（constant velocity 得 EPDMS 64）。
+
+**和其他两场考试放在一起读**：WOD-E2E（第 34 条，10 Hz 帧齐全）上同样两个模型都超过 ego-only 和我们的 head；NAVSIM 上它们只比 CV 好一截。
+差别最可能来自时间轴（推测）：WOD 给模型原生帧率，NAVSIM 不给。验证办法是在 nuPlan 原始 10 Hz 传感器数据上重做 navtest 的一个子集
+（OpenScene 不含，需要另下 nuPlan sensor blobs），或反过来在 WOD 上把输入降到 2 Hz 看分数掉多少。
+
+**状态**：**待定**。单次、单 seed；EPDMS 的 devkit 版本与文献不同（我们的 human 94.5，文献常引 90.3），文献行只作量级参照；navhard 的 openpilot 部分行还在补。
+
