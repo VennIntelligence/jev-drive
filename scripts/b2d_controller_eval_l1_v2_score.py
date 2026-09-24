@@ -68,7 +68,7 @@ def main():
             raise ValueError(f'{kind}: expected 480 cases, got {len(batch)}')
         rows += batch
     interface = []
-    for mode in ('short_2s', 'sparse_5s', 'stop_jitter'):
+    for mode in ('short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz'):
         root = a.v2 / f'l1-interface-{mode}'
         if root.exists():
             interface += score_batch(root, 'profile', refs, cruises, label=f'profile/{mode}')
@@ -97,7 +97,7 @@ def main():
                       routes=sum(x == arm for _, x in worst))
             for arm in 'ABCD'}
         per_mode = {}
-        for mode in ('short_2s', 'sparse_5s', 'stop_jitter'):
+        for mode in ('short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz'):
             group = [r for r in interface if r['reference'] == f'profile/{mode}']
             if group:
                 per_mode[mode] = {arm: float(np.median([r['primary'] for r in group if r['arm'] == arm]))

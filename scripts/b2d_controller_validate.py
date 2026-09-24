@@ -320,6 +320,7 @@ def main():
     p.add_argument('--case-list', help='JSON list of {route, perturbation_id, variant, preset} for infrastructure resume')
     p.add_argument('--presets', default='carla,tcp,pursuit')
     p.add_argument('--server-index', type=int, default=64)
+    p.add_argument('--decimate', type=int, default=4, help='plan refresh every N ticks (1 = 20 Hz)')
     p.add_argument('--cruise-mps', type=float, default=8)
     p.add_argument('--max-ticks', type=int, default=1800)
     p.add_argument('--rig', default='none')
@@ -478,7 +479,7 @@ def main():
                 metadata = case_metadata(case, route, cruise)
                 run = case_dir(out, route, case, a.variants)
                 run.mkdir(parents=True, exist_ok=True)
-                cfg = dict(rig=a.rig, width=800, height=450, policy='none', drive='controller', decimate=4,
+                cfg = dict(rig=a.rig, width=800, height=450, policy='none', drive='controller', decimate=a.decimate,
                            controller_preset=preset, controller_config=case['archived_controller_config'],
                            out=str(run), cruise_mps=cruise, reference_interface=a.reference_interface)
                 if archived_traces:

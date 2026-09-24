@@ -93,7 +93,9 @@ def run_route(a, route, index):
                    '--perturbation-ids', ','.join(sorted({s for s, _ in missing})), '--case-list', str(cases),
                    '--server-index', str(index), '--max-ticks', str(max_ticks),
                    '--rig', 'none', '--no-rendering', '--strict-invariants',
-                   '--reference-interface', a.interface]
+                   '--reference-interface', 'nominal' if a.interface == 'stale_5hz' else a.interface,
+                   # Plans refresh every tick (20 Hz, as TFv6/TCP run); stale_5hz holds each plan 4 ticks.
+                   '--decimate', '4' if a.interface == 'stale_5hz' else '1']
         if a.kind in ('ramp', 'profile'):
             command += ['--reference-traces', str(home / 'traces.json')]
         env = dict(os.environ, DATA_DIR='/data', OPENBLAS_CORETYPE='Barcelona',
@@ -117,7 +119,7 @@ def main():
     p.add_argument('--arms', default='ABCD')
     p.add_argument('--workers', type=int, default=3)
     p.add_argument('--server-base', type=int, default=120)
-    p.add_argument('--interface', default='nominal', choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter'))
+    p.add_argument('--interface', default='nominal', choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz'))
     a = p.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     routes = ET.parse(a.routes).getroot().findall('route')

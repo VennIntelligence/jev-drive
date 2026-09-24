@@ -22,7 +22,7 @@ for r in list(root):
 ET.ElementTree(root).write('$V2/l1-interface-routes.xml', encoding='utf-8', xml_declaration=True)
 print(len(keep), 'interface routes')
 EOF
-for mode in short_2s sparse_5s stop_jitter; do
+for mode in short_2s sparse_5s stop_jitter stale_5hz; do
   $PY scripts/b2d_controller_eval_l1_v2.py --kind profile --refs $V2/refs --interface $mode \
     --routes $V2/l1-interface-routes.xml --seeds p01 --out $V2/l1-interface-$mode
 done
