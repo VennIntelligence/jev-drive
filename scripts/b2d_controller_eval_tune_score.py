@@ -33,7 +33,7 @@ def main():
                           status=dict(status),
                           **{m: float(np.median([r[m] for r in group])) for m in METRICS})
     base = table['D']
-    eligible = [arm for arm in arms if arm.startswith('E') and table[arm]['primary'] <= 1.05 * base['primary']
+    eligible = [arm for arm in arms if arm != 'D' and arm not in 'ABC' and table[arm]['primary'] <= 1.05 * base['primary']
                 and table[arm]['failures'] <= base['failures']]
     winner = min(eligible, key=lambda arm: table[arm]['extra_jerk_rms_mps3']) if eligible else None
     contrasts = {arm: {m: contrast(rows, arm, 'D', m) for m in ('primary', 'extra_jerk_rms_mps3')}

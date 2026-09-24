@@ -29,8 +29,8 @@
   "rear_slip_c_per_rad": 11.0,
   "steer_inverse": "ackermann",
   "track_width_m": 1.5929,
-  "accel_kp": 2.0,
-  "accel_ki": 0.3,
+  "accel_kp": 3.0,
+  "accel_ki": 0.0,
   "jerk_limit": 4.0,
   "jerk_limit_brake": 8.0
 }

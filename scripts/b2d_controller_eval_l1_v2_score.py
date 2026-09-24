@@ -15,7 +15,9 @@ from b2d_controller_eval_l1_score import one
 
 METRICS = ('primary', 'cte_rms_m', 'time_xy_rms_m', 'speed_rms_mps', 'extra_jerk_rms_mps3',
            'along_lag_rms_m', 'stop_short_m')
-PAIRS = [('C', 'A'), ('C', 'B'), ('D', 'A'), ('D', 'B'), ('D', 'C'), ('B', 'A')]
+PAIRS = [('C', 'A'), ('C', 'B'), ('D', 'A'), ('D', 'B'), ('D', 'C'), ('B', 'A'),
+         ('P', 'A'), ('P', 'B'), ('P', 'C'), ('P', 'D')]
+ARMS = 'ABCDP'
 
 
 def score_batch(root, kind, refs, cruises, label=None):
@@ -82,14 +84,15 @@ def main():
     rows = []
     for kind in ('ramp', 'profile'):
         batch = score_batch(a.v2 / f'l1-{kind}', kind, refs, cruises)
-        if len(batch) != 40 * 3 * 4:
-            raise ValueError(f'{kind}: expected 480 cases, got {len(batch)}')
+        batch += score_batch(a.v2 / f'l1-P-{kind}', kind, refs, cruises)
+        if len(batch) != 40 * 3 * 5:
+            raise ValueError(f'{kind}: expected 600 cases, got {len(batch)}')
         rows += batch
     interface = []
     for mode in ('short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz', 'pose_plan'):
-        root = a.v2 / f'l1-interface-{mode}'
-        if root.exists():
-            interface += score_batch(root, 'profile', refs, cruises, label=f'profile/{mode}')
+        for root in (a.v2 / f'l1-interface-{mode}', a.v2 / f'l1-P-interface-{mode}'):
+            if root.exists():
+                interface += score_batch(root, 'profile', refs, cruises, label=f'profile/{mode}')
     a.out.mkdir(parents=True, exist_ok=True)
     with (a.out / 'l1-v2-cases.csv').open('w', newline='') as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0]), lineterminator='\n')
@@ -99,9 +102,9 @@ def main():
         group = [r for r in rows if r['reference'] == kind]
         summary[kind] = dict(
             median={arm: {m: float(np.median([r[m] for r in group if r['arm'] == arm])) for m in METRICS}
-                    for arm in 'ABCD'},
+                    for arm in ARMS},
             status={arm: {s: sum(r['status'] == s for r in group if r['arm'] == arm)
-                          for s in sorted({r['status'] for r in group})} for arm in 'ABCD'},
+                          for s in sorted({r['status'] for r in group})} for arm in ARMS},
             contrasts={f'{l}-{r}': {m: contrast(group, l, r, m) for m in METRICS} for l, r in PAIRS})
     if interface:
         nominal = {(r['route'], r['arm']): r['primary'] for r in rows
@@ -113,16 +116,16 @@ def main():
         summary['interface_robustness'] = {
             arm: dict(median_worst_over_nominal=float(np.median([v for (_, x), v in worst.items() if x == arm])),
                       routes=sum(x == arm for _, x in worst))
-            for arm in 'ABCD'}
+            for arm in ARMS}
         per_mode = {}
         for mode in ('short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz', 'pose_plan'):
             group = [r for r in interface if r['reference'] == f'profile/{mode}']
             if group:
                 per_mode[mode] = {arm: float(np.median([r['primary'] for r in group if r['arm'] == arm]))
-                                  for arm in 'ABCD'}
+                                  for arm in ARMS}
         summary['interface_primary_median'] = per_mode
     verdict = {}
-    for arm in 'CD':
+    for arm in 'CDP':
         verdict[arm] = {base: all(summary[k]['contrasts'][f'{arm}-{base}']['primary']['ci95'][1] < 0
                                   for k in ('ramp', 'profile')) for base in 'AB'}
     summary['l1_significantly_better'] = verdict

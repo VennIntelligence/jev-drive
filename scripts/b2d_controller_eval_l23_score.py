@@ -248,11 +248,15 @@ def main():
     p.add_argument('--tfv6',type=Path,required=True)
     p.add_argument('--tcp',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--routes',type=int,default=16)
     a=p.parse_args();rows=[]
     for planner,root in [('TFv6',a.tfv6),('TCP',a.tcp)]:
         paths=sorted(root.glob('cases/*/route-*/seed-*/*/done.json')) if planner=='TFv6' else sorted(root.glob('cases/route-*/seed-*/*/done.json'))
-        expected=64 if planner=='TFv6' else 80
-        if len(paths)!=expected:raise ValueError(f'Expected {expected} {planner} cases, got {len(paths)}')
+        cases={(q.parent.parent.parent.name,q.parent.parent.name,q.parent.name) for q in paths}
+        routes={c[0] for c in cases};seeds={c[1] for c in cases};arms={c[2] for c in cases}
+        expected=len(routes)*len(seeds)*len(arms)
+        if len(paths)!=expected or len(routes)!=a.routes:
+            raise ValueError(f'{planner}: {len(paths)} cases over {len(routes)} routes, expected {expected} over {a.routes}')
         rows.extend(load_case(path,planner) for path in paths)
     a.out.mkdir(parents=True,exist_ok=True)
     with (a.out/'l23-cases.csv').open('w',newline='') as f:

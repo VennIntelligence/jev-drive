@@ -8,7 +8,7 @@ import os
 
 import numpy as np
 
-from b2d_controller import Controller
+from b2d_controller import Controller, pursuit_from_config
 from b2d_tcp_comparison_agent import ComparisonTCPAgent, controls, serial
 from b2d_tfv6_author_control import AuthorController
 from srunner.scenariomanager.timer import GameTime
@@ -31,8 +31,9 @@ def envelope(triple, speed):
 class Task10TCPAgent(ComparisonTCPAgent):
     def setup(self, path_to_conf_file):
         requested = os.environ['B2D_TCP_CONTROL_ARM']
-        if requested not in 'NABCD' or len(requested) != 1:
-            raise ValueError('Task 10 TCP arm must be one of N/A/B/C/D')
+        candidate = os.environ.get('B2D_P_CONFIG')
+        if requested not in 'NABCD' + ('P' if candidate else '') or len(requested) != 1:
+            raise ValueError('Task 10 TCP arm must be one of N/A/B/C/D (P with B2D_P_CONFIG)')
         os.environ['B2D_TCP_CONTROL_ARM'] = 'native_common'
         try:
             super().setup(path_to_conf_file)
@@ -49,6 +50,8 @@ class Task10TCPAgent(ComparisonTCPAgent):
                             rear_slip_c_per_rad=11., steer_inverse='ackermann',
                             track_width_m=1.5929),
         }
+        if candidate:
+            self._eval['P'] = pursuit_from_config(candidate)
         self._eval_log = (self._out / 'controller-eval.jsonl').open('x', buffering=1)
         (self._out / 'tcp-eval-setup.json').write_text(json.dumps({
             'arm': requested, 'plan_axes': 'TCP forward/right -> controller forward/left',

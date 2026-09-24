@@ -10,7 +10,7 @@ import time
 import numpy as np
 
 from lead.inference.sensor_agent import SensorAgent
-from b2d_controller import Controller
+from b2d_controller import Controller, pursuit_from_config
 from b2d_controller_adapter import GPSProjector, PoseFilter, controller_speed
 from b2d_tfv6_coordinates import rear_waypoints
 from b2d_tfv6_search_control import SEARCH_ARMS, compose_search_control
@@ -43,7 +43,7 @@ def _normalize_brake(raw, speed):
 
 
 def _select_arm_control(arm, candidates):
-    if arm not in ARMS or set(candidates) != set(ARMS):
+    if arm not in ARMS + "P" or not set(ARMS) <= set(candidates) or arm not in candidates:
         raise ValueError("Expected exactly four registered TFv6 controls")
     return dict(candidates[arm])
 
@@ -153,7 +153,9 @@ class TFv6ControllerAgent(SensorAgent):
         self._d3 = os.environ.get('B2D_D3_DIAGNOSTIC') == '1'
         self._search = os.environ.get('B2D_TFV6_SEARCH') == '1'
         parts = path_to_conf_file.split("+")
-        permitted = ARMS + (DIAGNOSTIC_ARMS if self._d3 else '') + (SEARCH_ARMS if self._search else '')
+        candidate = os.environ.get("B2D_P_CONFIG")
+        permitted = (ARMS + (DIAGNOSTIC_ARMS if self._d3 else '') + (SEARCH_ARMS if self._search else '')
+                     + ('P' if candidate else ''))
         self.arm = (parts[1] if len(parts) > 1 and parts[1] in permitted
                     else os.environ.get("B2D_W2_ARM", "")).upper()
         if self.arm not in permitted:
@@ -182,6 +184,8 @@ class TFv6ControllerAgent(SensorAgent):
                             rear_slip_c_per_rad=11.0, steer_inverse="ackermann",
                             track_width_m=1.5929),
         }
+        if candidate:
+            self._controllers["P"] = pursuit_from_config(candidate)
         gps_plan = np.asarray([[point["lat"], point["lon"]] for point, _ in self._global_plan])
         world_plan = np.asarray([[transform.location.x, transform.location.y]
                                  for transform, _ in self._global_plan_world_coord])
@@ -261,7 +265,7 @@ class TFv6ControllerAgent(SensorAgent):
                 self._raw[self.arm] = _normalize_brake(compose_search_control(self.arm, self._raw), author_speed)
             if self._d3 and self.arm in DIAGNOSTIC_ARMS:
                 self._raw[self.arm] = _compose_d3_arm(self.arm, self._raw, author_speed)
-            if self.arm in "CD":
+            if self.arm in "CDP":
                 chosen = _select_arm_control(self.arm, self._raw)
                 prediction.steer = chosen["steer"]
                 prediction.throttle = chosen["throttle"]

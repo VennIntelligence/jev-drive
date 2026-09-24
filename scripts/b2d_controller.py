@@ -583,6 +583,16 @@ class Controller:
         return self._last_control
 
 
+ADAPTER_KEYS = ('rear_axle_offset_m', 'pose_lateral_coefficient_s2_per_m')
+
+
+def pursuit_from_config(path):
+    """A pursuit Controller from an L1 JSON controller config; pose-adapter keys are dropped."""
+    with open(path) as stream:
+        config = json.load(stream)
+    return Controller(preset='pursuit', **{k: v for k, v in config.items() if k not in ADAPTER_KEYS})
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--selftest', action='store_true')

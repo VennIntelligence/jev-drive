@@ -64,7 +64,7 @@ def validate_tcp_attempt(result, attempt, run):
         if row['prediction'] is not None:
             if row['forward_count'] != 1 or row['prediction']['native_pid_calls'] != 1:
                 raise RuntimeError(f'TCP {rid}/{arm}: inference/native PID count tick {index}')
-            if set(row['shadow_control']) != set('ABCD'):
+            if set(row['shadow_control']) != set('ABCD' + ('P' if os.environ.get('B2D_P_CONFIG') else '')):
                 raise RuntimeError(f'TCP {rid}/{arm}: missing shadow arm tick {index}')
             selected = row['official_tail_control'] if arm == 'N' else row['shadow_control'][arm]
             if max(abs(a-b) for a,b in zip(selected,row['selected_control'])) > 1e-6:
@@ -153,8 +153,9 @@ def main():
     all_ids = [r.get('id') for r in ET.parse(ROUTES).getroot().findall('route')]
     route_ids = a.route_ids.split(',') if a.route_ids else all_ids
     seeds = [int(x) for x in a.seeds.split(',')]
-    arms = a.arms or ('ABCD' if a.planner == 'tfv6' else 'NABCD')
-    if not set(route_ids) <= set(all_ids) or not set(arms) <= set('ABCD' if a.planner=='tfv6' else 'NABCD'):
+    candidate = 'P' if os.environ.get('B2D_P_CONFIG') else ''
+    arms = a.arms or ('ABCD' if a.planner == 'tfv6' else 'NABCD') + candidate
+    if not set(route_ids) <= set(all_ids) or not set(arms) <= set(('ABCD' if a.planner=='tfv6' else 'NABCD') + candidate):
         raise ValueError('Invalid route/arm selection')
     if a.planner == 'tfv6':
         sys.path.insert(0, str(ROOT/'scripts'))
@@ -170,7 +171,8 @@ def main():
                 if a.planner == 'tfv6':
                     base.case(a.out, ROUTES, '10', rid, seed, arm,
                               a.server_index, 4000, invariant_check=validate_attempt,
-                              extra_env={'B2D_D2_ACTORS': '1'})
+                              extra_env={'B2D_D2_ACTORS': '1',
+                                         **({'B2D_P_CONFIG': os.environ['B2D_P_CONFIG']} if candidate else {})})
                 else:
                     tcp_case(a.out, rid, seed, arm, a.server_index)
                 count += 1
