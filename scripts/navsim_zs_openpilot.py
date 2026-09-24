@@ -116,7 +116,7 @@ if __name__ == "__main__":
     r.add_argument("--model", choices=list(MODELS), required=True)
     r.add_argument("--desire", choices=("none", "cmd"), default="none")
     a = ap.parse_args()
-    log = RunLog("navsim_zs", "openpilot_" + a.cmd)
+    log = RunLog("navsim_zs", "openpilot_" + a.cmd + (f"_{a.model}_{a.desire}" if a.cmd == "run" else ""))
     log.info(f"args {vars(a)} -> {log.dir}")
     {"frames": cmd_frames, "run": cmd_run}[a.cmd](a, log)
     log.event("end")
