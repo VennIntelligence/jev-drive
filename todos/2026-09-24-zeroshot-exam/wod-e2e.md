@@ -1,6 +1,6 @@
 # Zero-shot 考试：Alpamayo 1.5 与 openpilot 在 WOD-E2E val 上的 RFS / ADE
 
-状态: running（rater 帧主表已完成；ADE-extra 的 Alpamayo 行在跑）
+状态: done
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 
 ## 目标
@@ -349,7 +349,6 @@ Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 
 
 ### ADE-extra（958 帧，只对 logged future）
 
-（Alpamayo 这一行还没跑完：rater 帧的任务结束后，NAVSIM 考试的第二个 Alpamayo 进程先占了显存，我的 958 帧任务启动时 OOM。它现在在 `jev:wz-alp-extra` 里等显存空出 36 GB 自动开始，跑完自动重新打分，数字届时补进这张表。）
 
 | 行 | n | ADE@3s | ADE@5s [CI，按 sequence 重抽] |
 |---|---:|---:|---|
@@ -361,10 +360,12 @@ Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 
 | openpilot Cinque | 958 | 0.97 | 1.94 [1.80, 2.08] |
 | openpilot Lebowski | 958 | 1.07 | 2.09 [1.94, 2.25] |
 | openpilot small | 958 | 1.21 | 2.45 [2.30, 2.62] |
+| **Alpamayo 1.5，nav，一条采样的期望** | 958 | 0.69 | **1.79** [1.68, 1.92] |
 
-在随机帧上对 log 算 ADE 时，排序反过来：我们 train 训的 `ridge ego` 最好（1.91 m），Cinque（1.94）与它持平，Lebowski 和我们的分类头同量级。
-这正是第 2 条说的指标冲突——回归 head 学的是条件均值、赢 ADE；zero-shot 模型输出的是「一种具体开法」、赢 RFS。
-两种口径下 zero-shot 模型都不输给我们在 Waymo 上训的东西。
+在随机帧上对 log 算 ADE，Alpamayo 最好（1.79 m），比我们 train 训的 `ridge ego`（1.91）低 0.11 m（两个 CI 部分重叠，这里没做配对检验）；
+Cinque（1.94）与 `ridge ego` 持平，Lebowski 和我们的分类头同量级。在 rater 帧上对 rater_best 算官方 ADE 时排序是 Cinque 第一，这里换成 Alpamayo，
+说明两种 ADE 口径给出的排序并不一致。openpilot 与我们的 head 在这里的相对位置，正是第 2 条说的指标冲突：回归 head 学的是条件均值，赢 ADE；
+zero-shot 模型输出的是「一种具体开法」，赢 RFS。两种口径下 zero-shot 模型都不输给我们在 Waymo 上训的东西。
 
 ### Wall time
 
@@ -373,7 +374,7 @@ Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 
 | GCS 抓取 5 696 条记录（12.98 GB） | 约 102 min（与下面并行） |
 | openpilot，1 437 目标 × 3 模型 | 35 min |
 | Alpamayo，479 帧 × {nav, no-nav} | 63 min（7.9 s/帧，卡上同时有另两个考试的 Alpamayo，GPU 100%） |
-| Alpamayo，958 帧 × nav | 排队中（启动时 OOM，等显存；预计 1 h） |
+| Alpamayo，958 帧 × nav | 84 min（5.3 s/帧；第一次排队时 OOM，box 在 19:45 重启加第二张卡后，改在 GPU 1 上重跑） |
 | 打分（10 000 次 bootstrap） | < 1 min |
 
 ## 偏离记录

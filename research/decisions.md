@@ -2659,8 +2659,8 @@ baseline 行逐位复现了第 2 条的数字。
 3. **输的地方很集中**：起始车速 < 0.5 m/s 的 120 帧上，所有 zero-shot 模型都不比 cv（继续停着）好；5–10 m/s 的帧上它们反而超过 logged future
    （Cinque 8.42 对 8.01）。三个失败案例都是「停着或低速、在路口、模型选择起步而 rater 偏好继续等」。按 cluster，差距最大的是 Intersections、
    Multi-Lane Maneuvers、Special Vehicles，也就是路线由导航决定的地方。
-4. **对 log 的 ADE 上排序反过来**（958 个随机帧）：我们 train 训的 `ridge ego` 1.91 m，Cinque 1.94、Lebowski 2.09。第 2 条和第 10 条说的
-   「回归赢 ADE、给出具体 mode 的模型赢 RFS」在一个外部模型上又复现了一次。
+4. **对 log 的 ADE 上**（958 个随机帧）：Alpamayo 1.79 m [1.68, 1.92] 最好，我们 train 训的 `ridge ego` 1.91、Cinque 1.94、Lebowski 2.09、`cls ego` 2.05。
+   openpilot 相对我们回归 head 的位置在 RFS 和 ADE 上翻过来，这是第 2 条和第 10 条说的「回归赢 ADE、给出具体 mode 的模型赢 RFS」；Alpamayo 在两种口径上都不输。
 
 **这对我们意味着什么（推测）**：「冻结 VLM 特征 + 薄 head」在 WOD 上的天花板（7.3 左右）低于两个现成的、没见过 Waymo 的驾驶模型。
 第 21 条的方法选型如果以 RFS 为目标，这两个模型应当作为强 baseline 进每一张表，而不只是 cv 和 log；
