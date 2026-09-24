@@ -1,6 +1,6 @@
 # Zero-shot 闭环考试：Alpamayo 1.5 与 openpilot 在 Bench2Drive 上
 
-状态: 预注册已冻结（2026-09-24 17:20，smoke 之前；plumbing 只用来查适配，不计分）；smoke 完成；全量 220 条**等用户批准**
+状态: 预注册已冻结（2026-09-24 17:20，smoke 之前；plumbing 只用来查适配，不计分）；smoke 完成；全量 220 条 Alpamayo（用户已批准，openpilot 不跑）**已暂停**，13/220 完成，见下方「全量暂停记录」
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 相关: [Alpamayo smoke](../2026-09-24-alpamayo-smoke/README.md)、[openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、
 [控制器 API](../../docs/b2d-controller.md)、[闭环成本](../../docs/bench2drive-cost.md)
@@ -282,3 +282,34 @@ python3 scripts/zeroshot_b2d_report.py $D/smoke-alpamayo --out smoke-alpamayo.cs
 ```
 
 `--decimate` 在外部 agent 下只用来打开 `sensor_tick` 补丁（b2d_hooks），相机频率由 agent 自己的传感器定义决定。
+
+## 全量暂停记录（2026-09-24）
+
+用户批准的 Alpamayo-only 全量 220 条已经在跑（GPU box 重启后拿到第二张卡，跑在 GPU 1，与 WOD-E2E 的 ADE-extra
+job 共卡），但用户随后要求暂停：controller（`todos/2026-09-22-b2d-controller/results/controller_config.json`）
+还在调，暂停期间不产生会被这版 controller 污染的分数。main 已经 kill 掉 `jev:b2d-alp-*` 系列 tmux 窗口、route
+子进程和 4 个 CARLA server；**没有留下任何常驻进程**。已完成 13/220 条，结果在
+`$DATA_DIR/runs/zeroshot-exam/b2d/full220-alpamayo/`（`done/<id>.json` 逐条标记，`attempts/<id>/1/results.json`
+是官方 leaderboard 分数）。启动时踩过一个坑：第一次忘了传 `--towns all`，默认 `--towns base` 只选 44 条
+（不含 Town12/13，按预注册占 220 条里 69% 的路线、83% 的墙钟），发现后 kill 掉重开，已经在
+`scripts/b2d_wait_and_run.sh` 里修好，不会再犯。
+
+**续跑命令**（controller 调完之后，GPU 号按当时空闲的卡改）：
+
+```bash
+D=$DATA_DIR/runs/zeroshot-exam/b2d
+# 常驻 policy server（先起，等 --ready-file 出现）
+env HF_ENDPOINT=https://hf-mirror.com CUDA_VISIBLE_DEVICES=1 \
+    ~/data/third_party/alpamayo1.5/.venv/bin/python scripts/zeroshot_policy_server.py alpamayo \
+    --socket $D/alpamayo-full.sock --ready-file $D/alpamayo-full.ready
+# 全量跑；--towns all 不能漏；done/<id>.json 存在的路线自动跳过，13 条已完成的会被跳过
+env DATA_DIR=$DATA_DIR ~/data/envs/carla/bin/python scripts/b2d_run.py \
+    --towns all --workers 4 --server-index 240 --gpu-rank 1 --agent scripts/b2d_zeroshot_agent.py \
+    --agent-config $D/agent-alpamayo-full.json --decimate 2 --no-spectator --max-attempts 2 \
+    --out $D/full220-alpamayo
+```
+
+也可以整包交给 `GPU=<rank> NO_WAIT=1 scripts/tmux_run.sh b2d-alp-wait env GPU=<rank> NO_WAIT=1
+scripts/b2d_wait_and_run.sh`（内置起 server、等 ready-file、起跑、跑完写 finish 行到 gpu-plan.md），
+或者用 `scripts/b2d_finish_watch.sh <run-window> <server-window> <out-dir>` 单独盯一个已经手动起好的跑。
+续跑前确认 `$D/alpamayo-full.{sock,ready}` 不是上一次的残留（脚本自己会删，手动起的话自己删）。
