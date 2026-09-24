@@ -1,0 +1,20 @@
+{
+  "C": {
+    "n": 48,
+    "old_mean_ds": 75.9602015,
+    "new_mean_ds": 83.06262500000001,
+    "mean_change": 7.1024235,
+    "old_linked_cases": 14,
+    "new_same_near_old_step": 0,
+    "new_same_anytime": 1
+  },
+  "D": {
+    "n": 48,
+    "old_mean_ds": 73.56702952083333,
+    "new_mean_ds": 83.51444166666666,
+    "mean_change": 9.947412145833335,
+    "old_linked_cases": 17,
+    "new_same_near_old_step": 0,
+    "new_same_anytime": 1
+  }
+}
