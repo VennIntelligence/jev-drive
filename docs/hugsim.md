@@ -165,20 +165,26 @@ per-scene 3DGS fit; the dip after 8 s is the turn, where views see less-covered 
 | simulator VRAM (process, nvidia-smi) | 2.4 GB (scene-0071, no actors) to 5.9 GB (scene-0383 with 2 actors) |
 | render-only torch peak | 2.6 GB |
 
-**Closed loop, official controller** ([smoke_eval.csv](../research/results/hugsim/smoke_eval.csv),
-[smoke_runs.csv](../research/results/hugsim/smoke_runs.csv)); 4 scenarios whose actor assets were already downloaded:
+**Closed loop** ([smoke_eval.csv](../research/results/hugsim/smoke_eval.csv),
+[smoke_runs.csv](../research/results/hugsim/smoke_runs.csv)); the 4 nuScenes scenarios whose actor assets were
+already downloaded; HD-Score / RC; "fixed" = with the optional PR #57 controller patch (next sections):
 
-| scenario | route (privileged) HD / RC | cv (straight, 1 m/s) HD / RC | end of the route run |
-|---|---|---|---|
-| scene-0071 easy-00 | 0.987 / 1.00 | 0.021 / 0.06 | complete |
-| scene-0383 easy-00 | 0.789 / 1.00 | 0.040 / 0.07 | complete (TTC 0.70 in the tight turn) |
-| scene-0383 medium-00 (1 actor) | 0.789 / 1.00 | 0.040 / 0.07 | complete |
-| scene-0383 hard-00 (2 actors) | 0.029 / 0.24 | 0.040 / 0.07 | foreground collision (the route agent ignores actors) |
+| scenario | LTF (official client) | LTF, fixed | route (privileged) | route, fixed | cv (straight, 1 m/s) | cv, fixed |
+|---|---|---|---|---|---|---|
+| scene-0071 easy-00 | 0.973 / 1.00 | 0.994 / 1.00 | 0.987 / 1.00 | 0.987 / 1.00 | 0.021 / 0.06 | 0.910 / 0.91 |
+| scene-0383 easy-00 | 0.328 / 0.51 | 0.562 / 0.56 | 0.789 / 1.00 | 0.733 / 1.00 | 0.040 / 0.07 | 0.548 / 0.55 |
+| scene-0383 medium-00 (1 actor) | 0.506 / 0.57 | 0.508 / 0.56 | 0.789 / 1.00 | 0.733 / 1.00 | 0.040 / 0.07 | 0.548 / 0.55 |
+| scene-0383 hard-00 (2 actors) | 0.193 / 0.44 | 0.164 / 0.46 | 0.029 / 0.24 | 0.034 / 0.26 | 0.040 / 0.07 | 0.548 / 0.55 |
+| mean | 0.500 | 0.557 | 0.649 | 0.622 | 0.035 | 0.639 |
 
-The privileged route agent scores ~1 where nothing blocks it and crashes into actors, as it should, so the whole
-chain (render -> pipe -> agent -> iLQR -> bicycle -> collision checks -> HD-Score) works. The cv agent dies within
-17-22 steps with a background collision even on the straight scene-0071: that is the controller defect below.
-The official LTF baseline is not in this table yet (its env was still downloading torch).
+This proves the chain end to end (render -> pipe -> agent -> iLQR -> bicycle -> collision checks -> HD-Score) with
+the official LTF baseline on our GPU (agent adds 1.2 GB; 64-93 steps take 90-124 s, ~1.4 s/step, the LTF client
+also draws a visualization every step). How each run ends: the privileged route agent completes easy/medium and
+hits an actor in hard, as it should (it ignores actors). LTF completes the straight scene-0071 and leaves the route
+in scene-0383's left turn ("Far from preset trajectory", RC ~0.5): the shipped LTF client always sends the
+"straight" command. The cv agent dies within 17-22 steps with a background collision even on the straight
+scene-0071, under the official controller only: that is the controller defect below. Four scenarios are a smoke
+test, not a measurement.
 
 ## Agent interface
 
@@ -276,7 +282,8 @@ route vs 1.1 m).
 
 In the real simulator the cv agent (straight plan every step, 1 m/s) shows the same thing: official HD 0.02-0.04,
 background collision after 17-22 steps; with PR #57 it drives straight until the route bends away, HD 0.91
-(scene-0071) and 0.55 (scene-0383, RC-limited). The route agent is barely affected (0.987 -> 0.987, 0.789 -> 0.733).
+(scene-0071) and 0.55 (scene-0383, RC-limited). The official LTF client moves from 0.500 to 0.557 mean HD-Score
+over the 4 smoke scenarios; the route agent, whose plans carry strong lateral feedback, barely moves (0.649 -> 0.622).
 
 **Policy:** the official controller is the default and is what every headline number uses (comparable with
 published HD-Scores). We also report our models under the fixed controller as a paired secondary:
