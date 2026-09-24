@@ -11,12 +11,44 @@ import numpy as np
 from b2d_controller import Controller
 from b2d_tfv6_controller_agent import (
     _apply_postprocessors, _assert_no_phantom, _changed_processor_keys, _clone_processor,
-    _configure_author_arm, _normalize_brake, _processor_snapshot, _select_arm_control,
+    _compose_d3_arm, _configure_author_arm, _kalman_input_only, _normalize_brake,
+    _processor_snapshot, _select_arm_control,
     controller_speed,
 )
 
 
 class AgentPathTests(unittest.TestCase):
+    def test_d3_hybrids_compose_then_interlock_before_author_postprocessors(self):
+        raw = {'B': {'steer': -.3, 'throttle': .8, 'brake': 0.},
+               'C': {'steer': .4, 'throttle': 0., 'brake': .7}}
+        self.assertEqual(_compose_d3_arm('E', raw, 2.),
+                         {'steer': .4, 'throttle': .8, 'brake': 0.})
+        self.assertEqual(_compose_d3_arm('F', raw, 2.),
+                         {'steer': -.3, 'throttle': 0., 'brake': .7})
+        self.assertEqual(_compose_d3_arm('F', raw, 0.),
+                         {'steer': 0., 'throttle': 0., 'brake': .7})
+        self.assertEqual(_compose_d3_arm('K', raw, 2.), raw['C'])
+        class Force:
+            def adjust(self, speed, throttle, brake): return throttle + .1, brake
+        class Stop:
+            def adjust(self, speed, throttle, brake): return throttle, brake + .2
+        final = _apply_postprocessors(_compose_d3_arm('E', raw, 2.),2.,Force(),Stop())
+        self.assertEqual(final, {'steer': .4, 'throttle': .9, 'brake': .2})
+
+    def test_d3_kalman_swap_changes_filter_argument_only(self):
+        class Control:
+            def __init__(self, steer, throttle, brake):
+                self.steer,self.throttle,self.brake=steer,throttle,brake
+        actual=Control(.3,.4,0.)
+        original_id=id(actual)
+        shadow={'steer':-.2,'throttle':0.,'brake':1.}
+        input_only=_kalman_input_only(actual,shadow)
+        self.assertEqual(id(actual),original_id)
+        self.assertEqual((actual.steer,actual.throttle,actual.brake),(.3,.4,0.))
+        self.assertEqual((input_only.steer,input_only.throttle,input_only.brake),(-.2,0.,1.))
+        self.assertIsNot(input_only,actual)
+        self.assertIs(_kalman_input_only(actual,None),actual)
+
     def test_i1_writes_diagnostic_before_fail_fast(self):
         log = io.StringIO()
         actor = np.tile([0., -.08], (8, 1))
