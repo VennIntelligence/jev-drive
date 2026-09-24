@@ -25,8 +25,9 @@ syn=(synthetic_sensor_path=$OPENSCENE_DATA_ROOT/navhard_two_stage/sensor_blobs
 [[ $ver == v1 ]] && syn=()
 
 if [[ $cmd == cache ]]; then
+  key=metric_cache_path; [[ $ver == v1 ]] && key=cache.cache_path   # v1.1 names it differently
   exec "$py" "$dk/navsim/planning/script/run_metric_caching.py" train_test_split=$split \
-    metric_cache_path=$cache "${worker[@]}" "${syn[@]}"
+    $key=$cache "${worker[@]}" "${syn[@]}"
 fi
 
 name=$4 agent=$5
