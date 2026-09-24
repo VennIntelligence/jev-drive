@@ -29,7 +29,7 @@ the pre-registered smoke:
                     RouteAdapter, as b2d_agent --drive controller) and the model's plans are only logged
   "op_mount"        rig [x, y, z] of the camera pair (default the windshield top, zeroshot_rigs.OP_MOUNT_RIG)
   "controller"      "fixed" (the pre-registered smoke: scripts/b2d_controller.py) | "zoo_pid": Bench2DriveZoo's
-                    official PID run as shipped (scripts/b2d_zoo_pid_admlp.py; needs envs/b2d-tcp). It is
+                    UniAD/VAD PID, vendored verbatim (scripts/b2d_zoo_pid_wrap.py -> b2d_zoo_pid.py). It is
                     evaluated once per plan and its control held until the next plan, as the 2 Hz AD-MLP agent does
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
@@ -135,7 +135,7 @@ class ZeroShotAgent(AutonomousAgent):
         self.controller = Controller(preset=self.cfg.get("controller_preset", "carla"), **params)
         self.zoo = self.zoo_control = self.zoo_target = None
         if self.cfg.get("controller", "fixed") == "zoo_pid":
-            from b2d_zoo_pid_admlp import ZooPID
+            from b2d_zoo_pid_wrap import ZooPID
             self.zoo = ZooPID()
         else:
             assert self.cfg.get("controller", "fixed") == "fixed", self.cfg
@@ -322,8 +322,8 @@ class ZeroShotAgent(AutonomousAgent):
         if warm:
             accepted = False
         elif self.zoo is not None:
-            wp = resample(times, np.asarray(drive_path, float), np.arange(1, 7) * 0.5) * [1.0, -1.0]  # fwd, right
-            steer, throttle, brake, zoo_meta = self.zoo.control(wp, speed, self.zoo_target)
+            steer, throttle, brake, zoo_meta = self.zoo.control(np.asarray(drive_path, float), times, speed,
+                                                                self.zoo_target)
             self.zoo_control, accepted = (throttle, steer, brake), True
         else:
             accepted = self.controller.update(np.asarray(drive_path, float), t_frame)

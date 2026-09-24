@@ -207,7 +207,7 @@ CPU 不超过我们在 gpu-plan.md 里登记的份额。基础设施失败（ser
 ## 步骤
 
 - [x] agent（作者 SensorAgent 原样 + 只读记录）、runner、路线 XML（209 条 + 45 对 x⁻ / null）、family 表：`00bf79f`
-- [ ] smoke：4 臂 × 2–4 个 run，GPU 0 ≤ 20 GB；核对 x⁺ 与 x⁻ 在触发前逐 tick 相同、规则开关确实生效、计时
+- [x] smoke（00:03–01:00，`runs/tfv6_rules/smoke`，不计入结果）：4 臂都能开完 27515（A1/A0/B1 DS 100；B 臂 1831 tick 对 A 臂 1077，开得更慢），规则开关按 `rules_summary.json` 生效；x⁺ 与 x⁻ 在触发前就数值分叉（见上面的修订）；Town12 的 1711 A1 485 tick、404 s；一次 server 段错误自动重试成功
 - [x] 本文件提交（任何计分 run 之前）；估时补进上一节；gpu-plan.md 登记
 - [x] 公开逐路线结果收集（CPU，`research/results/b2d-family/public/`）：22 个条目，见结果一节
 - [ ] 批量（slot `tfv6-exp`，GPU 0，3 worker，01:15 起；主进程定的上限，T1 约 9 h）
