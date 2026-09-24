@@ -66,7 +66,7 @@ comma 公开的效果数字都很局部：0.10 的 Space Lab 把 stop-and-go 中
 
 读法：openpilot 的 41.7k h 约为 Alpamayo 私有训练集的一半，而且只有前视两路相机，Alpamayo 是 4 路相机起步。Tesla 的车队数据量没有可引用的一手数字，但它的车队规模和城市 FSD 场景覆盖显然远超 20k 个售后设备用户，这一点本报告不给数值。
 
-再看模型。0.11 的车端 driving policy 是"小 transformer"；chestnut 的 1B 模型被 comma 描述为比最新车端模型"多 30× 参数"，由此倒推车端模型约 30M 量级，**这是推断，comma 没有直接给出**（[blog chestnut](https://blog.comma.ai/chestnut/)）。0.11.2 的 release notes 写 880M，chestnut blog 写 "1B"，大概率是同一模型的四舍五入。车端算力从 2021 年 comma three 的 Snapdragon 845 到 2025-11 的 comma four 没有变过，模型扩容只能靠外接 AMD RX 9060 8GB（[blog chestnut](https://blog.comma.ai/chestnut/)、[comma four](https://blog.comma.ai/comma-four/)）。作为对照，Alpamayo 1.5 是 10B（Cosmos-Reason2 8.2B + 2.3B diffusion trajectory decoder），Alpamayo 2 Super 是 32B，另有一处评论写成 34B，未核实（[HF blog](https://huggingface.co/blog/nvidia/nvidia-alpamayo-2)）。
+再看模型。车端 driving policy `driving_supercombo.onnx` 从文件直接读出是 **30.0M 参数**（fp16，每步 0.85 GMAC）；外接 GPU 跑的 0.11.2 大模型 "Lebowski" 实测 **877.4M 参数**，release notes 的 880M 与 chestnut blog 的 "1B" 指的就是它（细节见文末"追问"一节）。本节初版把车端模型写成"由 30× 倒推约 30M，推断"，现在已由权重文件证实。车端算力从 2021 年 comma three 的 Snapdragon 845 到 2025-11 的 comma four 没有变过，模型扩容只能靠外接 AMD RX 9060 8GB（[blog chestnut](https://blog.comma.ai/chestnut/)、[comma four](https://blog.comma.ai/comma-four/)）。作为对照，Alpamayo 1.5 是 10B（Cosmos-Reason2 8.2B + 2.3B action expert），Alpamayo 2 Super 总计 34B（32B VLM + 2.3B diffusion expert；初版写成"32B 与 34B 两说，未核实"，HF card 与 NVIDIA 产品页核对后确认 32B 指 backbone、34B 指总量）。
 
 最后是能力范围，这是用户判断里最容易被忽略的一点。openpilot 是 SAE Level 2：默认模式只做 lane centering 加 ACC，Experimental mode 能为红绿灯和 stop sign 停车，驾驶员必须随时准备接管（[comma.ai/openpilot](https://comma.ai/openpilot)）。它的输入没有 route，没有侧后相机，也没有 LiDAR，执行器受原车 LKAS/ACC 的扭矩和加速度上限约束。Bench2Drive 考的是路口转弯、让行、紧急避让这类城区交互，NAVSIM 考 4 s 多车交互下的 PDMS。这些能力 openpilot 的训练目标里就不包含，它在这些榜上打不出成绩在意料之中。因此"最多的驾驶智能"只在"量产 L2 高速车道保持 + 纵向跟停"这个很窄的 ODD 里才有说服力。
 
@@ -147,7 +147,7 @@ comma 公开的效果数字都很局部：0.10 的 Space Lab 把 stop-and-go 中
 | openpilot（comma） | learned E2E，L2 售后 | 代码 + 权重，MIT | 325+ 车型，20k+ 用户，300M+ 英里（均为 comma 自述）；CR 2020 第一 | 无标准榜 |
 | Autoware（TIER IV） | modular 栈；2026-03 新增 hybrid/E2E 分支 | 开源 | **日本 L4 认证与 permit**；小松市付费巴士 18,000+ 人次（至 2025-02） | 无 |
 | Baidu Apollo 开源版 | modular 栈 | Apache-2.0，最新 11.0 | Apollo Go 跑的是 enterprise 版，不是开源版 | 无 |
-| NVIDIA Alpamayo 1/1.5/2 | reasoning VLA，10B/32B | 权重 OpenMDW-1.1，**默认 non-commercial**，商用需另谈 | model card 只写 "on-vehicle road tests"；NVIDIA 定位为 teacher | AlpaSim 1.37±0.10，minADE@6.4s 0.916 m |
+| NVIDIA Alpamayo 1/1.5/2 Super | reasoning VLA，10B/10B/34B | 权重 OpenMDW-1.1；R1 card 写 non-commercial，NVIDIA 2026-08-04 blog 称全家族可商用，两处冲突（初版只写了 non-commercial） | model card 只写 "on-vehicle road tests"；NVIDIA 定位为 teacher | 1.5：AlpaSim 1.37±0.10，minADE@6.4s 0.916 m；2 Super：1.50±0.13，0.911 m |
 | Xiaomi MiMo-Embodied | 驾驶 + 具身 VLM | 开放权重 | 问答型基础模型，不在车载控制回路 | 自称 12 个驾驶 benchmark SOTA |
 | DiffusionDrive / UniAD / Hydra-MDP 等 | 学术 E2E planner | MIT 等 | 至多实车 demo 视频 | NAVSIM 88.1（DiffusionDrive）等 |
 
@@ -164,3 +164,49 @@ comma 公开的效果数字都很局部：0.10 的 Space Lab 把 stop-and-go 中
 ## 对 jev-drive 的含义（推断，未经实验验证）
 
 我们的设置是 frozen VLM feature 加 thin planning head，在 WOD-E2E、NAVSIM、Bench2Drive 上评测。上面的证据带来三点推论。其一，**不需要为"用了 VLM 主干"辩护，也不应指望主干本身带来分数**：同配方下 VLM 和 specialist 差 0.2–4 分，所以 thin head 的训练配方（RL 或 reward 是否对齐 RFS / EPDMS、闭环数据、expert 质量）很可能比换哪一个 VLM 更影响结果。可以用同一 frozen feature 分别做 imitation-only 和 metric-aligned post-training 的 head 来验证，如果后者的增益大于换 backbone 的增益，这条推论就成立。其二，**WOD-E2E 是 VLM feature 最可能占优的榜**（长尾、人类偏好型 RFS），NAVSIM navhard 和 Bench2Drive 长路线则是 VLM 类方法普遍弱的地方；报告结果时应按 benchmark 分开下结论，并把 DiffusionDrive（约 60M）作为同配方的 specialist 对照，而不是只和其他 VLM 比。其三，openpilot 不适合作为我们的 baseline：接口不兼容（前视两路、无 route、5 fps 视频上下文），适配层会主导分数；它的 world model 训练和"off-policy 指标会误导"的结论，倒是值得作为我们闭环评测设计的方法论参考。要验证这一点，可以看我们的 head 在 open-loop 指标（L2 / ADE）上的排序和在 Bench2Drive DS 上的排序是否一致。
+
+## 追问：Alpamayo 规格、openpilot 最新可下载模型、通用驾驶能力的证据（2026-09-24 补充）
+
+本节回答三个追问：Alpamayo 到底多大、吃什么吐什么、多少 Hz；openpilot 能下载到的最新最强模型是哪个；按"通用驾驶能力"而不是按榜单调优来看，这些大驾驶模型的证据是什么。来源 notes 在 `research/lit/research_notes/开源驾驶模型与OpenPilot打榜现状/` 下的 `alpamayo_specs.md`、`openpilot_latest_model.md`、`other_open_models_and_scaling.md`。
+
+### 两个模型的接口
+
+| | Alpamayo 1 / 1.5 | Alpamayo 2 Super | openpilot 车端（0.11.x） | openpilot 大模型 Lebowski（0.11.2） |
+|---|---|---|---|---|
+| 参数 | 8.2B VLM + 2.3B action expert ≈ 10B | 32B VLM + 2.3B diffusion expert ≈ 34B | 30.0M | 877.4M（99.5 GMAC/步） |
+| 相机 | 4 路（front-wide、front-tele、cross-left、cross-right），320×576 | 6 路环视 | 前视 narrow + wide，warp 到 128×256（YUV 打包） | 同左 |
+| 时序上下文 | 每路 4 帧 @10 Hz（0.4 s）+ ego 历史 16 点 @10 Hz（1.6 s） | 4 帧 | vision 取当前帧和 0.2 s 前帧，feature 历史 25 步 ≈ 5 s | 同左 |
+| 导航 | R1：left/right/straight；1.5 / 2：自然语言（"turn left in 200m"） | 自然语言 | **无**（只有 desire 变道脉冲） | 无 |
+| 输出 | 6.4 s、64 点 @10 Hz 轨迹（内部是 unicycle 的 accel + curvature），外加 Chain-of-Causation 文本 | 同左 + meta-action、VQA、2D grounding | 33 点非均匀 plan 覆盖 0–10 s，lane line、lead 等；控制量由 plan 插值 | 同左 + `action` 头直接给 curvature / accel |
+| 运行频率 | 论文 99 ms（RTX PRO 6000，2 相机、单条轨迹）；公开 1.5 checkpoint 4 相机×4 帧、6 条轨迹实测 717 ms ≈ 1.4 Hz，优化后 151 ms ≈ 6.6 Hz；Jetson Thor ≈ 944 ms | 单卡 H100 峰值显存 72 GB | 20 Hz | 20 Hz（外接 RX 9060） |
+| 训练数据 | 80k h 私有多相机，25 国 2500+ 城市；公开 PhysicalAI-AV 1.7k h | ≈115k h | world model 2.5M 分钟 ≈ 41.7k h | 同左 |
+| 获取 | HF `nvidia/Alpamayo-1.5-10B` 等，gated | HF card 2026-08 | `commaai/openpilot` master | HF `commaai/openpilot-lfs`（git 历史里的 `big_driving_supercombo.onnx`），匿名可取 |
+
+来源：[Alpamayo-R1 arXiv 2511.00088（2025-11）](https://arxiv.org/abs/2511.00088)、各版 HF model card、FlashDrive 第三方实测、openpilot 仓库与 HF LFS；openpilot 两列的参数量和 IO shape 是下载 ONNX 后直接读出的。Lebowski 就是 0.11.2 出货版本这一点是**按提交时间线推断**的。master 上当前的大模型是更小的 "Cinque Terre v3"（382M，HF `commaai/openpilot_driving_models`，MIT）。comma 还在 2026-09-01 公开了 `commaai/worldmodel-4B`（MIT）和对应的 autoencoder，0.11 blog 里的 2B DiT 本身没有找到公开权重。
+
+读法：Alpamayo 按公开 checkpoint 的默认配置跑不到实时，NVIDIA 的定位是 cloud teacher，车上跑的是蒸馏出来的 student，而 student 没有公开。openpilot 是真正 20 Hz 闭环的控制器，但只看前方、没有 route。两者的接口几乎不重叠：前者是多相机、带导航、10 Hz 的轨迹 planner，后者是前视、无导航、20 Hz 的 L2 控制器。
+
+### Scaling law 在驾驶上成立吗
+
+| 证据 | 规模 | 结论 |
+|---|---|---|
+| Waymo，[arXiv 2506.08228（2025-06）](https://arxiv.org/abs/2506.08228) | 约 447k h 数据，84 个模型，0.9M–118M 参数 | loss 对 compute 呈 power-law，**closed-loop 失败率也随 compute 按 power-law 下降**；compute-optimal 模型比同 compute 的 LLM 小约 50× |
+| Alpamayo-R1 自己的 ablation | backbone 0.5B→7B；数据 500k→2M segments | minADE 降 11%；数据端 0.880→0.874 m，基本饱和 |
+| Alpamayo 1.5（10B）→ 2 Super（34B） | 参数 3.4×，数据 80k→115k h | minADE 0.916→0.911 m，AlpaSim 1.37→1.50，差距落在误差条内 |
+| NVIDIA，[arXiv 2504.04338（2025-04）](https://arxiv.org/abs/2504.04338) | IL 小模型 | open-loop FDE 按指数约 −0.40 下降，但闭环 MDBF 在约 256 h 处饱和 |
+| [arXiv 2412.02689（2024-12）](https://arxiv.org/abs/2412.02689) | IL 小模型 | open-loop 有 power-law，closed-loop 没有 |
+| Tesla（厂商口径） | "约 10× 参数"的模型 | 2025-08 说要作为 v14；2026-04 推迟到 v15，理由是小模型进步更快 |
+
+读法：open-loop 指标在驾驶上确实随规模改善；闭环上给出正面证据的只有 Waymo，而且它的最优模型只在 100M 量级。Alpamayo 从 10B 到 34B 几乎没有换来可测的提升。所以"LLM 式 scaling 在车上成立"目前只能部分支持：数据和 compute 在涨，最优参数量却远小于 LLM；闭环能力看起来更依赖 RL、self-play、sim co-training 这类闭环训练信号（推断）。
+
+### 通用驾驶能力的证据：没有人测过
+
+用户问的不是榜单分数，而是不对着某个榜调也能开好车的能力。能回答这个问题的实验是：大驾驶模型**不做微调**，直接在它没见过的 benchmark 或分布上跑。目前的情况是：
+
+- Alpamayo、MiMo-Embodied、Qwen-Drive、Cosmos 系列都**没有发表过** zero-shot 的 NAVSIM、Bench2Drive、WOD-E2E 分数。凡是上榜的数字，都是在目标 split 上训过或微调过的。
+- 现有的第三方 zero-shot 测试里，Alpamayo 表现不一：nuReasoning 上 1.5 的 NPS 50.45，全表最低；KITScenes 上 Alpamayo 2 的 planning 最好（MMS 5.06），但推理和动作完全一致的场景只占 14%。两者都是新 benchmark，样本量和可信度都有限。
+- 分布迁移带来的掉分，比方法之间的差距大一个数量级：同一方法从 navtest 到 navhard、跨城市（[arXiv 2603.11417](https://arxiv.org/abs/2603.11417)）、到 WOD-E2E long-tail 都会大幅下降，而方法之间在 navtest 上只差几分。所以榜单分差本来就不是通用驾驶能力的好读数。
+
+另外几个可以对比的 open-weight 模型：Qwen-Drive-1.0-4B（Qwen3.5-4B + 1.1B diffusion planner，Apache-2.0，NAVSIM 90.7 / WOD-E2E 7.91，但它的训练集包含 NAVSIM 和 WOD-E2E，这两个分数是 in-domain 的；arXiv 号的年月有待核对）、MiMo-Embodied-7B（MIT，RL 后 NAVSIM 91.0）、DriveVLA-W0（在 70M 帧私有数据上做过 scaling，但只放出 NAVSIM 训练的 checkpoint）。Cosmos-Reason、Cosmos-Predict 和 Vista 是 world model 或 reasoning backbone，不是 planner。用车队级私有数据训练、又放出 planner 权重的，目前只有 Alpamayo 一家。Waymo、Wayve、Tesla、XPeng、Li Auto、DeepRoute、Momenta、Huawei、Horizon 都没有放出权重。
+
+**结论**：用户"大数据量驾驶专用模型应该不差"的判断，现在既没有被证实也没有被证伪，因为这个实验没人做过。Alpamayo 1.5 用 4 路相机加自然语言导航，接口和 WOD-E2E 的 8 路相机、NAVSIM 的 8 路相机都有交集。在我们的 RTX PRO 6000 96 GB 上 zero-shot 跑一遍 WOD-E2E val 和 NAVSIM navhard，就能直接给出"通用大驾驶模型不微调能拿多少分"的第一个公开数字（推断，尚未立项）。openpilot 要吃 20 Hz 连续前视视频，也没有 route，放到这几个榜上都不合适。
