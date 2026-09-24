@@ -1,6 +1,6 @@
 # SimLingo 同一 checkpoint：官方 Bench2Drive 协议 vs SimLingo 仓库自带的 Bench2Drive 副本
 
-状态: running（预登记已写死，计分 run 尚未开始）
+状态: running（预登记与所采用的设计 (a') 已写死；计分 run 排在 slot simlingo-exp，预计 06:30 起）
 主题: [research/leaderboard-vs-ability.md](../../research/leaderboard-vs-ability.md)；回答 [decisions.md](../../research/decisions.md) 第 35 条「怎么才能定下来」的 (2)
 
 ## 目标
@@ -107,6 +107,9 @@ S 臂 smoke（同一路线 24240，01:13–01:21）：313 tick、wall 453 s、ag
 （trace 记下的覆盖前数值），比官方臂早 10 tick 结束（官方臂在 >99% 时才判）。所以 D2 不是边角情形：**几乎每条走完的路线在 S 臂里都是
 按 90% 阈值提前判完成的**。只有「走到最后 10 m 停住或出事」的路线分数会因此不同；这部分不能从 S 轨迹反推，只能靠真实官方 run 对照。
 
+两 worker 同卡并发测速（01:28，GPU 0 上只有这两个 worker）：每个 worker 约 1.1 s/tick，并发几乎不拖慢单个 worker。
+Town12 路线 1711（S 臂）：353 tick、wall 546 s，路线外开销约 72 s（大地图加载）。
+
 **工作量**：同一个 checkpoint 的第三方复测（`research/results/b2d-family/public/simlingo_userrerun`，SimLingo 目录、seed 1）里，
 220 条路线的游戏时长合计约 19.1 万 tick（按 4000 截断算约 18.0 万），其中 12 条超过 200 s。所以一遍 220 条约 18–19 万 tick。
 
@@ -120,7 +123,18 @@ S 臂 smoke（同一路线 24240，01:13–01:21）：313 tick、wall 453 s、ag
 （逐行对比结论）：S 臂的一条轨迹同时给出 S 分数，以及「同一条轨迹加上截断」时官方口径的反事实分数（D1，精确、无重跑噪声）；
 D3 靠重新计分，精确；D2 逐条标出。P2 里的真实官方臂 run 用来核对反事实（截断后的分数是否与真实官方 run 一致到重跑噪声以内），
 20 条随机对照路线给出重跑噪声。时间有余，再在受影响的路线上补 seed 2、3（两臂都跑）。
-方案选择已报给 main，由用户定；最终采用哪个写在下面「批量」一节。
+### 采用的设计（2026-09-25 01:55 定，main 按 (a') 排期；用户若改选，main 通知后重排）
+
+**(a')：两臂各 1 个 TM seed（seed 1）× 全 220 条，按路线配对。** 取代上面「条件」一节里的 3 个 seed：
+- n = 220 条 × 2 臂 × 1 seed = 440 个 route run，约 37 万 tick，10 worker 约 15 h。
+- 主比较、CI、判据**不变**：Δ = S − O 按路线配对，95% CI 用重抽路线的 bootstrap（10 000 次）；判据表原样适用。
+  每条路线只有一次运行，所以 CI 里包含了重跑噪声，但没法把它单独分出来；「run-to-run 噪声」一项改为：
+  S 臂反事实截断分数（同一条轨迹）与真实官方 run 在 4000 tick 内都走完、且没有 D2 差异的路线上的逐路线差，作为重跑噪声的估计，并写明它的来源。
+- 归因不变：D1 用 S 轨迹精确反事实；D3 重新计分；D2 = 「S 在截断下的反事实」− O，其中混有重跑噪声，按路线列出。
+- 若 15 h 内有余量，再在「两臂分数不同」的路线上补 seed 2（两臂都跑），只作补充，不改主结果。
+- 并发：10 worker，每卡 5 个；每个臂在两张卡上各有一个 runner（O：GPU 0 3 个 + GPU 1 2 个；S：GPU 0 2 个 + GPU 1 3 个），
+  两臂同时跑，任一臂不会独占较空的卡。批量脚本 `scripts/simlingo_catalogue_batch.sh`，经 `scripts/slot_run.sh simlingo-exp` 在
+  `alp-b2d-full`、`op-b2d-full` 结束后启动。
 
 ## 给兄弟实验（hazard family 拆分）的逐路线结果
 
@@ -133,9 +147,9 @@ runner 目录本身也可以直接喂给 `jevdrive/tfv6_rules.collect()`（同�
 
 - [x] 两套评测逐行对比（上表）
 - [x] 环境 `~/data/envs/simlingo`、权重、SimLingo 仓库 `~/data/third_party/simlingo@743b243`
-- [ ] smoke：每臂 1–2 条路线，GPU 0 ≤ 20 GB
-- [ ] 本文件提交（任何计分 run 之前）；成本估计补进上一节；gpu-plan.md 登记
-- [ ] 批量（01:15 起）
+- [x] smoke：两臂各 2 条（24240、1711）跑通，外加 2 worker 并发测速；GPU 0 ≤ 20 GB（并发测速时 23 GB，当时 GPU 0 空闲）
+- [x] 本文件提交（任何计分 run 之前）；成本估计补进上一节；gpu-plan.md 登记
+- [ ] 批量（slot simlingo-exp，排在 alp-b2d-full、op-b2d-full 之后，约 06:30 起，约 15 h）
 - [ ] 分析、图、per_route.csv、decisions 条目（第 35 条就地更新）
 
 ## 结果
