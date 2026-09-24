@@ -90,7 +90,7 @@ def _ticks(ax, xy, yaw, color, every):
 
 
 def fig_bev(a):
-    from jevdrive.openpilot.model import T_IDXS
+    T_IDXS = 10.0 * (np.arange(33) / 32) ** 2          # openpilot plan times (model.py, no onnx here)
     idx = Z.load_index()
     by = {e["token"]: e for e in idx["samples"]}
     bench = latest("runs/nusc_zs/alpamayo_bench/*/")
