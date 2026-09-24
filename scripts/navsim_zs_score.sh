@@ -20,7 +20,7 @@ export NAVSIM_DEVKIT_ROOT=$dk PYTHONPATH=$repo${PYTHONPATH:+:$PYTHONPATH}
 # numpy 1.23.4 (pinned by navsim) bundles an OpenBLAS that picks a broken kernel on this box's Sapphire Rapids CPU:
 # pinv / inv come back silently wrong (errors ~1e3), the PDM LQR simulator blows up and every score is garbage.
 # Forcing the Haswell kernel fixes it; refuse to run if linear algebra is still wrong.
-export OPENBLAS_CORETYPE=${OPENBLAS_CORETYPE:-Haswell}
+export OPENBLAS_CORETYPE=${OPENBLAS_CORETYPE:-Haswell} OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1  # ray gives the parallelism
 "$py" -c "import numpy as np; A=np.random.default_rng(0).normal(size=(40,40)); e=abs(A@np.linalg.inv(A)-np.eye(40)).max(); assert e<1e-8, f'BLAS broken: {e}'"
 cache=$DATA_DIR/runs/navsim/metric_cache/${ver}_$split
 threads=${NAVSIM_THREADS:-16}
