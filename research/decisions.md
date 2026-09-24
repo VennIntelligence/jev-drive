@@ -2780,3 +2780,26 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
 **状态**：**待定**。TFv6 与 SimLingo 两行是第三方重跑；噪声带借自 BLUE，套到其他方法是假设；突发 hazard 只有 65 条路线，单个 family 5–20 条。
 **怎么才能定下来**：我们自己的 TFv6 A1 在 209 条上跑两遍（同一 todo 的 T2/T3），给出 TFv6 自己的噪声与 family 行；对 SimLingo 系，并入 SimLingo 目录对照实验的 3 次重复。
 
+## 39. Zero-shot 开环：nuScenes 的 L2 上 Alpamayo 1.5 和 openpilot 都比匀速直行差，collision 上都更好；在 PhysicalAI-AV 上 openpilot 输给 Alpamayo（**待定**）
+
+2026-09-25。预登记（看任何分数之前提交）、适配验证、全部表格和图在 [todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md](../todos/2026-09-24-zeroshot-exam/nuscenes-physicalai.md)，这里只记结论。
+两个模型不训练、不拟合参数。nuScenes 用 UniAD/VAD 口径（val 有效样本、L2 按 1/2/3 s 之前各步平均、BEV-Planner 的 collision 定义），
+我们自己的 CV 复现了 BEV-Planner 统一实现下的 GoStraight（3 s L2 1.40 对 1.33 m，collision 3.05% 对 2.50%），所以文献行可作量级参照。
+
+| nuScenes val，quarter（n = 1159，scene bootstrap） | L2 均值 (m) | Δ L2 vs CV | collision 均值 (%) | Δ col vs CV |
+|---|---:|---|---:|---|
+| CV（匀速直行） | 0.72 | 0 | 1.04 | 0 |
+| Alpamayo 1.5，nav | 0.97 | +0.25 [+0.16, +0.35] | 0.40 | −0.63 [−1.25, −0.09] |
+| openpilot small / Cinque / Lebowski | 0.86 / 0.92 / 1.09 | +0.14 / +0.20 / +0.36（CI 均 > 0） | 0.17 / 0.46 / 0.49 | −0.86 [−1.51, −0.31] / 跨 0 / 跨 0 |
+| 文献（nuScenes 训练，BEV-Planner 重算）：UniAD / VAD-Base / Ego-MLP | 0.66 / 0.37 / 0.35 | | 0.62 / 0.33 / 0.37 | |
+
+1. **L2 输给 CV** 的主要来源是纵向：3 s 终点两类模型都比 log 远 1–2 m（CV −0.2 m）；在转弯 command 的 150 个样本上它们反而比 CV 好（1.19–1.23 对 1.43 m）。
+   nuScenes 87% 是直行，L2 奖励的是「这个数据集的速度剖面」，与 AD-MLP / BEV-Planner 的批评一致。
+2. **collision 上比 CV 少撞，与在 nuScenes 上训的 UniAD / VAD 同量级**，但 n = 1159 时 1% 约 12 次碰撞，只有 Alpamayo nav 和 openpilot small 的 CI 不跨 0。
+3. **nav 文本无效**（L2 差 +0.002 m），与 WOD-E2E、NAVSIM 一致。
+4. **PhysicalAI-AV（Alpamayo 主场，31 个 clip，同一 GT）**：openpilot ADE@6.4 s Lebowski 2.35、Cinque 2.59、small 2.86 m，Alpamayo 单条采样 1.77 m，
+   配对差 +0.58 [+0.03, +1.22] 到 +1.09 [+0.44, +1.81]；CV 4.63 m。结合 WOD-E2E 上两者打平，说明 Alpamayo 在自己的分布上有优势、出了主场掉得更多（推测：clip 可能与其训练集重叠）。
+
+**状态**：**待定**。Alpamayo 只跑了 main 的随机 1/4（显存上限决定，预登记规则）；单次、单 seed；collision 用连续几何而非 0.5 m 栅格。
+**怎么才能定下来**：Alpamayo 在 main 全量（4636）上重跑（B = 4 约 1.5 h，需 > 30 GB），并在 PhysicalAI-AV 上换一批确定不在 Alpamayo 训练集里的 clip。
+

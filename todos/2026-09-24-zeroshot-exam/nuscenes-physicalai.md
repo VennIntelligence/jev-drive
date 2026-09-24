@@ -1,6 +1,6 @@
 # Zero-shot 考试：nuScenes 开环规划，以及 openpilot 在 PhysicalAI-AV 上的反向检查
 
-状态: running（预登记已写死，结果待填）
+状态: done
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 姊妹考试: [wod-e2e.md](wod-e2e.md)、[navsim.md](navsim.md)、[bench2drive.md](bench2drive.md)
 
@@ -175,8 +175,139 @@ nav 与 no-nav 的对比只在 quarter 上配对做；nav 如果只跑了子集�
 
 ## 结果
 
-（跑完再填。）
+run：box 上 `$DATA_DIR/runs/nusc_zs/`（`preds/` 逐样本预测、`alpamayo/quarter_nav-nonav.jsonl` Alpamayo 全部输出含 CoC、`score/` 打分）
+与 `$DATA_DIR/runs/pai_op/`；小结果文件在 [research/results/nuscenes-zeroshot/](../../research/results/nuscenes-zeroshot/)
+（`results.csv` 全部行 × 四个集合、`by_command.csv`）和 [research/results/pai-openpilot/results.csv](../../research/results/pai-openpilot/results.csv)。
+
+### 适配器验证（只看了 tail keyframe 和 PhysicalAI 的图）
+
+![adapter](../../research/figs/nusc-zeroshot-adapter.png)
+
+图：tail keyframe `6266da95…`（scene-0633，Boston）上两个模型实际看到的输入。(a)–(c) 是 Alpamayo 的三路 120° f-theta 视图，(d)–(f) 是原生的
+CAM_FRONT_LEFT / FRONT / FRONT_RIGHT，(g) 是 tele（CAM_FRONT 中心裁剪），(h)(i) 是 openpilot 的 road / wide（只画了 luma）。看三件事：
+接缝处路沿、停车标志和建筑连续，说明外参和选相机逻辑对；地平线在三路里高度一致；三路 120° 视图上下各有黑带，就是预登记里说的「nuScenes 垂直只有 ±20°」。
+（PNG 为控制体积降到 240 dpi，PDF 在 box 上。）
+
+| 项 | 结果 |
+|---|---|
+| Alpamayo 覆盖率（6 个 tail keyframe，Boston / Singapore 都有） | cross-left 0.60、front-wide 0.60、cross-right 0.60、tele 1.00；各帧之间差 < 0.01 |
+| Alpamayo 用到的源相机 | cross-left = FRONT + FRONT_LEFT + BACK_LEFT，front-wide = FRONT + FRONT_LEFT + FRONT_RIGHT，cross-right 对称，tele = FRONT |
+| openpilot road / wide 覆盖率 | 150 个 scene 全部 1.000（只用 CAM_FRONT 就够，没有加 FRONT_LEFT/RIGHT） |
+| openpilot 坐标符号（tail keyframe，n = 374，与 ego 自己走过的 ≤ 2 s 比） | 横向位移 > 1 m 的 36 帧，三个模型的左右方向 36/36 全对；中位位置误差 1.0–1.2 m |
+| PhysicalAI 上 openpilot 的输入 | 31 个 clip 覆盖率全 1.000；取到的帧都在步时刻之前 0–33 ms（30 Hz 视频，不看未来） |
+
+![bev](../../research/figs/nusc-zeroshot-bev.png)
+
+图：6 个 tail keyframe 的俯视图（后轴 t0 系，前向朝上，横轴向右为正），灰线 1.5 s 历史、黑虚线 ego 自己走过的未来（tail 帧离 scene 结束只剩 0–2.5 s，所以很短）、
+彩线是两类模型 6.4 s 的轨迹，箭头是每秒的朝向。看的是方向和朝向：同一帧上 Alpamayo 和三个 openpilot 往同一边转、箭头沿着切线，
+说明两条输出换算（Alpamayo 旋转矩阵的 yaw、openpilot 的 calib 系左右号与相机→后轴平移）都对。
+
+### nuScenes 主表
+
+**Alpamayo 的 n 按预登记规则落到 quarter（1159）**：bench 在 48 个 tail keyframe 上，B = 1 为 1.85 s/样本、峰值 24.5 GB，B = 4 为 1.14 s/样本、峰值 31.5 GB
+（超过 30 GB 的上限，卡上同时有别人的 65 GB）。B = 1 下 main 全量 + no-nav 要 3.0 h，half 要 1.8 h，都超过 90 min，所以 nav 和 no-nav 都只跑 quarter。
+下表因此用 quarter，所有行在同一 1159 个样本上配对；CV 与 openpilot 在 main（4636）和 valid（5119）上的数字见后。
+VAD 口径 L2，括号是按 scene 重抽 10 000 次的 95% CI；Δ 是对 CV 的配对差。collision 单位 %。
+
+| 行（quarter，n = 1159） | L2 1 / 2 / 3 s (m) | L2 均值 [CI] | Δ L2 vs CV [CI] | col VAD 口径 1 / 2 / 3 s | col BEV-Planner 口径 1 / 2 / 3 s | col BEV-P 均值 [CI] | Δ col vs CV [CI] |
+|---|---|---|---|---|---|---|---|
+| logged future | 0 / 0 / 0 | 0 | −0.72 | 0 / 0 / 0 | 0 / 0 / 0 | 0 | −1.04 |
+| **CV（我们的管线）** | 0.28 / 0.67 / 1.21 | **0.72** [0.65, 0.79] | 0 | 0.09 / 0.15 / 0.62 | 0.09 / 0.35 / 2.67 | 1.04 [0.49, 1.69] | 0 |
+| CVV | 0.31 / 0.72 / 1.26 | 0.77 [0.69, 0.84] | +0.04 [+0.03, +0.06] | 0.13 / 0.24 / 0.73 | 0.17 / 0.52 / 2.85 | 1.18 | +0.14 [0.00, +0.34] |
+| openpilot small | 0.43 / 0.83 / 1.32 | 0.86 [0.78, 0.94] | +0.14 [+0.06, +0.21] | 0.00 / 0.04 / 0.20 | 0.00 / 0.00 / 0.52 | **0.17** [0.06, 0.32] | **−0.86** [−1.51, −0.31] |
+| openpilot Cinque | 0.41 / 0.87 / 1.49 | 0.92 [0.84, 1.00] | +0.20 [+0.12, +0.28] | 0.00 / 0.17 / 0.37 | 0.00 / 0.43 / 0.95 | 0.46 | −0.58 [−1.18, 0.00] |
+| openpilot Lebowski | 0.51 / 1.04 / 1.71 | 1.09 [0.99, 1.18] | +0.36 [+0.28, +0.46] | 0.04 / 0.13 / 0.36 | 0.09 / 0.26 / 1.12 | 0.49 | −0.55 [−1.15, +0.03] |
+| **Alpamayo 1.5 nav** | 0.34 / 0.91 / 1.67 | 0.97 [0.89, 1.06] | +0.25 [+0.16, +0.35] | 0.00 / 0.04 / 0.27 | 0.00 / 0.17 / 1.04 | 0.40 [0.18, 0.66] | **−0.63** [−1.25, −0.09] |
+| Alpamayo 1.5 no-nav | 0.34 / 0.91 / 1.67 | 0.97 [0.89, 1.06] | +0.25 [+0.16, +0.35] | 0.00 / 0.06 / 0.33 | 0.00 / 0.26 / 1.29 | 0.52 | −0.52 [−1.18, +0.06] |
+| 文献，BEV-Planner 统一实现（n = 5119，都在 nuScenes train 上训） | | | | | | | |
+| UniAD（官方 ckpt） | 0.35 / 0.63 / 0.99 | 0.66 | | | 0.16 / 0.43 / 1.27 | 0.62 | |
+| VAD-Base（planner 用 ego status） | 0.17 / 0.34 / 0.60 | 0.37 | | | 0.04 / 0.27 / 0.67 | 0.33 | |
+| VAD-Base（planner 不用 ego status） | 0.41 / 0.70 / 1.06 | 0.72 | | | 0.04 / 0.43 / 1.15 | 0.54 | |
+| GoStraight（= 我们的 CV） | 0.38 / 0.79 / 1.33 | 0.83 | | | 0.15 / 0.60 / 2.50 | 1.08 | |
+| Ego-MLP（只吃 ego status） | 0.15 / 0.32 / 0.59 | 0.35 | | | 0.00 / 0.27 / 0.85 | 0.37 | |
+| 文献，各自 VAD / ST-P3 实现 | | | | | | | |
+| VAD-Base（论文） | 0.17 / 0.34 / 0.60 | 0.37 | | 0.07 / 0.10 / 0.24 | | | |
+| AD-MLP（只吃 ego status + command） | 0.20 / 0.26 / 0.41 | 0.29 | | 0.17 / 0.18 / 0.24 | | | |
+| UniAD（论文，逐点 L2） | 0.48 / 0.96 / 1.65 | 1.03 | | 0.05 / 0.17 / 0.71 | | | |
+
+![results](../../research/figs/nusc-zeroshot-results.png)
+
+图：上面五个空心菱形是 BEV-Planner 统一实现下的文献行（n = 5119，无 CI），下面是我们的行（quarter，n = 1159，scene bootstrap 95% CI）。
+看两件事：左图 L2 上所有 zero-shot 模型都在 CV 的右边（更差），且离 Ego-MLP / VAD-Base 很远；右图 collision 上它们都在 CV 的左边（更少撞），
+与 UniAD / VAD 同一量级，但 CI 很宽。
+
+**管线校准先过关**：我们的 CV 在 valid（n = 5119，与 BEV-Planner 同集合）上是 0.38 / 0.82 / 1.40 m，GoStraight 是 0.38 / 0.79 / 1.33 m，
+3 s 处差 5%，在预登记的 15% 以内；BEV-Planner 口径的 collision 0.14 / 0.63 / 3.05% 对 0.15 / 0.60 / 2.50%，也接近。
+所以连续几何代替栅格的影响不大，文献行可以当量级参照。
+
+**读法**（按预登记判据）：
+
+1. **L2：两个模型都比匀速直行差**。所有 zero-shot 行对 CV 的配对 Δ 的 CI 整体 > 0（+0.14 到 +0.36 m），落在判据表第三行。
+   主要来源是纵向：3 s 终点的纵向误差均值，CV −0.19 m，Alpamayo +1.15 m，openpilot +0.9 到 +2.2 m——两类模型都比 nuScenes 的司机开得更快更远。
+   nuScenes 的 val 大部分是城区低速、直行（87%），「照当前速度走」几乎就是答案，任何对速度有自己主见的模型都会在 L2 上吃亏。
+   在 PhysicalAI-AV 上 openpilot 没有这个纵向偏差（见下），所以这更像 nuScenes 司机 / 场景的速度剖面和两个模型的先验不同，而不是 openpilot 的相机高度问题（推测）。
+2. **转弯样本上 zero-shot 模型比 CV 好**：转弯 command 的 150 个样本上 L2 均值 CV 1.43 m，Alpamayo nav 1.23、openpilot small 1.21、Cinque 1.19；
+   直行的 1009 个上反过来（CV 0.62，模型 0.81–1.04）。也就是说它们在「需要看场景」的地方有增量，但被 87% 的直行样本上的速度偏差淹没。
+3. **collision：两个模型都比 CV 少撞**。BEV-Planner 口径均值 CV 1.04%，Alpamayo nav 0.40%（Δ −0.63 [−1.25, −0.09]），openpilot small 0.17%
+   （Δ −0.86 [−1.51, −0.31]）；Cinque / Lebowski / Alpamayo no-nav 的 Δ 为负但 CI 碰到 0，按预登记只报方向。
+   这些数字与在 nuScenes 上训的 UniAD（0.62%）、VAD（0.33–0.54%）同量级。但 1159 个样本上 1% ≈ 12 次碰撞，CI 宽，不排名次。
+4. **离「在 nuScenes 上训过、只吃 ego status」的水平很远**：Ego-MLP 0.35 m、AD-MLP 0.29 m、VAD-Base 0.37 m；zero-shot 模型 0.86–1.09 m。
+   预登记预期达不到，结果确实达不到。这再次说明 nuScenes 的 L2 主要奖励「学会这个数据集的速度剖面」。
+5. **nav 文本没用**：nav − no-nav 的 L2 差 +0.002 [−0.016, +0.019] m；collision −0.12 [−0.29, +0.03]%（转弯子集 −0.22）。
+   与 WOD-E2E、NAVSIM 两场的结论一致：不带距离的模板 route 文本对轨迹几乎没有影响。
+6. **openpilot 的 cmd 变体（turn desire）也没用**：三个模型 L2 差 ≤ 0.02 m。
+
+### CV 与 openpilot 在 main（4636）和 valid（5119）上
+
+| 行 | main：L2 均值 [CI] | main：Δ vs CV | main：col BEV-P 均值 | valid：L2 1 / 2 / 3 s | valid：L2 均值 | valid：col BEV-P 均值 |
+|---|---|---|---|---|---|---|
+| CV | 0.71 [0.64, 0.77] | 0 | 1.08 | 0.38 / 0.82 / 1.40 | 0.87 | 1.27 |
+| openpilot small | 0.88 [0.81, 0.95] | +0.18 [+0.11, +0.24] | 0.35 | 0.58 / 1.08 / 1.67 | 1.11 | 0.88 |
+| openpilot Cinque | 0.95 [0.88, 1.03] | +0.25 [+0.17, +0.33] | 0.50 | 0.50 / 1.01 / 1.66 | 1.06 | 0.82 |
+| openpilot Lebowski | 1.10 [1.02, 1.19] | +0.40 [+0.32, +0.48] | 0.44 | 0.72 / 1.41 / 2.22 | 1.45 | 1.24 |
+
+main 上的结论和 quarter 一样（quarter 是 main 的随机 1/4，两者的 CV 0.72 / 0.71 一致）。valid 多出来的 483 个样本是 scene 开头 1.5 s 内的 keyframe：
+openpilot 在那里只有 0–3 帧 context，L2 和 collision 都明显变差（Lebowski 从 1.10 到 1.45 m），fullhist（context ≥ 5 s，n = 3560）上则与 main 几乎相同（small 0.87、Cinque 0.96、Lebowski 1.09）。
+
+### PhysicalAI-AV 反向检查
+
+同一 31 个 clip、同一 GT（官方 loader，0.1 … 6.4 s），openpilot 每个 clip 一条确定性轨迹。CI 按 clip 重抽 10 000 次；Δ 是对 Alpamayo「单条采样 ADE」的配对差。
+
+| 行（n = 31） | ADE@6.4 s [CI] | ADE@4 s | ADE@3 s | FDE@6.4 s | Δ ADE@6.4 vs Alpamayo 单条 [CI] |
+|---|---|---|---|---|---|
+| **Alpamayo 1.5，单条采样（6 条各自 ADE 的均值）** | **1.77** [1.47, 2.09] | 0.73 | — | — | 0 |
+| openpilot Lebowski | 2.35 [1.74, 3.03] | 1.28 | 0.89 | 5.73 | +0.58 [+0.03, +1.22] |
+| openpilot Cinque v3 | 2.59 [1.93, 3.34] | 1.35 | 0.93 | 6.38 | +0.82 [+0.15, +1.58] |
+| openpilot small | 2.86 [2.20, 3.60] | 1.41 | 0.95 | 7.35 | +1.09 [+0.44, +1.81] |
+| CV（t0 速度直行） | 4.63 [3.64, 5.68] | 1.94 | 1.15 | 13.06 | +2.86 [+1.77, +3.99] |
+| *ORACLE：Alpamayo minADE_6（同一次运行）* | *0.72* | *0.31* | | | *−1.05* |
+| *ORACLE：Alpamayo minADE_6（smoke run，FA2、seed 42）* | *0.738* | | | | |
+
+![pai](../../research/figs/pai-openpilot.png)
+
+图：(a) 一个 clip 的原生 front-wide 120° 图和 openpilot 实际看到的 road / wide 帧（luma）；(b) 31 个 clip 的逐 clip ADE@6.4 s，按 Alpamayo 单条采样 ADE 排序（对数轴）。
+看的是：openpilot 的点大多在 Alpamayo 的蓝线之上，而且散得更开——几个 clip 上 openpilot 很准（< 0.5 m），但也有一串 5–8 m 的大错；CV 几乎处处最差。
+
+**读法**：三个 openpilot 都比 Alpamayo 的单条采样差，配对 Δ 的 CI 都不跨 0（Lebowski 刚好擦过：+0.58 [+0.03, +1.22]），都明显好于 CV。
+按预登记判据，这支持「Alpamayo 在自己的主场有优势」：在 WOD-E2E 上 Cinque 与 Alpamayo 打平（RFS 8.00 对 7.86–7.88），
+在 PhysicalAI-AV 上 Alpamayo 的 ADE 比最好的 openpilot 低 0.6 m（25%）。n = 31、clip 可能与 Alpamayo 训练集重叠（`clip_ids.parquet` 的 split 未注明），
+所以这个优势的大小不可靠，只能说方向。openpilot 在这里的纵向偏差很小（6.4 s 终点纵向误差 −0.4 到 −0.9 m），与它在 nuScenes 上 +1 到 +2 m 的过冲形成对比。
+
+### Wall time
+
+| 步骤 | wall | 资源 |
+|---|---|---|
+| 补解压 4 路相机（samples + sweeps，约 100 GB） | 57 min | 11 个 tar，IO |
+| openpilot nuScenes，3 模型 × 2 desire × 150 scene | 24 min（GPU 时间 small 5.3、Cinque 7.9、Lebowski 10.8 min） | GPU 1 约 1 GB，16 个解码进程 |
+| openpilot PhysicalAI（帧准备 + 3 模型） | 约 8 min + 1 min | CPU / GPU 1 |
+| Alpamayo bench（B = 1、4） | 11 min | GPU 1 ≤ 31.5 GB |
+| Alpamayo quarter × {nav, no-nav}（2318 次调用） | 84 min（2.2 s/调用，卡上同时有别的任务） | GPU 1 约 24 GB |
+| 打分（10 000 次 scene bootstrap，4 个集合） | 约 10 min | CPU |
+
 
 ## 偏离记录
 
-（暂无。）
+1. **Alpamayo 只跑了 quarter**：这是预登记规则的结果，不是偏离——B = 4 的峰值 31.5 GB 超过批准的 30 GB，B = 1 下 main 与 half 都超过 90 min。
+   影响：Alpamayo 的数字只在 1159 个样本上，CI 比 main 宽约一倍；与 CV / openpilot 的比较全部在同一 quarter 上配对。
+2. **适配器 PNG 降到 240 dpi**（照片内容在 300 dpi 下超过 500 KB 的上限），PDF 保留 300 dpi 原图在 box 上。
+3. **BEV 验证图里 ego 的未来很短**：tail keyframe 按定义离 scene 结束不足 3 s，挑中的 6 个大多只剩 0–1 s；坐标符号的定量检查改用 374 个 tail keyframe 上的左右方向一致率（36/36），见适配器验证表。
