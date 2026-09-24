@@ -82,7 +82,7 @@ def main():
         f = frames[idx]
         gt = imread(os.path.join(args.images, f['rgb_path'].replace('./', '')))[..., :3]
         pred = rgb(camera(f, with_dyn=True))
-        rows.append({'idx': idx, 'cam': f['rgb_path'].split('/')[-2], 'split': 'test' if idx % 30 >= 24 else 'train',
+        rows.append({'idx': idx, 't': f.get('timestamp', -1), 'cam': f['rgb_path'].split('/')[-2], 'split': 'test' if idx % 30 >= 24 else 'train',
                      'psnr': round(psnr(pred, gt), 3)})
         if args.fig_frames and idx in args.fig_frames:
             np.savez_compressed(out / f'frame_{idx:05d}.npz', pred=pred, gt=gt)
