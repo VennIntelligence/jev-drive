@@ -349,7 +349,7 @@ Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 
 
 ### ADE-extra（958 帧，只对 logged future）
 
-（Alpamayo 这一行在跑，完成后补。）
+（Alpamayo 这一行还没跑完：rater 帧的任务结束后，NAVSIM 考试的第二个 Alpamayo 进程先占了显存，我的 958 帧任务启动时 OOM。它现在在 `jev:wz-alp-extra` 里等显存空出 36 GB 自动开始，跑完自动重新打分，数字届时补进这张表。）
 
 | 行 | n | ADE@3s | ADE@5s [CI，按 sequence 重抽] |
 |---|---:|---:|---|
@@ -373,7 +373,7 @@ Alpamayo 比 cv 还「往前冲」，在 > 10 m/s 的帧上是 +7.5 m（cv +9.7 
 | GCS 抓取 5 696 条记录（12.98 GB） | 约 102 min（与下面并行） |
 | openpilot，1 437 目标 × 3 模型 | 35 min |
 | Alpamayo，479 帧 × {nav, no-nav} | 63 min（7.9 s/帧，卡上同时有另两个考试的 Alpamayo，GPU 100%） |
-| Alpamayo，958 帧 × nav | （在跑） |
+| Alpamayo，958 帧 × nav | 排队中（启动时 OOM，等显存；预计 1 h） |
 | 打分（10 000 次 bootstrap） | < 1 min |
 
 ## 偏离记录
