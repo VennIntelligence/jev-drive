@@ -17,8 +17,9 @@ REPOS = {
     # mirror redirects LFS to the HF US CDN (~0.5 MB/s per stream from the box) and ModelScope is ~6 MB/s per stream
     "weights": ("nvidia/Alpamayo-1.5-10B", ("*",), "nv-community/Alpamayo-1.5-10B"),
     "processor": ("Qwen/Qwen3-VL-2B-Instruct", ("*.json", "*.txt", "*.jinja"), None),
-    # config.vlm_name_or_path: the model is built from this repo's config + tokenizer; no backbone weights needed
-    "backbone-config": ("nvidia/Cosmos-Reason2-8B", ("*.json", "*.txt", "*.jinja"), None),
+    # config.vlm_name_or_path: the model is built from this repo's config + tokenizer; no backbone weights needed.
+    # Its HF gate is not accepted for our account (403), so the files come from ModelScope, checked vs HF git oids
+    "backbone-config": ("nvidia/Cosmos-Reason2-8B", ("*.json", "*.txt", "*.jinja"), "nv-community/Cosmos-Reason2-8B"),
 }
 
 if __name__ == "__main__":

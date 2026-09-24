@@ -70,6 +70,12 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
+def git_blob_sha1(p: Path) -> str:
+    """The oid HF reports for a non-LFS file."""
+    b = Path(p).read_bytes()
+    return hashlib.sha1(b"blob %d\0" % len(b) + b).hexdigest()
+
+
 def download(url: str, dst: Path, size: int | None = None, sha256: str | None = None, streams: int = 8,
              chunk: int = 4 << 20, headers: dict | None = None) -> Path:
     """Fetch url to dst using `streams` concurrent range requests; skip if dst already has the right size."""
@@ -117,8 +123,9 @@ def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = Fals
              ms_repo: str | None = None, log=print) -> Path:
     """Download matching files of `repo` into the standard HF hub cache layout (blobs + snapshots/<sha>),
     sha256-checking every LFS file against the HF LFS oid, and return the snapshot dir, so that offline
-    `from_pretrained(repo)` works. With `ms_repo`, LFS files come from that ModelScope copy instead
-    (still checked against HF's sha256, so a stale or different copy fails loudly)."""
+    `from_pretrained(repo)` works. With `ms_repo`, files come from that ModelScope copy instead (for speed, or
+    when the HF gate is not accepted), still checked against HF's sha256 / git oid, so a stale or different copy
+    fails loudly. Listing HF metadata works even for a gated repo whose gate is not accepted."""
     from huggingface_hub.constants import HF_HUB_CACHE
     info = repo_info(repo, dataset)
     sha = info["sha"]
@@ -132,11 +139,14 @@ def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = Fals
         blob = root / "blobs" / (lfs["oid"] if lfs else e["oid"])
         if not (blob.exists() and blob.stat().st_size == e["size"]):
             t1 = time.monotonic()
-            url = ms_url(ms_repo, e["path"]) if ms_repo and lfs else hf_url(repo, e["path"], dataset, sha)
-            download(url, blob, e["size"], lfs and lfs["oid"], streams, headers={} if ms_repo and lfs else None)
+            url = ms_url(ms_repo, e["path"]) if ms_repo else hf_url(repo, e["path"], dataset, sha)
+            download(url, blob, e["size"], lfs and lfs["oid"], streams, headers={} if ms_repo else None)
+            if not lfs and git_blob_sha1(blob) != e["oid"]:
+                blob.unlink()
+                raise RuntimeError(f"{e['path']}: git oid mismatch against {repo}@{sha[:10]}")
             dt = time.monotonic() - t1
-            log(f"{e['path']}: {e['size'] / 1e6:.0f} MB in {dt:.0f} s = {e['size'] / 1e6 / dt:.1f} MB/s"
-                + (" (sha256 ok)" if lfs else ""))
+            log(f"{e['path']}: {e['size'] / 1e6:.1f} MB in {dt:.0f} s = {e['size'] / 1e6 / dt:.1f} MB/s "
+                + ("(sha256 ok)" if lfs else "(git oid ok)"))
         link = snap / e["path"]
         link.parent.mkdir(parents=True, exist_ok=True)
         if not link.is_symlink():
