@@ -315,6 +315,34 @@ def scores_subset(gt, pred, name, sub, scores):
     return row
 
 
+def cmd_bias(a):
+    """Signed plan errors from the saved predictions: lon/lat bias at 2 s and the median plan/true forward-distance
+    ratio (moving frames, v > 3 m/s) per (variant, model), pooled over segments -> bias.json."""
+    from openpilot_replay import WARMUP, at_horizon, ground_truth
+    acc = {}
+    for sid in segments():
+        fdir = ROOT / "frames" / sid
+        preds = sorted(fdir.glob("pred_*.npy"))
+        if not preds:
+            continue
+        meta = load_segment_meta(COMMA / sid)
+        n = len(np.load(preds[0], mmap_mode="r"))
+        gt = ground_truth(meta, n)
+        g = at_horizon(gt["gt_pos"], 2.0)[WARMUP:]
+        ok = np.isfinite(g[:, 0]) & (gt["speed"][WARMUP:] > 3)
+        for f in preds:
+            var, model = f.name[5:-4].rsplit("_", 1)
+            p = at_horizon(np.load(f)[:, :99].reshape(-1, 33, 3), 2.0)[WARMUP:]
+            d = acc.setdefault(f"{var}|{model}", {"lon": [], "lat": [], "ratio": []})
+            d["lon"] += list(p[ok, 0] - g[ok, 0])
+            d["lat"] += list(p[ok, 1] - g[ok, 1])
+            d["ratio"] += list(p[ok, 0] / g[ok, 0])
+    out = {k: dict(n=len(v["lon"]), lon_bias=float(np.mean(v["lon"])), lat_bias=float(np.mean(v["lat"])),
+                   ratio=float(np.median(v["ratio"]))) for k, v in acc.items()}
+    (ROOT / "bias.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
+
+
 def cmd_sheet(a):
     """Frame 600 of one segment, road | wide luma per variant -> sheet.npz (for the figure on the Mac)."""
     from jevdrive.openpilot.frames import unpack_luma
@@ -337,8 +365,9 @@ if __name__ == "__main__":
     p.add_argument("--threads", type=int, default=2)
     p = sp.add_parser("eval")
     p.add_argument("--models", nargs="+", default=["small", "cinque", "lebowski"])
+    sp.add_parser("bias")
     p = sp.add_parser("sheet")
     p.add_argument("--seg", required=True)
     p.add_argument("--frame", type=int, default=600)
     a = ap.parse_args()
-    {"frames": cmd_frames, "eval": cmd_eval, "sheet": cmd_sheet}[a.cmd](a)
+    {"frames": cmd_frames, "eval": cmd_eval, "bias": cmd_bias, "sheet": cmd_sheet}[a.cmd](a)
