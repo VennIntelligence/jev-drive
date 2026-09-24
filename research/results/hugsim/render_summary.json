@@ -1,0 +1,15 @@
+{
+ "scene": "/home/ujs/data/datasets/hugsim/scenes/nuscenes/scene-0383",
+ "n_gaussians": 2581020,
+ "n_dynamic": 1,
+ "psnr_test_mean": 24.385,
+ "n_test": 216,
+ "psnr_train_mean": 25.815,
+ "n_train": 864,
+ "ms_per_view_gpu": 18.664,
+ "fps_view": 53.6,
+ "ms_per_6cam_obs_with_readback": 140.68,
+ "peak_vram_gb_torch": 2.563,
+ "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+ "torch": "2.8.0+cu128"
+}

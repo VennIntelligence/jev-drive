@@ -1,0 +1,17 @@
+run,scenario,nc,dac,ttc,c,pdms,rc,hdscore
+smoke-cv-lqrfix,scene-0071_easy_00,1.0,1.0,1.0,1.0,1.0,0.9101,0.9101
+smoke-cv-lqrfix,scene-0383_easy_00,1.0,1.0,1.0,1.0,1.0,0.5482,0.5482
+smoke-cv-lqrfix,scene-0383_hard_00,1.0,1.0,1.0,1.0,1.0,0.5482,0.5482
+smoke-cv-lqrfix,scene-0383_medium_00,1.0,1.0,1.0,1.0,1.0,0.5482,0.5482
+smoke-cv,scene-0071_easy_00,0.3636,1.0,0.3636,1.0,0.3636,0.0579,0.021
+smoke-cv,scene-0383_easy_00,0.7059,0.5882,0.5294,1.0,0.5462,0.0735,0.0401
+smoke-cv,scene-0383_hard_00,0.7059,0.5882,0.5294,1.0,0.5462,0.0735,0.0401
+smoke-cv,scene-0383_medium_00,0.7059,0.5882,0.5294,1.0,0.5462,0.0735,0.0401
+smoke-route-lqrfix,scene-0071_easy_00,1.0,1.0,1.0,0.9559,0.9874,1.0,0.9874
+smoke-route-lqrfix,scene-0383_easy_00,0.9556,1.0,0.6667,1.0,0.7333,1.0,0.7333
+smoke-route-lqrfix,scene-0383_hard_00,0.2857,1.0,0.0714,1.0,0.1327,0.2566,0.034
+smoke-route-lqrfix,scene-0383_medium_00,0.9556,1.0,0.6667,1.0,0.7333,1.0,0.7333
+smoke-route,scene-0071_easy_00,1.0,1.0,1.0,0.9545,0.987,1.0,0.987
+smoke-route,scene-0383_easy_00,1.0,1.0,0.7045,1.0,0.789,1.0,0.789
+smoke-route,scene-0383_hard_00,0.2308,1.0,0.0769,1.0,0.1209,0.2396,0.029
+smoke-route,scene-0383_medium_00,1.0,1.0,0.7045,1.0,0.789,1.0,0.789

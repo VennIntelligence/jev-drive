@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from jevdrive.plots import COLOR, PAGE, STYLE, legend_below, plt, save  # noqa: E402
+from jevdrive.plots import COLOR, PAGE, STYLE, plt, save  # noqa: E402
 
 
 def main(src: Path, out: Path):
@@ -32,17 +32,17 @@ def main(src: Path, out: Path):
                 s.set_visible(False)
             if j == 0:
                 ax.set_ylabel(lab)
-        axes[1, j].set_xlabel(f"{row.cam}, frame {idx} ({row.split}), PSNR {row.psnr:.1f} dB")
+        axes[0, j].set_title(f"{row.cam.replace('CAM_', '').replace('_', ' ').lower()}, held-out, {row.psnr:.1f} dB")
     fig.subplots_adjust(wspace=0.02, hspace=0.02)
     save(fig, out, "hugsim-render-check")
 
-    fig, ax = plt.subplots(figsize=(PAGE / 2, 1.6))
+    fig, ax = plt.subplots(figsize=(PAGE / 2, 2.0))
     for split, c in (("train", COLOR["baseline"]), ("test", COLOR["qwen_last"])):
         s = df[df.split == split]
         ax.scatter(s.t, s.psnr, s=2, color=c, label=f"{split} views (mean {s.psnr.mean():.2f} dB)")
     ax.set_xlabel("time in the recorded log [s]")
     ax.set_ylabel("PSNR vs recorded [dB]")
-    legend_below(fig, ax)
+    ax.legend(loc="lower left", ncol=1, markerscale=3)
     save(fig, out, "hugsim-render-psnr")
 
 
