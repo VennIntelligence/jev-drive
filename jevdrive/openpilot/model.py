@@ -78,7 +78,11 @@ class OPModel:
     """One openpilot model stepped at 20 Hz. step() takes the packed current frames and returns the raw
     output vector (float32); decode() turns it into plan / action."""
 
-    def __init__(self, name: str, backend: str = "cuda-iob", cache: Path | None = None, threads: int = 0):
+    def __init__(self, name: str, backend: str = "cuda-iob", cache: Path | None = None, threads: int = 0,
+                 context_rate: bool = False):
+        """context_rate: one step() per 5 Hz context step instead of per 20 Hz modeld step (external-queue models
+        only). A phase-t output depends only on frames t-4 and t, hidden states t-96..t-4 (stride 4) and desire
+        max-pooled over 4-step windows aligned to t, so stepping one phase alone reproduces modeld exactly there."""
         assert backend in BACKENDS, backend
         self.name, self.backend = name, backend
         so = ort.SessionOptions()
@@ -96,6 +100,8 @@ class OPModel:
         self.inputs = {i.name: (tuple(i.shape), np.float16 if "float16" in i.type else
                                 np.uint8 if "uint8" in i.type else np.float32) for i in self.sess.get_inputs()}
         self.queued = "new_img" in self.inputs
+        assert not (context_rate and self.queued), "queued models keep a 20 Hz queue inside the ONNX"
+        self.skip = 1 if context_rate else FRAME_SKIP
         self.device = backend not in ("cpu", "cuda")  # inputs/outputs/states bound on the GPU
         self.state_names = [n for n in self.inputs if n.startswith("state_")]
         self.reset()
@@ -106,9 +112,9 @@ class OPModel:
         self.n = 0
         zeros = {n: np.zeros(s, d) for n, (s, d) in self.inputs.items()}
         if not self.queued:  # host queues, as compile_modeld.make_input_queues
-            self.img_q = np.zeros((2, FRAME_SKIP + 1, 6, 128, 256), np.uint8)
-            self.desire_q = np.zeros((FRAME_SKIP * 25, 8), np.float32)
-            self.feat_q = np.zeros((FRAME_SKIP * 24, 512), np.float32)
+            self.img_q = np.zeros((2, self.skip + 1, 6, 128, 256), np.uint8)
+            self.desire_q = np.zeros((self.skip * 25, 8), np.float32)
+            self.feat_q = np.zeros((self.skip * 24, 512), np.float32)
             self.prev_feat = np.zeros(512, np.float32)
         if not self.device:
             self.state = {n: zeros[n] for n in self.state_names}
@@ -153,11 +159,12 @@ class OPModel:
         self.desire_q = np.concatenate([self.desire_q[1:], pulse[None]])
         self.feat_q = np.concatenate([self.feat_q[1:], self.prev_feat[None]])
         f16 = np.float16
-        return {"img": self.img_q[0, ::FRAME_SKIP].reshape(1, 12, 128, 256),
-                "big_img": self.img_q[1, ::FRAME_SKIP].reshape(1, 12, 128, 256),
-                "desire_pulse": self.desire_q.reshape(25, FRAME_SKIP, 8).max(1)[None].astype(f16),
+        k = self.skip
+        return {"img": self.img_q[0, ::k].reshape(1, 12, 128, 256),
+                "big_img": self.img_q[1, ::k].reshape(1, 12, 128, 256),
+                "desire_pulse": self.desire_q.reshape(25, k, 8).max(1)[None].astype(f16),
                 "traffic_convention": tc.astype(f16), "action_t": at.astype(f16),
-                "features_buffer": self.feat_q[::FRAME_SKIP][None].astype(f16)}
+                "features_buffer": self.feat_q[::k][None].astype(f16)}
 
     def step(self, img2, desire=np.zeros(8), traffic=(1, 0), action_t=(0.275, 0.525)):
         f = self.feeds(img2, desire, traffic, action_t)
