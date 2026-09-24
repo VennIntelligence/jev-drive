@@ -1,6 +1,6 @@
 # 榜单文本分析（第二轮）：正面归因、跨榜一致性、复现差距、指标攻击面、无代码方法
 
-状态: draft
+状态: done（2026-09-24 21:46–22:52，Codex gpt-6-sol ultra，约 54 万 token）
 执行者: Codex（Tokyo box，gpt-6-sol ultra），本文自包含
 前置: [第一轮 hack 审计](../2026-09-24-hack-audit/README.md)，交付物在 Tokyo 的 `/data/hack_audit/out/`（Mac 上的副本在 `research/results/hack-audit/`）
 
@@ -126,4 +126,7 @@ cd /data/hack_audit && codex exec -m gpt-6-sol -c model_reasoning_effort='"ultra
 
 ## 结果
 
-跑完再填：交付物拉回 `research/results/leaderboard-text-analysis/`，再打包交给综合阶段（第 6 项）。
+交付物已拉回 [research/results/leaderboard-text-analysis/](../../research/results/leaderboard-text-analysis/)，导读是 [HANDOFF.md](../../research/results/leaderboard-text-analysis/HANDOFF.md)。
+没有扩大范围。W1 账本 1,121 行，W2 已发表分数 204 个、机械 Spearman 10 组，W3 筛出 issue 113 条，W4 七个榜单的指标页和 24 条攻击面，W5 无代码方法的论文披露 45 条。
+五项独立复核最终都 ≥ 90%（W3 和 W5 初次未过，改正后重新复核通过，过程见 review.md）；170 个来源链接验收通过。
+45 个待判问题在 `questions_for_synthesis.md`，交给[综合判读](../2026-09-24-leaderboard-synthesis.md)。

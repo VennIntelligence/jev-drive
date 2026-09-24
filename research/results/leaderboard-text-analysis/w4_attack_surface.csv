@@ -1,0 +1,25 @@
+board,attack_surface,code_evidence,observed_in_round1,finding_id
+bench2drive,停车牌规则层提升模型不变时的计分,https://github.com/Thinklab-SJTU/Bench2Drive/blob/2645714eb1f3a100217928dd113093cae0779f36/leaderboard/leaderboard/utils/statistics_manager.py#L21-L27,yes,B2D-TFV6-003
+bench2drive,定时蠕行避免 blocked 终止,https://github.com/Thinklab-SJTU/Bench2Drive/blob/2645714eb1f3a100217928dd113093cae0779f36/leaderboard/leaderboard/scenarios/route_scenario.py#L429-L434,yes,B2D-BLUE-001;B2D-TFV6-002
+bench2drive,最低速度违规不直接扣 DS 且不计 SR 失败,https://github.com/Thinklab-SJTU/Bench2Drive/blob/2645714eb1f3a100217928dd113093cae0779f36/leaderboard/leaderboard/utils/statistics_manager.py#L31-L38,no,未观察到
+carla_lb2,提前停车截断后续乘积罚分,https://github.com/carla-simulator/leaderboard/blob/a87a3419e9d2e0d36deb25f1f26c17edee2d1420/leaderboard/utils/statistics_manager.py#L379-L405,yes,LB2-TFPP-001
+carla_lb2,停车牌后处理提升模型不变时的计分,https://github.com/carla-simulator/leaderboard/blob/a87a3419e9d2e0d36deb25f1f26c17edee2d1420/leaderboard/utils/statistics_manager.py#L21-L29,yes,LB2-TFPP-002
+carla_lb2,定时蠕行避免 blocked 终止,https://github.com/carla-simulator/leaderboard/blob/a87a3419e9d2e0d36deb25f1f26c17edee2d1420/leaderboard/scenarios/route_scenario.py#L429-L434,yes,LB2-TFPP-003
+navsim_v1,用 PDMS 代理从大量候选中挑轨迹,https://github.com/autonomousvision/navsim/blob/3e8291bfa89ff247231e0227778840cd0a036896/navsim/planning/simulation/planner/pdm_planner/scoring/pdm_scorer.py#L156-L183,yes,NAV1-DVM0-001;NAV1-DRIVOR-002;NAV1-TOAD-001;NAV1-RAP-001
+navsim_v1,v1.1 的 DDC 零权与非乘积门,https://github.com/autonomousvision/navsim/blob/3e8291bfa89ff247231e0227778840cd0a036896/navsim/planning/simulation/planner/pdm_planner/scoring/pdm_scorer.py#L38-L58,no,未观察到
+navsim_v1,低速时忽略已查询相交候选的 TTC 失分,https://github.com/autonomousvision/navsim/blob/3e8291bfa89ff247231e0227778840cd0a036896/navsim/planning/simulation/planner/pdm_planner/scoring/pdm_scorer.py#L455-L472,no,未观察到
+navsim_v1,根据非反应式协议调评分提示,https://github.com/autonomousvision/navsim/blob/3e8291bfa89ff247231e0227778840cd0a036896/docs/metrics.md#L1-L3,yes,NAV1-DVM0-002
+navsim_v2,代理评分与手工权重重排候选,https://github.com/autonomousvision/navsim/blob/359c7f72304bfa8273e754224a213d3751bd2340/navsim/planning/simulation/planner/pdm_planner/scoring/pdm_scorer.py#L40-L73,yes,NAV2-GTRS-002;NAV2-GTRS-003;NAV2-DRIVOR-001;NAV2-DRIVOR-002;NAV2-TOAD-001;NAV2-TOAD-003
+navsim_v2,首段终点改变合成后续场景计分权重,https://github.com/autonomousvision/navsim/blob/359c7f72304bfa8273e754224a213d3751bd2340/navsim/planning/simulation/planner/pdm_planner/scoring/scene_aggregator.py#L26-L47,no,未观察到
+navsim_v2,human 子项为零时豁免 agent 对应子项,https://github.com/autonomousvision/navsim/blob/359c7f72304bfa8273e754224a213d3751bd2340/navsim/evaluate/pdm_score.py#L171-L219,no,未观察到
+navsim_v2,交叉口时间步跳过 LK 检查,https://github.com/autonomousvision/navsim/blob/359c7f72304bfa8273e754224a213d3751bd2340/navsim/planning/simulation/planner/pdm_planner/scoring/pdm_scorer.py#L615-L655,no,未观察到
+nuscenes,ego-only 短时模仿可压低 L2,https://github.com/OpenDriveLab/UniAD/blob/609ee083ea51c3521c323f1279dfc4cee0e60467/projects/mmdet3d_plugin/uniad/dense_heads/planning_head_plugin/planning_metrics.py#L119-L148,yes,REAL-NUS-001;REAL-NUS-003;REAL-NUS-005
+nuscenes,适配 0.5 m 占用格碰撞判据,https://github.com/OpenDriveLab/UniAD/blob/609ee083ea51c3521c323f1279dfc4cee0e60467/projects/mmdet3d_plugin/uniad/dense_heads/planning_head_plugin/planning_metrics.py#L22-L29,yes,REAL-NUS-002
+nuscenes,GT 已碰撞时预测碰撞不入计数,https://github.com/OpenDriveLab/UniAD/blob/609ee083ea51c3521c323f1279dfc4cee0e60467/projects/mmdet3d_plugin/uniad/dense_heads/planning_head_plugin/planning_metrics.py#L97-L116,no,未观察到
+wod_e2e,直接用 RFS 奖励或代理选提交轨迹,https://github.com/waymo-research/waymo-open-dataset/blob/99a4cb3ff07e2fe06c2ce73da001f850f628e45a/src/waymo_open_dataset/metrics/python/rater_feedback_utils.py#L359-L419,yes,REAL-WOD-001;REAL-WOD-002;REAL-WOD-003
+wod_e2e,只拟合 3 秒和 5 秒评分点,https://github.com/waymo-research/waymo-open-dataset/blob/99a4cb3ff07e2fe06c2ce73da001f850f628e45a/src/waymo_open_dataset/metrics/python/rater_feedback_utils.py#L304-L323,no,未观察到
+wod_e2e,区外轨迹仍有 4.0 分下限,https://github.com/waymo-research/waymo-open-dataset/blob/99a4cb3ff07e2fe06c2ce73da001f850f628e45a/src/waymo_open_dataset/metrics/python/rater_feedback_utils.py#L375-L413,no,未观察到
+wod_e2e,3 秒和 5 秒分别取不同 rater 最佳匹配,https://github.com/waymo-research/waymo-open-dataset/blob/99a4cb3ff07e2fe06c2ce73da001f850f628e45a/src/waymo_open_dataset/metrics/python/rater_feedback_utils.py#L390-L405,no,未观察到
+hugsim,静止或制动 fallback 保住无 EP 的短窗子分数,https://github.com/hyzhou404/HUGSIM/blob/62c690d39fd90020e68a196bd8bcc1c4d4191f2e/sim/utils/score_calculator.py#L542-L566,yes,HUG-WA-002
+hugsim,非关键帧或少于两点规划被排除均值,https://github.com/hyzhou404/HUGSIM/blob/62c690d39fd90020e68a196bd8bcc1c4d4191f2e/sim/utils/score_calculator.py#L475-L488,no,未观察到
+hugsim,非 car 动态框不进入目标碰撞检查,https://github.com/hyzhou404/HUGSIM/blob/62c690d39fd90020e68a196bd8bcc1c4d4191f2e/sim/utils/score_calculator.py#L503-L509,no,未观察到
