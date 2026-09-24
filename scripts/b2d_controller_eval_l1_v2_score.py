@@ -13,7 +13,8 @@ import numpy as np
 
 from b2d_controller_eval_l1_score import one
 
-METRICS = ('primary', 'cte_rms_m', 'time_xy_rms_m', 'speed_rms_mps', 'extra_jerk_rms_mps3')
+METRICS = ('primary', 'cte_rms_m', 'time_xy_rms_m', 'speed_rms_mps', 'extra_jerk_rms_mps3',
+           'along_lag_rms_m', 'stop_short_m')
 PAIRS = [('C', 'A'), ('C', 'B'), ('D', 'A'), ('D', 'B'), ('D', 'C'), ('B', 'A')]
 
 
@@ -29,9 +30,26 @@ def score_batch(root, kind, refs, cruises, label=None):
             if fed.read_bytes() != reference.read_bytes():
                 raise ValueError(f'{case}: fed reference differs from {reference}')
             row = one(case / 'validation.json', 'expert', reference, cruises.get(rid, cruises['default']))
-            row.update(reference=label or kind, route=rid)
+            row.update(reference=label or kind, route=rid, **longitudinal(case, reference))
             rows.append(row)
     return rows
+
+
+def longitudinal(case, reference):
+    """Descriptive split of the longitudinal error: along-track lag (reference station at time t
+    minus the station of the actual position, held after the run ends) and the final stop
+    shortfall along the path (positive = stopped before the reference end)."""
+    ref = json.loads(reference.read_text())
+    rt, rxy = np.asarray(ref['elapsed_s']), np.asarray(ref['world_xy'])
+    arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(rxy, axis=0), axis=1))]
+    rows = json.loads((case / 'validation_trace.json').read_text())
+    t = np.asarray([r['elapsed_s'] for r in rows])
+    xy = np.asarray([r['truth_xy'] for r in rows])
+    station = np.asarray([arc[np.argmin(np.sum((rxy - p) ** 2, axis=1))] for p in xy[::5]])
+    grid = rt[rt <= rt[-1]]
+    actual = np.interp(grid, t[::5], station)
+    lag = np.interp(grid, rt, arc) - actual
+    return dict(along_lag_rms_m=float(np.sqrt(np.mean(lag ** 2))), stop_short_m=float(arc[-1] - station[-1]))
 
 
 def route_means(rows, arm, metric):
