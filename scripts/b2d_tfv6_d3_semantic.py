@@ -34,7 +34,7 @@ def route_projection(point, dense):
 
 
 class SemanticSequence:
-    """Mirror RouteCompletionTest's 10-point forward window on dense route."""
+    """Mirror RouteCompletionTest's two-point forward window on dense route."""
     def __init__(self, package):
         self.package=package
         self.dense=np.asarray([p['xyz'] for p in package['dense']],dtype=float)
@@ -71,7 +71,7 @@ class SemanticSequence:
         if np.linalg.norm(np.asarray(local_targets['target_point'])-target)>1.0:
             raise SemanticFailure(f'step {step}: TFv6 target differs from selected planner target')
         old_rc=self.rc_index
-        for i in range(old_rc,min(old_rc+11,len(self.dense))):
+        for i in range(old_rc,min(old_rc+3,len(self.dense))):
             forward=self.dense[min(i+1,len(self.dense)-1),:2]-self.dense[max(i-1,0),:2]
             if np.dot(ego-self.dense[i,:2],forward)>0:
                 self.rc_index=i
