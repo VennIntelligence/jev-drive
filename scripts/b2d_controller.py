@@ -126,9 +126,31 @@ class Controller:
                  longitudinal_mode='vendor', pi_kp=1., pi_ki=.25,
                  max_lookahead_time_s=.5, aim_interpolation='linear',
                  pursuit_frame='body', rear_slip_c_per_rad=None,
-                 steer_inverse='nominal', track_width_m=None):
-        if longitudinal_mode not in ('vendor', 'pi'):
-            raise ValueError('longitudinal_mode must be vendor or pi')
+                 steer_inverse='nominal', track_width_m=None,
+                 accel_kp=1., accel_ki=.3, accel_integral_limit=1.5,
+                 jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
+                 throttle_map=None, brake_map=None):
+        if longitudinal_mode not in ('vendor', 'pi', 'accel'):
+            raise ValueError('longitudinal_mode must be vendor, pi or accel')
+        # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
+        # measured MKZ throttle/brake -> acceleration maps are inverted, so decelerations the
+        # engine drag can give (coast is about -2.8 m/s^2) never touch the brake, whose least
+        # application already gives about -3.2 m/s^2.
+        self.throttle_map = np.array(throttle_map if throttle_map is not None else
+            [(0., -2.8), (.125, -2.0), (.2, -1.65), (.3, -.7), (.4, 0.), (.5, .6),
+             (.6, 1.5), (.7, 2.3), (.75, 3.)], dtype=float)
+        self.brake_map = np.array(brake_map if brake_map is not None else
+            [(0., -2.8), (.05, -3.2), (.25, -3.9), (.45, -4.5), (.75, -6.3), (1., -8.)], dtype=float)
+        for table in (self.throttle_map, self.brake_map):
+            if table.ndim != 2 or table.shape[1] != 2 or not np.isfinite(table).all() or (np.diff(table[:, 0]) <= 0).any():
+                raise ValueError('actuator maps need increasing command and finite acceleration')
+        if (np.diff(self.throttle_map[:, 1]) <= 0).any() or (np.diff(self.brake_map[:, 1]) >= 0).any():
+            raise ValueError('throttle map must increase and brake map decrease in acceleration')
+        accel_values = [accel_kp, accel_ki, accel_integral_limit, jerk_limit, jerk_limit_brake, brake_hysteresis]
+        if not np.all(np.isfinite(accel_values)) or min(accel_values) < 0 or jerk_limit <= 0 or jerk_limit_brake <= 0:
+            raise ValueError('accel-mode gains and limits must be finite, jerk limits positive')
+        self.accel_kp, self.accel_ki, self.accel_integral_limit = float(accel_kp), float(accel_ki), float(accel_integral_limit)
+        self.jerk_limit, self.jerk_limit_brake, self.brake_hysteresis = float(jerk_limit), float(jerk_limit_brake), float(brake_hysteresis)
         self.longitudinal_mode = longitudinal_mode
         if preset not in ('carla', 'tcp', 'pursuit'):
             raise ValueError('unknown controller preset')
@@ -210,6 +232,9 @@ class Controller:
         self.lateral.reset()
         self.longitudinal.reset()
         self.longitudinal_pi.reset()
+        self._accel_integral = 0.
+        self._accel_command = None
+        self._braking = False
         self._history = deque()
         self._pose = np.zeros(3)
         self._last_time = None
@@ -371,6 +396,34 @@ class Controller:
         self._diagnostics['aim_interpolation_used'] = 'hermite'
         return aim
 
+    def _accel_actuation(self, age, desired, speed, elapsed):
+        early, late = self._speed_at(age, 0., .5), self._speed_at(age, .5, 1.)
+        feedforward = 0. if early is None or late is None else (late - early) / .5
+        error = desired - speed
+        raw = feedforward + self.accel_kp * error + self._accel_integral
+        low, high = float(self.brake_map[-1, 1]), float(self.throttle_map[-1, 1])
+        # Conditional integration: no charging further into actuator saturation.
+        if not ((raw >= high and error > 0) or (raw <= low and error < 0)):
+            self._accel_integral = float(np.clip(self._accel_integral + self.accel_ki * error * elapsed,
+                                                 -self.accel_integral_limit, self.accel_integral_limit))
+        command = float(np.clip(feedforward + self.accel_kp * error + self._accel_integral, low, high))
+        if self._accel_command is not None:
+            command = float(np.clip(command, self._accel_command - self.jerk_limit_brake * elapsed,
+                                    self._accel_command + self.jerk_limit * elapsed))
+        self._accel_command = command
+        coast = float(self.throttle_map[0, 1])
+        # Brake only below coast with hysteresis, so the actuator does not chatter across the gap.
+        self._braking = command < coast - (0. if self._braking else self.brake_hysteresis)
+        if self._braking:
+            brake = float(np.interp(-command, -self.brake_map[:, 1], self.brake_map[:, 0]))
+            throttle = 0.
+        else:
+            throttle = float(np.interp(command, self.throttle_map[:, 1], self.throttle_map[:, 0]))
+            brake = 0.
+        self._diagnostics.update(accel_feedforward_mps2=feedforward, accel_command_mps2=command,
+                                 accel_integral_mps2=self._accel_integral)
+        return min(throttle, self.max_throttle), min(brake, self.max_brake)
+
     def _geometry(self, age):
         points = (self._points - self._pose[:2]) @ _rotation(self._pose[2])
         # Keep the segment straddling the current reference time. The origin is
@@ -395,6 +448,7 @@ class Controller:
         return points, (station, cross_track, heading)
 
     def _safe(self, reason, elapsed=None):
+        self._accel_integral, self._accel_command, self._braking = 0., None, True
         if self.longitudinal_mode == 'pi':
             self.longitudinal_pi.reset()
             self._diagnostics['longitudinal_integral_effort'] = 0.
@@ -490,6 +544,8 @@ class Controller:
                                      longitudinal_unsaturated_effort=self.longitudinal_pi.raw_effort,
                                      longitudinal_integration_limited=self.longitudinal_pi.integration_limited,
                                      longitudinal_kp=self.longitudinal_pi.kp, longitudinal_ki=self.longitudinal_pi.ki)
+        elif self.longitudinal_mode == 'accel':
+            throttle, brake = self._accel_actuation(age, desired, speed, elapsed)
         elif self.preset == 'tcp':
             brake = float(desired < .4 or speed > desired * 1.1)
             throttle = float(np.clip(self.longitudinal.step(np.clip(desired - speed, 0., .25)), 0., self.max_throttle))
@@ -516,6 +572,7 @@ class Controller:
             if self.longitudinal_mode == 'pi':
                 self.longitudinal_pi.reset()
                 self._diagnostics['longitudinal_integral_effort'] = 0.
+            self._accel_integral, self._accel_command, self._braking = 0., None, True
         self._diagnostics['longitudinal_effort'] = float(throttle - brake)
         self._diagnostics.update(aim_xy=aim.tolist(), cross_track_m=cross_track,
                                 heading_error_rad=heading, reason=reason,

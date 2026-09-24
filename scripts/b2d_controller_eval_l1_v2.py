@@ -20,7 +20,6 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / 'todos/2026-09-23-tfv6-controller/controller-eval'
-PRESET = {'A': 'author_route', 'B': 'author_waypoint', 'C': 'pursuit', 'D': 'pursuit'}
 LOCK = threading.Lock()
 # Town12/13 servers take 6-8 GB each; three at once fill a 24 GB card.
 BIG = ('Town12', 'Town13')
@@ -57,7 +56,9 @@ def run_route(a, route, index):
     root = ET.Element('routes'); root.append(route)
     ET.ElementTree(root).write(xml, encoding='utf-8', xml_declaration=True)
     seeds = ['p00'] if a.kind == 'probe' else a.seeds.split(',')
-    arms = 'A' if a.kind == 'probe' else a.arms
+    arms = ['A'] if a.kind == 'probe' else a.arms.split(',') if ',' in a.arms else list(a.arms)
+    variants = json.loads(a.variants.read_text())
+    PRESET = {arm: variants[arm]['presets'][0] for arm in arms}
     wanted = [(s, arm) for s in seeds for arm in arms]
     max_ticks = 40
     if a.kind in ('ramp', 'profile'):
@@ -95,7 +96,7 @@ def run_route(a, route, index):
         cases.write_text(json.dumps([dict(route=rid, perturbation_id=s, variant=arm, preset=PRESET[arm])
                                      for s, arm in missing]))
         command = ['/data/envs/tfv6/bin/python', str(ROOT / 'scripts/b2d_controller_validate.py'),
-                   '--routes', str(xml), '--out', str(target), '--variants', str(INPUT / 'l1-variants.json'),
+                   '--routes', str(xml), '--out', str(target), '--variants', str(a.variants),
                    '--route-cruises', str(INPUT / 'l1-cruises.json'),
                    '--perturbations', str(INPUT / 'perturbations.json'),
                    '--perturbation-ids', ','.join(sorted({s for s, _ in missing})), '--case-list', str(cases),
@@ -127,7 +128,8 @@ def main():
     p.add_argument('--refs', type=Path, help='directory with <kind>-traces.json')
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--seeds', default='p01,p02,p03')
-    p.add_argument('--arms', default='ABCD')
+    p.add_argument('--arms', default='ABCD', help='letters, or comma-separated variant labels')
+    p.add_argument('--variants', type=Path, default=INPUT / 'l1-variants.json')
     p.add_argument('--workers', type=int, default=3)
     p.add_argument('--server-base', type=int, default=120)
     p.add_argument('--interface', default='nominal', choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz', 'pose_plan'))
