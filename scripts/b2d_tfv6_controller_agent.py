@@ -16,6 +16,7 @@ from b2d_tfv6_coordinates import rear_waypoints
 
 
 ARMS = "ABCD"
+DIAGNOSTIC_ARMS = "EFK"
 
 
 def get_entry_point():
@@ -44,6 +45,28 @@ def _select_arm_control(arm, candidates):
     if arm not in ARMS or set(candidates) != set(ARMS):
         raise ValueError("Expected exactly four registered TFv6 controls")
     return dict(candidates[arm])
+
+
+def _compose_d3_arm(arm, raw, speed):
+    """Build a diagnostic arm after B/C raw controls, before author postprocessors."""
+    if arm == 'E':
+        mixed = _triplet(raw['C']['steer'], raw['B']['throttle'], raw['B']['brake'])
+    elif arm == 'F':
+        mixed = _triplet(raw['B']['steer'], raw['C']['throttle'], raw['C']['brake'])
+    elif arm == 'K':
+        mixed = dict(raw['C'])
+    else:
+        raise ValueError(f'Unknown D3 diagnostic arm {arm}')
+    return _normalize_brake(mixed, speed)
+
+
+def _kalman_input_only(original_control, shadow_b):
+    """Construct the filter-only B input; never mutate the actual C control."""
+    if shadow_b is None:
+        return original_control
+    return type(original_control)(steer=float(shadow_b['steer']),
+                                  throttle=float(shadow_b['throttle']),
+                                  brake=float(shadow_b['brake']))
 
 
 def _configure_author_arm(config, arm):
@@ -126,11 +149,13 @@ def _assert_no_phantom(actor_waypoints, rear, frame_log, step, sim_time, arm):
 
 class TFv6ControllerAgent(SensorAgent):
     def setup(self, path_to_conf_file, *args, **kwargs):
+        self._d3 = os.environ.get('B2D_D3_DIAGNOSTIC') == '1'
         parts = path_to_conf_file.split("+")
-        self.arm = (parts[1] if len(parts) > 1 and parts[1] in ARMS
+        permitted = ARMS + (DIAGNOSTIC_ARMS if self._d3 else '')
+        self.arm = (parts[1] if len(parts) > 1 and parts[1] in permitted
                     else os.environ.get("B2D_W2_ARM", "")).upper()
-        if self.arm not in ARMS:
-            raise ValueError("TFv6 agent requires --arm {A,B,C,D} via model_dir+ARM or B2D_W2_ARM")
+        if self.arm not in permitted:
+            raise ValueError(f"TFv6 agent requires an arm in {permitted} via model_dir+ARM or B2D_W2_ARM")
         model_path = parts[0]
         output = os.environ.get("B2D_W2_LOG_DIR")
         if not output:
@@ -138,7 +163,14 @@ class TFv6ControllerAgent(SensorAgent):
         Path(output).mkdir(parents=True, exist_ok=True)
         os.environ.setdefault("SAVE_PATH", output)
         super().setup(model_path, *args, **kwargs)
-        _configure_author_arm(self.config_closed_loop, self.arm)
+        if self._d3:
+            sparse = [{'xyz': [float(transform.location.x),float(transform.location.y),
+                              float(transform.location.z)], 'command': int(command)}
+                     for transform,command in self._global_plan_world_coord]
+            if len(sparse)<2:
+                raise RuntimeError('D3 sparse agent global plan is empty')
+            (Path(output)/'d3_agent_sparse_plan.json').write_text(json.dumps(sparse)+'\n')
+        _configure_author_arm(self.config_closed_loop, self.arm if self.arm in ARMS else 'C')
         # The W1 production pursuit configuration is fixed for both controller arms.
         common = dict(longitudinal_mode="pi", lookahead="max", pi_kp=0.5, pi_ki=0.25,
                       max_lookahead_time_s=0.5)
@@ -164,6 +196,25 @@ class TFv6ControllerAgent(SensorAgent):
         self._frame_log = open(Path(output) / "frames.jsonl", "w", buffering=1)
         self._d2_actor_log = os.environ.get("B2D_D2_ACTORS") == "1"
         self._d2_actor_types = []
+        self._d3_planners_installed = False
+        self._d3_nav = None
+        self._d3_pop_events = []
+        self._d3_selected_pop_distance = None
+        self._d3_prev_b = None
+        self._d3_kalman_trace = None
+        if self._d3 and self.arm == 'K':
+            original_kalman = self.kalman_filter.step
+
+            def diagnostic_kalman(*arguments, **keywords):
+                actual = keywords['control']
+                replacement = _kalman_input_only(actual, self._d3_prev_b)
+                self._d3_kalman_trace = {'actual_input': _triplet(actual.steer, actual.throttle, actual.brake),
+                                         'filter_input': _triplet(replacement.steer, replacement.throttle, replacement.brake),
+                                         'used_b_shadow': self._d3_prev_b is not None}
+                keywords['control'] = replacement
+                return original_kalman(*arguments, **keywords)
+
+            self.kalman_filter.step = diagnostic_kalman
 
         original_forward = self.closed_loop_inference.forward
         original_waypoints = self.closed_loop_inference.execute_waypoints
@@ -204,11 +255,18 @@ class TFv6ControllerAgent(SensorAgent):
                 self._controller_reason[arm] = controller.diagnostics["reason"]
             author_speed = float(self._tick_data["speed"].item())
             self._raw = {arm: _normalize_brake(raw, author_speed) for arm, raw in self._raw.items()}
+            if self._d3 and self.arm in DIAGNOSTIC_ARMS:
+                self._raw[self.arm] = _compose_d3_arm(self.arm, self._raw, author_speed)
             if self.arm in "CD":
                 chosen = _select_arm_control(self.arm, self._raw)
                 prediction.steer = chosen["steer"]
                 prediction.throttle = chosen["throttle"]
                 prediction.brake = chosen["brake"]
+            elif self.arm in DIAGNOSTIC_ARMS:
+                chosen = self._raw[self.arm]
+                prediction.steer = chosen['steer']
+                prediction.throttle = chosen['throttle']
+                prediction.brake = chosen['brake']
             return prediction
 
         self.closed_loop_inference.forward = forward
@@ -227,9 +285,58 @@ class TFv6ControllerAgent(SensorAgent):
         self.stop_sign_post_processor.adjust = record_stop
 
     def tick(self, input_data):
+        if self._d3:
+            self._install_d3_planner_trace()
         result = super().tick(input_data)
         self._tick_data = result
+        if self._d3:
+            planners = {}
+            for distance, planner in self.gps_waypoint_planners_dict.items():
+                route = list(planner.route)
+                active = distance in (self.config_closed_loop.route_planner_min_distance, 4.0)
+                selected = route if active else route[:3]
+                planners[str(distance)] = {'remaining': len(route),
+                    'points': [{'xyz': np.asarray(point).tolist(), 'command': int(command)}
+                               for point, command in selected], 'full_route': active}
+            chosen=planners.get(str(self._d3_selected_pop_distance))
+            self._d3_nav = {
+                'target_point_previous': np.asarray(result.get('target_point_previous')).tolist(),
+                'target_point': np.asarray(result.get('target_point')).tolist(),
+                'target_point_next': np.asarray(result.get('target_point_next')).tolist(),
+                'command': np.asarray(result.get('command')).tolist(),
+                'next_command': np.asarray(result.get('next_command')).tolist(),
+                'filtered_state': np.asarray(result.get('filtered_state')).tolist(),
+                'noisy_state': np.asarray(result.get('noisy_state')).tolist(),
+                'compass_rad': float(self.compass),
+                'selected_pop_distance': self._d3_selected_pop_distance,
+                'selected_target_planner_xyz':(chosen or {}).get('points',[{},{}])[1].get('xyz') if chosen and len(chosen['points'])>1 else None,
+                'planners': planners, 'pop_events': self._d3_pop_events}
         return result
+
+    def _install_d3_planner_trace(self):
+        if self._d3_planners_installed or not getattr(self, 'gps_waypoint_planners_dict', None):
+            return
+        for distance, planner in self.gps_waypoint_planners_dict.items():
+            original = planner.run_step
+            def traced(gps, _original=original, _planner=planner, _distance=distance):
+                previous = len(_planner.previous_target_points)
+                value = _original(gps)
+                popped = len(_planner.previous_target_points)-previous
+                if popped > 0:
+                    self._d3_pop_events.append({'tp_distance': _distance,
+                        'count': popped,
+                        'points': [{'xyz': np.asarray(p).tolist(), 'command': int(c)}
+                                   for p,c in zip(_planner.previous_target_points[previous:],
+                                                  _planner.previous_commands[previous:])]})
+                return value
+            planner.run_step = traced
+        original_target = self.set_target_points
+        def traced_target(input_data, pop_distance):
+            value=original_target(input_data,pop_distance)
+            self._d3_selected_pop_distance=pop_distance
+            return value
+        self.set_target_points=traced_target
+        self._d3_planners_installed=True
 
     def _nearby_actors(self, world, snapshot, ego):
         """Read-only D2 scene context; no actor state is changed."""
@@ -264,6 +371,11 @@ class TFv6ControllerAgent(SensorAgent):
         return sorted(result, key=lambda item: item["distance_m"])[:8]
 
     def run_step(self, input_data, timestamp, *args, **kwargs):
+        if self._d3:
+            self._d3_pop_events=[]
+            self._d3_nav=None
+            self._d3_selected_pop_distance=None
+            self._d3_kalman_trace=None
         self._motion = input_data
         self._sim_time = float(timestamp)
         self._raw_signed_speed = float(input_data["speed"][1]["speed"])
@@ -285,6 +397,7 @@ class TFv6ControllerAgent(SensorAgent):
         control = super().run_step(input_data, timestamp, *args, **kwargs)
         truth = None
         nearby_actors = None
+        traffic_light = None
         if getattr(self, "_vehicle", None) is not None:
             world = self._vehicle.get_world()
             snapshot = world.get_snapshot()
@@ -308,6 +421,14 @@ class TFv6ControllerAgent(SensorAgent):
                         nearby_actors = self._nearby_actors(world, snapshot, actor)
                     except Exception as error:
                         nearby_actors = {"telemetry_error": str(error)}
+                if self._d3:
+                    try:
+                        light = self._vehicle.get_traffic_light()
+                        traffic_light = {'at_light': bool(self._vehicle.is_at_traffic_light()),
+                                         'state': str(self._vehicle.get_traffic_light_state()),
+                                         'light_id': int(light.id) if light is not None else None}
+                    except Exception as error:
+                        traffic_light = {'telemetry_error': str(error)}
         final = None
         guard_start = time.perf_counter()
         force_before = _processor_snapshot(self.force_move_post_processor)
@@ -319,7 +440,7 @@ class TFv6ControllerAgent(SensorAgent):
                      _clone_processor(self._pre_force), _clone_processor(self._pre_stop))
                      for arm, raw in self._raw.items()}
             if self.step < self.training_config.inital_frames_delay:
-                final = {arm: _triplet(0.0, 0.0, 1.0) for arm in ARMS}
+                final = {arm: _triplet(0.0, 0.0, 1.0) for arm in self._raw}
         guard_start = time.perf_counter()
         changed = {"force": _changed_processor_keys(force_before, self.force_move_post_processor),
                    "stop": _changed_processor_keys(stop_before, self.stop_sign_post_processor)}
@@ -368,7 +489,12 @@ class TFv6ControllerAgent(SensorAgent):
                           "creep_active": bool(self.force_move_post_processor.force_move),
                           "stop_sign_active": bool(self.stop_sign_post_processor.stop_sign_buffer)},
         }
+        if self._d3:
+            row.update(d3_nav=self._d3_nav,d3_kalman=self._d3_kalman_trace,
+                       d3_traffic_light=traffic_light)
         self._frame_log.write(json.dumps(row, allow_nan=False) + "\n")
+        if self._d3 and final is not None:
+            self._d3_prev_b = final['B']
         return control
 
     def destroy(self, results=None):
