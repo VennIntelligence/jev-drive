@@ -98,9 +98,14 @@ def main():
     q = queue.Queue(maxsize=3)
 
     def producer():
-        for t in todo:
-            while not (Z.root("packages") / f"{t[0]}.npz").exists():  # packager may still be running
+        left = list(todo)
+        while left:  # take whatever is packaged; the packager may still be waiting on the record fetch
+            ready = [t for t in left if (Z.root("packages") / f"{t[0]}.npz").exists()]
+            if not ready:
                 time.sleep(20)
+                continue
+            t = ready[0]
+            left.remove(t)
             try:
                 q.put((t, *prepare(t[0], t[1], t[2], processor, a.variants)))
             except Exception as e:  # noqa: BLE001
