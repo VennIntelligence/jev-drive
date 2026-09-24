@@ -568,14 +568,32 @@ def report(runs_json: Path | None, out: Path = RESULTS):
     return allr
 
 
+def id_lists(out: Path):
+    """Route id lists of the tiers (README "估计与分批"), heaviest towns first so a runner's tail is short."""
+    t = route_table()
+    t = t[~t.crasher].copy()
+    t["heavy"] = t.town.isin(["Town12", "Town13"])
+    t = t.sort_values(["heavy", "route_id"], ascending=[False, True])
+    pair = t[t.pair].route_id.tolist()
+    rest = t[~t.pair].route_id.tolist()
+    lists = {"t1": pair + [str(int(b) * 100 + 20) for b in pair] + [str(int(b) * 100 + 30) for b in pair],
+             "rest": rest, "all": t.route_id.tolist()}
+    out.mkdir(parents=True, exist_ok=True)
+    for k, v in lists.items():
+        (out / f"ids_{k}.txt").write_text(",".join(v))
+        log.info("%s: %d ids", k, len(v))
+
+
 def main():
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["build", "report"])
+    p.add_argument("cmd", choices=["build", "report", "ids"])
     p.add_argument("--runs", default="", help="JSON {label: [runner dirs]} of our runs")
     a = p.parse_args()
     if a.cmd == "build":
         build()
+    elif a.cmd == "ids":
+        id_lists(data_dir() / "runs" / "tfv6_rules")
     elif a.cmd == "report":
         report(Path(a.runs) if a.runs else None)
 
