@@ -67,7 +67,12 @@ def run_route(a, route, index):
         (home / 'traces.json').write_text(json.dumps({rid: refs[rid]}))
     elif a.kind == 'step':
         max_ticks = 1800
-    for attempt in range(1, 4):
+    # Town13 servers hang after two or three consecutive cases in one process, so they get
+    # two cases per process. Retries stop after three attempts in a row with no new valid case.
+    chunk = 2 if route.get('town') == 'Town13' else len(wanted)
+    stalls, before = 0, -1
+    while True:
+        attempt = 1 + len(list(home.glob('attempt-*/')))
         found = {}
         for s, arm in wanted:
             for prior in sorted(home.glob('attempt-*')):
@@ -76,13 +81,16 @@ def run_route(a, route, index):
                     raise RuntimeError(f'{rid} {s}/{arm}: non-infrastructure failure in {prior}')
                 if state == 'valid':
                     found[(s, arm)] = str(prior / s / rid / arm / PRESET[arm])
+        stalls = stalls + 1 if len(found) == before else 0
+        before = len(found)
         missing = [c for c in wanted if c not in found]
         if not missing:
             (home / 'done.json').write_text(json.dumps({f'{s}/{arm}': p for (s, arm), p in found.items()}, indent=1))
             return rid, f'valid after {attempt - 1} attempt(s)'
+        if stalls >= 3:
+            break
+        missing = missing[:chunk]
         target = home / f'attempt-{attempt}'
-        if target.exists():
-            continue
         cases = home / f'cases-{attempt}.json'
         cases.write_text(json.dumps([dict(route=rid, perturbation_id=s, variant=arm, preset=PRESET[arm])
                                      for s, arm in missing]))
@@ -109,7 +117,7 @@ def run_route(a, route, index):
         states = {f'{s}/{arm}': status(target / s / rid / arm / PRESET[arm]) for s, arm in missing}
         log(a.out, 'attempt_end', route=rid, attempt=attempt, rc=rc,
             counts={k: list(states.values()).count(k) for k in set(states.values())})
-    raise RuntimeError(f'{rid}: infrastructure retry limit reached')
+    raise RuntimeError(f'{rid}: three consecutive attempts without a new valid case')
 
 
 def main():
