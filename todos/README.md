@@ -19,6 +19,6 @@
 - [2026-09-24 openpilot smoke run](2026-09-24-openpilot-smoke/README.md)：small / Cinque v3 / Lebowski 三个 openpilot 驾驶模型在 box 上用 onnxruntime + TensorRT 跑通（batch 1 p50 1.0 / 2.3 / 3.3 ms），数值与 CPU 参考等价，comma1M 4 段真实视频上 plan 明显好于 constant velocity；附 zero-shot 上 WOD-E2E / NAVSIM 的缺口。
 - [2026-09-24 Alpamayo 1.5 smoke run](2026-09-24-alpamayo-smoke/README.md)：10B reasoning VLA 在 box 上跑通（权重走 ModelScope、clip 按 zip 成员稀疏拉取），batch 1 默认 n=1 p50 983 ms / n=6 2722 ms，SDPA+compile+flow 5 步降到 697 / 2184 ms 且输出基本不变；31 个 clip 上 minADE_6 0.74 m（card 0.916 m）；Cosmos-Reason2-8B gate 未通过需用户 accept；附 zero-shot WOD-E2E / NAVSIM 的缺口。
 - [2026-09-24 榜单 hack 审计](2026-09-24-hack-audit/README.md)：7 个榜单各抽 3–5 个公开代码的方法，只读代码、对照论文，找出分数里不属于驾驶能力的部分，分类由审计自己长出来；Codex 在 Tokyo box 上执行。
-- [2026-09-24 zoo 进 CARLA](2026-09-24-zoo-in-carla.md)：openpilot ×3 与 Alpamayo 1.5 用各自训练时的传感器接进 CARLA，开环 shadow 加闭环，去掉 scenario 的 16 条路线上过「会不会正常开」的关卡。
+- [2026-09-24 zoo 进 CARLA](2026-09-24-zoo-in-carla.md)：已 dropped，并入进行中的 zeroshot-exam；只有「无 scenario 路段」这一项移到 R 层测量。
 - [2026-09-24 R 层测量](2026-09-24-r-layer-routine.md)：去掉 scenario 的路线上测 routine 驾驶能力，看排序是否等于榜单排序，并把 TFv6 的分数拆成接口、手写规则、网络三部分。
 - [2026-09-24 P5 v1：E 层测量](2026-09-24-p5-v1-e-layer.md)：在 v0 上加绕行类 family 和横向标签、剔除规则兜住的题、接入 PDM-Lite 与 zoo 考生，测突发事件时反应的方向和方式。

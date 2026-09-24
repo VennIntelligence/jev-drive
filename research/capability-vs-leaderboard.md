@@ -35,11 +35,11 @@ TFv6（Bench2Drive DS 约 95）有两个输出通道：
 | 测量 | 回答 | todo |
 |---|---|---|
 | 榜单 hack 审计 | 高分里有多少来自针对榜单的配方，这些配方都是什么 | [2026-09-24-hack-audit](../todos/2026-09-24-hack-audit/README.md) |
-| zoo 进 CARLA | 真实世界模型能否在 CARLA 里被正确驱动（其他测量的前提） | [2026-09-24-zoo-in-carla](../todos/2026-09-24-zoo-in-carla.md) |
+| zero-shot 考试（进行中，同事负责） | 真实世界模型不训练、原样进 B2D / NAVSIM / WOD-E2E 能拿多少分；它的 rig 和接法是其他测量的前提 | [2026-09-24-zeroshot-exam](../todos/2026-09-24-zeroshot-exam/bench2drive.md) |
 | R 层测量 | routine 能力的排序是否等于榜单排序；TFv6 的分数里接口、规则、网络各占多少 | [2026-09-24-r-layer-routine](../todos/2026-09-24-r-layer-routine.md) |
 | E 层测量（P5 v1） | 谁在突发事件时反应的方向和方式都对 | [2026-09-24-p5-v1-e-layer](../todos/2026-09-24-p5-v1-e-layer.md) |
 
-四个测量合起来给出一张三轴图：榜单分 × R 层 × E 层。
+四项合起来给出一张三轴图：榜单分 × R 层 × E 层。
 
 ## 定向提取的候选方法（等三轴图出来再选，现在不押注）
 

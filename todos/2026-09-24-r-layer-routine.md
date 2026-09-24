@@ -3,7 +3,9 @@
 状态: draft
 执行者: Opus 执行代理（在 GPU box 上）
 主题: ../research/capability-vs-leaderboard.md
-前提: [zoo 进 CARLA](2026-09-24-zoo-in-carla.md) 的关卡结果（没过关卡的模型只做开环，结果标注 domain 混杂）
+前提: [zeroshot-exam](2026-09-24-zeroshot-exam/bench2drive.md)（openpilot 与 Alpamayo 的 B2D rig、policy server 和控制器，直接复用，不另写 wrapper）。
+它在完整路线上的 DS/SR 是 E 层与 R 层混在一起的结果；本实验在同一套接法上去掉 scenario，把 R 层单独拿出来。
+它的 smoke 或全量结果里被判为「适配失败」的模型，这里只做开环，结果标注 domain 混杂
 
 ## 目标
 
@@ -35,7 +37,7 @@
 | TFv6 A 臂 | route + target speed + 作者 PID，加作者的启发式（完整配方） |
 | TFv6 B 臂 | waypoint + 作者 PID |
 | TFv6 A 臂去掉启发式 | 关掉 creeping、stop sign 等作者手写规则，其他同 A；用来量出规则的贡献（这是改配置，不是改模型） |
-| openpilot ×3、Alpamayo 1.5 | 用 zoo 进 CARLA 的 wrapper；没过关卡的只报开环 |
+| openpilot ×3、Alpamayo 1.5 | 用 zeroshot-exam 的接法；适配失败的只报开环 |
 
 ## 指标（跑之前写死）
 
