@@ -85,6 +85,23 @@ nuPlan 相机垂直只有约 ±21°，虚拟相机要 ±34°，三路 120° 视�
   **选择规则（在看到 ablation 结果前写下）**：在 PhysicalAI-AV 的 31 个 clip 上（原生 10 Hz 数据，有真值，不是 NAVSIM）跑
   `repeat+rt+ego2hz` 和 `2hz+rt+ego2hz` 两种完整的 NAVSIM 式输入（rt = 经过 nuPlan 相机的往返渲染，ego2hz = 下一条的 2 Hz egomotion），
   每个 clip 6 条样本，**取 4 s 平均 ADE（6 条样本的均值，对应 n = 1 的期望误差）更低的那种**作为 NAVSIM 主设置。
+- **ablation 结果与选择（2026-09-24 17:53，仍在任何 NAVSIM 分数之前）**：PhysicalAI-AV 31 个 clip（smoke run 的同一批，t0 = 5.1 s），
+  每个 clip 每种输入 6 条样本，4 s 平均 ADE 先在 clip 内对 6 条取均值、再对 31 个 clip 取均值，括号是对 clip 的 bootstrap 95% CI。
+
+  | 输入 | ADE@4s（m） | minADE_6@4s（m） | ADE@6.4s（m） |
+  |---|---:|---:|---:|
+  | native（原生 10 Hz 帧、原生 egomotion、原生相机） | **0.73** [0.59, 0.88] | **0.31** | **1.77** |
+  | native + ego2hz | 0.74 [0.59, 0.90] | 0.31 | 1.78 |
+  | native + rt（只做 nuPlan 相机往返） | 0.95 [0.73, 1.21] | 0.41 | 2.32 |
+  | repeat（只改时间轴） | 1.42 [1.10, 1.73] | 0.61 | 3.65 |
+  | 2hz（只改时间轴） | 1.37 [1.17, 1.58] | 0.68 | 3.17 |
+  | **repeat + rt + ego2hz**（NAVSIM 式完整输入） | **1.43** [1.14, 1.78] | 0.67 | 3.71 |
+  | 2hz + rt + ego2hz（NAVSIM 式完整输入） | 1.44 [1.19, 1.74] | 0.63 | 3.35 |
+
+  读法：egomotion 从 2 Hz 插值几乎不掉（+0.004 m）；相机往返（黑边 + 视差 + 重采样）让 4 s ADE 涨 0.22 m；
+  **掉得最多的是时间轴**，无论 repeat 还是 2hz 都让误差翻倍。两种完整输入之差 −0.01 m（repeat − 2hz，配对 bootstrap
+  95% CI [−0.33, +0.28]，repeat 在 31 个里赢 14 个），实际上打平；按预先写下的规则取数值更低的 **repeat** 作为 NAVSIM 主设置。
+  这张表也给出了适配损失的量级：同一个模型、同一批场景，NAVSIM 式输入的 4 s ADE 是原生输入的约 2 倍。
 - **egomotion 历史**：Alpamayo 要 16 步 @10 Hz（t = −1.5 … 0）的 xyz 和旋转，NAVSIM 给 4 个 2 Hz 位姿（x、y、yaw，
   t0 后轴系）和各自的车体系速度。位置用三次 Hermite 插值（节点速度用实测速度转到 t0 系），yaw 用三次样条，z = 0，
   roll = pitch = 0。ablation 里的 `native+ego2hz` 单独量这一步的损失。

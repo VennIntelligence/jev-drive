@@ -227,3 +227,21 @@ def nav_text(cmd) -> str | None:
     """NAVSIM driving_command one-hot of the current frame -> pre-registered Alpamayo route text (unknown -> None)."""
     k = int(np.argmax(cmd))
     return NAV_TEXT.get(k) if np.asarray(cmd)[k] > 0 else None
+
+
+def collect_alpamayo(split: str, variant: str, frames: str, tag: str = "main") -> Path:
+    """Merge the per-shard JSON lines of one Alpamayo variant into the npz the replay agent reads; every token of
+    the split's index must be present exactly once (a missing token would silently drop out of the devkit's mean)."""
+    import json
+    rows = {}
+    for f in sorted(root("alpamayo", split).glob(f"{frames}_{tag}_shard*.jsonl")):
+        for line in f.read_text().splitlines():
+            r = json.loads(line)
+            if r["variant"] == variant:
+                rows[r["token"]] = r["poses"]
+    tokens = [e["token"] for e in load_index(split)]
+    missing = [t for t in tokens if t not in rows]
+    assert not missing, f"{len(missing)} tokens missing, e.g. {missing[:3]}"
+    out = root("preds", split) / f"alpamayo_{variant}_{frames}_{tag}.npz"
+    np.savez(out, tokens=np.array(tokens), poses=np.array([rows[t] for t in tokens], np.float32))
+    return out
