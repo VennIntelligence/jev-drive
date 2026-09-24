@@ -2751,3 +2751,32 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 
 **状态**：**待定**。单次、单 seed；EPDMS 的 devkit 版本与文献不同（我们的 human 94.5，文献常引 90.3），文献行只作量级参照。
 
+
+## 38. Bench2Drive 榜单前几名的总分差在评测噪声以内；按 hazard family 拆开后，突发 hazard 近乎饱和，真正的差距在规划 / 让行类路线（**待定**）
+
+2026-09-25。第 35 条「怎么才能定下来」的实验 6，预登记与全部表格在 [todos/2026-09-25-tfv6-rules-interface/README.md](../todos/2026-09-25-tfv6-rules-interface/README.md)
+（在看任何分数之前提交）。这一条先只记公开数据的部分（CPU，不跑模型）；同一 todo 里的实验 1（TFv6 规则 × 接口的闭环配对）和我们自己的 TFv6 重复评测还在跑，出来后补在本条下面。
+
+**数据**：22 个条目的公开逐路线结果（作者发布 20 个，第三方重跑 2 个：TFv6 单 ckpt、SimLingo），限制在不会让 server 段错误的 209 条路线上。
+44 个 scenario 分成 10 个互斥的 hazard family，前五个（遮挡后冲出的行人「鬼探头」、路口横穿、cut-in、前车急刹、他车闯灯抢行）合称突发 hazard，65 条路线；
+Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 checkpoint 的重复评测：BLUE 6 次、Orion-Lite 2 次、DriveMoE 2 个评测 seed。
+
+**结论**：
+
+1. **单次评测噪声**：209 条平均 DS 的 SD 是 0.80（BLUE；Orion-Lite 0.82、DriveMoE 1.41），两次单独评测之差的 95% 带约 ±2.3 DS、±5.0 SR。
+   BLUE 六次的总分只差 0.8，但 58 / 206 条路线的成败翻过：总分稳定来自路线间抵消，不是逐路线稳定。
+2. **相邻名次的总分差全在噪声内**：TFv6（第三方）89.6、BLUE 90.6、SparseDriveV2 89.1、SimLingo（第三方）87.0、R2SE 86.3、TF++ 84.7，
+   每一对相邻条目的 |ΔDS| < 2.3 且路线 bootstrap CI 含 0。总分上能分开的最小差距约 3.5–4 DS（BLUE 对 R2SE +4.2 [+0.7, +7.8]、对 SimLingo +3.5 [+0.6, +6.5]）。
+   第 35 条 (e)「第 2–6 名间距 < 0.7 在噪声内」由此从引用的数字变成我们量到的数字。
+3. **突发 hazard 上真的更好的只有 BLUE**：突发 hazard 合并 SR 93.8% [88, 98]，比 SparseDriveV2 高 18.5 [7.7, 29.2]、比 SimLingo 高 10.8 [3.1, 18.5]，
+   对 R2SE（90.8%）在噪声内。BLUE = SimLingo + gate，它多出来的部分落在 junction_violator 和 cut-in 上。
+4. **总分掩盖了 family 间的取舍**：突发 hazard 的五个 family 对前几名大多饱和（很多格 100%）；拉开差距的是 unprotected turn（TFv6 82% 对其余 43–57%）、
+   obstacle bypass 和 routine control。TFv6 总分与 BLUE 相当，但突发 hazard SR 低 10.9 [−21.9, 0.0]、规划类高得多——它的高分主要不是 E 层。
+   YieldToEmergencyVehicle 所有学习方法 SR 0、DS 恰好 70，这一格量的是计分规则。
+
+**对方向的含义**：榜单上 90 分附近的排序不能当作能力排序；要比 E 层，得看突发 hazard family 的 SR 并带噪声带，而且这五个 family 在 B2D 上
+已接近天花板，区分度要靠我们自己的配对考卷（P5）或更难的路线。
+
+**状态**：**待定**。TFv6 与 SimLingo 两行是第三方重跑；噪声带借自 BLUE，套到其他方法是假设；突发 hazard 只有 65 条路线，单个 family 5–20 条。
+**怎么才能定下来**：我们自己的 TFv6 A1 在 209 条上跑两遍（同一 todo 的 T2/T3），给出 TFv6 自己的噪声与 family 行；对 SimLingo 系，并入 SimLingo 目录对照实验的 3 次重复。
+

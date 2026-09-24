@@ -79,9 +79,9 @@ def family_gaps():
                     ax.errorbar(row["d" + m], y, xerr=[[row["d" + m] - row[f"d{m}_lo"]], [row[f"d{m}_hi"] - row["d" + m]]],
                                 fmt="o" if g == "all" else "s", color="#000000" if g == "all" else "#D55E00", ms=3,
                                 elinewidth=0.8, label=("all routes" if g == "all" else "sudden-hazard routes") if i == 0 else None)
-            if m == "DS":
-                bar = float(cmp_.noise_bar.iloc[0])
-                ax.axvspan(-bar, bar, color="#7F7F7F", alpha=0.2, lw=0, label="run-to-run 95% band")
+            bar = float(cmp_[cmp_.group == "all"]["bar_" + m].iloc[0])
+            ax.axvspan(-bar, bar, color="#7F7F7F", alpha=0.2, lw=0,
+                       label=f"run-to-run 95% band, all routes ({cmp_.noise_ref.iloc[0]})")
             ax.axvline(0, color="#7F7F7F", lw=0.6)
             ax.set_xlabel(lab)
             ax.grid(True, axis="x")

@@ -148,6 +148,8 @@ waypoint 读数已经相差 0.005 m/s，此后 target speed 在第 7 个 tick �
 | family | scenario | 路线数（220 / 209） |
 |---|---|---|
 | vru_emerging（遮挡后冲出的行人或自行车，「鬼探头」） | DynamicObjectCrossing、ParkingCrossingPedestrian | 10 / 10 |
+
+（2026-09-25 01:00 补：11 条段错误路线全在 merge_lane_change，这个 family 在 209 条里剩 29 条，其余 family 不变。）
 | vru_crossing（路口横穿的行人、自行车） | PedestrianCrossing、VehicleTurningRoutePedestrian、VehicleTurningRoute、CrossingBicycleFlow | 20 |
 | cut_in | StaticCutIn、ParkingCutIn、HighwayCutIn | 15 |
 | lead_hard_brake（前车急刹） | HardBreakRoute | 5 |
@@ -207,10 +209,92 @@ CPU 不超过我们在 gpu-plan.md 里登记的份额。基础设施失败（ser
 - [x] agent（作者 SensorAgent 原样 + 只读记录）、runner、路线 XML（209 条 + 45 对 x⁻ / null）、family 表：`00bf79f`
 - [ ] smoke：4 臂 × 2–4 个 run，GPU 0 ≤ 20 GB；核对 x⁺ 与 x⁻ 在触发前逐 tick 相同、规则开关确实生效、计时
 - [x] 本文件提交（任何计分 run 之前）；估时补进上一节；gpu-plan.md 登记
-- [ ] 公开逐路线结果收集（CPU，`research/results/b2d-family/public/`）
-- [ ] 批量（01:15 起）
+- [x] 公开逐路线结果收集（CPU，`research/results/b2d-family/public/`）：22 个条目，见结果一节
+- [ ] 批量（slot `tfv6-exp`，GPU 0，3 worker，01:15 起；主进程定的上限，T1 约 9 h）
 - [ ] 分析：配对、2 × 2、family、噪声；图；decisions 条目；第 35 条按规则更新
 
 ## 结果
 
-跑完再填。
+### 实验 6 的公开部分（2026-09-25 01:00，CPU，不依赖我们的 run）
+
+**找到的公开逐路线结果**（`research/results/b2d-family/public/sources.csv`，紧凑表 `public_routes.csv`）：22 个条目有逐路线 DS。
+作者自己发布的：TF++、PDM-Lite、UniAD-Base/Tiny、VAD、TCP、DriveMoE（2 个评测 seed）、Drive-π0、BLUE（**同一模型 6 次评测**）、ORION、
+MindDrive / MindDrive-3B、UniDriveVLA、Hydra-NeXt、Orion-Lite（A100 与 A6000 各一次）、SparseDriveV2、R2SE（匿名上传，数字与论文一致）。
+第三方重跑：SimLingo（官方 ckpt，DS 86.8）、TFv6（单 ckpt 而非三 seed ensemble，211 条，lead#89）。
+没找到：HiP-AD、DriveTransformer、MomAD、Raw2Drive、DriveAdapter、VLR-Driver、RoG-DAgger、FIVE-VLA、DriveDPO、ReAL-AD
+（其中前两个只在第三方 SC-IRT 的 0/1 成功矩阵里出现，来源不明，不用）。所以榜单上 90.3–91.0 那一簇（第 35 条引的第 2–6 名）
+我们只拿得到 BLUE 一个，其余四个没有逐路线文件。以下全部限制在 B2D-209 上，缺路线的条目只在它有的路线上算（不补 0）。
+
+**run-to-run 噪声**（同一方法、同一 checkpoint 重复评测；`noise.csv`）：
+
+| 来源 | 次数 | 209 条单次平均 DS 的 SD | 单次 SR 的 SD（百分点） | 各次总 DS 的范围 | SR 改变的路线 |
+|---|--:|--:|--:|---|--:|
+| BLUE | 6 | **0.80** | 1.76 | 90.5–91.3 | 58 / 206 |
+| Orion-Lite（两张卡） | 2 | 0.82 | 1.27 | 81.0–81.2 | 14 / 209 |
+| DriveMoE（两个评测 seed） | 2 | 1.41 | 2.09 | 72.8–73.7 | 38 / 209 |
+
+两次单独评测之差的 95% 带是 2√2 × SD ≈ **±2.3 DS / ±5.0 SR**（用 BLUE）。只看突发 hazard 的 65 条时是 ±2.5 DS / ±6.1 SR。
+值得注意的是 BLUE 六次评测里总分只差 0.8，但有 58 条路线的成功与否变过：总分稳定是路线间互相抵消的结果，不是每条路线稳定。
+
+**分 family 的 SR**（`family.csv`，路线 bootstrap 95% CI，图 `research/figs/b2d-family-sr.png`）：
+
+| family（209 条中的 n） | TFv6（第三方，单 ckpt） | BLUE r1 | SparseDriveV2 | SimLingo（第三方） | R2SE | TF++ |
+|---|---|---|---|---|---|---|
+| 全部 209 | 79.5 [74, 85] | 77.0 [71, 83] | 69.4 [63, 76] | 69.4 [63, 76] | 69.9 [64, 76] | 67.9 [62, 74] |
+| 突发 hazard 合并（65） | 82.8 [73, 91] | **93.8** [88, 98] | 75.4 [65, 85] | 83.1 [74, 92] | 90.8 [83, 97] | 84.6 [75, 92] |
+| vru_emerging 鬼探头（10） | 70 [40, 100] | 100 | 100 | 100 | 90 [70, 100] | 50 [20, 80] |
+| vru_crossing（20） | 90 [75, 100] | 100 | 60 [40, 80] | 90 [75, 100] | 95 [85, 100] | 90 [75, 100] |
+| cut_in（15） | 100 | 86.7 [67, 100] | 93.3 [80, 100] | 86.7 [67, 100] | 100 | 93.3 [80, 100] |
+| lead_hard_brake（5） | 80 [40, 100] | 100 | 100 | 100 | 80 [40, 100] | 80 [40, 100] |
+| junction_violator（15） | 66.7 [40, 87] | 86.7 [67, 100] | 53.3 [27, 80] | 53.3 [27, 80] | 80 [60, 100] | 93.3 [80, 100] |
+| unprotected_turn（30） | **82.1** [68, 96] | 46.7 [30, 63] | 56.7 [40, 73] | 46.7 [30, 63] | 50 [33, 67] | 43.3 [27, 60] |
+| merge_lane_change（29） | 50 [32, 68] | 62.1 [45, 79] | 62.1 [45, 79] | 51.7 [34, 69] | 58.6 [41, 76] | 62.1 [45, 79] |
+| obstacle_bypass（50） | **89.4** [79, 98] | 80 [68, 90] | 78 [66, 88] | 76 [64, 88] | 58 [44, 72] | 60 [46, 74] |
+| emergency_vehicle（5） | 0 | 0 | 0 | 0 | 0 | 0 |
+| routine_control（30） | 93.1 [83, 100] | 93.3 [83, 100] | 73.3 [57, 87] | 80 [67, 93] | 86.7 [73, 97] | 86.7 [73, 97] |
+
+![B2D SR by family](../../research/figs/b2d-family-sr.png)
+
+看什么：每个小图是一个 family，点是 SR、横线是路线 bootstrap 95% CI。突发 hazard 的几格里前几名大多贴着 100%，
+真正拉开的是 unprotected turn、obstacle bypass 和 routine control；emergency vehicle 一格所有方法都是 0。
+
+读法：突发 hazard 的五个 family 对前几名基本**饱和**（很多格 100%，CI 触顶），前几名之间拉开差距的是 unprotected_turn、obstacle_bypass、
+merge 这些规划 / 让行类 family。YieldToEmergencyVehicle 所有学习方法都是 SR 0、DS 恰好 70（只有特权 PDM-Lite 过），这一格量的是计分规则，不是能力。
+
+**相邻名次的配对差**（`compare.csv`，图 `research/figs/b2d-family-gaps.png`）：
+
+| 配对（左 − 右） | 全部 ΔDS [CI] | 噪声内？ | 突发 hazard ΔSR [CI] | 噪声内？ |
+|---|---|---|---|---|
+| TFv6（第三方）− BLUE | −1.4 [−6.0, +3.1] | 是 | −10.9 [−21.9, 0.0] | 否（未分出，CI 贴 0） |
+| BLUE − SparseDriveV2 | +1.5 [−1.5, +4.5] | 是 | **+18.5 [+7.7, +29.2]** | 否，分出 |
+| SparseDriveV2 − SimLingo（第三方） | +2.1 [−1.4, +5.6] | 是 | −7.7 [−21.5, +4.6] | 未分出 |
+| SimLingo − R2SE | +0.7 [−3.1, +4.4] | 是 | −7.7 [−20.0, +3.1] | 未分出 |
+| R2SE − TF++ | +1.7 [−1.7, +5.0] | 是 | +6.2 [−4.6, +16.9] | 未分出 |
+| BLUE − R2SE | +4.2 [+0.7, +7.8] | 否，分出 | +3.1 [−4.6, +12.3] | 是 |
+| BLUE − SimLingo | +3.5 [+0.6, +6.5] | 否，分出 | **+10.8 [+3.1, +18.5]** | 否，分出 |
+
+![B2D gaps vs noise](../../research/figs/b2d-family-gaps.png)
+
+看什么：黑点是全部路线、橙方块是突发 hazard 路线上的配对差，横线是路线 bootstrap 95% CI，灰带是 BLUE 六次重复评测给出的
+两次单独评测之差的 95% 带。黑点全在灰带里；分得开的只有 BLUE 对 SparseDriveV2 在突发 hazard SR 上的差。
+
+「噪声内」按判据 = 差的绝对值小于 run-to-run 带 **且** 路线 bootstrap CI 含 0；「分出」= CI 不含 0 且超过带；其余为「未分出」。
+
+按判据的读法：
+
+1. **榜单上相邻名次的总分差（84.7 到 90.6 之间的六个条目）全部在评测噪声以内**：每一对的 |ΔDS| 都小于 2.3，CI 都含 0。
+   要在总分上分出两个方法，差距要到 3.5–4 DS 以上（BLUE 对 R2SE、对 SimLingo）。第 35 条「第 2–6 名间距 < 0.7，在噪声内」得到了直接的数字：
+   单次评测噪声 SD 0.8，两次之差的 95% 带 ±2.3。
+2. **在突发 hazard 上确实更好的只有 BLUE**：它对 SparseDriveV2（+18.5 SR）和 SimLingo（+10.8）在突发 hazard 合并 SR 上分出，
+   对 R2SE 在噪声内。BLUE 就是 SimLingo 加一个 gate，它在 SimLingo 上多出的 10.8 SR 集中在 junction_violator 和 cut-in——这与第 35 条里
+   「能归到 E 层的增益只在闭环里显形」一致。
+3. **总分掩盖了 family 间的取舍**：TFv6（第三方单 ckpt）总分与 BLUE 在噪声内，但在突发 hazard 上低 10.9 SR（CI 上界 0.0，差一点分出），
+   在 unprotected_turn（82 对 47）和 obstacle_bypass（89 对 80）上高得多。TFv6 的高分主要来自规划 / 让行类 family，不是突发 hazard。
+
+限定：TFv6 与 SimLingo 这两行是第三方重跑（TFv6 还是单 ckpt），不代表作者的最好评测；噪声带借用 BLUE，套到别的方法上是假设
+（Orion-Lite 的 0.82 与之一致，DriveMoE 的 1.41 更大）；突发 hazard 合并只有 65 条路线，单个 family 5–20 条，CI 很宽。
+我们自己的 TFv6 A1 两次 209 条（T2 + T3）跑完后，噪声与 TFv6 行会用我们的数字替换或并列。
+
+### 实验 1 与我们的 TFv6 各臂
+
+批量在 slot `tfv6-exp`（GPU 0，3 worker，01:15 起）里按 T1 → T4 顺序跑，跑完再填。

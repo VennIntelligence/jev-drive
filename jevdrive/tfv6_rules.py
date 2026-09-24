@@ -461,10 +461,11 @@ def run_noise(runs: pd.DataFrame, routes: pd.DataFrame, method: str) -> pd.DataF
     return pd.DataFrame(out)
 
 
-def compare(runs: pd.DataFrame, a: str, b: str, routes: pd.DataFrame, noise_sd: float,
+def compare(runs: pd.DataFrame, a: str, b: str, routes: pd.DataFrame, noise: pd.DataFrame,
             groups=("all", "sudden")) -> list:
     """Paired DS and SR difference a - b on common routes, with route-bootstrap CI and the run-to-run bar
-    2 * sqrt(2) * noise_sd (the 95% band of the difference of two single runs)."""
+    2 * sqrt(2) * SD (the 95% band of the difference of two single runs), SD from `noise` (one method's
+    run_noise rows) for the same route group."""
     x = runs[runs.run == a].set_index("route_id")[["ds", "success"]]
     y = runs[runs.run == b].set_index("route_id")[["ds", "success"]]
     j = x.join(y, rsuffix="_b", how="inner").join(routes.set_index("route_id")[["family", "sudden"]], how="inner")
@@ -473,8 +474,10 @@ def compare(runs: pd.DataFrame, a: str, b: str, routes: pd.DataFrame, noise_sd: 
         h = j if g == "all" else (j[j.sudden] if g == "sudden" else j[j.family == g])
         ds = boot_paired(h.ds, h.ds_b)
         sr = boot_paired(h.success.astype(float) * 100, h.success_b.astype(float) * 100)
+        nz = noise.set_index("family").reindex([g]).iloc[0]
         rows.append({"a": a, "b": b, "group": g, "n": len(h), "dDS": ds[0], "dDS_lo": ds[1], "dDS_hi": ds[2],
-                     "dSR": sr[0], "dSR_lo": sr[1], "dSR_hi": sr[2], "noise_bar": 2 * np.sqrt(2) * noise_sd})
+                     "dSR": sr[0], "dSR_lo": sr[1], "dSR_hi": sr[2],
+                     "bar_DS": 2 * np.sqrt(2) * nz.sd_single_run_mean, "bar_SR": 2 * np.sqrt(2) * nz.sd_single_run_sr})
     return rows
 
 
@@ -554,15 +557,17 @@ def report(runs_json: Path | None, out: Path = RESULTS):
     family_table(routes, allr).to_csv(out / "family.csv", index=False)
     nz = pd.concat(noise, ignore_index=True)
     nz.to_csv(out / "noise.csv", index=False)
-    sd_all = nz[nz.family == "all"].set_index("method").sd_single_run_mean
-    ref = float(sd_all.get("TFv6 A1 (ours)", sd_all.get("BLUE")))
+    ref_name = "TFv6 A1 (ours)" if "TFv6 A1 (ours)" in set(nz.method) else "BLUE"
+    ref = nz[nz.method == ref_name]
     rows = []
     present = [x for x in top if x in set(allr.run)]
     for i, a in enumerate(present):
         for b in present[i + 1:]:
             rows += compare(allr, a, b, routes, ref, groups=("all", "sudden") + SUDDEN)
     cmp_ = pd.DataFrame(rows)
-    cmp_["noise_ref"] = "TFv6 A1 (ours)" if "TFv6 A1 (ours)" in sd_all else "BLUE"
+    cmp_["noise_ref"] = ref_name
+    cmp_["within_noise_DS"] = (cmp_.dDS.abs() < cmp_.bar_DS) & (cmp_.dDS_lo < 0) & (cmp_.dDS_hi > 0)
+    cmp_["within_noise_SR"] = (cmp_.dSR.abs() < cmp_.bar_SR) & (cmp_.dSR_lo < 0) & (cmp_.dSR_hi > 0)
     cmp_.to_csv(out / "compare.csv", index=False)
     log.info("report -> %s", out)
     return allr
