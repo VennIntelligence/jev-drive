@@ -42,6 +42,8 @@ case $agent in
   *.npz) a=(agent._target_=jevdrive.navsim_agent.PrecomputedAgent "+agent.predictions=$agent") ;;
   *) echo "unknown agent $agent" >&2; exit 1 ;;
 esac
+# TOKENS_FILE (one token per line) restricts scoring to a subset through the split's own scene filter
+[[ -n ${TOKENS_FILE:-} ]] && a+=("train_test_split.scene_filter.tokens=[$(sed "s/.*/'&'/" "$TOKENS_FILE" | paste -sd,)]")
 script=run_pdm_score.py
 [[ $ver == v2 && $split != *two_stage* ]] && script=run_pdm_score_one_stage.py
 "$py" "$dk/navsim/planning/script/$script" train_test_split=$split metric_cache_path=$cache \
