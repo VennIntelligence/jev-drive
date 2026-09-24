@@ -40,7 +40,7 @@ def latest_csv(ver, split, name):
 
 
 def per_token(df):
-    return df[~df["token"].str.contains("_")].copy() if df is not None else None   # drop the summary rows
+    return df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}")].copy() if df is not None else None   # drop the summary rows
 
 
 def boot(x, y=None, B=2000, seed=0):
@@ -140,7 +140,7 @@ def navhard_table():
         if df is None:
             continue
         summ = df[df["token"].str.startswith("extended_pdm_score")].set_index("token")
-        r = {"model": model, "variant": var, "n_tokens": int((~df["token"].str.contains("_")).sum())}
+        r = {"model": model, "variant": var, "n_tokens": int((df["token"].str.fullmatch(r"[0-9a-f]{16,17}")).sum())}
         for key, lab in (("extended_pdm_score_stage_one", "stage1"), ("extended_pdm_score_stage_two", "stage2"),
                          ("extended_pdm_score_combined", "EPDMS")):
             if key in summ.index:
