@@ -39,6 +39,11 @@ def hf_url(repo: str, path: str, dataset: bool = False, rev: str = "main") -> st
     return f"{endpoint()}/{_kind(dataset)}{repo}/resolve/{rev}/{path}"
 
 
+def ms_url(repo: str, path: str, rev: str = "master") -> str:
+    """ModelScope (domestic, direct): ~10x the HF CDN per stream on the box when it hosts a copy."""
+    return f"https://www.modelscope.cn/models/{repo}/resolve/{rev}/{path}"
+
+
 def repo_info(repo: str, dataset: bool = False) -> dict:
     r = requests.get(f"{endpoint()}/api/{'datasets' if dataset else 'models'}/{repo}", headers=auth(), timeout=60)
     r.raise_for_status()
@@ -109,9 +114,11 @@ def download(url: str, dst: Path, size: int | None = None, sha256: str | None = 
 
 
 def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = False, streams: int = 16,
-             log=print) -> Path:
+             ms_repo: str | None = None, log=print) -> Path:
     """Download matching files of `repo` into the standard HF hub cache layout (blobs + snapshots/<sha>),
-    sha256-checking every LFS file, and return the snapshot dir. Offline `from_pretrained(repo)` then works."""
+    sha256-checking every LFS file against the HF LFS oid, and return the snapshot dir, so that offline
+    `from_pretrained(repo)` works. With `ms_repo`, LFS files come from that ModelScope copy instead
+    (still checked against HF's sha256, so a stale or different copy fails loudly)."""
     from huggingface_hub.constants import HF_HUB_CACHE
     info = repo_info(repo, dataset)
     sha = info["sha"]
@@ -125,7 +132,8 @@ def snapshot(repo: str, patterns: tuple[str, ...] = ("*",), dataset: bool = Fals
         blob = root / "blobs" / (lfs["oid"] if lfs else e["oid"])
         if not (blob.exists() and blob.stat().st_size == e["size"]):
             t1 = time.monotonic()
-            download(hf_url(repo, e["path"], dataset, sha), blob, e["size"], lfs and lfs["oid"], streams)
+            url = ms_url(ms_repo, e["path"]) if ms_repo and lfs else hf_url(repo, e["path"], dataset, sha)
+            download(url, blob, e["size"], lfs and lfs["oid"], streams, headers={} if ms_repo and lfs else None)
             dt = time.monotonic() - t1
             log(f"{e['path']}: {e['size'] / 1e6:.0f} MB in {dt:.0f} s = {e['size'] / 1e6 / dt:.1f} MB/s"
                 + (" (sha256 ok)" if lfs else ""))
