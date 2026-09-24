@@ -27,6 +27,7 @@ the pre-registered smoke:
                     plans reach the controller (openpilot is engaged only once modeld has been running)
   "drive"           "model" | "oracle": shadow mode, the route-oracle adapter drives (b2d_controller_adapter.
                     RouteAdapter, as b2d_agent --drive controller) and the model's plans are only logged
+  "op_mount"        rig [x, y, z] of the camera pair (default the windshield top, zeroshot_rigs.OP_MOUNT_RIG)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -118,7 +119,9 @@ class ZeroShotAgent(AutonomousAgent):
         self.lateral = self.cfg.get("lateral", "plan")
         assert self.plan_origin in ("camera", "rear") and self.drive in ("model", "oracle") \
             and self.lateral in ("plan", "curvature"), self.cfg
-        self.cam_specs = rigs.alpamayo_sensor_specs() if self.alpamayo else rigs.openpilot_sensor_specs(self.op_tick)
+        self.op_mount = tuple(self.cfg.get("op_mount", rigs.OP_MOUNT_RIG))
+        self.cam_specs = rigs.alpamayo_sensor_specs() if self.alpamayo else rigs.openpilot_sensor_specs(self.op_tick,
+                                                                                                        self.op_mount)
         self.cam_tags = [s["id"] for s in self.cam_specs]
         with open(self.cfg["controller_config"]) as fh:
             params = json.load(fh)
@@ -289,7 +292,7 @@ class ZeroShotAgent(AutonomousAgent):
             path = resample(out["t"], out["xy"], times)
         else:
             yaw = out["yaw"] if self.plan_origin == "rear" else None
-            path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], yaw), times)
+            path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], yaw, self.op_mount), times)
         if self.first_set_t is None:
             self.first_set_t = t_frame
         warm = t_frame - self.first_set_t < self.warmup_s - 1e-6

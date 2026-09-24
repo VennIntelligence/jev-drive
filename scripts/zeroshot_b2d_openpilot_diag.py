@@ -27,13 +27,15 @@ def load(attempt):
 
 def attempt_rows(attempt):
     plans, ticks = load(attempt)
+    cfg = json.loads((attempt / "agent_config.json").read_text()) if (attempt / "agent_config.json").exists() else {}
+    cam_x = float(cfg.get("op_mount", [CAM_X])[0])
     tt = [t for t in ticks if "truth" in t]
     if not tt or not plans or "plan_pos" not in plans[0]:
         return []
     t = np.array([x["t"] for x in tt])
     tr = np.array([x["truth"] for x in tt])                  # rear axle, CARLA world (y right, yaw clockwise)
     yaw = np.unwrap(tr[:, 2])
-    cam = tr[:, :2] + CAM_X * np.stack([np.cos(yaw), np.sin(yaw)], -1)
+    cam = tr[:, :2] + cam_x * np.stack([np.cos(yaw), np.sin(yaw)], -1)
     speed = np.array([x["v"] for x in tt])
     yaw_rate = np.gradient(yaw, t)
     curv = yaw_rate / np.maximum(speed, 1.0)                  # right-positive, as openpilot's decoded curvature
@@ -51,12 +53,13 @@ def attempt_rows(attempt):
                    curv_truth=float(np.interp(t0 + LAT_DELAY, t, curv)))
         for h in HORIZONS:
             if t0 + h > t[-1]:
-                row[f"lat@{h:g}s"] = row[f"lon@{h:g}s"] = row[f"plan_y@{h:g}s"] = np.nan
+                row[f"lat@{h:g}s"] = row[f"lon@{h:g}s"] = row[f"plan_y@{h:g}s"] = row[f"lonb@{h:g}s"] = np.nan
                 continue
             c = np.array([np.interp(t0 + h, t, cam[:, k]) for k in range(2)]) - c0
             gx, gy = c @ fwd, c @ right
             px, py = (np.interp(h, T_IDXS, pp[:, k]) for k in range(2))
             row[f"lat@{h:g}s"], row[f"lon@{h:g}s"], row[f"plan_y@{h:g}s"] = abs(py - gy), abs(px - gx), py
+            row[f"lonb@{h:g}s"] = px - gx                      # signed: + means the plan runs ahead of the car
         rows.append(row)
     return rows
 
@@ -71,6 +74,7 @@ def summarize(rows, label):
     for h in HORIZONS:
         out[f"lat@{h:g}s"] = float(np.nanmean([x[f"lat@{h:g}s"] for x in r]))
         out[f"lon@{h:g}s"] = float(np.nanmean([x[f"lon@{h:g}s"] for x in r]))
+        out[f"lonb@{h:g}s"] = float(np.nanmean([x[f"lonb@{h:g}s"] for x in r]))
     out["curv_r"] = float(np.corrcoef(k, kt)[0, 1]) if len(r) > 2 and k.std() > 0 and kt.std() > 0 else np.nan
     out["curv_mae_per_km"] = float(np.abs(k - kt).mean() * 1e3)
     y2 = np.array([x["plan_y@2s"] for x in r])
@@ -95,7 +99,7 @@ if __name__ == "__main__":
             pooled.setdefault(run.name, []).extend(rows)
     for name, rows in pooled.items():
         table.append(summarize(rows, f"{name}/ALL"))
-    keys = ["label", "n", "lat@1s", "lat@2s", "lat@4s", "lon@1s", "lon@2s", "lon@4s", "curv_r", "curv_mae_per_km",
+    keys = ["label", "n", "lat@1s", "lat@2s", "lat@4s", "lon@1s", "lon@2s", "lon@4s", "lonb@2s", "lonb@4s", "curv_r", "curv_mae_per_km",
             "flip_frac", "dy2_mean"]
     w = csv.DictWriter(a.out.open("w") if a.out else sys.stdout, keys, extrasaction="ignore")
     w.writeheader()

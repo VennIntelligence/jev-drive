@@ -116,6 +116,13 @@ def rigs(meta):
     out = {"native": (RS.Rig([fcam, ecam], use=pair), None)}
     # one camera for both model frames
     out["wide-only"] = (RS.Rig([ecam], src={"road": "ecam", "wide": "ecam"}), None)
+    # wide-only with the road frame warped through the segment's wide_from_device rotation (both signs, since
+    # which way liveCalibration's wideFromDeviceEuler applies is exactly what this tests); wide frame as native
+    for sign in (1, -1):
+        R = (RS.VIEW_FROM_DEVICE @ RS.rot_from_euler(sign * np.asarray(meta["wide_from_device_euler"]))
+             @ RS.rot_from_euler(meta["rpy_calib"])).T
+        out[f"wide-only-wfd{'+' if sign > 0 else '-'}"] = (
+            RS.Rig([ecam, ecam], belief=[ecam.replace(R=R), ecam], src={"road": "ecam", "wide": "ecam"}, use=pair), None)
     for hfov in (60, 90, 120):
         f = 960 / np.tan(np.radians(hfov / 2))
         out[f"single-pinhole{hfov}"] = (RS.Rig([level(w=1920, h=1080, f=f)]), None)

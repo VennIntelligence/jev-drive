@@ -57,7 +57,7 @@ def load_rows(path):
 
 GROUPS = [
     ("reference", ["native"]),
-    ("single camera", ["wide-only", "single-pinhole60", "single-pinhole90", "single-pinhole120", "fisheye180",
+    ("single camera", ["wide-only", "wide-only-wfd+", "wide-only-wfd-", "single-pinhole60", "single-pinhole90", "single-pinhole120", "fisheye180",
                        "fisheye180-as-pinhole", "fisheye180-720p"]),
     ("dataset rigs", ["nuplan-f0", "nuplan-l0f0r0", "waymo-front3", "b2d-nuscenes3", "tfpp-110"]),
     ("mount", ["pitch+2", "pitch-2", "pitch+5", "yaw+2", "height0.92", "height1.43", "height1.60", "height1.81",

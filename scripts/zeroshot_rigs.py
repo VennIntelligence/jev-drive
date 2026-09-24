@@ -120,11 +120,11 @@ OP_MOUNT_RIG = (1.779, 0.0, 1.433)
 OP_CAMERA_TICK = 0.2                # pre-registered smoke: 5 Hz, the model's context rate (frames t-0.2 s and t)
 
 
-def openpilot_sensor_specs(tick=OP_CAMERA_TICK):
+def openpilot_sensor_specs(tick=OP_CAMERA_TICK, mount=OP_MOUNT_RIG):
     """tick 0.05 renders every simulator step: road and wide then always come from the same frame and a 5 Hz
     context step is exactly 4 frames. At 0.2 s CARLA's sensor_tick fires one frame early or late on 5-25% of the
     frames and road / wide often differ by one frame (smoke run, 2026-09-24)."""
-    x, y, z = OP_MOUNT_RIG
+    x, y, z = mount
     w, h = OP_CAMERA_WH
     return [{"type": "sensor.camera.rgb", "id": "OP_" + name.upper(), "x": x + REAR_AXLE_X, "y": -y, "z": z,
              "roll": 0.0, "pitch": 0.0, "yaw": 0.0, "width": w, "height": h,
@@ -132,12 +132,12 @@ def openpilot_sensor_specs(tick=OP_CAMERA_TICK):
             for name, f in OP_FOCAL.items()]
 
 
-def openpilot_plan_to_rig(plan_pos, plan_yaw=None):
+def openpilot_plan_to_rig(plan_pos, plan_yaw=None, mount=OP_MOUNT_RIG):
     """openpilot plan (calib frame at the camera: x forward, y right, z down; yaw right-positive) -> rig xy of the
     REAR AXLE: rear(t) = d + p(t) - R(psi_t) d, d the camera's rig (x, y). Without plan_yaw the camera track is
     only shifted by d, which puts the t = 0 point d = 1.78 m ahead of the axle (the pre-registered smoke's bug)."""
     p = np.asarray(plan_pos, float)
-    d = np.asarray(OP_MOUNT_RIG[:2], float)
+    d = np.asarray(mount[:2], float)
     q = np.stack([p[:, 0], -p[:, 1]], -1)
     if plan_yaw is None:
         return q + d
