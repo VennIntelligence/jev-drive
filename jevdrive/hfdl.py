@@ -76,9 +76,31 @@ def git_blob_sha1(p: Path) -> str:
     return hashlib.sha1(b"blob %d\0" % len(b) + b).hexdigest()
 
 
+def _download_plain(url: str, tmp: Path, size: int, headers: dict) -> None:
+    """Single sequential GET, no Range header. Some LFS backends (HF's Xet CAS bridge, observed on
+    hugsim_fetch.py) serve arbitrary byte ranges far slower than a plain stream, to the point of
+    stalling past any sane timeout; a plain GET on the same object is reliable. No mid-file resume,
+    so retry re-fetches the whole file (streams=1 is meant for many-small-files jobs, not huge ones)."""
+    for attempt in range(6):
+        try:
+            with requests.get(url, headers=headers, stream=True, timeout=(10, 30)) as r:
+                r.raise_for_status()
+                with open(tmp, "wb") as f:
+                    for part in r.iter_content(1 << 20):
+                        f.write(part)
+            assert tmp.stat().st_size == size, "short read"
+            return
+        except Exception:
+            if attempt == 5:
+                raise
+            time.sleep(2 * (attempt + 1))
+
+
 def download(url: str, dst: Path, size: int | None = None, sha256: str | None = None, streams: int = 8,
              chunk: int = 4 << 20, headers: dict | None = None) -> Path:
-    """Fetch url to dst using `streams` concurrent range requests; skip if dst already has the right size."""
+    """Fetch url to dst; skip if dst already has the right size. `streams <= 1` does a single plain GET
+    (see `_download_plain`); `streams > 1` splits the file into `chunk`-sized ranges across that many
+    concurrent range requests, with a stalled or failed chunk retried in place."""
     dst, headers = Path(dst), headers if headers is not None else auth()
     if size is None:
         size = int(requests.head(url, headers=headers, allow_redirects=True, timeout=60).headers["Content-Length"])
@@ -86,6 +108,12 @@ def download(url: str, dst: Path, size: int | None = None, sha256: str | None = 
         return dst
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(dst.name + ".part")
+    if streams <= 1:
+        _download_plain(url, tmp, size, headers)
+        if sha256 and sha256_file(tmp) != sha256:
+            raise RuntimeError(f"{dst.name}: sha256 mismatch")
+        tmp.rename(dst)
+        return dst
     with open(tmp, "wb") as f:
         f.truncate(size)
 

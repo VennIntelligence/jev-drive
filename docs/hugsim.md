@@ -42,23 +42,45 @@ python scripts/hugsim_fetch.py benchmark     # ~61 GB, everything else
 
 Run in tmux `jev` window `hugsim-dl`: `scripts/tmux_run.sh hugsim-dl python scripts/hugsim_fetch.py sample_data benchmark`.
 
-Resumable: a file already at the right size is skipped; a stalled chunk within a file is retried. Every
-LFS file is sha256-checked against the HF API's reported oid, every non-LFS file against the git blob
-sha1 (see `jevdrive/hfdl.download`); a mismatch raises instead of leaving a silently-corrupt file.
+Resumable at file granularity: a file already at the right size is skipped. Every LFS file is
+sha256-checked against the HF API's reported oid, every non-LFS file against the git blob sha1 (see
+`jevdrive/hfdl.download`); a mismatch raises instead of leaving a silently-corrupt file.
 
 ## Network
 
 Both repos (`XDimLab/HUGSIM`, `hyzhou404/HUGSIM`) serve LFS files through Xet storage, redirected to
-`cas-bridge.xethub.hf.co`. Measured 2026-09-24 (West-D box), 4 parallel streams, 95 s sustained:
+`cas-bridge.xethub.hf.co`. A first pass (2026-09-24, 4 parallel streams, 95 s) measured 9 MB/s on
+`hf-mirror.com` direct and 8 MB/s on `proxy_on` (Clash) + `huggingface.co` -- both numbers turned out to
+be a CloudFront cache hit on one already-fetched object, not a real bulk-download rate; see the finding
+below.
 
-| Route | Sustained |
+**The Xet CAS bridge's Range (byte-serving) path stalls under load, on every route (2026-09-24).** The
+original fetcher split each file into N concurrent `Range` requests against one URL
+(`jevdrive.hfdl.download`, the same downloader `alpamayo_fetch.py` uses). Against real, distinct,
+first-touch files this stalled: individual range chunks hit `ReadTimeoutError` / "short read" from
+`cas-bridge.xethub.hf.co` past the 20 s socket timeout, then retried with exponential backoff (up to 8
+attempts) -- on both `hf-mirror.com` direct and `proxy_on` + `huggingface.co`, so the CDN in front of the
+Xet bridge is the bottleneck, not the route. The production run was at 3.65 GB after ~50 min (~1.3 MB/s).
+A plain whole-file GET (no `Range` header) on the same objects was reliable. Measured 90-95 s sustained on
+real remaining files, disk-growth ground truth (`du -sb`), no other job competing for the link:
+
+| Config | Sustained |
 |---|---:|
-| `hf-mirror.com` direct | 9 MB/s |
-| `proxy_on` (Clash) + `huggingface.co` | 8 MB/s |
+| `hf-mirror.com`, 1 file, 16-stream Range (old default) | 1 MB/s |
+| `hf-mirror.com`, 8 files parallel x 2-stream Range each | 2 MB/s |
+| `hf-mirror.com`, 8 files parallel, plain GET (no Range) | 1 MB/s (still stalls on hf-mirror) |
+| `proxy_on` + `huggingface.co`, 8 files parallel, plain GET | **4-6 MB/s** |
+| `proxy_on` + `huggingface.co`, 16 files parallel, plain GET | 0 MB/s (too many streams starves all of them) |
+| `proxy_on` + `huggingface.co`, 8 files parallel x 2-stream Range each | 0 MB/s (Range stalls here too) |
 
-No ModelScope mirror of either repo exists. Direct `hf-mirror.com` wins narrowly and costs no Clash
-quota, so it is the default (`jevdrive.hfdl.HF_MIRROR`); no proxy needed. At ~9 MB/s, 63.4 GB is
-roughly 2 hours.
+So the fix is file-level parallelism instead of range-level: `hugsim_fetch.py` fetches `--workers 8`
+(default, measured best) files at once, each with a single plain GET (`jevdrive.hfdl.download(...,
+streams=1)`), routed through `proxy_on` + `huggingface.co` (the script calls `use_proxy()` itself; no
+ModelScope mirror of either repo exists). Resumability is file-granularity only now (a dropped connection
+re-fetches the whole file, cheap at this file size) rather than mid-file chunk resume, since chunking is
+what broke.
+
+At ~5 MB/s (midpoint of the 4-6 MB/s range), 63.4 GB from empty is roughly 3.5 hours.
 
 ## Install (Blackwell, sm_120)
 
