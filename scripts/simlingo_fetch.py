@@ -15,8 +15,9 @@ INTERNVL = ("OpenGVLab/InternVL2-1B", ("*",))
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--internvl-from-modelscope", action="store_true", help="fetch InternVL2-1B from ModelScope")
+    ap.add_argument("--streams", type=int, default=1, help="range streams for the 2.6 GB checkpoint (1 = plain GET)")
     args = ap.parse_args()
-    snap = hfdl.snapshot(*SIMLINGO, streams=1)
+    snap = hfdl.snapshot(*SIMLINGO, streams=args.streams)
     base = hfdl.snapshot(*INTERNVL, streams=8, ms_repo=INTERNVL[0] if args.internvl_from_modelscope else None,
                          absent=("processor_config.json", "preprocessor_config.json", "chat_template.json"))
     print(f"simlingo  {snap}\n  ckpt    {snap}/simlingo/checkpoints/epoch=013.ckpt/pytorch_model.pt\ninternvl  {base}")
