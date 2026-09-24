@@ -45,12 +45,20 @@ def cmd_fetch(a, log):
 def cmd_packages(a, log):
     from concurrent.futures import ProcessPoolExecutor
     sets = Z.load_sets()
-    names = targets(sets, a.set)
-    t0 = time.time()
-    with ProcessPoolExecutor(min(16, Z.n_cpus())) as ex:
-        list(ex.map(Z.write_package, names, chunksize=8))
-    p = Z.write_op_calib(targets(sets, SETS))
-    log.info(f"{len(names)} packages in {time.time() - t0:.0f} s; {p}")
+    rec = Z.root("records")
+    while True:  # --watch: keep packaging targets whose four records have landed (fetch still running)
+        names = [n for n in targets(sets, a.set) if not (Z.root("packages") / f"{n}.npz").exists()
+                 and all((rec / f"{h}.pb").exists() for h in Z.history_names(n, 3))]
+        t0 = time.time()
+        with ProcessPoolExecutor(min(8, Z.n_cpus())) as ex:
+            list(ex.map(Z.write_package, names, chunksize=4))
+        left = sum(not (Z.root("packages") / f"{n}.npz").exists() for n in targets(sets, a.set))
+        log.info(f"{len(names)} packages in {time.time() - t0:.0f} s, {left} still waiting for records")
+        if not a.watch or not left:
+            break
+        time.sleep(60)
+    if not (Z.root() / "op_calib.json").exists():
+        log.info(f"{Z.write_op_calib(targets(sets, SETS))}")
 
 
 def alp_views(pkg, scale=0.3):
@@ -295,6 +303,8 @@ def main():
         if name == "fetch":
             p.add_argument("--route", default="proxy", choices=("proxy", "direct"))
             p.add_argument("--workers", type=int, default=96)
+        if name == "packages":
+            p.add_argument("--watch", action="store_true")
         if name == "views":
             p.add_argument("--limit", type=int, default=8)
     a = ap.parse_args()

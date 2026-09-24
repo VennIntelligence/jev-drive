@@ -99,6 +99,8 @@ def main():
 
     def producer():
         for t in todo:
+            while not (Z.root("packages") / f"{t[0]}.npz").exists():  # packager may still be running
+                time.sleep(20)
             try:
                 q.put((t, *prepare(t[0], t[1], t[2], processor, a.variants)))
             except Exception as e:  # noqa: BLE001
