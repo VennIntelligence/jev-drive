@@ -195,6 +195,28 @@ def cmd_bench(a, log):
     log.info("\n" + df.drop(columns=["gpu_others_before", "gpu_others_after"], errors="ignore").to_string())
 
 
+def cmd_profile(a, log):
+    """torch.profiler over one default n=1 inference: top CUDA kernels overall and inside the expert."""
+    from torch.profiler import ProfilerActivity, profile, record_function
+    from jevdrive.alpamayo import infer as I
+    c = clip_list()[0]
+    d = D.load_clip(c, D.interface())
+    model, proc = I.load(a.attn)
+    inp, cfg = I.build_inputs(d, proc), I.Config(n_samples=a.n)
+    I.run(model, inp, cfg, None)
+    f = model.expert.forward
+    def tagged(*x, **k):
+        with record_function("expert_forward"):
+            return f(*x, **k)
+    model.expert.forward = tagged
+    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as prof:
+        I.run(model, inp, cfg, None)
+    t = prof.key_averages().table(sort_by="cuda_time_total", row_limit=25, max_name_column_width=70)
+    (log.dir / "profile.txt").write_text(t)
+    prof.export_chrome_trace(str(log.dir / "trace.json"))
+    log.info("\n" + t)
+
+
 def cmd_eval(a, log):
     from jevdrive.alpamayo import infer as I
     avdi = D.interface()
@@ -220,8 +242,8 @@ def cmd_eval(a, log):
     df.to_csv(log.dir / "results.csv", index=False)
     np.savez_compressed(log.dir / "preds.npz", **{f"{c}|{k}": v for c, p in preds.items() for k, v in p.items()})
     json.dump(cots, open(log.dir / "cot.json", "w"), indent=1)
-    s = {"n": len(df), "minade6_mean_m": df.minade6_m.mean(), "minade6_median_m": df.minade6_m.median(),
-         "ade_sample0_mean_m": df.ade_sample0_m.mean()}
+    s = {"n": len(df), "minade6_mean_m": float(df.minade6_m.mean()), "minade6_median_m": float(df.minade6_m.median()),
+         "ade_sample0_mean_m": float(df.ade_sample0_m.mean())}
     log.event("summary", **s)
     log.info(json.dumps(s))
 
@@ -235,11 +257,14 @@ if __name__ == "__main__":
     b.add_argument("--seeds", type=int, default=4)
     b.add_argument("--only", default="")
     sub.add_parser("eval").add_argument("--attn", default="flash_attention_2")
+    p = sub.add_parser("profile")
+    p.add_argument("--attn", default="flash_attention_2")
+    p.add_argument("--n", type=int, default=1)
     a = ap.parse_args()
     if a.cmd != "fetch":
         import torch
     log = RunLog("alpamayo", a.cmd)
     log.info(f"args {vars(a)} -> {log.dir}")
-    {"fetch": cmd_fetch, "bench": cmd_bench, "eval": cmd_eval}[a.cmd](a, log)
+    {"fetch": cmd_fetch, "bench": cmd_bench, "eval": cmd_eval, "profile": cmd_profile}[a.cmd](a, log)
     log.event("end")
     log.close()
