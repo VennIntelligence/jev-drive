@@ -1,7 +1,8 @@
 """Controller-neutral, time-parameterized L1 references fed and scored identically.
 
 Two kinds, both built only from the route's dense global path and the nominal spawn:
-  ramp     route oracle law (launch <= a_acc, cruise, end stop at a_dec), jerk-limited
+  ramp     route oracle law (launch <= a_acc, cruise, end stop at a_dec) with the same curvature
+           speed limit as profile (a_lat <= 2 m/s^2), jerk-limited
   profile  seeded stop-and-go profile: cruise levels change along the route, curvature
            speed limit, one or two mid-route stops with dwell, end stop
 Every controller receives the reference itself as its plan (fixed-trace interface), so the
@@ -69,8 +70,9 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
     tangent = path[-1] - path[-2]
     path = np.vstack((path, path[-1] + 3*tangent/np.linalg.norm(tangent)))
     s, xy = resample(path)
+    lateral_limit = np.sqrt(2. / np.maximum(curvature(s, xy), 1e-6))  # a_lat <= 2 m/s^2
     if kind == 'ramp':
-        vmax, stops = np.full(len(s), float(cruise)), []
+        vmax, stops = np.minimum(float(cruise), lateral_limit), []
         t, station, speed = time_parameterize(s, vmax, stops, 2., 2., 1.)
     elif kind == 'profile':
         rng = np.random.default_rng(seed)
@@ -81,7 +83,7 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
             levels[(s >= edge) & (s < edge + span)] = min(10., rng.choice([.5, .75, 1., 1.25]) * cruise)
             edge += span
         levels[s >= edge - 1e-9] = levels[s < edge][-1] if np.any(s < edge) else cruise
-        vmax = np.minimum(levels, np.sqrt(2. / np.maximum(curvature(s, xy), 1e-6)))
+        vmax = np.minimum(levels, lateral_limit)
         stops = []
         candidates = s[(s > 25.) & (s < s[-1] - 30.)]
         for _ in range(int(s[-1] > 80.) + int(s[-1] > 160.)):
