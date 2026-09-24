@@ -12,10 +12,10 @@ export UV_INDEX_URL=http://mirrors.aliyun.com/pypi/simple UV_INSECURE_HOST=mirro
 git -C "$NAV" checkout -q ca0ca7e4368646d8f7b86fb1fdaa1862c946176f
 # weights: https://huggingface.co/autonomousvision/navsim_baselines/tree/main/ltf (the path ltf_e2e.py loads)
 ck=$NAV/ckpts/ltf_seed_0.ckpt
-if [[ $(stat -c %s "$ck" 2>/dev/null || echo 0) != 673235500 ]]; then
-  mkdir -p "$NAV/ckpts"
-  curl -sL --retry 20 -C - -o "$ck" https://hf-mirror.com/autonomousvision/navsim_baselines/resolve/main/ltf/ltf_seed_0.ckpt
-fi
+mkdir -p "$NAV/ckpts"
+until [[ $(stat -c %s "$ck" 2>/dev/null || echo 0) == 673235500 ]]; do  # curl resumes; the link drops mid-transfer
+  curl -sL --retry 20 -C - -o "$ck" https://hf-mirror.com/autonomousvision/navsim_baselines/resolve/main/ltf/ltf_seed_0.ckpt || sleep 5
+done
 
 [[ -x $ENV/bin/python ]] || uv venv "$ENV" --python 3.10
 req=$(mktemp)
