@@ -155,10 +155,8 @@ def load_case(done_path,planner):
                     throttle=float(selected['throttle']),brake=float(selected['brake']),
                     gap=front_gap(row,planner,xy,yaw))
         telemetry.append(item)
-    if len(telemetry)<40:
-        raise ValueError(f'Insufficient L2 telemetry: {planner}/{rid}/{seed}/{arm}')
     times=np.asarray([r['time'] for r in telemetry])
-    if np.any(np.diff(times)<=0) or np.max(np.abs(np.diff(times)-.05))>.01:
+    if len(times)>1 and (np.any(np.diff(times)<=0) or np.max(np.abs(np.diff(times)-.05))>.01):
         raise ValueError(f'L2 telemetry not contiguous 20 Hz: {planner}/{rid}/{seed}/{arm}')
     n=len(telemetry)
     feasible=np.asarray([r['feasible'] for r in telemetry],bool)
@@ -201,12 +199,12 @@ def load_case(done_path,planner):
         collisions_total=sum(len(value) for key,value in record['infractions'].items()
                              if key.startswith('collisions_')),
         completion=float(record['scores']['score_route']),ticks=len(rows),l2_frames=n,
-        feasible_frames=int(feasible.sum()),feasible_share=float(feasible.mean()),
+        feasible_frames=int(feasible.sum()),feasible_share=float(feasible.mean()) if n else None,
         feasible_disp05_mean_m=float(np.mean(timed)) if timed else None,
         feasible_speed_mae_mps=float(np.mean(np.abs(speeds[feasible]-targets[feasible]))) if feasible.any() else None,
         feasible_extra_jerk_rms_mps3=rms(jerk_delta[feasible]),
         low_demand_full_pedal_share=float(np.mean((throttle[low_req]>=.95)|(brake[low_req]>=.95))) if low_req.any() else None,
-        plan_unjustified_pedal_flips_per_min=flip/(n*.05/60),
+        plan_unjustified_pedal_flips_per_min=flip/(n*.05/60) if n else None,
         false_stop_events_2s=sum(end-start>=40 for start,end in contiguous_events(false_stop)),
         missed_stop_events_2s=sum(end-start>=40 for start,end in contiguous_events(missed_stop)),
         infeasible_events=len(bad_events),infeasible_frames=int((~feasible).sum()),
@@ -221,15 +219,19 @@ def load_case(done_path,planner):
 def bootstrap_diff(rows,left,right,metric):
     lookup={(r['route'],r['seed'],r['arm']):r for r in rows}
     routes=sorted({r['route'] for r in rows})
-    per_route=[]
+    per_route=[];missing=[]
     for route in routes:
         vals=[]
         for seed in (0,1):
             a=lookup.get((route,seed,left));b=lookup.get((route,seed,right))
             if not a or not b or a[metric] is None or b[metric] is None:
-                raise ValueError(f'Missing paired {metric}: {route}/{seed}/{left}-{right}')
+                missing.append(f'{route}/{seed}/{left}-{right}')
+                continue
             vals.append(a[metric]-b[metric])
-        per_route.append(np.mean(vals))
+        if len(vals)==2:per_route.append(np.mean(vals))
+    if missing:
+        return dict(mean=None,ci95=None,routes=len(per_route),missing_pairs=missing,
+                    conclusion='not established: incomplete paired metric')
     x=np.asarray(per_route)
     rng=np.random.default_rng(20260924)
     samples=np.mean(x[rng.integers(0,len(x),(10000,len(x)))],axis=1)
@@ -264,7 +266,10 @@ def main():
                                  'infeasible_stop_distance_m','infeasible_min_front_gap_m')}
             metrics.update(cases=len(s),ds_mean=float(np.mean([r['ds'] for r in s])),
                            collisions=sum(r['collisions_total'] for r in s),
-                           complete=sum(r['official_status']=='Completed' for r in s))
+                           complete=sum(r['official_status']=='Completed' for r in s),
+                           feasible_cases_at_least_50=sum(r['feasible_frames']>=50 for r in s),
+                           feasible_cases_below_50=[f"{r['route']}/{r['seed']}"
+                                                    for r in s if r['feasible_frames']<50])
             if arm!=native:
                 metrics['l3_ds_difference']=bootstrap_diff(group,arm,native,'ds')
                 baseline='B' if planner=='TFv6' else 'N'
