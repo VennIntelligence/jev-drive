@@ -53,43 +53,43 @@ class Renderer:
         self.cache, self.key = None, None
 
     def maps(self, key, cal):
+        """Per view and source camera: the flat indices of the output pixels it covers and their sampling grid."""
         if key != self.key:
             out = []
             for v in G.PAI_ORDER:
                 src, U, V = G.choose_sources(torch, self.rays[v], cal)
                 per = []
                 for i, c in enumerate(cal):
-                    m = src == i
-                    if not m.any():
+                    idx = (src == i).flatten().nonzero().squeeze(1)
+                    if not len(idx):
                         per.append(None)
                         continue
                     w, h = cal[c]["width"], cal[c]["height"]
-                    grid = torch.stack([(U + 0.5) / w * 2 - 1, (V + 0.5) / h * 2 - 1], -1).float()[None]
-                    per.append((m, grid))
+                    grid = torch.stack([(U + 0.5) / w * 2 - 1, (V + 0.5) / h * 2 - 1], -1).float()
+                    per.append((idx, grid.view(-1, 2)[idx][None, None]))
                 out.append(per)
             self.cache, self.key = out, key
         return self.cache
 
     def __call__(self, key, cal, jpgs) -> torch.Tensor:
-        """jpgs: {camera id: [4 encoded JPEG uint8 tensors, oldest first]} -> (4 views, 4, 3, 1080, 1920) uint8 CPU."""
+        """jpgs: {camera id: [4 encoded JPEG uint8 tensors, oldest first]} -> (4 views, 4, 3, 1080, 1920) uint8 CPU.
+
+        Bilinear sampling is per pixel, so sampling only the covered pixels of each source camera and scattering
+        them gives exactly the exam's full-frame grid_sample + where (checked bit for bit by `equiv`)."""
         from torchvision.io import decode_jpeg
         cams = list(cal)
         dec = decode_jpeg([j for c in cams for j in jpgs[c]], device=DEV)
         imgs = [torch.stack(dec[i * 4:(i + 1) * 4]).float() for i in range(len(cams))]
+        H, W = self.rays[G.PAI_ORDER[0]].shape[:2]
         out = []
         for per in self.maps(key, cal):
-            acc = None
-            for i, mg in enumerate(per):
-                if mg is None:
-                    continue
-                m, grid = mg
-                if acc is None:
-                    acc = torch.zeros(4, 3, *m.shape, device=DEV)
-                s = F.grid_sample(imgs[i], grid.expand(4, -1, -1, -1), mode="bilinear", padding_mode="border",
-                                  align_corners=False)
-                acc = torch.where(m[None, None], s, acc)
-            acc = torch.zeros(4, 3, *self.rays[G.PAI_ORDER[0]].shape[:2], device=DEV) if acc is None else acc
-            out.append(acc.round().clamp(0, 255).to(torch.uint8))
+            acc = torch.zeros(4, 3, H * W, device=DEV)
+            for i, ig in enumerate(per):
+                if ig is not None:
+                    idx, grid = ig
+                    acc[:, :, idx] = F.grid_sample(imgs[i], grid.expand(4, -1, -1, -1), mode="bilinear",
+                                                   padding_mode="border", align_corners=False)[:, :, 0]
+            out.append(acc.view(4, 3, H, W).round().clamp(0, 255).to(torch.uint8))
         return torch.stack(out).cpu()
 
 
@@ -185,11 +185,30 @@ def producer(targets, prep, q, n_threads):
     q.put(None)
 
 
-def load_model(log):
+def _vision_attention(self, hidden_states, cu_seqlens, position_embeddings, **_):
+    """jevdrive.features._vision_attention (that module needs the project venv): one batched SDPA call for a batch
+    of same-size images instead of the stock per-image split, which syncs the host in every block."""
+    from transformers.models.qwen3_vl.modeling_qwen3_vl import apply_rotary_pos_emb_vision
+    L, b = hidden_states.shape[0], cu_seqlens.numel() - 1
+    q, k, v = self.qkv(hidden_states).reshape(L, 3, self.num_heads, -1).permute(1, 0, 2, 3).unbind(0)
+    q, k = apply_rotary_pos_emb_vision(q, k, *position_embeddings)
+    q, k, v = (t.reshape(b, L // b, self.num_heads, -1).transpose(1, 2) for t in (q, k, v))
+    o = F.scaled_dot_product_attention(q, k, v, scale=self.scaling)
+    return self.proj(o.transpose(1, 2).reshape(L, -1))
+
+
+def load_model(log, fast_vision: bool = True):
+    """fast_vision: the vision attention of `jevdrive.features._vision_attention` -- every image here has the same
+    size, so the stock per-image SDPA loop (16 x batch calls per block, each after a host sync) becomes one batched
+    call with the same math. Checked against the stock path by `equiv`."""
+    import types
     from alpamayo1_5 import helper
     from alpamayo1_5.models.alpamayo1_5 import Alpamayo1_5
     model = Alpamayo1_5.from_pretrained(I.REPO, dtype=torch.bfloat16, attn_implementation="sdpa").to(DEV).eval()
-    log.info("model loaded")
+    if fast_vision:
+        for blk in model.vlm.model.visual.blocks:
+            blk.attn.forward = types.MethodType(_vision_attention, blk.attn)
+    log.info(f"model loaded (fast_vision={fast_vision})")
     return model, helper.get_processor(model.tokenizer)
 
 
@@ -277,6 +296,14 @@ def cmd_equiv(a, log):
     pool = Pooler(model)
     batched = pool(model, collate(items))
     single = [pool(model, collate([x])) for x in items]
+    import types
+    from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLVisionAttention
+    for blk in model.vlm.model.visual.blocks:                      # the stock per-image attention, for reference
+        blk.attn.forward = types.MethodType(Qwen3VLVisionAttention.forward, blk.attn)
+    stock = pool(model, collate(items))
+    for k in batched:
+        d = (batched[k] - stock[k]).norm(dim=1) / stock[k].norm(dim=1)
+        log.info(f"fast vision vs stock, {k}: rel L2 max {float(d.max()):.2e}")
     rows = []
     for k in batched:
         s = torch.cat([x[k] for x in single])
