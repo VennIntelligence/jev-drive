@@ -42,6 +42,8 @@ class ZooPID(object):
         self.agent = self.planner = None
 
     def route(self, agent):
+        if not hasattr(agent, "save_name"):   # _init prints it; the AD-MLP agent sets it from the route name
+            agent.save_name = os.environ.get("BENCHMARK_ROUTE_ID", "")
         ADMLPAgent._init(agent)
         self.agent, self.planner = agent, agent._route_planner
 
