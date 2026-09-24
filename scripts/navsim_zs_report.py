@@ -73,6 +73,37 @@ def paired_table(sc):
     return df
 
 
+def failure_table(sc):
+    """EPDMS failure classes per agent, and what the prediction did in them relative to the log."""
+    idx = Z.load_index("navtest")
+    cmd = {e["token"]: int(np.argmax(e["cmd"][-1])) for e in idx}
+    fut = np.load(Z.root("index") / "navtest_future.npz")
+    g = dict(zip(fut["tokens"].tolist(), fut["poses"]))
+    files = {"alpamayo_nav": Z.root("preds", "navtest") / "alpamayo_nav_repeat_main.npz", "cv": Z.root("preds", "navtest") / "cvreplay.npz"}
+    files.update({f"{m}_none": Z.root("openpilot", "navtest") / f"{m}_none.npz" for m in ("lebowski", "cinque", "small")})
+    rows = []
+    v2 = sc[sc.metric == "EPDMS"]
+    for a, f in files.items():
+        d = v2[v2.agent == a].set_index("token")
+        if d.empty or not f.exists():
+            continue
+        z = np.load(f)
+        P = dict(zip(z["tokens"].tolist(), z["poses"]))
+        over = pd.Series({t: P[t][-1, 0] - g[t][-1, 0] for t in d.index})     # 4 s longitudinal overshoot vs log (m)
+        lat = pd.Series({t: abs(P[t][-1, 1] - g[t][-1, 1]) for t in d.index})
+        turn = pd.Series({t: cmd[t] != 1 for t in d.index})
+        nc, dac = d.no_at_fault_collisions < 1, d.drivable_area_compliance < 1
+        rows.append({"agent": a, "NC_fail": 100 * nc.mean(), "DAC_fail": 100 * dac.mean(),
+                     "DDC_fail": 100 * (d.driving_direction_compliance < 1).mean(), "TLC_fail": 100 * (d.traffic_light_compliance < 1).mean(),
+                     "TTC_fail": 100 * (d.time_to_collision_within_bound < 1).mean(), "EC_fail": 100 * (d.two_frame_extended_comfort < 1).mean(),
+                     "NC_fail_overshoot>2m": 100 * (over[nc] > 2).mean(), "all_overshoot>2m": 100 * (over > 2).mean(),
+                     "DAC_fail_turn_cmd": 100 * turn[dac].mean(), "all_turn_cmd": 100 * turn.mean(),
+                     "DAC_fail_lat_err_med": lat[dac].median(), "lat_err_med": lat.median()})
+    df = pd.DataFrame(rows)
+    df.to_csv(OUT / "failures_navtest.csv", index=False, float_format="%.2f")
+    return df
+
+
 def navtest_tables():
     idx = Z.load_index("navtest")
     cmd = {e["token"]: ["left", "straight", "right", "unknown"][int(np.argmax(e["cmd"][-1]))] for e in idx}
@@ -157,8 +188,9 @@ if __name__ == "__main__":
     res, per = navtest_tables()
     pair = paired_table(pd.read_csv(OUT / "scores_navtest.csv.gz"))
     hard = navhard_table()
+    fail = failure_table(pd.read_csv(OUT / "scores_navtest.csv.gz"))
     ade = ade_table()
     (OUT / "results.md").write_text("## navtest\n\n" + md(res) + "\n\n## navtest by command\n\n" + md(per)
-                                    + "\n\n## paired differences\n\n" + md(pair) + "\n\n## navhard two-stage\n\n" + md(hard) + "\n\n## ADE vs log (navtest)\n\n"
+                                    + "\n\n## paired differences\n\n" + md(pair) + "\n\n## failure classes (EPDMS)\n\n" + md(fail) + "\n\n## navhard two-stage\n\n" + md(hard) + "\n\n## ADE vs log (navtest)\n\n"
                                     + md(ade, "{:.3f}") + "\n")
     print((OUT / "results.md").read_text())
