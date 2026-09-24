@@ -1,0 +1,19 @@
+{
+  "dev": [
+    "24240",
+    "26966",
+    "17563"
+  ],
+  "heldout": [
+    "24816",
+    "25845",
+    "24252",
+    "26990",
+    "26944",
+    "25863",
+    "25928",
+    "3364"
+  ],
+  "selection": "Scenario-family and town coverage, no Task 10 outcome viewed",
+  "source_xml": "/data/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml"
+}

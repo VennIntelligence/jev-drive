@@ -1,0 +1,26 @@
+{
+  "A": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/author.json",
+    "presets": [
+      "author_route"
+    ]
+  },
+  "B": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/author.json",
+    "presets": [
+      "author_waypoint"
+    ]
+  },
+  "C": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-controller-next/lateral_v2/inputs/configs/prod-kfix.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "D": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-controller-next/lateral_v2/inputs/configs/slipack-kfix.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

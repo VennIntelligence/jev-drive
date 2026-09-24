@@ -182,7 +182,7 @@ def load_matrix(controller_config, presets, variants_path=None, route_cruises_pa
             raise ValueError('Invalid rear axle or stop deceleration configuration')
         selected = variant['presets']
         if (not isinstance(selected, list) or not selected
-                or any(x not in ('carla', 'tcp', 'pursuit') for x in selected)
+                or any(x not in ('carla', 'tcp', 'pursuit', 'author_route', 'author_waypoint') for x in selected)
                 or len(selected) != len(set(selected))):
             raise ValueError('presets must be a nonempty unique list of carla/tcp/pursuit')
         for preset in selected:
@@ -312,6 +312,9 @@ def main():
     p.add_argument('--controller-config')
     p.add_argument('--variants', help='JSON label -> {controller_config: absolute path, presets: list}')
     p.add_argument('--route-cruises', help='JSON route ID -> cruise m/s, optional default key')
+    p.add_argument('--reference-traces', help='JSON route ID -> absolute fixed expert trace path; omit for route oracle')
+    p.add_argument('--reference-interface', default='nominal',
+                   choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter'))
     p.add_argument('--presets', default='carla,tcp,pursuit')
     p.add_argument('--server-index', type=int, default=64)
     p.add_argument('--cruise-mps', type=float, default=8)
@@ -336,15 +339,31 @@ def main():
     routes_path, out = [Path(x).resolve() for x in (a.routes, a.out)]
     cases, cruises = load_matrix(a.controller_config, a.presets, a.variants,
                                  a.route_cruises, a.cruise_mps)
+    reference_traces = json.loads(Path(a.reference_traces).read_text()) if a.reference_traces else {}
+    if not isinstance(reference_traces, dict) or any(not Path(v).is_absolute() or not Path(v).is_file()
+                                                     for v in reference_traces.values()):
+        raise ValueError('--reference-traces must map route IDs to existing absolute files')
     ids = a.perturbation_ids.split(',') if a.perturbation_ids else [None]
     if len(set(ids)) != len(ids):
         raise ValueError('duplicate perturbation id')
     perturbations = {key: load_perturbation(a.perturbations, key) for key in ids}
     cases = [dict(case, perturbation=perturbations[key], perturbation_id=key) for key in ids for case in cases]
     root = ET.parse(str(routes_path)).getroot()
+    if reference_traces and set(reference_traces) != {r.get('id') for r in root.findall('route')}:
+        raise ValueError('Expert reference traces must cover exactly the route XML IDs')
     out.mkdir(parents=True, exist_ok=True)
     (out / 'servers').mkdir(exist_ok=True)
     matrix_manifest = archive_matrix(out, routes_path, cases, cruises, a.variants, a.route_cruises)
+    if a.reference_traces:
+        (out / 'inputs' / 'reference-traces.json').write_bytes(Path(a.reference_traces).read_bytes())
+    archived_traces = {}
+    for route_id, source in reference_traces.items():
+        raw = Path(source).read_bytes()
+        target = out / 'inputs' / ('expert-%s.json' % route_id)
+        target.write_bytes(raw)
+        archived_traces[route_id] = str(target.resolve())
+    matrix_manifest['reference_trace_sha256'] = {
+        rid: hashlib.sha256(Path(path).read_bytes()).hexdigest() for rid, path in archived_traces.items()}
     matrix_manifest['perturbations'] = perturbations
     if a.perturbations:
         (out / 'inputs' / 'perturbations.json').write_bytes(Path(a.perturbations).read_bytes())
@@ -433,7 +452,10 @@ def main():
                 run = case_dir(out, route, case, a.variants)
                 run.mkdir(parents=True, exist_ok=True)
                 cfg = dict(rig=a.rig, width=800, height=450, policy='none', drive='controller', decimate=4,
-                           controller_preset=preset, controller_config=case['archived_controller_config'], out=str(run), cruise_mps=cruise)
+                           controller_preset=preset, controller_config=case['archived_controller_config'],
+                           out=str(run), cruise_mps=cruise, reference_interface=a.reference_interface)
+                if archived_traces:
+                    cfg['reference_trace_path'] = archived_traces[route.get('id')]
                 if case['perturbation'] is not None:
                     cfg.update(gnss_noise_seed=case['perturbation']['gnss_noise_seed'],
                                imu_noise_seed=case['perturbation']['imu_noise_seed'])

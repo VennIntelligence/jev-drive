@@ -192,7 +192,25 @@ class StubAgent(AutonomousAgent):
         parameters.pop("preset", None)
         if "rear_axle_offset_m" not in self._adapter_parameters:
             raise ValueError("controller config needs measured rear_axle_offset_m")
-        self._controller = Controller(preset=cfg.get("controller_preset", "carla"), **parameters)
+        preset = cfg.get("controller_preset", "carla")
+        if preset in ("author_route", "author_waypoint"):
+            if parameters:
+                raise ValueError("Author L1 controller accepts no trajectory-controller parameters")
+            from b2d_tfv6_author_control import AuthorController
+            self._controller = AuthorController(preset.removeprefix("author_"))
+        else:
+            self._controller = Controller(preset=preset, **parameters)
+        self._fixed_trace = None
+        self._fixed_trace_start = None
+        if cfg.get("reference_trace_path"):
+            trace = json.loads(open(cfg["reference_trace_path"]).read())
+            times = np.asarray(trace["elapsed_s"], float)
+            xy = np.asarray(trace["world_xy"], float)
+            if (times.ndim != 1 or xy.shape != (len(times), 2) or len(times) < 2
+                    or not np.isfinite(times).all() or not np.isfinite(xy).all()
+                    or abs(times[0]) > 1e-6 or (np.diff(times) <= 0).any()):
+                raise ValueError("Invalid fixed expert reference trace")
+            self._fixed_trace = (times, xy)
         self._frame_router = FrameRouter([camera[0] for camera in CAMERAS[:self.n_cam]])
         self._pose_filter = self._route_adapter = self._truth_logger = None
         self._trajectory_frame = None
@@ -233,6 +251,7 @@ class StubAgent(AutonomousAgent):
         self._controller.reset()
         self._tick = 0
         self._trajectory_frame = None
+        self._fixed_trace_start = None
         # A fresh route must not consume camera packets or held controls from its
         # predecessor when callers reuse an agent instance.
         from b2d_controller_adapter import FrameRouter
@@ -318,8 +337,33 @@ class StubAgent(AutonomousAgent):
         t_infer = 0.
         if self._trajectory_frame is None or (self._tick - 1) % self.decimate == 0:
             t = time.perf_counter()
-            trajectory = self._route_adapter.trajectory(xy, yaw)
-            accepted = self._controller.update(trajectory, timestamp)
+            if getattr(self, '_fixed_trace', None) is None:
+                trajectory = self._route_adapter.trajectory(xy, yaw)
+            else:
+                from b2d_controller_adapter import world_to_local
+                if self._fixed_trace_start is None:
+                    self._fixed_trace_start = timestamp
+                times, world_xy = self._fixed_trace
+                future = timestamp - self._fixed_trace_start + np.arange(1, 21) * .25
+                desired = np.column_stack((np.interp(future, times, world_xy[:, 0]),
+                                           np.interp(future, times, world_xy[:, 1])))
+                trajectory = world_to_local(desired, xy, yaw)
+            interface = getattr(self, 'cfg', {}).get('reference_interface', 'nominal')
+            if interface == 'nominal':
+                accepted = self._controller.update(trajectory, timestamp)
+            else:
+                if interface == 'short_2s':
+                    trajectory, plan_dt = trajectory[1:8:2], .5
+                elif interface == 'sparse_5s':
+                    trajectory, plan_dt = trajectory[3::4], 1.
+                elif interface == 'stop_jitter':
+                    plan_dt = .25
+                    if np.linalg.norm(trajectory[0]) < .25 and speed < .2:
+                        rng = np.random.default_rng(20260924 + frame)
+                        trajectory = trajectory + rng.normal(0, .05, trajectory.shape)
+                else:
+                    raise ValueError('Unknown reference_interface')
+                accepted = self._controller.update(trajectory, timestamp, trajectory_dt=plan_dt)
             self._trajectory_frame = frame
             self._trajectory_log.write(json.dumps({"frame": frame, "sim_time": timestamp,
                 "pose_xy": xy.tolist(), "pose_yaw": yaw, "accepted": accepted,
