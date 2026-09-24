@@ -147,12 +147,13 @@ def _write_set(name: str, fnames: np.ndarray, arrays: dict, meta: dict) -> dict:
 def finalize_op(model: str, split: str = "subset") -> dict:
     sub = "op" if split == "subset" else f"op_{split}"
     files = sorted(root(sub, model).glob("*.npz"))
-    parts = []
+    keep = OP_ARRAYS if split == "subset" else ("temporal",)   # train-split test reads the primary tap only:
+    parts = []                                                # Cinque's 16 384-d `hidden` over 522k rows is 34 GB
     for f in files:                      # read and close each file: 2690 lazy NpzFiles exhaust the fd limit
         with np.load(f) as z:
-            parts.append({k: z[k] for k in z.files})
+            parts.append({k: z[k].astype(np.float16) if k in OP_ARRAYS else z[k] for k in (*keep, "name", "wod", "hist")})
     fn = np.concatenate([p["name"] for p in parts]).astype(str)
-    arrs = {k: np.concatenate([p[k] for p in parts]) for k in OP_ARRAYS}
+    arrs = {k: np.concatenate([p[k] for p in parts]) for k in keep}
     arrs_native = {"wod": np.concatenate([p["wod"] for p in parts]), "hist": np.concatenate([p["hist"] for p in parts])}
     sfx = "" if split == "subset" else f"_{split}"
     np.savez(root() / f"op_{model}{sfx}_native.npz", name=fn, **arrs_native)
