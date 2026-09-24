@@ -43,22 +43,30 @@ other_alpamayo_running() {
 }
 
 free_vram_mb() {
-    nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1
+    nvidia-smi -i "$GPU" --query-gpu=memory.free --format=csv,noheader,nounits | head -1
 }
 
-echo "waiting: need $NAVSIM_DONE, no NAVSIM/WOD Alpamayo process or WOD waiter, and >= ${VRAM_MIN_MB} MiB free VRAM"
-while true; do
-    if ! other_alpamayo_running; then
-        free=$(free_vram_mb)
-        if (( free >= VRAM_MIN_MB )); then
-            echo "conditions met: free VRAM ${free} MiB"
-            break
+if [[ $NO_WAIT == 1 ]]; then
+    echo "NO_WAIT=1: starting immediately on GPU $GPU, no polling"
+else
+    echo "waiting: need $NAVSIM_DONE, no NAVSIM/WOD Alpamayo process or WOD waiter, and >= ${VRAM_MIN_MB} MiB free VRAM on GPU $GPU"
+    while true; do
+        if ! other_alpamayo_running; then
+            free=$(free_vram_mb)
+            if (( free >= VRAM_MIN_MB )); then
+                echo "conditions met: free VRAM ${free} MiB on GPU $GPU"
+                break
+            fi
         fi
-    fi
-    sleep "$POLL_S"
-done
+        sleep "$POLL_S"
+    done
+fi
 
-echo "## $(date +%Y-%m-%d\ %H:%M) [B2D] start: Alpamayo full 220-route run (1 server + 4 CARLA workers, ~50 GB, ~16 cores; est. 4.3 h idle / 6.6 h shared)" >> "$PLAN"
+# Stale sock/ready files from a previous (e.g. crashed) run would make the ready-file
+# check below pass instantly against a server that is not actually up.
+rm -f "$D/alpamayo-full.sock" "$D/alpamayo-full.ready"
+
+echo "## $(date +%Y-%m-%d\ %H:%M) [B2D] start: Alpamayo full 220-route run on GPU $GPU (1 server + 4 CARLA workers, ~50 GB, ~16 cores; est. ~4.3 h idle)" >> "$PLAN"
 
 cat > "$D/agent-alpamayo-full.json" <<EOF
 {"model": "alpamayo", "socket": "$D/alpamayo-full.sock", "plan_every": 5, "controller_preset": "carla",
@@ -66,7 +74,7 @@ cat > "$D/agent-alpamayo-full.json" <<EOF
  "seed": 0, "dump_every": 0}
 EOF
 
-scripts/tmux_run.sh "$SERVER_WIN" env HF_ENDPOINT=https://hf-mirror.com \
+scripts/tmux_run.sh "$SERVER_WIN" env HF_ENDPOINT=https://hf-mirror.com CUDA_VISIBLE_DEVICES=$GPU \
     ~/data/third_party/alpamayo1.5/.venv/bin/python scripts/zeroshot_policy_server.py alpamayo \
     --socket "$D/alpamayo-full.sock" --ready-file "$D/alpamayo-full.ready"
 
@@ -75,7 +83,7 @@ while [ ! -e "$D/alpamayo-full.ready" ]; do sleep 5; done
 echo "server ready, starting full run"
 
 scripts/tmux_run.sh "$RUN_WIN" env DATA_DIR="$DATA_DIR" ~/data/envs/carla/bin/python scripts/b2d_run.py \
-    --workers 4 --server-index 240 --agent scripts/b2d_zeroshot_agent.py \
+    --workers 4 --server-index 240 --gpu-rank "$GPU" --agent scripts/b2d_zeroshot_agent.py \
     --agent-config "$D/agent-alpamayo-full.json" --decimate 2 --no-spectator --max-attempts 2 --out "$OUT"
 
 echo "run started in jev:$RUN_WIN, watching for completion (resumable: reruns skip done/<id>.json)"
