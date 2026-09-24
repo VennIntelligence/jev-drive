@@ -20,7 +20,7 @@ done
 [[ -x $ENV/bin/python ]] || uv venv "$ENV" --python 3.10
 req=$(mktemp)
 uv pip freeze --python "$D/envs/navsim1/bin/python" \
-  | grep -viE "^(torch|torchvision|triton|nvidia-|navsim|nuplan-devkit)([=@ ]|$)" > "$req"
+  | grep -vE "^-e " | grep -viE "^(torch|torchvision|triton|nvidia-[a-z0-9-]+)==" > "$req"
 uv pip install --python "$ENV/bin/python" -r "$req" "torch==2.8.0" "torchvision==0.23.0"
 uv pip install --python "$ENV/bin/python" --no-deps "$D/third_party/nuplan-devkit" "$NAV"
 rm -f "$req"
