@@ -29,6 +29,14 @@ def milestone(step,message,**numbers):
         stream.write(json.dumps(row,ensure_ascii=False)+'\n')
 
 
+def block(error):
+    now=datetime.now(timezone.utc).isoformat()
+    message=f'D3b stopped on invariant, driving, runner or classification failure: {type(error).__name__}: {error}'
+    (BUS/'question.md').write_text('# D3 BLOCKED\n\n'+message+'\n\nOnly D3-owned route/CARLA workers were cancelled; no patch or restart was made. Inspect /data/runs/b2d/tfv6-d3/.\n')
+    milestone('blocked',message)
+    (BUS/'SIGNAL').write_text(f'BLOCKED {now} {message}\n')
+
+
 def _same(left,right,tol=1e-5):
     return all(abs(float(left[k])-float(right[k]))<=tol for k in ('steer','throttle','brake'))
 
@@ -62,8 +70,7 @@ def validate_d3(result,attempt_dir,run_dir):
             raw=f.get('raw_control');final=f.get('final_control');actual=f.get('executed_control')
             if raw and arm in 'EFK':
                 speed=float(f['raw_signed_speed_mps'])
-                # Author brake interlock uses the speedometer magnitude, not
-                # the production controller's signed-motion contract.
+                # The author brake interlock uses the logged speedometer value.
                 expected=_compose_d3_arm(arm,raw,speed)
                 if not _same(raw[arm],expected):
                     raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: hybrid raw composition at step {f["step"]}')
@@ -165,7 +172,11 @@ def main():
         if len(groups)!=len(selected) or any(g[1]=='2091' for g in groups):
             parser.error('kalman selection must be 2084/27529 groups only')
         items=[(*g,'K') for g in groups]
-    execute(args.phase,items)
+    try:
+        execute(args.phase,items)
+    except Exception as error:
+        block(error)
+        raise
 
 
 if __name__=='__main__':main()
