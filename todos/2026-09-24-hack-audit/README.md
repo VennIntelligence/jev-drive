@@ -1,6 +1,6 @@
 # 榜单 hack 审计：只读代码和论文，找出分数里不属于驾驶能力的部分
 
-状态: draft
+状态: done（2026-09-24 18:12–19:25，Codex gpt-6-sol ultra，约 80 万 token）
 执行者: Codex（Tokyo box），本文自包含，不需要读其他上下文也能做
 主题: 分数与驾驶能力的分离；审计结果将用于 [research/](../../research/README.md) 下的方向论述
 
@@ -182,4 +182,13 @@ cd /data/hack_audit && codex exec -m gpt-6-sol -c model_reasoning_effort='"ultra
 
 ## 结果
 
-跑完再填：交付物拉回 Mac 后放在 `research/results/hack-audit/`，结论写进 research 下的笔记。
+全部交付物已拉回 [research/results/hack-audit/](../../research/results/hack-audit/)，总报告是 [report.md](../../research/results/hack-audit/report.md)。
+
+7 个榜单共 36 个抽样条目，入选 20 个审计单元（A 档 16、B 档 4）。CARLA Leaderboard 2.0 只有 TF++ 一个符合代码公开条件，按规则如实少报。
+最终 codebook 19 类，35 条发现，矩阵 yes 33 / no 190 / NA 157。三轮独立复核中，最终一轮一致率 25/26 = 96.2%，5 项自动验收全过。
+没有运行任何模型或评测。
+
+四个机制簇：榜单指标直接进入决策（评分头重排候选、测试时 CEM 搜索、用 RFS 做 RL 奖励），主要在 NAVSIM 和 WOD-E2E；
+训练目标、评分权重与划分针对榜单调整；开环里的 ego 状态与未来标签（nuScenes）；闭环接口、手写规则与仿真协议（CARLA 系、HUGSIM）。
+报告只能说明分数由哪些机制共同产生，多数机制缺同权重的单项消融，**给不出「分数里多少比例不是驾驶能力」**；
+需要实测的 7 组对照列在报告的「候选实测设计」一节，其中 TFv6 的接口和规则拆分与 [R 层测量](../2026-09-24-r-layer-routine.md) 重合。

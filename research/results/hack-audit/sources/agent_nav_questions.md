@@ -1,0 +1,3 @@
+- TOAD 的固定 main 提交要求 NAVSIM-v1 另切 `nav1` 分支；README 当前称 v1 94.9，论文 Table 1 为 94.7。抽样按论文 94.7；若验收要求 v1 完整代码闭环，需给 `nav1` 单独锁定 commit 并更新该审计单元的 `repos.csv`。
+- DriveVLA-M0 论文 navtest 94.1 属 Scale（10K memory），固定提交的公开评测入口只部署 Base，Retrieve 为独立验证入口，未找到完整 memory+TTT 推理链。按完整论文方法衡量公开程度可能从 A 降为 B，现有发现仅能审公开 Base 机制。
+- GTRS 抽样 45.4 是修复官方指标后 navhard 双阶段合并 EPDMS（DrivoR 后续论文 Table 3），固定 GTRS 2025 论文及 README 仍列旧协议 V2-99 GTRS-Aug 42.1；没有本固定提交对 45.4 的直接重放配置/日志。其旧协议 ablation 不用于分解 45.4。

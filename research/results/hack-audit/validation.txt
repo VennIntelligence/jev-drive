@@ -1,0 +1,8 @@
+PASS sampling: 36 个抽样条目、20 个入选单元、7 榜覆盖；入选数 {'bench2drive': 3, 'carla_lb2': 1, 'hugsim': 3, 'navsim_v1': 4, 'navsim_v2': 3, 'nuscenes': 3, 'wod_e2e': 3}
+PASS index: 20 个任务板单元、20 页审计
+PASS findings: 35 条发现、29 个固定 Git 文件、全部检查原文与论文披露字段
+PASS matrix: 20 单元×19 最终类别，380 格；{'NA': 157, 'no': 190, 'yes': 33}
+PASS review: 26 条复核，yes 7/7、no 19/19；一致率 25/26=96.2%；1 条不一致
+SUMMARY PASS=5 FAIL=0 SKIP=0
+HTTP 检查 33 个唯一链接；WARN=0
+NOTE: 代理是否继承上下文无法从静态文件证明，需由主代理确认。

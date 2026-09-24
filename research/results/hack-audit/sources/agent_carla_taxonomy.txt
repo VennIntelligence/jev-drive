@@ -1,0 +1,25 @@
+
+### control_interface_selection
+- 定义：推理时在同一网络的多个输出头之间选定控制接口，并由手工控制器转换为车控；榜单增益依赖接口和控制器选项。
+- 正例：TFv6 默认以 route 控方向、target_speed 控油门和刹车，虽同时计算 waypoint 控制。
+- 提议者：agent_carla。
+
+### stuck_recovery_override
+- 定义：车辆连续静止达到固定帧数后，手工覆盖模型刹车或油门以解除榜单中的 blocked 状态。
+- 正例：BLUE agent 静止超过 800 帧后强制 0.4 油门、取消刹车。
+- 提议者：agent_carla。
+
+### infraction_rule_override
+- 定义：推理后用与榜单单项违规直接对应的手工规则覆盖网络车控。
+- 正例：TF++ 默认启用 stop sign controller，检测到停车牌时在网络车控后强制刹车。
+- 提议者：agent_carla。
+
+### simulator_pose_access
+- 定义：SENSORS 推理代码直接查询仿真器 world 或 actor 的真实位姿、状态，绕开所声明传感器的定位误差。
+- 正例：SparseDriveV2 Bench2Drive agent 从 CARLA world 的 LiDAR actor 读精确变换，并用于全局定位与路线输入。
+- 提议者：agent_carla。
+
+### metric_early_termination
+- 定义：依据计分公式，在固定行驶距离后主动停止，以牺牲路线完成率换取更高的乘积式分数。
+- 正例：TF++ 提供 STOP_AFTER_METER，达到阈值后将油门设 0、刹车设 1；论文报告 1.5 km 实践阈值。
+- 提议者：agent_carla。

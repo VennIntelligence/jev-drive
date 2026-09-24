@@ -1,0 +1,1530 @@
+                                                       S IM S CALE: Learning to Drive via Real-World Simulation at Scale
+
+                                                         Haochen Tian1,2,3⋄ Tianyu Li2† Haochen Liu3 Jiazhi Yang2 Yihang Qiu2,3⋄
+                                                         Guang Li3 Junli Wang1,3 Yinfeng Gao1,3 Zhang Zhang1§ Liang Wang1§
+                                                                  Hangjun Ye3 Tieniu Tan1 Long Chen3§ Hongyang Li2
+                                                                     1
+                                                                         MAIS, Institute of Automation, Chinese Academy of Sciences
+                                                                    2
+                                                                         OpenDriveLab at The University of Hong Kong 3 Xiaomi EV
+arXiv:2511.23369v3 [cs.CV] 10 Apr 2026
+
+
+
+
+                                                                               https://opendrivelab.com/SimScale
+                                           1. Real-World Data                3. Sim-Real Co-training                                                   1. Single-mode Regression
+                                                                                                                                                                                                     84.4
+                                                                                                                                                                                    30.2
+                                                                                                                                                                                             81.5
+                                                                                  Real      Logged States                          Human-Expert                              24.4
+                                                                                   Sim.   Perturbed States                         Pseudo-Expert
+                                                                                                                                                                             Robustness    Generalization
+
+                                                                                                                  ANY                                  2. Diffusion Policy
+                                                                                                                                                                                                     85.9
+                                                                                                                  E2E Planner                                                       32.6
+                                                                                                                                                                                              84.2
+
+                                                                                                                                                                             27.5
+                                           2. Scalable Simulation Data
+
+                                                reactive sim 1                    reactive sim 2                        reactive sim 3
+                                                                                                                                          …            3. Vocabulary Scoring
+                                                                                                                                                                             Robustness     Generalization
+
+
+
+                                                                                                                                                                                    46.9             84.6
+                                                                                                                                                                                              82.3
+                                                                                                                                                                             38.3
+
+
+
+                                                                                                                                                                             Robustness     Generalization
+
+                                          (a) Scalable Simulation Data and Sim-Real Co-training        Real Ego   Sim. Ego                           (b) Real-World Benchmarks             Real      Sim-Real
+
+
+                                         Figure 1. Scaling up end-to-end planners by simulation. (a) We construct large-scale simulation data by perturbing ego trajectories,
+                                         generating corresponding pseudo-expert demonstrations, and rendering multi-view observations in reactive environments. Combined with
+                                         real-world data, this enables broad coverage of out-of-distribution states and supports sim–real co-training for any end-to-end planner.
+                                         (b) Across three representative planner families, including regression, diffusion, and vocabulary scoring, sim-real co-training consistently
+                                         produces synergistic improvements in robustness and generalization, demonstrating clear and predictable simulation scaling trends.
+
+
+                                                                     Abstract                                                develop a pseudo-expert trajectory generation mechanism
+                                                                                                                             for these newly simulated states to provide action supervi-
+                                                                                                                             sion. Upon the synthesized data, we find that a simple co-
+                                             Achieving fully autonomous driving systems requires
+                                                                                                                             training strategy on both real-world and simulated samples
+                                         learning rational decisions in a wide span of scenarios, in-
+                                                                                                                             can lead to significant improvements in both robustness and
+                                         cluding safety-critical and out-of-distribution ones. How-
+                                                                                                                             generalization for various planning methods on challenging
+                                         ever, such cases are underrepresented in real-world cor-
+                                                                                                                             real-world benchmarks, up to +8.6 EPDMS on navhard and
+                                         pus collected by human experts. To complement for the
+                                                                                                                             +2.9 on navtest. More importantly, such policy improve-
+                                         lack of data diversity, we introduce a novel and scalable
+                                                                                                                             ment scales smoothly by increasing simulation data only,
+                                         simulation framework capable of synthesizing massive un-
+                                                                                                                             even without extra real-world data streaming in. We further
+                                         seen states upon existing driving logs. Our pipeline uti-
+                                                                                                                             reveal several crucial findings of such a sim-real learning
+                                         lizes advanced neural rendering with a reactive environ-
+                                                                                                                             system, which we term SimScale, including the design of
+                                         ment to generate high-fidelity multi-view observations con-
+                                                                                                                             pseudo-experts and the scaling properties for different pol-
+                                         trolled by the perturbed ego trajectory. Furthermore, we
+                                                                                                                             icy architectures. Simulation data and code have been re-
+                                             ⋄ Work done while interning at Xiaomi Embodied Intelligence Team.               leased at https://github.com/OpenDriveLab/
+                                             † Project Lead. § Equal Advising.
+                                                                                                                             SimScale.
+                                             Primary contact to Haochen Tian tianhaochen2023@ia.ac.cn
+
+
+                                                                                                                    1
+1. Introduction                                                       generates the trajectory that maximizes optimality, repre-
+                                                                      senting an exploratory strategy with lower realism. To en-
+Data scaling is recognized as a foundational principle in             hance scalability and plausibility, the entire pipeline is ex-
+modern deep learning across various domains, including                ecuted in a reactive environment [76], where surrounding
+language, vision, and multimodal modeling, underpinning               agents interact with the ego vehicle responsively.
+steady performance improvements as data sizes increase [5,
+                                                                          To thoroughly assess the effect of simulation data, we
+38, 72, 92]. In autonomous driving, end-to-end (E2E) plan-
+                                                                      consider three types of end-to-end planners with various
+ning learns to map raw observations to actions, offering a
+                                                                      model scales, i.e., LTF [12] for regression methods, Dif-
+promising way to leverage large-scale driving data to enable
+                                                                      fusionDrive [60] for diffusion-based planners, and GTRS-
+the emergence of fully autonomous systems [29, 68, 98].
+                                                                      Dense [59] for vocabulary scoring. We employ a sim-
+    Nevertheless, real-world driving data from human ex-
+                                                                      ple yet effective sim-real co-training strategy [67, 69] to
+pert demonstrations are dominated by common scenarios,
+                                                                      maintain human driving distribution while mitigating visual
+while non-trivial cases, e.g., safety-critical, are underrepre-
+                                                                      domain degradation. Furthermore, by keeping a constant
+sented [9, 62, 84, 87]. Moreover, planners trained on such
+                                                                      amount of real data and progressively adding simulation
+data are confined to human driving distribution and struggle
+                                                                      data via non-overlapping samples, we investigate how di-
+to generalize to rare or unseen situations, leading to distri-
+                                                                      verse planners can benefit from simulation data and the gen-
+bution shift and causal confusion in deployment [20, 56].
+                                                                      eral scaling property. We utilize two real-world closed-loop
+Consequently, scaling real-world data only is inefficient for
+                                                                      benchmarks to evaluate the planners from multiple perspec-
+achieving deploy-ready autonomous driving.
+                                                                      tives. navhard [6] focuses on unseen, challenging scenar-
+    Simulation via neural rendering [40] can generate high-
+                                                                      ios to assess the impact of OOD states on planners, while
+fidelity driving scenarios and thus has the potential to pro-
+                                                                      navtest [17] offers a broad set of diverse scenarios to test
+duce out-of-distribution (OOD) states deviated from hu-
+                                                                      planners’ ability to handle varying situations.
+man demonstrations at scale, which is essential for closed-
+                                                                          The complete sim-real learning system, which comprises
+loop planning [23, 71]. Therefore, scaling simulation data
+                                                                      a scalable simulation data construction pipeline and an ef-
+presents an attractive alternative to solely relying on real-
+                                                                      fective sim–real co-training strategy as shown in Fig. 1, is
+world data. However, planners require feasible correspond-
+                                                                      termed SimScale. Rigorous experiments uncover crucial
+ing demonstrations to learn how to handle OOD states,
+                                                                      findings enabled by SimScale—including, but not limited
+while current simulation methods fail to generate such
+                                                                      to, the following:
+demonstrations effectively. Moreover, the impact of scaling
+simulation data lacks in-depth analysis. In this work, we             • Scalable simulation with pseudo-expert unlocks the in-
+aim to derive a systematic recipe for scaling simulation data           herent potential of available real-world driving data.
+from limited real-world scenarios in end-to-end planning.             • Sim-real co-training improves both robustness and gener-
+    To conduct comprehensive experiments and analyses,                  alization synergistically in diverse end-to-end planners.
+this study is structured along three key questions: (1) what          • Exploratory expert and interaction environments improve
+constitutes effective simulation data, (2) how well plan-               the effectiveness of simulation data.
+ners benefit from it, and (3) whether this system scales pre-         • Planners with multimodal modeling capabilities exhibit
+dictably upon fixed real-world corpus.                                  more encouraging data scaling properties.
+    To this end, we formulate a scalable simulation data
+generation framework that extends the expert distribution             2. Methodology
+from existing real-world training data to bootstrap end-to-
+end autonomous driving systems. We develop a 3D Gaus-                 We outline SimScale as follows. In Sec. 2.2, we briefly in-
+sian Splatting (3DGS) [40] simulation data engine, which              troduce our 3GDS simulation data engine supporting con-
+allows controlling the temporal ego and other agent states            trollable multi-view video rendering. In Sec. 2.3, we pro-
+and rendering multi-view videos from the ego’s perspec-               pose a pseudo-expert scene simulation pipeline to generate
+tive. Concretely, we first sample a diverse set of plausi-            diverse simulation data containing OOD states with feasible
+ble perturbations to the ego trajectory, maximizing cover-            demonstrations. In Sec. 2.4, we demonstrate a scalable sim-
+age of the state space, e.g., off-center lane drifts, close in-       real co-training method with different end-to-end planners.
+teractions, among others. Then, we take the final state of
+                                                                      2.1. Preliminary
+each perturbed trajectory as the perturbed state and gener-
+ate corresponding demonstrations using pseudo-experts of              End-to-end planning models take observations within a his-
+two forms in comparison. The first, recovery-based expert             tory window as input and output a predicted future trajec-
+retrieves trajectories that steer the policy within the human         tory. Each training scenario starts at a selected timestep and
+trajectory manifold, resulting in human-like yet cautious be-         includes a history horizon of length T and a planning hori-
+haviors. The second, privileged planner-based expert [16]             zon of length H. The model processes the past T frames to
+
+                                                                  2
+        Real Ego   Sim. Ego    Other Agent
+
+
+
+
+                                                                         𝑇 + 2𝐻                       𝑇 + 2𝐻                       𝑇 + 2𝐻
+
+                     𝑇+𝐻
+
+
+ Sim.
+
+                                                          𝑇+𝐻                            𝑇+𝐻                         𝑇+𝐻
+         𝑇
+        Real                                    Sim.      1. Recovery-based       Real   2. Planner-based   Sim.                   reactive env.
+
+ (a) Trajectory Perturbation                 (b) Pseudo-Expert Trajectory Generation
+
+
+Figure 2. Pseudo-expert scene simulation pipeline. (a) Trajectory perturbation on T to T + H, (b) reactive environment rollout, and
+pseudo-expert trajectory generation from T + H to T + 2H under recovery-based and planner-based strategies.
+
+
+predict the future H frames, resulting in a complete training                  ensure the quality of generated simulation data.
+sample spanning T + H timesteps.
+                                                                               2.3. Pseudo-Expert Scene Simulation
+2.2. 3DGS Simulation Data Engine                                               Based on the data engine, we design a pseudo-expert scene
+To reduce the domain gap between real-world data and gen-                      simulation pipeline to generate diverse simulation data from
+erated observations from novel views in simulated scenar-                      existing real-world data, as shown in Alg. 1. The pipeline
+ios, a photorealistic data engine is required. Built upon                      aims to produce feasible demonstrations from perturbed
+3DGS [40] assets reconstructed from real-world datasets,                       states paired with expert trajectories, as illustrated in Fig. 2.
+                                                 N
+our data engine Φ(Kt , Et , {xi,t , yi,t , θi,t }i=1 ) takes as in-            Reactive Scene Reconstruction. For each training clip d,
+put the camera intrinsics Kt and extrinsics Et at timestep t,                  we perform two simulations of duration H: one for explor-
+along with the positions and yaw angles (x, y, θ) of a non-                    ing perturbed states at t = T , and the other for generating
+ego vehicle i at the same timestep, and renders the corre-                     expert trajectories at t = T +H. In each simulation, ego tra-
+sponding RGB observations from the camera. The cam-                            jectory ãt:t+H is simulated by LQR [43], while other agents
+era extrinsics Et can easily be obtained from the ego vehi-                    are modeled using the IDM [76] to interact with the ego,
+cle’s position and heading (x0,t , y0,t , θ0,t ) with the ego-to-              producing the corresponding future states s̃t:t+H . For the
+camera transformation, while the other camera parameters                       valid expert trajectories, the simulated ego–agent trajecto-
+are directly adopted from the raw dataset.                                     ries cross two stage (ãT :T +2H , s̃T :T +2H ) are then rendered
+Preprocessing. Following prior work [51], we apply expo-                       into multi-view videos õT :T +2H using the data engine Φ.
+sure alignment across images captured simultaneously by                        This decoupling of behavior simulation from sensor render-
+multi-view cameras at time t, using projected LiDAR points                     ing enables reactive environments where other agents re-
+at t as guidance. Moreover, with help of 3D bounding boxes                     spond plausibly to the ego’s behaviors, thereby enhancing
+provided by NAVSIM annotations, colored LiDAR points                           both the realism and diversity of the simulation data.
+are divided into several groups, i.e., the static background                   Trajectory Perturbation. At the first simulation step (t =
+and multiple vehicles, and further used as initialization for                  T ), we perturb the ego trajectory ãt:t+H so that the ego
+Gaussians to improve the reconstruction performance.                           reaches a new terminal state at t = T + H, which then
+Block-wise Reconstruction. During scene reconstruction,                        serves as the start state for the next rollout (Fig. 2 (a)). Our
+increasing the number of images significantly raises compu-                    objective is to sample diverse yet plausible states. For di-
+tational cost and runtime. Thus, we perform reconstruction                     versity, perturbations are drawn from a clustered human-
+in a block-wise manner, where each block corresponds to a                      trajectory vocabulary that densely covers the action space.
+spatio-temporal range. Following previous work [51, 86],                       For plausibility, we restrict perturbations to remain near
+backgrounds and foregrounds are reconstructed as separate                      human behavior by thresholding longitudinal/lateral shifts
+models using the per-timestep locations and orientations of                    (rlon , rlat ) and heading change |∆θ|, and by removing tra-
+3D bounding boxes, resulting in a static background asset                      jectories that are physically invalid (collisions, off-road, un-
+and multiple movable vehicle assets. These assets could                        stable renderings). We further apply spatially sparse sam-
+then be placed at desired locations and headings specified                     pling on trajectory endpoints using an interleaved grid with
+by inputs, rendering sensor data at novel views. Blocks with                   steps (δlon , δlat ) to promote uniform coverage. Since reac-
+low average PSNR in novel view synthesis are excluded to                       tive simulation is costly, we first filter infeasible trajectories
+
+
+                                                                          3
+Algorithm 1 Pseudo-Expert Scene Simulation                                                                                                                 retrieves the closest human maneuver by:
+Require:        Training clip d = (ot , st , at )Tt=0
+                                                   +2H
+                                                       ∈ D, perturb                                                                                                                                          \tilde {a}_{t:t+H} = \arg \min _{a \in \mathcal {V}_{\text {h}}} \|\mathbf {m}(a) - \mathbf {m}_{\text {r}}\|_1.                                                                                               (2)
+    action sets Aper , sensor engine Φ, pseudo policy πexp ,
+    reward functions f , reactive simulation T .                                                                                                           This yields a human-like yet conservative fallback behavior,
+ 1: Initialize simulation scene dataset Dsim ← ∅                                                                                                           stabilizing under distributional drifts.
+ 2: for each perturbed action aper ∈ Aper do                                                                                                               (2) Planner-based Expert. Following prior works [3, 97],
+ 3:     for timestep t ∈ {T, T + H} do                                                                                                                     we use a privileged planner P that leverages ground-truth
+ 4:          1.Pseudo Action Generation:                                                                                                                   states to generate reactive and optimized trajectory rollouts
+ 5:          if t = T then ãt:t+H ← aper ;                                                                                                                in simulation, as shown in Fig. 2 (b2). The planner-based
+ 6:          else ãt:t+H ← πexp (õt , s̃t ).                                                                                                             expert πexp ← P is defined as: ãt:t+H = P(s̃t:t+H ). Com-
+ 7:          end if                                                                                                                                        pared with the recovery policy, planner-based expert relies
+ 8:          2.Reactive State Simulation:                                                                                                                  on rules or cost heuristics, trading human-likeness and real-
+ 9:          s̃t:t+H ← T (ãt:t+H , s̃t ).                                                                                                                 ism of its behavior occasionally. Still, it offers strong opti-
+10:          3.Sensor Simulation:                                                                                                                          mization and diverse exploratory rollouts, enriching expert
+11:          õt:t+H ← Φ(s̃t:t+H ).                                                                                                                        supervision beyond human data.
+12:          4.Reward Filtering / Labeling:
+13:          r̃t:t+H ← f (ãt:t+H , s̃t:t+H ).                                                                                                             2.4. Scalable Sim-Real Co-training
+14:          if Filtered(r̃t:t+H , õt:t+H ) then                                                                                                          Strategies for Co-training. Sim-real co-training serves as
+15:               Break                                                                                                                                    a simple yet effective strategy [4, 67, 69, 87] that enables
+16:          end if                                                                                                                                        the integration of both real and simulated data for plan-
+17:     end for                                                                                                                                            ning. In our approach, we randomly sample from a mix-
+18:     Append (õt , s̃t , ãt , r̃t )Tt=0
+                                         +2H
+                                             to Dsim                                                                                                       ture of real-world data D and simulation data Dsim during
+19: end for                                                                                                                                                training, aiming to preserve the human driving distribution
+20: return Dsim                                                                                                                                            while mitigating visual domain degradation caused by po-
+                                                                                                                                                           tential simulation artifacts, such as subtle rendering incon-
+non-reactively and run reactive checks only on the sparsed                                                                                                 sistencies, temporal jitter, or unrealistic lighting and shad-
+set. This produces a set of dynamically and physically fea-                                                                                                ows [63, 64]. Our fully automated, scalable simulation data
+sible perturbations aper ∈ Aper .                                                                                                                          generation framework enables scaling the total training data
+                                                                                                                                                           by progressively adding non-overlapping simulation sam-
+Pseudo-Expert Trajectory Generation. At the second                                                                                                         ples, while keeping the real data amount fixed.
+simulation t = T + H, for each perturbed state, we employ
+                                                                                                                                                           Planners for Co-training. We aim to comprehensively
+a non-human expert, referring as the pseudo-expert πexp , to
+                                                                                                                                                           evaluate the effectiveness of simulation data for end-to-
+generate a feasible corresponding trajectory ãt:t+H . Since
+                                                                                                                                                           end planners. Modern end-to-end planning approaches can
+the pseudo-expert is not perfect and ãt:t+H will be used as
+                                                                                                                                                           be broadly categorized into three representative paradigms:
+supervision, we apply stricter filtering in the second stage
+                                                                                                                                                           regression-based planners [12, 27], diffusion-based plan-
+simulation. In addition to physical constraints, traffic rules
+                                                                                                                                                           ners [60, 83], and vocabulary scoring-based planners
+and vehicle kinematic limits are also enforced, following
+                                                                                                                                                           [34, 56]. Accordingly, we consider representative models
+Eq. 6. To investigate which strategy best serves as supervi-
+                                                                                                                                                           from each paradigm in our co-training experiments.
+sion for end-to-end planners, we compared two strategies:
+a conservative recovery-based expert, and an exploratory                                                                                                   (1) Co-training with Pseudo-Expert Trajectory. Regres-
+planner-based expert, as detailed below.                                                                                                                   sion and diffusion-based planners rely on expert demonstra-
+                                                                                                                                                           tions. The co-training process can thus be formulated as:
+(1) Recovery-based Expert. Recovery steers the policy
+within the human manifold after perturbation. To ensure                                                                                                                                 \arg \min _{\theta } \mathbb {E}_{(a,o)\sim (\mathcal {D}\,\cup \,\mathcal {D}_{\text {sim}})} \Big [ \mathcal {L}_{\text {im}}\big (a, \pi _\theta (\hat {a}|o)\big ) \Big ], \label {eq:im}                                       (3)
+robustness, our recovery expert πexp retrieves a human tra-
+jectory from a large vocabulary Vh that best matches the ego                                                                                               here, Lim denotes the imitation loss; D and Dsim represent
+vehicle’s logged state at time t = T + 2H (Fig. 2 (b1)). For                                                                                               the real-world and generated simulation datasets, respec-
+each candidate trajectory of horizon H, we summarize its                                                                                                   tively; and A refers to expert trajectories, i.e., human-expert
+initial and final poses with a compact matching vector:                                                                                                    trajectories in D and pseudo-expert trajectories in Dsim . As
+                                                                                                                                                           for the vocabulary scoring-based planner, the learning ob-
+                                                                                                                                                           jective has additional prediction of reward signals r that dis-
+         \mathbf {m} = [\tilde {v}^x_t, \tilde {v}^y_t,\tilde {\theta }_t, \tilde {x}_{t+H-1}, \tilde {y}_{t+H-1}, \tilde {\theta }_{t+H-1}].    (1)       till the evaluation metrics, e.g. EPDMS as Eq. 6:
+
+Given the ego’s perturbed state with target vector mr , πexp                                                                                                   \begin {aligned} \label {eq:im_reward} \arg \min _{\theta }\mathbb {E}_{(a,o,r)\sim (\mathcal {D}\cup \mathcal {D}_{\text {sim}})} \Big [ \lambda \mathcal {L}_{\text {im}} + \mathcal {L}_{\text {r}}\big (r,\, \pi _\theta (\hat {a}|o)\big ) \Big ], \end {aligned}  (4)
+
+
+                                                                                                                                                       4
+                 Increment Data                          Cumulative Data
+                                                                                                                                                                              237 K                       Closed [16] as the expert. Only pseudo-expert trajectories
+                                                                                                                                                             205 K
+                                                                                                                                                                                                          with decent sub-metrics of EPDMS are considered valid.
+                                                                                                                                                                                                          Due to computational limits, for each type of pseudo-expert,
+                                                                                                                                            167 K                                                         we perform up to five random samplings of valid trajecto-
+                                                                     147 K
+                                                     130 K
+                                                                                                                                                                                                          ries with no overlaps from navtrain split for rendering.
+                                    109 K
+                                                                                                                           120 K                                                                          Through multiple samplings, expert trajectory demonstra-
+                                                                                                                                                                 Real-World Data Size
+                                                                                                                                                                                                          tions are progressively accumulated. As shown in Fig. 3,
+                     80 K
+                                                                                                               65 K                                                                                       the two pseudo-expert methods exhibit different success
+      45 K                                                                                                                                                                                                rates, with the planner-based expert achieving higher effi-
+                                                                                                                                                                                                          ciency. In total, we generate 147K recovery-based simula-
+                                                                                    Rounds                                                                                                   Rounds       tion scenes and 237K planner-based simulation scenes. For
+             (a) Recovery-based Expert                                                                              (b) Planner-based Expert                                                              more details, please refer to Sec. B.1 in the supplementary
+                                                                                                                                                                                                          Benchmark and Metrics. We utilize two benchmarks in
+Figure 3. Simulation data statistics across multiple sampling                                                                                                                                             NAVSIMv2 [6] for end-to-end model evaluation, includ-
+rounds. (a) Recovery-based expert impose stronger constraints,                                                                                                                                            ing navhard and navtest. navhard is the official two-
+leading to slower data accumulation than (b) Planner-based expert.                                                                                                                                        stage evaluation benchmark, which contains 244 challeng-
+                                                                                                                                                                                                          ing real-world scenarios in the first stage and corresponding
+here, Lr denotes reward loss, λ is a weighting factor.                                                                                                                                                    4,164 synthetic scenarios generated by 3DGS in the sec-
+(2) Co-training with Rewards Only. For the vocabu-                                                                                                                                                        ond stage. navtest is a one-stage evaluation benchmark,
+lary scoring-based planner, when the reward signal is well-                                                                                                                                               containing a large number of 12,146 real-world scenarios.
+aligned, the expert is theoretically unnecessary, as shown in                                                                                                                                             navhard focuses on assessing the model’s closed-loop per-
+Eq. 4. The planner can explore directions to increase the                                                                                                                                                 formance in safety-critical situations, while navtest em-
+reward without being restricted to a single expert trajectory.                                                                                                                                            phasizes generalization across diverse driving conditions.
+The co-training process can be formulated as:                                                                                                                                                             The two benchmarks share a rule-based planning metric,
+                                                                                                                                                                                                          EPDMS [47], with several sub-metrics:
+     \arg \min _{\theta }\mathbb {E}_{(a,o,r)\sim \mathcal {D}} [\lambda \mathcal {L}_\text {im} + \mathcal {L}_r] + \mathbb {E}_{(o,r)\sim \mathcal {D}_{\text {sim}}} [\mathcal {L}_r].       (5)
+                                                                                                                                                                                                              \mathrm {EPDMS} = \underbrace {\left ( \prod _{m \in \mathcal {M}_\text {pen}} S_m \right ) }_{\text {penalties}} \cdot \underbrace {\left ( \frac { \sum _{m \in \mathcal {M}_\text {avg}} w_m S_m } { \sum _{m \in \mathcal {M}_\text {avg}} w_m }\right ) }_{\text {weighted average}}, \label {eq:epdms}  (6)
+We thus investigate purely reward-driven optimization for
+the scoring-based planner in simulation, to assess its po-
+tential for fully leveraging simulation data, and assess its
+potential for maximizing the utility of simulated data.                                                                                                                                                   where Sm is the sub-metric: penalty terms set Mpen in-
+                                                                                                                                                                                                          cludes No-at-fault Collisions (NC), Drivable Area Com-
+3. Experiments                                                                                                                                                                                            pliance (DAC), Driving Direction Compliance (DDC), and
+3.1. Setup and Protocols.                                                                                                                                                                                 Traffic Light Compliance (TLC); weighted average terms
+                                                                                                                                                                                                          set Mavg includes Time-to-Collision (TTC), Ego Progress
+Real-world Datasets. We use the navtrain split from                                                                                                                                                       (EP), Lane Keeping (LK), History Comfort (HC), and ex-
+NAVSIM [17], built upon the largest publicly available an-                                                                                                                                                tended comfort (EC). Note that EPDMS in navhard fur-
+notated driving dataset nuPlan [39], and comprises 100K                                                                                                                                                   ther incorporates several modifications, e.g., two-stage ag-
+interactive real-world scenarios.                                                                                                                                                                         gregation, reactive traffic simulation, and the exclusion of
+Simulation Data Curation. We construct simulated sce-                                                                                                                                                     penalties in cases where the human expert driver also fails.
+narios on navtrain split. 3DGS models of blocks with                                                                                                                                                      Models and Training. To thoroughly validate our model-
+PSNR < 27 in novel-view results are removed ensure re-                                                                                                                                                    agnostic simulation data, we select one representative open-
+construction quality. For ego trajectory perturbation, we                                                                                                                                                 source model for each paradigm discussed in Sec. 2.4: the
+choose the plausible candidates from the vocabulary of                                                                                                                                                    regression-based LTF [12], the diffusion-based Diffusion-
+16,384 trajectories from [59], with EPDMS ≥ 0.8 and                                                                                                                                                       Drive [60], and the scoring-based GTRS-Dense [59]. We
+relative heading |∆θ| ≤ 20◦ , where EPDMS is detailed                                                                                                                                                     adopt their official implementations with two modifications:
+in Eq. 6. During spatial sampling by trajectory endpoint,                                                                                                                                                 the input image resolution is unified to 2048 × 512, and
+the longitudinal and lateral perturbation ranges are set as                                                                                                                                               the LiDAR inputs are removed to align with the navhard
+rlon = 20m, rlat = 2.0m, with step sizes δlon = 5m, δlat =                                                                                                                                                evaluation setting. All models are trained from scratch on
+0.5m. For recovery-based trajectory generation, we use all                                                                                                                                                NVIDIA H20-3e GPUs. To ensure fair comparison, each
+human expert trajectories in navtrain split as the retrieval                                                                                                                                              model follows the same training strategy, whether using
+vocabulary. For planner-based trajectory generation, we se-                                                                                                                                               only the navtrain split or augmented with simulation data.
+lect the SOTA rule-based planner in nuPlan [39], PDM-                                                                                                                                                     For more details, please refer to Sec. B.2 in supplementary.
+
+
+                                                                                                                                                                                                      5
+Table 1. Performance on the NAVSIM-v2 navhard Leaderboard. PDM-Closed uses ground-truth symbolic inputs for planning, while
+other methods rely on sensor data. (∗: pseudo-expert supervision; †: reward scoring; S.: per-stage EPDM score.)
+ Method                 Backbone       Sim.        Stage    NC↑    DAC↑    DDC↑       TLC↑    EP↑       TTC↑      LK↑      HC↑     EC↑    S.↑         EPDMS↑
+                                                   S1       94.4   98.8    100        99.5    100       93.5      99.3     87.7    36.0     -
+ PDM-Closed [16]           -            -                                                                                                             51.3
+                                                   S2       88.1   90.6    96.3       98.5    100       83.1      73.7     91.5    25.4     -
+                                                                    Regeression-based Planner
+                                                   S1       97.3   80.2    97.8     99.3     83.4       96.2      92.9     97.8    71.1   61.3
+                                       w/o                                                                                                            24.4
+                                                   S2       79.4   69.0    85.6     98.5     83.8       76.7      47.9     97.0    70.6   39.2
+  LTF [12]              ResNet34
+                                                   S1       96.1   85.3     99.4     99.3     84.7      94.7      93.6     97.6    77.3   66.3+5.0
+                                       w/ ∗                                                                                                           30.2 ↑24%
+                                                   S2       85.5   66.9     91.6     99.1     93.0      81.1      58.3     95.1    42.9   44.8+5.6
+                                                                    Diffusion-based Planner
+                                                   S1       96.8   86.0     98.8     99.3     84.0      95.8      96.7     97.6    79.6   66.7
+                                       w/o                                                                                                            27.5
+                                                   S2       80.1   72.8     84.4     98.4     85.9      76.6      46.4     96.3    72.8   40.5
+ DiffusionDrive [60]    ResNet34
+                                                   S1       97.4   88.7     99.3    99.3      82.8      96.9      98.0     97.3    59.6   67.5+0.8
+                                       w/ ∗                                                                                                           32.6 ↑19%
+                                                   S2       86.4   72.1     92.9    98.5      92.1      80.6      60.8     95.4    31.9   46.8+6.3
+                                                                    Scoring-based Planner
+                                                   S1       99.3   96.6     99.6     100      57.4      99.5      92.6     89.5    16.4   67.1
+                                       w/o                                                                                                            38.3
+                                                   S2       92.8   88.6     95.5    99.4      55.9      91.3      55.7     91.1    35.7   55.8
+                        ResNet34
+                                                   S1       97.6   96.4    99.3       100     75.7      97.8      93.3     97.3    32.9   72.4+5.3
+                                       w/ †                                                                                                           46.9 ↑22%
+ GTRS-Dense [59]                                   S2       94.3   92.7    95.1       99.5    80.2      91.5      56.2     90.6    28.3   63.4+7.6
+                                                   S1       98.9   94.9    99.1       100     76.1      98.4      93.8     94.9    37.8   70.4
+                                       w/o                                                                                                            41.9
+                                                   S2       89.9   90.5    94.1       99.3    77.6      88.5      56.0     92.0    30.2   58.5
+                         V2-99
+                                                   S1       99.3   97.6    99.4       100     71.5      99.6      96.0     95.8    30.7   72.5+2.1
+                                       w/ †                                                                                                           48.0 ↑15%
+                                                   S2       94.9   94.3    94.5       99.3    79.0      92.6      57.8     93.4    30.9   65.4+6.9
+
+
+          Table 2. Performance on the NAVSIM-v2 navtest Leaderboard. (∗: pseudo-expert supervision; †: reward scoring.)
+  Method                  Backbone            Sim.         NC↑     DAC↑    DDC↑        TLC↑      EP↑           TTC↑      LK↑      HC↑     EC↑        EPDMS↑
+  Human Agent                    -             -           100     100      99.8        100      87.4          100       100      98.1    90.1       90.3
+                                                                    Regression-based Planner
+                                              w/o          97.7    94.0     99.3     99.8    87.2              96.7      95.5     98.3    82.9       81.5
+  LTF [12]                ResNet34                 ∗
+                                              w/           98.3    95.6     99.6     99.8        87.1          97.5      97.2     98.3    88.2       84.4 +2.9
+                                                                   Diffusion-based Planner
+                                              w/o          98.4    95.5     99.5     99.8        87.5          97.5      96.9     98.4    87.7       84.2
+  DiffusionDrive [60]     ResNet34                 ∗
+                                              w/           98.5    97.1     99.6    99.8         87.4          97.8      98.0     98.3    87.5       85.9 +1.7
+                                                                   Scoring-based Planner
+                                              w/o          97.6    97.5     99.0    99.9         87.9          97.0      95.9     97.5    55.9       82.3
+                          ResNet34
+                                              w/ †         98.4    98.8     99.4       99.9      88.0          98.0      96.5     97.6    58.0       84.6 +2.3
+  GTRS-Dense [59]
+                                              w/o          97.6    98.5     99.5       99.9      89.5          97.2      96.8     97.2    57.2       84.0
+                               V2-99
+                                                   †
+                                              w/           97.6    98.9     99.6       99.9      89.9          97.1      97.2     97.7    58.7       84.6 +0.8
+
+
+3.2. Leaderboard Results                                                              knowledge better and unlock their latent learning potential.
+Tab. 1 and Tab. 2 present the leaderboard results of Sim-                             Navtest Leaderboard. All models show consistent im-
+Scale sim-real co-training for the three planner paradigms                            provements of up to +2.9 points, demonstrating stronger
+on navhard and navtest, respectively.                                                 performance under large-scale and diverse conditions. The
+                                                                                      quantitative results above highlight that our simulation data
+Navhard Leaderboard. All models exhibit significant im-                               is model-agnostic, and that our general sim-real co-training
+provements in both Stage 1 and Stage 2. Notably, GTRS-                                achieves a synergistic optimization of robustness and
+Dense (V2-99) achieves a score of 48.0, establishing a new                            generalization, which is essential for reliable closed-loop
+SOTA on navhard. These results demonstrate that incor-                                deployment in the real world [9, 62].
+porating simulation data with an extended distribution sub-
+stantially enhances model robustness in challenging and un-                           3.3. Ablation and Data Scaling Analysis
+seen environments. Notably, weaker baseline models, i.e.,
+LTF and DiffusionDrive, benefit the most, with gains ex-                              Data Scaling Curves of Different Planners. Due to the
+ceeding 20%, indicating that sim-real co-training with sim-                           lack of prior work studying the scaling behavior of simula-
+ulation data effectively enables models to exploit dataset                            tion data under a fixed amount of real-world data, we model
+
+
+                                                                                  6
+              Recovery-based Expert       Planner-based Expert       Reward Scoring    Inflection Point
+EPDMS
+
+
+
+
+                                                            EPDMS
+
+
+
+
+                                                                                                                            EPDMS
+
+
+
+
+                                                                                                                                                                               EPDMS
+                                            𝑁 Samples                                                     𝑁 Samples                                                𝑁 Samples                                          𝑁 Samples
+        + Sim. Data                                                 + Sim. Data                                                     + Sim. Data                                        + Sim. Data
+                                                                                                                                       −0.62×(𝑙𝑜𝑔𝑁)! +6.48×𝑙𝑜𝑔𝑁 − 16.63                   −0.54×(𝑙𝑜𝑔𝑁)! +5.74×𝑙𝑜𝑔𝑁 − 14.66
+            −0.15×(𝑙𝑜𝑔𝑁)! +1.62×𝑙𝑜𝑔𝑁 − 4.01                            −0.23×(𝑙𝑜𝑔𝑁)! +2.44×𝑙𝑜𝑔𝑁 − 6.17
+                                                                                                                                       −0.38×(𝑙𝑜𝑔𝑁)! +4.12×𝑙𝑜𝑔𝑁 − 10.73                   −0.05×(𝑙𝑜𝑔𝑁)! +0.64×𝑙𝑜𝑔𝑁 − 1.48
+            −0.25×(𝑙𝑜𝑔𝑁)! +2.69×𝑙𝑜𝑔𝑁 − 6.78                            −0.02×(𝑙𝑜𝑔𝑁)! +0.33×𝑙𝑜𝑔𝑁 − 0.83
+                                                                                                                                       −0.39×(𝑙𝑜𝑔𝑁)! +4.20×𝑙𝑜𝑔𝑁 − 10.93                   −0.01×(𝑙𝑜𝑔𝑁)! +1.47×𝑙𝑜𝑔𝑁 − 3.73
+
+        (a) LTF-ResNet34 | 56M                                      (b) DiffusionDrive-ResNet34 | 61M                               (c) GTRS-Dense-ResNet34 | 67M                      (d) GTRS-Dense-2_99 | 83M
+
+
+Figure 4. Scaling dynamics across different planners and pseudo-expert trajectories. We visualize how simulation data scale and
+supervision signals influence the driving performance of various planners, where the infection point indicates learning plateau.
+
+          Pseudo-Expert Trajectory          Perturbed Trajectory
+
+
+
+
+                                                                      Front                               Front-Right                                                                    Front                         Front-Right
+
+  (a) off-center lane drift                                                                                                  (b) near collision
+
+
+
+
+                                                                      Front                               Front-Left                                                                     Front
+                                                                                                                                                                                          Front                              Right
+                                                                                                                                                                                                                       Front-Right
+
+ (c) leaving the drivable area                                                                                              (d) cutting in
+
+
+Figure 5. Qualitative results of the simulation scenes on navtrain. Four representative simulation scenarios are shown, each mirroring
+a typical real-world OOD scene, with synthetic front-view and auxiliary key-view images provided.
+
+the relationship between performance and the total data size                                                                        proposed in Sec. 2.4. Some classical trends can be ob-
+(simulation + real) using a log-quadratic function:                                                                                 served in Fig. 4. For instance, comparing planner-based and
+                                                                                                                                    reward-scoring settings in Fig. 4 (c) and (d), larger models
+                         S(N) = a \log ^2(N) + b \log (N) + c,                                               (7)                    exhibit more pronounced data scaling trends under the same
+                                                                                                                                    amount of data. Additional interesting and meaningful ob-
+where S(N) denotes the planner performance with total                                                                               servations are highlighted below.
+data size N , and a, b, c are parameters fitted via nonlinear
+least squares:                                                                                                                      Pseudo-Expert Should Be Exploratory. For all planners,
+                                                                                                                                    the scaling curves under recovery-based setting converge
+                                                                                                                                    earlier and achieve lower performance compared to planner-
+          (a^*, b^*, c^*) = \arg \min _{a,b,c} \sum _{i=1}^{M} \big ( S_i - S(N_i; a,b,c) \big )^2,          (8)
+                                                                                                                                    based. The recovery-based expert always steers to the hu-
+                                                                                                                                    man log, limiting diversity as the simulation data grows
+where S_i is the observed performance at total data size N_i ,                                                                      from the same real scenarios. In contrast, the planner-based
+and M is the number of data points. If the data scaling                                                                             expert explores a broader range of possibilities and even
+trend exists, the quadratic coefficient a approaches zero,                                                                          produces feasible solutions in challenging situations. Con-
+degenerating the model to a linear log relation; otherwise,                                                                         sequently, the recovery-based expert only exhibits advan-
+the curve exhibits a parabolic shape with a visible satu-                                                                           tages in small-data regimes (Fig. 4 (d)), likely because its
+ration point. We evaluate four planners under 2 pseudo-                                                                             trajectory distribution is human-like and better aligned with
+experts following simulation data scaling in Fig. 3 and se-                                                                         real-world data, making it easier to learn. In most cases,
+lect EPDMS in navhard as S. The scaling curves and fit-                                                                             data scaling yields diminishing returns for recovery-based
+ted log-quadratic functions are shown in Fig. 4, with the                                                                           methods compared to planner-based ones, and performance
+residual standard deviation depicted as an error band. Ad-                                                                          may even degrade as visual artifacts accumulate and begin
+ditionally, we conduct extra experiments using reward scor-                                                                         to dominate. These observations highlight the importance
+ing only in planner-based simulation data for GTRS-Dense,                                                                           of exploratory behavior for pseudo-experts, which enhances
+
+
+                                                                                                                        7
+Table 3. The effect of expert with simulated reward scoring on       Table 4. The effect between non-reactive vs. reactive data sim-
+navhard using GTRS-Dense. (S1/2 :per-stage EPDM scores.)             ulation on navhard using GTRS-Dense, across sampling rounds.
+
+ Backbone Real Expert Sim. Expert S1 ↑ S2 ↑ EPDMS ↑                                                               EPDMS↑
+                                                                             Type         #Round     #Sim.
+                                                                                                              ResNet34    V2-99
+             ✓      ✓                  67.1 55.8     38.3
+             ✓                         66.8 54.9     37.6                 Non-Reactive        2       141K       43.7      45.6
+ ResNet34
+                                                                          Reactive            2       120K       44.4      46.7
+             ✓      ✓      ✓     ✓     70.8 63.9     46.1
+             ✓      ✓      ✓           72.4 63.4     45.9                 Reactive            3       167K       45.0      47.9
+             ✓      ✓                  70.4 58.5     41.9
+             ✓                         68.1 55.6     38.8            indicate that reactive agent dynamics enhance the realism
+   V2-99
+             ✓      ✓      ✓     ✓     71.7 65.5     47.7
+                                                                     and diversity of traffic interactions, thereby increasing the
+             ✓      ✓      ✓           72.5 65.4     48.0            effectiveness of simulation data. Detailed scaling curves are
+                                                                     shown in Sec. C.3 in the supplementary material.
+the value of simulation data under scaling.                          3.4. Qualitative Results of the Simulation Scenes
+Multi-modality Modeling Sparks the Scaling. Although
+the regression-based LTF and diffusion-based Diffusion-              We present qualitative visualizations from the simulation
+Drive have comparable model sizes (56M vs 61M), they ex-             data in Fig. 5, showcasing four representative OOD scenar-
+hibit markedly different scaling properties for the planner-         ios used to train the policy. These scenarios mirror typical
+based in Fig. 4 (a) and (b). For LTF, performance satu-              real-world driving challenges where learned policies tend
+rates and starts to degrade when the simulation-to-real ra-          to struggle, including (a) off-center lane drift, (b) near colli-
+tio reaches 1:1, whereas DiffusionDrive exhibits an approx-          sion, (c) departure, and (d) cutting in cases. Each scenario is
+imately linear improvement. This is due to the gradually             illustrated with a top-down view showing the pseudo-expert
+increasing diversity of demonstrations from the same real            trajectory as supervision, and the deviating Perturbed Tra-
+scenario, which introduces an effectively multi-modal su-            jectory as history actions, alongside the synthetic front-view
+pervision problem. Single-mode regression struggles to               as sensory input to the policy. For instance, scenario (b) re-
+model multi-peak distributions, leading to mode confusion            quires the policy to adaptively avoid the collision in short
+and performance degradation, while diffusion models can              horizon. See supplementary Sec. C.2 for extended results.
+capture multimodality, making them amenable to optimiza-
+tion under diverse supervision [11]. Since real-world au-            4. Conclusion
+tonomous driving is inherently a multi-peak problem [34],
+                                                                     In this paper, we introduce SimScale, a sim–real learning
+our simulation-scaling results underscore the importance of
+                                                                     system that reveals how scalable simulation can amplify the
+multimodal modeling for scalable real-world end-to-end au-
+                                                                     value of real-world datasets for end-to-end autonomy. For
+tonomous driving.
+                                                                     the simulation data pipeline, we first generate pseudo-expert
+Reward is All You Need. In Fig. 4 (c) and (d), for the               demonstrations from potential OOD states by ego perturba-
+scoring-based GTRS-Dense planner, reward signals alone,              tion within reactive environments. Toward the real-world
+without expert trajectories in simulation, yields even better        simulation, the associated high-fidelity multi-view observa-
+performance. To further analyze this, we conduct reward-             tions are rendered with 3DGS engine. Upon the simulated
+only training on real-world data only, which instead leads to        data, sim-real co-training produces synergistic improve-
+performance degradation, as shown in Tab. 3. These results           ments in robustness and generalization for various planners
+indicate that with sufficient expert supervision to stabilize        on challenging real-world benchmarks, up to +8.6 EPDMS
+the optimization direction, the reward guidance is better.           on navhard and +2.9 navtest. Remarkably, the sim–real
+The model benefits from the feedback from rewards during             system scales clearly and predictably with increased simu-
+its exploration and interaction within the environment [14].         lation while keeping the real-world corpus fixed. We fur-
+Effect of Reactive Simulation. To isolate the effect of              ther uncover that exploration and interaction contribute to
+reactive traffic, we compare reward-scoring GTRS-Dense               more effective simulation, and that multi-modal planners
+on navhard using non-reactive vs. reactive simulation data           strengthen their scaling behavior. We hope SimScale will
+(Tab. 4). Two rounds of non-reactive sampling yield 141K             inspire the community to further explore real-world simula-
+trajectories, i.e., 21K more valid samples due to fewer col-         tion for data scaling.
+lision rates, yet provide no performance improvement in                  We provide additional experiments in the supplementary
+EPDMS. When reactive simulation reaches the third round,             material, such as multi-expert ensemble and scaling with
+it produces 167K samples yet delivers consistent and signif-         varying real data. It also provides extended discussions on
+icant EPDMS gains across both model sizes. These results             related work, limitations, and broader impact.
+
+
+                                                                 8
+Acknowledgments                                                          [7] Sergio Casas, Abbas Sadat, and Raquel Urtasun. Mp3: A
+                                                                             unified model to map, perceive, predict and plan. In CVPR,
+This study is supported by the National Key R&D Program                      2021. 1
+of China (2022ZD0117901), the National Natural Science                   [8] David Charatan, Sizhe Li, Andrea Tagliasacchi, and Vin-
+Foundation of China (Grant No. 62373355, 62236010), and                      cent Sitzmann. pixelsplat: 3d gaussian splats from image
+the Beijing Natural Science Foundation (Grant L252033).                      pairs for scalable generalizable 3d reconstruction. In CVPR,
+This work is in part supported by the JC STEM Lab of Au-                     2024. 6
+tonomous Intelligent Systems funded by The Hong Kong                     [9] Li Chen, Penghao Wu, Kashyap Chitta, Bernhard Jaeger,
+Jockey Club Charities Trust. We also appreciate the gener-                   Andreas Geiger, and Hongyang Li. End-to-end autonomous
+ous research sponsor from Xiaomi.                                            driving: Challenges and frontiers. TPAMI, 2024. 2, 6, 1
+   We extend our gratitude to Naiyan Wang, Yunsong Zhou,                [10] Ziyu Chen, Jiawei Yang, Jiahui Huang, Riccardo de Lutio,
+Hanxue Zhang, and the rest of the members from Open-                         Janick Martinez Esturo, Boris Ivanovic, Or Litany, Zan Go-
+DriveLab and Xiaomi Embodied Intelligence Team for their                     jcic, Sanja Fidler, Marco Pavone, Li Song, and Yue Wang.
+                                                                             Omnire: Omni urban scene reconstruction. In ICLR, 2025.
+profound support.
+                                                                             1
+                                                                        [11] Cheng Chi, Zhenjia Xu, Siyuan Feng, Eric Cousineau,
+References                                                                   Yilun Du, Benjamin Burchfiel, Russ Tedrake, and Shuran
+  [1] Hassan Abu Alhaija, Jose Alvarez, Maciej Bala, Tiffany                 Song. Diffusion policy: Visuomotor policy learning via ac-
+      Cai, Tianshi Cao, Liz Cha, Joshua Chen, Mike Chen,                     tion diffusion. RSS, 2025. 8
+      Francesco Ferroni, Sanja Fidler, et al. Cosmos-transfer1:         [12] Kashyap Chitta, Aditya Prakash, Bernhard Jaeger, Zehao
+      Conditional world generation with adaptive multimodal                  Yu, Katrin Renz, and Andreas Geiger. Transfuser: Imita-
+      control. arXiv preprint arXiv:2503.14492, 2025. 1, 5                   tion with transformer-based sensor fusion for autonomous
+  [2] Mustafa Baniodeh, Kratarth Goel, Scott Ettinger, Carlos                driving. TPAMI, 2022. 2, 4, 5, 6, 1, 3
+      Fuertes, Ari Seff, Tim Shen, Cole Gulino, Chenjie Yang,           [13] Daphne Cornelisse, Aarav Pandya, Kevin Joseph, Joseph
+      Ghassen Jerfel, Dokook Choe, et al. Scaling laws of motion             Suárez, and Eugene Vinitsky.         Building reliable sim
+      forecasting and planning–a technical report. arXiv preprint            driving agents by scaling self-play.         arXiv preprint
+      arXiv:2506.08228, 2025. 2                                              arXiv:2502.14706, 2025. 2, 6
+  [3] Jens Beißwenger. Pdm-lite: A rule-based planner for carla         [14] Marco Cusumano-Towner, David Hafner, Alex Hertzberg,
+      leaderboard 2.0. Univ. Tübingen, 2024. 4                              Brody Huval, Aleksei Petrenko, Eugene Vinitsky, Erik Wij-
+  [4] Anthony Brohan, Noah Brown, Justice Carbajal, Yevgen                   mans, Taylor Killian, Stuart Bowers, Ozan Sener, et al. Ro-
+      Chebotar, Xi Chen, Krzysztof Choromanski, Tianli Ding,                 bust autonomy emerges from self-play. In ICML, 2025. 8,
+      Danny Driess, Avinava Dubey, Chelsea Finn, Pete Flo-                   2, 6
+      rence, Chuyuan Fu, Montse Gonzalez Arenas, Keerthana              [15] Chenxu Dang, Sining Ang, Yongkang Li, Haochen Tian,
+      Gopalakrishnan, Kehang Han, Karol Hausman, Alex Her-                   Jie Wang, Guang Li, Hangjun Ye, Jie Ma, Long Chen, and
+      zog, Jasmine Hsu, Brian Ichter, Alex Irpan, Nikhil Joshi,              Yan Wang. Drivefine: Refining-augmented masked dif-
+      Ryan Julian, Dmitry Kalashnikov, Yuheng Kuang, Isabel                  fusion vla for precise and robust driving. arXiv preprint
+      Leal, Lisa Lee, Tsang-Wei Edward Lee, Sergey Levine,                   arXiv:2602.14577, 2026. 1
+      Yao Lu, Henryk Michalewski, Igor Mordatch, Karl Pertsch,          [16] Daniel Dauner, Marcel Hallgarten, Andreas Geiger, and
+      Kanishka Rao, Krista Reymann, Michael Ryoo, Grecia                     Kashyap Chitta.       Parting with misconceptions about
+      Salazar, Pannag Sanketi, Pierre Sermanet, Jaspiar Singh,               learning-based vehicle motion planning. In CoRL, 2023.
+      Anikait Singh, Radu Soricut, Huong Tran, Vincent Van-                  2, 5, 6, 3
+      houcke, Quan Vuong, Ayzaan Wahid, Stefan Welker, Paul             [17] Daniel Dauner, Marcel Hallgarten, Tianyu Li, Xinshuo
+      Wohlhart, Jialin Wu, Fei Xia, Ted Xiao, Peng Xu, Sichun                Weng, Zhiyu Huang, Zetong Yang, Hongyang Li, Igor
+      Xu, Tianhe Yu, and Brianna Zitkovich. Rt-2: Vision-                    Gilitschenski, Boris Ivanovic, Marco Pavone, Andreas
+      language-action models transfer web knowledge to robotic               Geiger, and Kashyap Chitta. Navsim: Data-driven non-
+      control. arXiv preprint arXiv:2307.15818, 2023. 4                      reactive autonomous vehicle simulation and benchmarking.
+  [5] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Sub-                     In NeurIPS, 2024. 2, 5
+      biah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakan-         [18] Alexey Dosovitskiy, German Ros, Felipe Codevilla, Anto-
+      tan, Pranav Shyam, Girish Sastry, Amanda Askell, et al.                nio Lopez, and Vladlen Koltun. CARLA: An open urban
+      Language models are few-shot learners. In NeurIPS, 2020.               driving simulator. In CoRL, 2017. 1
+      2                                                                 [19] Lan Feng, Yang Gao, Eloi Zablocki, Quanyi Li, Wuyang
+  [6] Wei Cao, Marcel Hallgarten, Tianyu Li, Daniel Dauner,                  Li, Sichao Liu, Matthieu Cord, and Alexandre Alahi. Rap:
+      Xunjiang Gu, Caojun Wang, Yakov Miron, Marco Aiello,                   3d rasterization augmented end-to-end planning. arXiv
+      Hongyang Li, Igor Gilitschenski, Boris Ivanovic, Marco                 preprint arXiv:2510.04333, 2025. 2
+      Pavone, Andreas Geiger, and Kashyap Chitta. Pseudo-               [20] Hao Gao, Shaoyu Chen, Bo Jiang, Bencheng Liao, Yiang
+      simulation for autonomous driving. In CoRL, 2025. 2, 5, 1,             Shi, Xiaoyang Guo, Yuechuan Pu, Haoran Yin, Xiangyu
+      6                                                                      Li, Xinbang Zhang, Ying Zhang, Wenyu Liu, Qian Zhang,
+
+
+                                                                    9
+     and Xinggang Wang. Rad: Training an end-to-end driving             [34] Bo Jiang, Shaoyu Chen, Hao Gao, Bencheng Liao, Qian
+     policy via large-scale 3dgs-based reinforcement learning.               Zhang, Wenyu Liu, and Xinggang Wang. VADv2: End-
+     In NeurIPS, 2025. 2, 1                                                  to-end autonomous driving via probabilistic planning. In
+[21] Yinfeng Gao, Deqing Liu, Qichao Zhang, Yupeng Zheng,                    ICLR, 2026. 4, 8, 1
+     Haochen Tian, Guang Li, Hangjun Ye, Long Chen, Da-Wei              [35] Junzhe Jiang, Nan Song, Jingyu Li, Xiatian Zhu, and Li
+     Ding, and Dongbin Zhao. Learning from mistakes: Post-                   Zhang. Realengine: Simulating autonomous driving in re-
+     training for driving vla with takeover data. arXiv preprint             alistic context. arXiv preprint arXiv:2505.16902, 2025. 1
+     arXiv:2603.14972, 2026.                                            [36] Max Jiang, Yijing Bai, Andre Cornman, Christopher Davis,
+[22] Yinfeng Gao, Qichao Zhang, Deqing Liu, Zhongpu Xia,                     Xiukun Huang, Hong Jeon, Sakshum Kulshrestha, John
+     Guang Li, Kun Ma, Guang Chen, Hangjun Ye, Long Chen,                    Lambert, Shuangyu Li, Xuanyu Zhou, et al. Scenediffuser:
+     Da-Wei Ding, and Dongbin Zhao. Perlad: Towards en-                      Efficient and controllable driving simulation initialization
+     hanced closed-loop end-to-end autonomous driving with                   and rollout. In NeurIPS, 2024. 1, 6
+     pseudo-simulation-based reinforcement learning. arXiv              [37] Siwen Jiao, Kangan Qian, Hao Ye, Yang Zhong, Ziang
+     preprint arXiv:2603.14908, 2026. 1                                      Luo, Sicong Jiang, Zilin Huang, Yangyi Fang, Jinyu Miao,
+[23] Mitchell Goff, Greg Hogan, George Hotz, Armand du                       Zheng Fu, et al. EvaDrive: Evolutionary adversarial pol-
+     Parc Locmaria, Kacper Raczy, Harald Schäfer, Adeeb Shi-                icy optimization for end-to-end autonomous driving. arXiv
+     hadeh, Weixing Zhang, and Yassine Yousfi. Learning to                   preprint arXiv:2508.09158, 2025. 1
+     drive from a world model. In CVPR, 2025. 2                         [38] Jared Kaplan, Sam McCandlish, Tom Henighan, Tom B
+[24] Ke Guo, Haochen Liu, Xiaojun Wu, Jia Pan, and Chen                      Brown, Benjamin Chess, Rewon Child, Scott Gray, Alec
+     Lv. ipad: Iterative proposal-centric end-to-end autonomous              Radford, Jeffrey Wu, and Dario Amodei. Scaling laws for
+     driving. arXiv preprint arXiv:2505.15111, 2025. 1                       neural language models. arXiv preprint arXiv:2001.08361,
+[25] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun.                  2020. 2, 1
+     Deep residual learning for image recognition. In CVPR,             [39] Napat Karnchanachari, Dimitris Geromichalos, Kok Seang
+     2016. 2, 4                                                              Tan, Nanxiang Li, Christopher Eriksen, Shakiba Yaghoubi,
+[26] Shengchao Hu, Li Chen, Penghao Wu, Hongyang Li,                         Noushin Mehdipour, Gianmarco Bernasconi, Whye Kit
+     Junchi Yan, and Dacheng Tao. St-p3: End-to-end vision-                  Fong, Yiluan Guo, et al. Towards learning-based planning:
+     based autonomous driving via spatial-temporal feature                   The nuplan benchmark for real-world autonomous driving.
+     learning. In ECCV, 2022. 1                                              In ICRA, 2024. 5, 2, 6
+[27] Yihan Hu, Jiazhi Yang, Li Chen, Keyu Li, Chonghao Sima,
+                                                                        [40] Bernhard Kerbl, Georgios Kopanas, Thomas Leimkühler,
+     Xizhou Zhu, Siqi Chai, Senyao Du, Tianwei Lin, Wenhai
+                                                                             and George Drettakis. 3d gaussian splatting for real-time
+     Wang, et al. Planning-oriented autonomous driving. In
+                                                                             radiance field rendering. TOG, 2023. 2, 3
+     CVPR, 2023. 4, 1
+                                                                        [41] Diederik P. Kingma and Jimmy Ba. Adam: A method for
+[28] Xin Huang, Eric M Wolff, Paul Vernaza, Tung Phan-Minh,
+                                                                             stochastic optimization. In ICLR, 2015. 2
+     Hongge Chen, David S Hayden, Mark Edmonds, Brian
+     Pierce, Xinxin Chen, Pratik Elias Jacob, et al. Drivegpt:          [42] Youngwan Lee and Jongyoul Park. Centermask: Real-time
+     Scaling autoregressive behavior models for driving. arXiv               anchor-free instance segmentation. In CVPR, 2020. 2, 4
+     preprint arXiv:2412.14415, 2024. 2                                 [43] Norman Lehtomaki, NJAM Sandell, and Michael Athans.
+[29] Jyh-Jing Hwang, Runsheng Xu, Hubert Lin, Wei-Chih                       Robustness results in linear-quadratic gaussian based mul-
+     Hung, Jingwei Ji, Kristy Choi, Di Huang, Tong He, Paul                  tivariable control designs. TAC, 2003. 3
+     Covington, Benjamin Sapp, et al. Emma: End-to-end mul-             [44] Bohan Li, Jiazhe Guo, Hongsi Liu, Yingshuang Zou,
+     timodal model for autonomous driving. TMLR, 2025. 2,                    Yikang Ding, Xiwu Chen, Hu Zhu, Feiyang Tan, Chi
+     1                                                                       Zhang, Tiancai Wang, et al. Uniscene: Unified occupancy-
+[30] Bernhard Jaeger, Daniel Dauner, Jens Beißwenger, Simon                  centric driving scene generation. In CVPR, 2025. 6
+     Gerstenecker, Kashyap Chitta, and Andreas Geiger. Carl:            [45] Derun Li, Jianwei Ren, Yue Wang, Xin Wen, Pengxiang Li,
+     Learning scalable planning policies with simple rewards.                Leimeng Xu, Kun Zhan, Zhongpu Xia, Peng Jia, Xianpeng
+     In CoRL, 2025. 2, 6                                                     Lang, et al. Finetuning generative trajectory model with re-
+[31] Xiaosong Jia, Penghao Wu, Li Chen, Jiangwei Xie, Con-                   inforcement learning from human feedback. arXiv preprint
+     ghui He, Junchi Yan, and Hongyang Li. Think twice be-                   arXiv:2503.10434, 2025. 1
+     fore driving: Towards scalable decoders for end-to-end au-         [46] Hongchen Li, Tianyu Li, Jiazhi Yang, Haochen Tian, Cao-
+     tonomous driving. In CVPR, 2023. 1                                      jun Wang, Lei Shi, Mingyang Shang, Zengrong Lin, Gao-
+[32] Xiaosong Jia, Junqi You, Zhiyuan Zhang, and Junchi Yan.                 qiang Wu, Zhihui Hao, et al. Plannerrft: Reinforcing dif-
+     Drivetransformer: Unified transformer for scalable end-to-              fusion planners through closed-loop and sample-efficient
+     end autonomous driving. In ICLR, 2025. 1                                fine-tuning. arXiv preprint arXiv:2601.12901, 2026. 2
+[33] Bo Jiang, Shaoyu Chen, Qing Xu, Bencheng Liao, Jia-                [47] Kailin Li, Zhenxin Li, Shiyi Lan, Yuan Xie, Zhizhong
+     jie Chen, Helong Zhou, Qian Zhang, Wenyu Liu, Chang                     Zhang, Jiayi Liu, Zuxuan Wu, Zhiding Yu, and Jose M
+     Huang, and Xinggang Wang. Vad: Vectorized scene repre-                  Alvarez. Hydra-mdp++: Advancing end-to-end driv-
+     sentation for efficient autonomous driving. In ICCV, 2023.              ing via expert-guided hydra-distillation. arXiv preprint
+     1                                                                       arXiv:2503.12820, 2025. 5
+
+
+                                                                   10
+[48] Quanyi Li, Zhenghao Peng, Lan Feng, Qihang Zhang,                 [61] Haochen Liu, Zhiyu Huang, Wenhui Huang, Haohan Yang,
+     Zhenghai Xue, and Bolei Zhou. Metadrive: Composing                     Xiaoyu Mo, and Chen Lv. Hybrid-prediction integrated
+     diverse driving scenarios for generalizable reinforcement              planning for autonomous driving. TPAMI, 2025. 1
+     learning. TPAMI, 2022. 1                                          [62] Haochen Liu, Tianyu Li, Haohan Yang, Li Chen, Caojun
+[49] Qifeng Li, Xiaosong Jia, Shaobo Wang, and Junchi Yan.                  Wang, Ke Guo, Haochen Tian, Hongchen Li, Hongyang Li,
+     Think2drive: Efficient reinforcement learning by thinking              and Chen Lv. Reinforced refinement with self-aware ex-
+     with latent world model for autonomous driving (in carla-              pansion for end-to-end autonomous driving. arXiv preprint
+     v2). In ECCV, 2024. 2                                                  arXiv:2506.09800, 2025. 2, 6, 1
+[50] Shihao Li, Naisheng Ye, Tianyu Li, Kashyap Chitta, Tuo            [63] Kunhao Liu, Ling Shao, and Shijian Lu. Novel view
+     An, Peng Su, Boyang Wang, Haiou Liu, Chen Lv, and                      extrapolation with video diffusion priors. arXiv preprint
+     Hongyang Li. Optimization-guided diffusion for interactive             arXiv:2411.14208, 2024. 4
+     scene generation. arXiv preprint arXiv:2512.07661, 2025.          [64] Xi Liu, Chaoyi Zhou, and Siyu Huang. 3dgs-enhancer:
+     6                                                                      Enhancing unbounded 3d gaussian splatting with view-
+[51] Tianyu Li, Yihang Qiu, Zhenhua Wu, Carl Lind-                          consistent 2d diffusion priors. In NeurIPS, 2024. 4
+     ström, Peng Su, Matthias Nießner, and Hongyang Li.               [65] William Ljungbergh, Adam Tonderski, Joakim Johnan-
+     MTGS: Multi-traversal gaussian splatting. arXiv preprint               der, Holger Caesar, Kalle Åström, Michael Felsberg, and
+     arXiv:2503.12552, 2025. 3, 6                                           Christoffer Petersson. Neuroncap: Photorealistic closed-
+[52] Xiaofan Li, Yifu Zhang, and Xiaoqing Ye. Drivingdif-                   loop safety testing for autonomous driving. In ECCV, 2024.
+     fusion: layout-guided multi-view driving scenarios video               1
+     generation with latent diffusion model. In ECCV, 2024. 1          [66] Ilya Loshchilov and Frank Hutter. Decoupled weight decay
+[53] Yingyan Li, Shuyao Shang, Weisong Liu, Bing Zhan,                      regularization. In ICLR, 2019. 2
+     Haochen Wang, Yuqi Wang, Yuntao Chen, Xiaoman Wang,               [67] Abhiram Maddukuri, Zhenyu Jiang, Lawrence Yunliang
+     Yasong An, Chufeng Tang, et al. Drivevla-w0: World mod-                Chen, Soroush Nasiriany, Yuqi Xie, Yu Fang, Wenqi
+     els amplify data scaling law in autonomous driving. arXiv              Huang, Zu Wang, Zhenjia Xu, Nikita Chernyadev, Scott
+     preprint arXiv:2510.12796, 2025. 1                                     Reed, Ken Goldberg, Ajay Mandlekar, Linxi Fan, and Yuke
+[54] Yingyan Li, Yuqi Wang, Yang Liu, Jiawei He, Lue Fan,                   Zhu. Sim-and-real co-training: A simple recipe for vision-
+     and Zhaoxiang Zhang. End-to-end driving with online tra-               based robotic manipulation. In RSS, 2025. 2, 4
+     jectory evaluation via bev world model. arXiv preprint            [68] Alexander Naumann, Xunjiang Gu, Tolga Dimlioglu, Mar-
+     arXiv:2504.01941, 2025. 1                                              iusz Bojarski, Alperen Degirmenci, Alexander Popov, De-
+[55] Yongkang Li, Kaixin Xiong, Xiangyu Guo, Fang Li, Sixu                  vansh Bisla, Marco Pavone, Urs Muller, and Boris Ivanovic.
+     Yan, Gangwei Xu, Lijun Zhou, Long Chen, Haiyang Sun,                   Data scaling laws for end-to-end autonomous driving. In
+     Bing Wang, et al. ReCogDrive: A reinforced cognitive                   CVPR, 2025. 2, 1
+     framework for end-to-end autonomous driving. In ICLR,             [69] NVIDIA, Nikita Cherniadev Johan Bjorck andFernando
+     2026. 1                                                                Castañeda, Xingye Da, Runyu Ding, Linxi ”Jim” Fan, Yu
+[56] Zhenxin Li, Kailin Li, Shihao Wang, Shiyi Lan, Zhid-                   Fang, Dieter Fox, Fengyuan Hu, Spencer Huang, Joel Jang,
+     ing Yu, Yishen Ji, Zhiqi Li, Ziyue Zhu, Jan Kautz, Zux-                Zhenyu Jiang, Jan Kautz, Kaushil Kundalia, Lawrence Lao,
+     uan Wu, et al. Hydra-mdp: End-to-end multimodal plan-                  Zhiqi Li, Zongyu Lin, Kevin Lin, Guilin Liu, Edith Llontop,
+     ning with multi-target hydra-distillation. arXiv preprint              Loic Magne, Ajay Mandlekar, Avnish Narayan, Soroush
+     arXiv:2406.06978, 2024. 2, 4                                           Nasiriany, Scott Reed, You Liang Tan, Guanzhi Wang, Zu
+[57] Zhenxin Li, Shihao Wang, Shiyi Lan, Zhiding Yu, Zuxuan                 Wang, Jing Wang, Qi Wang, Jiannan Xiang, Yuqi Xie,
+     Wu, and Jose M Alvarez. Hydra-next: Robust closed-loop                 Yinzhen Xu, Zhenjia Xu, Seonghyeon Ye, Zhiding Yu, Ao
+     driving with open-loop training. In ICCV, 2025. 1                      Zhang, Hao Zhang, Yizhou Zhao, Ruijie Zheng, and Yuke
+[58] Zhenxin Li, Wenhao Yao, Zi Wang, Xinglong Sun, Jingde                  Zhu. GR00T N1: An open foundation model for generalist
+     Chen, Nadine Chang, Maying Shen, Jingyu Song, Zuxuan                   humanoid robots. arxiv preprint arxiv:2503.14734, 2025.
+     Wu, Shiyi Lan, et al. Ztrs: Zero-imitation end-to-end au-              2, 4
+     tonomous driving with trajectory scoring. arXiv preprint          [70] OpenScene Contributors. OpenScene: The largest up-to-
+     arXiv:2510.24108, 2025. 1                                              date 3d occupancy prediction benchmark in autonomous
+[59] Zhenxin Li, Wenhao Yao, Zi Wang, Xinglong Sun, Joshua                  driving. https://github.com/OpenDriveLab/
+     Chen, Nadine Chang, Maying Shen, Zuxuan Wu, Shiyi                      OpenScene, 2023. 6
+     Lan, and Jose M Alvarez. Generalized trajectory scor-             [71] Alexander Popov, Alperen Degirmenci, David Wehr,
+     ing for end-to-end multimodal planning. arXiv preprint                 Shashank Hegde, Ryan Oldja, Alexey Kamenev, Bertrand
+     arXiv:2506.06664, 2025. 2, 5, 6, 1, 3, 4                               Douillard, David Nistér, Urs Muller, Ruchi Bhargava,
+[60] Bencheng Liao, Shaoyu Chen, Haoran Yin, Bo Jiang,                      et al. Mitigating covariate shift in imitation learning for
+     Cheng Wang, Sixu Yan, Xinbang Zhang, Xiangyu Li, Ying                  autonomous vehicles using latent space generative world
+     Zhang, Qian Zhang, et al. DiffusionDrive: Truncated diffu-             models. arXiv preprint arXiv:2409.16663, 2024. 2
+     sion model for end-to-end autonomous driving. In CVPR,            [72] Alec Radford, Jong Wook Kim, Chris Hallacy, Aditya
+     2025. 2, 4, 5, 6, 1, 3                                                 Ramesh, Gabriel Goh, Sandhini Agarwal, Girish Sastry,
+
+
+                                                                  11
+     Amanda Askell, Pamela Mishkin, Jack Clark, et al. Learn-           [86] Yunzhi Yan, Haotong Lin, Chenxu Zhou, Weijie Wang,
+     ing transferable visual models from natural language super-             Haiyang Sun, Kun Zhan, Xianpeng Lang, Xiaowei Zhou,
+     vision. In ICML, 2021. 2, 1                                             and Sida Peng. Street gaussians: Modeling dynamic urban
+[73] Yang Shi, Yuhao Dong, Yue Ding, Yuran Wang, Xuanyu                      scenes with gaussian splatting. In ECCV, 2024. 3, 1
+     Zhu, Sheng Zhou, Wenting Liu, Haochen Tian, Rundong                [87] Jiazhi Yang, Kashyap Chitta, Shenyuan Gao, Long Chen,
+     Wang, Huanqian Wang, et al. Realunify: Do unified mod-                  Yuqian Shao, Xiaosong Jia, Hongyang Li, Andreas Geiger,
+     els truly benefit from unification? a comprehensive bench-              Xiangyu Yue, and Li Chen. Resim: Reliable world simula-
+     mark. arXiv preprint arXiv:2509.24897, 2025. 6                          tion for autonomous driving. In NeurIPS, 2025. 2, 4
+[74] Wenchao Sun, Xuewu Lin, Yining Shi, Chuang Zhang,                  [88] Jiawei Yang, Jiahui Huang, Yuxiao Chen, Yan Wang, Boyi
+     Haoran Wu, and Sifa Zheng. Sparsedrive: End-to-end au-                  Li, Yurong You, Apoorva Sharma, Maximilian Igl, Peter
+     tonomous driving via sparse scene representation. In ICRA,              Karkus, Danfei Xu, et al. Storm: Spatio-temporal recon-
+     2025. 1                                                                 struction model for large-scale outdoor scenes. In ICLR,
+[75] Tianyi Tan, Yinan Zheng, Ruiming Liang, Zexu Wang,                      2025. 6
+     Kexin Zheng, Jinliang Zheng, Jianxiong Li, Xianyuan                [89] Yan Yang, Haochen Tian, Yang Shi, Wulin Xie, Yi-Fan
+     Zhan, and Jingjing Liu. Flow matching-based autonomous                  Zhang, Yuhao Dong, Yibo Hu, Liang Wang, Ran He,
+     driving planning with advanced interactive behavior mod-                Caifeng Shan, et al. A survey of unified multimodal un-
+     eling. In NeurIPS, 2025. 6                                              derstanding and generation: Advances and challenges. Au-
+[76] Martin Treiber, Ansgar Hennecke, and Dirk Helbing. Con-                 thorea Preprints, 2025. 6
+     gested traffic states in empirical observations and micro-         [90] Yifan Ye, Jun Cen, Jing Chen, and Zhihe Lu. Self-evolved
+     scopic simulations. Physical review E, 2000. 2, 3, 1, 6                 imitation learning in simulated world. arXiv preprint
+[77] Xiaofeng Wang, Zheng Zhu, Guan Huang, Xinze Chen, Ji-                   arXiv:2509.19460, 2025. 6
+     agang Zhu, and Jiwen Lu. Drivedreamer: Towards real-               [91] Junqi You, Xiaosong Jia, Zhiyuan Zhang, Yutao Zhu, and
+     world-drive world models for autonomous driving. In                     Junchi Yan. Bench2drive-r: Turning real world data into re-
+     ECCV, 2024. 1                                                           active closed-loop autonomous driving benchmark by gen-
+[78] Xinshuo Weng, Boris Ivanovic, Yan Wang, Yue Wang, and                   erative model. arXiv preprint arXiv:2412.09647, 2024. 1
+     Marco Pavone. Para-drive: Parallelized architecture for            [92] Xiaohua Zhai, Alexander Kolesnikov, Neil Houlsby, and
+     real-time autonomous driving. In CVPR, 2024. 1                          Lucas Beyer. Scaling vision transformers. In CVPR, 2022.
+[79] Penghao Wu, Xiaosong Jia, Li Chen, Junchi Yan,                          2, 1
+     Hongyang Li, and Yu Qiao. Trajectory-guided control pre-           [93] Chris Zhang, Sourav Biswas, Kelvin Wong, Kion Fallah,
+     diction for end-to-end autonomous driving: A simple yet                 Lunjun Zhang, Dian Chen, Sergio Casas, and Raquel Urta-
+     strong baseline. In NeurIPS, 2022. 1                                    sun. Learning to drive via asymmetric self-play. In ECCV,
+[80] Yanhao Wu, Haoyang Zhang, Tianwei Lin, Lichao Huang,                    2024. 2
+     Shujie Luo, Rui Wu, Congpei Qiu, Wei Ke, and Tong                  [94] Huanyu Zhang, Chengzu Li, Wenshan Wu, Shaoguang
+     Zhang. Generating multimodal driving scenes via next-                   Mao, Yifan Zhang, Haochen Tian, Ivan Vulić, Zhang
+     scene prediction. In CVPR, 2025. 6                                      Zhang, Liang Wang, Tieniu Tan, et al. Scaling and beyond:
+[81] Chengen Xie, Bin Sun, Tianyu Li, Junjie Wu, Zhihui Hao,                 Advancing spatial reasoning in mllms requires new recipes.
+     XianPeng Lang, and Hongyang Li. Latentvla: Efficient                    arXiv preprint arXiv:2504.15037, 2025. 6
+     vision-language models for autonomous driving via latent           [95] Huanyu Zhang, Wenshan Wu, Chengzu Li, Ning Shang,
+     action prediction. arXiv preprint arXiv:2601.05611, 2026.               Yan Xia, Yangyu Huang, Yifan Zhang, Li Dong, Zhang
+     1                                                                       Zhang, Liang Wang, et al. Latent sketchpad: Sketching
+[82] Ziyang Xie, Zhizheng Liu, Zhenghao Peng, Wayne Wu, and                  visual thoughts to elicit multimodal reasoning in mllms.
+     Bolei Zhou. Vid2sim: Realistic and interactive simulation               arXiv preprint arXiv:2510.24514, 2025. 6
+     from video for urban navigation. In CVPR, 2025. 1                  [96] YiFan Zhang, Huanyu Zhang, Haochen Tian, Chaoyou Fu,
+[83] Zebin Xing, Xingyu Zhang, Yang Hu, Bo Jiang, Tong He,                   Shuangqing Zhang, Junfei Wu, Feng Li, Kun Wang, Qing-
+     Qian Zhang, Xiaoxiao Long, and Wei Yin. Goalflow: Goal-                 song Wen, Zhang Zhang, et al. Mme-realworld: Could your
+     driven flow matching for multimodal trajectories generation             multimodal llm challenge high-resolution real-world sce-
+     in end-to-end autonomous driving. In CVPR, 2025. 4, 1                   narios that are difficult for humans? In ICLR, 2025. 1
+[84] Runsheng Xu, Hubert Lin, Wonseok Jeon, Hao Feng, Yu-               [97] Zhejun Zhang, Alexander Liniger, Dengxin Dai, Fisher Yu,
+     liang Zou, Liting Sun, John Gorman, Kate Tolstaya, Sarah                and Luc Van Gool. End-to-end urban driving by imitating
+     Tang, Brandyn White, et al. Wod-e2e: Waymo open dataset                 a reinforcement learning coach. In ICCV, 2021. 4
+     for end-to-end driving in challenging long-tail scenarios.         [98] Yupeng Zheng, Zhongpu Xia, Qichao Zhang, Teng Zhang,
+     arXiv preprint arXiv:2510.26125, 2025. 2                                Ben Lu, Xiaochuang Huo, Chao Han, Yixian Li, Mengjie
+[85] Zhiyuan Xu, Bohan Li, Huan-ang Gao, Mingju Gao, Yong                    Yu, Bu Jin, et al. Preliminary investigation into data scaling
+     Chen, Ming Liu, Chenxu Yan, Hang Zhao, Shuo Feng,                       laws for imitation learning-based end-to-end autonomous
+     and Hao Zhao. Challenger: Affordable adversarial driving                driving. arXiv preprint arXiv:2412.02689, 2024. 2, 1
+     video generation. arXiv preprint arXiv:2505.15880, 2025.           [99] Yinan Zheng, Ruiming Liang, Kexin ZHENG, Jinliang
+     1                                                                       Zheng, Liyuan Mao, Jianxiong Li, Weihao Gu, Rui Ai,
+
+
+                                                                   12
+      Shengbo Eben Li, Xianyuan Zhan, and Jingjing Liu.
+      Diffusion-based planning for autonomous driving with flex-
+      ible guidance. In ICLR, 2025. 6
+[100] Hongyu Zhou, Longzhong Lin, Jiabao Wang, Yichong
+      Lu, Dongfeng Bai, Bingbing Liu, Yue Wang, Andreas
+      Geiger, and Yiyi Liao. Hugsim: A real-time, photo-realistic
+      and closed-loop simulator for autonomous driving. arXiv
+      preprint arXiv:2412.01718, 2024. 1
+[101] Jiawei Zhou, Linye Lyu, Zhuotao Tian, Cheng Zhuo, and
+      Yu Li. Safemvdrive: Multi-view safety-critical driving
+      video synthesis in the real world domain. arXiv preprint
+      arXiv:2505.17727, 2025. 1
+[102] Yunsong Zhou, Michael Simon, Zhenghao Peng, Sicheng
+      Mo, Hongzi Zhu, Minyi Guo, and Bolei Zhou. Sim-
+      gen: Simulator-conditioned driving scene generation. In
+      NeurIPS, 2024. 1
+[103] Yunsong Zhou, Naisheng Ye, William Ljungbergh, Tianyu
+      Li, Jiazhi Yang, Zetong Yang, Hongzi Zhu, Christoffer Pe-
+      tersson, and Hongyang Li. Decoupled diffusion sparks
+      adaptive scene generation. In ICCV, 2025. 1, 6
+
+
+
+
+                                                                    13
+              S IM S CALE: Learning to Drive via Real-World Simulation at Scale
+                                                      Supplementary Material
+A. Related Work                                                      1       Concurrently, trajectory scoring has emerged as an effi-
+    A.1. End-to-End Autonomous Driving . . . . . . . .               1       cient alternative, ranking candidate trajectories under spline
+    A.2. Scene Simulation for Driving. . . . . . . . . . .           1       curves [7, 26], discretized tokens [20, 34], clustered human
+    A.3. Data Scaling for Driving . . . . . . . . . . . . . .        1       trajectories [57, 59], or predicted proposals [24, 54, 74, 81].
+    A.4. Comparison with Online RL . . . . . . . . . . .             2       Moreover, it offers a natural interface for reward- or cost-
+                                                                             based optimization [20–22, 37, 55, 58, 62], enabling rein-
+B. Extended Implementation Details                                   2       forced improvements. Still, supervision on logged end-to-
+    B.1. Simulation Data Curation . . . . . . . . . . . . .          2       end data limits training to the expert’s open-loop distribu-
+    B.2. Models and Training . . . . . . . . . . . . . . . .         2       tion, causing compromised learning in the drifted state of
+C. Extended Experimental Results                                     4       sensory data. We address this by introducing a scalable
+                                                                             simulation framework that reactively generates end-to-end
+    C.1. Detailed Leaderboard Results . . . . . . . . . .            4
+                                                                             pairs using pseudo-experts or rewards, allowing end-to-end
+    C.2. Complete Qualitative Results . . . . . . . . . . .          4
+                                                                             systems across any above paradigms to bootstrap extra su-
+    C.3. Scaling of Reactive vs. Non-Reactive . . . . .              4       pervision from existing training data.
+D. Additional Experimental Results                                   4
+    D.1. Multi-Expert Ensemble. . . . . . . . . . . . . . .          4       A.2. Scene Simulation for Driving
+    D.2. Effect of Scenarios beyond Scaling . . . . . . .            5       Scene simulation, including traffic behavior simulation and
+    D.3. Effect of Simulation Visual Fidelity . . . . . .            5       sensor simulation, has long been a key topic in autonomous
+    D.4. Scaling with Varying Scales of Real Data. . .               5       driving research. For traffic simulation, existing works [6,
+                                                                             20, 100] leverage rule-based planners like IDM [76], or
+E. Limitations and Broader Impact                                    6       diffusion-based generators [36, 103] to simulate plausible
+    E.1. Pseudo-Expert . . . . . . . . . . . . . . . . . . . .       6       interaction of traffic agents. For sensor simulation, tradi-
+    E.2. Scene Simulation. . . . . . . . . . . . . . . . . . .       6       tional graphics-based simulators [18, 48] suffer from a sig-
+    E.3. Self-Play . . . . . . . . . . . . . . . . . . . . . . . .   6       nificant sim-to-real gap, which limits the real-world deploy-
+    E.4. Societal Impact . . . . . . . . . . . . . . . . . . . .     6       ment of trained planners. Recent data-driven efforts follow
+F. License of Assets                                                 6       two directions: some approaches [1, 52, 77, 85, 91, 101,
+                                                                             102] attempt to generate sensor data in unseen scenarios
+                                                                             via video generation models conditioned on 3D bounding
+   We outline the supplementary material as follows. In                      boxes, HD maps or BEV maps. Other works focus on scene
+Sec. A, we first provide additional discussions of related                   reconstruction [6, 10, 35, 65, 82, 86, 100] to build photore-
+work. Sec. B presents further implementation details re-                     alistic simulators for novel-view synthesis, using techniques
+garding data curation and models. In Sec. C, we report                       like Neural Radiance Fields (NeRF) and 3D Gaussian Splat-
+extended experimental analyses and qualitative results                       ting (3DGS). Although these methods achieve impressive
+corresponding to the main experiments (Sec. 3). In Sec. D,                   visual results, most are primarily designed for closed-loop
+we further present additional experimental studies. Fi-                      evaluation or visual augmentation. Our work aims to ex-
+nally, Sec. E discusses the limitations and broader impacts,                 plore how to use traffic and sensor simulation to generate re-
+and Sec. F lists the licenses of all utilized assets.                        alistic scenes with feasible demonstrations for planner train-
+                                                                             ing, and its impacts on planner performances.
+A. Related Work
+                                                                             A.3. Data Scaling for Driving
+A.1. End-to-End Autonomous Driving
+                                                                             Recent data scaling laws have driven major advances in
+End-to-end system maps directly from raw sensor inputs to                    foundation models [38, 72, 92, 96], but their impact on au-
+planning [9]. Early works adopt regression-based planning                    tonomous driving planning remains underexplored. Prior
+and gradually shift from extra task branches [12, 31, 79]                    researches [29, 68, 98] demonstrate that increasing real-
+to unifying perception, prediction, and planning under                       world data from thousands to millions of driving logs im-
+joint supervision [27, 32, 33, 61, 78]. Recent work has                      proves end-to-end planner performance, though improve-
+moved toward generative approaches. Diffusion-based sys-                     ments diminish. Dense supervision from video predictions
+tems [15, 45, 55, 60, 83] are framed as a conditional denois-                improves this data scaling efficiency [53]. For planners op-
+ing process, enabling diverse and high-fidelity trajectories.                erating on abstract BEV representations, industry efforts
+
+
+                                                                         1
+[2, 28] demonstrate clear benefits from scaling real-world                  Table 5. Simulation Data Curation Pipeline Configurations.
+data and model capacity, while self-play [13, 14, 93] scales
+reinforcement learning via massive simulation to achieve                     Term                                Notation      Value
+strong zero-shot sim-to-real transfer. However, most exist-                  3DGS Data Engine
+ing approaches rely on costly real-world collection or traf-                 Peak signal-to-noise ratio of GS    PSNR          < 27
+fic simulation, which expands only in abstract state spaces                  Trajectory Perturbation
+rather than raw sensory domains. 3D rasterization pro-                       Clustered human traj vocabulary     Vc            16, 384
+vides a lightweight remedy, but suffers from information                     Relative heading range to log       ∆θ            ±20◦
+loss [19]. In contrast, we investigate scaling properties of                 Longitudinal shift range            rlon          ±20m
+                                                                             Lateral shift range                 rlat          ±2m
+planning directly through large-scale 3DGS sensory simu-                     Longitudinal sampling step          δlon          5m
+lation, which bridges abstract traffic simulation and real-                  Lateral sampling step               δlat          0.5m
+world perception, offering a scalable and realistic alterna-                 Reward filterer                     Rper
+                                                                                                                   EPDMS       ≥ 0.8
+tive to real-world data collection.                                          Pseudo-Expert Trajectory Generation
+A.4. Comparison with Online RL                                               Reward filterer                Rexp
+                                                                                                              EPDMS
+                                                                                                                               Sm =1,∀m̸=EP
+                                                                                                                               SEP >0.5
+                                                                             Recovery-based
+                                                                             Whole human traj vocabulary    Vh                 103, 288
+ (a) 3DGS-based Online RL                                                    Planner-based
+                                                                             Privileged planner             P                  PDM-Closed [16]
+                                              RL
+
+                                                                                    Table 6. Model and Training Hyperparameters.
+
+                                                                            Hyperpara.      LTF [12]     DiffusionDrive [60]    GTRS-Dense [59]
+                                                         Policy K+1         Model Configuration
+                 Action         Policy K
+                                                                            Sensors       3 × Cam.           3 × Cam.              3 × Cam.
+                                                                            Resolution   2048 × 512         2048 × 512            2048 × 512
+                                      Update x M                            Horizon           4s                4s                     4s
+                                                                            Frequency        2Hz               2Hz                   10Hz
+ (b) SimScale Simulation Pipeline                                           Backbone       R34 [25]          R34 [25]          R34 [25] / V99 [42]
+                                                                            Parameters       56M               61M                67M / 83M
+                                                    IL / RL
+                                                                            Aux. Tasks     Det. Seg.         Det. Seg.               None
+                                                                            Training Configuration
+                                            xN                              GPUs            8 × H20           8 × H20              32 × H20
+      Pseudo
+                                                                            Epochs            100               100                    50
+      Expert
+                                                                            Total BS          512               512                   352
+                                           Human                            Initial LR    2.83 × 10−4        6 × 10−4              4 × 10−4
+                        Perturb x N         State             ANY           Schedule        Constant        Cosine Decay          Cosine Decay
+                                                              Policy        Optimizer      Adam [41]        AdamW [66]            AdamW [66]
+
+
+Figure 6. Learning paradigm comparison of e2e autonomous
+driving between 3DGS-based Online RL and SimScale.                         plement Sec. 3.1 curation pipeline in the main paper. For
+                                                                           pseudo-expert trajectory generation, we discard infeasible
+                                                                           candidates to ensure valid supervision. Specifically, all sub-
+Online reinforcement learning (RL) [30, 46, 49] in traffic
+                                                                           metrics of EPDMS must be satisfied, with SEP relaxed:
+simulators learn through exploration and feedback. Sensor
+                                                                           EP ≥ 0.5, preventing biased driving styles. Qualitative re-
+simulation serves as a bridge to real-world environments,
+                                                                           sults during curation are shown in Sec. C.2
+enabling real-world RL for autonomous driving, i.e., 3DGS-
+based Online RL [20], as shown in Fig. 6 (a). In contrast,                 B.2. Models and Training
+the proposed SimScale introduces an alternative framework,
+as illustrated in Fig. 6 (b), that generates OOD states with               Tab. 6 provides the detailed model and training hyperparam-
+expert demonstrations at scale, enabling real-world simu-                  eters that complement Sec. 3.1 implementation protocol in
+lations to support both imitation learning (IL) and reward                 the main paper. We follow the NAVSIM [17] default setup
+learning (i.e. Offline RL) across arbitrary planners.                      and use only the train logs [39] of navtrain for both
+                                                                           real-data training and sim–real co-training. All planners
+B. Extended Implementation Details                                         share identical settings across the real or sim-real training
+                                                                           setups, and each model is trained to saturation to ensure the
+B.1. Simulation Data Curation                                              validity of the subsequent scaling analyses.
+Tab. 5 summarizes the detailed terms with notation and                     LTF. [12] A regression-based planner that directly regresses
+value used in the simulation data curation process to sup-                 future waypoints upon fused sensory latents. It employs
+
+
+                                                                       2
+Table 7. Detailed Results on navhard. PDM-Closed uses ground-truth symbolic inputs for planning, while other methods rely on sensor
+data. (recovery / planner: recovery-based / planner-based expert; reward: reward-only scoring; S.: per-stage EPDM score.)
+  Method                Backbone         Sim.          Stage     NC↑       DAC↑    DDC↑     TLC↑     EP↑     TTC↑     LK↑       HC↑       EC↑       S.↑     EPDMS↑
+                                                         S1      94.4      98.8     100     99.5     100     93.5     99.3      87.7      36.0          -
+  PDM-Closed [16]       -                  -                                                                                                                  51.3
+                                                         S2      88.1      90.6     96.3    98.5     100     83.1     73.7      91.5      25.4          -
+                                                                         Regeression-based Planner
+                                                         S1      97.3      80.2     97.8     99.3    83.4    96.2     92.9      97.8      71.1     61.3
+                                          w/o                                                                                                                 24.4
+                                                         S2      79.4      69.0     85.6     98.5    83.8    76.7     47.9      97.0      70.6     39.2
+
+  LTF [12]              ResNet34                         S1      96.4      78.4     98.9    99.8     80.5    96.2     92.7      97.6      78.2     60.7
+                                        recovery                                                                                                              29.8
+                                                         S2      88.9      71.1     91.8    99.0     77.3    85.5     53.8      96.8      47.5     46.3
+                                                         S1      96.1     85.3      99.4     99.3    84.7    94.7     93.6      97.6      77.3     66.3
+                                        planner                                                                                                               30.2
+                                                         S2      85.5     66.9      91.6     99.1    93.0    81.1     58.3      95.1      42.9     44.8
+                                                                         Diffusion-based Planner
+                                                         S1      96.8     86.0      98.8     99.3    84.0    95.8     96.7      97.6      79.6     66.7
+                                          w/o                                                                                                                 27.5
+                                                         S2      80.1     72.8      84.4     98.4    85.9    76.6     46.4      96.3      72.8     40.5
+
+  DiffusionDrive [60]   ResNet34                         S1      97.2      88.4     99.1    99.8     83.9    96.0     96.7      97.6      76.9     69.4
+                                        recovery                                                                                                              30.4
+                                                         S2      82.4      67.7     89.1    98.6     89.0    77.6     53.8      95.2      46.8     41.7
+                                                         S1      97.2      88.7     99.3     99.3    82.8    96.9     98.0      97.3      59.6     67.5
+                                        planner                                                                                                               32.6
+                                                         S2      82.4      72.1     92.9     98.5    92.1    80.6     60.8      95.4      31.9     46.8
+                                                                         Scoring-based Planner
+                                                         S1      99.3      96.6     99.6     100     57.4    99.5     92.6      89.5      16.4     67.1
+                                          w/o                                                                                                                 38.3
+                                                         S2      92.8      88.6     95.5     99.4    55.9    91.3     55.7      91.1      35.7     55.8
+                                                         S1      97.6      94.2     99.3    99.6     76.7    97.6     94.9      97.1      37.8     69.8
+                                        recovery                                                                                                              43.0
+                                                         S2      92.0      88.1     94.3    98.6     83.6    89.8     58.1      91.4      25.9     59.3
+                        ResNet34
+                                                         S1      98.7      94.2     99.7    100      74.3    98.2     95.8      96.7      34.7     70.8
+                                        planner                                                                                                               46.1
+                                                         S2      94.2      92.1     95.0    99.0     79.9    91.8     58.9      91.0      32.9     63.9
+                                                         S1      97.6      96.4     99.3    100      75.7    97.8     93.3      97.3      32.9     72.4
+                                        reward                                                                                                                46.9
+                                                         S2      94.3      92.7     95.1    99.5     80.2    91.5     56.2      90.6      28.3     63.4
+  GTRS-Dense [59]
+                                                         S1      98.9      94.9     99.1    100      76.1    98.4     93.8      94.9      37.8     70.4
+                                          w/o                                                                                                                 41.9
+                                                         S2      89.9      90.5     94.1    99.3     77.6    88.5     56.0      92.0      30.2     58.5
+                                                         S1      99.1      98.2     99.4    100      71.9    99.1     95.6      95.8      32.4     73.4
+                                        recovery                                                                                                              46.4
+                                                         S2      95.0      90.8     94.6    99.4     75.5    93.5     57.4      93.7      36.8     63.1
+                            V2-99
+                                                         S1      99.3      97.1     99.9    100      67.2    99.3     94.0      94.4      23.6     71.7
+                                        planner                                                                                                               47.7
+                                                         S2      95.6      91.9     95.0    98.9     76.7    93.7     61.9      90.8      38.0     65.5
+                                                         S1      99.3      97.6     99.4    100      71.5    99.6     96.0      95.8      30.7     72.5
+                                        reward                                                                                                                48.0
+                                                         S2      94.9      94.3     94.5    99.3     79.0    92.6     57.8      93.4      30.9     65.4
+
+    Table 8. Detailed Results on navtest. (recovery / planner: recovery-based / planner-based expert; reward: reward-only scoring)
+  Method                     Backbone           Sim.           NC↑       DAC↑     DDC↑      TLC↑      EP↑     TTC↑       LK↑           HC↑       EC↑        EPDMS↑
+  Human Agent                       -              -           100       100       99.8      100      87.4     100       100           98.1      90.1        90.3
+                                                                        Regression-based Planner
+                                                w/o            97.7      94.0     99.3     99.8       87.2     96.7      95.5          98.3      82.9        81.5
+  LTF [12]                   ResNet34       recovery           97.9      95.1      99.5      99.8     87.7     97.2      97.2          98.3      87.1        83.6
+                                               planner         98.3      95.6      99.6    99.8       87.1     97.5      97.2          98.3      88.2        84.4
+                                                                        Diffusion-based Planner
+                                                w/o            98.4      95.5      99.5    99.8       87.5     97.5      96.9          98.4      87.7        84.2
+  DiffusionDrive [60]        ResNet34       recovery           98.4      96.7      99.6      99.8     87.6     97.5      97.5          98.3      87.1        85.4
+                                               planner         98.5       97.1    99.6     99.8       87.4     97.8      98.0          98.3      87.5        85.9
+                                                                        Scoring-based Planner
+                                                w/o            97.6       97.5    99.0     99.9       87.9     97.0      95.9          97.5      55.9        82.3
+                                            recovery           98.2      97.9      99.5      99.9     87.2     97.8      96.3          97.6      56.5        83.4
+                             ResNet34
+                                               planner         97.8      98.3      99.5      99.9     89.2     97.3      97.3          96.9      55.1        84.0
+                                               reward          98.4      98.8      99.4      99.9     88.0     98.0      96.5          97.6      58.0        84.6
+  GTRS-Dense [59]
+                                                w/o            97.6      98.5      99.5      99.9     89.5     97.2      96.8          97.2      57.2        84.0
+                                            recovery           98.3      98.7      99.4      99.9     88.9     97.9      97.1          97.6      55.9        84.5
+                              V2-99
+                                               planner         98.7      99.0      99.5      99.8     86.8     98.3      95.9          97.9      58.5        84.5
+                                               reward          97.6      98.9      99.6      99.9     89.9     97.1      97.2          97.7      58.7        84.8
+
+
+                                                                                     3
+                                                                              Non-Reactive Sim. Data       Reactive Sim. Data
+
+pretrained ResNet34 [25] as image encoder and is trained
+for 100 epochs on 8 GPUs with a total batch size of 512 and
+a learning rate of 2.83 × 10−4 .
+
+
+
+
+                                                                  EPDMS
+
+
+
+
+                                                                                                                                EPDMS
+DiffusionDrive. [60] A multi-modal, DETR-style genera-
+tive planner that iteratively denoises diverse trajectories us-
+ing anchor-conditioned truncated diffusion. Each anchor
+                                                                           + Sim. Data                           𝑁 Samples              + Sim. Data              𝑁 Samples
+adaptively queries the encoded image features. It employs
+pretrained ResNet34 [25] as image encoder and applies                      (a) GTRS-Dense-ResNet34 | 67M                                   (b) GTRS-Dense-V2_99 | 83M
+
+truncated diffusion with 20 clustered anchors. It is trained
+for 100 epochs on 8 GPUs with a total batch size of 512 and               Figure 7. Scaling dynamics under reactive and non-reactive
+                                                                          simulation using GTRS-Dense across model sizes.
+a learning rate of 6 × 10−4 .
+GTRS-Dense. [59] A scoring-based, DETR-style planner                      the full scaling curves, demonstrating that reactive simula-
+that ranks a dense vocabulary of clustered human trajec-                  tion data consistently achieves superior scaling performance
+tories using multiple supervised scoring heads. Inputs are                across model sizes.
+augmented with random spatial shifts. It employs pre-
+trained ResNet34 [25] or V2-99 [42] as image encoder with                 D. Additional Experimental Results
+an action space of 16,384 trajectories. It is trained for 50
+epochs on 32 GPUs with a total batch size of 352 and a                    D.1. Multi-Expert Ensemble
+learning rate of 4 × 10−4 . We use a vocabulary of 16,384
+trajectories for training. At inference time, 8,192 trajecto-             Table 9. The effect of multi-expert ensemble on navhard us-
+                                                                          ing GTRS-Dense. (S1/2 :Per-stage EPDM scores; recovery / plan-
+ries are used for navhard, while the full 16,384 trajectories
+                                                                          ner: recovery-based / planner-based expert; reward: reward scor-
+are used for navtest.                                                     ing only; ∗:multi-expert ensemble)
+C. Extended Experimental Results
+                                                                           Backbone               Sim              Expert               S1 ↑          S2 ↑   EPDMS ↑
+C.1. Detailed Leaderboard Results                                                                                                       67.1          55.8     38.3
+In the main paper Sec. 3.2, Tab. 1 and Tab. 2 report only the                                          ✓          recovery              69.8          59.3     43.0
+best results in navhard and navtest of each planner co-                     ResNet34                   ✓          planner               70.8          63.9     46.1
+training (highlighted in blue rows ). Supplementary Tab. 7                                             ✓           reward               72.4          63.4     46.9
+and Tab. 8 provide full results across different pseudo-                                               ✓                ∗               72.8          65.1     47.7
+experts and the reward-only scoring method. The best re-
+sults remain highlighted in blue rows , allowing direct com-                                                                            70.4          58.5     41.9
+parison with the main paper. Planner-based experts gen-                                                ✓          recovery              73.4          63.1     46.4
+erally outperform recovery-based experts, while scoring-                      V2-99                    ✓          planner               71.7          65.5     47.7
+based planner benefits most from reward-only method.                                                   ✓           reward               72.5          65.4     48.0
+
+C.2. Complete Qualitative Results                                                                      ✓                ∗               74.8          67.6     50.9
+                                                                                  ∗                    ✓                ∗               75.4          66.4     50.4
+We show extended visualizations of our simulated data in
+Fig. 10 and Figs. 11–13, which demonstrate the high fi-
+delity and pseudo-expert generation of our data generation                Different pseudo-experts exhibit distinct behavioral charac-
+pipeline. More OOD simulation scenes are shown in Fig 14.                 teristics, e.g., the recovery-based expert is more conserva-
+Recovery-based Expert. As shown in Fig. 10, all simu-                     tive, whereas the planner-based expert is more exploratory.
+lation trajectories successfully converge back to the human               This raises the question of whether these complementary
+expert’s final waypoint.                                                  properties can be leveraged jointly. Therefore, we conduct
+Planner-based Expert As shown in Figs. 11–13, the simu-                   a simple ensemble study, multi-expert enseble as we call
+lated feasible trajectories under perturbed states exhibit sub-           it, to examine their potential complementarity on navhard,
+stantial variation and broader coverage across diverse traffic            as shown in Tab. 9. The scoring-based GTRS-Dense plan-
+scenarios, including the Y-branch intersection, the dense ur-             ner is chosen because it enables a straightforward ensemble:
+ban avenue, and the narrow local road.                                    the predicted sub-scores of each trajectory in the vocabulary
+                                                                          can be directly averaged across the three models (recovery-
+C.3. Scaling of Reactive vs. Non-Reactive                                 based, planner-based, reward-only scoring).
+In the main paper, Tab. 4 reports only a subset of simulation             Ensemble Gains from Expert Diversity. As shown in
+rounds for GTRS-Dense. Supplementary Fig. 7 provides                      Tab. 9, this simple multi-expert ensemble yields consistent
+
+
+                                                                  4
+                                                                                                          c
+                                                                                                       ffi
+                                                                                                     ra
+                                                                                                  _t                                                          e
+                                                                                                in                                   e   d
+                                                                                                                                           ff              bl
+                                                                                           r y_                                   pe                    ea           d
+                                                                                         na                ry                   _s     po            iv          ee
+                                                                                       io             na
+                                                                                                                            e     d ro         _ dr           sp
+                                                                                    at         t    io           o
+                                                                                                                  ff     ud     _             n           e _
+                                                                                 st           i
+                                                                                                 at
+                                                                                                                              p             o           d
+                                                                                            n
+                                                                                              st            op         ck
+                                                                                                                            u            e_          tu                                                                                                         n
+                                                                                          ag             dr         pi               on           ni                                                                                                       ct
+                                                                                                                                                                                                                                                              io                                                  ff
+                                                                                       _m             p_         g_              cc           ag                   le                                                      n                                                                                   po
+    Proportion
+
+
+
+
+                                                                                                                                                                ic                                                      tio                             se
+                                                                                                   ku                         ffi                                                                                                                    er
+
+
+
+
+                                                             EPDMS
+                                                                                   lo
+                                                                                     w
+                                                                                                  c           sin                         _ m                  h                 ig  n               d                 c                           t                                                        ro
+                                                                                                pi
+                                                                                                            r            tr a           m                  v e                  s                  e               e                             in                                                     _d          al
+                                                                                                                                                                                                                                                                                                                      k
+                         Avg 49.2          Avg 61.7                                          _          v e
+                                                                                                                    ar
+                                                                                                                       _             iu                  _
+                                                                                                                                                                            op
+                                                                                                                                                                              _
+                                                                                                                                                                                             sp
+                                                                                                                                                                                                e
+                                                                                                                                                                                                             te
+                                                                                                                                                                                                                r s                          t _
+                                                                                                                                                                                                                                                         k                                             p
+                                                                                                                                                                                                                                                                                                                sw
+                                                                                           on       tr a                        ed                    ng                                  e_
+                                                                                                                                                                                                                                           h           al              n         ed                 ku
+                                                                                                                 ne          m                   _ lo                  _ st           d                t _in                          _ lig
+                                                                                                                                                                                                                                                   sw              t io        e              p ic          r os
+                                                                     Avg 49.2                                                                 ar                  in
+                                                                                                                                                                     e
+                                                                                                                                                                               ni
+                                                                                                                                                                                  tu               gh               n           ffi
+                                                                                                                                                                                                                                   c            os               c
+                                                                                                                                                                                                                                                                          _s
+                                                                                                                                                                                                                                                                             p             t_            _c
+                                                                                                                                          ne                    pl                            _li               io                          cr               rse                        _a            on
+                                                                                                                                                                            ag                               ct           _t
+                                                                                                                                                                                                                             ra
+                                                                                                                                                                                                                                        e_                te           de                                          k
+                                                                                                                                                         _s
+                                                                                                                                                             to                            fic                                                                     tu               an             n_            al
+                                                                                                                                                        n              _m              r af           e rse           ing           lin             g _in        ni            str i        t ria            sw
+                                                                                                                                                      o
+                                                                                                                                                                 lo
+                                                                                                                                                                    w
+                                                                                                                                                                                n  _ t
+                                                                                                                                                                                                 in t
+                                                                                                                                                                                                                e  r s
+                                                                                                                                                                                                                              t op
+                                                                                                                                                                                                                                                sin         a  g
+                                                                                                                                                                                                                                                                           d e           e s             r os
+                                                                                                                                                                                               _              v              s                r                                                       _c
+                                                                                                                                                                              o
+                                                                                                                                                                                            on            tr a
+                                                                                                                                                                                                                           _              ve          h_
+                                                                                                                                                                                                                                                          m
+                                                                                                                                                                                                                                                                      _p
+                                                                                                                                                                                                                                                                         e           ed
+                                                                                                                                                                                                                        on                                                       _p               ng
+                                                                                                                                                                                                                                     tra hig                      ar         ar                rsi
+                                                                                                                                                                                                                                                              ne         ne               ve
+                 EPDMS                                                                                                                                                                                                                                                                rt a
+                                                                     Scenario Tags
+
+
+    (a) EPDMS Distribution of EgoMLP on Sim. and Real Data.                        (b) EPDMS of EgoMLP over the Top-20 Most Frequent Scenarios in Sim Data
+
+
+Figure 8. EgoMLP EPDMS on simulation and real data. (a) EPDMS distribution under simulation versus real-world data. (b) Scenario
+tags ranked by EPDMS. The figures reveal the distribution shift and scenario characteristics of simulation data.
+
+improvements for both backbones, achieving +0.8 and +2.9                                                                with PSNR ≥ 27 consistently yields higher EPDMS under
+EPDMS on ResNet34 and V2-99 compared with reward-                                                                       different data scales and co-training strategies. These re-
+only scoring, respectively, for navhard. Further enlarging                                                              sults indicate that simulation data with higher visual fidelity
+the ensemble to all six models yields no additional EPDMS                                                               helps reduce the visual gap between simulation and real-
+gains. These indicate that, for end-to-end planning, dif-                                                               world observations, thereby improving the effectiveness of
+ferent pseudo-experts provide strong complementary ben-                                                                 simulation data.
+efits—often exceeding the gains brought by different back-
+bone structures.                                                                                                        D.4. Scaling with Varying Scales of Real Data
+
+D.2. Effect of Scenarios beyond Scaling                                                                                             Only Real                    Sim-Real
+
+
+
+Beyond data scaling, simulation data exhibits an out-of-
+distribution shift relative to real-world data. We provide                                                                                                                                       + 16.7%
+                                                                                                                                                                                                                                                                                                               + 11.5%
+
+                                                                                                                                                                        + 14.9%                                                                                                         + 9.2%
+a preliminary analysis of these characteristics by evaluat-
+                                                                                                                EPDMS
+
+
+
+
+                                                                                                                                                                                                                            EPDMS
+ing an EgoMLP planner, trained on navtrain, on both                                                                                                         + 16.7%                                                                                                       + 10.8%
+
+                                                                                                                                    + 22.4%
+navtest and simulation data, as shown in Fig. 8. (1) Fig. 8                                                                                                                                                                                       + 12.1%
+
+
+(a): Sim data shows a lower EPDMS distribution than real                                                                                                                                          Samples                                                                                                       Samples
+data, confirming a higher safety-critical level. (2) Fig. 8 (b):                                                              1 x 105
+
+                                                                                                                         + Real Data
+                                                                                                                                                       2 x 105                         5 x 105              10 x 105                        1 x 105
+
+                                                                                                                                                                                                                                       + Real Data
+                                                                                                                                                                                                                                                                     2 x 105                         5 x 105              10 x 105
+
+
+
+
+Low EPDMS scores across nuPlan scenario tags identify                                                                           (a) GTRS-Dense-ResNet34 | 67M                                                                                   (b) GTRS-Dense-V2_99 | 83M
+challenging simulation scenarios, facilitating future study
+on their distinct impact, e.g., increasing their proportions                                                            Figure 9. Scaling simulation with varying real data. Simula-
+during simulation.                                                                                                      tion data are scaled by corresponding real data scenario tokens and
+                                                                                                                        fixed sim-real data ratio
+D.3. Effect of Simulation Visual Fidelity
+                                                                                                                        To assess the practical utility of our approach, we study
+Table 10. Effect of simulation visual fidelity on navhard using
+                                                                                                                        how simulation data affects performance as the amount of
+GTRS-Dense, across sampling rounds and co-training strategies.
+                                                                                                                        available real-world data scales up. Based on GTRS-Dense
+                                                                                                                        with reward-only scoring sim-real co-training, we conduct
+                                    Pseudo-Expert     Reward-Only Scoring
+  Backbone          PSNR                                                                                                experiments with different real data from navtrain (10K,
+                                    #R 1     #R 2     #R 1           #R 2                                               20K, 50K, 100K). Inspired by [1], simulation data are gen-
+                     < 27           41.0     41.1     40.8           41.6                                               erated from identical scenarios of corresponding real data
+  ResNet34                                                                                                              tokens, and we fix the sim-real data ratio (five sampling
+                     ≥ 27           41.9     41.2     41.3           42.9
+                                                                                                                        rounds) for each experiment.
+                     < 27           44.4     44.5     43.7           44.8
+    V2-99                                                                                                               Sustained Simulation Gains Across Real Data Scales.
+                     ≥ 27           45.4     46.1     44.9           46.3
+                                                                                                                        As shown in Fig. 9, our simulation data provides the most
+We retrain GTRS-Dense with new simulation data of                                                                       significant gains when real data is scarce (10K), achieving
+PSNR < 27 (∼10K×2 rounds) and compare it with the                                                                       +22.4% EPDMS on ResNet34 and +12.1% EPDMS on
+matched samples randomly selected from simulations with                                                                 V2-99 for navhard. As the amount of real data increases
+PSNR ≥ 27. The former represents lower reconstruc-                                                                      (from 10K to 100K), these gains remain consistently high,
+tion quality and is more likely to yield simulations with re-                                                           without noticeable narrowing. This demonstrates that our
+duced visual fidelity. As shown in Tab. 10, simulation data                                                             simulation data can effectively complement limited real-
+
+
+                                                                                                           5
+world data and still offers substantial potential to further         F. License of Assets
+exploit and amplify the value of real data even when it is
+abundant.                                                            All training and evaluation are performed on data from pub-
+                                                                     licly licensed datasets [6, 39, 70]. The real-world data
+E. Limitations and Broader Impact                                    engine is based on the MTGS codebase [51] under the
+                                                                     Apache-2.0 license. We adopt publicly available end-to-end
+E.1. Pseudo-Expert                                                   planners, including GTRS [59] (Apache-2.0) and Diffusion-
+Despite its effectiveness, our pseudo-expert generation              Drive [60] and LTF [12] (MIT).
+pipeline has limitations. Current rule-based trajectory per-
+turbations are static. A potential enhancement is the self-
+evolving approach [90], using pretrained planners to it-
+eratively explore the simulator and collect recovery data.
+Additionally, the privileged BEV planner we use is rule-
+based with limited performance, causing some degradation
+in comfort metrics (HC, EC in Tab. 7) and failing in ex-
+tremely corner cases. More advanced learning-based BEV
+planners [30, 75, 99] could further improve generation effi-
+ciency and realism.
+E.2. Scene Simulation
+For traffic behavior simulation in our decoupled scene sim-
+ulation paradigm, other agents are controlled by IDM [76],
+which enables interaction but limits scenario diversity.
+Diffusion-based traffic generators [36, 50, 103] offer a
+promising improvement. For sensor simulation, feedfor-
+ward GS [8, 88] can improve reconstruction efficiency,
+while adding modalities like LiDAR [44] provides comple-
+mentary modality information. Furthermore, unified world
+models [73, 80, 89, 94, 95] can serve as a substitute for both
+behavior and sensor simulation.
+E.3. Self-Play
+Self-play [13, 14] allows the ego and surrounding agents to
+share learned policies instead of relying on separate traf-
+fic behavior simulators, enabling behaviors to co-evolve
+through interaction. With sensor simulation, it can support
+end-to-end policy learning and potentially improve robust-
+ness in long-tail scenarios, though it remains limited by in-
+teraction cost and simulation fidelity.
+E.4. Societal Impact
+Despite promising improvements, pseudo-expert scene sim-
+ulation still has room for quality and efficiency enhance-
+ments for real-world deployment. Co-training may be af-
+fected by unrealistic simulation visuals and distributional
+differences in real-world corner cases, which could lead
+to potential risks. We hope SimScale will inspire both
+academia and industry in driving and robotics to leverage
+real-world simulation to address rare corner cases in data
+scaling, advancing fully autonomous systems that are robust
+and generalizable. In addition, we will provide the commu-
+nity with a fully open-source simulation dataset and training
+framework to promote academic research on autonomous
+driving in simulation.
+
+
+                                                                 6
+Pseudo-Expert Trajectory     Perturbed Trajectory    Perturbed State       Log End Point   Real Ego           Sim. Ego
+
+
+
+
+                 Sim.3
+
+
+       Sim.2     Sim.1
+                            Real                             Front-Left                               Front              Front-Right
+
+
+
+
+                           Sim. 1                           Front-Left                                Front              Front-Right
+
+
+
+
+                           Sim. 2                           Front-Left                                Front              Front-Right
+
+
+
+
+                           Sim. 3                           Front-Left                                Front              Front-Right
+
+
+                 Figure 10. Qualitative results of recovery-based expert with real and simulation data.
+
+Pseudo-Expert Trajectory      Perturbed Trajectory   Perturbed State         Real Ego      Sim. Ego
+
+
+
+
+        Sim.2
+                  Sim.1
+         Sim.3              Real                             Front-Left                                Front              Front-Right
+
+
+
+
+                           Sim. 1                            Front-Left                                Front              Front-Right
+
+
+
+
+                           Sim. 2                             Front-Left                               Front              Front-Right
+
+
+
+
+                           Sim. 3                             Front-Left                               Front              Front-Right
+
+
+
+  Figure 11. Qualitative results of planner-based expert with real and simulation data. (Y-branch intersection)
+
+
+                                                                       7
+Pseudo-Expert Trajectory       Perturbed Trajectory   Perturbed State       Real Ego   Sim. Ego
+
+
+
+
+     Sim.3          Sim.2
+                             Real                             Front-Left                          Front     Front-Right
+                Sim.1
+
+
+
+
+                            Sim. 1                            Front-Left                          Front     Front-Right
+
+
+
+
+                            Sim. 2                            Front-Left                          Front     Front-Right
+
+
+
+
+                            Sim. 3                            Front-Left                          Front     Front-Right
+
+
+
+   Figure 12. Qualitative results of planner-based expert with real and simulation data. (dense urban avenue)
+
+Pseudo-Expert Trajectory      Perturbed Trajectory    Perturbed State       Real Ego   Sim. Ego
+
+
+
+       Sim.1    Sim.2
+
+
+
+
+             Sim.3
+                             Real                             Front-Left                          Front     Front-Right
+
+
+
+
+                            Sim. 1                            Front-Left                          Front     Front-Right
+
+
+
+
+                            Sim. 2                            Front-Left                          Front     Front-Right
+
+
+
+
+                            Sim. 3                            Front-Left                          Front     Front-Right
+
+
+
+    Figure 13. Qualitative results of planner-based expert with real and simulation data. (narrow local road)
+
+
+                                                                        8
+Pseudo-Expert Trajectory      Perturbed Trajectory   Sim. Ego
+
+
+
+
+                           Sim.                           Front-Left                  Front            Front-Right
+
+
+
+
+                           Sim.                           Front-Left                  Front            Front-Right
+
+
+
+
+                           Sim.                           Front-Left                  Front            Front-Right
+
+
+
+
+                           Sim.                           Front-Left                   Front           Front-Right
+
+
+
+
+                           Sim.                           Front-Left                   Front           Front-Right
+
+
+
+                     Figure 14. Additional qualitative results of the simulation scenes on navtrain.
+
+
+
+
+                                                                   9
+

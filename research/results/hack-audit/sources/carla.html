@@ -1,0 +1,885 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.19.1 by Michael Rose
+  Copyright 2013-2019 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Leaderboard - CARLA Autonomous Driving Leaderboard</title>
+<meta name="description" content="Current results of the CARLA Autonomous Driving leaderboard. ">
+
+
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="CARLA Autonomous Driving Leaderboard">
+<meta property="og:title" content="Leaderboard">
+<meta property="og:url" content="http://leaderboard.carla.org/leaderboard/">
+
+
+  <meta property="og:description" content="Current results of the CARLA Autonomous Driving leaderboard. ">
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="canonical" href="http://leaderboard.carla.org/leaderboard/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": null,
+      "url": "http://leaderboard.carla.org/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title="CARLA Autonomous Driving Leaderboard Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<script src="/assets/js/main.min.js"></script>
+<script src="https://kit.fontawesome.com/4eee35f757.js"></script>
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.0.11/purify.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.3.1/js/dataTables.buttons.min.js"></script>
+
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/1.3.1/js/buttons.html5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+<script src="https://kit.fontawesome.com/b630c6fd7e.js" crossorigin="anonymous"></script>
+<script type="text/javascript"
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.1/css/buttons.dataTables.min.css"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS72TKL88S"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS72TKL88S', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--archive wide">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+        <a class="site-title" href="/">
+          CARLA Autonomous Driving Leaderboard
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Home</a>
+            </li><li class="masthead__menu-item">
+              <a href="/evaluation_v2_1/">Evaluation</a>
+            </li><li class="masthead__menu-item">
+              <a href="/get_started_v2_1/">Get started</a>
+            </li><li class="masthead__menu-item">
+              <a href="/submit_v2_1/">Submit</a>
+            </li><li class="masthead__menu-item">
+              <a href="/leaderboard/">Leaderboard</a>
+            </li><li class="masthead__menu-item">
+              <a href="/challenge/">Challenge</a>
+            </li><li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li><li class="masthead__menu-item">
+              <a href="/help/">Help</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+
+
+  <div class="archive">
+    
+      <h1 id="page-title" class="page__title">Leaderboard</h1>
+    
+    <h2 id="carla-leaderboard-20--sensors-track">CARLA Leaderboard 2.0 – SENSORS Track</h2>
+<table class="row-border" id="sensors_leaderboard2" style="width:100%">
+  <thead>
+    <tr>
+      <th>Team</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Infraction for failing for yield to an emergency vehicle.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Yield emergency infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for failing to complete some scenario types.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Scenario timeouts</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for travelling too slow.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Min speed infractions</th>
+    </tr>
+
+    <tr>
+    <th></th>
+    <th></th>
+    <th>%</th>
+    <th>%</th>
+    <th>[0, 1]</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+
+  </tr>
+  </thead>
+  <tbody>
+    <tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+  </tbody>
+  <tfoot>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Infraction for failing for yield to an emergency vehicle.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Yield emergency infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for failing to complete some scenario types.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Scenario timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for travelling too slow.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Min speed infractions</th>
+   </tr>
+   </tfoot>
+</table>
+
+<hr />
+
+<h2 id="carla-leaderboard-20--map-track">CARLA Leaderboard 2.0 – MAP Track</h2>
+<table class="row-border" id="map_leaderboard2" style="width:100%">
+  <thead>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Infraction for failing for yield to an emergency vehicle.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Yield emergency infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for failing to complete some scenario types.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Scenario timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for travelling too slow.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Min speed infractions</th>
+   </tr>
+
+    <tr>
+    <th></th>
+    <th></th>
+    <th>%</th>
+    <th>%</th>
+    <th>[0, 1]</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+
+  </tr>
+  </thead>
+  <tbody>
+    <tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+  </tbody>
+  <tfoot>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Infraction for failing for yield to an emergency vehicle.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Yield emergency infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for failing to complete some scenario types.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Scenario timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Penalty for travelling too slow.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Min speed infractions</th>
+   </tr>
+   </tfoot>
+</table>
+
+<h2 id="carla-leaderboard-10--sensors-track-09101">CARLA Leaderboard 1.0 – SENSORS Track (0.9.10.1)</h2>
+<table class="row-border" id="sensors_09101" style="width:100%">
+  <thead>
+    <tr>
+      <th>Team</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+      <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+    </tr>
+
+    <tr>
+    <th></th>
+    <th></th>
+    <th>%</th>
+    <th>%</th>
+    <th>[0, 1]</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+
+  </tr>
+  </thead>
+  <tbody>
+    <tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+  </tbody>
+  <tfoot>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+   </tr>
+   </tfoot>
+</table>
+
+<hr />
+
+<h2 id="carla-leaderboard-10--map-track-09101">CARLA Leaderboard 1.0 – MAP Track (0.9.10.1)</h2>
+<table class="row-border" id="map_09101" style="width:100%">
+  <thead>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+   </tr>
+
+    <tr>
+    <th></th>
+    <th></th>
+    <th>%</th>
+    <th>%</th>
+    <th>[0, 1]</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+    <th>Infractions/Km</th>
+
+  </tr>
+  </thead>
+  <tbody>
+    <tr>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    </tr>
+  </tbody>
+  <tfoot>
+  <tr>
+    <th>Team</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Session identifier for this submission&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Submission</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average driving proficiency score&lt;/b&gt;. This metric combines the average route completion percentage with the average infraction factor. &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Driving score</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Average percentage of routes completed.&lt;br&gt;&lt;b&gt;Higher is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route completion</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;&lt;b&gt;Average infraction penalty coefficient&lt;/b&gt;. This term aggregates all the infractions of an agent in a dumping factor.&lt;br&gt; &lt;b&gt;Higher is better&lt;/b&gt;.&lt;/small&gt;&lt;/p&gt;">Infraction penalty</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with pedestrians, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions pedestrians</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with other vehicles, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions vehicles</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of collisions with the scene layout, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Collisions layout</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a red light, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Red light infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent ran a stop sign, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Stop sign infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent drove off-road, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Off-road infractions</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent deviated from the assigned route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route deviations</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the route was aborted due to the agent exceeding the maximum amount of time allocated for a given route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Route timeouts</th>
+    <th data-toggle="tooltip" data-html="true" data-placement="left" title="&lt;p&gt;&lt;small&gt;Number of times that the agent got stuck in a route, normalized per kilometer.&lt;br&gt;&lt;b&gt;Lower is better&lt;/b&gt;&lt;/small&gt;&lt;/p&gt;">Agent blocked</th>
+   </tr>
+   </tfoot>
+</table>
+
+<script type="text/javascript">
+function format(data) {
+    return '<div style="float: left; width: 1%;">' +
+        '<ul><i class="far fa-file-alt"></i></ul>' +
+        '<ul><i class="fas fa-users"></i></ul>' +
+        '<ul><i class="fas fa-map-marker-alt"></i></ul>' +
+        '<ul><i class="fas fa-info-circle"></i></ul>' +
+        '</div>' +
+        '<div style="float: left; width: 95%;">' +
+        '<ul>' + (DOMPurify.sanitize(data.paper_title) || 'No title provided') + '</ul>' +
+        '<ul>' + (DOMPurify.sanitize(data.authors) || 'Anonymous') + '</ul>' +
+        '<ul>' + (DOMPurify.sanitize(data.paper_venue) || 'No venue provided') + '</ul>' +
+        '<ul>Details: ' + (DOMPurify.sanitize(data.public_description) || 'No description provided') + '</ul>' +
+        '</div>' +
+
+        '<div style="float: left; width: 5%;">' +
+        '<ul><a href="' + (DOMPurify.sanitize(data.paper_url) || '') + '"><i class="far fa-file-pdf"></i> paper</a></ul>' +
+        '</div>' +
+
+        '<div style="float: left; width: 5%;">' +
+        '<ul><a href="' + (DOMPurify.sanitize(data.repo_url) || '') + '"><i class="fab fa-github"></i> code</a></ul>' +
+        '</div>' +
+
+        '<div style="float: left; width: 10%;">' +
+        '<ul><a href="' + (DOMPurify.sanitize(data.web_site_url) || '') + '"><i class="fas fa-share-square"></i> website</a></ul>' +
+        '</div>';
+}
+
+
+function checkValue(value) {
+
+    if (isNaN(value)) {
+        return 0;
+    }
+    return value;
+}
+
+function formatTableLB1(result, table_id) {
+tableData = []
+result.entries.forEach((el) => { tableData.push(el) })
+let table = $(table_id).DataTable({
+    //ordering: false,
+    "aoColumnDefs": [
+        { "bSortable": false, "aTargets": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 ] }
+    ],
+    data: tableData,
+    columns: [
+        {
+            data: "team_name",
+            render: function (data, type, row) { return (DOMPurify.sanitize(data) || "Anonymous"); },
+        },
+        {
+            data: "method_name",
+            render: function (data, type, row) { return data },
+        },
+        {
+            data: "metrics.0",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.1",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.2",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.3",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.4",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.5",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.6",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.7",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.8",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.9",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.10",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.11",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        }]
+}
+)
+table.column(2).order('desc').draw();
+}
+
+function formatTableLB2(result, table_id) {
+tableData = []
+result.entries.forEach((el) => { tableData.push(el) })
+let table = $(table_id).DataTable({
+    "aoColumnDefs": [
+        { "bSortable": false, "aTargets": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ] }
+    ],
+    data: tableData,
+    columns: [
+        {
+            data: "team_name",
+            render: function (data, type, row) { return (DOMPurify.sanitize(data) || "Anonymous"); },
+        },
+        {
+            data: "method_name",
+            render: function (data, type, row) { return data },
+        },
+        {
+            data: "metrics.0",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.1",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.2",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.3",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.4",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.5",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.6",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.7",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.8",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.9",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.10",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.11",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.12",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.13",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        },
+        {
+            data: "metrics.14",
+            render: function (data, type, row) { return checkValue(parseFloat(DOMPurify.sanitize(data))).toFixed(2); },
+        }]
+}
+)
+table.column(2).order('desc').draw();
+}
+
+function fill_table_lb2(table_id, URI) {
+
+    $.ajax({
+        url: URI,
+        type: "GET",
+        contentType: 'application/json',
+        headers: {
+            'Accept': '*/*',
+        },
+        success: function (result) {
+          formatTableLB2(result, table_id)
+        },
+        error: function (error) {
+            console.log(error)
+        }
+    });
+
+}
+
+function fill_table_lb1(table_id, URI) {
+
+    $.ajax({
+        url: URI,
+        type: "GET",
+        contentType: 'application/json',
+        headers: {
+            'Accept': '*/*',
+        },
+        success: function (result) {
+          formatTableLB1(result, table_id)
+        },
+        error: function (error) {
+            console.log(error)
+        }
+    });
+}
+
+
+$(document).ready(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+
+// Static snapshot of the final leaderboard results (the AWS/EvalAI endpoint is no longer available)
+fill_table_lb2("#sensors_leaderboard2", '/debug/lb2_sensors.json');
+fill_table_lb2("#map_leaderboard2", '/debug/lb2_map.json');
+fill_table_lb1("#sensors_09101", '/debug/lb1_sensors.json');
+fill_table_lb1("#map_09101", '/debug/lb1_map.json');
+
+// *************** Old live endpoint (dead: returns 400) *********************
+// fill_table_lb2("#sensors_leaderboard2", 'https://amyvnze7tj.execute-api.us-west-2.amazonaws.com/production/public_submissions/2/sensors');
+// fill_table_lb2("#map_leaderboard2", 'https://amyvnze7tj.execute-api.us-west-2.amazonaws.com/production/public_submissions/2/map');
+// fill_table_lb1("#sensors_09101", 'https://amyvnze7tj.execute-api.us-west-2.amazonaws.com/production/public_submissions/1/sensors');
+// fill_table_lb1("#map_09101", 'https://amyvnze7tj.execute-api.us-west-2.amazonaws.com/production/public_submissions/1/map');
+
+</script>
+
+
+  </div>
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons" style="align:center">
+    
+
+    <!-- logo and sponsors -->
+    <li class="horizontalgap" style="width:0%"></li>
+    <li><small>Social:</small></li>
+
+    
+      
+        
+          <li><a href="https://twitter.com/carlasimulator" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter-square" aria-hidden="true" style="width:50px;height:35px"></i> Twitter</a></li>
+        
+      
+        
+          <li><a href="https://www.linkedin.com/company/carla-simulator" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true" style="width:50px;height:35px"></i> LinkedIn</a></li>
+        
+      
+        
+          <li><a href="https://github.com/carla-simulator/carla" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true" style="width:50px;height:35px"></i> GitHub</a></li>
+        
+      
+    
+
+
+  </ul>
+  <ul class="social-icons">
+    
+
+    <!-- 
+      
+        
+          <li><a href="https://twitter.com/carlasimulator" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter-square" aria-hidden="true" style="width:50px;height:35px"></i> Twitter</a></li>
+        
+      
+        
+          <li><a href="https://www.linkedin.com/company/carla-simulator" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin" aria-hidden="true" style="width:50px;height:35px"></i> LinkedIn</a></li>
+        
+      
+        
+          <li><a href="https://github.com/carla-simulator/carla" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true" style="width:50px;height:35px"></i> GitHub</a></li>
+        
+      
+     -->
+
+    <!-- logo and sponsors -->
+    <li class="horizontalgap" style="width:0%"></li>
+    <li><small>Sponsors:</small></li>
+
+    
+      <li>
+
+      <a target="_blank" href="https://www.synkrotron.ai/" style="width:150px;height:60px;vertical-align:middle;display:inline-block;overflow:hidden;">
+          <img style="width:4em" src="/assets/images/sponsors/synkrotron.jpg"/>
+      </a>
+      </li>
+    
+
+    
+      <li>
+
+      <a target="_blank" href="https://www.mathworks.com/" style="width:180px;height:60px;vertical-align:middle;display:inline-block;overflow:hidden;">
+          <img style="width:6em" src="/assets/images/sponsors/mathworks_logo.png"/>
+      </a>
+      </li>
+    
+  </ul>
+
+<div class="page__footer-copyright">&copy; 2026 CARLA Autonomous Driving Leaderboard.</div>
+
+      </footer>
+    </div>
+
+    
+
+
+
+
+
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-VS72TKL88S"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-VS72TKL88S', { 'anonymize_ip': false});
+</script>
+
+
+
+
+
+
+
+
+  </body>
+</html>
