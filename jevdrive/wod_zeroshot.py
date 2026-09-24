@@ -205,14 +205,19 @@ def fetch_records(want: dict, route: str = "proxy", proxy: str = "http://127.0.0
         todo = {o: n for o, n in ords.items() if not (out / f"{n}.pb").exists()}
         if not todo:
             return 0, 0
-        off, k, nb, top = 0, 0, 0, max(todo)
-        locs = {}
-        while k <= top:
+        # record framing walked so far, cached per shard: [(payload offset, length)] by ordinal
+        wf = root("walk") / f"{shard}.json"
+        walked = json.loads(wf.read_text()) if wf.exists() else []
+        nb, top = 0, max(todo)
+        off = walked[-1][0] + walked[-1][1] + 4 if walked else 0
+        while len(walked) <= top:
             head = get(shard, off, off + 11)
             (n,) = struct.unpack("<Q", head[:8])
-            if k in todo:
-                locs[k] = (off + 12, n)
-            off, k = off + 12 + n + 4, k + 1
+            walked.append((off + 12, n))
+            off += 12 + n + 4
+            if len(walked) % 100 == 0 or len(walked) > top:
+                wf.write_text(json.dumps(walked))
+        locs = {k: walked[k] for k in todo}
         for o, (a, n) in locs.items():
             rec = get(shard, a, a + n - 1)
             nb += len(rec)
