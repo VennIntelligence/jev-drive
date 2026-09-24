@@ -117,19 +117,30 @@ OP_FOCAL = {"road": 2648.0, "wide": 567.0}
 # road frames show none), and anywhere below ~1.4 m the camera is behind CARLA's tinted windshield glass, which
 # darkens the whole image.
 OP_MOUNT_RIG = (1.779, 0.0, 1.433)
-OP_CAMERA_TICK = 0.2                # 5 Hz, the model's context rate (frames t-0.2 s and t)
+OP_CAMERA_TICK = 0.2                # pre-registered smoke: 5 Hz, the model's context rate (frames t-0.2 s and t)
 
 
-def openpilot_sensor_specs():
+def openpilot_sensor_specs(tick=OP_CAMERA_TICK):
+    """tick 0.05 renders every simulator step: road and wide then always come from the same frame and a 5 Hz
+    context step is exactly 4 frames. At 0.2 s CARLA's sensor_tick fires one frame early or late on 5-25% of the
+    frames and road / wide often differ by one frame (smoke run, 2026-09-24)."""
     x, y, z = OP_MOUNT_RIG
     w, h = OP_CAMERA_WH
     return [{"type": "sensor.camera.rgb", "id": "OP_" + name.upper(), "x": x + REAR_AXLE_X, "y": -y, "z": z,
              "roll": 0.0, "pitch": 0.0, "yaw": 0.0, "width": w, "height": h,
-             "fov": math.degrees(2 * math.atan(w / 2 / f)), "sensor_tick": OP_CAMERA_TICK}
+             "fov": math.degrees(2 * math.atan(w / 2 / f)), "sensor_tick": tick}
             for name, f in OP_FOCAL.items()]
 
 
-def openpilot_plan_to_rig(plan_pos):
-    """openpilot plan positions (calib frame at the camera: x forward, y right, z down) -> rig xy."""
+def openpilot_plan_to_rig(plan_pos, plan_yaw=None):
+    """openpilot plan (calib frame at the camera: x forward, y right, z down; yaw right-positive) -> rig xy of the
+    REAR AXLE: rear(t) = d + p(t) - R(psi_t) d, d the camera's rig (x, y). Without plan_yaw the camera track is
+    only shifted by d, which puts the t = 0 point d = 1.78 m ahead of the axle (the pre-registered smoke's bug)."""
     p = np.asarray(plan_pos, float)
-    return np.stack([p[:, 0] + OP_MOUNT_RIG[0], OP_MOUNT_RIG[1] - p[:, 1]], -1)
+    d = np.asarray(OP_MOUNT_RIG[:2], float)
+    q = np.stack([p[:, 0], -p[:, 1]], -1)
+    if plan_yaw is None:
+        return q + d
+    psi = -np.asarray(plan_yaw, float)
+    Rd = np.stack([np.cos(psi) * d[0] - np.sin(psi) * d[1], np.sin(psi) * d[0] + np.cos(psi) * d[1]], -1)
+    return d + q - Rd

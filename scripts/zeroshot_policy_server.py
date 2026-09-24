@@ -125,7 +125,11 @@ class OpenpilotModel:
         from jevdrive.openpilot import frames as opf
         from jevdrive.openpilot.model import OPModel, T_IDXS, decode
         self.opf, self.decode, self.t_idxs = opf, decode, T_IDXS.astype(np.float32)
-        self.model = OPModel(a.model, a.backend, context_rate=True)
+        # Lebowski keeps its queues on the host: one step per 5 Hz context step, exact at that phase. small / Cinque
+        # keep them inside the ONNX on the GPU and must step at 20 Hz; their GPU state is not swapped per
+        # connection, so they serve one CARLA worker per server.
+        self.context_rate = a.model == "lebowski"
+        self.model = OPModel(a.model, a.backend, context_rate=self.context_rate)
         w, h = rigs.OP_CAMERA_WH
         self.idx = {}
         for name, f in rigs.OP_FOCAL.items():
@@ -136,7 +140,7 @@ class OpenpilotModel:
             r, c = np.divmod(uv, w // 2)
             quad = np.stack([(2 * r + i) * w + 2 * c + j for i in (0, 1) for j in (0, 1)])   # 2x2 block per chroma
             self.idx[name] = (y, quad)
-        self.meta = {"model": a.model, "backend": a.backend, "context_rate_hz": 1 / rigs.OP_CAMERA_TICK}
+        self.meta = {"model": a.model, "backend": a.backend, "step_hz": 5 if self.context_rate else 20}
         st = self.new_state()
         img = {"OP_ROAD": np.zeros((h, w, 4), np.uint8), "OP_WIDE": np.zeros((h, w, 4), np.uint8)}
         for _ in range(3):
@@ -187,7 +191,7 @@ class OpenpilotModel:
         info = {"prep_ms": prep["prep_ms"], "infer_ms": 1e3 * (time.perf_counter() - t1),
                 "curvature": d["curvature"], "accel": d["accel"], "engaged": d["engaged"]}
         return info, {"pos": d["plan_pos"].astype(np.float32), "vel": d["plan_vel"][:, 0].astype(np.float32),
-                      "t": self.t_idxs}
+                      "yaw": d["plan_yaw"].astype(np.float32), "t": self.t_idxs}
 
     def finish(self, meta, prep, info, out):
         if meta.get("dump"):

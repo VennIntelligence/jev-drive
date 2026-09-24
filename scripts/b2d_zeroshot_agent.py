@@ -17,8 +17,19 @@ reached over a unix socket. Per tick (20 Hz):
 Route information reaches the model only as the model would get it in a car: Alpamayo gets a nav sentence
 ("Turn left in 30m") from the next junction command of the route, openpilot a turn/lane-change desire.
 
-Config JSON (--agent-config): {"model": "alpamayo"|"lebowski", "socket": path, "plan_every": 5|1,
-"controller_config": path, "controller_preset": "carla", "seed": 0, "dump_every": 0}.
+Config JSON (--agent-config): {"model": "alpamayo"|"lebowski"|"cinque"|"small", "socket": path, "plan_every": 5|1,
+"controller_config": path, "controller_preset": "carla", "seed": 0, "dump_every": 0}, plus the openpilot adapter
+switches added after the smoke (todos/2026-09-24-zeroshot-exam/openpilot-migration.md); their defaults reproduce
+the pre-registered smoke:
+  "op_camera_tick"  0.2 (smoke) | 0.05: render both cameras every step, road and wide from the same frame
+  "plan_origin"     "camera" (smoke: plan x + 1.78 m) | "rear": rear-axle track, rear = d + p - R(psi) d
+  "warmup_s"        0 | 5.0: feed the model this long from the first camera set with the brake held before its
+                    plans reach the controller (openpilot is engaged only once modeld has been running)
+  "drive"           "model" | "oracle": shadow mode, the route-oracle adapter drives (b2d_controller_adapter.
+                    RouteAdapter, as b2d_agent --drive controller) and the model's plans are only logged
+  "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
+                    model's desired curvature through the bicycle model, longitudinal still from the plan
+Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
 """
 import json
 import math
@@ -38,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import zeroshot_rigs as rigs  # noqa: E402
 import zeroshot_wire as wire  # noqa: E402
 from b2d_controller import Controller  # noqa: E402
-from b2d_controller_adapter import FrameRouter, GPSProjector, PoseFilter, controller_speed  # noqa: E402
+from b2d_controller_adapter import FrameRouter, GPSProjector, PoseFilter, RouteAdapter, controller_speed  # noqa: E402
 
 DELTA = 0.05
 LEFT, RIGHT, STRAIGHT, LANEFOLLOW, CHANGE_LEFT, CHANGE_RIGHT = 1, 2, 3, 4, 5, 6
@@ -100,10 +111,18 @@ class ZeroShotAgent(AutonomousAgent):
         self.model = self.cfg["model"]
         self.alpamayo = self.model == "alpamayo"
         self.plan_every = int(self.cfg.get("plan_every", 5 if self.alpamayo else 1))
-        self.cam_specs = rigs.alpamayo_sensor_specs() if self.alpamayo else rigs.openpilot_sensor_specs()
+        self.op_tick = float(self.cfg.get("op_camera_tick", rigs.OP_CAMERA_TICK))
+        self.plan_origin = self.cfg.get("plan_origin", "camera")
+        self.warmup_s = float(self.cfg.get("warmup_s", 0.0))
+        self.drive = self.cfg.get("drive", "model")
+        self.lateral = self.cfg.get("lateral", "plan")
+        assert self.plan_origin in ("camera", "rear") and self.drive in ("model", "oracle") \
+            and self.lateral in ("plan", "curvature"), self.cfg
+        self.cam_specs = rigs.alpamayo_sensor_specs() if self.alpamayo else rigs.openpilot_sensor_specs(self.op_tick)
         self.cam_tags = [s["id"] for s in self.cam_specs]
         with open(self.cfg["controller_config"]) as fh:
             params = json.load(fh)
+        self.vehicle = dict(params)
         self.rear_offset = float(params.pop("rear_axle_offset_m"))
         for key in ("adapter", "metadata", "preset"):
             params.pop(key, None)
@@ -120,6 +139,9 @@ class ZeroShotAgent(AutonomousAgent):
         self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA}, {tag: frame})
         self.latest = {t: (-1, None) for t in self.cam_tags}
         self.first_frame = None
+        self.first_set_t = None
+        self.curvature = None                    # latest desired curvature (1/m, right-positive), lateral=curvature
+        self.last_steer = 0.0
         self.poses = deque(maxlen=64)            # (sim time, xy, yaw) rear axle, world
         self.frame_time = {}
         self.pose_filter = self.route = None
@@ -151,6 +173,7 @@ class ZeroShotAgent(AutonomousAgent):
         gps = np.array([[p["lat"], p["lon"]] for p, _ in self._dense_gps])
         self.pose_filter = PoseFilter(GPSProjector(gps, world), self.rear_offset, -1.4, .05, .1)
         self.route = Route(self._dense_plan)
+        self.oracle = RouteAdapter(world, float(self.cfg.get("cruise_mps", 8.0))) if self.drive == "oracle" else None
 
     # ---- per tick -------------------------------------------------------------------------------------------
     def __call__(self):
@@ -168,6 +191,8 @@ class ZeroShotAgent(AutonomousAgent):
             xy, yaw = self.pose_filter.update(data["GPS"][1], float(imu[6]), speed, world_gyro, now)
             self.poses.append((now, xy, yaw))
             self.route.progress(xy)
+            if self.oracle is not None:
+                self.oracle.project(xy, yaw, speed, now)
         except ValueError:
             self.pose_filter.reset()
         plan_ms = 0.0
@@ -181,7 +206,8 @@ class ZeroShotAgent(AutonomousAgent):
         # at a sensor_tick above 0.05 s occasionally fire one tick late (UE tick-interval carry-over), so a set
         # can span two adjacent frames; its frame is the newest, and the per-camera frames are logged.
         last = self.cam_sets[-1][3] if self.cam_sets else {t: -1 for t in self.cam_tags}
-        if all(self.latest[t][0] > last[t] for t in self.cam_tags):
+        synced = self.alpamayo or self.op_tick > DELTA or len({self.latest[t][0] for t in self.cam_tags}) == 1
+        if synced and all(self.latest[t][0] > last[t] for t in self.cam_tags):
             f = max(self.latest[t][0] for t in self.cam_tags)
             self.cam_sets.append((f, self.frame_time.get(f, now), {t: self.latest[t][1] for t in self.cam_tags},
                                   {t: self.latest[t][0] for t in self.cam_tags}))
@@ -189,14 +215,42 @@ class ZeroShotAgent(AutonomousAgent):
             if (self.n_sets - 1) % self.plan_every == 0 and self.poses:
                 plan_ms += self._plan(speed)
         throttle, steer, brake = self.controller.step(now, speed, -world_gyro)
+        if self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
+            steer = self._curvature_steer(speed)
+        self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
         tick_ms = 1e3 * (time.perf_counter() - t_start)
         self.timings["tick_ms"].append(tick_ms)
         diag = self.controller.diagnostics
-        self.tick_log.write(json.dumps({"frame": frame, "t": now, "v": speed, "throttle": float(throttle),
-                                        "steer": float(steer), "brake": float(brake), "reason": diag["reason"],
-                                        "agent_ms": round(tick_ms, 2), "plan_ms": round(plan_ms, 1)}) + "\n")
+        rec = {"frame": frame, "t": now, "v": speed, "throttle": float(throttle), "steer": float(steer),
+               "brake": float(brake), "reason": diag["reason"], "agent_ms": round(tick_ms, 2),
+               "plan_ms": round(plan_ms, 1)}
+        rec.update(self._truth())
+        self.tick_log.write(json.dumps(rec) + "\n")
         return self.control
+
+    def _truth(self):
+        """Rear-axle pose of the hero from the simulator, for evaluation logs only."""
+        try:
+            from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+            tf = CarlaDataProvider.get_hero_actor().get_transform()
+            yaw = math.radians(tf.rotation.yaw)
+            x = tf.location.x + self.rear_offset * math.cos(yaw)
+            y = tf.location.y + self.rear_offset * math.sin(yaw)
+            return {"truth": [round(x, 4), round(y, 4), round(yaw, 6)]}
+        except Exception as exc:  # noqa: BLE001 - evaluation only, never fatal
+            return {"truth_error": str(exc)[:80]}
+
+    def _curvature_steer(self, speed):
+        """Exploratory lateral: CARLA steer from the model's desired curvature (right-positive) through the
+        kinematic bicycle model and CARLA's speed-dependent steering curve, at the fixed controller's rate limit."""
+        curve = np.asarray(self.vehicle["steering_curve"], float)
+        scale = float(np.interp(speed * 3.6, curve[:, 0], curve[:, 1]))
+        angle = math.atan(float(self.vehicle["wheelbase"]) * self.curvature)
+        raw = angle / (math.radians(float(self.vehicle["max_steer_deg"])) * scale)
+        step = self.controller.steer_rate * DELTA
+        return float(np.clip(np.clip(raw, self.last_steer - step, self.last_steer + step),
+                             -self.controller.max_steer, self.controller.max_steer))
 
     def _history(self, t0):
         """16 rear-axle poses at t0 - 1.5 s ... t0 (10 Hz) in the t0 rig frame (x forward, y left, yaw CCW);
@@ -230,11 +284,21 @@ class ZeroShotAgent(AutonomousAgent):
             meta["desire"] = self.route.desire()
         wire.send(self.sock, meta, arrays)
         info, out = wire.recv(self.sock)
+        times = np.arange(1, 21) * 0.25
         if self.alpamayo:
-            path = resample(out["t"], out["xy"], np.arange(1, 21) * 0.25)
+            path = resample(out["t"], out["xy"], times)
         else:
-            path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"]), np.arange(1, 21) * 0.25)
-        accepted = self.controller.update(path.astype(float), t_frame)
+            yaw = out["yaw"] if self.plan_origin == "rear" else None
+            path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], yaw), times)
+        if self.first_set_t is None:
+            self.first_set_t = t_frame
+        warm = t_frame - self.first_set_t < self.warmup_s - 1e-6
+        if self.drive == "oracle":
+            drive_path = self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2])
+        else:
+            drive_path = path
+            self.curvature = float(info["curvature"]) if "curvature" in info else None
+        accepted = False if warm else self.controller.update(np.asarray(drive_path, float), t_frame)
         self.n_plans += 1
         ms = 1e3 * (time.perf_counter() - t_start)
         self.timings["plan_ms"].append(ms)
@@ -242,7 +306,11 @@ class ZeroShotAgent(AutonomousAgent):
                "speed": speed,
                "accepted": accepted, "path": np.round(path, 3).tolist(), "round_trip_ms": round(ms, 1),
                "pose": [float(v) for v in self.poses[-1][1]] + [float(self.poses[-1][2])],
-               "route_index": self.route.i}
+               "route_index": self.route.i, "warmup": bool(warm)}
+        if not self.alpamayo:
+            rec["plan_pos"] = np.round(out["pos"], 3).tolist()
+            rec["plan_yaw"] = np.round(out["yaw"], 5).tolist() if "yaw" in out else None
+        rec.update(self._truth())
         rec.update({k: v for k, v in meta.items() if k in ("nav_text", "desire", "seed", "dump")})
         rec.update(info)
         self.plan_log.write(json.dumps(rec) + "\n")
