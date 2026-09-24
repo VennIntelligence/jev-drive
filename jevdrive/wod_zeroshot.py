@@ -97,6 +97,38 @@ def build_sets(seed: int = 0) -> dict:
     return {k: len(v["name"]) for k, v in out.items()}
 
 
+def build_test_sets() -> dict:
+    """Add the "test" set to sets.npz/sets.json: the official submission frames (W.submission_frames(), one
+    per test clip, no future/rater -- both hidden on test) plus the slim-shard JPEG spans of their openpilot
+    history (max(f-100, seq start)..f), merged into the existing rater/extra/check sets without touching them.
+    Requires the test split's shards to be indexed first (`scripts/waymo_prepare.sh index`)."""
+    from . import waymo as W
+    df = W.load_index()
+    names_all = W.frame_names(df)
+    test = df.split.astype(str).to_numpy() == "test"
+    key = dict(zip(names_all[test], np.flatnonzero(test)))
+    want = W.submission_frames()
+    missing = [n for n in want if n not in key]
+    if missing:
+        raise RuntimeError(f"{len(missing)} of {len(want)} submission frames not indexed "
+                            f"(test split incomplete): e.g. {missing[:5]}")
+    rows = np.array([key[n] for n in want])
+    seq, frame = df.sequence.astype(str).to_numpy()[rows], df.frame.to_numpy()[rows]
+    pack = dict(name=np.asarray(want, dtype=str), sequence=np.asarray(seq, dtype=str), frame=frame)
+    need = set(seq)
+    m = test & np.isin(df.sequence.astype(str).to_numpy(), list(need))
+    spans = {n: [str(df.shard.iloc[i])] + [int(df[f"{c}_{s}"].iloc[i]) for c in W.CAMS for s in ("off", "len")]
+             for n, i in zip(names_all[m], np.flatnonzero(m))}
+    existing_npz = dict(np.load(root() / "sets.npz", allow_pickle=False)) if (root() / "sets.npz").exists() else {}
+    existing_npz.update({f"test/{f}": v for f, v in pack.items()})
+    np.savez(root() / "sets.npz", **existing_npz)
+    js = json.loads((root() / "sets.json").read_text()) if (root() / "sets.json").exists() else {"seed": 0, "spans": {}, "ordinal": {}}
+    js["spans"].update(spans)
+    (root() / "sets.json").write_text(json.dumps(js))
+    W.write_op_calib(want)
+    return {"test": len(want), "test_history_frames": len(spans)}
+
+
 def load_sets() -> dict:
     z = np.load(root() / "sets.npz", allow_pickle=False)
     out = {}

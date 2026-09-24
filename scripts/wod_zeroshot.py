@@ -1,6 +1,7 @@
 """WOD-E2E zero-shot exam, project-venv side (todos/2026-09-24-zeroshot-exam/wod-e2e.md).
 
   sets                   freeze the pre-registered frame sets -> $DATA_DIR/processed/wod_zeroshot/sets.{npz,json}
+  test_sets              add the official test-split submission frames (+ openpilot history spans) to sets.{npz,json}
   fetch                  8-camera records of frames f-3..f from the raw GCS val shards (needs gcloud + Clash)
   packages               Alpamayo input packages (JPEGs + calibration, no protobuf needed to read) + op_calib.json
   views --set check      render the adapter views (Alpamayo's four cameras, openpilot's two model frames) as PNGs
@@ -27,6 +28,11 @@ def targets(sets, which):
 
 def cmd_sets(a, log):
     log.info(f"sets: {Z.build_sets(a.seed)}")
+
+
+def cmd_test_sets(a, log):
+    """Add the official test-split submission frames (+ openpilot history spans) to sets.{npz,json}."""
+    log.info(f"test-sets: {Z.build_test_sets()}")
 
 
 def cmd_fetch(a, log):
@@ -295,6 +301,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("sets")
     s.add_argument("--seed", type=int, default=0)
+    sub.add_parser("test_sets")
     sc = sub.add_parser("score")
     sc.add_argument("--boot", type=int, default=10000)
     for name in ("fetch", "packages", "views"):
