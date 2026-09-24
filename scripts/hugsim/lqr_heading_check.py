@@ -97,17 +97,16 @@ def plot(df, route_xz, out):
     fig, axes = plt.subplots(1, 2, figsize=(PAGE, 2.3))
     for ax, dr in zip(axes, ('straight', 'route')):
         if dr == 'route':
-            ax.plot(route_xz[:, 0], route_xz[:, 1], color=COLOR['baseline'], lw=3, alpha=0.4, label='recorded route')
+            ax.plot(route_xz[:, 0], route_xz[:, 1], color=COLOR['baseline'], lw=3, alpha=0.4, label='reference (plan / recorded route)')
         else:
-            ax.plot([0, 0], [0, 50], color=COLOR['baseline'], lw=3, alpha=0.4, label='planned path')
+            ax.plot([0, 0], [0, 50], color=COLOR['baseline'], lw=3, alpha=0.4, label='reference (plan / recorded route)')
         for c, g in df[df.drive == dr].groupby('controller', sort=False):
             ax.plot(g.x, g.z, color=col[c], label=f"executed, {c} controller")
         ax.set_aspect('equal', adjustable='datalim')
         ax.set_xlabel('x (right) [m]')
         ax.set_ylabel('z (forward) [m]')
     h, l = axes[1].get_legend_handles_labels()
-    h0, l0 = axes[0].get_legend_handles_labels()
-    fig.legend(h0[:1] + h, l0[:1] + l, loc='upper center', bbox_to_anchor=(0.5, 0.0), ncol=4)
+    fig.legend(h, l, loc='upper center', bbox_to_anchor=(0.5, -0.06), ncol=3)
     save(fig, out, 'hugsim-lqr-heading')
 
 
