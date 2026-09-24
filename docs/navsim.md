@@ -31,6 +31,21 @@ export NAVSIM_EXP_ROOT=$DATA_DIR/runs/navsim   # metric caches and eval outputs
 `navhard_two_stage` uses `data_split: test`, so it reads `navsim_logs/test` and `sensor_blobs/test` plus
 `navhard_two_stage/`. Metric caches are built locally from logs + maps; nothing else is downloaded for them.
 
+## Devkit and scoring
+
+The official devkits live in `$DATA_DIR/third_party/navsim` (main @ `0a380a9`, v2.2 + fixes, EPDMS) and
+`$DATA_DIR/third_party/navsim-v1.1` (PDMS), with venvs `envs/navsim2` / `envs/navsim1` (Python 3.10, CPU torch,
+shared nuplan-devkit v1.2). Install: `scripts/setup_navsim_devkit.sh`. Metric caching and scoring:
+`scripts/navsim_zs_score.sh` (caches in `$DATA_DIR/runs/navsim/metric_cache/<v1|v2>_<split>`).
+
+**Broken BLAS on this CPU.** navsim pins numpy 1.23.4, whose bundled OpenBLAS picks a wrong kernel on the box's
+Xeon 8470Q (Sapphire Rapids): `np.linalg.inv` / `pinv` return garbage (max error ~1e3) without any warning. The
+PDM LQR simulator then blows up (speeds of 10^4 m/s), the PDM-Closed reference in the metric cache is wrong, and
+every score comes out plausible-looking but meaningless (constant velocity got EPDMS 64 with DAC 1.00). Always
+run the devkit with `OPENBLAS_CORETYPE=Haswell` (and `OPENBLAS_NUM_THREADS=1` inside ray workers);
+`scripts/navsim_zs_score.sh` sets both and refuses to run if a 40x40 inverse is off by more than 1e-8.
+Newer numpy (1.24+, e.g. `envs/jevdrive`, `envs/carla`, the model venvs) is not affected.
+
 ## How to (re)download
 
 `scripts/tmux_run.sh navsim scripts/download_navsim.sh [maps logs navhard navtest navtrain]`
@@ -60,4 +75,4 @@ Motional S3 (maps) is unreachable direct; the script fetches that one file throu
 
 TBD
 
-Last verified: 2026-09-20
+Last verified: 2026-09-24
