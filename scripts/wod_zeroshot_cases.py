@@ -34,11 +34,33 @@ def front_image(name):
         return np.asarray(Image.open(io.BytesIO(f.read(sp[2]))).convert("RGB"))
 
 
+def adapter_fig(name, out):
+    """What each model is shown: Alpamayo's four re-projected f-theta views and openpilot's two model frames."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import wod_zeroshot as W
+    spans, _ = Z.load_spans()
+    views, cover = W.alp_views(Z.root("packages") / f"{name}.npz", scale=0.25)
+    road, wide = W.op_views(name, spans, json.loads((Z.root() / "op_calib.json").read_text()))
+    S.apply()
+    fig, ax = plt.subplots(2, 3, figsize=(S.DOUBLE_COLUMN_IN, 2.55))
+    titles = [f"Alpamayo {v.replace('_', '-')} (covered {c:.0%})" for v, c in zip(("cross_left", "front_wide",
+              "cross_right", "front_tele"), cover)] + ["openpilot road frame", "openpilot wide frame"]
+    for a, img, t in zip(ax.flat, views + [road[::2, ::2], wide[::2, ::2]], titles):
+        a.imshow(img)
+        a.set_title(t, fontsize=7)
+        a.axis("off")
+    fig.subplots_adjust(left=.01, right=.99, top=.93, bottom=.01, hspace=.18, wspace=.04)
+    print(S.save(fig, out))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--frames", nargs="*")
     ap.add_argument("--run", default=None)
+    ap.add_argument("--adapter", help="frame name: draw the adapter figure for it instead")
     a = ap.parse_args()
+    if a.adapter:
+        return adapter_fig(a.adapter, data_dir() / "runs/wod_zeroshot/wod-zeroshot-adapter")
     run = Path(a.run) if a.run else sorted((data_dir() / "runs/wod_zeroshot/score").iterdir())[-1]
     z = np.load(run / "per_frame.npz", allow_pickle=False)
     names = [str(n) for n in z["names"]]
@@ -63,7 +85,7 @@ def main():
     info = []
     for j, (i, m) in enumerate(picks):
         img = front_image(names[i])
-        ax[0, j].imshow(img[200:900])
+        ax[0, j].imshow(img[200:900:3, ::3])  # downsampled: keeps the PNG under 500 KB
         ax[0, j].axis("off")
         S.panel(ax[0, j], f"({'abcdef'[j]})")
         b = ax[1, j]
