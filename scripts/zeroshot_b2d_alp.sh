@@ -40,7 +40,7 @@ done
 echo "$(date +%T) policy server ready (pid $server) on GPU $gpu"
 
 "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py "${routes[@]}" --workers $workers --server-index $sidx \
-    --gpu-rank "$gpu" --python "$DATA_DIR/envs/b2d-tcp/bin/python" --agent scripts/b2d_zeroshot_agent.py \
+    --gpu-rank "$gpu" --agent scripts/b2d_zeroshot_agent.py \
     --agent-config "$cfg" --decimate 2 --no-spectator --max-attempts 2 --out "$out"
 rc=$?
 kill -0 $server 2>/dev/null || { echo "policy server died during the run"; exit 3; }
