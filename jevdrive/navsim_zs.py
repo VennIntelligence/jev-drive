@@ -235,7 +235,7 @@ def collect_alpamayo(split: str, variant: str, frames: str, tag: str = "main") -
     the split's index must be present exactly once (a missing token would silently drop out of the devkit's mean)."""
     import json
     rows = {}
-    for f in sorted(root("alpamayo", split).glob(f"{frames}_{tag}_shard*.jsonl")):
+    for f in sorted(root("alpamayo", split).glob(f"{frames}_{tag}_*.jsonl")):
         for line in f.read_text().splitlines():
             r = json.loads(line)
             if r["variant"] == variant:

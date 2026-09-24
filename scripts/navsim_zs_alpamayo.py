@@ -179,36 +179,60 @@ def prepared(model, inputs, entries, variants, workers, ahead=32):
 
 # ---------------------------------------------------------------- commands
 
+def _read_lines(path: Path, log) -> list:
+    """Rows of one output file; a line cut by a kill is dropped and the file rewritten without it."""
+    good, bad = [], 0
+    for line in path.read_text().splitlines():
+        try:
+            good.append(json.loads(line))
+        except json.JSONDecodeError:
+            bad += 1
+    if bad:
+        log.info(f"dropping {bad} truncated line(s) in {path.name}")
+        path.write_text("".join(json.dumps(r) + "\n" for r in good))
+    return good
+
+
+def claimed(entries, claim_dir: Path, chunk: int):
+    """Dynamic work split between any number of processes (on any GPU): a process takes a chunk of `chunk`
+    entries by creating its claim directory (atomic mkdir); chunks another process holds are skipped."""
+    claim_dir.mkdir(parents=True, exist_ok=True)
+    for c in range(0, len(entries), chunk):
+        try:
+            (claim_dir / f"{c:06d}").mkdir()
+        except FileExistsError:
+            continue
+        yield from entries[c:c + chunk]
+
+
 def cmd_run(a, log):
     idx = Z.load_index(a.split)
-    i, n = map(int, a.shard.split("/"))
     if a.subset == "nonav3k":
         keep = Z.nonav_subset(idx)
         idx = [e for e in idx if e["token"] in keep]
-    entries = [e for k, e in enumerate(idx) if k % n == i]
-    out = Z.root("alpamayo", a.split) / f"{a.frames}_{a.tag}_shard{i}of{n}.jsonl"
-    done = set()
-    if out.exists():   # resume; a line cut by a kill is dropped (and the file rewritten without it)
-        good = []
-        for line in out.read_text().splitlines():
-            try:
-                good.append(json.loads(line))
-            except json.JSONDecodeError:
-                log.info(f"dropping a truncated line in {out.name}")
-        out.write_text("".join(json.dumps(r) + "\n" for r in good))
-        done = {(r["token"], r["variant"]) for r in good}
+    odir = Z.root("alpamayo", a.split)
     variants = a.variants.split(",")
-    todo = [e for e in entries if any((e["token"], v) not in done for v in variants)]
+    # done anywhere (every earlier shard or process file), so re-sharded or claimed runs never redo a sample
+    done = {(r["token"], r["variant"]) for f in sorted(odir.glob(f"{a.frames}_{a.tag}_*.jsonl")) for r in _read_lines(f, log)}
+    todo = [e for e in idx if any((e["token"], v) not in done for v in variants)]
+    if a.claim:
+        name = f"{a.claim}_{a.split}_{'-'.join(variants)}{'_' + a.subset if a.subset else ''}"
+        out = odir / f"{a.frames}_{a.tag}_{a.claim}_{'-'.join(variants)}{'_' + a.subset if a.subset else ''}.jsonl"
+        source = claimed(todo, Z.root("claims", f"{a.frames}_{a.tag}_{a.split}_{'-'.join(variants)}_{a.subset or 'all'}"), 32)
+    else:
+        i, n = map(int, a.shard.split("/"))
+        todo = [e for k, e in enumerate(todo) if k % n == i]
+        name, out, source = f"{a.split} {i}/{n}", odir / f"{a.frames}_{a.tag}_shard{i}of{n}.jsonl", todo
     if a.limit:
         todo = todo[:a.limit]
-    log.info(f"{a.split} shard {i}/{n}: {len(entries)} tokens, {len(todo)} to do, variants {variants}, B {a.batch} -> {out}")
+    log.info(f"{name}: {len(todo)} tokens not done yet, variants {variants}, B {a.batch} -> {out}")
     model = Model(a.attn, a.compile.split(",") if a.compile else (), a.flow_steps)
     log.event("start", n=len(todo), out=str(out), cfg=vars(model.cfg), versions=model.I.versions())
     inputs = Inputs(a.frames)
     f = open(out, "a", buffering=1)
     t0, cnt = time.time(), [0]
     from tqdm import tqdm
-    bar = tqdm(total=len(todo) * len(variants), desc=f"alp {a.split} {i}/{n}", smoothing=0.05)
+    bar = tqdm(total=len(todo) * len(variants), desc=f"alp {name}", smoothing=0.05)
 
     def emit(r):
         if (r["token"], r["variant"]) in done:
@@ -221,7 +245,7 @@ def cmd_run(a, log):
             log.info(f"{cnt[0]} calls, {rate:.2f}/s")
             log.scalar("throughput/calls_per_s", rate, cnt[0])
 
-    run_stream(model, prepared(model, inputs, todo, variants, a.workers), variants, a.batch, emit, log)
+    run_stream(model, prepared(model, inputs, source, variants, a.workers), variants, a.batch, emit, log)
     bar.close()
     log.event("end_run", n=cnt[0], seconds=time.time() - t0)
     log.info(f"done {cnt[0]} calls in {time.time() - t0:.0f} s")
@@ -399,6 +423,7 @@ if __name__ == "__main__":
     r.add_argument("--tag", default="main")
     r.add_argument("--limit", type=int, default=0)
     r.add_argument("--subset", default="", choices=("", "nonav3k"))
+    r.add_argument("--claim", default="", help="process name: take work in claimed chunks instead of a fixed shard")
     b = sub.add_parser("bench", parents=[common])
     b.add_argument("--split", default="navtest")
     b.add_argument("--n", type=int, default=64)
