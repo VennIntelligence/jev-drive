@@ -5,12 +5,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 PY=/data/envs/tfv6/bin/python
 V2=/data/runs/b2d/controller-eval/v2
+WORKERS=${WORKERS:-3}
 IN=todos/2026-09-23-tfv6-controller/controller-eval
 
 $PY scripts/b2d_controller_eval_refs.py --probes $V2/probe --cruises $IN/l1-cruises.json --out $V2/refs
 test "$($PY -c "import json;print(len(json.load(open('$V2/refs/profile-traces.json'))))")" = 40
 for kind in ramp profile; do
-  $PY scripts/b2d_controller_eval_l1_v2.py --kind $kind --refs $V2/refs --out $V2/l1-$kind
+  $PY scripts/b2d_controller_eval_l1_v2.py --kind $kind --refs $V2/refs --workers $WORKERS --out $V2/l1-$kind
 done
 # Interface subset: every third route of the v2 held-out list, p01 only.
 $PY - <<EOF
@@ -24,6 +25,6 @@ print(len(keep), 'interface routes')
 EOF
 for mode in short_2s sparse_5s stop_jitter stale_5hz pose_plan; do
   $PY scripts/b2d_controller_eval_l1_v2.py --kind profile --refs $V2/refs --interface $mode \
-    --routes $V2/l1-interface-routes.xml --seeds p01 --out $V2/l1-interface-$mode
+    --routes $V2/l1-interface-routes.xml --seeds p01 --workers $WORKERS --out $V2/l1-interface-$mode
 done
 echo "L1 v2 chain complete"

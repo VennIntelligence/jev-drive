@@ -17,6 +17,12 @@ done_() { touch $V2/stage-$STAGE.done; }
 
 STAGE=wait-dev-refs
 until [ -f $V2/dev/refs/profile-traces.json ]; do sleep 60; done
+# Held-out L1 for A/B/C/D runs in the background (2 servers) while dev tuning uses a third.
+chain=
+if [ ! -f $V2/stage-l1-abcd.done ]; then
+  WORKERS=2 scripts/b2d_controller_eval_v2_l1_chain.sh >> $V2/l1-chain.log 2>&1 &
+  chain=$!
+fi
 
 if stage tune-round1; then
   scripts/b2d_controller_eval_tune_round.sh round1 E1,E2,E3,E4,E5,E6,B,C,D
@@ -31,8 +37,8 @@ if stage freeze-p; then
 P_CONFIG=$(realpath $IN/P-final.json)
 printf '{"P": {"controller_config": "%s", "presets": ["pursuit"]}}\n' "$P_CONFIG" > $V2/p-variants.json
 
-STAGE=wait-l1-chain
-until grep -q "L1 v2 chain complete" $V2/l1-chain.log; do sleep 120; done
+STAGE=l1-abcd
+if [ -n "$chain" ]; then wait $chain; touch $V2/stage-l1-abcd.done; fi
 
 if stage l1-p; then
   for kind in ramp profile; do

@@ -214,9 +214,9 @@ class StubAgent(AutonomousAgent):
             self._fixed_trace = (times, xy)
             # Spatial path of the trace for route-input controllers (author route PID):
             # their native route comes from navigation, independent of speed.
-            keep = np.r_[True, np.linalg.norm(np.diff(xy, axis=0), axis=1) > 1e-4]
-            path = xy[keep]
-            self._trace_path = (path, np.r_[0., np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))])
+            time_arc = np.r_[0., np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
+            keep = np.r_[True, np.diff(time_arc) > 1e-4]
+            self._trace_path = (xy[keep], time_arc[keep], time_arc)
         self._frame_router = FrameRouter([camera[0] for camera in CAMERAS[:self.n_cam]])
         self._pose_filter = self._route_adapter = self._truth_logger = None
         self._trajectory_frame = None
@@ -351,17 +351,21 @@ class StubAgent(AutonomousAgent):
                 from b2d_controller_adapter import world_to_local
                 if self._fixed_trace_start is None:
                     self._fixed_trace_start = timestamp
-                times, world_xy = self._fixed_trace
-                future = timestamp - self._fixed_trace_start + np.arange(1, 21) * .25
-                desired = np.column_stack((np.interp(future, times, world_xy[:, 0]),
-                                           np.interp(future, times, world_xy[:, 1])))
+                times, _ = self._fixed_trace
+                path, arc, time_arc = self._trace_path
                 # L1 ideal planner: express the plan in the true ego frame, as a perception
                 # model does; the controller's own sensor inputs stay estimated and noisy.
                 plan_xy, plan_yaw = (self._truth_rear_pose(frame) if self.cfg.get('plan_from_truth')
                                      else (xy, yaw))
+                # A planner never asks to reverse: a car that overran the schedule (e.g. past a
+                # stop point) is told to hold where it is until the reference comes past it.
+                station = self._trace_station(plan_xy)
+                future = timestamp - self._fixed_trace_start + np.arange(1, 21) * .25
+                stations = np.maximum(np.interp(future, times, time_arc), station)
+                desired = np.column_stack([np.interp(stations, arc, path[:, i]) for i in (0, 1)])
                 trajectory = world_to_local(desired, plan_xy, plan_yaw)
                 if getattr(self._controller, 'accepts_route', False):
-                    route_xy = world_to_local(self._trace_route(plan_xy), plan_xy, plan_yaw)
+                    route_xy = world_to_local(self._trace_route(), plan_xy, plan_yaw)
             interface = getattr(self, 'cfg', {}).get('reference_interface', 'nominal')
             if interface == 'nominal':
                 accepted = (self._controller.update(trajectory, timestamp, route_xy=route_xy)
@@ -533,9 +537,9 @@ class StubAgent(AutonomousAgent):
             raise RuntimeError("policy failed in the overlap thread: %r" % (done["error"],))
         self._control = done["control"]
 
-    def _trace_route(self, xy, spacing=1., count=8):
-        """Eight 1 m route checkpoints ahead along the fixed trace path, progress monotonic."""
-        path, arc = self._trace_path
+    def _trace_station(self, xy):
+        """Monotonic projection of the pose onto the fixed trace path (station in metres)."""
+        path, arc, _ = self._trace_path
         start, delta = path[:-1], np.diff(path, axis=0)
         length = np.linalg.norm(delta, axis=1)
         window = (arc[1:] >= self._trace_progress - 2.) & (arc[:-1] <= self._trace_progress + 20.)
@@ -544,6 +548,11 @@ class StubAgent(AutonomousAgent):
         distance = np.linalg.norm(start[index] + fraction[:, None] * delta[index] - xy, axis=1)
         j = int(np.argmin(distance))
         self._trace_progress = max(self._trace_progress, float(arc[index[j]] + fraction[j] * length[index[j]]))
+        return self._trace_progress
+
+    def _trace_route(self, spacing=1., count=8):
+        """Eight 1 m route checkpoints ahead of the current trace station (author route input)."""
+        path, arc, _ = self._trace_path
         stations = np.minimum(self._trace_progress + spacing * np.arange(1, count + 1), arc[-1])
         return np.column_stack([np.interp(stations, arc, path[:, i]) for i in (0, 1)])
 
