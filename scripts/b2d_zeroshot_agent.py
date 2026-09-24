@@ -117,7 +117,9 @@ class ZeroShotAgent(AutonomousAgent):
         wire.send(self.sock, {"cmd": "reset"})
         self.server_meta = wire.recv(self.sock)[0]["server"]
         self.router = FrameRouter(self.cam_tags, retain_frames=32)
-        self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA})
+        self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA}, {tag: frame})
+        self.latest = {t: (-1, None) for t in self.cam_tags}
+        self.first_frame = None
         self.poses = deque(maxlen=64)            # (sim time, xy, yaw) rear axle, world
         self.frame_time = {}
         self.pose_filter = self.route = None
@@ -157,6 +159,8 @@ class ZeroShotAgent(AutonomousAgent):
         frame, now = int(GameTime.get_frame()), float(GameTime.get_time())
         data = self.router.read(self.sensor_interface, frame)
         self.frame_time[frame] = now
+        if self.first_frame is None:
+            self.first_frame = frame
         self.frame_time.pop(frame - 200, None)
         imu, speed_raw = data["IMU"][1], float(data["SPEED"][1]["speed"])
         speed, world_gyro = controller_speed(speed_raw), float(imu[5])
@@ -167,11 +171,20 @@ class ZeroShotAgent(AutonomousAgent):
         except ValueError:
             self.pose_filter.reset()
         plan_ms = 0.0
-        for f in sorted(f for f, d in self.router.frames.items()
-                        if set(self.cam_tags) <= set(d)
-                        and (not self.cam_sets or f > self.cam_sets[-1][0])):
-            sets = self.router.frames[f]
-            self.cam_sets.append((f, self.frame_time.get(f, now), {k: sets[k][1] for k in self.cam_tags}))
+        for f, tags in sorted(self.router.frames.items()):
+            if f < self.first_frame:
+                continue            # rendered while the scenario was being built, before the route started
+            for tag in self.cam_tags:
+                if tag in tags and f > self.latest[tag][0]:
+                    self.latest[tag] = (f, tags[tag][1])
+        # A camera set is complete when every camera has delivered a frame newer than the previous set. Cameras
+        # at a sensor_tick above 0.05 s occasionally fire one tick late (UE tick-interval carry-over), so a set
+        # can span two adjacent frames; its frame is the newest, and the per-camera frames are logged.
+        last = self.cam_sets[-1][3] if self.cam_sets else {t: -1 for t in self.cam_tags}
+        if all(self.latest[t][0] > last[t] for t in self.cam_tags):
+            f = max(self.latest[t][0] for t in self.cam_tags)
+            self.cam_sets.append((f, self.frame_time.get(f, now), {t: self.latest[t][1] for t in self.cam_tags},
+                                  {t: self.latest[t][0] for t in self.cam_tags}))
             self.n_sets += 1
             if (self.n_sets - 1) % self.plan_every == 0 and self.poses:
                 plan_ms += self._plan(speed)
@@ -199,7 +212,7 @@ class ZeroShotAgent(AutonomousAgent):
 
     def _plan(self, speed):
         t_start = time.perf_counter()
-        f, t_frame, cams = self.cam_sets[-1]
+        f, t_frame, cams, cam_frames = self.cam_sets[-1]
         dump = ""
         every = int(self.cfg.get("dump_every", 0))
         if every and self.n_plans % every == 0:
@@ -225,7 +238,8 @@ class ZeroShotAgent(AutonomousAgent):
         self.n_plans += 1
         ms = 1e3 * (time.perf_counter() - t_start)
         self.timings["plan_ms"].append(ms)
-        rec = {"frame": f, "t": t_frame, "cam_frames": [s[0] for s in self.cam_sets], "speed": speed,
+        rec = {"frame": f, "t": t_frame, "set_frames": [s[0] for s in self.cam_sets], "cam_frames": cam_frames,
+               "speed": speed,
                "accepted": accepted, "path": np.round(path, 3).tolist(), "round_trip_ms": round(ms, 1),
                "pose": [float(v) for v in self.poses[-1][1]] + [float(self.poses[-1][2])],
                "route_index": self.route.i}

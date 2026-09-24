@@ -187,7 +187,7 @@ class OpenpilotModel:
         tiles = []
         for k, K in enumerate((opf.MEDMODEL_K, opf.SBIGMODEL_K)):
             im = Image.fromarray(opf.unpack_luma(img2[k])).convert("RGB")
-            p = plan_pos[plan_pos[:, 0] > 1]
+            p = plan_pos[plan_pos[:, 0] > 1] + [0, 0, rigs.OP_MOUNT_RIG[2]]   # plan z is height above the road
             uvw = (K @ opf.VIEW_FROM_DEVICE @ p.T).T
             pts = [tuple(map(float, q[:2] / q[2])) for q in uvw]
             if len(pts) > 1:
