@@ -424,6 +424,19 @@ TFv6 目标速度的 0 来自它自己的噪声地板：只换天气就让这个
 结论：考卷能把「会反应」和「不会反应」分开（TFv6 waypoint 的 CI 下界 28.5% 远离 null）；我们的 CARLA 内薄 head 一题都没翻，
 hazard probe 贴着 0.65 的边界，按判据是 representation，行人横穿和高速 cut-in 上 probe 0.77–0.88 而翻转为 0，是 readout。
 
+**逐帧计分会不会冤枉反应慢的考生（用户提问后补）**：我们的 head 每帧吃 3 相机 × 4 帧 × 0.2 s 的 clip，TFv6 按官方只吃当前一帧。
+观察窗口（因素可见 → 两侧 ego 分叉）中位 6.9 s、每对中位 30 帧，expert 的 490 个 reactive 帧里 311 个在因素可见 6 s 以后，clip 早已全是可见帧。
+下表把窗口内任意一个 reactive 帧翻对就算这对过：
+
+| 考生 | 逐帧 | 按对（75 对） | 可见后 0–1 s / 5–6 s / ≥6 s（逐帧） | 每对最后一个 reactive 帧 |
+|:--|--:|--:|:--|--:|
+| TFv6 目标速度 | 2.0% | 4.0% | 0 / 0 / 3.2% | 1.3% |
+| TFv6 waypoint 2 s 速度 | 39.4% | **73.3%** | 22% / 66% / 41% | 37.3% |
+| `ridge_late` L18_last | 0% | **0%** | 0 / 0 / 0 | 0% |
+| `ridge_late` L18_mean | 0% | **0%** | 0 / 0 / 0 | 0% |
+
+TFv6 waypoint 确实有「看久了才反应」的成分，按对计分翻倍；我们的 head 在整个窗口里 |Δ|/τ 的 p90 只有 0.23 / 0.44，零不是帧数不够造成的。
+
 ## 结果文件
 
 `research/results/p0-train-split/`、`p1-judge/`、`p2-readout-ladder/`、`p2p3-subset/`、`p3-backbone-ladder/`、
