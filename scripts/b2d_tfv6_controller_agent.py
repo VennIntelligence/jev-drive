@@ -13,6 +13,7 @@ from lead.inference.sensor_agent import SensorAgent
 from b2d_controller import Controller
 from b2d_controller_adapter import GPSProjector, PoseFilter, controller_speed
 from b2d_tfv6_coordinates import rear_waypoints
+from b2d_tfv6_search_control import SEARCH_ARMS, compose_search_control
 
 
 ARMS = "ABCD"
@@ -150,8 +151,9 @@ def _assert_no_phantom(actor_waypoints, rear, frame_log, step, sim_time, arm):
 class TFv6ControllerAgent(SensorAgent):
     def setup(self, path_to_conf_file, *args, **kwargs):
         self._d3 = os.environ.get('B2D_D3_DIAGNOSTIC') == '1'
+        self._search = os.environ.get('B2D_TFV6_SEARCH') == '1'
         parts = path_to_conf_file.split("+")
-        permitted = ARMS + (DIAGNOSTIC_ARMS if self._d3 else '')
+        permitted = ARMS + (DIAGNOSTIC_ARMS if self._d3 else '') + (SEARCH_ARMS if self._search else '')
         self.arm = (parts[1] if len(parts) > 1 and parts[1] in permitted
                     else os.environ.get("B2D_W2_ARM", "")).upper()
         if self.arm not in permitted:
@@ -255,6 +257,8 @@ class TFv6ControllerAgent(SensorAgent):
                 self._controller_reason[arm] = controller.diagnostics["reason"]
             author_speed = float(self._tick_data["speed"].item())
             self._raw = {arm: _normalize_brake(raw, author_speed) for arm, raw in self._raw.items()}
+            if self._search and self.arm in SEARCH_ARMS:
+                self._raw[self.arm] = _normalize_brake(compose_search_control(self.arm, self._raw), author_speed)
             if self._d3 and self.arm in DIAGNOSTIC_ARMS:
                 self._raw[self.arm] = _compose_d3_arm(self.arm, self._raw, author_speed)
             if self.arm in "CD":
@@ -263,6 +267,11 @@ class TFv6ControllerAgent(SensorAgent):
                 prediction.throttle = chosen["throttle"]
                 prediction.brake = chosen["brake"]
             elif self.arm in DIAGNOSTIC_ARMS:
+                chosen = self._raw[self.arm]
+                prediction.steer = chosen['steer']
+                prediction.throttle = chosen['throttle']
+                prediction.brake = chosen['brake']
+            elif self._search and self.arm in SEARCH_ARMS:
                 chosen = self._raw[self.arm]
                 prediction.steer = chosen['steer']
                 prediction.throttle = chosen['throttle']
@@ -476,6 +485,7 @@ class TFv6ControllerAgent(SensorAgent):
             "rear_waypoint": self._rear.tolist() if self._rear is not None else None,
             "raw_control": self._raw, "final_control": final,
             "executed_control": _triplet(control.steer, control.throttle, control.brake),
+            "speed": float(self._tick_data["speed"].item()) if self._tick_data is not None else None,
             "raw_signed_speed_mps": _logged_number(self._raw_signed_speed),
             "controller_speed_mps": _logged_number(self._controller_speed),
             "controller_reason": self._controller_reason,

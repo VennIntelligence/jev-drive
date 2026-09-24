@@ -87,7 +87,7 @@ def clean_owned_server(run_dir, out):
 
 
 def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record_carla=False,
-         invariant_check=None, abort_event=None):
+         invariant_check=None, abort_event=None, extra_env=None):
     case_dir = out / "cases" / level / f"route-{route}" / f"seed-{seed}" / arm
     done = case_dir / "done.json"
     if done.exists():
@@ -109,6 +109,8 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record
                    B2D_W2_LOG_DIR=str(attempt_dir),
                    SAVE_PATH=str(attempt_dir),
                    LEAD_CLOSED_LOOP_CONFIG="sensor_agent_creeping=True use_kalman_filter=True slower_for_stop_sign=True")
+        if extra_env:
+            env.update(extra_env)
         command = [str(PYTHON), str(ROOT / "scripts/b2d_run.py"), "--routes", str(xml_path),
                    "--route-ids", route, "--out", str(run_dir), "--workers", "1",
                    "--server-index", str(server_index), "--gpu-rank", "0", "--quality", "Epic",
