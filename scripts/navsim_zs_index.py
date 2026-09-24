@@ -21,6 +21,10 @@ from hydra.utils import instantiate
 from omegaconf import OmegaConf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_nav = Path(os.environ["DATA_DIR"]) / "datasets/navsim"   # devkit env (docs/navsim.md), before navsim is imported
+os.environ.setdefault("OPENSCENE_DATA_ROOT", str(_nav))
+os.environ.setdefault("NUPLAN_MAPS_ROOT", str(_nav / "maps"))
+os.environ.setdefault("NUPLAN_MAP_VERSION", "nuplan-maps-v1.0")
 from jevdrive.navsim_zs import cams_of, root  # noqa: E402
 
 
