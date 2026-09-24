@@ -8,7 +8,7 @@ Stage timings come from forward hooks with CUDA syncs around four modules:
 `other` = wall - sum(stages): generate bookkeeping, sampling, trajectory integration.
 """
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 
 import numpy as np
@@ -22,6 +22,7 @@ class Config:
     name: str = "default"
     attn: str = "flash_attention_2"   # VLM attention; the expert always uses sdpa (FA2 unsupported there)
     n_samples: int = 1                # trajectories (= reasoning rollouts) per input
+    n_sets: int = 1                   # num_traj_sets: flow samples per rollout (1 rollout x n_sets trajectories)
     max_gen: int = 256                # reasoning token cap (the shipped example uses 256)
     flow_steps: int = 10              # Euler steps of the flow-matching expert (model default 10)
     no_reasoning: bool = False        # prefill an empty CoT so the model goes straight to the trajectory
@@ -147,22 +148,24 @@ def _mods(model) -> dict:
     return {"visual": model.vlm.model.visual, "expert": model.expert, "lm": model.vlm.model.language_model}
 
 
-def run(model, inputs: dict, cfg: Config, timer: StageTimer, seed: int = 42) -> dict:
+def run(model, inputs: dict, cfg: Config, timer: StageTimer | None, seed: int = 42) -> dict:
+    """One inference. timer=None runs without the per-module syncs (to measure their overhead)."""
     torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
     torch.cuda.synchronize()
-    with timer.record(), torch.autocast("cuda", dtype=torch.bfloat16), torch.no_grad():
+    with timer.record() if timer else nullcontext(), torch.autocast("cuda", dtype=torch.bfloat16), torch.no_grad():
         t0 = time.perf_counter()
         xyz, _, extra = model.sample_trajectories_from_data_with_vlm_rollout(
             data=inputs, top_p=cfg.top_p, temperature=cfg.temperature, num_traj_samples=cfg.n_samples,
-            max_generation_length=cfg.max_gen, return_extra=True,
+            num_traj_sets=cfg.n_sets, max_generation_length=cfg.max_gen, return_extra=True,
             diffusion_kwargs={"inference_step": cfg.flow_steps})
         torch.cuda.synchronize()
         wall = time.perf_counter() - t0
-    st = timer.stages()
+    st = timer.stages() if timer else {k: float("nan") for k in ("vision", "prefill", "decode", "flow")}
     st["other"] = wall - st["vision"] - st["prefill"] - st["decode"] - st["flow"]
-    return {"wall": wall, **st, "xyz": xyz[0, 0].float().cpu().numpy(),  # (n_samples, 64, 3)
-            "cot": [str(c) for c in extra["cot"][0, 0]]}
+    return {"wall": wall, **st, "xyz": xyz[0].reshape(-1, *xyz.shape[-2:]).float().cpu().numpy(),  # (n, 64, 3)
+            "cot": [str(c) for c in np.asarray(extra["cot"][0]).ravel()],
+            "n_prompt": int(inputs["tokenized_data"]["input_ids"].shape[1])}
 
 
 def ade(pred_xy: np.ndarray, gt_xy: np.ndarray) -> np.ndarray:

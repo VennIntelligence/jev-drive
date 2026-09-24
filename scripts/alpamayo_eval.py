@@ -70,6 +70,10 @@ def rows(I):
                       no_reasoning=True)]
         if n == 1:
             r += [replace(b, name="compile-lm", compile=("lm",)), replace(b, name="static-kv-cache", static_cache=True)]
+        else:  # one reasoning rollout, 6 flow samples on its KV cache (public num_traj_sets argument)
+            r += [replace(b, name="1-rollout x 6 flow samples", n_samples=1, n_sets=6),
+                  replace(b, name="stack: 1-rollout x 6 + flow-5", n_samples=1, n_sets=6, flow_steps=5,
+                          compile=("visual",))]
     return r
 
 
@@ -78,7 +82,8 @@ def bench_rows(model, proc, I, clips, cfgs, a, log, out):
     inputs = {nr: {c: I.build_inputs(d, proc, no_reasoning=nr) for c, d in clips.items()} for nr in (False, True)}
     seeds = list(range(42, 42 + a.seeds))
     for cfg in cfgs:
-        rec = {"row": cfg.name, **{k: v for k, v in asdict(cfg).items() if k != "name"}}
+        key = f"{cfg.name}/n{cfg.n_samples * cfg.n_sets}"
+        rec = {"row": cfg.name, "key": key, **{k: v for k, v in asdict(cfg).items() if k != "name"}}
         try:
             I.apply(model, cfg)
             torch.cuda.reset_peak_memory_stats()
@@ -92,10 +97,11 @@ def bench_rows(model, proc, I, clips, cfgs, a, log, out):
                 for c in clips:
                     o = I.run(model, inputs[cfg.no_reasoning][c], cfg, timer, seed=s)
                     runs.append({"clip": c, "seed": s, **{k: v for k, v in o.items() if k not in ("xyz", "cot")}})
-                    out.setdefault(cfg.name + f"/n{cfg.n_samples}", {})[(c, s)] = (o["xyz"], o["cot"])
+                    out.setdefault(key, {})[(c, s)] = (o["xyz"], o["cot"])
+            nohook = [I.run(model, inputs[cfg.no_reasoning][c], cfg, None, seed=seeds[0])["wall"] for c in clips]
             g1 = gpu_state()
         except Exception as e:  # e.g. static cache is incompatible with the expert's prompt-cache crop
-            log.info(f"{cfg.name} n={cfg.n_samples}: FAILED {type(e).__name__}: {str(e)[:300]}")
+            log.info(f"{key}: FAILED {type(e).__name__}: {str(e)[:300]}")
             rec["error"] = f"{type(e).__name__}: {str(e)[:300]}"
             I.reset(model)
             yield rec
@@ -103,7 +109,8 @@ def bench_rows(model, proc, I, clips, cfgs, a, log, out):
         df = pd.DataFrame(runs)
         ms = lambda x: 1e3 * x
         rec.update(n_runs=len(df), p50_ms=ms(df.wall.median()), p99_ms=ms(df.wall.quantile(.99)),
-                   mean_ms=ms(df.wall.mean()), **{f"{k}_ms": ms(df[k].mean()) for k in
+                   mean_ms=ms(df.wall.mean()), nohook_p50_ms=ms(np.median(nohook)), prompt_tokens=df.n_prompt.mean(),
+                   **{f"{k}_ms": ms(df[k].mean()) for k in
                                                    ("vision", "prefill", "decode", "flow", "other")},
                    decode_tokens=df.n_decode.mean(), ms_per_token=ms((df.decode / df.n_decode.clip(1)).mean()),
                    peak_alloc_gb=torch.cuda.max_memory_allocated() / 2**30,
@@ -111,7 +118,7 @@ def bench_rows(model, proc, I, clips, cfgs, a, log, out):
                    gpu_util_before=g0["util_pct"], gpu_others_before=g0["others"], gpu_others_after=g1["others"])
         if cfg.expert_graph and model.diffusion_expert_cuda_graph_stats:
             rec["graph_stats"] = model.diffusion_expert_cuda_graph_stats
-        log.info(f"{cfg.name:36s} n={cfg.n_samples} p50 {rec['p50_ms']:7.1f} ms p99 {rec['p99_ms']:7.1f}  "
+        log.info(f"{key:40s} p50 {rec['p50_ms']:7.1f} ms p99 {rec['p99_ms']:7.1f}  "
                  f"vis {rec['vision_ms']:6.1f} pre {rec['prefill_ms']:6.1f} dec {rec['decode_ms']:6.1f} "
                  f"({rec['decode_tokens']:.0f} tok) flow {rec['flow_ms']:6.1f} other {rec['other_ms']:6.1f}  "
                  f"peak {rec['peak_alloc_gb']:.1f} GB  gpu-others {g0['others']}")
@@ -119,23 +126,22 @@ def bench_rows(model, proc, I, clips, cfgs, a, log, out):
         yield rec
 
 
-def drift(out, clips, gt, cfgs):
-    """Per row: ADE of sample 0 vs the default row's sample 0 (same clip, same seed), CoT identical rate,
-    minADE vs GT. The noise floor row compares default runs with different seeds."""
+def drift(out, clips, gt):
+    """Per row: ADE of sample 0 vs the default row's sample 0 (same clip, same seed, same sample count), CoT
+    identical rate, minADE vs GT. noise-floor rows compare default runs across seeds."""
     res = {}
-    for cfg in cfgs:
-        key, ref = cfg.name + f"/n{cfg.n_samples}", f"default/n{cfg.n_samples}"
-        if key not in out:
-            continue
+    for key, o in out.items():
+        ref = out.get("default/n" + key.rsplit("/n", 1)[1])
         d, same, mde = [], [], []
-        for (c, s), (xyz, cot) in out[key].items():
-            rx, rc = out[ref][(c, s)]
-            d.append(np.linalg.norm(xyz[0, :, :2] - rx[0, :, :2], axis=-1).mean())
-            same.append(cot[0] == rc[0])
+        for (c, s), (xyz, cot) in o.items():
+            rx, rc = ref[(c, s)] if ref else (None, None)
+            if ref:
+                d.append(np.linalg.norm(xyz[0, :, :2] - rx[0, :, :2], axis=-1).mean())
+                same.append(cot[0] == rc[0])
             mde.append(np.linalg.norm(xyz[:, :, :2] - gt[c][None], axis=-1).mean(-1).min())
-        res[key] = {"drift_ade_m": float(np.mean(d)), "cot_identical": float(np.mean(same)),
-                    "minade_vs_gt_m": float(np.mean(mde))}
-    for n in (1, 6):  # seed-to-seed noise floor of the default row
+        res[key] = {"drift_ade_m": float(np.mean(d)) if d else None,
+                    "cot_identical": float(np.mean(same)) if same else None, "minade_vs_gt_m": float(np.mean(mde))}
+    for n in (1, 6):
         o = out.get(f"default/n{n}")
         if o:
             seeds = sorted({s for _, s in o})
@@ -167,10 +173,8 @@ def cmd_bench(a, log):
         sd = [I.Config("sdpa", attn="sdpa", n_samples=1), I.Config("sdpa", attn="sdpa", n_samples=6)]
         for rec in bench_rows(model, proc, I, clips, sd, a, log, out):
             recs.append(rec)
-        cfgs += sd
-    dr = drift(out, list(clips), gt, cfgs)
+    dr = drift(out, list(clips), gt)
     df = pd.DataFrame(recs)
-    df["key"] = df.row + "/n" + df.n_samples.astype(str)
     df = df.merge(pd.DataFrame(dr).T.rename_axis("key").reset_index(), on="key", how="outer")
     df.to_csv(log.dir / "results.csv", index=False)
     (log.dir / "drift.json").write_text(json.dumps(dr, indent=1))
