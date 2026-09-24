@@ -320,7 +320,7 @@ scripts/b2d_wait_and_run.sh`（内置起 server、等 ready-file、起跑、跑�
 **改了什么。** 第 3 节预注册的执行层（仓库的固定控制器 `Controller(preset="carla")`，20 Hz 跟踪重投影后的轨迹）
 换成 Bench2Drive(-Zoo) 基线（UniAD / VAD / TCP / AD-MLP）用的官方 PID，**原样运行**：从固定的 Bench2DriveZoo
 checkout（branch `tcp/admlp`，`8a08b07`）直接 import `ADMLP.model.ADMLP.control_pid`、`PIDController` 和
-`ADMLP.config.GlobalConfig`，不改一行（`scripts/b2d_zoo_pid.py`）。它的参数：转向 PID 0.75/0.75/0.3、窗口 40，
+`ADMLP.config.GlobalConfig`，不改一行（`scripts/b2d_zoo_pid_admlp.py`；与 UniAD/VAD 的 `team_code/pid_controller.py` 同算法同增益，后者另有 vendored 副本 `scripts/b2d_zoo_pid.py`）。它的参数：转向 PID 0.75/0.75/0.3、窗口 40，
 速度 PID 5/0.5/1、窗口 40，aim point 取中点离 ego 最接近 4 m 的那段，目标速度 = 相邻 waypoint 平均间距 × 2，
 desired speed < 0.4 m/s 或实际速度 > 1.1 倍时刹车，油门 ≤ 0.75。TCP 的 `control_pid` 是同一个算法（只差输入的张量
 格式）。它的 target point（路线上的下一个点，当 target 比预测的 aim 更直或预测突变时改用它转向）用 AD-MLP agent
@@ -333,7 +333,7 @@ tick **保持上一次的控制量**；Alpamayo 本来就是 2 Hz 重规划，�
 第一条轨迹到来之前刹车保持。agent 层照搬的还有：steer/throttle/brake 截断，brake > 0 就置 1 并把油门清零。
 **没有照搬**的只有一项：AD-MLP agent 在 `control_pid` 之后另加的低速限油门（转向时车速 > 2.5 m/s、否则 > 3 m/s 就把
 油门压到 0.05），它的注释写的是 "avoid stuck / avoid pass stop, red light, collision"，是该基线自己的驾驶启发式，
-不属于轨迹到控制的映射，而且会把任何 planner 的车速钉在约 3 m/s。要复现带限速的版本，改 `b2d_zoo_pid.py` 一处即可。
+不属于轨迹到控制的映射，而且会把任何 planner 的车速钉在约 3 m/s。要复现带限速的版本，改 `b2d_zoo_pid_admlp.py` 一处即可。
 
 **其他全部不变**：rig、nav 文本、2 Hz 重规划、推理配置、seed、5 条 smoke 路线、TM seed 0。因为 `control_pid`
 要 torch，route 子进程改用 `envs/b2d-tcp`（Python 3.8 + torch + carla，TCP 对照实验一直用它），agent 代码相同。
