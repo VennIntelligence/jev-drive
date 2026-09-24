@@ -9,11 +9,12 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--runs', type=Path, required=True)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--expected', type=int, default=8)
     a = p.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     paths = sorted(a.runs.glob('*/pursuit/validation.json'))
-    if len(paths) != 8:
-        raise ValueError(f'Expected exactly 8 held-out privileged expert cases; found {len(paths)}')
+    if len(paths) != a.expected:
+        raise ValueError(f'Expected exactly {a.expected} privileged expert cases; found {len(paths)}')
     manifest = {}
     for path in paths:
         summary = json.loads(path.read_text())
