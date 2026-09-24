@@ -28,7 +28,7 @@ class W2bTests(unittest.TestCase):
             p = np.column_stack((np.arange(1,9,dtype=float),np.zeros(8)))
             rear = rear_waypoints(p).tolist()
             frames = [dict(step=i,arm='C',route='3514',waypoint=p.tolist(),
-                           rear_waypoint=rear) for i in range(2)]
+                           rear_waypoint=[row[:] for row in rear]) for i in range(2)]
             def write_frames():
                 (attempt/'frames.jsonl').write_text(''.join(json.dumps(x)+'\n' for x in frames))
             write_frames()
@@ -39,6 +39,14 @@ class W2bTests(unittest.TestCase):
             result=dict(level='1',route='3514',seed=1,arm='C',attempt=1,
                         status='finished',official_status='Completed')
             self.assertEqual(validate_attempt(result,attempt,run)['phantom'],0)
+            frames[1]['rear_waypoint'][3][1]=rear[3][1]+1e-16
+            write_frames()
+            self.assertLess(validate_attempt(result,attempt,run)['max_rear_waypoint_residual_m'],1e-12)
+            frames[1]['rear_waypoint'][3][1]=rear[3][1]+1e-9
+            write_frames()
+            with self.assertRaisesRegex(InvariantFailure,'I3 logged rear waypoint'):
+                validate_attempt(result,attempt,run)
+            frames[1]['rear_waypoint'][3][1]=rear[3][1]
             frames[1]['step']=2
             write_frames()
             with self.assertRaisesRegex(InvariantFailure,'I3 frame coverage'):

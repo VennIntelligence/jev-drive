@@ -29,6 +29,8 @@ STAGES = ('S1', 'S2', 'S3')
 class InvariantFailure(RuntimeError):
     pass
 
+REAR_WAYPOINT_ABS_TOL_M = 1e-12
+
 
 def bus(state, stage, message, numbers=None):
     now = dt.datetime.now(dt.timezone.utc).isoformat()
@@ -86,7 +88,8 @@ def validate_attempt(result, attempt_dir, run_dir):
         raise InvariantFailure(f'{label}: I3 frame coverage {len(frames)} != {ticks} or non-contiguous steps')
     if any(f.get('arm') != result['arm'] or f.get('route') != result['route'] for f in frames):
         raise InvariantFailure(f'{label}: I3 frame identity mismatch')
-    phantom = valid = 0
+    phantom = valid = roundoff_ticks = 0
+    max_rear_waypoint_residual_m = 0.0
     for frame in frames:
         actor, rear = frame.get('waypoint'), frame.get('rear_waypoint')
         if actor is None and rear is None:
@@ -100,14 +103,20 @@ def validate_attempt(result, attempt_dir, run_dir):
         p0 = p[0] * (1., -1.)
         valid += 1
         phantom += int(np.linalg.norm(p0) < .3 and np.linalg.norm(r[0] - p0) > .3)
-        if not np.array_equal(r, rear_waypoints(p)):
+        residual = float(np.max(np.abs(r - rear_waypoints(p))))
+        max_rear_waypoint_residual_m = max(max_rear_waypoint_residual_m, residual)
+        roundoff_ticks += int(residual > 0)
+        if residual > REAR_WAYPOINT_ABS_TOL_M:
             if phantom:
                 raise InvariantFailure(f'{label}: I1 offline phantom at step {frame["step"]}')
-            raise InvariantFailure(f'{label}: I3 logged rear waypoint differs from pinned transform at step {frame["step"]}')
+            raise InvariantFailure(f'{label}: I3 logged rear waypoint differs from pinned transform at step {frame["step"]}: max residual {residual:.3g}m > {REAR_WAYPOINT_ABS_TOL_M:.3g}m')
     if phantom:
         raise InvariantFailure(f'{label}: I1 offline phantom count {phantom}/{valid}')
     return {'infra_attempt': False, 'label': label, 'frames': len(frames),
             'valid_waypoint_ticks': valid, 'phantom': phantom,
+            'rear_waypoint_abs_tolerance_m': REAR_WAYPOINT_ABS_TOL_M,
+            'max_rear_waypoint_residual_m': max_rear_waypoint_residual_m,
+            'rear_waypoint_roundoff_ticks': roundoff_ticks,
             'official_status': official_status,
             'ds': float(records[0]['scores']['score_composed'])}
 

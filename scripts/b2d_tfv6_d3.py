@@ -174,7 +174,11 @@ def execute(phase,items):
                 results.append((item,result,info))
                 milestone('D3b_progress',f'{phase} {len(results)}/{len(items)} cases valid',
                     phase=phase,done=len(results),total=len(items),case=item,
-                    wall_s=round(time.monotonic()-start,1),official_status=result.get('official_status'))
+                    wall_s=round(time.monotonic()-start,1),official_status=result.get('official_status'),
+                    first_ego_offroute_3m_step=info.get('first_ego_offroute_3m_step'),
+                    max_ego_dense_distance_m=info.get('max_ego_dense_distance_m'),
+                    max_rear_waypoint_residual_m=info.get('max_rear_waypoint_residual_m'),
+                    rear_waypoint_roundoff_ticks=info.get('rear_waypoint_roundoff_ticks'))
                 next_item=next(pending,None)
                 if next_item and not abort.is_set():
                     current[pool.submit(run_one,next_item,slot,phase,abort)]=slot

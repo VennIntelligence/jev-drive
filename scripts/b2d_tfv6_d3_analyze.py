@@ -28,6 +28,7 @@ def rows_for_case(phase,level,route,seed,arm):
         direction=dense[bend]-dense[bend-5];direction/=np.linalg.norm(direction)
         wrong=np.asarray([dense[bend]+direction*t for t in np.linspace(0,70,141)])
     step_after_turn=None;distance_at_jump=None;first_plan_wrong=None;first_offroute=None
+    max_ego_dense_distance_m=max((n['ego_dense_distance_m'] for n in nav),default=None)
     first_motion=None;nearby_vehicle_ticks=red_light_ticks=post_changed=hold_ticks=0
     plan_ticks=nav_ticks=0
     for f in frames:
@@ -68,6 +69,7 @@ def rows_for_case(phase,level,route,seed,arm):
             'first_motion_step':first_motion,'first_target_postturn_step':step_after_turn,
             'distance_to_bend_at_target_jump_m':distance_at_jump,
             'first_dense_wrong_plan_step':first_plan_wrong,'first_ego_offroute_3m_step':first_offroute,
+            'max_ego_dense_distance_m':max_ego_dense_distance_m,
             'red_light_ticks':red_light_ticks,'near_actor_10m_ticks':nearby_vehicle_ticks,
             'c_stop_hold_ticks':hold_ticks,'postprocessor_changed_ticks':post_changed}
 
