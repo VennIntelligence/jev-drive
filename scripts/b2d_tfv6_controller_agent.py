@@ -164,13 +164,12 @@ class TFv6ControllerAgent(SensorAgent):
         os.environ.setdefault("SAVE_PATH", output)
         super().setup(model_path, *args, **kwargs)
         if self._d3:
-            dense = [{'xyz': [float(transform.location.x),float(transform.location.y),
+            sparse = [{'xyz': [float(transform.location.x),float(transform.location.y),
                               float(transform.location.z)], 'command': int(command)}
                      for transform,command in self._global_plan_world_coord]
-            if len(dense)<2:
-                raise RuntimeError('D3 dense evaluator global plan is empty')
-            (Path(output)/'d3_global_plan.json').write_text(json.dumps(dense)+'\n')
-            self._d3_dense_xy=np.asarray([item['xyz'][:2] for item in dense])
+            if len(sparse)<2:
+                raise RuntimeError('D3 sparse agent global plan is empty')
+            (Path(output)/'d3_agent_sparse_plan.json').write_text(json.dumps(sparse)+'\n')
         _configure_author_arm(self.config_closed_loop, self.arm if self.arm in ARMS else 'C')
         # The W1 production pursuit configuration is fixed for both controller arms.
         common = dict(longitudinal_mode="pi", lookahead="max", pi_kp=0.5, pi_ki=0.25,
@@ -296,14 +295,9 @@ class TFv6ControllerAgent(SensorAgent):
                 route = list(planner.route)
                 active = distance in (self.config_closed_loop.route_planner_min_distance, 4.0)
                 selected = route if active else route[:3]
-                target=route[1][0] if len(route)>1 else route[0][0]
-                delta=self._d3_dense_xy-np.asarray(target[:2])
-                global_index=int(np.argmin(np.sum(delta*delta,axis=1)))
                 planners[str(distance)] = {'remaining': len(route),
                     'points': [{'xyz': np.asarray(point).tolist(), 'command': int(command)}
-                               for point, command in selected], 'full_route': active,
-                    'current_target_global_index':global_index,
-                    'current_target_global_distance_m':float(np.linalg.norm(delta[global_index]))}
+                               for point, command in selected], 'full_route': active}
             chosen=planners.get(str(self._d3_selected_pop_distance))
             self._d3_nav = {
                 'target_point_previous': np.asarray(result.get('target_point_previous')).tolist(),
@@ -313,8 +307,9 @@ class TFv6ControllerAgent(SensorAgent):
                 'next_command': np.asarray(result.get('next_command')).tolist(),
                 'filtered_state': np.asarray(result.get('filtered_state')).tolist(),
                 'noisy_state': np.asarray(result.get('noisy_state')).tolist(),
+                'compass_rad': float(self.compass),
                 'selected_pop_distance': self._d3_selected_pop_distance,
-                'selected_target_global_index':(chosen or {}).get('current_target_global_index'),
+                'selected_target_planner_xyz':(chosen or {}).get('points',[{},{}])[1].get('xyz') if chosen and len(chosen['points'])>1 else None,
                 'planners': planners, 'pop_events': self._d3_pop_events}
         return result
 

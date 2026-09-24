@@ -20,6 +20,7 @@ for source_root in (DATA/'third_party/lead-cvpr2026',
     sys.path.insert(0,str(source_root))
 
 from b2d_tfv6_controller_agent import _compose_d3_arm
+from b2d_tfv6_d3_semantic import SemanticFailure, SemanticSequence
 from b2d_tfv6_w2b import InvariantFailure, validate_attempt
 
 ROOT=Path('/data/runs/b2d/tfv6-d3')
@@ -53,25 +54,30 @@ def validate_d3(result,attempt_dir,run_dir):
     info=validate_attempt(result,attempt_dir,run_dir)
     if info['infra_attempt']:
         return info
-    dense_path=attempt_dir/'d3_global_plan.json'
-    if not dense_path.exists():
-        raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: missing evaluator dense plan')
-    dense=json.loads(dense_path.read_text())
-    if len(dense)<2:
-        raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: empty evaluator dense plan')
+    dense_path=ROOT/'dense'/f'{result["level"]}-{result["route"]}.json'
+    sparse_path=attempt_dir/'d3_agent_sparse_plan.json'
+    if not dense_path.exists() or not sparse_path.exists():
+        raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: missing evaluator dense or agent sparse plan')
+    package=json.loads(dense_path.read_text())
+    sparse=json.loads(sparse_path.read_text())
+    if len(package['dense'])<2 or len(sparse)!=len(package['agent_sparse_world_xy']):
+        raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{result["arm"]}: invalid dense/sparse plan')
+    checker=SemanticSequence(package)
     arm=result['arm']
     path=attempt_dir/'frames.jsonl'
     nav_count=actor_count=light_count=kalman_count=0
-    with path.open() as stream:
+    with path.open() as stream,(attempt_dir/'d3_nav_semantic.jsonl').open('w') as semantic_out:
         for line in stream:
             f=json.loads(line)
             if f.get('d3_nav'):
                 nav_count+=1
                 if not f['d3_nav'].get('planners'):
                     raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: missing planner trace at step {f["step"]}')
-                index=f['d3_nav'].get('selected_target_global_index')
-                if index is None or not 0<=int(index)<len(dense):
-                    raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: invalid dense plan index at step {f["step"]}')
+                try:
+                    semantic=checker.check(f)
+                except (SemanticFailure,KeyError,ValueError) as error:
+                    raise InvariantFailure(f'{result["route"]}/{result["seed"]}/{arm}: D3 semantic telemetry: {error}') from error
+                semantic_out.write(json.dumps(semantic)+'\n')
             if isinstance(f.get('nearby_actors'),list):actor_count+=1
             if f.get('d3_traffic_light'):light_count+=1
             if f.get('d3_kalman'):kalman_count+=1
