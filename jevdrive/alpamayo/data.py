@@ -63,7 +63,7 @@ class RemoteFile(io.RawIOBase):
                     raise
                 time.sleep(2 * (attempt + 1))
 
-    def prefetch(self, a: int, n: int, chunk: int = 4 << 20):
+    def prefetch(self, a: int, n: int, chunk: int = 1 << 20):  # small chunks: the HF CDN gives ~0.5 MB/s per stream
         starts = range(a, min(a + n, self.size), chunk)
         with ThreadPoolExecutor(self.streams) as ex:
             parts = list(ex.map(lambda s: self._get(s, min(s + chunk, self.size, a + n) - 1), starts))
@@ -83,7 +83,7 @@ class RemoteFile(io.RawIOBase):
         return self.readinto(buf)
 
 
-def fetch_clips(clip_ids: list[str], features=FEATURES, streams: int = 8, log=print) -> dict:
+def fetch_clips(clip_ids: list[str], features=FEATURES, streams: int = 12, files: int = 6, log=print) -> dict:
     """Make `clip_ids` readable offline through PhysicalAIAVDatasetInterface(cache_dir=cache_dir(), revision=rev).
     Returns {"revision", "bytes", "seconds"}. Already-present members are skipped."""
     import physical_ai_av
@@ -117,7 +117,7 @@ def fetch_clips(clip_ids: list[str], features=FEATURES, streams: int = 8, log=pr
                 out.writestr(i.filename, zf.read(i.filename))
         return rf.nbytes
 
-    with ThreadPoolExecutor(4) as ex:  # 4 files x `streams` ranged streams each
+    with ThreadPoolExecutor(files) as ex:  # `files` chunk files at once x `streams` ranged streams each
         for n in ex.map(one, by_file.items()):
             total += n
     dt = time.monotonic() - t0
