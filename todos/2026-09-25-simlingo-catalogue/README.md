@@ -136,6 +136,9 @@ D3 靠重新计分，精确；D2 逐条标出。P2 里的真实官方臂 run 用
   `alp-b2d-full` 结束后再加 4 个（每臂每卡 1 个），共 10 个；同一臂的 runner 共用输出目录，靠 claim 文件保证每条路线只跑一次。
   两臂同时跑，任一臂不会独占较空的卡。批量脚本 `scripts/simlingo_catalogue_batch.sh <seed> main|extra`，
   经 `scripts/slot_run.sh simlingo-exp`（无依赖）与 `simlingo-exp-extra`（`--after alp-b2d-full`）启动。
+  09:10 开跑。启动时每臂第二个 runner 按设计会清理输出目录里「死掉的 runner」留下的进程，但它分不出活着的兄弟 runner，
+  于是杀掉了第一个 runner 的服务器：路线 1711、1773 各丢了一次 attempt（`server_died_rc-15`），随即自动重试，不影响计分
+  （计分只取最后一次 attempt）。已加 `b2d_run.py --no-reap`，之后加入的 runner 都带它。
   预计：6 worker 约 25 h 的量，加到 10 个之后总计约 17–19 h（按 1.5 s/tick；机器更空时更快）。
 
 ## 给兄弟实验（hazard family 拆分）的逐路线结果
