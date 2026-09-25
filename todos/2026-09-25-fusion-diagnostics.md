@@ -385,6 +385,8 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   即加 `L18_grid` 不改动任何数值、recipe 与已存 P5 特征一致；换一种 batch 配对（obs 行的前 64 行）eager b2 就有 rel L2 3e-3 / 1.3e-2（cos ≥ 0.99983），说明 bf16 数值随 batch 里的另一个 clip 变，这是 recipe 本身的噪声量级。
   compile b8 在 12 GB 上限下 OOM（`qwenvid_train_t4` 的 b8 峰值 11.5 GB + 编译开销），compile b4：213 ms/帧、峰值 7.5 GB，对已存特征 rel L2 7.8e-3 / 1.5e-2、cos ≥ 0.99975，过 (1) 的门槛，所以按 (1) 的规则用 **compile b4**
   （eager b2 在同一张卡上 294 ms/帧）。预计 9919 × 213 ms ≈ 35 min。
+- 2026-09-25 19:39 CST [Q9b] （全量抽取之后、任何拟合之前）(8) 全量 9919 行 compile b4 抽完（`runs/fusion_diag/q9b-extract/`，40 min，185–259 ms/帧，后半段与别的作业共卡变慢）。每个 chunk 对已存特征：`L18_mean` rel L2 7.9e-3–9.3e-3（与 profiling 一致），
+  但最差单行 cos 在 chunk 5 / 9 是 0.99891 / 0.99879，略低于 (1) 写的 0.999（(1) 的门槛是按 profiling 那 64 行定配置用的，已过）。差异量级与 batch 配对造成的噪声同级，不重抽；照记。
 
 ## 结果
 
