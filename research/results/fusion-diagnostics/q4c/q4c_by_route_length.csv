@@ -1,0 +1,5 @@
+model,subset,frames,gt_lead,recall,no_lead,false_alarm,fa_x_pred_median
+cinque,route ahead >= 80 m,3875,2800,0.7625,1075,0.1451,22.62
+cinque,route ahead < 80 m,6044,3567,0.7805,2477,0.256,13.9
+lebowski,route ahead >= 80 m,3875,2800,0.7507,1075,0.02605,25.83
+lebowski,route ahead < 80 m,6044,3567,0.7213,2477,0.2846,14.91
