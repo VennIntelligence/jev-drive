@@ -1,0 +1,13 @@
+metric,a,b,n,diff,lo,hi
+PDMS,(b) Hydra-style,ridge_late,12146,10.66,9.95,11.37
+PDMS,(a) cls_late G3,ridge_late,12146,4.35,3.64,5.08
+PDMS,(a') cls_late refit,ridge_late,12146,4.34,3.60,5.07
+PDMS,(b) Hydra-style,(a') cls_late refit,12146,6.32,5.74,6.91
+PDMS,(b) Hydra-style,(a) cls_late G3,12146,6.31,5.70,6.91
+PDMS,(a') cls_late refit,(a) cls_late G3,12146,-0.02,-0.54,0.50
+EPDMS,(b) Hydra-style,ridge_late,12146,8.72,8.03,9.42
+EPDMS,(a) cls_late G3,ridge_late,12146,3.55,2.83,4.26
+EPDMS,(a') cls_late refit,ridge_late,12146,3.51,2.78,4.24
+EPDMS,(b) Hydra-style,(a') cls_late refit,12146,5.21,4.62,5.81
+EPDMS,(b) Hydra-style,(a) cls_late G3,12146,5.17,4.56,5.79
+EPDMS,(a') cls_late refit,(a) cls_late G3,12146,-0.04,-0.56,0.49

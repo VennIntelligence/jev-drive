@@ -821,3 +821,38 @@ op 流按 02:15 的规则：Cinque 的双流 / 只 openpilot 行作废，只看�
 **E2 总判格（按登记）**：三个训练集（navtrain、WOD、合训）没有一个同时满足「|Δ| 中位 ≥ 2 × 安慰剂」与「WOD Pedestrians RFS Δ CI > 0」。navtrain 与合训在 WOD 上**有害**（RFS −2.1 到 −2.3，来自 2 Hz → 10 Hz 的输入分布差）；
 只 WOD 对**无害但转不动**（Δ ≈ 0）。P5 v1 BA 上所有 E2 head 行人翻转 0–5%（真实 → 仿真方向也不过）。所以「用 SAM + LaMa 在真实帧上造反事实对来激发配对差分」这一格在本轮**不成立**，限定如下：
 编辑对的信噪比低（Qwen 特征上抹人的位移只比安慰剂大 21%）、WOD 对只有 216 个（CARLA 上激发需要约 400 个行人 reactive 帧，第 42 条）、标签 (a) 不是 expert 的两侧重跑而是 log 与 CTRA 之差。
+
+### E6：NAVSIM 上 Hydra-MDP 式打分头（2026-09-26 00:51–03:33，CPU 24 核 + GPU 2 约 1 min）
+
+口径见偏离日志 [E6] 00:34 与 00:37：(a) = G3 的 `cls_late`（不重拟合）；(a′) = 同一配方在确定性（CPU）k-means 词表上重拟合，是 (b) 的同候选集对照；
+(b) = 同一个 K = 1024 词表上，五个子分 head（NC、DAC、EP、TTC、C，输入标准化 ego ⊕ Cinque `temporal`，BCE、L-BFGS）加 `cls_late` 模仿项，按 Hydra-MDP 的对数分加权取 argmax。
+子分标签来自 navtrain 里均匀抽的 20 000 个 token，每个 token 用 v1.1 devkit 的 simulator + scorer 原样给 1024 个 anchor 打分（与 `pdm_score()` 单独打分逐项核对，最大差 2.9e-8）。
+权重只在子集 20% 的留出 log（4 046 个 token）上选。navtest 12 146 个 token 官方 devkit 打分（PDMS v1.1，EPDMS main @ 0a380a9），navhard two-stage 出 EPDMS；每行一个 seed。
+run：prep `runs/elicitation/e6-prep/20260926-003758`，fit `runs/elicitation/e6-fit/20260926-025946`，打分 `runs/navsim/eval/*_e6_{hydra,clsref}_cinque`；小表 [research/results/elicitation/e6/](../research/results/elicitation/e6/)。
+
+| 行（Cinque `temporal`） | PDMS [95% CI] | EPDMS [95% CI] | navhard EPDMS | NC / DAC / EP / TTC（PDMS 口径） |
+|:--|:--|:--|--:|:--|
+| `ridge_late`（G3） | 73.5 [72.9, 74.2] | 73.9 [73.2, 74.5] | 16.8 | 94.7 / 84.3 / 69.7 / 87.4 |
+| (a) `cls_late`（G3） | 77.9 [77.2, 78.5] | 77.4 [76.8, 78.0] | 19.8 | 96.6 / 87.1 / 73.2 / 90.9 |
+| (a′) `cls_late`，新词表重拟合 | 77.9 [77.3, 78.5] | 77.4 [76.7, 78.0] | 18.2 | 96.6 / 87.1 / 73.0 / 91.0 |
+| **(b) Hydra 式打分头** | **84.2 [83.7, 84.7]** | **82.6 [82.1, 83.1]** | **25.7** | 98.0 / 93.4 / 76.8 / 94.4 |
+| *文献* TransFuser / DiffusionDrive | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 | |
+
+| 配对 Δ（逐 token，10 000 次 token bootstrap） | PDMS | EPDMS |
+|:--|:--|:--|
+| (b) − `ridge_late` | **+10.7 [+10.0, +11.4]** | **+8.7 [+8.0, +9.4]** |
+| (a) − `ridge_late` | +4.3 [+3.6, +5.1] | +3.5 [+2.8, +4.3] |
+| (b) − (a′)（同一候选集，只差「怎么选」） | **+6.3 [+5.7, +6.9]** | **+5.2 [+4.6, +5.8]** |
+| (a′) − (a)（只差 k-means 的随机性） | −0.0 [−0.5, +0.5] | −0.0 [−0.6, +0.5] |
+
+读法：同一份 512 维冻结 `temporal`、同一套 1024 条候选，只把「选哪条」从模仿 softmax 换成「按 PDM 子分预测加权」，PDMS 就从 77.9 到 84.2，增益主要在 DAC（87 → 93）与 NC、TTC 上，
+EP 也略升；EPDMS 的 extended comfort 从 80 降到 75（选择更跳，head 没有学帧间一致性），其余 v2 子项基本不动。(a′) 与 (a) 在 navtest 上打平，而逐 token 的输出只有 38% 落在 0.5 m 内，
+说明 k-means 词表的随机性对总分几乎无影响。留出 log 上：词表 oracle 99.8，只用模仿项 81.2，(b) 86.8。
+
+**判定（按登记）**：(b) PDMS 点估计 84.2 ≥ 84 → 「512 维冻结特征 + 配方 head 到 TransFuser 水平」。要一起记的限定：CI 下端 83.7 跨过 84，所以只能说与 TransFuser 同一水平，不能说超过；
+EPDMS 两边 devkit 版本不同，只作量级；单 seed；五个子分 head 的 λ 全部选在登记网格的下沿 1e-5（碰边，没有放宽网格重跑）；子分标签只用了 navtrain 的 1/5（20 000 个 token）；
+选出的权重 (w_im, w_mul, w_TTC, w_EP, w_C) = (0.1, 1, 1, 2, 0)，留出网格前五名差 < 0.001。这个增益的性质要按第 35 条读：训练标签就是评测所用的同一个 PDM scorer，
+(b) 学的是「对准 metric 的选择」，属于 R 层配方，不是 E 层能力；它说明 NAVSIM 上那 6 分差距可以由配方补上，**不**说明 openpilot 特征比 TransFuser 的表征好。
+
+成本：v1.1 metric cache（20 000 token）35 min、逐 anchor 打分 92 min（24 核，约 7 core·s / token，与 profiling 的 6 core·s 一致）、head 拟合 + 权重网格约 1 min GPU、6 次官方打分约 30 min；
+总墙钟约 2.7 h，在登记估计（打分约 2.1 h + 缓存）的 2 倍以内。先在 200 个 token 上跑过一次 smoke（缓存 199 s、打分 374 s），smoke 的 fit 目录改名为 `…-smoke200`，不进结果。

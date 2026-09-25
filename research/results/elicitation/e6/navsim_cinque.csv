@@ -1,0 +1,9 @@
+metric,row,n,score,lo,hi,navhard_EPDMS,no_at_fault_collisions,drivable_area_compliance,ego_progress,time_to_collision_within_bound,comfort,driving_direction_compliance,traffic_light_compliance,lane_keeping,history_comfort,two_frame_extended_comfort
+PDMS,ridge_late,12146,73.52,72.86,74.18,,94.74,84.33,69.66,87.43,99.98,,,,,
+PDMS,(a) cls_late G3,12146,77.88,77.24,78.51,,96.64,87.07,73.20,90.89,99.97,,,,,
+PDMS,(a') cls_late refit,12146,77.86,77.26,78.48,,96.63,87.08,73.00,90.97,99.97,,,,,
+PDMS,(b) Hydra-style,12146,84.18,83.70,84.67,,98.04,93.36,76.83,94.43,99.98,,,,,
+EPDMS,ridge_late,12146,73.85,73.16,74.53,16.76,94.76,84.33,87.05,93.84,,96.16,99.57,93.27,98.32,85.21
+EPDMS,(a) cls_late G3,12146,77.40,76.80,78.01,19.82,96.67,87.07,86.85,95.68,,96.96,99.57,93.66,98.23,79.82
+EPDMS,(a') cls_late refit,12146,77.36,76.73,77.98,18.23,96.64,87.08,86.75,95.60,,97.11,99.64,93.91,98.24,80.12
+EPDMS,(b) Hydra-style,12146,82.57,82.06,83.08,25.74,98.04,93.36,84.01,97.36,,98.10,99.65,92.93,98.22,75.37
