@@ -182,7 +182,7 @@ def decode(blob: bytes):
     import torch
     from io import BytesIO
     from PIL import Image
-    return torch.from_numpy(np.asarray(Image.open(BytesIO(blob)).convert("RGB"))).permute(2, 0, 1).contiguous()
+    return torch.from_numpy(np.array(Image.open(BytesIO(blob)).convert("RGB"))).permute(2, 0, 1).contiguous()
 
 
 class _Images:
@@ -365,6 +365,7 @@ def main():
     ap.add_argument("--tag", default="sam")
     ap.add_argument("--mode", default="exact", choices=("exact", "batched"))
     ap.add_argument("--part", default="0/1", help="detect: shards k with k %% n == i")
+    ap.add_argument("--shard-size", type=int, default=2000)
     a = ap.parse_args()
     import torch
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -375,7 +376,7 @@ def main():
         _, rep = build()
         rl.info(f"load: {rep}")
     elif a.step == "detect":
-        info = detect(a.list, a.out, a.batch, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl, mode=a.mode, part=a.part)
+        info = detect(a.list, a.out, a.batch, a.shard_size, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl, mode=a.mode, part=a.part)
         rl.info(f"detect: {info}")
         rl.event("detect", **info)
     elif a.step == "check":
