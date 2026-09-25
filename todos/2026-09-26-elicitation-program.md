@@ -348,6 +348,27 @@ E6（可选）──────────────────────
   navtrain 上 x⁺ / x⁻ 的 `temporal` 都是真抽的，报其差的幅值对安慰剂差之比；若比值 ≥ 2（openpilot 其实「看得见」被抹的人），WOD 对的双流训练作废、只报只 Qwen arm，照记。
   (4) 训练与读数照 00:57 的 (3)–(6)，标签只有 (a)（y⁺ = logged 未来 20 点，y⁻ = CTRA；WOD 没有 GT 状态与 PDM scorer，(b)(c) 不适用）；prior = 第 40 条 (iii) 的 WOD `ridge_late`（train 行上的样本内预测，
   x⁺ 与 x⁻ 的 prior 相同，因为 op 流不变、ego 不变）；WOD 对全部来自 train sequence，读数在 val 的 19 663 帧上，不同源。WOD 对与 navtrain 对各训一个 head、也合训一个，分别报。
+- 2026-09-26 01:40 CST [E5] 登记补齐（写于 E5 的任何检测、拟合、延迟数字之前；fast-perception 表已出）。
+  (1) **检测器**：YOLO26x-seg 640（Ultralytics COCO 闭集，`yolo26x-seg.pt`，`envs/ultralytics`，`jevdrive.fastperc` 的 `yolo:yolo26x-seg.pt:640:half` 后端原样），部署用 fp16。
+  fast-perception 的数：3 路 batch 1 p50 / p95 17 / 20 ms、1 路 12 ms，P5 hazard 行人 ≤ 20 m 召回 0.89（全部 0.50），满足登记条件「延迟 ≤ 20 ms 且 ≤ 20 m 行人召回 ≥ 0.8」。
+  阈值用 Ultralytics 默认 conf 0.25（fast-perception 的主读数）；类别映射同 `fastperc.COCO_MAP`（person → pedestrian，bicycle → cyclist，car / motorcycle / bus / truck → vehicle）。
+  (2) **跑在哪些帧上**：P5 v1 BA 集 `index.parquet` 的全部 46 703 行（obs 19 428：x⁺ / x⁻ / null；role = train 27 275，含 P4 的 9 529 行），每行 3 路相机的当前帧（`files[4i+3]`），共 140 109 张。
+  接地点 = mask 最低 3 行平均列（`sam_detect.contact`），按 `fusion_q4.lift` 平地抬升（P5 标定 `op_plan.json`，该集合的 `p5_calib()`），再平移到车辆原点（x += `REAR_AXLE_X`，与 Q6-SAM 相同）。
+  (3) **embedding（agent 合法输入）**：走廊只用导航与自车定位——该帧的 `route.json` 路线中心线（CARLA / B2D 给 agent 的合法导航输入）与 `pose.jsonl` 位姿，取法同 `fusion_diag.gt_run`
+  （最近且朝向相容的路线点起、向前 60 m，转到 ego 坐标）；检测投影到中心线得弧长 s 与横距 d，保留 |d| ≤ 4 m、0 < s ≤ 40 m、`lift_ok` 的检测，按 s 升序取前 k = 8 个，
+  每个检测 7 维：类别 one-hot（pedestrian / cyclist / vehicle）、x、y（ego 坐标，m）、框高 / 图高、score；不足 8 个补零，另加 1 位 mask，共 8 × 8 = 64 维；三路相机的检测合并后再排序（重叠不去重）。
+  64 维在训练行上逐列标准化（mask 位不标准化）。
+  (4) **student**：Δ_s(x) = MLP([z_op(x), e(x)])，z_op = openpilot `temporal`（与 M-C 同一抽取 `op_streams_vis`，训练行标准化后乘 1/√512），e = 标准化后的 64 维 embedding 乘 1/√64（两路总方差相等，同 M-C 的做法）；
+  MLP 576 → 256 → 256 → 40，GELU，输出层零初始化（初始 Δ ≡ 0）；AdamW lr 1e-3、weight decay 1e-4、全批（每步全部训练行），最多 3 000 步；早停：训练 fold 内按 base 路线 GroupShuffleSplit 留出 20%（seed 0），
+  每 25 步在留出路线的配对 MSE 上评估，patience 300 步，取最好的一步的权重（不在全部训练 fold 上重训）。seed {0, 1, 2}（torch 初始化），主读数 seed 0，另两个只报。
+  (5) **两个 arm**（prior 同 M-C：`ridge_late` openpilot，`reactivity_mc.fit_fold` 原样按 fold 重算，与已存 run 逐 fold 核对）：
+  A = 配对差分：mean_pair ‖Δ_s(x⁺) − Δ_s(x⁻) − [(y⁺ − y⁻) − (p⁺ − p⁻)]‖² + mean_train ‖Δ_s(x)‖²（M-C 的 μ = n_pair / n_train 在求和形式下就是两项等权，这里用均值形式等价；
+  M-C 用 (z − z̄)W 让训练行均值为零，MLP 有偏置，直接罚二阶矩）；B = A + 1.0 × mean_{pair 两侧与训练行} ‖Δ_s(x) − Δ_t(x)‖²，Δ_t = 同一 fold 的 M-C 双流 teacher（`fit_fold` 的 `M-C pair` − prior）。
+  配对行、训练行、fold（`E.folds`，5 个路线 fold）与 M-C 完全相同；Cinque 为主，Lebowski 复现。
+  (6) **对照与 judge**：teacher（M-C 配对双流）与 `M-C pair op`（openpilot 单流配对差分）直接用 `runs/reactivity/mc-carla_p5v1_ba/20260925-233126/preds_obs.npz` 的已存预测；
+  `p5_exam.exam` 与 `reactivity_mc.criteria` 一字不改（τ 各自由 null 定），另报 non-reactive 帧误翻（DynamicObjectCrossing 与全部）。
+  (7) **端到端延迟**：GPU 上 batch 1：YOLO26x-seg 640 fp16 三路一次调用（fastperc `latency` 协议）+ 抬升 / 走廊 / embedding（CPU numpy）+ MLP 前向（GPU），分别计时，p95 相加作保守的端到端；openpilot `temporal` 的 2.3 ms 加上。
+  判据照登记：行人 ≥ 30% 且 CI 下端 > 样本外 null false-flip、cut-in 对 prior 的配对 Δ CI 上端 ≥ 0、延迟 ≤ 50 ms，三条都过才「过」；按 arm × 模型分别判，主判 arm A 与 B 的 Cinque seed 0。
 
 ## 结果
 
