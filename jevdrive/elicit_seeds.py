@@ -60,10 +60,12 @@ def _summ(df: pd.DataFrame, keys: list, hw_col: str = "halfwidth") -> pd.DataFra
     """One row per key: the three seeds' values, mean, range, seed 0's CI half-width, range < half-width."""
     out = []
     for k, g in df.groupby(keys, sort=False):
-        v = g.set_index("seed")["value"]
+        a = g.set_index("seed")["value"]
+        v = a[[x for x in a.index if x in (0, 1, 2)]]
         hw = float(g.set_index("seed")[hw_col].get(0, np.nan))
         out.append({**dict(zip(keys, k if isinstance(k, tuple) else (k,))),
-                    **{f"s{s}": v.get(s, np.nan) for s in (0, 1, 2)}, "mean": v.mean(), "range": v.max() - v.min(),
+                    **{f"s{s}": v.get(s, np.nan) for s in (0, 1, 2)}, "s0r (seed-0 re-run)": a.get("0r", np.nan),
+                    "mean": v.mean(), "range": v.max() - v.min(),
                     "ci_halfwidth_s0": hw, "range_lt_halfwidth": bool(v.max() - v.min() < hw) if len(v) == 3 else None})
     return pd.DataFrame(out)
 
@@ -95,7 +97,7 @@ def _scores(ver: str, split: str, name: str):
 def nav() -> pd.DataFrame:
     rows, tok = [], {}
     rng = np.random.default_rng(0)
-    for s in (0, 1, 2):
+    for s in (0, 1, 2, "0r"):
         for arm in NAV_ARMS:
             name = f"heads_{arm}" if s == 0 else f"heads_s{s}_{arm}"
             for ver, metric in (("v1", "PDMS"), ("v2", "EPDMS")):
@@ -128,8 +130,8 @@ def nav() -> pd.DataFrame:
 
 def wod() -> pd.DataFrame:
     rows = []
-    for s in (0, 1, 2):
-        d = R / WOD_STORED if s == 0 else latest(f"drive_backbones/heads_train-seed{s}/*")
+    for s in (0, 1, 2, "0r"):
+        d = R / WOD_STORED if s == 0 else latest(f"drive_backbones/heads_train-seed{str(s)[0]}/*")
         if d is None:
             continue
         a = pd.read_csv(d / "heads_rfs_arms_p3drive_heads.csv")
