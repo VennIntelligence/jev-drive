@@ -73,6 +73,38 @@ def prepare() -> dict:
     return info
 
 
+def reuse(src_set: str = "carla_p5", sub: str = "op_streams") -> dict:
+    """Link the runner's per-stream outputs from an earlier set for every stream of this plan that is the same
+    stream there: same frame names, same targets and the same JPEG files (directories resolved, so P5 v1's
+    BehaviorAgent worlds, which are symlinks to v0's runs, match v0's streams). The runner skips linked streams."""
+    import os
+    src = data_dir() / "processed" / src_set
+    if src == root() or not (src / "op_plan.json").exists():
+        return {"linked": 0}
+    real = {}
+
+    def rp(f):
+        d, b = f.rsplit("/", 1)
+        if d not in real:
+            real[d] = os.path.realpath(d)
+        return real[d] + "/" + b
+
+    def sig(s):
+        return s["names"], s["targets"], [[rp(f) for f in trip] for trip in s["files"]]
+    old = {s["key"]: s for s in json.loads((src / "op_plan.json").read_text())["streams"]}
+    n = 0
+    for s in json.loads((root() / "op_plan.json").read_text())["streams"]:
+        o = old.get(s["key"])
+        if o is None or o["names"] != s["names"] or o["targets"] != s["targets"] or sig(o) != sig(s):
+            continue
+        for m in MODELS:
+            f, dst = src / sub / m / f"{s['key']}.npz", root(sub, m) / f"{s['key']}.npz"
+            if f.exists() and not dst.exists():
+                dst.symlink_to(f)
+        n += 1
+    return {"linked_streams": n, "from": str(src / sub)}
+
+
 def _dst(model: str, sub: str) -> Path:
     """op_streams -> op_<model>; op_streams_<x> -> op_<model>_<x> (the reactivity D0 set keeps its own copy)."""
     return root(f"op_{model}" + sub.removeprefix("op_streams"))
@@ -111,12 +143,15 @@ def load(t, models=MODELS, arrays=("temporal",), sub: str = "op_streams") -> dic
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prepare", "finalize"))
+    ap.add_argument("step", choices=("prepare", "reuse", "finalize"))
     ap.add_argument("--arrays", default="temporal")
     ap.add_argument("--sub", default="op_streams")
+    ap.add_argument("--from-set", default="carla_p5")
     a = ap.parse_args()
     if a.step == "prepare":
         print(prepare())
+    elif a.step == "reuse":
+        print(reuse(a.from_set, a.sub))
     else:
         for m in MODELS:
             print(finalize(m, tuple(a.arrays.split(",")), a.sub))

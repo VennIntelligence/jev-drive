@@ -481,7 +481,9 @@ def main():
     p.add_argument("--heads-skip", default="", help="comma list of taps that get probes only, no ridge_late head")
     a = p.parse_args()
     if a.cmd == "run":
-        rl = RunLog("p5_pairs", "exam" if a.op_arrays == "temporal" else "exam-d0")
+        import os
+        set_ = os.environ.get("P5_SET", "carla_p5")       # a P5 v1 set gets its own run dirs
+        rl = RunLog("p5_pairs", ("exam" if a.op_arrays == "temporal" else "exam-d0") + ("" if set_ == "carla_p5" else "-" + set_))
         run(rl, tuple(m for m in a.op.split(",") if m), tuple(a.op_arrays.split(",")), a.op_sub,
             tuple(k for k in a.heads_skip.split(",") if k))
         rl.close()
