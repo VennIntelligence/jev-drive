@@ -96,6 +96,30 @@ def tracking(att, expert, rear_offset):
     return {"e_lat": np.abs(pr[:, 1]), "e_lon": pr[:, 0] - s_ref, "e_head": np.abs(head), "n": int(keep.sum())}
 
 
+def stuck_cause(att, row):
+    """Descriptive only (added after the runs, not a criterion): why a stuck route stopped for good.
+    gap_stop  the car stands still while the plan's first point (0.25 s) is >= 1 m ahead and the rest of the plan is
+              (nearly) stationary: a controller without position feedback (Zoo PID reads speed from waypoint spacing)
+              stops short of a stop point ahead; the replay plan then waits for a car that never arrives
+    pinned    the car's last motion ended within 3 s after a collision (collision then standstill)
+    other     anything else"""
+    ticks = [json.loads(line) for line in open(att / "ticks.jsonl")]
+    plans = [json.loads(line) for line in open(att / "plans.jsonl")]
+    v = np.array([x["v"] for x in ticks])
+    t = np.array([x["t"] for x in ticks])
+    moving = np.flatnonzero(v > 0.5)
+    t_last = t[moving[-1]] if len(moving) else t[0]
+    tc = row["t_col"]                       # sim time, as t
+    if tc is not None and tc <= t_last + 0.5 and t_last - tc <= 3.0:
+        return "pinned"
+    late = [p for p in plans if p["t"] > t_last + 2.0]
+    if late:
+        path = np.array(late[-1]["path"])
+        if path[0, 0] >= 1.0 and abs(path[-1, 0] - path[1, 0]) < 0.5:
+            return "gap_stop"
+    return "other"
+
+
 def q(x, p):
     return round(float(np.percentile(x, p)), 3) if len(x) else None
 
@@ -155,6 +179,8 @@ def main():
                  "extra_collision": int(row["n_collisions"] > 0 and ea.get("n_collisions", 0) == 0),
                  "stuck": int(any(s in row["status"] for s in STUCK)),
                  "stuck_vs_expert": int(any(s in row["status"] for s in STUCK) and ea.get("status") == "Completed")}
+            if r["stuck"]:
+                r["stuck_cause"] = stuck_cause(att, row)
             if tr is not None:
                 for k in E:
                     E[k].append(tr[k])
@@ -174,6 +200,7 @@ def main():
              "completed": sum(r["status"] == "Completed" for r in ok),
              "stuck": sum(r["stuck"] for r in ok), "stuck_vs_expert": sum(r["stuck_vs_expert"] for r in ok),
              "extra_collision_routes": sum(r["extra_collision"] for r in ok),
+             "stuck_causes": {c: sum(r.get("stuck_cause") == c for r in ok) for c in ("gap_stop", "pinned", "other")},
              "e_lat_med": q(E["e_lat"], 50), "e_lat_p95": q(E["e_lat"], 95),
              "abs_e_lon_med": q(np.abs(E["e_lon"]), 50), "abs_e_lon_p95": q(np.abs(E["e_lon"]), 95),
              "e_lon_med": q(E["e_lon"], 50), "e_head_med": q(E["e_head"], 50), "n_track_ticks": int(len(E["e_lat"])),
