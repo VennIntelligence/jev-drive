@@ -9,7 +9,7 @@ Working notes, pre-registrations and every table: [todos/2026-09-25-closed-loop-
 | Part | Verdict | Where |
 |---|---|---|
 | CARLA harness cost and layout | measured; GPU render binds first, **6 servers per GPU**, ~2.5 cores per worker; the container thread cap binds the box | [bench2drive-cost.md](bench2drive-cost.md) "Harness cost and layout on the five-GPU box" |
-| B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2) | **none passes**; the fixed tracker at 2 Hz plans is closest (lags ~3 m); Zoo PID fails outright | below |
+| B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2, P5) | **none passes**; P5 (re-acceptance, time-indexed replay) is closest: lateral passes at 1 / 2 / 5 Hz, longitudinal still lags ~2.6 m (starts ~0.5 s late); Zoo PID fails outright | below |
 | HUGSIM controllers | official **fail**, PR #57 **fail**, fixed2 **pass** | [hugsim.md](hugsim.md) "Controller acceptance" |
 | Unexplained SIGKILLs | not kernel OOM, not our code; most likely the platform's memory enforcement; forensics now armed | [long-runs.md](long-runs.md), todo `sigkill.md` |
 
@@ -46,9 +46,43 @@ the expert completed. The expert run twice differs by 0.26 DS per route on avera
   wait window can freeze the plan when the car stops more than 2 m short of an expert stop point, which prolongs stalls of
   controllers without position feedback; a time-indexed plan with smooth catch-up (s(t) = s_e(τ + t) − (s_e(τ) − s0)·e^(−t/2 s))
   avoids both the jump and the freeze and should replace it before the next acceptance run.
-- Only the fixed tracker at 2 Hz is close to usable; **no closed-loop B2D score obtained with Zoo PID (Alpamayo, openpilot)
+- Only the fixed tracker at 2 Hz was close to usable in this first run; **no closed-loop B2D score obtained with Zoo PID (Alpamayo, openpilot)
   can be attributed to the model.**
 
+
+### Re-acceptance: P5 under a time-indexed replay (2026-09-25 evening)
+
+**What changed.** (1) The replay plan is now time-indexed with smooth catch-up (`b2d_zeroshot_agent.py`
+`"replay_plan": "time"`): s(t) = s_e(τ + t) − (s_e(τ) − s0)·e^(−t/2 s), clipped to s >= s0 and non-decreasing, so it never
+freezes and never jumps ahead of the car. (2) P5, the final longitudinal redesign of the tfv6-controller work (on the D
+lateral; decision 41), runs in the exam agent as is (`controller_preset: "pursuit"`, `P5.json`; its pose-adapter key goes
+to the PoseFilter exactly as in the L1 harness; `scripts/test_infra_ctl_p5.py` shows bit-identical controls to
+`pursuit_from_config`). The fixed tracker was re-run under the new replay as the paired reference (f2t). Expert runs
+reused, criteria unchanged (A4 threshold 90.5), pre-registered before any run
+([todo](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md), commit 06f18d1).
+
+| Controller (plan cadence) | DS (expert 95.5) | ΔDS vs expert [95% CI] | ΔDS vs f2t | completed / 20 | stuck | collisions (routes the expert did not) | cross-track p95 | lag (signed e_lon median) | lateral ratio | verdict |
+|---|---:|---|---|---:|---:|---|---:|---:|---:|---|
+| f2t: fixed tracker, 2 Hz | 80.6 | −14.9 [−26.6, −5.4] | — | 19 | 0 | 11 (6) | 0.55 m | −3.0 m | 0.88 | fail (A2, A4) |
+| P5, 2 Hz | 85.7 | −9.8 [−18.8, −2.4] | +5.1 [−0.4, +11.4] | 19 | 0 | 5 (3) | 0.11 m | −2.7 m | 0.91 | fail (A2, A4) |
+| P5, 5 Hz | **88.5** | −7.0 [−15.6, +0.2] | **+7.9 [+1.4, +15.0]** | 19 | 0 | **3 (2)** | 0.11 m | −2.6 m | 0.90 | fail (A2 median, A4) |
+| P5, 1 Hz | 86.4 | −9.1 [−17.2, −1.5] | +5.9 [−5.7, +19.2] | 19 | 0 | 4 (4) | 0.17 m | −3.3 m | 0.88 | fail (A2, A4) |
+
+- **Lateral is solved** at all three cadences (cross-track p95 0.11-0.17 m vs 0.55 m for the fixed tracker; the fixed
+  tracker's 5 Hz collapse of the first run does not happen with P5).
+- **Longitudinal is what fails** (A2 median 2.6-3.3 m vs 2 m; DS 2.0-4.8 below 90.5). Measured in time
+  (`scripts/infra_ctl_lag.py`), every arm leaves every start ~0.5 s after the expert and then trails it by 0.3-0.4 s
+  (median). The expert throttles at its first tick and moves ~0.5 s later; a controller that sees only the plan's
+  positions starts accelerating only once the plan moves, and repeats the delay at every restart. P5 lags only 0.4-0.5 m
+  less than the fixed tracker. This is the controller's launch feed-forward and the replay interface (positions only, no
+  acceleration intent) together; the split was not measured. Throttle is still capped at 0.75 (expert 1.0).
+- DS losses: late arrival at conflict points (2084 junction left turn, 2668 parked obstacle for every arm, 17563, and
+  24211 / 24330 / 2086 at 1 Hz) and **stop-sign infractions** on the three unsignalized-junction routes (2086 / 2091 / 2115;
+  P5 at 2 / 5 Hz on all three, f2t on one, the expert and first-run F2 on none), which the new replay may cause in part
+  (it no longer holds a lagging car at the expert's stop point); about 3 of P5's 2.0-4.8 DS gap.
+- Infrastructure: 80/80 routes scored; 2 routes needed a second attempt, 1 server died at startup (Signal 11).
+- No parameter was tuned. What to change next (launch feed-forward / throttle authority / stopping position, or first
+  separating the replay's actuation delay from the controller's) is the user's decision.
 
 ## HUGSIM reporting rule (user, 2026-09-25)
 
@@ -88,11 +122,11 @@ here); both now kill only groups that still write into their own run directory.
 
 ## Before closed-loop exams resume
 
-1. B2D: drop Zoo PID (and P1 / P2). Start from the fixed tracker at 2 Hz, fix its longitudinal lag (no brake hold before
-   the first plan, throttle authority, position feedback on the plan's time stamps) and re-run this acceptance
-   (`scripts/infra_ctl_accept.sh arms <gpu> <arm>:<index>`, ~40 min for one arm). Use a controller only at the plan cadence
-   it was accepted at.
-2. Replace the replay's wait window with the time-indexed smooth catch-up plan before using this test again.
+1. B2D: drop Zoo PID (and P1 / P2). P5 is the best candidate (lateral accepted at 1 / 2 / 5 Hz), but no controller has
+   passed: its launch / restart lag (~0.5 s) must be fixed or explained before a B2D score can be attributed to a model
+   (`scripts/infra_ctl_accept.sh v2 <gpu> <arm>:<index> ...`, ~1.5 h for four arms on one card). Use a controller only at
+   the plan cadence it was accepted at.
+2. Done: the replay is time-indexed with smooth catch-up (`"replay_plan": "time"`); use it for every further run.
 3. HUGSIM: run every model under **both** the official controller and fixed2 (`zs_run.py --controller fixed2`) and
    report both; see "HUGSIM reporting rule" below.
 4. Size CARLA jobs by threads: `--client-threads 8` on every runner, <= 6 servers per GPU, <= 30 on the box.

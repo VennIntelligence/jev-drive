@@ -4,7 +4,7 @@
 主题: ../research/trajectory-to-control.md、[docs/carla.md](../docs/carla.md)、[docs/bench2drive-cost.md](../docs/bench2drive-cost.md)、[docs/hugsim.md](../docs/hugsim.md)
 子文档: [profiling](2026-09-25-closed-loop-infra-acceptance/profiling.md)、[B2D 控制器验收](2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md)、
 [HUGSIM 控制器验收](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)、[SIGKILL 取证](2026-09-25-closed-loop-infra-acceptance/sigkill.md)、
-[P5 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)（进行中）
+[P5 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)
 
 ## 为什么做
 
@@ -78,9 +78,20 @@ replay，单独就足以判 fail。固定控制器 2 Hz 横向合格、19/20 完
 0.75 而专家用到 1.0），晚到冲突点撞上 6 次；同一个控制器换 5 Hz plan 明显更差，所以它只在 2 Hz 下可用。
 TCP partner 不是 plan → control 控制器，它的 1.5 m/s 是出厂低速油门上限，不在验收里。
 
-**P5 复验（[b2d-controllers-p5.md](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)，进行中）。** 必改项 1、3 的执行：
+**P5 复验（[b2d-controllers-p5.md](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)，20:05–21:32 CST）。** 必改项 1、3 的执行：
 tfv6-controller 线的终版纵向 P5（D 横向）原样接进考试 agent（构造与 L1 逐位相同），replay plan 改成按时间索引、平滑追上，
-同一 20 条路线跑 P5 @ 2 / 5 / 1 Hz 和新协议下的 F2（配对参考）；判据与第一轮相同，预注册于运行之前。
+同一 20 条路线跑 P5 @ 2 / 5 / 1 Hz 和新协议下的 F2（f2t，配对参考）；判据与第一轮相同，预注册于运行之前。
+
+| 控制器 | DS（专家 95.5） | ΔDS 对专家 | ΔDS 对 f2t | 完成 | 碰撞（多出的路线） | e_lat p95 | lag | lat_ratio | 判定 |
+|---|---:|---|---|---:|---|---:|---:|---:|---|
+| f2t 固定，2 Hz | 80.6 | −14.9 [−26.6, −5.4] | — | 19 | 11 (6) | 0.55 m | −3.0 m | 0.88 | **fail** |
+| P5，2 Hz | 85.7 | −9.8 [−18.8, −2.4] | +5.1 [−0.4, +11.4] | 19 | 5 (3) | 0.11 m | −2.7 m | 0.91 | **fail** |
+| P5，5 Hz | **88.5** | −7.0 [−15.6, +0.2] | **+7.9 [+1.4, +15.0]** | 19 | 3 (2) | 0.11 m | −2.6 m | 0.90 | **fail**（最接近） |
+| P5，1 Hz | 86.4 | −9.1 [−17.2, −1.5] | +5.9 [−5.7, +19.2] | 19 | 4 (4) | 0.17 m | −3.3 m | 0.88 | **fail** |
+
+P5 横向在三个节奏下都合格（A1、A3），不过的是纵向：落后 2.6–3.3 m（A2 门槛 2 m），DS 差门槛 2.0–4.8。换成时间看，每次起步
+都比专家晚约 0.5 s、之后稳态滞后 0.3 s：plan 只有位置，专家踩油门后约 0.5 s 车才动，只看位置的控制器要等 plan 动了才加速。
+丢分来自晚到冲突点的碰撞和三条无信号路口的停车标志违规（后者可能部分来自新协议）。没有调参，下一步由用户定。
 
 **HUGSIM（[hugsim-controllers.md](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)）。** 喂场景自己的 logged 轨迹、
 以 ideal tracker 为参考，held-out 12 个场景：
@@ -109,9 +120,9 @@ OOM、我们代码里所有 kill 路径、Mac 上所有 agent 在两个时间窗
 
 | # | 事项 | 为什么 |
 |---|---|---|
-| 1 | **B2D 不再用 Zoo PID**（包括只换横向的 P1 / P2）；以固定控制器 2 Hz 为基线，补上纵向（起步不等、油门上限、按 plan 时间戳的位置反馈），再跑一遍本验收（20 条 × 1 臂，约 40 min） | Zoo PID 在专家 plan 上横向 1/3、纵向无位置反馈；固定控制器只差纵向 3 m |
+| 1 | **B2D 不再用 Zoo PID**（包括只换横向的 P1 / P2）；P5 已复验（见上）：横向合格，纵向起步 / 再起步晚约 0.5 s 仍不过，需要修或解释后再复验 | Zoo PID 在专家 plan 上横向 1/3、纵向无位置反馈；P5 只差纵向 |
 | 2 | 固定控制器只按 plan 的原生节奏用，5 Hz 的 openpilot 若要用它，先在 5 Hz 下单独过验收 | F5 比 F2 多 6 条碰撞路线 |
-| 3 | 验收 replay 的 plan 来源改成“按时间索引、平滑追上”再用于后续验收 | 当前 ±2 m 窗口会冻住 plan，放大无位置反馈控制器的卡住 |
+| 3 | ~~验收 replay 的 plan 来源改成“按时间索引、平滑追上”~~ 已做（`replay_plan: time`，P5 复验起使用） | ±2 m 窗口会冻住 plan，放大无位置反馈控制器的卡住 |
 | 4 | HUGSIM 换 fixed2（`zs_run.py --controller fixed2`）；official 还要不要当 headline 由用户定 | official、PR #57 都不过验收 |
 | 5 | CARLA 作业按线程数排：route client 一律 `--client-threads 8`，每卡 ≤ 6 个 server，整台 ≤ 30 | pids.max 20480 是 box 级上限 |
 | 6 | 分数里报告重试次数（RenderThread 超时崩溃约 15% 的 server 启动） | 原因未查明 |

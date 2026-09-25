@@ -1,0 +1,301 @@
+{
+ "E-a": {
+  "n_routes": 20,
+  "DS": 95.49,
+  "RC": 97.55,
+  "completed": 19,
+  "collision_routes": 1
+ },
+ "E-b": {
+  "n_routes": 20,
+  "DS": 95.75,
+  "RC": 97.55,
+  "completed": 19,
+  "collision_routes": 1
+ },
+ "f2t": {
+  "n_routes": 20,
+  "missing": 0,
+  "DS": 80.55,
+  "RC": 97.65,
+  "completed": 19,
+  "stuck": 1,
+  "stuck_vs_expert": 0,
+  "extra_collision_routes": 6,
+  "stuck_causes": {
+   "gap_stop": 0,
+   "pinned": 0,
+   "other": 1
+  },
+  "e_lat_med": 0.002,
+  "e_lat_p95": 0.55,
+  "abs_e_lon_med": 2.977,
+  "abs_e_lon_p95": 8.393,
+  "e_lon_med": -2.977,
+  "e_head_med": 0.048,
+  "n_track_ticks": 4203,
+  "lat_ratio": 0.878,
+  "lat_n": 141,
+  "A1": true,
+  "A2": false,
+  "A3": true,
+  "A4": false,
+  "A5": true,
+  "pass": false,
+  "n_collisions": 11,
+  "vs_expert": {
+   "DS": [
+    -14.94,
+    -26.61,
+    -5.39
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    0.4,
+    0.05,
+    0.9
+   ]
+  }
+ },
+ "p5x2": {
+  "n_routes": 20,
+  "missing": 0,
+  "DS": 85.67,
+  "RC": 97.65,
+  "completed": 19,
+  "stuck": 1,
+  "stuck_vs_expert": 0,
+  "extra_collision_routes": 3,
+  "stuck_causes": {
+   "gap_stop": 0,
+   "pinned": 0,
+   "other": 1
+  },
+  "e_lat_med": 0.002,
+  "e_lat_p95": 0.112,
+  "abs_e_lon_med": 2.702,
+  "abs_e_lon_p95": 8.035,
+  "e_lon_med": -2.702,
+  "e_head_med": 0.049,
+  "n_track_ticks": 4570,
+  "lat_ratio": 0.905,
+  "lat_n": 154,
+  "A1": true,
+  "A2": false,
+  "A3": true,
+  "A4": false,
+  "A5": true,
+  "pass": false,
+  "n_collisions": 5,
+  "vs_expert": {
+   "DS": [
+    -9.82,
+    -18.8,
+    -2.42
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    0.1,
+    -0.2,
+    0.4
+   ]
+  },
+  "vs_f2t": {
+   "DS": [
+    5.12,
+    -0.38,
+    11.42
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    -0.3,
+    -0.55,
+    -0.1
+   ],
+   "route_e_lon_med": [
+    0.4,
+    0.12,
+    0.68
+   ]
+  }
+ },
+ "p5x5": {
+  "n_routes": 20,
+  "missing": 0,
+  "DS": 88.45,
+  "RC": 97.65,
+  "completed": 19,
+  "stuck": 1,
+  "stuck_vs_expert": 0,
+  "extra_collision_routes": 2,
+  "stuck_causes": {
+   "gap_stop": 0,
+   "pinned": 0,
+   "other": 1
+  },
+  "e_lat_med": 0.002,
+  "e_lat_p95": 0.106,
+  "abs_e_lon_med": 2.601,
+  "abs_e_lon_p95": 7.904,
+  "e_lon_med": -2.601,
+  "e_head_med": 0.062,
+  "n_track_ticks": 4576,
+  "lat_ratio": 0.898,
+  "lat_n": 360,
+  "A1": true,
+  "A2": false,
+  "A3": true,
+  "A4": false,
+  "A5": true,
+  "pass": false,
+  "n_collisions": 3,
+  "vs_expert": {
+   "DS": [
+    -7.04,
+    -15.6,
+    0.16
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    0.0,
+    -0.4,
+    0.35
+   ]
+  },
+  "vs_f2t": {
+   "DS": [
+    7.9,
+    1.42,
+    14.96
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    -0.4,
+    -0.7,
+    -0.15
+   ],
+   "route_e_lon_med": [
+    0.54,
+    0.32,
+    0.77
+   ]
+  }
+ },
+ "p5x1": {
+  "n_routes": 20,
+  "missing": 0,
+  "DS": 86.44,
+  "RC": 97.65,
+  "completed": 19,
+  "stuck": 1,
+  "stuck_vs_expert": 0,
+  "extra_collision_routes": 4,
+  "stuck_causes": {
+   "gap_stop": 0,
+   "pinned": 0,
+   "other": 1
+  },
+  "e_lat_med": 0.003,
+  "e_lat_p95": 0.17,
+  "abs_e_lon_med": 3.345,
+  "abs_e_lon_p95": 12.325,
+  "e_lon_med": -3.345,
+  "e_head_med": 0.069,
+  "n_track_ticks": 4554,
+  "lat_ratio": 0.881,
+  "lat_n": 80,
+  "A1": true,
+  "A2": false,
+  "A3": true,
+  "A4": false,
+  "A5": true,
+  "pass": false,
+  "n_collisions": 4,
+  "vs_expert": {
+   "DS": [
+    -9.05,
+    -17.21,
+    -1.53
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    0.05,
+    -0.35,
+    0.35
+   ]
+  },
+  "vs_f2t": {
+   "DS": [
+    5.89,
+    -5.71,
+    19.21
+   ],
+   "completed": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "n_collisions": [
+    -0.35,
+    -0.85,
+    0.05
+   ],
+   "route_e_lon_med": [
+    -0.75,
+    -1.71,
+    0.04
+   ]
+  }
+ },
+ "_meta": {
+  "routes": [
+   "11381",
+   "1711",
+   "17563",
+   "1825",
+   "1833",
+   "1852",
+   "1956",
+   "2084",
+   "2086",
+   "2091",
+   "2115",
+   "2286",
+   "2373",
+   "2390",
+   "24211",
+   "24330",
+   "26458",
+   "2668",
+   "3564",
+   "4183"
+  ],
+  "A4_tolerance": 5.0,
+  "expert_ab_route_abs_ds_mean": 0.26,
+  "rear_axle_offset_m": -1.388633220199954
+ }
+}
