@@ -153,6 +153,49 @@ plan 随之冲出去。Lebowski 不同：它的 context 是 24 个 0.2 s 的 hid
 速度被高估 2.5 倍，5 s 终点照样冲出 17–24 m。**只有 4 帧 2 Hz 的输入里，没有一种不改模型的喂法能让 openpilot 的原生 plan 读数有意义**；
 NAVSIM 上能测 openpilot 的只剩「冻结特征 + 重拟合 head」（G3），head 可以学会把被放大的运动读回来。
 
+### G2：NAVSIM 上我们的 ego head（2026-09-25 16:47）
+
+navtrain 103 288 个 token（1192 个 log）上拟合，navtest 12 146 个 token 官方 devkit 打分；CI 为 token bootstrap。
+`ridge ego` 的 λ 与 `cls ego` 的 λ 都落在网格下沿（1e-6 / 1e-7），即几乎不正则；32 维输入、10 万行，本来就不需要。
+K = 1024 词表的 oracle ADE 0.29 m。
+
+| 行 | PDMS [CI] | EPDMS [CI] | navhard EPDMS | NC / DAC / EP（EPDMS 口径） |
+|:--|:--|:--|--:|:--|
+| human（log） | 94.6 | 94.5 | — | 100 / 100 / 87.4 |
+| **我们 `cls ego K1024`** | **68.4 [67.7, 69.1]** | **67.8 [67.1, 68.5]** | **13.6** | 93.0 / 80.2 / 86.5 |
+| 我们 `ridge ego` | 62.7 [62.0, 63.5] | 64.2 [63.4, 65.0] | 13.3 | 89.7 / 79.0 / 85.6 |
+| 文献 Ego Status MLP（arXiv 2406.15349） | 65.6 | — | — | |
+| openpilot Cinque 原生（第 37 条） | 52.1 | 46.2 | 9.3 | 78.4 / 75.7 / 95.2 |
+| Alpamayo 1.5 nav（第 37 条） | 44.3 | 43.2 | 10.8 | 76.8 / 70.6 / 84.8 |
+| ctrv | 41.1 [40.4, 41.8] | 43.9 [43.1, 44.7] | 11.4 | 73.1 / 75.5 / 78.7 |
+| constant velocity | 20.7 | 25.9 | 11.5 | 68.1 / 57.8 / 77.7 |
+
+配对（EPDMS）：`cls ego` − cv +42.0 [41.1, 42.9]；`cls ego` − Alpamayo +24.7 [23.7, 25.6]；Cinque 原生 − cv +20.3 [19.4, 21.2]。
+
+**读法**：两个 ego head 与文献 Ego Status MLP（65.6）同量级（`ridge` 62.7、`cls` 68.4），说明管线和口径对得上。
+一个不看图像的线性分类头比所有 zero-shot 驾驶模型高 16–24 PDMS、21–25 EPDMS；在 navhard 上也是最高的一行（13.6，cv 11.5）。
+NAVSIM 的分数里，「根据自车状态和 command 选一条合理的轨迹」这一部分就占了顶分的 70–75%（见 I2）。
+预期「ego head 60–70」成立。
+
+### I2：continuation share（2026-09-25 16:53）
+
+`research/results/openpilot-openloop/continuation_share.csv`。share = 不看路的基线 ÷ 该 benchmark 已发表的顶分（L2 取倒数）。
+
+| benchmark | 指标 | cv | ctrv | 最好的 ego-only 学习 head | 顶分（条目） | cv / ego head 的 share |
+|:--|:--|--:|--:|--:|:--|:--|
+| WOD-E2E val | RFS（下限 4） | 7.10 | 7.02 | 7.31（`cls ego`） | 8.04（RAP，test） | 0.88 / 0.91；扣掉下限 4 后 0.77 / 0.82 |
+| NAVSIM navtest | PDMS | 20.7 | 41.1 | 68.4（`cls ego`） | 91.5（SimWAM） | 0.23 / 0.75 |
+| NAVSIM navtest | EPDMS | 25.9 | 43.9 | 67.8 | 90.2（SimWAM） | 0.29 / 0.75 |
+| nuScenes val | L2 均值 (m) | 0.83（GoStraight） | — | 0.35（Ego-MLP，文献） | 0.37（VAD-Base + ego） | 0.45 / **1.06** |
+| Bench2Drive 开环 | L2 2 s (m) | — | — | 3.64（AD-MLP，文献） | 0.73（UniAD-Base） | — / 0.20 |
+| Bench2Drive 闭环 | DS | — | — | 18.1（AD-MLP，文献） | 90.6（BLUE） | — / 0.20 |
+| HUGSIM（64 场景） | HD-Score | 0.04（official 控制器）/ 0.29（fixed） | — | — | 0.299（UniAD，论文 Tab. 13） | 0.13 / —；fixed 控制器下 **0.98** |
+
+读法：开环榜上，不看路能拿到的份额很高——nuScenes 上 ego-only 已经超过顶分（1.06），WOD 上 cv 拿到顶分的 77–88%，
+NAVSIM 上学出来的 ego head 拿到 75%。闭环（Bench2Drive）只有 20%。HUGSIM 的 cv 份额取决于控制器：官方控制器下 0.13，
+修正后的控制器下 cv 与论文最好的 UniAD 打平（同一批 64 个场景上 cv-fixed 0.29 对 LTF-fixed 0.28），这一格量的是控制器与场景长度，
+不是驾驶能力（HUGSIM 考试另有判读）。B2D 开环 shadow 与 HUGSIM 的 ego head 没有数字，只收已有的（预登记）。
+
 ## 偏离记录
 
 1. **G1：slim shard 上缺帧时保持上一帧。** 预登记没写缺帧怎么办；考试的 runner 对缺帧是直接跳过。479 个目标里只有 1 个的 1.5 s 窗口缺帧，
