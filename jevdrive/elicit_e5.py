@@ -55,6 +55,8 @@ def imglist() -> pd.DataFrame:
             rows.append({"key": f"{r.frame_name}|{cam}", "path": f[4 * i + 3]})
     out = pd.DataFrame(rows)
     out.to_parquet(root("images.parquet"), index=False)
+    for i, sl in enumerate(np.array_split(np.arange(len(out)), 3)):      # three detector processes, disjoint slices
+        out.iloc[sl].to_parquet(root(f"images_{i}.parquet"), index=False)
     log.info("%d rows x 3 cameras = %d images", len(t), len(out))
     return out
 
@@ -110,11 +112,12 @@ def embed(det_dir: Path, workers: int = 12) -> pd.DataFrame:
     from multiprocessing import Pool
     from . import fusion_q4 as Q
     t = _index()
-    d = Q.load_dets(det_dir, SCORE)
+    subs = sorted(p for p in Path(det_dir).iterdir() if p.is_dir()) or [Path(det_dir)]   # one dir per list slice
+    d = pd.concat([Q.load_dets(s, SCORE) for s in subs], ignore_index=True)
     d = d[d.prompt.isin(CLASSES)]
     d = Q.lift_dets(d, d.key.str.split("|").str[1].to_numpy(), Q.p5_calib())
     d = d[d.lift_ok].copy()
-    H = pd.read_parquet(sorted(Path(det_dir).glob("part-*.parquet"))[0], columns=["H"]).H.iloc[0]
+    H = pd.read_parquet(sorted(subs[0].glob("part-*.parquet"))[0], columns=["H"]).H.iloc[0]
     d["fn"] = d.key.str.split("|").str[0]
     arr = np.c_[d.prompt.map({c: i for i, c in enumerate(CLASSES)}).to_numpy(), np.zeros((len(d), 2)),
                 d.gx.to_numpy() + Q.REAR_AXLE_X, d.gy.to_numpy(), ((d.y1 - d.y0) / H).to_numpy(), d.score.to_numpy()]
