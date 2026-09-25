@@ -2932,7 +2932,7 @@ I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出�
 下一步是闭环（反应通道进控制器）和更难的行人 family（VehicleTurningRoutePedestrian 仍为 0，只有 10 帧）。原先那句保留在此以便对照：「行人这条线的瓶颈是输入表征的空间分辨率，而不是训练信号」——已被推翻。
 **会推翻本条的证据**：P5 v1（更多路线、PDM-Lite 标签）上 vision 层行人 AUC 过 0.60；或 M-C 在 v1 上行人翻转过 20%（那说明 v0 是数据量问题，不是表征问题）。
 
-## 43. 融合前诊断：Qwen 在融合里不加分（冗余），行人既不在 openpilot 也不在 Qwen 的线性 / 空间读出里；现成 SAM 3.1 近处看得见、远处放不准，规则门在它的状态上拿到行人 family 的第一个非零翻转（**待定**，P5 v0 + WOD + nuScenes，I1 之前）
+## 43. 融合前诊断：Qwen ⊕ openpilot 在**均匀 imitation 下**冗余、在配对差分下互补；现成 SAM 3.1 近处看得见、远处放不准，规则门在它的状态上的行人翻转已被学出来的 reaction head 超过（**待定**，P5 v0/v1 + WOD + nuScenes；2026-09-26 就地修正）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-fusion-diagnostics.md](../todos/2026-09-25-fusion-diagnostics.md)（九项，含「架构方向」一页），小表在 [research/results/fusion-diagnostics/](results/fusion-diagnostics/)。
 SAM 3.1 是 Meta 的开放词表分割模型（文本 prompt），这里用它的 image 检测器、仓库原样的前后处理（与 `Sam3Processor` 逐位相同），接地点按平地假设抬到 BEV。
@@ -2949,9 +2949,17 @@ SAM 3.1 是 Meta 的开放词表分割模型（文本 prompt），这里用它�
 | Q8 反应窗口 p25 | 灯 0.05–0.1 s，ParkingCrossingPedestrian 0.53 s（SAM 3 路 558 ms、VLM 470 ms 都来不及），cut-in 6.9–8.9 s | 灯与车后出行人留在快通道 |
 | Q7 模式词表 | P5 与 WOD 的反应几乎全是纵向（停 / 让 / 走），openpilot desire 覆盖约 0 | decision head 词表以纵向为主 |
 
-**结论**：
-1. 在我们测过的每一个协议上，把 Qwen 拼到 openpilot 上都不加分，P5 上还减分；第 40 条「openpilot `temporal` 是最强冻结表征」延伸为「融合里不需要第二个通用 VLM 表征」。
-2. 行人这一条，openpilot（第 42 条 D0）、Qwen pooled（M-C）、Qwen 空间 token（Q9b）三种读出在 P5 v0 上都是 0；**唯一非零的是结构化感知 + 几何规则**（SAM 状态 29%，其中行人 family 31–40%）。
+**2026-09-26 就地修正（P5 v1 出数后）**：本条原标题和结论 1、2 写的是「Qwen 在融合里不加分（冗余）→ 去掉 Qwen」和「行人唯一非零的是结构化感知 + 几何规则」。
+**两句都要改。** Q1 在 P5 v1 上复跑（`research/results/fusion-diagnostics/q1-v1/`，BA 集 406 个行人 reactive 帧、49 条路线）：均匀 imitation 的拼接与 late fusion 行人翻转仍是 0.2–1.2%、合并翻转比单路 openpilot 低 5–12 pp，
+也就是**在均匀 imitation 这个训练信号下**冗余的判格照旧成立；但同一批特征、同一批帧，第 42 条修正后的 M-C（配对差分）行人 43.3% [35.0, 50.7]，hard-example 重加权 0%。
+所以 Q1 的预登记规则问错了问题：它把「拼接加不加分」当成特征的性质来测，而结果是训练信号的性质——Qwen 的行人信息一直在，均匀目标激发不出来，配对目标能。
+原结论 2 的「唯一非零」也不再成立：学出来的双流 head（43%，非反应帧误刹 11.7%）已经超过 SAM 状态上的规则门（29%，行人 family 31–40%，GT 状态版非反应帧误触发 48%）。
+「行人走 SAM 通道」这个判格由此撤回；SAM 的位置改为离线造配对（真实帧反事实编辑）与快通道的检测 embedding 候选，见 [elicitation 计划](../todos/2026-09-26-elicitation-program.md)。
+Q4（SAM 召回与接地点）、Q2（WOD 损失解剖）、Q7、Q8 的读数不受影响。原文保留如下以便对照。
+
+**结论（原文，2026-09-25，已被上面的修正部分推翻）**：
+1. 在我们测过的每一个协议上，把 Qwen 拼到 openpilot 上都不加分，P5 上还减分；第 40 条「openpilot `temporal` 是最强冻结表征」延伸为「融合里不需要第二个通用 VLM 表征」。〔2026-09-26：只在均匀 imitation 下成立〕
+2. 行人这一条，openpilot（第 42 条 D0）、Qwen pooled（M-C）、Qwen 空间 token（Q9b）三种读出在 P5 v0 上都是 0；**唯一非零的是结构化感知 + 几何规则**（SAM 状态 29%，其中行人 family 31–40%）。〔2026-09-26：v1 上 M-C 43%，已不是唯一〕
 3. 现成 SAM 3.1 的问题主要在接地点而不是检出：P5 行人 20–40 m 平地召回 0.12、oracle 地面高度 0.50；nuScenes 上近处也只有约 0.7，那是另一个问题（推测与正方形 resize 有关，未测）。
 4. WOD 上 openpilot 输分的纵向帧里，能被「走廊里有该类物体」解释的只有约 11%；没有证据支持「看见了但决策错」是主要缺口。
 
