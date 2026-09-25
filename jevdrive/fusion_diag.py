@@ -243,6 +243,24 @@ TURN_M, LC_M = 6.0, 2.5
 ONSET_M, ONSET_CENSOR = 0.5, 5.25
 
 
+OFFPATH_M = 1.0
+
+
+def offpath_max(a: np.ndarray, b: np.ndarray) -> float:
+    """Largest lateral distance from either trajectory's points to the other one's polyline (origin prepended).
+    Points beyond the other's end are ignored, so a car that stopped short on the path the other one drove on
+    (whatever that path does afterwards) scores ~0."""
+    def one(p, q):
+        q = np.r_[[[0.0, 0.0]], q].astype(np.float64)
+        keep = np.r_[True, np.linalg.norm(np.diff(q, axis=0), axis=1) > 1e-3]
+        q = q[keep]
+        if len(q) < 2:
+            return float(np.linalg.norm(p, axis=1).max())
+        s, d, u, inside = project(q, p.astype(np.float64))
+        return float(np.where(inside, np.abs(d), 0.0).max())
+    return max(one(a, b), one(b, a))
+
+
 def descriptors(d: np.ndarray) -> np.ndarray:
     """(n, 20, 2) difference of two trajectories in one ego frame -> 2 s longitudinal diff, signed max lateral diff."""
     j = np.abs(d[..., 1]).argmax(1)
@@ -289,7 +307,8 @@ def clusters_table(X: np.ndarray, lab: np.ndarray, data: str, fit: str, extra: d
                      "lon2_median": lon2, "lat_median": lat, "onset_median": on,
                      "lon2_iqr": np.subtract(*np.percentile(X[m, 0], [75, 25])),
                      "lat_iqr": np.subtract(*np.percentile(X[m, 1], [75, 25])), "mode": mode, "desire": desire,
-                     "covered": desire != "none", **{k: float(v[m].mean()) for k, v in (extra or {}).items()}})
+                     "covered": desire != "none", **{k: float(np.median(v[m]) if k.endswith("_median") else v[m].mean())
+                                                         for k, v in (extra or {}).items()}})
     return pd.DataFrame(rows)
 
 
@@ -307,7 +326,12 @@ def q7(rl) -> dict:
     dd = fut[pos[o.fn_plus].to_numpy()] - fut[pos[o.fn_minus].to_numpy()]
     Xp = np.c_[descriptors(dd), (o.t_div - o.t_vis).to_numpy() * P.TICK]
     lab_p, bic_p = gmm_bic(Xp)
-    tp = clusters_table(Xp, lab_p, "P5", "P5 reactive frames")
+    # post-hoc diagnostic (deviation log 18:35): largest off-path distance between the two expert futures; below
+    # OFFPATH_M the two worlds drove the same path and only the longitudinal progress differs
+    fp, fm = fut[pos[o.fn_plus].to_numpy()], fut[pos[o.fn_minus].to_numpy()]
+    offpath = np.array([offpath_max(a, b) for a, b in zip(fp, fm)])
+    tp = clusters_table(Xp, lab_p, "P5", "P5 reactive frames", {"same_path_share": (offpath < OFFPATH_M).astype(float),
+                                                                "offpath_median": offpath})
     fam = pd.crosstab(pd.Series(lab_p, name="cluster"), o.family.to_numpy(), normalize="columns")
     rl.log.info("P5: tau_exp %.3f, %d reactive frames (%d pairs); BIC k = %d", tau, len(o),
                 o.groupby(["base_id", "seed"]).ngroups, int(bic_p.k[bic_p.bic.idxmin()]))
