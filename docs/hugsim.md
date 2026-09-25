@@ -5,7 +5,8 @@ running a scenario, or the exact agent interface (cameras, ego state, command, p
 
 Sections: [data](#where-it-lives) · [install](#install-blackwell-sm_120) · [run](#run-a-scenario) ·
 [smoke results](#smoke-test-2026-09-24) · [agent interface](#agent-interface) ·
-[controller heading defect](#controller-heading-defect-upstream-pr-57) · [HD-Score](#episode-termination-and-hd-score)
+[controller heading defect](#controller-heading-defect-upstream-pr-57) · [controller acceptance](#controller-acceptance-2026-09-25) ·
+[HD-Score](#episode-termination-and-hd-score)
 
 ## Where it lives
 
@@ -285,9 +286,43 @@ background collision after 17-22 steps; with PR #57 it drives straight until the
 (scene-0071) and 0.55 (scene-0383, RC-limited). The official LTF client moves from 0.500 to 0.557 mean HD-Score
 over the 4 smoke scenarios; the route agent, whose plans carry strong lateral feedback, barely moves (0.649 -> 0.622).
 
-**Policy:** the official controller is the default and is what every headline number uses (comparable with
+**Policy (before the 2026-09-25 acceptance; under review, see [controller acceptance](#controller-acceptance-2026-09-25)):**
+the official controller is the default and is what every headline number uses (comparable with
 published HD-Scores). We also report our models under the fixed controller as a paired secondary:
 `git -C $DATA_DIR/third_party/HUGSIM apply patches/hugsim/optional/lqr-heading-fix.patch`, run, then `apply -R`.
+
+## Controller acceptance (2026-09-25)
+
+Each controller was fed a known-good plan: the scene's own logged ego trajectory (`jevdrive/hugsim_preset.py`, re-anchored
+at the ego every step, speed ramped from the ego's speed to the logged speed at +2 / -4 m/s^2), through the same agent
+path as the models (`scripts/hugsim/preset_agent.py` = `zs_agent.Agent` with the model call replaced, forward_only and
+straight_stop on). The reference is an ideal tracker that moves the ego exactly along the plan
+(`patches/hugsim/optional/ideal-tracker.patch`, tree `HUGSIM-zs/ideal`); collision, route and scoring code are unchanged.
+Pre-registered thresholds on the static scenes: lateral error at 0.5 s median <= 0.10 m and p95 <= 0.30 m, heading p95 <= 5 deg,
+per-run median cross-track to the log <= 0.3 m, end reasons as the reference, HD-Score within 0.05 (mean) / 0.15 (scene).
+Held-out validation, 12 scenes (8 static, 4 with actors), all four datasets:
+
+| controller | verdict | lateral @0.5 s median / p95 | heading p95 | HD-Score vs ideal (static mean / worst) |
+|---|---|---|---|---|
+| official (upstream) | fail | 0.16 / 1.18 m | 16 deg | -0.065 / -0.52 |
+| fixed (PR #57) | fail | 0.04 / 0.84 m | 10 deg | -0.002 / -0.04 |
+| fixed2 (PR #57 + `lqr-tracker-v2.patch`) | **pass** | 0.016 / 0.26 m | 3.4 deg | +0.006 / -0.001 |
+
+- The official controller leaves normal curved plans by 1-2 m, grazes roadside background or hits an actor the reference
+  avoids; its HD-Scores carry a controller component of -0.07 on average and up to -0.5 on a scene.
+- PR #57 scores like the reference but still cuts corners by 0.3-1.5 m. Offline (`scripts/hugsim/ctrl_offline.py`, the
+  env's equations without rendering; it reproduces the simulator's tracking errors) the cause is the iLQR's 0.5 s
+  discretization against the simulator's 0.25 s step (upstream issue #75), then the steering-rate input cost of 10.
+  The 50 ms solve cap and the 0.4 rad/s steering-rate limit never bind.
+- `lqr-tracker-v2.patch` (on top of PR #57): `traj2control` resamples the plan to 0.25 s, iLQR discretization 0.25 s,
+  steering-rate input cost 1, no wall-clock cap. Run it with `scripts/hugsim/zs_run.py --controller fixed2`
+  (tree created by `zs_run.py setup-trees fixed2`).
+- HD-Score is insensitive to tracking error by construction (every step is scored on the plan, which starts at the ego);
+  tracking error is the more sensitive acceptance measure.
+- The env class (`hugsim_env`) is an editable install and always comes from `$DATA_DIR/third_party/HUGSIM`, whichever tree
+  runs; `traj2control` and `sim.ilqr` come from the running tree, so controller patches must live there.
+
+Details, per-scene tables and figures: [hugsim-controllers.md](../todos/2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md).
 
 ## Episode termination and HD-Score
 

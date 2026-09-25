@@ -32,3 +32,8 @@ GPU 0、GPU 4 归本任务（schedule.md 2026-09-25 15:15 版），两卡合计 
 ## 结果
 
 （跑完再填；每一部分的预注册、数据与细节在各自的子文档里，这里只放结论与总表。）
+
+**HUGSIM 控制器（2026-09-25 17:00，[hugsim-controllers.md](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)）。**
+喂场景自己的 logged 轨迹、以 ideal tracker 为参考，held-out 12 个场景上：official **fail**（横向 @0.5 s p95 1.18 m，HD 对参考
+−0.065 均值、单场景 −0.52）；fixed（PR #57）**fail**（HD 无偏，但弯道横向 p95 0.84 m）；候选 fixed2（PR #57 + iLQR 0.25 s 离散化 +
+转向速率代价 1，离线诊断得出）**pass**（p95 0.26 m，HD 差 +0.006）。HUGSIM 考试恢复前换用 fixed2；official 是否仍作 headline 待主会话定。
