@@ -226,12 +226,52 @@ def run_wod(rl):
     pd.DataFrame(verdicts).to_csv(rl.dir / "wod_verdict.csv", index=False)
 
 
+def figs(res_dir, out_dir):
+    """RFS delta per cluster and activation rate per scope (research/results/elicitation/e1 -> research/figs)."""
+    from pathlib import Path
+    import matplotlib.pyplot as plt
+    from . import plots
+    res_dir, out_dir = Path(res_dir), Path(out_dir)
+    tab, act = pd.read_csv(res_dir / "wod_deltas.csv"), pd.read_csv(res_dir / "wod_activation.csv")
+    scopes = ["all", *CLUSTERS]
+    series = [(m, s, c, mk) for m, c in (("cinque", plots.OKABE_ITO[5]), ("lebowski", plots.OKABE_ITO[6]))
+              for s, mk in (("carla", "o"), ("wod-train", "^"))]
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, (a, b) = plt.subplots(1, 2, figsize=(plots.PAGE, 2.0), gridspec_kw={"width_ratios": [1.1, 1]})
+        for k, (m, s, c, mk) in enumerate(series):
+            r = tab[(tab.model == m) & (tab.stats == s) & (tab.judge == "RFS (rater)")].set_index("scope").loc[scopes]
+            x = np.arange(len(scopes)) + (k - 1.5) * 0.17
+            a.errorbar(x, r.delta, yerr=[r.delta - r.lo, r.hi - r.delta], fmt=mk, color=c, ms=3, lw=0.8, capsize=1.5,
+                       mfc=c if s == "carla" else "white", label=f"{m.capitalize()}, {'CARLA' if s == 'carla' else 'WOD-train'} stats")
+        a.axhline(0, color="0.5", lw=0.6)
+        a.set_xticks(np.arange(len(scopes)), ["All", "Ped.", "Cyc.", "Cut-in", "FOD", "Inters."])
+        a.set_ylabel(r"$\Delta$RFS (prior + $\Delta$ $-$ prior)")
+        sc2 = ["straight_yaw", "pre_onset", "Pedestrians", "all"]
+        for k, (m, s, c, mk) in enumerate(series):
+            r = act[(act.model == m) & (act.stats == s)].set_index("scope").loc[sc2]
+            x = np.arange(len(sc2)) + (k - 1.5) * 0.17
+            b.errorbar(x, 100 * r.activation, yerr=[100 * (r.activation - r.lo), 100 * (r.hi - r.activation)], fmt=mk,
+                       color=c, ms=3, lw=0.8, capsize=1.5, mfc=c if s == "carla" else "white")
+        b.axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
+        b.set_xlim(-0.5, 3.75)
+        b.text(3.72, 100 * ACT_HARM + 0.5, "7%", ha="right", va="bottom", fontsize=6.5, color="0.3")
+        b.set_xticks(np.arange(len(sc2)), ["Straight", "Pre-onset", "Ped.", "All"])
+        b.set_ylabel("Activation rate (%)")
+        plots.legend_below(fig, a, ncol=4)
+        plots.save(fig, out_dir, "elicit-e1-wod-transfer")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("wod",))
+    ap.add_argument("what", choices=("wod", "figs"))
+    ap.add_argument("--res", default="research/results/elicitation/e1")
+    ap.add_argument("--out", default="research/figs")
     a = ap.parse_args()
+    if a.what == "figs":
+        figs(a.res, a.out)
+        return
     rl = RunLog("elicitation", f"e1-{a.what}")
     run_wod(rl)
     rl.close()

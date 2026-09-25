@@ -253,6 +253,45 @@ E6（可选）──────────────────────
 
 ## 结果
 
+### E1：M-C head 零样本套到 WOD（2026-09-26 00:31–00:34，GPU 1 几分钟重算 head，其余 CPU）
+
+代码 `jevdrive/elicit_e1.py`（`fold_heads` 重算、`correction` 迁移、`readouts` 读数、`figs`），run `$DATA_DIR/runs/elicitation/e1-wod/20260926-003138`，
+小表 [research/results/elicitation/e1/](../research/results/elicitation/e1/)（`wod_deltas.csv`、`wod_activation.csv`、`wod_verdict.csv`）。口径见偏离日志 [E1] 00:25 与 (7) 00:31。
+
+**head 核对**：10 个 fold head（2 模型 × 5 fold）的 λ 与原 run 逐 fold 相同（全是 0.1，网格下沿，与第 42 条偏离 5 一致），在 obs 行上对已存预测的最大差 0.06–0.40 mm（GPU 重算；CPU 重算只到 1.3 cm，见 (7)）。
+评测 19 663 帧（rater 478、pre_onset 1 458、straight_yaw 11 597）。
+
+**主读数（CARLA 训练行标准化，head 自带）**，Δ = (prior + Δ) − prior，RFS 正 = 更好，ADE 负 = 更好：
+
+| cluster | rater 帧 | RFS Δ Cinque [CI] | RFS Δ Lebowski [CI] | ADE Δ 第 1–9 档 Cinque / Lebowski (m) | 激活率 Cinque / Lebowski |
+|:--|--:|:--|:--|:--|:--|
+| 全部 | 478 | **−1.02 [−1.21, −0.82]** | **−1.52 [−1.74, −1.30]** | +1.39 / +2.07 | 15.6% / 33.1% |
+| Pedestrians | 52 | −1.19 [−1.86, −0.52] | −1.35 [−2.10, −0.58] | +1.45 / +2.12 | 14.4% / 29.8% |
+| Cyclists | 71 | −1.12 [−1.65, −0.60] | −1.45 [−2.02, −0.88] | +1.21 / +1.93 | 14.3% / 30.9% |
+| Cut_ins | 20 | −1.23 [−2.33, −0.19] | −1.92 [−2.91, −0.97] | +1.25 / +1.76 | 13.4% / 28.6% |
+| FOD | 78 | −1.09 [−1.54, −0.63] | −1.25 [−1.77, −0.74] | +1.58 / +2.29 | 17.4% / 37.1% |
+| Intersections | 116 | −0.83 [−1.22, −0.43] | −1.48 [−1.90, −1.08] | +1.31 / +2.04 | 13.8% / 33.5% |
+| straight_yaw（激活判格用） | — | — | — | — | **16.7% [14.8, 18.6] / 40.7% [37.7, 43.5]** |
+| pre_onset | — | — | — | +0.95 / +1.33（第 1–9 档 ∩ pre_onset） | 12.8% / 25.0% |
+
+ADE Δ 的 CI 全部不跨零（全为正，也就是更差），见 `wod_deltas.csv`；|Δ| 的 ADE 幅值中位 2.0 m（Cinque）/ 3.0 m（Lebowski）。
+
+**描述版（WOD train 行标准化，偏离 (3)）**：去掉特征均值的域偏移后，幅值降到约 1 m、激活率降到 6.0–7.4%，但 RFS 仍然变差：
+全部 rater 帧 −0.53 [−0.69, −0.37]（Cinque）/ −0.48 [−0.63, −0.33]（Lebowski），Pedestrians −0.49 [−0.99, +0.03] / −0.63 [−1.14, −0.12]，ADE 第 1–9 档 +0.63 / +0.65 m；
+激活率在 Pedestrians 帧（4.5% / 6.6%）并不高于 straight_yaw（6.5% / 7.4%）。
+
+![E1 WOD](../research/figs/elicit-e1-wod-transfer.png)
+
+左：每个 cluster 在 rater 帧上的 RFS 配对 Δ（sequence bootstrap 95% CI）；右：激活率（|v₂(prior + Δ) − v₂(prior)| ≥ τ 的帧占比），虚线是登记的 7%。实心 = head 自带的 CARLA 标准化（判格用），空心 = WOD train 标准化（描述）。
+要看的是：所有点都在零线以下，没有一个 cluster 往上走；激活率不集中在行人帧，直行帧上反而最高。
+
+**判定（按登记，WOD 列）：有害，两个模型都是。** 全部 rater 帧 RFS Δ 的 CI 整体 < 0（−1.02 / −1.52），直行帧激活率 16.7% / 40.7% 都超过 7%，两条「有害」条件各自单独成立；
+Pedestrians / Cyclists 上 RFS Δ 全为负，「转移得过去」一条也不沾。预登记的预期是「转不过去但无害」，**这个预期错了**：CARLA 上配对激发出来的 Δ 不是在真实特征上安静地不动，
+而是在所有帧上加一个 1–3 m 的修正，方向与场景无关（行人帧上的激活率不高于直行帧）。WOD 统计量的描述版说明其中约一半来自特征均值的域偏移，另一半是 head 的读出方向本身在真实特征上没有意义。
+这和 P4 的 domain AUC 1.0（Waymo 训的 head 读不出 CARLA 特征）是同一件事的反方向。**按登记：E2 / E3 是必需的**，而且任何在 CARLA 配对上训出来的反应通道，放到真实数据上之前都必须有门控或在真实数据上重训，不能直接相加。
+
+NAVSIM 列（偏离 (5)）：navtest 的 Qwen `L18_last` 正在 GPU 1 上抽（`processed/navsim_qwen/navtest`，约 0.6 s / token，估约 2 h），抽完按 (5) 的口径打分补表，不改上面的判格。
+
 ### E4：PDM-Lite 集的两种计分窗口（2026-09-26 00:27，CPU，< 1 min）
 
 代码 `jevdrive/elicit_e4.py`，run `$DATA_DIR/runs/elicitation/e4/20260926-002723`，小表 [research/results/elicitation/e4/](../research/results/elicitation/e4/)（`e4_all.csv` 是全部考生 × 窗口 × scope，`criterion.csv` 是判格，`reactive_lead_times.csv` 是 reactive 帧离可见的时间）。
