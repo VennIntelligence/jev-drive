@@ -49,6 +49,13 @@ the pre-registered smoke:
                     (scripts/b2d_partner.py): TCP drives from standstill and (junctions) through route turns, the model
                     everything else; who drives is logged every tick ("driver", "w_model"); "tcp_only": true makes TCP
                     drive the whole route (reference arm; the model still plans, in shadow)
+  "replay"          absent | path of an expert log (scripts/b2d_expert_agent.py; "{route}" is replaced by the route id)
+                    | "route": no model and no socket; each
+                    planning step returns the expert's own future track (same elapsed time since the first tick) in the
+                    hero's simulator rear-axle frame, i.e. the plan a perfect planner would give, at the model's cadence
+                    and through the configured controller - the controller acceptance test
+                    (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md). "route": the route oracle's plan
+                    from the sensor pose (a no-model load for profiling)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -194,10 +201,17 @@ class ZeroShotAgent(AutonomousAgent):
         os.makedirs(os.path.join(self.out, "frames"), exist_ok=True)
         self.plan_log = open(os.path.join(self.out, "plans.jsonl"), "w", buffering=1)
         self.tick_log = open(os.path.join(self.out, "ticks.jsonl"), "w", buffering=1)
-        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.sock.connect(self.cfg["socket"])
-        wire.send(self.sock, {"cmd": "reset"})
-        self.server_meta = wire.recv(self.sock)[0]["server"]
+        self.replay = self.cfg.get("replay")
+        self.replay_log = self.replay_t0 = None
+        if self.replay:                          # no model: the plan comes from an expert log or the route oracle
+            self.sock, self.server_meta = None, {"replay": self.replay}
+            if self.replay != "route":       # "{route}" in the path: this route's log (b2d_route.py sets the id)
+                self._load_replay(self.replay.format(route=os.environ.get("BENCHMARK_ROUTE_ID", "")))
+        else:
+            self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.sock.connect(self.cfg["socket"])
+            wire.send(self.sock, {"cmd": "reset"})
+            self.server_meta = wire.recv(self.sock)[0]["server"]
         self.partner = self.arbiter = None
         pcfg = self.cfg.get("partner")
         if pcfg:
@@ -258,7 +272,8 @@ class ZeroShotAgent(AutonomousAgent):
         self.guide = self.drive != "oracle" and (self.engage_s > 0 or self.handover_m > 0)
         assert not self.guide or self.zoo is not None, "engage / junction handover are defined for controller zoo_pid"
         cruise = 3.0 if self.guide else float(self.cfg.get("cruise_mps", 8.0))
-        self.oracle = RouteAdapter(world, cruise) if (self.drive == "oracle" or self.guide) else None
+        self.oracle = RouteAdapter(world, cruise) if (self.drive == "oracle" or self.guide
+                                                      or self.replay == "route") else None
         if hasattr(self, "out"):   # route geometry and commands, for the junction analysis
             with open(os.path.join(self.out, "route.json"), "w") as fh:
                 json.dump({"xy": np.round(self.route.xy, 3).tolist(), "cmd": self.route.cmd.tolist()}, fh)
@@ -268,6 +283,8 @@ class ZeroShotAgent(AutonomousAgent):
         t_start = time.perf_counter()
         self.tick += 1
         frame, now = int(GameTime.get_frame()), float(GameTime.get_time())
+        if self.replay_t0 is None:
+            self.replay_t0 = now
         data = self.router.read(self.sensor_interface, frame)
         self.frame_time[frame] = now
         if self.first_frame is None:
@@ -415,6 +432,34 @@ class ZeroShotAgent(AutonomousAgent):
         pedal = a / (self.NATIVE_A_THROTTLE if a > 0 else self.NATIVE_A_BRAKE) + self.NATIVE_KP * (a - self.accel_meas)
         return float(np.clip(pedal, 0.0, 0.75)), steer, float(np.clip(-pedal, 0.0, 1.0)), "native"
 
+    def _load_replay(self, path):
+        """Expert log (scripts/b2d_expert_agent.py): per-tick vehicle-centre pose -> rear-axle track, time from the
+        expert's first tick."""
+        rows = [json.loads(line) for line in open(path)]
+        t = np.array([r["t"] for r in rows], float)
+        yaw = np.unwrap(np.radians([r["yaw"] for r in rows]))
+        x = np.array([r["x"] for r in rows]) + self.rear_offset * np.cos(yaw)
+        y = np.array([r["y"] for r in rows]) + self.rear_offset * np.sin(yaw)
+        self.replay_log = (t - t[0], x, y)
+
+    def _replay_path(self, t_frame, times):
+        """The known-good plan a perfect planner would output at t_frame: the expert's own future rear-axle track at
+        t_frame + times (same elapsed time since the route's first tick), in the hero's current rear-axle rig frame
+        (x forward, y left) from the simulator pose. "route": the route oracle's trajectory from the sensor pose, as
+        drive=oracle (a no-model load for profiling, not a known-good plan)."""
+        if self.replay == "route":
+            return np.asarray(self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2]), float)
+        te, xe, ye = self.replay_log
+        tq = (t_frame - self.replay_t0) + np.asarray(times, float)
+        wx, wy = np.interp(tq, te, xe), np.interp(tq, te, ye)     # past the log's end: hold its last pose
+        from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+        tf = CarlaDataProvider.get_hero_actor().get_transform()
+        h = math.radians(tf.rotation.yaw)
+        c, s = math.cos(h), math.sin(h)
+        x0, y0 = tf.location.x + self.rear_offset * c, tf.location.y + self.rear_offset * s
+        dx, dy = wx - x0, wy - y0
+        return np.stack([c * dx + s * dy, s * dx - c * dy], -1)
+
     def _pose_at(self, t0):
         """Rear-axle world pose (xy, CARLA yaw) interpolated at sim time t0 from the pose history."""
         t = np.array([p[0] for p in self.poses])
@@ -453,14 +498,18 @@ class ZeroShotAgent(AutonomousAgent):
         else:
             arrays = dict(cams)
             meta["desire"] = self.route.desire() if self.cfg.get("desire", True) else DESIRE_NONE
-        wire.send(self.sock, meta, arrays)
-        info, out = wire.recv(self.sock)
         times = np.arange(1, 21) * 0.25
-        if self.alpamayo:
-            path = resample(out["t"], out["xy"], times)
+        if self.replay:
+            info, out = {"replay": True}, {}
+            path = self._replay_path(t_frame, times)
         else:
-            yaw = out["yaw"] if self.plan_origin == "rear" else None
-            path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], yaw, self.op_mount), times)
+            wire.send(self.sock, meta, arrays)
+            info, out = wire.recv(self.sock)
+            if self.alpamayo:
+                path = resample(out["t"], out["xy"], times)
+            else:
+                yaw = out["yaw"] if self.plan_origin == "rear" else None
+                path = resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], yaw, self.op_mount), times)
         if self.first_set_t is None:
             self.first_set_t = t_frame
         warm = t_frame - self.first_set_t < self.warmup_s - 1e-6
@@ -501,7 +550,7 @@ class ZeroShotAgent(AutonomousAgent):
                "route_index": self.route.i, "warmup": bool(warm)}
         if zoo_meta is not None:
             rec["zoo_pid"] = zoo_meta
-        if not self.alpamayo:
+        if not self.alpamayo and not self.replay:
             rec["plan_pos"] = np.round(out["pos"], 3).tolist()
             rec["plan_yaw"] = np.round(out["yaw"], 5).tolist() if "yaw" in out else None
         rec.update(self._truth())
