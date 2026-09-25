@@ -72,14 +72,13 @@ def _run_states(run: str, ks: list, d: pd.DataFrame, gen: Path) -> tuple[pd.Data
 def sam_gates(need: dict, det_dir: Path) -> pd.DataFrame:
     from joblib import Parallel, delayed
     L = Q.root("lists")
-    p5 = pd.read_parquet(L / "p5.parquet")
     d = Q.load_dets(det_dir)
     d = d[d.prompt.isin(list(CLS))]
     d = Q.lift_dets(d, d.key.str.split("|").str[1].to_numpy(), Q.p5_calib())
     d = d[d.lift_ok].assign(cls=lambda x: x.prompt.map(CLS))
     fn = d.key.str.split("|").str[0]
     d["run"], d["frame"] = fn.str.rsplit("-", n=1).str[0], fn.str.rsplit("-", n=1).str[1].astype(int)
-    gen = data_dir() / "runs" / "p5_pairs" / "gen"
+    gen = Q.p5_gen()
     groups = {r: g for r, g in d.groupby("run")}
     empty = d.iloc[:0]
     res = Parallel(16, verbose=2)(delayed(_run_states)(r, sorted(ks), groups.get(r, empty), gen) for r, ks in sorted(need.items()))
@@ -96,9 +95,10 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--dets", default=str(data_dir() / "processed" / "fusion_diag" / "sam" / "p5"))
+    ap.add_argument("--dets", default=None, help="default: processed/fusion_diag/sam/p5<set tag>")
     a = ap.parse_args()
-    rl = RunLog("fusion_diag", "q6sam")
+    a.dets = a.dets or str(data_dir() / "processed" / "fusion_diag" / "sam" / f"p5{Q.p5_tag()}")
+    rl = RunLog("fusion_diag", "q6sam" + Q.p5_tag())
     rl.event("start", args=vars(a))
     out = FD.q6gt(rl, obs_gates=lambda need: sam_gates(need, Path(a.dets)))
     for name, v in out.items():

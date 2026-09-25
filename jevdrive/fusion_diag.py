@@ -504,7 +504,8 @@ def q6gt(rl, workers: int | None = None, obs_gates=None) -> dict:
     from joblib import Parallel, delayed
     from . import p5_exam as E
     from . import p5_pairs as P
-    gen = data_dir() / "runs" / "p5_pairs" / "gen"
+    from .fusion_q4 import p5_gen
+    gen = p5_gen()                                      # the recorded runs of the current P5_SET
     t, past, fut, obs, null, pairs = E.load()
     fold_row = E.folds(t, pairs)
     fold = dict(zip(t.base_id, fold_row))
@@ -604,7 +605,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("item", choices=list(STEPS))
     a = ap.parse_args()
-    rl = RunLog("fusion_diag", a.item)
+    import os
+    rl = RunLog("fusion_diag", a.item + ("" if os.environ.get("P5_SET", "carla_p5") == "carla_p5" else "_" + os.environ["P5_SET"]))
     rl.event("start", item=a.item)
     t0 = time.time()
     out = STEPS[a.item](rl)

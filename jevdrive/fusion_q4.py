@@ -40,6 +40,23 @@ NUSC_CAMS = ("CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT")
 OPENCV_TO_WOD = np.array([[0.0, 0, 1], [-1, 0, 0], [0, -1, 0]])   # columns: OpenCV cam x, y, z in WOD cam axes
 
 
+def p5_set() -> str:
+    """The P5 set in use: processed/<P5_SET> (v0 "carla_p5"; v1 "carla_p5v1_pdm" / "carla_p5v1_ba")."""
+    import os
+    return os.environ.get("P5_SET", "carla_p5")
+
+
+def p5_tag() -> str:
+    """File-name suffix of the P5 lists / GT for the current set ("" for v0, so v0 file names are unchanged)."""
+    return "" if p5_set() == "carla_p5" else "_" + p5_set()
+
+
+def p5_gen() -> Path:
+    """The generation tree of the current set's recorded runs."""
+    s = p5_set()
+    return data_dir() / ("runs/p5v1/gen-" + s.rsplit("_", 1)[1] if s.startswith("carla_p5v1_") else "runs/p5_pairs/gen")
+
+
 def root(*p) -> Path:
     d = data_dir() / "processed" / "fusion_diag" / Path(*p)
     d.mkdir(parents=True, exist_ok=True)
@@ -108,13 +125,13 @@ def carla_rot(yaw: float, pitch: float, roll: float) -> np.ndarray:
 
 
 def p5_calib() -> dict:
-    c = json.loads((data_dir() / "processed" / "carla_p5" / "op_plan.json").read_text())["calib"]
+    c = json.loads((data_dir() / "processed" / p5_set() / "op_plan.json").read_text())["calib"]
     return {cam: c[str(i + 1)] for i, cam in enumerate(CAMS)}
 
 
 def p5_list() -> pd.DataFrame:
     """Observation frames (pair and null, both worlds) x 3 cameras; the current frame of each camera's 4-frame clip."""
-    d = data_dir() / "processed" / "carla_p5"
+    d = data_dir() / "processed" / p5_set()
     t = pd.read_parquet(d / "index.parquet")
     t = t[t.role == "obs"].reset_index(drop=True)
     obs = pd.read_parquet(d / "obs.parquet")
@@ -124,6 +141,7 @@ def p5_list() -> pd.DataFrame:
     for r in t.itertuples():
         f = list(r.files)
         assert len(f) == 12 and f[3].endswith(f"/front/{r.frame:07d}.jpg"), f[3]
+        # v1 attempt dirs may be symlinks into v0's tree (BehaviorAgent on v0 routes); keep the path as indexed
         for i, cam in enumerate(CAMS):
             rows.append({"key": f"{r.frame_name}|{cam}", "path": f[4 * i + 3], "frame_name": r.frame_name, "cam": cam,
                          "adir": f[3].rsplit("/cams/", 1)[0], "frame": r.frame, "world": r.world, "base_id": r.base_id,
@@ -544,18 +562,24 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("lists", "check_pick", "check_ab", "p5_report", "nusc_report"))
+    ap.add_argument("step", choices=("lists", "lists_p5", "check_pick", "check_ab", "p5_report", "nusc_report"))
     ap.add_argument("--dets", help="sam_detect output directory")
     ap.add_argument("--workers", type=int, default=12)
     a = ap.parse_args()
     rl = RunLog("fusion_diag", "q4", a.step)
     rl.event("start", args=vars(a))
     L = root("lists")
-    if a.step == "lists":
+    if a.step == "lists_p5":            # only the P5 list + GT of the current P5_SET
         p5 = p5_list()
-        p5.to_parquet(L / "p5.parquet", index=False)
+        p5.to_parquet(L / f"p5{p5_tag()}.parquet", index=False)
         gt = p5_gt(p5, a.workers)
-        gt.to_parquet(L / "p5_gt.parquet", index=False)
+        gt.to_parquet(L / f"p5{p5_tag()}_gt.parquet", index=False)
+        rl.info(f"{p5_set()}: {len(p5)} images, {len(gt)} GT rows")
+    elif a.step == "lists":
+        p5 = p5_list()
+        p5.to_parquet(L / f"p5{p5_tag()}.parquet", index=False)
+        gt = p5_gt(p5, a.workers)
+        gt.to_parquet(L / f"p5{p5_tag()}_gt.parquet", index=False)
         rl.info(f"p5: {len(p5)} images, {len(gt)} GT rows, hazards in front x+ with factor_px >= {FACTOR_PX}: "
                 f"{int((gt.hazard & (gt.cam == 'front')).sum())}")
         nl, ng, nc = nusc_build()
@@ -568,13 +592,13 @@ def main():
         w.to_parquet(L / "wod.parquet", index=False)
         rl.info(f"wod: {len(w)} front images ({int(w.rater.sum())} rater frames)")
     elif a.step == "check_pick":
-        p5, gt = pd.read_parquet(L / "p5.parquet"), pd.read_parquet(L / "p5_gt.parquet")
+        p5, gt = pd.read_parquet(L / f"p5{p5_tag()}.parquet"), pd.read_parquet(L / f"p5{p5_tag()}_gt.parquet")
         sel = pick_check(p5, gt)
         sel.to_parquet(L / "check16_sel.parquet", index=False)
         p5[p5.key.isin(sel.key)].drop_duplicates("key").to_parquet(L / "check16.parquet", index=False)
         rl.info("check selection:\n" + sel[["key", "cls", "cam", "dist", "family", "factor_px"]].to_string())
     elif a.step == "check_ab":
-        p5, gt, sel = (pd.read_parquet(L / f) for f in ("p5.parquet", "p5_gt.parquet", "check16_sel.parquet"))
+        p5, gt, sel = (pd.read_parquet(L / f) for f in (f"p5{p5_tag()}.parquet", f"p5{p5_tag()}_gt.parquet", "check16_sel.parquet"))
         cal = p5_calib()
         d = load_dets(a.dets)
         d = lift_dets(d, d.key.str.split("|").str[1].to_numpy(), cal)
@@ -587,7 +611,7 @@ def main():
                 f"px err median {m.px_err.median():.1f}; (b) BEV err median <= 20 m: flat ground {near.bev_err.median():.2f} m, "
                 f"oracle height {near.bev_err_oracle_z.median():.2f} m (n = {len(near)}); BEV-matched {int(r.bev_matched.sum())}/{len(r)}")
     elif a.step == "p5_report":
-        p5, gt = pd.read_parquet(L / "p5.parquet"), pd.read_parquet(L / "p5_gt.parquet")
+        p5, gt = pd.read_parquet(L / f"p5{p5_tag()}.parquet"), pd.read_parquet(L / f"p5{p5_tag()}_gt.parquet")
         d = load_dets(a.dets)
         d = lift_dets(d, d.key.str.split("|").str[1].to_numpy(), p5_calib())
         wx = p5.set_index("key")

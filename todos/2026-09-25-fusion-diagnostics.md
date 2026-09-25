@@ -396,6 +396,10 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 - 2026-09-25 20:49 CST [Q4]（事后）(16) 登记的检查 (d)（nuScenes 取 4 帧做 (a)(b)）没有在批量之前做，漏了；批量之后补做为目检：4 张 CAM_FRONT 上 GT 参考点投影落在行人脚下、车辆离相机最近的底角，标定链正确。
   这一条不能再算「批量前通过」，照实记。
 
+- 2026-09-25 23:35 CST [Q6-v1]（第 3 阶段，写在任何 v1 的 Q6 数字之前）Q6 在 P5 v1 上按 reactivity 偏离 7 的口径：PDM-Lite 集（`carla_p5v1_pdm`）与 BehaviorAgent 集（`carla_p5v1_ba`）分别跑、分别报，**判据用 PDM-Lite 集**（登记：「决策规则以 PDM-Lite 那次为准」）。
+  代码不变（`fusion_diag.q6gt`，只把录制树换成该集合的 `runs/p5v1/gen-<expert>`），门、阈值、制动量级的拟合口径、考官都与 v0 相同。Q6-SAM 只在 PDM-Lite 集上跑（描述，不进判据）：对该集合 17 340 个观测帧 × 3 路跑同一条 SAM 原样路径，
+  GT / 抬升 / 状态构造同 v0。
+
 ## 结果
 
 （跑完再填；box 上 run dir：`$DATA_DIR/runs/fusion_diag/<item>/<time>`。）
