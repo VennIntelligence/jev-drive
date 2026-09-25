@@ -401,3 +401,35 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 读法：在 GT 状态上，三条几何门已经把行人 family 拿到 70–87%——这正是 openpilot 与 Qwen 线性读出都是 0 的那几格；代价是行人门触发偏早，非反应帧上 DynamicObjectCrossing 48%、PedestrianCrossing 36% 误触发。
 StaticCutIn 为 0 是门的形状问题：cut-in 车的参考点在 expert 已经刹车时仍在侧面 1.9–3.5 m，点状的 ±1.2 m 侵入门抓不到车身从侧面切入。
 决策规则「GT 规则 floor ≥ 80% 且 null ≤ 7%」按登记要用 I1 的 PDM-Lite 标签判，v0 只描述；SAM 状态版（perception-limited floor）等 Q4a。
+
+### Q1 互补矩阵（2026-09-25 18:21–18:41，GPU 3，约 0.3 GPU·h / 19 min，登记 1.5–2 h）
+
+代码 `jevdrive/fusion_q1.py`；run：`$DATA_DIR/runs/fusion_diag/q1/20260925-182145`（等价性 + P5）、`20260925-182628`（WOD (a)(b)）；小表 `research/results/fusion-diagnostics/q1/`。
+等价性先于任何 Q1 数字：新写的 cls arm（为了留下 logits）与 `waymo_heads.cls_arm` 在 (a) 一个方向的 10 021 帧上 top-1 完全相同；P5 的 head 循环与 `p5_exam.heads` 在 9 919 行上 max diff 0；
+(a) 的单路 `ridge_late` 与第 40 条主表逐位相同（Cinque −0.141 [−0.247, −0.027]），P5 单路与实验 1 逐位相同（Cinque 46.7%、Lebowski 41.6%、Qwen 0%）；(b) 训练 137 533 行、评估 19 663 行，与登记一致。
+
+**决策量：concat − best single**（best single 只在训练行上按同一读数选，几乎总是 openpilot；配对 bootstrap 500 次；WOD 负 = concat 好、RFS 与翻转率正 = concat 好）：
+
+| 读数 | Cinque ⊕ `L18_last` | Lebowski ⊕ `L18_last` |
+|:--|:--|:--|
+| (a) ridge，pre-onset 第 1–9 档（m） | −0.005 [−0.067, +0.059] | +0.018 [−0.041, +0.078] |
+| (a) cls，pre-onset | +0.027 [−0.082, +0.149] | +0.037 [−0.074, +0.160] |
+| (b) ridge，pre-onset | +0.026 [−0.050, +0.097] | +0.013 [−0.008, +0.035] |
+| (b) cls，pre-onset | +0.022 [−0.078, +0.122] | −0.010 [−0.136, +0.115] |
+| (a) ridge，RFS | −0.077 [−0.183, +0.021] | −0.093 [−0.194, −0.000] |
+| (a) cls，RFS | +0.043 [−0.081, +0.168] | +0.024 [−0.095, +0.151] |
+| (b) ridge，RFS | +0.013 [−0.090, +0.115] | −0.042 [−0.112, +0.021] |
+| (b) cls，RFS | **−0.144 [−0.263, −0.025]** | **−0.148 [−0.278, −0.016]** |
+| P5 合并翻转率 | **−19.6 pp [−31.8, −8.4]**（27.1% 对 46.7%） | **−24.5 pp [−39.4, −10.4]**（22.2% 对 41.6%） |
+| P5 行人翻转率（134 帧 / 10 条路线） | 0 对 0 | 0 对 0 |
+
+**判格：「冗余 → 只调 openpilot，去掉 Qwen」。** WOD pre-onset 的 8 个 Δ 全部跨零，RFS 不是跨零就是偏负（(b) cls 两个显著为负），P5 合并两个都显著为负；
+「只在行人上加分」不成立（P5 行人 Δ 恰好 0），「pre-onset 也加分」不成立（没有一个 concat 在 (a)(b) 两个协议上 CI 都 < 0）。与登记的预期一致。
+
+几条读数要跟着这个判格一起记：
+- (b) 的单路：Cinque / Lebowski `ridge_late` pre-onset −0.218 / −0.236，Qwen `L18_last` −0.019（跨零）、RFS −0.49；cls 头 RFS cluster mean Cinque 7.59、Lebowski 7.73（第 40 条 (iii) 是 7.64 / 7.73）、Qwen 7.22、concat 7.58 / 7.52。
+- (a) 的 cls 行只当描述：约 1 万行的 fit 半撑不起 K = 1024 的分类头（`cls ego` 自己在 pre-onset 上就比 `ridge ego` 差 +1.19 m，所有 cls arm +0.9 到 +1.2 m），Qwen 的 λ 碰到网格上边。
+- P5 上 concat 比单路 openpilot 差 20–25 pp，一部分是登记的 1/√d 缩放本身造成的：512 维的 openpilot 流在拼接后只占一半方差，2560 维的 Qwen 流稀释了它，τ 从 1.49 升到 1.62。这是读数的限定，不改判格（WOD 上 concat 也没有任何一格变好）。
+- **late fusion（描述性，不在决策规则里）在 pre-onset 上反而赢了 best single**：(a) ridge Cinque −0.086 [−0.164, −0.005]、Lebowski −0.075 [−0.148, −0.008]，(a) cls Cinque −0.103，(b) cls Cinque −0.082 [−0.172, −0.009]；
+  但同一批 arm 在 (b) ridge 的 RFS 上显著变差（−0.20 / −0.15），P5 合并翻转率也掉约 8 pp。推测是收缩效应：和一个几乎只给出 ego 预测的 Qwen 平均，等于把 openpilot 的修正量减半，
+  在 pre-onset（log 往往比模型预测的更保守）上 ADE 变好、在 rater 分和反应量上变差。**这是推测，没有验证**；决策规则按登记只看 concat，不因为这一行改判。若要验证，对照是「openpilot 单路 × 0.5 收缩」，不需要 Qwen。
