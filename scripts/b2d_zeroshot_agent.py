@@ -87,6 +87,7 @@ LEFT, RIGHT, STRAIGHT, LANEFOLLOW, CHANGE_LEFT, CHANGE_RIGHT = 1, 2, 3, 4, 5, 6
 NAV_RANGE_M = 60.0      # Alpamayo: announce a turn this far ahead (its horizon is 6.4 s)
 DESIRE_RANGE_M = 20.0   # openpilot: turn desire this far before the junction
 DESIRE_NONE, DESIRE_TURN_LEFT, DESIRE_TURN_RIGHT, DESIRE_LC_LEFT, DESIRE_LC_RIGHT = 0, 1, 2, 3, 4
+REPLAY_WAIT_TOL_M = 2.0     # "replay": the expert counts as still at s0 while within this arc distance of it
 
 
 def get_entry_point():
@@ -441,6 +442,14 @@ class ZeroShotAgent(AutonomousAgent):
         yaw = np.unwrap(np.radians([r["yaw"] for r in rows]))
         x = np.array([r["x"] for r in rows]) + self.rear_offset * np.cos(yaw)
         y = np.array([r["y"] for r in rows]) + self.rear_offset * np.sin(yaw)
+        # The route ends when the expert crosses the finish, still at speed: continue its track straight on at its
+        # final speed for 10 s, so the plan near the end does not decelerate into a stop that the expert never made.
+        k = min(20, len(t) - 1)
+        v_end = float(np.hypot(x[-1] - x[-1 - k], y[-1] - y[-1 - k]) / max(t[-1] - t[-1 - k], 1e-6)) if k else 0.0
+        if v_end > 0.5:
+            dt = np.arange(1, 201) * DELTA
+            t = np.r_[t, t[-1] + dt]
+            x, y = np.r_[x, x[-1] + v_end * dt * math.cos(yaw[-1])], np.r_[y, y[-1] + v_end * dt * math.sin(yaw[-1])]
         s = np.r_[0.0, np.cumsum(np.hypot(np.diff(x), np.diff(y)))]    # arc length, non-decreasing
         self.replay_log = (t - t[0], x, y, s)
         self.replay_i = 0
@@ -450,8 +459,11 @@ class ZeroShotAgent(AutonomousAgent):
         now, at the pace the expert drove it. The hero's simulator rear axle is projected onto the expert's rear-axle
         path (arc s0, searched forward from the last match); the plan starts at the expert time t* when it was at s0
         and returns its positions at t* + times, in the hero's rig frame (x forward, y left). Where the expert stood
-        still at s0 (a red light, a yield) over [ta, tb], t* = the elapsed time since the first tick clipped to
-        [ta, tb], so the plan waits as long as the expert did and no longer. Past the log's end: its last pose.
+        still within REPLAY_WAIT_TOL_M of s0 (a red light, a yield) over [ta, tb], t* = the elapsed time since the
+        first tick clipped to [ta, tb], so the plan waits as long as the expert did and no longer; the tolerance
+        absorbs the expert creeping a few cm while it waits and a controller stopping short of the expert's stop
+        point, either of which froze t* with a tight window (deviation 2). Past the log's end the track goes on
+        straight at the expert's final speed (see _load_replay).
         (A plan indexed by elapsed time alone jumps ahead of a lagging car and collapses to one point at the log's
         end, which no planner outputs: deviation 1 of the acceptance doc.)
         "route": the route oracle's trajectory from the sensor pose, as drive=oracle (a no-model load for
@@ -475,8 +487,8 @@ class ZeroShotAgent(AutonomousAgent):
             s0 = se[a + k] + u[k] * math.sqrt(L2[k])
         else:
             s0 = se[-1]
-        ta = te[min(np.searchsorted(se, s0 - 0.05, "left"), len(te) - 1)]
-        tb = te[max(np.searchsorted(se, s0 + 0.05, "right") - 1, 0)]
+        ta = te[min(np.searchsorted(se, s0 - REPLAY_WAIT_TOL_M, "left"), len(te) - 1)]
+        tb = te[max(np.searchsorted(se, s0 + REPLAY_WAIT_TOL_M, "right") - 1, 0)]
         t_star = min(max(t_frame - self.replay_t0, ta), max(ta, tb))
         tq = t_star + np.asarray(times, float)
         dx, dy = np.interp(tq, te, xe) - x0, np.interp(tq, te, ye) - y0
