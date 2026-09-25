@@ -149,7 +149,7 @@ class Controller:
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
                  throttle_map=None, brake_map=None, low_speed_brake_mps=0.,
                  plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5,
-                 feedforward_limit=None):
+                 feedforward_limit=None, terminal_approach=False):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -189,6 +189,10 @@ class Controller:
         if self.feedforward_limit is not None and not (len(self.feedforward_limit) == 2
                                                        and self.feedforward_limit[0] < 0 < self.feedforward_limit[1]):
             raise ValueError('feedforward_limit must be (negative, positive)')
+        # Low-rate plans: once the time-indexed remainder of a plan is parked but its endpoint is still
+        # ahead, approach the endpoint by position (projection on the whole plan, sqrt-profile speed)
+        # instead of treating the plan as stationary and holding short of it.
+        self.terminal_approach = bool(terminal_approach)
         self.low_speed_brake_mps = float(low_speed_brake_mps)
         if not math.isfinite(self.low_speed_brake_mps) or self.low_speed_brake_mps < 0:
             raise ValueError('low_speed_brake_mps must be finite and nonnegative')
@@ -571,6 +575,14 @@ class Controller:
             return self._safe('trajectory_horizon_exhausted', elapsed)
         self._diagnostics.update(target_speed_mps=desired, reference_speed_mps=reference)
         points, geometry = self._geometry(age)
+        if self.terminal_approach and self._stationary_tail:
+            if geometry is None:
+                points, geometry = self._geometry(0.)
+            if geometry is not None:
+                remaining = float(self._arc[-1] - geometry[0])
+                if remaining > .3 and points[-1, 0] > 0. and desired < .4:
+                    desired = max(desired, min(1.5, math.sqrt(1.6 * (remaining - .15))))
+                    self._diagnostics.update(terminal_approach_remaining_m=remaining, target_speed_mps=desired)
         if geometry is None:
             return self._safe('stationary_trajectory', elapsed)
         if not np.any(points[1:, 0] > 1e-6) and desired > .05:

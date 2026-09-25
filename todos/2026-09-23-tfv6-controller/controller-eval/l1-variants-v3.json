@@ -40,5 +40,11 @@
     "presets": [
       "pursuit"
     ]
+  },
+  "P5": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/P5.json",
+    "presets": [
+      "pursuit"
+    ]
   }
 }
