@@ -1,6 +1,6 @@
 # I3：HUGSIM 3DGS 真实外观反事实配对（开环，沿 logged 轨迹渲染）
 
-状态: 5 场景验证已过；预登记写于全量渲染之前（2026-09-25 16:40 CST，此前只渲染过下面 5 个验证场景，没有计算过任何标签统计）
+状态: done（2026-09-25 16:51）。5 场景验证已过；预登记写于全量渲染之前（16:29 CST 提交，16:30 开始渲染，此前只渲染过下面 5 个验证场景，没有计算过任何标签统计）；65 个场景已渲染并建好索引
 上级: [reactivity 计划](../2026-09-25-reactivity-program.md) 的 I3 行；配对设计沿用 [P5 v0](../2026-09-24-p5-carla-pairs-v0.md)（x⁺ 有 hazard actor、x⁻ 没有、ego 相同、null pair）；决策第 32、40 条
 代码: `jevdrive/hugsim_pairs.py`（logged 轨迹、actor 轨迹、标签规则、P5 形状的索引、验证图）、`scripts/hugsim/pairs_render.py`（HUGSIM venv 里的渲染器与验证检查）
 数据: box 上 `$DATA_DIR/processed/hugsim_pairs/`（不进 git）
@@ -87,7 +87,7 @@ HUGSIM 里没有一个能在 3DGS 场景几何上「两侧各开一遍」的 exp
 2. 遮挡检查最初把路面也算作遮挡物：掠射角下路面高斯的 alpha 加权深度不是表面深度，车身下缘被误判成「被路面挡住却变了」（nuScenes scene-0167 的 null 上 84%）。
    改成只把语义类 > 1 的场景物体当遮挡物之后，上表的数字才有意义。
 
-## 预登记（2026-09-25 16:40，全量渲染之前）
+## 预登记（2026-09-25 16:29 CST，全量渲染之前，commit 2f27f43）
 
 **场景选择规则**：box 上全部 82 个 HUGSIM 场景 zip（nuScenes 19、KITTI-360 26、PandaSet 15、Waymo 22），排除录制路线与前相机位姿不一致的（nuScenes scene-0411），
 每个场景取 t_c = 0.2 s 网格上最早满足三条的时刻：t_c − 6 s ≥ 0（完整的渲染前导）、t_c + 3 s ≤ 录制结束（最后一个观测帧有 3 s logged 未来）、
@@ -142,11 +142,59 @@ null 帧：null 世界合格，帧序号 ≥ 3，null 车可见，≥ 3 s 未来
 
 瓶颈是渲染本身，其中一大块不是 rasterization：HUGSIM 的 `GaussianModel.get_full_*` 每次访问都重算激活函数、重新拼接 ground model，一个视图要访问六次。
 我们把这六个张量在场景加载时算一次（`_FrozenPC`），交给同一个 `render()`。等价性：72 个视图（x⁺ 与 x⁻）逐像素相同（max |Δ| = 0）；全量运行里每个场景的 x⁻ 都会再与原始 GaussianModel 的渲染和官方 env 比一次。
-全量用 4 个 worker 进程共享 GPU 2（每个 ≤ 8 GB、5 核），预计 15–25 min。
+全量用 4 个 worker 进程共享 GPU 2（每个 ≤ 8 GB、5 核），预计 15–25 min，实测 20.4 min（见下）。
 
-## 全量渲染
+## 全量渲染（2026-09-25 16:30–16:51，slot `i3-render` + `i3-final`，GPU 2，核 170–189）
 
-（运行后填）
+4 个 worker 共享 GPU 2（与 D0 的一个进程同卡），全部场景都带验证检查运行。**实测 20.4 min**（渲染 19.5 min + 索引 1 min），
+预估 15–25 min；每场景 GPU 时间均值 28.9 s（11–51 s，含验证用的额外渲染），actor 轨迹 1.4 s。数据 2.9 GB，26 136 张 JPEG，索引 7 986 行。
+小结果文件在 [research/results/i3-hugsim-pairs/](../../research/results/i3-hugsim-pairs/)（`scenes.csv` 场景与 t_c，`worlds.csv` 每个世界的合格性与验证数字，`label_validity.csv`）。
+
+**全量上的验证**（65 个场景，同验证一节的定义）：
+
+| 检查 | 结果 |
+|:--|:--|
+| x⁻ 两遍渲染、对 `_FrozenPC` 之前的原始 GaussianModel、对官方 `HUGSimEnv._get_obs()` | 65/65 场景 max \|Δ\| = 0 |
+| 框外超阈值像素（冲突前） | 667 个，落在 3 个世界里（static 496、oncoming 171），对比 6 930 万个 actor 像素；推测是车离相机 < 3 m 时投影框的保守裁剪，没有逐帧查 |
+| 遮挡探针（65 个场景 1 535 个路边停车位置） | 被挡像素 258 万个中 93.6% 不变；不被挡像素 250 万个中 95.6% 改变 |
+| 轨迹上的遮挡 | 被挡像素只有 26 万个（车几乎都在路中间），其中 17% 改变：cut-in / null 车贴着路边植被和栅栏，这些半透明高斯挡不住后面的车；这是 3DGS 本身的外观，不是插入错误 |
+| actor 底部对路面高斯 − HUGSIM 地面规则 | 中位 −1.2 cm，范围 −15 至 +14 cm |
+
+**每个 family 的世界数**（按预登记规则合格才渲染）：
+
+| 数据集 | 场景 | static | cutin | oncoming | null |
+|:--|--:|--:|--:|--:|--:|
+| nuScenes | 17 | 17 | 14 | 16 | 12 |
+| KITTI-360 | 26 | 26 | 0 | 22 | 0 |
+| Waymo | 22 | 22 | 14 | 22 | 12 |
+| 合计 | 65 | **65** | **28** | **60** | **24** |
+
+cut-in 在 37 个场景里被拒：28 个是邻车道里有停着的车（box 内障碍点 > 100），9 个两侧都不在路面上；KITTI-360 一个都没有，那些路两侧都是路边停车。
+null 跟着 cut-in 的一侧，被拒 41 个（25 个障碍、16 个出路面）。
+
+**label-validity 表**（τ_exp = 0.5 m/s；Δ 单位 m/s，负 = x⁺ 更慢；TTC = 规则冲突时刻 − 帧时刻）：
+
+| family | 场景 | 观测帧 | reactive 帧 | 占比 | 有 reactive 的场景 | reactive 的 Δ 中位 | Δ p10 | Δstop ≠ 0 的帧 | reactive 的 TTC 中位 |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| static | 65 | 1 730 | 959 | 0.554 | 65 | −4.76 | −8.71 | 535 | 1.60 s |
+| cutin | 28 | 614 | 216 | 0.352 | 27 | −6.86 | −9.57 | 168 | 0.88 s |
+| oncoming | 60 | 1 215 | 657 | 0.541 | 60 | −5.84 | −9.30 | 445 | 1.20 s |
+| 合并 | 65 | **3 559** | **1 832** | 0.515 | 65 | −5.48 | −9.07 | 1 148 | 1.35 s |
+| null | 24 | 792 | 0（按构造） | — | — | — | — | — | 规则在 null 帧上报冲突 17 次（2.1%） |
+
+读法：三个 family 都远过 P5 的门槛（每个 family ≥ 5 个场景有 reactive 帧；合并 reactive 1 832 帧、占 51.5%，P5 v0 是 503 帧、21%），
+所以按「考卷有没有题」这一关是成立的。Δ 的量级比 P5 大（中位 −5.5 m/s 对 P5 的 BehaviorAgent），因为规则 expert 一旦判定冲突就沿停车曲线停，
+而 AttackPlanner 的车是冲着 ego 来的。x⁺ 比 x⁻ 快（Δ > 0.5）的帧只有 2 个（logged 速度的噪声）。
+cut-in 和 oncoming 各有 322 / 375 帧是「真实未来里会撞、但按匀速外推还不会」：这些帧按预登记是 non-reactive（画面里还看不出车要切进来），
+考生在这些帧上提前减速不算错，也不算对，照 P5 对 non-reactive 帧的处理只作描述。
+
+**给考生的胶水**（本文件不打分）：
+- P5 的 Qwen 特征抽取器与 `p5_exam`：`index.parquet` / `past.npy` / `future.npy` / `obs.parquet` / `null.parquet` / `pairs.csv` 与 `processed/carla_p5` 同列；
+  `p5_pairs.processed()` 读环境变量 `P5_SET`，指到 `hugsim_pairs` 即可（`files` 是 3 相机 × 4 帧，P4 的顺序）。缺的只有 TFv6 的 `tf_*` 列（HUGSIM 里没有 TFv6 shadow），`p5_exam` 的考生表要去掉 TFv6。
+  past / future 的原点是前相机，不是后轴。
+- openpilot：每个 `scenes/<key>/<world>/frames.jsonl` 是一条 5 Hz 流（frame 以 20 Hz tick 计，间隔 4），`p5_openpilot.prepare` 的流构造照用；
+  相机标定不能用它的 CARLA rig，要换成 HUGSIM exam 的 `hugsim_zs.calibs(cam_params, rect)`（按数据集的 camera yaml），
+  帧已是 0.2 s 一步，**不需要** HUGSIM 闭环考试里的 1.25 倍时钟拉伸。
 
 ## 未解决的问题
 

@@ -1,0 +1,6 @@
+family,scenes,obs_frames,reactive_frames,reactive_share,scenes_with_reactive,d_expert_median_reactive,d_expert_p10_reactive,dstop_frames,ttc_median_reactive,rule_conflicts_on_null
+static,65,1730,959,0.554,65.0,-4.76,-8.71,535.0,1.6,
+cutin,28,614,216,0.352,27.0,-6.86,-9.57,168.0,0.88,
+oncoming,60,1215,657,0.541,60.0,-5.84,-9.3,445.0,1.2,
+pooled,65,3559,1832,0.515,65.0,-5.48,-9.07,1148.0,1.35,
+null,24,792,0,,,,,,,17.0
