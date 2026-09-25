@@ -32,6 +32,7 @@ case $1 in
       for m in cinque lebowski; do
         arm_score $r $s ridge_late_${m}_temporal & arm_score $r $s cls_late_${m}_temporal; wait
       done
+      arm_score $r $s ridge_ego & arm_score $r $s cls_ego_K1024; wait      # the paired deltas' ego rows
     done
     echo "scoring done $(date +%H:%M)" ;;
 esac
