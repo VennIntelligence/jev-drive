@@ -16,6 +16,8 @@ Variants (name: reference heading, iLQR discretization, iLQR wall-clock cap):
   fixed-dt-sr fixed-dt with the steering-rate limit 0.4 -> 1.0 rad/s
   fixed-dt-h  fixed-dt with the heading state cost 10 -> 30
   fixed-dt-xy fixed-dt with the position state costs 1 -> 3
+  fixed-dt-u  fixed-dt with the steering-rate input cost 10 -> 1
+  fixed-dt-xyu  fixed-dt-xy and fixed-dt-u together
 Each step: the plan from the ego's state, the variant's (acc, steer rate), one 0.25 s step of hug_sim's bicycle.
 The start state is the scenario's (start_ab, start_euler, start_velo, start_steer); no collisions, the run ends at
 RC >= 1 (nearest logged pose past 90 %), 10 m off the log, or 400 steps. Writes <out>/<variant>/<scenario>/zs_steps.jsonl
@@ -41,7 +43,10 @@ VARIANTS = {"official": ("official", 0.5, 0.05), "fixed": ("fixed", 0.5, 0.05), 
             "fixed-dt": ("fixed", 0.25, None), "central": ("central", 0.5, None), "central-dt": ("central", 0.25, None),
             "fixed-dt-sr": ("fixed", 0.25, None, {"max_steering_angle_rate": 1.0}),
             "fixed-dt-h": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [1.0, 1.0, 30.0, 0.0, 0.0]}),
-            "fixed-dt-xy": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [3.0, 3.0, 10.0, 0.0, 0.0]})}
+            "fixed-dt-xy": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [3.0, 3.0, 10.0, 0.0, 0.0]}),
+            "fixed-dt-u": ("fixed", 0.25, None, {"input_cost_diagonal_entries": [1.0, 1.0]}),
+            "fixed-dt-xyu": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [3.0, 3.0, 10.0, 0.0, 0.0],
+                                                   "input_cost_diagonal_entries": [1.0, 1.0]})}
 
 
 def solver(dt, cap, extra=None):
