@@ -454,8 +454,8 @@ def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int 
 
     def crop(path, box, W=480, H=270):
         b = np.asarray(box, float)
-        cx, cy, s = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2, max(3 * (b[3] - b[1]), 200)
-        w, h = s * 16 / 9, s
+        cx, cy, s = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2, min(max(3 * (b[3] - b[1]), 200), H_IMG)
+        w, h = min(s * 16 / 9, W_IMG), s
         x0, y0 = int(np.clip(cx - w / 2, 0, W_IMG - w)), int(np.clip(cy - h / 2, 0, H_IMG - h))
         return np.asarray(Image.open(path).convert("RGB").crop((x0, y0, x0 + int(w), y0 + int(h))).resize((W, H)))
 
@@ -479,6 +479,9 @@ def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int 
         axes[row, col].text(4, 20, f"{j + 1}: {r['cls'][:3]} {r['dist']:.0f} m, {len(im['actors'])} actor(s)", color="w", fontsize=6)
     fig.subplots_adjust(wspace=0.02, hspace=0.04)
     plots.save(fig, rl.dir, "elicit-e2-pairs16")
+    im = Image.open(rl.dir / "elicit-e2-pairs16.png").convert("RGB")      # doc copy: <= ~500 KB
+    im = im.resize((1400, round(im.height * 1400 / im.width)), Image.LANCZOS).quantize(128, method=Image.MEDIANCUT)
+    im.save(rl.dir / "elicit-e2-pairs16-doc.png", optimize=True)
     rl.close()
     return rl.dir
 
