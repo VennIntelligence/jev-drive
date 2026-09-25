@@ -2922,8 +2922,27 @@ cut-in 对 prior +3.1 / +6.7 pp（CI 不跨零），样本外 null false-flip 5.
 这正是本条原先写下的推翻条件（「M-C 在 v1 上行人翻转过 20%」）。两路分工：只用 Qwen 流行人 42% 但 cut-in 显著变差，只用 openpilot 流 cut-in 最好但行人 7–18%——
 第 25 条「continuation prior + 配对监督的 reaction decoder」的结构在开环上第一次得到正向结果。代价：DynamicObjectCrossing 的 non-reactive 帧翻转 0.3% → 11.7%（比 expert 早减速）。
 D0 在 v1 两套集合上复现（vision 层行人 AUC 0.509–0.514，都不过），这一半不变。
-PDM-Lite 集上所有考生（含 prior）逐帧翻转都接近 0：PDM-Lite 在因素可见后 0.4 s 就反应，reactive 帧落在视觉证据出现之前，这套标签需要另定计分窗口，不参与本条判定。
+PDM-Lite 集上所有考生（含 prior）逐帧翻转都接近 0，不参与本条判定。
+（*2026-09-26 就地修正*：这里原来写「PDM-Lite 在因素可见后 0.4 s 就反应，reactive 帧落在视觉证据出现之前，这套标签需要另定计分窗口」。
+E4 按登记量了窗口，这个解释不成立，见下一段。）
 全部表与图：[reactivity todo](../todos/2026-09-25-reactivity-program.md) 的「P5 v1 上的复跑」。
+
+**E4：PDM-Lite 集的计分窗口（2026-09-26，[elicitation 计划](../todos/2026-09-26-elicitation-program.md) E4，预登记先于数字；表在 [results/elicitation/e4/](results/elicitation/e4/)）**。
+两种预登记的窗口都在已存的逐帧预测上重算，不重拟合：(a) 可见门控，只留可见后 L 秒的帧（L = 考生的感知 + 决策延迟：openpilot 0.1 s、Qwen 与双流 0.3 s、TFv6 0.1 s、GT 规则门 0）；
+(b) 按对计分，窗口内任意 reactive 帧翻对就算这对过，null 用对称的「任意一帧动了就算误翻」。
+
+| 行人 reactive 帧翻转 % | BA 集逐帧 | PDM-Lite 逐帧 | PDM-Lite (a) | PDM-Lite (b) 按对（null case 地板） |
+|:--|:--|:--|:--|:--|
+| M-C 配对双流（Cinque） | 43.3 [35.0, 50.7] | 1.0 | **0.8 [0.0, 2.9]** | 4.8（56%） |
+| M-C 配对双流（Lebowski） | 41.6 | 0.3 | 0.4 | 1.6（51%） |
+| TFv6 waypoint 2 s | 29.3 | 10.4 | 11.6 | 25.4（45%） |
+| Q6 GT 规则门 | 80.0 | 10.7 | 10.7 | 36.5（0%） |
+
+按登记判「不过」（(a) 下 M-C 与 BA 差 −42 pp，超出 ±15 pp；null 5.1% 本身合格）：**BA 集继续为主判定集，PDM-Lite 集只报 (b)**。
+门控几乎不改变读数，因为 PDM-Lite 的 reactive 帧本来就不在「可见后的头几百毫秒」：行人中位在可见后 0.8 s、cut-in 2.8 s（BA 分别 2.2 s、7.0 s），0.3 s 门控只去掉 23% / 10% 的帧。
+连用特权 GT 状态的几何规则门在 PDM-Lite 上也只有 10.7%（行人）/ 0%（cut-in），BA 上是 80% / 34%。所以更可能的解释（推测）是 PDM-Lite 反应的依据在 GT 几何都还没显示威胁的时候就已出现
+（scenario 的特权状态，例如对方车辆的并线计划），不是「早了几百毫秒」；这套标签对任何只看传感器的考生都测不出东西，换窗口修不好。
+验证办法：把 PDM-Lite 的 reactive 帧按 GT 规则门是否已触发分开计翻转。
 
 **状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
 I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
