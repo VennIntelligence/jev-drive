@@ -68,6 +68,8 @@ def cmd_rate(a):
     op_t.to_csv(RES / "rate_op.csv", index=False, float_format="%.4f")
     print(op_t.to_string())
 
+    if not (RES / "rate_alp.jsonl").exists():
+        return
     alp = pd.read_json(RES / "rate_alp.jsonl", lines=True)
     rows = []
     base = alp[alp.variant == "native"].set_index("token")
