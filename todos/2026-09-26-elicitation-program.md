@@ -74,6 +74,12 @@
 - **读数**：所有现有考生（TFv6 两通道、ridge ego、openpilot、Qwen、M-C 各 arm、Q6 规则门）在 PDM-Lite 集上按 (a)(b) 重报；与 BA 集并排。
 - **判据**：(a) 下 M-C 双流行人翻转与 BA 集的差在 ±15 pp 内且 null ≤ 7% → PDM-Lite 集成为主判定集；否则继续以 BA 为主、PDM-Lite 只报 (b)。
 - **资源**：CPU 分钟级（预测都存着），工程半天。
+- **E4c（2026-09-26 新增，描述性读数，写于任何曲线数字之前）：reaction latency 曲线与人类 onset 锚。** 两套 expert 标签分歧的本质是 onset 不同（PDM-Lite 可见后约 0.4 s、BehaviorAgent 中位 5.6 s），二选一会丢掉一种能力，所以把两者放到同一条曲线上：
+  (i) 对每一对，x = t − t_vis（0–10 s，步长 0.2 s），y = 到该时刻为止已定向翻转的对的比例（按对计分，翻转门槛 τ 仍由各考生在 null 上定），两个 expert 各画自己的 onset 分布作参照；null 对给出同一曲线的地板。
+  每个考生报：曲线、物理可行窗口 [L, 窗口终点] 内的面积（L = 该考生的感知 + 决策延迟）、首次翻转时刻对两个 expert onset 的中位差。
+  (ii) **人类 onset 锚**（WOD，CPU 分钟级）：在 Cut-ins、Pedestrians、Cyclists cluster 的 rater 帧上，算 rater_best 与 log 各自的减速起点（纵向速度剖面首次比 CTRA 外推低 0.5 m/s 的时刻），报两者的分布；
+  它回答 PDM-Lite 的 0.4 s 和 BehaviorAgent 的 5.6 s 哪个离人类偏好近，也就是曲线上哪一段该当主判定。
+  **当下的口径（写死）**：主判定用 BA 集（所有考生都得 0 的考卷没有区分度），PDM-Lite 集按 (a) 门控窗口当预判读数并列；E4c 出来后若人类 onset 落在 1–3 s，则主判定改为曲线在 [L, 3 s] 的面积，这个改动要先登记再用。
 
 ### E5. 20 Hz student：把 M-C 蒸馏到快通道（等 fast-perception 出延迟后登记细节）
 
