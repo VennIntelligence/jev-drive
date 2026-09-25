@@ -31,12 +31,17 @@ declare -A spid
 cleanup() {  # our policy servers, the watchdog, and CARLA servers our runners started (their pid files, ports 600-699)
     for m in "${!spid[@]}"; do kill -- -"${spid[$m]}" 2>/dev/null; done; kill ${watch:-} 2>/dev/null
     local f p
+    for f in "$D"/*/attempts/*/*/route.pid; do       # route processes of our runners
+        p=$(cat "$f" 2>/dev/null) || continue
+        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$D/" && kill "$p" 2>/dev/null
+    done
     for f in "$D"/*/servers/carla-*.pid; do
         p=$(cat "$f" 2>/dev/null) || continue
         tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qE 'carla-rpc-port=3[2-6][0-9]{3}' && kill -- -"$p" "$p" 2>/dev/null
     done
 }
 trap cleanup EXIT
+trap 'exit 129' HUP INT TERM    # run the EXIT trap on a killed window too
 
 launch() {  # model: start its policy server in its own session / process group, wait for ready
     local m=$1 sock=$D/$1-$mode.sock ready=$D/$1-$mode.ready log=$D/server-$1-$mode.log
