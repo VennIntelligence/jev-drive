@@ -35,10 +35,11 @@ SEQ = "carla"
 HOLD = 4          # 20 Hz steps per 5 Hz frame for the queued (20 Hz clock) models
 
 
-def render(files: list) -> np.ndarray:
-    """Packed (n, 2, 6, 128, 256) [road, wide] model frames from (front, front_left, front_right) JPEG triplets."""
+def render(files: list, seq: str = SEQ) -> np.ndarray:
+    """Packed (n, 2, 6, 128, 256) [road, wide] model frames from (front, front_left, front_right) JPEG triplets.
+    `seq` picks the calibration (one rig for CARLA; one per scene for the HUGSIM pairs, plan["calibs"])."""
     from PIL import Image
-    idx = WZ._maps(SEQ)
+    idx = WZ._maps(seq)
     out = np.empty((len(files), 2, 6, 128, 256), np.uint8)
     for j, trip in enumerate(files):
         planes = []
@@ -53,7 +54,7 @@ def render(files: list) -> np.ndarray:
 
 
 def job(st):
-    return st, render(st["files"])
+    return st, render(st["files"], st.get("seq", SEQ))
 
 
 ARRAYS = ("temporal", "vision", "hidden", "lead", "lead_prob")   # lead*: raw output slices (fusion Q4c)
@@ -133,8 +134,9 @@ def main():
     si, sn = map(int, a.shard.split("/"))
     log = RunLog("p5_openpilot", "check" if a.check else f"stream-{si}of{sn}")
     plan = json.loads((P.root() / "op_plan.json").read_text())
-    calib = plan["calib"]
-    WZ._init({}, {SEQ: calib}, ".")
+    calib = plan.get("calib")
+    calibs = plan.get("calibs") or {SEQ: calib}      # HUGSIM pairs (elicit_i3.op_prepare): one per scene
+    WZ._init({}, calibs, ".")
     outdir = {k: P.root(a.out_sub, k) for k in a.models}
     log.event("start", args=vars(a), taps={k: D.OP_TAPS[k]["temporal"] for k in a.models})
 
@@ -170,7 +172,7 @@ def main():
     items = [s for s in items if not all((outdir[k] / f"{s['key']}.npz").exists() for k in a.models)]
     items = items[: a.limit or None]
     del plan
-    with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=({}, {SEQ: calib}, ".")) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=({}, calibs, ".")) as ex:
         list(ex.map(int, range(a.workers)))     # fork before the TensorRT sessions exist (see drive_backbones_openpilot)
         models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
                   for k in a.models}
