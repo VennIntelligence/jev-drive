@@ -38,8 +38,12 @@ launch() {  # model: start its policy server in its own session / process group,
     # no `exec -a` renaming: a venv interpreter locates its prefix from argv[0]. The subshell records the exit status
     # (137 = SIGKILL) for the forensics.
     (
-        CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "$PY_OP" scripts/zeroshot_policy_server.py "$m" \
-            --socket "$sock" --ready-file "$ready" --pool "${POOL:-2}" >> "$log" 2>&1 &
+        if [[ $m == tcp ]]; then
+            cmd=("$DATA_DIR/envs/jevdrive/bin/python" scripts/b2d_tcp_server.py --ckpt "$TCP_CKPT")
+        else
+            cmd=("$PY_OP" scripts/zeroshot_policy_server.py "$m" --pool "${POOL:-2}")
+        fi
+        CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "${cmd[@]}" --socket "$sock" --ready-file "$ready" >> "$log" 2>&1 &
         echo $! > "$D/.pid-$m-$mode"
         wait $!
         echo "$(date '+%F %T') server $m exited rc=$?" >> "$log"
@@ -150,7 +154,7 @@ zoo_switches() {  # Alpamayo-exam arm -> the Zoo PID switches it freezes
     esac
 }
 partner() {  # junctions [tcp_only] -> the "partner" config key
-    echo "\"partner\": {\"ckpt\": \"$TCP_CKPT\", \"junctions\": $1, \"tcp_only\": ${2:-false}}"
+    echo "\"partner\": {\"ckpt\": \"$TCP_CKPT\", \"socket\": \"$D/tcp-$mode.sock\", \"junctions\": $1, \"tcp_only\": ${2:-false}}"
 }
 alp_arm() {  # the Zoo PID arm the Alpamayo smoke2 acceptance froze (the openpilot exam must use the same)
     local a
@@ -182,7 +186,7 @@ accept)
     for arm in f1 f1f2b; do
         config acc-$arm lebowski zoo_pid model 5 "$(zoo_switches $arm), \"desire\": false, $(partner true)"
     done
-    start_servers lebowski
+    start_servers lebowski tcp
     fail=0
     for arm in f1 f1f2b; do
         run acc-$arm "${ACCEPT_WORKERS:-4}" 600 "${R[@]}" || fail=1
@@ -202,7 +206,7 @@ smoke3)
     config pure-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false"
     config tcp-alone lebowski zoo_pid model 0 "$Z, \"desire\": false, $(partner true true)"
     config partner-native-lebowski lebowski native model 5 ", \"desire\": false, $(partner true)"
-    start_servers lebowski
+    start_servers lebowski tcp
     fail=0
     for ph in partner-lebowski pure-lebowski tcp-alone partner-native-lebowski; do
         run $ph 4 620 "${R[@]}" || fail=1
@@ -220,7 +224,7 @@ full)
     arm=$(alp_arm) || exit 2
     echo "$(date '+%F %T') full: lebowski + TCP partner, controller=$ctl zoo_arm=$arm" | tee "$D/full-choice.txt" >&2
     config full-partner lebowski "$ctl" model 0 "$([[ $ctl == zoo_pid ]] && zoo_switches "$arm"), \"desire\": false, $(partner true)"
-    POOL=4 start_servers lebowski
+    POOL=4 start_servers lebowski tcp
     run full-partner 4 660 --towns all
     python3 scripts/zeroshot_b2d_summary.py "$D/full-full-partner" | tee "$D/full-summary.txt"
     python3 scripts/zeroshot_b2d_junctions.py "$D/full-full-partner" --csv "$D/full-routes.csv" | tee "$D/full-junctions.csv"

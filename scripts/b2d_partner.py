@@ -30,31 +30,81 @@ BLEND_TICKS = 10
 LEFT, RIGHT = 1, 2
 
 
+class RemoteTCP(object):
+    """Stands in for the shipped agent's `self.net`: the network forward runs on the TCP server (scripts/b2d_tcp_server.py,
+    a CUDA build that knows this GPU; envs/b2d-tcp's torch 2.2 has no sm_120 kernels), process_action / control_pid (with
+    their PID state) run here on the CPU copy of the shipped model, exactly as the shipped code calls them."""
+
+    def __init__(self, net, sock_path):
+        import socket
+        import zeroshot_wire as wire
+        self.net, self.wire = net, wire
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(sock_path)
+
+    def __call__(self, img, state, target_point):
+        import torch
+        self.wire.send(self.sock, {"cmd": "forward"}, {"img": img.numpy().astype(np.float32),
+                                                      "state": state.numpy().astype(np.float32),
+                                                      "target_point": target_point.numpy().astype(np.float32)})
+        _, out = self.wire.recv(self.sock)
+        return {k: torch.from_numpy(np.array(v)) for k, v in out.items()}
+
+    def process_action(self, *a):
+        return self.net.process_action(*a)
+
+    def control_pid(self, *a):
+        return self.net.control_pid(*a)
+
+
 class TCPPartner(object):
-    def __init__(self, ckpt, hero=None, zoo_root=None):
+    """The shipped Bench2DriveZoo TCPAgent (setup, tick, run_step, route planner, PIDs, throttle cap: its own code),
+    with three environment adaptations: tensors that the shipped code moves to 'cuda' stay on the CPU and the network
+    forward runs on the TCP server (RemoteTCP); the checkpoint is loaded to the CPU; its 'bev' camera (a 50 m-high
+    top view that it only saves to disk, rejected by the leaderboard's sensor validation) is not spawned and a blank
+    image is passed in its place."""
+
+    def __init__(self, ckpt, sock_path, hero=None, zoo_root=None):
         os.environ.setdefault("PLANNER_TYPE", "only_traj")
-        os.environ.setdefault("IS_BENCH2DRIVE", "1")          # the shipped agent reads its 'bev' sensor only then
+        os.environ.setdefault("IS_BENCH2DRIVE", "1")
         os.environ.pop("SAVE_PATH", None)
         root = zoo_root or os.environ.get("B2D_ZOO_ROOT") or str(Path(os.environ["DATA_DIR"]) / "third_party/Bench2DriveZoo")
         if root not in sys.path:
             sys.path.insert(0, root)
+        import torch
         from leaderboard.autoagents.autonomous_agent import Track
         from leaderboard.envs.sensor_interface import SensorInterface
         from team_code.tcp_b2d_agent import TCPAgent
-        a = TCPAgent.__new__(TCPAgent)                      # the base __init__ only needs the hero; set its fields
-        a.track, a._global_plan, a._global_plan_world_coord = Track.SENSORS, None, None
-        a.sensor_interface, a.wallclock_t0 = SensorInterface(), None
-        a.hero_actor = hero                                  # read by the shipped run_step (get_metric_info)
-        a.setup(ckpt + "+partner")
+        orig_to, orig_load, orig_cuda = torch.Tensor.to, torch.load, torch.nn.Module.cuda
+
+        def to_cpu(self_, *args, **kw):
+            cpu = lambda d: "cpu" if (isinstance(d, str) and d.startswith("cuda")) or \
+                (isinstance(d, torch.device) and d.type == "cuda") else d  # noqa: E731
+            return orig_to(self_, *[cpu(x) for x in args], **{k: cpu(v) for k, v in kw.items()})
+
+        torch.Tensor.to = to_cpu                             # this process has no other torch user
+        torch.load = lambda f, map_location=None, **kw: orig_load(f, map_location="cpu", **kw)
+        torch.nn.Module.cuda = lambda self_, *args, **kw: self_
+        try:
+            a = TCPAgent.__new__(TCPAgent)                  # the base __init__ only finds the hero; set its fields
+            a.track, a._global_plan, a._global_plan_world_coord = Track.SENSORS, None, None
+            a.sensor_interface, a.wallclock_t0 = SensorInterface(), None
+            a.hero_actor = hero                              # read by the shipped run_step (get_metric_info)
+            a.setup(ckpt + "+partner")
+        finally:
+            torch.load, torch.nn.Module.cuda = orig_load, orig_cuda
+        a.net = RemoteTCP(a.net, sock_path)
         self.agent = a
-        self.tags = [s["id"] for s in a.sensors()]
+        self.specs = [s for s in a.sensors() if s["id"] != "bev"]
+        self.tags = [s["id"] for s in self.specs]
+        self.bev = np.zeros((512, 512, 4), np.uint8)
         self.last = (0.0, 0.0, 1.0)
 
     def sensors(self, taken):
-        return [dict(s) for s in self.agent.sensors() if s["id"] not in taken]
+        return [dict(s) for s in self.specs if s["id"] not in taken]
 
     def camera_tags(self):
-        return [s["id"] for s in self.agent.sensors() if s["type"].startswith("sensor.camera")]
+        return [s["id"] for s in self.specs if s["type"].startswith("sensor.camera")]
 
     def set_global_plan(self, gps, world):
         self.agent.set_global_plan(gps, world)
@@ -63,7 +113,9 @@ class TCPPartner(object):
         """data: {tag: (frame, value)} with every partner sensor; returns (throttle, steer, brake)."""
         if not all(t in data for t in self.tags):
             return self.last
-        c = self.agent.run_step({t: data[t] for t in self.tags}, timestamp)
+        inp = {t: data[t] for t in self.tags}
+        inp["bev"] = (data["SPEED"][0], self.bev)
+        c = self.agent.run_step(inp, timestamp)
         self.last = (float(c.throttle), float(c.steer), float(c.brake))
         return self.last
 

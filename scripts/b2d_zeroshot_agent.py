@@ -170,7 +170,7 @@ class ZeroShotAgent(AutonomousAgent):
         pcfg = self.cfg.get("partner")
         if pcfg:
             from b2d_partner import TCPPartner
-            self.partner = TCPPartner(pcfg["ckpt"], hero=getattr(self, "hero_actor", None))
+            self.partner = TCPPartner(pcfg["ckpt"], pcfg["socket"], hero=getattr(self, "hero_actor", None))
             if getattr(self, "_dense_plan", None):      # the evaluator set the route before setup()
                 self.partner.set_global_plan(self._dense_gps, self._dense_plan)
         router_tags = self.cam_tags + (self.partner.camera_tags() if self.partner else [])
