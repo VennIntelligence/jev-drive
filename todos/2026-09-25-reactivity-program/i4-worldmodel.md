@@ -114,7 +114,7 @@ batch 1 时每次去噪约 35 ms，对 4B 模型、~2k token 来说偏慢，看�
 |:--|:--|
 | 条件只有 ego pose | 不能指定「前面有个行人」或「旁车 cut-in」；场景里的其他 agent 由模型自由生成，hazard 只有录像里本来就有才会出现 |
 | future anchor 来自录像 | 环境知道录制的未来，并把 ego 往回拉。它教的是「偏了怎么回到人类轨迹」，和我们要的「为 hazard 偏离 prior」方向相反；刹停这类与录像矛盾的动作只被部分执行（上表 45%） |
-| 幅度只跟到约一半 | policy 在里面学到的动作—后果关系偏弱，可能会学成过度转向或过度刹车；comma 用 plan head 标签加 DAgger 而不是 reward 优化，部分就是为了绕开这一点 |
+| 幅度只跟到约一半 | policy 在里面学到的动作—后果关系偏弱，可能会学成过度转向或过度刹车；（推测）comma 用 plan head 标签做 DAgger 而不做 reward 优化，可能部分就是为了绕开这一点 |
 | 域 | 输出是 comma 相机 5 Hz、每路 128×256 的帧。openpilot 的 `driving_vision` 吃的正是 narrow + wide 两路 YUV（`openpilot.distill` 的 actor 就是把 WM 帧放大 2 倍转 YUV 喂进去），格式能对上，但分辨率是一半，帧率是 5 Hz 不是 20 Hz。M-A 反正要重训 temporal policy，按 5 Hz 训可以接受；WOD / CARLA 的帧不能进这个环境 |
 | 标签 | plan head 是按人类轨迹训的 inverse dynamics，给的是「人类会怎么开回去」，不是 hazard 反应的标签 |
 
