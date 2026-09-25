@@ -522,6 +522,47 @@ def features(rl, N, Wd) -> pd.DataFrame:
     return F
 
 
+# ---------------------------------------------------------------- post-hoc descriptive (not part of the criterion)
+
+def posthoc(run_dir: Path):
+    """Longitudinal brake-vs-continue pairs on navtrain: |dv_T| >= 2, |dy_T| < 1, both t0 speeds >= 2 m/s (main tau).
+    Cause-object share on the slower (braking) side vs the faster side (paired), and vs the twin nulls restricted to
+    the same speed condition. Written after the pre-registered navtrain numbers were seen; descriptive only."""
+    from . import navsim_zs as Z
+    idx = Z.load_index("navtrain", slim=True)
+    tok = np.array([e["token"] for e in idx])
+    v0 = np.linalg.norm(np.stack([e["vel"][-1] for e in idx]), axis=1)
+    with np.load(Z.root("index") / "navtrain_future.npz") as f:
+        pos = dict(zip(f["tokens"].tolist(), range(len(f["tokens"]))))
+        fut = f["poses"][[pos[t] for t in tok]].astype(np.float32)
+    vT, _, _ = future_stats(fut, 0.5, v0)
+    P = pd.read_parquet(run_dir / "navtrain_pairs.parquet")
+    fl = pd.read_parquet(run_dir / "navtrain_flags.parquet")
+    P = P[P.d_tau <= MAIN[0]]
+    a, b = P.a.to_numpy(), P.b.to_numpy()
+    moving = (v0[a] >= 2) & (v0[b] >= 2)
+    lon = moving & (P.dv.to_numpy() >= 2) & (P.dy.to_numpy() < 1)
+    nul = moving & P.null.to_numpy()
+    slow = np.where(vT[a] <= vT[b], a, b)
+    fast = np.where(vT[a] <= vT[b], b, a)
+    rows = []
+    for col in ("cause", "cause_vehicle", "cause_pedestrian", "in_pedestrian", "in_any"):
+        f = fl[col].to_numpy().astype(float)
+        g = P.grp.astype(str).to_numpy()
+        fs, ff = f[slow], f[fast]
+        pd_, plo, phi = boot_mean((fs - ff)[lon], g[lon])
+        both = np.r_[fs[lon], fs[nul]]
+        gg = np.r_[g[lon], g[nul]]
+        dd, dlo, dhi = boot_diff(both, gg, np.r_[np.ones(lon.sum(), bool), np.zeros(nul.sum(), bool)],
+                                 np.r_[np.zeros(lon.sum(), bool), np.ones(nul.sum(), bool)])
+        rows.append({"flag": col, "n_long": int(lon.sum()), "n_null_moving": int(nul.sum()), "brake_side": fs[lon].mean(),
+                     "continue_side": ff[lon].mean(), "null_moving": fs[nul].mean(), "brake_minus_continue": pd_,
+                     "bmc_lo": plo, "bmc_hi": phi, "brake_minus_null": dd, "bmn_lo": dlo, "bmn_hi": dhi})
+    R = pd.DataFrame(rows)
+    R.to_csv(RESULTS / "navtrain_posthoc_longitudinal.csv", index=False)
+    print(R.to_markdown(index=False, floatfmt=".3f"))
+
+
 # ---------------------------------------------------------------- PDM scorer subsample
 
 N_SCORER, DECEL, SEED = 300, 3.0, 0
@@ -626,6 +667,8 @@ def main():
         main_wod(rl, Wd)
         features(rl, N, Wd)
         rl.close()
+    elif cmd == "posthoc":
+        posthoc(Path(sys.argv[2]))
     elif cmd == "scorer-prep":
         scorer_prep(Path(sys.argv[2]))
     elif cmd == "scorer-read":

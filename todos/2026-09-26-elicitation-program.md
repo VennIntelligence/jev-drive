@@ -247,6 +247,9 @@ E6（可选）──────────────────────
   (6) **打分与读数**：navtest 用 `scripts/navsim_zs_score.sh`（v1.1 出 PDMS、main @ 0a380a9 出 EPDMS，`OPENBLAS_CORETYPE=Haswell`），navhard two-stage 出 EPDMS；
   配对 Δ（逐 token，10 000 次 token bootstrap，同 `openloop_standing.navsim`）：(b) − `ridge_late`、(a) − `ridge_late`、(b) − (a)。seed 各 1 个（k-means seed 0、子集 seed 0、留出 seed 1）。
   判据照登记：(b) PDMS ≥ 84 → 写「512 维冻结特征 + 配方 head 到 TransFuser 水平」；否则写「差距不在配方」。
+- 2026-09-26 00:36 CST **[E3] 事后描述（看过 navtrain 登记口径的数字之后写，不改判格）**：登记口径下 navtrain 分叉对的 x⁺ 原因物体比例**低于**孪生 null（null 以跟车为主，前车在走廊内、缓慢接近），
+  而分叉对六成是纯横向（|Δy_T| ≥ 1 m、|Δv_T| < 2 m/s，路形 / 路线）。为了看「刹 vs 继续」这一类是否有可用的子集，加一个只描述的读数：同一主格（1 × τ_ego）里两侧 t0 速度都 ≥ 2 m/s、|Δv_T| ≥ 2 m/s 且 |Δy_T| < 1 m 的纵向对，
+  比较终端速度较低的一侧（刹）与较高一侧（继续）的原因物体比例（对内配对差），以及刹的一侧对同样速度条件下孪生 null 的比例；按 log cluster bootstrap。代码 `elicit_e3.posthoc`。
 
 ## 结果
 
