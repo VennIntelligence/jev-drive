@@ -2897,3 +2897,31 @@ I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出�
 **对选型的含义（推测）**：行人这条线的瓶颈是输入表征的空间分辨率，而不是训练信号；下一步是空间 token 上的 readout（P2 的 attention head 那一格）或 video token，
 而不是再换 loss。cut-in 这类 openpilot 训练分布内的反应，配对差分 + openpilot 冻结特征就够。
 **会推翻本条的证据**：P5 v1（更多路线、PDM-Lite 标签）上 vision 层行人 AUC 过 0.60；或 M-C 在 v1 上行人翻转过 20%（那说明 v0 是数据量问题，不是表征问题）。
+
+## 43. 融合前诊断：Qwen 在融合里不加分（冗余），行人既不在 openpilot 也不在 Qwen 的线性 / 空间读出里；现成 SAM 3.1 近处看得见、远处放不准，规则门在它的状态上拿到行人 family 的第一个非零翻转（**待定**，P5 v0 + WOD + nuScenes，I1 之前）
+
+2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-fusion-diagnostics.md](../todos/2026-09-25-fusion-diagnostics.md)（九项，含「架构方向」一页），小表在 [research/results/fusion-diagnostics/](results/fusion-diagnostics/)。
+SAM 3.1 是 Meta 的开放词表分割模型（文本 prompt），这里用它的 image 检测器、仓库原样的前后处理（与 `Sam3Processor` 逐位相同），接地点按平地假设抬到 BEV。
+
+| 读数 | 数值 | 判格 |
+|:--|:--|:--|
+| Q1 concat（openpilot `temporal` ⊕ Qwen `L18_last`）− best single | WOD pre-onset 8 个 Δ 全跨零；RFS 跨零或偏负（(b) cls −0.14 / −0.15）；P5 合并翻转 −20 / −25 pp；P5 行人 0 对 0 | **冗余 → 只调 openpilot，去掉 Qwen** |
+| Q9b Qwen 4×4 空间 token + attention 读出，配对差分 | 行人翻转 0%（事后 40 epoch：训练对斜率 0.8，样本外 4.5% [0, 12.2]） | Q9 仍为 0 → 行人走 SAM 通道（v0 上弱） |
+| Q4 SAM 3.1 召回，P5 hazard 行人（前视可见） | 全部 0.49，≤ 30 m 白天 0.65，≤ 20 m 0.88（BEV 误差中位 0.46 m）；oracle 地面高度下 0.77 / 0.86 | 登记判据（≥ 0.9 / ≥ 0.8）不过 |
+| Q4 SAM 3.1 召回，nuScenes val ≤ 40 m | 行人 0.36（0–10 m 0.68），车辆 0.40，cone 0.33，debris 0 | 不过 |
+| Q6 几何规则门，P5 定向翻转（null false-flip） | GT 状态 42.9%（0%），SAM 状态 **29.2% [13.2, 47.0]**（4.3%）；行人 family GT 70–87% → SAM 31–40% | 判据等 I1 的 PDM-Lite |
+| Q4c openpilot lead 头 | 召回 0.77 / 0.73，≤ 20 m ≥ 0.9，40 m 外 0.2–0.4 | 描述 |
+| Q2 WOD 纵向损失帧 | 看见了但决策错 4.2%、没看见 6.6%、走廊里无该类物体 89.2% | 混合（上界受 SAM 漏检影响） |
+| Q8 反应窗口 p25 | 灯 0.05–0.1 s，ParkingCrossingPedestrian 0.53 s（SAM 3 路 558 ms、VLM 470 ms 都来不及），cut-in 6.9–8.9 s | 灯与车后出行人留在快通道 |
+| Q7 模式词表 | P5 与 WOD 的反应几乎全是纵向（停 / 让 / 走），openpilot desire 覆盖约 0 | decision head 词表以纵向为主 |
+
+**结论**：
+1. 在我们测过的每一个协议上，把 Qwen 拼到 openpilot 上都不加分，P5 上还减分；第 40 条「openpilot `temporal` 是最强冻结表征」延伸为「融合里不需要第二个通用 VLM 表征」。
+2. 行人这一条，openpilot（第 42 条 D0）、Qwen pooled（M-C）、Qwen 空间 token（Q9b）三种读出在 P5 v0 上都是 0；**唯一非零的是结构化感知 + 几何规则**（SAM 状态 29%，其中行人 family 31–40%）。
+3. 现成 SAM 3.1 的问题主要在接地点而不是检出：P5 行人 20–40 m 平地召回 0.12、oracle 地面高度 0.50；nuScenes 上近处也只有约 0.7，那是另一个问题（推测与正方形 resize 有关，未测）。
+4. WOD 上 openpilot 输分的纵向帧里，能被「走廊里有该类物体」解释的只有约 11%；没有证据支持「看见了但决策错」是主要缺口。
+
+**状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent）；Q9b 的事后读数提示行人读出的瓶颈可能是数据量而不是表征；SAM 的判据按平地抬升判，16 帧检查 (b) 差 0.07 m 没过（平地假设，不是坐标链）；
+nuScenes 的检查 (d) 是批量之后补做的目检。
+**会推翻或推进本条的证据**：I1（P5 v1：PDM-Lite、101 条路线 × 3 seed）上 Q9b 行人翻转过 20%（那就是数据量问题，Qwen 空间 token 可以留作行人通道）；Q6 在 PDM-Lite 标签下 GT 规则 floor ≥ 80%（反应主要是几何）；
+给 SAM 接地点加地面高度估计后 P5 / nuScenes 行人召回过登记门槛（结构化感知通道成立）。
