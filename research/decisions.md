@@ -2863,6 +2863,11 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    navtest 官方 devkit 打分，输入是 NAVSIM 规则给的 4 帧 2 Hz 前视。`temporal` + `cls_late` 77.9 / 77.3 PDMS（Cinque / Lebowski），对同族 `cls ego`
    +9.6 / +8.8 EPDMS（CI 不跨零），`ridge_late` 对 `ridge ego` +9.7 / +8.7；按同一规则判「更好」。原生 plan 在这种输入下失效（第 37 条修正），特征没有。
    离 TransFuser 的 84.0 PDMS 还差 6 分，navhard 19.8 对 23.1。
+   **2026-09-26 补（[elicitation 计划](../todos/2026-09-26-elicitation-program.md) E6，描述性，预登记先于数字）：这 6 分是 R 层配方，不在表征。** 同一份 512 维冻结 Cinque `temporal`、同一套 K = 1024 候选轨迹，
+   只把「选哪条」从模仿 softmax 换成 Hydra-MDP 式按 PDM 子分（NC、DAC、EP、TTC、C）各一个线性打分头、加权选 proposal（子分标签是 navtrain 2 万 token 上逐 anchor 的官方 scorer 分数，权重只在 navtrain held-out log 上定）：
+   navtest PDMS 77.9 → **84.2 [83.7, 84.7]**（同候选集配对 +6.3 [+5.7, +6.9]），EPDMS 82.6，navhard 25.7（TransFuser 84.0 / 76.7 / 23.1），单 seed，按登记判「512 维冻结特征 + 配方 head 到 TransFuser 水平」（CI 跨 84，只说同一水平）。
+   增益主要在 DAC（87 → 93），代价是 extended comfort 80 → 75。按第 35 条读：训练标签就是评测用的 scorer，这是对准 metric 的选择，不是 E 层能力，也不说明 openpilot 特征比 TransFuser 的表征好。
+   附带发现：`traj.kmeans` 在 GPU 上不可复现（同 seed 个别中心差 1.8 m），G2 / G3 的词表不能逐位复现，总分不受影响（CPU 确定性词表重拟合 77.9，配对 −0.0 [−0.5, +0.5]）。
 
 **对选型的含义（推测）**：第 21 条和 prediag 的「表征：Qwen3-VL-4B + 原生视频」要改：**在驾驶视频上训过的时序表征**（openpilot）比所有通用 backbone 都强，而且强一个量级；
 通用 VLM 做驾驶微调（Alpamayo）在中层 image token 上几乎不带来这种增益，增益在深层 last-token。下一步的候选是把 openpilot `temporal` 当 backbone 进 Stage B / 反应通道。
