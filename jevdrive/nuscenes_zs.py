@@ -33,12 +33,14 @@ def root(*parts) -> Path:
     return d
 
 
-def index_path() -> Path:
-    return data_dir() / "processed" / "nusc_zs" / "val_index.pkl"
+def index_path(name: str = "val") -> Path:
+    """"val": the exam's index (val scenes, every camera, GT boxes). "trainval": train + val scenes, CAM_FRONT and
+    poses only, for the frozen-feature replication of decisions 40 (jevdrive/nusc_ladder.py)."""
+    return data_dir() / "processed" / "nusc_zs" / f"{name}_index.pkl"
 
 
-def load_index() -> dict:
-    with open(index_path(), "rb") as f:
+def load_index(name: str = "val") -> dict:
+    with open(index_path(name), "rb") as f:
         return pickle.load(f)
 
 
@@ -83,14 +85,15 @@ def _tables(names):
         return dict(zip(names, ex.map(one, names)))
 
 
-def build_index(log=print) -> dict:
-    """Val scenes only. Returns {"samples": [entry], "scenes": {scene: {...}}}; see module docstring."""
+def build_index(log=print, splits=("val",), cams=CAMS, boxes: bool = True) -> dict:
+    """Scenes of `splits`. Returns {"samples": [entry], "scenes": {scene: {...}}}; see module docstring.
+    `cams` limits the per-scene frame lists, `boxes=False` skips the GT agent boxes (collision metrics only)."""
     from .nuscenes_index import scene_splits
     t = _tables(["scene", "sample", "sample_data", "ego_pose", "calibrated_sensor", "sensor", "sample_annotation",
                  "instance", "category", "log"])
     split = scene_splits(VERSION)
-    scenes = t["scene"][t["scene"].name.map(split) == "val"]
-    log(f"{len(scenes)} val scenes")
+    scenes = t["scene"][t["scene"].name.map(split).isin(splits)]
+    log(f"{len(scenes)} scenes of {splits}")
     sensor = t["sensor"].set_index("token").channel
     cs = t["calibrated_sensor"].set_index("token")
     cs_channel = cs.sensor_token.map(sensor)
@@ -103,25 +106,27 @@ def build_index(log=print) -> dict:
     ann = t["sample_annotation"]
     ann = ann.assign(cat=ann.instance_token.map(cat))
     ann = ann[ann.cat.str.startswith(AGENT_PREFIX) & ((ann.num_lidar_pts + ann.num_radar_pts) > 0)]
-    ann_by_sample = {k: g for k, g in ann.groupby("sample_token")}
+    ann_by_sample = {k: g for k, g in ann.groupby("sample_token")} if boxes else {}
 
+    sd = sd[sd.channel.isin(("LIDAR_TOP",) + tuple(cams))]
     sd_scene = sd.merge(smp[["scene_token"]], left_on="sample_token", right_index=True)
+    by_scene = dict(tuple(sd_scene.groupby("scene_token")))
     out_scenes, samples = {}, []
     for _, sc in scenes.iterrows():
-        s_sd = sd_scene[sd_scene.scene_token == sc.token]
+        s_sd = by_scene[sc.token]
         lid = s_sd[s_sd.channel == "LIDAR_TOP"].sort_values("timestamp")
         P = pose.loc[lid.ego_pose_token]
         lid_cs = cs.loc[lid.calibrated_sensor_token.iloc[0]]
-        cams = {}
-        for c in CAMS:
+        cam_d = {}
+        for c in cams:
             f = s_sd[s_sd.channel == c].sort_values("timestamp")
             ccs = cs.loc[f.calibrated_sensor_token.iloc[0]]
-            cams[c] = {"t": f.timestamp.to_numpy(np.int64), "path": f.filename.tolist(),
+            cam_d[c] = {"t": f.timestamp.to_numpy(np.int64), "path": f.filename.tolist(),
                        "key": f.is_key_frame.to_numpy(bool),
                        "K": np.asarray(ccs.camera_intrinsic, np.float64),
                        "R": quat_wxyz_to_R(ccs.rotation), "t_ego": np.asarray(ccs.translation, np.float64)}
         out_scenes[sc["name"]] = {
-            "location": loc[sc.log_token], "cams": cams,
+            "location": loc[sc.log_token], "split": split[sc["name"]], "cams": cam_d,
             "pose_t": lid.timestamp.to_numpy(np.int64), "pose_xyz": np.stack(P.translation.to_numpy()),
             "pose_R": np.stack([quat_wxyz_to_R(q) for q in P.rotation]),
             "lidar_xyz": np.asarray(lid_cs.translation, np.float64)}
@@ -136,7 +141,7 @@ def build_index(log=print) -> dict:
         key_lid = lid[lid.is_key_frame].set_index("sample_token")
         for i, tok in enumerate(keys):
             e = {"token": tok, "scene": sc["name"], "i": i, "t0": int(kt[i]), "hist_s": (kt[i] - kt[0]) * 1e-6,
-                 "location": sc_d["location"], "valid": i + N_FUT < len(keys)}
+                 "location": sc_d["location"], "split": sc_d["split"], "valid": i + N_FUT < len(keys)}
             if e["valid"]:
                 pl = pose.loc[key_lid.loc[keys[i:i + N_FUT + 1]].ego_pose_token]
                 p = np.stack(pl.translation.to_numpy())
@@ -150,19 +155,18 @@ def build_index(log=print) -> dict:
                 e["gt_yaw"] = yaw_of(R0t @ R[1:]).astype(np.float32)
                 y3 = e["gt"][-1, 1]
                 e["cmd"] = "right" if y3 <= -2 else "left" if y3 >= 2 else "straight"   # VAD converter rule
-                boxes = []
-                for tk in keys[i + 1:i + N_FUT + 1]:
+                e["boxes"] = boxes_ = []
+                for tk in keys[i + 1:i + N_FUT + 1] if boxes else ():
                     g = ann_by_sample.get(tk)
                     if g is None or not len(g):
-                        boxes.append(np.zeros((0, 5), np.float32))
+                        boxes_.append(np.zeros((0, 5), np.float32))
                         continue
                     c = (np.stack(g.translation.to_numpy()) - p[0]) @ R0t.T
                     yaw = np.array([yaw_of(R0t @ quat_wxyz_to_R(q)) for q in g.rotation])
                     wlh = np.stack(g["size"].to_numpy())
-                    boxes.append(np.c_[c[:, :2], wlh[:, 1], wlh[:, 0], yaw].astype(np.float32))   # x y l w yaw
-                e["boxes"] = boxes
+                    boxes_.append(np.c_[c[:, :2], wlh[:, 1], wlh[:, 0], yaw].astype(np.float32))   # x y l w yaw
             samples.append(e)
-    log(f"{len(samples)} val keyframes, {sum(e['valid'] for e in samples)} valid (6 future keyframes)")
+    log(f"{len(samples)} keyframes, {sum(e['valid'] for e in samples)} valid (6 future keyframes)")
     return {"samples": samples, "scenes": out_scenes}
 
 

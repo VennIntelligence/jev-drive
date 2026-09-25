@@ -256,3 +256,76 @@ Alpamayo 1.5 的中层 image-token 特征（主 tap）只在全部帧 ADE 上比
 `L27_last` 是全阶梯第一个两方向都过门槛的 arm，但它是次要 tap。
 限定：openpilot 的增益大头在直行帧（DiD 为正），它是一个在自己的视频上学了纵向动力学的时序模型，所以这一行说的是「驾驶视频上训出来的时序表征」而不单是「驾驶领域」；
 它的原生 plan 仍比 ridge 读出高 0.5 RFS，读出层还有空间。
+
+## 第 40 条的后续 (iii) 与 (i)：预登记（2026-09-25，在任何分数之前提交）
+
+状态: 预登记（本节提交时两项都还没有任何分数；nuScenes 的 openpilot 特征还没抽）
+资源: GPU 2 上 ≤ 25 GB（与 Alpamayo 闭环考试共卡，吞吐掉 > 10% 就自我限速），≤ 6 核（taskset + nice 10，DataLoader / 解码 worker ≤ 4），slot `decision40-*`。
+不做：Alpamayo `L27_last` 的 train 训复现（约 20 h，要用户决定）。
+
+### (iii) openpilot `temporal` 接进分类头：RFS 能不能接近原生 plan 的 8.0
+
+问题：第 40 条里冻结 `temporal` + ridge 的 RFS 是 7.45（Cinque）/ 7.52（Lebowski），原生 plan 是 8.00。
+差的 0.5 是**读出**的问题（ridge 只有一个 mode，不会在多模态处押 rater 偏好的一支），还是**特征**里就没有？
+分类头（fixed vocabulary 上的 softmax，第 8/10 条）在 P0 里正好是「输 ADE、赢 RFS」的那一族：`cls ego` 7.31 对 `ridge ego` 7.06。
+
+| 项 | 取值（全部沿用，不新调任何东西） |
+|:--|:--|
+| 行与切分 | 第 40 条 train 训后续的同一批行：train 415 663 帧训、val 106 360 帧评（`ladder_train`，单方向），s_ego 用 P0 的 |
+| 特征 | `op_cinque_p3_trainval` / `op_lebowski_p3_trainval` 的 `temporal`（512 维，已抽好） |
+| head | `waymo_heads` 原样：K = 1024，train 全部 logged future 上 k-means（seed 0）；线性 softmax，L-BFGS，λ 在 fit 行的 inner split 上选；vision arm 以 `cls ego` 的 logits 为冻结 offset（fit 行用 4 折 out-of-fold offset）；top-1 anchor 作为该 arm 的轨迹 |
+| arm | `ridge ego`（base）、`ridge_late` 同 tap（重算，应复现 7.45 / 7.52）、`cls ego K1024`、`cls_late` Cinque / Lebowski `temporal`；参照行：两个模型的原生 plan（不拟合） |
+| judge | 主读数：479 个 val rater 帧上的 RFS（frame mean 做配对，cluster mean 并列）；侧栏：第 22 条的 ADE 读数（pre-onset 第 1–9 档、全部帧第 1–9 档、第 10 档对 rater_best） |
+| 统计 | 按 sequence 重抽的配对 bootstrap；缺口比例 G = (cls_late − ridge_late) / (native − ridge_late)，分子分母在同一次重抽里算（10 000 次） |
+
+判据（每个模型分别判）：
+
+| 结果 | 判定 |
+|:--|:--|
+| cls_late − native 的 CI 上端 ≥ 0 | **够到原生**：缺口在读出，分类头就能补上 |
+| 否则，cls_late − ridge_late 的 CI 整体 > 0 | **补了一部分**：报 G 和它的 CI |
+| 否则 | **没补上**：单 mode 读出不是缺口的原因（至少线性分类头不是解） |
+
+并排报 cls_late − `cls ego`（特征在分类头家族里的增量；P0 里 Qwen 单帧特征在这一族几乎为 0）。
+**预期（跑之前写下）**：若 head 的效应与特征大致可加，cls_late 约 7.7–7.8，落第二行；ADE 上 cls 族照例比 ridge 差（P3e：+0.2 到 +0.4 m）。
+
+次要、只描述：truncated diffusion head（`waymo_heads.diff_arm` 原配方，M = 20）在同样的行上，`diff ego` 与两个 `diff` `temporal`。
+P3e 里这一族的 RFS 最高（+0.36 到 +0.49），但在 41.5 万行上训 60 epoch 的代价未知：先在 cls 跑完后量一个 epoch 的时间，估计 ≤ 1.5 h 且不拖慢 Alpamayo 才跑。
+
+### (i) 在 nuScenes 上独立复现「冻结 openpilot `temporal` + ridge」
+
+选 nuScenes 而不是 NAVSIM：nuScenes 的 CAM_FRONT 有约 12 Hz 的 sweeps，第 39 条的 openpilot 适配器能按原生节奏逐场景连续地跑（和车上一样），而 NAVSIM 的输入只有 2 Hz（第 37 条），
+openpilot 要 sample-and-hold，时序特征本身就被削了；另外 nuScenes 已经有 Qwen3-VL-4B 在全部 34 149 个 trainval keyframe 上的特征（`qwen_w800`，800 px，Stage A 的 arm A 配方），通用参照不用重抽。
+
+| 项 | 取值 |
+|:--|:--|
+| 数据与切分 | nuScenes v1.0-trainval，官方切分：700 个 train scene 训，150 个 val scene 评（单方向，没有任何东西在 val 上拟合） |
+| 行 | 每个 keyframe，要求它之前本 scene 有 ≥ 4.5 s（ego 输入的最老一步的加速度要回溯到 t0 − 4.25 s），之后 ego pose 覆盖 3.0 s |
+| 目标 | t0 后 0.25 … 3.0 s 的后轴位置（12 × 2，t0 的 ego 系），由 20 Hz 的 ego pose 线性插值；ADE 为 12 个点的均值 |
+| ego 输入 | 照 Waymo 的格式重建：t0 − 3.75 … t0 每 0.25 s 一步共 16 步 × (位置、速度、加速度)，速度和加速度都是**后向差分**（输入里没有任何未来）；加 VAD command one-hot（3 s 横向偏移 ≥ 2 m 左、≤ −2 m 右，否则直行——文献惯例，本身是泄露，替代 WOD 的 routing intent）。主表带 command；不带 command 的整套重拟合作为敏感性 |
+| 特征 | openpilot Cinque / Lebowski 的 `temporal`（主 tap，与 WOD 同一 ONNX tap、同一 TRT engine），按第 39 条考试的协议逐 scene 从第一个 keyframe 起连续跑 20 Hz、只用 CAM_FRONT、desire none，在每个 keyframe 那一步取；次要：`vision` tap、原生 plan（换到后轴、不拟合）、fusion Cinque `temporal` ‖ A |
+| 通用参照 | A = Qwen3-VL-4B `L18_mean`，800 px，CAM_FRONT 单帧（`qwen_w800`）。和 openpilot 一样只看前视一路；WOD 上的 A 是三路，这里不是 |
+| head | `ridge ego`，再 `ridge_late`（在 ego 残差上的 ridge），λ 在 train 上 4 折按 scene 分组 CV 选，特征用 train 的统计量标准化——和 P3 一字不差 |
+| judge | 第 22 条口径：s_ego（ego ridge 的样本外残差，`waymo_l0.ego_surprise`）在 val 上分十档；(i) pre-onset 第 1–9 档 ADE Δ、(ii) 全部帧第 1–9 档 ADE Δ；侧栏 straight 第 1–9 档、全部档、第 10 档、FDE@3 s。pre-onset / straight 用 `waymo.subsets` 的同一组阈值（当前 yaw rate < 1°/s，3 s chord bearing > 5°，位移守卫 1 m / 3 m），horizon 正好是 3 s。**没有 RFS**（nuScenes 无 rater 标注） |
+| 统计 | 按 scene 重抽的配对 bootstrap（150 个 cluster），Δ = arm − `ridge ego` |
+
+判据（第 40 条的规则，限在两个 ADE 读数、一个通用参照上）：
+
+| 读数 | 结果 | 判定 |
+|:--|:--|:--|
+| 主 tap vs A，(i)(ii) | 至少一个读数的配对 CI 整体偏向 `temporal`，且没有读数偏向 A | **复现「更好」** |
+| | 对称地偏向 A | **反向** |
+| | 两边都有 / 全跨零 | **混合 / 测不出**，报半宽 |
+| 主 tap vs `ridge ego`，(ii) | CI 整体 < 0 | 冻结 `temporal` 在 ego 先验之上有增量（第 40 条第 1 点的一半） |
+
+**预期（跑之前写下）**：方向复现，量级比 WOD 小（3 s horizon 对 5 s、城区低速），(ii) 上 −0.03 到 −0.10 m；pre-onset 在 val 上预计只有 100–300 帧，(i) 大概率跨零。
+nuScenes 的 command 泄露了 3 s 横向位移，所以 pre-onset 上 ego 已经「知道往哪转」，(i) 的空间比 WOD 小，这是读法的限定，不是改判据的理由。
+
+### 算力估计
+
+| 任务 | 估计 | 依据 |
+|:--|:--|:--|
+| trainval 流式索引（CAM_FRONT + pose） | < 10 min CPU | 考试的 val 索引 |
+| openpilot 两个模型 × 850 scene | 约 55 min GPU（纯）；与 Alpamayo 共卡时 batch-1 步长可能翻倍，估 1–2 h；解码 4 进程 | 考试：150 scene × 2 desire，Cinque 7.9 min、Lebowski 10.8 min GPU |
+| nuScenes ridge 阶梯 | < 5 min | 约 2 万行 |
+| (iii) 分类头，41.5 万行 × 512 维 | 每次 L-BFGS 迭代约 8 TFLOP，600 次上限 → 纯 GPU 约 15–30 min（含 ego 头与 4 折 offset） | P0 在 CPU 上 3.7 h |

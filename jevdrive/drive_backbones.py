@@ -228,6 +228,93 @@ def ladder_train(rl, models=("cinque", "lebowski"), p0_run: str = P0_RUN):
     return L.run_ladder(lambda k: arms, "p3drive_train", keep, ctx, directions=(0,), rl=rl)
 
 
+HEADS_TAG = "p3drive_heads"
+
+
+def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: float = 25.0):
+    """Decisions 40, follow-up (iii): the openpilot `temporal` token read by the classification head (and, as a
+    described-only extra, the truncated diffusion head) under the train-split protocol of `ladder_train`.
+
+    Heads are `waymo_heads`' unchanged (P0's `cls ego` recipe: K = 1024 k-means vocabulary over train futures,
+    linear softmax by L-BFGS, the vision arm on the ego logits as a frozen out-of-fold offset); rows, split,
+    s_ego and judge are `ladder_train`'s, so `ridge_late` on the same tap is recomputed beside them."""
+    import torch
+    from . import waymo_heads as H
+    from . import waymo_ladder as L
+    total = torch.cuda.get_device_properties(0).total_memory
+    torch.cuda.set_per_process_memory_fraction(min(1.0, vram_gb * 1e9 / total))
+    ctx = L.train_context(p0_run=P0_RUN)
+    keep, feats = np.ones(len(ctx["fname"]), bool), {}
+    for m in models:
+        a = L.align(ctx, op_set(m) + "_trainval", ["temporal"])
+        keep &= a["covered"]
+        feats[f"op-{m} temporal"] = a["temporal"]
+    ks = (H.VOCAB_K,) + ((H.DIFF_M,) if "diff" in which else ())
+    voc, norm = H.vocabularies(ks)
+    side = {"modes": {}, "pool": {}}
+    arms = {f"A ridge_late {n}": L.ridge_arm(X) for n, X in feats.items()}
+    if "cls" in which:
+        arms["cls ego K1024"] = H.cls_arm(ctx, None, voc[H.VOCAB_K], side, "cls ego K1024")
+        arms |= {f"cls_late {n}": H.cls_arm(ctx, X, voc[H.VOCAB_K], side, f"cls_late {n}") for n, X in feats.items()}
+    if "diff" in which:
+        arms[f"diff ego M{H.DIFF_M}"] = H.diff_arm(ctx, None, voc[H.DIFF_M], norm, side, f"diff ego M{H.DIFF_M}")
+        arms |= {f"diff {n}": H.diff_arm(ctx, X, voc[H.DIFF_M], norm, side, f"diff {n}") for n, X in feats.items()}
+    tag = HEADS_TAG + ("_diff" if "diff" in which and "cls" not in which else "")
+    log.info("%s: %d arms over %d rows (%d evaluated)", tag, len(arms), int(keep.sum()), int((keep & (ctx["half"] == 1)).sum()))
+    preds, sctx, fits = L.run_direction(ctx, keep, arms, 0, L.s_ego_from_p0(ctx), rl)
+    tables = dict(zip(("arms", "paired", "did", "deciles"), ([t] for t in L.judge(preds, sctx))))
+    L.write_tables(rl, tables | {"fits": [fits]}, tag)
+    L.save_preds(rl, preds, sctx, tag)
+    return tag
+
+
+def heads_readout(run_dir, tag: str = HEADS_TAG, b: int = 10_000, seed: int = 0) -> dict:
+    """The pre-registered (iii) readout on the 479 val rater frames: RFS per arm (frame and cluster mean) and the
+    paired comparisons cls_late vs cls ego / ridge_late (same tap) / the model's native plan, plus the share of
+    the ridge-to-native gap the head closes, G = (cls_late - ridge_late) / (native - ridge_late), with a
+    sequence-bootstrap CI of the ratio of means."""
+    import pandas as pd
+    from . import waymo as W
+    from . import waymo_p1 as P1
+    z = np.load(Path(run_dir) / f"{tag}_preds_dir0.npz", allow_pickle=True)
+    df = W.load_index()
+    r, rtraj, rscore = W.load_rater(df)
+    rname = W.frame_names(df)[r]
+    pos = pd.Series(np.arange(len(z["frame_name"])), index=z["frame_name"].astype(str)).reindex(rname).to_numpy()
+    ok = ~np.isnan(pos)
+    pos = pos[ok].astype(int)
+    preds = {k[5:]: z[k][pos] for k in z.files if k.startswith("pred_")} | native_preds(rname[ok])
+    seq, cl, sp = z["sequence"][pos].astype(str), df.cluster.astype(str).to_numpy()[r[ok]], z["speed"][pos]
+    rfs = {k: W.rater_feedback_score(p, rtraj[ok], rscore[ok], sp) for k, p in preds.items()}
+    t_arm = pd.DataFrame([{"arm": k, "n": len(v), "rfs_frame_mean": v.mean(), "rfs_cluster_mean": W.rfs_by_cluster(v, cl)[0]}
+                          for k, v in rfs.items()])
+    codes, uniq = pd.factorize(seq)
+    idx = np.random.default_rng(seed).integers(len(uniq), size=(b, len(uniq)))
+    cnt = np.bincount(codes, minlength=len(uniq)).astype(float)
+    boot = lambda v: np.bincount(codes, v, len(uniq))[idx].sum(1) / cnt[idx].sum(1)  # noqa: E731
+    rows, gaps, verdict = [], [], []
+    for m in ("cinque", "lebowski"):
+        c, rl_, cego, nat = f"cls_late op-{m} temporal", f"A ridge_late op-{m} temporal", "cls ego K1024", f"native op-{m} (no fit)"
+        if c not in rfs:
+            continue
+        pairs = [(c, cego), (c, rl_), (c, nat), (rl_, nat), (cego, "ridge ego"), (c, "ridge ego"), (rl_, "ridge ego")]
+        pairs += [(f"diff op-{m} temporal", x) for x in (rl_, nat, c)] + [(f"diff ego M20", "ridge ego")]
+        rows += [{"arm": a, "vs": v, **P1.paired(rfs[a], rfs[v], seq, np.ones(len(seq), bool)),
+                  "cluster_mean_delta": W.rfs_by_cluster(rfs[a], cl)[0] - W.rfs_by_cluster(rfs[v], cl)[0]}
+                 for a, v in pairs if a in rfs and v in rfs]
+        num, den = rfs[c] - rfs[rl_], rfs[nat] - rfs[rl_]
+        g = boot(num) / boot(den)
+        gaps.append({"model": m, "G": num.mean() / den.mean(), "lo": np.quantile(g, 0.025), "hi": np.quantile(g, 0.975),
+                     "native - ridge_late": den.mean()})
+        t = pd.DataFrame(rows)
+        d_nat, d_rl = (t[(t.arm == c) & (t.vs == x)].iloc[0] for x in (nat, rl_))
+        call = ("reaches native" if d_nat.hi >= 0 else "closes part of the gap" if d_rl.lo > 0
+                else "does not close the gap")
+        verdict.append({"model": m, "verdict": call, "cls_late - native": d_nat.delta, "cls_late - ridge_late": d_rl.delta})
+    return {"heads_rfs_arms": t_arm, "heads_rfs_paired": pd.DataFrame(rows), "heads_gap": pd.DataFrame(gaps),
+            "heads_verdict": pd.DataFrame(verdict)}
+
+
 def _pooled(run_dir, tag: str) -> dict:
     """Both directions' out-of-sample predictions, concatenated (the eval halves are disjoint and cover the rows).
     s_ego deciles are taken per direction, inside its own eval half, exactly as `waymo_ladder.rejudge` does."""
@@ -372,6 +459,7 @@ def main():
     ap.add_argument("--models", default=",".join(OP_MODELS))
     ap.add_argument("--run", default=None, help="crossfit: the ladder run directory (default: this run)")
     ap.add_argument("--split", default="subset", choices=("subset", "trainval"))
+    ap.add_argument("--vram-gb", type=float, default=25.0, help="heads_*: this process's share of the card")
     a = ap.parse_args()
     rl = RunLog("drive_backbones", a.steps.replace(",", "-"))
     rl.event("start", args=vars(a))
@@ -388,6 +476,12 @@ def main():
             ladder_train(rl, tuple(a.models.split(",")))
             for name, t in L.rejudge(rl.dir, "p3drive_train").items():
                 t.to_csv(rl.dir / f"{name}_p3drive_train.csv", index=False)
+                rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
+        elif step in ("heads_train", "heads_diff"):
+            from . import waymo_ladder as L
+            tag = heads_train(rl, tuple(a.models.split(",")), ("cls",) if step == "heads_train" else ("diff",), a.vram_gb)
+            for name, t in (L.rejudge(rl.dir, tag) | heads_readout(rl.dir, tag)).items():
+                t.to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
                 rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
         elif step == "finalize_alp":
             rl.event("finalize", **finalize_alp())
