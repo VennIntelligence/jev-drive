@@ -1,0 +1,4 @@
+family,pairs,runs_ok,deterministic_to_visibility,drop_never_visible,drop_background_drift,drop_expert_reacted_before_visible,drop_missing_run,obs_frames,reactive_frames,nonreactive_frames,pairs_with_reactive,stop_flip_frames,d_expert_median,d_expert_reactive_median,impure_frames,in_pooled
+cutin,65,65,28,0,0,0,0,614,216,398,27,168,0.0,-6.858079539616947,0,True
+oncoming,65,65,60,0,0,0,0,1215,657,558,60,445,-1.560136021991715,-5.841887322788086,0,True
+static,65,65,65,0,0,0,0,1730,959,771,65,535,-1.349493093713304,-4.756209082323111,0,True

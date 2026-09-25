@@ -202,3 +202,44 @@ cut-in 和 oncoming 各有 322 / 375 帧是「真实未来里会撞、但按匀�
 - **标签是规则，不是 expert 两侧重跑**：规则只做纵向（减速 / 停车），不会绕行；它在 cut-in 出现横向意图之后才反应（匀速外推），比会预判的 expert 晚。
 - **x⁻ 的 logged 动作不纯**：重建删掉了录制时的其他交通参与者，司机对它们的反应（跟车、减速）还在 logged 速度里，两侧相同，不影响 Δ，但影响「x⁻ 的正确动作」这一假设。
 - **actor 在冲突之后**：渲染窗口到 t_c + 1 s，AttackPlanner 的车在冲突后会穿过 ego；这些帧只作为 stream 的尾巴存在，不进观测帧。
+
+## 现有考生零样本考试（2026-09-26 01:13–01:31，夜间队列第 5 项）
+
+预登记在 [激发计划](../2026-09-26-elicitation-program.md) 偏离日志的 [I3-exam] 01:13 条（写于任何特征或数字之前）。代码 `jevdrive/elicit_i3.py`（`op-prepare`、`qwen-plan`、`exam`）、
+`scripts/p5_openpilot.py`（加了按场景的标定与未覆盖像素填黑，全覆盖的 rig 输出不变）；run `$DATA_DIR/runs/elicitation/i3-exam/20260926-012841`，小表 [research/results/elicitation/i3/](../../research/results/elicitation/i3/)。
+所有考生都在 P5 v1 BehaviorAgent 集上拟合（5 个路线 fold 各一个，fold head 对已存 run 的预测最大差 0.4 mm），在 I3 上不重训、不调，预测取 5 个 fold 的平均。
+特征：openpilot `temporal` 242 条 5 Hz 流、8 712 帧（Waymo 场景的 wide 帧有 5% 未覆盖，填黑，同 HUGSIM 考试）；Qwen `L18_last` 6 232 帧（前三路 × 4 帧、0.2 s 间隔，800 × 450）。
+judge 是 `p5_exam.exam` 原样（去掉 TFv6 列），τ 由 I3 的 24 个 null 场景定，CI 按场景 bootstrap。成本：GPU 0 约 15 min（Qwen 12 min、openpilot 10 min 并行，fit 与考试 2 min）。
+
+**合并（三个 family，1 832 个 reactive 帧，65 个场景）的定向翻转率**：
+
+| 考生（P5 v1 BA 拟合，零样本） | τ (m/s) | 翻转 [95% CI] | 反方向 | 非反应帧误翻 | 样本外 null false-flip |
+|:--|--:|:--|--:|--:|--:|
+| `ridge ego`（sanity：两侧 ego 相同） | 0 | 0.0% | 0 | 0 | 0 |
+| Qwen `ridge_late L18_last` | 0.34 | 2.8% [1.3, 4.7] | 0.1% | 1.2% | 5.4% |
+| openpilot `ridge_late` Cinque（= M-C prior） | 0.53 | **70.0% [65.5, 74.5]** | 9.2% | 18.0% | 4.4% |
+| openpilot `ridge_late` Lebowski | 0.73 | 70.5% [65.8, 74.8] | 7.2% | 19.1% | 4.9% |
+| **M-C 配对双流 Cinque** | 1.52 | **58.7% [54.2, 63.1]** | 5.0% | 4.6% | 5.8% |
+| M-C 配对双流 Lebowski | 1.23 | 67.4% [62.8, 71.7] | 5.6% | 9.4% | 5.2% |
+| M-C 只 Qwen / 只 openpilot（Cinque） | 1.23 / 0.71 | 59.6% / 68.7% | 5.3% / 8.5% | 5.7% / 16.2% | 5.1% / 5.1% |
+| M-C hard-example / 均匀（Cinque） | 0.63 / 0.56 | 64.6% / 69.8% | 13.2% / 9.8% | 18.2% / 18.2% | 4.5% / 4.8% |
+
+**逐 family（Cinque）**：
+
+| family（reactive 帧 / 场景） | openpilot prior | M-C 配对双流 | 双流 − prior（逐帧配对差 [CI]） |
+|:--|:--|:--|:--|
+| static（959 / 65） | 77.1% [72.1, 81.8] | 67.2% [62.2, 71.9] | −9.9 pp [−12.7, −7.2] |
+| cutin（216 / 27） | 66.7% [57.7, 75.4] | 46.3% [35.9, 56.1] | −20.4 pp [−29.1, −12.4] |
+| oncoming（657 / 60） | 60.7% [54.8, 66.3] | 50.5% [44.9, 56.3] | −10.2 pp [−13.6, −6.9] |
+
+Lebowski 的双流 − prior：合并 −3.1 pp [−4.5, −1.8]，三个 family 都小幅为负。
+
+读法：
+
+1. **CARLA 上拟合的 openpilot 读出在 3DGS 真实外观的车辆配对上直接可用**：零样本的 `ridge_late` 翻转 70%，样本外 null false-flip 4–5%，与它在 P5 BA 集 cut-in 上的 77% 同量级。
+   openpilot `temporal` 读的是真实驾驶视频训出来的表征，CARLA 训的线性读出没有被 CARLA 外观绑住——至少对车辆这一类（I3 只有车），这和第 40 条「openpilot 保留突发车辆事件」一致。
+   代价是非反应帧误翻 18%（static 28%）：车一出现在前方就减速，早于规则 expert 判定冲突；规则 expert 只看匀速外推的冲突，这些帧不一定是错，照 P5 的约定只描述。
+2. **M-C 的 Δ 在 I3 上是负贡献**：Cinque 双流比它自己的 prior 少翻 11 pp（CI 不跨零），原因是 Δ 在 I3 的 null 对上也在动，τ 从 0.53 升到 1.52 m/s，把 prior 已有的翻转压到门槛之下；
+   另一面是非反应帧误翻从 18% 降到 4.6%。和 E1 在 WOD 上的「有害」是同一个现象的温和版本：CARLA 上配对激发出来的修正项在真实外观上主要贡献噪声，而不是对着车辆的反应。
+3. **Qwen 流单独不动**：Qwen `ridge_late` 只有 2.8%，和它在 P5 上 cut-in 近 0 一致（第 42 条：Qwen 流管行人、openpilot 流管车辆）；I3 没有行人，所以 M-C 设计上的主要收益（行人）在这里测不到。
+4. 限定：只有车辆 family；标签是规则 expert（匀速外推 + 碰撞，只纵向）；null 只有 24 个场景（cut-in 同车同道版本），τ 与 null false-flip 都只由它们定；考题容易（reactive Δ 中位 −5.5 m/s，车从第一帧起就在）。

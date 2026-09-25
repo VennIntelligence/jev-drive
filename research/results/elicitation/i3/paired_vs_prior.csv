@@ -1,0 +1,49 @@
+examinee,vs,scope,n,delta,lo,hi
+M-C pair [cinque],ridge_late op-cinque temporal,pooled,1832,-0.11244541484716157,-0.13636363636363635,-0.08923550279173241
+M-C pair [cinque],ridge_late op-cinque temporal,cutin,216,-0.2037037037037037,-0.29061488673139163,-0.12442396313364056
+M-C pair [cinque],ridge_late op-cinque temporal,oncoming,657,-0.1019786910197869,-0.13575137867647058,-0.06885490023474179
+M-C pair [cinque],ridge_late op-cinque temporal,static,959,-0.09906152241918666,-0.12695483630496943,-0.07247673759265859
+M-C pair (mu=0) [cinque],ridge_late op-cinque temporal,pooled,1832,-0.25436681222707425,-0.28946008618171193,-0.22265667279176632
+M-C pair (mu=0) [cinque],ridge_late op-cinque temporal,cutin,216,-0.35648148148148145,-0.450456794822992,-0.2638249516441006
+M-C pair (mu=0) [cinque],ridge_late op-cinque temporal,oncoming,657,-0.2100456621004566,-0.2534786773189368,-0.16666058394160585
+M-C pair (mu=0) [cinque],ridge_late op-cinque temporal,static,959,-0.26173096976016685,-0.30062254904068597,-0.2240983120027211
+M-C pair qwen [cinque],ridge_late op-cinque temporal,pooled,1832,-0.1037117903930131,-0.12493493059263214,-0.08292040875356393
+M-C pair qwen [cinque],ridge_late op-cinque temporal,cutin,216,-0.24537037037037038,-0.344978711790393,-0.1603633583182563
+M-C pair qwen [cinque],ridge_late op-cinque temporal,oncoming,657,-0.1095890410958904,-0.14030312936826442,-0.08175858359740676
+M-C pair qwen [cinque],ridge_late op-cinque temporal,static,959,-0.06777893639207508,-0.09025114195055615,-0.04687378056711759
+M-C pair op [cinque],ridge_late op-cinque temporal,pooled,1832,-0.013100436681222707,-0.02935065072383208,0.003775773263468185
+M-C pair op [cinque],ridge_late op-cinque temporal,cutin,216,0.013888888888888888,-0.010763200576680483,0.04
+M-C pair op [cinque],ridge_late op-cinque temporal,oncoming,657,0.0060882800608828,-0.014094713206776893,0.027906976744186046
+M-C pair op [cinque],ridge_late op-cinque temporal,static,959,-0.03232533889468196,-0.054922279792746116,-0.010405286981478063
+M-C hard [cinque],ridge_late op-cinque temporal,pooled,1832,-0.05403930131004367,-0.0741624855813318,-0.03589526202538934
+M-C hard [cinque],ridge_late op-cinque temporal,cutin,216,-0.032407407407407406,-0.07075471698113207,0.0
+M-C hard [cinque],ridge_late op-cinque temporal,oncoming,657,-0.0030441400304414,-0.018867924528301886,0.013470168552999866
+M-C hard [cinque],ridge_late op-cinque temporal,static,959,-0.09384775808133472,-0.1272558263614768,-0.06319974247545469
+M-C uniform [cinque],ridge_late op-cinque temporal,pooled,1832,-0.002183406113537118,-0.007038440714672442,0.0027459710176499143
+M-C uniform [cinque],ridge_late op-cinque temporal,cutin,216,0.0,-0.0136986301369863,0.013217320962145718
+M-C uniform [cinque],ridge_late op-cinque temporal,oncoming,657,0.0060882800608828,0.0,0.013636880949096424
+M-C uniform [cinque],ridge_late op-cinque temporal,static,959,-0.008342022940563087,-0.015577134410222996,-0.0020855057351407717
+M-C pair [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.03111353711790393,-0.044768474086171454,-0.0184517760356175
+M-C pair [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.06481481481481481,-0.10294275435496086,-0.026079112505602912
+M-C pair [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0273972602739726,-0.05071455565037182,-0.006097560975609756
+M-C pair [lebowski],ridge_late op-lebowski temporal,static,959,-0.026068821689259645,-0.044148248790314745,-0.010405556841561005
+M-C pair (mu=0) [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.09006550218340612,-0.12270956418681762,-0.05846399894018943
+M-C pair (mu=0) [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.1111111111111111,-0.19298245614035087,-0.034778844344061755
+M-C pair (mu=0) [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0989345509893455,-0.15166429105940207,-0.05119715388500112
+M-C pair (mu=0) [lebowski],ridge_late op-lebowski temporal,static,959,-0.07924921793534932,-0.11789608636977057,-0.045063422690605134
+M-C pair qwen [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.06495633187772926,-0.08219254185692541,-0.047980955187211086
+M-C pair qwen [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.05092592592592592,-0.09767441860465116,-0.008888888888888889
+M-C pair qwen [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0715372907153729,-0.10016319534401717,-0.0434092884207599
+M-C pair qwen [lebowski],ridge_late op-lebowski temporal,static,959,-0.06360792492179354,-0.08178101461977162,-0.04693718112244899
+M-C pair op [lebowski],ridge_late op-lebowski temporal,pooled,1832,0.001091703056768559,-0.012176029633254076,0.013553847867245776
+M-C pair op [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.009259259259259259,-0.045049572185250575,0.02252252252252252
+M-C pair op [lebowski],ridge_late op-lebowski temporal,oncoming,657,0.0091324200913242,-0.010738270545509715,0.028965628962482275
+M-C pair op [lebowski],ridge_late op-lebowski temporal,static,959,-0.0020855057351407717,-0.015723682907996594,0.011352202364199267
+M-C hard [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.02019650655021834,-0.03706255003760402,-0.005127695800227017
+M-C hard [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.037037037037037035,-0.06404392823247616,-0.014285714285714285
+M-C hard [lebowski],ridge_late op-lebowski temporal,oncoming,657,0.0091324200913242,-0.008850212075195056,0.026512977779419283
+M-C hard [lebowski],ridge_late op-lebowski temporal,static,959,-0.0364963503649635,-0.06178172368753224,-0.016526802171014085
+M-C uniform [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0016375545851528383,-0.006543075245365322,0.0030782472613458457
+M-C uniform [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.004629629629629629,-0.015230368797265099,0.0
+M-C uniform [lebowski],ridge_late op-lebowski temporal,oncoming,657,0.0,-0.0060700333470165265,0.006033182503770739
+M-C uniform [lebowski],ridge_late op-lebowski temporal,static,959,-0.0020855057351407717,-0.010438413361169102,0.005291285832112978
