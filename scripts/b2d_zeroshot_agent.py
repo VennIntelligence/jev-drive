@@ -42,6 +42,9 @@ the pre-registered smoke:
                     see b2d_zoo_pid_wrap.py and todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md
   "zoo_cadence"     "plan" (control_pid once per plan, held: AD-MLP) | "tick": every tick on the age-shifted held plan
                     (UniAD / VAD)
+  "partner"         absent | {"ckpt": path, "junctions": true|false}: shared control with the official TCP agent
+                    (scripts/b2d_partner.py): TCP drives from standstill and (junctions) through route turns, the model
+                    everything else; who drives is logged every tick ("driver", "w_model")
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -162,7 +165,15 @@ class ZeroShotAgent(AutonomousAgent):
         self.sock.connect(self.cfg["socket"])
         wire.send(self.sock, {"cmd": "reset"})
         self.server_meta = wire.recv(self.sock)[0]["server"]
-        self.router = FrameRouter(self.cam_tags, retain_frames=32)
+        self.partner = self.arbiter = None
+        pcfg = self.cfg.get("partner")
+        if pcfg:
+            from b2d_partner import TCPPartner
+            self.partner = TCPPartner(pcfg["ckpt"])
+            if getattr(self, "_dense_plan", None):      # the evaluator set the route before setup()
+                self.partner.set_global_plan(self._dense_gps, self._dense_plan)
+        router_tags = self.cam_tags + (self.partner.camera_tags() if self.partner else [])
+        self.router = FrameRouter(router_tags, retain_frames=32)
         self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA}, {tag: frame})
         self.latest = {t: (-1, None) for t in self.cam_tags}
         self.first_frame = None
@@ -187,10 +198,15 @@ class ZeroShotAgent(AutonomousAgent):
              "sensor_tick": DELTA, "id": "GPS"},
             {"type": "sensor.speedometer", "reading_frequency": 20, "id": "SPEED"},
         ]
-        return [dict(s) for s in self.cam_specs] + motion
+        own = [dict(s) for s in self.cam_specs] + motion
+        if getattr(self, "partner", None) is not None:
+            own += self.partner.sensors({s["id"] for s in own})
+        return own
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
+        if getattr(self, "partner", None) is not None:
+            self.partner.set_global_plan(global_plan_gps, global_plan_world_coord)
         # Dense plan: the base class downsamples to 50 m, which loses the junction commands' extent.
         self._dense_plan, self._dense_gps = list(global_plan_world_coord), list(global_plan_gps)
         if hasattr(self, "cfg"):
@@ -284,6 +300,17 @@ class ZeroShotAgent(AutonomousAgent):
                 cmd, d = self.route.next_maneuver([LEFT, RIGHT])
                 if cmd in (LEFT, RIGHT) and d is not None and d <= self.handover_m:
                     steer, reason = o_steer, reason + "+junction_steer"
+        share = None
+        if self.partner is not None:
+            if self.arbiter is None:
+                from b2d_partner import Arbiter
+                self.arbiter = Arbiter(self.route.xy, self.route.cmd, bool(self.cfg["partner"].get("junctions", True)))
+            p_ctrl = self.partner.step(data, now)
+            ready = self.zoo_control is not None and not self.warm_now
+            w, why = self.arbiter.step(DELTA, speed, self.route.i, ready)
+            throttle, steer, brake = self.arbiter.mix(w, (throttle, steer, brake), p_ctrl)
+            share = {"driver": self.arbiter.driver, "w_model": round(w, 2), "partner_why": why,
+                     "partner_ctrl": [round(x, 3) for x in p_ctrl]}
         self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
         tick_ms = 1e3 * (time.perf_counter() - t_start)
@@ -293,6 +320,8 @@ class ZeroShotAgent(AutonomousAgent):
                "plan_ms": round(plan_ms, 1)}
         if zoo_tick is not None:
             rec["zoo_desired"] = round(zoo_tick["desired_speed"], 3)
+        if share is not None:
+            rec.update(share)
         rec.update(self._truth())
         self.tick_log.write(json.dumps(rec) + "\n")
         return self.control

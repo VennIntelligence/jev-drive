@@ -7,7 +7,7 @@ point 10 m past the run's end (or of the run's end when the route ends there). P
 
     python3 scripts/zeroshot_b2d_junctions.py RUN_DIR [RUN_DIR ...] [--csv out.csv]
 """
-import argparse, csv, json, sys
+import argparse, csv, json, re, sys
 from pathlib import Path
 
 import numpy as np
@@ -47,6 +47,27 @@ def attempt_summary(att):
     row["junction_steer_ticks"] = sum("junction_steer" in str(t.get("reason", "")) for t in ticks)
     for k in ("turn", "straight"):
         row[k + "_reached"] = row[k + "_passed"] = 0
+    # shared control: time and distance per driver, and which driver held the car at each infraction
+    drv = [t.get("driver", "model") for t in ticks]
+    dist = {d: 0.0 for d in ("model", "partner", "blend")}
+    for t, d in zip(ticks, drv):
+        dist[d] = dist.get(d, 0.0) + max(t["v"], 0.0) * 0.05
+    total = sum(dist.values()) or 1.0
+    row["dist_share_model"] = round(dist["model"] / total, 3)
+    row["time_share_model"] = round(drv.count("model") / max(len(drv), 1), 3)
+    by = {}
+    txy = np.array([t["truth"][:2] if "truth" in t else [np.nan, np.nan] for t in ticks])
+    for kind, items in res["infractions"].items():
+        if kind in ("min_speed_infractions",):
+            continue
+        for text in items:
+            m = re.search(r"x=(-?[\d.]+), y=(-?[\d.]+)", str(text))
+            who = "?"
+            if m and np.isfinite(txy).any():
+                k = int(np.nanargmin(np.linalg.norm(txy - [float(m.group(1)), float(m.group(2))], axis=1)))
+                who = drv[k]
+            by.setdefault(who, []).append(kind)
+    row["infractions_by_driver"] = json.dumps(by)
     if (att / "route.json").exists() and len(tr):
         for c, a, b in events(json.loads((att / "route.json").read_text())):
             key = "straight" if c == STRAIGHT else "turn"
@@ -62,7 +83,13 @@ def attempt_summary(att):
 def summarize(rows, label):
     n = len(rows)
     tot = lambda k: sum(r[k] for r in rows)  # noqa: E731
+    by = {}
+    for r in rows:
+        for who, kinds in json.loads(r["infractions_by_driver"]).items():
+            by[who] = by.get(who, 0) + len(kinds)
     return dict(phase=label, n=n, ds=round(float(np.mean([r["ds"] for r in rows])), 1),
+                dist_share_model=round(float(np.mean([r["dist_share_model"] for r in rows])), 3),
+                infractions_by_driver=json.dumps(by),
                 rc=round(float(np.mean([r["rc"] for r in rows])), 1), moved=sum(r["moved"] for r in rows),
                 turns=f"{tot('turn_passed')}/{tot('turn_reached')}", straights=f"{tot('straight_passed')}/{tot('straight_reached')}",
                 route_dev=tot("route_dev"), outside_lanes=tot("outside_lanes"), collisions=tot("collisions"))

@@ -131,6 +131,9 @@ class OpenpilotModel:
         self.context_rate = a.model == "lebowski"
         self.make = lambda: OPModel(a.model, a.backend, context_rate=self.context_rate)  # noqa: E731
         self.model = self.make()
+        # small / Cinque: sessions are created once, up front (--pool, one per CARLA worker), and handed out per
+        # connection; building one takes ~30 s and doing it per route was where the server twice died (2026-09-25)
+        self.free = [] if self.context_rate else [self.make() for _ in range(max(0, a.pool - 1))] + [self.model]
         w, h = rigs.OP_CAMERA_WH
         self.idx = {}
         for name, f in rigs.OP_FOCAL.items():
@@ -150,12 +153,21 @@ class OpenpilotModel:
 
     def new_state(self, state=None):
         if not self.context_rate:
-            m = state["model"] if state and "model" in state else (self.model if state is None else self.make())
+            if state and "model" in state:
+                m = state["model"]
+            elif state is None:
+                m = self.model
+            else:
+                m = self.free.pop() if self.free else self.make()
             m.reset()
             return {"model": m}
         self.model.reset()
         return {k: getattr(self.model, k).copy() if hasattr(getattr(self.model, k), "copy") else getattr(self.model, k)
                 for k in self.STATE}
+
+    def release(self, state):
+        if not self.context_rate and state and "model" in state:
+            self.free.append(state["model"])
 
     def pack(self, bgra, name):
         """CARLA BGRA -> 6x128x256 model-frame planes: BT.601 limited-range YUV (what the comma ISP delivers,
@@ -237,6 +249,7 @@ def parse_args():
     p.add_argument("--compile", default="visual,expert", help="alpamayo: submodules to torch.compile")
     p.add_argument("--flow-steps", type=int, default=5, help="alpamayo: 5 moves the path 0.17 m, far below the "
                    "1.28 m seed noise floor (todos/2026-09-24-alpamayo-smoke)")
+    p.add_argument("--pool", type=int, default=1, help="openpilot small / Cinque: sessions built at start-up")
     p.add_argument("--backend", default="trt", help="openpilot: onnxruntime backend (jevdrive/openpilot/model.py)")
     return p.parse_args()
 
@@ -307,6 +320,9 @@ def main():
             pass
         finally:
             conn.close()
+            if hasattr(policy, "release"):
+                with gpu:
+                    policy.release(state)
 
     while True:
         conn, _ = srv.accept()

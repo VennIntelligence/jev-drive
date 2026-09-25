@@ -7,10 +7,10 @@
 #
 #   smoke  <gpu>  (done 2026-09-25 02:22) 5 pre-registered routes x zoo-lebowski, zoo-cinque, native-cinque,
 #                 fixed-lebowski, shadow-cinque; 2 workers.
-#   smoke2 <gpu>  engage-while-rolling + turn guidance (migration doc, section D2): 9 routes (the 5 smoke routes + the
-#                 lowest route id of each of 4 junction-turn scenario types) x eng-implicit-lebowski,
-#                 eng-desire-lebowski, eng-handover-lebowski, eng-implicit-cinque; 2 workers.
-#   full   <gpu>  220 routes, 4 workers, resumable, with the model and guidance chosen from smoke2 by the rule in D2.
+#   smoke2 <gpu>  TCP-partner shared control (migration doc, section D3): 9 routes (the 5 smoke routes + the lowest
+#                 route id of each of 4 junction-turn scenario types) x partner-lebowski (primary), partner-cinque,
+#                 tcp-alone, partner-start-implicit-lebowski, partner-start-desire-lebowski; 2 workers.
+#   full   <gpu>  220 routes, 4 workers, resumable: the TCP partnership with the model chosen from smoke2 (rule in D3).
 # Exit non-zero only on infrastructure failure (runner error, routes never finished, harness status, no plans).
 # Driving outcome never. A policy server that dies is logged (sender of any catchable signal, a ps snapshot) and
 # restarted by a watchdog; the phase is then resumed (b2d_run skips finished routes).
@@ -21,6 +21,7 @@ mode=$1 gpu=$2
 D=$DATA_DIR/runs/zeroshot-exam/b2d-op
 C=$(pwd)/todos/2026-09-22-b2d-controller/results/controller_config.json
 PY_OP=$DATA_DIR/envs/openpilot/bin/python
+TCP_CKPT=$DATA_DIR/models/bench2drive/tcp/tcp_b2d.ckpt       # sha256 e6573ff1..., docs/b2d-tcp-controller.md
 mkdir -p "$D/ps"
 declare -A spid
 cleanup() { for m in "${!spid[@]}"; do kill -- -"${spid[$m]}" 2>/dev/null; done; kill ${watch:-} 2>/dev/null; }
@@ -31,7 +32,7 @@ launch() {  # model: start its policy server in its own session / process group,
     rm -f "$sock" "$ready"
     # own session / process group; no `exec -a` renaming: a venv interpreter locates its prefix from argv[0]
     CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "$PY_OP" scripts/zeroshot_policy_server.py "$m" \
-        --socket "$sock" --ready-file "$ready" >> "$D/server-$m-$mode.log" 2>&1 &
+        --socket "$sock" --ready-file "$ready" --pool "${POOL:-2}" >> "$D/server-$m-$mode.log" 2>&1 &
     spid[$m]=$!
     until [[ -e $ready ]]; do
         kill -0 "${spid[$m]}" 2>/dev/null || { echo "policy server $m died at start-up, see $D/server-$m-$mode.log" >&2; exit 3; }
@@ -89,7 +90,8 @@ run() {  # phase workers server-index route-args... ; resumes once after a serve
         echo "$(date '+%F %T') phase $ph (try $try)" >&2
         "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py "$@" --workers "$w" --server-index "$sidx" \
             --gpu-rank "$gpu" --python "$DATA_DIR/envs/b2d-tcp/bin/python" --agent scripts/b2d_zeroshot_agent.py \
-            --agent-config "$D/agent-$ph.json" --decimate 4 --no-spectator --max-attempts 2 --out "$D/$mode-$ph"
+            --agent-config "$D/agent-$ph.json" --decimate 4 --no-spectator --max-attempts 2 --no-reap \
+            --out "$D/$mode-$ph"
         local rc=$?
         revive || return $rc
         echo "$(date '+%F %T') a policy server died during $ph; restarted, resuming the phase" >&2
@@ -131,51 +133,43 @@ smoke)
     done
     exit $fail ;;
 smoke2)
-    # 5 pre-registered smoke routes + lowest id of NonSignalizedJunctionLeftTurn / NonSignalizedJunctionRightTurn /
-    # SignalizedJunctionLeftTurn / SignalizedJunctionRightTurn in bench2drive220.xml
+    # TCP-partner shared control (migration doc D3). 5 pre-registered smoke routes + the lowest route id of each of
+    # NonSignalizedJunctionLeftTurn / NonSignalizedJunctionRightTurn / SignalizedJunctionLeftTurn /
+    # SignalizedJunctionRightTurn in bench2drive220.xml. Zoo PID with forward-only plans, every-tick cadence.
     R=(--route-ids 2390,24211,1711,2373,3564,2084,2115,3936,2050)
-    E=', "engage_s": 5.0'
-    config eng-implicit-lebowski lebowski zoo_pid model 5 "$E, \"desire\": false"
-    config eng-desire-lebowski lebowski zoo_pid model 5 "$E, \"desire\": true"
-    config eng-handover-lebowski lebowski zoo_pid model 5 "$E, \"desire\": false, \"junction_handover_m\": 15.0"
-    config eng-implicit-cinque cinque zoo_pid model 20 "$E, \"desire\": false"
+    Z=', "plan_forward_only": true, "zoo_cadence": "tick"'
+    P="\"ckpt\": \"$TCP_CKPT\""
+    config partner-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true}"
+    config partner-start-implicit-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": false}"
+    config partner-start-desire-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": true, \"partner\": {$P, \"junctions\": false}"
+    config partner-cinque cinque zoo_pid model 20 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true}"
+    config tcp-alone lebowski zoo_pid model 0 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true, \"tcp_only\": true}"
     start_servers lebowski cinque
     fail=0
-    for ph in eng-implicit-lebowski eng-desire-lebowski eng-handover-lebowski eng-implicit-cinque; do
+    for ph in partner-lebowski partner-cinque tcp-alone partner-start-implicit-lebowski partner-start-desire-lebowski; do
         run $ph 2 500 "${R[@]}" || fail=1
         harness_check "$D/smoke2-$ph" || fail=1
     done
-    python3 scripts/zeroshot_b2d_junctions.py "$D"/smoke2-eng-* --csv "$D/smoke2-junctions.csv" | tee "$D/smoke2-summary.csv"
+    python3 scripts/zeroshot_b2d_junctions.py "$D"/smoke2-{partner-lebowski,partner-cinque,tcp-alone,partner-start-implicit-lebowski,partner-start-desire-lebowski} \
+        --csv "$D/smoke2-junctions.csv" | tee "$D/smoke2-summary.csv"
     exit $fail ;;
 full)
-    # Pre-registered choice (migration doc D2), from smoke2 only, before any full result.
-    read -r model guide < <(python3 - "$D" <<'EOF'
+    # Pre-registered (migration doc D3), from smoke2 only, before any full result: the TCP partnership (start +
+    # junctions) is the configuration; the model is Lebowski unless partner-cinque's smoke2 mean DS is >= 10 higher.
+    # The Zoo PID switches follow the values the Alpamayo exam freezes (ZOO_FORWARD_ONLY / ZOO_CADENCE, default F1+F2b).
+    model=$(python3 - "$D" <<'EOF'
 import csv, sys
 from pathlib import Path
-D = Path(sys.argv[1])
-rows = {r["phase"]: r for r in csv.DictReader(open(D / "smoke2-summary.csv"))}
-def rate(ph):
-    p, n = map(int, rows["smoke2-" + ph]["turns"].split("/"))
-    return p / n if n else 0.0
+rows = {r["phase"]: r for r in csv.DictReader(open(Path(sys.argv[1]) / "smoke2-summary.csv"))}
 ds = lambda ph: float(rows["smoke2-" + ph]["ds"])  # noqa: E731
-model = "cinque" if ds("eng-implicit-cinque") >= ds("eng-implicit-lebowski") + 10 else "lebowski"
-guide = "implicit"
-for cand in ("desire", "handover"):   # less invasive first; a more invasive variant must earn its place
-    if rate("eng-%s-lebowski" % cand) >= rate("eng-%s-lebowski" % guide) + 0.20 and \
-            ds("eng-%s-lebowski" % cand) >= ds("eng-%s-lebowski" % guide) - 5:
-        guide = cand
-print(model, guide)
-print("smoke2:", {k: (v["ds"], v["turns"]) for k, v in rows.items()}, "-> model", model, "guidance", guide, file=sys.stderr)
+print("cinque" if ds("partner-cinque") >= ds("partner-lebowski") + 10 else "lebowski")
 EOF
 )
-    echo "$(date '+%F %T') full: model=$model guidance=$guide" | tee "$D/full-choice.txt" >&2
-    extra=', "engage_s": 5.0, "desire": false'
-    [[ $guide == desire ]] && extra=', "engage_s": 5.0, "desire": true'
-    [[ $guide == handover ]] && extra=', "engage_s": 5.0, "desire": false, "junction_handover_m": 15.0'
-    config full-zoo "$model" zoo_pid model 0 "$extra"
-    start_servers "$model"
-    run full-zoo 4 520 --towns all
-    python3 -c "import json,sys; s=json.load(open('$D/full-full-zoo/summary.json')); n=len(s['routes_never_finished']); \
+    echo "$(date '+%F %T') full: model=$model forward_only=${ZOO_FORWARD_ONLY:-true} cadence=${ZOO_CADENCE:-tick}" | tee "$D/full-choice.txt" >&2
+    config full-partner "$model" zoo_pid model 0 ", \"plan_forward_only\": ${ZOO_FORWARD_ONLY:-true}, \"zoo_cadence\": \"${ZOO_CADENCE:-tick}\", \"desire\": false, \"partner\": {\"ckpt\": \"$TCP_CKPT\", \"junctions\": true}"
+    POOL=4 start_servers "$model"
+    run full-partner 4 520 --towns all
+    python3 -c "import json,sys; s=json.load(open('$D/full-full-partner/summary.json')); n=len(s['routes_never_finished']); \
 print('never finished:', s['routes_never_finished']); sys.exit(0 if n <= 15 else 1)" || exit 1
     exit 0 ;;
 *) echo "mode must be smoke, smoke2 or full" >&2; exit 2 ;;
