@@ -141,7 +141,8 @@ class GDino:
                 target_sizes=[i.shape[:2] for i in imgs])
         out = []
         for r in rs:
-            lab = np.array(r.get("text_labels", r["labels"]), dtype=object)
+            # transformers returns labels [''] for an image with no boxes; keep one label per box
+            lab = np.array(list(r.get("text_labels", r["labels"]))[:len(r["scores"])], dtype=object)
             per = []
             for p in self.prompts:           # a phrase maps to the longest prompt it contains ("emergency vehicle")
                 hit = np.array([_phrase(l) == p for l in lab], bool)
