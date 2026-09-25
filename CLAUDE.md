@@ -29,7 +29,7 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
 
 ## Code
 - Write expert-level code: efficient, compact, readable, with clear logic.
-- The box container gets 75 cores, 360 GB RAM and three RTX PRO 6000 Blackwell, 96 GB each (since 2026-09-25; the host shows 208 cores;
+- The box container gets 125 cores, 600 GB RAM and five RTX PRO 6000 Blackwell, 96 GB each (since 2026-09-25 15:00; the host shows 208 cores;
   size pools with `jevdrive.common.n_cpus()`, see docs/remote-box.md). Use all of it:
   run independent work in parallel across cores (one job per file/archive/shard),
   keep hot data in RAM, batch on the GPU and overlap I/O with compute.
