@@ -327,13 +327,13 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   门限行人 1.5 m、车辆 4 m，速度 = 位移 / 0.2 s 再转回当前 ego 轴，关联不上的记 0。制动量级沿用 GT 门在训练帧上的拟合值（训练帧没有跑 SAM；Δ_model 只取 {−m, 0, +m}，翻转率与 m 无关）。
   预先写明的风险：平地抬升在 20 m 以外的抖动（上面 (11)）会被 0.2 s 的差分放大成假速度，行人门可能因此多触发——这正是 perception-limited floor 要量的东西，不做额外平滑。
   代码 `jevdrive/fusion_q6sam.py`（`fusion_diag.q6gt` 只加了一个替换观测帧状态的钩子，GT 版的数字不变）。
-- 2026-09-25 19:20 CST [Q2b]（写在 WOD 的 SAM 结果出来之前）(1) 走廊：logged 未来 5 s 的 20 个点加原点连成折线，物体接地点（score > 0.5，按该 sequence 自己的前视标定平地抬升）到折线的距离 ≤ 1.5 m、
+- 2026-09-25 19:14 CST [Q2b]（写在 WOD 的 SAM 结果出来之前）(1) 走廊：logged 未来 5 s 的 20 个点加原点连成折线，物体接地点（score > 0.5，按该 sequence 自己的前视标定平地抬升）到折线的距离 ≤ 1.5 m、
   离 ego ≤ 40 m、在前方（x > 0）；折线两端之外 1.5 m 以内也算（到端点的距离）；ego 静止（折线总长 < 0.5 m）时用正前方 2 m 的短桩。
   (2) Interections 在登记的「cluster → 类别」映射里没有对应项；取「道路使用者」= vehicle ∪ pedestrian ∪ cyclist，单独一个 probe。其余按登记。
   (3) probe：sklearn `LogisticRegression(C = 1)` 在按训练折标准化的特征上，不调 C；「在训练折上定的 90% specificity 工作点」用训练折内部 3 折的样本外分数定（训练折上的样本内分数会过拟合，特异度虚高），
   评估折只用来出分数。正例 < 5 的折不拟合（该折记「没看见」）。特征：Cinque `temporal`（`op_cinque_p3`）与 Qwen `L18_last`（`qwenvid_p3`），两者共同覆盖的子集行。
   (4) 类别只按 Q2a 的「纵向」损失帧（停、走）在六个 cluster 里判；份额的 CI 按 sequence bootstrap 1000 次。代码 `jevdrive/fusion_q2b.py`。
-- 2026-09-25 19:20 CST [Q8] 窗口 = (t_div − t_vis) × 0.05 s，取 `pairs.csv` 里 reason = ok 的对；SAM 档用 Q4d 实测的 3 路相机、6 个 prompt 的 p50 与 p95 各一档，decision head 记 0（线性头，微秒级）；
+- 2026-09-25 19:14 CST [Q8] 窗口 = (t_div − t_vis) × 0.05 s，取 `pairs.csv` 里 reason = ok 的对；SAM 档用 Q4d 实测的 3 路相机、6 个 prompt 的 p50 与 p95 各一档，decision head 记 0（线性头，微秒级）；
   openpilot 档 2.3 ms、openjev 档 470 ms 按登记。代码 `jevdrive/fusion_q8.py`。
 - 2026-09-25 18:40 CST [Q1] 以下全部写于 Q1 任何拟合之前。代码 `jevdrive/fusion_q1.py`，run dir `$DATA_DIR/runs/fusion_diag/q1/<time>`。
   (1) **P5 只有 `ridge_late`**：`p5_exam` 本身没有分类头，加一个就不再是「一字不改」的考生；`cls_late` 只在 WOD 的 (a)(b) 上跑。P5 上 V-JEPA 2 没抽，按登记的「可选」跳过，P5 的 single 只有四个。
