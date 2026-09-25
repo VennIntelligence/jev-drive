@@ -247,7 +247,8 @@ def main():
         print(line, flush=True)
 
     event("start", argv=sys.argv, cpus=a.cpus, affinity=len(os.sched_getaffinity(0)))
-    indices = Indices(a.index_lo, a.index_hi, Path(os.environ["DATA_DIR"]) / "runs/infra-acceptance/.next_index")
+    indices = Indices(a.index_lo, a.index_hi, Path(os.environ["DATA_DIR"]) / (
+                      "runs/infra-acceptance/.next_index-%d-%d" % (a.index_lo, a.index_hi)))
     base = b2d_run.parse_args(["--out", str(out)] + a.passthrough)
     routes = b2d_run.select_routes(base.routes, "all", a.route_id, 0)
     pool = {g: [] for g in a.gpus}
