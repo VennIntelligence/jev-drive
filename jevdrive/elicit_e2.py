@@ -106,19 +106,18 @@ def _log_candidates(log_path):
             continue
         a = hist[-1]["anns"]
         poly = extend(np.vstack([[0.0, 0.0], tok2fut[tok][:, :2]]), RANGE)   # deviation [E2] 00:50
-        best = None
+        inside = []                   # every GT pedestrian / bicycle in the corridor (deviation [E2] 01:00)
         for j, (nm, bx) in enumerate(zip(a["gt_names"], a["gt_boxes"])):
             if nm not in ("pedestrian", "bicycle") or bx[0] <= 0:
                 continue
             d = float(np.hypot(bx[0], bx[1]))
-            if d > RANGE or seg_dist(bx[:2], poly) > CORRIDOR:
-                continue
-            if best is None or d < best[0]:
-                best = (d, j)
-        if best is None:
+            if d <= RANGE and seg_dist(bx[:2], poly) <= CORRIDOR:
+                inside.append((d, j))
+        if not inside:
             continue
-        d, j = best
-        track = a["track_tokens"][j]
+        d, j = min(inside)
+        track = a["track_tokens"][j]                 # the primary actor: the nearest one
+        tracks = {str(a["track_tokens"][q]) for _, q in inside}
         if track in seen:
             continue
         cams = [cams_of(f["cams"], sensor) for f in hist]
@@ -136,18 +135,25 @@ def _log_candidates(log_path):
         imgs = []
         for k, (f, cm) in enumerate(zip(hist, cams)):
             fa = f["anns"]
-            idx = np.flatnonzero(np.asarray(fa["track_tokens"]) == track)
+            tt_k = np.asarray(fa["track_tokens"]).astype(str)
+            idx = np.flatnonzero(tt_k == str(track))
             for c in CAMS:
                 ab = box2d(fa["gt_boxes"][idx[0]], cm[c]) if len(idx) else None
-                others = []
-                for nm, bx, tt in zip(fa["gt_names"], fa["gt_boxes"], fa["track_tokens"]):
-                    if tt == track or np.hypot(bx[0], bx[1]) > 60:
+                others, acts = [], []
+                for nm, bx, tt in zip(fa["gt_names"], fa["gt_boxes"], tt_k):
+                    if np.hypot(bx[0], bx[1]) > 60:
                         continue
                     ob = box2d(bx, cm[c])
-                    if ob is not None:
+                    if ob is None:
+                        continue
+                    if tt in tracks:
+                        acts.append((tt, str(nm), ob.tolist()))
+                    else:
                         others.append((str(nm), ob.tolist(), float(np.hypot(bx[0], bx[1]))))
+                if ab is None and acts:                 # the primary is out of view: anchor on another actor
+                    ab = np.asarray(acts[0][2])
                 imgs.append({"k": k, "cam": c, "path": cm[c]["path"], "actor": None if ab is None else ab.tolist(),
-                             "others": others, "cam_calib": {q: np.asarray(cm[c][q]).tolist() for q in ("R", "t", "K", "D")}})
+                             "actors": acts, "others": others, "cam_calib": {q: np.asarray(cm[c][q]).tolist() for q in ("R", "t", "K", "D")}})
         # choose the placebo point: the moved actor box must stay inside the image and touch no agent in any image
         placebo = None
         for p in cand_pts[:80]:
@@ -168,7 +174,7 @@ def _log_candidates(log_path):
                 if mb[0] < 0 or mb[1] < 0 or mb[2] > W_IMG - 1 or mb[3] > H_IMG - 1:
                     shifts.append(None)             # the point is not in this image: no placebo edit here
                     continue
-                if overlap(mb, ab) or any(overlap(mb, o[1]) for o in im["others"]):
+                if any(overlap(mb, o[1]) for o in im["others"]) or any(overlap(mb, x[2]) for x in im["actors"]):
                     good = False
                     break
                 shifts.append([float(du), float(dv)])
@@ -176,6 +182,7 @@ def _log_candidates(log_path):
                 placebo = {"point_t0": p.tolist(), "shifts": shifts}
                 break
         out.append({"token": tok, "log": hist[-1]["log_name"], "track": str(track), "cls": str(a["gt_names"][j]),
+                    "n_actors": len(tracks),
                     "dist": d, "box3": np.asarray(a["gt_boxes"][j]).tolist(), "h_px_f0": float(b0[3] - b0[1]),
                     "images": imgs, "placebo": placebo})
     return out
@@ -270,6 +277,17 @@ def _box_mask(box, H, W, dev):
     return m
 
 
+def _match(sam_box, gt_box) -> bool:
+    """A SAM box belongs to a projected GT cuboid: IoU >= 0.3, or most of it lies inside the cuboid's box (the
+    cuboid's hull is wider than a person's silhouette) and it is at least 40 % as tall."""
+    if _iou(sam_box, gt_box) >= MATCH_IOU:
+        return True
+    iw = max(0, min(sam_box[2], gt_box[2]) - max(sam_box[0], gt_box[0]))
+    ih = max(0, min(sam_box[3], gt_box[3]) - max(sam_box[1], gt_box[1]))
+    area = max((sam_box[2] - sam_box[0]) * (sam_box[3] - sam_box[1]), 1e-9)
+    return iw * ih / area >= 0.6 and (sam_box[3] - sam_box[1]) >= 0.4 * (gt_box[3] - gt_box[1])
+
+
 def _iou(a, b) -> float:
     iw, ih = max(0, min(a[2], b[2]) - max(a[0], b[0])), max(0, min(a[3], b[3]) - max(a[1], b[1]))
     i = iw * ih
@@ -310,21 +328,25 @@ def build(dataset: str = "navtrain", limit: int | None = None, tag: str = "main"
                 H, W = img.shape[-2:]
                 ab = im["actor"]
                 res = det([img], keep=SAM_SCORE)[0]
-                cand = [(p, s, b, m) for p, d in zip(SAM_PROMPTS, res)
-                        for s, b, m in zip(d["scores"].tolist(), d["boxes"].tolist(), d["masks"])]
-                ious = [_iou(b, ab) for _, _, b, _ in cand]
-                if c["cls"] == "bicycle":
-                    sel = [m for (_, _, b, m), iou in zip(cand, ious) if iou >= MATCH_IOU]
-                else:
-                    sel = [cand[int(np.argmax(ious))][3]] if ious and max(ious) >= MATCH_IOU else []
-                src = "sam" if sel else "box"
-                mask = torch.stack(sel).any(0) if sel else _box_mask(ab, H, W, img.device)
+                cand = [(b, m) for d in res for b, m in zip(d["boxes"].tolist(), d["masks"])]
+                sel, matched = [], []
+                for tt, nm, box in im["actors"]:
+                    hit = [q for q, (b, _) in enumerate(cand) if _match(b, box)]
+                    if nm == "pedestrian" and hit:      # a pedestrian is one mask: the best-overlapping one
+                        hit = [max(hit, key=lambda q: _iou(cand[q][0], box))]
+                    sel += hit                          # a bicycle: every matching mask (rider and bike)
+                    matched.append({"track": tt, "cls": nm, "box": box, "matched": bool(hit)})
+                name = f"{im['cam']}_{im['k']}"
+                r = {"i": ii, "cam": im["cam"], "k": im["k"], "path": im["path"], "actor": ab, "actors": matched,
+                     "edited": bool(sel), "placebo": False}
+                if not sel:                             # no actor visible to SAM here: the image stays as it is
+                    rec["images"].append(r)
+                    continue
+                mask = torch.stack([cand[q][1] for q in sorted(set(sel))]).any(0)
                 mask = _dilate(mask, max(7, int(0.08 * (ab[3] - ab[1]))))
                 out = lama(img, mask)
-                name = f"{im['cam']}_{im['k']}"
                 Image.fromarray(out.permute(1, 2, 0).cpu().numpy()).save(td / f"{name}_minus.jpg", quality=95)
-                r = {"i": ii, "cam": im["cam"], "k": im["k"], "path": im["path"], "actor": ab, "mask_src": src,
-                     "mask_px": int(mask.sum()), "sam_best_iou": float(max(ious)) if ious else 0.0, "placebo": False}
+                r["mask_px"] = int(mask.sum())
                 sh = c["placebo"]["shifts"][ii] if c["placebo"] else None
                 if sh is not None:
                     du, dv = int(round(sh[0])), int(round(sh[1]))
@@ -334,6 +356,8 @@ def build(dataset: str = "navtrain", limit: int | None = None, tag: str = "main"
                     r.update(placebo=True, placebo_shift=[du, dv])
                 rec["images"].append(r)
                 n_img += 1
+            t0f0 = [x for x in rec["images"] if x["cam"] == "CAM_F0" and x["k"] == 3]
+            rec["valid"] = bool(t0f0) and any(a["matched"] and a["track"] == rec["track"] for a in t0f0[0]["actors"])
             metas.append(rec)
         dt = time.time() - t0
         (cdir / "meta.json").write_text(json.dumps(metas))
@@ -358,7 +382,7 @@ def validate(dataset: str = "navtrain", tag: str = "val64", conf: float = 0.25, 
     model = YOLO(str(data_dir() / "models" / "ultralytics" / "yolo26x-seg.pt"))
     cands = {c["token"]: c for c in pickle.load(open(out_root(dataset) / "candidates.pkl", "rb"))}
     root = out_root(dataset, tag)
-    rows, oth = [], []
+    rows, oth, unedited = [], [], []
     coco = {0: "person", 1: "bicycle", 2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
     gt_map = {"pedestrian": {"person"}, "bicycle": {"bicycle", "person", "motorcycle"}, "vehicle": {"car", "bus", "truck", "motorcycle"}}
 
@@ -370,17 +394,23 @@ def validate(dataset: str = "navtrain", tag: str = "val64", conf: float = 0.25, 
     for meta in sorted(root.glob("c*/meta.json")):
         for rec in json.loads(meta.read_text()):
             c = cands[rec["token"]]
+            if not rec.get("valid"):
+                continue
             for r in rec["images"]:
                 im = c["images"][r["i"]]
                 name = f"{r['cam']}_{r['k']}"
+                if not r["edited"]:
+                    unedited.append({"token": rec["token"], "img": name, "n_actors": len(r["actors"])})
+                    continue
                 dp, dm = dets(r["path"]), dets(meta.parent / rec["token"] / f"{name}_minus.jpg")
-                hit = lambda ds: max([_iou(x, r["actor"]) for cl, x in ds if cl == "person"], default=0.0)  # noqa: E731
-                rows.append({"token": rec["token"], "cls": rec["cls"], "img": name, "mask_src": r["mask_src"],
-                             "h_px": r["actor"][3] - r["actor"][1], "iou_plus": hit(dp), "iou_minus": hit(dm)})
+                for a in r["actors"]:
+                    hit = lambda ds: max([_iou(x, a["box"]) for cl, x in ds if cl == "person"], default=0.0)  # noqa: E731
+                    rows.append({"token": rec["token"], "cls": a["cls"], "img": name, "sam_matched": a["matched"],
+                                 "h_px": a["box"][3] - a["box"][1], "iou_plus": hit(dp), "iou_minus": hit(dm)})
                 for nm, ob, dist in im["others"]:
                     if nm not in gt_map or ob[3] - ob[1] < MIN_PX or dist > 40:
                         continue
-                    mb = [x for x in r["actor"]]
+                    mb = r["actor"]
                     ib = max(0, min(ob[2], mb[2]) - max(ob[0], mb[0])) * max(0, min(ob[3], mb[3]) - max(ob[1], mb[1]))
                     cov = ib / max((ob[2] - ob[0]) * (ob[3] - ob[1]), 1e-9)
                     f = lambda ds: max([_iou(x, ob) for cl, x in ds if cl in gt_map[nm]], default=0.0)  # noqa: E731
@@ -391,10 +421,12 @@ def validate(dataset: str = "navtrain", tag: str = "val64", conf: float = 0.25, 
     o.to_csv(rl.dir / "others.csv", index=False)
     base = t[t.iou_plus >= iou_gate]
     ok_o = o[o.det_plus & (o.covered_by_actor_box <= 0.2)]
-    summ = {"images": len(t), "pairs": t.token.nunique(), "yolo_person_on_plus": len(base),
+    pd.DataFrame(unedited).to_csv(rl.dir / "unedited.csv", index=False)
+    summ = {"actor_images": len(t), "pairs_valid": t.token.nunique(), "unedited_images": len(unedited),
+            "yolo_person_on_plus": len(base),
             "residual_rate": float((base.iou_minus >= iou_gate).mean()) if len(base) else None,
-            "residual_rate_sam_masks": float((base[base.mask_src == "sam"].iou_minus >= iou_gate).mean()) if len(base) else None,
-            "mask_src_sam": float((t.mask_src == "sam").mean()),
+            "residual_rate_matched": float((base[base.sam_matched].iou_minus >= iou_gate).mean()) if len(base) else None,
+            "actor_sam_matched": float(t.sam_matched.mean()),
             "others_eval": len(ok_o), "others_retained": float(ok_o.det_minus.mean()) if len(ok_o) else None,
             "others_covered_gt20pct": int((o.covered_by_actor_box > 0.2).sum())}
     (rl.dir / "summary.json").write_text(json.dumps(summ, indent=1))
@@ -416,7 +448,8 @@ def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int 
     rl = RunLog("elicitation", "e2-fig")
     root = out_root(dataset, tag)
     recs = [(m.parent, r) for m in sorted(root.glob("c*/meta.json")) for r in json.loads(m.read_text())]
-    recs = [(d, r, im) for d, r in recs for im in r["images"] if im["cam"] == "CAM_F0" and im["k"] == 3]
+    recs = [(d, r, im) for d, r in recs if r.get("valid") for im in r["images"]
+            if im["cam"] == "CAM_F0" and im["k"] == 3 and im["edited"]]
     pick = np.random.default_rng(seed).choice(len(recs), min(n, len(recs)), replace=False)
 
     def crop(path, box, W=480, H=270):
@@ -443,7 +476,7 @@ def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int 
                 ax.imshow(panels[q])
             if row == 0:
                 ax.set_title(("$x^+$", "$x^-$", "placebo")[q], fontsize=8, pad=2)
-        axes[row, col].text(4, 20, f"{j + 1}: {r['cls'][:3]} {r['dist']:.0f} m ({im['mask_src']})", color="w", fontsize=6)
+        axes[row, col].text(4, 20, f"{j + 1}: {r['cls'][:3]} {r['dist']:.0f} m, {len(im['actors'])} actor(s)", color="w", fontsize=6)
     fig.subplots_adjust(wspace=0.02, hspace=0.04)
     plots.save(fig, rl.dir, "elicit-e2-pairs16")
     rl.close()
