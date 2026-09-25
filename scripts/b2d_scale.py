@@ -119,13 +119,13 @@ def proc_table():
 
 
 def classify(pid, comm):
+    if comm == "py-spy":
+        return "pyspy"
     if comm.startswith("CarlaUE4"):
         return "server" if comm.startswith("CarlaUE4-Linux") else "wrapper"
     cmd = read("/proc/%d/cmdline" % pid)
     if "b2d_route.py" in cmd:
         return "route"
-    if "py-spy" in comm:
-        return "pyspy"
     return "other"
 
 

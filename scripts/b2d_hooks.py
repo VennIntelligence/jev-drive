@@ -296,6 +296,13 @@ def _patch_sensor_tick():
 
 def _patch_callback(profile, fast_copy, zero_copy):
     keep = {}
+    # Behaviour-equivalence check (docs/bench2drive-cost.md, 2026-09-25): with $B2D_FRAME_HASH=1 every camera frame's
+    # md5 is appended to <attempt>/frame_hash.jsonl, so two runs can be compared image by image.
+    hashes = None
+    if os.environ.get("B2D_FRAME_HASH") == "1":
+        import threading
+        hashes = (open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "frame_hash.jsonl"), "a", buffering=1),
+                  threading.Lock())
 
     def parse_image(self, image, tag):
         t0 = time.perf_counter()
@@ -314,6 +321,10 @@ def _patch_callback(profile, fast_copy, zero_copy):
             array = np.reshape(array, (image.height, image.width, 4))
         t2 = time.perf_counter()
         profile.add_copy(t1 - t0, t2 - t1, raw.nbytes)
+        if hashes is not None:
+            line = json.dumps([tag, image.frame, hashlib.md5(raw.tobytes()).hexdigest()]) + "\n"
+            with hashes[1]:
+                hashes[0].write(line)
         self._data_provider.update_sensor(tag, array, image.frame)
 
     CallBack._parse_image_cb = parse_image
