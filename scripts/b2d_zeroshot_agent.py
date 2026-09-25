@@ -51,9 +51,10 @@ the pre-registered smoke:
                     drive the whole route (reference arm; the model still plans, in shadow)
   "replay"          absent | path of an expert log (scripts/b2d_expert_agent.py; "{route}" is replaced by the route id)
                     | "route": no model and no socket; each
-                    planning step returns the expert's own future track (same elapsed time since the first tick) in the
-                    hero's simulator rear-axle frame, i.e. the plan a perfect planner would give, at the model's cadence
-                    and through the configured controller - the controller acceptance test
+                    planning step returns the expert's own track from where the hero is, at the expert's pace (waits
+                    as long as the expert waited; see _replay_path), in the hero's simulator rear-axle frame, i.e. the
+                    plan a perfect planner would give, at the model's cadence and through the configured controller -
+                    the controller acceptance test
                     (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md). "route": the route oracle's plan
                     from the sensor pose (a no-model load for profiling)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
@@ -440,24 +441,45 @@ class ZeroShotAgent(AutonomousAgent):
         yaw = np.unwrap(np.radians([r["yaw"] for r in rows]))
         x = np.array([r["x"] for r in rows]) + self.rear_offset * np.cos(yaw)
         y = np.array([r["y"] for r in rows]) + self.rear_offset * np.sin(yaw)
-        self.replay_log = (t - t[0], x, y)
+        s = np.r_[0.0, np.cumsum(np.hypot(np.diff(x), np.diff(y)))]    # arc length, non-decreasing
+        self.replay_log = (t - t[0], x, y, s)
+        self.replay_i = 0
 
     def _replay_path(self, t_frame, times):
-        """The known-good plan a perfect planner would output at t_frame: the expert's own future rear-axle track at
-        t_frame + times (same elapsed time since the route's first tick), in the hero's current rear-axle rig frame
-        (x forward, y left) from the simulator pose. "route": the route oracle's trajectory from the sensor pose, as
-        drive=oracle (a no-model load for profiling, not a known-good plan)."""
+        """The known-good plan a perfect planner would output at t_frame: the expert's own track from where the hero is
+        now, at the pace the expert drove it. The hero's simulator rear axle is projected onto the expert's rear-axle
+        path (arc s0, searched forward from the last match); the plan starts at the expert time t* when it was at s0
+        and returns its positions at t* + times, in the hero's rig frame (x forward, y left). Where the expert stood
+        still at s0 (a red light, a yield) over [ta, tb], t* = the elapsed time since the first tick clipped to
+        [ta, tb], so the plan waits as long as the expert did and no longer. Past the log's end: its last pose.
+        (A plan indexed by elapsed time alone jumps ahead of a lagging car and collapses to one point at the log's
+        end, which no planner outputs: deviation 1 of the acceptance doc.)
+        "route": the route oracle's trajectory from the sensor pose, as drive=oracle (a no-model load for
+        profiling, not a known-good plan)."""
         if self.replay == "route":
             return np.asarray(self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2]), float)
-        te, xe, ye = self.replay_log
-        tq = (t_frame - self.replay_t0) + np.asarray(times, float)
-        wx, wy = np.interp(tq, te, xe), np.interp(tq, te, ye)     # past the log's end: hold its last pose
+        te, xe, ye, se = self.replay_log
         from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
         tf = CarlaDataProvider.get_hero_actor().get_transform()
         h = math.radians(tf.rotation.yaw)
         c, s = math.cos(h), math.sin(h)
         x0, y0 = tf.location.x + self.rear_offset * c, tf.location.y + self.rear_offset * s
-        dx, dy = wx - x0, wy - y0
+        a, b = max(self.replay_i - 40, 0), min(self.replay_i + 400, len(xe) - 1)
+        px, py = xe[a:b + 1], ye[a:b + 1]
+        sx, sy = np.diff(px), np.diff(py)
+        L2 = np.maximum(sx * sx + sy * sy, 1e-12)
+        u = np.clip(((x0 - px[:-1]) * sx + (y0 - py[:-1]) * sy) / L2, 0.0, 1.0) if len(sx) else np.zeros(0)
+        if len(u):
+            k = int(np.argmin(np.hypot(px[:-1] + u * sx - x0, py[:-1] + u * sy - y0)))
+            self.replay_i = a + k
+            s0 = se[a + k] + u[k] * math.sqrt(L2[k])
+        else:
+            s0 = se[-1]
+        ta = te[min(np.searchsorted(se, s0 - 0.05, "left"), len(te) - 1)]
+        tb = te[max(np.searchsorted(se, s0 + 0.05, "right") - 1, 0)]
+        t_star = min(max(t_frame - self.replay_t0, ta), max(ta, tb))
+        tq = t_star + np.asarray(times, float)
+        dx, dy = np.interp(tq, te, xe) - x0, np.interp(tq, te, ye) - y0
         return np.stack([c * dx + s * dy, s * dx - c * dy], -1)
 
     def _pose_at(self, t0):

@@ -86,6 +86,25 @@ TCP partner 不在这里：它不是 plan → control 的控制器，而是一�
 日志，再把 E-b 和六个控制器臂并行（各 1 个 worker）。输出 `$DATA_DIR/runs/infra-accept/b2d-ctl/`。计算：
 `scripts/infra_ctl_score.py`（写完再跑）。
 
+## 偏离
+
+**偏离 1（2026-09-25 16:00，控制器臂跑了前 1–3 条之后、看全部结果之前）：plan 的来源从“按经过时间”改成“从车现在的位置、
+按专家的节奏”。** 预注册里 plan = 专家在“同一经过时间”之后的轨迹。第一批路线里（2390 上 Z2、F2 都以 `Agent got blocked`
+结束，专家 6 s 就开完）看到这个定义本身有两个问题，和控制器无关：(1) 车一落后，plan 的第一个点就在车前几米（e_lon 中位数
+约 −7 m 时第一个点在 7 m 外），这是一个要求“瞬移”的不连续 plan，没有任何 planner 会这样输出；(2) 专家日志到头以后 plan
+全部塌缩到终点一个点，Zoo PID 从 waypoint 间距读期望速度，读到 0 就刹车，于是停在终点前几米，被判 blocked。新的定义
+（`b2d_zeroshot_agent._replay_path`）：把车的后轴投影到专家路径上得到弧长 s0，取专家在 s0 处的时刻 t*，plan = 专家在
+t* 之后 0.25–5 s 的位置；专家在 s0 停过（红灯、让行，停在 [ta, tb]）时 t* = 经过时间截到 [ta, tb]，也就是专家等多久
+plan 就等多久、不会更久。这样 plan 连续、从车的位置出发、速度剖面就是专家的，仍然是“完美 planner 此刻会给的 plan”。
+代价：车落后时 scenario 的时序不再强制和专家那次相同。离线单元检查（直线 5 m/s、在 20 m 处停 6 s）：准时、落后、
+等待中、迟到、早到五种情况下 t* 和 plan 都符合定义。指标和判据不变（A2 的 e_lon 仍按经过时间对齐，所以落后照样被记为
+纵向误差）。旧定义下的控制器臂（Z2、Z5、F2、F5、P1 各 1–3 条）全部作废，移到 `discarded/`；E-a、E-b 不受影响。
+
+另有一个与此无关的基础设施修复：SimLingo 的 Bench2Drive 副本在 `leaderboard/` 下带一个普通 package `team_code`，
+Bench2DriveZoo 的 `team_code` 没有 `__init__.py`（namespace package），不管 sys.path 顺序如何都会被前者遮住，Zoo PID
+的 wrapper 因此 import 失败（Zoo 臂第一次启动全部 crash，0 tick）。改成按文件路径加载 Zoo 的 `planner.py`，
+行为不变（同一份文件）。
+
 ## 结果
 
 （跑完再填。）
