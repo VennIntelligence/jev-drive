@@ -1,0 +1,2 @@
+rows,train,val,train_scenes,val_scenes,"val (i) pre-onset, deciles 1-9","val (ii) all frames, deciles 1-9","val side: straight, deciles 1-9","val side: all frames, all deciles",val side: decile 10,val pre-onset all deciles,val cmd left/straight/right
+20582,16950,3632,700,150,47,3268,1501,3632,364,61,177/3195/260

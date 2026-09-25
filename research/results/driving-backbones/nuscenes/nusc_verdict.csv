@@ -1,0 +1,3 @@
+model,arm,vs A,better than ridge ego,worse than ridge ego
+openpilot Cinque,op-cinque temporal,better,True,False
+openpilot Lebowski,op-lebowski temporal,better,True,False

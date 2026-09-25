@@ -1,6 +1,6 @@
 # 驾驶专用 backbone 进 P3 阶梯：openpilot 与 Alpamayo 1.5 的冻结特征 + 我们的 ridge head
 
-状态: done（预登记 2026-09-24 22:40 提交在任何抽取之前；结果 2026-09-25 01:55）
+状态: done（预登记 2026-09-24 22:40 提交在任何抽取之前；结果 2026-09-25 01:55；第 40 条后续 (iii)(i) 预登记 2026-09-25 11:05、结果 14:43）
 主题: ../../research/prediag-2026-09/README.md（P3 backbone 阶梯）、../../research/frozen-vlm-planner.md
 上游: [zero-shot WOD 考试](../2026-09-24-zeroshot-exam/wod-e2e.md)（第 34 条）、[P3 阶梯计划](../2026-09-22-p3-backbone-ladder.md)（第 24 条）
 
@@ -259,7 +259,7 @@ Alpamayo 1.5 的中层 image-token 特征（主 tap）只在全部帧 ADE 上比
 
 ## 第 40 条的后续 (iii) 与 (i)：预登记（2026-09-25，在任何分数之前提交）
 
-状态: 预登记（本节提交时两项都还没有任何分数；nuScenes 的 openpilot 特征还没抽）
+状态: 预登记提交时两项都还没有任何分数；结果见文末「第 40 条后续的结果」
 资源: GPU 2 上 ≤ 25 GB（与 Alpamayo 闭环考试共卡，吞吐掉 > 10% 就自我限速），≤ 6 核（taskset + nice 10，DataLoader / 解码 worker ≤ 4），slot `decision40-*`。
 不做：Alpamayo `L27_last` 的 train 训复现（约 20 h，要用户决定）。
 
@@ -383,3 +383,51 @@ Alpamayo policy server 每 200 次调用打一行累计计数（调用数、GPU-
 
 所以 (i) 的抽取以 35% duty cycle 跑完（`--duty 0.35`，约 24 s / scene，比满速慢 3 倍）；满载训练（diffusion head）不在 GPU 2 上和 Alpamayo 同时跑。
 第二行的 26% 不能当真：暂停的那 12 分钟恰好是 Alpamayo 的快段，同一方法在 30 分钟后重做，暂停与运行几乎相同。
+
+### (i) nuScenes 复现：**「更好」复现了**，全部帧上的增益按相对量和 WOD 同一量级（2026-09-25 14:43）
+
+run（box）：特征 `$DATA_DIR/processed/drive_backbones/nusc_op/{cinque,lebowski}/`（850 scene），阶梯 `$DATA_DIR/runs/nusc_backbones/ladder/20260925-144240/`；
+小表 [research/results/driving-backbones/nuscenes/](../../research/results/driving-backbones/nuscenes/)。
+行：20 582 个 keyframe（train 16 950 / 700 scene，val 3 632 / 150 scene）；val 上全部帧第 1–9 档 3 268，pre-onset 第 1–9 档只有 **47**（全部档 61），
+command 左 / 直 / 右 = 177 / 3195 / 260。`ridge ego` 在 (ii) 上的 ADE 是 0.514 m（3 s horizon）。
+
+主表（Δ = arm − `ridge ego`，ADE m，scene bootstrap 95% CI；主表 ego 带 command）：
+
+| arm | (i) pre-onset 第 1–9 档（n = 47） | (ii) 全部帧第 1–9 档 | 侧栏：直行第 1–9 档 | 侧栏：第 10 档 | 侧栏：FDE@3 s，(ii) |
+|:--|:--|:--|:--|:--|:--|
+| A Qwen3-VL-4B `L18_mean`（CAM_FRONT） | −0.035 [−0.066, −0.006] | −0.015 [−0.022, −0.008] | −0.010 | −0.021 | −0.045 |
+| **openpilot Cinque `temporal`** | −0.077 [−0.194, +0.033] | **−0.091 [−0.105, −0.077]** | −0.073 | −0.549 | −0.280 |
+| **openpilot Lebowski `temporal`** | −0.063 [−0.188, +0.066] | **−0.087 [−0.101, −0.074]** | −0.079 | −0.538 | −0.264 |
+| 次要：Cinque `vision` | −0.099 [−0.191, −0.015] | −0.065 | −0.062 | −0.317 | |
+| 次要：Lebowski `vision` | −0.103 [−0.192, −0.008] | −0.064 | −0.066 | −0.402 | |
+| 次要：fusion Cinque `temporal` ‖ A | −0.099 [−0.198, −0.005] | −0.082 | −0.067 | −0.424 | |
+| 参照：Cinque 原生 plan（不拟合） | +0.816 | +0.845 | +1.098 | −0.126 | |
+| 参照：Lebowski 原生 plan（不拟合） | +1.001 | +1.030 | +1.189 | −0.063 | |
+
+预登记的判定（主 tap 对 A 的配对差）：
+
+| 模型 | (i) pre-onset vs A | (ii) 全部帧 vs A | 判定 | (ii) vs `ridge ego` |
+|:--|:--|:--|:--|:--|
+| Cinque `temporal` | −0.042 [−0.144, +0.059] | **−0.076 [−0.090, −0.061]** | **更好** | CI 整体 < 0 |
+| Lebowski `temporal` | −0.028 [−0.140, +0.082] | **−0.072 [−0.086, −0.058]** | **更好** | CI 整体 < 0 |
+
+敏感性（ego 不带 command，整套重拟合）：`temporal` 对 `ridge ego (no cmd)` 在 pre-onset 上 **−0.402 [−0.531, −0.274]**（Cinque）/ **−0.411 [−0.549, −0.288]**（Lebowski），
+对同样不带 command 的 A 是 −0.350 / −0.359（CI 都不跨零）；全部帧 −0.116 / −0.113。A 在这个设定下只有 −0.052 / −0.020。
+
+读法：
+- **第 40 条的主结论在独立数据集上复现**：两个 `temporal` 都按预登记规则判「更好」，(ii) 上比 A 好 0.07 m、CI 离 0 很远。
+  量级按相对值和 WOD 一致：nuScenes 上 (ii) 把 `ridge ego` 的 ADE 降 18%（0.514 → 0.423），WOD train 训协议上降 22%（1.41 → 1.09）；通用的 A 在两边都只有 1–3%。
+  增益照旧大头在直行和第 10 档（纵向），第 10 档上 −0.54 m（A −0.02）。
+- **pre-onset 在带 command 的主设定里测不出**：n = 47，CI 半宽 0.11，点估计 −0.06 到 −0.08。这是预登记里写过的限定：command 由 3 s 横向位移算出，
+  「往哪转」已经泄露给 ego。**把 command 拿掉，pre-onset 上的增益就是 −0.40 m，和 WOD train 训协议的 −0.29 / −0.32 同一量级甚至更大**，
+  也就是说 openpilot 的时序特征里确实带着「马上要转」的信息，只是在主设定里被 command 替代了。
+- **原生 plan 在 nuScenes 上很差**（比 `ridge ego` 差 0.85–1.03 m），和第 39 条考试一致（纵向过冲，nuScenes 司机开得慢）；冻结特征 + 在 nuScenes train 上拟合的 ridge 把这个分布差完全吸收掉了。
+  这正是「冻结特征 + 薄 head」相对 zero-shot 原生输出的价值：同一个表征，换个数据集只要重拟合一个线性读出。
+- `vision` tap 在 pre-onset 上的点估计比 `temporal` 还好一点（−0.10，CI 刚好不跨零），但在全部帧上差 0.025；次要 tap，只描述。
+
+### 偏离记录（后续）
+
+1. nuScenes 的 pre-onset 只有 47 帧（预登记估 100–300）：nuScenes val 的转弯本来就少（command 转弯 437 / 3632），再乘上「当前 yaw rate < 1°/s」和 1 m 位移守卫。定义没有改。
+2. openpilot 抽取中途停了三次再按 scene 续跑（续跑逐 scene 跳过已完成的文件，定义不变）：一次是为共卡 A/B 测试改 duty cycle，一次是 Alpamayo 暂停后改回满速，
+   一次在 13:41 被 SIGKILL（rc 137；cgroup 的 memory.events 里 oom_kill = 0，来源未查明）。
+3. (iii) 的 diffusion head 没跑（预登记里自带的条件没满足，见上）。
