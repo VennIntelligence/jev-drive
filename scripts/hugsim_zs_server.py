@@ -55,7 +55,36 @@ class Alpamayo(S.Alpamayo):
         pass
 
 
+class State(dict):
+    """A connection's state; a dict subclass so a finalizer can return its ONNX session to the pool when the
+    connection's thread drops it."""
+
+
 class Openpilot(S.OpenpilotModel):
+    def new_state(self, state=None):
+        """Queued models (small / Cinque) own one ONNX session (TensorRT engine, ~2.3 GB, ~2 min to deserialize) per
+        connection. HUGSIM opens one connection per scenario, so sessions are pooled: a connection takes a free one
+        (reset to zero state) and gives it back when it closes."""
+        if self.context_rate:
+            return State(super().new_state(state))
+        import threading
+        import weakref
+        if not hasattr(self, "pool"):
+            self.pool, self.pool_lock = [self.model], threading.Lock()
+        if isinstance(state, State) and "model" in state:
+            state["model"].reset()
+            return state
+        with self.pool_lock:
+            m = self.pool.pop() if self.pool else self.make()
+        m.reset()
+        st = State(model=m)
+        weakref.finalize(st, self._give_back, m)
+        return st
+
+    def _give_back(self, m):
+        with self.pool_lock:
+            self.pool.append(m)
+
     def prepare(self, meta, arrays):
         if "img2" not in arrays:
             return super().prepare(meta, arrays)

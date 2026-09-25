@@ -11,7 +11,10 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      traffic ([1, 0] right-hand / [0, 1] left-hand), dilation (openpilot clock, default 1.25),
                      warmup_s (openpilot, model seconds of the first frame before the first plan, default 5),
                      replan (Alpamayo: plan every k-th step, re-issue the last plan in between, default 1),
-                     rigid (Alpamayo rear -> camera: rigid body, default true), dump_every (npz every k steps)
+                     rigid (Alpamayo rear -> camera: rigid body, default true), dump_every (npz every k steps),
+                     engage_s (engage while rolling: for the first engage_s simulated seconds the privileged route
+                     follower of agent_client.py drives at <= 3 m/s while the model already runs on every frame;
+                     default 0)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -29,7 +32,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path[:0] = [str(ROOT), str(ROOT / "scripts")]
+sys.path[:0] = [str(ROOT), str(ROOT / "scripts"), str(ROOT / "scripts" / "hugsim")]
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import hugsim_zs as Z  # noqa: E402
 
@@ -53,6 +56,10 @@ class Agent:
         self.seed0 = zlib.crc32(str(self.out.name).encode()) & 0x7FFFFFF
         self.log = open(self.out / "zs_steps.jsonl", "w", buffering=1)
         self.dump_every = int(opts.get("dump_every", 0))
+        self.engage_s = float(opts.get("engage_s", 0))
+        if self.engage_s > 0:
+            from agent_client import RoutePolicy
+            self.oracle = RoutePolicy(os.environ["HUGSIM_SCENE_DIR"], v_max=3.0, a_max=1.5)
         if self.dump_every:
             (self.out / "zs_dump").mkdir(exist_ok=True)
 
@@ -143,6 +150,11 @@ class Agent:
             plan = self.alpamayo(obs, info, rec) if self.model == "alpamayo" else self.openpilot(obs, info, rec)
             ta = info["timestamp"] + np.r_[0.0, Z.plan_times()]
             self.last = (Z.plan_to_world(np.r_[[[0.0, 0.0]], plan], pos, th), ta)
+        if self.engage_s > 0 and info["timestamp"] < self.engage_s - 1e-6:
+            rec["model_plan"] = np.round(plan, 3).tolist()
+            plan = np.asarray(self.oracle(obs, info), np.float64)
+            self.last = None
+            rec["oracle"] = True
         rec["plan"] = np.round(plan, 3).tolist()
         rec["agent_ms"] = round(1e3 * (time.perf_counter() - t0), 1)
         self.log.write(json.dumps(rec) + "\n")

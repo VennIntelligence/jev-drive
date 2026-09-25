@@ -52,19 +52,24 @@ debug)   # MODELS="cinque alpamayo" SCEN=nuscenes/scene-0383-easy-00.yaml: one s
     done
     ;;
 checklist)
-    # checklist scenarios + a standstill copy of scene-0071-easy-00 (start_velo 0), not a benchmark scenario
+    # checklist scenarios + derived copies of scene-0071-easy-00 (not benchmark scenarios): a standstill start, and
+    # a sign / frame check started 0.8 m right of the route and yawed 6 deg right
     mkdir -p "$OUT/scen/nuscenes"
-    sed -e 's/^start_velo: .*/start_velo: 0/' -e 's/^mode: .*/mode: standstill_00/' \
-        "$DATA_DIR/datasets/hugsim/scenarios/nuscenes/scene-0071-easy-00.yaml" > "$OUT/scen/nuscenes/scene-0071-standstill-00.yaml"
+    S71=$DATA_DIR/datasets/hugsim/scenarios/nuscenes/scene-0071-easy-00.yaml
+    $HPY scripts/hugsim/zs_run.py derive "$S71" "$OUT/scen/nuscenes/scene-0071-standstill-00.yaml" mode=standstill_00 start_velo=0
+    $HPY scripts/hugsim/zs_run.py derive "$S71" "$OUT/scen/nuscenes/scene-0071-offset-00.yaml" mode=offset_00 \
+        'start_ab=[0.8, 0.0]' 'start_euler=[0.0, 6.0, 0.0]'
     L=$OUT/checklist.txt
     cat todos/2026-09-25-hugsim-exam/checklist.txt > "$L"
     echo "$OUT/scen/nuscenes/scene-0071-standstill-00.yaml" >> "$L"
+    echo "$OUT/scen/nuscenes/scene-0071-offset-00.yaml" >> "$L"
     server alpamayo "$DATA_DIR/third_party/alpamayo1.5/.venv/bin/python" "$ALP_GPU" alpamayo
     server cinque "$DATA_DIR/envs/openpilot/bin/python" "$OP_GPU" cinque
     server lebowski "$DATA_DIR/envs/openpilot/bin/python" "$OP_GPU" lebowski
     wait_ready cinque lebowski
     D='{"dump_every": 4}'
     ( for c in official fixed; do run cinque $c "$OP_GPU" 1 $L "$D"; run lebowski $c "$OP_GPU" 1 $L "$D"; done
+      for c in official fixed; do run cinque $c "$OP_GPU" 1 $L '{"dump_every": 4, "engage_s": 5}' cinque-$c-engage; done
       run cinque official "$OP_GPU" 1 $L '{"dump_every": 4, "desire": false}' cinque-official-nodesire
       for c in official fixed; do for b in cv route; do run $b $c "$BASE_GPU" 1 $L; done; done ) &
     op=$!

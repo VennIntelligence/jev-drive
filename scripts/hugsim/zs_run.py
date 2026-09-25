@@ -184,10 +184,26 @@ def run(a):
     return 1 if len(fails) > a.max_fail else 0
 
 
+def derive(a):
+    """A scenario yaml with some keys replaced (values parsed as YAML), for checklist-only scenarios."""
+    import yaml
+    c = yaml.safe_load(open(a.src))
+    for kv in a.set:
+        k, v = kv.split("=", 1)
+        c[k] = yaml.safe_load(v)
+    Path(a.dst).parent.mkdir(parents=True, exist_ok=True)
+    yaml.safe_dump(c, open(a.dst, "w"), sort_keys=False)
+    return 0
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("setup-trees")
+    dv = sub.add_parser("derive")
+    dv.add_argument("src")
+    dv.add_argument("dst")
+    dv.add_argument("set", nargs="+")
     r = sub.add_parser("run")
     r.add_argument("--out", required=True)
     r.add_argument("--agent", required=True, choices=list(AD))
@@ -202,4 +218,4 @@ if __name__ == "__main__":
     r.add_argument("--retries", type=int, default=1)
     r.add_argument("--max-fail", type=int, default=3)
     a = ap.parse_args()
-    sys.exit(setup_trees() if a.cmd == "setup-trees" else run(a))
+    sys.exit({"setup-trees": lambda a: setup_trees(), "derive": derive, "run": run}[a.cmd](a))
