@@ -149,7 +149,7 @@ class Controller:
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
                  throttle_map=None, brake_map=None, low_speed_brake_mps=0.,
                  plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5,
-                 feedforward_limit=None, terminal_approach=False):
+                 feedforward_limit=None, terminal_approach=False, terminal_approach_min_period_s=0.):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -193,6 +193,9 @@ class Controller:
         # ahead, approach the endpoint by position (projection on the whole plan, sqrt-profile speed)
         # instead of treating the plan as stationary and holding short of it.
         self.terminal_approach = bool(terminal_approach)
+        # Only plans slower than this (measured period) use the approach; a 20 Hz planner's own
+        # parked plan is trusted as a stop command.
+        self.terminal_approach_min_period_s = float(terminal_approach_min_period_s)
         self.low_speed_brake_mps = float(low_speed_brake_mps)
         if not math.isfinite(self.low_speed_brake_mps) or self.low_speed_brake_mps < 0:
             raise ValueError('low_speed_brake_mps must be finite and nonnegative')
@@ -575,7 +578,8 @@ class Controller:
             return self._safe('trajectory_horizon_exhausted', elapsed)
         self._diagnostics.update(target_speed_mps=desired, reference_speed_mps=reference)
         points, geometry = self._geometry(age)
-        if self.terminal_approach and self._stationary_tail:
+        if (self.terminal_approach and self._stationary_tail and
+                (self._plan_period or 0.) >= self.terminal_approach_min_period_s):
             if geometry is None:
                 points, geometry = self._geometry(0.)
             if geometry is not None:
