@@ -51,3 +51,25 @@ M-A 只在 D0 判「信息在 vision 里」时是完整方案；否则 M-A 负�
 2. D0 出来后：M-C 立刻上（特征都在盘上），M-A 先抽 vision 特征（1 卡 70 min），policy 复刻工程并行。
 3. I1 与 I3 独立，CPU/CARLA 与渲染卡各占一路，与上面不抢。
 4. 任何一步超预算 2 倍先停下来报；结论写回 decisions.md（D0、M-* 进第 40 条下面或新开第 42 条；I1 进第 32 条）。
+
+## 执行记录
+
+执行者：reactivity agent（2026-09-25 15:50 起）。I1、I3、I4 由三个子执行代理做，各写子文档
+[i1-p5v1](2026-09-25-reactivity-program/i1-p5v1.md)、[i3-hugsim-pairs](2026-09-25-reactivity-program/i3-hugsim-pairs.md)、
+[i4-worldmodel](2026-09-25-reactivity-program/i4-worldmodel.md)，结论由本文件汇总。M-A 等用户决定，不启动训练。
+
+### 偏离与澄清日志（每条写于看到受影响的数字之前）
+
+1. **D0 的 tap 口径（2026-09-25 15:55，抽取之前）**。表里写「`driving_vision` 输出」，而 Cinque / Lebowski 是单个合并的 ONNX，没有独立的
+   `driving_vision.onnx`。按第 40 条 tap 表（[driving-backbones](2026-09-24-driving-backbones/README.md)）定：**主 tap 是 `vision`**
+   （进时间模块之前的当前步 vision encoder pooled 输出：Cinque `mean` 512 维、Lebowski `view_40` 3072 维）；**次要 tap 是 `hidden`**
+   （进 feature 队列的向量：Cinque 16 384 维 = 32 个未池化 vision token，Lebowski 512 维）。判定只用主 tap；`hidden` 只描述，
+   若它过线而 `vision` 不过，记为「次要证据，需复现」，不改判定。
+2. **D0 的「行人 family」（同上）**。P5 v0 里 hazard actor 是行人的 family 有四个：DynamicObjectCrossing、ParkingCrossingPedestrian、
+   PedestrianCrossing、VehicleTurningRoutePedestrian。判据作用在**四个合并的行人集合**上（x⁺ 对 x⁻ 的观测帧，按路线 bootstrap，
+   500 次，与 `probe_auc_paired` 同一套重采样）；逐 family 的 AUC 与配对 Δ 只描述。判定按模型分开：某个模型的 `vision` 在行人集合上
+   AUC ≥ 0.60 且对同模型 `temporal` 的配对 Δ 的 95% CI 下端 > 0，就算「信息在该模型的 vision 里」；两个模型中至少一个过线 → M-A 单独可行
+   （用过线的那个模型）；都不过 → M-A + M-C。
+3. **D0 的 probe 与抽取（同上）**。probe、fold、λ 选择、训练行一字不改（`p5_exam.probes`），只加 examinee；抽取器、stream、渲染与实验 1 相同，
+   只多存 `vision` / `hidden` 两个数组。新抽取的 `temporal` 与实验 1 已存的逐位比较，作为等价性检查。同一次 `p5_exam run` 也会给出这些 tap
+   上 `ridge_late` 的翻转率，只描述，不进 D0 判定。
