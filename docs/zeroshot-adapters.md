@@ -23,8 +23,32 @@ the outcome into the run's todo.
 | 9 | Resume after stop | Same routes | The ego resumes after the light turns green / the stop is served |
 | 10 | Controller identity | Diff the controller source against the shipped one | Verbatim, or the deviation is written into the pre-registration |
 
+## Routes and tooling
+
+A route set that covers the list in five Bench2Drive routes, none of them in the openpilot or Alpamayo smokes:
+2086 (NonSignalizedJunctionLeftTurn), 2903 (NonSignalizedJunctionRightTurn), 3144 (VanillaSignalizedTurnEncounterRedLight),
+2416 (VanillaNonSignalizedTurnEncounterStopsign), 3540 (HardBreakRoute: the lead brakes hard, then the ego resumes).
+Lane keeping, plan frame and heading are checked on the stretches between the events.
+
+For openpilot, `scripts/zeroshot_b2d_op.sh accept <gpu>` runs the set and `scripts/zeroshot_b2d_op_accept.py` scores
+items 1-10 automatically from `plans.jsonl`, `ticks.jsonl` and the official `results.json` (thresholds in its
+docstring, e.g. items 2, 5, 9: throttle share <= 5 % while a stay plan is in force, move within 20 s, no stop >= 45 s).
+The same logs exist for every model run through `scripts/b2d_zeroshot_agent.py`, so the script is the template for
+the next model.
+
+## Gaps that need a rule, not a fix
+
 Items 5 and 7 are about the interface between a model and the benchmark, not only about bugs: openpilot, for
 example, does not start from a full stop without a driver and has no navigation input. Such gaps are resolved by a
 documented rule before the scored run, and the score is reported with that rule's name.
+
+The rule used for openpilot is shared control with a learned partner (`scripts/b2d_partner.py`): the official
+Bench2DriveZoo TCP agent runs every tick and drives only while the ego is at standstill (latched after 0.5 s below
+0.1 m/s, released after 1 s at or above 1 m/s) or inside a junction-turn zone (15 m before to 5 m after a LEFT / RIGHT
+route command), the model drives otherwise, and a change of driver is blended over 0.5 s. The handover reads only
+observable state (speed, time, the route the benchmark hands every agent and the ego's progress along it), never an
+outcome. The driver is logged per tick; report the distance and time share of each driver and which driver held the
+car at each infraction. A privileged route oracle is not a partner: it knows the map, so it is not used to start or
+turn a scored model.
 
 Last verified: 2026-09-25

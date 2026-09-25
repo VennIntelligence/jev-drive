@@ -1,6 +1,6 @@
 # openpilot 迁移计划：从 comma 车到闭环仿真器和别的相机 rig
 
-状态: A 诊断完成、修复已实现；控制器已定（Zoo 官方 PID，D 节），smoke 与全量已排进 slot `op-b2d-smoke` / `op-b2d-full`；B 在 comma1M 与 WOD-E2E 上完成；C 见下
+状态: A 诊断完成、修复已实现；控制器已定（Zoo 官方 PID，D 节）；起步与路口交给 TCP 伙伴（D3），验收 → smoke3 → 全量排进 slot `op-b2d-accept` / `op-b2d-smoke3` / `op-b2d-full`；B 在 comma1M 与 WOD-E2E 上完成；C 见下
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/trajectory-to-control.md
 相关: [openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、[B2D 考试](bench2drive.md)、[WOD-E2E 考试](wod-e2e.md)、
 [NAVSIM 考试](navsim.md)、[控制器 API](../../docs/b2d-controller.md)
@@ -399,6 +399,10 @@ resume 或踩油门才重新起步，模型从来不需要自己决定“从静�
 
 ### D2. 适配层补两个缺口：起步与路口转向（预注册，写于 smoke2 之前，2026-09-25）
 
+> **已被 D3 取代（2026-09-25 09:50，没有跑过）。** 本节原先的做法是用 route oracle（特权路线跟踪器）开车起步、
+> 以及路口由 oracle 打方向。用户否决了这两点：起步与路口都交给一个**学出来的**伙伴模型（TCP）做 shared control，
+> 不用 oracle。smoke2 从未运行，下面的内容只作记录。
+
 用户的判断：从静止起步和“没有导航输入时怎么在路口转弯”都是**适配层**的问题，本该在打分之前查出来；以后任何外部模型进
 闭环打分前先过 [docs/zeroshot-adapters.md](../../docs/zeroshot-adapters.md) 的清单。这一节的规则都在 smoke2 之前写死。
 
@@ -417,7 +421,7 @@ resume 或踩油门才重新起步，模型从来不需要自己决定“从静�
 | (iii) handover | (i) + 在 LEFT/RIGHT 路线命令前 15 m 起到命令段结束，方向盘由 route oracle 给，油门刹车仍是 Zoo PID 按模型 plan 算 | 驾驶员自己打方向、ACC 管纵向；+ (i) |
 
 另外离线检查了模型是否懂 turn desire（`scripts/openpilot_desire_probe.py`：comma1M 8 段真实视频上每 10 s 给一次 1 s 的
-desire，和不给 desire 的同一段配对比较 plan 的横向位置），结果写在 D3。
+desire，和不给 desire 的同一段配对比较 plan 的横向位置；2026-09-25 09:33 跑完，逐段结果在 box 的 `runs/openpilot_rigs/desire_probe.json`，还没整理进本文）。
 
 **smoke2**：9 条路线 = 5 条预注册 smoke 路线 + bench2drive220 里 4 类路口转弯场景各取 route id 最小的一条
 （NonSignalizedJunctionLeftTurn 2084、NonSignalizedJunctionRightTurn 2115、SignalizedJunctionLeftTurn 3936、
@@ -442,6 +446,102 @@ eng-implicit-cinque。指标（`scripts/zeroshot_b2d_junctions.py`）：DS、RC�
 simlingo_catalogue_*、zeroshot_b2d_alp.sh、b2d_run.py），都只按自己记录的 pid / 进程组杀进程，没有 `pkill -f` 一类能匹配
 到我们进程名的模式；b2d_run 的孤儿清理只杀命令行含 CarlaUE4 或 b2d_route.py 的进程。上一次 SIGKILL 的来源仍未知。
 
+### D3. TCP 伙伴模型的 shared control、适配验收与 smoke3（预注册，写于任何一次验收或计分运行之前，2026-09-25 09:55；此前只有 1 条路线的管线调试，不进任何结果）
+
+**用户决定。** (1) 主控制器仍是 Bench2DriveZoo 的 UniAD / VAD PID（经 `b2d_zoo_pid_wrap.py`），两个开关
+`plan_forward_only` / `zoo_cadence` 取 Alpamayo 考试冻结的那一组（`b2d/smoke2-alpamayo-choice.json`：`f1` = forward-only +
+每次规划调一次，`f1f2b` = forward-only + 每 tick 调一次），openpilot 自己的 curvature / accel 执行（`native`）作配对次级；
+Zoo 的低速油门上限不加。(2) 从静止起步与需要路线知识的路口转弯是**适配层**问题（openpilot 没有导航，在真车上停稳后等
+驾驶员），不用 route oracle，改用学出来的伙伴模型 **TCP**（Bench2DriveZoo 官方 TCP，`tcp/admlp` 分支 `8a08b07`、
+`PLANNER_TYPE=only_traj`、checkpoint `tcp_b2d.ckpt` sha256 `e6573ff1…`，原样运行，自带三路 1600×900 相机、自己的
+route planner / target point、自己的 PID 和出厂的低速油门上限）。TCP 只开 openpilot 结构上做不了的阶段，其余包括车道保持、
+跟车、对危险的反应都是 openpilot。(3) 打分前先过适配验收清单（[docs/zeroshot-adapters.md](../../docs/zeroshot-adapters.md)）。
+(4) policy server 被不明 SIGKILL 的问题要加固并留取证。
+
+**谁开车：只看可观测量的仲裁（`scripts/b2d_partner.py` 的 `Arbiter`），带迟滞。** TCP 每个 tick 都跑（不管谁开），
+内部状态始终是新的。满足下列任一条件时 TCP 开，否则 openpilot 开：
+
+| 条件 | 进入 | 退出 |
+|---|---|---|
+| 静止锁存（standstill latch） | 车速 < 0.1 m/s 持续 0.5 s（所以路线起点也是） | 车速 ≥ 1.0 m/s 持续 1.0 s |
+| 路口区 | 沿路线弧长，在 LEFT / RIGHT 路线命令起点前 15 m | 该命令段终点后 5 m |
+| 模型预热 | openpilot 的 5 s 预热没结束，或还没有可用控制量 | 预热结束 |
+| 模型未就绪（只在 TCP 还有权重时判断） | openpilot 自己的控制量（每个 tick 都算，TCP 开车时也算）在最近 0.5 s 内踩过刹车 | 连续 0.5 s 不刹车 |
+
+- 退出阈值用 1.0 m/s 而不是 3 m/s：TCP 出厂的油门上限（1.5 m/s 以上油门 ≤ 0.05，转向时 1.0 m/s）让它只开到 1.5–2 m/s，
+  3 m/s 的退出条件永远不会触发。
+- 路口区用的是路线规划本身（Bench2Drive 给每个参赛 agent 的全局路线与命令）和车在路线上的进度，都是可观测量；不看
+  任何结果（碰撞、违规、分数）。STRAIGHT 与车道保持段不交给 TCP。
+- “模型未就绪”这一条是在 1 条路线的管线调试（2086，验收之前，不进结果）里看到之后加的：没有它时，TCP 把车带到
+  1.5 m/s、静止锁存释放，openpilot 接手后自己的低速 plan 在 1 s 处只走 1.1–1.3 m（它从画面估的自车速度偏低，
+  同时它输出的 desired accel 是 +1.1 ~ +1.5 m/s²），Zoo PID 按“实际速度 > 1.1 × plan 速度”直接满刹，0.2–0.5 s 内停住，
+  0.5 s 后又回到 TCP，约 3 s 一个循环。规则的意思是只把车交给一个会让车继续走的驾驶者（真车上驾驶员也是在 ACC
+  已经接住之后才松油门）；它只读模型自己的输出，不读任何结果。如果 openpilot + Zoo PID 在 TCP 的速度上始终不就绪，
+  TCP 会一直开，这由下面的 E4（模型开的距离占比）挡住，而不是被规则掩盖。
+- TCP 的网络只在它的控制量有权重（它在开或正在混合）的 tick 上跑；其余 tick 只推进它的 route planner（出厂 tick() 里
+  网络之前就做的那一步，不推进的话 50 m 后 planner 会跟丢），每次重新接手时 PID 窗口清零，和路线开头一样。TCP
+  没有时间输入（seq_len 1），所以这不改变它的网络输出。每 tick 都跑时 TCP 一项就占 ~160 ms / tick（三张 1600×900 的
+  JPEG 往返、缩放和前向），全量会慢约 4 倍。
+- 换人时方向盘、油门、刹车在 0.5 s（10 个 tick）内线性混合，记为 `blend`。
+- 每个 tick 记录 `driver`（model / partner / blend）、`w_model`、TCP 接管的原因（standstill / junction / warmup）和
+  TCP 自己的控制量。报告每个驱动者的行驶距离与时间占比，以及每条违规发生时是谁在开（按违规坐标找最近的 tick）。
+- 这意味着红灯前、前车后停下之后的**再起步**也归 TCP（静止锁存），而**停下来**这件事归 openpilot；分数要读成
+  “openpilot + TCP 起步 / 路口伙伴”。
+
+**适配验收（slot `op-b2d-accept`，不计分）。** 5 条不在任何 smoke 里的路线：2086 NonSignalizedJunctionLeftTurn、
+2903 NonSignalizedJunctionRightTurn、3144 VanillaSignalizedTurnEncounterRedLight、2416 VanillaNonSignalizedTurnEncounterStopsign、
+3540 HardBreakRoute（前车急刹后再起步）。Lebowski + TCP 伙伴（起步 + 路口），Zoo PID 的两组开关 `f1`、`f1f2b` 各跑一遍
+（Alpamayo 的选择还没出来，两组都验，smoke3 用被冻结的那组）。判据由 `scripts/zeroshot_b2d_op_accept.py` 自动计算，
+全部通过才算这一组通过：
+
+| # | 清单项 | 判据 |
+|---|---|---|
+| A1 | 基础设施 | 每条路线 status finished、有 plans |
+| A2 | 参考点 | 模型在开、车速 < 0.3 m/s、生效的 plan 3 s 内前进 < 1 m 的 tick 里踩油门的比例 ≤ 5% |
+| A3 | 传感器时序 | 每次规划 road 与 wide 同帧；相邻规划帧号正好差 plan_every（≥ 99%） |
+| A4 | 预热 | 第一次非预热 plan 之前，模型控制量的权重始终为 0 |
+| A5 | 静止起步 | 每条路线 20 s 内车速超过 0.5 m/s |
+| A6 | 车道保持 | 模型开或混合时 0 次 outside-lane / route-deviation 违规 |
+| A7 | 路口左右转 | 所有到达的 LEFT / RIGHT 转弯都通过，且左、右各至少到达一次 |
+| A8 | 红灯 / 停车标志 | 混合（换人）期间 0 次闯红灯 / 停车标志违规；openpilot 或 TCP 单独开车时的违规只报告，那是各自的驾驶行为（管线调试里 TCP 在 2086 上闯过一次停车标志，所以原稿“TCP 开时也不许”会让验收取决于 TCP 的水平而不是适配是否正确，验收运行前改成现在这样） |
+| A9 | 停后再起步 | 第一次起步之后没有 ≥ 45 s 的静止 |
+| A10 | plan 坐标系与朝向 | 模型在开、车速 > 2 m/s：2 s 处横向误差中位数 ≤ 1.0 m；真值横移 > 0.5 m 时 plan 左右符号一致 ≥ 80%；真值 2 s 转角 > 0.05 rad 时 plan yaw 符号一致 ≥ 80%（少于 5 次规划不判） |
+| A11 | 控制器一致 | `scripts/b2d_zoo_pid.py` 与 Zoo `498c1f7` 的 `team_code/pid_controller.py` 字节相同 |
+
+被冻结的那组没通过就不跑任何计分运行，回来找用户。
+
+**smoke3（slot `op-b2d-smoke3`，在 `alp-b2d-smoke2` 与验收之后）。** 9 条路线 = 5 条预注册 smoke 路线（2390、24211、1711、
+2373、3564）+ D2 预注册的 4 条路口路线（2084、2115、3936、2050），TM seed 0，4 个 CARLA worker，Zoo PID 开关为冻结的那组，
+desire 关。四个阶段：
+
+| 阶段 | 谁开 | 回答什么 |
+|---|---|---|
+| `partner-lebowski`（主） | Lebowski + Zoo PID，TCP 起步 + 路口 | 全量的候选配置 |
+| `pure-lebowski` | Lebowski + Zoo PID，无伙伴 | 纯 openpilot，对照 D1（起步失败是否仍主导） |
+| `tcp-alone` | TCP 全程（Lebowski 只在 shadow 里出 plan） | 参考：伙伴自己的水平 |
+| `partner-native-lebowski` | Lebowski + native 执行，TCP 起步 + 路口 | 主 / 次控制器配对 |
+
+**全量配置的选择规则（`scripts/zeroshot_b2d_op_choose.py`，只看适配判据，不看 DS）。** 按 `partner-lebowski`（Zoo PID）→
+`partner-native-lebowski` 的顺序，第一个在 9 条路线上同时满足下面四条的被选中：E1 20 s 内起步的路线 ≥ 8/9；E2 合并的
+LEFT / RIGHT 转弯通过率 ≥ 75%；E3 混合（blend）期间 0 次碰撞；E4 模型开的距离占比 ≥ 50%（否则分数主要是 TCP 的）。
+都不满足就不跑全量，回来找用户。模型按 D 节的预注册规则是 Lebowski（纯 smoke 里比 Cinque 高 17.8 DS），不再复核。
+
+**全量（slot `op-b2d-full`）。** 选中的配置 × 220 条 × `--towns all`，4 个 worker，CARLA server index 660–663。报告
+DS（均值与按路线 bootstrap 95% CI）、SR（Bench2Drive 定义，Wilson 95% CI）、RC、没跑完的路线数（≤ 15 条算 job 成功）、
+每个驱动者的距离 / 时间占比，以及按驱动者分的违规。
+
+**环境上的一处适配。** box 的 GPU 是 Blackwell（sm_120），`envs/b2d-tcp` 的 torch 2.2 没有这一代的 kernel，TCP 的网络
+在路线进程里跑不了。所以网络前向放到一个单独的 TCP server（`scripts/b2d_tcp_server.py`，`envs/jevdrive` 的 CUDA 12.8+ torch，
+fp32、关 TF32），路线进程里仍是出厂的 `TCPAgent` 代码（预处理、route planner、PID、油门上限），只是 `self.net(...)` 换成远程
+调用，张量留在 CPU。随机输入上远程与本地 CPU 前向的 waypoint 最大差 5e-6 m、动作 argmax 一致，往返约 30 ms。出厂 agent 的
+`bev` 相机（50 m 高的俯视图，只用于存盘）被 leaderboard 的传感器校验拒绝，不生成，传一张空图。
+
+**基础设施加固。** policy server 由一个子 shell 启动并 `wait`，退出码写进 server 日志（137 = SIGKILL，可以和正常退出区分）；
+watchdog 每 30 s 存 ps 快照（含 RSS、线程数）和容器 cgroup 的 `memory.events`、`pids.events`、`pids.current` / `pids.max`、
+线程总数，server 消失时把死前最后一份和死后的一份单独保存，自动重启并续跑 phase（最多 3 次）。已知：容器是 cgroup v2 的
+根（没有子 cgroup），`pids.max` = 20480（线程也计入），`memory.events` 的 oom_kill 为 0，`dmesg` 没有权限读。
+CARLA server index 用 600–699（验收 600–603、smoke3 620–623、全量 660–663）。
+
 ## 偏离记录（B2D 考试的 openpilot 部分）
 
 1. **（2026-09-24 21:00，修复后未看任何分数）plan 原点**：`plan_origin = rear`，理由见 A2。
@@ -449,6 +549,7 @@ simlingo_catalogue_*、zeroshot_b2d_alp.sh、b2d_run.py），都只按自己记�
 3. **（同上）5 s 预热**：`warmup_s = 5`，理由见 A1 冷启动一行和 A2。
 4. 复跑推迟到控制器定版之后（用户决定，2026-09-24 21:00）。
 6. **（2026-09-25，smoke2 之前）engage while rolling 与路口转向三选一**：见 D2。
+7. **（2026-09-25 09:55，任何运行之前）TCP 伙伴 shared control 取代 D2 的 oracle 起步 / 路口 handover**：见 D3。
 5. **（2026-09-25，运行之前）控制器**：主控制器换成 Bench2DriveZoo 官方 PID（原样运行），openpilot 自己的 curvature / accel 执行语义作配对次级，规则与全量选择见 D 节。
 
 ## 复现
@@ -468,6 +569,8 @@ CUDA_VISIBLE_DEVICES=0 $PY scripts/wod_openpilot_rigs.py run --model cinque --va
 # CARLA re-smoke after the controller is frozen (deferred): 7 phases, 1 worker + 1 openpilot server
 GPU=0 scripts/tmux_run.sh opm-carla scripts/zeroshot_b2d_opfix.sh
 python3 scripts/zeroshot_b2d_openpilot_diag.py $DATA_DIR/runs/zeroshot-exam/b2d-opfix/{shadow,fixed} --out diag.csv
+# openpilot + TCP partner (D3): acceptance -> smoke3 (after the Alpamayo choice) -> full, each a slot on GPU 1
+scripts/tmux_run.sh op-b2d-accept scripts/slot_run.sh op-b2d-accept --gpu 1 --vram-gb 35 -- scripts/zeroshot_b2d_op.sh accept 1
 # Mac: figures
 .venv/bin/python scripts/openpilot_migration_figs.py smoke <smoke-lebowski run dir> --routes 24211 1711 3564
 .venv/bin/python scripts/openpilot_migration_figs.py rigs rows.jsonl --csv research/results/openpilot-migration/rigs.csv
@@ -483,6 +586,8 @@ python3 scripts/zeroshot_b2d_openpilot_diag.py $DATA_DIR/runs/zeroshot-exam/b2d-
 | `scripts/openpilot_rig_study.py`、`scripts/wod_openpilot_rigs.py` | comma1M 与 WOD-E2E 的 rig 变体评测 |
 | `scripts/b2d_zeroshot_agent.py`、`scripts/zeroshot_rigs.py`、`scripts/zeroshot_policy_server.py` | CARLA 适配修复（配置开关） |
 | `scripts/zeroshot_b2d_opfix.sh`、`scripts/zeroshot_b2d_openpilot_diag.py` | 推迟的 CARLA 复跑与逐帧诊断 |
+| `scripts/b2d_partner.py`、`scripts/b2d_tcp_server.py` | TCP 伙伴（出厂 agent + 远程前向）与只看可观测量的仲裁（D3） |
+| `scripts/zeroshot_b2d_op.sh accept / smoke3 / full`、`scripts/zeroshot_b2d_op_accept.py`、`scripts/zeroshot_b2d_op_choose.py` | 验收、smoke3、全量与它们的预注册判据（D3） |
 | `research/results/openpilot-migration/` | `rigs.csv`（每变体 × 模型的合并误差与相对 native 的配对差）、`rows.jsonl`（每段原始行）、`bias.json`、`wod_rigs.csv` |
 | `research/figs/openpilot-migration-{smoke-start,frames,rigs,sheet}.png` | 图 1–4 |
 | box `$DATA_DIR/runs/openpilot_rigs/` | 每段每变体的 model frame（`frames/<sid>/<variant>.npy`）与逐帧预测（`pred_*.npy`） |
