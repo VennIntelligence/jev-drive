@@ -228,11 +228,132 @@ def fig_check(trs):
         P.save(fig, FIG, "hugsim-exam-checklist")
 
 
+# ---------------------------------------------------------------- scored results
+TERMS = ["hdscore", "rc", "nc", "dac", "ttc", "c", "pdms"]
+AGENTS = ["alpamayo", "cinque", "lebowski", "ltf", "cv"]
+ENDS = ["complete", "off_route", "bg_collision", "fg_collision", "max_steps", "other", "crash"]
+END_COLOR = {"complete": "#009E73", "off_route": "#E69F00", "bg_collision": "#D55E00", "fg_collision": "#CC79A7",
+             "max_steps": "#56B4E9", "other": "#BBBBBB", "crash": "#000000"}
+
+
+def load_scored():
+    df = pd.read_csv(RES / "scored_results.csv")
+    df = df.sort_values("finished").drop_duplicates(["scenario", "tag"], keep="last")
+    df["scene_id"] = df.dataset + "/" + df.scenario.str.rsplit("-", n=2).str[0]
+    for k in TERMS:
+        df[k] = pd.to_numeric(df[k], errors="coerce")
+    return df
+
+
+def paired_ci(a, b, groups, B=10000):
+    d = np.asarray(a, float) - np.asarray(b, float)
+    ok = np.isfinite(d)
+    lo, hi = boot_ci(d[ok], np.asarray(groups)[ok], B=B)
+    return d[ok].mean(), lo, hi, int(ok.sum())
+
+
+def cmd_results(a):
+    df = load_scored()
+    ok = df[df.end != "crash"]
+    rows = []
+    for (ag, ctl), g in ok.groupby(["agent", "controller"]):
+        r = {"agent": ag, "controller": ctl, "n": len(g), "crash": int(((df.agent == ag) & (df.controller == ctl) &
+                                                                        (df.end == "crash")).sum())}
+        for k in TERMS:
+            r[k] = g[k].mean()
+        lo, hi = boot_ci(g.hdscore.values, g.scene_id.values, B=10000)
+        r["hd_ci"] = f"[{lo:.3f}, {hi:.3f}]"
+        for e in ENDS[:-1]:
+            r[f"end_{e}"] = float((g.end == e).mean())
+        rows.append(r)
+    tab = pd.DataFrame(rows)
+    tab["o"] = tab.agent.map({a: i for i, a in enumerate(AGENTS)})
+    tab = tab.sort_values(["o", "controller"], ascending=[True, False]).drop(columns="o")
+    tab.to_csv(RES / "scores.csv", index=False, float_format="%.3f")
+    with pd.option_context("display.width", 250):
+        print(tab.to_string())
+    # paired differences: model - LTF (same controller), fixed - official (same agent)
+    wide = ok.pivot_table(index=["scenario", "scene_id"], columns=["agent", "controller"], values="hdscore")
+    pr = []
+    for ctl in ("official", "fixed"):
+        for ag in AGENTS:
+            if ag == "ltf" or (ag, ctl) not in wide or ("ltf", ctl) not in wide:
+                continue
+            m, lo, hi, n = paired_ci(wide[(ag, ctl)], wide[("ltf", ctl)], wide.index.get_level_values(1))
+            pr.append({"contrast": f"{ag} - ltf", "controller": ctl, "n": n, "diff": m, "ci": f"[{lo:+.3f}, {hi:+.3f}]"})
+    for ag in AGENTS:
+        if (ag, "fixed") in wide and (ag, "official") in wide:
+            m, lo, hi, n = paired_ci(wide[(ag, "fixed")], wide[(ag, "official")], wide.index.get_level_values(1))
+            pr.append({"contrast": f"{ag}: fixed - official", "controller": "-", "n": n, "diff": m,
+                       "ci": f"[{lo:+.3f}, {hi:+.3f}]"})
+    pr = pd.DataFrame(pr)
+    pr.to_csv(RES / "scores_paired.csv", index=False, float_format="%.3f")
+    print(pr.to_string())
+    # per dataset x difficulty (official), next to the published Table 13
+    cell = ok.groupby(["agent", "controller", "dataset", "difficulty"]).hdscore.mean().rename("hd").reset_index()
+    pub = pd.read_csv(RES / "published_table13.csv").rename(columns={"method": "agent", "hdscore": "hd"})
+    pub["agent"], pub["controller"] = "pub_" + pub.agent, "published"
+    cells = pd.concat([cell, pub[["agent", "controller", "dataset", "difficulty", "hd"]]])
+    piv = cells.pivot_table(index=["agent", "controller"], columns="dataset", values="hd")
+    piv["macro"] = cells.groupby(["agent", "controller"]).hd.mean()
+    piv.to_csv(RES / "scores_by_dataset.csv", float_format="%.3f")
+    piv2 = cells.pivot_table(index=["agent", "controller"], columns="difficulty", values="hd")
+    piv2.to_csv(RES / "scores_by_difficulty.csv", float_format="%.3f")
+    print(piv.round(3).to_string())
+    print(piv2.round(3).to_string())
+    fig_scores(tab, pub)
+
+
+def fig_scores(tab, pub):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    ags = [a for a in AGENTS if a in set(tab.agent)]
+    with mpl.rc_context(P.STYLE):
+        fig, (ax, bx) = plt.subplots(1, 2, figsize=(P.PAGE, 2.2), gridspec_kw={"width_ratios": [1.1, 1]})
+        x = np.arange(len(ags))
+        for k, ctl in enumerate(("official", "fixed")):
+            t = tab[tab.controller == ctl].set_index("agent").reindex(ags)
+            ci = np.array([[float(v) for v in str(c).strip("[]").split(",")] if isinstance(c, str) else [np.nan] * 2
+                           for c in t.hd_ci])
+            ax.bar(x + (k - .5) * .38, t.hdscore, .36, color=[MODEL_COLOR[a] for a in ags],
+                   alpha=1.0 if ctl == "official" else 0.45, edgecolor="k", lw=.4,
+                   label="official controller" if ctl == "official" else "PR #57 heading fix")
+            ax.errorbar(x + (k - .5) * .38, t.hdscore, yerr=np.abs(ci.T - t.hdscore.values), fmt="none", ecolor="k",
+                        lw=.6, capsize=1.5)
+        macro = pub.groupby("agent").hd.mean()
+        for name, ls in (("pub_UniAD", "--"), ("pub_LTF", "-."), ("pub_VAD", ":")):
+            ax.axhline(macro[name], color="#7F7F7F", ls=ls, lw=.7, label=f"{name[4:]} (published)")
+        short = {"alpamayo": "Alpamayo", "cinque": "Cinque", "lebowski": "Lebowski", "ltf": "LTF", "cv": "CV"}
+        ax.set_xticks(x, [short[a] for a in ags])
+        ax.set_ylabel("HD-Score")
+        from matplotlib.patches import Patch
+        h, l = ax.get_legend_handles_labels()
+        h = [Patch(facecolor="#555555", edgecolor="k", lw=.4), Patch(facecolor="#555555", alpha=.45, edgecolor="k",
+                                                                      lw=.4)] + h[:3]
+        l = ["official controller", "PR #57 heading fix"] + l[:3]
+        ax.legend(h, l, fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=3)
+        ax.grid(True, axis="y")
+        t = tab.set_index(["agent", "controller"])
+        rows = [(a, c) for a in ags for c in ("official", "fixed") if (a, c) in t.index]
+        left = np.zeros(len(rows))
+        for e in ENDS[:-1]:
+            v = np.array([t.loc[r, f"end_{e}"] for r in rows])
+            bx.barh(np.arange(len(rows)), v, left=left, color=END_COLOR[e], label=e.replace("_", " "))
+            left += v
+        bx.set_yticks(np.arange(len(rows)), [f"{MODEL_NAME[a].replace('openpilot ', 'op ')}, {c}" for a, c in rows])
+        bx.invert_yaxis()
+        bx.set_xlabel("fraction of scenarios")
+        bx.legend(fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.25), ncol=3)
+        fig.tight_layout()
+        P.save(fig, FIG, "hugsim-exam-scores")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("rate")
     c = sub.add_parser("check")
     c.add_argument("traces")
+    sub.add_parser("results")
     a = ap.parse_args()
-    {"rate": cmd_rate, "check": cmd_check}[a.cmd](a)
+    {"rate": cmd_rate, "check": cmd_check, "results": cmd_results}[a.cmd](a)
