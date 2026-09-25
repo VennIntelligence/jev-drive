@@ -2883,7 +2883,7 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 
 **P5 / P6 接真实 planner 的闭环（2026-09-25，[scorecard](../todos/2026-09-23-tfv6-controller/controller-scorecard.md) 末节）。** TFv6 16 条 held-out 路线 × 2 seed、TCP 8 条路线子集。P6 = P5 + 终点逼近只对 ≤ 5 Hz 的 plan 启用。TFv6 平均 DS：P5 87.3、P6 87.1，与 C 86.5、D 86.0 同档（A 94.1）；碰撞 4 / 5 次（C 6、D 5）；可行 plan 的 0.5 s 位移误差 0.23–0.24 m，介于 B 0.33 与 C/D 0.09 之间；相对 A 的 DS −6.8 [−18.2, +1.3]、−6.9 [−21.1, +3.9]，与 C/D 一样未确立非劣。TCP 子集上 P5/P6 的额外 jerk 4.7 m/s³，低于 C 6.2、D 5.9。1825、4183 两条路线 P5/P6 两个 seed 都失败而 C/D 完成：逐帧看是 TFv6 起步给出约 3 s 内 0→11 m/s 并转弯的不可行 plan，P 系列近乎全油门忠实执行，C 更保守，P 以更高速度进路口撞车。读法：执行层越忠实，越暴露与 A 共训的模型 plan 的激进，A 的滞后在闭环里起可行性整形作用。是否给 P 系列加显式可行性整形（限制 plan 要求的加速度）是一个设计选择，需在 dev 上登记后再测。
 
-## 42. 行人信息在 openpilot 的 vision 层就没有；配对差分监督在 cut-in 上有用而 hard-example 重加权没用，但救不回行人（**待定**，P5 v0，25 条路线、一个 expert）
+## 42. 行人信息在 openpilot 的 vision 层就没有；双流 reaction head 用配对差分监督能让行人翻转到 43%，hard-example 重加权不能（**待定**，P5 v1 BehaviorAgent 集，101 条路线）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
 接第 40 条和 [op-temporal-p5-and-route](../todos/2026-09-25-openpilot-temporal-p5-and-route.md) 的实验 1：openpilot `temporal` 在 cut-in 上 `ridge_late` 就翻转 86–89%，行人上 probe 0.50–0.53、翻转 0。
@@ -2900,11 +2900,22 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 仍在噪声门槛之下；训练 fold 内的拟合斜率只有中位约 0.12（cut-in 0.23–0.48），说明 pooled 的 Qwen ⊕ openpilot 特征连训练对上的行人反应量都线性读不出来。
 判据（行人 ≥ 20% 且 CI 下端 > null false-flip）没有一个 arm 过。
 
+**2026-09-26 就地修正（P5 v1 出数后）**：本条原标题是「……配对差分在 cut-in 上有用而 hard-example 重加权没用，**但救不回行人**」，
+正文把 v0 上行人翻转为 0 解释为「pooled 特征连训练对上的行人反应量都线性读不出来，瓶颈在输入表征」。**这个解释是错的**：在 P5 v1 的 BehaviorAgent 集上
+（101 条路线、行人 reactive 帧 406 个，特征、head、判据、λ 网格一字不改），配对差分双流 arm 行人翻转 **43.3% [35.0, 50.7]（Cinque）/ 41.6% [32.4, 50.0]（Lebowski）**，
+cut-in 对 prior +3.1 / +6.7 pp（CI 不跨零），样本外 null false-flip 5.1% / 5.0%，按预登记三条都过；hard-example 重加权与均匀 imitation 行人仍是 0–3%。
+训练集上的行人拟合斜率从 0.12 升到 0.26–0.31。所以 v0 的零是**数据量**不够（134 个行人 reactive 帧、每个 family 5 条路线），不是表征上限，
+这正是本条原先写下的推翻条件（「M-C 在 v1 上行人翻转过 20%」）。两路分工：只用 Qwen 流行人 42% 但 cut-in 显著变差，只用 openpilot 流 cut-in 最好但行人 7–18%——
+第 25 条「continuation prior + 配对监督的 reaction decoder」的结构在开环上第一次得到正向结果。代价：DynamicObjectCrossing 的 non-reactive 帧翻转 0.3% → 11.7%（比 expert 早减速）。
+D0 在 v1 两套集合上复现（vision 层行人 AUC 0.509–0.514，都不过），这一半不变。
+PDM-Lite 集上所有考生（含 prior）逐帧翻转都接近 0：PDM-Lite 在因素可见后 0.4 s 就反应，reactive 帧落在视觉证据出现之前，这套标签需要另定计分窗口，不参与本条判定。
+全部表与图：[reactivity todo](../todos/2026-09-25-reactivity-program.md) 的「P5 v1 上的复跑」。
+
 **状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
 I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
 
-**对选型的含义（推测）**：行人这条线的瓶颈是输入表征的空间分辨率，而不是训练信号；下一步是空间 token 上的 readout（P2 的 attention head 那一格）或 video token，
-而不是再换 loss。cut-in 这类 openpilot 训练分布内的反应，配对差分 + openpilot 冻结特征就够。
+**对选型的含义（推测，2026-09-26 改写）**：原先推测「行人的瓶颈是 pooled 表征，要换空间 token」，v1 否定了它的必要性——pooled Qwen `L18_last` ⊕ openpilot `temporal` + 配对差分在足够的配对数据上就够。
+下一步是闭环（反应通道进控制器）和更难的行人 family（VehicleTurningRoutePedestrian 仍为 0，只有 10 帧）。原先那句保留在此以便对照：「行人这条线的瓶颈是输入表征的空间分辨率，而不是训练信号」——已被推翻。
 **会推翻本条的证据**：P5 v1（更多路线、PDM-Lite 标签）上 vision 层行人 AUC 过 0.60；或 M-C 在 v1 上行人翻转过 20%（那说明 v0 是数据量问题，不是表征问题）。
 
 ## 43. 融合前诊断：Qwen 在融合里不加分（冗余），行人既不在 openpilot 也不在 Qwen 的线性 / 空间读出里；现成 SAM 3.1 近处看得见、远处放不准，规则门在它的状态上拿到行人 family 的第一个非零翻转（**待定**，P5 v0 + WOD + nuScenes，I1 之前）

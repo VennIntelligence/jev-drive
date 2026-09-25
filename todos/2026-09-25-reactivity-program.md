@@ -280,3 +280,52 @@ CARLA 实际并发从 11 个实例逐步加到 30 个（GPU 1/3/0 各加一条�
 **对 I1 目标的判定**：行人两个 family 都进了合并（两个 expert 都是），行人 reactive 帧从 134 增到 309–406；路线 25 → 101。
 **Light 没达到**：BehaviorAgent 集里 Light 进了合并但只有 9 个 reactive 帧（和 v0 一样），PDM-Lite 集里 Light 只有 2 个观测帧（24 对因为 expert 在可见之前就反应而被剔除）。
 Light 这一格按现有生成方式补不起来，要换判定可见性的办法或专门的路线。
+
+### P5 v1 上的复跑（按偏离 7；2026-09-26 00:3x 出数）
+
+抽取与考试由 `reactivity-v1-*` 链自动跑完（Qwen 抽取的优化与等价性见上面「P5 v1 复跑链」一节）。小表：
+[v1-ba](../research/results/reactivity/v1-ba/)、[v1-pdm](../research/results/reactivity/v1-pdm/)。
+
+**D0 在 v1 上复现**（行人 4 family 合并）：
+
+| 集合（观测帧 / 路线） | Qwen | Cinque `temporal` → `vision`（Δ [CI]） | Lebowski `temporal` → `vision`（Δ [CI]） | 判定 |
+|:--|--:|:--|:--|:--|
+| v0（1999 / 20） | 0.620 | 0.507 → 0.515（+0.009 [−0.003, +0.017]） | 0.517 → 0.519（+0.002 [−0.025, +0.051]） | 不过 |
+| v1 BA（4414 / 42） | 0.578 | 0.508 → 0.509（+0.001 [−0.007, +0.007]） | 0.513 → 0.514（+0.001 [−0.009, +0.010]） | 不过 |
+| v1 PDM-Lite（5777 / 34） | 0.547 | 0.503 → 0.509（+0.006 [−0.003, +0.015]） | 0.504 → 0.509（+0.005 [+0.001, +0.009]） | 不过（AUC < 0.60） |
+
+三套集合结论相同：openpilot 的 vision 层在行人上 AUC ≈ 0.51，行人信息在 vision encoder 就没有。M-A 单独不够。
+
+![D0 v1 BA](../research/figs/reactivity-d0-vision-probe-v1ba.png)
+
+v1 BehaviorAgent 集上的 D0（读法同 v0 那张）：行人一组仍贴着 0.5；DynamicObjectCrossing 上 vision 比 `temporal` 高 0.02–0.03（CI 不跨零）但 AUC 只有 0.57–0.58。
+
+**M-C 在 v1 BehaviorAgent 集上过了**（主判定用的是预登记网格；406 个行人 reactive 帧，49 条路线）：
+
+| arm（Cinque；Lebowski 在括号里） | 行人翻转 [CI] | cut-in 对 prior 的 Δ [CI] | 合并翻转 | 样本外 null false-flip | 判定 |
+|:--|:--|:--|--:|--:|:--|
+| prior（`ridge_late` `temporal`） | 0.2%（2.7%） | — | 48.2% | 5.1% | — |
+| **配对差分，双流** | **43.3% [35.0, 50.7]（41.6% [32.4, 50.0]）** | **+3.1 [+0.6, +5.8]（+6.7 [+1.6, +12.1]）** | 66.3% | 5.1%（5.0%） | **过（两个模型）** |
+| 配对差分，只 Qwen | 42.1%（39.2%） | −5.5 [−11.1, −1.4]（−6.2） | 60.5% | 4.9% | 不过（cut-in 变差） |
+| 配对差分，只 openpilot | 6.9%（17.7%） | +8.1（+13.2） | 55.8% | 5.0% | 不过（行人） |
+| hard-example 重加权 | 0.0%（3.4%） | +0.6（−0.7） | 48.5% | 4.9% | 不过（行人） |
+| 均匀 imitation（参照） | 0.0%（3.4%） | +1.0（+1.0） | 48.8% | 5.0% | 不过（行人） |
+| 配对差分，μ = 0（敏感性） | 37.4%（35.5%） | −10.2 [−17.8, −3.7]（−2.5） | 55.8% | 5.5% | Cinque 不过 / Lebowski 过 |
+
+逐 family（配对双流，Cinque）：DynamicObjectCrossing 47.7%（293 帧）、ParkingCrossingPedestrian 32.8%（76）、PedestrianCrossing 40.7%（27）、
+VehicleTurningRoutePedestrian 0%（10）；反方向翻转全部为 0。**代价**：DynamicObjectCrossing 的 non-reactive 帧上翻转从 0.3% 升到 11.7%（只 Qwen 12.9%），
+也就是行人一出现就减速、比 expert 早；null false-flip 没动。训练 fold 内行人配对目标的拟合斜率从 v0 的中位约 0.12 升到 0.26–0.31。
+
+![M-C v1 BA](../research/figs/reactivity-mc-flips-cinque-v1ba.png)
+
+v1 BehaviorAgent 集，Cinque，读法同 v0 那张：行人一栏只有带 Qwen 流的配对差分 arm 起来；cut-in 一栏双流不掉、只 Qwen 掉；重加权与均匀两个对照在行人上仍是 0。
+
+**判定**：按偏离 4 的三条，**配对差分双流 arm 在两个模型上都过，hard-example 对照不过**——这正是预登记的主问题（配对结构必要、纯加权不够）的正向结果。
+两条流分工清楚：Qwen 流带来行人（只 Qwen 42%，只 openpilot 7–18%），openpilot 流保住 cut-in（只 Qwen 时 cut-in 显著变差）。
+v0 上的失败因此不是表征上限，而是**数据量**：同一套特征与 head，行人 reactive 帧 134 → 406、路线 25 → 101，训练集上拟合斜率翻倍，考试翻转从 0 到 43%。
+第 42 条原来写的「pooled 特征读不出行人，瓶颈在输入」被这一条推翻（该条预登记的推翻条件正是这个）。
+
+**PDM-Lite 集上所有考生（包括 prior）都几乎不翻**：prior 合并翻转 0.5%（BA 集 48%），cut-in 0.4%，配对双流行人 1.0%，全部不过。
+原因在考卷，不在考生：PDM-Lite 从可见到开始反应中位 0.4 s（BA 5.6 s），reactive 帧几乎都在因素刚可见的最初几帧，
+那时 prior 在 cut-in 上的符号一致率降到 40–58%（机会水平），画面里还看不出要反应。也就是说，**用会提前减速的特权 expert 出标签时，
+reactive 帧落在视觉证据出现之前，逐帧翻转率测不出东西**；PDM-Lite 集适合用按对计分或「可见后 t 秒」的窗口，这要另行预登记，不在本轮判定里。

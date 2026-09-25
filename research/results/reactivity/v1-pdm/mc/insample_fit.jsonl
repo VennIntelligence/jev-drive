@@ -1,0 +1,60 @@
+{"t": 1790348670.814, "kind": "mc_insample", "fold": 0, "arm": "pair", "model": "cinque", "group": "pedestrian", "n": 291, "slope_fit": 0.019290896966482216, "slope_prior": 0.0011360850521900975}
+{"t": 1790348670.816, "kind": "mc_insample", "fold": 0, "arm": "pair", "model": "cinque", "group": "cut-in", "n": 394, "slope_fit": 0.015273337255999647, "slope_prior": -0.005398849006999493}
+{"t": 1790348673.595, "kind": "mc_insample", "fold": 0, "arm": "pair qwen", "model": "cinque", "group": "pedestrian", "n": 291, "slope_fit": 0.019002485053216594, "slope_prior": 0.0011360850521900975}
+{"t": 1790348673.596, "kind": "mc_insample", "fold": 0, "arm": "pair qwen", "model": "cinque", "group": "cut-in", "n": 394, "slope_fit": -0.0016503953370250418, "slope_prior": -0.005398849006999493}
+{"t": 1790348673.645, "kind": "mc_insample", "fold": 0, "arm": "pair op", "model": "cinque", "group": "pedestrian", "n": 291, "slope_fit": 6.573830866946689e-06, "slope_prior": 0.0011360850521900975}
+{"t": 1790348673.646, "kind": "mc_insample", "fold": 0, "arm": "pair op", "model": "cinque", "group": "cut-in", "n": 394, "slope_fit": 0.016168419483887468, "slope_prior": -0.005398849006999493}
+{"t": 1790348683.857, "kind": "mc_insample", "fold": 1, "arm": "pair", "model": "cinque", "group": "pedestrian", "n": 268, "slope_fit": 0.019353316938103535, "slope_prior": 0.0008569891564318482}
+{"t": 1790348683.858, "kind": "mc_insample", "fold": 1, "arm": "pair", "model": "cinque", "group": "cut-in", "n": 338, "slope_fit": -0.010645745930431683, "slope_prior": -0.04047214879596934}
+{"t": 1790348686.786, "kind": "mc_insample", "fold": 1, "arm": "pair qwen", "model": "cinque", "group": "pedestrian", "n": 268, "slope_fit": 0.0034654469796660927, "slope_prior": 0.0008569891564318482}
+{"t": 1790348686.787, "kind": "mc_insample", "fold": 1, "arm": "pair qwen", "model": "cinque", "group": "cut-in", "n": 338, "slope_fit": -0.041767622064043095, "slope_prior": -0.04047214879596934}
+{"t": 1790348687.067, "kind": "mc_insample", "fold": 1, "arm": "pair op", "model": "cinque", "group": "pedestrian", "n": 268, "slope_fit": 0.00032171551646871294, "slope_prior": 0.0008569891564318482}
+{"t": 1790348687.085, "kind": "mc_insample", "fold": 1, "arm": "pair op", "model": "cinque", "group": "cut-in", "n": 338, "slope_fit": -0.024543036855044387, "slope_prior": -0.04047214879596934}
+{"t": 1790348698.105, "kind": "mc_insample", "fold": 2, "arm": "pair", "model": "cinque", "group": "pedestrian", "n": 231, "slope_fit": 0.0270141059032365, "slope_prior": 0.004073737646119914}
+{"t": 1790348698.123, "kind": "mc_insample", "fold": 2, "arm": "pair", "model": "cinque", "group": "cut-in", "n": 391, "slope_fit": -0.006199521010391203, "slope_prior": -0.03888032112828716}
+{"t": 1790348701.14, "kind": "mc_insample", "fold": 2, "arm": "pair qwen", "model": "cinque", "group": "pedestrian", "n": 231, "slope_fit": 0.024521837925721275, "slope_prior": 0.004073737646119914}
+{"t": 1790348701.162, "kind": "mc_insample", "fold": 2, "arm": "pair qwen", "model": "cinque", "group": "cut-in", "n": 391, "slope_fit": -0.028394800967854517, "slope_prior": -0.03888032112828716}
+{"t": 1790348701.39, "kind": "mc_insample", "fold": 2, "arm": "pair op", "model": "cinque", "group": "pedestrian", "n": 231, "slope_fit": 0.007512346910088938, "slope_prior": 0.004073737646119914}
+{"t": 1790348701.409, "kind": "mc_insample", "fold": 2, "arm": "pair op", "model": "cinque", "group": "cut-in", "n": 391, "slope_fit": -0.007240757657601006, "slope_prior": -0.03888032112828716}
+{"t": 1790348712.433, "kind": "mc_insample", "fold": 3, "arm": "pair", "model": "cinque", "group": "pedestrian", "n": 273, "slope_fit": 0.023609073366083987, "slope_prior": 0.0016750963714552763}
+{"t": 1790348712.434, "kind": "mc_insample", "fold": 3, "arm": "pair", "model": "cinque", "group": "cut-in", "n": 336, "slope_fit": -0.04385807931880656, "slope_prior": -0.0416511076373276}
+{"t": 1790348715.461, "kind": "mc_insample", "fold": 3, "arm": "pair qwen", "model": "cinque", "group": "pedestrian", "n": 273, "slope_fit": 0.021308756275881576, "slope_prior": 0.0016750963714552763}
+{"t": 1790348715.479, "kind": "mc_insample", "fold": 3, "arm": "pair qwen", "model": "cinque", "group": "cut-in", "n": 336, "slope_fit": -0.04667799936203732, "slope_prior": -0.0416511076373276}
+{"t": 1790348715.713, "kind": "mc_insample", "fold": 3, "arm": "pair op", "model": "cinque", "group": "pedestrian", "n": 273, "slope_fit": 0.004945137294925519, "slope_prior": 0.0016750963714552763}
+{"t": 1790348715.731, "kind": "mc_insample", "fold": 3, "arm": "pair op", "model": "cinque", "group": "cut-in", "n": 336, "slope_fit": -0.04954502651634566, "slope_prior": -0.0416511076373276}
+{"t": 1790348727.29, "kind": "mc_insample", "fold": 4, "arm": "pair", "model": "cinque", "group": "pedestrian", "n": 173, "slope_fit": 0.030958141729734306, "slope_prior": 0.009152596701397167}
+{"t": 1790348727.309, "kind": "mc_insample", "fold": 4, "arm": "pair", "model": "cinque", "group": "cut-in", "n": 437, "slope_fit": -0.021941362655865847, "slope_prior": -0.02362666143937461}
+{"t": 1790348730.314, "kind": "mc_insample", "fold": 4, "arm": "pair qwen", "model": "cinque", "group": "pedestrian", "n": 173, "slope_fit": 0.02710197488237529, "slope_prior": 0.009152596701397167}
+{"t": 1790348730.333, "kind": "mc_insample", "fold": 4, "arm": "pair qwen", "model": "cinque", "group": "cut-in", "n": 437, "slope_fit": -0.027061165223381402, "slope_prior": -0.02362666143937461}
+{"t": 1790348730.589, "kind": "mc_insample", "fold": 4, "arm": "pair op", "model": "cinque", "group": "pedestrian", "n": 173, "slope_fit": 0.011685547043989688, "slope_prior": 0.009152596701397167}
+{"t": 1790348730.608, "kind": "mc_insample", "fold": 4, "arm": "pair op", "model": "cinque", "group": "cut-in", "n": 437, "slope_fit": -0.022020548748595815, "slope_prior": -0.02362666143937461}
+{"t": 1790348741.664, "kind": "mc_insample", "fold": 0, "arm": "pair", "model": "lebowski", "group": "pedestrian", "n": 291, "slope_fit": 0.01737705764756467, "slope_prior": -0.005174834387614905}
+{"t": 1790348741.673, "kind": "mc_insample", "fold": 0, "arm": "pair", "model": "lebowski", "group": "cut-in", "n": 394, "slope_fit": 0.01433294065138641, "slope_prior": -0.027827340242532778}
+{"t": 1790348744.693, "kind": "mc_insample", "fold": 0, "arm": "pair qwen", "model": "lebowski", "group": "pedestrian", "n": 291, "slope_fit": 0.012415647669561481, "slope_prior": -0.005174834387614905}
+{"t": 1790348744.702, "kind": "mc_insample", "fold": 0, "arm": "pair qwen", "model": "lebowski", "group": "cut-in", "n": 394, "slope_fit": -0.02077113423124393, "slope_prior": -0.027827340242532778}
+{"t": 1790348744.969, "kind": "mc_insample", "fold": 0, "arm": "pair op", "model": "lebowski", "group": "pedestrian", "n": 291, "slope_fit": -0.0009746951935460459, "slope_prior": -0.005174834387614905}
+{"t": 1790348744.979, "kind": "mc_insample", "fold": 0, "arm": "pair op", "model": "lebowski", "group": "cut-in", "n": 394, "slope_fit": 0.024827485046664995, "slope_prior": -0.027827340242532778}
+{"t": 1790348756.81, "kind": "mc_insample", "fold": 1, "arm": "pair", "model": "lebowski", "group": "pedestrian", "n": 268, "slope_fit": 0.01874837821471641, "slope_prior": -0.0022744764026443962}
+{"t": 1790348756.829, "kind": "mc_insample", "fold": 1, "arm": "pair", "model": "lebowski", "group": "cut-in", "n": 338, "slope_fit": -0.01554215467086358, "slope_prior": -0.08649002737519353}
+{"t": 1790348760.052, "kind": "mc_insample", "fold": 1, "arm": "pair qwen", "model": "lebowski", "group": "pedestrian", "n": 268, "slope_fit": 0.0004100834405283462, "slope_prior": -0.0022744764026443962}
+{"t": 1790348760.072, "kind": "mc_insample", "fold": 1, "arm": "pair qwen", "model": "lebowski", "group": "cut-in", "n": 338, "slope_fit": -0.08484131620751491, "slope_prior": -0.08649002737519353}
+{"t": 1790348760.354, "kind": "mc_insample", "fold": 1, "arm": "pair op", "model": "lebowski", "group": "pedestrian", "n": 268, "slope_fit": -0.00023949692042872305, "slope_prior": -0.0022744764026443962}
+{"t": 1790348760.373, "kind": "mc_insample", "fold": 1, "arm": "pair op", "model": "lebowski", "group": "cut-in", "n": 338, "slope_fit": -0.0040456011867331144, "slope_prior": -0.08649002737519353}
+{"t": 1790348771.702, "kind": "mc_insample", "fold": 2, "arm": "pair", "model": "lebowski", "group": "pedestrian", "n": 231, "slope_fit": 0.027862788599788673, "slope_prior": -0.0014403394482129083}
+{"t": 1790348771.721, "kind": "mc_insample", "fold": 2, "arm": "pair", "model": "lebowski", "group": "cut-in", "n": 391, "slope_fit": -0.0008882908148945429, "slope_prior": -0.06223015310085026}
+{"t": 1790348774.742, "kind": "mc_insample", "fold": 2, "arm": "pair qwen", "model": "lebowski", "group": "pedestrian", "n": 231, "slope_fit": 0.019032328739865045, "slope_prior": -0.0014403394482129083}
+{"t": 1790348774.762, "kind": "mc_insample", "fold": 2, "arm": "pair qwen", "model": "lebowski", "group": "cut-in", "n": 391, "slope_fit": -0.04686133741828073, "slope_prior": -0.06223015310085026}
+{"t": 1790348775.044, "kind": "mc_insample", "fold": 2, "arm": "pair op", "model": "lebowski", "group": "pedestrian", "n": 231, "slope_fit": 0.008491089445360344, "slope_prior": -0.0014403394482129083}
+{"t": 1790348775.063, "kind": "mc_insample", "fold": 2, "arm": "pair op", "model": "lebowski", "group": "cut-in", "n": 391, "slope_fit": 0.0070098877695234174, "slope_prior": -0.06223015310085026}
+{"t": 1790348785.987, "kind": "mc_insample", "fold": 3, "arm": "pair", "model": "lebowski", "group": "pedestrian", "n": 273, "slope_fit": 0.02405880432314161, "slope_prior": -0.0006609414240649141}
+{"t": 1790348786.006, "kind": "mc_insample", "fold": 3, "arm": "pair", "model": "lebowski", "group": "cut-in", "n": 336, "slope_fit": -0.0364434173384325, "slope_prior": -0.05608916824016323}
+{"t": 1790348789.009, "kind": "mc_insample", "fold": 3, "arm": "pair qwen", "model": "lebowski", "group": "pedestrian", "n": 273, "slope_fit": 0.019616548768294186, "slope_prior": -0.0006609414240649141}
+{"t": 1790348789.029, "kind": "mc_insample", "fold": 3, "arm": "pair qwen", "model": "lebowski", "group": "cut-in", "n": 336, "slope_fit": -0.05837819795483919, "slope_prior": -0.05608916824016323}
+{"t": 1790348789.306, "kind": "mc_insample", "fold": 3, "arm": "pair op", "model": "lebowski", "group": "pedestrian", "n": 273, "slope_fit": 0.005085064935922747, "slope_prior": -0.0006609414240649141}
+{"t": 1790348789.323, "kind": "mc_insample", "fold": 3, "arm": "pair op", "model": "lebowski", "group": "cut-in", "n": 336, "slope_fit": -0.023969208989255975, "slope_prior": -0.05608916824016323}
+{"t": 1790348800.176, "kind": "mc_insample", "fold": 4, "arm": "pair", "model": "lebowski", "group": "pedestrian", "n": 173, "slope_fit": 0.036338845829306285, "slope_prior": 0.011064808288704703}
+{"t": 1790348800.195, "kind": "mc_insample", "fold": 4, "arm": "pair", "model": "lebowski", "group": "cut-in", "n": 437, "slope_fit": -0.025112207022530707, "slope_prior": -0.04740600740757552}
+{"t": 1790348803.193, "kind": "mc_insample", "fold": 4, "arm": "pair qwen", "model": "lebowski", "group": "pedestrian", "n": 173, "slope_fit": 0.031037887656200153, "slope_prior": 0.011064808288704703}
+{"t": 1790348803.212, "kind": "mc_insample", "fold": 4, "arm": "pair qwen", "model": "lebowski", "group": "cut-in", "n": 437, "slope_fit": -0.046213172453349056, "slope_prior": -0.04740600740757552}
+{"t": 1790348803.495, "kind": "mc_insample", "fold": 4, "arm": "pair op", "model": "lebowski", "group": "pedestrian", "n": 173, "slope_fit": 0.01750403604856061, "slope_prior": 0.011064808288704703}
+{"t": 1790348803.514, "kind": "mc_insample", "fold": 4, "arm": "pair op", "model": "lebowski", "group": "cut-in", "n": 437, "slope_fit": -0.017072473232079017, "slope_prior": -0.04740600740757552}

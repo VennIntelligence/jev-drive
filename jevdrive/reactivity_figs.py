@@ -23,7 +23,7 @@ TAPS = {"op-cinque temporal": ("Cinque temporal", "#0072B2"), "op-cinque vision"
         "op-lebowski vision": ("Lebowski vision", "#E69F00"), "op-lebowski hidden": ("Lebowski hidden", "#CC79A7")}
 
 
-def d0(run: Path, out: Path):
+def d0(run: Path, out: Path, name: str = "reactivity-d0-vision-probe"):
     import matplotlib.pyplot as plt
     ps = _style()
     s = pd.read_csv(run / "probe_auc_paired_scopes.csv")
@@ -64,14 +64,14 @@ def d0(run: Path, out: Path):
     ax.legend(ncol=2, fontsize=6.5, loc="upper left")
     ps.panel(ax, "(b)")
     fig.tight_layout(pad=0.3)
-    ps.save(fig, out / "reactivity-d0-vision-probe")
+    ps.save(fig, out / name)
     plt.close(fig)
 
 
 MC_SCOPES = ["pedestrian", "cut-in", "pooled"]
 
 
-def mc(run: Path, out: Path, model: str = "cinque"):
+def mc(run: Path, out: Path, model: str = "cinque", name: str = ""):
     import matplotlib.pyplot as plt
     ps = _style()
     c = pd.read_csv(run / "criteria.csv")
@@ -96,14 +96,14 @@ def mc(run: Path, out: Path, model: str = "cinque"):
         ax.errorbar(xi[ok], v[ok], yerr=[v[ok] - lo[ok], hi[ok] - v[ok]], fmt="none", ecolor="#333333", elinewidth=0.5, capsize=1.2)
         ax.plot(xi[2] + w * 0.3, r.null_ff_oos, marker="v", color="#333333", ms=2.5)
     ax.set_xticks(np.arange(len(MC_SCOPES)))
-    ax.set_xticklabels(["Pedestrian families", "Cut-in families", "Pooled (P5 v0)"])
+    ax.set_xticklabels(["Pedestrian families", "Cut-in families", "Pooled"])
     ax.set_ylabel("Directional flip rate")
     ax.axhline(0.2, color=ps.BASELINE, linewidth=0.5, linestyle=":")
     ax.set_ylim(0, 1.05)
     ps.bars(ax)
     ax.legend(ncol=4, fontsize=6.5, loc="upper left")
     fig.tight_layout(pad=0.3)
-    ps.save(fig, out / f"reactivity-mc-flips-{model}")
+    ps.save(fig, out / (name or f"reactivity-mc-flips-{model}"))
     plt.close(fig)
 
 
@@ -114,10 +114,14 @@ def main():
     ap.add_argument("--run-dir", required=True)
     ap.add_argument("--out", default="research/figs")
     ap.add_argument("--model", default="cinque")
+    ap.add_argument("--name", default="")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    d0(Path(a.run_dir), out) if a.fig == "d0" else mc(Path(a.run_dir), out, a.model)
+    if a.fig == "d0":
+        d0(Path(a.run_dir), out, a.name or "reactivity-d0-vision-probe")
+    else:
+        mc(Path(a.run_dir), out, a.model, a.name)
 
 
 if __name__ == "__main__":
