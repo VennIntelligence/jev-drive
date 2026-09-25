@@ -241,7 +241,27 @@ def parse_args():
     return p.parse_args()
 
 
+def log_signals():
+    """Block the catchable termination signals in every thread and log who sent one (sender pid and its command line)
+    before exiting, so an external kill leaves a trace. SIGKILL cannot be caught; the launcher logs that case."""
+    import signal
+    sigs = {signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT}
+    signal.pthread_sigmask(signal.SIG_BLOCK, sigs)
+
+    def wait():
+        info = signal.sigwaitinfo(sigs)
+        try:
+            cmd = Path("/proc/%d/cmdline" % info.si_pid).read_bytes().replace(b"\0", b" ").decode()[:300]
+        except OSError:
+            cmd = "?"
+        print("%s received signal %d from pid %d uid %d: %s" % (time.strftime("%F %T"), info.si_signo, info.si_pid,
+                                                              info.si_uid, cmd), flush=True)
+        os._exit(128 + info.si_signo)
+    threading.Thread(target=wait, daemon=True).start()
+
+
 def main():
+    log_signals()
     a = parse_args()
     t0 = time.time()
     policy = Alpamayo(a) if a.model == "alpamayo" else OpenpilotModel(a)

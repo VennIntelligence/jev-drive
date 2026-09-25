@@ -31,6 +31,13 @@ the pre-registered smoke:
   "controller"      "fixed" (the pre-registered smoke: scripts/b2d_controller.py) | "zoo_pid": Bench2DriveZoo's
                     UniAD/VAD PID, vendored verbatim (scripts/b2d_zoo_pid_wrap.py -> b2d_zoo_pid.py). It is
                     evaluated once per plan and its control held until the next plan, as the 2 Hz AD-MLP agent does
+  "engage_s"        0 | 5.0: engage while rolling - the route oracle (RouteAdapter at 3 m/s through the fixed
+                    controller) drives from the route start until the model's warm-up is over, then hands over;
+                    later stops and resumes are the model's own
+  "desire"          true (pre-registered: turn / lane-change desire pulses from route commands) | false
+  "junction_handover_m"  0 | d: within d m before a LEFT / RIGHT route command and through it, steering comes from the
+                    route oracle while throttle / brake stay the model's controller (a driver steering through the
+                    turn with ACC on)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -155,6 +162,7 @@ class ZeroShotAgent(AutonomousAgent):
         self.latest = {t: (-1, None) for t in self.cam_tags}
         self.first_frame = None
         self.first_set_t = None
+        self.route_t0, self.engaged, self.warm_now = None, False, True
         self.curvature = None                    # latest desired curvature (1/m, right-positive), lateral=curvature
         self.last_steer = 0.0
         self.poses = deque(maxlen=64)            # (sim time, xy, yaw) rear axle, world
@@ -190,7 +198,15 @@ class ZeroShotAgent(AutonomousAgent):
         self.route = Route(self._dense_plan)
         if self.zoo is not None:
             self.zoo.route(self)
-        self.oracle = RouteAdapter(world, float(self.cfg.get("cruise_mps", 8.0))) if self.drive == "oracle" else None
+        self.engage_s = float(self.cfg.get("engage_s", 0.0))
+        self.handover_m = float(self.cfg.get("junction_handover_m", 0.0))
+        self.guide = self.drive != "oracle" and (self.engage_s > 0 or self.handover_m > 0)
+        assert not self.guide or self.zoo is not None, "engage / junction handover are defined for controller zoo_pid"
+        cruise = 3.0 if self.guide else float(self.cfg.get("cruise_mps", 8.0))
+        self.oracle = RouteAdapter(world, cruise) if (self.drive == "oracle" or self.guide) else None
+        if hasattr(self, "out"):   # route geometry and commands, for the junction analysis
+            with open(os.path.join(self.out, "route.json"), "w") as fh:
+                json.dump({"xy": np.round(self.route.xy, 3).tolist(), "cmd": self.route.cmd.tolist()}, fh)
 
     # ---- per tick -------------------------------------------------------------------------------------------
     def __call__(self):
@@ -233,16 +249,31 @@ class ZeroShotAgent(AutonomousAgent):
             self.n_sets += 1
             if (self.n_sets - 1) % self.plan_every == 0 and self.poses:
                 plan_ms += self._plan(speed)
+        if self.guide and self.poses and (self.tick - 1) % 4 == 0:   # route oracle, 5 Hz, as b2d_agent
+            self.controller.update(self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2]), now)
+        o_throttle, o_steer, o_brake = self.controller.step(now, speed, -world_gyro)
         if self.zoo is not None:
             throttle, steer, brake = self.zoo_control or (0.0, 0.0, 1.0)
             reason = "zoo_pid" if self.zoo_control else "no_trajectory"
         else:
-            throttle, steer, brake = self.controller.step(now, speed, -world_gyro)
+            throttle, steer, brake = o_throttle, o_steer, o_brake
             reason = self.controller.diagnostics["reason"]
         if self.native:
             throttle, steer, brake, reason = self._native_control(speed, throttle, steer, brake, reason)
         elif self.zoo is None and self.lateral == "curvature" and self.curvature is not None and self.controller.diagnostics["reason"] == "tracking":
             steer = self._curvature_steer(speed)
+        if self.guide:
+            if self.route_t0 is None:
+                self.route_t0 = now
+            elapsed = now - self.route_t0
+            if not self.engaged and (self.engage_s <= 0 or (elapsed >= self.engage_s - 1e-6 and not self.warm_now)):
+                self.engaged = True
+            if not self.engaged:
+                throttle, steer, brake, reason = o_throttle, o_steer, o_brake, "engage_oracle"
+            elif self.handover_m > 0:
+                cmd, d = self.route.next_maneuver([LEFT, RIGHT])
+                if cmd in (LEFT, RIGHT) and d is not None and d <= self.handover_m:
+                    steer, reason = o_steer, reason + "+junction_steer"
         self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
         tick_ms = 1e3 * (time.perf_counter() - t_start)
@@ -327,7 +358,7 @@ class ZeroShotAgent(AutonomousAgent):
             meta["nav_text"] = self.route.nav_text()
         else:
             arrays = dict(cams)
-            meta["desire"] = self.route.desire()
+            meta["desire"] = self.route.desire() if self.cfg.get("desire", True) else DESIRE_NONE
         wire.send(self.sock, meta, arrays)
         info, out = wire.recv(self.sock)
         times = np.arange(1, 21) * 0.25
@@ -339,6 +370,7 @@ class ZeroShotAgent(AutonomousAgent):
         if self.first_set_t is None:
             self.first_set_t = t_frame
         warm = t_frame - self.first_set_t < self.warmup_s - 1e-6
+        self.warm_now = warm
         if self.drive == "oracle":
             drive_path = self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2])
         else:

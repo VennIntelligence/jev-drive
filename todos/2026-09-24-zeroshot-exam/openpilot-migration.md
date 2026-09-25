@@ -397,12 +397,58 @@ resume 或踩油门才重新起步，模型从来不需要自己决定“从静�
 基础设施：第 4 阶段结束后一个 policy server 进程被外部 SIGKILL（容器 cgroup 的 oom_kill 计数为 0，不是 OOM），脚本按
 预设判为基础设施失败（rc 3），`shadow-cinque` 没跑，全量按依赖没有启动。
 
+### D2. 适配层补两个缺口：起步与路口转向（预注册，写于 smoke2 之前，2026-09-25）
+
+用户的判断：从静止起步和“没有导航输入时怎么在路口转弯”都是**适配层**的问题，本该在打分之前查出来；以后任何外部模型进
+闭环打分前先过 [docs/zeroshot-adapters.md](../../docs/zeroshot-adapters.md) 的清单。这一节的规则都在 smoke2 之前写死。
+
+**1. engage while rolling（行驶中接管）。** 真车上 openpilot 在车已经在走的时候才被接管。做法：路线开始后，route oracle
+（`b2d_controller_adapter.RouteAdapter`，巡航 3 m/s，经预注册的固定控制器）开车，直到模型的 5 s 预热结束，然后交给
+模型；之后的每一次停车、再起步都是模型自己的，不再帮。用户给的条件是“v ≥ 3 m/s 或 5 s”，因为交接必须等预热结束
+（5 s 的 context），实际执行的是“5 s 后交接”，oracle 在这 5 s 里通常已经到 3 m/s。oracle 不避障、不看红绿灯，
+所以前 5 s 里的违规算在这个接管规则上。带这条规则的分数一律标成 **engaged**，和纯 smoke 分开报。
+
+**2. 路口转向，三种做法对比（都在 engaged 之上，控制器都是 Zoo PID 原样）：**
+
+| 变体 | 做法 | 路线信息从哪进 |
+|---|---|---|
+| (i) implicit | Zoo PID 原样，desire 关 | 只有 Zoo PID 的 target point：当 target 比 plan 的 aim 更直、或 plan 突变而 target 在前方 10 m 内时改用 target 转向 |
+| (ii) desire | (i) + 路线命令转成 desire 脉冲：LEFT/RIGHT 路口前 20 m 起 turnLeft/turnRight，变道段 laneChange（即预注册 smoke 的做法） | 模型的 desire 输入 + (i) |
+| (iii) handover | (i) + 在 LEFT/RIGHT 路线命令前 15 m 起到命令段结束，方向盘由 route oracle 给，油门刹车仍是 Zoo PID 按模型 plan 算 | 驾驶员自己打方向、ACC 管纵向；+ (i) |
+
+另外离线检查了模型是否懂 turn desire（`scripts/openpilot_desire_probe.py`：comma1M 8 段真实视频上每 10 s 给一次 1 s 的
+desire，和不给 desire 的同一段配对比较 plan 的横向位置），结果写在 D3。
+
+**smoke2**：9 条路线 = 5 条预注册 smoke 路线 + bench2drive220 里 4 类路口转弯场景各取 route id 最小的一条
+（NonSignalizedJunctionLeftTurn 2084、NonSignalizedJunctionRightTurn 2115、SignalizedJunctionLeftTurn 3936、
+SignalizedJunctionRightTurn 2050）。四个阶段：eng-implicit-lebowski、eng-desire-lebowski、eng-handover-lebowski、
+eng-implicit-cinque。指标（`scripts/zeroshot_b2d_junctions.py`）：DS、RC、route deviation 次数、驶出车道次数、碰撞次数，
+以及**路口通过率**：路线上每段连续的 LEFT/RIGHT 命令是一个转弯事件，车的真值轨迹到达其起点 5 m 内算“到达”，此后
+经过命令段终点再往前 10 m 那个路线点 3 m 内算“通过”；直行路口（STRAIGHT）单独统计。
+
+**选择规则（全量用哪个，脚本 `zeroshot_b2d_op.sh full` 自动执行，结果写入 `full-choice.txt`）：**
+
+- 转向做法：默认 (i)；侵入性更强的 (ii)、(iii) 只有在 9 条路线合并的转弯通过率比当前选中者高 ≥ 20 个百分点、且平均 DS
+  不低于它 5 以上时才替换（按 (i) → (ii) → (iii) 的顺序逐个比较）。选中 (iii) 时，全量分数标成
+  “openpilot + 路口脚本转向”。
+- 模型：纯 smoke 按 D 节规则选出 Lebowski（比 Cinque 高 17.8 DS）；在 engaged implicit 这一对上再按同一规则复核一次，
+  Cinque 平均 DS 高 ≥ 10 才改用 Cinque。
+- 全量：选中的模型 × 选中的转向做法 × engaged，220 条，`--towns all`，4 个 worker。DS 报均值与按路线 bootstrap 的 95% CI，
+  SR 按 Bench2Drive 定义报 Wilson 95% CI，另报没跑完的路线数。
+
+**基础设施加固**：policy server 放进自己的 session / 进程组（`setsid`，进程名 `opb2d-policy-<model>`），server 里阻塞并记录
+所有可捕获的终止信号的发送者（pid、uid、命令行）；launcher 每 30 s 存一份全部进程快照（保留 60 min），server 消失时保留
+死前最后一份快照并自动重启，phase 续跑（b2d_run 跳过已完成路线）。查过其他 agent 的脚本（tfv6_rules_batch、
+simlingo_catalogue_*、zeroshot_b2d_alp.sh、b2d_run.py），都只按自己记录的 pid / 进程组杀进程，没有 `pkill -f` 一类能匹配
+到我们进程名的模式；b2d_run 的孤儿清理只杀命令行含 CarlaUE4 或 b2d_route.py 的进程。上一次 SIGKILL 的来源仍未知。
+
 ## 偏离记录（B2D 考试的 openpilot 部分）
 
 1. **（2026-09-24 21:00，修复后未看任何分数）plan 原点**：`plan_origin = rear`，理由见 A2。
 2. **（同上）相机逐帧渲染与同帧配对**：`op_camera_tick = 0.05`，规划只用 road / wide 同帧的组，理由见 A1 的时序行。
 3. **（同上）5 s 预热**：`warmup_s = 5`，理由见 A1 冷启动一行和 A2。
 4. 复跑推迟到控制器定版之后（用户决定，2026-09-24 21:00）。
+6. **（2026-09-25，smoke2 之前）engage while rolling 与路口转向三选一**：见 D2。
 5. **（2026-09-25，运行之前）控制器**：主控制器换成 Bench2DriveZoo 官方 PID（原样运行），openpilot 自己的 curvature / accel 执行语义作配对次级，规则与全量选择见 D 节。
 
 ## 复现
