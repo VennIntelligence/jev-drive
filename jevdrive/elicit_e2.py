@@ -812,10 +812,40 @@ def wod_feat_index(tag: str = "main") -> dict:
     return out
 
 
+def wod_validate(tag: str = "main", conf: float = 0.25, iou_gate: float = 0.3):
+    """WOD gate (b): YOLO26x-seg person detections inside the erased SAM boxes, x+ vs x- (no GT on WOD)."""
+    import pandas as pd
+    from ultralytics import YOLO
+    from .runlog import RunLog
+    rl = RunLog("elicitation", "e2-wod-validate")
+    model = YOLO(str(data_dir() / "models" / "ultralytics" / "yolo26x-seg.pt"))
+    rows = []
+    for meta in sorted(out_root("wod", tag).glob("c*/meta.json")):
+        for rec in json.loads(meta.read_text()):
+            td = meta.parent / rec["key"]
+            for r in rec["images"]:
+                if not r["edited"]:
+                    continue
+                name = f"{r['cam']}_{r['k']}"
+                dd = {sd: model.predict(str(td / f"{name}_{sd}.jpg"), conf=conf, verbose=False)[0].boxes for sd in ("plus", "minus")}
+                for b in r["boxes"]:
+                    hit = {sd: max([_iou(x, b) for c, x in zip(v.cls.tolist(), v.xyxy.tolist()) if int(c) == 0], default=0.0)
+                           for sd, v in dd.items()}
+                    rows.append({"key": rec["key"], "img": name, "h_px": b[3] - b[1], "iou_plus": hit["plus"], "iou_minus": hit["minus"]})
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "residual.csv", index=False)
+    base = t[t.iou_plus >= iou_gate]
+    summ = {"boxes": len(t), "yolo_person_on_plus": len(base), "residual_rate": float((base.iou_minus >= iou_gate).mean())}
+    (rl.dir / "summary.json").write_text(json.dumps(summ, indent=1))
+    rl.info(json.dumps(summ))
+    rl.close()
+    return summ
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam", "wod-candidates", "wod-build", "wod-feat-index"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam", "wod-candidates", "wod-build", "wod-feat-index", "wod-validate"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -831,6 +861,8 @@ def main():
         wod_sam()
     elif a.cmd == "wod-candidates":
         print(wod_candidates())
+    elif a.cmd == "wod-validate":
+        print(wod_validate(a.tag))
     elif a.cmd == "wod-feat-index":
         print(wod_feat_index(a.tag))
     elif a.cmd == "wod-build":
