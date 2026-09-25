@@ -53,8 +53,10 @@ def attempt_summary(att):
     for t, d in zip(ticks, drv):
         dist[d] = dist.get(d, 0.0) + max(t["v"], 0.0) * 0.05
     total = sum(dist.values()) or 1.0
-    row["dist_share_model"] = round(dist["model"] / total, 3)
-    row["time_share_model"] = round(drv.count("model") / max(len(drv), 1), 3)
+    for d in ("model", "partner", "blend"):
+        row["dist_m_" + d] = round(dist[d], 1)
+        row["dist_share_" + d] = round(dist[d] / total, 3)
+        row["time_share_" + d] = round(drv.count(d) / max(len(drv), 1), 3)
     by = {}
     txy = np.array([t["truth"][:2] if "truth" in t else [np.nan, np.nan] for t in ticks])
     for kind, items in res["infractions"].items():
@@ -88,7 +90,9 @@ def summarize(rows, label):
         for who, kinds in json.loads(r["infractions_by_driver"]).items():
             by[who] = by.get(who, 0) + len(kinds)
     return dict(phase=label, n=n, ds=round(float(np.mean([r["ds"] for r in rows])), 1),
-                dist_share_model=round(float(np.mean([r["dist_share_model"] for r in rows])), 3),
+                dist_share_model=round(tot("dist_m_model") / max(sum(tot("dist_m_" + d) for d in ("model", "partner", "blend")), 1e-9), 3),
+                dist_share_partner=round(tot("dist_m_partner") / max(sum(tot("dist_m_" + d) for d in ("model", "partner", "blend")), 1e-9), 3),
+                time_share_model=round(float(np.mean([r["time_share_model"] for r in rows])), 3),
                 infractions_by_driver=json.dumps(by),
                 rc=round(float(np.mean([r["rc"] for r in rows])), 1), moved=sum(r["moved"] for r in rows),
                 turns=f"{tot('turn_passed')}/{tot('turn_reached')}", straights=f"{tot('straight_passed')}/{tot('straight_reached')}",

@@ -72,7 +72,7 @@ class TCPPartner(object):
     with three environment adaptations: tensors that the shipped code moves to 'cuda' stay on the CPU and the network
     forward runs on the TCP server (RemoteTCP); the checkpoint is loaded to the CPU; its 'bev' camera (a 50 m-high
     top view that it only saves to disk, rejected by the leaderboard's sensor validation) is not spawned and a blank
-    image is passed in its place."""
+    image is passed in its place. Its per-tick metric_info log (six simulator RPCs, saved only with SAVE_PATH) is skipped."""
 
     def __init__(self, ckpt, sock_path, hero=None, zoo_root=None):
         os.environ.setdefault("PLANNER_TYPE", "only_traj")
@@ -104,6 +104,7 @@ class TCPPartner(object):
         finally:
             torch.load, torch.nn.Module.cuda = orig_load, orig_cuda
         a.net = RemoteTCP(a.net, sock_path)
+        a.get_metric_info = dict                             # logging only (six hero RPCs per tick); never read here
         self.fresh_pids = copy.deepcopy((a.net.net.turn_controller, a.net.net.speed_controller))
         self.idle = False
         self.agent = a
