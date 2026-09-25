@@ -185,10 +185,32 @@ def fit(feats: bool = True) -> dict:
     return stats
 
 
+def ctrv(split: str) -> np.ndarray:
+    """(n, 8, 3) constant turn rate and velocity from the AgentInput: speed |v(t0)|, yaw rate from the last two
+    history poses (0.5 s apart), an arc from the t0 rear axle (I2 of the comparison todo)."""
+    idx = Z.load_index(split, slim=True)
+    v = np.array([np.linalg.norm(e["vel"][-1]) for e in idx])
+    dyaw = np.array([e["pose"][-1, 2] - e["pose"][-2, 2] for e in idx])
+    w = np.arctan2(np.sin(dyaw), np.cos(dyaw)) / 0.5
+    t = Z.T_OUT[None]
+    wt = w[:, None] * t
+    small = np.abs(w[:, None]) < 1e-4
+    ws = np.where(small, 1.0, w[:, None])
+    x = np.where(small, v[:, None] * t, v[:, None] * np.sin(wt) / ws)
+    y = np.where(small, 0.5 * v[:, None] * w[:, None] * t ** 2, v[:, None] * (1 - np.cos(wt)) / ws)
+    return np.stack([x, y, wt], -1).astype(np.float32), np.array([e["token"] for e in idx])
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("fit",))
+    ap.add_argument("step", choices=("fit", "ctrv"))
     ap.add_argument("--no-feats", action="store_true", help="ego heads only (before the temporal extraction exists)")
     a = ap.parse_args()
-    fit(not a.no_feats)
+    if a.step == "ctrv":
+        for sp in EVAL:
+            P, tok = ctrv(sp)
+            np.savez(Z.root("heads", "kinematic") / f"{sp}_ctrv.npz", tokens=tok, poses=P)
+            print(sp, len(tok), "mean 4 s x", float(P[:, -1, 0].mean()))
+    else:
+        fit(not a.no_feats)
