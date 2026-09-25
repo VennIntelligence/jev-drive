@@ -132,8 +132,75 @@ def wod(desire_run: str = "") -> dict:
     return {"wod_main": main, "wod_timeline": pd.DataFrame(g1), "wod_board": board}
 
 
+NAV_AGENTS = {  # devkit run name -> row label (exam rows from navsim.md, head rows from jevdrive.navsim_heads)
+    "human": "human (log)", "cv": "constant velocity", "alpamayo_nav": "Alpamayo 1.5 nav",
+    "small_none": "op-small native", "cinque_none": "op-cinque native", "lebowski_none": "op-lebowski native",
+    "cinque_cmd": "op-cinque native +cmd desire", "lebowski_cmd": "op-lebowski native +cmd desire",
+    "heads_ridge_ego": "ours ridge ego", "heads_cls_ego_K1024": "ours cls ego K1024",
+    "heads_ridge_late_cinque_temporal": "op-cinque temporal + ridge_late",
+    "heads_cls_late_cinque_temporal": "op-cinque temporal + cls_late",
+    "heads_ridge_late_lebowski_temporal": "op-lebowski temporal + ridge_late",
+    "heads_cls_late_lebowski_temporal": "op-lebowski temporal + cls_late"}
+NAV_PAIRS = [("heads_ridge_late_cinque_temporal", "heads_ridge_ego"), ("heads_cls_late_cinque_temporal", "heads_cls_ego_K1024"),
+             ("heads_ridge_late_lebowski_temporal", "heads_ridge_ego"), ("heads_cls_late_lebowski_temporal", "heads_cls_ego_K1024"),
+             ("heads_ridge_late_cinque_temporal", "cinque_none"), ("heads_cls_late_cinque_temporal", "cinque_none"),
+             ("heads_ridge_late_lebowski_temporal", "lebowski_none"), ("heads_cls_late_lebowski_temporal", "lebowski_none"),
+             ("heads_ridge_ego", "cv"), ("heads_cls_ego_K1024", "cv"), ("heads_cls_late_cinque_temporal", "cv"),
+             ("heads_cls_late_lebowski_temporal", "cv"), ("cinque_none", "cv"), ("lebowski_none", "cv"), ("small_none", "cv"),
+             ("cinque_none", "alpamayo_nav"), ("lebowski_none", "alpamayo_nav"), ("heads_cls_ego_K1024", "alpamayo_nav"),
+             ("heads_cls_late_cinque_temporal", "alpamayo_nav"), ("heads_cls_late_lebowski_temporal", "alpamayo_nav")]
+# published navtest / navhard numbers (not pairable): NAVSIM v1 paper arXiv 2406.15349 Table 2 (PDMS), SimWAM arXiv
+# 2608.07468 Tables 2 / 3 (EPDMS, navhard two-stage) as collected in research/openpilot-and-open-driving-models.md
+NAV_BOARD = [("Ego Status MLP (blind, navtrain)", 65.6, None, None), ("TransFuser", 84.0, 76.7, 23.1),
+             ("DiffusionDrive", 88.1, 84.5, 27.5), ("DiffusionDriveV2", 91.2, None, None), ("ReCogDrive (VLM)", 90.8, 83.6, 25.7),
+             ("SimWAM", 91.5, 90.2, 37.6)]
+V1_SUB = ["no_at_fault_collisions", "drivable_area_compliance", "ego_progress", "time_to_collision_within_bound", "comfort"]
+V2_SUB = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "traffic_light_compliance",
+          "ego_progress", "time_to_collision_within_bound", "lane_keeping", "history_comfort", "two_frame_extended_comfort"]
+
+
+def _latest(ver: str, split: str, name: str):
+    import glob
+    from .common import data_dir
+    fs = sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{ver}_{split}_{name}" / "*" / "*.csv")))
+    return pd.read_csv(fs[-1]) if fs else None
+
+
 def navsim() -> dict:
-    raise NotImplementedError("G2 / G3 readouts: written once the heads are scored")
+    """G2 / G3: PDMS (v1.1) and EPDMS (v2) on navtest per row with token-bootstrap CIs, the pre-registered paired
+    deltas on per-token scores, and navhard two-stage EPDMS (aggregate only: its two-stage weighting is not per token)."""
+    rows, pairs, hard, tok = [], [], [], {}
+    for ver, metric, subs in (("v1", "PDMS", V1_SUB), ("v2", "EPDMS", V2_SUB)):
+        for name, label in NAV_AGENTS.items():
+            df = _latest(ver, "navtest", name)
+            if df is None:
+                continue
+            df = df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)]   # the exam's convention
+            sc = df.set_index("token")["score"].astype(float)
+            tok[(metric, name)] = sc
+            v = sc.to_numpy()
+            bs = v[np.random.default_rng(0).integers(0, len(v), (2000, len(v)))].mean(1)
+            rows.append({"metric": metric, "row": label, "agent": name, "n": len(v), "score": 100 * v.mean(),
+                         "ci_lo": 100 * np.percentile(bs, 2.5), "ci_hi": 100 * np.percentile(bs, 97.5),
+                         **{c: 100 * df[c].mean() for c in subs if c in df}})
+        for a, b in NAV_PAIRS:
+            if (metric, a) in tok and (metric, b) in tok:
+                x, y = tok[(metric, a)].align(tok[(metric, b)], join="inner")
+                d = (x - y).to_numpy()
+                bs = d[np.random.default_rng(1).integers(0, len(d), (B, len(d)))].mean(1)
+                pairs.append({"metric": metric, "a": NAV_AGENTS[a], "b": NAV_AGENTS[b], "n": len(d), "diff": 100 * d.mean(),
+                              "ci_lo": 100 * np.percentile(bs, 2.5), "ci_hi": 100 * np.percentile(bs, 97.5)})
+    for name, label in NAV_AGENTS.items():
+        df = _latest("v2", "navhard_two_stage", name)
+        if df is None:
+            continue
+        summ = df[df["token"].str.startswith("extended_pdm_score")].set_index("token")["score"]
+        hard.append({"row": label, "agent": name, "stage1": 100 * summ.get("extended_pdm_score_stage_one", np.nan),
+                     "stage2": 100 * summ.get("extended_pdm_score_stage_two", np.nan),
+                     "EPDMS": 100 * summ.get("extended_pdm_score_combined", np.nan)})
+    board = pd.DataFrame(NAV_BOARD, columns=["row", "PDMS", "EPDMS", "navhard EPDMS"])
+    return {"navsim_navtest": pd.DataFrame(rows), "navsim_paired": pd.DataFrame(pairs),
+            "navsim_navhard": pd.DataFrame(hard), "navsim_board": board}
 
 
 def main():
