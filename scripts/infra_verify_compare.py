@@ -75,8 +75,8 @@ def main():
     print("|---|---:|---:|---:|---:|---:|---:|---:|")
     for v in variants:
         a = attempt(root, v)
-        if a is None or r is None:
-            print("| %s | missing | | | | | |" % v)
+        if a is None or r is None or not (a / "ticks.jsonl").exists():
+            print("| %s | no run (missing or crashed) | | | | | | |" % v)
             continue
         c = out[v] = compare(r, a)
         fmt = lambda x: "-" if x is None else "%.2f" % x  # noqa: E731
