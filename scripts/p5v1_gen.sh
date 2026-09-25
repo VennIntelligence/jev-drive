@@ -47,6 +47,7 @@ EOF
 export B2D_RESEED_AFTER_BUILD=1 LEAD_PROJECT_ROOT=$DATA_DIR/third_party/scout/lead-cvpr2026 HF_HUB_OFFLINE=1 \
     OMP_NUM_THREADS=${OMP_THREADS:-2} NUMBA_NUM_THREADS=${NUMBA_THREADS:-3} SAVE_PATH=$R/lead_save
 export PYTHONPATH=$LEAD_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}
+# SimLingo's evaluator reads $WORK_DIR/leaderboard/data/weather.xml; the official one ignores WORK_DIR.
 tree() { [[ $1 == pdm ]] && echo "$DATA_DIR/third_party/simlingo/Bench2Drive" || echo "$DATA_DIR/third_party/Bench2Drive"; }
 
 chain() {  # chain <slot j> : every pass, every expert, on GPU G[j]
@@ -57,7 +58,7 @@ chain() {  # chain <slot j> : every pass, every expert, on GPU G[j]
             ids=$(.venv/bin/python -m jevdrive.p5v1 ids --expert "$e")
             [[ -z $ids ]] && continue
             echo "$(date +%T) gpu $g pass $pass $e: $(tr ',' '\n' <<< "$ids" | wc -l) worlds left, cpus ${!cpus_var}, index $base+$span"
-            CUDA_VISIBLE_DEVICES=$g BENCH2DRIVE_ROOT=$(tree "$e") taskset -c "${!cpus_var}" "$PY" scripts/b2d_run.py \
+            CUDA_VISIBLE_DEVICES=$g BENCH2DRIVE_ROOT=$(tree "$e") WORK_DIR=$DATA_DIR/third_party/simlingo taskset -c "${!cpus_var}" "$PY" scripts/b2d_run.py \
                 --routes "$R/pairs.xml" --route-ids "$ids" --out "$R/gen-$e" --workers "$w" --server-index "$base" \
                 --index-span "$span" --gpu-rank "$g" --tm-seed-from-id --agent scripts/p5_pair_agent.py \
                 --agent-config "$R/agent-$e.json" --python "$DATA_DIR/envs/scout-tfv6/bin/python" --fast-copy \
