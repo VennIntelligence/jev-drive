@@ -185,7 +185,7 @@ accept)
     start_servers lebowski
     fail=0
     for arm in f1 f1f2b; do
-        run acc-$arm 4 600 "${R[@]}" || fail=1
+        run acc-$arm "${ACCEPT_WORKERS:-4}" 600 "${R[@]}" || fail=1
         harness_check "$D/accept-acc-$arm" || fail=1
     done
     (( fail )) && exit 1
