@@ -96,7 +96,7 @@ def main():
     ap.add_argument("--tags", default="")
     a = ap.parse_args()
     root = Path(a.root)
-    rows = list(csv.DictReader(open(root / "results.csv")))
+    rows = list({(r["scenario"], r["tag"]): r for r in csv.DictReader(open(root / "results.csv"))}.values())
     want = set(a.tags.split(",")) if a.tags else None
     out = []
     for r in rows:

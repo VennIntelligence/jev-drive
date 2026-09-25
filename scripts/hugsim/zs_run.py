@@ -81,14 +81,18 @@ def unpack(ds, scene):
         return
     with open(DATA / "scenes" / ds / f".{scene}.lock", "w") as lk:
         fcntl.flock(lk, fcntl.LOCK_EX)
-        if not (d / "scene.pth").exists():
+        nested = DATA / "scenes" / ds / ds / scene     # later releases zip as <ds>/<scene>/..., older as <scene>/...
+        if not (d / "scene.pth").exists() and not (nested / "scene.pth").exists():
             zipfile.ZipFile(DATA / "scenes" / ds / f"{scene}.zip").extractall(DATA / "scenes" / ds)
+        if not (d / "scene.pth").exists() and (nested / "scene.pth").exists():
+            nested.rename(d)
 
 
 def done_set(results):
+    """Finished (scenario, tag) pairs; infrastructure crashes do not count, so a rerun retries them."""
     if not results.exists():
         return set()
-    return {(r["scenario"], r["tag"]) for r in csv.DictReader(open(results))}
+    return {(r["scenario"], r["tag"]) for r in csv.DictReader(open(results)) if r["end"] != "crash"}
 
 
 def append(results, row):
