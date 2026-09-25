@@ -25,8 +25,10 @@ Optimisations (each behind its own flag, all off by default)
                     re-fetches every street light in the map over RPC on every tick, measures each
                     one's distance in a Python loop, and re-sends `turn_on`/`turn_off` for lights
                     that are already in that state. Street lights do not move, so the list and the
-                    positions are fetched once; only lights whose state actually changes are sent.
-                    Same lights end up on, so the rendered image is the same.
+                    positions are fetched once; the first update sends the whole state, later ones
+                    only lights whose state changes. The first version trusted `is_on` at cache
+                    time and left ~1600 far street lights on at night (not equivalent; fixed
+                    2026-09-25, checked with $B2D_LIGHTS_CHECK).
   * sensor_tick   - let a camera spec carry `sensor_tick`. The leaderboard builds each sensor's
                     blueprint attributes from a hard-coded whitelist per sensor type
                     (agent_wrapper.py `_preprocess_sensor_spec`) which has no `sensor_tick` for any
@@ -238,15 +240,20 @@ def _patch_lights():
             self._cached_lights = lights
             self._light_xyz = np.array([[l.location.x, l.location.y, l.location.z]
                                         for l in lights], dtype=np.float64)
-            self._light_on = np.array([bool(l.is_on) for l in lights])
+            # Not the lights' current is_on: at night the server switches street lights on by itself around the
+            # time the route starts, after this cache is built, and a cache that believed them off never switched
+            # ~1600 of them off again (measured with $B2D_LIGHTS_CHECK on Town12, 2026-09-25). The first update sends
+            # the whole state; later ones only the changes.
+            self._light_on = None
             self._vehicle_state = {}
         radius = max(self._radius,
                      self._radius_increase * CarlaDataProvider.get_velocity(self._ego_vehicle))
 
         here = np.array([location.x, location.y, location.z])
         want = np.linalg.norm(self._light_xyz - here, axis=1) <= radius
-        turn_on = [l for l, w, o in zip(self._cached_lights, want, self._light_on) if w and not o]
-        turn_off = [l for l, w, o in zip(self._cached_lights, want, self._light_on) if o and not w]
+        was = ~want if self._light_on is None else self._light_on
+        turn_on = [l for l, w, o in zip(self._cached_lights, want, was) if w and not o]
+        turn_off = [l for l, w, o in zip(self._cached_lights, want, was) if o and not w]
         if turn_on:
             self._light_manager.turn_on(turn_on)
         if turn_off:
