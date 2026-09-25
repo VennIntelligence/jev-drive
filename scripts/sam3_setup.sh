@@ -27,10 +27,18 @@ if [[ ! -x $ENV/bin/python ]]; then
   uv venv --python 3.12 "$ENV"
 fi
 export VIRTUAL_ENV=$ENV
-# torch 2.13 cu130 (sm_120 supported; SAM 3 asks for >= 2.7): the wheel is already in the box's uv cache from other
-# envs, while a fresh cu128 2.10 download from download.pytorch.org ran at < 1 MB/s (2026-09-25)
-uv pip install --python "$ENV/bin/python" torch==2.13.0 torchvision==0.28.0 --index-url https://download.pytorch.org/whl/cu130
-uv pip install --python "$ENV/bin/python" -e "$SRC" einops pandas pyarrow opencv-python-headless pycocotools \
+# torch 2.13 cu130 (sm_120 supported; SAM 3 asks for >= 2.7). The torch / torchvision wheels are already in the box's
+# uv cache from other envs; their CUDA runtime deps come from the domestic Aliyun PyPI mirror. A plain install from
+# download.pytorch.org fetched every nvidia-* wheel from that CDN at < 1 MB/s (2026-09-25).
+PT=https://download.pytorch.org/whl/cu130 MIRROR=https://mirrors.aliyun.com/pypi/simple
+uv pip install --python "$ENV/bin/python" --no-deps torch==2.13.0+cu130 torchvision==0.28.0+cu130 --index-url $PT
+deps=$("$ENV/bin/python" - <<'PY'
+import importlib.metadata as m
+print(" ".join(r.split(";")[0].replace(" ", "") for r in m.requires("torch") if "extra ==" not in r))
+PY
+)
+uv pip install --python "$ENV/bin/python" $deps pillow --index-url $MIRROR
+uv pip install --python "$ENV/bin/python" --index-url $MIRROR -e "$SRC" einops pandas pyarrow opencv-python-headless pycocotools \
   scipy tqdm tensorboard
 "$ENV/bin/python" -c "import torch, sam3; print('torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.is_available())"
 ls -la "$DATA_DIR/models/sam3.1"
