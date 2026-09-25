@@ -31,9 +31,9 @@ CONTACT_ROWS = 3
 AMP = os.environ.get("SAM_AMP", "bf16")   # "bf16" (the repo examples) or "fp32" (autocast off; TF32 matmuls stay on)
 
 
-def _amp():
+def _amp(amp: str | None = None):
     import torch
-    return torch.autocast("cuda", dtype=torch.bfloat16, enabled=AMP == "bf16")
+    return torch.autocast("cuda", dtype=torch.bfloat16, enabled=(amp or AMP) == "bf16")
 
 
 def ckpt_path() -> Path:
@@ -44,8 +44,9 @@ def ckpt_path() -> Path:
     raise FileNotFoundError("sam3.1_multiplex.pt not found under $DATA_DIR/models/sam3.1{,-fast}")
 
 
-def build(device: str = "cuda"):
-    """SAM 3.1's detector with its checkpoint weights; returns (model, load report)."""
+def build(device: str = "cuda", compile_mode=None):
+    """SAM 3.1's detector with its checkpoint weights; returns (model, load report). compile_mode: the repo's own
+    backbone compile switch (None = off, as in the fusion runs)."""
     import pkg_resources
     import torch
     from sam3 import model_builder as mb
@@ -53,7 +54,7 @@ def build(device: str = "cuda"):
     from sam3.model.vl_combiner import SAM3VLBackboneTri
     bpe = pkg_resources.resource_filename("sam3", "assets/bpe_simple_vocab_16e6.txt.gz")
     fa3 = False                                         # flash-attn-3 is an optional extra we do not install
-    backbone = SAM3VLBackboneTri(scalp=0, visual=mb._create_multiplex_tri_backbone(None, fa3, False),
+    backbone = SAM3VLBackboneTri(scalp=0, visual=mb._create_multiplex_tri_backbone(compile_mode, fa3, False),
                                  text=mb._create_text_encoder(bpe))
     model = Sam3MultiplexDetector(
         num_feature_levels=1, backbone=backbone, transformer=mb._create_sam3_transformer(use_fa3=fa3),
@@ -81,18 +82,23 @@ class Detector:
     ~4e-3 and mask IoU drops to ~0.988 against the processor, which fails the pre-registered check (c), so the batch
     runs "exact" (fusion todo, deviation log)."""
 
-    def __init__(self, model, prompts=PROMPTS, device: str = "cuda", mode: str = "exact"):
+    def __init__(self, model, prompts=PROMPTS, device: str = "cuda", mode: str = "exact", res: int = RES,
+                 image_kwargs=None, amp: str | None = None):
+        """res: square input size (the processor's `resolution`). image_kwargs: extra `backbone.forward_image`
+        arguments; the multiplex detector's defaults, {} for a plain Sam3Image (e.g. EfficientSAM3)."""
         import torch
         from sam3.model.data_misc import FindStage
         self.m, self.prompts, self.dev, self.FindStage, self.mode = model, list(prompts), device, FindStage, mode
-        with torch.inference_mode(), _amp():
+        self.res, self.amp = res, amp or AMP
+        self.ikw = dict(need_interactive_out=False, need_propagation_out=False) if image_kwargs is None else image_kwargs
+        with torch.inference_mode(), _amp(self.amp):
             self.text = model.backbone.forward_text(self.prompts, device=device)
             self.text1 = [model.backbone.forward_text([p], device=device) for p in self.prompts]
 
     def _prep(self, img):
         """Sam3Processor.transform: uint8 -> Resize(1008, 1008) -> float [0, 1] -> Normalize(0.5, 0.5)."""
         from torchvision.transforms import v2
-        x = v2.functional.resize(img, [RES, RES])
+        x = v2.functional.resize(img, [self.res, self.res])
         return (x.float() / 255.0 - 0.5) / 0.5
 
     def _ground(self, bo, text, img_ids, txt_ids):
@@ -112,18 +118,17 @@ class Detector:
         from sam3.model import box_ops
         B, P = len(imgs), len(self.prompts)
         raw = {}                                               # (b, p) -> (prob (200,), cxcywh (200, 4), mask logits)
-        with torch.inference_mode(), _amp():
+        with torch.inference_mode(), _amp(self.amp):
             if self.mode == "batched":
                 x = torch.stack([self._prep(i) for i in imgs])
-                bo = self.m.backbone.forward_image(x, need_interactive_out=False, need_propagation_out=False)
+                bo = self.m.backbone.forward_image(x, **self.ikw)
                 prob, bxs, ml = self._ground(bo, self.text, torch.arange(B, device=self.dev).repeat_interleave(P),
                                              torch.arange(P, device=self.dev).repeat(B))
                 raw = {(b, p): (prob[b * P + p], bxs[b * P + p], ml[b * P + p]) for b in range(B) for p in range(P)}
             else:
                 zero = torch.zeros(1, dtype=torch.long, device=self.dev)
                 for b in range(B):
-                    bo = self.m.backbone.forward_image(self._prep(imgs[b])[None], need_interactive_out=False,
-                                                       need_propagation_out=False)
+                    bo = self.m.backbone.forward_image(self._prep(imgs[b])[None], **self.ikw)
                     for p in range(P):
                         prob, bxs, ml = self._ground(bo, self.text1[p], zero, zero)
                         raw[b, p] = (prob[0], bxs[0], ml[0])
