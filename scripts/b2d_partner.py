@@ -15,7 +15,7 @@ Arbiter - observable state only (speed, route geometry and the ego's progress al
     junction zone      the ego is between 15 m before the start and 5 m after the end (route arc length) of a
                        LEFT / RIGHT route command                                            (only if junctions=True)
     model warm-up      the model has not finished its warm-up
-  the model drives otherwise. A change of driver is blended linearly over 0.5 s (10 ticks) on steer, throttle, brake.
+  the model drives otherwise ("tcp_only": the partner drives throughout, the reference arm). A change of driver is blended linearly over 0.5 s (10 ticks) on steer, throttle, brake.
 """
 import os
 import sys
@@ -31,7 +31,7 @@ LEFT, RIGHT = 1, 2
 
 
 class TCPPartner(object):
-    def __init__(self, ckpt, zoo_root=None):
+    def __init__(self, ckpt, hero=None, zoo_root=None):
         os.environ.setdefault("PLANNER_TYPE", "only_traj")
         os.environ.setdefault("IS_BENCH2DRIVE", "1")          # the shipped agent reads its 'bev' sensor only then
         os.environ.pop("SAVE_PATH", None)
@@ -44,6 +44,7 @@ class TCPPartner(object):
         a = TCPAgent.__new__(TCPAgent)                      # the base __init__ only needs the hero; set its fields
         a.track, a._global_plan, a._global_plan_world_coord = Track.SENSORS, None, None
         a.sensor_interface, a.wallclock_t0 = SensorInterface(), None
+        a.hero_actor = hero                                  # read by the shipped run_step (get_metric_info)
         a.setup(ckpt + "+partner")
         self.agent = a
         self.tags = [s["id"] for s in a.sensors()]
@@ -68,7 +69,7 @@ class TCPPartner(object):
 
 
 class Arbiter(object):
-    def __init__(self, route_xy, route_cmd, junctions=True):
+    def __init__(self, route_xy, route_cmd, junctions=True, partner_only=False):
         xy, cmd = np.asarray(route_xy, float), np.asarray(route_cmd)
         self.s = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(xy, axis=0), axis=1))]
         self.zones = []
@@ -84,6 +85,7 @@ class Arbiter(object):
                 i += 1
         self.latch, self.low_t, self.high_t = True, 0.0, 0.0
         self.w = 0.0                                          # weight of the model's control, 0 = partner
+        self.partner_only = bool(partner_only)                # reference arm: the partner drives the whole route
         self.driver = "partner"
 
     def step(self, dt, speed, route_index, model_ready):
@@ -102,7 +104,7 @@ class Arbiter(object):
             self.high_t = 0.0
         s_now = self.s[min(route_index, len(self.s) - 1)]
         zone = any(a <= s_now <= b for a, b in self.zones)
-        why = "warmup" if not model_ready else "standstill" if self.latch else "junction" if zone else ""
+        why = "partner_only" if self.partner_only else "warmup" if not model_ready else "standstill" if self.latch else "junction" if zone else ""
         target = 0.0 if why else 1.0
         step = 1.0 / BLEND_TICKS
         self.w = min(target, self.w + step) if target > self.w else max(target, self.w - step)

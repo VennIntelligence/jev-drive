@@ -7,20 +7,24 @@
 #
 #   smoke  <gpu>  (done 2026-09-25 02:22) 5 pre-registered routes x zoo-lebowski, zoo-cinque, native-cinque,
 #                 fixed-lebowski, shadow-cinque; 2 workers.
-#   smoke2 <gpu>  TCP-partner shared control (migration doc, section D3): 9 routes (the 5 smoke routes + the lowest
-#                 route id of each of 4 junction-turn scenario types) x partner-lebowski (primary), partner-cinque,
-#                 tcp-alone, partner-start-implicit-lebowski, partner-start-desire-lebowski; 2 workers.
-#   full   <gpu>  220 routes, 4 workers, resumable: the TCP partnership with the model chosen from smoke2 (rule in D3).
-# Exit non-zero only on infrastructure failure (runner error, routes never finished, harness status, no plans).
-# Driving outcome never. A policy server that dies is logged (sender of any catchable signal, a ps snapshot) and
-# restarted by a watchdog; the phase is then resumed (b2d_run skips finished routes).
+#   accept <gpu>  adapter acceptance (docs/zeroshot-adapters.md; migration doc D3): 5 routes not in any smoke x the
+#                 TCP partnership with Lebowski under both Zoo PID switch sets the Alpamayo exam may freeze (f1, f1f2b);
+#                 scripts/zeroshot_b2d_op_accept.py writes accept.json; exit 1 if neither arm passes.
+#   smoke3 <gpu>  the 5 pre-registered routes + 4 pre-registered junction routes x partner-lebowski (primary),
+#                 pure-lebowski, tcp-alone, partner-native-lebowski; needs the Alpamayo choice and an accepted arm.
+#   full   <gpu>  220 routes, 4 workers, resumable: the configuration chosen from smoke3 by the rule in D3.
+# Exit non-zero only on infrastructure failure (runner error, routes never finished, harness status, no plans) or a
+# failed pre-registered gate. Driving outcome never. A policy server that dies is logged (its exit status, the
+# sender of any catchable signal, a ps snapshot, the container cgroup's memory / pids events) and restarted by a
+# watchdog; the phase is then resumed (b2d_run skips finished routes). CARLA server indices 600-699.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
 mode=$1 gpu=$2
-D=$DATA_DIR/runs/zeroshot-exam/b2d-op
+D=${OP_DIR:-$DATA_DIR/runs/zeroshot-exam/b2d-op}
 C=$(pwd)/todos/2026-09-22-b2d-controller/results/controller_config.json
 PY_OP=$DATA_DIR/envs/openpilot/bin/python
+ALP_CHOICE=$DATA_DIR/runs/zeroshot-exam/b2d/smoke2-alpamayo-choice.json
 TCP_CKPT=$DATA_DIR/models/bench2drive/tcp/tcp_b2d.ckpt       # sha256 e6573ff1..., docs/b2d-tcp-controller.md
 mkdir -p "$D/ps"
 declare -A spid
@@ -28,29 +32,50 @@ cleanup() { for m in "${!spid[@]}"; do kill -- -"${spid[$m]}" 2>/dev/null; done;
 trap cleanup EXIT
 
 launch() {  # model: start its policy server in its own session / process group, wait for ready
-    local m=$1 sock=$D/$1-$mode.sock ready=$D/$1-$mode.ready
-    rm -f "$sock" "$ready"
-    # own session / process group; no `exec -a` renaming: a venv interpreter locates its prefix from argv[0]
-    CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "$PY_OP" scripts/zeroshot_policy_server.py "$m" \
-        --socket "$sock" --ready-file "$ready" --pool "${POOL:-2}" >> "$D/server-$m-$mode.log" 2>&1 &
-    spid[$m]=$!
+    local m=$1 sock=$D/$1-$mode.sock ready=$D/$1-$mode.ready log=$D/server-$1-$mode.log
+    rm -f "$sock" "$ready" "$D/.pid-$m-$mode"
+    # own session / process group (setsid in a non-leader child execs in place, so pid = pgid = the server);
+    # no `exec -a` renaming: a venv interpreter locates its prefix from argv[0]. The subshell records the exit status
+    # (137 = SIGKILL) for the forensics.
+    (
+        CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "$PY_OP" scripts/zeroshot_policy_server.py "$m" \
+            --socket "$sock" --ready-file "$ready" --pool "${POOL:-2}" >> "$log" 2>&1 &
+        echo $! > "$D/.pid-$m-$mode"
+        wait $!
+        echo "$(date '+%F %T') server $m exited rc=$?" >> "$log"
+    ) &
+    until [[ -s $D/.pid-$m-$mode ]]; do sleep 0.2; done
+    spid[$m]=$(cat "$D/.pid-$m-$mode")
     until [[ -e $ready ]]; do
-        kill -0 "${spid[$m]}" 2>/dev/null || { echo "policy server $m died at start-up, see $D/server-$m-$mode.log" >&2; exit 3; }
+        kill -0 "${spid[$m]}" 2>/dev/null || { echo "policy server $m died at start-up, see $log" >&2; exit 3; }
         sleep 5
     done
-    echo "$(date '+%F %T') server $m ready (pid ${spid[$m]})" | tee -a "$D/server-$m-$mode.log" >&2
+    echo "$(date '+%F %T') server $m ready (pid ${spid[$m]})" | tee -a "$log" >&2
 }
 
-watchdog() {  # every 30 s: ps snapshot (kept 60 min); a dead server is logged and restarted
+cg_snapshot() {  # container cgroup counters (v2; the container is the root cgroup, no sub-cgroups) and pids in use
+    local f
+    for f in memory.events memory.events.local pids.events pids.current pids.max memory.current memory.max; do
+        [[ -r /sys/fs/cgroup/$f ]] && echo "$f: $(tr '\n' ' ' < /sys/fs/cgroup/$f)"
+    done
+    find /sys/fs/cgroup -mindepth 2 -maxdepth 4 \( -name memory.events -o -name pids.events \) 2>/dev/null \
+        | while read -r f; do echo "$f: $(tr '\n' ' ' < "$f")"; done
+    echo "threads: $(ps -eLf --no-headers | wc -l)"
+    dmesg 2>&1 | tail -5
+}
+
+watchdog() {  # every 30 s: ps + cgroup snapshot (kept 60 min); a dead server is logged and restarted
     while sleep 30; do
-        ps -eo pid,ppid,pgid,user,etimes,args --sort=pid | cut -c1-240 > "$D/ps/$(date +%H%M%S).txt"
-        find "$D/ps" -name '*.txt' -mmin +60 -delete
+        { ps -eo pid,ppid,pgid,user,etimes,rss,nlwp,args --sort=pid | cut -c1-240; cg_snapshot; } > "$D/ps/$(date +%H%M%S).txt"
+        find "$D/ps" -name '[0-9]*.txt' -mmin +60 -delete
         for m in $(cat "$D/.servers-$mode" 2>/dev/null); do
             p=$(cat "$D/.pid-$m-$mode" 2>/dev/null)
-            if [[ -n $p ]] && ! kill -0 "$p" 2>/dev/null; then
-                echo "$(date '+%F %T') server $m (pid $p) is gone; last ps snapshot kept as $D/ps/death-$m-$(date +%H%M%S).txt" \
+            if [[ -n $p ]] && ! kill -0 "$p" 2>/dev/null && [[ ! -e $D/.restart-$m-$mode ]]; then
+                local tag; tag=$(date +%H%M%S)
+                cp "$(ls -t "$D"/ps/[0-9]*.txt | sed -n 2p)" "$D/ps/death-$m-$tag.txt" 2>/dev/null
+                cg_snapshot > "$D/ps/death-$m-$tag-after.txt"
+                echo "$(date '+%F %T') server $m (pid $p) is gone ($(grep 'exited rc=' "$D/server-$m-$mode.log" | tail -1)); last snapshot kept as $D/ps/death-$m-$tag.txt" \
                     | tee -a "$D/server-$m-$mode.log" "$D/server-deaths.log" >&2
-                cp "$(ls -t "$D"/ps/*.txt | sed -n 2p)" "$D/ps/death-$m-$(date +%H%M%S).txt" 2>/dev/null
                 echo restart > "$D/.restart-$m-$mode"
             fi
         done
@@ -59,7 +84,7 @@ watchdog() {  # every 30 s: ps snapshot (kept 60 min); a dead server is logged a
 
 start_servers() {
     : > "$D/.servers-$mode"
-    for m in "$@"; do launch "$m"; echo "$m" >> "$D/.servers-$mode"; echo "${spid[$m]}" > "$D/.pid-$m-$mode"; done
+    for m in "$@"; do launch "$m"; echo "$m" >> "$D/.servers-$mode"; done
     watchdog & watch=$!
 }
 
@@ -68,7 +93,7 @@ revive() {  # restart any server the watchdog found dead; returns 0 if one was r
     for m in "${!spid[@]}"; do
         if [[ -e $D/.restart-$m-$mode ]] || ! kill -0 "${spid[$m]}" 2>/dev/null; then
             rm -f "$D/.restart-$m-$mode"
-            launch "$m"; echo "${spid[$m]}" > "$D/.pid-$m-$mode"; did=0
+            launch "$m"; did=0
         fi
     done
     return $did
@@ -86,7 +111,7 @@ EOF
 
 run() {  # phase workers server-index route-args... ; resumes once after a server death
     local ph=$1 w=$2 sidx=$3; shift 3
-    for try in 1 2; do
+    for try in 1 2 3; do
         echo "$(date '+%F %T') phase $ph (try $try)" >&2
         "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py "$@" --workers "$w" --server-index "$sidx" \
             --gpu-rank "$gpu" --python "$DATA_DIR/envs/b2d-tcp/bin/python" --agent scripts/b2d_zeroshot_agent.py \
@@ -117,6 +142,23 @@ sys.exit(1 if bad else 0)
 EOF
 }
 
+zoo_switches() {  # Alpamayo-exam arm -> the Zoo PID switches it freezes
+    case $1 in
+        f1) echo ', "plan_forward_only": true, "zoo_cadence": "plan"' ;;
+        f1f2b) echo ', "plan_forward_only": true, "zoo_cadence": "tick"' ;;
+        *) return 1 ;;
+    esac
+}
+partner() {  # junctions [tcp_only] -> the "partner" config key
+    echo "\"partner\": {\"ckpt\": \"$TCP_CKPT\", \"junctions\": $1, \"tcp_only\": ${2:-false}}"
+}
+alp_arm() {  # the Zoo PID arm the Alpamayo smoke2 acceptance froze (the openpilot exam must use the same)
+    local a
+    a=$(python3 -c "import json; print(json.load(open('$ALP_CHOICE'))['choice'] or '')" 2>/dev/null)
+    [[ $a == f1 || $a == f1f2b ]] || { echo "no Alpamayo choice in $ALP_CHOICE" >&2; return 1; }
+    echo "$a"
+}
+
 case $mode in
 smoke)
     R=(--route-ids 2390,24211,1711,2373,3564)
@@ -128,49 +170,62 @@ smoke)
     start_servers lebowski cinque
     fail=0
     for ph in zoo-lebowski zoo-cinque native-cinque fixed-lebowski shadow-cinque; do
-        run $ph 2 500 "${R[@]}" || fail=1
+        run $ph 2 600 "${R[@]}" || fail=1
         harness_check "$D/smoke-$ph" || fail=1
     done
     exit $fail ;;
-smoke2)
-    # TCP-partner shared control (migration doc D3). 5 pre-registered smoke routes + the lowest route id of each of
-    # NonSignalizedJunctionLeftTurn / NonSignalizedJunctionRightTurn / SignalizedJunctionLeftTurn /
-    # SignalizedJunctionRightTurn in bench2drive220.xml. Zoo PID with forward-only plans, every-tick cadence.
-    R=(--route-ids 2390,24211,1711,2373,3564,2084,2115,3936,2050)
-    Z=', "plan_forward_only": true, "zoo_cadence": "tick"'
-    P="\"ckpt\": \"$TCP_CKPT\""
-    config partner-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true}"
-    config partner-start-implicit-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": false}"
-    config partner-start-desire-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": true, \"partner\": {$P, \"junctions\": false}"
-    config partner-cinque cinque zoo_pid model 20 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true}"
-    config tcp-alone lebowski zoo_pid model 0 "$Z, \"desire\": false, \"partner\": {$P, \"junctions\": true, \"tcp_only\": true}"
-    start_servers lebowski cinque
-    fail=0
-    for ph in partner-lebowski partner-cinque tcp-alone partner-start-implicit-lebowski partner-start-desire-lebowski; do
-        run $ph 2 500 "${R[@]}" || fail=1
-        harness_check "$D/smoke2-$ph" || fail=1
+accept)
+    # Adapter acceptance before any scored run (docs/zeroshot-adapters.md, migration doc D3). Routes in no smoke:
+    # 2086 NonSignalizedJunctionLeftTurn, 2903 NonSignalizedJunctionRightTurn, 3144 VanillaSignalizedTurnEncounter-
+    # RedLight, 2416 VanillaNonSignalizedTurnEncounterStopsign, 3540 HardBreakRoute (lead brakes hard, resume).
+    R=(--route-ids ${ACCEPT_ROUTES:-2086,2903,3144,2416,3540})
+    for arm in f1 f1f2b; do
+        config acc-$arm lebowski zoo_pid model 5 "$(zoo_switches $arm), \"desire\": false, $(partner true)"
     done
-    python3 scripts/zeroshot_b2d_junctions.py "$D"/smoke2-{partner-lebowski,partner-cinque,tcp-alone,partner-start-implicit-lebowski,partner-start-desire-lebowski} \
-        --csv "$D/smoke2-junctions.csv" | tee "$D/smoke2-summary.csv"
-    exit $fail ;;
+    start_servers lebowski
+    fail=0
+    for arm in f1 f1f2b; do
+        run acc-$arm 4 600 "${R[@]}" || fail=1
+        harness_check "$D/accept-acc-$arm" || fail=1
+    done
+    (( fail )) && exit 1
+    python3 scripts/zeroshot_b2d_op_accept.py f1="$D/accept-acc-f1" f1f2b="$D/accept-acc-f1f2b" \
+        --zoo "$DATA_DIR/third_party/Bench2DriveZoo" --out "$D/accept.json" ;;
+smoke3)
+    # Pre-registered in the migration doc, section D3, before any run of this mode.
+    arm=$(alp_arm) || exit 2
+    python3 -c "import json,sys; r=json.load(open('$D/accept.json')); sys.exit(0 if r['$arm']['pass'] else 1)" \
+        || { echo "acceptance did not pass for the frozen arm $arm; no scored run" >&2; exit 2; }
+    R=(--route-ids 2390,24211,1711,2373,3564,2084,2115,3936,2050)
+    Z=$(zoo_switches "$arm")
+    config partner-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, $(partner true)"
+    config pure-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false"
+    config tcp-alone lebowski zoo_pid model 0 "$Z, \"desire\": false, $(partner true true)"
+    config partner-native-lebowski lebowski native model 5 ", \"desire\": false, $(partner true)"
+    start_servers lebowski
+    fail=0
+    for ph in partner-lebowski pure-lebowski tcp-alone partner-native-lebowski; do
+        run $ph 4 620 "${R[@]}" || fail=1
+        harness_check "$D/smoke3-$ph" || fail=1
+    done
+    python3 scripts/zeroshot_b2d_junctions.py "$D"/smoke3-{partner-lebowski,pure-lebowski,tcp-alone,partner-native-lebowski} \
+        --csv "$D/smoke3-routes.csv" | tee "$D/smoke3-summary.csv"
+    (( fail )) && exit 1
+    python3 scripts/zeroshot_b2d_op_choose.py "$D" --out "$D/full-choice.json" ;;
 full)
-    # Pre-registered (migration doc D3), from smoke2 only, before any full result: the TCP partnership (start +
-    # junctions) is the configuration; the model is Lebowski unless partner-cinque's smoke2 mean DS is >= 10 higher.
-    # The Zoo PID switches follow the values the Alpamayo exam freezes (ZOO_FORWARD_ONLY / ZOO_CADENCE, default F1+F2b).
-    model=$(python3 - "$D" <<'EOF'
-import csv, sys
-from pathlib import Path
-rows = {r["phase"]: r for r in csv.DictReader(open(Path(sys.argv[1]) / "smoke2-summary.csv"))}
-ds = lambda ph: float(rows["smoke2-" + ph]["ds"])  # noqa: E731
-print("cinque" if ds("partner-cinque") >= ds("partner-lebowski") + 10 else "lebowski")
-EOF
-)
-    echo "$(date '+%F %T') full: model=$model forward_only=${ZOO_FORWARD_ONLY:-true} cadence=${ZOO_CADENCE:-tick}" | tee "$D/full-choice.txt" >&2
-    config full-partner "$model" zoo_pid model 0 ", \"plan_forward_only\": ${ZOO_FORWARD_ONLY:-true}, \"zoo_cadence\": \"${ZOO_CADENCE:-tick}\", \"desire\": false, \"partner\": {\"ckpt\": \"$TCP_CKPT\", \"junctions\": true}"
-    POOL=4 start_servers "$model"
-    run full-partner 4 520 --towns all
+    # Configuration chosen from smoke3 by the pre-registered rule (migration doc D3); Lebowski (pre-registered rule
+    # of section D: it beat Cinque by 17.8 DS in the smoke).
+    ctl=$(python3 -c "import json; print(json.load(open('$D/full-choice.json'))['controller'] or '')")
+    [[ $ctl == zoo_pid || $ctl == native ]] || { echo "no full-run choice in $D/full-choice.json" >&2; exit 2; }
+    arm=$(alp_arm) || exit 2
+    echo "$(date '+%F %T') full: lebowski + TCP partner, controller=$ctl zoo_arm=$arm" | tee "$D/full-choice.txt" >&2
+    config full-partner lebowski "$ctl" model 0 "$([[ $ctl == zoo_pid ]] && zoo_switches "$arm"), \"desire\": false, $(partner true)"
+    POOL=4 start_servers lebowski
+    run full-partner 4 660 --towns all
+    python3 scripts/zeroshot_b2d_summary.py "$D/full-full-partner" | tee "$D/full-summary.txt"
+    python3 scripts/zeroshot_b2d_junctions.py "$D/full-full-partner" --csv "$D/full-routes.csv" | tee "$D/full-junctions.csv"
     python3 -c "import json,sys; s=json.load(open('$D/full-full-partner/summary.json')); n=len(s['routes_never_finished']); \
 print('never finished:', s['routes_never_finished']); sys.exit(0 if n <= 15 else 1)" || exit 1
     exit 0 ;;
-*) echo "mode must be smoke, smoke2 or full" >&2; exit 2 ;;
+*) echo "mode must be smoke, accept, smoke3 or full" >&2; exit 2 ;;
 esac

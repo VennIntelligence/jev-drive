@@ -44,7 +44,8 @@ the pre-registered smoke:
                     (UniAD / VAD)
   "partner"         absent | {"ckpt": path, "junctions": true|false}: shared control with the official TCP agent
                     (scripts/b2d_partner.py): TCP drives from standstill and (junctions) through route turns, the model
-                    everything else; who drives is logged every tick ("driver", "w_model")
+                    everything else; who drives is logged every tick ("driver", "w_model"); "tcp_only": true makes TCP
+                    drive the whole route (reference arm; the model still plans, in shadow)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -169,7 +170,7 @@ class ZeroShotAgent(AutonomousAgent):
         pcfg = self.cfg.get("partner")
         if pcfg:
             from b2d_partner import TCPPartner
-            self.partner = TCPPartner(pcfg["ckpt"])
+            self.partner = TCPPartner(pcfg["ckpt"], hero=getattr(self, "hero_actor", None))
             if getattr(self, "_dense_plan", None):      # the evaluator set the route before setup()
                 self.partner.set_global_plan(self._dense_gps, self._dense_plan)
         router_tags = self.cam_tags + (self.partner.camera_tags() if self.partner else [])
@@ -304,9 +305,13 @@ class ZeroShotAgent(AutonomousAgent):
         if self.partner is not None:
             if self.arbiter is None:
                 from b2d_partner import Arbiter
-                self.arbiter = Arbiter(self.route.xy, self.route.cmd, bool(self.cfg["partner"].get("junctions", True)))
+                pc = self.cfg["partner"]
+                self.arbiter = Arbiter(self.route.xy, self.route.cmd, bool(pc.get("junctions", True)),
+                                       bool(pc.get("tcp_only", False)))
             p_ctrl = self.partner.step(data, now)
-            ready = self.zoo_control is not None and not self.warm_now
+            has_ctrl = self.zoo_control is not None if self.zoo is not None else \
+                (self.accel_des is not None if self.native else self.controller.diagnostics["reason"] != "no_trajectory")
+            ready = has_ctrl and not self.warm_now
             w, why = self.arbiter.step(DELTA, speed, self.route.i, ready)
             throttle, steer, brake = self.arbiter.mix(w, (throttle, steer, brake), p_ctrl)
             share = {"driver": self.arbiter.driver, "w_model": round(w, 2), "partner_why": why,
