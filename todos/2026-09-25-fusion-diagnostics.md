@@ -1,6 +1,7 @@
-# 融合前诊断：谁看得见什么、谁对什么起反应、缺口在哪（9 项，一张卡）
+# 融合前诊断：谁看得见什么、谁对什么起反应、缺口在哪（9 项，1–2 张卡）
 
-状态: draft（预登记，写于任何新拟合、新抽取之前，2026-09-25 18:00；本文件只做计划，不启动任何实验）
+状态: 待排（预登记，写于任何新拟合、新抽取之前，2026-09-25 18:00；用户 2026-09-25 拍板三项，见「用户决定」；等中央调度员分卡后开跑）
+用户决定（2026-09-25）: (1) SAM 3.1 权重直接用 ModelScope 同名副本，SAM License 已接受；(2) 新建 `envs/sam3`；(3) 卡由中央调度员分配，可能是 1 张也可能是 2 张，本文件不指定卡号，两种排程都写在下面。
 上游: 第 22 条（judge 口径）、第 24 条（P3 阶梯）、第 25 条（continuation prior + reaction decoder）、第 32 条（P5 v0）、第 34 条（WOD zero-shot）、第 35 条（榜单 E 层）、
 第 40 条及后续 (iii)（[driving-backbones](2026-09-24-driving-backbones/README.md)）、第 42 条（[reactivity](2026-09-25-reactivity-program.md) 的 D0 / M-C）、
 [op-temporal-p5-and-route](2026-09-25-openpilot-temporal-p5-and-route.md)（实验 1、2a、2b）
@@ -107,8 +108,7 @@ box 状态：GPU 3 在 17:54 空闲（其余四张 40–57 GB 在用），load �
 - **输出**：召回、precision、BEV 位置误差中位数 / p90，按 类别 × 距离档（0–10、10–20、20–40、40–80 m）× 天气（白天 / 夜晚按 `sun_altitude` < 0 / 雨按 `precipitation` > 30；nuScenes 按 scene description）；
   openpilot lead 的召回与距离误差；延迟表。
 - **已有数据**：帧和 GT 全在；SAM 3.1 权重、环境都没有。
-- **阻塞项（要用户决定）**：HF 上 `facebook/sam3.1` 是 manual gated，我们的 token 403；ModelScope 有同名镜像（3.50 GB，可直接拉，走 Alpamayo 那条路）。
-  用 ModelScope 镜像之前，要用户确认接受 SAM License（Meta 自定义许可，2025-11-19 版），或在 HF 上提交访问申请等审批。
+- **权重与环境（已决定，2026-09-25）**：HF 上 `facebook/sam3.1` 是 manual gated（我们的 token 403），**直接拉 ModelScope 同名副本**（3.50 GB，走 Alpamayo 那条路），SAM License（Meta 自定义许可，2025-11-19 版）用户已接受。
   官方要求 Python ≥ 3.12、PyTorch ≥ 2.7、CUDA ≥ 12.6，没有 transformers 集成，走 `facebookresearch/sam3` 仓库；box 上的 `envs/jevdrive` 是 3.11，所以新建 `envs/sam3`（torch cu128 或 cu130，sm_120 已支持）。
   文本 prompt 在 video 模式下官方支持（`handle_request(start_session / add_prompt)`，SAM 3.1 的 release note 有 video PCS with text prompt 一栏）。未核实：SAM 3.1 的 multiplex checkpoint 是否也提供单独的 image 检测接口；若不提供，image 模式改用同一仓库的 SAM 3 检测器（`facebook/sam3`，ModelScope 同样有镜像），这一条写进偏离日志。
 - **等价性 / 坐标检查（批量之前必须过，16 帧）**：挑 16 个 hazard 清楚可见的 P5 x⁺ 帧（8 个行人、8 个车辆，覆盖三路相机和 5–40 m）：
@@ -216,9 +216,9 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 所以每张 80–200 ms（中位估 120 ms），68k 张 1.5–3.8 h。等效只算 P5 观测帧（29.8k 张）是 0.7–1.7 h。video 模式只用于 Q4d 的延迟和 Q6 的速度关联的抽查，不做全量。
 **停机线**：200 帧 profiling 外推全量 > 7.6 h（估计上界的 2 倍）就停下来报，考虑的降档依次是：WOD 只做 479 个 rater 帧 + 5000 帧 probe 训练行、nuScenes 只做 CAM_FRONT、P5 只做 x⁺ 与 null。
 
-**排程**（一张卡上的并发与先后）：
+**排程 A：分到一张卡**（并发与先后）：
 
-1. **第 0 阶段（CPU，立刻）**：Q3、Q7、Q2a、Q6（GT）并行，总 ≤ 20 核，约 1 h 墙钟。同时装 `envs/sam3`、拉权重（等用户对 SAM License 的确认）。
+1. **第 0 阶段（CPU，立刻）**：Q3、Q7、Q2a、Q6（GT）并行，总 ≤ 20 核，约 1 h 墙钟。同时装 `envs/sam3`、拉 ModelScope 权重。
 2. **第 1 阶段（GPU 两路并发）**：
    - 路 A：Q4 的 16 帧检查 → 200 帧 profiling → SAM 批量（P5 → nuScenes → WOD 的顺序，逐数据集落盘、可续跑）。≤ 30 GB、10 核。
    - 路 B：Q1 的 `cls_late`（WOD a、b 与 P5）和 ridge，≤ 20 GB、8 核；它是 L-BFGS 的小矩阵乘，与 SAM 共卡会互相拖慢约 20–40%，但总墙钟仍短于串行。
@@ -229,12 +229,19 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 
 整个包：不等 I1 的部分约 **1.5–2 天**（其中计算关键路径 7–10 h，其余是 SAM 接入、BEV 抬升和匹配的工程）；加上 I1 v1 的复跑再加半天。
 
+**排程 B：分到两张卡**。GPU·h 总量不变（3.8–7.7），变的是关键路径：
+- 卡 1 只跑 SAM 链（16 帧检查 → 200 帧 profiling → 批量 → Q4d 延迟），不与任何 L-BFGS 共卡，批量不再被拖慢 20–40%，估 1.2–3 h。
+- 卡 2 依次跑 Q1 `cls_late`（1.5 h）→ Q4c lead 重跑（20 min）→ Q9b 网格重抽 + head（1–2 h）→ 可选 V-JEPA 2 抽取（30 min）。
+- CPU 仍是 20 核上限，是两张卡时的瓶颈：SAM 的 JPEG 解码 10 核、Q1 8 核已到顶，Q4c 与 Q9b 只能排在 Q1 之后；第 0 阶段的 CPU 项照旧先跑。
+- 计算关键路径从 7–10 h 缩到约 **4–5 h**，整包仍约 1.5 天（工程时间不变）；I1 v1 后的复跑同 A。
+- 两张卡时显存合计 ≤ 60 GB 的约束不变，每张 ≤ 30 GB。
+
 ## 硬约束
 
 - judge 一字不改：WOD 用第 22 条口径（`waymo_ladder.rejudge`），P5 用 v0 的定向翻转率 + 样本外 null false-flip（`p5_exam.exam`）。新增的只是 arm、examinee 和描述性读数。
 - 训练与考试按路线（P5）或 sequence（WOD）分开；所有阈值（probe 工作点、规则门参数、best single 的选择）只在训练行上定。
 - SAM 部分必须先过上面的 16 帧坐标 / 等价性检查，才能批量。
-- 只用分给本任务的那一张卡（由 main 按 `runs/schedule.md` 指定；17:54 时 GPU 3 空闲）和约 20 核；其他卡上什么都不跑。每个 > 1 min 的作业进 tmux，写 `log.txt` / `events.jsonl` / `tb/`，并在 `runs/zeroshot-exam/gpu-plan.md` 登记。
+- 只用中央调度员分给本任务的卡（1 张按排程 A，2 张按排程 B；卡号以 `runs/schedule.md` 为准，本文件不指定）和约 20 核；其他卡上什么都不跑。每个 > 1 min 的作业进 tmux，写 `log.txt` / `events.jsonl` / `tb/`，并在 `runs/zeroshot-exam/gpu-plan.md` 登记。
 - 任何一步超出本表估计的 2 倍就停下来报，不自行加资源。
 - 偏离写进下面的偏离日志，时间戳早于受影响的数字。
 
