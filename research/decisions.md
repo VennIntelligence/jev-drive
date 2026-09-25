@@ -2846,6 +2846,10 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    RFS cluster mean 升到 **7.64（Cinque）/ 7.73（Lebowski）**，比同 tap 的 ridge 高 0.19 [−0.02, +0.40] / 0.23 [+0.04, +0.42]，比 `cls ego` 高 0.38 / 0.43（CI 不跨零）；
    增益集中在第 10 档（RFS +1.26 / +1.39 对 ridge 的 +0.59 / +0.51）。Lebowski 与它自己的原生 plan（7.89）差 −0.10 [−0.29, +0.09]，按预登记判「够到原生」；
    Cinque 与 8.00 仍差 −0.29 [−0.47, −0.10]，判「没补上」。合起来：**线性分类头补上了缺口的 0.4–0.7，剩下 0.1–0.3 RFS 不在单 mode 读出上**；代价照例是 ADE（pre-onset +0.18 / +0.21）。
+   *2026-09-26 补 seed（[夜间队列](../todos/2026-09-26-overnight-queue.md) 第 2 项，seed = k-means 词表 + 内层划分，其余不变）：这一格的强度要降。* `cls_late` 的 RFS 在 3 个 seed 上是 7.64 / 7.50 / 7.50（Cinque）、7.73 / 7.46 / 7.57（Lebowski），
+   对 `cls ego` 的增益 +0.38 / +0.19 / +0.29 与 +0.43 / +0.17 / +0.34，极差（0.18 / 0.26）超过原 CI 半宽（0.17 / 0.16）；seed 0 的重跑复现 seed 0，所以这是词表 seed 的效应，不是 run-to-run 噪声。
+   增益在三个 seed 上都为正，但「Lebowski 够到原生」只在 seed 0 上成立（3 seed 均值 7.59 对原生 7.89），按第 40 条原判据的 3 seed 重算还没做，在那之前这一格读作「补上缺口的一部分，是否够到原生随词表 seed 变」。
+   `ridge_late` 各行是确定性的（3 seed 逐位相同），pre-onset 的 −0.29 / −0.32 m 不受影响。
 4. **nuScenes 独立复现**（2026-09-25，预登记先于分数；700 train scene 拟合、150 val scene 评，只用 CAM_FRONT，openpilot 按第 39 条考试协议逐 scene 连续跑，通用参照是 Qwen3-VL-4B `L18_mean` 单帧）：
    两个 `temporal` 在全部帧第 1–9 档上比 `ridge ego` **−0.091 / −0.087 m**、比 A **−0.076 / −0.072 m**（CI 都不跨零），按同一规则判「更好」；
    按相对量和 WOD 一样（ADE 降 18%，WOD train 训协议 22%；A 两边都只有 1–3%）。带 command（由未来 3 s 横向位移算出，文献惯例）时 pre-onset 只有 47 帧、测不出（−0.08 / −0.06，CI 跨零）；
