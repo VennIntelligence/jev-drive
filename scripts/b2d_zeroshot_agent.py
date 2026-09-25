@@ -308,14 +308,19 @@ class ZeroShotAgent(AutonomousAgent):
                 pc = self.cfg["partner"]
                 self.arbiter = Arbiter(self.route.xy, self.route.cmd, bool(pc.get("junctions", True)),
                                        bool(pc.get("tcp_only", False)))
-            p_ctrl = self.partner.step(data, now)
             has_ctrl = self.zoo_control is not None if self.zoo is not None else \
                 (self.accel_des is not None if self.native else self.controller.diagnostics["reason"] != "no_trajectory")
             ready = has_ctrl and not self.warm_now
-            w, why = self.arbiter.step(DELTA, speed, self.route.i, ready)
-            throttle, steer, brake = self.arbiter.mix(w, (throttle, steer, brake), p_ctrl)
-            share = {"driver": self.arbiter.driver, "w_model": round(w, 2), "partner_why": why,
-                     "partner_ctrl": [round(x, 3) for x in p_ctrl]}
+            w, why = self.arbiter.step(DELTA, speed, self.route.i, ready, model_go=has_ctrl and brake <= 0.0)
+            share = {"driver": self.arbiter.driver, "w_model": round(w, 2), "partner_why": why}
+            if w < 1.0:             # the partner's network runs only when its control has weight (b2d_partner.py)
+                t_p = time.perf_counter()
+                p_ctrl = self.partner.step(data, now)
+                throttle, steer, brake = self.arbiter.mix(w, (throttle, steer, brake), p_ctrl)
+                share.update(partner_ctrl=[round(x, 3) for x in p_ctrl],
+                             partner_ms=round(1e3 * (time.perf_counter() - t_p), 1))
+            else:
+                self.partner.advance(data)
         self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
         tick_ms = 1e3 * (time.perf_counter() - t_start)

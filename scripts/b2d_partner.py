@@ -3,9 +3,12 @@ cannot handle, the model drives everything else. Pre-registration: todos/2026-09
 section D3. Python 3.8, runs inside the route subprocess (envs/b2d-tcp: torch + carla).
 
 Partner: the official Bench2DriveZoo TCP agent (team_code/tcp_b2d_agent.py, branch tcp/admlp 8a08b07,
-PLANNER_TYPE=only_traj, checkpoint tcp_b2d.ckpt sha256 e6573ff1...) run unmodified, with its own three 1600x900
-cameras, its own route planner / target point and its own PID and final throttle cap. It is stepped on every tick,
-whoever drives, so its internal state is always current.
+PLANNER_TYPE=only_traj, checkpoint tcp_b2d.ckpt sha256 e6573ff1...) run as shipped, with its own three 1600x900
+cameras, its own route planner / target point and its own PID and final throttle cap (environment adaptations in
+TCPPartner). Its network runs on every tick on which its control has weight (it drives or is being blended in); on
+the other ticks only its route planner advances (TCP has no temporal input, seq_len 1), and each stint starts with
+fresh PID windows. Running it on every tick cost ~160 ms per tick (the shipped JPEG round trip of three 1600x900
+images, the resize and the forward), which would have made the full run ~4x slower.
 
 Arbiter - observable state only (speed, route geometry and the ego's progress along it, time), never outcomes:
   the partner drives while any of
@@ -15,8 +18,14 @@ Arbiter - observable state only (speed, route geometry and the ego's progress al
     junction zone      the ego is between 15 m before the start and 5 m after the end (route arc length) of a
                        LEFT / RIGHT route command                                            (only if junctions=True)
     model warm-up      the model has not finished its warm-up
+    model not ready    (only while the partner still has weight) the model's own control, computed every tick, has
+                       braked within the last 0.5 s: control is handed back only to a model that would keep the car
+                       moving. Without this, openpilot + Zoo PID took over at TCP's 1.5 m/s, read its own low-speed plan
+                       (x@1 s ~1.2 m) as "slower than now", braked to a stop within 0.5 s and handed back: a 3 s cycle
+                       (plumbing run, route 2086, before any acceptance or scored run).
   the model drives otherwise ("tcp_only": the partner drives throughout, the reference arm). A change of driver is blended linearly over 0.5 s (10 ticks) on steer, throttle, brake.
 """
+import copy
 import os
 import sys
 from pathlib import Path
@@ -25,6 +34,7 @@ import numpy as np
 
 STANDSTILL_V, STANDSTILL_S = 0.1, 0.5
 RELEASE_V, RELEASE_S = 1.0, 1.0
+GO_S = 0.5
 ZONE_BEFORE_M, ZONE_AFTER_M = 15.0, 5.0
 BLEND_TICKS = 10
 LEFT, RIGHT = 1, 2
@@ -94,6 +104,8 @@ class TCPPartner(object):
         finally:
             torch.load, torch.nn.Module.cuda = orig_load, orig_cuda
         a.net = RemoteTCP(a.net, sock_path)
+        self.fresh_pids = copy.deepcopy((a.net.net.turn_controller, a.net.net.speed_controller))
+        self.idle = False
         self.agent = a
         self.specs = [s for s in a.sensors() if s["id"] != "bev"]
         self.tags = [s["id"] for s in self.specs]
@@ -109,10 +121,24 @@ class TCPPartner(object):
     def set_global_plan(self, gps, world):
         self.agent.set_global_plan(gps, world)
 
+    def advance(self, data):
+        """A tick on which the partner's control has no weight: only its route planner advances (the shipped tick()
+        does this before the network; skipped, the planner would lose the ego after 50 m). Next stint starts with
+        fresh PID windows, as at a route start."""
+        a = self.agent
+        if not a.initialized:
+            a._init()
+        a._route_planner.run_step(a.gps_to_location(np.asarray(data["GPS"][1], float)[:2]))
+        self.idle = True
+
     def step(self, data, timestamp):
         """data: {tag: (frame, value)} with every partner sensor; returns (throttle, steer, brake)."""
         if not all(t in data for t in self.tags):
             return self.last
+        if self.idle:
+            net = self.agent.net.net
+            net.turn_controller, net.speed_controller = copy.deepcopy(self.fresh_pids)
+            self.idle = False
         inp = {t: data[t] for t in self.tags}
         inp["bev"] = (data["SPEED"][0], self.bev)
         c = self.agent.run_step(inp, timestamp)
@@ -135,13 +161,15 @@ class Arbiter(object):
                 i = j + 1
             else:
                 i += 1
-        self.latch, self.low_t, self.high_t = True, 0.0, 0.0
+        self.latch, self.low_t, self.high_t, self.go_t = True, 0.0, 0.0, 0.0
         self.w = 0.0                                          # weight of the model's control, 0 = partner
         self.partner_only = bool(partner_only)                # reference arm: the partner drives the whole route
         self.driver = "partner"
 
-    def step(self, dt, speed, route_index, model_ready):
-        """-> weight of the model's control in [0, 1] and the reason the partner holds (or '')."""
+    def step(self, dt, speed, route_index, model_ready, model_go=True):
+        """-> weight of the model's control in [0, 1] and the reason the partner holds (or '').
+        model_go: the model's own control (computed every tick, also while the partner drives) does not brake."""
+        self.go_t = self.go_t + dt if model_go else 0.0
         if speed < STANDSTILL_V:
             self.low_t += dt
             if self.low_t >= STANDSTILL_S:
@@ -157,6 +185,8 @@ class Arbiter(object):
         s_now = self.s[min(route_index, len(self.s) - 1)]
         zone = any(a <= s_now <= b for a, b in self.zones)
         why = "partner_only" if self.partner_only else "warmup" if not model_ready else "standstill" if self.latch else "junction" if zone else ""
+        if not why and self.w < 1.0 and self.go_t < GO_S:
+            why = "model_not_ready"                           # hand over only to a model that is not braking
         target = 0.0 if why else 1.0
         step = 1.0 / BLEND_TICKS
         self.w = min(target, self.w + step) if target > self.w else max(target, self.w - step)
