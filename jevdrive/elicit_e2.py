@@ -2,7 +2,7 @@
 entry [E2] 00:40, written before any pair was built).
 
   candidates  (project venv, CPU) navtrain tokens whose t0 frame has a GT pedestrian / bicycle in the corridor
-              (logged 4 s path polyline +-1.5 m, ahead, <= 30 m, >= 20 px tall in CAM_F0); one actor per token (the
+              (logged 4 s path polyline continued along its last heading to 30 m, +-1.5 m, ahead, <= 30 m, >= 20 px tall in CAM_F0); one actor per token (the
               nearest), one token per (log, actor); for every image the features read (CAM_F0 / L0 / R0 x the 4 agent
               frames at 2 Hz): the actor's projected 3D box, the other agents' boxes, and the placebo shift (the actor's
               box moved onto a fixed world point of the ego path with no agent under it)
@@ -90,6 +90,7 @@ _TOK2FUT: dict = {}
 
 def _log_candidates(log_path):
     tok2fut = _TOK2FUT
+    from .fusion_q2b import extend
     from .navsim_zs import cams_of
     frames = pickle.load(open(log_path, "rb"))
     sensor = data_dir() / "datasets" / "navsim" / "sensor_blobs" / "trainval"
@@ -104,7 +105,7 @@ def _log_candidates(log_path):
         if not np.allclose(dts, 0.5, atol=0.06):
             continue
         a = hist[-1]["anns"]
-        poly = np.vstack([[0.0, 0.0], tok2fut[tok][:, :2]])
+        poly = extend(np.vstack([[0.0, 0.0], tok2fut[tok][:, :2]]), RANGE)   # deviation [E2] 00:50
         best = None
         for j, (nm, bx) in enumerate(zip(a["gt_names"], a["gt_boxes"])):
             if nm not in ("pedestrian", "bicycle") or bx[0] <= 0:
@@ -135,7 +136,7 @@ def _log_candidates(log_path):
         imgs = []
         for k, (f, cm) in enumerate(zip(hist, cams)):
             fa = f["anns"]
-            idx = np.flatnonzero(fa["track_tokens"] == track)
+            idx = np.flatnonzero(np.asarray(fa["track_tokens"]) == track)
             for c in CAMS:
                 ab = box2d(fa["gt_boxes"][idx[0]], cm[c]) if len(idx) else None
                 others = []
