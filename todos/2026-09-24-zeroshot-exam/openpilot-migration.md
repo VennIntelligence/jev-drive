@@ -1,6 +1,6 @@
 # openpilot 迁移计划：从 comma 车到闭环仿真器和别的相机 rig
 
-状态: A 诊断完成、修复已实现；控制器已定（Zoo 官方 PID，D 节）；起步与路口交给 TCP 伙伴（D3），验收 → smoke3 → 全量排进 slot `op-b2d-accept` / `op-b2d-smoke3` / `op-b2d-full`；B 在 comma1M 与 WOD-E2E 上完成；C 见下
+状态: A 诊断完成、修复已实现；控制器已定（Zoo 官方 PID，D 节）；起步与路口交给 TCP 伙伴（D3）；验收（D4）与 smoke3 跑完，**B2D 闭环按用户决定暂停**（D5，全量没有跑）；B 在 comma1M 与 WOD-E2E 上完成；C 见下
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/trajectory-to-control.md
 相关: [openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、[B2D 考试](bench2drive.md)、[WOD-E2E 考试](wod-e2e.md)、
 [NAVSIM 考试](navsim.md)、[控制器 API](../../docs/b2d-controller.md)
@@ -574,6 +574,54 @@ JPEG q20 往返 ~37 ms、CPU 上缩放 ~11–22 ms）、远程前向 ~30 ms、�
 1600×900）渲染并送来。整机负载 72–80 / 75 核。瓶颈在第三方部分（CARLA 渲染、TCP 出厂预处理），按规则不改写；我们这边已经
 做的：TCP 网络只在有权重时跑（原先每 tick 都跑，~160 ms）、去掉 TCP 每 tick 6 次只用于存盘的仿真器 RPC。全量 220 条约
 44 万 tick，估计 8–11 h（取决于 TCP 开车的占比）。
+
+### D5. smoke3 结果与暂停状态（2026-09-25，用户决定：B2D 闭环暂停，全量 `op-b2d-full` 已撤）
+
+9 条路线（5 条预注册 smoke + 4 条路口），TM seed 0，Lebowski，Zoo PID 开关为 Alpamayo 冻结的 `f1`（forward-only +
+每次规划调一次）。DS / RC 为官方 `score_composed` / `score_route`；SR 按 Bench2Drive 定义（Completed 且除 min-speed
+外无违规）；份额是按行驶距离 / tick 数算的“模型在开”比例（其余是 TCP 或换人混合）。
+
+| 阶段 | 均值 DS | RC | SR | 模型距离份额 | 模型时间份额 | 路口转弯通过 | 违规（按驾驶者） |
+|---|---|---|---|---|---|---|---|
+| `partner-lebowski`（主） | **65.4** | 100 | 3/9 | 61.5% | 31.9% | 5/6 | TCP 6，模型 2，无坐标 2 |
+| `pure-lebowski`（纯 openpilot） | 9.9 | 21.9 | 0/9 | 100% | 100% | 0/3 | 模型 12（5 条从未起步、3 次闯红灯） |
+| `tcp-alone`（参考） | 73.9 | 100 | 4/9 | 0 | 0 | 5/6 | TCP 6 |
+| `partner-native-lebowski` | 70.7 | 100 | 3/9 | 27.4% | 28.4% | 6/6 | TCP 7 |
+
+逐路线（`partner-lebowski`）：1711、2390、3564 DS 100；24211 50（模型开车时撞行人）；2115 25.4（模型与 TCP 各撞一次路边
+设施）；四条路口路线的扣分全部来自 TCP 在路口里的车辆碰撞。预注册的选择规则（E1–E4）选中 Zoo PID（E4 = 61.5% ≥ 50%；
+native 只有 27.4%），但全量按用户决定不跑。box 上的原始输出：`runs/zeroshot-exam/b2d-op/smoke3-*`、`smoke3-summary.csv`、
+`smoke3-routes.csv`、`full-choice.json`。
+
+读法：
+
+- **能用的部分。** 修过的适配（后轴原点、逐帧同步、5 s 预热、Zoo PID `f1`）让 openpilot 在已经开起来之后能稳定跟车道、
+  跟车：模型开车期间 0 次车道违规、0 次换人期间的碰撞；在三条常规路线上（1711、24211、3564）模型开了 91–95% 的距离。
+- **分数主要不是 openpilot 的。** 主配置比 TCP 单独开低 8.5 DS，且模型的距离份额只有 61.5%、时间份额 31.9%；
+  路口、起步、停后再起步都是 TCP。纯 openpilot 只有 9.9。所以在 B2D 上目前能说的是“openpilot 在直行 / 跟车段不拖后腿”，
+  不能说“openpilot 能开 B2D”。
+- **native 执行不是解药。** openpilot 自己的 accel 语义在 TCP 的 1.4 m/s 上会接手，但接手后很快又停（份额 27%）。
+
+**卡在哪里（适配层，已知、没有改）：**
+
+1. **没有路线输入。** openpilot 只有 desire（左 / 右转、变道脉冲），没有 route / target point；纯 openpilot 的路口转弯 0/3。
+   现在靠 TCP 在路口区（命令前 15 m 到后 5 m）开车。
+2. **TCP 出厂的低速油门上限。** TCP 在 1.5 m/s 以上油门 ≤ 0.05，所以它只能把车带到 ~1.5 m/s；在这个速度上 openpilot +
+   Zoo PID 不就绪（见 D4），换人拖得很长，路口里 TCP 也是这个速度，路口碰撞是主配置扣分的主要来源。
+3. **静止起步与停后再起步。** openpilot 在静止时的 plan 一直是“停着”（纯 openpilot 9 条里 5 条从未起步），红灯、前车
+   停下之后的再起步都要 TCP。
+
+**如果要重训 / 微调 openpilot，需要解决的具体问题：**
+
+| # | 问题 | 证据 | 重训需要的东西 |
+|---|---|---|---|
+| 1 | 没有导航条件输入，路口不会按路线转弯 | 纯 openpilot 路口 0/3；desire 探针只让 plan 横移 1–4 m（`desire_probe.json`） | 加 route / target point 或离散命令作为输入，并用带转弯标注的数据训 |
+| 2 | 静止时不会自己决定出发 | 5/9 路线从未起步；D1 里 20 个路线 × 配置 12 个没动；WOD-E2E 起始车速 < 0.5 m/s 的帧不比“继续停着”好 | 加入“从静止出发”的样本与标签（真车数据里起步由驾驶员触发，模型从未学过） |
+| 3 | 低速时位置 plan 与 accel 输出不一致 | 1.4 m/s 时 plan 1 s 处只走 ~1.2 m，desired accel 却是 +1.1 ~ +1.5 m/s²；按位置跟踪的控制器因此刹车 | 让轨迹头在低速段与自车速度 / 加速度一致（低速样本加权，或把位置与 accel 联合监督） |
+| 4 | 不看红绿灯 / 停车标志 | 纯 openpilot 在 2050、2373、3936 各闯一次红灯 | 带信号灯状态的数据与停车标签（comma 的数据里 openpilot 纵向不以红灯为目标） |
+| 5 | 仿真画面与相机安装的域差 | CARLA 相机高 1.43 m（comma 名义 1.22 m），画面为 CARLA 渲染；B4 的高度效应在真实数据上小、在地面平面仿真里大 | CARLA 数据上微调，或按目标 rig 的高度 / 内外参做数据增强 |
+| 6 | 行人与近距离障碍 | 24211 模型开车时撞行人；2115 撞路边设施 | 近距离弱势交通参与者与静态障碍的样本 |
+| 7 | 输出节奏与接口 | Lebowski 5 Hz、相机坐标的 plan；需要后轴变换和外部 PID 才能进 B2D | 输出后轴坐标、与 20 Hz 控制相容的轨迹（或直接输出控制），省掉一层适配 |
 
 ## 偏离记录（B2D 考试的 openpilot 部分）
 
