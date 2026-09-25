@@ -8,7 +8,7 @@ set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
 tag=$1 st=${2:-0}
-CPUS=${PROF_CPUS:-196-207} GPU=${PROF_GPU:-2} W=${PROF_WORKERS:-2}
+CPUS=${PROF_CPUS:-190-195,202-207} GPU=${PROF_GPU:-2} W=${PROF_WORKERS:-2}
 R=$DATA_DIR/runs/p5v1
 P=$R/prof-$tag
 mkdir -p "$P"
@@ -23,12 +23,13 @@ taskset -c "$CPUS" "$DATA_DIR/envs/carla/bin/python" scripts/p5v1_prof_sampler.p
     --port-lo 46000 --port-hi 46950 --gpu "$GPU" --until-file "$P/stop" &
 t0=$(date +%s)
 for e in pdm ba; do
-    tree=$DATA_DIR/third_party/Bench2Drive; [[ $e == pdm ]] && tree=$DATA_DIR/third_party/simlingo/Bench2Drive
+    tree=$DATA_DIR/third_party/Bench2Drive py=$DATA_DIR/envs/scout-tfv6/bin/python
+    [[ $e == pdm ]] && tree=$DATA_DIR/third_party/simlingo/Bench2Drive py=$DATA_DIR/envs/p5v1-pdm/bin/python
     CUDA_VISIBLE_DEVICES=$GPU BENCH2DRIVE_ROOT=$tree WORK_DIR=$DATA_DIR/third_party/simlingo taskset -c "$CPUS" \
         "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py --routes "$R/pairs.xml" \
         --route-ids 2751510,2751520,2751530,1117710,1117720 --out "$P/gen-$e" --workers "$W" --server-index 880 \
         --index-span 10 --gpu-rank "$GPU" --tm-seed-from-id --agent scripts/p5_pair_agent.py \
-        --agent-config "$P/agent-$e.json" --python "$DATA_DIR/envs/scout-tfv6/bin/python" --fast-copy --no-spectator \
+        --agent-config "$P/agent-$e.json" --python "$py" --fast-copy --no-spectator \
         --no-reap --max-attempts 2 --stagger-s 20
     echo "$(date +%T) $e done, wall so far $(( $(date +%s) - t0 )) s"
 done
