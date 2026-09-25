@@ -1,0 +1,11 @@
+family,pairs,runs_ok,deterministic_to_visibility,drop_never_visible,drop_background_drift,drop_expert_reacted_before_visible,drop_missing_run,obs_frames,reactive_frames,nonreactive_frames,pairs_with_reactive,stop_flip_frames,d_expert_median,d_expert_reactive_median,impure_frames,in_pooled
+DynamicObjectCrossing,45,45,30,0,0,15,0,149,142,7,30,90,-5.153247833251953,-5.225736021995544,10,True
+HardBreakRoute,24,24,2,22,0,0,0,167,0,167,0,0,0.0,,0,False
+HighwayCutIn,27,27,27,0,0,0,0,362,111,251,23,0,0.0,-1.658203125,0,True
+Light,51,48,17,0,7,24,3,2,0,2,0,0,0.3439950942993164,,0,False
+OppositeVehicleRunningRedLight,18,18,9,0,0,9,0,2,0,2,0,0,-0.0003371238708496094,,0,False
+ParkingCrossingPedestrian,21,21,9,3,0,9,0,102,62,40,9,39,-2.1388039588928223,-5.550967216491699,11,True
+ParkingCutIn,24,24,24,0,0,0,0,402,186,216,24,84,-0.05391693115234375,-5.1391847133636475,30,True
+PedestrianCrossing,21,21,21,0,0,0,0,758,38,720,11,4,0.0,-1.3460863828659058,17,True
+StaticCutIn,30,30,30,0,0,0,0,274,177,97,30,0,-3.544889450073242,-6.210949659347534,0,True
+VehicleTurningRoutePedestrian,42,42,42,0,0,0,0,4768,67,4701,13,50,0.0,-2.643202781677246,1217,True
