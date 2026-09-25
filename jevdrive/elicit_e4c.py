@@ -98,7 +98,9 @@ def curves(obs, null, taus, pooled, examinees, rl, set_):
             good = np.isfinite(cp[:, 0]) & np.isfinite(cn[:, 0])
             cp, cn = cp[good], cn[good]
             mL = GRID >= L - 1e-9
-            boot = {"A": cp[:, mL].mean(1), "A_null": cn[:, mL].mean(1)}
+            m3 = mL & (GRID <= 3.0 + 1e-9)            # A3: co-reported readout, decision [决定] 01:48
+            boot = {"A": cp[:, mL].mean(1), "A_null": cn[:, mL].mean(1), "A3": cp[:, m3].mean(1),
+                    "A3_null": cn[:, m3].mean(1)}
             A, An = np.array(boot["A"]), np.array(boot["A_null"])
             q = lambda v: (float(np.quantile(v, 0.025)), float(np.quantile(v, 0.975)))  # noqa: E731
             area.append({"set": set_, "examinee": ex, "scope": scope, "L_s": L, "pairs": len(units),
@@ -108,6 +110,11 @@ def curves(obs, null, taus, pooled, examinees, rl, set_):
                          "area_minus_null": _area(c_all, L) - _area(c_null, L),
                          "diff_lo": q(A - An)[0], "diff_hi": q(A - An)[1],
                          "area_L_3_descriptive": _area(c_all, L, 3.0) if L <= 3 else np.nan,
+                         "A3": _area(c_all, L, 3.0), "A3_lo": q(boot["A3"])[0], "A3_hi": q(boot["A3"])[1],
+                         "A3_null": _area(c_null, L, 3.0), "A3_null_lo": q(boot["A3_null"])[0],
+                         "A3_null_hi": q(boot["A3_null"])[1],
+                         "A3_minus_null": _area(c_all, L, 3.0) - _area(c_null, L, 3.0),
+                         "A3_diff_lo": q(boot["A3"] - boot["A3_null"])[0], "A3_diff_hi": q(boot["A3"] - boot["A3_null"])[1],
                          "area_reactive_only_L_10": _area(c_rea, L), "end_all": c_all[-1], "end_reactive_only": c_rea[-1],
                          "null_end": c_null[-1]})
             first_rows.append(pd.DataFrame({"set": set_, "examinee": ex, "scope": scope, "pk": units,
