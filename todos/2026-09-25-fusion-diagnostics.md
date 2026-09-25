@@ -303,6 +303,21 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   车辆 3 个：front_right hazard 32.2 m，front_left 背景车 16.7 / 28.7 m）。选帧只看 GT 投影图，不看任何 SAM 输出；清单在 box 上 `processed/fusion_diag/lists/check16_sel.parquet`。
   (9) P5 的 precision 偏低是结构性的：CARLA 城镇里路边停着的车很多是静态 mesh，不是 actor，不在 `actors.npz` 里（投影图上肉眼可见无 GT 的停放车辆）。SAM 检出它们会被计成 false positive。
   所以 P5 的 precision 只作描述，precision 的正式读数以 nuScenes 为准；P5 的召回不受影响（GT 里的每个 actor 都是真的）。GT 参考点投影的正确性已在 4 张图上目检（行人落在脚下、车辆落在离相机最近的底角）。
+- 2026-09-25 19:10 CST [Q4] 16 帧检查的结果与由此做的改动（写在任何批量统计之前）。
+  (10) **检查 (c) 按登记的 batching 不过，改成逐图逐 prompt 的原样路径**。第一版把 B 张图 × 6 个 prompt 放进一次 `forward_grounding`：16 张图 96 个（图, prompt）里实例数全部一致，
+  但 mask IoU 最低 0.988、分数差最大 4.2e-3，没过登记的 0.99 / 1e-3。原因是 bf16：任何 batch 形状的变化（多图、多 prompt、6 个 prompt 一起编码文本）都会改变数值，在 6 张图上逐一试过，
+  只有「一张图、一个 prompt、prompt 单独编码文本」与 `Sam3Processor` 逐位相同；关掉 autocast 的 fp32 路径跑不起来（模型内部有 bf16 的权重 / 缓存）。所以批量改用这条原样路径（`Detector(mode="exact")`），
+  图像编码在 6 个 prompt 之间共享（与 processor 一致）。修改后检查 (c)：96 对实例数全一致，mask IoU 全部 1.0，分数差 0。另外 JPEG 解码改用 PIL（processor 文档里的输入）：
+  GPU 上的 nvjpeg 解码会让已保留实例的分数移动到 0.04、mask IoU 低到 0.94，这是解码器差异，不是模型差异，但既然要逐位对齐就一起去掉。
+  (11) **检查 (a) 过、(b) 按字面不过，原因是平地假设，不是坐标链**。修正后（见 (12)）：16 个物体里 14 个被 SAM 检出且 GT 底面中心落在检出框内（剩下 2 个：一个 34 m 的车、一个被前车挡住大半的行人），
+  接地点对 GT 参考点的像素误差中位 8.8 px（登记 ≤ 15 px，过）；≤ 20 m 的 8 个物体上平地抬升的 BEV 误差中位 1.07 m（登记 ≤ 1.0 m，**差 0.07 m 不过**），
+  而把同一个接地点抬到物体真实地面高度（z = GT 底面在 ego 系下的高度，oracle）时中位 0.27 m。所以标定、投影、抬升这条链是对的，剩下的误差来自「路面是 z = 0 的平面」这个登记的方法假设：
+  站在人行道 / 路缘上的行人比 ego 路面高 0.2–0.3 m，在 20–33 m 处被平地抬升推远 2–7 m，超出匹配门 max(2 m, 0.1 d)，于是 16 个里按登记的 BEV 匹配只配上 9 个；车辆还有「轮胎接地点 vs footprint 角点」约 0.7–1 m 的结构差。
+  **处理**：这不是能在批量前「修掉」的 bug，而是被测方法的一部分，SAM 的输出（像素、mask）本身与抬升无关，抬升是批量之后的 CPU 后处理；所以批量照跑，主读数仍是登记的平地抬升，
+  另加一个并排读数「oracle 高度抬升」（只有 P5 有 GT 高度，nuScenes 用 box 底面高度同样可做），把「SAM 没看见」和「看见了但 BEV 放错」分开报。判据用的仍是主读数，(b) 不过这一条会写进结论。
+  (12) 这一轮查出并修掉的两处我们自己的错：P5 GT 原先没有计入 ego 的 pitch / roll（相机随车身俯仰），改为 CARLA `Transform` 的完整旋转；两个侧视行人的选帧脚本取了与人眼确认的不是同一个 walker（同一帧有多个 hazard 行人），改回人眼确认的那个。
+  两处都在看任何批量数字之前改好。
+  (13) 吞吐：原样路径在独占的卡上的实测见下一条 profiling；与 Q9b 的 Qwen 抽取共卡时 813 ms / 张（GPU 争用，不是 CPU：PIL 解码 12 ms / 张）。
 - 2026-09-25 18:40 CST [Q1] 以下全部写于 Q1 任何拟合之前。代码 `jevdrive/fusion_q1.py`，run dir `$DATA_DIR/runs/fusion_diag/q1/<time>`。
   (1) **P5 只有 `ridge_late`**：`p5_exam` 本身没有分类头，加一个就不再是「一字不改」的考生；`cls_late` 只在 WOD 的 (a)(b) 上跑。P5 上 V-JEPA 2 没抽，按登记的「可选」跳过，P5 的 single 只有四个。
   (2) **late fusion 的定义**：配对与 concat 相同（Cinque `temporal` + Qwen `L18_last`，Lebowski 同）。ridge = 两个单 arm 样本外轨迹逐点平均；cls = 两个单 arm 的**完整** logits（各自的 ego offset + 自己那一项）相加后取 top-1 anchor，
