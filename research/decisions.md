@@ -2948,6 +2948,23 @@ E4 按登记量了窗口，这个解释不成立，见下一段。）
 （scenario 的特权状态，例如对方车辆的并线计划），不是「早了几百毫秒」；这套标签对任何只看传感器的考生都测不出东西，换窗口修不好。
 验证办法：把 PDM-Lite 的 reactive 帧按 GT 规则门是否已触发分开计翻转。
 
+**E4c（同一计划，描述性）**：按对的累积翻转曲线上，BA 集 M-C 行人首次翻转比 expert onset 晚约 0.8 s（cut-in 0.2 s），是看见后反应；WOD 上人类（log）减速 onset 中位 0.9 s（Pedestrian 1.5 s），与 BA 的 1.2 s 同量级、比 PDM-Lite 的 0 s 晚。
+登记的「人类 onset 落在 1–3 s 就改主判定」没有触发；用户决定把 [L, 3 s] 曲线面积登记为并列读数（主判定仍是 BA 集逐帧翻转），3 s 内只有 BA 行人上的 M-C 高于 null 地板（+0.25 [+0.07, +0.43]）。
+
+**E5：20 Hz student——快通道不需要 Qwen（2026-09-26，同一计划 E5，检测器按 fast-perception 的表登记后才跑）**。student = openpilot `temporal` ⊕ YOLO26x-seg 640 fp16 的检测 embedding
+（路线走廊 |d| ≤ 4 m、40 m 内按距离前 8 个检测）经 MLP，用同一批 P5 v1 BA 配对差分训练；arm B 另加 teacher（M-C 双流）的 Δ 当辅助目标。
+
+| arm（Cinque；Lebowski） | 行人翻转 [CI] | cut-in 对 prior Δ (pp) | null false-flip | DynamicObjectCrossing 非反应帧误翻 |
+|:--|:--|:--|--:|--:|
+| 只 openpilot 配对差分（对照） | 6.9%（17.7%） | +8.1 | 5.0% | 0.9% |
+| M-C 双流 teacher（+ Qwen，200–300 ms） | 43.3%（41.6%） | +3.1 | 5.1% | 11.7% |
+| **student A**（+ YOLO，配对差分） | **52.7% [41.7, 62.1]**（55.7%） | −1.3 [−5.1, +2.1] | 5.1% | 12.7% |
+| **student B**（+ teacher Δ） | **51.5% [39.3, 61.9]**（51.5%） | +2.4 [+0.4, +4.3] | 5.0% | 12.3% |
+
+端到端延迟 p95 约 30 ms（检测 20 ms + embedding 2.6 + MLP 4.5 + openpilot 2.3），登记门槛 50 ms；两个 arm、两个模型、三个 seed（行人 51–57%）都过。
+读法：CARLA 里近处行人 YOLO26 看得见（≤ 20 m 召回 0.89），缺的是读出，配对差分把它读了出来；点估计高于 Qwen teacher 但 CI 重叠，不写「更好」。teacher 目标的作用是保住 cut-in。
+限定同本条：只在 CARLA（BA 集）内；[第 44 条](#44-配对差分从-carla-到真实数据carla-上激发出来的-reaction-head-直接加到真实特征上是有害的wod-与-navsim-都是log-里挖孪生对真实帧抹人造对两条路本轮都没把它带到真实数据上待定)说明 CARLA 上训的 Δ 直接上真实数据有害，student 的真实数据表现没测。
+
 **状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
 I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
 
