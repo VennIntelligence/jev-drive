@@ -13,9 +13,11 @@ MIRROR=https://mirrors.aliyun.com/pypi/simple
 JPY=$DATA_DIR/envs/jevdrive/bin/python
 
 hf() {  # repo path dst
-  [[ -s $3 ]] || env -u http_proxy -u https_proxy PYTHONPATH=$REPO "$JPY" -c "
-import sys; from pathlib import Path; from jevdrive.hfdl import download, hf_url
-download(hf_url(sys.argv[1], sys.argv[2]), Path(sys.argv[3]), streams=16)" "$1" "$2" "$3"
+  [[ -s $3 && $(stat -c %s "$3") -gt 20 ]] || env -u http_proxy -u https_proxy PYTHONPATH=$REPO "$JPY" -c "
+import sys, posixpath; from pathlib import Path; from jevdrive.hfdl import download, hf_url, tree
+# size from the tree listing: a HEAD on a small non-LFS file through the mirror reports a 20-byte body
+size = {x['path']: x['size'] for x in tree(sys.argv[1], posixpath.dirname(sys.argv[2]))}[sys.argv[2]]
+download(hf_url(sys.argv[1], sys.argv[2]), Path(sys.argv[3]), size=size, streams=16 if size > 64 << 20 else 1)" "$1" "$2" "$3"
 }
 gh_asset() {  # name dst_dir; GitHub release assets through turbo, resumed across dropped connections
   [[ -s $2/$1 ]] && return
@@ -65,7 +67,7 @@ G=$DATA_DIR/envs/gdino
 torch_env "$G"
 "$G/bin/python" -c "import transformers" 2>/dev/null || uv pip install -q --python "$G/bin/python" --index-url $MIRROR transformers $common
 mkdir -p "$M/grounding-dino-tiny"
-for f in config.json model.safetensors preprocessor_config.json special_tokens_map.json tokenizer.json tokenizer_config.json vocab.txt; do
+for f in config.json model.safetensors preprocessor_config.json special_tokens_map.json added_tokens.json tokenizer.json tokenizer_config.json vocab.txt; do
   hf IDEA-Research/grounding-dino-tiny "$f" "$M/grounding-dino-tiny/$f"
 done
 
