@@ -54,14 +54,20 @@ def _compare(dst, names) -> dict:
     return out
 
 
-def profile(rl, n: int, configs, workers: int):
+def profile(rl, n: int, configs, workers: int, ref_chunk: str = ""):
+    """`ref_chunk`: take the rows in a stored P5 chunk's own order, so every batch pairs the same clips as the
+    stored extraction did (the bit-for-bit test of the recipe); otherwise the first obs rows."""
     from . import features as F, p4_carla as p4, waymo_qwenvid as qv
     o = obs_index()
+    if ref_chunk:
+        t = pd.read_parquet(P.processed() / "index.parquet").set_index("frame_name")
+        names = pd.read_parquet(P.processed("features", ref_chunk) / "index.parquet").frame_name
+        o = t.loc[names].reset_index()
     items, names = o.files.map(list).tolist()[:n], o.frame_name.to_numpy()[:n]
     rows = []
     for comp, b in configs:
         fx = qv.make_fx(compile=comp, grid_hw=GRID_HW)
-        tag = f"b{b}-{'compile' if comp else 'eager'}"
+        tag = f"b{b}-{'compile' if comp else 'eager'}" + (f"-{ref_chunk}" if ref_chunk else "")
         dst = grid_root("profile", rl.dir.name, tag)
         torch.cuda.reset_peak_memory_stats()
         t0 = time.perf_counter()
@@ -323,6 +329,7 @@ def main():
     ap.add_argument("step", choices=("profile", "extract", "fit"))
     ap.add_argument("--n", type=int, default=64)
     ap.add_argument("--configs", default="eager:2,compile:8", help="profile: comma list of eager|compile:batch")
+    ap.add_argument("--ref-chunk", default="", help="profile: stored P5 chunk whose row order to reuse (e.g. c010)")
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--compile", action="store_true")
     ap.add_argument("--workers", type=int, default=6)
@@ -333,7 +340,8 @@ def main():
     rl = RunLog("fusion_diag", f"q9b-{a.step}")
     rl.event("start", args=vars(a))
     if a.step == "profile":
-        profile(rl, a.n, [(c == "compile", int(b)) for c, b in (x.split(":") for x in a.configs.split(","))], a.workers)
+        profile(rl, a.n, [(c == "compile", int(b)) for c, b in (x.split(":") for x in a.configs.split(","))], a.workers,
+                a.ref_chunk)
     elif a.step == "extract":
         extract(rl, a.batch, a.compile, a.workers)
     else:
