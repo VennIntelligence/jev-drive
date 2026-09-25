@@ -403,10 +403,57 @@ def validate(dataset: str = "navtrain", tag: str = "val64", conf: float = 0.25, 
     return summ
 
 
+# ---------------------------------------------------------------- figure (project venv)
+
+def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int = 0) -> Path:
+    """16 random pairs (seed 0): t0 CAM_F0 crops around the actor, x+ | x- | placebo (the placebo crop is taken
+    around the moved box). PNG + PDF in the run dir; the PNG is also written to research/figs/."""
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    from . import plots
+    from .runlog import RunLog
+    plt.rcParams.update(plots.STYLE)
+    rl = RunLog("elicitation", "e2-fig")
+    root = out_root(dataset, tag)
+    recs = [(m.parent, r) for m in sorted(root.glob("c*/meta.json")) for r in json.loads(m.read_text())]
+    recs = [(d, r, im) for d, r in recs for im in r["images"] if im["cam"] == "CAM_F0" and im["k"] == 3]
+    pick = np.random.default_rng(seed).choice(len(recs), min(n, len(recs)), replace=False)
+
+    def crop(path, box, W=480, H=270):
+        b = np.asarray(box, float)
+        cx, cy, s = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2, max(3 * (b[3] - b[1]), 200)
+        w, h = s * 16 / 9, s
+        x0, y0 = int(np.clip(cx - w / 2, 0, W_IMG - w)), int(np.clip(cy - h / 2, 0, H_IMG - h))
+        return np.asarray(Image.open(path).convert("RGB").crop((x0, y0, x0 + int(w), y0 + int(h))).resize((W, H)))
+
+    fig, axes = plt.subplots(8, 6, figsize=(6.875, 6.875 * 8 * 270 / (6 * 480) + 0.3))
+    for j, i in enumerate(pick):
+        d, r, im = recs[i]
+        name = f"{im['cam']}_{im['k']}"
+        panels = [crop(im["path"], im["actor"]), crop(d / r["token"] / f"{name}_minus.jpg", im["actor"])]
+        if im.get("placebo"):
+            du, dv = im["placebo_shift"]
+            pb = [im["actor"][0] + du, im["actor"][1] + dv, im["actor"][2] + du, im["actor"][3] + dv]
+            panels.append(crop(d / r["token"] / f"{name}_placebo.jpg", pb))
+        row, col = j // 2, (j % 2) * 3
+        for q in range(3):
+            ax = axes[row, col + q]
+            ax.axis("off")
+            if q < len(panels):
+                ax.imshow(panels[q])
+            if row == 0:
+                ax.set_title(("$x^+$", "$x^-$", "placebo")[q], fontsize=8, pad=2)
+        axes[row, col].text(4, 20, f"{j + 1}: {r['cls'][:3]} {r['dist']:.0f} m ({im['mask_src']})", color="w", fontsize=6)
+    fig.subplots_adjust(wspace=0.02, hspace=0.04)
+    plots.save(fig, rl.dir, "elicit-e2-pairs16")
+    rl.close()
+    return rl.dir
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -416,6 +463,8 @@ def main():
         candidates(a.workers)
     elif a.cmd == "build":
         build(a.dataset, a.limit, a.tag)
+    elif a.cmd == "fig":
+        print(fig16(a.dataset, a.tag))
     else:
         print(validate(a.dataset, a.tag))
 
