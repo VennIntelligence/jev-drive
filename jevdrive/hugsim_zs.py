@@ -235,6 +235,23 @@ def alpamayo_to_plan(xyz, yaw, d: float, t_src=ALP_T, rigid: bool = True) -> np.
     return np.stack([-y, x], -1)
 
 
+def forward_only(plan) -> np.ndarray:
+    """No reverse plans: walk the plan from the ego origin and zero every segment that points backwards relative to
+    the direction of travel so far (the ego's forward axis until the first kept segment), then re-accumulate. A
+    model's "stop" that integrates to a small reverse track becomes a zero-length plan (stand still) instead of a
+    reference behind the car, which iLQR would track by reversing. Forward plans, including sharp turns, are
+    unchanged. Returns a new (N, 2) array (x right, y forward)."""
+    p = np.asarray(plan, np.float64)
+    seg = np.diff(np.r_[[[0.0, 0.0]], p], axis=0)
+    ref = np.array([0.0, 1.0])
+    for k in range(len(seg)):
+        if seg[k] @ ref < 0:
+            seg[k] = 0.0
+        elif np.linalg.norm(seg[k]) > 1e-6:
+            ref = seg[k] / np.linalg.norm(seg[k])
+    return np.cumsum(seg, axis=0)
+
+
 def openpilot_to_plan(plan_pos, t_idxs, dilation: float = 1.0) -> np.ndarray:
     """openpilot plan (calib frame at the camera: x fwd, y right; model time tau) -> HUGSIM plan. The model's
     clock runs `dilation` times faster than the simulator's (one 0.25 s step is fed as one 0.2 s context step),

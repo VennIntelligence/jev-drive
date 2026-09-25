@@ -37,7 +37,7 @@ TREES = {"official": D / "third_party" / "HUGSIM-zs" / "official", "fixed": D / 
 FIX = REPO / "patches" / "hugsim" / "optional" / "lqr-heading-fix.patch"
 AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
-          "pdms", "steps", "end", "wall_s", "rc_code", "finished"]
+          "pdms", "steps", "end", "wall_s", "rc_code", "finished", "scene", "run_dir"]
 END = [("Collision with background", "bg_collision"), ("Collision with foreground", "fg_collision"),
        ("Far from preset trajectory", "off_route"), ("Complete", "complete")]
 
@@ -144,7 +144,7 @@ def run_job(a, scen, tag_dir, traffic):
         ev = {}
     row = dict(scenario=scen.stem, dataset=ds, difficulty=mode.split("_")[0], agent=a.agent, controller=a.controller,
                tag=tag_dir.name, steps=txt.count("ego pose"), end=end if ev else "crash", wall_s=round(wall, 1),
-               rc_code=code, finished=time.strftime("%F %T"),
+               rc_code=code, finished=time.strftime("%F %T"), scene=scene, run_dir=str(run_dir),
                **{k: ev.get(k, "") for k in ("hdscore", "rc", "nc", "dac", "ttc", "c", "pdms")})
     return row
 

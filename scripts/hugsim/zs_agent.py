@@ -8,13 +8,17 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
   HUGSIM_ZS_CAMYAML  configs/sim/<dataset>_camera.yaml (for cam_rect)
   HUGSIM_ZS_DATASET  nuscenes | waymo | kitti360 | pandaset
   HUGSIM_ZS_OPTS     JSON: nav (Alpamayo nav text, default true), desire (openpilot desire, default true),
-                     traffic ([1, 0] right-hand / [0, 1] left-hand), dilation (openpilot clock, default 1.25),
+                     traffic ([1, 0] right-hand / [0, 1] left-hand), op_clock (openpilot frame synthesis: "dilate",
+                     default, one 4 Hz frame per 0.2 s context step, model clock 1.25x fast; "hold", Cinque only, the
+                     20 Hz clock at face value with every frame held 5 steps), dilation (default 1.25),
                      warmup_s (openpilot, model seconds of the first frame before the first plan, default 5),
                      replan (Alpamayo: plan every k-th step, re-issue the last plan in between, default 1),
                      rigid (Alpamayo rear -> camera: rigid body, default true), dump_every (npz every k steps),
                      engage_s (engage while rolling: for the first engage_s simulated seconds the privileged route
                      follower of agent_client.py drives at <= 3 m/s while the model already runs on every frame;
-                     default 0)
+                     default 0; a value past the episode length is shadow mode: the route follower drives the whole
+                     episode and the model's plans are only logged), oracle_vmax (route follower speed cap, default 3),
+                     forward_only (jevdrive.hugsim_zs.forward_only on every model plan, default true)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -59,7 +63,8 @@ class Agent:
         self.engage_s = float(opts.get("engage_s", 0))
         if self.engage_s > 0:
             from agent_client import RoutePolicy
-            self.oracle = RoutePolicy(os.environ["HUGSIM_SCENE_DIR"], v_max=3.0, a_max=1.5)
+            self.oracle = RoutePolicy(os.environ["HUGSIM_SCENE_DIR"], v_max=float(opts.get("oracle_vmax", 3.0)),
+                                      a_max=1.5)
         if self.dump_every:
             (self.out / "zs_dump").mkdir(exist_ok=True)
 
@@ -107,12 +112,15 @@ class Agent:
     # ---- openpilot: one simulator step = one 0.2 s context step (clock dilated by 1.25)
     def openpilot(self, obs, info, rec):
         img2 = self.op.pack(obs["rgb"])
-        per_ctx = 1 if self.model == "lebowski" else 4                 # Lebowski steps at the context rate
-        reps = per_ctx
-        if self.step == 0:
-            reps = per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
+        hold = self.opts.get("op_clock", "dilate") == "hold" and self.model != "lebowski"
+        if hold:            # 20 Hz clock at face value: each 4 Hz frame held for 5 model steps (0.25 s)
+            per_ctx, dil = 5, 1.0
+            reps = 5 if self.step else int(round(20 * self.opts.get("warmup_s", 5.0)))
+        else:               # one simulator step = one 0.2 s context step; Lebowski steps at the context rate
+            per_ctx = 1 if self.model == "lebowski" else 4
+            dil = float(self.opts.get("dilation", 1.25))
+            reps = per_ctx if self.step else per_ctx * int(round(self.opts.get("warmup_s", 5.0) / OP_CTX_S))
         desire = Z.DESIRE[int(info["command"])] if self.opts.get("desire", True) else 0
-        dil = float(self.opts.get("dilation", 1.25))
         r, out = self.call({"desire": desire, "reps": reps, "traffic": self.opts.get("traffic", [1, 0]),
                             "speed": float(info["ego_velo"]) * dil}, {"img2": img2})
         plan = Z.openpilot_to_plan(out["pos"], out["t"], dil)
@@ -148,6 +156,11 @@ class Agent:
             rec["reissued"] = True
         else:
             plan = self.alpamayo(obs, info, rec) if self.model == "alpamayo" else self.openpilot(obs, info, rec)
+            if self.opts.get("forward_only", True):
+                fwd = Z.forward_only(plan)
+                if not np.allclose(fwd, plan):
+                    rec["raw_plan"] = np.round(plan, 3).tolist()
+                plan = fwd
             ta = info["timestamp"] + np.r_[0.0, Z.plan_times()]
             self.last = (Z.plan_to_world(np.r_[[[0.0, 0.0]], plan], pos, th), ta)
         if self.engage_s > 0 and info["timestamp"] < self.engage_s - 1e-6:
