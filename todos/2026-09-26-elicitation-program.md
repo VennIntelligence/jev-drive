@@ -742,3 +742,41 @@ Lebowski 同形（配对双流 (a) RFS −2.13、Pedestrians −2.57、直行激
 **判格（按登记）**：编辑对上 |Δ| 中位 ≥ 2 × 安慰剂 → **不过**（1.44）；WOD Pedestrians RFS Δ CI > 0 → **不过**（−2.39，整体 < 0）；直行激活 ≤ 7% → 过（4.7%）。E2 在 navtrain 这一轮**不过**，而且在 WOD 上有害。
 两条原因要分开记：(i) 编辑本身：LaMa 在 Qwen 特征里留下的位移与抹人同量级（门 (d) 1.21），编辑对的信噪比天生低；(ii) 训练域：navtrain 的 2 Hz 输入与 WOD / P5 的 0.2 s / 10 Hz 输入不是同一个特征分布，任何在 navtrain 特征上拟合的线性修正项搬到 WOD 都会整体偏移（E1 方向反过来也一样）。
 WOD 自己的编辑对（第二数据集，输入协议与读数一致）在跑，结果单列。
+
+### E5：20 Hz student——openpilot `temporal` ⊕ YOLO26x-seg 检测 embedding（2026-09-26 01:40–02:24，GPU 0，≤ 12 核）
+
+代码 `jevdrive/elicit_e5.py`（`imglist` / `embed` / `fit` / `latency` / `figs`），检测用 `jevdrive.fastperc detect`（`envs/ultralytics`，`yolo:yolo26x-seg.pt:640:half`，conf 0.25）；
+run：检测 `$DATA_DIR/runs/fastperc/detect/e5-p5v1ba-s{0,1,2}/`（输出 `processed/elicit_e5/dets/`），拟合 `$DATA_DIR/runs/elicitation/e5-fit/20260926-021421`，head 延迟 `runs/elicitation/e5-latency/20260926-014239`；
+小表 [research/results/elicitation/e5/](../research/results/elicitation/e5/)。口径见偏离日志 [E5] 01:40 与 01:58。
+
+**成本**：检测 140 109 张图，GPU 0 上 3 个进程、与 E2 的 SAM worker 共卡，01:42–02:14 约 32 min（单进程估 105 min）；embedding CPU 12 核约 1 min；60 次 student 拟合（2 模型 × 5 fold × 2 arm × 3 seed）加 exam 约 10 min，
+早停步数中位 300（A）/ 450（B），最多 750，没有顶到 3 000 步上限。prior 的逐 fold 重算对已存 run 差 ≤ 1.8 mm。embedding：81.6% 的行走廊内至少一个检测，平均 2.2 个，5.7% 的行有行人。
+
+**主表**（P5 v1 BA 集，行人 406 个 reactive 帧 / 49 条路线；Δ 与 CI 为 base 路线 bootstrap；student 为 seed 0，括号里 seed 1 / 2）：
+
+| arm | 输入 | 行人翻转 [CI] | cut-in 对 prior 的 Δ (pp) [CI] | 合并翻转 | 样本外 null false-flip | 非反应帧误翻：全部 / DynamicObjectCrossing | 判定 |
+|:--|:--|:--|:--|--:|--:|:--|:--|
+| prior（Cinque） | op | 0.2% | — | 48.2% | 5.1% | 4.2% / 0.3% | — |
+| `M-C pair op`（对照） | op | 6.9% [3.0, 11.6] | +8.1 [+5.2, +11.4] | 55.8% | 5.0% | 4.1% / 0.9% | 不过 |
+| M-C 配对双流（teacher） | op + Qwen | 43.3% [35.0, 50.7] | +3.1 [+0.6, +5.8] | 66.3% | 5.1% | 4.0% / 11.7% | 过 |
+| **student A**（配对差分） | op + YOLO | **52.7% [41.7, 62.1]**（52.2 / 53.4） | −1.3 [−5.1, +2.1]（−1.2 / −3.0） | 67.1% | 5.1% | 3.8% / 12.7% | **过** |
+| **student B**（+ teacher Δ） | op + YOLO | **51.5% [39.3, 61.9]**（53.9 / 56.7） | +2.4 [+0.4, +4.3]（+3.7 / +2.5） | 69.2% | 5.0% | 4.0% / 12.3% | **过** |
+| Lebowski：teacher / student A / student B | | 41.6% / 55.7% / 51.5% | +6.7 / +6.5 / +4.0 | 63.9 / 69.1 / 66.0% | 5.0 / 5.1 / 5.1% | 4.0 / 4.9 / 3.4%；DOC 10.4 / 11.4 / 10.1% | 过 / 过 / 过 |
+
+**延迟**（batch 1，GPU）：YOLO26x-seg 640 fp16 三路一次调用 p50 / p95 17.2 / 20.1 ms（fast-perception 在独占 GPU 4 上量的，`research/results/fast-perception/latency.csv`），
+抬升 + 走廊 + embedding（CPU）p95 2.6 ms，MLP 前向 p95 4.5 ms（争用中的 GPU 0；中位 1.2 ms），openpilot `temporal` 2.3 ms；p95 相加的端到端约 **29.5 ms**，登记门槛 50 ms。
+
+![E5](../research/figs/elicit-e5-student.png)
+
+左：行人 reactive 帧的定向翻转率（点 = seed 0 与路线 bootstrap 95% CI，× = seed 1 / 2），虚线是 30% 门槛；右：cut-in 对 prior 的逐帧配对差。蓝 = Cinque，橙 = Lebowski。
+要看的是：只用 openpilot 的配对差分停在 7–18%，加上 YOLO 检测 embedding 的 student 两个 arm 都到 51–57%，高于带 Qwen 的 teacher；cut-in 上 student A（Cinque）略低于 prior 但 CI 跨零，加 teacher 目标的 B 不掉。
+
+**判定（按登记）：过。** 两个 arm、两个模型、三个 seed 全部满足三条：行人 ≥ 30% 且 CI 下端（39–48%）> 样本外 null false-flip（4.9–5.1%）；cut-in 对 prior 的 CI 上端 ≥ 0；端到端延迟约 30 ms ≤ 50 ms。
+读法：
+
+1. **快通道不需要 Qwen**：在 P5 BA 集上，20 ms 的 COCO 检测器 + 路线走廊的 k = 8 检测 embedding，经配对差分训出的 student 行人翻转 52%（Cinque）/ 56%（Lebowski），不低于、点估计还高于 200–300 ms 的 Qwen 双流 teacher（43% / 42%，CI 大部分重叠，差别不显著，不写「更好」）。
+   这与第 43 条 / fast-perception 的读数一致：CARLA 里近处行人 YOLO26 看得见（≤ 20 m 召回 0.89），缺的是读出，配对差分把它读了出来。
+2. **teacher 目标（B）的作用是保住 cut-in**，不是加行人：B 与 A 行人持平，但 Cinque 上 cut-in 从 −1.3 回到 +2.4 pp（CI 不跨零）。
+3. **代价与 teacher 同级**：DynamicObjectCrossing 的非反应帧误翻 10–14%（teacher 10–12%），也就是行人一进走廊就减速、早于 expert；全部非反应帧 3–5% 不变。
+4. **限定**：这是 CARLA 内（BA 集）的结果；E1 说明 CARLA 上训的 Δ 直接加到真实特征上是有害的，这里的 student 同样只在 CARLA 上训过，真实数据上的行为没有测。
+   检测 embedding 只用单帧（没有速度），走廊来自路线中心线（B2D 给 agent 的合法导航输入）；PDM-Lite 集不在本项里（E4 已判它不做主判定集）。

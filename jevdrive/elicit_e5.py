@@ -296,6 +296,35 @@ def latency(rl, n: int = 200, warm: int = 20) -> dict:
     return out
 
 
+def figs(res_dir="research/results/elicitation/e5", out_dir="research/figs"):
+    """Pedestrian flips and cut-in delta per arm (seed 0 with CI, seeds 1-2 as dots), both models."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    c = pd.read_csv(Path(res_dir) / "criteria.csv")
+    arms = [("prior", "Prior"), ("M-C pair op", "Pair, op"), ("M-C pair", "M-C (teacher)"),
+            ("E5 A", "Student A"), ("E5 B", "Student B")]
+    cols = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, axes = plt.subplots(1, 2, figsize=(plots.PAGE, 2.0))
+        for ax, (val, lo, hi, lab) in zip(axes, (("ped_flip", "ped_lo", "ped_hi", "Pedestrian flip rate (%)"),
+                                                 ("cutin_delta_vs_prior", "cutin_lo", "cutin_hi", r"Cut-in $\Delta$ vs prior (pp)"))):
+            for k, (m, col) in enumerate(cols.items()):
+                for i, (a, _) in enumerate(arms):
+                    x = i + (k - 0.5) * 0.3
+                    r0 = c[c.arm == (f"{a} [{m}]" if not a.startswith("E5") else f"{a} s0 [{m}]")].iloc[0]
+                    ax.errorbar(x, 100 * r0[val], yerr=[[100 * (r0[val] - r0[lo])], [100 * (r0[hi] - r0[val])]], fmt="o",
+                                color=col, ms=3, lw=0.8, capsize=1.5, label=m.capitalize() if i == 0 else None)
+                    if a.startswith("E5"):
+                        for sd in (1, 2):
+                            r = c[c.arm == f"{a} s{sd} [{m}]"].iloc[0]
+                            ax.plot(x + 0.07, 100 * r[val], "x", color=col, ms=3, mew=0.7)
+            ax.set_xticks(range(len(arms)), [n for _, n in arms])
+            ax.set_ylabel(lab)
+            ax.axhline(30 if val == "ped_flip" else 0, color="0.4", ls="--" if val == "ped_flip" else "-", lw=0.6)
+        axes[0].legend(loc="upper left")
+        plots.save(fig, Path(out_dir), "elicit-e5-student")
+
+
 def main():
     import argparse
     from .runlog import RunLog
