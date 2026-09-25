@@ -49,7 +49,7 @@ ONCOMING_V = 3.0         # HUGSIM extreme scenarios' attacker speed (m/s)
 ATTACK_DT, ATTACK_FREQ = 0.1, 5    # AttackPlanner step and replanning period (steps)
 EGO_FRONT, EGO_REAR, EGO_HALF_W = 2.0, 2.0, 1.2   # HUGSIM's 3.0 x 1.6 m ego box grown by 0.5 m / 0.4 m
 HORIZON = 4.0            # label: conflict search horizon (s)
-A_BRAKE, A_MAX = 4.0, 8.0          # label: stopping profile deceleration, hardest allowed deceleration (m/s^2)
+A_BRAKE, A_MAX = 3.0, 8.0          # label: stopping profile deceleration, hardest allowed deceleration (m/s^2)
 VIS_PX = 100             # an actor is visible in a frame with this many changed pixels over the three cameras
 DIFF_THR = 8             # a pixel "changed" when any channel differs by more than this (0-255)
 ROAD_R = 0.5             # road coverage: footprint sample within this of a road Gaussian (m)
@@ -306,6 +306,19 @@ def conflicts(L: Logged, t_sim, track, wl) -> np.ndarray:
                      for i in range(len(t_sim))])
 
 
+def cv_conflict(L: Logged, t: float, state, wl) -> float | None:
+    """The rule's hazard test at time t: the actor extrapolated at constant velocity from its current state
+    (a, b, th, v) against the logged ego over [t, t + HORIZON]; the first time the two boxes overlap, else None.
+    Only what a camera could see at t enters (the actor's current pose and velocity), not its scripted future."""
+    tt = t + SIM_DT * np.arange(int(round(HORIZON / SIM_DT)) + 1)
+    a, b, th, v = state[:4]
+    f = fwd_of(th)
+    d = v * (tt - t)
+    track = np.stack([a + d * f[0], b + d * f[1], np.full_like(tt, th)], -1)
+    hit = np.flatnonzero(conflicts(L, tt, track, wl))
+    return float(tt[hit[0]]) if len(hit) else None
+
+
 def rule_speed(L: Logged, t0: float, t_conf: float | None, n: int = 101):
     """The rule expert's speed on t0 + SIM_DT * [0, n): the logged speed, capped by a stopping profile (A_BRAKE)
     that ends where the logged ego box first touches the actor (t_conf), never braking harder than A_MAX.
@@ -396,10 +409,12 @@ def _scene_rows(sdir: Path):
         vis = np.array(m.get("vis_px", [[0] * 3] * len(tr)))
         for k in range(3, len(tr)):
             t = float(tr[k])
-            t_conf = None
+            t_conf = t_true = None
             if conf is not None:
+                i = int(np.searchsorted(tsim, t - 1e-6))
+                t_conf = cv_conflict(L, t, track[i], (m["wlh"][0], m["wlh"][1]))
                 hit = np.flatnonzero(conf & (tsim >= t - 1e-6) & (tsim <= t + HORIZON + 1e-6))
-                t_conf = float(tsim[hit[0]]) if len(hit) else None
+                t_true = float(tsim[hit[0]]) if len(hit) else None
             fs = None
             if w in PLUS and t_conf is not None:
                 tt, _, ss = rule_speed(L, t, t_conf)
@@ -414,7 +429,7 @@ def _scene_rows(sdir: Path):
                          "past_padded_s": float(max(0.0, 3.75 - t) // 0.25 * 0.25)})
             past.append(p)
             fut.append(f)
-            labels[(w, k)] = {"fn": fn, "t_conf": t_conf, "v0": float(np.linalg.norm(p[-1, 2:4])),
+            labels[(w, k)] = {"fn": fn, "t_conf": t_conf, "t_true": t_true, "v0": float(np.linalg.norm(p[-1, 2:4])),
                               "v2": v2(f), "stop": stop3(float(np.linalg.norm(p[-1, 2:4])), f),
                               "px": int(vis[k].sum()), "fut_ok": bool(t + FUT_NEED <= L.dur + 1e-6)}
     frames, nulls, pairs = [], [], []
@@ -437,7 +452,7 @@ def _scene_rows(sdir: Path):
             frames.append({"base_id": key, "family": w, "seed": 0, "k": k, "t": t, "fn_plus": lp["fn"],
                            "fn_minus": lm["fn"], "v0": lm["v0"], "v2_plus": lp["v2"], "v2_minus": lm["v2"],
                            "stop_plus": lp["stop"], "stop_minus": lm["stop"], "impure_visible": 0,
-                           "factor_px": lp["px"], "t_conf": lp["t_conf"],
+                           "factor_px": lp["px"], "t_conf": lp["t_conf"], "t_conf_true": lp["t_true"],
                            "ttc": None if lp["t_conf"] is None else lp["t_conf"] - t})
             n += 1
         pairs.append({"base_id": key, "town": ds, "family": w, "seed": 0, "plus": f"{key}-{w}",
@@ -451,7 +466,8 @@ def _scene_rows(sdir: Path):
                 continue
             nulls.append({"base_id": key, "family": "null", "seed": 0, "k": k, "t": float(tr[k]),
                           "fn_plus": lm["fn"], "fn_null": ln["fn"], "v2_plus": lm["v2"], "v2_null": ln["v2"],
-                          "null_conflict": ln["t_conf"] is not None, "factor_px": ln["px"]})
+                          "null_conflict": ln["t_conf"] is not None, "factor_px": ln["px"],
+                          "d_expert": ln["v2"] - lm["v2"]})
     return rows, past, fut, frames, nulls, pairs
 
 
@@ -472,7 +488,6 @@ def index(workers: int = 4):
     null = pd.DataFrame([f for o in out for f in o[4]])
     pairs = pd.DataFrame([f for o in out for f in o[5]])
     obs["d_expert"] = obs.v2_plus - obs.v2_minus
-    null["d_expert"] = null.v2_null - null.v2_plus
     assert t.frame_name.is_unique
     d = root()
     t["role"] = np.where(t.frame_name.isin(set(obs.fn_plus) | set(obs.fn_minus) | set(null.fn_null)), "obs", "stream")
@@ -485,15 +500,72 @@ def index(workers: int = 4):
     return t, obs, null, pairs
 
 
+FAMILY_LABEL = {"static": "stopped car", "cutin": "cut-in", "oncoming": "oncoming", "null": "null (keeps lane)"}
+
+
+def fig(specs: list[str], probe: str | None, out: Path, name: str = "i3-hugsim-pairs-validation",
+        width_px: int = 360):
+    """Front camera x+ / x- / |x+ - x-|, one row per spec "key:world:dt" (dt = frame time - t_c, s), plus an
+    optional occlusion-probe row (a parked car put behind scene objects, see pairs_render.occlusion_probe)."""
+    import matplotlib.pyplot as plt
+    from PIL import Image
+    from . import plots
+    rows = []
+    for sp in specs:
+        key, w, dt = sp.split(":")
+        z = np.load(root("scenes", key) / "fig_frames.npz")
+        tag = f"{w}_{float(dt):+.0f}"
+        ds, scene = key.split("-", 1)
+        rows.append((f"{ds} {scene[:12]}: {FAMILY_LABEL[w]}, $t_c{float(dt):+.0f}$ s", z[f"{tag}_plus"],
+                     z[f"{tag}_minus"]))
+    if probe:
+        z = np.load(root("scenes", probe) / "probe_frames.npz")
+        ds, scene = probe.split("-", 1)
+        rows.append((f"{ds} {scene[:12]}: occlusion probe (parked car)", z["plus"], z["minus"]))
+    ar = rows[0][1].shape[0] / rows[0][1].shape[1]
+    with plt.rc_context(plots.STYLE):
+        f = plt.figure(figsize=(plots.PAGE, plots.PAGE / 3 * ar * len(rows) + 0.18))
+        gs = f.add_gridspec(len(rows), 3, left=0, right=1, bottom=0, top=1 - 0.18 / (plots.PAGE / 3 * ar * len(rows)
+                                                                                     + 0.18), wspace=0.01, hspace=0.02)
+        for r, (label, p, m) in enumerate(rows):
+            h = int(round(width_px * ar))
+            small = lambda x: np.asarray(Image.fromarray(x).resize((width_px, h), Image.LANCZOS))  # noqa: E731
+            d = np.abs(p.astype(np.int16) - m).max(-1).astype(np.uint8)
+            panels = (small(p), small(m), np.asarray(Image.fromarray(d).resize((width_px, h), Image.BOX)))
+            for c, im in enumerate(panels):
+                a = f.add_subplot(gs[r, c])
+                a.imshow(im, cmap="magma" if c == 2 else None, vmin=0, vmax=128 if c == 2 else None)
+                a.set_axis_off()
+                if r == 0:
+                    a.set_title(("$x^+$ (with actor)", "$x^-$ (plain scene)", "$|x^+ - x^-|$, max over RGB")[c], pad=2)
+                if c == 0:
+                    a.text(0.01, 0.97, label, transform=a.transAxes, va="top", ha="left", fontsize=5.5, color="white",
+                           bbox=dict(facecolor="black", alpha=0.55, pad=1.0, edgecolor="none"))
+        f.savefig(out / f"{name}.png", dpi=170)
+        f.savefig(out / f"{name}.pdf")
+        plt.close(f)
+    # photographic panels: an adaptive 256-colour palette keeps the PNG under the repo's ~500 KB
+    im = Image.open(out / f"{name}.png").convert("RGB")
+    im.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(out / f"{name}.png",
+                                                                                               optimize=True)
+    return out / f"{name}.png"
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("select", "index"))
+    ap.add_argument("step", choices=("select", "index", "fig"))
+    ap.add_argument("--keys", nargs="*")
+    ap.add_argument("--specs", nargs="*")
+    ap.add_argument("--probe")
+    ap.add_argument("--out", default=".")
     a = ap.parse_args()
     if a.step == "select":
         t = select()
         print(t.to_string())
         print(t.groupby("dataset").t_c.apply(lambda s: f"{s.notna().sum()}/{len(s)}"))
+    elif a.step == "fig":
+        print(fig(a.specs, a.probe, Path(a.out)))
     else:
         t, obs, null, pairs = index()
         print(len(t), "frames;", len(obs), "pair frames;", len(null), "null frames")

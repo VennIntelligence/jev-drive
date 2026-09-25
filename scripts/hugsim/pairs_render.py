@@ -73,8 +73,11 @@ class Scene:
             road = self.g.get_full_xyz[sem_full == 0].cpu().numpy()
             sem = torch.argmax(self.g.get_3D_features, dim=-1)
             obst = self.g.get_xyz[(sem > 1) & (sem != 10) & (self.g.get_opacity[:, 0] > 0.8)].cpu().numpy()
+        road = road[np.isfinite(road).all(1)]
+        obst = obst[np.isfinite(obst).all(1)]
         self.road_xz, self.road_y = road[:, [0, 2]], road[:, 1]
         self.road_tree = cKDTree(self.road_xz)
+        self.pc = _FrozenPC(self.g)
         self.obst = obst
         self.obst_tree = cKDTree(obst[:, [0, 2]])
         self.dyn = {}
@@ -119,7 +122,7 @@ class Scene:
             dyn = {"actor": self.dyn[actor[0]][0]}
             planning = [{"actor": torch.tensor(actor[1]).float().cuda()}, {}]
         with torch.no_grad():
-            return render(viewpoint=view, prev_viewpoint=None, pc=pc or self.g, dynamic_gaussians=dyn, unicycles={},
+            return render(viewpoint=view, prev_viewpoint=None, pc=pc or self.pc, dynamic_gaussians=dyn, unicycles={},
                           bg_color=self.bg, planning=planning)
 
 
@@ -181,7 +184,8 @@ def build_worlds(S: Scene, L: H.Logged, key: str, tc: float, t_render, t_sim, as
     for fam in ("static", "cutin", "oncoming", "null"):
         asset = H.asset_for(key, fam, assets)
         _, _, _, (w, l, h) = S.load_actor(asset)
-        sides = (1.0, -1.0) if fam == "cutin" else (cut_side,) if fam == "null" else (0.0,)
+        sides = (1.0, -1.0) if fam == "cutin" or (fam == "null" and cut_side is None) else \
+            (cut_side,) if fam == "null" else (0.0,)
         best = None
         for side in sides:
             if side is None:
@@ -202,7 +206,7 @@ def build_worlds(S: Scene, L: H.Logged, key: str, tc: float, t_render, t_sim, as
             cand = (ok, info, tr, conf)
             if best is None or (ok and not best[0]) or (ok == best[0] and info["road_mean"] > best[1]["road_mean"]):
                 best = cand
-            if ok and fam != "cutin":
+            if ok and fam not in ("cutin", "null"):
                 break
         if best is None:
             worlds[fam] = {"rendered": False, "reason": "no_side"}
@@ -230,7 +234,7 @@ def render_scene(S: Scene, L: H.Logged, row, out: Path, validate: bool, pool, rl
     ea, eb, eth = L.pose_at(t_render)
     poses = [S.c2ws(ea[k], eb[k], eth[k]) for k in range(len(t_render))]
     k_sim = np.searchsorted(t_sim, t_render - 1e-6)
-    stats = {w: {"vis_px": [], "any_px": [], "out_px": []} for w in worlds}
+    stats = {w: {"vis_px": [], "any_px": [], "out_px": [], "out_px_thr": []} for w in worlds}
     minus = {}
     futs = []
     t_gpu = 0.0
@@ -248,7 +252,7 @@ def render_scene(S: Scene, L: H.Logged, row, out: Path, validate: bool, pool, rl
             if w != "minus":
                 a, b, th, _, y = m["track"][k_sim[k]]
                 actor = (m["asset"], H.b2w(a, b, th, y))
-            vis, anyp, outp = [], [], []
+            vis, anyp, outp, outt = [], [], [], []
             files = {}
             for c, ck in zip(H.CAMS, H.CAM_KEYS):
                 g0 = time.perf_counter()
@@ -258,9 +262,9 @@ def render_scene(S: Scene, L: H.Logged, row, out: Path, validate: bool, pool, rl
                 if w == "minus":
                     minus[(k, c)] = rgb
                     if validate:
-                        rgb2 = to_rgb(S.render(c, poses[k][c], None))
+                        rgb2 = to_rgb(S.render(c, poses[k][c], None, pc=S.g))
                         val["det_max"] = max(val["det_max"], int(np.abs(rgb2.astype(int) - rgb).max()))
-                    vis.append(0), anyp.append(0), outp.append(0)
+                    vis.append(0), anyp.append(0), outp.append(0), outt.append(0)
                 else:
                     diff = np.abs(rgb.astype(np.int16) - minus[(k, c)]).max(-1)
                     ch = diff > H.DIFF_THR
@@ -268,17 +272,19 @@ def render_scene(S: Scene, L: H.Logged, row, out: Path, validate: bool, pool, rl
                     inb = np.zeros_like(ch)
                     if box is not None:
                         inb[box[1]:box[3], box[0]:box[2]] = True
-                    vis.append(int(ch.sum())), anyp.append(int((diff > 0).sum())), outp.append(int((diff > 0)[~inb].sum()))
+                    vis.append(int(ch.sum())), anyp.append(int((diff > 0).sum()))
+                    outp.append(int((diff > 0)[~inb].sum())), outt.append(int(ch[~inb].sum()))
                     if validate and c == "CAM_FRONT":
                         occ = occlusion(S, c, poses[k][c], actor, diff)
                         acc = val["occ"].setdefault(w, np.zeros(4, np.int64))
                         acc += occ
-                        fig.setdefault(w, []).append((k, int(ch.sum()), rgb, minus[(k, c)]))
+                        fig.setdefault(w, []).append((k, rgb, minus[(k, c)]))
                 f = f"cams/{ck}/{4 * k:07d}.jpg"
                 files[ck] = f
                 futs.append(pool.submit(cv2.imwrite, str(d / f), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR),
                                         [cv2.IMWRITE_JPEG_QUALITY, 95]))
             stats[w]["vis_px"].append(vis), stats[w]["any_px"].append(anyp), stats[w]["out_px"].append(outp)
+            stats[w]["out_px_thr"].append(outt)
             lines.append(json.dumps({"frame": 4 * k, "t": float(t_render[k]), "files": files}))
         (d / "frames.jsonl").write_text("\n".join(lines) + "\n")
     for f in futs:
@@ -288,31 +294,58 @@ def render_scene(S: Scene, L: H.Logged, row, out: Path, validate: bool, pool, rl
     if validate:
         val["env_max"] = env_check(S, row, poses, minus)
         val["occ"] = {w: v.tolist() for w, v in val["occ"].items()}
-        save_fig_frames(out, fig, worlds, t_render)
+        save_fig_frames(out, fig, t_render, tc)
+        val["probe"] = occlusion_probe(S, L, tc, out, H.asset_for(key, "static", assets))
     meta = {"key": key, "dataset": row["dataset"], "scene": row["scene"], "t_c": tc, "t_render": t_render.tolist(),
             "t_sim": t_sim.tolist(), "worlds": worlds, "cams": {c: {"K": S.cams[c][0].tolist(),
                                                                        "c2front": S.cams[c][1].tolist()}
                                                                    for c in H.CAMS},
             "timing": {"tracks_s": round(t_tracks, 2), "gpu_s": round(t_gpu, 2)}, "validation": val}
-    (out / "meta.json").write_text(json.dumps(meta))
+    (out / "meta.json").write_text(json.dumps(meta, default=_js))
     return meta
+
+
+def _js(o):
+    return o.tolist() if isinstance(o, np.ndarray) else o.item()
 
 
 def occlusion(S, cam, c2w, actor, diff):
     """Occlusion consistency of one x+ view against an actor-only render (same renderer, empty scene):
-    actor pixels (alpha > 0.5) where the x- scene surface is > 1 m in front of the actor must be unchanged, and
-    those where it is > 1 m behind must change. Returns counts [occluded, occluded_changed, clear, clear_changed]."""
+    actor pixels (alpha > 0.5) where an x- scene object (semantic class > 1, not sky) is > 1 m in front of the
+    actor must stay unchanged, and pixels where the x- surface is > 1 m behind it must change. Ground classes
+    (road 0, sidewalk 1) are not occluders: at grazing angles their alpha-weighted depth is not a surface depth,
+    and the car stands on them. Returns [occluded, occluded_changed, clear, clear_changed]."""
     empty = _EmptyPC.of(S.g)
     pa = S.render(cam, c2w, actor, pc=empty)
     pm = S.render(cam, c2w, None)
     alpha = pa["alphas"][0, ..., 0].cpu().numpy()
     da = pa["depth"][0].cpu().numpy()
     dm = pm["depth"][0].cpu().numpy()
+    sem = torch.argmax(pm["feats"], dim=0).cpu().numpy()
     on = alpha > 0.5
-    occ = on & (dm < da - 1.0)
+    occ = on & (dm < da - 1.0) & (sem > 1) & (sem != 10)
     clr = on & (dm > da + 1.0)
     chg = diff > H.DIFF_THR
     return np.array([occ.sum(), (occ & chg).sum(), clr.sum(), (clr & chg).sum()], np.int64)
+
+
+class _FrozenPC:
+    """The scene's Gaussians with their activations evaluated once. GaussianModel's get_full_* properties re-run
+    the activations and re-concatenate the ground model on every access, i.e. on every rendered view; render()
+    reads exactly these six tensors (plus the appearance model when `affine`), so a frozen copy renders the same
+    pixels (checked bit-exact, see the sub-doc) at 44 instead of 68 ms per 800x450 view (4.7 M Gaussians)."""
+
+    def __init__(self, g):
+        full = g.ground_model is not None
+        src = [g.get_full_xyz, g.get_full_opacity, g.get_full_scaling, g.get_full_rotation, g.get_full_features,
+               g.get_full_3D_features] if full else [g.get_xyz, g.get_opacity, g.get_scaling, g.get_rotation,
+                                                     g.get_features, g.get_3D_features]
+        with torch.no_grad():
+            (self.get_xyz, self.get_opacity, self.get_scaling, self.get_rotation, self.get_features,
+             self.get_3D_features) = [x.detach() for x in src]
+        self.ground_model, self.affine, self.active_sh_degree = None, g.affine, g.active_sh_degree
+        if g.affine:
+            self.pos_enc, self.dir_enc, self.appearance_model = g.pos_enc, g.dir_enc, g.appearance_model
 
 
 class _EmptyPC:
@@ -363,17 +396,51 @@ def env_check(S: Scene, row, poses, minus, n=4):
     return worst
 
 
-def save_fig_frames(out, fig, worlds, t_render):
-    """For the figure: per plus world the front-camera frame with the most changed pixels before the conflict."""
+def save_fig_frames(out, fig, t_render, tc, dts=(-3.0, -2.0, -1.0)):
+    """For the figure: every actor world's front-camera x+ and x- at t_c + dt (nearest render frame)."""
     keep = {}
     for w, fr in fig.items():
-        tc = worlds[w].get("t_conflict") or np.inf
-        fr = [f for f in fr if t_render[f[0]] < tc - 0.3] or fr
-        k, px, plus, minus = max(fr, key=lambda f: f[1])
-        keep[w] = (k, plus, minus)
-    np.savez_compressed(out / "fig_frames.npz", **{f"{w}_plus": v[1] for w, v in keep.items()},
-                        **{f"{w}_minus": v[2] for w, v in keep.items()},
-                        **{f"{w}_k": np.array(v[0]) for w, v in keep.items()})
+        by_k = {f[0]: f for f in fr}
+        for dt in dts:
+            k = int(np.argmin(np.abs(t_render - (tc + dt))))
+            if k in by_k:
+                keep[f"{w}_{dt:+.0f}_plus"], keep[f"{w}_{dt:+.0f}_minus"] = by_k[k][1], by_k[k][2]
+    np.savez_compressed(out / "fig_frames.npz", **keep)
+
+
+def occlusion_probe(S: Scene, L: H.Logged, tc, out, asset, t_off=-4.0):
+    """A parked car put behind scene objects on purpose: at t_c + t_off, a stopped car 15-35 m ahead on the logged
+    path, 4.5-9 m to either side (only placements whose box holds <= OBST_PTS obstacle Gaussians, i.e. not inside
+    a scene object). Occlusion counts (see `occlusion`) for every placement; the one with the most occluded actor
+    pixels is saved for the figure."""
+    _, _, _, (w, l, h) = S.load_actor(asset)
+    t = tc + t_off
+    a0, b0, th0 = [x[0] for x in L.pose_at(np.array([t]))]
+    c2w = S.c2ws(a0, b0, th0)["CAM_FRONT"]
+    pm = S.render("CAM_FRONT", c2w, None)
+    rm = to_rgb(pm)
+    rows, best = [], None
+    for ahead in (15.0, 20.0, 25.0, 30.0, 35.0):
+        for d in (4.5, -4.5, 6.0, -6.0, 7.5, -7.5, 9.0, -9.0):
+            a, b, th = [float(x) for x in L.path(np.array([L.s_at(t) + ahead]), np.array([d]))]
+            y, _ = S.road_height(a, b, r=2.0)
+            y = S.env_height(a, b) + S.cam_height if y is None else y
+            tr = np.array([[a, b, th, 0.0, y]])
+            _, info = check_track(S, tr, np.array([0.0]), np.array([False]), asset, 1.0)
+            if info["obst_max"] > H.OBST_PTS:
+                continue
+            M = H.b2w(a, b, th, y)
+            pp = S.render("CAM_FRONT", c2w, (asset, M))
+            rp = to_rgb(pp)
+            diff = np.abs(rp.astype(np.int16) - rm).max(-1)
+            occ = occlusion(S, "CAM_FRONT", c2w, (asset, M), diff)
+            rows.append({"ahead": ahead, "lateral": d, "occ": int(occ[0]), "occ_changed": int(occ[1]),
+                         "clear": int(occ[2]), "clear_changed": int(occ[3])})
+            if best is None or occ[0] > best[0]:
+                best = (occ[0], rp)
+    if best is not None and best[0] > 0:
+        np.savez_compressed(out / "probe_frames.npz", plus=best[1], minus=rm)
+    return rows
 
 
 def main():
@@ -382,6 +449,7 @@ def main():
     ap.add_argument("--validate", action="store_true")
     ap.add_argument("--tag", default="render")
     ap.add_argument("--skip-done", action="store_true")
+    ap.add_argument("--shard", type=int, nargs=2, default=(0, 1), metavar=("I", "N"), help="scenes i::n")
     a = ap.parse_args()
     import pandas as pd
     rl = RunLog("i3-hugsim-pairs", a.tag)
@@ -389,9 +457,11 @@ def main():
     sc = sc[sc.t_c.notna()]
     if a.keys:
         sc = sc.set_index("key").loc[a.keys].reset_index()
+    sc = sc.iloc[a.shard[0]::a.shard[1]]
     rl.log.info("%d scenes, validate=%s", len(sc), a.validate)
+    from tqdm import tqdm
     with ThreadPoolExecutor(3) as pool:
-        for _, row in sc.iterrows():
+        for _, row in tqdm(list(sc.iterrows()), desc=f"shard {a.shard[0]}/{a.shard[1]}", unit="scene"):
             out = H.root("scenes", row["key"])
             if a.skip_done and (out / "meta.json").exists():
                 continue
@@ -401,7 +471,10 @@ def main():
             L = H.Logged(S.dir, row["dataset"])
             meta = render_scene(S, L, row, out, a.validate, pool, rl)
             wall = time.perf_counter() - t0
-            ws = {w: (m["reason"] if not m["rendered"] else "ok") for w, m in meta["worlds"].items()}
+            ws = {w: {k: m.get(k) for k in ("reason", "side", "road_mean", "road_min", "obst_max", "t_conflict",
+                                             "y_minus_env", "ground_fallback")} | {"vis_frames": int(
+                      (np.array(m.get("vis_px", [[0]])).sum(1) >= H.VIS_PX).sum()), "out_px": int(np.array(
+                      m.get("out_px", [[0]])).sum())} for w, m in meta["worlds"].items()}
             rl.log.info("%s: %.1f s (load %.1f, tracks %.1f, render %.1f), peak %.2f GB; worlds %s; val %s",
                         row["key"], wall, t_load, meta["timing"]["tracks_s"], meta["timing"]["gpu_s"],
                         torch.cuda.max_memory_allocated() / 1e9, ws, meta["validation"] if a.validate else "-")
