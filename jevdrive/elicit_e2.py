@@ -778,10 +778,44 @@ def wod_build(limit: int | None = None, tag: str = "main"):
     rl.close()
 
 
+def wod_feat_index(tag: str = "main") -> dict:
+    """navsim_qwen indexes e2wod_<side> over the valid WOD pairs: 12 files, camera-major (front, front_left,
+    front_right), oldest first; x- / placebo fall back to the x+ file where the image was not edited."""
+    import pandas as pd
+    from . import navsim_qwen as NQ
+    root = out_root("wod", tag)
+    rows = []
+    for meta in sorted(root.glob("c*/meta.json")):
+        for rec in json.loads(meta.read_text()):
+            if not rec.get("valid"):
+                continue
+            td = meta.parent / rec["key"]
+            ed = {(i["cam"], i["k"]): i for i in rec["images"]}
+            f = {sd: [] for sd in SIDES}
+            for cam in WOD_CAMS:
+                for k in range(4):
+                    plus = str(td / f"{cam}_{k}_plus.jpg")
+                    i = ed.get((cam, k), {})
+                    f["plus"].append(plus)
+                    f["minus"].append(str(td / f"{cam}_{k}_minus.jpg") if i.get("edited") else plus)
+                    f["placebo"].append(str(td / f"{cam}_{k}_placebo.jpg") if i.get("placebo") else plus)
+            rows.append({"token": rec["key"], "pl": any(i.get("placebo") for i in rec["images"]), **f})
+    t = pd.DataFrame(rows)
+    out = {}
+    for sd in SIDES:
+        g = t if sd != "placebo" else t[t.pl]
+        q = g[["token"]].assign(files=g[sd].tolist())
+        q["chunk"] = np.arange(len(q)) // NQ.CHUNK
+        q.to_parquet(NQ.root(f"e2wod_{sd}", "index.parquet"), index=False)
+        out[sd] = len(q)
+    log.info("WOD feature inputs: %s", out)
+    return out
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam", "wod-candidates", "wod-build"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam", "wod-candidates", "wod-build", "wod-feat-index"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -797,6 +831,8 @@ def main():
         wod_sam()
     elif a.cmd == "wod-candidates":
         print(wod_candidates())
+    elif a.cmd == "wod-feat-index":
+        print(wod_feat_index(a.tag))
     elif a.cmd == "wod-build":
         wod_build(a.limit, a.tag)
     elif a.cmd == "feat-index":
