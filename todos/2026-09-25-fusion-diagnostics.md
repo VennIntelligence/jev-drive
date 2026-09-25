@@ -477,3 +477,44 @@ StaticCutIn 为 0 是门的形状问题：cut-in 车的参考点在 expert 已�
 - **late fusion（描述性，不在决策规则里）在 pre-onset 上反而赢了 best single**：(a) ridge Cinque −0.086 [−0.164, −0.005]、Lebowski −0.075 [−0.148, −0.008]，(a) cls Cinque −0.103，(b) cls Cinque −0.082 [−0.172, −0.009]；
   但同一批 arm 在 (b) ridge 的 RFS 上显著变差（−0.20 / −0.15），P5 合并翻转率也掉约 8 pp。推测是收缩效应：和一个几乎只给出 ego 预测的 Qwen 平均，等于把 openpilot 的修正量减半，
   在 pre-onset（log 往往比模型预测的更保守）上 ADE 变好、在 rater 分和反应量上变差。**这是推测，没有验证**；决策规则按登记只看 concat，不因为这一行改判。若要验证，对照是「openpilot 单路 × 0.5 收缩」，不需要 Qwen。
+
+![Q1 concat / late fusion minus best single](../research/figs/fusion-q1-concat-vs-best.png)
+
+图：实心点 = concat、空心点 = late fusion，均为减去 best single 的配对差与 95% CI（WOD 按 sequence、P5 按路线 bootstrap）；(a) 负为好，(b)(c) 正为好。
+要看的是实心点没有一个整体落在「好」的一侧，而 P5 上两个实心点都显著落在「坏」的一侧；空心点在 (a) 上偏好、在 (b)(c) 上偏坏，是上面说的收缩效应的样子。
+
+### Q4c openpilot lead（2026-09-25 18:41–18:53，GPU 3，约 9 min，登记 15–25 min）
+
+代码 `jevdrive/fusion_q4c.py`、`scripts/fd_q4c.sh`；run `$DATA_DIR/runs/p5_openpilot/stream-{0,1}of2/20260925-184141`、`fusion_diag/q4c/20260925-185129`；表 `research/results/fusion-diagnostics/q4c/`。
+等价性：Cinque、Lebowski 各重跑 385 条 P5 stream，20 298 行 `temporal` 与实验 1 逐位相同（max |diff| = 0）。GT lead = 路线中心线 ±1.5 m 走廊里最近的车辆、≤ 80 m（9 919 个观测帧里 6 367 帧有）；
+lead 的 x 从相机量起，GT 取离相机最近的 footprint 点的 x 减 1.519 m（打分前写进日志）。
+
+| 模型 | 天气 | 召回 [CI] | 0–10 m | 10–20 m | 20–40 m | 40–80 m | 距离误差中位 / p90 (m) | false alarm [CI] |
+|:--|:--|:--|--:|--:|--:|--:|:--|:--|
+| Cinque | 全部 | 0.77 [0.65, 0.88] | 0.96 | 0.91 | 0.84 | 0.43 | 1.6 / 13.1 | 0.22 [0.09, 0.40] |
+| Cinque | 夜 | 0.72 | 0.96 | 0.91 | 0.81 | 0.21 | 1.3 / 5.9 | 0.16 |
+| Cinque | 雨 | 0.72 | 0.97 | 0.96 | 0.82 | 0.37 | 2.0 / 26.3 | 0.11 |
+| Lebowski | 全部 | 0.73 [0.57, 0.87] | 0.96 | 0.92 | 0.85 | 0.28 | 1.4 / 7.3 | 0.21 [0.07, 0.39] |
+| Lebowski | 夜 | 0.72 | 0.94 | 0.93 | 0.82 | 0.22 | 1.4 / 8.2 | 0.17 |
+
+读法：openpilot 自己的 lead 头在 20 m 以内召回 ≥ 0.9、距离误差中位 1–1.5 m，这就是它在 cut-in 上有反应的那一半感知；40 m 以外召回掉到 0.2–0.4 且系统性报近（Cinque 距离比中位 0.67）。
+false alarm 的一大块是 GT 构造的伪影：6 044 帧前方路线不足 80 m，路线一断，前面的车就不在走廊里了；只看前方路线 ≥ 80 m 的帧，false alarm 是 Cinque 14.5%、Lebowski 2.6%（这个拆分是看过数之后做的描述，`q4c_by_route_length.csv`）。
+
+### Q9b Qwen 空间 token 读出（2026-09-25 18:53–19:47，GPU 3，约 55 min，登记 1–2 h）
+
+代码 `jevdrive/fusion_q9b.py`、`scripts/fd_q9b.sh`；run `$DATA_DIR/runs/fusion_diag/q9b-{profile,extract,fit}/`、`q9b-fit-fixed40/20260925-194232`；网格特征 `processed/carla_p5/features_grid/`；表 `research/results/fusion-diagnostics/q9b{,-fixed40}/`。
+抽取的等价性：按原 chunk 的 batch 配对重抽 eager b2，`L18_mean` / `L18_last` 64 / 64 行逐位相同；compile b4 213 ms / 帧（eager b2 294 ms / 帧，约 1.4×），cos ≥ 0.99975，两个 chunk 的最差单行 0.9988 / 0.9989 略低于预写的 0.999，照记未重抽。
+head 吃 48 个 token（3 路相机 × 4×4；登记写的「16 个」是每路，日志已记）。
+
+| arm（Cinque，seed 0） | 行人翻转 [CI] | null false-flip | cut-in 对 prior 的 Δ [CI] |
+|:--|:--|--:|:--|
+| prior（`ridge_late`） | 0% | 5.1% | — |
+| **配对差分，网格（主读数）** | **0% [0, 0]** | 5.7% | −18.9 [−35.1, −4.4] pp |
+| 配对差分，网格，seed 1 / 2 | 4.5% / 0% | 5.6 / 4.6% | +7.5 / −1.9 pp |
+| hard-example 重加权，网格 | 0% | 6.0% | −24.7 [−41.1, −10.2] pp |
+| 配对差分，pooled 线性（对照） | 0% | 5.0% | +4.7 [0, +10.9] pp |
+
+Lebowski 同结论（行人 0–3%）。**判据（行人 ≥ 20% 且 CI 下端 > null、null ≤ 7%）不过，Q9a（第 42 条 M-C）与 Q9b 都不过 → 决策规则落在「Q9 仍为 0 → 表征问题 → 行人走 SAM 通道」。**
+必须跟着这个判格记的限定：主读数的 head 几乎没训练，早停在多数折选了第 1 个 epoch，训练对上行人拟合斜率 0.09。事后敏感性（跑之前在日志标明「事后、不改判」）固定 40 epoch 不早停：
+训练对上行人斜率升到 0.76–0.81（M-C pooled 是 0.12），**样本外**行人翻转仍只有 4.5% [0, 12.2]，null 4.9–6.1%。也就是说空间 token 在训练路线上拟合得出行人反应，但 25 条路线、134 个行人 reactive 帧上跨路线泛化不出去——
+瓶颈更像数据量而不是 pooled 输入本身，这和第 42 条 M-C「瓶颈在输入」的读法不同。所以「表征问题」这个判格在 v0 上是弱的，I1（P5 v1）出来后第 3 阶段复跑 Q9b 是决定性的一步。
