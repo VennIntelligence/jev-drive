@@ -102,6 +102,10 @@ def main():
     for r in rows:
         if want and r["tag"] not in want:
             continue
+        if not r.get("run_dir"):                      # rows written before the runner logged it
+            sc, mode, k = r["scenario"].rsplit("-", 2)
+            ad = {"cv": "jev", "route": "jev", "ltf": "ltf"}.get(r["agent"], "zs")
+            r["scene"], r["run_dir"] = sc, str(root / r["tag"] / ad / f"{sc}_{mode}_{k}")
         try:
             out.append(one(Path(r["run_dir"]), r))
         except Exception as e:  # noqa: BLE001 - a broken run must not stop the collection
