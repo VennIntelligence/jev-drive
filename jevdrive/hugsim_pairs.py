@@ -108,7 +108,8 @@ class Logged:
         P = np.array([f["camtoworld"] for f in fr], float)
         with open(scene_dir / "ground_param.pkl", "rb") as fh:
             cp, _, cmds = pickle.load(fh)
-        assert len(cp) == len(P) and np.abs(cp - P).max() < 1e-6, "ground_param poses are not the front camera's"
+        if len(cp) != len(P) or np.abs(cp - P).max() > 1e-3:
+            raise ValueError("ground_param route disagrees with the recorded front-camera poses")
         self.cmd = np.asarray(cmds)
         self.a, self.b = P[:, 0, 3], P[:, 2, 3]
         self.th = np.unwrap(np.arctan2(P[:, 0, 2], P[:, 2, 2]))
@@ -174,10 +175,16 @@ def select(out: Path | None = None):
     for ds in DATASETS:
         for z in sorted((scenes_dir() / ds).glob("*.zip")):
             d = unpack(ds, z.stem)
-            L = Logged(d, ds)
+            row = {"key": scene_key(ds, z.stem), "dataset": ds, "scene": z.stem}
+            try:
+                L = Logged(d, ds)
+            except ValueError as e:
+                rows.append({**row, "t_c": None, "excluded": str(e)})
+                continue
             tc = pick_tc(L)
-            rows.append({"key": scene_key(ds, z.stem), "dataset": ds, "scene": z.stem, "dur": round(L.dur, 2),
-                         "path_m": round(float(L.s[-1]), 1), "v_mean": round(float(L.s[-1] / L.dur), 2), "t_c": tc})
+            rows.append({**row, "dur": round(L.dur, 2), "path_m": round(float(L.s[-1]), 1),
+                         "v_mean": round(float(L.s[-1] / L.dur), 2), "t_c": tc,
+                         "excluded": None if tc is not None else "no_tc"})
     t = pd.DataFrame(rows)
     t.to_csv(out or root() / "scenes.csv", index=False)
     return t
