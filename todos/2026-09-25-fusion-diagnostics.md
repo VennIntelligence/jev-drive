@@ -327,6 +327,9 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   门限行人 1.5 m、车辆 4 m，速度 = 位移 / 0.2 s 再转回当前 ego 轴，关联不上的记 0。制动量级沿用 GT 门在训练帧上的拟合值（训练帧没有跑 SAM；Δ_model 只取 {−m, 0, +m}，翻转率与 m 无关）。
   预先写明的风险：平地抬升在 20 m 以外的抖动（上面 (11)）会被 0.2 s 的差分放大成假速度，行人门可能因此多触发——这正是 perception-limited floor 要量的东西，不做额外平滑。
   代码 `jevdrive/fusion_q6sam.py`（`fusion_diag.q6gt` 只加了一个替换观测帧状态的钩子，GT 版的数字不变）。
+- 2026-09-25 19:25 CST [Q4]（写在批量统计之前）(14) 主读数 (i) 的可见性改为逐 actor：`obs.parquet` 的 `factor_px` 是一帧里所有因素 actor 的最大值，PedestrianCrossing 这类一组行人的 family 里，
+  一帧 `factor_px` ≥ 20 并不说明每个 hazard 行人都可见。`frames.jsonl` 存有前视实例分割里每个 actor 的可见像素（`factor_px` 就是从它取的最大值），所以 (i) 改为「该 hazard actor 自己的前视像素 ≥ 20」，
+  与登记的阈值、相机都相同，只是从帧级取到 actor 级。(15) 召回表另加两个并排读数：oracle 高度抬升（(11) 所说，把「放错」与「没看见」分开）、以及前视里可见（像素 ≥ 20）的背景 actor 召回（不含遮挡的 (ii)）。两者都不进判据。
 - 2026-09-25 19:14 CST [Q2b]（写在 WOD 的 SAM 结果出来之前）(1) 走廊：logged 未来 5 s 的 20 个点加原点连成折线，物体接地点（score > 0.5，按该 sequence 自己的前视标定平地抬升）到折线的距离 ≤ 1.5 m、
   离 ego ≤ 40 m、在前方（x > 0）；折线两端之外 1.5 m 以内也算（到端点的距离）；ego 静止（折线总长 < 0.5 m）时用正前方 2 m 的短桩。
   (2) Interections 在登记的「cluster → 类别」映射里没有对应项；取「道路使用者」= vehicle ∪ pedestrian ∪ cyclist，单独一个 probe。其余按登记。

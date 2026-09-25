@@ -82,6 +82,7 @@ def lift(u: np.ndarray, v: np.ndarray, calib: dict, ground_z: float = 0.0):
         s = (ground_z - t[2]) / d[:, 2]
     g = t[None, :2] + s[:, None] * d[:, :2]
     ok = np.isfinite(s) & (s > 0) & (np.hypot(g[:, 0], g[:, 1]) <= MAX_LIFT) & np.isfinite(u) & np.isfinite(v)
+    lift.last_rays = (t, d)                      # camera centre and ray directions, for the oracle-height side reading
     return g, ok
 
 
@@ -148,6 +149,12 @@ def _p5_gt_attempt(args) -> pd.DataFrame:
     meta = json.loads((adir / "meta.json").read_text())
     hero = meta.get("hero_id")
     hz = {h["id"] for h in json.loads((adir / "hidden.json").read_text())} if (adir / "hidden.json").exists() else set()
+    px = {}                                   # front-camera visible pixels per actor (instance segmentation, frames.jsonl)
+    with open(adir / "frames.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            if r["frame"] in frames and r.get("px"):
+                px[r["frame"]] = {int(k): v for k, v in r["px"].items() if not k.startswith("L")}
     sel = np.isin(a["frame"], list(frames))
     fr, ids, xyz, yaw = a["frame"][sel], a["id"][sel], a["xyz"][sel], a["yaw"][sel]
     out = []
@@ -186,7 +193,8 @@ def _p5_gt_attempt(args) -> pd.DataFrame:
             out.append(pd.DataFrame({"adir": str(adir), "frame": int(f), "cam": cam, "id": idm.astype(np.int64),
                                      "type_id": tid, "cls": cls, "emergency": np.isin(tid, EMERGENCY),
                                      "hazard": np.isin(idm, list(hz)), "x": ref[:, 0], "y": ref[:, 1], "xc": ex, "yc": ey,
-                                     "dz": z, "u": u, "v": v, "in_img": ok, "ub": ub, "vb": vb, "in_img_c": okb}))
+                                     "dz": z, "u": u, "v": v, "in_img": ok, "ub": ub, "vb": vb, "in_img_c": okb,
+                                     "px_front": [px.get(int(f), {}).get(int(i), 0) for i in idm]}))
     return pd.concat(out, ignore_index=True) if out else pd.DataFrame()
 
 
@@ -219,10 +227,13 @@ def lift_dets(d: pd.DataFrame, cal_key: np.ndarray, calibs: dict) -> pd.DataFram
     d = d.copy()
     gx, gy, ok = np.full(len(d), np.nan), np.full(len(d), np.nan), np.zeros(len(d), bool)
     cu, cv = d.cu.to_numpy(float), d.cv.to_numpy(float)
+    O, R = np.full((len(d), 3), np.nan), np.full((len(d), 3), np.nan)
     for ck, idx in pd.Series(cal_key).groupby(cal_key).indices.items():
         g, o = lift(cu[idx], cv[idx], calibs[ck])
         gx[idx], gy[idx], ok[idx] = g[:, 0], g[:, 1], o
+        O[idx], R[idx] = lift.last_rays[0], lift.last_rays[1]
     d["gx"], d["gy"], d["lift_ok"] = gx, gy, ok
+    d[["ox", "oy", "oz"]], d[["rx", "ry", "rz"]] = O, R
     d["gdist"] = np.hypot(gx, gy)
     return d
 
@@ -231,11 +242,13 @@ def gate(dist: np.ndarray) -> np.ndarray:
     return np.maximum(2.0, 0.1 * dist)
 
 
-def match(dets: pd.DataFrame, gt: pd.DataFrame, cls_det: str, gt_mask: np.ndarray, ref=("x", "y")) -> tuple:
+def match(dets: pd.DataFrame, gt: pd.DataFrame, cls_det: str, gt_mask: np.ndarray, ref=("x", "y"), oracle: bool = False) -> tuple:
     """Hungarian per image between detections of prompt `cls_det` (lift_ok) and the GT rows in `gt_mask`.
-    Returns (gt index -> matched det index or -1, det index -> matched gt index or -1, distances of matches)."""
+    Returns (gt index -> matched det index or -1, det index -> matched gt index or -1, distances of matches).
+    oracle: every detection is lifted onto each GT object's own ground height (z = its dz) before the distance, the
+    side reading that removes the flat-ground error (Q4 clarification (11))."""
     from scipy.optimize import linear_sum_assignment
-    D = dets[(dets.prompt == cls_det) & dets.lift_ok]
+    D = dets[(dets.prompt == cls_det) & (dets.lift_ok | oracle)]
     G = gt[gt_mask]
     g_m = pd.Series(-1, index=G.index)
     d_m = pd.Series(-1, index=D.index)
@@ -246,10 +259,19 @@ def match(dets: pd.DataFrame, gt: pd.DataFrame, cls_det: str, gt_mask: np.ndarra
         if di is None:
             continue
         gp = G.iloc[gi][list(ref)].to_numpy(float)
-        dp = D.iloc[di][["gx", "gy"]].to_numpy(float)
-        C = np.hypot(gp[:, None, 0] - dp[None, :, 0], gp[:, None, 1] - dp[None, :, 1])
+        if oracle:
+            Dd = D.iloc[di]
+            o, r = Dd[["ox", "oy", "oz"]].to_numpy(float), Dd[["rx", "ry", "rz"]].to_numpy(float)
+            z = G.iloc[gi].dz.to_numpy(float)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                sc = (z[:, None] - o[None, :, 2]) / r[None, :, 2]
+            px_, py_ = o[None, :, 0] + sc * r[None, :, 0], o[None, :, 1] + sc * r[None, :, 1]
+            C = np.where(sc > 0, np.hypot(gp[:, None, 0] - px_, gp[:, None, 1] - py_), np.inf)
+        else:
+            dp = D.iloc[di][["gx", "gy"]].to_numpy(float)
+            C = np.hypot(gp[:, None, 0] - dp[None, :, 0], gp[:, None, 1] - dp[None, :, 1])
         lim = gate(np.hypot(gp[:, 0], gp[:, 1]))[:, None]
-        cost = np.where(C <= lim, C, 1e6)
+        cost = np.where(np.isfinite(C) & (C <= lim), C, 1e6)
         r, c = linear_sum_assignment(cost)
         good = cost[r, c] < 1e6
         r, c = r[good], c[good]
@@ -463,6 +485,15 @@ def evaluate(lst: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame, classes, w
         for by in (["dbin"], ["weather"]):
             prec.append(precision_table(D.assign(cls=cls), d_m, ["cls", *by], "precision, lifted <= 80 m"))
         prec.append(precision_table(D.assign(cls=cls, all="all"), d_m, ["cls", "all"], "precision, lifted <= 80 m"))
+        vis = ev[(ev.cam == "front") & (ev.px_front >= FACTOR_PX)] if "px_front" in ev else ev.iloc[:0]
+        if len(vis):
+            for by in (["dbin"], ["all"]):
+                rec.append(recall_table(vis.assign(cls=cls, all="all"), g_m, dd, ["cls", *by],
+                                        "side: recall, front camera, visible (px >= 20), <= 40 m"))
+        g3, _, dd3 = match(dets, gt, cls, pool, oracle=True)
+        for by in (["dbin"], ["all"]):
+            rec.append(recall_table(ev.assign(cls=cls, all="all"), g3, dd3, ["cls", *by],
+                                    "side: recall (ii) with the oracle-height lift"))
         g2, _, dd2 = match(dets, gt, cls, pool, ref=("xc", "yc"))
         cen.append(recall_table(ev.assign(cls=cls, all="all"), g2, dd2, ["cls", "all"], "side: bottom-centre reference"))
     return {"recall": pd.concat(rec, ignore_index=True), "precision": pd.concat(prec, ignore_index=True),
@@ -470,23 +501,27 @@ def evaluate(lst: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame, classes, w
 
 
 def hazard_reading(lst: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Reading (i): hazard actors on x+ front frames with factor_px >= FACTOR_PX (front detections only)."""
+    """Reading (i): hazard actors on x+ front frames that are themselves visible, px_front >= FACTOR_PX (the per-actor
+    pixel count behind obs.parquet's frame-level factor_px, which is the max over the factor actors), front camera only."""
     L = lst.set_index("key")
     g = gt[gt.hazard & (gt.cam == "front")].copy()
     g["world"], g["factor_px"] = g.key.map(L.world), g.key.map(L.factor_px)
     g["family"], g["day"] = g.key.map(L.family), g.key.map(L.sun_altitude) >= 0
     g["rain"] = g.key.map(L.precipitation) > 30
-    g = g[(g.world == "plus") & (g.factor_px >= FACTOR_PX) & (g.dz.abs() < 8)]
+    g = g[(g.world == "plus") & (g.px_front >= FACTOR_PX) & (g.dz.abs() < 8)]
     rows, per = [], []
     for cls in ("pedestrian", "vehicle"):
         m = (g.cls == cls).to_numpy()
         g_m, _, dd = match(dets, g, cls, m)
-        h = g[m].assign(hit=g_m[g[m].index] >= 0, err=dd[g[m].index], dbin=dist_bin(g[m].dist))
+        g_o, _, _ = match(dets, g, cls, m, oracle=True)
+        h = g[m].assign(hit=g_m[g[m].index] >= 0, err=dd[g[m].index], dbin=dist_bin(g[m].dist),
+                        hit_oracle=g_o[g[m].index] >= 0)
         per.append(h)
         for name, sub in (("all", h), ("<= 30 m, day", h[(h.dist <= 30) & h.day]), ("<= 20 m", h[h.dist <= 20]),
                           ("night", h[~h.day]), ("rain", h[h.rain])):
             rows.append({"cls": cls, "scope": name, "n": len(sub), "frames": sub.key.nunique(),
                          "recall": sub.hit.mean() if len(sub) else np.nan,
+                         "recall_oracle_height": sub.hit_oracle.mean() if len(sub) else np.nan,
                          "bev_err_med": sub.err.median(), "bev_err_p90": sub.err.quantile(0.9)})
         for (fam, b), sub in h.groupby(["family", "dbin"], observed=True):
             rows.append({"cls": cls, "scope": f"{fam} {b}", "n": len(sub), "frames": sub.key.nunique(),
