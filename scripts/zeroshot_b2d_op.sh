@@ -33,11 +33,11 @@ cleanup() {  # our policy servers, the watchdog, and CARLA servers our runners s
     local f p
     for f in "$D"/*/attempts/*/*/route.pid; do       # route processes of our runners
         p=$(cat "$f" 2>/dev/null) || continue
-        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$D/" && kill "$p" 2>/dev/null
+        tr '\0' ' ' 2>/dev/null < /proc/$p/cmdline | grep -qF "$D/" && kill "$p" 2>/dev/null
     done
     for f in "$D"/*/servers/carla-*.pid; do
         p=$(cat "$f" 2>/dev/null) || continue
-        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qE 'carla-rpc-port=3[2-6][0-9]{3}' && kill -- -"$p" "$p" 2>/dev/null
+        tr '\0' ' ' 2>/dev/null < /proc/$p/cmdline | grep -qE 'carla-rpc-port=3[2-6][0-9]{3}' && kill -- -"$p" "$p" 2>/dev/null
     done
 }
 trap cleanup EXIT
