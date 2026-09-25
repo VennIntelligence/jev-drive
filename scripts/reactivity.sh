@@ -14,5 +14,7 @@ case $1 in
              wait $a; ra=$?; wait $b; rb=$?; (( ra == 0 && rb == 0 )) || exit 1
              "${PIN[@]}" .venv/bin/python -m jevdrive.p5_openpilot finalize --arrays temporal,vision,hidden --sub $SUB ;;
     d0-exam) "${PIN[@]}" .venv/bin/python -m jevdrive.p5_exam run --op cinque,lebowski --op-arrays temporal,vision,hidden --op-sub $SUB ;;
-    *) echo "mode: d0-op | d0-exam" >&2; exit 2 ;;
+    # M-C: dual-stream reaction head, pair / hard / uniform / single-stream arms (P5 v0 smoke)
+    mc)      "${PIN[@]}" .venv/bin/python -m jevdrive.reactivity_mc ;;
+    *) echo "mode: d0-op | d0-exam | mc" >&2; exit 2 ;;
 esac
