@@ -27,7 +27,7 @@ run() {  # run <name> <server index> <workers> [b2d_run args...]
     local name=$1 idx=$2 w=$3; shift 3
     "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py --routes "$XML" --route-ids "$ROUTES" --workers "$w" \
         --server-index "$idx" --gpu-rank "$gpu" --tm-seed 0 --no-spectator --no-reap --max-attempts 2 \
-        --stall-s 480 --route-timeout-s 3600 --out "$OUT/$name" "$@"
+        --stall-s 480 --route-timeout-s 3600 --out "$OUT/$name" ${B2D_RUN_EXTRA:-} "$@"   # e.g. "--client-threads 8"
 }
 expert() {  # expert <tag> <index> <workers>
     run "expert-$1" "$2" "$3" --python "$DATA_DIR/envs/simlingo/bin/python" \
