@@ -1,0 +1,8 @@
+row,rfs_cluster,ade5_rater_best
+RAP (test split),8.0430,2.6500
+Poutine (test split),7.9860,2.7410
+UniPlan (test split),7.7790,2.9860
+HMVLM (test split),7.7360,3.0710
+DiffusionLTF (test split),7.7170,2.9770
+AutoVLA (test split),7.5560,2.9580
+NaiveEMMA (test split),7.5280,3.0180

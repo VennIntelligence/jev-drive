@@ -95,8 +95,37 @@ G3 预计刚过 1 h：先在 1 000 个 token 上 profile（渲染 vs GPU），�
 
 ## 结果
 
-（待填）
+代码：`scripts/wod_openpilot_timeline.py`（G1 抽取）、`jevdrive/openloop_standing.py`（G0 / G1 / NAVSIM 读数）、
+`scripts/navsim_zs_openpilot.py feat` 与 `jevdrive/navsim_heads.py`（G2 / G3）。小表在
+[research/results/openpilot-openloop/](../research/results/openpilot-openloop/)。
+
+### G1：NAVSIM 的时间轴在 WOD 上值多少（2026-09-25 15:33）
+
+479 个 rater 帧，RFS cluster mean；Δ 是对同模型考试原样（`base`，10 s、10 Hz）的配对 frame-mean 差，frame bootstrap 10 000 次；
+S = (base − nav2hz) / (base − cv)（frame mean），cv 为 7.10；「5 s 纵向偏差」是预测终点减 log 终点的 x 均值。
+
+| 模型 | base | `ctx1.5`（10 Hz、1.5 s） | Δ [CI] | `nav2hz`（2 Hz、1.5 s） | Δ [CI] | S | 5 s 纵向偏差：base / ctx1.5 / nav2hz (m) |
+|:--|--:|--:|:--|--:|:--|--:|:--|
+| small | 7.640 | 7.528 | −0.07 [−0.15, +0.02] | 5.191 | **−2.57 [−2.80, −2.33]** | 3.9 | +0.7 / +0.9 / **+22.8** |
+| Cinque | 8.005 | 7.878 | −0.11 [−0.20, −0.03] | 5.126 | **−2.88 [−3.11, −2.64]** | 3.2 | +0.9 / +0.2 / **+20.9** |
+| Lebowski | 7.886 | 5.780 | **−2.00 [−2.26, −1.74]** | 4.942 | **−2.89 [−3.13, −2.65]** | 3.8 | +0.3 / −3.3 / **+19.4** |
+| 参照：cv / 原地不动 | 7.103 / 5.383 | | | | | | |
+
+**判定：S ≥ 0.5 那一格，而且远超**——NAVSIM 式的 2 Hz sample-and-hold 输入让三个模型在 WOD 上从 cv 之上 0.5–0.9 掉到 cv 之下 2 分，
+和「原地不动」（5.38）同一水平；5 s 终点平均比 log 远 19–23 m。所以第 37 条 NAVSIM 表里 openpilot 的原生 plan 行主要是**输入协议的读数**，
+不能当作模型的开环能力。预期里「nav2hz 掉到 cv 附近或以下、纵向偏差显著为正」成立，而且比预期更重。
+
+两个时间轴因素分开看：small / Cinque 对 context 长度几乎不敏感（只看 1.5 s 的 10 Hz 帧只掉 0.07–0.11），**掉分几乎全来自帧率**
+（nav2hz − ctx1.5 = −2.50 / −2.76）：sample-and-hold 下 t0 那一步模型看到的 t−0.2 s 帧其实是 0.5 s 前的，自车运动被放大 2.5 倍，
+plan 随之冲出去。Lebowski 不同：它的 context 是 24 个 0.2 s 的 hidden state（4.8 s），只给 1.5 s 就已经掉 2.0 分（纵向反而偏短 3.3 m），
+帧率再扣 0.9。也就是 Lebowski 比 Cinque 更依赖长时序记忆。
+（1 个 rater 帧的 1.5 s 窗口里有一帧不在 slim shard 上，按「保持上一帧」处理，见偏离 1。）
 
 ## 偏离记录
 
-（无）
+1. **G1：slim shard 上缺帧时保持上一帧。** 预登记没写缺帧怎么办；考试的 runner 对缺帧是直接跳过。479 个目标里只有 1 个的 1.5 s 窗口缺帧，
+   按「取时刻 ≤ 需要时刻的最近一帧」处理（sample-and-hold 本来就是这个语义）。对表的影响不超过 1/479。
+2. **G3 等价性：Cinque 的 tapped 图与考试图不是逐位相同。** 预登记的判据是前 1000 个 navtest token 上原生位姿最大差 < 1 cm。
+   Lebowski 逐位相同（0.0）；Cinque 的 ADE 差中位 1.1 cm、p99 4.1 cm、最大 6.6 cm（单点最大 18 cm）。原因是暴露 `temporal` 之后
+   TensorRT 按 fp16 重新做了 fusion，和第 40 条 WOD 抽取时「中位数 ≤ 1 cm」是同一现象。处理：`temporal` 照用（它是 head 的输入，不是被比较的量）；
+   NAVSIM 表里 openpilot 原生 plan 行一律用考试已存的位姿，不用 tapped 图的。
