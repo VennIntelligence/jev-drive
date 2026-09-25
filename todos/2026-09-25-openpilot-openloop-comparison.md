@@ -1,6 +1,6 @@
 # openpilot 开环地位：WOD-E2E 与 NAVSIM 上的并排对比，以及补齐公平比较缺的几格
 
-状态: 进行中（预登记写于任何新分数之前，2026-09-25 15:40）
+状态: done（预登记写于任何新分数之前，2026-09-25 15:40；G3 结果 2026-09-26 00:20；G4 提交包等下载）
 上游: 第 34 / 37 / 39 / 40 条；[wod-e2e.md](2026-09-24-zeroshot-exam/wod-e2e.md)、[navsim.md](2026-09-24-zeroshot-exam/navsim.md)、
 [nuscenes-physicalai.md](2026-09-24-zeroshot-exam/nuscenes-physicalai.md)、[driving-backbones](2026-09-24-driving-backbones/README.md)、
 [p5route](2026-09-25-openpilot-temporal-p5-and-route.md)
@@ -196,6 +196,33 @@ NAVSIM 上学出来的 ego head 拿到 75%。闭环（Bench2Drive）只有 20%�
 修正后的控制器下 cv 与论文最好的 UniAD 打平（同一批 64 个场景上 cv-fixed 0.29 对 LTF-fixed 0.28），这一格量的是控制器与场景长度，
 不是驾驶能力（HUGSIM 考试另有判读）。B2D 开环 shadow 与 HUGSIM 的 ego head 没有数字，只收已有的（预登记）。
 
+### G3：NAVSIM 上冻结 openpilot `temporal` + 薄 head（2026-09-26 00:20）
+
+`temporal` 在 navtrain 103 288 + navtest 12 146 + navhard 5 912 个 token 上按考试输入抽取（Lebowski 位姿与考试逐位相同，Cinque 见偏离 2），
+head 在 navtrain 上拟合（run：box 上 `navsim_zs/heads/20260925-232810`），官方 devkit 打分。Δ 是逐 token 配对差，10 000 次 token bootstrap。
+
+| 行 | PDMS [CI] | EPDMS [CI] | navhard EPDMS | late − 同族 ego（EPDMS） | − 同模型原生（EPDMS） |
+|:--|:--|:--|--:|:--|:--|
+| **Cinque `temporal` + `cls_late`** | **77.9 [77.2, 78.5]** | **77.4 [76.8, 78.0]** | **19.8** | **+9.6 [+8.9, +10.2]** | **+31.2 [+30.4, +32.1]** |
+| Lebowski `temporal` + `cls_late` | 77.3 [76.7, 77.9] | 76.7 [76.0, 77.3] | 17.5 | +8.8 [+8.2, +9.4] | +31.2 [+30.3, +32.0] |
+| Cinque `temporal` + `ridge_late` | 73.5 [72.9, 74.2] | 73.9 [73.2, 74.5] | 16.8 | +9.7 [+8.9, +10.4] | +27.7 |
+| Lebowski `temporal` + `ridge_late` | 72.4 [71.8, 73.1] | 72.9 [72.2, 73.6] | 17.0 | +8.7 [+7.9, +9.4] | +27.4 |
+| 我们 `cls ego` / `ridge ego`（G2） | 68.4 / 62.7 | 67.8 / 64.2 | 13.6 / 13.3 | 0 | |
+| openpilot 原生 Cinque / Lebowski | 52.1 / 50.9 | 46.2 / 45.5 | 9.3 / 10.2 | | 0 |
+| *文献* Ego Status MLP / TransFuser / DiffusionDrive | 65.6 / 84.0 / 88.1 | — / 76.7 / 84.5 | — / 23.1 / 27.5 | | |
+
+（navtest 上 (x, y) ADE 对 log：`ridge_late` 0.74 / 0.76 m、`cls_late` 0.87 m、`ridge ego` 1.04 m、原生 8.4 / 9.3 m。）
+
+**判定（按预登记）**：
+- `temporal` 在 NAVSIM 上**有用**：两个模型、两种 head 的 late − ego 配对 Δ 都是 +8.7 到 +9.7 EPDMS，CI 远离零。
+- **达到 blind 文献线**（PDMS ≥ 65.6）：四个 head 全部达到。
+- **没有达到 specialist 线**（PDMS ≥ 84.0）：最好的 77.9，差 6 分。EPDMS 上 77.4 与 TransFuser 的 76.7 同量级，但我们的 devkit 版本与文献不同
+  （human 94.5 对 90.3），这一格只作量级。navhard 上 19.8，低于 TransFuser 23.1。
+- 预期「head 高于同族 ego 几分、低于 TransFuser、远高于原生 plan」三条都成立，增益（+9–10）比预期的「几分」大。
+
+读法：原生 plan 在 NAVSIM 上只比 cv 高 20 EPDMS，重拟合的线性读出比原生 plan 再高 31。G1 / G1b 已经说明原生 plan 差是 2 Hz 输入造成的；这里说明
+同样被 2 Hz 输入扭曲的 `temporal` 里信息基本还在，只是要一个在该分布上拟合的读出。这是第 40 条 nuScenes 上「重拟合的读出吸收了分布差」在第三个数据集上的复现。
+
 ## 偏离记录
 
 1. **G1：slim shard 上缺帧时保持上一帧。** 预登记没写缺帧怎么办；考试的 runner 对缺帧是直接跳过。479 个目标里只有 1 个的 1.5 s 窗口缺帧，
@@ -204,3 +231,10 @@ NAVSIM 上学出来的 ego head 拿到 75%。闭环（Bench2Drive）只有 20%�
    Lebowski 逐位相同（0.0）；Cinque 的 ADE 差中位 1.1 cm、p99 4.1 cm、最大 6.6 cm（单点最大 18 cm）。原因是暴露 `temporal` 之后
    TensorRT 按 fp16 重新做了 fusion，和第 40 条 WOD 抽取时「中位数 ≤ 1 cm」是同一现象。处理：`temporal` 照用（它是 head 的输入，不是被比较的量）；
    NAVSIM 表里 openpilot 原生 plan 行一律用考试已存的位姿，不用 tapped 图的。
+3. **G3 抽取的调度偏离预算。** 第一次 8 个进程各自反序列化完整的 navtrain 索引（8 路相机 × 4 帧标定，每进程约 30 GB），加上 navsim_heads 里
+   逐 token 读 npz 的写法，把 box 内存推近 cgroup 上限，被我停掉；改成只含 CAM_F0 与 ego 状态的 slim 索引（1.4 GB）后重跑。
+   抽取按 7 个 shard 分到 GPU 2 / 3 / 4，墙钟约 65 min（预算约 45 min），瓶颈是每进程单核的 Python 步进 + TRT 调用（并发时 Cinque 的
+   GPU ms/token 从单进程的 75 涨到 190），不是 GPU。结果不受影响（chunk 文件可续跑，合并时断言 token 完整）。抽取在 17:30 结束后我的 watcher
+   没有触发，head 拟合与打分晚了约 6 h。
+4. **G4 没做完。** WOD test 下载在共享网络上只有 2–5 MB/s，剩约 65 个 shard（ETA 约 15 h）；链式脚本（下载 → 索引 → openpilot → 提交包）挂在
+   tmux `wodtest-chain`，用 GPU 3，只写文件，不上传。

@@ -9,3 +9,7 @@ op-lebowski native +cmd desire,lebowski_cmd,32.1886,29.1835,10.2687
 ctrv,heads_ctrv,38.1492,27.3970,11.4214
 ours ridge ego,heads_ridge_ego,47.8100,28.3642,13.2568
 ours cls ego K1024,heads_cls_ego_K1024,46.8666,29.0802,13.5956
+op-cinque temporal + ridge_late,heads_ridge_late_cinque_temporal,55.1476,29.5274,16.7576
+op-cinque temporal + cls_late,heads_cls_late_cinque_temporal,56.6484,34.0344,19.8186
+op-lebowski temporal + ridge_late,heads_ridge_late_lebowski_temporal,56.2193,29.0422,17.0478
+op-lebowski temporal + cls_late,heads_cls_late_lebowski_temporal,55.4922,30.3072,17.4635

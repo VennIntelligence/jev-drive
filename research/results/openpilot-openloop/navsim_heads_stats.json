@@ -1,0 +1,43 @@
+{
+ "ridge ego": {
+  "lam": 1e-06
+ },
+ "cls ego K1024": {
+  "lam": 1e-07,
+  "sel_ade": 0.9753420948982239
+ },
+ "ridge_late cinque temporal": {
+  "lam": 0.00031622776601683794
+ },
+ "cls_late cinque temporal": {
+  "lam": 0.001,
+  "sel_ade": 0.8478019833564758
+ },
+ "ridge_late lebowski temporal": {
+  "lam": 0.001
+ },
+ "cls_late lebowski temporal": {
+  "lam": 0.001,
+  "sel_ade": 0.8577037453651428
+ },
+ "ade_navtest": {
+  "ridge ego": 1.036766529083252,
+  "cls ego K1024": 1.0143003463745117,
+  "ridge_late cinque temporal": 0.7432161569595337,
+  "cls_late cinque temporal": 0.8654236197471619,
+  "native cinque": 8.379068374633789,
+  "ridge_late lebowski temporal": 0.7632850408554077,
+  "cls_late lebowski temporal": 0.8741937279701233,
+  "native lebowski": 9.293900489807129
+ },
+ "ade_navhard_two_stage": {
+  "ridge ego": 1.2449607849121094,
+  "cls ego K1024": 1.3406801223754883,
+  "ridge_late cinque temporal": 0.9300955533981323,
+  "cls_late cinque temporal": 1.1257877349853516,
+  "native cinque": 9.327409744262695,
+  "ridge_late lebowski temporal": 0.9659146070480347,
+  "cls_late lebowski temporal": 1.162061333656311,
+  "native lebowski": 9.944807052612305
+ }
+}

@@ -2756,6 +2756,15 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 
 **状态**：**待定**。单次、单 seed；EPDMS 的 devkit 版本与文献不同（我们的 human 94.5，文献常引 90.3），文献行只作量级参照。
 
+**2026-09-26 就地修正（openpilot 部分）**：上面把 openpilot 的 47–52 PDMS 读成「模型 + 适配损失的下限式读数」，并推测差别「最可能来自时间轴」。
+现在量过了（[openpilot-openloop-standing.md](openpilot-openloop-standing.md) 第 2、3 节，预登记在
+[comparison todo](../todos/2026-09-25-openpilot-openloop-comparison.md)）：在 WOD 的同一批 rater 帧上把输入换成 NAVSIM 式 2 Hz、1.5 s，
+三个 openpilot 的 RFS 从 7.6–8.0 掉到 4.9–5.2，比 cv（7.10）还低，和「原地不动」（5.38）同一水平，5 s 终点平均冲出 19–23 m；帧率是主因
+（small / Cinque 只给 1.5 s 的 10 Hz 帧只掉 0.07–0.11）。所以这一条里 openpilot 原生 plan 的行**不是模型能力的下限，而基本是输入协议的读数**。
+在同样的 2 Hz 输入下把 openpilot 当冻结 backbone，`temporal` + 在 navtrain 上拟合的 `cls_late` 得 77.9 PDMS / 77.4 EPDMS（Cinque），
+比原生 plan 高 31 EPDMS，比我们不看图像的 `cls ego`（68.4 / 67.8，与文献 Ego Status MLP 65.6 同量级）高 9.6 [8.9, 10.2]。
+标题里「离 specialist 差 30–40 分」对 openpilot 原生 plan 仍然成立，对 openpilot 作 backbone 则是 PDMS 差 TransFuser 6 分。Alpamayo 部分不变。
+
 
 ## 38. Bench2Drive 榜单前几名的总分差在评测噪声以内；按 hazard family 拆开后，突发 hazard 近乎饱和，真正的差距在规划 / 让行类路线（**待定**）
 
@@ -2849,6 +2858,11 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    (2) intent 已作为 ego 输入时，`cls_late` 在 Intersections / Multi-Lane 上与原生 plan 打平，静止帧上与 cv 打平（回归 head 在静止帧上低 0.6–0.7，是回归平均掉「继续停」的代价）。
    (3) 把 WOD routing intent 当 desire 脉冲喂进 backbone：RFS 在任何预登记子集上都没有变好，Cinque 原生反而 −0.13 [−0.23, −0.05]、静止帧 −0.66 [−0.99, −0.35]；
    只有 pre-onset ADE 降 0.21–0.23 m（`ridge_late`，CI 不跨零）。**不采用 desire 作 route 输入**，route 留在 ego 侧。
+
+6. **NAVSIM 第三个数据集复现**（2026-09-26，预登记先于分数，[openpilot-openloop-standing.md](openpilot-openloop-standing.md) 第 3 节）：navtrain 10.3 万 token 拟合、
+   navtest 官方 devkit 打分，输入是 NAVSIM 规则给的 4 帧 2 Hz 前视。`temporal` + `cls_late` 77.9 / 77.3 PDMS（Cinque / Lebowski），对同族 `cls ego`
+   +9.6 / +8.8 EPDMS（CI 不跨零），`ridge_late` 对 `ridge ego` +9.7 / +8.7；按同一规则判「更好」。原生 plan 在这种输入下失效（第 37 条修正），特征没有。
+   离 TransFuser 的 84.0 PDMS 还差 6 分，navhard 19.8 对 23.1。
 
 **对选型的含义（推测）**：第 21 条和 prediag 的「表征：Qwen3-VL-4B + 原生视频」要改：**在驾驶视频上训过的时序表征**（openpilot）比所有通用 backbone 都强，而且强一个量级；
 通用 VLM 做驾驶微调（Alpamayo）在中层 image token 上几乎不带来这种增益，增益在深层 last-token。下一步的候选是把 openpilot `temporal` 当 backbone 进 Stage B / 反应通道。

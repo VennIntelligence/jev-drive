@@ -100,7 +100,7 @@ def navsim():
         return
     df = pd.read_csv(p)
     board = pd.read_csv(RES / "navsim_board.csv").set_index("row")
-    fig, axs = plt.subplots(1, 2, figsize=(S.DOUBLE_COLUMN_IN, 3.0), sharey=True)
+    fig, axs = plt.subplots(1, 2, figsize=(S.DOUBLE_COLUMN_IN, 3.4), sharey=True)
     order = df[df.metric == "EPDMS"].sort_values("score")["row"].tolist()
     for ax, metric, bcol in zip(axs, ("PDMS", "EPDMS"), ("PDMS", "EPDMS")):
         d = df[df.metric == metric].set_index("row").reindex(order).reset_index()
@@ -120,8 +120,9 @@ def navsim():
                 ax.text(v, len(d) - .3, name.replace(" (blind, navtrain)", ""), rotation=90, ha="right", va="top",
                         fontsize=6.5, color="#666666")
         ax.set_xlabel(f"navtest {metric} (n = 12 146)")
-    axs[0].legend(loc="lower right", fontsize=6.5)
-    fig.tight_layout()
+    h, l = axs[0].get_legend_handles_labels()
+    fig.legend(h, l, loc="lower center", ncol=3, fontsize=6.5, bbox_to_anchor=(.55, 0))
+    fig.tight_layout(rect=(0, .1, 1, 1))
     print(S.save(fig, FIGS / "openloop-navsim"))
 
 

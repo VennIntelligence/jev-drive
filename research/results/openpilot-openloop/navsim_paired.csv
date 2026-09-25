@@ -1,19 +1,43 @@
 metric,a,b,n,diff,ci_lo,ci_hi
+PDMS,op-cinque temporal + ridge_late,ours ridge ego,12146,10.8605,10.1407,11.5781
+PDMS,op-cinque temporal + cls_late,ours cls ego K1024,12146,9.4466,8.8195,10.0740
+PDMS,op-lebowski temporal + ridge_late,ours ridge ego,12146,9.7520,9.0582,10.4513
+PDMS,op-lebowski temporal + cls_late,ours cls ego K1024,12146,8.8215,8.1838,9.4306
+PDMS,op-cinque temporal + ridge_late,op-cinque native,12146,21.4524,20.4916,22.4045
+PDMS,op-cinque temporal + cls_late,op-cinque native,12146,25.8070,24.9001,26.6942
+PDMS,op-lebowski temporal + ridge_late,op-lebowski native,12146,21.5213,20.5895,22.4699
+PDMS,op-lebowski temporal + cls_late,op-lebowski native,12146,26.3592,25.4970,27.2450
 PDMS,ours ridge ego,constant velocity,12146,42.0113,41.1971,42.8355
 PDMS,ours cls ego K1024,constant velocity,12146,47.7798,46.9432,48.5847
 PDMS,ctrv,constant velocity,12146,20.4479,19.7467,21.1479
+PDMS,op-cinque temporal + cls_late,constant velocity,12146,57.2265,56.4634,57.9739
+PDMS,op-lebowski temporal + cls_late,constant velocity,12146,56.6013,55.8453,57.3603
 PDMS,op-cinque native,constant velocity,12146,31.4195,30.5425,32.2920
 PDMS,op-lebowski native,constant velocity,12146,30.2421,29.3710,31.1124
 PDMS,op-small native,constant velocity,12146,26.6938,25.8508,27.5483
 PDMS,op-cinque native,Alpamayo 1.5 nav,12146,7.7880,6.8195,8.7857
 PDMS,op-lebowski native,Alpamayo 1.5 nav,12146,6.6106,5.6124,7.6147
 PDMS,ours cls ego K1024,Alpamayo 1.5 nav,12146,24.1484,23.1653,25.1154
+PDMS,op-cinque temporal + cls_late,Alpamayo 1.5 nav,12146,33.5950,32.6762,34.4920
+PDMS,op-lebowski temporal + cls_late,Alpamayo 1.5 nav,12146,32.9698,32.0475,33.8789
+EPDMS,op-cinque temporal + ridge_late,ours ridge ego,12146,9.6451,8.9247,10.3617
+EPDMS,op-cinque temporal + cls_late,ours cls ego K1024,12146,9.5526,8.9263,10.1696
+EPDMS,op-lebowski temporal + ridge_late,ours ridge ego,12146,8.6667,7.9391,9.3815
+EPDMS,op-lebowski temporal + cls_late,ours cls ego K1024,12146,8.8143,8.2128,9.4425
+EPDMS,op-cinque temporal + ridge_late,op-cinque native,12146,27.6940,26.7848,28.6085
+EPDMS,op-cinque temporal + cls_late,op-cinque native,12146,31.2428,30.4075,32.0779
+EPDMS,op-lebowski temporal + ridge_late,op-lebowski native,12146,27.3976,26.5011,28.2762
+EPDMS,op-lebowski temporal + cls_late,op-lebowski native,12146,31.1865,30.3362,32.0278
 EPDMS,ours ridge ego,constant velocity,12146,38.3248,37.4525,39.1849
 EPDMS,ours cls ego K1024,constant velocity,12146,41.9660,41.0634,42.8502
 EPDMS,ctrv,constant velocity,12146,18.0049,17.3166,18.7134
+EPDMS,op-cinque temporal + cls_late,constant velocity,12146,51.5187,50.7018,52.3732
+EPDMS,op-lebowski temporal + cls_late,constant velocity,12146,50.7804,49.9381,51.6097
 EPDMS,op-cinque native,constant velocity,12146,20.2759,19.3632,21.1716
 EPDMS,op-lebowski native,constant velocity,12146,19.5938,18.7113,20.5043
 EPDMS,op-small native,constant velocity,12146,16.6422,15.7505,17.5240
 EPDMS,op-cinque native,Alpamayo 1.5 nav,12146,2.9857,2.0470,3.9234
 EPDMS,op-lebowski native,Alpamayo 1.5 nav,12146,2.3036,1.3650,3.2488
 EPDMS,ours cls ego K1024,Alpamayo 1.5 nav,12146,24.6758,23.7046,25.6247
+EPDMS,op-cinque temporal + cls_late,Alpamayo 1.5 nav,12146,34.2285,33.3425,35.1089
+EPDMS,op-lebowski temporal + cls_late,Alpamayo 1.5 nav,12146,33.4902,32.5950,34.3984
