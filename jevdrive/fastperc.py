@@ -7,7 +7,7 @@ GPU part (run inside each model's own env; only numpy / pandas / torch + that mo
 CPU part (envs/jevdrive):
   subset   the fixed frame subset S (P5 hazard frames x 3 cameras, every 3rd nuScenes scene x 3 front cameras)
   eval     fusion_q4's own evaluate / hazard_reading on S for one detection dir; summary row + tables
-  summary  all eval rows + paired bootstrap against SAM 3.1 -> one table
+  depth    optional side reading: metric depth (YOLO26-depth) at each detection's contact pixel (envs/ultralytics)
 
 Backend specs (`--backend`), all returning per image, per prompt: scores (n,), boxes xyxy px (n, 4), masks (n, H, W)
 bool at the original resolution (None for box-only models):
@@ -250,6 +250,48 @@ def detect(be, image_list: str, out_dir: str, keys=None, batch: int = 8, shard: 
     return info
 
 
+def depth_sample(det_dir: str, out_dir: str, weights: str = "yolo26x-depth.pt", batch: int = 8, workers: int = 8,
+                 min_score: float = 0.05, rl=None) -> dict:
+    """Optional side reading D-depth: a monocular metric depth model (Ultralytics YOLO26-depth, as shipped: no camera
+    intrinsics) on every S image that has detections; per detection, the median predicted depth in a 5 x 5 window just
+    above its ground-contact pixel. Writes out_dir/{p5,nusc}/part-*.parquet = the detection rows + a `depth` column."""
+    import pandas as pd
+    import torch
+    from torch.utils.data import DataLoader
+    from tqdm import tqdm
+    from ultralytics import YOLO
+    from .sam_detect import _collate, _Images
+    L = Path(os.environ["DATA_DIR"]) / "processed/fusion_diag/lists"
+    m = YOLO(str(models_dir() / "ultralytics" / weights))
+    info = {}
+    for ds, lst in (("p5", "p5.parquet"), ("nusc", "nusc.parquet")):
+        parts = sorted((Path(det_dir) / ds).glob("part-*.parquet"))
+        d = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
+        d = d[d.score > min_score].reset_index(drop=True)
+        t = pd.read_parquet(L / lst)
+        rows = t[t.key.isin(set(d.key))].to_dict("records")
+        gi = d.groupby("key").indices
+        dep = np.full(len(d), np.nan, np.float32)
+        dl = DataLoader(_Images(rows), batch_size=batch, num_workers=workers, collate_fn=_collate, prefetch_factor=4)
+        for idx, ims in tqdm(dl, desc=f"depth {ds}", mininterval=10):
+            rs = m.predict([to_input(x, "bgr") for x in ims], verbose=False)
+            for i, r in zip(idx, rs):
+                D = r.depth.data.float()
+                H, W = D.shape
+                j = gi[rows[i]["key"]]
+                u = np.clip(np.nan_to_num(d.cu.to_numpy()[j]).round().astype(int), 2, W - 3)
+                v = np.clip(np.nan_to_num(d.cv.to_numpy()[j]).round().astype(int) - 3, 2, H - 3)
+                win = torch.stack([D[vv - 2:vv + 3, uu - 2:uu + 3].reshape(-1) for uu, vv in zip(u, v)])
+                dep[j] = win.median(1).values.cpu().numpy()
+        o = Path(out_dir) / ds
+        o.mkdir(parents=True, exist_ok=True)
+        d.assign(depth=dep).to_parquet(o / "part-0000.parquet", index=False)
+        info[ds] = {"detections": len(d), "images": len(rows)}
+        if rl:
+            rl.info(f"depth {ds}: {info[ds]}")
+    return info
+
+
 # ================================================================ the subset and the evaluation (CPU)
 
 def subset() -> dict:
@@ -264,6 +306,15 @@ def subset() -> dict:
     nl = pd.read_parquet(L / "nusc.parquet")
     scenes = set(sorted(nl.scene.unique())[::3])
     return {"p5": p5.key[p5.frame_name.isin(frames)].tolist(), "nusc": nl.key[nl.scene.isin(scenes)].tolist()}
+
+
+def _depth_place(d):
+    """Replace the flat-ground lift by camera centre + depth x ray (rays from fusion_q4.lift have unit optical-axis
+    component, so `depth` is the optical-axis depth); lift_ok = finite depth within 80 m."""
+    gx = d.ox + d.depth * d.rx
+    gy = d.oy + d.depth * d.ry
+    gd = np.hypot(gx, gy)
+    return d.assign(gx=gx, gy=gy, gdist=gd, lift_ok=np.isfinite(gd) & (d.depth > 0) & (gd <= 80))
 
 
 def _pick(t, reading: str, cls: str, col: str, val):
@@ -287,10 +338,16 @@ def evaluate(det_dir: str, name: str, score: float, out: Path, contact: str = "m
                       ignore_index=True)
     if contact == "box":
         d_all = d_all.assign(cu=(d_all.x0 + d_all.x1) / 2, cv=d_all.y1)
+    if contact == "depth":                                    # the depth_sample output: rows carry `depth`
+        d_all = pd.concat([pd.read_parquet(p) for s in ("p5", "nusc") for p in sorted((Path(det_dir) / s).glob("part-*.parquet"))],
+                          ignore_index=True)
+        d_all = d_all[d_all.score > thr].reset_index(drop=True)
     dp = d_all[d_all.key.isin(S["p5"])].reset_index(drop=True)
     dp = Q.lift_dets(dp, dp.key.str.split("|").str[1].to_numpy(), Q.p5_calib())
     dn = d_all[d_all.key.isin(S["nusc"])].reset_index(drop=True)
     dn = Q.lift_dets(dn, dn.key.to_numpy(), ncal)
+    if contact == "depth":   # place the contact point on its camera ray at the predicted (optical-axis) depth
+        dp, dn = _depth_place(dp), _depth_place(dn)
     wx = p5.set_index("key")
     w5 = pd.Series(np.where(wx.sun_altitude < 0, "night", np.where(wx.precipitation > 30, "rain", "day")), index=wx.index)
     nx = nl.set_index("key")
@@ -360,7 +417,7 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("latency", "detect", "subset", "eval"))
+    ap.add_argument("step", choices=("latency", "detect", "subset", "eval", "depth"))
     ap.add_argument("--backend", help="backend spec, see the module docstring")
     ap.add_argument("--list", help="image list parquet (latency / detect)")
     ap.add_argument("--dataset", choices=("p5", "nusc"), help="detect: restrict to that part of S")
@@ -368,7 +425,8 @@ def main():
     ap.add_argument("--out", help="detect: output dir; eval: detection dir")
     ap.add_argument("--keep", type=float, default=0.05, help="lowest score stored (detect) / used (latency: default thr)")
     ap.add_argument("--score", type=float, default=0.5, help="eval: the model's default threshold")
-    ap.add_argument("--contact", default="mask", choices=("mask", "box"))
+    ap.add_argument("--contact", default="mask", choices=("mask", "box", "depth"))
+    ap.add_argument("--depth-out", help="depth: output dir (detections + depth column)")
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--tag", default="run")
@@ -388,6 +446,9 @@ def main():
                 keys = json.loads((Path(os.environ["DATA_DIR"]) / "processed/fastperc/subset.json").read_text())[a.dataset]
             info = detect(be, a.list, a.out, keys, a.batch, workers=a.workers, rl=rl)
             rl.info(f"detect: {info}")
+    elif a.step == "depth":
+        info = depth_sample(a.out, a.depth_out, workers=a.workers, rl=rl)
+        rl.info(f"depth: {info}")
     elif a.step == "subset":
         S = subset()
         d = Path(os.environ["DATA_DIR"]) / "processed/fastperc"
