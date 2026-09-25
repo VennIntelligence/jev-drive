@@ -220,8 +220,12 @@ def boot_diff(v: np.ndarray, grp: np.ndarray, hi: np.ndarray, lo: np.ndarray, b:
 
 
 def boot_mean(v, grp, b=NB, seed=0):
-    return boot_diff(np.r_[v, 0.0], np.r_[grp, "__zero__"], np.r_[np.ones(len(v), bool), False],
-                     np.r_[np.zeros(len(v), bool), True], b, seed)
+    codes, u = pd.factorize(grp)
+    k = len(u)
+    s, n = np.bincount(codes, v, k), np.bincount(codes, minlength=k).astype(float)
+    W = np.random.default_rng(seed).multinomial(k, np.full(k, 1 / k), size=b).astype(float)
+    m = (W @ s) / (W @ n).clip(1e-9)
+    return float(v.mean()), float(np.quantile(m, 0.025)), float(np.quantile(m, 0.975))
 
 
 def grid(P, n_pool) -> pd.DataFrame:
