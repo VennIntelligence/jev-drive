@@ -561,9 +561,11 @@ def extract(rl, batch: int = 2, workers: int = 4):
 
 
 def load_features(t: pd.DataFrame, taps=TAPS) -> dict:
-    """Feature rows aligned to `t` (P4's reused clips and the P5 chunks)."""
+    """Feature rows aligned to `t` (P4's reused clips, the P5 chunks c<NNN>, and rows copied from an earlier set's
+    chunks, r<NNN>, by jevdrive.p5_qwen)."""
     from . import p4_carla as p4
-    srcs = [(p4.out_dir("features", p4.FEATURE_SET), None)] + [(d, None) for d in sorted(processed("features").glob("c*"))]
+    srcs = [(p4.out_dir("features", p4.FEATURE_SET), None)] + \
+        [(d, None) for d in sorted(processed("features").glob("[cr][0-9]*")) if d.is_dir()]
     pos, arrs = {}, {k: [] for k in taps}
     n = 0
     for d, _ in srcs:
