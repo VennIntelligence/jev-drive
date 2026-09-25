@@ -2835,3 +2835,22 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
 **状态**：**待定**。子集是半 val 的 479 个 sequence；openpilot 的主结果在 train 训协议上复现且更强，但只有一个 split、一个 seed；openpilot 的特征来自它自己的训练视频，
 与 WOD 没有已知重叠（推测）。**怎么才能定下来**：(i) 在 test split 或另一个数据集（nuScenes / NAVSIM）上同样的冻结 + ridge；(ii) Alpamayo 的 `L27_last` 在 train 训协议上复现（约 20 h 抽取，要用户决定）；
 (iii) 把 openpilot `temporal` 接进 classification head（`cls ego` 那一族），看 RFS 能否接近原生 8.0。
+
+## 41. 控制器评判：L1（不接模型）上我们能做出又准又平顺的执行器，但优势传不到闭环；按冻结规则没有控制器被判"更好"（**待定**，TCP 仅 8 条路线）
+
+2026-09-25。回答第 31 条留下的问题：DS 分不出执行层好坏时，怎么判断一个控制器更好或更易用。规则见 [controller-eval-rules.md](../todos/2026-09-23-tfv6-controller/controller-eval-rules.md)（L1 不接模型、同一条可行时间参数化轨迹既喂入也打分；L2 按 plan 条件评，可行/不可行 plan 分开；L3 只作 DS 非劣护栏），操作协议与冻结后的修正见 [protocol-v2](../todos/2026-09-23-tfv6-controller/controller-eval-protocol-v2.md)，全部数字见 [scorecard](../todos/2026-09-23-tfv6-controller/controller-scorecard.md)。
+
+**L1（held-out 40 条路线 × 3 扰动种子）。** C（我们的 pursuit + PI）与 D（C + 横向修正）在两类参考上都显著优于 TFv6 作者的两个执行层 A（route/target-speed PID）和 B（waypoint PID）：primary（跟踪误差合成量，越低越好）ramp 0.92/0.90 对 2.38/2.10。A/B 没有位置环，全部停在终点前几米，起步近全油门、巡航掉速。C/D 的代价是额外 jerk（实际减参考的 jerk RMS）约 6 m/s³，B 只有 1.4。新候选 P 把 C 的纵向改成 plant 反解（期望加速度 = plan 前馈 + P 修正，jerk 限幅后按实测 MKZ 油门/刹车—加速度表反查，能靠松油门实现的减速不踩刹车；dev 上两轮预登记调参选出）：ramp primary 0.51、额外 jerk 1.64，比 D 准且平顺与 B 相当，P − D 的 jerk 差 −4.3 [−4.7, −3.9]。
+
+| TFv6 闭环（16 路线 × 2 seed） | A | B | C | D | P | P2 |
+|---|---:|---:|---:|---:|---:|---:|
+| 平均 DS | 94.1 | 95.0 | 86.5 | 86.0 | 77.2 | 87.8 |
+| 车辆碰撞 | 2 | 1 | 6 | 5 | 10 | 6 |
+| 可行 plan 的 0.5 s 位移误差 (m) | — | 0.33 | 0.09 | 0.09 | 0.38 | 0.33 |
+| 可行 plan 的额外 jerk (m/s³) | 25.6 | 5.4 | 4.4 | 4.2 | 5.4 | 4.9 |
+
+**闭环。** P 在 TFv6 上最差：前车停下、plan 要求停车时车在蠕行，P 给油门不刹车撞上去（映射在 2–9 m/s 上测得，近静止时同样的油门会前爬）。加低速刹车规则的 P2 先过 dev 闸门再上 held-out，碰撞回到与 C 相同，DS 与 C/D 持平。L1 上 P 的平顺优势在闭环里消失：闭环 jerk 由模型 plan 的变化主导。L3 相对原生：TFv6 上 C −7.6 [−16.8, +1.2]、D −8.1、P2 −6.3，都没达到"下界 ≥ −3"；TCP 子集（8 路线、1 seed）上 C 与原生打平 +3.7 [−15, +27]，所有控制器的 0.5 s 位移误差都显著好于 TCP 原生（C − N −0.33 [−0.42, −0.24]）。
+
+**读法。** 执行层"跟得准"已经可以做到并被公平地测出来（L1），也能在闭环里保持（C/D 的 0.5 s 位移误差在两个 planner 上都显著最好），但它不转化为 TFv6 上的 DS：A 就是 TFv6 训练数据的 expert（LEAD PDM-Lite）控制器，参数逐项相同，模型与之共同优化。L1 本身在 v1 里有七处接口伪差，多数偏向 C，修完后 C 的 L1 优势缩小但仍显著。L1 对闭环的预测力不足，缺"跟车蠕行到停"和"带模型噪声的 plan"两类工况。
+
+**怎么推翻或推进。** TCP 的 L3 需要跑满 16 条路线 × 2 seed 才能收窄 CI；下一版 L1 加入上述两类工况后，再判断 P2 这类平顺化设计是否值得在闭环里继续做。

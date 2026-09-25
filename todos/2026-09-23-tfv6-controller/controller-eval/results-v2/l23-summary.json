@@ -1,0 +1,472 @@
+{
+  "TFv6": {
+    "A": {
+      "cases": 32,
+      "mean_ds": 94.0628849375,
+      "collisions": 2,
+      "completed": 32,
+      "ds": 100.0,
+      "feasible_disp05_mean_m": null,
+      "feasible_speed_mae_mps": 1.1801607746003477,
+      "feasible_extra_jerk_rms_mps3": 25.631658103678248,
+      "low_demand_full_pedal_share": 0.7991459320695102,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 27.45156193067706,
+      "infeasible_min_front_gap_m": 9.562157722573197
+    },
+    "B": {
+      "cases": 32,
+      "mean_ds": 95.0,
+      "collisions": 1,
+      "completed": 32,
+      "ds": 100.0,
+      "feasible_disp05_mean_m": 0.3268935486728042,
+      "feasible_speed_mae_mps": 0.39440173560646824,
+      "feasible_extra_jerk_rms_mps3": 5.401674501396984,
+      "low_demand_full_pedal_share": 0.39899973444277237,
+      "plan_unjustified_pedal_flips_per_min": 3.5126913204677255,
+      "infeasible_extra_jerk_rms_mps3": 9.812746431833581,
+      "infeasible_min_front_gap_m": 12.151054793528111,
+      "l3_ds_vs_native": [
+        0.937,
+        [
+          -3.25,
+          5.687
+        ],
+        16
+      ]
+    },
+    "C": {
+      "cases": 32,
+      "mean_ds": 86.48375,
+      "collisions": 6,
+      "completed": 31,
+      "ds": 100.0,
+      "feasible_disp05_mean_m": 0.09124520932195256,
+      "feasible_speed_mae_mps": 0.4583304124806643,
+      "feasible_extra_jerk_rms_mps3": 4.384711902749473,
+      "low_demand_full_pedal_share": 0.1610169491525424,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 7.52628727425663,
+      "infeasible_min_front_gap_m": 13.680391057097026,
+      "l3_ds_vs_native": [
+        -7.579,
+        [
+          -16.829,
+          1.234
+        ],
+        16
+      ],
+      "l2_feasible_disp05_mean_m_vs_B": [
+        -0.232,
+        [
+          -0.272,
+          -0.188
+        ],
+        16
+      ],
+      "l2_feasible_speed_mae_mps_vs_B": [
+        0.136,
+        [
+          0.046,
+          0.237
+        ],
+        16
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_B": [
+        -1.069,
+        [
+          -1.896,
+          -0.177
+        ],
+        16
+      ]
+    },
+    "D": {
+      "cases": 32,
+      "mean_ds": 85.95938753125,
+      "collisions": 5,
+      "completed": 30,
+      "ds": 100.0,
+      "feasible_disp05_mean_m": 0.09278298781117686,
+      "feasible_speed_mae_mps": 0.5030774160024982,
+      "feasible_extra_jerk_rms_mps3": 4.239142510904654,
+      "low_demand_full_pedal_share": 0.21234388749093042,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 7.527465467384815,
+      "infeasible_min_front_gap_m": 10.661934579493845,
+      "l3_ds_vs_native": [
+        -8.103,
+        [
+          -17.636,
+          1.0
+        ],
+        16
+      ],
+      "l2_feasible_disp05_mean_m_vs_B": [
+        -0.233,
+        [
+          -0.276,
+          -0.189
+        ],
+        16
+      ],
+      "l2_feasible_speed_mae_mps_vs_B": [
+        0.143,
+        [
+          0.052,
+          0.243
+        ],
+        16
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_B": [
+        -1.059,
+        [
+          -1.9,
+          -0.179
+        ],
+        16
+      ]
+    },
+    "P": {
+      "cases": 32,
+      "mean_ds": 77.23325,
+      "collisions": 10,
+      "completed": 30,
+      "ds": 70.0,
+      "feasible_disp05_mean_m": 0.38263279530809463,
+      "feasible_speed_mae_mps": 0.7043353470715946,
+      "feasible_extra_jerk_rms_mps3": 5.402989167978564,
+      "low_demand_full_pedal_share": 0.0,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 8.140540223906157,
+      "infeasible_min_front_gap_m": 8.148368560755387,
+      "l3_ds_vs_native": [
+        -16.83,
+        [
+          -29.097,
+          -5.125
+        ],
+        16
+      ],
+      "l2_feasible_disp05_mean_m_vs_B": [
+        0.061,
+        [
+          0.019,
+          0.1
+        ],
+        16
+      ],
+      "l2_feasible_speed_mae_mps_vs_B": [
+        0.299,
+        [
+          0.226,
+          0.372
+        ],
+        16
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_B": [
+        -0.413,
+        [
+          -1.253,
+          0.532
+        ],
+        16
+      ]
+    },
+    "P2": {
+      "cases": 32,
+      "mean_ds": 87.79108125,
+      "collisions": 6,
+      "completed": 29,
+      "ds": 100.0,
+      "feasible_disp05_mean_m": 0.32538247920644936,
+      "feasible_speed_mae_mps": 0.5769254466375267,
+      "feasible_extra_jerk_rms_mps3": 4.919033385885485,
+      "low_demand_full_pedal_share": 0.025777777777777778,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 8.194420958722533,
+      "infeasible_min_front_gap_m": 10.741694802675942,
+      "l3_ds_vs_native": [
+        -6.272,
+        [
+          -16.278,
+          0.437
+        ],
+        16
+      ],
+      "l2_feasible_disp05_mean_m_vs_B": [
+        0.019,
+        [
+          -0.015,
+          0.054
+        ],
+        16
+      ],
+      "l2_feasible_speed_mae_mps_vs_B": [
+        0.207,
+        [
+          0.114,
+          0.311
+        ],
+        16
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_B": [
+        -0.173,
+        [
+          -1.292,
+          1.257
+        ],
+        16
+      ],
+      "ds_vs_D": [
+        1.832,
+        [
+          -12.819,
+          14.637
+        ],
+        16
+      ],
+      "feasible_extra_jerk_rms_mps3_vs_D": [
+        0.887,
+        [
+          -0.024,
+          1.888
+        ],
+        16
+      ],
+      "feasible_disp05_mean_m_vs_D": [
+        0.253,
+        [
+          0.204,
+          0.304
+        ],
+        16
+      ]
+    }
+  },
+  "TCP": {
+    "N": {
+      "cases": 8,
+      "mean_ds": 61.1455,
+      "collisions": 4,
+      "completed": 4,
+      "ds": 65.0,
+      "feasible_disp05_mean_m": 0.8120332104135105,
+      "feasible_speed_mae_mps": 1.7695057533588043,
+      "feasible_extra_jerk_rms_mps3": 4.3193578606096015,
+      "low_demand_full_pedal_share": 0.2602040816326531,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 3.0968564888761803,
+      "infeasible_min_front_gap_m": 9.072208197907251
+    },
+    "C": {
+      "cases": 8,
+      "mean_ds": 64.826,
+      "collisions": 3,
+      "completed": 6,
+      "ds": 65.0,
+      "feasible_disp05_mean_m": 0.4751341978579875,
+      "feasible_speed_mae_mps": 1.2563713937564565,
+      "feasible_extra_jerk_rms_mps3": 6.246821815785534,
+      "low_demand_full_pedal_share": 0.016129032258064516,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 6.968980382739499,
+      "infeasible_min_front_gap_m": 7.111889832661605,
+      "l3_ds_vs_native": [
+        3.68,
+        [
+          -15.184,
+          27.174
+        ],
+        8
+      ],
+      "l2_feasible_disp05_mean_m_vs_N": [
+        -0.326,
+        [
+          -0.419,
+          -0.24
+        ],
+        8
+      ],
+      "l2_feasible_speed_mae_mps_vs_N": [
+        -0.322,
+        [
+          -1.43,
+          0.769
+        ],
+        8
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_N": [
+        1.442,
+        [
+          -0.584,
+          3.299
+        ],
+        8
+      ]
+    },
+    "D": {
+      "cases": 8,
+      "mean_ds": 47.3370465,
+      "collisions": 6,
+      "completed": 5,
+      "ds": 49.904986,
+      "feasible_disp05_mean_m": 0.45109596113019546,
+      "feasible_speed_mae_mps": 1.344023664629936,
+      "feasible_extra_jerk_rms_mps3": 5.877649812904624,
+      "low_demand_full_pedal_share": 0.0,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 8.126936049812379,
+      "infeasible_min_front_gap_m": 11.125925103040121,
+      "l3_ds_vs_native": [
+        -13.808,
+        [
+          -30.448,
+          4.812
+        ],
+        8
+      ],
+      "l2_feasible_disp05_mean_m_vs_N": [
+        -0.332,
+        [
+          -0.433,
+          -0.244
+        ],
+        8
+      ],
+      "l2_feasible_speed_mae_mps_vs_N": [
+        -0.172,
+        [
+          -1.236,
+          0.878
+        ],
+        8
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_N": [
+        1.401,
+        [
+          -0.219,
+          3.241
+        ],
+        8
+      ]
+    },
+    "P": {
+      "cases": 8,
+      "mean_ds": 54.120127749999995,
+      "collisions": 2,
+      "completed": 3,
+      "ds": 58.443200000000004,
+      "feasible_disp05_mean_m": 0.6037289605144991,
+      "feasible_speed_mae_mps": 1.4901798273200422,
+      "feasible_extra_jerk_rms_mps3": 5.235081691438283,
+      "low_demand_full_pedal_share": 0.024539877300613498,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 6.359499268672695,
+      "infeasible_min_front_gap_m": 8.189788296646004,
+      "l3_ds_vs_native": [
+        -7.025,
+        [
+          -32.683,
+          22.619
+        ],
+        8
+      ],
+      "l2_feasible_disp05_mean_m_vs_N": [
+        -0.213,
+        [
+          -0.366,
+          -0.036
+        ],
+        8
+      ],
+      "l2_feasible_speed_mae_mps_vs_N": [
+        0.039,
+        [
+          -1.37,
+          1.365
+        ],
+        8
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_N": [
+        0.928,
+        [
+          -0.979,
+          3.111
+        ],
+        8
+      ]
+    },
+    "P2": {
+      "cases": 8,
+      "mean_ds": 56.36025,
+      "collisions": 4,
+      "completed": 5,
+      "ds": 60.0,
+      "feasible_disp05_mean_m": 0.577066680335277,
+      "feasible_speed_mae_mps": 1.7517186350069833,
+      "feasible_extra_jerk_rms_mps3": 5.897715808467086,
+      "low_demand_full_pedal_share": 0.021739130434782608,
+      "plan_unjustified_pedal_flips_per_min": 0.0,
+      "infeasible_extra_jerk_rms_mps3": 7.220306828190063,
+      "infeasible_min_front_gap_m": 10.285859556432658,
+      "l3_ds_vs_native": [
+        -4.785,
+        [
+          -23.897,
+          12.578
+        ],
+        8
+      ],
+      "l2_feasible_disp05_mean_m_vs_N": [
+        -0.239,
+        [
+          -0.321,
+          -0.154
+        ],
+        8
+      ],
+      "l2_feasible_speed_mae_mps_vs_N": [
+        -0.2,
+        [
+          -1.438,
+          0.899
+        ],
+        8
+      ],
+      "l2_feasible_extra_jerk_rms_mps3_vs_N": [
+        0.918,
+        [
+          -1.049,
+          2.779
+        ],
+        8
+      ],
+      "ds_vs_D": [
+        9.023,
+        [
+          0.705,
+          18.358
+        ],
+        8
+      ],
+      "feasible_extra_jerk_rms_mps3_vs_D": [
+        -0.484,
+        [
+          -1.953,
+          0.937
+        ],
+        8
+      ],
+      "feasible_disp05_mean_m_vs_D": [
+        0.093,
+        [
+          0.019,
+          0.182
+        ],
+        8
+      ]
+    }
+  }
+}

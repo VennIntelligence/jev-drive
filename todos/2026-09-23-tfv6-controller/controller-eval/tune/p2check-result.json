@@ -1,0 +1,94 @@
+{
+  "round": "p2check",
+  "table": {
+    "D": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 1.0062047298348218,
+      "cte_rms_m": 0.023579204860146887,
+      "time_xy_rms_m": 0.16943868518913074,
+      "speed_rms_mps": 0.5010172451776373,
+      "extra_jerk_rms_mps3": 6.111046835002981,
+      "along_lag_rms_m": 0.16619482638009936,
+      "stop_short_m": 0.029199676981072287
+    },
+    "P": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.6515302569074359,
+      "cte_rms_m": 0.037336120096123554,
+      "time_xy_rms_m": 0.23855978707124656,
+      "speed_rms_mps": 0.31923377744340237,
+      "extra_jerk_rms_mps3": 1.960226987407093,
+      "along_lag_rms_m": 0.25027092654648875,
+      "stop_short_m": 0.0
+    },
+    "P2": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.6321558387332906,
+      "cte_rms_m": 0.022195225080291814,
+      "time_xy_rms_m": 0.2347281848943618,
+      "speed_rms_mps": 0.3096608164372856,
+      "extra_jerk_rms_mps3": 2.359455021570321,
+      "along_lag_rms_m": 0.24232279701749637,
+      "stop_short_m": 0.08884601002285564
+    }
+  },
+  "eligible": [
+    "P",
+    "P2"
+  ],
+  "winner": "P",
+  "contrasts_vs_D": {
+    "P": {
+      "primary": {
+        "mean": -0.4819502421497809,
+        "ci95": [
+          -0.6508706245313406,
+          -0.32693615406327853
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -4.308834786369196,
+        "ci95": [
+          -4.835404162849985,
+          -3.802108371284715
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "P2": {
+      "primary": {
+        "mean": -0.5344965570302165,
+        "ci95": [
+          -0.7116843049330047,
+          -0.37170425967113385
+        ],
+        "routes": 15,
+        "left_better_routes": 14
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -3.8763143412023795,
+        "ci95": [
+          -4.405010183831801,
+          -3.3614278412271723
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    }
+  }
+}
