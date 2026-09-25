@@ -276,6 +276,9 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   「距走廊」= 到中心线横距 − 1.2 m，「朝走廊方向的速度分量」= 物体速度在指向中心线的法向上的分量；只对 walker 计（自行车按 vehicle 类进 (i)(ii)）。
   (3) 物体 = 同一 tick 的全部 actor（除 ego），与 ego 高差 > 8 m 的剔除（x⁻ 的 hazard 被藏在地下 500 m、生成前也在地下）。坐标用 CARLA 左手系取 y 反号转成右手系，ego BEV 原点在车辆位置（bbox 中心地面），x 前 y 左。
   (4) 考官：`p5_exam.exam` 一字不改，examinee = `gate any`（主读数，rule floor）以及三条门各自（描述）。
+- 2026-09-25 18:35 CST [Q7] **事后诊断（看过 Q7 表之后加的，不改登记的表）**：P5 的三个「横向」簇（turn left / laneChange right / keep right）2 s 纵向差中位是 −1.5 到 −5.8 m，
+  且 Light、StaticCutIn 占大头，怀疑是「一侧停、一侧沿弯道走」在 ego 坐标系里投出来的横向差，不是横向决策。另算一列 off-path 横向差：x⁺ 每个点到 x⁻ 折线（及反向）的最大横距，
+  < 1.0 m 视为「同一路径、只差纵向」。只作为横向簇的解释列，覆盖率的登记口径不变。
 - 2026-09-25 18:30 CST [Q4] 以下全部写在任何 SAM 输出之前。
   (1) **image 模式用 SAM 3.1 自己的 detector**，不回退到 SAM 3：multiplex checkpoint 里 `detector.*` 那一半就是 `Sam3Image` 的子类（`Sam3MultiplexDetector`，Tri-head ViT neck），
   按 `build_sam3_multiplex_video_predictor` 的同一套构造加载，前后处理与仓库的 `Sam3Processor` 一致（1008×1008 resize、mean/std 0.5、score = sigmoid(logit) × sigmoid(presence)、mask 双线性上采样后 sigmoid > 0.5），
