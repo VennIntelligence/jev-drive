@@ -436,7 +436,7 @@ eng-implicit-cinque。指标（`scripts/zeroshot_b2d_junctions.py`）：DS、RC�
 - 全量：选中的模型 × 选中的转向做法 × engaged，220 条，`--towns all`，4 个 worker。DS 报均值与按路线 bootstrap 的 95% CI，
   SR 按 Bench2Drive 定义报 Wilson 95% CI，另报没跑完的路线数。
 
-**基础设施加固**：policy server 放进自己的 session / 进程组（`setsid`，进程名 `opb2d-policy-<model>`），server 里阻塞并记录
+**基础设施加固**：policy server 放进自己的 session / 进程组（`setsid`；改进程名的 `exec -a` 会让 venv 找不到自己的 prefix，没用），server 里阻塞并记录
 所有可捕获的终止信号的发送者（pid、uid、命令行）；launcher 每 30 s 存一份全部进程快照（保留 60 min），server 消失时保留
 死前最后一份快照并自动重启，phase 续跑（b2d_run 跳过已完成路线）。查过其他 agent 的脚本（tfv6_rules_batch、
 simlingo_catalogue_*、zeroshot_b2d_alp.sh、b2d_run.py），都只按自己记录的 pid / 进程组杀进程，没有 `pkill -f` 一类能匹配

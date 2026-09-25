@@ -29,8 +29,9 @@ trap cleanup EXIT
 launch() {  # model: start its policy server in its own session / process group, wait for ready
     local m=$1 sock=$D/$1-$mode.sock ready=$D/$1-$mode.ready
     rm -f "$sock" "$ready"
-    CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid bash -c "exec -a opb2d-policy-$m $PY_OP \
-        scripts/zeroshot_policy_server.py $m --socket $sock --ready-file $ready" >> "$D/server-$m-$mode.log" 2>&1 &
+    # own session / process group; no `exec -a` renaming: a venv interpreter locates its prefix from argv[0]
+    CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 setsid "$PY_OP" scripts/zeroshot_policy_server.py "$m" \
+        --socket "$sock" --ready-file "$ready" >> "$D/server-$m-$mode.log" 2>&1 &
     spid[$m]=$!
     until [[ -e $ready ]]; do
         kill -0 "${spid[$m]}" 2>/dev/null || { echo "policy server $m died at start-up, see $D/server-$m-$mode.log" >&2; exit 3; }
