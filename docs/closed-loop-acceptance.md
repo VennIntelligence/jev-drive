@@ -9,7 +9,7 @@ Working notes, pre-registrations and every table: [todos/2026-09-25-closed-loop-
 | Part | Verdict | Where |
 |---|---|---|
 | CARLA harness cost and layout | measured; GPU render binds first, **6 servers per GPU**, ~2.5 cores per worker; the container thread cap binds the box | [bench2drive-cost.md](bench2drive-cost.md) "Harness cost and layout on the five-GPU box" |
-| B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2, P5) | **none passes**; P5 (re-acceptance, time-indexed replay) is closest: lateral passes at 1 / 2 / 5 Hz, longitudinal still lags ~2.6 m (starts ~0.5 s late); Zoo PID fails outright | below |
+| B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2, P5, P6, P7) | **none passes**; P5 / P6 (time-indexed replay) are closest: lateral passes at 1 / 2 / 5 Hz, longitudinal still lags ~2.6 m (starts ~0.5 s late); P7's 2 m/s² launch cap doubles that lag; Zoo PID fails outright | below |
 | HUGSIM controllers | official **fail**, PR #57 **fail**, fixed2 **pass** | [hugsim.md](hugsim.md) "Controller acceptance" |
 | Unexplained SIGKILLs | not kernel OOM, not our code; most likely the platform's memory enforcement; forensics now armed | [long-runs.md](long-runs.md), todo `sigkill.md` |
 
@@ -83,6 +83,32 @@ reused, criteria unchanged (A4 threshold 90.5), pre-registered before any run
 - Infrastructure: 80/80 routes scored; 2 routes needed a second attempt, 1 server died at startup (Signal 11).
 - No parameter was tuned. What to change next (launch feed-forward / throttle authority / stopping position, or first
   separating the replay's actuation delay from the controller's) is the user's decision.
+
+### P6 and P7 under the same protocol (2026-09-26, GPU box)
+
+Only these acceptance arms ran on the GPU box; P7's registered L1 and TFv6 / TCP closed loop run on the Tokyo box.
+P6 = P5 + terminal approach only for plan periods >= 0.2 s (so identical to P5 at 1 / 2 / 5 Hz); P7 = P6 + positive
+acceleration request capped at 2.0 m/s². Pre-registered before the runs (commit d9c7640,
+[todo](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p7.md)); 120/120 routes on the first attempt.
+
+| Controller (plan cadence) | DS (expert 95.5) | ΔDS vs expert [95% CI] | collisions (routes the expert did not) | cross-track p95 | lag (signed e_lon median) | time lag (median) | lateral ratio | verdict |
+|---|---:|---|---|---:|---:|---:|---:|---|
+| P6, 2 Hz | 88.9 | −6.6 [−15.2, −0.3] | 4 (2) | 0.12 m | −2.7 m | 0.29 s | 0.90 | fail (A2, A4) |
+| P6, 5 Hz | 87.4 | −8.1 [−15.8, −0.9] | 3 (3) | 0.10 m | −2.5 m | 0.26 s | 0.92 | fail (A2, A4) |
+| P6, 1 Hz | 84.7 | −10.8 [−21.8, −1.7] | 4 (4) | 0.16 m | −3.2 m | 0.39 s | 0.85 | fail (A2, A4, A5) |
+| P7, 2 Hz | 81.9 | −13.6 [−24.0, −4.0] | 7 (6) | 0.11 m | −4.6 m | 0.80 s | 0.74 | fail (A2, A4) |
+| P7, 5 Hz | 87.1 | −8.4 [−17.2, −0.7] | 4 (4) | 0.11 m | −4.5 m | 0.73 s | 0.71 | fail (A2, A4) |
+| P7, 1 Hz | 77.8 | −17.7 [−29.7, −6.4] | 10 (7) | 0.16 m | −5.4 m | 0.81 s | 0.65 | fail (A2, A3, A4) |
+
+- **P7's cap more than doubles the longitudinal lag** (paired per-route e_lon vs P6: −2.4 m at every cadence, CIs
+  [−3.5, −1.5]): PDM-Lite accelerates above 2 m/s² for most (median 82%) of its accelerating time, so a capped
+  controller falls further behind its schedule and reaches more conflict points late (new collisions on 2286, 24211,
+  2091 at every cadence). Its lower lateral ratio is the same lag seen through a lateral metric (cross-track is unchanged).
+- **P6 behaves as P5 here, and their difference is run-to-run noise**: e_lon within 0.1 m at 2 / 5 Hz, yet single routes
+  flip between 36-60 and 100 at conflict points and mean DS differs by −1.8 to +3.2. Differences of ~3 DS between single
+  runs on these 20 routes cannot be attributed to the controller.
+- This test measures how tightly a controller follows a known-feasible plan; it does not measure the problem P7 was
+  designed for (infeasible TFv6 launch plans). Read it together with Tokyo's L1 and closed-loop results.
 
 ## HUGSIM reporting rule (user, 2026-09-25)
 
