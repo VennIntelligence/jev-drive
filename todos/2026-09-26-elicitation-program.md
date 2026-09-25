@@ -379,6 +379,9 @@ E6（可选）──────────────────────
 - 2026-09-26 01:58 CST [E5] 执行记录（写于正式 run 之前）：(i) 检测器按三段互不重叠的图像列表在 GPU 0 上开 3 个进程（单进程在争用的 GPU 0 上 45 ms / 张，估 105 min；三进程合计约 52 张 / s，约 45 min），检测配置不变；
   (ii) prior 的逐 fold 核对门槛从 1e-3 m 放到 1e-2 m：GPU 上重算 `fit_fold` 的 prior 与已存 run 差 0.4–1.8 mm（fp32 累加顺序），训练目标与 student 预测都用重算的 prior，teacher 与 `pair op` 用已存预测；
   (iii) 01:45 在只有约 4% 行有检测的部分 embedding 上、每个 student 只训 50 步做了一次管线 smoke（`runs/elicitation/e5-smoke/`），只验证代码路径与已存 teacher / 对照的复现，登记的任何选择都没有因它改动。
+- 2026-09-26 02:15 CST [E2] 写于 WOD 对的任何训练 / 读数数字之前，只用 navtrain 的门 (d) 读数应用 01:22 (3) 的预登记规则：navtrain 编辑对上 openpilot `temporal` 的位移对安慰剂之比 Cinque **2.40 [2.03, 2.76]**、Lebowski 1.92 [1.67, 2.31]（Qwen 1.21）。
+  按规则 Cinque 过 2 倍线（openpilot 对「抹人」有反应，不能假定 x⁻ 的 `temporal` 等于 x⁺），**WOD 对上 Cinque 的双流与只 openpilot arm 作废、只报只 Qwen arm**；Lebowski 在线下，双流照报但标注「边缘」。
+  WOD 对训练与读数的代码此前已经排好、在跑（`elicit_e2_train wod`），这条只决定哪些行进判格。
 
 ## 结果
 
