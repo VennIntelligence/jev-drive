@@ -213,13 +213,16 @@ def _rle(masks_cpu: np.ndarray) -> list[str]:
 def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000, workers: int = 8, rle: bool = True,
            limit: int | None = None, rl=None, mode: str = "exact", part: str = "0/1") -> dict:
     """Run over an image list, writing out_dir/part-<k>.parquet per `shard_size` images (skipped if present).
-    part "i/n": this process takes the shards k with k % n == i (several processes share a card or cards)."""
+    part "i/n": this process takes the shards k with k % n == i; part "claim": processes (on one card or several) claim
+    shards one at a time with an atomic mkdir of part-<k>.claim, so faster cards take more shards. Each image's result
+    does not depend on which process or card ran it (exact mode is one image per call)."""
     import pandas as pd
     import torch
     from concurrent.futures import ThreadPoolExecutor
     from torch.utils.data import DataLoader
     from tqdm import tqdm
-    pi, pn = map(int, part.split("/"))
+    claim = part == "claim"
+    pi, pn = (0, 1) if claim else map(int, part.split("/"))
     t = pd.read_parquet(image_list)
     if limit:
         t = t.iloc[:limit]
@@ -239,6 +242,11 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
         if dst.exists():
             done += 1
             continue
+        if claim:
+            try:
+                dst.with_suffix(".claim").mkdir()
+            except FileExistsError:
+                continue
         rows = t.iloc[s0:s0 + shard_size].to_dict("records")
         dl = DataLoader(_Images(rows), batch_size=batch, num_workers=workers, collate_fn=_collate, prefetch_factor=4,
                         persistent_workers=False, pin_memory=True)
@@ -277,7 +285,8 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
             rl.info(f"{dst.name}: {len(rows)} images, {len(df)} instances, {1000 * dt / len(rows):.1f} ms/image")
     info = {"images": len(t), "new_images": n_img, "skipped_shards": done, "seconds": time.time() - t0,
             "peak_vram_gb": torch.cuda.max_memory_allocated() / 1e9}
-    if pn == 1:
+    n_parts = (len(t) + shard_size - 1) // shard_size
+    if len(list(out.glob("part-*.parquet"))) == n_parts:
         (out / "done.json").write_text(json.dumps(info, indent=1))
     return info
 
