@@ -67,8 +67,9 @@ def _inner_splits(groups: np.ndarray, k: int = INNER):
     return list(GroupKFold(k).split(groups, groups=groups))
 
 
-def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam=None) -> dict:
-    """Predictions (n, 40) on every row for every arm, fitted without fold f."""
+def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam=None, keep=None) -> dict:
+    """Predictions (n, 40) on every row for every arm, fitted without fold f. `keep` (a dict), when given, receives
+    the dual-stream `pair` arm's head: W, the training rows and their mean z (elicitation E1 transfers it)."""
     n = len(t)
     role, seq = t.role.to_numpy(), t.base_id.to_numpy()
     tr = np.flatnonzero((role == "train") & (fold != f))
@@ -103,6 +104,8 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam
         best = int(np.argmin(score))
         W = _solve_pair(D, Rp, Zc, mu, [LAMS[best]])[0]
         out[f"M-C {arm}"] = prior + (Z - Z[tr].mean(0)) @ W
+        if keep is not None and arm == "pair":
+            keep.update(W=W.cpu(), tr=tr, zbar=Z[tr].mean(0).cpu(), lam=float(LAMS[best]))
         if pr_fam is not None:      # diagnostic: in-sample fit of the paired target at 2 s speed, per family group
             fam = pr_fam[keep]
             v = lambda y: np.linalg.norm((y[:, 14:16] - y[:, 12:14]).cpu().numpy(), axis=1) / 0.25  # noqa: E731
