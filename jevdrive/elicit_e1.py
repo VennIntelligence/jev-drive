@@ -226,6 +226,76 @@ def run_wod(rl):
     pd.DataFrame(verdicts).to_csv(rl.dir / "wod_verdict.csv", index=False)
 
 
+# ---------------------------------------------------------------- NAVSIM (deviation [E1] (5); scored by the devkit)
+
+NAV_HEADS = "runs/navsim_zs/heads/20260925-232810"
+NAV_SPLITS = ("navtest", "navhard_two_stage")
+NAV_PRIORS = ("ridge_late", "cls_late")          # ridge_late + Delta is the registered row, cls_late + Delta descriptive
+
+
+def _grid20(p8: np.ndarray) -> np.ndarray:
+    """(n, 20, 2) on the 0.25 s grid with only the points P.v2 reads (1.75 s, 2.0 s) filled from 0.5 s poses."""
+    g = np.zeros((len(p8), 20, 2), np.float32)
+    g[:, 6], g[:, 7] = (p8[:, 2, :2] + p8[:, 3, :2]) / 2, p8[:, 3, :2]
+    return g
+
+
+def nav_scopes(tokens: np.ndarray) -> pd.DataFrame:
+    """navtest groups: a pedestrian / cyclist GT agent in the logged-path corridor (<= 30 m, +-1.5 m; E3's function),
+    and straight frames (waymo.subsets' straight_yaw on NAVSIM's 2 Hz poses: yaw rate over the last 0.5 s < 1 deg/s,
+    moved >= 1 m over the last 1 s, chord bearing at 3 s <= 5 deg with a chord >= 3 m)."""
+    from . import elicit_e3 as E3, navsim_zs as Z
+    fz = np.load(data_dir() / "runs/navsim_zs/index/navtest_future.npz")
+    assert (fz["tokens"] == tokens).all()
+    fut = fz["poses"]
+    fl = E3.cause_flags_nav(tokens, fut[:, :, :2], E3.extract("navtest"))
+    idx = {e["token"]: e for e in Z.load_index("navtest", slim=True)}
+    pose = np.stack([idx[t]["pose"] for t in tokens])
+    dyaw = np.arctan2(np.sin(pose[:, -1, 2] - pose[:, -2, 2]), np.cos(pose[:, -1, 2] - pose[:, -2, 2]))
+    w = np.abs(np.degrees(dyaw)) / 0.5
+    moved = np.linalg.norm(pose[:, -1, :2] - pose[:, -3, :2], axis=1) >= waymo.MIN_PAST_DISP
+    b = np.degrees(np.arctan2(fut[:, 5, 1], fut[:, 5, 0]))
+    chord = np.linalg.norm(fut[:, 5, :2], axis=1) >= waymo.MIN_CHORD
+    return pd.DataFrame({"token": tokens, "ped_cyc_corridor": (fl.in_pedestrian | fl.in_bicycle).to_numpy(),
+                         "straight": moved & (w < waymo.ONSET_YAW_RATE) & chord & (np.abs(b) <= waymo.ONSET_BEARING)})
+
+
+def run_navsim(rl):
+    """Write prior + Delta predictions for the devkit (navtest, navhard two-stage) and the activation table."""
+    from . import navsim_qwen as NQ
+    fl = pd.read_csv(data_dir() / MC_RUN / "flip_rates.csv")
+    acts = []
+    for m in MODELS:
+        heads = fold_heads(m, rl)
+        tau = float(fl[(fl.examinee == f"M-C pair [{m}]") & (fl.scope == "pooled")].tau_model.iloc[0])
+        for split in NAV_SPLITS:
+            z = np.load(data_dir() / "runs/navsim_zs/openpilot" / split / f"{m}_temporal.npz")
+            tok = z["tokens"]
+            Q = NQ.load(split, tok)["L18_last"]
+            delta = correction(heads, Q, z["temporal"].astype(np.float32))
+            np.savez_compressed(rl.dir / f"{split}_delta_{m}.npz", tokens=tok, delta=delta)
+            for pr in NAV_PRIORS:
+                p = np.load(data_dir() / NAV_HEADS / f"{split}_{pr}_{m}_temporal.npz")
+                assert (p["tokens"] == tok).all()
+                arm = p["poses"].copy()
+                arm[..., :2] += delta[:, 1::2]                   # 0.5 ... 4.0 s of the 0.25 s grid; heading kept
+                np.savez(rl.dir / f"{split}_{pr}_{m}_plus_mc.npz", tokens=tok, poses=arm.astype(np.float32))
+                if split != "navtest":
+                    continue
+                act = (np.abs(P.v2(_grid20(arm)) - P.v2(_grid20(p["poses"]))) >= tau).astype(float)
+                sc = nav_scopes(tok)
+                mag = np.linalg.norm(delta[:, 1::2], axis=-1).mean(-1)
+                for name, msk in (("all", np.ones(len(tok), bool)), ("straight", sc.straight.to_numpy()),
+                                  ("ped_cyc_corridor", sc.ped_cyc_corridor.to_numpy()),
+                                  ("no ped_cyc", ~sc.ped_cyc_corridor.to_numpy())):
+                    acts.append({"model": m, "prior": pr, "scope": name, "n": int(msk.sum()), "tau": tau,
+                                 "activation": float(act[msk].mean()), "delta_mag_median_m": float(np.median(mag[msk]))})
+                sc.to_csv(rl.dir / "navtest_scopes.csv", index=False)
+    a = pd.DataFrame(acts)
+    a.to_csv(rl.dir / "navsim_activation.csv", index=False)
+    log.info("activation\n%s", a.to_markdown(index=False, floatfmt=".3f"))
+
+
 def figs(res_dir, out_dir):
     """RFS delta per cluster and activation rate per scope (research/results/elicitation/e1 -> research/figs)."""
     from pathlib import Path
@@ -265,7 +335,7 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("wod", "figs"))
+    ap.add_argument("what", choices=("wod", "navsim", "figs"))
     ap.add_argument("--res", default="research/results/elicitation/e1")
     ap.add_argument("--out", default="research/figs")
     a = ap.parse_args()
@@ -273,7 +343,7 @@ def main():
         figs(a.res, a.out)
         return
     rl = RunLog("elicitation", f"e1-{a.what}")
-    run_wod(rl)
+    {"wod": run_wod, "navsim": run_navsim}[a.what](rl)
     rl.close()
 
 
