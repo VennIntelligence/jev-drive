@@ -422,7 +422,25 @@ Pedestrians / Cyclists 上 RFS Δ 全为负，「转移得过去」一条也不�
 而是在所有帧上加一个 1–3 m 的修正，方向与场景无关（行人帧上的激活率不高于直行帧）。WOD 统计量的描述版说明其中约一半来自特征均值的域偏移，另一半是 head 的读出方向本身在真实特征上没有意义。
 这和 P4 的 domain AUC 1.0（Waymo 训的 head 读不出 CARLA 特征）是同一件事的反方向。**按登记：E2 / E3 是必需的**，而且任何在 CARLA 配对上训出来的反应通道，放到真实数据上之前都必须有门控或在真实数据上重训，不能直接相加。
 
-NAVSIM 列（偏离 (5)）：navtest 的 Qwen `L18_last` 正在 GPU 1 上抽（`processed/navsim_qwen/navtest`，约 0.6 s / token，估约 2 h），抽完按 (5) 的口径打分补表，不改上面的判格。
+**NAVSIM 列（偏离 (5)(8)，2026-09-26 02:07–03:02）**。navtest 12 146 + navhard 5 912 个 token 的 Qwen `L18_last` 用 `jevdrive/navsim_qwen.py` 抽（P3(d″) eager b2，clip = 2 Hz 的 4 帧 × CAM_F0/L0/R0，GPU 1/3/4 三个进程认领 chunk，约 1.1 h 墙钟，约 0.8–1.3 s / token），
+head 在 GPU 3 上重算（与 WOD 那次同样的核对，最大差 ≤ 0.4 mm），predictions 与激活率在 run `$DATA_DIR/runs/elicitation/e1-navsim/20260926-020742`，官方 devkit（v1.1 PDMS、main @ 0a380a9 EPDMS）10 次打分，
+配对表 run `e1-navsim-table/20260926-030219`，小表 `navsim_paired.csv`、`navhard.csv`、`navsim_activation.csv`。prior 的分数与 G3 逐位相同（ridge_late Cinque 73.52 PDMS），所以 Δ 就是加 Δ 的效应。
+
+| prior + Δ − prior（token bootstrap 95% CI） | 全部 12 146 | 走廊内有行人 / cyclist（897） | 其余（11 249） | 直行（4 365） | 激活率 全部 / 直行 / 行人组 |
+|:--|:--|:--|:--|:--|:--|
+| Cinque `ridge_late`（登记行），PDMS | **−8.2 [−8.9, −7.5]** | −6.0 [−8.6, −3.3] | −8.3 | −5.1 | 18.0% / 14.1% / 18.4% |
+| Cinque `ridge_late`，EPDMS | **−13.0 [−13.7, −12.3]** | −11.2 [−13.7, −8.6] | −13.2 | −13.8 | |
+| Lebowski `ridge_late`，PDMS | −11.2 [−11.9, −10.4] | −12.3 [−15.1, −9.5] | −11.1 | −8.0 | 60.5% / 64.3% / 54.8% |
+| Lebowski `ridge_late`，EPDMS | −15.8 [−16.6, −15.1] | −18.2 [−20.9, −15.6] | −15.7 | −16.5 | |
+| Cinque / Lebowski `cls_late`（描述），PDMS | −11.6 / −14.9 | −10.2 / −15.7 | | | |
+| Cinque / Lebowski `cls_late`（描述），EPDMS | −15.9 / −18.7 | −15.5 / −20.3 | | | |
+
+navhard two-stage EPDMS（聚合，官方两阶段加权不是逐 token，没有 CI）：Cinque `ridge_late` 16.8 → **22.1**，Lebowski 17.1 → 20.9。|Δ| 的 4 s 内 ADE 幅值中位 3.0 m（Cinque）/ 5.1 m（Lebowski），比 WOD（2.0 / 3.0 m）更大。
+
+读法：NAVSIM 上和 WOD 同向而且更重——所有分组 PDMS 降 5–15、EPDMS 降 11–20，行人组并不比其余 token 好；激活率在直行 token 上与行人组同量级（Lebowski 直行反而更高），和 WOD 一样没有「只在该反应的地方动」。
+比 WOD 更重的一个直接原因是输入协议：NAVSIM 的 Qwen clip 间隔 0.5 s、openpilot 是 2 Hz sample-and-hold（开环对比第 2 节），离 CARLA 的 0.2 s clip 更远。
+唯一的例外是 navhard 的聚合 EPDMS 升了 4–5 分（没有 CI，只能描述）：navhard 的第二阶段是偏离后的合成场景，推测一个普遍偏慢 / 偏保守的修正在那里少撞（NC、TTC 项），不是 head 读出了场景；这需要看子分项，没做。
+**NAVSIM 列与 WOD 列的判格一致（有害），E1 判格不变。**
 
 ### E4：PDM-Lite 集的两种计分窗口（2026-09-26 00:27，CPU，< 1 min）
 
