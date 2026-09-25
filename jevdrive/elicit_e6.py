@@ -1,5 +1,5 @@
 """Elicitation E6 (b): a Hydra-MDP-style scoring head on frozen openpilot `temporal` for NAVSIM
-(todos/2026-09-26-elicitation-program.md, E6 and deviation [E6] 00:45, written before any fit or score).
+(todos/2026-09-26-elicitation-program.md, E6 and deviation [E6] 00:34, written before any fit or score).
 
   prep   the G2 / G3 K = 1024 vocabulary (recomputed, checked against G3's cls_late outputs), the 20 000-token navtrain
          subset, the anchors file for scripts/elicit_e6_score.py and a hydra train_test_split for the v1.1 metric cache
@@ -39,7 +39,7 @@ def prep(rl, model: str):
     tr = _navtrain(False)
     fut = tr["fut"]
     # k-means on the CPU: traj.kmeans on the GPU is not reproducible run to run (index_add_ uses float atomics), so
-    # G3's own vocabulary cannot be recomputed (deviation [E6] 00:55); this one is fixed once and saved
+    # G3's own vocabulary cannot be recomputed (deviation [E6] 00:37); this one is fixed once and saved
     F = torch.as_tensor(fut[..., :2].reshape(len(fut), -1))
     A = traj.kmeans(F, H.K, seed=0)
     ids = traj.nearest(F, A, 1)[0][:, 0]
