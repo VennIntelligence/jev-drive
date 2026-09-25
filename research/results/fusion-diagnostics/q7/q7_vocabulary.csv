@@ -1,0 +1,9 @@
+mode,desire,covered,P5 reactive frames,WOD all rater frames,WOD s_ego decile 10
+lateral keep left,keepLeft,True,0.0,0.0,0.16666666666666666
+lateral keep right,keepRight,True,0.1073558648111332,0.0,0.0
+lateral laneChange right,laneChangeRight,True,0.09940357852882704,0.0,0.0
+lateral turn left,turnLeft,True,0.05765407554671968,0.006263048016701462,0.0
+lateral turn right,turnRight,True,0.011928429423459244,0.0,0.0
+longitudinal faster / go,none,False,0.0,0.22129436325678498,0.45555555555555555
+longitudinal slow / stop,none,False,0.7236580516898609,0.21711899791231734,0.0
+near-zero difference,none,False,0.0,0.5553235908141962,0.37777777777777777
