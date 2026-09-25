@@ -4,6 +4,8 @@ frames fed and the step schedule change. Every variant starts from a zero state 
 
   ctx1.5   the 10 Hz frames of the last 1.5 s (f-15 .. f)
   nav2hz   NAVSIM's four frames f-15, f-10, f-5, f (t = -1.5, -1.0, -0.5, 0 s)
+  nav2hz-dilate  the same four frames fed 0.2 s apart (time compressed 2.5x): small / Cinque step t = -0.6 .. 0 (13 steps,
+           4 per frame), Lebowski 4 context steps -- HUGSIM's h4-dilate carried to 2 Hz (G1b)
 
 Both run on the schedule of scripts/navsim_zs_openpilot.py: small / Cinque step the 20 Hz clock t = -1.5 .. 0 (31 steps),
 Lebowski its context-rate phases t = -1.4 .. 0 (8 steps); each step shows the latest frame at or before t.
@@ -22,7 +24,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import wod_openpilot_rigs as R  # noqa: E402
 from jevdrive import wod_zeroshot as Z  # noqa: E402
 
-VARIANTS = {"ctx1.5": 0.1, "nav2hz": 0.5}     # frame spacing (s) within the 1.5 s window
+VARIANTS = {"ctx1.5": 0.1, "nav2hz": 0.5, "nav2hz-dilate": 0.5}   # frame spacing (s) in the log, 1.5 s window
+FED = {"nav2hz-dilate": 0.2}                                        # spacing the model is told (default: the real one)
 T_HIST = 1.5
 
 
@@ -31,9 +34,13 @@ def frame_times(variant: str) -> np.ndarray:
 
 
 def schedule(variant: str, context_rate: bool) -> list[int]:
-    """Index into frame_times(variant) of the frame shown at each step (navsim_zs_openpilot.schedule, generalised)."""
-    ts = np.round(np.arange(-7, 1) * 0.2, 3) if context_rate else np.round(np.arange(-30, 1) * 0.05, 3)
-    ft = frame_times(variant)
+    """Index into frame_times(variant) of the frame shown at each step (navsim_zs_openpilot.schedule, generalised):
+    frames sit at their fed times, steps run from the oldest fed time to 0 and show the latest frame at or before."""
+    fed = FED.get(variant, VARIANTS[variant])
+    ft = frame_times(variant) / VARIANTS[variant] * fed
+    n = int(round(-ft[0] / (0.2 if context_rate else 0.05)))
+    first = 1 if context_rate and FED.get(variant) is None else 0     # the exam schedule starts at -1.4 on the context clock
+    ts = np.round(np.arange(-n + first, 1) * (0.2 if context_rate else 0.05), 3)
     return [int(np.searchsorted(ft, t + 1e-6) - 1) for t in ts]
 
 

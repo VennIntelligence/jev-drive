@@ -81,6 +81,25 @@ Alpamayo、我们自己的 ego head，但没有一张配对的总表；NAVSIM �
 - 按 `$DATA_DIR/runs/zeroshot-exam/wod-test/chain.sh`：下载完成 → 索引 → test 帧集（1505 帧）→ Cinque、Lebowski 按考试协议跑 → 写 + 校验提交包。
   GPU 3。只生成文件，**不上传**；提交需要用户批准。
 
+### 追加预登记（2026-09-25 16:25，G1 出来之后、任何 G1b / I2 数字之前）
+
+**G1b：有没有一个 NAVSIM 合法的输入适配能救回 openpilot。** G1 说明掉分来自 sample-and-hold 下的帧率错配；HUGSIM 考试（R1）里把 4 Hz 帧
+当作 0.2 s context 步「压缩」地喂（`h4-dilate`），比 hold 好一个数量级。NAVSIM 只有 4 帧 2 Hz，对应的变体是
+`nav2hz-dilate`：同样四帧（f−15、f−10、f−5、f），但当作 0.2 s 间隔喂（small / Cinque 在 20 Hz 时钟上 t = −0.6 … 0 共 13 步，每帧保持 4 步；
+Lebowski 4 个 context 步）。时间被压缩 2.5 倍，预期速度被高估、纵向冲出，但不会有 hold 的「静止 + 跳变」。
+判据：在 WOD 上 `nav2hz-dilate − nav2hz` 的配对 Δ 的 CI 整体 > 0（三个模型分别判），**且**至少回到 cv 之上，才在 NAVSIM navtest 上用它重跑三个 openpilot
+（v1 / v2 两个 devkit），作为「WOD 上选出的适配」的次行，主表不替换。选择只看 WOD，不看任何 NAVSIM 分数。
+
+**I2：continuation share 表**（reactivity 计划的 I2 行，并入本 todo）。同一组不看图像的基线在五个 benchmark 上占「顶分」的比例：
+- 基线：cv（匀速直行）、ctrv（当前速度 + 当前角速度的圆弧，WOD 用 `waymo.baselines`，NAVSIM 由 AgentInput 最后两个位姿的 yaw 差 / 0.5 s 得角速度）、
+  ego-only 学习 head（WOD：`ridge ego` / `cls ego K1024`；NAVSIM：G2 的两个 head；nuScenes：文献 Ego-MLP / AD-MLP 的 BEV-Planner 重算值；
+  其余有就报，没有标「—」）。
+- 顶分：该 benchmark 标准 split 上的最好公开条目（WOD：test 榜 RAP 8.04；NAVSIM：PDMS / EPDMS 取研究笔记表里已核实的最高行；
+  nuScenes：L2 取 BEV-Planner 统一实现下最好的一行；HUGSIM：论文 Table 13 最好的 UniAD 0.299；B2D 开环：Bench2Drive 论文的开环 L2 最好行），
+  另报 human / log 行作第二个分母。
+- share：越高越好的指标 = 基线 / 顶分；越低越好的指标（L2）= 顶分 / 基线。一个数不代表能力，只回答「这个 benchmark 的分数里有多少不用看路就能拿到」。
+- 只用 CPU；缺的 NAVSIM 基线（ctrv）用 devkit 跑，缺的 B2D 开环、HUGSIM 数字只收已有的，不新跑闭环。
+
 ## 预算
 
 | 步骤 | 估计 | 依据 |
