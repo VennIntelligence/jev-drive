@@ -89,6 +89,9 @@ def parse_args(argv=None):
     p.add_argument("--server-index", type=int, default=0,
                    help="first CARLA server index; rpc port 2000+50i, as scripts/carla_server.sh")
     p.add_argument("--gpu-rank", type=int, default=0, help="which card this runner's servers use")
+    p.add_argument("--index-span", type=int, default=0,
+                   help="a moved server wraps around inside [server-index, server-index + span); 0 = unbounded. "
+                        "Keeps a long runner inside its reserved index block")
     p.add_argument("--windowed", action="store_true",
                    help="show CARLA on DISPLAY in a 1280x720 window (default: off-screen)")
     p.add_argument("--claim-stale-s", type=float, default=7200.0,
@@ -246,8 +249,10 @@ class Server(object):
     """One CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=None, extra_args=()):
+    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=None, extra_args=(), base=None,
+                 span=0):
         self.index = index
+        self.base, self.span = (index if base is None else base), span
         self.extra_args = list(extra_args)
         self.gpu_rank = gpu_rank
         self.windowed = WINDOWED if windowed is None else windowed
@@ -306,6 +311,8 @@ class Server(object):
         to work."""
         self.stop()
         self.index += self.stride
+        if self.span:           # --index-span: stay inside the runner's own block of indices
+            self.index = self.base + (self.index - self.base) % self.span
         self.port = PORT_BASE + PORT_STRIDE * self.index
         self.tm_port = TM_BASE + PORT_STRIDE * self.index
 
@@ -499,7 +506,7 @@ class Runner(object):
         server = self._external_servers[wi] if externally_owned else Server(
             self.a.server_index + wi, self.out / "servers", self.a.quality,
             self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed,
-            extra_args=self.a.server_args.split())
+            extra_args=self.a.server_args.split(), base=self.a.server_index, span=self.a.index_span)
         abnormal_exit = False
         try:
             if externally_owned and server.alive():

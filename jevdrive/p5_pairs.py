@@ -81,30 +81,54 @@ def _variant(route: ET.Element, world: str, seed: int) -> ET.Element:
     return r
 
 
-def build(src: Path | None = None) -> pd.DataFrame:
-    """Case table (one row per base route x seed) and the variant XML with every world of every case."""
-    root = ET.parse(src or data_dir() / B2D_XML).getroot()
-    out, rows = ET.Element("routes"), []
-    for route in root.findall("route"):
-        (s,) = route.iter("scenario")
-        fam = _family(s.get("type"))
-        rid = route.get("id")
-        if fam not in FAMILIES or rid in CRASHERS:
-            continue
-        for seed in SEEDS:
-            for world in WORLDS:
-                if world == "null" and seed != 0:
-                    continue
-                out.append(_variant(route, world, seed))
-            rows.append({"base_id": rid, "town": route.get("town"), "family": fam, "orig_type": s.get("type"),
-                         "seed": seed, "plus": variant_id(rid, "plus", seed), "minus": variant_id(rid, "minus", seed),
-                         "null": variant_id(rid, "null", 0) if seed == 0 else ""})
+def _signature(route: ET.Element) -> tuple:
+    """What makes two routes the same drive: town, waypoints and the scenario's type and trigger."""
+    (s,) = route.iter("scenario")
+    tp = s.find("trigger_point")
+    return (route.get("town"), tuple((w.get("x"), w.get("y")) for w in route.find("waypoints")), s.get("type"),
+            None if tp is None else (tp.get("x"), tp.get("y")))
+
+
+def build(src: Path | list | None = None, xml: Path | None = None, results: Path | None = None) -> pd.DataFrame:
+    """Case table (one row per base route x seed) and the variant XML with every world of every case.
+
+    `src` is one route XML or a list of them (P5 v1: bench2drive220 + bench2drive_0.0.4_val); a route whose id or
+    drive (_signature) already came from an earlier source is skipped. Defaults are v0's."""
+    srcs = src if isinstance(src, list) else [src or data_dir() / B2D_XML]
+    out, rows, seen_id, seen_sig = ET.Element("routes"), [], set(), set()
+    for path in srcs:
+        for route in ET.parse(path).getroot().findall("route"):
+            sc = list(route.iter("scenario"))
+            rid = route.get("id")
+            if len(sc) != 1 or rid in CRASHERS:
+                continue
+            s = sc[0]
+            fam = _family(s.get("type"))
+            if fam not in FAMILIES:
+                continue
+            sig = _signature(route)
+            if rid in seen_id or sig in seen_sig:
+                log.info("skip route %s of %s: already taken from an earlier source", rid, Path(path).name)
+                continue
+            seen_id.add(rid)
+            seen_sig.add(sig)
+            for seed in SEEDS:
+                for world in WORLDS:
+                    if world == "null" and seed != 0:
+                        continue
+                    out.append(_variant(route, world, seed))
+                rows.append({"base_id": rid, "town": route.get("town"), "family": fam, "orig_type": s.get("type"),
+                             "seed": seed, "plus": variant_id(rid, "plus", seed), "minus": variant_id(rid, "minus", seed),
+                             "null": variant_id(rid, "null", 0) if seed == 0 else "", "source": Path(path).stem})
     cases = pd.DataFrame(rows)
-    xml = runs_dir() / "pairs.xml"
+    if src is None or not isinstance(src, list):
+        cases = cases.drop(columns="source")          # v0's cases.csv, unchanged
+    xml = xml or runs_dir() / "pairs.xml"
     ET.indent(out)
     ET.ElementTree(out).write(xml)
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    cases.to_csv(RESULTS / "cases.csv", index=False)
+    results = results or RESULTS
+    results.mkdir(parents=True, exist_ok=True)
+    cases.to_csv(results / "cases.csv", index=False)
     log.info("%d cases (%d base routes) -> %s; per family %s", len(cases), cases.base_id.nunique(), xml,
              cases.groupby("family").size().to_dict())
     return cases

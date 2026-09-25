@@ -6,7 +6,15 @@ Loaded by the leaderboard through `scripts/b2d_run.py --agent scripts/p5_pair_ag
 --python $DATA_DIR/envs/scout-tfv6/bin/python`. It IS TFv6's `SensorAgent` (LEAD cvpr2026), so the leaderboard
 attaches TFv6's own rig; every tick the author's `run_step` runs on that rig's data - GPS filter, LiDAR
 accumulation, JPEG round trip, ensemble forward - and its control is thrown away (shadow inference). The car is
-driven by CARLA's BehaviorAgent, exactly as in P4. Outputs, in the attempt directory B2D_ATTEMPT_OUT:
+driven by a privileged expert, config key "driver":
+
+  behavior   CARLA's BehaviorAgent(normal), exactly as in P4 and P5 v0 (the default)
+  pdm_lite   PDM-Lite (P5 v1, todos/2026-09-25-reactivity-program/i1-p5v1.md): SimLingo's Bench2Drive copy,
+             leaderboard/team_code/autopilot.py, run as shipped. It needs that tree (BENCH2DRIVE_ROOT, for its
+             CarlaDataProvider.active_scenarios bookkeeping) and IS_BENCH2DRIVE=1; its steering noise draws from its
+             own numpy stream seeded by the TM seed, so both worlds of a pair draw the same noise.
+
+Outputs, in the attempt directory B2D_ATTEMPT_OUT:
 
   meta.json       rig, route, town, weather, vehicle geometry, driver, TFv6 model
   route.json      dense route plan (CARLA world, left-handed) with RoadOptions
@@ -44,7 +52,7 @@ from lead.inference.sensor_agent import SensorAgent
 
 TFV6_SPEEDS = (0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0)
 DEFAULT = dict(p4.DEFAULT, sensor_tick=0.0, max_sim_s=50.0, stuck_s=30.0, after_trigger_s=20.0, tfv6_model_dir="",
-               actor_radius=100.0, vis_radius=60.0)
+               actor_radius=100.0, vis_radius=60.0, driver="behavior", save_threads=0)
 FRONT = p4.WAYMO_CAMS[0]                         # ("front", x, y, z, yaw) in Waymo's rear-axle frame
 
 
@@ -82,7 +90,8 @@ class P5PairAgent(SensorAgent):
             (self.out / "cams" / name).mkdir(parents=True, exist_ok=True)
         self.mx, self.my = p4.distortion_maps(cfg)
         self.fov = math.degrees(2 * math.atan(cfg["render_w"] / 2.0 / cfg["f"]))
-        self._tick, self._ba, self._still_since, self._pred, self._t_trig = 0, None, None, None, None
+        self._tick, self._ba, self._pdm, self._still_since, self._pred, self._t_trig = 0, None, None, None, None, None
+        self._inited = False
         self._kinds, self._actor_rows = {}, []
         self._t = {k: [] for k in ("tick", "tfv6", "tfv6_base", "tfv6_forward", "expert", "snapshot", "save", "visibility")}
         self._pose = open(self.out / "pose.jsonl", "w")
@@ -100,23 +109,67 @@ class P5PairAgent(SensorAgent):
         own = [{"type": "sensor.camera.rgb", "id": name, "x": x + p4.REAR_AXLE_X, "y": -y, "z": z - c["origin_z"],
                 "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": c["render_w"], "height": c["render_h"], "fov": self.fov}
                for name, x, y, z, yaw in p4.WAYMO_CAMS]
-        return own + (super().sensors() if self.tfv6 else [])
+        extra = super().sensors() if self.tfv6 else []
+        if self.cfg["driver"] == "pdm_lite" and not any(x["id"] == "imu" for x in extra):
+            extra = extra + [{"type": "sensor.other.imu", "x": 0.0, "y": 0.0, "z": 0.0, "roll": 0.0, "pitch": 0.0,
+                              "yaw": 0.0, "sensor_tick": 0.05, "id": "imu"}]      # PDM-Lite's own (compass)
+        return own + extra
 
     def set_global_plan(self, global_plan_gps, global_plan_world_coord):
         super().set_global_plan(global_plan_gps, global_plan_world_coord)
         self._dense = list(global_plan_world_coord)      # the leaderboard calls this before setup()
+        self._plan_gps = list(global_plan_gps)
 
     # ------------------------------------------------------------------ one-off state
+
+    def _pdm_lite(self):
+        """PDM-Lite as shipped, as an inner agent that gets the same plan and the same input_data (it reads only the
+        IMU compass; everything else it queries from the simulator)."""
+        import sys
+        team_code = os.path.join(os.environ["BENCH2DRIVE_ROOT"], "leaderboard", "team_code")
+        if team_code not in sys.path:
+            sys.path.insert(0, team_code)      # autopilot.py imports its siblings (config, nav_planner, ...) top-level
+        os.environ["IS_BENCH2DRIVE"] = "1"
+        # autopilot.py reads SAVE_PATH at import and in setup() and would then write its own dataset; LEAD wants it.
+        save = os.environ.pop("SAVE_PATH", None)
+        try:
+            from autopilot import AutoPilot
+            pdm = AutoPilot("127.0.0.1", 0, False)
+            pdm.setup("p5+pdm_lite", None, None)
+        finally:
+            if save is not None:
+                os.environ["SAVE_PATH"] = save
+        pdm.set_global_plan(self._plan_gps, self._dense)
+        # PDM-Lite adds 1e-3 * randn() to every steer from the global numpy stream. Give it a stream of its own, seeded
+        # by the TM seed (the variant id's last digit, jevdrive/p5_pairs.py), so x+, x- and the null draw identical
+        # noise whatever else in the process uses numpy.
+        self._pdm_rng = np.random.RandomState(int(os.environ.get("BENCHMARK_ROUTE_ID", "0")) % 10).get_state()
+        return pdm
+
+    def _pdm_step(self, input_data, t):
+        outer = np.random.get_state()
+        np.random.set_state(self._pdm_rng)
+        try:
+            return self._pdm.run_step(input_data, t)
+        finally:
+            self._pdm_rng = np.random.get_state()
+            np.random.set_state(outer)
 
     def _init_world(self):
         from agents.navigation.behavior_agent import BehaviorAgent
         hero = CarlaDataProvider.get_hero_actor()
         world, cmap = CarlaDataProvider.get_world(), CarlaDataProvider.get_map()
         self._hero, self._world = hero, world
-        # grp_inst: the plan is handed over, so the agent never routes (P4: saves minutes on Town12)
-        self._ba = BehaviorAgent(hero, behavior=self.cfg["behavior"], map_inst=cmap, grp_inst=object())
-        self._ba.set_global_plan([(cmap.get_waypoint(t.location), o) for t, o in self._dense],
-                                 stop_waypoint_creation=True, clean_queue=True)
+        if self.cfg["driver"] == "pdm_lite":
+            self._pdm, self._ba = self._pdm_lite(), None
+            self._driver = "PDM-Lite (SimLingo Bench2Drive team_code/autopilot.py)"
+        else:
+            # grp_inst: the plan is handed over, so the agent never routes (P4: saves minutes on Town12)
+            self._pdm = None
+            self._ba = BehaviorAgent(hero, behavior=self.cfg["behavior"], map_inst=cmap, grp_inst=object())
+            self._ba.set_global_plan([(cmap.get_waypoint(t.location), o) for t, o in self._dense],
+                                     stop_waypoint_creation=True, clean_queue=True)
+            self._driver = "carla.agents.navigation.BehaviorAgent(%s)" % self.cfg["behavior"]
         (self.out / "route.json").write_text(json.dumps(
             [{"x": t.location.x, "y": t.location.y, "z": t.location.z, "yaw": t.rotation.yaw, "option": int(o.value),
               "option_name": o.name} for t, o in self._dense]))
@@ -152,7 +205,8 @@ class P5PairAgent(SensorAgent):
                                                        "wind_intensity", "sun_azimuth_angle", "sun_altitude_angle",
                                                        "fog_density", "wetness")},
                 "cams": self.sensors(), "config": self.cfg, "fov_render": self.fov, "route_id": os.environ.get(
-                    "BENCHMARK_ROUTE_ID"), "driver": "carla.agents.navigation.BehaviorAgent(%s)" % self.cfg["behavior"],
+                    "BENCHMARK_ROUTE_ID"), "driver": self._driver,
+                "bench2drive_root": os.environ.get("BENCH2DRIVE_ROOT", ""),
                 "tfv6": {"model_dir": self.cfg["tfv6_model_dir"],
                          "models": sorted(os.listdir(self.cfg["tfv6_model_dir"])) if self.tfv6 else []},
                 "route_points": len(self._dense)}
@@ -283,16 +337,25 @@ class P5PairAgent(SensorAgent):
                     pass
         return {str(self._lights[i].id): str(self._lights[i].get_state()) for i in near}
 
+    def _save_one(self, name, frame, input_data):
+        bgr = np.ascontiguousarray(input_data[name][1][:, :, :3])
+        img = cv2.remap(bgr, self.mx, self.my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        rel = "cams/%s/%07d.jpg" % (name, frame)
+        cv2.imwrite(str(self.out / rel), img, [cv2.IMWRITE_JPEG_QUALITY, int(self.cfg["jpeg_q"])])
+        return rel, round(float(img[::8, ::8].std()), 2)
+
     def _save(self, frame, input_data):
-        files, std = {}, []
-        for name, *_ in p4.WAYMO_CAMS:
-            bgr = np.ascontiguousarray(input_data[name][1][:, :, :3])
-            img = cv2.remap(bgr, self.mx, self.my, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-            rel = "cams/%s/%07d.jpg" % (name, frame)
-            cv2.imwrite(str(self.out / rel), img, [cv2.IMWRITE_JPEG_QUALITY, int(self.cfg["jpeg_q"])])
-            files[name] = rel
-            std.append(round(float(img[::8, ::8].std()), 2))
-        return files, std
+        """The three Waymo images: undistort-remap and JPEG. cv2 releases the GIL, so with save_threads > 0 the
+        cameras run in parallel (same bytes on disk, P5 v1 profiling)."""
+        names = [name for name, *_ in p4.WAYMO_CAMS]
+        if self.cfg["save_threads"]:
+            if getattr(self, "_pool", None) is None:
+                from concurrent.futures import ThreadPoolExecutor
+                self._pool = ThreadPoolExecutor(int(self.cfg["save_threads"]))
+            res = list(self._pool.map(lambda n: self._save_one(n, frame, input_data), names))
+        else:
+            res = [self._save_one(n, frame, input_data) for n in names]
+        return {n: r[0] for n, r in zip(names, res)}, [r[1] for r in res]
 
     def _shadow(self, input_data, t, frame, cam_tick):
         """TFv6's own run_step on its own sensors; the control it returns is discarded.
@@ -331,8 +394,9 @@ class P5PairAgent(SensorAgent):
         self._tick += 1
         input_data = self.sensor_interface.get_data(GameTime.get_frame())
         frame, t = GameTime.get_frame(), GameTime.get_time()
-        if self._ba is None:
+        if not self._inited:
             self._init_world()
+            self._inited = True
         cam_tick = (self._tick - 1) % p4.CAM_TICKS == 0
         if self.tfv6:
             t0 = time.perf_counter()
@@ -356,7 +420,10 @@ class P5PairAgent(SensorAgent):
                                            "std": std, "trig": trig, "lights": self._light_states(),
                                            "px": px}) + "\n")
         t0 = time.perf_counter()
-        control = carla.VehicleControl(throttle=0.0, steer=0.0, brake=1.0) if self._ba.done() else self._ba.run_step()
+        if self._pdm is not None:
+            control = self._pdm_step(input_data, t)
+        else:
+            control = carla.VehicleControl(throttle=0.0, steer=0.0, brake=1.0) if self._ba.done() else self._ba.run_step()
         control.manual_gear_shift = False
         self._t["expert"].append(time.perf_counter() - t0)
         tf = self._hero.get_transform()
@@ -397,5 +464,6 @@ class P5PairAgent(SensorAgent):
         ms = {k: round(1e3 * float(np.mean(v)), 2) for k, v in self._t.items() if v}
         (self.out / "p5_summary.json").write_text(json.dumps(
             {"ticks": self._tick, "stop": p4.STOP["why"] or "route_end", "t_trigger": self._t_trig,
+             "driver": self.cfg["driver"],
              "tfv6_errors": self._tfv6_errors,
              "ms_mean": ms, "ms_p95": {k: round(1e3 * float(np.percentile(v, 95)), 2) for k, v in self._t.items() if v}}))
