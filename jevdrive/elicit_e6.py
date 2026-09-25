@@ -197,15 +197,55 @@ def fit(rl, prep_dir: Path, score_dir: Path, model: str):
     rl.log.info(json.dumps(stats))
 
 
+# ---------------------------------------------------------------- report
+
+def report(out: Path, model: str):
+    """Official navtest / navhard scores of ridge_late, (a) G3 cls_late, (a') refit and (b) Hydra-style, with paired
+    token-bootstrap deltas (openloop_standing's conventions: valid 16/17-hex tokens, B = 10 000)."""
+    import pandas as pd
+    from .openloop_standing import B, V1_SUB, V2_SUB, _latest
+    rows_ = {"ridge_late": f"heads_ridge_late_{model}_temporal", "(a) cls_late G3": f"heads_cls_late_{model}_temporal",
+             "(a') cls_late refit": f"e6_clsref_{model}", "(b) Hydra-style": f"e6_hydra_{model}"}
+    tab, pairs, tok = [], [], {}
+    for ver, metric, subs in (("v1", "PDMS", V1_SUB), ("v2", "EPDMS", V2_SUB)):
+        for label, name in rows_.items():
+            df = _latest(ver, "navtest", name)
+            df = df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)]
+            sc = df.set_index("token")["score"].astype(float)
+            tok[(metric, label)] = sc
+            v = sc.to_numpy()
+            bs = v[np.random.default_rng(0).integers(0, len(v), (2000, len(v)))].mean(1)
+            hard = _latest("v2", "navhard_two_stage", name) if metric == "EPDMS" else None
+            h = np.nan if hard is None else 100 * hard.set_index("token")["score"].get("extended_pdm_score_combined", np.nan)
+            tab.append({"metric": metric, "row": label, "n": len(v), "score": 100 * v.mean(),
+                        "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5), "navhard_EPDMS": h,
+                        **{c: 100 * df[c].mean() for c in subs if c in df}})
+        for a, b in (("(b) Hydra-style", "ridge_late"), ("(a) cls_late G3", "ridge_late"), ("(a') cls_late refit", "ridge_late"),
+                     ("(b) Hydra-style", "(a') cls_late refit"), ("(b) Hydra-style", "(a) cls_late G3"),
+                     ("(a') cls_late refit", "(a) cls_late G3")):
+            x, y = tok[(metric, a)].align(tok[(metric, b)], join="inner")
+            d = (x - y).to_numpy()
+            bs = d[np.random.default_rng(1).integers(0, len(d), (B, len(d)))].mean(1)
+            pairs.append({"metric": metric, "a": a, "b": b, "n": len(d), "diff": 100 * d.mean(),
+                          "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5)})
+    out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(tab).to_csv(out / f"navsim_{model}.csv", index=False, float_format="%.2f")
+    pd.DataFrame(pairs).to_csv(out / f"navsim_paired_{model}.csv", index=False, float_format="%.2f")
+    print(pd.DataFrame(tab).to_markdown(index=False, floatfmt=".1f"))
+    print(pd.DataFrame(pairs).to_markdown(index=False, floatfmt=".2f"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "fit"))
+    ap.add_argument("step", choices=("prep", "fit", "report"))
     ap.add_argument("prep_dir", nargs="?")
     ap.add_argument("score_dir", nargs="?")
     ap.add_argument("--model", default="cinque")
     a = ap.parse_args()
+    if a.step == "report":
+        return report(Path(a.prep_dir), a.model)
     rl = RunLog("elicitation", f"e6-{a.step}")
     if a.step == "prep":
         prep(rl, a.model)
