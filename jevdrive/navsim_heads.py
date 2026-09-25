@@ -40,15 +40,18 @@ def load(split: str, feats: bool) -> dict:
          "stage": np.array([e["stage"] for e in idx])}
     fp = Z.root("index") / f"{split}_future.npz"
     if fp.exists():
-        f = np.load(fp)
-        pos = dict(zip(f["tokens"].tolist(), range(len(f["tokens"]))))
-        d["fut"] = np.stack([f["poses"][pos[t]] if t in pos else np.full((8, 3), np.nan, np.float32) for t in tok])
+        with np.load(fp) as f:                       # read each array once: f[key] re-reads it from the zip
+            ft, fp_ = f["tokens"], f["poses"]
+        pos = dict(zip(ft.tolist(), range(len(ft))))
+        nan = np.full((8, 3), np.nan, np.float32)
+        d["fut"] = np.stack([fp_[pos[t]] if t in pos else nan for t in tok]).astype(np.float32)
     if feats:
         for m in TAPS:
-            z = np.load(Z.root("openpilot", split) / f"{m}_temporal.npz")
-            pos = dict(zip(z["tokens"].tolist(), range(len(z["tokens"]))))
-            d[m] = z["temporal"][[pos[t] for t in tok]].astype(np.float32)
-            d[f"native {m}"] = z["poses"][[pos[t] for t in tok]]
+            with np.load(Z.root("openpilot", split) / f"{m}_temporal.npz") as z:
+                zt, zf, zp = z["tokens"], z["temporal"], z["poses"]
+            at = dict(zip(zt.tolist(), range(len(zt))))
+            sel = np.array([at[t] for t in tok])
+            d[m], d[f"native {m}"] = zf[sel].astype(np.float32), zp[sel]
     return d
 
 
