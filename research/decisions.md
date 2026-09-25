@@ -3045,7 +3045,7 @@ PDM scorer 对「继续 / 刹停」两条 proposal 的符号与人类一致率�
 验证门都过了（YOLO26x 残留检出 navtrain 7.8% / WOD 3.5%，门槛 10%；navtrain 其他 GT agent 仍被检出 96.9%；16 对目检过），造出 navtrain 911 对、WOD 216 对。
 但编辑本身的信号弱：抹人在 Qwen `L18_last` 上的位移只比安慰剂大 21%（openpilot Cinque 2.4 倍，因此 Cinque 的双流行作废，只看 Qwen 流）。
 
-| 用编辑对训的 M-C（Cinque） | |Δ| 编辑 / 安慰剂（门槛 ≥ 2） | P5 BA 行人翻转 | WOD RFS Δ 全部 [CI] | WOD Pedestrians | 直行激活 |
+| 用编辑对训的 M-C（Cinque） | 编辑 / 安慰剂的 Δ 幅值比（门槛 ≥ 2） | P5 BA 行人翻转 | WOD RFS Δ 全部 [CI] | WOD Pedestrians | 直行激活 |
 |:--|--:|--:|:--|:--|--:|
 | navtrain 对，配对差分 | 1.44 | 0% | −2.16 [−2.38, −1.95] | −2.39 | 4.7% |
 | 只 WOD 对（只 Qwen 流） | 2.16（Δ 中位只有 2 cm） | 0.5% | +0.01 [−0.01, +0.03] | −0.01 [−0.08, +0.07] | 0% |
