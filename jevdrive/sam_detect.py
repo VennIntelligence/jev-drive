@@ -72,14 +72,22 @@ def build(device: str = "cuda"):
 
 
 class Detector:
-    """B images x all PROMPTS per forward. Images: uint8 CHW tensors on the GPU (any size)."""
+    """Images: uint8 CHW tensors on the GPU (any size) -> per image, per prompt: scores, boxes, masks.
 
-    def __init__(self, model, prompts=PROMPTS, device: str = "cuda"):
+    mode "exact" (default): one image and one prompt per `forward_grounding` call, each prompt's text encoded on its
+    own -- exactly the repo's `Sam3Processor` path, bit-identical to it (the image encoding is shared across the
+    prompts, as in the processor). mode "batched": B images x P prompts in one call. Under bf16 autocast (the model does
+    not run without it) every change of batch shape changes the numerics: scores of kept instances move by up to
+    ~4e-3 and mask IoU drops to ~0.988 against the processor, which fails the pre-registered check (c), so the batch
+    runs "exact" (fusion todo, deviation log)."""
+
+    def __init__(self, model, prompts=PROMPTS, device: str = "cuda", mode: str = "exact"):
         import torch
         from sam3.model.data_misc import FindStage
-        self.m, self.prompts, self.dev, self.FindStage = model, list(prompts), device, FindStage
+        self.m, self.prompts, self.dev, self.FindStage, self.mode = model, list(prompts), device, FindStage, mode
         with torch.inference_mode(), _amp():
             self.text = model.backbone.forward_text(self.prompts, device=device)
+            self.text1 = [model.backbone.forward_text([p], device=device) for p in self.prompts]
 
     def _prep(self, img):
         """Sam3Processor.transform: uint8 -> Resize(1008, 1008) -> float [0, 1] -> Normalize(0.5, 0.5)."""
@@ -87,36 +95,49 @@ class Detector:
         x = v2.functional.resize(img, [RES, RES])
         return (x.float() / 255.0 - 0.5) / 0.5
 
+    def _ground(self, bo, text, img_ids, txt_ids):
+        import torch
+        fs = self.FindStage(img_ids=img_ids, text_ids=txt_ids, input_boxes=None, input_boxes_mask=None,
+                            input_boxes_label=None, input_points=None, input_points_mask=None)
+        bo.update(text)
+        out = self.m.forward_grounding(backbone_out=bo, find_input=fs, geometric_prompt=self.m._get_dummy_prompt(len(img_ids)),
+                                       find_target=None)
+        prob = (out["pred_logits"].sigmoid() * out["presence_logit_dec"].sigmoid().unsqueeze(1)).squeeze(-1).float()
+        return prob, out["pred_boxes"].float(), out["pred_masks"]
+
     def __call__(self, imgs: list, keep: float = KEEP_SCORE) -> list[list[dict]]:
         """Per image, per prompt: dict of scores (n,), boxes xyxy px (n, 4), masks bool (n, H, W) on the GPU."""
         import torch
         import torch.nn.functional as F
         from sam3.model import box_ops
         B, P = len(imgs), len(self.prompts)
+        raw = {}                                               # (b, p) -> (prob (200,), cxcywh (200, 4), mask logits)
         with torch.inference_mode(), _amp():
-            x = torch.stack([self._prep(i) for i in imgs])
-            bo = self.m.backbone.forward_image(x, need_interactive_out=False, need_propagation_out=False)
-            bo.update(self.text)
-            q_img = torch.arange(B, device=self.dev).repeat_interleave(P)
-            q_txt = torch.arange(P, device=self.dev).repeat(B)
-            fs = self.FindStage(img_ids=q_img, text_ids=q_txt, input_boxes=None, input_boxes_mask=None,
-                                input_boxes_label=None, input_points=None, input_points_mask=None)
-            out = self.m.forward_grounding(backbone_out=bo, find_input=fs, geometric_prompt=self.m._get_dummy_prompt(B * P),
-                                           find_target=None)
-            prob = (out["pred_logits"].sigmoid() * out["presence_logit_dec"].sigmoid().unsqueeze(1)).squeeze(-1).float()
-            boxes = box_ops.box_cxcywh_to_xyxy(out["pred_boxes"].float())
-            mlog = out["pred_masks"]
+            if self.mode == "batched":
+                x = torch.stack([self._prep(i) for i in imgs])
+                bo = self.m.backbone.forward_image(x, need_interactive_out=False, need_propagation_out=False)
+                prob, bxs, ml = self._ground(bo, self.text, torch.arange(B, device=self.dev).repeat_interleave(P),
+                                             torch.arange(P, device=self.dev).repeat(B))
+                raw = {(b, p): (prob[b * P + p], bxs[b * P + p], ml[b * P + p]) for b in range(B) for p in range(P)}
+            else:
+                zero = torch.zeros(1, dtype=torch.long, device=self.dev)
+                for b in range(B):
+                    bo = self.m.backbone.forward_image(self._prep(imgs[b])[None], need_interactive_out=False,
+                                                       need_propagation_out=False)
+                    for p in range(P):
+                        prob, bxs, ml = self._ground(bo, self.text1[p], zero, zero)
+                        raw[b, p] = (prob[0], bxs[0], ml[0])
         res = []
         for b in range(B):
             H, W = imgs[b].shape[-2:]
             per = []
             for p in range(P):
-                q = b * P + p
-                k = prob[q] > keep
-                sc = prob[q][k]
-                bx = boxes[q][k] * torch.tensor([W, H, W, H], device=self.dev)
+                prob, bxs, ml = raw[b, p]
+                k = prob > keep
+                sc = prob[k]
+                bx = box_ops.box_cxcywh_to_xyxy(bxs[k]) * torch.tensor([W, H, W, H], device=self.dev)
                 if k.any():
-                    mk = F.interpolate(mlog[q][k].unsqueeze(1).float(), (H, W), mode="bilinear", align_corners=False)
+                    mk = F.interpolate(ml[k].unsqueeze(1).float(), (H, W), mode="bilinear", align_corners=False)
                     mk = mk.squeeze(1).sigmoid() > 0.5
                 else:
                     mk = torch.zeros((0, H, W), dtype=torch.bool, device=self.dev)
@@ -182,7 +203,7 @@ def _rle(masks_cpu: np.ndarray) -> list[str]:
 
 
 def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000, workers: int = 8, rle: bool = True,
-           limit: int | None = None, rl=None) -> dict:
+           limit: int | None = None, rl=None, mode: str = "exact") -> dict:
     """Run over an image list, writing out_dir/part-<k>.parquet per `shard_size` images (skipped if present)."""
     import pandas as pd
     import torch
@@ -199,7 +220,7 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
     if rl:
         rl.event("model", **rep)
         rl.info(f"model: {rep}")
-    det = Detector(model)
+    det = Detector(model, mode=mode)
     pool = ThreadPoolExecutor(max(1, workers // 2))
     n_img, t0, done = 0, time.time(), 0
     for s0 in range(0, len(t), shard_size):
@@ -249,7 +270,7 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
     return info
 
 
-def check_batched(image_list: str, n: int = 16, batch: int = 8) -> "pd.DataFrame":
+def check_batched(image_list: str, n: int = 16, batch: int = 8, mode: str = "exact") -> "pd.DataFrame":
     """Pre-registered check (c): the batched path vs the repo's single-image Sam3Processor, per (image, prompt):
     mask IoU of matched instances (Hungarian on box IoU) and score difference."""
     import pandas as pd
@@ -262,7 +283,7 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8) -> "pd.DataFrame
     from torchvision.ops import box_iou
     t = pd.read_parquet(image_list).iloc[:n].to_dict("records")
     model, _ = build()
-    det, proc = Detector(model), Sam3Processor(model, confidence_threshold=0.5)
+    det, proc = Detector(model, mode=mode), Sam3Processor(model, confidence_threshold=0.5)
     blobs = [_reader(r) for r in t]
     rows = []
     for s in range(0, n, batch):
@@ -292,7 +313,7 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8) -> "pd.DataFrame
     return pd.DataFrame(rows)
 
 
-def latency(image_list: str, n: int = 200, warm: int = 20) -> dict:
+def latency(image_list: str, n: int = 200, warm: int = 20, mode: str = "exact") -> dict:
     """Q4d: batch-1 image mode, 6 prompts, 1 camera and 3 cameras (3 images in one call); p50 / p95 ms, peak VRAM.
     Timed from JPEG bytes in host memory to masks on the GPU (decode + resize + model + mask upsampling)."""
     import pandas as pd
@@ -300,7 +321,7 @@ def latency(image_list: str, n: int = 200, warm: int = 20) -> dict:
     from torchvision.io import decode_jpeg
     t = pd.read_parquet(image_list).iloc[:n + warm].to_dict("records")
     model, _ = build()
-    det = Detector(model)
+    det = Detector(model, mode=mode)
     blobs = [torch.frombuffer(bytearray(_reader(r)), dtype=torch.uint8) for r in t]
     out = {}
     for label, k in (("1 camera", 1), ("3 cameras", 3)):
@@ -332,6 +353,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--no-rle", action="store_true")
     ap.add_argument("--tag", default="sam")
+    ap.add_argument("--mode", default="exact", choices=("exact", "batched"))
     a = ap.parse_args()
     import torch
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -342,15 +364,15 @@ def main():
         _, rep = build()
         rl.info(f"load: {rep}")
     elif a.step == "detect":
-        info = detect(a.list, a.out, a.batch, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl)
+        info = detect(a.list, a.out, a.batch, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl, mode=a.mode)
         rl.info(f"detect: {info}")
         rl.event("detect", **info)
     elif a.step == "check":
-        r = check_batched(a.list, a.limit or 16, a.batch)
+        r = check_batched(a.list, a.limit or 16, a.batch, a.mode)
         r.to_csv(rl.dir / "check_batched.csv", index=False)
         rl.info("check (c):\n" + r.to_string())
     elif a.step == "latency":
-        r = latency(a.list)
+        r = latency(a.list, mode=a.mode)
         (rl.dir / "latency.json").write_text(json.dumps(r, indent=1))
         rl.info(f"latency: {r}")
     rl.event("end")
