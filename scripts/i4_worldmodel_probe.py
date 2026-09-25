@@ -255,7 +255,7 @@ def plot(a):
                     ax.set_title("last context frame" if c == 0 else f"generated, +{(ts[c - 1] + 1) / 5:.1f} s", fontsize=8)
                 if c == 0:
                     ax.set_ylabel(arm, fontsize=8)
-        fig.savefig(out / f"i4_worldmodel_actions{'' if a.clip == 0 else f'_clip{a.clip}'}.png", dpi=150)
+        fig.savefig(out / f"i4_worldmodel_actions{'' if a.clip == 0 else f'_clip{a.clip}'}.png", dpi=140)
         plt.close(fig)
 
         S = summarize(res)
