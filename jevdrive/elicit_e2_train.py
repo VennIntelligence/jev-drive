@@ -279,6 +279,8 @@ def _ratio_ci(e, p, ge, gp, b=2000, seed=0):
         xp = np.concatenate([p[ip[g]] for g in pick])
         if len(xe) and len(xp) and np.median(xp) > 0:
             rs.append(np.median(xe) / np.median(xp))
+    if not len(e) or not len(rs):        # e.g. the op stream on WOD pairs, which is not edited (placebo shift 0)
+        return np.nan, np.nan, np.nan
     return float(np.median(e) / np.median(p)), float(np.quantile(rs, 0.025)), float(np.quantile(rs, 0.975))
 
 
@@ -292,7 +294,7 @@ def r1(d, deltas: dict) -> pd.DataFrame:
         for grp, m in (("all", np.ones(len(e), bool)), ("1-3 actors", na <= 3), (">=4 actors", na >= 4)):
             r, lo, hi = _ratio_ci(e[m], p, d["log"][m], d["log"][ipl])
             rows.append({"head": name, "pairs": grp, "n_edit": int(m.sum()), "n_placebo": len(p),
-                         "median_edit_m": float(np.median(e[m])), "median_placebo_m": float(np.median(p)),
+                         "median_edit_m": float(np.median(e[m])) if m.any() else np.nan, "median_placebo_m": float(np.median(p)),
                          "ratio": r, "lo": lo, "hi": hi, "pass_2x": r >= 2})
     return pd.DataFrame(rows)
 
