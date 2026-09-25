@@ -578,3 +578,37 @@ navtrain 上反而显著更低（−37 pp，CI 整体 < 0），WOD 上跨零。�
 | WOD train 2 Hz | 39 721 | 39 721 | 6 848（`qwenvid_train_t4` 覆盖） | 35 400 | 3.3–3.9 GPU·h |
 
 事后的纵向子集（4 134 对，≤ 8 268 个 token）若将来重登记，Qwen 抽取约 0.8–0.9 GPU·h。
+
+### E2：真实帧反事实编辑对——造对与批量前验证（2026-09-26 00:43–01:20，GPU 1 / 2，与 E1 的 Qwen 抽取共卡）
+
+代码 `jevdrive/elicit_e2.py`（candidates / build / validate / fig / feat-index / WOD 扫描），`jevdrive/elicit_e2_train.py`（训练与读数），链 `scripts/elicit_e2_chain.sh`。
+产物在 box 的 `$DATA_DIR/processed/elicit_e2/navtrain/{candidates.pkl, val64/, main/}`；run：build `runs/elicitation/e2-build/`，验证 `runs/elicitation/e2-validate/20260926-005349`（64 候选）与 `…/20260926-011552`（全量），
+图 `runs/elicitation/e2-fig/20260926-011529`。小表 [research/results/elicitation/e2/](../research/results/elicitation/e2/)。口径见偏离日志 [E2] 00:33、00:38、00:49。
+
+**候选与产量（navtrain）**。按登记的 Q2b 走廊（不延长）只有 198 个 token，改用延长走廊（偏离 00:38）后，t0 帧里走廊内（≤ 30 m、±1.5 m）有 GT pedestrian / bicycle、CAM_F0 上主 actor ≥ 20 px 的 token，
+每个 (log, 主 actor) 取最早一个，得 1 389 个候选；SAM 3.1 在 t0 CAM_F0 上配上主 actor 的（`valid`）911 对，来自 340 个 log（行人 891、bicycle 20）。
+每对最多 12 张图（CAM_F0 / L0 / R0 × 4 帧），有效对里 6 733 张图上有 actor 的投影，其中 5 007 张被编辑，1 726 张没有任何 actor 被 SAM 配上（多是被前车挡住）而保持原样。
+安慰剂（同形 mask 平移到 ego 路径上无 agent 的地面、同一条 LaMa 管线）只在 175 对（669 张图）上找得到落点：城市场景里路径附近几乎总有 GT agent（含 generic_object）挡着。
+批量耗时：两个进程共约 0.6 GPU·h（与 E1 共卡，0.4–0.6 s / 张），低于登记的量级，所以没有另做 profiling。
+
+**批量前验证门**（登记 (6)，分母是有效对里被编辑的图上的每个 actor）：
+
+| 门 | 64 个候选（37 有效对） | 全量（911 有效对） | 门槛 | 过否 |
+|:--|--:|--:|:--|:--|
+| (b) 残留检出：x⁺ 上 YOLO26x 有 person（IoU ≥ 0.3）的 actor 框里，x⁻ 上仍有 person | 6.5%（n = 341） | **7.8%**（n = 7 838） | ≤ 10% | 过 |
+| 　其中 SAM 配上的 actor | 5.9% | 7.3% | — | — |
+| 　按框高：60–120 px / > 120 px | 8.6% / 4.2% | 9.6% / 6.9% | — | — |
+| 　按相机：CAM_F0 / L0 / R0 | — | 8.4% / 4.9% / 6.2% | — | — |
+| (c) 其他 GT agent 在 x⁻ 上仍被 YOLO 检出（相对 x⁺，未被主 actor 框盖住 > 20%） | 97.8%（n = 1 463） | **96.9%**（n = 37 725；行人 95.8%、车辆 99.4%、bicycle 92.1%） | ≥ 95% | 过 |
+| (a) 16 对目检 | 过（见下） | 过（见下） | — | 过 |
+
+第一次验证（偏离 00:49 之前的口径：只抹最近一人、SAM 不配就退回投影框）残留 9.7%，边缘过门，但目检不过——成群过街时 x⁻ 走廊里还站着别人，被前车挡住的行人被「抹」成前车上的一块补丁；
+改成「抹掉走廊内全部 GT 行人 / bicycle、只用 SAM mask、t0 前视主 actor 必须配上」之后重跑，才是上表的数。
+
+![E2 pairs](../research/figs/elicit-e2-pairs16.png)
+
+全量有效对里随机 16 对（seed 0）的 t0 CAM_F0 裁块：每组左 x⁺、中 x⁻、右安慰剂（只有找到落点的对才有）；标注是类别、主 actor 距离、被抹的 actor 数。
+要看的是中间一列：走廊里的行人都没了、填充与路面连贯，没被抹的只有走廊外的行人；最明显的缺陷在大群过街（第 15 组）——LaMa 在一大片人群的位置留下糊状纹理，这类对的 x⁻ 不是干净的空路面。
+
+**目检结论**：单人或两三人的对（多数）抹得干净；被挡住的 actor 不再被误抹；大群（≥ 4 人，占有效对的一部分，n_actors 最大 18）留有可见的填充纹理，走廊外的行人保留（按定义）。门 (a) 记「过」，限定是大群对的 x⁻ 质量偏低，读数里按 n_actors 分组各报一次。
+安慰剂对上 Qwen / openpilot 特征的位移地板（门 (d)）在特征抽取之后报。

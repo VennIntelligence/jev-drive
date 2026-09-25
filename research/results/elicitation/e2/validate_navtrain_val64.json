@@ -1,0 +1,12 @@
+{
+ "actor_images": 519,
+ "pairs_valid": 37,
+ "unedited_images": 65,
+ "yolo_person_on_plus": 341,
+ "residual_rate": 0.06451612903225806,
+ "residual_rate_matched": 0.058997050147492625,
+ "actor_sam_matched": 0.8516377649325626,
+ "others_eval": 1463,
+ "others_retained": 0.9781271360218728,
+ "others_covered_gt20pct": 458
+}
