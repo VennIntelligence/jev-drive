@@ -21,6 +21,9 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 INPUT = ROOT / 'todos/2026-09-23-tfv6-controller/controller-eval'
 LOCK = threading.Lock()
+INTERFACES = ('short_2s', 'sparse_5s', 'stop_jitter', 'model_noise', 'stale_5hz', 'stale_2hz', 'stale_1hz', 'pose_plan')
+# Plan refresh period in 20 Hz ticks; nominal plans refresh every tick.
+DECIMATE = {'stale_5hz': 4, 'stale_2hz': 10, 'stale_1hz': 20}
 # Town12/13 servers take 6-8 GB each; three at once fill a 24 GB card.
 BIG = ('Town12', 'Town13')
 BIG_SLOTS = threading.Semaphore(2)
@@ -61,7 +64,7 @@ def run_route(a, route, index):
     PRESET = {arm: variants[arm]['presets'][0] for arm in arms}
     wanted = [(s, arm) for s in seeds for arm in arms]
     max_ticks = 40
-    if a.kind in ('ramp', 'profile'):
+    if a.kind in ('ramp', 'profile', 'crawl'):
         refs = json.loads((a.refs / f'{a.kind}-traces.json').read_text())
         duration = json.loads(Path(refs[rid]).read_text())['bounds']['duration_s']
         max_ticks = math.ceil(duration / .05) + 400
@@ -102,10 +105,10 @@ def run_route(a, route, index):
                    '--perturbation-ids', ','.join(sorted({s for s, _ in missing})), '--case-list', str(cases),
                    '--server-index', str(index), '--max-ticks', str(max_ticks),
                    '--rig', 'none', '--no-rendering', '--strict-invariants',
-                   '--reference-interface', a.interface if a.interface in ('short_2s', 'sparse_5s', 'stop_jitter') else 'nominal',
-                   # Plans refresh every tick (20 Hz, as TFv6/TCP run); stale_5hz holds each plan 4 ticks.
-                   '--decimate', '4' if a.interface == 'stale_5hz' else '1']
-        if a.kind in ('ramp', 'profile'):
+                   '--reference-interface', a.interface if a.interface in ('short_2s', 'sparse_5s', 'stop_jitter', 'model_noise') else 'nominal',
+                   # Plans refresh every tick (20 Hz, as TFv6/TCP run); stale_* hold each plan longer.
+                   '--decimate', str(DECIMATE.get(a.interface, 1))]
+        if a.kind in ('ramp', 'profile', 'crawl'):
             command += ['--reference-traces', str(home / 'traces.json')]
             # pose_plan: the plan goes through the noisy estimated pose instead of the true ego frame.
             if a.interface != 'pose_plan':
@@ -123,7 +126,7 @@ def run_route(a, route, index):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('--kind', choices=('probe', 'ramp', 'profile', 'step'), required=True)
+    p.add_argument('--kind', choices=('probe', 'ramp', 'profile', 'crawl', 'step'), required=True)
     p.add_argument('--routes', type=Path, default=INPUT / 'l1-v2-heldout.xml')
     p.add_argument('--refs', type=Path, help='directory with <kind>-traces.json')
     p.add_argument('--out', type=Path, required=True)
@@ -132,7 +135,7 @@ def main():
     p.add_argument('--variants', type=Path, default=INPUT / 'l1-variants.json')
     p.add_argument('--workers', type=int, default=3)
     p.add_argument('--server-base', type=int, default=120)
-    p.add_argument('--interface', default='nominal', choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter', 'stale_5hz', 'pose_plan'))
+    p.add_argument('--interface', default='nominal', choices=('nominal',) + INTERFACES)
     a = p.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     routes = ET.parse(a.routes).getroot().findall('route')

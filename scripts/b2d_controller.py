@@ -102,6 +102,24 @@ def ackermann_inner_angle(curvature, wheelbase, track_width):
     return math.copysign(math.atan2(wheelbase * magnitude, 1. - .5 * track_width * magnitude), curvature)
 
 
+def pchip(x, y, query):
+    """Fritsch-Carlson monotone cubic Hermite interpolation; clamps outside [x0, xn]."""
+    x, y, query = np.asarray(x, float), np.asarray(y, float), np.clip(np.asarray(query, float), x[0], x[-1])
+    if len(x) < 3:
+        return np.interp(query, x, y)
+    h = np.diff(x)
+    d = np.diff(y) / h
+    m = np.zeros_like(y)
+    m[0], m[-1] = d[0], d[-1]
+    w1, w2 = 2 * h[1:] + h[:-1], h[1:] + 2 * h[:-1]
+    same = d[:-1] * d[1:] > 0
+    m[1:-1][same] = (w1[same] + w2[same]) / (w1[same] / d[:-1][same] + w2[same] / d[1:][same])
+    i = np.clip(np.searchsorted(x, query, side='right') - 1, 0, len(x) - 2)
+    t = (query - x[i]) / h[i]
+    return ((2*t**3 - 3*t**2 + 1) * y[i] + (t**3 - 2*t**2 + t) * h[i] * m[i]
+            + (-2*t**3 + 3*t**2) * y[i+1] + (t**3 - t**2) * h[i] * m[i+1])
+
+
 def advance_pose(pose, speed, yaw_rate, dt):
     """Exact constant-twist SE(2) integration, including the zero-turn limit."""
     x, y, yaw = pose
@@ -129,7 +147,8 @@ class Controller:
                  steer_inverse='nominal', track_width_m=None,
                  accel_kp=1., accel_ki=.3, accel_integral_limit=1.5,
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
-                 throttle_map=None, brake_map=None, low_speed_brake_mps=0.):
+                 throttle_map=None, brake_map=None, low_speed_brake_mps=0.,
+                 plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -153,6 +172,16 @@ class Controller:
         self.jerk_limit, self.jerk_limit_brake, self.brake_hysteresis = float(jerk_limit), float(jerk_limit_brake), float(brake_hysteresis)
         # The maps were measured at 2-9 m/s. Near standstill there is no engine drag and any
         # throttle creeps forward, so below this speed a deceleration command always brakes.
+        # Low-rate / sparse plans (e.g. VLA planners at 1-2 Hz): 'pchip' reads plan timing through a
+        # monotone cubic of station over time, so sparse points still give continuous speed and
+        # acceleration; feedforward_tau_s low-passes the plan feedforward across plan switches;
+        # adaptive_stale scales the stale timeout with the measured plan period.
+        if plan_interp not in ('linear', 'pchip'):
+            raise ValueError('plan_interp must be linear or pchip')
+        self.plan_interp, self.adaptive_stale = plan_interp, bool(adaptive_stale)
+        self.feedforward_tau_s, self.stale_factor = float(feedforward_tau_s), float(stale_factor)
+        if not np.isfinite([self.feedforward_tau_s, self.stale_factor]).all() or self.feedforward_tau_s < 0 or self.stale_factor < 1:
+            raise ValueError('feedforward_tau_s must be >= 0 and stale_factor >= 1')
         self.low_speed_brake_mps = float(low_speed_brake_mps)
         if not math.isfinite(self.low_speed_brake_mps) or self.low_speed_brake_mps < 0:
             raise ValueError('low_speed_brake_mps must be finite and nonnegative')
@@ -238,6 +267,8 @@ class Controller:
         self.longitudinal.reset()
         self.longitudinal_pi.reset()
         self._accel_integral = 0.
+        self._feedforward = None
+        self._plan_period = None
         self._accel_command = None
         self._braking = False
         self._history = deque()
@@ -326,6 +357,9 @@ class Controller:
         self._times = np.arange(len(points)) * dt
         self._point_dt = dt
         self._stationary_tail = bool(np.linalg.norm(points[-1] - points[-2]) < 1e-6)
+        if self._source_time is not None and stamp > self._source_time:
+            period = stamp - self._source_time
+            self._plan_period = period if self._plan_period is None else .7 * self._plan_period + .3 * period
         self._source_time = stamp
         self._rejection = None
 
@@ -333,6 +367,8 @@ class Controller:
         a, b = age + start, age + end
         if b > self._times[-1] + 1e-8 and not self._stationary_tail:
             return None
+        if self.plan_interp == 'pchip':
+            return float(np.diff(pchip(self._times, self._arc, np.array([a, b])))[0] / (b - a))
         return float((np.interp(b, self._times, self._arc) -
                       np.interp(a, self._times, self._arc)) / (b - a))
 
@@ -404,6 +440,10 @@ class Controller:
     def _accel_actuation(self, age, desired, speed, elapsed):
         early, late = self._speed_at(age, 0., .5), self._speed_at(age, .5, 1.)
         feedforward = 0. if early is None or late is None else (late - early) / .5
+        if self.feedforward_tau_s > 0.:
+            if self._feedforward is not None:
+                feedforward = self._feedforward + (feedforward - self._feedforward) * min(1., elapsed / self.feedforward_tau_s)
+            self._feedforward = feedforward
         error = desired - speed
         raw = feedforward + self.accel_kp * error + self._accel_integral
         low, high = float(self.brake_map[-1, 1]), float(self.throttle_map[-1, 1])
@@ -461,6 +501,7 @@ class Controller:
 
     def _safe(self, reason, elapsed=None):
         self._accel_integral, self._accel_command, self._braking = 0., None, True
+        self._feedforward = None
         if self.longitudinal_mode == 'pi':
             self.longitudinal_pi.reset()
             self._diagnostics['longitudinal_integral_effort'] = 0.
@@ -507,7 +548,12 @@ class Controller:
             return self._safe(self._rejection or 'no_trajectory', elapsed)
         age = max(0., now - self._source_time)
         self._diagnostics['trajectory_age_s'] = age
-        if age > self.stale_timeout + 1e-8:
+        stale = self.stale_timeout
+        if self.adaptive_stale and self._plan_period is not None:
+            # Keep at least 1 s of plan ahead for the speed and feedforward windows.
+            stale = max(stale, min(self.stale_factor * self._plan_period, self._times[-1] - 1.))
+            self._diagnostics['stale_timeout_s'] = stale
+        if age > stale + 1e-8:
             return self._safe('stale_trajectory', elapsed)
         start, end = (0., .25) if self.speed_window == 'near' else (.25, 1.)
         desired = self._speed_at(age, start, end)

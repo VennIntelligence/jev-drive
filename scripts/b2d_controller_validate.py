@@ -314,7 +314,7 @@ def main():
     p.add_argument('--route-cruises', help='JSON route ID -> cruise m/s, optional default key')
     p.add_argument('--reference-traces', help='JSON route ID -> absolute fixed expert trace path; omit for route oracle')
     p.add_argument('--reference-interface', default='nominal',
-                   choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter'))
+                   choices=('nominal', 'short_2s', 'sparse_5s', 'stop_jitter', 'model_noise'))
     p.add_argument('--strict-invariants', action='store_true',
                    help='stop after the first setup/agent/telemetry bug, retaining that case output')
     p.add_argument('--case-list', help='JSON list of {route, perturbation_id, variant, preset} for infrastructure resume')

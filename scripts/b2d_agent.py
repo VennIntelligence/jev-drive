@@ -375,6 +375,14 @@ class StubAgent(AutonomousAgent):
                     trajectory, plan_dt = trajectory[1:8:2], .5
                 elif interface == 'sparse_5s':
                     trajectory, plan_dt = trajectory[3::4], 1.
+                elif interface == 'model_noise':
+                    # Fresh model-like plan noise on every update, growing with the horizon.
+                    plan_dt = .25
+                    rng = np.random.default_rng(20260925 + frame)
+                    sigma = .05 + .08 * np.arange(1, len(trajectory) + 1)[:, None] * plan_dt
+                    trajectory = trajectory + rng.normal(0, 1, trajectory.shape) * sigma
+                    if route_xy is not None:
+                        route_xy = route_xy + rng.normal(0, 1, route_xy.shape) * (.05 + .02 * np.arange(1, len(route_xy) + 1)[:, None])
                 elif interface == 'stop_jitter':
                     plan_dt = .25
                     if np.linalg.norm(trajectory[0]) < .25 and speed < .2:

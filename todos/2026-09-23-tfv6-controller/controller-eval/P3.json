@@ -1,0 +1,41 @@
+{
+  "wheelbase": 2.8604714913890885,
+  "rear_axle_offset_m": -1.388633220199954,
+  "max_steer_deg": 69.99999237060547,
+  "steering_curve": [
+    [
+      0.0,
+      1.0
+    ],
+    [
+      20.0,
+      0.8999999761581421
+    ],
+    [
+      60.0,
+      0.800000011920929
+    ],
+    [
+      120.0,
+      0.699999988079071
+    ]
+  ],
+  "longitudinal_mode": "accel",
+  "lookahead": "max",
+  "max_lookahead_time_s": 0.5,
+  "aim_interpolation": "linear",
+  "pose_lateral_coefficient_s2_per_m": 0.010659832,
+  "pursuit_frame": "rear_slip",
+  "rear_slip_c_per_rad": 11.0,
+  "steer_inverse": "ackermann",
+  "track_width_m": 1.5929,
+  "accel_kp": 2.0,
+  "accel_ki": 0.0,
+  "jerk_limit": 8.0,
+  "jerk_limit_brake": 16.0,
+  "low_speed_brake_mps": 2.0,
+  "plan_interp": "pchip",
+  "feedforward_tau_s": 0.3,
+  "adaptive_stale": true,
+  "stale_factor": 2.5
+}

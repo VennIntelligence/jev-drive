@@ -94,6 +94,22 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
             stops.append((index, float(rng.uniform(2.5, 4.))))
             candidates = candidates[np.abs(candidates - at) > 30.]
         t, station, speed = time_parameterize(s, vmax, sorted(stops), 1.5, 2.5, 1.)
+    elif kind == 'crawl':
+        # Queue-like creep over the first 40 m: 0.3-1.5 m/s levels, a stop every 8-20 m.
+        rng = np.random.default_rng(seed + 1)
+        keep = s <= 40.
+        s, xy = s[keep], xy[keep]
+        levels = np.empty(len(s))
+        edge = 0.
+        while edge < s[-1]:
+            span = rng.uniform(5., 12.)
+            levels[(s >= edge) & (s < edge + span)] = rng.choice([.3, .6, 1., 1.5])
+            edge += span
+        stops, at = [], rng.uniform(8., 20.)
+        while at < s[-1] - 4.:
+            stops.append((int(np.searchsorted(s, at)), float(rng.uniform(2.5, 4.))))
+            at += rng.uniform(8., 20.)
+        t, station, speed = time_parameterize(s, np.minimum(levels, lateral_limit[:len(s)]), stops, 1., 1.5, .5)
     else:
         raise ValueError(kind)
     hold = int(round(hold_s / DT))
@@ -104,7 +120,7 @@ def build(kind, world_xy, start_xy, cruise, seed, hold_s=5.):
     acceleration = np.gradient(speed, DT)
     return dict(kind=kind, seed=seed, cruise_mps=float(cruise), elapsed_s=t.round(6).tolist(),
                 world_xy=ref_xy.tolist(), speed_mps=speed.tolist(),
-                stops=[[float(s[i]), d] for i, d in sorted(stops)] if kind == 'profile' else [],
+                stops=[[float(s[i]), d] for i, d in sorted(stops)] if kind != 'ramp' else [],
                 bounds=dict(max_speed=float(speed.max()), max_accel=float(acceleration.max()),
                             max_decel=float(-acceleration.min()),
                             max_abs_jerk=float(np.abs(np.gradient(acceleration, DT)).max()),
@@ -117,10 +133,11 @@ def main():
                    help='b2d_controller_eval_l1_v2.py --kind probe output')
     p.add_argument('--cruises', type=Path, required=True)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--kinds', default='ramp,profile,crawl')
     a = p.parse_args()
     cruises = json.loads(a.cruises.read_text())
     a.out.mkdir(parents=True, exist_ok=True)
-    manifest = {'ramp': {}, 'profile': {}}
+    manifest = {kind: {} for kind in a.kinds.split(',')}
     for done in sorted(a.probes.glob('route-*/done.json')):
         trace = Path(json.loads(done.read_text())['p00/A']) / 'validation_trace.json'
         route = trace.parents[2].name
