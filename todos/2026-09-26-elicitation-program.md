@@ -370,6 +370,13 @@ E6（可选）──────────────────────
   (7) **端到端延迟**：GPU 上 batch 1：YOLO26x-seg 640 fp16 三路一次调用（fastperc `latency` 协议）+ 抬升 / 走廊 / embedding（CPU numpy）+ MLP 前向（GPU），分别计时，p95 相加作保守的端到端；openpilot `temporal` 的 2.3 ms 加上。
   判据照登记：行人 ≥ 30% 且 CI 下端 > 样本外 null false-flip、cut-in 对 prior 的配对 Δ CI 上端 ≥ 0、延迟 ≤ 50 ms，三条都过才「过」；按 arm × 模型分别判，主判 arm A 与 B 的 Cinque seed 0。
 
+- 2026-09-26 01:48 CST **[决定] 用户决定（经 main 转达）**，写于下述新读数的任何数字之前：
+  (1) **E3 纵向子集版不登记**：那个子集是看过数之后挑的，真实数据这条路由 E2 覆盖；E3 在本计划里作为已关闭的选项，不再开。
+  (2) **E4c 的 [L, 3 s] 面积登记为并列读数**（从现在起两个 v1 集合都报；主判定仍是 BA 集的逐帧定向翻转率，登记的触发条件没有触发：人类 onset 中位 0.9 s）。
+  定义（写死）：沿用 E4c 的曲线 C(x)（按对、全部观测帧、官方 τ，x = t − t_vis，0.2 s 网格）；A₃ = C 在 x ∈ [L, 3.0 s] 网格点上的平均高度，L 同 E4（openpilot 0.1、Qwen 流与 M-C 0.3、SAM / 规则门 0.6 描述行、TFv6 0.1、`ridge ego` 0）；
+  null 地板同一定义在 null case 上；报 A₃、A₃ − null 与 base 路线 bootstrap 95% CI（2000 次，与 E4c 相同的重采样），两个集合、全部考生、行人 / cut-in / 合并三个 scope。只用已存预测，不重拟合。
+  (3) **标定深度 / 地面高度估计不做**（fast-perception 的 D-depth 已说明发布版单目深度原样不行；要做是新登记，今晚不排）。
+
 ## 结果
 
 ### E1：M-C head 零样本套到 WOD（2026-09-26 00:31–00:34，GPU 1 几分钟重算 head，其余 CPU）
