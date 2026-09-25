@@ -118,6 +118,18 @@ N = 1 那档 server 在 setup 时崩了，没有数；"12（6）"那档 12 个 s
 失败，只剩 6 个在跑（见下文），按 6 个算。Town03 每 tick 只有 Town12 的一半多一点 CPU，tick 也快一倍，8 个时 72.7 ticks/s
 仍在涨；GPU utilization 在 5 个以上就显示 97%，但吞吐还在涨，说明这个指标在这里已经饱和、不再是线性的容量度量。
 
+**openpilot+TCP rig**（成本 stub `--rig op2tcp3`，5 个相机每 tick 渲染，`--client-threads 8`，Town12 route 1773，800 tick）。
+17:38–18:10 CST 在 GPU 0 上测，同卡还有控制器验收的 6 个 server，背景约 58–63 核，所以只能当成本上界看：
+
+| 我们的 server 数 | aggregate ticks/s | per-worker ms/tick（其中 agent 等传感器） | server core-s/tick | GPU util |
+|---:|---:|---:|---:|---:|
+| 1 | 2.8 | 356（299） | 0.79 | 70% |
+| 4 | 8.3 | 483（424） | 0.90 | 95% |
+| 6 | 10.1 | 595（533） | 0.98 | 98% |
+
+每 tick 的 GPU 和 server CPU 成本约是 Alpamayo rig 的三倍，tick 的大头是 agent 等五个大相机的数据。这个 rig 每个 worker
+按约 3 核预算，GPU 的 knee 预计在 6 个或更少。
+
 ![CPU per tick, cores used and GPU utilisation against servers on one GPU](../../research/figs/infra-scale-resources.png)
 
 左：每推进一个 simulation tick 花多少 core-seconds（圆点 server，三角 route client），基本不随 N 变；中：我们的进程一共用多少核，
@@ -189,8 +201,6 @@ B 组只剩一个 worker，ms/tick 的差（6%）在这种负载下是噪声量�
 
 ## 没做 / 待做
 
-- openpilot+TCP rig（5 个相机每 tick 渲染）的 ladder 在 17:40 之后的满载 box 上跑，只作每个 worker 成本的参考，见 `rungs.csv`
-  的 `t12-op-t8`。
 - 跨卡线性叠加（上文）。
 - RenderThread 超时崩溃的原因。
 - py-spy 剖析 route 进程（`scripts/pyspy_python.sh`、`infra_scale.sh pyspy` 已备好）：route client 每 tick 只占 0.07–0.09

@@ -20,7 +20,7 @@ SERIES = {  # step -> (label, colour, line style)
     "t03-alp": ("Town03, Alpamayo rig", "#009E73", "-"),
     "t13-t8": ("Town13, Alpamayo rig", "#D55E00", "-"),
     "t13-lights-t8": ("Town13, Alpamayo rig, cached lights", "#E69F00", "--"),
-    "t12-op-t8": ("Town12, openpilot+TCP rig", "#CC79A7", "-"),
+    "t12-op-t8": ("Town12, openpilot+TCP rig (shared GPU)", "#CC79A7", "-"),
     "t12-alp-res64": ("Town12, Alpamayo rig, 64x64 viewport", "#56B4E9", "--"),
     "t12-base6": ("Town12, Alpamayo rig (GPU 0 baseline)", "#000000", "none"),
     "t12-t8": ("Town12, Alpamayo rig, 8 client threads", "#7F7F7F", "none"),

@@ -59,6 +59,20 @@ servers; Town03 is still climbing at eight.
 points are rungs of 6 and 12 measured on the workers that survived setup. Background load was heavy during the
 Town03 rungs, 55-88 cores of other jobs.)
 
+**The heaviest rig** (openpilot road + wide 1928x1208 and TCP's three 1600x900, all five every tick; cost stub
+`b2d_agent.py --rig op2tcp3`, `--client-threads 8`) was measured after 17:30 CST on GPU 0 while six other
+CARLA servers ran on the same card, so read it as an upper bound on cost:
+
+| Servers (ours, on a card with 6 others) | 1 | 4 | 6 |
+|---|---:|---:|---:|
+| aggregate ticks/s | 2.8 | 8.3 | 10.1 |
+| per-worker ms/tick (sensor wait in the agent) | 356 (299) | 483 (424) | 595 (533) |
+| server core-seconds per tick | 0.79 | 0.90 | 0.98 |
+
+Five cameras every tick cost about three times the Alpamayo rig per tick on both the GPU and the server CPU;
+the card was at 95-98% utilisation from four of our servers on. For this rig budget ~3 cores per worker and
+expect the GPU knee at or below six.
+
 ![CPU per tick, cores used and GPU utilisation against servers on one GPU](../research/figs/infra-scale-resources.png)
 
 Left: core-seconds per simulated tick, flat in N; middle: cores our processes used; right: GPU utilisation.
