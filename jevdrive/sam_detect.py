@@ -176,8 +176,17 @@ def _reader(row) -> bytes:
         return f.read(int(row["len"]))
 
 
-class _Bytes:
-    """torch Dataset over the image list: raw JPEG bytes (decoding happens on the GPU, nvjpeg)."""
+def decode(blob: bytes):
+    """JPEG -> uint8 CHW tensor with PIL, the decoder the repo's Sam3Processor is documented with (nvjpeg on the GPU
+    moves scores of kept instances by up to 0.04 against it, so it is not used)."""
+    import torch
+    from io import BytesIO
+    from PIL import Image
+    return torch.from_numpy(np.asarray(Image.open(BytesIO(blob)).convert("RGB"))).permute(2, 0, 1).contiguous()
+
+
+class _Images:
+    """torch Dataset over the image list: decoded uint8 CHW tensors (PIL, in the loader workers)."""
 
     def __init__(self, rows):
         self.rows = rows
@@ -186,8 +195,7 @@ class _Bytes:
         return len(self.rows)
 
     def __getitem__(self, i):
-        import torch
-        return i, torch.frombuffer(bytearray(_reader(self.rows[i])), dtype=torch.uint8)
+        return i, decode(_reader(self.rows[i]))
 
 
 def _collate(b):
@@ -203,14 +211,15 @@ def _rle(masks_cpu: np.ndarray) -> list[str]:
 
 
 def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000, workers: int = 8, rle: bool = True,
-           limit: int | None = None, rl=None, mode: str = "exact") -> dict:
-    """Run over an image list, writing out_dir/part-<k>.parquet per `shard_size` images (skipped if present)."""
+           limit: int | None = None, rl=None, mode: str = "exact", part: str = "0/1") -> dict:
+    """Run over an image list, writing out_dir/part-<k>.parquet per `shard_size` images (skipped if present).
+    part "i/n": this process takes the shards k with k % n == i (several processes share a card or cards)."""
     import pandas as pd
     import torch
     from concurrent.futures import ThreadPoolExecutor
     from torch.utils.data import DataLoader
-    from torchvision.io import decode_jpeg
     from tqdm import tqdm
+    pi, pn = map(int, part.split("/"))
     t = pd.read_parquet(image_list)
     if limit:
         t = t.iloc[:limit]
@@ -225,16 +234,18 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
     n_img, t0, done = 0, time.time(), 0
     for s0 in range(0, len(t), shard_size):
         dst = out / f"part-{s0 // shard_size:04d}.parquet"
+        if (s0 // shard_size) % pn != pi:
+            continue
         if dst.exists():
             done += 1
             continue
         rows = t.iloc[s0:s0 + shard_size].to_dict("records")
-        dl = DataLoader(_Bytes(rows), batch_size=batch, num_workers=workers, collate_fn=_collate, prefetch_factor=4,
-                        persistent_workers=False)
+        dl = DataLoader(_Images(rows), batch_size=batch, num_workers=workers, collate_fn=_collate, prefetch_factor=4,
+                        persistent_workers=False, pin_memory=True)
         recs, futs = [], []
         ts = time.time()
-        for idx, blobs in tqdm(dl, desc=dst.name, mininterval=10):
-            imgs = decode_jpeg(blobs, device="cuda")
+        for idx, ims in tqdm(dl, desc=dst.name, mininterval=10):
+            imgs = [x.to("cuda", non_blocking=True) for x in ims]
             res = det(imgs)
             for b, (i, per) in enumerate(zip(idx, res)):
                 key = rows[i]["key"]
@@ -266,7 +277,8 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
             rl.info(f"{dst.name}: {len(rows)} images, {len(df)} instances, {1000 * dt / len(rows):.1f} ms/image")
     info = {"images": len(t), "new_images": n_img, "skipped_shards": done, "seconds": time.time() - t0,
             "peak_vram_gb": torch.cuda.max_memory_allocated() / 1e9}
-    (out / "done.json").write_text(json.dumps(info, indent=1))
+    if pn == 1:
+        (out / "done.json").write_text(json.dumps(info, indent=1))
     return info
 
 
@@ -279,7 +291,6 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8, mode: str = "exa
     from io import BytesIO
     from scipy.optimize import linear_sum_assignment
     from sam3.model.sam3_image_processor import Sam3Processor
-    from torchvision.io import decode_jpeg
     from torchvision.ops import box_iou
     t = pd.read_parquet(image_list).iloc[:n].to_dict("records")
     model, _ = build()
@@ -287,12 +298,11 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8, mode: str = "exa
     blobs = [_reader(r) for r in t]
     rows = []
     for s in range(0, n, batch):
-        imgs = decode_jpeg([torch.frombuffer(bytearray(b), dtype=torch.uint8) for b in blobs[s:s + batch]], device="cuda")
+        imgs = [decode(b).to("cuda") for b in blobs[s:s + batch]]
         res = det(imgs, keep=0.5)
         for j, per in enumerate(res):
-            # "same input": the processor gets the very tensor the batched path decoded (isolates batching);
-            # "PIL decode": the processor's documented PIL input (adds the nvjpeg-vs-libjpeg decode difference)
-            for src, im in (("same input", imgs[j]), ("PIL decode", Image.open(BytesIO(blobs[s + j])).convert("RGB"))):
+            # the processor gets the same decoded tensor the detector got (PIL decode, as documented)
+            for src, im in (("same input", imgs[j]),):
               with _amp():
                 st = proc.set_image(im)
                 for p, d in zip(det.prompts, per):
@@ -315,22 +325,22 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8, mode: str = "exa
 
 def latency(image_list: str, n: int = 200, warm: int = 20, mode: str = "exact") -> dict:
     """Q4d: batch-1 image mode, 6 prompts, 1 camera and 3 cameras (3 images in one call); p50 / p95 ms, peak VRAM.
-    Timed from JPEG bytes in host memory to masks on the GPU (decode + resize + model + mask upsampling)."""
+    Timed from decoded uint8 images in pinned host memory to masks on the GPU (upload + resize + model + mask
+    upsampling); JPEG decoding runs in loader workers in the batch and is not on this path."""
     import pandas as pd
     import torch
-    from torchvision.io import decode_jpeg
     t = pd.read_parquet(image_list).iloc[:n + warm].to_dict("records")
     model, _ = build()
     det = Detector(model, mode=mode)
-    blobs = [torch.frombuffer(bytearray(_reader(r)), dtype=torch.uint8) for r in t]
+    host = [decode(_reader(r)).pin_memory() for r in t]
     out = {}
     for label, k in (("1 camera", 1), ("3 cameras", 3)):
         torch.cuda.reset_peak_memory_stats()
         ts = []
-        for i in range(0, len(blobs) - k, k):
+        for i in range(0, len(host) - k, k):
             torch.cuda.synchronize()
             a = time.perf_counter()
-            det(decode_jpeg(blobs[i:i + k], device="cuda"))
+            det([h.to("cuda", non_blocking=True) for h in host[i:i + k]])
             torch.cuda.synchronize()
             ts.append(1000 * (time.perf_counter() - a))
         ts = np.array(ts[warm // k:])
@@ -354,6 +364,7 @@ def main():
     ap.add_argument("--no-rle", action="store_true")
     ap.add_argument("--tag", default="sam")
     ap.add_argument("--mode", default="exact", choices=("exact", "batched"))
+    ap.add_argument("--part", default="0/1", help="detect: shards k with k %% n == i")
     a = ap.parse_args()
     import torch
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -364,7 +375,7 @@ def main():
         _, rep = build()
         rl.info(f"load: {rep}")
     elif a.step == "detect":
-        info = detect(a.list, a.out, a.batch, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl, mode=a.mode)
+        info = detect(a.list, a.out, a.batch, workers=a.workers, rle=not a.no_rle, limit=a.limit, rl=rl, mode=a.mode, part=a.part)
         rl.info(f"detect: {info}")
         rl.event("detect", **info)
     elif a.step == "check":

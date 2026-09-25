@@ -14,5 +14,5 @@ BATCH=${BATCH:-8} WORKERS=${WORKERS:-8}
 for ds in ${DATASETS:-p5 nusc wod}; do
   echo "$(date '+%F %T') sam batch: $ds"
   ${CORES:+taskset -c $CORES} env OMP_NUM_THREADS=2 PYTHONPATH=. "$PY" -m jevdrive.sam_detect detect --list "$L/$ds.parquet" \
-    --out "$OUT/$ds" --batch "$BATCH" --workers "$WORKERS" --tag "batch-$ds"
+    --out "$OUT/$ds" --batch "$BATCH" --workers "$WORKERS" --part "${PART:-0/1}" --tag "batch-$ds"
 done
