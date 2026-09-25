@@ -76,8 +76,8 @@ def link_v0():
     """BehaviorAgent on a v0 route = v0's own run: same XML variant (checked element by element), same agent code
     path, same tree. Link the attempts and copy done/ so b2d_run skips them."""
     v0 = data_dir() / V0_GEN
-    old = {r.get("id"): ET.tostring(r) for r in ET.parse(data_dir() / "runs/p5_pairs/pairs.xml").getroot()}
-    new = {r.get("id"): ET.tostring(r) for r in ET.parse(root() / "pairs.xml").getroot()}
+    old = {r.get("id"): ET.tostring(r).strip() for r in ET.parse(data_dir() / "runs/p5_pairs/pairs.xml").getroot()}
+    new = {r.get("id"): ET.tostring(r).strip() for r in ET.parse(root() / "pairs.xml").getroot()}
     g = gen("ba")
     (g / "done").mkdir(exist_ok=True)
     (g / "attempts").mkdir(exist_ok=True)
