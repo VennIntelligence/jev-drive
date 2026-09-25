@@ -13,6 +13,9 @@ Variants (name: reference heading, iLQR discretization, iLQR wall-clock cap):
   fixed-dt    PR #57, plan resampled to 0.25 s,     0.25 s, none    (tracker step = simulator step, issue #75)
   central     central-difference tangent,           0.5 s, none
   central-dt  central-difference tangent, 0.25 s,   0.25 s, none
+  fixed-dt-sr fixed-dt with the steering-rate limit 0.4 -> 1.0 rad/s
+  fixed-dt-h  fixed-dt with the heading state cost 10 -> 30
+  fixed-dt-xy fixed-dt with the position state costs 1 -> 3
 Each step: the plan from the ego's state, the variant's (acc, steer rate), one 0.25 s step of hug_sim's bicycle.
 The start state is the scenario's (start_ab, start_euler, start_velo, start_steer); no collisions, the run ends at
 RC >= 1 (nearest logged pose past 90 %), 10 m off the log, or 400 steps. Writes <out>/<variant>/<scenario>/zs_steps.jsonl
@@ -35,15 +38,18 @@ sys.path[:0] = [str(REPO), str(REPO / "scripts" / "hugsim")]
 D = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 DT, L = 0.25, 2.7
 VARIANTS = {"official": ("official", 0.5, 0.05), "fixed": ("fixed", 0.5, 0.05), "fixed-T": ("fixed", 0.5, None),
-            "fixed-dt": ("fixed", 0.25, None), "central": ("central", 0.5, None), "central-dt": ("central", 0.25, None)}
+            "fixed-dt": ("fixed", 0.25, None), "central": ("central", 0.5, None), "central-dt": ("central", 0.25, None),
+            "fixed-dt-sr": ("fixed", 0.25, None, {"max_steering_angle_rate": 1.0}),
+            "fixed-dt-h": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [1.0, 1.0, 30.0, 0.0, 0.0]}),
+            "fixed-dt-xy": ("fixed", 0.25, None, {"state_cost_diagonal_entries": [3.0, 3.0, 10.0, 0.0, 0.0]})}
 
 
-def solver(dt, cap):
+def solver(dt, cap, extra=None):
     import sim.ilqr.lqr as base
     from sim.ilqr.lqr_solver import ILQRSolver, ILQRSolverParameters
     from dataclasses import asdict
     p = asdict(base.solver_params)
-    p.update(discretization_time=dt, max_solve_time=cap)
+    p.update(discretization_time=dt, max_solve_time=cap, **(extra or {}))
     return ILQRSolver(solver_params=ILQRSolverParameters(**p), warm_start_params=base.warm_start_params)
 
 
@@ -73,11 +79,11 @@ def run(args):
     import yaml
     from jevdrive import hugsim_zs as Z
     from jevdrive.hugsim_preset import LoggedPlan
-    heading, dt, cap = VARIANTS[variant]
+    heading, dt, cap, *extra = VARIANTS[variant]
     cfg = yaml.safe_load(open(scen))
     ds = Path(scen).parent.name
     src = LoggedPlan(D / "datasets" / "hugsim" / "scenes" / ds / str(cfg["scene_name"]))
-    lqr = solver(dt, cap)
+    lqr = solver(dt, cap, *extra)
     a, b = map(float, cfg["start_ab"])
     th = math.radians(float(cfg["start_euler"][1]))
     v, steer = float(cfg["start_velo"]), float(cfg["start_steer"])
