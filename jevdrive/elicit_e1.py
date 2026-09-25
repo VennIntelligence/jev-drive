@@ -296,6 +296,51 @@ def run_navsim(rl):
     log.info("activation\n%s", a.to_markdown(index=False, floatfmt=".3f"))
 
 
+def _devkit(ver: str, split: str, name: str) -> pd.DataFrame | None:
+    from .openloop_standing import _latest
+    df = _latest(ver, split, name)
+    if df is None:
+        return None
+    return df
+
+
+def navsim_table(rl, run_dir):
+    """PDMS / EPDMS of prior + Delta against the stored prior scores (paired, token bootstrap), per navtest group, and
+    navhard two-stage EPDMS (aggregate: its two-stage weighting is not per token)."""
+    from pathlib import Path
+    run_dir = Path(run_dir)
+    sc = pd.read_csv(run_dir / "navtest_scopes.csv").set_index("token")
+    groups = {"all": None, "ped_cyc_corridor": sc.ped_cyc_corridor, "no ped_cyc": ~sc.ped_cyc_corridor,
+              "straight": sc.straight}
+    rows, hard = [], []
+    rng = np.random.default_rng(0)
+    for m in MODELS:
+        for pr in NAV_PRIORS:
+            for ver, metric in (("v1", "PDMS"), ("v2", "EPDMS")):
+                a = _devkit(ver, "navtest", f"e1_{pr}_{m}_plus_mc")
+                b = _devkit(ver, "navtest", f"heads_{pr}_{m}_temporal")
+                if a is None or b is None:
+                    continue
+                f = lambda df: df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)].set_index("token")["score"].astype(float)  # noqa: E731
+                x, y = f(a).align(f(b), join="inner")
+                for g, msk in groups.items():
+                    keep = np.ones(len(x), bool) if msk is None else msk.reindex(x.index).fillna(False).to_numpy(bool)
+                    d = (x - y).to_numpy()[keep]
+                    bs = d[rng.integers(0, len(d), (10000, len(d)))].mean(1)
+                    rows.append({"model": m, "prior": pr, "metric": metric, "group": g, "n": len(d),
+                                 "prior_score": 100 * y.to_numpy()[keep].mean(), "plus_mc": 100 * x.to_numpy()[keep].mean(),
+                                 "delta": 100 * d.mean(), "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5)})
+        for name in (f"e1_ridge_late_{m}_plus_mc", f"heads_ridge_late_{m}_temporal"):
+            df = _devkit("v2", "navhard_two_stage", name)
+            if df is not None:
+                summ = df[df["token"].str.startswith("extended_pdm_score")].set_index("token")["score"]
+                hard.append({"model": m, "name": name, "EPDMS": 100 * summ.get("extended_pdm_score_combined", np.nan)})
+    t, h = pd.DataFrame(rows), pd.DataFrame(hard)
+    t.to_csv(rl.dir / "navsim_paired.csv", index=False)
+    h.to_csv(rl.dir / "navhard.csv", index=False)
+    log.info("navtest\n%s\nnavhard\n%s", t.to_markdown(index=False, floatfmt=".2f"), h.to_markdown(index=False, floatfmt=".2f"))
+
+
 def figs(res_dir, out_dir):
     """RFS delta per cluster and activation rate per scope (research/results/elicitation/e1 -> research/figs)."""
     from pathlib import Path
@@ -335,7 +380,8 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("wod", "navsim", "figs"))
+    ap.add_argument("what", choices=("wod", "navsim", "navsim-table", "figs"))
+    ap.add_argument("--run", default="", help="navsim-table: the e1-navsim run dir")
     ap.add_argument("--res", default="research/results/elicitation/e1")
     ap.add_argument("--out", default="research/figs")
     a = ap.parse_args()
@@ -343,7 +389,10 @@ def main():
         figs(a.res, a.out)
         return
     rl = RunLog("elicitation", f"e1-{a.what}")
-    {"wod": run_wod, "navsim": run_navsim}[a.what](rl)
+    if a.what == "navsim-table":
+        navsim_table(rl, a.run)
+    else:
+        {"wod": run_wod, "navsim": run_navsim}[a.what](rl)
     rl.close()
 
 
