@@ -125,7 +125,7 @@ def build_test_sets() -> dict:
     js = json.loads((root() / "sets.json").read_text()) if (root() / "sets.json").exists() else {"seed": 0, "spans": {}, "ordinal": {}}
     js["spans"].update(spans)
     (root() / "sets.json").write_text(json.dumps(js))
-    W.write_op_calib(want)
+    write_op_calib(want)
     return {"test": len(want), "test_history_frames": len(spans)}
 
 
@@ -309,9 +309,11 @@ def read_calib(z, cams) -> dict:
 
 
 def write_op_calib(names) -> Path:
-    """Front-three calibration per sequence (openpilot runner reads it without protobuf)."""
+    """Front-three calibration per sequence (openpilot runner reads it without protobuf), merged into the existing
+    file: the test-split sequences are added beside val's, never replacing them."""
     from . import waymo as W
-    E2ED, out = W.e2ed_frame(), {}
+    p = root() / "op_calib.json"
+    E2ED, out = W.e2ed_frame(), (json.loads(p.read_text()) if p.exists() else {})
     df = W.load_index()
     key = dict(zip(W.frame_names(df), range(len(df))))
     for n in names:
@@ -324,7 +326,6 @@ def write_op_calib(names) -> Path:
             fr = E2ED.FromString(f.read(int(r.rec_len))).frame
         out[seq] = {str(c): {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in d.items()}
                     for c, d in calib_dict(fr, OP_SRC).items()}
-    p = root() / "op_calib.json"
     p.write_text(json.dumps(out))
     return p
 
