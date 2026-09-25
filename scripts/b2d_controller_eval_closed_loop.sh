@@ -4,6 +4,7 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."
 PY=/data/envs/tfv6/bin/python
+export DATA_DIR=${DATA_DIR:-/data}
 V2=/data/runs/b2d/controller-eval/v2
 IN=todos/2026-09-23-tfv6-controller/controller-eval
 signal() { echo "$1 $(date -u +%FT%TZ) $2" > $V2/SIGNAL; echo "== $1 $2"; }
