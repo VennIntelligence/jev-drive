@@ -87,13 +87,78 @@ def profile(rl, n: int, configs, workers: int, ref_chunk: str = ""):
     rl.log.info("profile\n%s", t.to_markdown(index=False, floatfmt=".4g"))
 
 
+def _file_keys(files: pd.Series) -> pd.Series:
+    from .p5_qwen import _file_keys as fk
+    return fk(files)
+
+
+def reuse(rl, src: str = "carla_p5") -> pd.DataFrame:
+    """P5 v1: obs rows whose 12 JPEGs are the same files (directories resolved) as a v0 obs row take v0's grid row
+    as is (features_grid/r000); the rest is left to `extract`. The v0 grid is the same recipe (compile, batch 4)."""
+    import json
+    import os
+    cur = os.environ.get("P5_SET", "carla_p5")
+    o = obs_index()
+    dst = grid_root("r000")
+    if cur == src:
+        return o.iloc[:0]
+    os.environ["P5_SET"] = src
+    try:
+        v0 = obs_index()
+        names0, parts0 = [], []
+        for d in sorted(grid_root().glob("c*")):
+            names0.append(pd.read_parquet(d / "index.parquet").frame_name)
+            parts0.append((d, len(names0[-1])))
+    finally:
+        os.environ["P5_SET"] = cur
+    k0 = pd.Series(v0.frame_name.to_numpy(), index=_file_keys(v0.files).to_numpy())
+    k0 = k0[~k0.index.duplicated()]
+    src_name = pd.Series(_file_keys(o.files).map(k0).to_numpy(), index=o.frame_name.to_numpy()).dropna()
+    rl.log.info("%s: %d obs rows, %d with the same 12 files as a %s obs row", cur, len(o), len(src_name), src)
+    if (dst / "meta.json").exists() and pd.read_parquet(dst / "index.parquet").frame_name.tolist() == src_name.index.tolist():
+        return src_name
+    pos0 = pd.Series(np.arange(sum(map(len, names0))), index=pd.concat(names0).to_numpy())
+    G0 = np.concatenate([np.load(d / "L18_grid.npy", mmap_mode="r") for d, _ in parts0])
+    rows = pos0.reindex(src_name.to_numpy()).to_numpy()
+    assert not np.isnan(rows).any()
+    np.save(dst / "L18_grid.npy", G0[rows.astype(int)])
+    pd.DataFrame({"frame_name": src_name.index, "src_frame": src_name.to_numpy()}).to_parquet(dst / "index.parquet", index=False)
+    (dst / "meta.json").write_text(json.dumps({"reused_rows": len(src_name), "from": src}))
+    rl.event("reuse", rows=len(src_name), of=len(o), src=src)
+    return src_name
+
+
+def reuse_check(rl, n: int, batch: int, compile: bool, workers: int):
+    """Recompute the grid of `n` reused rows (spread over r000) and compare with the copied v0 rows."""
+    from . import features as F, p4_carla as p4, waymo_qwenvid as qv
+    idx = pd.read_parquet(grid_root("r000") / "index.parquet")
+    sel = np.linspace(0, len(idx) - 1, n).astype(int)
+    t = obs_index().set_index("frame_name")
+    names = idx.frame_name.to_numpy()[sel]
+    fx = qv.make_fx(compile=compile, grid_hw=GRID_HW)
+    dst = grid_root("reuse_check", rl.dir.name)
+    st = F.extract(fx, t.loc[names].files.map(list).tolist(), batch, workers, dst, rl, "reuse_check", dataset=p4.ClipFiles)
+    x = np.load(dst / "L18_grid.npy").astype(np.float32)
+    y = np.load(grid_root("r000") / "L18_grid.npy", mmap_mode="r")[sel].astype(np.float32)
+    cos = (x * y).sum(1) / (np.linalg.norm(x, axis=1) * np.linalg.norm(y, axis=1))
+    r = {"rows": n, "identical_rows": int(((x - y) == 0).all(1).sum()), "max_abs": float(np.abs(x - y).max()),
+         "rel_l2": float(np.linalg.norm(x - y) / np.linalg.norm(y)), "min_cos": float(cos.min()),
+         "pooled_vs_stored": _compare(dst, names), "ms_per_frame": st["ms_per_frame"]}
+    rl.event("reuse_check", **r)
+    rl.log.info("reuse check (recomputed vs copied v0 grid rows): %s", r)
+
+
 def extract(rl, batch: int, compile: bool, workers: int):
     from . import features as F, p4_carla as p4, waymo_qwenvid as qv
     o = obs_index()
+    reused = reuse(rl)
+    o = o[~o.frame_name.isin(set(reused.index))].reset_index(drop=True)
     chunks = [o.iloc[i:i + CHUNK] for i in range(0, len(o), CHUNK)]
     left = [(i, c) for i, c in enumerate(chunks) if not (grid_root(f"c{i:03d}") / "meta.json").exists()]
-    rl.log.info("%d obs rows in %d chunks, %d to do (batch %d, compile %s, workers %d)", len(o), len(chunks), len(left),
-                batch, compile, workers)
+    rl.log.info("%d obs rows to extract in %d chunks, %d to do (batch %d, compile %s, workers %d)", len(o), len(chunks),
+                len(left), batch, compile, workers)
+    if not left:
+        return
     fx = qv.make_fx(compile=compile, grid_hw=GRID_HW)
     t0, done = time.perf_counter(), 0
     for i, c in left:
@@ -114,7 +179,7 @@ def extract(rl, batch: int, compile: bool, workers: int):
 def load_grid(names) -> np.ndarray:
     """(len(names), N_TOK * 2560) float16, aligned to `names`."""
     parts, idx = [], []
-    for d in sorted(grid_root().glob("c*")):
+    for d in sorted(grid_root().glob("[cr][0-9]*")):
         if (d / "meta.json").exists():
             idx.append(pd.read_parquet(d / "index.parquet").frame_name)
             parts.append(np.load(d / "L18_grid.npy", mmap_mode="r"))
@@ -266,7 +331,7 @@ def fit_fold(f, fold, t, F, prior, s_ego, G, gpos, Q, pr_ip, pr_im, pr_group, pr
     return out
 
 
-def fit(rl, models=("cinque", "lebowski")):
+def fit(rl, models=("cinque", "lebowski"), op_sub: str = "op_streams", out_name: str = "q9b"):
     from . import p5_openpilot
     from .reactivity_mc import criteria
     from .fusion_diag import RESULTS
@@ -277,7 +342,7 @@ def fit(rl, models=("cinque", "lebowski")):
     gpos = np.full(n, -1)
     gpos[obs_rows] = np.arange(len(obs_rows))
     Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device="cuda")
-    op = p5_openpilot.load(t, models)
+    op = p5_openpilot.load(t, models, sub=op_sub)
     fold = E.folds(t, pairs)
     F = torch.as_tensor(fut.reshape(n, -1), device="cuda")
     Ego = torch.as_tensor(E.ego_input(t, past), device="cuda")
@@ -313,7 +378,7 @@ def fit(rl, models=("cinque", "lebowski")):
     res["obs"].to_parquet(d / "obs_scored.parquet", index=False)
     nn.to_parquet(d / "null_scored.parquet", index=False)
     np.savez_compressed(d / "preds_obs.npz", rows=obs_rows, **{k: v[obs_rows] for k, v in preds.items()})
-    out = RESULTS / ("q9b" + (f"-fixed{FIXED_EPOCHS}" if FIXED_EPOCHS else ""))
+    out = RESULTS / (out_name + (f"-fixed{FIXED_EPOCHS}" if FIXED_EPOCHS else ""))
     out.mkdir(parents=True, exist_ok=True)
     crit.to_csv(out / "q9b_criteria.csv", index=False, float_format="%.4g")
     fl[fl.scope != "pooled"][["examinee", "scope", "n_reactive", "flip_rate", "flip_lo", "flip_hi", "tau_model"]].to_csv(
@@ -331,7 +396,10 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("profile", "extract", "fit"))
+    ap.add_argument("step", choices=("profile", "extract", "reuse-check", "fit"))
+    ap.add_argument("--op-sub", default="op_streams", help="fit: openpilot stream set (v1: op_streams_vis)")
+    ap.add_argument("--out", default="q9b", help="fit: results path under research/results/fusion-diagnostics")
+    ap.add_argument("--tag", default="", help="run-dir tag suffix (e.g. v1-pdm)")
     ap.add_argument("--n", type=int, default=64)
     ap.add_argument("--configs", default="eager:2,compile:8", help="profile: comma list of eager|compile:batch")
     ap.add_argument("--ref-chunk", default="", help="profile: stored P5 chunk whose row order to reuse (e.g. c010)")
@@ -345,15 +413,18 @@ def main():
     FIXED_EPOCHS = a.fixed_epochs
     total = torch.cuda.get_device_properties(0).total_memory
     torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
-    rl = RunLog("fusion_diag", f"q9b-{a.step}" + (f"-fixed{a.fixed_epochs}" if a.fixed_epochs else ""))
+    rl = RunLog("fusion_diag", f"q9b-{a.step}" + (f"-{a.tag}" if a.tag else "") +
+                (f"-fixed{a.fixed_epochs}" if a.fixed_epochs else ""))
     rl.event("start", args=vars(a))
     if a.step == "profile":
         profile(rl, a.n, [(c == "compile", int(b)) for c, b in (x.split(":") for x in a.configs.split(","))], a.workers,
                 a.ref_chunk)
     elif a.step == "extract":
         extract(rl, a.batch, a.compile, a.workers)
+    elif a.step == "reuse-check":
+        reuse_check(rl, a.n, a.batch, a.compile, a.workers)
     else:
-        fit(rl)
+        fit(rl, op_sub=a.op_sub, out_name=a.out)
     rl.event("end")
     rl.close()
 

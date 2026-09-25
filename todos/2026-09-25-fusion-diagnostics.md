@@ -404,6 +404,21 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   特征：Qwen `L18_last` / `L18_mean` 取各集合 `features/`（`p5_qwen`，P3(d″) 抽取器）；openpilot `temporal` 取 D0 链抽的 `op_streams_vis`（`op_{cinque,lebowski}_vis/temporal.npy`，与 v0 实验 1 同一抽取器，只是多存了 vision / hidden），
   这是与 v0 的唯一输入来源差别（v0 读 `op_{model}` 的 temporal-only 副本）。BA 集等 `reactivity-v1-qwen-ba.done` 出现后再跑。run dir `$DATA_DIR/runs/fusion_diag/q1-p5v1_{pdm,ba}/<time>`。
   「Q1 的 P5 行是否相对 v0 改变」按决策规则表原文读：合并翻转率 concat − best single 的 CI 是否跨零 / 偏负，行人合并 concat − best single 的 CI 是否 > 0。
+- 2026-09-25 23:32 CST [Q9b-v1]（第 3 阶段，写于 v1 上任何网格抽取、拟合之前）Q9b 在 P5 v1 上按 reactivity 偏离 7 的口径复跑：PDM-Lite 集（`carla_p5v1_pdm`）与 BehaviorAgent 集（`carla_p5v1_ba`）分开跑、分开报，**判据用 PDM-Lite 集**，BA 集是与 v0 同 expert 的复现。
+  (1) **抽取**：与 v0 的 Q9b 完全相同的配方（`make_fx(grid_hw=(4, 4))`，compile、batch 4，见 [Q9b] (7)），只抽各集合 obs 角色的行，落在 `processed/carla_p5v1_<e>/features_grid/`。
+  凡 12 张 JPEG 与某个 v0 obs 行是**同一批文件**（目录解析 symlink 后相同，与 `p5_qwen` 的复用规则同一个 `_file_keys`）的 v1 行，直接拷 v0 的网格行（float16 原样）到 `features_grid/r000`，不重算；
+  这在 BA 集上是 v0 路线的那部分世界，PDM 集上预期没有。复用检查：从 r000 里均匀取 64 行重算，比网格与拷来的 v0 行（配方相同、batch 配对不同，预期与 [Q9b] (7) 里 batch 配对噪声同级：rel L2 ~1e-2，cos ≥ 0.998），
+  再比这 64 行的 pooled `L18_mean` / `L18_last` 与该集合已存特征。新抽的 chunk 照 v0 一样逐 chunk 比已存 pooled 特征（v1 的已存特征是 eager b2，与 v0 同，预期 rel ~8e-3）。
+  (2) **head、loss、对照、折、考试**：与 [Q9b] (2)–(6) 一字不改（AttnPool，48 token；配对 arm 的 null 对承担 μ；hard-example 对照；pooled `L18_last` 的线性配对比较 arm；`E.folds` 路线 5 折；`p5_exam.exam` 与 `reactivity_mc.criteria` 原样），
+  主读数 = Cinque、seed 0、配对 arm、早停（与 v0 相同）。prior 的 openpilot `temporal` 取 D0 链抽的 `op_streams_vis`（`op_{cinque,lebowski}_vis`），与 Q1-v1、M-C v1 同一来源（v0 读的是 temporal-only 副本，数值相同）。
+  PDM 集用 `p5v1-index` 的完整录制窗口。判据同登记：行人合并翻转 ≥ 20% 且路线 bootstrap CI 下端 > 样本外 null false-flip，且 null ≤ 7%（cut-in 不掉照报）。
+  (3) **固定 40 epoch 敏感性**：与 v0 的事后敏感性（[Q9b] 19:45）完全同一设置（`--fixed-epochs 40`，seed 0–2），在 v1 上照跑、照标「事后、只描述、不改判定」。
+  (4) 「Q9 的决策规则行是否相对 v0 改变」：只按 PDM 集主读数判；Q9a-v1 与 Q9b-v1 都不过 → 仍在「Q9 仍为 0」；Q9b-v1 过 → 改到「是读出问题」。BA 集与 PDM 集不一致时照实写，不改判。
+  资源：GPU 0 与 GPU 3 各一个进程（≤ 30 GB，实际 compile b4 约 7.5 GB），合计 ≤ 16 核；run dir `$DATA_DIR/runs/fusion_diag/q9b-{extract,reuse-check,fit}-v1-<e>[-fixed40]/`；小表 `research/results/fusion-diagnostics/q9b-v1/<e>/`。
+- 2026-09-25 23:32 CST [Q9a-v1]（写于读 v1 M-C 的任何数字之前）Q9a = reactivity 的 M-C 在 v1 上的「配对差分，只 Qwen」arm（`M-C pair qwen [<model>]`）与它的 hard-example 重加权对照（`M-C hard [<model>]`），
+  直接读 `runs/reactivity/mc-carla_p5v1_<e>/` 的 `criteria.csv` / `flip_rates.csv`，不重拟合（那两次 run 就是 reactivity 偏离 7 的同一口径：预登记 λ 网格、role = train 行上的 μ 项）。
+  注意：M-C 的 hard-example 对照是双流（Qwen `L18_last` ⊕ openpilot `temporal`），不是只 Qwen；登记里「Q9a 的 hard-example 重加权对照」就是指 M-C 的这一格，照读，读数表里写明双流。
+  主读数 Cinque，PDM 集为判据，BA 集复现；判据同 M-C（行人 ≥ 20% 且 CI 下端 > null false-flip，null ≤ 7%）。
 
 ## 结果
 
