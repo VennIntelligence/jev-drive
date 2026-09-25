@@ -109,6 +109,9 @@ def parse_args(argv=None):
     p.add_argument("--stall-s", type=float, default=240.0, help="no tick progress for this long = hung")
     p.add_argument("--route-timeout-s", type=float, default=5400.0)
     p.add_argument("--fresh", action="store_true", help="ignore existing results and redo everything")
+    p.add_argument("--no-reap", action="store_true",
+                   help="do not kill servers/routes recorded in --out at start. Required for every runner that joins an "
+                        "--out another live runner is using: reaping cannot tell its servers from a dead runner's.")
     # passed through to b2d_route.py
     p.add_argument("--agent", default="", help="external leaderboard agent .py; keeps its own sensors "
                    "and control logic instead of b2d_agent.py's cost-measurement stub")
@@ -338,7 +341,8 @@ class Runner(object):
             json.dumps(manifest, indent=2))
         self.available_maps = None
         self.no_map = []
-        self.reap_orphans()
+        if not self.a.no_reap:
+            self.reap_orphans()
         self.claimed = set()
         self.stop_flag = False
         self.worker_errors = []

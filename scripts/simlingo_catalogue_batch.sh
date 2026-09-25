@@ -18,9 +18,12 @@ mkdir -p "$logs"
 if [[ $stage == main ]]; then plan=("official 0 140 2" "simlingo 0 160 1" "simlingo 1 180 2" "official 1 200 1")
 else plan=("official 0 220 1" "simlingo 0 230 1" "simlingo 1 240 1" "official 1 250 1"); fi
 pids=()
-for p in "${plan[@]}"; do
-  set -- $p
-  scripts/simlingo_catalogue_run.sh "$1" "$seed" "$2" "$3" "$4" --stagger-s 30 \
+for i in "${!plan[@]}"; do
+  set -- ${plan[$i]}
+  # Only each arm's first runner in the main stage may reap orphans from the out dir; any later runner would kill
+  # its live sibling's servers and routes (seen on the first start: one attempt per arm lost, retried).
+  reap=--no-reap; [[ $stage == main ]] && (( i < 2 )) && reap=
+  scripts/simlingo_catalogue_run.sh "$1" "$seed" "$2" "$3" "$4" --stagger-s 30 $reap \
     > "$logs/$stage-$1-g$2-seed$seed.log" 2>&1 &
   pids+=($!)
   sleep 90  # stagger the four runners' first server starts
