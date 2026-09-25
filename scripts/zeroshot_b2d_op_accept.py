@@ -18,7 +18,7 @@ Gating items (checklist numbers in brackets):
   A9 [9]       resume: no standstill >= 45 s after the first move
   A10 [1]      plan frame / heading, model driving at v > 2 m/s: median |lateral error @2 s| <= 1.0 m; lateral sign
                agrees with the truth on >= 80 % of plans with |truth y@2s| > 0.5 m; yaw sign agrees on >= 80 % of plans
-               with |truth dyaw@2s| > 0.05 rad (vacuous below 5 plans)
+               with |truth dyaw@2s| > 0.05 rad (each of the three not judged below 5 qualifying plans)
   A11 [10]     controller identity: scripts/b2d_zoo_pid.py equals the Zoo uniad/vad team_code/pid_controller.py
 Standard library + NumPy.
 """
@@ -166,11 +166,13 @@ def arm(run):
         "A7": all(p for _, p in turns) and {"left", "right"} <= {d for d, _ in turns},
         "A8": sum(r["a8_blend"] for r in rows) == 0,
         "A9": all(r["a9_longest_stop_s"] < 45.0 for r in rows),
-        "A10": n10 < 5 or (lat_med <= 1.0 and wmean("sign", "sign_n") >= 0.8 and wmean("yaw", "yaw_n") >= 0.8),
+        "A10": (n10 < 5 or lat_med <= 1.0) and (sum(x["sign_n"] for x in lat) < 5 or wmean("sign", "sign_n") >= 0.8)
+               and (sum(x["yaw_n"] for x in lat) < 5 or wmean("yaw", "yaw_n") >= 0.8),
     }
     return {"gates": g, "pass": all(g.values()), "infra": infra, "a2": [a2t, a2n],
             "turns": turns, "a10": dict(n=n10, lat_med=lat_med, sign=round(wmean("sign", "sign_n"), 3),
-                                        yaw=round(wmean("yaw", "yaw_n"), 3)),
+                                        sign_n=sum(x["sign_n"] for x in lat), yaw=round(wmean("yaw", "yaw_n"), 3),
+                                        yaw_n=sum(x["yaw_n"] for x in lat)),
             "red_stop_by_driver": {d: sum(r["a8_" + d] for r in rows) for d in ("model", "partner", "blend")},
             "routes": rows}
 

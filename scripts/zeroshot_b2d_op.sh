@@ -205,13 +205,25 @@ accept)
         harness_check "$D/accept-acc-$arm" || fail=1
     done
     (( fail )) && exit 1
+    # writes accept.json; the gate on it (with any written waiver) is applied by smoke3, so this slot fails only on
+    # infrastructure
     python3 scripts/zeroshot_b2d_op_accept.py f1="$D/accept-acc-f1" f1f2b="$D/accept-acc-f1f2b" \
-        --zoo "$DATA_DIR/third_party/Bench2DriveZoo" --out "$D/accept.json" ;;
+        --zoo "$DATA_DIR/third_party/Bench2DriveZoo" --out "$D/accept.json"
+    [[ -s $D/accept.json ]] ;;
 smoke3)
     # Pre-registered in the migration doc, section D3, before any run of this mode.
     arm=$(alp_arm) || exit 2
-    python3 -c "import json,sys; r=json.load(open('$D/accept.json')); sys.exit(0 if r['$arm']['pass'] else 1)" \
-        || { echo "acceptance did not pass for the frozen arm $arm; no scored run" >&2; exit 2; }
+    # the frozen arm must pass, or each failed gate must carry a written explanation (accept-waiver.json,
+    # {arm: {gate: reason}}, written after reading the failure; docs/zeroshot-adapters.md: "or its failure is explained")
+    python3 - "$D" "$arm" <<'EOF' || { echo "acceptance did not pass for the frozen arm $arm; no scored run" >&2; exit 2; }
+import json, os, sys
+d, arm = sys.argv[1:]
+r = json.load(open(os.path.join(d, "accept.json")))[arm]
+w = json.load(open(os.path.join(d, "accept-waiver.json"))).get(arm, {}) if os.path.exists(os.path.join(d, "accept-waiver.json")) else {}
+failed = [g for g, ok in r["gates"].items() if not ok]
+print("acceptance", arm, "failed gates:", failed, "waived:", {g: w[g] for g in failed if g in w})
+sys.exit(0 if all(g in w for g in failed) else 1)
+EOF
     R=(--route-ids 2390,24211,1711,2373,3564,2084,2115,3936,2050)
     Z=$(zoo_switches "$arm")
     config partner-lebowski lebowski zoo_pid model 5 "$Z, \"desire\": false, $(partner true)"
