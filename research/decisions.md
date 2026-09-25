@@ -2872,6 +2872,8 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 
 **怎么推翻或推进。** TCP 的 L3 需要跑满 16 条路线 × 2 seed 才能收窄 CI；下一版 L1 加入上述两类工况后，再判断 P2 这类平顺化设计是否值得在闭环里继续做。
 
+**后续（2026-09-25，L1 v3，[scorecard](../todos/2026-09-23-tfv6-controller/controller-scorecard.md) 末节）。** L1 补上了排队蠕行（crawl）、模型式 plan 噪声和 2 Hz / 1 Hz 低频 plan 三类工况，纵向迭代到 P5：P2 加低速刹车（修 TFv6 蠕行撞车），P3 加 PCHIP、前馈低通与按实测 plan 周期自适应的过期阈值，P4 把前馈裁到车辆能力范围，P5 在低频 plan 停在终点前时按位置逼近终点。P5 在名义条件下仍显著优于 C/D（ramp primary −0.52 [−0.68, −0.38]，额外 jerk −3.7 m/s³），并且是唯一在 1 Hz 与 2 Hz plan 下都能 14/14 完成的控制器（C/D 在 1 Hz 下 0/14）。短板：2 s 短 plan 与 2 Hz 下精度不如 C/D，模型噪声下完成 10/14。P5 还没有跑闭环，作为 production 默认之前需要先过 TFv6/TCP 闭环。
+
 ## 42. 行人信息在 openpilot 的 vision 层就没有；配对差分监督在 cut-in 上有用而 hard-example 重加权没用，但救不回行人（**待定**，P5 v0，25 条路线、一个 expert）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
