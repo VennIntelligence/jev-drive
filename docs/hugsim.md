@@ -319,4 +319,24 @@ For Alpamayo 1.5 and openpilot the adapter has to: take the 6 (or front 3) 800x4
 keep its own history at the model's rate; map `command` (0 right, 1 left, 2 straight) to the model's navigation
 input; and send x-right/y-forward waypoints at 0.5 s spacing relative to the front camera, not to the rear axle.
 
-Last verified: 2026-09-24
+## Zero-shot agents (Alpamayo 1.5, openpilot)
+
+Code: `jevdrive/hugsim_zs.py` (geometry), `scripts/hugsim/zs_agent.py` (per-scenario agent process),
+`scripts/hugsim_zs_server.py` (resident model server), `scripts/hugsim/zs_run.py` (batch runner over two private HUGSIM
+trees, `official` and `fixed` = + PR #57), `scripts/hugsim/zs_exam.sh` (phases). Pre-registration, checklist and results:
+[todos/2026-09-25-hugsim-exam/README.md](../todos/2026-09-25-hugsim-exam/README.md).
+
+- **Frames at 4 Hz.** openpilot gets one rendered frame per 0.2 s context step, so its clock runs 1.25x fast and plan
+  time tau is read as real time 1.25 tau (offline on comma1M: +25-38 % lateral error at 2 s vs native 20 Hz; holding each
+  4 Hz frame for five 20 Hz steps instead costs +500-600 % and is unusable). Alpamayo's four 10 Hz slots take the
+  nearest 4 Hz frame.
+- **Plan post-processing** (all models): `forward_only` zeroes plan segments that point backwards (a "stop" that
+  integrates to a small reverse track becomes a zero-length plan); `straight_stop` sends a plan whose 3 s end point is
+  within 1 m of the ego straight ahead. iLQR derives reference headings from consecutive waypoints, so the millimetre
+  lateral noise of a stop plan otherwise becomes headings anywhere in +-180 deg and the tracker reverses and steers a
+  standing car (measured: -0.91 m/s and 0.88 rad steer on a stop plan).
+- **Shadow mode** (`engage_s` past the episode end): the privileged route follower drives, the model only plans; used
+  to check plan frame and sign against the driven future.
+- Scene zips of the later release are prefixed with `<dataset>/`; `zs_run.py` unpacks both layouts.
+
+Last verified: 2026-09-25
