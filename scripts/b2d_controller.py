@@ -148,7 +148,8 @@ class Controller:
                  accel_kp=1., accel_ki=.3, accel_integral_limit=1.5,
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
                  throttle_map=None, brake_map=None, low_speed_brake_mps=0.,
-                 plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5):
+                 plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5,
+                 feedforward_limit=None):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -182,6 +183,12 @@ class Controller:
         self.feedforward_tau_s, self.stale_factor = float(feedforward_tau_s), float(stale_factor)
         if not np.isfinite([self.feedforward_tau_s, self.stale_factor]).all() or self.feedforward_tau_s < 0 or self.stale_factor < 1:
             raise ValueError('feedforward_tau_s must be >= 0 and stale_factor >= 1')
+        # Plan feedforward beyond what the vehicle can do (e.g. a lagging car handed a catch-up jump
+        # in the first plan segment) carries no information; clip it to (low, high) m/s^2.
+        self.feedforward_limit = None if feedforward_limit is None else tuple(map(float, feedforward_limit))
+        if self.feedforward_limit is not None and not (len(self.feedforward_limit) == 2
+                                                       and self.feedforward_limit[0] < 0 < self.feedforward_limit[1]):
+            raise ValueError('feedforward_limit must be (negative, positive)')
         self.low_speed_brake_mps = float(low_speed_brake_mps)
         if not math.isfinite(self.low_speed_brake_mps) or self.low_speed_brake_mps < 0:
             raise ValueError('low_speed_brake_mps must be finite and nonnegative')
@@ -440,6 +447,8 @@ class Controller:
     def _accel_actuation(self, age, desired, speed, elapsed):
         early, late = self._speed_at(age, 0., .5), self._speed_at(age, .5, 1.)
         feedforward = 0. if early is None or late is None else (late - early) / .5
+        if self.feedforward_limit is not None:
+            feedforward = float(np.clip(feedforward, *self.feedforward_limit))
         if self.feedforward_tau_s > 0.:
             if self._feedforward is not None:
                 feedforward = self._feedforward + (feedforward - self._feedforward) * min(1., elapsed / self.feedforward_tau_s)

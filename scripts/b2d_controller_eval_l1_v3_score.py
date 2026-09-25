@@ -14,7 +14,7 @@ import numpy as np
 from b2d_controller_eval_l1_v2_score import METRICS, contrast, score_batch
 
 INTERFACES = ('short_2s', 'sparse_5s', 'stop_jitter', 'model_noise', 'stale_5hz', 'stale_2hz', 'stale_1hz', 'pose_plan')
-PAIRS = [('P3', 'P2'), ('P2', 'D'), ('P3', 'D'), ('P2', 'C'), ('P3', 'C'), ('D', 'C'), ('C', 'B'), ('P2', 'B'), ('P3', 'B')]
+PAIRS = [('P4', 'P3'), ('P4', 'P2'), ('P4', 'D'), ('P4', 'C'), ('P3', 'P2'), ('P2', 'D'), ('P3', 'D'), ('P2', 'C'), ('P3', 'C'), ('D', 'C'), ('C', 'B'), ('P2', 'B'), ('P3', 'B')]
 
 
 def gather(roots, kind, refs, cruises, label):
@@ -51,12 +51,12 @@ def main():
     V2, refs = a.v2, a.v2 / 'refs'
     summary, cases = {'heldout': {}, 'interface': {}, 'dev': {}}, []
     for kind in ('ramp', 'profile', 'crawl'):
-        rows = gather([V2 / f'l1-{kind}', V2 / f'l1-P-{kind}', V2 / f'l1-v3-{kind}'], kind, refs, cruises, kind)
+        rows = gather([V2 / f'l1-{kind}', V2 / f'l1-P-{kind}'] + sorted(V2.glob(f'l1-v*-{kind}')), kind, refs, cruises, kind)
         cases += rows
         summary['heldout'][kind] = dict(table=table(rows), contrasts=pairs(rows))
     nominal = {(r['route'], r['arm']): r['primary'] for r in cases if r['reference'] == 'profile' and r['seed'] == 'p01'}
     for mode in INTERFACES:
-        rows = gather([V2 / f'l1-interface-{mode}', V2 / f'l1-P-interface-{mode}', V2 / f'l1-v3-if-{mode}'],
+        rows = gather([V2 / f'l1-interface-{mode}', V2 / f'l1-P-interface-{mode}'] + sorted(V2.glob(f'l1-v*-if-{mode}')),
                       'profile', refs, cruises, f'profile/{mode}')
         cases += rows
         tab = table(rows)
@@ -68,8 +68,8 @@ def main():
     dev_refs = V2 / 'dev' / 'refs'
     for name in ('ramp', 'profile', 'crawl') + ('short_2s', 'model_noise', 'stale_2hz', 'stale_1hz'):
         kind = name if name in ('ramp', 'profile', 'crawl') else 'profile'
-        root = V2 / 'dev' / (f'v3-{name}' if kind == name else f'v3-if-{name}')
-        rows = gather([root], kind, dev_refs, cruises, f'dev/{name}')
+        pattern = f'v*-{name}' if kind == name else f'v*-if-{name}'
+        rows = gather(sorted((V2 / 'dev').glob(pattern)), kind, dev_refs, cruises, f'dev/{name}')
         if rows:
             summary['dev'][name] = dict(table=table(rows), contrasts=pairs(rows))
     a.out.mkdir(parents=True, exist_ok=True)
