@@ -38,16 +38,16 @@ def schedule(variant: str, context_rate: bool) -> list[int]:
 
 
 def render(name):
-    """{variant: (n_frames, 2, 6, 128, 256)} with the exam's renderer. A history frame before the sequence's first
-    indexed frame (one rater frame starts its sequence, wod-e2e.md) is replaced by that first frame, i.e. held."""
+    """{variant: (n_frames, 2, 6, 128, 256)} with the exam's renderer. A history frame missing from the slim shards
+    (the exam's runner skips those too) is replaced by the latest indexed frame before it, i.e. held; one before the
+    sequence's first indexed frame by that first frame."""
     seq, f = name.rsplit("-", 1)
-    spans = R._ctx["spans"]
-    first = min(int(n.rsplit("-", 1)[1]) for n in spans if n.startswith(seq + "-"))
+    have = np.array(sorted(int(n.rsplit("-", 1)[1]) for n in R._ctx["spans"] if n.startswith(seq + "-")))
     out = {}
     for v in VARIANTS:
-        names = [f"{seq}-{max(first, int(f) + int(round(t * 10))):03d}" for t in frame_times(v)]
-        assert all(n in spans for n in names), f"{name}: history frame missing inside the sequence"
-        out[v] = names
+        want = int(f) + np.rint(frame_times(v) * 10).astype(int)
+        got = have[np.clip(np.searchsorted(have, want, "right") - 1, 0, None)]
+        out[v] = [f"{seq}-{k:03d}" for k in got]
     allnames = sorted({n for ns in out.values() for n in ns})
     fr = _render_names(allnames)
     at = {n: i for i, n in enumerate(allnames)}
