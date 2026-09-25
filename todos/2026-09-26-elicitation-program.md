@@ -152,7 +152,7 @@ E6（可选）──────────────────────
   两个模型分别判，主判 Cinque。fold head 的重算在 CPU 上做（GPU 都有人），与已存预测的差按 fp32 噪声级核对，λ 必须逐 fold 相同。
   (7) 2026-09-26 00:31 [E1]（WOD 的任何数字出来之前）fold head 在 CPU 上重算只复现到 1.3 cm（fold 0 Cinque，λ = 0.1 在网格下沿，3072 维的解病态，CPU 与 GPU 的 fp32 累加顺序差被放大），
   没过 (1) 的 ≤ 1e-3 m 核对。病态方向正是域外特征可能投影上去的方向，所以不放宽门槛，改在 GPU 上重算（原 run 是 GPU fit，同型号卡），占 GPU 1 几分钟、< 5 GB，gpu-plan 记一行；其余读数仍在 CPU。
-  (8) 2026-09-26 00:40 [E1]（NAVSIM 的任何数字之前）NAVSIM 列补充口径：navhard two-stage 也要 Qwen 特征（5 912 token，同一抽取器，接在 navtest 后面，GPU 1，约 1 h）；
+  (8) 2026-09-26 00:37 [E1]（NAVSIM 的任何数字之前）NAVSIM 列补充口径：navhard two-stage 也要 Qwen 特征（5 912 token，同一抽取器，接在 navtest 后面，GPU 1，约 1 h）；
   激活率里 prior 只有 0.5 s 间隔的位姿，v₂ 所需的 1.75 s 点取 1.5 s 与 2.0 s 的线性插值；NAVSIM 的「直行帧」按 `waymo.subsets` 的 straight_yaw 同一套阈值在 2 Hz 位姿上算
   （最近 0.5 s 的 yaw rate < 1°/s、最近 1 s 位移 ≥ 1 m、logged 未来 3 s 弦方位 ≤ 5° 且弦长 ≥ 3 m）；行人 / cyclist 组 = E3 的 `corridor_objects`（logged 路径延长到 30 m、±1.5 m）里有 pedestrian 或 bicycle 类 GT agent，不要求接近速度。
   打分名 `e1_<prior>_<model>_plus_mc`，配对 Δ 对 `heads_<prior>_<model>_temporal`（G3 的已存打分），token bootstrap。
