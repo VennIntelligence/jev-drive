@@ -59,6 +59,7 @@ def check() -> pd.DataFrame:
 def _summ(df: pd.DataFrame, keys: list, hw_col: str = "halfwidth") -> pd.DataFrame:
     """One row per key: the three seeds' values, mean, range, seed 0's CI half-width, range < half-width."""
     out = []
+    df = df.drop_duplicates(keys + ["seed"])          # a paired row can be listed once per model loop
     for k, g in df.groupby(keys, sort=False):
         a = g.set_index("seed")["value"]
         v = a[[x for x in a.index if x in (0, 1, 2)]]
