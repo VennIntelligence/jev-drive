@@ -500,6 +500,56 @@ def index(workers: int = 4):
     return t, obs, null, pairs
 
 
+TAU_EXP = 0.5            # reactive: |d_expert| above this (P5: max(null p95, 0.5 m/s); null d is 0 by construction)
+
+
+def report(out: Path):
+    """Small result tables for the repo: per-world validity and validation, label validity per family."""
+    import pandas as pd
+    out.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for mf in sorted(root("scenes").glob("*/meta.json")):
+        m = json.loads(mf.read_text())
+        v, tr = m.get("validation") or {}, np.array(m["t_render"])
+        for w, x in m["worlds"].items():
+            r = {"key": m["key"], "dataset": m["dataset"], "world": w, "rendered": bool(x.get("rendered")),
+                 "reason": x.get("reason", "ok" if w == "minus" else None), "side": x.get("side"),
+                 "road_mean": x.get("road_mean"), "road_min": x.get("road_min"), "obst_max": x.get("obst_max"),
+                 "y_road_minus_env": x.get("y_minus_env"), "t_c": m["t_c"], "t_conflict": x.get("t_conflict"),
+                 "det_max": v.get("det_max"), "env_max": v.get("env_max"), **m.get("timing", {})}
+            if x.get("rendered") and w != "minus":
+                pre = tr < (x.get("t_conflict") or np.inf) - 1e-6
+                vis = np.array(x["vis_px"]).sum(1)
+                r.update(frames_pre=int(pre.sum()), vis_frames_pre=int((vis[pre] >= VIS_PX).sum()),
+                         changed_px=int(vis[pre].sum()), out_any=int(np.array(x["out_px"]).sum(1)[pre].sum()),
+                         out_thr=int(np.array(x["out_px_thr"]).sum(1)[pre].sum()))
+                o = (v.get("occ") or {}).get(w)
+                if o:
+                    r.update(occ=o[0], occ_chg=o[1], clear=o[2], clear_chg=o[3])
+            rows.append(r)
+    worlds = pd.DataFrame(rows)
+    worlds.to_csv(out / "worlds.csv", index=False)
+    obs, null = pd.read_parquet(root() / "obs.parquet"), pd.read_parquet(root() / "null.parquet")
+    obs["reactive"] = obs.d_expert.abs() > TAU_EXP
+    obs["dstop"] = obs.stop_plus.astype(int) - obs.stop_minus.astype(int)
+    val = []
+    for fam, g in [(f, obs[obs.family == f]) for f in PLUS] + [("pooled", obs)]:
+        rs = g[g.reactive]
+        val.append({"family": fam, "scenes": g.base_id.nunique(), "obs_frames": len(g), "reactive_frames": len(rs),
+                    "reactive_share": round(len(rs) / max(len(g), 1), 3),
+                    "scenes_with_reactive": rs.base_id.nunique(),
+                    "d_expert_median_reactive": round(float(rs.d_expert.median()), 2) if len(rs) else None,
+                    "d_expert_p10_reactive": round(float(rs.d_expert.quantile(0.1)), 2) if len(rs) else None,
+                    "dstop_frames": int((g.dstop != 0).sum()), "ttc_median_reactive":
+                    round(float(rs.ttc.median()), 2) if len(rs) else None})
+    val.append({"family": "null", "scenes": null.base_id.nunique(), "obs_frames": len(null),
+                "reactive_frames": int((null.d_expert.abs() > TAU_EXP).sum()),
+                "rule_conflicts_on_null": int(null.null_conflict.sum())})
+    val = pd.DataFrame(val)
+    val.to_csv(out / "label_validity.csv", index=False)
+    return worlds, val
+
+
 FAMILY_LABEL = {"static": "stopped car", "cutin": "cut-in", "oncoming": "oncoming", "null": "null (keeps lane)"}
 
 
@@ -554,7 +604,7 @@ def fig(specs: list[str], probe: str | None, out: Path, name: str = "i3-hugsim-p
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("select", "index", "fig"))
+    ap.add_argument("step", choices=("select", "index", "fig", "report"))
     ap.add_argument("--keys", nargs="*")
     ap.add_argument("--specs", nargs="*")
     ap.add_argument("--probe")
@@ -564,6 +614,12 @@ def main():
         t = select()
         print(t.to_string())
         print(t.groupby("dataset").t_c.apply(lambda s: f"{s.notna().sum()}/{len(s)}"))
+    elif a.step == "report":
+        import pandas as pd
+        w, v = report(Path(a.out))
+        pd.set_option("display.width", 250)
+        print(v.to_string())
+        print(w.groupby(["world", "reason"]).size())
     elif a.step == "fig":
         print(fig(a.specs, a.probe, Path(a.out)))
     else:
