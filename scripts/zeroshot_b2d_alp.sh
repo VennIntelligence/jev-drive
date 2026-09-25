@@ -7,26 +7,46 @@
 #   scripts/zeroshot_b2d_alp.sh smoke <gpu>   5 pre-registered routes, 1 worker. Exits non-zero on INFRASTRUCTURE
 #                                             failure only: runner error, server crash/restart, route never finished,
 #                                             harness error in a route, policy server gone. Driving outcome never.
-#   scripts/zeroshot_b2d_alp.sh full <gpu>    220 routes, 4 workers, resumable (rerun skips done/<id>.json).
-#                                             Non-zero if the policy server dies, there is no summary, or more than
-#                                             15 routes never finished (11 is the known CARLA-crash baseline).
+#   scripts/zeroshot_b2d_alp.sh smoke2 <gpu>  re-smoke after the stall diagnosis (todos/2026-09-24-zeroshot-exam/
+#                                             alpamayo-closed-loop-diagnosis.md, section 6): 11 routes x 2 arms in parallel
+#                                             on one server, f1 (forward-only plan, AD-MLP hold) and f1f2b (+ per-tick
+#                                             control_pid); then scripts/zeroshot_b2d_alp_smoke2_check.py writes
+#                                             smoke2-alpamayo-choice.json. Non-zero on infrastructure failure or no arm passing.
+#   scripts/zeroshot_b2d_alp.sh full <gpu>    220 routes, 4 workers, resumable (rerun skips done/<id>.json), with the arm
+#                                             chosen by smoke2. Non-zero if the policy server dies, there is no summary, or
+#                                             more than 15 routes never finished (11 is the known CARLA-crash baseline).
+#                                             The first full run (no fixes, full220-alpamayo-zoopid/) is discarded.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
 mode=$1 gpu=$2
 D=$DATA_DIR/runs/zeroshot-exam/b2d
+choice=$D/smoke2-alpamayo-choice.json
+fixes=""                                      # extra agent-config keys
 case $mode in
     smoke) out=$D/smoke-alpamayo-zoopid; workers=1; sidx=400; routes=(--route-ids 2390,24211,1711,2373,3564) ;;
-    full)  out=$D/full220-alpamayo-zoopid; workers=4; sidx=410; routes=(--towns all) ;;
-    *) echo "mode must be smoke or full" >&2; exit 2 ;;
+    smoke2) rm -f "$choice"; routes=(--route-ids 2390,24211,1711,2373,3564,1833,1852,1956,2668,4183,11381) ;;
+    full)
+        arm=$(python3 -c "import json; print(json.load(open('$choice'))['choice'] or '')" 2>/dev/null)
+        case $arm in
+            f1) fixes=', "plan_forward_only": true, "zoo_cadence": "plan"' ;;
+            f1f2b) fixes=', "plan_forward_only": true, "zoo_cadence": "tick"' ;;
+            *) echo "no smoke2 choice in $choice; refusing to start the full run" >&2; exit 2 ;;
+        esac
+        out=$D/full220-alpamayo-zoopid-$arm; workers=4; sidx=440; routes=(--towns all) ;;
+    *) echo "mode must be smoke, smoke2 or full" >&2; exit 2 ;;
 esac
-sock=$D/alpamayo-$mode-zoopid.sock ready=$D/alpamayo-$mode-zoopid.ready cfg=$D/agent-alpamayo-$mode-zoopid.json
+sock=$D/alpamayo-$mode-zoopid.sock ready=$D/alpamayo-$mode-zoopid.ready
 rm -f "$sock" "$ready"
-cat > "$cfg" <<EOF
+agent_cfg() {   # agent_cfg <file> <extra keys>
+    cat > "$1" <<EOF
 {"model": "alpamayo", "socket": "$sock", "plan_every": 5, "controller": "zoo_pid", "controller_preset": "carla",
  "controller_config": "$(pwd)/todos/2026-09-22-b2d-controller/results/controller_config.json",
- "seed": 0, "dump_every": $([[ $mode == smoke ]] && echo 1 || echo 0)}
+ "seed": 0, "dump_every": $([[ $mode == smoke ]] && echo 1 || echo 0)$2}
 EOF
+}
+cfg=$D/agent-alpamayo-$mode-zoopid.json
+agent_cfg "$cfg" "$fixes"
 
 HF_ENDPOINT=https://hf-mirror.com CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 \
     "$DATA_DIR/third_party/alpamayo1.5/.venv/bin/python" scripts/zeroshot_policy_server.py alpamayo \
@@ -39,9 +59,28 @@ until [[ -e $ready ]]; do
 done
 echo "$(date +%T) policy server ready (pid $server) on GPU $gpu"
 
+if [[ $mode == smoke2 ]]; then
+    # Two arms at once on the one server (it keeps per-connection state); each has its own --out and server indices.
+    pids=()
+    for arm in f1 f1f2b; do
+        if [[ $arm == f1 ]]; then keys=', "plan_forward_only": true, "zoo_cadence": "plan"' idx=420
+        else keys=', "plan_forward_only": true, "zoo_cadence": "tick"' idx=430; fi
+        agent_cfg "$D/agent-alpamayo-smoke2-$arm.json" "$keys"
+        "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py "${routes[@]}" --workers 2 --server-index $idx \
+            --gpu-rank "$gpu" --agent scripts/b2d_zeroshot_agent.py --agent-config "$D/agent-alpamayo-smoke2-$arm.json" \
+            --decimate 2 --no-spectator --no-reap --max-attempts 2 --out "$D/smoke2-alpamayo-$arm" &
+        pids+=($!)
+    done
+    for p in "${pids[@]}"; do wait "$p" || echo "runner $p exit $?"; done
+    kill -0 $server 2>/dev/null || { echo "policy server died during the run"; exit 3; }
+    "$DATA_DIR/envs/carla/bin/python" scripts/zeroshot_b2d_alp_smoke2_check.py f1="$D/smoke2-alpamayo-f1" \
+        f1f2b="$D/smoke2-alpamayo-f1f2b" --out "$choice"
+    exit $?
+fi
+
 "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py "${routes[@]}" --workers $workers --server-index $sidx \
     --gpu-rank "$gpu" --agent scripts/b2d_zeroshot_agent.py \
-    --agent-config "$cfg" --decimate 2 --no-spectator --max-attempts 2 --out "$out"
+    --agent-config "$cfg" --decimate 2 --no-spectator --no-reap --max-attempts 2 --out "$out"
 rc=$?
 kill -0 $server 2>/dev/null || { echo "policy server died during the run"; exit 3; }
 if [[ $mode == full ]]; then

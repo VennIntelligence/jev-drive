@@ -38,6 +38,10 @@ the pre-registered smoke:
   "junction_handover_m"  0 | d: within d m before a LEFT / RIGHT route command and through it, steering comes from the
                     route oracle while throttle / brake stay the model's controller (a driver steering through the
                     turn with ACC on)
+  "plan_forward_only"  false | true: controller zoo_pid reads the plan with its backward segments removed (speed >= 0);
+                    see b2d_zoo_pid_wrap.py and todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md
+  "zoo_cadence"     "plan" (control_pid once per plan, held: AD-MLP) | "tick": every tick on the age-shifted held plan
+                    (UniAD / VAD)
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -143,7 +147,8 @@ class ZeroShotAgent(AutonomousAgent):
         self.zoo = self.zoo_control = self.zoo_target = None
         if self.cfg.get("controller", "fixed") == "zoo_pid":
             from b2d_zoo_pid_wrap import ZooPID
-            self.zoo = ZooPID()
+            self.zoo = ZooPID(forward_only=self.cfg.get("plan_forward_only", False),
+                              cadence=self.cfg.get("zoo_cadence", "plan"))
         else:
             assert self.cfg.get("controller", "fixed") in ("fixed", "native"), self.cfg
         self.native = self.cfg.get("controller", "fixed") == "native"
@@ -251,6 +256,11 @@ class ZeroShotAgent(AutonomousAgent):
                 plan_ms += self._plan(speed)
         if self.guide and self.poses and (self.tick - 1) % 4 == 0:   # route oracle, 5 Hz, as b2d_agent
             self.controller.update(self.oracle.trajectory(self.poses[-1][1], self.poses[-1][2]), now)
+        zoo_tick = None
+        if self.zoo is not None and self.zoo.cadence == "tick" and self.zoo.held is not None and self.poses:
+            p, t = self.zoo.held_now(now, (self.poses[-1][1], self.poses[-1][2]))
+            z_steer, z_throttle, z_brake, zoo_tick = self.zoo.control(p, t, speed, self.zoo_target)
+            self.zoo_control = (z_throttle, z_steer, z_brake)
         o_throttle, o_steer, o_brake = self.controller.step(now, speed, -world_gyro)
         if self.zoo is not None:
             throttle, steer, brake = self.zoo_control or (0.0, 0.0, 1.0)
@@ -281,6 +291,8 @@ class ZeroShotAgent(AutonomousAgent):
         rec = {"frame": frame, "t": now, "v": speed, "throttle": float(throttle), "steer": float(steer),
                "brake": float(brake), "reason": reason, "agent_ms": round(tick_ms, 2),
                "plan_ms": round(plan_ms, 1)}
+        if zoo_tick is not None:
+            rec["zoo_desired"] = round(zoo_tick["desired_speed"], 3)
         rec.update(self._truth())
         self.tick_log.write(json.dumps(rec) + "\n")
         return self.control
@@ -328,6 +340,14 @@ class ZeroShotAgent(AutonomousAgent):
             return 0.0, steer, 1.0, "native_stop"
         pedal = a / (self.NATIVE_A_THROTTLE if a > 0 else self.NATIVE_A_BRAKE) + self.NATIVE_KP * (a - self.accel_meas)
         return float(np.clip(pedal, 0.0, 0.75)), steer, float(np.clip(-pedal, 0.0, 1.0)), "native"
+
+    def _pose_at(self, t0):
+        """Rear-axle world pose (xy, CARLA yaw) interpolated at sim time t0 from the pose history."""
+        t = np.array([p[0] for p in self.poses])
+        xy = np.array([p[1] for p in self.poses])
+        yaw = np.unwrap(np.array([p[2] for p in self.poses]))
+        t0 = min(max(t0, t[0]), t[-1])
+        return (np.array([np.interp(t0, t, xy[:, 0]), np.interp(t0, t, xy[:, 1])]), float(np.interp(t0, t, yaw)))
 
     def _history(self, t0):
         """16 rear-axle poses at t0 - 1.5 s ... t0 (10 Hz) in the t0 rig frame (x forward, y left, yaw CCW);
@@ -386,9 +406,13 @@ class ZeroShotAgent(AutonomousAgent):
         if warm:
             accepted = False
         elif self.zoo is not None:
-            steer, throttle, brake, zoo_meta = self.zoo.control(np.asarray(drive_path, float), times, speed,
-                                                                self.zoo_target)
-            self.zoo_control, accepted = (throttle, steer, brake), True
+            if self.zoo.cadence == "tick":   # control_pid runs every tick in __call__ on this held plan
+                self.zoo.hold(np.asarray(drive_path, float), times, t_frame, self._pose_at(t_frame))
+            else:
+                p, t = self.zoo.prepare(np.asarray(drive_path, float), times)
+                steer, throttle, brake, zoo_meta = self.zoo.control(p, t, speed, self.zoo_target)
+                self.zoo_control = (throttle, steer, brake)
+            accepted = True
         else:
             accepted = self.controller.update(np.asarray(drive_path, float), t_frame)
         self.n_plans += 1

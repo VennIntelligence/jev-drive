@@ -1,6 +1,6 @@
 # Alpamayo 1.5 在 Bench2Drive 全量里“停住不动”的诊断
 
-状态: 诊断完成（2026-09-25 10:30）；全量 `alp-b2d-full` **已暂停**在 119/220（没写 sentinel），修复与 re-smoke 待 main 决定
+状态: 诊断完成（2026-09-25 10:30）；旧全量停在 119/220 并作废；main 批准 F1 + 两臂 re-smoke（第 6 节，写于运行之前），slot `alp-b2d-smoke2` → `alp-b2d-full`（从头 220 条）已排上
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/trajectory-to-control.md
 相关: [B2D 考试](bench2drive.md)（预注册与“控制器换成 Zoo PID”的偏离）、[openpilot 迁移](openpilot-migration.md)（同类适配 bug 的先例）、
 [控制器 API](../../docs/b2d-controller.md)
@@ -87,7 +87,11 @@ stopped ahead”“Stop for the construction barricade blocking the lane ahead�
 | go（plan 平均 0.81 m/s） | 352 | 91% | 98% | 0.66 m/s；1.0 s 后 **1.96 m/s** | 98% |
 
 固定控制器的 n 是 smoke 的 41/66/47 个 plan。两件事：倒车 plan 被 Zoo PID 执行成前进，这是 bug；go plan 在 Zoo PID 下
-0.5 s 满油门之后车速是 plan 的 2.4 倍，这是“2 Hz 规划 + 控制量保持”的节奏问题，下一节说。
+1 s 后车速是 plan 平均速度的 2.4 倍。**更正（同日，写 re-smoke 验收标准时重看）**：初稿把这 2.4 倍整个算在“2 Hz 保持”上，
+不对。第一个 0.5 s 里满油门只把车带到 0.66 m/s，还低于 plan 的 0.81 m/s；冲到 1.96 m/s 发生在下一次规划之后——车动起来，
+模型看到自己在走，plan 拉长，目标速度随之升高。保持本身的份额是：30% 的起步在 0.5 s 窗口里已经超过 1.1 倍目标速度
+却仍在踩油门（per-tick 调用时这些 tick 会刹车）。所以 2.4 倍主要是模型对自身运动的反应加上 Zoo PID 追“0.5–3 s 平均速度”
+的定义，节奏只放大了一部分。
 
 ![route 1833](../../research/figs/alp-b2d-stall-route1833.png)
 
@@ -107,7 +111,7 @@ Zoo PID 把 reverse 读成前进，油门和刹车交替，车顶着警示牌 17
 | 相机时序与 f-theta | 预注册 smoke 已核（4 帧 @10 Hz、组内 ±1 tick 抖动、f-theta 重采样的图与真车一致）；这次没改 | 与固定控制器 smoke 相同，不能解释控制器换了之后的差别 | 不变 |
 | nav 文本时机 | 每次规划按路线进度给“Turn left/right in d m”（≤ 60 m） | 未改；9 段无碰撞长停车里 3 段有 nav，在路口前等横向车流 | 不变 |
 | **倒车 plan 的语义** | Alpamayo `action_to_traj`：v = v0 + cumsum(a·dt)，没有 v ≥ 0 截断；Zoo PID 的 `desired_speed` 用距离绝对值 | 静止 plan 的 48% 是倒车，Zoo PID 68% 踩油门往前；9021 个倒车 plan 里只有 39.9% 触发刹车 | **bug** |
-| 2 Hz 规划 + 控制保持 | Zoo PID 在每次规划调用一次、保持 0.5 s（照 AD-MLP agent 的节奏）；速度环 K_P = 5、delta 截在 0.25，差 0.15 m/s 以上就饱和到 0.75 | 从静止起步 0.5 s 满油门，1 s 后车速是 plan 的 2.4 倍（30% 的起步在 0.5 s 时就超过 1.1 倍）；刹车同样保持 0.5 s，形成停-冲-停循环。UniAD/VAD 每 tick 调用，超速 1.1 倍时下一 tick 就刹 | 节奏选择放大了问题，要 main 定 |
+| 2 Hz 规划 + 控制保持 | Zoo PID 在每次规划调用一次、保持 0.5 s（照 AD-MLP agent 的节奏）；速度环 K_P = 5、delta 截在 0.25，差 0.15 m/s 以上就饱和到 0.75 | 从静止起步 0.5 s 满油门；30% 的起步在这 0.5 s 里超过 1.1 倍目标速度仍踩油门（1 s 后的 2.4 倍主要来自下一次 plan 拉长，见第 2 节的更正）；刹车同样保持 0.5 s，形成停-冲-停循环。UniAD/VAD 每 tick 调用，超速 1.1 倍时下一 tick 就刹 | 节奏选择放大了问题，要 main 定 |
 | aim point / target | aim 取中点离原点最接近 4 m 的那段；plan 很短时 aim 是第一个点 | 倒车 plan 的 aim 角 ≈ ±2（180°），但 `|angle_target| < |angle|` 让它改用 route target 转向，没有出现满舵 | 无害 |
 | 去掉的低速限油门 | AD-MLP 在车速 > 3 m/s（转弯 2.5）时把油门压到 0.05 | 只在 3 m/s 以上生效，不影响起步冲撞；它影响的是 v ≥ 3 m/s 的 90 次碰撞里有多少能避免，不是 stall | 不是 stall 的原因 |
 | 预热 / stop-hold | Alpamayo 没有预热，第一组图就规划；Zoo PID 没有 stop-hold，每次规划重新判刹车 | 起步正常；缺 stop-hold 本身不是问题，问题是倒车 plan 让“停”判不出来 | — |
@@ -145,7 +149,8 @@ Zoo PID 本身一字不改。做成 agent 配置开关（默认关，复现当�
 
 **F2（控制节奏，需要 main 选）。** (a) 保持现在的 AD-MLP 节奏（每次规划算一次、保持 0.5 s），只修 F1；
 (b) 每 tick 调用一次 `control_pid`，用最新 plan 按其“年龄”平移时间（取 age + 0.5 … age + 3.0 s 的点，按里程计重投影到当前
-位姿），这就是 UniAD/VAD 在 20 Hz 下的闭环语义，超速 1.1 倍时下一 tick 就刹车，能消掉 2.4 倍的起步过冲。
+位姿），这就是 UniAD/VAD 在 20 Hz 下的闭环语义，超速 1.1 倍时下一 tick 就刹车，消掉保持窗口里的超速油门（2.4 倍的起步比例
+主要不是它造成的，见第 2 节的更正，所以不拿它当 F2 的判据）。
 我倾向 (b)：Zoo PID 的增益（K_P 5、delta 截 0.25）是按 20 Hz 反馈设计的，2 Hz 保持把它变成了 0.5 s 的 bang-bang。
 但 AD-MLP 确实这样发布，(a) 也站得住，所以这是决策，不是 bug。
 
@@ -153,7 +158,7 @@ Zoo PID 本身一字不改。做成 agent 配置开关（默认关，复现当�
 诊断路线（1833、1852、1956、2668、4183、11381），TM seed 0。两个 arm：F1、F1 + F2(b)。
 验收只看适配指标，不看 DS：碰撞前静止倒车 plan 的油门比例 ≤ 5%；v < 3 m/s 的碰撞里“碰前 2 s 静止拿油门”的次数；
 go plan 起步 1 s 后车速 / plan 速度的中位数；碰撞后 ≥ 10 s 的停车段数。F2 选 (a) 还是 (b) 的规则也事先写死：
-(b) 只在起步过冲中位数从约 2.4 降到 ≤ 1.3 且其他指标不变差时采用。之后 220 条从头跑，119 条旧结果作废，不并入。
+（初稿写的“(b) 只在起步过冲从 2.4 降到 ≤ 1.3 时采用”作废，理由同上；main 批准后的最终规则见第 6 节。）
 
 ## 复现
 
@@ -173,3 +178,41 @@ $DATA_DIR/envs/carla/bin/python scripts/zeroshot_b2d_alp_stall_probes/clamp_repl
 
 `episodes.csv` / `collisions.csv` 是 episodes.py / collisions.py 的输出再加上“episode 起点前 3 s 到结束之间有没有碰撞”
 （`ncol_in`）和“碰前 2 s 有没有静止拿油门的 plan”（`lunge`、`revthr`）两列，合并在 Mac 上做。
+
+## 6. 修复与 re-smoke：预注册（2026-09-25，main 批准，写于 smoke2 运行之前）
+
+**偏离记录（B2D 考试 Alpamayo 部分，第二条，第一条是控制器换成 Zoo PID）。** 执行层加两个适配开关，都在
+`scripts/b2d_zoo_pid_wrap.py`（`ZooPID(forward_only, cadence)`），agent 配置键 `plan_forward_only`、`zoo_cadence`；
+**默认值保持现有行为**（`false` / `"plan"`），openpilot 的配置不受影响（main 通知 openpilot agent）。vendored 的
+`b2d_zoo_pid.py` 一字未改。
+
+- **F1 `plan_forward_only: true`**：plan 前面补原点 (0, 0)@0 s，前进分量为负的每一段位移置零再累加，即速度截在 ≥ 0。
+  理由见第 5 节，是语义修复，不看分数。
+- **F2b `zoo_cadence: "tick"`**：每次规划只保存 plan（连同规划时刻的后轴世界位姿，由位姿历史插值到相机组时刻），
+  每个 20 Hz tick 用当前位姿把它重投影到当前后轴系、时间减去 plan 的年龄，再调用一次 `control_pid`（UniAD / VAD 的调用方式，
+  PID 窗口按每 tick 推进）。tick 日志多一列 `zoo_desired`。
+- 单元测试 `scripts/test_b2d_zoo_pid_wrap.py`（box `envs/carla` 上 4/4 通过）：默认路径与改前逐位相同；倒车刹停 plan 在 F1 下变成
+  刹车、不加 F1 时是油门；前进 plan 不变；年龄平移与位姿重投影（直行 5 m/s、0.3 s 后 0.5 s 处的点在前方 2.5 m，左右不翻）。
+
+**smoke2（slot `alp-b2d-smoke2`，GPU 1，一个 Alpamayo server，两臂并行各 2 个 CARLA worker，server index 420–421 / 430–431，
+`--no-reap`）。** 路线 11 条：5 条预注册 smoke 路线（2390、24211、1711、2373、3564）+ 6 条旧全量里“撞后顶住”的路线
+（1833、1852、1956、2668、4183、11381），TM seed 0，`--max-attempts 2`。两臂：`f1`（F1 + AD-MLP 保持，按原预注册的节奏）、
+`f1f2b`（F1 + F2b）。输出 `$DATA_DIR/runs/zeroshot-exam/b2d/smoke2-alpamayo-{f1,f1f2b}/`。
+
+**验收（只看适配指标，DS 不参与；`scripts/zeroshot_b2d_alp_smoke2_check.py` 自动算，写 `smoke2-alpamayo-choice.json`）：**
+
+| 判据 | 定义 | 门槛 |
+|---|---|---|
+| A0 基础设施 | 11 条都 `finished`、没有 CARLA 重启、每条都有 plans / ticks / 官方结果 | 必须 |
+| A1 倒车不变油门 | 自由静止（v < 0.3 m/s、在该路线第一次碰撞 2 s 之前）的倒车 plan 之后 0.5 s 内油门 tick 占比 | ≤ 5%（旧全量 68%，旧 smoke 78%） |
+| A2 没有倒车引起的碰撞 | v < 3 m/s 的碰撞，碰前 2 s 内有“静止倒车 plan 后踩了油门” | 0 次 |
+| 只报告 | 保持窗口里超速 1.1 倍仍踩油门的 tick 占比；起步 v(+1 s) / plan 平均速度；所有“静止拿油门后低速碰撞”；碰撞后 ≥ 10 s 停车段数；DS / RC | — |
+
+**选择规则**：`f1f2b` 过 A0–A2 就用它（与 UniAD / VAD 基线调用控制器的方式一致，main 定的默认）；否则 `f1` 过就用 `f1`；
+都不过则 smoke2 slot 失败、全量不启动，回报 main。用旧 smoke（`smoke-alpamayo-zoopid`）试跑检查脚本：A1 = 78%、A2 = 2 次，
+按预期不通过。
+
+**全量（slot `alp-b2d-full`，同名重新 arm，`--after alp-b2d-smoke2`，GPU 1，4 worker，server index 440–443）。**
+`scripts/zeroshot_b2d_alp.sh full 1` 读 choice 文件，220 条从头跑到 `full220-alpamayo-zoopid-<arm>/`；旧的
+`full220-alpamayo-zoopid/`（119 条）作废，不并入。报告 DS 均值与按路线 bootstrap 95% CI、SR（Bench2Drive
+`merge_route_json.py` 定义：Completed 且除 min-speed 外无违规）与 Wilson 95% CI、没跑完的路线数。
