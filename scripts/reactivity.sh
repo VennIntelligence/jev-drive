@@ -46,11 +46,12 @@ roomiest_gpu() {  # the card of V1_GPUS with the most free memory
 note() { echo "$(date '+%Y-%m-%d %H:%M') [REACTIVITY/V1] $*" | tee -a "$DATA_DIR/runs/zeroshot-exam/gpu-plan.md"; }
 v1_set() {
     [[ ${1:-} == pdm || ${1:-} == ba ]] || { echo "expert: pdm | ba" >&2; exit 2; }
-    export P5_SET=carla_p5v1_$1
+    export P5_SET=${V1_PREFIX:-carla_p5v1_}$1          # V1_PREFIX: a dry-run copy of the set
     [[ -f $DATA_DIR/processed/$P5_SET/index.parquet ]] || { echo "no index for $P5_SET" >&2; exit 1; }
 }
 # disjoint candidate CPU lists per mode (and per expert where two can run at once)
-declare -A CPUS=([qwen]=156-207 [op]=52-77 [exam-pdm]=78-90 [exam-ba]=91-103 [mc-pdm]=104-113 [mc-ba]=114-131)
+declare -A CPUS=([qwen]=${QWEN_CPUS:-156-207} [op]=${OP_CPUS:-52-77} [exam-pdm]=${EXAM_CPUS:-78-90} [exam-ba]=${EXAM_CPUS:-91-103}
+                 [mc-pdm]=${MC_CPUS:-104-113} [mc-ba]=${MC_CPUS:-114-131})
 
 case $1 in
     # D0: `temporal`, `vision`, `hidden` on the P5 streams (same streams and renderer as experiment 1)
@@ -86,7 +87,7 @@ case $1 in
              exit 1 ;;
     # openpilot temporal / vision / hidden: plan, link v0's identical streams, two shards on one card, finalize
     v1-op)   v1_set "${2:-}"
-             c=$(free_cpus "${CPUS[op]}" "${OP_CORES:-16}")
+             c=$(free_cpus "${CPUS[op]}" "${OP_CORES:-16}"); [[ -n $c ]] || { echo "no free CPU" >&2; exit 1; }
              g=${OP_GPU:-$(roomiest_gpu)}
              note "v1-op $2: GPU $g, CPUs $c"
              taskset -c "$c" $PY -m jevdrive.p5_openpilot prepare || exit 1
@@ -100,13 +101,13 @@ case $1 in
              taskset -c "$c" $PY -m jevdrive.p5_openpilot finalize --arrays temporal,vision,hidden --sub $SUB ;;
     # D0 exam and M-C, exactly the v0 calls (deviation 7), on the expert's set
     v1-exam) v1_set "${2:-}"
-             c=$(free_cpus "${CPUS[exam-$2]}" 12); g=$(roomiest_gpu)
+             c=$(free_cpus "${CPUS[exam-$2]}" 12); g=$(roomiest_gpu); [[ -n $c ]] || { echo "no free CPU" >&2; exit 1; }
              note "v1-exam $2: GPU $g, CPUs $c"
              OMP_NUM_THREADS=12 MKL_NUM_THREADS=12 OPENBLAS_NUM_THREADS=12 CUDA_VISIBLE_DEVICES=$g taskset -c "$c" nice -n 5 \
                  $PY -m jevdrive.p5_exam run --op cinque,lebowski --op-arrays temporal,vision,hidden --op-sub $SUB \
                  --heads-skip "op-cinque hidden" ;;
     v1-mc)   v1_set "${2:-}"
-             c=$(free_cpus "${CPUS[mc-$2]}" 8); g=$(roomiest_gpu)
+             c=$(free_cpus "${CPUS[mc-$2]}" 8); g=$(roomiest_gpu); [[ -n $c ]] || { echo "no free CPU" >&2; exit 1; }
              note "v1-mc $2: GPU $g, CPUs $c"
              OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 CUDA_VISIBLE_DEVICES=$g taskset -c "$c" nice -n 5 \
                  $PY -m jevdrive.reactivity_mc --op-sub $SUB ;;
