@@ -130,6 +130,11 @@ class P5PairAgent(SensorAgent):
         if team_code not in sys.path:
             sys.path.insert(0, team_code)      # autopilot.py imports its siblings (config, nav_planner, ...) top-level
         os.environ["IS_BENCH2DRIVE"] = "1"
+        # PDM-Lite was written for numpy < 1.24 (np.float etc.); these aliases are the builtins, restoring them
+        # changes nothing numerically. envs/scout-tfv6 has a newer numpy.
+        for k, v in (("float", float), ("int", int), ("bool", bool), ("object", object), ("complex", complex)):
+            if not hasattr(np, k):
+                setattr(np, k, v)
         # autopilot.py reads SAVE_PATH at import and in setup() and would then write its own dataset; LEAD wants it.
         save = os.environ.pop("SAVE_PATH", None)
         try:
