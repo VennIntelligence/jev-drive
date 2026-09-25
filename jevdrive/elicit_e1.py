@@ -1,5 +1,5 @@
 """Elicitation E1: zero-shot transfer of the P5 v1 M-C dual-stream reaction head to real data
-(todos/2026-09-26-elicitation-program.md, E1 and deviation-log entry [E1] 00:35, written before any number).
+(todos/2026-09-26-elicitation-program.md, E1 and deviation-log entry [E1] 00:25, written before any number).
 
   head    the five route-fold heads of the `M-C pair` arm on the P5 v1 BehaviorAgent set, recomputed with
           reactivity_mc.fit_fold unchanged and checked against the stored predictions and lambdas of that run;
@@ -46,7 +46,7 @@ def fold_heads(model: str, rl) -> list[dict]:
     run = data_dir() / MC_RUN
     t, past, fut, obs, null, pairs = E.load()
     n = len(t)
-    dev = "cuda" if torch.cuda.is_available() else "cpu"     # the stored run is a GPU fit; see deviation [E1] 00:45
+    dev = "cuda" if torch.cuda.is_available() else "cpu"     # the stored run is a GPU fit; see deviation [E1] (7) 00:31
     Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device=dev)
     Xop = torch.as_tensor(p5_openpilot.load(t, (model,), sub="op_streams_vis")[f"op-{model} temporal"], device=dev)
     fold = E.folds(t, pairs)
