@@ -161,8 +161,15 @@ def extract(rl, batch: int, compile: bool, workers: int):
         return
     fx = qv.make_fx(compile=compile, grid_hw=GRID_HW)
     t0, done = time.perf_counter(), 0
+    import os
     for i, c in left:
         dst = grid_root(f"c{i:03d}")
+        if (dst / "meta.json").exists():
+            continue
+        try:                                   # several processes (one per card) claim chunks through a lock file
+            os.close(os.open(grid_root() / f"c{i:03d}.lock", os.O_CREAT | os.O_EXCL | os.O_WRONLY))
+        except FileExistsError:
+            continue
         st = F.extract(fx, c.files.map(list).tolist(), batch, workers, dst, rl, f"grid/c{i:03d}", dataset=p4.ClipFiles)
         c[["frame_name"]].to_parquet(dst / "index.parquet", index=False)
         eq = _compare(dst, c.frame_name.to_numpy())
