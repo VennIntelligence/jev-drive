@@ -14,6 +14,7 @@ Arrays: `temporal` (primary tap), `vision` (pooled vision encoder output before 
   CUDA_VISIBLE_DEVICES=2 python scripts/p5_openpilot.py --shard 0/2 --workers 6
   python scripts/p5_openpilot.py --arrays temporal vision hidden --out-sub op_streams_vis   # reactivity D0
   python scripts/p5_openpilot.py --check 16      # equivalence checks before the batch
+  python scripts/p5_openpilot.py --arrays temporal lead lead_prob --out-sub op_streams_lead   # fusion Q4c
 """
 import argparse, io, json, sys, time
 from concurrent.futures import ProcessPoolExecutor
@@ -55,7 +56,7 @@ def job(st):
     return st, render(st["files"])
 
 
-ARRAYS = ("temporal", "vision", "hidden")
+ARRAYS = ("temporal", "vision", "hidden", "lead", "lead_prob")   # lead*: raw output slices (fusion Q4c)
 
 
 def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
@@ -66,8 +67,8 @@ def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
         for _ in range(1 if m.skip == 1 else HOLD):
             out = m.step(frames[j], action_t=WZ.ACTION_T)
         if j in tset:
-            rows[j] = {k: (out[m.slices["hidden_state"]] if k == "hidden" else m.tap_values[taps[k]]).copy()
-                       for k in arrays}
+            rows[j] = {k: (out[m.slices["hidden_state"]] if k == "hidden" else out[m.slices[k]] if k.startswith("lead")
+                           else m.tap_values[taps[k]]).copy() for k in arrays}
     return rows
 
 
@@ -75,7 +76,8 @@ def save(path, st, rows, arrays=("temporal",)):
     """`temporal` stays float32 (bit-for-bit comparable with earlier runs); the wide arrays are stored float16."""
     tg = sorted(rows)
     tmp = path.with_suffix(".tmp.npz")
-    arr = {k: np.stack([rows[j][k] for j in tg]).astype(np.float32 if k == "temporal" else np.float16) for k in arrays}
+    arr = {k: np.stack([rows[j][k] for j in tg]).astype(np.float32 if k == "temporal" or k.startswith("lead") else np.float16)
+           for k in arrays}
     np.savez(tmp, name=np.array([st["names"][j] for j in tg]), hist=np.array(tg), **arr)
     tmp.replace(path)
 
