@@ -28,7 +28,14 @@ ALP_CHOICE=$DATA_DIR/runs/zeroshot-exam/b2d/smoke2-alpamayo-choice.json
 TCP_CKPT=$DATA_DIR/models/bench2drive/tcp/tcp_b2d.ckpt       # sha256 e6573ff1..., docs/b2d-tcp-controller.md
 mkdir -p "$D/ps"
 declare -A spid
-cleanup() { for m in "${!spid[@]}"; do kill -- -"${spid[$m]}" 2>/dev/null; done; kill ${watch:-} 2>/dev/null; }
+cleanup() {  # our policy servers, the watchdog, and CARLA servers our runners started (their pid files, ports 600-699)
+    for m in "${!spid[@]}"; do kill -- -"${spid[$m]}" 2>/dev/null; done; kill ${watch:-} 2>/dev/null
+    local f p
+    for f in "$D"/*/servers/carla-*.pid; do
+        p=$(cat "$f" 2>/dev/null) || continue
+        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qE 'carla-rpc-port=3[2-6][0-9]{3}' && kill -- -"$p" "$p" 2>/dev/null
+    done
+}
 trap cleanup EXIT
 
 launch() {  # model: start its policy server in its own session / process group, wait for ready
