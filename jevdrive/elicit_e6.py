@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from . import navsim_heads as H, planner
+from . import navsim_heads as H, planner, traj
 from .common import get_logger
 
 log = get_logger(__name__)
@@ -37,12 +37,21 @@ def _navtrain(feats: bool) -> dict:
 def prep(rl, model: str):
     from .common import data_dir
     tr = _navtrain(False)
-    A, ids, yaw = H.vocabulary(tr["fut"])
-    anchors = H.anchor_poses(A, yaw, np.arange(H.K))                            # (K, 8, 3)
+    fut = tr["fut"]
+    # k-means on the CPU: traj.kmeans on the GPU is not reproducible run to run (index_add_ uses float atomics), so
+    # G3's own vocabulary cannot be recomputed (deviation [E6] 00:55); this one is fixed once and saved
+    F = torch.as_tensor(fut[..., :2].reshape(len(fut), -1))
+    A = traj.kmeans(F, H.K, seed=0)
+    ids = traj.nearest(F, A, 1)[0][:, 0]
+    s_, c_ = np.zeros((H.K, 8)), np.zeros((H.K, 8))
+    np.add.at(s_, ids, np.sin(fut[..., 2]))
+    np.add.at(c_, ids, np.cos(fut[..., 2]))
+    anchors = np.concatenate([A.reshape(H.K, 8, 2).numpy(), np.arctan2(s_, c_)[..., None]], -1).astype(np.float32)
     g3 = np.load(data_dir() / G3 / f"navtest_cls_late_{model}_temporal.npz")["poses"]
-    d = np.abs(g3[:, None] - anchors[None]).max((2, 3)).min(1)
-    rl.log.info(f"G3 cls_late navtest outputs vs recomputed anchors: max nearest-anchor diff {d.max():.2e} m")
-    assert d.max() <= 1e-4, "recomputed vocabulary differs from G3's"
+    d = np.abs(g3[:, None, :, :2] - anchors[None, :, :, :2]).max((2, 3)).min(1)
+    rl.log.info(f"G3 cls_late navtest outputs vs this vocabulary: nearest-anchor (x, y) diff median {np.median(d):.3f}, "
+                f"p90 {np.quantile(d, 0.9):.3f}, share <= 1e-4 m {(d <= 1e-4).mean():.3f}; oracle ADE "
+                f"{np.linalg.norm(A.numpy()[ids].reshape(-1, 8, 2) - fut[..., :2], axis=-1).mean():.3f} m")
     rng = np.random.default_rng(SEED_SUB)
     sub = np.sort(rng.choice(len(tr["tokens"]), N_SUB, replace=False))
     toks, logs = tr["tokens"][sub], tr["log"][sub]
@@ -173,13 +182,14 @@ def fit(rl, prep_dir: Path, score_dir: Path, model: str):
     out = {}
     for s in H.EVAL:
         g3p = np.load(data_dir() / G3 / f"{s}_cls_late_{model}_temporal.npz")["poses"]
-        agree = float((np.abs(anchors[im_ev[s].argmax(1).cpu().numpy()] - g3p).max((1, 2)) < 1e-4).mean())
-        rl.log.info(f"{s}: imitation argmax agrees with G3 cls_late on {agree:.4f}")
-        assert agree >= 0.99, "imitation logits do not reproduce G3"
+        im_sel = im_ev[s].argmax(1).cpu().numpy()
+        agree = float((np.abs(anchors[im_sel, :, :2] - g3p[..., :2]).max((1, 2)) < 0.5).mean())
+        rl.log.info(f"{s}: refitted cls_late (a') within 0.5 m of G3's output on {agree:.4f} of tokens")
+        np.savez(rl.dir / f"{s}_clsref_{model}_temporal.npz", tokens=ev[s]["tokens"], poses=anchors[im_sel])
         sel = _select(im_ev[s], {m: heads_all[m][s] for m in SUBS}, best[0]).cpu().numpy()
         out[s] = sel
         np.savez(rl.dir / f"{s}_hydra_{model}_temporal.npz", tokens=ev[s]["tokens"], poses=anchors[sel])
-        rl.log.info(f"{s}: {float((sel == im_ev[s].argmax(1).cpu().numpy()).mean()):.3f} of tokens keep the imitation argmax")
+        rl.log.info(f"{s}: {float((sel == im_sel).mean()):.3f} of tokens keep the imitation argmax")
     stats = {"lam": lam_sel, "weights": best[0], "pdms_hold": best[1], "pdms_hold_imitation": v_im,
              "pdms_hold_oracle": float(pdms[hold_r].max(1).mean()), "n_scored": len(rows), "n_hold": len(hold_r),
              "cls_lams": lams}

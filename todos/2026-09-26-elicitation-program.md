@@ -247,6 +247,12 @@ E6（可选）──────────────────────
   (6) **打分与读数**：navtest 用 `scripts/navsim_zs_score.sh`（v1.1 出 PDMS、main @ 0a380a9 出 EPDMS，`OPENBLAS_CORETYPE=Haswell`），navhard two-stage 出 EPDMS；
   配对 Δ（逐 token，10 000 次 token bootstrap，同 `openloop_standing.navsim`）：(b) − `ridge_late`、(a) − `ridge_late`、(b) − (a)。seed 各 1 个（k-means seed 0、子集 seed 0、留出 seed 1）。
   判据照登记：(b) PDMS ≥ 84 → 写「512 维冻结特征 + 配方 head 到 TransFuser 水平」；否则写「差距不在配方」。
+- 2026-09-26 00:55 CST [E6] 写于任何逐 anchor 打分、任何 head 拟合之前。(1) 的核对没过：重算的 K = 1024 词表与 G3 的不同（G3 `cls_late` navtest 输出到最近 anchor 的差最大 0.70 m）。
+  原因是 `traj.kmeans` 在 GPU 上不可复现：`index_add_` 用浮点 atomic 累加，同一数据、同一 seed 连跑两次，inertia 相同（0.141 m²）而个别中心差到 1.8 m；G3 的输出里只能找回 1014 个不同的 anchor。
+  所以不能「复用 G3 的候选集」。改为：k-means 在 CPU 上跑一次（seed 0，确定性），词表存盘，之后一切（ids、子分表、head）都读这个文件；
+  **(a′)** = 同一配方（`cls ego` → `cls_late`，G3 的 λ 不重选）在新词表上重拟合，作为 (b) 的模仿项和 (b) 的直接对照（候选集相同）；G3 的 (a) 行照报，(a′) 对 (a) 的差就是「词表随机性」的量级（等于一个免费的 seed 读数）。
+  原登记里「argmax 与 G3 一致率 ≥ 99%」的核对作废，改报 (a′) 输出与 G3 输出 (x, y) 差 < 0.5 m 的 token 比例（描述）。(a′) 另在 navtest / navhard 上用官方 devkit 打分。
+  另外澄清 (2)/(4)：v1.1 的 `driving_direction_weight` 是 0，DDC 不进 PDMS，所以子分 head 是 NC、DAC、EP、TTC、C 五个（登记里的 DDC 去掉），w_mul 只乘 NC 与 DAC。
 - 2026-09-26 00:36 CST **[E3] 事后描述（看过 navtrain 登记口径的数字之后写，不改判格）**：登记口径下 navtrain 分叉对的 x⁺ 原因物体比例**低于**孪生 null（null 以跟车为主，前车在走廊内、缓慢接近），
   而分叉对六成是纯横向（|Δy_T| ≥ 1 m、|Δv_T| < 2 m/s，路形 / 路线）。为了看「刹 vs 继续」这一类是否有可用的子集，加一个只描述的读数：同一主格（1 × τ_ego）里两侧 t0 速度都 ≥ 2 m/s、|Δv_T| ≥ 2 m/s 且 |Δy_T| < 1 m 的纵向对，
   比较终端速度较低的一侧（刹）与较高一侧（继续）的原因物体比例（对内配对差），以及刹的一侧对同样速度条件下孪生 null 的比例；按 log cluster bootstrap。代码 `elicit_e3.posthoc`。
