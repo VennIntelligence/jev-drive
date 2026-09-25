@@ -1,0 +1,4 @@
+n 1096
+plan x@1s / speed median 1.048 ; realized fwd@1s / speed median 0.969
+lateral sign agreement plan y@1s vs realized left@1s: 0.826 (n=219), corr 0.441
+heading sign agreement plan vs realized yaw change: 0.756 (n=328), corr 0.308

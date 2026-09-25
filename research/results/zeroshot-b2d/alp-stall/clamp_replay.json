@@ -1,0 +1,71 @@
+{
+ "full220-alpamayo-zoopid": {
+  "rev": {
+   "n": 9021,
+   "brake_now": 0.399,
+   "brake_clamped": 0.994,
+   "desired_now": 0.61,
+   "desired_clamped": 0.01
+  },
+  "stay": {
+   "n": 6768,
+   "brake_now": 0.983,
+   "brake_clamped": 0.989,
+   "desired_now": 0.178,
+   "desired_clamped": 0.158
+  },
+  "go": {
+   "n": 4351,
+   "brake_now": 0.02,
+   "brake_clamped": 0.02,
+   "desired_now": 0.802,
+   "desired_clamped": 0.802
+  }
+ },
+ "smoke-alpamayo-zoopid": {
+  "stay": {
+   "n": 124,
+   "brake_now": 0.968,
+   "brake_clamped": 0.984,
+   "desired_now": 0.19,
+   "desired_clamped": 0.163
+  },
+  "go": {
+   "n": 96,
+   "brake_now": 0.062,
+   "brake_clamped": 0.062,
+   "desired_now": 0.82,
+   "desired_clamped": 0.82
+  },
+  "rev": {
+   "n": 206,
+   "brake_now": 0.311,
+   "brake_clamped": 0.995,
+   "desired_now": 0.776,
+   "desired_clamped": 0.013
+  }
+ },
+ "smoke-alpamayo": {
+  "stay": {
+   "n": 49,
+   "brake_now": 0.898,
+   "brake_clamped": 0.898,
+   "desired_now": 0.213,
+   "desired_clamped": 0.207
+  },
+  "go": {
+   "n": 65,
+   "brake_now": 0.0,
+   "brake_clamped": 0.0,
+   "desired_now": 2.117,
+   "desired_clamped": 2.116
+  },
+  "rev": {
+   "n": 74,
+   "brake_now": 0.311,
+   "brake_clamped": 0.919,
+   "desired_now": 0.681,
+   "desired_clamped": 0.076
+  }
+ }
+}

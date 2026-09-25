@@ -1,0 +1,728 @@
+{
+ "full": [
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead",
+   1966
+  ],
+  [
+   "Keep distance to the lead vehicle since it is directly ahead in our lane",
+   1930
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead in our lane",
+   917
+  ],
+  [
+   "Stop to keep distance to the lead vehicle since it is stationary ahead",
+   668
+  ],
+  [
+   "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+   535
+  ],
+  [
+   "Keep lane since the lane is clear ahead",
+   528
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle ahead",
+   419
+  ],
+  [
+   "Stop to keep distance to the lead vehicle since it is stopped ahead",
+   369
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead blocking our lane",
+   325
+  ],
+  [
+   "Nudge to the left to clear the stopped vehicle blocking the right side of our lane",
+   301
+  ],
+  [
+   "Nudge to the left to clear the stopped vehicle blocking the lane ahead",
+   231
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicle blocking the lane ahead",
+   209
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the right since it is entering our lane ahead",
+   172
+  ],
+  [
+   "",
+   131
+  ],
+  [
+   "Adapt speed for the right curve since the lane bends right ahead",
+   126
+  ],
+  [
+   "Stop for the construction barricade blocking the lane ahead",
+   120
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle blocking our lane",
+   109
+  ],
+  [
+   "Stop for the stop sign ahead",
+   102
+  ],
+  [
+   "Nudge to the left to clear the cones blocking the right side of our lane",
+   100
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead blocking our path",
+   98
+  ],
+  [
+   "Keep distance to the stopped vehicle blocking the lane ahead",
+   94
+  ],
+  [
+   "Stop for the red traffic light ahead",
+   92
+  ],
+  [
+   "Yield to the cut-in vehicle since it merges into our lane ahead",
+   80
+  ],
+  [
+   "Nudge to the left to clear the construction cones blocking the right side of our lane",
+   79
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the right since it merges into our lane ahead",
+   67
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it blocks our lane ahead",
+   63
+  ],
+  [
+   "Keep distance to the lead vehicle since it is moving slowly ahead",
+   62
+  ],
+  [
+   "Keep distance to the stopped lead vehicle blocking our lane",
+   59
+  ],
+  [
+   "Stop and hold position since no critical agent needs attention",
+   56
+  ],
+  [
+   "Stop to keep distance to the lead vehicle since it is stopped ahead in our lane",
+   40
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the right since it is blocking our lane ahead",
+   40
+  ],
+  [
+   "Nudge to the left to clear the stopped lead vehicle blocking the lane",
+   38
+  ],
+  [
+   "Stop to keep distance to the stationary lead vehicle ahead",
+   37
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle",
+   37
+  ],
+  [
+   "Stop for the red traffic light",
+   36
+  ],
+  [
+   "Turn left at the intersection since cross-traffic has cleared",
+   35
+  ],
+  [
+   "Stop and hold position since no critical agent needs special attention",
+   35
+  ],
+  [
+   "Stop for the barricade blocking the lane ahead",
+   35
+  ],
+  [
+   "Stop to yield to the cross-traffic since a vehicle is crossing ahead",
+   34
+  ],
+  [
+   "Keep distance to the stopped vehicle blocking our lane ahead",
+   34
+  ],
+  [
+   "Yield to the cut-in vehicle since it is entering our lane ahead",
+   34
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the right since it is merging into our lane ahead",
+   34
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicle blocking the lane",
+   34
+  ],
+  [
+   "Turn left at the intersection since the cross-traffic vehicle has cleared",
+   33
+  ],
+  [
+   "Stop because a fence blocks the path ahead",
+   33
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it is blocking our lane ahead",
+   32
+  ],
+  [
+   "Yield to the cut-in vehicle from the right since it is entering our lane ahead",
+   32
+  ],
+  [
+   "Stop because cones block the lane ahead",
+   32
+  ],
+  [
+   "Stop to yield to the cyclist crossing ahead",
+   32
+  ],
+  [
+   "Stop to keep distance to the stopped vehicle blocking the lane ahead",
+   31
+  ],
+  [
+   "Keep distance to the cyclist since it is directly ahead in our lane",
+   31
+  ],
+  [
+   "Keep at the center of the lane since no critical agent needs attention",
+   31
+  ],
+  [
+   "Stop because a wooden fence blocks the path ahead",
+   30
+  ],
+  [
+   "Keep distance to the lead vehicle since it is directly ahead in our path",
+   30
+  ],
+  [
+   "Stop to yield to the cross-traffic since vehicles are crossing ahead",
+   29
+  ],
+  [
+   "Nudge to the left to clear the tree blocking the center of our path",
+   29
+  ],
+  [
+   "Stop for the cones blocking the lane ahead",
+   28
+  ],
+  [
+   "Keep lane since no critical agent is affecting our path",
+   28
+  ],
+  [
+   "Nudge to the left to clear the vehicle encroaching from the right",
+   28
+  ],
+  [
+   "Nudge to the left to pass the stopped vehicle blocking the lane ahead",
+   27
+  ]
+ ],
+ "smokefixed": [
+  [
+   "Keep distance to the lead vehicle since it is directly ahead in our lane",
+   98
+  ],
+  [
+   "Stop for the red traffic light ahead",
+   9
+  ],
+  [
+   "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+   8
+  ],
+  [
+   "Stop for the red traffic light",
+   7
+  ],
+  [
+   "Keep lane since the lane is clear ahead",
+   5
+  ],
+  [
+   "Stop to yield to the cross-traffic since a vehicle is crossing ahead",
+   4
+  ],
+  [
+   "Nudge left due to the stopped vehicle blocking the right side of our lane",
+   4
+  ],
+  [
+   "Nudge to the right to clear the cones blocking the left side of our lane",
+   3
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicle blocking the lane ahead",
+   3
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead in our lane",
+   2
+  ],
+  [
+   "Accelerate to proceed through the intersection since the traffic light turns green",
+   2
+  ],
+  [
+   "Slow down to yield to the cut-in vehicle from the left since it is entering our lane ahead",
+   2
+  ],
+  [
+   "Stop to yield to the crossing vehicle ahead since it is blocking our path",
+   2
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicle blocking the lane",
+   1
+  ],
+  [
+   "Nudge right due to the stopped car encroaching from the left side of our lane",
+   1
+  ],
+  [
+   "Slow down to yield to the cut-in vehicle from the left since it merges into our lane ahead",
+   1
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicles blocking the left side of our lane",
+   1
+  ],
+  [
+   "Stop at the stop line since the traffic light is red",
+   1
+  ],
+  [
+   "Slow down to yield to the cut-in vehicle from the right since it merges into our lane ahead",
+   1
+  ],
+  [
+   "Stop for the red traffic light since the signal is red",
+   1
+  ],
+  [
+   "Wait for a gap because a car is alongside in the right lane blocking an immediate merge into that lane",
+   1
+  ],
+  [
+   "Stop for the red traffic light since it is red",
+   1
+  ],
+  [
+   "Stop to keep distance to the lead vehicle since it is stopped ahead",
+   1
+  ],
+  [
+   "Brake to a stop for multiple vehicles turning across our lane into our side street ahead, blocking our path and requiring us to yield before proceeding straight in our lane.",
+   1
+  ],
+  [
+   "Keep lane since the lane ahead is clear and no lead vehicle is present",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle since it is crossing ahead",
+   1
+  ],
+  [
+   "Keep lane since the lane is clear with no immediate obstacles ahead",
+   1
+  ],
+  [
+   "Keep at the center of the lane since the lane is clear ahead",
+   1
+  ],
+  [
+   "Stop for the closed gate blocking the lane ahead",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle since it is turning into our lane ahead",
+   1
+  ],
+  [
+   "Stop to yield to the cross-traffic vehicle since it is crossing our path ahead",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle since it is turning across our lane ahead",
+   1
+  ],
+  [
+   "Stop to yield to the vehicle turning across our lane since it is crossing our path ahead",
+   1
+  ],
+  [
+   "Yield to the vehicle turning across our lane since it is turning across our path ahead",
+   1
+  ],
+  [
+   "Stop to yield to the crossing vehicle ahead since it is entering our lane",
+   1
+  ],
+  [
+   "Keep lane since the oncoming vehicle stays in its lane",
+   1
+  ],
+  [
+   "Stop to yield to the vehicle turning across our path ahead",
+   1
+  ],
+  [
+   "Stop to yield to the crossing vehicle ahead since it blocks our path",
+   1
+  ],
+  [
+   "Yield to the cross-traffic since vehicles are crossing ahead across our path",
+   1
+  ],
+  [
+   "Yield to the cross-traffic since vehicles are crossing ahead",
+   1
+  ],
+  [
+   "Yield to the cross-traffic since a vehicle is crossing ahead",
+   1
+  ],
+  [
+   "Yield to the vehicle crossing our lane since it is turning across our path ahead",
+   1
+  ],
+  [
+   "Stop to yield to the cross-traffic since vehicles are crossing ahead",
+   1
+  ],
+  [
+   "Stop to yield to the crossing vehicle ahead since it is turning across our lane",
+   1
+  ],
+  [
+   "Stop to yield to the cross-traffic since a vehicle is crossing ahead in our lane",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle since it is crossing our lane ahead",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle since it turns across our lane ahead",
+   1
+  ],
+  [
+   "Stop to yield to cross-traffic since vehicles are crossing ahead",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle from the left since it is entering our lane ahead",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle from the right since it is entering our lane ahead",
+   1
+  ],
+  [
+   "Yield to the cross-traffic since a vehicle is turning left across our lane ahead",
+   1
+  ],
+  [
+   "Keep distance to the lead vehicle since it merges into our lane ahead",
+   1
+  ],
+  [
+   "Change lanes to the left to merge into the main travel lane and clear the right-side curb/fence, then accelerate to match traffic after the crossing car has cleared.",
+   1
+  ],
+  [
+   "Yield to the cut-in vehicle from the right since it merges into our lane ahead",
+   1
+  ],
+  [
+   "",
+   1
+  ],
+  [
+   "Nudge to the right to create clearance for the vehicle encroaching from the left curb",
+   1
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead",
+   1
+  ],
+  [
+   "Nudge to the left to clear the parked vehicle blocking the right side of our lane",
+   1
+  ],
+  [
+   "Nudge to the right to clear the construction cones blocking the left side of our lane",
+   1
+  ],
+  [
+   "Keep distance to the stopped vehicle blocking the lane ahead",
+   1
+  ]
+ ],
+ "smokezoo": [
+  [
+   "Keep distance to the lead vehicle since it is directly ahead in our lane",
+   32
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead",
+   31
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead in our lane",
+   19
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle ahead",
+   19
+  ],
+  [
+   "Keep distance to the lead vehicle since it is stopped ahead blocking our lane",
+   13
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it blocks our lane",
+   10
+  ],
+  [
+   "Stop for the stop sign ahead",
+   10
+  ],
+  [
+   "Stop for the red traffic light ahead",
+   8
+  ],
+  [
+   "Keep distance to the stopped vehicle blocking the lane ahead",
+   7
+  ],
+  [
+   "Turn left to exit the parking area since the path is clear",
+   7
+  ],
+  [
+   "Keep distance to the cut-in vehicle since it merges into our lane ahead",
+   5
+  ],
+  [
+   "Yield to the cut-in vehicle from the right since it is entering our lane ahead",
+   5
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it blocks our lane ahead",
+   5
+  ],
+  [
+   "Keep lane since the lane is clear ahead",
+   5
+  ],
+  [
+   "Stop to yield to the cross-traffic vehicle since it is crossing ahead",
+   5
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle blocking our lane",
+   4
+  ],
+  [
+   "Stop to keep distance to the stopped vehicle blocking the lane ahead",
+   4
+  ],
+  [
+   "Stop to yield to the cross-traffic vehicle since it is crossing our path ahead",
+   4
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it is blocking our lane",
+   3
+  ],
+  [
+   "",
+   3
+  ],
+  [
+   "Stop to keep distance to the lead vehicle since it is stopped ahead",
+   3
+  ],
+  [
+   "Slow down to yield to the cut-in vehicle from the left since it merges into our lane ahead",
+   3
+  ],
+  [
+   "Stop to yield to the cross-traffic since a vehicle is crossing ahead",
+   3
+  ],
+  [
+   "Stop to yield to the oncoming vehicle blocking our lane",
+   3
+  ],
+  [
+   "Stop because a fence blocks the path ahead",
+   3
+  ],
+  [
+   "Stop to yield to cross-traffic since a vehicle is crossing ahead",
+   3
+  ],
+  [
+   "Yield to the cut-in vehicle from the left since it merges into our lane ahead",
+   2
+  ],
+  [
+   "Keep distance to the lead vehicle since it is moving slowly ahead",
+   2
+  ],
+  [
+   "Stop to yield to the cross-traffic since vehicles are crossing ahead",
+   2
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the left since it is entering our lane ahead",
+   2
+  ],
+  [
+   "Stop to yield to the cut-in vehicle from the left since it merges into our lane ahead",
+   2
+  ],
+  [
+   "Nudge to the right to clear the stopped vehicle blocking the lane",
+   2
+  ],
+  [
+   "Keep distance to the stopped lead vehicle since it is blocking our lane ahead",
+   2
+  ],
+  [
+   "Yield to the cut-in vehicle since it merges into our lane ahead",
+   2
+  ],
+  [
+   "Nudge to the left to clear the stopped vehicle blocking the lane ahead",
+   2
+  ],
+  [
+   "Stop to keep distance to the stopped vehicle blocking our lane",
+   2
+  ],
+  [
+   "Stop to keep distance to the stopped lead vehicle",
+   2
+  ],
+  [
+   "Stop for the stop sign controlling our approach",
+   2
+  ],
+  [
+   "Stop to yield to the vehicle approaching from the right",
+   2
+  ],
+  [
+   "Stop to yield to the vehicle ahead",
+   2
+  ],
+  [
+   "Stop because a fence blocks the way ahead",
+   2
+  ],
+  [
+   "Stop for the red traffic light since it is red",
+   2
+  ],
+  [
+   "Slow down due to the upcoming speed bump ahead",
+   1
+  ],
+  [
+   "Accelerate to proceed through the intersection since the right-turn traffic light is green",
+   1
+  ],
+  [
+   "Resume speed since the lane ahead is clear after the right turn",
+   1
+  ],
+  [
+   "Slow down to yield to the cut-in vehicle from the right since it is entering our lane ahead",
+   1
+  ],
+  [
+   "Stop to yield to multiple vehicles crossing our path ahead, blocking our lane, and wait for a clear gap before proceeding forward.",
+   1
+  ],
+  [
+   "Stop to yield to multiple vehicles (including a car turning left across our path and another car following) blocking our lane ahead, leaving no safe gap to proceed forward or merge right into traffic.",
+   1
+  ],
+  [
+   "Stop and wait for a gap because multiple vehicles are coming up in our left front, blocking our merge into that lane; we must yield until a safe space opens for our left merge into traffic.",
+   1
+  ],
+  [
+   "Stop to maintain a safe distance to the stopped lead vehicle ahead",
+   1
+  ],
+  [
+   "Stop to yield to the car crossing our front and wait for a safe gap before proceeding into our lane; another vehicle is following closely behind, so stopping prevents a rear-end conflict as we wait for our turn to go.",
+   1
+  ],
+  [
+   "Keep lane since the lane ahead is clear",
+   1
+  ],
+  [
+   "Stop to yield to multiple cars in our lane that are merging from the right into our lane, blocking our path ahead; hold position until they clear to create a gap for our next move.",
+   1
+  ],
+  [
+   "Stop because our lane is blocked by a stationary lead car directly ahead, leaving no safe forward path and requiring us to hold position until it moves.",
+   1
+  ],
+  [
+   "Stop and hold position because our lead vehicle is stationary blocking our lane and a car is coming up in our right lane, making an immediate merge unsafe; wait for a usable gap before changing right to pass.",
+   1
+  ],
+  [
+   "Stop and hold position because a stationary lead car blocks our lane and opposing traffic is coming, leaving no safe gap to pass or merge right into our lane; wait for a usable gap before moving right to bypass it.",
+   1
+  ],
+  [
+   "Stop because a stationary lead vehicle is blocking our lane ahead, with opposing traffic in adjacent lanes preventing an immediate pass or merge; hold position and maintain a safe following distance until it clears and it is safe to proceed.",
+   1
+  ],
+  [
+   "Lane change to the right due to slow/obstructed vehicles directly ahead in our lane and a safe gap forming after a right\u2011lane vehicle passes, then accelerate to match right\u2011lane traffic after merging.",
+   1
+  ],
+  [
+   "Stop because a stationary lead car is directly ahead blocking our lane, leaving no usable gap to proceed or merge; maintain a safe following distance until it moves or space opens to the right for a pass, with adjacent right\u2011lane cars preventing an immediate merge.",
+   1
+  ],
+  [
+   "Stop because a stationary car is directly ahead blocking our lane, with traffic flowing in both adjacent lanes, so we must hold position until a gap opens for a right-lane merge to pass it safely.",
+   1
+  ]
+ ]
+}

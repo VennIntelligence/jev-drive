@@ -1,0 +1,28 @@
+{
+ "stay": {
+  "n": 8,
+  "frac_ticks_throttle": 0.0,
+  "mean_brake": 1.0,
+  "v_after_0p5s": 0.0
+ },
+ "go": {
+  "n": 15,
+  "frac_ticks_throttle": 0.9800000000000001,
+  "mean_brake": 0.020000000000000004,
+  "v_after_0p5s": 0.6270371506627087
+ },
+ "rev": {
+  "n": 42,
+  "frac_ticks_throttle": 0.7761904761904761,
+  "mean_brake": 0.22380952380952376,
+  "v_after_0p5s": 0.742906328722672
+ },
+ "go_lunge": {
+  "n": 15,
+  "plan_v3_median": 0.8370000000000001,
+  "v_0p5_median": 0.6676163199627553,
+  "v_1p0_median": 1.943659773498158,
+  "ratio_0p5_median": 0.7828010331761436,
+  "frac_overshoot_1p1": 0.3333333333333333
+ }
+}
