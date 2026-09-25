@@ -1,0 +1,19 @@
+metric,a,b,n,diff,ci_lo,ci_hi
+PDMS,ours ridge ego,constant velocity,12146,42.0113,41.1971,42.8355
+PDMS,ours cls ego K1024,constant velocity,12146,47.7798,46.9432,48.5847
+PDMS,ctrv,constant velocity,12146,20.4479,19.7467,21.1479
+PDMS,op-cinque native,constant velocity,12146,31.4195,30.5425,32.2920
+PDMS,op-lebowski native,constant velocity,12146,30.2421,29.3710,31.1124
+PDMS,op-small native,constant velocity,12146,26.6938,25.8508,27.5483
+PDMS,op-cinque native,Alpamayo 1.5 nav,12146,7.7880,6.8195,8.7857
+PDMS,op-lebowski native,Alpamayo 1.5 nav,12146,6.6106,5.6124,7.6147
+PDMS,ours cls ego K1024,Alpamayo 1.5 nav,12146,24.1484,23.1653,25.1154
+EPDMS,ours ridge ego,constant velocity,12146,38.3248,37.4525,39.1849
+EPDMS,ours cls ego K1024,constant velocity,12146,41.9660,41.0634,42.8502
+EPDMS,ctrv,constant velocity,12146,18.0049,17.3166,18.7134
+EPDMS,op-cinque native,constant velocity,12146,20.2759,19.3632,21.1716
+EPDMS,op-lebowski native,constant velocity,12146,19.5938,18.7113,20.5043
+EPDMS,op-small native,constant velocity,12146,16.6422,15.7505,17.5240
+EPDMS,op-cinque native,Alpamayo 1.5 nav,12146,2.9857,2.0470,3.9234
+EPDMS,op-lebowski native,Alpamayo 1.5 nav,12146,2.3036,1.3650,3.2488
+EPDMS,ours cls ego K1024,Alpamayo 1.5 nav,12146,24.6758,23.7046,25.6247

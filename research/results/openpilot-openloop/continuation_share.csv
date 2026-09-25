@@ -1,0 +1,21 @@
+benchmark,metric,baseline,value,top,top_entry,share_of_top,reference,reference_name,share_of_reference,source
+WOD-E2E val (479 rater frames),RFS,cv,7.1034,8.0430,RAP (test),0.8832,8.1308,logged future,0.8736,wod_main.csv
+WOD-E2E val (479 rater frames),RFS,ctrv,7.0182,8.0430,RAP (test),0.8726,8.1308,logged future,0.8632,"waymo.baselines, same 479 frames"
+WOD-E2E val (479 rater frames),RFS,ego head: ridge ego,7.0593,8.0430,RAP (test),0.8777,8.1308,logged future,0.8682,wod_main.csv
+WOD-E2E val (479 rater frames),RFS,ego head: cls ego K1024,7.3114,8.0430,RAP (test),0.9090,8.1308,logged future,0.8992,wod_main.csv
+NAVSIM navtest,PDMS,cv,20.6517,91.5000,SimWAM,0.2257,94.5514,"human (log, our devkit)",0.2184,navsim_navtest.csv
+NAVSIM navtest,PDMS,ctrv,41.0995,91.5000,SimWAM,0.4492,94.5514,"human (log, our devkit)",0.4347,navsim_navtest.csv
+NAVSIM navtest,PDMS,ego head: ridge ego,62.6630,91.5000,SimWAM,0.6848,94.5514,"human (log, our devkit)",0.6627,navsim_navtest.csv
+NAVSIM navtest,PDMS,ego head: cls ego K1024,68.4315,91.5000,SimWAM,0.7479,94.5514,"human (log, our devkit)",0.7237,navsim_navtest.csv
+NAVSIM navtest,EPDMS,cv,25.8812,90.2000,SimWAM,0.2869,94.5143,"human (log, our devkit)",0.2738,navsim_navtest.csv
+NAVSIM navtest,EPDMS,ctrv,43.8862,90.2000,SimWAM,0.4865,94.5143,"human (log, our devkit)",0.4643,navsim_navtest.csv
+NAVSIM navtest,EPDMS,ego head: ridge ego,64.2060,90.2000,SimWAM,0.7118,94.5143,"human (log, our devkit)",0.6793,navsim_navtest.csv
+NAVSIM navtest,EPDMS,ego head: cls ego K1024,67.8473,90.2000,SimWAM,0.7522,94.5143,"human (log, our devkit)",0.7179,navsim_navtest.csv
+NAVSIM navtest,PDMS,ego MLP (literature),65.6000,91.5000,SimWAM,0.7169,94.8000,human (paper),0.6920,arXiv 2406.15349 Tab. 2
+nuScenes val,L2 avg (m),cv (GoStraight),0.8300,0.3700,VAD-Base (with ego status),0.4458,,,,BEV-Planner Tab. 1
+nuScenes val,L2 avg (m),"cv (ours, valid)",0.8667,0.3700,VAD-Base (with ego status),0.4269,,,,nuscenes-physicalai.md
+nuScenes val,L2 avg (m),ego MLP (literature),0.3500,0.3700,VAD-Base (with ego status),1.0571,,,,BEV-Planner Tab. 1
+Bench2Drive open loop (50 clips),L2 avg 2 s (m),ego MLP: AD-MLP (literature),3.6400,0.7300,UniAD-Base,0.2005,,,,arXiv 2406.03877 Tab. 3
+Bench2Drive closed loop (220 routes),DS,ego MLP: AD-MLP (literature),18.0500,90.6000,BLUE (decision 38),0.1992,,,,arXiv 2406.03877 Tab. 3; decision 38
+HUGSIM (64 scenarios),HD-Score,cv-official,0.0390,0.2990,UniAD (paper Tab. 13),0.1304,0.2497,"LTF, same controller",0.1562,hugsim-exam scored-base
+HUGSIM (64 scenarios),HD-Score,cv-fixed,0.2923,0.2990,UniAD (paper Tab. 13),0.9776,0.2786,"LTF, same controller",1.0492,hugsim-exam scored-base

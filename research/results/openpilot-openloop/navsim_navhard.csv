@@ -1,0 +1,11 @@
+row,agent,stage1,stage2,EPDMS
+constant velocity,cv,28.9588,34.2464,11.4816
+Alpamayo 1.5 nav,alpamayo_nav,34.0547,32.5788,10.8198
+op-small native,small_none,28.6936,31.5310,10.1533
+op-cinque native,cinque_none,28.0617,29.3692,9.2998
+op-lebowski native,lebowski_none,31.7537,30.2341,10.2106
+op-cinque native +cmd desire,cinque_cmd,27.8633,27.7996,7.9817
+op-lebowski native +cmd desire,lebowski_cmd,32.1886,29.1835,10.2687
+ctrv,heads_ctrv,38.1492,27.3970,11.4214
+ours ridge ego,heads_ridge_ego,47.8100,28.3642,13.2568
+ours cls ego K1024,heads_cls_ego_K1024,46.8666,29.0802,13.5956

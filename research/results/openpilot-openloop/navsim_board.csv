@@ -1,0 +1,7 @@
+row,PDMS,EPDMS,navhard EPDMS
+"Ego Status MLP (blind, navtrain)",65.6000,,
+TransFuser,84.0000,76.7000,23.1000
+DiffusionDrive,88.1000,84.5000,27.5000
+DiffusionDriveV2,91.2000,,
+ReCogDrive (VLM),90.8000,83.6000,25.7000
+SimWAM,91.5000,90.2000,37.6000
