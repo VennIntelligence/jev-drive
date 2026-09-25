@@ -28,6 +28,12 @@ PROMPTS = ("pedestrian", "cyclist", "vehicle", "cone", "debris", "emergency vehi
 RES = 1008
 KEEP_SCORE = 0.3          # rows stored; the analysis reads the repo's default 0.5 and uses the rest for sweeps
 CONTACT_ROWS = 3
+AMP = os.environ.get("SAM_AMP", "bf16")   # "bf16" (the repo examples) or "fp32" (autocast off; TF32 matmuls stay on)
+
+
+def _amp():
+    import torch
+    return torch.autocast("cuda", dtype=torch.bfloat16, enabled=AMP == "bf16")
 
 
 def ckpt_path() -> Path:
@@ -72,7 +78,7 @@ class Detector:
         import torch
         from sam3.model.data_misc import FindStage
         self.m, self.prompts, self.dev, self.FindStage = model, list(prompts), device, FindStage
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.inference_mode(), _amp():
             self.text = model.backbone.forward_text(self.prompts, device=device)
 
     def _prep(self, img):
@@ -87,7 +93,7 @@ class Detector:
         import torch.nn.functional as F
         from sam3.model import box_ops
         B, P = len(imgs), len(self.prompts)
-        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.inference_mode(), _amp():
             x = torch.stack([self._prep(i) for i in imgs])
             bo = self.m.backbone.forward_image(x, need_interactive_out=False, need_propagation_out=False)
             bo.update(self.text)
@@ -266,7 +272,7 @@ def check_batched(image_list: str, n: int = 16, batch: int = 8) -> "pd.DataFrame
             # "same input": the processor gets the very tensor the batched path decoded (isolates batching);
             # "PIL decode": the processor's documented PIL input (adds the nvjpeg-vs-libjpeg decode difference)
             for src, im in (("same input", imgs[j]), ("PIL decode", Image.open(BytesIO(blobs[s + j])).convert("RGB"))):
-              with torch.autocast("cuda", dtype=torch.bfloat16):
+              with _amp():
                 st = proc.set_image(im)
                 for p, d in zip(det.prompts, per):
                     o = proc.set_text_prompt(prompt=p, state=st)
