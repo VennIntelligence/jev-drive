@@ -67,7 +67,7 @@ def wod_rfs():
 
 def wod_timeline():
     t = pd.read_csv(RES / "wod_timeline.csv")
-    t = t[t["variant"].isin(["ctx1.5", "nav2hz"])]
+    t = t[t["variant"].isin(["ctx1.5", "nav2hz", "nav2hz-dilate"])]
     models = ["small", "cinque", "lebowski"]
     fig, ax = plt.subplots(figsize=(S.SINGLE_COLUMN_IN, 2.2))
     w = .26

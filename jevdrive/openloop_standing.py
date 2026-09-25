@@ -19,7 +19,7 @@ log = get_logger(__name__)
 B = 10_000
 REPO = Path(__file__).resolve().parents[1]
 MODELS = ("small", "cinque", "lebowski")
-TIMELINE = ("ctx1.5", "nav2hz")
+TIMELINE = ("ctx1.5", "nav2hz", "nav2hz-dilate")
 # published WOD-E2E test-split entries (not pairable; arXiv 2510.26125 Table 8, RAP from the leaderboard page)
 WOD_BOARD = {"RAP": (8.043, 2.65), "Poutine": (7.986, 2.741), "UniPlan": (7.779, 2.986), "HMVLM": (7.736, 3.071),
              "DiffusionLTF": (7.717, 2.977), "AutoVLA": (7.556, 2.958), "NaiveEMMA": (7.528, 3.018)}
@@ -121,7 +121,7 @@ def wod(desire_run: str = "") -> dict:
                        "lon5_bias": lon.mean(), "lon5_bias_base": (preds[f"op-{m} native"][:, 0, -1, 0]
                                                                   - preds["logged future"][:, 0, -1, 0]).mean(),
                        "ade5_rater_best": ade[k].mean()})
-        for a, b in (("nav2hz", "ctx1.5"),):
+        for a, b in (("nav2hz", "ctx1.5"), ("nav2hz-dilate", "nav2hz")):
             ka, kb = f"op-{m} native @{a}", f"op-{m} native @{b}"
             if ka in rfs and kb in rfs:
                 d, lo, hi = _paired(rfs[ka] - rfs[kb], np.random.default_rng(4))
