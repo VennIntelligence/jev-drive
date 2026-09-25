@@ -343,10 +343,12 @@ def q7(rl) -> dict:
     Xw = np.c_[descriptors(dw), onset_wod(dw)]
     top = c["dec"][rp] == 9
     lab_w, bic_w = gmm_bic(Xw)
-    tw = clusters_table(Xw, lab_w, "WOD", "WOD all rater frames", {"share_in_dec10": top.astype(float)})
+    offw = np.array([offpath_max(a, b) for a, b in zip(best, c["gt"][rp])])
+    same = {"same_path_share": (offw < OFFPATH_M).astype(float), "offpath_median": offw}
+    tw = clusters_table(Xw, lab_w, "WOD", "WOD all rater frames", {"share_in_dec10": top.astype(float), **same})
     tw["n_dec10"] = [int((top & (lab_w == k)).sum()) for k in tw.cluster]
     lab_t, bic_t = gmm_bic(Xw[top])
-    tt = clusters_table(Xw[top], lab_t, "WOD", "WOD s_ego decile 10")
+    tt = clusters_table(Xw[top], lab_t, "WOD", "WOD s_ego decile 10", {k: v[top] for k, v in same.items()})
     bic = pd.concat([bic_p.assign(fit="P5 reactive frames"), bic_w.assign(fit="WOD all rater frames"),
                      bic_t.assign(fit="WOD s_ego decile 10")])
     cl = pd.concat([tp, tw, tt], ignore_index=True)
