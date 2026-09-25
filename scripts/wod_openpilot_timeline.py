@@ -38,12 +38,15 @@ def schedule(variant: str, context_rate: bool) -> list[int]:
 
 
 def render(name):
-    """{variant: (n_frames, 2, 6, 128, 256)} with the exam's renderer; frames absent from the shards raise."""
+    """{variant: (n_frames, 2, 6, 128, 256)} with the exam's renderer. A history frame before the sequence's first
+    indexed frame (one rater frame starts its sequence, wod-e2e.md) is replaced by that first frame, i.e. held."""
     seq, f = name.rsplit("-", 1)
+    spans = R._ctx["spans"]
+    first = min(int(n.rsplit("-", 1)[1]) for n in spans if n.startswith(seq + "-"))
     out = {}
     for v in VARIANTS:
-        names = [f"{seq}-{int(f) + int(round(t * 10)):03d}" for t in frame_times(v)]
-        assert all(n in R._ctx["spans"] for n in names), f"{name}: history frame missing"
+        names = [f"{seq}-{max(first, int(f) + int(round(t * 10))):03d}" for t in frame_times(v)]
+        assert all(n in spans for n in names), f"{name}: history frame missing inside the sequence"
         out[v] = names
     allnames = sorted({n for ns in out.values() for n in ns})
     fr = _render_names(allnames)
