@@ -15,6 +15,9 @@ import xml.etree.ElementTree as ET
 
 from tqdm import tqdm
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import b2d_run  # noqa: E402  (ownership-checked group kills)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = Path("/data")
@@ -71,19 +74,17 @@ def monitor_resources(out, stop):
 
 
 def clean_owned_server(run_dir, out):
+    """Kill the CARLA server group a stopped b2d_run left behind. The recorded pid is the group id (setsid);
+    the group is killed only while it still holds a process logging under run_dir, so a recorded pid that
+    was reused by someone else's process is left alone (pids wrap every few hours on the box)."""
     for pid_file in (run_dir / "servers").glob("*.pid"):
         try:
             pid = int(pid_file.read_text().strip())
-            command = Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ")
-        except (ValueError, FileNotFoundError, ProcessLookupError):
+        except (ValueError, OSError):
             continue
-        if b"CarlaUE4" not in command:
-            continue
-        record(out, "orphan_server", pid=pid, source=str(pid_file))
-        os.kill(pid, signal.SIGTERM)
-        time.sleep(1)
-        if Path(f"/proc/{pid}").exists():
-            os.kill(pid, signal.SIGKILL)
+        if b2d_run.owned_group_members(pid, run_dir):
+            record(out, "orphan_server", pid=pid, source=str(pid_file))
+            b2d_run.kill_owned_group(pid, run_dir)
 
 
 def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record_carla=False,
@@ -134,10 +135,9 @@ def case(out, xml_path, level, route, seed, arm, server_index, max_ticks, record
                         if route_pid.exists():
                             try:
                                 pid = int(route_pid.read_text().strip())
-                                commandline = Path(f"/proc/{pid}/cmdline").read_bytes()
-                                if b"b2d_route.py" in commandline:
+                                if b2d_run.owned_group_members(pid, run_dir):   # not a reused pid
                                     os.killpg(pid, signal.SIGTERM)
-                            except (ValueError, FileNotFoundError, ProcessLookupError):
+                            except (ValueError, OSError):
                                 pass
                         process.terminate()
                         try:

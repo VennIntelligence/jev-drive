@@ -76,6 +76,10 @@ When more than one agent (or person) runs jobs on the box at the same time:
   exist (and the GPU has room), runs the command, then writes `<slot>.done` or `<slot>.failed`. A failed
   dependency fails the dependent slot instead of starting it on bad inputs.
 - `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
+- A job that dies by a signal (rc > 128) gets `$DATA_DIR/runs/sched/<slot>.death-<HHMMSS>.txt` from `slot_run.sh`:
+  container memory, the largest processes and the last 2 min of `scripts/boxwatch.sh`, the box-wide 5 s
+  memory/process sampler that `slot_run.sh` starts (one per box, `$DATA_DIR/runs/boxwatch/`). Unexplained SIGKILLs:
+  todos/2026-09-25-closed-loop-infra-acceptance/sigkill.md.
 - Agents arm their slots and then stop; they watch only their own final sentinel. No polling loops in the agent
   and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
 - Waiters that look for a process with `pgrep -f <name>` must not carry `<name>` on their own command line

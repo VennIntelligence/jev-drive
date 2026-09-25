@@ -191,17 +191,44 @@ def cmdline(pid):
         return ""
 
 
-def kill_group(pid, why=""):
-    """Kill a process group by pid, after checking what that pid actually is. Never pkill -f:
-    -f matches our own command line and other sessions' (docs/long-runs.md)."""
-    for sig in (signal.SIGTERM, signal.SIGKILL):
+def owned_group_members(pgid, out_dir):
+    """Pids in process group `pgid` whose stdout is a file under `out_dir`.
+
+    Every process b2d_run starts is a group leader (setsid, so pgid == the recorded pid) with its
+    stdout on a log inside --out, and its children inherit that stdout. A recorded pid may since
+    have been reused by an unrelated process, possibly someone else's; matching the command line
+    does not prove ownership (another CARLA or route process, or any shell whose argv merely
+    mentions the script, matches too). The stdout target does."""
+    prefix = str(Path(out_dir).resolve()) + os.sep
+    members = []
+    for d in os.listdir("/proc"):
+        if not d.isdigit():
+            continue
         try:
-            os.killpg(os.getpgid(pid), sig)
+            with open("/proc/%s/stat" % d) as fh:
+                pgrp = int(fh.read().rsplit(")", 1)[1].split()[2])
+            if pgrp == pgid and os.readlink("/proc/%s/fd/1" % d).startswith(prefix):
+                members.append(int(d))
+        except (OSError, ValueError, IndexError):
+            continue
+    return members
+
+
+def kill_owned_group(pgid, out_dir):
+    """SIGTERM, then SIGKILL, the process group `pgid`, but only while it still holds processes
+    we own (owned_group_members). Never pkill -f, and never os.getpgid(pid) of a pid that may
+    have been reused: that kills whatever group the new holder is in (docs/long-runs.md)."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        if not owned_group_members(pgid, out_dir):
+            return
+        try:
+            os.killpg(pgid, sig)
         except OSError:
             return
-        time.sleep(2)
-        if not pid_alive(pid):
-            return
+        for _ in range(10):
+            time.sleep(0.5)
+            if not owned_group_members(pgid, out_dir):
+                return
 
 
 def port_free(port):
@@ -354,7 +381,10 @@ class Runner(object):
     def reap_orphans(self):
         """A runner that is SIGKILLed leaves its CARLA servers and route processes behind, holding
         the ports the next run wants. Recorded pids make that recoverable without pattern-matching
-        command lines: check that the pid really is the thing we started, then kill its group."""
+        command lines. A recorded pid is the pgid of what we started (setsid); the group is killed
+        only while it still holds a process whose stdout is a log under our --out, so a reused pid
+        can never take down someone else's process. This also reaps a CARLA binary whose wrapper
+        (the recorded pid) already exited."""
         supplied_pids = {server.proc.pid for server in self._external_servers or ()
                          if server.proc is not None and server.alive()}
         for pidfile in sorted(self.out.glob("servers/*.pid")) + sorted(
@@ -365,10 +395,10 @@ class Runner(object):
                 continue
             if pid in supplied_pids:
                 continue
-            cmd = cmdline(pid)
-            if pid_alive(pid) and ("CarlaUE4" in cmd or "b2d_route.py" in cmd):
-                self.event("orphan_killed", pid=pid, cmd=cmd[:120])
-                kill_group(pid)
+            members = owned_group_members(pid, self.out)
+            if members:
+                self.event("orphan_killed", pgid=pid, pids=members, cmd=cmdline(members[0])[:120])
+                kill_owned_group(pid, self.out)
             try:
                 pidfile.unlink()
             except OSError:

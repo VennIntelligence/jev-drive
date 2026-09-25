@@ -302,9 +302,8 @@ class ReusableServerTests(unittest.TestCase):
             path = Path(tmp) / "servers" / "carla-0.pid"
             path.parent.mkdir()
             path.write_text(str(server.proc.pid))
-            with patch.object(b2d_run, "pid_alive", return_value=True), \
-                    patch.object(b2d_run, "cmdline", return_value="CarlaUE4"), \
-                    patch.object(b2d_run, "kill_group") as kill:
+            with patch.object(b2d_run, "owned_group_members", return_value=[server.proc.pid]), \
+                    patch.object(b2d_run, "kill_owned_group") as kill:
                 runner = self.runner(Path(tmp), [server])
             runner.events.close()
             kill.assert_not_called()

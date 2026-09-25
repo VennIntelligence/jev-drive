@@ -7,6 +7,8 @@
 # Usage (run it inside tmux via scripts/tmux_run.sh):
 #   scripts/tmux_run.sh <slot> scripts/slot_run.sh <slot> [--after a,b] [--gpu N --vram-gb G] [--not-before HH:MM] -- cmd args...
 # Sentinels live in $DATA_DIR/runs/sched/. Other agents wait on your slot by name, so pick the name in schedule.md.
+# A job killed by a signal (rc > 128) also gets <slot>.death-<HHMMSS>.txt there: container memory, largest
+# processes and the last 2 min of scripts/boxwatch.sh, which this script starts (once per box).
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
@@ -28,6 +30,25 @@ PLAN=$DATA_DIR/runs/zeroshot-exam/gpu-plan.md
 mkdir -p "$S"
 rm -f "$S/$slot.done" "$S/$slot.failed"
 note() { echo "$(date '+%Y-%m-%d %H:%M') [slot $slot] $*" | tee -a "$PLAN"; }
+# The box-wide memory/process sampler (one per box, flock) for SIGKILL forensics; detached so it outlives this slot.
+setsid nohup scripts/boxwatch.sh > /dev/null 2>&1 < /dev/null &
+
+post_mortem() {  # rc -> $S/<slot>.death-<HHMMSS>.txt: container memory right after a signal death, largest processes,
+    # and the last 2 min of the boxwatch samples (todos/2026-09-25-closed-loop-infra-acceptance/sigkill.md)
+    local rc=$1 f=$S/$slot.death-$(date +%H%M%S).txt g; shift
+    {
+        echo "$(date '+%F %T.%3N') slot $slot: job exited rc=$rc (signal $(( rc - 128 ))); command: $*"
+        for g in memory.current memory.high memory.max memory.events pids.current memory.pressure; do
+            echo "$g: $(tr '\n' ' ' < /sys/fs/cgroup/$g 2>/dev/null)"
+        done
+        grep -E '^(anon|file|shmem|file_mapped|slab) ' /sys/fs/cgroup/memory.stat 2>/dev/null
+        echo "--- largest processes"
+        ps -eo pid,ppid,pgid,user,etimes,rss,nlwp,args --sort=-rss 2>/dev/null | head -16 | cut -c1-240
+        echo "--- boxwatch, last 2 min"
+        tail -24 "$DATA_DIR/runs/boxwatch/$(date +%Y%m%d).tsv" 2>/dev/null
+    } > "$f"
+    echo "$f"
+}
 
 ready() {
     local d
@@ -52,5 +73,7 @@ until ready; do sleep 60; done
 note "start (gpu=${gpu:-any}): $*"
 [[ -n $gpu ]] && export CUDA_VISIBLE_DEVICES=$gpu
 "$@"; rc=$?
-if (( rc == 0 )); then touch "$S/$slot.done"; note "done"; else touch "$S/$slot.failed"; note "FAILED rc=$rc"; fi
+pm=""
+(( rc > 128 )) && pm=" (killed by signal $(( rc - 128 )); post-mortem $(post_mortem "$rc" "$@"))"
+if (( rc == 0 )); then touch "$S/$slot.done"; note "done"; else touch "$S/$slot.failed"; note "FAILED rc=$rc$pm"; fi
 exit $rc
