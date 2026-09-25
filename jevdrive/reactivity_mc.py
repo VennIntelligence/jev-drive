@@ -67,7 +67,7 @@ def _inner_splits(groups: np.ndarray, k: int = INNER):
     return list(GroupKFold(k).split(groups, groups=groups))
 
 
-def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag) -> dict:
+def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam=None) -> dict:
     """Predictions (n, 40) on every row for every arm, fitted without fold f."""
     n = len(t)
     role, seq = t.role.to_numpy(), t.base_id.to_numpy()
@@ -103,6 +103,18 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag) -> dic
         best = int(np.argmin(score))
         W = _solve_pair(D, Rp, Zc, mu, [LAMS[best]])[0]
         out[f"M-C {arm}"] = prior + (Z - Z[tr].mean(0)) @ W
+        if pr_fam is not None:      # diagnostic: in-sample fit of the paired target at 2 s speed, per family group
+            fam = pr_fam[keep]
+            v = lambda y: np.linalg.norm((y[:, 14:16] - y[:, 12:14]).cpu().numpy(), axis=1) / 0.25  # noqa: E731
+            fit = prior + (Z - Z[tr].mean(0)) @ W
+            dt = v(F[ip]) - v(F[im])
+            for grp_name, msk in (("pedestrian", np.isin(fam, E.PED_FAMILIES)), ("cut-in", np.isin(fam, CUTIN))):
+                big = msk & (np.abs(dt) > 0.5)
+                dm = v(fit[ip]) - v(fit[im])
+                dp = v(prior[ip]) - v(prior[im])
+                rl.event("mc_insample", fold=f, arm=arm, model=tag, group=grp_name, n=int(big.sum()),
+                         slope_fit=float(np.polyfit(dt[big], dm[big], 1)[0]) if big.sum() > 2 else None,
+                         slope_prior=float(np.polyfit(dt[big], dp[big], 1)[0]) if big.sum() > 2 else None)
         if arm == "pair":           # sensitivity only: no zero constraint
             W0 = _solve_pair(D, Rp, Zc, 0.0, [LAMS[best]])[0]
             out["M-C pair (mu=0)"] = prior + (Z - Z[tr].mean(0)) @ W0
@@ -167,6 +179,7 @@ def run(rl, models=("cinque", "lebowski")):
     pr_ip = np.r_[pos[obs.fn_plus].to_numpy(), pos[null.fn_plus].to_numpy()]
     pr_im = np.r_[pos[obs.fn_minus].to_numpy(), pos[null.fn_null].to_numpy()]
     pr_group = np.r_[obs.base_id.to_numpy(), null.base_id.to_numpy()].astype(str)
+    pr_fam = np.r_[obs.family.to_numpy(), np.full(len(null), "null")].astype(str)
     obs_rows = np.flatnonzero(t.role.to_numpy() == "obs")
     preds = {}
     for m in models:
@@ -175,7 +188,7 @@ def run(rl, models=("cinque", "lebowski")):
             ev = obs_rows[fold[obs_rows] == f]
             if not len(ev):
                 continue
-            o = fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, m)
+            o = fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, m, pr_fam)
             for arm, v in o.items():
                 key = f"{arm} [{m}]"
                 preds.setdefault(key, np.full((n, 20, 2), np.nan, np.float32))[ev] = v[ev].reshape(-1, 20, 2).cpu().numpy()
@@ -201,8 +214,14 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", default="cinque,lebowski")
+    ap.add_argument("--lams", default="", help="log10 range lo,hi of the lam grid; default the pre-registered -1,5 "
+                                                 "(wider grids are the post-hoc sensitivity, deviation-log item 5)")
     a = ap.parse_args()
-    rl = RunLog("reactivity", "mc")
+    global LAMS
+    if a.lams:
+        lo, hi = map(int, a.lams.split(","))
+        LAMS = 10.0 ** np.arange(lo, hi + 1)
+    rl = RunLog("reactivity", "mc" + (f"-lams{lo}_{hi}" if a.lams else ""))
     run(rl, tuple(a.models.split(",")))
     rl.close()
 

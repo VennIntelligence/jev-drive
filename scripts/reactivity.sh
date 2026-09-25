@@ -16,5 +16,6 @@ case $1 in
     d0-exam) "${PIN[@]}" .venv/bin/python -m jevdrive.p5_exam run --op cinque,lebowski --op-arrays temporal,vision,hidden --op-sub $SUB ;;
     # M-C: dual-stream reaction head, pair / hard / uniform / single-stream arms (P5 v0 smoke)
     mc)      "${PIN[@]}" .venv/bin/python -m jevdrive.reactivity_mc ;;
-    *) echo "mode: d0-op | d0-exam | mc" >&2; exit 2 ;;
+    mc-wide) "${PIN[@]}" .venv/bin/python -m jevdrive.reactivity_mc --lams -5,7 ;;   # post-hoc sensitivity
+    *) echo "mode: d0-op | d0-exam | mc | mc-wide" >&2; exit 2 ;;
 esac
