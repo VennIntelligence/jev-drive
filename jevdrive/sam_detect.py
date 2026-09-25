@@ -209,7 +209,7 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
         for idx, blobs in tqdm(dl, desc=dst.name, mininterval=10):
             imgs = decode_jpeg(blobs, device="cuda")
             res = det(imgs)
-            for i, per in zip(idx, res):
+            for b, (i, per) in enumerate(zip(idx, res)):
                 key = rows[i]["key"]
                 for p, d in zip(det.prompts, per):
                     if not len(d["scores"]):
@@ -221,7 +221,7 @@ def detect(image_list: str, out_dir: str, batch: int = 8, shard_size: int = 2000
                     futs.append(f)
                     recs.append({"key": key, "prompt": p, "score": sc, "x0": bx[:, 0], "y0": bx[:, 1], "x1": bx[:, 2],
                                  "y1": bx[:, 3], "area": area, "cu": u, "cv": v,
-                                 "H": int(imgs[i].shape[-2]), "W": int(imgs[i].shape[-1])})
+                                 "H": int(imgs[b].shape[-2]), "W": int(imgs[b].shape[-1])})
             n_img += len(idx)
         cols = []
         for r, f in zip(recs, futs):
