@@ -376,6 +376,9 @@ E6（可选）──────────────────────
   定义（写死）：沿用 E4c 的曲线 C(x)（按对、全部观测帧、官方 τ，x = t − t_vis，0.2 s 网格）；A₃ = C 在 x ∈ [L, 3.0 s] 网格点上的平均高度，L 同 E4（openpilot 0.1、Qwen 流与 M-C 0.3、SAM / 规则门 0.6 描述行、TFv6 0.1、`ridge ego` 0）；
   null 地板同一定义在 null case 上；报 A₃、A₃ − null 与 base 路线 bootstrap 95% CI（2000 次，与 E4c 相同的重采样），两个集合、全部考生、行人 / cut-in / 合并三个 scope。只用已存预测，不重拟合。
   (3) **标定深度 / 地面高度估计不做**（fast-perception 的 D-depth 已说明发布版单目深度原样不行；要做是新登记，今晚不排）。
+- 2026-09-26 01:58 CST [E5] 执行记录（写于正式 run 之前）：(i) 检测器按三段互不重叠的图像列表在 GPU 0 上开 3 个进程（单进程在争用的 GPU 0 上 45 ms / 张，估 105 min；三进程合计约 52 张 / s，约 45 min），检测配置不变；
+  (ii) prior 的逐 fold 核对门槛从 1e-3 m 放到 1e-2 m：GPU 上重算 `fit_fold` 的 prior 与已存 run 差 0.4–1.8 mm（fp32 累加顺序），训练目标与 student 预测都用重算的 prior，teacher 与 `pair op` 用已存预测；
+  (iii) 01:45 在只有约 4% 行有检测的部分 embedding 上、每个 student 只训 50 步做了一次管线 smoke（`runs/elicitation/e5-smoke/`），只验证代码路径与已存 teacher / 对照的复现，登记的任何选择都没有因它改动。
 
 ## 结果
 
