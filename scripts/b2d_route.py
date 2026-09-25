@@ -73,7 +73,7 @@ def parse_args(argv=None):
     p.add_argument("--agent", default="", help="external leaderboard agent .py (default: cost stub)")
     p.add_argument("--agent-config", default="", help="external agent config/checkpoint path")
     p.add_argument("--record-dir", default="", help="optional CARLA recorder directory")
-    p.add_argument("--rig", default="front3", choices=["none", "front1", "front3", "b2d6"])
+    p.add_argument("--rig", default="front3", choices=["none", "front1", "front3", "b2d6", "alp4", "op2tcp3"])
     p.add_argument("--width", type=int, default=1600)
     p.add_argument("--height", type=int, default=900)
     p.add_argument("--policy", default="none", choices=["none", "sleep", "gpu"])

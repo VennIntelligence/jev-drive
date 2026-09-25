@@ -76,7 +76,25 @@ CAMERAS = [
     ("CAM_BACK_RIGHT", -0.32, 0.55, 1.60, 110.0, 70),
 ]
 # front3 is our planner's rig; b2d6 is what UniAD/VAD/AD-MLP are evaluated with in Bench2DriveZoo.
-RIGS = {"none": 0, "front1": 1, "front3": 3, "b2d6": 6}
+# The two exam rigs reproduce the zero-shot exam's cameras without any model, for harness cost measurement
+# (docs/bench2drive-cost.md, 2026-09-25): alp4 is the Alpamayo rig of scripts/zeroshot_rigs.py, four cameras at
+# their own sizes at 10 Hz (run it with --decimate 2); op2tcp3 is the heaviest rig we ran, openpilot's road and
+# wide 1928x1208 plus the TCP partner's three 1600x900 (Bench2DriveZoo tcp_b2d_agent.py), all five every tick.
+RIGS = {"none": 0, "front1": 1, "front3": 3, "b2d6": 6, "alp4": 4, "op2tcp3": 5}
+
+
+def exam_rig_specs(rig):
+    """Camera specs of an exam rig, or None for the uniform rigs built from CAMERAS."""
+    if rig not in ("alp4", "op2tcp3"):
+        return None
+    import zeroshot_rigs
+    if rig == "alp4":
+        return zeroshot_rigs.alpamayo_sensor_specs()
+    specs = zeroshot_rigs.openpilot_sensor_specs(DELTA)
+    for name, x, y, z, yaw, fov in CAMERAS[:3]:
+        specs.append({"type": "sensor.camera.rgb", "x": x, "y": y, "z": z, "roll": 0.0, "pitch": 0.0,
+                      "yaw": yaw, "width": 1600, "height": 900, "fov": fov, "id": name})
+    return specs
 
 
 # The leaderboard destroys its agent during cleanup, so b2d_route.py cannot read the timings off
@@ -433,8 +451,8 @@ class StubAgent(AutonomousAgent):
         return self._control
 
     def sensors(self):
-        sensors = []
-        for i in range(self.n_cam):
+        sensors = [dict(spec) for spec in exam_rig_specs(self.cfg.get("rig")) or []]
+        for i in range(0 if sensors else self.n_cam):
             name, x, y, z, yaw, fov = CAMERAS[i]
             spec = {"type": "sensor.camera.rgb", "x": x, "y": y, "z": z,
                     "roll": 0.0, "pitch": 0.0, "yaw": yaw,
