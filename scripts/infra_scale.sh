@@ -37,6 +37,10 @@ case $step in
     t13-alp)  scale t13-alp 3561 4 1,4,8 1200 "$@" -- "${ALP[@]}" ;;
     t13-alp-lights) scale t13-alp-lights 3561 4 1,4,8 1200 "$@" -- "${ALP[@]}" --cache-lights ;;
     t12-op)   scale t12-op 1773 4 1,2,4,6 800 "$@" -- "${OP[@]}" ;;
+    t12-alp-res64)  # the off-screen spectator viewport shrunk to 64x64; the agent's cameras are untouched
+        scale t12-alp-res64 1773 4 1,6,10 1200 "$@" -- "${ALP[@]}" "--server-args=-ResX=64 -ResY=64" ;;
+    x2)       # the same totals split over two cards: 4+4 and 6+6 (GPU list from $X2_GPUS, default 1,4)
+        scale x2-alp 1773 "${X2_GPUS:-1,4}" 4,6 1200 "$@" -- "${ALP[@]}" ;;
     verify)   # behaviour equivalence of each candidate change at N=1: frame md5s + per-tick truth pose and control
         export B2D_FRAME_HASH=1
         g=${VERIFY_GPU:-0}
