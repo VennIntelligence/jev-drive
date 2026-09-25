@@ -5,7 +5,7 @@
 # Layout: $R/layout.env (our defaults), then $R/layout.infra.env (servers_per_gpu / cores_per_server from the infra
 # agent's "[INFRA-PROFILE] layout ready" line, written by scripts/p5v1_wait_infra.sh) overrides WORKERS and
 # CORES_PER_SERVER. One runner chain per GPU in $GPUS; a chain whose GATE_<gpu> is "i3" first waits for the I3 rendering
-# on that card to finish (i3_done below). Each chain takes WORKERS x CORES_PER_SERVER CPUs from its CPUS_<gpu> list,
+# on that card to finish and VRAM_GB_PER_SERVER x WORKERS to be free (i3_done below). Each chain takes WORKERS x CORES_PER_SERVER CPUs from its CPUS_<gpu> list,
 # minus every CPU a live process is pinned to at that moment (so chains and other jobs never overlap), and drives, for
 # each pass and each expert in $EXPERTS, that expert's remaining worlds through scripts/b2d_run.py under taskset.
 # CARLA uses -graphicsadapter=<gpu>, TFv6 CUDA_VISIBLE_DEVICES=<gpu>. All chains share one --out per expert (claims split
@@ -72,20 +72,20 @@ print(",".join(str(c) for c in [c for c in want if c not in busy][:n]))
 EOF
 }
 
-i3_done() {  # the I3 rendering on this card has finished: its named final sentinel, or (not named) at least one
-    # i3-*.done, no jev:i3-* window with a live child, and >= 40 GB free on the card, for 3 checks 5 minutes apart
-    local g=$1 ok=0 w p free
+i3_done() {  # i3_done <gpu> <GB>: the I3 rendering on this card has finished: its named final sentinel, or (fallback)
+    # at least one i3-*.done, no jev:i3-* window with a live child, and >= <GB> free on the card, 3 checks 5 min apart
+    local g=$1 need=$(( $2 * 1024 )) ok=0 w p free
     while :; do
-        if [[ -n ${I3_FINAL_SLOT:-} ]]; then
-            [[ -f $S/$I3_FINAL_SLOT.done || -f $S/$I3_FINAL_SLOT.failed ]] && return 0
-        else
-            live=0
-            while read -r w p; do [[ $w == i3-* ]] && pgrep -P "$p" > /dev/null && live=1; done \
-                < <(tmux list-windows -t jev -F '#W #{pane_pid}' 2>/dev/null)
-            free=$(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits)
-            if compgen -G "$S/i3-*.done" > /dev/null && (( live == 0 && free >= 40960 )); then ok=$(( ok + 1 )); else ok=0; fi
-            (( ok >= 3 )) && return 0
+        if [[ -n ${I3_FINAL_SLOT:-} ]] && [[ -f $S/$I3_FINAL_SLOT.done || -f $S/$I3_FINAL_SLOT.failed ]]; then
+            return 0
         fi
+        # fallback, in case the named sentinel never appears
+        live=0
+        while read -r w p; do [[ $w == i3-* ]] && pgrep -P "$p" > /dev/null && live=1; done \
+            < <(tmux list-windows -t jev -F '#W #{pane_pid}' 2>/dev/null)
+        free=$(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits)
+        if compgen -G "$S/i3-*.done" > /dev/null && (( live == 0 && free >= need )); then ok=$(( ok + 1 )); else ok=0; fi
+        (( ok >= 3 )) && return 0
         sleep 300
     done
 }
@@ -103,8 +103,12 @@ chain() {  # chain <j>: GPU G[j], every pass, every expert
     span=$(( 50 / w * w ))
     if [[ ${!gate_var:-} == i3 ]]; then
         echo "$(date +%T) gpu $g: waiting for I3 to finish on this card"
-        i3_done "$g"
+        i3_done "$g" $(( w * ${VRAM_GB_PER_SERVER:-11} ))
     fi
+    local need=$(( w * ${VRAM_GB_PER_SERVER:-11} * 1024 ))
+    until (( $(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits) >= need )); do
+        echo "$(date +%T) gpu $g: waiting for $(( need / 1024 )) GB free"; sleep 120
+    done
     cpus=$(free_cpus "${!list_var}" $(( w * CORES_PER_SERVER )))
     note "p5v1-gen chain gpu $g start: $w CARLA instances, CPUs $cpus, server index $base-$(( base + span - 1 ))"
     for pass in 1 2; do
