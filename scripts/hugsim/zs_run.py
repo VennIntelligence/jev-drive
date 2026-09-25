@@ -7,7 +7,8 @@ preset (the scene's logged trajectory as the plan, scripts/hugsim/preset_agent.p
 Controllers run from private copies of the patched HUGSIM tree, so nobody else's apply / revert of the optional
 patch can touch a running job:  official = patches/hugsim/*.patch,  fixed = + optional/lqr-heading-fix.patch,
 ideal = + optional/ideal-tracker.patch (no iLQR: the ego moves exactly along the plan; reference for acceptance,
-created only by `setup-trees ideal`). The patch state of the job's tree is verified before every job.
+created only by `setup-trees ideal`), fixed2 = fixed + optional/lqr-tracker-v2.patch (iLQR at the 0.25 s simulator step,
+steering-rate cost 1; created only by `setup-trees fixed2`). The patch state of the job's tree is verified before every job.
 
     python scripts/hugsim/zs_run.py setup-trees
     python scripts/hugsim/zs_run.py run --out $DATA_DIR/runs/hugsim-exam --agent cinque --controller official \
@@ -35,9 +36,10 @@ REPO = Path(__file__).resolve().parents[2]
 D = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 DATA = D / "datasets" / "hugsim"
 PY = D / "envs" / "hugsim" / "bin" / "python"
-TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal")}
+TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal", "fixed2")}
 FIX = REPO / "patches" / "hugsim" / "optional" / "lqr-heading-fix.patch"
 IDEAL = REPO / "patches" / "hugsim" / "optional" / "ideal-tracker.patch"
+V2 = REPO / "patches" / "hugsim" / "optional" / "lqr-tracker-v2.patch"
 AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
           "pdms", "steps", "end", "wall_s", "rc_code", "finished", "scene", "run_dir"]
@@ -59,8 +61,10 @@ def setup_trees(names=("official", "fixed")):
             sh("git", "-C", str(dst), "checkout", "-q", sh("git", "-C", str(src), "rev-parse", "HEAD").strip())
             for p in sorted((REPO / "patches" / "hugsim").glob("*.patch")):
                 sh("git", "-C", str(dst), "apply", str(p))
-            if name == "fixed":
+            if name in ("fixed", "fixed2"):
                 sh("git", "-C", str(dst), "apply", str(FIX))
+            if name == "fixed2":
+                sh("git", "-C", str(dst), "apply", str(V2))
             if name == "ideal":
                 sh("git", "-C", str(dst), "apply", str(IDEAL))
         check_tree(name)
@@ -75,10 +79,12 @@ def applied(t, patch):
 
 def check_tree(name):
     t = str(TREES[name])
-    if applied(t, FIX) is not (name == "fixed"):
+    if applied(t, FIX) is not (name in ("fixed", "fixed2")):
         raise SystemExit(f"tree {t}: optional LQR patch state wrong for controller '{name}'")
     if name == "ideal" and not applied(t, IDEAL):
         raise SystemExit(f"tree {t}: ideal-tracker patch not applied")
+    if name == "fixed2" and not applied(t, V2):
+        raise SystemExit(f"tree {t}: tracker-v2 patch not applied")
 
 
 def traffic_map():

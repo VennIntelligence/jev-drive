@@ -1,6 +1,7 @@
 # HUGSIM 控制器验收：把场景自己的 logged 轨迹当 plan 喂给控制器
 
-状态: 预注册（2026-09-25 15:40 CST，写于任何验收场景运行之前；只跑过一个集合外场景的 plumbing smoke，见下）
+状态: 验收已跑（R1）：official 与 fixed 都不过；离线诊断（R2）找到候选控制器 fixed2，其 held-out 验证已预注册（V），运行中
+（预注册 2026-09-25 15:40 CST，commit badfbd0，写于任何验收场景运行之前）
 上级: [闭环基础设施验收](../2026-09-25-closed-loop-infra-acceptance.md)；姊妹篇: [B2D 控制器验收](b2d-controllers.md)
 接口: [docs/hugsim.md](../../docs/hugsim.md)
 代码: `jevdrive/hugsim_preset.py`（logged 轨迹 → plan）、`scripts/hugsim/preset_agent.py`（agent）、
@@ -107,4 +108,86 @@ nuScenes scene-0051-easy-00（不在上面 14 个里），ideal 与 official 各
 
 ## 结果
 
-（跑完再填。）
+数据：[accept_runs.csv](../../research/results/infra-acceptance/hugsim/accept_runs.csv)（逐 run）、
+[accept_summary.json](../../research/results/infra-acceptance/hugsim/accept_summary.json)（逐控制器，含判定）、
+[accept_results.csv](../../research/results/infra-acceptance/hugsim/accept_results.csv)（`zs_run.py` 原始行）。
+box 上：`$DATA_DIR/runs/infra-accept/hugsim/`。42 个 run 全部跑完，无基础设施崩溃，每个 run 20–40 s。
+
+### R1. 验收（预注册集合，2026-09-25 16:05）
+
+**参考自身。** S1 成立：ideal 的一步误差 median 0.3 mm、p95 0.9 mm。S2 不成立：ideal 在 static 上 complete 8/9、HD 均值 0.792（< 0.80）。
+唯一的例外是 KITTI-360 2800_3000-easy：场景从录制路径右侧 0.47 m 处起步，plan 要求 0.5 s 内横移 0.45 m（1 m/s 下是约 30° 的
+急打），ideal 不受转向约束，第 1 步就把车身转进了路边的背景点里（bg collision，HD 0）。这是参考的缺陷（plan 的 “0.5 s 内回到路径”
+在低速下不可行，而 ideal 照做），不是控制器的问题；按预注册它仍参与配对，但下面同时给出去掉它的数字。其余 8 个 static 场景上
+ideal 的 HD 均值 0.891。
+
+**跟踪与分数（static 9 个场景的全部步，pooled）：**
+
+| | ideal（参考） | official | fixed（PR #57） | 阈值 |
+|---|---:|---:|---:|---|
+| lateral @0.5 s，median / p95 (m) | 0.004 / 0.043 | 0.233 / **1.806** | 0.120 / **0.627** | ≤ 0.10 / ≤ 0.30 |
+| longitudinal @0.5 s，median / p95 (m) | 0.012 / 0.063 | 0.111 / 0.384 | 0.124 / 0.359 | ≤ 0.20 / ≤ 0.50 |
+| heading @0.5 s，median / p95 (°) | 0.07 / 1.4 | 2.0 / **32.6** | 1.2 / **11.8** | ≤ 1.5 / ≤ 5 |
+| cross-track 对录制路径，median / p95 / max (m) | 0.004 / 0.044 / 0.47 | 0.232 / 1.770 / 2.153 | 0.119 / 0.588 / 1.095 | — |
+| 逐 run median \|cross-track\| 的最大值 (m) | 0.47（2800 起步） | **1.447**（0920 右转） | **0.358**（Waymo 1308） | ≤ 0.30 |
+| max \|cross-track\| ≤ 1 m 的 run | 9/9 | **4/9** | **7/9** | ≥ 8/9 |
+| 结束原因（static） | 8 complete，1 bg（2800 第 1 步） | 8 complete，1 bg（KITTI 1290，35 步） | 9 complete | complete ≥ 8/9 |
+| 与 ideal 结束原因相同（static / actor） | — | 7/9 / 4/5 | 8/9 / 5/5 | ≥ 8/9 / ≥ 4/5 |
+| HD 均值 static（去掉 2800） | 0.792（0.891） | 0.796（0.804） | 0.884（0.902） | — |
+| HD 差对 ideal：static 均值 / 最差场景 | — | +0.004 / **−0.470**（KITTI 1290） | +0.092 / −0.020 | ≥ −0.05 / ≥ −0.15 |
+| HD 差对 ideal：actor 5 个 | — | −0.007, +0.004, −0.005, +0.018, **−0.564**（Waymo 1308-hard） | −0.008, +0.004, −0.005, +0.006, −0.018 | \|差\| ≤ 0.15 的 ≥ 4/5 |
+| P1 / P2 / P3 / P4 | | ✗ / ✗ / ✗ / ✗ | ✗ / ✗ / ✓ / ✓ | |
+| **判定** | | **fail** | **fail** | |
+
+读法：两条控制器路径的纵向都合格（p95 < 0.4 m），不合格的是横向与航向。official 在弯道里系统性地偏离 plan（0383 左转、0920 右转、
+Waymo 两个场景的逐 run 中位横向偏差 0.3–1.4 m、航向 p95 32°），在 KITTI 1290 上擦到路边背景提前结束（HD 0.916 → 0.446），
+在 Waymo 1308-hard 上撞上了 ideal 与 fixed 都没撞的车（HD 0.910 → 0.346）。fixed 把横向误差减半，结束原因与 ideal 全部一致，
+HD 与 ideal 的差都在 ±0.02 以内（2800 之外），**分数层面已经可用**；但它仍在弯道里切内侧 0.3–0.5 m（Waymo 1308 右转段、
+KITTI 1290、Waymo 1137 的 max cross-track 1.0–1.1 m），按预注册的跟踪标准不过。适配层（forward_only、straight_stop）在这 42 个
+run 里没有改动任何 plan（录制轨迹不倒车、没有停车段），所以这里验证的是 “适配层对正常 plan 是恒等变换”，straight_stop 的停车
+分支没被这组场景覆盖。actor 场景里 4/5 连 ideal 也撞（录制轨迹不知道插入的车），正是预注册用 ideal 当参考的原因。
+
+HD 为什么几乎不受跟踪误差影响：HD 按每步**计划**轨迹打分，plan 从 ego 当前位置出发、终点在录制路径上，车偏了 0.5 m，
+plan 仍然是一条合理的回归路径，NC / DAC / TTC 照样满分；跟踪误差只在车真的擦到背景、撞上 actor 或离开路线时才进入分数。
+所以 HD 对控制器不敏感是这个打分方式的性质，而跟踪误差是更灵敏的验收量；fixed 的 “跟踪不过、分数过” 并不矛盾。
+
+### R2. 诊断：误差来自 iLQR 的 0.5 s 离散化与转向速率代价（离线，不渲染）
+
+`scripts/hugsim/ctrl_offline.py` 把同一个 `LoggedPlan` 交给 `traj2control` → iLQR → env 的 bicycle 方程（逐字照抄），从各场景的
+起点状态开，不渲染、不判碰撞，在 static 9 个场景上比较控制器变体。先验证离线模型：它复现了仿真器里的数字（official lateral
+median / p95 0.243 / 1.805 m 对仿真器 0.233 / 1.806；fixed 0.125 / 0.700 对 0.120 / 0.627），所以下面的差别可以当作控制器本身的。
+数据：[offline_variants.csv](../../research/results/infra-acceptance/hugsim/offline_variants.csv)。
+
+| 变体 | 改了什么 | lateral @0.5 s med / p95 (m) | heading med / p95 (°) | 逐 run median xt 的最大值 (m) | max xt (m) |
+|---|---|---:|---:|---:|---:|
+| official | 上游 | 0.243 / 1.805 | 2.07 / 32.4 | 1.451 | 2.15 |
+| fixed | PR #57 | 0.125 / 0.700 | 1.29 / 13.1 | 0.358 | 1.13 |
+| fixed-T | + 去掉 50 ms 求解时限 | 0.125 / 0.700 | 1.29 / 13.1 | 0.358 | 1.13 |
+| central | PR #57 换成中心差分切向 | 0.130 / 0.711 | 1.28 / 13.9 | 0.387 | 1.17 |
+| fixed-dt | + iLQR 离散化 0.5 → 0.25 s，plan 线性插到 0.25 s | 0.049 / 0.431 | 0.57 / 7.3 | 0.143 | 0.69 |
+| fixed-dt-sr | fixed-dt + 转向速率上限 0.4 → 1.0 rad/s | 0.049 / 0.431 | 0.57 / 7.3 | 0.143 | 0.69 |
+| fixed-dt-h | fixed-dt + heading 代价 10 → 30 | 0.050 / 0.393 | 0.55 / 5.9 | 0.167 | 0.66 |
+| fixed-dt-xy | fixed-dt + 位置代价 1 → 3 | 0.037 / 0.383 | 0.51 / 6.4 | 0.087 | 0.57 |
+| **fixed-dt-u** | fixed-dt + 转向速率输入代价 10 → 1 | **0.034 / 0.275** | **0.44 / 4.7** | **0.078** | **0.52** |
+| fixed-dt-xyu | fixed-dt-xy + fixed-dt-u | 0.039 / 0.282 | 0.77 / 4.4 | 0.051 | 0.52 |
+
+结论（离线、在验收集合上）：50 ms 的求解时限从不触发（fixed-T 与 fixed 逐位相同），转向速率上限也不起作用；换切向算法没用。
+**最大的一项是离散化**：上游 iLQR 以 0.5 s 为一步积分，而仿真器每 0.25 s 就执行一次它的第一个输入（上游 issue #75），把离散化
+改成 0.25 s 后横向误差 median 降到 0.4 倍、p95 降到 0.6 倍。剩下的弯道误差来自转向速率的输入代价（10），降到 1 后 p95 进阈值。
+fixed-dt-u 在离线上满足 P1、P2 的全部阈值（lateral 0.034 / 0.275，longitudinal 0.107 / 0.321，heading 0.44 / 4.7，逐 run median
+cross-track ≤ 0.08 m、max ≤ 0.52 m）。它是在验收集合上挑出来的，所以这只是一个候选，要在没见过的场景上、在仿真器里重新验收。
+
+### V. 候选控制器 fixed2 的 held-out 验证（预注册，写于运行之前，2026-09-25 16:55 CST）
+
+**候选。** `fixed2` = fixed + `patches/hugsim/optional/lqr-tracker-v2.patch`：`traj2control` 把 0.5 s 的 plan 线性插值到 0.25 s，
+iLQR 离散化 0.25 s，转向速率输入代价 1，去掉 50 ms 求解时限（离线里不起作用，去掉后结果确定）。即离线的 fixed-dt-u，此后不再调参。
+
+**场景（12 个，与验收集合不重叠，按规则选、不看结果）。** static 8 个：`scored.txt` 里每个数据集 easy 的第 2、3 个
+（nuScenes 的第 1 个 0051 已用于 plumbing smoke，改取 0166、0167）：nuScenes 0166、0167；Waymo 164701907483、322492347634；
+KITTI-360 570_770、5980_6180；PandaSet 039、040。actor 4 个：`scored.txt` 里每个数据集 hard 的第 1 个：nuScenes 0254-hard-00、
+Waymo 100613054308-hard-00、KITTI-360 250_450-hard-00、PandaSet 034-hard-00。列表：[hugsim-val-static.txt](hugsim-val-static.txt)、
+[hugsim-val-actor.txt](hugsim-val-actor.txt)。控制器 ideal、official、fixed、fixed2 各一遍（48 个 run，`preset_accept.sh validate`）。
+
+**标准。** 与 P1–P4 完全相同（同一份 `preset_eval.py`，阈值不动）；“≥ 8/9” 在 8 个 static 上读作 ≥ 7/8，actor 的 “≥ 4/5” 读作
+≥ 3/4（代码里是 n − 1）。fixed2 全过即 **accept**，作为此后 HUGSIM 考试的 fixed 控制器；official 与 fixed 在新场景上的结果
+用来检查 R1 的结论是否可复现。fixed2 不过：不再调参，报告哪一项不过，结论写成 “HUGSIM 没有合格的控制器”。

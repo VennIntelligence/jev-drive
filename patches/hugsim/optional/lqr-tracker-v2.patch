@@ -1,0 +1,38 @@
+diff --git a/sim/ilqr/lqr.py b/sim/ilqr/lqr.py
+index d65c202..43578f6 100644
+--- a/sim/ilqr/lqr.py
++++ b/sim/ilqr/lqr.py
+@@ -2,14 +2,14 @@ from sim.ilqr.lqr_solver import ILQRSolverParameters, ILQRWarmStartParameters, I
+ import numpy as np
+ 
+ solver_params = ILQRSolverParameters(
+-    discretization_time=0.5,
++    discretization_time=0.25,  # jev-drive tracker v2: the simulator step (upstream issue #75)
+     state_cost_diagonal_entries=[1.0, 1.0, 10.0, 0.0, 0.0],
+-    input_cost_diagonal_entries=[1.0, 10.0],
++    input_cost_diagonal_entries=[1.0, 1.0],  # jev-drive tracker v2: steering-rate cost 10 -> 1
+     state_trust_region_entries=[1.0] * 5,
+     input_trust_region_entries=[1.0] * 2,
+     max_ilqr_iterations=100,
+     convergence_threshold=1e-6,
+-    max_solve_time=0.05,
++    max_solve_time=None,  # jev-drive tracker v2: no wall-clock cap (deterministic; <= 100 iterations)
+     max_acceleration=3.0,
+     max_steering_angle=np.pi / 3.0,
+     max_steering_angle_rate=0.4,
+diff --git a/sim/utils/sim_utils.py b/sim/utils/sim_utils.py
+index 9a2b27a..f7c08b6 100644
+--- a/sim/utils/sim_utils.py
++++ b/sim/utils/sim_utils.py
+@@ -55,6 +55,11 @@ def traj2control(plan_traj, info):
+         The input plan trajectory is under lidar coordinates
+         x to right, y to forward and z to upward
+     """
++    # jev-drive tracker v2 (patches/hugsim/optional/lqr-tracker-v2.patch): resample the 0.5 s plan to the simulator's
++    # 0.25 s step, which is now also the iLQR discretization (upstream issue #75), linear between waypoints
++    full = np.concatenate([np.zeros((1, 2)), np.asarray(plan_traj, dtype=np.float64)], 0)
++    t, tq = 0.5 * np.arange(len(full)), 0.25 * np.arange(1, 2 * len(full) - 1)
++    plan_traj = np.stack([np.interp(tq, t, full[:, k]) for k in (0, 1)], -1)
+     plan_traj_stats = np.zeros((plan_traj.shape[0]+1, 5))
+     plan_traj_stats[1:, :2] = plan_traj[:, [1,0]]
+     prev_a, prev_b = 0.0, 0.0

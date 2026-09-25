@@ -1,0 +1,8 @@
+nuscenes/scene-0166-easy-00.yaml
+nuscenes/scene-0167-easy-00.yaml
+waymo/scene-164701907483-easy-00.yaml
+waymo/scene-322492347634-easy-00.yaml
+kitti360/scene-570_770-easy-00.yaml
+kitti360/scene-5980_6180-easy-00.yaml
+pandaset/scene-039-easy-00.yaml
+pandaset/scene-040-easy-00.yaml
