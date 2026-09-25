@@ -1,0 +1,7 @@
+ab,arm,option,servers,workers_effective,window_s,ms_per_tick_worker,server_cores_each,route_cores_each,route_threads,route_rss_gb,cores_background,gpu0_util,tree_ms_mean,world_tick_ms_mean
+ab-lights,a,default,3,3,87.3,197.6,1.0,0.41,16.0,1.6,57.62,71.0,20.0,152.5
+ab-lights,b,--cache-lights,3,2,85.3,199.8,1.2,0.48,16.0,1.6,60.55,64.8,22.8,159.9
+ab-res64,a,default,3,2,140.6,268.9,0.75,0.22,16.0,1.25,79.1,84.2,13.6,233.7
+ab-res64,b,--server-args=-ResX=64 -ResY=64,3,2,192.2,265.8,0.8,0.22,16.0,1.23,77.34,81.2,13.3,238.7
+ab-threads,a,default,3,3,149.6,262.7,0.75,0.22,216.0,2.72,74.97,84.4,13.2,238.2
+ab-threads,b,--client-threads 8 (A: 0),3,1,208.5,278.8,0.81,0.24,16.0,1.22,76.15,81.0,15.3,250.4

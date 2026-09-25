@@ -65,6 +65,17 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   Bench2Drive spaces its task ports **150** apart and its README says to avoid ports below 10000
   ("<10000 could be unsafe"). Our TM ports at `8000 + 50i` are inside that range, so moving both
   ranges above 10000 is still worth doing; the wider spacing alone may not be the whole fix.
+- **Our server ports sit in the kernel's ephemeral range.** `ip_local_port_range` is 32768-60999 on the box, so
+  RPC ports of index >= 616 and TM ports of index >= 496 may be held by an outgoing connection, and the server
+  dies at startup with `bind: Address already in use` / Signal 11. Prefer indices below 490, or bind-test the
+  ports first (`scripts/b2d_scale.py`, `bindable`); `b2d_run.port_free` only checks for a listener.
+- **`GameThread timed out waiting for RenderThread after 60.00 secs`, then Signal 11,** during route setup: 16
+  servers on 2026-09-25 (14 of 91 starts in the profiling runs) and 19 on 2026-09-23. Not a port conflict and not
+  the container's thread cap (`pids.events` did not move); seen while 20-29 CARLA servers ran on the box, and
+  once with a single server on an idle card. Cause open. b2d_run's retry absorbs it at 60-90 s per hit.
+- **The container's thread cap (pids.max 20480) bounds the number of workers.** A server has ~430 threads, a
+  route client ~215 (`carla.Client` opens one worker per host hardware thread); at the cap, new route clients
+  fail with `RuntimeError: Resource temporarily unavailable`. Run `b2d_run.py --client-threads 8`.
 - **`SDL_VIDEODRIVER=offscreen` breaks CARLA.** It exits 1 immediately, printing nothing past
   `Disabling core dumps.`. `-RenderOffScreen` already does the headless part; SDL is not involved.
   Unset it, or use `dummy`. Setting it is a natural thing to try, which is why it is listed here.

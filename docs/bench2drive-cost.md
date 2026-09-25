@@ -10,6 +10,132 @@ processes finished, which did not mean 209 driving successes. The later Tokyo co
 Dev10 seed0 diagnostic logged **17.91 minutes through the completion marker for three sets
 of ten routes**, with no model inference. Hardware, driver, camera schedule and route mix differ, so these are not a speedup pair.
 
+## Harness cost and layout on the five-GPU box (2026-09-25)
+
+Measured on the current box (5 RTX PRO 6000 96 GB, cgroup 125 cores, 600 GB RAM) with our launch path
+(`b2d_run.Server`: `-RenderOffScreen -quality-level=Epic -graphicsadapter=<gpu>`, then `b2d_route.py` with
+leaderboard + scenario_runner + traffic manager in the route process), 20 Hz synchronous mode.
+[Working notes, method and every table](../todos/2026-09-25-closed-loop-infra-acceptance/profiling.md);
+per-rung numbers in `research/results/infra-acceptance/profiling/rungs.csv`.
+
+**Rig.** Unless stated, the Alpamayo exam rig through the real exam agent (`b2d_zeroshot_agent.py` with
+`"replay": "route"`, i.e. no model: 4 cameras of 1368-1392 x 784-792 plus one 608 x 352 at 10 Hz, `--decimate 2`,
+`--no-spectator`). **Work.** `scripts/b2d_scale.py` runs the *same* route on every worker for 1200 ticks and
+measures only the steady window in which every worker is ticking (no load, no teardown); servers are added
+rung by rung on one GPU. **CPU budget.** Our processes pinned to 45 CPUs of the GPU's NUMA node.
+
+### Per server
+
+| Town12 (route 1773), 1 server | value |
+|---|---:|
+| ms/tick | 127 (7.9 ticks/s, 0.39x real time) |
+| CarlaUE4 server | 2.4 cores, 4.2 GB RSS, ~374 threads |
+| route client (leaderboard + scenario tree + TM + agent) | 0.7 cores, 3.0 GB RSS, ~215 threads |
+| VRAM | ~5.1 GB (Town03 ~5.3-6 GB) |
+| tick split | `world.tick` 95 ms, scenario tree 20.5 ms, agent 9 ms |
+| route setup (load_world + scenario build) | 56 s at 1 server, 92 s at 12 (Town03: 14-28 s) |
+
+CPU per simulated tick is roughly constant across load: **~0.33 core-seconds per Town12 tick** (server 0.26-0.32,
+client 0.07-0.09) and **~0.18 on Town03** (server 0.15-0.18, client 0.03). Cores per worker therefore fall as a
+GPU gets crowded (each worker ticks slower), and the number to budget is cores per aggregate tick rate.
+
+### Servers per GPU
+
+![Aggregate tick rate and per-worker cost against servers on one GPU](../research/figs/infra-scale-throughput.png)
+
+Left: aggregate ticks/s (dotted: linear from one server); right: per-worker ms/tick. Town12 flattens at six
+servers; Town03 is still climbing at eight.
+
+| Servers on one GPU | 1 | 2 | 4 | 6 | 8 | 10 | 12 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Town12 aggregate ticks/s | 7.9 | 14.6 | 27.4 | **34.8** | 36.4 | 36.3 | 38.2 |
+| Town12 per-worker ms/tick | 127 | 137 | 146 | 173 | 220 | 276 | 315 |
+| Town12 GPU utilisation | 20% | 38% | 68% | 89% | 96% | 97% | 100% |
+| Town12 cores used (ours) | 3.1 | 5.9 | 11.2 | 13.2 | 13.1 | 12.4 | 12.4 |
+| Town03 aggregate ticks/s | - | 26.7 | 46.1 | 51.3 (5) / 57.0 (6) | 72.7 | - | - |
+| Town03 per-worker ms/tick | - | 75 | 87 | 97 / 105 | 110 | - | - |
+
+(Town03 at 1 server, and at 12 and 16, lost their routes to the failures described below; the 5- and 6-server
+points are rungs of 6 and 12 measured on the workers that survived setup. Background load was heavy during the
+Town03 rungs, 55-88 cores of other jobs.)
+
+![CPU per tick, cores used and GPU utilisation against servers on one GPU](../research/figs/infra-scale-resources.png)
+
+Left: core-seconds per simulated tick, flat in N; middle: cores our processes used; right: GPU utilisation.
+
+**The binding resource per card is the GPU (rendering), not the CPU.** On Town12 six servers reach 89% GPU
+utilisation and 4.4x the single-server rate; eight to twelve add under 10% while each worker gets 1.3-1.8x
+slower. Our processes never used more than 13 of their 45 cores and the cgroup was not throttled. This
+contradicts the earlier "CPU is usually the binding constraint for CARLA" (docs/long-runs.md), which came from
+the old 25-core container and from rigs rendered every fourth tick; on this box the card saturates first.
+
+### Recommended layout
+
+- **Six servers per GPU** for exams that are mostly Town12/Town13 (69% of routes, 83% of wall), with a
+  camera rig like Alpamayo's. Small towns would take eight or more, but they are 17% of the wall.
+- **Budget 2.5 cores per worker** (about 15 per GPU at the knee; ~12 are used, the rest is headroom for route
+  setup, which is CPU-heavy). For small towns budget ~3 cores per worker at eight per GPU.
+- **Shard over GPUs before stacking on one**: one `b2d_run.py` per card (`--gpu-rank`, own `--server-index`
+  block, shared `--out`).
+- **Whole box**: 5 x 6 = 30 workers, ~75 cores, ~150 GB VRAM, ~220 GB RSS - which only fits under the thread
+  cap below with `--client-threads 8`.
+- **Run with `--client-threads 8`.** It is what lets 30 workers fit under the container's thread cap (next
+  subsection); it changes neither CPU nor tick rate.
+- Machine-readable, as logged in gpu-plan.md: `servers_per_gpu=6 cores_per_server=2.5 threads_per_server=650
+  (450 with --client-threads 8) max_servers_box=30`.
+- **Not measured: splitting across cards.** No second card was idle; the expectation that cards add linearly
+  (they share only CPU, memory bandwidth and the thread cap, and five cards at the knee need ~60 cores) is an
+  inference. `scripts/infra_scale.sh x2` is the test.
+
+### The container's thread cap is a hard ceiling on workers
+
+`/sys/fs/cgroup/pids.max` is **20480** threads for the whole container, and CARLA is thread-hungry: a server
+has ~430 threads unpinned (374 at a 45-CPU affinity, 261 at 8 CPUs), and each route client ~215, because
+`carla.Client(host, port)` defaults to `worker_threads=0`, one worker per *host* hardware thread (208 here).
+During the Town03 rungs the container reached 17.9k threads with 21 servers from three jobs, `pids.events`
+counted 12 hits of the limit, and six of twelve routes in one rung died at `carla.Client()` with
+`RuntimeError: Resource temporarily unavailable` (pthread EAGAIN). At ~650 threads per worker, 30 workers
+plus the box's other jobs do not fit. `--client-threads N` (b2d_run/b2d_route) passes `worker_threads=N`;
+at 8 a route client has ~16 threads.
+
+### Failures seen while measuring
+
+- **`GameThread timed out waiting for RenderThread after 60.00 secs`, then Signal 11**, during route setup,
+  before the first tick: 14 of our 91 server starts on 2026-09-25, 2 of the controller arms', and 19 on
+  2026-09-23 (lateral-v2 runs). Not a port conflict (no `bind` line), not the thread cap (`pids.events` did not
+  move across two of them), and not exclusive to a crowded GPU (one happened with a single server on an idle
+  GPU 4); it came while 20-29 CARLA servers ran on the box. Cause open. It costs a retry of 60-90 s, not a
+  half-driven route.
+- **Our server ports sit inside the kernel's ephemeral range.** `ip_local_port_range` is 32768-60999, so every
+  RPC port of index >= 616 (2000 + 50i) and every TM port of index >= 496 can be held by an outgoing
+  connection; CARLA then dies at startup with `bind: Address already in use` / Signal 11 (hit once at index
+  780). `b2d_run.port_free` only checks for a listener. Prefer server indices below 490, or bind-test first
+  (`b2d_scale.bindable`).
+
+### Optimisations, and whether they are equivalent
+
+CARLA is not bitwise reproducible here: the same configuration run twice differs from the first camera frame
+on (md5), and the ego ends 1.4-3.4 m apart after 400 ticks. So an option is judged equivalent when its runs
+fall inside the spread of two identical baselines, and a semantic change is checked directly.
+
+After 17:00 CST the box was saturated by other CARLA jobs, so options were compared by concurrent A/B
+(`scripts/infra_ab.sh`: two drivers on one GPU at the same time, 3 servers each, arm B with the option), which
+gives both arms the same background. `research/results/infra-acceptance/profiling/ab.csv` has the rows.
+
+| Option | Equivalence | Cost (concurrent A/B, per-worker ms/tick) | Verdict |
+|---|---|---|---|
+| `--client-threads 8` | ego pose within 0.06 m of baseline after 400 ticks; two identical baselines differ by 0.41 m | 263 (n=3) vs 279 (n=1); client threads 216 -> 16, client RSS 2.7 -> 1.2 GB, client CPU unchanged | **take** |
+| `--cache-lights`, fixed | street-light rule: 0 mismatches (the first cache: 1633 of 2699 lights wrong every check); pose and thumbnails within the baseline spread | Town13 route 3561: 198 (n=3) vs 200 (n=2); scenario tree 20 vs 23 ms | equivalent now, no gain; leave off |
+| `--server-args=-ResX=64 -ResY=64` (off-screen viewport) | thumbnails and pose within the baseline spread | Town12: 269 vs 266 (n=2 each) | no gain; leave off |
+
+The scenario tree on these routes is ~20 ms of a 150-250 ms tick with a driver that completes its route; the
+55.9 ms Town13 tree of the full220 round came from a stand-in that sat in 4000-tick routes. The Python side of
+the route client costs 0.07-0.09 core-seconds per tick and is not on the critical path; no profiler run was
+needed to rule it out (`scripts/pyspy_python.sh` is ready if that changes).
+
+Last verified: 2026-09-25
+
+
 ## Tokyo controller diagnostic: complete Dev10 seed0, 2026-09-22
 
 Source: `/data/runs/b2d/controller/dev10/`, including every `attempt.json`, `route_result.json`,
@@ -178,7 +304,7 @@ Each change measured against its own baseline on the same server, same route, sa
 | `np.frombuffer(...).copy()` instead of `copy.deepcopy` | 158.3 | 169.0 | none | reject |
 | no copy at all: hand out a view of the CARLA buffer | 158.3 | 165.7 | none in wall clock; 12.4 ms -> 0.13 ms of CPU | take for CPU, not for speed |
 | stop moving the spectator camera (2 RPCs/tick) | 158.3 | 165.9 | none (the RPCs cost 0.06 ms) | reject |
-| cache the street lights (see below) | 157.9 | 193.4 | tree 25.0 -> 7.8 ms, wall clock worse | reject at one instance |
+| cache the street lights (see below; that cache was not equivalent, fixed 2026-09-25) | 157.9 | 193.4 | tree 25.0 -> 7.8 ms, wall clock worse | void, re-measured below |
 | overlap inference with simulation | 167.4 | 165.1 | hides all of a 129 ms policy | take |
 
 ### Decimation only works after fixing a leaderboard bug
@@ -230,14 +356,18 @@ Python loop, and re-sends `turn_on`/`turn_off` for lights already in that state;
 asks the server for locations `CarlaDataProvider` already cached this tick.
 
 So the hot path is one function, and what it spends its time on is RPCs for data that does not
-change - which Cython would not touch. Caching it (`--cache-lights`, semantically identical: the
-same lights end up on) does exactly what it should to the Python: **the scenario tree falls from
-25.0 to 7.8 ms per tick, a 3.2x reduction.**
+change - which Cython would not touch. Caching it (`--cache-lights`) does exactly what it should to
+the Python: **the scenario tree falls from 25.0 to 7.8 ms per tick, a 3.2x reduction.**
 
 And the wall clock does not improve. It gets slightly worse: 157.9 -> 193.4 ms at one instance,
-62.3 -> 67.6 ms in the decimated configuration, with the removed Python time reappearing almost
-one-for-one in the blocking wait. The leaderboard's per-tick Python work was already hidden behind
-the sensor pipeline; removing it just means arriving at the same wall sooner.
+62.3 -> 67.6 ms in the decimated configuration. This paragraph used to read that as the removed
+Python time reappearing in the blocking wait, and the cache as "semantically identical: the same
+lights end up on". **The second half was wrong** (checked 2026-09-25, see "Harness cost and layout"
+below): the first cache trusted each light's `is_on` when it was built, the server switches street
+lights on by itself at night after that, and the cache then never switched ~1600 of Town12's 2699
+lights off again. The slower wall clock measured here is at least partly a server rendering a city
+full of extra lights. The cache is fixed (the first update sends the whole state) and checked
+against the rule; re-measure before quoting any of the numbers in this subsection.
 
 **Conclusion for H4: the ceiling on optimising the leaderboard's Python is zero wall-clock at one
 instance.** The flag is kept because at four instances the freed CPU may be worth something, but
@@ -406,7 +536,8 @@ Once the optimised configuration removes the sensor wait (0.03 ms/tick), what is
 - **The scenario tree is what makes Town13 worse than Town12**: 55.9 ms against 29.2 and 6-19 in
   the small towns. `RouteLightsBehavior._turn_close_lights_on` re-fetches every street light in the
   map over RPC on every tick (see the Cython section above), and Town13 has the most of them.
-  **This finally makes `--cache-lights` worth re-measuring**: it was rejected at one instance on a
+  **This finally makes `--cache-lights` worth re-measuring** (re-measured 2026-09-25, see "Harness cost and
+  layout": after fixing it, no measurable gain on Town13 with a driver that finishes its route): it was rejected at one instance on a
   small town, where the freed Python reappeared in the blocking wait, but here it is 36% of a
   Town13 tick and the CPU is genuinely oversubscribed (load median 31.8, p90 47.0 against 25 cores).
 
@@ -438,7 +569,8 @@ Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
   replace it.
 - **Ten workers instead of eight** is about 23% on Town12, and is available whenever this card is
   not shared - see the Large Map ladder above for why we did not take it here.
-- **`--cache-lights`**, now that the scenario tree is 36% of a Town13 tick and the CPU binds.
+- ~~`--cache-lights`~~: measured 2026-09-25 (see "Harness cost and layout"); no gain, and the CPU does not bind on
+  this box.
 
 A six-camera BEV agent (UniAD, VAD) pays 263.3 ms/tick against our 158.3 at 1600x900 and adds a
 lidar, so roughly double, in the other direction.
@@ -620,7 +752,8 @@ once.
 - **The profile decomposition is one route on one map.** Route 24240 in Town10HD. The per-town
   table above is from the full round and is broad; the phase-by-phase breakdown at the top of this
   document is not.
-- **`--cache-lights` is still measured at one instance only** and rejected there. The 220-route
+- **`--cache-lights` was measured under contention on 2026-09-25** (no gain, section "Harness cost and layout");
+  what follows is the earlier reasoning. The 220-route
   round makes it the obvious next measurement rather than a curiosity: the scenario tree is 36% of
   a Town13 tick and the CPU is oversubscribed at eight workers. Untested, do not assume.
 - **No lidar or radar.** The Bench2Drive rig for UniAD/VAD adds a 64-channel lidar, which is

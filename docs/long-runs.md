@@ -69,8 +69,9 @@ Last verified: 2026-09-20
 
 When more than one agent (or person) runs jobs on the box at the same time:
 - `$DATA_DIR/runs/schedule.md` is the timetable: slots, owner, GPU, CARLA worker / core caps, dependencies.
-  One owner (the main session) edits it; everyone else reads it. CPU is usually the binding constraint for CARLA
-  (~3-4 cores per worker, ~12 workers on 50 cores).
+  One owner (the main session) edits it; everyone else reads it. On the five-GPU box the GPU binds first for
+  CARLA (about 6 servers per card, ~2.5 cores per worker), and the container's thread cap (pids.max 20480, ~650
+  threads per worker, ~450 with `--client-threads 8`) caps the box; see docs/bench2drive-cost.md (2026-09-25).
 - Launch every scheduled job through `scripts/slot_run.sh <slot> [--after a,b] [--gpu N --vram-gb G] -- cmd`
   inside tmux. It waits with plain `sleep` until the dependency sentinels `$DATA_DIR/runs/sched/<slot>.done`
   exist (and the GPU has room), runs the command, then writes `<slot>.done` or `<slot>.failed`. A failed
