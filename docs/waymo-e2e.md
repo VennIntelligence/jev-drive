@@ -53,12 +53,15 @@ Inspect a shard: `scripts/download_waymo_e2e.sh inspect <tfrecord>`.
 
 ```bash
 scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh            # small val train test, in that order
-scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route proxy --streams 16
+scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route direct --streams 64   # non-default route
 ```
 
-- Idempotent and resumable: files in `manifest.csv` whose slim file exists are skipped, and complete raw shards
-  left in `raw/` are slimmed without re-downloading. Just rerun it.
-- Pipeline (`scripts/waymo_e2e.py`): 32-64 range-GET streams into a sparse `.part` file per shard, then one process
+- Idempotent and resumable: files in `manifest.csv` whose slim file exists are skipped, complete raw shards
+  left in `raw/` are slimmed without re-downloading, and a partial shard resumes from its chunk journal
+  (`raw/<name>.part.chunks`, one line per finished 32 MB range). Just rerun it.
+- Pipeline (`scripts/waymo_e2e.py`): 32 range-GET streams (default) into a sparse `.part` file per shard. A new
+  shard starts whenever fewer than 2x `--streams` chunks are open, so slow tail chunks never idle the pool, and a
+  stream under 32 kB/s for 60 s is reconnected (it resumes within its range). Then one process
   per shard checks md5 and TFRecord CRCs, drops the other five cameras, re-reads and verifies the slim copy
   (same frames, same kept cameras), then deletes the raw shard. Slimming runs at ~420 MB/s per process,
   so the network is always the bottleneck.
@@ -81,6 +84,14 @@ scripts/tmux_run.sh waymo scripts/download_waymo_e2e.sh val --route proxy --stre
   at ~15 MB/s. On a 0.1x node the whole 1.65 TB costs only ~165 GB of subscription quota.
 - 2026-09-20, under contention from another bulk download: direct 32 streams 2.0 MB/s, direct 64 5.0,
   Clash 16 7.6. Alone that day both routes reached ~16 MB/s, so direct is only competitive on an idle link.
+- 2026-09-25, test split: defaults were then `--route direct --streams 64` and the job was started without
+  flags. It began at 10 MB/s and fell to 45 kB/s within an hour: direct GCS connections go near-dead
+  (~1 kB/s) without tripping the 60 s socket timeout, and the old pipeline allowed only 3 shards in flight,
+  so 5 such tail chunks held all 3 shards open while 59 of 64 threads idled. 120 s tests the same evening
+  (30-120 s window): direct 32 streams 4.2 MB/s; Clash (Tokyo-01, 0.1x) 16 / 32 / 64 streams 16.2 / 16.2 /
+  16.4 MB/s, i.e. the link ceiling at any count. Since then the default is `--route proxy --streams 32`,
+  the pool is kept fed across shards and stalled streams are reopened. The relaunch held the box link at
+  17-18 MB/s, of which the download got 7 MB/s while another job's torch wheel install ran and 13 MB/s after it.
 - A full run (1.65 TB) takes ~30 h at 15 MB/s; the training split alone (941 GB) ~17.5 h.
 - **The download's own `status` line reports a cumulative average, so it lags a decaying link badly.** Its
   MB/s is total bytes over total elapsed, and its ETA follows: with a fast first few hours it read 9.0 MB/s
@@ -610,4 +621,4 @@ index and the raw records and that RFS gives a rater trajectory its own label ba
 away, and more to the logged future than to standing still, and that a submission round-trips.
 
 
-Last verified: 2026-09-21
+Last verified: 2026-09-25
