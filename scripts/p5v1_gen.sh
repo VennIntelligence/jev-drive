@@ -34,6 +34,13 @@ stamp=$(date +%m%d-%H%M)
 { cat "$R/layout.env"; [[ -f $R/layout.infra.env ]] && cat "$R/layout.infra.env"; } > "$R/layout.used-$stamp.env"
 note "p5v1-gen start: GPUs [${G[*]}], CARLA instances [${W[*]}], $CORES_PER_SERVER cores each, experts [$EXPERTS] ($R/layout.used-$stamp.env)"
 
+# Recorder configs. BehaviorAgent: v0's (plus parallel JPEG, same bytes). PDM-Lite: records longer (todo, deviation 3):
+# in profiling it waited at a red light for the whole 20 s v0 allows after the trigger; the analysis also cuts its
+# frames back to v0's window (jevdrive/p5v1.py v0_window).
+TFV6=$(python3 -c "import json;print(json.load(open('$DATA_DIR/runs/p5_pairs/agent_config.json'))['tfv6_model_dir'])")
+echo "{\"tfv6_model_dir\": \"$TFV6\", \"save_threads\": 3}" > "$R/agent-ba.json"
+echo "{\"tfv6_model_dir\": \"$TFV6\", \"save_threads\": 3, \"driver\": \"pdm_lite\", \"after_trigger_s\": 40.0, \"stuck_s\": 40.0, \"max_sim_s\": 70.0}" > "$R/agent-pdm.json"
+
 # Orphans of an earlier, killed invocation hold ports in our blocks; every runner below runs --no-reap because the
 # chains share an --out and one runner's reaper would kill the other's servers.
 "$PY" - "$R/gen-ba" "$R/gen-pdm" <<'EOF'

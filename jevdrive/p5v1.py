@@ -8,7 +8,8 @@ expert labels and the label-validity table. What is new is only which routes, wh
   ids       the variant ids one expert still has to drive (comma list, for scripts/p5v1_gen.sh)
   link-v0   BehaviorAgent on the v0 routes is v0's own generation: link those attempts into runs/p5v1/gen-ba
   index     per expert, the v0 pipeline (pairs, observation frames, labels, frame index) -> processed/carla_p5v1_<e>
-  validity  per expert label-validity table (p5_exam.exam, no examinees) and the two experts on the same pairs
+  validity  per expert label-validity table (p5_exam.exam, no examinees; PDM-Lite also in v0's recording window) and
+            the two experts on the same pairs
 
 Experts: "ba" = BehaviorAgent(normal) in the official Bench2Drive 0.0.4 tree (exactly v0), "pdm" = PDM-Lite in
 SimLingo's Bench2Drive copy.
@@ -107,12 +108,56 @@ def index(expert: str):
     P.index(gen(expert))
 
 
-def _pair_view(expert: str, tau: float) -> pd.DataFrame:
-    """One row per case: determinism outcome and the expert's reaction on its own observation frames."""
+# v0's recorder stop rules (scripts/p5_pair_agent.py DEFAULT). PDM-Lite runs record longer (deviation 3 in the todo);
+# for the two-expert comparison their observation frames are cut back to what v0's rules would have recorded.
+V0_STOP = dict(max_sim_s=50.0, after_trigger_s=20.0, stuck_s=30.0)
+FUTURE_TICKS = 100                         # the 5 s future every observation frame needs
+
+
+def _v0_end(adir: Path) -> int:
+    """The last tick this world would have recorded under v0's stop rules (max_sim_s, trigger + after_trigger_s,
+    standing still longer than stuck_s after t = 10 s), from its own pose and trigger time."""
+    pose = pd.read_json(adir / "pose.jsonl", lines=True).drop_duplicates("frame")
+    t_trig = json.loads((adir / "p5_summary.json").read_text()).get("t_trigger")
+    end = V0_STOP["max_sim_s"] if t_trig is None else min(V0_STOP["max_sim_s"], t_trig + V0_STOP["after_trigger_s"])
+    since = None
+    for t, vx, vy in zip(pose.t, pose.vx, pose.vy):
+        since = (since if since is not None else t) if np.hypot(vx, vy) < 0.2 else None
+        if since is not None and t - since > V0_STOP["stuck_s"] and t > 10:
+            end = min(end, t)
+            break
+    return int(round(end / P.TICK))
+
+
+def v0_window(expert: str, obs: pd.DataFrame, null: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Observation and null frames whose 5 s future lies inside what both worlds would have recorded under v0's rules."""
+    c = cases().set_index(["base_id", "seed"])
+    g, ends = gen(expert), {}
+
+    def end(rid):
+        if rid not in ends:
+            a = P.attempt(g, rid)
+            ends[rid] = _v0_end(a) if a is not None else -1
+        return ends[rid]
+
+    def keep(df, other):
+        if not len(df):
+            return df
+        lim = [min(end(c.loc[(b, s), "plus"]), end(c.loc[(b, s), other])) for b, s in zip(df.base_id, df.seed)]
+        return df[df.k.to_numpy() + FUTURE_TICKS <= np.array(lim)]
+
+    return keep(obs, "minus"), keep(null, "null")
+
+
+def load(expert: str):
     use(expert)
     d = P.processed()
-    pairs = pd.read_csv(d / "pairs.csv", dtype={"base_id": str})
-    obs = pd.read_parquet(d / "obs.parquet")
+    return (pd.read_parquet(d / "obs.parquet"), pd.read_parquet(d / "null.parquet"),
+            pd.read_csv(d / "pairs.csv", dtype={"base_id": str}))
+
+
+def _pair_view(pairs: pd.DataFrame, obs: pd.DataFrame, tau: float) -> pd.DataFrame:
+    """One row per case: determinism outcome and the expert's reaction on its own observation frames."""
     obs = obs.assign(reactive=np.abs(obs.d_expert) > tau)
     rows = []
     for (b, s), o in obs.groupby(["base_id", "seed"]):
@@ -121,41 +166,32 @@ def _pair_view(expert: str, tau: float) -> pd.DataFrame:
         rows.append({"base_id": b, "seed": s, "n_obs": len(o), "n_reactive": len(r),
                      "lead_s": (r.k.min() - pr.t_vis) * P.TICK if len(r) else np.nan,
                      "d_min": float(o.d_expert.min()), "d_reactive_median": float(r.d_expert.median()) if len(r) else np.nan})
-    view = pairs[["base_id", "seed", "family", "reason"]].merge(pd.DataFrame(rows), on=["base_id", "seed"], how="left")
+    view = pairs[["base_id", "seed", "family", "reason"]].merge(pd.DataFrame(rows, columns=[
+        "base_id", "seed", "n_obs", "n_reactive", "lead_s", "d_min", "d_reactive_median"]), on=["base_id", "seed"], how="left")
     return view.fillna({"n_obs": 0, "n_reactive": 0})
 
 
-def validity():
+def _validity_one(tag: str, obs, null, pairs) -> tuple[dict, float]:
     from . import p5_exam as E
-    out, taus = {}, {}
-    for e in EXPERTS:
-        use(e)
-        d = P.processed()
-        if not (d / "obs.parquet").exists():
-            log.info("no index for %s yet", e)
-            continue
-        obs, null = pd.read_parquet(d / "obs.parquet"), pd.read_parquet(d / "null.parquet")
-        pairs = pd.read_csv(d / "pairs.csv", dtype={"base_id": str})
-        res = E.exam(obs, null, pairs, [])
-        v = res["validity"]
-        pooled = v[v.in_pooled]
-        summary = {"expert": e, "tau_exp": res["tau_exp"],
-                   "null_p95": float(np.quantile(np.abs(null.d_expert), 0.95)) if len(null) else np.nan,
-                   "pairs": int(v.pairs.sum()), "deterministic": int(v.deterministic_to_visibility.sum()),
-                   "obs_frames": int(v.obs_frames.sum()), "reactive_frames": int(v.reactive_frames.sum()),
-                   "pooled_families": ",".join(res["pooled_families"]),
-                   "pooled_reactive_frames": int(pooled.reactive_frames.sum()),
-                   "pooled_reactive_share": float(pooled.reactive_frames.sum() / max(pooled.obs_frames.sum(), 1)),
-                   "all_reactive_share": float(v.reactive_frames.sum() / max(v.obs_frames.sum(), 1))}
-        v.to_csv(RESULTS / f"label_validity_{e}.csv", index=False)
-        log.info("%s: tau %.3f\n%s", e, res["tau_exp"], v.to_markdown(index=False))
-        out[e], taus[e] = summary, res["tau_exp"]
-    pd.DataFrame(out.values()).to_csv(RESULTS / "summary.csv", index=False)
-    if len(out) < 2:
-        return
-    a, b = (_pair_view(e, taus[e]) for e in EXPERTS)
+    res = E.exam(obs, null, pairs, [])
+    v = res["validity"]
+    pooled = v[v.in_pooled]
+    v.to_csv(RESULTS / f"label_validity_{tag}.csv", index=False)
+    log.info("%s: tau %.3f\n%s", tag, res["tau_exp"], v.to_markdown(index=False))
+    return {"set": tag, "tau_exp": res["tau_exp"],
+            "null_p95": float(np.quantile(np.abs(null.d_expert), 0.95)) if len(null) else np.nan,
+            "pairs": int(v.pairs.sum()), "deterministic": int(v.deterministic_to_visibility.sum()),
+            "obs_frames": int(v.obs_frames.sum()), "reactive_frames": int(v.reactive_frames.sum()),
+            "pooled_families": ",".join(res["pooled_families"]),
+            "pooled_reactive_frames": int(pooled.reactive_frames.sum()),
+            "pooled_reactive_share": float(pooled.reactive_frames.sum() / max(pooled.obs_frames.sum(), 1)),
+            "all_reactive_share": float(v.reactive_frames.sum() / max(v.obs_frames.sum(), 1))}, res["tau_exp"]
+
+
+def compare(a: pd.DataFrame, b: pd.DataFrame, tag: str) -> pd.DataFrame:
+    """The two experts on the same pairs (pairs deterministic under both), per family."""
     m = a.merge(b, on=["base_id", "seed", "family"], suffixes=("_ba", "_pdm"))
-    m.to_csv(RESULTS / "experts_pairs.csv", index=False)
+    m.to_csv(RESULTS / f"experts_pairs_{tag}.csv", index=False)
     rows = []
     for fam, g in [("all", m)] + list(m.groupby("family")):
         both = g[(g.reason_ba == "ok") & (g.reason_pdm == "ok")]
@@ -169,9 +205,33 @@ def validity():
                      "d_reactive_ba": float(both.d_reactive_median_ba.median()),
                      "d_reactive_pdm": float(both.d_reactive_median_pdm.median()),
                      "d_min_ba": float(both.d_min_ba.median()), "d_min_pdm": float(both.d_min_pdm.median())})
-    cmp_ = pd.DataFrame(rows)
-    cmp_.to_csv(RESULTS / "experts_compare.csv", index=False)
-    log.info("experts on the same pairs\n%s", cmp_.to_markdown(index=False))
+    out = pd.DataFrame(rows)
+    out.to_csv(RESULTS / f"experts_compare_{tag}.csv", index=False)
+    log.info("experts on the same pairs (%s)\n%s", tag, out.to_markdown(index=False))
+    return out
+
+
+def validity():
+    """Label validity per expert (PDM-Lite also cut back to v0's recording window), and the two experts on the same
+    pairs: PDM-Lite in v0's window (the like-for-like comparison) and in its full window."""
+    rows, views = [], {}
+    for e in EXPERTS:
+        use(e)
+        if not (P.processed() / "obs.parquet").exists():
+            log.info("no index for %s yet", e)
+            continue
+        obs, null, pairs = load(e)
+        sets = [(e, obs, null)]
+        if e == "pdm":
+            sets.append(("pdm_v0window",) + v0_window(e, obs, null))
+        for tag, o, n in sets:
+            row, tau = _validity_one(tag, o, n, pairs)
+            rows.append(row)
+            views[tag] = _pair_view(pairs, o, tau)
+    pd.DataFrame(rows).to_csv(RESULTS / "summary.csv", index=False)
+    if "ba" in views and "pdm" in views:
+        compare(views["ba"], views["pdm_v0window"], "v0window")
+        compare(views["ba"], views["pdm"], "full")
 
 
 def main():
