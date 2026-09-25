@@ -27,8 +27,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from zeroshot_b2d_alp_speed import analyse, collisions  # noqa: E402
 
 ARMS = ["z2", "z5", "f2", "f5", "p1", "p2",      # first run (wait-window replay)
-        "f2t", "p5x2", "p5x5", "p5x1"]           # P5 re-acceptance (time-indexed replay), b2d-controllers-p5.md
-PAIRED_REF = {"p5x2": "f2t", "p5x5": "f2t", "p5x1": "f2t"}   # paired contrasts besides the one against expert a
+        "f2t", "p5x2", "p5x5", "p5x1",           # P5 re-acceptance (time-indexed replay), b2d-controllers-p5.md
+        "p6x2", "p6x5", "p6x1", "p7x2", "p7x5", "p7x1"]   # P6 / P7, b2d-controllers-p7.md
+# Paired contrasts besides the one against expert a.
+PAIRED_REF = [(f"p5x{h}", "f2t") for h in (2, 5, 1)] + \
+    [(f"{c}x{h}", r) for c in ("p6", "p7") for h in (2, 5, 1) for r in ("f2t", f"p5x{h}")] + \
+    [(f"p7x{h}", f"p6x{h}") for h in (2, 5, 1)]
 
 
 def paired_ci(diff, n_boot=10000, seed=0):
@@ -234,7 +238,7 @@ def main():
                           "n_collisions": paired_ci([r["n_collisions"] - e["n_collisions"] for r, e in pair])}
         per_arm[arm] = {r["route"]: r for r in ok}
         summary[arm] = m
-    for arm, ref in PAIRED_REF.items():
+    for arm, ref in PAIRED_REF:
         if arm in per_arm and ref in per_arm:
             both = [r for r in routes if r in per_arm[arm] and r in per_arm[ref]]
             A, R = per_arm[arm], per_arm[ref]

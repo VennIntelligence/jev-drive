@@ -4,7 +4,7 @@
 主题: ../research/trajectory-to-control.md、[docs/carla.md](../docs/carla.md)、[docs/bench2drive-cost.md](../docs/bench2drive-cost.md)、[docs/hugsim.md](../docs/hugsim.md)
 子文档: [profiling](2026-09-25-closed-loop-infra-acceptance/profiling.md)、[B2D 控制器验收](2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md)、
 [HUGSIM 控制器验收](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)、[SIGKILL 取证](2026-09-25-closed-loop-infra-acceptance/sigkill.md)、
-[P5 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)
+[P5 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)、[P6 / P7 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p7.md)
 
 ## 为什么做
 

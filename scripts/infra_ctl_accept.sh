@@ -12,7 +12,7 @@
 #   scripts/infra_ctl_accept.sh all <gpu>       both
 #   scripts/infra_ctl_accept.sh v2 <gpu> arm:index ...   the P5 re-acceptance (b2d-controllers-p5.md): time-indexed
 #                                               replay plan; arms f2t (fixed, 2 Hz) and P5 at 2 / 5 / 1 Hz (p5x2, p5x5,
-#                                               p5x1); expert a / b reused from the first run (ACCEPT_REF). Several
+#                                               p5x1; P6 / P7 likewise: p6x2 ... p7x1); expert a / b reused from the first run (ACCEPT_REF). Several
 #                                               runners of one arm share its output dir (route claims).
 # Re-running resumes (b2d_run skips done/<id>.json). Exit non-zero on infrastructure failure only.
 set -uo pipefail
@@ -67,6 +67,12 @@ if [[ $mode == v2 ]]; then
     arm_cfg p5x2 5 fixed "$T" pursuit "$P5"
     arm_cfg p5x5 2 fixed "$T" pursuit "$P5"
     arm_cfg p5x1 10 fixed "$T" pursuit "$P5"
+    for c in P6 P7; do                           # b2d-controllers-p7.md
+        cc=$(pwd)/todos/2026-09-23-tfv6-controller/controller-eval/$c.json l=${c,,}
+        arm_cfg ${l}x2 5 fixed "$T" pursuit "$cc"
+        arm_cfg ${l}x5 2 fixed "$T" pursuit "$cc"
+        arm_cfg ${l}x1 10 fixed "$T" pursuit "$cc"
+    done
     pids=()
     for spec in "${@:3}"; do
         arm=${spec%%:*} i=${spec##*:}

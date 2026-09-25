@@ -1,6 +1,6 @@
 """Checks for the P5 re-acceptance wiring (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md).
 
-1. The exam agent (b2d_zeroshot_agent.py, controller_preset "pursuit") builds P5 exactly as the L1 / L2 harnesses do
+1. The exam agent (b2d_zeroshot_agent.py, controller_preset "pursuit") builds P5 / P6 / P7 exactly as the L1 / L2 harnesses do
    (b2d_controller.pursuit_from_config; pose_lateral_coefficient_s2_per_m to the PoseFilter as b2d_agent.py):
    bit-identical controls on a synthetic 2 Hz / 1 Hz plan stream with a stop and a restart.
 2. replay_plan "time": on time, lagging, ahead of schedule, during the expert's wait and past the log's end the plan is
@@ -20,7 +20,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-P5 = HERE.parent / "todos/2026-09-23-tfv6-controller/controller-eval/P5.json"
+CONFIGS = [HERE.parent / f"todos/2026-09-23-tfv6-controller/controller-eval/{n}.json" for n in ("P5", "P6", "P7")]
 
 
 def stub_modules(hero):
@@ -37,7 +37,7 @@ def stub_modules(hero):
         get_hero_actor=lambda: hero)
 
 
-def check_controller():
+def check_controller(P5):
     from b2d_controller import pursuit_from_config, Controller
     params = json.loads(P5.read_text())
     params.pop("rear_axle_offset_m")                       # as ZeroShotAgent.setup
@@ -64,7 +64,7 @@ def check_controller():
             x += v * 0.05
         assert out_a == out_r, "controls differ"
         assert max(o[0] for o in out_a) > 0.3 and max(o[2] for o in out_a) > 0.1
-    print("controller: P5 via the exam agent == pursuit_from_config (bit-identical, 2 Hz and 1 Hz)")
+    print("controller: %s via the exam agent == pursuit_from_config (bit-identical, 2 Hz and 1 Hz)" % P5.stem)
 
 
 def check_replay():
@@ -112,5 +112,6 @@ def check_replay():
 
 
 if __name__ == "__main__":
-    check_controller()
+    for config in CONFIGS:
+        check_controller(config)
     check_replay()
