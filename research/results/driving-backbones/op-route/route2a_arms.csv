@@ -1,0 +1,46 @@
+subset,arm,n,rfs_frame_mean,rfs_cluster_mean
+all rater frames,ridge ego,479,7.055030071506471,7.065050359115882
+all rater frames,A ridge_late op-cinque temporal,479,7.457946164918519,7.44893955911454
+all rater frames,A ridge_late op-lebowski temporal,479,7.471683309214765,7.521587485883439
+all rater frames,cls ego K1024,479,7.277340321229472,7.262260881599444
+all rater frames,cls_late op-cinque temporal,479,7.6526077439992735,7.637276413649218
+all rater frames,cls_late op-lebowski temporal,479,7.703487033288038,7.734075282422667
+all rater frames,native op-cinque,479,7.941206200464859,8.004919907280499
+all rater frames,native op-lebowski,479,7.80468568915373,7.885506729659272
+all rater frames,cv,479,7.045712040010445,7.103378721352011
+standstill (v0 < 0.5 m/s),ridge ego,120,7.014836804644604,7.074255122590269
+standstill (v0 < 0.5 m/s),A ridge_late op-cinque temporal,120,6.9082897104773116,6.78918531232112
+standstill (v0 < 0.5 m/s),A ridge_late op-lebowski temporal,120,7.013715600292068,6.993378995590837
+standstill (v0 < 0.5 m/s),cls ego K1024,120,7.316650531233039,7.44872807127126
+standstill (v0 < 0.5 m/s),cls_late op-cinque temporal,120,7.624813981097712,7.729746641971586
+standstill (v0 < 0.5 m/s),cls_late op-lebowski temporal,120,7.651991927207119,7.878193939428818
+standstill (v0 < 0.5 m/s),native op-cinque,120,7.809306028116359,7.953476375328233
+standstill (v0 < 0.5 m/s),native op-lebowski,120,7.5913402830961,7.7968346601100205
+standstill (v0 < 0.5 m/s),cv,120,7.648761504877431,7.752025482390445
+Interections + Multi-Lane,ridge ego,158,7.002723256731551,6.9697363460993245
+Interections + Multi-Lane,A ridge_late op-cinque temporal,158,7.441253778284657,7.344002163230255
+Interections + Multi-Lane,A ridge_late op-lebowski temporal,158,7.398740061232674,7.320105954702408
+Interections + Multi-Lane,cls ego K1024,158,7.253141750091509,7.176397121161585
+Interections + Multi-Lane,cls_late op-cinque temporal,158,7.619600700925117,7.523874049856445
+Interections + Multi-Lane,cls_late op-lebowski temporal,158,7.647766344442732,7.615051497452068
+Interections + Multi-Lane,native op-cinque,158,7.688246816118624,7.641591488285413
+Interections + Multi-Lane,native op-lebowski,158,7.458637731008165,7.415788603252052
+Interections + Multi-Lane,cv,158,7.03844428161898,6.973773286255785
+Interections,ridge ego,116,7.040167857989752,7.040167857989752
+Interections,A ridge_late op-cinque temporal,116,7.551647503481544,7.551647503481544
+Interections,A ridge_late op-lebowski temporal,116,7.488000398375138,7.48800039837514
+Interections,cls ego K1024,116,7.340257274822773,7.340257274822773
+Interections,cls_late op-cinque temporal,116,7.728263385921989,7.72826338592199
+Interections,cls_late op-lebowski temporal,116,7.684902116702406,7.684902116702406
+Interections,native op-cinque,116,7.74120691798335,7.74120691798335
+Interections,native op-lebowski,116,7.50727728143402,7.507277281434021
+Interections,cv,116,7.111854600679903,7.111854600679904
+Multi-Lane Maneuvers,ridge ego,42,6.899304834208896,6.8993048342088965
+Multi-Lane Maneuvers,A ridge_late op-cinque temporal,42,7.136356822978965,7.136356822978966
+Multi-Lane Maneuvers,A ridge_late op-lebowski temporal,42,7.152211511029675,7.152211511029676
+Multi-Lane Maneuvers,cls ego K1024,42,7.012536967500396,7.012536967500397
+Multi-Lane Maneuvers,cls_late op-cinque temporal,42,7.319484713790902,7.319484713790902
+Multi-Lane Maneuvers,cls_late op-lebowski temporal,42,7.545200878201728,7.5452008782017295
+Multi-Lane Maneuvers,native op-cinque,42,7.541976058587476,7.541976058587476
+Multi-Lane Maneuvers,native op-lebowski,42,7.3242999250700835,7.324299925070082
+Multi-Lane Maneuvers,cv,42,6.835691971831665,6.835691971831665
