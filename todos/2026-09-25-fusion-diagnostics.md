@@ -1,6 +1,6 @@
 # 融合前诊断：谁看得见什么、谁对什么起反应、缺口在哪（9 项，1–2 张卡）
 
-状态: 待排（预登记，写于任何新拟合、新抽取之前，2026-09-25 18:00；用户 2026-09-25 拍板三项，见「用户决定」；等中央调度员分卡后开跑）
+状态: 进行中（预登记写于 2026-09-25 18:00，任何新拟合、新抽取之前；18:06 中央调度员分卡：GPU 3 现在、GPU 0 约 19:00 后作第二张卡，按排程 A 起步、GPU 0 空出后切 B。第 0 阶段 18:35 完成）
 用户决定（2026-09-25）: (1) SAM 3.1 权重直接用 ModelScope 同名副本，SAM License 已接受；(2) 新建 `envs/sam3`；(3) 卡由中央调度员分配，可能是 1 张也可能是 2 张，本文件不指定卡号，两种排程都写在下面。
 上游: 第 22 条（judge 口径）、第 24 条（P3 阶梯）、第 25 条（continuation prior + reaction decoder）、第 32 条（P5 v0）、第 34 条（WOD zero-shot）、第 35 条（榜单 E 层）、
 第 40 条及后续 (iii)（[driving-backbones](2026-09-24-driving-backbones/README.md)）、第 42 条（[reactivity](2026-09-25-reactivity-program.md) 的 D0 / M-C）、
@@ -318,3 +318,54 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 ## 结果
 
 （跑完再填；box 上 run dir：`$DATA_DIR/runs/fusion_diag/<item>/<time>`。）
+
+### 第 0 阶段（CPU，2026-09-25 18:20–18:35）：Q3、Q2a、Q7、Q6-GT
+
+四项都在分钟级跑完（登记预算 10–60 min）。run dir：`$DATA_DIR/runs/fusion_diag/{q3,q2a,q6gt}/20260925-182051`、`q7/20260925-182408`；小表在 `research/results/fusion-diagnostics/{q3,q2a,q7,q6}/`；代码 `jevdrive/fusion_diag.py`。
+口径的细节（原生 plan 取哪份、Q2a 的方向与 intent 操作化、Q7 分开聚类、Q6 的路径与制动量级）都在上面的偏离日志里，时间早于数字。
+
+**Q3 真实数据镜像**（零拟合；Δ [95% CI]，sequence bootstrap，Cinque；Lebowski 同向、量级接近，全表见 `q3_deltas.csv`）。
+
+| 读数 | Cut_ins | Pedestrian | Cyclist | FOD | Interections | 全部 |
+|:--|:--|:--|:--|:--|:--|:--|
+| `cls_late − cls ego`，ADE 第 1–9 档（m，负 = 表征有用） | **−0.21 [−0.36, −0.07]** | −0.10 [−0.19, +0.03] | −0.09 [−0.18, +0.00] | −0.01 [−0.14, +0.12] | −0.07 [−0.15, +0.02] | −0.04 [−0.09, +0.03] |
+| `cls_late − cls ego`，rater RFS（正 = 有用） | +0.94 [−0.06, +2.16]（n = 20） | +0.20 [−0.22, +0.59] | **+0.61 [+0.15, +1.11]** | +0.32 [−0.07, +0.69] | **+0.39 [+0.09, +0.70]** | **+0.38 [+0.21, +0.54]** |
+| 原生 plan − cv，rater RFS | +0.37 [−0.57, +1.37] | **+0.92 [+0.35, +1.51]** | **+1.46 [+0.82, +2.08]** | **+0.85 [+0.26, +1.43]** | **+0.63 [+0.13, +1.11]** | **+0.90 [+0.67, +1.13]** |
+| 原生 plan − cv，ADE 第 1–9 档（20 237 帧子集） | **−0.77** | **−1.00** | **−0.85** | **−0.58** | **−0.87** | **−0.84** |
+
+读法：冻结 `temporal` 经线性 head 读出之后，唯一在 ADE 上 CI 不跨零的 cluster 是 Cut_ins（Lebowski 在 Pedestrian 上也刚好不跨零，−0.09 [−0.16, −0.00]），Pedestrian 的 RFS 两个模型都跨零——
+实验 1「cut-in 有反应、行人没有」在真实数据上有影子，但只是影子（Pedestrian 的 CI 下端离零不远）。反过来，openpilot **原生 plan** 相对匀速在 Pedestrian 上 RFS +0.92、Cut_ins 上反而跨零；
+原生 plan 里含有我们线性读出拿不到的东西，这与第 42 条 D0「行人信息在 vision encoder 输出里就没有」并不矛盾（原生 plan 的行人增益可能来自路线 / 速度先验，而不是看见行人），但值得在 Q2b 里核对。
+
+**Q2a WOD 损失解剖（CPU 部分）**。损失帧 = Cinque 原生或 `cls_late` 的 RFS ≤ max(rater 分) − 1：原生 239、`cls_late` 268、并集 308 / 479（64%）。六个 cluster 合并（并集，213 / 333）：
+
+| 类别 | 占比 [95% CI] |
+|:--|:--|
+| 横向，决策错（intent 解释得了） | 3.8% [1.4, 6.6] |
+| 横向，路线歧义 | 25.8% [19.8, 31.8] |
+| 横向，其他 | 5.6% |
+| 纵向，停（rater_best 停、模型走） | 24.4% [18.7, 30.2] |
+| 纵向，走（rater_best 走、模型停或慢） | 35.7% [29.2, 42.0] |
+| 无方向 | 4.7% |
+
+读法：六成损失是纵向的，要等 Q2b（SAM 标原因物体 + 两份 probe）拆成「看见了但决策错 / 没看见 / 无可见原因」才能对决策规则那两行下判断。两条要一起记住的限定：479 帧里 427 帧的 intent 是 GO_STRAIGHT，
+所以「路线歧义」按构造吸走了几乎全部横向损失，「intent 解释得了」的上限就是那 52 个转弯 intent 帧；登记的损失门槛（≤ max − 1）偏松，标出 64% 的 rater 帧。
+
+**Q7 模式词表**（覆盖率 = 落在能映射到 openpilot desire 的横向类簇里的帧占比）：P5 reactive 帧 27.6%（503 帧），WOD 全部 rater 帧 0.6%，WOD s_ego 第 10 档 16.7%。
+**P5 的 27.6% 不是真的横向**：事后诊断（写在算之前，见偏离日志）显示 100% 的 P5 reactive 帧 x⁺ 与 x⁻ 走在同一条路径上，所谓横向簇是「一侧停、另一侧开过弯道」造成的横向位移差，集中在 Light 与 StaticCutIn，
+2 s 纵向差 −1.5 到 −5.8 m。BehaviorAgent 从不绕行，所以 P5 v0 上真实的横向 desire 覆盖约为 0；WOD 上 55% 是近零差、其余几乎全是纵向。**词表的主体是纵向类（停 / 让 / 走），openpilot 的 desire 输入覆盖不到它们。**
+另记：两边 BIC 都一路降到登记上限 k = 8，是 onset 特征的离散取值（P5 逐对常数、WOD 0.25 s 删失网格）造成的点质量，簇数本身不可解读。
+
+**Q6-GT 规则门**（`p5_exam.exam` 一字不改；阈值按登记数值、不拟合，见偏离日志 [Q6]）：
+
+| examinee | 合并翻转率 [CI] | 非反应帧 false-flip | 样本外 null false-flip |
+|:--|:--|--:|--:|
+| `gate any`（主读数，rule floor） | **42.9% [24.7, 62.9]** | 9.6% | 0.0% |
+| TTC 门 | 5.3% | 0.4% | 0.0% |
+| 车道侵入门 | 26.1% | 5.6% | 0.0% |
+| 行人接近门 | 19.8% | 4.4% | 0.0% |
+
+按 family（`gate any`）：DynamicObjectCrossing 87%、ParkingCrossingPedestrian 76%、VehicleTurningRoutePedestrian 70%（n 小）、HighwayCutIn 100%、ParkingCutIn 8%、StaticCutIn 0%、Light 0%（没有灯的门）。
+读法：在 GT 状态上，三条几何门已经把行人 family 拿到 70–87%——这正是 openpilot 与 Qwen 线性读出都是 0 的那几格；代价是行人门触发偏早，非反应帧上 DynamicObjectCrossing 48%、PedestrianCrossing 36% 误触发。
+StaticCutIn 为 0 是门的形状问题：cut-in 车的参考点在 expert 已经刹车时仍在侧面 1.9–3.5 m，点状的 ±1.2 m 侵入门抓不到车身从侧面切入。
+决策规则「GT 规则 floor ≥ 80% 且 null ≤ 7%」按登记要用 I1 的 PDM-Lite 标签判，v0 只描述；SAM 状态版（perception-limited floor）等 Q4a。
