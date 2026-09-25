@@ -1,6 +1,6 @@
 # 快通道感知：SAM 3.1 的提速选项与更快的替代检测器（延迟 × 召回，同一批帧）
 
-状态: running（预登记写于 2026-09-26 00:10 CST，任何候选的延迟或召回输出之前）
+状态: running（预登记写于 2026-09-25 23:33 CST（box 时钟），任何候选的延迟或召回输出之前）
 主题: [decisions 第 43 条](../research/decisions.md)、[融合前诊断](2026-09-25-fusion-diagnostics.md) 的 Q4 / Q4d / Q8
 卡: GPU 0（独占）；CPU ≤ 20 核；slot 记在 `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md`，标 `[FASTPERC]`
 
