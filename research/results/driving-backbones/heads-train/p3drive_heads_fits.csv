@@ -1,0 +1,7 @@
+direction,arm,lam,sel_ade,d,K,sel_iter_mean,sel_iter_max,sel_not_converged,iter_mean,iter_max,not_converged
+0,ridge ego,3.1622776601683795e-05,1.6805123686790466,,,,,,,,
+0,A ridge_late op-cinque temporal,0.01,1.158401757478714,512.0,,,,,,,
+0,A ridge_late op-lebowski temporal,0.01,1.1873102188110352,512.0,,,,,,,
+0,cls ego K1024,1e-07,1.858546495437622,,1024.0,370.44444444444446,600.0,3.0,600.0,600.0,1.0
+0,cls_late op-cinque temporal,0.001,1.6767123937606812,,1024.0,353.3333333333333,600.0,3.0,86.0,86.0,0.0
+0,cls_late op-lebowski temporal,0.001,1.6957931518554688,,1024.0,379.1111111111111,600.0,4.0,110.0,110.0,0.0

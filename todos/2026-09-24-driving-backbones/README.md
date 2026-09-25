@@ -329,3 +329,57 @@ nuScenes 的 command 泄露了 3 s 横向位移，所以 pre-onset 上 ego 已�
 | openpilot 两个模型 × 850 scene | 约 55 min GPU（纯）；与 Alpamayo 共卡时 batch-1 步长可能翻倍，估 1–2 h；解码 4 进程 | 考试：150 scene × 2 desire，Cinque 7.9 min、Lebowski 10.8 min GPU |
 | nuScenes ridge 阶梯 | < 5 min | 约 2 万行 |
 | (iii) 分类头，41.5 万行 × 512 维 | 每次 L-BFGS 迭代约 8 TFLOP，600 次上限 → 纯 GPU 约 15–30 min（含 ego 头与 4 折 offset） | P0 在 CPU 上 3.7 h |
+
+## 第 40 条后续的结果
+
+### (iii) 分类头：Lebowski 够到了它自己的原生 plan，Cinque 没有（2026-09-25 11:16）
+
+run（box）：`$DATA_DIR/runs/drive_backbones/heads_train/20260925-110819/`，小表 [research/results/driving-backbones/heads-train/](../../research/results/driving-backbones/heads-train/)。
+415 663 帧训、106 360 帧评，479 个 val rater 帧。管线复现检查：`ridge ego` 7.065、两个 `ridge_late temporal` 7.449 / 7.522、Cinque 原生 8.005，都与第 40 条逐位一致；
+`cls ego` 7.262（P0 是 7.311，同一配方、词表的 k-means 行集略不同，差在 CI 半宽的四分之一以内）。
+
+| arm | RFS cluster mean | RFS frame mean | Δ vs `ridge ego`（frame）[CI] | 第 10 档 RFS Δ | pre-onset 第 1–9 档 ADE Δ [CI] |
+|:--|--:|--:|:--|--:|:--|
+| `ridge ego` | 7.065 | 7.055 | 0 | 0 | 0 |
+| `cls ego K1024` | 7.262 | 7.277 | +0.222 [+0.039, +0.406] | +0.70 | +0.340 [+0.110, +0.683] |
+| `ridge_late` Cinque `temporal` | 7.449 | 7.458 | +0.403 [+0.232, +0.582] | +0.59 | **−0.294** [−0.424, −0.168] |
+| `ridge_late` Lebowski `temporal` | 7.522 | 7.472 | +0.417 [+0.243, +0.594] | +0.51 | **−0.318** [−0.449, −0.197] |
+| **`cls_late` Cinque `temporal`** | 7.637 | 7.653 | **+0.598** [+0.403, +0.809] | **+1.26** | +0.207 [−0.057, +0.527] |
+| **`cls_late` Lebowski `temporal`** | **7.734** | 7.703 | **+0.648** [+0.443, +0.853] | **+1.39** | +0.182 [−0.085, +0.549] |
+| 参照：Cinque 原生 plan（不拟合） | 8.005 | 7.941 | +0.886 | | |
+| 参照：Lebowski 原生 plan（不拟合） | 7.886 | 7.805 | +0.750 | | |
+
+预登记的配对比较（frame mean，sequence bootstrap）和缺口比例 G：
+
+| 模型 | cls_late − `cls ego` | cls_late − ridge_late | cls_late − 原生 | G = 补上的缺口份额 [CI] | 判定 |
+|:--|:--|:--|:--|:--|:--|
+| Cinque | **+0.375** [+0.214, +0.544] | +0.195 [−0.015, +0.398] | **−0.289** [−0.472, −0.100] | 0.40 [−0.02, 0.75] | **没补上**（按字面：对 ridge_late 的 CI 擦过 0） |
+| Lebowski | **+0.426** [+0.262, +0.584] | **+0.232** [+0.039, +0.415] | −0.101 [−0.292, +0.094] | 0.70 [0.17, 1.42] | **够到原生** |
+
+读法：
+- **分类头在 openpilot 特征上确实多拿了 RFS**：两个 `cls_late` 比同 tap 的 `ridge_late` 高 0.19–0.23，比 `cls ego` 高 0.38–0.43。后一个数是这里最干净的对照：
+  P0 里 Qwen 单帧特征进了分类头几乎不加分（`cls_late` 7.30 对 `cls ego` 7.31），openpilot `temporal` 加了 0.4，也就是**特征的增量在分类头家族里同样存在**，
+  而且和 head 的增量大致可加（cls ego − ridge ego +0.22，ridge_late − ridge ego +0.40，cls_late − ridge ego +0.60–0.65）。
+- **增益集中在第 10 档**：`cls_late` 的第 10 档 RFS 比 `ridge ego` 高 1.26–1.39，ridge_late 只有 0.51–0.59。多模态的顶档里，分类头押中 rater 偏好那一支的能力是 ridge 没有的。
+- **够不够到 8.0 取决于拿谁当「原生」**：Lebowski 的原生 plan 自己只有 7.89（cluster），`cls_late` 7.73 与它的差 −0.10 [−0.29, +0.09] 跨零，按预登记判「够到」；
+  Cinque 的原生是 8.00，`cls_late` 7.64 仍差 0.29（CI 不跨零），G 只有 0.40，对 ridge_late 的提升 CI 擦过 0，按字面判「没补上」。
+  两者合起来的读法：**线性分类头把「冻结特征 → 原生 plan」的缺口补上了一半左右（G 0.4–0.7），剩下 0.1–0.3 RFS 不在单 mode 读出上**；
+  我们这族 head 的最好成绩是 7.73（Lebowski `cls_late`），比全项目此前最好的 train 训 head（`ridge_late` Lebowski 7.52）高 0.21，比 Cinque 原生低 0.27。
+- 代价照例在 ADE：两个 `cls_late` 的 pre-onset Δ 为正（+0.18 / +0.21，CI 跨零），比 ridge_late 差 0.5 m。第 10 条的「分类输 ADE、赢 trust region」在这里原样成立。
+- `cls ego` 的 λ 选在网格下端（1e-7，warning），与 P0 同一现象；`cls_late` 的 λ 是 1e-3，在网格内部。
+
+**次要的 diffusion head 没跑**（按预登记自己的条件）：P3e 在 13.7 万行上每个 diffusion arm 约 15 min，41.5 万行上三个 arm 估约 2.3 h 满载 GPU，超过 1.5 h 的线；
+而且实测表明 GPU 2 上任何满载的 kernel 流都会直接拖慢 Alpamayo（见下「共卡的代价」）。它是「剩下的 0.1–0.3 RFS 是否在多模态解码上」这个问题的下一步，等 GPU 2 空出来再跑。
+
+### 共卡的代价（Alpamayo 闭环考试，GPU 2）
+
+Alpamayo policy server 每 200 次调用打一行累计计数（调用数、GPU-lock busy 比例、server 运行秒数），这是量它吞吐的唯一读数。
+
+| 我们在 GPU 2 上跑的东西 | 对照 | 每 200 次调用的秒数 | 读法 |
+|:--|:--|--:|:--|
+| 分类头 L-BFGS，满载约 7 min（11:09–11:16，smoke2 末尾） | 前 3 个窗口 220–232 s | 418 | 单次调用的 busy 时间约 1.1 s → 约 2.0 s（按累计 busy 比例估，±0.25 s）；smoke2 末尾在收尾，调用数下降有一部分是它自己的，但单次调用变慢只能是争卡 |
+| openpilot batch-1 抽取，满速（11:41–11:48） | 暂停抽取（SIGSTOP）的下 3 个窗口 | 232 对 184 | 当时读成慢 26%，但两段时间不同，见下一行 |
+| openpilot 抽取，35% duty cycle（每步后 sleep） | 同一小时内先暂停 3 个窗口、再恢复 3 个窗口 | 236 对 239 | **测不出差别**；Alpamayo 自己的吞吐随路线组合在 184–250 s 之间漂，比我们的影响大 |
+
+所以 (i) 的抽取以 35% duty cycle 跑完（`--duty 0.35`，约 24 s / scene，比满速慢 3 倍）；满载训练（diffusion head）不在 GPU 2 上和 Alpamayo 同时跑。
+第二行的 26% 不能当真：暂停的那 12 分钟恰好是 Alpamayo 的快段，同一方法在 30 分钟后重做，暂停与运行几乎相同。
