@@ -249,6 +249,34 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 
 （执行时追加。）
 
+- 2026-09-25 18:20 CST [Q3] 原生 plan 用 decision 40 (iii) `heads_readout` 读的同一份：`processed/drive_backbones/op_{cinque,lebowski}_native.npz`（20 237 帧子集的流式抽取，`wod` 即 `op_*_p3/plan` 换算成 WOD 后轴 waypoint 的版本，覆盖全部 479 个 rater 帧）。
+  ADE 的 native − cv 按登记在这 20 237 帧上算，s_ego 分档取 `heads_train/20260925-110819` 在 val 全部 106 360 帧上的十分位（与 `rejudge` 同一口径），子集只是取其中的行。
+  另加一行描述性读数：native − cv 在 val 全部帧上的 ADE（`op_*_trainval_native.npz`，实验 2a 用的那份），标为 side，不进判据。`cls_late − cls ego` 另报 pre-onset 第 1–9 档一列，同样标 side。
+  CI 用 `waymo_p1.paired`（sequence bootstrap，1000 次）。
+- 2026-09-25 18:20 CST [Q2a] (1) 原生 plan 同 [Q3]（`op_cinque_native.npz`）；`cls_late` = `heads_train/20260925-110819` 的 `cls_late op-cinque temporal`。
+  (2) 损失帧 = 两者之一 RFS ≤ max(rater 分) − 1 的并集；方向按「输了的那个模型」判，两个都输时按原生 plan 判（问题问的是 openpilot 输的帧）；另附按模型分开的两张表。
+  (3) 差值 = 模型 − rater_best，在 rater_best 自己的纵 / 横坐标系里量（与 RFS 同一个 `_rater_frames`）：纵向取 2 s（第 8 个点）与 5 s（第 20 个点）的纵向投影，任一 |·| > 3 m 算纵向，
+  rater_best 在后（模型走得更远）为「停」支、rater_best 在前为「走」支；横向取 5 s 的横向投影 |·| > 2 m，或朝向差 > 15°（朝向 = 最后 0.5 s 的位移方向，两条轨迹这段都 ≥ 0.5 m 才判）。
+  同时满足横向与纵向的帧归横向（因为横向要再按 intent 拆），另记一个 `both` 标记；两者都不满足记「无方向」（例如低速 trust region 缩小导致的输分）。
+  (4) intent 拆分：intent = GO_LEFT / GO_RIGHT，且 rater_best 在 5 s 的弦方位角朝 intent 一侧超过 5°（`waymo.ONSET_BEARING`）而模型没有 → 「决策错（intent 解释得了）」；
+  intent = GO_STRAIGHT / UNKNOWN → 「路线歧义」；intent 是转弯但不满足前一条（例如两者都转、只是车道不同）→ 「横向其他」。
+  (5) rater_best − log 用同一套分类另存为描述列。比例的 CI：损失帧上的类别指示变量，sequence bootstrap（`traj.boot_ci`，1000 次）。Q2b 的列（SAM 原因物体、两份 probe 分数、类别）留空。
+- 2026-09-25 18:20 CST [Q7] (1) P5 的 reactive 帧 = `p5_exam.exam` 的定义（|Δ_expert| > τ_exp，τ_exp = max(null |Δ_expert| 的 95 分位, 0.5)）。
+  (2) 三维描述：2 s 纵向差 = x⁺ − x⁻ 在第 8 个点（2.0 s）的 x；最大横向差 = |Δy| 最大那一点的带符号 Δy（左正，desire 映射需要方向）；onset 按登记 P5 取 (t_div − t_vis) × 0.05 s（逐对常数），
+  WOD 取 |Δx| 或 |Δy| 首次 > 0.5 m 的时刻（0.25–5 s；从不超过记 5.25 s，删失）。两边 onset 含义不同，所以**分开聚类**（各自标准化、各自 BIC 选 k），词表通过同一套命名规则对齐。
+  (3) GMM：sklearn `GaussianMixture`，full covariance，n_init = 10，reg_covar = 1e-4，seed 0，k = 1…8 取 BIC 最小。WOD 聚类在全部 479 个 rater 帧上拟合，s_ego 第 10 档（val 全部帧的十分位）另报各簇占比，并单独拟合一次。
+  (4) 簇 → 模式 → desire 的命名规则（按簇内中位数，物理单位，预先写死）：|最大横向差| ≥ 1.0 m 为横向类，≥ 6 m → turnLeft/Right，2.5–6 m → laneChangeLeft/Right，1.0–2.5 m → keepLeft/Right；
+  否则为纵向类（desire「无」）：2 s 纵向差 < −1 m 为「减速 / 停」，> +1 m 为「加速 / 走」，其余为「近零差」。覆盖率 = 落在横向类簇的帧占比。
+- 2026-09-25 18:20 CST [Q6] (1) **P4 的 attempt 目录里没有 `actors.npz`**（P4 录制器不存 actor），GT 状态下 P4 训练路线上算不出门是否触发，登记的「在 P4 训练路线上定参数」做不到。
+  处理：三条门的阈值就用登记里写明的数值（TTC 3.0 s；±1.2 m；0.5 m/s、4 m、30 m），不做任何拟合；唯一要拟合的量是制动量级 m（门触发时 expert 的中位减速 v0 − v(2 s)），
+  改在 P5 role = train 帧上按 `p5_exam.folds` 的路线 5 折**样本外**估（评估第 f 折时只用其余 4 折路线的训练帧，与 `p5_exam.heads` 的训练行口径相同，路线不相交）。
+  注意：Δ_model = −m_f ·（门(x⁺) − 门(x⁻)），取值只有 {−m, 0, +m}，定向翻转率与 null false-flip 对 m 不敏感，m 只影响量级列。
+  (2) 「ego 未来 3 s 路径」用路线中心线（`route.json`，从 ego 最近点向前 max(v0 × 3 s, 5 m)），**不用 logged 未来**：x⁺ 的 logged 未来已经含 expert 的制动，会把答案漏进门里。
+  TTC 门的走廊 = 同一中心线向前 60 m、±1.2 m，TTC = 纵向间距（减 ego 前悬 = bbox 半长）/ 接近速度（v0 − 物体速度在路径切向的分量，> 0 才算）；行人门的走廊 = 中心线向前 30 m，
+  「距走廊」= 到中心线横距 − 1.2 m，「朝走廊方向的速度分量」= 物体速度在指向中心线的法向上的分量；只对 walker 计（自行车按 vehicle 类进 (i)(ii)）。
+  (3) 物体 = 同一 tick 的全部 actor（除 ego），与 ego 高差 > 8 m 的剔除（x⁻ 的 hazard 被藏在地下 500 m、生成前也在地下）。坐标用 CARLA 左手系取 y 反号转成右手系，ego BEV 原点在车辆位置（bbox 中心地面），x 前 y 左。
+  (4) 考官：`p5_exam.exam` 一字不改，examinee = `gate any`（主读数，rule floor）以及三条门各自（描述）。
+
 ## 结果
 
 （跑完再填；box 上 run dir：`$DATA_DIR/runs/fusion_diag/<item>/<time>`。）
