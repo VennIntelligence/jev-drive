@@ -7,9 +7,12 @@ JPEGs are rendered into openpilot's road / wide model frames by the WOD extracti
 (wod_zeroshot_openpilot._maps / _pack; only the calibration record differs). Frames arrive at 5 Hz, the models'
 context rate: Cinque gets each frame held for 4 steps of its 20 Hz clock (the rate study's `ctx5-hold`, bit-identical
 to native at the output phase), Lebowski one context-rate step per frame (OPModel(context_rate=True)).
-Output: processed/carla_p5/op_streams/<model>/<stream>.npz (name, temporal, hist), resumable.
+Output: processed/carla_p5/<out-sub>/<model>/<stream>.npz (name, hist and the --arrays), resumable.
+Arrays: `temporal` (primary tap), `vision` (pooled vision encoder output before the temporal module) and `hidden`
+(the vector that enters the feature queue), as in the driving-backbones tap table (jevdrive.drive_backbones.OP_TAPS).
 
   CUDA_VISIBLE_DEVICES=2 python scripts/p5_openpilot.py --shard 0/2 --workers 6
+  python scripts/p5_openpilot.py --arrays temporal vision hidden --out-sub op_streams_vis   # reactivity D0
   python scripts/p5_openpilot.py --check 16      # equivalence checks before the batch
 """
 import argparse, io, json, sys, time
@@ -52,23 +55,28 @@ def job(st):
     return st, render(st["files"])
 
 
-def run_stream(m, frames, targets) -> dict:
-    """One stream through one model from a zero state; `temporal` at every target."""
+ARRAYS = ("temporal", "vision", "hidden")
+
+
+def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
+    """One stream through one model from a zero state; the requested arrays at every target: {j: {array: vec}}."""
     m.reset()
-    tap, tset, rows = D.OP_TAPS[m.name]["temporal"], set(targets), {}
+    taps, tset, rows = D.OP_TAPS[m.name], set(targets), {}
     for j in range(len(frames)):
         for _ in range(1 if m.skip == 1 else HOLD):
-            m.step(frames[j], action_t=WZ.ACTION_T)
+            out = m.step(frames[j], action_t=WZ.ACTION_T)
         if j in tset:
-            rows[j] = m.tap_values[tap].copy()
+            rows[j] = {k: (out[m.slices["hidden_state"]] if k == "hidden" else m.tap_values[taps[k]]).copy()
+                       for k in arrays}
     return rows
 
 
-def save(path, st, rows):
+def save(path, st, rows, arrays=("temporal",)):
+    """`temporal` stays float32 (bit-for-bit comparable with earlier runs); the wide arrays are stored float16."""
     tg = sorted(rows)
     tmp = path.with_suffix(".tmp.npz")
-    np.savez(tmp, name=np.array([st["names"][j] for j in tg]), temporal=np.stack([rows[j] for j in tg]),
-             hist=np.array(tg))
+    arr = {k: np.stack([rows[j][k] for j in tg]).astype(np.float32 if k == "temporal" else np.float16) for k in arrays}
+    np.savez(tmp, name=np.array([st["names"][j] for j in tg]), hist=np.array(tg), **arr)
     tmp.replace(path)
 
 
@@ -115,6 +123,8 @@ def main():
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--check", type=int, default=0, help="equivalence check on this many targets, no batch")
+    ap.add_argument("--arrays", nargs="+", default=["temporal"], choices=ARRAYS)
+    ap.add_argument("--out-sub", default="op_streams")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
     si, sn = map(int, a.shard.split("/"))
@@ -122,7 +132,7 @@ def main():
     plan = json.loads((P.root() / "op_plan.json").read_text())
     calib = plan["calib"]
     WZ._init({}, {SEQ: calib}, ".")
-    outdir = {k: P.root("op_streams", k) for k in a.models}
+    outdir = {k: P.root(a.out_sub, k) for k in a.models}
     log.event("start", args=vars(a), taps={k: D.OP_TAPS[k]["temporal"] for k in a.models})
 
     if a.check:
@@ -146,9 +156,9 @@ def main():
                 full = run_stream(m, fr, s["targets"])
                 again = run_stream(m, solo, tg)
                 for j in tg:
-                    d = float(np.abs(full[j] - again[j]).max())
+                    d = float(np.abs(full[j]["temporal"] - again[j]["temporal"]).max())
                     res.append({"stream": key, "model": k, "target": s["names"][j], "max_abs_diff": d,
-                                "norm": float(np.linalg.norm(full[j]))})
+                                "norm": float(np.linalg.norm(full[j]["temporal"]))})
         log.info("16-row check: " + json.dumps(res))
         log.event("check", rows=res, max_abs_diff=max(r["max_abs_diff"] for r in res))
         return
@@ -166,9 +176,9 @@ def main():
         for st, frames in bounded_map(ex, job, items, 2 * a.workers):
             for k, m in models.items():
                 t = time.perf_counter()
-                rows = run_stream(m, frames, st["targets"])
+                rows = run_stream(m, frames, st["targets"], a.arrays)
                 tm[k] += time.perf_counter() - t
-                save(outdir[k] / f"{st['key']}.npz", st, rows)
+                save(outdir[k] / f"{st['key']}.npz", st, rows, a.arrays)
             n, nf = n + 1, nf + len(st["names"])
             if n % 20 == 0 or n == len(items):
                 el = time.time() - t0

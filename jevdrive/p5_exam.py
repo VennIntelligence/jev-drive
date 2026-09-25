@@ -303,12 +303,51 @@ def probe_auc_paired(obs: pd.DataFrame, t: pd.DataFrame, scores: dict, ref: str 
     return pd.DataFrame(rows)
 
 
-def run(rl, op_models=()):
+PED_FAMILIES = ("DynamicObjectCrossing", "ParkingCrossingPedestrian", "PedestrianCrossing", "VehicleTurningRoutePedestrian")
+
+
+def probe_auc_paired_scopes(obs, t, scores, comparisons, b: int = 500) -> pd.DataFrame:
+    """Hazard-probe AUC of tap minus ref for each (tap, ref) in `comparisons`, per scope: every hazard family, the
+    pooled pedestrian families (PED_FAMILIES) and all hazard families pooled. Frames where every compared tap has an
+    out-of-fold score; one route bootstrap per scope shared by all comparisons (probe_auc_paired's resampling).
+    Reactivity program D0 (todos/2026-09-25-reactivity-program.md)."""
+    from .p4_carla import auc
+    pos = pd.Series(np.arange(len(t)), index=t.frame_name)
+    taps = sorted({k for c in comparisons for k in c})
+    oh = obs[obs.family != "Light"]
+    scopes = [("pedestrian", oh[oh.family.isin(PED_FAMILIES)]), ("hazard pooled", oh)] + \
+             [(f, oh[oh.family == f]) for f in sorted(oh.family.unique())]
+    rows = []
+    for scope, o in scopes:
+        ip, im = pos[o.fn_plus].to_numpy(), pos[o.fn_minus].to_numpy()
+        ok = np.logical_and.reduce([~np.isnan(scores[("hazard", k)][ip]) & ~np.isnan(scores[("hazard", k)][im]) for k in taps])
+        if ok.sum() < 5:
+            continue
+        y = np.r_[np.ones(ok.sum()), np.zeros(ok.sum())]
+        sc = {k: np.r_[scores[("hazard", k)][ip][ok], scores[("hazard", k)][im][ok]] for k in taps}
+        g = np.r_[o.base_id.to_numpy()[ok], o.base_id.to_numpy()[ok]]
+        codes, uniq = pd.factorize(g)
+        members = [np.flatnonzero(codes == c) for c in range(len(uniq))]
+        rng = np.random.default_rng(0)
+        draws = [m for m in (np.concatenate([members[c] for c in rng.integers(len(uniq), size=len(uniq))]) for _ in range(b))
+                 if len(np.unique(y[m])) == 2]
+        boot = {k: np.array([auc(y[m], sc[k][m]) for m in draws]) for k in taps}
+        for k, ref in comparisons:
+            d = boot[k] - boot[ref]
+            rows.append({"scope": scope, "tap": k, "vs": ref, "n_frames": int(ok.sum()), "routes": len(uniq),
+                         "auc": auc(y, sc[k]), "auc_lo": float(np.quantile(boot[k], 0.025)),
+                         "auc_hi": float(np.quantile(boot[k], 0.975)), "auc_vs": auc(y, sc[ref]),
+                         "delta": auc(y, sc[k]) - auc(y, sc[ref]),
+                         "lo": float(np.quantile(d, 0.025)), "hi": float(np.quantile(d, 0.975))})
+    return pd.DataFrame(rows)
+
+
+def run(rl, op_models=(), op_arrays=("temporal",), op_sub="op_streams"):
     t, past, fut, obs, null, pairs = load()
     X = P.load_features(t)
     if op_models:                     # openpilot `temporal` as extra examinees (todos/2026-09-25-openpilot-temporal-p5-and-route.md)
         from . import p5_openpilot
-        X |= p5_openpilot.load(t, op_models)
+        X |= p5_openpilot.load(t, op_models, op_arrays, op_sub)
     fold = folds(t, pairs)
     rl.log.info("%d frames (%s), %d pair frames, %d null frames, %d cases", len(t),
                 t.groupby(["source", "role"]).size().to_dict(), len(obs), len(null), len(pairs))
@@ -322,6 +361,12 @@ def run(rl, op_models=()):
         pp = probe_auc_paired(res["obs"], t, scores)
         pp.to_csv(rl.dir / "probe_auc_paired.csv", index=False)
         rl.log.info("probe AUC, paired against %s\n%s", PROBE_REF, pp.to_markdown(index=False, floatfmt=".3f"))
+        if set(op_arrays) - {"temporal"}:  # reactivity D0: every openpilot array against its own model's `temporal` and Qwen
+            cmp = [(f"op-{m} {k}", ref) for m in op_models for k in op_arrays if k != "temporal"
+                   for ref in (f"op-{m} temporal", PROBE_REF)] + [(f"op-{m} temporal", PROBE_REF) for m in op_models]
+            ps = probe_auc_paired_scopes(res["obs"], t, scores, cmp)
+            ps.to_csv(rl.dir / "probe_auc_paired_scopes.csv", index=False)
+            rl.log.info("probe AUC per scope, paired\n%s", ps.to_markdown(index=False, floatfmt=".3f"))
     d = rl.dir
     res["validity"].to_csv(d / "label_validity.csv", index=False)
     res["flips"].to_csv(d / "flip_rates.csv", index=False)
@@ -431,10 +476,12 @@ def main():
     p.add_argument("cmd", choices=["run", "figs"])
     p.add_argument("--run-dir", default="")
     p.add_argument("--op", default="", help="comma list of openpilot models to add as examinees (cinque,lebowski)")
+    p.add_argument("--op-arrays", default="temporal", help="comma list of openpilot arrays (temporal,vision,hidden)")
+    p.add_argument("--op-sub", default="op_streams", help="stream dir the arrays were extracted into")
     a = p.parse_args()
     if a.cmd == "run":
-        rl = RunLog("p5_pairs", "exam")
-        run(rl, tuple(m for m in a.op.split(",") if m))
+        rl = RunLog("p5_pairs", "exam" if a.op_arrays == "temporal" else "exam-d0")
+        run(rl, tuple(m for m in a.op.split(",") if m), tuple(a.op_arrays.split(",")), a.op_sub)
         rl.close()
     else:
         from pathlib import Path

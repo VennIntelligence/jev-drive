@@ -73,32 +73,38 @@ def prepare() -> dict:
     return info
 
 
-def finalize(model: str) -> dict:
+def _dst(model: str, sub: str) -> Path:
+    """op_streams -> op_<model>; op_streams_<x> -> op_<model>_<x> (the reactivity D0 set keeps its own copy)."""
+    return root(f"op_{model}" + sub.removeprefix("op_streams"))
+
+
+def finalize(model: str, arrays=("temporal",), sub: str = "op_streams") -> dict:
     import pandas as pd
-    files = sorted(root("op_streams", model).glob("*.npz"))
+    files = sorted(root(sub, model).glob("*.npz"))
     parts = []
     for f in files:
         with np.load(f) as z:
-            parts.append({k: z[k] for k in ("name", "temporal", "hist")})
+            parts.append({k: z[k] for k in ("name", "hist", *arrays)})
     fn = np.concatenate([p["name"] for p in parts]).astype(str)
-    X = np.concatenate([p["temporal"] for p in parts]).astype(np.float16)
-    dst = root(f"op_{model}")
-    np.save(dst / "temporal.npy", X)
+    dst = _dst(model, sub)
+    for k in arrays:
+        np.save(dst / f"{k}.npy", np.concatenate([p[k] for p in parts]).astype(np.float16))
     pd.DataFrame({"frame_name": fn, "hist": np.concatenate([p["hist"] for p in parts])}).to_parquet(dst / "index.parquet")
-    return {"model": model, "rows": len(fn), "streams": len(files)}
+    return {"model": model, "arrays": list(arrays), "rows": len(fn), "streams": len(files)}
 
 
-def load(t, models=MODELS) -> dict:
-    """{"op-<model> temporal": (n, 512) float32} aligned to the P5 index `t`."""
+def load(t, models=MODELS, arrays=("temporal",), sub: str = "op_streams") -> dict:
+    """{"op-<model> <array>": (n, d) float32} aligned to the P5 index `t`."""
     import pandas as pd
     out = {}
     for m in models:
-        d = root(f"op_{m}")
+        d = _dst(m, sub)
         names = pd.read_parquet(d / "index.parquet").frame_name
         pos = pd.Series(np.arange(len(names)), index=names)
         at = t.frame_name.map(pos)
         assert at.notna().all(), f"{m}: {int(at.isna().sum())} frames without features"
-        out[f"op-{m} temporal"] = np.load(d / "temporal.npy")[at.astype(int).to_numpy()].astype(np.float32)
+        for k in arrays:
+            out[f"op-{m} {k}"] = np.load(d / f"{k}.npy", mmap_mode="r")[at.astype(int).to_numpy()].astype(np.float32)
     return out
 
 
@@ -106,12 +112,14 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("step", choices=("prepare", "finalize"))
+    ap.add_argument("--arrays", default="temporal")
+    ap.add_argument("--sub", default="op_streams")
     a = ap.parse_args()
     if a.step == "prepare":
         print(prepare())
     else:
         for m in MODELS:
-            print(finalize(m))
+            print(finalize(m, tuple(a.arrays.split(",")), a.sub))
 
 
 if __name__ == "__main__":
