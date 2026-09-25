@@ -112,6 +112,15 @@ chain() {  # chain <j>: GPU G[j], every pass, every expert
         echo "$(date +%T) gpu $g: waiting for I3 to finish on this card"
         i3_done "$g" $(( w * ${VRAM_GB_PER_SERVER:-11} ))
     fi
+    # The container caps threads (pids.max 20480, infra agent 16:46): a CARLA server holds ~430, our route client
+    # ~100 with --client-threads 8. Start only as many instances as fit under PIDS_BUDGET, waiting for at least one.
+    local per=${THREADS_PER_SERVER:-600} room
+    while :; do
+        room=$(( (${PIDS_BUDGET:-19000} - $(cat /sys/fs/cgroup/pids.current)) / per ))
+        (( room >= 1 )) && break
+        echo "$(date +%T) gpu $g: waiting for thread room"; sleep 120
+    done
+    (( room < w )) && { echo "$(date +%T) gpu $g: thread cap allows $room of $w instances"; w=$room; span=$(( 50 / w * w )); }
     local need=$(( w * ${VRAM_GB_PER_SERVER:-11} * 1024 ))
     until (( $(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits) >= need )); do
         echo "$(date +%T) gpu $g: waiting for $(( need / 1024 )) GB free"; sleep 120
@@ -127,7 +136,7 @@ chain() {  # chain <j>: GPU G[j], every pass, every expert
                 "$PY" scripts/b2d_run.py --routes "$R/pairs.xml" --route-ids "$ids" --out "$R/gen-$e" --workers "$w" \
                 --server-index "$base" --index-span "$span" --gpu-rank "$g" --tm-seed-from-id \
                 --agent scripts/p5_pair_agent.py --agent-config "$R/agent-$e.json" --python "$(pyenv "$e")" \
-                --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20
+                --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8
         done
     done
     note "p5v1-gen chain gpu $g end"
