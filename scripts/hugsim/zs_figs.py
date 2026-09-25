@@ -114,9 +114,125 @@ def cmd_rate(a):
         P.save(fig, FIG, "hugsim-exam-rate")
 
 
+# ---------------------------------------------------------------- checklist
+def ego_frame(pos, th, k, pts):
+    """World ground points -> (right, forward) in the ego frame of step k (theta + right, forward = (sin, cos))."""
+    d = np.asarray(pts, float) - pos[k]
+    return np.stack([d @ np.array([np.cos(th[k]), -np.sin(th[k])]), d @ np.array([np.sin(th[k]), np.cos(th[k])])], -1)
+
+
+def shadow_errors(tr):
+    """Model plan (logged in shadow mode) vs the driven future: per step and horizon 1 / 2 / 3 s, (lat, lon) error
+    and the true displacement, in the ego frame at the planning step."""
+    pos, th = np.asarray(tr["pos"]), np.asarray(tr["theta"])
+    out = []
+    for st in tr["steps"]:
+        k, mp = st.get("step", None), st.get("model_plan")
+        k = tr["steps"].index(st) if k is None else k
+        if mp is None:
+            continue
+        mp = np.asarray(mp)
+        for h, j in ((1, 1), (2, 3), (3, 5)):
+            if k + 2 * (j + 1) >= len(pos):
+                continue
+            g = ego_frame(pos, th, k, pos[k + 2 * (j + 1)][None])[0]
+            out.append({"step": k, "h": h, "lat": mp[j, 0] - g[0], "lon": mp[j, 1] - g[1], "g_lat": g[0],
+                        "g_lon": g[1], "p_lat": mp[j, 0], "v": st["v"]})
+    return pd.DataFrame(out)
+
+
+def run_row(tr):
+    st = tr["steps"]
+    v = np.array([x["v"] for x in st]) if st else np.zeros(0)
+    t = np.array([x["t"] for x in st]) if st else np.zeros(0)
+    lat = np.abs(np.asarray(tr["lat"]))
+    th = np.asarray(tr["theta"])
+    moving = np.flatnonzero(v > 2.0)
+    r = {"tag": tr["tag"], "scenario": tr["scenario"], "end": tr["end"], "hd": tr["hdscore"], "rc": tr["rc"],
+         "steps": len(st), "v10": float(v[min(40, len(v) - 1)]) if len(v) else np.nan,
+         "t_move": float(t[moving[0]]) if len(moving) else np.nan, "v_min": float(v.min()) if len(v) else np.nan,
+         "clamped": float(np.mean(["raw_plan" in x for x in st])) if st else np.nan,
+         "lat_med": float(np.median(lat)) if len(lat) else np.nan, "lat_max": float(lat.max()) if len(lat) else np.nan,
+         "dheading_deg": float(np.degrees(th[-1] - th[0])) if len(th) else np.nan,
+         "route_frac": float(max(tr["s"]) / tr["route_len"]) if tr["s"] else np.nan}
+    plans = [np.asarray(x["plan"]) for x in st if "plan" in x and not x.get("oracle")]
+    if plans:
+        r["plan0_len"] = float(plans[0][-1, 1])
+        r["plan_x3s_early"] = float(np.mean([p[-1, 0] for p in plans[1:9]])) if len(plans) > 1 else np.nan
+    return r
+
+
+def cmd_check(a):
+    trs = json.load(open(a.traces))
+    rows = pd.DataFrame([run_row(t) for t in trs])
+    rows.to_csv(RES / "checklist_runs.csv", index=False, float_format="%.3f")
+    with pd.option_context("display.width", 250, "display.max_rows", 500):
+        print(rows.to_string())
+    sh = []
+    for t in trs:
+        if "shadow" in t["tag"]:
+            e = shadow_errors(t)
+            if len(e):
+                e["tag"], e["scenario"] = t["tag"], t["scenario"]
+                sh.append(e)
+    if sh:
+        e = pd.concat(sh)
+        e = e[e.v > 1.0]
+        g = e.groupby(["tag", "h"])
+        tab = pd.DataFrame({"n": g.size(), "abs_lat": g.lat.apply(lambda x: x.abs().mean()),
+                            "bias_lat": g.lat.mean(), "abs_lon": g.lon.apply(lambda x: x.abs().mean()),
+                            "bias_lon": g.lon.mean(),
+                            "cv_abs_lat": g.g_lat.apply(lambda x: x.abs().mean())})
+        turn = e[(e.h == 3) & (e.g_lat.abs() > 1.0)]
+        sign = turn.groupby("tag").apply(lambda q: float(np.mean(np.sign(q.p_lat) == np.sign(q.g_lat))))
+        tab = tab.reset_index()
+        tab["sign_agree@3s"] = tab.tag.map(sign)
+        tab.to_csv(RES / "checklist_shadow.csv", index=False, float_format="%.3f")
+        print(tab.to_string())
+    fig_check(trs)
+
+
+def fig_check(trs):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    want = [s for s in ("scene-0071-easy-00", "scene-0383-easy-00", "scene-0920-easy-00", "scene-0062-medium-00",
+                        "scene-0071-offset-00", "scene-0071-standstill-00")
+            if any(t["scenario"] == s for t in trs)]
+    tags = [(m, c) for m in ("cinque", "lebowski", "alpamayo") for c in ("official", "fixed")
+            if any(t["tag"] == f"{m}-{c}" for t in trs)]
+    if not want or not tags:
+        return
+    by = {(t["tag"], t["scenario"]): t for t in trs}
+    with mpl.rc_context(P.STYLE):
+        fig, axes = plt.subplots(1, len(want), figsize=(P.PAGE, 2.3))
+        axes = np.atleast_1d(axes)
+        for ax, sc in zip(axes, want):
+            ref = next(t for t in trs if t["scenario"] == sc)
+            r = np.asarray(ref["route"])
+            ax.plot(r[:, 0], r[:, 1], color="#BBBBBB", lw=3, label="recorded route")
+            for m, c in tags:
+                t = by.get((f"{m}-{c}", sc))
+                if t is None or not t["pos"]:
+                    continue
+                p = np.asarray(t["pos"])
+                ax.plot(p[:, 0], p[:, 1], color=MODEL_COLOR[m], ls="-" if c == "fixed" else ":", lw=1,
+                        label=f"{MODEL_NAME[m]}, {c}")
+                ax.plot(p[-1, 0], p[-1, 1], "x", color=MODEL_COLOR[m], ms=4)
+            ax.set_aspect("equal", adjustable="datalim")
+            ax.set_title(sc.replace("scene-", "").replace("-00", ""), fontsize=7)
+            ax.set_xlabel("x (m)")
+        axes[0].set_ylabel("z (m)")
+        h, l = axes[0].get_legend_handles_labels()
+        fig.legend(h, l, loc="upper center", bbox_to_anchor=(0.5, 0.0), ncol=4)
+        fig.tight_layout()
+        P.save(fig, FIG, "hugsim-exam-checklist")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("rate")
+    c = sub.add_parser("check")
+    c.add_argument("traces")
     a = ap.parse_args()
-    {"rate": cmd_rate}[a.cmd](a)
+    {"rate": cmd_rate, "check": cmd_check}[a.cmd](a)

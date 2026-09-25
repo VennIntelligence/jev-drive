@@ -78,8 +78,8 @@ def one(run_dir, row):
         det = ev.get("details", {})
     except (OSError, ValueError):
         ev, det = {}, {}
-    keep = ("t", "v", "cmd", "plan", "desire", "nav", "oracle", "infer_ms", "cot", "model_pos", "model_xy", "slots_dt",
-            "lead_prob", "reps")
+    keep = ("t", "v", "steer", "cmd", "plan", "raw_plan", "model_plan", "desire", "nav", "oracle", "infer_ms", "cot",
+            "model_pos", "model_xy", "slots_dt", "lead_prob", "reps", "n_obj")
     return {"tag": row["tag"], "scenario": row["scenario"], "dataset": ds, "scene": scene, "end": row["end"],
             "hdscore": ev.get("hdscore"), "rc": ev.get("rc"), "setup": setup,
             "route": np.round(rt[2][::2], 2).tolist(), "route_len": float(len(rt[0]) * 0.1),
