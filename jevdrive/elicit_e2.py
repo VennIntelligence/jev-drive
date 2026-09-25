@@ -165,12 +165,14 @@ def _log_candidates(log_path):
                 ab = np.asarray(im["actor"])
                 du, dv = uv[0, 0] - (ab[0] + ab[2]) / 2, uv[0, 1] - ab[3]
                 mb = ab + [du, dv, du, dv]
-                if mb[0] < 0 or mb[1] < 0 or mb[2] > W_IMG - 1 or mb[3] > H_IMG - 1 or \
-                        overlap(mb, ab) or any(overlap(mb, o[1]) for o in im["others"]):
+                if mb[0] < 0 or mb[1] < 0 or mb[2] > W_IMG - 1 or mb[3] > H_IMG - 1:
+                    shifts.append(None)             # the point is not in this image: no placebo edit here
+                    continue
+                if overlap(mb, ab) or any(overlap(mb, o[1]) for o in im["others"]):
                     good = False
                     break
                 shifts.append([float(du), float(dv)])
-            if good and any(s is not None for s in shifts):
+            if good and shifts[-3] is not None:     # at least the t0 CAM_F0 image carries the placebo
                 placebo = {"point_t0": p.tolist(), "shifts": shifts}
                 break
         out.append({"token": tok, "log": hist[-1]["log_name"], "track": str(track), "cls": str(a["gt_names"][j]),
