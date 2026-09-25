@@ -46,10 +46,12 @@ def fold_heads(model: str, rl) -> list[dict]:
     run = data_dir() / MC_RUN
     t, past, fut, obs, null, pairs = E.load()
     n = len(t)
-    Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"])
-    Xop = torch.as_tensor(p5_openpilot.load(t, (model,), sub="op_streams_vis")[f"op-{model} temporal"])
+    dev = "cuda" if torch.cuda.is_available() else "cpu"     # the stored run is a GPU fit; see deviation [E1] 00:45
+    Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device=dev)
+    Xop = torch.as_tensor(p5_openpilot.load(t, (model,), sub="op_streams_vis")[f"op-{model} temporal"], device=dev)
     fold = E.folds(t, pairs)
-    F, Ego = torch.as_tensor(fut.reshape(n, -1)), torch.as_tensor(E.ego_input(t, past))
+    F = torch.as_tensor(fut.reshape(n, -1), device=dev)
+    Ego = torch.as_tensor(E.ego_input(t, past), device=dev)
     pos = pd.Series(np.arange(n), index=t.frame_name)
     pr_ip = np.r_[pos[obs.fn_plus].to_numpy(), pos[null.fn_plus].to_numpy()]
     pr_im = np.r_[pos[obs.fn_minus].to_numpy(), pos[null.fn_null].to_numpy()]
@@ -65,13 +67,16 @@ def fold_heads(model: str, rl) -> list[dict]:
         ev = obs_rows[fold[obs_rows] == f]
         keep = {}
         o = MC.fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, model, None, keep)
-        diff = float(np.abs(o["M-C pair"][ev].reshape(-1, 20, 2).numpy() - ref_pred[at[ev].to_numpy()]).max())
+        diff = float(np.abs(o["M-C pair"][ev].reshape(-1, 20, 2).cpu().numpy() - ref_pred[at[ev].to_numpy()]).max())
         rl.event("e1_head_check", model=model, fold=f, lam=keep["lam"], lam_ref=ref_lam.get(f), max_abs_diff=diff)
         log.info("%s fold %d: lam %g (stored %s), max |pred - stored| %.2e m", model, f, keep["lam"], ref_lam.get(f), diff)
-        assert keep["lam"] == ref_lam[f] and diff < 1e-3, "fold head does not reproduce the stored run"
+        assert np.isclose(keep["lam"], ref_lam[f]) and diff < 1e-3, "fold head does not reproduce the stored run"
         tr = keep["tr"]
         heads.append({"W": keep["W"].double(), "zbar": keep["zbar"].double(), "lam": keep["lam"],
-                      "q": _stats(Q, tr), "op": _stats(Xop, tr), "diff": diff})
+                      "q": tuple(x.cpu() for x in _stats(Q, tr)), "op": tuple(x.cpu() for x in _stats(Xop, tr)),
+                      "diff": diff})
+    del Q, Xop, F, Ego
+    torch.cuda.empty_cache()
     return heads
 
 
