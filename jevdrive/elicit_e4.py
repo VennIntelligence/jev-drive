@@ -80,7 +80,7 @@ def load(set_: str):
     s0 = pairs[pairs.seed == 0].set_index("base_id")
     null["t_vis"] = s0.t_vis.fillna(s0.t_trig).reindex(null.base_id).to_numpy()   # p5_pairs' null-window origin
     assert obs.t_vis.notna().all() and null.t_vis.notna().all() and (obs.k >= obs.t_vis).all()
-    examinees = list(E.TFV6) + [c for c in obs.columns if c.startswith("ridge ")] + arms + list(Q6_GATES) + [SAM_PROXY]
+    examinees = list(E.TFV6) + [c for c in obs.columns if c.startswith(("ridge ego", "ridge_late"))] + arms + list(Q6_GATES) + [SAM_PROXY]
     return obs, null, taus, pooled, examinees
 
 
@@ -140,7 +140,10 @@ def score(obs, null, taus, pooled, examinees, halves_null) -> pd.DataFrame:
                     fr, lo, hi = E.boot_ratio(ok.to_numpy(), np.ones(len(r)), r.base_id.to_numpy()) \
                         if len(r) else (np.nan,) * 3
                     row |= {"n": len(r), "unit": "frame"}
-                rows.append(row | {"routes": r.base_id.nunique(), "flip": fr, "lo": lo, "hi": hi})
+                rows.append(row | {"routes": r.base_id.nunique(), "flip": fr, "lo": lo, "hi": hi,
+                                   # descriptive: direction agreement and size relative to tau, ignoring tau
+                                   "sign_agree": float((np.sign(r[ex]) == np.sign(r.d_expert)).mean()) if len(r) else np.nan,
+                                   "abs_over_tau_median": float((np.abs(r[ex]) / tau).median()) if len(r) and tau > 0 else np.nan})
     return pd.DataFrame(rows)
 
 
