@@ -780,3 +780,26 @@ run：检测 `$DATA_DIR/runs/fastperc/detect/e5-p5v1ba-s{0,1,2}/`（输出 `proc
 3. **代价与 teacher 同级**：DynamicObjectCrossing 的非反应帧误翻 10–14%（teacher 10–12%），也就是行人一进走廊就减速、早于 expert；全部非反应帧 3–5% 不变。
 4. **限定**：这是 CARLA 内（BA 集）的结果；E1 说明 CARLA 上训的 Δ 直接加到真实特征上是有害的，这里的 student 同样只在 CARLA 上训过，真实数据上的行为没有测。
    检测 embedding 只用单帧（没有速度），走廊来自路线中心线（B2D 给 agent 的合法导航输入）；PDM-Lite 集不在本项里（E4 已判它不做主判定集）。
+
+### E2：WOD 编辑对（第二数据集）与 navtrain + WOD 合训（2026-09-26 01:01–02:26，GPU 0 / 1 / 2 / 4）
+
+口径见 [E2] 01:00、01:22、02:15。run：扫描 `runs/elicitation/e2-wod-sam/`（4 个进程、GPU 0 / 2，约 1.3 GPU·h），造对 `runs/elicitation/e2-wod-build/`，残留检查 `runs/elicitation/e2-wod-validate/20260926-020631`，
+训练与读数 `runs/elicitation/e2-train-wod/20260926-021847`（`wod/` 只 WOD 对，`nav+wod/` 两者合训）。小表 [e2/wod/](../research/results/elicitation/e2/wod/)、[e2/nav+wod/](../research/results/elicitation/e2/nav+wod/)。
+
+**产量**：train 前视每 0.8 s 一帧，51 970 帧（2 037 个 sequence）里走廊内有行人 / cyclist 检测的 628 帧（1.2%），每 sequence 每 5 s 取一帧后 216 个候选、216 个有效对（177 个 sequence），780 张被编辑的图，181 对有安慰剂。
+残留检出（YOLO26x，抹掉的 SAM 框里 x⁺ 有 person 的 916 个框）**3.5%**，过 10% 门；WOD 没有 GT，门 (c) 不适用。目检 16 对（t0 前视）：单人、两人过街抹得干净；一对夜间与一对摩托车（cyclist prompt）只抹掉了一部分，因为候选的走廊检测只对应其中一个目标。
+op 流按 02:15 的规则：Cinque 的双流 / 只 openpilot 行作废，只看只 Qwen；Lebowski 双流照报。WOD 对上 op 不编辑，所以只 Qwen 与双流的配对 head 数值相同。
+
+| head（Cinque 只 Qwen；Lebowski 双流） | R1 编辑 / 安慰剂 Δ 中位 (m) | R1 比 [CI] | P5 行人翻转 | P5 cut-in Δ | WOD RFS Δ 全部 [CI] | WOD Pedestrians [CI] | 直行激活 | WOD Δ 幅值中位 (m) |
+|:--|:--|:--|--:|--:|:--|:--|--:|--:|
+| 只 WOD 对，配对差分 (a) | 0.021 / 0.010 | 2.16 [1.77, 2.56] | 0.5%（2.7%） | +0.3 | +0.007 [−0.013, +0.027] | −0.009 [−0.081, +0.065] | 0.0% | 0.09 |
+| 只 WOD 对，hard-example | 0.032 / 0.021 | 1.49 | 0.2% | −1.3 | −0.23 [−0.36, −0.11] | −0.18 | 2.0% | 1.03 |
+| 只 WOD 对，均匀 imitation | 0.024 / 0.016 | 1.48 | 0.2% | −0.1 | −0.13 [−0.25, −0.02] | +0.08 | 0.3% | 0.71 |
+| navtrain + WOD 合训，配对差分 (a) | 0.454 / 0.284 | 1.60 | 0.0% | −46.2 | −2.26 [−2.47, −2.04] | −2.10 | 0.6% | 2.07 |
+
+读法：只用 WOD 对训出来的配对 head 在编辑对上的 Δ 只有 2 cm（λ = 10，内层 CV 选的不是网格边），比值刚过 2 倍但绝对量在噪声里；放到 WOD val 上 Δ 中位 9 cm，RFS、Pedestrians 都跨零、直行不激活——**无害但没有学到东西**：
+216 对上「logged 未来 − CTRA」这个标签里，能被「走廊里有没有这个人」的 Qwen 特征差解释的部分太小，ridge 把它收缩到近零。合训版被 navtrain 部分主导，WOD 读数与 navtrain 单训一样有害。
+
+**E2 总判格（按登记）**：三个训练集（navtrain、WOD、合训）没有一个同时满足「|Δ| 中位 ≥ 2 × 安慰剂」与「WOD Pedestrians RFS Δ CI > 0」。navtrain 与合训在 WOD 上**有害**（RFS −2.1 到 −2.3，来自 2 Hz → 10 Hz 的输入分布差）；
+只 WOD 对**无害但转不动**（Δ ≈ 0）。P5 v1 BA 上所有 E2 head 行人翻转 0–5%（真实 → 仿真方向也不过）。所以「用 SAM + LaMa 在真实帧上造反事实对来激发配对差分」这一格在本轮**不成立**，限定如下：
+编辑对的信噪比低（Qwen 特征上抹人的位移只比安慰剂大 21%）、WOD 对只有 216 个（CARLA 上激发需要约 400 个行人 reactive 帧，第 42 条）、标签 (a) 不是 expert 的两侧重跑而是 log 与 CTRA 之差。
