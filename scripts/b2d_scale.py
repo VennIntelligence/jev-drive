@@ -70,6 +70,19 @@ def cpu_list(spec):
     return out
 
 
+def bindable(port):
+    """A port CARLA can listen on. `b2d_run.port_free` only asks whether something listens there, but our index
+    block puts every port inside the kernel's ephemeral range (32768-60999 on the box), where an outgoing
+    connection may hold it, and CARLA then dies at startup with `bind: Address already in use` / Signal 11."""
+    import socket
+    with socket.socket() as sock:
+        try:
+            sock.bind(("0.0.0.0", port))
+            return True
+        except OSError:
+            return False
+
+
 class Indices(object):
     """CARLA server indices from our block. An index is never reused within one invocation (a stopped server's
     ports sit in TIME_WAIT and CARLA dies on a busy port), and the next invocation continues where this one stopped,
@@ -89,7 +102,7 @@ class Indices(object):
             self.state.write_text(str(self.next))
             port = b2d_run.PORT_BASE + b2d_run.PORT_STRIDE * i
             tm = b2d_run.TM_BASE + b2d_run.PORT_STRIDE * i
-            if all(b2d_run.port_free(q) for q in (port, port + 1, port + 2, tm)):
+            if all(bindable(q) for q in (port, port + 1, port + 2, tm, tm + 1)):
                 return i
         raise RuntimeError("no free CARLA index in %d-%d" % (self.lo, self.hi))
 
