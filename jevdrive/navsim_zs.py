@@ -34,7 +34,22 @@ def root(*parts) -> Path:
     return d
 
 
-def load_index(split: str) -> list:
+def load_index(split: str, slim: bool = False) -> list:
+    """The frozen per-token inputs. slim=True keeps only what openpilot and the thin heads read (ego state, CAM_F0 of
+    the 4 frames): navtrain's full index holds 8 cameras x 4 frames of calibration per token and unpickles to ~30 GB,
+    the slim one to a few GB. It is cached next to the full index on first use."""
+    if slim:
+        sp = root("index") / f"{split}_slim.pkl"
+        if not sp.exists():
+            keep = ("token", "stage", "log_name", "map", "pose", "vel", "acc", "cmd")
+            out = [{**{k: e[k] for k in keep}, "cams": [{"CAM_F0": c["CAM_F0"]} for c in e["cams"]]}
+                   for e in load_index(split)]
+            with open(sp.with_suffix(".tmp"), "wb") as f:
+                pickle.dump(out, f, protocol=4)
+            sp.with_suffix(".tmp").replace(sp)
+            return out
+        with open(sp, "rb") as f:
+            return pickle.load(f)
     with open(root("index") / f"{split}.pkl", "rb") as f:
         return pickle.load(f)
 

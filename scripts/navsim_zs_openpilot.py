@@ -135,7 +135,7 @@ def rollout(m, fr, sched, tc, desire=None):
 def cmd_feat(a, log):
     from concurrent.futures import ProcessPoolExecutor
     from jevdrive.drive_backbones import OP_TAPS
-    idx = Z.load_index(a.split)
+    idx = Z.load_index(a.split, slim=True)
     toks = np.array([e["token"] for e in idx])
     base = Z.root("openpilot", a.split, "feat")
     if a.merge:

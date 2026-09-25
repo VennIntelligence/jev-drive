@@ -34,7 +34,7 @@ def ego_features(idx: list) -> np.ndarray:
 
 
 def load(split: str, feats: bool) -> dict:
-    idx = Z.load_index(split)
+    idx = Z.load_index(split, slim=True)
     tok = np.array([e["token"] for e in idx])
     d = {"tokens": tok, "log": np.array([e["log_name"] for e in idx]), "ego": ego_features(idx),
          "stage": np.array([e["stage"] for e in idx])}
