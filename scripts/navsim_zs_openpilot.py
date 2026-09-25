@@ -10,6 +10,14 @@
     PY=$DATA_DIR/envs/openpilot/bin/python
     $PY scripts/navsim_zs_openpilot.py frames --split navtest
     $PY scripts/navsim_zs_openpilot.py run --split navtest --model cinque --desire none
+
+  feat    the same rollout (desire none) for several models at once, also reading the `temporal` tap at t0: the
+          frozen feature of the NAVSIM thin heads (todos/2026-09-25-openpilot-openloop-comparison.md, G3). Splits with
+          a `frames` cache read it; others (navtrain, ~100k tokens, a 160 GB cache) render CAM_F0 on the fly in a
+          process pool. Chunks of 1000 tokens, claimed by --shard i/n, resumable:
+          openpilot/<split>/feat/<model>/chunk_NNNN.npz (tokens, temporal, poses); `feat --merge` joins them.
+
+    $PY scripts/navsim_zs_openpilot.py feat --split navtrain --models cinque lebowski --shard 0/6 --workers 3
 """
 import argparse
 import json
@@ -105,6 +113,87 @@ def cmd_run(a, log):
     log.info(json.dumps(s) + f" -> {out}")
 
 
+_maps = {}
+
+
+def render_token(e) -> np.ndarray:
+    """(4, 2, 6, 128, 256) packed model frames of one index entry, exactly as cmd_frames (calibration of the t0 frame)."""
+    cams = e["cams"][-1]
+    key = Z.calib_key({"CAM_F0": cams["CAM_F0"]})
+    m = _maps.get(key) or _maps.setdefault(key, Z.OpenpilotMaps(cams["CAM_F0"]))
+    return np.stack([m(m.decode(e["cams"][f]["CAM_F0"]["path"])) for f in range(4)])
+
+
+def rollout(m, fr, sched, tc, desire=None):
+    m.reset()
+    for slot in sched:
+        raw = m.step(fr[slot], desire=np.zeros(8, np.float32) if desire is None else desire(slot), traffic=tc,
+                     action_t=ACTION_T)
+    return raw
+
+
+def cmd_feat(a, log):
+    from concurrent.futures import ProcessPoolExecutor
+    from jevdrive.drive_backbones import OP_TAPS
+    idx = Z.load_index(a.split)
+    toks = np.array([e["token"] for e in idx])
+    base = Z.root("openpilot", a.split, "feat")
+    if a.merge:
+        for mn in a.models:
+            parts = [np.load(p) for p in sorted((base / mn).glob("chunk_*.npz"))]
+            got = np.concatenate([q["tokens"] for q in parts])
+            assert len(got) == len(toks) and (np.sort(got) == np.sort(toks)).all(), f"{mn}: {len(got)}/{len(toks)} tokens"
+            np.savez(Z.root("openpilot", a.split) / f"{mn}_temporal.npz", tokens=got,
+                     temporal=np.concatenate([q["temporal"] for q in parts]).astype(np.float16),
+                     poses=np.concatenate([q["poses"] for q in parts]))
+            log.info(f"{mn}: merged {len(parts)} chunks, {len(got)} tokens")
+        return
+    si, sn = map(int, a.shard.split("/"))
+    chunks = [c for c in range(0, len(idx), a.chunk)
+              if (c // a.chunk) % sn == si and not all((base / mn / f"chunk_{c // a.chunk:04d}.npz").exists() for mn in a.models)]
+    chunks = chunks[: a.limit or None]
+    fpath, jpath = frame_paths(a.split)
+    cached = fpath.exists() and json.load(open(jpath))["tokens"] == toks.tolist()
+    frames = np.load(fpath, mmap_mode="r") if cached else None
+    from jevdrive.openpilot.model import T_IDXS, OPModel, decode
+    ex = None if cached else ProcessPoolExecutor(a.workers)
+    if ex is not None:
+        list(ex.map(int, range(a.workers)))        # fork the renderers before the TensorRT sessions exist
+    models = {mn: OPModel(mn, MODELS[mn], context_rate=(mn == "lebowski"), taps=[OP_TAPS[mn]["temporal"]]) for mn in a.models}
+    sched = {mn: schedule(mn == "lebowski") for mn in a.models}
+    log.info(f"{a.split}: {len(chunks)} chunks of {a.chunk} (shard {a.shard}), frames {'cached' if cached else 'rendered'}")
+    t0, n, tg = time.time(), 0, {mn: 0.0 for mn in a.models}
+    for c in chunks:
+        rows = range(c, min(c + a.chunk, len(idx)))
+        it = (frames[k] for k in rows) if cached else ex.map(render_token, [idx[k] for k in rows], chunksize=4)
+        out = {mn: {"temporal": [], "poses": []} for mn in a.models}
+        for k, fr in zip(rows, it):
+            e = idx[k]
+            fr = np.ascontiguousarray(fr)
+            tc = (0, 1) if e["map"] in LHT_MAPS else (1, 0)
+            dev = e["cams"][-1]["CAM_F0"]["t"][:2]
+            for mn, m in models.items():
+                t = time.perf_counter()
+                raw = rollout(m, fr, sched[mn], tc)
+                tg[mn] += time.perf_counter() - t
+                d = decode(raw, m.slices, float(np.linalg.norm(e["vel"][-1])), ACTION_T)
+                out[mn]["temporal"].append(m.tap_values[OP_TAPS[mn]["temporal"]].astype(np.float16))
+                out[mn]["poses"].append(Z.openpilot_to_navsim(d["plan_pos"], d["plan_yaw"], T_IDXS, dev))
+            n += 1
+        for mn in a.models:
+            (base / mn).mkdir(parents=True, exist_ok=True)
+            tmp = base / mn / f"chunk_{c // a.chunk:04d}.tmp.npz"
+            np.savez(tmp, tokens=toks[list(rows)], temporal=np.stack(out[mn]["temporal"]),
+                     poses=np.stack(out[mn]["poses"]).astype(np.float32))
+            tmp.replace(base / mn / f"chunk_{c // a.chunk:04d}.npz")
+        el = time.time() - t0
+        log.info(f"chunk {c // a.chunk}: {n} tokens, {1e3 * el / n:.1f} ms/token wall; GPU ms/token "
+                 + ", ".join(f"{mn} {1e3 * v / n:.1f}" for mn, v in tg.items()))
+        log.event("progress", tokens=n, wall_s=el, **{f"gpu_s_{mn}": v for mn, v in tg.items()})
+    if ex is not None:
+        ex.shutdown()
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -115,9 +204,17 @@ if __name__ == "__main__":
     r.add_argument("--split", default="navtest")
     r.add_argument("--model", choices=list(MODELS), required=True)
     r.add_argument("--desire", choices=("none", "cmd"), default="none")
+    f = sub.add_parser("feat")
+    f.add_argument("--split", default="navtrain")
+    f.add_argument("--models", nargs="+", default=["cinque", "lebowski"])
+    f.add_argument("--shard", default="0/1")
+    f.add_argument("--chunk", type=int, default=1000)
+    f.add_argument("--workers", type=int, default=3)
+    f.add_argument("--limit", type=int, default=0, help="chunks")
+    f.add_argument("--merge", action="store_true")
     a = ap.parse_args()
     log = RunLog("navsim_zs", "openpilot_" + a.cmd + (f"_{a.model}_{a.desire}" if a.cmd == "run" else ""))
     log.info(f"args {vars(a)} -> {log.dir}")
-    {"frames": cmd_frames, "run": cmd_run}[a.cmd](a, log)
+    {"frames": cmd_frames, "run": cmd_run, "feat": cmd_feat}[a.cmd](a, log)
     log.event("end")
     log.close()
