@@ -1,0 +1,109 @@
+examinee,scope,n_reactive,flip_rate,flip_lo,flip_hi,tau_model
+prior [cinque],DynamicObjectCrossing,293,0,0,0,1.165
+prior [cinque],HighwayCutIn,207,1,1,1,1.165
+prior [cinque],Light,9,0,0,0,1.165
+prior [cinque],OppositeVehicleRunningRedLight,0,,,,1.165
+prior [cinque],ParkingCrossingPedestrian,76,0.01316,0,0.03371,1.165
+prior [cinque],ParkingCutIn,217,0.6313,0.4612,0.7361,1.165
+prior [cinque],PedestrianCrossing,27,0,0,0,1.165
+prior [cinque],StaticCutIn,252,0.6984,0.567,0.8238,1.165
+prior [cinque],VehicleTurningRoutePedestrian,10,0,0,0,1.165
+Q9b pair grid s0 [cinque],DynamicObjectCrossing,293,0.5631,0.4356,0.6789,2.002
+Q9b pair grid s0 [cinque],HighwayCutIn,207,0.913,0.8095,0.9857,2.002
+Q9b pair grid s0 [cinque],Light,9,0,0,0,2.002
+Q9b pair grid s0 [cinque],OppositeVehicleRunningRedLight,0,,,,2.002
+Q9b pair grid s0 [cinque],ParkingCrossingPedestrian,76,0.4342,0.2326,0.5932,2.002
+Q9b pair grid s0 [cinque],ParkingCutIn,217,0.5253,0.3564,0.7083,2.002
+Q9b pair grid s0 [cinque],PedestrianCrossing,27,0.03704,0,0.3333,2.002
+Q9b pair grid s0 [cinque],StaticCutIn,252,0.7222,0.5692,0.86,2.002
+Q9b pair grid s0 [cinque],VehicleTurningRoutePedestrian,10,0,0,0,2.002
+Q9b pair grid s1 [cinque],DynamicObjectCrossing,293,0.5734,0.4333,0.7008,1.986
+Q9b pair grid s1 [cinque],HighwayCutIn,207,0.8986,0.7923,0.9954,1.986
+Q9b pair grid s1 [cinque],Light,9,0,0,0,1.986
+Q9b pair grid s1 [cinque],OppositeVehicleRunningRedLight,0,,,,1.986
+Q9b pair grid s1 [cinque],ParkingCrossingPedestrian,76,0.3816,0.2326,0.5424,1.986
+Q9b pair grid s1 [cinque],ParkingCutIn,217,0.5207,0.3502,0.7051,1.986
+Q9b pair grid s1 [cinque],PedestrianCrossing,27,0.07407,0.04167,0.3333,1.986
+Q9b pair grid s1 [cinque],StaticCutIn,252,0.7302,0.568,0.8745,1.986
+Q9b pair grid s1 [cinque],VehicleTurningRoutePedestrian,10,0,0,0,1.986
+Q9b pair grid s2 [cinque],DynamicObjectCrossing,293,0.5939,0.457,0.7148,1.946
+Q9b pair grid s2 [cinque],HighwayCutIn,207,0.9034,0.8019,0.9952,1.946
+Q9b pair grid s2 [cinque],Light,9,0,0,0,1.946
+Q9b pair grid s2 [cinque],OppositeVehicleRunningRedLight,0,,,,1.946
+Q9b pair grid s2 [cinque],ParkingCrossingPedestrian,76,0.4605,0.2373,0.6102,1.946
+Q9b pair grid s2 [cinque],ParkingCutIn,217,0.5346,0.3519,0.7051,1.946
+Q9b pair grid s2 [cinque],PedestrianCrossing,27,0.03704,0,0.3333,1.946
+Q9b pair grid s2 [cinque],StaticCutIn,252,0.7619,0.6032,0.9032,1.946
+Q9b pair grid s2 [cinque],VehicleTurningRoutePedestrian,10,0,0,0,1.946
+Q9b hard grid [cinque],DynamicObjectCrossing,293,0.1263,0.05734,0.1921,2.762
+Q9b hard grid [cinque],HighwayCutIn,207,0.6377,0.3857,0.8696,2.762
+Q9b hard grid [cinque],Light,9,0,0,0,2.762
+Q9b hard grid [cinque],OppositeVehicleRunningRedLight,0,,,,2.762
+Q9b hard grid [cinque],ParkingCrossingPedestrian,76,0.1053,0,0.3214,2.762
+Q9b hard grid [cinque],ParkingCutIn,217,0.1797,0.06421,0.3287,2.762
+Q9b hard grid [cinque],PedestrianCrossing,27,0.03704,0,0.04167,2.762
+Q9b hard grid [cinque],StaticCutIn,252,0.4563,0.3214,0.5958,2.762
+Q9b hard grid [cinque],VehicleTurningRoutePedestrian,10,0,0,0,2.762
+Q9b pair pooled-linear [cinque],DynamicObjectCrossing,293,0.1502,0.04412,0.2615,1.384
+Q9b pair pooled-linear [cinque],HighwayCutIn,207,1,1,1,1.384
+Q9b pair pooled-linear [cinque],Light,9,0,0,0,1.384
+Q9b pair pooled-linear [cinque],OppositeVehicleRunningRedLight,0,,,,1.384
+Q9b pair pooled-linear [cinque],ParkingCrossingPedestrian,76,0.1579,0,0.3371,1.384
+Q9b pair pooled-linear [cinque],ParkingCutIn,217,0.5392,0.35,0.713,1.384
+Q9b pair pooled-linear [cinque],PedestrianCrossing,27,0.3333,0,0.375,1.384
+Q9b pair pooled-linear [cinque],StaticCutIn,252,0.6825,0.5572,0.8042,1.384
+Q9b pair pooled-linear [cinque],VehicleTurningRoutePedestrian,10,0,0,0,1.384
+prior [lebowski],DynamicObjectCrossing,293,0.01024,0,0.025,1.17
+prior [lebowski],HighwayCutIn,207,0.9952,0.9855,1,1.17
+prior [lebowski],Light,9,0,0,0,1.17
+prior [lebowski],OppositeVehicleRunningRedLight,0,,,,1.17
+prior [lebowski],ParkingCrossingPedestrian,76,0.03947,0,0.1011,1.17
+prior [lebowski],ParkingCutIn,217,0.4839,0.3529,0.6204,1.17
+prior [lebowski],PedestrianCrossing,27,0.1852,0,0.2083,1.17
+prior [lebowski],StaticCutIn,252,0.6587,0.5233,0.7866,1.17
+prior [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,1.17
+Q9b pair grid s0 [lebowski],DynamicObjectCrossing,293,0.5631,0.4475,0.6757,2.097
+Q9b pair grid s0 [lebowski],HighwayCutIn,207,0.8357,0.6808,0.9496,2.097
+Q9b pair grid s0 [lebowski],Light,9,0,0,0,2.097
+Q9b pair grid s0 [lebowski],OppositeVehicleRunningRedLight,0,,,,2.097
+Q9b pair grid s0 [lebowski],ParkingCrossingPedestrian,76,0.4342,0.2558,0.6102,2.097
+Q9b pair grid s0 [lebowski],ParkingCutIn,217,0.5484,0.4306,0.6941,2.097
+Q9b pair grid s0 [lebowski],PedestrianCrossing,27,0.1111,0,0.125,2.097
+Q9b pair grid s0 [lebowski],StaticCutIn,252,0.7222,0.5736,0.8624,2.097
+Q9b pair grid s0 [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,2.097
+Q9b pair grid s1 [lebowski],DynamicObjectCrossing,293,0.6041,0.512,0.6976,2.118
+Q9b pair grid s1 [lebowski],HighwayCutIn,207,0.8068,0.6381,0.9451,2.118
+Q9b pair grid s1 [lebowski],Light,9,0,0,0,2.118
+Q9b pair grid s1 [lebowski],OppositeVehicleRunningRedLight,0,,,,2.118
+Q9b pair grid s1 [lebowski],ParkingCrossingPedestrian,76,0.4079,0.2558,0.5763,2.118
+Q9b pair grid s1 [lebowski],ParkingCutIn,217,0.5161,0.3594,0.6927,2.118
+Q9b pair grid s1 [lebowski],PedestrianCrossing,27,0.1111,0,0.125,2.118
+Q9b pair grid s1 [lebowski],StaticCutIn,252,0.7262,0.5801,0.8595,2.118
+Q9b pair grid s1 [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,2.118
+Q9b pair grid s2 [lebowski],DynamicObjectCrossing,293,0.5734,0.4521,0.6862,2.044
+Q9b pair grid s2 [lebowski],HighwayCutIn,207,0.7778,0.6,0.9403,2.044
+Q9b pair grid s2 [lebowski],Light,9,0,0,0,2.044
+Q9b pair grid s2 [lebowski],OppositeVehicleRunningRedLight,0,,,,2.044
+Q9b pair grid s2 [lebowski],ParkingCrossingPedestrian,76,0.4605,0.2558,0.6441,2.044
+Q9b pair grid s2 [lebowski],ParkingCutIn,217,0.53,0.4128,0.6774,2.044
+Q9b pair grid s2 [lebowski],PedestrianCrossing,27,0.1481,0.125,0.3333,2.044
+Q9b pair grid s2 [lebowski],StaticCutIn,252,0.7302,0.5757,0.8715,2.044
+Q9b pair grid s2 [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,2.044
+Q9b hard grid [lebowski],DynamicObjectCrossing,293,0.1468,0.07611,0.2143,2.71
+Q9b hard grid [lebowski],HighwayCutIn,207,0.6232,0.3682,0.8725,2.71
+Q9b hard grid [lebowski],Light,9,0,0,0,2.71
+Q9b hard grid [lebowski],OppositeVehicleRunningRedLight,0,,,,2.71
+Q9b hard grid [lebowski],ParkingCrossingPedestrian,76,0.1053,0,0.3214,2.71
+Q9b hard grid [lebowski],ParkingCutIn,217,0.1244,0.06018,0.1927,2.71
+Q9b hard grid [lebowski],PedestrianCrossing,27,0.2593,0,0.2917,2.71
+Q9b hard grid [lebowski],StaticCutIn,252,0.5159,0.3804,0.6492,2.71
+Q9b hard grid [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,2.71
+Q9b pair pooled-linear [lebowski],DynamicObjectCrossing,293,0.198,0.09677,0.2981,1.35
+Q9b pair pooled-linear [lebowski],HighwayCutIn,207,1,1,1,1.35
+Q9b pair pooled-linear [lebowski],Light,9,0,0,0,1.35
+Q9b pair pooled-linear [lebowski],OppositeVehicleRunningRedLight,0,,,,1.35
+Q9b pair pooled-linear [lebowski],ParkingCrossingPedestrian,76,0.1711,0.02041,0.3333,1.35
+Q9b pair pooled-linear [lebowski],ParkingCutIn,217,0.4931,0.3761,0.6065,1.35
+Q9b pair pooled-linear [lebowski],PedestrianCrossing,27,0.4074,0,0.4583,1.35
+Q9b pair pooled-linear [lebowski],StaticCutIn,252,0.6667,0.5498,0.7815,1.35
+Q9b pair pooled-linear [lebowski],VehicleTurningRoutePedestrian,10,0,0,0,1.35

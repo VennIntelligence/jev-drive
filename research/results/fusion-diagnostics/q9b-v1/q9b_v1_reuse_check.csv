@@ -1,0 +1,2 @@
+set,rows,grid_identical_rows,grid_max_abs,grid_rel_l2,grid_min_cos,L18_mean_vs_stored_identical_rows,L18_mean_vs_stored_max_abs,L18_mean_vs_stored_rel_l2,L18_mean_vs_stored_min_cos,L18_last_vs_stored_identical_rows,L18_last_vs_stored_max_abs,L18_last_vs_stored_rel_l2,L18_last_vs_stored_min_cos
+carla_p5v1_ba,64,63,0.04688,0.0003753,1,0,0.7422,0.008116,0.9998,0,0.375,0.0147,0.9998
