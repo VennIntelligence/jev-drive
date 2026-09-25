@@ -31,6 +31,22 @@
 4. E4c 曲线与 WOD onset 分布：PDM-Lite 0.4 s 与 BA 5.6 s 谁更靠近人类。
 5. I3 上 M-C 零样本有没有动。
 
+## 偏离与澄清日志
+
+（执行时追加，时间戳为 box 时钟、早于受影响的数字。）
+
+- 2026-09-26 01:12 CST [SEEDS]（第 2 项，写于任何新 seed 的数字之前）「seed」对每个 head 改的是什么，其余一字不改（λ 网格、特征、judge、bootstrap 种子、null 半分都不动）：
+  (a) **M-C**（`reactivity_mc`，v1 BA 与 PDM 两套，`op_streams_vis`，预登记网格）：唯一的随机性是按 base 路线分 5 折的排列 `p5_exam.folds(t, pairs, seed)`；seed s 就是这个排列种子。
+  prior（`ridge_late`）与各 arm 都在 fold 内重拟合，所以 prior 也随 seed 变；内层 λ 选择是 `GroupKFold`（确定性），考试里 null 半分与路线 bootstrap 的种子保持 0。新参数 `--fold-seed`（默认 0）。
+  (b) **NAVSIM 薄 head**（`navsim_heads`）：seed s → log 分组外层 5 折 `_group_folds(seed=s)`、cls λ 的内层 20% log 划分 `_group_folds(seed=s+1)`、K = 1024 k-means 词表 `traj.kmeans(seed=s)`；s = 0 即原配置（0 / 1 / 0）。
+  新参数 `--seed`；打分用官方 devkit 原样（PDMS v1.1、EPDMS main @ 0a380a9，navtest；navhard two-stage EPDMS），打分名 `heads_s<s>_<arm>`。
+  (c) **WOD 第 40 条 (iii) 薄 head**（`drive_backbones.heads_train`，train 训、完整 val 评）：seed s → K = 1024 词表的 k-means 种子（`waymo_heads.vocabularies(seed=s)`）与 cls λ 的内层 sequence 划分（`Halves` 的 `GroupShuffleSplit(random_state=s)`，经 `train_context(seed=s)`）。
+  `ridge_late` 的 λ 是 `GroupKFold`、拟合是闭式、train / val 固定，**没有随机性**，seed 1、2 预期与 seed 0 逐位相同（照跑，作为核对）。读数：479 个 rater 帧的 RFS（`heads_readout`）与第 22 条的 ADE 口径（s_ego 第 1–9 档、pre_onset）。新参数 `--seed`。
+  (d) **Q9b 网格 attention head**（`fusion_q9b fit`，v1 BA 与 PDM）：seed 是 `_train` 的 seed（`torch.manual_seed` + 内层 20% 路线 `GroupShuffleSplit`）。配对 arm 原 run 已经按登记跑了 seed 0–2（`Q9b pair grid s0/s1/s2`），直接读已存结果，不重跑；
+  hard-example 网格 arm 原 run 只有 seed 0，新参数 `--hard-seed` 跑 1、2（同一次 fit 会顺带重算配对 arm 的 s0–s2，逐项核对与原 run 相同）。
+  核对：每个脚本先在 seed 0 上重跑，与已存 run 比（逐位相同，或 GPU fp32 噪声级），过了才跑 1、2。报每张主表 seed 0 / 1 / 2 的点值、3 seed 均值与极差，以及极差是否小于原 CI 半宽。
+  估计：GPU 0 上 (a) 约 15 min、(c) 约 25 min、(d) 约 20 min、(b) 拟合 2 min；devkit 打分 8 个 arm × 约 23 min，两路并行约 1.5 h。
+
 ## 结果
 
 （按到达顺序记在 `tmp/2026-09-26-overnight.md`；早上汇总后把判格写回各自的 todo。）
