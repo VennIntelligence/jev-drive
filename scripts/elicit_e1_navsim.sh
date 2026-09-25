@@ -9,7 +9,7 @@ PY=.venv/bin/python
 GPU=${GPU:-1}
 until $PY -m jevdrive.navsim_qwen check navtest 2>/dev/null; do sleep 60; done
 env CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=2 nice -n 10 $PY -m jevdrive.navsim_qwen work navhard_two_stage --workers 4
-$PY -m jevdrive.navsim_qwen check navhard_two_stage || { echo "navhard features incomplete"; exit 1; }
+until $PY -m jevdrive.navsim_qwen check navhard_two_stage 2>/dev/null; do sleep 60; done   # other cards may still hold chunks
 run=$(ls -td $DATA_DIR/runs/elicitation/e1-navsim/*/ 2>/dev/null | head -1)
 if [[ -z $run || ! -f $run/navsim_activation.csv ]]; then
   env CUDA_VISIBLE_DEVICES=$GPU P5_SET=carla_p5v1_ba OMP_NUM_THREADS=12 MKL_NUM_THREADS=12 nice -n 10 \
