@@ -276,6 +276,23 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   「距走廊」= 到中心线横距 − 1.2 m，「朝走廊方向的速度分量」= 物体速度在指向中心线的法向上的分量；只对 walker 计（自行车按 vehicle 类进 (i)(ii)）。
   (3) 物体 = 同一 tick 的全部 actor（除 ego），与 ego 高差 > 8 m 的剔除（x⁻ 的 hazard 被藏在地下 500 m、生成前也在地下）。坐标用 CARLA 左手系取 y 反号转成右手系，ego BEV 原点在车辆位置（bbox 中心地面），x 前 y 左。
   (4) 考官：`p5_exam.exam` 一字不改，examinee = `gate any`（主读数，rule floor）以及三条门各自（描述）。
+- 2026-09-25 18:30 CST [Q4] 以下全部写在任何 SAM 输出之前。
+  (1) **image 模式用 SAM 3.1 自己的 detector**，不回退到 SAM 3：multiplex checkpoint 里 `detector.*` 那一半就是 `Sam3Image` 的子类（`Sam3MultiplexDetector`，Tri-head ViT neck），
+  按 `build_sam3_multiplex_video_predictor` 的同一套构造加载，前后处理与仓库的 `Sam3Processor` 一致（1008×1008 resize、mean/std 0.5、score = sigmoid(logit) × sigmoid(presence)、mask 双线性上采样后 sigmoid > 0.5），
+  bf16 autocast + TF32（仓库示例的设置）。我们只加了 batching（B 张图 × 6 个 prompt 一次 `forward_grounding`），由检查 (c) 验证。代码 `jevdrive/sam_detect.py`。若 detector 权重加载有缺键，再按登记回退并另记一条。
+  (2) 置信阈值取仓库默认 0.5 为主读数；存盘到 0.3，只用于描述性的阈值扫描。
+  (3) **GT 参考点**：mask 最低点抬到 BEV 得到的是物体离相机最近的那条底边（从车后看是后保险杠下沿），不是 bbox 底面中心；对一辆 4.8 m 长的车，两者相差约 2.4 m，
+  已经超过匹配门 max(2 m, 0.1 × 距离)，按登记的底面中心匹配会把近处车辆系统性判成漏检。所以匹配、召回、BEV 误差和检查 (a)(b) 都以 **GT footprint 矩形上离相机最近的点**为参考点（行人上两者只差 ≤ 0.2 m），
+  登记的底面中心口径并排报（同一匹配下的 BEV 误差，以及按底面中心重新匹配的召回），不进判据。
+  (4) 类别映射：CARLA `walker.*` → pedestrian；`vehicle.*` → vehicle，其中 `carlamotors.firetruck`、`ford.ambulance`、`dodge.charger_police*` 同时算 emergency vehicle；P5 v0 里没有自行车 / 摩托车蓝图，也没有 cone / debris 这类 prop 的 GT，
+  所以 P5 只报 pedestrian、vehicle、emergency vehicle 三类的召回与 precision（cyclist、cone、debris 的检测只计数）。nuScenes：`human.pedestrian.*` → pedestrian；`vehicle.bicycle` 且属性 `cycle.with_rider` → cyclist；
+  `vehicle.{car,truck,bus.*,trailer,construction,motorcycle}` → vehicle；`vehicle.emergency.*` → vehicle + emergency vehicle；`movable_object.trafficcone` → cone；`movable_object.debris` → debris；其余（barrier、无人自行车等）不参与。
+  (5) 可见性：P5 主读数 (i) 的「因素可见」= `obs.parquet` 的 `factor_px` ≥ 20（与 `p5_pairs.PX_ACTOR` 同一阈值，即 `factor_visible` 的定义）；`factor_px` 只在前视图里量，所以 (i) 只用前视相机的检测。
+  (ii) 背景 actor：GT 参考点投到该相机图内、在相机前方、≤ 40 m，按相机分别匹配。nuScenes 登记写的是「visibility token ≥ 3，即 ≥ 40% 可见」，但 token 3 是 60–80%，≥ 40% 是 token ≥ 2：
+  主读数按字面值 token ≥ 3，token ≥ 2 并排报；nuScenes 的 visibility 是对全部相机的，另加「参考点投在该相机图内」的条件。
+  (6) precision：分母 = 该类别、抬升有效（射线打到地面且 ≤ 80 m）的检测；分子 = 与同类 GT（该相机视锥内、≤ 80 m，含被遮挡的）匹配上的检测。距离档按 GT 参考点到 ego 原点（后轴地面）的 BEV 距离。
+  (7) 抬升：P5 用 `op_plan.json` 的 `calib`（Waymo 式 k1/k2 径向畸变，反解用不动点迭代），地面 = ego 坐标系 z = 0（P5 的 ego 原点在车底地面，相机高 1.806 m）；nuScenes 用 `calibrated_sensor`（针孔、无畸变），
+  地面高度取 ego 坐标系 z = 0，检查 (d) 顺带报 GT box 底面在 ego 系下的 z 中位数，若偏离 > 0.15 m 再另记一条。
 
 ## 结果
 
