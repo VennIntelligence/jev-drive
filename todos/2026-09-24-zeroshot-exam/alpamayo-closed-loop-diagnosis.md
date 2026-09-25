@@ -1,6 +1,6 @@
 # Alpamayo 1.5 在 Bench2Drive 全量里“停住不动”的诊断
 
-状态: 诊断完成（2026-09-25 10:30）；旧全量停在 119/220 并作废；main 批准 F1 + 两臂 re-smoke（第 6 节，写于运行之前），slot `alp-b2d-smoke2` → `alp-b2d-full`（从头 220 条）已排上
+状态: 诊断完成（2026-09-25 10:30）；旧全量停在 119/220 并作废；main 批准 F1 + 两臂 re-smoke（第 6 节，写于运行之前），slot `alp-b2d-smoke2` → `alp-b2d-full`（从头 220 条）已排上；smoke2 选了 `f1`，f1 全量被用户暂停在 17/220，“开得慢”的诊断见第 7 节（2026-09-25 14:40）
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/trajectory-to-control.md
 相关: [B2D 考试](bench2drive.md)（预注册与“控制器换成 Zoo PID”的偏离）、[openpilot 迁移](openpilot-migration.md)（同类适配 bug 的先例）、
 [控制器 API](../../docs/b2d-controller.md)
@@ -216,3 +216,142 @@ $DATA_DIR/envs/carla/bin/python scripts/zeroshot_b2d_alp_stall_probes/clamp_repl
 `scripts/zeroshot_b2d_alp.sh full 1` 读 choice 文件，220 条从头跑到 `full220-alpamayo-zoopid-<arm>/`；旧的
 `full220-alpamayo-zoopid/`（119 条）作废，不并入。报告 DS 均值与按路线 bootstrap 95% CI、SR（Bench2Drive
 `merge_route_json.py` 定义：Completed 且除 min-speed 外无违规）与 Wilson 95% CI、没跑完的路线数。
+
+## 7. f1 全量为什么“开得慢”（2026-09-25 14:40，全量被用户暂停在 17/220）
+
+f1 全量（`full220-alpamayo-zoopid-f1`，F1 forward-only + AD-MLP 节奏的 Zoo PID，未加 Zoo 的低速限油门）暂停时 17 条：
+DS 44.4、SR 41%、RC 67.7，17/17 条有 min-speed 记录，8 条以 `TickRuntime` 结束。只读日志诊断，没有动这个 run，也没有跑 CARLA
+（离线证据已经能下结论）。
+
+### 结论先行
+
+- **`TickRuntime` 不是“开得慢”，是“撞上之后顶住不动”。** 8 条全部在 6–32 s 之间发生第一次碰撞，之后车速 < 0.5 m/s
+  直到 4000 tick（200 s）上限：8 × 200 s 里 **1395 s（87%）是碰撞后顶住**。按各自碰撞前的平均速度推算，7/8 条本来在
+  48–84 s 就能跑完（1956 在 6.3 s 就撞了，推算 204 s）。所以 TickRuntime 的亏空约 100% 来自碰撞 + 顶住，0% 来自延迟，
+  慢速巡航本身不会超时。
+- **顶住是执行层的问题（c）。** 顶住时 Zoo PID 每 0.5 s 给一次 0.75 油门，0.5 s 后车速中位数 0.03 m/s、1 s 位移中位数 ≤ 0.08 m
+  ——车头顶着障碍物，只会往前推；Zoo PID 不会倒车，转向 |steer| ≈ 0.02。同一模型、同一批路线用预注册的固定控制器
+  （`full220-alpamayo`）跑，这 8 条里的 6 条 **Completed**（其中 5 条也撞了，但 1–7 s 内就重新开起来）；9 条共享路线上
+  DS **58.2 vs 25.2**、RC **93.1 vs 51.8**。
+- **撞上的一个主要原因也是执行层：Zoo PID 基本不执行 plan 的横向。** 车速 ≥ 2 m/s、plan 在 2 s 处横向偏 ≥ 1 m 时，
+  2 s 后实际横向位移只有 plan 的 **4%**（固定控制器 **64%**）。Zoo PID 的 aim point 取中点离车最接近 4 m 的那段，
+  在 0.5 s 间隔的 waypoint 上，车速 ≥ 4 m/s 时就是 0.5 s 那个点（横向还很小）；route target 的角度更小时又改用 target。
+  1825 / 1833（ConstructionObstacleTwoWays）撞前 2 s 的 plan 在 3 s 处向左 2.7–8.3 m（CoT “Nudge to the left to clear
+  the construction trailer”），转向 −0.02–0.05，5 m/s 正面撞上施工警示牌。
+- **（a）模型确实开得慢，但它解释的是 pace，不是超时。** 碰撞前，plan 自己要求的平均速度（每个 0.5 s 窗口 plan 走的距离 /
+  时间）只有 2.40 m/s，实际 1.99 m/s，PDM-Lite 专家在同 17 条上平均 5.22 m/s：差距的约 87% 在 plan 本身，13% 在执行。
+  32% 的规划窗口是停车 plan，CoT 里一半是“Keep distance to the lead vehicle”，23% 是 stop sign。
+- **（b）延迟不存在。** CARLA 同步模式下推理墙钟（往返中位数 3.2 s）不推进仿真时间；plan 用的相机帧与施加控制的
+  tick 相差 0（最大 0.05 s），仿真时间里每 0.5 s 一次规划，控制在规划时刻就用新 plan。
+- **min-speed 记录不是信号。** Bench2Drive 的 `statistics_manager.py` 把 `MIN_SPEED_INFRACTION` 设成 `'unused'`，
+  每个 checkpoint 都记一条“Average speed is X% of the surrounding traffic's one”，不管 X 是多少：f1 的记录从 11% 到 1479%，
+  很多 > 100%。17/17 条有记录是计分器的记账方式，不影响 DS，也不说明慢。
+- **建议修复（适配层，需要 main 决定）**：P1 让横向跟 plan 走（Zoo 纵向 + 固定控制器的 20 Hz 横向，或 Zoo 的 aim 改成按时间
+  取约 1.5 s 的点、去掉 route target 替换）。预期：把固定控制器跑通的 6 条 TickRuntime 路线换成它的结果粗算，17 条 DS 44 → 约 58–62、RC 68 → 约 89
+  （单 seed、n = 9 条的对照，是估计不是承诺）。F2b（每 tick 调 `control_pid`）单独做只消掉“刹车保持刹停”，pace 只 +4%，
+  不值得单独换。
+
+### 7.1 仿真时间花在哪里
+
+| f1 全量 17 条 | 时间 (s) | 占比 |
+|---|---:|---:|
+| 碰撞后顶住（第一次碰撞之后 v < 0.5 m/s） | 1545.8 | 74.4% |
+| 碰撞前静止：路线起步 | 41.2 | 2.0% |
+| 碰撞前静止：由“超速刹车保持”刹停（plan 期望 ≥ 0.4 m/s） | 104.8 | 5.0% |
+| 碰撞前静止：由停车 plan 刹停（期望 < 0.4 m/s） | 82.1 | 4.0% |
+| 碰撞前行驶 | 263.4 | 12.7% |
+| 碰撞后行驶 | 40.1 | 1.9% |
+| 合计 | 2077.5 | 100% |
+
+8 条 TickRuntime 单看：顶住 1395.0 s（87.2%）、碰撞前静止 101.5 s（6.3%）、碰撞前行驶 90.3 s（5.6%）、碰撞后行驶 13.3 s。
+“超速刹车保持”指 Zoo PID 在 speed > 1.1 × 期望速度时刹车、AD-MLP 节奏把这一刹保持 0.5 s：碰撞前行驶中 23% 的规划窗口是它，
+0.5 s 里车速中位数掉 3.1 m/s（从 5.2 到期望 2.8 的 0.17 倍），127 次里 63 次直接刹停；刹停之后 60% 的时间模型接着给停车 plan
+（例如 1711 在 40.1 s：plan 要从 4.7 减到 1.9 m/s，0.5 s 满刹车把车刹到 0，模型随后 3.5 s 一直 “Keep distance to the lead
+vehicle”）。它是真实的执行层失真，但量不大，见 7.4。
+
+### 7.2 八条 TickRuntime 和两条 blocked
+
+| route | 场景 | RC | 专家用时 (s) | 第一次碰撞 t / v | 对象 | 碰前 pace (m/s) | 按 pace 推算完成 (s) | 顶住 (s) | 顶住时油门 0.5 s 后车速 | 固定控制器同路线 |
+|---|---|---:|---:|---|---|---:|---:|---:|---:|---|
+| 1825 | ConstructionObstacleTwoWays | 33.4 | 31.5 | 25.3 s / 5.3 | 施工警示牌 | 1.74 | 76 | 174.2 | 0.025 | TickRuntime |
+| 1833 | ConstructionObstacleTwoWays | 37.6 | 31.5 | 31.0 s / 5.0 | 施工警示牌 | 1.59 | 84 | 168.5 | 0.028 | Completed 47 s |
+| 1852 | AccidentTwoWays | 39.1 | 40.9 | 24.5 s / 0.5 | 警车（事故车） | 2.15 | 62 | 175.5 | 0.027 | Completed 45 s |
+| 1956 | ParkingExit | 3.1 | 22.9 | 6.3 s / 1.2 | 停着的车 | 0.66 | 204 | 193.7 | 0.024 | Completed 55 s |
+| 2084 | NonSignalizedJunctionLeftTurn | 42.6 | 16.8 | 20.5 s / 6.1 | 横穿车 | 1.64 | 49 | 177.0 | 0.000 | Completed 34 s |
+| 2086 | NonSignalizedJunctionLeftTurn | 61.8 | 15.6 | 27.8 s / 5.2 | 横穿车 | 1.26 | 63 | 169.9 | 0.023 | 旧 run 崩溃 |
+| 2091 | NonSignalizedJunctionLeftTurn | 53.2 | 14.0 | 32.1 s / 2.2 | 横穿车 | 0.97 | 79 | 163.0 | 0.069 | Completed 60 s |
+| 2115 | NonSignalizedJunctionRightTurn | 57.0 | 14.0 | 24.8 s / 0.0 | 横穿车 | 1.35 | 53 | 173.2 | 0.028 | Completed 68 s |
+| 2127 | OppositeVehicleTakingPriority | 60.8（blocked） | 15.9 | 42.6 s / 3.3 | 植被 | 1.14 | 67 | 60.2 | 0.024 | 旧 run 崩溃 |
+| 2143 | OppositeVehicleTakingPriority | 61.7（blocked） | 15.8 | 21.6 s / 2.7 | 消防车 | 1.72 | 46 | 70.2 | 0.047 | 旧 run 崩溃 |
+
+专家用时是 PDM-Lite 公开结果（`research/results/b2d-family/public/pdm_lite/merged.json`）同一路线的 `duration_game`。
+“固定控制器同路线”是预注册控制器的旧全量 `full220-alpamayo`（13 条，同模型、同推理配置、TM seed 0；“崩溃”是那一轮的
+基础设施失败，没有可比结果）。
+
+碰撞分三类，都以顶住收尾：
+
+| 类型 | 路线 | 撞前发生了什么 | 归因 |
+|---|---|---|---|
+| 横向避让没被执行 | 1825、1833 | 5 m/s 接近施工区，plan 3 s 处向左 2.7–8.3 m，Zoo PID 的 steer −0.02–0.05（aim = 0.5 s 点，或被 route target 替换） | 执行层（Zoo PID 横向规则） |
+| 静止起步冲撞 | 1852、1956 | 静止时模型给 0.5–1.0 m/s 的蠕行 plan，Zoo PID 0.75 油门保持 0.5 s，0.5–1.2 m/s 撞上停着的车 | 执行层（油门 bang-bang + 保持）为主 |
+| 路口决策 | 2084、2086、2091、2115 | CoT “Turn left since cross-traffic has cleared”，0–6 m/s 与横穿车相撞；2086、2091 1 s 内重新开起来，后来又撞标志牌 / 护栏顶住 | 模型决策；固定控制器下 2084、2091、2115 也撞了，但 1.7–6.8 s 内恢复 |
+
+固定控制器在 1833 上执行了“向左绕”（碰撞前后 plan 3 s 处向左中位数 3.8 m），只在 8.1 m/s 时擦到一个锥桶，1 s 后回到行驶，
+47 s 完成；Zoo PID 下同一条路线正面顶在警示牌上 169 s。
+
+### 7.3 执行器对照
+
+| 指标（碰撞前） | f1 全量（17） | smoke2 f1（11） | smoke2 f1+F2b（11） | 固定控制器（9） | 旧 Zoo，无 F1（119） |
+|---|---:|---:|---:|---:|---:|
+| plan 要求的 pace (m/s) | 2.40 | 2.28 | 2.33 | 2.16 | 3.37 |
+| 实际 pace (m/s) | 1.99 | 1.83 | 1.92 | 1.69 | 2.76 |
+| 行驶中 实际 / plan 距离 | 0.85 | 0.83 | 0.85 | 0.84 | 0.85 |
+| 横向：2 s 实际 / plan（v ≥ 2、\|y@2s\| ≥ 1 m） | **0.04**（n 47） | 0.05（27） | 0.17（39） | **0.64**（37） | 0.13（392） |
+| 超速刹车保持刹停次数 | 63 | 51 | 2 | 0 | 495 |
+| 碰撞后顶住占总仿真时间 | 74% | 74% | 72% | 40% | 76% |
+| TickRuntime 条数 | 8 / 17 | 4 / 11 | 3 / 11 | 1 / 9 | 36 / 119 |
+
+pace 定义：每条路线第一次碰撞之前的规划窗口，plan 在窗口时长内走的弧长（或真值实际走的距离）之和除以总时长。
+读法：plan 要求的 pace 在四种执行器下都是 2.2–2.4 m/s（旧 Zoo 的 3.37 是倒车 plan 被读成前进的假象），所以碰撞前的慢
+主要是模型自己的节奏；执行层再丢 15%。F2b 把刹停从 51 次降到 2 次，但 pace 只从 1.83 到 1.92、顶住占比几乎不变，
+它不是瓶颈。真正把执行器区分开的是横向执行（0.04 vs 0.64）和撞后是否顶住（74% vs 40%）。固定控制器那一列的
+“停车 plan 占比”没有列，因为它的日志是未截断的原始 plan（倒车会被算成 go）。
+
+### 7.4 逐项回答（a）（b）（c）
+
+| 候选 | 证据 | 判定 |
+|---|---|---|
+| (a) 模型规划保守 | plan 要求的 pace 2.40 m/s vs 专家 5.22 m/s；32% 窗口是停车 plan（CoT：前车 52%、stop sign 23%、让行 14%、红灯 6%）；行驶中期望速度中位数 4.7 m/s、p90 8.4 m/s；行驶时车速是期望的 0.74 倍，模型一直在要求加速 | 解释 pace 差距的约 87%；不解释 TickRuntime |
+| (b) 延迟、陈旧 plan、索引 | 同步仿真，plan 帧到施加控制 0 tick（最大 1 tick）；每 0.5 s 仿真时间一次规划；AD-MLP 节奏在规划时刻用新 plan 的 0.5–3 s 点，不存在按墙钟错位的索引 | 不是原因 |
+| (c1) Zoo PID 横向（aim 取 0.5 s 点 + route target 替换） | 横向执行 4% vs 固定控制器 64%；1825 / 1833 正面撞施工牌 | **TickRuntime 的主因之一** |
+| (c2) 撞后顶住、不会倒车 | 顶住时油门 0.75 → 0.03 m/s；固定控制器下同样的碰撞 1–7 s 恢复 | **TickRuntime 的直接原因（87% 时间）** |
+| (c3) 油门 bang-bang + 0.5 s 保持的起步冲撞 | 1852、1956 以 0.5–1.2 m/s 撞停着的车；smoke2 里 f1 5 次、F2b 7 次（F2b 没有改善） | 次要原因 |
+| (c4) 超速刹车保持 0.5 s | 23% 的行驶窗口，63 次刹停，104.8 s 静止；F2b 消掉它，pace 只 +4% | 真实但量小 |
+| (c5) F1 截断 | 只作用于倒车段；行驶中的 plan 不变（前进分量全为正）；静止时把倒车读成停车，是第 5 节的语义修复 | 不是原因 |
+| (c6) nav 文本 / egomotion 让模型以为自己停着 | 第 3 节已核对坐标、时间基、历史；起步静止 41 s / 17 条（每条 2.4 s）；刹停后 60% 时间模型继续给停车 plan，但 F2b 下刹停少了、停车 plan 占比没降（34% → 36%） | 不是主要原因 |
+| min-speed 记录 | B2D `MIN_SPEED_INFRACTION: [0.7, 'unused']`，每个 checkpoint 都记，11%–1479% | 记账方式，不是信号 |
+
+### 7.5 建议（待 main 决定；全量不续跑、不改预注册）
+
+1. **P1 横向跟 plan（推荐）**：纵向保持 Zoo PID（官方 PID 的可比性），横向改成固定控制器的 20 Hz 路径跟踪（按里程计重投影
+   plan）；或者更小的改动：Zoo 的 aim 改成按时间取 plan 上约 1.5 s 的点、关掉 route target 替换。两种都是新的偏离，要先写
+   预注册再跑。预期：横向执行从 4% 回到约 60%，1825 / 1833 这类绕行场景、ParkingExit 可以通过；按固定控制器在 9 条共享路线的
+   结果替换 6 条 TickRuntime，17 条 DS 44 → 约 58–62、RC 68 → 约 89（单 seed、小样本的粗估）。
+2. **P1 的 re-smoke**：smoke2 的 11 条 + 本节 8 条 TickRuntime（去重后 16 条），验收看横向执行比例 ≥ 0.5、碰撞后 ≥ 10 s
+   顶住段数、TickRuntime 条数，DS 只报告。
+3. F2b 可以一起开（消掉刹停，和 UniAD / VAD 的调用方式一致），单独开不值得。
+4. 撞后恢复（倒车脱困）属于驾驶启发式，不建议加进适配层；P1 之后先看顶住还剩多少。
+5. 模型本身的慢（pace 2.4 vs 专家 5.2 m/s）是 zero-shot 的真实表现，适配层不该去改。
+
+### 7.6 复现
+
+```bash
+# box, repo root (NumPy only; the PDM-Lite reference is research/results/b2d-family/public/pdm_lite/merged.json)
+D=$DATA_DIR/runs/zeroshot-exam/b2d
+$DATA_DIR/envs/carla/bin/python scripts/zeroshot_b2d_alp_speed.py f1=$D/full220-alpamayo-zoopid-f1 \
+    s2f1=$D/smoke2-alpamayo-f1 s2f1f2b=$D/smoke2-alpamayo-f1f2b zoo=$D/full220-alpamayo-zoopid fixed=$D/full220-alpamayo \
+    --ref research/results/b2d-family/public/pdm_lite/merged.json --out $D/diag-alp-speed
+```
+
+输出 `routes.csv`、`summary.json` 已放在 [research/results/zeroshot-b2d/alp-speed/](../../research/results/zeroshot-b2d/alp-speed/)
+（`windows.csv` 4.8 MB，留在 box）。只统计有 `done/<id>.json` 的路线（暂停时被取消的 4 条不算）。

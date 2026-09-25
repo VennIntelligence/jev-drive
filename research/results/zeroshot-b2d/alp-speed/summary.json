@@ -1,0 +1,327 @@
+{
+ "f1": {
+  "standstill_episodes_pre_collision": {
+   "start": {
+    "n": 17,
+    "s": 41.2,
+    "stop_plan_s": 27.5
+   },
+   "brake_over": {
+    "n": 64,
+    "s": 104.8,
+    "stop_plan_s": 63.2
+   },
+   "brake_stop": {
+    "n": 37,
+    "s": 82.1,
+    "stop_plan_s": 63.2
+   },
+   "other": {
+    "n": 0,
+    "s": 0.0,
+    "stop_plan_s": 0.0
+   }
+  },
+  "routes": 17,
+  "sim_s": 2077.5,
+  "moving_s": 303.5,
+  "stall_pre_stop_s": 153.8,
+  "stall_pre_go_s": 73.7,
+  "pinned_s": 1545.8,
+  "post_moving_s": 40.1,
+  "efficiency": 0.846,
+  "actions": {
+   "throttle": {
+    "n": 371,
+    "share": 0.668,
+    "dv_med": 1.32
+   },
+   "coast": {
+    "n": 36,
+    "share": 0.065,
+    "dv_med": -0.5
+   },
+   "brake_stop": {
+    "n": 21,
+    "share": 0.038,
+    "dv_med": -2.09
+   },
+   "brake_over": {
+    "n": 127,
+    "share": 0.229,
+    "dv_med": -3.13
+   }
+  },
+  "brake_over_v1_over_des_med": 0.168,
+  "brake_over_to_stall": 63,
+  "brake_over_des_med": 2.81,
+  "brake_over_v0_med": 5.18,
+  "plan_pace": 2.4,
+  "driven_pace": 1.99,
+  "stop_plan_share": 0.318,
+  "lateral_n": 47,
+  "lateral_driven_over_plan_med": 0.037,
+  "lateral_sign_agree": 0.787,
+  "v_moving_over_desired_med": 0.739
+ },
+ "fixed": {
+  "standstill_episodes_pre_collision": {
+   "start": {
+    "n": 9,
+    "s": 24.9,
+    "stop_plan_s": 12.2
+   },
+   "brake_over": {
+    "n": 80,
+    "s": 49.8,
+    "stop_plan_s": 13.2
+   },
+   "brake_stop": {
+    "n": 21,
+    "s": 29.3,
+    "stop_plan_s": 16.5
+   },
+   "other": {
+    "n": 0,
+    "s": 0.0,
+    "stop_plan_s": 0.0
+   }
+  },
+  "routes": 9,
+  "sim_s": 590.8,
+  "moving_s": 251.2,
+  "stall_pre_stop_s": 41.9,
+  "stall_pre_go_s": 61.6,
+  "pinned_s": 235.3,
+  "post_moving_s": 109.4,
+  "efficiency": 0.836,
+  "actions": {
+   "throttle": {
+    "n": 0,
+    "share": 0.0,
+    "dv_med": null
+   },
+   "coast": {
+    "n": 296,
+    "share": 1.0,
+    "dv_med": 0.12
+   },
+   "brake_stop": {
+    "n": 0,
+    "share": 0.0,
+    "dv_med": null
+   },
+   "brake_over": {
+    "n": 0,
+    "share": 0.0,
+    "dv_med": null
+   }
+  },
+  "brake_over_v1_over_des_med": null,
+  "brake_over_to_stall": 0,
+  "brake_over_des_med": null,
+  "brake_over_v0_med": null,
+  "plan_pace": 2.16,
+  "driven_pace": 1.69,
+  "stop_plan_share": 0.181,
+  "lateral_n": 37,
+  "lateral_driven_over_plan_med": 0.641,
+  "lateral_sign_agree": 1.0,
+  "v_moving_over_desired_med": 0.764
+ },
+ "s2f1": {
+  "standstill_episodes_pre_collision": {
+   "start": {
+    "n": 11,
+    "s": 21.3,
+    "stop_plan_s": 12.5
+   },
+   "brake_over": {
+    "n": 50,
+    "s": 102.4,
+    "stop_plan_s": 69.7
+   },
+   "brake_stop": {
+    "n": 19,
+    "s": 34.7,
+    "stop_plan_s": 25.8
+   },
+   "other": {
+    "n": 0,
+    "s": 0.0,
+    "stop_plan_s": 0.0
+   }
+  },
+  "routes": 11,
+  "sim_s": 1411.5,
+  "moving_s": 203.6,
+  "stall_pre_stop_s": 107.8,
+  "stall_pre_go_s": 50.1,
+  "pinned_s": 1049.4,
+  "post_moving_s": 45.3,
+  "efficiency": 0.825,
+  "actions": {
+   "throttle": {
+    "n": 227,
+    "share": 0.672,
+    "dv_med": 1.29
+   },
+   "coast": {
+    "n": 19,
+    "share": 0.056,
+    "dv_med": -0.4
+   },
+   "brake_stop": {
+    "n": 14,
+    "share": 0.041,
+    "dv_med": -1.71
+   },
+   "brake_over": {
+    "n": 78,
+    "share": 0.231,
+    "dv_med": -3.9
+   }
+  },
+  "brake_over_v1_over_des_med": 0.0,
+  "brake_over_to_stall": 51,
+  "brake_over_des_med": 2.52,
+  "brake_over_v0_med": 5.23,
+  "plan_pace": 2.28,
+  "driven_pace": 1.83,
+  "stop_plan_share": 0.344,
+  "lateral_n": 27,
+  "lateral_driven_over_plan_med": 0.049,
+  "lateral_sign_agree": 0.889,
+  "v_moving_over_desired_med": 0.696
+ },
+ "s2f1f2b": {
+  "standstill_episodes_pre_collision": {
+   "start": {
+    "n": 11,
+    "s": 24.6,
+    "stop_plan_s": 16.0
+   },
+   "brake_over": {
+    "n": 61,
+    "s": 46.7,
+    "stop_plan_s": 29.8
+   },
+   "brake_stop": {
+    "n": 32,
+    "s": 76.4,
+    "stop_plan_s": 60.6
+   },
+   "other": {
+    "n": 1,
+    "s": 0.0,
+    "stop_plan_s": 0.0
+   }
+  },
+  "routes": 11,
+  "sim_s": 1317.1,
+  "moving_s": 221.7,
+  "stall_pre_stop_s": 106.5,
+  "stall_pre_go_s": 40.7,
+  "pinned_s": 947.6,
+  "post_moving_s": 64.7,
+  "efficiency": 0.849,
+  "actions": {
+   "throttle": {
+    "n": 302,
+    "share": 0.888,
+    "dv_med": 0.88
+   },
+   "coast": {
+    "n": 2,
+    "share": 0.006,
+    "dv_med": -1.01
+   },
+   "brake_stop": {
+    "n": 22,
+    "share": 0.065,
+    "dv_med": -1.02
+   },
+   "brake_over": {
+    "n": 14,
+    "share": 0.041,
+    "dv_med": -2.19
+   }
+  },
+  "brake_over_v1_over_des_med": 1.082,
+  "brake_over_to_stall": 2,
+  "brake_over_des_med": 4.64,
+  "brake_over_v0_med": 8.68,
+  "plan_pace": 2.33,
+  "driven_pace": 1.92,
+  "stop_plan_share": 0.359,
+  "lateral_n": 39,
+  "lateral_driven_over_plan_med": 0.173,
+  "lateral_sign_agree": 0.923,
+  "v_moving_over_desired_med": 0.764
+ },
+ "zoo": {
+  "standstill_episodes_pre_collision": {
+   "start": {
+    "n": 119,
+    "s": 185.9,
+    "stop_plan_s": 85.4
+   },
+   "brake_over": {
+    "n": 551,
+    "s": 477.7,
+    "stop_plan_s": 155.0
+   },
+   "brake_stop": {
+    "n": 104,
+    "s": 135.9,
+    "stop_plan_s": 88.0
+   },
+   "other": {
+    "n": 0,
+    "s": 0.0,
+    "stop_plan_s": 0.0
+   }
+  },
+  "routes": 119,
+  "sim_s": 11951.2,
+  "moving_s": 2087.1,
+  "stall_pre_stop_s": 328.9,
+  "stall_pre_go_s": 464.4,
+  "pinned_s": 9063.4,
+  "post_moving_s": 477.8,
+  "efficiency": 0.848,
+  "actions": {
+   "throttle": {
+    "n": 2253,
+    "share": 0.667,
+    "dv_med": 1.33
+   },
+   "coast": {
+    "n": 177,
+    "share": 0.052,
+    "dv_med": -0.45
+   },
+   "brake_stop": {
+    "n": 95,
+    "share": 0.028,
+    "dv_med": -1.22
+   },
+   "brake_over": {
+    "n": 854,
+    "share": 0.253,
+    "dv_med": -2.63
+   }
+  },
+  "brake_over_v1_over_des_med": 0.003,
+  "brake_over_to_stall": 495,
+  "brake_over_des_med": 2.94,
+  "brake_over_v0_med": 5.11,
+  "plan_pace": 3.37,
+  "driven_pace": 2.76,
+  "stop_plan_share": 0.14,
+  "lateral_n": 392,
+  "lateral_driven_over_plan_med": 0.13,
+  "lateral_sign_agree": 0.834,
+  "v_moving_over_desired_med": 0.775
+ }
+}
