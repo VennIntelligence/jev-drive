@@ -59,8 +59,9 @@ def run_route(a, route, index):
     root = ET.Element('routes'); root.append(route)
     ET.ElementTree(root).write(xml, encoding='utf-8', xml_declaration=True)
     seeds = ['p00'] if a.kind == 'probe' else a.seeds.split(',')
-    arms = ['A'] if a.kind == 'probe' else a.arms.split(',') if ',' in a.arms else list(a.arms)
     variants = json.loads(a.variants.read_text())
+    arms = (['A'] if a.kind == 'probe' else a.arms.split(',') if ',' in a.arms or a.arms in variants
+            else list(a.arms))
     PRESET = {arm: variants[arm]['presets'][0] for arm in arms}
     wanted = [(s, arm) for s in seeds for arm in arms]
     max_ticks = 40
