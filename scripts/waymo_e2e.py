@@ -13,7 +13,10 @@ Download pipeline:
   -> slim pool (one process per shard: md5 + TFRecord CRC check, drop every camera image except
      FRONT/FRONT_LEFT/FRONT_RIGHT, keep all other fields and the original JPEG bytes)
   -> re-read and verify the slim shard -> delete the raw shard.
-Resumable: shards in manifest.csv whose slim file exists with the recorded size are skipped.
+Resumable: shards in manifest.csv whose slim file exists with the recorded size are skipped, and a
+partial shard resumes from its chunk journal (raw/<name>.part.chunks: finished ranges of the .part file).
+The pool is kept fed across shards (a new shard starts while fewer than 2x --streams chunks are open),
+so a few slow tail chunks never idle the other streams.
 Disk guard: no new shard starts if free space on the data disk would drop below --min-free-gb.
 """
 import argparse
@@ -141,6 +144,7 @@ class Gcs:
         self.route, self.proxy = route, proxy
         self._tok, self._tok_t, self._lock, self._local = None, 0.0, threading.Lock(), threading.local()
         self.nbytes = 0  # downloaded bytes, read by the main thread for progress
+        self.n_stalls, self.stall_bps, self.stall_s = 0, 32e3, 60.0
 
     def token(self, force=False) -> str:
         with self._lock:
@@ -186,17 +190,21 @@ class Gcs:
             self._drop()
             raise
 
-    def _retry(self, fn, what: str, tries=40):
-        for k in range(tries):
+    def _retry(self, fn, what: str, tries=40, progress=lambda: 0):
+        """Call fn until it succeeds; `tries` counts consecutive failures that made no `progress`."""
+        k = 0
+        while True:
+            p0 = progress()
             try:
                 return fn()
             except (OSError, http.client.HTTPException) as e:
                 self._drop()
-                if k == tries - 1:
+                k = 1 if progress() > p0 else k + 1
+                if k == tries:
                     raise
-                if k >= 2:
-                    log.warning(f"{what}: {e!r}, retry {k + 1}")
-                time.sleep(min(60, 2 ** k))
+                if k >= 3:
+                    log.warning(f"{what}: {e!r}, retry {k}")
+                time.sleep(min(60, 2 ** (k - 1)))
 
     def list(self, prefix="") -> list[dict]:
         items, page = [], ""
@@ -209,21 +217,29 @@ class Gcs:
                 return items
 
     def fetch_range(self, name: str, fd: int, start: int, end: int):
-        """Write bytes [start, end] of object `name` into fd at the same offsets; resumes within the range."""
+        """Write bytes [start, end] of object `name` into fd at the same offsets; resumes within the range.
+        A stream slower than `stall_bps` over `stall_s` is dropped and reopened: on a lossy path single
+        connections go near-dead (~1 kB/s) without ever tripping the socket timeout."""
         pos, path = start, f"/{BUCKET}/{urllib.parse.quote(name)}"
 
         def once():
             nonlocal pos
             r = self._get(path, {"Range": f"bytes={pos}-{end}"})
+            t, p = time.monotonic(), pos
             while pos <= end:
-                b = r.read(min(1 << 20, end - pos + 1))
+                b = r.read1(min(1 << 20, end - pos + 1))  # whatever has arrived, so stalls show
                 if not b:
                     raise OSError("connection closed mid-range")
                 os.pwrite(fd, b, pos)
                 pos += len(b)
                 self.nbytes += len(b)  # GIL makes this += safe enough for a progress counter
+                if (now := time.monotonic()) - t >= self.stall_s:
+                    if pos - p < self.stall_bps * (now - t):
+                        self.n_stalls += 1
+                        raise OSError(f"stalled at {(pos - p) / (now - t) / 1e3:.1f} kB/s, reconnecting")
+                    t, p = now, pos
 
-        self._retry(once, f"{name}[{start}:{end}]")
+        self._retry(once, f"{name}[{start}:{end}]", progress=lambda: pos)
 
 
 # ---------------------------------------------------------------- orchestration
@@ -259,6 +275,13 @@ def load_manifest(path: Path, out: Path) -> dict:
             if (out / n).exists() and (out / n).stat().st_size == int(r["slim_bytes"])}
 
 
+def read_journal(path: Path) -> tuple[int, set]:
+    """Chunk journal of a partial shard -> (chunk bytes, finished (start, end) ranges). A torn last line
+    parses to a range off the chunk grid, which is simply never matched."""
+    head, *rows = path.read_text().split("\n")
+    return int(head.split()[1]), {tuple(map(int, r.split())) for r in rows if len(r.split()) == 2}
+
+
 def download(a):
     root = Path(a.root)
     out, raw_dir = root / "front3", root / "raw"
@@ -274,8 +297,15 @@ def download(a):
     order = {s: i for i, s in enumerate(a.splits)}
     todo = sorted((o for o in objs if split_of(o["name"]) in order and o["name"] not in done),
                   key=lambda o: (order[split_of(o["name"])], o["name"]))
-    for p in raw_dir.glob("*.part"):
-        p.unlink()
+    # Partial shards resume if their .part has the right size and a chunk journal; anything else restarts.
+    sizes, resumed = {o["name"]: o["size"] for o in todo}, 0
+    for p in sorted(raw_dir.glob("*.part*")):
+        name = p.name.split(".part")[0]
+        part, jr = raw_dir / (name + ".part"), raw_dir / (name + ".part.chunks")
+        if not (name in sizes and jr.exists() and part.exists() and part.stat().st_size == sizes[name]):
+            p.unlink(missing_ok=True)
+        elif p == jr:
+            resumed += sum(e - s + 1 for s, e in read_journal(jr)[1])
     for p in out.glob("*.tmp"):
         p.unlink()
     new_manifest = not (root / "manifest.csv").exists()
@@ -284,11 +314,11 @@ def download(a):
     if new_manifest:
         mw.writeheader()
 
-    total = sum(o["size"] for o in todo)
+    total = sum(o["size"] for o in todo) - resumed
     log.info(f"route={a.route} streams={a.streams} slim_workers={slim_workers} raw_cap={raw_cap} "
              f"chunk={a.chunk_mb}MB min_free={a.min_free_gb}GB run_dir={run.dir}")
     log.info(f"{len(objs)} objects in bucket, {len(done)} already done, {len(todo)} to do "
-             f"({total / GB:.1f} GB raw) for splits {a.splits}")
+             f"({total / GB:.1f} GB raw left, {resumed / GB:.1f} GB in partial shards) for splits {a.splits}")
     run.event("start", route=a.route, streams=a.streams, slim_workers=slim_workers, todo=len(todo),
               todo_gb=round(total / GB, 1), done=len(done))
 
@@ -333,9 +363,30 @@ def download(a):
         dl = sum(d["left"] for d in downloading.values())
         return dl + sum(0.5 * o["size"] for o, _ in slimming.values())  # slim copy is written before raw is freed
 
+    def finish(name):
+        """All chunks of `name` are in: requeue it if any failed (its journal keeps the good ones), else slim."""
+        d = downloading.pop(name)
+        os.close(d["fd"])
+        d["jf"].close()
+        o, part = d["o"], raw_dir / (name + ".part")
+        if d["err"]:
+            fails[name] += 1
+            log.error(f"{name}: download failed ({d['err']!r}), attempt {fails[name]}")
+            run.event("shard_failed", name=name, stage="download", error=repr(d["err"]))
+            if fails[name] < 3:
+                todo.appendleft(o)
+            return
+        dl_s = round(time.time() - d["t0"], 1)
+        part.rename(raw_dir / name)
+        (raw_dir / (name + ".part.chunks")).unlink()
+        log.info(f"{name}: downloaded {d['bytes'] / GB:.2f} GB in {dl_s:.0f} s ({d['bytes'] / dl_s / 1e6:.1f} MB/s)")
+        run.event("shard_downloaded", name=name, bytes=d["bytes"], dl_s=dl_s)
+        submit_slim(o, dl_s)
+
     def admit():
         nonlocal stop_reason
         while todo and stop_reason is None and len(downloading) < a.max_dl_shards \
+                and sum(d["n"] for d in downloading.values()) < 2 * a.streams \
                 and len(downloading) + len(slimming) < raw_cap:
             o = todo[0]
             free = shutil.disk_usage(root).free
@@ -348,18 +399,29 @@ def download(a):
                 run.event("stop", reason=stop_reason, left=len(todo))
                 return
             todo.popleft()
-            part = raw_dir / (o["name"] + ".part")
-            fd = os.open(part, os.O_RDWR | os.O_CREAT | os.O_TRUNC, 0o644)
+            name = o["name"]
+            part, jr = raw_dir / (name + ".part"), raw_dir / (name + ".part.chunks")
+            c, have = read_journal(jr) if jr.exists() else (chunk, set())
+            fd = os.open(part, os.O_RDWR | os.O_CREAT | (0 if have else os.O_TRUNC), 0o644)
             os.ftruncate(fd, o["size"])
-            ranges = [(s, min(s + chunk, o["size"]) - 1) for s in range(0, o["size"], chunk)]
-            downloading[o["name"]] = {"o": o, "fd": fd, "n": len(ranges), "left": o["size"], "err": None,
-                                      "t0": time.time()}
+            jf = open(jr, "a" if have else "w", buffering=1)
+            if not have:
+                jf.write(f"chunk {c}\n")
+            ranges = [r for r in ((s, min(s + c, o["size"]) - 1) for s in range(0, o["size"], c)) if r not in have]
+            left = sum(e - s + 1 for s, e in ranges)
+            downloading[name] = {"o": o, "fd": fd, "jf": jf, "n": len(ranges), "left": left, "bytes": left,
+                                 "err": None, "t0": time.time()}
+            if have:
+                log.info(f"{name}: resuming, {len(ranges)} chunks ({left / GB:.2f} GB) left")
+            if not ranges:
+                finish(name)
             for s, e in ranges:
-                f = dl_pool.submit(gcs.fetch_range, o["name"], fd, s, e)
-                f.add_done_callback(lambda f, n=o["name"], sz=e - s + 1: events.put(("chunk", n, f, sz)))
+                f = dl_pool.submit(gcs.fetch_range, name, fd, s, e)
+                f.add_done_callback(lambda f, n=name, r=(s, e): events.put(("chunk", n, f, r)))
 
     bar = tqdm(total=total, unit="B", unit_scale=True, desc="download", dynamic_ncols=True, smoothing=0.05)
     t_start, last_status, n_done, slim_bytes_done, raw_bytes_done = time.time(), time.time(), 0, 0, 0
+    last_bytes = 0
     while True:
         admit()
         if not downloading and not slimming:
@@ -370,43 +432,32 @@ def download(a):
             ev = None
         bar.update(gcs.nbytes - bar.n)
         if time.time() - last_status > 600:
-            last_status, el = time.time(), time.time() - t_start
-            rate = gcs.nbytes / el
+            now = time.time()
+            rate, recent = gcs.nbytes / (now - t_start), (gcs.nbytes - last_bytes) / (now - last_status)
+            last_status, last_bytes = now, gcs.nbytes
             left = sum(o["size"] for o in todo) + pending_bytes()
-            log.info(f"status: {gcs.nbytes / GB:.1f} GB in {el / 3600:.2f} h = {rate / 1e6:.1f} MB/s, "
-                     f"{n_done} shards done, {len(todo)} queued, {len(downloading)} downloading, "
-                     f"{len(slimming)} slimming, free {shutil.disk_usage(root).free / GB:.0f} GB, "
-                     f"ETA {left / max(rate, 1) / 3600:.1f} h")
-            run.event("status", gb=round(gcs.nbytes / GB, 2), mb_s=round(rate / 1e6, 2), done=n_done,
-                      queued=len(todo), downloading=len(downloading), slimming=len(slimming))
+            log.info(f"status: {gcs.nbytes / GB:.1f} GB in {(now - t_start) / 3600:.2f} h, "
+                     f"last 10 min {recent / 1e6:.1f} MB/s (mean {rate / 1e6:.1f}), {n_done} shards done, "
+                     f"{len(todo)} queued, {len(downloading)} downloading "
+                     f"({sum(d['n'] for d in downloading.values())} chunks open), {len(slimming)} slimming, "
+                     f"{gcs.n_stalls} stalled streams reopened, free {shutil.disk_usage(root).free / GB:.0f} GB, "
+                     f"ETA {left / max(recent, 1) / 3600:.1f} h at the recent rate")
+            run.event("status", gb=round(gcs.nbytes / GB, 2), mb_s=round(rate / 1e6, 2),
+                      mb_s_recent=round(recent / 1e6, 2), done=n_done, queued=len(todo),
+                      downloading=len(downloading), slimming=len(slimming), stalls=gcs.n_stalls)
         if ev is None:
             continue
         if ev[0] == "chunk":
-            _, name, f, sz = ev
+            _, name, f, (s, e) = ev
             d = downloading[name]
             d["n"] -= 1
-            d["left"] -= sz
-            if f.exception() is not None:
+            d["left"] -= e - s + 1
+            if f.exception() is None:
+                d["jf"].write(f"{s} {e}\n")
+            else:
                 d["err"] = d["err"] or f.exception()
-            if d["n"]:
-                continue
-            os.close(d["fd"])
-            o, part = d["o"], raw_dir / (name + ".part")
-            del downloading[name]
-            if d["err"]:
-                part.unlink()
-                fails[name] += 1
-                log.error(f"{name}: download failed ({d['err']!r}), attempt {fails[name]}")
-                run.event("shard_failed", name=name, stage="download", error=repr(d["err"]))
-                if fails[name] < 3:
-                    todo.appendleft(o)
-                continue
-            dl_s = round(time.time() - d["t0"], 1)
-            part.rename(raw_dir / name)
-            log.info(f"{name}: downloaded {o['size'] / GB:.2f} GB in {dl_s:.0f} s "
-                     f"({o['size'] / dl_s / 1e6:.1f} MB/s)")
-            run.event("shard_downloaded", name=name, bytes=o["size"], dl_s=dl_s)
-            submit_slim(o, dl_s)
+            if not d["n"]:
+                finish(name)
         else:
             _, name, f = ev
             o, dl_s = slimming.pop(name)
@@ -497,11 +548,13 @@ def main():
     d = sub.add_parser("download")
     d.add_argument("splits", nargs="*", choices=SPLITS, help="default: all, in this order")
     d.add_argument("--root", default=str(Path(os.environ.get("DATA_DIR", ".")) / "datasets" / "waymo_e2e"))
-    d.add_argument("--route", choices=("direct", "proxy"), default="direct", help="data path; token always via proxy")
+    d.add_argument("--route", choices=("direct", "proxy"), default="proxy",
+                   help="data path (direct GCS is lossy from the box, docs/waymo-e2e.md); token always via proxy")
     d.add_argument("--proxy", default="http://127.0.0.1:7890")
-    d.add_argument("--streams", type=int, default=64, help="concurrent range GETs")
+    d.add_argument("--streams", type=int, default=32, help="concurrent range GETs")
     d.add_argument("--chunk-mb", type=int, default=32)
-    d.add_argument("--max-dl-shards", type=int, default=3, help="shards downloading at once")
+    d.add_argument("--max-dl-shards", type=int, default=12,
+                   help="cap on shards downloading at once (new ones start while < 2x streams chunks are open)")
     d.add_argument("--slim-workers", type=int, default=0, help="0: cgroup cores - 4")
     d.add_argument("--min-free-gb", type=float, default=200)
     i = sub.add_parser("inspect")
@@ -514,7 +567,7 @@ def main():
     try:
         sys.exit(download(a))
     except KeyboardInterrupt:  # download threads are not daemons: skip joining them; rerun resumes
-        log.warning("interrupted; partial shards are discarded on the next run")
+        log.warning("interrupted; partial shards resume from their chunk journals on the next run")
         logging.shutdown()
         os._exit(130)
 
