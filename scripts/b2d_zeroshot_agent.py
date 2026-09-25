@@ -42,6 +42,9 @@ the pre-registered smoke:
                     see b2d_zoo_pid_wrap.py and todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md
   "zoo_cadence"     "plan" (control_pid once per plan, held: AD-MLP) | "tick": every tick on the age-shifted held plan
                     (UniAD / VAD)
+  "zoo_lateral"     "zoo" (control_pid's steer) | "fixed" (P1: steer from the fixed controller's 20 Hz tracking of the raw
+                    plan, throttle / brake stay Zoo PID) | "time" (P2: Zoo turn PID on the plan point at "zoo_aim_s",
+                    default 1.5 s, no route-target substitution); diagnosis doc section 8
   "partner"         absent | {"ckpt": path, "junctions": true|false}: shared control with the official TCP agent
                     (scripts/b2d_partner.py): TCP drives from standstill and (junctions) through route turns, the model
                     everything else; who drives is logged every tick ("driver", "w_model"); "tcp_only": true makes TCP
@@ -174,10 +177,14 @@ class ZeroShotAgent(AutonomousAgent):
             params.pop(key, None)
         self.controller = Controller(preset=self.cfg.get("controller_preset", "carla"), **params)
         self.zoo = self.zoo_control = self.zoo_target = None
+        self.zoo_lateral = self.cfg.get("zoo_lateral", "zoo")
+        assert self.zoo_lateral in ("zoo", "fixed", "time"), self.zoo_lateral
         if self.cfg.get("controller", "fixed") == "zoo_pid":
             from b2d_zoo_pid_wrap import ZooPID
             self.zoo = ZooPID(forward_only=self.cfg.get("plan_forward_only", False),
-                              cadence=self.cfg.get("zoo_cadence", "plan"))
+                              cadence=self.cfg.get("zoo_cadence", "plan"),
+                              lateral="time" if self.zoo_lateral == "time" else "zoo",
+                              aim_s=float(self.cfg.get("zoo_aim_s", 1.5)))
         else:
             assert self.cfg.get("controller", "fixed") in ("fixed", "native"), self.cfg
         self.native = self.cfg.get("controller", "fixed") == "native"
@@ -308,6 +315,8 @@ class ZeroShotAgent(AutonomousAgent):
         if self.zoo is not None:
             throttle, steer, brake = self.zoo_control or (0.0, 0.0, 1.0)
             reason = "zoo_pid" if self.zoo_control else "no_trajectory"
+            if self.zoo_lateral == "fixed":      # P1: the fixed controller's 20 Hz path tracking steers
+                steer, reason = o_steer, reason + "+fixed_lateral"
         else:
             throttle, steer, brake = o_throttle, o_steer, o_brake
             reason = self.controller.diagnostics["reason"]
@@ -471,6 +480,8 @@ class ZeroShotAgent(AutonomousAgent):
         if warm:
             accepted = False
         elif self.zoo is not None:
+            if self.zoo_lateral == "fixed":   # P1: the fixed controller tracks the raw plan for the steer only
+                self.controller.update(np.asarray(drive_path, float), t_frame)
             if self.zoo.cadence == "tick":   # control_pid runs every tick in __call__ on this held plan
                 self.zoo.hold(np.asarray(drive_path, float), times, t_frame, self._pose_at(t_frame))
             else:

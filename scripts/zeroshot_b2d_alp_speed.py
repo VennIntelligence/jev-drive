@@ -171,6 +171,11 @@ def analyse(att, run, ref):
         row["ep_%s_n" % k] += 1
         row["ep_%s_s" % k] = round(row["ep_%s_s" % k] + (b_ - a_) * dt, 2)
         row["ep_%s_stop_s" % k] = round(row["ep_%s_stop_s" % k] + (tick_cls[a_:b_] == "stop").sum() * dt, 2)
+    # stall episodes >= 10 s with a collision between 3 s before their start and their end (smoke2 "pinned_stalls")
+    e_all = np.flatnonzero(np.diff(np.r_[0, st.astype(int), 0]))
+    row["n_collisions"] = len(cols)
+    row["pinned_eps_10s"] = sum((b_ - a_) * dt >= 10 and any(t[a_] - 3 <= c[0] <= t[b_ - 1] for c in cols)
+                                for a_, b_ in zip(e_all[::2], e_all[1::2]))
     # pinned: does throttle move the car?
     post = ~pre & (t > tc + 2.0)
     on = np.flatnonzero(post[1:] & (thr[1:] > 0) & (thr[:-1] == 0) & (v[1:] < 0.3)) + 1

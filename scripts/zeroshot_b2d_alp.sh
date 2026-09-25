@@ -12,6 +12,12 @@
 #                                             on one server, f1 (forward-only plan, AD-MLP hold) and f1f2b (+ per-tick
 #                                             control_pid); then scripts/zeroshot_b2d_alp_smoke2_check.py writes
 #                                             smoke2-alpamayo-choice.json. Non-zero on infrastructure failure or no arm passing.
+#   scripts/zeroshot_b2d_alp.sh lat <gpu>     lateral fix (diagnosis doc, section 8): pilot P1 (fixed-controller steer) and
+#                                             P2 (Zoo turn PID on the 1.5 s plan point) on routes 1833, 1852 in parallel,
+#                                             scripts/zeroshot_b2d_alp_lat_check.py picks one (lat-pilot-choice.json), then
+#                                             the 16-route re-smoke with it and its acceptance (lat-resmoke-check.json).
+#                                             Non-zero on infrastructure failure or when no pilot variant is eligible;
+#                                             a failed re-smoke acceptance is reported in the json, not as a job failure.
 #   scripts/zeroshot_b2d_alp.sh full <gpu>    220 routes, 4 workers, resumable (rerun skips done/<id>.json), with the arm
 #                                             chosen by smoke2. Non-zero if the policy server dies, there is no summary, or
 #                                             more than 15 routes never finished (11 is the known CARLA-crash baseline).
@@ -26,6 +32,7 @@ fixes=""                                      # extra agent-config keys
 case $mode in
     smoke) out=$D/smoke-alpamayo-zoopid; workers=1; sidx=400; routes=(--route-ids 2390,24211,1711,2373,3564) ;;
     smoke2) rm -f "$choice"; routes=(--route-ids 2390,24211,1711,2373,3564,1833,1852,1956,2668,4183,11381) ;;
+    lat) routes=() ;;
     full)
         arm=$(python3 -c "import json; print(json.load(open('$choice'))['choice'] or '')" 2>/dev/null)
         case $arm in
@@ -34,7 +41,7 @@ case $mode in
             *) echo "no smoke2 choice in $choice; refusing to start the full run" >&2; exit 2 ;;
         esac
         out=$D/full220-alpamayo-zoopid-$arm; workers=4; sidx=440; routes=(--towns all) ;;
-    *) echo "mode must be smoke, smoke2 or full" >&2; exit 2 ;;
+    *) echo "mode must be smoke, smoke2, lat or full" >&2; exit 2 ;;
 esac
 sock=$D/alpamayo-$mode-zoopid.sock ready=$D/alpamayo-$mode-zoopid.ready
 rm -f "$sock" "$ready"
@@ -58,6 +65,35 @@ until [[ -e $ready ]]; do
     sleep 5
 done
 echo "$(date +%T) policy server ready (pid $server) on GPU $gpu"
+
+run_arm() {   # run_arm <name> <extra keys> <route ids> <workers> <server index> <out>
+    agent_cfg "$D/agent-alpamayo-$mode-$1.json" "$2"
+    "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py --route-ids "$3" --workers "$4" --server-index "$5" \
+        --gpu-rank "$gpu" --agent scripts/b2d_zeroshot_agent.py --agent-config "$D/agent-alpamayo-$mode-$1.json" \
+        --decimate 2 --no-spectator --no-reap --max-attempts 2 --out "$6"
+}
+if [[ $mode == lat ]]; then
+    f1=', "plan_forward_only": true, "zoo_cadence": "plan"'
+    declare -A lat=([p1]="$f1"', "zoo_lateral": "fixed"' [p2]="$f1"', "zoo_lateral": "time", "zoo_aim_s": 1.5')
+    rm -f "$D/lat-pilot-choice.json" "$D/lat-resmoke-check.json"
+    run_arm p1 "${lat[p1]}" 1833,1852 2 480 "$D/lat-pilot-alpamayo-p1" & a=$!
+    run_arm p2 "${lat[p2]}" 1833,1852 2 482 "$D/lat-pilot-alpamayo-p2" & b=$!
+    wait $a; ra=$?; wait $b; rb=$?
+    kill -0 $server 2>/dev/null || { echo "policy server died during the pilot"; exit 3; }
+    (( ra == 0 && rb == 0 )) || { echo "pilot runner exit $ra / $rb"; exit 1; }
+    "$DATA_DIR/envs/carla/bin/python" scripts/zeroshot_b2d_alp_lat_check.py pilot p1="$D/lat-pilot-alpamayo-p1" \
+        p2="$D/lat-pilot-alpamayo-p2" --out "$D/lat-pilot-choice.json" || { echo "no eligible pilot variant"; exit 4; }
+    arm=$(python3 -c "import json; print(json.load(open('$D/lat-pilot-choice.json'))['choice'])")
+    echo "$(date +%T) pilot choice: $arm; 16-route re-smoke"
+    run_arm "$arm" "${lat[$arm]}" 2390,24211,1711,2373,3564,1833,1852,1956,2668,4183,11381,1825,2084,2086,2091,2115 \
+        4 490 "$D/lat-resmoke-alpamayo-$arm"; rc=$?
+    kill -0 $server 2>/dev/null || { echo "policy server died during the re-smoke"; exit 3; }
+    (( rc == 0 )) || { echo "re-smoke runner exit $rc"; exit 1; }
+    "$DATA_DIR/envs/carla/bin/python" scripts/zeroshot_b2d_alp_lat_check.py resmoke arm="$D/lat-resmoke-alpamayo-$arm" \
+        --baseline "$D/smoke2-alpamayo-f1" "$D/full220-alpamayo-zoopid-f1:1825,2084,2086,2091,2115" \
+        --out "$D/lat-resmoke-check.json"
+    exit 0
+fi
 
 if [[ $mode == smoke2 ]]; then
     # Two arms at once on the one server (it keeps per-connection state); each has its own --out and server indices.

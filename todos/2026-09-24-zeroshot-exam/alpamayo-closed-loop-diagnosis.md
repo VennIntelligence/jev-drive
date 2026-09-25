@@ -355,3 +355,59 @@ $DATA_DIR/envs/carla/bin/python scripts/zeroshot_b2d_alp_speed.py f1=$D/full220-
 
 输出 `routes.csv`、`summary.json` 已放在 [research/results/zeroshot-b2d/alp-speed/](../../research/results/zeroshot-b2d/alp-speed/)
 （`windows.csv` 4.8 MB，留在 box）。只统计有 `done/<id>.json` 的路线（暂停时被取消的 4 条不算）。
+
+## 8. 横向修复 P1 / P2：预注册（2026-09-25，用户决定，写于任何运行之前）
+
+**偏离记录（B2D 考试 Alpamayo 部分，第三条）。** 第 7 节的诊断：Zoo PID 基本不执行 plan 的横向（v ≥ 2 m/s、plan 2 s 处
+横向 ≥ 1 m 时实际只走出 4%，固定控制器 64%），导致绕行场景正面撞上障碍、之后顶住直到 TickRuntime。用户决定换横向，
+先用 1–2 条路线比较两个版本。两个版本都是 agent 配置开关，默认值保持现有行为（`"zoo_lateral": "zoo"`），openpilot
+不受影响；vendored 的 `b2d_zoo_pid.py` 一字未改；F1（forward-only）保持开，节奏保持 AD-MLP（`zoo_cadence: "plan"`）。
+
+- **P1 `"zoo_lateral": "fixed"`**：纵向（油门 / 刹车）仍是 Zoo PID；转向取预注册固定控制器（`Controller(preset="carla")`，
+  与 `full220-alpamayo` 同一构造）20 Hz 跟踪原始 plan（按里程计重投影到当前位姿）的 steer。每次规划把原始 plan 交给
+  固定控制器，和固定控制器那一轮完全一样。
+- **P2 `"zoo_lateral": "time", "zoo_aim_s": 1.5`**：`control_pid` 照常算油门 / 刹车；转向改为 plan 上 **1.5 s 处的点**
+  （按时间，不再按“中点离车最接近 4 m”）的角度，用 Zoo 原装转向增益（0.75 / 0.75 / 0.3、窗口 40）的一个独立 PID，
+  **不再用 route target 替换**。这个点离车 < 1 m 时（静止、蠕行）改用 plan 上第一个 ≥ 1 m 的点，没有就打直。
+- 单元检查（`scripts/test_b2d_zoo_pid_wrap.py`，box `envs/carla` 上 8/8 通过），用第 7 节里 1825 在 24.65 s 的真实 plan
+  （4.0 m/s，plan 在 1.5 s 处向左 2.2 m、3 s 处向左 5.6 m，“Nudge to the left to clear the construction trailer”）：
+
+| 执行器 | 第一个 tick 的 steer | 0.5 s 后 | 纵向 |
+|---|---:|---:|---|
+| Zoo PID（现状，日志值 −0.006） | −0.006 | 保持 | Zoo |
+| P2 | −0.156（向左） | 下一次规划 −0.115，P + I 保持向左 | 与 Zoo 逐位相同 |
+| P1 | −0.10（限速 2/s 逐 tick 增加） | −0.51 | Zoo |
+
+  另测：P2 在停车 plan 上转向为 0，旁边 3 m 的 route target 不再被替换进来；蠕行 plan 取第一个 ≥ 1 m 的点。
+
+**pilot（slot `alp-b2d-lat`，GPU 2，一个 Alpamayo server，两个版本并行各 2 个 CARLA worker，server index 480–481 / 482–483，
+`--no-reap`，约 16 核）。** 路线：**1833**（ConstructionObstacleTwoWays：f1 全量里 5 m/s 正面撞施工牌后顶住 169 s，
+固定控制器下 47 s 完成，是横向执行的直接检验）和 **1852**（AccidentTwoWays：要向左绕过事故车，f1 全量撞上事故警车后顶住
+176 s，固定控制器 45 s 完成、无违规）。TM seed 0，`--max-attempts 2`，输出 `lat-pilot-alpamayo-{p1,p2}/`。
+
+**选择规则（`scripts/zeroshot_b2d_alp_lat_check.py pilot`，写 `lat-pilot-choice.json`）。** 指标按版本合并两条路线：
+横向执行比例 `lat_ratio`（第 7.3 节定义：第一次碰撞之前、v ≥ 2 m/s、plan 2 s 处横向 ≥ 1 m 的规划，2 s 后实际 / 计划
+横向位移的中位数）；`stuck`（以 TickRuntime 或 blocked 结束的路线数）；`pinned`（≥ 10 s、从碰撞前 3 s 到结束之间有碰撞的
+停车段数）；碰撞数；DS / RC。
+1. 资格：没有完成的路线，或 `lat_ratio` < 0.3（至少 5 个窗口时）的版本不入选；两个都不入选则停下，不做 re-smoke，回报。
+2. 依次比较：`stuck` 少者 → `pinned` 少者 → `lat_ratio` 高 0.1 以上者 → 碰撞少者 → 平均 DS 高者 → 都相同取 P2（改动更小，
+   Zoo PID 更完整）。
+3. **F2b 不开。** 第 6 节的 smoke2 规则已经选了 `f1`（F2b 在 A2 上不通过），第 7 节显示 F2b 只消掉刹停、pace +4%，
+   对 TickRuntime 没有作用；这一轮只换横向，保持单一变量。
+
+**16 条 re-smoke（同一 slot，接在 pilot 之后，胜出版本，4 个 CARLA worker，server index 490–493）。** 路线：smoke2 的 11 条
+（2390、24211、1711、2373、3564、1833、1852、1956、2668、4183、11381）+ f1 全量里 5 条 TickRuntime（1825、2084、2086、2091、
+2115）。输出 `lat-resmoke-alpamayo-<arm>/`，检查写 `lat-resmoke-check.json`。基线是 Zoo PID f1 在同样 16 条上的结果：
+`smoke2-alpamayo-f1` 的 11 条 + `full220-alpamayo-zoopid-f1` 的 5 条（stuck 12 / 16，其中 smoke2 那 11 条 7 条）。
+
+| 判据 | 定义 | 门槛 |
+|---|---|---|
+| A0 基础设施 | 16 条都 `finished`、没有 CARLA 重启、都有 plans / ticks / 官方结果 | 必须 |
+| A1 倒车不变油门 | 同 smoke2：自由静止时倒车 plan 之后 0.5 s 内油门 tick 占比 | ≤ 5% |
+| A2 没有倒车引起的碰撞 | 同 smoke2 | 0 次 |
+| L1 横向执行 | `lat_ratio`（同上） | ≥ 0.4（f1 0.04–0.05，固定控制器 0.64） |
+| L2 顶住变少 | `stuck` 路线数 | < 基线 |
+| 只报告 | `pinned`、碰撞数、DS、RC、SR（Completed 且除 min-speed 外无违规），与基线逐条对照 | — |
+
+通过与否都停在这里回报；全量 `alp-b2d-full` 不续跑、不重启，由用户看完结果再定。跑法：
+`scripts/slot_run.sh alp-b2d-lat --gpu 2 --vram-gb 50 -- scripts/zeroshot_b2d_alp.sh lat 2`（tmux 窗口 `alp-b2d-lat`）。

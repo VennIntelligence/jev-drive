@@ -63,3 +63,68 @@ def test_held_now_age_and_pose():
     z.hold(np.c_[np.zeros(20), np.ones(20)], TIMES, 0.0, (x0, yaw))
     p, _ = z.held_now(0.0, (x0, yaw))
     assert np.allclose(p[1:, 1], 1.0)
+
+
+# Logged plan of the first f1 full run, route 1825 at t = 24.65 s (4.0 m/s, ConstructionObstacleTwoWays): the model
+# plans to swerve left around the work zone (CoT "Nudge to the left to clear the construction trailer"); the shipped
+# Zoo PID steered -0.006 (aim = the 0.5 s point, then the route target was straighter). Diagnosis doc, sections 7-8.
+DETOUR = np.array([[1.28, 0.003], [2.745, 0.044], [4.336, 0.214], [5.981, 0.59], [7.639, 1.251], [9.284, 2.167],
+                   [10.945, 3.281], [12.67, 4.47], [14.517, 5.627], [16.521, 6.683], [18.711, 7.588], [21.039, 8.337],
+                   [23.454, 8.93], [25.91, 9.411], [28.387, 9.81], [30.866, 10.161], [33.334, 10.475],
+                   [35.782, 10.762], [38.202, 11.023], [40.585, 11.262]])
+DETOUR_V, DETOUR_TARGET = 4.012, (12.0788, 1.1935)       # speed, route target (forward, right) as logged
+
+
+def test_zoo_lateral_mutes_the_detour():
+    z = ZooPID(forward_only=True)
+    p, t = z.prepare(DETOUR, TIMES)
+    steer, throttle, brake, meta = z.control(p, t, DETOUR_V, DETOUR_TARGET)
+    assert abs(steer) < 0.02                                          # as logged (-0.006)
+
+
+def test_p2_time_aim_steers_left_on_the_detour():
+    z = ZooPID(forward_only=True, lateral="time", aim_s=1.5)
+    p, t = z.prepare(DETOUR, TIMES)
+    ref = ZooPID(forward_only=True)
+    s0, th0, b0, _ = ref.control(p, t, DETOUR_V, DETOUR_TARGET)
+    steer, throttle, brake, meta = z.control(p, t, DETOUR_V, DETOUR_TARGET)
+    assert np.allclose(meta["aim_time"], DETOUR[5])                  # the 1.5 s point, 9.3 m ahead, 2.2 m left
+    assert -0.25 < steer < -0.1                                       # left (CARLA steer < 0), first PID step
+    assert (throttle, brake) == (th0, b0)                             # longitudinal untouched
+    # held at the next plan: the derivative kick is gone, P + I keep steering left
+    assert z.control(p, t, DETOUR_V, DETOUR_TARGET)[0] < -0.1
+
+
+def test_p2_time_aim_near_standstill_and_stop_plans():
+    z = ZooPID(forward_only=True, lateral="time")
+    creep = np.c_[0.3 * TIMES, 0.05 * TIMES]                          # 0.45 m at 1.5 s: use the first point >= 1 m
+    p, t = z.prepare(creep, TIMES)
+    assert np.hypot(*z.time_aim(p, t)) >= 1.0 and z.time_aim(p, t)[1] > 0
+    stop = np.zeros((20, 2))
+    p, t = z.prepare(stop, TIMES)
+    assert z.time_aim(p, t) is None
+    steer, throttle, brake, meta = z.control(p, t, 0.0, (20.0, 3.0))  # target 3 m right is NOT substituted
+    assert steer == 0.0 and brake == 1.0
+
+
+def test_p1_fixed_lateral_steers_left_on_the_detour():
+    import json
+    from b2d_controller import Controller
+    here = os.path.dirname(os.path.abspath(__file__))
+    params = json.load(open(os.path.join(here, "..", "todos/2026-09-22-b2d-controller/results/controller_config.json")))
+    params.pop("rear_axle_offset_m")
+    for key in ("adapter", "metadata", "preset"):
+        params.pop(key, None)
+    c = Controller(preset="carla", **params)                          # exactly as b2d_zeroshot_agent.py builds it
+    c.step(10.0, DETOUR_V, 0.0)
+    assert c.update(DETOUR, 10.0)
+    steers = [c.step(10.0 + 0.05 * k, DETOUR_V, 0.0)[1] for k in range(1, 11)]
+    assert c.diagnostics["reason"] == "tracking"
+    assert steers[-1] < -0.1 and all(s <= 1e-9 for s in steers)       # left from the first tick, rate-limited
+
+
+if __name__ == "__main__":
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_") and callable(fn):
+            fn()
+            print("ok", name)
