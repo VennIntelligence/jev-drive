@@ -195,9 +195,14 @@ class Sampler(threading.Thread):
             time.sleep(max(0.0, self.dt - (time.time() - t0)))
 
 
-def window_stats(samples, n_workers, warm, gpus, t_start):
-    """Numbers over the steady window: every worker past `warm` ticks and still ticking (its heartbeat, written every
-    2 s while it ticks, is fresh), i.e. no route loading and none finished yet."""
+def window_stats(samples, n_workers, warm, gpus, t_start, only=None):
+    """Numbers over the steady window: every worker past `warm` ticks and still ticking (its route has not written
+    a result yet), i.e. no route loading and none finished. `only` restricts it to those workers (a rung in which a
+    server crashed during setup is then measured on the survivors)."""
+    if only is not None:
+        samples = [dict(s, beats={w: v for w, v in s["beats"].items() if w in only}) for s in samples]
+        n_workers = len(only)
+
     def steady(s):
         b = s["beats"]
         return len(b) == n_workers and all(v[0] >= warm and v[2] for v in b.values())
@@ -243,7 +248,31 @@ def window_stats(samples, n_workers, warm, gpus, t_start):
     return out
 
 
+def recompute(rdirs, warm):
+    """Re-measure finished rungs on the workers whose route reached its tick cap, e.g. after a setup crash."""
+    for rdir in rdirs:
+        rdir = Path(rdir)
+        stats = json.loads((rdir / "stats.json").read_text())
+        good = set()
+        for w in sorted(rdir.glob("w*")):
+            for f in w.glob("attempts/*/*/route_result.json"):
+                d = json.loads(f.read_text())
+                if d.get("status") == "finished" and d.get("profile", {}).get("ticks", 0) >= 0.9 * stats["max_ticks"]:
+                    good.add(w.name)
+        samples = [json.loads(line) for line in open(str(rdir / "samples.jsonl"))]
+        new = window_stats(samples, len(good), warm, stats["gpus"], samples[0]["t"], only=good)
+        stats.update(new, workers_effective=len(good))
+        (rdir / "stats.json").write_text(json.dumps(stats, indent=1))
+        print(rdir, len(good), "of", stats["workers"], new.get("agg_ticks_s"), new.get("window_s"))
+    out = Path(rdirs[0]).parent
+    with open(str(out / "rungs.jsonl"), "w") as fh:
+        for f in sorted(out.glob("rung-*/stats.json")):
+            fh.write(json.dumps(json.loads(f.read_text())) + "\n")
+
+
 def main():
+    if sys.argv[1:2] == ["--recompute"]:
+        return recompute(sys.argv[2:], 40)
     a = parse_args()
     if a.cpus:
         os.sched_setaffinity(0, cpu_list(a.cpus))

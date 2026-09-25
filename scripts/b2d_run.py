@@ -81,8 +81,11 @@ def parse_args(argv=None):
     p.add_argument("--route-ids", default="", help="comma-separated route ids, overrides --towns")
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--out", required=True)
-    p.add_argument("--workers", type=int, default=4, help="4 is the measured operating point; "
-                   "5 is slower and a 6th server segfaults at startup (docs/carla.md)")
+    p.add_argument("--workers", type=int, default=4,
+                   help="one CARLA server per worker, all on --gpu-rank. Measured 2026-09-25 (docs/bench2drive-cost.md): "
+                        "a Town12 camera-rig exam is GPU-bound at about 6 servers per RTX PRO 6000, at ~2.5 cores "
+                        "per worker; shard over GPUs (one runner per card) rather than stacking more on one. The old "
+                        "'a 6th server segfaults at startup' was a port conflict, not a limit")
     p.add_argument("--stagger-s", type=float, default=20.0,
                    help="gap between server launches; launching a pool at once costs 17%% "
                         "throughput and half-fails (docs/carla.md)")
