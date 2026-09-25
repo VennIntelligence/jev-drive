@@ -231,7 +231,7 @@ def ladder_train(rl, models=("cinque", "lebowski"), p0_run: str = P0_RUN):
 HEADS_TAG = "p3drive_heads"
 
 
-def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: float = 25.0):
+def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: float = 25.0, feat_suffix: str = "_trainval"):
     """Decisions 40, follow-up (iii): the openpilot `temporal` token read by the classification head (and, as a
     described-only extra, the truncated diffusion head) under the train-split protocol of `ladder_train`.
 
@@ -246,7 +246,7 @@ def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: floa
     ctx = L.train_context(p0_run=P0_RUN)
     keep, feats = np.ones(len(ctx["fname"]), bool), {}
     for m in models:
-        a = L.align(ctx, op_set(m) + "_trainval", ["temporal"])
+        a = L.align(ctx, op_set(m) + feat_suffix, ["temporal"])
         keep &= a["covered"]
         feats[f"op-{m} temporal"] = a["temporal"]
     ks = (H.VOCAB_K,) + ((H.DIFF_M,) if "diff" in which else ())
@@ -458,7 +458,9 @@ def main():
                     help="comma list of prepare,finalize_op,finalize_alp,ladder,ladder_hist,crossfit,native_front3")
     ap.add_argument("--models", default=",".join(OP_MODELS))
     ap.add_argument("--run", default=None, help="crossfit: the ladder run directory (default: this run)")
-    ap.add_argument("--split", default="subset", choices=("subset", "trainval"))
+    ap.add_argument("--split", default="subset", choices=("subset", "trainval", "trainval_desire"))
+    ap.add_argument("--feat-suffix", default="_trainval", help="heads_*: feature set op_<model>_p3<suffix> "
+                    "(_trainval_desire: the route-into-backbone extraction, todos/2026-09-25-openpilot-temporal-p5-and-route.md)")
     ap.add_argument("--vram-gb", type=float, default=25.0, help="heads_*: this process's share of the card")
     a = ap.parse_args()
     rl = RunLog("drive_backbones", a.steps.replace(",", "-"))
@@ -479,7 +481,8 @@ def main():
                 rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))
         elif step in ("heads_train", "heads_diff"):
             from . import waymo_ladder as L
-            tag = heads_train(rl, tuple(a.models.split(",")), ("cls",) if step == "heads_train" else ("diff",), a.vram_gb)
+            tag = heads_train(rl, tuple(a.models.split(",")), ("cls",) if step == "heads_train" else ("diff",), a.vram_gb,
+                              a.feat_suffix)
             for name, t in (L.rejudge(rl.dir, tag) | heads_readout(rl.dir, tag)).items():
                 t.to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
                 rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))

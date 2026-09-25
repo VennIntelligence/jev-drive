@@ -63,7 +63,7 @@ def heads(t, past, fut, X, fold, rl) -> dict:
     Xs = {k: torch.as_tensor(v, device="cuda") for k, v in X.items()}
     seq = t.base_id.to_numpy()
     role = t.role.to_numpy()
-    out = {h: np.full((n, 20, 2), np.nan, np.float32) for h in HEADS}
+    out = {h: np.full((n, 20, 2), np.nan, np.float32) for h in ["ridge ego"] + [f"ridge_late {k}" for k in X]}
     for f in range(K_FOLDS):
         tr = np.flatnonzero((role == "train") & (fold != f))
         ev = np.flatnonzero((role == "obs") & (fold == f))
@@ -269,18 +269,59 @@ def probe_auc(obs: pd.DataFrame, t: pd.DataFrame, scores: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def run(rl):
+PROBE_REF = "L18_last"
+
+
+def probe_auc_paired(obs: pd.DataFrame, t: pd.DataFrame, scores: dict, ref: str = PROBE_REF, b: int = 500) -> pd.DataFrame:
+    """Hazard-probe AUC of every tap minus the reference tap's, on the same pair frames (hazard families, frames
+    where both taps have out-of-fold scores), under one shared route bootstrap -- probe_auc's resampling, paired."""
+    from .p4_carla import auc
+    pos = pd.Series(np.arange(len(t)), index=t.frame_name)
+    o = obs[obs.family != "Light"]
+    ip, im = pos[o.fn_plus].to_numpy(), pos[o.fn_minus].to_numpy()
+    taps = [tap for (task, tap) in scores if task == "hazard"]
+    ok = np.logical_and.reduce([~np.isnan(scores[("hazard", k)][ip]) & ~np.isnan(scores[("hazard", k)][im]) for k in taps])
+    y = np.r_[np.ones(ok.sum()), np.zeros(ok.sum())]
+    sc = {k: np.r_[scores[("hazard", k)][ip][ok], scores[("hazard", k)][im][ok]] for k in taps}
+    g = np.r_[o.base_id.to_numpy()[ok], o.base_id.to_numpy()[ok]]
+    codes, uniq = pd.factorize(g)
+    members = [np.flatnonzero(codes == c) for c in range(len(uniq))]
+    rng = np.random.default_rng(0)
+    draws = []
+    for _ in range(b):
+        m = np.concatenate([members[c] for c in rng.integers(len(uniq), size=len(uniq))])
+        if len(np.unique(y[m])) == 2:
+            draws.append(m)
+    rows = []
+    for k in taps:
+        if k == ref:
+            continue
+        d = [auc(y[m], sc[k][m]) - auc(y[m], sc[ref][m]) for m in draws]
+        rows.append({"tap": k, "vs": ref, "n_frames": int(ok.sum()), "routes": len(uniq), "auc": auc(y, sc[k]),
+                     "auc_vs": auc(y, sc[ref]), "delta": auc(y, sc[k]) - auc(y, sc[ref]),
+                     "lo": float(np.quantile(d, 0.025)), "hi": float(np.quantile(d, 0.975))})
+    return pd.DataFrame(rows)
+
+
+def run(rl, op_models=()):
     t, past, fut, obs, null, pairs = load()
     X = P.load_features(t)
+    if op_models:                     # openpilot `temporal` as extra examinees (todos/2026-09-25-openpilot-temporal-p5-and-route.md)
+        from . import p5_openpilot
+        X |= p5_openpilot.load(t, op_models)
     fold = folds(t, pairs)
     rl.log.info("%d frames (%s), %d pair frames, %d null frames, %d cases", len(t),
                 t.groupby(["source", "role"]).size().to_dict(), len(obs), len(null), len(pairs))
     preds = heads(t, past, fut, X, fold, rl)
     scores, probe_folds = probes(t, X, fold, rl)
     o, n = deltas(obs, null, t, preds)
-    ex = list(TFV6) + list(HEADS)
+    ex = list(TFV6) + list(preds)
     res = exam(o, n, pairs, ex)
     pa = probe_auc(res["obs"], t, scores)
+    if op_models:
+        pp = probe_auc_paired(res["obs"], t, scores)
+        pp.to_csv(rl.dir / "probe_auc_paired.csv", index=False)
+        rl.log.info("probe AUC, paired against %s\n%s", PROBE_REF, pp.to_markdown(index=False, floatfmt=".3f"))
     d = rl.dir
     res["validity"].to_csv(d / "label_validity.csv", index=False)
     res["flips"].to_csv(d / "flip_rates.csv", index=False)
@@ -389,10 +430,11 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("cmd", choices=["run", "figs"])
     p.add_argument("--run-dir", default="")
+    p.add_argument("--op", default="", help="comma list of openpilot models to add as examinees (cinque,lebowski)")
     a = p.parse_args()
     if a.cmd == "run":
         rl = RunLog("p5_pairs", "exam")
-        run(rl)
+        run(rl, tuple(m for m in a.op.split(",") if m))
         rl.close()
     else:
         from pathlib import Path

@@ -136,13 +136,37 @@ def ade_paired(desire_run: str, run_dir: str = NOD40_RUN) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+OP_DESIRE = {2: 1, 3: 2}   # WOD intent GO_LEFT / GO_RIGHT -> openpilot desire turnLeft / turnRight (HUGSIM check 7)
+
+
+def write_desire(split: str = "trainval") -> dict:
+    """op_desire_<split>.json: {frame name: desire index} for every streamed frame whose routing intent is a turn
+    (straight / unknown = none, left out). The runner feeds the one-hot every step; the pulse is its rising edge."""
+    import json
+    from . import waymo as W
+    from .drive_backbones import plan_name, root
+    df = W.load_index()
+    intent = pd.Series(df.intent.to_numpy(), index=W.frame_names(df))
+    plan = json.loads((root() / plan_name(split)).read_text())
+    names = [n for st in plan["streams"] for n in st["names"]]
+    it = intent.reindex(names).to_numpy()
+    assert not np.isnan(it.astype(float)).any(), "streamed frames missing from the index"
+    out = {n: OP_DESIRE[int(i)] for n, i in zip(names, it) if int(i) in OP_DESIRE}
+    (root() / f"op_desire_{split}.json").write_text(json.dumps(out))
+    info = {"frames": len(names), "turnLeft": sum(v == 1 for v in out.values()), "turnRight": sum(v == 2 for v in out.values())}
+    log.info("desire map: %s", info)
+    return info
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("2a", "2b"))
+    ap.add_argument("step", choices=("2a", "2b", "desire"))
     ap.add_argument("--desire-run", default="")
     a = ap.parse_args()
+    if a.step == "desire":
+        return write_desire()
     rl = RunLog("op_route", a.step)
     out = exp2a() if a.step == "2a" else exp2b(a.desire_run)
     for name, t in out.items():

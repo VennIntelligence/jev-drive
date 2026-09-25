@@ -79,20 +79,22 @@ def bounded_map(ex, fn, items, depth):
 
 
 class Recorder:
-    """Collects the per-target arrays of one model."""
+    """Collects the per-target arrays of one model (`keep`: the arrays to store; default all)."""
 
-    def __init__(self, model, dev_xy):
+    def __init__(self, model, dev_xy, keep=None):
         from jevdrive.openpilot.model import T_IDXS, decode, mdn_mu
         self.m, self.dev, self.T, self.decode, self.mdn = model, dev_xy, T_IDXS, decode, mdn_mu
+        self.keep = keep
         self.rows = []
 
     def add(self, name, raw, hist):
         s, tv = self.m.slices, self.m.tap_values
         taps = D.OP_TAPS[self.m.name]
         d = self.decode(raw, s, 10.0, WZ.ACTION_T)
-        self.rows.append({"name": name, "temporal": tv[taps["temporal"]], "vision": tv[taps["vision"]],
-                          "hidden": raw[s["hidden_state"]], "plan": self.mdn(raw[s["plan"]], (33, 15)).ravel(),
-                          "wod": Z.openpilot_to_wod(d["plan_pos"], d["plan_yaw"], self.T, self.dev), "hist": hist})
+        r = {"name": name, "temporal": tv[taps["temporal"]], "vision": tv[taps["vision"]],
+             "hidden": raw[s["hidden_state"]], "plan": self.mdn(raw[s["plan"]], (33, 15)).ravel(),
+             "wod": Z.openpilot_to_wod(d["plan_pos"], d["plan_yaw"], self.T, self.dev), "hist": hist}
+        self.rows.append(r if self.keep is None else {k: r[k] for k in ("name", "hist", *self.keep)})
 
     def save(self, path):
         k = self.rows[0].keys()
@@ -102,21 +104,25 @@ class Recorder:
         tmp.replace(path)
 
 
-def run_stream(m, frames, names, targets, dev_xy) -> Recorder:
-    """One stream through one model; records every target on it. `hist` = frames of history before the target."""
-    rec, tset = Recorder(m, dev_xy), set(targets)
+def run_stream(m, frames, names, targets, dev_xy, desire=None, keep=None) -> Recorder:
+    """One stream through one model; records every target on it. `hist` = frames of history before the target.
+    desire: {frame name: openpilot desire index} (absent = none); the one-hot is fed every step and OPModel turns
+    it into modeld's rising-edge pulse."""
+    rec, tset = Recorder(m, dev_xy, keep), set(targets)
+    eye = np.eye(8, dtype=np.float32)
+    des = [eye[desire.get(n, 0)] if desire else eye[0] for n in names]
     if m.skip == 1:   # context rate: one stream per parity, one step per 0.2 s
         for p in (0, 1):
             m.reset()
             for j in range(p, len(names), 2):
-                raw = m.step(frames[j], action_t=WZ.ACTION_T)
+                raw = m.step(frames[j], desire=des[j], action_t=WZ.ACTION_T)
                 if j in tset:
                     rec.add(names[j], raw, j)
     else:
         m.reset()
         for j in range(len(names)):
             for _ in range(2):
-                raw = m.step(frames[j], action_t=WZ.ACTION_T)
+                raw = m.step(frames[j], desire=des[j], action_t=WZ.ACTION_T)
             if j in tset:
                 rec.add(names[j], raw, j)
     rec.rows.sort(key=lambda r: r["name"])
@@ -144,6 +150,9 @@ def main():
     ap.add_argument("--mode", choices=("stream", "exam"), default="stream")
     ap.add_argument("--split", default="subset", choices=("subset", "trainval"), help="stream mode: which plan")
     ap.add_argument("--targets", default="rater", help="exam mode: 'rater' (the exam's frames on the subset) or a file")
+    ap.add_argument("--desire", action="store_true", help="stream mode: desire pulses from the WOD routing intent "
+                    "(op_desire_<split>.json from `python -m jevdrive.op_route desire`); stores temporal + native plan")
+    ap.add_argument("--out-sub", default="", help="override the output directory under processed/drive_backbones")
     a = ap.parse_args()
     from jevdrive.common import data_dir
     from jevdrive.openpilot.model import OPModel
@@ -156,6 +165,9 @@ def main():
         op_calib |= json.loads((D.root() / f"op_calib_{a.split}.json").read_text())
     spans = plan["spans"]
     sub = ("op" if a.split == "subset" else f"op_{a.split}") if a.mode == "stream" else "op_exam"
+    sub = a.out_sub or sub + ("_desire" if a.desire else "")
+    desire = json.loads((D.root() / f"op_desire_{a.split}.json").read_text()) if a.desire else None
+    keep = ("temporal", "wod") if a.desire else None
     outdir = {k: D.root(sub, k) for k in a.models}
     if a.mode == "stream":
         items = [(f"{i:04d}_{s['sequence']}", s["names"], s["targets"]) for i, s in enumerate(plan["streams"])]
@@ -187,7 +199,7 @@ def main():
             dev = np.array(op_calib[seq]["1"]["extrinsic"]).reshape(4, 4)[:2, 3]
             for k, m in models.items():
                 t = time.perf_counter()
-                rec = (run_stream(m, frames, names, targets, dev) if a.mode == "stream"
+                rec = (run_stream(m, frames, names, targets, dev, desire, keep) if a.mode == "stream"
                        else run_exam(m, frames, names, key, dev))
                 tm[k] += time.perf_counter() - t
                 rec.save(outdir[k] / f"{key}.npz")
