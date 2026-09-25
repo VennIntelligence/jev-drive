@@ -1,6 +1,6 @@
 # 快通道感知：SAM 3.1 的提速选项与更快的替代检测器（延迟 × 召回，同一批帧）
 
-状态: running（预登记写于 2026-09-25 23:33 CST（box 时钟），任何候选的延迟或召回输出之前）
+状态: done（2026-09-26 01:40）。预登记写于 2026-09-25 23:33 CST（box 时钟），任何候选的延迟或召回输出之前
 主题: [decisions 第 43 条](../research/decisions.md)、[融合前诊断](2026-09-25-fusion-diagnostics.md) 的 Q4 / Q4d / Q8
 卡: GPU 0（独占）；CPU ≤ 20 核；slot 记在 `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md`，标 `[FASTPERC]`
 
@@ -110,7 +110,119 @@
   「框底中点接地」的 side 读数与 mask 接地几乎相同（hazard 行人 0.502 对 0.492），所以只出框的候选（Grounding DINO）不会因为接地点定义吃亏。
 - 23:48 **A2 / A3（少 prompt）不另跑召回**：原样路径里每个 prompt 是独立的一次 grounding，少 prompt 只是少算几次，留下的 prompt 的输出逐位不变；batched 路径里 prompt 之间也只通过 bf16 的 batch 形状噪声相关
   （Q4 日志 (10)）。所以 A2 / A3 的召回 = A0 / A1 的对应类别，只量延迟。召回只重跑 A1（batched，确认 bf16 噪声不改召回）和 A5（672，若能跑）。
+- 23:49 **A5（672 输入）跑不起来**：ViT 的全局注意力块里 RoPE 频率表按 1008（72 × 72 个 patch）预先算好，`vitdet.reshape_for_broadcast` 的形状断言失败；
+  position encoding 也是 `precompute_resolution=1008`。`Sam3Processor(resolution=…)` 只改前处理，模型本身不支持别的分辨率，要改就得按新尺寸重建 ViT（改模型配置），按登记不做。
+  EfficientSAM3 自带的 TensorRT 导出脚本里也写明「输入分辨率固定在 1008」。
+- 23:52 **A4（官方 compile）几乎不提速**：`compile_mode="max-autotune"` 编译的是 ViT 的 forward（fullgraph），3 路 p50 180 → 176 ms。
+  **A6（fp8）不测**：torchao 不在 `envs/sam3` 里、按规则不能动这个 env；而且下面的分解说明它最多只能省图像编码器那一块，到不了 50 ms。
+- 23:59 **SAM 3.1 延迟分解**（GPU 4，batch 1，bf16，一张图）：图像编码器 26 ms；grounding（融合 encoder + DETR decoder + 分割头，都在 1008 分辨率的 72 × 72 特征上）1 个 prompt 36 ms、6 个 prompt 51 ms；整次调用 73–83 ms。
+  **瓶颈是 grounding 头，不是视觉 backbone**。EfficientSAM3 只蒸馏了视觉和文本编码器、decoder 冻结沿用 SAM 3，所以它的 batched bf16 也只到 1 路 54 ms、3 路 112 ms（与 SAM 3.1 只留 pedestrian 一个 prompt 的 112 ms 一样）。
+  由此，任何保持 SAM 3 grounding 头、1008 输入的变体（量化、蒸馏编码器、编译）3 路都到不了 50 ms：光 grounding 一项就是 3 × 36 ms。
+- 00:00 **EfficientSAM3 的召回批量改到 GPU 4**：在争用的 GPU 0 上原样路径（fp32、逐 prompt）1.3 s / 张，16k 张要 5–6 h；GPU 1 / 2 又被别人占了，所以等 GPU 4 的延迟跑完后在 GPU 4 上跑（165 ms / 张，约 45 min）。
+  另外修了三处我们自己的环境问题：EfficientSAM3 的 `[stage1]` extra 会拉 mmcv 源码编译（只训练需要，去掉，补 `omegaconf`）；GitHub 资产断流改成可续传；hf-mirror 上小文件的 HEAD 返回 20 字节，改用 tree 列表里的大小。
+- 00:02 **YOLOE 加一个 side 变体「类别词」**（写于任何 YOLOE 召回数字之前，只看过 6 张图的检测个数：YOLO26 在同样 6 张图上检出 1–3 个行人，YOLOE 用 "pedestrian" 一个都没有）：
+  文本 prompt 改用 COCO 式类别词（person、bicycle、car、motorcycle、bus、truck、traffic cone、debris、ambulance、fire truck、police car），再映射回 Q4 的类别（`fastperc.YOLOE_WORDS`）。
+  主读数仍是登记的 6 个 prompt；这个变体不进判据，只回答「YOLOE 的问题是模型还是措辞」。
+- 00:03 Grounding DINO 的 transformers 实现对「一个框都没有」的图返回 labels `['']`，与空的 scores 对不上，修了我们的循环后重跑检测（之前的部分作废）。
+- 00:26 **加一个 side 读数「图像平面召回」**（写于看过 SAM 3.1 与 YOLO26 的 BEV 召回之后，属于事后描述，不进判据）：GT 参考点投到图上，落在同类检测框（每边放宽框尺寸的 10%，至少 4 px）内即算看见，
+  完全不经过 BEV 抬升，用来把「没检出」与「放错」分开，比 oracle 高度更干净（oracle 只修高度，不修接地点本身的偏差）。只报行人：车辆的参考点是 footprint 离相机最近的角，近处常落在框外（0–10 m 车辆图像召回 0.17），这个读数对车辆没有意义。
+- 00:30 **可选 D-depth 做了**（SAM 3.1 与 YOLO26x-640 两份检测）：YOLO26x-depth 按发布方式跑（不给相机内参），接地点沿射线放到预测深度处。
+- 00:40 追加三个 side 召回（GPU 4，写于它们的任何数字之前）：YOLO26x-640 fp16、YOLOE-26x 类别词 640 fp32、YOLOE-26x 类别词 1280 fp16，以及类别词变体的延迟。目的：判据里的延迟用的是 fp32 还是 fp16 要与召回同一配置。
+- Grounding DINO 的车辆召回是 0：它把相邻 token 合成一个短语（例如 "vehicle emergency vehicle"），我们的映射取包含的最长 prompt，于是车辆全被记成 emergency vehicle。这是我们映射的问题，但判据只看行人，GDINO 在延迟上已经不过，没有修。
 
 ## 结果
 
-（跑完再填。）
+run：延迟 `$DATA_DIR/runs/fastperc/latency/`（GPU 4 独占；两处例外见日志），检测 `processed/fastperc/dets/<tag>/`，评测 `runs/fastperc/eval/<tag>/`；
+小表 [research/results/fast-perception/](../research/results/fast-perception/)（`latency.csv`、`recall.csv`，由 `python -m jevdrive.fastperc summary` 生成）。代码 `jevdrive/fastperc.py`、`scripts/fastperc.sh`、`scripts/fastperc_setup.sh`。
+
+### 延迟（batch 1，Q4d 口径，RTX PRO 6000）
+
+| 配置 | 3 路 p50 / p95 (ms) | 1 路 p50 (ms) | 峰值显存 3 路 (GB) | 延迟判据（p95 ≤ 50） |
+|:--|--:|--:|--:|:--|
+| SAM 3.1 原样路径（6 prompt 逐个，= Q4d） | 540 / 550 | 182 | 4.7 | 不过 |
+| SAM 3.1 batched，6 prompt | 180 / 181 | 73 | 10.7 | 不过 |
+| SAM 3.1 batched，pedestrian + vehicle | 125 / 126 | 57 | 6.3 | 不过 |
+| SAM 3.1 batched，只 pedestrian | 113 / 119 | 52 | 5.2 | 不过 |
+| SAM 3.1 batched + 官方 compile（max-autotune） | 176 / 177 | 73 | 12.0 | 不过 |
+| SAM 3.1 输入 672 | 跑不起来（RoPE 固定 1008） | — | — | — |
+| EfficientSAM3 TV-M，原样（fp32，逐 prompt） | 484 / 514 | 163 | 2.4 | 不过 |
+| EfficientSAM3 TV-M / EV-M / RV-M，batched bf16 | 115 / 112 / 116（p95 115 / 114 / 118） | 55 / 54 / 58 | 6.9 | 不过 |
+| Grounding DINO tiny | 148 / 162 | 66 | 3.6 | 不过 |
+| YOLOE-26x-seg 640（6 prompt 或类别词） | 21–22 / 24 | 14 | 0.9 | **过** |
+| YOLOE-26x-seg 1280 fp32 / fp16（类别词） | 65 / 72，42 / 47 | 23 / 17 | 2.6 / 1.5 | 不过 / **过（贴线）** |
+| YOLO26x-seg 640 fp32 / fp16 | 23 / 30，17 / 20 | 13 / 12 | 0.9 / 0.5 | **过** |
+| YOLO26x-seg 1280 fp32 / fp16 | 65 / 66，42 / 44 | 22 / 15 | 2.6 / 1.6 | 不过 / 过 |
+| YOLO26l-seg 640 fp16 | 17 / 19 | 12 | 0.4 | 过（未测召回） |
+
+YOLO26x-640 fp32 的数取的是 01:32 在 GPU 0 上的复测（23 / 30 ms），GPU 4 上第一次是 22 / 24 ms，两次都过线。Ultralytics 的 1 路延迟里约一半是 CPU 上的 letterbox 与后处理，不是 GPU。
+
+读法：**SAM 3 系的延迟下限由 grounding 头决定，不是视觉 backbone**。分解（日志 23:59）：图像编码器 26 ms，grounding 1 个 prompt 36 ms、6 个 51 ms。
+所以把视觉编码器蒸馏成 EfficientViT / TinyViT（EfficientSAM3）只省 20 ms，编译几乎不省，分辨率在模型里写死，最好的同模型配置（batched、只 pedestrian）3 路 113 ms，是 50 ms 预算的两倍多。
+真正进预算的是 YOLO 系的一阶段检测 + 分割：3 路 17–30 ms，比 SAM 3.1 原样快 20–30 倍。
+
+### 召回（子集 S：P5 9 918 张、nuScenes 6 024 张；平地抬升为主读数）
+
+| 配置（阈值） | P5 hazard 行人全部 [对 SAM 的配对差 95% CI] | ≤ 20 m [配对差 CI] | ≤ 30 m 白天 | ≤ 20 m BEV 误差中位 (m) | nuScenes 行人 ≤ 40 m | 同 precision 下 | nuScenes precision | 召回判据 |
+|:--|:--|:--|--:|--:|--:|--:|--:|:--|
+| SAM 3.1 原样（0.5） | **0.492** | 0.880 | 0.650 | 0.46 | 0.356 | 0.351 | 0.377 | 基线 |
+| SAM 3.1 batched（0.5） | 0.492 [0, 0] | 0.880 [0, 0] | 0.650 | 0.46 | 0.356 | 0.356 | 0.377 | 不劣 |
+| EfficientSAM3 TV-M（0.5） | 0.394 [−0.16, −0.04] | 0.785 [−0.15, −0.05] | 0.529 | 0.50 | 0.127 | 0.265 | 0.586 | **劣** |
+| Grounding DINO tiny（0.35） | 0.416 [−0.18, +0.02] | 0.726 [−0.28, −0.02] | 0.554 | 0.32 | 0.257 | 0.210 | 0.370 | **劣** |
+| YOLOE-26x 640，6 个 prompt（0.25） | 0.004 [−0.73, −0.23] | 0.008 | 0.005 | — | 0.000 | 0.044 | — | **劣** |
+| YOLOE-26x 1280，6 个 prompt | 0.012 | 0.019 | 0.013 | — | 0.000 | 0.018 | — | **劣** |
+| YOLOE-26x 640，类别词（side） | 0.478 [−0.031, −0.004] | 0.860 [−0.048, −0.004] | 0.634 | 0.47 | 0.342 | 0.333 | 0.348 | 不劣（−0.014 / −0.020 / −0.014） |
+| YOLOE-26x 1280 fp16，类别词（side） | 0.481 [−0.030, +0.008] | 0.856 [−0.048, −0.011] | 0.637 | 0.48 | 0.361 | 0.342 | 0.321 | 不劣 |
+| **YOLO26x-seg 640（0.25）** | **0.497 [−0.010, +0.019]** | **0.890 [−0.004, +0.029]** | 0.656 | 0.44 | **0.366** | 0.363 | 0.365 | **不劣** |
+| YOLO26x-seg 640 fp16（side） | 0.499 [−0.007, +0.021] | 0.890 | 0.658 | 0.44 | 0.367 | 0.364 | 0.365 | 不劣 |
+| YOLO26x-seg 1280（0.25） | 0.494 [−0.008, +0.013] | 0.884 | 0.656 | 0.44 | 0.377 | 0.360 | 0.344 | 不劣 |
+
+CI 按 base 路线 bootstrap 2000 次（同一批 GT 行上的配对差）。「同 precision 下」= 把阈值调到 nuScenes 行人 precision ≥ SAM 3.1 的 0.377 时能拿到的最高召回（阈值扫描 0.05–0.95）。车辆的 hazard 召回：SAM 0.78、YOLO26x-640 0.80、YOLOE 类别词 0.66–0.70、EfficientSAM3 0.53。
+
+**判定（按登记）**：延迟过关且召回不劣的只有 **YOLO26x-seg 640**（登记的 fp32：3 路 p95 30 ms、p50 23 ms，严格档 ≤ 30 ms 也过；三项召回差 +0.005 / +0.010 / +0.010，BEV 误差 0.44 m），它是推荐项；
+事后加的 fp16 side 召回与 fp32 逐位接近（差 ≤ 0.002）、3 路 17 / 20 ms，部署时用 fp16。YOLOE-26x 的类别词变体（640 fp32、1280 fp16）也过了两条线，但它是看过 6 张图后加的 side 变体、不进判据；
+登记的 6 个 prompt 版本在 "pedestrian" 这个词上几乎什么都不出（P5 0.004、nuScenes 0.000），换成 "person" 就回到 SAM 的水平——轻量开放词表模型对措辞很脆，SAM 3 对同一个词是稳的。
+SAM 3.1 的所有同模型提速、EfficientSAM3、Grounding DINO 都在延迟上不过；EfficientSAM3 与 Grounding DINO 召回也明显更差（nuScenes 行人 0.13 / 0.26 对 0.36）。
+Q4 的绝对门槛（hazard 行人全部 ≥ 0.8、≤ 30 m 白天 ≥ 0.9、nuScenes ≤ 30 m ≥ 0.8）没有任何候选过，与预期一致。
+
+![latency vs recall](../research/figs/fastperc-latency-recall.png)
+
+图：横轴 3 路 batch 1 的 p95 延迟（对数），竖线 50 ms（主判据）与 30 ms（严格档）；实心 = 登记的平地抬升召回，空心 = oracle 地面高度召回，同一配置用竖线连起来。
+要看的是：50 ms 线左边只有 YOLO 系；而所有「能看见行人」的候选实心点都挤在同一高度（P5 约 0.48–0.50、nuScenes 约 0.34–0.38），差别全在空心点和竖线长度上，即放置而不是检测。
+
+### 两个问题分开：延迟由模型选择解决，BEV 放置不由它解决
+
+图像平面召回（side，事后加：GT 参考点落在同类检测框内就算看见，不经过 BEV）与平地 BEV 召回按距离档对比（行人，≤ 40 m，背景 actor / nuScenes 全部）：
+
+| | P5 0–10 / 10–20 / 20–40 m，图像平面 | P5 同档，平地 BEV | nuScenes 0–10 / 10–20 / 20–40 m，图像平面 | nuScenes 同档，平地 BEV |
+|:--|:--|:--|:--|:--|
+| SAM 3.1 | 0.91 / 0.80 / 0.58 | 0.90 / 0.68 / 0.13 | 0.66 / 0.60 / 0.56 | 0.65 / 0.44 / 0.21 |
+| YOLO26x-seg 640 | 0.91 / 0.79 / 0.46 | 0.90 / 0.71 / 0.13 | 0.74 / 0.66 / 0.61 | 0.67 / 0.44 / 0.22 |
+| YOLOE-26x 640 类别词 | 0.89 / 0.78 / 0.60 | 0.88 / 0.64 / 0.12 | 0.69 / 0.55 / 0.44 | 0.67 / 0.42 / 0.19 |
+
+三个完全不同的检测器，20–40 m 在图上看见了 46–61% 的行人，BEV 里都只剩 12–22%；10 m 以内图像与 BEV 几乎相等。**远处的缺口是平地抬升，任何 2D 检测器都不改变它**。
+nuScenes 近处（0–10 m）图像平面也只有 0.66–0.74，这一块是真的漏检 / 截断（近处行人常被图像边缘截掉，脚不在图里），YOLO26 比 SAM 高 0.08。
+
+**可选 D-depth**（YOLO26x-depth 按发布方式跑、不给内参，接地点放到射线上的预测深度处）：
+
+| 检测 + 放置 | P5 hazard 行人全部 / ≤ 20 m | P5 背景行人 0–10 / 10–20 / 20–40 m | nuScenes 行人 0–10 / 10–20 / 20–40 m / ≤ 40 m |
+|:--|:--|:--|:--|
+| SAM 3.1 + 平地 | 0.49 / 0.88 | 0.90 / 0.68 / 0.13 | 0.65 / 0.44 / 0.21 / 0.36 |
+| SAM 3.1 + 深度 | 0.21 / 0.44 | 0.49 / 0.03 / 0.00 | 0.83 / 0.61 / 0.12 / 0.41 |
+| YOLO26x-640 + 深度 | 0.20 / 0.43 | 0.48 / 0.03 / 0.00 | 0.92 / 0.64 / 0.12 / 0.43 |
+
+发布版的单目深度不给内参，尺度系统性偏近：同一批检测上「深度放置距离 / 平地放置距离」的中位数，P5 0–10 / 10–20 / 20–40 m 是 0.74 / 0.64 / 0.47，nuScenes 是 0.86 / 0.86 / 0.70。
+所以在 CARLA 上它比平地差得多，在 nuScenes 近处（≤ 20 m）比平地好（0.65 → 0.92），20 m 以外仍然不行。结论：**单目深度头原样不能替代平地抬升**；要修放置，得给它按相机标定尺度
+（Ultralytics 自带两参数的 `calibrate`，或用平地抬升在近处的点在线拟合尺度），或者直接估计地面高度。这是下一个实验，不是换检测器能解决的。
+
+### 推荐
+
+1. 快通道的结构化感知用 **YOLO26x-seg 640 fp16**（COCO 闭集，person / bicycle / car / motorcycle / bus / truck）：3 路 batch 1 p95 20 ms、显存 0.5 GB，行人召回与 SAM 3.1 不劣（配对差 CI 跨零），车辆略好。
+   按 Q8 的规则，感知延迟 20–30 ms 时 ParkingCrossingPedestrian（p25 0.53 s）不再被判「来不及」。代价是没有开放词表：cone / debris / 特种车拿不到（SAM 的 debris / emergency vehicle 本来也几乎为 0）。
+   要长尾类别时用 YOLOE-26x 640 + 类别词（3 路 p95 24 ms，行人召回差 −0.01 到 −0.02），但它对措辞敏感，词表要先在我们的数据上验过。
+2. SAM 3.1 留给慢通道和离线标注（它的召回并不比 YOLO26 好，唯一优势是开放词表对措辞稳）。
+3. 召回的主要缺口不在检测器：下一步是接地点的高度 / 深度（按相机标定尺度的单目深度，或地面高度估计），在同一个子集 S 上用同一套评测，先看 oracle 高度这条上界（P5 hazard 行人 0.70–0.81）能拿回多少。
+
+### 资源与时间
+
+墙钟 23:33 → 01:40，约 2.1 h（登记 3–4 h）。GPU：GPU 0（与融合第 3 阶段、ELICIT 共用）召回批量约 1.5 h 墙钟，GPU 4 延迟与 EfficientSAM3 批量约 1 h；约 2.5 GPU·h。CPU ≤ 20 核（180–199）。
+盘：三个 env 约 12 GB，权重 2.9 GB，检测 < 1 GB。全量 47.8k 张的 side 复核没有做：在争用的 GPU 0 上最快的 YOLO 也要约 70 min，超过登记的「< 20 min」条件。

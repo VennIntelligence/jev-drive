@@ -18,8 +18,11 @@ RUNS = {
     "gdino-tiny": ("gdino:0.35:0.25", "Grounding DINO-T", "orange", "D"),
     "yoloe26x-640": ("yoloe:yoloe-26x-seg.pt:640:fp32", "YOLOE-26x 640", "green", "o"),
     "yoloe26x-1280": ("yoloe:yoloe-26x-seg.pt:1280:fp32", "YOLOE-26x 1280", "green", "s"),
-    "yoloe26x-1280-words": ("yoloe:yoloe-26x-seg.pt:1280:fp32", "YOLOE-26x 1280, class words", "green", "^"),
+    "yoloe26x-640-words": ("yoloe:yoloe-26x-seg.pt:640:fp32:words", "YOLOE-26x 640, class words", "green", "v"),
+    "yoloe26x-1280-words": ("yoloe:yoloe-26x-seg.pt:1280:fp32:words", "YOLOE-26x 1280, class words", "green", "^"),
+    "yoloe26x-1280-words-half": ("yoloe:yoloe-26x-seg.pt:1280:half:words", "YOLOE-26x 1280, class words, fp16", "green", ">"),
     "yolo26x-640": ("yolo:yolo26x-seg.pt:640:fp32", "YOLO26x-seg 640 (COCO)", "blue", "o"),
+    "yolo26x-640-half": ("yolo:yolo26x-seg.pt:640:half", "YOLO26x-seg 640 (COCO), fp16", "blue", "v"),
     "yolo26x-1280": ("yolo:yolo26x-seg.pt:1280:fp32", "YOLO26x-seg 1280 (COCO)", "blue", "s"),
 }
 
@@ -56,6 +59,8 @@ def fig(out: Path):
         for x, ls in ((50, "-"), (30, ":")):
             ax.axvline(x, color=ps.BASELINE, lw=0.6, ls=ls, zorder=0)
         ax.set_xscale("log")
+        ax.set_xticks([20, 30, 50, 100, 200, 500], ["20", "30", "50", "100", "200", "500"])
+        ax.xaxis.set_minor_formatter(plt.NullFormatter())
         ax.set_xlabel("latency, 3 cameras, batch 1, p95 (ms)")
         ps.panel(ax, title)
     axs[0].set_ylabel("recall")

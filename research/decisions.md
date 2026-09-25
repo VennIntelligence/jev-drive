@@ -3024,3 +3024,27 @@ PDM scorer 对「继续 / 刹停」两条 proposal 的符号与人类一致率�
 
 **状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。
 **怎么推进**：E2 用编辑对在真实特征上训 M-C，判据是编辑对上 |Δ| ≥ 2 × 安慰剂、WOD Pedestrians RFS Δ CI > 0 且直行激活率 ≤ 7%；若 E2 也不过，配对差分在真实数据上的路只剩「重新登记的纵向孪生对」这一条。
+
+## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
+
+2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-fast-perception.md](../todos/2026-09-26-fast-perception.md)，小表在 [research/results/fast-perception/](results/fast-perception/)。
+接第 43 条：SAM 3.1（Meta 的开放词表分割模型）作为结构化状态来源，3 路相机 558 ms，进不了 20 Hz 快通道。这一条在第 43 条 Q4 的同一套帧（子集 S：P5 hazard 帧 9 918 张、nuScenes 1/3 scene 6 024 张）、同一套 GT / 匹配 / 平地抬升上比较更快的替代。
+
+| 候选 | 3 路 batch 1 p50 / p95 (ms) | P5 hazard 行人（全部 / ≤ 20 m） | nuScenes 行人 ≤ 40 m | 判定（p95 ≤ 50 ms 且三项召回 ≥ SAM − 0.03） |
+|:--|:--|:--|:--|:--|
+| SAM 3.1 原样 | 540 / 550 | 0.49 / 0.88 | 0.36 | 基线 |
+| SAM 3.1 最快的同模型配置（batched、只 pedestrian） | 113 / 119 | 同基线 | 同基线 | 延迟不过 |
+| EfficientSAM3 TV-M（蒸馏编码器，batched bf16 / 原样） | 115 / 115，484 / 514 | 0.39 / 0.79 | 0.13 | 两项都不过 |
+| Grounding DINO tiny | 148 / 162 | 0.42 / 0.73 | 0.26 | 两项都不过 |
+| YOLOE-26x-seg 640，prompt "pedestrian" 等 | 21 / 24 | 0.00 / 0.01 | 0.00 | 召回不过 |
+| YOLOE-26x-seg 640，COCO 式类别词（side） | 22 / 24 | 0.48 / 0.86 | 0.34 | 过（不进判据） |
+| **YOLO26x-seg 640**（COCO 闭集；fp16 side 17 / 20 ms，召回相同） | **23 / 30** | **0.50 / 0.89** | **0.37** | **过** |
+
+**结论**：
+1. 延迟是模型选择的问题，已解决：YOLO26x-seg 640 fp16 三路 20 ms（p95），行人召回对 SAM 3.1 的配对差 +0.005 [−0.010, +0.019]、nuScenes +0.010。
+2. SAM 3 系没有进预算的路：图像编码器只占 26 ms，grounding 头（融合 encoder + decoder + 分割头，1008 输入）一个 prompt 就 36 ms；分辨率在 RoPE 里写死，官方 compile 省 2%，EfficientSAM3 只蒸馏编码器所以只到 112–116 ms。
+3. 召回缺口不是检测器的问题：三个完全不同的检测器平地 BEV 召回几乎相同（P5 hazard 行人 0.48–0.50），20–40 m 行人在图像平面看见 46–61%、BEV 里只剩 12–22%。发布版单目深度（YOLO26x-depth，不给内参）尺度偏近 0.47–0.86 倍，原样替代平地更差（P5 0.49 → 0.20）。
+4. 轻量开放词表模型对措辞很脆（YOLOE 用 "pedestrian" 几乎不出检测、用 "person" 与 SAM 持平）；SAM 3 在同一个词上是稳的。
+
+**状态**：**待定**。限定：P5 是 v0 的 hazard 帧；nuScenes 只取 1/3 scene；延迟在 RTX PRO 6000 上、batch 1，Ultralytics 的时间里一半是 CPU 前后处理；YOLOE 类别词与 fp16 是事后加的 side 变体；没有复跑第 43 条 Q6 的规则门（行为读出）。
+**会推翻或推进本条的证据**：在 YOLO26 状态上复跑 Q6-SAM 的规则门，行人 family 翻转不低于 SAM 状态（推进：可以直接替换）；给接地点加按相机标定尺度的深度或地面高度后，P5 / nuScenes 行人召回向 oracle 高度上界（0.70–0.81 / 0.52–0.67）靠拢（推进结构化感知通道）。
