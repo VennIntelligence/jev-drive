@@ -2995,7 +2995,7 @@ nuScenes 的检查 (d) 是批量之后补做的目检。
 **会推翻或推进本条的证据**：I1（P5 v1：PDM-Lite、101 条路线 × 3 seed）上 Q9b 行人翻转过 20%（那就是数据量问题，Qwen 空间 token 可以留作行人通道）；Q6 在 PDM-Lite 标签下 GT 规则 floor ≥ 80%（反应主要是几何）；
 给 SAM 接地点加地面高度估计后 P5 / nuScenes 行人召回过登记门槛（结构化感知通道成立）。
 
-## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的；按 ego 历史从 log 里挖孪生对挖不出「场景解释的分叉」（**待定**，E2 真实帧编辑对在跑）
+## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的（WOD 与 NAVSIM 都是）；log 里挖孪生对、真实帧抹人造对，两条路本轮都没把它带到真实数据上（**待定**）
 
 2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-elicitation-program.md](../todos/2026-09-26-elicitation-program.md)（E1–E3），小表在 [research/results/elicitation/](results/elicitation/)。
 接第 42 条：M-C 双流 reaction head（Qwen `L18_last` ⊕ openpilot `temporal`，线性，配对差分监督）在 P5 v1 BA 集上行人翻转 43%。这一条问它能不能走出 CARLA。
@@ -3014,7 +3014,9 @@ nuScenes 的检查 (d) 是批量之后补做的目检。
 登记的预期是「转不过去但无害」，结果是有害：Δ 在所有帧上都加一个 1–3 m 的修正，行人帧上的激活率不高于直行帧，也就是它读的方向在真实特征上没有意义。
 去掉特征均值的域偏移（WOD 统计量）只把损害减半。这是 P4「domain AUC 1.0」的反方向版本。
 含义：CARLA 配对上训出来的反应通道不能直接相加到真实数据的 prior 上；要么在真实数据上重训（E2），要么至少有门控。图：[elicit-e1-wod-transfer](figs/elicit-e1-wod-transfer.png)。
-NAVSIM 那一列（navtest / navhard 官方 devkit）因为 NAVSIM 上原本没有 Qwen 特征，在补抽后再填，不改这里的判格。
+**NAVSIM 列**（补抽 navtest / navhard 的 Qwen 特征后，官方 devkit）同向且更重：Cinque `ridge_late` + Δ 对 prior 的 PDMS −8.2 [−8.9, −7.5]、EPDMS −13.0 [−13.7, −12.3]，
+走廊内有行人 / cyclist 的 897 个 token 上也是 −6.0 / −11.2，Lebowski −11 / −16，激活率 18% / 60%；唯一的例外是 navhard 两阶段聚合 EPDMS 升 4–5 分（无 CI，推测是普遍偏保守的修正在偏离后的合成场景里少撞，不是读出了场景）。
+NAVSIM 更重与它的输入协议（0.5 s 间隔的 clip、2 Hz 的 openpilot 喂法）离 CARLA 更远一致。
 
 **E3 可行性：log 里挖不出「场景解释的分叉」（两个数据集都不过）。** 按标准化 ego 历史在同 command / intent 内做最近邻、排除同一 log 与同一路段，再按未来分叉（4–5 s 速度差 ≥ 2 m/s 或横向差 ≥ 1 m）挑对：
 navtrain 4.0 万对、WOD train 4.0 万对，对数不缺；但分叉对 x⁺ 侧走廊内有接近物体的比例比孪生 null 低 37 pp（navtrain，GT，CI 整体 < 0），WOD（SAM）跨零。
@@ -3022,10 +3024,25 @@ navtrain 4.0 万对、WOD train 4.0 万对，对数不缺；但分叉对 x⁺ �
 这是看过数后的子集；用户 2026-09-26 决定不为它另行登记（真实数据的路由 E2 覆盖），E3 就此关闭。文献检索没有找到从真实 log 按 ego 状态挖配对做差分监督的先例（最近的是 copycat 基准 2504.14709 与 BranchDrive 2609.27275 的仿真分叉），写作「未见先例」。
 PDM scorer 对「继续 / 刹停」两条 proposal 的符号与人类一致率：逐 token 63%、逐对 79%（描述，n = 341 / 118）。
 
-**E2（真实帧反事实编辑对，SAM 3.1 抹行人 + LaMa inpainting，navtrain 为主）**：验证与批量在跑，结果出来后补进本条。
+**E2：真实帧反事实编辑对——不成立（本轮）。** SAM 3.1 按 pedestrian / cyclist 出 mask、LaMa 逐帧 inpainting 抹掉走廊内全部行人 / 骑车人，安慰剂 = 同样大小的块贴到空路面走同一管线。
+验证门都过了（YOLO26x 残留检出 navtrain 7.8% / WOD 3.5%，门槛 10%；navtrain 其他 GT agent 仍被检出 96.9%；16 对目检过），造出 navtrain 911 对、WOD 216 对。
+但编辑本身的信号弱：抹人在 Qwen `L18_last` 上的位移只比安慰剂大 21%（openpilot Cinque 2.4 倍，因此 Cinque 的双流行作废，只看 Qwen 流）。
 
-**状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。
-**怎么推进**：E2 用编辑对在真实特征上训 M-C，判据是编辑对上 |Δ| ≥ 2 × 安慰剂、WOD Pedestrians RFS Δ CI > 0 且直行激活率 ≤ 7%；若 E2 也不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。
+| 用编辑对训的 M-C（Cinque） | |Δ| 编辑 / 安慰剂（门槛 ≥ 2） | P5 BA 行人翻转 | WOD RFS Δ 全部 [CI] | WOD Pedestrians | 直行激活 |
+|:--|--:|--:|:--|:--|--:|
+| navtrain 对，配对差分 | 1.44 | 0% | −2.16 [−2.38, −1.95] | −2.39 | 4.7% |
+| 只 WOD 对（只 Qwen 流） | 2.16（Δ 中位只有 2 cm） | 0.5% | +0.01 [−0.01, +0.03] | −0.01 [−0.08, +0.07] | 0% |
+| navtrain + WOD 合训 | 1.60 | 0% | −2.26 | −2.10 | 0.6% |
+
+navtrain 训的 head 到 WOD 上有害（2 Hz → 10 Hz 的输入分布差，与 E1 NAVSIM 列同一个问题的反方向）；只用 WOD 对的 head 无害但什么也没学到（216 对、标签是「log 未来 − CTRA」而不是 expert 两侧重跑，ridge 把 Δ 收缩到近零）。
+按登记三个训练集都不同时满足「编辑 / 安慰剂 ≥ 2」与「WOD Pedestrians RFS Δ CI > 0」。限定：编辑对信噪比低、WOD 对少（CARLA 上激发用了约 400 个行人 reactive 帧）、标签 (c)（PDM scorer）没做。
+
+**对方向的含义**：配对差分在 CARLA 里激发得出来（第 42 条，以及同一条里 E5 的 20 Hz student），但本轮三条通往真实数据的路（零样本迁移、log 孪生对、真实帧编辑对）都没通：
+零样本有害，孪生对的分叉不是场景造成的，编辑对的信号在管线噪声量级。瓶颈不在 head 的训练信号，在「真实数据上有没有干净的配对标签」。
+
+**状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
+**怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选（都要新登记，未做）：几何一致的真实外观配对（HUGSIM 3DGS，I3 已有 65 个车辆场景；
+在那里 CARLA 拟合的 openpilot 读出零样本翻 70%，而 M-C Δ 反而 −11 pp，见 [i3 子文档](../todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md)）；更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）；以及带门控的部署形式。
 
 ## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
 
