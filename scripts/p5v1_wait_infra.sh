@@ -10,13 +10,14 @@ set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 PLAN=$DATA_DIR/runs/zeroshot-exam/gpu-plan.md
 OUT=$DATA_DIR/runs/p5v1/layout.infra.env
-until line=$(grep -F '[INFRA-PROFILE] layout ready' "$PLAN" | tail -1) && [[ -n $line ]]; do sleep 60; done
+# Only a line the infra agent wrote counts: timestamp, then the tag (a line that merely quotes the phrase does not).
+until line=$(grep -E '^[0-9-]+ [0-9:]+ \[INFRA-PROFILE\] layout ready' "$PLAN" | tail -1) && [[ -n $line ]]; do sleep 60; done
 echo "$(date +%T) infra layout reported: $line"
 {
     echo "# from gpu-plan.md at $(date '+%F %T'): $line"
     s=$(grep -oE 'servers_per_gpu=[0-9]+' <<< "$line" | tail -1 | cut -d= -f2)
     c=$(grep -oE 'cores_per_server=[0-9.]+' <<< "$line" | tail -1 | cut -d= -f2)
     [[ -n $s ]] && echo "INFRA_SERVERS_PER_GPU=$s"
-    [[ -n $c ]] && echo "INFRA_CORES_PER_SERVER=${c%%.*}"
+    [[ -n $c ]] && echo "INFRA_CORES_PER_SERVER=$(awk -v x="$c" 'BEGIN {printf "%d", (x == int(x)) ? x : int(x) + 1}')"
 } > "$OUT"
 cat "$OUT"
