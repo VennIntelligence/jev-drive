@@ -17,9 +17,12 @@ hf() {  # repo path dst
 import sys; from pathlib import Path; from jevdrive.hfdl import download, hf_url
 download(hf_url(sys.argv[1], sys.argv[2]), Path(sys.argv[3]), streams=16)" "$1" "$2" "$3"
 }
-gh_asset() {  # name dst_dir
-  [[ -s $2/$1 ]] || (source /etc/network_turbo >/dev/null; curl -fsSL --retry 3 -o "$2/$1.tmp" \
-    "https://github.com/ultralytics/assets/releases/download/v8.4.0/$1" && mv "$2/$1.tmp" "$2/$1")
+gh_asset() {  # name dst_dir; GitHub release assets through turbo, resumed across dropped connections
+  [[ -s $2/$1 ]] && return
+  (source /etc/network_turbo >/dev/null
+   for i in 1 2 3 4 5 6 7 8; do
+     curl -fsSL -C - -o "$2/$1.tmp" "https://github.com/ultralytics/assets/releases/download/v8.4.0/$1" && break
+   done) && mv "$2/$1.tmp" "$2/$1"
 }
 torch_env() {  # env dir: python 3.12 + torch 2.13 cu130 from the local wheel cache (same as envs/sam3)
   [[ -x $1/bin/python ]] || uv venv -q --python 3.12 "$1"
@@ -40,7 +43,7 @@ echo "efficientsam3 code at $(git -C "$TP/efficientsam3" rev-parse HEAD)"
 torch_env "$E"
 # no [stage1] extra: it pulls mmcv (a source build, training only); inference needs the core deps below
 "$E/bin/python" -c "import sam3.model_builder" 2>/dev/null || uv pip install -q --python "$E/bin/python" --index-url $MIRROR \
-  -e "$TP/efficientsam3" $common einops timm "setuptools<81"
+  -e "$TP/efficientsam3" $common einops timm omegaconf "setuptools<81"
 "$E/bin/python" -c "import sam3.model_builder" 2>/dev/null || uv pip install -q --python "$E/bin/python" --index-url $MIRROR \
   -e "$TP/efficientsam3/sam3"
 mkdir -p "$M/efficientsam3"
@@ -51,7 +54,8 @@ U=$DATA_DIR/envs/ultralytics
 torch_env "$U"
 "$U/bin/python" -c "import ultralytics" 2>/dev/null || uv pip install -q --python "$U/bin/python" --index-url $MIRROR ultralytics $common
 mkdir -p "$M/ultralytics"
-for f in yoloe-26x-seg.pt yoloe-26l-seg.pt yolo26x-seg.pt yolo26l-seg.pt yolo26x-depth.pt mobileclip2_b.ts; do gh_asset "$f" "$M/ultralytics"; done
+for f in yolo26x-seg.pt yolo26l-seg.pt; do hf Ultralytics/YOLO26 "$f" "$M/ultralytics/$f"; done   # HF copy, via hf-mirror
+for f in yoloe-26x-seg.pt yoloe-26l-seg.pt mobileclip2_b.ts yolo26x-depth.pt; do gh_asset "$f" "$M/ultralytics"; done
 # YOLOE's first set_classes() pip-installs ultralytics/CLIP from GitHub; do it here, through turbo, once.
 "$U/bin/python" -c "import clip" 2>/dev/null || (source /etc/network_turbo >/dev/null
   uv pip install -q --python "$U/bin/python" "git+https://github.com/ultralytics/CLIP.git")
