@@ -252,6 +252,17 @@ def forward_only(plan) -> np.ndarray:
     return np.cumsum(seg, axis=0)
 
 
+def straight_stop(plan, eps: float = 1.0) -> np.ndarray:
+    """A plan that ends within eps metres of the ego (mean speed < eps / 3 s) is a stop: its lateral part is
+    millimetre noise, but iLQR derives reference headings from consecutive points, so that noise becomes headings
+    anywhere in +-180 deg and the tracker steers and reverses a standing car (seen in the checklist). Such a plan is
+    sent straight ahead with its forward progress kept."""
+    p = np.array(plan, np.float64)
+    if np.linalg.norm(p[-1]) < eps:
+        p[:, 0] = 0.0
+    return p
+
+
 def openpilot_to_plan(plan_pos, t_idxs, dilation: float = 1.0) -> np.ndarray:
     """openpilot plan (calib frame at the camera: x fwd, y right; model time tau) -> HUGSIM plan. The model's
     clock runs `dilation` times faster than the simulator's (one 0.25 s step is fed as one 0.2 s context step),

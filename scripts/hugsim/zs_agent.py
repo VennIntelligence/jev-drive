@@ -18,7 +18,8 @@ Adapter geometry: jevdrive.hugsim_zs. Configuration comes from the environment (
                      follower of agent_client.py drives at <= 3 m/s while the model already runs on every frame;
                      default 0; a value past the episode length is shadow mode: the route follower drives the whole
                      episode and the model's plans are only logged), oracle_vmax (route follower speed cap, default 3),
-                     forward_only (jevdrive.hugsim_zs.forward_only on every model plan, default true)
+                     forward_only (jevdrive.hugsim_zs.forward_only on every model plan, default true),
+                     straight_stop (jevdrive.hugsim_zs.straight_stop after it, default true)
 
 Per scenario it writes <output>/zs_steps.jsonl (one line per step: ego state, command, model input summary, the
 model's own trajectory, the plan sent, timings) and optional <output>/zs_dump/<step>.npz (model inputs + plans).
@@ -161,6 +162,11 @@ class Agent:
                 if not np.allclose(fwd, plan):
                     rec["raw_plan"] = np.round(plan, 3).tolist()
                 plan = fwd
+            if self.opts.get("straight_stop", True):
+                st = Z.straight_stop(plan)
+                if not np.array_equal(st, plan):
+                    rec["stop"] = True
+                plan = st
             ta = info["timestamp"] + np.r_[0.0, Z.plan_times()]
             self.last = (Z.plan_to_world(np.r_[[[0.0, 0.0]], plan], pos, th), ta)
         if self.engage_s > 0 and info["timestamp"] < self.engage_s - 1e-6:

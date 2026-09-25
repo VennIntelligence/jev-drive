@@ -82,6 +82,15 @@ check-op)   # adapter acceptance, openpilot + references; two lanes (one simulat
       run route fixed "$OP_GPU" 1 $L; run cv fixed "$OP_GPU" 1 $L; run route official "$OP_GPU" 1 $L ) & b=$!
     wait $a $b
     ;;
+check-op2)  # checklist rerun of the model-driven runs after the straight-stop fix (shadow runs are not affected)
+    derive_check; opserv
+    ( for c in official fixed; do run cinque $c "$OP_GPU" 1 $L "$D"; done
+      run cinque fixed "$OP_GPU" 1 $T '{"dump_every": 4, "desire": false}' cinque-fixed-nodesire
+      run cinque fixed "$OP_GPU" 1 $S '{"dump_every": 4, "engage_s": 5}' cinque-fixed-engage ) & a=$!
+    ( for c in official fixed; do run lebowski $c "$OP_GPU" 1 $L "$D"; done
+      run lebowski fixed "$OP_GPU" 1 $T '{"dump_every": 4, "desire": false}' lebowski-fixed-nodesire ) & b=$!
+    wait $a $b
+    ;;
 check-alp)  # adapter acceptance, Alpamayo; two simulators against one server
     derive_check; alpserv
     ( run alpamayo official "$ALP_GPU" 1 $L "$D"
