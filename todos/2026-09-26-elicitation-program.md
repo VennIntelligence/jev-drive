@@ -164,7 +164,7 @@ E6（可选）──────────────────────
   打分名 `e1_<prior>_<model>_plus_mc`，配对 Δ 对 `heads_<prior>_<model>_temporal`（G3 的已存打分），token bootstrap。
   登记的三格判据都是 WOD 上的量（Pedestrians / Cyclists 的 RFS Δ、straight_yaw 激活率、全部 rater 帧 RFS Δ），所以 E1 的判格由 WOD 列下；NAVSIM 列按登记报表，不改判格。
 
-- 2026-09-26 00:30 CST（box 时钟）**[E4] 两种窗口的操作化**（写于任何 E4 数字之前；此前只见过 v1 两套集合的官方逐帧数，即第 42 条已记的那些）。
+- 2026-09-26 00:25 CST（box 时钟；原写 00:30 是手填的估计，已按提交 c160f08 的时间改正，E4 run 在 00:26:32）**[E4] 两种窗口的操作化**（写于任何 E4 数字之前；此前只见过 v1 两套集合的官方逐帧数，即第 42 条已记的那些）。
   输入全部是已存的逐帧打分，不重拟合：PDM-Lite 集 `runs/p5_pairs/exam-d0-carla_p5v1_pdm/20260925-230423`（TFv6 三通道、`ridge ego`、Qwen 与 openpilot 的 `ridge_late`）、
   `runs/reactivity/mc-carla_p5v1_pdm/20260925-230424`（M-C 全部 arm 与 prior）、`runs/fusion_diag/q6gt_carla_p5v1_pdm/20260925-233007`（Q6 GT 规则门）；BA 集用对应的三个 run 并排。
   Q6-SAM 在 v1 上按融合诊断 23:36 的决定没有跑，SAM 状态版考生缺，记为缺项，不补。Q1-v1 的拼接 arm 不在本项考生名单里。
@@ -302,7 +302,7 @@ E6（可选）──────────────────────
   有 future、且在 `op_calib_trainval.json` 里有标定的 sequence；SAM 3.1 原样（`sam_detect.detect`，exact 路径），只用 pedestrian / cyclist 两个 prompt，score > 0.5 与 Q2b 相同。全量 41.5 万帧要约 20 GPU·h，抽到 0.8 s 一帧把成本压到约 2.5 GPU·h，
   代价是同一事件只被看到一次或几次（候选本来就每个事件只取一帧）。WOD 编辑对的 clip 与 openpilot 输入怎么编（WOD 的 openpilot 特征按 sequence 流式抽，历史远长于 Qwen 的 0.6 s clip）在扫描出候选数后另行登记。
 
-- 2026-09-26 01:15 CST **[E4c] 曲线与人类 onset 的操作化**（写于任何 E4c 数字之前；此前见过的只有 E4 的表，即 reactive 帧离可见的分位数与 (a)(b) 翻转率）。
+- 2026-09-26 01:11 CST（box 时钟；原写 01:15 是手填的估计，已按提交 4a8d5d0 的时间改正，E4c run 在 01:13:12）**[E4c] 曲线与人类 onset 的操作化**（写于任何 E4c 数字之前；此前见过的只有 E4 的表，即 reactive 帧离可见的分位数与 (a)(b) 翻转率）。
   输入与 E4 相同（`jevdrive.elicit_e4.load` 读的三个官方 run × 两套集合，29 个考生 + 「GT 规则门 L = 0.6 s」描述行），只用已存逐帧 Δ，不重拟合。代码 `jevdrive/elicit_e4c.py`，run `runs/elicitation/e4c/<time>`。
   (1) **对的方向**：一对（base_id, seed）进曲线当且仅当它在该 scope 里有 ≥ 1 个 reactive 帧（与 E4 (b) 同一分母）；方向 d = sign(该对 reactive 帧 Δ_expert 之和)。
   (2) **考生在某帧「定向翻转」** = |Δ_model| ≥ τ_model（官方 τ，不改）且 sign(Δ_model) = d；**看该对的全部观测帧**（不只 reactive 帧），因为首次翻转要能早于 expert onset；只数 reactive 帧的版本（终点 = E4 (b)）作副读数。
@@ -330,6 +330,10 @@ E6（可选）──────────────────────
   (3) **judge**：`p5_exam.deltas` + `p5_exam.exam` 原样（`P5_SET=hugsim_pairs`），唯一改动是去掉 TFv6 三列（I3 没有 TFv6 shadow）；τ_model 由 I3 的 null 对定，定向翻转率、非反应帧误翻、样本外 null false-flip（null 场景两半互定 τ）、
   CI 按 base_id（场景）bootstrap 2000 次；family = static / cutin / oncoming 与合并（合并规则照 p5_exam：≥ 5 个 pair 有 reactive 帧的 family 进合并）。
   I3 的 null 只有 24 个场景、792 帧（cut-in 的同车同道版本），τ 与样本外 null false-flip 都只由它定，照记为限定。主读数：M-C pair [cinque] 的合并与逐 family 翻转率、样本外 null false-flip；与 `ridge_late op` prior 的配对差按 reactivity_mc.criteria 的 cut-in 口径（逐帧配对差、场景 bootstrap）描述，不设过线判格（本项在队列里是描述性读数）。
+
+- 2026-09-26 01:20 CST **[E4c] 事后偏离（看过人类 onset 的登记口径数字之后写，只加描述列，不改登记口径）**：rater_best 的 onset 有一半以上落在第一个区间（0.125 s）。
+  核查：rater 轨迹的第一个点不在 0.25 s——479 帧 × 3 条 rater 轨迹上，第一个区间的速度中位是 v0 的 0.71，之后各区间 0.97–1.01（log 是 0.99、0.98…），也就是第一个点大约在 0.18 s，
+  登记口径把这个时间基差读成了「减速」。所以加一个描述变体 `from2`：两种轨迹都从第二个区间（0.375 s 中点）起找 onset，其余不变。登记口径的数照报，但 rater_best 的登记口径数是伪影，读的时候用 `from2`。
 
 ## 结果
 
@@ -375,7 +379,7 @@ NAVSIM 列（偏离 (5)）：navtest 的 Qwen `L18_last` 正在 GPU 1 上抽（`
 ### E4：PDM-Lite 集的两种计分窗口（2026-09-26 00:27，CPU，< 1 min）
 
 代码 `jevdrive/elicit_e4.py`，run `$DATA_DIR/runs/elicitation/e4/20260926-002723`，小表 [research/results/elicitation/e4/](../research/results/elicitation/e4/)（`e4_all.csv` 是全部考生 × 窗口 × scope，`criterion.csv` 是判格，`reactive_lead_times.csv` 是 reactive 帧离可见的时间）。
-口径见偏离日志 [E4] 00:30。等价性：「逐帧」一列在两个集合的 29 个考生上逐项复现官方 run 的合并翻转率（最大差 1e-16），样本外 null false-flip 逐项相同（差 0）。
+口径见偏离日志 [E4] 00:25。等价性：「逐帧」一列在两个集合的 29 个考生上逐项复现官方 run 的合并翻转率（最大差 1e-16），样本外 null false-flip 逐项相同（差 0）。
 
 **先看 reactive 帧落在哪**（从因素对相机可见算起，秒）：
 

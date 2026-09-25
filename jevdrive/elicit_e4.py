@@ -1,4 +1,4 @@
-"""E4 of the elicitation program (todos/2026-09-26-elicitation-program.md, deviation-log entry [E4] 00:30): scoring
+"""E4 of the elicitation program (todos/2026-09-26-elicitation-program.md, deviation-log entry [E4] 00:25): scoring
 windows for the P5 v1 PDM-Lite set, where the expert reacts ~0.4 s after the factor becomes visible.
 
   (a) visibility gate  keep an observation frame only if k >= t_vis + L / TICK, L = the examinee's perception +

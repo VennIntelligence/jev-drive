@@ -1,4 +1,4 @@
-"""E4c of the elicitation program (todos/2026-09-26-elicitation-program.md, deviation-log entry [E4c] 01:15):
+"""E4c of the elicitation program (todos/2026-09-26-elicitation-program.md, deviation-log entry [E4c] 01:11):
 reaction-latency curves on both P5 v1 sets and the human onset anchor on WOD-E2E rater frames.
 
   curve   per pair (>= 1 reactive frame), cumulative share of pairs with a directional flip (|Delta_model| >=
@@ -158,24 +158,30 @@ def human_onset():
         pts = np.concatenate([np.zeros((len(tr), 1, 2)), tr], 1)
         v = np.linalg.norm(np.diff(pts, axis=1), axis=-1) / waymo.DT
         below = v < vc - DROP
-        first = np.where(below.any(1), tm[below.argmax(1)], np.nan)
-        out[f"onset_{name}"] = first
+        out[f"onset_{name}"] = np.where(below.any(1), tm[below.argmax(1)], np.nan)
+        # post-hoc (deviation log [E4c] 01:20): the rater trajectories' first waypoint sits at ~0.18 s, not 0.25 s
+        # (first-interval speed 0.71 v0 against 0.98-1.0 v0 afterwards), so the registered search puts a spurious
+        # onset at 0.125 s; this variant starts the search at the second interval for both trajectories
+        b2 = below[:, 1:]
+        out[f"onset_{name}_from2"] = np.where(b2.any(1), tm[1:][b2.argmax(1)], np.nan)
     return out
 
 
 def human_summary(h: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for cl, g in [("all three", h)] + [(c, h[h.cluster == c]) for c in CLUSTERS]:
-        for name in ("log", "rater_best"):
+        for name in ("log", "rater_best", "log_from2", "rater_best_from2"):
             v = g[f"onset_{name}"].dropna()
             rows.append({"cluster": cl, "trajectory": name, "frames": len(g), "with_onset": len(v),
                          "share_with_onset": len(v) / len(g) if len(g) else np.nan,
                          **{f"p{int(q * 100)}": float(np.quantile(v, q)) if len(v) else np.nan
                             for q in (0.1, 0.25, 0.5, 0.75, 0.9)},
                          "share_onset_1_3s": float(((v >= 1) & (v <= 3)).mean()) if len(v) else np.nan})
-        both = g.dropna(subset=["onset_log", "onset_rater_best"])
-        rows.append({"cluster": cl, "trajectory": "rater_best - log (paired)", "frames": len(g), "with_onset": len(both),
-                     "p50": float((both.onset_rater_best - both.onset_log).median()) if len(both) else np.nan})
+        for suf in ("", "_from2"):
+            both = g.dropna(subset=[f"onset_log{suf}", f"onset_rater_best{suf}"])
+            rows.append({"cluster": cl, "trajectory": f"rater_best{suf} - log{suf} (paired)", "frames": len(g),
+                         "with_onset": len(both),
+                         "p50": float((both[f"onset_rater_best{suf}"] - both[f"onset_log{suf}"]).median()) if len(both) else np.nan})
     return pd.DataFrame(rows)
 
 
@@ -239,12 +245,12 @@ def fig(run_dir: Path, out: Path):
     axs[0].legend(fontsize=5.5, loc="upper left")
     ax = axs[2]
     for name, col in (("log", "#0072B2"), ("rater_best", "#D55E00")):
-        v = np.sort(h[f"onset_{name}"].dropna().to_numpy())
+        v = np.sort(h[f"onset_{name}_from2"].dropna().to_numpy())
         ax.step(v, np.arange(1, len(v) + 1) / len(h), where="post", color=col, label=name.replace("_", " "))
     ax.axvspan(1, 3, color=ps.BASELINE, alpha=0.15, linewidth=0)
     ax.set_xlim(0, 5)
     ax.set_ylim(0, 1)
-    ax.set_xlabel("Onset after rater frame (s)")
+    ax.set_xlabel("Onset after rater frame (s)")   # post-hoc from2 variant, see the deviation log
     ax.set_ylabel("Share of frames")
     ax.legend(fontsize=6, loc="upper left")
     ps.panel(ax, "(c) WOD human onset")
@@ -257,13 +263,18 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["run", "fig"])
+    ap.add_argument("cmd", choices=["run", "human", "fig"])
     ap.add_argument("--run-dir", default="")
     a = ap.parse_args()
     if a.cmd == "run":
         rl = RunLog("elicitation", "e4c")
         run(rl)
         rl.close()
+    elif a.cmd == "human":                                  # rerun only the WOD part into an existing run dir
+        h = human_onset()
+        h.to_csv(Path(a.run_dir) / "human_onset_frames.csv", index=False)
+        human_summary(h).to_csv(Path(a.run_dir) / "human_onset_summary.csv", index=False)
+        log.info("human onset\n%s", human_summary(h).to_markdown(index=False, floatfmt=".2f"))
     else:
         out = data_dir() / "runs" / "elicitation" / "figs"
         out.mkdir(parents=True, exist_ok=True)
