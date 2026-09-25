@@ -2881,6 +2881,8 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 
 **P5 第一次闭环：基础设施验收（2026-09-25 晚，[b2d-controllers-p5.md](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)）。** 给控制器喂 PDM-Lite 专家自己的轨迹（replay 改成按时间索引、平滑追上），20 条预注册路线，P5 原样、不调参：横向在 1 / 2 / 5 Hz 下都合格（cross-track p95 0.11–0.17 m，固定控制器 0.55 m；lateral ratio 0.88–0.91），5 Hz 下 DS 88.5，比同协议的固定控制器高 +7.9 [+1.4, +15.0]、碰撞更少；但**纵向没过验收**：比专家时刻表落后 2.6–3.3 m（门槛 2 m），DS 离“专家 − 5”差 2.0–4.8。落后主要是每次起步 / 再起步晚约 0.5 s（plan 只有位置、专家踩油门后约 0.5 s 车才动，只看位置的执行器要等 plan 动了才加速），P5 只比固定控制器少落后 0.4–0.5 m。推测：P5 的纵向在“从静止跟上一个已经在加速的日程”这一类工况上没有优势，L1 的参考从静止缓启动（≤ 2 m/s²），覆盖不到这一类，没有单独验证。本条仍**待定**。
 
+**P5 / P6 接真实 planner 的闭环（2026-09-25，[scorecard](../todos/2026-09-23-tfv6-controller/controller-scorecard.md) 末节）。** TFv6 16 条 held-out 路线 × 2 seed、TCP 8 条路线子集。P6 = P5 + 终点逼近只对 ≤ 5 Hz 的 plan 启用。TFv6 平均 DS：P5 87.3、P6 87.1，与 C 86.5、D 86.0 同档（A 94.1）；碰撞 4 / 5 次（C 6、D 5）；可行 plan 的 0.5 s 位移误差 0.23–0.24 m，介于 B 0.33 与 C/D 0.09 之间；相对 A 的 DS −6.8 [−18.2, +1.3]、−6.9 [−21.1, +3.9]，与 C/D 一样未确立非劣。TCP 子集上 P5/P6 的额外 jerk 4.7 m/s³，低于 C 6.2、D 5.9。1825、4183 两条路线 P5/P6 两个 seed 都失败而 C/D 完成：逐帧看是 TFv6 起步给出约 3 s 内 0→11 m/s 并转弯的不可行 plan，P 系列近乎全油门忠实执行，C 更保守，P 以更高速度进路口撞车。读法：执行层越忠实，越暴露与 A 共训的模型 plan 的激进，A 的滞后在闭环里起可行性整形作用。是否给 P 系列加显式可行性整形（限制 plan 要求的加速度）是一个设计选择，需在 dev 上登记后再测。
+
 ## 42. 行人信息在 openpilot 的 vision 层就没有；配对差分监督在 cut-in 上有用而 hard-example 重加权没用，但救不回行人（**待定**，P5 v0，25 条路线、一个 expert）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
