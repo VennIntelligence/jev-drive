@@ -317,6 +317,20 @@ E6（可选）──────────────────────
   转向不影响速度剖面，所以 CTRA 的角速度项不进速度比较。onset = 第一个 v(t) < v_ctra(t) − 0.5 m/s 的区间中点；5 s 内没有就记「无 onset」。报每个 cluster 与合并的：有 onset 的比例、onset 的分位数（p10/25/50/75/90），log 与 rater_best 并列，
   以及同一帧上两者都有 onset 时的配对差。时间零点是 rater 帧本身（WOD 没有「可见」时刻），和 P5 的 t − t_vis 不是同一个零点，读的时候必须带这句。
 
+- 2026-09-26 01:13 CST [I3-exam]（夜间队列第 5 项，写于 I3 上任何特征或考生数字之前；结果写进 [i3 子文档](2026-09-25-reactivity-program/i3-hugsim-pairs.md) 的新一节）
+  I3 的 65 个 HUGSIM 场景上零样本跑现有考生，不重训、不调。
+  (1) **特征**。openpilot `temporal`（Cinque、Lebowski）：每个 `scenes/<key>/<world>/frames.jsonl` 一条 5 Hz 流、从零状态开始，`scripts/p5_openpilot.py` 的渲染与步进原样（Cinque 每帧保持 4 个 20 Hz 步、Lebowski context-rate 一步），
+  只换标定：每个场景用自己 `meta.json` 的 `cams`（K 与 c2front，即 `hugsim_zs.calibs` 的 E = v2front·inv(v2c)·rect）写成 camgeom 记录，openpilot calib 取 rpy = 0（HUGSIM 考试的约定），不做 1.25 倍时钟拉伸（渲染已是 0.2 s 一步）。
+  Qwen `L18_last`：P3(d″) 抽取器原样（eager、batch 2，`p5_qwen.work`），clip = 前三路 × 4 帧、间隔 0.2 s（渲染是 5 Hz，正好是 P5 的 clip 间隔），`index.parquet` 的 `files` 原样；只抽 obs / null 表引用到的帧。
+  图像是 800 × 450（P5 972 × 1079），由 processor 自己 resize，照记。
+  (2) **考生（全部在 P5 v1 BA 集上拟合、在 I3 上零样本）**：每个 fold f 的模型用 `reactivity_mc.fit_fold` 原样拟合（训练行 = BA 集 role = train 且 fold ≠ f，与存下来的 run 相同，fold head 先对已存预测核对 ≤ 1e-3 m），
+  I3 的帧作为不参与任何训练 / 标准化的附加行一起过同一个 forward，考生的预测 = 5 个 fold 模型的预测取平均。考生：`ridge ego`（两侧 ego 相同，理论上翻转 0，作 sanity）、
+  `ridge_late op-<model> temporal`（= M-C 的 prior）、`ridge_late L18_last`（Qwen，p5_exam.heads 同一配方、同样按 fold 平均）、**M-C pair [<model>]（主考生）**、以及 M-C 其余 arm（只 Qwen、只 openpilot、hard-example、均匀、μ = 0）作描述。
+  **prior 就是 M-C 自己的 prior**（每个 fold 的 `ridge_late op-<model> temporal`），不另选；cv 不列（两侧 ego 相同，Δ 恒为 0）。
+  (3) **judge**：`p5_exam.deltas` + `p5_exam.exam` 原样（`P5_SET=hugsim_pairs`），唯一改动是去掉 TFv6 三列（I3 没有 TFv6 shadow）；τ_model 由 I3 的 null 对定，定向翻转率、非反应帧误翻、样本外 null false-flip（null 场景两半互定 τ）、
+  CI 按 base_id（场景）bootstrap 2000 次；family = static / cutin / oncoming 与合并（合并规则照 p5_exam：≥ 5 个 pair 有 reactive 帧的 family 进合并）。
+  I3 的 null 只有 24 个场景、792 帧（cut-in 的同车同道版本），τ 与样本外 null false-flip 都只由它定，照记为限定。主读数：M-C pair [cinque] 的合并与逐 family 翻转率、样本外 null false-flip；与 `ridge_late op` prior 的配对差按 reactivity_mc.criteria 的 cut-in 口径（逐帧配对差、场景 bootstrap）描述，不设过线判格（本项在队列里是描述性读数）。
+
 ## 结果
 
 ### E1：M-C head 零样本套到 WOD（2026-09-26 00:31–00:34，GPU 1 几分钟重算 head，其余 CPU）
