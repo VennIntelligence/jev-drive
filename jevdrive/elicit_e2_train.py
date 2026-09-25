@@ -316,23 +316,27 @@ def feature_floor(d) -> pd.DataFrame:
 def run(rl):
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 12)))
     d = load_data(rl)
-    out = rl.dir
-    d["gates"].to_csv(out / "rule_gates.csv", index=False)
+    d["gates"].to_csv(rl.dir / "rule_gates.csv", index=False)
     ff = feature_floor(d)
-    ff.to_csv(out / "feature_floor.csv", index=False)
+    ff.to_csv(rl.dir / "feature_floor.csv", index=False)
     rl.info("feature shift, edit vs placebo\n" + ff.to_markdown(index=False, floatfmt=".3f"))
-    # R1 on the E1 head
+    readout_all(rl, d)
+
+
+def readout_all(rl, d: dict, prefix: str = ""):
+    """Fit every arm on the pairs in `d`, then R1 (with the E1 head), R2 (P5 v1 BA) and R3 (WOD val)."""
+    out = rl.dir / prefix
+    out.mkdir(parents=True, exist_ok=True)
     r1_rows, heads_all = {}, {}
     for m in MODELS:
         e1h = E1.fold_heads(m, rl)
-        sides = [E1.correction(e1h, d[f"Q {sd}"], d[f"op {m} {sd}"]) for sd in ("plus", "minus", "placebo")]
-        r1_rows[f"E1 M-C pair [{m}]"] = sides
+        r1_rows[f"E1 M-C pair [{m}]"] = [E1.correction(e1h, d[f"Q {sd}"], d[f"op {m} {sd}"]) for sd in ("plus", "minus", "placebo")]
         heads_all[m] = fit_arms(d, m, rl)
         for arm, h in heads_all[m].items():
             r1_rows[f"{arm} [{m}]"] = [apply(h, {s: d[f"{s} {sd}"] for s in h["streams"]}) for sd in ("plus", "minus", "placebo")]
     t1 = r1(d, r1_rows)
     t1.to_csv(out / "r1_magnitude.csv", index=False)
-    rl.info("R1\n" + t1.to_markdown(index=False, floatfmt=".3f"))
+    rl.info(f"{prefix}R1\n" + t1.to_markdown(index=False, floatfmt=".3f"))
     pickle.dump(heads_all, open(out / "heads.pkl", "wb"))
     # R2: P5 v1 BA exam
     t, past, fut, obs, null, pairs = E.load()
@@ -356,8 +360,8 @@ def run(rl):
     crit = pd.concat([MC.criteria(res, [k for k in preds if k.endswith(f"[{m}]")], f"prior [{m}]") for m in MODELS])
     res["flips"].to_csv(out / "p5_flip_rates.csv", index=False)
     crit.to_csv(out / "p5_criteria.csv", index=False)
-    rl.info("R2 P5 v1 BA\n" + crit.to_markdown(index=False, floatfmt=".3f"))
-    # R3: WOD
+    rl.info(f"{prefix}R2 P5 v1 BA\n" + crit.to_markdown(index=False, floatfmt=".3f"))
+    # R3: WOD val (E1's frames, prior and readouts)
     w = E1.wod_frames()
     tabs, acts = [], []
     for m in MODELS:
@@ -369,17 +373,122 @@ def run(rl):
             acts.append(act.assign(model=m, arm=arm, tau=tau))
     pd.concat(tabs).to_csv(out / "wod_deltas.csv", index=False)
     pd.concat(acts).to_csv(out / "wod_activation.csv", index=False)
-    rl.info("R3 WOD done")
+    rl.info(f"{prefix}R3 WOD done")
+
+
+# ---------------------------------------------------------------- WOD pairs (deviation [E2] 01:22)
+
+def _wod_ridge(X: torch.Tensor, Y: torch.Tensor, groups: np.ndarray, rows_out: np.ndarray, k: int = 4):
+    """Ridge with lambda by k-fold CV grouped by sequence (mean (x, y) ADE); predictions on rows_out."""
+    from . import planner
+    f = NH._group_folds(groups, k)
+    err = np.zeros(len(planner.LAM_RIDGE))
+    for q in range(k):
+        tr, te = np.flatnonzero(f != q), np.flatnonzero(f == q)
+        P_ = planner.linear_apply(planner.ridge_solve(X, Y, tr, planner.LAM_RIDGE), X, te)
+        err += (P_ - Y[te]).reshape(len(planner.LAM_RIDGE), len(te), -1, 2).norm(dim=-1).mean((1, 2)).cpu().numpy()
+    lam = float(planner.LAM_RIDGE[int(np.argmin(err))])
+    W = planner.ridge_solve(X, Y, np.arange(len(X)), [lam])
+    return planner.linear_apply(W, X, rows_out)[0], lam
+
+
+def load_wod(rl, tag: str = "main") -> dict:
+    """WOD edit pairs in load_data's layout: the openpilot stream is not edited (x- takes x+'s exam `temporal`),
+    so every side shares one prior; y+ = logged future, y- = CTRA from the past kinematics; 16-point grid."""
+    from . import waymo as W
+    root = E2.out_root("wod", tag)
+    recs = [r for m in sorted(root.glob("c*/meta.json")) for r in json.loads(m.read_text()) if r.get("valid")]
+    df = W.load_index()
+    names = W.frame_names(df)
+    at = pd.Series(np.arange(len(df)), index=names)
+    keys = np.array([r["key"] for r in recs])
+    rows = at[keys].to_numpy()
+    pl = np.array([any(i["placebo"] for i in r["images"]) for r in recs])
+    d = {"pairs": pd.DataFrame({"token": keys, "n_actors": [r["n_actors"] for r in recs]}), "tokens": keys,
+         "pl_tokens": keys[pl], "log": df.sequence.to_numpy()[rows]}
+    for sd, tk in (("plus", keys), ("minus", keys), ("placebo", keys[pl])):
+        d[f"Q {sd}"] = NQ.load(f"e2wod_{sd}", tk)["L18_last"]
+    past, future = W.load_ego()
+    fut = future[:, :, :2]
+    kin = W.past_kinematics(past[rows])
+    t = np.arange(1, 17) * 0.25
+    ys = []
+    for v0, a0, w in zip(kin["v"], kin["a"], kin["w"]):
+        e = {"vel": np.array([[v0, 0.0]]), "acc": np.array([[a0, 0.0]]), "pose": np.array([[0, 0, -w * 0.5], [0, 0, 0.0]])}
+        ys.append(ctra(e))
+    d["dy"] = {"a": fut[rows][:, :16] - np.stack(ys)}
+    d["y_single"] = {"a": (fut[rows][:, :16], np.stack(ys))}
+    # prior: WOD-train ridge ego + ridge_late <model> (entry 40 (iii)'s recipe), on the pair rows
+    tr = np.flatnonzero((df.split == "train").to_numpy() & df.has_future.to_numpy())
+    ego = np.concatenate([W.ego_state(past), W.intent_onehot(df)], 1).astype(np.float32)
+    Xe = torch.as_tensor(ego[tr], device="cuda")
+    mu, sd = Xe.mean(0), Xe.std(0).clamp_min(1e-6)
+    Xe = (Xe - mu) / sd
+    Y = torch.as_tensor(fut[tr].reshape(len(tr), -1), device="cuda")
+    pos = pd.Series(np.arange(len(tr)), index=tr)[rows].to_numpy()
+    grp = df.sequence.to_numpy()[tr]
+    base_all, lam_e = _wod_ridge(Xe, Y, grp, np.arange(len(tr)))
+    base = base_all[pos].reshape(-1, 20, 2).cpu().numpy()
+    d["s_ego"] = np.linalg.norm(base - fut[rows], axis=-1).mean(1)
+    for m in MODELS:
+        oi = pd.read_parquet(data_dir() / E1.WOD_FEAT / f"op_{m}_p3_trainval/index.parquet").frame_name
+        oat = pd.Series(np.arange(len(oi)), index=oi)
+        O = np.load(data_dir() / E1.WOD_FEAT / f"op_{m}_p3_trainval/temporal.npy", mmap_mode="r")
+        ok = pd.Series(names[tr]).isin(oi).to_numpy()
+        Xo = torch.as_tensor(O[oat[names[tr][ok]].to_numpy()].astype(np.float32), device="cuda")
+        Xo = (Xo - Xo.mean(0)) / Xo.std(0).clamp_min(1e-6)
+        R = Y[ok] - base_all[ok]
+        sub = pd.Series(np.arange(ok.sum()), index=tr[ok])
+        r, lam = _wod_ridge(Xo, R, grp[ok], sub[rows].to_numpy())
+        prior = grid16x(base + r.reshape(-1, 20, 2).cpu().numpy())
+        opx = O[oat[keys].to_numpy()].astype(np.float32)
+        for sd in ("plus", "minus", "placebo"):
+            sel = slice(None) if sd != "placebo" else pl
+            d[f"op {m} {sd}"] = opx[sel]
+            d[f"prior {m} {sd}"] = prior[sel]
+        rl.info(f"WOD prior {m}: ridge ego lam {lam_e}, ridge_late lam {lam}")
+        del Xo, R
+    del Xe, Y
+    torch.cuda.empty_cache()
+    rl.info(f"WOD pairs {len(keys)}, placebo {int(pl.sum())}, sequences {len(np.unique(d['log']))}")
+    return d
+
+
+def grid16x(p20: np.ndarray) -> np.ndarray:
+    """(n, 20, 2) on the 0.25 s grid -> its first 16 points (the training grid)."""
+    return p20[:, :16].astype(np.float32)
+
+
+def merge(a: dict, b: dict) -> dict:
+    out = {"pairs": pd.concat([a["pairs"][["token", "n_actors"]], b["pairs"][["token", "n_actors"]]], ignore_index=True)}
+    for k in ("tokens", "pl_tokens", "log", "s_ego"):
+        out[k] = np.concatenate([np.asarray(a[k]), np.asarray(b[k])])
+    for k, v in a.items():
+        if k.startswith(("Q ", "op ", "prior ")):
+            out[k] = np.concatenate([v, b[k]])
+    out["dy"] = {"a": np.concatenate([a["dy"]["a"], b["dy"]["a"]])}
+    out["y_single"] = {"a": tuple(np.concatenate([x, y]) for x, y in zip(a["y_single"]["a"], b["y_single"]["a"]))}
+    return out
+
+
+def run_wod(rl):
+    """WOD-only and navtrain + WOD heads, readouts R1-R3 exactly as `run`."""
+    torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 12)))
+    w = load_wod(rl)
+    n = load_data(rl)
+    for name, d in (("wod", w), ("nav+wod", merge(n, w))):
+        rl.info(f"--- {name}")
+        readout_all(rl, d, prefix=f"{name}/")
 
 
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("run",))
-    ap.parse_args()
-    rl = RunLog("elicitation", "e2-train")
-    run(rl)
+    ap.add_argument("cmd", choices=("run", "wod"))
+    a = ap.parse_args()
+    rl = RunLog("elicitation", "e2-train" if a.cmd == "run" else "e2-train-wod")
+    run(rl) if a.cmd == "run" else run_wod(rl)
     rl.close()
 
 
