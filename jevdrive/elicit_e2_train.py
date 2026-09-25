@@ -286,11 +286,30 @@ def r1(d, deltas: dict) -> pd.DataFrame:
     """|Delta(x+) - Delta(x-)| on edit pairs vs |Delta(x+) - Delta(placebo)| on placebo pairs, per head."""
     ipl = np.array([list(d["tokens"]).index(t) for t in d["pl_tokens"]])
     rows = []
+    na = d["pairs"].n_actors.to_numpy()
     for name, (dp, dm, dpl) in deltas.items():
         e, p = _mag(dp, dm), _mag(dp[ipl], dpl)
+        for grp, m in (("all", np.ones(len(e), bool)), ("1-3 actors", na <= 3), (">=4 actors", na >= 4)):
+            r, lo, hi = _ratio_ci(e[m], p, d["log"][m], d["log"][ipl])
+            rows.append({"head": name, "pairs": grp, "n_edit": int(m.sum()), "n_placebo": len(p),
+                         "median_edit_m": float(np.median(e[m])), "median_placebo_m": float(np.median(p)),
+                         "ratio": r, "lo": lo, "hi": hi, "pass_2x": r >= 2})
+    return pd.DataFrame(rows)
+
+
+def feature_floor(d) -> pd.DataFrame:
+    """Gate (d): per stream, |z(x+) - z(x-)| on edit pairs vs |z(x+) - z(placebo)| on placebo pairs (each stream
+    standardised over the x+ rows, per-dim RMS), median ratio with a log bootstrap."""
+    ipl = np.array([list(d["tokens"]).index(t) for t in d["pl_tokens"]])
+    rows = []
+    for s in ("Q",) + tuple(f"op {m}" for m in MODELS):
+        X = d[f"{s} plus"]
+        sd = np.where(X.std(0) > 1e-6, X.std(0), 1.0)
+        sh = lambda a, b: np.sqrt((((a - b) / sd) ** 2).mean(1))  # noqa: E731
+        e, p = sh(X, d[f"{s} minus"]), sh(X[ipl], d[f"{s} placebo"])
         r, lo, hi = _ratio_ci(e, p, d["log"], d["log"][ipl])
-        rows.append({"head": name, "n_edit": len(e), "n_placebo": len(p), "median_edit_m": float(np.median(e)),
-                     "median_placebo_m": float(np.median(p)), "ratio": r, "lo": lo, "hi": hi, "pass_2x": r >= 2})
+        rows.append({"stream": s, "median_edit": float(np.median(e)), "median_placebo": float(np.median(p)),
+                     "ratio": r, "lo": lo, "hi": hi})
     return pd.DataFrame(rows)
 
 
@@ -299,6 +318,9 @@ def run(rl):
     d = load_data(rl)
     out = rl.dir
     d["gates"].to_csv(out / "rule_gates.csv", index=False)
+    ff = feature_floor(d)
+    ff.to_csv(out / "feature_floor.csv", index=False)
+    rl.info("feature shift, edit vs placebo\n" + ff.to_markdown(index=False, floatfmt=".3f"))
     # R1 on the E1 head
     r1_rows, heads_all = {}, {}
     for m in MODELS:
