@@ -289,32 +289,34 @@ def pick_check(lst: pd.DataFrame, gt: pd.DataFrame, seed: int = 0) -> pd.DataFra
     return pd.concat(out, ignore_index=True)
 
 
-def check_ab(sel: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame) -> pd.DataFrame:
-    """(a) projected GT bottom centre (as registered) inside the matched mask's box, pixel error of the contact point
-    to the projected GT reference point;
-    (b) BEV error of the lifted contact point. One row per selected hazard."""
+def check_ab(sel: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame, calibs: dict) -> pd.DataFrame:
+    """The coordinate check, one row per selected object. The detection is found in the image, not in BEV: the
+    same-class SAM box that contains the projected GT bottom centre (registered (a)), nearest contact point if several.
+    Then (a) pixel error of its contact point to the projected GT reference point, (b) BEV error of the flat-ground
+    lift, and beside it the lift onto the object's true ground height (z = GT dz, an oracle): if the oracle error is
+    small, the chain (calibration, projection, lift) is right and what remains is the flat-ground assumption.
+    `bev_matched` says whether the registered BEV matching (gate max(2 m, 0.1 d)) pairs them."""
     rows = []
     for r in sel.itertuples():
-        g = gt[(gt.key == r.key)]
-        cls = r.cls
-        gm, _, dd = match(dets[dets.key == r.key], g, cls, (g.cls == cls).to_numpy())
+        g = gt[gt.key == r.key]
         gi = g.index[g.id == r.id][0]
-        di = gm.loc[gi]
-        row = {"key": r.key, "cls": cls, "cam": r.cam, "dist": r.dist, "family": r.family, "matched": di >= 0}
-        if di >= 0:
-            d = dets.loc[di]
-            row |= {"in_box": bool(d.x0 - 2 <= g.loc[gi, "ub"] <= d.x1 + 2 and d.y0 - 2 <= g.loc[gi, "vb"] <= d.y1 + 2),
-                    "in_box_ref": bool(d.x0 - 2 <= g.loc[gi, "u"] <= d.x1 + 2 and d.y0 - 2 <= g.loc[gi, "v"] <= d.y1 + 2),
-                    "du": float(d.cu - g.loc[gi, "u"]), "dv": float(d.cv - g.loc[gi, "v"]),
-                    "px_err": float(np.hypot(d.cu - g.loc[gi, "u"], d.cv - g.loc[gi, "v"])),
-                    "bev_err": float(dd.loc[gi]), "bev_err_centre": float(np.hypot(d.gx - g.loc[gi, "xc"], d.gy - g.loc[gi, "yc"])),
-                    "score": float(d.score)}
-        else:   # nearest detection of the class, for diagnosis
-            c = dets[(dets.key == r.key) & (dets.prompt == cls)]
-            if len(c):
-                j = np.argmin(np.hypot(c.gx - g.loc[gi, "x"], c.gy - g.loc[gi, "y"]))
-                row |= {"nearest_det_bev": float(np.hypot(c.gx.iloc[j] - g.loc[gi, "x"], c.gy.iloc[j] - g.loc[gi, "y"])),
-                        "nearest_det_px": float(np.hypot(c.cu.iloc[j] - g.loc[gi, "u"], c.cv.iloc[j] - g.loc[gi, "v"]))}
+        G = g.loc[gi]
+        c = dets[(dets.key == r.key) & (dets.prompt == r.cls)]
+        inb = c[(c.x0 - 2 <= G.ub) & (G.ub <= c.x1 + 2) & (c.y0 - 2 <= G.vb) & (G.vb <= c.y1 + 2)]
+        gm, _, dd = match(dets[dets.key == r.key], g, r.cls, (g.cls == r.cls).to_numpy())
+        row = {"key": r.key, "cls": r.cls, "cam": r.cam, "dist": G.dist, "dz": G.dz, "family": r.family,
+               "detected_in_box": len(inb) > 0, "bev_matched": bool(gm.loc[gi] >= 0),
+               "bev_err_matched": float(dd.loc[gi]) if gm.loc[gi] >= 0 else np.nan}
+        if len(inb):
+            d = inb.iloc[np.argmin(np.hypot(inb.cu - G.u, inb.cv - G.v))]
+            cal = calibs[r.cam]
+            flat, _ = lift(np.array([d.cu]), np.array([d.cv]), cal)
+            orc, _ = lift(np.array([d.cu]), np.array([d.cv]), cal, ground_z=float(G.dz))
+            row |= {"score": float(d.score), "du": float(d.cu - G.u), "dv": float(d.cv - G.v),
+                    "px_err": float(np.hypot(d.cu - G.u, d.cv - G.v)),
+                    "bev_err": float(np.hypot(flat[0, 0] - G.x, flat[0, 1] - G.y)),
+                    "bev_err_oracle_z": float(np.hypot(orc[0, 0] - G.x, orc[0, 1] - G.y)),
+                    "bev_err_centre": float(np.hypot(flat[0, 0] - G.xc, flat[0, 1] - G.yc))}
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -542,11 +544,13 @@ def main():
         d = load_dets(a.dets)
         d = lift_dets(d, d.key.str.split("|").str[1].to_numpy(), cal)
         g = gt[gt.key.isin(sel.key)]
-        r = check_ab(sel, g, d)
+        r = check_ab(sel, g, d, cal)
         r.to_csv(rl.dir / "check_ab.csv", index=False)
-        m = r[r.matched]
-        rl.info("check (a)(b):\n" + r.to_string() + f"\nmatched {len(m)}/{len(r)}; (a) in box {m.in_box.mean():.2f}, "
-                f"px err median {m.px_err.median():.1f}; (b) BEV err median (<= 20 m) {m[m.dist <= 20].bev_err.median():.2f} m")
+        m = r[r.detected_in_box]
+        near = m[m.dist <= 20]
+        rl.info("check (a)(b):\n" + r.to_string() + f"\n(a) detected with the GT bottom centre in the box: {len(m)}/{len(r)}; "
+                f"px err median {m.px_err.median():.1f}; (b) BEV err median <= 20 m: flat ground {near.bev_err.median():.2f} m, "
+                f"oracle height {near.bev_err_oracle_z.median():.2f} m (n = {len(near)}); BEV-matched {int(r.bev_matched.sum())}/{len(r)}")
     elif a.step == "p5_report":
         p5, gt = pd.read_parquet(L / "p5.parquet"), pd.read_parquet(L / "p5_gt.parquet")
         d = load_dets(a.dets)
