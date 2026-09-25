@@ -39,8 +39,11 @@ def carla_calib() -> dict:
 
 
 def root(*parts) -> Path:
-    from .p5_pairs import processed
-    return processed(*parts)
+    """p5_pairs.processed() without its pandas import (this module is loaded by the openpilot venv)."""
+    import os
+    p = data_dir() / "processed" / os.environ.get("P5_SET", "carla_p5") / Path(*parts)
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
 
 def prepare() -> dict:
