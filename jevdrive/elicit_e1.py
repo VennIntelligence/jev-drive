@@ -278,13 +278,13 @@ def run_navsim(rl):
                 p = np.load(data_dir() / NAV_HEADS / f"{split}_{pr}_{m}_temporal.npz")
                 assert (p["tokens"] == tok).all()
                 arm = p["poses"].copy()
-                arm[..., :2] += delta[:, 1::2]                   # 0.5 ... 4.0 s of the 0.25 s grid; heading kept
+                arm[..., :2] += delta[:, 1:16:2]                   # 0.5 ... 4.0 s of the 0.25 s grid; heading kept
                 np.savez(rl.dir / f"{split}_{pr}_{m}_plus_mc.npz", tokens=tok, poses=arm.astype(np.float32))
                 if split != "navtest":
                     continue
                 act = (np.abs(P.v2(_grid20(arm)) - P.v2(_grid20(p["poses"]))) >= tau).astype(float)
                 sc = nav_scopes(tok)
-                mag = np.linalg.norm(delta[:, 1::2], axis=-1).mean(-1)
+                mag = np.linalg.norm(delta[:, 1:16:2], axis=-1).mean(-1)
                 for name, msk in (("all", np.ones(len(tok), bool)), ("straight", sc.straight.to_numpy()),
                                   ("ped_cyc_corridor", sc.ped_cyc_corridor.to_numpy()),
                                   ("no ped_cyc", ~sc.ped_cyc_corridor.to_numpy())):
