@@ -206,6 +206,26 @@ E6（可选）──────────────────────
   (b) 逐对：sign(分差_x⁺ − 分差_x⁻) 与 sign(人类减速量_x⁺ − 人类减速量_x⁻) 一致的比例。token bootstrap CI。缓存或打分若实测超过 1 h 就停在已完成的子集上，照记。
   (12) **特征可得性**：统计主格分叉对里两侧都有现成特征的对数——navtrain / navtest 只有 openpilot `temporal`（无 Qwen）；WOD train 的 Qwen `L18_last` 只有 thin=4 的 137 533 个 train 行（`qwenvid_train_t4`），openpilot `temporal` 覆盖全部 trainval。
   并按 0.33–0.40 s / 帧 / 卡估双流训练所需的 Qwen 抽取量（GPU·h）。
+- 2026-09-26 00:40 CST [E2] 写于任何编辑对生成之前，也不读 E1 的任何数字（造对与 E1 无关；E2 的训练与读数开不开仍按 E1 判格）。卡：GPU 1（main 00:30 分配）。
+  (1) **inpainting**：LaMa（big-lama，官方权重的 TorchScript 版，`simple-lama-inpainting` v0.1.0 release 的 `big-lama.pt`，原样调用），**逐帧**，不用 ProPainter。
+  理由：NAVSIM 只有 2 Hz 帧，相邻两帧间 ego 位移常达数米、行人位移 0.5–1 m，ProPainter 的光流传播在这种间隔上不成立（它为 24–30 fps 视频设计）；WOD 的 clip 是 0.2 s 间隔，同样逐帧 LaMa，两个数据集一个配方。
+  逐帧的代价是 4 帧之间的填充纹理不严格一致，这正是安慰剂对照要量的东西。为了分辨率，LaMa 在 mask 外接框放大 2.5 倍（至少 384 px，边长补到 8 的倍数）的裁块上运行，输出只贴回（膨胀后的）mask 内，mask 外逐像素不变。
+  (2) **mask**：SAM 3.1（`envs/sam3`，`sam_detect.Detector` 原样的 exact 路径），prompt 只用 pedestrian、cyclist，保留 score ≥ 0.5（Q4 的分析阈值）。
+  被抹 actor 的身份由 GT 决定（navtrain）：把它的 3D 框投到每张图，取与投影框 IoU 最大且 ≥ 0.3 的 SAM mask（cyclist 取 pedestrian ∪ cyclist 里与框重叠 ≥ 0.3 的全部 mask 的并，人和车一起抹）；
+  mask 膨胀 max(7 px, 框高 × 8%)。SAM 在某张图上没配上时，退回投影 3D 框的凸包（膨胀同上），逐图记来源（sam / box），报比例。
+  (3) **候选（navtrain，主）**：navtrain 官方 token（103 288），t0 帧 GT 里 `pedestrian` 或 `bicycle`，中心在 ego 前方（x > 0）、距离 ≤ 30 m、到 logged 未来 4 s 路径折线（原点 + 8 个位姿，
+  折线两端外 1.5 m 也算，即 Q2b 的走廊定义）≤ 1.5 m，且 CAM_F0 上投影框高 ≥ 20 px。每个 token 只抹一个 actor（离 ego 最近的那个）；同一 actor 在同一 log 里只取一个 token（最早的），避免同一事件重复成几十个对。
+  (4) **编辑覆盖的帧**：特征读到的每一张图都要编辑——Qwen P3(d″) 的 clip 用前视三路 × 4 帧，NAVSIM 上对应 CAM_F0 / CAM_L0 / CAM_R0 × NAVSIM agent 可见的 4 帧（−1.5 / −1.0 / −0.5 / 0 s，2 Hz）；
+  openpilot 读 CAM_F0 的同 4 帧。所以每对最多 12 张图：该 actor（按 track token 在每一帧的 GT 里找）投影可见的图都抹，不可见的图原样。x⁺ = 原图，x⁻ = 抹掉后的图。
+  (5) **安慰剂**：同一 token、同样的 mask 形状，平移到「空路面」上再走同一条 inpainting 管线（没有物体被删，只量管线本身的特征位移）。
+  空路面 = ego logged 未来路径上一个固定的世界点（t0 帧里距离与被抹 actor 最接近、且在 5–30 m 之间的路径点），在每一帧里把 mask 的底边中点平移到该点的投影上；
+  平移后的 mask 与任何 GT agent 的投影框重叠 > 0 的候选点跳过，取下一个；找不到就记为无安慰剂。
+  (6) **验证门（批量之前，64 个 navtrain 候选）**：(a) 16 对目检（我看图：x⁺ / x⁻ / 安慰剂并排）；(b) 残留检出：YOLO26x-seg（COCO，`envs/ultralytics`，conf 0.25 的发布默认）在 x⁻ 上被抹 actor 投影框内仍有 person 检出（IoU ≥ 0.3）的比例，
+  分母 = x⁺ 上同一框内 YOLO 有 person 检出的图，门槛 ≤ 10%（2609.22582 报 8.5%）；(c) navtrain GT 核对：其他 GT 行人 / 车辆的投影框在 x⁻ 上 YOLO 仍检出的比例（相对 x⁺）≥ 95%，被 mask 覆盖 > 20% 的其他 actor 单独计数报出；
+  (d) 安慰剂对上 Qwen `L18_last` 与 openpilot `temporal` 的位移地板：要等特征抽取（NAVSIM 上目前没有 Qwen 特征），届时再量，不是批量前的门。(a)–(c) 任一不过就停下报。
+  (7) **WOD（第二数据集）**：候选 = Q2b 的前视 SAM 检测（val 的 20 237 帧，pedestrian / cyclist，score > 0.5，走廊同 (3) 但用 5 s 路径、≤ 30 m）；train 上没有检测，太少时在 train 前视帧上补跑 SAM（量按 E2 登记的估计）。
+  WOD 没有 3D 框，actor 身份由 t0 的 SAM mask 定，历史帧里按「同 prompt、框中心最近、IoU ≥ 0.2」逐帧往回关联；(c) 的 GT 核对在 WOD 上不适用。WOD 的 clip 是前视三路 × 4 帧、0.2 s 间隔。WOD 排在 navtrain 批量之后。
+  (8) 产物：`$DATA_DIR/processed/elicit_e2/<dataset>/`，按 chunk 锁文件认领、可续跑；每对存 x⁻ 与安慰剂的编辑图（JPEG q95）、mask（RLE）、元数据（token、actor、每图 mask 来源）。代码 `jevdrive/elicit_e2.py`。
 
 ## 结果
 
