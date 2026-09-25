@@ -72,7 +72,7 @@ def check_tree(name):
 
 def traffic_map():
     rows = csv.DictReader(open(REPO / "research" / "results" / "hugsim-exam" / "scenarios.csv"))
-    return {r["scenario"]: ([0, 1] if r["location"].startswith("singapore") else [1, 0]) for r in rows}
+    return {r["scene"]: ([0, 1] if r["location"].startswith("singapore") else [1, 0]) for r in rows}
 
 
 def unpack(ds, scene):
@@ -166,7 +166,7 @@ def run(a):
 
     def one(s):
         for attempt in range(1 + a.retries):
-            row = run_job(a, s, tag_dir, traffic.get(s.stem, [1, 0]))
+            row = run_job(a, s, tag_dir, traffic.get(s.stem.rsplit("-", 2)[0], [1, 0]))
             if row["end"] != "crash":
                 break
             print(f"  {s.stem}: crash (attempt {attempt + 1}), see {tag_dir}", flush=True)
