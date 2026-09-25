@@ -248,6 +248,17 @@ def port_free(port):
         return s.connect_ex(("127.0.0.1", port)) != 0
 
 
+def bindable(port):
+    """A port CARLA can listen on (scripts/b2d_scale.py): high indices put its ports inside the kernel's ephemeral
+    range, where an outgoing connection may hold one, and CARLA then dies at startup on `bind: Address already in use`."""
+    with socket.socket() as s:
+        try:
+            s.bind(("0.0.0.0", port))
+            return True
+        except OSError:
+            return False
+
+
 class Server(object):
     """One CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
@@ -274,6 +285,11 @@ class Server(object):
 
     def start(self, timeout=180.0):
         self.stop()
+        if self.span:          # --index-span runners (P5 v1): skip slots whose ports something else already holds
+            for _ in range(self.span // self.stride):
+                if all(bindable(p) for p in (self.port, self.port + 1, self.port + 2, self.tm_port, self.tm_port + 1)):
+                    break
+                self.move()
         self.starts += 1
         self.log = self.log_dir / ("carla-%d-%d.log" % (self.index, self.starts))
         while self.log.exists():
