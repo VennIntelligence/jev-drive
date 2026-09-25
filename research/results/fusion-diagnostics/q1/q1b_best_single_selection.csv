@@ -1,0 +1,11 @@
+family,direction,single,sel_rows,n_pre19,pre19_ade,n_rater,rfs_frame
+ridge,0,op-cinque temporal,train inner selection split,1077,1.6300567388534546,0,
+ridge,0,op-lebowski temporal,train inner selection split,1077,1.6296164989471436,0,
+ridge,0,qwenvid L18_last,train inner selection split,1077,1.9353972673416138,0,
+ridge,0,qwenvid L18_mean,train inner selection split,1077,1.9190196990966797,0,
+ridge,0,vjepa2 mean,train inner selection split,1077,1.902357578277588,0,
+cls,0,op-cinque temporal,train inner selection split,1077,2.152146100997925,0,
+cls,0,op-lebowski temporal,train inner selection split,1077,2.1587371826171875,0,
+cls,0,qwenvid L18_last,train inner selection split,1077,2.262580633163452,0,
+cls,0,qwenvid L18_mean,train inner selection split,1077,2.253190040588379,0,
+cls,0,vjepa2 mean,train inner selection split,1077,2.2630257606506348,0,

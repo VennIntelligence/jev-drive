@@ -1,0 +1,21 @@
+family,direction,single,sel_rows,n_pre19,pre19_ade,n_rater,rfs_frame
+ridge,0,op-cinque temporal,fit half (other direction's oos),640,1.634601354598999,241,7.190358260980326
+ridge,0,op-lebowski temporal,fit half (other direction's oos),640,1.699080228805542,241,7.212263121936986
+ridge,0,qwenvid L18_last,fit half (other direction's oos),640,1.8173961639404297,241,7.059336792008808
+ridge,0,qwenvid L18_mean,fit half (other direction's oos),640,1.7806568145751953,241,7.010228274502383
+ridge,0,vjepa2 mean,fit half (other direction's oos),640,1.7614028453826904,241,6.992043956829492
+ridge,1,op-cinque temporal,fit half (other direction's oos),625,1.8412504196166992,237,7.598557054796089
+ridge,1,op-lebowski temporal,fit half (other direction's oos),625,1.8399816751480103,237,7.519261124062551
+ridge,1,qwenvid L18_last,fit half (other direction's oos),625,1.8402652740478516,237,7.160847039391182
+ridge,1,qwenvid L18_mean,fit half (other direction's oos),625,1.8523257970809937,237,7.130599581507862
+ridge,1,vjepa2 mean,fit half (other direction's oos),625,1.8985004425048828,237,7.2418749754434
+cls,0,op-cinque temporal,fit half (other direction's oos),640,2.9382500648498535,241,6.743119300591617
+cls,0,op-lebowski temporal,fit half (other direction's oos),640,2.844083309173584,241,6.718805329081245
+cls,0,qwenvid L18_last,fit half (other direction's oos),640,3.0350279808044434,241,6.679611788077844
+cls,0,qwenvid L18_mean,fit half (other direction's oos),640,2.9140827655792236,241,6.689511902471943
+cls,0,vjepa2 mean,fit half (other direction's oos),640,2.981053590774536,241,6.70343892631482
+cls,1,op-cinque temporal,fit half (other direction's oos),625,2.6842763423919678,237,6.7533394382858605
+cls,1,op-lebowski temporal,fit half (other direction's oos),625,2.797729015350342,237,6.698589055195688
+cls,1,qwenvid L18_last,fit half (other direction's oos),625,2.8523409366607666,237,6.821860088448909
+cls,1,qwenvid L18_mean,fit half (other direction's oos),625,2.8689956665039062,237,6.848204205982728
+cls,1,vjepa2 mean,fit half (other direction's oos),625,2.8954715728759766,237,6.789364725489395

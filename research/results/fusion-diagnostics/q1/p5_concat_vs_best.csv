@@ -1,0 +1,25 @@
+protocol,family,readout,kind,arm,vs,is_best_single,n,routes,delta,lo,hi,ci_excludes_0,arm_rate,vs_rate
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,best single (pooled readout),True,490,25,-0.19591836734693877,-0.31840644863278833,-0.08417345281699325,True,0.2714285714285714,0.4673469387755102
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,ridge_late op-cinque temporal,False,490,25,-0.19591836734693877,-0.31840644863278833,-0.08417345281699325,True,0.2714285714285714,0.4673469387755102
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,490,25,0.2714285714285714,0.1443355119825708,0.4031167040387639,True,0.2714285714285714,0.0
+p5,ridge,flip rate (pooled),late,ridge_late late op-cinque temporal + qwenvid L18_last,best single (pooled readout),True,490,25,-0.08163265306122448,-0.1274471772862331,-0.04198130961588039,True,0.38571428571428573,0.4673469387755102
+p5,ridge,flip rate (pooled),late,ridge_late late op-cinque temporal + qwenvid L18_last,ridge_late op-cinque temporal,False,490,25,-0.08163265306122448,-0.1274471772862331,-0.04198130961588039,True,0.38571428571428573,0.4673469387755102
+p5,ridge,flip rate (pooled),late,ridge_late late op-cinque temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,490,25,0.38571428571428573,0.2402670810195632,0.506671052735097,True,0.38571428571428573,0.0
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,best single (pooled readout),True,490,25,-0.24489795918367346,-0.3943088192530844,-0.10385336284225784,True,0.22244897959183674,0.4673469387755102
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,ridge_late op-lebowski temporal,False,490,25,-0.19387755102040816,-0.33299356223175963,-0.0721026096095501,True,0.22244897959183674,0.4163265306122449
+p5,ridge,flip rate (pooled),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,490,25,0.22244897959183674,0.08589781687071596,0.3687453078078078,True,0.22244897959183674,0.0
+p5,ridge,flip rate (pooled),late,ridge_late late op-lebowski temporal + qwenvid L18_last,best single (pooled readout),True,490,25,-0.07551020408163266,-0.1813648937415842,0.032109713964325826,False,0.39183673469387753,0.4673469387755102
+p5,ridge,flip rate (pooled),late,ridge_late late op-lebowski temporal + qwenvid L18_last,ridge_late op-lebowski temporal,False,490,25,-0.024489795918367346,-0.06056873602241802,-0.0019989906919367535,True,0.39183673469387753,0.4163265306122449
+p5,ridge,flip rate (pooled),late,ridge_late late op-lebowski temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,490,25,0.39183673469387753,0.22799894725177305,0.5384218412850634,True,0.39183673469387753,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,best single (ped readout),True,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,ridge_late op-cinque temporal,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-cinque temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-cinque temporal + qwenvid L18_last,best single (ped readout),True,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-cinque temporal + qwenvid L18_last,ridge_late op-cinque temporal,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-cinque temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,best single (ped readout),True,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,ridge_late op-lebowski temporal,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),concat,ridge_late concat op-lebowski temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-lebowski temporal + qwenvid L18_last,best single (ped readout),True,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-lebowski temporal + qwenvid L18_last,ridge_late op-lebowski temporal,False,134,10,0.0,0.0,0.0,False,0.0,0.0
+p5,ridge,flip rate (ped),late,ridge_late late op-lebowski temporal + qwenvid L18_last,ridge_late qwenvid L18_last,False,134,10,0.0,0.0,0.0,False,0.0,0.0

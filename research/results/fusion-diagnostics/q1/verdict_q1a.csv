@@ -1,0 +1,20 @@
+arm,meets_both_directions
+cls ego K1024,False
+cls_late concat op-cinque temporal + qwenvid L18_last,False
+cls_late concat op-lebowski temporal + qwenvid L18_last,False
+cls_late late op-cinque temporal + qwenvid L18_last,False
+cls_late late op-lebowski temporal + qwenvid L18_last,False
+cls_late op-cinque temporal,False
+cls_late op-lebowski temporal,False
+cls_late qwenvid L18_last,False
+cls_late qwenvid L18_mean,False
+cls_late vjepa2 mean,False
+ridge_late concat op-cinque temporal + qwenvid L18_last,False
+ridge_late concat op-lebowski temporal + qwenvid L18_last,False
+ridge_late late op-cinque temporal + qwenvid L18_last,True
+ridge_late late op-lebowski temporal + qwenvid L18_last,True
+ridge_late op-cinque temporal,False
+ridge_late op-lebowski temporal,False
+ridge_late qwenvid L18_last,False
+ridge_late qwenvid L18_mean,False
+ridge_late vjepa2 mean,False
