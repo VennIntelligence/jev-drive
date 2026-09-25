@@ -119,7 +119,13 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--variants", default=",".join(VARIANTS))
     ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--summary-only", action="store_true", help="re-summarize an existing <out>/offline.csv")
     a = ap.parse_args()
+    if a.summary_only:
+        import csv
+        rows = [dict(r, solve_ms_med=float(r["solve_ms_med"]), solve_capped=float(r["solve_capped"]))
+                for r in csv.DictReader(open(Path(a.out) / "offline.csv"))]
+        return summarize(Path(a.out), rows)
     scen = [s if s.startswith("/") else str(D / "datasets" / "hugsim" / "scenarios" / s) for s in open(a.scenarios).read().split()]
     jobs = [(s, v, a.out) for v in a.variants.split(",") for s in scen]
     with ProcessPoolExecutor(a.workers) as ex:
@@ -129,8 +135,33 @@ def main():
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows(rows)
-    for r in rows:
-        print(r)
+    summarize(Path(a.out), rows)
+
+
+def summarize(out, rows):
+    """Per variant, pooled over scenarios: the preset_eval tracking metrics -> <out>/offline_summary.csv."""
+    import csv
+    from preset_eval import q, run_steps
+    res = []
+    for v in dict.fromkeys(r["variant"] for r in rows):
+        R = [r for r in rows if r["variant"] == v]
+        S = [s for r in R for s in run_steps(out / v / r["scenario"] / "zs_steps.jsonl")]
+        m = {"variant": v, "n_runs": len(R), "n_steps": len(S), "complete": sum(r["end"] == "complete" for r in R)}
+        for k in ("lat50", "lon50", "lat25"):
+            m[f"{k}_med"], m[f"{k}_p95"] = q([s.get(k) for s in S], 50), q([s.get(k) for s in S], 95)
+        m["hd50_med_deg"], m["hd50_p95_deg"] = (float(np.degrees(q([s.get("hd50") for s in S], p))) for p in (50, 95))
+        m["xt_med"], m["xt_p95"], m["xt_max"] = (q([s["log_xt"] for s in S], p) for p in (50, 95, 100))
+        m["xt_run_med_max"] = max(q([s["log_xt"] for s in run_steps(out / v / r["scenario"] / "zs_steps.jsonl")], 50)
+                                  for r in R)
+        m["solve_ms_med"] = float(np.median([r["solve_ms_med"] for r in R]))
+        m["solve_capped"] = float(np.mean([r["solve_capped"] for r in R]))
+        res.append({k: round(x, 4) if isinstance(x, float) else x for k, x in m.items()})
+    with open(out / "offline_summary.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(res[0]))
+        w.writeheader()
+        w.writerows(res)
+    for m in res:
+        print(m)
 
 
 if __name__ == "__main__":
