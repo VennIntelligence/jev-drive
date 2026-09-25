@@ -28,7 +28,8 @@ Outputs, in the attempt directory B2D_ATTEMPT_OUT:
   tfv6.jsonl      per tick: TFv6 target-speed distribution and scalar, 8 waypoints, 10 route points
   cams/<cam>/<frame>.jpg   the three Waymo-calibrated cameras of P4, unchanged
 
-Python 3.10: runs in envs/scout-tfv6 (carla 0.9.15 cp310, torch 2.8 cu128).
+Python 3.10: runs in envs/scout-tfv6 (carla 0.9.15 cp310, torch 2.8 cu128); with driver pdm_lite in envs/p5v1-pdm
+(SimLingo's environment, numpy 1.23, which PDM-Lite's ragged-array code needs, plus LEAD's imports).
 """
 import json
 import math
@@ -130,8 +131,8 @@ class P5PairAgent(SensorAgent):
         if team_code not in sys.path:
             sys.path.insert(0, team_code)      # autopilot.py imports its siblings (config, nav_planner, ...) top-level
         os.environ["IS_BENCH2DRIVE"] = "1"
-        # PDM-Lite was written for numpy < 1.24 (np.float etc.); these aliases are the builtins, restoring them
-        # changes nothing numerically. envs/scout-tfv6 has a newer numpy.
+        # PDM-Lite was written for numpy < 1.24 (np.float etc.; it also relies on 1.23's ragged-array semantics, hence
+        # envs/p5v1-pdm). The aliases are the builtins, so restoring them is a no-op where they exist.
         for k, v in (("float", float), ("int", int), ("bool", bool), ("object", object), ("complex", complex)):
             if not hasattr(np, k):
                 setattr(np, k, v)
@@ -193,6 +194,9 @@ class P5PairAgent(SensorAgent):
         for k, v in (("image_size_x", c["render_w"] // 2), ("image_size_y", c["render_h"] // 2), ("fov", self.fov)):
             bp.set_attribute(k, str(v))
         self._seg_buf = {}
+        # Spawned during this tick, so it has no image of this tick's frame: the first camera tick's visibility is
+        # None (v0 waited 5 s per run to find that out; P5 v1 profiling).
+        self._seg_first = True
         self._seg = world.spawn_actor(bp, carla.Transform(carla.Location(x=fx + p4.REAR_AXLE_X, y=-fy, z=fz - c["origin_z"])),
                                       attach_to=hero)
         self._seg.listen(lambda img: self._seg_buf.__setitem__(img.frame, bytes(img.raw_data)))
@@ -258,6 +262,9 @@ class P5PairAgent(SensorAgent):
         vehicles and two-wheelers 13-19, traffic lights 7) and belong to the box's dominant instance: an actor
         hidden behind a car contributes only the car's pixels, which belong to the car's own box. Returns
         {actor id: pixels, "L<light id>": pixels} for the actors that project into the image at all."""
+        if self._seg_first:
+            self._seg_first = False
+            return None
         deadline = time.time() + 5.0
         while frame not in self._seg_buf and time.time() < deadline:
             time.sleep(0.002)
