@@ -136,7 +136,7 @@ NAV_AGENTS = {  # devkit run name -> row label (exam rows from navsim.md, head r
     "human": "human (log)", "cv": "constant velocity", "alpamayo_nav": "Alpamayo 1.5 nav",
     "small_none": "op-small native", "cinque_none": "op-cinque native", "lebowski_none": "op-lebowski native",
     "cinque_cmd": "op-cinque native +cmd desire", "lebowski_cmd": "op-lebowski native +cmd desire",
-    "heads_ridge_ego": "ours ridge ego", "heads_cls_ego_K1024": "ours cls ego K1024",
+    "heads_ctrv": "ctrv", "heads_ridge_ego": "ours ridge ego", "heads_cls_ego_K1024": "ours cls ego K1024",
     "heads_ridge_late_cinque_temporal": "op-cinque temporal + ridge_late",
     "heads_cls_late_cinque_temporal": "op-cinque temporal + cls_late",
     "heads_ridge_late_lebowski_temporal": "op-lebowski temporal + ridge_late",
@@ -145,7 +145,7 @@ NAV_PAIRS = [("heads_ridge_late_cinque_temporal", "heads_ridge_ego"), ("heads_cl
              ("heads_ridge_late_lebowski_temporal", "heads_ridge_ego"), ("heads_cls_late_lebowski_temporal", "heads_cls_ego_K1024"),
              ("heads_ridge_late_cinque_temporal", "cinque_none"), ("heads_cls_late_cinque_temporal", "cinque_none"),
              ("heads_ridge_late_lebowski_temporal", "lebowski_none"), ("heads_cls_late_lebowski_temporal", "lebowski_none"),
-             ("heads_ridge_ego", "cv"), ("heads_cls_ego_K1024", "cv"), ("heads_cls_late_cinque_temporal", "cv"),
+             ("heads_ridge_ego", "cv"), ("heads_cls_ego_K1024", "cv"), ("heads_ctrv", "cv"), ("heads_cls_late_cinque_temporal", "cv"),
              ("heads_cls_late_lebowski_temporal", "cv"), ("cinque_none", "cv"), ("lebowski_none", "cv"), ("small_none", "cv"),
              ("cinque_none", "alpamayo_nav"), ("lebowski_none", "alpamayo_nav"), ("heads_cls_ego_K1024", "alpamayo_nav"),
              ("heads_cls_late_cinque_temporal", "alpamayo_nav"), ("heads_cls_late_lebowski_temporal", "alpamayo_nav")]
@@ -203,16 +203,70 @@ def navsim() -> dict:
             "navsim_navhard": pd.DataFrame(hard), "navsim_board": board}
 
 
+def continuation_share(wod_main: pd.DataFrame, nav: pd.DataFrame | None) -> pd.DataFrame:
+    """I2: how much of each benchmark's top score a planner that never looks at the road already gets.
+    share = baseline / top for higher-is-better metrics, top / baseline for L2. Sources per row in `source`."""
+    from . import waymo as W
+    from . import op_route as R
+    rows = []
+    add = lambda bench, metric, base, v, top, top_name, ref, ref_name, src, hib=True: rows.append({  # noqa: E731
+        "benchmark": bench, "metric": metric, "baseline": base, "value": v, "top": top, "top_entry": top_name,
+        "share_of_top": (v / top if hib else top / v) if v is not None else np.nan,
+        "reference": ref, "reference_name": ref_name,
+        "share_of_reference": (v / ref if hib else (np.nan if v == 0 else ref / v)) if (v is not None and ref) else np.nan,
+        "source": src})
+    wm = wod_main.set_index("row")["rfs_cluster"]
+    ctx = R.rater_context()
+    past = W.load_ego()[0][W.load_rater(W.load_index())[0]]
+    ctrv = W.rater_feedback_score(W.baselines(past)["ctrv"], ctx["rtraj"], ctx["rscore"], ctx["speed"])
+    ctrv_c = W.rfs_by_cluster(ctrv, ctx["cluster"])[0]
+    for b, v, src in (("cv", wm["cv"], "wod_main.csv"), ("ctrv", ctrv_c, "waymo.baselines, same 479 frames"),
+                      ("ego head: ridge ego", wm["ours ridge ego"], "wod_main.csv"),
+                      ("ego head: cls ego K1024", wm["ours cls ego K1024"], "wod_main.csv")):
+        add("WOD-E2E val (479 rater frames)", "RFS", b, v, 8.043, "RAP (test)", wm["logged future"], "logged future", src)
+    if nav is not None:
+        for metric, top, top_name in (("PDMS", 91.5, "SimWAM"), ("EPDMS", 90.2, "SimWAM")):
+            n = nav[nav.metric == metric].set_index("agent")["score"]
+            for b, a in (("cv", "cv"), ("ctrv", "heads_ctrv"), ("ego head: ridge ego", "heads_ridge_ego"),
+                         ("ego head: cls ego K1024", "heads_cls_ego_K1024")):
+                if a in n:
+                    add("NAVSIM navtest", metric, b, n[a], top, top_name, n.get("human"), "human (log, our devkit)",
+                        "navsim_navtest.csv")
+        add("NAVSIM navtest", "PDMS", "ego MLP (literature)", 65.6, 91.5, "SimWAM", 94.8, "human (paper)", "arXiv 2406.15349 Tab. 2")
+    # nuScenes, BEV-Planner's unified implementation on the 5119 valid samples (nuscenes-physicalai.md), L2 mean 1-3 s
+    for b, v, src in (("cv (GoStraight)", 0.83, "BEV-Planner Tab. 1"), ("cv (ours, valid)", (0.38 + 0.82 + 1.40) / 3, "nuscenes-physicalai.md"),
+                      ("ego MLP (literature)", 0.35, "BEV-Planner Tab. 1")):
+        add("nuScenes val", "L2 avg (m)", b, v, 0.37, "VAD-Base (with ego status)", None, "", src, hib=False)
+    add("Bench2Drive open loop (50 clips)", "L2 avg 2 s (m)", "ego MLP: AD-MLP (literature)", 3.64, 0.73, "UniAD-Base", None, "",
+        "arXiv 2406.03877 Tab. 3", hib=False)
+    add("Bench2Drive closed loop (220 routes)", "DS", "ego MLP: AD-MLP (literature)", 18.05, 90.6, "BLUE (decision 38)", None, "",
+        "arXiv 2406.03877 Tab. 3; decision 38")
+    hp = REPO / "research/results/openpilot-openloop/hugsim_base.csv"
+    if hp.exists():
+        h = pd.read_csv(hp).set_index("tag")["hd"]
+        for tag in ("cv-official", "cv-fixed"):
+            add("HUGSIM (64 scenarios)", "HD-Score", tag, h[tag], 0.299, "UniAD (paper Tab. 13)", h[tag.replace("cv", "ltf")],
+                "LTF, same controller", "hugsim-exam scored-base")
+    return pd.DataFrame(rows)
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("wod", "navsim"))
+    ap.add_argument("step", choices=("wod", "navsim", "share"))
     ap.add_argument("--desire-run", default="")
     a = ap.parse_args()
     (REPO / "research/results/openpilot-openloop").mkdir(parents=True, exist_ok=True)
     rl = RunLog("openloop_standing", a.step)
-    out = wod(a.desire_run) if a.step == "wod" else navsim()
+    if a.step == "wod":
+        out = wod(a.desire_run)
+    elif a.step == "navsim":
+        out = navsim()
+    else:
+        res = REPO / "research/results/openpilot-openloop"
+        nav = pd.read_csv(res / "navsim_navtest.csv") if (res / "navsim_navtest.csv").exists() else None
+        out = {"continuation_share": continuation_share(pd.read_csv(res / "wod_main.csv"), nav)}
     for name, t in out.items():
         t.to_csv(rl.dir / f"{name}.csv", index=False)
         t.to_csv(REPO / "research/results/openpilot-openloop" / f"{name}.csv", index=False, float_format="%.4f")
