@@ -2,10 +2,12 @@
 """Batch runner of HUGSIM's official closed_loop.py for the zero-shot exam (todos/2026-09-25-hugsim-exam).
 
 One job = (scenario, agent, controller). Agents: alpamayo / cinque / lebowski (scripts/hugsim/zs_agent.py against a
-resident scripts/hugsim_zs_server.py), cv / route (scripts/hugsim/agent_client.py), ltf (the official LTF client).
-Controllers run from two private copies of the patched HUGSIM tree, so nobody else's apply / revert of the optional
-patch can touch a running job:  official = patches/hugsim/*.patch,  fixed = + optional/lqr-heading-fix.patch.
-The patch state of both trees is verified before every job.
+resident scripts/hugsim_zs_server.py), cv / route (scripts/hugsim/agent_client.py), ltf (the official LTF client),
+preset (the scene's logged trajectory as the plan, scripts/hugsim/preset_agent.py; controller acceptance).
+Controllers run from private copies of the patched HUGSIM tree, so nobody else's apply / revert of the optional
+patch can touch a running job:  official = patches/hugsim/*.patch,  fixed = + optional/lqr-heading-fix.patch,
+ideal = + optional/ideal-tracker.patch (no iLQR: the ego moves exactly along the plan; reference for acceptance,
+created only by `setup-trees ideal`). The patch state of the job's tree is verified before every job.
 
     python scripts/hugsim/zs_run.py setup-trees
     python scripts/hugsim/zs_run.py run --out $DATA_DIR/runs/hugsim-exam --agent cinque --controller official \
@@ -33,9 +35,10 @@ REPO = Path(__file__).resolve().parents[2]
 D = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 DATA = D / "datasets" / "hugsim"
 PY = D / "envs" / "hugsim" / "bin" / "python"
-TREES = {"official": D / "third_party" / "HUGSIM-zs" / "official", "fixed": D / "third_party" / "HUGSIM-zs" / "fixed"}
+TREES = {c: D / "third_party" / "HUGSIM-zs" / c for c in ("official", "fixed", "ideal")}
 FIX = REPO / "patches" / "hugsim" / "optional" / "lqr-heading-fix.patch"
-AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf"}
+IDEAL = REPO / "patches" / "hugsim" / "optional" / "ideal-tracker.patch"
+AD = {"alpamayo": "zs", "cinque": "zs", "lebowski": "zs", "cv": "jev", "route": "jev", "ltf": "ltf", "preset": "pre"}
 FIELDS = ["scenario", "dataset", "difficulty", "agent", "controller", "tag", "hdscore", "rc", "nc", "dac", "ttc", "c",
           "pdms", "steps", "end", "wall_s", "rc_code", "finished", "scene", "run_dir"]
 END = [("Collision with background", "bg_collision"), ("Collision with foreground", "fg_collision"),
@@ -46,9 +49,10 @@ def sh(*a, **k):
     return subprocess.run(a, check=True, capture_output=True, text=True, **k).stdout
 
 
-def setup_trees():
+def setup_trees(names=("official", "fixed")):
     src = D / "third_party" / "HUGSIM"
-    for name, dst in TREES.items():
+    for name in names:
+        dst = TREES[name]
         if not dst.exists():
             dst.parent.mkdir(parents=True, exist_ok=True)
             sh("git", "clone", "-q", str(src), str(dst))
@@ -57,17 +61,24 @@ def setup_trees():
                 sh("git", "-C", str(dst), "apply", str(p))
             if name == "fixed":
                 sh("git", "-C", str(dst), "apply", str(FIX))
+            if name == "ideal":
+                sh("git", "-C", str(dst), "apply", str(IDEAL))
         check_tree(name)
         print(name, dst, "ok")
 
 
+def applied(t, patch):
+    fwd = subprocess.run(["git", "-C", t, "apply", "--check", str(patch)], capture_output=True).returncode == 0
+    rev = subprocess.run(["git", "-C", t, "apply", "-R", "--check", str(patch)], capture_output=True).returncode == 0
+    return rev if fwd != rev else None                     # None: neither or both apply (a broken tree)
+
+
 def check_tree(name):
     t = str(TREES[name])
-    fwd = subprocess.run(["git", "-C", t, "apply", "--check", str(FIX)], capture_output=True).returncode == 0
-    rev = subprocess.run(["git", "-C", t, "apply", "-R", "--check", str(FIX)], capture_output=True).returncode == 0
-    ok = (fwd and not rev) if name == "official" else (rev and not fwd)
-    if not ok:
+    if applied(t, FIX) is not (name == "fixed"):
         raise SystemExit(f"tree {t}: optional LQR patch state wrong for controller '{name}'")
+    if name == "ideal" and not applied(t, IDEAL):
+        raise SystemExit(f"tree {t}: ideal-tracker patch not applied")
 
 
 def traffic_map():
@@ -115,7 +126,8 @@ def run_job(a, scen, tag_dir, traffic):
     base = tag_dir / f"base_{ds}.yaml"
     base.write_text(f"realcar_path: {DATA}/3DRealCar\nmodel_base: {DATA}/scenes/{ds}\n"
                     f"zs_path: {REPO}/scripts/hugsim/zs_agent_e2e.sh\njev_path: {REPO}/scripts/hugsim/agent_e2e.sh\n"
-                    f"ltf_path: {REPO}/scripts/hugsim/ltf_e2e.sh\noutput_dir: {tag_dir}/\n"
+                    f"ltf_path: {REPO}/scripts/hugsim/ltf_e2e.sh\npre_path: {REPO}/scripts/hugsim/preset_agent_e2e.sh\n"
+                    f"output_dir: {tag_dir}/\n"
                     f"HD_map:\n  path: {DATA}/nusc_map_cache\n  version: nusc_trainval\n")
     run_dir = tag_dir / ad / f"{scene}_{mode}"
     if run_dir.exists():
@@ -203,7 +215,8 @@ def derive(a):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("setup-trees")
+    st = sub.add_parser("setup-trees")
+    st.add_argument("names", nargs="*", default=["official", "fixed"], choices=list(TREES))
     dv = sub.add_parser("derive")
     dv.add_argument("src")
     dv.add_argument("dst")
@@ -222,4 +235,4 @@ if __name__ == "__main__":
     r.add_argument("--retries", type=int, default=1)
     r.add_argument("--max-fail", type=int, default=3)
     a = ap.parse_args()
-    sys.exit({"setup-trees": lambda a: setup_trees(), "derive": derive, "run": run}[a.cmd](a))
+    sys.exit({"setup-trees": lambda a: setup_trees(a.names), "derive": derive, "run": run}[a.cmd](a))

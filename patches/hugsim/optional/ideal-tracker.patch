@@ -1,0 +1,65 @@
+diff --git a/closed_loop.py b/closed_loop.py
+index f644084..b8fd196 100644
+--- a/closed_loop.py
++++ b/closed_loop.py
+@@ -61,9 +61,16 @@ def create_gym_env(cfg, output):
+             plan_traj = pickle.loads(pipe.read())
+ 
+         if plan_traj is not None:
+-            acc, steer_rate = traj2control(plan_traj, info)
+-
+-            action = {'acc': acc, 'steer_rate': steer_rate}
++            # jev-drive ideal tracker (patches/hugsim/optional/ideal-tracker.patch): no iLQR, the ego moves exactly
++            # along the plan for one step (quadratic through the origin and the first two waypoints at t = 0.5, 1.0 s)
++            p1 = np.asarray(plan_traj, dtype=np.float64)[0]
++            p2 = np.asarray(plan_traj, dtype=np.float64)[1] if len(plan_traj) > 1 else 2 * p1
++            qa, qb = 4 * p1 - p2, 2 * (p2 - 2 * p1)                 # p(t) = qa t + qb t^2, t in seconds
++            dt = float(cfg.kinematic.dt)
++            pos, vel = qa * dt + qb * dt ** 2, qa + 2 * qb * dt
++            speed = float(np.linalg.norm(vel))
++            dth = float(np.arctan2(vel[0], vel[1])) if speed > 1e-6 else 0.0
++            action = {'pose': (float(pos[0]), float(pos[1]), dth, speed)}
+             obs, reward, terminated, truncated, info = env.step(action)
+             cnt += 1
+             done = terminated or truncated or cnt > 400
+diff --git a/sim/hugsim_env/envs/hug_sim.py b/sim/hugsim_env/envs/hug_sim.py
+index c80fa5f..915c4e2 100644
+--- a/sim/hugsim_env/envs/hug_sim.py
++++ b/sim/hugsim_env/envs/hug_sim.py
+@@ -278,16 +278,27 @@ class HUGSimEnv(gymnasium.Env):
+         self.timestamp += self.dt
+         if self.planner is not None:
+             self.render_kwargs['planning'] = self.planner.plan_traj(self.timestamp, self.ego_state)
+-        steer_rate, acc = action['steer_rate'], action['acc']
+-        self.last_steer_rate, self.last_accel = steer_rate, acc
+         L = self.kinematic['Lr'] + self.kinematic['Lf']
+-        self.velo += acc * self.dt
+-        self.steer += steer_rate * self.dt
+-        theta = self.vr[1]
+-        # print(theta / np.pi * 180, self.steer / np.pi * 180)
+-        self.vab[0] = self.vab[0] + self.velo * np.sin(theta) * self.dt
+-        self.vab[1] = self.vab[1] + self.velo * np.cos(theta) * self.dt
+-        self.vr[1] = theta + self.velo * np.tan(self.steer) / L * self.dt
++        if 'pose' in action:  # jev-drive ideal tracker: (right, forward, yaw change, speed) of this step, ego frame
++            x, y, dth, v = action['pose']
++            theta = self.vr[1]
++            self.last_steer_rate, self.last_accel = 0.0, (v - self.velo) / self.dt
++            self.vab[0] = self.vab[0] + x * np.cos(theta) + y * np.sin(theta)
++            self.vab[1] = self.vab[1] - x * np.sin(theta) + y * np.cos(theta)
++            self.vr[1] = theta + dth
++            self.velo = v
++            if v > 1e-3:
++                self.steer = float(np.arctan(L * dth / (v * self.dt)))
++        else:
++            steer_rate, acc = action['steer_rate'], action['acc']
++            self.last_steer_rate, self.last_accel = steer_rate, acc
++            self.velo += acc * self.dt
++            self.steer += steer_rate * self.dt
++            theta = self.vr[1]
++            # print(theta / np.pi * 180, self.steer / np.pi * 180)
++            self.vab[0] = self.vab[0] + self.velo * np.sin(theta) * self.dt
++            self.vab[1] = self.vab[1] + self.velo * np.cos(theta) * self.dt
++            self.vr[1] = theta + self.velo * np.tan(self.steer) / L * self.dt
+ 
+         terminated = False
+         reward = 0
