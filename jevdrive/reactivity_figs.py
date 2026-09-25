@@ -44,6 +44,7 @@ def d0(run: Path, out: Path):
     ax.axhline(0.5, color=ps.BASELINE, linewidth=0.5, linestyle=":")
     ax.axhline(0.6, color=ps.BASELINE, linewidth=0.5, linestyle="--")
     ax.set_ylabel(r"Hazard probe AUC (x$^+$ vs x$^-$)")
+    ax.set_ylim(0.42, 1.0)
     ax.legend(ncol=4, fontsize=6.5, loc="upper left")
     ps.panel(ax, "(a)")
     # (b) paired delta against the same model's temporal

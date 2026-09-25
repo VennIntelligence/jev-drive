@@ -2871,3 +2871,27 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 **读法。** 执行层"跟得准"已经可以做到并被公平地测出来（L1），也能在闭环里保持（C/D 的 0.5 s 位移误差在两个 planner 上都显著最好），但它不转化为 TFv6 上的 DS：A 就是 TFv6 训练数据的 expert（LEAD PDM-Lite）控制器，参数逐项相同，模型与之共同优化。L1 本身在 v1 里有七处接口伪差，多数偏向 C，修完后 C 的 L1 优势缩小但仍显著。L1 对闭环的预测力不足，缺"跟车蠕行到停"和"带模型噪声的 plan"两类工况。
 
 **怎么推翻或推进。** TCP 的 L3 需要跑满 16 条路线 × 2 seed 才能收窄 CI；下一版 L1 加入上述两类工况后，再判断 P2 这类平顺化设计是否值得在闭环里继续做。
+
+## 42. 行人信息在 openpilot 的 vision 层就没有；配对差分监督在 cut-in 上有用而 hard-example 重加权没用，但救不回行人（**待定**，P5 v0，25 条路线、一个 expert）
+
+2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
+接第 40 条和 [op-temporal-p5-and-route](../todos/2026-09-25-openpilot-temporal-p5-and-route.md) 的实验 1：openpilot `temporal` 在 cut-in 上 `ridge_late` 就翻转 86–89%，行人上 probe 0.50–0.53、翻转 0。
+
+**D0（vision 层 probe，判据预登记）**：把 tap 从 `temporal` 换成时间模块之前的 vision encoder 输出（主 tap `vision`：Cinque 512 维 pooled、Lebowski 3072 维；次要 `hidden`），
+同一 hazard probe、同一 fold。行人 4 个 family 合并的 1999 个观测帧上，`vision` AUC **0.515 [0.503, 0.535]（Cinque）/ 0.519 [0.495, 0.552]（Lebowski）**，
+对同模型 `temporal` 的配对 Δ +0.009 [−0.003, +0.017] / +0.002 [−0.025, +0.051]；Qwen `L18_last` 在同一批帧上 0.620。两个模型都不过「AUC ≥ 0.60 且 Δ CI > 0」。
+**所以行人信息是 vision encoder 就滤掉了，不是 policy 丢的**；第 40 条「openpilot `temporal` 是最强冻结表征」对行人这一类 hazard 不成立，而且换到 vision 层也补不上。
+按预登记，**M-A（冻结 vision、重训 temporal policy）单独不够**，行人要靠第二路输入（M-C）。
+
+**M-C（双流 reaction head，线性，prior = openpilot `ridge_late`）**：配对差分 loss 在 cut-in 上把翻转率从 63.6% 提到 76.9%（配对 Δ +13.3 pp [+6.6, +20.8]），
+只用 openpilot 流 +16.1 pp；同数据同特征的 hard-example 重加权 −1.7 pp、均匀 imitation +0.3 pp；null false-flip 全部 5.0–6.1% 不动。
+**这是第 21 条 D1「配对结构 vs 纯加权」那一格的第一个数，方向对配对结构有利。** 但行人翻转在所有 arm 上都是 0：配对差分把行人 Δ 放大约 2.5 倍、同号比例 58% → 67%，
+仍在噪声门槛之下；训练 fold 内的拟合斜率只有中位约 0.12（cut-in 0.23–0.48），说明 pooled 的 Qwen ⊕ openpilot 特征连训练对上的行人反应量都线性读不出来。
+判据（行人 ≥ 20% 且 CI 下端 > null false-flip）没有一个 arm 过。
+
+**状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
+I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
+
+**对选型的含义（推测）**：行人这条线的瓶颈是输入表征的空间分辨率，而不是训练信号；下一步是空间 token 上的 readout（P2 的 attention head 那一格）或 video token，
+而不是再换 loss。cut-in 这类 openpilot 训练分布内的反应，配对差分 + openpilot 冻结特征就够。
+**会推翻本条的证据**：P5 v1（更多路线、PDM-Lite 标签）上 vision 层行人 AUC 过 0.60；或 M-C 在 v1 上行人翻转过 20%（那说明 v0 是数据量问题，不是表征问题）。

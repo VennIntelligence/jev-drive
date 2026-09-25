@@ -1,6 +1,6 @@
 # reactivity 计划：决定性检查、方法实验、仪器加固（排 GPU 用）
 
-状态: 待排（预登记，写于任何新抽取之前，2026-09-25）
+状态: 进行中（预登记写于任何新抽取之前，2026-09-25）；D0、M-C（v0 smoke）、I3、I4 已出，I1 生成在跑，M-A 等用户
 上游: [op-temporal-p5-and-route](2026-09-25-openpilot-temporal-p5-and-route.md)（实验 1、2a 已出，2b 在跑）、第 25 条（continuation prior + reaction decoder）、第 32 条（P5 v0）、第 40 条
 主线: openpilot 冻结 vision；闭环考试仍暂停（memory：infra 验收未过）；本文件全部是开环或离线渲染。
 不重复做的（别人已做，只当动机引用）：真实帧抹行人的 model-agnostic 考试（2609.22582，6 个 ckpt，1.9%）、meta-action 考试（CoLT-Drive，11 个）、闭环 shift（Fail2Drive，7 个）。
@@ -101,3 +101,104 @@ M-A 只在 D0 判「信息在 vision 里」时是完整方案；否则 M-A 负�
    要 5 次 16 384² 的 CPU eigh，实测第一个 fold 卡了 9 分钟以上，估计全程约 6 h，超预算远不止 2 倍。`ridge_late` 翻转率在 D0 里本来只描述，
    D0 判定用的是 probe，所以这一个 tap 去掉 head、保留 probe；其余 tap 不变。同时按 main 的排程把 D0 exam 与 M-C 敏感性挪到 GPU 1（与 I4 共卡），
    我方 CPU 收到 196–201。
+
+## 结果
+
+代码：`scripts/p5_openpilot.py --arrays`（D0 抽取）、`p5_exam run --op-arrays --heads-skip`（D0 考试，新增 `probe_auc_paired_scopes`）、
+`jevdrive/reactivity_mc.py`（M-C）、`jevdrive/reactivity_figs.py`（图）、入口 `scripts/reactivity.sh`。小表在
+[research/results/reactivity/](../research/results/reactivity/)。
+
+### 等价性与成本
+
+| 检查 / 步骤 | 结果 |
+|:--|:--|
+| D0 新抽取的 `temporal` 对实验 1 已存的（抽查 12 条 stream、两个模型） | 最大差 **0**（逐位相同） |
+| M-C 的 prior 对实验 1 的 `ridge_late` examinee | 翻转率逐位复现：Cinque 46.7% [31.7, 60.0]、Lebowski 41.6% [25.5, 56.3]，null false-flip 5.1% / 5.5% |
+| D0 抽取：536 条 stream、48 046 帧 × 2 模型，多存 `vision` / `hidden` | 预算 24 min，实测 11 min（GPU 2，12 核） |
+| D0 考试（7 个 tap 的 head + probe） | 预算分钟级，实测约 60 min：box CPU 被 CARLA 压到 cgroup 上限（load 125 / 125 核），加上 16 384 维 head（偏离 6 去掉后） |
+| M-C 全部 arm × 2 模型 × 5 fold | 4 min（预登记网格）；宽网格那次 20 min（同样的 CPU 争用） |
+
+### D0：行人信息在 openpilot 的 vision 层里有没有
+
+x⁺ 对 x⁻ 观测帧上的 hazard probe AUC（probe 不改，按路线 5 折），路线 bootstrap 500 次；Δ 是对同模型 `temporal` 的逐帧配对差。
+
+| 范围（观测帧 / 路线） | Qwen `L18_last` | Cinque `temporal` | Cinque **`vision`** [CI] | Δ vs `temporal` [CI] | Lebowski `temporal` | Lebowski **`vision`** [CI] | Δ vs `temporal` [CI] |
+|:--|--:|--:|:--|:--|--:|:--|:--|
+| **行人 4 family 合并（1999 / 20）** | 0.620 | 0.507 | **0.515** [0.503, 0.535] | +0.009 [−0.003, +0.017] | 0.517 | **0.519** [0.495, 0.552] | +0.002 [−0.025, +0.051] |
+| DynamicObjectCrossing（179 / 5） | 0.624 | 0.501 | 0.515 | +0.013 [−0.013, +0.047] | 0.518 | 0.538 | +0.020 [−0.047, +0.072] |
+| ParkingCrossingPedestrian（199 / 5） | 0.536 | 0.511 | 0.517 | +0.006 [+0.001, +0.044] | 0.518 | 0.519 | +0.002 [−0.015, +0.056] |
+| PedestrianCrossing（725 / 5） | 0.774 | 0.528 | 0.532 | +0.004 [−0.058, +0.028] | 0.523 | 0.579 | +0.056 [−0.047, +0.215] |
+| VehicleTurningRoutePedestrian（896 / 5） | 0.501 | 0.502 | 0.512 | +0.010 | 0.506 | 0.489 | −0.017 |
+| HighwayCutIn（690 / 5） | 0.837 | 0.767 | 0.711 | −0.055 [−0.142, +0.024] | 0.761 | 0.710 | −0.050 [−0.084, −0.010] |
+| StaticCutIn / ParkingCutIn | 0.53 / 0.56 | 0.56 / 0.56 | 0.58 / 0.59 | +0.03 / +0.04 | 0.56 / 0.57 | 0.56 / 0.59 | +0.00 / +0.02 |
+| 全部 hazard（3744 / 37） | 0.635 | 0.540 | 0.544 | +0.005 [−0.020, +0.021] | 0.543 | 0.546 | +0.002 [−0.012, +0.025] |
+
+次要 tap `hidden` 在行人合并上也是 0.519 / 0.519，Δ +0.012 [−0.010, +0.026] / +0.003 [−0.023, +0.041]；
+唯一 CI 不跨零的是 Cinque `hidden`（32 个未池化 vision token）在 DynamicObjectCrossing 上 +0.063 [+0.037, +0.102]，AUC 0.564，仍低于 0.60，只描述。
+四个 openpilot tap 在行人合并上都比 Qwen 低约 0.10（CI 全不跨零）。
+
+![D0](../research/figs/reactivity-d0-vision-probe.png)
+
+(a) 每个范围上各 tap 的 probe AUC（点与 95% 路线 bootstrap CI），灰色短横是 Qwen `L18_last`，虚线是 0.60 门槛；(b) vision 层 tap 对同模型 `temporal` 的配对 ΔAUC。
+要看的是左边五组：行人 family 上 vision 层和 `temporal` 一样贴着 0.5，Δ 全在零附近；车辆 cut-in 上 vision 层反而略低于 `temporal`。
+
+**判定（按偏离 1、2 的口径）：两个模型的 `vision` 在行人合并集上 AUC 都 < 0.60，对 `temporal` 的 Δ CI 都跨零 → 行人信息在 openpilot 的 vision 层里就没有，
+不是 policy（时间模块）丢的。M-A 单独不够，按预登记走 M-A + M-C。** 顺带：`ridge_late` 读 `vision` 时行人翻转仍全是 0（Cinque / Lebowski `vision` 合并翻转 47% / 46%，与 `temporal` 相同，
+全部来自 cut-in），和 probe 一致。实验 1 里「bottleneck 滤掉了分布外的行人」这句话因此可以往前推一层：滤掉发生在 vision encoder，不在 temporal summarizer。
+
+### M-C：双流 reaction head（P5 v0 的 165 对上的 smoke）
+
+主表是预登记网格那次 run（`reactivity/mc/20260925-160059`），判据按偏离 4。
+
+| arm（Cinque） | 行人翻转 [CI]（134 reactive 帧） | cut-in 翻转 | cut-in 对 prior 的配对 Δ [CI] | 合并翻转 [CI] | 样本外 null false-flip | 判定 |
+|:--|:--|--:|:--|:--|--:|:--|
+| prior（`ridge_late` `temporal`） | 0% | 63.6% | — | 46.7% [31.7, 60.0] | 5.1% | — |
+| **配对差分，双流** | **0%** | **76.9%** | **+13.3 [+6.6, +20.8]** | 56.5% [39.6, 69.9] | 5.0% | 不过（a） |
+| 配对差分，只 Qwen | 0% | 64.7% | +1.1 [−4.8, +8.1] | 47.6% | 5.3% | 不过（a） |
+| 配对差分，只 openpilot | 0% | 79.7% | +16.1 [+9.3, +23.5] | 58.6% [41.3, 72.3] | 5.5% | 不过（a） |
+| hard-example 重加权 | 0% | 61.9% | −1.7 [−4.1, +0.6] | 45.5% | 5.5% | 不过（a） |
+| 均匀 imitation（参照） | 0% | 63.9% | +0.3 | 46.9% | 5.0% | 不过（a） |
+| 配对差分，μ = 0（敏感性） | 0% | 67.5% | +3.9 [−8.7, +14.8] | 49.6% | 5.4% | 不过（a） |
+
+Lebowski 复现同样的形状：配对双流行人 1.5% [0, 4.8]，cut-in +6.4 [−2.0, +14.7]，只 openpilot +16.1 [+7.8, +26.5]，hard 与均匀都 ≈ 0。
+偏离 5 的宽网格（10^[−5..7]）结果逐项相同或只差 1 个百分点（`research/results/reactivity/mc-wide/`）。
+
+![M-C](../research/figs/reactivity-mc-flips-cinque.png)
+
+Cinque 上每个 arm 在行人、cut-in、合并三个范围的定向翻转率；误差线是路线 bootstrap 95% CI，▼ 是样本外 null false-flip，点线是 20% 门槛。
+要看的是：行人一栏全部是零；cut-in 一栏只有带配对差分、且输入里有 openpilot 的 arm 明显抬高，hard-example 重加权不动。
+
+**判定：所有 arm 都不过（行人一条就挂）。** 按预登记的读法：
+
+- **行人**：配对差分把行人 Δ 的量级放大了约 2.5 倍（|Δ|/τ 的 p90 从 0.22 到 0.52，与 expert 同号比例 58% → 67%），但仍在各自 τ 之下，翻转为 0。
+  训练 fold 内的诊断（偏离 5）说明这不是跨路线泛化的问题：**在训练对上**，行人配对目标的拟合斜率只有 0.03–0.29（中位约 0.12；prior 0.01–0.03），
+  cut-in 是 0.23–0.48。也就是说，Qwen `L18_last` ⊕ `temporal` 的线性 readout 连训练集上的行人配对差都拟合不了，瓶颈在输入（pooled 特征），不在监督信号。
+  Qwen 在行人上的 probe AUC 只有 0.62（D0 同表），与这一点一致：「能分出 x⁺/x⁻」离「能读出该减多少速」还很远。
+- **cut-in**：配对差分是唯一能在 prior 之上买到翻转的训练信号（+13 到 +16 个百分点，CI 不跨零），hard-example 重加权与均匀 imitation 都是 0。
+  这是第 21 条 D1 那一格的第一个数：**在同样的数据、同样的特征上，配对结构有用，纯加权没用**；但它作用在 openpilot 已经会的 family 上，
+  而且单 openpilot 流就够（加 Qwen 不加分，只 Qwen 流不动）。
+- **null false-flip** 各 arm 都在 5.0–6.1%，没有动。
+
+限定：P5 v0 只有 25 条路线、一个 expert，行人 reactive 帧 134 个（DynamicObjectCrossing 45、ParkingCrossingPedestrian 76 为主）；I1 的 v1 出来后在加固版上复跑。
+下一步候选（未预登记，只是推测）：行人需要空间 token 而不是 pooled 向量（P2 的 attention readout 那一格），或者 I1 的 PDM-Lite 提前减速标签；
+单靠换 loss 救不回来。
+
+### I4：commaai/worldmodel-4B 是否 action-conditioned
+
+详见 [i4-worldmodel](2026-09-25-reactivity-program/i4-worldmodel.md)。**是，但条件是 ego pose（每帧相对平移 + Euler 角），不是 action 向量**；
+左 / 右转与刹车的方向都对（12/12、11/12、12/12），幅度只跟到指令的 45–52%；每次预测还吃 5 帧录像里的真实 future anchor，把 ego 拉回 logged 轨迹。
+batch 8 约 108 ms/帧（15 步去噪），一张卡约 10 帧/s，可信的偏离窗口约 2 s。**结论**：可以给 M-A 当围绕 logged 轨迹的 recovery / covariate-shift 环境
+（comma 的 `openpilot.distill/rl` 基本就是这套），但它不会凭空生成行人或 cut-in，替代不了 P5 / I3 的配对标签。
+
+### I3：HUGSIM 3DGS 开环配对
+
+详见 [i3-hugsim-pairs](2026-09-25-reactivity-program/i3-hugsim-pairs.md)。5 场景验证通过（x⁻ 与官方渲染逐位相同、actor 框外无变化、遮挡探针 94% / 96%），
+按预登记渲了全部符合规则的 **65 个场景**（任务写 50），3559 个观测帧、1832 个 reactive 帧，family 为 static / cut-in / oncoming（车辆），null 792 帧；
+实测 20 min。**缺口：HUGSIM 只有车辆资产，没有行人 family**；标签是匀速外推 + 碰撞规则，不是 expert 两侧重跑。接 p5_exam 还要少量胶水（无 TFv6 列、原点在前相机、openpilot 标定换 `hugsim_zs.calibs`）。
+
+### I1：P5 v1 生成
+
+详见 [i1-p5v1](2026-09-25-reactivity-program/i1-p5v1.md)。PDM-Lite 已接通（两对 x⁺/x⁻/null 逐 tick 确定，v0 的 BehaviorAgent run 逐位复现并复用 385 个），
+101 条 base 路线 × 3 seed = 303 对 + 101 null，新跑 1029 个 run；`p5v1-gen` 17:01 起在 GPU 4 + GPU 2 上 11 个 CARLA 实例运行，估计 10–12 h，
+`p5v1-index` 自动接在后面。偏离：PDM-Lite 的录制窗口放长到触发后 40 s（profiling 的两对在 v0 窗口里行人 scenario 没演到 ego 面前），
+另出一套截回 v0 窗口的标签供两 expert 对比。
