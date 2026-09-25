@@ -470,7 +470,8 @@ def _gt_gates(gen: Path, run: str, ks) -> pd.DataFrame | None:
     return g.merge(eg[["run", "k", "v0"]], on=["run", "k"]).assign(n_obj=g.k.map(st.groupby("k").size()).fillna(0).astype(int))
 
 
-def q6gt(rl, workers: int = 10) -> dict:
+def q6gt(rl, workers: int | None = None) -> dict:
+    import os
     from joblib import Parallel, delayed
     from . import p5_exam as E
     from . import p5_pairs as P
@@ -495,6 +496,7 @@ def q6gt(rl, workers: int = 10) -> dict:
     for r, k in zip(tr.run, tr.k):
         need.setdefault(r, set()).add(int(k))
     rl.log.info("%d runs, %d (run, tick) frames to gate", len(need), sum(len(v) for v in need.values()))
+    workers = workers or len(os.sched_getaffinity(0))          # the taskset the job was started under
     res = Parallel(workers, verbose=5)(delayed(_gt_gates)(gen, r, ks) for r, ks in sorted(need.items()))
     G = pd.concat([x for x in res if x is not None], ignore_index=True).set_index(["run", "k"])
     rl.log.info("gated %d frames of %d runs", len(G), G.index.get_level_values(0).nunique())
