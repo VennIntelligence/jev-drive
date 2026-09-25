@@ -1,0 +1,50 @@
+{
+  "W": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-W.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "D": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-controller-next/lateral_v2/inputs/configs/slipack-kfix.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M1": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M1.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M2": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M2.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M3": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M3.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M4": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M4.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M5": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M5.json",
+    "presets": [
+      "pursuit"
+    ]
+  },
+  "M6": {
+    "controller_config": "/home/ujs/mycode/jev-drive-w2/todos/2026-09-23-tfv6-controller/controller-eval/tune/round2-M6.json",
+    "presets": [
+      "pursuit"
+    ]
+  }
+}

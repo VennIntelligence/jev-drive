@@ -129,7 +129,7 @@ class Controller:
                  steer_inverse='nominal', track_width_m=None,
                  accel_kp=1., accel_ki=.3, accel_integral_limit=1.5,
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
-                 throttle_map=None, brake_map=None):
+                 throttle_map=None, brake_map=None, low_speed_brake_mps=0.):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -151,6 +151,11 @@ class Controller:
             raise ValueError('accel-mode gains and limits must be finite, jerk limits positive')
         self.accel_kp, self.accel_ki, self.accel_integral_limit = float(accel_kp), float(accel_ki), float(accel_integral_limit)
         self.jerk_limit, self.jerk_limit_brake, self.brake_hysteresis = float(jerk_limit), float(jerk_limit_brake), float(brake_hysteresis)
+        # The maps were measured at 2-9 m/s. Near standstill there is no engine drag and any
+        # throttle creeps forward, so below this speed a deceleration command always brakes.
+        self.low_speed_brake_mps = float(low_speed_brake_mps)
+        if not math.isfinite(self.low_speed_brake_mps) or self.low_speed_brake_mps < 0:
+            raise ValueError('low_speed_brake_mps must be finite and nonnegative')
         self.longitudinal_mode = longitudinal_mode
         if preset not in ('carla', 'tcp', 'pursuit'):
             raise ValueError('unknown controller preset')
@@ -412,6 +417,13 @@ class Controller:
                                     self._accel_command + self.jerk_limit * elapsed))
         self._accel_command = command
         coast = float(self.throttle_map[0, 1])
+        if speed < self.low_speed_brake_mps and command < 0.:
+            # Crawl speed: brake in proportion to the command over the full brake range.
+            self._braking = True
+            brake = float(np.clip(-command / -float(self.brake_map[-1, 1]), 0., 1.))
+            self._diagnostics.update(accel_feedforward_mps2=feedforward, accel_command_mps2=command,
+                                     accel_integral_mps2=self._accel_integral, accel_low_speed_brake=True)
+            return 0., min(brake, self.max_brake)
         # Brake only below coast with hysteresis, so the actuator does not chatter across the gap.
         self._braking = command < coast - (0. if self._braking else self.brake_hysteresis)
         if self._braking:

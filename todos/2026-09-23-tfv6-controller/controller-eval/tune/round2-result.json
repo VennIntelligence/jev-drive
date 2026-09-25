@@ -1,0 +1,269 @@
+{
+  "round": "round2",
+  "table": {
+    "D": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 1.0018872415278273,
+      "cte_rms_m": 0.023579204860146887,
+      "time_xy_rms_m": 0.16943868518913074,
+      "speed_rms_mps": 0.49906482376755734,
+      "extra_jerk_rms_mps3": 6.026405351015106,
+      "along_lag_rms_m": 0.16619482638009936,
+      "stop_short_m": 0.029199676981072287
+    },
+    "M1": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.7109213953059357,
+      "cte_rms_m": 0.035840397699329306,
+      "time_xy_rms_m": 0.24694034538194953,
+      "speed_rms_mps": 0.34435428325432027,
+      "extra_jerk_rms_mps3": 2.0929921054117333,
+      "along_lag_rms_m": 0.25477738269298206,
+      "stop_short_m": 0.0
+    },
+    "M2": {
+      "cases": 30,
+      "failures": 2,
+      "status": {
+        "completed": 28,
+        "blocked": 2
+      },
+      "primary": 0.8717861535492979,
+      "cte_rms_m": 0.04002003483565676,
+      "time_xy_rms_m": 0.41572815943334074,
+      "speed_rms_mps": 0.40641984134114084,
+      "extra_jerk_rms_mps3": 2.2628086951209885,
+      "along_lag_rms_m": 0.41557440979903076,
+      "stop_short_m": 0.0
+    },
+    "M3": {
+      "cases": 30,
+      "failures": 11,
+      "status": {
+        "blocked": 11,
+        "completed": 19
+      },
+      "primary": 1.3980283402261122,
+      "cte_rms_m": 0.046616484189744276,
+      "time_xy_rms_m": 0.7396748421417485,
+      "speed_rms_mps": 0.6150437231263903,
+      "extra_jerk_rms_mps3": 3.4073545467268023,
+      "along_lag_rms_m": 0.7195202788527869,
+      "stop_short_m": 0.0
+    },
+    "M4": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.6402825976072277,
+      "cte_rms_m": 0.037336120096123554,
+      "time_xy_rms_m": 0.23621878528012458,
+      "speed_rms_mps": 0.313566418443815,
+      "extra_jerk_rms_mps3": 1.9426308988459708,
+      "along_lag_rms_m": 0.2440734462581779,
+      "stop_short_m": 0.0
+    },
+    "M5": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.7305508807566241,
+      "cte_rms_m": 0.03711996948379125,
+      "time_xy_rms_m": 0.24758803055727208,
+      "speed_rms_mps": 0.3532887122230667,
+      "extra_jerk_rms_mps3": 2.1598740685835995,
+      "along_lag_rms_m": 0.2467796050606411,
+      "stop_short_m": 0.0
+    },
+    "M6": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.7433860702592423,
+      "cte_rms_m": 0.037086104961537844,
+      "time_xy_rms_m": 0.24594390872648816,
+      "speed_rms_mps": 0.3570029704353014,
+      "extra_jerk_rms_mps3": 2.115709998871237,
+      "along_lag_rms_m": 0.2467796050606411,
+      "stop_short_m": 0.0
+    },
+    "W": {
+      "cases": 30,
+      "failures": 0,
+      "status": {
+        "completed": 30
+      },
+      "primary": 0.755855831374684,
+      "cte_rms_m": 0.038508593845758186,
+      "time_xy_rms_m": 0.39990738119360425,
+      "speed_rms_mps": 0.3602968564006793,
+      "extra_jerk_rms_mps3": 2.1699605018105754,
+      "along_lag_rms_m": 0.40346662285865104,
+      "stop_short_m": 0.0
+    }
+  },
+  "eligible": [
+    "M1",
+    "M4",
+    "M5",
+    "M6",
+    "W"
+  ],
+  "winner": "M4",
+  "contrasts_vs_D": {
+    "M1": {
+      "primary": {
+        "mean": -0.4289100879891033,
+        "ci95": [
+          -0.5731820807143926,
+          -0.2965978351320081
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -4.1094094571166435,
+        "ci95": [
+          -4.588716027463697,
+          -3.6398858279600805
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "M2": {
+      "primary": {
+        "mean": -0.06699399651652976,
+        "ci95": [
+          -0.38821877419228557,
+          0.32381966366983267
+        ],
+        "routes": 15,
+        "left_better_routes": 11
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -3.5065771925361564,
+        "ci95": [
+          -4.165292042487198,
+          -2.8325390480361308
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "M3": {
+      "primary": {
+        "mean": 1.6674689352898302,
+        "ci95": [
+          0.863360451309255,
+          2.5459672274343426
+        ],
+        "routes": 15,
+        "left_better_routes": 2
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -2.1333917406734484,
+        "ci95": [
+          -2.5649737958075645,
+          -1.6161459277461052
+        ],
+        "routes": 15,
+        "left_better_routes": 14
+      }
+    },
+    "M4": {
+      "primary": {
+        "mean": -0.45802598446851545,
+        "ci95": [
+          -0.6155079491056212,
+          -0.3169347370328582
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -4.282244546850823,
+        "ci95": [
+          -4.800644929654766,
+          -3.7837697323403536
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "M5": {
+      "primary": {
+        "mean": -0.33951709496518406,
+        "ci95": [
+          -0.505420209522432,
+          -0.17804175690053403
+        ],
+        "routes": 15,
+        "left_better_routes": 13
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -3.8882347245306863,
+        "ci95": [
+          -4.371983938789316,
+          -3.431255471236765
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "M6": {
+      "primary": {
+        "mean": -0.37655142172281325,
+        "ci95": [
+          -0.5218867391659446,
+          -0.2336411566783561
+        ],
+        "routes": 15,
+        "left_better_routes": 14
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -4.012666320950938,
+        "ci95": [
+          -4.465110903331013,
+          -3.576293019520108
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    },
+    "W": {
+      "primary": {
+        "mean": -0.2757214181387335,
+        "ci95": [
+          -0.4804088370945114,
+          -0.044073296251019405
+        ],
+        "routes": 15,
+        "left_better_routes": 13
+      },
+      "extra_jerk_rms_mps3": {
+        "mean": -3.7817874725879617,
+        "ci95": [
+          -4.362062794168225,
+          -3.1474885984329237
+        ],
+        "routes": 15,
+        "left_better_routes": 15
+      }
+    }
+  }
+}
