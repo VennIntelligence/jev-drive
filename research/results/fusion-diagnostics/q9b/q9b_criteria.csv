@@ -1,0 +1,13 @@
+arm,ped_reactive,ped_flip,ped_lo,ped_hi,null_ff_oos,cutin_flip,cutin_delta_vs_prior,cutin_lo,cutin_hi,a_ped,b_cutin,c_null,pass
+prior [cinque],134,0,0,0,0.05109,0.6361,0,0,0,False,True,True,False
+Q9b pair grid s0 [cinque],134,0,0,0,0.05659,0.4472,-0.1889,-0.351,-0.04367,False,False,True,False
+Q9b pair grid s1 [cinque],134,0.04478,0,0.09601,0.05623,0.7111,0.075,-0.05158,0.188,False,True,True,False
+Q9b pair grid s2 [cinque],134,0,0,0,0.04568,0.6167,-0.01944,-0.1111,0.07652,False,True,True,False
+Q9b hard grid [cinque],134,0,0,0,0.05965,0.3889,-0.2472,-0.4115,-0.1025,False,False,True,False
+Q9b pair pooled-linear [cinque],134,0,0,0,0.05036,0.6833,0.04722,0,0.1092,False,True,True,False
+prior [lebowski],134,0,0,0,0.05495,0.5667,0,0,0,False,True,True,False
+Q9b pair grid s0 [lebowski],134,0,0,0,0.05175,0.5333,-0.03333,-0.1568,0.08613,False,True,True,False
+Q9b pair grid s1 [lebowski],134,0.02985,0,0.08122,0.1293,0.4611,-0.1056,-0.2514,0.03879,False,True,False,False
+Q9b pair grid s2 [lebowski],134,0,0,0,0.07374,0.5639,-0.002778,-0.06838,0.07838,False,True,False,False
+Q9b hard grid [lebowski],134,0,0,0,0.06108,0.3278,-0.2389,-0.3154,-0.1681,False,False,True,False
+Q9b pair pooled-linear [lebowski],134,0.007463,0,0.0203,0.05824,0.5889,0.02222,-0.03056,0.07278,False,True,True,False

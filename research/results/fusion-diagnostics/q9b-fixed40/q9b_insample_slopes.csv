@@ -1,0 +1,101 @@
+t,kind,fold,arm,model,group,n,slope_fit,slope_prior
+1.79e+09,q9b_insample,0,Q9b pair grid s0,cinque,pedestrian,82,0.1111,0.01924
+1.79e+09,q9b_insample,0,Q9b pair grid s0,cinque,cut-in,289,0.7417,0.1609
+1.79e+09,q9b_insample,0,Q9b pair grid s1,cinque,pedestrian,82,0.08779,0.01924
+1.79e+09,q9b_insample,0,Q9b pair grid s1,cinque,cut-in,289,0.7334,0.1609
+1.79e+09,q9b_insample,0,Q9b pair grid s2,cinque,pedestrian,82,0.07363,0.01924
+1.79e+09,q9b_insample,0,Q9b pair grid s2,cinque,cut-in,289,0.7057,0.1609
+1.79e+09,q9b_insample,0,Q9b hard grid,cinque,pedestrian,82,0.05421,0.01924
+1.79e+09,q9b_insample,0,Q9b hard grid,cinque,cut-in,289,0.4707,0.1609
+1.79e+09,q9b_insample,0,Q9b pair pooled-linear,cinque,pedestrian,82,0.01893,0.01924
+1.79e+09,q9b_insample,0,Q9b pair pooled-linear,cinque,cut-in,289,0.223,0.1609
+1.79e+09,q9b_insample,1,Q9b pair grid s0,cinque,pedestrian,134,0.7724,0.01596
+1.79e+09,q9b_insample,1,Q9b pair grid s0,cinque,cut-in,306,0.7016,0.1486
+1.79e+09,q9b_insample,1,Q9b pair grid s1,cinque,pedestrian,134,0.7551,0.01596
+1.79e+09,q9b_insample,1,Q9b pair grid s1,cinque,cut-in,306,0.7409,0.1486
+1.79e+09,q9b_insample,1,Q9b pair grid s2,cinque,pedestrian,134,0.8047,0.01596
+1.79e+09,q9b_insample,1,Q9b pair grid s2,cinque,cut-in,306,0.6916,0.1486
+1.79e+09,q9b_insample,1,Q9b hard grid,cinque,pedestrian,134,0.4445,0.01596
+1.79e+09,q9b_insample,1,Q9b hard grid,cinque,cut-in,306,0.3585,0.1486
+1.79e+09,q9b_insample,1,Q9b pair pooled-linear,cinque,pedestrian,134,0.04981,0.01596
+1.79e+09,q9b_insample,1,Q9b pair pooled-linear,cinque,cut-in,306,0.1856,0.1486
+1.79e+09,q9b_insample,2,Q9b pair grid s0,cinque,pedestrian,106,0.7529,0.01542
+1.79e+09,q9b_insample,2,Q9b pair grid s0,cinque,cut-in,283,0.7083,0.04831
+1.79e+09,q9b_insample,2,Q9b pair grid s1,cinque,pedestrian,106,0.7787,0.01542
+1.79e+09,q9b_insample,2,Q9b pair grid s1,cinque,cut-in,283,0.7055,0.04831
+1.79e+09,q9b_insample,2,Q9b pair grid s2,cinque,pedestrian,106,0.7582,0.01542
+1.79e+09,q9b_insample,2,Q9b pair grid s2,cinque,cut-in,283,0.6773,0.04831
+1.79e+09,q9b_insample,2,Q9b hard grid,cinque,pedestrian,106,0.2981,0.01542
+1.79e+09,q9b_insample,2,Q9b hard grid,cinque,cut-in,283,0.3027,0.04831
+1.79e+09,q9b_insample,2,Q9b pair pooled-linear,cinque,pedestrian,106,0.04313,0.01542
+1.79e+09,q9b_insample,2,Q9b pair pooled-linear,cinque,cut-in,283,0.08536,0.04831
+1.79e+09,q9b_insample,3,Q9b pair grid s0,cinque,pedestrian,131,0.8118,0.01019
+1.79e+09,q9b_insample,3,Q9b pair grid s0,cinque,cut-in,280,0.7428,0.1326
+1.79e+09,q9b_insample,3,Q9b pair grid s1,cinque,pedestrian,131,0.8069,0.01019
+1.79e+09,q9b_insample,3,Q9b pair grid s1,cinque,cut-in,280,0.7509,0.1326
+1.79e+09,q9b_insample,3,Q9b pair grid s2,cinque,pedestrian,131,0.8256,0.01019
+1.79e+09,q9b_insample,3,Q9b pair grid s2,cinque,cut-in,280,0.7548,0.1326
+1.79e+09,q9b_insample,3,Q9b hard grid,cinque,pedestrian,131,0.3556,0.01019
+1.79e+09,q9b_insample,3,Q9b hard grid,cinque,cut-in,280,0.3606,0.1326
+1.79e+09,q9b_insample,3,Q9b pair pooled-linear,cinque,pedestrian,131,0.04168,0.01019
+1.79e+09,q9b_insample,3,Q9b pair pooled-linear,cinque,cut-in,280,0.1872,0.1326
+1.79e+09,q9b_insample,4,Q9b pair grid s0,cinque,pedestrian,83,0.8829,0.02514
+1.79e+09,q9b_insample,4,Q9b pair grid s0,cinque,cut-in,282,0.7355,0.1262
+1.79e+09,q9b_insample,4,Q9b pair grid s1,cinque,pedestrian,83,0.788,0.02514
+1.79e+09,q9b_insample,4,Q9b pair grid s1,cinque,cut-in,282,0.7435,0.1262
+1.79e+09,q9b_insample,4,Q9b pair grid s2,cinque,pedestrian,83,0.8328,0.02514
+1.79e+09,q9b_insample,4,Q9b pair grid s2,cinque,cut-in,282,0.7245,0.1262
+1.79e+09,q9b_insample,4,Q9b hard grid,cinque,pedestrian,83,0.3653,0.02514
+1.79e+09,q9b_insample,4,Q9b hard grid,cinque,cut-in,282,0.2432,0.1262
+1.79e+09,q9b_insample,4,Q9b pair pooled-linear,cinque,pedestrian,83,0.07143,0.02514
+1.79e+09,q9b_insample,4,Q9b pair pooled-linear,cinque,cut-in,282,0.1575,0.1262
+1.79e+09,q9b_insample,0,Q9b pair grid s0,lebowski,pedestrian,82,0.08599,0.02655
+1.79e+09,q9b_insample,0,Q9b pair grid s0,lebowski,cut-in,289,0.7406,0.2233
+1.79e+09,q9b_insample,0,Q9b pair grid s1,lebowski,pedestrian,82,0.06574,0.02655
+1.79e+09,q9b_insample,0,Q9b pair grid s1,lebowski,cut-in,289,0.7435,0.2233
+1.79e+09,q9b_insample,0,Q9b pair grid s2,lebowski,pedestrian,82,0.07204,0.02655
+1.79e+09,q9b_insample,0,Q9b pair grid s2,lebowski,cut-in,289,0.7419,0.2233
+1.79e+09,q9b_insample,0,Q9b hard grid,lebowski,pedestrian,82,0.06262,0.02655
+1.79e+09,q9b_insample,0,Q9b hard grid,lebowski,cut-in,289,0.5039,0.2233
+1.79e+09,q9b_insample,0,Q9b pair pooled-linear,lebowski,pedestrian,82,0.01911,0.02655
+1.79e+09,q9b_insample,0,Q9b pair pooled-linear,lebowski,cut-in,289,0.2743,0.2233
+1.79e+09,q9b_insample,1,Q9b pair grid s0,lebowski,pedestrian,134,0.7316,0.008138
+1.79e+09,q9b_insample,1,Q9b pair grid s0,lebowski,cut-in,306,0.7145,0.1949
+1.79e+09,q9b_insample,1,Q9b pair grid s1,lebowski,pedestrian,134,0.7454,0.008138
+1.79e+09,q9b_insample,1,Q9b pair grid s1,lebowski,cut-in,306,0.7549,0.1949
+1.79e+09,q9b_insample,1,Q9b pair grid s2,lebowski,pedestrian,134,0.7612,0.008138
+1.79e+09,q9b_insample,1,Q9b pair grid s2,lebowski,cut-in,306,0.7248,0.1949
+1.79e+09,q9b_insample,1,Q9b hard grid,lebowski,pedestrian,134,0.4454,0.008138
+1.79e+09,q9b_insample,1,Q9b hard grid,lebowski,cut-in,306,0.4145,0.1949
+1.79e+09,q9b_insample,1,Q9b pair pooled-linear,lebowski,pedestrian,134,0.04237,0.008138
+1.79e+09,q9b_insample,1,Q9b pair pooled-linear,lebowski,cut-in,306,0.2245,0.1949
+1.79e+09,q9b_insample,2,Q9b pair grid s0,lebowski,pedestrian,106,0.7546,0.0007167
+1.79e+09,q9b_insample,2,Q9b pair grid s0,lebowski,cut-in,283,0.6902,0.09604
+1.79e+09,q9b_insample,2,Q9b pair grid s1,lebowski,pedestrian,106,0.7659,0.0007167
+1.79e+09,q9b_insample,2,Q9b pair grid s1,lebowski,cut-in,283,0.7155,0.09604
+1.79e+09,q9b_insample,2,Q9b pair grid s2,lebowski,pedestrian,106,0.7651,0.0007167
+1.79e+09,q9b_insample,2,Q9b pair grid s2,lebowski,cut-in,283,0.6761,0.09604
+1.79e+09,q9b_insample,2,Q9b hard grid,lebowski,pedestrian,106,0.2906,0.0007167
+1.79e+09,q9b_insample,2,Q9b hard grid,lebowski,cut-in,283,0.3243,0.09604
+1.79e+09,q9b_insample,2,Q9b pair pooled-linear,lebowski,pedestrian,106,0.0282,0.0007167
+1.79e+09,q9b_insample,2,Q9b pair pooled-linear,lebowski,cut-in,283,0.136,0.09604
+1.79e+09,q9b_insample,3,Q9b pair grid s0,lebowski,pedestrian,131,0.7698,-0.002544
+1.79e+09,q9b_insample,3,Q9b pair grid s0,lebowski,cut-in,280,0.7692,0.171
+1.79e+09,q9b_insample,3,Q9b pair grid s1,lebowski,pedestrian,131,0.758,-0.002544
+1.79e+09,q9b_insample,3,Q9b pair grid s1,lebowski,cut-in,280,0.7716,0.171
+1.79e+09,q9b_insample,3,Q9b pair grid s2,lebowski,pedestrian,131,0.7963,-0.002544
+1.79e+09,q9b_insample,3,Q9b pair grid s2,lebowski,cut-in,280,0.7798,0.171
+1.79e+09,q9b_insample,3,Q9b hard grid,lebowski,pedestrian,131,0.3794,-0.002544
+1.79e+09,q9b_insample,3,Q9b hard grid,lebowski,cut-in,280,0.3956,0.171
+1.79e+09,q9b_insample,3,Q9b pair pooled-linear,lebowski,pedestrian,131,0.029,-0.002544
+1.79e+09,q9b_insample,3,Q9b pair pooled-linear,lebowski,cut-in,280,0.2167,0.171
+1.79e+09,q9b_insample,4,Q9b pair grid s0,lebowski,pedestrian,83,0.839,0.006914
+1.79e+09,q9b_insample,4,Q9b pair grid s0,lebowski,cut-in,282,0.7393,0.1507
+1.79e+09,q9b_insample,4,Q9b pair grid s1,lebowski,pedestrian,83,0.8004,0.006914
+1.79e+09,q9b_insample,4,Q9b pair grid s1,lebowski,cut-in,282,0.7506,0.1507
+1.79e+09,q9b_insample,4,Q9b pair grid s2,lebowski,pedestrian,83,0.8227,0.006914
+1.79e+09,q9b_insample,4,Q9b pair grid s2,lebowski,cut-in,282,0.738,0.1507
+1.79e+09,q9b_insample,4,Q9b hard grid,lebowski,pedestrian,83,0.3671,0.006914
+1.79e+09,q9b_insample,4,Q9b hard grid,lebowski,cut-in,282,0.2617,0.1507
+1.79e+09,q9b_insample,4,Q9b pair pooled-linear,lebowski,pedestrian,83,0.05278,0.006914
+1.79e+09,q9b_insample,4,Q9b pair pooled-linear,lebowski,cut-in,282,0.1812,0.1507

@@ -1,0 +1,51 @@
+t,kind,fold,arm,model,n_pairs,epochs,sel_loss,n_frames,lam,lam_edge
+1.79e+09,q9b_fold,0,Q9b pair grid s0,cinque,5008,1,2.955,,,
+1.79e+09,q9b_fold,0,Q9b pair grid s1,cinque,5008,27,2.93,,,
+1.79e+09,q9b_fold,0,Q9b pair grid s2,cinque,5008,1,1.242,,,
+1.79e+09,q9b_fold,0,Q9b hard grid,cinque,,1,21.75,8848,,
+1.79e+09,q9b_fold,0,Q9b pair pooled-linear,cinque,,,,,10,0
+1.79e+09,q9b_fold,1,Q9b pair grid s0,cinque,3688,5,2.493,,,
+1.79e+09,q9b_fold,1,Q9b pair grid s1,cinque,3688,13,5.575,,,
+1.79e+09,q9b_fold,1,Q9b pair grid s2,cinque,3688,5,2.698,,,
+1.79e+09,q9b_fold,1,Q9b hard grid,cinque,,1,22.11,6525,,
+1.79e+09,q9b_fold,1,Q9b pair pooled-linear,cinque,,,,,10,0
+1.79e+09,q9b_fold,2,Q9b pair grid s0,cinque,4502,1,2.841,,,
+1.79e+09,q9b_fold,2,Q9b pair grid s1,cinque,4502,12,3.656,,,
+1.79e+09,q9b_fold,2,Q9b pair grid s2,cinque,4502,1,2.444,,,
+1.79e+09,q9b_fold,2,Q9b hard grid,cinque,,1,15.92,7949,,
+1.79e+09,q9b_fold,2,Q9b pair pooled-linear,cinque,,,,,10,0
+1.79e+09,q9b_fold,3,Q9b pair grid s0,cinque,4888,9,3.49,,,
+1.79e+09,q9b_fold,3,Q9b pair grid s1,cinque,4888,8,3.354,,,
+1.79e+09,q9b_fold,3,Q9b pair grid s2,cinque,4888,1,2.017,,,
+1.79e+09,q9b_fold,3,Q9b hard grid,cinque,,1,12.2,8623,,
+1.79e+09,q9b_fold,3,Q9b pair pooled-linear,cinque,,,,,10,0
+1.79e+09,q9b_fold,4,Q9b pair grid s0,cinque,4374,1,1.938,,,
+1.79e+09,q9b_fold,4,Q9b pair grid s1,cinque,4374,5,3.827,,,
+1.79e+09,q9b_fold,4,Q9b pair grid s2,cinque,4374,1,0.695,,,
+1.79e+09,q9b_fold,4,Q9b hard grid,cinque,,16,23.88,7731,,
+1.79e+09,q9b_fold,4,Q9b pair pooled-linear,cinque,,,,,10,0
+1.79e+09,q9b_fold,0,Q9b pair grid s0,lebowski,5008,1,2.797,,,
+1.79e+09,q9b_fold,0,Q9b pair grid s1,lebowski,5008,4,2.344,,,
+1.79e+09,q9b_fold,0,Q9b pair grid s2,lebowski,5008,1,1.301,,,
+1.79e+09,q9b_fold,0,Q9b hard grid,lebowski,,1,24.35,8848,,
+1.79e+09,q9b_fold,0,Q9b pair pooled-linear,lebowski,,,,,10,0
+1.79e+09,q9b_fold,1,Q9b pair grid s0,lebowski,3688,5,2.697,,,
+1.79e+09,q9b_fold,1,Q9b pair grid s1,lebowski,3688,1,6.324,,,
+1.79e+09,q9b_fold,1,Q9b pair grid s2,lebowski,3688,1,3.223,,,
+1.79e+09,q9b_fold,1,Q9b hard grid,lebowski,,18,22.31,6525,,
+1.79e+09,q9b_fold,1,Q9b pair pooled-linear,lebowski,,,,,10,0
+1.79e+09,q9b_fold,2,Q9b pair grid s0,lebowski,4502,1,2.822,,,
+1.79e+09,q9b_fold,2,Q9b pair grid s1,lebowski,4502,10,3.924,,,
+1.79e+09,q9b_fold,2,Q9b pair grid s2,lebowski,4502,1,2.231,,,
+1.79e+09,q9b_fold,2,Q9b hard grid,lebowski,,1,22.43,7949,,
+1.79e+09,q9b_fold,2,Q9b pair pooled-linear,lebowski,,,,,10,0
+1.79e+09,q9b_fold,3,Q9b pair grid s0,lebowski,4888,16,3.613,,,
+1.79e+09,q9b_fold,3,Q9b pair grid s1,lebowski,4888,11,3.241,,,
+1.79e+09,q9b_fold,3,Q9b pair grid s2,lebowski,4888,1,2.252,,,
+1.79e+09,q9b_fold,3,Q9b hard grid,lebowski,,1,16.64,8623,,
+1.79e+09,q9b_fold,3,Q9b pair pooled-linear,lebowski,,,,,10,0
+1.79e+09,q9b_fold,4,Q9b pair grid s0,lebowski,4374,1,1.86,,,
+1.79e+09,q9b_fold,4,Q9b pair grid s1,lebowski,4374,7,3.871,,,
+1.79e+09,q9b_fold,4,Q9b pair grid s2,lebowski,4374,1,0.7699,,,
+1.79e+09,q9b_fold,4,Q9b hard grid,lebowski,,12,24.02,7731,,
+1.79e+09,q9b_fold,4,Q9b pair pooled-linear,lebowski,,,,,10,0
