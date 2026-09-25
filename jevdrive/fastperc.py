@@ -320,6 +320,30 @@ def _depth_place(d):
     return d.assign(gx=gx, gy=gy, gdist=gd, lift_ok=np.isfinite(gd) & (d.depth > 0) & (gd <= 80))
 
 
+def img_recall(gt, dets, cls: str, margin: float = 0.1) -> "pd.DataFrame":
+    """Side reading (added post hoc, descriptive): image-plane recall, independent of any BEV placement. A GT object
+    (in image, <= 40 m, the evaluate() recall rows) counts as found when its projected reference point lies inside a
+    detection box of its class, the box grown by `margin` of its size (>= 4 px) on every side."""
+    import pandas as pd
+    from . import fusion_q4 as Q
+    g = gt[(gt.cls == cls) & gt.in_img & (gt.dist < 40) & (gt.dz.abs() < 8) & gt["eval"]]
+    D = dets[dets.prompt == cls]
+    dg = D.groupby("key").indices
+    B = D[["x0", "y0", "x1", "y1"]].to_numpy(float)
+    hit = np.zeros(len(g), bool)
+    u, v = g.u.to_numpy(float), g.v.to_numpy(float)
+    for key, gi in g.groupby("key").indices.items():
+        di = dg.get(key)
+        if di is None:
+            continue
+        b = B[di]
+        mw, mh = np.maximum(4, margin * (b[:, 2] - b[:, 0])), np.maximum(4, margin * (b[:, 3] - b[:, 1]))
+        hit[gi] = ((u[gi, None] >= b[None, :, 0] - mw) & (u[gi, None] <= b[None, :, 2] + mw) &
+                   (v[gi, None] >= b[None, :, 1] - mh) & (v[gi, None] <= b[None, :, 3] + mh)).any(1)
+    return g.assign(hit=hit, dbin=Q.dist_bin(g.dist)).groupby("dbin", observed=True).hit.agg(["size", "mean"]) \
+        .rename(columns={"mean": "recall"}).assign(le40=hit.mean() if len(hit) else np.nan)
+
+
 def _pick(t, reading: str, cls: str, col: str, val):
     r = t[(t.reading == reading) & (t.cls == cls) & (t[col].astype(str) == str(val))]
     return r.iloc[0] if len(r) else None
@@ -386,6 +410,13 @@ def evaluate(det_dir: str, name: str, score: float, out: Path, contact: str = "m
             row[f"{ds}_{cls[:3]}_le40_oracle"] = None if o is None else o.recall
             pr = _pick(ev["precision"], "precision, lifted <= 80 m", cls, "all", "all")
             row[f"{ds}_{cls[:3]}_prec"] = None if pr is None else pr.precision
+    for ds, G, Dd in (("p5", gt.assign(eval=True), dp5), ("nusc", ng, dnu)):
+        for cls in ("pedestrian", "vehicle"):
+            ir = img_recall(G, Dd, cls)
+            ir.to_csv(out / f"{ds}_{cls}_img_recall.csv")
+            for b, r in ir.iterrows():
+                row[f"{ds}_{cls[:3]}_img_{str(b).replace(' m', '')}"] = r.recall
+            row[f"{ds}_{cls[:3]}_img_le40"] = ir.le40.iloc[0] if len(ir) else None
     if sweep:                                             # nuScenes pedestrian recall / precision over the threshold
         sw = []
         for thr in np.round(np.arange(0.05, 0.96, 0.05), 2):
