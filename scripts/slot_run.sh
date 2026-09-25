@@ -31,8 +31,12 @@ note() { echo "$(date '+%Y-%m-%d %H:%M') [slot $slot] $*" | tee -a "$PLAN"; }
 
 ready() {
     local d
+    # Check every dependency for failure before checking completion, so a failed later dependency is not
+    # hidden behind an earlier one that is still running.
     for d in ${after//,/ }; do
         [[ -f $S/$d.failed ]] && { note "dependency $d failed; not starting"; touch "$S/$slot.failed"; exit 1; }
+    done
+    for d in ${after//,/ }; do
         [[ -f $S/$d.done ]] || return 1
     done
     if [[ -n $not_before ]] && [[ $(date +%H%M) < ${not_before/:/} ]]; then return 1; fi

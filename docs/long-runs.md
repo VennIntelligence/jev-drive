@@ -78,3 +78,7 @@ When more than one agent (or person) runs jobs on the box at the same time:
 - `$DATA_DIR/runs/zeroshot-exam/gpu-plan.md` is the append-only log (`>>` only, never rewrite).
 - Agents arm their slots and then stop; they watch only their own final sentinel. No polling loops in the agent
   and no interim status messages: waiting costs nothing when bash does it, and tokens when an agent does it.
+- Waiters that look for a process with `pgrep -f <name>` must not carry `<name>` on their own command line
+  (e.g. inside `bash -c "... pgrep -f name ..."`): they match themselves and wait forever. Put the check in a
+  script file, or match on a sentinel file instead. (2026-09-25: a HUGSIM waiter matched itself and stalled
+  the WOD test download for ~7.5 h.)
