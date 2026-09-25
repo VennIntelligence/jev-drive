@@ -302,6 +302,21 @@ E6（可选）──────────────────────
   有 future、且在 `op_calib_trainval.json` 里有标定的 sequence；SAM 3.1 原样（`sam_detect.detect`，exact 路径），只用 pedestrian / cyclist 两个 prompt，score > 0.5 与 Q2b 相同。全量 41.5 万帧要约 20 GPU·h，抽到 0.8 s 一帧把成本压到约 2.5 GPU·h，
   代价是同一事件只被看到一次或几次（候选本来就每个事件只取一帧）。WOD 编辑对的 clip 与 openpilot 输入怎么编（WOD 的 openpilot 特征按 sequence 流式抽，历史远长于 Qwen 的 0.6 s clip）在扫描出候选数后另行登记。
 
+- 2026-09-26 01:15 CST **[E4c] 曲线与人类 onset 的操作化**（写于任何 E4c 数字之前；此前见过的只有 E4 的表，即 reactive 帧离可见的分位数与 (a)(b) 翻转率）。
+  输入与 E4 相同（`jevdrive.elicit_e4.load` 读的三个官方 run × 两套集合，29 个考生 + 「GT 规则门 L = 0.6 s」描述行），只用已存逐帧 Δ，不重拟合。代码 `jevdrive/elicit_e4c.py`，run `runs/elicitation/e4c/<time>`。
+  (1) **对的方向**：一对（base_id, seed）进曲线当且仅当它在该 scope 里有 ≥ 1 个 reactive 帧（与 E4 (b) 同一分母）；方向 d = sign(该对 reactive 帧 Δ_expert 之和)。
+  (2) **考生在某帧「定向翻转」** = |Δ_model| ≥ τ_model（官方 τ，不改）且 sign(Δ_model) = d；**看该对的全部观测帧**（不只 reactive 帧），因为首次翻转要能早于 expert onset；只数 reactive 帧的版本（终点 = E4 (b)）作副读数。
+  (3) **曲线**：x = (k − t_vis) × 0.05 s，网格 0, 0.2, …, 10.0 s；C(x) = 在 t − t_vis ≤ x 的帧里至少翻转过一次的对的比例（累积）。观测窗口在 x 之前结束的对保持其状态。
+  (4) **null 地板**：每个 null case 的方向取同一 base 的 seed-0 对的 d（该 base 没有带 reactive 帧的 seed-0 对时取 −1，即制动），x 用 null 帧的 k 减同一 base seed-0 的 t_vis（缺则 t_trig，与 E4 同），同样的累积定义。
+  (5) **面积**：A = C(x) 在网格点 x ∈ [L, 10] 上的平均（归一化到 0–1，L 同 E4 的考生延迟）；报 A、null 的 A、A − A_null，base 路线 bootstrap 2000 次的 CI（对与 null 各自按 base 重抽，差用同一套 base 抽样）。
+  另报 [L, 3 s] 的面积作**描述**，不当判据：登记里写的「人类 onset 落在 1–3 s 则主判定改为 [L, 3 s] 面积」本项只报告是否触发，不切换，切换要另行登记。
+  (6) **首次翻转 vs expert onset**：expert onset = 该对第一个 reactive 帧的 t − t_vis；两个集合的对按 (base_id, seed) 配上，给出 BA onset 与 PDM-Lite onset（另一集合没有该对或该对无 reactive 帧就缺）；
+  对每个考生、在它首次翻转的对上报 median(t_flip − onset_BA) 与 median(t_flip − onset_PDM) 及 n。scope：pooled（官方合并 family）、行人、cut-in，与 E4 同。
+  (7) **人类 onset 锚（WOD）**：val 的 rater 帧，cluster ∈ {Cut_ins, Pedestrian, Cyclist}（143 帧）。轨迹 = log（`future.npy` 的 x, y）与 rater_best（该帧得分最高的 rater 轨迹，并列取 traj 编号最小者；取前 20 点，点数不足按项目惯例重复最后一点），
+  都是 t = 0.25 … 5.0 s。速度剖面 = 原点起相邻点位移 / 0.25 s，时刻记在区间中点（0.125 … 4.875 s）。CTRA 外推的速度 v_ctra(t) = max(v0 + a0·t, 0)，v0、a0 取 `waymo.past_kinematics(past, k=4)` 的 v 与 a（位置差分的速度与纵向加速度，项目已有的定义）；
+  转向不影响速度剖面，所以 CTRA 的角速度项不进速度比较。onset = 第一个 v(t) < v_ctra(t) − 0.5 m/s 的区间中点；5 s 内没有就记「无 onset」。报每个 cluster 与合并的：有 onset 的比例、onset 的分位数（p10/25/50/75/90），log 与 rater_best 并列，
+  以及同一帧上两者都有 onset 时的配对差。时间零点是 rater 帧本身（WOD 没有「可见」时刻），和 P5 的 t − t_vis 不是同一个零点，读的时候必须带这句。
+
 ## 结果
 
 ### E1：M-C head 零样本套到 WOD（2026-09-26 00:31–00:34，GPU 1 几分钟重算 head，其余 CPU）
