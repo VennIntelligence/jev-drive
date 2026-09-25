@@ -159,7 +159,7 @@ def human_onset():
         v = np.linalg.norm(np.diff(pts, axis=1), axis=-1) / waymo.DT
         below = v < vc - DROP
         out[f"onset_{name}"] = np.where(below.any(1), tm[below.argmax(1)], np.nan)
-        # post-hoc (deviation log [E4c] 01:20): the rater trajectories' first waypoint sits at ~0.18 s, not 0.25 s
+        # post-hoc (deviation log [E4c] 01:14): the rater trajectories' first waypoint sits at ~0.18 s, not 0.25 s
         # (first-interval speed 0.71 v0 against 0.98-1.0 v0 afterwards), so the registered search puts a spurious
         # onset at 0.125 s; this variant starts the search at the second interval for both trajectories
         b2 = below[:, 1:]

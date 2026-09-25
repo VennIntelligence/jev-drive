@@ -331,7 +331,7 @@ E6（可选）──────────────────────
   CI 按 base_id（场景）bootstrap 2000 次；family = static / cutin / oncoming 与合并（合并规则照 p5_exam：≥ 5 个 pair 有 reactive 帧的 family 进合并）。
   I3 的 null 只有 24 个场景、792 帧（cut-in 的同车同道版本），τ 与样本外 null false-flip 都只由它定，照记为限定。主读数：M-C pair [cinque] 的合并与逐 family 翻转率、样本外 null false-flip；与 `ridge_late op` prior 的配对差按 reactivity_mc.criteria 的 cut-in 口径（逐帧配对差、场景 bootstrap）描述，不设过线判格（本项在队列里是描述性读数）。
 
-- 2026-09-26 01:20 CST **[E4c] 事后偏离（看过人类 onset 的登记口径数字之后写，只加描述列，不改登记口径）**：rater_best 的 onset 有一半以上落在第一个区间（0.125 s）。
+- 2026-09-26 01:14 CST（box 时钟，按提交 c6c4a97 的时间；人类 onset 的 from2 列在 01:15:01 算出）**[E4c] 事后偏离（看过人类 onset 的登记口径数字之后写，只加描述列，不改登记口径）**：rater_best 的 onset 有一半以上落在第一个区间（0.125 s）。
   核查：rater 轨迹的第一个点不在 0.25 s——479 帧 × 3 条 rater 轨迹上，第一个区间的速度中位是 v0 的 0.71，之后各区间 0.97–1.01（log 是 0.99、0.98…），也就是第一个点大约在 0.18 s，
   登记口径把这个时间基差读成了「减速」。所以加一个描述变体 `from2`：两种轨迹都从第二个区间（0.375 s 中点）起找 onset，其余不变。登记口径的数照报，但 rater_best 的登记口径数是伪影，读的时候用 `from2`。
 
