@@ -46,6 +46,11 @@
   hard-example 网格 arm 原 run 只有 seed 0，新参数 `--hard-seed` 跑 1、2（同一次 fit 会顺带重算配对 arm 的 s0–s2，逐项核对与原 run 相同）。
   核对：每个脚本先在 seed 0 上重跑，与已存 run 比（逐位相同，或 GPU fp32 噪声级），过了才跑 1、2。报每张主表 seed 0 / 1 / 2 的点值、3 seed 均值与极差，以及极差是否小于原 CI 半宽。
   估计：GPU 0 上 (a) 约 15 min、(c) 约 25 min、(d) 约 20 min、(b) 拟合 2 min；devkit 打分 8 个 arm × 约 23 min，两路并行约 1.5 h。
+- 2026-09-26 01:31 CST [SEEDS]（seed 0 重跑核对之后、seed 1 / 2 的任何数字之前）核对结果（`research/results/elicitation/seeds/seed0_reproduction.csv`）：
+  M-C（BA）重跑与已存 run 的 obs 预测最大差 0.46 mm、`criteria.csv` 逐项相同；NAVSIM 与 WOD 的 `ridge ego` / `ridge_late` 预测最大差 ≤ 2 mm（WOD）/ 8 µm（NAVSIM），算是复现。
+  **分类头（`cls ego K1024`、`cls_late`）不能逐位复现**：同一 seed 0 重跑，NAVSIM navtest 上 31% 的 token、WOD val 上 47–52% 的帧选到了不同的 anchor（GPU 上 k-means 的 scatter 累加与 L-BFGS 的非确定性，推测），
+  但汇总量几乎不动（navtest ADE 0.8646 对 0.8654 m；WOD RFS cluster mean 差 0.00–0.05）。所以分类头的「seed 间差」里本来就混着同 seed 的 run-to-run 噪声。处理：不改代码（改了就不再是已存 run 的配方），
+  分类头多报一行「seed 0 重跑」（s0′：WOD 直接用这次重跑；NAVSIM 另打分 `heads_s0r_<arm>`），极差按 s0 / s1 / s2 算，s0′ 只作 run-to-run 噪声的参照。
 
 ## 结果
 

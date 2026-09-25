@@ -34,5 +34,9 @@ case $1 in
       done
       arm_score $r $s ridge_ego & arm_score $r $s cls_ego_K1024; wait      # the paired deltas' ego rows
     done
+    r=$(ls -td $DATA_DIR/runs/navsim_zs/heads-s0/*/ | head -1)      # s0': the cls heads' run-to-run noise (log 01:31)
+    for a in cls_late_cinque_temporal cls_late_lebowski_temporal cls_ego_K1024; do
+      S v1 navtest heads_s0r_$a $r/navtest_$a.npz & S v2 navtest heads_s0r_$a $r/navtest_$a.npz; wait
+    done
     echo "scoring done $(date +%H:%M)" ;;
 esac
