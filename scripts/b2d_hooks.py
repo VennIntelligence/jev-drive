@@ -131,6 +131,8 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         _patch_sensor_tick()
     if cache_lights:
         _patch_lights()
+    if os.environ.get("B2D_LIGHTS_CHECK") == "1":
+        _check_lights()
 
 
 def reseed_after_build(tm_seed):
@@ -277,6 +279,30 @@ def _patch_lights():
     RouteLightsBehavior._turn_close_lights_on = turn_close_lights_on
 
 
+def _check_lights(every=20):
+    """Equivalence check for cache_lights, on when $B2D_LIGHTS_CHECK=1 (either implementation): every `every`-th
+    street-light update, read every light back from the server and count lights whose on/off state differs from the
+    rule RouteLightsBehavior implements (on iff within the radius of the ego). Appends to <attempt>/lights_check.jsonl
+    [call, lights, on, mismatches]."""
+    from srunner.scenariomanager.lights_sim import RouteLightsBehavior
+    inner = RouteLightsBehavior._turn_close_lights_on
+    fh = open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "lights_check.jsonl"), "a", buffering=1)
+    calls = [0]
+
+    def checked(self, location):
+        inner(self, location)
+        calls[0] += 1
+        if calls[0] % every:
+            return
+        radius = max(self._radius, self._radius_increase * CarlaDataProvider.get_velocity(self._ego_vehicle))
+        lights = self._light_manager.get_all_lights()
+        want = [l.location.distance(location) <= radius for l in lights]
+        bad = sum(w != bool(l.is_on) for w, l in zip(want, lights))
+        fh.write(json.dumps([calls[0], len(lights), sum(want), bad]) + "\n")
+
+    RouteLightsBehavior._turn_close_lights_on = checked
+
+
 def _patch_sensor_tick():
     from leaderboard.autoagents.agent_wrapper import AgentWrapper
 
@@ -322,7 +348,12 @@ def _patch_callback(profile, fast_copy, zero_copy):
         t2 = time.perf_counter()
         profile.add_copy(t1 - t0, t2 - t1, raw.nbytes)
         if hashes is not None:
-            line = json.dumps([tag, image.frame, hashlib.md5(raw.tobytes()).hexdigest()]) + "\n"
+            # md5 for bitwise identity, plus a 16x9 block-mean grey thumbnail: CARLA's renderer is not bitwise
+            # reproducible run to run (eye adaptation runs on wall time), so equivalence is judged by distance
+            h, w = image.height, image.width
+            grey = raw.reshape(h, w, 4)[:9 * (h // 9), :16 * (w // 16), :3]
+            thumb = grey.reshape(9, h // 9, 16, w // 16, 3).mean(axis=(1, 3, 4)).round(1).ravel().tolist()
+            line = json.dumps([tag, image.frame, hashlib.md5(raw.tobytes()).hexdigest(), thumb]) + "\n"
             with hashes[1]:
                 hashes[0].write(line)
         self._data_provider.update_sensor(tag, array, image.frame)

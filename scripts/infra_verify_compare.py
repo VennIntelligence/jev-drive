@@ -23,9 +23,13 @@ def attempt(root, tag):
 def frames(adir):
     by = {}
     for line in open(adir / "frame_hash.jsonl"):
-        tag, frame, md5 = json.loads(line)
-        by.setdefault(tag, []).append((frame, md5))
-    return {t: [m for _, m in sorted(v)] for t, v in by.items()}
+        rec = json.loads(line)
+        by.setdefault(rec[0], []).append((rec[1], rec[2], rec[3] if len(rec) > 3 else None))
+    return {t: [(m, th) for _, m, th in sorted(v)] for t, v in by.items()}
+
+
+def thumb_diff(a, b):
+    return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
 
 
 def ticks(adir):
@@ -37,20 +41,28 @@ def compare(ref, var):
     fr, fv = frames(ref), frames(var)
     n = same = 0
     first = None
+    early, alld = [], []   # mean |grey difference| (0-255) of matched thumbnails: first 10 frames per camera, all
     for tag in fr:
         a, b = fr[tag], fv.get(tag, [])
         for i, (x, y) in enumerate(zip(a, b)):
             n += 1
-            same += x == y
-            if x != y and (first is None or i < first):
+            same += x[0] == y[0]
+            if x[0] != y[0] and (first is None or i < first):
                 first = i
+            if x[1] is not None and y[1] is not None:
+                d = thumb_diff(x[1], y[1])
+                alld.append(d)
+                if i < 10:
+                    early.append(d)
+    med = lambda xs: sorted(xs)[len(xs) // 2] if xs else None  # noqa: E731
     tr, tv = ticks(ref), ticks(var)
     k = min(len(tr), len(tv))
     dpose = max((max(abs(p - q) for p, q in zip(a[0], b[0])) for a, b in zip(tr[:k], tv[:k])
                  if a[0] and b[0]), default=None)
     dctl = max((max(abs(p - q) for p, q in zip(a[1], b[1])) for a, b in zip(tr[:k], tv[:k])), default=None)
     first_tick = next((i for i, (a, b) in enumerate(zip(tr[:k], tv[:k])) if a != b), None)
-    return {"frames": n, "frames_identical": same, "first_frame_diff_index": first, "ticks_ref": len(tr),
+    return {"frames": n, "frames_identical": same, "first_frame_diff_index": first,
+            "thumb_diff_first10_median": med(early), "thumb_diff_median": med(alld), "ticks_ref": len(tr),
             "ticks_var": len(tv), "first_tick_diff": first_tick, "max_pose_diff": dpose, "max_control_diff": dctl}
 
 
@@ -58,17 +70,19 @@ def main():
     root, ref, variants = sys.argv[1], sys.argv[2], sys.argv[3:]
     r = attempt(root, ref)
     out = {}
-    print("| variant | frames identical | first differing frame | ticks | first differing tick | "
-          "max pose diff (m / rad) | max control diff |")
-    print("|---|---:|---:|---:|---:|---:|---:|")
+    print("| variant | frames identical | first differing frame | thumbnail diff, first 10 / all (median) | ticks | "
+          "first differing tick | max pose diff (m / rad) | max control diff |")
+    print("|---|---:|---:|---:|---:|---:|---:|---:|")
     for v in variants:
         a = attempt(root, v)
         if a is None or r is None:
             print("| %s | missing | | | | | |" % v)
             continue
         c = out[v] = compare(r, a)
-        print("| %s | %d / %d | %s | %d | %s | %s | %s |" % (
-            v, c["frames_identical"], c["frames"], c["first_frame_diff_index"], c["ticks_var"],
+        fmt = lambda x: "-" if x is None else "%.2f" % x  # noqa: E731
+        print("| %s | %d / %d | %s | %s / %s | %d | %s | %s | %s |" % (
+            v, c["frames_identical"], c["frames"], c["first_frame_diff_index"],
+            fmt(c["thumb_diff_first10_median"]), fmt(c["thumb_diff_median"]), c["ticks_var"],
             c["first_tick_diff"], "%.4f" % c["max_pose_diff"] if c["max_pose_diff"] is not None else "-",
             "%.4f" % c["max_control_diff"] if c["max_control_diff"] is not None else "-"))
     (Path(root) / "verify.json").write_text(json.dumps({"reference": ref, "variants": out}, indent=1))
