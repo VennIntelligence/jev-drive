@@ -7,6 +7,7 @@ GPU part (run inside each model's own env; only numpy / pandas / torch + that mo
 CPU part (envs/jevdrive):
   subset   the fixed frame subset S (P5 hazard frames x 3 cameras, every 3rd nuScenes scene x 3 front cameras)
   eval     fusion_q4's own evaluate / hazard_reading on S for one detection dir; summary row + tables
+  summary  latency + recall + paired deltas against SAM 3.1 -> small csv files (research/results/fast-perception)
   depth    optional side reading: metric depth (YOLO26-depth) at each detection's contact pixel (envs/ultralytics)
 
 Backend specs (`--backend`), all returning per image, per prompt: scores (n,), boxes xyxy px (n, 4), masks (n, H, W)
@@ -410,6 +411,40 @@ def paired_boot(a: "pd.DataFrame", b: "pd.DataFrame", cls: str, maxd: float | No
     return float(diff.mean()), float(np.quantile(bs, 0.025)), float(np.quantile(bs, 0.975))
 
 
+def summary(out: Path, base: str = "sam31-orig") -> dict:
+    """Latency (GPU 4 runs, the latest per backend), recall rows, paired hazard-pedestrian deltas against SAM 3.1 and
+    nuScenes pedestrian recall at SAM 3.1's precision -> out/{latency,recall}.csv (small, committed)."""
+    import pandas as pd
+    R = Path(os.environ["DATA_DIR"]) / "runs/fastperc"
+    lat = []
+    for f in sorted((R / "latency").glob("*/*/latency.json")):
+        d = json.loads(f.read_text())
+        for cam in ("1 camera", "3 cameras"):
+            lat.append({"backend": d["backend"], "cams": int(cam[0]), "run": f.parent.name, **d[cam]})
+    lat = pd.DataFrame(lat).sort_values("run").groupby(["backend", "cams"]).last().reset_index().drop(columns="run")
+    runs = {}
+    for f in sorted((R / "eval").glob("*/*/row.json")):
+        runs[f.parent.parent.name] = f.parent                     # the latest run per tag
+    rows = {t: json.loads((d / "row.json").read_text()) for t, d in runs.items()}
+    b_rows = pd.read_parquet(runs[base] / "hazard_rows.parquet")
+    target = rows[base]["nusc_ped_prec"]
+    for t, d in runs.items():
+        a = pd.read_parquet(d / "hazard_rows.parquet")
+        for tag, mx in (("all", None), ("le20", 20.0)):
+            m, lo, hi = paired_boot(a, b_rows, "pedestrian", mx)
+            rows[t] |= {f"d_haz_ped_{tag}": m, f"d_haz_ped_{tag}_lo": lo, f"d_haz_ped_{tag}_hi": hi}
+        sw = d / "nusc_ped_sweep.csv"
+        if sw.exists():
+            w = pd.read_csv(sw).dropna()
+            ok = w[w.precision >= target]
+            rows[t]["nusc_ped_recall_at_base_prec"] = float(ok.recall.max()) if len(ok) else np.nan
+    rec = pd.DataFrame(rows.values())
+    out.mkdir(parents=True, exist_ok=True)
+    lat.to_csv(out / "latency.csv", index=False, float_format="%.4g")
+    rec.to_csv(out / "recall.csv", index=False, float_format="%.4g")
+    return {"latency": len(lat), "recall": len(rec)}
+
+
 # ================================================================ CLI
 
 def main():
@@ -418,7 +453,7 @@ def main():
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("latency", "detect", "subset", "eval", "depth"))
+    ap.add_argument("step", choices=("latency", "detect", "subset", "eval", "depth", "summary"))
     ap.add_argument("--backend", help="backend spec, see the module docstring")
     ap.add_argument("--list", help="image list parquet (latency / detect)")
     ap.add_argument("--dataset", choices=("p5", "nusc"), help="detect: restrict to that part of S")
@@ -450,6 +485,8 @@ def main():
     elif a.step == "depth":
         info = depth_sample(a.out, a.depth_out, workers=a.workers, rl=rl)
         rl.info(f"depth: {info}")
+    elif a.step == "summary":
+        rl.info(f"summary: {summary(Path(a.out))}")
     elif a.step == "subset":
         S = subset()
         d = Path(os.environ["DATA_DIR"]) / "processed/fastperc"
