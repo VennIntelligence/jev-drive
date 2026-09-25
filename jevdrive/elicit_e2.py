@@ -1,5 +1,5 @@
 """Elicitation E2: real-frame counterfactual edit pairs (todos/2026-09-26-elicitation-program.md, E2 and deviation-log
-entry [E2] 00:40, written before any pair was built).
+entry [E2] 00:33, written before any pair was built).
 
   candidates  (project venv, CPU) navtrain tokens whose t0 frame has a GT pedestrian / bicycle in the corridor
               (logged 4 s path polyline continued along its last heading to 30 m, +-1.5 m, ahead, <= 30 m, >= 20 px tall in CAM_F0); one actor per token (the
@@ -105,8 +105,8 @@ def _log_candidates(log_path):
         if not np.allclose(dts, 0.5, atol=0.06):
             continue
         a = hist[-1]["anns"]
-        poly = extend(np.vstack([[0.0, 0.0], tok2fut[tok][:, :2]]), RANGE)   # deviation [E2] 00:50
-        inside = []                   # every GT pedestrian / bicycle in the corridor (deviation [E2] 01:00)
+        poly = extend(np.vstack([[0.0, 0.0], tok2fut[tok][:, :2]]), RANGE)   # deviation [E2] 00:38
+        inside = []                   # every GT pedestrian / bicycle in the corridor (deviation [E2] 00:49)
         for j, (nm, bx) in enumerate(zip(a["gt_names"], a["gt_boxes"])):
             if nm not in ("pedestrian", "bicycle") or bx[0] <= 0:
                 continue
