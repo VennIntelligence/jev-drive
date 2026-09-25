@@ -483,10 +483,73 @@ def fig16(dataset: str = "navtrain", tag: str = "val64", n: int = 16, seed: int 
     return rl.dir
 
 
+# ---------------------------------------------------------------- feature inputs (project venv)
+
+SIDES = ("plus", "minus", "placebo")
+
+
+def pairs_table(dataset: str = "navtrain", tag: str = "main"):
+    """Valid pairs: token -> {side: 12 JPEG paths (CAM_F0 / L0 / R0 x 4 frames, oldest first)}; the placebo side only
+    for tokens with at least one placebo image. Unedited images keep the original path on every side."""
+    import pandas as pd
+    root = out_root(dataset, tag)
+    cands = {c["token"]: c for c in pickle.load(open(out_root(dataset) / "candidates.pkl", "rb"))}
+    rows = []
+    for meta in sorted(root.glob("c*/meta.json")):
+        for rec in json.loads(meta.read_text()):
+            if not rec.get("valid"):
+                continue
+            c = cands[rec["token"]]
+            orig = {(im["cam"], im["k"]): im["path"] for im in c["images"]}
+            files = {sd: dict(orig) for sd in SIDES}
+            n_pl = 0
+            for r in rec["images"]:
+                key, base = (r["cam"], r["k"]), meta.parent / rec["token"] / f"{r['cam']}_{r['k']}"
+                if r["edited"]:
+                    files["minus"][key] = str(base) + "_minus.jpg"
+                if r.get("placebo"):
+                    files["placebo"][key] = str(base) + "_placebo.jpg"
+                    n_pl += 1
+            row = {"token": rec["token"], "log": rec["log"], "cls": rec["cls"], "dist": rec["dist"],
+                   "n_actors": c.get("n_actors", 1), "n_placebo_imgs": n_pl}
+            for sd in SIDES:
+                row[sd] = [files[sd][(cam, k)] for cam in CAMS for k in range(4)]
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def feat_index(dataset: str = "navtrain", tag: str = "main") -> dict:
+    """Inputs for the unchanged extractors: navsim_qwen indexes processed/navsim_qwen/e2<ds>_<side>/index.parquet and
+    openpilot slim indexes runs/navsim_zs/index/e2<ds>_<side>_slim.pkl (the navtrain entry with CAM_F0 paths swapped)."""
+    import copy
+    from . import navsim_qwen as NQ, navsim_zs as Z
+    t = pairs_table(dataset, tag)
+    t.drop(columns=list(SIDES)).to_parquet(out_root(dataset, tag) / "pairs.parquet", index=False)
+    slim = {e["token"]: e for e in Z.load_index(dataset, slim=True)}
+    out = {}
+    for sd in SIDES:
+        g = t if sd != "placebo" else t[t.n_placebo_imgs > 0]
+        name = f"e2{dataset[:3]}_{sd}"
+        q = g[["token"]].assign(files=g[sd].tolist())
+        q["chunk"] = np.arange(len(q)) // NQ.CHUNK
+        q.to_parquet(NQ.root(name, "index.parquet"), index=False)
+        ents = []
+        for tok, files in zip(g.token, g[sd]):
+            e = copy.deepcopy(slim[tok])
+            for k in range(4):
+                e["cams"][k]["CAM_F0"]["path"] = files[k]          # CAM_F0 is the first camera block
+            ents.append(e)
+        with open(Z.root("index") / f"{name}_slim.pkl", "wb") as f:
+            pickle.dump(ents, f, protocol=4)
+        out[sd] = len(g)
+    log.info("feature inputs: %s", out)
+    return out
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -496,6 +559,8 @@ def main():
         candidates(a.workers)
     elif a.cmd == "build":
         build(a.dataset, a.limit, a.tag)
+    elif a.cmd == "feat-index":
+        print(feat_index(a.dataset, a.tag))
     elif a.cmd == "fig":
         print(fig16(a.dataset, a.tag))
     else:
