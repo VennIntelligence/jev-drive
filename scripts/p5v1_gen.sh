@@ -12,6 +12,11 @@
 # the routes); chain j owns CARLA server indices 800 + 50j .. +49 (b2d_run --index-span).
 # Resumable: killed and re-run, it skips done/<id>.json and steals the claims of dead runners.
 # Exit 0 when each expert has >= MIN_DONE_PCT (95) % of its worlds, so the index slot runs on what exists.
+#
+# Extra chain mid-run (EXTRA_GPU=<g> EXTRA_WORKERS=<n> EXTRA_BLOCK=<j> EXTRA_CPUS=<list> EXTRA_NCPUS=<k>): one more
+# chain on card <g> with server block 800 + 50j, no orphan reaping (the running chains own live servers). Safe to add
+# while other chains run: routes are claimed with O_EXCL claims/<id>.lock and done/<id>.json is skipped, all chains
+# share one --out per expert, and a world's output depends only on its XML variant and TM seed, not on the runner.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
@@ -30,6 +35,11 @@ read -ra G <<< "$GPUS"
 read -ra W <<< "$WORKERS"
 [[ -n $INFRA_SERVERS_PER_GPU ]] && for j in "${!W[@]}"; do W[j]=$INFRA_SERVERS_PER_GPU; done
 [[ -n $INFRA_CORES_PER_SERVER ]] && CORES_PER_SERVER=$INFRA_CORES_PER_SERVER
+if [[ -n ${EXTRA_GPU:-} ]]; then
+    G=("$EXTRA_GPU") W=("$EXTRA_WORKERS")
+    printf -v "CPUS_$EXTRA_GPU" '%s' "$EXTRA_CPUS"
+    printf -v "GATE_$EXTRA_GPU" '%s' ""
+fi
 stamp=$(date +%m%d-%H%M)
 { cat "$R/layout.env"; [[ -f $R/layout.infra.env ]] && cat "$R/layout.infra.env"; } > "$R/layout.used-$stamp.env"
 note "p5v1-gen start: GPUs [${G[*]}], CARLA instances [${W[*]}], $CORES_PER_SERVER cores each, experts [$EXPERTS] ($R/layout.used-$stamp.env)"
@@ -42,7 +52,8 @@ echo "{\"tfv6_model_dir\": \"$TFV6\", \"save_threads\": 3}" > "$R/agent-ba.json"
 echo "{\"tfv6_model_dir\": \"$TFV6\", \"save_threads\": 3, \"driver\": \"pdm_lite\", \"after_trigger_s\": 40.0, \"stuck_s\": 40.0, \"max_sim_s\": 70.0}" > "$R/agent-pdm.json"
 
 # Orphans of an earlier, killed invocation hold ports in our blocks; every runner below runs --no-reap because the
-# chains share an --out and one runner's reaper would kill the other's servers.
+# chains share an --out and one runner's reaper would kill the other's servers. An extra chain skips this step.
+if [[ -z ${EXTRA_GPU:-} ]]; then
 "$PY" - "$R/gen-ba" "$R/gen-pdm" <<'EOF'
 import sys
 from pathlib import Path
@@ -54,6 +65,7 @@ for o in sys.argv[1:]:
         B.Runner.reap_orphans(SimpleNamespace(out=Path(o), _external_servers=None,
                                               event=lambda kind, **kw: print(kind, kw, flush=True)))
 EOF
+fi
 
 free_cpus() {  # free_cpus <cpu list> <n>: the first n CPUs of the list that no live process is pinned to
     python3 - "$1" "$2" <<'EOF'
@@ -106,7 +118,7 @@ tree() { [[ $1 == pdm ]] && echo "$DATA_DIR/third_party/simlingo/Bench2Drive" ||
 pyenv() { [[ $1 == pdm ]] && echo "$DATA_DIR/envs/p5v1-pdm/bin/python" || echo "$DATA_DIR/envs/scout-tfv6/bin/python"; }
 
 chain() {  # chain <j>: GPU G[j], every pass, every expert
-    local j=$1 g=${G[$1]} w=${W[$1]} list_var=CPUS_${G[$1]} gate_var=GATE_${G[$1]} base=$(( 800 + $1 * 50 )) span cpus pass e ids
+    local j=$1 g=${G[$1]} w=${W[$1]} list_var=CPUS_${G[$1]} gate_var=GATE_${G[$1]} base=$(( 800 + ${EXTRA_BLOCK:-$1} * 50 )) span cpus pass e ids
     span=$(( 50 / w * w ))
     if [[ ${!gate_var:-} == i3 ]]; then
         echo "$(date +%T) gpu $g: waiting for I3 to finish on this card"
@@ -125,7 +137,7 @@ chain() {  # chain <j>: GPU G[j], every pass, every expert
     until (( $(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits) >= need )); do
         echo "$(date +%T) gpu $g: waiting for $(( need / 1024 )) GB free"; sleep 120
     done
-    cpus=$(free_cpus "${!list_var}" $(( w * CORES_PER_SERVER )))
+    cpus=$(free_cpus "${!list_var}" "${EXTRA_NCPUS:-$(( w * CORES_PER_SERVER ))}")
     note "p5v1-gen chain gpu $g start: $w CARLA instances, CPUs $cpus, server index $base-$(( base + span - 1 ))"
     for pass in 1 2; do
         for e in $EXPERTS; do
@@ -144,7 +156,7 @@ chain() {  # chain <j>: GPU G[j], every pass, every expert
 
 pids=()
 for ((j = 0; j < ${#G[@]}; j++)); do
-    chain "$j" > "$R/chain-gpu${G[$j]}-$stamp.log" 2>&1 &
+    chain "$j" > "$R/chain-gpu${G[$j]}${EXTRA_BLOCK:+-b$EXTRA_BLOCK}-$stamp.log" 2>&1 &
     pids+=($!)
     sleep 60            # the chains' first server starts do not collide
 done
