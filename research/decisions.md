@@ -2899,6 +2899,8 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 
 **P6 / P7 的基础设施验收（2026-09-26，GPU box，[b2d-controllers-p7.md](../todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p7.md)）。** P7 = P6 + 正向加速度命令上限 2 m/s²（上面那种可行性整形，登记于 protocol-v2 末段）。与 P5 同一套专家 replay 验收、同 20 条路线，1 / 2 / 5 Hz，预注册后运行：P6、P7 全部 fail，失败层都是纵向。P6 在这些节奏下按设计与 P5 相同，结果也相同（落后 2.5–3.2 m、DS 84.7–88.9）；两者逐路线 DS 在冲突点上 36/60 ↔ 100 翻转、均值差 −1.8 到 +3.2，给出这套 20 条路线单次运行的噪声量级（约 ±3 DS）。**P7 把跟随专家时刻表的滞后放大一倍多**：时间滞后 0.73–0.81 s（P6 0.26–0.39 s），逐路线 e_lon 比 P6 多落后 2.4 m（三个节奏 CI 都在 [−3.5, −1.5] 附近），DS 77.8–87.1，2 Hz 下比 P6 低 −7.0 [−14.4, −0.9]，在 2286、24211、2091 上三个节奏都多撞；原因是 PDM-Lite 加速时的大部分时间（逐路线中位数 82%）超过 2 m/s²。读法：可行性整形在“plan 本身可行且激进”的情形下直接变成跟随滞后；它在 TFv6 不可行起步 plan 上是否值得，要看 Tokyo 登记的 L1 与 TFv6 / TCP 闭环（判据：闭环完成与碰撞不差于 C、L1 名义 primary 不劣于 D），本验收不单独判 P7 的去留。
 
+**P7：可行性整形（2026-09-26，判据登记于结果前）。** P7 = P6 + 正向加速度命令上限 2.0 m/s²。登记判据（闭环完成与碰撞不差于 C、L1 名义不劣于 D）**未通过**：L1 与碰撞通过，但 TFv6 完成 29/32 少于 C 的 31/32；1825 两个 seed、4183 seed 1 仍失败，说明"起步加速过猛"只解释了一部分。P7 在 TCP 子集上平均 DS 63.4，与 C 64.8 持平、高于原生 61.1，L1 模型噪声下最好。建议：TFv6 这类与作者执行层共训的 planner 继续用 C/D；非共训 planner 与低频 VLA planner 用 P7。剩余失败待在 dev 上单独诊断。
+
 ## 42. 行人信息在 openpilot 的 vision 层就没有；双流 reaction head 用配对差分监督能让行人翻转到 43%，hard-example 重加权不能（**待定**，P5 v1 BehaviorAgent 集，101 条路线）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
