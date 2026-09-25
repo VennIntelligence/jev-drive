@@ -397,16 +397,17 @@ def _flip(o: pd.DataFrame, ex: str, tau: float) -> np.ndarray:
     return ((np.sign(o[ex]) == np.sign(o.d_expert)) & E._moved(o[ex], tau)).astype(float).to_numpy()
 
 
-def run_p5(rl) -> dict:
+def run_p5(rl, op_sub: str = "op_streams") -> dict:
     from . import p5_exam as E, p5_openpilot, p5_pairs as P
     t0 = time.time()
     t, past, fut, obs, null, pairs = E.load()
-    X = P.load_features(t) | p5_openpilot.load(t, ("cinque", "lebowski"))
+    X = P.load_features(t) | p5_openpilot.load(t, ("cinque", "lebowski"), ("temporal",), op_sub)
     X = {"qwenvid L18_last": X["L18_last"], "qwenvid L18_mean": X["L18_mean"],
          "op-cinque temporal": X["op-cinque temporal"], "op-lebowski temporal": X["op-lebowski temporal"]}
     singles = [s for s in SINGLES if s in X]
     fold = E.folds(t, pairs)
-    rl.log.info("P5: %d frames, %d pair frames, %d null frames; singles %s", len(t), len(obs), len(null), singles)
+    rl.log.info("P5 set %s (op %s): %d frames, %d pair frames, %d null frames; singles %s", P.processed(), op_sub,
+                len(t), len(obs), len(null), singles)
     heads = E.heads(t, past, fut, X, fold, rl)                           # unchanged: ridge ego + one ridge_late per tap
     preds = {"ridge ego": heads["ridge ego"]} | {f"ridge_late {k}": heads[f"ridge_late {k}"] for k in singles}
     # equivalence: the parametrised loop with the heads' own standardiser reproduces p5_exam.heads
@@ -516,11 +517,14 @@ def main():
     ap.add_argument("--run", default=None, help="readout: the run directory to read (default: this run)")
     ap.add_argument("--vram-gb", type=float, default=20.0)
     ap.add_argument("--threads", type=int, default=8)
+    ap.add_argument("--op-sub", default="op_streams", help="p5: openpilot stream dir (P5 v1: op_streams_vis)")
     a = ap.parse_args()
     torch.set_num_threads(a.threads)
     total = torch.cuda.get_device_properties(0).total_memory
     torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
-    rl = RunLog("fusion_diag", "q1")
+    import os
+    p5_set = os.environ.get("P5_SET", "carla_p5")
+    rl = RunLog("fusion_diag", "q1" if p5_set == "carla_p5" else f"q1-{p5_set.removeprefix('carla_')}")
     rl.log.info("args %s -> %s", vars(a), rl.dir)
     rl.event("start", args=vars(a))
     heads = tuple(a.heads.split(","))
@@ -538,7 +542,7 @@ def main():
         if step == "check_cls":
             check_cls(rl)
         elif step == "p5":
-            dump(run_p5(rl), "")
+            dump(run_p5(rl, a.op_sub), "")
         elif step in ("wod_a", "wod_b"):
             run_wod(rl, step, heads)
             dump(wod_readout(rl.dir, step), f"{TAG[step]}_")

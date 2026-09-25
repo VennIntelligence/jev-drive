@@ -399,6 +399,11 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 - 2026-09-25 23:35 CST [Q6-v1]（第 3 阶段，写在任何 v1 的 Q6 数字之前）Q6 在 P5 v1 上按 reactivity 偏离 7 的口径：PDM-Lite 集（`carla_p5v1_pdm`）与 BehaviorAgent 集（`carla_p5v1_ba`）分别跑、分别报，**判据用 PDM-Lite 集**（登记：「决策规则以 PDM-Lite 那次为准」）。
   代码不变（`fusion_diag.q6gt`，只把录制树换成该集合的 `runs/p5v1/gen-<expert>`），门、阈值、制动量级的拟合口径、考官都与 v0 相同。Q6-SAM 只在 PDM-Lite 集上跑（描述，不进判据）：对该集合 17 340 个观测帧 × 3 路跑同一条 SAM 原样路径，
   GT / 抬升 / 状态构造同 v0。
+- 2026-09-26 [Q1-v1] 写于 v1 上任何 Q1 数字之前。Q1-P5 在 P5 v1 上复跑，口径按 reactivity todo 偏离 7：**两个 expert 的集合分开跑、分开报**（`P5_SET=carla_p5v1_pdm` 为主，`carla_p5v1_ba` 为与 v0 同口径的复现），不合并；
+  PDM-Lite 集用 `p5v1-index` 产出的完整录制窗口（不用「截回 v0 窗口」那套，那套只供两 expert 对比，不在本项复跑）。arm、head、judge、best single 的选择与并列规则、500 次路线 bootstrap 与 [Q1] (1)–(5) 完全相同，代码同一个 `fusion_q1.run_p5`。
+  特征：Qwen `L18_last` / `L18_mean` 取各集合 `features/`（`p5_qwen`，P3(d″) 抽取器）；openpilot `temporal` 取 D0 链抽的 `op_streams_vis`（`op_{cinque,lebowski}_vis/temporal.npy`，与 v0 实验 1 同一抽取器，只是多存了 vision / hidden），
+  这是与 v0 的唯一输入来源差别（v0 读 `op_{model}` 的 temporal-only 副本）。BA 集等 `reactivity-v1-qwen-ba.done` 出现后再跑。run dir `$DATA_DIR/runs/fusion_diag/q1-p5v1_{pdm,ba}/<time>`。
+  「Q1 的 P5 行是否相对 v0 改变」按决策规则表原文读：合并翻转率 concat − best single 的 CI 是否跨零 / 偏负，行人合并 concat − best single 的 CI 是否 > 0。
 
 ## 结果
 
