@@ -194,8 +194,10 @@ def run(rl):
         onsets[s] = on
     crv, area, first = pd.concat(crv), pd.concat(area), pd.concat(first)
     oc = onset_compare(first, onsets)
-    eo = pd.concat([pd.DataFrame({"expert": e, "onset": v.to_numpy()}) for e, v in onsets.items()])
-    eo_sum = eo.groupby("expert").onset.describe(percentiles=[.1, .25, .5, .75, .9]).reset_index()
+    eo = pd.concat([pd.DataFrame({"expert": e, "pk": v.index, "onset": v.to_numpy()}) for e, v in onsets.items()])
+    scope_of = first[first.scope != "pooled"].drop_duplicates(["set", "pk"])[["set", "pk", "scope"]]
+    eo = eo.merge(scope_of.rename(columns={"set": "expert"}), on=["expert", "pk"], how="left").fillna({"scope": "other"})
+    eo_sum = eo.groupby(["expert", "scope"]).onset.describe(percentiles=[.1, .25, .5, .75, .9]).reset_index()
     h = human_onset()
     hs = human_summary(h)
     d = rl.dir
@@ -235,7 +237,7 @@ def fig(run_dir: Path, out: Path):
             ax.plot(g.x, g.all_frames, color=col, label=lab, linewidth=1.0)
             if ex == "M-C pair [cinque]":
                 ax.plot(g.x, g.null, color=col, linestyle=":", linewidth=0.8, label="M-C null floor")
-        v = np.sort(eo[eo.expert == s].onset.to_numpy())
+        v = np.sort(eo[(eo.expert == s) & (eo.scope == "pedestrian")].onset.to_numpy())
         ax.step(v, np.arange(1, len(v) + 1) / len(v), where="post", color=ps.BASELINE, linewidth=0.8, label="Expert onset CDF")
         ax.set_xlim(0, 10)
         ax.set_ylim(0, 1)
