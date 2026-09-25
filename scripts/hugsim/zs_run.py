@@ -141,7 +141,7 @@ def run_job(a, scen, tag_dir, traffic):
             code = "timeout"
     wall = time.time() - t0
     txt = (run_dir / "sim.log").read_text(errors="replace")
-    end = next((e for k, e in END if k in txt), "max_steps" if txt.count("ego pose") > 400 else "other")
+    end = next((e for k, e in END if k in txt), "max_steps" if txt.count("ego pose") >= 400 else "other")
     try:
         ev = json.loads((run_dir / "eval.json").read_text())
     except (OSError, ValueError):
