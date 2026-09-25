@@ -202,3 +202,7 @@ batch 8 约 108 ms/帧（15 步去噪），一张卡约 10 帧/s，可信的偏�
 101 条 base 路线 × 3 seed = 303 对 + 101 null，新跑 1029 个 run；`p5v1-gen` 17:01 起在 GPU 4 + GPU 2 上 11 个 CARLA 实例运行，估计 10–12 h，
 `p5v1-index` 自动接在后面。偏离：PDM-Lite 的录制窗口放长到触发后 40 s（profiling 的两对在 v0 窗口里行人 scenario 没演到 ego 面前），
 另出一套截回 v0 窗口的标签供两 expert 对比。
+7. **P5 v1 上的复跑口径（2026-09-25 19:20，写于 v1 的任何特征或标签数字之前）**。D0 与 M-C 在 v1 上按上面第 1–4、6 条原样复跑，
+   **两个 expert 的集合分别跑、分别报**（`processed/carla_p5v1_pdm` 与 `carla_p5v1_ba`，由 `p5v1-index` 产出），不合并；判定以 **PDM-Lite 集**为主
+   （它是为行人 family 加进来的 expert），BehaviorAgent 集是与 v0 同口径的复现。特征：Qwen `L18_last` 用 `p5_pairs.extract`（P3(d″) 抽取器，不改），
+   openpilot 用 `p5_openpilot`（`--arrays temporal vision hidden`），都按 `P5_SET` 指到对应集合。λ 网格仍用预登记的 10^[−1..5]。
