@@ -118,6 +118,51 @@ M-A 只在 D0 判「信息在 vision 里」时是完整方案；否则 M-A 负�
 | D0 考试（7 个 tap 的 head + probe） | 预算分钟级，实测约 60 min：box CPU 被 CARLA 压到 cgroup 上限（load 125 / 125 核），加上 16 384 维 head（偏离 6 去掉后） |
 | M-C 全部 arm × 2 模型 × 5 fold | 4 min（预登记网格）；宽网格那次 20 min（同样的 CPU 争用） |
 
+### P5 v1 复跑链：Qwen 抽取的 profiling 与自动排程（2026-09-25 19:40，写于任何 v1 特征之前）
+
+代码：`jevdrive/p5_qwen.py`（分 chunk 认领、复用、`profile`）、`scripts/reactivity.sh` 的 `v1-*` 模式、`scripts/reactivity_v1_arm.sh`（挂链）。
+抽取配方不变（P3(d″) 抽取器，eager，batch 2），变的只是怎么跑、哪些帧不重算。
+
+**瓶颈是 GPU 计算。** profiling 在 GPU 1 上做（同卡有 6 个 CARLA server 在跑，绝对值偏高，按同一时段的相对值读），240 个 v0 帧（`carla_p5/features/c000` 前 240 行）：
+
+| 配置 | ms/frame | 峰值显存 | `L18_last` 对 v0 已存行：逐位相同 / max abs diff / rel L2 | `L18_mean` max abs / rel L2 |
+|:--|--:|--:|:--|:--|
+| 旧路径 eager batch 2（两次） | 328 / 400 | 7.3 GB | **240 / 240，0，0** | 0，0 |
+| eager batch 4 | 432 | 10.0 GB | 0 / 240，0.50，1.4e-2 | 0.71，3.5e-3 |
+| `torch.compile` batch 2 | 212 | 11.9 GB | 0 / 240，0.375，1.5e-2 | 0.85，7.7e-3 |
+| `torch.compile` batch 4 | 273 | 14.2 GB | 0 / 240，0.50，1.5e-2 | 0.83，7.7e-3 |
+| 同卡 2 个 eager batch 2 进程并行 | 各 756–760（合计 ≈ 379） | 各 7.3 GB | 240 / 240，0 | 0 |
+
+（`L18_last` 的量级：v0 这 240 行最大绝对值 24.5。）读法：旧路径在同一型号卡上**逐位复现** v0 的已存特征；换 batch 或 compile 都改 kernel，差到 1e-2 相对量级。
+加大 batch 不快、同卡多进程不增加总吞吐（2 × 758 ≈ 1 × 380），说明单进程 eager batch 2 已经把卡喂满；CPU 读 + 解码 + processor 一个 clip item 408 ms/核，
+4 个 loader worker 的供给是 GPU 消耗的 3–4 倍，不是瓶颈。compile 快 1.6 倍，但 v1 的特征表里 P4 与复用的 v0 行都是 eager 配方，混用会让同一个 probe / head 的训练行
+来自两个数值配方，所以**不用 compile，保持逐位相同**；加速全部来自并行和复用：
+
+| | v0（旧） | v1（新） |
+|:--|:--|:--|
+| 并行 | 1 个进程、1 张卡，620 ms/frame（v0 实测，共享卡） | 每张卡 1 个进程，GPU 1、2、4 三张卡，O_EXCL 锁认领 1500 帧的 chunk，死进程的锁自动接管，`meta.json` 最后写作完成标记 |
+| 复用 | P4 的 3000 个 clip（按帧名） | 另加：凡 12 张 JPEG 是**同一批文件**（目录解析 symlink 后相同）的帧，直接拷 v0 chunk 的行（float16 原样）到 `features/r000`。BehaviorAgent v1 在 v0 路线上的世界就是 v0 run 的 symlink，帧名与文件都相同；P4 里 v0 已抽过的 6756 帧同理 |
+| 复用检查 | — | 用 v0 index 伪造一个「v1 BA」集合（文件路径改到 `gen-ba` 的 symlink 下）：29 827 帧里 2773 帧走 P4、27 054 帧从 v0 chunk 复用、0 帧要算；载入后与 v0 逐行比较，`L18_last`、`vit_mean` 最大差 0 |
+| openpilot | 全部 stream 重跑 | 同理把 v0 `op_streams_vis` 里同名、同 target、同文件的 stream 链接过来（dry run 里 536 / 536 条全链接） |
+
+**估计**（每个 run 约 50 个 index 帧，v0 实测 20 298 帧 / 385 run）：PDM-Lite 集约 707 × 53 ≈ 3.7 万帧要算，BA 集约 322 × 53 ≈ 1.7 万帧（另约 2.7 万帧复用）；
+三张卡、每卡约 0.33–0.40 s/frame（卡上没有 CARLA 后应接近 0.33）：PDM 约 70–80 min，BA 约 30–35 min；v0 的单进程路径要约 54 000 × 0.62 s ≈ 9.3 h。
+D0 考试与 M-C 在 dry run（v1 代码路径、v0 路线的 BA 集，全部特征复用）上各 11 min / 8 min（12 / 8 个独占核；v0 那次 60 min 是 CPU 被 CARLA 压满），v1 每个集合约 1.5 倍帧数，估 15–20 min / 10–15 min。
+
+**链**（`reactivity_v1_arm.sh`，全部 `slot_run.sh`，重挂即续跑）：
+
+| slot | 门 | 做什么 | 资源 |
+|:--|:--|:--|:--|
+| `reactivity-v1-qwen-pdm` | `p5v1-index` | plan + 每卡 1 个 `p5_qwen work`，失败的 chunk 再跑一遍，`check` 通过才算完成 | GPU 1、2、4，各 6 核（从 156–207 里挑没被 pin 的） |
+| `reactivity-v1-op-pdm` | `p5v1-index` | `p5_openpilot prepare` → `reuse` → 两个 shard（`temporal vision hidden`，`op_streams_vis`）→ `finalize` | 空闲显存最多的那张卡，16 核（52–77） |
+| `reactivity-v1-qwen-ba` / `-op-ba` | 各自的 pdm slot | 同上，BA 集 | 同上 |
+| `reactivity-v1-exam-{pdm,ba}` | 该 expert 的 qwen + op | `p5_exam run --op cinque,lebowski --op-arrays temporal,vision,hidden --op-sub op_streams_vis --heads-skip "op-cinque hidden"`，run dir `runs/p5_pairs/exam-d0-carla_p5v1_<e>/` | 12 核（78–90 / 91–103） |
+| `reactivity-v1-mc-{pdm,ba}` | 同上 | `reactivity_mc --op-sub op_streams_vis`（预登记网格），run dir `runs/reactivity/mc-carla_p5v1_<e>/` | 8 核（104–113 / 114–131） |
+| `reactivity-v1-final` | 四个 exam / mc | 在 gpu-plan.md 记一行 | — |
+
+同时在跑的我方核数最多约 18（抽取）+ 16（op）或 18 + 12 + 8，≤ 45。p5v1-index 之后的总 wall time 估约 2–2.5 h（qwen-pdm 80 min → qwen-ba 35 min，与 pdm 的考试重叠 → ba 考试 20 min）；
+index 若 02:00 落地，约 04:30 前完成。考试与 M-C 的代码只改了 plumbing（run dir 按 `P5_SET` 分开、M-C 从 `op_streams_vis` 读 `temporal`），judge、probe、head、判据、网格不动。
+
 ### D0：行人信息在 openpilot 的 vision 层里有没有
 
 x⁺ 对 x⁻ 观测帧上的 hazard probe AUC（probe 不改，按路线 5 折），路线 bootstrap 500 次；Δ 是对同模型 `temporal` 的逐帧配对差。
