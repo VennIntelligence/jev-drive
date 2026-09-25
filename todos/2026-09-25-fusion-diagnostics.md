@@ -346,6 +346,10 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   seed 1、2 只作敏感性描述。另跑一个只描述的比较 arm：同样去掉 train 行 μ 项的**线性**配对 arm，输入 pooled `L18_last`（闭式解，λ 同 M-C 的网格与 3 折路线 CV），用来在同一损失下隔离「网格 vs pooled」。
   (6) **读数与判据**：`p5_exam.exam` 一字不改，`reactivity_mc.criteria` 原样（行人 = 四个行人 family 的 reactive 帧合并，路线 bootstrap；cut-in 对 prior 的逐帧配对 Δ；样本外 null false-flip）；判据按登记：行人 ≥ 20% 且 CI 下端 > null false-flip，且 null ≤ 7%（cut-in 不掉照 M-C 一起报）。
   拟合斜率诊断同 M-C 偏离 5（训练对上 |Δ_expert| > 0.5 m/s 的对，2 s 速度差，拟合值对 expert 值的斜率，按行人 / cut-in，逐折报，取中位）。决策规则只读主读数（Cinque，seed 0，配对 arm）；Lebowski 与其余 seed 不一致时照实写。
+- 2026-09-25 18:58 CST [Q9b] （profiling 之后、全量抽取与任何拟合之前）(7) **抽取配置**：64 行 profiling（`runs/fusion_diag/q9b-profile/`）。按已存 chunk `c000` 的原顺序（batch 配对相同）跑 eager b2，`L18_mean` / `L18_last` 64 / 64 行**逐位相同**，
+  即加 `L18_grid` 不改动任何数值、recipe 与已存 P5 特征一致；换一种 batch 配对（obs 行的前 64 行）eager b2 就有 rel L2 3e-3 / 1.3e-2（cos ≥ 0.99983），说明 bf16 数值随 batch 里的另一个 clip 变，这是 recipe 本身的噪声量级。
+  compile b8 在 12 GB 上限下 OOM（`qwenvid_train_t4` 的 b8 峰值 11.5 GB + 编译开销），compile b4：213 ms/帧、峰值 7.5 GB，对已存特征 rel L2 7.8e-3 / 1.5e-2、cos ≥ 0.99975，过 (1) 的门槛，所以按 (1) 的规则用 **compile b4**
+  （eager b2 在同一张卡上 294 ms/帧）。预计 9919 × 213 ms ≈ 35 min。
 
 ## 结果
 
