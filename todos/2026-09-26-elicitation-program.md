@@ -443,6 +443,68 @@ M-C 双流行人 4.8% 远在它自己 56% 的 null case 地板之下。
 主要考生在行人（a）与 cut-in（b）reactive 帧上的定向翻转率；灰色是 BA 集官方逐帧，三种蓝 / 橙是 PDM-Lite 集的逐帧、(a) 门控、(b) 按对；误差线是 base 路线 bootstrap 95% CI，点线是 20% 门槛。
 要看的是：蓝色两根几乎等高（门控不改变 PDM-Lite 的读数），而且连 GT 规则门在 PDM-Lite 上也从 0.8 掉到 0.1，问题在标签，不在窗口。
 
+### E4c：reaction latency 曲线与 WOD 人类 onset（2026-09-26 01:13–01:16，CPU 8 核，< 2 min）
+
+代码 `jevdrive/elicit_e4c.py`，run `$DATA_DIR/runs/elicitation/e4c/20260926-011619`（01:13 那次与它逐文件相同，只少了按 scope 分的 expert onset，图用的是后者），
+小表 [research/results/elicitation/e4c/](../research/results/elicitation/e4c/)。口径见偏离日志 [E4c] 01:11，事后加的 `from2` 列见 [E4c] 01:14。
+曲线 C(x) 是「到 t − t_vis = x 为止已经定向翻转过的对」的比例（按对、看全部观测帧、τ 用官方值）；A 是 C 在 [L, 10 s] 上的平均高度；null 地板是同一定义在 null case 上（方向取同 base 的 seed-0 对），A − null 是能读的量。
+
+**expert onset**（每对第一个 reactive 帧离可见的秒数）：
+
+| 集合 | 行人：p25 / 中位 / p75 | cut-in：p25 / 中位 / p75 | 对数（行人 / cut-in） |
+|:--|:--|:--|:--|
+| BehaviorAgent | 0.0 / 1.2 / 2.2 | 5.7 / 6.2 / 7.2 | 63 / 78 |
+| PDM-Lite | 0.0 / **0.0** / 1.3 | 0.0 / 1.8 / 2.4 | 63 / 77 |
+
+**曲线面积 A − null [base bootstrap 95% CI]**（A 本身在括号里；L 同 E4）：
+
+| 考生 | 行人 BA | 行人 PDM-Lite | cut-in BA | cut-in PDM-Lite |
+|:--|:--|:--|:--|:--|
+| M-C 配对双流（Cinque） | **+0.38 [+0.22, +0.55]**（0.72） | −0.31 [−0.46, −0.15]（0.05） | +0.15 [−0.00, +0.30]（0.41） | −0.18 [−0.31, −0.06]（0.06） |
+| M-C 配对双流（Lebowski） | **+0.48 [+0.29, +0.67]**（0.70） | −0.38（0.02） | +0.07 [−0.07, +0.20]（0.42） | −0.17（0.13） |
+| M-C 只 Qwen / 只 openpilot | +0.42 / +0.00 | −0.28 / −0.23 | +0.12 / +0.21 | −0.21 / −0.16 |
+| M-C hard-example / 均匀 | −0.25 / −0.19 | −0.19 / −0.19 | +0.28 / +0.28 | −0.11 / −0.22 |
+| openpilot `ridge_late`（= prior） | −0.20（0.01） | −0.26（0.03） | +0.23 [+0.08, +0.36]（0.41） | −0.21（0.03） |
+| Qwen `ridge_late L18_last` | −0.09（0） | −0.18（0） | −0.36（0） | −0.26（0） |
+| TFv6 waypoint 2 s | +0.40 [+0.26, +0.55]（0.67） | −0.22 [−0.40, −0.05]（0.15） | +0.17 [+0.05, +0.29]（0.43） | +0.06 [−0.08, +0.20]（0.23） |
+| `ridge ego` | +0.38（0.40） | +0.43（0.47） | +0.06（0.06） | +0.19（0.19） |
+| Q6 GT 规则门 | +0.83（0.83） | **+0.33 [+0.19, +0.47]**（0.33） | +0.17（0.17） | 0.00（0） |
+
+**首次翻转对 expert onset 的中位差（s，只算考生翻了的对）**：
+
+| 考生（BA 集） | 行人：− BA onset / − PDM onset（n） | cut-in：− BA onset / − PDM onset（n） |
+|:--|:--|:--|
+| M-C 配对双流（Cinque） | +0.8 / +2.1（53 / 38） | +0.2 / +4.4（76 / 75） |
+| TFv6 waypoint 2 s | +0.9 / +2.4（54 / 43） | −1.4 / +3.2（61 / 61） |
+| Q6 GT 规则门 | +0.2 / +1.7（63 / 44） | 0.0 / +5.0（44 / 43） |
+| openpilot `ridge_late` | —（1） | +0.2 / +4.0（77 / 76） |
+
+**WOD 人类 onset**（Cut_ins / Pedestrian / Cyclist 的 143 个 rater 帧；时间零点是 rater 帧本身，不是「可见」）：
+
+| 轨迹 | 5 s 内有 onset 的帧 | p10 | p25 | 中位 | p75 | p90 | onset 落在 1–3 s 的比例 |
+|:--|--:|--:|--:|--:|--:|--:|--:|
+| log（登记口径，与 `from2` 相同） | 75 / 143（52%） | 0.38 | 0.38 | **0.88** | 1.62 | 3.12 | 28% |
+| rater_best，登记口径（第一个区间是伪影，见 [E4c] 01:14） | 79 / 143 | 0.12 | 0.12 | 0.12 | 0.25 | 2.38 | 11% |
+| rater_best，`from2`（事后） | 45 / 143（31%） | 0.62 | 1.12 | **1.88** | 3.62 | 4.68 | 42% |
+| 分 cluster 的 log 中位：Cut_ins 0.38（15/20）、Pedestrian 1.50（22/52）、Cyclist 0.62（38/71）；rater_best `from2`：3.12（5）、1.88（24）、1.50（16） | | | | | | | |
+
+![E4c](../research/figs/elicit-e4c-latency.png)
+
+(a)(b) BA 与 PDM-Lite 集行人对上主要考生的累积定向翻转曲线（实线）、M-C 的 null 地板（点线）和该集合 expert 在行人对上的 onset CDF（灰）；(c) WOD 三个 cluster 上 log 与 rater_best（`from2`）减速 onset 的累积分布（分母是全部 143 帧，没到 1 的部分是 5 s 内没有减速），灰带是 1–3 s。
+要看的是：BA 上 M-C 与 TFv6 的曲线紧跟 expert onset 起来、明显高于地板；PDM-Lite 上除特权规则门外，所有考生都在地板之下，而 expert 近一半的对在 t_vis 当刻就已反应。
+
+读法：
+
+1. **BA 集上的反应是跟着 expert 走的，不是提前**：M-C 双流在行人对上的首次翻转中位比 BehaviorAgent onset 晚 0.8 s（只 8% 的对早于 onset），在 cut-in 上晚 0.2 s；
+   相对 PDM-Lite 的 onset 则晚 2–4 s。曲线面积减地板在 BA 行人上 +0.38 到 +0.48（CI 不跨零），与 E4 / 第 42 条的逐帧 43% 一致；hard-example 与均匀 imitation 在行人上低于地板。
+2. **PDM-Lite 集上没有一个传感器考生高于地板**，唯一显著为正的是特权 GT 规则门（+0.33），以及 τ = 0 的 `ridge ego`（它读的是 t_div 阈值以下的自车差，E4 已说明是标签伪影）。
+   PDM-Lite 行人对的 onset 中位就是 0.0 s（可见的当刻），这与 E4 的结论一致：它读的是特权状态，不是画面。
+3. **人类 onset 锚没有给出干净的「1–3 s」**：log 在三个 cluster 合并上的中位是 0.88 s（Pedestrian 1.50 s），rater_best（修掉第一个 waypoint 的时间基伪影后）中位 1.88 s；
+   落在 1–3 s 的只有 28% / 42%，一半左右的帧 5 s 内根本没有减速。零点也不一样（WOD 是 rater 帧，P5 是可见时刻），所以两者只能比量级：人类的减速在「看到之后 1–2 s」这个量级，
+   比 PDM-Lite 的 0 s 晚、比 BehaviorAgent cut-in 的 6 s 早，行人上与 BehaviorAgent 的 1.2 s 同量级。
+4. **对登记规则**：「人类 onset 落在 1–3 s 则主判定改为 [L, 3 s] 面积」——log 的合并中位 0.88 s 不在区间内，rater_best `from2` 的 1.88 s 在，但 `from2` 是看过数后加的变体；按登记的两种轨迹读，**不触发**。
+   本项只报告，不切换；是否换主判定、用哪条轨迹当锚，要 owner 另行登记。[L, 3 s] 面积已作为描述列存在 `areas.csv`（`area_L_3_descriptive`）：行人上 BA 集 M-C 0.44、TFv6 0.35、规则门 0.55，PDM-Lite 集 M-C 0.04、规则门 0.26。
+
 ### E3 可行性：从 log 里挖孪生帧（2026-09-26 00:33–01:08，CPU ≤ 20 核）
 
 代码 `jevdrive/elicit_e3.py`（`run` 挖掘与统计、`posthoc`、`features`、`scorer-prep` / `scorer-read`）与 `scripts/elicit_e3_scorer.sh`，run `$DATA_DIR/runs/elicitation/e3-feas/20260926-003309`，
