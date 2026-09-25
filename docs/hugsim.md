@@ -286,10 +286,11 @@ background collision after 17-22 steps; with PR #57 it drives straight until the
 (scene-0071) and 0.55 (scene-0383, RC-limited). The official LTF client moves from 0.500 to 0.557 mean HD-Score
 over the 4 smoke scenarios; the route agent, whose plans carry strong lateral feedback, barely moves (0.649 -> 0.622).
 
-**Policy (before the 2026-09-25 acceptance; under review, see [controller acceptance](#controller-acceptance-2026-09-25)):**
-the official controller is the default and is what every headline number uses (comparable with
-published HD-Scores). We also report our models under the fixed controller as a paired secondary:
-`git -C $DATA_DIR/third_party/HUGSIM apply patches/hugsim/optional/lqr-heading-fix.patch`, run, then `apply -R`.
+**Reporting rule (user, 2026-09-25; replaces "official is the headline, fixed is a paired secondary"):** every
+HUGSIM table reports every controller configuration that was run, **official AND fixed2** (and PR #57 where run), side
+by side; no single headline column hides the others ("data is never too much"). Official is comparable with published
+HD-Scores; fixed2 is the controller that passed [acceptance](#controller-acceptance-2026-09-25). See
+[closed-loop-acceptance.md](closed-loop-acceptance.md) "HUGSIM reporting rule".
 
 ## Controller acceptance (2026-09-25)
 

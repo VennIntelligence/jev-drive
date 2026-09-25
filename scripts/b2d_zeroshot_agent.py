@@ -57,6 +57,12 @@ the pre-registered smoke:
                     the controller acceptance test
                     (todos/2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md). "route": the route oracle's plan
                     from the sensor pose (a no-model load for profiling)
+  "replay_plan"     "window" (default; the first acceptance run: wait window of REPLAY_WAIT_TOL_M) | "time": the
+                    expert's schedule at the elapsed time, with the car's lag closed smoothly (REPLAY_CATCHUP_S); see
+                    _replay_path
+  "controller_preset"  "carla" (default, the fixed tracker) | "pursuit" (the D lateral + accel-mode longitudinal of the
+                    tfv6-controller work, e.g. P5.json); the config's pose_lateral_coefficient_s2_per_m goes to the
+                    PoseFilter as in the L1 harness (b2d_agent.py), everything else to Controller unchanged
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
@@ -88,6 +94,7 @@ NAV_RANGE_M = 60.0      # Alpamayo: announce a turn this far ahead (its horizon 
 DESIRE_RANGE_M = 20.0   # openpilot: turn desire this far before the junction
 DESIRE_NONE, DESIRE_TURN_LEFT, DESIRE_TURN_RIGHT, DESIRE_LC_LEFT, DESIRE_LC_RIGHT = 0, 1, 2, 3, 4
 REPLAY_WAIT_TOL_M = 2.0     # "replay": the expert counts as still at s0 while within this arc distance of it
+REPLAY_CATCHUP_S = 2.0      # replay_plan "time": time constant of closing the gap to the expert's schedule
 
 
 def get_entry_point():
@@ -182,6 +189,9 @@ class ZeroShotAgent(AutonomousAgent):
             params = json.load(fh)
         self.vehicle = dict(params)
         self.rear_offset = float(params.pop("rear_axle_offset_m"))
+        # A pose-adapter key of the L1 configs (b2d_controller.ADAPTER_KEYS): it tunes the PoseFilter, not the
+        # controller; absent (the fixed tracker's config) it is 0, the filter's default.
+        self.pose_lateral = float(params.pop("pose_lateral_coefficient_s2_per_m", 0.0))
         for key in ("adapter", "metadata", "preset"):
             params.pop(key, None)
         self.controller = Controller(preset=self.cfg.get("controller_preset", "carla"), **params)
@@ -204,6 +214,8 @@ class ZeroShotAgent(AutonomousAgent):
         self.plan_log = open(os.path.join(self.out, "plans.jsonl"), "w", buffering=1)
         self.tick_log = open(os.path.join(self.out, "ticks.jsonl"), "w", buffering=1)
         self.replay = self.cfg.get("replay")
+        self.replay_plan = self.cfg.get("replay_plan", "window")
+        assert self.replay_plan in ("window", "time"), self.replay_plan
         self.replay_log = self.replay_t0 = None
         if self.replay:                          # no model: the plan comes from an expert log or the route oracle
             self.sock, self.server_meta = None, {"replay": self.replay}
@@ -265,7 +277,8 @@ class ZeroShotAgent(AutonomousAgent):
     def _init_route(self):
         world = np.array([[tf.location.x, tf.location.y] for tf, _ in self._dense_plan])
         gps = np.array([[p["lat"], p["lon"]] for p, _ in self._dense_gps])
-        self.pose_filter = PoseFilter(GPSProjector(gps, world), self.rear_offset, -1.4, .05, .1)
+        self.pose_filter = PoseFilter(GPSProjector(gps, world), self.rear_offset, -1.4, .05, .1,
+                                      lateral_coefficient_s2_per_m=self.pose_lateral)
         self.route = Route(self._dense_plan)
         if self.zoo is not None:
             self.zoo.route(self)
@@ -452,6 +465,8 @@ class ZeroShotAgent(AutonomousAgent):
             x, y = np.r_[x, x[-1] + v_end * dt * math.cos(yaw[-1])], np.r_[y, y[-1] + v_end * dt * math.sin(yaw[-1])]
         s = np.r_[0.0, np.cumsum(np.hypot(np.diff(x), np.diff(y)))]    # arc length, non-decreasing
         self.replay_log = (t - t[0], x, y, s)
+        keep = np.r_[True, np.diff(s) > 1e-6]              # strictly increasing arc, for position lookups by arc
+        self.replay_arc = (s[keep], x[keep], y[keep])
         self.replay_i = 0
 
     def _replay_path(self, t_frame, times):
@@ -466,6 +481,10 @@ class ZeroShotAgent(AutonomousAgent):
         straight at the expert's final speed (see _load_replay).
         (A plan indexed by elapsed time alone jumps ahead of a lagging car and collapses to one point at the log's
         end, which no planner outputs: deviation 1 of the acceptance doc.)
+        replay_plan "time" (the re-acceptance protocol): the expert's schedule at the elapsed time tau, with the car's
+        arc lag d = s_e(tau) - s0 closed smoothly, s(t) = s_e(tau + t) - d * exp(-t / REPLAY_CATCHUP_S), clipped to
+        s >= s0 and non-decreasing in t (a planner never asks to reverse). It never freezes (tau always advances)
+        and never jumps ahead of the car (the first point is s0 + v_e * 0.25 s + 0.12 d).
         "route": the route oracle's trajectory from the sensor pose, as drive=oracle (a no-model load for
         profiling, not a known-good plan)."""
         if self.replay == "route":
@@ -487,6 +506,15 @@ class ZeroShotAgent(AutonomousAgent):
             s0 = se[a + k] + u[k] * math.sqrt(L2[k])
         else:
             s0 = se[-1]
+        if self.replay_plan == "time":
+            tt = np.asarray(times, float)
+            tau = t_frame - self.replay_t0
+            lag = float(np.interp(tau, te, se)) - s0
+            sq = np.maximum.accumulate(np.maximum(np.interp(tau + tt, te, se) - lag * np.exp(-tt / REPLAY_CATCHUP_S),
+                                                  s0))
+            sa, xa, ya = self.replay_arc
+            dx, dy = np.interp(sq, sa, xa) - x0, np.interp(sq, sa, ya) - y0
+            return np.stack([c * dx + s * dy, s * dx - c * dy], -1)
         ta = te[min(np.searchsorted(se, s0 - REPLAY_WAIT_TOL_M, "left"), len(te) - 1)]
         tb = te[max(np.searchsorted(se, s0 + REPLAY_WAIT_TOL_M, "right") - 1, 0)]
         t_star = min(max(t_frame - self.replay_t0, ta), max(ta, tb))

@@ -10,6 +10,10 @@
 #   scripts/infra_ctl_accept.sh arms <gpu> [arm:index ...]   expert b ("eb") and the controller arms in parallel, 1 worker
 #                                               each; default eb:715 z2:718 z5:721 f2:724 f5:727 p1:730 p2:733
 #   scripts/infra_ctl_accept.sh all <gpu>       both
+#   scripts/infra_ctl_accept.sh v2 <gpu> arm:index ...   the P5 re-acceptance (b2d-controllers-p5.md): time-indexed
+#                                               replay plan; arms f2t (fixed, 2 Hz) and P5 at 2 / 5 / 1 Hz (p5x2, p5x5,
+#                                               p5x1); expert a / b reused from the first run (ACCEPT_REF). Several
+#                                               runners of one arm share its output dir (route claims).
 # Re-running resumes (b2d_run skips done/<id>.json). Exit non-zero on infrastructure failure only.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -33,10 +37,10 @@ expert() {  # expert <tag> <index> <workers>
     run "expert-$1" "$2" "$3" --python "$DATA_DIR/envs/simlingo/bin/python" \
         --agent scripts/b2d_expert_agent.py --agent-config "expert+$1"
 }
-arm_cfg() {  # arm_cfg <arm> <plan_every> <controller> <extra keys>
+arm_cfg() {  # arm_cfg <arm> <plan_every> <controller> <extra keys> [preset config]
     cat > "$OUT/cfg/$1.json" <<EOF
 {"model": "alpamayo", "replay": "$OUT/expert-logs/{route}.jsonl", "plan_every": $2, "controller": "$3",
- "controller_preset": "carla", "controller_config": "$C", "seed": 0, "dump_every": 0$4}
+ "controller_preset": "${5:-carla}", "controller_config": "${6:-$C}", "seed": 0, "dump_every": 0$4}
 EOF
 }
 collect() {  # the expert-a log of each route's last finished attempt -> expert-logs/<id>.jsonl
@@ -52,6 +56,26 @@ if [[ $mode == expert || $mode == all ]]; then
     expert a 700 5; rc=$?
     collect || { echo "expert logs missing"; exit 1; }
     echo "$(date +%T) expert a: runner exit $rc, $(ls "$OUT"/expert-logs | wc -l) route logs"
+fi
+if [[ $mode == v2 ]]; then
+    REF=${ACCEPT_REF:-$DATA_DIR/runs/infra-accept/b2d-ctl}
+    for d in expert-a expert-b; do [[ -e $OUT/$d ]] || ln -s "$REF/$d" "$OUT/$d"; done
+    [[ -n $(ls "$OUT/expert-logs") ]] || cp "$REF"/expert-logs/*.jsonl "$OUT/expert-logs/"
+    P5=$(pwd)/todos/2026-09-23-tfv6-controller/controller-eval/P5.json
+    T=', "replay_plan": "time"'
+    arm_cfg f2t 5 fixed "$T"
+    arm_cfg p5x2 5 fixed "$T" pursuit "$P5"
+    arm_cfg p5x5 2 fixed "$T" pursuit "$P5"
+    arm_cfg p5x1 10 fixed "$T" pursuit "$P5"
+    pids=()
+    for spec in "${@:3}"; do
+        arm=${spec%%:*} i=${spec##*:}
+        run "arm-$arm" "$i" 1 --agent scripts/b2d_zeroshot_agent.py --agent-config "$OUT/cfg/$arm.json" & pids+=($!)
+        sleep 25
+    done
+    bad=0
+    for p in "${pids[@]}"; do wait "$p" || { echo "runner $p exit $?"; bad=1; }; done
+    exit $bad
 fi
 if [[ $mode == arms || $mode == all ]]; then
     F1=', "plan_forward_only": true, "zoo_cadence": "plan"'

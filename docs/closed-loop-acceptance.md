@@ -50,6 +50,14 @@ the expert completed. The expert run twice differs by 0.26 DS per route on avera
   can be attributed to the model.**
 
 
+## HUGSIM reporting rule (user, 2026-09-25)
+
+Every HUGSIM table reports **every controller configuration that was run: the official controller AND fixed2** (and
+PR #57 where it was run), side by side, per model and per scene group. There is no single headline column: no table,
+summary line or figure may show one controller's HD-Score and leave the other out, and neither is relegated to an
+appendix ("data is never too much"). The official column is comparable with published HD-Scores; the fixed2 column is
+the one whose controller passed acceptance; readers get both and the paired difference.
+
 ## Box limits that decide how many closed-loop workers fit
 
 - **GPU render** binds a card at about six CARLA servers (Town12, Alpamayo-like rig: 34.8 aggregate ticks/s at 6,
@@ -85,7 +93,8 @@ here); both now kill only groups that still write into their own run directory.
    (`scripts/infra_ctl_accept.sh arms <gpu> <arm>:<index>`, ~40 min for one arm). Use a controller only at the plan cadence
    it was accepted at.
 2. Replace the replay's wait window with the time-indexed smooth catch-up plan before using this test again.
-3. HUGSIM: switch to fixed2 (`zs_run.py --controller fixed2`); whether official stays the headline is the user's call.
+3. HUGSIM: run every model under **both** the official controller and fixed2 (`zs_run.py --controller fixed2`) and
+   report both; see "HUGSIM reporting rule" below.
 4. Size CARLA jobs by threads: `--client-threads 8` on every runner, <= 6 servers per GPU, <= 30 on the box.
 5. Report retries with every score (~15% of server starts die in setup with a RenderThread timeout, cause unknown).
 6. Keep application memory under ~85% of the container limit; read `<slot>.death-*.txt` and boxwatch at the next kill.

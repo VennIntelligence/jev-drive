@@ -3,7 +3,8 @@
 状态: done（2026-09-25 15:10–19:10 CST）；验收结论：harness 布局已定；B2D 没有控制器通过（固定控制器 2 Hz 最接近）；HUGSIM 只有 fixed2 通过；SIGKILL 来源未能确证，取证已布好
 主题: ../research/trajectory-to-control.md、[docs/carla.md](../docs/carla.md)、[docs/bench2drive-cost.md](../docs/bench2drive-cost.md)、[docs/hugsim.md](../docs/hugsim.md)
 子文档: [profiling](2026-09-25-closed-loop-infra-acceptance/profiling.md)、[B2D 控制器验收](2026-09-25-closed-loop-infra-acceptance/b2d-controllers.md)、
-[HUGSIM 控制器验收](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)、[SIGKILL 取证](2026-09-25-closed-loop-infra-acceptance/sigkill.md)
+[HUGSIM 控制器验收](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)、[SIGKILL 取证](2026-09-25-closed-loop-infra-acceptance/sigkill.md)、
+[P5 复验](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)（进行中）
 
 ## 为什么做
 
@@ -76,6 +77,10 @@ rig（4 路相机 10 Hz，走真实的考试 agent、不接模型），一张卡
 replay，单独就足以判 fail。固定控制器 2 Hz 横向合格、19/20 完成，输在比专家时刻表落后 3 m（推测：起步等第一个 plan、油门上限
 0.75 而专家用到 1.0），晚到冲突点撞上 6 次；同一个控制器换 5 Hz plan 明显更差，所以它只在 2 Hz 下可用。
 TCP partner 不是 plan → control 控制器，它的 1.5 m/s 是出厂低速油门上限，不在验收里。
+
+**P5 复验（[b2d-controllers-p5.md](2026-09-25-closed-loop-infra-acceptance/b2d-controllers-p5.md)，进行中）。** 必改项 1、3 的执行：
+tfv6-controller 线的终版纵向 P5（D 横向）原样接进考试 agent（构造与 L1 逐位相同），replay plan 改成按时间索引、平滑追上，
+同一 20 条路线跑 P5 @ 2 / 5 / 1 Hz 和新协议下的 F2（配对参考）；判据与第一轮相同，预注册于运行之前。
 
 **HUGSIM（[hugsim-controllers.md](2026-09-25-closed-loop-infra-acceptance/hugsim-controllers.md)）。** 喂场景自己的 logged 轨迹、
 以 ideal tracker 为参考，held-out 12 个场景：

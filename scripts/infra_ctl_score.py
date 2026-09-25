@@ -26,7 +26,20 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from zeroshot_b2d_alp_speed import analyse, collisions  # noqa: E402
 
-ARMS = ["z2", "z5", "f2", "f5", "p1", "p2"]
+ARMS = ["z2", "z5", "f2", "f5", "p1", "p2",      # first run (wait-window replay)
+        "f2t", "p5x2", "p5x5", "p5x1"]           # P5 re-acceptance (time-indexed replay), b2d-controllers-p5.md
+PAIRED_REF = {"p5x2": "f2t", "p5x5": "f2t", "p5x1": "f2t"}   # paired contrasts besides the one against expert a
+
+
+def paired_ci(diff, n_boot=10000, seed=0):
+    """Mean of per-route differences with a route-bootstrap 95% CI (percentile)."""
+    d = np.asarray(diff, float)
+    if not len(d):
+        return None
+    b = d[np.random.default_rng(seed).integers(0, len(d), (n_boot, len(d)))].mean(1)
+    return [round(float(d.mean()), 2), round(float(np.percentile(b, 2.5)), 2), round(float(np.percentile(b, 97.5)), 2)]
+
+
 STUCK = ("blocked", "timeout", "TickRuntime")
 
 
@@ -158,6 +171,7 @@ def main():
     ab = [abs(exp["a", r]["DS"] - exp["b", r]["DS"]) for r in routes if ("a", r) in exp and ("b", r) in exp]
     gap = abs(summary["E-a"]["DS"] - summary["E-b"]["DS"]) if summary["E-b"]["DS"] is not None else 0.0
     tol = max(5.0, gap)
+    per_arm = {}
     for arm in ARMS:
         adir = run / ("arm-" + arm)
         if not adir.exists():
@@ -211,7 +225,25 @@ def main():
         m["A4"] = ds is not None and ds >= summary["E-a"]["DS"] - tol
         m["A5"] = m["stuck_vs_expert"] == 0
         m["pass"] = all(m[k] for k in ("A1", "A2", "A3", "A4", "A5"))
+        # Paired per-route contrasts (reported, not criteria): arm - expert a, route bootstrap.
+        pair = [(r, exp["a", r["route"]]) for r in ok if ("a", r["route"]) in exp]
+        m["n_collisions"] = sum(r["n_collisions"] for r in ok)
+        m["vs_expert"] = {"DS": paired_ci([r["DS"] - e["DS"] for r, e in pair]),
+                          "completed": paired_ci([(r["status"] == "Completed") - (e["status"] == "Completed")
+                                                  for r, e in pair]),
+                          "n_collisions": paired_ci([r["n_collisions"] - e["n_collisions"] for r, e in pair])}
+        per_arm[arm] = {r["route"]: r for r in ok}
         summary[arm] = m
+    for arm, ref in PAIRED_REF.items():
+        if arm in per_arm and ref in per_arm:
+            both = [r for r in routes if r in per_arm[arm] and r in per_arm[ref]]
+            A, R = per_arm[arm], per_arm[ref]
+            lag = [r for r in both if A[r].get("e_lon_med") is not None and R[r].get("e_lon_med") is not None]
+            summary[arm]["vs_" + ref] = {
+                "DS": paired_ci([A[r]["DS"] - R[r]["DS"] for r in both]),
+                "completed": paired_ci([(A[r]["status"] == "Completed") - (R[r]["status"] == "Completed") for r in both]),
+                "n_collisions": paired_ci([A[r]["n_collisions"] - R[r]["n_collisions"] for r in both]),
+                "route_e_lon_med": paired_ci([A[r]["e_lon_med"] - R[r]["e_lon_med"] for r in lag])}
     summary["_meta"] = {"routes": routes, "A4_tolerance": tol, "expert_ab_route_abs_ds_mean":
                         round(float(np.mean(ab)), 2) if ab else None, "rear_axle_offset_m": rear}
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
