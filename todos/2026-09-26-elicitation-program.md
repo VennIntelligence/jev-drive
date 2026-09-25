@@ -270,6 +270,28 @@ E6（可选）──────────────────────
   某张图里一个 actor 都没配上就不编辑这张图（记数）；t0 CAM_F0 上主 actor 必须被 SAM 配上，否则这一对不要（`valid`）。
   配对规则放宽为「IoU ≥ 0.3，或 SAM 框 ≥ 60% 落在投影框内且高度 ≥ 投影框的 40%」（行人 cuboid 的投影框比人影宽，第一次读数里 IoU 中位只有 0.11）。
   残留检出门与其他 GT 核对照登记，但分母改成「有效对里被编辑的图上的每个 actor」；验证集重跑后按新口径判门。
+- 2026-09-26 00:57 CST [E2] 训练与读数的登记（E1 已判「有害」，按预登记 E2 必做；写于任何编辑对特征、任何拟合之前）。
+  (1) **特征**：navtrain 编辑对的 x⁺ / x⁻ / 安慰剂三份 clip 各抽一次——Qwen `L18_last` 用 `navsim_qwen`（P3(d″) 原样，NAVSIM 2 Hz clip，CAM_F0 / L0 / R0 × 4 帧，未编辑的图用原图），
+  openpilot `temporal`（Cinque 主、Lebowski 复现）用 `scripts/navsim_zs_openpilot.py feat` 原样（CAM_F0 × 4 帧）。x⁺ 也重抽（不复用 navtrain 已存的 `temporal`），让三份出自同一次运行。只用 `valid` 对。
+  (2) **输出格式**：head 输出 WOD / P5 的 20 × 2（0.25 s 网格，5 s）。navtrain 的标签只有 0.5 … 4.0 s 的 8 个位姿：(x, y) 连同原点线性插到 0.25 … 4.0 s 的 16 个点，只在这 16 个点上训练（32 维输出）；
+  用到 WOD / P5 时第 17–20 点按第 15→16 点的 Δ 速度线性外推。
+  (3) **prior 与配对目标**：prior = navtrain 上拟合的 `ridge ego` + `ridge_late <model> temporal`（`navsim_heads` 同一配方重拟合一次，全 navtrain 的 W，插到同一 16 点网格）；
+  两侧 ego 相同，p⁺ − p⁻ 只来自 `temporal` 之差。配对差分 loss 与 M-C 相同：Σ‖W(z⁺ − z⁻) − [(y⁺ − y⁻) − (p⁺ − p⁻)]‖² + λ‖W‖²，z = 两路按训练行（全部有效对的 x⁺ 与 x⁻）逐列标准化再乘 1/√d。
+  M-C 的 μ 项（role = train 帧上 Δ 为零）在这里没有对应的「直行帧」特征（navtrain 没有 Qwen 特征），改用安慰剂对当 null 对（目标 0，与 M-C 里 null 对的作用相同），μ = 0；这与 M-C 的主 arm 不同，照记。
+  (4) **标签（三个来源各一 arm，分开报）**：(a) y⁺ = logged 未来，y⁻ = CTRA 外推（t0 速度、t0 纵向加速度、最后两帧 0.5 s 的 yaw rate，速度截到 ≥ 0）；
+  (b) 规则裁判：Q6 的三条门在 GT 状态上各判一次 x⁺（场景原样）与 x⁻（被抹的 actor 从 GT 里去掉）——门只在 x⁺ 触发时 y⁺ − y⁻ = 沿同一条 CTRA 路径以 3 m/s² 减速到停 − 匀速继续（与 E3 (11) 的「刹停 / 继续」同一对 proposal），否则 0；
+  门的阈值照 Q6 登记（TTC < 3 s；侵入 3 s 路径 ±1.2 m；行人朝走廊速度分量 > 0.5 m/s 且距走廊 < 4 m、距离 < 30 m），走廊 = logged 路径延长版；
+  (c) PDM scorer：x⁺ 场景上对同一对「继续 / 刹停」proposal 用官方 v1.1 PDMS 各打一次（metric cache 只建这些 token，E3 的脚本口径），PDMS(刹停) > PDMS(继续) 时 y⁺ − y⁻ = 刹停 − 继续，否则 0；
+  scorer 不能在 x⁻ 场景（去掉 actor）上打分，x⁻ 侧一律当「继续」。(c) 只作第三来源（第 35 条），不单独定判格；cache 超过 1 h CPU 就停在已完成的子集上照记。**判格用 (a)**，(b)(c) 描述。
+  (5) **对照**：同一 z、同一 prior、同一批帧：均匀 imitation（x⁺ 帧目标 y⁺ − p⁺、x⁻ 帧目标 y⁻ − p⁻ 的逐帧 ridge）与 hard-example 重加权（权重 = 该 token 上 navtrain `ridge ego` 的 ADE / 均值，Keyframe-Focused IL 的口径）；
+  单流对照（只 Qwen、只 openpilot）照 M-C。λ 网格 = M-C 的 10^[−1..5]，按 log 分组的内层 3 折选（配对 arm 最小化留出 log 上的配对 MSE，单帧 arm 最小化（加权）MSE）；选定后在全部有效对上重拟合一次。
+  编辑对全部用于训练：读数都在别的数据集（P5 v1 BA、WOD val）上，与 navtrain 不同源，不需要再分折。
+  (6) **读数**：R1（E1 的 head 上）：E1 迁移用的 M-C fold 平均 head 在 x⁺ − x⁻ 与安慰剂对（原图 − 安慰剂图）上的 Δ 差幅值，幅值 = 20 点平均 ‖Δ(x) − Δ(x′)‖（m），报两者中位数之比与 bootstrap（按 log）CI；
+  R2：E2 训出的 head 放到 P5 v1 BA 集（prior = M-C 的 prior，`p5_exam.exam` 原样，τ 由该考生自己的 P5 null 定）报行人翻转、cut-in Δ、样本外 null false-flip；
+  R3：同一 head 放到 WOD（E1 的 19 663 帧、E1 的 prior 与读数函数原样），报 Pedestrians / 全部 rater 帧 RFS Δ 与 straight_yaw 激活率（τ 用 R2 里该考生的 P5 τ）。
+  z 的标准化统计量一律用 head 自己的训练行（navtrain 编辑对），与 E1 的主口径一致；各数据集自带统计量的版本只描述。
+  判据照登记：编辑对上 |Δ| 中位数 ≥ 2 × 安慰剂对（R1 与 R2 所用的训练后 head 各报一次，判格用训练后 head 的 (a) arm），且 WOD Pedestrians RFS Δ CI > 0、直行帧激活率 ≤ 7%。
+  WOD 编辑对（第二数据集）在 navtrain 这一轮之后另做，结果单列。
 
 ## 结果
 
