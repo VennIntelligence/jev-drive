@@ -73,3 +73,22 @@ M-A 只在 D0 判「信息在 vision 里」时是完整方案；否则 M-A 负�
 3. **D0 的 probe 与抽取（同上）**。probe、fold、λ 选择、训练行一字不改（`p5_exam.probes`），只加 examinee；抽取器、stream、渲染与实验 1 相同，
    只多存 `vision` / `hidden` 两个数组。新抽取的 `temporal` 与实验 1 已存的逐位比较，作为等价性检查。同一次 `p5_exam run` 也会给出这些 tap
    上 `ridge_late` 的翻转率，只描述，不进 D0 判定。
+4. **M-C 的具体化（2026-09-25 16:10，写于任何 M-C 拟合之前，也早于 D0 的数字）**。表里只给了结构和判据，下面把会影响数字的选择全部定死：
+   - **结构**：`pred(x) = prior(x) + Δ(x)`。prior 是实验 1 的 examinee 本身，即 openpilot `temporal` 上的 `ridge_late`
+     （`p5_exam.heads` 原样，按路线 5 折，只在 role = train 的帧上拟合，所以对 pair 帧是样本外）；Δ(x) = W·z(x) + b，**线性**（thin，闭式解）。
+     z 是 reaction 输入：Qwen `L18_last`（P3(d″) 原生视频 token，已抽）⊕ 同一模型的 `temporal`，每列按训练行标准化，每个 stream 再乘 1/√d_stream，
+     使两路总方差相等（不让 2560 维的 Qwen 靠维数压过 512 维的 openpilot）。输出是整条 20 × 2 未来轨迹的修正，考试照旧读 2 s 速度。
+     主 arm 用 Cinque，Lebowski 是复现。
+   - **配对差分 arm（主）**：外层 fold f 内，训练行是 fold ≠ f 的全部 pair 帧（obs 的 x⁺/x⁻，含 non-reactive 帧，以及 null 的 x⁺/x_null），
+     损失 Σ‖W(z⁺ − z⁻) − [(y⁺ − y⁻) − (p⁺ − p⁻)]‖²，y 是 expert 两侧各自的未来轨迹，p 是 prior；null 对的 expert 差≈0，所以「null 上约束为零」由它们自带。
+     另加「直行帧上修正项为零」：fold ≠ f 的 role = train 帧上 μ‖W(z − z̄)‖²，μ 取使两项总权重相等（μ = n_pair / n_train），固定不调；
+     μ = 0 只作敏感性描述。ridge λ 在训练 fold 内按路线分组 3 折选（网格 10^[−1..5]，最小化留出路线上的配对 MSE）。
+   - **hard-example 重加权对照**：同一 z、同一 prior、同样的训练帧（fold ≠ f 的 role = train 帧，加上训练 fold 的 pair 帧，各当普通单帧），
+     逐帧拟合残差 y − p 的加权 ridge，权重 w = s_ego / mean(s_ego)，s_ego = 同一批训练行上 `ridge ego` 的逐帧 ADE（Keyframe-Focused IL 2106.06452 的做法）；
+     λ 同样按路线 3 折选（加权 MSE）。同时报 w ≡ 1 的均匀 imitation 一行作参照（只描述）。
+   - **单流对照**：配对差分 arm，z 只用 Qwen `L18_last`，或只用 openpilot `temporal`。
+   - **考试**：`p5_exam.exam` 一字不改（τ_model 由各自 null 定，定向翻转率、样本外 null false-flip、路线 bootstrap CI）。
+   - **判据**（表里的三条写成数）：(a) 行人：四个行人 family 的 reactive 帧合并（v0 实际上只有 DynamicObjectCrossing 45、ParkingCrossingPedestrian 76 有量），
+     翻转率 ≥ 20% 且路线 bootstrap CI 下端 > 该 arm 的样本外 null false-flip；(b) cut-in 不掉：三个 cut-in family 合并的翻转率对 prior 的逐帧配对差，
+     路线 bootstrap 95% CI 上端 ≥ 0（没有显著变差）；(c) null false-flip 不动：样本外 null false-flip ≤ 7%。三条都过，这个 arm 判「过」。
+     主问题是配对差分 arm 过、而 hard-example 对照不过（第 21 条 D1 的那一格）；两者都过，则配对结构不是必要的，照实写。
