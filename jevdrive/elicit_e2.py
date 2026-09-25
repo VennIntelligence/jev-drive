@@ -548,7 +548,7 @@ def feat_index(dataset: str = "navtrain", tag: str = "main") -> dict:
 
 # ---------------------------------------------------------------- WOD: SAM scan of train front frames (envs/sam3)
 
-WOD_THIN = 8                     # every 0.8 s (deviation [E2] 01:12)
+WOD_THIN = 8                     # every 0.8 s (deviation [E2] 01:00)
 
 
 def wod_list() -> Path:
