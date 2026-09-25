@@ -2963,7 +2963,7 @@ E4 按登记量了窗口，这个解释不成立，见下一段。）
 
 端到端延迟 p95 约 30 ms（检测 20 ms + embedding 2.6 + MLP 4.5 + openpilot 2.3），登记门槛 50 ms；两个 arm、两个模型、三个 seed（行人 51–57%）都过。
 读法：CARLA 里近处行人 YOLO26 看得见（≤ 20 m 召回 0.89），缺的是读出，配对差分把它读了出来；点估计高于 Qwen teacher 但 CI 重叠，不写「更好」。teacher 目标的作用是保住 cut-in。
-限定同本条：只在 CARLA（BA 集）内；[第 44 条](#44-配对差分从-carla-到真实数据carla-上激发出来的-reaction-head-直接加到真实特征上是有害的wod-与-navsim-都是log-里挖孪生对真实帧抹人造对两条路本轮都没把它带到真实数据上待定)说明 CARLA 上训的 Δ 直接上真实数据有害，student 的真实数据表现没测。
+限定同本条：只在 CARLA（BA 集）内；第 44 条说明 CARLA 上训的 Δ 直接上真实数据有害，student 的真实数据表现没测。
 
 **状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
 I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
