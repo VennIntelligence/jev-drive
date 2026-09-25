@@ -226,6 +226,27 @@ E6（可选）──────────────────────
   (7) **WOD（第二数据集）**：候选 = Q2b 的前视 SAM 检测（val 的 20 237 帧，pedestrian / cyclist，score > 0.5，走廊同 (3) 但用 5 s 路径、≤ 30 m）；train 上没有检测，太少时在 train 前视帧上补跑 SAM（量按 E2 登记的估计）。
   WOD 没有 3D 框，actor 身份由 t0 的 SAM mask 定，历史帧里按「同 prompt、框中心最近、IoU ≥ 0.2」逐帧往回关联；(c) 的 GT 核对在 WOD 上不适用。WOD 的 clip 是前视三路 × 4 帧、0.2 s 间隔。WOD 排在 navtrain 批量之后。
   (8) 产物：`$DATA_DIR/processed/elicit_e2/<dataset>/`，按 chunk 锁文件认领、可续跑；每对存 x⁻ 与安慰剂的编辑图（JPEG q95）、mask（RLE）、元数据（token、actor、每图 mask 来源）。代码 `jevdrive/elicit_e2.py`。
+- 2026-09-26 00:45 CST [E6] 写于 E6 的任何拟合、任何打分之前（main 00:3x 让卡空时做 E6；只描述，不改方向）。卡：GPU 2（CTL-P7 结束后；这一项的 GPU 用量只有分钟级），CPU ≤ 16 核。代码 `jevdrive/elicit_e6.py`，run `runs/elicitation/e6/<time>`。
+  (0) **澄清**：E6 正文写「冻结 `temporal` + ridge 77.9 PDMS」，这个数是 `cls_late`（Cinque）的；`ridge_late` 是 73.5（开环对比 G3、standing 文档第 3 节）。所以 (a)（K = 1024 词表分类头 `cls_late`）已经就是 G3 的那一行：
+  **(a) 不重拟合，直接重报 G3**（`runs/navsim_zs/heads/20260925-232810`，同一批官方打分）。比较照登记写成「(a)、(b) 各对同模型 `ridge_late` 的配对 Δ」。Cinque 为主，Lebowski 若时间允许作复现。
+  (1) **(b) 的候选集 = (a) 的词表**：G2 / G3 同一个 K = 1024 k-means 词表（`navsim_heads.vocabulary`，seed 0，重算；核对 G3 的 `cls_late` navtest 输出的每一条都是重算词表里的某个 anchor，差 ≤ 1e-4 m，不过就停）。
+  不用 Hydra-MDP 的 8192：候选集相同，(b) 对 (a) 的差只来自「怎么选」，而且逐 anchor 打分的成本与 K 成正比。
+  (2) **逐 anchor 的子分目标**：v1.1 devkit 的 `PDMSimulator` + `PDMScorer` 原样（`default_scoring_parameters`），metric cache 由 v1.1 devkit 的 metric caching 原样构建（navtrain 子集，见 (3)）。
+  每个 token 一次调用打 [PDM-Closed] + 1024 个 anchor；由 scorer 的逐 proposal 数组算每个 anchor 的**官方两两口径**子分：NC、DAC、DDC（乘性）、TTC、C（加权）照取，
+  EP 只对 PDM-Closed 归一化（raw_k·mult_k / max(raw_pdm·mult_pdm, raw_k·mult_k)，该最大值 ≤ 5 m 时按 devkit 取 1 或 0），使每个 anchor 的 PDMS 与 `pdm_score()` 单独打这条轨迹完全相同。
+  批量前核对：5 个 token × 20 个 anchor，逐项与 `pdm_score()` 比，必须相等（≤ 1e-9）。EPDMS 的额外子项不训练，(b) 的 EPDMS 只作为同一条输出轨迹的 v2 打分报出。
+  (3) **navtrain 子集**：profiling（v1 navtest 缓存上 3 个 token，1025 条 proposal）：读缓存 0.05 s、建轨迹 1.6 s、仿真 1.2 s、打分 3.0 s，约 6 core·s / token；
+  navtrain 全部 10.3 万 token 要约 170 core·h（16 核约 11 h）另加缓存，对一个可选项太贵。登记 **N = 20 000 个 token**：从 G2 / G3 的训练行（navtrain stage-one、未来完整）里均匀抽（seed 0），
+  估计打分约 2.1 h + 缓存（先在 200 个 token 上实测缓存速度再定，超过估计 2 倍就停下报）。只有子分 head 的训练行被抽样；模仿项（`cls_late` 的 logits）照旧用全部 navtrain。
+  (4) **head**：每个子分 m ∈ {NC, DAC, DDC, TTC, EP, C} 一个线性层，输入 = 标准化的 ego 32 维 ⊕ 标准化的 `temporal` 512 维（统计量取全部 navtrain 训练行，同 G3），输出 1024 个 logit，
+  对该 anchor 的子分做 BCE（NC 的 0.5、DDC 的 0.5、EP / TTC / C 的连续值都当软标签），L-BFGS 全批量；λ ∈ {1e-5, 1e-4, 1e-3, 1e-2}（按样本平均的 BCE 上 λ/2 |W|²），在子集的留出 log（20% 的 log，seed 1）上按 BCE 选，再在全部 20 000 个上重拟合。
+  (5) **推理聚合**（Hydra-MDP 的对数分加权）：s_k = w_im·log softmax(`cls_late` logits)_k + w_mul·Σ_{NC,DAC,DDC} log σ(ŝ_{k,m}) + w_TTC·log σ(ŝ_TTC) + w_EP·log σ(ŝ_EP) + w_C·log σ(ŝ_C)，取 argmax。
+  权重网格 w_im ∈ {0, 0.1, 0.5, 1}、w_mul ∈ {1, 2, 5, 10}、w_TTC、w_EP、w_C ∈ {0, 0.5, 1, 2, 5}（2000 组），只在留出 log 上选：指标 = 选中 anchor 在 (2) 的逐 anchor 表上的平均 PDMS。
+  留出 log 上的模仿 logits 必须样本外：`cls ego` 与 `cls_late` 在去掉留出 log 的 navtrain 上按 G3 的 λ 重拟合一次，只用于调权重；最终推理的模仿 logits 用全部 navtrain、G3 的 λ 重拟合（核对其 argmax 与 G3 的 navtest 输出一致率 ≥ 99%，否则停）。
+  另报两条描述：留出 log 上词表的 oracle PDMS（每个 token 取最好的 anchor）和只用模仿项（(a)）的留出 PDMS。
+  (6) **打分与读数**：navtest 用 `scripts/navsim_zs_score.sh`（v1.1 出 PDMS、main @ 0a380a9 出 EPDMS，`OPENBLAS_CORETYPE=Haswell`），navhard two-stage 出 EPDMS；
+  配对 Δ（逐 token，10 000 次 token bootstrap，同 `openloop_standing.navsim`）：(b) − `ridge_late`、(a) − `ridge_late`、(b) − (a)。seed 各 1 个（k-means seed 0、子集 seed 0、留出 seed 1）。
+  判据照登记：(b) PDMS ≥ 84 → 写「512 维冻结特征 + 配方 head 到 TransFuser 水平」；否则写「差距不在配方」。
 
 ## 结果
 
