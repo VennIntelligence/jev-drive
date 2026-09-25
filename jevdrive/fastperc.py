@@ -269,7 +269,8 @@ def depth_sample(det_dir: str, out_dir: str, weights: str = "yolo26x-depth.pt", 
     for ds, lst in (("p5", "p5.parquet"), ("nusc", "nusc.parquet")):
         parts = sorted((Path(det_dir) / ds).glob("part-*.parquet"))
         d = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
-        d = d[d.score > min_score].reset_index(drop=True)
+        S = json.loads((Path(os.environ["DATA_DIR"]) / "processed/fastperc/subset.json").read_text())[ds]
+        d = d[(d.score > min_score) & d.key.isin(set(S))].reset_index(drop=True)
         t = pd.read_parquet(L / lst)
         rows = t[t.key.isin(set(d.key))].to_dict("records")
         gi = d.groupby("key").indices
