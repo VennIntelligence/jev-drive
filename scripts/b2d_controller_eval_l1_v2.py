@@ -44,7 +44,9 @@ def status(case):
     if not d.get('exception') and not d.get('cleanup_errors') and not d.get('telemetry_parse_errors') \
             and d['gates']['telemetry_complete']:
         return 'valid'
-    if d.get('ticks') == 0 and ('time-out' in str(d.get('exception')) or d.get('status') == 'setup_error'):
+    # A simulator RPC timeout is never a controller outcome, whenever it happens (Town13 servers
+    # can hang mid-run); a zero-tick setup error is infrastructure too.
+    if 'time-out of' in str(d.get('exception')) or (d.get('ticks') == 0 and d.get('status') == 'setup_error'):
         return 'infrastructure'
     return 'bug'
 
