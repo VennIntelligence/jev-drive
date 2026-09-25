@@ -1,6 +1,6 @@
 # 激发计划：冻结组件 + 配对差分，从 CARLA 走到真实开环数据（E1–E5）
 
-状态: 待排（预登记，2026-09-26，写于任何新拟合、新挖掘之前；2026-09-26 按 openpilot 开环对比最终结果修订：E1 加 NAVSIM 列，E3 主数据集改 navtrain，新增 E6 可选）
+状态: 进行中（2026-09-26 03:10）：E1 有害（WOD + NAVSIM）、E2 不过、E3 可行性不过（用户关闭）、E4 不过（BA 继续主判）、E4c 已出、E5 过（CARLA 内）；E6 与夜间补 seed 在跑。预登记写于 2026-09-26 任何新拟合之前（按 openpilot 开环对比结果修订过一次）
 上游: 第 25 条（continuation prior + reaction decoder）、第 42 条（M-C 在 P5 v1 上行人 43%）、第 43 条（融合诊断，2026-09-26 就地修正）、
 [reactivity 计划](2026-09-25-reactivity-program.md)、[融合前诊断](2026-09-25-fusion-diagnostics.md)、[fast-perception](2026-09-26-fast-perception.md)、
 [openpilot 开环对比](2026-09-25-openpilot-openloop-comparison.md)（第 37 条修正：冻结 `temporal` + 薄 head 在 WOD / nuScenes / NAVSIM 三个数据集上都超过 ego-only）
