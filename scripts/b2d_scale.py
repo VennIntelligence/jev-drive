@@ -277,7 +277,7 @@ def main():
             for g in a.gpus:
                 while len(pool[g]) < n:
                     pool[g].append(b2d_run.Server(0, out / "servers", base.quality, g, stride=10 ** 6,
-                                                  windowed=False))
+                                                  windowed=False, extra_args=base.server_args.split()))
                 for s in pool[g][n:]:
                     s.stop()   # an idle server free-runs in async mode and would load the rung
                 for s in pool[g][:n]:

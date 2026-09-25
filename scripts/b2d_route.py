@@ -90,6 +90,8 @@ def parse_args(argv=None):
     p.add_argument("--fast-copy", action="store_true")
     p.add_argument("--zero-copy", action="store_true")
     p.add_argument("--cache-lights", action="store_true")
+    p.add_argument("--client-threads", type=int, default=0,
+                   help="carla.Client worker_threads; 0 = CARLA's default (one per hardware thread)")
     # profiling
     p.add_argument("--max-ticks", type=int, default=0, help="stop the route early, for profiling")
     p.add_argument("--drop-ticks", type=int, default=20, help="warmup ticks excluded from the profile")
@@ -293,7 +295,7 @@ def _patch_setup_simulation(LeaderboardEvaluator, a):
     import carla
 
     def setup(self, args):
-        client = carla.Client(args.host, args.port)
+        client = carla.Client(args.host, args.port, worker_threads=a.client_threads)
         client.set_timeout(args.timeout)
         client.get_world().apply_settings(carla.WorldSettings(
             synchronous_mode=True, fixed_delta_seconds=1.0 / LeaderboardEvaluator.frame_rate,

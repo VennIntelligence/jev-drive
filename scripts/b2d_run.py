@@ -94,6 +94,12 @@ def parse_args(argv=None):
     p.add_argument("--claim-stale-s", type=float, default=7200.0,
                    help="a claim older than this is assumed to belong to a dead runner")
     p.add_argument("--quality", default="Epic", choices=["Epic", "Low"])
+    p.add_argument("--server-args", default="",
+                   help="extra CarlaUE4 arguments, space-separated (e.g. the off-screen viewport size "
+                        "'-ResX=64 -ResY=64'; docs/bench2drive-cost.md, 2026-09-25)")
+    p.add_argument("--client-threads", type=int, default=0,
+                   help="carla.Client worker_threads in the route process; 0 = CARLA's default, one per "
+                        "hardware thread of the host (208 here)")
     p.add_argument("--max-attempts", type=int, default=3)
     p.add_argument("--recycle-routes", type=int, default=0,
                    help="R7: stop and restart a worker's server every N routes even when it looks "
@@ -240,8 +246,9 @@ class Server(object):
     """One CARLA server. Owns the process group so it can be killed without pkill -f,
     which docs/long-runs.md forbids for good reason."""
 
-    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=None):
+    def __init__(self, index, log_dir, quality, gpu_rank=0, stride=0, windowed=None, extra_args=()):
         self.index = index
+        self.extra_args = list(extra_args)
         self.gpu_rank = gpu_rank
         self.windowed = WINDOWED if windowed is None else windowed
         self.stride = stride or 1
@@ -274,7 +281,7 @@ class Server(object):
             self.proc = subprocess.Popen(
                 [str(CARLA_ROOT / "CarlaUE4.sh")] + display_args + ["-nosound",
                  "-carla-rpc-port=%d" % self.port, "-quality-level=%s" % self.quality,
-                 "-graphicsadapter=%d" % self.gpu_rank],
+                 "-graphicsadapter=%d" % self.gpu_rank] + self.extra_args,
                 stdout=fh, stderr=subprocess.STDOUT, env=env, preexec_fn=os.setsid)
         # setsid in preexec_fn makes the child its own group leader, so pgid == pid. Record it:
         # stop() must not look it up later, when the wrapper may already be gone.
@@ -491,7 +498,8 @@ class Runner(object):
         externally_owned = self._external_servers is not None
         server = self._external_servers[wi] if externally_owned else Server(
             self.a.server_index + wi, self.out / "servers", self.a.quality,
-            self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed)
+            self.a.gpu_rank, stride=self.a.workers, windowed=self.a.windowed,
+            extra_args=self.a.server_args.split())
         abnormal_exit = False
         try:
             if externally_owned and server.alive():
@@ -608,6 +616,8 @@ class Runner(object):
                 cmd.append("--" + flag.replace("_", "-"))
         if self.a.max_ticks:
             cmd += ["--max-ticks", str(self.a.max_ticks)]
+        if self.a.client_threads:
+            cmd += ["--client-threads", str(self.a.client_threads)]
 
         self.event("route_start", worker=wi, route_id=rid, attempt=attempt, port=server.port,
                    tm_port=tm_port)
