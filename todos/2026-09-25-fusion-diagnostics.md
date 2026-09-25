@@ -293,6 +293,22 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   (6) precision：分母 = 该类别、抬升有效（射线打到地面且 ≤ 80 m）的检测；分子 = 与同类 GT（该相机视锥内、≤ 80 m，含被遮挡的）匹配上的检测。距离档按 GT 参考点到 ego 原点（后轴地面）的 BEV 距离。
   (7) 抬升：P5 用 `op_plan.json` 的 `calib`（Waymo 式 k1/k2 径向畸变，反解用不动点迭代），地面 = ego 坐标系 z = 0（P5 的 ego 原点在车底地面，相机高 1.806 m）；nuScenes 用 `calibrated_sensor`（针孔、无畸变），
   地面高度取 ego 坐标系 z = 0，检查 (d) 顺带报 GT box 底面在 ego 系下的 z 中位数，若偏离 > 0.15 m 再另记一条。
+- 2026-09-25 18:40 CST [Q1] 以下全部写于 Q1 任何拟合之前。代码 `jevdrive/fusion_q1.py`，run dir `$DATA_DIR/runs/fusion_diag/q1/<time>`。
+  (1) **P5 只有 `ridge_late`**：`p5_exam` 本身没有分类头，加一个就不再是「一字不改」的考生；`cls_late` 只在 WOD 的 (a)(b) 上跑。P5 上 V-JEPA 2 没抽，按登记的「可选」跳过，P5 的 single 只有四个。
+  (2) **late fusion 的定义**：配对与 concat 相同（Cinque `temporal` + Qwen `L18_last`，Lebowski 同）。ridge = 两个单 arm 样本外轨迹逐点平均；cls = 两个单 arm 的**完整** logits（各自的 ego offset + 自己那一项）相加后取 top-1 anchor，
+  等价于两个 log-softmax 等权平均的 argmax（不是「offset + 两项相加」那种只加一次 offset 的写法）。
+  (3) **concat 的标准化**：两路各自按训练行（WOD = fit 半 / train 行，P5 = 该折训练行）逐列 z-score，再各乘 1/√d，拼接后**不再**逐列标准化（否则 1/√d 被抵消）；single arm 仍用 head 自己的逐列 z-score，不变。λ 网格不变（`LAM_RIDGE`、`LAM_CLS`），选到网格边缘时照记，不扩网格。
+  (4) **best single 的候选与选择**：候选 = 同一 head 的全部 single（WOD 5 个，P5 4 个），不只是 concat 的两个分量；另报 concat / late 对各自两个分量的配对 Δ（描述）。
+  WOD (a)：每个方向的 best single 在**它的 fit 半**上选，用的是另一个方向在这半上的样本外预测（cross-fit，评估行从不参与选择）；pre-onset 读数按 pre-onset ∩ s_ego 第 1–9 档的 ADE 选，RFS 读数按该半 rater 帧的 RFS frame mean 选。
+  WOD (b)：在 train 行的内层选择集 `sp.sel`（train 序列的 20%，按 sequence 与 `sp.fit` 不相交）上选：ridge 在 `sp.fit` 上重拟合（ego ridge 与残差 ridge 都只见 `sp.fit`，λ 由 `sp.fit` 内的分组 CV 定）后读 `sp.sel`；
+  cls 取 λ 搜索阶段（`sp.fit` 拟合）在所选 λ 下对 `sp.sel` 的 top-1；`sp.sel` 上的 s_ego = 只用 `sp.fit` 拟合的 ego ridge 的逐帧 ADE，分档在 `sp.sel` 内取。**train 没有 rater 帧，所以 (b) 的 RFS 读数的 best single 也按 pre-onset 读数选**。
+  P5：评估第 f 折时，在其余 4 折的 reactive 帧上按合并翻转率选，τ 用其余 4 折 null 帧的 95 分位；行人读数按其余 4 折的行人 family 合并翻转率选，并列时依次按合并翻转率、arm 顺序（Cinque、Lebowski、`L18_last`、`L18_mean`）破。
+  best single 的预测 = 按方向 / 折拼起来的复合 examinee，judge 照常（P5 的复合 examinee 由 `exam` 按它自己的 null 定 τ）。
+  (5) **CI**：每个 arm 对 `ridge ego`（cls arm 另对 `cls ego K1024`）的读数沿用 judge 原有的 bootstrap 次数（WOD 1000、P5 `exam` 2000）；登记的决策量「concat − best single」用 500 次（WOD 按 sequence，P5 按路线，`E.boot_ratio`）。
+  P5 行人读数的行 = reactive 且 family ∈ `PED_FAMILIES` 的帧（与 M-C `criteria` 同一定义，含不进合并的 PedestrianCrossing）；合并读数的行 = `exam` 的 pooled families。
+  (6) WOD (a) 的 per-arm 主读数是两方向合并的 cross-fit（`drive_backbones._pooled`，与第 40 条主表同一读法），每个方向的 `rejudge` 并列写出；(b) 只有一个方向，`rejudge` 即主读数。DiD 与 RFS 按 cluster 由同一批合并预测算（`traj.boot_did`、`waymo.rfs_by_cluster`）。
+  (7) 等价性：(a) 的 `ridge_late` single 与第 40 条同一函数、同一行，应逐位复现第 40 条主表；cls 的新写法（为了留下 logits）先在 (a) 一个方向上对 `waymo_heads.cls_arm` 比 top-1；P5 的参数化 head 循环先对 `p5_exam.heads` 比输出。三项都在 Q1 的数字之前跑。
+  (8) WOD (b) 行数以四个特征集与 P0 行的实际交集为准，run 的 `events.jsonl`（`q1_rows`）记录，若与登记的 137 533 / 19 663 不同，在这里补一行。
 
 ## 结果
 
