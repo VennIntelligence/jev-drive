@@ -1,5 +1,5 @@
 """Elicitation E6 (b): per-anchor PDM sub-scores on navtrain tokens with the NAVSIM v1.1 devkit's simulator and scorer
-as shipped (todos/2026-09-26-elicitation-program.md, deviation [E6] 00:45 (2)).
+as shipped (todos/2026-09-26-elicitation-program.md, deviation [E6] 00:34 (2)).
 
 Each token is scored once with [PDM-Closed] + K anchors. From the scorer's per-proposal arrays every anchor gets the
 sub-scores `pdm_score()` would give it scored alone (paired with PDM-Closed only): NC, DAC, TTC and C do not depend on
