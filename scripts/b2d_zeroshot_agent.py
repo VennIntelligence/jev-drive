@@ -57,6 +57,7 @@ import socket
 import sys
 import time
 from collections import deque
+from queue import Empty
 
 import carla
 import numpy as np
@@ -79,6 +80,30 @@ DESIRE_NONE, DESIRE_TURN_LEFT, DESIRE_TURN_RIGHT, DESIRE_LC_LEFT, DESIRE_LC_RIGH
 
 def get_entry_point():
     return "ZeroShotAgent"
+
+
+class SyncRouter(FrameRouter):
+    """FrameRouter that also waits (up to 2 s) for `required` cameras of the current frame. With every-tick openpilot
+    cameras plus the TCP partner's three 1600x900 cameras, road / wide packets sometimes arrived after the motion
+    sensors of their frame, so that frame's pair was superseded before it was read and 9 % of the Lebowski context
+    steps were 5-14 frames instead of 4 (plumbing run, route 2086)."""
+
+    def __init__(self, camera_tags, retain_frames, required=()):
+        super().__init__(camera_tags, retain_frames=retain_frames)
+        self.required = frozenset(required)
+
+    def read(self, interface, frame):
+        if self.required:
+            deadline = time.monotonic() + 2.0
+            while not (self.MOTION | self.required).issubset(self.frames.get(frame, {})):
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    break
+                try:
+                    self._put(interface._data_buffers.get(True, left))
+                except Empty:
+                    break
+        return super().read(interface, frame)
 
 
 def resample(t_src, xy, t_dst):
@@ -174,7 +199,8 @@ class ZeroShotAgent(AutonomousAgent):
             if getattr(self, "_dense_plan", None):      # the evaluator set the route before setup()
                 self.partner.set_global_plan(self._dense_gps, self._dense_plan)
         router_tags = self.cam_tags + (self.partner.camera_tags() if self.partner else [])
-        self.router = FrameRouter(router_tags, retain_frames=32)
+        every_tick = not self.alpamayo and self.op_tick <= DELTA
+        self.router = SyncRouter(router_tags, 32, self.cam_tags if every_tick else ())
         self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA}, {tag: frame})
         self.latest = {t: (-1, None) for t in self.cam_tags}
         self.first_frame = None

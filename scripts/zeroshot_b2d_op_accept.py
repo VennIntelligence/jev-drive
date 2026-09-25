@@ -176,7 +176,8 @@ def arm(run):
 
 
 def controller_identity(zoo):
-    ours = hashlib.sha256(Path(__file__).with_name("b2d_zoo_pid.py").read_bytes()).hexdigest()
+    body = Path(__file__).with_name("b2d_zoo_pid.py").read_bytes().split(b"# ---- vendored ----\n", 1)[-1]
+    ours = hashlib.sha256(body).hexdigest()                  # the file below its provenance header
     try:
         ship = subprocess.run(["git", "-C", zoo, "show", ZOO_PID_COMMIT + ":team_code/pid_controller.py"],
                               capture_output=True, check=True).stdout
