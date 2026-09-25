@@ -132,9 +132,11 @@ D3 靠重新计分，精确；D2 逐条标出。P2 里的真实官方臂 run 用
   S 臂反事实截断分数（同一条轨迹）与真实官方 run 在 4000 tick 内都走完、且没有 D2 差异的路线上的逐路线差，作为重跑噪声的估计，并写明它的来源。
 - 归因不变：D1 用 S 轨迹精确反事实；D3 重新计分；D2 = 「S 在截断下的反事实」− O，其中混有重跑噪声，按路线列出。
 - 若 15 h 内有余量，再在「两臂分数不同」的路线上补 seed 2（两臂都跑），只作补充，不改主结果。
-- 并发：10 worker，每卡 5 个；每个臂在两张卡上各有一个 runner（O：GPU 0 3 个 + GPU 1 2 个；S：GPU 0 2 个 + GPU 1 3 个），
-  两臂同时跑，任一臂不会独占较空的卡。批量脚本 `scripts/simlingo_catalogue_batch.sh`，经 `scripts/slot_run.sh simlingo-exp` 在
-  `alp-b2d-full`、`op-b2d-full` 结束后启动。
+- 并发（09:1x 改排期，main 通知）：立即以 6 worker 开跑（每卡 3 个：O 在 GPU 0 两个、GPU 1 一个，S 反过来），
+  `alp-b2d-full` 结束后再加 4 个（每臂每卡 1 个），共 10 个；同一臂的 runner 共用输出目录，靠 claim 文件保证每条路线只跑一次。
+  两臂同时跑，任一臂不会独占较空的卡。批量脚本 `scripts/simlingo_catalogue_batch.sh <seed> main|extra`，
+  经 `scripts/slot_run.sh simlingo-exp`（无依赖）与 `simlingo-exp-extra`（`--after alp-b2d-full`）启动。
+  预计：6 worker 约 25 h 的量，加到 10 个之后总计约 17–19 h（按 1.5 s/tick；机器更空时更快）。
 
 ## 给兄弟实验（hazard family 拆分）的逐路线结果
 

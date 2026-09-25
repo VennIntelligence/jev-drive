@@ -5,27 +5,37 @@
 # Server indices 140-227 in four blocks of 22 (a worker that loses its slot moves up by the runner's worker count):
 # RPC 9000-13350, TM 15000-19350. TM of index i sits on the RPC of index i+120, so staying inside 140-229 keeps clear
 # of our own TM ports and of the TFv6 runner's 110-139.
-# Usage (on the box, via slot_run.sh): scripts/simlingo_catalogue_batch.sh [seed]
+# Usage (on the box, via slot_run.sh): scripts/simlingo_catalogue_batch.sh <seed> <main|extra>
+#   main  6 workers, 3 per GPU (each arm: 2 on one card, 1 on the other); judges coverage at the end
+#   extra 4 more workers, 1 per arm per GPU, joining the same out dirs (claims keep routes from running twice)
 set -uo pipefail
 cd "$(dirname "$0")/.."
-seed=${1:-1}
+seed=${1:-1} stage=${2:-main}
 logs=${OUT_ROOT:-$DATA_DIR/runs/simlingo-catalogue}/batch-logs
 mkdir -p "$logs"
 # arm gpu server_index workers
-plan=("official 0 140 3" "simlingo 0 162 2" "simlingo 1 184 3" "official 1 206 2")
+# Index blocks 140-259 (a failing worker moves up by its runner's worker count); TM of index i = RPC of i+120.
+if [[ $stage == main ]]; then plan=("official 0 140 2" "simlingo 0 160 1" "simlingo 1 180 2" "official 1 200 1")
+else plan=("official 0 220 1" "simlingo 0 230 1" "simlingo 1 240 1" "official 1 250 1"); fi
 pids=()
 for p in "${plan[@]}"; do
   set -- $p
   scripts/simlingo_catalogue_run.sh "$1" "$seed" "$2" "$3" "$4" --stagger-s 30 \
-    > "$logs/$1-g$2-seed$seed.log" 2>&1 &
+    > "$logs/$stage-$1-g$2-seed$seed.log" 2>&1 &
   pids+=($!)
   sleep 90  # stagger the four runners' first server starts
 done
 rcs=()
 for p in "${pids[@]}"; do wait "$p"; rcs+=($?); done
+[[ $stage == main ]] || exit 0
+root=${OUT_ROOT:-$DATA_DIR/runs/simlingo-catalogue}
+# routes still claimed by the extra runners finish before coverage is judged (claims are released at route end)
+for i in $(seq 1 360); do
+  ls "$root"/*/seed"$seed"/claims/*.lock >/dev/null 2>&1 || break
+  sleep 30
+done
 # b2d_run.py exits 1 when any route never finished (the known Town12/13 server segfaults do that), so judge the
 # batch by coverage instead: fail only if an arm has fewer than 200 of 220 routes done.
-root=${OUT_ROOT:-$DATA_DIR/runs/simlingo-catalogue}
 ok=0
 for arm in official simlingo; do
   n=$(ls "$root/$arm/seed$seed/done" 2>/dev/null | wc -l)
