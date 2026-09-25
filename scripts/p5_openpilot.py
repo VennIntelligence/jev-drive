@@ -14,7 +14,7 @@ Arrays: `temporal` (primary tap), `vision` (pooled vision encoder output before 
   CUDA_VISIBLE_DEVICES=2 python scripts/p5_openpilot.py --shard 0/2 --workers 6
   python scripts/p5_openpilot.py --arrays temporal vision hidden --out-sub op_streams_vis   # reactivity D0
   python scripts/p5_openpilot.py --check 16      # equivalence checks before the batch
-  python scripts/p5_openpilot.py --arrays temporal lead lead_prob --out-sub op_streams_lead   # fusion Q4c
+  python scripts/p5_openpilot.py --arrays temporal lead lead_prob --out-sub op_streams_lead --key-prefix p5_   # fusion Q4c
 """
 import argparse, io, json, sys, time
 from concurrent.futures import ProcessPoolExecutor
@@ -127,6 +127,7 @@ def main():
     ap.add_argument("--check", type=int, default=0, help="equivalence check on this many targets, no batch")
     ap.add_argument("--arrays", nargs="+", default=["temporal"], choices=ARRAYS)
     ap.add_argument("--out-sub", default="op_streams")
+    ap.add_argument("--key-prefix", default="", help="only streams whose key starts with this (p5_: the P5 worlds)")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
     si, sn = map(int, a.shard.split("/"))
@@ -165,7 +166,8 @@ def main():
         log.event("check", rows=res, max_abs_diff=max(r["max_abs_diff"] for r in res))
         return
 
-    items = [s for s in plan["streams"][si::sn] if not all((outdir[k] / f"{s['key']}.npz").exists() for k in a.models)]
+    items = [s for s in plan["streams"] if s["key"].startswith(a.key_prefix)][si::sn]
+    items = [s for s in items if not all((outdir[k] / f"{s['key']}.npz").exists() for k in a.models)]
     items = items[: a.limit or None]
     del plan
     with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=({}, {SEQ: calib}, ".")) as ex:

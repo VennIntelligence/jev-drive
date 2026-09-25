@@ -319,6 +319,33 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   (6) WOD (a) 的 per-arm 主读数是两方向合并的 cross-fit（`drive_backbones._pooled`，与第 40 条主表同一读法），每个方向的 `rejudge` 并列写出；(b) 只有一个方向，`rejudge` 即主读数。DiD 与 RFS 按 cluster 由同一批合并预测算（`traj.boot_did`、`waymo.rfs_by_cluster`）。
   (7) 等价性：(a) 的 `ridge_late` single 与第 40 条同一函数、同一行，应逐位复现第 40 条主表；cls 的新写法（为了留下 logits）先在 (a) 一个方向上对 `waymo_heads.cls_arm` 比 top-1；P5 的参数化 head 循环先对 `p5_exam.heads` 比输出。三项都在 Q1 的数字之前跑。
   (8) WOD (b) 行数以四个特征集与 P0 行的实际交集为准，run 的 `events.jsonl`（`q1_rows`）记录，若与登记的 137 533 / 19 663 不同，在这里补一行。
+- 2026-09-25 18:45 CST [Q4c] 以下全部写于 Q4c 任何 lead 输出被解码、打分之前。代码 `jevdrive/fusion_q4c.py`，run dir `$DATA_DIR/runs/fusion_diag/q4c/<time>`。
+  (1) **重跑范围**：`scripts/p5_openpilot.py --arrays temporal lead lead_prob --out-sub op_streams_lead`，只跑 key 以 `p5_` 开头的 stream（新加 `--key-prefix`；P4 训练路线的 stream 不含观测帧）。
+  每条 stream 仍从 run 的第一帧零状态起步，与实验 1 完全相同，所以只是少跑了不需要的 stream。等价性：新 `temporal` 与 `op_streams/<model>/<key>.npz` 里实验 1 的 float32 `temporal` 逐位比较（实验 1 的 16 行检查是 max |diff| = 0），不过就停。
+  (2) **openpilot lead 的约定（我的读法）**：`lead` 切片 144 维 = MDN 的 mean + std，`mdn_mu` 取前 72 维 reshape 成 (3, 6, 4)：3 个 selection（t = 0 / 2 / 4 s 的 lead），6 个未来时刻（0, 2, …, 10 s），4 列 = x, y, v, a；
+  `lead_prob` 3 维取 sigmoid。读数用 selection 0、时刻 0：x = `lead[0, 0, 0]`，存在概率 = sigmoid(`lead_prob[0]`)，> 0.5 判「有 lead」。x 是 device（相机）坐标系的纵向距离：openpilot 的 radard 用 `dRel = x − RADAR_TO_CAMERA`（1.52 m）换到雷达，
+  训练标签是雷达测到的前车**后端**距离加回 1.52 m。所以 GT 对应量 = GT lead footprint 上离相机最近的点（与 [Q4] (3) 同一参考点，`nearest_on_box`）的 ego x 减去相机 x：
+  这里 openpilot 看到的是 renderer 按旋转重投影到前视相机光心的虚拟 road camera，光心在后轴系 (1.519, 0.026, 1.806)，所以 GT = x_ref − 1.519。误差 = x_pred − GT（正 = 报远了），报 |误差| 中位 / p90 与带符号中位。
+  预期偏差（写在看数之前）：虚拟相机高 1.806 m，而 comma 设备一般装在 1.2–1.3 m，单目测距若依赖地面线索会系统性报近（约 × 0.7）；所以另报 x_pred / GT 的中位数，这一列只描述。
+  (3) **GT lead**：观测帧（obs 角色 9919 行，x⁺ / x⁻ / null 三个世界）上，同一 frame 的全部 `vehicle.*` actor（除 hero，与 hero 高差 > 8 m 的剔除，同 [Q6] (3)），footprint 用 `actor_kinds.json` 的 bbox（同 `fusion_q4._p5_gt_attempt` 的变换，后轴系 x 前 y 左）。
+  ego 车道走廊 = `route.json` 的路线中心线，从 ego 最近且朝向相容的点向前（同 `fusion_diag.gt_run` 的取法，但长度放到 90 m），±1.5 m；footprint 在 7 × 5 网格点上采样，任一点投影落在中心线上（`fusion_diag.project` 的 `inside`，弧长 s > 0，即在 ego 车辆位置之前）且 |横距| ≤ 1.5 m 即算相交。
+  候选里取参考点 BEV 距离（到后轴原点）最小的一辆，≤ 80 m 才算有 GT lead。距离档按这个 BEV 距离（与 [Q4] (6) 同一口径）：0–10、10–20、20–40、40–80 m。
+  (4) **读数**：召回 = GT lead 存在的帧里 prob > 0.5 的比例；false-alarm = 没有 GT lead 的帧里 prob > 0.5 的比例（另报「且 x_pred ≤ 80 m」的一列，只描述）；距离误差只在「有 GT lead 且 prob > 0.5」的帧上算。
+  天气：夜 = `sun_altitude` < 0，雨 = `precipitation` > 30（与 [Q4] 同），表按 模型 × 天气（全部 / 白天 / 夜 / 雨）× 距离档（全部 + 四档）。召回与 false-alarm 附按路线（`base_id`）bootstrap 的 95% CI（500 次）。零拟合，没有阈值要在训练行上定（0.5 是 openpilot 自己的门槛）。
+- 2026-09-25 18:45 CST [Q9b] 以下全部写于 Q9b 任何抽取、拟合之前。代码 `jevdrive/fusion_q9b.py`，run dir `$DATA_DIR/runs/fusion_diag/q9b/<time>`。
+  (1) **抽取**：`waymo_qwenvid.make_fx(grid_hw=(4, 4))`，clip 与已存 P5 特征完全相同（`index.parquet` 的 `files`，3 路 × 4 帧），只抽 obs 角色 9919 行，落在 `processed/carla_p5/features_grid/`（按 chunk 可续跑）。
+  `L18_grid` = 每路相机最后一个时间槽的 token 平均池化到 4 × 4，3 路共 **48 个 token** × 2560（`qwenvid_train_t4` 的存法；登记里说的「16 个网格 token」是每路 16 个，head 看三路全部 48 个，与 P2 的 attention readout 把所有相机的 token 放进一个集合相同）。
+  数值配置由 profiling 定：候选 = 已存 P5 特征的配置（eager、batch 2）与 `qwenvid_train_t4` 的配置（compile、batch 8，或显存 ≤ 12 GB 所允许的最大 batch）。等价性检查在同一批行上比新抽的 `L18_mean` / `L18_last` 与已存的 P5 特征：
+  eager b2 应逐位相同；compile 允许 `waymo_qwenvid` profile 已记录的量级（rel L2 ~1e-2，cos ≥ 0.999）。compile 过这一条就用 compile（更快、且与 `qwenvid_train_t4` 同配置），否则用 eager b2。
+  (2) **head**：`waymo_ladder.AttnPool`（一个学习的 query 在 48 个 token 上做 softmax attention，d → 256 投影，dropout，256 → 40 线性输出，没有位置编码，与 P2 同构），输入按训练行逐通道标准化（`_chan_stats`，统计量取 (行, token)）。
+  prior 与 M-C 完全相同（`reactivity_mc.fit_fold` 的 prior：openpilot `temporal` 上的 `ridge_late`，role = train、fold ≠ f 的行拟合），Cinque 为主，Lebowski 复现。Δ 只读 Qwen 网格（这是「只 Qwen」arm 的空间版，Q9a 的对照）。
+  (3) **配对差分 arm（主）**：训练对 = fold ≠ f 的全部 obs 对（x⁺/x⁻，含 non-reactive）与 null 对（x⁺/x_null），损失 = 平均 ‖f(z⁺) − f(z⁻) − [(y⁺ − y⁻) − (p⁺ − p⁻)]‖²，**没有** role = train 行上的 μ 项（那些行没有网格特征）；
+  「直行帧上修正为零」只由 null 对（expert 差 ≈ 0 的目标）承担，不加额外权重。非线性 head 的绝对水平不被配对损失约束，所以输出 = prior + f(z) − mean_{训练对的帧} f(z)（M-C 里 W(z − z̄) 的对应）。
+  (4) **hard-example 对照**：同一 AttnPool，在训练对的全部帧上（各当单帧）拟合残差 y − p 的加权 MSE，w = s_ego / mean(s_ego)（s_ego = 同折 `ridge ego` 的逐帧 ADE，同 M-C），输出 = prior + f(z)；M-C 的对照还用了 role = train 行，这里没有（同 (3) 的原因）。
+  (5) **训练**：`waymo_ladder._train` 的配方（AdamW，`planner.MLP_LR` / `MLP_WD` / `MLP_BS` / `MLP_EPOCHS`，cosine），早停在训练折内按路线分出的 20% 内层留出集上（配对损失或加权 MSE），再用选出的 epoch 数在全部训练对上重训；seed 0 为主读数，
+  seed 1、2 只作敏感性描述。另跑一个只描述的比较 arm：同样去掉 train 行 μ 项的**线性**配对 arm，输入 pooled `L18_last`（闭式解，λ 同 M-C 的网格与 3 折路线 CV），用来在同一损失下隔离「网格 vs pooled」。
+  (6) **读数与判据**：`p5_exam.exam` 一字不改，`reactivity_mc.criteria` 原样（行人 = 四个行人 family 的 reactive 帧合并，路线 bootstrap；cut-in 对 prior 的逐帧配对 Δ；样本外 null false-flip）；判据按登记：行人 ≥ 20% 且 CI 下端 > null false-flip，且 null ≤ 7%（cut-in 不掉照 M-C 一起报）。
+  拟合斜率诊断同 M-C 偏离 5（训练对上 |Δ_expert| > 0.5 m/s 的对，2 s 速度差，拟合值对 expert 值的斜率，按行人 / cut-in，逐折报，取中位）。决策规则只读主读数（Cinque，seed 0，配对 arm）；Lebowski 与其余 seed 不一致时照实写。
 
 ## 结果
 
