@@ -38,8 +38,11 @@ E=$DATA_DIR/envs/efficientsam3
 [[ -d $TP/efficientsam3/.git ]] || (source /etc/network_turbo >/dev/null; git clone -q --depth 1 https://github.com/SimonZeng7108/efficientsam3 "$TP/efficientsam3")
 echo "efficientsam3 code at $(git -C "$TP/efficientsam3" rev-parse HEAD)"
 torch_env "$E"
-"$E/bin/python" -c "import sam3" 2>/dev/null || uv pip install -q --python "$E/bin/python" --index-url $MIRROR \
-  -e "$TP/efficientsam3[stage1]" $common einops timm "setuptools<81"
+# no [stage1] extra: it pulls mmcv (a source build, training only); inference needs the core deps below
+"$E/bin/python" -c "import sam3.model_builder" 2>/dev/null || uv pip install -q --python "$E/bin/python" --index-url $MIRROR \
+  -e "$TP/efficientsam3" $common einops timm "setuptools<81"
+"$E/bin/python" -c "import sam3.model_builder" 2>/dev/null || uv pip install -q --python "$E/bin/python" --index-url $MIRROR \
+  -e "$TP/efficientsam3/sam3"
 mkdir -p "$M/efficientsam3"
 for f in efficientvit repvit tinyvit; do hf Simon7108528/EfficientSAM3 "efficientsam3_ft/efficientsam3_$f.pt" "$M/efficientsam3/efficientsam3_$f.pt"; done
 
