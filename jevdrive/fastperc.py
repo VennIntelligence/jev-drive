@@ -14,7 +14,8 @@ bool at the original resolution (None for box-only models):
   sam31:<mode>:<prompts>:<res>:<compile>:<amp>   SAM 3.1 detector via sam_detect.Detector (mode exact|batched,
                                                  prompts all|pv|p, compile none|max-autotune|default)
   esam3:<tinyvit|repvit|efficientvit>:<mode>:<amp>  EfficientSAM3 Stage 3 through the same Detector (their Sam3Image)
-  yoloe:<weights>:<imgsz>:<half>                 Ultralytics YOLOE, text prompts = the six Q4 prompts
+  yoloe:<weights>:<imgsz>:<half>[:words]         Ultralytics YOLOE, text prompts = the six Q4 prompts (words: COCO-style
+                                                 class words, YOLOE_WORDS, mapped back onto the Q4 classes)
   yolo:<weights>:<imgsz>:<half>                  Ultralytics COCO closed set, mapped onto the Q4 classes
   gdino:<box_thr>:<text_thr>                     Grounding DINO tiny (HF transformers), boxes only
 """
@@ -29,6 +30,10 @@ PROMPTS = ("pedestrian", "cyclist", "vehicle", "cone", "debris", "emergency vehi
 PROMPT_SETS = {"all": PROMPTS, "pv": ("pedestrian", "vehicle"), "p": ("pedestrian",)}
 COCO_MAP = {"person": "pedestrian", "bicycle": "cyclist", "car": "vehicle", "motorcycle": "vehicle", "bus": "vehicle",
             "truck": "vehicle"}
+# YOLOE side variant (added after a 6-image smoke test, before any recall number): COCO-style class words as the text
+# prompts, mapped back onto the Q4 classes
+YOLOE_WORDS = {**COCO_MAP, "traffic cone": "cone", "debris": "debris", "ambulance": "emergency vehicle",
+               "fire truck": "emergency vehicle", "police car": "emergency vehicle"}
 ESAM3 = {"tinyvit": ("tinyvit", "11m"), "repvit": ("repvit", "m1.1"), "efficientvit": ("efficientvit", "b1")}
 
 
@@ -78,17 +83,18 @@ class Ultra:
         cwd = os.getcwd()
         os.chdir(models_dir() / "ultralytics")          # the text encoder (mobileclip2_b.ts) is looked up in the cwd
         try:
+            words = f[0] == "yoloe" and len(f) > 4 and f[4] == "words"
             if f[0] == "yoloe":
                 from ultralytics import YOLOE
                 self.m = YOLOE(w)
-                self.m.set_classes(list(PROMPTS))
+                self.m.set_classes(list(YOLOE_WORDS) if words else list(PROMPTS))
             else:
                 from ultralytics import YOLO
                 self.m = YOLO(w)
         finally:
             os.chdir(cwd)
         names = self.m.names
-        self.map = {i: (n if f[0] == "yoloe" else COCO_MAP.get(n)) for i, n in names.items()}
+        self.map = {i: (YOLOE_WORDS.get(n) if words else n if f[0] == "yoloe" else COCO_MAP.get(n)) for i, n in names.items()}
         self.prompts = list(PROMPTS) if f[0] == "yoloe" else ["pedestrian", "cyclist", "vehicle"]
         self.report = {"weights": f[1], "names": len(names)}
 
