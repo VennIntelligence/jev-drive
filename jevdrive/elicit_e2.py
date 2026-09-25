@@ -585,10 +585,203 @@ def wod_sam(part: str = "claim", workers: int = 6):
     rl.close()
 
 
+# ---------------------------------------------------------------- WOD pairs (second dataset)
+
+WOD_CAMS = ("front", "front_left", "front_right")
+WOD_CAL = {"front": "1", "front_left": "2", "front_right": "3"}
+WOD_GAP_S = 5.0                  # one candidate per sequence per 5 s (deviation [E2] WOD pairs)
+
+
+def wod_candidates() -> Path:
+    """Scan detections -> corridor frames (extended logged 5 s path, +-1.5 m, ahead, <= 30 m, >= 20 px), one per
+    sequence per WOD_GAP_S, with the clip rows (f-6, f-4, f-2, f) and the 12 image locations."""
+    import pandas as pd
+    from . import fusion_q4 as Q, waymo as W
+    from .fusion_q2b import calibs, extend
+    lst = pd.read_parquet(out_root("wod") / "scan_list.parquet")
+    d = Q.load_dets(out_root("wod", "sam"), score=SAM_SCORE)
+    d = d[d.prompt.isin(SAM_PROMPTS) & ((d.y1 - d.y0) >= MIN_PX)]
+    seq = d.key.map(lst.set_index("key").sequence).to_numpy()
+    cal = calibs()
+    d = Q.lift_dets(d, seq, cal)
+    d = d[d.lift_ok & (d.gx > 0) & (d.gdist <= RANGE)]
+    df = W.load_index()
+    names = W.frame_names(df)
+    at = pd.Series(np.arange(len(df)), index=names)
+    _, future = W.load_ego()
+    keep = []
+    for key, g in d.groupby("key"):
+        path = extend(np.r_[[[0.0, 0.0]], future[at[key], :, :2]], RANGE)
+        pts = g[["gx", "gy"]].to_numpy(float)
+        inside = np.array([seg_dist(q, path) <= CORRIDOR for q in pts])
+        if inside.any():
+            gi = g[inside]
+            keep.append({"key": key, "row": int(at[key]), "n_actors": int(inside.sum()),
+                         "dist": float(gi.gdist.min()), "prompts": gi.prompt.tolist(),
+                         "boxes": gi[["x0", "y0", "x1", "y1"]].to_numpy().tolist(), "g": gi[["gx", "gy"]].to_numpy().tolist()})
+    c = pd.DataFrame(keep)
+    c["sequence"], c["frame"] = df.sequence.to_numpy()[c.row], df.frame.to_numpy()[c.row]
+    rows, _, exact = W.history_rows(df, 3, 2, targets=c.row.to_numpy())
+    c = c[exact.all(1)].copy()
+    c["clip_rows"] = [list(r[::-1]) for r in rows[exact.all(1)]]              # oldest first
+    c = c.sort_values(["sequence", "frame"])
+    out, last = [], {}
+    for r in c.itertuples():
+        if r.sequence in last and r.frame - last[r.sequence] < WOD_GAP_S * 10:
+            continue
+        last[r.sequence] = r.frame
+        out.append(r._asdict())
+    c = pd.DataFrame(out).drop(columns="Index")
+    sd = W.shard_dir()
+    c["images"] = [[{"cam": cam, "k": k, "shard": str(sd / df.shard.iloc[rr]), "off": int(df[f"{cam}_off"].iloc[rr]),
+                     "len": int(df[f"{cam}_len"].iloc[rr]), "row": int(rr)} for cam in WOD_CAMS for k, rr in enumerate(cr)]
+                   for cr in c.clip_rows]
+    dst = out_root("wod") / "candidates.pkl"
+    pickle.dump(c.to_dict("records"), open(dst, "wb"), protocol=4)
+    log.info("WOD candidates: %d frames in the corridor -> %d after one per %.0f s (%d sequences)", len(keep), len(c),
+             WOD_GAP_S, c.sequence.nunique())
+    return dst
+
+
+def _read_img(im: dict) -> bytes:
+    with open(im["shard"], "rb") as f:
+        f.seek(im["off"])
+        return f.read(im["len"])
+
+
+def wod_build(limit: int | None = None, tag: str = "main"):
+    """WOD edit pairs: SAM (pedestrian / cyclist / vehicle) on all 12 clip images; the t0 front actors are the
+    candidate's corridor detections (matched by IoU >= 0.5 to this run's detections); each is followed back through
+    the earlier front frames (same prompt, nearest centre, IoU >= 0.2); side cameras: pedestrian / cyclist masks whose
+    lifted ground point lies within 2 m of a followed actor's lifted point in the same frame. x- = LaMa over the
+    union; placebo = the same union mask shifted so the t0 front primary box lands on the ego path at the same range
+    with no SAM detection under it, the same pixel shift in every image. Every image is written as a file (x+ too)."""
+    import torch
+    from PIL import Image
+    from tqdm import tqdm
+    from . import sam_detect as S
+    from .fusion_q2b import calibs, extend
+    from .fusion_q4 import lift
+    from .runlog import RunLog
+    rl = RunLog("elicitation", "e2-wod-build")
+    cands = pickle.load(open(out_root("wod") / "candidates.pkl", "rb"))
+    if limit:
+        cands = cands[:: max(1, len(cands) // limit)][:limit]
+    cal_all = json.loads((data_dir() / "processed" / "drive_backbones" / "op_calib_trainval.json").read_text())
+    from . import waymo as W
+    _, future = W.load_ego()
+    dst = out_root("wod", tag)
+    model, rep = S.build()
+    det = S.Detector(model, prompts=SAM_PROMPTS + ("vehicle",), mode="exact")
+    lama = Lama()
+    chunks = [cands[i:i + CHUNK] for i in range(0, len(cands), CHUNK)]
+    for ci, chunk in enumerate(chunks):
+        cdir = dst / f"c{ci:05d}"
+        if (cdir / "meta.json").exists() or not _claim(dst / f"c{ci:05d}.lock"):
+            continue
+        cdir.mkdir(exist_ok=True)
+        t0, metas, n_img = time.time(), [], 0
+        for c in tqdm(chunk, desc=cdir.name, mininterval=10):
+            td = cdir / c["key"]
+            td.mkdir(exist_ok=True)
+            cal = cal_all[c["sequence"]]
+            imgs, dets = {}, {}
+            for im in c["images"]:
+                raw = _read_img(im)
+                (td / f"{im['cam']}_{im['k']}_plus.jpg").write_bytes(raw)
+                img = S.decode(raw).cuda()
+                res = det([img], keep=SAM_SCORE)[0]
+                imgs[im["cam"], im["k"]] = img
+                dets[im["cam"], im["k"]] = [(p, b, m) for p, dd in zip(det.prompts, res)
+                                            for b, m in zip(dd["boxes"].tolist(), dd["masks"])]
+            # t0 front actors, followed back in the front camera
+            front3 = [(p, b, m) for p, b, m in dets["front", 3] if p in SAM_PROMPTS]
+            actors = []
+            for pr, bx in zip(c["prompts"], c["boxes"]):
+                ious = [_iou(b, bx) if p == pr else 0 for p, b, _ in front3]
+                if ious and max(ious) >= 0.5:
+                    actors.append({3: front3[int(np.argmax(ious))]})
+            masks = {key: [] for key in dets}
+            for a in actors:
+                for k in (2, 1, 0):
+                    p0, b0, _ = a[k + 1]
+                    cand = [(p, b, m) for p, b, m in dets["front", k] if p == p0 and _iou(b, b0) >= 0.2]
+                    if not cand:
+                        break
+                    ctr = np.array([(b0[0] + b0[2]) / 2, (b0[1] + b0[3]) / 2])
+                    a[k] = min(cand, key=lambda x: np.hypot((x[1][0] + x[1][2]) / 2 - ctr[0], (x[1][1] + x[1][3]) / 2 - ctr[1]))
+                for k, (p, b, m) in a.items():
+                    masks["front", k].append(m)
+                    g, ok = lift(np.array([(b[0] + b[2]) / 2]), np.array([b[3]]), cal[WOD_CAL["front"]])
+                    if not ok[0]:
+                        continue
+                    for cam in ("front_left", "front_right"):
+                        for ps, bs, ms in dets[cam, k]:
+                            if ps not in SAM_PROMPTS:
+                                continue
+                            gs, oks = lift(np.array([(bs[0] + bs[2]) / 2]), np.array([bs[3]]), cal[WOD_CAL[cam]])
+                            if oks[0] and np.hypot(*(gs[0] - g[0])) <= 2.0:
+                                masks[cam, k].append(ms)
+            rec = {k: c[k] for k in ("key", "sequence", "frame", "n_actors", "dist")}
+            rec.update(n_followed=len(actors), valid=bool(actors), images=[])
+            # placebo shift: primary t0 front box onto the ego path at the same range, no detection under it
+            shift = None
+            if actors:
+                pb = actors[0][3][1]
+                path = extend(np.r_[[[0.0, 0.0]], future[c["row"], :, :2]], RANGE)
+                seg = np.vstack([np.linspace(path[q], path[q + 1], max(2, int(np.linalg.norm(path[q + 1] - path[q]) / 0.5) + 1))
+                                 for q in range(len(path) - 1)])
+                rr = np.hypot(seg[:, 0], seg[:, 1])
+                seg = seg[(rr >= 5) & (rr <= RANGE)]
+                seg = seg[np.argsort(np.abs(np.hypot(seg[:, 0], seg[:, 1]) - c["dist"]))]
+                E_ = np.asarray(cal[WOD_CAL["front"]]["extrinsic"], np.float64).reshape(4, 4)
+                fu, fv, cu, cv = (float(x) for x in cal[WOD_CAL["front"]]["intrinsic"][:4])
+                for q in seg[:60]:
+                    pc = np.linalg.solve(E_, np.r_[q, 0.0, 1.0])[:3]        # ego -> camera (x fwd, y left, z up)
+                    if pc[0] <= 0.5:
+                        continue
+                    u, v = cu - fu * pc[1] / pc[0], cv - fv * pc[2] / pc[0]  # pinhole, distortion ignored for placement
+                    du, dv = u - (pb[0] + pb[2]) / 2, v - pb[3]
+                    mb = [pb[0] + du, pb[1] + dv, pb[2] + du, pb[3] + dv]
+                    H, Wd = imgs["front", 3].shape[-2:]
+                    if mb[0] < 0 or mb[1] < 0 or mb[2] > Wd - 1 or mb[3] > H - 1:
+                        continue
+                    if any(overlap(mb, b) for _, b, _ in dets["front", 3]):
+                        continue
+                    shift = (int(round(du)), int(round(dv)))
+                    break
+            for (cam, k), ms in masks.items():
+                r = {"cam": cam, "k": k, "edited": bool(ms), "placebo": False}
+                if ms:
+                    img = imgs[cam, k]
+                    hgt = max(float(m.any(1).sum()) for m in ms)
+                    mask = _dilate(torch.stack(ms).any(0), max(7, int(0.08 * hgt)))
+                    out = lama(img, mask)
+                    Image.fromarray(out.permute(1, 2, 0).cpu().numpy()).save(td / f"{cam}_{k}_minus.jpg", quality=95)
+                    r["mask_px"] = int(mask.sum())
+                    r["boxes"] = [b for p, b, m in dets[cam, k] if any(m is x for x in ms)]
+                    if shift is not None and cam == "front":
+                        pm = torch.roll(mask, shifts=(shift[1], shift[0]), dims=(0, 1))
+                        pout = lama(img, pm)
+                        Image.fromarray(pout.permute(1, 2, 0).cpu().numpy()).save(td / f"{cam}_{k}_placebo.jpg", quality=95)
+                        r.update(placebo=True, placebo_shift=list(shift))
+                    n_img += 1
+                rec["images"].append(r)
+            metas.append(rec)
+        dt = time.time() - t0
+        (cdir / "meta.json").write_text(json.dumps(metas))
+        (dst / f"c{ci:05d}.lock").unlink(missing_ok=True)
+        rl.event("chunk", chunk=ci, pairs=len(chunk), images=n_img, seconds=dt)
+        rl.info(f"{cdir.name}: {len(chunk)} pairs, {n_img} edited images, {dt / len(chunk):.2f} s/pair")
+    if all((dst / f"c{ci:05d}" / "meta.json").exists() for ci in range(len(chunks))):
+        (dst / "done.json").write_text(json.dumps({"pairs": len(cands), "chunks": len(chunks)}))
+    rl.close()
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam", "wod-candidates", "wod-build"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -602,6 +795,10 @@ def main():
         print(wod_list())
     elif a.cmd == "wod-sam":
         wod_sam()
+    elif a.cmd == "wod-candidates":
+        print(wod_candidates())
+    elif a.cmd == "wod-build":
+        wod_build(a.limit, a.tag)
     elif a.cmd == "feat-index":
         print(feat_index(a.dataset, a.tag))
     elif a.cmd == "fig":

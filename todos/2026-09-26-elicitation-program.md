@@ -336,6 +336,18 @@ E6（可选）──────────────────────
 - 2026-09-26 01:14 CST（box 时钟，按提交 c6c4a97 的时间；人类 onset 的 from2 列在 01:15:01 算出）**[E4c] 事后偏离（看过人类 onset 的登记口径数字之后写，只加描述列，不改登记口径）**：rater_best 的 onset 有一半以上落在第一个区间（0.125 s）。
   核查：rater 轨迹的第一个点不在 0.25 s——479 帧 × 3 条 rater 轨迹上，第一个区间的速度中位是 v0 的 0.71，之后各区间 0.97–1.01（log 是 0.99、0.98…），也就是第一个点大约在 0.18 s，
   登记口径把这个时间基差读成了「减速」。所以加一个描述变体 `from2`：两种轨迹都从第二个区间（0.375 s 中点）起找 onset，其余不变。登记口径的数照报，但 rater_best 的登记口径数是伪影，读的时候用 `from2`。
+- 2026-09-26 01:22 CST [E2] WOD 编辑对的造法，写于扫描出候选、任何 WOD 编辑对与特征之前（`elicit_e2.wod_candidates / wod_build`）。
+  (1) 候选：扫描检测（pedestrian / cyclist，score > 0.5，框高 ≥ 20 px）按该 sequence 的前视标定平地抬升，走廊 = logged 5 s 路径延长到 30 m、±1.5 m、前方、≤ 30 m；
+  每个 sequence 每 5 s 最多一帧（没有 track id，同一事件在 0.8 s 抽样里会连续出现）；clip 行 f−6 / f−4 / f−2 / f 必须全在（与 qwenvid 同一个 `history_rows(3, 2)`）。
+  (2) 造对：12 张 clip 图（front / front_left / front_right × 4 帧，0.2 s 间隔）都跑 SAM（pedestrian / cyclist / vehicle，vehicle 只用于安慰剂避让）。t0 前视的 actor = 候选的走廊检测（与本次检测 IoU ≥ 0.5 对上）；
+  在前视里逐帧往回跟（同 prompt、IoU ≥ 0.2、中心最近）；侧视只抹抬升点离该帧前视 actor 抬升点 ≤ 2 m 的行人 / cyclist mask。LaMa 同 navtrain。t0 前视上一个 actor 都没对上的候选不要（`valid`）。
+  安慰剂：同一 union mask 平移，使 t0 前视主 actor 框底中点落到 ego 路径上同距离、框下没有任何 SAM 检测的地面点，**四帧用同一个像素平移**（WOD 没有逐帧 ego 位姿的现成接口；安慰剂只量管线噪声，像素固定的补丁够用），只在前视上做。
+  x⁺ 也逐张写成 JPEG 文件（原始字节），三份 clip 都从文件走 `navsim_qwen` 的 ClipFiles 路径抽 Qwen。
+  (3) **openpilot 流在 WOD 对上不编辑**：WOD 的 openpilot 特征是按 sequence 流式抽的（有效记忆远长于 0.6 s 的 clip），要让 x⁻ 的 `temporal` 真的「没见过」这个人，得把 10 s 左右的前视 / 广角历史都抹掉，成本是 clip 的约 30 倍。
+  第 42 条 D0 已经量过 openpilot 的 vision 层对行人 AUC ≈ 0.51，所以 x⁻ 的 `temporal` 取 x⁺ 的（exam 协议、t0 行），即 WOD 对上 op 流的配对差为 0。这个假设用 navtrain 对直接检验：
+  navtrain 上 x⁺ / x⁻ 的 `temporal` 都是真抽的，报其差的幅值对安慰剂差之比；若比值 ≥ 2（openpilot 其实「看得见」被抹的人），WOD 对的双流训练作废、只报只 Qwen arm，照记。
+  (4) 训练与读数照 00:57 的 (3)–(6)，标签只有 (a)（y⁺ = logged 未来 20 点，y⁻ = CTRA；WOD 没有 GT 状态与 PDM scorer，(b)(c) 不适用）；prior = 第 40 条 (iii) 的 WOD `ridge_late`（train 行上的样本内预测，
+  x⁺ 与 x⁻ 的 prior 相同，因为 op 流不变、ego 不变）；WOD 对全部来自 train sequence，读数在 val 的 19 663 帧上，不同源。WOD 对与 navtrain 对各训一个 head、也合训一个，分别报。
 
 ## 结果
 
