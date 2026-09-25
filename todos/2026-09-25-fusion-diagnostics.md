@@ -298,6 +298,11 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   (6) precision：分母 = 该类别、抬升有效（射线打到地面且 ≤ 80 m）的检测；分子 = 与同类 GT（该相机视锥内、≤ 80 m，含被遮挡的）匹配上的检测。距离档按 GT 参考点到 ego 原点（后轴地面）的 BEV 距离。
   (7) 抬升：P5 用 `op_plan.json` 的 `calib`（Waymo 式 k1/k2 径向畸变，反解用不动点迭代），地面 = ego 坐标系 z = 0（P5 的 ego 原点在车底地面，相机高 1.806 m）；nuScenes 用 `calibrated_sensor`（针孔、无畸变），
   地面高度取 ego 坐标系 z = 0，检查 (d) 顺带报 GT box 底面在 ego 系下的 z 中位数，若偏离 > 0.15 m 再另记一条。
+- 2026-09-25 18:50 CST [Q4] （仍在任何 SAM 输出之前）(8) 16 帧检查的选帧：`factor_px` 只量前视，侧视相机里的 scenario hazard 按场景设计多半藏在建筑 / 树后（把 GT 参考点画到图上逐张看过，
+  24 张侧视候选里清楚可见的不到三分之一）。所以 16 帧 = 前视 11 个 hazard（`factor_px` ≥ 200：行人 6、车辆 5，7.5–34.5 m）+ 侧视 5 个**人眼确认可见**的物体（front_right 行人 hazard 2 个 15.5 / 16.6 m；
+  车辆 3 个：front_right hazard 32.2 m，front_left 背景车 16.7 / 28.7 m）。选帧只看 GT 投影图，不看任何 SAM 输出；清单在 box 上 `processed/fusion_diag/lists/check16_sel.parquet`。
+  (9) P5 的 precision 偏低是结构性的：CARLA 城镇里路边停着的车很多是静态 mesh，不是 actor，不在 `actors.npz` 里（投影图上肉眼可见无 GT 的停放车辆）。SAM 检出它们会被计成 false positive。
+  所以 P5 的 precision 只作描述，precision 的正式读数以 nuScenes 为准；P5 的召回不受影响（GT 里的每个 actor 都是真的）。GT 参考点投影的正确性已在 4 张图上目检（行人落在脚下、车辆落在离相机最近的底角）。
 - 2026-09-25 18:40 CST [Q1] 以下全部写于 Q1 任何拟合之前。代码 `jevdrive/fusion_q1.py`，run dir `$DATA_DIR/runs/fusion_diag/q1/<time>`。
   (1) **P5 只有 `ridge_late`**：`p5_exam` 本身没有分类头，加一个就不再是「一字不改」的考生；`cls_late` 只在 WOD 的 (a)(b) 上跑。P5 上 V-JEPA 2 没抽，按登记的「可选」跳过，P5 的 single 只有四个。
   (2) **late fusion 的定义**：配对与 concat 相同（Cinque `temporal` + Qwen `L18_last`，Lebowski 同）。ridge = 两个单 arm 样本外轨迹逐点平均；cls = 两个单 arm 的**完整** logits（各自的 ego offset + 自己那一项）相加后取 top-1 anchor，
