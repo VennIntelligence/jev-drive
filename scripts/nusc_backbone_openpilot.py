@@ -72,7 +72,10 @@ def main(a, log):
                 mod.reset()
                 t1 = time.perf_counter()
                 for s in range(len(plan["t"])):
+                    t2 = time.perf_counter()
                     raw = mod.step(frames[inv[s]], desire=np.zeros(8, np.float32), traffic=tc, action_t=NO.ACTION_T)
+                    if a.duty < 1:     # yield the shared card: busy at most `duty` of the wall time
+                        time.sleep((time.perf_counter() - t2) * (1 / a.duty - 1))
                     e = keyat.get(s)
                     if e is None:
                         continue
@@ -93,6 +96,9 @@ if __name__ == "__main__":
     ap.add_argument("--models", default="cinque,lebowski")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit", type=int, default=0, help="first N pending scenes only (smoke test)")
+    ap.add_argument("--duty", type=float, default=1.0,
+                    help="GPU duty cycle: sleep after each step so the card is ours at most this share of the time "
+                         "(0.35 kept the Alpamayo exam on the same card within ~10%%)")
     a = ap.parse_args()
     log = RunLog("nusc_backbones", "openpilot")
     log.info(f"args {vars(a)} -> {log.dir}")
