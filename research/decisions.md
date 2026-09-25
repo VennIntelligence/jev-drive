@@ -2992,3 +2992,35 @@ Q4（SAM 召回与接地点）、Q2（WOD 损失解剖）、Q7、Q8 的读数不
 nuScenes 的检查 (d) 是批量之后补做的目检。
 **会推翻或推进本条的证据**：I1（P5 v1：PDM-Lite、101 条路线 × 3 seed）上 Q9b 行人翻转过 20%（那就是数据量问题，Qwen 空间 token 可以留作行人通道）；Q6 在 PDM-Lite 标签下 GT 规则 floor ≥ 80%（反应主要是几何）；
 给 SAM 接地点加地面高度估计后 P5 / nuScenes 行人召回过登记门槛（结构化感知通道成立）。
+
+## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的；按 ego 历史从 log 里挖孪生对挖不出「场景解释的分叉」（**待定**，E2 真实帧编辑对在跑）
+
+2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-elicitation-program.md](../todos/2026-09-26-elicitation-program.md)（E1–E3），小表在 [research/results/elicitation/](results/elicitation/)。
+接第 42 条：M-C 双流 reaction head（Qwen `L18_last` ⊕ openpilot `temporal`，线性，配对差分监督）在 P5 v1 BA 集上行人翻转 43%。这一条问它能不能走出 CARLA。
+
+**E1：零样本迁移到 WOD——有害（两个模型都是）。** head 是 v1 BA 集上过判据的 5 个路线 fold head（在 GPU 上逐 fold 重算，对已存预测的最大差 ≤ 0.4 mm，λ 逐 fold 相同），Δ 取平均，
+加在 WOD train 训的 `ridge_late` openpilot prior 上；评测是 `p2p3_v1` 里有 Qwen 特征的 19 663 帧（完整 val 没有 Qwen 特征，偏离 (2)）。
+
+| | Cinque | Lebowski |
+|:--|:--|:--|
+| RFS Δ，全部 478 rater 帧 [95% CI] | **−1.02 [−1.21, −0.82]** | **−1.52 [−1.74, −1.30]** |
+| RFS Δ，Pedestrians（52）/ Cyclists（71） | −1.19 / −1.12（CI 全 < 0） | −1.35 / −1.45 |
+| ADE Δ，s_ego 第 1–9 档（m） | +1.39 | +2.07 |
+| 激活率：straight_yaw / Pedestrians 帧（门槛 7%） | 16.7% / 14.4% | 40.7% / 29.8% |
+| 描述：换成 WOD train 统计量标准化后的 RFS Δ / 直行激活率 | −0.53 / 6.5% | −0.48 / 7.4% |
+
+登记的预期是「转不过去但无害」，结果是有害：Δ 在所有帧上都加一个 1–3 m 的修正，行人帧上的激活率不高于直行帧，也就是它读的方向在真实特征上没有意义。
+去掉特征均值的域偏移（WOD 统计量）只把损害减半。这是 P4「domain AUC 1.0」的反方向版本。
+含义：CARLA 配对上训出来的反应通道不能直接相加到真实数据的 prior 上；要么在真实数据上重训（E2），要么至少有门控。图：[elicit-e1-wod-transfer](figs/elicit-e1-wod-transfer.png)。
+NAVSIM 那一列（navtest / navhard 官方 devkit）因为 NAVSIM 上原本没有 Qwen 特征，在补抽后再填，不改这里的判格。
+
+**E3 可行性：log 里挖不出「场景解释的分叉」（两个数据集都不过）。** 按标准化 ego 历史在同 command / intent 内做最近邻、排除同一 log 与同一路段，再按未来分叉（4–5 s 速度差 ≥ 2 m/s 或横向差 ≥ 1 m）挑对：
+navtrain 4.0 万对、WOD train 4.0 万对，对数不缺；但分叉对 x⁺ 侧走廊内有接近物体的比例比孪生 null 低 37 pp（navtrain，GT，CI 整体 < 0），WOD（SAM）跨零。
+60% 的分叉是纯横向（路形、路线），null 以稳定跟车为主。按登记 E3 的训练不开。事后收窄到纵向「刹 vs 继续」的 4 134 对时，刹的一侧多 25 pp 接近物体（多是车辆，行人只多 2.8 pp）——
+这是看过数后的子集，要重新预登记才能用。文献检索没有找到从真实 log 按 ego 状态挖配对做差分监督的先例（最近的是 copycat 基准 2504.14709 与 BranchDrive 2609.27275 的仿真分叉），写作「未见先例」。
+PDM scorer 对「继续 / 刹停」两条 proposal 的符号与人类一致率：逐 token 63%、逐对 79%（描述，n = 341 / 118）。
+
+**E2（真实帧反事实编辑对，SAM 3.1 抹行人 + LaMa inpainting，navtrain 为主）**：验证与批量在跑，结果出来后补进本条。
+
+**状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。
+**怎么推进**：E2 用编辑对在真实特征上训 M-C，判据是编辑对上 |Δ| ≥ 2 × 安慰剂、WOD Pedestrians RFS Δ CI > 0 且直行激活率 ≤ 7%；若 E2 也不过，配对差分在真实数据上的路只剩「重新登记的纵向孪生对」这一条。
