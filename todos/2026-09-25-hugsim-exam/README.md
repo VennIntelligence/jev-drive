@@ -137,3 +137,39 @@ bootstrap 的 95% CI。
 横向 25–38%、纵向 11–14% 的误差，而 “20 Hz 时钟照常、帧保持” 让模型把 0.25 s 的运动当成静止 + 跳变，纵向误差到 19–23 m，
 不可用。按第 1 节规则（hold 须两项都更好）**保持 `h4-dilate`**。这个 +25–38% 横向误差是 openpilot 在 HUGSIM 上的已知
 handicap。
+
+### R2. openpilot 适配清单（2026-09-25 13:30；`check-op` + 修复后重跑的 `check-op2`）
+
+逐 run 表：[checklist_runs.csv](../../research/results/hugsim-exam/checklist_runs.csv)；shadow mode 误差：
+[checklist_shadow.csv](../../research/results/hugsim-exam/checklist_shadow.csv)。
+
+**查出并修掉的适配 bug（偏离 1，写于任何计分之前）：停车 plan 让 iLQR 倒车打转。** 第一轮里 Lebowski 在 PandaSet 021 停住后
+（plan 3 s 终点 < 0.1 m，forward-only 已经起作用），`ego_velo` 掉到 −0.91 m/s、方向盘从 0.08 打到 0.88 rad：iLQR 用相邻 waypoint
+的差算参考航向，毫米级的横向噪声让航向在 ±180° 乱跳，于是原地倒车、转向。修复 `jevdrive.hugsim_zs.straight_stop`：3 s 终点
+离 ego < 1 m 的 plan 视为停车，横向分量置零、纵向进度保留。纯语义修复（停车就是停在原地），不看分数；修复后所有模型 run
+的最低车速 ≥ 0（原来 −0.91）。按预注册的规则重跑了全部模型驱动的清单 run（`check-op2`），shadow 与参照 run 不受影响、没重跑。
+
+| # | 检查 | 结果 | 判定 |
+|---|---|---|---|
+| 1 | 坐标与航向（shadow，oracle ≤ 5 m/s 开，n = 514–594 次规划） | 横向误差 1 / 2 / 3 s：Cinque 0.11 / 0.25 / 0.46 m，Lebowski 0.11 / 0.24 / 0.48 m（直行外推 0.13 / 0.60 / 1.40 m）；横向偏差 −0.02 ~ −0.07 m；真值横移 > 1 m 时 3 s 横向符号一致 98%；纵向 0.79 / 0.94 m @2s，偏短 0.15–0.18 m | 过：误差与 comma1M 上的开环误差同量级（2 s 横向 0.20 m，4 Hz 代价之后），没有系统性偏置 |
+| 2 | 参考点与倒车 | 修复前 1 例倒车 −0.91 m/s；修复后 0 例 | 修复后过 |
+| 3 | 时序 | reps：Cinque 首步 100、之后 4；Lebowski 首步 25、之后 1；与第 1 节一致 | 过 |
+| 4 | 预热 | 首步 plan 3 s 终点 0.03–0.07 m（预热 5 s 喂的是同一帧，模型认为车停着），第二步起正常（4–7 m）；起步时车速从 1 m/s 先掉到约 0.7 m/s 再加速 | 过（记为已知现象：静止帧预热与 1 m/s 起始速度不一致） |
+| 5 | 静止起步（fixed） | 两个模型都**一直不动**（400 步，车速 < 0.01 m/s）；engage 5 s 后 Cinque 能开，但在无车道线的停车场里向左打转 | 模型行为：与 B2D 一致，openpilot 从全停不自己起步 |
+| 6 | 车道保持（fixed） | 0071（无车道线的货场）：Cinque 13 s 后右拐冲向停着的卡车（plan 投影在图上是一条连贯的右转路径），Lebowski 开头绕了 3 圈之后沿路线开完；PandaSet 021：两者都在 3–4 s 后自己把 plan 缩到 0 并停住，之后不再起步（lead_prob < 0.1，前方无车） | 失败来自模型输出（停车、选错方向），不是适配；闭环打转见下 |
+| 7 | 转弯（fixed，有 / 无路线信息） | 左转（0383、KITTI-360）：两模型航向变化都向左（Cinque −45° / −49°，Lebowski −83° / −56°）；右转（0920、Waymo）：Lebowski +115° / +50°，Cinque +20°（冲出路线）/ 停住。desire 的作用方向对：Cinque 在 0383 无 desire 只转 −6°，有 desire −45°；comma1M 离线 probe 里 turnRight 让 4 s 横向 +1.1 m（Cinque）/ +0.7 m（Lebowski） | 映射正确；Cinque 的右转执行不了是模型行为 |
+| 8 | 前车静止（0062） | Lebowski 停在车后不撞（400 步）；Cinque 向左绕开后偏离路线 | 过（没有穿过前车的 plan 被执行成碰撞） |
+| 9 | 偏置起点（右 0.8 m、右偏 6°） | 两模型前 2 s 的 plan 都向左修正（3 s 横向 −0.20 / −0.21 m）；Cinque 开完 HD 0.96 | 过 |
+| 10 | 控制器 | 每个 job 前核对补丁状态，全部一致 | 过 |
+
+**official 控制器**：10 个清单场景上两个 openpilot 模型 20/20 都在 9–50 步内背景碰撞（HD 0.00–0.12，只有 Lebowski 在
+PandaSet 021 开完），轨迹是原地打转：heading 转置让直行 plan 向右拐，openpilot 从画面里看到自己在转，下一次 plan 跟着转。
+同一批场景上 route follower 在 official 下 7/10 完成，所以这是 “控制器缺陷 × 会外推自身 yaw 的模型” 的相互作用，按预注册
+official 仍是 headline，fixed 是配对次结果。
+
+**fixed 控制器下仍有的闭环打转**（Lebowski 0071 开头 3 圈、Cinque engage 后 14 圈）只出现在没有车道线的货场里：模型把刚执行出的
+yaw 外推成更大的弯。推测（未验证）：HUGSIM 的 bicycle 把前相机当后轴积分，转弯时相机没有真车前相机那 ω·1.7 m 的横向速度，
+模型看到的运动与训练分布不同。验证办法是在仿真器里把渲染位姿前移 1.7 m 做对照，这超出适配层，不做。
+
+**决定（按第 3 节预注册规则）**：没有待修的适配 bug，计分照常进行。engage 规则的触发条件（0071 与 021 起步 10 s 后都 < 2 m/s）
+不成立（0071 上 5.5 / 3.9 m/s），**计分不用 engage**；两个模型的静止起步失败与 021 的自停作为模型行为报告。
