@@ -45,6 +45,6 @@ PY
 )
 uv pip install --python "$ENV/bin/python" $deps pillow --index-url $MIRROR
 uv pip install --python "$ENV/bin/python" --index-url $MIRROR -e "$SRC" einops pandas pyarrow opencv-python-headless pycocotools \
-  scipy tqdm tensorboard
+  scipy tqdm tensorboard "setuptools<81"   # sam3 imports pkg_resources
 "$ENV/bin/python" -c "import torch, sam3; print('torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.is_available())"
 ls -la "$DATA_DIR/models/sam3.1"
