@@ -170,12 +170,12 @@ def criteria(res: dict, arms, prior: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def run(rl, models=("cinque", "lebowski"), op_sub="op_streams"):
+def run(rl, models=("cinque", "lebowski"), op_sub="op_streams", fold_seed: int = 0):
     t, past, fut, obs, null, pairs = E.load()
     n = len(t)
     Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device="cuda")
     op = p5_openpilot.load(t, models, sub=op_sub)
-    fold = E.folds(t, pairs)
+    fold = E.folds(t, pairs, fold_seed)
     F = torch.as_tensor(fut.reshape(n, -1), device="cuda")
     Ego = torch.as_tensor(E.ego_input(t, past), device="cuda")
     pos = pd.Series(np.arange(n), index=t.frame_name)
@@ -220,6 +220,7 @@ def main():
     ap.add_argument("--lams", default="", help="log10 range lo,hi of the lam grid; default the pre-registered -1,5 "
                                                  "(wider grids are the post-hoc sensitivity, deviation-log item 5)")
     ap.add_argument("--op-sub", default="op_streams", help="openpilot stream dir holding `temporal` (P5 v1: op_streams_vis)")
+    ap.add_argument("--fold-seed", type=int, default=None, help="route-fold permutation seed (overnight queue [SEEDS]); given -> own run dir")
     a = ap.parse_args()
     global LAMS
     if a.lams:
@@ -227,8 +228,9 @@ def main():
         LAMS = 10.0 ** np.arange(lo, hi + 1)
     import os
     set_ = os.environ.get("P5_SET", "carla_p5")           # a P5 v1 set gets its own run dirs
-    rl = RunLog("reactivity", "mc" + (f"-lams{lo}_{hi}" if a.lams else "") + ("" if set_ == "carla_p5" else "-" + set_))
-    run(rl, tuple(a.models.split(",")), a.op_sub)
+    rl = RunLog("reactivity", "mc" + (f"-lams{lo}_{hi}" if a.lams else "") + ("" if set_ == "carla_p5" else "-" + set_)
+                + (f"-seed{a.fold_seed}" if a.fold_seed is not None else ""))
+    run(rl, tuple(a.models.split(",")), a.op_sub, a.fold_seed or 0)
     rl.close()
 
 

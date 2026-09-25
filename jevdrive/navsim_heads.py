@@ -87,10 +87,10 @@ def fit_ridge(Xtr, Ytr, Xev: dict, folds) -> tuple[dict, torch.Tensor, dict]:
     return {s: planner.linear_apply(W, X, np.arange(len(X)))[0] for s, X in Xev.items()}, oof, {"lam": lam}
 
 
-def vocabulary(fut: np.ndarray) -> tuple[torch.Tensor, np.ndarray, np.ndarray]:
+def vocabulary(fut: np.ndarray, seed: int = 0) -> tuple[torch.Tensor, np.ndarray, np.ndarray]:
     """K-means anchors over (x, y), the navtrain rows' nearest anchor, and each anchor's circular-mean heading."""
     F = torch.as_tensor(fut[..., :2].reshape(len(fut), -1), device=DEV)
-    A = traj.kmeans(F, K, seed=0)
+    A = traj.kmeans(F, K, seed=seed)
     ids = traj.nearest(F, A, 1)[0][:, 0]
     s, c = np.zeros((K, 8)), np.zeros((K, 8))
     np.add.at(s, ids, np.sin(fut[..., 2]))
@@ -132,9 +132,11 @@ def oof_logits(Xtr, ids, lam, folds) -> torch.Tensor:
     return out
 
 
-def fit(feats: bool = True) -> dict:
+def fit(feats: bool = True, seed: int | None = None) -> dict:
+    """seed (overnight queue [SEEDS]): outer log folds seed s, cls inner split seed s + 1, k-means seed s; None = 0."""
     from .runlog import RunLog
-    rl = RunLog("navsim_zs", "heads")
+    rl = RunLog("navsim_zs", "heads" + (f"-s{seed}" if seed is not None else ""))
+    s0 = seed or 0
     t0 = time.time()
     tr = load("navtrain", feats)
     keep = (tr["stage"] == "one") & ~np.isnan(tr["fut"]).any((1, 2))
@@ -142,8 +144,8 @@ def fit(feats: bool = True) -> dict:
     ev = {s: load(s, feats) for s in EVAL}
     fut = tr["fut"]
     fut_xy = fut[..., :2]
-    folds = _group_folds(tr["log"], FOLDS)
-    inner = _group_folds(tr["log"], 5, seed=1) == 0            # 20% of the logs: the cls lambda's inner split
+    folds = _group_folds(tr["log"], FOLDS, seed=s0)
+    inner = _group_folds(tr["log"], 5, seed=s0 + 1) == 0            # 20% of the logs: the cls lambda's inner split
     rl.log.info(f"navtrain rows {len(fut)} over {len(np.unique(tr['log']))} logs; eval {[len(v['tokens']) for v in ev.values()]}")
     Y = torch.as_tensor(fut.reshape(len(fut), -1), device=DEV)
     Xe, *Xe_ev = _std(tr["ego"], *(ev[s]["ego"] for s in EVAL))
@@ -152,7 +154,7 @@ def fit(feats: bool = True) -> dict:
     p, oof_e, st = fit_ridge(Xe, Y, Xe_ev, folds)
     preds["ridge ego"], stats["ridge ego"] = {s: v.reshape(-1, 8, 3).cpu().numpy() for s, v in p.items()}, st
     base_ev = p
-    A, ids, yaw = vocabulary(fut)
+    A, ids, yaw = vocabulary(fut, s0)
     rl.log.info(f"vocabulary K={K}: oracle (x, y) ADE {np.linalg.norm(A.reshape(K, 8, 2).cpu().numpy()[ids] - fut_xy, axis=-1).mean():.3f} m")
     preds["cls ego K1024"], st = fit_cls(Xe, ids, A, yaw, fut_xy, Xe_ev, inner)
     We = st.pop("W")
@@ -206,6 +208,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("step", choices=("fit", "ctrv"))
     ap.add_argument("--no-feats", action="store_true", help="ego heads only (before the temporal extraction exists)")
+    ap.add_argument("--seed", type=int, default=None, help="[SEEDS]: fold / inner-split / k-means seed; given -> heads-s<seed> run dir")
     a = ap.parse_args()
     if a.step == "ctrv":
         for sp in EVAL:
@@ -213,4 +216,4 @@ if __name__ == "__main__":
             np.savez(Z.root("heads", "kinematic") / f"{sp}_ctrv.npz", tokens=tok, poses=P)
             print(sp, len(tok), "mean 4 s x", float(P[:, -1, 0].mean()))
     else:
-        fit(not a.no_feats)
+        fit(not a.no_feats, a.seed)

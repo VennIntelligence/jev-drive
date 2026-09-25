@@ -231,7 +231,8 @@ def ladder_train(rl, models=("cinque", "lebowski"), p0_run: str = P0_RUN):
 HEADS_TAG = "p3drive_heads"
 
 
-def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: float = 25.0, feat_suffix: str = "_trainval"):
+def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: float = 25.0, feat_suffix: str = "_trainval",
+                seed: int = 0):
     """Decisions 40, follow-up (iii): the openpilot `temporal` token read by the classification head (and, as a
     described-only extra, the truncated diffusion head) under the train-split protocol of `ladder_train`.
 
@@ -243,14 +244,14 @@ def heads_train(rl, models=("cinque", "lebowski"), which=("cls",), vram_gb: floa
     from . import waymo_ladder as L
     total = torch.cuda.get_device_properties(0).total_memory
     torch.cuda.set_per_process_memory_fraction(min(1.0, vram_gb * 1e9 / total))
-    ctx = L.train_context(p0_run=P0_RUN)
+    ctx = L.train_context(seed, p0_run=P0_RUN)       # seed: the cls lambda inner split (overnight queue [SEEDS])
     keep, feats = np.ones(len(ctx["fname"]), bool), {}
     for m in models:
         a = L.align(ctx, op_set(m) + feat_suffix, ["temporal"])
         keep &= a["covered"]
         feats[f"op-{m} temporal"] = a["temporal"]
     ks = (H.VOCAB_K,) + ((H.DIFF_M,) if "diff" in which else ())
-    voc, norm = H.vocabularies(ks)
+    voc, norm = H.vocabularies(ks, seed=seed)
     side = {"modes": {}, "pool": {}}
     arms = {f"A ridge_late {n}": L.ridge_arm(X) for n, X in feats.items()}
     if "cls" in which:
@@ -462,8 +463,9 @@ def main():
     ap.add_argument("--feat-suffix", default="_trainval", help="heads_*: feature set op_<model>_p3<suffix> "
                     "(_trainval_desire: the route-into-backbone extraction, todos/2026-09-25-openpilot-temporal-p5-and-route.md)")
     ap.add_argument("--vram-gb", type=float, default=25.0, help="heads_*: this process's share of the card")
+    ap.add_argument("--seed", type=int, default=None, help="heads_*: vocabulary k-means + inner-split seed ([SEEDS]); given -> own run dir")
     a = ap.parse_args()
-    rl = RunLog("drive_backbones", a.steps.replace(",", "-"))
+    rl = RunLog("drive_backbones", a.steps.replace(",", "-") + (f"-seed{a.seed}" if a.seed is not None else ""))
     rl.event("start", args=vars(a))
     for step in a.steps.split(","):
         if step == "prepare":
@@ -482,7 +484,7 @@ def main():
         elif step in ("heads_train", "heads_diff"):
             from . import waymo_ladder as L
             tag = heads_train(rl, tuple(a.models.split(",")), ("cls",) if step == "heads_train" else ("diff",), a.vram_gb,
-                              a.feat_suffix)
+                              a.feat_suffix, a.seed or 0)
             for name, t in (L.rejudge(rl.dir, tag) | heads_readout(rl.dir, tag)).items():
                 t.to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
                 rl.log.info("%s\n%s", name, t.to_markdown(index=False, floatfmt=".4f"))

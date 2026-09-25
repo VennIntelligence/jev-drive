@@ -27,6 +27,7 @@ CHUNK = 1000
 TAPS = ("L18_mean", "L18_last")
 SEEDS = (0, 1, 2)
 FIXED_EPOCHS = 0                           # post-hoc sensitivity only: train this many epochs, no early stopping
+HARD_SEED = 0                              # overnight queue [SEEDS]: the hard-example arm's _train seed
 
 
 def grid_root(*p):
@@ -309,7 +310,7 @@ def fit_fold(f, fold, t, F, prior, s_ego, G, gpos, Q, pr_ip, pr_im, pr_group, pr
     Y = F - prior
     w = s_ego / s_ego[frames].mean()
     lossh = lambda net, b: (w[b] * (net(z(b.cpu().numpy())) - Y[b]).pow(2).mean(1)).mean()  # noqa: E731
-    net, st = _train(lambda: AttnPool(G.shape[-1], 40), lossh, frames, t.base_id.to_numpy()[frames].astype(str), 0)
+    net, st = _train(lambda: AttnPool(G.shape[-1], 40), lossh, frames, t.base_id.to_numpy()[frames].astype(str), HARD_SEED)
     full = prior.clone()
     full[obs_rows] = prior[obs_rows] + apply(net, obs_rows)
     tr_fit = prior.clone()
@@ -415,13 +416,15 @@ def main():
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--vram-gb", type=float, default=12.0)
     ap.add_argument("--fixed-epochs", type=int, default=0, help="fit: post-hoc sensitivity, no early stopping")
+    ap.add_argument("--hard-seed", type=int, default=None, help="fit: seed of the hard-example arm ([SEEDS]); given -> own run dir")
     a = ap.parse_args()
-    global FIXED_EPOCHS
+    global FIXED_EPOCHS, HARD_SEED
     FIXED_EPOCHS = a.fixed_epochs
+    HARD_SEED = a.hard_seed or 0
     total = torch.cuda.get_device_properties(0).total_memory
     torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
     rl = RunLog("fusion_diag", f"q9b-{a.step}" + (f"-{a.tag}" if a.tag else "") +
-                (f"-fixed{a.fixed_epochs}" if a.fixed_epochs else ""))
+                (f"-fixed{a.fixed_epochs}" if a.fixed_epochs else "") + (f"-hardseed{a.hard_seed}" if a.hard_seed is not None else ""))
     rl.event("start", args=vars(a))
     if a.step == "profile":
         profile(rl, a.n, [(c == "compile", int(b)) for c, b in (x.split(":") for x in a.configs.split(","))], a.workers,
