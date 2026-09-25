@@ -1,0 +1,9 @@
+set,model,arm,s0,s1,s2,s0r (seed-0 re-run),mean,range,ci_halfwidth_s0,range_lt_halfwidth
+ba,cinque,Q9b pair grid,0.4606,0.5222,0.4532,,0.4787,0.0690,0.0824,True
+ba,cinque,Q9b hard grid,0.0345,0.0246,0.0000,,0.0197,0.0345,0.0293,False
+ba,lebowski,Q9b pair grid,0.3719,0.5049,0.4852,,0.4540,0.1330,0.1090,False
+ba,lebowski,Q9b hard grid,0.0025,0.0246,0.0074,,0.0115,0.0222,0.0040,False
+pdm,cinque,Q9b pair grid,0.0453,0.0129,0.0453,,0.0345,0.0324,0.0627,True
+pdm,cinque,Q9b hard grid,0.0000,0.0000,0.0000,,0.0000,0.0000,0.0000,False
+pdm,lebowski,Q9b pair grid,0.0388,0.0194,0.0356,,0.0313,0.0194,0.0552,True
+pdm,lebowski,Q9b hard grid,0.0000,0.0000,0.0000,,0.0000,0.0000,0.0000,False

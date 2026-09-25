@@ -55,3 +55,70 @@
 ## 结果
 
 （按到达顺序记在 `tmp/2026-09-26-overnight.md`；早上汇总后把判格写回各自的 todo。）
+
+### 补 seed（第 2 项，2026-09-26 01:12–04:18，GPU 0 约 1 h、GPU 3 5 min，devkit 打分 CPU 2 × 12 线程约 2.3 h）
+
+口径见偏离日志 [SEEDS] 01:12 / 01:31。代码 `scripts/seeds_overnight.sh`、`jevdrive/elicit_seeds.py`（各 head 只加了 seed 参数，默认值不变），
+表 [research/results/elicitation/seeds/](../research/results/elicitation/seeds/)（`mc_seeds.csv`、`navsim_seeds.csv`、`wod_seeds.csv`、`q9b_seeds.csv`、`seed0_reproduction.csv`）。
+「半宽」是原 run（seed 0）的 95% CI 半宽；「极差 < 半宽」即 seed 带来的变化小于原本报的抽样不确定性。
+
+**M-C（P5 v1 BA，seed = 路线分折排列）**：
+
+| arm | 读数 | s0 / s1 / s2 | 均值 | 极差 | 半宽 | 三个 seed 都过判据 |
+|:--|:--|:--|--:|--:|--:|:--|
+| 配对双流 Cinque | 行人翻转 % | 43.3 / 43.6 / 42.4 | 43.1 | 1.2 | 7.8 | 是 |
+| 配对双流 Cinque | cut-in 对 prior Δ pp | +3.1 / +4.6 / +2.8 | +3.5 | 1.8 | 2.6 | |
+| 配对双流 Lebowski | 行人翻转 % | 41.6 / 39.2 / 41.9 | 40.9 | 2.7 | 8.8 | 是 |
+| 配对双流 Lebowski | cut-in 对 prior Δ pp | +6.7 / +8.3 / +5.0 | +6.7 | 3.3 | 5.3 | |
+| 只 Qwen Cinque / Lebowski | 行人翻转 % | 42.1 / 41.9 / 40.4；39.2 / 36.7 / 37.0 | | ≤ 2.5 | 8.3–8.7 | 否 / 是 / 否（cut-in 贴边） |
+| 只 openpilot Cinque / Lebowski | 行人翻转 % | 6.9 / 6.2 / 8.4；17.7 / 18.0 / 19.5 | | ≤ 2.2 | 4.3–6.9 | 否 |
+| hard-example / 均匀 | 行人翻转 % | 0–3.7（全部 seed） | | ≤ 1.2 | | 否 |
+
+样本外 null false-flip 所有 arm × seed 在 4.4–5.6%。PDM-Lite 集上所有 arm 所有 seed 行人翻转 ≤ 1.3%（与 E4 一致）。
+
+**NAVSIM（seed = log 分折、内层划分、k-means 词表）**，navtest，官方 devkit：
+
+| 行 | PDMS s0 / s1 / s2 | 极差 / 半宽 | EPDMS s0 / s1 / s2 | 极差 / 半宽 | navhard EPDMS s0 / s1 / s2 |
+|:--|:--|:--|:--|:--|:--|
+| Cinque `cls_late` | 77.9 / 77.4 / 77.8 | 0.48 / 0.61 | 77.4 / 76.9 / 77.3 | 0.46 / 0.61 | 19.8 / 19.5 / 19.0 |
+| Lebowski `cls_late` | 77.3 / 77.2 / 76.8 | 0.47 / 0.63 | 76.7 / 76.5 / 76.3 | 0.39 / 0.64 | 17.5 / 19.0 / 18.7 |
+| Cinque `ridge_late` | 73.5 / 73.7 / 73.5 | 0.13 / 0.66 | 73.9 / 74.0 / 73.9 | 0.15 / 0.69 | 16.8 / 16.5 / 16.8 |
+| Lebowski `ridge_late` | 72.4 / 72.4 / 72.4 | 0.02 / 0.66 | 72.9 / 72.9 / 72.9 | 0.01 / 0.69 | 17.0 / 17.0 / 17.0 |
+| `cls ego` | 68.4 / 67.7 / 68.4 | **0.77 / 0.71** | 67.8 / 67.2 / 67.6 | 0.68 / 0.76 | 13.6 / 14.3 / 13.3 |
+| Cinque `cls_late` − `cls ego` | +9.4 / +9.7 / +9.5 | 0.29 / 0.63 | +9.6 / +9.8 / +9.7 | 0.23 / 0.64 | |
+| Lebowski `cls_late` − `cls ego` | +8.8 / +9.5 / +8.4 | **1.10 / 0.62** | +8.8 / +9.3 / +8.6 | **0.72 / 0.61** | |
+| `ridge_late` − `ridge ego`（两模型） | +10.9 / +11.0 / +10.9；+9.8 / +9.8 / +9.8 | ≤ 0.13 / 0.69 | +9.6 / +9.8 / +9.7；+8.7 / +8.7 / +8.7 | ≤ 0.15 / 0.72 | |
+
+s0′（seed 0 重跑，分类头的 run-to-run 噪声）：Cinque / Lebowski `cls_late` PDMS 77.8 / 77.3，`cls ego` 68.3，与 s0 差 ≤ 0.12。`ridge ego` 三个 seed 的分数逐位相同（三个 seed 选到同一个 λ，闭式解与分折无关）。
+
+**WOD 第 40 条 (iii)（seed = k-means 词表 + 内层划分）**，479 个 rater 帧：
+
+| 行 | s0 / s1 / s2（s0′） | 均值 | 极差 | 半宽 | 极差 < 半宽 |
+|:--|:--|--:|--:|--:|:--|
+| RFS cluster mean，Cinque `cls_late` | 7.64 / 7.50 / 7.50（7.65） | 7.55 | 0.14 | — | — |
+| RFS cluster mean，Lebowski `cls_late` | 7.73 / 7.46 / 7.57（7.68） | 7.59 | 0.27 | — | — |
+| RFS 配对，Cinque `cls_late` − `cls ego` | +0.38 / +0.19 / +0.29（+0.39） | +0.29 | 0.18 | 0.17 | **否** |
+| RFS 配对，Lebowski `cls_late` − `cls ego` | +0.43 / +0.17 / +0.34（+0.42） | +0.31 | 0.26 | 0.16 | **否** |
+| RFS 配对，`cls ego` − `ridge ego` | +0.22 / +0.23 / +0.18 | +0.21 | 0.06 | 0.18 | 是 |
+| RFS 配对，`ridge_late` − `ridge ego`（两模型） | +0.40 / +0.40 / +0.40；+0.42 ×3 | | 0 | 0.18 | 是（确定性） |
+| ADE 第 1–9 档 pre_onset Δ vs `ridge ego`，`ridge_late`（两模型） | −0.294 ×3；−0.318 ×3 | | 0 | 0.13 | 是（确定性） |
+| 同上，`cls_late`（两模型） | +0.21 / +0.05 / +0.20；+0.18 / +0.06 / +0.22 | | 0.16 | 0.29–0.32 | 是 |
+
+**Q9b 网格 attention head（seed = `_train` seed）**，P5 v1 BA 行人翻转 %：
+
+| arm | Cinque s0 / s1 / s2 | 极差 / 半宽 | Lebowski s0 / s1 / s2 | 极差 / 半宽 |
+|:--|:--|:--|:--|:--|
+| 配对（原 run 已有） | 46.1 / 52.2 / 45.3 | 6.9 / 8.2 | 37.2 / 50.5 / 48.5 | **13.3 / 10.9** |
+| hard-example（新跑 s1、s2） | 3.4 / 2.5 / 0.0 | 3.4 / 2.9 | 0.2 / 2.5 / 0.7 | 2.2 / 0.4 |
+
+hard 重跑时同一次 fit 顺带重算的配对 arm s0–s2 与原 run 逐项相同（行人翻转到小数点后 4 位）。PDM 集上两种 arm 所有 seed ≤ 4.5%。
+
+**读法**：
+
+1. **主结论全部不随 seed 变**：M-C 配对双流在三个 seed 上都过判据（行人 42–44% / 39–42%，极差只有原 CI 半宽的 1/6–1/3），hard-example 与均匀对照在三个 seed 上都是行人 ≈ 0；
+   NAVSIM 上 `temporal` 对同族 ego 的 +8.4 到 +11 分在三个 seed 上都远离零；`ridge_late` 类 head 基本确定（极差 ≤ 0.15 分）。「全部单 seed」这条限定对这些读数可以去掉。
+2. **两处超过原 CI 半宽，都在分类头**：WOD 上 `cls_late` − `cls ego` 的 RFS 增益 3 seed 均值 +0.29 / +0.31，seed 1 只有 +0.19 / +0.17（s0 的 +0.38 / +0.43 与它的重跑 s0′ 一致，所以不是 run-to-run 噪声，是词表 / 内层划分的 seed 效应）；
+   第 40 条里「Lebowski `cls_late` 7.73 够到原生 7.89」这一格依赖 seed 0，3 seed 均值 7.59，要改成「补上缺口的一部分，是否够到原生随 seed 变」（推测，要白天按第 40 条的判据重算 3 seed 均值）。
+   NAVSIM 上 Lebowski `cls_late` − `cls ego` 极差 1.1 PDMS，超过半宽 0.62，但三个 seed 都在 +8.4 以上，结论不变。
+3. Q9b 配对 arm 的 seed 离散大（Lebowski 37 → 51%），原先只读 seed 0 偏保守；hard 对照三个 seed 都 ≤ 3.4%。
+4. navhard EPDMS（无 CI，只是 aggregate）的 seed 极差 0.3–1.6 分，和 navhard 上各行之间的差同量级，navhard 的单 seed 行间比较要谨慎。

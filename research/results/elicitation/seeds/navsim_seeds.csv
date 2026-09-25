@@ -1,0 +1,27 @@
+arm,metric,s0,s1,s2,s0r (seed-0 re-run),mean,range,ci_halfwidth_s0,range_lt_halfwidth
+ridge_late_cinque_temporal,PDMS,73.5235,73.6557,73.5445,,73.5746,0.1322,0.6627,True
+ridge_late_cinque_temporal,EPDMS,73.8511,74.0049,73.8796,,73.9118,0.1538,0.6850,True
+ridge_late_cinque_temporal,navhard EPDMS,16.7576,16.4851,16.7614,,16.6680,0.2764,,False
+cls_late_cinque_temporal,PDMS,77.8781,77.3967,77.8386,77.7899,77.7045,0.4814,0.6143,True
+cls_late_cinque_temporal,EPDMS,77.3999,76.9441,77.2983,77.3181,77.2141,0.4558,0.6098,True
+cls_late_cinque_temporal,navhard EPDMS,19.8186,19.5233,19.0000,,19.4473,0.8185,,False
+ridge_late_lebowski_temporal,PDMS,72.4150,72.4346,72.4183,,72.4226,0.0196,0.6614,True
+ridge_late_lebowski_temporal,EPDMS,72.8727,72.8782,72.8665,,72.8724,0.0116,0.6898,True
+ridge_late_lebowski_temporal,navhard EPDMS,17.0478,17.0154,17.0081,,17.0238,0.0397,,False
+cls_late_lebowski_temporal,PDMS,77.2530,77.1778,76.7836,77.2538,77.0715,0.4693,0.6252,True
+cls_late_lebowski_temporal,EPDMS,76.6616,76.5125,76.2720,76.6448,76.4820,0.3896,0.6367,True
+cls_late_lebowski_temporal,navhard EPDMS,17.4635,19.0442,18.7240,,18.4106,1.5807,,False
+ridge_ego,PDMS,62.6630,62.6630,62.6630,,62.6630,0.0000,0.7139,True
+ridge_ego,EPDMS,64.2060,64.2060,64.2060,,64.2060,0.0000,0.7657,True
+ridge_ego,navhard EPDMS,13.2568,13.2568,13.2568,,13.2568,0.0000,,False
+cls_ego_K1024,PDMS,68.4315,67.6601,68.3616,68.3094,68.1511,0.7714,0.7069,False
+cls_ego_K1024,EPDMS,67.8473,67.1658,67.6477,67.6528,67.5536,0.6814,0.7578,True
+cls_ego_K1024,navhard EPDMS,13.5956,14.3430,13.3267,,13.7551,1.0163,,False
+ridge_late_cinque_temporal - ridge_ego,PDMS,10.8605,10.9927,10.8815,,10.9116,0.1322,0.7454,True
+ridge_late_cinque_temporal - ridge_ego,EPDMS,9.6451,9.7989,9.6736,,9.7058,0.1538,0.7641,True
+ridge_late_lebowski_temporal - ridge_ego,PDMS,9.7520,9.7716,9.7553,,9.7596,0.0196,0.6898,True
+ridge_late_lebowski_temporal - ridge_ego,EPDMS,8.6667,8.6721,8.6605,,8.6664,0.0116,0.7210,True
+cls_late_cinque_temporal - cls_ego_K1024,PDMS,9.4466,9.7366,9.4770,9.4805,9.5534,0.2899,0.6335,True
+cls_late_cinque_temporal - cls_ego_K1024,EPDMS,9.5526,9.7783,9.6506,9.6653,9.6605,0.2256,0.6356,True
+cls_late_lebowski_temporal - cls_ego_K1024,PDMS,8.8215,9.5177,8.4221,8.9444,8.9204,1.0956,0.6216,False
+cls_late_lebowski_temporal - cls_ego_K1024,EPDMS,8.8143,9.3467,8.6243,8.9921,8.9284,0.7225,0.6118,False

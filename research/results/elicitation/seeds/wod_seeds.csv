@@ -1,0 +1,25 @@
+row,s0,s1,s2,s0r (seed-0 re-run),mean,range,ci_halfwidth_s0,range_lt_halfwidth
+RFS cluster mean: ridge ego,7.0651,7.0650,7.0650,7.0650,7.0650,0.0000,,False
+RFS cluster mean: A ridge_late op-cinque temporal,7.4489,7.4489,7.4489,7.4489,7.4489,0.0000,,False
+RFS cluster mean: A ridge_late op-lebowski temporal,7.5216,7.5216,7.5216,7.5216,7.5216,0.0000,,False
+RFS cluster mean: cls ego K1024,7.2623,7.2767,7.2202,7.2366,7.2530,0.0565,,False
+RFS cluster mean: cls_late op-cinque temporal,7.6373,7.4967,7.5019,7.6521,7.5453,0.1406,,False
+RFS cluster mean: cls_late op-lebowski temporal,7.7341,7.4622,7.5733,7.6832,7.5899,0.2719,,False
+RFS cluster mean: native op-small (no fit),7.6397,7.6397,7.6397,7.6397,7.6397,0.0000,,False
+RFS cluster mean: native op-cinque (no fit),8.0049,8.0049,8.0049,8.0049,8.0049,0.0000,,False
+RFS cluster mean: native op-lebowski (no fit),7.8855,7.8855,7.8855,7.8855,7.8855,0.0000,,False
+RFS paired: cls_late op-cinque temporal - cls ego K1024,0.3753,0.1943,0.2907,0.3947,0.2868,0.1809,0.1653,False
+RFS paired: cls ego K1024 - ridge ego,0.2223,0.2316,0.1762,0.2024,0.2100,0.0554,0.1835,True
+RFS paired: A ridge_late op-cinque temporal - ridge ego,0.4029,0.4029,0.4029,0.4029,0.4029,0.0000,0.1750,True
+RFS paired: cls_late op-lebowski temporal - cls ego K1024,0.4261,0.1657,0.3435,0.4162,0.3118,0.2604,0.1607,False
+RFS paired: A ridge_late op-lebowski temporal - ridge ego,0.4167,0.4167,0.4167,0.4167,0.4167,0.0000,0.1754,True
+ADE dec1-9 pre_onset delta vs ridge ego: A ridge_late op-cinque temporal,-0.2937,-0.2937,-0.2937,-0.2937,-0.2937,0.0000,0.1279,True
+ADE dec1-9 all delta vs ridge ego: A ridge_late op-cinque temporal,-0.3178,-0.3178,-0.3178,-0.3178,-0.3178,0.0000,0.0277,True
+ADE dec1-9 pre_onset delta vs ridge ego: A ridge_late op-lebowski temporal,-0.3180,-0.3180,-0.3180,-0.3180,-0.3180,0.0000,0.1258,True
+ADE dec1-9 all delta vs ridge ego: A ridge_late op-lebowski temporal,-0.3118,-0.3118,-0.3118,-0.3118,-0.3118,0.0000,0.0286,True
+ADE dec1-9 pre_onset delta vs ridge ego: cls ego K1024,0.3397,0.2500,0.3027,0.3321,0.2975,0.0898,0.2863,True
+ADE dec1-9 all delta vs ridge ego: cls ego K1024,0.2571,0.2423,0.2652,0.2727,0.2549,0.0229,0.0740,True
+ADE dec1-9 pre_onset delta vs ridge ego: cls_late op-cinque temporal,0.2072,0.0491,0.1973,0.1266,0.1512,0.1581,0.2923,True
+ADE dec1-9 all delta vs ridge ego: cls_late op-cinque temporal,0.2210,0.1229,0.2126,0.2376,0.1855,0.0981,0.1081,True
+ADE dec1-9 pre_onset delta vs ridge ego: cls_late op-lebowski temporal,0.1823,0.0560,0.2198,0.1847,0.1527,0.1638,0.3171,True
+ADE dec1-9 all delta vs ridge ego: cls_late op-lebowski temporal,0.2036,0.1434,0.2087,0.2145,0.1852,0.0653,0.1000,True
