@@ -318,6 +318,14 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   (12) 这一轮查出并修掉的两处我们自己的错：P5 GT 原先没有计入 ego 的 pitch / roll（相机随车身俯仰），改为 CARLA `Transform` 的完整旋转；两个侧视行人的选帧脚本取了与人眼确认的不是同一个 walker（同一帧有多个 hazard 行人），改回人眼确认的那个。
   两处都在看任何批量数字之前改好。
   (13) 吞吐：原样路径在独占的卡上的实测见下一条 profiling；与 Q9b 的 Qwen 抽取共卡时 813 ms / 张（GPU 争用，不是 CPU：PIL 解码 12 ms / 张）。
+- 2026-09-25 19:20 CST [Q4] profiling（200 张 P5，独占的 GPU 0）：原样路径 1 个进程 197 ms / 张；同卡 3 个进程合计 7.8 张 / s（每个 385 ms / 张，GPU 满载）。68 051 张按两张卡（GPU 0 三进程 + GPU 3 两进程，GPU 3 与 Q9b 共卡）估 1.5–2.5 h，
+  在登记 1.5–3.8 h 之内，远低于停机线 7.6 h，不降档。批量按 500 张一块、进程抢块（原子 mkdir）数据并行；原样路径逐图独立，结果与哪个进程 / 哪张卡跑无关。峰值显存每进程 5.8 GB。
+- 2026-09-25 19:20 CST [Q6-SAM]（写在 SAM 批量出结果之前）SAM 状态版的操作化：物体 = P5 批量里 score > 0.5 的检测，三路相机合并（侧视与前视约 2° 的重叠不去重，门只看「有没有」），
+  pedestrian → 行人，vehicle / emergency vehicle / cyclist → 车辆（与 GT 版「自行车按车辆」一致），cone / debris 不进（GT 版的物体只有 actor，两边口径对齐）；接地点按登记的平地抬升，
+  再平移到 Q6 的 ego 原点（车辆位置而非后轴）。速度：按类别、在世界坐标里（ego 位姿取 `pose.jsonl`，只用 yaw，与 GT 版相同）与前一帧相机帧（k − 4，0.2 s）做 Hungarian 关联，
+  门限行人 1.5 m、车辆 4 m，速度 = 位移 / 0.2 s 再转回当前 ego 轴，关联不上的记 0。制动量级沿用 GT 门在训练帧上的拟合值（训练帧没有跑 SAM；Δ_model 只取 {−m, 0, +m}，翻转率与 m 无关）。
+  预先写明的风险：平地抬升在 20 m 以外的抖动（上面 (11)）会被 0.2 s 的差分放大成假速度，行人门可能因此多触发——这正是 perception-limited floor 要量的东西，不做额外平滑。
+  代码 `jevdrive/fusion_q6sam.py`（`fusion_diag.q6gt` 只加了一个替换观测帧状态的钩子，GT 版的数字不变）。
 - 2026-09-25 18:40 CST [Q1] 以下全部写于 Q1 任何拟合之前。代码 `jevdrive/fusion_q1.py`，run dir `$DATA_DIR/runs/fusion_diag/q1/<time>`。
   (1) **P5 只有 `ridge_late`**：`p5_exam` 本身没有分类头，加一个就不再是「一字不改」的考生；`cls_late` 只在 WOD 的 (a)(b) 上跑。P5 上 V-JEPA 2 没抽，按登记的「可选」跳过，P5 的 single 只有四个。
   (2) **late fusion 的定义**：配对与 concat 相同（Cinque `temporal` + Qwen `L18_last`，Lebowski 同）。ridge = 两个单 arm 样本外轨迹逐点平均；cls = 两个单 arm 的**完整** logits（各自的 ego offset + 自己那一项）相加后取 top-1 anchor，

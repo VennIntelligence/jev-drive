@@ -496,7 +496,10 @@ def _gt_gates(gen: Path, run: str, ks) -> pd.DataFrame | None:
     return g.merge(eg[["run", "k", "v0"]], on=["run", "k"]).assign(n_obj=g.k.map(st.groupby("k").size()).fillna(0).astype(int))
 
 
-def q6gt(rl, workers: int | None = None) -> dict:
+def q6gt(rl, workers: int | None = None, obs_gates=None) -> dict:
+    """GT gates, examined by `p5_exam.exam`. obs_gates: optional callable {run: ticks} -> gates table indexed by
+    (run, k) (columns GATES + "any"), used instead of the GT gates on the observation and null frames (Q6-SAM); the
+    brake magnitudes still come from the GT gates on the training frames (flip rates do not depend on them)."""
     import os
     from joblib import Parallel, delayed
     from . import p5_exam as E
@@ -527,8 +530,19 @@ def q6gt(rl, workers: int | None = None) -> dict:
     G = pd.concat([x for x in res if x is not None], ignore_index=True).set_index(["run", "k"])
     rl.log.info("gated %d frames of %d runs", len(G), G.index.get_level_values(0).nunique())
 
-    def trig(runs, ks, gate):   # 1.0 / 0.0, NaN where the frame could not be gated
-        return G[gate].astype(float).reindex(pd.MultiIndex.from_arrays([runs.to_numpy(), ks.astype(int).to_numpy()])).to_numpy()
+    def trig(runs, ks, gate, src=None):   # 1.0 / 0.0, NaN where the frame could not be gated
+        src = G if src is None else src
+        return src[gate].astype(float).reindex(pd.MultiIndex.from_arrays([runs.to_numpy(), ks.astype(int).to_numpy()])).to_numpy()
+
+    GO = None
+    if obs_gates is not None:
+        need_obs = {}
+        for df_, cols in ((obs, ("run_plus", "run_minus")), (null, ("run_plus", "run_null"))):
+            for c in cols:
+                for r, k in zip(df_[c], df_.k):
+                    need_obs.setdefault(r, set()).add(int(k))
+        GO = obs_gates(need_obs)
+        rl.log.info("observation / null frames gated from the alternative states: %d", len(GO))
 
     # brake magnitude per eval fold: median expert v0 - v(2 s) on triggered P5 training frames of the other folds
     pos = np.flatnonzero((t.source == "p5").to_numpy() & (t.role == "train").to_numpy())
@@ -555,12 +569,12 @@ def q6gt(rl, workers: int | None = None) -> dict:
         # the gate's direction is braking by construction: a non-positive fitted median is floored (logged in magnitudes)
         mag = lambda bases: np.array([max(np.nan_to_num(mags[(g, fold[b])]), 1e-3) for b in bases])  # noqa: E731
         mo = mag(obs.base_id)
-        tp, tm = trig(obs.run_plus, obs.k, g), trig(obs.run_minus, obs.k, g)
+        tp, tm = trig(obs.run_plus, obs.k, g, GO), trig(obs.run_minus, obs.k, g, GO)
         miss = np.isnan(tp) | np.isnan(tm)
         obs[col] = np.where(miss, np.nan, -mo * (tp - tm))
         obs[f"{col} plus"], obs[f"{col} minus"] = tp, tm
         mn = mag(null.base_id)
-        np_, nn = trig(null.run_plus, null.k, g), trig(null.run_null, null.k, g)
+        np_, nn = trig(null.run_plus, null.k, g, GO), trig(null.run_null, null.k, g, GO)
         missn = np.isnan(np_) | np.isnan(nn)
         null[col] = np.where(missn, np.nan, -mn * (np_ - nn))
     ex = list(names.values())
