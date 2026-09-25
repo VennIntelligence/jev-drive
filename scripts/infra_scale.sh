@@ -44,9 +44,16 @@ case $step in
     t12-op)   scale t12-op 1773 4 1,2,4,6 800 "$@" -- "${OP[@]}" ;;
     t12-alp-res64)  # the off-screen spectator viewport shrunk to 64x64; the agent's cameras are untouched
         scale t12-alp-res64 1773 4 1,6,10 1200 "$@" -- "${ALP[@]}" "--server-args=-ResX=64 -ResY=64" ;;
+    # With --client-threads 8 the route client runs 8 CARLA worker threads instead of one per host hardware thread
+    # (208): ~200 fewer threads per worker against the container's pids.max of 20480, which the default hit.
+    t12-t8)   scale t12-t8 1773 4 6 1200 "$@" -- "${ALP[@]}" --client-threads 8 ;;
+    t13-t8)   scale t13-t8 3561 4 1,8 1200 "$@" -- "${ALPS[@]}" --client-threads 8 ;;
+    t13-lights-t8) scale t13-lights-t8 3561 4 1,8 1200 "$@" -- "${ALPS[@]}" --client-threads 8 --cache-lights ;;
+    t12-op-t8) scale t12-op-t8 1773 4 1,4,6 800 "$@" -- "${OP[@]}" --client-threads 8 ;;
+    t03-t8)   scale t03-t8 25378 4 1,12,16 1200 "$@" -- "${ALPS[@]}" --client-threads 8 ;;
     x2)       # the same totals split over two cards: 4+4 and 6+6 (GPU list from $X2_GPUS, default 1,4)
         scale x2-alp 1773 "${X2_GPUS:-1,4}" 4,6 1200 "$@" -- "${ALP[@]}" ;;
     pyspy)    # where the route process spends its CPU, Town13 at 1 and 8 servers (sampling costs some CPU)
-        scale pyspy-t13 3561 4 1,8 1200 "$@" -- "${ALP[@]}" --python scripts/pyspy_python.sh ;;
+        scale pyspy-t13 3561 4 1,8 1200 "$@" -- "${ALPS[@]}" --python scripts/pyspy_python.sh ;;
     *) echo "unknown step $step" >&2; exit 2 ;;
 esac
