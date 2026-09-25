@@ -26,6 +26,7 @@ N_TOK = 3 * GRID_HW[0] * GRID_HW[1]
 CHUNK = 1000
 TAPS = ("L18_mean", "L18_last")
 SEEDS = (0, 1, 2)
+FIXED_EPOCHS = 0                           # post-hoc sensitivity only: train this many epochs, no early stopping
 
 
 def grid_root(*p):
@@ -174,6 +175,10 @@ def _train(make, loss_fn, items: np.ndarray, groups: np.ndarray, seed: int):
                 best = min(best, (curve[-1], ep + 1))
         return net, best, curve
 
+    if FIXED_EPOCHS:
+        net, _, _ = run(items, FIXED_EPOCHS, None)
+        net.eval()
+        return net, {"epochs": FIXED_EPOCHS, "sel_loss": float("nan"), "curve": []}
     _, (sel_loss, ep), curve = run(items[a], planner.MLP_EPOCHS, items[b])
     net, _, _ = run(items, ep, None)
     net.eval()
@@ -308,7 +313,7 @@ def fit(rl, models=("cinque", "lebowski")):
     res["obs"].to_parquet(d / "obs_scored.parquet", index=False)
     nn.to_parquet(d / "null_scored.parquet", index=False)
     np.savez_compressed(d / "preds_obs.npz", rows=obs_rows, **{k: v[obs_rows] for k, v in preds.items()})
-    out = RESULTS / "q9b"
+    out = RESULTS / ("q9b" + (f"-fixed{FIXED_EPOCHS}" if FIXED_EPOCHS else ""))
     out.mkdir(parents=True, exist_ok=True)
     crit.to_csv(out / "q9b_criteria.csv", index=False, float_format="%.4g")
     fl[fl.scope != "pooled"][["examinee", "scope", "n_reactive", "flip_rate", "flip_lo", "flip_hi", "tau_model"]].to_csv(
@@ -334,10 +339,13 @@ def main():
     ap.add_argument("--compile", action="store_true")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--vram-gb", type=float, default=12.0)
+    ap.add_argument("--fixed-epochs", type=int, default=0, help="fit: post-hoc sensitivity, no early stopping")
     a = ap.parse_args()
+    global FIXED_EPOCHS
+    FIXED_EPOCHS = a.fixed_epochs
     total = torch.cuda.get_device_properties(0).total_memory
     torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 1e9 / total))
-    rl = RunLog("fusion_diag", f"q9b-{a.step}")
+    rl = RunLog("fusion_diag", f"q9b-{a.step}" + (f"-fixed{a.fixed_epochs}" if a.fixed_epochs else ""))
     rl.event("start", args=vars(a))
     if a.step == "profile":
         profile(rl, a.n, [(c == "compile", int(b)) for c, b in (x.split(":") for x in a.configs.split(","))], a.workers,
