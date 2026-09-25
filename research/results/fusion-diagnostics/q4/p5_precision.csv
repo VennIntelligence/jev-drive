@@ -1,0 +1,21 @@
+cls,dbin,n,precision,reading,weather,all
+pedestrian,0-10 m,1388,0.7543227665706052,"precision, lifted <= 80 m",,
+pedestrian,10-20 m,917,0.8691384950926936,"precision, lifted <= 80 m",,
+pedestrian,20-40 m,928,0.2607758620689655,"precision, lifted <= 80 m",,
+pedestrian,40-80 m,280,0.039285714285714285,"precision, lifted <= 80 m",,
+pedestrian,,1578,0.6438529784537389,"precision, lifted <= 80 m",day,
+pedestrian,,1140,0.537719298245614,"precision, lifted <= 80 m",night,
+pedestrian,,795,0.5886792452830188,"precision, lifted <= 80 m",rain,
+pedestrian,,3513,0.5969257045260461,"precision, lifted <= 80 m",,all
+vehicle,0-10 m,6747,0.24603527493700905,"precision, lifted <= 80 m",,
+vehicle,10-20 m,10486,0.5976540148769788,"precision, lifted <= 80 m",,
+vehicle,20-40 m,21666,0.5514631219422136,"precision, lifted <= 80 m",,
+vehicle,40-80 m,18455,0.5748035762665944,"precision, lifted <= 80 m",,
+vehicle,,25884,0.5043269973728944,"precision, lifted <= 80 m",day,
+vehicle,,16889,0.5063650897033573,"precision, lifted <= 80 m",night,
+vehicle,,14581,0.6088059803854331,"precision, lifted <= 80 m",rain,
+vehicle,,57354,0.531488649440318,"precision, lifted <= 80 m",,all
+emergency vehicle,0-10 m,7,0.0,"precision, lifted <= 80 m",,
+emergency vehicle,,2,0.0,"precision, lifted <= 80 m",night,
+emergency vehicle,,5,0.0,"precision, lifted <= 80 m",rain,
+emergency vehicle,,7,0.0,"precision, lifted <= 80 m",,all

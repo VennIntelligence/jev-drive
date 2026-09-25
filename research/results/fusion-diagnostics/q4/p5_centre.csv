@@ -1,0 +1,4 @@
+cls,all,n,recall,bev_err_med,bev_err_p90,reading
+pedestrian,all,4181,0.5092083233676155,0.3324446074069183,1.4558467324121196,side: bottom-centre reference
+vehicle,all,31943,0.6609898882384246,1.4257871422558224,2.1742718079936263,side: bottom-centre reference
+emergency vehicle,all,344,0.0,,,side: bottom-centre reference
