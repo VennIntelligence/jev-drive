@@ -489,36 +489,34 @@ def main_wod(rl, Wd):
     return g, C, O
 
 
-def features(rl, N, Wd) -> pd.DataFrame:
+def features(run_dir: Path) -> pd.DataFrame:
     """Divergent main-cell pairs with both sides' features on disk now, and the Qwen extraction still needed."""
-    from . import navsim_zs as Z
+    import glob
+    from . import navsim_zs as Z, waymo as W
     rows = []
     with np.load(Z.root("openpilot", "navtrain") / "cinque_temporal.npz") as z:
-        op = set(z["tokens"].tolist())
-    Q = N["P"][(N["P"].d_tau <= MAIN[0]) & div(N["P"], MAIN[1])]
-    tp, tm = N["tok"][Q.xp.to_numpy()], N["tok"][Q.xm.to_numpy()]
-    both_op = np.isin(tp, list(op)) & np.isin(tm, list(op))
-    uniq = len(set(tp) | set(tm))
+        op = pd.Index(z["tokens"].astype(str))
+    Q = pd.read_parquet(run_dir / "navtrain_divergent_main.parquet")
+    both_op = op.get_indexer(Q.tok_xp) >= 0
+    both_op &= op.get_indexer(Q.tok_xm) >= 0
+    uniq = len(set(Q.tok_xp) | set(Q.tok_xm))
     rows.append({"dataset": "navtrain", "divergent": len(Q), "both_op_temporal": int(both_op.sum()), "both_qwen": 0,
                  "frames_needing_qwen": uniq, "gpu_h_lo": uniq * 0.33 / 3600, "gpu_h_hi": uniq * 0.40 / 3600})
     D = data_dir() / "processed" / "waymo_e2e" / "features"
-    import glob
-    qn = set(pd.concat([pd.read_parquet(f, columns=["frame_name"]) for f in glob.glob(str(D / "qwenvid_train_t4" / "*" / "index.parquet"))]).frame_name)
-    on = set(pd.read_parquet(D / "op_cinque_p3_trainval" / "index.parquet", columns=["frame_name"]).frame_name)
-    names = Wd["names"]
-    qrows = set(np.flatnonzero(np.isin(names, list(qn))).tolist())
-    oprows = set(np.flatnonzero(np.isin(names, list(on))).tolist())
-    P = Wd["P_2hz"]
+    names = pd.Series(W.frame_names(W.load_index()))
+    qn = pd.concat([pd.read_parquet(f, columns=["frame_name"]) for f in glob.glob(str(D / "qwenvid_train_t4" / "*" / "index.parquet"))]).frame_name
+    on = pd.read_parquet(D / "op_cinque_p3_trainval" / "index.parquet", columns=["frame_name"]).frame_name
+    hq, ho = names.isin(qn).to_numpy(), names.isin(on).to_numpy()
+    P = pd.read_parquet(run_dir / "wod_2hz_pairs.parquet")
     Q = P[(P.d_tau <= MAIN[0]) & div(P, MAIN[1])]
     a, b = Q.xp.to_numpy(), Q.xm.to_numpy()
-    bq = np.isin(a, list(qrows)) & np.isin(b, list(qrows))
-    bo = np.isin(a, list(oprows)) & np.isin(b, list(oprows))
-    need = len(set(a[~np.isin(a, list(qrows))]) | set(b[~np.isin(b, list(qrows))]))
-    rows.append({"dataset": "wod train 2 Hz", "divergent": len(Q), "both_op_temporal": int(bo.sum()), "both_qwen": int(bq.sum()),
-                 "frames_needing_qwen": need, "gpu_h_lo": need * 0.33 / 3600, "gpu_h_hi": need * 0.40 / 3600})
+    need = len(set(a[~hq[a]]) | set(b[~hq[b]]))
+    rows.append({"dataset": "wod train 2 Hz", "divergent": len(Q), "both_op_temporal": int((ho[a] & ho[b]).sum()),
+                 "both_qwen": int((hq[a] & hq[b]).sum()), "frames_needing_qwen": need,
+                 "gpu_h_lo": need * 0.33 / 3600, "gpu_h_hi": need * 0.40 / 3600})
     F = pd.DataFrame(rows)
     F.to_csv(RESULTS / "features.csv", index=False)
-    rl.log.info("features\n%s", F.to_markdown(index=False, floatfmt=".2f"))
+    print(F.to_markdown(index=False, floatfmt=".2f"))
     return F
 
 
@@ -665,8 +663,10 @@ def main():
         main_nav(rl, N)
         Wd = wod(rl)
         main_wod(rl, Wd)
-        features(rl, N, Wd)
+        features(rl.dir)
         rl.close()
+    elif cmd == "features":
+        features(Path(sys.argv[2]))
     elif cmd == "posthoc":
         posthoc(Path(sys.argv[2]))
     elif cmd == "scorer-prep":
