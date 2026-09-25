@@ -149,7 +149,8 @@ class Controller:
                  jerk_limit=4., jerk_limit_brake=8., brake_hysteresis=.3,
                  throttle_map=None, brake_map=None, low_speed_brake_mps=0.,
                  plan_interp='linear', feedforward_tau_s=0., adaptive_stale=False, stale_factor=2.5,
-                 feedforward_limit=None, terminal_approach=False, terminal_approach_min_period_s=0.):
+                 feedforward_limit=None, terminal_approach=False, terminal_approach_min_period_s=0.,
+                 accel_request_max_mps2=None):
         if longitudinal_mode not in ('vendor', 'pi', 'accel'):
             raise ValueError('longitudinal_mode must be vendor, pi or accel')
         # 'accel': acceleration command = plan feedforward + PI on speed, jerk-limited, then the
@@ -192,6 +193,14 @@ class Controller:
         # Low-rate plans: once the time-indexed remainder of a plan is parked but its endpoint is still
         # ahead, approach the endpoint by position (projection on the whole plan, sqrt-profile speed)
         # instead of treating the plan as stationary and holding short of it.
+        # Feasibility shaping (opt-in): cap the positive acceleration request. Planners trained with a
+        # slow execution layer (TFv6 with its author PID) can emit launch plans no car should follow
+        # literally, e.g. 0 -> 11 m/s in 3 s through a turn; that execution lag was their implicit
+        # shaping. Braking is never capped. None keeps faithful execution.
+        self.accel_request_max_mps2 = None if accel_request_max_mps2 is None else float(accel_request_max_mps2)
+        if self.accel_request_max_mps2 is not None and not (math.isfinite(self.accel_request_max_mps2)
+                                                             and self.accel_request_max_mps2 > 0):
+            raise ValueError('accel_request_max_mps2 must be positive and finite')
         self.terminal_approach = bool(terminal_approach)
         # Only plans slower than this (measured period) use the approach; a 20 Hz planner's own
         # parked plan is trusted as a stop command.
@@ -468,6 +477,8 @@ class Controller:
             self._accel_integral = float(np.clip(self._accel_integral + self.accel_ki * error * elapsed,
                                                  -self.accel_integral_limit, self.accel_integral_limit))
         command = float(np.clip(feedforward + self.accel_kp * error + self._accel_integral, low, high))
+        if self.accel_request_max_mps2 is not None:
+            command = min(command, self.accel_request_max_mps2)
         if self._accel_command is not None:
             command = float(np.clip(command, self._accel_command - self.jerk_limit_brake * elapsed,
                                     self._accel_command + self.jerk_limit * elapsed))

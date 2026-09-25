@@ -14,7 +14,7 @@ import numpy as np
 from b2d_controller_eval_l1_v2_score import METRICS, contrast, score_batch
 
 INTERFACES = ('short_2s', 'sparse_5s', 'stop_jitter', 'model_noise', 'stale_5hz', 'stale_2hz', 'stale_1hz', 'pose_plan')
-PAIRS = [('P5', 'P4'), ('P5', 'D'), ('P5', 'C'), ('P4', 'P3'), ('P4', 'P2'), ('P4', 'D'), ('P4', 'C'), ('P3', 'P2'), ('P2', 'D'), ('P3', 'D'), ('P2', 'C'), ('P3', 'C'), ('D', 'C'), ('C', 'B'), ('P2', 'B'), ('P3', 'B')]
+PAIRS = [('P7', 'P5'), ('P7', 'D'), ('P7', 'C'), ('P5', 'P4'), ('P5', 'D'), ('P5', 'C'), ('P4', 'P3'), ('P4', 'P2'), ('P4', 'D'), ('P4', 'C'), ('P3', 'P2'), ('P2', 'D'), ('P3', 'D'), ('P2', 'C'), ('P3', 'C'), ('D', 'C'), ('C', 'B'), ('P2', 'B'), ('P3', 'B')]
 
 
 def gather(roots, kind, refs, cruises, label):
