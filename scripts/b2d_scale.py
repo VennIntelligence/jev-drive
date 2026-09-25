@@ -169,9 +169,11 @@ class Sampler(threading.Thread):
             for f in glob.glob(os.path.join(self.rdir, "w*/attempts/*/*/heartbeat.json")):
                 try:
                     beat = json.loads(read(f))
-                    beats[os.path.relpath(f, self.rdir).split("/")[0]] = [beat["ticks"], round(beat["t"], 2)]
-                except (ValueError, KeyError):
-                    pass
+                except ValueError:
+                    continue
+                # still ticking = the route process is alive and has not written its result yet
+                live = not os.path.exists(os.path.join(os.path.dirname(f), "route_result.json"))
+                beats[os.path.relpath(f, self.rdir).split("/")[0]] = [beat["ticks"], round(beat["t"], 2), live]
             rec = {"t": round(t0, 3), "cg_usage_us": int(stat.get("usage_usec", 0)),
                    "cg_throttled_us": int(stat.get("throttled_usec", 0)),
                    "cg_nr_throttled": int(stat.get("nr_throttled", 0)),
@@ -185,7 +187,7 @@ def window_stats(samples, n_workers, warm, gpus, t_start):
     2 s while it ticks, is fresh), i.e. no route loading and none finished yet."""
     def steady(s):
         b = s["beats"]
-        return len(b) == n_workers and all(v[0] >= warm and s["t"] - v[1] < 6.0 for v in b.values())
+        return len(b) == n_workers and all(v[0] >= warm and v[2] for v in b.values())
     first = {}
     for s in samples:
         for w, v in s["beats"].items():
@@ -311,7 +313,7 @@ def main():
                 prof.append({"status": d.get("status"), "ticks": p.get("ticks"), "wall_s": d.get("wall_s"),
                              **{k: p.get(k + "_ms_mean") for k in
                                 ("total", "world_tick", "tree", "agent", "provider", "control")}})
-            fin = [r for r in prof if (r["ticks"] or 0) >= a.max_ticks - 1]
+            fin = [r for r in prof if r["status"] == "finished" and (r["ticks"] or 0) >= 0.9 * a.max_ticks]
             stats.update(servers_per_gpu=n, gpus=a.gpus, workers=len(servers), rung_wall_s=round(time.time() - t0, 1),
                          routes_capped=len(fin), routes=prof, passthrough=a.passthrough, route_id=a.route_id,
                          max_ticks=a.max_ticks, cpus=a.cpus)
