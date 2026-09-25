@@ -1,6 +1,6 @@
 # Bench2Drive 控制器验收：给控制器一份已知是好的 plan
 
-状态: 预注册（2026-09-25 15:50，写于任何控制器臂运行之前；expert a 已在跑，还没看它的结果）
+状态: 预注册（2026-09-25 15:26 CST（commit 9ca6151），写于任何控制器臂运行之前；expert a 已在跑，还没看它的结果）
 上级: [闭环基础设施验收](../2026-09-25-closed-loop-infra-acceptance.md)
 代码: `scripts/b2d_expert_agent.py`（PDM-Lite + 轨迹日志）、`scripts/b2d_zeroshot_agent.py` 的 `"replay"`、`scripts/infra_ctl_accept.sh`
 

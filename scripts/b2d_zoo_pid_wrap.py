@@ -31,9 +31,9 @@ the behaviour of the first Alpamayo full run and of the openpilot runs:
                 within 1 m of the axle (standstill, creeping) the first plan point >= 1 m away is used, else straight.
                 (P1, lateral from the fixed controller, lives in the agent: b2d_zeroshot_agent.py "zoo_lateral".)
 """
+import importlib.util
 import math
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -41,9 +41,13 @@ import numpy as np
 from b2d_zoo_pid import PID, PIDController
 
 ZOO = Path(os.environ.get("B2D_ZOO_ROOT", Path(os.environ.get("DATA_DIR", "")) / "third_party/Bench2DriveZoo"))
-if str(ZOO) not in sys.path:
-    sys.path.append(str(ZOO))
-from team_code.planner import RoutePlanner  # noqa: E402  shipped, identical on tcp/admlp and uniad/vad
+# The shipped planner (team_code/planner.py, identical on tcp/admlp and uniad/vad), loaded by file path: Zoo's team_code
+# has no __init__.py, so a regular `team_code` package anywhere on sys.path (SimLingo's Bench2Drive copy ships one in
+# leaderboard/) wins over it whatever the path order.
+_spec = importlib.util.spec_from_file_location("b2d_zoo_team_code_planner", str(ZOO / "team_code" / "planner.py"))
+_planner = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_planner)
+RoutePlanner = _planner.RoutePlanner
 
 WAYPOINT_TIMES = np.arange(1, 7) * 0.5
 

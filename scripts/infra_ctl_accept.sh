@@ -7,7 +7,8 @@
 # Run under scripts/slot_run.sh or scripts/tmux_run.sh; CARLA server indices 700-739.
 #
 #   scripts/infra_ctl_accept.sh expert <gpu>    expert a (5 workers, index 700-709)
-#   scripts/infra_ctl_accept.sh arms <gpu>      expert b + the six controller arms in parallel, 1 worker each (715-735)
+#   scripts/infra_ctl_accept.sh arms <gpu> [arm:index ...]   expert b ("eb") and the controller arms in parallel, 1 worker
+#                                               each; default eb:715 z2:718 z5:721 f2:724 f5:727 p1:730 p2:733
 #   scripts/infra_ctl_accept.sh all <gpu>       both
 # Re-running resumes (b2d_run skips done/<id>.json). Exit non-zero on infrastructure failure only.
 set -uo pipefail
@@ -20,10 +21,7 @@ ROUTES=${ACCEPT_ROUTES:-2390,24211,1711,2373,3564,1833,1852,1956,2668,4183,11381
 C=$(pwd)/todos/2026-09-22-b2d-controller/results/controller_config.json
 export BENCH2DRIVE_ROOT=$S/Bench2Drive WORK_DIR=$S OMP_NUM_THREADS=2 MKL_NUM_THREADS=2
 XML=$S/leaderboard/data/bench2drive220.xml
-mkdir -p "$OUT/cfg" "$OUT/expert-logs" "$OUT/zoo_path"
-# SimLingo's leaderboard/team_code (PDM-Lite) would shadow Bench2DriveZoo's team_code that the Zoo PID wrapper imports;
-# put only Zoo's team_code in front for the replay arms.
-ln -sfn "$DATA_DIR/third_party/Bench2DriveZoo/team_code" "$OUT/zoo_path/team_code"
+mkdir -p "$OUT/cfg" "$OUT/expert-logs"
 
 run() {  # run <name> <server index> <workers> [b2d_run args...]
     local name=$1 idx=$2 w=$3; shift 3
@@ -63,12 +61,16 @@ if [[ $mode == arms || $mode == all ]]; then
     arm_cfg f5 2 fixed ""
     arm_cfg p1 5 zoo_pid "$F1"', "zoo_lateral": "fixed"'         # lateral fix P1
     arm_cfg p2 5 zoo_pid "$F1"', "zoo_lateral": "time", "zoo_aim_s": 1.5'   # lateral fix P2
-    expert b 715 1 & pids=($!)
-    i=718
-    for arm in z2 z5 f2 f5 p1 p2; do
-        B2D_PREPEND_PATH=$OUT/zoo_path run "arm-$arm" $i 1 --agent scripts/b2d_zeroshot_agent.py \
-            --agent-config "$OUT/cfg/$arm.json" & pids+=($!)
-        i=$((i + 3))
+    specs=("${@:3}")
+    [[ $mode == all || ${#specs[@]} == 0 ]] && specs=(eb:715 z2:718 z5:721 f2:724 f5:727 p1:730 p2:733)
+    pids=()
+    for spec in "${specs[@]}"; do    # arm:index, 3 indices apart so a moved server cannot land on a neighbour's
+        arm=${spec%%:*} i=${spec##*:}
+        if [[ $arm == eb ]]; then
+            expert b "$i" 1 & pids+=($!)
+        else
+            run "arm-$arm" "$i" 1 --agent scripts/b2d_zeroshot_agent.py --agent-config "$OUT/cfg/$arm.json" & pids+=($!)
+        fi
         sleep 25          # stagger the server starts across runners
     done
     bad=0
