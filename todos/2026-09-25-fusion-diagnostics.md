@@ -396,7 +396,7 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
 - 2026-09-25 20:49 CST [Q4]（事后）(16) 登记的检查 (d)（nuScenes 取 4 帧做 (a)(b)）没有在批量之前做，漏了；批量之后补做为目检：4 张 CAM_FRONT 上 GT 参考点投影落在行人脚下、车辆离相机最近的底角，标定链正确。
   这一条不能再算「批量前通过」，照实记。
 
-- 2026-09-25 23:35 CST [Q6-v1]（第 3 阶段，写在任何 v1 的 Q6 数字之前）Q6 在 P5 v1 上按 reactivity 偏离 7 的口径：PDM-Lite 集（`carla_p5v1_pdm`）与 BehaviorAgent 集（`carla_p5v1_ba`）分别跑、分别报，**判据用 PDM-Lite 集**（登记：「决策规则以 PDM-Lite 那次为准」）。
+- 2026-09-25 23:28 CST [Q6-v1]（第 3 阶段，写在任何 v1 的 Q6 数字之前）Q6 在 P5 v1 上按 reactivity 偏离 7 的口径：PDM-Lite 集（`carla_p5v1_pdm`）与 BehaviorAgent 集（`carla_p5v1_ba`）分别跑、分别报，**判据用 PDM-Lite 集**（登记：「决策规则以 PDM-Lite 那次为准」）。
   代码不变（`fusion_diag.q6gt`，只把录制树换成该集合的 `runs/p5v1/gen-<expert>`），门、阈值、制动量级的拟合口径、考官都与 v0 相同。Q6-SAM 只在 PDM-Lite 集上跑（描述，不进判据）：对该集合 17 340 个观测帧 × 3 路跑同一条 SAM 原样路径，
   GT / 抬升 / 状态构造同 v0。
 - 2026-09-26 [Q1-v1] 写于 v1 上任何 Q1 数字之前。Q1-P5 在 P5 v1 上复跑，口径按 reactivity todo 偏离 7：**两个 expert 的集合分开跑、分开报**（`P5_SET=carla_p5v1_pdm` 为主，`carla_p5v1_ba` 为与 v0 同口径的复现），不合并；
@@ -419,6 +419,8 @@ D0 的考试就因此从「分钟级」拖到 60 min，所以下面 CPU 项的�
   直接读 `runs/reactivity/mc-carla_p5v1_<e>/` 的 `criteria.csv` / `flip_rates.csv`，不重拟合（那两次 run 就是 reactivity 偏离 7 的同一口径：预登记 λ 网格、role = train 行上的 μ 项）。
   注意：M-C 的 hard-example 对照是双流（Qwen `L18_last` ⊕ openpilot `temporal`），不是只 Qwen；登记里「Q9a 的 hard-example 重加权对照」就是指 M-C 的这一格，照读，读数表里写明双流。
   主读数 Cinque，PDM 集为判据，BA 集复现；判据同 M-C（行人 ≥ 20% 且 CI 下端 > null false-flip，null ≤ 7%）。
+
+- 2026-09-25 23:36 CST [Q6-v1]（看过 v1 的 GT 门数字之后写）不在 v1 上跑 Q6-SAM：PDM-Lite 集的 GT 规则 floor 只有 4.2%，SAM 状态版只会更低或相等，作为「perception-limited floor」已无信息；省下的 GPU 给 Q9b-v1。这是取消一个描述项，不改任何判据。
 
 ## 结果
 
