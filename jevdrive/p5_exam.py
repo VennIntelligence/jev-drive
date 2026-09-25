@@ -342,7 +342,7 @@ def probe_auc_paired_scopes(obs, t, scores, comparisons, b: int = 500) -> pd.Dat
     return pd.DataFrame(rows)
 
 
-def run(rl, op_models=(), op_arrays=("temporal",), op_sub="op_streams"):
+def run(rl, op_models=(), op_arrays=("temporal",), op_sub="op_streams", heads_skip=()):
     t, past, fut, obs, null, pairs = load()
     X = P.load_features(t)
     if op_models:                     # openpilot `temporal` as extra examinees (todos/2026-09-25-openpilot-temporal-p5-and-route.md)
@@ -351,7 +351,7 @@ def run(rl, op_models=(), op_arrays=("temporal",), op_sub="op_streams"):
     fold = folds(t, pairs)
     rl.log.info("%d frames (%s), %d pair frames, %d null frames, %d cases", len(t),
                 t.groupby(["source", "role"]).size().to_dict(), len(obs), len(null), len(pairs))
-    preds = heads(t, past, fut, X, fold, rl)
+    preds = heads(t, past, fut, {k: v for k, v in X.items() if k not in heads_skip}, fold, rl)
     scores, probe_folds = probes(t, X, fold, rl)
     o, n = deltas(obs, null, t, preds)
     ex = list(TFV6) + list(preds)
@@ -478,10 +478,12 @@ def main():
     p.add_argument("--op", default="", help="comma list of openpilot models to add as examinees (cinque,lebowski)")
     p.add_argument("--op-arrays", default="temporal", help="comma list of openpilot arrays (temporal,vision,hidden)")
     p.add_argument("--op-sub", default="op_streams", help="stream dir the arrays were extracted into")
+    p.add_argument("--heads-skip", default="", help="comma list of taps that get probes only, no ridge_late head")
     a = p.parse_args()
     if a.cmd == "run":
         rl = RunLog("p5_pairs", "exam" if a.op_arrays == "temporal" else "exam-d0")
-        run(rl, tuple(m for m in a.op.split(",") if m), tuple(a.op_arrays.split(",")), a.op_sub)
+        run(rl, tuple(m for m in a.op.split(",") if m), tuple(a.op_arrays.split(",")), a.op_sub,
+            tuple(k for k in a.heads_skip.split(",") if k))
         rl.close()
     else:
         from pathlib import Path
