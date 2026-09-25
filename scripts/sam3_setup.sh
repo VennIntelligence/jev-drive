@@ -31,7 +31,13 @@ export VIRTUAL_ENV=$ENV
 # uv cache from other envs; their CUDA runtime deps come from the domestic Aliyun PyPI mirror. A plain install from
 # download.pytorch.org fetched every nvidia-* wheel from that CDN at < 1 MB/s (2026-09-25).
 PT=https://download.pytorch.org/whl/cu130 MIRROR=https://mirrors.aliyun.com/pypi/simple
-uv pip install --python "$ENV/bin/python" --no-deps torch==2.13.0+cu130 torchvision==0.28.0+cu130 --index-url $PT
+# Wheels pre-fetched into $DATA_DIR/tmp/whl (parallel ranges through the Clash proxy, ~5 MB/s) are used when present.
+W=$DATA_DIR/tmp/whl
+if ls "$W"/torch-2.13.0+cu130-*.whl "$W"/torchvision-0.28.0+cu130-*.whl >/dev/null 2>&1; then
+  uv pip install --python "$ENV/bin/python" --no-deps "$W"/torch-2.13.0+cu130-*.whl "$W"/torchvision-0.28.0+cu130-*.whl
+else
+  uv pip install --python "$ENV/bin/python" --no-deps torch==2.13.0+cu130 torchvision==0.28.0+cu130 --index-url $PT
+fi
 deps=$("$ENV/bin/python" - <<'PY'
 import importlib.metadata as m
 print(" ".join(r.split(";")[0].replace(" ", "") for r in m.requires("torch") if "extra ==" not in r))
