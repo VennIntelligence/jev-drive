@@ -1,0 +1,33 @@
+scope,category,n_frames,share,lo,hi
+six clusters pooled,"seen, decided wrong",167,0.041916167664670656,0.012048192771084338,0.07738095238095238
+six clusters pooled,not seen,167,0.0658682634730539,0.029940119760479042,0.10240963855421686
+six clusters pooled,no visible cause,167,0.8922155688622755,0.844311377245509,0.9397590361445783
+six clusters pooled,"Qwen sees, openpilot does not",167,0.011976047904191617,0.0,0.030120481927710843
+Pedestrian,"seen, decided wrong",16,0.0,0.0,0.0
+Pedestrian,not seen,16,0.0,0.0,0.0
+Pedestrian,no visible cause,16,1.0,1.0,1.0
+Pedestrian,"Qwen sees, openpilot does not",16,0.0,0.0,0.0
+Cyclist,"seen, decided wrong",39,0.0,0.0,0.0
+Cyclist,not seen,39,0.02564102564102564,0.0,0.08888888888888889
+Cyclist,no visible cause,39,0.9743589743589743,0.9111111111111111,1.0
+Cyclist,"Qwen sees, openpilot does not",39,0.02564102564102564,0.0,0.08888888888888889
+Cut_ins,"seen, decided wrong",10,0.3,0.0,0.6
+Cut_ins,not seen,10,0.0,0.0,0.0
+Cut_ins,no visible cause,10,0.7,0.4,1.0
+Cut_ins,"Qwen sees, openpilot does not",10,0.0,0.0,0.0
+Multi-Lane Maneuvers,"seen, decided wrong",14,0.07142857142857142,0.0,0.25
+Multi-Lane Maneuvers,not seen,14,0.14285714285714285,0.0,0.3573051948051947
+Multi-Lane Maneuvers,no visible cause,14,0.7857142857142857,0.5553030303030303,1.0
+Multi-Lane Maneuvers,"Qwen sees, openpilot does not",14,0.0,0.0,0.0
+Foreign Object Debris,"seen, decided wrong",31,0.0,0.0,0.0
+Foreign Object Debris,not seen,31,0.0,0.0,0.0
+Foreign Object Debris,no visible cause,31,1.0,1.0,1.0
+Foreign Object Debris,"Qwen sees, openpilot does not",31,0.0,0.0,0.0
+Special Vehicles,"seen, decided wrong",8,0.0,0.0,0.0
+Special Vehicles,not seen,8,0.0,0.0,0.0
+Special Vehicles,no visible cause,8,1.0,1.0,1.0
+Special Vehicles,"Qwen sees, openpilot does not",8,0.0,0.0,0.0
+Interections,"seen, decided wrong",49,0.061224489795918366,0.0,0.13795498084291186
+Interections,not seen,49,0.16326530612244897,0.0625,0.26002173913043475
+Interections,no visible cause,49,0.7755102040816326,0.6665322580645161,0.8958864795918368
+Interections,"Qwen sees, openpilot does not",49,0.02040816326530612,0.0,0.06818181818181818

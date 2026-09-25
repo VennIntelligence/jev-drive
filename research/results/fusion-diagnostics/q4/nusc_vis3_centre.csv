@@ -1,0 +1,7 @@
+cls,all,n,recall,bev_err_med,bev_err_p90,reading
+pedestrian,all,8729,0.3671669148814297,0.8994294439743273,1.966189089818442,side: bottom-centre reference
+cyclist,all,139,0.302158273381295,0.5909534009556262,1.936963478106919,side: bottom-centre reference
+vehicle,all,21129,0.4022906905201382,1.4436920261681538,2.5791239957586543,side: bottom-centre reference
+cone,all,5768,0.32385575589459087,0.7823046922476534,1.7967566247530267,side: bottom-centre reference
+debris,all,195,0.0,,,side: bottom-centre reference
+emergency vehicle,all,33,0.0,,,side: bottom-centre reference
