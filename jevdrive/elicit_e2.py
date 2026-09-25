@@ -546,10 +546,46 @@ def feat_index(dataset: str = "navtrain", tag: str = "main") -> dict:
     return out
 
 
+# ---------------------------------------------------------------- WOD: SAM scan of train front frames (envs/sam3)
+
+WOD_THIN = 8                     # every 0.8 s (deviation [E2] 01:12)
+
+
+def wod_list() -> Path:
+    """Train front frames with a future and a trainval calibration, every WOD_THIN-th frame of each sequence."""
+    import pandas as pd
+    from . import waymo as W
+    from .fusion_q2b import calibs
+    df = W.load_index()
+    cal = calibs()
+    keep = (df.split == "train").to_numpy() & df.has_future.to_numpy() & (df.frame % WOD_THIN == 0).to_numpy() & \
+        df.sequence.isin(cal).to_numpy()
+    r = df[keep]
+    t = pd.DataFrame({"key": W.frame_names(df)[keep], "path": "", "shard": [str(W.shard_dir() / x) for x in r.shard],
+                      "off": r.front_off.to_numpy(), "len": r.front_len.to_numpy(), "sequence": r.sequence.to_numpy()})
+    dst = out_root("wod") / "scan_list.parquet"
+    t.to_parquet(dst, index=False)
+    log.info("WOD scan list: %d frames from %d sequences", len(t), t.sequence.nunique())
+    return dst
+
+
+def wod_sam(part: str = "claim", workers: int = 6):
+    """sam_detect.detect unchanged, with the two E2 prompts only; shards claimed across processes and cards."""
+    import functools
+    from . import sam_detect as S
+    from .runlog import RunLog
+    rl = RunLog("elicitation", "e2-wod-sam")
+    S.Detector = functools.partial(S.Detector, prompts=SAM_PROMPTS)
+    info = S.detect(str(out_root("wod") / "scan_list.parquet"), str(out_root("wod", "sam")), batch=8, shard_size=2000,
+                    workers=workers, rle=False, rl=rl, mode="exact", part=part)
+    rl.event("end", **info)
+    rl.close()
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index"))
+    ap.add_argument("cmd", choices=("candidates", "build", "validate", "fig", "feat-index", "wod-list", "wod-sam"))
     ap.add_argument("--dataset", default="navtrain")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--tag", default="main")
@@ -559,6 +595,10 @@ def main():
         candidates(a.workers)
     elif a.cmd == "build":
         build(a.dataset, a.limit, a.tag)
+    elif a.cmd == "wod-list":
+        print(wod_list())
+    elif a.cmd == "wod-sam":
+        wod_sam()
     elif a.cmd == "feat-index":
         print(feat_index(a.dataset, a.tag))
     elif a.cmd == "fig":

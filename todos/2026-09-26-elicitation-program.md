@@ -292,6 +292,9 @@ E6（可选）──────────────────────
   z 的标准化统计量一律用 head 自己的训练行（navtrain 编辑对），与 E1 的主口径一致；各数据集自带统计量的版本只描述。
   判据照登记：编辑对上 |Δ| 中位数 ≥ 2 × 安慰剂对（R1 与 R2 所用的训练后 head 各报一次，判格用训练后 head 的 (a) arm），且 WOD Pedestrians RFS Δ CI > 0、直行帧激活率 ≤ 7%。
   WOD 编辑对（第二数据集）在 navtrain 这一轮之后另做，结果单列。
+- 2026-09-26 01:12 CST [E2] WOD（第二数据集）的候选扫描，写于任何 WOD 检测之前。train 上没有 SAM 检测，(7) 的「补跑」定为：train 前视帧每个 sequence 每 0.8 s 取一帧（frame % 8 == 0，约 5 万帧），
+  有 future、且在 `op_calib_trainval.json` 里有标定的 sequence；SAM 3.1 原样（`sam_detect.detect`，exact 路径），只用 pedestrian / cyclist 两个 prompt，score > 0.5 与 Q2b 相同。全量 41.5 万帧要约 20 GPU·h，抽到 0.8 s 一帧把成本压到约 2.5 GPU·h，
+  代价是同一事件只被看到一次或几次（候选本来就每个事件只取一帧）。WOD 编辑对的 clip 与 openpilot 输入怎么编（WOD 的 openpilot 特征按 sequence 流式抽，历史远长于 Qwen 的 0.6 s clip）在扫描出候选数后另行登记。
 
 ## 结果
 
