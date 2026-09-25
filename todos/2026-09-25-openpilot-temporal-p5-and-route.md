@@ -1,6 +1,6 @@
 # openpilot temporal 特征：P5 配对考卷上有没有长尾信息；route 进 head / 进 backbone 买不买得回静止起步与路口
 
-状态: 进行中（预登记写于任何抽取之前；1 与 2a 结果 2026-09-25 14:20，2b 在跑）
+状态: done（预登记写于任何抽取之前；1 与 2a 结果 2026-09-25 14:20，2b 结果 15:50）
 上游: 第 40 条及后续 (iii)（[driving-backbones](2026-09-24-driving-backbones/README.md)）、第 32 条（[P5 配对考卷 v0](2026-09-24-p5-carla-pairs-v0.md)）、第 34 条（[WOD zero-shot](2026-09-24-zeroshot-exam/wod-e2e.md)）
 背景: openpilot 的 512 维 `temporal` 是项目里最强的冻结表征（第 40 条），但它的视觉端有约 700 bit 的 information bottleneck（arXiv 2504.19077），
 长尾信息在不在里面要测；它输的地方是静止帧和 Intersections（第 34 条），comma 自己加 route 输入的尝试（Navigate on openpilot，0.9.4 → 0.9.7 删除）在闭环里失败过。
@@ -133,5 +133,49 @@ P4 训练路线也必须抽：head 的训练行里有 9529 行来自 P4（协议
 
 ### 实验 2b：route 进 backbone（WOD intent → desire 脉冲）
 
-（在跑：52 万帧 × 2 模型带 desire 重抽，之后重拟合 `ridge_late` / `cls_late`。映射：GO_LEFT → turnLeft、GO_RIGHT → turnRight，
-直行 / UNKNOWN → none；one-hot 每步都给，OPModel 按 modeld 取上升沿脉冲；81 386 / 522 023 帧的 intent 是转弯。）
+映射：GO_LEFT → turnLeft、GO_RIGHT → turnRight，直行 / UNKNOWN → none；one-hot 每步都给，OPModel 按 modeld 取上升沿脉冲；
+81 386 / 522 023 帧的 intent 是转弯。run：box 上 `drive_backbones/heads_train/20260925-154105`（head）、`op_route/2b/20260925-154719`（读数），
+表 `route2b_{arms,paired,ade}.csv`。统计同 2a（frame-mean RFS，sequence bootstrap）；每一行都是「+desire − 同一 arm 不带 desire」的配对差。
+
+| 子集 | n | Cinque 原生 | Lebowski 原生 | Cinque `cls_late` | Lebowski `cls_late` | Cinque `ridge_late` | Lebowski `ridge_late` |
+|:--|--:|:--|:--|:--|:--|:--|:--|
+| 全部 rater 帧 | 479 | **−0.13 [−0.23, −0.05]** | −0.04 [−0.11, +0.03] | −0.06 [−0.16, +0.03] | −0.08 [−0.17, +0.02] | −0.03 [−0.12, +0.05] | +0.00 [−0.09, +0.08] |
+| 起始速度 < 0.5 m/s | 120 | **−0.66 [−0.99, −0.35]** | −0.21 [−0.50, +0.06] | −0.03 [−0.23, +0.16] | −0.00 [−0.15, +0.14] | −0.01 [−0.23, +0.21] | −0.09 [−0.33, +0.14] |
+| Intersections + Multi-Lane | 158 | −0.08 [−0.22, +0.07] | +0.01 [−0.13, +0.14] | −0.08 [−0.24, +0.10] | −0.03 [−0.20, +0.13] | **−0.15 [−0.29, −0.00]** | −0.06 [−0.18, +0.05] |
+| 其中 Intersections | 116 | −0.11 [−0.30, +0.07] | +0.06 [−0.10, +0.24] | −0.08 [−0.30, +0.14] | −0.02 [−0.23, +0.19] | −0.19 [−0.38, +0.01] | −0.10 [−0.26, +0.04] |
+| 转弯 intent 帧（追加，未预登记） | 52 | −0.16 [−0.72, +0.39] | +0.22 [−0.30, +0.72] | −0.08 [−0.51, +0.35] | +0.14 [−0.16, +0.49] | +0.02 [−0.18, +0.22] | +0.17 [−0.19, +0.57] |
+
+带 desire 的绝对值（cluster mean）：Cinque 原生 7.87（不带 8.00）、Lebowski 原生 7.82（7.89）、`cls_late` 7.55 / 7.62（7.64 / 7.73）。
+不读特征的 `ridge ego` 逐位不变（|Δ| < 1e-5），`cls ego K1024` 只差 −0.005 [−0.06, +0.04]（L-BFGS 重拟合的噪声），说明两个 run 的行、split、judge 完全配对。
+
+第 22 条的 ADE 读数（全部 val 帧，s_ego 第 1–9 档，对不带 desire 的同一 arm）：
+
+| arm | pre-onset（n = 1291） | 全部帧（95 724） | 直行帧（42 497） |
+|:--|:--|:--|:--|
+| Cinque `ridge_late` | **−0.227 [−0.309, −0.149]** | −0.025 [−0.033, −0.017] | +0.010 [+0.006, +0.014] |
+| Lebowski `ridge_late` | **−0.213 [−0.282, −0.143]** | −0.022 [−0.028, −0.017] | +0.007 [+0.004, +0.010] |
+| Cinque `cls_late` | −0.190 [−0.406, −0.032] | −0.040 [−0.059, −0.022] | −0.040 |
+| Lebowski `cls_late` | −0.072 [−0.154, −0.001] | −0.013 [−0.025, −0.001] | −0.006（CI 跨零） |
+
+**判定：route 进 backbone 没有买回静止帧和路口，预期两条都不成立。**
+
+- 原生 plan：预登记的主读数是对 8.005 / 7.886 的配对 Δ。Cinque **变差** −0.13（CI 不跨零），Lebowski 不变；「全集主表不能变差」这一条对 Cinque 原生不成立。
+  预期的「路口上 +」没有出现（Intersections −0.11 / +0.06，CI 都跨零；转弯 intent 帧 52 个，CI 半宽 0.5，读不动）。
+  预期的「静止帧不动」也不对：Cinque 在静止帧上 **−0.66**，比 cv 还低 0.50 [0.06, 0.94]——desire 脉冲让停着的车起步，而 rater 在这些帧上偏好继续等
+  （第 34 条失败案例的同一模式，被 desire 放大）。
+- head：`cls_late` / `ridge_late` 在 RFS 的任何预登记子集上都没有变好（全部 CI 跨零或为负），路口上 Cinque `ridge_late` 还低 0.15。
+- ADE 上有一个真实但方向不同的效应：pre-onset 帧（机动开始前、ego 状态还看不出要转的帧）上 `ridge_late` 的 ADE 降 0.21–0.23 m（CI 不跨零），
+  即 `temporal` 里确实带进了 intent 的方向信息，回归 head 读得出来。它换不成 RFS：pre-onset 帧里只有很少是 rater 帧，而且 RFS 看的是「选对 mode」，
+  ADE 看的是「往正确方向偏一点」（第 2 / 10 条）。另外 intent 本来就在 ego 特征里（2a 的前提），pre-onset 上的 ADE 增益说明 late fusion 下
+  特征通道比 ego 通道用得更好，不说明 openpilot「理解了路线」。
+
+合起来和 comma 的先例一致：openpilot 的 desire 是低速转弯 / 变道的触发信号，不是路口导航；把 WOD 的 routing intent 当 desire 喂进去，
+在开环上不带来 RFS，在停着的帧上反而有害（Cinque）。NAVSIM 考试里 turn desire 一致拖分（−1.0 到 −3.4 EPDMS，第 37 条）是同一件事。
+
+## 三个实验合起来（给第 40 条）
+
+| # | 结论 | 对主线的含义 |
+|---|---|---|
+| 1 | `temporal` 保留了车辆 cut-in 类的突发 hazard（冻结特征 + ridge 翻转率 42–47%，高于 TFv6 waypoint 的 39%），行人 / 横穿物 / 灯上是零 | openpilot 可以直接做第 3 层里「车」的那一半；行人那一半要别的表征或别的数据 |
+| 2a | intent 已在 ego 输入时，分类头在路口上已追平原生 plan；静止帧上「不如 cv」是回归平均掉「继续停」的代价，分类头补平 | head 层面没有 route 缺口可补；静止帧要靠多模态读出，不是 route |
+| 2b | intent → desire 进 backbone：RFS 不涨，Cinque 原生 −0.13、静止帧 −0.66；只有 pre-onset ADE −0.2 m | 不采用 desire 作 route 输入；route 继续走 ego 侧 |

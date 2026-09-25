@@ -2838,6 +2838,13 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    ego 不带 command 时 pre-onset 上是 **−0.40 / −0.41 m**（对 A −0.35 / −0.36，CI 不跨零），与 WOD 的 −0.29 / −0.32 同量级。openpilot 的原生 plan 在 nuScenes 上比 `ridge ego` 还差 0.85–1.03 m，
    冻结特征 + 重拟合的线性读出把这个分布差完全吸收了。
 
+5. **长尾与 route**（2026-09-25，预登记先于抽取，[p5route todo](../todos/2026-09-25-openpilot-temporal-p5-and-route.md)）：
+   (1) 在 CARLA 配对考卷（第 32 条）上，同一个未改动的 `ridge_late` 读 `temporal` 的定向翻转率 42–47%（Qwen `L18_last` 0%、TFv6 waypoint 39%），
+   全部来自车辆 cut-in（HighwayCutIn 86–89%）；两个行人 family 和红绿灯上翻转 0、probe AUC 0.50–0.53。openpilot 的 information bottleneck 保留了它训练分布里的突发车辆事件，滤掉了行人。
+   (2) intent 已作为 ego 输入时，`cls_late` 在 Intersections / Multi-Lane 上与原生 plan 打平，静止帧上与 cv 打平（回归 head 在静止帧上低 0.6–0.7，是回归平均掉「继续停」的代价）。
+   (3) 把 WOD routing intent 当 desire 脉冲喂进 backbone：RFS 在任何预登记子集上都没有变好，Cinque 原生反而 −0.13 [−0.23, −0.05]、静止帧 −0.66 [−0.99, −0.35]；
+   只有 pre-onset ADE 降 0.21–0.23 m（`ridge_late`，CI 不跨零）。**不采用 desire 作 route 输入**，route 留在 ego 侧。
+
 **对选型的含义（推测）**：第 21 条和 prediag 的「表征：Qwen3-VL-4B + 原生视频」要改：**在驾驶视频上训过的时序表征**（openpilot）比所有通用 backbone 都强，而且强一个量级；
 通用 VLM 做驾驶微调（Alpamayo）在中层 image token 上几乎不带来这种增益，增益在深层 last-token。下一步的候选是把 openpilot `temporal` 当 backbone 进 Stage B / 反应通道。
 
