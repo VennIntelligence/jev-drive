@@ -251,3 +251,32 @@ batch 8 约 108 ms/帧（15 步去噪），一张卡约 10 帧/s，可信的偏�
    **两个 expert 的集合分别跑、分别报**（`processed/carla_p5v1_pdm` 与 `carla_p5v1_ba`，由 `p5v1-index` 产出），不合并；判定以 **PDM-Lite 集**为主
    （它是为行人 family 加进来的 expert），BehaviorAgent 集是与 v0 同口径的复现。特征：Qwen `L18_last` 用 `p5_pairs.extract`（P3(d″) 抽取器，不改），
    openpilot 用 `p5_openpilot`（`--arrays temporal vision hidden`），都按 `P5_SET` 指到对应集合。λ 网格仍用预登记的 10^[−1..5]。
+
+### I1 结果：P5 v1 考卷（2026-09-25 22:05 box 时间生成完毕）
+
+1029 个新 run 全部跑完（两个 expert 各 707 / 707 个世界），`p5v1-index` 按 v0 管线建好两套集合；
+CARLA 实际并发从 11 个实例逐步加到 30 个（GPU 1/3/0 各加一条链，见 [i1-p5v1](2026-09-25-reactivity-program/i1-p5v1.md)），总墙钟约 5 h，低于 8–10 h 的预算。
+表在 [research/results/p5-v1/](../research/results/p5-v1/)。τ_expert 两套都是下限 0.5 m/s（null 的 p95 为 0）。
+
+| 集合 | 对 | 确定到可见 | 观测帧 | reactive 帧 | 进合并的 family | 合并 reactive 帧 |
+|:--|--:|--:|--:|--:|:--|--:|
+| v0（参照） | 165 | — | — | 503 | 6 个（3 个 cut-in、DynamicObjectCrossing、ParkingCrossingPedestrian、Light） | 490 |
+| v1 BehaviorAgent | 303 | 246 | 7843 | 1091 | 7 个：3 个 cut-in、DynamicObjectCrossing、ParkingCrossingPedestrian、PedestrianCrossing、Light | 1081 |
+| v1 PDM-Lite | 303 | 211 | 6986 | 783 | 7 个：3 个 cut-in、4 个行人 family（Light 不进） | 783 |
+| v1 PDM-Lite，截回 v0 窗口 | 303 | 211 | 4313 | 745 | 同上 | 745 |
+
+| 行人 family 的 reactive 帧 | v0（BA） | v1 BA | v1 PDM-Lite |
+|:--|--:|--:|--:|
+| DynamicObjectCrossing | 45 | 293 | 142 |
+| ParkingCrossingPedestrian | 76 | 76 | 62 |
+| PedestrianCrossing | 3 | 27 | 38 |
+| VehicleTurningRoutePedestrian | 10 | 10 | 67 |
+| 合计 | 134 | 406 | 309 |
+
+两个 expert 在都确定的 205 对上（v0 窗口）：各自有反应的对 126 / 135，重合 121；**PDM-Lite 从因素可见到第一个 reactive 帧的中位时间 0.4 s，BehaviorAgent 5.6 s**，
+也就是 PDM-Lite 确实提前减速。代价是 PDM-Lite 在 15 个 DynamicObjectCrossing 对、9 个 ParkingCrossingPedestrian 对上**在因素对相机可见之前就开始反应**
+（它读的是特权状态），这些对按 v0 规则剔除，所以 PDM-Lite 集的确定对少（211 对 246）。
+
+**对 I1 目标的判定**：行人两个 family 都进了合并（两个 expert 都是），行人 reactive 帧从 134 增到 309–406；路线 25 → 101。
+**Light 没达到**：BehaviorAgent 集里 Light 进了合并但只有 9 个 reactive 帧（和 v0 一样），PDM-Lite 集里 Light 只有 2 个观测帧（24 对因为 expert 在可见之前就反应而被剔除）。
+Light 这一格按现有生成方式补不起来，要换判定可见性的办法或专门的路线。

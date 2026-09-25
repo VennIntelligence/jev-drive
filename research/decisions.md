@@ -2611,6 +2611,11 @@ TFv6 与我们的 head 用的是不同传感器。
 行人和 cut-in 两类 probe 高而翻转为 0，是配对监督最可能先见效的地方。
 
 **怎么才能推翻或推进**：换一个会提前减速的 expert（PDM-Lite 需要作者的 scenario_runner fork），看两个行人 family 能否进合并、结论是否改变；
+
+**P5 v1 考卷已生成（2026-09-25，[reactivity 计划](../todos/2026-09-25-reactivity-program.md) 的 I1）**：第二个 expert PDM-Lite 接通（逐 tick 确定，v0 的 BehaviorAgent run 逐位复现后复用），
+路线 25 → 101、每条 3 个 TM seed，303 对 + 101 null，每个 expert 707 个世界全部跑完。两个行人 family 在两个 expert 下都进了合并，行人 reactive 帧 v0 134 → v1 BehaviorAgent 406 / PDM-Lite 309；
+PDM-Lite 从可见到开始反应中位 0.4 s（BehaviorAgent 5.6 s），但它有 24 个行人对在可见之前就反应（特权状态），这些对按 v0 规则剔除。Light 仍只有 9（BA）/ 0（PDM-Lite）个 reactive 帧，没补起来。
+表在 [research/results/p5-v1/](results/p5-v1/)。考生在 v1 上的复跑见第 42 条。
 把 Light 扩到更多路线；给 TFv6 喂与我们相同的 Waymo 三相机不现实，反过来用 TFv6 自己的前视图抽 Qwen 特征，可以把「传感器不同」这一项拿掉。
 
 **两个失败模式的机制（D3，[诊断](../todos/2026-09-23-tfv6-controller/diagnosis-d3.md)）。** 先交代一个输入事实：Bench2Drive 把 route 交给 sensor agent 之前做了 50 m 降采样（`autonomous_agent.py:128–134`），所以 TFv6 看到的 target point 只是几个稀疏关键点，这三条路线各 4 个。实验设计是 2×2 因子，横向取 B 或 C，纵向取 B 或 C，共四臂；另外逐 tick 记录 target point、command，并与 evaluator 稠密 route 做对照。

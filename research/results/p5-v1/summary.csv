@@ -1,0 +1,4 @@
+set,tau_exp,null_p95,pairs,deterministic,obs_frames,reactive_frames,pooled_families,pooled_reactive_frames,pooled_reactive_share,all_reactive_share
+ba,0.5,0.0,303,246,7843,1091,"DynamicObjectCrossing,HighwayCutIn,Light,ParkingCrossingPedestrian,ParkingCutIn,PedestrianCrossing,StaticCutIn",1081,0.21088568084276238,0.13910493433635088
+pdm,0.5,0.0,303,211,6986,783,"DynamicObjectCrossing,HighwayCutIn,ParkingCrossingPedestrian,ParkingCutIn,PedestrianCrossing,StaticCutIn,VehicleTurningRoutePedestrian",783,0.1148936170212766,0.11208130546807901
+pdm_v0window,0.5,0.0,303,211,4313,745,"DynamicObjectCrossing,HighwayCutIn,ParkingCrossingPedestrian,ParkingCutIn,PedestrianCrossing,StaticCutIn,VehicleTurningRoutePedestrian",745,0.17289394291018798,0.17273359610479944
