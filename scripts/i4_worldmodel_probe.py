@@ -232,7 +232,7 @@ def plot(a):
     from jevdrive.plots import PAGE, STYLE
     d = Path(a.run_dir)
     res = json.load(open(d / "results.json"))
-    z = np.load(d / "rollout_0.npz")
+    z = np.load(d / f"rollout_{a.clip}.npz")
     names, dec, ctx = list(z["names"]), z["decoded"], z["context_frames"]
     K = res["steps"]
     H = ctx.shape[0] - K - 5
@@ -254,8 +254,8 @@ def plot(a):
                 if r == 0:
                     ax.set_title("last context frame" if c == 0 else f"generated, +{(ts[c - 1] + 1) / 5:.1f} s", fontsize=8)
                 if c == 0:
-                    ax.set_ylabel(LABELS[arm], fontsize=7)
-        fig.savefig(out / "i4_worldmodel_actions.png", dpi=170)
+                    ax.set_ylabel(arm, fontsize=8)
+        fig.savefig(out / f"i4_worldmodel_actions{'' if a.clip == 0 else f'_clip{a.clip}'}.png", dpi=150)
         plt.close(fig)
 
         S = summarize(res)
@@ -334,6 +334,7 @@ if __name__ == "__main__":
     q = sub.add_parser("plot")
     q.add_argument("run_dir")
     q.add_argument("--out-dir", default=str(REPO / "research/figs"))
+    q.add_argument("--clip", type=int, default=0, help="clip shown in the image grid")
     a = p.parse_args()
     if a.cmd == "run":
         import os
