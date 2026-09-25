@@ -96,6 +96,16 @@ def nearest_on_box(c: np.ndarray, yaw: np.ndarray, ext: np.ndarray, q: np.ndarra
 
 # ================================================================ P5
 
+def carla_rot(yaw: float, pitch: float, roll: float) -> np.ndarray:
+    """CARLA Transform rotation (degrees; UE4 left-handed, Transform::GetMatrix): local -> world."""
+    cy, sy = np.cos(np.radians(yaw)), np.sin(np.radians(yaw))
+    cp, sp = np.cos(np.radians(pitch)), np.sin(np.radians(pitch))
+    cr, sr = np.cos(np.radians(roll)), np.sin(np.radians(roll))
+    return np.array([[cp * cy, cy * sp * sr - sy * cr, -cy * sp * cr - sy * sr],
+                     [sy * cp, sy * sp * sr + cy * cr, -sy * sp * cr + cy * sr],
+                     [sp, -cp * sr, cp * cr]])
+
+
 def p5_calib() -> dict:
     c = json.loads((data_dir() / "processed" / "carla_p5" / "op_plan.json").read_text())["calib"]
     return {cam: c[str(i + 1)] for i, cam in enumerate(CAMS)}
@@ -132,7 +142,7 @@ def _p5_gt_attempt(args) -> pd.DataFrame:
         for line in f:
             r = json.loads(line)
             if r["frame"] in frames:
-                pose[r["frame"]] = (r["x"], r["y"], r["z"], r["yaw"])
+                pose[r["frame"]] = (r["x"], r["y"], r["z"], r["yaw"], r.get("pitch", 0.0), r.get("roll", 0.0))
     a = np.load(adir / "actors.npz")
     kinds = json.loads((adir / "actor_kinds.json").read_text())
     meta = json.loads((adir / "meta.json").read_text())
@@ -144,7 +154,8 @@ def _p5_gt_attempt(args) -> pd.DataFrame:
     for f in np.unique(fr):
         if f not in pose:
             continue
-        hx, hy, hz_, hyaw = pose[f]
+        hx, hy, hz_, hyaw, hpitch, hroll = pose[f]
+        Rh = carla_rot(hyaw, hpitch, hroll)                             # hero actor -> world (CARLA, left-handed)
         m = (fr == f) & (ids != hero)
         k = [kinds.get(str(int(i))) for i in ids[m]]
         keep = np.array([x is not None for x in k])
@@ -158,18 +169,18 @@ def _p5_gt_attempt(args) -> pd.DataFrame:
         cx = P[:, 0] + np.cos(ay) * bb[:, 0] - np.sin(ay) * bb[:, 1]
         cy = P[:, 1] + np.sin(ay) * bb[:, 0] + np.cos(ay) * bb[:, 1]
         bz = P[:, 2] + bb[:, 2] - bb[:, 5]
-        # world -> hero actor local (left-handed) -> ego (rear axle, right-handed)
+        # world -> hero actor local with the hero's full attitude (the cameras pitch and roll with the car)
+        # -> ego (rear axle, right-handed); the flat ground of the lift is the car's own plane z = 0
         th = np.radians(hyaw)
-        dx, dy = cx - hx, cy - hy
-        lx, ly = np.cos(th) * dx + np.sin(th) * dy, -np.sin(th) * dx + np.cos(th) * dy
-        ex, ey = lx - REAR_AXLE_X, -ly
+        loc = (np.stack([cx - hx, cy - hy, bz - hz_], 1)) @ Rh
+        ex, ey, ez = loc[:, 0] - REAR_AXLE_X, -loc[:, 1], loc[:, 2]
         eyaw = -(ay - th)
         tid = [x[0] for x in k]
         cls = np.array(["pedestrian" if t.startswith("walker.") else "vehicle" for t in tid])
         for cam, cal in calib.items():
             cpos = np.asarray(cal["extrinsic"], np.float64).reshape(4, 4)[:3, 3]
             ref = nearest_on_box(np.stack([ex, ey], 1), eyaw, bb[:, 3:5], cpos[:2])
-            z = bz - hz_
+            z = ez
             u, v, ok = project(np.c_[ref, z], cal)
             ub, vb, okb = project(np.c_[ex, ey, z], cal)
             out.append(pd.DataFrame({"adir": str(adir), "frame": int(f), "cam": cam, "id": idm.astype(np.int64),
@@ -279,7 +290,8 @@ def pick_check(lst: pd.DataFrame, gt: pd.DataFrame, seed: int = 0) -> pd.DataFra
 
 
 def check_ab(sel: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame) -> pd.DataFrame:
-    """(a) projected GT reference point inside the matched mask's box, pixel error to the contact point;
+    """(a) projected GT bottom centre (as registered) inside the matched mask's box, pixel error of the contact point
+    to the projected GT reference point;
     (b) BEV error of the lifted contact point. One row per selected hazard."""
     rows = []
     for r in sel.itertuples():
@@ -291,7 +303,9 @@ def check_ab(sel: pd.DataFrame, gt: pd.DataFrame, dets: pd.DataFrame) -> pd.Data
         row = {"key": r.key, "cls": cls, "cam": r.cam, "dist": r.dist, "family": r.family, "matched": di >= 0}
         if di >= 0:
             d = dets.loc[di]
-            row |= {"in_box": bool(d.x0 - 2 <= g.loc[gi, "u"] <= d.x1 + 2 and d.y0 - 2 <= g.loc[gi, "v"] <= d.y1 + 2),
+            row |= {"in_box": bool(d.x0 - 2 <= g.loc[gi, "ub"] <= d.x1 + 2 and d.y0 - 2 <= g.loc[gi, "vb"] <= d.y1 + 2),
+                    "in_box_ref": bool(d.x0 - 2 <= g.loc[gi, "u"] <= d.x1 + 2 and d.y0 - 2 <= g.loc[gi, "v"] <= d.y1 + 2),
+                    "du": float(d.cu - g.loc[gi, "u"]), "dv": float(d.cv - g.loc[gi, "v"]),
                     "px_err": float(np.hypot(d.cu - g.loc[gi, "u"], d.cv - g.loc[gi, "v"])),
                     "bev_err": float(dd.loc[gi]), "bev_err_centre": float(np.hypot(d.gx - g.loc[gi, "xc"], d.gy - g.loc[gi, "yc"])),
                     "score": float(d.score)}
