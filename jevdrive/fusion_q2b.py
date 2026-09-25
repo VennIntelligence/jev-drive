@@ -40,7 +40,18 @@ def calibs() -> dict:
     return out
 
 
-def corridor_labels(det_dir: Path) -> pd.DataFrame:
+def extend(path: np.ndarray, reach: float = RANGE) -> np.ndarray:
+    """Post-hoc sensitivity: the logged path continued along its last heading until it reaches `reach` metres
+    from the origin (a stopping ego's 5 s path is a few metres long and cannot contain what it stops for)."""
+    seg = np.diff(path, axis=0)
+    good = np.linalg.norm(seg, axis=1) > 0.05
+    h = seg[good][-1] / np.linalg.norm(seg[good][-1]) if good.any() else np.array([1.0, 0.0])
+    end = path[-1]
+    left = reach - np.linalg.norm(end)
+    return np.r_[path, [end + h * max(left, 0.0)]] if left > 0 else path
+
+
+def corridor_labels(det_dir: Path, extended: bool = False) -> pd.DataFrame:
     """One row per WOD frame of the list: for each class group, whether a detection lies in the corridor."""
     from . import waymo as W
     from .fusion_diag import project
@@ -67,6 +78,8 @@ def corridor_labels(det_dir: Path) -> pd.DataFrame:
             pts = g[["gx", "gy"]].to_numpy(float)
             if np.linalg.norm(np.diff(path, axis=0), axis=1).sum() < 0.5:        # standing still: a short stub ahead
                 path = np.array([[0.0, 0.0], [2.0, 0.0]])
+            if extended:
+                path = extend(path)
             _, dist_lat, _, _ = project(path, pts)     # distance to the polyline, ends included
             near = (np.abs(dist_lat) <= HALF_W) & (np.hypot(pts[:, 0], pts[:, 1]) <= RANGE) & (pts[:, 0] > 0)
             hit = set(g.prompt.to_numpy()[near])
@@ -155,9 +168,10 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dets", default=str(data_dir() / "processed" / "fusion_diag" / "sam" / "wod"))
+    ap.add_argument("--extended", action="store_true", help="post-hoc sensitivity: corridor continued to 40 m")
     a = ap.parse_args()
-    rl = RunLog("fusion_diag", "q2b")
-    lab = corridor_labels(Path(a.dets))
+    rl = RunLog("fusion_diag", "q2b-extended" if a.extended else "q2b")
+    lab = corridor_labels(Path(a.dets), a.extended)
     lab.to_parquet(rl.dir / "corridor_labels.parquet", index=False)
     rl.info("corridor positives: " + str({g: int(lab[f"in_{g}"].sum()) for g in GROUPS}))
     pr = probes(lab)
