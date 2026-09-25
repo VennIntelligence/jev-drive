@@ -39,7 +39,7 @@ def render(files: list, seq: str = SEQ) -> np.ndarray:
     """Packed (n, 2, 6, 128, 256) [road, wide] model frames from (front, front_left, front_right) JPEG triplets.
     `seq` picks the calibration (one rig for CARLA; one per scene for the HUGSIM pairs, plan["calibs"])."""
     from PIL import Image
-    idx = WZ._maps(seq)
+    idx = _maps(seq)
     out = np.empty((len(files), 2, 6, 128, 256), np.uint8)
     for j, trip in enumerate(files):
         planes = []
@@ -47,10 +47,30 @@ def render(files: list, seq: str = SEQ) -> np.ndarray:
             im = Image.open(io.BytesIO(Path(f).read_bytes()))
             im.draft("YCbCr", im.size)
             planes.append(np.asarray(im.convert("YCbCr")).reshape(-1, 3))
-        cat = np.concatenate(planes)
+        cat = np.concatenate(planes + [BLACK])     # index -1 (uncovered, HUGSIM Waymo rigs only) -> black
         for m, k in enumerate(("road", "wide")):
             out[j, m] = WZ._pack(cat[idx[k]].reshape(G.OP_H, G.OP_W, 3))
     return out
+
+
+BLACK = np.array([[0, 128, 128]], np.uint8)       # full-range YCbCr black
+
+
+def _maps(seq):
+    """WZ._maps; a rig that leaves part of a model frame uncovered (HUGSIM's Waymo side cameras: 5% of the wide
+    frame) gets -1 there instead of the assertion, rendered black as in the HUGSIM exam (hugsim_zs.OpenpilotFrames).
+    A fully covered rig (CARLA, WOD) never reaches the fallback, so its maps are unchanged."""
+    try:
+        return WZ._maps(seq)
+    except AssertionError:
+        cal = {int(c): d for c, d in WZ._ctx["calib"][seq].items()}
+        sizes = [(cal[c]["width"], cal[c]["height"]) for c in (1, 2, 3)]
+        idx = {}
+        for k in ("road", "wide"):
+            src, U, V = G.choose_sources(np, G.pinhole_rays(np, G.OP_K[k], G.OP_W, G.OP_H), {c: cal[c] for c in (1, 2, 3)})
+            idx[k] = G.nn_gather_index(src, U, V, sizes).ravel()
+        WZ._ctx["maps"] = {seq: idx}
+        return idx
 
 
 def job(st):
