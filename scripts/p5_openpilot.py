@@ -133,7 +133,7 @@ def main():
         sts = [sts[i] for i in np.linspace(0, len(sts) - 1, max(1, a.check // 4)).astype(int)]
         with ProcessPoolExecutor(2, initializer=WZ._init, initargs=({}, {SEQ: calib}, ".")) as ex:
             list(ex.map(int, range(2)))
-            models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=[D.OP_TAPS[k]["temporal"]])
+            models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
                       for k in a.models}
             batch = {s["key"]: (s, fr) for s, fr in ex.map(job, sts)}
         np.save(log.dir / "model_frame_example.npy", batch[sts[0]["key"]][1][sts[0]["targets"][-1]])
@@ -158,7 +158,7 @@ def main():
     del plan
     with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=({}, {SEQ: calib}, ".")) as ex:
         list(ex.map(int, range(a.workers)))     # fork before the TensorRT sessions exist (see drive_backbones_openpilot)
-        models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=[D.OP_TAPS[k]["temporal"]])
+        models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
                   for k in a.models}
         n_frames = sum(len(s["names"]) for s in items)
         log.info(f"{len(items)} streams, {n_frames} frames, models {list(models)}, {a.workers} render workers")
