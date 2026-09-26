@@ -99,6 +99,11 @@ def depth(model: str, workers: int = 16, limit: int = 0, rl=None) -> dict:
     net = {"unidepth": UniDepth, "da3": DA3Metric}[model]()
     info = {}
     for ds, lst in (("p5", "p5.parquet"), ("nusc", "nusc.parquet")):
+        done = [out_root("dets", f"{tag}-{model}", ds) / "part-0000.parquet" for tag in DETS]
+        if not limit and all(f.exists() for f in done) and all(
+                np.isfinite(pd.read_parquet(f, columns=["depth"]).depth).mean() > 0.5 for f in done):
+            info[f"{ds} skipped"] = "already done"     # a full run's output (a --limit smoke fills < 1 % of rows)
+            continue
         cal = Q.p5_calib() if ds == "p5" else json.loads((L / "nusc_calib.json").read_text())
         dets = {}
         for tag, (d, _) in DETS.items():

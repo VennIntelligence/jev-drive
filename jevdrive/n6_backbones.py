@@ -210,6 +210,13 @@ def fit(seed: int, which, rl, priors=("cinque", "lebowski"), eigh: str = "cpu") 
     from . import p5_exam as E, p5_openpilot, reactivity_mc as M
     os.environ.setdefault("P5_SET", SET)
     M.EIGH_DEVICE = eigh
+    if eigh != "cpu":                # the ridge heads' gram eigh too (planner.gram_eigh: float64 on the CPU, which the
+        from . import planner       # loaded box makes ~400x slower than the card: 559 s vs 1.4 s at d = 3584)
+        def _gram_eigh(A):
+            import torch
+            e, V = torch.linalg.eigh((A.T @ A).double().to(eigh))
+            return e.float().to(A.device), V.float().to(A.device)
+        planner.gram_eigh = _gram_eigh
     t, past, fut, obs, null, pairs = E.load()
     n = len(t)
     X = load_backbones(t, which)
