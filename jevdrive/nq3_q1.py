@@ -180,7 +180,7 @@ def heads(rl, models=MODELS, folds=None, out: Path | None = None):
     for k in list(res):
         if k.startswith("M-C"):
             res[k][~hasq] = np.nan                   # no Qwen features on the negotiation / mirror frames
-    np.savez_compressed(Path(out_path) if out_path else proc("nq3_p5heads.npz"), frame_name=t6.frame_name.to_numpy(), **res)
+    np.savez_compressed(Path(out_path) if out_path else proc("nq3_p5heads.npz"), frame_name=t6.frame_name.to_numpy().astype(str), **res)
     return res
 
 
@@ -248,7 +248,8 @@ def collect() -> tuple[pd.DataFrame, dict, dict]:
     preds["TFv6 target speed"] = tsf
     notes["TFv6 target speed"] = "longitudinal only (route + target speed channel): stop substitution"
     if proc("nq3_p5heads.npz").exists():
-        z = np.load(proc("nq3_p5heads.npz"))
+        # Trusted output of heads() above; older caches store pandas names as objects.
+        z = np.load(proc("nq3_p5heads.npz"), allow_pickle=True)
         at = pos[z["frame_name"]].to_numpy()
         for k in z.files:
             if k != "frame_name":
