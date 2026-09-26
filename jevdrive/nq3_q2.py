@@ -234,6 +234,16 @@ def _mode_head(X: torch.Tensor, lab: np.ndarray, tr: np.ndarray, groups: np.ndar
     return _mlr(X, lab, tr, lam, K), lam
 
 
+def _pick_cls(X, tgt, fit_r, sel_r, Axy, fut, K, offset=None) -> float:
+    """night2_n3._pick_cls with the vocabulary size as an argument (A4's vocabulary is 1024 + 128)."""
+    from . import planner
+    W, _ = planner.ce_solve(X, tgt, fit_r, planner.LAM_CLS, K, offset=offset)
+    top = planner.cls_topk(W, X, sel_r, 1, offset=offset)
+    err = [np.linalg.norm(Axy[top[:, i, 0]] - fut[sel_r], axis=-1).mean() for i in range(len(planner.LAM_CLS))]
+    del W
+    return float(planner.LAM_CLS[planner._pick(err, planner.LAM_CLS, "cls")])
+
+
 _WOD_ANCHORS = {}
 
 
@@ -256,7 +266,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
     `stream` swaps the Delta stream of A1 / A3 for a backbone (the prior stays on openpilot `temporal`).
     `head` (dict) receives every fitted parameter (the closed-loop export)."""
     from sklearn.model_selection import GroupShuffleSplit
-    from . import navsim_heads as NH, night2_n3 as N3, p6, planner, traj, waymo_stage_a as sa
+    from . import navsim_heads as NH, p6, planner, traj, waymo_stage_a as sa
     t, F, Ego, Xop, lab, p = D["t"], D["F"], D["Ego"], D["op"][m], D["lab"], D["pairs"]
     n = len(t)
     world = t.world.to_numpy()
@@ -353,14 +363,14 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         tgt = (ids[:, None], np.ones((len(ids), 1), np.float32))
         a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=seed).split(tr, groups=seq[tr]))
         fit_r, sel_r = tr[a], tr[b]
-        lam_e = N3._pick_cls(Xe, tgt, fit_r, sel_r, Axy, fut)
+        lam_e = _pick_cls(Xe, tgt, fit_r, sel_r, Axy, fut, K)
         Wce, _ = planner.ce_solve(Xe, tgt, tr, [lam_e], K)
         off = planner.linear_apply(Wce, Xe, np.arange(n))[0]
         inner = NH._group_folds(seq[tr], 5, seed=seed)
         for k in range(5):
             Wk, _ = planner.ce_solve(Xe, tgt, tr[inner != k], [lam_e], K)
             off[tr[inner == k]] = planner.linear_apply(Wk, Xe, tr[inner == k])[0]
-        lam_l = N3._pick_cls(Xi, tgt, fit_r, sel_r, Axy, fut, off)
+        lam_l = _pick_cls(Xi, tgt, fit_r, sel_r, Axy, fut, K, off)
         Wl, _ = planner.ce_solve(Xi, tgt, tr, [lam_l], K, offset=off)
         top = planner.cls_topk(Wl, Xi, te, 1, offset=off)[:, 0, 0]
         out["A4"] = Axy[top]
