@@ -312,7 +312,7 @@ class Tokens(torch.utils.data.Dataset):
         return i, self.n(self.l.get_agent_input_from_token(self.t[i]))
 
 
-def navsim(rl, M, split: str, workers: int, batch: int):
+def navsim(rl, M, split: str, workers: int, batch: int, shard: str = "0/1"):
     """The model's own feature path on every token of a NAVSIM split -> tokens + poses (8, 3) at 0.5 ... 4.0 s, for
     the replay agent (jevdrive.navsim_agent) and the official devkits (scripts/navsim_zs_score.sh)."""
     from hydra.utils import instantiate
@@ -335,7 +335,8 @@ def navsim(rl, M, split: str, workers: int, batch: int):
     done = set()
     for f in parts.glob("*.npz"):                               # resumable: finished chunks are kept, never redone
         done |= set(np.load(f)["tokens"].tolist())
-    todo = [t for t in toks if t not in done]
+    si, sn = (int(x) for x in shard.split("/"))
+    todo = [t for t in toks[si::sn] if t not in done]           # shard i of n: every n-th token, own chunk names
     rl.log.info("%d tokens already in %s, %d to go", len(done), parts, len(todo))
     dl = torch.utils.data.DataLoader(Tokens(loader, todo, M.native), batch_size=batch, num_workers=workers,
                                      collate_fn=lambda xs: ([x[0] for x in xs], M.collate([x[1] for x in xs])),
@@ -345,7 +346,7 @@ def navsim(rl, M, split: str, workers: int, batch: int):
 
     def flush():
         if buf_t:
-            tmp = parts / f"{len(list(parts.glob('*.npz'))):05d}.tmp.npz"
+            tmp = parts / f"s{si}of{sn}_{len(list(parts.glob(f's{si}of{sn}_*.npz'))):05d}.tmp.npz"
             np.savez(tmp, tokens=np.asarray(buf_t), poses=np.concatenate(buf_p))
             tmp.rename(tmp.with_name(tmp.name.replace(".tmp", "")))
             buf_t.clear(), buf_p.clear()
@@ -364,7 +365,9 @@ def navsim(rl, M, split: str, workers: int, batch: int):
     for f in sorted(parts.glob("*.npz")):
         z = np.load(f)
         got.update(zip(z["tokens"].tolist(), z["poses"]))
-    assert set(got) == set(toks), f"{len(set(toks) - set(got))} tokens missing"
+    if set(got) != set(toks):
+        rl.log.info("shard %s done; %d tokens still missing (other shards), no merge yet", shard, len(set(toks) - set(got)))
+        return
     out = DATA / "processed/top10_exam/navsim" / f"{rl.model}_{split}.npz"
     np.savez(out, tokens=np.asarray(toks), poses=np.stack([got[t] for t in toks]))
     rl.log.info("%d tokens (%d this run) in %.0f s -> %s", len(toks), len(todo), time.time() - t0, out)
@@ -378,6 +381,7 @@ def main():
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--check", type=int, default=0, help="adapter equivalence on this many navtest tokens instead")
     ap.add_argument("--maps-only", action="store_true", help="only precompute the render maps of the plan's rigs")
+    ap.add_argument("--shard", default="0/1", help="navsim: token shard i/n (every n-th token); the last one merges")
     ap.add_argument("--navsim", default="", help="native inference on every token of this NAVSIM split instead")
     a = ap.parse_args()
     M = {"sparsedrivev2": sparsedrivev2, "ztrs": ztrs}[a.model]()
@@ -385,7 +389,7 @@ def main():
     rl = RunLog("top10_exam", f"{kind}-{a.model}")
     rl.model = a.model
     if a.navsim:
-        navsim(rl, M, a.navsim, a.workers, a.batch)
+        navsim(rl, M, a.navsim, a.workers, a.batch, a.shard)
     elif a.check:
         check(rl, M, a.check, a.batch)
     else:
