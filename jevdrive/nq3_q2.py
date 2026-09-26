@@ -67,7 +67,7 @@ def lateral_cache(set_: str = "carla_p6", gen: Path | None = None, workers: int 
     f = proc(set_, "nq3_lateral.parquet")
     if f.exists():
         return pd.read_parquet(f)
-    g = gen or p6.root("gen")
+    g = gen or J.gen_dir(set_)
     rids = sorted(pd.read_parquet(proc(set_, "index.parquet"), columns=["route_id"]).route_id.unique())
     lat = pd.concat([x for x in Parallel(workers)(delayed(_lat_world)(g, r) for r in rids) if x is not None])
     lat.to_parquet(f, index=False)
@@ -153,7 +153,11 @@ def backbone(set_: str, t: pd.DataFrame, name: str) -> tuple[np.ndarray, np.ndar
 # ---------------------------------------------------------------- folds
 
 def fold_ids(D: dict, split: str, seed: int) -> np.ndarray:
+    """loco: class index (IT / EV -1, always training); route: 5 seeded route folds; town (v1): fold 0 = the held-out
+    town group (lane A's split == "test"), 1 = training only."""
     t = D["t"]
+    if split == "town":
+        return np.where(t.split.to_numpy() == "test", 0, 1)
     if split == "loco":
         m = {c: i for i, c in enumerate(CLASSES9)}
         return t.scenario.map(m).fillna(-1).astype(int).to_numpy()
@@ -163,7 +167,7 @@ def fold_ids(D: dict, split: str, seed: int) -> np.ndarray:
 
 
 def n_folds(split: str) -> int:
-    return len(CLASSES9) if split == "loco" else 5
+    return {"loco": len(CLASSES9), "route": 5, "town": 1}[split]
 
 
 # ---------------------------------------------------------------- arms
@@ -310,6 +314,21 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
     if head is not None:
         head.update(z_mu=mu_z.cpu().numpy(), z_sd=sd_z.cpu().numpy(), z_dim=int(Zsrc.shape[1]))
     Fy, Py = F.reshape(n, 20, 2)[..., 1], P3[..., 1]
+    if "A5" in arms or "A5m" in arms:            # the negotiation pairs (x11, x10) of the training folds
+        pn = p[(p.reading == "neg10")]
+        pn = pn[np.isin(pn.ia.to_numpy(), tr) & np.isin(pn.ib.to_numpy(), tr) & ok[pn.ia.to_numpy()] & ok[pn.ib.to_numpy()]]
+        ip5, im5 = np.r_[ip, pn.ia.to_numpy()], np.r_[im, pn.ib.to_numpy()]
+        grp5 = np.r_[grp, pn.base_id.to_numpy().astype(str)]
+        info["n_pairs_neg"] = len(pn)
+    if "A5" in arms:
+        R = (Fy[ip5] - Fy[im5]) - (Py[ip5] - Py[im5])
+        dlt, lam, edge = _pair_delta(Z, trz, ip5, im5, R, grp5, seed, head, "A5_")
+        a5 = P3.clone()
+        a5[..., 1] += dlt
+        v = a5[te].cpu().numpy()
+        v[~ok[te]] = np.nan
+        out["A5"] = v
+        info.update(lam_A5=lam, edge_A5=edge)
     if "A1" in arms:
         R = (Fy[ip] - Fy[im]) - (Py[ip] - Py[im])
         dlt, lam, edge = _pair_delta(Z, trz, ip, im, R, grp, seed, head, "A1_")
@@ -319,7 +338,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         v[~ok[te]] = np.nan
         out["A1"] = v
         info.update(lam_A1=lam, edge_A1=edge)
-    if {"A2", "A3"} & set(arms):
+    if {"A2", "A3", "A5m"} & set(arms):
         X2 = torch.cat([Xe, Xi], 1).cpu()
         W2, lam2 = _mode_head(X2, lab.clip(0), tr, seq, seed, len(MODES))
         logit = (X2.double() @ W2[:-1] + W2[-1]).float().to(DEV)              # (n, 5)
@@ -352,6 +371,18 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
             out["A3"] = v
             out["A3_mode"] = lg3[te].argmax(1).cpu().numpy()
             info.update(lam_A3=lam3, edge_A3=edge3)
+        if "A5m" in arms:
+            E1 = torch.eye(len(MODES), device=DEV)
+            L = torch.as_tensor(lab, device=DEV)
+            R = C_LOGIT * (E1[L[ip5]] - E1[L[im5]]) - (logit[ip5] - logit[im5])
+            dl, lam5, edge5 = _pair_delta(Z, trz, ip5, im5, R, grp5, seed, head, "A5m_")
+            lg5 = logit + dl
+            a5 = P3.clone()
+            a5[..., 1] += Tt[lg5.argmax(1)]
+            v = a5[te].cpu().numpy()
+            v[~ok[te]] = np.nan
+            out["A5m"] = v
+            info.update(lam_A5m=lam5, edge_A5m=edge5)
     if "A4" in arms:
         A = traj.kmeans(F[tr], NH.K, seed=seed)
         xb = tr[(world[tr] == "x10") & p6.bypass_shape(fut[tr])]
@@ -398,7 +429,7 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
     for seed in seeds:
         fold = fold_ids(D, split, seed)
         for m, stream in runs:
-            a_run = arms if stream is None else tuple(a for a in arms if a in ("A1", "A3"))
+            a_run = arms if stream is None else tuple(a for a in arms if a in ("A1", "A3", "A5", "A5m"))
             preds = {a: np.full((n, 20, 2), np.nan, np.float32) for a in a_run}
             for f in range(n_folds(split)):
                 r = fit_fold(D, fold, f, m, seed, a_run, stream, rl=rl)
@@ -417,7 +448,7 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
                 rl.log.info("  %s: flip %.3f [%.3f, %.3f] ff %.3f shoulder %.3f ref %.3f stop %.3f mirror %.3f -> %s", a,
                             row["bypass_flip"], row["lo"], row["hi"], row["null_ff_oos"], row["shoulder_flip"],
                             row["shoulder_ref"], row["stop_sub"], row["mirror_borrow"], row["verdict"])
-            for a, b in (("A1", "A0"), ("A3", "A2"), ("A1", "A2"), ("A3", "A0"), ("A4", "A0")):
+            for a, b in (("A1", "A0"), ("A3", "A2"), ("A1", "A2"), ("A3", "A0"), ("A4", "A0"), ("A5", "A1"), ("A5m", "A3")):
                 if a in scored and b in scored:
                     d, lo, hi = J.paired_diff(scored[a], scored[b])
                     diffs.append({"split": split, "seed": seed, "model": m, "stream": stream or "op", "arm": a, "vs": b,
@@ -441,7 +472,7 @@ def report(d: Path, out: Path | None = None) -> str:
     out = out or RESULTS
     out.mkdir(parents=True, exist_ok=True)
     md = []
-    for split in ("loco", "route"):
+    for split in ("loco", "route", "town"):
         if not list(Path(d).glob(f"summary_{split}*.csv")):
             continue
         tab, dif = gather(d, split)
@@ -457,7 +488,7 @@ def report(d: Path, out: Path | None = None) -> str:
         md += [f"## {split}", agg.to_markdown(index=False, floatfmt=".3f"), "### paired (flip difference, route bootstrap)",
                dif.to_markdown(index=False, floatfmt=".3f"), "### readings", cr.to_markdown(index=False)]
     text = "\n\n".join(md) + "\n"
-    (out / "q2_v0.md").write_text(text)
+    (out / "q2.md").write_text(text)
     return text
 
 
@@ -484,7 +515,7 @@ def choose(tab: pd.DataFrame) -> tuple[str, str]:
     bypass flip; A1 if none passes. The mode head for CL5d: A3 if it passes, else A2."""
     g = tab[(tab.split == "loco") & (tab.model == "cinque") & (tab.stream == "op")]
     agg = g.groupby("examinee").agg(ok=("has_bypass", "all"), flip=("bypass_flip", "mean"))
-    ok = agg[agg.ok & agg.index.isin(["A0", "A1", "A2", "A3", "A4"])]
+    ok = agg[agg.ok & agg.index.isin(["A0", "A1", "A2", "A3"])]         # A4 has no closed-loop export ([C] entry)
     arm = ok.flip.idxmax() if len(ok) else "A1"
     mode = "A3" if bool(agg.ok.get("A3", False)) else "A2"
     return arm, mode

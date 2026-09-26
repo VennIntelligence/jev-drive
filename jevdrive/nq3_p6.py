@@ -26,6 +26,10 @@ from .common import data_dir, get_logger
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
 N1 = REPO / "research" / "results" / "night2" / "N1"
+# per frame set: expert statistics dir (worlds.csv, pairs_bypass.csv), case table, generation dir (lane A writes v1's)
+SETS = {"carla_p6": {"stats": N1, "cases": N1 / "cases.csv", "gen": ("runs", "p6", "gen")},
+        "carla_p6_v1": {"stats": REPO / "research" / "results" / "nq3" / "q3",
+                        "cases": REPO / "research" / "results" / "nq3" / "q3" / "cases.csv", "gen": ("runs", "nq3", "a", "v1", "gen")}}
 MAIN = ("Accident", "ConstructionObstacle", "ParkedObstacle", "HazardAtSideLane", "AccidentTwoWays",
         "ConstructionObstacleTwoWays", "ParkedObstacleTwoWays", "HazardAtSideLaneTwoWays")
 SEPARATE = ("VehicleOpensDoorTwoWays", "InvadingTurn", "YieldToEmergencyVehicle")
@@ -57,14 +61,18 @@ def _div_lat(la, lb) -> int | None:
     return int(m.index[i[0]]) if len(i) else None
 
 
-def cases_table(g: Path | None = None, workers: int = 24) -> pd.DataFrame:
+def gen_dir(set_: str) -> Path:
+    return data_dir().joinpath(*SETS[set_]["gen"])
+
+
+def cases_table(set_: str = "carla_p6", workers: int = 24) -> pd.DataFrame:
     """One row per (base_id, seed) with the expert's x10 mode / side, t_vis and the windows of every reading."""
     from joblib import Parallel, delayed
-    from . import p6
-    g = g or p6.root("gen")
-    c = p6.cases()
-    w = pd.read_csv(N1 / "worlds.csv", dtype={"base_id": str, "rid": str})
-    pr = pd.read_csv(N1 / "pairs_bypass.csv", dtype={"base_id": str})
+    g, S = gen_dir(set_), SETS[set_]
+    c = pd.read_csv(S["cases"], dtype=str, keep_default_na=False).astype({"seed": int})
+    c = c[c.cls != "REC"].reset_index(drop=True)
+    w = pd.read_csv(S["stats"] / "worlds.csv", dtype={"base_id": str, "rid": str})
+    pr = pd.read_csv(S["stats"] / "pairs_bypass.csv", dtype={"base_id": str})
     mode = w.pivot_table(index=["base_id", "seed"], columns="world", values="mode", aggfunc="first")
     c = c.merge(pr[["base_id", "seed", "t_vis", "t_div", "t_div_lat", "reason"]], on=["base_id", "seed"], how="left")
     c = c.join(mode.add_prefix("mode_"), on=["base_id", "seed"])
@@ -87,7 +95,7 @@ def exam_frames(set_: str = "carla_p6") -> pd.DataFrame:
     """Window frames of every reading. priority 0 = bypass (x10, x00) + wnull + shoulder on seed 0; 1 = the same on
     seeds 1-2; 2 = negotiation and mirror (x11 / x01 / mirror)."""
     t = pd.read_parquet(proc(set_, "index.parquet"), columns=["frame_name", "base_id", "seed", "world", "k"])
-    c = cases_table()
+    c = cases_table(set_)
     c.to_parquet(proc(set_, "nq3_cases.parquet"), index=False)
     seed0 = c[c.seed == 0].set_index("base_id")
     key = t.set_index(["base_id", "seed", "world"]).sort_index()
@@ -134,7 +142,8 @@ def exam_frames(set_: str = "carla_p6") -> pd.DataFrame:
 # ---------------------------------------------------------------- judge (rule 7)
 
 READ_WORLDS = {"bypass": ("x10", "x00"), "wnull": ("wnull", "x10"), "shoulder": ("shoulder", "x00"),
-               "neg": ("x11", "x01"), "mirror": ("mirror", "x01")}
+               "neg": ("x11", "x01"), "mirror": ("mirror", "x01"), "neg10": ("x11", "x10")}
+READ_SRC = {"neg10": "neg"}           # the reading whose window supplies the first world's frames
 
 
 def pairs(set_: str = "carla_p6") -> pd.DataFrame:
@@ -145,7 +154,7 @@ def pairs(set_: str = "carla_p6") -> pd.DataFrame:
     c = pd.read_parquet(proc(set_, "nq3_cases.parquet"))
     out = []
     for rd, (wa, wb) in READ_WORLDS.items():
-        f = fr[fr.reading == rd]
+        f = fr[fr.reading == READ_SRC.get(rd, rd)]
         a = f[f.world == wa][["base_id", "seed", "k", "frame_name"]]
         b = fr[fr.world == wb][["base_id", "seed", "k", "frame_name"]].drop_duplicates(["base_id", "seed", "k"])
         m = a.merge(b, on=["base_id", "seed", "k"], suffixes=("_a", "_b"))
@@ -330,9 +339,9 @@ def world_modes(s: pd.DataFrame, pred: np.ndarray) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def mode_agreement(wm: pd.DataFrame) -> pd.DataFrame:
-    """Examinee vs expert world mode (N1 worlds.csv), wait_then_bypass_[LR] collapsed, per world type."""
-    w = pd.read_csv(N1 / "worlds.csv", dtype={"base_id": str})[["base_id", "seed", "world", "mode"]]
+def mode_agreement(wm: pd.DataFrame, set_: str = "carla_p6") -> pd.DataFrame:
+    """Examinee vs expert world mode (the set's worlds.csv), wait_then_bypass_[LR] collapsed, per world type."""
+    w = pd.read_csv(SETS[set_]["stats"] / "worlds.csv", dtype={"base_id": str})[["base_id", "seed", "world", "mode"]]
     m = wm.merge(w, on=["base_id", "seed", "world"], suffixes=("", "_expert"))
     col = lambda x: x.str.replace("wait_then_bypass_[LR]", "wait_then_bypass", regex=True)  # noqa: E731
     m["agree"] = col(m["mode"]) == col(m["mode_expert"])
