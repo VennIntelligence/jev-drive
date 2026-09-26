@@ -495,7 +495,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False):
         t3, past3 = t3a[keep].reset_index(drop=True), past3a[keep]
         op3 = p5_openpilot.load(t3, MODELS, sub="op_streams")
         lead3 = p5_openpilot.load(t3, MODELS, ("temporal", "lead", "lead_prob"), sub="op_streams_lead")
-    z = np.load(data_dir() / I3_EXAM / "preds_i3.npz")
+    z = np.load(data_dir() / I3_EXAM / "preds_i3.npz", allow_pickle=True)
     assert (z["frame_name"].astype(str) == t3.frame_name.to_numpy()).all()
     ego = E.ego_input(t3, past3)
     v_ego = np.linalg.norm(past3[:, -1, 2:4], axis=1)
