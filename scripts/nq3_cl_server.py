@@ -134,7 +134,7 @@ def main():
                 sets.append(jpg)
                 full = len(sets) == 4
                 fut_q = ex.submit(fq, [sets[j][c] for c in range(3) for j in range(4)]) \
-                    if arm == "mc" and full else None
+                    if arm in ("mc", "mc_real0") and full else None
                 fut_y = ex.submit(fy, jpg) if arm == "student_b" else None
                 img2 = P5.render_blobs([jpg])[0]
                 t_r = time.perf_counter()
@@ -161,7 +161,7 @@ def main():
                     else:
                         dd = decode(raw, m.slices, float(meta.get("speed", 0.0)))
                         path = np.asarray(openpilot_to_rear(dd["plan_pos"], dd["plan_yaw"], T_IDXS, front_xy), np.float64)
-                elif arm == "mc" and q is None:          # the first three camera sets of a route: no 4-frame clip yet
+                elif arm in ("mc", "mc_real0") and q is None:          # the first three camera sets of a route: no 4-frame clip yet
                     path = heads.predict("ridge_late", ego, op)
                 else:
                     path = heads.predict(arm, ego, op, q=q, tok=tok)

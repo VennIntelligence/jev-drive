@@ -121,9 +121,24 @@ class Heads:
         h = _gelu(h @ p["sb_w2"].T + p["sb_b2"])
         return h @ p["sb_w4"].T + p["sb_b4"]
 
+    def mcr_delta(self, q: np.ndarray, op: np.ndarray) -> np.ndarray:
+        """mc_real0 (lane D's Q4a package, runs/nq3/q4a/mc_real0): elicit_e1.correction, the mean over the five fold
+        heads of (z(x) - zbar) W in float64."""
+        if not hasattr(self, "mcr"):
+            z = np.load(Path(os.environ["DATA_DIR"]) / "runs" / "nq3" / "q4a" / "mc_real0" / "heads.npz")
+            self.mcr = [{k: z[f"{k}{i}"] for k in ("W", "zbar", "mq", "sq", "mo", "so")} for i in range(int(z["n"]))]
+        q, op = np.asarray(q, np.float64), np.asarray(op, np.float64)
+        out = 0.0
+        for h in self.mcr:
+            zz = np.concatenate([(q - h["mq"]) / h["sq"] / np.sqrt(len(q)), (op - h["mo"]) / h["so"] / np.sqrt(len(op))])
+            out = out + (zz - h["zbar"]) @ h["W"]
+        return out / len(self.mcr)
+
     def predict(self, arm: str, ego, op, q=None, tok=None) -> np.ndarray:
         y = self.prior(ego, op)
-        if arm == "mc":
+        if arm == "mc_real0":
+            y = y + self.mcr_delta(q, op)
+        elif arm == "mc":
             y = y + self.mc_delta(q, op)
         elif arm == "student_b":
             y = y + self.student_delta(op, tok)
@@ -238,12 +253,28 @@ def export(rl):
                                               "lam_mc": float(MC.LAMS[best]), "apply_check": dif}, indent=1))
 
 
+def convert_mc_real0():
+    """runs/nq3/q4a/mc_real0/heads.pt (torch list of elicit_e1 fold dicts) -> heads.npz for the numpy head server."""
+    import torch
+    d = Path(os.environ["DATA_DIR"]) / "runs" / "nq3" / "q4a" / "mc_real0"
+    hs = torch.load(d / "heads.pt", map_location="cpu", weights_only=False)
+    out = {"n": np.int64(len(hs))}
+    for i, h in enumerate(hs):
+        f = lambda x: np.asarray(x.double().numpy() if hasattr(x, "double") else x, np.float64)  # noqa: E731
+        out.update({f"W{i}": f(h["W"]), f"zbar{i}": f(h["zbar"]), f"mq{i}": f(h["q"][0]), f"sq{i}": f(h["q"][1]),
+                    f"mo{i}": f(h["op"][0]), f"so{i}": f(h["op"][1])})
+    np.savez(d / "heads.npz", **out)
+    print("mc_real0 heads.npz: %d fold heads" % len(hs))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("export",))
+    ap.add_argument("step", choices=("export", "convert-mc-real0"))
     a = ap.parse_args()
+    if a.step == "convert-mc-real0":
+        return convert_mc_real0()
     rl = RunLog("nq3_cl", a.step)
     export(rl)
     rl.close()

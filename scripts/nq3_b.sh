@@ -90,7 +90,7 @@ srv_stop_all() { local f; for f in "$B"/srv/*.pid; do [[ -e $f ]] && srv_stop "$
 servers_for() {  # servers_for <arm> <gpu>: the model servers an arm needs on one GPU
     local arm=$1 g=$2
     case $arm in
-        cl1) ;;
+        cl1|tfv6|bridgedrive|simlingo|blue) ;;
         cl2|cl9_cl2) srv_start op-cinque-g$g "$g" "$PY_OP" scripts/zeroshot_policy_server.py cinque --pool "$WORKERS" ;;
         cl7) srv_start op-lebowski-g$g "$g" "$PY_OP" scripts/zeroshot_policy_server.py lebowski ;;
         cl8) srv_start alpamayo-g$g "$g" "$PY_ALP" scripts/zeroshot_policy_server.py alpamayo ;;
@@ -141,6 +141,7 @@ arm_cfg() {  # arm_cfg <arm> <gpu> <seed> <dump_every> -> path of the agent conf
         cl4) echo "{$head, \"arm\": \"mc\", \"socket\": \"$B/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl5) echo "{$head, \"arm\": \"q2\", \"socket\": \"$B/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl5d) echo "{$head, \"arm\": \"q2d\", \"socket\": \"$B/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
+        mc_real0) echo "{$head, \"arm\": \"mc_real0\", \"socket\": \"$B/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl6) echo "{$head, \"arm\": \"student_b\", \"socket\": \"$B/srv/heady-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
     esac > "$f"
     echo "$f"
@@ -154,6 +155,7 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
     local arm=$1 seed=$2 routes=$3 est=$4 dump=${5:-0} out=${6:-$B/arms/$1/s$2}
     local sel k=0 pids=() g t0=$SECONDS try
     mkdir -p "$out"
+    rm -f "$out"/claims/*.lock        # the chain runs one arm at a time: any claim left here is a dead runner's
     CFG_TAG=$(echo "$out" | md5sum | cut -c1-8)
     case $routes in
         all) sel=(--routes "$XML" --towns all) ;;
@@ -170,6 +172,11 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
             servers_for "$arm" "$g" || error "server start failed for $arm on GPU $g" "$B/log.txt"
         done
         for g in $GPUS; do
+            if [[ $arm =~ ^(tfv6|bridgedrive|simlingo|blue)$ ]]; then     # CL10: author agents as shipped
+                B_CPUS=$B_CPUS scripts/nq3_b_cl10.sh "$arm" "$g" "$WORKERS" $((300 + 30 * g)) "$seed" "$out" \
+                    "$([[ $routes == all ]] && echo all || echo "${sel[3]}")" >> "$out/runner-g$g.log" 2>&1 &
+                pids+=($!); echo "${pids[*]}" > "$out/runner.pids"; sleep 20; continue
+            fi
             local cfg; cfg=$(arm_cfg "$arm" "$g" "$seed" "$dump")
             taskset -c "$B_CPUS" "$PY_CARLA" scripts/b2d_run.py "${sel[@]}" --workers "$WORKERS" \
                 --server-index $((300 + 30 * g)) --index-span 30 --gpu-rank "$g" --tm-seed "$seed" --no-spectator \
@@ -308,21 +315,24 @@ chain() {
     [[ -e $B/cl0/DONE ]] || error "CL0 (smoke + rule-8 equivalence) has not passed; run the smoke first"
     [[ -e $B/cl1_expert/DONE ]] || expert "${GPUS// /,}"
     # step = "arm seed routes estimate_h"
-    local -a Q=("cl1 0 all ${EST_CL1:-1.0}" "cl2 0 all ${EST_CL2:-1.5}" "cl3 0 all ${EST_CL3:-1.5}" "cl4 0 all ${EST_CL4:-2.0}"
-                "cl6 0 all ${EST_CL6:-1.5}" "cl7 0 all ${EST_CL7:-1.5}" "cl8 0 all ${EST_CL8:-3.0}"
-                "cl2 1 all ${EST_CL2:-1.5}" "cl3 1 all ${EST_CL3:-1.5}" "cl4 1 all ${EST_CL4:-2.0}"
-                "cl2 2 all ${EST_CL2:-1.5}" "cl3 2 all ${EST_CL3:-1.5}" "cl4 2 all ${EST_CL4:-2.0}")
+    local -a Q=("cl1 0 all ${EST_CL1:-1.0}" "cl2 0 all ${EST_CL2:-1.5}" "cl3 0 all ${EST_CL3:-2.0}" "cl4 0 all ${EST_CL4:-4.5}"
+                "cl6 0 all ${EST_CL6:-2.5}" "cl7 0 all ${EST_CL7:-1.5}" "cl8 0 all ${EST_CL8:-4.0}"
+                "cl2 1 all ${EST_CL2:-1.5}" "cl3 1 all ${EST_CL3:-2.0}" "cl4 1 all ${EST_CL4:-4.5}"
+                "cl2 2 all ${EST_CL2:-1.5}" "cl3 2 all ${EST_CL3:-2.0}" "cl4 2 all ${EST_CL4:-4.5}"
+                "tfv6 0 all ${EST_CL10:-3.0}" "bridgedrive 0 all ${EST_CL10:-3.0}" "simlingo 0 all ${EST_CL10:-3.0}"
+                "blue 0 all ${EST_CL10:-3.0}")
     local inserted=0 appended=0 s
     while (( ${#Q[@]} )); do
         maybe_expand
         if (( ! inserted )) && [[ -e $NQ/q2/closed_loop_head/READY ]]; then
-            local ob=${EST_CL5:-1.0}
+            local ob=${EST_CL5:-0.8}
             Q=("cl5 0 obstacle $ob" "cl5d 0 obstacle $ob" "cl5 1 obstacle $ob" "cl5d 1 obstacle $ob"
                "cl5 2 obstacle $ob" "cl5d 2 obstacle $ob" "${Q[@]}")
             inserted=1; ev insert '"what": "cl5, cl5d"'; log "Q2 head READY: CL5 / CL5d inserted"
         fi
         if (( ! appended )) && [[ -e $NQ/q4a/PASS ]]; then
-            Q+=("mc_real0 0 all ${EST_CL4:-2.0}"); appended=1; ev append '"what": "mc_real0"'; log "Q4a PASS: mc_real0 appended"
+            "$PY_VENV" -m jevdrive.nq3_cl convert-mc-real0 >> "$B/log.txt" 2>&1 || error "mc_real0 package conversion failed" "$B/log.txt"
+            Q+=("mc_real0 0 all ${EST_CL4:-4.5}"); appended=1; ev append '"what": "mc_real0"'; log "Q4a PASS: mc_real0 appended"
         fi
         s=${Q[0]}; Q=("${Q[@]:1}")
         printf '%s\n' "${Q[@]}" > "$B/QUEUE"
