@@ -1,0 +1,407 @@
+{
+  "deadline": "2026-09-27T23:59:00+09:00",
+  "poll_s": 15,
+  "jobs": [
+    {
+      "id": "q6-inputs",
+      "command": ".venv/bin/python scripts/cx_orchestrator.py preflight --job q6",
+      "cpus": "180-191",
+      "after": [],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 1800,
+      "locks": [
+        "q6-inputs"
+      ],
+      "artifacts": [],
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q4b-inputs",
+      "command": ".venv/bin/python scripts/cx_orchestrator.py preflight --job q4b",
+      "cpus": "192-195,197-199",
+      "after": [],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 1800,
+      "locks": [
+        "q4b-inputs"
+      ],
+      "artifacts": [],
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-rt-wod",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 rt-wod",
+      "cpus": "180-191",
+      "after": [
+        "q6-inputs"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-rt-wod"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/wod_deltas.csv",
+        "$DATA_DIR/runs/nq3/q6/wod_activation.csv"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/rt-wod",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q4b-hydra",
+      "command": ".venv/bin/python -m jevdrive.nq3_q4b hydra",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q4b-inputs"
+      ],
+      "gpu_gb": 20,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q4b-hydra"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q4b/navridge.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s0.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s1.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_cinque_s2.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s0.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s1.npz",
+        "$DATA_DIR/runs/nq3/q4b/sel/sel_lebowski_s2.npz"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q4b/navridge.npz",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q4b-compat",
+      "command": ".venv/bin/python -m jevdrive.nq3_q4b compat",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q4b-hydra"
+      ],
+      "gpu_gb": 0,
+      "pids": 64,
+      "threads": 2,
+      "timeout_s": 7200,
+      "locks": [
+        "q4b-compat"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q4b/q4b_compat.csv",
+        "$DATA_DIR/runs/nq3/q4b/q4b_verdict.json"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q4b/q4b_verdict.json",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 2
+    },
+    {
+      "id": "q4b-exam",
+      "command": ".venv/bin/python -m jevdrive.nq3_q4b exam",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q4b-compat"
+      ],
+      "gpu_gb": 4,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q4b-exam"
+      ],
+      "artifacts": [],
+      "artifact_any": [
+        [
+          "$DATA_DIR/runs/nq3/q4b/exam.skipped",
+          "$DATA_DIR/runs/nq3/q4b/q4b_p5_criteria.csv"
+        ]
+      ],
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-rt-nav",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 rt-nav",
+      "cpus": "180-191",
+      "after": [
+        "q6-rt-wod"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-rt-nav"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/nav/jobs.txt",
+        "$DATA_DIR/runs/nq3/q6/navsim_activation.csv",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s0.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s1.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_cinque_s2.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s0.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s1.npz",
+        "$DATA_DIR/runs/nq3/q6/nav/navtest_q6vj_lebowski_s2.npz"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/rt-nav",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-rt-score",
+      "command": "OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NAVSIM_THREADS=6 scripts/real_g1_score.sh \"$DATA_DIR/runs/nq3/q6/nav/jobs.txt\" 2 | tee \"$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-score/score.log\"; ! grep -q FAILED \"$DATA_DIR/runs/nq4/cx/orchestration/jobs/q6-rt-score/score.log\"",
+      "cpus": "180-191",
+      "after": [
+        "q6-rt-nav"
+      ],
+      "gpu_gb": 0,
+      "pids": 768,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-rt-score"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s0/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s1/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_cinque_s2/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s0/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s1/*/*.csv",
+        "$DATA_DIR/runs/navsim/eval/v1_navtest_q6vj_lebowski_s2/*/*.csv"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/rt-score",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 12,
+      "max_cores": 12
+    },
+    {
+      "id": "q6-refit",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --backbone vjepa2 --seed 0",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-inputs"
+      ],
+      "gpu_gb": 20,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-refit"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/*/preds_obs.npz"
+      ],
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-refit-check",
+      "command": "d=$(ls -d \"$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/\"*/ | tail -1); .venv/bin/python -m jevdrive.nq3_q6 sf-refit-check --fit-dir \"$d\"",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-refit"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-refit-check"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/sf_refit_check.csv"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/sf-refit-check",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-sf-fit-s0",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 0",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-refit-check"
+      ],
+      "gpu_gb": 20,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-sf-fit-s0"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed0/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed0/*/preds_obs.npz"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/sf-fit-s0",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-sf-fit-s1",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 1",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-refit-check"
+      ],
+      "gpu_gb": 20,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-sf-fit-s1"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed1/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed1/*/preds_obs.npz"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/sf-fit-s1",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-sf-fit-s2",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 2",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-refit-check"
+      ],
+      "gpu_gb": 20,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-sf-fit-s2"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed2/*/criteria.csv",
+        "$DATA_DIR/runs/nq3/q6/fits/sf-seed2/*/preds_obs.npz"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/sf-fit-s2",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-sf-report",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-report",
+      "cpus": "192-195,197-199",
+      "after": [
+        "q6-sf-fit-s0",
+        "q6-sf-fit-s1",
+        "q6-sf-fit-s2"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-sf-report"
+      ],
+      "artifacts": [
+        "$REPO/research/results/nq3/q6/vjepa_single_frame.csv",
+        "$REPO/research/results/nq3/q6/vjepa_single_frame_verdict.json"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/sf-report",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q6-rt-verdict",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 rt-verdict",
+      "cpus": "180-191",
+      "after": [
+        "q6-rt-score"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-rt-verdict"
+      ],
+      "artifacts": [
+        "$REPO/research/results/nq3/q6/vjepa_real_verdict.csv",
+        "$REPO/research/results/nq3/q6/vjepa_real_summary.json"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/rt-verdict",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    },
+    {
+      "id": "q5-child",
+      "command": "WJ_BS=8 SCORE_THREADS=6 scripts/nq3_d/q5.sh",
+      "cpus": "180-195,197-199",
+      "after": [],
+      "gpu_gb": 20,
+      "pids": 1000,
+      "threads": 4,
+      "timeout_s": 21600,
+      "locks": [
+        "q5"
+      ],
+      "artifacts": [
+        "$DATA_DIR/runs/nq3/q5/verify.json",
+        "$REPO/research/results/nq3/q5/ego_nusc.csv",
+        "$REPO/research/results/nq3/q5/ego_navtest.csv",
+        "$REPO/research/results/nq3/q5/ego_verdict.csv",
+        "$REPO/research/results/nq3/q5/selectivity.csv",
+        "$REPO/research/results/nq3/q5/rig_perturbation.csv"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q5/DONE",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 10,
+      "max_cores": 10
+    },
+    {
+      "id": "q6-table",
+      "command": ".venv/bin/python -m jevdrive.nq3_q6 table",
+      "cpus": "180-191",
+      "after": [
+        "q6-sf-report",
+        "q6-rt-verdict",
+        "q5-child",
+        "q4b-exam"
+      ],
+      "gpu_gb": 0,
+      "pids": 128,
+      "threads": 4,
+      "timeout_s": 7200,
+      "locks": [
+        "q6-table"
+      ],
+      "artifacts": [
+        "$REPO/research/results/nq3/q6/main_table.csv",
+        "$REPO/research/results/nq3/q6/main_table.md"
+      ],
+      "existing_done": "$DATA_DIR/runs/nq3/q6/done/table",
+      "cpu_pool": "142-149,180-195,197-203",
+      "min_cores": 2,
+      "max_cores": 4
+    }
+  ]
+}
