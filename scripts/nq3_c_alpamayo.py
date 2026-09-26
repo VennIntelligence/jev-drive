@@ -368,6 +368,70 @@ def cmd_check(a, log):
         raise SystemExit("rule 8 check failed")
 
 
+def cmd_bench(a, log):
+    """Exactness-preserving GPU knobs (I.Config: the repo's expert CUDA graphs, static KV cache) against the shipped
+    default on the same frames and seeds, configs interleaved per frame (the card is shared, so its load drifts);
+    batch B > 1 for reference (a batched sampler draws differently, so it is never bit-identical)."""
+    import copy
+    t = frames()
+    sub = t.iloc[np.sort(np.random.default_rng(1).choice(len(t), a.n, replace=False))].reset_index(drop=True)
+    model, processor = I.load(CFG.attn)
+    prep = Prep(processor)
+    items = list(prefetch(prep, list(sub.itertuples()), a.workers, 4 * a.workers))
+    names = a.configs.split(",")
+    cfgs = {"default": CFG, "graph": I.Config(name="graph", expert_graph=True),
+            "static": I.Config(name="static", static_cache=True),
+            "graph_static": I.Config(name="graph_static", expert_graph=True, static_cache=True)}
+    I.apply(model, CFG)
+    infer(model, to_cuda(items[0]["inputs"]), 0)
+    res = {c: [] for c in names}
+    for p in items:
+        for c in names:
+            I.apply(model, cfgs[c])
+            if c != "default":
+                infer(model, to_cuda(copy.deepcopy(p["inputs"])), 12345)       # warm-up / capture at this shape
+            res[c].append(infer(model, to_cuda(copy.deepcopy(p["inputs"])), p["seed"]))
+    I.apply(model, CFG)
+    rows = []
+    for c in names:
+        d = [float(np.abs(o["xyz"] - r["xyz"]).max()) for o, r in zip(res[c], res["default"])]
+        same = [o["cot"] == r["cot"] for o, r in zip(res[c], res["default"])]
+        rows.append({"config": c, "s_per_frame": float(np.mean([o["wall"] for o in res[c]])),
+                     "traj_max_abs_m": max(d), "cot_identical": int(sum(same)), "n": len(items)})
+    for B in [int(b) for b in a.batches.split(",") if b]:
+        for k in range(0, len(items) - B + 1, B):
+            grp = items[k:k + B]
+            tok = [g["inputs"]["tokenized_data"] for g in grp]
+            batch = {"tokenized_data": {kk: torch.cat([x[kk] for x in tok]) for kk in tok[0].keys()},
+                     "ego_history_xyz": torch.cat([g["inputs"]["ego_history_xyz"] for g in grp]),
+                     "ego_history_rot": torch.cat([g["inputs"]["ego_history_rot"] for g in grp])}
+            if k == 0:
+                infer_b(model, to_cuda(batch), 0)
+            o = infer_b(model, to_cuda(batch), grp[0]["seed"])
+            rows.append({"config": f"batch{B}", "s_per_frame": o["wall"] / B, "n": B,
+                         "traj_max_abs_m": float(max(np.abs(o["xyz"][i] - res["default"][k + i]["xyz"]).max()
+                                                     for i in range(B))),
+                         "cot_identical": int(sum(o["cot"][i] == res["default"][k + i]["cot"] for i in range(B)))})
+            log.info(json.dumps(rows[-1]))
+    df = pd.DataFrame(rows)
+    df.to_csv(log.dir / "bench.csv", index=False)
+    log.info("\n" + df.to_string())
+    log.event("bench", rows=rows)
+
+
+def infer_b(model, inputs: dict, seed: int) -> dict:
+    torch.cuda.manual_seed_all(seed)
+    torch.manual_seed(seed)
+    with torch.autocast("cuda", dtype=torch.bfloat16), torch.no_grad():
+        t0 = time.perf_counter()
+        xyz, _, extra = model.sample_trajectories_from_data_with_vlm_rollout(
+            data=inputs, top_p=CFG.top_p, temperature=CFG.temperature, num_traj_samples=1, num_traj_sets=1,
+            max_generation_length=CFG.max_gen, return_extra=True, diffusion_kwargs={"inference_step": CFG.flow_steps})
+        torch.cuda.synchronize()
+    return {"xyz": xyz[:, 0, 0].float().cpu().numpy(), "cot": [str(c) for c in np.asarray(extra["cot"]).reshape(-1)],
+            "wall": time.perf_counter() - t0}
+
+
 # ---------------------------------------------------------------- run
 
 def cmd_run(a, log):
@@ -406,7 +470,7 @@ def cmd_run(a, log):
             ui += 1
         if not part:
             break
-        rows = [r for _, g in part for r in g.itertuples()]
+        rows, t_part = [r for _, g in part for r in g.itertuples()], time.time()
         for p in prefetch(prep, rows, a.workers, 4 * a.workers):
             o = infer(model, to_cuda(p["inputs"]), p["seed"])
             recs.append(record(p, o))
@@ -416,8 +480,8 @@ def cmd_run(a, log):
         write_part(recs, j)
         j, recs = j + 1, []
         tot = consolidate()
-        rate = (time.time() - t_start) / n
-        log.info(f"{n}/{n_todo} frames this run ({tot} in the outputs), {rate:.2f} s/frame wall, "
+        rate = (time.time() - t_part) / nf                        # the last part's rate decides the next units
+        log.info(f"{n}/{n_todo} frames this run ({tot} in the outputs), {rate:.2f} s/frame wall (last part), "
                  f"{gpu_s / n:.2f} s/frame GPU, peak {torch.cuda.max_memory_allocated() / 2**30:.1f} GB, "
                  f"ETA all {(n_todo - n) * rate / 60:.0f} min")
         log.scalar("s_per_frame", rate, n)
@@ -444,6 +508,12 @@ if __name__ == "__main__":
     c.add_argument("--n", type=int, default=50)
     c.add_argument("--workers", type=int, default=4)
     c.add_argument("--threads", type=int, default=1, help="torch intra-op threads (the processor)")
+    b = sub.add_parser("bench")
+    b.add_argument("--n", type=int, default=8)
+    b.add_argument("--workers", type=int, default=4)
+    b.add_argument("--threads", type=int, default=1)
+    b.add_argument("--configs", default="default,graph,static,graph_static")
+    b.add_argument("--batches", default="4")
     r = sub.add_parser("run")
     r.add_argument("--workers", type=int, default=4)
     r.add_argument("--threads", type=int, default=1, help="torch intra-op threads (the processor)")
@@ -455,5 +525,5 @@ if __name__ == "__main__":
     torch.set_num_threads(a.threads)
     log = RunLog("nq3", "c", "q1_alp", a.cmd)
     log.info(f"args {vars(a)} -> {log.dir}")
-    {"check": cmd_check, "run": cmd_run}[a.cmd](a, log)
+    {"check": cmd_check, "bench": cmd_bench, "run": cmd_run}[a.cmd](a, log)
     log.close()
