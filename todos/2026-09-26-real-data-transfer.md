@@ -125,6 +125,20 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (5) **判格读 Qwen `L18_last` 行人 scope 的点估计**（本节读法写的是「CARLA 上 Qwen 的比值」）：< 2 → 编辑质量不是 E2 的瓶颈，做 G3b；[2, 3) → 做 G3b，标「灰区」；≥ 3 → 停在 G3a。openpilot 与 YOLO 两行只描述。
   (6) **限定先写下**：E2 的分母是「同形补丁贴空路面」的安慰剂（只量管线噪声），CARLA 的分母是昼夜互换（全图外观大变），两者不是同一种 null；按登记用天气 null 判。
   为了不让这一点被数字掩盖，另报一个描述量：两边编辑对的分子本身（各自 x⁺ 标准差单位下的 RMS 位移中位数，CARLA 行人 vs E2 的 0.322 / 0.070 / 0.076）。
+- 2026-09-26 08:36 CST [G3] G3a 判格与 G3b 的登记（写于 G3b 的任何标签、拟合与读数之前）。G3a run `runs/real-data-transfer/g3a/20260926-083005`：CARLA 行人 scope 的 Qwen 比值 **0.23 [0.19, 0.29]** < 2，
+  按读法做 G3b（不是灰区）。数字与读法见结果节。
+  **G3b (1) PDM 标签**：911 个有效对的 token，官方 v1.1（`third_party/navsim-v1.1`，`envs/navsim1`）只为这些 token 建 metric cache（`scripts/elicit_e3_scorer.sh` 同一口径：`run_metric_caching.py` 加 token 过滤、`run_pdm_score.py` 经 `navsim_agent.PrecomputedAgent` 回放）。
+  两条 proposal 的几何**就是 E2 标签 (b) / (c) 自己的轨迹**：「继续」= `elicit_e2_train.cv_path`（t0 速度匀速、最后 0.5 s 的 yaw rate），「刹停」= `ctra(decel=3)`（同一弧线 3 m/s² 减到停）；
+  在 0.5 … 4.0 s 取 (x, y, yaw)，yaw = yaw rate × t（与 CTRA 的积分一致）。这与 E3 (11) 量 79% 时用的几何（沿 logged 路径）不同：00:57 (c) 写的是「同一对 proposal」，标签的数值就是这两条轨迹之差，打分必须打同一对。
+  结果写成 E2 `load_data` 读的 `processed/elicit_e2/navtrain/main/pdm_scores.csv`（token, continue, brake）；打分失败的 token 两列写 NaN，经 E2 原代码 `brake > continue` 为假即标签 0，个数报出。
+  另报描述：刹停优于继续的对数、分差分布、与标签 (b)（规则门）触发的交叉表。
+  **(2) M-C 重训**：`elicit_e2_train.run` 原样重跑（拟合全部 arm、R1 / R2 / R3 的代码一字不改），新增的只是 `E2 pair (c)`（双流；E2 代码里 (c) 只进双流）。**判格读 `E2 pair (c) [cinque]`**，Lebowski 复现；
+  判据同 E2：R1 编辑 / 安慰剂 Δ 幅值中位比 ≥ 2，且 WOD Pedestrians RFS Δ CI 整体 > 0，且直行激活率 ≤ 7%；P5 BA 行人翻转、cut-in Δ、null false-flip 照报。navtrain 对上 openpilot 是真编辑过的，Cinque 双流有效（02:15 的作废只针对 WOD 对）。
+  **3 seed**：E2 的 ridge head 是闭式解，唯一的选择是内层 λ（`reactivity_mc._inner_splits` = 按 log 的 `GroupKFold`，确定性）。seed s ≥ 1 = 把 log 先按 `default_rng(s)` 随机排列再做 3 折（只替换 `_inner_splits`，在 `real_g3` 里包一层，E2 与 M-C 的模块不改）；
+  seed 0 就是原函数，并与已存 E2 run（`e2-train/20260926-020936`）的 (a) / (b) arm 逐项核对（R1 / R2 / R3 表相同，否则停）。λ 若三个 seed 都落在同一格，三个 seed 的数逐位相同，照报。
+  **(3) student**：E5 arm A / B 的配方搬到 navtrain 编辑对（MLP [z_op, e] → 16 点 × 2，零初始化输出层、AdamW、早停与 seed 0–2 同 E5），标签 (c) 为判格 arm、(a) 作描述；
+  e = G0 登记的真实数据 embedding，编辑图上的 YOLO 我在最空的卡上补跑（x⁺ / x⁻ / 安慰剂三侧 t0 帧、三路，约 6 千张，检测配置 = E5 / G0 原样）。损失里的「非配对行 Δ 二阶矩」项、P5 与 WOD 上 embedding 的来源，
+  在看到 G0 的交接说明之后、任何 student 数字之前另起一条登记。
 - 2026-09-26 08:40 CST（box 时钟）[G1] 分步时间估计与 g₁ / g₃ / 统一接口 / I3 的操作化，写于 G1 的任何数字之前（此前只读过 E1 / E5 / I3 / 第 23 条 (e) 的已发表数字与代码）。
   代码 `jevdrive/real_g1.py`，run `runs/real-data-transfer/g1-*/<time>`，小表 `research/results/real-data-transfer/g1/`。g₂ 的标签与训练行、student 的 Δ 等 G0 的交接说明，另记一条，时间早于 g₂ / student 的任何数字。
   **时间估计**（墙钟）：接口 + g₁ + g₃ 工程 1.5 h；g₁ 训练（WOD train 41 万行 × 3 个 L1 × 2 模型，外加 5 折 OOF；navtrain 同样）GPU 约 40 min；lead 头补跑（I3 8.7k 帧、WOD val 那 19 663 帧所在的流、navtest 12k token、
