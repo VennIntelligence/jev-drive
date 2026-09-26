@@ -50,6 +50,20 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - 全部考生只有 stop 替代 → 第三层是公开方法的空白，Q2 是唯一的正例来源。
 - Alpamayo 的 CoT 说 nudge 而轨迹不绕，单列「语言与轨迹不一致率」。
 
+- 2026-09-26 16:40 CST [C] 开工（执行员 C，lane C），分步估时（写于本 lane 任何数字之前）。资源：GPU 6（T2 已收工，与 lane D ≤ 20 GB、T3 SimLingo 尾巴共卡），
+  核段 `taskset -c 150-179`（30 核），OMP / MKL / OpenBLAS / NUMBA 线程 ≤ 30（并行子步骤按份分）。脚本 `scripts/nq3_c.sh`（tmux `jev:nq3-c`），状态 `runs/nq3/c/`。
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | C0 | 代码：P6 判卷模块（规则 7）与考卷帧集、考生适配（openpilot 原生 plan、TFv6、P5 v1 上训的读出零样本；NAVSIM 族与 Alpamayo 由两个子执行员写）、Q2 模块、链式脚本；子集 profiling 与数值一致检查 | 16:40–19:00 | Mac + GPU 6 小量 |
+  | C1 | P6 全部 37 317 帧的特征：Qwen `L18_last`、V-JEPA 2 `mean`、YOLO26x image-plane token | 1.5 h | GPU 6 |
+  | C2 | Q1 推理：openpilot 原生 plan（605 流）、NAVSIM 族 4 个（考卷帧）、Alpamayo 1.5（考卷帧，按实测吞吐定范围）、P5 v1 读出（CPU / GPU 分钟级）；TFv6 读已录的 shadow | 2.5 h（GPU 6 上并行） | GPU 6 |
+  | C3 | Q1 判卷 + 小表 + 图 | 0.3 h | CPU |
+  | C4 | Q2 pilot（v0）：A0–A4 × 2 模型 × 3 seed，按障碍类留一 + 按路线 5 折；backbone 对照 A1 / A3 | 1 h（与 C2 并行起跑） | CPU + GPU 6 |
+  | C5 | 选臂、全部 v0 重训、写 `runs/nq3/q2/closed_loop_head/READY` | 0.2 h，目标 ≤ 00:30 | |
+  | C6 | 等 `runs/nq3/a/v1/DONE`（约 03:00）；v1 帧的 openpilot 流与 backbone 特征 | 0.5 h + 1.5 h | GPU 6 |
+  | C7 | Q2 v1（加 town 留出，必要时 A5） | 1.5 h | CPU + GPU 6 |
+  任何一步超估计 2 倍，脚本停该步写 `runs/nq3/c/ERROR`。
+
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
 特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。
