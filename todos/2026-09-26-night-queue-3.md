@@ -154,6 +154,9 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   7. **链的顺序**（与 todo 列的 Q1 → 判卷 → Q2 不同，因为 Q2 不依赖 Q1 的任何数）：后台起特征 → Q2 pilot（LOCO A0–A3）→ READY → 等特征 → openpilot 原生 plan → P5 读出 → backbone 对照 → route 折 → A4 → 等 NAVSIM 族（最迟 01:30）→ Q1 判卷 → Q2 表 → 等 v1 → v1 准备 → Q2 v1 → 等 Alpamayo（最迟 08:30）→ Q1 终判。
   8. **优化与一致性记录**：openpilot 原生 plan 18.5 ms / 帧（6 流子集，`temporal` 逐位同已存）；V-JEPA 2 110 clip/s（解码受限，5 worker，8.5 min 全量）；Qwen 在共卡上 CPU 受限，每分片 1.2–1.5 s / 帧 → 缩到 priority ≤ 1；模式头从 GPU `ce_solve` 的 58 s / 折改 CPU float64 L-BFGS 25 s / 折（GPU 被五个作业时间片切碎）；A4 共卡上 406 s / 折。
 
+- 2026-09-26 17:45 CST [C] 链重启（17:42，写于任何 pilot 数字之前）：GPU 6 被五个 lane 的作业挤满（86–88 / 96 GB），Qwen 两个分片载入即 OOM、Q2 一折要 6 min。改动：Q2 pilot 先只跑 Cinque（READY 按 Cinque 选），Lebowski 放到 READY 之后（`q2_pilot_leb`）；
+  Qwen 改一个进程 12 个 loader worker，载入 OOM 就等 2 min 重试（最多约 7 h）；GPU 步骤都加了同样的 OOM 重试。P5 读出的子集核对（Cinque、fold 0）已过：prior 0、M-C 2.3e-5 m、`cls_late` 3.2e-5 m、E5 student 6 mm（MLP 训练在 GPU 上不逐位确定）。
+
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
 特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。
