@@ -8,6 +8,10 @@ deviation-log entries [G3], written before any G3 number).
   pdm-prep / pdm-read   label (c) of E2 on the 911 navtrain edit pairs: the official v1.1 PDMS of E2's own "continue"
         (elicit_e2_train.cv_path) and "brake" (ctra, 3 m/s^2) proposals on x+ (scripts/real_g3_pdm.sh runs the devkit),
         written to processed/elicit_e2/navtrain/main/pdm_scores.csv, where elicit_e2_train.load_data reads it
+  g3c   cost table of extending the WOD edit pairs from 216 to every in-corridor pedestrian frame of WOD train (estimate
+        only: E2's measured rates, the 0.8 s SAM scan's corridor frames and their event structure)
+  mc    E2's training and readouts (elicit_e2_train.run, unchanged) with label (c) present; seed s >= 1 only replaces
+        the inner lambda split (reactivity_mc._inner_splits: logs permuted with default_rng(s), then 3 folds)
 
 Run on the box: P5_SET=carla_p5v1_ba python -m jevdrive.real_g3 g3a
 """
@@ -181,15 +185,106 @@ def pdm_read(rl, run_dir: str, cont_csv: str, brake_csv: str):
     rl.event("g3b_pdm", **summ)
 
 
+# ---------------------------------------------------------------- G3c: cost table (no GPU)
+
+# E2's measured rates (elicitation todo, results "E2: WOD ..." and run logs): SAM 3.1 exact scan 1.3 GPU h for 51 970
+# frames; pair build (SAM on 12 clip images + LaMa) 1.6-1.7 s / pair on a free card (6.7 s shared); Qwen 0.254 s / clip
+SAM_S_PER_FRAME = 1.3 * 3600 / 51970
+BUILD_S_PER_PAIR = 1.7
+QWEN_S_PER_CLIP = 0.254
+LAMA_SAM_S_PER_IMG = 0.45            # navtrain build: 0.23-0.74 s / edited image incl. SAM, shared cards
+YOLO_S_PER_FRAME = SAM_S_PER_FRAME / 25   # decision 45: YOLO26x-seg at 1/25 of SAM 3.1's latency
+OP_HISTORY_S = 10.0                  # E2 [E2] 01:22 (3): openpilot's effective memory to edit for a streamed x-
+
+
+def g3c(rl):
+    from . import elicit_e2 as E2, fusion_q4 as Q, waymo as W
+    from .fusion_q2b import calibs, extend
+    df = W.load_index()
+    cal = calibs()
+    full = (df.split == "train").to_numpy() & df.has_future.to_numpy() & df.sequence.isin(cal).to_numpy()
+    n_full, n_seq = int(full.sum()), int(df.sequence[full].nunique())
+    lst = pd.read_parquet(E2.out_root("wod") / "scan_list.parquet")
+    d = Q.load_dets(E2.out_root("wod", "sam"), score=E2.SAM_SCORE)
+    d = d[d.prompt.isin(E2.SAM_PROMPTS) & ((d.y1 - d.y0) >= E2.MIN_PX)]
+    d = Q.lift_dets(d, d.key.map(lst.set_index("key").sequence).to_numpy(), cal)
+    d = d[d.lift_ok & (d.gx > 0) & (d.gdist <= E2.RANGE)]
+    at = pd.Series(np.arange(len(df)), index=W.frame_names(df))
+    _, future = W.load_ego()
+    keep = []
+    for key, g in d.groupby("key"):                      # wod_candidates' corridor test, unchanged
+        path = extend(np.r_[[[0.0, 0.0]], future[at[key], :, :2]], E2.RANGE)
+        if any(E2.seg_dist(q, path) <= E2.CORRIDOR for q in g[["gx", "gy"]].to_numpy(float)):
+            keep.append(int(at[key]))
+    c = pd.DataFrame({"sequence": df.sequence.to_numpy()[keep], "frame": df.frame.to_numpy()[keep]}).sort_values(["sequence", "frame"])
+    # events: runs of consecutive scanned frames (0.8 s apart) in a sequence
+    new = (c.sequence != c.sequence.shift()) | (c.frame.diff() != E2.WOD_THIN)
+    c["event"] = new.cumsum()
+    ev = c.groupby("event").agg(sequence=("sequence", "first"), n=("frame", "size"))
+    dur = ev.n * E2.WOD_THIN / 10.0                       # s, lower bound at 0.8 s sampling
+    n_corr, n_ev = len(c), len(ev)
+    share = n_corr / len(lst)
+    corr_full = share * n_full                            # every in-corridor frame at 10 Hz
+    cand_gap = int(sum(np.ceil(x / E2.WOD_GAP_S) for x in dur))   # E2's one-per-5-s rule at full rate, upper-ish
+    stats = {"train_frames_full": n_full, "train_sequences": n_seq, "scan_frames": len(lst), "scan_corridor_frames": n_corr,
+             "corridor_share": share, "scan_events": n_ev, "event_sequences": int(ev.sequence.nunique()),
+             "event_duration_median_s": float(dur.median()), "event_duration_p90_s": float(dur.quantile(.9)),
+             "full_rate_corridor_frames_est": corr_full, "full_rate_candidates_5s_rule_est": cand_gap, "e2_pairs": 216}
+    rl.info("scan structure\n" + pd.Series(stats).to_markdown(floatfmt=".3f"))
+    gh = lambda sec: sec / 3600  # noqa: E731
+    rows = []
+    def row(option, scan, n_pairs, indep, extra=0.0, note=""):
+        build, qwen = gh(n_pairs * BUILD_S_PER_PAIR), gh(n_pairs * 3 * QWEN_S_PER_CLIP)
+        tot = scan + build + qwen + extra
+        rows.append({"option": option, "pairs": int(round(n_pairs)), "independent_events": int(round(indep)),
+                     "scan_gpu_h": scan, "build_gpu_h": build, "qwen_gpu_h": qwen, "op_stream_edit_gpu_h": extra,
+                     "total_gpu_h": tot, "wall_h_5_cards": tot / 5, "note": note})
+    sam_full, yolo_full = gh(n_full * SAM_S_PER_FRAME), gh(n_full * YOLO_S_PER_FRAME)
+    row("E2 as run (0.8 s SAM scan, one per sequence per 5 s)", gh(len(lst) * SAM_S_PER_FRAME), 216, 216, note="measured")
+    row("full 10 Hz SAM scan, one per sequence per 5 s", sam_full, cand_gap, cand_gap)
+    row("full 10 Hz SAM scan, every in-corridor frame", sam_full, corr_full, n_ev, note="frames of one event are near-duplicates")
+    row("full 10 Hz YOLO scan + SAM masks on hits, every in-corridor frame", yolo_full, corr_full, n_ev,
+        note="YOLO recall not below SAM (decision 45); SAM only inside the build")
+    row("existing 0.8 s scan, every in-corridor frame (no new scan)", 0.0, n_corr, n_ev)
+    op_imgs = n_ev * OP_HISTORY_S * 10 + corr_full    # front history per event + the event's own frames
+    row("full YOLO scan, every in-corridor frame, + openpilot stream edited", yolo_full, corr_full, n_ev,
+        extra=gh(op_imgs * LAMA_SAM_S_PER_IMG), note="per-frame LaMa; video-consistent inpainting would add to this")
+    T = pd.DataFrame(rows)
+    T.to_csv(rl.dir / "g3c_cost.csv", index=False)
+    pd.DataFrame([stats]).to_csv(rl.dir / "g3c_scan_structure.csv", index=False)
+    rl.info("G3c cost table\n" + T.to_markdown(index=False, floatfmt=".2f"))
+
+
+# ---------------------------------------------------------------- G3b (2): M-C retrain, E2's code
+
+def _seeded_inner_splits(seed: int):
+    def splits(groups: np.ndarray, k: int = 3):
+        u = np.random.default_rng(seed).permutation(np.unique(groups))
+        f = pd.Series(np.arange(len(u)) % k, index=u)[groups].to_numpy()
+        return [(np.flatnonzero(f != j), np.flatnonzero(f == j)) for j in range(k)]
+    return splits
+
+
+def mc(rl, seed: str = "0"):
+    from . import elicit_e2_train as E2T, reactivity_mc as MC
+    assert os.environ.get("P5_SET") == "carla_p5v1_ba", "R2 of E2 reads the P5 v1 BA set: set P5_SET"
+    s = int(seed)
+    if s:
+        MC._inner_splits = _seeded_inner_splits(s)
+    rl.event("g3b_mc_seed", seed=s)
+    E2T.run(rl)
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("g3a", "pdm-prep", "pdm-read"))
+    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc"))
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
-    rl = RunLog("real-data-transfer", "g3" + a.step.replace("-", "") if not a.step.startswith("g3") else a.step)
-    {"g3a": g3a, "pdm-prep": pdm_prep, "pdm-read": pdm_read}[a.step](rl, *a.args)
+    name = a.step if a.step.startswith("g3") else "g3" + a.step.replace("-", "") + (f"-s{a.args[0]}" if a.step == "mc" else "")
+    rl = RunLog("real-data-transfer", name)
+    {"g3a": g3a, "g3c": g3c, "pdm-prep": pdm_prep, "pdm-read": pdm_read, "mc": mc}[a.step](rl, *a.args)
     rl.close()
 
 
