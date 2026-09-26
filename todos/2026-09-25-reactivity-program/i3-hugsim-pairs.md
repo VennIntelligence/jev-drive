@@ -243,3 +243,18 @@ Lebowski 的双流 − prior：合并 −3.1 pp [−4.5, −1.8]，三个 family
    另一面是非反应帧误翻从 18% 降到 4.6%。和 E1 在 WOD 上的「有害」是同一个现象的温和版本：CARLA 上配对激发出来的修正项在真实外观上主要贡献噪声，而不是对着车辆的反应。
 3. **Qwen 流单独不动**：Qwen `ridge_late` 只有 2.8%，和它在 P5 上 cut-in 近 0 一致（第 42 条：Qwen 流管行人、openpilot 流管车辆）；I3 没有行人，所以 M-C 设计上的主要收益（行人）在这里测不到。
 4. 限定：只有车辆 family；标签是规则 expert（匀速外推 + 碰撞，只纵向）；null 只有 24 个场景（cut-in 同车同道版本），τ 与 null false-flip 都只由它们定；考题容易（reactive Δ 中位 −5.5 m/s，车从第一帧起就在）。
+
+## 在 I3 上重训（real-data transfer G2，2026-09-26）
+
+预登记与全部表在 [real-data transfer todo](../2026-09-26-real-data-transfer.md) 的 G2 节与偏离日志 [G2] 条目，小表 [research/results/real-data-transfer/g2/](../../research/results/real-data-transfer/g2/)，代码 `jevdrive/real_g2.py`。
+做法：65 个场景按场景分 5 折（3 个分折 seed），每折只用其余场景的 4 337 个配对（x⁺ / x⁻ 与 null）训 M-C 双流（配对差分闭式解，同 M-C）、hard-example 与均匀对照、E5 的 student A / B（openpilot ⊕ YOLO 检测 embedding）；
+prior 冻结为上一节 CARLA 拟合的 `ridge_late`（零样本 70%），judge 是 `p5_exam.exam` 原样，τ 由 held-out 的 null 定。登记的判据：I3 held-out 翻转 ≥ CARLA 训的 M-C（58.7%）且 null ≤ 7%，并且 WOD Cut_ins RFS Δ CI 不整体 < 0、直行激活 ≤ 7%。
+
+| Cinque，合并 1 832 个 reactive 帧 | CARLA 训（零样本） | I3 训（held-out 场景，3 seed） | 对 prior（pp） | cut-in（prior 66.7%） | WOD Cut_ins RFS Δ | WOD 直行激活 |
+|:--|:--|:--|:--|:--|:--|:--|
+| M-C pair | 58.7% | 62.4–64.3% | −5.7 … −7.6 | 46.3% → 65.3–66.7% | −3.4 … −3.5（CI < 0） | 86–87% |
+| student A | 59.8–62.9% | 65.0–67.7% | −2.2 … −5.0 | 64.8% → 62.0–65.3% | −0.06 … −0.12（跨零） | 6.7–8.9% |
+
+读法：I3 自己的配对把 CARLA 训的 M-C 在 I3 上的害去掉大半（cut-in +20 pp），过了登记的 I3 那条线，但没有一个 head（含对照）超过 prior，也就是在这 65 个场景上配对差分没有学到 openpilot 读出之外的东西；
+搬到 WOD / NAVSIM 上，I3 训的线性 M-C 比 CARLA 训的更有害（WOD 全部帧 −3.4、NAVSIM 接近车辆 token −33 PDMS），student 在 WOD Cut_ins 上跨零、直行激活贴着 7% 线，判格随 seed 变。
+这套数据作为**考卷**仍然成立（外观真实、几何一致）；作为**训练集**，65 个场景、规则标签、5 Hz 的量不够把一个在真实 log 上有用的车辆 Δ 训出来。详见 todo 的 G2 结果与[第 44 条](../../research/decisions.md)。

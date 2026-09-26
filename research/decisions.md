@@ -3041,7 +3041,7 @@ nuScenes 的检查 (d) 是批量之后补做的目检。
 **会推翻或推进本条的证据**：I1（P5 v1：PDM-Lite、101 条路线 × 3 seed）上 Q9b 行人翻转过 20%（那就是数据量问题，Qwen 空间 token 可以留作行人通道）；Q6 在 PDM-Lite 标签下 GT 规则 floor ≥ 80%（反应主要是几何）；
 给 SAM 接地点加地面高度估计后 P5 / nuScenes 行人召回过登记门槛（结构化感知通道成立）。
 
-## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的（WOD 与 NAVSIM 都是；不含 Qwen 的 20 Hz student 害小一个量级但仍有害）；log 里挖孪生对、真实帧抹人造对，两条路本轮都没把它带到真实数据上（**待定**）
+## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的（WOD 与 NAVSIM 都是；不含 Qwen 的 20 Hz student 害小一个量级但仍有害）；log 里挖孪生对、真实帧抹人造对、HUGSIM 3DGS 车辆配对重训，三条路都没把它带到真实数据上（**待定**；2026-09-26 G2 后就地修正，原写「两条路」）
 
 2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-elicitation-program.md](../todos/2026-09-26-elicitation-program.md)（E1–E3），小表在 [research/results/elicitation/](results/elicitation/)。
 接第 42 条：M-C 双流 reaction head（Qwen `L18_last` ⊕ openpilot `temporal`，线性，配对差分监督）在 P5 v1 BA 集上行人翻转 43%。这一条问它能不能走出 CARLA。
@@ -3132,14 +3132,27 @@ NAVSIM 上 g₂ 开度 0.43（直行 0.50，navtrain 标签里接近车辆占 40
 即「前车逼近时加上 M-C 那个普遍偏慢的修正」，是车辆纵向减速，不是行人反应；student 的 Δ 不减速，同一个 g₃ 下为负；WOD 上 g₃ 几乎不开（Δ 为 0），I3 上 −1.6 pp。**G1c（第二轮补的对照，2026-09-26 就地修正；原写「一个常数减速乘 g₃ 是否一样好还没测」）**：把 M-C 的 Δ 换成它在 g₃ 开门 token 上的 g₃ 加权平均纵向形状（与场景无关的常数刹车），g₃ × 常数在 NAVSIM 上 +0.53 [+0.40, +0.67] / +0.42 PDMS，比 g₃ × M-C 还高，配对差 (M-C − 常数) −0.07 [−0.12, −0.02] / −0.06 [−0.09, −0.03]，CI 整体 < 0；按登记读法，这个正数由「lead 门 + 刹车」解释，与 CARLA 配对学到的逐帧方向无关，g₃ × 常数本身按 G1 判据「有用」，记作一个与配对无关的车辆规则候选（WOD 上 g₃ 不开，无从检验）。
 图：[real-g1-gates](figs/real-g1-gates.png)，小表 [research/results/real-data-transfer/g1/](results/real-data-transfer/g1/)。
 
+**G2（第二轮，同一 todo 的 G2 节）：在 HUGSIM 3DGS 真实外观的车辆配对（I3，65 个场景）上重训——I3 上的害去掉大半，但没有 head 超过 prior；带到 WOD / NAVSIM 上线性 M-C 更有害，student 贴线、判格随 seed 变。**
+按场景 5 折、3 个分折 seed，prior 冻结为 CARLA 拟合的 openpilot `ridge_late`；M-C 与对照是闭式解，student 是 E5 配方（openpilot ⊕ G0 的 YOLO embedding）。
+
+| Cinque（3 seed 范围） | I3 held-out 翻转（CARLA 训 58.7%，prior 70.0%） | WOD RFS Δ 全部 / Cut_ins（20） | WOD 直行激活 | navtest PDMS Δ，接近车辆 4 726 | 判格 |
+|:--|:--|:--|:--|:--|:--|
+| M-C pair | 62.4–64.3%（cut-in 46% → 66%） | −3.36 / **−3.43 … −3.52**（CI < 0） | 86–87% | −32 … −34 | **不过**（3 seed） |
+| student A | 65.0–67.7% | −0.28 … −0.40 / −0.06 … −0.12（跨零） | 6.7 / 7.4 / 8.9% | +0.45 / +0.61 / −0.07（跨零） | **随 seed 变**（过 1 / 3） |
+| hard-example / 均匀 | 62–69% | 约 −3.2 / −2.7 … −3.0 | 86–96% | −73 / −71（seed 0） | 不过 |
+
+读法：登记的 I3 那条线（≥ 58.7%）所有 head 都过，但它对「回到 prior」的 head 也会过——没有一个 head 超过 prior（M-C −6 … −8 pp，student −2 … −5 pp）。WOD 上 I3 训的线性 M-C 的 Δ 中位 11 m，比 E1 的 CARLA 训 Δ 更坏：λ 在 30 个 fold 里全落在网格下沿，
+I3 的 μ 行统计量又离 WOD 的真实特征很远（换 WOD train 统计量 Δ 降到 2.7 m，全部帧仍 −2.3）；hard / 均匀对照同样崩，所以是小数据上的线性双流读出与跨数据集标准化的问题，不是配对损失的问题。
+student 是唯一贴近可用的（Cut_ins 跨零、激活贴 7%），但全部帧 RFS 仍 CI < 0。Lebowski 同向（M-C 3 seed 不过，student A 过 2 / 3）。**WOD Cut_ins 上没有一个 head 为正**。
+描述（不进判格）：G1 的 g₂ 乘上去，student 回到 prior（WOD −0.01 … −0.04），M-C × g₂ 在 I3 上 +2 pp、WOD 上仍 −0.9。图：[real-g2-i3-retrain](figs/real-g2-i3-retrain.png)，小表 [research/results/real-data-transfer/g2/](results/real-data-transfer/g2/)，I3 子文档的「在 I3 上重训」一节。
+
 **对方向的含义**：配对差分在 CARLA 里激发得出来（第 42 条，以及同一条里 E5 的 20 Hz student），但本轮三条通往真实数据的路（零样本迁移、log 孪生对、真实帧编辑对）都没通，第二轮加上的不含 Qwen 的 student 零样本（G0）也没通：
 零样本有害（student 的害小一个量级，但 NAVSIM 全部 token 上仍整体 < 0；原写只有 M-C 的零样本），真实数据训的门控（G1）只能把害压小（WOD 上消失、NAVSIM 上剩五分之一），靠的是整体缩小 Δ 而不是按帧选择，行人帧上不为正；
-唯一的正数是 openpilot lead 头的 TTC 门乘一个减速在 NAVSIM 上少撞前车，G1c 表明换成与场景无关的常数刹车同样成立（还略好），所以它与 CARLA 配对无关（第二轮 G1 / G1c 补；原写没有门控这一项，G1 时写的是「乘 M-C 的减速修正」），孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
+唯一的正数是 openpilot lead 头的 TTC 门乘一个减速在 NAVSIM 上少撞前车，G1c 表明换成与场景无关的常数刹车同样成立（还略好），所以它与 CARLA 配对无关（第二轮 G1 / G1c 补；原写没有门控这一项，G1 时写的是「乘 M-C 的减速修正」），在 3DGS 车辆配对上重训（G2）只在 I3 自己身上去掉了害、没有超过 prior，带到 WOD / NAVSIM 上线性 M-C 更有害、student 贴线（第二轮 G2 补），孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
 瓶颈不在 head 的训练信号，在「真实数据上有没有干净的配对标签」。
 
 **状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。G0 限定：真实数据上的走廊是 ego 历史圆弧（P5 上与路线走廊的行人标记一致 99.5%），20–40 m 的平地放置误差中位 6 m；NAVSIM 地面高度按 navtrain GT 车辆框定为 −0.36 m。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
-**怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选（都要新登记，未做）：几何一致的真实外观配对（HUGSIM 3DGS，I3 已有 65 个车辆场景；
-在那里 CARLA 拟合的 openpilot 读出零样本翻 70%，而 M-C Δ 反而 −11 pp，见 [i3 子文档](../todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md)）；带门控的部署形式 G1 已做（见上，原列为候选）：「g₃ × 常数减速」对照 G1c 已做（原写「下一步只剩」这一项）：常数刹车不比 M-C 差，openpilot lead 门若要登记，是作为与配对无关的车辆规则，不是配对 Δ 的部署门。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
+**怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选：几何一致的真实外观配对（HUGSIM 3DGS）G2 已做（原列为「要新登记，未做」的候选，见上：I3 上不超过 prior，带不到 WOD）；带门控的部署形式 G1 已做（见上，原列为候选）：「g₃ × 常数减速」对照 G1c 已做（原写「下一步只剩」这一项）：常数刹车不比 M-C 差，openpilot lead 门若要登记，是作为与配对无关的车辆规则，不是配对 Δ 的部署门。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
 
 ## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
 
