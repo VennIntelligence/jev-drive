@@ -606,15 +606,49 @@ def report(rl, models=MODELS, seeds=SEEDS):
     _stamp(f"report done; cinque verdict {cin}")
 
 
+def figs(res_dir: str = str(RESULTS), out_dir: str = "research/figs"):
+    """(a) navtest PDMS of Hydra + Delta minus Hydra per model x seed: unconstrained M-C with g2 (N3), the zero-constrained
+    Delta ungated (main) and with g2; (b) P5 v1 BA pedestrian flips of the constrained M-C against 0.8 x M-C."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    res_dir, out_dir = Path(res_dir), Path(out_dir)
+    T = pd.read_csv(res_dir / "q4a_main.csv")
+    n3 = {("cinque", 0): -5.14, ("cinque", 1): -5.11, ("cinque", 2): -5.49,
+          ("lebowski", 0): -8.33, ("lebowski", 1): -8.48, ("lebowski", 2): -7.86}   # decision 53, Hydra + g2 Delta
+    col = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, (a, b) = plt.subplots(1, 2, figsize=(plots.PAGE, 2.0))
+        for i, r in T.reset_index(drop=True).iterrows():
+            x, c = i, col[r.model]
+            a.plot(x - 0.2, n3[(r.model, r.seed)], "x", color="0.5", label="M-C + $g_2$ (decision 53)" if i == 0 else None)
+            a.errorbar(x, r.real_delta, yerr=[[r.real_delta - r.real_lo], [r.real_hi - r.real_delta]], fmt="o", color=c, capsize=1.5,
+                       label=f"{r.model.capitalize()}: zero-constrained $\\Delta$" if r.seed == 0 else None)
+            a.plot(x + 0.2, r.g2real_delta, "^", color=c, mfc="white", label="zero-constrained $\\Delta$ + $g_2$" if i == 0 else None)
+            b.errorbar(x, 100 * r.ped, yerr=[[100 * (r.ped - r.ped_lo)], [100 * (r.ped_hi - r.ped)]], fmt="o", color=c, capsize=1.5)
+            b.plot([x - 0.3, x + 0.3], [100 * PED_RATIO * r.mc_ped] * 2, color="0.3", lw=0.8)
+            b.plot(x - 0.2, 100 * r.mc_ped, "x", color="0.5")
+        a.axhline(PDMS_DROP, color="0.3", ls="--", lw=0.7)
+        a.axhline(0, color="0.6", lw=0.5)
+        lab = [f"{'C' if m == 'cinque' else 'L'} s{s}" for m, s in zip(T.model, T.seed)]
+        for ax in (a, b):
+            ax.set_xticks(range(len(T)), lab)
+        a.set_ylabel("navtest PDMS, paired $\\Delta$ vs Hydra")
+        b.set_ylabel("P5 pedestrian flip (%)")
+        plots.legend_below(fig, a, ncol=4)
+        plots.save(fig, out_dir, "nq3-q4a-zero-constraint")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "fit", "hydra", "hold-jobs", "select", "nav-jobs", "report"))
+    ap.add_argument("step", choices=("prep", "fit", "hydra", "hold-jobs", "select", "nav-jobs", "report", "figs"))
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--seeds", default=",".join(map(str, SEEDS)))
     a = ap.parse_args()
     models, seeds = tuple(a.models.split(",")), tuple(int(x) for x in a.seeds.split(","))
+    if a.step == "figs":
+        return figs()
     rl = RunLog("nq3", f"q4a-{a.step}")
     fn = {"prep": lambda: prep(rl), "fit": lambda: fit(rl, models, seeds), "hydra": lambda: hydra(rl, models, seeds),
           "hold-jobs": lambda: hold_jobs(rl, models, seeds), "select": lambda: select(rl, models, seeds),
