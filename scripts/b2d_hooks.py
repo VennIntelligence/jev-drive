@@ -237,6 +237,31 @@ P6_FLOW_GAP_M = (25.0, 45.0)    # x11 / x01: oncoming spacing, ~2.5-4.5 s headwa
 P6_DENSE_GAP_M = (10.0, 14.0)   # mirror world: ~1-1.5 s headway, no gap PDM-Lite accepts
 
 
+def p6_shift(out_dir, shift_m):
+    """P6 v1 recovery worlds (todos/2026-09-26-night-queue-3.md Q3): the ego is born shift_m to the side of the route's
+    first point (left positive, along the route's own right vector), everything else as the route has it. The route
+    itself is untouched, so the expert (PDM-Lite, which follows the route) has to steer back. RouteScenario spawns the
+    hero at route[0] lifted by 0.5 m and leaves that lift in route[0]; both are kept."""
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    inner = RouteScenario._spawn_ego_vehicle
+
+    def spawn(self):
+        t0 = self.route[0][0]
+        x, y, z = t0.location.x, t0.location.y, t0.location.z
+        r = t0.get_right_vector()
+        t0.location = carla.Location(x - shift_m * r.x, y - shift_m * r.y, z)
+        try:
+            ego = inner(self)
+        finally:
+            t0.location = carla.Location(x, y, z + 0.5)
+        with open(os.path.join(out_dir, "p6_shift.json"), "w") as fh:
+            json.dump({"shift_m": shift_m, "route0": [x, y, z], "right": [r.x, r.y],
+                       "spawned": ego is not None}, fh)
+        return ego
+
+    RouteScenario._spawn_ego_vehicle = spawn
+
+
 def p6_world(out_dir, obstacle, oncoming, tm_seed):
     """P6 behaviour-mode pairs (todos/2026-09-26-night-queue-2.md N1): one world of the 2 x 2 obstacle x oncoming
     design on the Bench2Drive obstacle-bypass scenarios, InvadingTurn and YieldToEmergencyVehicle, run under PDM-Lite.

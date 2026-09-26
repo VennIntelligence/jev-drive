@@ -148,7 +148,8 @@ def main():
 
     profile = b2d_hooks.TickProfile(heartbeat_path=str(out / "heartbeat.json"))
     b2d_hooks.install(profile, no_spectator=a.no_spectator, fast_copy=a.fast_copy,
-                      zero_copy=a.zero_copy, sensor_tick=a.decimate > 1,
+                      zero_copy=a.zero_copy,
+                      sensor_tick=a.decimate > 1 or os.environ.get("B2D_SENSOR_TICK") == "1",
                       cache_lights=a.cache_lights)
     if os.environ.get("B2D_RESEED_AFTER_BUILD") == "1":
         b2d_hooks.reseed_after_build(a.tm_seed)
@@ -158,6 +159,9 @@ def main():
     p6 = _route_attr(a.routes, a.route_id, "p6_obstacle")
     if p6 is not None:
         b2d_hooks.p6_world(a.out, p6, _route_attr(a.routes, a.route_id, "p6_oncoming"), a.tm_seed)
+    shift = _route_attr(a.routes, a.route_id, "p6_shift")
+    if shift is not None:
+        b2d_hooks.p6_shift(a.out, float(shift))
     _patch_setup_simulation(LeaderboardEvaluator, a)
     _patch_signal_handler(LeaderboardEvaluator)
     if a.max_ticks:
