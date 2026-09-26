@@ -318,10 +318,76 @@ def stats(g: Path | None = None, out: Path | None = None, workers: int = 16):
     return worlds, pairs, frames
 
 
+# ---------------------------------------------------------------- CPU check (i): bypass anchors in cls_late's vocabulary
+
+def bypass_shape(F: np.ndarray) -> np.ndarray:
+    """(n, 20, 2) ego-frame futures at 0.25 s: |y(3 s)| >= 1 m and back within |y| <= 0.5 m somewhere in (3 s, 5 s]."""
+    y = np.abs(F[:, :, 1])
+    return (y[:, 11] >= 1.0) & (y[:, 12:].min(1) <= 0.5)
+
+
+def mode_21(F: np.ndarray) -> np.ndarray:
+    """Section 2.1 on ego-frame futures (n, 20, 2), speeds from the 0.25 s steps (v0 = first step)."""
+    P0 = np.concatenate([np.zeros_like(F[:, :1]), F], 1)
+    st = np.diff(P0, axis=1)
+    hd = np.degrees(np.arctan2(st[..., 1], st[..., 0]))
+    hd = np.stack([np.convolve(h, np.ones(3) / 3, "same") for h in hd])[:, 1:-1]
+    sp = np.linalg.norm(st, axis=-1) / 0.25
+    y = F[:, :, 1]
+    peak, y_end = np.abs(y).max(1), np.abs(y[:, -1])
+    h_end, h_max = np.abs(hd[:, -1]), np.abs(hd).max(1)
+    v0, v_end = sp[:, 0], sp[:, -1]
+    out = np.full(len(F), "keep", object)
+    out[(v_end < 0.5) | ((v0 > 3) & (v_end < 0.3 * v0))] = "stop"
+    out[peak >= 1] = "curve_or_other"
+    out[(y_end >= 2.5) & (h_end < 10) & (h_max > 2 * h_end)] = "lane_change"
+    out[(peak >= 1) & (y_end >= 1) & (y_end < 2.5) & (h_end < 5) & (h_max > 2 * h_end)] = "nudge_hold"
+    out[(peak >= 1) & (y_end < 0.5 * peak)] = "nudge_return"
+    out[h_end > 25] = "turn"
+    return out
+
+
+def vocab_check(out: Path | None = None, p6_futures: np.ndarray | None = None) -> pd.DataFrame:
+    import torch
+    from . import traj, waymo_heads as H
+    out = out or RESULTS
+    fut = H.train_futures()
+    F = torch.as_tensor(fut.reshape(len(fut), -1), device=H.DEV)
+    voc = traj.kmeans(F, 1024, seed=0).reshape(-1, 20, 2)
+    voc = voc.cpu().numpy() if hasattr(voc, "cpu") else np.asarray(voc)
+    np.save(out / "vocab_k1024_seed0.npy", voc.astype(np.float32))
+    ab, am = bypass_shape(voc), mode_21(voc)
+    rows = [{"set": "anchors", "n": len(voc), "bypass_shape": int(ab.sum()),
+             **{f"mode_{m}": int((am == m).sum()) for m in ("keep", "stop", "nudge_return", "nudge_hold",
+                                                            "lane_change", "curve_or_other", "turn")}}]
+    V = torch.as_tensor(voc.reshape(len(voc), -1), device=H.DEV)
+    sets = {"wod_train": fut}
+    if p6_futures is not None:
+        sets["p6_x10_expert"] = p6_futures
+    for name, T in sets.items():
+        b = bypass_shape(T)
+        Tb = torch.as_tensor(T[b].reshape(int(b.sum()), -1), device=H.DEV)
+        ade, idx = [], []
+        for i in range(0, len(Tb), 8192):
+            d = torch.cdist(Tb[i:i + 8192].view(-1, 20, 2).permute(1, 0, 2), V.view(-1, 20, 2).permute(1, 0, 2)).mean(0)
+            m = d.min(1)
+            ade.append(m.values.cpu().numpy())
+            idx.append(m.indices.cpu().numpy())
+        ade, idx = np.concatenate(ade) if ade else np.zeros(0), np.concatenate(idx) if idx else np.zeros(0, int)
+        rows.append({"set": name, "n": len(T), "bypass_shape": int(b.sum()),
+                     "nearest_anchor_bypass_share": round(float(ab[idx].mean()), 4) if len(idx) else None,
+                     "min_ade_median_m": round(float(np.median(ade)), 3) if len(ade) else None,
+                     "nearest_anchor_modes": json.dumps(pd.Series(am[idx]).value_counts().to_dict()) if len(idx) else ""})
+    df = pd.DataFrame(rows)
+    df.to_csv(out / "vocab_bypass.csv", index=False)
+    log.info("\n%s", df.to_string())
+    return df
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "ids", "stats"])
+    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
@@ -330,6 +396,8 @@ def main():
         build()
     elif a.cmd == "ids":
         ids(a.only, a.out)
+    elif a.cmd == "vocab":
+        vocab_check()
     else:
         stats(Path(a.out) if a.out else None, Path(a.results) if a.results else None)
 
