@@ -16,12 +16,12 @@ retry() {   # retry <tries> <cmd...>: GPU 6 is oversubscribed by five lanes; an 
   return 1
 }
 
-feats() {   # C1: Qwen (2 shards, cores 164-179) || V-JEPA 2 -> YOLO detect -> tokens (cores 172-179)
+feats() {   # C1: Qwen (cores 164-179) || V-JEPA 2 -> YOLO detect -> tokens (cores 172-179)
   local pids=() rc=0
-  for i in 0 1; do     # CPU-bound (HF processor): both shards may use all 16 cores
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 retry 40 taskset -c 164-179 \
-      $PY -m jevdrive.nq3_feats qwen --shard $i/2 --batch 2 --workers 6 > "$R/feats/qwen$i.log" 2>&1 & pids+=($!)
-  done
+  # CPU-bound (HF processor): one process (~10 GB of VRAM on a full card) with 12 loader workers on the 16 cores;
+  # retried for up to ~7 h while GPU 6 has no room to load it
+  OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 retry 200 taskset -c 164-179 \
+    $PY -m jevdrive.nq3_feats qwen --shard 0/1 --batch 2 --workers 12 > "$R/feats/qwen0.log" 2>&1 & pids+=($!)
   (
     set -e
     [[ -f $DATA_DIR/processed/$P6/bb_vjepa2/mean.npy ]] || \
