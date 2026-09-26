@@ -382,7 +382,24 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   7. **creep 单列**：creep 是否在某帧生效，用重录的 20 Hz 自车速度按作者的计数规则离线算（< 0.1 m/s 计数，BridgeDrive 超过 1100 帧后 creep 20 帧，BLUE 超过 800 帧后 15 帧），x⁺ / x⁻ 任一侧生效的帧单列、不进主读数；
      录制窗口 ≤ 50 s 且静止 30 s 即停，所以预期 0 帧，照样报数。BridgeDrive 的停车标志规则默认关，不涉及。BLUE 另把 gate 开 / 关的帧分开报（描述性，不设门槛）。
   8. **等价检查（先于批量）**：E1 重录 expert 对原记录逐 tick 比（位置、航向、速度差与相机 tick 网格）；E2 BridgeDrive 的 5 Hz shadow 对作者每 tick 跑 `run_step`（`shadow=ref20`）在相机 tick 上的输出；
-     E3 BLUE 离线捷径对作者每 tick 跑 `run_step`、缓存模型对每个世界重新 setup。门槛：E1 位置差 0 / 航向差 0（与 v0 的确定性一致），E2 / E3 的读数逐位相同；不过就停下查。
+     E3 BLUE 离线捷径对作者每 tick 跑 `run_step`、缓存模型对每个世界重新 setup。门槛：E1 位置差 0 / 航向差 0（与 v0 的确定性一致），E3 的读数逐位相同；E2 原写「逐位相同」，13:25 改为「5 Hz 对 ref20 的差不大于同配置重录两次的差」：同一个世界用同一份代码录两次，BridgeDrive 的读数本身就不逐位相同（CARLA 的 LiDAR / radar 每次运行不同，相机与 expert 轨迹逐位相同），逐位门槛不可达，与抽取方式无关（数字见下一条）；不过就停下查。
+- 2026-09-26 13:35 CST [T3] **smoke 与等价检查**（GPU 4，≤ 2 个 server，CPU 116–123；run dir `runs/top10_t3/{gen-smoke,gen-smoke-rep,gen-smoke-ref20,blue-smoke,prof}`；还没有任何考卷数字）。
+  smoke = 两个 Town12 的 case 各三个世界（14382 PedestrianCrossing、18311 ParkingCutIn，x⁺ / x⁻ / null），录到各自最后引用 tick（105 / 161）后按 `need_k` 停。
+
+  | 检查 | 内容 | 结果 |
+  |:--|:--|:--|
+  | E1 确定性 | 6 个重录世界的 expert 对原 BA 记录逐 tick 比（共 798 tick） | 位置差、航向差、速度差全部 **0**，相机 tick 网格相同（去掉 Waymo 相机与分割相机、加 BLUE 相机不影响仿真） |
+  | E2 BridgeDrive 抽取 | 5 Hz shadow 对作者每 tick `run_step`（ref20），另录一次 5 Hz 作重复，2 个世界 66 帧，|Δ| 中位数 / p95 / 最大 | 5 Hz vs ref20：目标速度 0.0004 / 0.46 / 1.69 m/s，waypoint 速度 0.020 / 0.43 / 1.35；5 Hz vs 5 Hz 重录：0.0004 / 0.75 / 2.39，0.020 / 0.30 / 0.76。**同量级**，差来自每次运行的 LiDAR / radar，不来自抽取；这份噪声在 x⁺ / x⁻ / null 三个世界之间同样存在，由各自 null 定的 τ 吸收（TFv6 原记录同理） |
+  | E2b BridgeDrive 模型路径 | recorder 的 setup / 配置 / reseed 在 smoke 抓的 20 帧网络输入上，对作者 agent 当时在线的输出 | waypoint 0.0016 m、目标速度分布 0.0012、标量 0.021 m/s（浮点级）；route 0.99 m，是 bridge 首步采样噪声（换 seed 0→1 route 变 0.53 m，waypoint 与目标速度逐位不变），读数不用 route；同 seed 重复逐位相同 |
+  | E3 BLUE | 离线捷径对作者每 tick `run_step`（1 个世界 17 帧）；缓存模型对每世界重新 setup；重复运行 | speed waypoints、gate、prompt **逐位相同** |
+
+  **每 tick 分项与 CPU**（6 个世界，box load 240–285 / 175 核下）：recorder 每 tick 396–517 ms（含等传感器），BridgeDrive 相机 tick 约 250–350 ms（其中 GPU 前向 p95 288 ms，首帧含 warmup），非相机 tick 的作者 `BaseAgent.tick`（LiDAR 变换、RANSAC 去地面、Kalman）40–57 ms，expert 11–16 ms，BLUE 存图 3–4 ms；
+  按 PID 量的 CPU：route client 0.64–0.88 核（每世界 114–148 CPU·s，含模型加载），CARLA server 1.3 核（Town12 首次载图约 300 CPU·s），每个 worker 合计约 2.1 核，30 个 worker 约 65 核。
+  大头是作者的预处理（CPU，numba RANSAC、LiDAR 每 tick 都要，因为模型累积最近 10 帧）与 CARLA 渲染；我们自己的代码（存图、写 jsonl）每 tick < 5 ms。作者代码不改（第三方原样跑），线程已限（OMP 2、NUMBA 3、MKL / OpenBLAS 2、client_threads 8）。
+  BridgeDrive 前向 batch 1 在各自 recorder 里（跨进程攒 batch 要一个共享 GPU 服务，而前向是 GPU 时间、不占 CPU 大头，不做）。BLUE 离线每个世界约 16 s（缓存模型；107 tick、17 帧，模型每帧约 300 ms，共享卡上），batch 1：prompt 长度逐帧不同，左 padding 的 batch 会改数值。
+  相对原 BA 生成（TFv6 shadow + 三路 Waymo 存图 + 可见性），每个相机 tick 省掉约 105 ms CPU 的存图与可见性、每 tick 省掉 3 路 1088×1560 与 1 路分割相机的渲染。
+  **批量估时**：570 个世界、13.6 万 tick，按原 BA 生成的逐 town 墙钟回归（setup + 每 tick）估 32 server·h，按 smoke 在负载下的慢 1.5 倍估约 45 server·h，30 个 server 墙钟约 1.5–1.8 h（< 3 h，2 对的 profiling 已在上面）；BLUE 离线与批量重叠，约 2.5 CPU·h + 0.8 GPU·h。
+  smoke 通过，等 night-queue-2 A 的 GPU 0–3。
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
