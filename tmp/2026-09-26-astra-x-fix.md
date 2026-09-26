@@ -39,3 +39,7 @@ round02 闭环结果：自动容量门在pids15062、GPU1两个既有CARLA/19.22
 假设：单模型+CARLA/client挤在四核，可能触发文档记录的render-thread饥饿（`docs/bench2drive-cost.md`和todo K18:37；原因不是已证明的）。仅改变运行CPU资源：live affinity审计确认134–149没有窄affinity活动进程，Sol确认对应pull-forward任务已DONE，因此用134–141八核；不借D的180–199，保留D待修复资源。parent/root和Sol capacity均已通知。
 
 修复wrapper的BLAS线程池上限（原wrapper67线程，子进程已是2），并在head加载之后和每个route stage真正起CARLA之前重查容量，模型已存活时按SCH原每worker400线程预算；总plan cap仍16000，GPU1至多再加到4个CARLA。启动命令将wrapper本身也taskset134–141、OMP/BLAS2。模型/路径/门控/看门狗/世界与判据一概未变；既有formal q2 READY复用。重新单路253490，不跳到pilot。
+
+round03 的单路已通过：wrapper448786、GPU1/index0–2/CPU134–141，初门pids15131、三个已有CARLA；head加载后的真正开车门再次通过。253490首个attempt完成，668 tick、167次head请求（含warmup）、142次X执行，最高8.0276 m/s；完成1/1，启动崩溃0，blocked0，stalled0，原stage1 sanity PASS。142次X路径/元信息离线逐位一致（最大差0）、head check返回0、unseen fold正确。实际11个低速stop目标均8.0 m/s，4个高速stop目标均0；raw模式keep19/stop15/bypass_L108。这里终于有真实起步与两侧门控证据，前两轮仍只记运维/导出结果。
+
+仍不能写“X能力判格通过”：此刻只完成登记的2534这一条；另两条2668、1790的rule8和约10路sanity在同一round继续自动执行，full从未启动。控制候选从de39c51保持不变；aa4133d只是运行资源与安全复核。小表：`research/results/nq4/x/fix/round03/stage1_pilot.json`、`stage1_behavior.json`。

@@ -1,0 +1,11 @@
+{
+  "source": "/home/ujs/data/runs/nq4/cx/x-fix/round03/stage1/attempts/253490/1",
+  "ticks": 668,
+  "max_speed_mps": 8.027566465378216,
+  "x_plans": 142,
+  "low_stop_plans": 11,
+  "low_targets": [8.0],
+  "high_stop_plans": 4,
+  "high_targets": [0.0],
+  "raw_mode_counts": {"0": 19, "1": 15, "2": 108}
+}
