@@ -135,6 +135,29 @@ def external_writers(active):
     return hits
 
 
+def effective_rows(rows):
+    """Ignore closed pilot commitments only with terminal evidence and no runner.
+
+    The SCH table itself is untouched. Live CARLA remains counted by the probe.
+    """
+    commands = []
+    for path in Path('/proc').glob('[0-9]*/cmdline'):
+        try:
+            if identity(int(path.parent.name)):
+                commands.extend(path.read_bytes().decode(errors='replace').split('\0'))
+        except OSError: pass
+    k_done = (DATA / 'runs/nq4/k/steps/cl/DONE').exists() and (DATA / 'runs/nq4/k/READY').exists()
+    opl_stopped = (DATA / 'runs/nq4/opl/ERROR').exists()
+    result = []
+    for row in rows:
+        closed = ((row['lane'] == 'nq4-k-pilot' and k_done and
+                   not any(a.endswith('scripts/nq4_k.sh') for a in commands)) or
+                  (row['lane'] == 'nq4-opl-pilot' and opl_stopped and
+                   not any(a.endswith('scripts/nq4_opl.sh') for a in commands)))
+        if not closed: result.append(row)
+    return result
+
+
 def admission(job, active, probe, rows):
     import sch_table as sch
     cores = cpuset(job['cpus'])
@@ -249,7 +272,7 @@ def run(manifest, once=False):
                 event(name, {'status': 'DONE', 'source': 'existing marker and artifacts'})
         pending = [j for j in jobs if state.get(j['id'], {}).get('status') not in ('DONE', 'WAIT', 'RUNNING')]
         if time.time() < deadline and pending:
-            probe = sch.probe(); rows = sch.load()
+            probe = sch.probe(); rows = effective_rows(sch.load())
             atomic(OUT / 'resources.json', {'time': time.time(), 'probe': probe, 'rows': rows})
             writers = external_writers(active)
             for job in pending:

@@ -19,7 +19,7 @@
     {
       "id": "q4b-inputs",
       "command": ".venv/bin/python scripts/cx_orchestrator.py preflight --job q4b",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [],
       "gpu_gb": 0,
       "pids": 384,
@@ -53,7 +53,7 @@
     {
       "id": "q4b-hydra",
       "command": ".venv/bin/python -m jevdrive.nq3_q4b hydra",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q4b-inputs"
       ],
@@ -78,7 +78,7 @@
     {
       "id": "q4b-compat",
       "command": ".venv/bin/python -m jevdrive.nq3_q4b compat",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q4b-hydra"
       ],
@@ -98,7 +98,7 @@
     {
       "id": "q4b-exam",
       "command": ".venv/bin/python -m jevdrive.nq3_q4b exam",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q4b-compat"
       ],
@@ -170,7 +170,7 @@
     {
       "id": "q6-refit",
       "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --backbone vjepa2 --seed 0",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-inputs"
       ],
@@ -189,7 +189,7 @@
     {
       "id": "q6-refit-check",
       "command": "d=$(ls -d \"$DATA_DIR/runs/nq3/q6/fits/refit-vjepa2-seed0/\"*/ | tail -1); .venv/bin/python -m jevdrive.nq3_q6 sf-refit-check --fit-dir \"$d\"",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-refit"
       ],
@@ -208,7 +208,7 @@
     {
       "id": "q6-sf-fit-s0",
       "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 0",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-refit-check"
       ],
@@ -228,7 +228,7 @@
     {
       "id": "q6-sf-fit-s1",
       "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 1",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-sf-fit-s0"
       ],
@@ -248,7 +248,7 @@
     {
       "id": "q6-sf-fit-s2",
       "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-fit --seed 2",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-sf-fit-s1"
       ],
@@ -268,7 +268,7 @@
     {
       "id": "q6-sf-report",
       "command": ".venv/bin/python -m jevdrive.nq3_q6 sf-report",
-      "cpus": "192-199",
+      "cpus": "192-195,197-199",
       "after": [
         "q6-sf-fit-s2"
       ],
@@ -308,7 +308,7 @@
     {
       "id": "q5-child",
       "command": "WJ_BS=8 SCORE_THREADS=14 scripts/nq3_d/q5.sh",
-      "cpus": "180-199",
+      "cpus": "180-195,197-199",
       "after": [],
       "gpu_gb": 20,
       "pids": 768,
