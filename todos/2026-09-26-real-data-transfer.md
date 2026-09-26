@@ -227,6 +227,11 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   五个帧集 i3 / wod_val / navtest / wod_train / navtrain 全部 READY（每个 `yolo/<set>/READY.json`），读法 `jevdrive.real_g0.load_embed(<set>)` → (frames, (n, 64))；逐帧原始检测在 `yolo/<set>/dets.parquet`（含抬升点、走廊坐标与 embedding 槽位）。
   检测 08:40–09:02 墙钟 22 min（5 卡 × 6 进程，843 570 张，约 645 张 / s；估计 20–25 min，未超），卡已释放；中间第一次启动因 30 个进程的线程池按宿主 208 核铺开、负载冲到约 480 而卡住，限线程后重启，结果不受影响（每张图独立）。
   student 权重恢复：60 个 fit 的 early-stop 步数与原 run 全部相同，obs 行预测对已存预测**逐位相同**（最大差 0.0 m），权重在 `g0/students.pt`；student 在 WOD val、navtest、I3 全部行上的 Δ 已存（`g0/*_delta_<model>_<arm>_s<seed>.npz`），给 G1 当 Δ 来源。
+- 2026-09-26 09:10 CST（box 时钟）[G1] student 作为 Δ 来源的口径，写于 G1 的任何 student 读数之前（G0 交接说明已读；此时已看过 I3 与 WOD 上 M-C × g₁ / g₃ 的数，没看过任何 G0 或 student 的数）。
+  (1) Δ = G0 存的 `g0/<set>_delta_<model>_<arm>_s<seed>.npz`（5 个 fold student 的平均、CARLA 训练行统计量），不重算；τ = E5 run `flip_rates.csv` 的 `E5 <arm> s<seed> [<model>]` pooled `tau_model`（与 [G0] 08:52 同）。
+  (2) **主 arm 的 student = A**（纯配对差分，与 M-C pair 同一种训练信号）；B（+ teacher Δ）在 WOD 与 I3 上并列（CPU 便宜），NAVSIM 只做 A（3 seed × 3 gate × 2 模型 × 2 指标 = 36 次 devkit 打分，B 再加一倍，超出本项预算）。
+  (3) 3 seed 各自一行、各自判格；student 的总判格按 [G0] 的规则：三个 seed 一致取那一格，否则写「随 seed 变」并列出。无 gate 的 student 行就是 G0 的读数（同一函数、同一文件），在 G1 表里照抄作对照。
+  (4) I3 上 student 的 prior 同 M-C（`ridge_late op-<model> temporal`，`preds_i3.npz`），gated = prior + g·Δ_student，judge 同 08:40 (5)。
 
 ## 结果
 
