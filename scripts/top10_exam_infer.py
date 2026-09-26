@@ -180,7 +180,7 @@ def to_dev(x, dev):
     return x
 
 
-def infer(rl, M, plan, workers: int, batch: int):
+def infer(rl, M, plan, workers: int, batch: int, maps_only: bool = False):
     from concurrent.futures import ProcessPoolExecutor
     set_ = plan["set"]
     maps_path(set_, "x").parent.mkdir(parents=True, exist_ok=True)
@@ -188,6 +188,8 @@ def infer(rl, M, plan, workers: int, batch: int):
     with ProcessPoolExecutor(min(workers, len(plan["rigs"]))) as ex:
         list(ex.map(make_maps, [(set_, k, r) for k, r in plan["rigs"].items()]))
     rl.log.info("maps for %d rigs in %.0f s", len(plan["rigs"]), time.time() - t0)
+    if maps_only:
+        return
     ds = Frames(plan, M.feats)
     dl = torch.utils.data.DataLoader(ds, batch_size=batch, num_workers=workers, collate_fn=lambda xs: (
         [x[0] for x in xs], M.collate([x[1] for x in xs])), prefetch_factor=4, persistent_workers=False)
@@ -348,6 +350,7 @@ def main():
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--check", type=int, default=0, help="adapter equivalence on this many navtest tokens instead")
+    ap.add_argument("--maps-only", action="store_true", help="only precompute the render maps of the plan's rigs")
     ap.add_argument("--navsim", default="", help="native inference on every token of this NAVSIM split instead")
     a = ap.parse_args()
     M = {"sparsedrivev2": sparsedrivev2, "ztrs": ztrs}[a.model]()
@@ -360,7 +363,7 @@ def main():
         check(rl, M, a.check, a.batch)
     else:
         plan = json.loads((DATA / "processed/top10_exam" / a.set / "plan.json").read_text())
-        infer(rl, M, plan, a.workers, a.batch)
+        infer(rl, M, plan, a.workers, a.batch, a.maps_only)
     rl.close()
 
 
