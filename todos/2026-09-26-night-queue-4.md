@@ -377,6 +377,10 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
   3. 批量段（全部 index ≤ 494，RPC / TM 端口在 ephemeral 段以下）：OPL IDX0 120、每卡 10（最多 3 张卡，pilot 结束后）；F IDX0 300、每卡 18（lane B 结束后，或从 B 释放的段里给）。GO 约定：`GPUS`、`WORKERS`、`IDX0`、`IDX_SPAN`、`<LANE>_CPUS`，GPUS 里第 k 张卡用 `[IDX0 + k·IDX_SPAN, IDX0 + (k+1)·IDX_SPAN)`；每个步骤边界重读。
   4. 容量现实：全 box 的 CARLA 由线程数封顶，约 36–38 个 worker；01:00 前 A 18 + B 18 + debug 卡 pilot 已到顶，01:00 后 lane B 默认扩到 30。所以 F / OPL 的批量要么等 lane B 结束，要么 main 在 lane B 的 GO 里把 `B_EXPAND_GPUS` 改成 `0 2 3 4`，把 GPU 5 让出来——这是优先级决定，留给 main。
 
+- 2026-09-26 19:40 CST [main] X 的 stop 规则更正（只看过 X 在 1 条路线上静止不动的管线现象，写于任何 X 读数之前）：模式头判 stop / wait 只在自车速度 ≥ 1.0 m/s 时生效（目标速度降 0）；
+  静止或 < 1.0 m/s 时忽略 stop，路径不变、目标速度取路线巡航，与 OPL 的「只接管起步」同一原则。原因：Q2 模式头在静止帧上一律判 stop，照原规则 X 每条路线都 blocked。
+  shift 只能 +15 m（触发点离出生点 2–17 m），G 的读数 3 只覆盖「hazard 推后」。
+
 每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**），E 节按上面补专家汇总。
 
 ## 结果
