@@ -41,3 +41,17 @@ HF（Hugging Face，公开数据仓库）数据卡与 API 清单查于 2026-09-2
 需要 main 提供能关联实际 clip ID、town、原始 scenario 类与触发点坐标的元数据清单，或明确新的部分覆盖范围。当前规格未允许只数路线模板、只数 mini 子集，或把公开但与原实验不同的数据当成同一个训练集，因此这些替代均未执行。
 
 检查使用 CPU 198–199，未使用 GPU，未下载传感器数据。没有启动计数长任务或触碰 night-queue-3 进程。实际本轮审计约 5 min（box 17:25–17:29 CST）；现有 17:15 CST 登记之前的实际操作时长未查清。
+
+## 17:38 CST 恢复委派后的补核
+
+再次核查的结果是：可以把缺口说得更具体，但尚不能开始近邻计数。没有改变匹配口径，也没有把采集路线 XML 当成实际训练 clip。
+
+| 核查 | 一手证据 | 对恢复计数的影响 |
+|:--|:--|:--|
+| 原始 B2D 每帧 annotation 是否能直接提供 scenario trigger | 固定版本 [tools/data_collect.py 第 792–821 行](https://github.com/Thinklab-SJTU/Bench2Drive/blob/7ec25d1c9f7522d923ce5f3420986cef1cb2d956/tools/data_collect.py#L792) 的 `anno_data` 字段包含 ego pose、导航 target、weather、bounding_boxes、sensors 等，没有 scenario 类、route ID 或 scenario trigger 坐标。box 已有 mini clip 的一个 annotation 文件字段核对相符。 | 仅下载每帧 annotation 并不能直接补齐本项要求的 clip→trigger 对应关系。ego 位置和交通灯 trigger volume 不能替代 scenario trigger。 |
+| 官方是否声称评测路线与训练 clip 相同 | [官方仓库 issue #193 的维护者回复](https://github.com/Thinklab-SJTU/Bench2Drive/issues/193#issuecomment-3270122438) 说 220 条路线不在 train / val 数据中。 | 这是路线成员声明，不是距离证据：不同路线仍可能共享邻近触发点，不能据此把近邻数置 0，也不能把评测 trigger 直接赋给训练 clip。 |
+| 是否发现新的独立 clip→trigger manifest | 官方仓库 tracked 文件清单和相关公开 issue 中，本次没有找到可靠映射。 | 仍为「未查清」，不声称不存在。此次补核没有下载传感器、bucket 或其他大型数据。 |
+
+能恢复计数的最小输入是一份逐实际 clip 的元数据表，列为 `dataset_id, dataset_version, clip_id, town, scenario_type, trigger_x_m, trigger_y_m, source_uri`。一 clip 有多个 scenario trigger 时可重复列行，计数按 clip ID 并集。还需要每个榜单族 / checkpoint 对该版本训练成员的出处；已公开但与原实验不同的 LEAD 数据，应明确作为哪个版本报告。B2D 也可提供原始采集 XML 加经过出处核实的 clip ID→XML route ID 映射。以上输入均不需要传感器文件。
+
+在这些输入到位前，`route × dataset` 的数值 CSV 仍无法完成；本次未生成全为 unknown 的占位表，避免把占位状态误读成计数产物。恢复补核约 3 min（17:36–17:39 CST），低于此次 15 min 限时。
