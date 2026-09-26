@@ -287,7 +287,6 @@ def embed_set(name: str, workers: int | None = None) -> dict:
     fv = np.array([cal[k]["intrinsic"][1] for k in ck])
     d["h_feat"] = (d.y1 - d.y0).to_numpy() / fv * p5_f_over_h()
     d["xc"], d["yc"] = d.gx.to_numpy() + x_off[d.fi.to_numpy()], d.gy.to_numpy()
-    d["s"], d["d"], d["rank"] = np.nan, np.nan, -1
     ok = d.lift_ok.to_numpy()
     arr = np.c_[d.prompt.map({c: i for i, c in enumerate(CLS3)}).to_numpy(), np.zeros((len(d), 2)), d.xc, d.yc,
                 d.h_feat, d.score]
@@ -303,7 +302,7 @@ def embed_set(name: str, workers: int | None = None) -> dict:
             chunk = []
     jobs.append(chunk)
     E = np.zeros((len(fr), K_DET * 8), np.float32)
-    S, Dl, rank = d.s.to_numpy(), d.d.to_numpy(), d["rank"].to_numpy()
+    S, Dl, rank = np.full(len(d), np.nan), np.full(len(d), np.nan), np.full(len(d), -1, np.int64)
     with Pool(workers or min(64, n_cpus())) as p:
         for part in p.imap_unordered(_embed_frames, jobs):
             for i, e, r, s_, d_, sel in part:
