@@ -567,3 +567,37 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- hazard point (proposal, [F] entry)
+
+CONFLICT_LAT_M = 2.0
+
+
+def hazard_point(base: str) -> dict:
+    """Where the hazard meets the route in the orig world: the route arc position of the first recorded tick at which a
+    scenario actor (hidden.json of the PDM-Lite P6 x10 / P5 x+ recording of this route, seed 0) is within 2 m of the
+    route centreline; if none ever is, its point of minimum |lateral offset|."""
+    D = data_dir() / "runs"
+    P = dense_route(base)
+    for pat in (f"p6/gen/attempts/{int(base) * 100 + 10}/*", f"p5_pairs/gen/attempts/{int(base) * 100 + 10}/*"):
+        for a in sorted(D.glob(pat)):
+            if not (a / "actors.npz").exists() or not (a / "hidden.json").exists() or P is None:
+                continue
+            ids = {h["id"] for h in json.loads((a / "hidden.json").read_text())}
+            z = np.load(a / "actors.npz")
+            m = np.isin(z["id"], list(ids))
+            if not m.any():
+                continue
+            s = arc(P)
+            fr, xy = z["frame"][m], z["xyz"][m][:, :2]
+            ss, ll = project(P, s, xy)
+            inside = np.abs(ll) <= CONFLICT_LAT_M
+            if inside.any():
+                j = np.flatnonzero(inside)[np.argmin(fr[inside])]
+                how = "conflict"
+            else:
+                j = int(np.argmin(np.abs(ll)))
+                how = "closest"
+            return {"base": base, "s_hazard": float(ss[j]), "lat": float(ll[j]), "how": how, "src": str(a.relative_to(D))}
+    return {"base": base, "s_hazard": np.nan, "how": "missing"}
