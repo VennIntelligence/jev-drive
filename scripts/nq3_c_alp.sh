@@ -19,9 +19,21 @@ export CUDA_VISIBLE_DEVICES=6
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false
 PY=$DATA_DIR/third_party/alpamayo1.5/.venv/bin/python
 t0=$(date +%s)
+NEED_MB=${ALP_NEED_MB:-26000}     # model 22 GB peak + margin; GPU 6 is shared, so wait for room instead of OOMing
+free_mb() { nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i 6 | tr -d ' '; }
 echo "$(date '+%F %T') q1_alp start (pid $$)" | tee -a "$D/log.txt"
-taskset -c 158-163 "$PY" scripts/nq3_c_alpamayo.py run --workers 4 --threads 1 --batch "${ALP_BATCH:-1}" \
-    --deadline "${ALP_DEADLINE:-23:30}" --summary "$D/summary.json" 2>&1 | tee -a "$D/run.log"
+ok=0
+for attempt in $(seq 1 ${ALP_ATTEMPTS:-30}); do   # resumable: every attempt skips the frames already written
+    until (( $(free_mb) >= NEED_MB )); do sleep 60; done
+    echo "$(date '+%F %T') attempt $attempt, GPU 6 free $(free_mb) MB" | tee -a "$D/log.txt"
+    if taskset -c 158-163 "$PY" scripts/nq3_c_alpamayo.py run --workers 4 --threads 1 --batch "${ALP_BATCH:-1}" \
+        --deadline "${ALP_DEADLINE:-23:30}" --summary "$D/summary.json" 2>&1 | tee -a "$D/run.log"; then
+        ok=1; break
+    fi
+    echo "$(date '+%F %T') attempt $attempt failed (see run.log), retrying" | tee -a "$D/log.txt"
+    sleep 120
+done
+(( ok )) || { echo "$(date '+%F %T') q1_alp FAILED after all attempts" | tee -a "$D/log.txt"; exit 1; }
 "$PY" - "$D" "$t0" <<'EOF'
 import json, sys, time
 d, t0 = sys.argv[1], float(sys.argv[2])
