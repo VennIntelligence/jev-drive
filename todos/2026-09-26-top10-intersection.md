@@ -441,7 +441,7 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   box 13:38 在 smoke 世界上试跑过一次判卷流程（只为验证代码能跑通，输出已删，不作任何读数）。
 - 2026-09-26 14:27 CST [T3] 扩容（main 14:25：A 的 P6 14:22 结束）：GPU 0–3 各加一条 6 server 的链（block 250 / 300 / 350 / 400，CPU 0–10 / 11–21 / 22–32 / 33–43），连同 GPU 5 共 30 个 server，CPU 合计约 74 核。
   扩容时已完成 130 / 570 个世界；前 99 个的 E1 复核：98 个与原记录逐 tick 相同，1 个（null 世界 2451930）在 k = 109 分叉（0.09 m / 0.48°），按预登记整个世界剔除，判卷时对全部世界再核一次。
-- 2026-09-26 16:05 CST [T3] **补 5.5 的 BLUE vs SimLingo 一格（main 16:00），写于任何 SimLingo 数字之前**：
+- 2026-09-26 15:45 CST [T3] **补 5.5 的 BLUE vs SimLingo 一格（main 15:40），写于任何 SimLingo 数字之前**：
   1. **checkpoint**：`RenzKa/simlingo` 的 release checkpoint `simlingo/checkpoints/epoch=013.ckpt/pytorch_model.pt`（HF snapshot `26c7c89`，与 simlingo-catalogue 同一份）。理由：BLUE 就是在这份权重上加 gate（BLUE 的 agent 载入的正是它，`strict=False` 只为多出的 gate 参数），
      所以 BLUE − SimLingo 只差 gate 与 gate 带来的推理路径，是族内基线的干净对照。
   2. **agent 原样**：SimLingo 仓库 `743b243` 自己的 `team_code/agent_simlingo.py`（不是 BLUE 仓库里改过的副本），`envs/simlingo`，config 与 BLUE 的 `config_simlingo.py` 逐字相同（单前视 1024×512 FOV 110、`eval_route_as=target_point`、`use_cot=True`，所以每帧都先生成语言再出动作）；
@@ -451,6 +451,7 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   4. **通道**：speed waypoints（10 点 × 0.25 s）的 1.75 → 2.0 s 速度，与 BLUE 同一换算；同一套 568 个世界、同一个 judge（`p5_exam.exam`，τ 用 SimLingo 自己的 null）；creep 用同一规则（SimLingo 的阈值与 BLUE 相同，800 帧）。
   5. **对比**：BLUE − SimLingo = 同一批 reactive 帧上两者「定向翻对」指示的差，路线整组 bootstrap，合并（pooled families）、行人、cut-in 与逐 family 各报；BLUE 的 gate 开 / 关分开的差作描述。
      读法对第 38 条：若 BLUE − SimLingo 在突发 family（行人或 cut-in）上 CI 整体 > 0，则第 38 条「BLUE 在突发 hazard 上更好」得到配对证据；CI 跨 0 则不支持；< 0 则反向。
+  15:50 E3 检查（世界 1438210，17 帧）：捷径对作者每 tick `run_step` 的 speed waypoints 与 prompt **逐位相同**；SimLingo 每帧约 700 ms（每帧都生成语言）。开跑：GPU 6 十个 worker + GPU 4 两个，每个 2 核，共 24 核。
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
