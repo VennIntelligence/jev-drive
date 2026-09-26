@@ -410,7 +410,7 @@ def geom_check(rl) -> dict:
         err, rng = [], []
         for tok, g in dd.groupby("frame_id"):
             a = ag[tok]
-            ped = a["boxes"][a["cls"] == "pedestrian"] if len(a["boxes"]) else np.zeros((0, 7))
+            ped = a["boxes"][a["cls"] == E3.CLASSES.index("pedestrian")] if len(a["boxes"]) else np.zeros((0, 7))
             if not len(ped):
                 continue
             dist = np.linalg.norm(g[["gx", "gy"]].to_numpy()[:, None] - ped[None, :, :2], axis=-1)
