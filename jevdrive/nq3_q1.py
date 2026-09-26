@@ -277,6 +277,10 @@ def judge(rl, out: Path | None = None) -> pd.DataFrame:
     for name, pr in preds.items():
         long_only = name == "TFv6 target speed"
         row, pc, s = J.judge_one(name, p, pr)
+        if not row["n_frames"]:
+            rows.append({**row, "note": notes.get(name, "")})
+            rl.log.info("%s: %s", name, row["verdict"])
+            continue
         if long_only:
             for k in ("bypass_flip", "lo", "hi", "gate_a", "shoulder_flip", "selective", "has_bypass", "mirror_borrow"):
                 row[k] = np.nan
@@ -292,8 +296,12 @@ def judge(rl, out: Path | None = None) -> pd.DataFrame:
                     row["bypass_flip"], row["lo"], row["hi"], row["null_ff_oos"], row["shoulder_flip"],
                     row["shoulder_ref"], row["stop_sub"], row["verdict"])
     tab = pd.DataFrame(rows)
+    for c in ("bypass_flip", "lo", "hi", "null_ff_oos", "gate_a", "shoulder_flip", "shoulder_ref", "selective", "stop_sub",
+              "stop_lo", "stop_hi", "neg_later_rate", "neg_agree_expert", "mirror_borrow", "routes", "tau_lat"):
+        if c not in tab:
+            tab[c] = np.nan
     tab.to_csv(out / "summary.csv", index=False)
-    pd.concat(per).to_csv(out / "per_scenario.csv", index=False)
+    pd.concat(per or [pd.DataFrame()]).to_csv(out / "per_scenario.csv", index=False)
     if wms:
         wm = pd.concat(wms)
         wm.to_csv(out / "world_modes.csv", index=False)
