@@ -8,20 +8,26 @@ R=$DATA_DIR/runs/nq3/c
 PY=$REPO/.venv/bin/python
 OPPY=$DATA_DIR/envs/openpilot/bin/python
 ULPY=$DATA_DIR/envs/ultralytics/bin/python
-export CUDA_VISIBLE_DEVICES=6 P6=carla_p6
+export CUDA_VISIBLE_DEVICES=6 P6=carla_p6 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+retry() {   # retry <tries> <cmd...>: GPU 6 is oversubscribed by five lanes; an OOM at load waits 2 min and tries again
+  local n=$1 i; shift
+  for ((i = 1; i <= n; i++)); do "$@" && return 0; echo "attempt $i of $n failed: $*"; sleep 120; done
+  return 1
+}
 
 feats() {   # C1: Qwen (2 shards, cores 164-179) || V-JEPA 2 -> YOLO detect -> tokens (cores 172-179)
   local pids=() rc=0
   for i in 0 1; do     # CPU-bound (HF processor): both shards may use all 16 cores
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c 164-179 \
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 retry 40 taskset -c 164-179 \
       $PY -m jevdrive.nq3_feats qwen --shard $i/2 --batch 2 --workers 6 > "$R/feats/qwen$i.log" 2>&1 & pids+=($!)
   done
   (
     set -e
     [[ -f $DATA_DIR/processed/$P6/bb_vjepa2/mean.npy ]] || \
-      OMP_NUM_THREADS=2 taskset -c 172-179 $PY -m jevdrive.nq3_feats vjepa --batch 64 --workers 6
+      OMP_NUM_THREADS=2 retry 20 taskset -c 172-179 $PY -m jevdrive.nq3_feats vjepa --batch 64 --workers 6
     for i in 0 1; do
-      OMP_NUM_THREADS=1 taskset -c $((172 + 4 * i))-$((175 + 4 * i)) $ULPY -m jevdrive.night2_n4 detect --part $i/2 \
+      OMP_NUM_THREADS=1 retry 20 taskset -c $((172 + 4 * i))-$((175 + 4 * i)) $ULPY -m jevdrive.night2_n4 detect --part $i/2 \
         --images "$DATA_DIR/processed/$P6/nq3_images.parquet" --dst "$DATA_DIR/processed/$P6/nq3_dets" --workers 3 &
     done
     wait
@@ -46,7 +52,7 @@ feats_wait() {
 }
 
 q1_op() {   # openpilot Cinque / Lebowski native plan on all 605 P6 streams (cores 164-179)
-  P5_SET=$P6 OMP_NUM_THREADS=2 taskset -c 164-179 $OPPY scripts/p5_openpilot.py --arrays plan temporal \
+  P5_SET=$P6 OMP_NUM_THREADS=2 retry 10 taskset -c 164-179 $OPPY scripts/p5_openpilot.py --arrays plan temporal \
     --out-sub op_streams_plan --workers 12
 }
 
@@ -55,9 +61,13 @@ q1_op() {   # openpilot Cinque / Lebowski native plan on all 605 P6 streams (cor
 Q2OUT=$R/q2_pilot/out
 q2py() { OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 taskset -c 164-179 $PY -m jevdrive.nq3_q2 "$@"; }
 
-q2_pilot() {   # LOCO (primary), A0-A3, seeds 0-2, Cinque and Lebowski
-  q2py pilot --split loco --seeds 0,1,2 --arms A0,A1,A2,A3 --run "$Q2OUT" --tag _main
+q2py_m() { local m=$1; shift; OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 taskset -c 164-179 \
+  $PY -c "import sys; from jevdrive import nq3_q2 as Q; Q.MODELS = ('$m',); sys.argv = ['nq3_q2'] + sys.argv[1:]; Q.main()" "$@"; }
+
+q2_pilot() {   # LOCO (primary), A0-A3, seeds 0-2, Cinque first (READY is chosen on Cinque); Lebowski after READY
+  retry 5 q2py_m cinque pilot --split loco --seeds 0,1,2 --arms A0,A1,A2,A3 --run "$Q2OUT" --tag _main
 }
+q2_pilot_leb() { retry 5 q2py_m lebowski pilot --split loco --seeds 0,1,2 --arms A0,A1,A2,A3 --run "$Q2OUT" --tag _leb; }
 
 ready() {      # registered rule (nq3_q2.choose): LOCO, Cinque, arm passing rule 7 in all seeds with the highest mean
                # bypass flip, none -> A1; mode head A3 if it passes else A2. Refit on all v0, export, READY
@@ -67,12 +77,12 @@ ready() {      # registered rule (nq3_q2.choose): LOCO, Cinque, arm passing rule
 }
 
 q2_controls() { q2py controls --split loco --seeds 0,1,2 --run "$Q2OUT"; }                         # backbone Delta streams
-q2_route()    { q2py pilot --split route --seeds 0,1,2 --arms A0,A1,A2,A3 --run "$Q2OUT" --tag _main; }
-q2_a4()       { q2py pilot --split loco --seeds 0 --arms A4 --run "$Q2OUT" --tag _A4; }             # vocabulary control
+q2_route()    { retry 5 q2py pilot --split route --seeds 0,1,2 --arms A0,A1,A2,A3 --run "$Q2OUT" --tag _main; }
+q2_a4()       { retry 5 q2py pilot --split loco --seeds 0 --arms A4 --run "$Q2OUT" --tag _A4; }     # vocabulary control
 q2_report()   { q2py report --run "$Q2OUT"; }
 
 # ---------------------------------------------------------------- Q1 readouts and judge
-q1_heads() { OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 taskset -c 164-179 $PY -m jevdrive.nq3_q1 heads; }
+q1_heads() { OMP_NUM_THREADS=16 MKL_NUM_THREADS=16 retry 5 taskset -c 164-179 $PY -m jevdrive.nq3_q1 heads; }
 
 wait_for() {   # wait_for <file> <deadline YYYY-mm-dd HH:MM>: 0 when the file exists, 0 with a note at the deadline
   local f=$1 dl; dl=$(date -d "$2" +%s)

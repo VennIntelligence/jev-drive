@@ -84,7 +84,7 @@ step() {
 
 # order ([C] entry 17:40): features start in the background, the Q2 pilot and READY first (no data dependency on
 # Q1; READY is the cross-lane hand-off), then the Q1 readouts, the remaining Q2 splits, the Q1 judge, v1.
-STEPS=("feats_start:5" "q2_pilot:45" "ready:15" "feats_wait:180" "q1_op:25" "q1_heads:75" "q2_controls:40" "q2_route:30" "q2_a4:150"
+STEPS=("feats_start:5" "q2_pilot:120" "ready:15" "q2_pilot_leb:120" "feats_wait:240" "q1_op:25" "q1_heads:75" "q2_controls:40" "q2_route:30" "q2_a4:150"
        "q1_wait_nav:420" "q1_judge:30" "q2_report:10" "wait_v1:720" "v1_prep:75" "q2_v1:180" "q1_wait_alp:720"
        "q1_judge_final:30")
 
