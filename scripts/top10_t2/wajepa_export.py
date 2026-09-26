@@ -37,7 +37,8 @@ def export(a):
     log_names, _ = _load_scene_filter(a.navsim_root)
     scene_filter = instantiate(OmegaConf.load(_scene_filter_path(a.navsim_root)))
     scene_filter.log_names = _shard_logs(log_names, a.num_shards)[a.rank]
-    part = a.out_dir / f"rank_{a.rank:02d}.partial{'' if a.seed is None else f'.n{a.num_shards}'}.pkl"
+    part = a.out_dir / (f"rank_{a.rank:02d}.partial{'' if a.seed is None else f'.n{a.num_shards}'}"
+                        f"{'' if a.split is None else f'.split{a.split[0]}of{a.split[1]}'}.pkl")
     done = pickle.load(open(part, "rb"))["trajectories"] if part.exists() else {}
     agent = WorldModelNavsimAgent(config_path=str(a.config), checkpoint_path=str(a.checkpoint), device="cuda")
     agent.initialize()
@@ -48,6 +49,8 @@ def export(a):
         own = {str(t) for t in loader.tokens}
         done |= {k: v for k, v in pickle.load(open(a.seed, "rb"))["trajectories"].items() if k in own and k not in done}
     todo = [t for t in loader.tokens if str(t) not in done]
+    if a.split is not None:                    # a helper takes every M-th remaining token of this rank (--split j M)
+        todo = todo[a.split[0]::a.split[1]]
     print(f"[export] rank={a.rank} {len(loader.tokens)} tokens, {len(done)} already done, {len(todo)} to go", flush=True)
     t0 = time.time()
     for i, token in enumerate(todo, 1):
@@ -56,6 +59,8 @@ def export(a):
             _dump({"trajectories": done}, part)
             print(f"[export] rank={a.rank} {len(done)}/{len(loader.tokens)} ({(time.time() - t0) / i:.2f} s/token)",
                   flush=True)
+    if a.split is not None:                    # helpers only checkpoint; a final plain run with --seed writes rank_XX.pkl
+        return
     own = [str(t) for t in loader.tokens]         # the partial may hold another sharding's tokens; merge wants disjoint ranks
     _dump({"trajectories": {k: done[k] for k in own}}, a.out_dir / f"rank_{a.rank:02d}.pkl")
 
@@ -71,6 +76,8 @@ def main():
     ap.add_argument("--openscene-root", type=Path)
     ap.add_argument("--merge", action="store_true")
     ap.add_argument("--seed", type=Path, help="union pickle from --consolidate; lets a run change --num-shards")
+    ap.add_argument("--split", type=int, nargs=2, metavar=("J", "M"),
+                    help="helper for a slow rank: only its remaining tokens j::M, checkpoint only (then --consolidate)")
     ap.add_argument("--consolidate", action="store_true",
                     help="union of every rank_*.pkl / rank_*.partial.pkl in --out-dir -> done_union.pkl")
     a = ap.parse_args()
