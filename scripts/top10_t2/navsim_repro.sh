@@ -10,7 +10,7 @@
 #           The v1.1 config already has sensor_blobs_path (same path), so the scorer's "+<key>=" append goes to an
 #           unused key instead of failing on the existing one.
 #
-# Usage (on the box, in tmux): GPU=4 CPUS=0-3 scripts/top10_t2/navsim_repro.sh drivor|wajepa
+# Usage (on the box, in tmux): GPU=4 CPUS=0-3 scripts/top10_t2/navsim_repro.sh drivor|wajepa [extra hydra overrides, drivor]
 # CPUS pins the whole job (inference, data loading, scoring workers) to a core list: the box is CPU-bound.
 set -euo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -40,7 +40,7 @@ case $model in
       agent.config.one_token_per_traj=true agent.config.refiner_num_heads=1 agent.config.tf_d_model=256 \
       agent.config.tf_d_ffn=1024 agent.config.area_pred=false agent.config.agent_pred=false agent.config.ref_num=4 \
       agent.config.noc=1 agent.config.dac=1 agent.config.ddc=0.0 agent.config.ttc=5 agent.config.ep=5 agent.config.comfort=2 \
-      metric_cache_path="$CACHE/v1_navtest" output_dir="$run" ;;
+      metric_cache_path="$CACHE/v1_navtest" output_dir="$run" "${@:2}" ;;
   wajepa)
     cd "$TP/wajepa"
     py=$DATA_DIR/envs/wajepa/bin/python
