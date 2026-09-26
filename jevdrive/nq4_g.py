@@ -609,7 +609,7 @@ def report():
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("build", "report", "smoke", "pilot-check"))
+    ap.add_argument("cmd", choices=("build", "report", "smoke", "pilot-check", "profile"))
     ap.add_argument("--cand", default="")
     ap.add_argument("--variant", default="")
     ap.add_argument("--out", default="")
@@ -620,6 +620,9 @@ def main():
         r = pilot_check(a.cand, a.variant, Path(a.out), [i for i in a.ids.split(",") if i], a.since)
         print(json.dumps(r, default=str))
         raise SystemExit(0 if r["pass"] else 1)
+    if a.cmd == "profile":
+        print(prof_report(a.out or "smoke").to_string())
+        return
     if a.cmd == "smoke":
         print(smoke_report().to_string())
     else:
@@ -843,6 +846,45 @@ def pilot_check(cand: str, variant: str, out: Path, ids: list[str], since: float
             if abs(d) > PILOT["ds_ref_tol"]:
                 failed.append(f"DS {np.mean(mine):.1f} vs night-queue-3 {ref} {np.mean(theirs):.1f} on the same {len(mine)} routes")
     return {"pass": not failed, "failed": failed, "facts": facts}
+
+
+def prof_report(arms: str = "smoke") -> pd.DataFrame:
+    """F3: per examinee, from its pilot / smoke runs: wall per route (worker-minutes), the set-up phases (nq4_setup.json)
+    and the per-tick split of the evaluator loop (route_result.json profile) -> results/g/profile.csv."""
+    rows = []
+    for d in sorted(root(arms).glob("*/*/s*")):
+        for f in sorted((d / "done").glob("*.json")):
+            a = finished_attempt(d, f.stem)
+            try:
+                rr = json.loads((a / "route_result.json").read_text())
+            except (OSError, ValueError):
+                continue
+            p = rr.get("profile", {})
+            st = json.loads((a / "nq4_setup.json").read_text()) if (a / "nq4_setup.json").exists() else {}
+            pl = a / "plans.jsonl"
+            srv = pd.read_json(pl, lines=True) if pl.exists() and pl.stat().st_size else pd.DataFrame()
+            rows.append({"cand": d.parent.parent.name, "variant": d.parent.name, "id": f.stem, "wall_s": rr.get("wall_s"),
+                         "ticks": p.get("ticks"), "tick_ms": p.get("total_ms_mean"), "world_tick_ms": p.get("world_tick_ms_mean"),
+                         "agent_ms": p.get("agent_ms_mean"), "tree_ms": p.get("tree_ms_mean"),
+                         "load_world_s": st.get("load_world_s"), "route_scenario_s": st.get("route_scenario_s"),
+                         "server_ms": float(srv.server_ms.mean()) if "server_ms" in srv else None,
+                         "op_ms": float(srv.op_ms.mean()) if "op_ms" in srv else None,
+                         "head_ms": float(srv.head_ms.mean()) if "head_ms" in srv else None})
+    df = pd.DataFrame(rows)
+    if len(df):
+        df["drive_s"] = df.ticks * df.tick_ms / 1e3
+        df["setup_s"] = df.wall_s - df.drive_s
+        agg = df.groupby("cand").agg(routes=("id", "size"), wall_min=("wall_s", lambda x: x.median() / 60),
+                                     setup_s=("setup_s", "median"), load_world_s=("load_world_s", "median"),
+                                     route_scenario_s=("route_scenario_s", "median"), ticks=("ticks", "median"),
+                                     tick_ms=("tick_ms", "median"), world_tick_ms=("world_tick_ms", "median"),
+                                     agent_ms=("agent_ms", "median"), tree_ms=("tree_ms", "median"),
+                                     server_ms=("server_ms", "median")).reset_index()
+        out = root("results", "g")
+        df.to_csv(out / "profile_runs.csv", index=False)
+        agg.to_csv(out / "profile.csv", index=False)
+        return agg
+    return df
 
 
 if __name__ == "__main__":
