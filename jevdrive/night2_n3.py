@@ -371,7 +371,9 @@ def compat(rl) -> pd.DataFrame:
             keys = pd.Series(np.arange(len(z[f"{s}_keys"])), index=z[f"{s}_keys"].astype(str))
             r = keys.reindex(fr.astype(str)).dropna().astype(int).to_numpy()
             ov = len(top(z[f"{s}_hydra"][r]) & nav_top) / 10
+            ov_cls = len(top(z[f"{s}_clsref"][r]) & top(z["navtest_clsref"])) / 10    # [B] 10:11, description only
             rows.append({"model": m, "seed": sd, "set": s, "null_frames": len(r), "top10_overlap": ov,
+                         "cls_late_top10_overlap (post hoc)": ov_cls,
                          "distinct_anchors_null": int(len(np.unique(z[f"{s}_hydra"][r]))),
                          "distinct_anchors_navtest": int(len(np.unique(z["navtest_hydra"]))),
                          "dac_sel_null": float(z[f"{s}_dac_sel"][r].mean()), "dac_sel_navtest": float(z["navtest_dac_sel"].mean()),
