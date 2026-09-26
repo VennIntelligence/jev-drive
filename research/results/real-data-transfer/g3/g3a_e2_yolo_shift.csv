@@ -1,0 +1,2 @@
+feature,n_edit,n_placebo,median_edit,median_placebo,ratio,lo,hi,share_edit_zero,share_placebo_zero
+YOLO embedding (G0 real-data),911,175,0.5660601854324341,0.0037321329582482576,151.67202758789062,115.93798274993897,246.17931976318357,0.09989023051591657,0.2

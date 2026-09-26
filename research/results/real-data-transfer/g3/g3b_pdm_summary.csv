@@ -1,0 +1,2 @@
+tokens,scored,label_c_fires,share_fires,diff_median,diff_p10,diff_p90,continue_pdms_mean,brake_pdms_mean,rule_b_fires,both_fire,c_only,b_only,human_decisive,agree_with_human_slowing
+911,911,456,0.5005488474204172,0.11440334270065278,-0.26131143520691724,0.8423208469259741,0.49426039112763326,0.7353552938388477,160,61,395,99,553,0.8553345388788427

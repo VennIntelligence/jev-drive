@@ -570,6 +570,40 @@ def student(rl):
 
 # ---------------------------------------------------------------- figures (pulled tables -> research/figs)
 
+G3B_ARMS = [("E2 pair (a)", "M-C (a)"), ("E2 pair (c)", "M-C (c)"), ("G3 student A (c)", "Student A (c)"),
+            ("G3 student B (c)", "Student B (c)"), ("G3 student A (a)", "Student A (a)"), ("G3 student B (a)", "Student B (a)")]
+
+
+def g3b_table(res_dir="research/results/real-data-transfer/g3") -> pd.DataFrame:
+    """One row per model x arm x seed: E2's readouts (R1, P5 BA, WOD) from the pulled M-C seed runs and the student run."""
+    rd = Path(res_dir)
+    rows = []
+    for m in MODELS:
+        for arm, _ in G3B_ARMS:
+            for sd in (0, 1, 2):
+                src = rd / (f"mc_s{sd}" if arm.startswith("E2") else "student")
+                key = arm if arm.startswith("E2") else f"{arm} s{sd}"
+                r1 = pd.read_csv(src / "r1_magnitude.csv").query("pairs == 'all'").set_index("head").loc[f"{key} [{m}]"]
+                c = pd.read_csv(src / "p5_criteria.csv").set_index("arm").loc[f"{key} [{m}]"]
+                w = pd.read_csv(src / "wod_deltas.csv").query("model == @m and arm == @key and judge == 'RFS (rater)'").set_index("scope")
+                a = pd.read_csv(src / "wod_activation.csv").query("model == @m and arm == @key").set_index("scope")
+                rows.append({"model": m, "arm": arm, "seed": sd, "r1_ratio": r1.ratio, "r1_lo": r1.lo, "r1_hi": r1.hi,
+                             "r1_edit_median_m": r1.median_edit_m, "p5_ped_flip": c.ped_flip, "p5_ped_lo": c.ped_lo, "p5_ped_hi": c.ped_hi,
+                             "p5_cutin_delta": c.cutin_delta_vs_prior, "p5_null_ff_oos": c.null_ff_oos,
+                             "wod_rfs_all": w.loc["all", "delta"], "wod_rfs_all_lo": w.loc["all", "lo"], "wod_rfs_all_hi": w.loc["all", "hi"],
+                             "wod_rfs_ped": w.loc["Pedestrians", "delta"], "wod_rfs_ped_lo": w.loc["Pedestrians", "lo"],
+                             "wod_rfs_ped_hi": w.loc["Pedestrians", "hi"], "straight_activation": a.loc["straight_yaw", "activation"],
+                             "wod_delta_median_m": a.loc["all", "delta_mag_median_m"]})
+    T = pd.DataFrame(rows)
+    T["pass_r1"] = T.r1_ratio >= 2
+    T["pass_wod_ped"] = T.wod_rfs_ped_lo > 0
+    T["pass_straight"] = T.straight_activation <= 0.07
+    T["pass"] = T.pass_r1 & T.pass_wod_ped & T.pass_straight
+    T["harm_wod_all"] = T.wod_rfs_all_hi < 0
+    T.to_csv(rd / "g3b_summary.csv", index=False, float_format="%.4f")
+    return T
+
+
 def figs(rl=None, res_dir="research/results/real-data-transfer/g3", out_dir="research/figs"):
     """G3a: median feature shift (edit vs null / placebo) and their ratio, CARLA pedestrian pairs vs E2 navtrain."""
     import matplotlib.pyplot as plt
@@ -605,6 +639,29 @@ def figs(rl=None, res_dir="research/results/real-data-transfer/g3", out_dir="res
         a1.set_ylabel("Shift ratio, edit / null")
         a1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1, fontsize=6)
         plots.save(fig, Path(out_dir), "real-g3a-shift")
+    T = g3b_table(res_dir)
+    cols = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, axes = plt.subplots(1, 2, figsize=(plots.PAGE, 2.0))
+        for ax, (v, lo, hi, lab, ref) in zip(axes, (("r1_ratio", "r1_lo", "r1_hi", "R1: edit / placebo $|\\Delta|$ ratio", 2.0),
+                                                   ("wod_rfs_ped", "wod_rfs_ped_lo", "wod_rfs_ped_hi", r"WOD Pedestrians RFS $\Delta$", 0.0))):
+            for k, (m, col) in enumerate(cols.items()):
+                for i, (arm, _) in enumerate(G3B_ARMS):
+                    x = i + (k - 0.5) * 0.3
+                    g = T[(T.model == m) & (T.arm == arm)].set_index("seed")
+                    r0 = g.loc[0]
+                    ax.errorbar(x, r0[v], yerr=[[r0[v] - r0[lo]], [r0[hi] - r0[v]]], fmt="o", color=col, ms=3, lw=0.8,
+                                capsize=1.5, label=m.capitalize() if i == 0 else None)
+                    if arm.startswith("G3"):
+                        ax.plot([x + 0.07] * 2, g.loc[[1, 2], v], "x", color=col, ms=3, mew=0.7)
+            ax.axhline(ref, color="0.4", ls="--" if ref else "-", lw=0.6)
+            ax.set_xticks(range(len(G3B_ARMS)), [n for _, n in G3B_ARMS], rotation=20, ha="right")
+            ax.set_ylabel(lab)
+        axes[0].set_yscale("log")
+        axes[0].set_yticks([1, 2, 5, 10, 20], ["1", "2", "5", "10", "20"])
+        axes[0].minorticks_off()
+        axes[0].legend(loc="upper right")
+        plots.save(fig, Path(out_dir), "real-g3b-retrain")
 
 
 def main():
