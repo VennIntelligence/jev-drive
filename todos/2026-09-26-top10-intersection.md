@@ -386,3 +386,89 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
+
+### T1：SparseDriveV2 + ZTRS（2026-09-26 12:25–13:45 CST，GPU 5 + 4）
+
+所有选择在 [T1] 10:05 / 10:25 / 11:16 / 12:55 条目里写于数字之前；代码 `jevdrive/navsim_rig.py`（虚拟 nuPlan 相机）、`jevdrive/top10_exam.py`（plan / judge）、`scripts/top10_exam_infer.py`（模型 env 里的 runner）；
+小表 `research/results/top10-exams/t1_*`（T2 的表在同一目录，不带前缀），run dir `$DATA_DIR/runs/top10_exam/`。两个模型都是 scorer 式规划器（从固定词表里给候选打分选一条），
+SparseDriveV2 用 path × velocity 两级词表，ZTRS 用 8192 条轨迹词表且只用 PDM 奖励训练。
+
+**适配器噪声地板（先读这一格）**：正式 256 token 复检（12:36）上，恒等渲染与原生管线逐位一致（两个模型 100%），但把 nuPlan 自己的三路换成「按考卷构造的虚拟相机」
+——只差车队内亚度级的安装差异——SparseDriveV2 有 59.8% 的 token 换了轨迹（平均位移差 0.32 m，p95 1.39 m），ZTRS 33.6%（0.24 m，p95 1.24 m）。
+这本身是一个读数：**这两个 scorer 模型的选轨对亚度级的相机安装变化就会跳**，比它们在 NAVSIM 榜上彼此之间的差距（PDMS 零点几）所对应的轨迹差大得多。下面 WOD / nuScenes 的绝对误差都带这个量级的适配噪声（0.24–0.32 m 平均，尾部 1.2–1.4 m）；
+P5 / I3 的 x⁺ / x⁻ 两侧用同一套 rig，这部分噪声两侧相同，体现在各自 null 定出的 τ 上（P5 上 τ：SparseDriveV2 1.94、ZTRS 2.95 m/s，TFv6 waypoint 2.41、openpilot prior 1.16）。
+
+**P5 v1 BA 配对（纵向；1 081 个 reactive 帧，49 条路线，147 对；judge `p5_exam.exam` 原样，CI 按路线 bootstrap）**
+
+| 考生 | τ (m/s) | 合并逐帧翻转 [95% CI] | 行人 | cut-in | 反方向 | 非反应帧误翻 | 样本外 null false-flip | 按对（null 按 case） | 判格（纵向） |
+|:--|--:|:--|--:|--:|--:|--:|--:|:--|:--|
+| SparseDriveV2 | 1.94 | 5.5% [2.1, 9.6] | 0.5% | 8.4% | 1.2% | 1.9% | 5.1% | 19.0% [10.2, 28.6]（42.2%） | **没有** |
+| ZTRS | 2.95 | 6.0% [1.9, 11.1] | 0.7% | 8.9% | 0.2% | 1.7% | 5.1% | 15.6% [7.5, 25.2]（40.0%） | **没有** |
+| *参照* TFv6 waypoint 2 s（同一 run） | 2.41 | 30.4% [23.9, 37.0] | | | 0.6% | 17.6% | 5.5% | | 有 |
+| *参照* openpilot `ridge_late` Cinque（P5 内拟合，M-C prior） | | 48.2% [35.5, 60.2] | | | | | 5.1% | | 有 |
+
+两个模型的合并翻转 CI 下界（2.1% / 1.9%）都低于自己的样本外 null false-flip（5.1%），按判据「没有纵向 E 层能力」；按对的翻转（19% / 16%）也低于 null case 的误翻（42% / 40%）。
+逐 family 只有 HighwayCutIn 有信号（SparseDriveV2 21.7% [9.0, 36.9]、ZTRS 26.1% [7.8, 45.5]），行人三个 family 与 StaticCutIn / ParkingCutIn 都在 0–7%。
+横向与 4 类反应一致率不报（BA 集没有横向标签，[T1] 10:05 (1)）。这张卷对这两个模型是「domain 混杂」：它们在 navtrain 真实图像上训，CARLA 渲染 + 我们的 rig 对它们是双重分布外，下一张卷正好把外观这一项拿掉。
+
+**I3 HUGSIM 车辆配对（1 832 个 reactive 帧，65 个场景；judge = `elicit_i3` 的，τ 由 24 个 null 场景定，CI 按场景 bootstrap）**
+
+| 考生 | τ (m/s) | 合并翻转 [95% CI] | static（959） | cut-in（216） | oncoming（657） | 反方向 | 非反应帧误翻 | 样本外 null false-flip | 判格 |
+|:--|--:|:--|--:|--:|--:|--:|--:|--:|:--|
+| SparseDriveV2 | 1.27 | 23.6% [18.9, 28.6] | 27.4% | 22.2% | 18.4% | 1.1% | 9.3% | 4.8% | **有**（车辆，纵向） |
+| ZTRS | 0.81 | **45.5% [40.0, 51.1]** | 44.8% | 48.1% | 45.5% | 1.6% | 10.5% | 5.8% | **有**（车辆，纵向） |
+| *参照* openpilot `ridge_late` Cinque（P5 拟合，零样本） | 0.53 | 70.0% [65.5, 74.5] | 77.1% | 66.7% | 60.7% | 9.2% | 18.0% | 4.4% | 有 |
+
+真实外观上两个模型都对车辆有定向反应，CI 下界远高于 null 地板，反方向很少；但都低于 openpilot `ridge_late` 的 70%（ZTRS 比 Cinque 少约 25 个百分点，SparseDriveV2 少约 46）。
+按 5.5 的预登记：「scorer 族在 I3 车辆配对上也与 openpilot `ridge_late`（70%）同量级 → scorer = 纯配方要降级」——**ZTRS 的 45.5% 不算同量级，但也远不是 0**，所以 5.5 第一条（scorer 族翻转不高于 null）在 I3 上不成立，第二条也没有完全触发，落在两者之间：
+PDM 子分数头确实学到了对车辆的纵向反应（只用 PDM 奖励、没有模仿的 ZTRS 反而更强），但强度只有 openpilot 线性读出的 2/3。I3 只有车辆、标签是规则 expert，这一格不外推到行人。
+
+**WOD-E2E val 零样本（rater 479 帧 RFS；rater + ADE-extra 1 437 帧 ADE@5 s；judge 见 [T1] 10:25 (1)）**
+
+| 行 | RFS cluster mean [CI] | 对 cv 的 Δ [CI] | floored | ADE@5 s s_ego 1–9 档（1 232） | 对 cv 的 Δ [CI] | 顶档 ADE（205） | 对 cv 的 Δ [CI] |
+|:--|:--|:--|--:|--:|:--|--:|:--|
+| cv | 7.10 [6.85, 7.35] | — | 27.1% | 2.51 | — | 6.82 | — |
+| logged future | 8.13 | +1.03 | 9.4% | — | | — | |
+| `ours cls ego` | 7.31 | +0.21 [−0.03, +0.45] | 21.3% | 1.74 | −0.77 [−0.94, −0.61] | 5.14 | −1.68 |
+| Alpamayo 1.5 nav（E[1 sample]） | 7.86 | +0.75 [+0.50, +1.00] | 2.9% | 1.59 | −0.92 | 4.67 | −2.15 |
+| openpilot Cinque | 8.01 | +0.90 [+0.62, +1.18] | 10.0% | 1.79 | −0.73 | 4.11 | −2.71 |
+| **SparseDriveV2** | 6.42 [6.19, 6.66] | **−0.68 [−1.05, −0.32]** | 31.3% | 4.05 [3.56, 4.58] | **+1.54 [+1.01, +2.11]** | 5.05 | −1.78 [−2.87, −0.41] |
+| **ZTRS** | 6.70 [6.47, 6.93] | **−0.40 [−0.72, −0.08]** | 22.8% | 4.04 [3.56, 4.57] | **+1.53 [+1.03, +2.07]** | 5.00 | −1.82 [−2.81, −0.55] |
+
+按 wod-e2e 的判法两个模型都是「CI 整体 < 0，零样本比匀速外推还差」，按第 22 条的主判（s_ego 1–9 档 ADE）也比 cv 差 1.5 m，远大于 0.24–0.32 m 的适配噪声地板；只有顶档（ego prior 失效的帧）比 cv 好，但仍不如 Alpamayo / openpilot。
+失败集中在车速两端（按起始车速拆，1 437 帧）：起始车速 > 10 m/s 的 189 帧（平均 14.5 m/s）两个模型 4 s 处都只开到约 8.3–8.7 m/s，4 s 纵向落后 log 15–16 m；
+静止帧（< 0.5 m/s，305 帧）SparseDriveV2 平均向前多走 7.5 m（ZTRS 2.3 m）。词表本身覆盖得到这些速度（ZTRS 8192 词表 4 s 终点最远 58.9 m），所以是选择问题不是词表问题；
+推测是 navtrain（城市、低速为主）的速度先验 + 4 s 输出外推到 5 s。
+
+**nuScenes main 4 636（零样本；`scripts/nusc_zs.py` 的 `cmd_score` 原样，VAD 口径，按 scene bootstrap）**
+
+| 行 | L2 1 / 2 / 3 s (m) | L2 均值 | 对 CV 的 Δ [CI] | collision（BEV-Planner 口径）均值 % | 对 CV 的 Δ [CI] |
+|:--|:--|--:|:--|--:|:--|
+| CV | 0.28 / 0.66 / 1.18 | 0.706 | — | 1.08 | — |
+| openpilot Cinque | 0.43 / 0.91 / 1.53 | 0.955 | +0.25 [+0.17, +0.33] | 0.50 | −0.58 [−1.07, −0.12] |
+| **SparseDriveV2** | 0.44 / 0.89 / 1.56 | 0.964 | **+0.26 [+0.17, +0.35]** | 0.84 | −0.24 [−0.83, +0.36] |
+| **ZTRS** | 0.70 / 1.25 / 1.94 | 1.294 | **+0.59 [+0.49, +0.69]** | 0.79 | −0.29 [−0.84, +0.19] |
+
+按 nuscenes-physicalai 的判法两个模型都是「CI 整体 > 0，比匀速直行差」；SparseDriveV2 的 +0.26 与 openpilot Cinque 同量级，且与适配噪声地板（0.32 m）同量级，读不动更多；ZTRS 的 +0.59 超出地板，1 s 处就差 0.4 m（起步速度对不上）。
+collision 两个模型点估计都低于 CV，但 CI 跨 0，按预登记只报方向。都离 AD-MLP / Ego-MLP（约 0.3 m）很远。
+
+**NAVSIM 复现（官方 devkit，回放 agent；复现差距只报不判）**
+
+| 模型 | 卷 / devkit | 我们 | 论文 / 榜 | 差 |
+|:--|:--|--:|--:|--:|
+| SparseDriveV2（`sparsedrive_navsimv1_92p2.ckpt`） | navtest 12 146，v1.1，PDMS | **92.22**（NC 98.7、DAC 98.4、EP 88.7、TTC 95.3、C 100） | 92.2 | +0.02 |
+| ZTRS（`ztrs_vov.ckpt`，8192 词表） | navhard two-stage 5 912，main @ 0a380a9，EPDMS | **48.15** | 48.1（HF 榜，修复后协议）/ 45.5（README，旧协议） | +0.05（对 48.1） |
+
+**墙钟与算力**：P5 / I3 / WOD / nuScenes 推理两个模型合计约 30 min 墙钟（GPU 5 满载，渲染改定点 atlas 后 29–40 帧 / s）、SparseDriveV2 navtest 两个 shard 共约 10 min（GPU 5 + 4）、
+ZTRS navhard 推理约 25 min（重启前，GPU 4）、适配器检查两轮约 25 min；出数用的 GPU 合计约 1.7 GPU·h（另约 0.5 GPU·h 耗在重启前被停掉的首跑），devkit 打分 CPU：PDMS 4 min（16 线程）、navhard EPDMS 22 min（7 线程）。
+早上的首跑与 box 负载 300 下的慢检查另耗约 1 h 墙钟（重启前停掉，没有产出数字）。估时 8 h，实际工作墙钟约 2.5 h（10:05–11:16、12:25–13:40，不含重启停机）。
+
+**按 5.5 的读法（待定级）**：两个 scorer 族在真实外观的车辆配对上有 E 层纵向反应（ZTRS 45.5%、SparseDriveV2 23.6%，都显著高于 null），在 CARLA 配对上没有（domain 混杂，不据此判能力）；
+在 WOD / nuScenes 两个零样本开环卷上都输给匀速外推，而同样零样本的 Alpamayo / openpilot 在 WOD 上赢 cv 0.75–0.90 RFS。NAVSIM 榜分数完整复现（SparseDriveV2 92.22），
+所以「榜上 92 分」与「出了 navtrain 就比 cv 差」同时成立，这是 scorer 配方对 NAVSIM 生态（相机安装、速度分布、PDM 公式）的过拟合的直接读数，加上适配器检查里亚度级安装变化就换轨迹的脆弱性。
+结论回填：[leaderboard-vs-ability](../research/leaderboard-vs-ability.md) 第 8 节 与 decisions 第 46 条的「T1 考试」段。图：
+
+![T1 flip rates](../research/figs/top10-t1-flip-rates.png)
+
+看什么：(a) CARLA 配对上两个 scorer 模型（橙、蓝）在合并与行人 family 上都贴着 5% 的 null 线（虚线），只有 HighwayCutIn 有信号；同一 judge 下 TFv6 waypoint（绿）和 P5 内拟合的 openpilot 读出（灰）明显高于它。
+(b) 换成真实外观的 HUGSIM 车辆配对，两个模型都离开 null 线，ZTRS 约 45%、SparseDriveV2 约 24%，三个 family 一致，但都低于零样本的 openpilot 读出（70%）。误差线是按路线 / 场景 bootstrap 的 95% CI。

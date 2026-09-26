@@ -376,3 +376,25 @@ R 层 = routine（保持车道、转弯、跟车、按灯停、起步），E 层
 > 两轮只读审计（35 条 finding、1,121 行 ablation、204 个跨榜分数、113 条 issue）之后：(a) 三类榜单三种增益构成，nuScenes = ego prior，NAVSIM v2 = EPDMS 代理评分器（配方项 10–15 分），Bench2Drive = 真能力但含账本外的接口 / 规则（我们自己量到接口 +14）；(b) 跨榜排序只在同代码族内和代际分层上一致，NAVSIM 顶部 ρ=0.21，B2D↔Longest6 去掉 TFv6 家族后 ρ=0.05；(c) E 层证据只有四条（RAM、DAgger、LiDAR 的 SR、RAP 恢复数据），全部在闭环或 v2 协议上；(d) 同一 R prior 开环加分、闭环减分（FIVE-VLA −3.95 DS）。
 > **对方向的含义**：骨架里"R 层配方不稀缺、E 层稀缺"的判断成立；提取目标锁定 TFv6 waypoint 通道（P5 39%/73%）和 RAM 式结构；P5 v1 按 7.3 节的攻击面清单加固。
 > **怎么定下来**：7.4 的实验 1 和 3。**会推翻的证据**：实验 1 里关掉规则后 target speed 通道翻转率显著上升（说明"不反应"是规则掩盖的）；实验 3 里官方权重与重调权重的 EPDMS 差 <3。
+
+## 8. 多榜前 10 族在我们考卷上（T1：SparseDriveV2 + ZTRS，2026-09-26，**待定**）
+
+预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T1」，小表 [results/top10-exams/](results/top10-exams/)（`t1_*`）。
+两个模型都是 scorer 式规划器（从固定轨迹词表里用学到的 PDM 子分数选一条）：SparseDriveV2（SparseDrive 族，navtest-v2 #7、B2D #10）与 ZTRS（NVlabs Hydra 族，只用 PDM 奖励训练、没有模仿，作「对准 metric 的配方」对照）。
+
+| 卷 | SparseDriveV2 | ZTRS | 同卷参照 |
+|:--|:--|:--|:--|
+| NAVSIM 复现（官方 devkit） | navtest PDMS **92.22**（论文 92.2） | navhard EPDMS **48.15**（HF 榜 48.1） | — |
+| P5 v1 BA 配对，纵向翻转（CARLA） | 5.5% [2.1, 9.6]，null 5.1% → 没有 | 6.0% [1.9, 11.1]，null 5.1% → 没有 | TFv6 waypoint 30.4%，openpilot prior（P5 内拟合）48.2% |
+| I3 HUGSIM 车辆配对（真实外观） | 23.6% [18.9, 28.6]，null 4.8% → 有 | **45.5% [40.0, 51.1]**，null 5.8% → 有 | openpilot `ridge_late`（零样本）70.0% |
+| WOD val RFS，对 cv 的 Δ | −0.68 [−1.05, −0.32] | −0.40 [−0.72, −0.08] | Alpamayo +0.75、openpilot Cinque +0.90 |
+| WOD ADE@5 s（s_ego 1–9 档），对 cv 的 Δ | +1.54 m [+1.01, +2.11] | +1.53 m [+1.03, +2.07] | Alpamayo −0.92、`cls ego` −0.77 |
+| nuScenes L2 均值，对 CV 的 Δ | +0.26 m [+0.17, +0.35] | +0.59 m [+0.49, +0.69] | openpilot Cinque +0.25 |
+| 适配器噪声地板（亚度级相机安装变化，nuPlan 自己的图） | 60% token 换轨迹，平均 0.32 m | 34% 换轨迹，平均 0.24 m | 恒等渲染两者都 100% 逐位一致 |
+
+**读法**。(1) 榜分可以完整复现，而且一出 navtrain 生态就输给匀速外推：同样零样本的 Alpamayo / openpilot 在 WOD 上赢 cv 0.75–0.90 RFS，这两个 NAVSIM 榜上 92 分级的模型输 0.4–0.7；
+失败集中在高速（> 10 m/s 的帧 4 s 只开到约 8.5 m/s，落后 log 15 m）与静止起步，词表覆盖得到这些速度，是选择问题。(2) **scorer 选轨的脆弱性**：不换场景、不换图像，只把相机安装改动亚度级（nuPlan 车队内的标定差异），
+SparseDriveV2 就有 60% 的 token 换了轨迹，ZTRS 34%，平均 0.24–0.32 m、尾部 1.2–1.4 m。这是离散 argmax 选轨在近似等分候选之间跳的直接后果，也说明榜上相邻名次零点几 PDMS 的差，对应的是这种量级的不稳定选择。
+(3) E 层：真实外观车辆配对上 scorer 族**有**纵向反应，而且不看人类轨迹、只用 PDM 奖励训出来的 ZTRS（45.5%）比 SparseDriveV2（23.6%）强，但都只到 openpilot 线性读出（70%）的 1/3–2/3；
+CARLA 配对上两者都没有（外观 + rig 双重分布外，按预登记标「domain 混杂」，不作能力结论）。所以 7.1 节「NAVSIM 顶部 4 分基本是配方」在这两个模型上的具体形态是：PDM 子分数头学到了一部分对车辆的反应，但这部分能力绑在 NAVSIM 的相机与速度分布上。
+推测（未验证）：ZTRS 比 SparseDriveV2 强的来源是 TTC / NC 子分数在奖励训练里被直接优化；验证办法是对 ZTRS 的 TTC / NC 头做消融，看 I3 翻转掉多少。

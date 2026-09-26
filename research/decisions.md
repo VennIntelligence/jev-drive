@@ -3212,6 +3212,13 @@ BLUE 是第 38 条里唯一在突发 hazard 上显著更好的方法，它的 ga
 **状态**：**待定**。限定：榜单快照到 2026-09-26；BridgeDrive 仓库无 LICENSE、HF 未写 96.34 出自哪个 ckpt；WOD 新条目只有榜单行没有论文代码；NAVSIM 模型只出 4 s 轨迹，考 WOD 要外推到 5 s，对它们不利。
 **会推翻本条的证据**：这 6 族在 P5 / I3 上的翻转率普遍显著高于各自 null 地板且跨外观成立，则「交集不是能力信号」要改写为「交集里的族确有能力」。
 
+**T1 考试：SparseDriveV2 + ZTRS（2026-09-26 下午，预登记与表在 todo「结果 / T1」，[leaderboard-vs-ability 第 8 节](leaderboard-vs-ability.md)）**。
+NAVSIM 榜分完整复现（SparseDriveV2 navtest PDMS 92.22 对论文 92.2；ZTRS navhard EPDMS 48.15 对 HF 榜 48.1）。零样本开环两张卷都输给匀速外推：WOD RFS 对 cv −0.68 / −0.40（CI < 0），s_ego 1–9 档 ADE 差 1.5 m；nuScenes L2 差 +0.26 / +0.59 m。
+配对考卷：CARLA P5 v1 BA 上两者纵向翻转 5.5% / 6.0%，CI 下界低于 5.1% 的 null → 没有（domain 混杂）；真实外观 I3 车辆配对上 23.6% / **45.5%**（null 4.8% / 5.8%）→ 有，但低于 openpilot `ridge_late` 的 70%。
+另一个读数：亚度级的相机安装变化就让 60% / 34% 的 token 换轨迹（0.32 / 0.24 m），是 scorer argmax 选轨脆弱性的直接量。
+**对本条的含义**：交集里的 scorer 族在真实外观车辆配对上确有一部分 E 层纵向反应（「推翻条件」的一半成立：高于 null，但不跨外观——CARLA 上没有），同时它们的开环能力绑在 navtrain 生态上，出了生态比 cv 差；
+「交集由训练生态决定、不是能力信号」对 SD / HY 两族**维持**，但要加一句：scorer 头里的 PDM 子分数确实带车辆反应，只是强度不到 openpilot 线性读出的 2/3。状态仍**待定**（T2 / T3 的族还没出数；I3 只有车辆、规则标签）。
+
 ## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
 
 2026-09-26。只读调研 + 在已提交的 WOD `per_frame.npz` 上算的一版零成本读数，全文 [behavior-layer-instruments.md](behavior-layer-instruments.md)；
