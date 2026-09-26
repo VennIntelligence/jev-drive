@@ -274,6 +274,7 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   `scripts/tmux_run.sh t1-nav-sd env CUDA_VISIBLE_DEVICES=<g> scripts/top10_exam.sh sparsedrivev2 --navsim navtest --workers 16`；
   打分 `scripts/navsim_zs_score.sh score v1 navtest t1_sparsedrivev2 $DATA_DIR/processed/top10_exam/navsim/sparsedrivev2_navtest.npz` 与 `scripts/navsim_zs_score.sh score v2 navhard_two_stage t1_ztrs $DATA_DIR/processed/top10_exam/navsim/ztrs_navhard_two_stage.npz`；
   判卷 `.venv/bin/python -m jevdrive.top10_exam judge --set p5`（i3 / wod / nusc 同理）。
+- 2026-09-26 11:25 CST [main] 复核：同意门槛按 (a) 判；(b) 作为适配噪声与 scorer 脆弱性的读数并报；理由：两臂都在任何考卷数字之前，(b) 测的是模型对安装的敏感度而非适配器正确性，配对考卷两侧同 rig。
 - 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
   所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
 
