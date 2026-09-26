@@ -147,13 +147,14 @@ def main():
     ap.add_argument("--arrays", default="temporal")
     ap.add_argument("--sub", default="op_streams")
     ap.add_argument("--from-set", default="carla_p5")
+    ap.add_argument("--models", default=",".join(MODELS), help="finalize: comma list (small for night queue 2, N6)")
     a = ap.parse_args()
     if a.step == "prepare":
         print(prepare())
     elif a.step == "reuse":
         print(reuse(a.from_set, a.sub))
     else:
-        for m in MODELS:
+        for m in a.models.split(","):
             print(finalize(m, tuple(a.arrays.split(",")), a.sub))
 
 
