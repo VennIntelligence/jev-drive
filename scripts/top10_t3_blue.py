@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Top-10 T3: BLUE (SimLingo epoch=013 + trained language gate, threshold 0.66) in shadow on the re-recorded P5 v1 BA
+"""Top-10 T3: BLUE (SimLingo epoch=013 + trained language gate, threshold 0.66), and SimLingo itself (--model simlingo), in shadow on the re-recorded P5 v1 BA
 worlds, offline ([T3] in todos/2026-09-26-top10-intersection.md). Env: envs/blue.
 
 Per world, the author's agent (team_code/agent_simlingo.py LingoAgent) is set up as the leaderboard would set it up,
@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 BLUE = Path(os.environ.get("BLUE_ROOT", Path.home() / "data/third_party/blue"))
+SIMLINGO = Path(os.environ.get("SIMLINGO_ROOT", Path.home() / "data/third_party/simlingo"))
 CKPT = os.environ.get("BLUE_SIMLINGO_CKPT", str(Path(os.environ["DATA_DIR"]) / "cache/huggingface/hub/models--RenzKa--simlingo/"
                       "snapshots/26c7c89e797d4e25bbf640013317af8da26a5454/simlingo/checkpoints/epoch=013.ckpt/pytorch_model.pt"))
 GATE = str(BLUE / "gate/weights/blue_simlingo_gate.pt")
@@ -35,11 +36,18 @@ THRESHOLD = 0.66                                   # docs/MODEL_ZOO.md recommend
 _CACHE = {}
 
 
-def _imports():
-    sys.path[:0] = [str(BLUE), str(BLUE / "team_code"), str(BLUE / "Bench2Drive/leaderboard"),
-                    str(BLUE / "Bench2Drive/scenario_runner"), os.environ["CARLA_ROOT"] + "/PythonAPI/carla"]
-    os.chdir(BLUE)                                 # the agent resolves ./pretrained/InternVL2-1B relative to cwd
-    os.environ.update(BLUE_MODE="trained_gate", BLUE_GATE_CKPT=GATE, BLUE_GATE_THRESHOLD=str(THRESHOLD), ROUTES="")
+def _imports(model="blue"):
+    """BLUE: its repo's agent (the gate on). SimLingo: RenzKa/simlingo's own agent, as shipped, run under the Bench2Drive
+    copy vendored in that repo (the tree its README evaluates with); the release checkpoint is the one BLUE builds on."""
+    root = BLUE if model == "blue" else SIMLINGO
+    sys.path[:0] = [str(root), str(root / "team_code"), str(root / "Bench2Drive/leaderboard"),
+                    str(root / "Bench2Drive/scenario_runner"), os.environ["CARLA_ROOT"] + "/PythonAPI/carla"]
+    # the agent resolves ./pretrained/InternVL2-1B relative to cwd (BLUE: repo root; SimLingo: its Bench2Drive root,
+    # as scripts/simlingo_catalogue_run.sh sets it up)
+    os.chdir(BLUE if model == "blue" else SIMLINGO / "Bench2Drive")
+    os.environ.update(ROUTES="")
+    if model == "blue":
+        os.environ.update(BLUE_MODE="trained_gate", BLUE_GATE_CKPT=GATE, BLUE_GATE_THRESHOLD=str(THRESHOLD))
     os.environ.setdefault("SAVE_PATH", "/tmp/t3_blue")
     import torch
     # torch >= 2.6 loads weights_only; the gate .pt stores numpy scalars in its config (the smoke's workaround)
@@ -161,6 +169,8 @@ def main():
     ap.add_argument("--worlds", default="", help="comma list of route ids (default: all in the plan)")
     ap.add_argument("--ref", action="store_true", help="the author's run_step on every tick (equivalence reference)")
     ap.add_argument("--no-cache", action="store_true")
+    ap.add_argument("--model", choices=("blue", "simlingo"), default="blue",
+                    help="simlingo: RenzKa/simlingo's own agent (envs/simlingo), same release checkpoint, no gate")
     a = ap.parse_args()
     plan = json.loads(Path(a.plan).read_text())
     if a.worlds:
@@ -170,7 +180,7 @@ def main():
     plan = plan[i::n]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    A, torch = _imports()
+    A, torch = _imports(a.model)
     t_all = time.time()
     for j, p in enumerate(plan):
         dst = out / (p["rid"] + ".json")
@@ -179,7 +189,8 @@ def main():
         t0 = time.time()
         rows, tm = world(A, torch, p["rid"], p["adir"], p["ks"], ref=a.ref, cache=not a.no_cache)
         tmp = dst.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"rid": p["rid"], "adir": p["adir"], "ref": a.ref, "threshold": THRESHOLD,
+        tmp.write_text(json.dumps({"rid": p["rid"], "adir": p["adir"], "ref": a.ref, "model": a.model,
+                                   "threshold": THRESHOLD if a.model == "blue" else None,
                                    "wall_s": round(time.time() - t0, 2),
                                    "model_ms_mean": round(1e3 * float(np.mean(tm)), 1) if tm else None,
                                    "frames": rows}))

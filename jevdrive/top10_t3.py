@@ -28,6 +28,10 @@ RESULTS = REPO / "research" / "results" / "top10-exams"
 BD = {"BridgeDrive target speed": "ts", "BridgeDrive target speed (decoded scalar)": "ts_scalar",
       "BridgeDrive waypoint speed 2 s": "wp2"}
 BLUE = {"BLUE waypoint speed 2 s": "wp2"}
+SIMLINGO = {"SimLingo waypoint speed 2 s": "wp2"}    # BLUE's base model, same rig, same checkpoint, no gate
+PAIRED = (("BLUE waypoint speed 2 s", "SimLingo waypoint speed 2 s"), ("BLUE waypoint speed 2 s", "TFv6 waypoint speed 2 s"),
+          ("SimLingo waypoint speed 2 s", "TFv6 waypoint speed 2 s"),
+          ("BridgeDrive waypoint speed 2 s", "TFv6 waypoint speed 2 s"), ("BridgeDrive target speed", "TFv6 target speed"))
 CREEP = {"bd": 1100, "blue": 800}          # author stuck thresholds in 20 Hz frames (config_closed_loop / config_simlingo)
 STILL = 0.1                                # both authors' "stopped" speed, m/s
 
@@ -184,7 +188,7 @@ def check_blue(fast: Path, ref: Path) -> dict:
 
 # ---------------------------------------------------------------- the exam
 
-def readouts(gen: Path, blue_dir: Path, drop=()) -> pd.DataFrame:
+def readouts(gen: Path, blue_dir: Path, drop=(), simlingo_dir: Path | None = None) -> pd.DataFrame:
     """One row per (world, k): every examinee's scalar, creep flags, BLUE gate. Worlds in `drop` (the re-recorded
     expert left the original recording) contribute nothing."""
     rows = []
@@ -197,11 +201,37 @@ def readouts(gen: Path, blue_dir: Path, drop=()) -> pd.DataFrame:
         if f.exists():
             b = blue_rows(f).rename(columns={"wp2": list(BLUE)[0]})
             r = r.merge(b, on="k", how="left")
+        f = simlingo_dir / (rid + ".json") if simlingo_dir is not None else None
+        if f is not None and f.exists():
+            r = r.merge(blue_rows(f)[["k", "wp2"]].rename(columns={"wp2": list(SIMLINGO)[0]}), on="k", how="left")
         rows.append(r.assign(rid=rid))
     return pd.concat(rows, ignore_index=True)
 
 
-def judge(rl, gen: Path, blue_dir: Path):
+def paired(obs: pd.DataFrame, taus: dict, pooled: list, pairs=PAIRED) -> pd.DataFrame:
+    """Examinee a minus examinee b on the same reactive frames: difference of the directional-flip indicators (each
+    with its own tau), route bootstrap, pooled families, the pedestrian and cut-in groups, and every family."""
+    from . import elicit_e4 as E4, p5_exam as E
+    r = obs[obs.reactive]
+    ok = {ex: ((np.sign(r[ex]) == np.sign(r.d_expert)) & E._moved(r[ex], taus[ex])).astype(float)
+          for ex in {x for p in pairs for x in p} if ex in r}
+    scopes = [("pooled", r.family.isin(pooled)), ("pedestrian", r.family.isin(E.PED_FAMILIES)),
+              ("cut-in", r.family.isin(E4.CUTIN))] + [(f, r.family == f) for f in sorted(r.family.unique())]
+    rows = []
+    for a, b in pairs:
+        if a not in ok or b not in ok:
+            continue
+        for scope, m in scopes:
+            m = m & r[a].notna() & r[b].notna()
+            d = (ok[a] - ok[b])[m]
+            pt, lo, hi = E.boot_ratio(d.to_numpy(), np.ones(len(d)), r.base_id[m].to_numpy()) if len(d) else (np.nan,) * 3
+            rows.append({"a": a, "b": b, "scope": scope, "n": int(m.sum()), "routes": int(r.base_id[m].nunique()),
+                         "flip_a": float(ok[a][m].mean()) if len(d) else np.nan, "flip_b": float(ok[b][m].mean()) if len(d) else np.nan,
+                         "diff": pt, "lo": lo, "hi": hi})
+    return pd.DataFrame(rows)
+
+
+def judge(rl, gen: Path, blue_dir: Path, simlingo_dir: Path | None = None):
     from . import elicit_e4 as E4, elicit_i3 as I, p5_exam as E
     with I.p5_set("carla_p5v1_ba"):
         t, _, _, obs, null, pairs = E.load()
@@ -210,10 +240,10 @@ def judge(rl, gen: Path, blue_dir: Path):
     bad = set(det.rid[det.first_div_k.notna() | ~det.cam_grid_same.astype(bool)])
     rl.log.info("determinism: %d re-recorded worlds, %d identical to the original up to their last referenced tick, "
                 "%d dropped: %s", len(det), len(det) - len(bad), len(bad), sorted(bad))
-    R = readouts(gen, blue_dir, bad).set_index(["rid", "k"])
+    R = readouts(gen, blue_dir, bad, simlingo_dir).set_index(["rid", "k"])
     R.to_parquet(rl.dir / "readouts.parquet")
     o, n = E.deltas(obs, null, t, {})
-    ours = list(BD) + list(BLUE)
+    ours = list(BD) + list(BLUE) + [c for c in SIMLINGO if c in R]
 
     def look(fn, k, col):
         idx = pd.MultiIndex.from_arrays([fn.str.split("-").str[0], k])
@@ -257,7 +287,7 @@ def judge(rl, gen: Path, blue_dir: Path):
     side = []
     for name in ours + list(E.TFV6):
         tau = res["taus"][name]
-        creep = ro["creep_blue" if name.startswith("BLUE") else "creep_bd"] if not name.startswith("TFv6") else ro.creep_bd & False
+        creep = ro["creep_blue" if name.startswith(("BLUE", "SimLingo")) else "creep_bd"] if not name.startswith("TFv6") else ro.creep_bd & False
         pooled = ro.family.isin(res["pooled_families"]) & ro[name].notna()
         for split, m in [("creep frames", creep), ("no creep", ~creep)] + (
                 [("gate open (either world)", ro.blue_gate_open == 1), ("gate closed (both)", ro.blue_gate_open == 0)]
@@ -271,6 +301,9 @@ def judge(rl, gen: Path, blue_dir: Path):
     side = pd.DataFrame(side)
     side.to_csv(d / "splits.csv", index=False)
     rl.log.info("creep / gate splits (pooled families)\n%s", side.to_markdown(index=False, floatfmt=".3f"))
+    pdiff = paired(ro, res["taus"], res["pooled_families"])
+    pdiff.to_csv(d / "paired_diff.csv", index=False)
+    rl.log.info("paired differences (same reactive frames)\n%s", pdiff.to_markdown(index=False, floatfmt=".3f"))
     gate = [{"frames": scope, "n": int(m.sum()), "gate_open_share": float(np.nanmean(ro.blue_gate_open[m]))}
             for scope, m in (("all pair frames", ro.blue_gate_open.notna()), ("reactive", ro.reactive & ro.blue_gate_open.notna()),
                              ("non-reactive", ~ro.reactive & ro.blue_gate_open.notna()))]
@@ -281,6 +314,7 @@ def judge(rl, gen: Path, blue_dir: Path):
     fl.to_csv(RESULTS / "p5_t3_flip_rates.csv", index=False)
     pp.to_csv(RESULTS / "p5_t3_per_pair.csv", index=False)
     side.to_csv(RESULTS / "p5_t3_splits.csv", index=False)
+    pdiff.to_csv(RESULTS / "p5_t3_paired_diff.csv", index=False)
     pd.DataFrame(gate).to_csv(RESULTS / "p5_t3_gate.csv", index=False)
     return res
 
@@ -292,6 +326,7 @@ def main():
     ap.add_argument("cmd", choices=("need", "check-det", "check-bd", "check-blue", "blue-plan", "judge"))
     ap.add_argument("--gen", default=str(data_dir() / "runs/top10_t3/gen"))
     ap.add_argument("--blue", default=str(data_dir() / "runs/top10_t3/blue"))
+    ap.add_argument("--simlingo", default=str(data_dir() / "runs/top10_t3/simlingo"))
     ap.add_argument("--ids", default="")
     ap.add_argument("--a", nargs=2, default=None, help="check-bd: attempt dirs (5 Hz, ref20); check-blue: json files (fast, ref)")
     a = ap.parse_args()
@@ -309,7 +344,7 @@ def main():
     elif a.cmd == "blue-plan":
         blue_plan(gen)
     else:
-        judge(RunLog("top10_t3", "judge"), gen, Path(a.blue))
+        judge(RunLog("top10_t3", "judge"), gen, Path(a.blue), Path(a.simlingo) if Path(a.simlingo).exists() else None)
 
 
 if __name__ == "__main__":
