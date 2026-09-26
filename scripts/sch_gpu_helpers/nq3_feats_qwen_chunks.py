@@ -8,8 +8,8 @@ staged chunks into processed/carla_p6/features only once that process is gone.
   run      --chunks 8,7,6   claim (O_EXCL lock in the staging root, p5_qwen._claim) and extract each chunk not yet
                             done in either root
   verify   --n 16           the first n clips of chunk 0 into a scratch dir, compared bit for bit with the stored c000
-  install  --owner-pid P    rename every finished staged chunk into features/ (refuses while P is alive; a partial
-                            target without meta.json is replaced)
+  install  --owner-pid P    once P is gone and every chunk missing from features/ is staged, finished and holds exactly
+                            nq3_feats.qwen's rows, rename them into features/ (a partial target is replaced)
 """
 import argparse
 import os
@@ -90,16 +90,27 @@ def cmd_verify(a):
     sys.exit(0 if all(res.values()) else 1)
 
 
-def cmd_install(a):
+def _alive(pid: int) -> bool:
+    """Running or stopped; a zombie (exited, not yet reaped by a stopped parent) counts as gone."""
     try:
-        os.kill(a.owner_pid, 0)
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[0] != "Z"
+    except FileNotFoundError:
+        return False
+
+
+def cmd_install(a):
+    if _alive(a.owner_pid):
         sys.exit(f"lane C's qwen process {a.owner_pid} is alive: not installing")
-    except ProcessLookupError:
-        pass
-    for d in sorted(STAGE.glob("c[0-9][0-9][0-9]")):
-        tgt = REAL / d.name
-        if not (d / "meta.json").exists() or (tgt / "meta.json").exists():
-            continue
+    cs = chunks()
+    todo = [i for i in range(len(cs)) if not (REAL / f"c{i:03d}" / "meta.json").exists()]
+    for i in todo:                                 # every missing chunk staged, complete, with nq3_feats.qwen's rows
+        d = STAGE / f"c{i:03d}"
+        assert (d / "meta.json").exists(), f"{d} not finished"
+        assert pd.read_parquet(d / "index.parquet").frame_name.tolist() == cs[i].frame_name.tolist(), f"{d}: rows differ"
+        for k in TAPS:
+            assert np.load(d / f"{k}.npy", mmap_mode="r").shape[0] == len(cs[i]), f"{d}/{k}.npy: row count"
+    for i in todo:
+        d, tgt = STAGE / f"c{i:03d}", REAL / f"c{i:03d}"
         if tgt.exists():                           # a partial chunk of the stopped process (no meta.json)
             shutil.rmtree(tgt)
         d.rename(tgt)
