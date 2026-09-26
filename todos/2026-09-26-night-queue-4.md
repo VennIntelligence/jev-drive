@@ -395,3 +395,24 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 | O | 已完成 main 授权的描述性 fallback：1 320 行，B2D base / full 的 440 行可计数，其余 880 行为 not determinable；[逐路线表](../research/results/nq4/o/overlap_fallback.csv)、[来源与汇总](../research/results/nq4/o/summary.md) | 描述性任务，无门槛；仅同 town / scenario 类计数，trigger distance 未检查 | 原 <30 m 近邻计数仍不可得；TFv6 / BridgeDrive / SimLingo / BLUE 实际成员或触发元数据未查清 |
 
 P1 与 main 授权的 O fallback 均已完成，待 main 复核；原 O 触发距离近邻统计仍不可得，缺口详见 `tmp/2026-09-26-codex-status.md`。未启动 P2，未做与 G 的相关，未修改 decisions。
+
+### 2026-09-26 新读数：W（GPT 按登记判格，待人复核）
+
+来源：[W 小表](../research/results/nq4/w/criterion1_pairs.csv)、[动作小表](../research/results/nq4/w/criterion2_actions.csv)、[判格文件](../research/results/nq4/w/verdict.json)。3 个 seed，按 base route 分 5 折；AUC（ROC 曲线下面积）与 null AUC 为 3 seed 均值，CI（置信区间）是表中路线整组 bootstrap 区间，不参与门槛比较。
+
+| 类 / probe | pair n / route n / null n | 1 s AUC [CI] | 2 s AUC [CI] | 1 / 2 s null AUC | ≥0.70（两个时刻） | ≥null+0.10（两个时刻） | 登记判格 |
+|:--|:--|:--|:--|:--|:--|:--|:--|
+| 行人 / ped | 7 270 / 27 / 2 489 | 0.5418 [0.516, 0.585] | 0.5410 [0.515, 0.589] | 0.5721 / 0.5713 | 不成立 | 不成立 | 不能分清 |
+| cut-in / occ | 1 907 / 26 / 636 | 0.6848 [0.610, 0.765] | 0.6943 [0.622, 0.773] | 0.5431 / 0.5607 | 不成立 | 成立 | 不能分清 |
+| 障碍 / a | 2 303 / 39 / 1 217 | 0.7108 [0.679, 0.781] | 0.7119 [0.689, 0.791] | 0.5399 / 0.5439 | 成立 | 成立 | 能分清 |
+
+| 动作测试（d_front） | n / route n | 1 s 正确比例 | 2 s 正确比例 | 2 s seed min–max | CI | ≥70%（2 s） |
+|:--|:--|--:|--:|:--|:--|:--|
+| 纵向：刹停 > 保持 | 2 249 / 90 | 8.40% | 6.49% | 5.25–7.78% | 原表未提供 | 不成立 |
+| 横向：横移 > 保持 | 932 / 38 | 55.54% | 30.54% | 22.10–34.98% | 原表未提供 | 不成立 |
+
+- 判据 1：行人、cut-in、障碍三类都过 → **不成立**（仅障碍过）。
+- 判据 2：纵向与横向 2 s 正确比例都 ≥70% → **不成立**（两项均不过）。
+- 两条都过 → **不成立**。
+
+登记读法原文：“1 不过 → 这套 latent 的世界模型推演不出 hazard，JEPA + openpilot 训策略这条路先搁置，写进 decisions。”按本次判格落入此分支。**GPT 按登记判格，待人复核；状态：待定。**
