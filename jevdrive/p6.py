@@ -113,8 +113,8 @@ def variants(c: pd.DataFrame) -> list[str]:
     return out
 
 
-def ids(only: str = ""):
-    g = root("gen")
+def ids(only: str = "", out: str = ""):
+    g = Path(out) if out else root("gen")
     want = set(only.split(",")) if only else None
     todo = [v for v in variants(cases()) if not (g / "done" / (v + ".json")).exists()
             and (want is None or v in want)]
@@ -126,11 +126,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["build", "ids"])
     ap.add_argument("--only", default="")
+    ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     a = ap.parse_args()
     if a.cmd == "build":
         build()
     else:
-        ids(a.only)
+        ids(a.only, a.out)
 
 
 if __name__ == "__main__":

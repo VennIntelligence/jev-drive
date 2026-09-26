@@ -64,7 +64,7 @@ chain() {  # chain <j>
     cpus=$(free_cpus $(( w * CORES )))
     echo "$(date +%T) chain gpu $g: $w instances, CPUs $cpus, server index $base-$(( base + span - 1 ))"
     for pass in 1 2; do
-        ids=$(.venv/bin/python -m jevdrive.p6 ids --only "${ONLY:-}")
+        ids=$(.venv/bin/python -m jevdrive.p6 ids --only "${ONLY:-}" --out "$OUT")
         [[ -z $ids ]] && break
         echo "$(date +%T) gpu $g pass $pass: $(tr ',' '\n' <<< "$ids" | wc -l) worlds left"
         CUDA_VISIBLE_DEVICES=$g BENCH2DRIVE_ROOT=$DATA_DIR/third_party/simlingo/Bench2Drive WORK_DIR=$DATA_DIR/third_party/simlingo \
@@ -83,6 +83,6 @@ for ((j = 0; j < ${#G[@]}; j++)); do
     (( j + 1 < ${#G[@]} )) && sleep 45
 done
 for p in "${pids[@]}"; do wait "$p"; done
-left=$(.venv/bin/python -m jevdrive.p6 ids --only "${ONLY:-}" | tr ',' '\n' | grep -c .)
+left=$(.venv/bin/python -m jevdrive.p6 ids --only "${ONLY:-}" --out "$OUT" | tr ',' '\n' | grep -c .)
 echo "$(date '+%F %T') p6-gen end: $left worlds left"
 (( left == 0 ))
