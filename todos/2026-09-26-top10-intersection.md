@@ -365,6 +365,24 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   | 6 | 判卷（`p5_exam.exam` 原样 + E4 (b) 按对）、creep 单列、表、图、回填 | 1.5 h | — |
   | 合计 | | 约 7 h（不含等卡） | 约 3 |
 
+- 2026-09-26 13:05 CST [T3] **跑前写死的操作性选择**（5.1–5.3 没写死的部分；写于任何 BridgeDrive / BLUE 考卷数字之前，代码 `scripts/top10_t3_agent.py`、`scripts/top10_t3_blue.py`、`jevdrive/top10_t3.py`）：
+  1. **重录哪些世界**：BA 考卷引用到的 570 个世界（`runs/top10_t3/need.json`），每个世界录到它最后一个被引用的 tick k 再多 2 个 tick 就停（因果：k 时刻的输出只依赖 k 以前）；expert、路线 XML、TM seed、`B2D_RESEED_AFTER_BUILD`、b2d_run 参数全部照 `p5v1_gen.sh`。
+     判卷只用原 BA 索引的帧、标签与 d_expert（`processed/carla_p5v1_ba` 原样），新录的只贡献考生读数，按 (世界, k) 对上；前提是重录的 expert 轨迹与原记录逐 tick 相同（下面的 E1，批量后对全部 570 个世界再核一遍，不同的世界剔除并报数）。
+  2. **rig**：BridgeDrive 的 rig 与 P5 recorder 挂的 TFv6 rig 逐个传感器相同（3×384² FOV 60、yaw 0 / ±54.5°、2 LiDAR、4 radar、IMU、GNSS、速度计），所以 recorder 直接是 BridgeDrive 自己的 `SensorAgent`（lead `a41d116`，`envs/bridgedrive`），不再挂 TFv6；
+     P5 的三路 Waymo 相机与可见性分割相机去掉（已有，不再需要）；加一路 BLUE 的相机，spec 照抄 `config_simlingo.py`（rgb_0，1024×512，FOV 110，x = −1.5，z = 2.0；它的 IMU / GNSS / 速度计 spec 与作者 rig 相同，共用）。
+  3. **BridgeDrive shadow**：同 TFv6 shadow——相机 tick（5 Hz）跑作者完整 `run_step`，其余 tick 只跑作者的 `BaseAgent.tick`（GPS / Kalman、route planner、LiDAR / radar 队列），control 丢弃。
+     两处与 TFv6 recorder 不同的适配：Kalman 滤波的控制输入喂上一 tick 实际施加的控制（expert 的），而不是模型自己的输出；每次前向前 `torch.manual_seed(0)`，x⁺ / x⁻ 两侧抽到同样的采样噪声（bridge 首步有 `randn_like`）。
+     配置 = 作者 `eval_bench2drive_bridgedrive.sh` 的 `LEAD_CLOSED_LOOP_CONFIG` / `LEAD_TRAINING_CONFIG`（route + target speed 控车、20 步、`diffusion_speed=False`），checkpoint `model_BridgeDrive_m2_k60_0030.pth`（smoke 同款）。
+  4. **BLUE 离线**（`envs/blue`）：每个世界按 leaderboard 给的 global plan 建作者的 `LingoAgent`，逐 tick 喂录下的 GNSS / IMU / 速度，每 tick 跑作者的 `tick`（UKF、route planner、命令历史、prompt），被引用的相机 tick 跑模型；
+     UKF 的控制输入同样喂 expert 上一 tick 的控制（首个 tick 照 `run_step` 刹车）；模型不读图的 tick 喂 64×32 黑图（模型只读当前帧）；gate 为 trained_gate、阈值 0.66（`docs/MODEL_ZOO.md` 推荐值）；batch 1。图按 PNG 无损落盘，JPEG 往返由 BLUE 自己的 `tick` 做。
+  5. **读数（每个考生固定申明通道，多通道全报）**：BridgeDrive 的 route + target speed 通道 = 期望目标速度（对它自己的 `target_speed_classes` 求期望，**主读数**，与 TFv6 的主读数同口径）与它实际驱动用的解码标量（含作者的 P(0) > 阈值强制刹车）；
+     waypoint 通道 = 1.75 → 2.0 s 的 waypoint 速度（8 点 × 0.25 s）。BLUE = speed waypoints 的 1.75 → 2.0 s 速度（10 点 × 0.25 s），另记每帧 gate 是否开语言。Δ = x⁺ − x⁻（null 为 x⁺ − null）。
+  6. **判卷**：`p5_exam.exam` 原样（τ = 各考生自己 null 的 95 分位数，路线整组 bootstrap），逐帧为主读数，按对用 `elicit_e4.score` 的 (b) 原样（同 [T1] 的 judge）；TFv6 三列作参照行（原记录，不重算）。
+     与 [T1] / [T2] 相同，BA 集没有横向标签，横向翻转与 4 类反应一致率不报。判格：「有 E 层能力（纵向）」= 合并逐帧定向翻转率的 CI 下界 > 该考生的样本外 null false-flip。
+  7. **creep 单列**：creep 是否在某帧生效，用重录的 20 Hz 自车速度按作者的计数规则离线算（< 0.1 m/s 计数，BridgeDrive 超过 1100 帧后 creep 20 帧，BLUE 超过 800 帧后 15 帧），x⁺ / x⁻ 任一侧生效的帧单列、不进主读数；
+     录制窗口 ≤ 50 s 且静止 30 s 即停，所以预期 0 帧，照样报数。BridgeDrive 的停车标志规则默认关，不涉及。BLUE 另把 gate 开 / 关的帧分开报（描述性，不设门槛）。
+  8. **等价检查（先于批量）**：E1 重录 expert 对原记录逐 tick 比（位置、航向、速度差与相机 tick 网格）；E2 BridgeDrive 的 5 Hz shadow 对作者每 tick 跑 `run_step`（`shadow=ref20`）在相机 tick 上的输出；
+     E3 BLUE 离线捷径对作者每 tick 跑 `run_step`、缓存模型对每个世界重新 setup。门槛：E1 位置差 0 / 航向差 0（与 v0 的确定性一致），E2 / E3 的读数逐位相同；不过就停下查。
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
