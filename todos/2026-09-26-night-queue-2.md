@@ -101,13 +101,15 @@
 - 2026-09-26 10:03 CST [A] CPU 准备 (i) 的口径（写于算之前）：词表 = `waymo_heads.vocabularies` 的 K = 1024 k-means（WOD train futures，seed 0，即 P0 / `cls_late` 的配方；
   box 上没有存盘的那一份，按同一配方重算）。bypass 形状：ego 系 y 在 3 s 处 |y| ≥ 1.0 m，且 3–5 s 之间某点回到 |y| ≤ 0.5 m（todo 写死的阈值），另按 §2.1 给每个 anchor 分类并列。
   oracle 覆盖率：在同一规则下为 bypass 形状的目标轨迹上，最近 anchor（20 点平均 L2）也是 bypass 形状的比例，以及 minADE 中位数；目标轨迹两套：WOD train futures、P6 x₁₀ 里 expert 的 5 s 未来（数据到后补）。
-- 2026-09-26 10:13 CST [A] smoke 第 1 轮（10 个世界：24816 Accident、25896 ParkedObstacleTwoWays、25381 HazardAtSideLane，seed 0，GPU 0，5 实例）与对向车流的修改。
+- 2026-09-26 10:09 CST [A] smoke 第 1 轮（10 个世界：24816 Accident、25896 ParkedObstacleTwoWays、25381 HazardAtSideLane，seed 0，GPU 0，5 实例）与对向车流的修改。
   删登记 smoke **过**：x₁₀ 在 3 s 处正在绕的 40 帧上，x₀₀ 的 |d(k + 3 s)| 全部 < 0.3 m（40 / 40，3 对；x₀₀ 的 max|d| ≤ 0.18 m），放置 null 1 / 1 keep。
   对向车流**没造出来**：25896 的 x₁₀、x₁₁、镜像题三个世界的 ego 轨迹一样（都在 k = 129 停、k = 215 起绕，383 tick），x₁₀ 窗口里也有 3 辆对向车。
   原因：(a) 背景的对向车流在触发 + 5 s 之前一直在，x₁₀ 的 ego 等的就是它们；(b) scenario 自己的 `OppositeActorFlow` 在触发 + 5 s 才从障碍前方约 75 m 处起流，到 ego 身边之前 ego 已经绕过去了。
   修改（写于第 2 轮 smoke 之前）：所有 2W 世界里背景的对向 source 从第一个 tick 起关掉；x₁₁ / x₀₁ / 镜像题里 scenario 的 `OppositeActorFlow`（间距仍用路线 XML 的 frequency 区间、私有随机流）
   由 hook 从第一个 tick 驱动，行为树里它自己的那一份不再起作用；HazardAtSideLaneTwoWays 的对向流本来就是背景的，这几个世界里从第一个 tick 起以 XML 的 frequency 打开。
   镜像题的间距从 10–14 m 改成 14–20 m（背景 source 离 ego 的距离 = 2 × 间距，10–14 m 会让车在 ego 前 20 多米凭空出现）。第 2 轮 smoke：25896 与 25854（HazardAtSideLaneTwoWays）的 x₁₀ / x₀₀ / x₁₁ / x₀₁ / 镜像，10 个世界。
+- 2026-09-26 10:11 CST [A] 批量 a 段开跑：1W、InvadingTurn、Emergency 共 230 个世界（它们不走对向车流的代码路径，第 1 轮 smoke 的删登记与放置 null 已过），GPU 1、2 各 6 实例，
+  `runs/p6/gen`（tmux `p6-gen-a`，server index 850–949）。2W 的 375 个世界等第 2 轮 smoke 过了再上 GPU 0。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
