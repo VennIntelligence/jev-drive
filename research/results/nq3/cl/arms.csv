@@ -1,0 +1,2 @@
+arm,seed,label,executor,requested,finished,DS,DS_finished,SR,retries,SR_sudden,n_sudden,SR_yield,n_yield,SR_obstacle,n_obstacle,SR_other,n_other,collisions
+cl1,0,CL1 expert track via P7 (ceiling),P7,220,219,82.55633794090907,82.93330752054793,0.6045454545454545,72,0.7076923076923077,65,0.44,75,0.62,50,0.7666666666666667,30,80.0
