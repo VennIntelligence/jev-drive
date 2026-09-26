@@ -808,6 +808,15 @@ def ready() -> str:
               f"- closed-loop rule 8 (GPU {gpu}, routes {sorted({x['route'] for x in ver['folds']})}): pass = {ver['pass']}; "
               + "; ".join(f"{r['attempt'].split('/steps/cl/')[-1]}: {r['requests']} requests identical {r['identical']}" for r in ver["model"]),
               f"- rules replay: {ver['rules']}", f"- folds used: {ver['folds']}", "",
+              "## Pilot sanity checklist per level (user rule: 1 route, then a 10-route pilot, then the batch; F's chain applies it)",
+              "Pilot = the same 10 routes for every level, run unseen with TM seed 0, next to CL3 (lane B, seed 0) on those routes. Stop the level and write ERROR on any failed item:",
+              "1. completion: all 10 routes end with a route result (CARLA crashes retried by b2d_run, max 2 attempts); agent_summary.json shows arm, k_view and n_plans > 0; no Python traceback in any route log",
+              "2. blocked: routes ending in 'Agent got blocked' <= CL3's count on the same 10 routes + 2",
+              "3. DS: the level's mean DS over the 10 routes >= CL3's mean on the same routes - 25 (a far lower mean means a wrong fold, head file or path convention, not a recipe effect)",
+              "4. plans.jsonl: every path finite; K1-K3: v_target within [0, 20] m/s and its median over plans with speed > 2 m/s above 2 m/s",
+              "5. K3: g3 within [0, 1]; the share of plans with g3 > 0.5 over the 10 routes between 0.5% and 20% (open-loop on P5 v1 BA: 3.7-5.0% per fold); 0% or > 30% = gate miswired",
+              "6. K2 / K3: every tick of ticks.jsonl has a 'rules' record; ticks where the rules changed throttle / brake < 5% of ticks outside the stop-sign routes",
+              "7. seen runs (K0, K3): the agent refuses a never-recorded route, so a seen batch lists only recorded routes (route_split.json, recorded = true)", "",
               "## Open-loop exports (capability readouts, not judged here)",
               f"- {kdir('openloop')}/ba_<level>.npz (unseen / seen / full, readout_unseen, v / g3), i3_<level>.npz (R1, R2; main = R1), "
               "p6_<level>.npz (unseen by the route's readout, R1, R2)", ""]
