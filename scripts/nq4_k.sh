@@ -74,11 +74,58 @@ labels() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k labels >> "$1/log.txt" 2
 fit() { wait_gpu 12000; CUDA_VISIBLE_DEVICES=$GPU taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k fit >> "$1/log.txt" 2>&1; }
 export_p6() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k export-p6 >> "$1/log.txt" 2>&1; }
 
+# ---------------------------------------------------------------- K5: closed-loop rule-8 check (a borrowed card, 2 servers)
+XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml
+P7=$(pwd)/todos/2026-09-23-tfv6-controller/controller-eval/P7.json
+PY_CARLA=$DATA_DIR/envs/carla/bin/python PY_SCOUT=$DATA_DIR/envs/scout-tfv6/bin/python
+CL_ROUTES=${K_CL_ROUTES:-2416,3540,17752}      # [K] 17:30 (8): stop sign, HardBreakRoute, DynamicObjectCrossing
+export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
+emptiest_gpu() {  # the card among 0-5 with the fewest CARLA servers (ties: the lowest index)
+    local g best=0 n bn=999
+    for g in 0 1 2 3 4 5; do
+        n=$(nvidia-smi -i "$g" --query-compute-apps=process_name --format=csv,noheader | grep -c CarlaUE4)
+        (( n < bn )) && { bn=$n; best=$g; }
+    done
+    echo "$best"
+}
+cl() {
+    local d=$1 est=$2 g=${K_CL_GPU:-$(emptiest_gpu)} arm out cfg srv=$1/srv pids=()
+    mkdir -p "$srv"; log "cl: GPU $g ($(nvidia-smi -i "$g" --query-compute-apps=process_name --format=csv,noheader | grep -c CarlaUE4) CARLA servers there), cores $K_CPUS"
+    echo "$g" > "$d/gpu"
+    ( CUDA_VISIBLE_DEVICES=$g PYTHONUNBUFFERED=1 setsid taskset -c "$K_CPUS" "$PY_OP" scripts/nq3_cl_server.py --pool 2 \
+          --socket "$srv/head.sock" --ready-file "$srv/head.ready" >> "$srv/head.log" 2>&1 & echo $! > "$srv/head.pid"; wait ) &
+    local t0=$SECONDS
+    until [[ -e $srv/head.ready ]]; do (( SECONDS - t0 > 900 )) && return 1; sleep 5; done
+    for arm in k0 k1 k2 k3; do
+        out=$d/$arm; mkdir -p "$out"; cfg=$d/$arm.json
+        printf '{"model": "head", "warmup_s": 5.0, "desire": true, "head_cam_tick": 0.0, "arm": "%s", "k_view": "unseen", "k_split": "%s", "socket": "%s", "controller": "fixed", "controller_preset": "pursuit", "controller_config": "%s", "seed": 0, "dump_every": 1}\n' \
+            "$arm" "$K/route_split.json" "$srv/head.sock" "$P7" > "$cfg"
+        [[ -e $out/DONE ]] && continue
+        taskset -c "$K_CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$CL_ROUTES" --workers 2 \
+            --server-index 490 --index-span 10 --gpu-rank "$g" --tm-seed 0 --no-spectator --no-reap --client-threads 8 \
+            --max-attempts 2 --stall-s 480 --route-timeout-s 3600 --out "$out" --python "$PY_SCOUT" \
+            --agent scripts/b2d_zeroshot_agent.py --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
+        echo $! > "$out/runner.pid"
+        guard "$!" "$est" "$out/runner.log" || return 1
+        date '+%F %T' > "$out/DONE"
+    done
+    local p; p=$(cat "$srv/head.pid"); kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null
+    local adirs=() r a
+    for arm in k0 k1 k2 k3; do
+        for r in "$d/$arm"/done/*.json; do
+            a=$(python3 -c "import json;print(json.load(open('$r'))['attempt'])"); adirs+=("$d/$arm/attempts/$(basename "$r" .json)/$a")
+        done
+    done
+    CUDA_VISIBLE_DEVICES=$g taskset -c "$K_CPUS" "$PY_OP" scripts/nq3_cl_check.py op "${adirs[@]}" --out "$d/check_op.json" >> "$d/log.txt" 2>&1 || return 1
+    "$PY" -m jevdrive.nq4_k cl-verdict --dir "$d" >> "$d/log.txt" 2>&1
+}
+
 case ${1:-all} in
     lead) step lead_ba 1.5 lead_ba; step lead_p6 1.0 lead_p6 ;;
     labels) step labels 0.2 labels ;;
     fit) step fit 0.5 fit ;;
     labels-fit) step labels 0.2 labels; step fit 0.5 fit ;;
+    cl) step cl 1.0 cl ;;
     all) trap 'exit 129' HUP INT TERM
          step lead_ba 1.5 lead_ba; step labels 0.2 labels; step fit 0.5 fit; step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6
          status done "lead, labels, fit done; closed-loop rule-8 step: scripts/nq4_k.sh cl <gpu>" ;;

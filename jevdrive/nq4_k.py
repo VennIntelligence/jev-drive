@@ -709,12 +709,49 @@ def check_eigh():
     assert max(res[f"{lv}_max_abs_m"] for lv in ("K0", "K1", "K3")) <= 1e-3, res
 
 
+def cl_verdict(d: Path) -> dict:
+    """K5: the offline recomputation (scripts/nq3_cl_check.py op) identical on every request of every K arm, the fold
+    the agent used = the split's unseen readout, and the TFv6 rules replayed from ticks.jsonl identical on every tick."""
+    d = Path(d)
+    sp = load_split()
+    res = {"model": json.loads((d / "check_op.json").read_text()), "rules": [], "folds": []}
+    ok = True
+    for r in res["model"]:
+        n = r["requests"]
+        good = n > 0 and r["img2"] == n and r["op"] == n and r["path"] == n and r.get("lead", n) == n
+        r["identical"] = good
+        ok &= good
+        a = Path(r["attempt"])
+        arm, rid = a.parents[2].name, a.parents[0].name
+        fs = sorted((a / "frames").glob("*.npz"))
+        with np.load(fs[0]) as z:
+            used = str(z["kfold"]) if "kfold" in z.files else None
+        want = readout(sp, rid, "unseen")
+        res["folds"].append({"arm": arm, "route": rid, "kfold": used, "expected": want})
+        ok &= used == want
+        if arm in ("k2", "k3"):
+            ticks = [json.loads(line) for line in (a / "ticks.jsonl").read_text().splitlines() if line.strip()]
+            rr = replay_rules(ticks)
+            rr.update(arm=arm, route=rid, stop_ticks=sum(1 for t in ticks if (t.get("rules") or {}).get("stop_dist") is not None
+                                                         and t["rules"]["stop_dist"] < Tfv6Rules.STOP_DIST),
+                      rule_changed=sum(1 for t in ticks if t.get("rules") and t["rules"]["rule_in"] != t["rules"]["rule_out"]))
+            res["rules"].append(rr)
+            ok &= rr["ticks"] > 0 and rr["different"] == 0
+    res["pass"] = bool(ok)
+    (d / "verdict.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps({"pass": res["pass"], "rules": res["rules"], "folds": res["folds"]}))
+    if not ok:
+        raise SystemExit("rule-8 check failed")
+    return res
+
+
 # ================================================================ entry point
 
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh", "export-p6"))
+    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh", "export-p6", "cl-verdict"))
+    ap.add_argument("--dir", default="")
     ap.add_argument("--set", default=SET_BA)
     a = ap.parse_args()
     if a.step == "split":
@@ -729,6 +766,8 @@ def main():
         check_eigh()
     elif a.step == "export-p6":
         export_p6()
+    elif a.step == "cl-verdict":
+        cl_verdict(Path(a.dir))
 
 
 if __name__ == "__main__":
