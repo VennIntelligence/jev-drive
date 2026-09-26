@@ -5,10 +5,14 @@ deviation-log entries [G3], written before any G3 number).
         over the same shift on the weather null pairs (elicit_e2_train.feature_floor's statistic, unchanged, route
         bootstrap), for Qwen `L18_last`, openpilot `temporal` and the E5 YOLO embedding; plus an R1-style row on the
         stored M-C Delta
+  pdm-prep / pdm-read   label (c) of E2 on the 911 navtrain edit pairs: the official v1.1 PDMS of E2's own "continue"
+        (elicit_e2_train.cv_path) and "brake" (ctra, 3 m/s^2) proposals on x+ (scripts/real_g3_pdm.sh runs the devkit),
+        written to processed/elicit_e2/navtrain/main/pdm_scores.csv, where elicit_e2_train.load_data reads it
 
 Run on the box: P5_SET=carla_p5v1_ba python -m jevdrive.real_g3 g3a
 """
 import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -20,6 +24,7 @@ PED = ("PedestrianCrossing", "DynamicObjectCrossing", "VehicleTurningRoutePedest
 CUTIN = ("HighwayCutIn", "StaticCutIn", "ParkingCutIn")
 MODELS = ("cinque", "lebowski")
 MC_RUN = "runs/reactivity/mc-carla_p5v1_ba/20260925-233126"
+E2_RUN = "runs/elicitation/e2-train/20260926-020936"
 # E2's gate (d) and R1 on the navtrain edit pairs (elicitation todo, results "E2: navtrain ..."), the comparators
 E2_FEATURE = {"Qwen L18_last": (0.322, 0.267, 1.21, 1.08, 1.28), "openpilot cinque temporal": (0.070, 0.029, 2.40, 2.03, 2.76),
               "openpilot lebowski temporal": (0.076, 0.040, 1.92, 1.67, 2.31)}
@@ -107,14 +112,84 @@ def g3a(rl):
     rl.event("g3a_verdict", qwen_ratio=qr, verdict=verdict)
 
 
+# ---------------------------------------------------------------- G3b (1): PDM scorer label (c)
+
+T8 = np.arange(1, 9) * 0.5
+
+
+def proposal8(e: dict, decel: float | None = None) -> np.ndarray:
+    """(8, 3) x, y, yaw at 0.5 ... 4 s of elicit_e2_train.ctra (decel=None with zero acceleration: cv_path), the same
+    integration, sampled for the devkit; yaw = yaw rate x t."""
+    v0 = float(np.linalg.norm(e["vel"][-1]))
+    a0 = -decel if decel is not None else 0.0
+    dyaw = e["pose"][-1, 2] - e["pose"][-2, 2]
+    w = float(np.arctan2(np.sin(dyaw), np.cos(dyaw)) / 0.5)
+    dt = 0.01
+    ts = np.arange(0, 4.0 + dt / 2, dt)
+    v = np.maximum(v0 + a0 * ts, 0.0)
+    th = w * ts
+    x = np.r_[0, np.cumsum(v[:-1] * np.cos(th[:-1]) * dt)]
+    y = np.r_[0, np.cumsum(v[:-1] * np.sin(th[:-1]) * dt)]
+    return np.stack([np.interp(T8, ts, x), np.interp(T8, ts, y), w * T8], -1).astype(np.float32)
+
+
+def pdm_prep(rl):
+    from . import elicit_e2 as E2, navsim_zs as Z
+    from .elicit_e2_train import ctra, cv_path
+    toks = pd.read_parquet(E2.out_root("navtrain", "main") / "pairs.parquet").token.tolist()
+    slim = {e["token"]: e for e in Z.load_index("navtrain", slim=True)}
+    cont = np.stack([proposal8(slim[t]) for t in toks])
+    brake = np.stack([proposal8(slim[t], 3.0) for t in toks])
+    # the devkit poses are the label's own trajectories: (x, y) at 0.5 ... 4 s = every second point of the 16-point grid
+    for P8, P16 in ((cont, np.stack([cv_path(slim[t]) for t in toks])), (brake, np.stack([ctra(slim[t], 3.0) for t in toks]))):
+        err = float(np.abs(P8[:, :, :2] - P16[:, 1::2]).max())
+        assert err < 1e-4, err
+    (rl.dir / "tokens.txt").write_text("\n".join(toks) + "\n")
+    np.savez(rl.dir / "continue.npz", tokens=np.array(toks), poses=cont)
+    np.savez(rl.dir / "brake.npz", tokens=np.array(toks), poses=brake)
+    rl.info(f"{len(toks)} tokens; continue / brake proposals match the label trajectories")
+
+
+def pdm_read(rl, run_dir: str, cont_csv: str, brake_csv: str):
+    from . import elicit_e2 as E2, navsim_zs as Z
+    toks = np.loadtxt(Path(run_dir) / "tokens.txt", dtype=str).tolist()
+    sc = {k: pd.read_csv(p).set_index("token") for k, p in (("continue", cont_csv), ("brake", brake_csv))}
+    S = pd.DataFrame({"token": toks, **{k: sc[k].score.reindex(toks).to_numpy() for k in sc}})
+    dst = E2.out_root("navtrain", "main") / "pdm_scores.csv"
+    S.to_csv(dst, index=False)
+    S.to_csv(rl.dir / "pdm_scores.csv", index=False)
+    d = S.brake - S["continue"]
+    g = pd.read_csv(data_dir() / E2_RUN / "rule_gates.csv").set_index("token").reindex(toks)
+    rule = (g.gate_plus & ~g.gate_minus).to_numpy()
+    slim = {e["token"]: e for e in Z.load_index("navtrain", slim=True)}
+    with np.load(Z.root("index") / "navtrain_future.npz") as f:
+        fut = dict(zip(f["tokens"].tolist(), f["poses"]))
+    slow = np.array([4.0 * float(np.linalg.norm(slim[t]["vel"][-1])) -
+                     float(np.linalg.norm(np.diff(np.r_[[[0.0, 0.0]], fut[t][:, :2]], axis=0), axis=1).sum()) for t in toks])
+    human = np.where(slow > 2, 1, np.where(slow < -2, -1, 0))
+    fire = (d > 0).to_numpy()
+    dec = (human != 0) & (np.abs(d.to_numpy()) >= 0.05)
+    summ = {"tokens": len(toks), "scored": int(S[["continue", "brake"]].notna().all(1).sum()),
+            "label_c_fires": int(fire.sum()), "share_fires": float(fire.mean()),
+            "diff_median": float(d.median()), "diff_p10": float(d.quantile(.1)), "diff_p90": float(d.quantile(.9)),
+            "continue_pdms_mean": float(S["continue"].mean()), "brake_pdms_mean": float(S.brake.mean()),
+            "rule_b_fires": int(rule.sum()), "both_fire": int((fire & rule).sum()), "c_only": int((fire & ~rule).sum()),
+            "b_only": int((~fire & rule).sum()),
+            "human_decisive": int(dec.sum()), "agree_with_human_slowing": float((np.sign(d.to_numpy()[dec]) == human[dec]).mean())}
+    pd.DataFrame([summ]).to_csv(rl.dir / "pdm_summary.csv", index=False)
+    rl.info("label (c) summary\n" + pd.DataFrame([summ]).T.to_markdown(floatfmt=".3f"))
+    rl.event("g3b_pdm", **summ)
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("g3a",))
+    ap.add_argument("step", choices=("g3a", "pdm-prep", "pdm-read"))
+    ap.add_argument("args", nargs="*")
     a = ap.parse_args()
-    rl = RunLog("real-data-transfer", a.step)
-    {"g3a": g3a}[a.step](rl)
+    rl = RunLog("real-data-transfer", "g3" + a.step.replace("-", "") if not a.step.startswith("g3") else a.step)
+    {"g3a": g3a, "pdm-prep": pdm_prep, "pdm-read": pdm_read}[a.step](rl, *a.args)
     rl.close()
 
 
