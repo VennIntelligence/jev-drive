@@ -608,6 +608,18 @@ class Runner(object):
             wait = self.a.stagger_s - (time.time() - self.last_start)
             if wait > 0:
                 time.sleep(wait)
+            # Container thread cap (docs/closed-loop-acceptance.md): with B2D_PIDS_WAIT set, hold a new server
+            # while the cgroup's pids.current is above it (night queue 3: 17 000 of 20 480).
+            cap = int(os.environ.get("B2D_PIDS_WAIT", "0"))
+            while cap:
+                try:
+                    cur = int(Path("/sys/fs/cgroup/pids.current").read_text())
+                except (OSError, ValueError):
+                    break
+                if cur <= cap:
+                    break
+                self.event("pids_wait", pids=cur, cap=cap)
+                time.sleep(30)
             server.start()
             self.last_start = time.time()
 
