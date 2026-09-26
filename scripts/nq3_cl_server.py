@@ -12,6 +12,11 @@ own pose track). The server then does exactly what the P5 offline path does:
   2. arm "mc": Qwen `L18_last` of the 4-frame x 3-camera clip from the Qwen server; arm "student_b": the 672-d token
      row from the YOLO server; both requested before step 1 and collected after it, so they overlap the Cinque steps;
   3. the head (jevdrive.nq3_cl.Heads): prior + Delta -> (20, 2) rear-axle path at 0.25 ... 5 s.
+  Arms "q2" (CL5) and "q2d" (CL5d) use lane C's head (jevdrive.nq3_head.Head, runs/nq3/q2/closed_loop_head) on the same
+  `temporal` and ego input: "q2" drives on its trajectory; "q2d" drives on openpilot's own plan from this same stream
+  (camera origin = the rig's FRONT camera, rear = d + p - R(psi) d as wod_zeroshot.openpilot_to_wod), and while the
+  mode head's last output is bypass-L / -R the desire is laneChangeLeft / -Right instead of the route desire (OPModel turns
+  a held desire into a rising-edge pulse, as modeld does).
 
 With meta "dump" = <path>.npz, the inputs and every intermediate are written there for the equivalence check
 (jevdrive.nq3_cl check, rule 8). Protocol: scripts/zeroshot_wire.py.
@@ -37,7 +42,7 @@ import wod_zeroshot_openpilot as WZ  # noqa: E402
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import drive_backbones as D  # noqa: E402
 from jevdrive import nq3_cl as CL  # noqa: E402
-from jevdrive.p5_openpilot import carla_calib  # noqa: E402
+from jevdrive.p5_openpilot import RIG, carla_calib  # noqa: E402
 
 HOLD = P5.HOLD
 MODEL = "cinque"
@@ -58,6 +63,17 @@ class FeatClient:
         self.sock.close()
 
 
+def openpilot_to_rear(plan_pos, plan_yaw, t_idx, dev_xy):
+    """jevdrive.wod_zeroshot.openpilot_to_wod (numpy only here): the plan's camera track -> rear-axle track at 0.25 ... 5 s."""
+    p = np.stack([plan_pos[:, 0], -plan_pos[:, 1]], -1).astype(np.float64)
+    psi = -np.asarray(plan_yaw, np.float64)
+    d = np.asarray(dev_xy, np.float64)
+    Rd = np.stack([np.cos(psi) * d[0] - np.sin(psi) * d[1], np.sin(psi) * d[0] + np.cos(psi) * d[1]], -1)
+    rear = d + p - Rd
+    tq = np.arange(1, 21) * 0.25
+    return np.stack([np.interp(tq, t_idx, rear[:, k]) for k in range(2)], -1)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--socket", required=True)
@@ -70,6 +86,15 @@ def main():
     t0 = time.time()
     WZ._init({}, {P5.SEQ: carla_calib()}, ".")
     heads = CL.Heads()
+    q2 = {}
+
+    def q2head():
+        if "h" not in q2:
+            from jevdrive.nq3_head import Head
+            q2["h"] = Head(Path(os.environ["DATA_DIR"]) / "runs" / "nq3" / "q2" / "closed_loop_head")
+        return q2["h"]
+    from jevdrive.openpilot.model import T_IDXS, decode
+    front_xy = np.array(RIG[0][1:3], float)                  # the rig's FRONT camera (x, y) on the rear-axle frame
     taps = D.OP_TAPS[MODEL]
     make = lambda: OPModel(MODEL, WZ.MODELS[MODEL], context_rate=False, taps=list(taps.values()))  # noqa: E731
     free = [make() for _ in range(a.pool)]
@@ -90,6 +115,7 @@ def main():
             m = free.pop() if free else make()
         m.reset()
         sets = deque(maxlen=4)
+        last_mode = [None]
         fq = FeatClient(a.qwen) if a.qwen else None
         fy = FeatClient(a.yolo) if a.yolo else None
         ex = ThreadPoolExecutor(2)
@@ -99,6 +125,7 @@ def main():
                 if meta["cmd"] == "reset":
                     m.reset()
                     sets.clear()
+                    last_mode[0] = None
                     wire.send(conn, {"ok": True, "server": {"model": MODEL, "taps": taps}}, {})
                     continue
                 t = time.perf_counter()
@@ -111,17 +138,30 @@ def main():
                 fut_y = ex.submit(fy, jpg) if arm == "student_b" else None
                 img2 = P5.render_blobs([jpg])[0]
                 t_r = time.perf_counter()
+                d_idx = int(meta.get("desire", 0))
+                if arm == "q2d" and last_mode[0] in (2, 3):          # bypass_L / bypass_R -> laneChangeLeft / Right
+                    d_idx = 3 if last_mode[0] == 2 else 4
                 desire = np.zeros(8, np.float32)
-                desire[int(meta.get("desire", 0))] = 1
+                desire[d_idx] = 1
                 for _ in range(HOLD):
-                    m.step(img2, desire=desire, action_t=WZ.ACTION_T)
+                    raw = m.step(img2, desire=desire, action_t=WZ.ACTION_T)
                 op = m.tap_values[taps["temporal"]].copy()
                 t_o = time.perf_counter()
                 q = fut_q.result()[1]["q"] if fut_q else None
                 tok = fut_y.result()[1]["tok"] if fut_y else None
                 t_f = time.perf_counter()
                 ego = np.asarray(arrays["ego"], np.float32)
-                if arm == "mc" and q is None:          # the first three camera sets of a route: no 4-frame clip yet
+                mode = None
+                if arm in ("q2", "q2d"):
+                    traj, md = q2head()(op, ego)
+                    mode = int(md[0]) if md is not None else None
+                    last_mode[0] = mode
+                    if arm == "q2":
+                        path = np.asarray(traj[0], np.float64)
+                    else:
+                        dd = decode(raw, m.slices, float(meta.get("speed", 0.0)))
+                        path = np.asarray(openpilot_to_rear(dd["plan_pos"], dd["plan_yaw"], T_IDXS, front_xy), np.float64)
+                elif arm == "mc" and q is None:          # the first three camera sets of a route: no 4-frame clip yet
                     path = heads.predict("ridge_late", ego, op)
                 else:
                     path = heads.predict(arm, ego, op, q=q, tok=tok)
@@ -130,6 +170,8 @@ def main():
                       "head_ms": 1e3 * (t_h - t_f), "server_ms": 1e3 * (t_h - t)}
                 info = {k: round(v, 2) for k, v in ms.items()}
                 info["full_clip"] = full
+                if mode is not None:
+                    info.update(mode=mode, desire_used=d_idx)
                 wire.send(conn, info, {"path": path.astype(np.float64)})
                 if meta.get("dump"):
                     extra = {"q": q} if q is not None else {}

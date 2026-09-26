@@ -92,7 +92,7 @@ servers_for() {  # servers_for <arm> <gpu>: the model servers an arm needs on on
         cl2|cl9_cl2) srv_start op-cinque-g$g "$g" "$PY_OP" scripts/zeroshot_policy_server.py cinque --pool "$WORKERS" ;;
         cl7) srv_start op-lebowski-g$g "$g" "$PY_OP" scripts/zeroshot_policy_server.py lebowski ;;
         cl8) srv_start alpamayo-g$g "$g" "$PY_ALP" scripts/zeroshot_policy_server.py alpamayo ;;
-        cl3) srv_start head-g$g "$g" "$PY_OP" scripts/nq3_cl_server.py --pool "$WORKERS" ;;
+        cl3|cl5|cl5d) srv_start head-g$g "$g" "$PY_OP" scripts/nq3_cl_server.py --pool "$WORKERS" ;;
         cl4|mc_real0)
             srv_start qwen-g$g "$g" "$PY_VENV" scripts/nq3_feat_server.py qwen || return 1
             srv_start headq-g$g "$g" "$PY_OP" scripts/nq3_cl_server.py --pool "$WORKERS" --qwen "$B/srv/qwen-g$g.sock" ;;
@@ -104,7 +104,7 @@ servers_for() {  # servers_for <arm> <gpu>: the model servers an arm needs on on
 }
 server_names() {  # the server names an arm uses on one GPU
     case $1 in
-        cl2) echo op-cinque-g$2 ;; cl7) echo op-lebowski-g$2 ;; cl8) echo alpamayo-g$2 ;; cl3) echo head-g$2 ;;
+        cl2) echo op-cinque-g$2 ;; cl7) echo op-lebowski-g$2 ;; cl8) echo alpamayo-g$2 ;; cl3|cl5|cl5d) echo head-g$2 ;;
         cl4|mc_real0) echo qwen-g$2 headq-g$2 ;; cl6) echo yolo-g$2 heady-g$2 ;;
     esac
 }
@@ -122,6 +122,8 @@ arm_cfg() {  # arm_cfg <arm> <gpu> <seed> <dump_every> -> path of the agent conf
         cl8) echo "{\"model\": \"alpamayo\", \"socket\": \"$B/srv/alpamayo-g$g.sock\", \"plan_every\": 5, $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl3) echo "{$head, \"arm\": \"ridge_late\", \"socket\": \"$B/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl4) echo "{$head, \"arm\": \"mc\", \"socket\": \"$B/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
+        cl5) echo "{$head, \"arm\": \"q2\", \"socket\": \"$B/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
+        cl5d) echo "{$head, \"arm\": \"q2d\", \"socket\": \"$B/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
         cl6) echo "{$head, \"arm\": \"student_b\", \"socket\": \"$B/srv/heady-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $dump}" ;;
     esac > "$f"
     echo "$f"
