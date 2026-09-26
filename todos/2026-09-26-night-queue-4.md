@@ -301,6 +301,30 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
   3. OpenScene / nuPlan（P1 已数出 33 490 个走廊行人事件）：2 Hz 下采样，对行人的动态重建太稀，只作最后备选。
   建议：main 批 1 的话，选场景用 v2 parquet（CPU、几分钟），同时用 nuScenes 的一个带走廊行人的场景在调试卡上先把 drivestudio 装好并过 smoke，WOD 段下完直接接上，GPU 不空等。
   判据与门不变（null 对上 openpilot `ridge_late` 误翻率 ≤ 7%、删除区域无肉眼可见残影），只换数据源；这一条要 main 在 P 节确认后才开始装机。
+  - [main] 2026-09-26 18:44 CST 批准（main 经协调员转达，P3 记录）：数据源 = WOD Perception scene-flow（方案 1）。用 v2 `lidar_box` + `vehicle_pose` parquet 在 CPU 上按与 P1 相同的走廊行人口径选 10 段，只下这 10 段（约 10 GB）；
+    同时装 drivestudio，在一个有走廊行人的 nuScenes 场景上做场景 1 的 smoke。门不变，只换数据源。调试卡 = GPU 1（`runs/sched/table.tsv` 的 `debug 1` 行，与 OPL 的 2-server smoke 共卡），CPU ≤ 8 核；
+    批量卡等场景 1 过检查清单后由 SCH 或 Codex 写 `runs/nq4/p3/GO`。
+- [P3] 2026-09-26 18:50 CST 场景选择规则与读数口径（写于任何重建、任何 openpilot 读数之前）。
+  - **候选池**：WOD v2 training + validation 全部 segment 中，在 `gs://waymo_open_dataset_scene_flow/{train,valid}` 里也存在的那些。只用 v2 的 `lidar_box`、`vehicle_pose`、`stats` 三个组件（< 1 GB）。
+  - **走廊事件**（P1 口径照搬）：10 Hz 每帧，从当前 ego 位姿沿 logged future 取弧长 30 m 的折线（不足 30 m 沿末段方向直线延长，静止按 pose 朝向），行人框中心（类型 PEDESTRIAN，不含骑行者）投影弧长在 [0, 30] m、横向 ≤ 4 m 即在走廊内；
+    同一 track 连续在走廊内只算一次。
+  - **一个 segment 合格**要同时满足：
+    (1) 至少一个「目标事件」：进入走廊的首帧 f₀ 在 [3.0 s, 16.5 s]（前面有 3 s 可渲染的引导、后面有 ≥ 3 s logged 未来），f₀ 时 ego 速度 ≥ 2 m/s；
+    (2) 视角覆盖：目标行人在 [f₀ − 1 s, f₀ + 2 s] 内至少连续 1 s 落在前相机视野里（ego 系下 4 m ≤ x ≤ 30 m、方位角 |atan2(y, x)| ≤ 22°）；
+    (3) 可删：渲染窗口 [f₀ − 3 s, f₀ + 2 s] 内进过走廊的行人 track 合计 ≤ 5 个（x⁻ 删掉的是**窗口内所有进过走廊的行人**，不只目标一个，保证 x⁻ 的走廊是干净的；更多就是人群，删除后的空洞背景大多没被观测过）；
+    (4) `stats` 的 time_of_day = Day（夜景的 3DGS 重建与 openpilot 都不在可比的区间）。
+  - **抽取**：合格 segment 按 crc32(segment name) 排序取前 10 个（不按行人外观或数量挑，避免挑好看的）；每段取 crc32 最小的那一个合格目标事件定 f₀。合格总数、每条规则筛掉多少写进 `research/results/nq4/p3/selection.csv` 与日志。
+  - **nuScenes smoke 场景**：`v1.0-mini` 的 10 个场景按同一规则（2 Hz 关键帧标注、同一走廊口径，f₀ 要求放宽为 ≥ 2 s、≤ 16 s）取 crc32 最小的合格者；只用于装机与流程 smoke，不进可行性判格表。
+  - **重建**：drivestudio OmniRe，每场景 3 路前相机（WOD FRONT / FRONT_LEFT / FRONT_RIGHT；nuScenes CAM_FRONT / FRONT_LEFT / FRONT_RIGHT），全部帧参与训练（渲染位姿就是 logged 位姿），迭代数用 OmniRe 默认。
+    行人节点：box 上没有 SMPL 模型文件（需要在 smpl.is.tue.mpg.de 注册下载），先按 drivestudio 在不加载 SMPL 时的做法把行人放进 deformable 节点；这不影响「删掉」（删的是整个节点），影响的只是 x⁺ 里行人本身的外观。
+    装机时若发现 drivestudio 在这种配置下跑不通，记在这里再改。
+  - **三个世界**（每场景，5 Hz，沿 logged ego 轨迹，渲染窗口 [f₀ − 3 s, f₀ + 2 s]）：`real` = 原始 log 图像（与渲染同分辨率、同裁剪）；`plus` = 未改动的重建按 logged 位姿重渲染（x⁺）；`minus` = 删掉 (3) 中所有走廊行人节点后重渲染（x⁻）。
+  - **null 的读法**：「未改动的重渲染对」若理解为同一重建渲两遍，按构造逐像素相同（smoke 里作为确定性检查报 max |Δ|，应为 0），误翻率恒为 0，没有信息；所以门用的 null 对 = (`real`, `plus`)：
+    外观从真实相机换成 3DGS 重渲染、场景内容不变、正确动作不变，对应 I3 null「外观变、动作不变」的角色。**这一解释待 main 复核**，另一个候选（删一个走廊外人行道上的行人）只作描述。
+  - **门的读数**：openpilot `temporal` 特征 + I3 考试用的 P5 v1 BA 拟合的 `ridge_late` Cinque（5 个 fold 平均），**τ 固定为 I3 的 0.53 m/s**（不在 P3 上重定）；
+    null 误翻率 = null 帧中 |v2(`plus`) − v2(`real`)| > τ 的比例，按场景汇总、按场景 bootstrap 给 CI；门 = 合并误翻率 ≤ 7%。Lebowski（τ 0.73）同样报，只作描述。
+    (`plus`, `minus`) 的翻转率只作描述（这里没有规则 expert 标签，不判格）。残影：每场景存 `real` / `plus` / `minus` / |plus − minus| 四联图（f₀ 附近 3 个时刻），另报删除框投影外扩 12 px 以外超阈值（任一通道 > 8/255）的像素数，肉眼判定标「待 main 复核」。
+  - **重建质量**：每场景报 `plus` 对 `real` 的 PSNR / SSIM（全图，与 drivestudio 自己的 eval 同口径）与行人框内的 PSNR。
 
 ## E. 专家汇总的补充
 
