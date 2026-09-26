@@ -1,6 +1,6 @@
 # 配对差分走到真实数据（第二轮）：G0 student 零样本、G1 门控、G3 编辑对诊断、G2 HUGSIM 车辆配对重训；附第 40 条 3 seed 重判
 
-状态: 待排（预登记，2026-09-26 上午，写于任何新拟合之前；用户 2026-09-26 决定顺序 G0 → G1 → G3 诊断 → G2，第 40 条重判随时可做）
+状态: **本轮完成**（2026-09-26 12:55 CST；G0、G1、G1c、G3、G2、R40 都已出判格，见「结果」各节）。原状态：待排（预登记，2026-09-26 上午，写于任何新拟合之前；用户 2026-09-26 决定顺序 G0 → G1 → G3 诊断 → G2，第 40 条重判随时可做）
 上游: 第 44 条（E1 零样本有害、E2 编辑对不过、E3 关闭）、第 42 条（M-C 3 seed 过；E4c 人类 onset 0.9–1.9 s；E5 student 52.7%、p95 30 ms）、
 第 45 条（YOLO26x-seg 行人召回不劣于 SAM、延迟 1/25）、[I3](2026-09-25-reactivity-program/i3-hugsim-pairs.md)（65 个 3DGS 车辆场景，openpilot 读出零样本 70%、M-C Δ −11 pp）、
 [激发计划](2026-09-26-elicitation-program.md)、[夜间汇总](../tmp/2026-09-26-overnight.md)
@@ -595,3 +595,65 @@ I3（描述）：g₃ × 常数 68.5% / 69.8%，与 g₃ × M-C 的 68.4% / 70.1
 去掉逐帧方向之后反而多拿 15%（常数的收益 / M-C 的收益 = 1.15 / 1.17），也就是 M-C 在这些 token 上的逐帧变化是噪声。g₃ × 常数按 G1 的判据自己也「有用」（全部 token CI > 0、行人组 CI > 0、直行激活 0%），
 按登记另记：**openpilot lead 门 + 常数刹车是一个与配对无关的车辆规则候选**。它的收益来自 NAVSIM 的非反应式回放里少撞前车（G1 已拆过子项：碰撞与 TTC），行人组的 +1.6 也来自 g₃ 开着的少数 token，不是对行人的反应。
 限定：常数是在 navtest 自己的 g₃ 与 Δ 上取的均值（不用标签，但用了评测帧的输入）；只报 PDMS；WOD 上 g₃ 不开，这个规则在 WOD 上无从检验。
+
+### G2：HUGSIM 3DGS 车辆配对上重训 M-C 与 student（2026-09-26 10:48–11:22 与 12:28–12:50 box 时钟，中间 box 重启暂停；GPU 3 / 4 各一小段，其余 CPU）
+
+代码 `jevdrive/real_g2.py`（`fit` / `exam` / `transfer` / `nav-table` / `summary` / `figs`），run `runs/real-data-transfer/g2-{fit,exam,transfer,nav-table}/`（考试 `g2-exam/20260926-111023`，迁移 `g2-transfer/20260926-111136`，NAVSIM 表 `g2-nav-table/20260926-124713`）；
+小表 [research/results/real-data-transfer/g2/](../research/results/real-data-transfer/g2/)（`g2_table.md` 是全部 模型 × head × seed 的一行一格）。口径见偏离日志 [G2] 10:48、10:53、11:00、11:22、12:28。
+实际用时约 1 h 45 min 墙钟（不含重启暂停；登记估计 5–6 h）：30 个 I3 拟合 6 个 shard 并行约 14 min，I3 考试 1 min，WOD 与 navtest 迁移 4 min，NAVSIM 16 次打分（4 726 token、3 × 8 线程）18 min（另有一次因 token 存成 object 数组全部失败、改成 str 后重跑，分数不受影响）。
+训练行：65 个场景、4 337 个配对（obs 3 559 减去 14 个未来含 NaN 的，加 null 792），μ 行 = 训练折的 minus 世界帧（1 881 帧的约 4/5）。M-C 配对 arm 的 λ 在 30 个 fold 里全部落在网格下沿 0.1（同 E2 / G3b），hard / uniform 全部在 10。
+
+**I3 held-out 场景**（合并 1 832 个 reactive 帧 / 65 个场景；prior = CARLA 拟合的 `ridge_late`，70.0% / 70.5%；3 seed 写成范围，seed 0 带 CI）：
+
+| head（Cinque） | CARLA 训（I3 零样本） | I3 训（held-out 场景） | 对 prior（pp） | 对 CARLA M-C（pp） | 样本外 null ff | 非反应帧误翻 |
+|:--|:--|:--|:--|:--|:--|:--|
+| M-C pair | 58.7% | **62.4–64.3%**（62.8 [57.6, 67.6]） | −5.7 … −7.6（CI < 0） | +3.7 … +5.6（CI > 0） | 5.1% | 6.8–8.4% |
+| M-C hard-example | 64.6% | 62.3–66.3% | −3.7 … −7.6 | +3.6 … +7.6 | 4.7–7.4% | 6.9–10.2% |
+| M-C uniform | 69.8% | 66.7–69.0% | −1.0 … −3.3 | +8.0 … +10.3 | 5.2–6.9% | 7.1–10.1% |
+| student A | 59.8–62.9% | **65.0–67.7%** | −2.2 … −5.0 | +6.2 … +9.0 | 4.8–5.6% | 7.9–13.0% |
+| student B | 60.8–63.3% | 65.2–68.4% | −1.6 … −4.8 | +6.4 … +9.7 | 5.2–8.7% | 8.9–13.4% |
+| 描述：M-C pair × g₂ / student A × g₂ | — | 71.8–72.1% / 69.9–71.9% | +1.8 … +2.1 / −0.1 … +1.9 | — | 4.8–6.6% | 13.7–17.1% |
+
+Lebowski：M-C pair 66.2–68.1%（CARLA 训 67.4%，对 CARLA −1.2 … +0.7 跨零），student A 69.2–69.3%，都不高于 prior 的 70.5%。
+逐 family（Cinque M-C pair，seed 0 / 1 / 2）：static 65.6 / 67.7 / 65.1%（CARLA 训 67.2，prior 77.1），**cut-in 66.2 / 66.7 / 65.3%（CARLA 训 46.3，prior 66.7；对 CARLA +19 … +20 pp，CI > 0）**，oncoming 57.7 / 58.6 / 57.5%（CARLA 训 50.5，prior 60.7）。
+
+**WOD（E1 的 19 663 帧，478 rater 帧；Δ 用各 head 自己的 I3 μ 行统计量；Cinque，3 seed 范围）与 NAVSIM（navtest 有接近车辆的 4 726 个 token，v1.1 PDMS）**：
+
+| head（Cinque） | RFS Δ 全部 | RFS Δ Cut_ins（20） | RFS Δ Pedestrians（52） | 直行激活 | WOD Δ 中位 (m) | navtest PDMS Δ（接近车辆） | navtest 直行激活 |
+|:--|:--|:--|:--|:--|--:|:--|:--|
+| M-C pair | −3.35 … −3.37（CI < 0） | **−3.43 … −3.52（CI < 0）** | −3.45 | 86–87% | 11.2–11.5 | **−32.3 … −33.7** | 79–81% |
+| M-C hard-example | −3.20 … −3.26 | −2.76 … −3.02（CI < 0） | −3.37 | 86–89% | 11.7–12.9 | −73.2（seed 0） | 99.5% |
+| M-C uniform | −3.24 … −3.27 | −2.66 … −2.69（CI < 0） | −3.35 | 95–96% | 10.6–11.2 | −71.2（seed 0） | 99.7% |
+| student A | −0.28 … −0.40（CI < 0） | −0.06 … −0.12（CI 跨零） | −0.35 … −0.55 | **6.7 / 7.4 / 8.9%** | 0.32–0.45 | +0.45 / +0.61 / −0.07（CI 跨零） | 31–46% |
+| student B | −0.33 … −0.47（CI < 0） | −0.27 … +0.01 | −0.46 … −0.64 | 8.1–9.5% | 0.39–0.43 | 未打 | 40–51% |
+| 描述：M-C pair × g₂ / student A × g₂ | −0.93 / −0.01 … −0.04 | −1.17 … −1.26 / −0.03 … +0.06 | −1.10 … −1.13 / −0.04 … +0.03 | 11.6% / 0.1% | 1.8 / 0.06 | 未打 | — |
+
+Lebowski：M-C pair WOD 全部 −3.1、Cut_ins −3.3 … −3.5（CI < 0）、直行激活 64–70%，NAVSIM −28.8 … −30.4；student A WOD 全部 −0.16 … −0.28（CI < 0）、Cut_ins −0.10 … −0.31（seed 1 CI 上端 −0.00）、直行激活 5.1–5.3%，NAVSIM −2.6 / −5.3 / +0.7。
+描述版（WOD train 统计量标准化）：M-C pair 的 Δ 中位降到 2.7 m、直行激活 30%，全部帧 RFS 仍 −2.25（Cinque）；student 基本不变。
+
+![G2](../research/figs/real-g2-i3-retrain.png)
+
+从左到右（Cinque）：I3 合并翻转率（空心灰 = CARLA 训的同一 head 零样本，实心蓝 = I3 训、held-out 场景；虚线 = CARLA M-C 的 58.7% 判据线，点线 = prior 70.0%）；WOD RFS 配对 Δ（绿 = Cut_ins，橙 = 全部 rater 帧）；WOD 直行激活率（虚线 7%）；navtest 接近车辆 token 的 PDMS Δ（hard / uniform 只 seed 0，student B 未打）。
+点 = seed 0 与 95% CI（场景 / sequence / token bootstrap），× = seed 1 / 2。要看的是：左图所有 I3 训的 head 都越过了 58.7% 线但没有一个到 prior 的点线；中间两图里三个线性 head 在 WOD 上是 −3 RFS、激活 90% 左右，只有 student 贴近 0 和 7% 线。
+
+**判格（按登记，逐 模型 × head × seed）**：
+
+| 模型 × head | seed 0 / 1 / 2 | 不过的条件 | 总判格 |
+|:--|:--|:--|:--|
+| **Cinque M-C pair（主判）** | 不过 / 不过 / 不过 | WOD Cut_ins RFS Δ CI 整体 < 0（I3 那条过：62–64% ≥ 58.7%，null 5.1%） | **不过** |
+| **Cinque student A（主判）** | 过 / 不过 / 不过 | seed 1 / 2 的 WOD 直行激活 7.4% / 8.9% > 7% | **随 seed 变**（过 1 / 3） |
+| Cinque hard / uniform / student B | 全部不过 | WOD Cut_ins（hard、uniform）、直行激活与 null（student B） | 不过 |
+| Lebowski M-C pair | 不过 ×3 | WOD Cut_ins CI < 0；seed 2 的 I3 也低于 67.4% | 不过 |
+| Lebowski student A | 过 / 不过 / 过 | seed 1 的 Cut_ins CI 上端 −0.004 | 随 seed 变（过 2 / 3） |
+| Lebowski student B | 过 / 过 / 不过 | seed 2 的 I3 66.4% < 67.4% | 随 seed 变（过 2 / 3） |
+
+**读法**：
+
+1. **在 3DGS 真实外观的车辆配对上重训，I3 上的害消了一大半，但没有一个 head 超过 prior**。M-C 的 cut-in 从 CARLA 训的 46% 回到 66%（+20 pp），合并翻转对 CARLA 训 +4 … +6 pp，过了登记的 58.7% 这条线；
+   但对 prior 仍 −6 … −8 pp（CI < 0），student 也是 −2 … −5 pp。登记时已写明这条线对「回到 prior」的 head 也会过：I3 上配对差分学到的东西没有超出 openpilot `ridge_late` 已经读出的部分，而且 static 与 oncoming 上还略低于 prior。
+2. **M-C 在 I3 上训出来的 Δ 在 WOD 与 NAVSIM 上比 CARLA 训的还坏得多**：WOD 全部帧 −3.4（E1 是 −1.0）、Δ 中位 11 m、直行激活 87%，NAVSIM 接近车辆 token −33 PDMS。
+   原因是 λ 落在网格下沿（I3 只有 65 个场景、配对目标 Δ_expert 中位 −5.5 m/s，闭式解几乎不收缩），加上 I3 μ 行（约 1 500 帧 minus 世界）的标准化统计量离 WOD 的 10 Hz 真实特征很远：换成 WOD train 统计量，Δ 中位降到 2.7 m，但全部帧仍 −2.3。hard / uniform 对照同样崩（NAVSIM −70），所以这是「在小的 3DGS 集上训的线性双流读出 + 跨数据集标准化」的问题，不是配对损失本身的问题。
+3. **student 是唯一接近能用的**：WOD 上 Cut_ins 跨零、Δ 中位 0.3–0.45 m、直行激活贴着 7% 线（6.7–8.9%），NAVSIM 接近车辆 token 跨零（Cinque），但 WOD 全部帧仍 −0.3（CI < 0），它在 I3 上也没有超过 prior。它「过」的那几格是贴线过的，判格随 seed 变。
+4. **g₂ 乘上去（描述）**：student × g₂ 在 WOD 上回到 0（激活 0.1%），在 I3 上与 prior 持平或略高（−0.1 … +1.9 pp）；M-C × g₂ 在 I3 上 +2 pp（CI > 0，I3 上唯一高于 prior 的 arm），但 WOD 仍 −0.9。与 G1 的读法一样：gate 把 Δ 压小，I3 上的一点正数来自非反应帧上多刹（误翻 14–17%）。
+5. **对 G2 的问题的回答**：真实外观的车辆配对能把 CARLA 训的 Δ 在同一分布（I3）上的害去掉大半，但带不到 WOD / NAVSIM：线性 M-C 更有害，student 在 WOD Cut_ins 上跨零但全部帧仍为负。**WOD Cut_ins 上没有一个 head 为正**。
+   限定：I3 只有 65 个场景、标签是规则 expert（匀速外推 + 只纵向）、5 Hz 渲染；Cut_ins 只有 20 个 rater 帧；NAVSIM 只打了接近车辆的 token；hard / uniform 的 NAVSIM 只 seed 0。
