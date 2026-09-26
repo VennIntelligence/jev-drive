@@ -3225,7 +3225,7 @@ NAVSIM 榜分完整复现（SparseDriveV2 navtest PDMS 92.22 对论文 92.2；ZT
 
 **T3 考试：BridgeDrive + BLUE（2026-09-26 下午，P5 v1 BA 的 570 个世界挂各自 rig 重录，568 个 expert 轨迹与原记录逐 tick 相同；todo「结果 / T3」，[leaderboard-vs-ability 第 9 节](leaderboard-vs-ability.md)）**。
 BridgeDrive 控车用的 route + target speed 通道纵向翻转 0.2% [0.0, 0.6]（TFv6 0%），waypoint 通道 27.2% [20.6, 34.6]，与 TFv6 waypoint 同帧差 −2.7 pp [−10.8, +5.9] → **与 TFv6 分不开，B2D 榜首的增量不在 E 层**（5.5 的读法成立，waypoint 点估计略低于预登记写的 30%，CI 覆盖）。
-BLUE speed waypoints 合并 26.5% [17.0, 36.5]（null 5.4%）→ 有纵向反应，但集中在 cut-in（39.9%），行人 5.9%，比 TFv6 低 23.7 pp [−29.3, −17.4]；第 38 条「BLUE 在突发 hazard 上更好」在配对考卷上**没有复现为行人反应**；与 SimLingo 本体的比较因 SimLingo 无 P5 读数未做。
+BLUE speed waypoints 合并 26.5% [17.0, 36.5]（null 5.4%）→ 有纵向反应，但集中在 cut-in（39.9%），行人 5.9%，比 TFv6 低 23.7 pp [−29.3, −17.4]；第 38 条「BLUE 在突发 hazard 上更好」在配对考卷上**没有复现为行人反应**。16:35 补 SimLingo（同 checkpoint、同 rig、无 gate；本段原写「与 SimLingo 本体的比较因 SimLingo 无 P5 读数未做」）：SimLingo 34.6% [23.9, 45.6]（行人 9.1%、cut-in 51.1%），**BLUE − SimLingo 合并 −8.1 pp [−12.4, −4.5]、cut-in −11.2 [−17.7, −5.4]**，CI 整体 < 0；同一个 τ 下为 −0.6 [−4.0, +2.5]，差只来自 BLUE 直出路径的 null 抖动（τ 5.0 对 4.0）。即 gate 没有给 SimLingo 增加 E 层反应，第 38 条 3. 里 BLUE 对 SimLingo 的突发 hazard SR 优势（+10.8）在配对考卷上不复现，其来源不在速度通道对 hazard 的反应。
 creep 在全部考卷帧上 0 帧生效。**对本条的含义**：CARLA 榜首两族（LEAD、SimLingo）的新成员在 E 层上没有超过族内老成员，「交集 / 榜首由配方决定」对这两族**维持**。状态仍**待定**（只有 BA 一个 expert、只有纵向；T2 的族还没出数）。
 
 **T2 考试：DrivoR + WA-JEPA（2026-09-26 下午，预登记与表在 todo「结果 / T2」，[leaderboard-vs-ability 第 8.2 节](leaderboard-vs-ability.md)）**。

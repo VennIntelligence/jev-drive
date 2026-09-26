@@ -432,16 +432,22 @@ BridgeDrive（B2D 96.34，第一）是 TransFuser-LEAD 族在 TFv6 上加 diffus
 | BridgeDrive route + target speed（它控车用的通道） | 0.2% [0.0, 0.6] | 0.0% | 0.3% | 4.7% | — | 没有 |
 | BridgeDrive waypoint | 27.2% [20.6, 34.6] | 24.1% | 30.1% | 5.1% | −2.7 pp [−10.8, +5.9] | 有 |
 | BLUE speed waypoints | 26.5% [17.0, 36.5] | 5.9% | 39.9% | 5.4% | −3.5 pp（行人 −23.7 [−29.3, −17.4]；cut-in +8.1 [−6.3, +23.8]） | 有（cut-in） |
+| SimLingo speed waypoints（BLUE 的底座，无 gate） | 34.6% [23.9, 45.6] | 9.1% | 51.1% | 5.8% | +4.7 pp（行人 −20.2 [−25.4, −14.3]；cut-in +19.3 [+4.1, +34.4]） | 有（cut-in） |
 | *参照* TFv6 target speed / waypoint（原记录） | 0.0% / 30.4% [23.9, 37.0] | 0 / 29.3% | 0 / 32.5% | 4.7% / 5.5% | — | 没有 / 有 |
+
+**BLUE − SimLingo**（同一批 reactive 帧，各自 τ，路线 bootstrap）：合并 −8.1 pp [−12.4, −4.5]、行人 −3.2 [−6.5, −0.6]、cut-in −11.2 [−17.7, −5.4]；用同一个 τ（5.00）重判是 −0.6 [−4.0, +2.5] / −1.5 [−3.4, +0.3] / −0.1 [−5.4, +4.5]。
 
 ![top10-t3-flip-rates](figs/top10-t3-flip-rates.png)
 
 图：P5 v1 BA 配对上各考生的定向翻转率，(a) 逐帧按 family，(b) 按对（窗口内任一 reactive 帧翻对即算过；按对的 null case 误翻很高，waypoint 通道约 50%、BLUE 33%，读 (b) 要对着它看）；误差棒是路线整组 bootstrap 的 95% CI。
-该看的是 BridgeDrive 两根柱子与 TFv6 两根几乎重合，BLUE 在行人三个 family 上接近 0、在 cut-in 上最高。
+该看的是 BridgeDrive 两根柱子与 TFv6 两根几乎重合，BLUE 与 SimLingo 形态相同（行人接近 0、cut-in 最高），SimLingo 每格都不低于 BLUE。
 
 **读法**。(1) **B2D 第一名的增量不在 E 层**：BridgeDrive 控车的 route + target speed 通道对突发 hazard 几乎不翻（0.2%），会翻的 waypoint 通道（27%）它不用来开车，而且与 TFv6 的 waypoint 同帧差 −2.7 pp、CI 跨 0。
 这与第 31 / 32 条对 TFv6 的结论一模一样：B2D 高分来自 route + target speed 接口与规则，而这个接口在我们的配对考卷上不反应。BridgeDrive 比 TFv6 多的 +1 DS 只能来自接口 / 规则 / 其余配方，不来自对 hazard 的反应。
 (2) **BLUE 的纵向反应集中在车辆 cut-in，行人上几乎没有**：cut-in 39.9%（与 TFv6 同量级，点估计略高但 CI 跨 0），行人 5.9%，比 TFv6 低 24 pp，按对（23.8%）还低于它自己 null case 的误翻（33%）。
 第 38 条里 BLUE「在突发 hazard 上显著更好」是 B2D 公开逐路线数据上的差；在我们的配对考卷上它没有以「对行人更会减速」的形式出现。gate 在 reactive 帧上开语言的比例是非反应帧的 3 倍（13.7% vs 4.4%），开了语言的帧翻转更高（44% vs 24%），但只有 145 帧、CI 很宽。
-推测（未验证）：BLUE 的行人不反应可能与 SimLingo 单前视 1024×512、下缘裁掉 30%（`tick` 里的裁剪）有关，近处从车侧冲出的行人在图里出现得晚；验证办法是按行人第一次进入 BLUE 相机视野的 tick 重新对齐窗口再算。
-(3) 与 SimLingo 本体的比较（5.5 的最后一条）这次做不了：SimLingo 没有 P5 读数；BLUE 与 SimLingo 同一 rig，重录的图可以直接给 SimLingo 离线跑，是一个 < 1 GPU·h 的补充。
+推测（未验证）：BLUE（以及 SimLingo，见 (3)）的行人不反应可能与 SimLingo 单前视 1024×512、下缘裁掉 30%（`tick` 里的裁剪）有关，近处从车侧冲出的行人在图里出现得晚；验证办法是按行人第一次进入 BLUE 相机视野的 tick 重新对齐窗口再算。
+(3) **gate 没有给 SimLingo 增加 E 层反应**（16:35 补；本段 15:41 的版本写「与 SimLingo 本体的比较这次做不了」，当时 SimLingo 没有 P5 读数）。同 checkpoint、同 rig、同一批帧上，BLUE − SimLingo 合并 −8.1 pp [−12.4, −4.5]，cut-in −11.2 [−17.7, −5.4]，CI 整体 < 0；
+第 38 条里 BLUE 比 SimLingo 多出的突发 hazard SR（+10.8，落在 junction_violator 与 cut-in）在配对考卷上没有复现，方向反而相反。负差的来源是 BLUE 直出路径（gate 关、不生成语言）在 null 上更抖、τ 高一档（5.0 对 4.0）：
+同一个 τ 下两者几乎相同（−0.6 [−4.0, +2.5]）。所以 gate 省掉语言换来的是更快的推理和更大的 null 抖动，不是更好的 hazard 反应；BLUE 在 B2D 上的突发 hazard 优势若是真的，来源要到闭环里的别处找（评测器的截断与完成阈值改动、creep、控制），推测，未验证。
+行人几乎不翻、cut-in 强是 SimLingo 族本身的形态（SimLingo 9.1% / 51.1%），不是 gate 造成的。

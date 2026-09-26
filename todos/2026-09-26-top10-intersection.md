@@ -648,18 +648,28 @@ WA-JEPA 的偏离：用作者的 `configs/wa_jepa_hugsim.yaml`（与 EPDMS 预�
 | BridgeDrive 同通道，驱动用的解码标量 | 8.31 | 0.2% [0.0, 0.6] | 0.0% | 0.3% | 0.0% | 1.9% | 5.0% | | 没有 |
 | BridgeDrive waypoint（1.75 → 2.0 s） | 3.36 | **27.2% [20.6, 34.6]** | 24.1% | 30.1% | 1.8% | 17.1% | 5.1% | 67.1% [55.8, 78.6]（50.0%） | **有** |
 | BLUE speed waypoints（1.75 → 2.0 s） | 5.00 | **26.5% [17.0, 36.5]** | 5.9% | 39.9% | 1.4% | 12.3% | 5.4% | 46.6% [34.2, 59.4]（33.0%） | **有**（主要来自 cut-in） |
+| SimLingo speed waypoints（BLUE 的底座，同 rig、同 checkpoint、无 gate；16:35 补） | 3.99 | **34.6% [23.9, 45.6]** | 9.1% | 51.1% | 1.8% | 14.7% | 5.8% | 54.1% [41.4, 67.1]（35.1%） | **有**（主要来自 cut-in） |
 | *参照* TFv6 target speed | 8.25 | 0.0% | 0.0% | 0.0% | 0.0% | 1.5% | 4.7% | 0.0%（14.7%） | 没有 |
 | *参照* TFv6 waypoint | 2.41 | 30.4% [23.9, 37.0] | 29.3% | 32.5% | 0.6% | 17.6% | 5.5% | 67.3% [55.8, 79.6]（50.5%） | 有 |
 
 逐 family（逐帧；n 为 reactive 帧）：BLUE 在 HighwayCutIn（207）61.8%、StaticCutIn（243）42.4%、ParkingCutIn（217）16.1%，行人三个 family DynamicObjectCrossing（293）2.7%、ParkingCrossingPedestrian（76）9.2%、PedestrianCrossing（27）0%；
-BridgeDrive waypoint 各 family 23–34%，与 TFv6 waypoint（27–42%）逐格同量级。**同帧配对差**（翻对指示的差，路线 bootstrap，`p5_t3_paired_diff.csv`）：
+BridgeDrive waypoint 各 family 23–34%，与 TFv6 waypoint（27–42%）逐格同量级。**同帧配对差**（翻对指示的差，各自的 τ，路线 bootstrap，`p5_t3_paired_diff.csv`，逐 family 也在文件里）：
 
-| 比较 | 合并 | 行人 | cut-in |
+| 比较 | 合并（1 072） | 行人（406） | cut-in（667） |
 |:--|:--|:--|:--|
-| BridgeDrive waypoint − TFv6 waypoint | −2.7 pp [−10.8, +5.9] | −5.3 [−10.0, −0.6] | −1.6 [−15.3, +11.8] |
-| BLUE − TFv6 waypoint | −3.5 [−13.4, +7.0] | **−23.7 [−29.3, −17.4]** | +8.1 [−6.3, +23.8] |
-| BLUE − BridgeDrive waypoint | −0.7 [−12.1, +11.3] | −18.4 [−25.3, −11.8] | +9.7 [−7.2, +27.5] |
+| **BLUE − SimLingo** | **−8.1 pp [−12.4, −4.5]** | −3.2 [−6.5, −0.6] | **−11.2 [−17.7, −5.4]** |
+| SimLingo − TFv6 waypoint | +4.7 [−5.5, +15.4] | −20.2 [−25.4, −14.3] | +19.3 [+4.1, +34.4] |
+| BridgeDrive waypoint − TFv6 waypoint | −2.7 [−10.8, +5.9] | −5.2 [−9.6, −0.6] | −1.6 [−15.3, +11.8] |
+| BLUE − TFv6 waypoint | −3.5 [−13.4, +7.0] | **−23.4 [−29.3, −16.9]** | +8.1 [−6.3, +23.8] |
 | BridgeDrive target speed − TFv6 target speed | +0.2 [0.0, +0.6] | 0 | +0.3 [0.0, +0.9] |
+
+16:35 更正：这张表 15:41 的版本是手算的，「行人」只取了进合并的 3 个行人 family（396 帧），并有一行 BLUE − BridgeDrive；现在全部由 judge 的 `paired()` 出，「行人」= 4 个行人 family（406 帧，加上 VehicleTurningRoutePedestrian 的 10 帧），
+行人列数字因此小改（BridgeDrive −5.3 → −5.2，BLUE −23.7 → −23.4），结论不变；BLUE − BridgeDrive 一行去掉，换成 BLUE − SimLingo 与 SimLingo − TFv6。
+BLUE − SimLingo 逐 family：StaticCutIn −18.5 [−30.4, −8.5]、ParkingCutIn −12.4 [−23.6, −2.8]、ParkingCrossingPedestrian −10.5 [−18.6, 0.0]、HighwayCutIn −1.4 [−4.3, 0.0]、DynamicObjectCrossing −1.4 [−3.4, +0.4]，其余 0。
+
+**BLUE − SimLingo 的来源（敏感性读数，不在预登记里）**：两者的 τ 不同——BLUE 5.00、SimLingo 3.99 m/s；null 帧上 gate 关着的 BLUE（直出动作、不生成语言）|Δ| 的 95 分位是 5.0，SimLingo（每帧都先生成语言）是 4.0，gate 开着的 BLUE 帧是 3.95。
+即 BLUE 的直出路径在 null 上更抖，τ 被抬高，翻转被门槛吃掉。**用同一个 τ（取 BLUE 的 5.00）重判**，BLUE − SimLingo 合并 −0.6 pp [−4.0, +2.5]、行人 −1.5 [−3.4, +0.3]、cut-in −0.1 [−5.4, +4.5]（`p5_t3_blue_simlingo_common_tau.csv`）：
+两者在 reactive 帧上的输出方向与幅度几乎一样，差只来自 null 噪声地板。按 gate 拆（各自 τ）：gate 关的 reactive 帧 −7.9 [−12.9, −3.9]（927 帧），gate 开的 −9.7 [−21.7, 0.0]（145 帧）。
 
 **creep 单列**：按作者计数规则从 20 Hz 自车速度离线算，BridgeDrive（> 1100 帧）与 BLUE（> 800 帧）在全部考卷帧上 **0 帧**生效（录制 ≤ 50 s、静止 30 s 即停），主读数不受 creep 影响。
 **BLUE 的 gate**：pair 帧里 5.7% 至少一侧开了语言（7 805 帧），reactive 帧 13.7%、非反应帧 4.4%、null 帧 7.8%；gate 开的 reactive 帧翻转 44.1% [15.6, 69.4]（145 帧），关的 23.7% [14.5, 33.5]（927 帧）。描述性，CI 很宽，不设门槛。
@@ -668,11 +678,14 @@ BridgeDrive waypoint 各 family 23–34%，与 TFv6 waypoint（27–42%）逐格
 - 「BridgeDrive 的 target speed 通道翻转仍像 TFv6 一样接近 0、waypoint 通道 ≥ 30%：B2D 榜首的增量属于接口与规则」：target speed 通道 0.2%（TFv6 0%），成立；waypoint 通道 27.2%，点估计低于 30% 但 CI [20.6, 34.6] 覆盖 30%，
   且与 TFv6 waypoint 同帧差 −2.7 pp [−10.8, +5.9]。实质读法：**BridgeDrive 在 E 层纵向上与 TFv6 分不开**——它控车用的那个通道（route + target speed）对突发 hazard 不翻，会翻的 waypoint 通道它不用来开车；
   B2D 上 +1 DS 的增量不来自 E 层反应，只能来自接口 / 规则 / 其余配方（diffusion bridge 只产 route，route 不是速度读数；ts 与 waypoint 头与 TFv6 同架构）。
-- 「BLUE 在 P5 v1 突发 family 上显著高于 SimLingo」：**这一格读不出**——SimLingo 没有进过 P5 考卷（它的 P5 读数不存在），与它的比较只能等 SimLingo 用同一个 recorder 重录（BLUE 的 rig 与 SimLingo 相同，BLUE 的图可以直接复用，只差跑一遍 SimLingo 的离线 runner）。
-  能读的是：BLUE 的纵向 E 层**有**，但集中在 cut-in（与 TFv6 同量级或略高，CI 跨 0），**行人上几乎没有**（5.9%，比 TFv6 低 24 pp，按对 23.8% 低于它自己 null case 的 33%）。
-  所以第 38 条「BLUE 在突发 hazard 上显著更好」在我们的配对考卷上没有以「对行人更会减速」的形式复现；如果它在 B2D 上的突发 hazard 优势是真的，来源要到 CARLA 闭环里的别处找（评测器改动、完成阈值、creep、或车辆类 hazard）。
+- 「BLUE 在 P5 v1 突发 family 上显著高于 SimLingo」：15:41 的版本写「这一格读不出」（当时 SimLingo 没有 P5 读数）；16:35 按 [T3] 15:45 的预登记补跑 SimLingo 后，**不成立，方向相反**：
+  BLUE − SimLingo 合并 −8.1 pp [−12.4, −4.5]、行人 −3.2 [−6.5, −0.6]、cut-in −11.2 [−17.7, −5.4]，CI 整体 < 0。第 38 条说 BLUE 比 SimLingo 多出的突发 hazard SR（+10.8）落在 junction_violator 与 cut-in 上，
+  而我们的 cut-in 配对上 BLUE 反而更少翻。敏感性读数说明这个负差不是 gate 让 BLUE 看不懂 hazard：同一个 τ 下两者几乎相同（−0.6 [−4.0, +2.5]），负差来自 BLUE 的直出路径在 null 上更抖（τ 5.0 对 4.0）。
+  所以在 E 层纵向上，**gate 没有给 SimLingo 增加任何反应**；BLUE 在 B2D 上的突发 hazard 优势如果是真的，来源不在「看到 hazard 后速度通道怎么变」，要到闭环里的别处找（评测器改动：删 4000-tick 截断、完成阈值 90%；creep；控制）。
+  另外：BLUE 与 SimLingo 都是行人几乎不翻（5.9% / 9.1%）、cut-in 强（39.9% / 51.1%），这是 SimLingo 族本身的形态，不是 gate 带来的。
 
 **偏离**：(1) 规模按 BA 索引重录 570 个世界而不是 5.1 写的 322 个 run（322 只是 v1 新录那部分），各录到最后引用 tick；(2) E2 门槛由「逐位」改为「不大于同配置重录两次的差」（13:25 更正，写于数字之前，原因是 CARLA LiDAR / radar 每次运行不同）；
-(3) 5.5 的 BLUE vs SimLingo 一格因 SimLingo 无 P5 读数未判；(4) 批量先在 GPU 5 上开（main 13:38 指示），14:27 扩到 GPU 0–3 + 5。
+(3) 5.5 的 BLUE vs SimLingo 一格 15:41 时未判，16:35 按 main 15:40 的要求补跑 SimLingo 后已判（见上）；(4) 批量先在 GPU 5 上开（main 13:38 指示），14:27 扩到 GPU 0–3 + 5。
 **墙钟与算力**：工程 + smoke 12:40–13:39；批量 13:39–15:39（2.0 h：GPU 5 单链 47 min，之后 30 个 server），36.3 server·h（583 次 attempt）；BridgeDrive shadow 前向约 2.4 GPU·h（在 recorder 里，与渲染共卡）；
 BLUE 离线 6 个 worker 与批量重叠，合计 5.8 worker·h（模型约 1.6 GPU·h，其余是作者 `tick` 的 CPU 预处理）；判卷 1 min。约合 7 卡·h（GPU 5 约 2 h，GPU 0–3 各约 1.3 h）。
+SimLingo 补跑 15:52–16:34（42 min，GPU 6 起、16:10 起分到 GPU 0–3、5、6，最多 15 个 worker、30 核）：19 428 帧、8.1 worker·h（每帧约 700 ms，每帧都生成语言），约 3 GPU·h。
