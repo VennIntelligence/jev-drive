@@ -38,3 +38,4 @@
 - [2026-09-26 夜间队列](2026-09-26-overnight-queue.md)：5–6 h 空卡只排预登记过的活：E2 批量、全部 head 补 3 seed、E3 挖掘后定向抽特征、D-depth 接地点、I3 配对上跑现有考生、E4c latency 曲线、E5；早上按汇总回填各 todo。
 - [2026-09-26 快通道感知](2026-09-26-fast-perception.md)：SAM 3.1 的同模型提速、EfficientSAM3、Grounding DINO、YOLOE-26、YOLO26-seg 在 Q4 同一批帧上比延迟 × 召回；YOLO26x-seg 640 三路 20–30 ms、行人召回不劣于 SAM 3.1（decisions 第 45 条），召回缺口在 BEV 放置而非检测器。
 - [2026-09-26 配对差分走到真实数据（第二轮）](2026-09-26-real-data-transfer.md)：E1–E3 都没通之后的下一轮：G0 不含 Qwen 的 20 Hz student 零样本上 WOD / NAVSIM、G1 真实数据训的 gate × CARLA 的 Δ（先在 I3 上验）、G3 编辑对的位移比值 CARLA 参照与 PDM scorer 标签（先于任何视频 inpainting）、G2 HUGSIM 车辆配对重训（无行人资产）；附 R40 第 40 条「够到原生」3 seed 重判。
+- [2026-09-26-night-queue-2.md](2026-09-26-night-queue-2.md) — 夜间队列 2：P6 行为模式考卷数据与 expert 统计（N1）、openpilot 绕行信息 probe 与 desire 执行器检查（N2）、榜单 head × 反应 2×2（N3）、E5 去 lift（N4）、metric-depth 放置只用于测量（N5）、backbone 补 P5 行（N6）、state-space policy（N7）
