@@ -142,6 +142,10 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 | 新执行员 F | O → G-prep → G + K 闭环链 | O 今晚开；G-prep 写代码；接管 lane B 的卡后写 `nq4_gk.sh` 的优先级队列（含 profiling 重估与砍单规则） |
 | night-queue-3 的执行员 D（Q4a 收工后）或 C（`READY` 交付后） | K-prep | 谁先空谁领，领的时候在本文件写一行 |
 
+- 2026-09-26 17:30 CST [main] 实际分派：P1 与 O 交给本机 Codex 执行员 CX（`tmp/2026-09-26-codex-brief.md`，只计数、不改判据，结论由 main 复核）；
+  W → P3 可行性由 Opus 执行员 E；G-prep + X 的 agent 与 `nq4_gk.sh` 链由 Opus 执行员 F；K-prep 由 Opus 执行员 K（不等 night-queue-3 的 C / D 空出来）。
+  准备好的批量链（G + K 闭环）在 lane B 交卡后启动，批量期的看护可交给 Codex。
+
 每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**），E 节按上面补专家汇总。
 
 ## 结果
