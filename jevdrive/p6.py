@@ -408,6 +408,49 @@ def report(out: Path | None = None) -> str:
     return text
 
 
+def fig_modes(out_dir: Path | None = None, results: Path | None = None):
+    """Expert world-level mode per scenario: x10 (obstacle), x11 (obstacle + oncoming, 2W), mirror, placement null.
+    Horizontal stacked bars, share of worlds; one colour per mode across panels."""
+    import matplotlib as mpl
+    from . import plots
+    out_dir = out_dir or REPO / "research" / "figs"
+    w = pd.read_csv((results or RESULTS) / "worlds.csv")
+    w["m"] = w["mode"].str.replace("wait_then_bypass_[LR]", "wait_then_bypass", regex=True)
+    modes = ["bypass_L", "bypass_R", "wait_then_bypass", "stop", "keep"]
+    col = dict(zip(modes, [plots.OKABE_ITO[5], plots.OKABE_ITO[2], plots.OKABE_ITO[1], plots.OKABE_ITO[6], "#9E9E9E"]))
+    short = {"Accident": "Accident", "ConstructionObstacle": "Construction", "ParkedObstacle": "Parked",
+             "HazardAtSideLane": "HazardSideLane", "AccidentTwoWays": "Accident 2W", "ConstructionObstacleTwoWays": "Construction 2W",
+             "ParkedObstacleTwoWays": "Parked 2W", "HazardAtSideLaneTwoWays": "HazardSideLane 2W",
+             "VehicleOpensDoorTwoWays": "OpensDoor 2W", "InvadingTurn": "InvadingTurn", "YieldToEmergencyVehicle": "Emergency"}
+    panels = [("x10", "obstacle ($x_{10}$)"), ("x11", "obstacle + oncoming ($x_{11}$)"), ("mirror", "mirror"),
+              ("shoulder", "placement null")]
+    with mpl.rc_context(plots.STYLE):
+        fig, axes = plots.plt.subplots(1, 4, figsize=(plots.PAGE, 2.3), sharey=True,
+                                       gridspec_kw={"width_ratios": [1, 1, 1, 1]})
+        order = [s for s in short if s in set(w.scenario)]
+        for ax, (world, title) in zip(axes, panels):
+            g = w[w.world == world]
+            tab = pd.crosstab(g.scenario, g.m, normalize="index").reindex(index=order, columns=modes, fill_value=0.0)
+            n = g.groupby("scenario").size().reindex(order)
+            left = np.zeros(len(order))
+            y = np.arange(len(order))
+            for mo in modes:
+                v = tab[mo].to_numpy()
+                ax.barh(y, v, left=left, color=col[mo], height=0.75, label=mo.replace("_", " "), lw=0)
+                left += v
+            for yi, ni in zip(y, n):
+                if np.isnan(ni):
+                    ax.text(0.02, yi, "n/a", va="center", fontsize=6, color="#7F7F7F")
+            ax.set_xlim(0, 1)
+            ax.set_xlabel("share of worlds")
+            ax.set_title(title, fontsize=8)
+            ax.invert_yaxis() if ax is axes[0] else None
+        axes[0].set_yticks(np.arange(len(order)), [short[s] for s in order])
+        plots.legend_below(fig, axes[0], ncol=5)
+        fig.tight_layout(rect=(0, 0.08, 1, 1))
+        plots.save(fig, Path(out_dir), "night2_n1_expert_modes")
+
+
 # ---------------------------------------------------------------- frame index (N2 probes, openpilot streams)
 
 def _world_index(g: Path, rid: str, town: str, meta: dict):
@@ -536,7 +579,7 @@ def vocab_check(out: Path | None = None, p6_futures: np.ndarray | None = None) -
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index", "n2probe", "vocab_p6"])
+    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index", "n2probe", "vocab_p6", "fig"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
@@ -547,6 +590,8 @@ def main():
         ids(a.only, a.out)
     elif a.cmd == "vocab":
         vocab_check()
+    elif a.cmd == "fig":
+        fig_modes()
     elif a.cmd == "n2probe":
         print(n2probe().to_markdown(index=False))
     elif a.cmd == "vocab_p6":
