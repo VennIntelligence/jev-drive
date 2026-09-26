@@ -95,6 +95,17 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
      E1 照 T3：重录的 expert 对 v0 原记录逐 tick 比到 need_k（位置差 < 1 cm、航向差 < 0.1°、相机 tick 网格相同），不同的世界整体剔除并报数。
   4. **shadow 等价（规则 8）**：smoke 上 (a) 进程外 BridgeDrive 的读数与 T3 进程内版同样的方式比（LiDAR / radar 每次运行不同，门槛沿用 T3 13:25 更正：差不大于同配置重录两次的差）；
      (b) 全挂载版（TFv6 与 BridgeDrive 两个进程 + Waymo 相机）上 TFv6 的读数对 v0 原记录，同一门槛。不过就停。
+- 2026-09-26 17:10 CST [C-alp] Alpamayo 1.5（nav，E[1 sample]）在 P6 v0 考卷帧上的操作口径与覆盖（写于它的任何 P6 轨迹数字之前）。脚本 `scripts/nq3_c_alpamayo.py`、`scripts/nq3_c_alp.sh`（tmux `jev:nq3-c-alp`），日志 `runs/nq3/c/q1_alp/`。
+  (1) 模型原样：shipped 默认（bf16、FA2、1 条 reasoning rollout 1 条轨迹、top-p 0.98、T 0.6、≤ 256 token、flow 10 步），**batch 1**，另开仓库自带的 expert CUDA graph（8 帧上与默认逐位相同）。
+  (2) 图像：P6 三路相机（`carla_calib()`）按 WOD 考试的 GPU 渲染旋转重投影到四个 1920×1080 f-theta 视图，未覆盖处黑，由 shipped processor 自己缩放。10 Hz 四槽 t−0.3 / −0.2 / −0.1 / 0 s 用 5 Hz 帧 sample-and-hold：取 t−0.4、−0.2、−0.2、0 s。
+  (3) egomotion：世界 20 Hz `pose.jsonl` 每 2 tick 取一点，16 步 rear axle，t0 rig 系，z = 0，只绕 z 转；早于出生点的钳到出生点（静止），同 P6 索引与 B2D agent。
+  (4) nav：`intent` → WOD 考试预登记文本；考卷帧 intent 全是 GO_STRAIGHT，所以全部是 "Continue straight"（x₁₀ / x₀₀ 同 tick 没有一对不同）。
+  (5) seed = crc32("base_id-seed-k")：同一 case 同一 tick 的各世界（x₁₀、x₀₀、null）用同一个随机流。
+  (6) CoT：保存 cot / meta_action / answer；`cot_nudge` 沿用第 47 条的读法（CoT 里出现 nudge），另记方向。
+  (7) 规则 8：4 帧上我们的流水线与逐帧直接构造（`wod_zeroshot_alpamayo.render` + `I.build_inputs` + B2D agent 的 `_history`）token 逐位相同、history 差 0、同 seed 轨迹差 0.0 m、CoT 4/4 相同。
+  batch 4 在共享卡上快 3.2 倍，但批内逐行的随机抽样不同，轨迹与 batch 1 最大差 10–15 m、CoT 8 帧只有 4 帧相同，过不了逐位条件，所以不用（`ALP_BATCH` 留作主执行员的选项）。
+  (8) 覆盖：priority 0 的 6 042 帧必跑完；之后按 (priority, base_id, seed) 整组单元依次开，上一个 part 的实测速度预计能在 23:30 前跑完才开，第一个放不下的单元即收尾。
+  吞吐（此刻 GPU 6 100%，C1 特征 3 进程 + lane D 共卡）：batch 1 实测 14.4 s/帧，瓶颈是 time-slicing 下的逐 token decode（22 token 占 10 s）。按这个速度 priority 0 要约 24 h；C1 收工后能降多少未知，所以 priority 0 大概率跑过 23:30。
 
 ### Q2. 在 openpilot 冻结特征上激发绕行
 

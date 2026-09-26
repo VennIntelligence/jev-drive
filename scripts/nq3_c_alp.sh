@@ -2,7 +2,8 @@
 # Night queue 3, lane C, Q1: Alpamayo 1.5 (nav, E[1 sample]) on the P6 v0 exam frames (scripts/nq3_c_alpamayo.py).
 # Idempotent: finished frames are skipped, and a DONE file ends it at once. A second invocation waits on the lock.
 # Pins GPU 6 and cores 158-163 itself; logs and DONE under $DATA_DIR/runs/nq3/c/q1_alp/.
-#   scripts/tmux_run.sh nq3-c-alp scripts/nq3_c_alp.sh          (ALP_DEADLINE=HH:MM overrides 23:30, box clock)
+#   scripts/tmux_run.sh nq3-c-alp scripts/nq3_c_alp.sh          (ALP_DEADLINE=HH:MM overrides 23:30, box clock;
+#   ALP_BATCH=B > 1 batches B frames per call: faster on a shared card, but not bit-identical to batch 1)
 set -euo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
@@ -19,7 +20,7 @@ export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THRE
 PY=$DATA_DIR/third_party/alpamayo1.5/.venv/bin/python
 t0=$(date +%s)
 echo "$(date '+%F %T') q1_alp start (pid $$)" | tee -a "$D/log.txt"
-taskset -c 158-163 "$PY" scripts/nq3_c_alpamayo.py run --workers 4 --threads 1 \
+taskset -c 158-163 "$PY" scripts/nq3_c_alpamayo.py run --workers 4 --threads 1 --batch "${ALP_BATCH:-1}" \
     --deadline "${ALP_DEADLINE:-23:30}" --summary "$D/summary.json" 2>&1 | tee -a "$D/run.log"
 "$PY" - "$D" "$t0" <<'EOF'
 import json, sys, time

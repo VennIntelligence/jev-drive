@@ -401,17 +401,13 @@ def cmd_bench(a, log):
     for B in [int(b) for b in a.batches.split(",") if b]:
         for k in range(0, len(items) - B + 1, B):
             grp = items[k:k + B]
-            tok = [g["inputs"]["tokenized_data"] for g in grp]
-            batch = {"tokenized_data": {kk: torch.cat([x[kk] for x in tok]) for kk in tok[0].keys()},
-                     "ego_history_xyz": torch.cat([g["inputs"]["ego_history_xyz"] for g in grp]),
-                     "ego_history_rot": torch.cat([g["inputs"]["ego_history_rot"] for g in grp])}
             if k == 0:
-                infer_b(model, to_cuda(batch), 0)
-            o = infer_b(model, to_cuda(batch), grp[0]["seed"])
-            rows.append({"config": f"batch{B}", "s_per_frame": o["wall"] / B, "n": B,
-                         "traj_max_abs_m": float(max(np.abs(o["xyz"][i] - res["default"][k + i]["xyz"]).max()
+                infer_b(model, to_cuda(stack(grp)), 0)
+            o = infer_b(model, to_cuda(stack(grp)), grp[0]["seed"])
+            rows.append({"config": f"batch{B}", "s_per_frame": o[0]["wall"], "n": B,
+                         "traj_max_abs_m": float(max(np.abs(o[i]["xyz"] - res["default"][k + i]["xyz"]).max()
                                                      for i in range(B))),
-                         "cot_identical": int(sum(o["cot"][i] == res["default"][k + i]["cot"] for i in range(B)))})
+                         "cot_identical": int(sum(o[i]["cot"] == res["default"][k + i]["cot"] for i in range(B)))})
             log.info(json.dumps(rows[-1]))
     df = pd.DataFrame(rows)
     df.to_csv(log.dir / "bench.csv", index=False)
@@ -419,7 +415,16 @@ def cmd_bench(a, log):
     log.event("bench", rows=rows)
 
 
-def infer_b(model, inputs: dict, seed: int) -> dict:
+def stack(items: list) -> dict:
+    """Same-length prompts (one nav text, same images count) into one batch, as navsim_zs_alpamayo.collate."""
+    tok = [g["inputs"]["tokenized_data"] for g in items]
+    return {"tokenized_data": {k: torch.cat([x[k] for x in tok]) for k in tok[0].keys()},
+            "ego_history_xyz": torch.cat([g["inputs"]["ego_history_xyz"] for g in items]),
+            "ego_history_rot": torch.cat([g["inputs"]["ego_history_rot"] for g in items])}
+
+
+def infer_b(model, inputs: dict, seed: int) -> list:
+    """A batch of B frames in one shipped call (per-row draws differ from batch 1: never bit-identical)."""
     torch.cuda.manual_seed_all(seed)
     torch.manual_seed(seed)
     with torch.autocast("cuda", dtype=torch.bfloat16), torch.no_grad():
@@ -428,9 +433,10 @@ def infer_b(model, inputs: dict, seed: int) -> dict:
             data=inputs, top_p=CFG.top_p, temperature=CFG.temperature, num_traj_samples=1, num_traj_sets=1,
             max_generation_length=CFG.max_gen, return_extra=True, diffusion_kwargs={"inference_step": CFG.flow_steps})
         torch.cuda.synchronize()
-    return {"xyz": xyz[:, 0, 0].float().cpu().numpy(), "cot": [str(c) for c in np.asarray(extra["cot"]).reshape(-1)],
-            "wall": time.perf_counter() - t0}
-
+    wall = (time.perf_counter() - t0) / len(xyz)
+    txt = {k: [str(c) for c in np.asarray(v).reshape(-1)] for k, v in extra.items()}
+    xyz = xyz[:, 0, 0].float().cpu().numpy()
+    return [{"xyz": xyz[i], "wall": wall, **{k: v[i] for k, v in txt.items()}} for i in range(len(xyz))]
 
 # ---------------------------------------------------------------- run
 
@@ -448,8 +454,9 @@ def cmd_run(a, log):
     log.info(f"{len(t)} exam frames, {len(done)} done, {n_todo} to do in {len(todo)} units; deadline {a.deadline} "
              f"(priority >= 1 units start only if they fit)")
     model, processor = I.load(CFG.attn)
-    I.apply(model, CFG)
-    log.event("start", todo=n_todo, done=len(done), deadline=a.deadline, cfg=vars(CFG), versions=I.versions())
+    cfg = I.Config(name="nq3_p6_graph", expert_graph=True)     # bench: bit-identical to the shipped default
+    I.apply(model, cfg)
+    log.event("start", batch=a.batch, todo=n_todo, done=len(done), deadline=a.deadline, cfg=vars(cfg), versions=I.versions())
     prep = Prep(processor)
     t_start, n, gpu_s, recs, j = time.time(), 0, 0.0, [], j0
     rate = a.est_s                                                # s/frame, measured as the run goes
@@ -471,12 +478,20 @@ def cmd_run(a, log):
         if not part:
             break
         rows, t_part = [r for _, g in part for r in g.itertuples()], time.time()
+        buf = []
         for p in prefetch(prep, rows, a.workers, 4 * a.workers):
-            o = infer(model, to_cuda(p["inputs"]), p["seed"])
-            recs.append(record(p, o))
-            gpu_s += o["wall"]
-            n += 1
-            bar.update(1)
+            buf.append(p)
+            if len(buf) < a.batch and len(buf) + len(recs) < len(rows):
+                continue
+            if a.batch == 1:
+                outs = [infer(model, to_cuda(buf[0]["inputs"]), buf[0]["seed"])]
+            else:
+                outs = infer_b(model, to_cuda(stack(buf)), buf[0]["seed"])
+            recs += [dict(record(q, o), batch=a.batch) for q, o in zip(buf, outs)]
+            gpu_s += sum(o["wall"] for o in outs)
+            n += len(buf)
+            bar.update(len(buf))
+            buf = []
         write_part(recs, j)
         j, recs = j + 1, []
         tot = consolidate()
@@ -517,6 +532,8 @@ if __name__ == "__main__":
     r = sub.add_parser("run")
     r.add_argument("--workers", type=int, default=4)
     r.add_argument("--threads", type=int, default=1, help="torch intra-op threads (the processor)")
+    r.add_argument("--batch", type=int, default=1, help="1 = bit-identical to the shipped path (rule 8); B > 1 is "
+                   "the same sampler on a batch, a different random draw per row (not bit-identical)")
     r.add_argument("--part-frames", type=int, default=300, help="frames per part file (whole units)")
     r.add_argument("--deadline", default="23:30", help="box clock; priority >= 1 units start only if they fit")
     r.add_argument("--est-s", type=float, default=1.5, help="s/frame assumed before the first part is measured")
