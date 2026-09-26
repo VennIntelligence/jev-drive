@@ -84,6 +84,9 @@
      读数 5 的巡航速度 = orig 对照窗口内的平均速度，完成时间 = 完成路线的 `duration_game`。
   7. **复用**：orig 里 night-queue-3 已跑过的同考生、同路线、同 seed 直接读：PDM-Lite seed 0 = `runs/nq3/b/cl1_expert`（SimLingo 树，PDM-Lite 靠登记绕行，所以 PDM-Lite 的所有 G 运行都在 SimLingo 树里跑，其余考生在官方树里跑），
      openpilot Cinque 原生 = CL2 / CL9，作者执行层 = CL10（`nq3_b_cl10.sh` 原样的四个 recipe，只把路线文件换成 G 的 XML）。
+  2b. **shift 的方向**（19:10 pilot 的清单抓到的：2164 要 −15 m 只移了 −4 m）：G 的 80 条路线的触发点离路线起点只有 2–17 m（自车就生在起点），往回 15 m 会落到出生点之后的路线外，
+     scenario 被过滤掉或只移几米。所以凡是往回平移会越过「起点后 5 m」的路线改成往前 +15 m——这恰好是全部 80 条，**shift 实际上全是 +15 m（hazard 往后挪 15 m）**，
+     「两个方向各一半」做不到，读数 3 只能读「往后挪」这一个方向（main 若要往前挪的一半，唯一可行的是给带 `distance` 参数的 11 类（55 条）把 `distance` 减 15 m，但那会改变触发时刻与 hazard 的相对几何，不是纯平移，没有采用）。
   8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
      G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
   9. **交叉拟合的 M-C 与 Q2 head**（G 的 `mc` / `q2` 考生与 X 共用，`jevdrive/nq4_x.py export-mc / export-q2`，写 `runs/nq4/gk/heads_xfit/{mc,q2}/R{1,2}` + `READY`）：折 = K 的 `route_split.json`。
