@@ -83,7 +83,8 @@ EPHEMERAL_LO = 32768   # net.ipv4.ip_local_port_range starts here: an outgoing c
 
 
 def conflicts(rows) -> list[str]:
-    out, live = [], [r for r in rows if not r["status"].startswith(("done", "revoked"))]
+    # rows without GPUs are proposals (waiting for a grant): checked when granted, not before
+    out, live = [], [r for r in rows if not r["status"].startswith(("done", "revoked")) and r["gpus"] != "-"]
     for r in live:
         top = max(indices(r), default=-1)
         if top >= 0 and 8000 + 50 * top + 49 >= EPHEMERAL_LO and not r["status"].startswith("legacy"):
