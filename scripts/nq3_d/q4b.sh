@@ -10,6 +10,7 @@ export P5_SET=carla_p5v1_ba
 echo "[$(date +%T)] Q4b: estimate ~90 min"
 f=$DATA_DIR/processed/carla_p5v1_ba/nq3_q4b_navsim_protocol
 if [[ ! -f $f/lebowski.npz ]]; then
+  mkdir -p "$f"; .venv/bin/python -c "import pandas as pd, json, os; t = pd.read_parquet(os.environ['DATA_DIR'] + '/processed/carla_p5v1_ba/index.parquet'); json.dump(sorted(t.frame_name[t.role == 'obs']), open('$f/obs_names.json', 'w'))"
   CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=1 taskset -c "$CPUS" "$DATA_DIR/envs/openpilot/bin/python" scripts/nq3_d/q4b_openpilot.py --check 8
   CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=1 taskset -c "$CPUS" "$DATA_DIR/envs/openpilot/bin/python" scripts/nq3_d/q4b_openpilot.py --workers 12
 fi

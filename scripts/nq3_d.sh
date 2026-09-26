@@ -85,7 +85,7 @@ ev start chain
 q=("${PY[@]}" -m jevdrive.nq3_q4a)
 # ---- Q4a
 step q4a-prep 15 "${q[@]}" prep
-step q4a-qwen 50 bash -c "for i in 0 1; do CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 taskset -c $CPUS $repo/.venv/bin/python -m jevdrive.navsim_qwen work nq3_navtrain --workers 3 & sleep 60; done; wait; $repo/.venv/bin/python -m jevdrive.navsim_qwen check nq3_navtrain"
+step q4a-qwen 120 bash -c "for i in 0 1; do CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=4 taskset -c $CPUS $repo/.venv/bin/python -m jevdrive.navsim_qwen work nq3_navtrain2 --workers 3 & sleep 60; done; wait; $repo/.venv/bin/python -m jevdrive.navsim_qwen check nq3_navtrain2"
 step q4a-fit 45 env CUDA_VISIBLE_DEVICES="$GPU" "${q[@]}" fit
 step q4a-hydra 20 env CUDA_VISIBLE_DEVICES="$GPU" "${q[@]}" hydra
 step q4a-hold 40 bash -c "${q[*]} hold-jobs && taskset -c $CPUS scripts/nq3_d/navscore.sh $DATA_DIR/runs/nq3/q4a/hold/jobs.txt 2 9 && ${q[*]} select"

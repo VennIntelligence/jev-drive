@@ -37,8 +37,8 @@ SEEDS = (0, 1, 2)
 LAM_R = (0.0, 0.1, 1.0, 10.0)             # 0 = the reproduction check, not a candidate
 CAND = (0.1, 1.0, 10.0)
 HALF_W, REACH, LEAD_W = 4.0, 30.0, 1.5
-N_NAV, HOLD_FRAC, SPLIT_SEED = 6000, 0.10, 0
-QSPLIT = "nq3_navtrain"
+N_NAV, HOLD_FRAC, SPLIT_SEED = 2000, 0.10, 0      # N_NAV 6000 -> 2000 before any number: GPU 6 contention ([D] 17:30)
+QSPLIT = "nq3_navtrain2"
 PED_RATIO, PDMS_DROP = 0.8, -1.0
 G2_RUN = "runs/real-data-transfer/g2/20260926-090503"
 RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "nq3" / "q4"
@@ -150,7 +150,7 @@ def prep(rl):
     nav["heldout_eval"] = nav.hold & nav.e6sub
     nav.to_parquet(out("prep", "nav_frames.parquet"), index=False)
     wod.to_parquet(out("prep", "wod_frames.parquet"), index=False)
-    need = nav.token[nav.constraint | nav.heldout_eval].to_numpy()
+    need = np.r_[nav.token[nav.heldout_eval].to_numpy(), nav.token[nav.constraint].to_numpy()]   # held-out first
     with open(data_dir() / "runs/navsim_zs/index/navtrain.pkl", "rb") as f:
         idx = {e["token"]: e for e in pickle.load(f)}
     t = pd.DataFrame({"token": need, "files": [[fr[c]["path"] for c in NQ.CAMS for fr in idx[k]["cams"]] for k in need]})

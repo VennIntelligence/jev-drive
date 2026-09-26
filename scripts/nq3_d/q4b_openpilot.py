@@ -63,11 +63,9 @@ def main():
     ap.add_argument("--models", nargs="+", default=list(P.MODELS))
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
-    import pandas as pd
     log = RunLog("nq3", "q4b-openpilot" + ("-check" if a.check else ""))
     plan = json.loads((P.root() / "op_plan.json").read_text())
-    t = pd.read_parquet(P.root() / "index.parquet")
-    want = set(t.frame_name[t.role == "obs"])
+    want = set(json.loads((P.root("nq3_q4b_navsim_protocol") / "obs_names.json").read_text()))   # written by q4b.sh
     WZ._init({}, {PO.SEQ: plan["calib"]}, ".")
     streams = []
     for st in plan["streams"]:

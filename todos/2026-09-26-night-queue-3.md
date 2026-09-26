@@ -144,6 +144,8 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   每个模型 × seed 各判，三个 seed 一致取那一格，否则写「随 seed 变」。描述：WOD RFS（E1 的 19 663 帧、prior = WOD train `ridge_late`；cluster mean 与 frame mean 的配对差，cluster 分层 bootstrap）、
   激活率，I3 车辆翻转（`elicit_i3` 的 judge，5 fold 平均）。
   (7) **交给 CL**：Cinque 的合并判格是「成立」才写 `runs/nq3/q4a/PASS`（CL 的 M-C 臂是 Cinque）；`mc_real0` = Cinque seed 0、λ\*(seed 0) 的 5 个 fold head（W、z̄、两路标准化统计量、λ，E1 `fold_heads` 的格式）放 `runs/nq3/q4a/mc_real0/`，附说明。
+- 2026-09-26 16:55 CST [D] **Q4a 偏离（写于任何 Q4a 数字之前）**：navtrain 的 Qwen 抽取在 GPU 6 上实测 3.1 s / token / 进程（navtest 当初 0.63 s，GPU 6 此时被 9 个进程共用、100% 占用），8 068 个 token 要约 3.5 h，超估计 2 倍，已停（只抽了 22 个）。
+  改为：navtrain 零约束行从 6 000 减到 **2 000**（同一 rng 0 从干净帧里抽），留出 2 068 个 token 不变且排在抽取队列最前；步骤估时改 120 min。WOD 干净帧（68 570，已有特征）不受影响，两个数据集仍各占一半权重。
 - 2026-09-26 17:20 CST [D] **Q4b 的操作化**（写于 Q4b 的任何数字之前）。
   (1) **只换时间协议**：P5 v1 BA 全部 obs 行（19 428 帧，兼容检查用其中 null 表引用的 6 352 帧，翻转用全部）按 NAVSIM 的输入协议重抽 openpilot `temporal`：NAVSIM 的 4 个 2 Hz 历史槽（−1.5 / −1.0 / −0.5 / 0 s）取最近的 5 Hz 录制帧
   （等距取较晚的：−1.4 / −1.0 / −0.4 / 0 s，与 T2 给 WA-JEPA 的取法相同；早于流起点的钳到第一帧，比例照报），每帧仍用 P5 自己的三路 rig 渲染（`p5_openpilot.render` 原样，与 `op_streams_vis` 同一渲染），
