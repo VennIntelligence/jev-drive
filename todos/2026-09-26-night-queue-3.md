@@ -411,6 +411,45 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
      `mc_real0`（Q4a PASS 后追加）= CL4 的 prior + lane D 包里 5 个 fold head 的平均 Δ（`elicit_e1.correction`），与 CL4 的全数据重拟合 Δ 不是同一种拟合，配对差要带这个限定。
   5. 链式脚本 `scripts/nq3_b.sh chain` 17:47 在 `jev:nq3-b` 开跑（CL1 → CL2 → CL3 → CL4 → CL6 → CL7 → CL8 → CL9 → CL10，CL5 / CL5d 与 `mc_real0` 按文件插入 / 追加，A 的 `v1/DONE` 后扩到 GPU 0–5、`taskset -c 60-149`）；
      之后由 Codex 按 [tmp/2026-09-26-codex-handoff.md](../tmp/2026-09-26-codex-handoff.md) 的 lane B 一节看护。
+- 2026-09-26 18:35 CST [OPL] **openpilot 原生 plan 静止不起步：诊断与登记的起步策略**（执行员 OPL；诊断只用 lane B 已有的 CL0 smoke 日志，
+  下面第 2–5 点写于新模式的任何一次运行之前）。代码：`scripts/b2d_zeroshot_agent.py` 的 `"launch"` / `"raw_dump"`、`scripts/nq4_opl_check.py`（规则 8）、
+  `jevdrive/nq4_opl_report.py`（表与验收门）、`scripts/nq4_opl.sh`（链）；run 在 `runs/nq4/opl/`。
+  1. **诊断：是模型自己在静止帧上要求停，不是 P7。** CL0 的 6 条 smoke 运行（CL2 / CL7 × 2084 / 24211 / 2668）里车速始终为 0，
+     预热后 1 101 / 1 201 个 tick 是 P7 的 `stop_hold`（其余 100 个是预热期的 `no_trajectory`）。逐次 plan（后轴系，预热后每条约 275 次）：
+
+     | 臂 | 路线 | plan x@1 s 中位 [p10, p90] | x@3 s | x@5 s | P7 速度窗 0.25–1 s 均速 < 0.05 m/s 的比例 | 模型 desired accel 中位 |
+     |:--|:--|:--|:--|:--|--:|--:|
+     | CL2 Cinque | 2084 | 0.002 [−0.001, 0.010] m | 0.12 m | 0.91 m | 99.6% | +0.047 m/s² |
+     | CL2 Cinque | 24211 | 0.013 [0.010, 0.019] m | 0.11 m | 0.50 m | 100% | +0.042 |
+     | CL2 Cinque | 2668 | 0.002 [−0.001, 0.006] m | 0.14 m | 0.91 m | 100% | +0.042 |
+     | CL7 Lebowski | 2084 | 0.000 [−0.002, 0.004] m | 0.03 m | 0.17 m | 99.6% | −0.004 |
+     | CL7 Lebowski | 24211 | 0.014 [0.005, 0.035] m | 0.22 m | 1.97 m | 93.8% | −0.004 |
+     | CL7 Lebowski | 2668 | −0.004 [−0.007, −0.001] m | 0.03 m | 0.36 m | 100% | −0.004 |
+
+     plan 5 s 内最多走 0.2–2 m，形状是「一直推迟的起步」：每一帧都说「再过两三秒才动」，下一帧车没动，又说一遍。任何照着 plan 走的执行层都不会起步，
+     openpilot 自己的纵向也一样（`should_stop`：0.525 s 处的 plan 速度 < 0.5 m/s 就刹停）；Cinque 的 action 头给的加速度只有 +0.04 m/s²，Lebowski 从 plan 算出来 ≤ 0。
+     desire 在这些 tick 上全是 0（起点 20 m 内没有路口命令），但 desire 只管横向，也不是「出发」信号；openpilot 没有导航 / 出发输入，真车上停稳后由驾驶员按 resume 或踩油门。
+     这与迁移文档 D1（纯 openpilot 12 / 20 没动）、D5 重训表第 2 条一致：**起步缺口在模型，是适配层要补的，不是 P7 的 stop_hold 造成的**（P7 在这里的行为就是照 plan 做）。
+  2. **起步策略 = 新 agent 模式 `op_native_launch`**（config 键 `"launch": {"ckpt", "socket"}`，现有模式的行为不变）：迁移文档 D3 的 TCP 伙伴与仲裁器（`b2d_partner.py`，代码一字不改），
+     **只开起步**：`junctions` 关、`tcp_only` 关。TCP = Bench2DriveZoo 官方 TCP（`tcp/admlp` 8a08b07，`tcp_b2d.ckpt` sha256 e6573ff1…），原样运行（自带三路 1600×900 相机、route planner、PID、出厂低速油门上限），网络前向在 `b2d_tcp_server.py`。
+     仲裁只看可观测量，写死：静止锁存（车速 < 0.1 m/s 持续 0.5 s，路线起点也算）→ TCP 开；车速 ≥ 1.0 m/s 持续 1.0 s 解锁；openpilot 预热（5 s）期间 TCP 开；
+     解锁后只有当 openpilot 自己的控制量（P7 在 openpilot plan 上每 tick 都算）连续 0.5 s 不刹车才交还（「模型未就绪」）；换人 0.5 s 线性混合。
+     「前方无障碍」由 TCP 自己判断（它看得到前车、红灯），不读任何特权信息、不读登记、不看结果。模型、P7（`P7.json`）、相机与后轴变换、desire、`ctl_every` 与 CL2 / CL7 / CL5d 逐项相同，
+     所以 CL2p − CL2 这类配对只差起步策略。与 CL2 的一处结构差别如实记下：CL2 开头 5 s 刹车保持，这里 TCP 从第 0 s 开车（D3 原样）。
+     分数一律读成「openpilot + TCP 起步伙伴」；每张表单列**伙伴接管的 tick 比例**（w_model < 1，含混合）、模型开的距离比例、起步时刻、交还次数、按驾驶者分的违规。
+  3. **验收（写在任何运行之前）**：CL2p、CL7p 各跑 13 条 = 3 条 smoke 路线（2084 / 24211 / 2668，前 200 个请求存原始输入输出）+ 10 条随机 220 路线
+     （`random.Random(0).sample`，220 去掉 smoke 三条后排序抽：28330、3890、26966、10857、2086、3378、23695、18356、4468、27529），TM seed 0。
+     资源：GPU 1，2 个 CARLA server（index 130–131），`taskset -c 200-203`。门（`jevdrive.nq4_opl_report accept` 与 `scripts/nq4_opl_check.py`，全过才交链）：
+     G1 13 条都跑完且有 plan；G2 ≥ 12 / 13 条 20 s 内车速过 0.5 m/s；G3 ≥ 11 / 13 条 openpilot（w_model = 1）自己开了 ≥ 10 m；G4 规则 8：3 条 smoke 路线的前 200 个请求，
+     新进程从 reset 起按原顺序重算，plan / 速度 / yaw / curvature / accel 逐位相同，请求连续、相邻请求正好一个模型步、交给 P7 的 plan road / wide 同帧且间隔 4 tick（≥ 99%）；
+     G5 混合期间 0 次碰撞。模型距离比例、伙伴 tick 比例、DS / RC 只报告不设门；伙伴 tick 比例 > 50% 时交链前先报 main。
+  4. **链 `scripts/nq4_opl.sh chain`**：CL2p（220，seed 0）→ CL7p（220，seed 0）→ CL5dp（obstacle 约 40 条，seed 0 / 1 / 2，同 CL5d；等 `runs/nq3/q2/closed_loop_head/READY`，
+     先 3 条 smoke 路线 dump 每个请求、`nq3_cl_check.py op` 逐位相同才往下）。每臂按分阶段规则：1 条 → 10 条 → 其余（路线顺序 = `random.Random(1)` 打乱该臂的路线表），
+     1 条与 10 条两个阶段各过一遍写死的 sanity 清单，不过就停链写 ERROR：S1 阶段内路线全部有记录、需要重试的 ≤ 20%；S2 被判 blocked 的 ≤ 30%；S3 20 s 内起步 ≥ 90%；
+     S4 伙伴 tick 比例（合并）≤ 50%；S5 混合期 0 次碰撞、有碰撞的路线 ≤ 50%；S6 10 条阶段的平均 DS ≥ 5 且不高于同路线 CL1（专家轨迹经 P7）平均 + 15（CL1 没有时只查 ≥ 5）。
+     启动门：`runs/nq4/opl/GO`（SCH / main 按全局容量表写，给卡、每卡 worker、index 段、核段）或脚本自己探到空闲容量（某卡 CarlaUE4 ≤ 6 − worker 数、空闲显存 ≥ 40 GB、
+     pids.current < 15 000、index 130–139 的端口没人占），先到先得。重试 ≤ 2（b2d_run 每条路线 3 次）、单步超估计 2 倍停、失败率 > 10% 停；每步结束出表到 `runs/nq4/opl/results/`，
+     由看护拉回 `research/results/nq3/cl/opl/`。CL5dp 的路线进程用 CL5d 同一个 env（scout-tfv6，JPEG 字节与 recorder 一致），加 `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` 让出厂 TCP checkpoint 在 torch 2.8 里能读。
 
 ## 时间表与资源（box 时钟 CST；每条 lane 固定卡与核段，`taskset` 绑核，OMP / MKL / OpenBLAS / NUMBA 线程按 lane 上限设）
 
