@@ -10,6 +10,13 @@
 #                                     runs/nq3/q4a/PASS
 #   scripts/nq3_b.sh arm <arm> <seed> <routes> <est_h>   one queue step (resumable), for debugging
 #
+# Scheduler hooks (SCH, 2026-09-26 19:00; every default reproduces the behaviour before them):
+#   $B/GO    grant file, sourced at start and again before every queue step (runs/sched/table.tsv -> GO, see
+#            tmp/2026-09-26-codex-handoff.md "全局调度"): GPUS, WORKERS, B_CPUS, B_IDX ("g:index ..." server index base
+#            per GPU, default 300 + 30 g), B_EXPAND_GPUS / B_EXPAND_WORKERS / B_CPUS_WIDE (the post-lane-A expansion).
+#   $B/SKIP  "arm seed" lines: the chain skips those queue steps (re-read before every step).
+#   B_DIR    lane directory (default runs/nq3/b); B_REPORT=0 skips the table refresh (pilots in their own B_DIR).
+#
 # Resources (fixed by main): GPUs 0,1,2, <= 6 CARLA servers each, 50 cores (taskset $B_CPUS), --client-threads 8; after
 # runs/nq3/a/v1/DONE and once no CARLA server is left on GPUs 3-5: GPUs 0-5 and 90 cores. A new CARLA server waits while
 # the cgroup's pids.current > 17000 (B2D_PIDS_WAIT, scripts/b2d_run.py). CARLA server indices 300-479 (30 per GPU).
@@ -20,7 +27,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
 NQ=$DATA_DIR/runs/nq3
-B=$NQ/b
+B=${B_DIR:-$NQ/b}
+B_GO=${B_GO:-$B/GO}
+load_go() { [[ -f $B_GO ]] && source "$B_GO"; return 0; }
+load_go
 mkdir -p "$B/srv" "$B/cfg" "$B/arms" "$B/steps"
 B_CPUS=${B_CPUS:-60-109}
 B_CPUS_WIDE=${B_CPUS_WIDE:-60-149}
@@ -37,6 +47,10 @@ PY_SCOUT=$DATA_DIR/envs/scout-tfv6/bin/python PY_OP=$DATA_DIR/envs/openpilot/bin
 PY_VENV=$REPO/.venv/bin/python PY_ULT=$DATA_DIR/envs/ultralytics/bin/python
 PY_ALP=$DATA_DIR/third_party/alpamayo1.5/.venv/bin/python
 SMOKE_ROUTES=${SMOKE_ROUTES:-2084,24211,2668}
+idx_of() {  # idx_of <gpu>: first CARLA server index of that GPU's block (B_IDX "g:i" entry, else 300 + 30 g)
+    local e; for e in ${B_IDX:-}; do [[ ${e%%:*} == "$1" ]] && { echo "${e#*:}"; return; }; done
+    echo $((300 + 30 * $1))
+}
 
 ev() {  # ev <kind> [json fields without braces]
     printf '{"t": %s, "kind": "%s"%s}\n' "$(date +%s.%N | cut -c1-14)" "$1" "${2:+, $2}" >> "$B/events.jsonl"
@@ -173,13 +187,13 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
         done
         for g in $GPUS; do
             if [[ $arm =~ ^(tfv6|bridgedrive|simlingo|blue)$ ]]; then     # CL10: author agents as shipped
-                B_CPUS=$B_CPUS scripts/nq3_b_cl10.sh "$arm" "$g" "$WORKERS" $((300 + 30 * g)) "$seed" "$out" \
+                B_CPUS=$B_CPUS scripts/nq3_b_cl10.sh "$arm" "$g" "$WORKERS" "$(idx_of "$g")" "$seed" "$out" \
                     "$([[ $routes == all ]] && echo all || echo "${sel[3]}")" >> "$out/runner-g$g.log" 2>&1 &
                 pids+=($!); echo "${pids[*]}" > "$out/runner.pids"; sleep 20; continue
             fi
             local cfg; cfg=$(arm_cfg "$arm" "$g" "$seed" "$dump")
             taskset -c "$B_CPUS" "$PY_CARLA" scripts/b2d_run.py "${sel[@]}" --workers "$WORKERS" \
-                --server-index $((300 + 30 * g)) --index-span 30 --gpu-rank "$g" --tm-seed "$seed" --no-spectator \
+                --server-index "$(idx_of "$g")" --index-span 30 --gpu-rank "$g" --tm-seed "$seed" --no-spectator \
                 --no-reap --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 3600 --out "$out" \
                 --python "$(route_python "$arm")" --agent scripts/b2d_zeroshot_agent.py --agent-config "$cfg" \
                 ${RUN_FLAGS---fast-copy --cache-lights} \
@@ -217,7 +231,7 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
     done
     local fail
     fail=$(python3 -c "print(1 if ($nreq - $ndone) / max($nreq, 1) > 0.10 else 0)")
-    "$PY_VENV" -m jevdrive.nq3_cl_report >> "$B/report.log" 2>&1 || log "report failed (see report.log)"
+    [[ ${B_REPORT:-1} == 1 ]] && { "$PY_VENV" -m jevdrive.nq3_cl_report >> "$B/report.log" 2>&1 || log "report failed (see report.log)"; }
     ev step_end "\"arm\": \"$arm\", \"seed\": $seed, \"done\": $ndone, \"requested\": $nreq, \"wall_h\": $(python3 -c "print(round(($SECONDS - $t0) / 3600, 3))")"
     printf '{"arm": "%s", "seed": %s, "done": %s, "requested": %s, "wall_h": %s, "out": "%s", "finished": "%s"}\n' \
         "$arm" "$seed" "$ndone" "$nreq" "$(python3 -c "print(round(($SECONDS - $t0) / 3600, 3))")" "$out" "$(date '+%F %T')" \
@@ -258,7 +272,7 @@ expert() {  # expert logs on GPUs $1 (comma list), 6 workers per GPU; resumable
     for g in ${gpus//,/ }; do
         BENCH2DRIVE_ROOT=$SIM/Bench2Drive WORK_DIR=$SIM taskset -c "$B_CPUS" "$PY_CARLA" \
             scripts/b2d_run.py --routes "$SIM/leaderboard/data/bench2drive220.xml" --towns all --workers 6 \
-            --server-index $((300 + 30 * g)) --index-span 30 --gpu-rank "$g" --tm-seed 0 --no-spectator --no-reap \
+            --server-index "$(idx_of "$g")" --index-span 30 --gpu-rank "$g" --tm-seed 0 --no-spectator --no-reap \
             --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 3600 --out "$out" \
             --python "$DATA_DIR/envs/simlingo/bin/python" --agent scripts/b2d_expert_agent.py \
             --agent-config "expert+nq3" >> "$out/runner-g$g.log" 2>&1 &
@@ -290,21 +304,20 @@ status_loop() {  # STATUS.md every 10 min
             echo; echo '```'
             nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader
             echo '```'; echo; echo "finished steps:"
-            for f in "$B"/arms/*/s*/DONE; do [[ -e $f ]] && echo "- $(cat "$f")"; done
+            for f in "$B"/arms/*/s*/DONE; do [[ -e $f ]] && echo "- $(cat "$f")"; done; true
         } > "$B/STATUS.md.tmp" && mv "$B/STATUS.md.tmp" "$B/STATUS.md"
     done
 }
-maybe_expand() {  # after lane A's v1 is done and its CARLA servers are gone: GPUs 0-5, 90 cores
-    [[ $GPUS == "0 1 2 3 4 5" ]] && return
+maybe_expand() {  # after lane A's v1 is done and no CARLA server is left on the added GPUs: $B_EXPAND_GPUS (default 0-5)
+    local target=${B_EXPAND_GPUS:-0 1 2 3 4 5} add="" g n
+    [[ $GPUS == "$target" ]] && return
     [[ -e $NQ/a/v1/DONE ]] || return
-    local busy
-    busy=$(nvidia-smi --query-compute-apps=gpu_bus_id,process_name --format=csv,noheader 2>/dev/null | grep -c CarlaUE4 || true)
-    local g345
-    g345=$(for g in 3 4 5; do nvidia-smi -i $g --query-compute-apps=process_name --format=csv,noheader; done | grep -c CarlaUE4)
-    (( g345 == 0 )) || { log "lane A done but $g345 CARLA servers remain on GPUs 3-5; not expanding yet"; return; }
-    GPUS="0 1 2 3 4 5"; B_CPUS=$B_CPUS_WIDE
-    ev expand '"gpus": "0-5", "cores": 90'
-    log "expanded to GPUs $GPUS, cores $B_CPUS"
+    for g in $target; do [[ " $GPUS " == *" $g "* ]] || add+=" $g"; done
+    n=$(for g in $add; do nvidia-smi -i $g --query-compute-apps=process_name --format=csv,noheader; done | grep -c CarlaUE4)
+    (( n == 0 )) || { log "lane A done but $n CARLA servers remain on GPUs$add; not expanding yet"; return; }
+    GPUS=$target; B_CPUS=$B_CPUS_WIDE; WORKERS=${B_EXPAND_WORKERS:-$WORKERS}
+    ev expand "\"gpus\": \"$GPUS\", \"workers\": $WORKERS, \"cores\": \"$B_CPUS\""
+    log "expanded to GPUs $GPUS, $WORKERS workers each, cores $B_CPUS"
 }
 
 # ---------------------------------------------------------------- the queue
@@ -323,6 +336,7 @@ chain() {
                 "simlingo 0 all ${EST_SIMLINGO:-8.0}")      # SimLingo ~1.1 s / tick, single-core bound (CL10 smoke)
     local inserted=0 appended=0 s
     while (( ${#Q[@]} )); do
+        load_go
         maybe_expand
         if (( ! inserted )) && [[ -e $NQ/q2/closed_loop_head/READY ]]; then
             local ob=${EST_CL5:-0.8}
@@ -338,6 +352,9 @@ chain() {
         printf '%s\n' "${Q[@]}" > "$B/QUEUE"
         set -- $s
         [[ -e $B/arms/$1/s$2/DONE ]] && continue
+        if grep -qxF "$1 $2" "$B/SKIP" 2>/dev/null; then
+            ev skip "\"arm\": \"$1\", \"seed\": $2"; log "skip $1 seed $2 (listed in $B/SKIP)"; continue
+        fi
         run_arm "$1" "$2" "$3" "$4"
         srv_stop_all             # free the cards between arms (the next arm starts its own servers)
     done
