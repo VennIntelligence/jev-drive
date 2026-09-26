@@ -179,6 +179,102 @@ def judge(rl, set_: str, models=tuple(MODELS)):
     return res
 
 
+# ---------------------------------------------------------------- WOD-E2E val (zeroshot-exam/wod-e2e.md + decision 22)
+
+WOD_REFS = ("cv", "logged future", "ours cls ego", "Alpamayo 1.5 nav", "openpilot Cinque")
+
+
+def _wzs():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("wod_zeroshot_script", REPO / "scripts" / "wod_zeroshot.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def _wod_rows(names: np.ndarray, past: np.ndarray, fut: np.ndarray, models) -> dict:
+    """Every row's (n, K, 20, 2) prediction on these frames: ours, the stored zero-shot runs, the baselines."""
+    from . import waymo as W
+    wz = _wzs()
+    rows = {"cv": W.baselines(past)["cv"][:, None], "logged future": fut[:, None, :, :2]}
+    rows |= {k: v[:, None] for k, v in wz._ours(list(names)).items() if k == "ours cls ego"}
+    alp, _ = wz._alp(list(names), "nav")
+    op = wz._op(list(names), "cinque")
+    rows |= {"Alpamayo 1.5 nav": alp, "openpilot Cinque": op[:, None]}
+    for m in models:
+        z = np.load(root("wod", f"{m}.npz"), allow_pickle=True)
+        at = pd.Series(np.arange(len(z["frame_name"])), index=z["frame_name"].astype(str))
+        rows[MODELS[m]] = z["grid"][at[names].to_numpy()][:, None]
+    return rows
+
+
+def judge_wod(rl, models=tuple(MODELS), B: int = 10000):
+    """Rater frames: RFS cluster mean (leaderboard) + frame mean, paired deltas under one stratified bootstrap.
+    Rater + ADE-extra frames: ADE@5 s vs the logged future on s_ego deciles 1-9 (the main judge, decision 22) and on
+    the top decile, paired deltas under a sequence bootstrap. K > 1 rows (Alpamayo, 6 samples) score E[1 sample]."""
+    from . import traj, waymo as W, wod_zeroshot as Z
+    wz = _wzs()
+    S = Z.load_sets()
+    r = S["rater"]
+    rn = r["name"].astype(str)
+    rows = _wod_rows(rn, r["past"], r["future"], models)
+    speed, tr, sc = W.init_speed(r["past"]), r["traj"], r["scores"]
+    rfs = {k: np.mean([W.rater_feedback_score(p[:, j].astype(np.float64), tr.astype(np.float64), sc, speed)
+                       for j in range(p.shape[1])], 0) for k, p in rows.items()}
+    cl = r["cluster"].astype(str)
+    rng = np.random.default_rng(0)
+    sidx = wz._strat_idx(cl, B, rng)
+    cboot = lambda x: np.mean([x[g].mean(1) for g in sidx], 0)            # noqa: E731
+    cmean = lambda x: float(pd.Series(x).groupby(cl).mean().mean())       # noqa: E731
+    out = []
+    for k, x in rfs.items():
+        b = cboot(x)
+        row = {"row": k, "n": len(x), "rfs": cmean(x), "rfs_lo": np.percentile(b, 2.5), "rfs_hi": np.percentile(b, 97.5),
+               "rfs_frame": float(x.mean()), "floored": float((x <= W.RFS_FLOOR + 1e-9).mean())}
+        for ref in WOD_REFS:
+            if ref != k:
+                d = b - cboot(rfs[ref])
+                row |= {f"d_{ref}": cmean(x) - cmean(rfs[ref]), f"d_{ref}_lo": np.percentile(d, 2.5),
+                        f"d_{ref}_hi": np.percentile(d, 97.5)}
+        out.append(row)
+    res_rfs = pd.DataFrame(out)
+    # ADE on the s_ego deciles: rater + ADE-extra frames, decile edges on the whole of val (P0's s_ego)
+    e = S["extra"]
+    names = np.r_[rn, e["name"].astype(str)]
+    seq = np.r_[r["sequence"], e["sequence"]].astype(str)
+    fut = np.r_[r["future"], e["future"]][..., :2]
+    allrows = _wod_rows(names, np.r_[r["past"], e["past"]], np.r_[r["future"], e["future"]], models)
+    z = np.load(data_dir() / wz.P0_PREDS, allow_pickle=True)
+    s_all = z["s_ego"]
+    edges = np.quantile(s_all, np.linspace(0, 1, 11))[1:-1]
+    s_at = pd.Series(s_all, index=z["frame_name"].astype(str))[names].to_numpy()
+    dec = np.clip(np.searchsorted(edges, s_at, "right"), 0, 9)
+    ade = {k: np.linalg.norm(p - fut[:, None], axis=-1).mean(-1).mean(1) for k, p in allrows.items()}
+    out = []
+    for scope, m in (("s_ego dec 1-9", dec < 9), ("s_ego top decile", dec == 9), ("all", np.ones(len(dec), bool))):
+        for k, a in ade.items():
+            if k == "logged future":
+                continue
+            lo, hi = traj.boot_ci(a[m], seq[m], b=B)
+            row = {"scope": scope, "row": k, "n": int(m.sum()), "ade5": float(a[m].mean()), "lo": lo, "hi": hi}
+            for ref in ("cv", "ours cls ego", "Alpamayo 1.5 nav", "openpilot Cinque"):
+                if ref != k:
+                    v = a[m] - ade[ref][m]
+                    dl, dh = traj.boot_ci(v, seq[m], b=B)
+                    row |= {f"d_{ref}": float(v.mean()), f"d_{ref}_lo": dl, f"d_{ref}_hi": dh}
+            out.append(row)
+    res_ade = pd.DataFrame(out)
+    for df, name in ((res_rfs, "wod_rfs.csv"), (res_ade, "wod_ade_sego.csv")):
+        df.to_csv(rl.dir / name, index=False)
+        df.to_csv(RESULTS / name, index=False)
+    np.savez_compressed(rl.dir / "per_frame.npz", names=names, dec=dec, **{f"ade/{k}": v for k, v in ade.items()},
+                        **{f"rfs/{k}": v for k, v in rfs.items()})
+    rl.log.info("RFS (rater, n=%d)\n%s", len(rn), res_rfs[["row", "rfs", "rfs_lo", "rfs_hi", "rfs_frame", "d_cv", "d_cv_lo",
+                                                          "d_cv_hi", "floored"]].to_markdown(index=False, floatfmt=".3f"))
+    rl.log.info("ADE@5 s vs log by s_ego decile\n%s", res_ade[["scope", "row", "n", "ade5", "lo", "hi", "d_cv", "d_cv_lo",
+                                                              "d_cv_hi"]].to_markdown(index=False, floatfmt=".3f"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
@@ -191,7 +287,8 @@ def main():
         print(plan(a.set))
     else:
         rl = RunLog("top10_exam", f"judge-{a.set}")
-        judge(rl, a.set, tuple(a.models.split(",")))
+        RESULTS.mkdir(parents=True, exist_ok=True)
+        (judge_wod if a.set == "wod" else judge)(rl, *([] if a.set == "wod" else [a.set]), tuple(a.models.split(",")))
         rl.close()
 
 

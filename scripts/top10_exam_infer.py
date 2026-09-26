@@ -291,6 +291,56 @@ def check(rl, M, n_tok: int, batch: int):
     rl.log.info("adapter check: %s", s)
 
 
+# ---------------------------------------------------------------- NAVSIM reproduction (native pipeline, all tokens)
+
+class Tokens(torch.utils.data.Dataset):
+    def __init__(self, loader, tokens, native):
+        self.l, self.t, self.n = loader, tokens, native
+
+    def __len__(self):
+        return len(self.t)
+
+    def __getitem__(self, i):
+        return i, self.n(self.l.get_agent_input_from_token(self.t[i]))
+
+
+def navsim(rl, M, split: str, workers: int, batch: int):
+    """The model's own feature path on every token of a NAVSIM split -> tokens + poses (8, 3) at 0.5 ... 4.0 s, for
+    the replay agent (jevdrive.navsim_agent) and the official devkits (scripts/navsim_zs_score.sh)."""
+    from hydra.utils import instantiate
+    from omegaconf import OmegaConf
+    from navsim.common.dataloader import SceneLoader
+    cfgd = Path.cwd() / "navsim/planning/script/config/common/train_test_split"
+    ds = OmegaConf.load(cfgd / f"{split}.yaml").data_split
+    sf = instantiate(OmegaConf.load(cfgd / "scene_filter" / f"{split}.yaml"))
+    two = "two_stage" in split
+    loader = SceneLoader(data_path=NAV / "navsim_logs" / ds, original_sensor_path=NAV / "sensor_blobs" / ds, scene_filter=sf,
+                         synthetic_sensor_path=NAV / "navhard_two_stage/sensor_blobs" if two else None,
+                         synthetic_scenes_path=NAV / "navhard_two_stage/synthetic_scene_pickles" if two else None,
+                         sensor_config=M.sensor_config)
+    toks = sorted(loader.tokens)
+    rl.log.info("%s: %d tokens", split, len(toks))
+    dl = torch.utils.data.DataLoader(Tokens(loader, toks, M.native), batch_size=batch, num_workers=workers,
+                                     collate_fn=lambda xs: ([x[0] for x in xs], M.collate([x[1] for x in xs])),
+                                     prefetch_factor=2)
+    dev = torch.device("cuda")
+    M.agent.to(dev).eval()
+    poses = np.zeros((len(toks), 8, 3), np.float32)
+    step = int(round(0.5 / M.dt))
+    from tqdm import tqdm
+    t0 = time.time()
+    with torch.no_grad():
+        for k, (ids, b) in enumerate(tqdm(dl, mininterval=30)):
+            tr = M.forward(to_dev(b, dev))[0].float().cpu().numpy()
+            poses[ids] = tr[:, step - 1::step][:, :8]
+            if k % 50 == 0:
+                rl.event("progress", done=(k + 1) * batch, n=len(toks), seconds=time.time() - t0)
+    out = DATA / "processed/top10_exam/navsim" / f"{rl.model}_{split}.npz"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(out, tokens=np.asarray(toks), poses=poses)
+    rl.log.info("%d tokens in %.0f s -> %s", len(toks), time.time() - t0, out)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", choices=("sparsedrivev2", "ztrs"), required=True)
@@ -298,11 +348,15 @@ def main():
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--check", type=int, default=0, help="adapter equivalence on this many navtest tokens instead")
+    ap.add_argument("--navsim", default="", help="native inference on every token of this NAVSIM split instead")
     a = ap.parse_args()
     M = {"sparsedrivev2": sparsedrivev2, "ztrs": ztrs}[a.model]()
-    rl = RunLog("top10_exam", f"{'check' if a.check else 'infer-' + a.set}-{a.model}")
+    kind = "check" if a.check else f"navsim-{a.navsim}" if a.navsim else f"infer-{a.set}"
+    rl = RunLog("top10_exam", f"{kind}-{a.model}")
     rl.model = a.model
-    if a.check:
+    if a.navsim:
+        navsim(rl, M, a.navsim, a.workers, a.batch)
+    elif a.check:
         check(rl, M, a.check, a.batch)
     else:
         plan = json.loads((DATA / "processed/top10_exam" / a.set / "plan.json").read_text())
