@@ -95,6 +95,23 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
      E1 照 T3：重录的 expert 对 v0 原记录逐 tick 比到 need_k（位置差 < 1 cm、航向差 < 0.1°、相机 tick 网格相同），不同的世界整体剔除并报数。
   4. **shadow 等价（规则 8）**：smoke 上 (a) 进程外 BridgeDrive 的读数与 T3 进程内版同样的方式比（LiDAR / radar 每次运行不同，门槛沿用 T3 13:25 更正：差不大于同配置重录两次的差）；
      (b) 全挂载版（TFv6 与 BridgeDrive 两个进程 + Waymo 相机）上 TFv6 的读数对 v0 原记录，同一门槛。不过就停。
+- 2026-09-26 17:36 CST [A] **smoke、profiling 与等价检查**（GPU 3–5，每卡 2–3 个 server，box 上 lane B 同时在跑；run dir `runs/nq3/a/smoke/`；还没有任何考卷读数）。
+  | 检查 | 内容 | 结果 |
+  |:--|:--|:--|
+  | E1（v0 重录配置） | 6 个 v0 世界重录，expert 对 P6 v0 原记录逐 tick 比到 need_k | x₁₀ / x₀₀（177310、177320、2589610、2589620）与 x₀₁ 2589650 位置 / 航向 / 速度差全 **0**；x₁₁ 2589640 两次里一次在 k = 65 分叉 |
+  | 对向车流世界能否复现 | **P6 v0 的 recorder 原样**重跑 x₁₁ 2589640、镜像 2589670、x₀₁ 2589650，对 v0 原记录 | x₁₁ 在 k = 65、镜像在 k = 12 分叉（与新 recorder 第二次重录**逐位相同**的分叉），x₀₁ 相同：从第一个 tick 就摆满对向车流的世界本身不可复现，不是 recorder 造成的 |
+  | TFv6 进程外路径（规则 8） | 全挂载版（TFv6 + BridgeDrive 两个进程、Waymo 相机、BLUE）的 TFv6 读数对 v0 原记录，与「v0 recorder 原样重跑对 v0 原记录」比，2 个世界 154 帧 | waypoint 逐帧最大差 中位 / p95：新路径 0.107 / 0.667、0.128 / 0.961 m，原样重跑 0.109 / 0.647、0.102 / 0.957 m；期望目标速度 0.009 / 1.25、0.012 / 1.18 对 0.007 / 1.43、0.016 / 1.78 m/s。**同一水平，过**（差来自每次运行的 LiDAR / radar 与渲染，T3 13:25 的门槛） |
+  | BridgeDrive 两次新路径之间 | 177310 / 177320（lean 对 full 两种 rig）84 帧；2589640 同 rig 两次、分叉前 15 帧 | 期望目标速度 中位 / p95 0.004 / 2.2–3.2、0.0008 / 6.0 m/s（少数帧在相邻速度类之间跳），2 s waypoint 速度 0.045–0.12 / 0.29–1.1 m/s；T3 的同配置重录是 0.0004 / 0.75、0.020 / 0.30。中位同量级、尾部更宽（P6 的绕行帧上速度分布更双峰）；BridgeDrive 没有进程内的 P6 参照可比，进程外机制由 TFv6 那一行验证（同一段代码），读数照 T3 由各自 null 定 τ 吸收 |
+  | 相机降频 | Waymo 相机 / BLUE 相机 `sensor_tick` 0.2 s（及 0.1999 s） | 全挂载版里相机 tick 上的图 76–80 / 76–80 帧缺（相位错开），lean 版 BLUE 2 / 42 缺：**不可靠，弃用**，全部相机照 v0 20 Hz 渲染 |
+  **吞吐（同 2 个 Town12 世界、同时段、每卡 2 个 server）**：P6 v0 recorder 原样（TFv6 进程内、Waymo 相机，不带 BridgeDrive / BLUE）每世界 233 / 225 s，每 tick 331 / 336 ms；
+  新 recorder 全挂载（TFv6 + BridgeDrive 两个 shadow 进程、Waymo 相机 20 Hz、BLUE）**232 / 189 s**，每 tick 331 / 286 ms，其中 271 / 223 ms 是等 server 的传感器数据——瓶颈已从 client 里的 shadow 移到 CARLA server 渲染；
+  两个 shadow 进程全程跟得上（队列最深 4–53 tick，路线结束后 ≤ 2.1 s 追平）。CPU：recorder 主进程每世界 69–72 CPU·s，TFv6 进程 128–160，BridgeDrive 进程 101–109。
+  折算：同一批输出（TFv6 + BridgeDrive + BLUE 相机）旧做法要 P6 v0 recorder 一遍再加 T3 式重录一遍（约 2 × 0.063 server·h / 世界），新做法一遍 **0.054 server·h / 世界**，约 2.3 倍；
+  v0 重录配置（lean + BridgeDrive + BLUE，录到 need_k）每世界 122–145 s（161–169 tick）。setup：recorder 导入到第一个 tick 60–94 s（Town12），shadow 进程在载图期间导入（5 s）、收到路线后建模型 16–28 s，与载图重叠。
+  **由此改的操作口径（写于 v0 重录批量与任何考卷读数之前）**：(1) 全部相机 20 Hz（`cam_period 1`）；(2) E1 的剔除从「整个世界」细化为「从该世界 expert 第一次分叉的 tick 起的帧」（分叉前的帧 ego 轨迹与原记录逐位相同）；
+  (3) E1 的 10% 熔断只算非对向车流世界（x₁₀、x₀₀、天气 null、放置 null），x₁₁ / x₀₁ / 镜像的 E1 单列报数（它们在原 recorder 下也不可复现）；v1 的 E1 抽查同样分开报。
+  recovery hook 的管线检查（登记的 10 个 smoke 世界里的前 2 个，GPU 3）：出生横移 +1.0 / −1.5 m 实际 d₀ = +1.000 / −1.500 m，两个都生成成功；登记的门由链式脚本在全部 10 个世界上算。
+  估时更新：v0 重录约 30 server·h（setup 占一大半），18 个 server 约 1.7 h；v1 约 816 × 220 s + 504 × 150 s ≈ 71 server·h，在 48 核上 CPU 也接近饱和（每个 slot 约 3 核），估 5.5 h。
 - 2026-09-26 17:10 CST [C-alp] Alpamayo 1.5（nav，E[1 sample]）在 P6 v0 考卷帧上的操作口径与覆盖（写于它的任何 P6 轨迹数字之前）。脚本 `scripts/nq3_c_alpamayo.py`、`scripts/nq3_c_alp.sh`（tmux `jev:nq3-c-alp`），日志 `runs/nq3/c/q1_alp/`。
   (1) 模型原样：shipped 默认（bf16、FA2、1 条 reasoning rollout 1 条轨迹、top-p 0.98、T 0.6、≤ 256 token、flow 10 步），**batch 1**，另开仓库自带的 expert CUDA graph（8 帧上与默认逐位相同）。
   (2) 图像：P6 三路相机（`carla_calib()`）按 WOD 考试的 GPU 渲染旋转重投影到四个 1920×1080 f-theta 视图，未覆盖处黑，由 shipped processor 自己缩放。10 Hz 四槽 t−0.3 / −0.2 / −0.1 / 0 s 用 5 Hz 帧 sample-and-hold：取 t−0.4、−0.2、−0.2、0 s。
