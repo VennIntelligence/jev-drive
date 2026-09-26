@@ -286,17 +286,19 @@ load_go() {  # the batch cards: runs/nq4/gk/GO (SCH's table, runs/sched/table.ts
     local GPUS_= WORKERS_= IDX0_= IDX_SPAN_= CPUS_=
     eval "$(set +u; source "$f"; echo "GPUS_='${GPUS//,/ }' WORKERS_='$WORKERS' IDX0_='$IDX0' IDX_SPAN_='$IDX_SPAN' CPUS_='${NQ4GK_CPUS:-${NQ4_GK_CPUS:-${GK_CPUS:-$CPUS}}}'")"
     [[ -n $GPUS_ ]] || return 1
-    GPUS=$GPUS_; WORKERS=${WORKERS_:-6}; SIDX0=${IDX0_:-60}; SPAN=${IDX_SPAN_:-18}; CPUS=${CPUS_:-60-149}
+    GPUS=$GPUS_; WORKERS=${WORKERS_:-6}; SIDX0=${IDX0_:-60}; SPAN=${IDX_SPAN_:-18}; CPUS=${CPUS_:-60-149}; CTX=batch
 }
 load_pilot() {  # the validation card: $SCHED/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN, PILOT_CPUS)
     [[ -f $SCHED/nq4-gk.pilot ]] || return 1
     local P_= W_= I_= S_= C_=
     eval "$(set +u; source "$SCHED/nq4-gk.pilot"; echo "P_='$PILOT_GPU' W_='$PILOT_WORKERS' I_='$PILOT_IDX0' S_='$PILOT_SPAN' C_='$PILOT_CPUS'")"
     [[ -n $P_ ]] || return 1
-    GPUS=$P_; WORKERS=${W_:-3}; SIDX0=${I_:-150}; SPAN=${S_:-10}; CPUS=${C_:-110-113}
+    GPUS=$P_; WORKERS=${W_:-2}; SIDX0=${I_:-150}; SPAN=${S_:-10}; CPUS=${C_:-110-113}; CTX=pilot
 }
 block_of() { echo $(( SIDX0 + SPAN * $1 )); }         # <position of the GPU in $GPUS> -> its first server index
-free_slots() {  # free_slots <gpu>: CARLA servers that still fit on the card (<= 6 a card, other lanes' servers counted)
+free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card (<= 6 a card, other lanes' counted); on the
+               # validation card SCH's table already splits the slots between lanes, so there it is PILOT_WORKERS as granted
+    [[ ${CTX:-batch} == pilot ]] && { echo "$WORKERS"; return; }
     local n; n=$(nvidia-smi -i "$1" --query-compute-apps=process_name --format=csv,noheader 2>/dev/null | grep -c CarlaUE4)
     echo $(( 6 - n > WORKERS ? WORKERS : (6 - n > 0 ? 6 - n : 0) ))
 }
@@ -319,7 +321,7 @@ execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run rout
         pids+=("$p"); echo "$p" >> "$out/runner.pids"; used=$(( used + n ))
         sleep 10
     done
-    (( ${#pids[@]} )) || { log "no free CARLA slot on GPUs $GPUS"; return 1; }
+    (( ${#pids[@]} )) || { log "no free CARLA slot on GPUs $GPUS"; srv_stop_gpus "$GPUS"; return 3; }
     CUR_OUTS="${outs[*]}"
     local limit; limit=$(python3 -c "print(int(2 * $est * 3600))")
     while :; do
@@ -354,7 +356,11 @@ pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 
         local sel=$one; [[ $st == 2 ]] && sel=$ten
         log "pilot $c $v stage $st: $(n_ids "$sel") route(s) on GPUs $GPUS"
         ev pilot_start "\"cand\": \"$c\", \"variant\": \"$v\", \"stage\": $st"
-        execute "$c" "$v" "$( [[ $st == 1 ]] && echo 0.5 || echo 1.5)" "$( [[ $st == 1 ]] && echo 1 || echo 10)" "$sd=$sel"; r=$?
+        while :; do                                    # no free slot is not a pilot failure: wait for one
+            execute "$c" "$v" "$( [[ $st == 1 ]] && echo 0.5 || echo 1.5)" "$( [[ $st == 1 ]] && echo 1 || echo 10)" "$sd=$sel"; r=$?
+            (( r == 3 )) || break
+            sleep 120
+        done
         srv_stop_gpus "$GPUS"
         r=$(taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g pilot-check --cand "$c" --variant "$v" --out "$(arm_dir "$c" "$v" "$sd")" --ids "$sel" 2>> "$d/check.err")
         echo "$r" > "$d/stage$st.json"
@@ -404,6 +410,7 @@ run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]: pilo
     log "start $c $v seeds $3 ($rs, $total routes, $w worker-min/route, $nw workers, estimate $est h)"
     execute "$c" "$v" "$est" 999 "${sets[@]}"; local r=$?
     srv_stop_gpus "$GPUS"
+    (( r == 3 )) && return 2                          # no free slot right now: the chain comes back to it
     (( r == 2 )) && error "$c $v seeds $3 exceeded twice its estimate ($est h)" "$G/log.txt"
     (( r == 1 )) && error "$c $v seeds $3: servers / ports failed (see log.txt)" "$G/log.txt"
     local bad=0 req done_ wall out
