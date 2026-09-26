@@ -51,7 +51,8 @@ def ego_vec(e8: np.ndarray) -> torch.Tensor:
 
 
 @torch.no_grad()
-def run(agent, img, ego8, bs=16, workers=6, reuse=True) -> np.ndarray:
+def run(agent, img, ego8, bs=16, workers=6, reuse=True, stack=False) -> np.ndarray:
+    """stack=True: all arms of a batch in one forward (backbone output repeated per arm)."""
     from tqdm import tqdm
     m = agent._drivor_model
     A = len(ego8)
@@ -63,6 +64,13 @@ def run(agent, img, ego8, bs=16, workers=6, reuse=True) -> np.ndarray:
         if reuse:
             m.image_backbone = Cached(bb(x, m.scene_embeds.repeat(len(x), 1, 1, 1)))
         try:
+            if stack:
+                f = m.image_backbone.feat
+                m.image_backbone = Cached(f.repeat(A, *([1] * (f.ndim - 1))))
+                e = torch.cat([ego_vec(ego8[a, i]) for a in range(A)]).cuda()
+                o = agent.forward({"image": x.repeat(A, 1, 1, 1, 1), "ego_status": e})
+                out[:, i] = o["trajectory"].float().cpu().numpy().reshape(A, len(i), 8, 3)
+                continue
             for a in range(A):
                 o = agent.forward({"image": x, "ego_status": ego_vec(ego8[a, i]).cuda()})
                 out[a, i] = o["trajectory"].float().cpu().numpy()
@@ -93,9 +101,12 @@ def main():
         t1 = time.time()
         got = run(agent, img[sl], arms["ego8"][:, sl], a.bs, a.workers)
         t2 = time.time()
+        st = run(agent, img[sl], arms["ego8"][:, sl], a.bs, a.workers, stack=True)
+        t3 = time.time()
         res = {"n": a.check, "arms": int(len(arms["names"])), "max_abs_diff_m": float(np.abs(got - ref)[..., :2].max()),
                "bitwise_equal": bool((got == ref).all()), "s_per_sample_plain": (t1 - t0) / a.check,
-               "s_per_sample_reuse": (t2 - t1) / a.check}
+               "s_per_sample_reuse": (t2 - t1) / a.check, "stack_max_abs_diff_m": float(np.abs(st - ref)[..., :2].max()),
+               "stack_same_selection": float((np.abs(st - ref).max((2, 3)) < 1e-3).mean()), "s_per_sample_stack": (t3 - t2) / a.check}
         print(json.dumps(res, indent=1))
         if a.out:
             Path(a.out).write_text(json.dumps(res, indent=1))
