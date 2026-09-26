@@ -2,8 +2,8 @@
 # Night queue 4, K-prep chain (todos/2026-09-26-night-queue-4.md, section K and its [K] entries). One chain, started in
 # tmux jev:nq4-k; every step writes runs/nq4/k/steps/<step>/DONE and is skipped when that exists (resumable).
 #
-#   scripts/nq4_k.sh [all]     lead -> labels -> fit -> ready (the closed-loop rule-8 step `cl` is run by hand:
-#                              scripts/nq4_k.sh cl <gpu>, it needs a borrowed card)
+#   scripts/nq4_k.sh [all]     lead_ba -> labels -> fit -> check_eigh -> lead_p6 -> export_p6 -> cl -> ready
+#                              (cl borrows the card with the fewest CARLA servers, K_CL_GPU overrides; 2 servers)
 #   scripts/nq4_k.sh <step>    one step
 #
 # Resources (fixed by the [K] 17:30 entry): GPU 6 (shared; each GPU step waits for room first), cores $K_CPUS,
@@ -75,6 +75,8 @@ lead_p6() { lead_set "$1" "$2" carla_p6; }
 labels() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k labels >> "$1/log.txt" 2>&1; }
 fit() { wait_gpu 12000; CUDA_VISIBLE_DEVICES=$GPU taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k fit >> "$1/log.txt" 2>&1; }
 export_p6() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k export-p6 >> "$1/log.txt" 2>&1; }
+check_eigh() { wait_gpu 12000; CUDA_VISIBLE_DEVICES=$GPU taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k check-eigh >> "$1/log.txt" 2>&1; }
+ready() { "$PY" -m jevdrive.nq4_k ready >> "$1/log.txt" 2>&1; }
 
 # ---------------------------------------------------------------- K5: closed-loop rule-8 check (a borrowed card, 2 servers)
 XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml
@@ -136,8 +138,11 @@ case ${1:-all} in
     fit) step fit 0.5 fit ;;
     labels-fit) step labels 0.2 labels; step fit 0.5 fit ;;
     cl) step cl 1.0 cl ;;
+    check-eigh) step check_eigh 0.5 check_eigh ;;
+    ready) step ready 0.05 ready ;;
     all) trap 'exit 129' HUP INT TERM
-         step lead_ba 1.5 lead_ba; step labels 0.2 labels; step fit 0.5 fit; step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6
+         step lead_ba 1.5 lead_ba; step labels 0.2 labels; step fit 0.5 fit; step check_eigh 0.5 check_eigh
+         step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6; step cl 1.0 cl; step ready 0.05 ready
          status done "lead, labels, fit done; closed-loop rule-8 step: scripts/nq4_k.sh cl <gpu>" ;;
     *) sed -n 2,11p "$0"; exit 1 ;;
 esac

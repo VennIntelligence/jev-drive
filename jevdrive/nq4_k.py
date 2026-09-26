@@ -767,12 +767,60 @@ def cl_verdict(d: Path) -> dict:
     return res
 
 
+def ready() -> str:
+    """runs/nq4/k/READY: weights, agent modes, output convention and the checks behind them; refuses unless every
+    check file exists and passed."""
+    import pandas as pd
+    ck = kdir("checks")
+    fitj = json.loads((ck / "fit.json").read_text())
+    eig = json.loads((ck / "eigh.json").read_text())
+    ver = json.loads(kdir("steps", "cl", "verdict.json").read_text())
+    leads = [json.loads((ck / f"lead_vs_vis_{s_}.json").read_text()) for s_ in (SET_BA, SET_P6)]
+    assert ver["pass"] and all(x["different"] == 0 for x in leads)
+    assert fitj["k0_full_vs_laneB"]["max_abs_pred"] <= 1e-3
+    gpu = kdir("steps", "cl", "gpu").read_text().strip()
+    lines = [f"# K-prep READY {pd.Timestamp.now(tz='Asia/Shanghai'):%Y-%m-%d %H:%M} CST (todos/2026-09-26-night-queue-4.md, K)", "",
+             "## Weights (numpy apply: jevdrive.nq4_k.KHead; one set per level and fold, the fits are deterministic)"]
+    for lv in LEVELS:
+        lines.append(f"- {lv}: " + ", ".join(str(kdir(lv, f, "head.npz")) for f in (*FOLDS, "full"))
+                     + ("   (K2 = K1's weights; the rules live in the agent)" if lv == "K2" else ""))
+    lines += ["", "## Agent modes (scripts/b2d_zeroshot_agent.py, model head) and server",
+              '- config: {"model": "head", "arm": "k0"|"k1"|"k2"|"k3", "k_view": "unseen"|"seen", "k_split": "' + str(kdir("route_split.json"))
+              + '", "socket": <head server socket>, "warmup_s": 5.0, "desire": true, "head_cam_tick": 0.0, "controller": "fixed", '
+              '"controller_preset": "pursuit", "controller_config": todos/2026-09-23-tfv6-controller/controller-eval/P7.json, "seed": <TM seed>, "dump_every": 0}',
+              "- route python: envs/scout-tfv6 (as lane B's head arms); the fold is chosen per route from BENCHMARK_ROUTE_ID:"
+              " unseen = the readout that never saw the route's recordings (never-recorded routes: R1), seen = its own (recorded routes only; the agent refuses otherwise)",
+              "- k2 / k3: TFv6 rules (LEAD 730bc1a creeping + stop sign) on P7's throttle / brake, logged per tick in ticks.jsonl (key rules)",
+              "- head server: CUDA_VISIBLE_DEVICES=<g> envs/openpilot/bin/python scripts/nq3_cl_server.py --pool <workers> --socket <S> "
+              "(no Qwen / YOLO server needed; one server serves all four K arms and both folds)",
+              "- plans.jsonl gets v_target (K1-K3) and g3 (K3) per plan from the server's info", "",
+              "## Output convention",
+              "- path (20, 2) float64, rear-axle frame, x forward, y left, t = 0.25 ... 5.0 s, handed to P7 as lane B's head arms",
+              "- K0 = ridge ego + ridge_late (CL3's recipe); K1 = TFv6 route (10 checkpoints, 2.5 m + 1 m steps) + target speed "
+              "(8 classes, two-hot expectation), path at s = v t; K2 = K1 + rules; K3 = K2 + g3 x c along the path", "",
+              "## Checks",
+              f"- lead re-run temporal vs stored op_streams_vis: {[{k: x[k] for k in ('set', 'streams', 'rows', 'different')} for x in leads]}",
+              f"- full-data K0 vs lane B heads.npz: {fitj['k0_full_vs_laneB']}",
+              f"- numpy apply vs fit, max |diff| m: { {t: fitj['info'][t]['numpy_vs_fit'] for t in fitj['info']} }",
+              f"- GPU vs CPU eigh (fold R1): { {k: v for k, v in eig.items() if 'max_abs' in k or k.startswith('wall')} }",
+              f"- closed-loop rule 8 (GPU {gpu}, routes {sorted({x['route'] for x in ver['folds']})}): pass = {ver['pass']}; "
+              + "; ".join(f"{r['attempt'].split('/steps/cl/')[-1]}: {r['requests']} requests identical {r['identical']}" for r in ver["model"]),
+              f"- rules replay: {ver['rules']}", f"- folds used: {ver['folds']}", "",
+              "## Open-loop exports (capability readouts, not judged here)",
+              f"- {kdir('openloop')}/ba_<level>.npz (unseen / seen / full, readout_unseen, v / g3), i3_<level>.npz (R1, R2; main = R1), "
+              "p6_<level>.npz (unseen by the route's readout, R1, R2)", ""]
+    txt = "\n".join(lines)
+    kdir("READY").write_text(txt)
+    print(txt)
+    return txt
+
+
 # ================================================================ entry point
 
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh", "export-p6", "cl-verdict"))
+    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh", "export-p6", "cl-verdict", "ready"))
     ap.add_argument("--dir", default="")
     ap.add_argument("--set", default=SET_BA)
     a = ap.parse_args()
@@ -790,6 +838,8 @@ def main():
         export_p6()
     elif a.step == "cl-verdict":
         cl_verdict(Path(a.dir))
+    elif a.step == "ready":
+        ready()
 
 
 if __name__ == "__main__":
