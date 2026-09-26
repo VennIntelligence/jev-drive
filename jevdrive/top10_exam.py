@@ -23,7 +23,7 @@ MODELS = {"sparsedrivev2": "SparseDriveV2", "ztrs": "ZTRS"}
 # I3's origin is the front camera; place it where nuPlan's CAM_F0 sits over the rear axle (the [T1] 10:05 entry)
 I3_FRONT = np.array([1.67, 0.0, 1.52])
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "top10-exams"
+RESULTS = REPO / "research" / "results" / "top10-exams"      # shared with T2: every T1 file is t1_*
 
 
 def root(*p) -> Path:
@@ -216,9 +216,9 @@ def judge(rl, set_: str, models=tuple(MODELS)):
         rl.log.info("per frame / per pair\n%s", pp.pivot_table(index="examinee", columns=["scope", "window"],
                                                               values="flip", sort=False).to_markdown(floatfmt=".3f"))
     RESULTS.mkdir(parents=True, exist_ok=True)
-    fl.to_csv(RESULTS / f"{set_}_flip_rates.csv", index=False)
+    fl.to_csv(RESULTS / f"t1_{set_}_flip_rates.csv", index=False)
     if set_ == "p5":
-        pp.to_csv(RESULTS / "p5_per_pair.csv", index=False)
+        pp.to_csv(RESULTS / "t1_p5_per_pair.csv", index=False)
     return res
 
 
@@ -307,7 +307,7 @@ def judge_wod(rl, models=tuple(MODELS), B: int = 10000):
                     row |= {f"d_{ref}": float(v.mean()), f"d_{ref}_lo": dl, f"d_{ref}_hi": dh}
             out.append(row)
     res_ade = pd.DataFrame(out)
-    for df, name in ((res_rfs, "wod_rfs.csv"), (res_ade, "wod_ade_sego.csv")):
+    for df, name in ((res_rfs, "t1_wod_rfs.csv"), (res_ade, "t1_wod_ade_sego.csv")):
         df.to_csv(rl.dir / name, index=False)
         df.to_csv(RESULTS / name, index=False)
     np.savez_compressed(rl.dir / "per_frame.npz", names=names, dec=dec, **{f"ade/{k}": v for k, v in ade.items()},
@@ -349,7 +349,7 @@ def judge_nusc(rl, models=tuple(MODELS)):
     finally:
         N.root, S.load_preds = zr, lp
     for f in ("results.csv", "by_command.csv"):
-        (RESULTS / f"nusc_{f}").write_text((rl.dir / f).read_text())
+        (RESULTS / f"t1_nusc_{f}").write_text((rl.dir / f).read_text())
 
 
 def main():
