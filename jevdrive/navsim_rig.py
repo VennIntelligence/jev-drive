@@ -50,15 +50,27 @@ def as_camgeom(v: dict) -> dict:
             "width": W, "height": H}
 
 
-def rays(v: dict) -> np.ndarray:
-    """(H, W, 3) unit rays in the ego frame through the pixel centres of a distorted virtual camera."""
+_GRID = {}
+
+
+def _cam_rays(K_: np.ndarray, dist: np.ndarray) -> np.ndarray:
+    """(H, W, 3) float32 unit rays in OpenCV camera axes through the pixel centres of a distorted camera; cached per
+    (K, distortion), since every virtual camera shares nuPlan's and only its rotation differs."""
     import cv2
-    u, w = np.meshgrid(np.arange(W, dtype=np.float64), np.arange(H, dtype=np.float64), indexing="xy")
-    pts = np.stack([u, w], -1).reshape(-1, 1, 2)
-    crit = (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 50, 1e-10)
-    xy = cv2.undistortPointsIter(pts, v["intrinsics"], v["distortion"], None, None, crit).reshape(H, W, 2)
-    d = np.concatenate([xy, np.ones((H, W, 1))], -1) @ v["sensor2lidar_rotation"].T
-    return d / np.linalg.norm(d, axis=-1, keepdims=True)
+    key = np.r_[np.ravel(K_), np.ravel(dist)].tobytes()
+    if key not in _GRID:
+        u, w = np.meshgrid(np.arange(W, dtype=np.float64), np.arange(H, dtype=np.float64), indexing="xy")
+        pts = np.stack([u, w], -1).reshape(-1, 1, 2)
+        crit = (cv2.TERM_CRITERIA_COUNT | cv2.TERM_CRITERIA_EPS, 50, 1e-10)
+        xy = cv2.undistortPointsIter(pts, K_, dist, None, None, crit).reshape(H, W, 2)
+        d = np.concatenate([xy, np.ones((H, W, 1))], -1)
+        _GRID[key] = (d / np.linalg.norm(d, axis=-1, keepdims=True)).astype(np.float32)
+    return _GRID[key]
+
+
+def rays(v: dict) -> np.ndarray:
+    """(H, W, 3) float32 unit rays in the ego frame through the pixel centres of a distorted virtual camera."""
+    return _cam_rays(v["intrinsics"], v["distortion"]) @ v["sensor2lidar_rotation"].T.astype(np.float32)
 
 
 def maps(src: list, virt: list, primary: list) -> list:
