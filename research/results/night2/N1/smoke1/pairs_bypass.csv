@@ -1,0 +1,4 @@
+base_id,scenario,cls,seed,t_trig,t_vis,t_div,t_last,t_div_lat,smoke1_frames,smoke1_keep,max_d_x00_in_window,reason
+24816,Accident,1W,0,65,5,81,230,139,16,16,0.001,ok
+25381,HazardAtSideLane,1W,0,57,5,85,218,129,20,20,0.026,ok
+25896,ParkedObstacleTwoWays,2W,0,53,65,74,265,212,4,4,0.0,ok

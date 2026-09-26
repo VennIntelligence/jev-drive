@@ -120,6 +120,23 @@
   ego 到达时大概率面对车流、要等其中一部分空档），镜像题 10–14 m（约 1–1.5 s，没有 PDM-Lite 接受的空档）；HazardAtSideLaneTwoWays 也改成同一种流（参考车道 = 自行车所在车道的左邻），
   背景在 2W 世界里从不驱动对向车道；VehicleOpensDoorTwoWays 的流参考车道改成 ego 车道的左邻（原版取停放车所在车道的左邻，停在右侧时那就是 ego 车道本身）。
   第 3 轮 smoke：25896 x₁₁ / 镜像，25854 x₁₀ / x₁₁ / 镜像，25928（VehicleOpensDoorTwoWays）x₁₀ / x₁₁ / 镜像，8 个世界，GPU 0。a 段照跑（它不走这段代码）。
+- 2026-09-26 11:12 CST [A] 第 3 轮 smoke（25854 的 x₁₁ / 镜像）显示流仍然太稀：车流从第一个 tick 起在障碍前方约 75 m 的 source 处从空开始，路线开头约 5 s 就到障碍，整段录制只有 2–3 辆对向车，
+  x₁₁ / 镜像与 x₁₀ 逐 tick 相同。修改（写于第 4 轮之前）：流启动时沿 source → sink 按它的间距预先摆满车并给初速（离 ego 25 m 内不摆），相当于流已经跑了一阵。
+- 2026-09-26 11:41 CST [A] **第 4 轮 smoke 与暂停**（box 11:45 重启加卡）。第 4 轮（6 个世界，GPU 0）世界级模式，与同 case 的 x₁₀ 对照：
+  | case | x₁₀ | x₁₁ | 镜像 |
+  |:--|:--|:--|:--|
+  | 25896 ParkedObstacleTwoWays | bypass_L，t_lat 128，窗口内对向车 0 | bypass_L，t_lat 153（晚 1.25 s，没停），对向车 4 | **stop**（853 tick 录到触发后 40 s），对向车 16 |
+  | 25854 HazardAtSideLaneTwoWays | bypass_L，t_lat 111，对向车 0 | bypass_L，t_lat 430（跟在自行车后 2.6 m/s 等了 16 s） | 一直跟车不绕（按登记的定义记 keep，因为没有「停」），对向车 16 |
+  | 25928 VehicleOpensDoorTwoWays | （未跑） | bypass_L（max\|d\| 1.38 m）后停住 | **stop**，对向车 17 |
+  对向车流现在确实造出了 negotiation：x₁₁ 比 x₁₀ 晚起动，镜像题 3 个里 2 个 stop。HazardAtSideLane 类的「等」是跟车而不是停，登记的 wait / stop 定义会把它记成 bypass / keep，
+  这一点在批量结果里单列（事后行，不改原判格）。smoke 1（删登记）第 1 轮已过（40 / 40）；smoke 2（x₁₁ / x₀₁ 每个世界窗口内 ≥ 1 辆对向车）第 2、4 轮都过。**判定 smoke 过，2W 可以批量。**
+  CPU 准备 (i)（口径见 10:03）：K = 1024 词表里 bypass 形状的 anchor **0 / 1024**（§2.1 分类：keep 299、stop 47、lane_change 1、curve_or_other 347、turn 330、nudge 0）；
+  WOD train 415 663 条未来里 bypass 形状 493 条（0.12%），它们的最近 anchor 没有一个是 bypass 形状，minADE 中位 0.77 m（`research/results/night2/N1/vocab_bypass.csv`）。P6 x₁₀ 一侧等数据齐了补。
+  (ii) 220 集里每类 5 条路线（11 类都是 5），val 集 Accident 8、ConstructionObstacle 12、ParkedObstacle 4、HazardAtSideLane 3、各 TwoWays 版 8 / 11 / 8 / 7、Door 8、InvadingTurn 3、Emergency 3。
+  **暂停时的状态**：`runs/p6/gen` 里完成 120 / 605 个世界（都是 a 段的 1W / IT / EV，共 230 个），11:39 用 `scripts/p6_stop.sh` 停掉 a 段（SIGINT runner、清掉我们端口段里的 11 个 CARLA server；
+  在跑的世界没有 `done/`，续跑时从头重跑）；2W 的 375 个世界还没开始。smoke 目录 `runs/p6/smoke*` 不再用。
+  **续跑命令**（box 上，一条）：`cd ~/data/jev-drive && git pull && scripts/tmux_run.sh p6-gen env GPUS="0 1 2" WORKERS=6 BLOCK=800 OUT=$DATA_DIR/runs/p6/gen scripts/p6_gen.sh`
+  （不带 ONLY 就是全部 605 个，已完成的跳过；多给卡就在 GPUS 里加，每卡一条链、server index 800 + 50j）。剩 485 个世界，按停前实测（CPU 被打满时每 run 7–13 min）约 5–6 h / 18 实例，CPU 不被打满时约 2.5 h。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 

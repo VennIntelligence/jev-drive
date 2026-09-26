@@ -1,0 +1,2 @@
+base_id,scenario,seed,mode_x10,mode_x11,t_lat_x10,t_lat_x11,v_x10_at_tlat,v_x11_at_tlat,lat_delay_s
+25896,ParkedObstacleTwoWays,0,wait_then_bypass_L,wait_then_bypass_L,215,215,5.238,5.238,0.0

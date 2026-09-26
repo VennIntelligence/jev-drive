@@ -1,0 +1,16 @@
+base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v_min,k0,stop,ticks,registry_dropped,registry_kept,oncoming_in_window
+24816,Accident,1W,0,x10,2481610,bypass_L,141.0,3.499,3.499,,0.0,5.0,route_end,275.0,,,
+24816,Accident,1W,0,x00,2481620,keep,,0.002,0.002,,0.0,5.0,route_end,230.0,,,
+24816,Accident,1W,0,wnull,2481630,missing,,,,,,,,,,,
+24816,Accident,1W,0,shoulder,2481660,keep,,0.002,0.002,,0.0,5.0,route_end,230.0,,,
+25381,HazardAtSideLane,1W,0,x10,2538110,bypass_L,5.0,3.5,3.5,,0.007,5.0,route_end,290.0,,HazardAtSideLane,
+25381,HazardAtSideLane,1W,0,x00,2538120,keep,5.0,0.983,0.983,,0.116,5.0,route_end,218.0,HazardAtSideLane,,
+25381,HazardAtSideLane,1W,0,wnull,2538130,missing,,,,,,,,,,,
+25381,HazardAtSideLane,1W,0,shoulder,2538160,missing,,,,,,,,,,,
+25896,ParkedObstacleTwoWays,2W,0,x10,2589610,wait_then_bypass_L,215.0,1.893,1.893,129.0,0.0,65.0,route_end,383.0,,,3.0
+25896,ParkedObstacleTwoWays,2W,0,x00,2589620,keep,,0.18,-0.18,,1.617,65.0,route_end,265.0,,,4.0
+25896,ParkedObstacleTwoWays,2W,0,wnull,2589630,missing,,,,,,,,,,,
+25896,ParkedObstacleTwoWays,2W,0,x11,2589640,wait_then_bypass_L,215.0,1.893,1.893,129.0,0.0,65.0,route_end,383.0,,,4.0
+25896,ParkedObstacleTwoWays,2W,0,x01,2589650,keep,,0.18,-0.18,,1.617,65.0,route_end,265.0,,,5.0
+25896,ParkedObstacleTwoWays,2W,0,shoulder,2589660,missing,,,,,,,,,,,
+25896,ParkedObstacleTwoWays,2W,0,mirror,2589670,wait_then_bypass_L,215.0,1.893,1.893,129.0,0.0,65.0,route_end,383.0,,,5.0
