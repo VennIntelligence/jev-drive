@@ -126,13 +126,19 @@ def plan_nusc() -> tuple:
     return fr, rigs, np.zeros(2)
 
 
-def plan_p6() -> tuple:
-    """Every frame of the P6 v0 exam frame list (nq3_exam_frames.parquet, all priorities). P6 was recorded by P5 v1's
-    recorder: same index layout, same rig, so the p5 branch's frames, ego statuses and rig apply unchanged."""
+def p6_frames(priorities=(0, 1, 2)) -> set:
+    """Frame names of the P6 v0 exam frame list (jevdrive.nq3_p6) with these priorities."""
+    f = pd.read_parquet(data_dir() / "processed" / SETS["p6"] / "nq3_exam_frames.parquet", columns=["frame_name", "priority"])
+    return set(f.frame_name[f.priority.isin(priorities)])
+
+
+def plan_p6(priorities=(0, 1, 2)) -> tuple:
+    """The frames of the P6 v0 exam frame list with these priorities. P6 was recorded by P5 v1's recorder: same index
+    layout, same rig, so the p5 branch's frames, ego statuses and rig apply unchanged."""
     from .p5_openpilot import carla_calib
     d = data_dir() / "processed" / SETS["p6"]
     t = pd.read_parquet(d / "index.parquet")
-    need = set(pd.read_parquet(d / "nq3_exam_frames.parquet", columns=["frame_name"]).frame_name)
+    need = p6_frames(priorities)
     rows = np.flatnonzero(t.frame_name.isin(need).to_numpy())
     fr = _frames(t, np.load(d / "past.npy", mmap_mode="r"), rows)
     c = carla_calib()
@@ -140,10 +146,10 @@ def plan_p6() -> tuple:
     return fr, {"p5": _rig([c["1"], c["2"], c["3"]])}, np.zeros(2)
 
 
-def plan(set_: str) -> dict:
+def plan(set_: str, priorities=(0, 1, 2)) -> dict:
     from . import elicit_i3 as I, p5_exam as E
     if set_ in ("wod", "nusc", "p6"):
-        fr, rigs, offset = {"wod": plan_wod, "nusc": plan_nusc, "p6": plan_p6}[set_]()
+        fr, rigs, offset = {"wod": plan_wod, "nusc": plan_nusc, "p6": lambda: plan_p6(priorities)}[set_]()
         return _write_plan(set_, fr, rigs, offset)
     with I.p5_set(SETS[set_]):
         t, past, _, obs, null, _ = E.load()
@@ -374,9 +380,10 @@ def main():
     ap.add_argument("cmd", choices=("plan", "judge"))
     ap.add_argument("--set", choices=tuple(SETS), required=True)
     ap.add_argument("--models", default=",".join(MODELS))
+    ap.add_argument("--priorities", default="0,1,2", help="p6: frame-list priorities to plan")
     a = ap.parse_args()
     if a.cmd == "plan":
-        print(plan(a.set))
+        print(plan(a.set, tuple(int(x) for x in a.priorities.split(","))))
     else:
         rl = RunLog("top10_exam", f"judge-{a.set}")
         RESULTS.mkdir(parents=True, exist_ok=True)

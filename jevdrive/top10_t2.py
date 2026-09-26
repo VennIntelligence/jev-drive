@@ -222,12 +222,13 @@ def req_carla(set_: str, t: pd.DataFrame, past: np.ndarray, rows: np.ndarray):
 P6 = "carla_p6"
 
 
-def req_p6():
-    """Every frame of the P6 v0 exam frame list (jevdrive.nq3_p6, all priorities), in index order; P6 was recorded by
-    P5 v1's recorder, so the P5 request path applies unchanged."""
+def req_p6(priorities=(0, 1, 2)):
+    """The frames of the P6 v0 exam frame list (jevdrive.nq3_p6) with these priorities, in index order; P6 was recorded
+    by P5 v1's recorder, so the P5 request path applies unchanged."""
+    from .top10_exam import p6_frames
     d = data_dir() / "processed" / P6
     t = pd.read_parquet(d / "index.parquet")
-    need = set(pd.read_parquet(d / "nq3_exam_frames.parquet", columns=["frame_name"]).frame_name)
+    need = p6_frames(priorities)
     req_carla("p6", t, np.load(d / "past.npy", mmap_mode="r"), np.flatnonzero(t.frame_name.isin(need).to_numpy()))
 
 
@@ -356,13 +357,14 @@ def main():
     ap.add_argument("--i3-run")
     ap.add_argument("--p5-run")
     ap.add_argument("--out", default=".")
+    ap.add_argument("--priorities", default="0,1,2", help="req-p6: frame-list priorities")
     a = ap.parse_args()
     if a.cmd == "req-i3":
         req_i3()
     elif a.cmd == "req-p5":
         req_p5()
     elif a.cmd == "req-p6":
-        req_p6()
+        req_p6(tuple(int(x) for x in a.priorities.split(",")))
     elif a.cmd == "export-p6":
         export_p6()
     elif a.cmd == "fig":
