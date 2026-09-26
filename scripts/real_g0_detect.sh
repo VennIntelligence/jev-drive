@@ -9,13 +9,17 @@ gpus=(${gpus[@]//,/ })
 Y=$DATA_DIR/processed/real_transfer/yolo
 source "$DATA_DIR/envs/ultralytics/bin/activate"
 mkdir -p "$Y/dets" "$Y/logs"
+# 30 processes x (main + loader workers): without these caps every torch / OpenCV pool sizes itself to the host's
+# 208 cores and the box stalls at a load of ~480 before the first batch
+export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 OPENCV_FOR_THREADS_NUM=2
 pids=()
 for f in "$Y"/slices/slice_*.parquet; do
   k=$(basename "$f" .parquet); k=${k#slice_}
   g=${gpus[$((10#$k % ${#gpus[@]}))]}
   CUDA_VISIBLE_DEVICES=$g python -m jevdrive.fastperc detect --backend yolo:yolo26x-seg.pt:640:half --list "$f" --full \
-    --out "$Y/dets/s$k" --keep 0.25 --batch 16 --workers 4 --tag "g0-s$k" > "$Y/logs/s$k.txt" 2>&1 &
+    --out "$Y/dets/s$k" --keep 0.25 --batch 16 --workers 3 --tag "g0-s$k" > "$Y/logs/s$k.txt" 2>&1 &
   pids+=($!)
+  sleep 2
 done
 echo "$(date +%H:%M:%S) started ${#pids[@]} detector processes on GPUs ${gpus[*]}"
 rc=0
