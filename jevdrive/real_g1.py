@@ -485,6 +485,8 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
         if m not in deltas:
             continue
         gm = gates[m](d, v_ego) if callable(gates.get(m)) else gates[m]
+        if "g2" in gm:                   # [G1] post-hoc control: g2's mean as a constant (shrinkage without selection)
+            gm = {**gm, "c2": np.full(len(rows), gm["g2"].mean(), np.float32)}
         if sam is not None:              # [G1] 08:50 (2): the non-circular description, not a selection input
             from sklearn.metrics import roc_auc_score
             for gname, g in gm.items():
@@ -552,6 +554,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False, students: bool = False):
               "g3": g3(lead3[f"op-{m} lead"], lead3[f"op-{m} lead_prob"], v_ego)}
         if g2v is not None:
             gs["g2"] = g2v
+            gs["c2"] = np.full(len(g2v), g2v.mean(), np.float32)    # post-hoc control, as on WOD
         x, v, p = lead_decode(lead3[f"op-{m} lead"], lead3[f"op-{m} lead_prob"])
         st = (fam == "static").to_numpy() & (p > 0.5)
         checks.append({"model": m, "check": "static world, P(lead) > 0.5", "n": int(st.sum()),

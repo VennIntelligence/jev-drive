@@ -232,6 +232,9 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (2) **主 arm 的 student = A**（纯配对差分，与 M-C pair 同一种训练信号）；B（+ teacher Δ）在 WOD 与 I3 上并列（CPU 便宜），NAVSIM 只做 A（3 seed × 3 gate × 2 模型 × 2 指标 = 36 次 devkit 打分，B 再加一倍，超出本项预算）。
   (3) 3 seed 各自一行、各自判格；student 的总判格按 [G0] 的规则：三个 seed 一致取那一格，否则写「随 seed 变」并列出。无 gate 的 student 行就是 G0 的读数（同一函数、同一文件），在 G1 表里照抄作对照。
   (4) I3 上 student 的 prior 同 M-C（`ridge_late op-<model> temporal`，`preds_i3.npz`），gated = prior + g·Δ_student，judge 同 08:40 (5)。
+- 2026-09-26 09:30 CST（box 时钟）[G1] **事后加一个描述对照（看过 I3 / WOD 的 g₁–g₃ 数之后，不进判格）**：g₂ 在 WOD val 上的均值只有 0.16、g > 0.5 的帧 < 2%，害的消失可能只是 Δ 被整体缩小。
+  对照 c₂ = 常数 gate，取 g₂ 在同一批评测帧上的均值（WOD 19 663 帧上的均值、I3 全部帧上的均值），乘同一个 Δ、走同一套读数；c₂ 与 g₂ 的差才是「按帧选择」的贡献。NAVSIM 不做（要再打分，且 WOD / I3 已足够回答）。
+  另记一个实现修正：I3 的 gate 描述表第一版把每个 Δ 来源的最后一个 gate 重复写了 7 遍（只影响描述表，翻转数逐位不变，重跑 `i3/20260926-092702` 已核对）。
 
 ## 结果
 
