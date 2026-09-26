@@ -150,8 +150,9 @@ def _mlp(d_in: int, seed: int):
     return net.cuda()
 
 
-def train_student(X, ip, im, R, tr, grp, teacher, seed: int, rl, tag: str):
-    """Arm A (teacher None) or B. X (n, d) standardised input; pair rows ip / im with target R; train rows tr."""
+def train_student(X, ip, im, R, tr, grp, teacher, seed: int, rl, tag: str, keep: dict | None = None):
+    """Arm A (teacher None) or B. X (n, d) standardised input; pair rows ip / im with target R; train rows tr.
+    `keep` (optional) receives the selected weights (real-data transfer G0 applies the students to foreign rows)."""
     import copy
     import torch
     from sklearn.model_selection import GroupShuffleSplit
@@ -178,12 +179,16 @@ def train_student(X, ip, im, R, tr, grp, teacher, seed: int, rl, tag: str):
                 break
     net.load_state_dict(best_state)
     net.eval()
+    if keep is not None:
+        keep[tag, seed] = {k: v.detach().cpu().clone() for k, v in best_state.items()}
     rl.event("e5_fit", tag=tag, seed=seed, best_step=best_step, stop_step=step, holdout_mse=best)
     with torch.no_grad():
         return net(X)
 
 
-def fit(rl, models=("cinque", "lebowski")):
+def fit(rl, models=("cinque", "lebowski"), keep: dict | None = None):
+    """E5's fit. `keep` (optional, G0) receives per model and fold the CARLA training-row statistics and per arm and
+    seed the student weights; nothing else changes."""
     import torch
     from . import p5_exam as E, p5_openpilot, p5_pairs as P, reactivity_mc as MC
     t, past, fut, obs, null, pairs = E.load()
@@ -223,12 +228,15 @@ def fit(rl, models=("cinque", "lebowski")):
             mc = torch.as_tensor(mask_col, device="cuda")
             ze = torch.where(mc, Emb, (Emb - mu) / sd) / np.sqrt(Emb.shape[1])
             X = torch.cat([zo, ze], 1).float()
+            if keep is not None:
+                keep[m, f] = {"op_mu": Xop[tr].mean(0).cpu(), "op_sd": Xop[tr].std(0, correction=0).clamp_min(1e-6).cpu(),
+                              "e_mu": mu.cpu(), "e_sd": sd.cpu()}
             keep = fold[pr_ip] != f
             ip, im, grp = pr_ip[keep], pr_im[keep], pr_group[keep]
             R = (F[ip] - F[im]) - (prior[ip] - prior[im])
             for arm, tch in (("A", None), ("B", teach)):
                 for seed in SEEDS:
-                    d = train_student(X, ip, im, R, tr, grp, tch, seed, rl, f"{m} f{f} {arm}")
+                    d = train_student(X, ip, im, R, tr, grp, tch, seed, rl, f"{m} f{f} {arm}", keep)
                     key = f"E5 {arm} s{seed} [{m}]"
                     preds.setdefault(key, np.full((n, 20, 2), np.nan, np.float32))[ev] = \
                         (prior[ev] + d[ev]).reshape(-1, 20, 2).cpu().numpy()

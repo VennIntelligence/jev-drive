@@ -460,18 +460,248 @@ def geom_check(rl) -> dict:
     return out
 
 
+
+# ---------------------------------------------------------------- G0: E5's students zero-shot on WOD and NAVSIM
+
+E5_RUN = "runs/elicitation/e5-fit/20260926-021421"
+MODELS, ARMS, SEEDS, K_FOLDS = ("cinque", "lebowski"), ("A", "B"), (0, 1, 2), 5
+ACT_HARM = 0.07
+NAV_HEADS = "runs/navsim_zs/heads/20260925-232810"
+
+
+def g0_dir(*p) -> Path:
+    d = data_dir() / "processed" / "real_transfer" / "g0"
+    d.mkdir(parents=True, exist_ok=True)
+    return d.joinpath(*p)
+
+
+def students(rl):
+    """Refit E5 with elicit_e5.fit unchanged, keep weights and statistics, and check the refit against the stored run:
+    identical early-stop steps per fit and max |pred - stored| <= 1e-2 m on the obs rows (deviation [G0] 08:35)."""
+    import torch
+    from . import elicit_e5 as E5
+    os.environ["P5_SET"] = "carla_p5v1_ba"
+    keep = {}
+    E5.fit(rl, keep=keep)
+    run = data_dir() / E5_RUN
+    ref, new = np.load(run / "preds_obs.npz"), np.load(rl.dir / "preds_obs.npz")
+    ev = lambda f: {(e["tag"], e["seed"]): e["best_step"] for e in map(json.loads, open(f)) if e.get("kind") == "e5_fit"}  # noqa: E731
+    a, b = ev(run / "events.jsonl"), ev(rl.dir / "events.jsonl")
+    steps_same = a == b
+    diffs = {k: float(np.nanmax(np.abs(ref[k] - new[k]))) for k in ref.files if k.startswith("E5 ")}
+    rep = {"best_steps_identical": steps_same, "n_fits": len(b), "step_mismatch": [str(k) for k in a if a[k] != b.get(k)],
+           "max_abs_diff_m": max(diffs.values()), "per_arm": diffs}
+    rl.event("g0_student_check", **rep)
+    rl.info(f"student refit check: {json.dumps(rep, default=str)}")
+    (rl.dir / "student_check.json").write_text(json.dumps(rep, indent=1, default=str))
+    assert steps_same and rep["max_abs_diff_m"] <= 1e-2, "E5 students do not reproduce the stored run"
+    torch.save(keep, g0_dir("students.pt"))
+    return rep
+
+
+def _mlp_cpu():
+    import torch
+    from .elicit_e5 import HIDDEN
+    return torch.nn.Sequential(torch.nn.Linear(576, HIDDEN), torch.nn.GELU(), torch.nn.Linear(HIDDEN, HIDDEN),
+                               torch.nn.GELU(), torch.nn.Linear(HIDDEN, 40))
+
+
+_KEEP = {}
+
+
+def student_delta(model: str, arm: str, seed: int, Xop: np.ndarray, Emb: np.ndarray, own: dict | None = None) -> np.ndarray:
+    """Mean over the five route-fold students of Delta_s([z_op, e]), (n, 20, 2). Each fold standardises with its own
+    CARLA training rows (E5); `own` = {"op_mu", "op_sd", "e_mu", "e_sd"} of another dataset replaces them (descriptive)."""
+    import torch
+    if not _KEEP:
+        _KEEP.update(torch.load(g0_dir("students.pt"), weights_only=False))
+    Xo, Ee = torch.as_tensor(Xop, dtype=torch.float32), torch.as_tensor(Emb, dtype=torch.float32)
+    mask = torch.as_tensor(np.arange(64) % 8 == 7)
+    out = 0
+    with torch.no_grad():
+        for f in range(K_FOLDS):
+            st = own or _KEEP[model, f]
+            zo = (Xo - st["op_mu"]) / st["op_sd"] / np.sqrt(Xo.shape[1])
+            ze = torch.where(mask, Ee, (Ee - st["e_mu"]) / st["e_sd"]) / np.sqrt(Ee.shape[1])
+            net = _mlp_cpu()
+            net.load_state_dict(_KEEP[f"{model} f{f} {arm}", seed])
+            net.eval()
+            out = out + net(torch.cat([zo, ze], 1))
+    return (out / K_FOLDS).numpy().reshape(-1, 20, 2)
+
+
+def _tau(model: str, arm: str, seed: int) -> tuple[float, float]:
+    fl = pd.read_csv(data_dir() / E5_RUN / "flip_rates.csv")
+    cr = pd.read_csv(data_dir() / E5_RUN / "criteria.csv").set_index("arm")
+    k = f"E5 {arm} s{seed} [{model}]"
+    return float(fl[(fl.examinee == k) & (fl.scope == "pooled")].tau_model.iloc[0]), float(cr.loc[k, "null_ff_oos"])
+
+
+def _wod_train_stats(model: str) -> dict:
+    """Descriptive: op `temporal` and embedding statistics over the WOD train frames of the shared set."""
+    import torch
+    from .elicit_e1 import WOD_FEAT, _rows
+    fr, Emb = load_embed("wod_train")
+    oi = pd.read_parquet(data_dir() / WOD_FEAT / f"op_{model}_p3_trainval/index.parquet").frame_name
+    O = np.load(data_dir() / WOD_FEAT / f"op_{model}_p3_trainval/temporal.npy", mmap_mode="r")[_rows(fr.frame_id, oi)]
+    O, Emb = torch.as_tensor(np.asarray(O, np.float32)), torch.as_tensor(Emb)
+    return {"op_mu": O.mean(0), "op_sd": O.std(0, correction=0).clamp_min(1e-6),
+            "e_mu": Emb.mean(0), "e_sd": Emb.std(0, correction=0).clamp_min(1e-6)}
+
+
+def run_wod(rl):
+    """E1's readouts, unchanged, for every student (model x arm x seed) on E1's 19 663 frames."""
+    from . import elicit_e1 as E1
+    d = E1.wod_frames()
+    fr, Emb = load_embed("wod_val")
+    Ew = Emb[pd.Series(np.arange(len(fr)), index=fr.frame_id).loc[d["frame_name"]].to_numpy()]
+    tabs, acts = [], []
+    for m in MODELS:
+        own = _wod_train_stats(m)
+        for arm in ARMS:
+            for seed in SEEDS:
+                tau, null_ff = _tau(m, arm, seed)
+                for stats in ("carla", "wod-train"):
+                    delta = student_delta(m, arm, seed, d[f"op {m}"], Ew, own if stats == "wod-train" else None)
+                    tab, act = E1.readouts(d, d[f"prior {m}"], delta, tau)
+                    tag = {"model": m, "arm": arm, "seed": seed, "stats": stats}
+                    tabs.append(tab.assign(**tag))
+                    acts.append(act.assign(**tag, tau=tau, null_ff_oos=null_ff))
+                    if stats == "carla":
+                        np.savez_compressed(g0_dir(f"wod_val_delta_{m}_{arm}_s{seed}.npz"), frame_name=d["frame_name"], delta=delta)
+                    rl.log.info("%s %s s%d %s\n%s", m, arm, seed, stats,
+                                tab[tab.judge == "RFS (rater)"].to_markdown(index=False, floatfmt=".3f"))
+    pd.concat(tabs).to_csv(rl.dir / "wod_deltas.csv", index=False)
+    pd.concat(acts).to_csv(rl.dir / "wod_activation.csv", index=False)
+
+
+def run_navsim(rl):
+    """prior + Delta predictions on navtest for the devkit (E1's mapping onto 0.5 ... 4.0 s, heading kept) and the
+    activation table (E1's straight / pedestrian-cyclist scopes)."""
+    from . import elicit_e1 as E1, p5_pairs as P
+    fr, Emb = load_embed("navtest")
+    acts = []
+    sc = None
+    for m in MODELS:
+        z = np.load(data_dir() / "runs/navsim_zs/openpilot/navtest" / f"{m}_temporal.npz")
+        tok = z["tokens"]
+        assert (tok == fr.frame_id.to_numpy()).all()
+        p = np.load(data_dir() / NAV_HEADS / f"navtest_ridge_late_{m}_temporal.npz")
+        assert (p["tokens"] == tok).all()
+        if sc is None:
+            sc = E1.nav_scopes(tok)
+            sc.to_csv(rl.dir / "navtest_scopes.csv", index=False)
+        for arm in ARMS:
+            for seed in SEEDS:
+                tau, _ = _tau(m, arm, seed)
+                delta = student_delta(m, arm, seed, z["temporal"].astype(np.float32), Emb)
+                np.savez_compressed(g0_dir(f"navtest_delta_{m}_{arm}_s{seed}.npz"), tokens=tok, delta=delta)
+                arm_p = p["poses"].copy()
+                arm_p[..., :2] += delta[:, 1:16:2]
+                np.savez(rl.dir / f"navtest_g0_{arm}_s{seed}_{m}.npz", tokens=tok, poses=arm_p.astype(np.float32))
+                act = (np.abs(P.v2(E1._grid20(arm_p)) - P.v2(E1._grid20(p["poses"]))) >= tau).astype(float)
+                mag = np.linalg.norm(delta[:, 1:16:2], axis=-1).mean(-1)
+                for name, msk in (("all", np.ones(len(tok), bool)), ("straight", sc.straight.to_numpy()),
+                                  ("ped_cyc_corridor", sc.ped_cyc_corridor.to_numpy()), ("no ped_cyc", ~sc.ped_cyc_corridor.to_numpy())):
+                    acts.append({"model": m, "arm": arm, "seed": seed, "scope": name, "n": int(msk.sum()), "tau": tau,
+                                 "activation": float(act[msk].mean()), "delta_mag_median_m": float(np.median(mag[msk]))})
+    a = pd.DataFrame(acts)
+    a.to_csv(rl.dir / "navsim_activation.csv", index=False)
+    rl.log.info("activation\n%s", a.to_markdown(index=False, floatfmt=".3f"))
+
+
+def navsim_table(rl, run_dir):
+    """PDMS (v1.1) / EPDMS (v2) of prior + Delta against the stored prior scores, paired, token bootstrap (E1's)."""
+    from .elicit_e1 import _devkit
+    run_dir = Path(run_dir)
+    sc = pd.read_csv(run_dir / "navtest_scopes.csv").set_index("token")
+    groups = {"all": None, "ped_cyc_corridor": sc.ped_cyc_corridor, "no ped_cyc": ~sc.ped_cyc_corridor, "straight": sc.straight}
+    rows = []
+    rng = np.random.default_rng(0)
+    f = lambda df: df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)].set_index("token")["score"].astype(float)  # noqa: E731
+    for m in MODELS:
+        for arm in ARMS:
+            for seed in SEEDS:
+                for ver, metric in (("v1", "PDMS"), ("v2", "EPDMS")):
+                    a = _devkit(ver, "navtest", f"g0_{arm}_s{seed}_{m}_plus_student")
+                    b = _devkit(ver, "navtest", f"heads_ridge_late_{m}_temporal")
+                    if a is None or b is None:
+                        rl.log.warning("missing scores: %s %s %s s%d", ver, m, arm, seed)
+                        continue
+                    x, y = f(a).align(f(b), join="inner")
+                    for g, msk in groups.items():
+                        keep = np.ones(len(x), bool) if msk is None else msk.reindex(x.index).fillna(False).to_numpy(bool)
+                        dd = (x - y).to_numpy()[keep]
+                        bs = dd[rng.integers(0, len(dd), (10000, len(dd)))].mean(1)
+                        rows.append({"model": m, "arm": arm, "seed": seed, "metric": metric, "group": g, "n": len(dd),
+                                     "prior_score": 100 * y.to_numpy()[keep].mean(), "plus_student": 100 * x.to_numpy()[keep].mean(),
+                                     "delta": 100 * dd.mean(), "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5)})
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "navsim_paired.csv", index=False)
+    rl.log.info("navtest\n%s", t.to_markdown(index=False, floatfmt=".2f"))
+    return t
+
+
+WOD_SCOPES = ("all", "Pedestrians", "Cyclists", "Cut_ins", "FOD", "Intersections")
+NAV_GROUPS = ("all", "ped_cyc_corridor", "no ped_cyc", "straight")
+
+
+def verdicts(wod_run, nav_run, nav_table_run, out: Path) -> pd.DataFrame:
+    """The registered G0 cells per model x arm x seed (deviation [G0], written before any G0 number)."""
+    wt = pd.read_csv(Path(wod_run) / "wod_deltas.csv")
+    wa = pd.read_csv(Path(wod_run) / "wod_activation.csv")
+    na = pd.read_csv(Path(nav_run) / "navsim_activation.csv")
+    nt = pd.read_csv(Path(nav_table_run) / "navsim_paired.csv")
+    rows = []
+    for m in MODELS:
+        for arm in ARMS:
+            for seed in SEEDS:
+                sel = lambda t: t[(t.model == m) & (t.arm == arm) & (t.seed == seed)]  # noqa: E731
+                w = sel(wt)
+                w = w[(w.stats == "carla") & (w.judge == "RFS (rater)")].set_index("scope").loc[list(WOD_SCOPES)]
+                a_w = float(sel(wa)[(sel(wa).stats == "carla")].set_index("scope").loc["straight_yaw", "activation"])
+                n = sel(nt)
+                n = n[n.metric == "PDMS"].set_index("group").loc[list(NAV_GROUPS)]
+                a_n = float(sel(na).set_index("scope").loc["straight", "activation"])
+                harm = w.loc["all", "hi"] < 0 or n.loc["all", "hi"] < 0 or a_w > ACT_HARM or a_n > ACT_HARM
+                useful = (not harm) and (w.loc["Pedestrians", "lo"] > 0 or n.loc["ped_cyc_corridor", "lo"] > 0)
+                cross = ((w.lo <= 0) & (w.hi >= 0)).all() and ((n.lo <= 0) & (n.hi >= 0)).all()
+                cell = "harmful" if harm else "useful" if useful else "harmless, not useful" if cross else "none of the three cells"
+                rows.append({"model": m, "arm": arm, "seed": seed, "cell": cell,
+                             "wod_rfs_all": w.loc["all", "delta"], "wod_rfs_all_lo": w.loc["all", "lo"], "wod_rfs_all_hi": w.loc["all", "hi"],
+                             "wod_rfs_ped": w.loc["Pedestrians", "delta"], "wod_rfs_ped_lo": w.loc["Pedestrians", "lo"],
+                             "wod_rfs_ped_hi": w.loc["Pedestrians", "hi"], "wod_act_straight": a_w,
+                             "nav_pdms_all": n.loc["all", "delta"], "nav_pdms_all_lo": n.loc["all", "lo"], "nav_pdms_all_hi": n.loc["all", "hi"],
+                             "nav_pdms_ped": n.loc["ped_cyc_corridor", "delta"], "nav_pdms_ped_lo": n.loc["ped_cyc_corridor", "lo"],
+                             "nav_pdms_ped_hi": n.loc["ped_cyc_corridor", "hi"], "nav_act_straight": a_n})
+    v = pd.DataFrame(rows)
+    v.to_csv(out / "verdict.csv", index=False)
+    return v
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("lists", "embed", "status", "geom"))
+    ap.add_argument("step", choices=("lists", "embed", "status", "geom", "students", "wod", "navsim", "navsim-table", "verdict"))
     ap.add_argument("--slices", type=int, default=30)
     ap.add_argument("--sets", nargs="+", default=list(SETS))
+    ap.add_argument("--runs", nargs="*", default=[], help="navsim-table: the g0-navsim run; verdict: wod, navsim, navsim-table runs")
     a = ap.parse_args()
     if a.step == "lists":
         lists(a.slices)
     elif a.step == "status":
         for n in a.sets:
             log.info("%s: %d / %d images detected, READY %s", n, *slices_done(n), root(n, "READY.json").exists())
+    elif a.step in ("students", "wod", "navsim", "navsim-table", "verdict"):
+        from .runlog import RunLog
+        rl = RunLog("real-data-transfer", f"g0-{a.step}")
+        if a.step == "navsim-table":
+            navsim_table(rl, a.runs[0])
+        elif a.step == "verdict":
+            rl.info(verdicts(*a.runs, rl.dir).to_markdown(index=False, floatfmt=".3f"))
+        else:
+            {"students": students, "wod": run_wod, "navsim": run_navsim}[a.step](rl)
+        rl.close()
     elif a.step == "geom":
         from .runlog import RunLog
         rl = RunLog("real-data-transfer", "g0-geom")
