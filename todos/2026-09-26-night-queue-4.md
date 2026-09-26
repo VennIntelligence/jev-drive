@@ -122,7 +122,7 @@
 - [K] 2026-09-26 17:30 CST 开工与分步估时（执行员 K，K-prep；写于任何 K 数字之前）。代码：`jevdrive/nq4_k.py`（分折、标签、拟合、导出、numpy apply、规则、离线等价检查），
   闭环接线是对 `scripts/nq3_cl_server.py`（新 arm `k0`–`k3`）与 `scripts/b2d_zeroshot_agent.py`（按路线选折、K2 / K3 的规则后处理）的增量改动，lane B 的既有 arm 行为不变。
   产物在 `$DATA_DIR/runs/nq4/k/`，齐了写 `READY`。资源：GPU 6 空档（显存 ≤ 16 GB），核 `taskset -c 146-149`（4 核；lane D 的 Q4a 收工后可扩到 146-153），
-  BLAS / OMP 线程 = 4；闭环等价检查借 1 张卡 ≤ 2 个 CARLA server（server index 490–499，不与 lane B 的 300–479、F 的 480–489 重叠），借哪张卡开跑前在这里写一行。
+  BLAS / OMP 线程 = 4；闭环等价检查借 1 张卡 ≤ 2 个 CARLA server（server index 490–499，不与 lane B 的 300–479、F 的 480–489 重叠；17:58 改为 170–179，见下面 17:58 条），借哪张卡开跑前在这里写一行。
   | 步 | 内容 | 估墙钟 | 资源 |
   |:--|:--|:--|:--|
   | K0 | 代码（上面几个文件） | 17:30–21:30 | Mac |
@@ -171,6 +171,7 @@
      记进 `ticks.jsonl`，离线重放规则类得到的油门 / 刹车逐位相同。不过就停。
 - [K] 2026-09-26 17:36 CST `route_split.json` 已写（17:35:44，先于任何 K 训练；副本 [research/results/nq4/k/route_split.json](../research/results/nq4/k/route_split.json)）：录过的 216 条里 R₁ 109 条 / R₂ 107 条（train 行 13 197 / 14 078），每个类内两折录过的路线数差 ≤ 1；220 的每条路线都有折标签（R₁ 111 / R₂ 109），其中 50 条从未录过、由 R₁ 读出开。F 的 X 用同一文件里 P6 路线的 `fold`。
 - [K] 2026-09-26 17:58 CST 管线的两处实测与改动（代码路径检查，不是 K 的读数）。(a) lead 重跑：GPU 6 此刻被约 10 个进程时间片共享（100% 占用），每个 openpilot 进程只有约 3.5 帧 / s（空卡时 19 帧 / s），主进程在等卡时自旋占满一个核，瓶颈是卡的时间片，不是解码或 CPU；改成按 GPU 6 的空闲显存开 1–4 个进程（每个约 2.6 GB），BA 与 P6 拆成两步，P6 的 lead 挪到拟合之后（只影响 K3 在 P6 上的开环导出）。(b) 全量 K0 的试拟合（dev run，全部 ridge gram 都在卡上做 float64 `eigh`）对 lane B 的 `heads.npz` 预测差 1.28 mm，超过第 3 条登记的 1e-3 m：`ridge ego` 选到 λ = 3e-5，gram 病态，GPU 与 CPU 的 `eigh` 在这里就差出毫米级。所以 ridge 的 gram（d ≤ 512，CPU 上几乎不花时间）一律留在 CPU 的原路径，只有 M-C 的配对 gram（d ≈ 3 000，忙机上 CPU 要数分钟）放卡上；GPU 与 CPU 的对照改为对 M-C（K3 的常数）做，另报「ridge 也放卡上」的一臂作说明。第 3 条的复现门槛不变。
+  (c) 闭环等价检查的 CARLA server index 从 490–499 改为 **170–179**（main 转 F 的警告：index i 的 TM 端口 8000 + 50i 等于 index i + 120 的 RPC 端口，490–499 的 TM 端口正好是 lane A 610–619 的 RPC 端口；170–179 的 i、i ± 120 都没人用），`nq4_k.sh cl` 开 server 前用 `ss -ltn` 核一遍 RPC / TM 端口。(d) lead 重跑借空闲的 GPU 2（lane B 的卡，此刻 2 个 CARLA server、2% 占用、89 GB 空；≤ 12 GB、4 进程、约 1 h，让位 CARLA），`gpu-plan.md` 已记一行；GPU 6 此刻 100% 时间片、只剩 4 GB。
 
 ## O. B2D 训练数据与 220 评测路线的重叠（只读，CPU）
 
