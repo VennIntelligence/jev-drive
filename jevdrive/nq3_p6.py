@@ -119,6 +119,11 @@ def exam_frames(set_: str = "carla_p6") -> pd.DataFrame:
             add(r.base_id, r.seed, "x11", r.t_vis, hi, "neg", 2)
             add(r.base_id, r.seed, "x01", r.t_vis, hi, "neg", 2)
     fr = pd.concat(rows, ignore_index=True)
+    # x11 only while its reference x01 is recorded (x01 stops 8 s after the ego passes the hidden obstacle)
+    ref = fr[(fr.reading == "neg") & (fr.world == "x01")].groupby(["base_id", "seed"]).k.max()
+    last = fr.set_index(["base_id", "seed"]).index.map(ref.to_dict()).to_numpy(dtype=float)
+    fr = fr[~((fr.reading == "neg") & (fr.world == "x11") & ~(fr.k.to_numpy() <= np.nan_to_num(last, nan=-1)))]
+    fr = fr.reset_index(drop=True)
     fr.to_parquet(proc(set_, "nq3_exam_frames.parquet"), index=False)
     u = fr.drop_duplicates("frame_name")
     log.info("%d reading rows, %d unique frames; by reading %s; unique by priority %s", len(fr), len(u),
