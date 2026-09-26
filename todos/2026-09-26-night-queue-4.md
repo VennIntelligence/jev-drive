@@ -170,6 +170,7 @@
      4 级各跑一遍（K0 / K1 unseen，K2 / K3 unseen），每个请求 dump；离线用同一份 JPEG、新 Cinque session 同顺序步进、`nq4_k` 的 apply 重算，轨迹、v̂、g3 逐位相同；规则层把逐 tick 的输入（速度、P7 的油门 / 刹车、停车牌替身、安全盒）
      记进 `ticks.jsonl`，离线重放规则类得到的油门 / 刹车逐位相同。不过就停。
 - [K] 2026-09-26 17:36 CST `route_split.json` 已写（17:35:44，先于任何 K 训练；副本 [research/results/nq4/k/route_split.json](../research/results/nq4/k/route_split.json)）：录过的 216 条里 R₁ 109 条 / R₂ 107 条（train 行 13 197 / 14 078），每个类内两折录过的路线数差 ≤ 1；220 的每条路线都有折标签（R₁ 111 / R₂ 109），其中 50 条从未录过、由 R₁ 读出开。F 的 X 用同一文件里 P6 路线的 `fold`。
+- [K] 2026-09-26 17:58 CST 管线的两处实测与改动（代码路径检查，不是 K 的读数）。(a) lead 重跑：GPU 6 此刻被约 10 个进程时间片共享（100% 占用），每个 openpilot 进程只有约 3.5 帧 / s（空卡时 19 帧 / s），主进程在等卡时自旋占满一个核，瓶颈是卡的时间片，不是解码或 CPU；改成按 GPU 6 的空闲显存开 1–4 个进程（每个约 2.6 GB），BA 与 P6 拆成两步，P6 的 lead 挪到拟合之后（只影响 K3 在 P6 上的开环导出）。(b) 全量 K0 的试拟合（dev run，全部 ridge gram 都在卡上做 float64 `eigh`）对 lane B 的 `heads.npz` 预测差 1.28 mm，超过第 3 条登记的 1e-3 m：`ridge ego` 选到 λ = 3e-5，gram 病态，GPU 与 CPU 的 `eigh` 在这里就差出毫米级。所以 ridge 的 gram（d ≤ 512，CPU 上几乎不花时间）一律留在 CPU 的原路径，只有 M-C 的配对 gram（d ≈ 3 000，忙机上 CPU 要数分钟）放卡上；GPU 与 CPU 的对照改为对 M-C（K3 的常数）做，另报「ridge 也放卡上」的一臂作说明。第 3 条的复现门槛不变。
 
 ## O. B2D 训练数据与 220 评测路线的重叠（只读，CPU）
 

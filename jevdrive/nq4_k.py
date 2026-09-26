@@ -408,16 +408,18 @@ def labels(workers: int = 4) -> dict:
 
 # ================================================================ fits (repo .venv, GPU)
 
-def _gpu_eigh(dev: str):
-    """nq3_q6._gpu_eigh: float64 eigh of the ridge / pair-Delta grams on `dev` (cpu = the stock path)."""
+def _gpu_eigh(dev: str, ridge: bool = False):
+    """nq3_q6._gpu_eigh: float64 eigh of the pair-Delta grams (and, with ridge, of the ridge grams) on `dev`. [K] 17:58:
+    the ridge grams stay on the CPU by default: `ridge ego`'s gram at lam 3e-5 is ill-conditioned enough that the GPU
+    eigh moves its predictions by 1.3 mm, while d <= 512 costs nothing on the CPU."""
     import torch
     from . import planner, reactivity_mc as MC
     MC.EIGH_DEVICE = dev
-
-    def _gram_eigh(A):
-        e, V = torch.linalg.eigh((A.T @ A).double().to(dev))
-        return e.float().to(A.device), V.float().to(A.device)
-    planner.gram_eigh = _gram_eigh
+    if ridge:
+        def _gram_eigh(A):
+            e, V = torch.linalg.eigh((A.T @ A).double().to(dev))
+            return e.float().to(A.device), V.float().to(A.device)
+        planner.gram_eigh = _gram_eigh
 
 
 def data(with_lead: bool = True) -> dict:
@@ -499,14 +501,18 @@ def fit_fold(D: dict, tr: np.ndarray, rows_k: np.ndarray, pair_keep: np.ndarray,
         R0 = Y - base
         _, st_p, Wp = sa.ridge_cv(Xi, R0, sp, R0.reshape(N, T, 2).cpu().numpy())
         return We[0].cpu().numpy(), Wp[0].cpu().numpy(), base + planner.linear_apply(Wp, Xi, ALL)[0], st_e["lam"], st_p["lam"]
+    import time
+    tk = time.time()
     We, Wp, prior, le, lp = ridge_late(F, 20)
-    info["K0"] = {"lam_ego": le, "lam_op": lp, "n_train": int(len(tr))}
+    info["K0"] = {"lam_ego": le, "lam_op": lp, "n_train": int(len(tr)), "wall_s": time.time() - tk}
     heads["K0"] = {"ego_mu": em, "ego_sd": es, "op_mu": om, "op_sd": osd, "We": We, "Wp": Wp}
     preds["K0"] = prior.reshape(N, 20, 2).cpu().double().numpy()
     if "K1" in levels or "K3" in levels:
+        tk = time.time()
         rt = np.zeros((N, ROUTE_N, 2), np.float32)
         rt[:n] = D["route"]
         Re, Rp, rpred, le, lp = ridge_late(torch.as_tensor(rt.reshape(N, -1), device=dev), ROUTE_N)
+        t_route = time.time() - tk
         ids, w = np.zeros((N, 2), np.int64), np.zeros((N, 2), np.float32)
         ids[:n], w[:n] = two_hot(D["speed"])
         tgt = (ids, w)
@@ -533,7 +539,8 @@ def fit_fold(D: dict, tr: np.ndarray, rows_k: np.ndarray, pair_keep: np.ndarray,
             off[tr[inner == k]] = planner.linear_apply(Wk, Xe, tr[inner == k])[0]
         lam_l = pick(Xi, off, "speed late")
         Cp, st_c = planner.ce_solve(Xi, tgt, tr, [lam_l], len(SPEEDS), offset=off)
-        info["K1"] = {"lam_route_ego": le, "lam_route_op": lp, "lam_speed_ego": lam_e, "lam_speed_op": lam_l, **st_c}
+        info["K1"] = {"lam_route_ego": le, "lam_route_op": lp, "lam_speed_ego": lam_e, "lam_speed_op": lam_l, **st_c,
+                      "wall_s_route": t_route, "wall_s_speed": time.time() - tk - t_route}
         k1 = {"ego_mu": em, "ego_sd": es, "op_mu": om, "op_sd": osd, "Re": Re, "Rp": Rp,
               "Ce": Ce[0].cpu().numpy(), "Cp": Cp[0].cpu().numpy(), "speeds": SPEEDS}
         heads["K1"] = heads["K2"] = k1
@@ -544,6 +551,7 @@ def fit_fold(D: dict, tr: np.ndarray, rows_k: np.ndarray, pair_keep: np.ndarray,
         info["K1"]["torch_vs_numpy_route_max"] = float(np.abs(route.reshape(N, -1) - rpred.cpu().numpy()).max())
         preds["_v"], preds["_route"] = v, route
     if "K3" in levels:
+        tk = time.time()
         Q = torch.as_tensor(np.r_[D["Q"], np.zeros((N - n, D["Q"].shape[1]), np.float32)], device=dev)
         ip, im, grp = D["ip"][pair_keep], D["im"][pair_keep], D["grp"][pair_keep]
         Rpair = (F[ip] - F[im]) - (prior[ip] - prior[im])
@@ -562,7 +570,8 @@ def fit_fold(D: dict, tr: np.ndarray, rows_k: np.ndarray, pair_keep: np.ndarray,
         c = (c * np.array([1.0, 0.0])).astype(np.float64)
         heads["K3"] = {**heads["K1"], "c": c, "ttc": np.array([TTC_ON, TTC_OFF, CLOSING])}
         info["K3"] = {"lam_mc": float(MC.LAMS[best]), "lam_edge": best in (0, len(MC.LAMS) - 1), "n_pair": int(len(ip)),
-                      "g3_sum": float(g.sum()), "g3_open": float((g > 0.5).mean()), "c_x_2s": float(c[7, 0]), "c_x_4s": float(c[15, 0])}
+                      "g3_sum": float(g.sum()), "g3_open": float((g > 0.5).mean()), "c_x_2s": float(c[7, 0]), "c_x_4s": float(c[15, 0]),
+                      "wall_s": time.time() - tk}
         gall = g3(D["lead"], D["lead_prob"], v_ego_of(D["ego"])).astype(np.float64)
         preds["K3"] = path_from_route(preds["_route"], preds["_v"], gall[:, None] * c[:, 0])
         preds["_g3"] = gall
@@ -700,19 +709,26 @@ def check_eigh():
     D = data()
     tr, rows_k, pk = _fold_masks(D, "R1")
     res = {}
-    for dev in ("cuda", "cpu"):
-        _gpu_eigh(dev)
+    from . import planner
+    stock = planner.gram_eigh
+    for dev, ridge in (("cuda", False), ("cpu", False), ("cuda", True)):
+        planner.gram_eigh = stock
+        _gpu_eigh(dev, ridge)
+        tag = dev + ("+ridge" if ridge else "")
         t0 = time.time()
-        _, PRED[dev], _ = fit_fold(D, tr, rows_k, pk, rl, f"R1-{dev}")
-        res[f"wall_s_{dev}"] = time.time() - t0
-    for level in ("K0", "K1", "K3"):
-        res[f"{level}_max_abs_m"] = float(np.abs(PRED["cuda"][level] - PRED["cpu"][level]).max())
-    res["v_max_abs"] = float(np.abs(PRED["cuda"]["_v"] - PRED["cpu"]["_v"]).max())
+        _, PRED[tag], inf = fit_fold(D, tr, rows_k, pk, rl, f"R1-{tag}")
+        res[f"wall_s_{tag}"] = time.time() - t0
+        res[f"sections_{tag}"] = {k: {kk: vv for kk, vv in v.items() if kk.startswith("wall")} for k, v in inf.items()}
+    planner.gram_eigh = stock
+    for a, b in (("cuda", "cpu"), ("cuda+ridge", "cpu")):
+        for level in ("K0", "K1", "K3"):
+            res[f"{a}_vs_{b}_{level}_max_abs_m"] = float(np.nanmax(np.abs(PRED[a][level] - PRED[b][level])))
+        res[f"{a}_vs_{b}_c_max_abs_m"] = float(np.nanmax(np.abs(PRED[a]["K3"] - PRED[b]["K3"])))
     rl.log.info("GPU vs CPU eigh: %s", res)
     kdir("checks").mkdir(parents=True, exist_ok=True)
     (kdir("checks") / "eigh.json").write_text(json.dumps(res, indent=1))
     rl.close()
-    assert max(res[f"{lv}_max_abs_m"] for lv in ("K0", "K1", "K3")) <= 1e-3, res
+    assert max(res[f"cuda_vs_cpu_{lv}_max_abs_m"] for lv in ("K0", "K1", "K3")) <= 1e-3, res
 
 
 def cl_verdict(d: Path) -> dict:
