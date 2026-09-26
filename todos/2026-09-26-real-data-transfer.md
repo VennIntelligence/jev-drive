@@ -259,6 +259,9 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (9) **判格**（todo 写死的两条，逐 模型 × head × seed）：**过** = I3 held-out 合并翻转点估计 ≥ 同模型 CARLA 训的 M-C（Cinque 58.7%、Lebowski 67.4%）且样本外 null false-flip ≤ 7%，且 WOD Cut_ins RFS Δ CI 不整体 < 0、straight_yaw 激活 ≤ 7%；否则不过，写明哪条。
   主判 Cinque 的 M-C pair 与 student A；三个 seed 一致取那一格，否则「随 seed 变」。student 也用 M-C 的 58.7% 这条线（登记原文），CARLA student 的 I3 数并列。限定先写下：prior 自己就有 70%，这条线对「回到 prior」的 head 也会过，所以另报对 prior 的配对差，不进判格。
   (10) **g₂ × G2 Δ（并列描述，不进判格）**：G1 的主 gate g₂ 乘在 G2 的 M-C 与 student A 的 Δ 上，WOD 用 G1 存的 g₂（`wod/20260926-092810/wod_gates_<m>.npz`），I3 用 G1 同一段代码重算的 I3 OOF probe；NAVSIM 不打分。
+- 2026-09-26 11:05 CST（box 时钟）[G2] 两处实现细节，写于任何 G2 拟合之前。(1) student 的标准化用 `planner.standardize` 的规则（std ≤ 1e-6 的维取 1），不用 E5 的 `clamp_min(1e-6)`：
+  I3 的 μ 行（minus 世界）里 embedding 的若干行人 one-hot 槽位恒为 0，E5 的写法会把 x⁺ 帧与 WOD 帧上这些维放大 10⁶ 倍；两种写法在 μ 行上逐位相同。
+  (2) M-C 与对照的闭式解用 `reactivity_mc` 的 N6 选项 `EIGH_DEVICE = "cuda"`（float64 eigh 放 GPU），同一个解，只因 box 的 CPU 饱和（负载 ~400 / 125 核）。
 
 ## 结果
 
