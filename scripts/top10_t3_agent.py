@@ -293,17 +293,24 @@ def smoke_check(capture: str, model_dir: str):
     agent._global_plan = [({"lat": 0.0, "lon": lon, "z": 0.0}, RoadOption.LANEFOLLOW) for lon in (0.0, 50.0 / 111319.49)]
     with mock.patch("shutil.which", return_value="/bin/true"):
         agent.setup(model_dir)
-    out = []
+    keys = ("pred_future_waypoints", "pred_route", "pred_target_speed_scalar", "pred_target_speed_distribution")
+
+    def run(data, seed):
+        torch.manual_seed(seed)
+        with torch.inference_mode():
+            p = agent.closed_loop_inference.forward(data)
+        return {k: getattr(p, k).detach().float().cpu() for k in keys}
+
+    out = {"live vs ours (seed 0)": [], "ours seed 0 vs seed 0 again": [], "ours seed 0 vs seed 1": []}
     for f in sorted(Path(capture).glob("frame_*.pth")):
         rec = torch.load(f, weights_only=False)
         data = {k: (v.to(agent.device, torch.float32) if isinstance(v, torch.Tensor) else v) for k, v in rec["data"].items()}
-        torch.manual_seed(0)
-        with torch.inference_mode():
-            p = agent.closed_loop_inference.forward(data)
-        out.append({"frame": f.name, **{k: float((getattr(p, k).detach().float().cpu() - rec["live"][k].float()).abs().max())
-                                         for k in ("pred_future_waypoints", "pred_route", "pred_target_speed_scalar",
-                                                   "pred_target_speed_distribution")}})
-    print(json.dumps({"frames": len(out), "max_abs": {k: max(o[k] for o in out) for k in out[0] if k != "frame"}}, indent=1))
+        a, b, c = run(data, 0), run(data, 0), run(data, 1)
+        live = {k: rec["live"][k].float() for k in keys}
+        for name, (x, y) in zip(out, ((live, a), (a, b), (a, c))):
+            out[name].append({k: float((x[k] - y[k]).abs().max()) for k in keys})
+    print(json.dumps({"capture": capture, "frames": len(out["live vs ours (seed 0)"]),
+                      **{n: {k: max(r[k] for r in v) for k in keys} for n, v in out.items() if v}}, indent=1))
 
 
 if __name__ == "__main__":
