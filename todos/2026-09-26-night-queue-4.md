@@ -220,6 +220,11 @@ Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：�
   - 读法照 W 节第 3 条；另：判据 1 在 persistence 上就已过而 oracle 更高时，写明「分清」有多少来自历史里已经看见的 hazard（描述，不改判格）。
 - [E] 2026-09-26 17:32 CST 借卡：GPU 6 只剩约 5 GB（92.5 / 97.9 GB、100% 利用），放不下 W；借空闲的 GPU 5（26 MiB、0%），已写 `gpu-plan.md`。链式脚本每一步开始前重新选卡：GPU 6 空出 ≥ 18 GB 就回 6，否则只用 3–5 里 < 5 GB 且没有 CarlaUE4 进程的卡，都没有就等；CARLA 起来后下一步自动让出（单步 ≤ 40 min）。
   V-JEPA 抽取等价检查（BA 已存 48 行重抽）：cos ≥ 0.9999、最大相对差 0.7%（bf16 batch 噪声），过。
+- [E] 2026-09-26 17:58 CST smoke 与 profile（只读训练折 loss 与吞吐，没读任何 probe / 判据数；smoke 的读数文件在 `runs/nq4/w/seed0-smoke/`，不进出表）：
+  - 数据：宇宙 74 085 帧（BA 19 428、PDM 17 340、P6 37 317），完整 18 帧窗口 50 260 个，152 条路线；测试用锚点对 16 583（行人 7 270 + null 2 489、cut-in 1 907 + 636、障碍 2 303 + 1 217、无 probe 的类 761）。P6 里没有行人（`ped` 正例 0），行人类的判读只来自 P5。补抽 V-JEPA 10.8 万 clip 用时 11 min（~150 clip/s，GPU 5）。
+  - 绕行方向符号（读 probe 之前）：expert 在 bypass_L 段 ω 均值 −0.031 rad/s、bypass_R +0.005，与 CARLA 左手系「左 = ω < 0」一致，按均值取符号（中位数在直行段接近 0，不用）。
+  - profile（同一模型、batch 256、GPU 5 独占、核 200–207）：(a) memmap + DataLoader 7 workers + fp32 eager 30.7 step/s，GPU 利用 ~20%，瓶颈是 Python 端 kernel launch 而不是数据；(b) z 标准化后常驻 GPU（bf16，0.53 GB）、卡上 index gather、bf16 autocast、fused AdamW，eager 仍 ~30 step/s；(c) 再加 `torch.compile(mode="reduce-overhead")`（CUDA graphs）112 step/s，GPU 利用 43%，3.7 倍。等价：同 seed 2 000 步 eager 与 compiled 的 inner-val loss 曲线 0.4926/0.3831/0.3637/0.3596 对 0.4898/0.3882/0.3631/0.3596。峰值显存 2.3 GB。
+  - 步数：seed 0 fold 0 训 12 000 步，inner-val loss 1k 0.390 → 5k 0.327 → 8k 0.323（最低）→ 12k 0.327，train loss 0.07（明显过拟合，靠 inner-val 选点）。**定总步数 8 000**（`CFG` 默认），15 次训练一律不变。单折含 probe 与读数 154 s，单 seed 约 13 min，三 seed 约 40 min，GPU 用量 < 1 GPU·h，远低于 4–6 GPU·h 预算。
 
 ## X. 判断与执行拆开：模式头 → 几何路径 → P7（闭环，CARLA；2026-09-26 18:30 补，专家回复第 6 问）
 
