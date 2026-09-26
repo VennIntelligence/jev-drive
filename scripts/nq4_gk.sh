@@ -122,12 +122,12 @@ cfg_for() {  # cfg_for <cand> <gpu> <seed> -> agent config path (P7 examinees)
     local c=$1 g=$2 seed=$3 f=$G/cfg/$1-g$2-s$3.json
     local ctl="\"controller\": \"fixed\", \"controller_preset\": \"pursuit\", \"controller_config\": \"$P7\""
     local head="\"model\": \"head\", \"warmup_s\": 5.0, \"desire\": true, \"head_cam_tick\": 0.0"
-    local QX=$G/heads_xfit
+    local QX=$G/heads_xfit Q2N=${Q2NAME:-q2} D=${DUMP_EVERY:-0}   # Q2NAME=q2_placeholder, DUMP_EVERY=1: smoke / rule 8 only
     case $c in
         cinque) echo "{\"model\": \"cinque\", \"socket\": \"$G/srv/op-cinque-g$g.sock\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05, \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": true, $ctl, \"seed\": $seed, \"dump_every\": 0}" ;;
-        mc) echo "{$head, \"arm\": \"mc\", \"socket\": \"$G/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": 0, $(fold_json heads "$QX/mc/R1/heads.npz" "$QX/mc/R2/heads.npz" unseen)}" ;;
-        q2) echo "{$head, \"arm\": \"q2\", \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": 0, $(fold_json q2_dir "$QX/q2/R1" "$QX/q2/R2" unseen)}" ;;
-        x) echo "{$head, \"arm\": \"q2\", \"x\": true, \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": 0, $(fold_json q2_dir "$QX/q2/R1" "$QX/q2/R2" unseen)}" ;;
+        mc) echo "{$head, \"arm\": \"mc\", \"socket\": \"$G/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json heads "$QX/mc/R1/heads.npz" "$QX/mc/R2/heads.npz" unseen)}" ;;
+        q2) echo "{$head, \"arm\": \"q2\", \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen)}" ;;
+        x) echo "{$head, \"arm\": \"q2\", \"x\": true, \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen)}" ;;
         k*) k_cfg "$c" "$g" "$seed" ;;
     esac > "$f"
     echo "$f"
