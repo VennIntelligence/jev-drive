@@ -188,7 +188,7 @@ class ZeroShotAgent(AutonomousAgent):
         self.head = self.model == "head"
         self.ctl_every = int(self.cfg.get("ctl_every", 1))
         self.plan_ticks = int(self.cfg.get("plan_ticks", 4))
-        self.head_pending, self.track = None, []
+        self.head_pending, self.pose_track = None, []
         self.plan_every = int(self.cfg.get("plan_every", 5 if self.alpamayo else 1))
         self.op_tick = float(self.cfg.get("op_camera_tick", rigs.OP_CAMERA_TICK))
         self.plan_origin = self.cfg.get("plan_origin", "camera")
@@ -666,13 +666,13 @@ class ZeroShotAgent(AutonomousAgent):
         pose); on every 4th tick capture the three cameras as the P5 recorder writes them."""
         import cv2
         if self.poses:
-            self.track.append((self.poses[-1][1], self.poses[-1][2]))
-        elif self.track:
-            self.track.append(self.track[-1])
+            self.pose_track.append((self.poses[-1][1], self.poses[-1][2]))
+        elif self.pose_track:
+            self.pose_track.append(self.pose_track[-1])
         ms = 0.0
-        if self.head_pending is not None and len(self.track) > self.head_pending[0] + 1:
+        if self.head_pending is not None and len(self.pose_track) > self.head_pending[0] + 1:
             ms = self._head_plan()
-        if (self.tick - 1) % 4 == 0 and self.track:
+        if (self.tick - 1) % 4 == 0 and self.pose_track:
             got = [data.get(tag) for tag in self.cam_tags]
             if all(g is not None and g[0] == frame for g in got):
                 mx, my = self.head_maps
@@ -683,7 +683,7 @@ class ZeroShotAgent(AutonomousAgent):
                     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, self.head_q])
                     jpgs.append(np.frombuffer(buf.tobytes(), np.uint8))
                 desire = self.route.desire() if self.cfg.get("desire", True) else DESIRE_NONE
-                self.head_pending = (len(self.track) - 1, frame, now, jpgs, desire)
+                self.head_pending = (len(self.pose_track) - 1, frame, now, jpgs, desire)
                 self.n_sets += 1
             else:
                 self.head_missing = getattr(self, "head_missing", 0) + 1
@@ -694,8 +694,8 @@ class ZeroShotAgent(AutonomousAgent):
         t_start = time.perf_counter()
         k, f, t_frame, jpgs, desire = self.head_pending
         self.head_pending = None
-        xy = np.array([p[0] for p in self.track], float)
-        yaw = np.array([p[1] for p in self.track], float)
+        xy = np.array([p[0] for p in self.pose_track], float)
+        yaw = np.array([p[1] for p in self.pose_track], float)
         ra, th = CL.rh_track(xy, yaw)
         it = CL.intent(self.route.xy, self.route.cmd, self.route.s, xy[k])
         ego = CL.ego_input(CL.ego_past(ra, th, k), it)
