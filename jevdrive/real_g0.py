@@ -330,10 +330,137 @@ def load_embed(name: str) -> tuple[pd.DataFrame, np.ndarray]:
     return pd.read_parquet(root(name, "frames.parquet")), np.load(root(name, "embed.npy"))
 
 
+
+# ---------------------------------------------------------------- geometry checks of the embedding (no Delta, no metric)
+
+def _corridor_agreement(E_a: np.ndarray, E_b: np.ndarray) -> dict:
+    a, b = E_a.reshape(len(E_a), K_DET, 8), E_b.reshape(len(E_b), K_DET, 8)
+    na, nb = a[:, :, 7].sum(1), b[:, :, 7].sum(1)
+    pa, pb = a[:, :, 0].sum(1) > 0, b[:, :, 0].sum(1) > 0
+    return {"rows": len(a), "identical": float(np.isclose(a, b, atol=1e-5).all((1, 2)).mean()),
+            "same_count": float((na == nb).mean()), "same_ped_flag": float((pa == pb).mean()),
+            "ped_flag_a": float(pa.mean()), "ped_flag_b": float(pb.mean()), "ped_both_given_a": float((pa & pb).sum() / max(pa.sum(), 1))}
+
+
+def geom_check(rl) -> dict:
+    """(1) P5 v1 BA: E5's route corridor vs the ego-history arc on E5's own detections; (2) WOD val: the arc vs the
+    logged 5 s path (extended to 40 m; an oracle, for scale only); (3) navtest: lifted pedestrians vs GT pedestrian boxes;
+    (4) I3: lifted vehicles vs the inserted actor in the x+ worlds."""
+    from multiprocessing import Pool
+    from . import fusion_q4 as Q, p5_exam as E, waymo as W
+    from .fusion_q2b import extend
+    out = {}
+    # (1) P5
+    os.environ["P5_SET"] = "carla_p5v1_ba"
+    t, past, *_ = E.load()
+    sub = sorted(p for p in (data_dir() / "processed/elicit_e5/dets").iterdir() if p.is_dir())
+    d = pd.concat([Q.load_dets(x, SCORE) for x in sub], ignore_index=True)
+    d = d[d.prompt.isin(CLS3)]
+    d = Q.lift_dets(d, d.key.str.split("|").str[1].to_numpy(), Q.p5_calib())
+    d = d[d.lift_ok]
+    H = pd.read_parquet(sorted(sub[0].glob("part-*.parquet"))[0], columns=["H"]).H.iloc[0]
+    arr = np.c_[d.prompt.map({c: i for i, c in enumerate(CLS3)}).to_numpy(), np.zeros((len(d), 2)),
+                d.gx.to_numpy() + Q.REAR_AXLE_X, d.gy.to_numpy(), ((d.y1 - d.y0) / H).to_numpy(), d.score.to_numpy()]
+    by = pd.Series(np.arange(len(d))).groupby(d.key.str.split("|").str[0].to_numpy()).indices
+    p1 = past[:, -int(ARC_T / 0.25) - 1, :2].astype(np.float64)
+    jobs = [[(i, arc_path(p1[i], Q.REAR_AXLE_X), arr[by[fn]] if fn in by else np.zeros((0, 7)),
+              by.get(fn, np.zeros(0, np.int64))) for i, fn in enumerate(t.frame_name[c0:c0 + 512], c0)]
+            for c0 in range(0, len(t), 512)]
+    Ea = np.zeros((len(t), 64), np.float32)
+    with Pool(48) as pool:
+        for part in pool.imap_unordered(_embed_frames, jobs):
+            for i, e, *_ in part:
+                Ea[i] = e
+    Er = np.load(data_dir() / "processed/elicit_e5/embed.npy")
+    out["p5_route_vs_arc"] = _corridor_agreement(Er, Ea)
+    obs = t.role.to_numpy() == "obs"
+    out["p5_route_vs_arc_obs"] = _corridor_agreement(Er[obs], Ea[obs])
+    # (2) WOD val: arc vs logged path
+    fr = pd.read_parquet(root("wod_val", "frames.parquet"))
+    if root("wod_val", "READY.json").exists():
+        dd = pd.read_parquet(root("wod_val", "dets.parquet"))
+        dd = dd[dd.lift_ok]
+        _, fut = W.load_ego()
+        arr = np.c_[dd.prompt.map({c: i for i, c in enumerate(CLS3)}).to_numpy(), np.zeros((len(dd), 2)), dd.xc, dd.yc,
+                    dd.h_feat, dd.score]
+        at = pd.Series(np.arange(len(fr)), index=fr.frame_id)
+        by = pd.Series(np.arange(len(dd))).groupby(at[dd.frame_id].to_numpy()).indices
+        from .fusion_q4 import REAR_AXLE_X
+        jobs, rows = [], fr.row.to_numpy()
+        for c0 in range(0, len(fr), 512):
+            ch = []
+            for i in range(c0, min(c0 + 512, len(fr))):
+                pth = extend(np.r_[[[0.0, 0.0]], fut[rows[i], :, :2]], ROUTE_LEN)
+                pth = pth + [REAR_AXLE_X, 0.0]
+                pth = np.r_[[[0.0, 0.0]], pth[int((pth[:, 0] > 0).argmax()):]]
+                ch.append((i, pth, arr[by[i]] if i in by else np.zeros((0, 7)), by.get(i, np.zeros(0, np.int64))))
+            jobs.append(ch)
+        El = np.zeros((len(fr), 64), np.float32)
+        with Pool(48) as pool:
+            for part in pool.imap_unordered(_embed_frames, jobs):
+                for i, e, *_ in part:
+                    El[i] = e
+        out["wod_val_logged_vs_arc"] = _corridor_agreement(El, np.load(root("wod_val", "embed.npy")))
+    # (3) navtest pedestrians vs GT
+    if root("navtest", "READY.json").exists():
+        from . import elicit_e3 as E3
+        ag = E3.extract("navtest")
+        dd = pd.read_parquet(root("navtest", "dets.parquet"))
+        dd = dd[dd.lift_ok & (dd.prompt == "pedestrian") & (np.hypot(dd.gx, dd.gy) <= 40)]
+        err, rng = [], []
+        for tok, g in dd.groupby("frame_id"):
+            a = ag[tok]
+            ped = a["boxes"][a["cls"] == "pedestrian"] if len(a["boxes"]) else np.zeros((0, 7))
+            if not len(ped):
+                continue
+            dist = np.linalg.norm(g[["gx", "gy"]].to_numpy()[:, None] - ped[None, :, :2], axis=-1)
+            err += list(dist.min(1))
+            rng += list(np.hypot(g.gx, g.gy))
+        err, rng = np.array(err), np.array(rng)
+        out["navtest_ped_vs_gt"] = {f"{lo}-{hi} m": {"n": int(((rng >= lo) & (rng < hi)).sum()),
+                                                    "median_err_m": float(np.median(err[(rng >= lo) & (rng < hi)])) if ((rng >= lo) & (rng < hi)).any() else None,
+                                                    "share_within_2m": float((err[(rng >= lo) & (rng < hi)] <= 2).mean()) if ((rng >= lo) & (rng < hi)).any() else None}
+                                    for lo, hi in ((0, 10), (10, 20), (20, 40))}
+    # (4) I3: the inserted car
+    from .hugsim_pairs import Logged, ego_frame, unpack
+    fr = pd.read_parquet(root("i3", "frames.parquet"))
+    dd = pd.read_parquet(root("i3", "dets.parquet"))
+    dd = dd[dd.lift_ok & (dd.prompt == "vehicle")]
+    t3 = pd.read_parquet(data_dir() / "processed/hugsim_pairs/index.parquet").set_index("frame_name")
+    by = dd.groupby("frame_id")
+    rows = []
+    for key in fr.base_id.unique():
+        m = json.loads((data_dir() / "processed/hugsim_pairs/scenes" / key / "meta.json").read_text())
+        L = Logged(unpack(m["dataset"], m["scene"]), m["dataset"])
+        tsim = np.array(m["t_sim"])
+        for w in ("static", "cutin", "oncoming"):
+            if not m["worlds"].get(w, {}).get("rendered"):
+                continue
+            tr = np.array(m["worlds"][w]["track"])
+            for fn in fr.frame_id[(fr.base_id == key) & (fr.world == "plus") & (fr.role == "obs")]:
+                if fn not in by.groups or f"/{w}/" not in t3.loc[fn].files[3]:
+                    continue
+                tt = float(t3.loc[fn].t)
+                i = int(np.searchsorted(tsim, tt - 1e-6))
+                c = ego_frame(L, tt, tr[i:i + 1, :2])[0]
+                g = by.get_group(fn)
+                dist = np.hypot(g.gx - c[0], g.gy - c[1]).min()
+                rows.append({"world": w, "range": float(np.hypot(*c)), "err": float(dist)})
+    r = pd.DataFrame(rows)
+    if len(r):
+        r["bin"] = pd.cut(r.range, [0, 10, 20, 40, 200])
+        out["i3_actor_vs_nearest_vehicle"] = {str(k): {"n": len(g), "median_err_m": float(g.err.median()),
+                                                       "share_within_3m": float((g.err <= 3).mean())}
+                                              for k, g in r.groupby("bin", observed=True)}
+    (rl.dir / "geom_check.json").write_text(json.dumps(out, indent=1, default=float))
+    rl.info(json.dumps(out, indent=1, default=float))
+    return out
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("lists", "embed", "status"))
+    ap.add_argument("step", choices=("lists", "embed", "status", "geom"))
     ap.add_argument("--slices", type=int, default=30)
     ap.add_argument("--sets", nargs="+", default=list(SETS))
     a = ap.parse_args()
@@ -342,6 +469,11 @@ def main():
     elif a.step == "status":
         for n in a.sets:
             log.info("%s: %d / %d images detected, READY %s", n, *slices_done(n), root(n, "READY.json").exists())
+    elif a.step == "geom":
+        from .runlog import RunLog
+        rl = RunLog("real-data-transfer", "g0-geom")
+        geom_check(rl)
+        rl.close()
     else:
         for n in a.sets:
             embed_set(n)
