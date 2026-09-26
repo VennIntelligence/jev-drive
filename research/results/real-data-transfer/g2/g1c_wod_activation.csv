@@ -1,0 +1,65 @@
+scope,n,activation,lo,hi,delta_mag_median_m,model,arm,tau
+straight_yaw,11597,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+pre_onset,1458,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+all,19663,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+Pedestrians,1831,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+Cyclists,2830,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+Cut_ins,885,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+FOD,3561,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+Intersections,4772,0.0,0.0,0.0,0.0,cinque,g3 x M-C,1.6276710629463196
+straight_yaw,11597,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+pre_onset,1458,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+all,19663,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+Pedestrians,1831,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+Cyclists,2830,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+Cut_ins,885,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+FOD,3561,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+Intersections,4772,0.0,0.0,0.0,0.0,cinque,g3 x const,1.6276710629463196
+straight_yaw,11597,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+pre_onset,1458,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+all,19663,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+Pedestrians,1831,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+Cyclists,2830,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+Cut_ins,885,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+FOD,3561,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+Intersections,4772,0.0,0.0,0.0,0.0,cinque,g3 x const2d,1.6276710629463196
+straight_yaw,11597,8.622919720617402e-05,0.0,0.000267191550448794,0.0,cinque,M-C - const (paired),1.6276710629463196
+pre_onset,1458,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+all,19663,5.085693942938514e-05,0.0,0.00015541665915236235,0.0,cinque,M-C - const (paired),1.6276710629463196
+Pedestrians,1831,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+Cyclists,2830,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+Cut_ins,885,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+FOD,3561,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+Intersections,4772,0.0,0.0,0.0,0.0,cinque,M-C - const (paired),1.6276710629463196
+straight_yaw,11597,0.0005173751832370441,0.0,0.0013877264770128632,0.0,lebowski,g3 x M-C,1.6549868881702423
+pre_onset,1458,0.0,0.0,0.0,0.0,lebowski,g3 x M-C,1.6549868881702423
+all,19663,0.00030514163657631085,0.0,0.0008133149977301858,0.0,lebowski,g3 x M-C,1.6549868881702423
+Pedestrians,1831,0.0,0.0,0.0,0.0,lebowski,g3 x M-C,1.6549868881702423
+Cyclists,2830,0.0,0.0,0.0,0.0,lebowski,g3 x M-C,1.6549868881702423
+Cut_ins,885,0.0,0.0,0.0,0.0,lebowski,g3 x M-C,1.6549868881702423
+FOD,3561,0.0,0.0,0.0,0.0,lebowski,g3 x M-C,1.6549868881702423
+Intersections,4772,0.0012573344509639564,0.0,0.003316870081810171,0.0,lebowski,g3 x M-C,1.6549868881702423
+straight_yaw,11597,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+pre_onset,1458,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+all,19663,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+Pedestrians,1831,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+Cyclists,2830,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+Cut_ins,885,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+FOD,3561,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+Intersections,4772,0.0,0.0,0.0,0.0,lebowski,g3 x const,1.6549868881702423
+straight_yaw,11597,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+pre_onset,1458,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+all,19663,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+Pedestrians,1831,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+Cyclists,2830,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+Cut_ins,885,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+FOD,3561,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+Intersections,4772,0.0,0.0,0.0,0.0,lebowski,g3 x const2d,1.6549868881702423
+straight_yaw,11597,8.622919720617402e-05,0.0,0.00026860059092130003,0.0,lebowski,M-C - const (paired),1.6549868881702423
+pre_onset,1458,0.0,0.0,0.0,0.0,lebowski,M-C - const (paired),1.6549868881702423
+all,19663,5.085693942938514e-05,0.0,0.00015606345544214815,0.0,lebowski,M-C - const (paired),1.6549868881702423
+Pedestrians,1831,0.0005461496450027307,0.0,0.0018029117182802163,0.0,lebowski,M-C - const (paired),1.6549868881702423
+Cyclists,2830,0.0,0.0,0.0,0.0,lebowski,M-C - const (paired),1.6549868881702423
+Cut_ins,885,0.0,0.0,0.0,0.0,lebowski,M-C - const (paired),1.6549868881702423
+FOD,3561,0.0,0.0,0.0,0.0,lebowski,M-C - const (paired),1.6549868881702423
+Intersections,4772,0.0,0.0,0.0,0.0,lebowski,M-C - const (paired),1.6549868881702423

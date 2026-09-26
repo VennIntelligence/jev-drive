@@ -1,0 +1,7 @@
+model,arm,version,n_check,n_scored,max_abs_diff,n_scored_total
+cinque,g1c_g3_const_ridge_late_cinque,v1,200,200,0.0,1447
+cinque,g1c_g3_const_ridge_late_cinque,v2,200,200,0.125,1447
+cinque,g1c_g3_const2d_ridge_late_cinque,v1,200,200,0.0,1447
+lebowski,g1c_g3_const_ridge_late_lebowski,v1,200,200,0.0,1447
+lebowski,g1c_g3_const_ridge_late_lebowski,v2,200,200,0.125,1447
+lebowski,g1c_g3_const2d_ridge_late_lebowski,v1,200,200,0.0,1447

@@ -267,6 +267,12 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (1) **G1c**：只打 g₃ > 0 的 token（两个模型的并集）；g₃ = 0 的 token 上 arm 的预测与 prior 逐位相同，PDM 打分逐 token 独立、确定，直接取 prior 已存的逐 token 分数。
   核对：另从 g₃ = 0 的 token 里按 `default_rng(0)` 抽 200 个一起打，它们的分数必须与 prior 已存分数逐个相等，不等就停、改回全量。
   (2) **G2**：只打「有接近车辆」的 token（登记的 NAVSIM 读数就是这一组）；全部 / 行人 / 直行三组的 PDMS 不再打，激活率仍在全部 token 上报。arm 不变（M-C pair 与 student A 各 3 seed、hard / uniform seed 0，两个模型）。
+- 2026-09-26 11:22 CST（box 时钟）[G2] 两条记录。(1) **G1c 子集打分的核对**：200 个 g₃ = 0 的核对 token 上，v1.1 PDMS 与 prior 已存分数逐个相等（两个模型、两种常数，max |diff| = 0），按登记用子集 + prior 填补；
+  main 的 EPDMS 不相等（约 43% 的核对 token 差 0.004–0.125，全量 run 之间则逐位相同），说明 EPDMS 的逐 token 分数依赖同批打分的 token 集合，按登记 EPDMS 的子集结果作废，G1c 只报 PDMS（主指标），EPDMS 等重启后若有余量再全量打。
+  (2) **box 11:45 重启（加第 6 张卡）前的暂停**：已完成 G1c 全部（WOD 读数、NAVSIM PDMS 6 次打分、配对表）、G2 的 30 个 I3 拟合（6 个 shard）、I3 考试、WOD 读数与 navtest 预测写出；小表已拉回 `research/results/real-data-transfer/g2/`。
+  没有被杀的作业（11:15 之后没有再启动任何作业）。**剩下的**：G2 的 16 次 NAVSIM PDMS 打分（4 726 个接近车辆 token，每次约 12 min / 8 线程，当前负载下 16 次约 1 h）、再跑配对表、汇总表、图与文字。恢复命令（box 上 repo 根目录）：
+  `R=runs/real-data-transfer; T=$DATA_DIR/$R/g2-transfer/20260926-111136; scripts/tmux_run.sh g2-score env NAVSIM_THREADS=8 TOKENS_FILE=$T/tokens.txt scripts/real_g1_score.sh $T/score_jobs_registered.txt 4`，
+  完成后 `python -m jevdrive.real_g2 nav-table --transfer-run $R/g2-transfer/20260926-111136 --g1c-run $R/g2-g1c-nav-write/20260926-105928`（`score_jobs_registered.txt` = transfer 写出的 18 行去掉未登记的 student B s0 两行）。
 
 ## 结果
 
