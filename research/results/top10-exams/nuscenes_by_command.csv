@@ -1,0 +1,13 @@
+row,cmd,n,l2_avg,col_bevp_avg
+cv,straight,4027,0.5973,0.8277
+cv,turn,609,1.4246,2.7367
+logged future,straight,4027,0.0,0.0
+logged future,turn,609,0.0,0.0
+openpilot small,straight,4027,0.8354,0.2814
+openpilot small,turn,609,1.1906,0.821
+openpilot Cinque,straight,4027,0.933,0.24
+openpilot Cinque,turn,609,1.098,2.2441
+openpilot Lebowski,straight,4027,1.057,0.3477
+openpilot Lebowski,turn,609,1.4155,1.04
+DrivoR,straight,4027,0.6949,0.4635
+DrivoR,turn,609,0.6954,0.3831
