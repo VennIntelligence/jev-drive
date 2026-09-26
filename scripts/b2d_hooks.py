@@ -456,6 +456,9 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
             a, hw, side, extra, row = pending.pop()
             loc, row["shift_m"] = shoulder(a.get_location(), hw, side, extra)
             if row["shift_m"]:
+                # physics off: a parked car set down on a kerb or against a wall was thrown back into the lane, into
+                # the opposite lane or out of the map ([A] 15:3x smoke); these actors never move anyway
+                a.set_simulate_physics(False)
                 a.set_location(loc)
                 shifted.append(a.id)
             if not pending:
