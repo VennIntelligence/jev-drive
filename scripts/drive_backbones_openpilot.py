@@ -94,6 +94,8 @@ class Recorder:
         r = {"name": name, "temporal": tv[taps["temporal"]], "vision": tv[taps["vision"]],
              "hidden": raw[s["hidden_state"]], "plan": self.mdn(raw[s["plan"]], (33, 15)).ravel(),
              "wod": Z.openpilot_to_wod(d["plan_pos"], d["plan_yaw"], self.T, self.dev), "hist": hist}
+        if self.keep is not None and "lead" in self.keep:     # raw output slices, decoded as fusion_q4c.outputs
+            r |= {"lead": raw[s["lead"]].copy(), "lead_prob": raw[s["lead_prob"]].copy()}
         self.rows.append(r if self.keep is None else {k: r[k] for k in ("name", "hist", *self.keep)})
 
     def save(self, path):
@@ -153,6 +155,9 @@ def main():
     ap.add_argument("--desire", action="store_true", help="stream mode: desire pulses from the WOD routing intent "
                     "(op_desire_<split>.json from `python -m jevdrive.op_route desire`); stores temporal + native plan")
     ap.add_argument("--out-sub", default="", help="override the output directory under processed/drive_backbones")
+    ap.add_argument("--lead", action="store_true", help="stream mode: store temporal + the raw lead / lead_prob slices")
+    ap.add_argument("--only", default="", help="stream mode: a file of frame names; keep only the streams holding one "
+                    "and only those targets on them (real-data transfer G1: lead outputs on the E1 eval frames)")
     a = ap.parse_args()
     from jevdrive.common import data_dir
     from jevdrive.openpilot.model import OPModel
@@ -167,10 +172,14 @@ def main():
     sub = ("op" if a.split == "subset" else f"op_{a.split}") if a.mode == "stream" else "op_exam"
     sub = a.out_sub or sub + ("_desire" if a.desire else "")
     desire = json.loads((D.root() / f"op_desire_{a.split}.json").read_text()) if a.desire else None
-    keep = ("temporal", "wod") if a.desire else None
+    keep = ("temporal", "wod") if a.desire else ("temporal", "lead", "lead_prob") if a.lead else None
     outdir = {k: D.root(sub, k) for k in a.models}
     if a.mode == "stream":
         items = [(f"{i:04d}_{s['sequence']}", s["names"], s["targets"]) for i, s in enumerate(plan["streams"])]
+        if a.only:
+            only = set(Path(a.only).read_text().split())
+            items = [(k, nm, t) for k, nm, t in ((k, nm, [j for j in t if nm[j] in only]) for k, nm, t in items) if t]
+            items = [(k, nm[: t[-1] + 1], t) for k, nm, t in items]     # the stream stops at its last kept target
         items = [it for it in items[si::sn] if not all((outdir[k] / f"{it[0]}.npz").exists() for k in a.models)]
     else:
         want = ([str(n) for n in Z.load_sets()["rater"]["name"]] if a.targets == "rater"

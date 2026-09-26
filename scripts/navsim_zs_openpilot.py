@@ -137,15 +137,20 @@ def cmd_feat(a, log):
     from jevdrive.drive_backbones import OP_TAPS
     idx = Z.load_index(a.split, slim=True)
     toks = np.array([e["token"] for e in idx])
-    base = Z.root("openpilot", a.split, "feat")
+    base = Z.root("openpilot", a.split, "feat_lead" if a.lead else "feat")
+    if a.tokens:                  # a subset (real-data transfer G1: lead outputs on sampled navtrain rows)
+        want = set(Path(a.tokens).read_text().split())
+        idx = [e for e in idx if e["token"] in want]
+        toks = np.array([e["token"] for e in idx])
     if a.merge:
         for mn in a.models:
             parts = [np.load(p) for p in sorted((base / mn).glob("chunk_*.npz"))]
             got = np.concatenate([q["tokens"] for q in parts])
             assert len(got) == len(toks) and (np.sort(got) == np.sort(toks)).all(), f"{mn}: {len(got)}/{len(toks)} tokens"
-            np.savez(Z.root("openpilot", a.split) / f"{mn}_temporal.npz", tokens=got,
+            extra = {k: np.concatenate([q[k] for q in parts]) for k in ("lead", "lead_prob") if a.lead}
+            np.savez(Z.root("openpilot", a.split) / f"{mn}_temporal{'_lead' if a.lead else ''}.npz", tokens=got,
                      temporal=np.concatenate([q["temporal"] for q in parts]).astype(np.float16),
-                     poses=np.concatenate([q["poses"] for q in parts]))
+                     poses=np.concatenate([q["poses"] for q in parts]), **extra)
             log.info(f"{mn}: merged {len(parts)} chunks, {len(got)} tokens")
         return
     si, sn = map(int, a.shard.split("/"))
@@ -166,7 +171,7 @@ def cmd_feat(a, log):
     for c in chunks:
         rows = range(c, min(c + a.chunk, len(idx)))
         it = (frames[k] for k in rows) if cached else ex.map(render_token, [idx[k] for k in rows], chunksize=4)
-        out = {mn: {"temporal": [], "poses": []} for mn in a.models}
+        out = {mn: {"temporal": [], "poses": [], "lead": [], "lead_prob": []} for mn in a.models}
         for k, fr in zip(rows, it):
             e = idx[k]
             fr = np.ascontiguousarray(fr)
@@ -179,12 +184,16 @@ def cmd_feat(a, log):
                 d = decode(raw, m.slices, float(np.linalg.norm(e["vel"][-1])), ACTION_T)
                 out[mn]["temporal"].append(m.tap_values[OP_TAPS[mn]["temporal"]].astype(np.float16))
                 out[mn]["poses"].append(Z.openpilot_to_navsim(d["plan_pos"], d["plan_yaw"], T_IDXS, dev))
+                if a.lead:            # raw output slices, decoded as fusion_q4c.outputs
+                    out[mn]["lead"].append(raw[m.slices["lead"]].astype(np.float32))
+                    out[mn]["lead_prob"].append(raw[m.slices["lead_prob"]].astype(np.float32))
             n += 1
         for mn in a.models:
             (base / mn).mkdir(parents=True, exist_ok=True)
             tmp = base / mn / f"chunk_{c // a.chunk:04d}.tmp.npz"
+            extra = {k: np.stack(out[mn][k]) for k in ("lead", "lead_prob") if a.lead}
             np.savez(tmp, tokens=toks[list(rows)], temporal=np.stack(out[mn]["temporal"]),
-                     poses=np.stack(out[mn]["poses"]).astype(np.float32))
+                     poses=np.stack(out[mn]["poses"]).astype(np.float32), **extra)
             tmp.replace(base / mn / f"chunk_{c // a.chunk:04d}.npz")
         el = time.time() - t0
         log.info(f"chunk {c // a.chunk}: {n} tokens, {1e3 * el / n:.1f} ms/token wall; GPU ms/token "
@@ -212,6 +221,8 @@ if __name__ == "__main__":
     f.add_argument("--workers", type=int, default=3)
     f.add_argument("--limit", type=int, default=0, help="chunks")
     f.add_argument("--merge", action="store_true")
+    f.add_argument("--lead", action="store_true", help="also store the raw lead / lead_prob slices (feat_lead/)")
+    f.add_argument("--tokens", default="", help="a file of tokens: run only those")
     a = ap.parse_args()
     log = RunLog("navsim_zs", "openpilot_" + a.cmd + (f"_{a.model}_{a.desire}" if a.cmd == "run" else ""))
     log.info(f"args {vars(a)} -> {log.dir}")
