@@ -250,8 +250,9 @@ def build_v1():
     ET.ElementTree(out).write(d / "pairs.xml")
     (d / "need.json").write_text(json.dumps(need))
     c = pd.DataFrame(cases)
-    c.to_csv(_res("q3") / "cases.csv", index=False)
-    sel.to_csv(_res("q3") / "routes.csv", index=False)
+    for o in (_res("q3"), d):                  # the run dir copy is what the chain reads (the repo copy gets committed)
+        c.to_csv(o / "cases.csv", index=False)
+        sel.to_csv(o / "routes.csv", index=False)
     main = [c.loc[i, w] for i in c.index for w in p6.WORLDS if w in c and isinstance(c.loc[i, w], str) and c.loc[i, w]]
     rec = [c.loc[i, n] for i in c.index for n in REC if n in c and isinstance(c.loc[i, n], str) and c.loc[i, n]]
     (d / "ids_main.txt").write_text(",".join(main))
@@ -271,7 +272,7 @@ def ids(file: str, gen: str, head: int = 0):
 def smoke_ids() -> list[str]:
     """Q3 [A] 17:15 item 4: the v0 1W routes by id, the first of each class and Accident's second; odd ones (+1.0, -1.5),
     even ones (+1.5, -1.0)."""
-    r = pd.read_csv(_res("q3") / "routes.csv", dtype={"base_id": str})
+    r = pd.read_csv(root("v1") / "routes.csv", dtype={"base_id": str})
     r = r[(r.source == "v0") & (r.cls == "1W")].assign(n=lambda d: d.base_id.astype(int)).sort_values("n")
     pick = [g.base_id.iloc[0] for _, g in r.groupby("scenario", sort=True)]
     pick.append(r[r.scenario == "Accident"].base_id.iloc[1])
@@ -357,7 +358,7 @@ def v1_post(workers: int = 24):
     split and source; recovery worlds carry world = their recovery name) for lane C's Q2 v1."""
     from joblib import Parallel, delayed
     g, out = root("v1") / "gen", _res("q3")
-    c = pd.read_csv(out / "cases.csv", dtype=str, keep_default_na=False).astype({"seed": int})
+    c = pd.read_csv(root("v1") / "cases.csv", dtype=str, keep_default_na=False).astype({"seed": int})
     main, rec = c[c.cls != "REC"], c[c.cls == "REC"]
     res = Parallel(workers)(delayed(p6._case)(g, r) for _, r in main.iterrows())
     pd.DataFrame([w for r in res for w in r[0]]).to_csv(out / "worlds.csv", index=False)
