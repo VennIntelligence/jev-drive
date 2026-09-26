@@ -1,0 +1,17 @@
+{
+ "tau_exp": 0.5,
+ "pooled_families": [
+  "cutin",
+  "oncoming",
+  "static"
+ ],
+ "taus": {
+  "DrivoR": 1.2395534038543687,
+  "WA-JEPA": 0.45011215209960914,
+  "openpilot ridge_late (Cinque)": 0.5268521547317493
+ },
+ "reactive_frames": 1832,
+ "padded_frames": 1140,
+ "pair_frames_complete_history": 2848,
+ "null_frames_complete_history": 672
+}

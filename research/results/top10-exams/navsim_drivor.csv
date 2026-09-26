@@ -1,0 +1,2 @@
+model,metric,score,paper,n_tokens,n_valid,devkit,metric_cache,no_at_fault_collisions,drivable_area_compliance,ego_progress,time_to_collision_within_bound,comfort,driving_direction_compliance,run_dir,csv,gap
+drivor,PDMS v1.1,93.69,93.7,12146,12146,"DrivoR repo (navsim 1.1.0 fork, fc6e5aa)",runs/navsim/metric_cache/v1_navtest,99.04,98.93,89.94,96.71,100.0,97.25,/home/ujs/data/runs/top10_t2/navsim/drivor/20260926-134814,2026.09.26.14.29.48.csv,-0.01
