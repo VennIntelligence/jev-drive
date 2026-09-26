@@ -2791,8 +2791,11 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
 2. **相邻名次的总分差全在噪声内**：TFv6（第三方）89.6、BLUE 90.6、SparseDriveV2 89.1、SimLingo（第三方）87.0、R2SE 86.3、TF++ 84.7，
    每一对相邻条目的 |ΔDS| < 2.3 且路线 bootstrap CI 含 0。总分上能分开的最小差距约 3.5–4 DS（BLUE 对 R2SE +4.2 [+0.7, +7.8]、对 SimLingo +3.5 [+0.6, +6.5]）。
    第 35 条 (e)「第 2–6 名间距 < 0.7 在噪声内」由此从引用的数字变成我们量到的数字。
-3. **突发 hazard 上真的更好的只有 BLUE**：突发 hazard 合并 SR 93.8% [88, 98]，比 SparseDriveV2 高 18.5 [7.7, 29.2]、比 SimLingo 高 10.8 [3.1, 18.5]，
+3. **突发 hazard 上公开读数更高的只有 BLUE，但这个差不能归为反应能力**：突发 hazard 合并 SR 93.8% [88, 98]，比 SparseDriveV2 高 18.5 [7.7, 29.2]、比 SimLingo 高 10.8 [3.1, 18.5]，
    对 R2SE（90.8%）在噪声内。BLUE = SimLingo + gate，它多出来的部分落在 junction_violator 和 cut-in 上。
+   **2026-09-26 18:30 就地降级**（原标题式写法「突发 hazard 上真的更好的只有 BLUE」）：BLUE 一行是作者自报，SimLingo 一行是第三方重跑，评测机器、评测器版本与截断设置都可能不同；
+   同 checkpoint、同 rig 的开环配对考卷上 BLUE 的反应反而比 SimLingo 少 8.1 pp [−12.4, −4.5]（第 46 条 T3）。所以这 +10.8 的来源未定：可能是评测设置差，也可能是整体更保守的驾驶（开得慢本身就抬高 hazard SR，不需要反应），
+   都没有测。复核在 [队列 4](../todos/2026-09-26-night-queue-4.md) G 第 5 条：官方评测器、作者执行层、同机、3 seed，并报非 hazard 路段的巡航速度。
 4. **总分掩盖了 family 间的取舍**：突发 hazard 的五个 family 对前几名大多饱和（很多格 100%）；拉开差距的是 unprotected turn（TFv6 82% 对其余 43–57%）、
    obstacle bypass 和 routine control。TFv6 总分与 BLUE 相当，但突发 hazard SR 低 10.9 [−21.9, 0.0]、规划类高得多——它的高分主要不是 E 层。
    YieldToEmergencyVehicle 所有学习方法 SR 0、DS 恰好 70，这一格量的是计分规则。
@@ -3218,9 +3221,9 @@ BLUE 是第 38 条里唯一在突发 hazard 上显著更好的方法，它的 ga
 
 **T1 考试：SparseDriveV2 + ZTRS（2026-09-26 下午，预登记与表在 todo「结果 / T1」，[leaderboard-vs-ability 第 8 节](leaderboard-vs-ability.md)）**。
 NAVSIM 榜分完整复现（SparseDriveV2 navtest PDMS 92.22 对论文 92.2；ZTRS navhard EPDMS 48.15 对 HF 榜 48.1）。零样本开环两张卷都输给匀速外推：WOD RFS 对 cv −0.68 / −0.40（CI < 0），s_ego 1–9 档 ADE 差 1.5 m；nuScenes L2 差 +0.26 / +0.59 m。
-配对考卷：CARLA P5 v1 BA 上两者纵向翻转 5.5% / 6.0%，CI 下界低于 5.1% 的 null → 没有（domain 混杂）；真实外观 I3 车辆配对上 23.6% / **45.5%**（null 4.8% / 5.8%）→ 有，但低于 openpilot `ridge_late` 的 70%。
+配对考卷：CARLA P5 v1 BA 上两者纵向翻转 5.5% / 6.0%，CI 下界低于 5.1% 的 null → **不可判**（2026-09-26 18:30 就地改，原写「没有（domain 混杂）」：NAVSIM 训的读出在 CARLA 帧上兼容检查不过，第 53 条，低翻转不能读成没有反应）；真实外观 I3 车辆配对上 23.6% / **45.5%**（null 4.8% / 5.8%）→ 有，但低于 openpilot `ridge_late` 的 70%。
 另一个读数：亚度级的相机安装变化就让 60% / 34% 的 token 换轨迹（0.32 / 0.24 m），是 scorer argmax 选轨脆弱性的直接量。
-**对本条的含义**：交集里的 scorer 族在真实外观车辆配对上确有一部分 E 层纵向反应（「推翻条件」的一半成立：高于 null，但不跨外观——CARLA 上没有），同时它们的开环能力绑在 navtrain 生态上，出了生态比 cv 差；
+**对本条的含义**：交集里的 scorer 族在真实外观车辆配对上确有一部分 E 层纵向反应（「推翻条件」的一半成立：高于 null；跨外观不可判——CARLA 上的读数不可比，见上），同时它们的开环能力绑在 navtrain 生态上，出了生态比 cv 差；
 「交集由训练生态决定、不是能力信号」对 SD / HY 两族**维持**，但要加一句：scorer 头里的 PDM 子分数确实带车辆反应，只是强度不到 openpilot 线性读出的 2/3。状态仍**待定**（T2 / T3 的族还没出数；I3 只有车辆、规则标签）。
 
 **T3 考试：BridgeDrive + BLUE（2026-09-26 下午，P5 v1 BA 的 570 个世界挂各自 rig 重录，568 个 expert 轨迹与原记录逐 tick 相同；todo「结果 / T3」，[leaderboard-vs-ability 第 9 节](leaderboard-vs-ability.md)）**。
@@ -3234,7 +3237,7 @@ NAVSIM 榜分按作者评测路径复现（DrivoR navtest PDMS 93.69 对 93.7；
 零样本开环：WOD RFS 对 cv DrivoR −0.63（CI < 0）、WA-JEPA **+0.33 [+0.03, +0.63]**；nuScenes L2 对 CV DrivoR −0.01（分不开）、WA-JEPA **−0.30 m**。
 **对本条的含义**：多榜覆盖最广的 DR 系（DrivoR）在我们的卷上与 T1 的两个 scorer 模型同形——真实外观车辆有一部分反应（34%），出了 navtrain 生态比 cv 差或持平；
 表征驱动的 AF 族（WA-JEPA）在车辆反应和零样本迁移两类卷上都明显更好，是前 10 族里第一个「推翻条件」两半（高于 null、跨卷）都部分成立的族，但它仍低于 Alpamayo / openpilot 的零样本 WOD 分数，且 CARLA 上只有弱信号。
-「交集由训练生态决定、不是能力信号」对 DR 族**维持**，对 AF 族**降级**为「交集里至少这一族带出了可迁移的车辆反应与开环能力」。状态仍**待定**（T1 / T2 / T3 三路合起来的读法留给 main；I3 只有车辆、规则标签；单 ckpt、单 seed）。
+「交集由训练生态决定、不是能力信号」对 DR 与 AF 两族都**降级**为「两族在真实外观车辆配对上都有约 25 pp 的选择性反应（反应帧翻转 − 非反应帧误翻：WA-JEPA 66 − 40、DrivoR 34 − 11，冻结 openpilot `ridge_late` 70 − 18 = 52 pp），约为 openpilot 线性读出的一半；CARLA 外观上不可判」（2026-09-26 18:30 就地改，原写「对 DR 族维持，对 AF 族降级为『交集里至少这一族带出了可迁移的车辆反应与开环能力』」：DrivoR 在 I3 上也显著高于 null，选择性与 WA-JEPA 同一水平；CARLA 上没有可比读数，谈不上跨外观迁移；WA-JEPA 的 66% 里有 40 pp 是非选择性的减速）。状态仍**待定**（T1 / T2 / T3 三路合起来的读法留给 main；I3 只有车辆、规则标签；单 ckpt、单 seed）。
 
 ## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
 
