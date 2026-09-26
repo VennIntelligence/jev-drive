@@ -99,10 +99,12 @@ def t1(model: str):
                 for a, b in zip(_flat(x).values(), _flat(y).values()))
     dev = torch.device("cuda")
     M.agent.to(dev).eval()
-    with torch.no_grad():
-        tn, sn = M.forward(I.to_dev(M.collate(new), dev))
-        to, so = M.forward(I.to_dev(M.collate(old), dev))
-    tn, to = tn.float().cpu().numpy(), to.float().cpu().numpy()
+    def fwd(xs):                                  # batches of 16: SparseDriveV2's kernel rejects 32
+        with torch.no_grad():
+            r = [M.forward(I.to_dev(M.collate(xs[k:k + 16]), dev)) for k in range(0, len(xs), 16)]
+        return (np.concatenate([a.float().cpu().numpy() for a, _ in r]),
+                None if r[0][1] is None else torch.cat([b.cpu() for _, b in r]))
+    (tn, sn), (to, so) = fwd(new), fwd(old)
     res = {"model": model, "n": len(new), "max_abs_image_diff": dimg, "max_abs_ego_diff": ego_diff,
            "max_abs_feature_diff": dfeat, "max_abs_traj_diff_m": float(np.abs(tn - to)[..., :2].max()),
            "same_selected": None if sn is None else bool((sn == so).all().item())}
