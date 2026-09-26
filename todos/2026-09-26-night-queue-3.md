@@ -148,6 +148,36 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - V-JEPA 2 单帧对照：当前帧重复成 4 帧 clip，同一 pair-Δ，3 seed。行人翻转 < 10% → 「是时间不是视频预训练」；与 4 帧版 CI 重叠 → 「视频预训练本身」。
 - V-JEPA 2 进 E5 student 上真实数据：Qwen 流换 V-JEPA 2，G0 口径上 WOD 与 NAVSIM；对不加 Δ 的配对差 CI 覆盖 0 → 快通道 backbone 换 V-JEPA 2 进候选。
 
+- 2026-09-26 16:50 CST [D] **Q6 的操作化**（写于 Q6 的任何新数字之前；此前只读过盘点、第 42–53 条与各 todo 已发表的数）。
+  **(a) 主表**。表 = 行（backbone × head）× 列（考卷），每格一个主数 + seed 数 + 出处；P6 与闭环两列写「待 Q1 / Q2 / CL」。「重算」= 从 box 上已存的逐帧预测 / checkpoint 用统一 judge 重新出数；已经按统一口径出过的格直接收，每格记「收 / 重算」。
+  行：ego-only（`ridge ego`、`cls ego`）；Qwen3-VL-4B、V-JEPA 2、SigLIP2、DINOv2、openpilot small（`ridge_late`、pair-Δ 单流、pair-Δ 双流）；openpilot Cinque / Lebowski（`ridge_late`、`cls_late`、Hydra、M-C 双流 / 只 Qwen / 只 op / hard / 均匀、E5 student A / B、原生 plan）；
+  榜单与 CARLA 族（SparseDriveV2、ZTRS、DrivoR、WA-JEPA、TFv6 waypoint / target speed、BridgeDrive、BLUE、SimLingo、Alpamayo 1.5，原生、零样本）。列：P5 v1 BA、P5 PDM、I3、WOD、NAVSIM、P6（待）、闭环（待）。15 条不一致逐条定为：
+  1. RFS：绝对值一律 cluster mean（榜单口径）；配对 Δ 用 frame mean（E1 / G0 登记的 judge），并在同格括注 cluster mean（有逐帧预测就重算）。n = 479 为主，W-xfit 的 478 只在附录。
+  2. `cls ego`：主表取 W-train 协议的 7.262（heads-train，3 seed）；P0 的 7.311 进附录，不混用。
+  3. WOD 主协议 = W-train（train 训、完整 val 评；pre-onset 第 1–9 档 ΔADE 对 `ridge ego`，n = 1 291，V-JEPA 行 n = 1 249 照注）；W-half / W-xfit 只进附录。只有 W-half / W-xfit 数的行（DINOv2、SigLIP2、op small、Alpamayo 特征）WOD 格写「无 W-train」。
+  4. s_ego 分档来自 `ridge ego` 自己的残差，所有「第 1–9 档」格带脚注，不改算法。
+  5. PDMS（v1.1）为 NAVSIM 主列，EPDMS（main @ 0a380a9）并列，对文献只写「同量级」。
+  6. navhard 不进主表（无 CI、seed 极差与行间差同量级），进附录。
+  7. seed：每格写 seed 数；3 seed 的格报 seed 均值 [最小, 最大] 并附 seed 0 的 CI；单 seed 格标「1」，按通用规则只能读「同一水平」；确定性的 `ridge_*` 标「确定性」。
+  8. Lebowski `cls_late`：3 seed 均值，不取 seed 0。
+  9. nuScenes 不进主表（三套 L2 口径不能同列）；U-zs / U-head 进附录，各自带口径。
+  10. P5：BA 逐帧定向翻转为主数（行人 / cut-in / 合并 + 样本外 null false-flip），A₃（[L, 3 s] 面积减 null）有就并列；PDM 集只报按对（E4 的决定）。
+  11. τ 与 null：每张卷用各自的 null 定 τ，null false-flip 与翻转并列；`ridge ego` 在 P5 的 6–8% 标「τ = 0 的标签伪影，不是反应」，I3 上 0% 标「按构造」。
+  12. expert：列头写明 expert（P5 BA = BehaviorAgent，PDM = PDM-Lite，I3 = 规则 expert，WOD = log / rater）；不同列的「翻转率」不跨列比较。
+  13. Qwen 行按卷写 tap：P5 / I3 / M-C 是 P3(d″) 视频 clip 的 `L18_last`，WOD W-train 是单帧 `L18_mean`（arm A），NAVSIM 是 0.5 s 间隔 clip；行名带脚注。
+  14. openpilot 输入时钟：NAVSIM 列的 openpilot 行标「2 Hz sample-and-hold 协议读数」（原生 plan 与冻结特征都是）。
+  15. E2 的 1.44 是 R1（head Δ 幅值比），不进主表。
+  代码 `jevdrive/nq3_q6.py table`：主表 `research/results/nq3/q6/main_table.csv`，逐格对旧表（盘点第 1–5 节里有数的格）`diff_vs_old.csv`（旧值、新值、原因代码：cluster-vs-frame / seed-mean / protocol-switch / new-cell / same），原因的文字由执行员逐格写进结果。
+  **(b) V-JEPA 2 单帧对照**：N6 的抽取配方原样（`features.VJepaFeatures(frames=4)`、256² 拉伸、bf16、三路 front / front_left / front_right 拼接、主 tap `mean`、副 `last_mean`），唯一改动是 clip = 当前帧重复 4 次（每个 unit 只解码当前帧一次，同一张量复制 4 份，与把同一 PIL 图传 4 次逐位相同）。
+  拟合 = `n6_backbones.fit` 原样（`ridge_late` + pair-Δ 单流 / 双流，prior = Cinque，Lebowski 只作 side，λ 网格、μ、fold 不改，`--eigh cuda`），route-fold seed 0 / 1 / 2。判格（todo 原文）：单帧版行人翻转（3 seed 均值）< 10% →「是时间不是视频预训练」；
+  每个 seed 的单帧版行人翻转 CI 与同 seed 4 帧版（N6 已存）CI 重叠 →「视频预训练本身」；两条都不满足写「部分来自时间」，seed 间不一致写「随 seed 变」。
+  等价检查（批量前）：同一驱动对 4 帧 clip 在 256 个 unit 上重抽，对 N6 已存特征报最大相对差（bf16 batch 形状噪声，N6 记 0.3–2%），> 5% 就停；同一驱动的 4 帧 seed 0 重拟合，行人翻转对 N6 已存值差 ≤ 1 帧（GPU `eigh` 的 0.5 mm 不确定性）、预测最大差 ≤ 1e-3 m，否则停。
+  **(c) V-JEPA 2 流上真实数据**：读作「M-C 双流里的 Qwen 流换成 V-JEPA 2 `mean`」（= N6 的双流臂 V-JEPA ⊕ openpilot `temporal`），E5 student 不含 Qwen 流，所以「student」这里按第 48 条的推翻条件理解为快通道的配对差分读出。
+  head = N6 各 seed 的 5 个 fold head（E1 `fold_heads` 的做法用 V-JEPA 替换 Qwen 重算，逐 fold 对 N6 已存预测 ≤ 1e-3 m、λ 相同），真实数据上的 Δ = 5 个 fold 的平均，CARLA 统计量；读数 = E1 / G0 的原样：
+  WOD 用 E1 的 19 663 帧（已有 `vjepa2_p3` / `_fl` / `_fr`，4 帧 × 0.2 s、256²、ViT-L，与 N6 配方一致，三路按 front | front_left | front_right 拼），prior = WOD train `ridge_late`；
+  NAVSIM navtest 需新抽 V-JEPA 2（三路 CAM_F0 / L0 / R0，NAVSIM 2 Hz 的 4 帧历史 −1.5 … 0 s，与 E1 的 Qwen NAVSIM clip 相同的「记录下来的输入差」：0.5 s 间隔对 P5 的 0.2 s），prior = NAVSIM `ridge_late`，官方 devkit v1.1 PDMS（EPDMS 不跑，省 CPU）。
+  3 seed × 2 模型。判格：WOD 全部 rater 帧 RFS 配对差与 navtest 全部 token PDMS 配对差的 95% CI **都覆盖 0（或整体 > 0）**，3 个 seed 都成立 →「V-JEPA 2 进快通道候选」；另报 G0 的四格判定（有害 / 有用 / 无害无用 / 都不是）与同口径的 Qwen M-C（E1）对照。激活率的 τ 取该臂自己在 P5 null 上的 τ。
+
 ### CL. 闭环（Bench2Drive 220，官方评测器）
 
 考生与执行层（规则 9）：
