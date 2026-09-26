@@ -442,6 +442,31 @@ def index(g: Path | None = None, set_name: str = "carla_p6", workers: int = 24) 
     return t
 
 
+def n2probe(set_name: str = "carla_p6") -> pd.DataFrame:
+    """N2 on N1 frames ([A-N2] 12:31): probes a / b on every P6 frame, c on the two-way worlds' frames only, with
+    night2_n2's labels, features and probe; plus the post-hoc controls of P5 v1 (ego speed alone, moving frames)."""
+    from . import night2_n2 as N
+    lab = pd.read_parquet(N.proc(set_name, "night2_labels.parquet"))
+    idx = pd.read_parquet(N.proc(set_name, "index.parquet"), columns=["frame_name", "cls"]).set_index("frame_name")
+    lab = lab.join(idx)
+    feats = N.op_features(set_name, lab.index.to_series())
+    feats["ego speed only"] = lab[["v_ego"]].to_numpy(np.float32)
+    two = (lab.cls == "2W").to_numpy()
+    tabs = [N.probe_table(lab, feats, ("a", "b", "b_front"), tag=set_name).assign(frames="all"),
+            N.probe_table(lab[two], {k: v[two] for k, v in feats.items()}, ("c",), tag=set_name).assign(frames="2W")]
+    mv = (lab.v_ego >= 3.0).to_numpy()
+    tabs.append(N.probe_table(lab[mv], {k: v[mv] for k, v in feats.items()}, ("a", "b", "b_front"), tag=set_name)
+                .assign(frames="v_ego>=3 (post hoc)"))
+    mv2 = mv & two
+    tabs.append(N.probe_table(lab[mv2], {k: v[mv2] for k, v in feats.items()}, ("c",), tag=set_name)
+                .assign(frames="2W, v_ego>=3 (post hoc)"))
+    tab = pd.concat(tabs, ignore_index=True)
+    out = N.RESULTS / f"probe_{set_name}.csv"
+    tab.to_csv(out, index=False)
+    log.info("-> %s", out)
+    return tab
+
+
 # ---------------------------------------------------------------- CPU check (i): bypass anchors in cls_late's vocabulary
 
 def bypass_shape(F: np.ndarray) -> np.ndarray:
@@ -511,7 +536,7 @@ def vocab_check(out: Path | None = None, p6_futures: np.ndarray | None = None) -
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index"])
+    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index", "n2probe", "vocab_p6"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
@@ -522,6 +547,12 @@ def main():
         ids(a.only, a.out)
     elif a.cmd == "vocab":
         vocab_check()
+    elif a.cmd == "n2probe":
+        print(n2probe().to_markdown(index=False))
+    elif a.cmd == "vocab_p6":
+        t = pd.read_parquet(data_dir() / "processed" / "carla_p6" / "index.parquet", columns=["world"])
+        fut = np.load(data_dir() / "processed" / "carla_p6" / "future.npy")
+        vocab_check(p6_futures=fut[(t.world == "x10").to_numpy()])
     elif a.cmd == "index":
         index(Path(a.out) if a.out else None)
     elif a.cmd == "report":
