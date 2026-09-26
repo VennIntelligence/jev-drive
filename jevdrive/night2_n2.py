@@ -291,8 +291,10 @@ WARM, READ = 40, (0, 1, 5)                     # 8 s warm-up from a zero state; 
 PER_BIN, PER_RUN, MIN_GAP_S = 150, 2, 10.0
 
 
-def targets(set_name: str, seed: int = 0) -> dict:
+def targets(set_name: str, seed: int = 0, query: str = "") -> dict:
     lab = pd.read_parquet(proc(set_name, "night2_labels.parquet"))
+    if query:                                   # e.g. N1: "world == 'x10' and a" (obstacle in the ego lane)
+        lab = lab.query(query)
     ok = (lab.v_ego >= 5.0) & (lab.intent == 1) & (lab.dhead60 < 10.0)
     cand = lab[ok].copy()
     rng = np.random.RandomState(seed)
@@ -331,7 +333,7 @@ def targets(set_name: str, seed: int = 0) -> dict:
     return {"targets": len(picked)}
 
 
-def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm")) -> pd.DataFrame:
+def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm"), tag: str = "") -> pd.DataFrame:
     rows = []
     for s in set_names:
         f = proc(s, "night2_desire_out.jsonl")
@@ -339,7 +341,7 @@ def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm")) -> pd.DataFrame:
             rows.append(pd.read_json(f, lines=True).assign(set=s))
     d = pd.concat(rows, ignore_index=True)
     RESULTS.mkdir(parents=True, exist_ok=True)
-    d.drop(columns=[c for c in d.columns if c.startswith("plan")], errors="ignore").to_csv(RESULTS / "desire_frames.csv", index=False)
+    d.drop(columns=[c for c in d.columns if c.startswith("plan")], errors="ignore").to_csv(RESULTS / f"desire_frames{tag}.csv", index=False)
     out = []
     for (model, read), g in d.groupby(["model", "read"]):
         for sname, gs in list(g.groupby("set")) + [("pooled", g)]:
@@ -358,7 +360,7 @@ def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm")) -> pd.DataFrame:
                             "p90_abs_dlat3": round(float(np.percentile(np.abs(dl), 90)), 3),
                             "dir_correct": round(float(ok.mean()), 3), "verdict": v})
     tab = pd.DataFrame(out)
-    tab.to_csv(RESULTS / "desire_bins.csv", index=False)
+    tab.to_csv(RESULTS / f"desire_bins{tag}.csv", index=False)
     return tab
 
 
@@ -398,19 +400,23 @@ def main():
     ap.add_argument("--set", default="carla_p5v1_ba")
     ap.add_argument("--dets", default="", help="probe: YOLO detection root (E5: processed/elicit_e5/dets)")
     ap.add_argument("--workers", type=int, default=24)
+    ap.add_argument("--source", default="p5", help="labels: index rows of this source (N1: p6)")
+    ap.add_argument("--query", default="", help="targets: pandas query on the labels first")
+    ap.add_argument("--sets", default="", help="desire: comma list of sets (default the two P5 v1 sets); output tagged")
     a = ap.parse_args()
     if a.step == "labels":
-        labels(a.set, a.workers)
+        labels(a.set, a.workers, a.source)
     elif a.step == "probe":
         print(probe(a.set, a.dets or None).to_markdown(index=False))
     elif a.step == "controls":
         print(controls(a.set, a.dets or None).to_markdown(index=False))
     elif a.step == "targets":
-        print(targets(a.set))
+        print(targets(a.set, query=a.query))
     elif a.step == "fig":
         fig_desire()
     else:
-        print(desire_table().to_markdown(index=False))
+        print((desire_table(tuple(a.sets.split(",")), "_" + a.sets.replace(",", "_")) if a.sets else desire_table())
+              .to_markdown(index=False))
 
 
 if __name__ == "__main__":

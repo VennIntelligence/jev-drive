@@ -408,6 +408,40 @@ def report(out: Path | None = None) -> str:
     return text
 
 
+# ---------------------------------------------------------------- frame index (N2 probes, openpilot streams)
+
+def _world_index(g: Path, rid: str, town: str, meta: dict):
+    f = g / "done" / (rid + ".json")
+    if not f.exists():
+        return None
+    a = g / "attempts" / rid / str(json.loads(f.read_text())["attempt"])
+    r = P.world_rows(a, rid, town)
+    if r is None:
+        return None
+    t, past, fut = r
+    base, world, seed = parse_id(rid)
+    return t.assign(base_id=base, world=world, seed=seed, source="p6", role="obs", **meta), past, fut
+
+
+def index(g: Path | None = None, set_name: str = "carla_p6", workers: int = 24) -> pd.DataFrame:
+    """Every 5 Hz camera frame with a 5 s future of every finished world -> processed/<set>/index.parquet, past.npy,
+    future.npy (the P5 index layout, source "p6"), for night2_n2 labels / probes and scripts/p5_openpilot.py."""
+    from joblib import Parallel, delayed
+    g = g or root("gen")
+    c = cases()
+    jobs = [(r[w], r.town, {"scenario": r.scenario, "cls": r.cls}) for _, r in c.iterrows() for w in WORLDS if r[w]]
+    res = [x for x in Parallel(workers)(delayed(_world_index)(g, *j) for j in jobs) if x is not None]
+    t = pd.concat([x[0] for x in res], ignore_index=True)
+    d = data_dir() / "processed" / set_name
+    d.mkdir(parents=True, exist_ok=True)
+    t.to_parquet(d / "index.parquet", index=False)
+    np.save(d / "past.npy", np.concatenate([x[1] for x in res]))
+    np.save(d / "future.npy", np.concatenate([x[2] for x in res]))
+    log.info("%s: %d frames from %d worlds; by class/world %s", set_name, len(t), len(res),
+             t.groupby(["cls", "world"]).size().to_dict())
+    return t
+
+
 # ---------------------------------------------------------------- CPU check (i): bypass anchors in cls_late's vocabulary
 
 def bypass_shape(F: np.ndarray) -> np.ndarray:
@@ -477,7 +511,7 @@ def vocab_check(out: Path | None = None, p6_futures: np.ndarray | None = None) -
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report"])
+    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report", "index"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
@@ -488,6 +522,8 @@ def main():
         ids(a.only, a.out)
     elif a.cmd == "vocab":
         vocab_check()
+    elif a.cmd == "index":
+        index(Path(a.out) if a.out else None)
     elif a.cmd == "report":
         print(report(Path(a.results) if a.results else None))
     else:

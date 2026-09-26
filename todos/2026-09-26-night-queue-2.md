@@ -137,6 +137,8 @@
   在跑的世界没有 `done/`，续跑时从头重跑）；2W 的 375 个世界还没开始。smoke 目录 `runs/p6/smoke*` 不再用。
   **续跑命令**（box 上，一条）：`cd ~/data/jev-drive && git pull && scripts/tmux_run.sh p6-gen env GPUS="0 1 2" WORKERS=6 BLOCK=800 OUT=$DATA_DIR/runs/p6/gen scripts/p6_gen.sh`
   （不带 ONLY 就是全部 605 个，已完成的跳过；多给卡就在 GPUS 里加，每卡一条链、server index 800 + 50j）。剩 485 个世界，按停前实测（CPU 被打满时每 run 7–13 min）约 5–6 h / 18 实例，CPU 不被打满时约 2.5 h。
+- 2026-09-26 12:28 CST [A] 续跑（box 12:25 重启后：7 卡、175 核）。main 分配 GPU 0–3、每卡 6 server、约 80 核：`GPUS="0 1 2 3" WORKERS=6 CORES=3`，tmux `p6-gen`，
+  剩 485 个世界（a 段剩 110 + 2W 375）。`p6_gen.sh` 现在把自己起的每个 PID 记进 `runs/p6/gen/pids.txt`，`scripts/p6_stop.sh` 只停这些 PID 及其子进程（不再按进程名匹配）。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
@@ -178,6 +180,12 @@
   (2) 同一特征只在 v_ego ≥ 3 m/s 的帧上重拟合（路线分组 5 折不变）。probe b / b_front / c 同样补这两行。
 - 2026-09-26 11:35 CST [A-N2] P5 v1 部分完成（结果见文末「结果 / N2 的 P5 v1 部分」、第 49 条）。box 11:45 重启前已全部跑完，没有被杀的作业。
   N1 数据到后的重跑：`python -m jevdrive.night2_n2 labels --set <N1 帧集> && ... probe --set <N1 帧集>`（probe c 用同一 `c` 标签），desire 的 x₁₀ 补跑用 `targets` / `scripts/night2_desire.py` 指向同一帧集。
+- 2026-09-26 12:31 CST [A-N2] N1 部分的操作性选择（写于任何 N1 帧上的 probe / desire 数字之前）：帧集 `processed/carla_p6` = 所有完成的 P6 世界里带 5 s 未来的 5 Hz 相机帧（`jevdrive.p6 index`，
+  source = p6），openpilot 两个模型的 `temporal` / `vision` 照 P5 v1 的方式按世界成流抽取（`scripts/p5_openpilot.py --arrays temporal vision hidden --out-sub op_streams_vis`），标签沿用 `night2_n2 labels`
+  （P6 的 actors.npz 里多了 static prop：probe a 的「静止 actor」因此包括锥桶和警示牌，这正是 N1 要补的障碍类型；b / c 仍只看车）。
+  probe a / b 在全部 P6 帧上跑（与 P5 v1 同一判据），**probe c 只在 2W 世界的帧上跑**（todo 写死的数据），判据同上（≥ 0.70 / ≤ 0.60）。YOLO token 对照：P6 帧上没有检测，本轮不跑（写「未测」）。
+  desire 补跑：目标帧 = x₁₀ 世界里 label a 为真（本车道前方 ≤ 30 m 有静止障碍）、直行（intent = 1、前方 60 m 航向变化 < 10°）、v ≥ 5 m/s 的帧，其余抽样与读数规则同 09:55 条（每档 ≤ 150、每 run ≤ 2、间隔 ≥ 10 s）；
+  判格同 todo。若某档目标 < 20 个，只报数不判格。
 
 ## N3. 榜单 head × 反应：能力包的 2 × 2（CPU 为主，< 2 GPU·h）
 
