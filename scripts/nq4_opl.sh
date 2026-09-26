@@ -13,8 +13,9 @@
 #   scripts/nq4_opl.sh arm <arm> <seed> <route ids | all | obstacle> <est_h> <raw_dump> <dump_every> <out>
 #                                one run on the current resources (debugging)
 #
-# Resources. Debug card (smoke, pilots): $DEBUG_GPU, else the row of runs/sched/table.tsv (SCH) that names the
-# infrastructure / debug card; 2 CARLA servers at indices 130-131, cores 200-203. Batch (full runs): runs/nq4/opl/GO,
+# Resources. Debug card (smoke, pilots): $DEBUG_GPU, else runs/sched/nq4-opl.pilot (PILOT_GPU [PILOT_WORKERS PILOT_IDX0
+# PILOT_SPAN PILOT_CPUS]), else the row of runs/sched/table.tsv (SCH) naming the infrastructure / debug card; default 2
+# CARLA servers at indices 130-131, cores 200-203. Batch (full runs): runs/sched/nq4-opl.go or runs/nq4/opl/GO,
 # a shell fragment written by SCH / Codex / main, e.g.
 #     GPUS="3 4"; WORKERS=5; IDX0=130; IDX_SPAN=5; OPL_CPUS=60-89
 # (index i binds RPC 2000 + 50i and TM 8000 + 50i: i, i + 120 and i - 120 must be free). Without a GO file, after
@@ -57,8 +58,10 @@ error() {  # error <reason> [log file]: write ERROR and stop
     exit 1
 }
 
-debug_gpu() {  # the infrastructure / debug card: $DEBUG_GPU, else SCH's runs/sched/table.tsv
+SCHED=$DATA_DIR/runs/sched
+debug_gpu() {  # the infrastructure / debug card: $DEBUG_GPU, else runs/sched/nq4-opl.pilot (PILOT_GPU), else table.tsv
     [[ -n ${DEBUG_GPU:-} ]] && { echo "$DEBUG_GPU"; return; }
+    [[ -f $SCHED/nq4-opl.pilot ]] && { (set +u; source "$SCHED/nq4-opl.pilot"; echo "$PILOT_GPU"); return; }
     python3 - "$DATA_DIR/runs/sched/table.tsv" <<'EOF'
 import csv, re, sys
 try:
@@ -76,15 +79,20 @@ for r in rows[1:]:
 sys.exit(1)
 EOF
 }
-use_debug() {  # resources = the debug card
+use_debug() {  # resources = the debug card (runs/sched/nq4-opl.pilot may also set PILOT_WORKERS / _IDX0 / _SPAN / _CPUS)
     local g; g=$(debug_gpu) || error "no debug card: set DEBUG_GPU or wait for SCH's runs/sched/table.tsv"
     GPUS=$g WORKERS=$DBG_WORKERS IDX0=$DBG_IDX0 IDX_SPAN=$DBG_WORKERS OPL_CPUS=$DBG_CPUS
+    if [[ -f $SCHED/nq4-opl.pilot ]]; then
+        eval "$(set +u; source "$SCHED/nq4-opl.pilot"; echo "WORKERS=${PILOT_WORKERS:-$DBG_WORKERS} IDX0=${PILOT_IDX0:-$DBG_IDX0} OPL_CPUS=${PILOT_CPUS:-$DBG_CPUS}")"
+        IDX_SPAN=$( (set +u; source "$SCHED/nq4-opl.pilot"; echo "${PILOT_SPAN:-$WORKERS}") )
+    fi
 }
-use_go() {  # resources = the GO file (0 if there is none)
-    [[ -f $O/GO ]] || return 1
+go_file() { for f in "$SCHED/nq4-opl.go" "$O/GO"; do [[ -f $f ]] && { echo "$f"; return 0; }; done; return 1; }
+use_go() {  # resources = the GO file, runs/sched/nq4-opl.go or runs/nq4/opl/GO (1 if there is none)
+    local f; f=$(go_file) || return 1
     GPUS= WORKERS=4 IDX0=130 IDX_SPAN= OPL_CPUS=$DBG_CPUS
-    # shellcheck disable=SC1091
-    source "$O/GO"
+    # shellcheck disable=SC1090
+    source "$f"
     [[ -n $GPUS ]] || error "GO file without GPUS"
     IDX_SPAN=${IDX_SPAN:-$WORKERS}
 }
@@ -297,7 +305,7 @@ status_loop() {
             echo "# OPL status $(date '+%F %T %Z')"; echo
             echo "- current: $(cat "$O/CURRENT" 2>/dev/null)"
             echo "- phase: $(cat "$O/PHASE" 2>/dev/null)"
-            echo "- debug card: $(debug_gpu 2>/dev/null || echo '?'); GO: $([[ -f $O/GO ]] && tr '\n' ' ' < "$O/GO" || echo none)"
+            echo "- debug card: $(debug_gpu 2>/dev/null || echo '?'); GO: $(f=$(go_file) && tr '\n' ' ' < "$f" || echo none)"
             echo "- pids.current $(cat /sys/fs/cgroup/pids.current), load $(cut -d' ' -f1-3 /proc/loadavg)"
             echo; echo "finished stages:"; ls "$O"/arms/*/s*/STAGE* 2>/dev/null | sed 's/^/- /'
         } > "$O/STATUS.md.tmp" && mv "$O/STATUS.md.tmp" "$O/STATUS.md"
@@ -331,7 +339,7 @@ full() {  # full <arm> <seed>: the rest of the route set on the batch cards
     rest=$(cat "$out/rest.txt")
     t0=$SECONDS
     until use_go; do                      # wait for SCH's GO; fall back to the debug card after OPL_GO_WAIT_MIN
-        echo "waiting for $O/GO ($arm s$seed full)" > "$O/PHASE"
+        echo "waiting for a GO file ($SCHED/nq4-opl.go or $O/GO) for $arm s$seed full" > "$O/PHASE"
         if (( SECONDS - t0 > 60 * OPL_GO_WAIT_MIN )) && debug_has_room; then
             use_debug; log "no GO after $OPL_GO_WAIT_MIN min: $arm s$seed full runs on the debug card"; break
         fi
