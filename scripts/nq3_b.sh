@@ -348,6 +348,7 @@ chain() {
 
 smoke() {  # CL0: every P7 agent on 3 routes (profiling); the head arms dump every request for the rule-8 check
     local arm
+    trap '[[ -n ${arm:-} ]] && { srv_stop_arm "$arm"; kill_runs "$B/cl0/$arm"; }' EXIT
     for arm in ${SMOKE_ARMS:-cl3 cl4 cl6 cl2 cl7 cl8 cl1}; do
         local d=0
         [[ $arm == cl3 || $arm == cl4 || $arm == cl6 ]] && d=1
