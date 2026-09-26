@@ -218,10 +218,11 @@ t = pd.read_csv(NG.root() / "routes.csv", dtype={"base": str})
 split = json.loads((NG.data_dir() / "runs/nq4/k/route_split.json").read_text())["routes"] if rs in ("grec", "krec") else {}
 if variant == "k":
     import xml.etree.ElementTree as ET
-    ids = [r.get("id") for r in ET.parse(NG.data_dir() / NG.B2D_XML).getroot().iter("route")]
+    town = {r.get("id"): r.get("town") for r in ET.parse(NG.data_dir() / NG.B2D_XML).getroot().iter("route")}
+    ids = list(town)
     if rs == "krec":
         ids = [i for i in ids if split.get(i, {}).get("recorded")]
-    print(",".join(ids)); sys.exit()
+    print(",".join(sorted(ids, key=lambda i: (town[i], int(i))))); sys.exit()   # same town back to back (world reuse)
 v = pd.read_csv(NG.root() / "variants.csv", dtype={"id": str, "base": str})
 v = v[v.variant == variant].merge(t[["base", "obstacle"]], on="base")
 if rs == "gob":
@@ -233,6 +234,7 @@ if variant == "orig":
     for d in NG.reuse_dirs().get((cand, seed), []):
         have |= {p.stem for p in (d / "done").glob("*.json")} if (d / "done").exists() else set()
     v = v[~v.base.isin(have)]
+v = v.merge(t[["base", "town"]], on="base").sort_values(["town", "id"])      # same town back to back (world reuse)
 print(",".join(v.id))
 EOF
 }
