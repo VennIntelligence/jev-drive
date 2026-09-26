@@ -471,7 +471,7 @@ def exam(rl):
                                                             "false_flip_null_oos"]].to_markdown(index=False, floatfmt=".3f"))
 
 
-def navjobs(rl):
+def navjobs(rl, seeds=SEEDS):
     """navtest predictions for the devkit: Hydra (every model x seed), Hydra + g2 * Delta (E1's M-C correction on
     0.5 ... 4.0 s, heading kept) and Hydra + Delta ungated (seed 0); the activation of Delta on navtest (description)."""
     from . import elicit_e1 as E1, p5_pairs as P
@@ -480,6 +480,8 @@ def navjobs(rl):
     g2 = np.load(data_dir() / G2_RUN / "g2_nav_eval.npz", allow_pickle=True)
     taus, jobs, acts = mc_taus(), [], []
     for (m, sd), f in sorted(_sel_files().items()):
+        if sd not in seeds:
+            continue
         fitdir = f.parent
         hy = np.load(fitdir / f"navtest_hydra_{m}_s{sd}.npz")
         tok = hy["tokens"]
@@ -665,8 +667,10 @@ def main():
     elif a.step == "p5cls":
         for sd in seeds:
             p5cls(rl, sd)
+    elif a.step == "navjobs":
+        navjobs(rl, seeds)
     else:
-        {"navridge": navridge, "gates": gates, "compat": compat, "exam": exam, "navjobs": navjobs, "navtable": navtable,
+        {"navridge": navridge, "gates": gates, "compat": compat, "exam": exam, "navtable": navtable,
          "nusc": nusc, "e4c": e4c_students}[a.step](rl)
     rl.close()
 
