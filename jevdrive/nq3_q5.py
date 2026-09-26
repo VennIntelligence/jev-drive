@@ -167,6 +167,20 @@ def verify():
 
 # ---------------------------------------------------------------- nuScenes readout
 
+_NUSC_SAMPLES = None
+
+
+def _nusc_metrics(args):
+    """VAD-style 1 / 2 / 3 s means of L2 and both collision rates for predictions `pts` on sample rows `rows`."""
+    from . import nuscenes_zs as Z
+    pts, rows = args
+    smp = [_NUSC_SAMPLES[i] for i in rows]
+    h = Z.horizons(Z.per_sample(pts.astype(np.float64), smp))
+    return {"l2": (h["l2_1s"] + h["l2_2s"] + h["l2_3s"]) / 3,
+            "col_vad": (h["col_vad_1s"] + h["col_vad_2s"] + h["col_vad_3s"]) / 3,
+            "col_bevp": (h["col_bevp_1s"] + h["col_bevp_2s"] + h["col_bevp_3s"]) / 3}
+
+
 def exam_nusc():
     from . import nuscenes_zs as Z, top10_t2_real as TR
     nz = TR._script("nusc_zs")
@@ -185,31 +199,33 @@ def exam_nusc():
             return s[Bidx].sum(1) / c[Bidx].sum(1)
         return boot
 
-    def metrics(p, smp=samples):
-        h = Z.horizons(Z.per_sample(p.astype(np.float64), smp))
-        return {"l2": (h["l2_1s"] + h["l2_2s"] + h["l2_3s"]) / 3,
-                "col_vad": (h["col_vad_1s"] + h["col_vad_2s"] + h["col_vad_3s"]) / 3,
-                "col_bevp": (h["col_bevp_1s"] + h["col_bevp_2s"] + h["col_bevp_3s"]) / 3}
-    mcv = metrics(cv)
     t8 = 0.5 * np.arange(1, 9)
-    rows = []
+    jobs, meta = [("cv", "cv", cv, np.arange(len(samples)))], []
     for m in MODELS:
         z = np.load(run_dir("preds", f"nusc_{m}.npz"))
         rows_m = pd.Series(np.arange(len(toks)), index=toks)[z["keys"]].to_numpy()
-        sm = [samples[i] for i in rows_m]
-        names = list(z["names"])
-        M = {}
-        for a, traj in zip(names, z["traj"]):
-            pts = np.stack([Z.to_lidar_point(t8, tr[:, :2], tr[:, 2], idx["scenes"][e["scene"]]["lidar_xyz"], e["fut_t"])[0]
-                            for tr, e in zip(traj, sm)])
-            M[a] = metrics(pts, sm)
+        meta.append((m, list(z["names"]), rows_m))
+        for a, traj in zip(z["names"], z["traj"]):
+            pts = np.stack([Z.to_lidar_point(t8, tr[:, :2], tr[:, 2], idx["scenes"][samples[i]["scene"]]["lidar_xyz"],
+                                             samples[i]["fut_t"])[0] for tr, i in zip(traj, rows_m)])
+            jobs.append((m, str(a), pts, rows_m))
+    from multiprocessing import Pool
+    global _NUSC_SAMPLES
+    _NUSC_SAMPLES = samples
+    with Pool(min(16, len(jobs))) as p:        # per_sample's collision loop is ~50 ms / sample: one process per arm
+        res = p.map(_nusc_metrics, [(pts, rows) for _, _, pts, rows in jobs])
+    got = {(m, a): r for (m, a, _, _), r in zip(jobs, res)}
+    mcv = got[("cv", "cv")]
+    rows = []
+    for m, names, rows_m in meta:
+        M = {a: got[(m, a)] for a in names}
         cvm = {k: v[rows_m] for k, v in mcv.items()}
         sid = scene_ids[rows_m]
         boot = booter(sid)
         adv_b = cvm["l2"] - M["base"]["l2"]
         adv_b_ci = np.percentile(boot(adv_b), [2.5, 97.5])
         for a in names:
-            r = {"model": NAME[m], "arm": a, "n": len(sm), "cv_l2": float(cvm["l2"].mean()), "l2": float(M[a]["l2"].mean()),
+            r = {"model": NAME[m], "arm": a, "n": len(rows_m), "cv_l2": float(cvm["l2"].mean()), "l2": float(M[a]["l2"].mean()),
                  "col_vad": float(M[a]["col_vad"].mean()), "col_bevp": float(M[a]["col_bevp"].mean())}
             for k in ("l2", "col_vad", "col_bevp"):
                 d = M[a][k] - M["base"][k]
