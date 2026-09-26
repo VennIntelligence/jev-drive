@@ -141,6 +141,31 @@ def check(adir: Path) -> dict:
     return {"plans": n, "differing": bad, "max_abs_diff_m": worst}
 
 
+def check_head(adir: Path) -> dict:
+    """Rule 8 (a): every request the server dumped (frames/*.npz: `temporal`, ego input, the trajectory it returned) through
+    the fold's numpy Head offline (run it in the server's env, envs/openpilot): trajectory and mode identical."""
+    from .nq3_head import Head
+    fold = json.loads((adir / "fold.json").read_text())
+    h = Head(list(fold["meta"].values())[0])
+    modes = {}
+    for line in open(adir / "x_dump.jsonl"):
+        r = json.loads(line)
+        modes[int(r["frame"])] = r["mode"]
+    n = bad_t = bad_m = 0
+    worst = 0.0
+    for f in sorted((adir / "frames").glob("*.npz")):
+        z = np.load(f)
+        tr, md = h(z["op"], z["ego"])
+        d = float(np.abs(tr[0] - z["path"]).max())
+        worst = max(worst, d)
+        bad_t += d != 0.0
+        fr = int(z["frame"])
+        if fr in modes and modes[fr] is not None:
+            bad_m += int(md[0]) != int(modes[fr])
+        n += 1
+    return {"requests": n, "fold": fold["fold"], "traj_differing": bad_t, "traj_max_abs_diff_m": worst, "mode_differing": bad_m}
+
+
 # ---------------------------------------------------------------- cross-fitted heads
 
 def xfit_root(*p) -> Path:
@@ -269,9 +294,14 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("export-q2", "export-q2-placeholder", "export-mc", "check"))
+    ap.add_argument("cmd", choices=("export-q2", "export-q2-placeholder", "export-mc", "check", "check-head"))
     ap.add_argument("dirs", nargs="*")
     a = ap.parse_args()
+    if a.cmd == "check-head":
+        res = {d: check_head(Path(d)) for d in a.dirs}
+        print(json.dumps(res, indent=1))
+        raise SystemExit(0 if all(r["traj_differing"] == 0 and r["mode_differing"] == 0 and r["requests"] > 0
+                                  for r in res.values()) else 1)
     if a.cmd == "check":
         res = {d: check(Path(d)) for d in a.dirs}
         print(json.dumps(res, indent=1))
