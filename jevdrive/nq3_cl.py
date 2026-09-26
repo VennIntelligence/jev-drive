@@ -63,10 +63,12 @@ def rh_track(xy_carla: np.ndarray, yaw_carla_rad: np.ndarray):
     return np.stack([xy_carla[:, 0], -xy_carla[:, 1]], -1), -np.asarray(yaw_carla_rad)
 
 
-def intent(route_xy: np.ndarray, route_cmd: np.ndarray, route_s: np.ndarray, xy_carla: np.ndarray) -> int:
+def intent(route_xy: np.ndarray, route_cmd: np.ndarray, route_s: np.ndarray, xy_rear: np.ndarray, yaw: float) -> int:
     """WOD-E2E intent (1 straight, 2 left, 3 right) as p4_carla.route_intent with P5's 15 m lookahead; progress is the
-    nearest dense route point (p4_carla._progress, all points)."""
-    p = int(np.argmin(((route_xy - xy_carla) ** 2).sum(1)))
+    dense route point nearest to the vehicle centre (p4_carla._progress on route_rows' c[k], all points). CARLA world
+    in, rear axle -> centre here."""
+    c = xy_rear - REAR_AXLE_X * np.array([math.cos(yaw), math.sin(yaw)])
+    p = int(np.argmin(((route_xy - c) ** 2).sum(1)))
     ahead = np.flatnonzero((route_s >= route_s[p]) & (route_s <= route_s[p] + INTENT_LOOKAHEAD_M)
                            & np.isin(route_cmd, (1, 2)))
     return (2 if route_cmd[ahead[0]] == 1 else 3) if len(ahead) else 1

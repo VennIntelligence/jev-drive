@@ -697,7 +697,7 @@ class ZeroShotAgent(AutonomousAgent):
         xy = np.array([p[0] for p in self.pose_track], float)
         yaw = np.array([p[1] for p in self.pose_track], float)
         ra, th = CL.rh_track(xy, yaw)
-        it = CL.intent(self.route.xy, self.route.cmd, self.route.s, xy[k])
+        it = CL.intent(self.route.xy, self.route.cmd, self.route.s, xy[k], yaw[k])
         ego = CL.ego_input(CL.ego_past(ra, th, k), it)
         every = int(self.cfg.get("dump_every", 0))
         dump = os.path.join(self.out, "frames", "%06d.npz" % f) if every and self.n_plans % every == 0 else ""
