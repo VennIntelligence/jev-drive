@@ -358,6 +358,12 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
   W → P3 可行性由 Opus 执行员 E；G-prep + X 的 agent 与 `nq4_gk.sh` 链由 Opus 执行员 F；K-prep 由 Opus 执行员 K（不等 night-queue-3 的 C / D 空出来）。
   准备好的批量链（G + K 闭环）在 lane B 交卡后启动，批量期的看护可交给 Codex。
 
+- 2026-09-26 19:20 CST [SCH] **F / K / OPL / P3 的启动门改为「就绪即排队、先到先得」**（用户 18:25 与 main 转达的政策；全局表与规则见 night-queue-3 的 [SCH] 19:15 条和 `tmp/2026-09-26-codex-handoff.md` 的「全局调度（SCH）」节）。
+  1. 原来 G + K + X 链与 OPL 都 gate 在 `runs/nq3/b/DONE`（明早以后）。改为：smoke、等价检查、1 unit 与 ~10 unit 的 pilot 一律在 **debug 卡 GPU 1** 上跑，清单过了就在 box 的 `runs/sched/table.tsv` 里排队，按到达先后用 GO 文件授批量卡；链自己启动时读 GO，并按表里的 index 段检查端口。
+  2. 已授的 debug 卡 pilot 段：OPL 130–139（main 18:45，核 200–203）、F 150–159（`runs/sched/nq4-gk.pilot`，2 worker，核 204–207）、K 170–179（核 146–149；`nq4_k.sh` 的 `emptiest_gpu` 会在 0–5 里挑卡，按新政策 K 的闭环检查只能在 GPU 1，K 下次起步前请固定到 GPU 1）。P3 只用 GPU，smoke 在 GPU 1。
+  3. 批量段（全部 index ≤ 494，RPC / TM 端口在 ephemeral 段以下）：OPL IDX0 120、每卡 10（最多 3 张卡，pilot 结束后）；F IDX0 300、每卡 18（lane B 结束后，或从 B 释放的段里给）。GO 约定：`GPUS`、`WORKERS`、`IDX0`、`IDX_SPAN`、`<LANE>_CPUS`，GPUS 里第 k 张卡用 `[IDX0 + k·IDX_SPAN, IDX0 + (k+1)·IDX_SPAN)`；每个步骤边界重读。
+  4. 容量现实：全 box 的 CARLA 由线程数封顶，约 36–38 个 worker；01:00 前 A 18 + B 18 + debug 卡 pilot 已到顶，01:00 后 lane B 默认扩到 30。所以 F / OPL 的批量要么等 lane B 结束，要么 main 在 lane B 的 GO 里把 `B_EXPAND_GPUS` 改成 `0 2 3 4`，把 GPU 5 让出来——这是优先级决定，留给 main。
+
 每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**），E 节按上面补专家汇总。
 
 ## 结果
