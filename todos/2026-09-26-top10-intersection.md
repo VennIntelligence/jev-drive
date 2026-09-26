@@ -237,6 +237,17 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   4. **checkpoint 与推理配置**：SparseDriveV2 = `sparsedrive_navsimv1_92p2.ckpt` + 仓库 `run_pdm_score_navtest_v1.sh` 的推理设置（smoke 同款）；ZTRS = `ztrs_vov.ckpt` + `docs/ztrs_inference.md` 的 8192 词表（NAVSIM 复现用同一套）。
   5. **输出换算**：5.2 原样，(0, 0) + 模型输出点做三次样条插到 0.25 s 网格（ZTRS 的 10 Hz 同样处理）；4 s 以后按最后两点匀速外推到 5 s（只有 WOD 的 RFS 用到）。
   6. **适配器等价检查（先于任何考卷数字）**：navtest 256 个 token，把 nuPlan 自己的 F0 / L0 / R0 当作源相机走同一条渲染路径，与模型原生管线的输出比：两个模型选中同一条轨迹（SparseDriveV2 为同一 path / velocity 组合，ZTRS 为同一词表项）的比例 ≥ 90% 才开考；不过就停下查。
+- 2026-09-26 10:25 CST [T1] WOD / NAVSIM / nuScenes 的操作性选择（写于这三张卷的任何输出之前）：
+  1. **WOD 的「二选一」写死为保留源相机的 yaw**：F0 ← FRONT、L0 / R0 ← FRONT_LEFT / FRONT_RIGHT（WOD 标定实测 ±45°），与 P5 同一个适配器（10:05 (2)），不做 ±55° 的重投影；B0 不用（两个模型都只读 L0 / F0 / R0）。
+     帧 = rater 479 + ADE-extra 958，图取 zero-shot 考试已存的 package（帧 f 本身），标定每个 sequence 一套；ego 同 10:05 (3)，intent → NAVSIM one-hot 同 P5。
+     判：RFS cluster mean（榜单口径）与 frame mean，对 cv、logged future、`ours cls ego`、Alpamayo 1.5 nav（E[1 sample]）、openpilot Cinque 的配对 Δ（cluster 分层 bootstrap 10 000）；
+     第 22 条主判 = rater + extra 共 1 437 帧上 s_ego 第 1–9 档的 ADE@5 s（对 logged future），档界用 P0 run 全 val 的 s_ego，配对 Δ 按 sequence bootstrap；顶档单独报。5 s 点按最后两点匀速外推（5.2）。
+  2. **nuScenes**：main 4 636，只用 CAM_FRONT / FRONT_LEFT / FRONT_RIGHT 关键帧（两个模型都不读后视，所以**不需要**补解压 CAM_BACK），yaw 保留源相机的（nuScenes 侧前约 ±55°）；
+     box 上没有 CAN bus，ego 速度 / 加速度改由 20 Hz ego pose 算（±50 ms 中心差分，再按 P4 的约定存成每 0.25 s 的速度变化），与 zero-shot 考试的 CV 同源；
+     command 用 VAD converter 规则（GT 3 s 横向位移，`future_label_conditioning`，与 nuscenes-physicalai 同口径）映射到 NAVSIM one-hot；输出（后轴轨迹 + heading）用 `nuscenes_zs.to_lidar_point` 换到 LIDAR_TOP 点（与 Alpamayo 行同一换算），打分是 `scripts/nusc_zs.py` 的 `cmd_score` 原样。
+  3. **NAVSIM 复现**：两个模型都走**自己的**特征代码（我们的 runner 的 native 路径，与适配器等价检查里的 native 同一段代码），全部 token 推理后存 8 个 0.5 s 位姿，
+     用回放 agent + 官方 devkit 打分（`scripts/navsim_zs_score.sh`，与 zero-shot 考试同一套 metric cache）：SparseDriveV2 = navtest、navsim v1.1、PDMS（论文 92.2）；
+     ZTRS = navhard two-stage、navsim main @ 0a380a9、EPDMS（HF 榜 48.1；README 45.5 是旧协议）。ZTRS 的 10 Hz 输出取 0.5 … 4.0 s 的点。复现差距只报不判。
 - 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
   所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
 
