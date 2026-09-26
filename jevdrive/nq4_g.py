@@ -577,7 +577,8 @@ CONFLICT_LAT_M = 2.0
 def hazard_point(base: str) -> dict:
     """Where the hazard meets the route in the orig world: the route arc position of the first recorded tick at which a
     scenario actor (hidden.json of the PDM-Lite P6 x10 / P5 x+ recording of this route, seed 0) is within 2 m of the
-    route centreline; if none ever is, its point of minimum |lateral offset|."""
+    route centreline (records more than 5 m below the actor's highest recorded z, i.e. parked underground before the
+    scenario places it, are dropped); if none ever is, its point of minimum |lateral offset|."""
     D = data_dir() / "runs"
     P = dense_route(base)
     for pat in (f"p6/gen/attempts/{int(base) * 100 + 10}/*", f"p5_pairs/gen/attempts/{int(base) * 100 + 10}/*"):
@@ -587,6 +588,11 @@ def hazard_point(base: str) -> dict:
             ids = {h["id"] for h in json.loads((a / "hidden.json").read_text())}
             z = np.load(a / "actors.npz")
             m = np.isin(z["id"], list(ids))
+            if m.any():   # drop the parked-underground records (walkers kept under the ego, cut-in cars at -500 m)
+                top = pd.Series(z["xyz"][m][:, 2]).groupby(z["id"][m]).transform("max").to_numpy()
+                keep = np.zeros(len(m), bool)
+                keep[np.flatnonzero(m)] = z["xyz"][m][:, 2] >= top - 5.0
+                m = keep
             if not m.any():
                 continue
             s = arc(P)
