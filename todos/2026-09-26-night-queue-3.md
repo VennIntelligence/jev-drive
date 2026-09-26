@@ -102,6 +102,39 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - 读法：Q4a 过 → 系统偏置来自训练时没见过真实非 hazard 帧，可在训练里修；不过 → 偏置在特征分布差本身，需要真实配对数据，写进论文限定。
 - Q4a 若过线，过线的 Δ（λ 选定版）作为 CL 队列的一个追加臂（`mc_real0`），与 M-C 同路线同 seed 配对。
 
+- 2026-09-26 16:45 CST [D] 开工（执行员 D，lane D），分步估时（写于本 lane 任何数字之前）。资源：核段 `taskset -c 180-199`（20 核），OMP / MKL / OpenBLAS / NUMBA 线程 ≤ 20（并行子步骤按份分，devkit 的 ray worker 每个 1 个 BLAS 线程）；
+  GPU 6 的空档，显存 ≤ 20 GB（与 lane C 共卡）。脚本 `scripts/nq3_d.sh`（tmux `jev:nq3-d`），状态 `runs/nq3/d/`，每步产物在 `runs/nq3/<q4a|q4b|q5|q6>/`。
+  | 步 | 内容 | 估墙钟（box 时钟） | 资源 |
+  |:--|:--|:--|:--|
+  | D0 | Q4a 代码与链式脚本；λ_r = 0 对已存 M-C 的逐 fold 复现检查、devkit 子集打分对全量的逐位核对 | 16:45–18:45 | Mac + 小量 box |
+  | Q4a-1 | 真实干净帧筛选（navtrain GT 框、WOD YOLO 检测）、navtrain 留出划分、navtrain 子集的 Qwen 抽取清单 | 15 min | CPU |
+  | Q4a-2 | navtrain 约 8 000 token 的 Qwen `L18_last`（NAVSIM 2 Hz clip，2 个进程） | 50 min | GPU 6 ≤ 18 GB |
+  | Q4a-3 | M-C + 真实帧零约束：3 seed × 2 模型 × 3 λ_r × 5 fold（GPU `eigh`）；Hydra 3 seed × 2 模型重拟合出留出 token 的选择 | 30 min | GPU 6 + CPU |
+  | Q4a-4 | navtrain 留出（约 2 000 token）devkit v1.1：Hydra 与 Hydra + Δ_λ 共 24 个 job → 选 λ | 30 min | CPU 16 worker |
+  | Q4a-5 | navtest devkit v1.1（6 个主 job + 6 个 g₂ 描述 job）、P5 / WOD / I3 读数、表、判格、`PASS` | 45 min | CPU + GPU 6 |
+  | Q4b | P5 v1 BA 考卷帧按 NAVSIM 2 Hz sample-and-hold 重抽 openpilot `temporal`（两个模型）、Hydra 兼容检查；过线补 P5 翻转 | 1.5 h | GPU 6 + CPU |
+  | Q5 | DrivoR / WA-JEPA 的 ego status 扰动（nuScenes main + navtest，GPU 推理 + devkit 打分）、选择性表（纯 CPU）、scorer argmax 扰动（navtest 256 token） | 4 h | GPU 6 + CPU |
+  | Q6 | 主表口径统一（已存预测重算）、V-JEPA 2 单帧对照（P5 v1 BA 抽取 + 3 seed 拟合）、V-JEPA 2 流上真实数据（navtest 抽取 + 读数） | 3.5 h + 写作 | GPU 6 + CPU |
+  预计 Q4a 在 22:00 前出判格，Q4b / Q5 在 22:00–03:30，Q6 在 03:30–07:30，之后写结果与 decisions。任何一步超估计 2 倍，脚本停该步写 `runs/nq3/d/ERROR`。
+- 2026-09-26 16:50 CST [D] **Q4a 的操作化**（写于 Q4a 的任何数字之前；此前只读过第 42、44、53 条与 N3 / E1 / G0–G2 已发表的数）。
+  (1) **真实干净帧**：走廊 = 该帧自己的 log 未来路径（navtrain 8 个 0.5 s 位姿，WOD 20 个 0.25 s 点）从原点起、沿末端朝向延长到 30 m（E3 的 `extend`），半宽 4 m，0 < s ≤ 30 m。
+  物体：navtrain = t0 的 GT 框（E3 的 `extract` 缓存，五点判入廊）；WOD train 没有 GT 框，用 G0 已有的 YOLO26x-seg 三路前视检测（平地抬升 `lift_ok`，中心点）。
+  干净 = 走廊内没有行人 / 骑车人，**且**侧带 1.5 m < |d| ≤ 4 m 内没有车辆（「切入车」的操作化：30 m 内贴在路径旁的车都当潜在切入，偏保守；|d| ≤ 1.5 m 的前车保留）。WOD 的筛选受 YOLO 召回限制（远处行人会漏），写作限定。
+  (2) **留出与 navtrain 特征**：navtrain 全部 log 按 rng 0 分 90 / 10；λ 选择只用 10% 留出 log 里属于 E6 两万 token 子集的 token（有 v1.1 metric cache `v1_e6sub`）；零约束集不含留出 log。
+  navtrain 没有 Qwen 特征，按 `navsim_qwen` 原配方（NAVSIM 2 Hz clip，P3(d″)）只抽：干净帧里随机 6 000 个（rng 0）+ 全部留出 token。WOD 用 `qwenvid_train_t4` 里全部干净帧。
+  (3) **损失**（每个路线 fold）：Σ_pair |D W − R|² + μ Σ_train |Z_c W|² + λ_r · n_pair · [½ mean_{navtrain 干净}|(z − z̄) W|² + ½ mean_{WOD 干净}|(z − z̄) W|²] + λ |W|²；
+  z 用该 fold 的 CARLA 训练行统计量标准化（与 E1 把 Δ 搬到真实数据的映射相同），z̄ = CARLA 训练行均值，所以约束的正是部署时加上去的 Δ(x)。两个数据集各占一半权重。
+  λ_r ∈ {0.1, 1, 10}；ridge 的 λ 仍按原来的 3 折路线内层 CV 在配对 MSE 上选（零约束项在内层拟合里照加），μ、网格、fold 一字不改。**λ_r = 0 必须逐 fold 复现已存 M-C（seed s）的预测（≤ 1e-3 m、λ 相同）**，不过就停。
+  (4) **seed**：seed s = M-C 路线分折 seed s（第 42 条三个 run）配 Hydra seed s（N3）。真实数据上的 Δ = 5 个 fold head 的 Δ 平均（E1）。
+  (5) **选 λ**：每个模型 × seed 各选一次，取 navtrain 留出上 Hydra_s + Δ_λr 的 v1.1 PDMS（官方 devkit）最高的 λ_r。Hydra_s 在留出 token 上的选择来自 N3 `fit` 代码原样重拟合、把留出 token 作额外评测矩阵
+  （navtest 上的选择对 N3 已存的同一 anchor ≥ 99% 才用；Hydra 训练时见过这些 token，对 Hydra 是样本内、对 Δ 是样本外）。Δ 加法同 N3：加在 0.5 … 4.0 s 的 xy，heading 不动。
+  选择结果连同时间写进 `runs/nq3/q4a/lam_select.json`，**先于任何 navtest 打分**；navtest 只打选定的 λ。
+  (6) **判格**：主臂 = Hydra_s + Δ_λ\*，**不加 gate**（零约束就是来替代 gate 的）；g₂ 门控版只作描述。NAVSIM = navtest v1.1 PDMS 对 N3 已存的同 seed Hydra 分数逐 token 配对（bootstrap 10 000），点估计 ≥ −1.0；
+  P5 = 约束版 M-C 在 P5 v1 BA 上按 fold 出预测，`p5_exam.exam` + `reactivity_mc.criteria` 原样，行人翻转 ≥ 0.8 × 同 seed 已存 M-C 的行人翻转（43.3 / 43.6 / 42.4%）。两条都满足 →「能力包成立」。
+  每个模型 × seed 各判，三个 seed 一致取那一格，否则写「随 seed 变」。描述：WOD RFS（E1 的 19 663 帧、prior = WOD train `ridge_late`；cluster mean 与 frame mean 的配对差，cluster 分层 bootstrap）、
+  激活率，I3 车辆翻转（`elicit_i3` 的 judge，5 fold 平均）。
+  (7) **交给 CL**：Cinque 的合并判格是「成立」才写 `runs/nq3/q4a/PASS`（CL 的 M-C 臂是 Cinque）；`mc_real0` = Cinque seed 0、λ\*(seed 0) 的 5 个 fold head（W、z̄、两路标准化统计量、λ，E1 `fold_heads` 的格式）放 `runs/nq3/q4a/mc_real0/`，附说明。
+
 ### Q5. 六族的 hack 核查
 
 - **ego status 依赖**：WA-JEPA 在 nuScenes 上 L2 0.41（cv 0.71，全部考生最好），DrivoR 0.70。ego 速度 / 加速度 / 命令分别置零、置 cv 常数、换成同场景另一帧，重跑 nuScenes main 与 NAVSIM navtest。
