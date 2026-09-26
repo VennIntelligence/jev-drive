@@ -235,6 +235,30 @@ G2 等 G0、G1 出来后排；行人资产另行调研
 - 2026-09-26 09:30 CST（box 时钟）[G1] **事后加一个描述对照（看过 I3 / WOD 的 g₁–g₃ 数之后，不进判格）**：g₂ 在 WOD val 上的均值只有 0.16、g > 0.5 的帧 < 2%，害的消失可能只是 Δ 被整体缩小。
   对照 c₂ = 常数 gate，取 g₂ 在同一批评测帧上的均值（WOD 19 663 帧上的均值、I3 全部帧上的均值），乘同一个 Δ、走同一套读数；c₂ 与 g₂ 的差才是「按帧选择」的贡献。NAVSIM 不做（要再打分，且 WOD / I3 已足够回答）。
   另记一个实现修正：I3 的 gate 描述表第一版把每个 Δ 来源的最后一个 gate 重复写了 7 遍（只影响描述表，翻转数逐位不变，重跑 `i3/20260926-092702` 已核对）。
+- 2026-09-26 10:50 CST（box 时钟）[G2] 分步估时、G1c 的定义与读法、G2 的操作化，写于 G1c 与 G2 的任何数字之前（此前只读过 G0 / G1 / G3 已发表的数与 I3 的索引结构：
+  I3 有 Qwen 特征的帧 6 232 = x⁺ 3 559、x⁻ 1 881、null 792，其中 24 帧的未来是 NaN）。代码 `jevdrive/real_g2.py`，run `runs/real-data-transfer/g2-*/<time>`，小表 `research/results/real-data-transfer/g2/`。
+  **估时**（墙钟；box 负载 ~400 / 125 核，devkit 限 2 路 × 8 线程）：G1c 工程 20 min + WOD / I3 读数 5 min + NAVSIM 6 次打分约 30 min；G2 工程 1.5 h，I3 上 3 seed × 2 模型 × 5 折的 M-C 与对照（闭式，GPU）5 min、
+  student 60 次 MLP 拟合约 15 min，WOD 读数 10 min，NAVSIM 16 次 PDMS 打分约 1–1.5 h（与 G1c 的打分错峰）；表、图、I3 子文档与第 44 条 1.5 h。合计约 5–6 h。任何一步超估计 2 倍先停。
+  **G1c 常数减速的定义**：对每个模型、每个数据集，c = Σᵢ g₃,ᵢ Δᵢ / Σᵢ g₃,ᵢ（Δ = E1 存的 M-C Δ，20 点 × 2，求和在该数据集全部评测帧上，g₃ 同 G1），**只保留纵向（x）分量、横向置 0**；
+  arm = prior + g₃(x) · c。也就是「M-C Δ 在 g₃ 开门帧上的平均纵向形状」，与 g₃ × M-C 的平均开度、平均减速量相同，只去掉 Δ 随帧变化的方向。选它而不选「训练行上拟合的剖面」，因为它回答的是「同样大小的刹车、同一个门，去掉 CARLA 配对学到的逐帧方向后还剩多少」；
+  拟合剖面会用人类标签另学一个幅值，混进第二个问题。均值只用模型输出与 g₃，不用标签。描述另报 2D 版（横向也保留均值）。
+  **G1c 读数**：NAVSIM navtest（`ridge_late` prior，v1.1 PDMS 主、main EPDMS 并列）与 WOD 19 663 帧（`elicit_e1.readouts`），读数函数不改；另报 g₃ × M-C 对 g₃ × c 的逐 token 配对差（token bootstrap，全部 token 与 g₃ > 0.01 的 token）。I3 作描述。
+  **G1c 读法（写死）**：主读数 = NAVSIM 全部 token 上 PDMS 的配对差 (g₃ × M-C) − (g₃ × c)。CI 整体 > 0 → g₃ × M-C 的收益里有 CARLA 配对学到的逐帧方向的贡献，g₃ 值得作为车辆通道的部署门、带着配对 Δ 单独登记；
+  CI 跨零或整体 < 0 → NAVSIM 的正数由「lead 门 + 一个与场景无关的刹车」解释，与 CARLA 配对无关，第 44 条的「唯一正数」改写成这一句；此时若 g₃ × c 自己按 G1 的判据「有用」，另记「lead 门 + 常数刹车」是一个与配对无关的车辆规则候选。
+  另报比值（g₃ × c 的收益 / g₃ × M-C 的收益）。WOD 上 g₃ 几乎不开（G1），两个 arm 预期都 ≈ 0，只描述，不进读法。
+  **G2 的操作化**：(1) **训练行**：I3 的 obs 对（x⁺ = plus 世界、x⁻ = 同帧 minus 世界）与 null 对（minus 对 null 世界），目标 = (y⁺ − y⁻) − (p⁺ − p⁻)，未来含 NaN 的对不进训练；65 个场景按 `default_rng(s)` 排列后轮流分 5 折（`p5_exam.folds` 同一规则），每折的 head 只用其余 4 折的场景训。
+  (2) **prior** = I3 考试里 CARLA 拟合的 `ridge_late op-<m> temporal`（`preds_i3.npz`，冻结），I3 上所有 arm 与翻转判据都对它；hard / uniform 的 s_ego 用同一文件的 CARLA `ridge ego`。
+  (3) **μ 行**（M-C 的零均值与方差惩罚、student 的二阶矩项、标准化统计量）= 训练折场景的 minus 世界帧（有特征的全部，含 stream），即 I3 里「没有插入车辆的原始驾驶」，对应 P5 的 train 行；与 x⁻ 侧重叠（P5 里不重叠），照记。
+  (4) **M-C**：`reactivity_mc` 的配对闭式解、λ 网格、μ = n_pair / n_μ、按场景的内层 3 折一字不改；特征 Qwen `L18_last` ⊕ openpilot `temporal`（`op_streams`，与 I3 考试同），每路按 μ 行标准化再除 √d。对照 hard-example 重加权与均匀 imitation = `fit_fold` 同名 arm 的配方（行 = μ 行 ∪ 配对帧，Y = F − prior）；另一对照 = CARLA 训的同一 head（I3 考试已存的 M-C pair / hard / uniform 与 G0 的 student）。
+  (5) **student**：E5 配方原样（MLP、AdamW、零初始化输出、按场景的 GroupShuffleSplit 20% 早停、random_state 0），输入 [z_op, z_e]，e = G0 的 I3 embedding（`load_embed("i3")`），统计量用 μ 行；arm A 主判，B 的 teacher = 同折同 seed 的 I3 M-C pair head。
+  (6) **3 seed**：s ∈ {0, 1, 2} 同时是场景分折排列与 MLP 初始化种子；M-C 是闭式解，seed 间只差分折。
+  (7) **I3 读数**：每个场景用没见过它的那一折的 head；`p5_exam.exam` 原样（去掉 TFv6 列），τ 由 held-out null 定；报合并与逐 family 翻转、样本外 null false-flip、非反应帧误翻，以及对 prior 与对 CARLA M-C 的逐帧配对差（场景 bootstrap）。
+  (8) **迁移**：Δ = 5 个 fold head 的平均，每个 head 用自己的 I3 μ 行统计量（主，与 E1 用 CARLA 训练行同理）；WOD train 统计量的版本只描述。WOD：E1 的 19 663 帧、WOD train `ridge_late` prior、`elicit_e1.readouts` 原样，τ = 该 head 在 I3 held-out null 上的 τ（同 seed）；
+  NAVSIM：navtest、navtrain `ridge_late` prior、0.5 … 4.0 s 八点、heading 不动（同 E1），官方 v1.1 PDMS；分组 = 全部、**有接近车辆**（`elicit_e3.cause_flags_nav` 的 cause_vehicle，接近速度 < −0.5 m/s，与 g₂ 的 navtrain 标签同一函数）、走廊内行人 / cyclist、直行。
+  NAVSIM 打分的 arm：M-C pair 与 student A 各 3 seed，hard / uniform 只 seed 0，两个模型（16 次）；EPDMS 不打。
+  (9) **判格**（todo 写死的两条，逐 模型 × head × seed）：**过** = I3 held-out 合并翻转点估计 ≥ 同模型 CARLA 训的 M-C（Cinque 58.7%、Lebowski 67.4%）且样本外 null false-flip ≤ 7%，且 WOD Cut_ins RFS Δ CI 不整体 < 0、straight_yaw 激活 ≤ 7%；否则不过，写明哪条。
+  主判 Cinque 的 M-C pair 与 student A；三个 seed 一致取那一格，否则「随 seed 变」。student 也用 M-C 的 58.7% 这条线（登记原文），CARLA student 的 I3 数并列。限定先写下：prior 自己就有 70%，这条线对「回到 prior」的 head 也会过，所以另报对 prior 的配对差，不进判格。
+  (10) **g₂ × G2 Δ（并列描述，不进判格）**：G1 的主 gate g₂ 乘在 G2 的 M-C 与 student A 的 Δ 上，WOD 用 G1 存的 g₂（`wod/20260926-092810/wod_gates_<m>.npz`），I3 用 G1 同一段代码重算的 I3 OOF probe；NAVSIM 不打分。
 
 ## 结果
 
