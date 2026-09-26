@@ -299,8 +299,16 @@ def mc(rl, seed: str = "0"):
     from . import elicit_e2_train as E2T, reactivity_mc as MC
     assert os.environ.get("P5_SET") == "carla_p5v1_ba", "R2 of E2 reads the P5 v1 BA set: set P5_SET"
     s = int(seed)
-    if s:
-        MC._inner_splits = _seeded_inner_splits(s)
+    if s:                          # only E2's own lambda selection; E1's stored M-C fold heads (R1) stay as they are
+        fit, orig = E2T.fit_arms, MC._inner_splits
+
+        def fit_seeded(*a, **k):
+            MC._inner_splits = _seeded_inner_splits(s)
+            try:
+                return fit(*a, **k)
+            finally:
+                MC._inner_splits = orig
+        E2T.fit_arms = fit_seeded
     rl.event("g3b_mc_seed", seed=s)
     E2T.run(rl)
 
