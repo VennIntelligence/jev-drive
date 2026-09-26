@@ -3163,6 +3163,10 @@ NAVSIM 上 g₂ 开度 0.43（直行 0.50，navtrain 标签里接近车辆占 40
 4. 轻量开放词表模型对措辞很脆（YOLOE 用 "pedestrian" 几乎不出检测、用 "person" 与 SAM 持平）；SAM 3 在同一个词上是稳的。
 
 **状态**：**待定**。限定：P5 是 v0 的 hazard 帧；nuScenes 只取 1/3 scene；延迟在 RTX PRO 6000 上、batch 1，Ultralytics 的时间里一半是 CPU 前后处理；YOLOE 类别词与 fp16 是事后加的 side 变体；没有复跑第 43 条 Q6 的规则门（行为读出）。
+**N5 补一行（2026-09-26，[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N5，判据先于数字；只改测量，不进模型）**：把平地抬升换成按相机内参的单目 metric depth（UniDepth v2 ViT-L，主读数；接地点沿射线放到预测深度），
+同一批 YOLO26x-640 检测、同一套评测，20–40 m 行人 BEV 召回 **nuScenes 0.22 → 0.57（过 0.40 线）、P5 0.13 → 0.397（差 0.003 到线，登记的「之间」）**；近处不坏（nuScenes 0–10 m 0.67 → 0.94，P5 0.90 → 0.85），P5 hazard 行人全部 0.50 → 0.68。
+所以「缺口在放置」在真实相机上得到了修法（单目 metric depth 给内参就够，不需要地面高度）；CARLA 上修回大半，残差来自 P5 上深度整体偏近 10–15%（推测是渲染域差）。SAM 3.1 检测 + 同一深度 P5 0.49 / nuScenes 0.56（副读数）。
+DA3METRIC-LARGE 副读数待补。表：[results/night2/N5/](results/night2/N5/)，图：[night2-n5-depth-recall](figs/night2-n5-depth-recall.png)。
 **会推翻或推进本条的证据**：在 YOLO26 状态上复跑 Q6-SAM 的规则门，行人 family 翻转不低于 SAM 状态（推进：可以直接替换）；给接地点加按相机标定尺度的深度或地面高度后，P5 / nuScenes 行人召回向 oracle 高度上界（0.70–0.81 / 0.52–0.67）靠拢（推进结构化感知通道）。
 
 ## 46. 多榜前 10 的交集：没有一个方法族同时在真实数据开环榜和 CARLA 闭环榜上都进前 10；交集由训练数据生态和输入契约决定，不是能力信号（**待定**）
@@ -3216,3 +3220,29 @@ BLUE 是第 38 条里唯一在突发 hazard 上显著更好的方法，它的 ga
 **状态**：**待定**。限定：WOD 的 21 帧只能当 sanity check；宽口径 133 帧混有弯道，WOD 没有 map 分不开；`cls_late` 词表里 bypass 形状的 anchor 有多少还没数，0 / 21 可能是 vocabulary 造成的而不是 representation。
 **会推翻或推进本条的证据**：N1 里 PDM-Lite 在 bypass 类的绕行比例 < 70%（考卷造不出来）；词表里 bypass anchor 覆盖足够而 `cls_late` 在 P6 上仍为 0（第 25 条的 reaction decoder 只会「刹」，第三层要用横向目标重训）；
 TFv6 waypoint 在 P6 上有显著 Δ_lat（第 38 条「TFv6 高分主要不是 E 层」在 obstacle_bypass 这一格要改写）。
+
+## 48. 冻结的视频 / 图像自监督特征里有 E 层（行人反应）信号，但只有配对差分激发得出来：V-JEPA 2 与 Qwen 同一水平，SigLIP2 低一档，DINOv2 与 openpilot small 没有（**待定**，P5 v1 BA，3 seed）
+
+2026-09-26。预登记、操作性选择与偏离在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N6（`[C]` 条目写于任何数字之前），小表在 [results/night2/N6/](results/night2/N6/)。
+接第 42 条（M-C：Qwen `L18_last` 单流配对差分在 P5 v1 BA 上行人翻转 42%）与 [消融矩阵盘点](../tmp/2026-09-26-ablation-matrix.md) 的空格：同一套 `ridge_late` 与 pair-Δ（`reactivity_mc.fit_fold` 原样，把 Qwen 流换成该 backbone，prior = openpilot Cinque `ridge_late`），
+三路相机拼接、mean-pool、冻结；判据：每个 seed 行人翻转 CI 下界 > 该考生样本外 null false-flip + 10 pp。
+
+| backbone（主 tap） | `ridge_late` 行人 | pair-Δ 单流行人，3 seed 均值 [最小, 最大] | pair-Δ cut-in（对 prior Δ） | 判格 |
+|:--|--:|:--|:--|:--|
+| Qwen3-VL-4B `L18_last`（参照，seed 0 逐位复现第 42 条） | 0.0% | 41.5% [40.4, 42.1] | 73.0%（−4.6 pp） | 过 |
+| V-JEPA 2 ViT-L `mean`（4 帧 clip） | 0.0% | **47.0% [45.8, 47.8]** | 77.0%（−0.6 pp） | **有**（3/3） |
+| SigLIP2 so400m `patch_mean` | 0.0% | **33.8% [30.5, 37.0]** | 74.0%（−3.6 pp） | **有**（3/3） |
+| DINOv2-B `patch_mean` | 0.0% | 7.1% [4.2, 10.3] | 80.2%（+2.6 pp） | 没有（0/3） |
+| openpilot small `temporal` | 0.2% | 3.0% [2.0, 3.7] | 82.9%（+5.3 pp） | 没有（0/3） |
+| DINOv3 | — | — | — | 未测（无权重） |
+
+null false-flip 4.8–5.2%；副 tap 与 Lebowski prior 判格不变。
+
+**结论**：
+1. 均匀 imitation（`ridge_late`）在每个通用 backbone 上行人翻转都是 0，配对差分下 V-JEPA 2 / Qwen / SigLIP2 都过线：P5 上「冻结特征 + 薄 head 的行人翻转为 0」是训练信号的性质，不是这些特征的性质（与第 43 条修正同一个结论，现在推广到三种预训练）。
+2. V-JEPA 2 与 Qwen 同一水平（seed 0 CI [36.8, 54.9] 对 [33.5, 50.0]，不写「更好」）。V-JEPA 看 4 帧、图像模型只看当前帧，「视频预训练」与「有时间」没有分开。
+3. DINOv2（纯视觉自监督）与 openpilot small（驾驶视频，vision 层滤掉行人，同第 42 条 D0）不过；SigLIP2 过，提示语言对齐的图像特征更线性可读（推测，未分离）。
+4. 与 WA-JEPA 的 +6 EPDMS 不同口径（微调 encoder、token 网格、NAVSIM），不能直接比；这里只说明冻结 mean-pool 的 V-JEPA 2 在配对监督下带着至少与 Qwen 一样多的行人反应信息。
+
+**状态**：**待定**。限定：只在 CARLA（BA 集）；pooled 特征、线性 head；DINOv2 输入按竖图改成 350 × 322；DINOv3 未测。图：[night2-n6-backbone-flips](figs/night2-n6-backbone-flips.png)。
+**会推翻或推进本条的证据**：V-JEPA 2 只喂当前帧（1 帧重复成 clip）行人翻转掉到 DINOv2 的水平（那就是「时间」而不是「视频预训练」）；V-JEPA 流替换 Qwen 进 E5 student 后在真实数据上不再有害（推进快通道换 backbone）。
