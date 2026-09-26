@@ -37,11 +37,12 @@ def smooth(u):
     return 0.5 - 0.5 * np.cos(np.pi * u)
 
 
-def fold_pick(split: dict, base: str, pick: str) -> str:
-    """The fold whose readout drives this route. K's rule: a recorded route has its own fold; 'unseen' = the other fold,
-    'seen' = its own; a route with no fold label is driven by R1."""
+def fold_pick(split: dict, base: str, pick: str, rule: str = "label") -> str:
+    """The fold whose readout drives this route: 'unseen' = the other fold, 'seen' = its own. rule 'k' (readouts trained on
+    P5 v1 BA, as K's nq4_k.readout): a route never recorded there is driven by R1; rule 'label' (the Q2 head, trained on P6
+    whose routes are not in P5 v1 BA): every route's fold label counts, as K's split entry says for X."""
     r = split.get(str(base))
-    if r is None or "fold" not in r:
+    if r is None or "fold" not in r or (rule == "k" and not r.get("recorded")):
         return "R1"
     own = r["fold"]
     return own if pick == "seen" else ("R2" if own == "R1" else "R1")

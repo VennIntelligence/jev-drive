@@ -12,7 +12,7 @@
 #   examinees  pdm (PDM-Lite, SimLingo's tree: it plans on the registry), tfv6 / bridgedrive / simlingo / blue (author
 #              executors, scripts/nq3_b_cl10.sh as is), cinque (openpilot Cinque native plan -> P7, lane B's CL2),
 #              mc / q2 (our heads -> P7, cross-fitted: each route driven by the fold that never saw it), x (Q2 mode head ->
-#              geometric path -> P7), k0..k3 (K ladder, K's recipe, scripts/nq4_k_recipes.sh when it exists),
+#              geometric path -> P7), k0..k3 (K ladder, K's wiring in b2d_zeroshot_agent; waits for runs/nq4/k/READY),
 #              k3seen (K3 driven by the fold that DID see the route: G's positive control)
 #   variants   orig ghost shift swap (G, runs/nq4/gk/g_routes.xml) | k (the official 220, K)
 #   routesets  g (the 80 G routes / 50 for swap), gob (the 40 obstacle routes), grec (G routes recorded in K's
@@ -99,7 +99,7 @@ server_names() {  # the model servers an examinee needs on one GPU
         cinque) echo op-cinque-g$2 ;;
         mc) echo qwen-g$2 headq-g$2 ;;
         q2|x) echo head-g$2 ;;
-        k*) declare -F k_server_names >/dev/null && k_server_names "$1" "$2" ;;
+        k*) k_server_names "$1" "$2" ;;
     esac
 }
 servers_for() {
@@ -114,9 +114,20 @@ servers_for() {
     esac
 }
 
+# K's closed-loop wiring (scripts/nq4_k.sh cl): scripts/b2d_zeroshot_agent.py "model": "head", "arm": "k0".."k3",
+# "k_view" unseen / seen, "k_split"; one head server (the same as q2 / x). Names: k<L>_unseen, k<L>_seen, k3seen (G).
+k_server_names() { echo head-g$2; }
+k_servers() { srv_start head-g$2 "$2" "$PY_OP" scripts/nq3_cl_server.py --pool "$WORKERS"; }
+k_agent() { echo "$PY_SCOUT scripts/b2d_zeroshot_agent.py"; }
+k_cfg() {  # k_cfg <cand> <gpu> <seed>
+    local arm=${1:0:2} view=unseen
+    [[ $1 == *seen && $1 != *unseen ]] && view=seen
+    echo "{\"model\": \"head\", \"warmup_s\": 5.0, \"desire\": true, \"head_cam_tick\": 0.0, \"arm\": \"$arm\", \"k_view\": \"$view\", \"k_split\": \"$SPLIT\", \"socket\": \"$G/srv/head-g$2.sock\", \"controller\": \"fixed\", \"controller_preset\": \"pursuit\", \"controller_config\": \"$P7\", \"seed\": $3, \"dump_every\": 0}"
+}
+
 # ---------------------------------------------------------------- examinee configs and runners
-fold_json() {  # fold_json <key> <R1 path> <R2 path> <pick>: the cross-fit block of the nq4 agent config
-    echo "\"folds\": {\"split\": \"$SPLIT\", \"key\": \"$1\", \"R1\": \"$2\", \"R2\": \"$3\", \"pick\": \"$4\"}"
+fold_json() {  # fold_json <key> <R1 path> <R2 path> <pick> <rule>: the cross-fit block of the nq4 agent config
+    echo "\"folds\": {\"split\": \"$SPLIT\", \"key\": \"$1\", \"R1\": \"$2\", \"R2\": \"$3\", \"pick\": \"$4\", \"rule\": \"$5\"}"
 }
 cfg_for() {  # cfg_for <cand> <gpu> <seed> -> agent config path (P7 examinees)
     local c=$1 g=$2 seed=$3 f=$G/cfg/$1-g$2-s$3.json
@@ -125,9 +136,9 @@ cfg_for() {  # cfg_for <cand> <gpu> <seed> -> agent config path (P7 examinees)
     local QX=$G/heads_xfit Q2N=${Q2NAME:-q2} D=${DUMP_EVERY:-0}   # Q2NAME=q2_placeholder, DUMP_EVERY=1: smoke / rule 8 only
     case $c in
         cinque) echo "{\"model\": \"cinque\", \"socket\": \"$G/srv/op-cinque-g$g.sock\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05, \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": true, $ctl, \"seed\": $seed, \"dump_every\": 0}" ;;
-        mc) echo "{$head, \"arm\": \"mc\", \"socket\": \"$G/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json heads "$QX/mc/R1/heads.npz" "$QX/mc/R2/heads.npz" unseen)}" ;;
-        q2) echo "{$head, \"arm\": \"q2\", \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen)}" ;;
-        x) echo "{$head, \"arm\": \"q2\", \"x\": true, \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen)}" ;;
+        mc) echo "{$head, \"arm\": \"mc\", \"socket\": \"$G/srv/headq-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json heads "$QX/mc/R1/heads.npz" "$QX/mc/R2/heads.npz" unseen k)}" ;;
+        q2) echo "{$head, \"arm\": \"q2\", \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen label)}" ;;
+        x) echo "{$head, \"arm\": \"q2\", \"x\": true, \"socket\": \"$G/srv/head-g$g.sock\", $ctl, \"seed\": $seed, \"dump_every\": $D, $(fold_json q2_dir "$QX/$Q2N/R1" "$QX/$Q2N/R2" unseen label)}" ;;
         k*) k_cfg "$c" "$g" "$seed" ;;
     esac > "$f"
     echo "$f"
@@ -148,7 +159,7 @@ launch() {  # launch <cand> <gpu> <seed> <xml> <ids> <out>: one b2d_run runner i
         *)
             local py=$PY_SCOUT ag=scripts/nq4_x_agent.py
             [[ $c == cinque ]] && { py=$PY_TCP; ag=scripts/b2d_zeroshot_agent.py; }
-            [[ $c == k* ]] && declare -F k_agent >/dev/null && read -r py ag <<< "$(k_agent "$c")"
+            [[ $c == k* ]] && read -r py ag <<< "$(k_agent "$c")"
             B2D_SENSOR_TICK=1 taskset -c "$CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$xml" "${common[@]}" \
                 --route-timeout-s 3600 --python "$py" --agent "$ag" --agent-config "$(cfg_for "$c" "$g" "$seed")" \
                 --fast-copy --cache-lights >> "$out/runner-g$g.log" 2>&1 & ;;
@@ -367,7 +378,7 @@ ready_for() {  # an examinee's inputs exist (heads exported, K's READY); else th
               CUDA_VISIBLE_DEVICES=${GPUS%% *} taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_x export-q2 >> "$G/export_q2.log" 2>&1 \
                   || error "cross-fitted Q2 export failed" "$G/export_q2.log"
               ev export '"what": "q2 cross-fit"'; [[ -e $G/heads_xfit/q2/READY ]] ;;
-        k*) [[ -e $K/READY ]] && declare -F k_cfg >/dev/null ;;
+        k*) [[ -e $K/READY ]] ;;
         *) return 0 ;;
     esac
 }
@@ -448,7 +459,6 @@ chain() {
     trap 'exit 129' HUP INT TERM
     gate
     [[ -e $G/prep/DONE ]] || error "G-prep has not passed (runs/nq4/gk/prep/DONE missing)"
-    [[ -f scripts/nq4_k_recipes.sh ]] && source scripts/nq4_k_recipes.sh
     [[ -f $G/QUEUE ]] || queue > "$G/QUEUE"
     apply_cuts "$G/QUEUE"
     local line c v s rs pass=0 ran
@@ -477,8 +487,8 @@ chain() {
 case ${1:-} in
     chain) chain ;;
     step) shift; trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_all' EXIT; trap 'exit 129' HUP INT TERM
-          [[ -f scripts/nq4_k_recipes.sh ]] && source scripts/nq4_k_recipes.sh; run_step "$@" ;;
+          run_step "$@" ;;
     report) report_now ;;
-    plan) [[ -f scripts/nq4_k_recipes.sh ]] && source scripts/nq4_k_recipes.sh; queue > "$G/plan.tmp"; project "$G/plan.tmp" ;;
+    plan) queue > "$G/plan.tmp"; project "$G/plan.tmp" ;;
     *) sed -n 2,26p "$0"; exit 1 ;;
 esac

@@ -41,7 +41,7 @@ class NQ4Agent(ZeroShotAgent):
         rid = os.environ.get("BENCHMARK_ROUTE_ID", "0")
         if folds:
             split = json.load(open(folds["split"]))["routes"]
-            fk = NX.fold_pick(split, NX.base_of(rid), folds.get("pick", "unseen"))
+            fk = NX.fold_pick(split, NX.base_of(rid), folds.get("pick", "unseen"), folds.get("rule", "label"))
             self.fold_meta = {folds["key"]: folds[fk]}
             with open(os.path.join(self.out, "fold.json"), "w") as fh:
                 json.dump({"route": rid, "base": NX.base_of(rid), "fold": fk, "pick": folds.get("pick", "unseen"),

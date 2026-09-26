@@ -48,6 +48,8 @@ def load_split(path: Path | None = None) -> dict:
 def readout(split: dict, route_id: str, view: str = "unseen") -> str | None:
     """The fold whose readout drives this route: unseen = the fold that never saw its recordings (never-recorded routes:
     R1, the todo's rule); seen = its own fold (None for a never-recorded route)."""
+    if str(route_id).isdigit() and int(route_id) >= 100000:   # a night-queue-4 G variant id 100 b + 90 + code (nq4_g.vid)
+        route_id = str(int(route_id) // 100)
     r = split["routes"].get(str(route_id))
     if r is None or not r["recorded"]:
         return "R1" if view == "unseen" else None
