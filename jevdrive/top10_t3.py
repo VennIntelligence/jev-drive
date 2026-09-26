@@ -184,12 +184,13 @@ def check_blue(fast: Path, ref: Path) -> dict:
 
 # ---------------------------------------------------------------- the exam
 
-def readouts(gen: Path, blue_dir: Path) -> pd.DataFrame:
-    """One row per (world, k): every examinee's scalar, creep flags, BLUE gate."""
+def readouts(gen: Path, blue_dir: Path, drop=()) -> pd.DataFrame:
+    """One row per (world, k): every examinee's scalar, creep flags, BLUE gate. Worlds in `drop` (the re-recorded
+    expert left the original recording) contribute nothing."""
     rows = []
     for rid in json.loads((root() / "need.json").read_text()):
         a = attempt(gen, rid)
-        if a is None:
+        if a is None or rid in drop:
             continue
         r = creep_flags(a).merge(bd_rows(a).rename(columns={v: k for k, v in BD.items()}), on="k", how="left")
         f = blue_dir / (rid + ".json")
@@ -204,7 +205,12 @@ def judge(rl, gen: Path, blue_dir: Path):
     from . import elicit_e4 as E4, elicit_i3 as I, p5_exam as E
     with I.p5_set("carla_p5v1_ba"):
         t, _, _, obs, null, pairs = E.load()
-    R = readouts(gen, blue_dir).set_index(["rid", "k"])
+    det = check_det(gen)
+    det.to_csv(rl.dir / "check_det.csv", index=False)
+    bad = set(det.rid[det.first_div_k.notna() | ~det.cam_grid_same.astype(bool)])
+    rl.log.info("determinism: %d re-recorded worlds, %d identical to the original up to their last referenced tick, "
+                "%d dropped: %s", len(det), len(det) - len(bad), len(bad), sorted(bad))
+    R = readouts(gen, blue_dir, bad).set_index(["rid", "k"])
     R.to_parquet(rl.dir / "readouts.parquet")
     o, n = E.deltas(obs, null, t, {})
     ours = list(BD) + list(BLUE)
@@ -271,6 +277,7 @@ def judge(rl, gen: Path, blue_dir: Path):
     gate.append({"frames": "null frames", "n": int(n.blue_gate_open.notna().sum()), "gate_open_share": float(np.nanmean(n.blue_gate_open))})
     pd.DataFrame(gate).to_csv(d / "gate.csv", index=False)
     RESULTS.mkdir(parents=True, exist_ok=True)
+    det.to_csv(RESULTS / "p5_t3_determinism.csv", index=False)
     fl.to_csv(RESULTS / "p5_t3_flip_rates.csv", index=False)
     pp.to_csv(RESULTS / "p5_t3_per_pair.csv", index=False)
     side.to_csv(RESULTS / "p5_t3_splits.csv", index=False)
