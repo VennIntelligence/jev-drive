@@ -214,12 +214,13 @@ def i3_exam(rl, D: dict, held: dict) -> dict:
     return res
 
 
-def run_fit(rl):
+def run_fit(rl, models=MODELS, seeds=SEEDS):
+    """One shard (models x seeds) of the fits; `exam` merges the shards (they run as parallel processes)."""
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 8)))
     D = i3_data()
     held, store = {}, {"heads": {}, "weights": {}}
-    for m in MODELS:
-        for s in SEEDS:
+    for m in models:
+        for s in seeds:
             h, st = fit_model_seed(D, m, s, rl)
             held[m, s] = h
             store["heads"].update(st["heads"])
@@ -228,6 +229,24 @@ def run_fit(rl):
     torch.save(store, rl.dir / "heads.pt")
     np.savez_compressed(rl.dir / "i3_held_delta.npz", frame_name=D["t"].frame_name.to_numpy(),
                         **{f"{m} s{s} {k}": v for (m, s), h in held.items() for k, v in h.items()})
+
+
+def run_exam(rl, fit_runs: list[str]):
+    """Merge the fit shards into one heads.pt / i3_held_delta.npz and run the I3 exam."""
+    D = i3_data()
+    held, store = {}, {"heads": {}, "weights": {}}
+    for r in fit_runs:
+        st = torch.load(data_dir() / r / "heads.pt", weights_only=False)
+        store["heads"].update(st["heads"])
+        store["weights"].update(st["weights"])
+        z = np.load(data_dir() / r / "i3_held_delta.npz", allow_pickle=True)
+        assert (z["frame_name"].astype(str) == D["t"].frame_name.to_numpy()).all()
+        for k in z.files:
+            if k != "frame_name":
+                m, s, arm = k.split()
+                held.setdefault((m, int(s[1:])), {})[arm] = z[k]
+    assert set(held) == {(m, s) for m in MODELS for s in SEEDS}, sorted(held)
+    torch.save(store, rl.dir / "heads.pt")
     i3_exam(rl, D, held)
 
 
@@ -616,8 +635,11 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("fit", "transfer", "g1c-wod", "g1c-nav-write", "nav-table", "summary", "figs"))
-    ap.add_argument("--fit-run", default="")
+    ap.add_argument("what", choices=("fit", "exam", "transfer", "g1c-wod", "g1c-nav-write", "nav-table", "summary", "figs"))
+    ap.add_argument("--fit-run", default="", help="transfer: the exam run (merged heads.pt, i3_flip_rates.csv)")
+    ap.add_argument("--fit-runs", default="", help="exam: comma list of fit shard runs")
+    ap.add_argument("--models", default=",".join(MODELS))
+    ap.add_argument("--seeds", default="0,1,2")
     ap.add_argument("--transfer-run", default="")
     ap.add_argument("--g1c-run", default="", help="the g1c-nav-write run dir")
     ap.add_argument("--runs", default="", help="summary: fit,transfer,g1c-wod,nav-table run dirs")
@@ -632,7 +654,9 @@ def main():
         return
     rl = RunLog("real-data-transfer", f"g2-{a.what}")
     if a.what == "fit":
-        run_fit(rl)
+        run_fit(rl, tuple(a.models.split(",")), tuple(int(x) for x in a.seeds.split(",")))
+    elif a.what == "exam":
+        run_exam(rl, a.fit_runs.split(","))
     elif a.what == "transfer":
         run_transfer(rl, a.fit_run)
     elif a.what == "g1c-wod":
