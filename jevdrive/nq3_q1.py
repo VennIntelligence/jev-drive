@@ -50,7 +50,7 @@ def _p6_rows():
 def heads(rl):
     from sklearn.model_selection import GroupShuffleSplit
     from . import elicit_e5 as E5, elicit_i3 as I, night2_n3 as N3, night2_n4 as N4, nq3_feats as NF
-    from . import p5_exam as E, p5_openpilot, p5_pairs as P, planner, reactivity_mc as MC, traj, waymo_heads as H
+    from . import navsim_heads as H, p5_exam as E, p5_openpilot, p5_pairs as P, planner, reactivity_mc as MC, traj
     dev = "cuda"
     MC.EIGH_DEVICE = "cuda"
     with I.p5_set(I.BA):

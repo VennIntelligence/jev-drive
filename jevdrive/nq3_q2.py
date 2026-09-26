@@ -231,7 +231,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
     `stream` swaps the Delta stream of A1 / A3 for a backbone (the prior stays on openpilot `temporal`).
     `head` (dict) receives every fitted parameter (the closed-loop export)."""
     from sklearn.model_selection import GroupShuffleSplit
-    from . import night2_n3 as N3, p6, planner, traj, waymo_heads as H, waymo_stage_a as sa
+    from . import navsim_heads as NH, night2_n3 as N3, p6, planner, traj, waymo_stage_a as sa
     t, F, Ego, Xop, lab, p = D["t"], D["F"], D["Ego"], D["op"][m], D["lab"], D["pairs"]
     n = len(t)
     world = t.world.to_numpy()
@@ -285,12 +285,12 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         out["A1"] = v
         info.update(lam_A1=lam, edge_A1=edge)
     if {"A2", "A3"} & set(arms):
-        X2 = torch.cat([Xe, Xi], 1)
+        X2 = torch.cat([Xe, Xi], 1).cpu()      # K = 5: the CPU beats a GPU time-sliced with other lanes (~60 -> ~5 s)
         g_tr = seq[tr]
         a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=seed).split(tr, groups=g_tr))
         lam2 = _ce_pick(X2, lab.clip(0), tr[a], tr[b], len(MODES), seed)
         W2, _ = planner.ce_solve(X2, (lab.clip(0)[:, None], np.ones((n, 1), np.float32)), tr, [lam2], len(MODES))
-        logit = planner.linear_apply(W2, X2, np.arange(n))[0]                 # (n, 5)
+        logit = planner.linear_apply(W2, X2, np.arange(n))[0].to(DEV)         # (n, 5)
         res_y = (Fy - Py).cpu().numpy()
         T = np.zeros((len(MODES), 20), np.float32)
         for c in range(len(MODES)):
@@ -320,7 +320,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
             out["A3_mode"] = lg3[te].argmax(1).cpu().numpy()
             info.update(lam_A3=lam3, edge_A3=edge3)
     if "A4" in arms:
-        A = traj.kmeans(F[tr], H.K, seed=seed)
+        A = traj.kmeans(F[tr], NH.K, seed=seed)
         xb = tr[(world[tr] == "x10") & p6.bypass_shape(fut[tr])]
         Ab = traj.kmeans(F[xb], 64, seed=seed) if len(xb) >= 64 else F[xb]
         A = torch.cat([A, Ab, wod_bypass_anchors(seed)], 0)
@@ -333,7 +333,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         lam_e = N3._pick_cls(Xe, tgt, fit_r, sel_r, Axy, fut)
         Wce, _ = planner.ce_solve(Xe, tgt, tr, [lam_e], K)
         off = planner.linear_apply(Wce, Xe, np.arange(n))[0]
-        inner = H._group_folds(seq[tr], 5, seed=seed)
+        inner = NH._group_folds(seq[tr], 5, seed=seed)
         for k in range(5):
             Wk, _ = planner.ce_solve(Xe, tgt, tr[inner != k], [lam_e], K)
             off[tr[inner == k]] = planner.linear_apply(Wk, Xe, tr[inner == k])[0]
@@ -342,7 +342,7 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         top = planner.cls_topk(Wl, Xi, te, 1, offset=off)[:, 0, 0]
         out["A4"] = Axy[top]
         info.update(lam_A4_ego=lam_e, lam_A4_late=lam_l, K_A4=K, n_bypass_anchor_src=len(xb),
-                    A4_bypass_anchor_pick=float(np.isin(top, np.arange(H.K, K)).mean()))
+                    A4_bypass_anchor_pick=float(np.isin(top, np.arange(NH.K, K)).mean()))
         del Wce, off, Wl
     if rl is not None:
         rl.event("q2_fold", fold=int(f), model=m, seed=seed, stream=stream or "op", **{k: v for k, v in info.items()})
