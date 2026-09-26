@@ -103,7 +103,7 @@ def check_ego(n_routes=6):
     for adir in adirs:
         a = Path(adir)
         meta = json.loads((a / "meta.json").read_text())
-        rows = p4.route_rows(a, meta["route_id"], meta["town"])
+        rows = p4.route_rows(a, meta.get("route_id", a.parents[1].name), meta.get("town", ""))
         if rows is None:
             continue
         tt, past, _, route = rows
