@@ -106,7 +106,7 @@
   | K5 | 闭环等价检查（规则 8）：4 级 × 3 条路线，每个请求 dump，离线重算逐位比；规则层按逐 tick 日志离线重放逐位比 | 2 h | 1 卡 2 server |
   | K6 | 写 `READY`、交接 | 0.2 h | |
   目标 02:00 前写齐 `READY`（todo 的截止 03:00）；任何一步超估计 2 倍就停，写 `runs/nq4/k/ERROR`。
-- [K] 2026-09-26 17:40 CST **操作性选择**（写于任何 K 拟合与任何 K 数字之前；此前只读过 night-queue-3 CL 节、第 31 / 33 条、G1c 代码、LEAD `730bc1a` 与 SimLingo 作者 agent 的规则代码，以及 P5 v1 BA 各路线的帧数）。
+- [K] 2026-09-26 17:30 CST **操作性选择**（写于任何 K 拟合与任何 K 数字之前；此前只读过 night-queue-3 CL 节、第 31 / 33 条、G1c 代码、LEAD `730bc1a` 与 SimLingo 作者 agent 的规则代码，以及 P5 v1 BA 各路线的帧数）。
   1. **分折（`route_split.json`）**。录过的路线 = P5 v1 BA 里出现的全部 216 条 base 路线（151 条来自 P4、65 条只来自 P5；其中 170 条在 `bench2drive220.xml` 里，46 条不在 220 里，是 P5 v1 从别的路线集补的）。
      分层的类 = 路线在 220 里的 scenario 类型（220 每条恰好一个）；不在 220 里的 46 条用 P5 的 family（`pairs.csv`，含 `Light`）。字面的「路线号奇偶」在 8 个类里把全部录过的路线分到同一边
      （例如 OppositeVehicleTakingPriority 5 / 0、ConstructionObstacle 2 / 0），那样另一折的读出连这个 scenario 类都没见过，unseen 就混进了「类没见过」，所以改成**类内按路线号排序后的奇偶位**：
@@ -142,6 +142,7 @@
   8. **等价检查（规则 8）**：3 条路线 = 一条停车牌路线（VanillaNonSignalizedTurnEncounterStopsign）、一条前车急刹（HardBreakRoute，g3 会开）、一条行人（DynamicObjectCrossing），各取 220 里录过的、路线号最小的一条，
      4 级各跑一遍（K0 / K1 unseen，K2 / K3 unseen），每个请求 dump；离线用同一份 JPEG、新 Cinque session 同顺序步进、`nq4_k` 的 apply 重算，轨迹、v̂、g3 逐位相同；规则层把逐 tick 的输入（速度、P7 的油门 / 刹车、停车牌替身、安全盒）
      记进 `ticks.jsonl`，离线重放规则类得到的油门 / 刹车逐位相同。不过就停。
+- [K] 2026-09-26 17:36 CST `route_split.json` 已写（17:35:44，先于任何 K 训练；副本 [research/results/nq4/k/route_split.json](../research/results/nq4/k/route_split.json)）：录过的 216 条里 R₁ 109 条 / R₂ 107 条（train 行 13 197 / 14 078），每个类内两折录过的路线数差 ≤ 1；220 的每条路线都有折标签（R₁ 111 / R₂ 109），其中 50 条从未录过、由 R₁ 读出开。F 的 X 用同一文件里 P6 路线的 `fold`。
 
 ## O. B2D 训练数据与 220 评测路线的重叠（只读，CPU）
 

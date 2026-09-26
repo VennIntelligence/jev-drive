@@ -1,0 +1,2421 @@
+{
+ "rule": "[K] 17:40 (1): classes = the route's scenario type in bench2drive220.xml (P5 family for the 46 routes outside     220); inside a class the recorded routes (id ascending) then the unrecorded 220 routes (id ascending) alternate     R1 / R2; the first fold rotates over the classes with an odd count (class name order).",
+ "written": "2026-09-26T17:35:44.817847+08:00",
+ "routes": {
+  "1711": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 378,
+   "train_rows": 126,
+   "fold": "R1"
+  },
+  "1773": {
+   "class": "ParkedObstacle",
+   "recorded": true,
+   "in220": true,
+   "frames": 72,
+   "train_rows": 72,
+   "fold": "R2"
+  },
+  "1790": {
+   "class": "HazardAtSideLane",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "1792": {
+   "class": "HazardAtSideLane",
+   "recorded": true,
+   "in220": true,
+   "frames": 296,
+   "train_rows": 296,
+   "fold": "R2"
+  },
+  "1825": {
+   "class": "ConstructionObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "1833": {
+   "class": "ConstructionObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "1852": {
+   "class": "AccidentTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "1956": {
+   "class": "ParkingExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "2050": {
+   "class": "SignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 49,
+   "train_rows": 49,
+   "fold": "R2"
+  },
+  "2082": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 157,
+   "train_rows": 99,
+   "fold": "R1"
+  },
+  "2084": {
+   "class": "NonSignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 31,
+   "train_rows": 31,
+   "fold": "R2"
+  },
+  "2086": {
+   "class": "NonSignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 31,
+   "train_rows": 31,
+   "fold": "R1"
+  },
+  "2091": {
+   "class": "NonSignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 45,
+   "train_rows": 45,
+   "fold": "R2"
+  },
+  "2115": {
+   "class": "NonSignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 53,
+   "train_rows": 53,
+   "fold": "R2"
+  },
+  "2127": {
+   "class": "OppositeVehicleTakingPriority",
+   "recorded": true,
+   "in220": true,
+   "frames": 25,
+   "train_rows": 25,
+   "fold": "R1"
+  },
+  "2129": {
+   "class": "OppositeVehicleTakingPriority",
+   "recorded": true,
+   "in220": true,
+   "frames": 84,
+   "train_rows": 84,
+   "fold": "R2"
+  },
+  "2143": {
+   "class": "OppositeVehicleTakingPriority",
+   "recorded": true,
+   "in220": true,
+   "frames": 27,
+   "train_rows": 27,
+   "fold": "R1"
+  },
+  "2144": {
+   "class": "VehicleTurningRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 62,
+   "train_rows": 62,
+   "fold": "R1"
+  },
+  "2164": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 428,
+   "train_rows": 82,
+   "fold": "R2"
+  },
+  "2201": {
+   "class": "EnterActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 40,
+   "train_rows": 40,
+   "fold": "R1"
+  },
+  "2204": {
+   "class": "BlockedIntersection",
+   "recorded": true,
+   "in220": true,
+   "frames": 57,
+   "train_rows": 57,
+   "fold": "R1"
+  },
+  "2215": {
+   "class": "BlockedIntersection",
+   "recorded": true,
+   "in220": true,
+   "frames": 36,
+   "train_rows": 36,
+   "fold": "R2"
+  },
+  "2273": {
+   "class": "MergerIntoSlowTraffic",
+   "recorded": true,
+   "in220": true,
+   "frames": 38,
+   "train_rows": 38,
+   "fold": "R2"
+  },
+  "2283": {
+   "class": "MergerIntoSlowTraffic",
+   "recorded": true,
+   "in220": true,
+   "frames": 101,
+   "train_rows": 101,
+   "fold": "R1"
+  },
+  "2286": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 315,
+   "train_rows": 106,
+   "fold": "R2"
+  },
+  "2299": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 432,
+   "train_rows": 68,
+   "fold": "R1"
+  },
+  "2373": {
+   "class": "VanillaSignalizedTurnEncounterRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 198,
+   "train_rows": 138,
+   "fold": "R1"
+  },
+  "2390": {
+   "class": "VanillaNonSignalizedTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 22,
+   "train_rows": 22,
+   "fold": "R2"
+  },
+  "2397": {
+   "class": "VanillaNonSignalizedTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 23,
+   "train_rows": 23,
+   "fold": "R1"
+  },
+  "2403": {
+   "class": "VanillaNonSignalizedTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 18,
+   "train_rows": 18,
+   "fold": "R2"
+  },
+  "2416": {
+   "class": "VanillaNonSignalizedTurnEncounterStopsign",
+   "recorded": true,
+   "in220": true,
+   "frames": 16,
+   "train_rows": 16,
+   "fold": "R1"
+  },
+  "2460": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 371,
+   "train_rows": 231,
+   "fold": "R2"
+  },
+  "2509": {
+   "class": "ConstructionObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "2513": {
+   "class": "ConstructionObstacle",
+   "recorded": true,
+   "in220": true,
+   "frames": 76,
+   "train_rows": 76,
+   "fold": "R2"
+  },
+  "2534": {
+   "class": "Accident",
+   "recorded": true,
+   "in220": true,
+   "frames": 60,
+   "train_rows": 60,
+   "fold": "R1"
+  },
+  "2539": {
+   "class": "Accident",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "2554": {
+   "class": "ParkedObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "2606": {
+   "class": "ConstructionObstacleTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 74,
+   "train_rows": 74,
+   "fold": "R1"
+  },
+  "2643": {
+   "class": "AccidentTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "2664": {
+   "class": "ParkedObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "2668": {
+   "class": "ParkedObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "2709": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 447,
+   "train_rows": 181,
+   "fold": "R1"
+  },
+  "2715": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 403,
+   "train_rows": 139,
+   "fold": "R2"
+  },
+  "2790": {
+   "class": "InvadingTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 46,
+   "train_rows": 46,
+   "fold": "R2"
+  },
+  "2802": {
+   "class": "InvadingTurn",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "2844": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 291,
+   "train_rows": 239,
+   "fold": "R2"
+  },
+  "2847": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 304,
+   "train_rows": 244,
+   "fold": "R1"
+  },
+  "2881": {
+   "class": "NonSignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 35,
+   "train_rows": 35,
+   "fold": "R1"
+  },
+  "2903": {
+   "class": "NonSignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 35,
+   "train_rows": 35,
+   "fold": "R1"
+  },
+  "2913": {
+   "class": "OppositeVehicleTakingPriority",
+   "recorded": true,
+   "in220": true,
+   "frames": 26,
+   "train_rows": 26,
+   "fold": "R2"
+  },
+  "2943": {
+   "class": "VehicleTurningRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 59,
+   "train_rows": 59,
+   "fold": "R2"
+  },
+  "2989": {
+   "class": "BlockedIntersection",
+   "recorded": true,
+   "in220": true,
+   "frames": 53,
+   "train_rows": 53,
+   "fold": "R1"
+  },
+  "3048": {
+   "class": "MergerIntoSlowTraffic",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3072": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 533,
+   "train_rows": 174,
+   "fold": "R2"
+  },
+  "3074": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 463,
+   "train_rows": 155,
+   "fold": "R1"
+  },
+  "3080": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 548,
+   "train_rows": 148,
+   "fold": "R2"
+  },
+  "3086": {
+   "class": "CrossingBicycleFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 48,
+   "train_rows": 48,
+   "fold": "R1"
+  },
+  "3090": {
+   "class": "CrossingBicycleFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 50,
+   "train_rows": 50,
+   "fold": "R2"
+  },
+  "3093": {
+   "class": "CrossingBicycleFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 52,
+   "train_rows": 52,
+   "fold": "R1"
+  },
+  "3099": {
+   "class": "CrossingBicycleFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 88,
+   "train_rows": 88,
+   "fold": "R2"
+  },
+  "3100": {
+   "class": "CrossingBicycleFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 50,
+   "train_rows": 50,
+   "fold": "R1"
+  },
+  "3144": {
+   "class": "VanillaSignalizedTurnEncounterRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 482,
+   "train_rows": 482,
+   "fold": "R2"
+  },
+  "3178": {
+   "class": "VanillaNonSignalizedTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 22,
+   "train_rows": 22,
+   "fold": "R1"
+  },
+  "3184": {
+   "class": "VanillaNonSignalizedTurnEncounterStopsign",
+   "recorded": true,
+   "in220": true,
+   "frames": 21,
+   "train_rows": 21,
+   "fold": "R2"
+  },
+  "3189": {
+   "class": "VanillaNonSignalizedTurnEncounterStopsign",
+   "recorded": true,
+   "in220": true,
+   "frames": 19,
+   "train_rows": 19,
+   "fold": "R1"
+  },
+  "3248": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 353,
+   "train_rows": 335,
+   "fold": "R2"
+  },
+  "3255": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 312,
+   "train_rows": 294,
+   "fold": "R1"
+  },
+  "3307": {
+   "class": "Accident",
+   "recorded": true,
+   "in220": true,
+   "frames": 60,
+   "train_rows": 60,
+   "fold": "R2"
+  },
+  "3364": {
+   "class": "YieldToEmergencyVehicle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3373": {
+   "class": "YieldToEmergencyVehicle",
+   "recorded": true,
+   "in220": true,
+   "frames": 38,
+   "train_rows": 38,
+   "fold": "R2"
+  },
+  "3378": {
+   "class": "YieldToEmergencyVehicle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3380": {
+   "class": "YieldToEmergencyVehicle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3410": {
+   "class": "AccidentTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 72,
+   "train_rows": 72,
+   "fold": "R2"
+  },
+  "3436": {
+   "class": "HazardAtSideLaneTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3457": {
+   "class": "ParkedObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3464": {
+   "class": "VehicleOpensDoorTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3472": {
+   "class": "VehicleOpensDoorTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3476": {
+   "class": "VehicleOpensDoorTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3482": {
+   "class": "VehicleOpensDoorTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 67,
+   "train_rows": 67,
+   "fold": "R2"
+  },
+  "3483": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 382,
+   "train_rows": 137,
+   "fold": "R1"
+  },
+  "3502": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 395,
+   "train_rows": 141,
+   "fold": "R2"
+  },
+  "3514": {
+   "class": "ParkingExit",
+   "recorded": true,
+   "in220": true,
+   "frames": 84,
+   "train_rows": 84,
+   "fold": "R1"
+  },
+  "3520": {
+   "class": "ParkingExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3540": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 334,
+   "train_rows": 274,
+   "fold": "R2"
+  },
+  "3561": {
+   "class": "ControlLoss",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3564": {
+   "class": "InvadingTurn",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3572": {
+   "class": "InvadingTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 110,
+   "train_rows": 110,
+   "fold": "R1"
+  },
+  "3575": {
+   "class": "InvadingTurn",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3666": {
+   "class": "NonSignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 58,
+   "train_rows": 58,
+   "fold": "R2"
+  },
+  "3670": {
+   "class": "NonSignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 28,
+   "train_rows": 28,
+   "fold": "R1"
+  },
+  "3676": {
+   "class": "NonSignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 34,
+   "train_rows": 34,
+   "fold": "R2"
+  },
+  "3697": {
+   "class": "OppositeVehicleTakingPriority",
+   "recorded": true,
+   "in220": true,
+   "frames": 28,
+   "train_rows": 28,
+   "fold": "R1"
+  },
+  "3708": {
+   "class": "VehicleTurningRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 43,
+   "train_rows": 43,
+   "fold": "R1"
+  },
+  "3712": {
+   "class": "VehicleTurningRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 52,
+   "train_rows": 52,
+   "fold": "R2"
+  },
+  "3717": {
+   "class": "VehicleTurningRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 50,
+   "train_rows": 50,
+   "fold": "R1"
+  },
+  "3731": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 572,
+   "train_rows": 40,
+   "fold": "R1"
+  },
+  "3737": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 550,
+   "train_rows": 60,
+   "fold": "R2"
+  },
+  "3740": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 553,
+   "train_rows": 21,
+   "fold": "R1"
+  },
+  "3749": {
+   "class": "EnterActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 127,
+   "train_rows": 127,
+   "fold": "R2"
+  },
+  "3785": {
+   "class": "MergerIntoSlowTraffic",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "3800": {
+   "class": "MergerIntoSlowTraffic",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "3813": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 539,
+   "train_rows": 209,
+   "fold": "R1"
+  },
+  "3816": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 500,
+   "train_rows": 4,
+   "fold": "R2"
+  },
+  "3865": {
+   "class": "VanillaSignalizedTurnEncounterRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 654,
+   "train_rows": 647,
+   "fold": "R1"
+  },
+  "3869": {
+   "class": "VanillaSignalizedTurnEncounterRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 674,
+   "train_rows": 614,
+   "fold": "R2"
+  },
+  "3876": {
+   "class": "VanillaSignalizedTurnEncounterRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 185,
+   "train_rows": 125,
+   "fold": "R1"
+  },
+  "3890": {
+   "class": "VanillaNonSignalizedTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 22,
+   "train_rows": 22,
+   "fold": "R2"
+  },
+  "3904": {
+   "class": "VanillaNonSignalizedTurnEncounterStopsign",
+   "recorded": true,
+   "in220": true,
+   "frames": 18,
+   "train_rows": 18,
+   "fold": "R2"
+  },
+  "3905": {
+   "class": "VanillaNonSignalizedTurnEncounterStopsign",
+   "recorded": true,
+   "in220": true,
+   "frames": 22,
+   "train_rows": 22,
+   "fold": "R1"
+  },
+  "3936": {
+   "class": "SignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 65,
+   "train_rows": 65,
+   "fold": "R2"
+  },
+  "4183": {
+   "class": "SignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 86,
+   "train_rows": 86,
+   "fold": "R1"
+  },
+  "4468": {
+   "class": "SignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 50,
+   "train_rows": 50,
+   "fold": "R2"
+  },
+  "4669": {
+   "class": "SignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 54,
+   "train_rows": 54,
+   "fold": "R1"
+  },
+  "4683": {
+   "class": "SignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 70,
+   "train_rows": 70,
+   "fold": "R2"
+  },
+  "4937": {
+   "class": "SignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 34,
+   "train_rows": 34,
+   "fold": "R1"
+  },
+  "6673": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": false,
+   "frames": 126,
+   "train_rows": 63,
+   "fold": "R2"
+  },
+  "10552": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 553,
+   "train_rows": 21,
+   "fold": "R2"
+  },
+  "10791": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 553,
+   "train_rows": 21,
+   "fold": "R1"
+  },
+  "10793": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 217,
+   "train_rows": 28,
+   "fold": "R2"
+  },
+  "10857": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 247,
+   "train_rows": 55,
+   "fold": "R1"
+  },
+  "11010": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 546,
+   "train_rows": 14,
+   "fold": "R2"
+  },
+  "11177": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 546,
+   "train_rows": 14,
+   "fold": "R1"
+  },
+  "11215": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 546,
+   "train_rows": 14,
+   "fold": "R2"
+  },
+  "11333": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 553,
+   "train_rows": 21,
+   "fold": "R1"
+  },
+  "11381": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 576,
+   "train_rows": 44,
+   "fold": "R2"
+  },
+  "11715": {
+   "class": "EnterActorFlow",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "11755": {
+   "class": "EnterActorFlow",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "13674": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 161,
+   "train_rows": 21,
+   "fold": "R2"
+  },
+  "14194": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 183,
+   "train_rows": 85,
+   "fold": "R1"
+  },
+  "14382": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 209,
+   "train_rows": 90,
+   "fold": "R2"
+  },
+  "14842": {
+   "class": "VanillaSignalizedTurnEncounterGreenLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 441,
+   "train_rows": 381,
+   "fold": "R2"
+  },
+  "14862": {
+   "class": "VanillaSignalizedTurnEncounterGreenLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 393,
+   "train_rows": 386,
+   "fold": "R1"
+  },
+  "14909": {
+   "class": "VanillaSignalizedTurnEncounterGreenLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 637,
+   "train_rows": 630,
+   "fold": "R2"
+  },
+  "14955": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 377,
+   "train_rows": 317,
+   "fold": "R1"
+  },
+  "15071": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 455,
+   "train_rows": 455,
+   "fold": "R2"
+  },
+  "15102": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 455,
+   "train_rows": 455,
+   "fold": "R1"
+  },
+  "15483": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 658,
+   "train_rows": 598,
+   "fold": "R2"
+  },
+  "15612": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 359,
+   "train_rows": 299,
+   "fold": "R1"
+  },
+  "16390": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 121,
+   "train_rows": 61,
+   "fold": "R2"
+  },
+  "17563": {
+   "class": "SequentialLaneChange",
+   "recorded": true,
+   "in220": true,
+   "frames": 69,
+   "train_rows": 69,
+   "fold": "R1"
+  },
+  "17569": {
+   "class": "SequentialLaneChange",
+   "recorded": true,
+   "in220": true,
+   "frames": 220,
+   "train_rows": 220,
+   "fold": "R2"
+  },
+  "17598": {
+   "class": "SequentialLaneChange",
+   "recorded": true,
+   "in220": true,
+   "frames": 138,
+   "train_rows": 138,
+   "fold": "R1"
+  },
+  "17635": {
+   "class": "SequentialLaneChange",
+   "recorded": true,
+   "in220": true,
+   "frames": 223,
+   "train_rows": 223,
+   "fold": "R2"
+  },
+  "17655": {
+   "class": "SequentialLaneChange",
+   "recorded": true,
+   "in220": true,
+   "frames": 67,
+   "train_rows": 67,
+   "fold": "R1"
+  },
+  "17749": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 304,
+   "train_rows": 220,
+   "fold": "R1"
+  },
+  "17752": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 338,
+   "train_rows": 296,
+   "fold": "R2"
+  },
+  "17853": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 279,
+   "train_rows": 244,
+   "fold": "R1"
+  },
+  "17892": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 300,
+   "train_rows": 223,
+   "fold": "R2"
+  },
+  "17921": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 311,
+   "train_rows": 213,
+   "fold": "R1"
+  },
+  "17965": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 321,
+   "train_rows": 188,
+   "fold": "R2"
+  },
+  "18027": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 328,
+   "train_rows": 188,
+   "fold": "R1"
+  },
+  "18073": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 311,
+   "train_rows": 210,
+   "fold": "R2"
+  },
+  "18160": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 290,
+   "train_rows": 234,
+   "fold": "R1"
+  },
+  "18174": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": false,
+   "frames": 371,
+   "train_rows": 231,
+   "fold": "R2"
+  },
+  "18252": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 358,
+   "train_rows": 190,
+   "fold": "R2"
+  },
+  "18305": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 483,
+   "train_rows": 231,
+   "fold": "R2"
+  },
+  "18311": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 400,
+   "train_rows": 148,
+   "fold": "R1"
+  },
+  "18344": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 407,
+   "train_rows": 148,
+   "fold": "R2"
+  },
+  "18356": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 387,
+   "train_rows": 128,
+   "fold": "R1"
+  },
+  "20920": {
+   "class": "ConstructionObstacleTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "22331": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 402,
+   "train_rows": 143,
+   "fold": "R1"
+  },
+  "22531": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 399,
+   "train_rows": 133,
+   "fold": "R2"
+  },
+  "22535": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 403,
+   "train_rows": 137,
+   "fold": "R1"
+  },
+  "22651": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": false,
+   "frames": 294,
+   "train_rows": 294,
+   "fold": "R1"
+  },
+  "22983": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": false,
+   "frames": 338,
+   "train_rows": 278,
+   "fold": "R2"
+  },
+  "23658": {
+   "class": "HighwayExit",
+   "recorded": true,
+   "in220": true,
+   "frames": 94,
+   "train_rows": 94,
+   "fold": "R1"
+  },
+  "23659": {
+   "class": "HighwayExit",
+   "recorded": true,
+   "in220": true,
+   "frames": 70,
+   "train_rows": 70,
+   "fold": "R2"
+  },
+  "23670": {
+   "class": "HighwayExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "23687": {
+   "class": "HighwayExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "23695": {
+   "class": "InterurbanAdvancedActorFlow",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "23697": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 371,
+   "train_rows": 98,
+   "fold": "R1"
+  },
+  "23700": {
+   "class": "InterurbanAdvancedActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 57,
+   "train_rows": 57,
+   "fold": "R1"
+  },
+  "23708": {
+   "class": "InterurbanAdvancedActorFlow",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "23771": {
+   "class": "MergerIntoSlowTrafficV2",
+   "recorded": true,
+   "in220": true,
+   "frames": 81,
+   "train_rows": 81,
+   "fold": "R1"
+  },
+  "23842": {
+   "class": "HighwayCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 421,
+   "train_rows": 86,
+   "fold": "R2"
+  },
+  "23901": {
+   "class": "InterurbanActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 95,
+   "train_rows": 95,
+   "fold": "R2"
+  },
+  "23910": {
+   "class": "InterurbanActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 30,
+   "train_rows": 30,
+   "fold": "R1"
+  },
+  "23918": {
+   "class": "InterurbanActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 71,
+   "train_rows": 71,
+   "fold": "R2"
+  },
+  "23930": {
+   "class": "InterurbanActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 46,
+   "train_rows": 46,
+   "fold": "R1"
+  },
+  "24041": {
+   "class": "HighwayExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24071": {
+   "class": "InterurbanAdvancedActorFlow",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24078": {
+   "class": "InterurbanAdvancedActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 57,
+   "train_rows": 57,
+   "fold": "R2"
+  },
+  "24092": {
+   "class": "MergerIntoSlowTrafficV2",
+   "recorded": true,
+   "in220": true,
+   "frames": 69,
+   "train_rows": 69,
+   "fold": "R2"
+  },
+  "24098": {
+   "class": "InterurbanActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 30,
+   "train_rows": 30,
+   "fold": "R2"
+  },
+  "24206": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 509,
+   "train_rows": 306,
+   "fold": "R1"
+  },
+  "24211": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 390,
+   "train_rows": 229,
+   "fold": "R1"
+  },
+  "24224": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 133,
+   "train_rows": 84,
+   "fold": "R2"
+  },
+  "24240": {
+   "class": "Accident",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "24252": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 309,
+   "train_rows": 183,
+   "fold": "R1"
+  },
+  "24258": {
+   "class": "HazardAtSideLaneTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 250,
+   "train_rows": 250,
+   "fold": "R1"
+  },
+  "24294": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": true,
+   "frames": 112,
+   "train_rows": 56,
+   "fold": "R2"
+  },
+  "24330": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 331,
+   "train_rows": 271,
+   "fold": "R1"
+  },
+  "24333": {
+   "class": "DynamicObjectCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 266,
+   "train_rows": 226,
+   "fold": "R2"
+  },
+  "24340": {
+   "class": "ControlLoss",
+   "recorded": true,
+   "in220": true,
+   "frames": 53,
+   "train_rows": 53,
+   "fold": "R2"
+  },
+  "24367": {
+   "class": "ConstructionObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24416": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 314,
+   "train_rows": 179,
+   "fold": "R2"
+  },
+  "24519": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 364,
+   "train_rows": 105,
+   "fold": "R1"
+  },
+  "24679": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": false,
+   "frames": 372,
+   "train_rows": 134,
+   "fold": "R1"
+  },
+  "24693": {
+   "class": "ParkingCrossingPedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 244,
+   "train_rows": 244,
+   "fold": "R2"
+  },
+  "24721": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": false,
+   "frames": 324,
+   "train_rows": 264,
+   "fold": "R2"
+  },
+  "24757": {
+   "class": "ParkedObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24759": {
+   "class": "ParkingCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 462,
+   "train_rows": 203,
+   "fold": "R2"
+  },
+  "24781": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 331,
+   "train_rows": 271,
+   "fold": "R1"
+  },
+  "24784": {
+   "class": "ControlLoss",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24785": {
+   "class": "ConstructionObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "24795": {
+   "class": "ConstructionObstacle",
+   "recorded": true,
+   "in220": true,
+   "frames": 63,
+   "train_rows": 63,
+   "fold": "R1"
+  },
+  "24816": {
+   "class": "Accident",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "24841": {
+   "class": "ControlLoss",
+   "recorded": true,
+   "in220": true,
+   "frames": 83,
+   "train_rows": 83,
+   "fold": "R1"
+  },
+  "25300": {
+   "class": "HazardAtSideLane",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "25318": {
+   "class": "ParkedObstacle",
+   "recorded": true,
+   "in220": true,
+   "frames": 75,
+   "train_rows": 75,
+   "fold": "R1"
+  },
+  "25358": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 326,
+   "train_rows": 231,
+   "fold": "R2"
+  },
+  "25378": {
+   "class": "YieldToEmergencyVehicle",
+   "recorded": true,
+   "in220": true,
+   "frames": 26,
+   "train_rows": 26,
+   "fold": "R1"
+  },
+  "25381": {
+   "class": "HazardAtSideLane",
+   "recorded": true,
+   "in220": true,
+   "frames": 237,
+   "train_rows": 237,
+   "fold": "R1"
+  },
+  "25383": {
+   "class": "ParkedObstacle",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "25424": {
+   "class": "ConstructionObstacleTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 78,
+   "train_rows": 78,
+   "fold": "R2"
+  },
+  "25439": {
+   "class": "HazardAtSideLane",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "25845": {
+   "class": "AccidentTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 63,
+   "train_rows": 63,
+   "fold": "R1"
+  },
+  "25854": {
+   "class": "HazardAtSideLaneTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 232,
+   "train_rows": 232,
+   "fold": "R2"
+  },
+  "25857": {
+   "class": "AccidentTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "25863": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 546,
+   "train_rows": 14,
+   "fold": "R1"
+  },
+  "25865": {
+   "class": "ParkedObstacleTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 73,
+   "train_rows": 73,
+   "fold": "R1"
+  },
+  "25896": {
+   "class": "ParkedObstacleTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 69,
+   "train_rows": 69,
+   "fold": "R2"
+  },
+  "25928": {
+   "class": "VehicleOpensDoorTwoWays",
+   "recorded": true,
+   "in220": true,
+   "frames": 111,
+   "train_rows": 111,
+   "fold": "R1"
+  },
+  "25951": {
+   "class": "HazardAtSideLaneTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "25955": {
+   "class": "HazardAtSideLaneTwoWays",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "25968": {
+   "class": "VanillaSignalizedTurnEncounterGreenLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 1014,
+   "train_rows": 559,
+   "fold": "R1"
+  },
+  "25975": {
+   "class": "VanillaSignalizedTurnEncounterGreenLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 440,
+   "train_rows": 440,
+   "fold": "R2"
+  },
+  "26393": {
+   "class": "ParkingExit",
+   "recorded": true,
+   "in220": true,
+   "frames": 82,
+   "train_rows": 82,
+   "fold": "R2"
+  },
+  "26394": {
+   "class": "MergerIntoSlowTrafficV2",
+   "recorded": true,
+   "in220": true,
+   "frames": 50,
+   "train_rows": 50,
+   "fold": "R1"
+  },
+  "26396": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 391,
+   "train_rows": 146,
+   "fold": "R1"
+  },
+  "26401": {
+   "class": "MergerIntoSlowTrafficV2",
+   "recorded": true,
+   "in220": true,
+   "frames": 34,
+   "train_rows": 34,
+   "fold": "R2"
+  },
+  "26405": {
+   "class": "StaticCutIn",
+   "recorded": true,
+   "in220": true,
+   "frames": 470,
+   "train_rows": 225,
+   "fold": "R2"
+  },
+  "26406": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 338,
+   "train_rows": 278,
+   "fold": "R2"
+  },
+  "26408": {
+   "class": "MergerIntoSlowTrafficV2",
+   "recorded": true,
+   "in220": true,
+   "frames": 51,
+   "train_rows": 51,
+   "fold": "R1"
+  },
+  "26418": {
+   "class": "ControlLoss",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R2"
+  },
+  "26435": {
+   "class": "ParkingExit",
+   "recorded": false,
+   "in220": true,
+   "frames": 0,
+   "train_rows": 0,
+   "fold": "R1"
+  },
+  "26456": {
+   "class": "HardBreakRoute",
+   "recorded": true,
+   "in220": true,
+   "frames": 477,
+   "train_rows": 417,
+   "fold": "R1"
+  },
+  "26458": {
+   "class": "T_Junction",
+   "recorded": true,
+   "in220": true,
+   "frames": 48,
+   "train_rows": 48,
+   "fold": "R1"
+  },
+  "26944": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 455,
+   "train_rows": 395,
+   "fold": "R1"
+  },
+  "26950": {
+   "class": "OppositeVehicleRunningRedLight",
+   "recorded": true,
+   "in220": true,
+   "frames": 150,
+   "train_rows": 136,
+   "fold": "R2"
+  },
+  "26956": {
+   "class": "SignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 61,
+   "train_rows": 61,
+   "fold": "R2"
+  },
+  "26966": {
+   "class": "SignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 60,
+   "train_rows": 60,
+   "fold": "R1"
+  },
+  "26990": {
+   "class": "NonSignalizedJunctionLeftTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 47,
+   "train_rows": 47,
+   "fold": "R2"
+  },
+  "27018": {
+   "class": "SignalizedJunctionRightTurn",
+   "recorded": true,
+   "in220": true,
+   "frames": 65,
+   "train_rows": 65,
+   "fold": "R2"
+  },
+  "27297": {
+   "class": "VehicleTurningRoutePedestrian",
+   "recorded": true,
+   "in220": false,
+   "frames": 208,
+   "train_rows": 7,
+   "fold": "R1"
+  },
+  "27494": {
+   "class": "BlockedIntersection",
+   "recorded": true,
+   "in220": true,
+   "frames": 65,
+   "train_rows": 65,
+   "fold": "R2"
+  },
+  "27506": {
+   "class": "EnterActorFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 61,
+   "train_rows": 61,
+   "fold": "R1"
+  },
+  "27515": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 525,
+   "train_rows": 87,
+   "fold": "R2"
+  },
+  "27529": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 317,
+   "train_rows": 205,
+   "fold": "R1"
+  },
+  "27532": {
+   "class": "BlockedIntersection",
+   "recorded": true,
+   "in220": true,
+   "frames": 57,
+   "train_rows": 57,
+   "fold": "R1"
+  },
+  "27582": {
+   "class": "PedestrianCrossing",
+   "recorded": true,
+   "in220": true,
+   "frames": 525,
+   "train_rows": 14,
+   "fold": "R2"
+  },
+  "27787": {
+   "class": "Light",
+   "recorded": true,
+   "in220": false,
+   "frames": 132,
+   "train_rows": 72,
+   "fold": "R1"
+  },
+  "28035": {
+   "class": "T_Junction",
+   "recorded": true,
+   "in220": true,
+   "frames": 76,
+   "train_rows": 76,
+   "fold": "R2"
+  },
+  "28048": {
+   "class": "T_Junction",
+   "recorded": true,
+   "in220": true,
+   "frames": 27,
+   "train_rows": 27,
+   "fold": "R1"
+  },
+  "28087": {
+   "class": "NonSignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 42,
+   "train_rows": 42,
+   "fold": "R1"
+  },
+  "28093": {
+   "class": "NonSignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 33,
+   "train_rows": 33,
+   "fold": "R2"
+  },
+  "28099": {
+   "class": "SignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 65,
+   "train_rows": 65,
+   "fold": "R1"
+  },
+  "28111": {
+   "class": "T_Junction",
+   "recorded": true,
+   "in220": true,
+   "frames": 43,
+   "train_rows": 43,
+   "fold": "R2"
+  },
+  "28154": {
+   "class": "T_Junction",
+   "recorded": true,
+   "in220": true,
+   "frames": 117,
+   "train_rows": 117,
+   "fold": "R1"
+  },
+  "28198": {
+   "class": "SignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 48,
+   "train_rows": 48,
+   "fold": "R2"
+  },
+  "28210": {
+   "class": "NonSignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 33,
+   "train_rows": 33,
+   "fold": "R1"
+  },
+  "28219": {
+   "class": "NonSignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 33,
+   "train_rows": 33,
+   "fold": "R2"
+  },
+  "28229": {
+   "class": "NonSignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 40,
+   "train_rows": 40,
+   "fold": "R1"
+  },
+  "28241": {
+   "class": "SignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 59,
+   "train_rows": 59,
+   "fold": "R1"
+  },
+  "28243": {
+   "class": "SignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 51,
+   "train_rows": 51,
+   "fold": "R2"
+  },
+  "28330": {
+   "class": "SignalizedJunctionLeftTurnEnterFlow",
+   "recorded": true,
+   "in220": true,
+   "frames": 57,
+   "train_rows": 57,
+   "fold": "R1"
+  }
+ },
+ "R1": [
+  "1711",
+  "2082",
+  "2086",
+  "2127",
+  "2143",
+  "2144",
+  "2201",
+  "2204",
+  "2283",
+  "2299",
+  "2373",
+  "2397",
+  "2416",
+  "2534",
+  "2606",
+  "2709",
+  "2847",
+  "2881",
+  "2903",
+  "2989",
+  "3074",
+  "3086",
+  "3093",
+  "3100",
+  "3178",
+  "3189",
+  "3255",
+  "3483",
+  "3514",
+  "3572",
+  "3670",
+  "3697",
+  "3708",
+  "3717",
+  "3731",
+  "3740",
+  "3813",
+  "3865",
+  "3876",
+  "3905",
+  "4183",
+  "4669",
+  "4937",
+  "10791",
+  "10857",
+  "11177",
+  "11333",
+  "14194",
+  "14862",
+  "14955",
+  "15102",
+  "15612",
+  "17563",
+  "17598",
+  "17655",
+  "17749",
+  "17853",
+  "17921",
+  "18027",
+  "18160",
+  "18311",
+  "18356",
+  "22331",
+  "22535",
+  "22651",
+  "23658",
+  "23697",
+  "23700",
+  "23771",
+  "23910",
+  "23930",
+  "24206",
+  "24211",
+  "24252",
+  "24258",
+  "24330",
+  "24519",
+  "24679",
+  "24781",
+  "24795",
+  "24841",
+  "25318",
+  "25378",
+  "25381",
+  "25845",
+  "25863",
+  "25865",
+  "25928",
+  "25968",
+  "26394",
+  "26396",
+  "26408",
+  "26456",
+  "26458",
+  "26944",
+  "26966",
+  "27297",
+  "27506",
+  "27529",
+  "27532",
+  "27787",
+  "28048",
+  "28087",
+  "28099",
+  "28154",
+  "28210",
+  "28229",
+  "28241",
+  "28330"
+ ],
+ "R2": [
+  "1773",
+  "1792",
+  "2050",
+  "2084",
+  "2091",
+  "2115",
+  "2129",
+  "2164",
+  "2215",
+  "2273",
+  "2286",
+  "2390",
+  "2403",
+  "2460",
+  "2513",
+  "2715",
+  "2790",
+  "2844",
+  "2913",
+  "2943",
+  "3072",
+  "3080",
+  "3090",
+  "3099",
+  "3144",
+  "3184",
+  "3248",
+  "3307",
+  "3373",
+  "3410",
+  "3482",
+  "3502",
+  "3540",
+  "3666",
+  "3676",
+  "3712",
+  "3737",
+  "3749",
+  "3816",
+  "3869",
+  "3890",
+  "3904",
+  "3936",
+  "4468",
+  "4683",
+  "6673",
+  "10552",
+  "10793",
+  "11010",
+  "11215",
+  "11381",
+  "13674",
+  "14382",
+  "14842",
+  "14909",
+  "15071",
+  "15483",
+  "16390",
+  "17569",
+  "17635",
+  "17752",
+  "17892",
+  "17965",
+  "18073",
+  "18174",
+  "18252",
+  "18305",
+  "18344",
+  "22531",
+  "22983",
+  "23659",
+  "23842",
+  "23901",
+  "23918",
+  "24078",
+  "24092",
+  "24098",
+  "24224",
+  "24294",
+  "24333",
+  "24340",
+  "24416",
+  "24693",
+  "24721",
+  "24759",
+  "25358",
+  "25424",
+  "25854",
+  "25896",
+  "25975",
+  "26393",
+  "26401",
+  "26405",
+  "26406",
+  "26950",
+  "26956",
+  "26990",
+  "27018",
+  "27494",
+  "27515",
+  "27582",
+  "28035",
+  "28093",
+  "28111",
+  "28198",
+  "28219",
+  "28243"
+ ],
+ "unrecorded_220": [
+  "1790",
+  "1825",
+  "1833",
+  "1852",
+  "1956",
+  "2509",
+  "2539",
+  "2554",
+  "2643",
+  "2664",
+  "2668",
+  "2802",
+  "3048",
+  "3364",
+  "3378",
+  "3380",
+  "3436",
+  "3457",
+  "3464",
+  "3472",
+  "3476",
+  "3520",
+  "3561",
+  "3564",
+  "3575",
+  "3785",
+  "3800",
+  "11715",
+  "11755",
+  "20920",
+  "23670",
+  "23687",
+  "23695",
+  "23708",
+  "24041",
+  "24071",
+  "24240",
+  "24367",
+  "24757",
+  "24784",
+  "24785",
+  "24816",
+  "25300",
+  "25383",
+  "25439",
+  "25857",
+  "25951",
+  "25955",
+  "26418",
+  "26435"
+ ],
+ "summary": {
+  "recorded": {
+   "R1": 109,
+   "R2": 107
+  },
+  "train_rows": {
+   "R1": 13197,
+   "R2": 14078
+  },
+  "in220": {
+   "R1": 111,
+   "R2": 109
+  },
+  "max_class_imbalance_recorded": 1
+ }
+}
