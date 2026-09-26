@@ -33,6 +33,7 @@ INNER = 3
 CUTIN = ("HighwayCutIn", "StaticCutIn", "ParkingCutIn")
 NULL_FF_MAX = 0.07
 PED_FLIP_MIN = 0.20
+EIGH_DEVICE = "cpu"                        # float64 eigh; "cuda" for wide streams on a busy box (night queue 2, N6)
 
 
 def _std(X: torch.Tensor, rows) -> torch.Tensor:
@@ -41,7 +42,7 @@ def _std(X: torch.Tensor, rows) -> torch.Tensor:
 
 def _solve_pair(D, R, Zc, mu, lams):
     """W for every lam of min |D W - R|^2 + mu |Zc W|^2 + lam |W|^2 (one eigh)."""
-    ev, V = torch.linalg.eigh((D.T @ D + mu * (Zc.T @ Zc)).double().cpu())
+    ev, V = torch.linalg.eigh((D.T @ D + mu * (Zc.T @ Zc)).double().to(EIGH_DEVICE))
     ev, V = ev.float().to(D.device), V.float().to(D.device)
     B = V.T @ (D.T @ R)
     return [V @ (B / (ev[:, None] + lam)) for lam in lams]
@@ -52,7 +53,7 @@ def _solve_weighted(Z, Y, w, lams):
     w = w / w.sum() * len(w)
     mz, my = (w[:, None] * Z).sum(0) / w.sum(), (w[:, None] * Y).sum(0) / w.sum()
     A, B = (Z - mz) * w.sqrt()[:, None], (Y - my) * w.sqrt()[:, None]
-    ev, V = torch.linalg.eigh((A.T @ A).double().cpu())
+    ev, V = torch.linalg.eigh((A.T @ A).double().to(EIGH_DEVICE))
     ev, V = ev.float().to(Z.device), V.float().to(Z.device)
     C = V.T @ (A.T @ B)
     out = []

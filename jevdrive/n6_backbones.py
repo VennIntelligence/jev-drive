@@ -204,11 +204,12 @@ def load_backbones(t, which) -> dict:
     return out
 
 
-def fit(seed: int, which, rl, priors=("cinque", "lebowski")) -> dict:
+def fit(seed: int, which, rl, priors=("cinque", "lebowski"), eigh: str = "cpu") -> dict:
     import pandas as pd
     import torch
     from . import p5_exam as E, p5_openpilot, reactivity_mc as M
     os.environ.setdefault("P5_SET", SET)
+    M.EIGH_DEVICE = eigh
     t, past, fut, obs, null, pairs = E.load()
     n = len(t)
     X = load_backbones(t, which)
@@ -270,9 +271,10 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--backbones", default="qwen,vjepa2,dinov2,siglip2,opsmall")
     ap.add_argument("--priors", default="cinque,lebowski")
+    ap.add_argument("--eigh", default="cpu", help="fit: float64 eigh device of the pair-Delta solves (cuda on a busy box)")
     a = ap.parse_args()
     os.environ.setdefault("P5_SET", SET)
-    tag = {"extract": f"extract-{a.shard.replace('/', 'of')}", "fit": f"fit-seed{a.seed}"}.get(a.step, a.step)
+    tag = {"extract": f"extract-{a.shard.replace('/', 'of')}", "fit": f"fit-seed{a.seed}-{a.eigh}"}.get(a.step, a.step)
     rl = RunLog("night2", "n6", tag)
     rl.event("start", args=vars(a), gpu=os.environ.get("CUDA_VISIBLE_DEVICES"))
     rl.info(f"GPU {os.environ.get('CUDA_VISIBLE_DEVICES')}, args {vars(a)}")
@@ -285,7 +287,7 @@ def main():
     elif a.step == "finalize":
         r = finalize()
     else:
-        r = fit(a.seed, a.backbones.split(","), rl, tuple(a.priors.split(",")))
+        r = fit(a.seed, a.backbones.split(","), rl, tuple(a.priors.split(",")), a.eigh)
     rl.info(json.dumps(r, default=float))
     rl.event("result", **{"r": r})
     rl.close()
