@@ -449,6 +449,10 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 
 每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**）。
 
+- 2026-09-26 18:40 CST [main] 复核 lane D 的两处（写于任何 Q5 / Q6 数字之前）：(1) 同意 Q5 对 WA-JEPA 的缩规模（nuScenes 1/4、navtest 1/10、3 个判格臂 + 2 个描述臂）与 bf16 批量前向；
+  条件：置零臂与基线臂必须走同一条批量 bf16 路径，使 3 cm 级的数值差在配对差里抵消；报告里写明子样本与 CI 变宽。(2) 同意 Q6 (c) 的读法：E5 student 没有 Qwen 流，
+  「Qwen 流换 V-JEPA 2」按 M-C 双流（openpilot ⊕ V-JEPA 2 替代 openpilot ⊕ Qwen）在 G0 口径上测；todo 原文的「E5 student」是笔误，结论里按 M-C 写。
+
 ## 结果
 
 （待写）
