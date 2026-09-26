@@ -59,6 +59,10 @@ as they ship: measure them, do not rewrite them.
   code still runs elsewhere, but leave OUR best values as the defaults.
 - Verify the optimized code gives the same results (numerical equivalence on a subset), then record the
   before/after numbers and the bottleneck in the run's todo.
+- Staged launch for every job of more than ~1 h (closed-loop B2D, CARLA generation, long training, big feature runs):
+  run 1 unit, inspect it; then ~10 units (routes, worlds, folds, shards), inspect them against a written sanity
+  checklist (completion / blocked / crash rates, value ranges against a known reference, outputs non-degenerate);
+  only then the full batch. A pilot that fails the checklist stops the batch; never find out after the full run.
 
 ## Results, figures and what lives where
 - Figures, docs and small result files (results.csv/md, metrics, timings) are pulled to this Mac and
