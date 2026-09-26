@@ -1,5 +1,5 @@
 """Figure for the top-10 exams, executor T3 (todos/2026-09-26-top10-intersection.md, results): directional flip rate of
-BridgeDrive (both channels) and BLUE on the P5 v1 BehaviorAgent pairs, per family, per frame (a) and per pair (b), next
+BridgeDrive (both channels), BLUE and its base SimLingo on the P5 v1 BehaviorAgent pairs, per family, per frame (a) and per pair (b), next
 to TFv6's two channels from the original recording on the same judge.
 
     python scripts/make_top10_t3_figs.py      # reads research/results/top10-exams/p5_t3_*.csv
@@ -23,6 +23,7 @@ ps.apply()
 EX = {"BridgeDrive target speed": ("BridgeDrive target speed", ps.PALETTE["vermillion"]),
       "BridgeDrive waypoint speed 2 s": ("BridgeDrive waypoint", ps.PALETTE["orange"]),
       "BLUE waypoint speed 2 s": ("BLUE waypoint", ps.PALETTE["blue"]),
+      "SimLingo waypoint speed 2 s": ("SimLingo waypoint", ps.PALETTE["sky_blue"]),
       "TFv6 target speed": ("TFv6 target speed", ps.PALETTE["green"]),
       "TFv6 waypoint speed 2 s": ("TFv6 waypoint", ps.BASELINE)}
 FAM = ["pooled", "DynamicObjectCrossing", "ParkingCrossingPedestrian", "PedestrianCrossing", "HighwayCutIn",
@@ -54,15 +55,15 @@ def main():
     fl = pd.read_csv(RES / "p5_t3_flip_rates.csv")
     pp = pd.read_csv(RES / "p5_t3_per_pair.csv")
     pp = pp[pp.window == "(b) per pair"]
-    fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.35), gridspec_kw={"width_ratios": [7, 3]})
+    fig, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.6), gridspec_kw={"width_ratios": [7, 3]})
     panel(axs[0], fl, FAM, "flip_rate", "flip_lo", "flip_hi", "n_reactive")
     ps.panel(axs[0], "(a) per frame")
     panel(axs[1], pp, ["pooled", "pedestrian", "cut-in"], "flip", "lo", "hi", "n")
     ps.panel(axs[1], "(b) per pair")
     axs[1].set_ylabel("")
     h, lab = axs[0].get_legend_handles_labels()
-    fig.legend(h, lab, loc="lower center", ncol=5, bbox_to_anchor=(0.5, -0.02), fontsize=7)
-    fig.tight_layout(rect=(0, 0.08, 1, 1), pad=0.3)
+    fig.legend(h, lab, loc="lower center", ncol=3, bbox_to_anchor=(0.5, -0.02), fontsize=7)
+    fig.tight_layout(rect=(0, 0.14, 1, 1), pad=0.3)
     print(ps.save(fig, REPO / "research" / "figs" / "top10-t3-flip-rates"))
 
 

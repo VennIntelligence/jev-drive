@@ -15,5 +15,6 @@
  "tau BridgeDrive target speed": 8.266019943833802,
  "tau BridgeDrive target speed (decoded scalar)": 8.310979843139648,
  "tau BridgeDrive waypoint speed 2 s": 3.3606611905934014,
- "tau BLUE waypoint speed 2 s": 4.9976790214071105
+ "tau BLUE waypoint speed 2 s": 4.9976790214071105,
+ "tau SimLingo waypoint speed 2 s": 3.993818302726098
 }
