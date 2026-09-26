@@ -286,7 +286,11 @@ def smoke_check(capture: str, model_dir: str):
     """The recorder's model path (the author's SensorAgent.setup under this file's env config and shims, forward with
     the reseed) on the BridgeDrive smoke's captured network inputs, against the predictions the author's agent made
     live on those ticks (scripts/top10_smoke/bridgedrive_smoke.py)."""
+    from agents.navigation.local_planner import RoadOption
     agent = SensorAgent.__new__(SensorAgent)
+    # setup() estimates the GPS reference from the plan the leaderboard hands over first; any two points do here
+    agent._global_plan_world_coord = [(carla.Transform(carla.Location(x=x)), RoadOption.LANEFOLLOW) for x in (0.0, 50.0)]
+    agent._global_plan = [({"lat": 0.0, "lon": lon, "z": 0.0}, RoadOption.LANEFOLLOW) for lon in (0.0, 50.0 / 111319.49)]
     with mock.patch("shutil.which", return_value="/bin/true"):
         agent.setup(model_dir)
     out = []
