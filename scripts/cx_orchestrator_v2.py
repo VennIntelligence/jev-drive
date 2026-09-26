@@ -114,12 +114,22 @@ def measure(name):
                             gpu=[list(map(int, line.split(','))) for line in raw.splitlines()]))
         if i < 6: time.sleep(5)
     state = json.loads((OUT / 'state.json').read_text())
-    result = dict(samples=samples, cores=(samples[-1]['cpu'] - samples[0]['cpu']) /
+    result = dict(samples=samples, elapsed_s=samples[-1]['t'] - samples[0]['t'], cores=(samples[-1]['cpu'] - samples[0]['cpu']) /
                   (samples[-1]['t'] - samples[0]['t']) / 1e6, state=state,
                   gpu_mean={g: sum(next(r[2] for r in s['gpu'] if r[0] == g) for s in samples) / len(samples)
                             for g in range(7)})
     base.atomic(OUT / (name + '.json'), result)
     print(json.dumps({k: v for k, v in result.items() if k != 'samples'}, indent=2))
+
+
+def validate_adoption(job, previous, old):
+    """A successor adopts the immutable command actually launched, not a template."""
+    if previous.get('launch'):
+        launched = json.loads(Path(previous['launch']).read_text())['jobs']
+        original = next(j for j in launched if j['id'] == job['id'])
+    else:
+        original = old[job['id']]
+    assert job['command'] == original['command'], 'live command changed'
 
 
 def run(manifest):
@@ -134,7 +144,7 @@ def run(manifest):
     old = {j['id']: j for j in json.loads(base.DEFAULT.read_text())['jobs']}
     for job in jobs:
         if state.get(job['id'], {}).get('status') == 'RUNNING':
-            assert job['command'] == old[job['id']]['command'], 'live command changed'
+            validate_adoption(job, state[job['id']], old)
     base.atomic(OUT / 'successor.json', dict(pid=os.getpid(), manifest=str(manifest),
         sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(), adopted=state))
     deadline = dt.datetime.fromisoformat(config['deadline']).timestamp()

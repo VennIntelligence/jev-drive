@@ -44,6 +44,15 @@ class CapacityTests(unittest.TestCase):
         measured=q.resident(active,procs,[(2,4)])
         self.assertEqual(measured[0]['resident_pids'],203)
         self.assertEqual(measured[0]['resident_gpu_gb'],4)
+    def test_successor_readopts_actual_launch_command(self):
+        with tempfile.TemporaryDirectory() as temp:
+            launch=Path(temp)/'launch.json'
+            job=dict(id='q5-child',command='SCORE_THREADS=6 original-child')
+            launch.write_text(json.dumps(dict(jobs=[job])))
+            old={'q5-child':dict(command='SCORE_THREADS=14 original-child')}
+            q.validate_adoption(job,dict(launch=str(launch)),old)
+            with self.assertRaises(AssertionError):
+                q.validate_adoption(dict(job,command='different-scientific-command'),dict(launch=str(launch)),old)
     def test_manifest_keeps_scoring_command_and_fit_gate(self):
         old={j['id']:j for j in json.loads(q.base.DEFAULT.read_text())['jobs']}
         new={j['id']:j for j in json.loads(q.DEFAULT.read_text())['jobs']}
