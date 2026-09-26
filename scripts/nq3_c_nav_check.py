@@ -78,6 +78,7 @@ def t1(model: str):
     M = getattr(I, model)()
     p6 = json.loads((DATA / "processed/top10_exam/p6/plan.json").read_text())
     p5 = json.loads((DATA / "processed/top10_exam/p5/plan.json").read_text())
+    I.maps_path("p6", "x").parent.mkdir(parents=True, exist_ok=True)
     for k, r in p6["rigs"].items():
         I.make_maps(("p6", k, r))
     d = np.load(S / "direct.npz")
