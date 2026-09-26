@@ -386,8 +386,8 @@ def fig_desire(out_dir=REPO / "research" / "figs", read: int = 0):
             ax.axhline(y, color=c, lw=0.6, ls=":")
         ax.set_xlabel("ego speed (m/s)")
         ax.set_ylabel(r"$|\Delta_{lat}(3\,s)|$ toward desire (m)")
-        ax.set_ylim(bottom=0)
-        plots.legend_below(fig, ax, ncol=2)
+        ax.set_ylim(0, 2.3)
+        ax.legend(loc="upper left", ncol=2)
         plots.save(fig, Path(out_dir), "night2_n2_desire_speed")
 
 
