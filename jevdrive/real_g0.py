@@ -679,10 +679,56 @@ def verdicts(wod_run, nav_run, nav_table_run, out: Path) -> pd.DataFrame:
     return v
 
 
+
+def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/figs"):
+    """WOD RFS delta per cluster, NAVSIM PDMS delta per group, straight / pedestrian activation; students A / B x models,
+    seed 0 with CI and seeds 1-2 as crosses."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    res_dir, out_dir = Path(res_dir), Path(out_dir)
+    wt, wa = pd.read_csv(res_dir / "wod_deltas.csv"), pd.read_csv(res_dir / "wod_activation.csv")
+    nt, na = pd.read_csv(res_dir / "navsim_paired.csv"), pd.read_csv(res_dir / "navsim_activation.csv")
+    wt, wa = wt[(wt.stats == "carla") & (wt.judge == "RFS (rater)")], wa[wa.stats == "carla"]
+    nt = nt[nt.metric == "PDMS"]
+    series = [(m, a, c, mk) for m, c in (("cinque", plots.OKABE_ITO[5]), ("lebowski", plots.OKABE_ITO[6]))
+              for a, mk in (("A", "o"), ("B", "s"))]
+    panels = [(wt, "scope", list(WOD_SCOPES), ["All", "Ped.", "Cyc.", "Cut-in", "FOD", "Inters."], r"WOD $\Delta$RFS"),
+              (nt, "group", list(NAV_GROUPS), ["All", "Ped./cyc.", "Other", "Straight"], r"navtest $\Delta$PDMS")]
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(plots.PAGE, 2.0), gridspec_kw={"width_ratios": [1.3, 1, 0.9]})
+        for ax, (t, col, keys, labels, ylab) in zip(axes, panels):
+            for k, (m, a, c, mk) in enumerate(series):
+                x = np.arange(len(keys)) + (k - 1.5) * 0.17
+                r = t[(t.model == m) & (t.arm == a) & (t.seed == 0)].set_index(col).loc[keys]
+                ax.errorbar(x, r.delta, yerr=[r.delta - r.lo, r.hi - r.delta], fmt=mk, color=c, ms=3, lw=0.8, capsize=1.5,
+                            mfc=c if a == "A" else "white", label=f"{m.capitalize()}, student {a}")
+                for sd in (1, 2):
+                    r = t[(t.model == m) & (t.arm == a) & (t.seed == sd)].set_index(col).loc[keys]
+                    ax.plot(x + 0.06, r.delta, "x", color=c, ms=2.5, mew=0.6)
+            ax.axhline(0, color="0.5", lw=0.6)
+            ax.set_xticks(np.arange(len(keys)), labels)
+            ax.set_ylabel(ylab)
+        ax = axes[2]
+        acts = [("WOD straight", wa, "straight_yaw"), ("WOD ped.", wa, "Pedestrians"), ("nav straight", na, "straight"),
+                ("nav ped.", na, "ped_cyc_corridor")]
+        for k, (m, a, c, mk) in enumerate(series):
+            x = np.arange(len(acts)) + (k - 1.5) * 0.17
+            for sd in SEEDS:
+                y = [100 * float(t[(t.model == m) & (t.arm == a) & (t.seed == sd) & (t.scope == sc)].activation.iloc[0])
+                     for _, t, sc in acts]
+                ax.plot(x + (0.06 if sd else 0), y, mk if sd == 0 else "x", color=c, ms=3 if sd == 0 else 2.5,
+                        mfc=(c if a == "A" else "white") if sd == 0 else None, mew=0.6, ls="none")
+        ax.axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
+        ax.set_xticks(np.arange(len(acts)), [n for n, *_ in acts], rotation=25, ha="right")
+        ax.set_ylabel("Activation rate (%)")
+        plots.legend_below(fig, axes[0], ncol=4)
+        plots.save(fig, out_dir, "real-g0-student-transfer")
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("lists", "embed", "status", "geom", "students", "wod", "navsim", "navsim-table", "verdict"))
+    ap.add_argument("step", choices=("lists", "embed", "status", "geom", "students", "wod", "navsim", "navsim-table", "verdict", "figs"))
     ap.add_argument("--slices", type=int, default=30)
     ap.add_argument("--sets", nargs="+", default=list(SETS))
     ap.add_argument("--runs", nargs="*", default=[], help="navsim-table: the g0-navsim run; verdict: wod, navsim, navsim-table runs")
@@ -692,7 +738,9 @@ def main():
     elif a.step == "status":
         for n in a.sets:
             log.info("%s: %d / %d images detected, READY %s", n, *slices_done(n), root(n, "READY.json").exists())
-    elif a.step in ("students", "wod", "navsim", "navsim-table", "verdict"):
+    elif a.step == "figs":
+        figs()
+    elif a.step in ("students", "wod", "navsim", "navsim-table", "verdict", "figs"):
         from .runlog import RunLog
         rl = RunLog("real-data-transfer", f"g0-{a.step}")
         if a.step == "navsim-table":
