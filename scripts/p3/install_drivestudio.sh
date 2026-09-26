@@ -52,6 +52,6 @@ PY
 
 echo "== p3-wodprep: tensorflow + waymo-open-dataset (Waymo preprocess only)"
 [[ $("$PREP/bin/python" -V 2>/dev/null) == "Python 3.10"* ]] || uv venv --clear "$PREP" --python 3.10
-pip "$PREP" "waymo-open-dataset-tf-2-12-0==1.6.4" "numpy<2" pillow tqdm opencv-python-headless
+pip "$PREP" "waymo-open-dataset-tf-2-12-0==1.6.4" "protobuf==3.20.3" "numpy<2" pillow tqdm opencv-python-headless
 CUDA_VISIBLE_DEVICES= "$PREP/bin/python" -c "import tensorflow as tf; from waymo_open_dataset.utils import frame_utils; print('ok tf', tf.__version__)"
 echo "== install done"
