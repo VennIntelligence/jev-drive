@@ -21,17 +21,42 @@ say "estimate (GPU 6 shared with lane C, measured 17:20): DrivoR 11 arms x 16 78
 [[ -f $R/req/arms.json ]] || { "${py[@]}" req; "${py[@]}" arms; }
 [[ -f $R/frag/arms_wajepa.npz ]] || "${py[@]}" frag-prep --workers 16
 
-drivor() {   # set request arms out
-  [[ -f $4 ]] && return 0
-  say "DrivoR $1 -> $4"
-  (cd "$DATA_DIR/third_party/drivor" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=2 "${pin[@]}" "$DATA_DIR/envs/drivor/bin/python" \
-    "$repo/scripts/nq3_d/drivor_arms.py" "$2" "$3" --out "$4" --workers "${5:-10}" > "$L/drivor_$1.log" 2>&1)
+vram_wait() {   # GB: wait (<= 60 min) until GPU $GPU has that much free memory; GPU 6 is shared with lane C
+  local i free
+  for i in $(seq 60); do
+    free=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$GPU" | tr -d ' ')
+    (( free >= $1 * 1024 )) && return 0
+    (( i == 1 )) && say "waiting for $1 GB free on GPU $GPU (now $((free / 1024)) GB)"
+    sleep 60
+  done
+  say "still < $1 GB free on GPU $GPU after 60 min; trying anyway"
 }
-wajepa() {   # set request arms out [extra args]
+drivor() {   # set request arms out [workers]; up to 3 attempts (chunks resume)
   [[ -f $4 ]] && return 0
-  say "WA-JEPA $1 -> $4"
-  (cd "$DATA_DIR/third_party/wajepa" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=1 "${pin[@]}" "$DATA_DIR/envs/wajepa/bin/python" \
-    "$repo/scripts/nq3_d/wajepa_arms.py" "$2" "$3" --out "$4" "${@:5}" > "$L/wajepa_$1.log" 2>&1)
+  local k
+  for k in 1 2 3; do
+    vram_wait 4
+    say "DrivoR $1 -> $4 (attempt $k)"
+    (cd "$DATA_DIR/third_party/drivor" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=2 "${pin[@]}" "$DATA_DIR/envs/drivor/bin/python" \
+      "$repo/scripts/nq3_d/drivor_arms.py" "$2" "$3" --out "$4" --workers "${5:-10}" >> "$L/drivor_$1.log" 2>&1) && return 0
+    sleep 120
+  done
+  say "DrivoR $1 FAILED 3 times (see $L/drivor_$1.log)"; return 1
+}
+wajepa() {   # set request arms out [extra args]; up to 3 attempts, the batch halved after an out-of-memory
+  [[ -f $4 ]] && return 0
+  local k bs=$WJ_BS extra=("${@:5}")
+  for k in 1 2 3; do
+    vram_wait 12
+    say "WA-JEPA $1 -> $4 (attempt $k, bs $bs)"
+    local args=("${extra[@]}")
+    [[ " ${extra[*]} " == *" --bs "* ]] && args=("${extra[@]/#$WJ_BS/$bs}")
+    (cd "$DATA_DIR/third_party/wajepa" && CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=1 "${pin[@]}" "$DATA_DIR/envs/wajepa/bin/python" \
+      "$repo/scripts/nq3_d/wajepa_arms.py" "$2" "$3" --out "$4" "${args[@]}" >> "$L/wajepa_$1.log" 2>&1) && return 0
+    grep -qi "out of memory" "$L/wajepa_$1.log" && (( bs > 1 )) && bs=$((bs / 2))
+    sleep 120
+  done
+  say "WA-JEPA $1 FAILED 3 times (see $L/wajepa_$1.log)"; return 1
 }
 score() {    # jobs file
   local ver split name npz tok
