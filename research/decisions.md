@@ -3244,7 +3244,7 @@ TFv6 waypoint 在 P6 上有显著 Δ_lat（第 38 条「TFv6 高分主要不是 
 ## 48. 冻结的视频 / 图像自监督特征里有 E 层（行人反应）信号，但只有配对差分激发得出来：V-JEPA 2 与 Qwen 同一水平，SigLIP2 低一档，DINOv2 与 openpilot small 没有（**待定**，P5 v1 BA，3 seed）
 
 2026-09-26。预登记、操作性选择与偏离在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N6（`[C]` 条目写于任何数字之前），小表在 [results/night2/N6/](results/night2/N6/)。
-接第 42 条（M-C：Qwen `L18_last` 单流配对差分在 P5 v1 BA 上行人翻转 42%）与 [消融矩阵盘点](../tmp/2026-09-26-ablation-matrix.md) 的空格：同一套 `ridge_late` 与 pair-Δ（`reactivity_mc.fit_fold` 原样，把 Qwen 流换成该 backbone，prior = openpilot Cinque `ridge_late`），
+接第 42 条（M-C：Qwen `L18_last` 单流配对差分在 P5 v1 BA 上行人翻转 42%）与 [消融矩阵盘点](ablation-matrix-inventory.md) 的空格：同一套 `ridge_late` 与 pair-Δ（`reactivity_mc.fit_fold` 原样，把 Qwen 流换成该 backbone，prior = openpilot Cinque `ridge_late`），
 三路相机拼接、mean-pool、冻结；判据：每个 seed 行人翻转 CI 下界 > 该考生样本外 null false-flip + 10 pp。
 
 | backbone（主 tap） | `ridge_late` 行人 | pair-Δ 单流行人，3 seed 均值 [最小, 最大] | pair-Δ cut-in（对 prior Δ） | 判格 |
@@ -3311,7 +3311,7 @@ DynamicObjectCrossing 非反应误翻 B − A 在 ±1.9 pp（门槛 +3），null
 
 **状态**：**待定**。限定：只在 CARLA（BA 集），检测外观来自 COCO 训练的 YOLO，真实数据上 image-plane token 的迁移（G0 那一问）没测；Lebowski 的 cut-in 增益本身 CI 下端就贴着 0；延迟在共卡上量，绝对值比 E5 独占卡时高约 15 ms。
 
-## 50. 公开的 state-space RL policy 只有 BehaviorBench 的两个权重能装上跑；negotiation 上 PPO 的反应是 IDM 的 3 倍且带横向，bypass 由 reward 系数决定，recovery 没有一个会；两个都不能直接当 openpilot desire 之后的执行层（**待定**）
+## 51. 公开的 state-space RL policy 只有 BehaviorBench 的两个权重能装上跑；negotiation 上 PPO 的反应是 IDM 的 3 倍且带横向，bypass 由 reward 系数决定，recovery 没有一个会；两个都不能直接当 openpilot desire 之后的执行层（**待定**）
 
 2026-09-26。预登记、执行日志与全部表格在 [todos/2026-09-26-state-space-policies.md](../todos/2026-09-26-state-space-policies.md)，候选清单在 [state-space-policies.md](state-space-policies.md)。
 起因是第 47 条：判断之后的行为（绕行、让行 / 博弈、恢复）我们没有量具，也没有来源；用户认为 Gigaflow 类自博弈 state-space policy 可能有公开权重。
