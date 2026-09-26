@@ -325,9 +325,12 @@ def block_mse(pred, tgt):
 
 
 def train(model, data: Data, tr_starts: np.ndarray, va_starts: np.ndarray, seed: int, rl=None, tag: str = "",
-          cfg=CFG, steps: int | None = None) -> dict:
+          cfg=CFG, steps: int | None = None, compile: bool = True) -> dict:
+    """The training steps run through torch.compile(mode="reduce-overhead") (CUDA graphs: the eager step is launch-bound,
+    30 steps/s at ~20 % GPU utilisation on the box -> 112 steps/s); evaluation and readouts use the eager module."""
     import torch
     steps = steps or cfg["steps"]
+    fwd = torch.compile(model, mode="reduce-overhead") if compile else model
     g = torch.Generator(device="cuda").manual_seed(seed)
     tr = torch.as_tensor(tr_starts, device="cuda")
     va = torch.as_tensor(va_starts, device="cuda")
@@ -340,7 +343,7 @@ def train(model, data: Data, tr_starts: np.ndarray, va_starts: np.ndarray, seed:
         idx = tr[torch.randint(len(tr), (cfg["batch"],), device="cuda", generator=g)]
         zh, ha, fa, zf = data.batch(idx)
         with torch.autocast("cuda", torch.bfloat16):
-            pred = model(zh, ha, fa)
+            pred = fwd(zh, ha, fa)
         loss = block_mse(pred.float(), zf)
         opt.zero_grad(set_to_none=True)
         loss.backward()
@@ -349,7 +352,7 @@ def train(model, data: Data, tr_starts: np.ndarray, va_starts: np.ndarray, seed:
         sched.step()
         if step % cfg["eval_every"] == 0 or step == steps:
             vl = evaluate(model, data, va)
-            tl = float(loss)
+            tl = float(loss.detach())
             hist.append({"step": step, "train": tl, "val": vl, "wall_s": time.time() - t0})
             if rl:
                 rl.scalar(f"{tag}/train_loss", tl, step)
