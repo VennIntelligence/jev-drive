@@ -139,6 +139,9 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 
 顺序图：N2(P5 v1 部分) / N3 / N4 / N5 立即；N1 smoke 过后批量；N6 在 N5 后；N2 的 N1 部分最后。
 
+- 2026-09-26 09:55 CST [main] A / B / C 由中央调度员（real-data-transfer 那个 session）派出，D 已在跑。卡：G0 / G3 已收工、5 张卡全空；
+  A 用 GPU 0–2（每卡 ≤ 6 个 CARLA server，全 box ≤ 30，与 D 的 CARLA 合计），C 用 GPU 3，B 的零散 GPU 用 GPU 4；空出来的卡谁需要谁用，开工前看 `nvidia-smi`。
+
 ## 结果
 
 （按节追加，每条带出处路径。）
