@@ -187,6 +187,9 @@
   另报不加 gate 的 Hydra + Δ（P5 / I3 全部 seed，NAVSIM 只 seed 0）作描述。
   (7) **顺带两格**：nuScenes = `runs/nusc_backbones/ladder/20260925-144240/nusc_preds.npz` 里的冻结 head 预测（0.5 … 3.0 s 六个点，从后轴 t0 系换到 LIDAR_TOP 系，第 39 条考试的 `nuscenes_zs.per_sample` / `horizons` 原样），
   报 VAD 与 BEV-Planner 两种 collision（1 / 2 / 3 s）与 L2，scene bootstrap；只在第 39 条 index 里有 GT 框的 val 样本上算（n 照报）。E4c = `elicit_e4c` 的曲线代码原样，加 E5 student A / B（seed 0 主，1 / 2 并报），L = 0.1 s（与 openpilot 同，端到端 30 ms）。
+- 2026-09-26 10:12 [B] 执行记录（无结果数字）：seed 0 的 Hydra 重拟合对 E6 已存 navtest 选择**逐 token 同一 anchor（100%）**，Lebowski seed 0 拟合完成；NAVSIM `ridge_late` 重拟合对 G3 已存 navtest 预测最大差 0（Cinque / Lebowski）。
+  seed 1 的逐 anchor 打分实测比 E6 慢：48 个钉住的核上 2.9 token / s（约 17 core·s / token，E6 是 7；box 负载 150–170，超线程争用），顺序跑两个 seed 约 4 h，是估计的 2 倍。
+  处理：seed 1 在 64–111 核上续跑（已完成的 48 个 chunk 保留，被打断的 chunk 重算），seed 2 同时在 160–199 核上跑；预计 12:30 前两个 seed 都打完。其余 N3 步骤先用 seed 0 做，seed 1 / 2 到了再补同一套代码。
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
 
