@@ -197,6 +197,11 @@
 - 2026-09-26 10:12 [B] 执行记录（无结果数字）：seed 0 的 Hydra 重拟合对 E6 已存 navtest 选择**逐 token 同一 anchor（100%）**，Lebowski seed 0 拟合完成；NAVSIM `ridge_late` 重拟合对 G3 已存 navtest 预测最大差 0（Cinque / Lebowski）。
   seed 1 的逐 anchor 打分实测比 E6 慢：48 个钉住的核上 2.9 token / s（约 17 core·s / token，E6 是 7；box 负载 150–170，超线程争用），顺序跑两个 seed 约 4 h，是估计的 2 倍。
   处理：seed 1 在 64–111 核上续跑（已完成的 48 个 chunk 保留，被打断的 chunk 重算），seed 2 同时在 160–199 核上跑；预计 12:30 前两个 seed 都打完。其余 N3 步骤先用 seed 0 做，seed 1 / 2 到了再补同一套代码。
+- 2026-09-26 10:10 [B] **兼容检查的结果（按 09:58 (3) 先写进来，此时没算过任何 N3 的翻转数）**：seed 0 上 Hydra 选中 anchor 的 top-10 与 navtest 的重叠，P5 null 帧（6 352 帧）Cinque 10%、Lebowski 0%，I3 null 帧（1 584 帧）Cinque 10%、Lebowski 0%，
+  全部 < 30%；选中 anchor 的 σ(DAC) 均值差 P5 +0.05 / +0.00、I3 −0.10 / −0.08（Cinque / Lebowski），全部 anchor 上 +0.15 / +0.12、−0.01 / +0.02。
+  **按登记：Hydra 与 Hydra + gated Δ 在 P5 与 I3 列写「不可比」，这些格不读**（exam 照算、原始 csv 留在 box 的 run 目录，汇总表不收这些行）。所以 N3 的第一个判据（榜单 head 压不压反应）在 CARLA 内无法判，第二个判据（能力包）只剩 NAVSIM 一半可读，总判「不可判」。
+  seed 1 / 2 的 Hydra 照跑，只为 NAVSIM 列的 3 seed 与 Lebowski 行。
+- 2026-09-26 10:11 [B] **事后加一个描述（看过上面的重叠数之后，不改任何判格）**：同一统计量对同词表的 NAVSIM `cls_late`（(a′)，模仿头）也算一次，看低重叠是 Hydra 打分头特有，还是 NAVSIM 训的读出在 CARLA 帧上普遍如此（后者指向输入 / 场景分布差，而非打分头本身）。
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
 
