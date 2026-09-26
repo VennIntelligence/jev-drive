@@ -338,6 +338,12 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   **11:39 更新**：I3 补渲在停之前已全部完成：65 / 65 个场景、68 728 个视图、5.8 GB（`processed/hugsim_pairs_10hz/`）；核对：前三路 5 Hz 帧 **26 136 / 26 136 张与原 JPEG 逐字节相同**（= 原集合全部 JPEG），
   判据 max |Δ| = 0 通过。续跑命令里的第 1 步不再需要。
   **事故**：NAVSIM 子执行员 11:06:53 清理自己的进程时用了 `pgrep -f run_pdm_score_multi_gpu`，误杀了 T1 的 `t1-nav-sd`（SparseDriveV2 navtest，37%，exit 143）；已报 main 转告 T1。
+- 2026-09-26 12:50 CST [T2] 重启后续跑（12:28 起，GPU 6 独占，CPU 上限 16）。核分配：T2 全部进程 `taskset` 在 192–207（WOD / nuScenes 子执行员 192–195，NAVSIM 196–201，P5 / I3 推理 202–207），
+  所有进程 OMP / OPENBLAS = 1；NAVSIM 打分用 devkit 的 worker 数上限（`SCORE_WORKERS=6`，同一核段内），v2 EPDMS 与 v1.1 PDMS 是两种分，不是同一打分跑两遍。
+  **12:45 吞吐检查**（main 要求）：T2 进程实测合计约 10 核（每个推理进程约 1 核、DrivoR 两个 loader 各 0.4 核），全部在 192–207 内；GPU 6 100%，瓶颈是这张卡，
+  图像解码已经不在热路径上（WA-JEPA 每张唯一图只解码一次进 /dev/shm 缓存，P5 69 606 张 4 min）。没有要改的，不改（前后数字相同，无需等价核对）。
+  GPU 6 上的排队量约 3.5–4 GPU·h（NAVSIM WA-JEPA fp32 导出 12 146 token 约 2 h、P5 WA-JEPA 约 50 min、I3 与 DrivoR 各约 20–25 min、WOD / nuScenes 的 WA-JEPA 约 15 min），
+  单卡墙钟约 3.5–4 h，与 10:05 的总估时（7–8 h）一致。
 - 2026-09-26 12:40 CST [T3] 开工（BridgeDrive + BLUE 的 P5 v1 BA 重录与考试）。先核对了规模：BA 考卷的索引（`processed/carla_p5v1_ba`）不是 322 个 run，
   而是 707 个世界（322 个 v1 新录 + 385 个从 v0 链接进 `gen-ba` 的），其中 570 个世界出了 obs / null 帧（19 428 个唯一帧）；每个世界只需录到它最后一个被引用的 tick，
   合计 13.5 万 tick（全长是 30.5 万）。所以重录这 570 个世界、各录到最后引用帧为止，工作量与 5.4 估的 322 个全长 run 同量级。**分步估时**：
