@@ -56,7 +56,10 @@ guard() {  # guard <pid> <estimate h> <log>: wait for a background job, kill it 
 # ---------------------------------------------------------------- K2: Cinque lead outputs on P5 v1 BA and P6 v0
 lead_set() {  # lead_set <dir> <estimate h> <set>: 4 single-model processes (GPU 6 is time-sliced among ~10 processes;
     # each openpilot process spin-waits at 100% of one core, so 4 processes = the 4 cores and 4 shares of the card)
-    local d=$1 est=$2 set=$3 pids=() s nsh
+    local d=$1 est=$2 set=$3 pids=() s nsh p t0=$SECONDS
+    for p in $(cat "$d/pids" 2>/dev/null); do     # processes of an earlier chain on this step: let them finish first
+        while kill -0 "$p" 2>/dev/null; do (( SECONDS - t0 > 2 * 3600 )) && return 1; status "$STEP" "waiting for earlier PID $p"; sleep 20; done
+    done
     wait_gpu 3600
     nsh=$(( ($(free_mb) - 1000) / 2600 )); (( nsh > 4 )) && nsh=4; (( nsh < 1 )) && nsh=1   # ~2.6 GB per process
     log "lead $set: $nsh processes (GPU $GPU free $(free_mb) MB)"
