@@ -201,6 +201,22 @@
 P5 v1 BA 集，配对差分，3 seed，Cinque 与 Lebowski。**判据**：B 的行人翻转 CI 与 A 重叠或更高，且 DOC 非反应误翻不比 A 多 3 pp 以上 → 快通道改为 image-plane，
 lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验在这里有用」。cut-in 对 prior 的 Δ 并列报。端到端延迟同 E5 口径重测一次。
 
+**[B] 执行记录（执行员 B；box 时钟 CST）**
+
+- 2026-09-26 10:12 [B] **N4 的操作化**（写于 N4 的任何检测、拟合、延迟数字之前；估时见 N3 节 09:55 条）。
+  (1) **arm A** = E5 的 student A（op `temporal` ⊕ E5 的 64 维路线走廊抬升 embedding，纯配对差分），直接用 E5 fit run（`runs/elicitation/e5-fit/20260926-021421`）已存的 3 seed × 2 模型预测；G0 已证明同一代码逐位复现，不重拟合。
+  (2) **B 的检测**：YOLO26x-seg 640 fp16、conf 0.25、COCO → 三类（`fastperc.COCO_MAP`），在 E5 同一张图像表（`processed/elicit_e5/images.parquet`，140 109 张）上重跑，只多一个 Segment 头的 forward pre-hook 取三层 neck 特征图；
+  每个检测框按 Ultralytics LetterBox 规则映到网络输入坐标，在三层上各做 `torchvision.ops.roi_align`（1 × 1 输出、sampling_ratio 2、aligned）后拼接 = 原始检测特征。核对（描述）：每张图的三类检测数与 E5 已存检测一致的比例。
+  (3) **检测 embedding** = 原始检测特征的 PCA 16 维；PCA 只在 role == train 帧的检测上拟合（无标签、与 fold 无关的无监督降维，所有 fold 共用）。
+  (4) **B 的 token**：每路相机按框底 y₁ 从下往上（图像平面上的远近顺序，不用任何标定）取前 k = 8 个检测；每个 token = 相机 one-hot 3、框中心 (u, v) / (W, H)、框宽高 (w, h) / (W, H)、类别 one-hot 3、score、embedding 16、mask 位 1，共 28 维；
+  3 路 × 8 × 28 = 672 维，空位补零。不 lift、不做走廊筛。选 y₁ 排序的理由（写于任何拟合之前，依据是输入统计）：E5 检测里每路相机图像三类检测数的 p90 = 8、p95 = 10，约一成图像会被截断，按 score 截会先丢掉分数偏低的行人。
+  (5) **C** = op ⊕ B ⊕ A 三路，各自在训练行上逐列标准化（mask 位不标准化）后乘 1/√d_路（E5 / M-C 的等总方差做法）；B 同样是 op ⊕ B 两路。
+  (6) **student**：`elicit_e5.train_student` 原样，纯配对差分（E5 的 arm A 训练信号，无 teacher），seed 0 / 1 / 2，fold、prior、训练行、配对行与 E5 完全相同；Cinque 与 Lebowski。
+  (7) **judge 与判格**：`p5_exam.exam`、`reactivity_mc.criteria` 原样，A / B / C 放进同一次 exam；DynamicObjectCrossing 非反应帧误翻同 E5 的 `nonreactive` 表。按模型 × seed 判：
+  「B 的行人翻转 CI 与 A 重叠或更高」= B 的 CI 上界 ≥ A 的 CI 下界；且 DOC 非反应误翻 B − A ≤ 3 pp → 「快通道改为 image-plane，lift 只留在测量里」；B 的 CI 上界 < A 的 CI 下界 →「几何先验在这里有用」；其余照实写。
+  主判 Cinque，三个 seed 一致取那一格，否则写「随 seed 变」；Lebowski 复现；cut-in 对 prior 的 Δ 并列；C 只描述。
+  (8) **延迟**（E5 口径重测）：GPU 4 空闲时 batch 1、三路一次调用：YOLO fp16 + hook 的 RoIAlign + PCA、token 构造（CPU）、MLP 前向分别计时，p95 相加，加 openpilot `temporal` 2.3 ms；A 的抬升 + 走廊 + embedding 同一次重测。
+
 ## N5. 放置修复只用于测量（GPU 1–2 h）
 
 第 45 条要求登记的一项。metric depth（Depth Anything 3 metric 或 UniDepth v2，给相机内参）替代 flat-ground lift，只改**召回测量**，不进模型。
