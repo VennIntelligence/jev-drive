@@ -315,16 +315,24 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
     if obstacle == "hide":
         ab.InvadingActorFlow.update = lambda self: running
 
+    route_pts = []                                  # the ego route (RouteScenario.route), filled at build
+
     def shoulder(loc, half_width, side, extra):
-        cmap = CarlaDataProvider.get_map()
-        wp = cmap.get_waypoint(loc, project_to_road=True, lane_type=_carla.LaneType.Driving)
-        r = wp.transform.get_right_vector()
-        o = (loc.x - wp.transform.location.x) * r.x + (loc.y - wp.transform.location.y) * r.y
-        target = side * (wp.lane_width / 2.0 + half_width + P6_SHOULDER_MARGIN_M + extra)
-        if abs(o) >= abs(target):                   # already off the lane (the side warning sign)
+        """Move loc sideways, relative to the ego ROUTE (not to the nearest driving lane: on two-way roads that can be
+        the opposite lane, whose right vector points the other way; [A] 15:30 diagnosis), so that the actor's inner
+        edge is P6_SHOULDER_MARGIN_M (+ extra) beyond the ego lane's edge on its side (+1 right, -1 left)."""
+        P = np.asarray(route_pts)
+        i = int(np.argmin(np.hypot(P[:, 0] - loc.x, P[:, 1] - loc.y)))
+        a, b = P[max(i - 1, 0)], P[min(i + 1, len(P) - 1)]
+        t = (b - a) / max(np.hypot(*(b - a)), 1e-6)
+        r = np.array([-t[1], t[0]])                 # CARLA is left-handed: heading +y -> right is -x
+        o = float((np.array([loc.x, loc.y]) - P[i]) @ r)
+        lw = CarlaDataProvider.get_map().get_waypoint(_carla.Location(float(P[i, 0]), float(P[i, 1]), loc.z)).lane_width
+        target = side * (lw / 2.0 + half_width + P6_SHOULDER_MARGIN_M + extra)
+        if o * side >= abs(target):                 # already off the lane on that side (the side warning sign)
             return loc, 0.0
         s = target - o
-        return _carla.Location(loc.x + s * r.x, loc.y + s * r.y, loc.z), s
+        return _carla.Location(loc.x + s * r[0], loc.y + s * r[1], loc.z), s
 
     log, hidden, shifted, registry = [], [], [], {"dropped": [], "kept": []}
     pending, bikes = [], []
@@ -333,6 +341,8 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
     def build(self, ego_vehicle, debug=False):
         n0 = len(self.list_scenarios)
         inner_build(self, ego_vehicle, debug=debug)
+        if not route_pts:
+            route_pts.extend([t.location.x, t.location.y] for t, _ in self.route)
         mine = set()
         for sc in self.list_scenarios[n0:]:
             name = type(sc).__name__
