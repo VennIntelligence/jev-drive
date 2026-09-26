@@ -71,6 +71,14 @@ def fetch_wod(workers: int = 16):
                     n += 1
     log.info("%d records to fetch from %d raw shards", n, len(want))
     import os
+    from . import waymo as W
+    gcs = Z._gcs
+
+    def _gcs():          # the project venv's own proto (jevdrive.waymo), not the download venv's waymo_open_dataset
+        m = gcs()
+        m.e2ed_frame = W.e2ed_frame
+        return m
+    Z._gcs = _gcs
     proxy = os.environ.get("https_proxy") or "http://127.0.0.1:7890"
     r = Z.fetch_records(want, "proxy", proxy, workers, log=log.info)
     log.info("fetched %s", r)
