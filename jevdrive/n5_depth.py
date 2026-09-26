@@ -95,6 +95,7 @@ def depth(model: str, workers: int = 16, limit: int = 0, rl=None) -> dict:
     from .sam_detect import _collate, _Images
     L = data() / "processed/fusion_diag/lists"
     S = json.loads((data() / "processed/fastperc/subset.json").read_text())
+    torch.set_num_threads(1)     # DA3's CPU pre/post-processing is 16x slower with many threads on the loaded box
     net = {"unidepth": UniDepth, "da3": DA3Metric}[model]()
     info = {}
     for ds, lst in (("p5", "p5.parquet"), ("nusc", "nusc.parquet")):
