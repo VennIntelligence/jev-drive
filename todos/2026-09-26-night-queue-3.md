@@ -219,6 +219,12 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   WOD 用 E1 的 19 663 帧（已有 `vjepa2_p3` / `_fl` / `_fr`，4 帧 × 0.2 s、256²、ViT-L，与 N6 配方一致，三路按 front | front_left | front_right 拼），prior = WOD train `ridge_late`；
   NAVSIM navtest 需新抽 V-JEPA 2（三路 CAM_F0 / L0 / R0，NAVSIM 2 Hz 的 4 帧历史 −1.5 … 0 s，与 E1 的 Qwen NAVSIM clip 相同的「记录下来的输入差」：0.5 s 间隔对 P5 的 0.2 s），prior = NAVSIM `ridge_late`，官方 devkit v1.1 PDMS（EPDMS 不跑，省 CPU）。
   3 seed × 2 模型。判格：WOD 全部 rater 帧 RFS 配对差与 navtest 全部 token PDMS 配对差的 95% CI **都覆盖 0（或整体 > 0）**，3 个 seed 都成立 →「V-JEPA 2 进快通道候选」；另报 G0 的四格判定（有害 / 有用 / 无害无用 / 都不是）与同口径的 Qwen M-C（E1）对照。激活率的 τ 取该臂自己在 P5 null 上的 τ。
+- 2026-09-26 16:56 CST [D] **Q6 管线的 profiling 与等价检查**（只在子集上，核 192–195、GPU 6 ≤ 6 GB；没有产生任何 Q6 判格用的数）。代码 `jevdrive/nq3_q6.py`（(b)(c)）、`jevdrive/nq3_q6_table.py`（(a)），链式入口 `scripts/nq3_d/q6.sh`（无参数、按 `runs/nq3/q6/done/` 续跑）。
+  (1) 抽取器等价：本驱动在 64 个 unit 上重抽真 4 帧 clip，对 N6 已存 V-JEPA 2 特征中位相对差 0、最大 0.38%（门槛 5%）、余弦 0.9999993，过；单帧路径每个 unit 只解码 1 张 JPEG（原 4 张），
+  4 096 个 unit 实测 122 clip / s（4 个 loader，GPU 6 与 lane C 共卡满载），全量 140 109 个 unit 估 19 min，峰值显存 1.6 GB。
+  (2) fold head 等价：V-JEPA 2 双流 M-C 的 5 个 fold head（Cinque、seed 0）用 GPU `eigh` 重算，对 N6 已存预测**逐位相同**（最大差 0.00 m、λ 5 / 5 相同），47 s / 模型 × seed（CPU `eigh` 在忙机上 559 s / 次，N6 记录），6 组合计约 5 min。
+  (3) 主表收集器在 box 上 30 s 跑完、64 行、436 格；对盘点旧表的 75 格：48 格相同（舍入内），26 格因「3 seed 均值替代 seed 0」变化（最大 Hydra EPDMS 82.6 → 81.0，Cinque seed 1 的 comfort 掉分，N3 已述），1 格（E1 Lebowski NAVSIM −11 → −11.18）是盘点取整；
+  逐格原因在跑完后写进结果。E1 的 WOD 配对 RFS 另用 cluster mean 重算（从已存逐帧 Δ）。估时：Q6 全链约 1.3 h 墙钟、约 0.7 GPU·h（GPU 6），devkit 6 个 job 在 180–191 核上与 GPU 步骤重叠。
 
 ### CL. 闭环（Bench2Drive 220，官方评测器）
 

@@ -411,7 +411,7 @@ def wod_transfer_cluster(T: Table):
     run = Path(fs[-1]).parent
     d = E1.wod_frames()
     for m in ("cinque", "lebowski"):
-        z = np.load(run / f"wod_delta_{m}.npz")
+        z = np.load(run / f"wod_delta_{m}.npz", allow_pickle=True)
         assert (z["frame_name"] == d["frame_name"]).all()
         c = _rfs_cluster(d, d[f"prior {m}"], d[f"prior {m}"] + z["delta"]).iloc[0]
         short = "Cinque" if m == "cinque" else "Lebowski"
