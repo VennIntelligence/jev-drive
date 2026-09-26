@@ -609,8 +609,16 @@ def report():
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("build", "report", "smoke"))
+    ap.add_argument("cmd", choices=("build", "report", "smoke", "pilot-check"))
+    ap.add_argument("--cand", default="")
+    ap.add_argument("--variant", default="")
+    ap.add_argument("--out", default="")
+    ap.add_argument("--ids", default="")
     a = ap.parse_args()
+    if a.cmd == "pilot-check":
+        r = pilot_check(a.cand, a.variant, Path(a.out), [i for i in a.ids.split(",") if i])
+        print(json.dumps(r, default=str))
+        raise SystemExit(0 if r["pass"] else 1)
     if a.cmd == "smoke":
         print(smoke_report().to_string())
     else:
@@ -708,6 +716,112 @@ def smoke_report(arms: Path | None = None) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     df.to_csv(root("results", "g") / "smoke_hooks.csv", index=False)
     return df
+
+
+
+# ---------------------------------------------------------------- staged launch: the pilot checklist
+
+PILOT = {"finished_min": 0.9, "crash_attempts_max": 0.35, "stalled_max": 0.7, "moving_min": 0.8,
+         "pdm_ghost_lat_max_m": 1.0, "shift_tol_m": 3.0, "ds_ref_tol": 25.0}
+VAN_TYPES = ("vehicle.mercedes.sprinter", "vehicle.volkswagen.t2", "vehicle.volkswagen.t2_2021")
+
+
+def pilot_check(cand: str, variant: str, out: Path, ids: list[str]) -> dict:
+    """The written sanity checklist of a pilot ([F] staged launch; CLAUDE.md "Before a long run"). Returns
+    {"pass": bool, "failed": [...], "facts": {...}}; every item is computed on the pilot's own routes."""
+    failed, facts = [], {}
+    var = pd.read_csv(root() / "variants.csv", dtype={"id": str, "base": str}).set_index("id")
+    ev = []
+    for f in (out.glob("runner-g*.log")):
+        for line in open(f):
+            if '"route_end"' in line:
+                try:
+                    ev.append(json.loads(line))
+                except ValueError:
+                    pass
+    ev = [e for e in ev if e.get("route_id") in ids]
+    done = [i for i in ids if (out / "done" / f"{i}.json").exists()]
+    crashes = sum(1 for e in ev if e["status"] != "finished")
+    facts.update(routes=len(ids), finished=len(done), attempts=len(ev), crashed_attempts=crashes)
+    if len(done) < PILOT["finished_min"] * len(ids):
+        failed.append(f"finished {len(done)} / {len(ids)} < {PILOT['finished_min']:.0%}")
+    if ev and crashes / len(ev) > PILOT["crash_attempts_max"]:
+        failed.append(f"crashed attempts {crashes} / {len(ev)} > {PILOT['crash_attempts_max']:.0%}")
+    runs = []
+    for i in done:
+        a = finished_attempt(out, i)
+        rec, tr = record(a), ego_track(a)
+        runs.append((i, a, rec, tr))
+    if not runs:
+        return {"pass": False, "failed": failed or ["no finished route"], "facts": facts}
+    no_trace = [i for i, a, rec, tr in runs if tr is None or tr["act"] is None or len(tr["k"]) < 50]
+    if no_trace:
+        failed.append(f"no / short 20 Hz trace: {no_trace}")
+    stalled = sum(1 for i, a, rec, tr in runs if tr and tr["meta"].get("stopped") == "stalled")
+    blocked = sum(1 for i, a, rec, tr in runs if rec and rec.get("infractions", {}).get("vehicle_blocked"))
+    moving = sum(1 for i, a, rec, tr in runs if tr is not None and np.nanmax(tr["v"]) > 3.0)
+    facts.update(stalled=stalled, blocked=blocked, moving=moving)
+    if (stalled + blocked) > PILOT["stalled_max"] * len(runs):
+        failed.append(f"stalled / blocked {stalled + blocked} / {len(runs)} > {PILOT['stalled_max']:.0%}")
+    if moving < PILOT["moving_min"] * len(runs):
+        failed.append(f"ego above 3 m/s in only {moving} / {len(runs)} runs (degenerate drive)")
+    if cand.startswith("k") and variant == "k" or cand in ("mc", "q2", "x", "cinque", "k3seen"):
+        empty = [i for i, a, rec, tr in runs if not (a / "plans.jsonl").exists() or (a / "plans.jsonl").stat().st_size == 0]
+        if empty:
+            failed.append(f"no plans logged: {empty}")
+    for i, a, rec, tr in runs:
+        if tr is None or variant not in VARIANTS:
+            continue
+        meta = tr["meta"]
+        b = var.loc[i, "base"] if i in var.index else i
+        built = meta.get("built", [])
+        ids_sc = {x for s in built for x in s["ids"]}
+        if variant == "ghost":
+            seen = set(tr["act"][:, 1].astype(int).tolist()) & ids_sc if len(tr["act"]) else set()
+            if seen:
+                failed.append(f"{i}: ghost actors above ground near the ego: {sorted(seen)}")
+            pw = a / "p6_world.json"
+            if cand == "pdm" and b in route_table().set_index("base").query("obstacle").index:
+                if not pw.exists() or not json.loads(pw.read_text())["registry_dropped"]:
+                    failed.append(f"{i}: PDM-Lite registry entry not deleted")
+            if cand == "pdm":
+                P = dense_route(b)
+                _, le = project(P, arc(P), tr["xy"])
+                if np.abs(le).max() > PILOT["pdm_ghost_lat_max_m"]:
+                    failed.append(f"{i}: PDM-Lite leaves the lane in a ghost world (|lat| {np.abs(le).max():.2f} m)")
+        if variant == "shift":
+            sh = meta.get("shifted", [])
+            want = float(var.loc[i].get("shift_m", 0) or 0) if "shift_m" in var.columns else None
+            if not sh or not built:
+                failed.append(f"{i}: shift not applied or scenario not built")
+            elif abs(sh[0]["s_after"] - sh[0]["s_before"] - sh[0]["shift_m"]) > PILOT["shift_tol_m"]:
+                failed.append(f"{i}: trigger moved {sh[0]['s_after'] - sh[0]['s_before']:.1f} m, wanted {sh[0]['shift_m']}")
+        if variant == "swap":
+            to = var.loc[i, "swap_to"] if i in var.index else ""
+            if to == "van":
+                sw = meta.get("swapped", [])
+                if not sw or not all(str(x.get("type_id")).startswith(VAN_TYPES) for x in sw):
+                    failed.append(f"{i}: cut-in vehicle not a van: {[x.get('type_id') for x in sw]}")
+            elif to and not any(s["type"] == to for s in built):
+                failed.append(f"{i}: swapped scenario {to} not built ({[s['type'] for s in built]})")
+    # DS against night queue 3's run of the same examinee (full routes only: K, and orig reuse examinees)
+    ref = {"k0": "cl3", "k3": "cl3", "k1": "cl3", "k2": "cl3", "cinque": "cl2", "tfv6": "tfv6", "bridgedrive": "bridgedrive",
+           "simlingo": "simlingo", "blue": "blue"}.get(cand[:2] if cand.startswith("k") and variant == "k" else cand)
+    if variant == "k" and ref:
+        from .nq3_cl_report import root as b_root
+        mine, theirs = [], []
+        for i, a, rec, tr in runs:
+            r = finished_attempt(b_root() / "arms" / ref / "s0", i)
+            rr = record(r) if r is not None else None
+            if rec is not None and rr is not None:
+                mine.append(float(rec["scores"]["score_composed"]))
+                theirs.append(float(rr["scores"]["score_composed"]))
+        if len(mine) >= 3:
+            d = float(np.mean(mine) - np.mean(theirs))
+            facts.update(ds_pilot=float(np.mean(mine)), ds_ref=float(np.mean(theirs)), ds_ref_arm=ref, ds_ref_n=len(mine))
+            if abs(d) > PILOT["ds_ref_tol"]:
+                failed.append(f"DS {np.mean(mine):.1f} vs night-queue-3 {ref} {np.mean(theirs):.1f} on the same {len(mine)} routes")
+    return {"pass": not failed, "failed": failed, "facts": facts}
 
 
 if __name__ == "__main__":

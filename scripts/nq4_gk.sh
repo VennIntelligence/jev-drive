@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
 # Night queue 4: the G + K + X closed-loop chain (todos/2026-09-26-night-queue-4.md, sections G / K / X, the [F] entries).
-# One chain script, started once in tmux jev:nq4-gk; it waits for its gate and then runs unattended.
+# One chain script, started once in tmux jev:nq4-gk; it runs unattended from there.
 #
-#   scripts/nq4_gk.sh chain        gate (runs/nq3/b/DONE, lane B's CARLA servers gone) -> queue by priority -> DONE
-#   scripts/nq4_gk.sh step <cand> <variant> <seeds> <routeset> [est_h]    one queue step (resumable), for smoke / debug
+#   scripts/nq4_gk.sh chain        pilot loop on the validation card + the batch on the GO cards -> DONE
+#   scripts/nq4_gk.sh step <cand> <variant> <seeds> <routeset> [est_h]   one queue step (pilot first), for debugging
+#   scripts/nq4_gk.sh pilot <cand> <variant> <seed> <routeset>             one staged pilot, for debugging
 #   scripts/nq4_gk.sh report       the tables (runs/nq4/gk/results/{g,k,x}/)
 #   scripts/nq4_gk.sh plan         print the queue with its current worker-hour estimate, apply no cut
 #
-# Step = examinee x world variant x TM seeds x route set. The seeds of a step run side by side, seed i on the GPUs
-# i, i + n_seeds, ... (one b2d_run runner per GPU, $WORKERS CARLA servers each, the runners of a seed share its out dir).
+# Capacity (first come, first served; no wait for other lanes' DONE): the batch runs on the cards of the GO file
+# runs/sched/nq4-gk.go (shell vars GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS; the i-th card of GPUS uses server indices
+# [IDX0 + i IDX_SPAN, IDX0 + (i + 1) IDX_SPAN)), written by SCH / Codex once the pilots pass; it is re-read before every step.
+# The pilots run on the validation card of runs/sched/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN,
+# PILOT_CPUS). No card starts more CARLA servers than fit its 6 (other lanes' counted).
+# Staged launch (CLAUDE.md "Before a long run"): every examinee x world type runs 1 route, is checked, then 10 routes, is
+# checked against the written checklist (jevdrive.nq4_g.pilot_check: completion, crash, stalled / blocked, moving,
+# plans / trace present, PDM-Lite ghost stays in lane, ghost actors really absent, shift / swap really applied, K DS near
+# night queue 3's), and only then the full step. A failed check blocks that examinee (runs/nq4/gk/ERROR.<cand>,
+# runs/nq4/gk/blocked/<cand>); the rest of the queue goes on. Pilot routes are seed-0 routes of the step and count.
+#
+# Step = examinee x world variant x TM seeds x route set. The seeds of a step run side by side, seed i on the i-th,
+# (i + n)-th ... card (one b2d_run runner per card; the runners of a seed share its out dir); fewer cards than seeds ->
+# one seed after the other.
 #   examinees  pdm (PDM-Lite, SimLingo's tree: it plans on the registry), tfv6 / bridgedrive / simlingo / blue (author
 #              executors, scripts/nq3_b_cl10.sh as is), cinque (openpilot Cinque native plan -> P7, lane B's CL2),
 #              mc / q2 (our heads -> P7, cross-fitted: each route driven by the fold that never saw it), x (Q2 mode head ->
@@ -22,11 +35,10 @@
 # remaining) > $BUDGET_WH worker-hours (600) -> the todo's cut: first drop every swap step, then keep shift only for
 # tfv6 / bridgedrive / blue / mc; still over -> OVER_BUDGET, the queue runs on in priority order. K and X are projected
 # and shown (PROJECTED_WH) but not cut. Each step stops at twice its estimate (ERROR).
-# Resources: GPUs 0-5 x <= 6 servers, cores 60-149. Server index i binds RPC 2000 + 50 i (+1, +2) and TM 8000 + 50 i, i.e.
-# the RPC port of index i + 120, so a block must keep i, i + 120 and i - 120 clear of every other lane's indices (lane B
-# 300-479, lane A 600-689, K 170-179): GPU g uses [60 + 18 g, 78 + 18 g), 60-167 in all (i + 120 in 180-287, i - 120 <= 47).
-# Before every step each GPU's block is checked against the listening sockets (/proc/net/tcp): fewer than WORKERS + 2
-# clean indices -> wait (2 min polls, 30 min at most), then ERROR.
+# Ports: server index i binds RPC 2000 + 50 i (+1, +2) and TM 8000 + 50 i, i.e. the RPC port of index i + 120, so a block
+# must keep i, i + 120 and i - 120 clear of every other lane's indices (defaults without a GO file: IDX0 60, span 18,
+# 60-167 for six cards). Before every execution each card's block is checked against the listening sockets
+# (/proc/net/tcp): fewer than min(WORKERS + 2, span) clean indices -> wait (2 min polls, 30 min at most), then ERROR.
 # Only processes whose PIDs this script recorded are ever killed. Hand-offs: runs/nq4/gk/{STATUS.md,ERROR,DONE,events.jsonl}.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -50,6 +62,7 @@ XML_K=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml
 XML_G=$G/g_routes.xml
 P7=$REPO/todos/2026-09-23-tfv6-controller/controller-eval/P7.json
 SPLIT=$K/route_split.json
+SCHED=$DATA_DIR/runs/sched
 PY_CARLA=$DATA_DIR/envs/carla/bin/python PY_TCP=$DATA_DIR/envs/b2d-tcp/bin/python
 PY_SCOUT=$DATA_DIR/envs/scout-tfv6/bin/python PY_OP=$DATA_DIR/envs/openpilot/bin/python
 PY_VENV=$REPO/.venv/bin/python PY_SL=$DATA_DIR/envs/simlingo/bin/python
@@ -95,6 +108,7 @@ srv_start() {  # srv_start <name> <gpu> <cmd ...>
 srv_alive() { local p; p=$(cat "$G/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_stop() { local p; p=$(cat "$G/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$G/srv/$1.pid"; }
 srv_stop_all() { local f; for f in "$G"/srv/*.pid; do [[ -e $f ]] && srv_stop "$(basename "$f" .pid)"; done; }
+srv_stop_gpus() { local g f; for g in $1; do for f in "$G"/srv/*-g$g.pid; do [[ -e $f ]] && srv_stop "$(basename "$f" .pid)"; done; done; }
 
 server_names() {  # the model servers an examinee needs on one GPU
     case $1 in
@@ -145,9 +159,10 @@ cfg_for() {  # cfg_for <cand> <gpu> <seed> -> agent config path (P7 examinees)
     esac > "$f"
     echo "$f"
 }
-launch() {  # launch <cand> <gpu> <seed> <xml> <ids> <out>: one b2d_run runner in the background, its PID on stdout
-    local c=$1 g=$2 seed=$3 xml=$4 ids=$5 out=$6 idx=$((SIDX0 + SPAN * g))
-    local common=(--route-ids "$ids" --out "$out" --workers "$WORKERS" --server-index "$idx" --index-span "$SPAN"
+launch() {  # launch <cand> <gpu> <seed> <xml> <ids> <out> <workers> <first index>: one b2d_run runner, PID on stdout
+    local c=$1 g=$2 seed=$3 xml=$4 ids=$5 out=$6 nw=$7 idx=$8
+    mkdir -p "$out"
+    local common=(--route-ids "$ids" --out "$out" --workers "$nw" --server-index "$idx" --index-span "$SPAN"
                   --gpu-rank "$g" --tm-seed "$seed" --no-spectator --no-reap --client-threads 8 --max-attempts 3
                   --stall-s 480)
     case $c in
@@ -156,7 +171,7 @@ launch() {  # launch <cand> <gpu> <seed> <xml> <ids> <out>: one b2d_run runner i
                 --routes "$xml" "${common[@]}" --route-timeout-s 3600 --python "$PY_SL" \
                 --agent scripts/b2d_expert_agent.py --agent-config "expert+nq4" >> "$out/runner-g$g.log" 2>&1 & ;;
         tfv6|bridgedrive|simlingo|blue)
-            CL10_ROUTES=$xml INDEX_SPAN=$SPAN B_CPUS=$CPUS scripts/nq3_b_cl10.sh "$c" "$g" "$WORKERS" "$idx" "$seed" "$out" \
+            CL10_ROUTES=$xml INDEX_SPAN=$SPAN B_CPUS=$CPUS scripts/nq3_b_cl10.sh "$c" "$g" "$nw" "$idx" "$seed" "$out" \
                 "$ids" >> "$out/runner-g$g.log" 2>&1 & ;;
         *)
             local py=$PY_SCOUT ag=scripts/nq4_x_agent.py
@@ -257,76 +272,146 @@ EOF
     done
 }
 
-# ---------------------------------------------------------------- one step
-arm_dir() {  # arm_dir <cand> <variant> <seed>
-    if [[ $2 == k ]]; then echo "$G/${ARMS:-arms}_k/$1/s$3"; else echo "$G/${ARMS:-arms}/$1/$2/s$3"; fi
+# ---------------------------------------------------------------- capacity (GO file, pilot card), execution of one route set
+load_go() {  # the batch cards: $SCHED/nq4-gk.go (GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS), written by SCH or Codex
+    [[ -f $SCHED/nq4-gk.go ]] || return 1
+    local GPUS_= WORKERS_= IDX0_= IDX_SPAN_= CPUS_=
+    eval "$(set +u; source "$SCHED/nq4-gk.go"; echo "GPUS_='$GPUS' WORKERS_='$WORKERS' IDX0_='$IDX0' IDX_SPAN_='$IDX_SPAN' CPUS_='${NQ4GK_CPUS:-$CPUS}'")"
+    [[ -n $GPUS_ ]] || return 1
+    GPUS=$GPUS_; WORKERS=${WORKERS_:-6}; SIDX0=${IDX0_:-60}; SPAN=${IDX_SPAN_:-18}; CPUS=${CPUS_:-60-149}
 }
-run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]
-    local c=$1 v=$2 seeds=(${3//,/ }) rs=$4 est=${5:-}
+load_pilot() {  # the validation card: $SCHED/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN, PILOT_CPUS)
+    [[ -f $SCHED/nq4-gk.pilot ]] || return 1
+    local P_= W_= I_= S_= C_=
+    eval "$(set +u; source "$SCHED/nq4-gk.pilot"; echo "P_='$PILOT_GPU' W_='$PILOT_WORKERS' I_='$PILOT_IDX0' S_='$PILOT_SPAN' C_='$PILOT_CPUS'")"
+    [[ -n $P_ ]] || return 1
+    GPUS=$P_; WORKERS=${W_:-3}; SIDX0=${I_:-150}; SPAN=${S_:-10}; CPUS=${C_:-110-113}
+}
+block_of() { echo $(( SIDX0 + SPAN * $1 )); }         # <position of the GPU in $GPUS> -> its first server index
+free_slots() {  # free_slots <gpu>: CARLA servers that still fit on the card (<= 6 a card, other lanes' servers counted)
+    local n; n=$(nvidia-smi -i "$1" --query-compute-apps=process_name --format=csv,noheader 2>/dev/null | grep -c CarlaUE4)
+    echo $(( 6 - n > WORKERS ? WORKERS : (6 - n > 0 ? 6 - n : 0) ))
+}
+
+execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run route sets on the context's cards (GPUS,
+             # WORKERS, SIDX0, SPAN, CPUS), at most <cap> workers in all; seeds side by side when there are enough cards
+    local c=$1 v=$2 est=$3 cap=$4; shift 4
     local xml=$XML_G; [[ $v == k ]] && xml=$XML_K
-    local cname=${c%%_*} ns=${#seeds[@]} gl=($GPUS) t0=$SECONDS s i g
-    declare -A IDS OUT
-    local total=0
-    for s in "${seeds[@]}"; do
-        OUT[$s]=$(arm_dir "$c" "$v" "$s"); mkdir -p "${OUT[$s]}"
-        if [[ -f ${OUT[$s]}/requested.json ]]; then
-            IDS[$s]=$(python3 -c "import json;print(','.join(json.load(open('${OUT[$s]}/requested.json'))))")
-        else
-            IDS[$s]=$(ids_for "$c" "$v" "$s" "$rs") || error "route list failed for $c $v"
-            python3 -c "import json,sys;print(json.dumps([i for i in sys.argv[1].split(',') if i]))" "${IDS[$s]}" > "${OUT[$s]}/requested.json"
-        fi
-        total=$(( total + $(n_ids "${IDS[$s]}") ))
-    done
-    (( total == 0 )) && { log "step $c $v $3 $rs: nothing to run (reused)"; return 0; }
-    local w; w=$(wmin "$c")
-    [[ -z $est ]] && est=$(python3 -c "print(max(0.3, round($total * $w / 60 / (${#gl[@]} * $WORKERS) * 1.3, 2)))")
-    echo "$c $v $3 $rs" > "$G/CURRENT"
-    CUR_OUTS="${OUT[*]}"
-    ev step_start "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"routes\": $total, \"est_h\": $est, \"wmin\": $w"
-    log "start $c $v seeds $3 ($rs, $total routes, $w worker-min/route, estimate $est h)"
-    for g in "${gl[@]}"; do ports_ok $((SIDX0 + SPAN * g)) || error "server block of GPU $g has fewer than $((WORKERS + 2)) free indices for 30 min" "$G/log.txt"; done
-    for i in "${!gl[@]}"; do servers_for "$c" "${gl[$i]}" || error "server start failed for $c on GPU ${gl[$i]}" "$G/log.txt"; done
-    local pids=()
+    local gl=($GPUS) sets=("$@") t0=$SECONDS i g s ids n pids=() outs=() used=0
+    (( ${#gl[@]} < ${#sets[@]} && ${#sets[@]} > 1 )) && { for s in "${sets[@]}"; do execute "$c" "$v" "$est" "$cap" "$s" || return 1; done; return 0; }
+    for i in "${!gl[@]}"; do ports_ok "$(block_of "$i")" || { log "server block of GPU ${gl[$i]} has no free indices for 30 min"; return 1; }; done
+    for i in "${!gl[@]}"; do servers_for "$c" "${gl[$i]}" || { log "server start failed for $c on GPU ${gl[$i]}"; return 1; }; done
     for i in "${!gl[@]}"; do
-        g=${gl[$i]}; s=${seeds[$(( i % ns ))]}
-        [[ -z ${IDS[$s]} ]] && continue
-        local p; p=$(launch "$c" "$g" "$s" "$xml" "${IDS[$s]}" "${OUT[$s]}")
-        pids+=("$p"); echo "$p" >> "${OUT[$s]}/runner.pids"
+        g=${gl[$i]}; s=${sets[$(( i % ${#sets[@]} ))]}; ids=${s#*=}; s=${s%%=*}
+        [[ -z $ids ]] && continue
+        n=$(free_slots "$g"); (( n > cap - used )) && n=$(( cap - used ))
+        (( n <= 0 )) && continue
+        local out; out=$(arm_dir "$c" "$v" "$s"); outs+=("$out")
+        local p; p=$(launch "$c" "$g" "$s" "$xml" "$ids" "$out" "$n" "$(block_of "$i")")
+        pids+=("$p"); echo "$p" >> "$out/runner.pids"; used=$(( used + n ))
         sleep 10
     done
+    (( ${#pids[@]} )) || { log "no free CARLA slot on GPUs $GPUS"; return 1; }
+    CUR_OUTS="${outs[*]}"
     local limit; limit=$(python3 -c "print(int(2 * $est * 3600))")
     while :; do
         local alive=0 p
         for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive=1; done
         (( alive )) || break
         if (( SECONDS - t0 > limit )); then
-            for s in "${seeds[@]}"; do kill_runs "${OUT[$s]}"; done
-            error "$c $v seeds $3 exceeded twice its estimate ($est h)" "${OUT[${seeds[0]}]}/runner-g${gl[0]}.log"
+            for s in "${outs[@]}"; do kill_runs "$s"; done
+            log "$c $v exceeded twice its estimate ($est h)"; return 2
         fi
         for g in "${gl[@]}"; do
             for n in $(server_names "$c" "$g"); do
                 srv_alive "$n" || { log "server $n died; restarting"; ev server_died "\"name\": \"$n\""
-                                    servers_for "$c" "$g" || error "server restart failed: $n" "$G/srv/$n.log"; }
+                                    servers_for "$c" "$g" || { log "server restart failed: $n"; return 1; }; }
             done
         done
         sleep 30
     done
     for p in "${pids[@]}"; do wait "$p" 2>/dev/null; done
-    local bad=0 req done_ wall
+    CUR_OUTS=""
+    return 0
+}
+
+# ---------------------------------------------------------------- staged launch (1 route, then 10, the checklist, then all)
+pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 = examinee blocked, 2 = not run (busy elsewhere)
+    local c=$1 v=$2 sd=$3 ids=$4 d=$G/pilot/$1.$2 st r
+    [[ -e $d/PASS ]] && return 0
+    [[ -e $G/blocked/$c ]] && return 1
+    mkdir -p "$G/pilot"; mkdir "$d" 2>/dev/null || return 2          # another loop is piloting it
+    local one=${ids%%,*} ten; ten=$(tr , '\n' <<< "$ids" | head -10 | paste -sd,)
+    for st in 1 2; do
+        local sel=$one; [[ $st == 2 ]] && sel=$ten
+        log "pilot $c $v stage $st: $(n_ids "$sel") route(s) on GPUs $GPUS"
+        ev pilot_start "\"cand\": \"$c\", \"variant\": \"$v\", \"stage\": $st"
+        execute "$c" "$v" "$( [[ $st == 1 ]] && echo 0.5 || echo 1.5)" "$( [[ $st == 1 ]] && echo 1 || echo 10)" "$sd=$sel"; r=$?
+        srv_stop_gpus "$GPUS"
+        r=$(taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g pilot-check --cand "$c" --variant "$v" --out "$(arm_dir "$c" "$v" "$sd")" --ids "$sel" 2>> "$d/check.err")
+        echo "$r" > "$d/stage$st.json"
+        if ! python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1])['pass'] else 1)" "$r" 2>/dev/null; then
+            mkdir -p "$G/blocked"; echo "$r" > "$G/blocked/$c"
+            { echo "# nq4-gk pilot FAILED: $c $v stage $st ($(date '+%F %T %Z'))"; echo; echo "$r"; } > "$G/ERROR.$c"
+            ev pilot_failed "\"cand\": \"$c\", \"variant\": \"$v\", \"stage\": $st"
+            log "pilot $c $v stage $st FAILED: examinee $c blocked ($G/ERROR.$c)"; return 1
+        fi
+    done
+    date '+%F %T' > "$d/PASS"; ev pilot_pass "\"cand\": \"$c\", \"variant\": \"$v\""; log "pilot $c $v passed"
+    return 0
+}
+
+# ---------------------------------------------------------------- one step
+arm_dir() {  # arm_dir <cand> <variant> <seed>
+    if [[ $2 == k ]]; then echo "$G/${ARMS:-arms}_k/$1/s$3"; else echo "$G/${ARMS:-arms}/$1/$2/s$3"; fi
+}
+step_ids() {  # step_ids <cand> <variant> <seed> <routeset>: the seed's route list (requested.json once written)
+    local out; out=$(arm_dir "$1" "$2" "$3"); mkdir -p "$out"
+    if [[ ! -f $out/requested.json ]]; then
+        local ids; ids=$(ids_for "$@") || return 1
+        python3 -c "import json,sys;print(json.dumps([i for i in sys.argv[1].split(',') if i]))" "$ids" > "$out/requested.json"
+    fi
+    python3 -c "import json;print(','.join(json.load(open('$out/requested.json'))))"
+}
+run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]: pilot (if not passed) then the full step
+    local c=$1 v=$2 seeds=(${3//,/ }) rs=$4 est=${5:-} s total=0 sets=() t0=$SECONDS
+    for s in "${seeds[@]}"; do
+        local ids; ids=$(step_ids "$c" "$v" "$s" "$rs") || error "route list failed for $c $v"
+        sets+=("$s=$ids"); total=$(( total + $(n_ids "$ids") ))
+    done
+    (( total == 0 )) && { for s in "${seeds[@]}"; do echo '{"reused": true}' > "$(arm_dir "$c" "$v" "$s")/DONE"; done
+                          log "step $c $v $3 $rs: nothing to run (reused)"; return 0; }
+    local s0ids; s0ids=$(step_ids "$c" "$v" "${seeds[0]}" "$rs")
+    if [[ -n $s0ids ]]; then
+        pilot "$c" "$v" "${seeds[0]}" "$s0ids"; local r=$?
+        (( r == 1 )) && return 1
+        (( r == 2 )) && return 2                          # being piloted elsewhere: come back later
+    fi
+    local nw=0 g; for g in $GPUS; do nw=$(( nw + $(free_slots "$g") )); done
+    (( nw == 0 )) && { log "no free CARLA slot on GPUs $GPUS for $c $v; waiting"; return 2; }
+    local w; w=$(wmin "$c")
+    [[ -z $est ]] && est=$(python3 -c "print(max(0.3, round($total * $w / 60 / $nw * 1.3, 2)))")
+    echo "$c $v $3 $rs" > "$G/CURRENT"
+    ev step_start "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"routes\": $total, \"est_h\": $est, \"wmin\": $w, \"workers\": $nw"
+    log "start $c $v seeds $3 ($rs, $total routes, $w worker-min/route, $nw workers, estimate $est h)"
+    execute "$c" "$v" "$est" 999 "${sets[@]}"; local r=$?
+    srv_stop_gpus "$GPUS"
+    (( r == 2 )) && error "$c $v seeds $3 exceeded twice its estimate ($est h)" "$G/log.txt"
+    (( r == 1 )) && error "$c $v seeds $3: servers / ports failed (see log.txt)" "$G/log.txt"
+    local bad=0 req done_ wall out
     wall=$(python3 -c "print(round(($SECONDS - $t0) / 3600, 3))")
     for s in "${seeds[@]}"; do
-        req=$(n_ids "${IDS[$s]}"); done_=$(ls "${OUT[$s]}/done" 2>/dev/null | wc -l)
+        out=$(arm_dir "$c" "$v" "$s"); req=$(python3 -c "import json;print(len(json.load(open('$out/requested.json'))))")
+        done_=$(ls "$out/done" 2>/dev/null | wc -l)
         printf '{"cand": "%s", "variant": "%s", "seed": %s, "done": %s, "requested": %s, "wall_h": %s, "finished": "%s"}\n' \
-            "$c" "$v" "$s" "$done_" "$req" "$wall" "$(date '+%F %T')" > "${OUT[$s]}/DONE"
+            "$c" "$v" "$s" "$done_" "$req" "$wall" "$(date '+%F %T')" > "$out/DONE"
         python3 -c "import sys; sys.exit(0 if ($req - $done_) / max($req, 1) <= 0.10 else 1)" || bad=1
+        [[ $c == simlingo || $c == blue ]] && rm -rf "$out/viz"     # the author agents' debug images: output only
     done
-    if [[ $c == simlingo || $c == blue ]]; then          # the author agents' debug images: output only, ~60 MB a route
-        for s in "${seeds[@]}"; do rm -rf "${OUT[$s]}/viz"; done
-    fi
     ev step_end "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"wall_h\": $wall"
     log "done $c $v seeds $3 in $wall h"
     report_now
-    (( bad )) && error "$c $v seeds $3: more than 10% of the routes never finished" "${OUT[${seeds[0]}]}/runner-g${gl[0]}.log"
+    (( bad )) && error "$c $v seeds $3: more than 10% of the routes never finished" "$G/log.txt"
     return 0
 }
 report_now() { taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g report >> "$G/report.log" 2>&1 || log "report failed (report.log)"; }
@@ -376,6 +461,7 @@ ready_for() {  # an examinee's inputs exist (heads exported, K's READY); else th
         mc) [[ -e $G/heads_xfit/mc/READY ]] ;;
         q2|x) [[ -e $G/heads_xfit/q2/READY ]] && return 0
               [[ -e $NQ3/q2/closed_loop_head/READY ]] || return 1
+              mkdir "$G/heads_xfit/q2.lock" 2>/dev/null || return 1          # the other loop is exporting it
               log "lane C's head is READY: exporting the cross-fitted Q2 head (GPU ${GPUS%% *})"
               CUDA_VISIBLE_DEVICES=${GPUS%% *} taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_x export-q2 >> "$G/export_q2.log" 2>&1 \
                   || error "cross-fitted Q2 export failed" "$G/export_q2.log"
@@ -449,57 +535,79 @@ status_loop() {
     while sleep 600; do
         {
             echo "# nq4-gk status $(date '+%F %T %Z')"; echo
-            echo "- current: $(cat "$G/CURRENT" 2>/dev/null)"
+            echo "- batch: $( [[ -f $SCHED/nq4-gk.go ]] && echo "GO ($(tr '\n' ' ' < "$SCHED/nq4-gk.go"))" || echo 'waiting for runs/sched/nq4-gk.go')"
+            echo "- pilot card: $( [[ -f $SCHED/nq4-gk.pilot ]] && tr '\n' ' ' < "$SCHED/nq4-gk.pilot" || echo 'waiting for runs/sched/nq4-gk.pilot')"
+            echo "- current batch step: $(cat "$G/CURRENT" 2>/dev/null)"
+            echo "- pilots passed: $(ls "$G"/pilot/*/PASS 2>/dev/null | wc -l); blocked examinees: $(ls "$G/blocked" 2>/dev/null | tr '\n' ' ')"
             echo "- projection: $(cat "$G/PROJECTED_WH" 2>/dev/null) (G budget $BUDGET_WH)$( [[ -e $G/OVER_BUDGET ]] && echo '; G OVER BUDGET after both cuts')"
-            echo "- steps left: $(grep -c . "$G/QUEUE" 2>/dev/null)"
-            echo "- GPUs $GPUS, workers/GPU $WORKERS, cores $CPUS; pids.current $(cat /sys/fs/cgroup/pids.current), load $(cut -d' ' -f1-3 /proc/loadavg)"
+            echo "- steps left: $(grep -c . "$G/QUEUE" 2>/dev/null); pids.current $(cat /sys/fs/cgroup/pids.current), load $(cut -d' ' -f1-3 /proc/loadavg)"
             echo; echo '```'; nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader; echo '```'
             echo; echo "finished seeds:"
-            for f in "$G"/arms*/*/*/DONE "$G"/arms/*/*/*/DONE; do [[ -e $f ]] && echo "- $(cat "$f")"; done | sort -u
+            for f in "$G"/arms_k/*/*/DONE "$G"/arms/*/*/*/DONE; do [[ -e $f ]] && echo "- $(cat "$f")"; done
         } > "$G/STATUS.md.tmp" && mv "$G/STATUS.md.tmp" "$G/STATUS.md"
     done
 }
-gate() {  # runs/nq3/b/DONE and no CARLA server left on the chain's GPUs
-    local g n
-    until [[ -e $NQ3/b/DONE ]]; do sleep 120; done
+step_skip() {  # a step is settled: every seed dir has DONE, or its examinee is blocked
+    [[ -e $G/blocked/$1 ]] || step_done "$1" "$2" "$3"
+}
+pilot_loop() {  # on the validation card: the staged pilot of every examinee x world, in queue order, ahead of the batch
+    trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT
+    trap 'exit 129' HUP INT TERM
+    until load_pilot; do [[ -e $G/DONE ]] && return 0; sleep 120; done
+    log "pilot loop on GPU $GPUS ($WORKERS workers, indices from $SIDX0)"
+    local c v s rs pending ids
     while :; do
-        n=0
-        for g in $GPUS; do n=$(( n + $(nvidia-smi -i "$g" --query-compute-apps=process_name --format=csv,noheader | grep -c CarlaUE4) )); done
-        (( n == 0 )) && break
-        sleep 120
+        pending=0
+        while read -r c v s rs; do
+            [[ -e $G/pilot/$c.$v/PASS || -e $G/blocked/$c || -d $G/pilot/$c.$v ]] && continue
+            ready_for "$c" || { pending=1; continue; }
+            ids=$(step_ids "$c" "$v" "${s%%,*}" "$rs") || continue
+            [[ -z $ids ]] && continue
+            load_pilot
+            pilot "$c" "$v" "${s%%,*}" "$ids" < /dev/null
+            pending=1; break
+        done < "$G/QUEUE"
+        (( pending )) || { log "pilot loop: every examinee x world is piloted"; return 0; }
+        [[ -e $G/DONE ]] && return 0
+        sleep 60
     done
-    ev gate_open; log "gate open: runs/nq3/b/DONE and no CARLA server on GPUs $GPUS"
 }
 
 chain() {
-    echo "waiting for runs/nq3/b/DONE" > "$G/CURRENT"
+    echo "waiting for runs/sched/nq4-gk.go" > "$G/CURRENT"
     status_loop & local st=$!
-    trap 'kill $st 2>/dev/null; for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_all' EXIT
-    trap 'exit 129' HUP INT TERM
-    gate
     [[ -e $G/prep/DONE ]] || error "G-prep has not passed (runs/nq4/gk/prep/DONE missing)"
     [[ -f $G/QUEUE ]] || queue > "$G/QUEUE"
+    pilot_loop & local pl=$!
+    echo "$pl" > "$G/pilot_loop.pid"
+    trap 'kill $st 2>/dev/null; kill $pl 2>/dev/null; for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT
+    trap 'exit 129' HUP INT TERM
+    local said=0
+    until load_go; do (( said++ == 0 )) && log "waiting for the GO file $SCHED/nq4-gk.go"; sleep 120; done
+    ev go "\"gpus\": \"$GPUS\", \"workers\": $WORKERS, \"idx0\": $SIDX0, \"span\": $SPAN, \"cpus\": \"$CPUS\""
+    log "GO: GPUs $GPUS, $WORKERS workers each, server indices from $SIDX0 (span $SPAN), cores $CPUS"
     apply_cuts "$G/QUEUE"
-    local line c v s rs pass=0 ran
+    local c v s rs pass=0 ran r
     while :; do
+        load_go
         ran=0
         while read -r c v s rs; do
-            step_done "$c" "$v" "$s" && continue
+            step_skip "$c" "$v" "$s" && continue
             ready_for "$c" || continue
             if [[ $v == shift || $v == swap ]] && [[ ! -e $G/CUT_CHECKED ]]; then   # last chance for the cut rule
                 touch "$G/CUT_CHECKED"; apply_cuts "$G/QUEUE" force; ran=1; break
             fi
+            run_step "$c" "$v" "$s" "$rs" < /dev/null; r=$?
+            (( r == 2 )) && continue                         # being piloted on the validation card / no slot: next step
             ran=1
-            run_step "$c" "$v" "$s" "$rs" < /dev/null
-            srv_stop_all
             apply_cuts "$G/QUEUE"
-            break                                    # re-read the (possibly cut) queue from the top
+            break                                            # re-read the (possibly cut) queue from the top
         done < "$G/QUEUE"
         (( ran )) && continue
-        local left; left=$(while read -r c v s rs; do step_done "$c" "$v" "$s" || echo x; done < "$G/QUEUE" | wc -l)
+        local left; left=$(while read -r c v s rs; do step_skip "$c" "$v" "$s" || echo x; done < "$G/QUEUE" | wc -l)
         (( left == 0 )) && break
-        (( pass++ == 0 )) && log "$left steps wait for their inputs (fold heads / K READY); polling every 10 min"
-        sleep 600
+        (( pass++ == 0 )) && log "$left steps wait for inputs (fold heads / K READY) or for their pilot; polling every 5 min"
+        sleep 300
     done
     date '+%F %T' > "$G/DONE"
     ev end '"what": "nq4 G + K + X queue done"'
@@ -508,8 +616,10 @@ chain() {
 
 case ${1:-} in
     chain) chain ;;
-    step) shift; trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_all' EXIT; trap 'exit 129' HUP INT TERM
+    step) shift; trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT; trap 'exit 129' HUP INT TERM
           run_step "$@" ;;
+    pilot) shift; trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT; trap 'exit 129' HUP INT TERM
+           pilot "$1" "$2" "$3" "$(step_ids "$1" "$2" "$3" "$4")" ;;
     report) report_now ;;
     plan) queue > "$G/plan.tmp"; project "$G/plan.tmp" ;;
     *) sed -n 2,26p "$0"; exit 1 ;;
