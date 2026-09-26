@@ -188,9 +188,14 @@ kill_runs() {  # the runners, route processes and CARLA servers recorded under o
     local out=$1 p f
     for p in $(cat "$out/runner.pids" 2>/dev/null); do kill "$p" 2>/dev/null; pkill -P "$p" 2>/dev/null; done
     sleep 5
+    local left=()
     for f in "$out"/attempts/*/*/route.pid; do
         p=$(cat "$f" 2>/dev/null) || continue
-        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }
+        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; left+=("$p"); }
+    done
+    sleep 10                                        # a route process can sit in the evaluator's SIGTERM handler: KILL it
+    for p in "${left[@]}"; do
+        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -9 -- -"$p" 2>/dev/null; kill -9 "$p" 2>/dev/null; }
     done
     for f in "$out"/servers/carla-*.pid; do       # the CarlaUE4.sh wrapper's process group: its shipping child survives
         p=$(cat "$f" 2>/dev/null) || continue      # the wrapper when a runner dies by a signal
