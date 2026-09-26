@@ -78,7 +78,7 @@ error() {
         echo "# nq4-gk ERROR $(date '+%F %T %Z')"; echo; echo "reason: $1"; echo
         echo "current step: $(cat "$G/CURRENT" 2>/dev/null)"; echo
         [[ -n ${2:-} && -f $2 ]] && { echo '```'; tail -50 "$2"; echo '```'; }
-    } > "$G/ERROR"
+    } > "$ERRP"
     ev error "\"reason\": \"$1\""
     log "ERROR: $1"
     exit 1
