@@ -5,7 +5,7 @@ with P5's machinery (jevdrive/p5_pairs.py: load_world, ego_divergence, world_row
   build     variant XML + case table: per base route (bench2drive220 only) and TM seed
                 x10  obstacle, no oncoming flow        x00  obstacle hidden and its PDM-Lite registration deleted
                 x11  obstacle, oncoming flow (2W)      x01  no obstacle, oncoming flow (2W)
-              and on seed 0: null (x10 under swapped weather), shoulder (placement null: obstacle moved onto the
+              and on seed 0: wnull (weather null: x10 under swapped weather), shoulder (placement null: obstacle moved onto the
               shoulder, registration deleted; 1W and 2W) and mirror (x10 with an unbroken oncoming flow; 2W).
               Variant id = base_id * 100 + world code * 10 + seed. The hooks are scripts/b2d_hooks.py p6_world.
   ids       the variant ids still to drive (comma list, for scripts/p6_gen.sh)
@@ -31,11 +31,11 @@ CLASS = {**{s: "1W" for s in ("Accident", "ConstructionObstacle", "ParkedObstacl
          **{s: "2W" for s in ("AccidentTwoWays", "ConstructionObstacleTwoWays", "ParkedObstacleTwoWays",
                               "HazardAtSideLaneTwoWays", "VehicleOpensDoorTwoWays")},
          "InvadingTurn": "IT", "YieldToEmergencyVehicle": "EV"}
-WORLDS = {"x10": 1, "x00": 2, "null": 3, "x11": 4, "x01": 5, "shoulder": 6, "mirror": 7}
+WORLDS = {"x10": 1, "x00": 2, "wnull": 3, "x11": 4, "x01": 5, "shoulder": 6, "mirror": 7}
 CODE = {v: k for k, v in WORLDS.items()}
 SEEDS = (0, 1, 2)
 # world -> (p6_obstacle, p6_oncoming for 2W)
-SPEC = {"x10": ("on", "off"), "x00": ("hide", "off"), "null": ("on", "off"), "x11": ("on", "on"),
+SPEC = {"x10": ("on", "off"), "x00": ("hide", "off"), "wnull": ("on", "off"), "x11": ("on", "on"),
         "x01": ("hide", "on"), "shoulder": ("shoulder", "off"), "mirror": ("on", "dense")}
 
 
@@ -57,7 +57,7 @@ def parse_id(rid: str) -> tuple[str, str, int]:
 def worlds_of(cls: str, seed: int) -> list[str]:
     w = ["x10", "x00"] + (["x11", "x01"] if cls == "2W" else [])
     if seed == 0:
-        w += ["null"] + (["shoulder"] if cls in ("1W", "2W") else []) + (["mirror"] if cls == "2W" else [])
+        w += ["wnull"] + (["shoulder"] if cls in ("1W", "2W") else []) + (["mirror"] if cls == "2W" else [])
     return w
 
 
@@ -68,7 +68,7 @@ def _variant(route: ET.Element, cls: str, world: str, seed: int) -> ET.Element:
     r.set("p6_obstacle", obstacle)
     if cls == "2W":
         r.set("p6_oncoming", oncoming)
-    if world == "null":
+    if world == "wnull":
         ws = r.find("weathers")
         day = float(ws.find("weather").get("sun_altitude_angle")) > 0
         for w in ws.findall("weather"):
