@@ -1,0 +1,72 @@
+{
+ "trajectory_arm": "A1",
+ "mode_arm": "A2",
+ "model": "cinque",
+ "feature": "openpilot cinque temporal (512, float32)",
+ "fit": {
+  "set": "carla_p6",
+  "fold": "R1",
+  "routes": [
+   "1825",
+   "20920",
+   "24258",
+   "24367",
+   "24757",
+   "24795",
+   "24816",
+   "25300",
+   "25318",
+   "2534",
+   "25378",
+   "25381",
+   "2539",
+   "25845",
+   "25865",
+   "25928",
+   "25955",
+   "2606",
+   "2643",
+   "2664",
+   "3378",
+   "3436",
+   "3457",
+   "3472",
+   "3564",
+   "3572"
+  ],
+  "rows": 13234,
+  "pairs": 2214,
+  "lam_ego": 9.999999999999999e-06,
+  "lam_prior": 0.09999999999999999,
+  "lam_A1": 100000.0,
+  "lam_A2": 0.09999999999999999
+ },
+ "scalars": {
+  "z_dim": 512,
+  "A1_lam": 100000.0
+ },
+ "modes": [
+  "keep",
+  "stop",
+  "bypass_L",
+  "bypass_R",
+  "wait"
+ ],
+ "c_logit": 2.772588722239781,
+ "inputs": {
+  "temporal": "openpilot `temporal` tap of the model's own 5 Hz stream from a zero state (scripts/p5_openpilot.py run_stream; Cinque: each frame held 4 steps of its 20 Hz clock)",
+  "ego": "p5_exam.ego_input: waymo.ego_state(past) (16 x (x, y, vx, vy, dvx, dvy), rear axle, current frame, 0.25 s steps, p4_carla.route_rows convention) | one-hot intent (waymo.INTENTS)"
+ },
+ "output": {
+  "trajectory": "(20, 2) future positions at t = 0.25 .. 5.0 s, rear-axle ego frame at the current tick, x forward, y left, metres (P5 / P6 future convention)",
+  "mode": "argmax over modes (keep, stop, bypass_L, bypass_R, wait) of the mode head",
+  "rate": "one plan per 5 Hz camera frame"
+ },
+ "loader": "from jevdrive.nq3_head import Head; h = Head(dir); traj, mode = h(temporal, ego_input)",
+ "written": "2026-09-26T21:07:44.974160",
+ "check": {
+  "rows": 1024,
+  "traj_max_abs_diff_m": 2.86102294921875e-05,
+  "mode_mismatch_share": 0.0
+ }
+}

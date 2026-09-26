@@ -29,3 +29,5 @@ round01 的实际结束：资源稍后放行，但 box 没有 `ss`，端口检�
 假设/修改：round01 的控制实现本机与 box 均过回归；唯一实测失败是运维依赖。端口读数在有 ss 时仍用 ss；缺失时读相同内核的 `/proc/net/tcp` 与 `tcp6`，并包括所有已绑定 TCP 状态，比只查 LISTEN 更严格。i±120、index≤494、sch_table check 与资源阈值不变。根据用户指出“非 CARLA 的 GPU 任务可以先跑”，正式 Q2 xfit 导出移到 CARLA 容量门之前；仍按 GPU1 显存、CPU、pids+64 门和 q2.lock 防重写。独立 formal export 的输入/输出检查没有降低。
 
 最新外部机械快照（Sol capacity）：pids15300，GPU1约10.5GB/18%、1 CARLA；CPU约95/175核。round02 仍自行复核，不把单次 utilization 当启动依据。round01 的等待/错误产物保留；round02 新目录与 PID。
+
+round02 已部署（f6d9bc3，box回归同过）；wrapper343121、formal export344728，GPU1、204–207。导出自身门：pids15798+64≤16000、GPU1用15.64GB、CPU约92核；此时已有四个CARLA，未追加CARLA。正式导出约2分钟完成，READY为Cinque/A1轨迹/A2模式：R1训练13234行/2214对，R2训练13506行/2090对；各1024行导出检查，轨迹最大差分别2.8610e-5/2.6703e-5 m，模式误差均0，原1e-3门通过。这是导出检查，不是闭环rule8。导出后返回CARLA容量门；wrapper现有67线程已全部pin到204–207，子进程本来已pin并限制OMP/BLAS2。CARLA仍需自己的pids+600与<4现有server条件。
