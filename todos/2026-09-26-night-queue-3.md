@@ -492,6 +492,22 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   条件：置零臂与基线臂必须走同一条批量 bf16 路径，使 3 cm 级的数值差在配对差里抵消；报告里写明子样本与 CI 变宽。(2) 同意 Q6 (c) 的读法：E5 student 没有 Qwen 流，
   「Qwen 流换 V-JEPA 2」按 M-C 双流（openpilot ⊕ V-JEPA 2 替代 openpilot ⊕ Qwen）在 G0 口径上测；todo 原文的「E5 student」是笔误，结论里按 M-C 写。
 
+- 2026-09-26 19:15 CST [SCH] **全局调度落地**（执行员 SCH；用户 18:25「先完成基础设施的排队、把卡用满，先到先得」，及 main 转达的分级起跑、恰好一张 debug 卡、GPU 6 分流三条政策）。
+  1. **容量实测**（18:25，CL1 满载 + lane A 18 个 server）：一个 CARLA server 约 330 线程、1.2 核、3–9 GB 显存（中位约 6.5 GB）；route client 约 15 线程、0.25 核。线程拆开看，139 个未命名的 UE4 线程、82 个 PoolThread、68 个 `server`、3 × 26 个 TaskGraph，
+     主要是按宿主机核数开的线程池。容器 `pids.current` 12 900 里 CARLA 占 11 000；cgroup 实际只用 68–88 核（load 110 多是等待态）；GPU 0–5 的计算利用率 0–40%。
+     所以 CARLA 的上限由线程数定：按每 worker 400 线程、计划上限 16 000（b2d_run 在 17 000 等），全 box 约 36–38 个 worker，CPU 与显存都不是先到的瓶颈。能翻倍的杠杆是压 CARLA 的线程数（UE4 线程池跟核数走），但那是 server 启动参数，要在 debug 卡上先证明仿真逐 tick 不变，留给 main。
+  2. **端口**：读了 `b2d_run.py`。`Server.start` 在 `--index-span` 内跳过 RPC / TM 端口已在监听的 slot，route 的 TM 端口在自己 50 个端口里取第一个空闲；它躲得开已占用的端口，躲不开「检查之后、UE4 绑定之前」被占的竞争，server 启动即崩时该 worker 线程直接退出（`worker_error`），整臂少一个 worker。
+     lane B 原定扩卡的 GPU 4、5（420 / 450 段）与自己的 GPU 0、1（300 / 330）正好差 120，worker k 的 slot 两两对齐，冲突是实的。另外按 F 的提醒，index > 494 的 TM 端口落进内核 ephemeral 段（32768–60999），出站连接可能占着端口；新段一律 ≤ 494。
+     全局 index 表写在 `tmp/2026-09-26-codex-handoff.md` 开头，机器可读版 box `runs/sched/table.tsv`，`scripts/sch_table.py check` 查 ±120 冲突与 ephemeral 段。
+  3. **lane B 的改动**：18:39 CX 按分级规则停了链（CL1 206 / 220，没写 DONE）。借这次停链给 `scripts/nq3_b.sh` 加了只在显式设置时才生效的调度钩子（commit 54df39d、814880e；默认值与原行为逐字相同，单测过）：`$B/GO` 授权文件（每步前重读）、每卡 index 映射 `B_IDX`、扩卡目标 `B_EXPAND_GPUS / B_EXPAND_WORKERS`、`$B/SKIP`、分级起跑门 `B_PILOT_DIR` + `$B/APPROVED`，并修了 STATUS.md 在第一个臂 DONE 之前写不出来的 bug。
+     debug 卡是 GPU 1（main 18:45），所以 lane B 改为 GPU 0、2 各 9 个 worker（总数仍 18），A 交卡后扩到 0、2、3、4、5 各 6 个（30），GPU 3 / 4 / 5 用 60 / 90 / 330 段。18:46 用原命令重启，CL1 余下 14 条续跑。
+  4. **额外 runner：没有开**。claims 本身可靠（`O_EXCL`，同一路线不会被两个 runner 同时跑，`done/` 只写一次，报表按 `done/` 计），但 `nq3_b.sh arm` 不能对着主链的臂目录跑：它开头删 `claims/*.lock`，改写主链 EXIT trap 依赖的 `$B/CURRENT` 与 `runner.pids`，模型 server 与主链同名同目录（步间 `srv_stop_all` 会杀掉它）；
+     主链臂结束时额外 runner 还在跑的路线会被记成未完成，影响 DONE 的计数与 10% 熔断。再加上线程余量只够 6–10 个 worker，这份余量改用在 debug 卡上的 pilot（下一条）；批量提速靠 A 交卡后的扩卡。
+  5. **分级起跑**：`scripts/sch_cl_pilots.sh`（`jev:sch-pilots`）在 GPU 1 上按 CL3 → CL4 → CL2 → CL7 → CL6 → CL8 → CL10 的顺序，给每个未开跑的臂跑 10 条路线的 pilot（lane B 自己的 `arm` 步原样，`B_DIR=runs/sched/pilot/b`、`B_REPORT=0`；pilot 路线不进 lane B 的表，主链照跑全部 220 条，所以不会重复计数），
+     `scripts/sch_cl_checklist.py` 写清单：完成率 ≥ 0.80、崩溃率 ≤ 0.25、需要 plan 的臂 `plans.jsonl` 非空（不过 = FAIL，自动写 SKIP 并上报）；ego 行驶（RC > 5%）≥ 50%、blocked ≤ 50%、DS 不全为 0、DS 不高于同路线 CL1 25 分以上（不过 = FLAG，只上报）。
+     主链只在 PASS 或 main 写进 `runs/nq3/b/APPROVED` 后才开某臂，否则跑下一个已开门的步，都没开门就等。**CL2 / CL7 等 main**：smoke 3 / 3 blocked，pilot 大概率 FLAG；按判据 4「如实报、不设门」照跑就写 APPROVED，等 OPL 的起步修复版就写 SKIP。
+     代价：每个新臂第一次开之前要等它的 pilot（CL3 这一次 B 空等约 40 min，之后 pilot 都跑在主链前面）。
+
 ## 结果
 
 （待写）
