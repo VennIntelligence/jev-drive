@@ -82,6 +82,7 @@ def install(out_dir, routes, route_id, tm_seed):
         _swap_cut_in()
     elif world not in ("orig", "swap"):
         raise ValueError("unknown nq4_world %r" % world)
+    _setup_timing(out_dir)
     tr = Trace(out_dir, world, attrs, vis=attrs.get("nq4_vis") == "1")
     tr.stop_m = float(attrs["nq4_stop_m"]) if "nq4_stop_m" in attrs else None
     tr.stall_s = float(attrs["nq4_stall_s"]) if "nq4_stall_s" in attrs else None
@@ -128,6 +129,84 @@ def _ghost_strict():
             a.set_location(carla.Location(h[1], h[2], h[3]))
 
     ScenarioManager._tick_scenario = tick
+
+
+# ---------------------------------------------------------------- setup timing and (optional) world reuse
+
+TIMES = {}
+
+
+def _setup_timing(out_dir):
+    """Wall time of the route set-up phases -> <attempt>/nq4_setup.json (load_world, RouteScenario build, agent setup).
+    With $B2D_NQ4_REUSE_WORLD=1: when this server still holds the world this worker loaded for an earlier route of the
+    same town (same episode id, recorded in $B2D_NQ4_WORLD_CACHE/<port>.json), skip load_world: destroy every vehicle,
+    walker, controller and sensor and every prop that the fresh load did not have, then continue exactly as
+    _load_and_wait_for_world does (Large Map settings, traffic lights reset, provider, TM seed, one tick)."""
+    import time
+    from leaderboard.leaderboard_evaluator import LeaderboardEvaluator
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    from leaderboard.autoagents.agent_wrapper import AgentWrapper
+    from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+    inner_load, inner_rs, inner_setup = LeaderboardEvaluator._load_and_wait_for_world, RouteScenario.__init__, AgentWrapper.setup_sensors
+    reuse = os.environ.get("B2D_NQ4_REUSE_WORLD") == "1"
+    cache_dir = os.environ.get("B2D_NQ4_WORLD_CACHE", "")
+
+    def dump():
+        with open(os.path.join(out_dir, "nq4_setup.json"), "w") as fh:
+            json.dump(TIMES, fh)
+
+    def load(self, args, town):
+        t0 = time.time()
+        cf = os.path.join(cache_dir, "%d.json" % args.port) if cache_dir else ""
+        w = self.client.get_world() if reuse and cf else None
+        prev = json.load(open(cf)) if cf and os.path.exists(cf) else None
+        if w is not None and prev and prev["town"] == town and prev["episode"] == w.id \
+                and w.get_map().name.split("/")[-1] == town:
+            keep = set(prev["props"])
+            dead = [a.id for a in w.get_actors() if a.type_id.startswith(("vehicle.", "walker.", "controller.", "sensor."))
+                    or (a.type_id.startswith("static.prop.") and a.id not in keep)]
+            if dead:
+                self.client.apply_batch_sync([carla.command.DestroyActor(i) for i in dead])
+            self.world = w
+            settings = self.world.get_settings()
+            settings.tile_stream_distance = 650
+            settings.actor_active_distance = 650
+            self.world.apply_settings(settings)
+            self.world.reset_all_traffic_lights()
+            CarlaDataProvider.set_client(self.client)
+            CarlaDataProvider.set_traffic_manager_port(args.traffic_manager_port)
+            CarlaDataProvider.set_world(self.world)
+            self.traffic_manager.set_random_device_seed(args.traffic_manager_seed)
+            self.world.tick()
+            TIMES.update(world="reused", destroyed=len(dead))
+        else:
+            inner_load(self, args, town)
+            TIMES["world"] = "loaded"
+            if cf:
+                w = self.client.get_world()
+                with open(cf + ".tmp", "w") as fh:
+                    json.dump({"town": town, "episode": w.id,
+                               "props": [a.id for a in w.get_actors() if a.type_id.startswith("static.prop.")]}, fh)
+                os.replace(cf + ".tmp", cf)
+        TIMES["load_world_s"] = round(time.time() - t0, 2)
+        dump()
+
+    def rs(self, *args, **kwargs):
+        t0 = time.time()
+        inner_rs(self, *args, **kwargs)
+        TIMES["route_scenario_s"] = round(time.time() - t0, 2)
+        dump()
+
+    def setup_sensors(self, *args, **kwargs):
+        t0 = time.time()
+        r = inner_setup(self, *args, **kwargs)
+        TIMES["sensors_s"] = round(time.time() - t0, 2)
+        dump()
+        return r
+
+    LeaderboardEvaluator._load_and_wait_for_world = load
+    RouteScenario.__init__ = rs
+    AgentWrapper.setup_sensors = setup_sensors
 
 
 # ---------------------------------------------------------------- shift
