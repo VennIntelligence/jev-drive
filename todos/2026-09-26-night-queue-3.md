@@ -1,124 +1,170 @@
-# 夜间队列 3（2026-09-26 晚）：第三层读考生与激发、P6 扩容、真实数据上的 Δ 抑制、hack 核查与主表口径
+# 夜间队列 3（2026-09-26 晚 → 09-27 上午）：第三层读考生与激发、闭环（P7）、P6 扩容、真实数据上的 Δ 抑制、hack 核查与主表口径
 
-状态: registered（2026-09-26 16:15 CST 写于任何本队列的数字之前；执行员按节领活，结果写回本节末尾，结论回填 decisions）
+状态: registered（16:15 CST 首版；16:50 CST 按用户要求重排：闭环恢复、用 P7 执行层，四条 lane 按卡 / 核 / 时间排好，每条 lane 是一次性脚本。两版都写于本队列的任何数字之前）
 
-box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，盘剩 543 GB），本队列按宽裕排。仍在跑的 T2 尾巴（WA-JEPA NAVSIM 导出）与 T3 的 SimLingo 一格不动，它们收工的卡和核直接归本队列。
+box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线程 852 / 20 480，盘剩 543 GB）。仍在跑的 T2 尾巴（WA-JEPA NAVSIM 导出，GPU 6）与 T3 的 SimLingo 一格（GPU 6 + 4）不动，收工后卡和核归本队列（见「时间表」）。
 
-## 这一轮的起点（中期结论，每条的出处在 decisions）
+## 这一轮的起点（中期结论，出处在 decisions）
 
-1. **榜首的增量不在 E 层**（第 46 条 T1 / T2 / T3）：BridgeDrive 与 TFv6 分不开，BLUE 行人 5.9%（比 TFv6 低 24 pp），DrivoR 在 P5 上 3%、I3 上 34%，
-   WA-JEPA 在 I3 上 66% 但非反应帧误翻 40%（openpilot `ridge_late` 70% / 18%），是「见车就减速」而不是有选择的反应。出了 navtrain 生态，DrivoR / SparseDriveV2 / ZTRS 在 WOD 上都比 cv 差。
-2. **反应来自训练信号，不来自 backbone 或 head**（第 48、53 条）：V-JEPA 2 / Qwen / SigLIP2 在均匀 imitation 下行人翻转都是 0，配对差分下 34–47%；榜单常用的分类头（`cls_late`、Hydra）比回归头更保不住反应。
-3. **第三层：信息在，考卷有了，解码器和执行器缺**（第 49、52、51 条）：openpilot 冻结特征读得出本车道静止障碍 / 旁车道车 / 对向来车（AUC 0.85–0.92，锥桶、事故车也读得出）；
-   P6 v0 的 bypass 与 negotiation 对比成立；`cls_late` 词表没有绕行 anchor；desire 脉冲方向对、幅度不够；公开 state-space policy 不能当执行层。
+1. **榜首的增量不在 E 层**（第 46 条 T1 / T2 / T3）：BridgeDrive 与 TFv6 分不开，BLUE 行人 5.9%（比 TFv6 低 24 pp），DrivoR 在 P5 上 3%、I3 上 34%；
+   WA-JEPA 在 I3 上 66% 但非反应帧误翻 40%（openpilot `ridge_late` 70% / 18%），是「见车就减速」。出了 navtrain 生态，DrivoR / SparseDriveV2 / ZTRS 在 WOD 上都比 cv 差。
+2. **反应来自训练信号，不来自 backbone 或 head**（第 48、53 条）：V-JEPA 2 / Qwen / SigLIP2 在均匀 imitation 下行人翻转都是 0，配对差分下 34–47%；分类头（`cls_late`、Hydra）比回归头更保不住反应。
+3. **第三层：信息在，考卷有了，解码器和执行器缺**（第 49、52、51 条）：openpilot 冻结特征读得出本车道静止障碍 / 旁车道车 / 对向来车（AUC 0.85–0.92）；P6 v0 的 bypass 与 negotiation 对比成立；
+   `cls_late` 词表没有绕行 anchor；desire 脉冲开环里方向对、幅度不够；公开 state-space policy 不能当执行层。
 4. **真实数据仍是主阻塞**（第 44、53 条）：CARLA 激发的 Δ 在真实分布上是有方向的系统偏置，gate 缩小它但不消除，叠在 Hydra 上 NAVSIM 掉 5–8 分。
-5. **快通道不需要 BEV**（第 50、45 条补 N5）：image-plane token 与抬升版同一水平；真实相机上按内参的单目 metric depth 把 20–40 m 行人放置修好了（nuScenes 0.22 → 0.57），只用于测量。
+5. **快通道不需要 BEV**（第 50 条、N5）：image-plane token 与抬升版同一水平；真实相机上按内参的单目 metric depth 修好了 20–40 m 行人放置（nuScenes 0.22 → 0.57），只用于测量。
 
-所以这一轮的主线是第三层：先在 P6 上读所有考生（榜首方法会不会绕），再在 openpilot 上用配对差分激发绕行；同时扩 P6、试一个真正针对第 53 条的 Δ 抑制，
-并把论文主表要的 hack 核查与口径统一做掉。闭环仍暂停，执行器问题（绕行要闭环才能验证）本轮只登记不跑。
+主线是第三层：P6 上读所有考生（榜首方法会不会绕）→ 在 openpilot 上用配对差分激发绕行 → **闭环里看激发出来的反应和绕行是否变成 SR**。
+开环的配对考卷回答「有没有」，闭环回答「有用没用」，这一轮第一次两边都有。
 
 ## 通用规则
 
-照抄夜间队列 2 的通用规则 1–6（判据先于数字、不跑闭环、估时 + 2 倍停、3 seed 才能写「更好」、口径、结果路径），另加：
+照抄夜间队列 2 的通用规则 1、3–6（判据先于数字、估时 + 2 倍停、3 seed 才能写「更好」、口径、结果路径），规则 2「不跑闭环」撤销（用户 16:45），另加：
 
-7. **P6 的判卷口径（Q1、Q2 共用，写死于此）**。帧窗 = 通过 t_div ≥ t_vis 的 bypass 对里，障碍首次可见 t_vis 到 expert 横向分叉 t_div_lat + 2 s 之间的 5 Hz 帧，只取 9 类可用障碍（第 52 条；InvadingTurn、开门车、Emergency 不进主读数，单列）。
-   读数 Δ_lat(k) = 考生在 x₁₀ 与 x₀₀ 同一 tick 输出的 3 s 处横向位置之差（ego 系，左正）；τ_lat = 该考生在天气 null 对（x₁₀ 对自己的天气 null）上 |Δ_lat| 的 95 分位数。
+7. **P6 的判卷口径（Q1、Q2 共用）**。帧窗 = 通过 t_div ≥ t_vis 的 bypass 对里，障碍首次可见 t_vis 到 expert 横向分叉 t_div_lat + 2 s 的 5 Hz 帧，只取 9 类可用障碍（第 52 条；InvadingTurn、开门车、Emergency 单列）。
+   Δ_lat(k) = 考生在 x₁₀ 与 x₀₀ 同一 tick 输出的 3 s 处横向位置之差（ego 系，左正）；τ_lat = 该考生在天气 null 对上 |Δ_lat| 的 95 分位数。
    **bypass 翻转** = |Δ_lat| > τ_lat 且方向与 expert 绕行方向相同；**stop 替代** = 纵向 2 s 速度 Δ < −τ_lon（τ_lon 同 `p5_exam`）且不是 bypass 翻转。
-   主读数 = 合并逐帧 bypass 翻转率，路线整组 bootstrap；判格「有 bypass（第三层）」= CI 下界 > 该考生天气 null 的样本外误翻率 + 10 pp，
-   **且**选择性：放置 null 40 个 keep 世界（第 52 条事后口径）上同一帧窗的 bypass 翻转率 ≤ x₀₀ 误翻率 + 10 pp（否则写「对『有东西』起反应，不是绕行」）。
-   negotiation（x₁₁ − x₁₀，2W 5 类）读横向起动延迟：考生 |Δ_lat| 首次过 τ_lat 的时刻在 x₁₁ 比 x₁₀ 晚 ≥ 1 s 的对的比例，对 expert 的 0.65 报一致率，描述性不设门。
-   镜像题读「借对向车道」率（向左 Δ_lat > τ_lat），描述性，> 50% 标「会冲进来车」。
-8. 所有新写的考生适配器在开考前做与 T1 同款的等价检查（native vs 我们的渲染路径，同一条轨迹 ≥ 90% 或读数逐位相同），不过就停。
+   主读数 = 合并逐帧 bypass 翻转率，路线整组 bootstrap；判格「有 bypass」= CI 下界 > 天气 null 样本外误翻率 + 10 pp，**且**选择性：放置 null 的 40 个 keep 世界（第 52 条事后口径）上 bypass 翻转率 ≤ x₀₀ 误翻率 + 10 pp（不满足写「对『有东西』起反应，不是绕行」）。
+   negotiation（x₁₁ − x₁₀，2W 5 类）：|Δ_lat| 首次过 τ_lat 的时刻 x₁₁ 比 x₁₀ 晚 ≥ 1 s 的对的比例，对 expert 0.65 报一致率，描述性。镜像题：向左 Δ_lat > τ_lat 的「借对向车道」率，> 50% 标「会冲进来车」。
+8. 新写的考生适配器 / 闭环 agent 开考前做等价检查（native vs 我们的路径：同一条轨迹 ≥ 90% 或读数逐位相同；闭环 agent 另在 3 条路线上核对它每 tick 的模型输入输出与离线路径逐位相同），不过就停。
+9. **闭环的执行层与归因（写在任何闭环数字之前）**。按第 41 条末段的建议：非共训的 planner（openpilot 原生 plan、我们所有的 head、Alpamayo 1.5）一律走 **P7**
+   （`todos/2026-09-23-tfv6-controller/controller-eval/P7.json`，`controller_preset: pursuit`，plan 节奏 = 考生原生节奏，openpilot 与我们的 head 5 Hz、Alpamayo 2 Hz）；
+   与作者执行层共训的 TFv6 / BridgeDrive / SimLingo / BLUE 用各自自带的执行层（作者 agent 原样）。
+   **P7 没有过基础设施验收**（纵向跟随落后 0.73–0.81 s，专家 plan 经 P7 在 20 条验收路线上 DS 77.8–87.1，[closed-loop-acceptance](../docs/closed-loop-acceptance.md)），所以：
+   (a) P7 列内的考生之间只做同路线同 seed 的配对差，差异归 planner；(b) 每张闭环表都带「专家轨迹经 P7 replay」这一行作执行层天花板；(c) P7 列与作者执行层列不直接比总分，只并列；
+   (d) 这一轮不调 P7 的任何参数。
+10. **闭环读数**：Bench2Drive 官方 220 路线、官方评测器（4000-tick 截断、完成阈值 99%），报 DS、SR、按第 38 条 hazard family 分组的 SR（突发 hazard / 让行与博弈 / obstacle bypass / 其余），
+    配对差按路线整组 bootstrap（10 000）；多 seed 时先对 seed 取均值再 bootstrap。单次运行的噪声约 ±3 DS（第 41 条 P6 对 P5），单 seed 的差只写「同一水平」。
 
-## Q1. P6 上读所有考生：谁会绕、谁只会停（GPU 约 8–10 卡·h + CPU）
+## 各节的目标与判据
 
-目标：填第三层这一列。考生分两批：
+### Q1. P6 上读所有考生：谁会绕、谁只会停
 
-- **不用重录的**（P6 v0 已有的 Waymo 式三路相机与 TFv6 shadow）：openpilot Cinque / Lebowski 原生 plan（605 流已抽，第 49 条）、TFv6 waypoint 与 route + target speed（shadow 已录）、
-  Alpamayo 1.5（nav，E[1 sample]，与 WOD 零样本同配置）、DrivoR、WA-JEPA、SparseDriveV2、ZTRS（T1 / T2 的虚拟相机适配器原样）、我们的 `ridge_late` / `cls_late` / M-C / E5 student（P5 v1 上训的 checkpoint 原样，零样本）。
-- **要挂各自 rig 重录的**：BridgeDrive、BLUE、SimLingo（T3 的 recorder 与离线 runner 原样，E1 逐 tick 核对 expert 轨迹；与 Q3 的扩容批量合并录，见 Q3）。先在 v0 的 605 个世界上录，Q3 的新世界录出来后同一口径补。
+- **不用重录的**（P6 v0 已有 Waymo 式三路相机与 TFv6 shadow）：openpilot Cinque / Lebowski 原生 plan（605 流已抽）、TFv6 waypoint 与 route + target speed、Alpamayo 1.5（nav，E[1 sample]）、
+  DrivoR、WA-JEPA、SparseDriveV2、ZTRS（T1 / T2 的虚拟相机适配器原样）、我们的 `ridge_late` / `cls_late` / M-C / E5 student（P5 v1 上训的 checkpoint 原样，零样本）。
+- **要挂各自 rig 重录的**：BridgeDrive、BLUE、SimLingo（T3 的 recorder 与离线 runner 原样，E1 逐 tick 核对 expert 轨迹）。v0 只重录主读数要用的世界（9 类的 x₁₀ / x₀₀、2W 的 x₁₁、放置 null、天气 null，约 400 个，录到最后引用 tick 为止）；v1 与 Q3 的新世界一起录。
 
-判据：通用规则 7。另报每个考生的世界级模式分布（bypass / wait-then-bypass / stop / keep，用考生自己的 5 s 轨迹按第 52 条 expert 的同一分类规则），与 expert 的一致率。
-**读法（写在数字之前）**：
-- TFv6 waypoint 若「有 bypass」，第 38 条「TFv6 高分主要不是 E 层」在 obstacle_bypass 这一格要改写（第 47 条推翻条件之一）；route + target speed 通道只看纵向（它的 route 就是导航路线，预期没有横向）。
-- NAVSIM 族（DrivoR、SparseDriveV2、ZTRS、WA-JEPA）的词表 / scorer 里本来就有横向候选，若它们「有 bypass」而 openpilot 原生 plan 没有，说明第三层是 navtrain 上 PDM 子分数学到的配方能给的，对我们是「可移植的 R 层配方」而不是 E 层。
-- 全部考生都「没有 bypass」、只有 stop 替代，则第三层确实是公开方法的空白，Q2 的激发是唯一的正例来源。
-- Alpamayo 的 CoT 若说 nudge 而轨迹不绕（第 47 条 WOD 180 帧的现象），单列「语言与轨迹不一致率」。
+判据：规则 7。另报每个考生的世界级模式分布（考生自己 5 s 轨迹按第 52 条 expert 的分类规则），与 expert 的一致率。**读法（写在数字之前）**：
+- TFv6 waypoint「有 bypass」→ 第 38 条在 obstacle_bypass 格改写（第 47 条推翻条件之一）；route + target speed 通道只看纵向。
+- NAVSIM 族「有 bypass」而 openpilot 原生 plan 没有 → 第三层是 navtrain 上 PDM 子分数学得到的配方，对我们是「可移植的 R 层配方」。
+- 全部考生只有 stop 替代 → 第三层是公开方法的空白，Q2 是唯一的正例来源。
+- Alpamayo 的 CoT 说 nudge 而轨迹不绕，单列「语言与轨迹不一致率」。
 
-## Q2. 在 openpilot 冻结特征上激发绕行（CPU 为主，< 2 GPU·h；先 v0 做 pilot，Q3 的数据到后按同一代码上 v1）
+### Q2. 在 openpilot 冻结特征上激发绕行
 
-目标：回答「能不能像行人那样把绕行激发出来」。特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last` 与 V-JEPA 2 `mean` 作 backbone 对照行（第 48 条同款抽取）。
-
-臂（每臂 3 seed × 2 openpilot 模型；backbone 对照行只跑 A1 与 A3）：
+特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。
 
 | 臂 | 读出 | 训练信号 |
 |:--|:--|:--|
 | A0 | `ridge_late` 在 P6 expert 未来上重训（横纵向 1–5 s） | 均匀 imitation |
-| A1 | A0 + 横向 pair-Δ（x₁₀ − x₀₀ 的 expert 横向差作 Δ 目标，M-C 的 `fit_fold` 把纵向目标换成横向） | 配对差分 |
-| A2 | 模式头（keep / stop / bypass-L / bypass-R / wait，按第 52 条规则从 expert 5 s 未来贴标）+ 每个模式一条横向模板轨迹 | 均匀分类 |
-| A3 | A2 + 配对一致性（同一 tick 的 x₁₀ / x₀₀ 模式 logit 差受 expert 模式差监督） | 配对差分 |
-| A4 | `cls_late` 换词表：K-means 词表里强制加入 P6 x₁₀ 与 WOD train 的 bypass 形状 anchor（各 64 条），其余同 `cls_late` | 均匀分类（第 52 条 4 的 vocabulary 对照） |
+| A1 | A0 + 横向 pair-Δ（x₁₀ − x₀₀ 的 expert 横向差作 Δ 目标，M-C 的 `fit_fold` 换横向目标） | 配对差分 |
+| A2 | 模式头（keep / stop / bypass-L / bypass-R / wait，按第 52 条规则从 expert 5 s 未来贴标）+ 每模式一条横向模板轨迹 | 均匀分类 |
+| A3 | A2 + 配对一致性（同一 tick x₁₀ / x₀₀ 的模式 logit 差受 expert 模式差监督） | 配对差分 |
+| A4 | `cls_late` 换词表：K-means 词表强制加入 P6 x₁₀ 与 WOD train 的 bypass 形状 anchor 各 64 条 | 均匀分类（vocabulary 对照） |
+| A5（v1 上加跑，条件见下） | A1 / A3 + 第二个 Δ 项（x₁₁ − x₁₀，negotiation） | 配对差分 |
 
-切分：**按障碍类留一**（9 折，每折测一类没见过的障碍）为主读数，按路线 5 折为副；训练集不含放置 null、镜像题、天气 null（它们只当考题）。
-判据：通用规则 7，在留一类的测试折上；另两条（写在数字之前）：
+切分：**按障碍类留一**（9 折）为主读数，按路线 5 折为副；放置 null、镜像题、天气 null 只当考题。v0 做 pilot，v1 到了按同一代码重跑并加 town 留出。判据：规则 7，在测试折上：
 - 「绕行被激发」= A1 或 A3 过判格 **且**比 A0 / A2 的 bypass 翻转率高（同帧配对差 CI 下界 > 0，3 seed 都成立）。
-- 「只是词表问题」= A4 过判格而 A0 / A2 不过：那第 47 条 `cls_late` 的 0 / 21 归 vocabulary，第三层不需要配对监督。
-- 镜像题上激发后的头借对向车道率 > 50%：写「激发出的是『见障碍就绕』，没有 gap 判断」，negotiation 需要单独的 x₁₁ − x₁₀ 配对（A1 / A3 的第二个 Δ 项），作为 A5 在 v1 上加跑。
-副读数（只报不判）：CARLA 上训的最好一臂零样本上 WOD 的 21 个 nudge 帧与 18 个双模式帧（第 47 条），报 nudge 预测率与 RFS；按第 44 条的先例，预期真实数据上有偏置，只作 sanity。
+- 「只是词表问题」= A4 过判格而 A0 / A2 不过：第 47 条 `cls_late` 的 0 / 21 归 vocabulary。
+- 镜像题借对向车道率 > 50% → 「激发出的是见障碍就绕，没有 gap 判断」，v1 上开 A5。
+- 副读数（只报）：最好一臂零样本上 WOD 的 21 个 nudge 帧与 18 个双模式帧，报 nudge 预测率与 RFS。
+- **交付给闭环**：v0 pilot 里过判格的最好一臂（没有过的就用 A1）按全部 v0 数据重训一版 checkpoint，写 `runs/nq3/q2/closed_loop_head/READY`，CL 队列看到它就把 CL5 插进去。
 
-## Q3. P6 v1 扩容：更多路线、town 留出、recovery 题（GPU 6 卡 × 约 6 h，CPU 约 100 核）
+### Q3. P6 v1 扩容：更多路线、town 留出、recovery 题
 
-目标：v0 每类只有 5 条路线 × 3 seed，Q2 的留一类在 135 对上 CI 会很宽；v1 让每类 ≥ 20 条路线，并补 recovery 这一格。
+- 路线：Bench2Drive 全量里 9 类障碍 scenario 的全部可用路线，每类 ≥ 20 条；按 town 留出测试组（占 20–30% 路线，定好写日志再生成）。世界类型同 v0，录制窗口延到障碍后 15 s 或路线结束。
+- 放置 null 判卷主口径改为「放置 null 的模式 = 同 case x₀₀ 的模式」，登记门槛 0.90 仍报（看过 v0 数字后的改动，明示为事后口径）。
+- **recovery 题**：每条 1W 路线另造 x_shift（出生点横移 ±1.0 / ±1.5 m，无障碍）与 x_center；先 smoke 10 个世界，PDM-Lite 3 s 内回到 |d| < 0.3 m 的比例 ≥ 0.80 才开，否则写日志不开。
+  考生读数 = 出生后 1–3 s 的横向回线量（对 x_center 的差），「会回线」= 回线量 / 初始偏移中位 ≥ 0.5 且 CI 下界 > x_center 天气 null 抖动。
+- recorder 同时挂 TFv6 shadow + BridgeDrive shadow + BLUE 相机（T3 证明加传感器不改仿真，E1 在 v1 上全量核）。
+- 规模：**约 1 200 个世界**（首版写 2 000，按时间表缩：v0 实测每世界约 0.12 server·h → 约 140 server·h，18 个 server 约 8 h；60 MB / 世界 → 约 75 GB）。
+- 门照 v0：每类 x₁₀ bypass ≥ 0.70 才进主读数；x₀₀ ≥ 95% 帧 |d| < 0.3 m；t_div ≥ t_vis。
 
-- **路线来源**：Bench2Drive 全量（不止 220 集）里这 9 类障碍 scenario 的全部可用路线；按 town 留出一组测试 town（执行员按各 town 的路线数定，测试 town 占 20–30% 的路线，定好写进日志再生成）。
-  世界类型同 v0（x₁₀ / x₀₀ / 2W 的 x₁₁ / x₀₁、放置 null、镜像题、天气 null），录制窗口延长到障碍后 15 s 或路线结束（v0 很多帧没有回正段）。
-- **放置 null 的背景交通**：v0 剩下的 5 个 stop 是背景交通（第 52 条 3）。v1 的放置 null 与它的 x₀₀ 用同一 TM seed（本来就是），判卷口径改为「放置 null 的模式 = 同 case x₀₀ 的模式」为主、登记门槛 0.90 仍报。这条是看过 v0 数字后的改动，在此明示为事后口径。
-- **recovery 题（新）**：每条 1W 路线另造 x_shift（ego 出生点横移 ±1.0 m / ±1.5 m，无障碍）与 x_center。expert = PDM-Lite；先 smoke 10 个世界确认 PDM-Lite 会回线（3 s 内 |d| < 0.3 m 的比例 ≥ 0.80，不过则 recovery 题不开，写日志）。
-  考生读数 = 出生后 1–3 s 的横向回线量（对 x_center 的差），判格「会回线」= 回线量 / 初始偏移的中位 ≥ 0.5 且 CI 下界 > x_center 的天气 null 抖动。
-- **Q1 的重录合并**：recorder 同时挂 TFv6 shadow + BridgeDrive shadow + BLUE 相机（T3 已证明加传感器不改仿真，E1 逐 tick 核对仍在 v1 上全量做）。
-- 规模：目标约 2 000 个世界（v0 实测 605 个世界约 12 卡·h、60 MB / 世界 → 约 40 卡·h、120 GB）；超过 3 h 的批量先按 v0 的逐 tick 分项做 profiling pass，CPU 是上一轮的瓶颈（25 次渲染超时），这次按空余核开，每卡 ≤ 6 server。
-- 门（照 v0）：每类 x₁₀ bypass ≥ 0.70 才进主读数；x₀₀ smoke ≥ 95% 帧 |d| < 0.3 m；t_div ≥ t_vis。
+### Q4. 真实数据上压住 Δ（第 53 条的翻案条件）
 
-## Q4. 真实数据上压住 Δ：第 53 条的翻案条件（CPU 为主，< 1 GPU·h）
+- **Q4a 训练时的真实帧零约束**：M-C 的 pair-Δ 训练加 λ·‖Δ(x)‖²，x = navtrain 与 WOD train 里走廊 ±4 m、30 m 内没有行人 / cyclist / 切入车的帧（GT 框只用于筛选），λ ∈ {0.1, 1, 10}，按 navtrain 留出 10% 的 PDMS 选 λ（先于任何 navtest 数字）。
+  判「能力包成立」照第 53 条原登记：Hydra + Δ navtest PDMS 掉 ≤ 1.0 **且** P5 v1 BA 行人翻转 ≥ M-C 的 80%；另报 WOD RFS cluster mean 配对差、I3 车辆翻转。3 seed × 2 模型。
+- **Q4b NAVSIM 协议兼容检查**：P5 v1 BA 帧按 NAVSIM 2 Hz sample-and-hold 重抽 openpilot 特征，重做第 53 条 top-10 重叠检查（门槛 30%）；过线则把 Hydra 的 P5 翻转按原口径补上。
+- 读法：Q4a 过 → 系统偏置来自训练时没见过真实非 hazard 帧，可在训练里修；不过 → 偏置在特征分布差本身，需要真实配对数据，写进论文限定。
+- Q4a 若过线，过线的 Δ（λ 选定版）作为 CL 队列的一个追加臂（`mc_real0`），与 M-C 同路线同 seed 配对。
 
-目标：第 53 条写了两条翻案条件，这一节各做一个。
+### Q5. 六族的 hack 核查
 
-- **Q4a 训练时的真实帧零约束**：M-C 的 pair-Δ 训练加一项 λ·‖Δ(x)‖²，x 取 navtrain 与 WOD train 里「走廊 ±4 m、30 m 内没有行人 / cyclist / 切入车」的帧（用各自的 GT 框筛，GT 只进训练的筛选，不进特征），λ ∈ {0.1, 1, 10}，按 navtrain 留出 10% 的 PDMS 选 λ（先于任何 navtest 数字）。
-  判「能力包成立」照第 53 条原登记：Hydra + Δ 的 navtest PDMS 掉 ≤ 1.0 **且** P5 v1 BA 行人翻转 ≥ M-C 的 80%；另报 WOD RFS cluster mean 对不加 Δ 的配对差、I3 车辆翻转。3 seed × 2 模型。
-- **Q4b NAVSIM 协议下的兼容检查**：在 P5 v1 BA 帧上按 NAVSIM 的 2 Hz sample-and-hold 重抽 openpilot 特征，重做第 53 条的 top-10 重叠检查（门槛 30%）；过线则第 53 条第 1 点变为可判，把 Hydra 的 P5 翻转按原口径补上。
-- 读法：Q4a 过线 → 第 44 / 53 条的「系统偏置」是训练时没有见过真实非 hazard 帧造成的，可以在训练里修，真实数据这条路重新打开；不过线（PDMS 仍掉 > 1）→ 偏置在特征分布差本身，需要真实配对数据（G2 那条路），写进论文的限定。
+- **ego status 依赖**：WA-JEPA 在 nuScenes 上 L2 0.41（cv 0.71，全部考生最好），DrivoR 0.70。ego 速度 / 加速度 / 命令分别置零、置 cv 常数、换成同场景另一帧，重跑 nuScenes main 与 NAVSIM navtest。
+  判：置零后相对 cv 的 L2 优势缩掉 ≥ 50% → 「nuScenes 分数主要来自 ego prior」（第 35 条 (a) 类）；NAVSIM PDMS 掉 ≥ 5 同理标注。
+- **选择性表**：反应帧翻转 − 非反应帧误翻，六族 + openpilot + M-C，P5 与 I3 各一张（已有读数，纯 CPU）；< 10 pp 标「见车就减速」。
+- **scorer argmax 脆弱性**：DrivoR、WA-JEPA 补 T1 同款扰动（±0.5° yaw、±5 cm 高度），报换轨迹率与平均位移，描述性。
 
-## Q5. 六族的 hack 核查（CPU + < 1 GPU·h）
+### Q6. 主表口径统一 + 第 48 条的两个后续
 
-目标：论文主张「榜单分 ≠ 能力」需要对交集的六族各有一条直接的 hack 量，不只是「反应低」。
+- 按 [ablation-matrix-inventory](../research/ablation-matrix-inventory.md) 的 15 处不一致逐条定口径，从已存特征与 checkpoint 重算 backbone × head × 考卷主表（P5 v1 BA / PDM、I3、WOD、NAVSIM；P6 与闭环列等 Q1 / Q2 / CL 出来后补）。与旧表不同的格子逐个写原因；与 decisions 冲突的就地修正。
+- V-JEPA 2 单帧对照：当前帧重复成 4 帧 clip，同一 pair-Δ，3 seed。行人翻转 < 10% → 「是时间不是视频预训练」；与 4 帧版 CI 重叠 → 「视频预训练本身」。
+- V-JEPA 2 进 E5 student 上真实数据：Qwen 流换 V-JEPA 2，G0 口径上 WOD 与 NAVSIM；对不加 Δ 的配对差 CI 覆盖 0 → 快通道 backbone 换 V-JEPA 2 进候选。
 
-- **ego status 依赖**：WA-JEPA 在 nuScenes 上 L2 0.41（cv 0.71，所有考生最好），DrivoR 0.70。把 ego 速度 / 加速度 / 命令分别置零、置 cv 常数、换成同场景另一帧的值，重跑 nuScenes main 与 NAVSIM navtest。
-  判（写在数字之前）：置零后相对 cv 的 L2 优势缩掉 ≥ 50% → 「nuScenes 分数主要来自 ego prior」（第 35 条 (a) 类 hack）；NAVSIM PDMS 掉 ≥ 5 同理标注。
-- **WA-JEPA 的选择性**：I3 上非反应帧误翻 40%（static 类 58%），报「选择性 = 反应帧翻转 − 非反应帧误翻」给六族 + openpilot + M-C 一张表；选择性 < 10 pp 的标「见车就减速」。只用已有读数，纯 CPU。
-- **scorer argmax 脆弱性**：T1 量到亚度级相机安装变化让 60% / 34% token 换轨迹；对 DrivoR、WA-JEPA 补同一扰动（±0.5° yaw、±5 cm 高度），报换轨迹率与平均位移，描述性。
+### CL. 闭环（Bench2Drive 220，官方评测器）
 
-## Q6. 主表口径统一 + 第 48 条的两个后续（CPU 为主，GPU 约 2 h）
+考生与执行层（规则 9）：
 
-- **口径**：按 [ablation-matrix-inventory](../research/ablation-matrix-inventory.md) 的 15 处不一致逐条定口径（RFS cluster mean、3 seed、τ 定义、「Qwen L18_last」统一为一种特征并改名另一种），
-  从已存特征与 checkpoint 重算一张 backbone × head × 考卷的主表（P5 v1 BA / PDM、I3、WOD、NAVSIM，加 P6 列等 Q1 / Q2 出来后补）。数字与旧表不同的格子逐个写原因；与 decisions 冲突的就地修正。
-- **V-JEPA 2 单帧对照**（第 48 条推翻条件）：当前帧重复成 4 帧 clip，同一 pair-Δ 读出，3 seed。判：行人翻转掉到 DINOv2 水平（< 10%）→ 写「是时间不是视频预训练」；与 4 帧版 CI 重叠 → 「视频预训练本身」。
-- **V-JEPA 2 进 E5 student 上真实数据**（第 48 条推进条件）：E5 student 的 Qwen 流换成 V-JEPA 2，G0 的口径原样上 WOD 与 NAVSIM。判：WOD RFS / NAVSIM PDMS 对不加 Δ 的配对差 CI 覆盖 0（不再有害）→ 快通道 backbone 换 V-JEPA 2 进候选。
+| 臂 | 考生 | 执行层 | seed | 优先级 |
+|:--|:--|:--|:--|:--|
+| CL0 | 全部下列 agent 各 3 条路线的 smoke + 规则 8 的逐 tick 等价检查；openpilot 适配器用 [openpilot-migration](2026-09-24-zeroshot-exam/openpilot-migration.md) A 部分修过的版本 | — | — | 最先 |
+| CL1 | 专家轨迹经 P7 replay（执行层天花板） | P7 | 0 | 1 |
+| CL2 | openpilot Cinque 原生 plan | P7 | 0 | 2 |
+| CL3 | Cinque `temporal` + `ridge_late`（R 层）| P7 | 0 | 3 |
+| CL4 | Cinque `temporal` + M-C（R + E 层，第 42 条） | P7 | 0 | 4 |
+| CL5 | Cinque `temporal` + Q2 的绕行 head（`READY` 出现后插队到当前位置） | P7 | 0, 1, 2 | 插队 |
+| CL5d | openpilot 原生 + desire：Q2 的模式头判 bypass-L / R 时发 laneChange desire 上升沿（开环第 49 条的执行器问题，闭环里图像会跟着走） | openpilot 自己的 plan → P7 | 0, 1, 2 | 与 CL5 同时插队 |
+| CL6 | E5 student（Cinque ⊕ YOLO26x image-plane，第 50 条 B arm） | P7 | 0 | 5 |
+| CL7 | openpilot Lebowski 原生 plan | P7 | 0 | 6 |
+| CL8 | Alpamayo 1.5（第 33 条暂停在 13 / 220，重跑全量） | P7 | 0 | 7 |
+| CL9 | CL2 / CL3 / CL4 的 seed 1、2 | P7 | 1, 2 | 8 |
+| CL10 | TFv6、BridgeDrive、SimLingo、BLUE（top-10 todo 5.1 建议的那一项） | 作者自带 | 0 | 9（截止线，时间不够就顺延到上午） |
 
-## 本轮登记但不跑
+- 我们的 head 用 P5 v1 BA 上训、P5 表里的同一个 checkpoint；导航输入与 openpilot 原生同一套 desire（`b2d_zeroshot_agent` 的路口 desire）；head 输出的轨迹原点对齐到后轴后交给 P7（第 33 条那个 1.78 m 的 bug 不许再出）。
+- CL5 / CL5d 只跑 220 里的 obstacle 类路线（Accident / Construction / ParkedObstacle / HazardAtSideLane 及其 TwoWays，约 40 条）× 3 seed，对照 = 同路线同 seed 的 CL4（M-C）与 CL2（openpilot 原生），CL9 跑完后对照也有 3 seed。
+- **判据（写在数字之前）**：
+  1. 「E 层激发变成闭环收益」= CL4 − CL3 在突发 hazard family 上 SR 配对差 CI 下界 > 0（3 seed），且总 DS 配对差 CI 下界 > −3。只有 1 seed 时写「同一水平 / 方向」。
+  2. 「第三层激发变成闭环收益」= CL5 − CL4 在 obstacle 类路线上 SR 配对差 CI 下界 > 0（3 seed），且这些路线上碰撞数不多于 CL4。
+  3. 「desire 执行器闭环可用」= CL5d 里触发的 desire 在 8 s 内完成横移 ≥ 2.5 m 的比例 ≥ 70%，且 obstacle 类路线 SR ≥ CL5 的 SR − 10 pp。
+  4. 「openpilot 能开」（第 33 条悬而未决的那一半）：CL2 完成率与 DS 如实报，对 CL1 天花板写差距，不设门。
+  5. CL10 与 P7 列只并列，按规则 9 (c) 不比总分；作者执行层列内部可以配对比（BridgeDrive − TFv6、BLUE − SimLingo，对第 46 条 T3 的开环结论作闭环复核）。
 
-- **执行器**：绕行 / 回线要闭环验证（desire 持续多步、我们自己的横向轨迹 + 第 41 条控制器）。闭环暂停期间不跑；Q2 过线后再立 todo。
-- 第二个 expert（非特权的绕行 teacher）：没有现成可用的（BehaviorAgent 不绕、state-space policy 不可用），等 Q1 看哪个考生绕得最像 expert 再说。
+## 时间表与资源（box 时钟 CST；每条 lane 固定卡与核段，`taskset` 绑核，OMP / MKL / OpenBLAS / NUMBA 线程按 lane 上限设）
 
-## 分派与顺序
+| lane | 内容 | 卡 | 核上限 | 17:30–22:00 | 22:00–03:00 | 03:00–09:00 |
+|:--|:--|:--|--:|:--|:--|:--|
+| A（CARLA 生成） | Q1 的 v0 重录（约 400 个世界）→ Q3 smoke + profiling → v1 批量 → BLUE / SimLingo 离线推理与 Q1 CARLA-rig 考生判卷 | 3、4、5（每卡 ≤ 6 server） | 60 | v0 重录（约 2 h）、Q3 smoke | v1 批量 | v1 收尾（约 03:00）、离线推理与判卷；**卡 3–5 在 v1 结束时自动交给 B** |
+| B（闭环） | CL 队列 | 0、1、2（每卡 ≤ 6 server）；A 交卡后扩到 0–5 | 50 → 90（A 结束后） | CL0、CL1、CL2 | CL3、CL4、CL6（CL5 插队） | CL7、CL8、CL9，有余量做 CL10 |
+| C（推理 / 训练） | Q1 不重录的考生 → Q2 pilot（v0）→ 交付闭环 head → Q2 v1（等 A 的 v1） | 6（T2 / T3 尾巴收工前与其共卡，≤ 40 GB） | 30 | Q1 推理与判卷 | Q2 pilot，约 00:30 交 `READY` | Q2 v1（03:00 后） |
+| D（CPU 为主） | Q4a → Q4b → Q5 → Q6 | 6 的空档 | 20 | Q4a | Q4b、Q5 | Q6 |
 
-| 执行员 | 节 | 卡 / 核（按开工时 `nvidia-smi` 与 load 选最空的，记在 run 目录） | 依赖 |
-|:--|:--|:--|:--|
-| A | Q3（含 Q1 的重录部分）→ Q1 重录考生的判卷 | GPU 0–3 + 5，CPU ≤ 110 核 | 无；最长的一条，先开 |
-| B | Q1 不重录的考生 → Q2 pilot（v0）→ Q2 v1 | GPU 4，CPU ≤ 24 核 | Q2 v1 等 A 的数据 |
-| C | Q4a → Q4b | GPU 6 空档，CPU ≤ 24 核 | 无 |
-| D | Q5 → Q6 | GPU 6 / 4 空档，CPU ≤ 16 核 | Q6 的 P6 列等 Q1 / Q2 |
+- **核**：A 60 + B 50 + C 30 + D 20 = 160 / 175，留 15 给系统与 T2 / T3 尾巴；A 交卡后 A 只剩判卷（≤ 10 核），B 升到 90。
+- **线程**（`pids.max` = 20 480，数线程不数核）：一个 CARLA server 约 430 线程，route client 用 `--client-threads 8` 约 16 线程；A 18 + B 18 = 36 个 server 约 16 000 线程，到顶了。
+  B 扩到 36 个 server 只在 A 的 server 全部退出之后；每条 lane 的脚本启动新 server 前读 `/sys/fs/cgroup/pids.current`，> 17 000 就等。
+- **盘**：Q3 约 75 GB、闭环 dump 关掉（`dump_every 0`）只存 per-route json，剩余 > 400 GB。
+- **估时依据**：v0 生成每世界约 0.12 server·h（605 个世界约 12 卡·h）；闭环 220 条一轮按 full220 实测（8 worker 3.1 h，含大量 4000-tick 超时）估 15–25 worker·h，18 worker 约 1–1.5 h / 轮，obstacle 子集 40 条 × 3 seed 约 0.8 轮。
+  到 09:00 B 能跑约 13–15 轮，CL0–CL9 约 12 轮，CL10 的 4 轮在截止线上。任何一步超估计 2 倍，脚本停该步、写 ERROR。
 
-T2 / T3 的尾巴收工后，它们的卡给 A。每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**）。
+## 一次性脚本与轮询（用户 16:45：各执行员写一次性脚本，不用一直盯）
+
+每条 lane 开工时写**一个**链式脚本（`scripts/nq3_<lane>.sh`，进 tmux `jev` 的 `nq3-<lane>` 窗口），把本 lane 的全部步骤按顺序串起来，执行员启动后不再手动推进：
+
+1. **步骤之间自动衔接**：每步结束写 `runs/nq3/<lane>/<step>/DONE`（含墙钟、产物路径），下一步检查前一步的 `DONE` 再开；跨 lane 的依赖只靠这些文件（C 的 `q2/closed_loop_head/READY` → B 插 CL5 / CL5d；A 的 `a/v1/DONE` → B 扩卡、C 开 Q2 v1；D 的 `q4a/PASS` → B 追加 `mc_real0`）。
+2. **自动重试与熔断**：单条路线 / 单个世界崩溃自动重试 ≤ 2 次后跳过并记录；同一批失败率 > 10%，或一步墙钟超估计 2 倍，停该步、写 `runs/nq3/<lane>/ERROR`（原因、最后 50 行日志、已完成比例），不再往下走。
+3. **状态文件**：`runs/nq3/<lane>/STATUS.md` 每 10 min 刷新（当前步、完成比例、ETA、GPU / 核 / 线程占用），`events.jsonl` 照 long-runs 规范写。
+4. **执行员的轮询**：每 1–2 h 看一次 `STATUS.md`；另起一个只等 `ERROR` 或整条 lane 的 `DONE` 出现的等待（Monitor 的 until-loop），出现就立刻处理。其余时间不看、不发进度消息。
+5. **结果落盘也在脚本里**：每步结束自动生成小表到 `research/results/nq3/<节>/`；commit、decisions 回填由执行员在轮询时做（结论要人写）。
+
+## 分派
+
+| 执行员 | lane | 先做 |
+|:--|:--|:--|
+| A | A | 写 `nq3_a.sh`（v0 重录清单 → Q3 路线清单与 town 留出 → smoke → 批量 → 离线推理 → 判卷），先跑 v0 重录 |
+| B | B | 写 CL 的 agent 适配（head 模式、desire 触发、P7 接线）与 `nq3_b.sh` 的优先级队列（含插队与扩卡逻辑），先跑 CL0 |
+| C | C | 写 `nq3_c.sh`（Q1 推理 → 判卷 → Q2 pilot → 交付 head → 等 A 的 v1 → Q2 v1） |
+| D | D | 写 `nq3_d.sh`（Q4a → Q4b → Q5 → Q6 的 CPU 部分） |
+
+每节结果写回下面「结果」，结论回填 decisions（新条或就地修正，标**待定**）。
 
 ## 结果
 
