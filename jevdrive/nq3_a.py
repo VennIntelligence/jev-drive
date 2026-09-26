@@ -527,7 +527,8 @@ def main():
     elif a.cmd == "e1-ids":
         print(",".join(e1_ids()))
     elif a.cmd == "judge-rig":
-        judge_rig(Path(a.gen), Path(a.e1), dict(x.split("=", 1) for x in a.blue.split(",") if x))
+        judge_rig(Path(a.gen), Path(a.e1), dict(x.split("=", 1) for x in a.blue.split(",") if x),
+                  Path(a.out) if a.out else None)
     elif a.cmd == "check-det":
         df = check_det(Path(a.gen), Path(a.need) if a.need else None, a.file.split(",") if a.file else None,
                        Path(a.ref) if a.ref else None)
