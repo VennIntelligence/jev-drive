@@ -31,3 +31,11 @@ round01 的实际结束：资源稍后放行，但 box 没有 `ss`，端口检�
 最新外部机械快照（Sol capacity）：pids15300，GPU1约10.5GB/18%、1 CARLA；CPU约95/175核。round02 仍自行复核，不把单次 utilization 当启动依据。round01 的等待/错误产物保留；round02 新目录与 PID。
 
 round02 已部署（f6d9bc3，box回归同过）；wrapper343121、formal export344728，GPU1、204–207。导出自身门：pids15798+64≤16000、GPU1用15.64GB、CPU约92核；此时已有四个CARLA，未追加CARLA。正式导出约2分钟完成，READY为Cinque/A1轨迹/A2模式：R1训练13234行/2214对，R2训练13506行/2090对；各1024行导出检查，轨迹最大差分别2.8610e-5/2.6703e-5 m，模式误差均0，原1e-3门通过。这是导出检查，不是闭环rule8。导出后返回CARLA容量门；wrapper现有67线程已全部pin到204–207，子进程本来已pin并限制OMP/BLAS2。CARLA仍需自己的pids+600与<4现有server条件。
+
+round02 闭环结果：自动容量门在pids15062、GPU1两个既有CARLA/19.22GB时通过；table登记index0–2、核204–207，内核端口盘点与sch_table check=0。head402033在64秒后READY，runner405595开始253490。三个尝试分别在129.1/67.0/68.0秒后server_died_rc139，**0/1完成、3/3启动崩溃、0 tick、0 agent请求**；引擎日志均属`GameThread timed out waiting for RenderThread after 60.00 secs`。这不是模型不起步、不是blocked驾驶结果；保留原始日志，result仍明确infrastructure_error/model_verdict=false。自己的进程已清理、表行释放，未改看门狗或门槛。
+
+## round03：给 render startup 八核，保留同一控制候选
+
+假设：单模型+CARLA/client挤在四核，可能触发文档记录的render-thread饥饿（`docs/bench2drive-cost.md`和todo K18:37；原因不是已证明的）。仅改变运行CPU资源：live affinity审计确认134–149没有窄affinity活动进程，Sol确认对应pull-forward任务已DONE，因此用134–141八核；不借D的180–199，保留D待修复资源。parent/root和Sol capacity均已通知。
+
+修复wrapper的BLAS线程池上限（原wrapper67线程，子进程已是2），并在head加载之后和每个route stage真正起CARLA之前重查容量，模型已存活时按SCH原每worker400线程预算；总plan cap仍16000，GPU1至多再加到4个CARLA。启动命令将wrapper本身也taskset134–141、OMP/BLAS2。模型/路径/门控/看门狗/世界与判据一概未变；既有formal q2 READY复用。重新单路253490，不跳到pilot。

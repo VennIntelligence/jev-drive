@@ -18,6 +18,9 @@ import subprocess
 import sys
 import time
 
+# Cap wrapper BLAS pools too, before importing numpy through the project modules.
+for _name in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'NUMBA_NUM_THREADS'):
+    os.environ[_name] = '2'
 from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -34,7 +37,7 @@ def sha(path):
 
 
 class Run:
-    def __init__(self, number):
+    def __init__(self, number, cpus):
         self.out = DATA / 'runs/nq4/cx/x-fix' / f'round{number:02}'
         self.out.mkdir(parents=True, exist_ok=True)
         self.lock = (self.out.parent / 'lock').open('w')
@@ -46,7 +49,7 @@ class Run:
         self.env = dict(os.environ, OMP_NUM_THREADS='2', MKL_NUM_THREADS='2', OPENBLAS_NUM_THREADS='2',
                         NUMBA_NUM_THREADS='2', B2D_PIDS_WAIT='16000', B2D_NQ4_TRACE='1', B2D_SENSOR_TICK='1',
                         PYTHONUNBUFFERED='1', HF_ENDPOINT='https://hf-mirror.com')
-        self.cpus = '204-207'
+        self.cpus = cpus
         self.index = None
         (self.out / 'pid').write_text(str(os.getpid()))
         from torch.utils.tensorboard import SummaryWriter
@@ -216,6 +219,17 @@ class Run:
             time.sleep(5)
 
     def routes(self, stage, ids):
+        # Loading the model can take a minute. Recheck at the actual CARLA launch,
+        # including its already-live model, and at each later stage boundary.
+        while True:
+            probe = SCH.probe()
+            gpu = next(g for g in probe['gpus'] if g['gpu'] == 1)
+            if (probe['pids'] + SCH.PIDS_PER_WORKER <= SCH.PIDS_CAP and
+                    probe['cores_used'] <= SCH.CPU_CAP - 8 and gpu['carla'] < 4 and gpu['used_gb'] <= 72):
+                self.event('route_capacity', stage=stage, probe=probe)
+                break
+            self.event('waiting_route_capacity', stage=stage, probe=probe)
+            time.sleep(60)
         out = self.out / stage
         out.mkdir(exist_ok=True)
         command = ['taskset', '-c', self.cpus, DATA / 'envs/carla/bin/python', 'scripts/b2d_run.py',
@@ -303,8 +317,9 @@ class Run:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--round', type=int, required=True, choices=range(1, 11))
+    ap.add_argument('--cpus', default='204-207')
     a = ap.parse_args()
-    run = Run(a.round)
+    run = Run(a.round, a.cpus)
     def stop(signum, frame):
         raise KeyboardInterrupt(f'Signal {signum}')
     signal.signal(signal.SIGTERM, stop)
