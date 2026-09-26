@@ -44,7 +44,7 @@ MASK = np.arange(64) % 8 == 7
 
 
 def _zs(xo: torch.Tensor, e: torch.Tensor, st: dict) -> torch.Tensor:
-    """E5's student input [z_op, z_e] (mask bits not standardised), with the sd <= 1e-6 -> 1 rule ([G2] 11:05)."""
+    """E5's student input [z_op, z_e] (mask bits not standardised), with the sd <= 1e-6 -> 1 rule ([G2] 10:53)."""
     m = torch.as_tensor(MASK, device=e.device)
     ze = torch.where(m, e, (e - st["e_mu"].to(e.device)) / st["e_sd"].to(e.device)) / np.sqrt(e.shape[1])
     return torch.cat([(xo - st["op_mu"].to(xo.device)) / st["op_sd"].to(xo.device) / np.sqrt(xo.shape[1]), ze], 1)
@@ -94,7 +94,7 @@ def i3_data() -> dict:
 def fit_model_seed(D: dict, m: str, s: int, rl) -> tuple[dict, dict]:
     """Held-out Delta (n, 20, 2) per head and the fold heads (for transfer) of one model x seed ([G2] 10:50 (1)-(6))."""
     from . import elicit_e5 as E5, p5_exam as E, reactivity_mc as MC
-    MC.EIGH_DEVICE = DEV                              # float64 eigh on the GPU ([G2] 11:05): the box's CPUs are saturated
+    MC.EIGH_DEVICE = DEV                              # float64 eigh on the GPU ([G2] 10:53): the box's CPUs are saturated
     t = D["t"]
     n = len(t)
     fold = E.folds(t, D["pairs"], s)
