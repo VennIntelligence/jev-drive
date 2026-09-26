@@ -273,6 +273,24 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 
 - [main] 2026-09-26 18:27 CST P1 边界口径已明确：logged future（实际记录的未来轨迹）不足 30 m 时，沿最后一段有效行进方向直线延长到弧长 30 m，走廊仍为 ±4 m；完全静止、没有有效线段时，按当前 ego pose 的朝向构造前方 30 m 直线。前后端点外投影排除；future 不跨连续采样断链。CX 按此口径恢复 CPU 计数，核 196–197、2 worker、线程 1，估时仍为 90 min，超过 180 min 停止。
 
+- [P3] 2026-09-26 18:41 CST 输入核查：**WOD-E2E 不能作 OmniRe 的输入，P3 停在装机之前，待 main 选替代数据。** 没有装任何 env、没有占 GPU、没有写 `nq4_p3.sh`。
+  OmniRe（drivestudio 里的动态场景 3DGS 重建，行人用 SMPL 人体模型节点、车辆用刚体节点）的 Waymo 预处理要的输入是：多相机图像与标定、每帧 ego 世界位姿、LiDAR 点云（高斯初始化与深度监督）、
+  带 track id 的逐帧 3D 框（每个行人、车辆各建一个节点；「删掉一个真实行人」就是不渲染它的节点，没有框就没有可删的对象），外加 sky mask 与由框和 4D-Humans 得到的 SMPL 位姿。
+  在 box 上直接解析 `front3/val_…-00000-of-00093` 的前 300 帧（`E2EDFrame.frame`）得到：`lasers` 0、`laser_labels` 0、`camera_labels` 0、`projected_lidar_labels` 0、`context.laser_calibrations` 0；
+  `frame.pose` 为空，900 个图像的 `image.pose` 全是单位阵（世界位姿被抹掉，时间戳也全为 0，已见 docs/waymo-e2e.md）；只剩 3 路前相机图像、相机标定、每图的瞬时速度，
+  以及 4 Hz、只有 x/y 的 `past_states` / `future_states`。也就是说 LiDAR、3D 框、track、世界位姿四样都缺，其中框与 track 是删行人本身的前提，不是质量问题；
+  用单目 3D 检测 + 跟踪 + SfM 补出来等于另造一条未验证的几何管线，删除区域的残影无法归因，这里不走。
+  替代方案（按推荐顺序，都在 box 上核过可达性）：
+  1. **WOD Perception 的 scene-flow 版**（drivestudio 文档指定的 Waymo 版本，`gs://waymo_open_dataset_scene_flow/{train,valid}`，同一个授权账号经 Clash 可列）：5 路相机、5 个 LiDAR、10 Hz 带 track 的 3D 框，
+     每段 20 s、约 0.92–1.0 GB（valid 共 210 GB）。选场景不用下全量：WOD v2 的 `lidar_box` + `vehicle_pose` parquet 在 validation 只有 163 MB + 7 MB（training 的 `lidar_box` 653 MB），
+     按走廊行人规则（沿 logged ego 轨迹 30 m 内、横向 ±4 m 有行人，P1 同一口径）在全部约 1 000 段上选 10 段，再只下这 10 段 tfrecord（约 10 GB，按 13 MB/s 约 15 min）。
+     drivestudio 另提供一部分 Waymo 场景的现成 SMPL 位姿（gdown），候选落在其中的可省掉 4D-Humans 预处理。外观仍是 Waymo 相机（与 WOD-E2E 不是同一套 rig 分辨率），「WOD 场景」的名义不变。
+  2. **nuScenes**（box 上已有 `datasets/nuscenes`，含 sweeps 与 LIDAR_TOP，trainval 标注在；完整 tgz 在 `/autodl-pub`）：drivestudio 原生支持，零下载即可先做装机与第一个场景的 smoke；
+     缺点是框只有 2 Hz 关键帧（drivestudio 插值到 10 Hz），行人框的时间精度差一档。I3 的 null 里本来就有 nuScenes 场景，门的比较口径不受影响。
+  3. OpenScene / nuPlan（P1 已数出 33 490 个走廊行人事件）：2 Hz 下采样，对行人的动态重建太稀，只作最后备选。
+  建议：main 批 1 的话，选场景用 v2 parquet（CPU、几分钟），同时用 nuScenes 的一个带走廊行人的场景在调试卡上先把 drivestudio 装好并过 smoke，WOD 段下完直接接上，GPU 不空等。
+  判据与门不变（null 对上 openpilot `ridge_late` 误翻率 ≤ 7%、删除区域无肉眼可见残影），只换数据源；这一条要 main 在 P 节确认后才开始装机。
+
 ## E. 专家汇总的补充
 
 `tmp/2026-09-26-round-expert-brief.md` 的第 4 问（第 38 条）在 G 的第 5 条读数出来后补一段；G 的主读数、K 的判格出来后，各补一条到「主要结论」，标日期。
