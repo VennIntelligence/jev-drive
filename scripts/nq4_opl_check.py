@@ -106,7 +106,7 @@ def check_attempt(pol, model, adir):
     r.update(bit_identical=n_same, pos_max_abs=max_abs,
              request_step_ok=float(np.mean(gaps == STEP_TICKS[model])) if len(gaps) else None)
     plans = [json.loads(line) for line in open(Path(adir, "plans.jsonl"))]
-    acc = [p for p in plans if p.get("accepted") is not None]
+    acc = [p for p in plans if p.get("accepted") is not None and not p.get("warmup")]   # warm-up plans: every request
     same = [p["cam_frames"]["OP_ROAD"] == p["cam_frames"]["OP_WIDE"] for p in acc]
     pg = np.diff([p["frame"] for p in acc])
     r.update(plans=len(acc), road_wide_same=float(np.mean(same)) if same else None,
