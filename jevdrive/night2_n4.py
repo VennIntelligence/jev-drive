@@ -314,14 +314,56 @@ def latency(rl, n: int = 200, warm: int = 20):
     rl.log.info(json.dumps(res_, indent=1))
 
 
+# ---------------------------------------------------------------- figure
+
+def figs(res_dir="research/results/night2/N4", out_dir="research/figs"):
+    """Pedestrian flip rate, cut-in delta vs the prior and DynamicObjectCrossing non-reactive flips for A (E5, lifted),
+    B (image plane) and C (both): seed 0 with the route-bootstrap CI, seeds 1-2 as crosses; both models."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    c = pd.read_csv(Path(res_dir) / "criteria.csv")
+    nr = pd.read_csv(Path(res_dir) / "nonreactive.csv")
+    nr = nr[nr.scope == "DynamicObjectCrossing"].set_index("arm").nonreactive_flip
+    arms = [("prior", "Prior"), ("M-C pair", "M-C"), ("E5 A", "A: lifted"), ("N4 B", "B: image plane"), ("N4 C", "C: both")]
+    cols = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    key = lambda a, m, sd: f"{a} s{sd} [{m}]" if a.startswith(("E5", "N4")) else f"{a} [{m}]"  # noqa: E731
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, axes = plt.subplots(1, 3, figsize=(plots.PAGE, 1.9))
+        for ax, spec in zip(axes, (("ped_flip", "ped_lo", "ped_hi", "Pedestrian flip rate (%)"),
+                                   ("cutin_delta_vs_prior", "cutin_lo", "cutin_hi", r"Cut-in $\Delta$ vs prior (pp)"),
+                                   (None, None, None, "DOC non-reactive flips (%)"))):
+            val, lo, hi, lab = spec
+            for k, (m, col) in enumerate(cols.items()):
+                for i, (a, _) in enumerate(arms):
+                    x = i + (k - 0.5) * 0.3
+                    if val is None:
+                        ax.plot(x, 100 * nr[key(a, m, 0)], "o", color=col, ms=3, label=m.capitalize() if i == 0 else None)
+                        seeds = [100 * nr[key(a, m, sd)] for sd in (1, 2)] if a.startswith(("E5", "N4")) else []
+                    else:
+                        r0 = c[c.arm == key(a, m, 0)].iloc[0]
+                        ax.errorbar(x, 100 * r0[val], yerr=[[100 * (r0[val] - r0[lo])], [100 * (r0[hi] - r0[val])]], fmt="o",
+                                    color=col, ms=3, lw=0.8, capsize=1.5, label=m.capitalize() if i == 0 else None)
+                        seeds = [100 * c[c.arm == key(a, m, sd)].iloc[0][val] for sd in (1, 2)] if a.startswith(("E5", "N4")) else []
+                    for v in seeds:
+                        ax.plot(x + 0.07, v, "x", color=col, ms=3, mew=0.7)
+            ax.set_xticks(range(len(arms)), [n for _, n in arms], rotation=25, ha="right")
+            ax.set_ylabel(lab)
+            ax.axhline(0, color="0.5", lw=0.5)
+        axes[0].legend(loc="upper left")
+        fig.tight_layout(w_pad=0.6)
+        plots.save(fig, Path(out_dir), "night2-n4-image-plane")
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("detect", "tokens", "fit", "latency"))
+    ap.add_argument("step", choices=("detect", "tokens", "fit", "latency", "figs"))
     ap.add_argument("--part", default="0/1")
     a = ap.parse_args()
     if a.step == "detect":
         return detect(a.part)
+    if a.step == "figs":
+        return figs()
     from .runlog import RunLog
     rl = RunLog("night2", f"n4-{a.step}")
     {"tokens": tokens, "fit": fit, "latency": latency}[a.step](rl)
