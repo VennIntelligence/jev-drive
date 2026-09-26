@@ -308,6 +308,21 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
   - **判据的操作化**：τ = 考生自身 null |Δ| 的 p95（`p5_exam` 原样），所以「null p95」对应的翻转率就是该考生的样本外 null false-flip（构造上约 5%）；
     判据读作：行人翻转的路线 bootstrap CI 下界 > 该考生（同一 seed）样本外 null false-flip + 10 pp。3 个 seed 都过 → 「有 E 层信号」，都不过 → 「没有」，混合 → 「不稳定」如实写。
     cut-in 报翻转率与对 prior 的配对 Δ（M-C `criteria` 口径），不进判格。
+- 2026-09-26 11:13 CST [C] **偏离与澄清**（都写于任何 N5 深度召回、任何图像 backbone 翻转数字之前）：
+  (1) 「29 757 张」的来源查到了：是第 43 条 Q4 的 P5 **v0** 图像列表（`fusion_diag/lists/p5.parquet`），不是 v1 BA 集；N6 按 v1 BA 索引全量抽，46 703 行 × 3 路 = 140 109 个 clip（行之间没有重复）。
+  (2) 盒子 CPU 过载（load ≈ 100 / 125 核）下，float64 `eigh` 在 CPU 上 d = 3584 要 559 s、卡上 1.4 s。N6 的拟合因此加了 `--eigh cuda`：pair-Δ 与 ridge head 的 gram 分解都在 GPU 3 上做 float64；
+  `reactivity_mc` 默认仍是 CPU，不改别人的结果。等价性：同一驱动用 CPU `eigh` 跑的 seed 0 Qwen 行，criteria 与已存 M-C「pair qwen」逐位相同（行人 42.1818% / 39.1626%），预测最大差 0.6 mm，与 prior 自身的差相同（GPU ridge 的浮点不确定性）；
+  GPU `eigh` 对 CPU 的差在报告里单列（`qwen_reproduction.csv`）。`fit_fold` 加了可选的 `arms` 过滤（只算 pair 与单流），被算的 arm 计算不变。
+  (3) DA3 的 API 在过载 CPU 上前后处理慢 16 倍（1.3 s / 张），深度步设 `torch.set_num_threads(1)`（82 ms / 张），不改数值路径。
+  (4) N6 抽特征的 bf16 batch 对单张最大相对差 0.3–2%（DINOv2 `cls` 2%），是 bf16 的 batch 形状噪声，与 WOD / nuScenes 的配方同精度。
+- 2026-09-26 11:13 CST [C] **暂停（box 11:45 重启加第 6 张卡）**。已完成：`envs/depth` 与两份权重；UniDepth v2 深度（S 全量）；平地基线评测（YOLO26x-640 20–40 m 行人 P5 0.131 / nuScenes 0.219，复现第 45 条）；
+  N6 三个图像 backbone 的特征（`processed/carla_p5v1_ba/bb_*`，1.6 GB，GPU 3 上 18.5 min）与 openpilot small `temporal`（`op_small_vis`，7 min）；Qwen 复现检查（上条）。
+  11:40 前会跑完的：UniDepth 评测（`n5-eval-uni`）、N6 三个 seed 的拟合（`n6-fit-s{0,1,2}`，GPU `eigh` 后约 25 min）。
+  **会被杀的**：DA3 深度（`n5-da3`，P5 部分约 11:30 写完，nuScenes 部分没做完；11:40 我自己停掉，不留半写文件——每个数据集写完才落盘）。
+  恢复命令（box 上，repo 根目录）：`scripts/tmux_run.sh n5-da3 scripts/n5_depth.sh da3`（已写完的数据集按「深度有限值 > 50%」跳过，只补 nuScenes，约 40 min；空机更快），
+  然后 `scripts/tmux_run.sh n5-eval-da3 env PYTHONPATH=$PWD $DATA_DIR/envs/jevdrive/bin/python -m jevdrive.n5_depth eval --tags yolo26x-640-da3,sam31-orig-da3`（约 15 min）。
+  若某个 seed 的拟合没跑完：`scripts/tmux_run.sh n6-fit-s<s> env THREADS=8 scripts/n6_fit.sh <s> qwen,vjepa2,dinov2,siglip2,opsmall`（seed 内不可续，约 25 min）。
+  另：我对 `reactivity_mc.py` 的 `arms` 改动被执行员 D 的 statepol 提交 7ffc2d5 顺手带进了 main（内容无误，只是提交归属不对）。
 
 ## N7. state-space policy（另一执行员，已派，`todos/2026-09-26-state-space-policies.md`）
 
