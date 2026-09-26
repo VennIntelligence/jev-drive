@@ -363,6 +363,10 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 - 2026-09-26 09:55 CST [main] A / B / C 由中央调度员（real-data-transfer 那个 session）派出，D 已在跑。卡：G0 / G3 已收工、5 张卡全空；
   A 用 GPU 0–2（每卡 ≤ 6 个 CARLA server，全 box ≤ 30，与 D 的 CARLA 合计），C 用 GPU 3，B 的零散 GPU 用 GPU 4；空出来的卡谁需要谁用，开工前看 `nvidia-smi`。
 
+- 2026-09-26 12:30 CST [main] box 重启后恢复（7 × RTX PRO 6000，cgroup 175 核，840 GB）。卡：A = GPU 0–3（P6 CARLA，每卡 6 server，共 24）；
+  B、G2、C 的 DA3 共用 GPU 4；top10 T1 = GPU 5，T2 = GPU 6；T3 的工程与 smoke 用 GPU 4 上 ≤ 2 个 server，批量等 A 跑完接 GPU 0–4。
+  CPU 上限（worker / 线程总数）：A 的 CARLA 约 80 核；B 24、G2 24、T1 16、T2 16、C 8、T3 smoke 8。清理进程只按自己记录的 PID，不用 `pkill -f` / `pgrep -f` 按名字匹配。
+
 ## 结果
 
 （按节追加，每条带出处路径。）
