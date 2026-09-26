@@ -115,6 +115,7 @@ def render(a):
     # node instance k <-> dataset instance <-> Waymo laser_object_id (instances_info.json "id")
     info = json.loads((Path(cfg.data.data_root) / f"{cfg.data.scene_idx:03d}" / "instances/instances_info.json").read_text())
     true2wid = {int(k): v["id"] for k, v in info.items()}
+    peds = [k for k in range(len(ps.instances_true_id)) if info[str(int(ps.instances_true_id[k]))]["class_name"] == "Pedestrian"]
     dcfg = cfg.model.DeformableNodes.init
     keys = list(ds.get_init_objects(cur_node_type="DeformableNodes", instance_max_pts=dcfg.instance_max_pts,
                                     only_moving=dcfg.only_moving, traj_length_thres=dcfg.traj_length_thres, exclude_smpl=False))
@@ -170,10 +171,10 @@ def render(a):
                         if r:
                             inbox[r[1]:r[3], r[0]:r[2]] = True
                 ped = np.zeros((H, W), bool)                  # every pedestrian box (0 px pad) for the in-box PSNR
-                for k in range(ps.instances_pose.shape[1]):
-                    if ps.per_frame_instance_mask[t, k] and int(ps.instances_model_types[k]) != 0:
+                for k in peds:
+                    if ps.per_frame_instance_mask[t, k]:
                         r = _box_mask(ps.instances_pose[t, k].cpu().numpy(), ps.instances_size[k].cpu().numpy(), K, c2w, H, W, 0)
-                        if r and int(ps.instances_model_types[k]) in (2, 3):   # DeformableNodes / SMPLNodes types = humans, cyclists
+                        if r:
                             ped[r[1]:r[3], r[0]:r[2]] = True
                 d = np.abs(imgs["plus"].astype(np.int16) - imgs["minus"].astype(np.int16)).max(-1)
                 e = (imgs["plus"].astype(np.float64) - imgs["real"].astype(np.float64)) / 255
