@@ -110,6 +110,21 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (2) GPU：YOLO26x-seg 的检测一次性在 5 张卡上分片跑完（WOD val 子集、navtest、I3 帧、g₂ 需要的 WOD train / navtrain 训练帧），由 G0 代理负责，其余代理复用；之后的小 GPU 任务各自挑最空的卡。
   (3) G3a 的读法补一格：比值落在 [2, 3) 时照做 G3b，并在结果里标「灰区」；比值 ≥ 3 时停在 G3a，视频一致 inpainting 的登记交给用户。
   (4) E5 的 embedding 用的是 CARLA `route.json` 走廊与三路相机的平地抬升；真实数据上走廊（WOD / NAVSIM 没有路线中心线）、相机标定与只有前视这三处的操作化，由 [G0] 在任何 G0 数字之前登记，G1 / G2 / G3b 的 student 一律沿用。
+- 2026-09-26 08:33 CST（box 时钟，下同）[G3] 分步时间估计与 G3a 的操作化，写于 G3 的任何数字之前（此前只读过 E2 / E5 的已发表数字与代码）。代码 `jevdrive/real_g3.py`，run `runs/real-data-transfer/g3*/<time>`，小表 `research/results/real-data-transfer/g3/`。
+  **时间估计**：G3a 工程 30 min + CPU < 5 min；G3c 桌面估算 45 min（复用 E2 WOD 扫描 / 造对 / Qwen 抽取的实测速率）；G3b 若开：PDM 标签（911 个 token 的 v1.1 metric cache + 两条 proposal 各打一次，E3 实测 600 token 16 线程 345 s）约 15 min 墙钟，
+  M-C 按 E2 代码重训 + R1–R3 约 20 min，student（等 G0 的 embedding 定义；编辑图上 YOLO 几千张约 5 min GPU、3 seed 拟合 + 读数约 30 min）工程约 2 h。合计约 4.5 h，不含等 G0 的时间。
+  **G3a 口径**：(1) 统计量就是 E2 门 (d) 的 `elicit_e2_train.feature_floor`：每路按 x⁺ 行逐维标准化（std ≤ 1e-6 的维取 1）、逐行 RMS 位移，编辑对中位数 / null 对中位数，`_ratio_ci` 原样（2000 次，seed 0），
+  分组从 log 换成 base 路线（P5 的独立单位），编辑对与 null 对按路线联合重抽。函数直接 import，不改。
+  (2) **对照数的澄清**：本节正文写的「E2 的 1.44（Qwen）」是 R1（训练后 dual head 的 Δ 幅值比），不是特征位移；与 G3a 同一统计量的 E2 数是门 (d)：Qwen **1.21**、openpilot Cinque **2.40**、Lebowski 1.92。
+  并排表以门 (d) 为对照；另加一行 R1 同款的 CARLA 描述（M-C 已存的样本外 Δ = `M-C pair` − `prior`，`preds_obs.npz`，|Δ(x⁺) − Δ(x⁻)| 对 |Δ(x⁺) − Δ(x_null)| 的 20 点平均幅值中位数之比），与 E2 的 1.43（E1 head）/ 1.44 并排，不进判格。
+  (3) **对与 null**：x⁺ / x⁻ = P5 v1 BA 的 `obs` 表（每对 t_vis ≤ k < t_div − 1 的全部观测帧，即 hazard 已可见），null = `null` 表（seed 0 case 的 x⁺ 对「昼夜互换」的天气世界，同一组 k）。
+  **判格 scope = 行人四个 family**（PedestrianCrossing、DynamicObjectCrossing、VehicleTurningRoutePedestrian、ParkingCrossingPedestrian）的 obs 帧，理由：E2 抹的是行人 / 骑车人，比的是「抹掉一个行人」的特征位移；
+  分母用全部 null 帧（天气互换与 family 无关，样本多）。描述 scope：全部 family、cut-in 三个 family、行人 family 只取 reactive 帧（|d_expert| > τ_exp）、行人 family 的 null 只取行人 family 的 case、按 `factor_px` 三分位。
+  (4) **特征**：Qwen `L18_last`（`p5_pairs.load_features`）、openpilot `temporal`（`p5_openpilot.load`，`op_streams_vis`，与 M-C / E5 同一抽取）、YOLO embedding = E5 的 `processed/elicit_e5/embed.npy`（64 维原样，mask 位也按同一公式逐维标准化）。
+  YOLO 的 E2 侧数要等 G0 定真实数据上的 embedding，在 G3b 里补（描述，不进判格）。
+  (5) **判格读 Qwen `L18_last` 行人 scope 的点估计**（本节读法写的是「CARLA 上 Qwen 的比值」）：< 2 → 编辑质量不是 E2 的瓶颈，做 G3b；[2, 3) → 做 G3b，标「灰区」；≥ 3 → 停在 G3a。openpilot 与 YOLO 两行只描述。
+  (6) **限定先写下**：E2 的分母是「同形补丁贴空路面」的安慰剂（只量管线噪声），CARLA 的分母是昼夜互换（全图外观大变），两者不是同一种 null；按登记用天气 null 判。
+  为了不让这一点被数字掩盖，另报一个描述量：两边编辑对的分子本身（各自 x⁺ 标准差单位下的 RMS 位移中位数，CARLA 行人 vs E2 的 0.322 / 0.070 / 0.076）。
 
 ## 结果
 
