@@ -123,7 +123,15 @@ class Shadow:
         CDP.get_hero_actor = staticmethod(lambda: self.stub)
         from leaderboard.autoagents import autonomous_agent as AA   # Bench2Drive's base looks the hero up at init
         AA.AutonomousAgent.get_hero = lambda self_: setattr(self_, "hero_actor", self.stub)
-        self.agent = SensorAgent("127.0.0.1", 0, False)
+
+        class Agent(SensorAgent):
+            # The Bench2Drive base would dump a growing metric_info.json every tick (and read the hero's state for it);
+            # hidden exactly as the in-process recorders hid it.
+            @property
+            def get_metric_info(self_):
+                raise AttributeError("disabled for the recorder")
+
+        self.agent = Agent("127.0.0.1", 0, False)
         a = self.agent
         a.set_global_plan([({"lat": la, "lon": lo, "z": z}, RoadOption(o)) for la, lo, z, o in init["plan_gps"]],
                           [(carla.Transform(carla.Location(x, y, z), carla.Rotation(pitch=p, yaw=yw, roll=r)), RoadOption(o))
