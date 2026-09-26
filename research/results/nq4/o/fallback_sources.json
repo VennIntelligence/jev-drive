@@ -1,0 +1,19 @@
+{
+  "b2d_base": {
+    "file": "bench2drive_base_1000.json",
+    "sha256": "548c4d7f580ea74b10f3703f48a6a7e7781b706b425813997521c82cef461b08",
+    "clips": 1000,
+    "unparsed_clips": 0
+  },
+  "b2d_full": {
+    "file": "bench2drive_full+sup_13638.json",
+    "sha256": "1e063a241d3d330d0e8e67a9cfe21ac4c87ec1778cf8b51a854409cc5b30bf56",
+    "clips": 13638,
+    "unparsed_clips": 0
+  },
+  "evaluation": {
+    "file": "bench2drive220.xml",
+    "sha256": "ffff24b3a2b8584632730fb42de7cb6036af780c3952cfef08ee8cf96a712f88",
+    "routes": 220
+  }
+}

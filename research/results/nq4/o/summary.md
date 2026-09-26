@@ -1,6 +1,10 @@
 # O：训练数据出处与元数据缺口
 
-**CX 产出，待 main 复核。状态：暂停，尚未计数。** 2026-09-26 17:29 CST 按任务书第 5 条停下：现有元数据没有建立官方 Bench2Drive 训练 clip（一次实际记录）到 scenario trigger（场景触发点）的可靠对应关系，不能把未知近邻数写成 0。未生成 `overlap.csv`，未做与 G 幽灵率的相关分析。
+**CX 产出，待 main 复核。状态：已完成 main 授权的描述性 fallback；原 `< 30 m` 近邻计数不可得。**
+
+产物：[overlap_fallback.csv](overlap_fallback.csv)，每条评测路线 × 每个数据集一行。仅 B2D base / full 可计数；TFv6 / BridgeDrive / SimLingo / BLUE 标 `not determinable`。全部行的 `trigger_distance_checked=false`。不作与 G 的相关。
+
+以下保留前期出处审计与停止原因。 2026-09-26 17:29 CST 按任务书第 5 条停下：现有元数据没有建立官方 Bench2Drive 训练 clip（一次实际记录）到 scenario trigger（场景触发点）的可靠对应关系，不能把未知近邻数写成 0。未生成 `overlap.csv`，未做与 G 幽灵率的相关分析。
 
 ## 已登记的口径
 
@@ -34,7 +38,7 @@ HF（Hugging Face，公开数据仓库）数据卡与 API 清单查于 2026-09-2
 | LEAD 公开 archive 名 | [HF `ln2697/lead/Accident` API](https://huggingface.co/api/datasets/ln2697/lead/tree/main/Accident?limit=10) | 目录名可给 scenario，ZIP 名可给 town 与 route ID。 | 名称没有触发坐标；未下载 ZIP。 |
 | BLUE gate 数据 | [HF 根目录 API](https://huggingface.co/api/datasets/George-Ling/blue_data/tree/main) | 查询结果仅 `.gitattributes` 与 README。 | 没有可核查的 clip 成员或触发点。 |
 
-这些是出处和文件盘点数字，**不是近邻结果**。当前每个训练集的近邻分布均未计算；没有均值、分位数或零近邻路线数可报告。
+以上是前期出处和文件盘点数字，**不是近邻结果**。原 `< 30 m` 近邻分布仍不可得；后续获准的同 town、同 scenario fallback 分布见文末。
 
 ## 停止点与交接
 
@@ -55,3 +59,25 @@ HF（Hugging Face，公开数据仓库）数据卡与 API 清单查于 2026-09-2
 能恢复计数的最小输入是一份逐实际 clip 的元数据表，列为 `dataset_id, dataset_version, clip_id, town, scenario_type, trigger_x_m, trigger_y_m, source_uri`。一 clip 有多个 scenario trigger 时可重复列行，计数按 clip ID 并集。还需要每个榜单族 / checkpoint 对该版本训练成员的出处；已公开但与原实验不同的 LEAD 数据，应明确作为哪个版本报告。B2D 也可提供原始采集 XML 加经过出处核实的 clip ID→XML route ID 映射。以上输入均不需要传感器文件。
 
 在这些输入到位前，`route × dataset` 的数值 CSV 仍无法完成；本次未生成全为 unknown 的占位表，避免把占位状态误读成计数产物。恢复补核约 3 min（17:36–17:39 CST），低于此次 15 min 限时。
+
+
+## 18:27 CST main 授权后的描述性 fallback（已完成）
+
+main 明确将本次交付范围改为：按每条评测路线，统计训练 clip 的 **town 和原始 scenario 类完全相同**的数量，**不检查触发点距离**。这是类别与城市覆盖计数，不能称为 `< 30 m` 近邻，也不能据此判断位置重叠或背题。原任务要求的距离统计不可得。
+
+输入为官方 commit `7ec25d1` 的两个 JSON 清单与 `bench2drive220.xml`，总元数据 3,417,420 bytes，无传感器下载。完整成员数分别为 base 1,000、full 13,638；每个清单 key 是一个实际 clip archive，Weather 后缀不影响 clip 唯一性。full 清单有一个 `...Route523_Weathe.tar.gz` 截短后缀，town / scenario 字段仍完整，直接按原始 key 计一个 clip，没有补写或猜测 Weather。Town10HD 保留原名，没有折叠到 Town10。全部 key 的 town / scenario 均可解析，排除数为 0。
+
+| 数据集 | 训练 clip n | 评测 route n | 可计数 route n | 同 town、同类 clip 数均值 | min | p25 | median | p75 | p95 | max | 计数为 0 的 route n |
+|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| B2D base | 1,000 | 220 | 220 | 5.97 | 0 | 1.00 | 4.00 | 7.00 | 26.00 | 35 | 53 |
+| B2D full | 13,638 | 220 | 220 | 122.04 | 0 | 6.00 | 18.00 | 123.75 | 697.30 | 980 | 11 |
+| TFv6 / LEAD | 未查清 | 220 | 0 | not determinable | — | — | — | — | — | — | — |
+| BridgeDrive / LEAD | 未查清 | 220 | 0 | not determinable | — | — | — | — | — | — | — |
+| SimLingo | 未查清 | 220 | 0 | not determinable | — | — | — | — | — | — | — |
+| BLUE | 未查清 | 220 | 0 | not determinable | — | — | — | — | — | — | — |
+
+读法：这两个 B2D 列仅表示评测路线所属 town / scenario 在公开训练清单里的覆盖量；不是附近有多少 clip。分位数用排序后线性插值，单位均为 clip。其他族缺完整、明确版本的训练成员清单，不把未知值记为 0。`overlap_fallback.csv` 共 1,320 行（220 route × 6 数据集），每条评测路线原 XML 恰有一个 scenario。若以后出现多 scenario 路线，脚本按 scenario 类集合匹配，同一 clip 每 route 仅计一次。
+
+可复现脚本：`scripts/nq4_o_fallback.py --metadata-dir <三个元数据文件所在目录> --output-dir research/results/nq4/o`。固定来源链接见上表；输入 SHA-256、清单大小与解析排除数保存在 [fallback_sources.json](fallback_sources.json)。脚本检查评测 route 数和 ID 唯一性、全部 clip 名字段解析及计数总和。输出再次核对 220 route × 6 dataset 唯一键、880 个未知值与 440 个可计数值；同一 town / scenario 的路线计数一致。
+
+fallback 本轮于 18:27 CST 登记后开始，约 4 min 完成。仅本机单线程 CPU，不使用 GPU、CARLA 或传感器 archive。

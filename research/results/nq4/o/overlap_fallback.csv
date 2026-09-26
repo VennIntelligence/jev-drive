@@ -1,0 +1,1321 @@
+route_id,town,scenario_types,dataset,same_town_scenario_clip_count,trigger_distance_checked,status
+1711,Town12,ParkingCutIn,b2d_base,21,false,counted
+1711,Town12,ParkingCutIn,b2d_full,120,false,counted
+1711,Town12,ParkingCutIn,tfv6_lead,not determinable,false,not determinable
+1711,Town12,ParkingCutIn,bridgedrive_lead,not determinable,false,not determinable
+1711,Town12,ParkingCutIn,simlingo,not determinable,false,not determinable
+1711,Town12,ParkingCutIn,blue,not determinable,false,not determinable
+1773,Town12,ParkedObstacle,b2d_base,6,false,counted
+1773,Town12,ParkedObstacle,b2d_full,155,false,counted
+1773,Town12,ParkedObstacle,tfv6_lead,not determinable,false,not determinable
+1773,Town12,ParkedObstacle,bridgedrive_lead,not determinable,false,not determinable
+1773,Town12,ParkedObstacle,simlingo,not determinable,false,not determinable
+1773,Town12,ParkedObstacle,blue,not determinable,false,not determinable
+1790,Town12,HazardAtSideLane,b2d_base,31,false,counted
+1790,Town12,HazardAtSideLane,b2d_full,33,false,counted
+1790,Town12,HazardAtSideLane,tfv6_lead,not determinable,false,not determinable
+1790,Town12,HazardAtSideLane,bridgedrive_lead,not determinable,false,not determinable
+1790,Town12,HazardAtSideLane,simlingo,not determinable,false,not determinable
+1790,Town12,HazardAtSideLane,blue,not determinable,false,not determinable
+1792,Town12,HazardAtSideLane,b2d_base,31,false,counted
+1792,Town12,HazardAtSideLane,b2d_full,33,false,counted
+1792,Town12,HazardAtSideLane,tfv6_lead,not determinable,false,not determinable
+1792,Town12,HazardAtSideLane,bridgedrive_lead,not determinable,false,not determinable
+1792,Town12,HazardAtSideLane,simlingo,not determinable,false,not determinable
+1792,Town12,HazardAtSideLane,blue,not determinable,false,not determinable
+1825,Town12,ConstructionObstacleTwoWays,b2d_base,27,false,counted
+1825,Town12,ConstructionObstacleTwoWays,b2d_full,35,false,counted
+1825,Town12,ConstructionObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+1825,Town12,ConstructionObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+1825,Town12,ConstructionObstacleTwoWays,simlingo,not determinable,false,not determinable
+1825,Town12,ConstructionObstacleTwoWays,blue,not determinable,false,not determinable
+1833,Town12,ConstructionObstacleTwoWays,b2d_base,27,false,counted
+1833,Town12,ConstructionObstacleTwoWays,b2d_full,35,false,counted
+1833,Town12,ConstructionObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+1833,Town12,ConstructionObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+1833,Town12,ConstructionObstacleTwoWays,simlingo,not determinable,false,not determinable
+1833,Town12,ConstructionObstacleTwoWays,blue,not determinable,false,not determinable
+1852,Town12,AccidentTwoWays,b2d_base,35,false,counted
+1852,Town12,AccidentTwoWays,b2d_full,55,false,counted
+1852,Town12,AccidentTwoWays,tfv6_lead,not determinable,false,not determinable
+1852,Town12,AccidentTwoWays,bridgedrive_lead,not determinable,false,not determinable
+1852,Town12,AccidentTwoWays,simlingo,not determinable,false,not determinable
+1852,Town12,AccidentTwoWays,blue,not determinable,false,not determinable
+1956,Town12,ParkingExit,b2d_base,17,false,counted
+1956,Town12,ParkingExit,b2d_full,93,false,counted
+1956,Town12,ParkingExit,tfv6_lead,not determinable,false,not determinable
+1956,Town12,ParkingExit,bridgedrive_lead,not determinable,false,not determinable
+1956,Town12,ParkingExit,simlingo,not determinable,false,not determinable
+1956,Town12,ParkingExit,blue,not determinable,false,not determinable
+2050,Town12,SignalizedJunctionRightTurn,b2d_base,5,false,counted
+2050,Town12,SignalizedJunctionRightTurn,b2d_full,262,false,counted
+2050,Town12,SignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+2050,Town12,SignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+2050,Town12,SignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+2050,Town12,SignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+2082,Town12,OppositeVehicleRunningRedLight,b2d_base,5,false,counted
+2082,Town12,OppositeVehicleRunningRedLight,b2d_full,798,false,counted
+2082,Town12,OppositeVehicleRunningRedLight,tfv6_lead,not determinable,false,not determinable
+2082,Town12,OppositeVehicleRunningRedLight,bridgedrive_lead,not determinable,false,not determinable
+2082,Town12,OppositeVehicleRunningRedLight,simlingo,not determinable,false,not determinable
+2082,Town12,OppositeVehicleRunningRedLight,blue,not determinable,false,not determinable
+2084,Town12,NonSignalizedJunctionLeftTurn,b2d_base,17,false,counted
+2084,Town12,NonSignalizedJunctionLeftTurn,b2d_full,151,false,counted
+2084,Town12,NonSignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+2084,Town12,NonSignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+2084,Town12,NonSignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+2084,Town12,NonSignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+2086,Town12,NonSignalizedJunctionLeftTurn,b2d_base,17,false,counted
+2086,Town12,NonSignalizedJunctionLeftTurn,b2d_full,151,false,counted
+2086,Town12,NonSignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+2086,Town12,NonSignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+2086,Town12,NonSignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+2086,Town12,NonSignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+2091,Town12,NonSignalizedJunctionLeftTurn,b2d_base,17,false,counted
+2091,Town12,NonSignalizedJunctionLeftTurn,b2d_full,151,false,counted
+2091,Town12,NonSignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+2091,Town12,NonSignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+2091,Town12,NonSignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+2091,Town12,NonSignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+2115,Town12,NonSignalizedJunctionRightTurn,b2d_base,6,false,counted
+2115,Town12,NonSignalizedJunctionRightTurn,b2d_full,162,false,counted
+2115,Town12,NonSignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+2115,Town12,NonSignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+2115,Town12,NonSignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+2115,Town12,NonSignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+2127,Town12,OppositeVehicleTakingPriority,b2d_base,8,false,counted
+2127,Town12,OppositeVehicleTakingPriority,b2d_full,692,false,counted
+2127,Town12,OppositeVehicleTakingPriority,tfv6_lead,not determinable,false,not determinable
+2127,Town12,OppositeVehicleTakingPriority,bridgedrive_lead,not determinable,false,not determinable
+2127,Town12,OppositeVehicleTakingPriority,simlingo,not determinable,false,not determinable
+2127,Town12,OppositeVehicleTakingPriority,blue,not determinable,false,not determinable
+2129,Town12,OppositeVehicleTakingPriority,b2d_base,8,false,counted
+2129,Town12,OppositeVehicleTakingPriority,b2d_full,692,false,counted
+2129,Town12,OppositeVehicleTakingPriority,tfv6_lead,not determinable,false,not determinable
+2129,Town12,OppositeVehicleTakingPriority,bridgedrive_lead,not determinable,false,not determinable
+2129,Town12,OppositeVehicleTakingPriority,simlingo,not determinable,false,not determinable
+2129,Town12,OppositeVehicleTakingPriority,blue,not determinable,false,not determinable
+2143,Town12,OppositeVehicleTakingPriority,b2d_base,8,false,counted
+2143,Town12,OppositeVehicleTakingPriority,b2d_full,692,false,counted
+2143,Town12,OppositeVehicleTakingPriority,tfv6_lead,not determinable,false,not determinable
+2143,Town12,OppositeVehicleTakingPriority,bridgedrive_lead,not determinable,false,not determinable
+2143,Town12,OppositeVehicleTakingPriority,simlingo,not determinable,false,not determinable
+2143,Town12,OppositeVehicleTakingPriority,blue,not determinable,false,not determinable
+2144,Town12,VehicleTurningRoute,b2d_base,6,false,counted
+2144,Town12,VehicleTurningRoute,b2d_full,267,false,counted
+2144,Town12,VehicleTurningRoute,tfv6_lead,not determinable,false,not determinable
+2144,Town12,VehicleTurningRoute,bridgedrive_lead,not determinable,false,not determinable
+2144,Town12,VehicleTurningRoute,simlingo,not determinable,false,not determinable
+2144,Town12,VehicleTurningRoute,blue,not determinable,false,not determinable
+2164,Town12,VehicleTurningRoutePedestrian,b2d_base,7,false,counted
+2164,Town12,VehicleTurningRoutePedestrian,b2d_full,366,false,counted
+2164,Town12,VehicleTurningRoutePedestrian,tfv6_lead,not determinable,false,not determinable
+2164,Town12,VehicleTurningRoutePedestrian,bridgedrive_lead,not determinable,false,not determinable
+2164,Town12,VehicleTurningRoutePedestrian,simlingo,not determinable,false,not determinable
+2164,Town12,VehicleTurningRoutePedestrian,blue,not determinable,false,not determinable
+2201,Town12,EnterActorFlow,b2d_base,3,false,counted
+2201,Town12,EnterActorFlow,b2d_full,567,false,counted
+2201,Town12,EnterActorFlow,tfv6_lead,not determinable,false,not determinable
+2201,Town12,EnterActorFlow,bridgedrive_lead,not determinable,false,not determinable
+2201,Town12,EnterActorFlow,simlingo,not determinable,false,not determinable
+2201,Town12,EnterActorFlow,blue,not determinable,false,not determinable
+2204,Town12,BlockedIntersection,b2d_base,4,false,counted
+2204,Town12,BlockedIntersection,b2d_full,849,false,counted
+2204,Town12,BlockedIntersection,tfv6_lead,not determinable,false,not determinable
+2204,Town12,BlockedIntersection,bridgedrive_lead,not determinable,false,not determinable
+2204,Town12,BlockedIntersection,simlingo,not determinable,false,not determinable
+2204,Town12,BlockedIntersection,blue,not determinable,false,not determinable
+2215,Town12,BlockedIntersection,b2d_base,4,false,counted
+2215,Town12,BlockedIntersection,b2d_full,849,false,counted
+2215,Town12,BlockedIntersection,tfv6_lead,not determinable,false,not determinable
+2215,Town12,BlockedIntersection,bridgedrive_lead,not determinable,false,not determinable
+2215,Town12,BlockedIntersection,simlingo,not determinable,false,not determinable
+2215,Town12,BlockedIntersection,blue,not determinable,false,not determinable
+2273,Town12,MergerIntoSlowTraffic,b2d_base,5,false,counted
+2273,Town12,MergerIntoSlowTraffic,b2d_full,19,false,counted
+2273,Town12,MergerIntoSlowTraffic,tfv6_lead,not determinable,false,not determinable
+2273,Town12,MergerIntoSlowTraffic,bridgedrive_lead,not determinable,false,not determinable
+2273,Town12,MergerIntoSlowTraffic,simlingo,not determinable,false,not determinable
+2273,Town12,MergerIntoSlowTraffic,blue,not determinable,false,not determinable
+2283,Town12,MergerIntoSlowTraffic,b2d_base,5,false,counted
+2283,Town12,MergerIntoSlowTraffic,b2d_full,19,false,counted
+2283,Town12,MergerIntoSlowTraffic,tfv6_lead,not determinable,false,not determinable
+2283,Town12,MergerIntoSlowTraffic,bridgedrive_lead,not determinable,false,not determinable
+2283,Town12,MergerIntoSlowTraffic,simlingo,not determinable,false,not determinable
+2283,Town12,MergerIntoSlowTraffic,blue,not determinable,false,not determinable
+2286,Town12,HighwayCutIn,b2d_base,11,false,counted
+2286,Town12,HighwayCutIn,b2d_full,95,false,counted
+2286,Town12,HighwayCutIn,tfv6_lead,not determinable,false,not determinable
+2286,Town12,HighwayCutIn,bridgedrive_lead,not determinable,false,not determinable
+2286,Town12,HighwayCutIn,simlingo,not determinable,false,not determinable
+2286,Town12,HighwayCutIn,blue,not determinable,false,not determinable
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,b2d_base,6,false,counted
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,b2d_full,844,false,counted
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,tfv6_lead,not determinable,false,not determinable
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,bridgedrive_lead,not determinable,false,not determinable
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,simlingo,not determinable,false,not determinable
+2373,Town12,VanillaSignalizedTurnEncounterRedLight,blue,not determinable,false,not determinable
+2390,Town12,VanillaNonSignalizedTurn,b2d_base,0,false,counted
+2390,Town12,VanillaNonSignalizedTurn,b2d_full,106,false,counted
+2390,Town12,VanillaNonSignalizedTurn,tfv6_lead,not determinable,false,not determinable
+2390,Town12,VanillaNonSignalizedTurn,bridgedrive_lead,not determinable,false,not determinable
+2390,Town12,VanillaNonSignalizedTurn,simlingo,not determinable,false,not determinable
+2390,Town12,VanillaNonSignalizedTurn,blue,not determinable,false,not determinable
+2397,Town12,VanillaNonSignalizedTurn,b2d_base,0,false,counted
+2397,Town12,VanillaNonSignalizedTurn,b2d_full,106,false,counted
+2397,Town12,VanillaNonSignalizedTurn,tfv6_lead,not determinable,false,not determinable
+2397,Town12,VanillaNonSignalizedTurn,bridgedrive_lead,not determinable,false,not determinable
+2397,Town12,VanillaNonSignalizedTurn,simlingo,not determinable,false,not determinable
+2397,Town12,VanillaNonSignalizedTurn,blue,not determinable,false,not determinable
+2403,Town12,VanillaNonSignalizedTurn,b2d_base,0,false,counted
+2403,Town12,VanillaNonSignalizedTurn,b2d_full,106,false,counted
+2403,Town12,VanillaNonSignalizedTurn,tfv6_lead,not determinable,false,not determinable
+2403,Town12,VanillaNonSignalizedTurn,bridgedrive_lead,not determinable,false,not determinable
+2403,Town12,VanillaNonSignalizedTurn,simlingo,not determinable,false,not determinable
+2403,Town12,VanillaNonSignalizedTurn,blue,not determinable,false,not determinable
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_base,8,false,counted
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_full,238,false,counted
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,tfv6_lead,not determinable,false,not determinable
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,bridgedrive_lead,not determinable,false,not determinable
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,simlingo,not determinable,false,not determinable
+2416,Town12,VanillaNonSignalizedTurnEncounterStopsign,blue,not determinable,false,not determinable
+2509,Town12,ConstructionObstacle,b2d_base,5,false,counted
+2509,Town12,ConstructionObstacle,b2d_full,342,false,counted
+2509,Town12,ConstructionObstacle,tfv6_lead,not determinable,false,not determinable
+2509,Town12,ConstructionObstacle,bridgedrive_lead,not determinable,false,not determinable
+2509,Town12,ConstructionObstacle,simlingo,not determinable,false,not determinable
+2509,Town12,ConstructionObstacle,blue,not determinable,false,not determinable
+2513,Town12,ConstructionObstacle,b2d_base,5,false,counted
+2513,Town12,ConstructionObstacle,b2d_full,342,false,counted
+2513,Town12,ConstructionObstacle,tfv6_lead,not determinable,false,not determinable
+2513,Town12,ConstructionObstacle,bridgedrive_lead,not determinable,false,not determinable
+2513,Town12,ConstructionObstacle,simlingo,not determinable,false,not determinable
+2513,Town12,ConstructionObstacle,blue,not determinable,false,not determinable
+2534,Town12,Accident,b2d_base,8,false,counted
+2534,Town12,Accident,b2d_full,208,false,counted
+2534,Town12,Accident,tfv6_lead,not determinable,false,not determinable
+2534,Town12,Accident,bridgedrive_lead,not determinable,false,not determinable
+2534,Town12,Accident,simlingo,not determinable,false,not determinable
+2534,Town12,Accident,blue,not determinable,false,not determinable
+2539,Town12,Accident,b2d_base,8,false,counted
+2539,Town12,Accident,b2d_full,208,false,counted
+2539,Town12,Accident,tfv6_lead,not determinable,false,not determinable
+2539,Town12,Accident,bridgedrive_lead,not determinable,false,not determinable
+2539,Town12,Accident,simlingo,not determinable,false,not determinable
+2539,Town12,Accident,blue,not determinable,false,not determinable
+2554,Town12,ParkedObstacle,b2d_base,6,false,counted
+2554,Town12,ParkedObstacle,b2d_full,155,false,counted
+2554,Town12,ParkedObstacle,tfv6_lead,not determinable,false,not determinable
+2554,Town12,ParkedObstacle,bridgedrive_lead,not determinable,false,not determinable
+2554,Town12,ParkedObstacle,simlingo,not determinable,false,not determinable
+2554,Town12,ParkedObstacle,blue,not determinable,false,not determinable
+2606,Town12,ConstructionObstacleTwoWays,b2d_base,27,false,counted
+2606,Town12,ConstructionObstacleTwoWays,b2d_full,35,false,counted
+2606,Town12,ConstructionObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+2606,Town12,ConstructionObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+2606,Town12,ConstructionObstacleTwoWays,simlingo,not determinable,false,not determinable
+2606,Town12,ConstructionObstacleTwoWays,blue,not determinable,false,not determinable
+2643,Town12,AccidentTwoWays,b2d_base,35,false,counted
+2643,Town12,AccidentTwoWays,b2d_full,55,false,counted
+2643,Town12,AccidentTwoWays,tfv6_lead,not determinable,false,not determinable
+2643,Town12,AccidentTwoWays,bridgedrive_lead,not determinable,false,not determinable
+2643,Town12,AccidentTwoWays,simlingo,not determinable,false,not determinable
+2643,Town12,AccidentTwoWays,blue,not determinable,false,not determinable
+2664,Town12,ParkedObstacleTwoWays,b2d_base,19,false,counted
+2664,Town12,ParkedObstacleTwoWays,b2d_full,82,false,counted
+2664,Town12,ParkedObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+2664,Town12,ParkedObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+2664,Town12,ParkedObstacleTwoWays,simlingo,not determinable,false,not determinable
+2664,Town12,ParkedObstacleTwoWays,blue,not determinable,false,not determinable
+2668,Town12,ParkedObstacleTwoWays,b2d_base,19,false,counted
+2668,Town12,ParkedObstacleTwoWays,b2d_full,82,false,counted
+2668,Town12,ParkedObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+2668,Town12,ParkedObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+2668,Town12,ParkedObstacleTwoWays,simlingo,not determinable,false,not determinable
+2668,Town12,ParkedObstacleTwoWays,blue,not determinable,false,not determinable
+2709,Town12,StaticCutIn,b2d_base,3,false,counted
+2709,Town12,StaticCutIn,b2d_full,441,false,counted
+2709,Town12,StaticCutIn,tfv6_lead,not determinable,false,not determinable
+2709,Town12,StaticCutIn,bridgedrive_lead,not determinable,false,not determinable
+2709,Town12,StaticCutIn,simlingo,not determinable,false,not determinable
+2709,Town12,StaticCutIn,blue,not determinable,false,not determinable
+2715,Town12,StaticCutIn,b2d_base,3,false,counted
+2715,Town12,StaticCutIn,b2d_full,441,false,counted
+2715,Town12,StaticCutIn,tfv6_lead,not determinable,false,not determinable
+2715,Town12,StaticCutIn,bridgedrive_lead,not determinable,false,not determinable
+2715,Town12,StaticCutIn,simlingo,not determinable,false,not determinable
+2715,Town12,StaticCutIn,blue,not determinable,false,not determinable
+2790,Town12,InvadingTurn,b2d_base,3,false,counted
+2790,Town12,InvadingTurn,b2d_full,4,false,counted
+2790,Town12,InvadingTurn,tfv6_lead,not determinable,false,not determinable
+2790,Town12,InvadingTurn,bridgedrive_lead,not determinable,false,not determinable
+2790,Town12,InvadingTurn,simlingo,not determinable,false,not determinable
+2790,Town12,InvadingTurn,blue,not determinable,false,not determinable
+2802,Town12,InvadingTurn,b2d_base,3,false,counted
+2802,Town12,InvadingTurn,b2d_full,4,false,counted
+2802,Town12,InvadingTurn,tfv6_lead,not determinable,false,not determinable
+2802,Town12,InvadingTurn,bridgedrive_lead,not determinable,false,not determinable
+2802,Town12,InvadingTurn,simlingo,not determinable,false,not determinable
+2802,Town12,InvadingTurn,blue,not determinable,false,not determinable
+2844,Town12,OppositeVehicleRunningRedLight,b2d_base,5,false,counted
+2844,Town12,OppositeVehicleRunningRedLight,b2d_full,798,false,counted
+2844,Town12,OppositeVehicleRunningRedLight,tfv6_lead,not determinable,false,not determinable
+2844,Town12,OppositeVehicleRunningRedLight,bridgedrive_lead,not determinable,false,not determinable
+2844,Town12,OppositeVehicleRunningRedLight,simlingo,not determinable,false,not determinable
+2844,Town12,OppositeVehicleRunningRedLight,blue,not determinable,false,not determinable
+2847,Town12,OppositeVehicleRunningRedLight,b2d_base,5,false,counted
+2847,Town12,OppositeVehicleRunningRedLight,b2d_full,798,false,counted
+2847,Town12,OppositeVehicleRunningRedLight,tfv6_lead,not determinable,false,not determinable
+2847,Town12,OppositeVehicleRunningRedLight,bridgedrive_lead,not determinable,false,not determinable
+2847,Town12,OppositeVehicleRunningRedLight,simlingo,not determinable,false,not determinable
+2847,Town12,OppositeVehicleRunningRedLight,blue,not determinable,false,not determinable
+2881,Town12,NonSignalizedJunctionLeftTurn,b2d_base,17,false,counted
+2881,Town12,NonSignalizedJunctionLeftTurn,b2d_full,151,false,counted
+2881,Town12,NonSignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+2881,Town12,NonSignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+2881,Town12,NonSignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+2881,Town12,NonSignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+2903,Town12,NonSignalizedJunctionRightTurn,b2d_base,6,false,counted
+2903,Town12,NonSignalizedJunctionRightTurn,b2d_full,162,false,counted
+2903,Town12,NonSignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+2903,Town12,NonSignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+2903,Town12,NonSignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+2903,Town12,NonSignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+2913,Town12,OppositeVehicleTakingPriority,b2d_base,8,false,counted
+2913,Town12,OppositeVehicleTakingPriority,b2d_full,692,false,counted
+2913,Town12,OppositeVehicleTakingPriority,tfv6_lead,not determinable,false,not determinable
+2913,Town12,OppositeVehicleTakingPriority,bridgedrive_lead,not determinable,false,not determinable
+2913,Town12,OppositeVehicleTakingPriority,simlingo,not determinable,false,not determinable
+2913,Town12,OppositeVehicleTakingPriority,blue,not determinable,false,not determinable
+2943,Town12,VehicleTurningRoute,b2d_base,6,false,counted
+2943,Town12,VehicleTurningRoute,b2d_full,267,false,counted
+2943,Town12,VehicleTurningRoute,tfv6_lead,not determinable,false,not determinable
+2943,Town12,VehicleTurningRoute,bridgedrive_lead,not determinable,false,not determinable
+2943,Town12,VehicleTurningRoute,simlingo,not determinable,false,not determinable
+2943,Town12,VehicleTurningRoute,blue,not determinable,false,not determinable
+2989,Town12,BlockedIntersection,b2d_base,4,false,counted
+2989,Town12,BlockedIntersection,b2d_full,849,false,counted
+2989,Town12,BlockedIntersection,tfv6_lead,not determinable,false,not determinable
+2989,Town12,BlockedIntersection,bridgedrive_lead,not determinable,false,not determinable
+2989,Town12,BlockedIntersection,simlingo,not determinable,false,not determinable
+2989,Town12,BlockedIntersection,blue,not determinable,false,not determinable
+3048,Town12,MergerIntoSlowTraffic,b2d_base,5,false,counted
+3048,Town12,MergerIntoSlowTraffic,b2d_full,19,false,counted
+3048,Town12,MergerIntoSlowTraffic,tfv6_lead,not determinable,false,not determinable
+3048,Town12,MergerIntoSlowTraffic,bridgedrive_lead,not determinable,false,not determinable
+3048,Town12,MergerIntoSlowTraffic,simlingo,not determinable,false,not determinable
+3048,Town12,MergerIntoSlowTraffic,blue,not determinable,false,not determinable
+3072,Town12,HighwayCutIn,b2d_base,11,false,counted
+3072,Town12,HighwayCutIn,b2d_full,95,false,counted
+3072,Town12,HighwayCutIn,tfv6_lead,not determinable,false,not determinable
+3072,Town12,HighwayCutIn,bridgedrive_lead,not determinable,false,not determinable
+3072,Town12,HighwayCutIn,simlingo,not determinable,false,not determinable
+3072,Town12,HighwayCutIn,blue,not determinable,false,not determinable
+3074,Town12,HighwayCutIn,b2d_base,11,false,counted
+3074,Town12,HighwayCutIn,b2d_full,95,false,counted
+3074,Town12,HighwayCutIn,tfv6_lead,not determinable,false,not determinable
+3074,Town12,HighwayCutIn,bridgedrive_lead,not determinable,false,not determinable
+3074,Town12,HighwayCutIn,simlingo,not determinable,false,not determinable
+3074,Town12,HighwayCutIn,blue,not determinable,false,not determinable
+3080,Town12,HighwayCutIn,b2d_base,11,false,counted
+3080,Town12,HighwayCutIn,b2d_full,95,false,counted
+3080,Town12,HighwayCutIn,tfv6_lead,not determinable,false,not determinable
+3080,Town12,HighwayCutIn,bridgedrive_lead,not determinable,false,not determinable
+3080,Town12,HighwayCutIn,simlingo,not determinable,false,not determinable
+3080,Town12,HighwayCutIn,blue,not determinable,false,not determinable
+3086,Town12,CrossingBicycleFlow,b2d_base,26,false,counted
+3086,Town12,CrossingBicycleFlow,b2d_full,200,false,counted
+3086,Town12,CrossingBicycleFlow,tfv6_lead,not determinable,false,not determinable
+3086,Town12,CrossingBicycleFlow,bridgedrive_lead,not determinable,false,not determinable
+3086,Town12,CrossingBicycleFlow,simlingo,not determinable,false,not determinable
+3086,Town12,CrossingBicycleFlow,blue,not determinable,false,not determinable
+3090,Town12,CrossingBicycleFlow,b2d_base,26,false,counted
+3090,Town12,CrossingBicycleFlow,b2d_full,200,false,counted
+3090,Town12,CrossingBicycleFlow,tfv6_lead,not determinable,false,not determinable
+3090,Town12,CrossingBicycleFlow,bridgedrive_lead,not determinable,false,not determinable
+3090,Town12,CrossingBicycleFlow,simlingo,not determinable,false,not determinable
+3090,Town12,CrossingBicycleFlow,blue,not determinable,false,not determinable
+3093,Town12,CrossingBicycleFlow,b2d_base,26,false,counted
+3093,Town12,CrossingBicycleFlow,b2d_full,200,false,counted
+3093,Town12,CrossingBicycleFlow,tfv6_lead,not determinable,false,not determinable
+3093,Town12,CrossingBicycleFlow,bridgedrive_lead,not determinable,false,not determinable
+3093,Town12,CrossingBicycleFlow,simlingo,not determinable,false,not determinable
+3093,Town12,CrossingBicycleFlow,blue,not determinable,false,not determinable
+3099,Town12,CrossingBicycleFlow,b2d_base,26,false,counted
+3099,Town12,CrossingBicycleFlow,b2d_full,200,false,counted
+3099,Town12,CrossingBicycleFlow,tfv6_lead,not determinable,false,not determinable
+3099,Town12,CrossingBicycleFlow,bridgedrive_lead,not determinable,false,not determinable
+3099,Town12,CrossingBicycleFlow,simlingo,not determinable,false,not determinable
+3099,Town12,CrossingBicycleFlow,blue,not determinable,false,not determinable
+3100,Town12,CrossingBicycleFlow,b2d_base,26,false,counted
+3100,Town12,CrossingBicycleFlow,b2d_full,200,false,counted
+3100,Town12,CrossingBicycleFlow,tfv6_lead,not determinable,false,not determinable
+3100,Town12,CrossingBicycleFlow,bridgedrive_lead,not determinable,false,not determinable
+3100,Town12,CrossingBicycleFlow,simlingo,not determinable,false,not determinable
+3100,Town12,CrossingBicycleFlow,blue,not determinable,false,not determinable
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,b2d_base,6,false,counted
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,b2d_full,844,false,counted
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,tfv6_lead,not determinable,false,not determinable
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,bridgedrive_lead,not determinable,false,not determinable
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,simlingo,not determinable,false,not determinable
+3144,Town12,VanillaSignalizedTurnEncounterRedLight,blue,not determinable,false,not determinable
+3178,Town12,VanillaNonSignalizedTurn,b2d_base,0,false,counted
+3178,Town12,VanillaNonSignalizedTurn,b2d_full,106,false,counted
+3178,Town12,VanillaNonSignalizedTurn,tfv6_lead,not determinable,false,not determinable
+3178,Town12,VanillaNonSignalizedTurn,bridgedrive_lead,not determinable,false,not determinable
+3178,Town12,VanillaNonSignalizedTurn,simlingo,not determinable,false,not determinable
+3178,Town12,VanillaNonSignalizedTurn,blue,not determinable,false,not determinable
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_base,8,false,counted
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_full,238,false,counted
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,tfv6_lead,not determinable,false,not determinable
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,bridgedrive_lead,not determinable,false,not determinable
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,simlingo,not determinable,false,not determinable
+3184,Town12,VanillaNonSignalizedTurnEncounterStopsign,blue,not determinable,false,not determinable
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_base,8,false,counted
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,b2d_full,238,false,counted
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,tfv6_lead,not determinable,false,not determinable
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,bridgedrive_lead,not determinable,false,not determinable
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,simlingo,not determinable,false,not determinable
+3189,Town12,VanillaNonSignalizedTurnEncounterStopsign,blue,not determinable,false,not determinable
+3248,Town13,ParkingCrossingPedestrian,b2d_base,5,false,counted
+3248,Town13,ParkingCrossingPedestrian,b2d_full,18,false,counted
+3248,Town13,ParkingCrossingPedestrian,tfv6_lead,not determinable,false,not determinable
+3248,Town13,ParkingCrossingPedestrian,bridgedrive_lead,not determinable,false,not determinable
+3248,Town13,ParkingCrossingPedestrian,simlingo,not determinable,false,not determinable
+3248,Town13,ParkingCrossingPedestrian,blue,not determinable,false,not determinable
+3255,Town13,ParkingCrossingPedestrian,b2d_base,5,false,counted
+3255,Town13,ParkingCrossingPedestrian,b2d_full,18,false,counted
+3255,Town13,ParkingCrossingPedestrian,tfv6_lead,not determinable,false,not determinable
+3255,Town13,ParkingCrossingPedestrian,bridgedrive_lead,not determinable,false,not determinable
+3255,Town13,ParkingCrossingPedestrian,simlingo,not determinable,false,not determinable
+3255,Town13,ParkingCrossingPedestrian,blue,not determinable,false,not determinable
+3307,Town13,Accident,b2d_base,3,false,counted
+3307,Town13,Accident,b2d_full,11,false,counted
+3307,Town13,Accident,tfv6_lead,not determinable,false,not determinable
+3307,Town13,Accident,bridgedrive_lead,not determinable,false,not determinable
+3307,Town13,Accident,simlingo,not determinable,false,not determinable
+3307,Town13,Accident,blue,not determinable,false,not determinable
+3364,Town13,YieldToEmergencyVehicle,b2d_base,5,false,counted
+3364,Town13,YieldToEmergencyVehicle,b2d_full,3,false,counted
+3364,Town13,YieldToEmergencyVehicle,tfv6_lead,not determinable,false,not determinable
+3364,Town13,YieldToEmergencyVehicle,bridgedrive_lead,not determinable,false,not determinable
+3364,Town13,YieldToEmergencyVehicle,simlingo,not determinable,false,not determinable
+3364,Town13,YieldToEmergencyVehicle,blue,not determinable,false,not determinable
+3373,Town13,YieldToEmergencyVehicle,b2d_base,5,false,counted
+3373,Town13,YieldToEmergencyVehicle,b2d_full,3,false,counted
+3373,Town13,YieldToEmergencyVehicle,tfv6_lead,not determinable,false,not determinable
+3373,Town13,YieldToEmergencyVehicle,bridgedrive_lead,not determinable,false,not determinable
+3373,Town13,YieldToEmergencyVehicle,simlingo,not determinable,false,not determinable
+3373,Town13,YieldToEmergencyVehicle,blue,not determinable,false,not determinable
+3378,Town13,YieldToEmergencyVehicle,b2d_base,5,false,counted
+3378,Town13,YieldToEmergencyVehicle,b2d_full,3,false,counted
+3378,Town13,YieldToEmergencyVehicle,tfv6_lead,not determinable,false,not determinable
+3378,Town13,YieldToEmergencyVehicle,bridgedrive_lead,not determinable,false,not determinable
+3378,Town13,YieldToEmergencyVehicle,simlingo,not determinable,false,not determinable
+3378,Town13,YieldToEmergencyVehicle,blue,not determinable,false,not determinable
+3380,Town13,YieldToEmergencyVehicle,b2d_base,5,false,counted
+3380,Town13,YieldToEmergencyVehicle,b2d_full,3,false,counted
+3380,Town13,YieldToEmergencyVehicle,tfv6_lead,not determinable,false,not determinable
+3380,Town13,YieldToEmergencyVehicle,bridgedrive_lead,not determinable,false,not determinable
+3380,Town13,YieldToEmergencyVehicle,simlingo,not determinable,false,not determinable
+3380,Town13,YieldToEmergencyVehicle,blue,not determinable,false,not determinable
+3410,Town13,AccidentTwoWays,b2d_base,0,false,counted
+3410,Town13,AccidentTwoWays,b2d_full,196,false,counted
+3410,Town13,AccidentTwoWays,tfv6_lead,not determinable,false,not determinable
+3410,Town13,AccidentTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3410,Town13,AccidentTwoWays,simlingo,not determinable,false,not determinable
+3410,Town13,AccidentTwoWays,blue,not determinable,false,not determinable
+3436,Town13,HazardAtSideLaneTwoWays,b2d_base,0,false,counted
+3436,Town13,HazardAtSideLaneTwoWays,b2d_full,15,false,counted
+3436,Town13,HazardAtSideLaneTwoWays,tfv6_lead,not determinable,false,not determinable
+3436,Town13,HazardAtSideLaneTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3436,Town13,HazardAtSideLaneTwoWays,simlingo,not determinable,false,not determinable
+3436,Town13,HazardAtSideLaneTwoWays,blue,not determinable,false,not determinable
+3457,Town13,ParkedObstacleTwoWays,b2d_base,4,false,counted
+3457,Town13,ParkedObstacleTwoWays,b2d_full,17,false,counted
+3457,Town13,ParkedObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+3457,Town13,ParkedObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3457,Town13,ParkedObstacleTwoWays,simlingo,not determinable,false,not determinable
+3457,Town13,ParkedObstacleTwoWays,blue,not determinable,false,not determinable
+3464,Town13,VehicleOpensDoorTwoWays,b2d_base,0,false,counted
+3464,Town13,VehicleOpensDoorTwoWays,b2d_full,62,false,counted
+3464,Town13,VehicleOpensDoorTwoWays,tfv6_lead,not determinable,false,not determinable
+3464,Town13,VehicleOpensDoorTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3464,Town13,VehicleOpensDoorTwoWays,simlingo,not determinable,false,not determinable
+3464,Town13,VehicleOpensDoorTwoWays,blue,not determinable,false,not determinable
+3472,Town13,VehicleOpensDoorTwoWays,b2d_base,0,false,counted
+3472,Town13,VehicleOpensDoorTwoWays,b2d_full,62,false,counted
+3472,Town13,VehicleOpensDoorTwoWays,tfv6_lead,not determinable,false,not determinable
+3472,Town13,VehicleOpensDoorTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3472,Town13,VehicleOpensDoorTwoWays,simlingo,not determinable,false,not determinable
+3472,Town13,VehicleOpensDoorTwoWays,blue,not determinable,false,not determinable
+3476,Town13,VehicleOpensDoorTwoWays,b2d_base,0,false,counted
+3476,Town13,VehicleOpensDoorTwoWays,b2d_full,62,false,counted
+3476,Town13,VehicleOpensDoorTwoWays,tfv6_lead,not determinable,false,not determinable
+3476,Town13,VehicleOpensDoorTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3476,Town13,VehicleOpensDoorTwoWays,simlingo,not determinable,false,not determinable
+3476,Town13,VehicleOpensDoorTwoWays,blue,not determinable,false,not determinable
+3482,Town13,VehicleOpensDoorTwoWays,b2d_base,0,false,counted
+3482,Town13,VehicleOpensDoorTwoWays,b2d_full,62,false,counted
+3482,Town13,VehicleOpensDoorTwoWays,tfv6_lead,not determinable,false,not determinable
+3482,Town13,VehicleOpensDoorTwoWays,bridgedrive_lead,not determinable,false,not determinable
+3482,Town13,VehicleOpensDoorTwoWays,simlingo,not determinable,false,not determinable
+3482,Town13,VehicleOpensDoorTwoWays,blue,not determinable,false,not determinable
+3514,Town13,ParkingExit,b2d_base,10,false,counted
+3514,Town13,ParkingExit,b2d_full,18,false,counted
+3514,Town13,ParkingExit,tfv6_lead,not determinable,false,not determinable
+3514,Town13,ParkingExit,bridgedrive_lead,not determinable,false,not determinable
+3514,Town13,ParkingExit,simlingo,not determinable,false,not determinable
+3514,Town13,ParkingExit,blue,not determinable,false,not determinable
+3520,Town13,ParkingExit,b2d_base,10,false,counted
+3520,Town13,ParkingExit,b2d_full,18,false,counted
+3520,Town13,ParkingExit,tfv6_lead,not determinable,false,not determinable
+3520,Town13,ParkingExit,bridgedrive_lead,not determinable,false,not determinable
+3520,Town13,ParkingExit,simlingo,not determinable,false,not determinable
+3520,Town13,ParkingExit,blue,not determinable,false,not determinable
+3540,Town13,HardBreakRoute,b2d_base,8,false,counted
+3540,Town13,HardBreakRoute,b2d_full,16,false,counted
+3540,Town13,HardBreakRoute,tfv6_lead,not determinable,false,not determinable
+3540,Town13,HardBreakRoute,bridgedrive_lead,not determinable,false,not determinable
+3540,Town13,HardBreakRoute,simlingo,not determinable,false,not determinable
+3540,Town13,HardBreakRoute,blue,not determinable,false,not determinable
+3561,Town13,ControlLoss,b2d_base,1,false,counted
+3561,Town13,ControlLoss,b2d_full,5,false,counted
+3561,Town13,ControlLoss,tfv6_lead,not determinable,false,not determinable
+3561,Town13,ControlLoss,bridgedrive_lead,not determinable,false,not determinable
+3561,Town13,ControlLoss,simlingo,not determinable,false,not determinable
+3561,Town13,ControlLoss,blue,not determinable,false,not determinable
+3564,Town13,InvadingTurn,b2d_base,2,false,counted
+3564,Town13,InvadingTurn,b2d_full,7,false,counted
+3564,Town13,InvadingTurn,tfv6_lead,not determinable,false,not determinable
+3564,Town13,InvadingTurn,bridgedrive_lead,not determinable,false,not determinable
+3564,Town13,InvadingTurn,simlingo,not determinable,false,not determinable
+3564,Town13,InvadingTurn,blue,not determinable,false,not determinable
+3572,Town13,InvadingTurn,b2d_base,2,false,counted
+3572,Town13,InvadingTurn,b2d_full,7,false,counted
+3572,Town13,InvadingTurn,tfv6_lead,not determinable,false,not determinable
+3572,Town13,InvadingTurn,bridgedrive_lead,not determinable,false,not determinable
+3572,Town13,InvadingTurn,simlingo,not determinable,false,not determinable
+3572,Town13,InvadingTurn,blue,not determinable,false,not determinable
+3575,Town13,InvadingTurn,b2d_base,2,false,counted
+3575,Town13,InvadingTurn,b2d_full,7,false,counted
+3575,Town13,InvadingTurn,tfv6_lead,not determinable,false,not determinable
+3575,Town13,InvadingTurn,bridgedrive_lead,not determinable,false,not determinable
+3575,Town13,InvadingTurn,simlingo,not determinable,false,not determinable
+3575,Town13,InvadingTurn,blue,not determinable,false,not determinable
+3666,Town13,NonSignalizedJunctionRightTurn,b2d_base,3,false,counted
+3666,Town13,NonSignalizedJunctionRightTurn,b2d_full,5,false,counted
+3666,Town13,NonSignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+3666,Town13,NonSignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+3666,Town13,NonSignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+3666,Town13,NonSignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+3670,Town13,NonSignalizedJunctionRightTurn,b2d_base,3,false,counted
+3670,Town13,NonSignalizedJunctionRightTurn,b2d_full,5,false,counted
+3670,Town13,NonSignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+3670,Town13,NonSignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+3670,Town13,NonSignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+3670,Town13,NonSignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+3676,Town13,NonSignalizedJunctionRightTurn,b2d_base,3,false,counted
+3676,Town13,NonSignalizedJunctionRightTurn,b2d_full,5,false,counted
+3676,Town13,NonSignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+3676,Town13,NonSignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+3676,Town13,NonSignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+3676,Town13,NonSignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+3697,Town13,OppositeVehicleTakingPriority,b2d_base,2,false,counted
+3697,Town13,OppositeVehicleTakingPriority,b2d_full,14,false,counted
+3697,Town13,OppositeVehicleTakingPriority,tfv6_lead,not determinable,false,not determinable
+3697,Town13,OppositeVehicleTakingPriority,bridgedrive_lead,not determinable,false,not determinable
+3697,Town13,OppositeVehicleTakingPriority,simlingo,not determinable,false,not determinable
+3697,Town13,OppositeVehicleTakingPriority,blue,not determinable,false,not determinable
+3708,Town13,VehicleTurningRoute,b2d_base,6,false,counted
+3708,Town13,VehicleTurningRoute,b2d_full,12,false,counted
+3708,Town13,VehicleTurningRoute,tfv6_lead,not determinable,false,not determinable
+3708,Town13,VehicleTurningRoute,bridgedrive_lead,not determinable,false,not determinable
+3708,Town13,VehicleTurningRoute,simlingo,not determinable,false,not determinable
+3708,Town13,VehicleTurningRoute,blue,not determinable,false,not determinable
+3712,Town13,VehicleTurningRoute,b2d_base,6,false,counted
+3712,Town13,VehicleTurningRoute,b2d_full,12,false,counted
+3712,Town13,VehicleTurningRoute,tfv6_lead,not determinable,false,not determinable
+3712,Town13,VehicleTurningRoute,bridgedrive_lead,not determinable,false,not determinable
+3712,Town13,VehicleTurningRoute,simlingo,not determinable,false,not determinable
+3712,Town13,VehicleTurningRoute,blue,not determinable,false,not determinable
+3717,Town13,VehicleTurningRoute,b2d_base,6,false,counted
+3717,Town13,VehicleTurningRoute,b2d_full,12,false,counted
+3717,Town13,VehicleTurningRoute,tfv6_lead,not determinable,false,not determinable
+3717,Town13,VehicleTurningRoute,bridgedrive_lead,not determinable,false,not determinable
+3717,Town13,VehicleTurningRoute,simlingo,not determinable,false,not determinable
+3717,Town13,VehicleTurningRoute,blue,not determinable,false,not determinable
+3731,Town13,VehicleTurningRoutePedestrian,b2d_base,6,false,counted
+3731,Town13,VehicleTurningRoutePedestrian,b2d_full,11,false,counted
+3731,Town13,VehicleTurningRoutePedestrian,tfv6_lead,not determinable,false,not determinable
+3731,Town13,VehicleTurningRoutePedestrian,bridgedrive_lead,not determinable,false,not determinable
+3731,Town13,VehicleTurningRoutePedestrian,simlingo,not determinable,false,not determinable
+3731,Town13,VehicleTurningRoutePedestrian,blue,not determinable,false,not determinable
+3737,Town13,VehicleTurningRoutePedestrian,b2d_base,6,false,counted
+3737,Town13,VehicleTurningRoutePedestrian,b2d_full,11,false,counted
+3737,Town13,VehicleTurningRoutePedestrian,tfv6_lead,not determinable,false,not determinable
+3737,Town13,VehicleTurningRoutePedestrian,bridgedrive_lead,not determinable,false,not determinable
+3737,Town13,VehicleTurningRoutePedestrian,simlingo,not determinable,false,not determinable
+3737,Town13,VehicleTurningRoutePedestrian,blue,not determinable,false,not determinable
+3749,Town13,EnterActorFlow,b2d_base,5,false,counted
+3749,Town13,EnterActorFlow,b2d_full,12,false,counted
+3749,Town13,EnterActorFlow,tfv6_lead,not determinable,false,not determinable
+3749,Town13,EnterActorFlow,bridgedrive_lead,not determinable,false,not determinable
+3749,Town13,EnterActorFlow,simlingo,not determinable,false,not determinable
+3749,Town13,EnterActorFlow,blue,not determinable,false,not determinable
+3785,Town13,MergerIntoSlowTraffic,b2d_base,2,false,counted
+3785,Town13,MergerIntoSlowTraffic,b2d_full,13,false,counted
+3785,Town13,MergerIntoSlowTraffic,tfv6_lead,not determinable,false,not determinable
+3785,Town13,MergerIntoSlowTraffic,bridgedrive_lead,not determinable,false,not determinable
+3785,Town13,MergerIntoSlowTraffic,simlingo,not determinable,false,not determinable
+3785,Town13,MergerIntoSlowTraffic,blue,not determinable,false,not determinable
+3800,Town13,MergerIntoSlowTraffic,b2d_base,2,false,counted
+3800,Town13,MergerIntoSlowTraffic,b2d_full,13,false,counted
+3800,Town13,MergerIntoSlowTraffic,tfv6_lead,not determinable,false,not determinable
+3800,Town13,MergerIntoSlowTraffic,bridgedrive_lead,not determinable,false,not determinable
+3800,Town13,MergerIntoSlowTraffic,simlingo,not determinable,false,not determinable
+3800,Town13,MergerIntoSlowTraffic,blue,not determinable,false,not determinable
+3813,Town13,HighwayCutIn,b2d_base,10,false,counted
+3813,Town13,HighwayCutIn,b2d_full,54,false,counted
+3813,Town13,HighwayCutIn,tfv6_lead,not determinable,false,not determinable
+3813,Town13,HighwayCutIn,bridgedrive_lead,not determinable,false,not determinable
+3813,Town13,HighwayCutIn,simlingo,not determinable,false,not determinable
+3813,Town13,HighwayCutIn,blue,not determinable,false,not determinable
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_base,6,false,counted
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_full,15,false,counted
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,tfv6_lead,not determinable,false,not determinable
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,bridgedrive_lead,not determinable,false,not determinable
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,simlingo,not determinable,false,not determinable
+3865,Town13,VanillaSignalizedTurnEncounterRedLight,blue,not determinable,false,not determinable
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_base,6,false,counted
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_full,15,false,counted
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,tfv6_lead,not determinable,false,not determinable
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,bridgedrive_lead,not determinable,false,not determinable
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,simlingo,not determinable,false,not determinable
+3869,Town13,VanillaSignalizedTurnEncounterRedLight,blue,not determinable,false,not determinable
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_base,6,false,counted
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,b2d_full,15,false,counted
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,tfv6_lead,not determinable,false,not determinable
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,bridgedrive_lead,not determinable,false,not determinable
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,simlingo,not determinable,false,not determinable
+3876,Town13,VanillaSignalizedTurnEncounterRedLight,blue,not determinable,false,not determinable
+3890,Town13,VanillaNonSignalizedTurn,b2d_base,0,false,counted
+3890,Town13,VanillaNonSignalizedTurn,b2d_full,17,false,counted
+3890,Town13,VanillaNonSignalizedTurn,tfv6_lead,not determinable,false,not determinable
+3890,Town13,VanillaNonSignalizedTurn,bridgedrive_lead,not determinable,false,not determinable
+3890,Town13,VanillaNonSignalizedTurn,simlingo,not determinable,false,not determinable
+3890,Town13,VanillaNonSignalizedTurn,blue,not determinable,false,not determinable
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,b2d_base,4,false,counted
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,b2d_full,18,false,counted
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,tfv6_lead,not determinable,false,not determinable
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,bridgedrive_lead,not determinable,false,not determinable
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,simlingo,not determinable,false,not determinable
+3904,Town13,VanillaNonSignalizedTurnEncounterStopsign,blue,not determinable,false,not determinable
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,b2d_base,4,false,counted
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,b2d_full,18,false,counted
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,tfv6_lead,not determinable,false,not determinable
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,bridgedrive_lead,not determinable,false,not determinable
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,simlingo,not determinable,false,not determinable
+3905,Town13,VanillaNonSignalizedTurnEncounterStopsign,blue,not determinable,false,not determinable
+3936,Town12,SignalizedJunctionLeftTurn,b2d_base,2,false,counted
+3936,Town12,SignalizedJunctionLeftTurn,b2d_full,135,false,counted
+3936,Town12,SignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+3936,Town12,SignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+3936,Town12,SignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+3936,Town12,SignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+4183,Town12,SignalizedJunctionLeftTurn,b2d_base,2,false,counted
+4183,Town12,SignalizedJunctionLeftTurn,b2d_full,135,false,counted
+4183,Town12,SignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+4183,Town12,SignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+4183,Town12,SignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+4183,Town12,SignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+4468,Town12,SignalizedJunctionLeftTurn,b2d_base,2,false,counted
+4468,Town12,SignalizedJunctionLeftTurn,b2d_full,135,false,counted
+4468,Town12,SignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+4468,Town12,SignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+4468,Town12,SignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+4468,Town12,SignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+4669,Town12,SignalizedJunctionLeftTurn,b2d_base,2,false,counted
+4669,Town12,SignalizedJunctionLeftTurn,b2d_full,135,false,counted
+4669,Town12,SignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+4669,Town12,SignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+4669,Town12,SignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+4669,Town12,SignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+4683,Town12,SignalizedJunctionLeftTurn,b2d_base,2,false,counted
+4683,Town12,SignalizedJunctionLeftTurn,b2d_full,135,false,counted
+4683,Town12,SignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+4683,Town12,SignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+4683,Town12,SignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+4683,Town12,SignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+4937,Town12,SignalizedJunctionRightTurn,b2d_base,5,false,counted
+4937,Town12,SignalizedJunctionRightTurn,b2d_full,262,false,counted
+4937,Town12,SignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+4937,Town12,SignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+4937,Town12,SignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+4937,Town12,SignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+10857,Town12,VehicleTurningRoutePedestrian,b2d_base,7,false,counted
+10857,Town12,VehicleTurningRoutePedestrian,b2d_full,366,false,counted
+10857,Town12,VehicleTurningRoutePedestrian,tfv6_lead,not determinable,false,not determinable
+10857,Town12,VehicleTurningRoutePedestrian,bridgedrive_lead,not determinable,false,not determinable
+10857,Town12,VehicleTurningRoutePedestrian,simlingo,not determinable,false,not determinable
+10857,Town12,VehicleTurningRoutePedestrian,blue,not determinable,false,not determinable
+11381,Town12,VehicleTurningRoutePedestrian,b2d_base,7,false,counted
+11381,Town12,VehicleTurningRoutePedestrian,b2d_full,366,false,counted
+11381,Town12,VehicleTurningRoutePedestrian,tfv6_lead,not determinable,false,not determinable
+11381,Town12,VehicleTurningRoutePedestrian,bridgedrive_lead,not determinable,false,not determinable
+11381,Town12,VehicleTurningRoutePedestrian,simlingo,not determinable,false,not determinable
+11381,Town12,VehicleTurningRoutePedestrian,blue,not determinable,false,not determinable
+11715,Town12,EnterActorFlow,b2d_base,3,false,counted
+11715,Town12,EnterActorFlow,b2d_full,567,false,counted
+11715,Town12,EnterActorFlow,tfv6_lead,not determinable,false,not determinable
+11715,Town12,EnterActorFlow,bridgedrive_lead,not determinable,false,not determinable
+11715,Town12,EnterActorFlow,simlingo,not determinable,false,not determinable
+11715,Town12,EnterActorFlow,blue,not determinable,false,not determinable
+11755,Town12,EnterActorFlow,b2d_base,3,false,counted
+11755,Town12,EnterActorFlow,b2d_full,567,false,counted
+11755,Town12,EnterActorFlow,tfv6_lead,not determinable,false,not determinable
+11755,Town12,EnterActorFlow,bridgedrive_lead,not determinable,false,not determinable
+11755,Town12,EnterActorFlow,simlingo,not determinable,false,not determinable
+11755,Town12,EnterActorFlow,blue,not determinable,false,not determinable
+14194,Town12,PedestrianCrossing,b2d_base,9,false,counted
+14194,Town12,PedestrianCrossing,b2d_full,484,false,counted
+14194,Town12,PedestrianCrossing,tfv6_lead,not determinable,false,not determinable
+14194,Town12,PedestrianCrossing,bridgedrive_lead,not determinable,false,not determinable
+14194,Town12,PedestrianCrossing,simlingo,not determinable,false,not determinable
+14194,Town12,PedestrianCrossing,blue,not determinable,false,not determinable
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_base,5,false,counted
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_full,980,false,counted
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,tfv6_lead,not determinable,false,not determinable
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,bridgedrive_lead,not determinable,false,not determinable
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,simlingo,not determinable,false,not determinable
+14842,Town12,VanillaSignalizedTurnEncounterGreenLight,blue,not determinable,false,not determinable
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_base,5,false,counted
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_full,980,false,counted
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,tfv6_lead,not determinable,false,not determinable
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,bridgedrive_lead,not determinable,false,not determinable
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,simlingo,not determinable,false,not determinable
+14862,Town12,VanillaSignalizedTurnEncounterGreenLight,blue,not determinable,false,not determinable
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_base,5,false,counted
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,b2d_full,980,false,counted
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,tfv6_lead,not determinable,false,not determinable
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,bridgedrive_lead,not determinable,false,not determinable
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,simlingo,not determinable,false,not determinable
+14909,Town12,VanillaSignalizedTurnEncounterGreenLight,blue,not determinable,false,not determinable
+17563,Town12,SequentialLaneChange,b2d_base,0,false,counted
+17563,Town12,SequentialLaneChange,b2d_full,0,false,counted
+17563,Town12,SequentialLaneChange,tfv6_lead,not determinable,false,not determinable
+17563,Town12,SequentialLaneChange,bridgedrive_lead,not determinable,false,not determinable
+17563,Town12,SequentialLaneChange,simlingo,not determinable,false,not determinable
+17563,Town12,SequentialLaneChange,blue,not determinable,false,not determinable
+17569,Town12,SequentialLaneChange,b2d_base,0,false,counted
+17569,Town12,SequentialLaneChange,b2d_full,0,false,counted
+17569,Town12,SequentialLaneChange,tfv6_lead,not determinable,false,not determinable
+17569,Town12,SequentialLaneChange,bridgedrive_lead,not determinable,false,not determinable
+17569,Town12,SequentialLaneChange,simlingo,not determinable,false,not determinable
+17569,Town12,SequentialLaneChange,blue,not determinable,false,not determinable
+17598,Town12,SequentialLaneChange,b2d_base,0,false,counted
+17598,Town12,SequentialLaneChange,b2d_full,0,false,counted
+17598,Town12,SequentialLaneChange,tfv6_lead,not determinable,false,not determinable
+17598,Town12,SequentialLaneChange,bridgedrive_lead,not determinable,false,not determinable
+17598,Town12,SequentialLaneChange,simlingo,not determinable,false,not determinable
+17598,Town12,SequentialLaneChange,blue,not determinable,false,not determinable
+17635,Town12,SequentialLaneChange,b2d_base,0,false,counted
+17635,Town12,SequentialLaneChange,b2d_full,0,false,counted
+17635,Town12,SequentialLaneChange,tfv6_lead,not determinable,false,not determinable
+17635,Town12,SequentialLaneChange,bridgedrive_lead,not determinable,false,not determinable
+17635,Town12,SequentialLaneChange,simlingo,not determinable,false,not determinable
+17635,Town12,SequentialLaneChange,blue,not determinable,false,not determinable
+17655,Town12,SequentialLaneChange,b2d_base,0,false,counted
+17655,Town12,SequentialLaneChange,b2d_full,0,false,counted
+17655,Town12,SequentialLaneChange,tfv6_lead,not determinable,false,not determinable
+17655,Town12,SequentialLaneChange,bridgedrive_lead,not determinable,false,not determinable
+17655,Town12,SequentialLaneChange,simlingo,not determinable,false,not determinable
+17655,Town12,SequentialLaneChange,blue,not determinable,false,not determinable
+17752,Town12,DynamicObjectCrossing,b2d_base,3,false,counted
+17752,Town12,DynamicObjectCrossing,b2d_full,368,false,counted
+17752,Town12,DynamicObjectCrossing,tfv6_lead,not determinable,false,not determinable
+17752,Town12,DynamicObjectCrossing,bridgedrive_lead,not determinable,false,not determinable
+17752,Town12,DynamicObjectCrossing,simlingo,not determinable,false,not determinable
+17752,Town12,DynamicObjectCrossing,blue,not determinable,false,not determinable
+18252,Town12,ParkingCrossingPedestrian,b2d_base,10,false,counted
+18252,Town12,ParkingCrossingPedestrian,b2d_full,109,false,counted
+18252,Town12,ParkingCrossingPedestrian,tfv6_lead,not determinable,false,not determinable
+18252,Town12,ParkingCrossingPedestrian,bridgedrive_lead,not determinable,false,not determinable
+18252,Town12,ParkingCrossingPedestrian,simlingo,not determinable,false,not determinable
+18252,Town12,ParkingCrossingPedestrian,blue,not determinable,false,not determinable
+18305,Town12,ParkingCutIn,b2d_base,21,false,counted
+18305,Town12,ParkingCutIn,b2d_full,120,false,counted
+18305,Town12,ParkingCutIn,tfv6_lead,not determinable,false,not determinable
+18305,Town12,ParkingCutIn,bridgedrive_lead,not determinable,false,not determinable
+18305,Town12,ParkingCutIn,simlingo,not determinable,false,not determinable
+18305,Town12,ParkingCutIn,blue,not determinable,false,not determinable
+18311,Town12,ParkingCutIn,b2d_base,21,false,counted
+18311,Town12,ParkingCutIn,b2d_full,120,false,counted
+18311,Town12,ParkingCutIn,tfv6_lead,not determinable,false,not determinable
+18311,Town12,ParkingCutIn,bridgedrive_lead,not determinable,false,not determinable
+18311,Town12,ParkingCutIn,simlingo,not determinable,false,not determinable
+18311,Town12,ParkingCutIn,blue,not determinable,false,not determinable
+18356,Town12,ParkingCutIn,b2d_base,21,false,counted
+18356,Town12,ParkingCutIn,b2d_full,120,false,counted
+18356,Town12,ParkingCutIn,tfv6_lead,not determinable,false,not determinable
+18356,Town12,ParkingCutIn,bridgedrive_lead,not determinable,false,not determinable
+18356,Town12,ParkingCutIn,simlingo,not determinable,false,not determinable
+18356,Town12,ParkingCutIn,blue,not determinable,false,not determinable
+20920,Town12,ConstructionObstacleTwoWays,b2d_base,27,false,counted
+20920,Town12,ConstructionObstacleTwoWays,b2d_full,35,false,counted
+20920,Town12,ConstructionObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+20920,Town12,ConstructionObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+20920,Town12,ConstructionObstacleTwoWays,simlingo,not determinable,false,not determinable
+20920,Town12,ConstructionObstacleTwoWays,blue,not determinable,false,not determinable
+23658,Town12,HighwayExit,b2d_base,12,false,counted
+23658,Town12,HighwayExit,b2d_full,80,false,counted
+23658,Town12,HighwayExit,tfv6_lead,not determinable,false,not determinable
+23658,Town12,HighwayExit,bridgedrive_lead,not determinable,false,not determinable
+23658,Town12,HighwayExit,simlingo,not determinable,false,not determinable
+23658,Town12,HighwayExit,blue,not determinable,false,not determinable
+23659,Town12,HighwayExit,b2d_base,12,false,counted
+23659,Town12,HighwayExit,b2d_full,80,false,counted
+23659,Town12,HighwayExit,tfv6_lead,not determinable,false,not determinable
+23659,Town12,HighwayExit,bridgedrive_lead,not determinable,false,not determinable
+23659,Town12,HighwayExit,simlingo,not determinable,false,not determinable
+23659,Town12,HighwayExit,blue,not determinable,false,not determinable
+23670,Town13,HighwayExit,b2d_base,11,false,counted
+23670,Town13,HighwayExit,b2d_full,24,false,counted
+23670,Town13,HighwayExit,tfv6_lead,not determinable,false,not determinable
+23670,Town13,HighwayExit,bridgedrive_lead,not determinable,false,not determinable
+23670,Town13,HighwayExit,simlingo,not determinable,false,not determinable
+23670,Town13,HighwayExit,blue,not determinable,false,not determinable
+23687,Town12,HighwayExit,b2d_base,12,false,counted
+23687,Town12,HighwayExit,b2d_full,80,false,counted
+23687,Town12,HighwayExit,tfv6_lead,not determinable,false,not determinable
+23687,Town12,HighwayExit,bridgedrive_lead,not determinable,false,not determinable
+23687,Town12,HighwayExit,simlingo,not determinable,false,not determinable
+23687,Town12,HighwayExit,blue,not determinable,false,not determinable
+23695,Town13,InterurbanAdvancedActorFlow,b2d_base,5,false,counted
+23695,Town13,InterurbanAdvancedActorFlow,b2d_full,25,false,counted
+23695,Town13,InterurbanAdvancedActorFlow,tfv6_lead,not determinable,false,not determinable
+23695,Town13,InterurbanAdvancedActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23695,Town13,InterurbanAdvancedActorFlow,simlingo,not determinable,false,not determinable
+23695,Town13,InterurbanAdvancedActorFlow,blue,not determinable,false,not determinable
+23700,Town12,InterurbanAdvancedActorFlow,b2d_base,3,false,counted
+23700,Town12,InterurbanAdvancedActorFlow,b2d_full,52,false,counted
+23700,Town12,InterurbanAdvancedActorFlow,tfv6_lead,not determinable,false,not determinable
+23700,Town12,InterurbanAdvancedActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23700,Town12,InterurbanAdvancedActorFlow,simlingo,not determinable,false,not determinable
+23700,Town12,InterurbanAdvancedActorFlow,blue,not determinable,false,not determinable
+23708,Town12,InterurbanAdvancedActorFlow,b2d_base,3,false,counted
+23708,Town12,InterurbanAdvancedActorFlow,b2d_full,52,false,counted
+23708,Town12,InterurbanAdvancedActorFlow,tfv6_lead,not determinable,false,not determinable
+23708,Town12,InterurbanAdvancedActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23708,Town12,InterurbanAdvancedActorFlow,simlingo,not determinable,false,not determinable
+23708,Town12,InterurbanAdvancedActorFlow,blue,not determinable,false,not determinable
+23771,Town12,MergerIntoSlowTrafficV2,b2d_base,17,false,counted
+23771,Town12,MergerIntoSlowTrafficV2,b2d_full,43,false,counted
+23771,Town12,MergerIntoSlowTrafficV2,tfv6_lead,not determinable,false,not determinable
+23771,Town12,MergerIntoSlowTrafficV2,bridgedrive_lead,not determinable,false,not determinable
+23771,Town12,MergerIntoSlowTrafficV2,simlingo,not determinable,false,not determinable
+23771,Town12,MergerIntoSlowTrafficV2,blue,not determinable,false,not determinable
+23901,Town13,InterurbanActorFlow,b2d_base,3,false,counted
+23901,Town13,InterurbanActorFlow,b2d_full,8,false,counted
+23901,Town13,InterurbanActorFlow,tfv6_lead,not determinable,false,not determinable
+23901,Town13,InterurbanActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23901,Town13,InterurbanActorFlow,simlingo,not determinable,false,not determinable
+23901,Town13,InterurbanActorFlow,blue,not determinable,false,not determinable
+23910,Town12,InterurbanActorFlow,b2d_base,6,false,counted
+23910,Town12,InterurbanActorFlow,b2d_full,58,false,counted
+23910,Town12,InterurbanActorFlow,tfv6_lead,not determinable,false,not determinable
+23910,Town12,InterurbanActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23910,Town12,InterurbanActorFlow,simlingo,not determinable,false,not determinable
+23910,Town12,InterurbanActorFlow,blue,not determinable,false,not determinable
+23918,Town13,InterurbanActorFlow,b2d_base,3,false,counted
+23918,Town13,InterurbanActorFlow,b2d_full,8,false,counted
+23918,Town13,InterurbanActorFlow,tfv6_lead,not determinable,false,not determinable
+23918,Town13,InterurbanActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23918,Town13,InterurbanActorFlow,simlingo,not determinable,false,not determinable
+23918,Town13,InterurbanActorFlow,blue,not determinable,false,not determinable
+23930,Town12,InterurbanActorFlow,b2d_base,6,false,counted
+23930,Town12,InterurbanActorFlow,b2d_full,58,false,counted
+23930,Town12,InterurbanActorFlow,tfv6_lead,not determinable,false,not determinable
+23930,Town12,InterurbanActorFlow,bridgedrive_lead,not determinable,false,not determinable
+23930,Town12,InterurbanActorFlow,simlingo,not determinable,false,not determinable
+23930,Town12,InterurbanActorFlow,blue,not determinable,false,not determinable
+24041,Town13,HighwayExit,b2d_base,11,false,counted
+24041,Town13,HighwayExit,b2d_full,24,false,counted
+24041,Town13,HighwayExit,tfv6_lead,not determinable,false,not determinable
+24041,Town13,HighwayExit,bridgedrive_lead,not determinable,false,not determinable
+24041,Town13,HighwayExit,simlingo,not determinable,false,not determinable
+24041,Town13,HighwayExit,blue,not determinable,false,not determinable
+24071,Town13,InterurbanAdvancedActorFlow,b2d_base,5,false,counted
+24071,Town13,InterurbanAdvancedActorFlow,b2d_full,25,false,counted
+24071,Town13,InterurbanAdvancedActorFlow,tfv6_lead,not determinable,false,not determinable
+24071,Town13,InterurbanAdvancedActorFlow,bridgedrive_lead,not determinable,false,not determinable
+24071,Town13,InterurbanAdvancedActorFlow,simlingo,not determinable,false,not determinable
+24071,Town13,InterurbanAdvancedActorFlow,blue,not determinable,false,not determinable
+24078,Town12,InterurbanAdvancedActorFlow,b2d_base,3,false,counted
+24078,Town12,InterurbanAdvancedActorFlow,b2d_full,52,false,counted
+24078,Town12,InterurbanAdvancedActorFlow,tfv6_lead,not determinable,false,not determinable
+24078,Town12,InterurbanAdvancedActorFlow,bridgedrive_lead,not determinable,false,not determinable
+24078,Town12,InterurbanAdvancedActorFlow,simlingo,not determinable,false,not determinable
+24078,Town12,InterurbanAdvancedActorFlow,blue,not determinable,false,not determinable
+24092,Town13,MergerIntoSlowTrafficV2,b2d_base,0,false,counted
+24092,Town13,MergerIntoSlowTrafficV2,b2d_full,48,false,counted
+24092,Town13,MergerIntoSlowTrafficV2,tfv6_lead,not determinable,false,not determinable
+24092,Town13,MergerIntoSlowTrafficV2,bridgedrive_lead,not determinable,false,not determinable
+24092,Town13,MergerIntoSlowTrafficV2,simlingo,not determinable,false,not determinable
+24092,Town13,MergerIntoSlowTrafficV2,blue,not determinable,false,not determinable
+24098,Town12,InterurbanActorFlow,b2d_base,6,false,counted
+24098,Town12,InterurbanActorFlow,b2d_full,58,false,counted
+24098,Town12,InterurbanActorFlow,tfv6_lead,not determinable,false,not determinable
+24098,Town12,InterurbanActorFlow,bridgedrive_lead,not determinable,false,not determinable
+24098,Town12,InterurbanActorFlow,simlingo,not determinable,false,not determinable
+24098,Town12,InterurbanActorFlow,blue,not determinable,false,not determinable
+24206,Town03,ParkingCrossingPedestrian,b2d_base,0,false,counted
+24206,Town03,ParkingCrossingPedestrian,b2d_full,19,false,counted
+24206,Town03,ParkingCrossingPedestrian,tfv6_lead,not determinable,false,not determinable
+24206,Town03,ParkingCrossingPedestrian,bridgedrive_lead,not determinable,false,not determinable
+24206,Town03,ParkingCrossingPedestrian,simlingo,not determinable,false,not determinable
+24206,Town03,ParkingCrossingPedestrian,blue,not determinable,false,not determinable
+24211,Town01,DynamicObjectCrossing,b2d_base,8,false,counted
+24211,Town01,DynamicObjectCrossing,b2d_full,9,false,counted
+24211,Town01,DynamicObjectCrossing,tfv6_lead,not determinable,false,not determinable
+24211,Town01,DynamicObjectCrossing,bridgedrive_lead,not determinable,false,not determinable
+24211,Town01,DynamicObjectCrossing,simlingo,not determinable,false,not determinable
+24211,Town01,DynamicObjectCrossing,blue,not determinable,false,not determinable
+24224,Town02,DynamicObjectCrossing,b2d_base,6,false,counted
+24224,Town02,DynamicObjectCrossing,b2d_full,2,false,counted
+24224,Town02,DynamicObjectCrossing,tfv6_lead,not determinable,false,not determinable
+24224,Town02,DynamicObjectCrossing,bridgedrive_lead,not determinable,false,not determinable
+24224,Town02,DynamicObjectCrossing,simlingo,not determinable,false,not determinable
+24224,Town02,DynamicObjectCrossing,blue,not determinable,false,not determinable
+24240,Town10HD,Accident,b2d_base,0,false,counted
+24240,Town10HD,Accident,b2d_full,1,false,counted
+24240,Town10HD,Accident,tfv6_lead,not determinable,false,not determinable
+24240,Town10HD,Accident,bridgedrive_lead,not determinable,false,not determinable
+24240,Town10HD,Accident,simlingo,not determinable,false,not determinable
+24240,Town10HD,Accident,blue,not determinable,false,not determinable
+24252,Town11,DynamicObjectCrossing,b2d_base,1,false,counted
+24252,Town11,DynamicObjectCrossing,b2d_full,11,false,counted
+24252,Town11,DynamicObjectCrossing,tfv6_lead,not determinable,false,not determinable
+24252,Town11,DynamicObjectCrossing,bridgedrive_lead,not determinable,false,not determinable
+24252,Town11,DynamicObjectCrossing,simlingo,not determinable,false,not determinable
+24252,Town11,DynamicObjectCrossing,blue,not determinable,false,not determinable
+24258,Town07,HazardAtSideLaneTwoWays,b2d_base,0,false,counted
+24258,Town07,HazardAtSideLaneTwoWays,b2d_full,13,false,counted
+24258,Town07,HazardAtSideLaneTwoWays,tfv6_lead,not determinable,false,not determinable
+24258,Town07,HazardAtSideLaneTwoWays,bridgedrive_lead,not determinable,false,not determinable
+24258,Town07,HazardAtSideLaneTwoWays,simlingo,not determinable,false,not determinable
+24258,Town07,HazardAtSideLaneTwoWays,blue,not determinable,false,not determinable
+24294,Town02,ParkingCrossingPedestrian,b2d_base,0,false,counted
+24294,Town02,ParkingCrossingPedestrian,b2d_full,3,false,counted
+24294,Town02,ParkingCrossingPedestrian,tfv6_lead,not determinable,false,not determinable
+24294,Town02,ParkingCrossingPedestrian,bridgedrive_lead,not determinable,false,not determinable
+24294,Town02,ParkingCrossingPedestrian,simlingo,not determinable,false,not determinable
+24294,Town02,ParkingCrossingPedestrian,blue,not determinable,false,not determinable
+24330,Town10HD,HardBreakRoute,b2d_base,1,false,counted
+24330,Town10HD,HardBreakRoute,b2d_full,1,false,counted
+24330,Town10HD,HardBreakRoute,tfv6_lead,not determinable,false,not determinable
+24330,Town10HD,HardBreakRoute,bridgedrive_lead,not determinable,false,not determinable
+24330,Town10HD,HardBreakRoute,simlingo,not determinable,false,not determinable
+24330,Town10HD,HardBreakRoute,blue,not determinable,false,not determinable
+24333,Town15,DynamicObjectCrossing,b2d_base,3,false,counted
+24333,Town15,DynamicObjectCrossing,b2d_full,6,false,counted
+24333,Town15,DynamicObjectCrossing,tfv6_lead,not determinable,false,not determinable
+24333,Town15,DynamicObjectCrossing,bridgedrive_lead,not determinable,false,not determinable
+24333,Town15,DynamicObjectCrossing,simlingo,not determinable,false,not determinable
+24333,Town15,DynamicObjectCrossing,blue,not determinable,false,not determinable
+24340,Town10HD,ControlLoss,b2d_base,2,false,counted
+24340,Town10HD,ControlLoss,b2d_full,1,false,counted
+24340,Town10HD,ControlLoss,tfv6_lead,not determinable,false,not determinable
+24340,Town10HD,ControlLoss,bridgedrive_lead,not determinable,false,not determinable
+24340,Town10HD,ControlLoss,simlingo,not determinable,false,not determinable
+24340,Town10HD,ControlLoss,blue,not determinable,false,not determinable
+24367,Town06,ConstructionObstacle,b2d_base,2,false,counted
+24367,Town06,ConstructionObstacle,b2d_full,2,false,counted
+24367,Town06,ConstructionObstacle,tfv6_lead,not determinable,false,not determinable
+24367,Town06,ConstructionObstacle,bridgedrive_lead,not determinable,false,not determinable
+24367,Town06,ConstructionObstacle,simlingo,not determinable,false,not determinable
+24367,Town06,ConstructionObstacle,blue,not determinable,false,not determinable
+24757,Town06,ParkedObstacle,b2d_base,4,false,counted
+24757,Town06,ParkedObstacle,b2d_full,7,false,counted
+24757,Town06,ParkedObstacle,tfv6_lead,not determinable,false,not determinable
+24757,Town06,ParkedObstacle,bridgedrive_lead,not determinable,false,not determinable
+24757,Town06,ParkedObstacle,simlingo,not determinable,false,not determinable
+24757,Town06,ParkedObstacle,blue,not determinable,false,not determinable
+24759,Town05,ParkingCutIn,b2d_base,0,false,counted
+24759,Town05,ParkingCutIn,b2d_full,6,false,counted
+24759,Town05,ParkingCutIn,tfv6_lead,not determinable,false,not determinable
+24759,Town05,ParkingCutIn,bridgedrive_lead,not determinable,false,not determinable
+24759,Town05,ParkingCutIn,simlingo,not determinable,false,not determinable
+24759,Town05,ParkingCutIn,blue,not determinable,false,not determinable
+24781,Town01,HardBreakRoute,b2d_base,3,false,counted
+24781,Town01,HardBreakRoute,b2d_full,5,false,counted
+24781,Town01,HardBreakRoute,tfv6_lead,not determinable,false,not determinable
+24781,Town01,HardBreakRoute,bridgedrive_lead,not determinable,false,not determinable
+24781,Town01,HardBreakRoute,simlingo,not determinable,false,not determinable
+24781,Town01,HardBreakRoute,blue,not determinable,false,not determinable
+24784,Town02,ControlLoss,b2d_base,0,false,counted
+24784,Town02,ControlLoss,b2d_full,1,false,counted
+24784,Town02,ControlLoss,tfv6_lead,not determinable,false,not determinable
+24784,Town02,ControlLoss,bridgedrive_lead,not determinable,false,not determinable
+24784,Town02,ControlLoss,simlingo,not determinable,false,not determinable
+24784,Town02,ControlLoss,blue,not determinable,false,not determinable
+24785,Town04,ConstructionObstacle,b2d_base,4,false,counted
+24785,Town04,ConstructionObstacle,b2d_full,4,false,counted
+24785,Town04,ConstructionObstacle,tfv6_lead,not determinable,false,not determinable
+24785,Town04,ConstructionObstacle,bridgedrive_lead,not determinable,false,not determinable
+24785,Town04,ConstructionObstacle,simlingo,not determinable,false,not determinable
+24785,Town04,ConstructionObstacle,blue,not determinable,false,not determinable
+24795,Town04,ConstructionObstacle,b2d_base,4,false,counted
+24795,Town04,ConstructionObstacle,b2d_full,4,false,counted
+24795,Town04,ConstructionObstacle,tfv6_lead,not determinable,false,not determinable
+24795,Town04,ConstructionObstacle,bridgedrive_lead,not determinable,false,not determinable
+24795,Town04,ConstructionObstacle,simlingo,not determinable,false,not determinable
+24795,Town04,ConstructionObstacle,blue,not determinable,false,not determinable
+24816,Town03,Accident,b2d_base,4,false,counted
+24816,Town03,Accident,b2d_full,1,false,counted
+24816,Town03,Accident,tfv6_lead,not determinable,false,not determinable
+24816,Town03,Accident,bridgedrive_lead,not determinable,false,not determinable
+24816,Town03,Accident,simlingo,not determinable,false,not determinable
+24816,Town03,Accident,blue,not determinable,false,not determinable
+24841,Town01,ControlLoss,b2d_base,0,false,counted
+24841,Town01,ControlLoss,b2d_full,0,false,counted
+24841,Town01,ControlLoss,tfv6_lead,not determinable,false,not determinable
+24841,Town01,ControlLoss,bridgedrive_lead,not determinable,false,not determinable
+24841,Town01,ControlLoss,simlingo,not determinable,false,not determinable
+24841,Town01,ControlLoss,blue,not determinable,false,not determinable
+25300,Town04,HazardAtSideLane,b2d_base,1,false,counted
+25300,Town04,HazardAtSideLane,b2d_full,12,false,counted
+25300,Town04,HazardAtSideLane,tfv6_lead,not determinable,false,not determinable
+25300,Town04,HazardAtSideLane,bridgedrive_lead,not determinable,false,not determinable
+25300,Town04,HazardAtSideLane,simlingo,not determinable,false,not determinable
+25300,Town04,HazardAtSideLane,blue,not determinable,false,not determinable
+25318,Town05,ParkedObstacle,b2d_base,4,false,counted
+25318,Town05,ParkedObstacle,b2d_full,9,false,counted
+25318,Town05,ParkedObstacle,tfv6_lead,not determinable,false,not determinable
+25318,Town05,ParkedObstacle,bridgedrive_lead,not determinable,false,not determinable
+25318,Town05,ParkedObstacle,simlingo,not determinable,false,not determinable
+25318,Town05,ParkedObstacle,blue,not determinable,false,not determinable
+25358,Town06,StaticCutIn,b2d_base,2,false,counted
+25358,Town06,StaticCutIn,b2d_full,10,false,counted
+25358,Town06,StaticCutIn,tfv6_lead,not determinable,false,not determinable
+25358,Town06,StaticCutIn,bridgedrive_lead,not determinable,false,not determinable
+25358,Town06,StaticCutIn,simlingo,not determinable,false,not determinable
+25358,Town06,StaticCutIn,blue,not determinable,false,not determinable
+25378,Town03,YieldToEmergencyVehicle,b2d_base,1,false,counted
+25378,Town03,YieldToEmergencyVehicle,b2d_full,2,false,counted
+25378,Town03,YieldToEmergencyVehicle,tfv6_lead,not determinable,false,not determinable
+25378,Town03,YieldToEmergencyVehicle,bridgedrive_lead,not determinable,false,not determinable
+25378,Town03,YieldToEmergencyVehicle,simlingo,not determinable,false,not determinable
+25378,Town03,YieldToEmergencyVehicle,blue,not determinable,false,not determinable
+25381,Town05,HazardAtSideLane,b2d_base,3,false,counted
+25381,Town05,HazardAtSideLane,b2d_full,9,false,counted
+25381,Town05,HazardAtSideLane,tfv6_lead,not determinable,false,not determinable
+25381,Town05,HazardAtSideLane,bridgedrive_lead,not determinable,false,not determinable
+25381,Town05,HazardAtSideLane,simlingo,not determinable,false,not determinable
+25381,Town05,HazardAtSideLane,blue,not determinable,false,not determinable
+25383,Town15,ParkedObstacle,b2d_base,3,false,counted
+25383,Town15,ParkedObstacle,b2d_full,12,false,counted
+25383,Town15,ParkedObstacle,tfv6_lead,not determinable,false,not determinable
+25383,Town15,ParkedObstacle,bridgedrive_lead,not determinable,false,not determinable
+25383,Town15,ParkedObstacle,simlingo,not determinable,false,not determinable
+25383,Town15,ParkedObstacle,blue,not determinable,false,not determinable
+25424,Town11,ConstructionObstacleTwoWays,b2d_base,0,false,counted
+25424,Town11,ConstructionObstacleTwoWays,b2d_full,2,false,counted
+25424,Town11,ConstructionObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+25424,Town11,ConstructionObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25424,Town11,ConstructionObstacleTwoWays,simlingo,not determinable,false,not determinable
+25424,Town11,ConstructionObstacleTwoWays,blue,not determinable,false,not determinable
+25439,Town15,HazardAtSideLane,b2d_base,2,false,counted
+25439,Town15,HazardAtSideLane,b2d_full,4,false,counted
+25439,Town15,HazardAtSideLane,tfv6_lead,not determinable,false,not determinable
+25439,Town15,HazardAtSideLane,bridgedrive_lead,not determinable,false,not determinable
+25439,Town15,HazardAtSideLane,simlingo,not determinable,false,not determinable
+25439,Town15,HazardAtSideLane,blue,not determinable,false,not determinable
+25845,Town15,AccidentTwoWays,b2d_base,0,false,counted
+25845,Town15,AccidentTwoWays,b2d_full,4,false,counted
+25845,Town15,AccidentTwoWays,tfv6_lead,not determinable,false,not determinable
+25845,Town15,AccidentTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25845,Town15,AccidentTwoWays,simlingo,not determinable,false,not determinable
+25845,Town15,AccidentTwoWays,blue,not determinable,false,not determinable
+25854,Town03,HazardAtSideLaneTwoWays,b2d_base,0,false,counted
+25854,Town03,HazardAtSideLaneTwoWays,b2d_full,6,false,counted
+25854,Town03,HazardAtSideLaneTwoWays,tfv6_lead,not determinable,false,not determinable
+25854,Town03,HazardAtSideLaneTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25854,Town03,HazardAtSideLaneTwoWays,simlingo,not determinable,false,not determinable
+25854,Town03,HazardAtSideLaneTwoWays,blue,not determinable,false,not determinable
+25857,Town05,AccidentTwoWays,b2d_base,0,false,counted
+25857,Town05,AccidentTwoWays,b2d_full,7,false,counted
+25857,Town05,AccidentTwoWays,tfv6_lead,not determinable,false,not determinable
+25857,Town05,AccidentTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25857,Town05,AccidentTwoWays,simlingo,not determinable,false,not determinable
+25857,Town05,AccidentTwoWays,blue,not determinable,false,not determinable
+25863,Town07,PedestrianCrossing,b2d_base,0,false,counted
+25863,Town07,PedestrianCrossing,b2d_full,3,false,counted
+25863,Town07,PedestrianCrossing,tfv6_lead,not determinable,false,not determinable
+25863,Town07,PedestrianCrossing,bridgedrive_lead,not determinable,false,not determinable
+25863,Town07,PedestrianCrossing,simlingo,not determinable,false,not determinable
+25863,Town07,PedestrianCrossing,blue,not determinable,false,not determinable
+25865,Town11,ParkedObstacleTwoWays,b2d_base,0,false,counted
+25865,Town11,ParkedObstacleTwoWays,b2d_full,5,false,counted
+25865,Town11,ParkedObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+25865,Town11,ParkedObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25865,Town11,ParkedObstacleTwoWays,simlingo,not determinable,false,not determinable
+25865,Town11,ParkedObstacleTwoWays,blue,not determinable,false,not determinable
+25896,Town03,ParkedObstacleTwoWays,b2d_base,0,false,counted
+25896,Town03,ParkedObstacleTwoWays,b2d_full,13,false,counted
+25896,Town03,ParkedObstacleTwoWays,tfv6_lead,not determinable,false,not determinable
+25896,Town03,ParkedObstacleTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25896,Town03,ParkedObstacleTwoWays,simlingo,not determinable,false,not determinable
+25896,Town03,ParkedObstacleTwoWays,blue,not determinable,false,not determinable
+25928,Town11,VehicleOpensDoorTwoWays,b2d_base,0,false,counted
+25928,Town11,VehicleOpensDoorTwoWays,b2d_full,6,false,counted
+25928,Town11,VehicleOpensDoorTwoWays,tfv6_lead,not determinable,false,not determinable
+25928,Town11,VehicleOpensDoorTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25928,Town11,VehicleOpensDoorTwoWays,simlingo,not determinable,false,not determinable
+25928,Town11,VehicleOpensDoorTwoWays,blue,not determinable,false,not determinable
+25951,Town04,HazardAtSideLaneTwoWays,b2d_base,0,false,counted
+25951,Town04,HazardAtSideLaneTwoWays,b2d_full,8,false,counted
+25951,Town04,HazardAtSideLaneTwoWays,tfv6_lead,not determinable,false,not determinable
+25951,Town04,HazardAtSideLaneTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25951,Town04,HazardAtSideLaneTwoWays,simlingo,not determinable,false,not determinable
+25951,Town04,HazardAtSideLaneTwoWays,blue,not determinable,false,not determinable
+25955,Town05,HazardAtSideLaneTwoWays,b2d_base,0,false,counted
+25955,Town05,HazardAtSideLaneTwoWays,b2d_full,4,false,counted
+25955,Town05,HazardAtSideLaneTwoWays,tfv6_lead,not determinable,false,not determinable
+25955,Town05,HazardAtSideLaneTwoWays,bridgedrive_lead,not determinable,false,not determinable
+25955,Town05,HazardAtSideLaneTwoWays,simlingo,not determinable,false,not determinable
+25955,Town05,HazardAtSideLaneTwoWays,blue,not determinable,false,not determinable
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,b2d_base,3,false,counted
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,b2d_full,10,false,counted
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,tfv6_lead,not determinable,false,not determinable
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,bridgedrive_lead,not determinable,false,not determinable
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,simlingo,not determinable,false,not determinable
+25968,Town07,VanillaSignalizedTurnEncounterGreenLight,blue,not determinable,false,not determinable
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,b2d_base,3,false,counted
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,b2d_full,10,false,counted
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,tfv6_lead,not determinable,false,not determinable
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,bridgedrive_lead,not determinable,false,not determinable
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,simlingo,not determinable,false,not determinable
+25975,Town07,VanillaSignalizedTurnEncounterGreenLight,blue,not determinable,false,not determinable
+26393,Town03,ParkingExit,b2d_base,0,false,counted
+26393,Town03,ParkingExit,b2d_full,5,false,counted
+26393,Town03,ParkingExit,tfv6_lead,not determinable,false,not determinable
+26393,Town03,ParkingExit,bridgedrive_lead,not determinable,false,not determinable
+26393,Town03,ParkingExit,simlingo,not determinable,false,not determinable
+26393,Town03,ParkingExit,blue,not determinable,false,not determinable
+26394,Town06,MergerIntoSlowTrafficV2,b2d_base,0,false,counted
+26394,Town06,MergerIntoSlowTrafficV2,b2d_full,1,false,counted
+26394,Town06,MergerIntoSlowTrafficV2,tfv6_lead,not determinable,false,not determinable
+26394,Town06,MergerIntoSlowTrafficV2,bridgedrive_lead,not determinable,false,not determinable
+26394,Town06,MergerIntoSlowTrafficV2,simlingo,not determinable,false,not determinable
+26394,Town06,MergerIntoSlowTrafficV2,blue,not determinable,false,not determinable
+26396,Town05,StaticCutIn,b2d_base,4,false,counted
+26396,Town05,StaticCutIn,b2d_full,13,false,counted
+26396,Town05,StaticCutIn,tfv6_lead,not determinable,false,not determinable
+26396,Town05,StaticCutIn,bridgedrive_lead,not determinable,false,not determinable
+26396,Town05,StaticCutIn,simlingo,not determinable,false,not determinable
+26396,Town05,StaticCutIn,blue,not determinable,false,not determinable
+26401,Town06,MergerIntoSlowTrafficV2,b2d_base,0,false,counted
+26401,Town06,MergerIntoSlowTrafficV2,b2d_full,1,false,counted
+26401,Town06,MergerIntoSlowTrafficV2,tfv6_lead,not determinable,false,not determinable
+26401,Town06,MergerIntoSlowTrafficV2,bridgedrive_lead,not determinable,false,not determinable
+26401,Town06,MergerIntoSlowTrafficV2,simlingo,not determinable,false,not determinable
+26401,Town06,MergerIntoSlowTrafficV2,blue,not determinable,false,not determinable
+26405,Town15,StaticCutIn,b2d_base,4,false,counted
+26405,Town15,StaticCutIn,b2d_full,13,false,counted
+26405,Town15,StaticCutIn,tfv6_lead,not determinable,false,not determinable
+26405,Town15,StaticCutIn,bridgedrive_lead,not determinable,false,not determinable
+26405,Town15,StaticCutIn,simlingo,not determinable,false,not determinable
+26405,Town15,StaticCutIn,blue,not determinable,false,not determinable
+26406,Town04,HardBreakRoute,b2d_base,3,false,counted
+26406,Town04,HardBreakRoute,b2d_full,15,false,counted
+26406,Town04,HardBreakRoute,tfv6_lead,not determinable,false,not determinable
+26406,Town04,HardBreakRoute,bridgedrive_lead,not determinable,false,not determinable
+26406,Town04,HardBreakRoute,simlingo,not determinable,false,not determinable
+26406,Town04,HardBreakRoute,blue,not determinable,false,not determinable
+26408,Town06,MergerIntoSlowTrafficV2,b2d_base,0,false,counted
+26408,Town06,MergerIntoSlowTrafficV2,b2d_full,1,false,counted
+26408,Town06,MergerIntoSlowTrafficV2,tfv6_lead,not determinable,false,not determinable
+26408,Town06,MergerIntoSlowTrafficV2,bridgedrive_lead,not determinable,false,not determinable
+26408,Town06,MergerIntoSlowTrafficV2,simlingo,not determinable,false,not determinable
+26408,Town06,MergerIntoSlowTrafficV2,blue,not determinable,false,not determinable
+26418,Town11,ControlLoss,b2d_base,2,false,counted
+26418,Town11,ControlLoss,b2d_full,2,false,counted
+26418,Town11,ControlLoss,tfv6_lead,not determinable,false,not determinable
+26418,Town11,ControlLoss,bridgedrive_lead,not determinable,false,not determinable
+26418,Town11,ControlLoss,simlingo,not determinable,false,not determinable
+26418,Town11,ControlLoss,blue,not determinable,false,not determinable
+26435,Town03,ParkingExit,b2d_base,0,false,counted
+26435,Town03,ParkingExit,b2d_full,5,false,counted
+26435,Town03,ParkingExit,tfv6_lead,not determinable,false,not determinable
+26435,Town03,ParkingExit,bridgedrive_lead,not determinable,false,not determinable
+26435,Town03,ParkingExit,simlingo,not determinable,false,not determinable
+26435,Town03,ParkingExit,blue,not determinable,false,not determinable
+26456,Town03,HardBreakRoute,b2d_base,3,false,counted
+26456,Town03,HardBreakRoute,b2d_full,18,false,counted
+26456,Town03,HardBreakRoute,tfv6_lead,not determinable,false,not determinable
+26456,Town03,HardBreakRoute,bridgedrive_lead,not determinable,false,not determinable
+26456,Town03,HardBreakRoute,simlingo,not determinable,false,not determinable
+26456,Town03,HardBreakRoute,blue,not determinable,false,not determinable
+26458,Town07,T_Junction,b2d_base,0,false,counted
+26458,Town07,T_Junction,b2d_full,0,false,counted
+26458,Town07,T_Junction,tfv6_lead,not determinable,false,not determinable
+26458,Town07,T_Junction,bridgedrive_lead,not determinable,false,not determinable
+26458,Town07,T_Junction,simlingo,not determinable,false,not determinable
+26458,Town07,T_Junction,blue,not determinable,false,not determinable
+26944,Town04,OppositeVehicleRunningRedLight,b2d_base,3,false,counted
+26944,Town04,OppositeVehicleRunningRedLight,b2d_full,11,false,counted
+26944,Town04,OppositeVehicleRunningRedLight,tfv6_lead,not determinable,false,not determinable
+26944,Town04,OppositeVehicleRunningRedLight,bridgedrive_lead,not determinable,false,not determinable
+26944,Town04,OppositeVehicleRunningRedLight,simlingo,not determinable,false,not determinable
+26944,Town04,OppositeVehicleRunningRedLight,blue,not determinable,false,not determinable
+26950,Town03,OppositeVehicleRunningRedLight,b2d_base,4,false,counted
+26950,Town03,OppositeVehicleRunningRedLight,b2d_full,2,false,counted
+26950,Town03,OppositeVehicleRunningRedLight,tfv6_lead,not determinable,false,not determinable
+26950,Town03,OppositeVehicleRunningRedLight,bridgedrive_lead,not determinable,false,not determinable
+26950,Town03,OppositeVehicleRunningRedLight,simlingo,not determinable,false,not determinable
+26950,Town03,OppositeVehicleRunningRedLight,blue,not determinable,false,not determinable
+26956,Town05,SignalizedJunctionRightTurn,b2d_base,0,false,counted
+26956,Town05,SignalizedJunctionRightTurn,b2d_full,8,false,counted
+26956,Town05,SignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+26956,Town05,SignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+26956,Town05,SignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+26956,Town05,SignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+26966,Town05,SignalizedJunctionRightTurn,b2d_base,0,false,counted
+26966,Town05,SignalizedJunctionRightTurn,b2d_full,8,false,counted
+26966,Town05,SignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+26966,Town05,SignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+26966,Town05,SignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+26966,Town05,SignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+26990,Town03,NonSignalizedJunctionLeftTurn,b2d_base,4,false,counted
+26990,Town03,NonSignalizedJunctionLeftTurn,b2d_full,5,false,counted
+26990,Town03,NonSignalizedJunctionLeftTurn,tfv6_lead,not determinable,false,not determinable
+26990,Town03,NonSignalizedJunctionLeftTurn,bridgedrive_lead,not determinable,false,not determinable
+26990,Town03,NonSignalizedJunctionLeftTurn,simlingo,not determinable,false,not determinable
+26990,Town03,NonSignalizedJunctionLeftTurn,blue,not determinable,false,not determinable
+27018,Town15,SignalizedJunctionRightTurn,b2d_base,2,false,counted
+27018,Town15,SignalizedJunctionRightTurn,b2d_full,12,false,counted
+27018,Town15,SignalizedJunctionRightTurn,tfv6_lead,not determinable,false,not determinable
+27018,Town15,SignalizedJunctionRightTurn,bridgedrive_lead,not determinable,false,not determinable
+27018,Town15,SignalizedJunctionRightTurn,simlingo,not determinable,false,not determinable
+27018,Town15,SignalizedJunctionRightTurn,blue,not determinable,false,not determinable
+27494,Town04,BlockedIntersection,b2d_base,3,false,counted
+27494,Town04,BlockedIntersection,b2d_full,16,false,counted
+27494,Town04,BlockedIntersection,tfv6_lead,not determinable,false,not determinable
+27494,Town04,BlockedIntersection,bridgedrive_lead,not determinable,false,not determinable
+27494,Town04,BlockedIntersection,simlingo,not determinable,false,not determinable
+27494,Town04,BlockedIntersection,blue,not determinable,false,not determinable
+27506,Town05,EnterActorFlow,b2d_base,2,false,counted
+27506,Town05,EnterActorFlow,b2d_full,4,false,counted
+27506,Town05,EnterActorFlow,tfv6_lead,not determinable,false,not determinable
+27506,Town05,EnterActorFlow,bridgedrive_lead,not determinable,false,not determinable
+27506,Town05,EnterActorFlow,simlingo,not determinable,false,not determinable
+27506,Town05,EnterActorFlow,blue,not determinable,false,not determinable
+27515,Town03,PedestrianCrossing,b2d_base,0,false,counted
+27515,Town03,PedestrianCrossing,b2d_full,10,false,counted
+27515,Town03,PedestrianCrossing,tfv6_lead,not determinable,false,not determinable
+27515,Town03,PedestrianCrossing,bridgedrive_lead,not determinable,false,not determinable
+27515,Town03,PedestrianCrossing,simlingo,not determinable,false,not determinable
+27515,Town03,PedestrianCrossing,blue,not determinable,false,not determinable
+27529,Town04,PedestrianCrossing,b2d_base,0,false,counted
+27529,Town04,PedestrianCrossing,b2d_full,11,false,counted
+27529,Town04,PedestrianCrossing,tfv6_lead,not determinable,false,not determinable
+27529,Town04,PedestrianCrossing,bridgedrive_lead,not determinable,false,not determinable
+27529,Town04,PedestrianCrossing,simlingo,not determinable,false,not determinable
+27529,Town04,PedestrianCrossing,blue,not determinable,false,not determinable
+27532,Town11,BlockedIntersection,b2d_base,0,false,counted
+27532,Town11,BlockedIntersection,b2d_full,20,false,counted
+27532,Town11,BlockedIntersection,tfv6_lead,not determinable,false,not determinable
+27532,Town11,BlockedIntersection,bridgedrive_lead,not determinable,false,not determinable
+27532,Town11,BlockedIntersection,simlingo,not determinable,false,not determinable
+27532,Town11,BlockedIntersection,blue,not determinable,false,not determinable
+27582,Town11,PedestrianCrossing,b2d_base,0,false,counted
+27582,Town11,PedestrianCrossing,b2d_full,14,false,counted
+27582,Town11,PedestrianCrossing,tfv6_lead,not determinable,false,not determinable
+27582,Town11,PedestrianCrossing,bridgedrive_lead,not determinable,false,not determinable
+27582,Town11,PedestrianCrossing,simlingo,not determinable,false,not determinable
+27582,Town11,PedestrianCrossing,blue,not determinable,false,not determinable
+28035,Town01,T_Junction,b2d_base,0,false,counted
+28035,Town01,T_Junction,b2d_full,0,false,counted
+28035,Town01,T_Junction,tfv6_lead,not determinable,false,not determinable
+28035,Town01,T_Junction,bridgedrive_lead,not determinable,false,not determinable
+28035,Town01,T_Junction,simlingo,not determinable,false,not determinable
+28035,Town01,T_Junction,blue,not determinable,false,not determinable
+28048,Town02,T_Junction,b2d_base,0,false,counted
+28048,Town02,T_Junction,b2d_full,0,false,counted
+28048,Town02,T_Junction,tfv6_lead,not determinable,false,not determinable
+28048,Town02,T_Junction,bridgedrive_lead,not determinable,false,not determinable
+28048,Town02,T_Junction,simlingo,not determinable,false,not determinable
+28048,Town02,T_Junction,blue,not determinable,false,not determinable
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,b2d_base,0,false,counted
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,b2d_full,3,false,counted
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28087,Town04,NonSignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,b2d_base,0,false,counted
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,b2d_full,3,false,counted
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28093,Town04,NonSignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,b2d_base,0,false,counted
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,b2d_full,1,false,counted
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28099,Town04,SignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28111,Town04,T_Junction,b2d_base,0,false,counted
+28111,Town04,T_Junction,b2d_full,0,false,counted
+28111,Town04,T_Junction,tfv6_lead,not determinable,false,not determinable
+28111,Town04,T_Junction,bridgedrive_lead,not determinable,false,not determinable
+28111,Town04,T_Junction,simlingo,not determinable,false,not determinable
+28111,Town04,T_Junction,blue,not determinable,false,not determinable
+28154,Town10HD,T_Junction,b2d_base,0,false,counted
+28154,Town10HD,T_Junction,b2d_full,0,false,counted
+28154,Town10HD,T_Junction,tfv6_lead,not determinable,false,not determinable
+28154,Town10HD,T_Junction,bridgedrive_lead,not determinable,false,not determinable
+28154,Town10HD,T_Junction,simlingo,not determinable,false,not determinable
+28154,Town10HD,T_Junction,blue,not determinable,false,not determinable
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,b2d_base,5,false,counted
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,b2d_full,6,false,counted
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28198,Town15,SignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_base,6,false,counted
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_full,10,false,counted
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28210,Town12,NonSignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_base,6,false,counted
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_full,10,false,counted
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28219,Town12,NonSignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_base,6,false,counted
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,b2d_full,10,false,counted
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28229,Town12,NonSignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_base,8,false,counted
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_full,9,false,counted
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28241,Town12,SignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_base,8,false,counted
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_full,9,false,counted
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28243,Town12,SignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_base,8,false,counted
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,b2d_full,9,false,counted
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,tfv6_lead,not determinable,false,not determinable
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,bridgedrive_lead,not determinable,false,not determinable
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,simlingo,not determinable,false,not determinable
+28330,Town12,SignalizedJunctionLeftTurnEnterFlow,blue,not determinable,false,not determinable

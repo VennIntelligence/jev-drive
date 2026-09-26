@@ -189,6 +189,8 @@ Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：�
 
 - [CX] 2026-09-26 18:27 CST main 授权描述性 fallback，写于计数之前：仅统计公开 clip 清单中 town 与原始 scenario 类和评测 route 完全相同的实际 clip 数，**不检查触发点距离**；B2D base / full 用固定 commit 的官方 JSON 文件名解析，其他族成员关系不足的标 `not determinable`。每 clip 每 route 最多一次，多 scenario 取并集。产出 `overlap_fallback.csv`，原 `< 30 m` 近邻计数仍不可得；不与 G 做相关。预计 10 min，超过 20 min 停。
 
+- [CX] 2026-09-26 18:31 CST O **done（main 授权描述性 fallback）**：`research/results/nq4/o/overlap_fallback.csv` 为 220 route × 6 数据集；B2D base / full 同 town、同 scenario 类计数已完成，其他四族 `not determinable`。**触发点距离未检查，原 `< 30 m` 近邻不可得**，不与 G 做相关。出处、分布、输入 SHA-256 与 QA 见 `research/results/nq4/o/summary.md`、`fallback_sources.json`；脚本 `scripts/nq4_o_fallback.py`。仅元数据，本轮约 4 min。CX 产出，待 main 复核。
+
 ## W. 世界模型配对测试（GPU 探索，不训 policy）
 
 问的是：在 latent 里预测未来的世界模型，能不能分清有没有 hazard、能不能推演不同动作的后果。这是「JEPA 世界模型 + openpilot 低成本训策略」的前置检查，过了才考虑下一轮的 latent MPC。
