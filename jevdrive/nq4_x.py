@@ -11,7 +11,7 @@ offline check alike.
                           over 8 m (PDM-Lite's transition_smoothness_distance), in from where the ego is when the head first
                           says bypass, held until 30 m past the ego's position at the last bypass output, then 8 m back;
                           the trajectory's speed profile (its arc length at 0.25 ... 5 s) is kept and laid along that path
-      stop / wait          target speed 0: every point at the origin (P7 brakes with its own law)
+      stop / wait          preserve geometry; target 0 at >= 1 m/s, route cruise below 1 m/s
       keep                 the head's own trajectory (= CL5), unless a shift is still active (then the shifted path)
   export-q2 / export-mc    (repo .venv, GPU) the Q2 head (lane C's chosen arms) and the M-C heads refitted on one fold's
                            routes (K's route_split.json), written to runs/nq4/gk/heads_xfit/{q2,mc}/R{1,2}, then READY
@@ -81,19 +81,28 @@ class XState:
         w_out = 1.0 - smooth((s - (self.s_last + HOLD_M)) / TRANSITION_M)
         return np.minimum(w_in, w_out)
 
-    def step(self, mode, traj, xy0, yaw0):
+    def step(self, mode, traj, xy0, yaw0, speed_mps=None, cruise_mps=8.0):
         """mode (int or None), traj (20, 2) the head's trajectory in the ego frame of pose (xy0, yaw0; rear axle, CARLA
-        world, yaw rad) -> (path (20, 2), info). Deterministic given the call sequence."""
+        world, yaw rad) -> (path (20, 2), info). Deterministic given the call sequence.
+        speed_mps=None replays legacy dumps; new calls provide current sensor speed and route cruise."""
         traj = np.asarray(traj, float)
         s0 = self._arc(xy0)
         info = {"mode": None if mode is None else int(mode), "s_ego": round(s0, 3)}
+        if speed_mps is not None:
+            if not np.isfinite([speed_mps, cruise_mps]).all() or speed_mps < 0 or cruise_mps <= 0:
+                raise ValueError("X requires finite nonnegative speed and positive route cruise")
+            stop = mode in (1, 4)
+            info.update(raw_mode=info["mode"], effective_mode=0 if stop and speed_mps < 1.0 else info["mode"],
+                        speed_mps=float(speed_mps), cruise_mps=float(cruise_mps),
+                        target_speed_mps=(0.0 if speed_mps >= 1.0 else float(cruise_mps)) if stop else None)
+            mode = info["effective_mode"]
         if mode in (2, 3):
             if self.side is None or s0 > self.s_last + HOLD_M + TRANSITION_M:
                 self.side, self.s_in = int(mode), s0
             self.s_last = s0
         if self.side is not None and s0 > self.s_last + HOLD_M + TRANSITION_M:
             self.side = None
-        if mode in (1, 4):
+        if mode in (1, 4) and speed_mps is None:
             info["x"] = "stop"
             return np.zeros((20, 2)), info
         if self.side is None:
@@ -133,10 +142,11 @@ def check(adir: Path) -> dict:
         r = json.loads(line)
         if r.get("warmup"):
             continue
-        path, _ = st.step(r["mode"], np.array(r["traj"]), np.array(r["pose"][:2]), r["pose"][2])
+        path, info = st.step(r["mode"], np.array(r["traj"]), np.array(r["pose"][:2]), r["pose"][2],
+                             r.get("speed_mps"), r.get("cruise_mps", 8.0))
         dif = float(np.abs(path - np.array(r["path"])).max())
         worst = max(worst, dif)
-        bad += dif != 0.0
+        bad += dif != 0.0 or info != r["x"]
         n += 1
     return {"plans": n, "differing": bad, "max_abs_diff_m": worst}
 

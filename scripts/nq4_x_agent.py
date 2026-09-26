@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import zeroshot_wire as wire  # noqa: E402
 from b2d_zeroshot_agent import DELTA, ZeroShotAgent  # noqa: E402
+from nq4_x_controller import XController
 from jevdrive import nq4_x as NX  # noqa: E402
 
 
@@ -37,6 +38,11 @@ class NQ4Agent(ZeroShotAgent):
     def setup(self, path_to_conf_file):
         super().setup(path_to_conf_file)
         self.fold_meta, self.x = {}, None
+        if self.cfg.get("x"):
+            params = {k: v for k, v in self.vehicle.items() if k not in
+                      ("rear_axle_offset_m", "pose_lateral_coefficient_s2_per_m", "adapter", "metadata", "preset")}
+            self.controller = XController(preset=self.cfg.get("controller_preset", "carla"), **params)
+        self.x_speed_mps = 0.0
         folds = self.cfg.get("folds")
         rid = os.environ.get("BENCHMARK_ROUTE_ID", "0")
         if folds:
@@ -68,6 +74,11 @@ class NQ4Agent(ZeroShotAgent):
         np.savez(os.path.join(self.out, "x_route.npz"), route=np.asarray(P), left=np.asarray(L), right=np.asarray(R))
         self.x_log = open(os.path.join(self.out, "x_dump.jsonl"), "w", buffering=1)
 
+    def _head_tick(self, data, frame, now):
+        from b2d_controller_adapter import controller_speed
+        self.x_speed_mps = controller_speed(float(data["SPEED"][1]["speed"]))
+        return super()._head_tick(data, frame, now)
+
     def _head_plan(self):
         from jevdrive import nq3_cl as CL
         t_start = time.perf_counter()
@@ -94,12 +105,15 @@ class NQ4Agent(ZeroShotAgent):
         xinfo = None
         if self.x is not None and not warm:
             head_path = path
-            path, xinfo = self.x.step(info.get("mode"), head_path, xy[k], float(yaw[k]))
+            path, xinfo = self.x.step(info.get("mode"), head_path, xy[k], float(yaw[k]),
+                                      self.x_speed_mps, float(self.cfg.get("cruise_mps", 8.0)))
             self.x_log.write(json.dumps({"frame": int(f), "t": t_frame, "mode": info.get("mode"), "warmup": False,
+                                         "speed_mps": self.x_speed_mps, "cruise_mps": float(self.cfg.get("cruise_mps", 8.0)),
                                          "pose": [float(xy[k, 0]), float(xy[k, 1]), float(yaw[k])],
                                          "traj": np.asarray(head_path).tolist(), "path": np.asarray(path).tolist(),
                                          "x": xinfo}) + "\n")
-        accepted = False if warm else self.controller.update(path, t_frame)
+        target = {} if xinfo is None else {"target_speed_mps": xinfo["target_speed_mps"]}
+        accepted = False if warm else self.controller.update(path, t_frame, **target)
         self.n_plans += 1
         ms = 1e3 * (time.perf_counter() - t_start)
         self.timings["plan_ms"].append(ms)
