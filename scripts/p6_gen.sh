@@ -14,6 +14,7 @@ PY=$DATA_DIR/envs/carla/bin/python
 read -ra G <<< "${GPUS:-0 1 2}"
 W=${WORKERS:-6} CORES=${CORES:-3} BLOCK=${BLOCK:-800}
 mkdir -p "$OUT"
+echo "gen $$" >> "$OUT/pids.txt"          # every PID this run starts, for scripts/p6_stop.sh (no name matching)
 exec > >(tee -a "$OUT/log.txt") 2>&1
 echo "$(date '+%F %T') p6-gen start: GPUs [${G[*]}], $W CARLA instances each, $CORES cores each, block $BLOCK, only=${ONLY:-all}"
 echo "$(date '+%F %T') GPUs ${G[*]} x $W servers (server index $BLOCK..)" >> "$OUT/gpus.txt"
@@ -71,7 +72,9 @@ chain() {  # chain <j>
             taskset -c "$cpus" "$PY" scripts/b2d_run.py --routes "$R/pairs.xml" --route-ids "$ids" --out "$OUT" \
             --workers "$w" --server-index "$base" --index-span "$span" --gpu-rank "$g" --tm-seed-from-id \
             --agent scripts/p5_pair_agent.py --agent-config "$R/agent-p6.json" --python "$DATA_DIR/envs/p5v1-pdm/bin/python" \
-            --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8 --stall-s ${STALL_S:-600}
+            --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8 --stall-s ${STALL_S:-600} &
+        echo "runner $! gpu $g" >> "$OUT/pids.txt"
+        wait $!
     done
     echo "$(date +%T) chain gpu $g end"
 }
@@ -80,6 +83,7 @@ pids=()
 for ((j = 0; j < ${#G[@]}; j++)); do
     chain "$j" > "$OUT/chain-gpu${G[$j]}.log" 2>&1 &
     pids+=($!)
+    echo "chain $! gpu ${G[$j]}" >> "$OUT/pids.txt"
     (( j + 1 < ${#G[@]} )) && sleep 45
 done
 for p in "${pids[@]}"; do wait "$p"; done
