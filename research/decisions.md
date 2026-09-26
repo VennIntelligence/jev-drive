@@ -3112,13 +3112,34 @@ student 是第 42 条里 E5 那个不含 Qwen 的快通道（openpilot `temporal
 它读的不是真实帧里的行人，而是一个与场景无关的小偏置；和 E1 一样，NAVSIM（2 Hz 输入）比 WOD 更重。按 G0 登记的预期，「有害」意味着 MLP 在 embedding 上也学了 CARLA 的分布，G1 的 gate 是必需的；
 而且害来自全部帧上的系统偏移而不是激活，gate 必须把非 hazard 帧上的 Δ 压到零，只卡激活门槛不够。图：[real-g0-student-transfer](figs/real-g0-student-transfer.png)，小表 [research/results/real-data-transfer/g0/](results/real-data-transfer/g0/)。
 
+**G1（第二轮，同一 todo 的 G1 节）：真实数据训的 gate × CARLA 配对的 Δ——WOD 上害消失，但靠的是把 Δ 整体缩小；NAVSIM 上主 arm 仍有害；行人帧上没有一格为正。**
+三个 gate：g₁ = 第 23 条 (e) 的 gated residual 在 WOD train / navtrain 上重训、只取 gate（输入 ego ⊕ openpilot `temporal`）；g₂ = G0 检测 embedding 上的 hazard probe（走廊内行人 / cyclist / 接近车辆，Platt 校准）；g₃ = openpilot lead 头的 P(lead) × TTC 单调映射（无训练）。
+gate 逐帧乘 Δ（prior + g·Δ），读数函数与 E1 / G0 一字不改。主 arm 按训练行上对 hazard 标签的 AUC 选（不看评测数）：两个数据集都是 g₂（0.74 / 0.73；g₁ 0.54–0.58 与 0.26–0.30，g₃ 0.54–0.58）。
+
+| 主 arm g₂，Cinque | M-C（E1 的 Δ） | student A（G0 的 Δ，3 seed） |
+|:--|:--|:--|
+| WOD RFS Δ，全部 478 rater 帧 | −0.03 [−0.09, +0.04]（无 gate −1.02） | −0.00 … +0.00（无 gate −0.11 … −0.09） |
+| WOD RFS Δ，Pedestrians（52） | +0.09 [−0.04, +0.23] | −0.00 … +0.01 |
+| WOD straight_yaw 激活率 | 0.0%（16.7%） | 0.0–0.1% |
+| navtest PDMS Δ，全部 | **−1.61 [−2.14, −1.08]**（−8.17） | **−0.54 … −0.44**（CI 全 < 0；−1.30 … −1.10） |
+| navtest PDMS Δ，行人 / cyclist 组（897） | +0.10 [−2.20, +2.43] | −0.88 … −0.58 |
+| I3 翻转对 prior（pp；null false-flip） | −4.4 [−6.0, −2.9]（−11.2；5.4%） | +0.1 … +0.2（CI 跨零；4.7–4.8%） |
+| 判格（WOD / NAVSIM） | 成立 / 不成立 | 成立 / 不成立（3 seed 一致） |
+
+读法：g₂ 在 WOD val 上均值只有 0.16、g > 0.5 的帧 < 2%，行人帧 0.19 对直行 0.16，Δ 被整体压到约六分之一，所以激活归零、RFS 回到 prior；事后加的常数对照（g₂ 的均值当常数乘上去）在 WOD 与 I3 上与 g₂ 持平或更好，逐帧选择没有贡献。
+NAVSIM 上 g₂ 开度 0.43（直行 0.50，navtrain 标签里接近车辆占 40%），只把害压到 E1 的五分之一。Lebowski 的 M-C × g₂ 两个数据集都不成立。主 arm 没有一格「有用」，student 也没有比 M-C 更接近为正。
+非主 arm 的一个稳定正数：**M-C × g₃ 在 NAVSIM 上两个模型都「有用」**（PDMS +0.46 [+0.34, +0.59] / +0.36，行人组 +1.53 / +1.55），收益全部来自 openpilot lead 头报 TTC < 6 s 的约 5% token（碰撞与 TTC 子项），
+即「前车逼近时加上 M-C 那个普遍偏慢的修正」，是车辆纵向减速，不是行人反应；student 的 Δ 不减速，同一个 g₃ 下为负；WOD 上 g₃ 几乎不开（Δ 为 0），I3 上 −1.6 pp。一个常数减速乘 g₃ 是否一样好还没测。
+图：[real-g1-gates](figs/real-g1-gates.png)，小表 [research/results/real-data-transfer/g1/](results/real-data-transfer/g1/)。
+
 **对方向的含义**：配对差分在 CARLA 里激发得出来（第 42 条，以及同一条里 E5 的 20 Hz student），但本轮三条通往真实数据的路（零样本迁移、log 孪生对、真实帧编辑对）都没通，第二轮加上的不含 Qwen 的 student 零样本（G0）也没通：
-零样本有害（student 的害小一个量级，但 NAVSIM 全部 token 上仍整体 < 0；原写只有 M-C 的零样本），孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
+零样本有害（student 的害小一个量级，但 NAVSIM 全部 token 上仍整体 < 0；原写只有 M-C 的零样本），真实数据训的门控（G1）只能把害压小（WOD 上消失、NAVSIM 上剩五分之一），靠的是整体缩小 Δ 而不是按帧选择，行人帧上不为正；
+唯一的正数是 openpilot lead 头的 TTC 门乘 M-C 的减速修正在 NAVSIM 上少撞前车，属于车辆纵向、与 CARLA 配对的行人激发无关（第二轮 G1 补；原写没有门控这一项），孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
 瓶颈不在 head 的训练信号，在「真实数据上有没有干净的配对标签」。
 
 **状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。G0 限定：真实数据上的走廊是 ego 历史圆弧（P5 上与路线走廊的行人标记一致 99.5%），20–40 m 的平地放置误差中位 6 m；NAVSIM 地面高度按 navtrain GT 车辆框定为 −0.36 m。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
 **怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选（都要新登记，未做）：几何一致的真实外观配对（HUGSIM 3DGS，I3 已有 65 个车辆场景；
-在那里 CARLA 拟合的 openpilot 读出零样本翻 70%，而 M-C Δ 反而 −11 pp，见 [i3 子文档](../todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md)）；以及带门控的部署形式。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
+在那里 CARLA 拟合的 openpilot 读出零样本翻 70%，而 M-C Δ 反而 −11 pp，见 [i3 子文档](../todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md)）；带门控的部署形式 G1 已做（见上，原列为候选）：下一步只剩「g₃ × 常数减速」对照，决定 openpilot lead 门是否值得作为车辆通道单独登记。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
 
 ## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
 

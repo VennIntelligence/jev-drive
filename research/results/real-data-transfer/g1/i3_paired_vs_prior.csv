@@ -1,0 +1,281 @@
+examinee,vs,scope,n,delta,lo,hi
+M-C pair [cinque],ridge_late op-cinque temporal,pooled,1832,-0.1124454148471615,-0.1363636363636363,-0.0892355027917324
+M-C pair [cinque],ridge_late op-cinque temporal,cutin,216,-0.2037037037037037,-0.2906148867313916,-0.1244239631336405
+M-C pair [cinque],ridge_late op-cinque temporal,oncoming,657,-0.1019786910197869,-0.1357513786764705,-0.0688549002347417
+M-C pair [cinque],ridge_late op-cinque temporal,static,959,-0.0990615224191866,-0.1269548363049694,-0.0724767375926585
+student A s0 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.1020742358078602,-0.1489409521023436,-0.0616130832807208
+student A s0 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0185185185185185,-0.0648223514211886,0.0271555197421434
+student A s0 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.0730593607305936,-0.1118089017630838,-0.035765790918866
+student A s0 [cinque],ridge_late op-cinque temporal,static,959,-0.140771637122002,-0.2091399648780071,-0.0813825239398085
+student A s1 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.0786026200873362,-0.1192613059807547,-0.0441495015761808
+student A s1 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0092592592592592,-0.0487864658058345,0.0315350984468631
+student A s1 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.0578386605783866,-0.0952417582417582,-0.0236551948563302
+student A s1 [cinque],ridge_late op-cinque temporal,static,959,-0.1084462982273201,-0.1626449103703031,-0.0583318158168574
+student A s2 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.0709606986899563,-0.111047236575512,-0.0367567311050487
+student A s2 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0428622693096377,0.0350021929824561
+student A s2 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.045662100456621,-0.0836007846288374,-0.0118168389955686
+student A s2 [cinque],ridge_late op-cinque temporal,static,959,-0.1032325338894682,-0.1597073954983922,-0.053014553014553
+student B s0 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.0922489082969432,-0.1361570772974678,-0.0523457876890975
+student B s0 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0092592592592592,-0.0486752644075113,0.0331793048973143
+student B s0 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.045662100456621,-0.0823109957298136,-0.0119363418547908
+student B s0 [cinque],ridge_late op-cinque temporal,static,959,-0.1428571428571428,-0.2070352387133349,-0.0846386995548653
+student B s1 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.0671397379912663,-0.1053097920522262,-0.0325649449939239
+student B s1 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0092592592592592,-0.0452318410232983,0.0255401687454144
+student B s1 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.0258751902587519,-0.0593625964298072,0.0045530470641383
+student B s1 [cinque],ridge_late op-cinque temporal,static,959,-0.1084462982273201,-0.1640977679870869,-0.0575895321412441
+student B s2 [cinque],ridge_late op-cinque temporal,pooled,1832,-0.0736899563318777,-0.1114857937073886,-0.0401045811789971
+student B s2 [cinque],ridge_late op-cinque temporal,cutin,216,-0.0231481481481481,-0.0654205607476635,0.0184374665094844
+student B s2 [cinque],ridge_late op-cinque temporal,oncoming,657,-0.0243531202435312,-0.0583599243096037,0.0063065432358508
+student B s2 [cinque],ridge_late op-cinque temporal,static,959,-0.1188738269030239,-0.17599329335656,-0.0682706969610373
+M-C pair [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.1086244541484716,-0.1338940682424303,-0.0847261434217956
+M-C pair [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.2175925925925926,-0.3102156432748538,-0.1285622710622711
+M-C pair [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.1004566210045662,-0.134710356336743,-0.0660355654589651
+M-C pair [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.0896767466110531,-0.1151471471932487,-0.0661730022197558
+M-C pair [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0158296943231441,-0.0284828882038411,-0.0057769361492628
+M-C pair [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0231481481481481,-0.045662100456621,0.0
+M-C pair [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,-0.0015220700152207,-0.0090232368250944,0.0046296296296296
+M-C pair [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0239833159541188,-0.0447916666666666,-0.0082815734989648
+M-C pair [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,-0.0442139737991266,-0.0597361670537735,-0.0291470222372381
+M-C pair [cinque] x g2,ridge_late op-cinque temporal,cutin,216,-0.125,-0.1814259855189058,-0.0707964601769911
+M-C pair [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,-0.0426179604261796,-0.0622109389402827,-0.0238033873343152
+M-C pair [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.02711157455683,-0.0446567848778095,-0.0111122399990463
+M-C pair [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,-0.0185589519650655,-0.0308742415885273,-0.0069147487268564
+M-C pair [cinque] x c2,ridge_late op-cinque temporal,cutin,216,-0.074074074074074,-0.1179039301310043,-0.0309723109205364
+M-C pair [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,-0.0121765601217656,-0.0283170029138955,0.0030911901081916
+M-C pair [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.0104275286757038,-0.0260437075496342,0.0051656907035498
+student A s0 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0960698689956331,-0.1415713618582877,-0.0582369756762101
+student A s0 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0231481481481481,-0.067569199634417,0.0192307692307692
+student A s0 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.0684931506849315,-0.1059207976226366,-0.0335854121772161
+student A s0 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.1313868613138686,-0.1949256310772113,-0.0739929117176655
+student A s0 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.009825327510917,-0.022120460165593,0.0005734192814484
+student A s0 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student A s0 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0015220700152207,-0.0031695721077654,0.0063494587023998
+student A s0 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0187695516162669,-0.0414121164364512,0.0010571104175755
+student A s0 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,0.0010917030567685,-0.0127089915803223,0.0143042202393691
+student A s0 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,0.0046296296296296,-0.0144265776699029,0.02451181292189
+student A s0 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.0121765601217656,0.0,0.0247699518403852
+student A s0 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0072992700729927,-0.0295030295865596,0.0136326453983451
+student A s0 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.0010917030567685,-0.0118614452990891,0.0126866812127269
+student A s0 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0092592592592592,-0.0087719298245614,0.0281756892063279
+student A s0 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0121765601217656,0.0,0.0241354723707664
+student A s0 [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.008342022940563,-0.0289002697324215,0.008439264591752
+student A s1 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0693231441048034,-0.1073637145691537,-0.0370951006583341
+student A s1 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0185185185185185,-0.0533392857142857,0.0180200562553503
+student A s1 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.0487062404870624,-0.0829660402242004,-0.0182919868582247
+student A s1 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.0948905109489051,-0.1473538102974297,-0.0468237914166512
+student A s1 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0076419213973799,-0.0183542373238267,0.0016512328317273
+student A s1 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student A s1 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0015220700152207,-0.0031695721077654,0.0063494587023998
+student A s1 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0145985401459854,-0.0349470799300409,0.003131605814098
+student A s1 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,0.0016375545851528,-0.0116754406042572,0.0144704252631869
+student A s1 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,0.0,-0.0186046511627906,0.0181838937318389
+student A s1 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.0121765601217656,0.001483298256622,0.0235852535203428
+student A s1 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0052137643378519,-0.0273418054279971,0.0148309016481837
+student A s1 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.006004366812227,-0.0063161367077655,0.0174810607159644
+student A s1 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0092592592592592,-0.0087719298245614,0.0281756892063279
+student A s1 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0136986301369863,0.0015871760096443,0.0255255255255255
+student A s1 [cinque] x c2,ridge_late op-cinque temporal,static,959,0.0,-0.0198973799968068,0.0167372788435391
+student A s2 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0693231441048034,-0.1075703515053709,-0.0364136394254116
+student A s2 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0231481481481481,-0.0555555555555555,0.0126145912910618
+student A s2 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.0441400304414003,-0.0800029673590504,-0.0118501063655702
+student A s2 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.0969760166840458,-0.1528977170148861,-0.0468250057870245
+student A s2 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0125545851528384,-0.025057141186401,-0.0011415355674376
+student A s2 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student A s2 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0015220700152207,-0.0031695721077654,0.0063494587023998
+student A s2 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0239833159541188,-0.0471735313374203,-0.0031085674217445
+student A s2 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,0.0021834061135371,-0.0108654183300026,0.014949478874332
+student A s2 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,-0.0092592592592592,-0.0324074074074074,0.0096153846153846
+student A s2 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.0136986301369863,0.0029204829160847,0.0258771654641151
+student A s2 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0031282586027111,-0.0240863021013978,0.0166501916777253
+student A s2 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.0054585152838427,-0.007257030239409,0.0173231332269815
+student A s2 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0092592592592592,-0.0087719298245614,0.0281756892063279
+student A s2 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0136986301369863,0.0029761904761904,0.0256468797564687
+student A s2 [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.0010427528675703,-0.0209716012003823,0.016580310880829
+student B s0 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0856986899563318,-0.1292537598418563,-0.047643091415748
+student B s0 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0185185185185185,-0.0524074925304527,0.0133333333333333
+student B s0 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.0380517503805175,-0.0737342804397312,-0.0075061089405351
+student B s0 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.1334723670490094,-0.196031336260769,-0.0764522791680676
+student B s0 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0158296943231441,-0.0301421355916386,-0.0031962511429011
+student B s0 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student B s0 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0015220700152207,-0.0031695721077654,0.0063494587023998
+student B s0 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0302398331595411,-0.0570882936034393,-0.0063403452768586
+student B s0 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,-0.0010917030567685,-0.0142370625849144,0.0112119594233849
+student B s0 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,-0.0185185185185185,-0.0502622559803626,0.0094786729857819
+student B s0 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.0136986301369863,0.0015384024577572,0.0253757486453084
+student B s0 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0072992700729927,-0.0280104846265776,0.0116408288306485
+student B s0 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.0032751091703056,-0.0094603431480083,0.0153263296885173
+student B s0 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0046296296296296,-0.0150018844221105,0.0259740259740259
+student B s0 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0136986301369863,0.0032250334947954,0.0239529935630986
+student B s0 [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.0041710114702815,-0.0259652921701273,0.0160310913705583
+student B s1 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0616812227074235,-0.0981166597798938,-0.0286922495651301
+student B s1 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0138888888888888,-0.0440577365404857,0.0138347129097778
+student B s1 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.0197869101978691,-0.0506134969325153,0.0075531557513791
+student B s1 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.1011470281543274,-0.1549774495525103,-0.0511713454634631
+student B s1 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0136462882096069,-0.0264070022057994,-0.0027467656457018
+student B s1 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student B s1 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0030441400304414,-0.0030122756888581,0.0091185410334346
+student B s1 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.02711157455683,-0.0521431028176165,-0.0052297164933835
+student B s1 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,0.0032751091703056,-0.0092640201346427,0.0153370254044473
+student B s1 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,-0.0092592592592592,-0.0357182895579756,0.0144230769230769
+student B s1 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.015220700152207,0.0046578450948956,0.0261569343065693
+student B s1 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0020855057351407,-0.0221794187692376,0.0167189132706374
+student B s1 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.0070960698689956,-0.0050085566244744,0.0189832614744721
+student B s1 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0092592592592592,-0.0087719298245614,0.0281756892063279
+student B s1 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0182648401826484,0.0062583251446664,0.0302650769663315
+student B s1 [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.0010427528675703,-0.0211455621834649,0.0168785291835041
+student B s2 [cinque] x g1,ridge_late op-cinque temporal,pooled,1832,-0.0660480349344978,-0.1022629246978238,-0.0332252045946768
+student B s2 [cinque] x g1,ridge_late op-cinque temporal,cutin,216,-0.0231481481481481,-0.0577134146341463,0.0093907786340685
+student B s2 [cinque] x g1,ridge_late op-cinque temporal,oncoming,657,-0.015220700152207,-0.0448921043362192,0.0119581464872944
+student B s2 [cinque] x g1,ridge_late op-cinque temporal,static,959,-0.1105318039624609,-0.1668589700105453,-0.0605097236438075
+student B s2 [cinque] x g3,ridge_late op-cinque temporal,pooled,1832,-0.0169213973799126,-0.0327970095530969,-0.0036551619982666
+student B s2 [cinque] x g3,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0142857142857142,0.0
+student B s2 [cinque] x g3,ridge_late op-cinque temporal,oncoming,657,0.0015220700152207,-0.0046876833920187,0.0077763525723947
+student B s2 [cinque] x g3,ridge_late op-cinque temporal,static,959,-0.0323253388946819,-0.0625667511717587,-0.0063356301712269
+student B s2 [cinque] x g2,ridge_late op-cinque temporal,pooled,1832,0.0032751091703056,-0.0101783999872952,0.0165766707602221
+student B s2 [cinque] x g2,ridge_late op-cinque temporal,cutin,216,-0.0046296296296296,-0.0304381051832162,0.0178571428571428
+student B s2 [cinque] x g2,ridge_late op-cinque temporal,oncoming,657,0.0182648401826484,0.006220598321146,0.0301659125188536
+student B s2 [cinque] x g2,ridge_late op-cinque temporal,static,959,-0.0052137643378519,-0.0279243058307319,0.0145863970588235
+student B s2 [cinque] x c2,ridge_late op-cinque temporal,pooled,1832,0.0070960698689956,-0.0056766690980389,0.0196185296029604
+student B s2 [cinque] x c2,ridge_late op-cinque temporal,cutin,216,0.0092592592592592,-0.0087719298245614,0.0281756892063279
+student B s2 [cinque] x c2,ridge_late op-cinque temporal,oncoming,657,0.0197869101978691,0.0090487546369899,0.0312012480499219
+student B s2 [cinque] x c2,ridge_late op-cinque temporal,static,959,-0.0020855057351407,-0.0232349597756548,0.0169137666812085
+M-C pair [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0311135371179039,-0.0447684740861714,-0.0184517760356175
+M-C pair [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0648148148148148,-0.1029427543549608,-0.0260791125056029
+M-C pair [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0273972602739726,-0.0507145556503718,-0.0060975609756097
+M-C pair [lebowski],ridge_late op-lebowski temporal,static,959,-0.0260688216892596,-0.0441482487903147,-0.010405556841561
+student A s0 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0349344978165938,-0.0497207475539368,-0.0206692388657411
+student A s0 [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0231481481481481,-0.0519536984754376,0.004587684437492
+student A s0 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0471841704718417,-0.0739037386443046,-0.0238726837095817
+student A s0 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0291970802919708,-0.0424446868337502,-0.0164435655934038
+student A s1 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0343886462882096,-0.0499426577321952,-0.0185970324989344
+student A s1 [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0185185185185185,-0.0467289719626168,0.0053989361702123
+student A s1 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0471841704718417,-0.0758963621605667,-0.0211798454616684
+student A s1 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0291970802919708,-0.0431591942820012,-0.015607930472217
+student A s2 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0311135371179039,-0.0456048205858116,-0.0172174908424908
+student A s2 [lebowski],ridge_late op-lebowski temporal,cutin,216,0.0,-0.0287081339712918,0.0327141196086174
+student A s2 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0410958904109589,-0.066360588757227,-0.0178830902703853
+student A s2 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0312825860271115,-0.0446540364077911,-0.0186717154343946
+student B s0 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.033296943231441,-0.0472060574546331,-0.0203191286964106
+student B s0 [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0231481481481481,-0.05,0.0042414880907936
+student B s0 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0380517503805175,-0.0602232784740984,-0.0164917541229385
+student B s0 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0323253388946819,-0.0455487090746394,-0.02
+student B s1 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.0278384279475982,-0.0390376361548366,-0.017297199970206
+student B s1 [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0138888888888888,-0.0390291726446676,0.0135135135135135
+student B s1 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.030441400304414,-0.0498489425981873,-0.0122883152865341
+student B s1 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0291970802919708,-0.0421940928270042,-0.0167534885758724
+student B s2 [lebowski],ridge_late op-lebowski temporal,pooled,1832,-0.029475982532751,-0.0433838855506449,-0.0166122569681622
+student B s2 [lebowski],ridge_late op-lebowski temporal,cutin,216,-0.0185185185185185,-0.0519480519480519,0.0142857142857142
+student B s2 [lebowski],ridge_late op-lebowski temporal,oncoming,657,-0.0334855403348554,-0.0547736188822432,-0.0137399343697635
+student B s2 [lebowski],ridge_late op-lebowski temporal,static,959,-0.0291970802919708,-0.0425770015078147,-0.0172926824990353
+M-C pair [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0158296943231441,-0.0304306197034919,-0.0016665742793791
+M-C pair [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0277777777777777,-0.0567711459260332,0.0
+M-C pair [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0045662100456621,-0.0305822105455413,0.0199700460829493
+M-C pair [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0208550573514077,-0.0395946761378974,-0.0041362912116351
+M-C pair [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,-0.0038209606986899,-0.0138450230065171,0.0067814809212033
+M-C pair [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,-0.0092592592592592,-0.027027027027027,0.0095238095238095
+M-C pair [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0076103500761035,-0.002919921770634,0.0183788432088585
+M-C pair [lebowski] x g3,ridge_late op-lebowski temporal,static,959,-0.0104275286757038,-0.025911468192586,0.0041240311730402
+M-C pair [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,0.0038209606986899,-0.0016511870961157,0.0096016145537236
+M-C pair [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0138888888888888,-0.0339805825242718,0.0047624743677375
+M-C pair [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,0.0136986301369863,0.0031246354976671,0.0237750300714639
+M-C pair [lebowski] x g2,ridge_late op-lebowski temporal,static,959,0.0010427528675703,-0.0052692614336449,0.0074319892052831
+M-C pair [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,0.0185589519650655,0.0112862048135313,0.0262145609452308
+M-C pair [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,0.0092592592592592,-0.020002512562814,0.0446478619474695
+M-C pair [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,0.0334855403348554,0.0204939659103146,0.0470957613814756
+M-C pair [lebowski] x c2,ridge_late op-lebowski temporal,static,959,0.0104275286757038,0.0020898096216647,0.0197921826120959
+student A s0 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.023471615720524,-0.0351250957342959,-0.0120256615607342
+student A s0 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0265486725663716,0.0213738738738738
+student A s0 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0334855403348554,-0.056152691691125,-0.0139740736111378
+student A s0 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0208550573514077,-0.0330166557524523,-0.0093167701863354
+student A s0 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,-0.0010917030567685,-0.0063435917400173,0.0033994816056734
+student A s0 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student A s0 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0015220700152207,-0.0046583850931677,0.0077288752675991
+student A s0 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.0105155238253362,0.0031153457555326
+student A s0 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,-0.0027292576419213,-0.0077220077220077,0.0017097453570744
+student A s0 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student A s0 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,-0.0030441400304414,-0.0153380123076343,0.0089689455170376
+student A s0 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,-0.0020855057351407,-0.0083078050187855,0.0031120331950207
+student A s0 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0032751091703056,-0.0083429695737529,0.001685511948093
+student A s0 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student A s0 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,-0.0060882800608828,-0.0169498064448629,0.0044843049327354
+student A s0 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.0010427528675703,-0.0075204513492278,0.0052412276359988
+student A s1 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0201965065502183,-0.0327780054644808,-0.0077904377666481
+student A s1 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0092592592592592,-0.0277777777777777,0.008850540806293
+student A s1 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0258751902587519,-0.0504590773594188,-0.0029939000921922
+student A s1 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0187695516162669,-0.0311558964263787,-0.0071281282826378
+student A s1 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,-0.0010917030567685,-0.0066669449081803,0.003512936287331
+student A s1 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student A s1 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0015220700152207,-0.0046583850931677,0.0077288752675991
+student A s1 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.0114825546516929,0.0031747714992677
+student A s1 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,-0.0043668122270742,-0.0090764356393486,0.0
+student A s1 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student A s1 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,-0.0060882800608828,-0.0182391702823731,0.0045736959810256
+student A s1 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.0102777566306742,0.0030959752321981
+student A s1 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0043668122270742,-0.0091713590472266,0.0005388734113634
+student A s1 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student A s1 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,-0.0060882800608828,-0.0164726881593414,0.0045112781954887
+student A s1 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.009375,0.0030130440377992
+student A s2 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0207423580786026,-0.0323457740971486,-0.0092372807099895
+student A s2 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,0.0,-0.0235877000804793,0.026431718061674
+student A s2 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0289193302891933,-0.0503894185105709,-0.0102324306405548
+student A s2 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0198123044838373,-0.0319612415910617,-0.009129547333609
+student A s2 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,-0.0021834061135371,-0.0070715350223546,0.0021633607964056
+student A s2 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student A s2 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0,-0.0075642965204236,0.0074524014564016
+student A s2 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,-0.0041710114702815,-0.0113168724279835,0.0020388401070804
+student A s2 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,-0.0005458515283842,-0.0049345496007059,0.0037555667082006
+student A s2 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student A s2 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,0.0,-0.010719754977029,0.0093517661461287
+student A s2 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,-0.0010427528675703,-0.0063426625054532,0.0040859062813981
+student A s2 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0021834061135371,-0.0065223617732868,0.002189411474829
+student A s2 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,0.0046296296296296,0.0,0.0140861679511028
+student A s2 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,-0.0045662100456621,-0.014706423806636,0.0057983727434528
+student A s2 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.0020855057351407,-0.0072693293914373,0.0030457626594032
+student B s0 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0131004366812227,-0.0220982330734973,-0.004725238425251
+student B s0 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0138888888888888,-0.0334958385267982,0.0046296296296296
+student B s0 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0136986301369863,-0.0281075498575498,0.0
+student B s0 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0125130344108446,-0.0240604707881299,-0.0020554456991754
+student B s0 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,0.0038209606986899,0.0,0.0080554679089795
+student B s0 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student B s0 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0045662100456621,-0.0030583384927112,0.0124035822620251
+student B s0 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,0.0041710114702815,0.0,0.0094149668301378
+student B s0 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,-0.0021834061135371,-0.0073623239485121,0.0027625455946335
+student B s0 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student B s0 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,-0.0015220700152207,-0.0134963153823995,0.0089696198440593
+student B s0 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,-0.0020855057351407,-0.0083952062738167,0.0041152263374485
+student B s0 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0027292576419213,-0.0074631851432309,0.0016521192834716
+student B s0 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student B s0 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,-0.0015220700152207,-0.0119069929321053,0.0081038667559423
+student B s0 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.0085108648856864,0.002089918810089
+student B s1 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0109170305676855,-0.0200709663739309,-0.0016500067815
+student B s1 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0185185185185185,-0.0355555555555555,-0.0044052863436123
+student B s1 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0045662100456621,-0.0197360057977404,0.0092592592592592
+student B s1 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.013555787278415,-0.0255075041084611,-0.0030800031590586
+student B s1 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,0.0038209606986899,-0.0010621490002556,0.0090040659680502
+student B s1 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student B s1 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0045662100456621,-0.0030583384927112,0.0124035822620251
+student B s1 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,0.0041710114702815,-0.0020942957182214,0.0112953845435878
+student B s1 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,0.0,-0.0051172013319256,0.0050405483509735
+student B s1 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0151553803339517,0.0
+student B s1 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,0.0015220700152207,-0.0091890671202038,0.0107535165763705
+student B s1 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,0.0,-0.0065449180773827,0.007239258215409
+student B s1 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0027292576419213,-0.0080445257590029,0.0022065017081628
+student B s1 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student B s1 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,0.0015220700152207,-0.0079624193646852,0.0115963186290066
+student B s1 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.0062565172054223,-0.0127558154533137,-0.001021424402243
+student B s2 [lebowski] x g1,ridge_late op-lebowski temporal,pooled,1832,-0.0131004366812227,-0.0227671020179931,-0.0037571793166679
+student B s2 [lebowski] x g1,ridge_late op-lebowski temporal,cutin,216,-0.0092592592592592,-0.0318218140307181,0.0098534360825245
+student B s2 [lebowski] x g1,ridge_late op-lebowski temporal,oncoming,657,-0.0121765601217656,-0.0282769792333973,0.0029679134897295
+student B s2 [lebowski] x g1,ridge_late op-lebowski temporal,static,959,-0.0145985401459854,-0.0267379679144385,-0.0041279669762641
+student B s2 [lebowski] x g3,ridge_late op-lebowski temporal,pooled,1832,0.0038209606986899,0.0,0.007905810164709
+student B s2 [lebowski] x g3,ridge_late op-lebowski temporal,cutin,216,0.0,0.0,0.0
+student B s2 [lebowski] x g3,ridge_late op-lebowski temporal,oncoming,657,0.0030441400304414,-0.0045112781954887,0.010558468100231
+student B s2 [lebowski] x g3,ridge_late op-lebowski temporal,static,959,0.0052137643378519,0.0,0.0115670762078698
+student B s2 [lebowski] x g2,ridge_late op-lebowski temporal,pooled,1832,-0.0027292576419213,-0.0078785577220439,0.002181054828448
+student B s2 [lebowski] x g2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0151553803339517,0.0
+student B s2 [lebowski] x g2,ridge_late op-lebowski temporal,oncoming,657,-0.0015220700152207,-0.0128260869565217,0.0090100281276751
+student B s2 [lebowski] x g2,ridge_late op-lebowski temporal,static,959,-0.0031282586027111,-0.0093559966216216,0.0021684941903065
+student B s2 [lebowski] x c2,ridge_late op-lebowski temporal,pooled,1832,-0.0054585152838427,-0.0101295291690114,-0.0010138470058065
+student B s2 [lebowski] x c2,ridge_late op-lebowski temporal,cutin,216,-0.0046296296296296,-0.0149272388059701,0.0
+student B s2 [lebowski] x c2,ridge_late op-lebowski temporal,oncoming,657,-0.0015220700152207,-0.0118360805860805,0.0080006420545746
+student B s2 [lebowski] x c2,ridge_late op-lebowski temporal,static,959,-0.008342022940563,-0.0147368421052631,-0.0030799243444306

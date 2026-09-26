@@ -1,0 +1,5 @@
+model,temporal_max_abs_diff,check,n,v_lead_median,v_ego_median
+cinque,0.0,,,,
+cinque,,"static world, P(lead) > 0.5",1007.0,1.5244140625,8.485918998718262
+lebowski,0.0,,,,
+lebowski,,"static world, P(lead) > 0.5",1132.0,1.70849609375,8.378578186035156
