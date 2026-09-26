@@ -3311,7 +3311,7 @@ DynamicObjectCrossing 非反应误翻 B − A 在 ±1.9 pp（门槛 +3），null
 
 **状态**：**待定**。限定：只在 CARLA（BA 集），检测外观来自 COCO 训练的 YOLO，真实数据上 image-plane token 的迁移（G0 那一问）没测；Lebowski 的 cut-in 增益本身 CI 下端就贴着 0；延迟在共卡上量，绝对值比 E5 独占卡时高约 15 ms。
 
-## 48. 公开的 state-space RL policy 只有 BehaviorBench 的两个权重能装上跑；negotiation 上 PPO 的反应是 IDM 的 3 倍且带横向，bypass 由 reward 系数决定，recovery 没有一个会；两个都不能直接当 openpilot desire 之后的执行层（**待定**）
+## 50. 公开的 state-space RL policy 只有 BehaviorBench 的两个权重能装上跑；negotiation 上 PPO 的反应是 IDM 的 3 倍且带横向，bypass 由 reward 系数决定，recovery 没有一个会；两个都不能直接当 openpilot desire 之后的执行层（**待定**）
 
 2026-09-26。预登记、执行日志与全部表格在 [todos/2026-09-26-state-space-policies.md](../todos/2026-09-26-state-space-policies.md)，候选清单在 [state-space-policies.md](state-space-policies.md)。
 起因是第 47 条：判断之后的行为（绕行、让行 / 博弈、恢复）我们没有量具，也没有来源；用户认为 Gigaflow 类自博弈 state-space policy 可能有公开权重。
