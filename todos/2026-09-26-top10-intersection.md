@@ -211,6 +211,38 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   T2 = DrivoR + WA-JEPA：I3 补渲 CAM_BACK + 10 Hz，再 P5 / WOD / NAVSIM / nuScenes；等下一个执行员收工空出卡再开。
   T3 = BridgeDrive + BLUE 的 P5 重录（约 30 个 CARLA server）：等 night-queue-2 A 的 N1 批量结束、CARLA 容量空出来再开。
   各路在本节下写 [T1] / [T2] / [T3] 条目，结果写「结果」。B2D 闭环那一项仍按 5.1 另立 todo，不在这里跑。
+- 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
+  所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
+
+  | 步 | 内容 | 墙钟 | GPU·h |
+  |:--|:--|--:|--:|
+  | 0 | nuScenes 解压 samples/CAM_BACK（10 个 blob 并行，nice 10，IO 为主） | 30 min（后台） | 0 |
+  | 1 | I3 补渲：已有 242 个世界 × 71 帧（10 Hz）× 4 路（前三路 + CAM_BACK），约 6.9 万张 JPEG / 7.6 GB；4 worker 共享 GPU 4；核对前三路 | 45 min | 0.5 |
+  | 2 | DrivoR / WA-JEPA 通用推理器（输入契约见下）+ 对 NAVSIM 路径的等价核对（64 个 navtest token） | 1 h 工程 | < 0.1 |
+  | 3 | I3 考试（约 6 千帧 × 2 模型） | 30 min | 0.4 |
+  | 4 | P5 v1 BA（观测帧 + null 约 1.9 万帧 × 2 模型） | 1.5 h | 1.2 |
+  | 5 | WOD val 零样本（479 + 958 帧；适配器按 Alpamayo 的改） | 2 h（多为工程） | 0.2 |
+  | 6 | NAVSIM 复现：DrivoR navtest PDMS（它自己仓库的 v1 评测路径）、WA-JEPA navtest EPDMS（它的 `run_navsim_epdms.sh`，fp32 原样） | 2.5 h（与 3–5 并行） | 2.5 |
+  | 7 | nuScenes main 4636（等步 0） | 1.5 h | 0.4 |
+  | 8 | 表、图、decisions / leaderboard-vs-ability 回填 | 1.5 h | 0 |
+  | 合计 | | 约 7–8 h 墙钟 | 约 5.3 |
+
+  每步超估计 2 倍就停下写日志报告。**跑前写死的操作性选择**（5.1–5.3 没写死的部分；全部写于任何考生数字之前）：
+  1. **I3 补渲**：用 I3 自己的渲染器与 HUGSIM rig（`configs/sim/<ds>_camera.yaml` 的 CAM_BACK），actor 轨迹**不重算**，直接读已有 `meta.json` 的 track；
+     窗口、世界、合格性全部不变，只把帧率改成 10 Hz（0.1 s，frame = 2 × 帧序号，仍按 20 Hz tick 计）、相机加 CAM_BACK。输出到新集合 `processed/hugsim_pairs_10hz/`，不动原集合。
+     **核对判据**：补渲的前三路在 5 Hz 时刻（偶数帧）与原 JPEG 解码后逐像素相同（max |Δ| = 0）；不为 0 就停下查，不上考生。
+  2. **DrivoR 输入**：它的 NAVSIM v1 ckpt（`drivor_Nav1_25epochs.pth`，README 的 v1 评测覆盖项）、4 路当前帧 f0 / b0 / l0 / r0，图像按它的 feature builder 原样缩放到 1148×672、ImageNet 归一化；
+     ego = [pose 0, vx, vy, ax, ay, command 4 维]（模型只读最后一帧 ego）；缺后视时 b0 = 全黑 RGB（归一化前为 0）。
+  3. **WA-JEPA 输入**：`wa_jepa_hugsim.yaml`（与 EPDMS ckpt 同一架构）、它自己的 HUGSIM 适配器的约定——相机槽 l0 / f0 / r0 / b0、256×512 INTER_AREA、[-1, 1]、fp32 权重 + bf16 autocast、
+     ego = [command 4 维, vx, 0, ax, 0]（它的 HUGSIM 适配器把 vy、ay 置 0，I3 与 P5 照用；WOD / nuScenes 有横向量就填上，照它的 NAVSIM 路径）、history_trajectory = 4 个历史帧相对当前帧的 (x, y, yaw)。
+     历史帧在 I3 上取 t − 1.5 / −1.0 / −0.5 / 0 s 的 10 Hz 渲染帧；早于渲染窗口起点的历史**按它的 HUGSIM 适配器的 warmup 规则**钳到窗口第一帧（图像与位姿一起），
+     并单独报「历史不完整」帧的占比，另报只用完整历史帧的敏感性读数。P5 上按 5.2 取 t / −0.4 / −1.0 / −1.4 s 的 5 Hz 帧，早于流起点同样钳。
+  4. **输出换算**：两个模型输出后轴系 8 个点 @2 Hz。I3（原点前相机）上先按刚体关系把轨迹从后轴换到前相机：p_cam(t) = p(t) + R(ψ_t)·d − d，d = nuPlan CAM_F0 相对后轴的 (x, y)（从 navtest 标定取）；
+     P5、WOD、nuScenes 的原点都是后轴 / 自车，不换。然后按 5.2 对 (0, 0) + 8 点做三次样条（按时间，x、y 分别）插到 0.25 s 网格；WOD 的 5 s 点按 5.2 用最后两点匀速外推。
+  5. **P5 的判据范围**：逐帧纵向定向翻转（`p5_exam.exam` 原样）与按对（E4 (b) 的定义：窗口内任一 reactive 帧翻对就算这对过，null case 任一帧动了就算误翻）、null false-flip，按 family 与合并。
+     5.3 抄来的「横向定向翻转」与「反应类别一致率」在 BA 集上**不报**：BA 集没有横向标签（BehaviorAgent 不绕行，第 47 条），反应类别的阈值 P5 v1 从未写死，照「不新设门槛」不补。
+  6. **WOD 相机**：直接映射（F0 ← FRONT、L0 / R0 ← FRONT_LEFT / RIGHT、B0 ← REAR），不做纯旋转重投影（与 P5 / I3 喂 ±45° 侧前视的做法一致）。
+  7. **NAVSIM 复现**只跑 5.1 里本 brief 要的两项（DrivoR v1 PDMS 93.7、WA-JEPA navtest EPDMS 91.7）；DrivoR 的 v2 ckpt（navhard EPDMS）不在盘上，不下载、不跑。
 
 ## 结果
 
