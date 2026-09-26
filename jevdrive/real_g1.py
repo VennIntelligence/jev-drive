@@ -73,7 +73,8 @@ def _std_stats(X: torch.Tensor, rows) -> tuple[torch.Tensor, torch.Tensor]:
     return mu.float(), torch.where(sd > 1e-6, sd, torch.ones_like(sd)).float()
 
 
-def fit_gated(X: np.ndarray, R: torch.Tensor, sp, pre: np.ndarray | None, rl, tag: str, seed: int = 0) -> tuple:
+def fit_gated(X: np.ndarray, R: torch.Tensor, sp, pre: np.ndarray | None, rl, tag: str, seed: int = 0,
+              l1s=(0.0, 1e-3, 1e-2)) -> tuple:
     """waymo_ladder.gated_arm's recipe with the fitted net kept: L1 over (0, 1e-3, 1e-2) chosen on the inner split's
     pre-onset ADE (overall inner ADE where there is no pre-onset subset), `_train` unchanged."""
     from . import waymo_ladder as L
@@ -84,7 +85,7 @@ def fit_gated(X: np.ndarray, R: torch.Tensor, sp, pre: np.ndarray | None, rl, ta
     T = R.shape[1] // 2
     res_fut = R.reshape(-1, T, 2).cpu().numpy()
     best = None
-    for l1 in (0.0, 1e-3, 1e-2):
+    for l1 in l1s:
         nets = []
 
         def make(l1=l1):
@@ -112,36 +113,54 @@ def wod_train_context():
     return L.train_context(p0_run=D.P0_RUN)
 
 
-def g1_wod(rl, models=MODELS, exclude: str = "", seed: int = 0):
+def g1_wod(rl, models=MODELS, oof_rows: str = "", main_run: str = "", seed: int = 0):
     """g1 on WOD train: target = residual of `ridge ego` fitted on the same train rows; input [ego, op temporal].
-    `exclude` (a file of sequences) removes those train sequences from the fit (the selection rows' held-out fit)."""
+
+    oof_rows (a file of WOD frame names, the selection rows): instead of the main fit, 5 sequence-grouped folds over
+    the train sequences, each refitting `ridge ego` and the gate (L1 fixed to the main fit's, from `main_run`) without
+    that fold, and writing the gate on the fold's selection rows -- the out-of-fold values the AUC selection reads."""
     from . import planner, waymo_ladder as L, waymo_stage_a as sa
     ctx = wod_train_context()
+    want = set(Path(oof_rows).read_text().split()) if oof_rows else None
     for m in models:
         a = L.align(ctx, f"op_{m}_p3_trainval", ["temporal"])
-        keep = a["covered"].copy()
-        if exclude:
-            drop = set(Path(exclude).read_text().split())
-            keep &= ~pd.Series(ctx["seq"]).astype(str).isin(drop).to_numpy()
-        sel = np.flatnonzero(keep)
-        seq, h = ctx["seq"][sel], ctx["half"][sel]
-        sp = sa.Halves(ctx["df"], seq, h == 0, h == 1, seed)
-        n = len(sel)
-        F = torch.as_tensor(ctx["fut"][sel].reshape(n, -1), device=L.DEV)
-        Xe = planner.standardize(torch.as_tensor(ctx["ego"][sel], device=L.DEV), sp.train)
-        _, st_ego, W = sa.ridge_cv(Xe, F, sp, ctx["fut"][sel])
-        R = F - planner.linear_apply(W, Xe, np.arange(n))[0]
-        del Xe, F
+        sel = np.flatnonzero(a["covered"])
+        seq, h, n = ctx["seq"][sel], ctx["half"][sel], len(sel)
         X = np.concatenate([ctx["ego"][sel], a["temporal"][sel].astype(np.float32)], 1)
-        log.info("g1 WOD %s: %d train / %d val rows, d = %d, ridge ego %s", m, len(sp.train), len(sp.val), X.shape[1], st_ego)
-        gate, st = fit_gated(X, R, sp, ctx["sub"]["pre_onset"][sel], rl, f"g1-wod-{m}", seed)
-        tag = f"g1_wod_{m}" + ("_heldout" if exclude else "")
-        gate.save(rl.dir / f"{tag}.pt", **{k: v for k, v in st.items() if k in ("l1", "d", "out")})
-        g = gate(X[sp.val])
-        np.savez_compressed(rl.dir / f"{tag}_val.npz", frame_name=ctx["fname"][sel][sp.val], gate=g)
-        rl.event("g1_saved", tag=tag, **{k: v for k, v in st.items() if isinstance(v, (int, float))})
-        del R, X
-        torch.cuda.empty_cache()
+        F = torch.as_tensor(ctx["fut"][sel].reshape(n, -1), device=L.DEV)
+        E = torch.as_tensor(ctx["ego"][sel], device=L.DEV)
+        pre = ctx["sub"]["pre_onset"][sel]
+
+        def fit(fit_mask, eval_mask, tag, l1s):
+            sp = sa.Halves(ctx["df"], seq, fit_mask, eval_mask, seed)
+            Xe = planner.standardize(E, sp.train)
+            _, st_ego, W = sa.ridge_cv(Xe, F, sp, ctx["fut"][sel])
+            R = F - planner.linear_apply(W, Xe, np.arange(n))[0]
+            del Xe
+            log.info("%s: %d fit / %d eval rows, d = %d, ridge ego %s", tag, len(sp.train), len(sp.val), X.shape[1], st_ego)
+            gate, st = fit_gated(X, R, sp, pre, rl, tag, seed, l1s)
+            del R
+            torch.cuda.empty_cache()
+            return gate, st, sp
+
+        if want is None:
+            gate, st, sp = fit(h == 0, h == 1, f"g1-wod-{m}", (0.0, 1e-3, 1e-2))
+            gate.save(rl.dir / f"g1_wod_{m}.pt", **{k: v for k, v in st.items() if k in ("l1", "d", "out")})
+            np.savez_compressed(rl.dir / f"g1_wod_{m}_val.npz", frame_name=ctx["fname"][sel][sp.val], gate=gate(X[sp.val]))
+            rl.event("g1_saved", tag=f"g1_wod_{m}", **{k: v for k, v in st.items() if isinstance(v, (int, float))})
+            continue
+        l1 = float(torch.load(data_dir() / main_run / f"g1_wod_{m}.pt", map_location="cpu")["l1"])
+        tr_seq = np.unique(seq[h == 0])
+        fold_of = dict(zip(np.random.default_rng(seed).permutation(tr_seq), np.arange(len(tr_seq)) % 5))
+        fold = np.array([fold_of.get(q, -1) for q in seq])
+        target = (h == 0) & pd.Series(ctx["fname"][sel]).isin(want).to_numpy()
+        names, gates = [], []
+        for f in range(5):
+            gate, st, sp = fit((h == 0) & (fold != f), target & (fold == f), f"g1-wod-{m}-oof{f}", (l1,))
+            names.append(ctx["fname"][sel][sp.val])
+            gates.append(gate(X[sp.val]))
+        np.savez_compressed(rl.dir / f"g1_wod_{m}_oof.npz", frame_name=np.concatenate(names), gate=np.concatenate(gates), l1=l1)
+        rl.event("g1_oof_saved", model=m, rows=int(sum(map(len, names))), l1=l1)
 
 
 def g1_nav(rl, models=MODELS, seed: int = 0):
@@ -172,6 +191,16 @@ def g1_nav(rl, models=MODELS, seed: int = 0):
         np.savez_compressed(rl.dir / f"g1_nav_{m}_navtest.npz", tokens=te["tokens"], gate=gate(X[sp.val]))
         np.savez_compressed(rl.dir / f"g1_nav_{m}_navtrain.npz", tokens=tr["tokens"], gate=gate(X[sp.train]))
         rl.event("g1_saved", tag=f"g1_nav_{m}", **{k: v for k, v in st.items() if isinstance(v, (int, float))})
+        # out-of-fold gate on navtrain (the AUC selection's rows): the same log folds, L1 fixed to the main fit's;
+        # the target stays `ridge ego`'s out-of-fold residual, whose fold of a row never saw that row
+        oof = np.zeros(ntr, np.float32)
+        for f in range(NH.FOLDS):
+            tr_f = np.flatnonzero(folds != f)
+            inn = NH._group_folds(tr["log"][tr_f], 5, seed=seed + 1) == 0
+            sp_f = SimpleNamespace(train=tr_f, fit=tr_f[~inn], sel=tr_f[inn], val=np.flatnonzero(folds == f))
+            g_f, _ = fit_gated(X, R, sp_f, None, rl, f"g1-nav-{m}-oof{f}", seed, (st["l1"],))
+            oof[sp_f.val] = g_f(X[sp_f.val])
+        np.savez_compressed(rl.dir / f"g1_nav_{m}_oof.npz", tokens=tr["tokens"], gate=oof, l1=st["l1"])
 
 
 # ---------------------------------------------------------------- g3
@@ -431,14 +460,14 @@ def main():
     ap.add_argument("what", choices=("g1-wod", "g1-nav", "i3", "wod", "nav-write", "nav-table"))
     ap.add_argument("--g1-run", default="", help="the g1 fit run dir (relative to DATA_DIR)")
     ap.add_argument("--models", default=",".join(MODELS))
-    ap.add_argument("--exclude", default="")
+    ap.add_argument("--oof-rows", default="", help="g1-wod: selection rows file -> out-of-fold fits")
     ap.add_argument("--tags", default="mc")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))
     models = tuple(a.models.split(","))
     rl = RunLog("real-data-transfer", a.what)
     if a.what == "g1-wod":
-        g1_wod(rl, models, a.exclude)
+        g1_wod(rl, models, a.oof_rows, a.g1_run)
     elif a.what == "g1-nav":
         g1_nav(rl, models)
     elif a.what == "i3":
