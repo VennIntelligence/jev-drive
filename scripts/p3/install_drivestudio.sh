@@ -27,6 +27,7 @@ clone() {  # clone <github repo> <dir> <tag or commit>; shallow for tags, turbo 
 [[ -d $DS ]] || { git clone -q --recursive https://github.com/ziyc/drivestudio "$DS"; git -C "$DS" checkout -q e59bda4; }
 clone nerfstudio-project/gsplat "$DEPS/gsplat" v1.3.0
 clone facebookresearch/pytorch3d "$DEPS/pytorch3d" V0.7.8
+clone NVlabs/nvdiffrast "$DEPS/nvdiffrast" v0.3.3
 
 [[ $("$ENV/bin/python" -V 2>/dev/null) == "Python 3.10"* ]] || uv venv --clear "$ENV" --python 3.10
 echo "== drivestudio: torch + pure-python deps"
@@ -40,6 +41,7 @@ pip "$ENV" "torch==2.8.0" "torchvision==0.23.0" "numpy>=1.26,<2" "setuptools<80"
 echo "== drivestudio: CUDA extensions from source (no build isolation, against the torch above)"
 "$ENV/bin/python" -c "import gsplat" 2>/dev/null || pip "$ENV" --no-build-isolation "$DEPS/gsplat"
 "$ENV/bin/python" -c "import pytorch3d._C" 2>/dev/null || pip "$ENV" --no-build-isolation "$DEPS/pytorch3d"
+"$ENV/bin/python" -c "import nvdiffrast.torch" 2>/dev/null || pip "$ENV" --no-build-isolation "$DEPS/nvdiffrast"
 pip "$ENV" -e "$DS/third_party/smplx"
 
 echo "== drivestudio: import check"
