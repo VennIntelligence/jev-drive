@@ -82,6 +82,7 @@ def _run_labels(args):
     fr, ids, xyz, yaw, vel = a["frame"][order], a["id"][order], a["xyz"][order], a["yaw"][order], a["v"][order]
     starts = np.searchsorted(fr, [f for _, f in rows]), np.searchsorted(fr, [f for _, f in rows], side="right")
     is_walker = {int(k): v[0].startswith("walker.") for k, v in kinds.items()}
+    is_vehicle = {int(k): v[0].startswith("vehicle.") for k, v in kinds.items()}   # P6 also records static props
     out = []
     for (fn, frame), i0, i1 in zip(rows, *starts):
         if frame not in pose.index:
@@ -118,7 +119,7 @@ def _run_labels(args):
             ds = s - s_ego
             sp = np.hypot(*vel[i0:i1].T.astype(np.float64))
             walk = np.array([is_walker.get(int(x), False) for x in ids[i0:i1]])
-            veh = ~walk
+            veh = np.array([is_vehicle.get(int(x), False) for x in ids[i0:i1]])
             dyaw = np.abs((yaw[i0:i1] - ryaw[jj] + 180) % 360 - 180)
             # CARLA is left-handed (y right): a positive cross product is to the right of the route
             ego_lane, adj = np.abs(dd) <= HALF_LANE, (np.abs(dd) > HALF_LANE) & (np.abs(dd) <= ADJ)
