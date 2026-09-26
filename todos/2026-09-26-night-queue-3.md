@@ -144,6 +144,16 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   每个模型 × seed 各判，三个 seed 一致取那一格，否则写「随 seed 变」。描述：WOD RFS（E1 的 19 663 帧、prior = WOD train `ridge_late`；cluster mean 与 frame mean 的配对差，cluster 分层 bootstrap）、
   激活率，I3 车辆翻转（`elicit_i3` 的 judge，5 fold 平均）。
   (7) **交给 CL**：Cinque 的合并判格是「成立」才写 `runs/nq3/q4a/PASS`（CL 的 M-C 臂是 Cinque）；`mc_real0` = Cinque seed 0、λ\*(seed 0) 的 5 个 fold head（W、z̄、两路标准化统计量、λ，E1 `fold_heads` 的格式）放 `runs/nq3/q4a/mc_real0/`，附说明。
+- 2026-09-26 17:20 CST [D] **Q4b 的操作化**（写于 Q4b 的任何数字之前）。
+  (1) **只换时间协议**：P5 v1 BA 全部 obs 行（19 428 帧，兼容检查用其中 null 表引用的 6 352 帧，翻转用全部）按 NAVSIM 的输入协议重抽 openpilot `temporal`：NAVSIM 的 4 个 2 Hz 历史槽（−1.5 / −1.0 / −0.5 / 0 s）取最近的 5 Hz 录制帧
+  （等距取较晚的：−1.4 / −1.0 / −0.4 / 0 s，与 T2 给 WA-JEPA 的取法相同；早于流起点的钳到第一帧，比例照报），每帧仍用 P5 自己的三路 rig 渲染（`p5_openpilot.render` 原样，与 `op_streams_vis` 同一渲染），
+  然后是 NAVSIM 那条 rollout 原样（`navsim_zs_openpilot.schedule / rollout`：零状态、每个 2 Hz 帧在 20 Hz 时钟上保持到下一帧，Cinque 31 步、Lebowski 8 个 context-rate 相位，desire 无，右侧通行）。
+  所以和第 53 条的 N3 检查相比只差「2 Hz sample-and-hold + 1.5 s 零状态历史」这一项；NAVSIM 只给 openpilot 前视一路（CAM_F0）这一差别不动（P5 前视 47° 覆盖不了宽视野帧，单路渲染反而离 NAVSIM 更远），写作限定。
+  (2) **等价检查**：新 runner 按 P5 原协议（整条流、5 Hz、`run_stream`）在 8 条流的末尾 target 上复现已存 `op_streams_vis` 的 `temporal`（最大差 ≤ 1e-3），不过就停。
+  (3) **兼容检查**：N3 `fit` 原样重拟合 Hydra（3 seed × 2 模型，navtest 选择对 N3 已存的同一 anchor ≥ 99%），P5 行换成新特征（navtrain 统计量、N3 的 32 维 ego 构造）；统计量同 N3 `compat`：P5 null 帧上 Hydra 选中 anchor 的频次 top-10 与 navtest top-10 的交集 / 10，
+  **主判 seed 0，≥ 30% → 可比**，与 N3（5 Hz 协议）同表并列；同词表 `cls_late` 的重叠、选中 anchor 的 σ(DAC) 差作描述。
+  (4) **过线才读**：可比的模型按 N3 [B] 09:58 (5) 的原口径补 P5 翻转：Hydra 每个 seed 对同 seed 的 P5 prior 用 `p5_exam.exam` + `reactivity_mc.criteria`，第 53 条判据 1：Hydra 行人翻转 CI 上界 < prior 的点估计 →「榜单 head 压掉反应」，CI 重叠 →「同一水平」，
+  三个 seed 一致取那一格；NAVSIM 训的 `ridge_late`（2 Hz 协议特征）与 `cls_late` 并列作描述。不可比就维持「不可比」，读法写「P5 上 NAVSIM 训的读出选不同轨迹不是时间协议造成的，是场景 / rig 分布差」。
 
 ### Q5. 六族的 hack 核查
 
