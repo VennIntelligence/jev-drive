@@ -22,7 +22,8 @@ print(' '.join(r.split(';')[0].replace(' ', '') for r in m.requires('torch') if 
   uv pip install -q --python "$E/bin/python" $deps pillow --index-url $MIRROR
 fi
 uv pip install -q --python "$E/bin/python" --index-url $MIRROR einops timm huggingface-hub safetensors omegaconf addict \
-  opencv-python-headless imageio scipy pandas pyarrow tqdm tensorboard matplotlib trimesh plyfile evo "numpy<2.3"
+  opencv-python-headless imageio scipy pandas pyarrow tqdm tensorboard matplotlib trimesh plyfile evo "numpy<2.3" \
+  wandb h5py tables tabulate termcolor protobuf e3nn moviepy==1.0.3 pillow_heif typer requests pycolmap   # import-time deps
 uv pip install -q --python "$E/bin/python" --no-deps -e "$TP/UniDepth"
 uv pip install -q --python "$E/bin/python" --no-deps -e "$TP/Depth-Anything-3"
 # weights into the HF cache (hf-mirror, direct link; the box cannot reach huggingface.co without the proxy)
