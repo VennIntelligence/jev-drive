@@ -2872,6 +2872,8 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    按相对量和 WOD 一样（ADE 降 18%，WOD train 训协议 22%；A 两边都只有 1–3%）。带 command（由未来 3 s 横向位移算出，文献惯例）时 pre-onset 只有 47 帧、测不出（−0.08 / −0.06，CI 跨零）；
    ego 不带 command 时 pre-onset 上是 **−0.40 / −0.41 m**（对 A −0.35 / −0.36，CI 不跨零），与 WOD 的 −0.29 / −0.32 同量级。openpilot 的原生 plan 在 nuScenes 上比 `ridge ego` 还差 0.85–1.03 m，
    冻结特征 + 重拟合的线性读出把这个分布差完全吸收了。
+   *2026-09-26 补（[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N3，第 39 条的 collision 代码原样，150 个 val scene）*：同一批冻结 head 的碰撞率，BEV-Planner 口径 `ridge ego` 0.81%、Cinque `temporal` 0.39%（−0.42 [−0.70, −0.16] pp）、Lebowski 0.41%（−0.40 [−0.67, −0.16]），
+   VAD 口径 0.21% → 0.12% / 0.15%（Cinque 的 CI 不跨零）；Qwen A 两个口径都不动。L2 降 18% 的同时碰撞减半，不只是 continuation。
 
 5. **长尾与 route**（2026-09-25，预登记先于抽取，[p5route todo](../todos/2026-09-25-openpilot-temporal-p5-and-route.md)）：
    (1) 在 CARLA 配对考卷（第 32 条）上，同一个未改动的 `ridge_late` 读 `temporal` 的定向翻转率 42–47%（Qwen `L18_last` 0%、TFv6 waypoint 39%），
@@ -2886,7 +2888,7 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    离 TransFuser 的 84.0 PDMS 还差 6 分，navhard 19.8 对 23.1。
    **2026-09-26 补（[elicitation 计划](../todos/2026-09-26-elicitation-program.md) E6，描述性，预登记先于数字）：这 6 分是 R 层配方，不在表征。** 同一份 512 维冻结 Cinque `temporal`、同一套 K = 1024 候选轨迹，
    只把「选哪条」从模仿 softmax 换成 Hydra-MDP 式按 PDM 子分（NC、DAC、EP、TTC、C）各一个线性打分头、加权选 proposal（子分标签是 navtrain 2 万 token 上逐 anchor 的官方 scorer 分数，权重只在 navtrain held-out log 上定）：
-   navtest PDMS 77.9 → **84.2 [83.7, 84.7]**（同候选集配对 +6.3 [+5.7, +6.9]），EPDMS 82.6，navhard 25.7（TransFuser 84.0 / 76.7 / 23.1），单 seed，按登记判「512 维冻结特征 + 配方 head 到 TransFuser 水平」（CI 跨 84，只说同一水平）。
+   navtest PDMS 77.9 → **84.2 [83.7, 84.7]**（同候选集配对 +6.3 [+5.7, +6.9]），EPDMS 82.6，navhard 25.7（TransFuser 84.0 / 76.7 / 23.1），按登记判「512 维冻结特征 + 配方 head 到 TransFuser 水平」（CI 跨 84，只说同一水平）。（*2026-09-26 就地修正*：原写「单 seed」。[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N3 按 [SEEDS] 口径补了 seed 1 / 2（CPU k-means 词表 seed s、留出 log 划分 s + 1，子分标签重打）与 Lebowski 行：PDMS Cinque 84.2 / 83.8 / 84.3、Lebowski 84.4 / 84.2 / 84.2，seed 0 重拟合与 E6 逐 token 同一 anchor；EPDMS 82.6 / 78.0 / 82.3 与 82.2 / 82.0 / 82.1，Cinque seed 1 低的 4.6 分全在 extended comfort（该 seed 的权重没有模仿项，选择在帧间跳）。单 seed 的限定去掉。）
    增益主要在 DAC（87 → 93），代价是 extended comfort 80 → 75。按第 35 条读：训练标签就是评测用的 scorer，这是对准 metric 的选择，不是 E 层能力，也不说明 openpilot 特征比 TransFuser 的表征好。
    附带发现：`traj.kmeans` 在 GPU 上不可复现（同 seed 个别中心差 1.8 m），G2 / G3 的词表不能逐位复现，总分不受影响（CPU 确定性词表重拟合 77.9，配对 −0.0 [−0.5, +0.5]）。
 
@@ -2993,6 +2995,8 @@ E4 按登记量了窗口，这个解释不成立，见下一段。）
 端到端延迟 p95 约 30 ms（检测 20 ms + embedding 2.6 + MLP 4.5 + openpilot 2.3），登记门槛 50 ms；两个 arm、两个模型、三个 seed（行人 51–57%）都过。
 读法：CARLA 里近处行人 YOLO26 看得见（≤ 20 m 召回 0.89），缺的是读出，配对差分把它读了出来；点估计高于 Qwen teacher 但 CI 重叠，不写「更好」。teacher 目标的作用是保住 cut-in。
 限定同本条：只在 CARLA（BA 集）内；第 44 条说明 CARLA 上训的 Δ 直接上真实数据有害，student 的真实数据表现没测。
+*2026-09-26 补（夜间队列 2 N3，E4c 曲线代码原样，L = 0.1 s）*：student 的首翻相对 BA expert onset 中位晚 0.6 s（teacher 0.8 s），早于 onset 的对 0–9%，行人 [L, 10 s] 面积减 null 地板 +0.41 到 +0.55（CI > 0）；student 是看见后反应，不是提前刹。
+*同日第 50 条*：把检测输入换成不抬升、不筛的 image-plane token，行人翻转同一水平。
 
 **状态**：**待定**。限定：P5 v0 只有 25 条路线、一个不提前减速的 expert（BehaviorAgent），行人 reactive 帧 134 个；λ 网格在预登记范围碰边，宽网格敏感性结论不变（偏离 5，事后）。
 I1（P5 v1：PDM-Lite 第二 expert、101 条路线 × 3 seed）在生成，出来后同一套 D0 / M-C 复跑。
@@ -3379,3 +3383,26 @@ x₁₁ 一栏里黄（先等后绕）和橙（录制窗内一直在等）占了
 negotiation 的车流表是我们定的；Emergency 的 t_div 早于前向可见，要么加后视相机要么只当对照。
 **会推翻或推进本条的证据**：修过的放置 null 过门后，考生在放置 null 上的 bypass 率 ≈ x₁₀（那是「只对有东西反应」，P5 的行人翻转也要打折）；换成有 bypass anchor 的词表后 `cls_late` 仍 Δm_bypass ≈ 0（那才是 representation 的问题）；
 第二个 expert（例如 TFv6 的 waypoint 当 teacher）在同一批世界上与 PDM-Lite 的模式一致率低（考卷的标签依赖单一规则 expert）。
+
+## 51. 榜单最优的 Hydra 打分头在 CARLA 配对考卷上不可比；把 CARLA 激发的反应 Δ 经真实数据 gate 叠到它上面，NAVSIM 掉 5–8 分，「能力包」不成立（**待定**，NAVSIM navtest + P5 v1 BA + I3，3 seed，两个 openpilot 模型）
+
+2026-09-26。预登记、兼容检查与全部表在 [todos/2026-09-26-night-queue-2.md](../todos/2026-09-26-night-queue-2.md) N3 节（[B] 09:58 / 10:10）与结果节，小表 [results/night2/N3/](results/night2/N3/)，图 [night2-n3-heads](figs/night2-n3-heads.png)。
+问两件事：榜单最优的 head（第 40 条 6 的 Hydra 式打分头，NAVSIM 84 PDMS）在配对考卷上保不保反应；把能力 head（M-C 配对差分 Δ，第 42 条）经 G1 选出的真实数据 gate g₂（第 44 条）叠到它上面，榜单分和反应能不能都留住。
+
+| | Cinque | Lebowski |
+|:--|:--|:--|
+| Hydra navtest PDMS（seed 0 / 1 / 2） | 84.2 / 83.8 / 84.3 | 84.4 / 84.2 / 84.2 |
+| Hydra + g₂·Δ − Hydra，PDMS 配对 Δ（seed 0 [CI]；1 / 2） | −5.14 [−5.52, −4.76]；−5.11 / −5.49 | −8.33 [−8.78, −7.87]；−8.48 / −7.86 |
+| 同上，走廊有行人 / cyclist 的 897 个 token | −8.9 到 −9.9 | −12.1 到 −13.5 |
+| Hydra 选中 anchor 的 top-10：P5 null 帧 vs navtest 重叠（seed 0；门槛 30%） | 10% | 0% |
+
+**结论**：
+1. **兼容检查不过**（预登记：top-10 重叠 < 30% 就写「不可比」，不读）：Hydra 在 P5 与 I3 的 null 帧上选的轨迹与 navtest 几乎不重合（0–10%，seed 1 / 2 到 30%），同词表的 NAVSIM `cls_late` 也是 0–10%，NAVSIM 训的 `ridge_late` 零样本在 P5 cut-in 上只翻 9–23%（P5 自己训的 prior 71–77%）。
+   所以「榜单 head 压不压反应」在 CARLA 内**不可判**；NAVSIM 训的读出（不论哪种 head）搬不到 5 Hz 的 CARLA 帧上，是 2 Hz / 5 Hz 输入协议与场景分布之差，这次分不开。
+2. **能力包不成立**：登记要求 NAVSIM PDMS 掉 ≤ 1.0 且 P5 行人翻转 ≥ M-C 的 80%。第一条 3 seed × 2 模型全不满足，第二条因不可比不读；g₂ 只把不加 gate 的损失（−15 / −20 分）减到 −5 / −8，有行人的 token 上掉得更多。
+   与第 44 条同一个形状：CARLA 配对激发的 Δ 在真实分布上是一个有方向的系统偏置，gate 缩小它但不消除它；叠在更强的榜单 head 上，害的绝对值更大。
+3. 顺带：在同一冻结特征上，P5 训的 `cls_late` 行人翻转 0.2–1.7%、cut-in 12–28%（回归 prior 71–79%），I3 上 33–46%（prior 70%）；分类读出的离散 anchor 让 null 抖动变大，τ 升到 0.6–5.2 m/s，反应被噪声门槛吃掉。
+   即「榜单常用的分类头」在配对考卷上不比回归头保反应，反而更差；这是 head 结构的性质，不涉及训练数据。
+
+**状态**：**待定**。限定：Hydra 的子分标签只用 navtrain 的 2 万 token；Δ 只用 M-C seed 0；g₂ 是 G1 的主 arm（按训练行 AUC 选），P5 / I3 上用的是 navtrain 训的同一个 probe；NAVSIM 的 EPDMS 用 main @ 0a380a9 devkit。
+**会推翻或推进本条的证据**：用 NAVSIM 协议（2 Hz sample-and-hold）在 P5 帧上重抽 openpilot 特征后兼容检查过线（那时第 1 条可判）；或一个在真实数据上把非 hazard 帧的 Δ 压到零的 gate 让 Hydra + Δ 的 PDMS 损失 ≤ 1（第 2 条翻案）。
