@@ -386,9 +386,12 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
 # ---------------------------------------------------------------- pilot
 
 def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MODELS, arms=ARMS, streams=(),
-        tag: str = "") -> pd.DataFrame:
-    """Fit every arm per (seed, model, fold), judge per arm, paired differences; predictions and tables to rl.dir."""
-    D = load(set_, models, streams)
+        tag: str = "", out: Path | None = None) -> pd.DataFrame:
+    """Fit every arm per (seed, model, fold), judge per arm, paired differences; predictions and tables to `out`
+    (default rl.dir); files carry `tag` so several calls can share one directory."""
+    out = Path(out) if out else rl.dir
+    out.mkdir(parents=True, exist_ok=True)
+    D = load(set_, models or ("cinque",), streams)
     n = len(D["t"])
     rows, diffs, infos = [], [], []
     runs = [(m, None) for m in models] + [("cinque", s) for s in streams]
@@ -405,7 +408,7 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
                 rl.log.info("%s seed %d %s %s fold %d (%s): %s", split, seed, m, stream or "op", f,
                             CLASSES9[f] if split == "loco" else "route", json.dumps(r["info"], default=str)[:300])
             key = f"{split}_s{seed}_{m}" + (f"_{stream.split()[0]}" if stream else "")
-            np.savez_compressed(rl.dir / f"preds_{key}.npz", **preds)
+            np.savez_compressed(out / f"preds_{key}{tag}.npz", **preds)
             scored = {}
             for a in a_run:
                 row, per, s = J.judge_one(a, D["pairs"], preds[a], scopes=False)
@@ -420,10 +423,42 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
                     diffs.append({"split": split, "seed": seed, "model": m, "stream": stream or "op", "arm": a, "vs": b,
                                   "delta": d, "lo": lo, "hi": hi})
     tab, dif = pd.DataFrame(rows), pd.DataFrame(diffs)
-    tab.to_csv(rl.dir / f"summary_{split}{tag}.csv", index=False)
-    dif.to_csv(rl.dir / f"paired_{split}{tag}.csv", index=False)
-    pd.DataFrame(infos).to_csv(rl.dir / f"folds_{split}{tag}.csv", index=False)
+    tab.to_csv(out / f"summary_{split}{tag}.csv", index=False)
+    dif.to_csv(out / f"paired_{split}{tag}.csv", index=False)
+    pd.DataFrame(infos).to_csv(out / f"folds_{split}{tag}.csv", index=False)
     return tab
+
+
+def gather(d: Path, split: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    tab = pd.concat([pd.read_csv(f) for f in sorted(Path(d).glob(f"summary_{split}*.csv"))], ignore_index=True)
+    dif = pd.concat([pd.read_csv(f) for f in sorted(Path(d).glob(f"paired_{split}*.csv"))], ignore_index=True)
+    return tab, dif
+
+
+def report(d: Path, out: Path | None = None) -> str:
+    """Q2 tables for research/results/nq3/q2: per-arm summary (mean and range over seeds), paired differences,
+    the pre-registered readings, the chosen closed-loop arms."""
+    out = out or RESULTS
+    out.mkdir(parents=True, exist_ok=True)
+    md = []
+    for split in ("loco", "route"):
+        if not list(Path(d).glob(f"summary_{split}*.csv")):
+            continue
+        tab, dif = gather(d, split)
+        tab.to_csv(out / f"summary_{split}.csv", index=False)
+        dif.to_csv(out / f"paired_{split}.csv", index=False)
+        agg = tab.groupby(["model", "stream", "examinee"]).agg(
+            seeds=("seed", "nunique"), flip=("bypass_flip", "mean"), flip_min=("bypass_flip", "min"),
+            flip_max=("bypass_flip", "max"), lo_min=("lo", "min"), ff=("null_ff_oos", "mean"),
+            shoulder=("shoulder_flip", "mean"), ref=("shoulder_ref", "mean"), gate_all=("has_bypass", "all"),
+            stop=("stop_sub", "mean"), mirror=("mirror_borrow", "mean"), neg_later=("neg_later_rate", "mean")).reset_index()
+        cr = criteria(tab, dif)
+        cr.to_csv(out / f"criteria_{split}.csv", index=False)
+        md += [f"## {split}", agg.to_markdown(index=False, floatfmt=".3f"), "### paired (flip difference, route bootstrap)",
+               dif.to_markdown(index=False, floatfmt=".3f"), "### readings", cr.to_markdown(index=False)]
+    text = "\n\n".join(md) + "\n"
+    (out / "q2_v0.md").write_text(text)
+    return text
 
 
 def criteria(tab: pd.DataFrame, dif: pd.DataFrame) -> pd.DataFrame:
@@ -506,14 +541,17 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("labels", "pilot", "controls", "export"))
+    ap.add_argument("cmd", choices=("labels", "pilot", "controls", "export", "report"))
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--dst", default="")
+    ap.add_argument("--results", default="")
     ap.add_argument("--set", default="carla_p6")
     ap.add_argument("--split", default="loco")
     ap.add_argument("--seeds", default="0,1,2")
     ap.add_argument("--arms", default=",".join(ARMS))
     ap.add_argument("--arm", default="")
     ap.add_argument("--mode-arm", default="")
-    ap.add_argument("--run", default="", help="pilot run dir (export: choose the arm from its summary)")
+    ap.add_argument("--run", default="", help="pilot output dir (shared by the pilot calls; export chooses from it)")
     a = ap.parse_args()
     seeds = tuple(int(s) for s in a.seeds.split(","))
     if a.cmd == "labels":
@@ -521,16 +559,23 @@ def main():
         print(np.bincount(D["lab"][D["lab"] >= 0], minlength=5))
         return
     rl = RunLog("nq3_c", f"q2-{a.cmd}-{a.set}-{a.split}")
+    out = Path(a.run) if a.run else None
     if a.cmd == "pilot":
-        run(rl, a.set, a.split, seeds, MODELS, tuple(a.arms.split(",")))
+        run(rl, a.set, a.split, seeds, MODELS, tuple(a.arms.split(",")), tag=a.tag, out=out)
     elif a.cmd == "controls":
-        run(rl, a.set, a.split, seeds, (), ("A1", "A3"), ("qwen L18_last", "vjepa2 mean"), tag="_controls")
+        run(rl, a.set, a.split, seeds, (), ("A1", "A3"), ("qwen L18_last", "vjepa2 mean"), tag="_controls", out=out)
+    elif a.cmd == "report":
+        print(report(out, Path(a.results) if a.results else None))
     else:
         arm, mode = a.arm, a.mode_arm
         if not arm:
-            arm, mode = choose(pd.read_csv(Path(a.run) / f"summary_loco.csv"))
-        d = export(rl, arm, mode, a.set)
+            tab, _ = gather(out, "loco")
+            arm, mode = choose(tab[tab.stream == "op"])
+        d = export(rl, arm, mode, a.set, out_dir=Path(a.dst) if a.dst else None)
         rl.log.info("exported %s (trajectory %s, mode %s)", d, arm, mode)
+        (d / "READY").write_text(json.dumps({"trajectory_arm": arm, "mode_arm": mode, "written": pd.Timestamp.now().isoformat(),
+                                             "rule": "LOCO, Cinque, all seeds pass the rule-7 gate, highest mean flip; "
+                                                     "none -> A1; mode head A3 if it passes else A2"}, indent=1))
     rl.close()
 
 

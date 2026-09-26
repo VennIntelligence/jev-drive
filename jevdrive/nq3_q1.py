@@ -62,7 +62,9 @@ def heads(rl):
     t6, past6 = _p6_rows()
     with I.p5_set(SET):
         op6 = p5_openpilot.load(t6, MODELS, sub="op_streams_vis")
-        qn = set(NF.rows(1).frame_name)
+        fd = proc("features")
+        qn = set(pd.concat([pd.read_parquet(c / "index.parquet") for c in sorted(fd.glob("c[0-9]*"))
+                            if (c / "meta.json").exists()] or [pd.DataFrame({"frame_name": []})]).frame_name)
         hasq = t6.frame_name.isin(qn).to_numpy()
         Q6 = np.zeros((len(t6), Q.shape[1]), np.float32)
         Q6[hasq] = P.load_features(t6[hasq], ("L18_last",))["L18_last"]
