@@ -50,6 +50,41 @@ def _res(sec: str) -> Path:
     return d
 
 
+# ---------------------------------------------------------------- recorder configs
+
+def configs():
+    """scripts/nq3_recorder.py configs: P6 v0's PDM-Lite recorder settings plus the lane's rigs and shadows.
+    v0rr   lean rig (v0's cameras spawned, not rendered), BridgeDrive shadow, BLUE camera at 5 Hz, need_k stop
+    full   P6 v0's rig (Waymo cameras 5 Hz, visibility), TFv6 + BridgeDrive shadows, BLUE camera (the smoke vs v0)
+    v1     full, recorded to 15 s after the ego has passed the obstacle; recovery worlds stop at their need_k
+    e1     lean rig without shadows or BLUE: the v1 determinism re-drive"""
+    d = data_dir()
+    bl = str(d / "third_party/bridgedrive/lead")
+    produce = " ".join("produce_%s=False" % k for k in ("demo_image", "demo_video", "debug_image", "debug_video",
+                                                        "input_image", "input_video", "grid_image", "grid_video", "input_log"))
+    bd = {"model": "bridgedrive", "python": str(d / "envs/bridgedrive/bin/python"), "lead": bl,
+          "model_dir": str(d / "models/bridgedrive"),       # model_BridgeDrive_m2_k60_0030.pth, T3's
+          "env": {"LEAD_CLOSED_LOOP_CONFIG": "steer_modality=route throttle_modality=target_speed "
+                  "brake_modality=target_speed step_num=20 diffusion_speed=False " + produce,
+                  "LEAD_TRAINING_CONFIG": "diffusion_speed=False plan_anchor_path=%s/anchor_utils/anchor_data/"
+                  "lead_cp_kmeans_60_10.npy" % bl, "SAVE_PATH": str(d / "runs/top10_t3/lead_save")}}
+    tf = {"model": "tfv6", "python": str(d / "envs/p5v1-pdm/bin/python"), "lead": str(d / "third_party/scout/lead-cvpr2026"),
+          "model_dir": json.loads((d / "runs/p5_pairs/agent_config.json").read_text())["tfv6_model_dir"],
+          "env": {"SAVE_PATH": str(d / "runs/p6/lead_save")}}
+    p6v0 = {"save_threads": 3, "driver": "pdm_lite", "after_trigger_s": 40.0, "stuck_s": 40.0, "max_sim_s": 70.0,
+            "record_props": True, "pass_stop_s": 8.0}       # runs/p6/agent-p6.json, P6 v0
+    a = root()
+    cfgs = {"v0rr": dict(p6v0, rig="lean", cam_period=4, blue=1, shadows=[bd], need=str(a / "v0rr/need.json")),
+            "full": dict(p6v0, rig="p5", cam_period=4, blue=1, shadows=[tf, bd]),
+            "full_c1": dict(p6v0, rig="p5", cam_period=1, blue=1, shadows=[tf, bd]),
+            "v1": dict(p6v0, rig="p5", cam_period=4, blue=1, shadows=[tf, bd], pass_stop_s=15.0,
+                       need=str(a / "v1/need.json")),
+            "e1": dict(p6v0, rig="lean", cam_period=4, blue=0, shadows=[], pass_stop_s=15.0, need=str(a / "v1/need.json"))}
+    for k, v in cfgs.items():
+        (a / ("agent_%s.json" % k)).write_text(json.dumps(v, indent=1))
+    log.info("configs: %s", sorted(cfgs))
+
+
 # ---------------------------------------------------------------- v0 re-record
 
 def need_v0():
@@ -116,22 +151,37 @@ def _single(route) -> ET.Element | None:
 
 def pool() -> pd.DataFrame:
     """Every candidate route: Bench2Drive 0.0.4 val clips (not in the 220 set, not a known crasher) and the long-route
-    clips of scripts/nq3_clips.py; the v0 routes (220 set) are listed with source v0."""
+    clips of scripts/nq3_clips.py; the v0 routes (220 set) are listed with source v0. One route per scenario instance:
+    a candidate whose trigger point lies within 5 m of an earlier one in the same town (v0, then val, then long-route
+    clips; Bench2Drive cut its own clips from the same long routes) is dropped."""
     rows = []
-    v0 = {r.get("id") for r in ET.parse(data_dir() / B2D / "bench2drive220.xml").getroot().findall("route")}
-    for r in ET.parse(data_dir() / B2D / "bench2drive220.xml").getroot().findall("route"):
+
+    def add(r, source, **kw):
         sc = _single(r)
-        if sc is not None and r.get("id") not in P.CRASHERS:
-            rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "v0"})
+        if sc is None:
+            return
+        tp = sc.find("trigger_point")
+        rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": source,
+                     "tx": float(tp.get("x")), "ty": float(tp.get("y")), **kw})
+    v0 = ET.parse(data_dir() / B2D / "bench2drive220.xml").getroot().findall("route")
+    v0_ids = {r.get("id") for r in v0}
+    for r in v0:
+        if r.get("id") not in P.CRASHERS:
+            add(r, "v0")
     for r in ET.parse(data_dir() / B2D / "bench2drive_0.0.4_val.xml").getroot().findall("route"):
-        sc = _single(r)
-        if sc is not None and r.get("id") not in v0 and r.get("id") not in P.CRASHERS:
-            rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "b2d_val"})
+        if r.get("id") not in v0_ids and r.get("id") not in P.CRASHERS:
+            add(r, "b2d_val")
     for r in ET.parse(root("q3") / "clips.xml").getroot().findall("route"):
-        sc = _single(r)
-        rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "lb2_clip",
-                     "origin": r.get("source")})
-    return pd.DataFrame(rows)
+        add(r, "lb2_clip", origin=r.get("source"))
+    df = pd.DataFrame(rows)
+    keep = np.ones(len(df), bool)
+    for town, g in df.groupby("town"):
+        xy = g[["tx", "ty"]].to_numpy()
+        for j, i in enumerate(g.index):
+            if j and (np.hypot(*(xy[:j] - xy[j]).T) < 5.0)[keep[g.index[:j]]].any():
+                keep[i] = False
+    log.info("route pool: %d candidates, %d dropped as the same scenario instance", len(df), int((~keep).sum()))
+    return df[keep].reset_index(drop=True)
 
 
 def select(pl: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
@@ -288,7 +338,7 @@ def status(gen: Path, id_file: Path, t_start: float, est_h: float) -> str:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status", "pool"])
+    ap.add_argument("cmd", choices=["configs", "need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status", "pool"])
     ap.add_argument("--gen", default="")
     ap.add_argument("--file", default="")
     ap.add_argument("--need", default="")
@@ -298,7 +348,9 @@ def main():
     ap.add_argument("--t0", type=float, default=0.0)
     ap.add_argument("--est-h", type=float, default=0.0)
     a = ap.parse_args()
-    if a.cmd == "need-v0":
+    if a.cmd == "configs":
+        configs()
+    elif a.cmd == "need-v0":
         need_v0()
     elif a.cmd == "build-v1":
         build_v1()
