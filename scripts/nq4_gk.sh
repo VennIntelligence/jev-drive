@@ -55,6 +55,7 @@ SIDX0=${SIDX0:-60}          # GPU g: server indices [60 + 18 g, 60 + 18 g + 18),
 SPAN=${SPAN:-18}
 BUDGET_WH=${BUDGET_WH:-600}
 CUR_OUTS=""
+PIL=$G/${ARMS:-arms}_pilot BLK=$G/${ARMS:-arms}_blocked ERRP=$G/ERROR${ARMS:+.$ARMS}   # smoke runs (ARMS=...) keep their own
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_NQ4_TRACE=1
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 NUMBA_NUM_THREADS=2
 SIM=$DATA_DIR/third_party/simlingo
@@ -344,10 +345,10 @@ execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run rout
 
 # ---------------------------------------------------------------- staged launch (1 route, then 10, the checklist, then all)
 pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 = examinee blocked, 2 = not run (busy elsewhere)
-    local c=$1 v=$2 sd=$3 ids=$4 d=$G/pilot/$1.$2 st r
+    local c=$1 v=$2 sd=$3 ids=$4 d=$PIL/$1.$2 st r
     [[ -e $d/PASS ]] && return 0
-    [[ -e $G/blocked/$c ]] && return 1
-    mkdir -p "$G/pilot"; mkdir "$d" 2>/dev/null || return 2          # another loop is piloting it
+    [[ -e $BLK/$c ]] && return 1
+    mkdir -p "$PIL"; mkdir "$d" 2>/dev/null || return 2          # another loop is piloting it
     local one=${ids%%,*} ten; ten=$(tr , '\n' <<< "$ids" | head -10 | paste -sd,)
     for st in 1 2; do
         local sel=$one; [[ $st == 2 ]] && sel=$ten
@@ -358,10 +359,10 @@ pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 
         r=$(taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g pilot-check --cand "$c" --variant "$v" --out "$(arm_dir "$c" "$v" "$sd")" --ids "$sel" 2>> "$d/check.err")
         echo "$r" > "$d/stage$st.json"
         if ! python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1])['pass'] else 1)" "$r" 2>/dev/null; then
-            mkdir -p "$G/blocked"; echo "$r" > "$G/blocked/$c"
-            { echo "# nq4-gk pilot FAILED: $c $v stage $st ($(date '+%F %T %Z'))"; echo; echo "$r"; } > "$G/ERROR.$c"
+            mkdir -p "$BLK"; echo "$r" > "$BLK/$c"
+            { echo "# nq4-gk pilot FAILED: $c $v stage $st ($(date '+%F %T %Z'))"; echo; echo "$r"; } > "$ERRP.$c"
             ev pilot_failed "\"cand\": \"$c\", \"variant\": \"$v\", \"stage\": $st"
-            log "pilot $c $v stage $st FAILED: examinee $c blocked ($G/ERROR.$c)"; return 1
+            log "pilot $c $v stage $st FAILED: examinee $c blocked ($ERRP.$c)"; return 1
         fi
     done
     date '+%F %T' > "$d/PASS"; ev pilot_pass "\"cand\": \"$c\", \"variant\": \"$v\""; log "pilot $c $v passed"
@@ -389,7 +390,7 @@ run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]: pilo
     (( total == 0 )) && { for s in "${seeds[@]}"; do echo '{"reused": true}' > "$(arm_dir "$c" "$v" "$s")/DONE"; done
                           log "step $c $v $3 $rs: nothing to run (reused)"; return 0; }
     local s0ids; s0ids=$(step_ids "$c" "$v" "${seeds[0]}" "$rs")
-    if [[ -n $s0ids ]]; then
+    if [[ -n $s0ids && -z ${NO_PILOT:-} ]]; then
         pilot "$c" "$v" "${seeds[0]}" "$s0ids"; local r=$?
         (( r == 1 )) && return 1
         (( r == 2 )) && return 2                          # being piloted elsewhere: come back later
@@ -545,7 +546,7 @@ status_loop() {
             echo "- batch: $( [[ -f $G/GO ]] && echo "GO ($(tr '\n' ' ' < "$G/GO"))" || echo 'waiting for runs/nq4/gk/GO')"
             echo "- pilot card: $( [[ -f $SCHED/nq4-gk.pilot ]] && tr '\n' ' ' < "$SCHED/nq4-gk.pilot" || echo 'waiting for runs/sched/nq4-gk.pilot')"
             echo "- current batch step: $(cat "$G/CURRENT" 2>/dev/null)"
-            echo "- pilots passed: $(ls "$G"/pilot/*/PASS 2>/dev/null | wc -l); blocked examinees: $(ls "$G/blocked" 2>/dev/null | tr '\n' ' ')"
+            echo "- pilots passed: $(ls "$PIL"/*/PASS 2>/dev/null | wc -l); blocked examinees: $(ls "$BLK" 2>/dev/null | tr '\n' ' ')"
             echo "- projection: $(cat "$G/PROJECTED_WH" 2>/dev/null) (G budget $BUDGET_WH)$( [[ -e $G/OVER_BUDGET ]] && echo '; G OVER BUDGET after both cuts')"
             echo "- steps left: $(grep -c . "$G/QUEUE" 2>/dev/null); pids.current $(cat /sys/fs/cgroup/pids.current), load $(cut -d' ' -f1-3 /proc/loadavg)"
             echo; echo '```'; nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader; echo '```'
@@ -555,7 +556,7 @@ status_loop() {
     done
 }
 step_skip() {  # a step is settled: every seed dir has DONE, or its examinee is blocked
-    [[ -e $G/blocked/$1 ]] || step_done "$1" "$2" "$3"
+    [[ -e $BLK/$1 ]] || step_done "$1" "$2" "$3"
 }
 pilot_loop() {  # on the validation card: the staged pilot of every examinee x world, in queue order, ahead of the batch
     trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT
@@ -566,7 +567,7 @@ pilot_loop() {  # on the validation card: the staged pilot of every examinee x w
     while :; do
         pending=0
         while read -r c v s rs; do
-            [[ -e $G/pilot/$c.$v/PASS || -e $G/blocked/$c || -d $G/pilot/$c.$v ]] && continue
+            [[ -e $PIL/$c.$v/PASS || -e $BLK/$c || -d $PIL/$c.$v ]] && continue
             ready_for "$c" || { pending=1; continue; }
             ids=$(step_ids "$c" "$v" "${s%%,*}" "$rs") || continue
             [[ -z $ids ]] && continue
