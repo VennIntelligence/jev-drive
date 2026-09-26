@@ -382,7 +382,8 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   7. **creep 单列**：creep 是否在某帧生效，用重录的 20 Hz 自车速度按作者的计数规则离线算（< 0.1 m/s 计数，BridgeDrive 超过 1100 帧后 creep 20 帧，BLUE 超过 800 帧后 15 帧），x⁺ / x⁻ 任一侧生效的帧单列、不进主读数；
      录制窗口 ≤ 50 s 且静止 30 s 即停，所以预期 0 帧，照样报数。BridgeDrive 的停车标志规则默认关，不涉及。BLUE 另把 gate 开 / 关的帧分开报（描述性，不设门槛）。
   8. **等价检查（先于批量）**：E1 重录 expert 对原记录逐 tick 比（位置、航向、速度差与相机 tick 网格）；E2 BridgeDrive 的 5 Hz shadow 对作者每 tick 跑 `run_step`（`shadow=ref20`）在相机 tick 上的输出；
-     E3 BLUE 离线捷径对作者每 tick 跑 `run_step`、缓存模型对每个世界重新 setup。门槛：E1 位置差 0 / 航向差 0（与 v0 的确定性一致），E3 的读数逐位相同；E2 原写「逐位相同」，13:25 改为「5 Hz 对 ref20 的差不大于同配置重录两次的差」：同一个世界用同一份代码录两次，BridgeDrive 的读数本身就不逐位相同（CARLA 的 LiDAR / radar 每次运行不同，相机与 expert 轨迹逐位相同），逐位门槛不可达，与抽取方式无关（数字见下一条）；不过就停下查。
+     E3 BLUE 离线捷径对作者每 tick 跑 `run_step`、缓存模型对每个世界重新 setup。门槛：E1 位置差 0 / 航向差 0（与 v0 的确定性一致），E2 / E3 的读数逐位相同；不过就停下查。
+     **13:25 [T3] 更正（写于任何考卷数字之前）**：上面 E2 的门槛「逐位相同」改为「5 Hz shadow 对 ref20 的差不大于同配置重录两次的差」。原因：同一个世界用同一份代码录两次，BridgeDrive 的读数本身就不逐位相同（CARLA 的 LiDAR / radar 每次运行不同，相机与 expert 轨迹逐位相同），逐位门槛不可达，且与抽取方式无关（数字见 13:35 条）。E1、E3 的门槛不变。
 - 2026-09-26 13:35 CST [T3] **smoke 与等价检查**（GPU 4，≤ 2 个 server，CPU 116–123；run dir `runs/top10_t3/{gen-smoke,gen-smoke-rep,gen-smoke-ref20,blue-smoke,prof}`；还没有任何考卷数字）。
   smoke = 两个 Town12 的 case 各三个世界（14382 PedestrianCrossing、18311 ParkingCutIn，x⁺ / x⁻ / null），录到各自最后引用 tick（105 / 161）后按 `need_k` 停。
 
