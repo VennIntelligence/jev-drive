@@ -33,20 +33,23 @@ def proc(*p) -> Path:
     return d.joinpath(*p)
 
 
-def rows() -> pd.DataFrame:
+def rows(max_priority: int = 9) -> pd.DataFrame:
     t = pd.read_parquet(proc("index.parquet"))
-    need = set(pd.read_parquet(proc("nq3_exam_frames.parquet")).frame_name)
+    fr = pd.read_parquet(proc("nq3_exam_frames.parquet"))
+    need = set(fr.frame_name[fr.priority <= max_priority])
     return t[t.frame_name.isin(need)].reset_index(drop=True)
 
 
 # ---------------------------------------------------------------- Qwen
 
-def qwen(shard: str = "0/1", batch: int = 2, workers: int = 4):
+def qwen(shard: str = "0/1", batch: int = 2, workers: int = 4, max_priority: int = 1):
+    """Only the bypass / weather-null / placement-null frames (priority <= 1): the HF processor's CPU cost (~4 core-s
+    per 12-image clip) makes all 18.8k frames too slow for the lane's 30 cores ([C] entry)."""
     os.environ["P5_SET"] = SET
     from . import features as F, p4_carla as p4, waymo_qwenvid as qv
     from .runlog import RunLog
     si, sn = map(int, shard.split("/"))
-    t = rows()
+    t = rows(max_priority)
     root = proc("features", "x")
     root = root.parent
     chunks = [t.iloc[i:i + CHUNK] for i in range(0, len(t), CHUNK)]

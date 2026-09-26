@@ -10,11 +10,11 @@ OPPY=$DATA_DIR/envs/openpilot/bin/python
 ULPY=$DATA_DIR/envs/ultralytics/bin/python
 export CUDA_VISIBLE_DEVICES=6 P6=carla_p6
 
-feats() {   # C1: Qwen (2 shards, cores 164-171) || V-JEPA 2 -> YOLO detect -> tokens (cores 172-179)
+feats() {   # C1: Qwen (2 shards, cores 164-179) || V-JEPA 2 -> YOLO detect -> tokens (cores 172-179)
   local pids=() rc=0
-  for i in 0 1; do
-    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c $((164 + 4 * i))-$((167 + 4 * i)) \
-      $PY -m jevdrive.nq3_feats qwen --shard $i/2 --batch 2 --workers 3 > "$R/feats/qwen$i.log" 2>&1 & pids+=($!)
+  for i in 0 1; do     # CPU-bound (HF processor): both shards may use all 16 cores
+    OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 taskset -c 164-179 \
+      $PY -m jevdrive.nq3_feats qwen --shard $i/2 --batch 2 --workers 6 > "$R/feats/qwen$i.log" 2>&1 & pids+=($!)
   done
   (
     set -e
