@@ -188,7 +188,7 @@ class ZeroShotAgent(AutonomousAgent):
         self.head = self.model == "head"
         self.ctl_every = int(self.cfg.get("ctl_every", 1))
         self.plan_ticks = int(self.cfg.get("plan_ticks", 4))
-        self.head_pending, self.pose_track = None, []
+        self.head_pending, self.pose_track, self.head_gaps = None, [], {}
         self.plan_every = int(self.cfg.get("plan_every", 5 if self.alpamayo else 1))
         self.op_tick = float(self.cfg.get("op_camera_tick", rigs.OP_CAMERA_TICK))
         self.plan_origin = self.cfg.get("plan_origin", "camera")
@@ -672,9 +672,13 @@ class ZeroShotAgent(AutonomousAgent):
         ms = 0.0
         if self.head_pending is not None and len(self.pose_track) > self.head_pending[0] + 1:
             ms = self._head_plan()
-        if (self.tick - 1) % 4 == 0 and self.pose_track:
+        every_tick = float(self.cfg.get("head_cam_tick", 0.0)) == 0.0
+        if (not every_tick or (self.tick - 1) % 4 == 0) and self.pose_track:
             got = [data.get(tag) for tag in self.cam_tags]
-            if all(g is not None and g[0] == frame for g in got):
+            fs = {g[0] if g is not None else -1 for g in got}
+            f_cam = fs.pop() if len(fs) == 1 else -1
+            if f_cam > getattr(self, "head_last_f", -1) and 0 <= frame - f_cam < len(self.pose_track) \
+                    and (f_cam == frame or not every_tick):
                 mx, my = self.head_maps
                 jpgs = []
                 for g in got:
@@ -683,9 +687,13 @@ class ZeroShotAgent(AutonomousAgent):
                     ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, self.head_q])
                     jpgs.append(np.frombuffer(buf.tobytes(), np.uint8))
                 desire = self.route.desire() if self.cfg.get("desire", True) else DESIRE_NONE
-                self.head_pending = (len(self.pose_track) - 1, frame, now, jpgs, desire)
+                gap = f_cam - getattr(self, "head_last_f", f_cam)
+                self.head_gaps[gap] = self.head_gaps.get(gap, 0) + 1
+                self.head_last_f = f_cam
+                k = len(self.pose_track) - 1 - (frame - f_cam)
+                self.head_pending = (k, f_cam, self.frame_time.get(f_cam, now), jpgs, desire)
                 self.n_sets += 1
-            else:
+            elif every_tick:
                 self.head_missing = getattr(self, "head_missing", 0) + 1
         return ms
 
@@ -734,6 +742,8 @@ class ZeroShotAgent(AutonomousAgent):
         summary = {k: {"n": len(v), "mean_ms": float(np.mean(v)) if v else None,
                        "p50_ms": float(np.median(v)) if v else None} for k, v in tm.items()}
         summary.update(n_plans=getattr(self, "n_plans", 0), n_camera_sets=getattr(self, "n_sets", 0),
+                       head_frame_gaps={str(k): v for k, v in getattr(self, "head_gaps", {}).items()},
+                       head_missing=getattr(self, "head_missing", 0),
                        server=getattr(self, "server_meta", None), config=getattr(self, "cfg", None))
         with open(os.path.join(getattr(self, "out", "."), "agent_summary.json"), "w") as fh:
             json.dump(summary, fh, indent=1, default=str)
