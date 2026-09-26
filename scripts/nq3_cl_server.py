@@ -18,7 +18,8 @@ own pose track). The server then does exactly what the P5 offline path does:
   mode head's last output is bypass-L / -R the desire is laneChangeLeft / -Right instead of the route desire (OPModel turns
   a held desire into a rising-edge pulse, as modeld does).
 
-With meta "dump" = <path>.npz, the inputs and every intermediate are written there for the equivalence check
+Night queue 4: meta "heads" (a heads.npz) / "q2_dir" (a Head dir) select one cross-fitted fold per request; absent,
+the full-data heads above. With meta "dump" = <path>.npz, the inputs and every intermediate are written there for the equivalence check
 (jevdrive.nq3_cl check, rule 8). Protocol: scripts/zeroshot_wire.py.
 
     CUDA_VISIBLE_DEVICES=0 $DATA_DIR/envs/openpilot/bin/python scripts/nq3_cl_server.py --socket S --qwen Q --yolo Y
@@ -86,13 +87,23 @@ def main():
     t0 = time.time()
     WZ._init({}, {P5.SEQ: carla_calib()}, ".")
     heads = CL.Heads()
-    q2 = {}
+    q2, fold_heads = {}, {}
 
-    def q2head():
-        if "h" not in q2:
+    def q2head(d=None):
+        """Lane C's head, or (night queue 4, meta "q2_dir") one cross-fitted fold of it."""
+        d = d or str(Path(os.environ["DATA_DIR"]) / "runs" / "nq3" / "q2" / "closed_loop_head")
+        if d not in q2:
             from jevdrive.nq3_head import Head
-            q2["h"] = Head(Path(os.environ["DATA_DIR"]) / "runs" / "nq3" / "q2" / "closed_loop_head")
-        return q2["h"]
+            q2[d] = Head(d)
+        return q2[d]
+
+    def heads_for(p=None):
+        """The full-data heads, or (night queue 4, meta "heads") one cross-fitted fold's heads.npz."""
+        if not p:
+            return heads
+        if p not in fold_heads:
+            fold_heads[p] = CL.Heads(Path(p))
+        return fold_heads[p]
     from jevdrive.openpilot.model import T_IDXS, decode
     front_xy = np.array(RIG[0][1:3], float)                  # the rig's FRONT camera (x, y) on the rear-axle frame
     taps = D.OP_TAPS[MODEL]
@@ -153,7 +164,7 @@ def main():
                 ego = np.asarray(arrays["ego"], np.float32)
                 mode = None
                 if arm in ("q2", "q2d"):
-                    traj, md = q2head()(op, ego)
+                    traj, md = q2head(meta.get("q2_dir"))(op, ego)
                     mode = int(md[0]) if md is not None else None
                     last_mode[0] = mode
                     if arm == "q2":
@@ -162,9 +173,9 @@ def main():
                         dd = decode(raw, m.slices, float(meta.get("speed", 0.0)))
                         path = np.asarray(openpilot_to_rear(dd["plan_pos"], dd["plan_yaw"], T_IDXS, front_xy), np.float64)
                 elif arm in ("mc", "mc_real0") and q is None:          # the first three camera sets of a route: no 4-frame clip yet
-                    path = heads.predict("ridge_late", ego, op)
+                    path = heads_for(meta.get("heads")).predict("ridge_late", ego, op)
                 else:
-                    path = heads.predict(arm, ego, op, q=q, tok=tok)
+                    path = heads_for(meta.get("heads")).predict(arm, ego, op, q=q, tok=tok)
                 t_h = time.perf_counter()
                 ms = {"render_ms": 1e3 * (t_r - t), "op_ms": 1e3 * (t_o - t_r), "feat_wait_ms": 1e3 * (t_f - t_o),
                       "head_ms": 1e3 * (t_h - t_f), "server_ms": 1e3 * (t_h - t)}

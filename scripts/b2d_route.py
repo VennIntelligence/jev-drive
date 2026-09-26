@@ -162,6 +162,9 @@ def main():
     shift = _route_attr(a.routes, a.route_id, "p6_shift")
     if shift is not None:
         b2d_hooks.p6_shift(a.out, float(shift))
+    if _route_attr(a.routes, a.route_id, "nq4_world") is not None or os.environ.get("B2D_NQ4_TRACE") == "1":
+        import nq4_hooks   # night queue 4 G / K: world variants and the 20 Hz trace (scripts/nq4_hooks.py)
+        nq4_hooks.install(a.out, a.routes, a.route_id, a.tm_seed)
     _patch_setup_simulation(LeaderboardEvaluator, a)
     _patch_signal_handler(LeaderboardEvaluator)
     if a.max_ticks:
