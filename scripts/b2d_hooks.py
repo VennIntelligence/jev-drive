@@ -323,7 +323,7 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
         s = target - o
         return _carla.Location(loc.x + s * r.x, loc.y + s * r.y, loc.z), s
 
-    log, hidden, shifted = [], [], []
+    log, hidden, shifted, registry = [], [], [], {"dropped": [], "kept": []}
     inner_build = RouteScenario.build_scenarios
 
     def build(self, ego_vehicle, debug=False):
@@ -353,19 +353,19 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
                             a.set_location(loc)
                             shifted.append(a.id)
                 log.append(row)
+        if not mine:                                   # build_scenarios is called again later; nothing new
+            return
         if obstacle != "on":
             keep = [e for e in CarlaDataProvider.active_scenarios
                     if not any(x is not None and hasattr(x, "id") and x.id in mine for x in e[1][:2])]
-            dropped = [e[0] for e in CarlaDataProvider.active_scenarios if e not in keep]
+            registry["dropped"] += [e[0] for e in CarlaDataProvider.active_scenarios if e not in keep]
             CarlaDataProvider.active_scenarios[:] = keep
-        else:
-            dropped = []
+        registry["kept"] += [e[0] for e in CarlaDataProvider.active_scenarios if e[0] not in registry["kept"]]
         with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
             json.dump(log, fh)
         with open(os.path.join(out_dir, "p6_world.json"), "w") as fh:
             json.dump({"obstacle": obstacle, "oncoming": oncoming, "tm_seed": int(tm_seed),
-                       "registry_dropped": dropped,
-                       "registry_kept": [e[0] for e in CarlaDataProvider.active_scenarios]}, fh)
+                       "registry_dropped": registry["dropped"], "registry_kept": registry["kept"]}, fh)
 
     RouteScenario.build_scenarios = build
     if obstacle != "hide":
