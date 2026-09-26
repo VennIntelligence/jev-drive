@@ -143,6 +143,16 @@ def load_maps(set_: str, key: str):
     return [(z[f"s{i}"], z[f"u{i}"], z[f"v{i}"]) for i in range(3)]
 
 
+def read_rgb(f: str) -> np.ndarray:
+    """A JPEG path, or `<package.npz>::<key>` for JPEG bytes inside an npz (the WOD zero-shot packages)."""
+    if "::" in f:
+        import io
+        p, k = f.split("::")
+        with np.load(p) as z:
+            return np.asarray(Image.open(io.BytesIO(z[k].tobytes())).convert("RGB"))
+    return np.asarray(Image.open(f).convert("RGB"))
+
+
 class Frames(torch.utils.data.Dataset):
     def __init__(self, plan, feats):
         self.p, self.f = plan, feats
@@ -155,7 +165,7 @@ class Frames(torch.utils.data.Dataset):
     def __getitem__(self, i):
         fr = self.p["frames"]
         key = fr["rig"][i]
-        src = [np.asarray(Image.open(f).convert("RGB")) for f in fr["files"][i]]
+        src = [read_rgb(f) for f in fr["files"][i]]
         out = R.render(src, load_maps(self.p["set"], key))
         return i, self.f(dict(zip(R.NAMES, out)), self.cams[key], np.asarray(fr["ego"][i], np.float32))
 
@@ -225,7 +235,7 @@ def check(rl, M, n_tok: int, batch: int):
     dev = torch.device("cuda")
     M.agent.to(dev).eval()
     names = {"cam_l0": "cam_l0", "cam_f0": "cam_f0", "cam_r0": "cam_r0"}
-    rows, ego_rows = [], []
+    rows, map_cache = [], {}
     for k0 in range(0, n_tok, batch):
         nat, ad_a, ad_b = [], [], []
         for tok in toks[k0: k0 + batch]:
@@ -253,7 +263,11 @@ def check(rl, M, n_tok: int, batch: int):
                     yaw = lambda k: float(np.degrees(np.arctan2(cams[k]["sensor2lidar_rotation"][1, 2],  # noqa: E731
                                                                 cams[k]["sensor2lidar_rotation"][0, 2])))
                     virt = [R.virtual(yaw(k), cams[k]["sensor2lidar_translation"]) for k in R.NAMES]
-                mp = R.maps(src, virt, [1, 0, 2])
+                key = (arm, np.round(np.concatenate([np.ravel(c[k]) for c in virt for k in sorted(c)]), 4).tobytes(),
+                       json.dumps(src))
+                if key not in map_cache:                     # nuPlan calibrations repeat across logs of a vehicle
+                    map_cache[key] = R.maps(src, virt, [1, 0, 2])
+                mp = map_cache[key]
                 out = R.render([imgs[k] for k in src_keys], mp)
                 lst.append(M.feats(dict(zip(R.NAMES, out)), dict(zip(R.NAMES, virt)), ego))
         with torch.no_grad():
@@ -267,7 +281,7 @@ def check(rl, M, n_tok: int, batch: int):
                 r[f"same_{arm}"] = bool(np.allclose(ta, tn, atol=1e-3)) if res[arm][1] is None else \
                     bool(int(res[arm][1][j]) == int(res["native"][1][j]))
             rows.append(r)
-        rl.log.info("check %d / %d tokens", len(rows), n_tok)
+        rl.log.info("check %d / %d tokens (%d distinct rigs)", len(rows), n_tok, len(map_cache))
     import pandas as pd
     df = pd.DataFrame(rows)
     df.to_csv(rl.dir / "adapter_check.csv", index=False)

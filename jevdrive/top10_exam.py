@@ -18,7 +18,7 @@ from . import navsim_rig as R
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
-SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs"}
+SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs", "wod": None}
 MODELS = {"sparsedrivev2": "SparseDriveV2", "ztrs": "ZTRS"}
 # I3's origin is the front camera; place it where nuPlan's CAM_F0 sits over the rear axle (the [T1] 10:05 entry)
 I3_FRONT = np.array([1.67, 0.0, 1.52])
@@ -60,8 +60,33 @@ def _frames(t: pd.DataFrame, past: np.ndarray, rows: np.ndarray) -> dict:
             "ego": nav_ego(past[rows], f.intent.to_numpy())}
 
 
+def plan_wod() -> dict:
+    """WOD-E2E val rater (479) + ADE-extra (958) frames: FRONT / FRONT_LEFT / FRONT_RIGHT of frame f from the
+    zero-shot exam's packages, one rig per sequence (the calibration of its first planned frame)."""
+    from . import wod_zeroshot as Z
+    from .night2_n3 import nav_ego
+    S = Z.load_sets()
+    names = np.r_[S["rater"]["name"], S["extra"]["name"]].astype(str)
+    seq = np.r_[S["rater"]["sequence"], S["extra"]["sequence"]].astype(str)
+    past = np.r_[S["rater"]["past"], S["extra"]["past"]]
+    intent = np.r_[S["rater"]["intent"], S["extra"]["intent"]]
+    pk = [str(Z.root("packages") / f"{n}.npz") for n in names]
+    files = np.array([[f"{p}::jpg_3_{c}" for c in (1, 2, 3)] for p in pk], object)   # k = 3 is frame f itself
+    rigs = {}
+    for s_, p in zip(seq, pk):
+        if s_ not in rigs:
+            z = np.load(p)
+            c = Z.read_calib(z, (1, 2, 3))
+            rigs[s_] = _rig([{k: (np.asarray(v).tolist() if not isinstance(v, int) else v) for k, v in c[i].items()}
+                             for i in (1, 2, 3)])
+    return {"frame_name": names, "files": files, "ego": nav_ego(past, intent), "rig": seq}, rigs, np.zeros(2)
+
+
 def plan(set_: str) -> dict:
     from . import elicit_i3 as I, p5_exam as E
+    if set_ == "wod":
+        fr, rigs, offset = plan_wod()
+        return _write_plan(set_, fr, rigs, offset)
     with I.p5_set(SETS[set_]):
         t, past, _, obs, null, _ = E.load()
     need = set(obs.fn_plus) | set(obs.fn_minus) | set(null.fn_plus) | set(null.fn_null)
@@ -83,14 +108,19 @@ def plan(set_: str) -> dict:
             rigs[k] = _rig([c["1"], c["2"], c["3"]], I3_FRONT)
         fr["rig"] = keys
         offset = I3_FRONT[:2]
+    return _write_plan(set_, fr, rigs, offset)
+
+
+def _write_plan(set_, fr, rigs, offset) -> dict:
     order = np.argsort(fr["rig"], kind="stable")               # workers see one rig at a time
     fr = {k: v[order].tolist() for k, v in fr.items()}
     rigs = {k: {"src": r["src"], "primary": r["primary"],
                 "virt": [{n: np.asarray(a).tolist() for n, a in v.items()} for v in r["virt"]]} for k, r in rigs.items()}
     p = {"set": set_, "frames": fr, "rigs": rigs, "offset": offset.tolist()}
     root(set_, "plan.json").write_text(json.dumps(p))             # JSON: the model envs run numpy 1.23
-    info = {"set": set_, "frames": len(rows), "rigs": len(rigs),
-            "yaws": {k: [round(_yaw(s), 1) for s in r["src"]] for k, r in list(rigs.items())[:3]}}
+    info = {"set": set_, "rigs": len(rigs),
+            "yaws": {k: [round(_yaw(s), 1) for s in r["src"]] for k, r in list(rigs.items())[:3]},
+            "frames": len(fr["frame_name"])}
     (root(set_, "plan_info.json")).write_text(json.dumps(info, indent=1))
     log.info("plan %s", info)
     return info
