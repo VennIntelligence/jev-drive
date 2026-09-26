@@ -2,7 +2,8 @@
 """SCH GPU helper: lane C's Alpamayo 1.5 exam (scripts/nq3_c_alpamayo.py run) on a second card.
 
 Same model load (I.load + the runner's expert_graph config), same Prep / infer / record, batch 1 (the rule-8
-bit-identical path). Takes whole priority-0 units from the END of the runner's order (the runner walks from the start),
+bit-identical path). Takes whole units of --priorities from the END of the runner's order (the runner walks from the start; with
+priorities 1,2 these are the units its 23:30 deadline would drop, so it does not redo them),
 one O_EXCL claim per unit, and writes one part per unit as nq3_alpamayo_parts/part_9UUUU.npz (UUUU = unit index):
 the runner's glob picks them up at its next consolidate, and its own numbering (count of parts at start) never
 reaches 90000. It never consolidates while the runner lives, and takes no new unit after --stop-at (08:00). It stops before a unit within --gap frames of the
@@ -73,12 +74,13 @@ def cmd_run(a, log):
     t = A.frames()
     units = [(k, g) for k, g in t.groupby(["priority", "base_id", "seed"], sort=False)]
     pos = np.cumsum([0] + [len(g) for _, g in units])            # frame offset of each unit in the runner's order
+    prios = {int(x) for x in a.priorities.split(",")}
     CLAIMS.mkdir(parents=True, exist_ok=True)
     model, processor, prep = None, None, None
     n = 0
     for u in range(len(units) - 1, -1, -1):
         (pri, base, seed), g = units[u]
-        if pri != a.priority:
+        if pri not in prios:
             continue
         part = A.PARTS / f"part_9{u:04d}.npz"
         if part.exists():
@@ -137,7 +139,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=("verify", "run", "consolidate"))
     ap.add_argument("--unit", type=int, default=0)
-    ap.add_argument("--priority", type=int, default=0)
+    ap.add_argument("--priorities", default="1,2", help="unit priorities to take (from the end of the runner's order)")
     ap.add_argument("--gap", type=int, default=600, help="frames kept free ahead of the runner's last written frame")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--stop-at", default="08:00", help="box clock (morning): no new unit from then on")
