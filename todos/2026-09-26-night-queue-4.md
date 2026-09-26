@@ -84,9 +84,15 @@
      读数 5 的巡航速度 = orig 对照窗口内的平均速度，完成时间 = 完成路线的 `duration_game`。
   7. **复用**：orig 里 night-queue-3 已跑过的同考生、同路线、同 seed 直接读：PDM-Lite seed 0 = `runs/nq3/b/cl1_expert`（SimLingo 树，PDM-Lite 靠登记绕行，所以 PDM-Lite 的所有 G 运行都在 SimLingo 树里跑，其余考生在官方树里跑），
      openpilot Cinque 原生 = CL2 / CL9，作者执行层 = CL10（`nq3_b_cl10.sh` 原样的四个 recipe，只把路线文件换成 G 的 XML）。
+  9. **交叉拟合的 M-C 与 Q2 head**（G 的 `mc` / `q2` 考生与 X 共用，`jevdrive/nq4_x.py export-mc / export-q2`，写 `runs/nq4/gk/heads_xfit/{mc,q2}/R{1,2}` + `READY`）：折 = K 的 `route_split.json`。
+     M-C = lane B `nq3_cl.export` 的同一段代码（prior + `pair` 双流），训练行 = P5 v1 BA 里 R_k 路线的 train 行、配对行 = 两端都在 R_k 路线上的配对，λ 仍按原内层 CV 选（17:52 已导出：R₁ 13 197 行 / 5 476 对、R₂ 14 078 / 5 543，numpy apply 对 torch ≤ 5.2e-5 m）；
+     Q2 = lane C 闭环 head 的 manifest 里的两个臂（轨迹臂、模式臂），`nq3_q2.fit_fold` 原样、训练世界只取 R_k 的 P6 路线（numpy Head 对 in-process 拟合 1 024 行 ≤ 1e-3 m、模式逐一相同，否则停）。
+     每条路线由没见过它的那一折开（路线自己 fold 标签的另一折；没有标签的用 R₁，K 的规则）；K3 的 seen 版由 K 的 recipe 反过来取。lane C 的 `READY` 之前只有登记的后备（A1 / A2）占位版 `q2_placeholder`，只给 smoke 和规则 8 用。
+  10. **批量的 server index**：GPU g 用 [60 + 18 g, 78 + 18 g)，共 60–167；i + 120 落在 180–287、i − 120 ≤ 47，与 lane B（300–479）、lane A（600–689）、K（170–179）都不撞。
+     每步开始前按 `/proc/net/tcp` 查每张卡的段里至少 WORKERS + 2 个 index 的 RPC / TM 端口没被监听，不够就每 2 min 等一次，30 min 还不够写 ERROR。
   8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
      G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
-- [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server（index 480–481），核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。
+- [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server，核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。server index 起初用 480–481，它的 TM 端口（8000 + 50 i）正是 lane A index 600–601 的 RPC 端口，server 起不来，17:56 改到 **150–151**（规则：i、i + 120、i − 120 都不能落在别的 lane 的 index 段里）。
 
 ## K. 材料包阶梯：分数动、能力不动
 
@@ -234,6 +240,16 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 触发来自我们的感知，不读 `active_scenarios` 登记。路线 = G 的障碍类约 40 条 × 3 seed，与 CL5（学出来的横向轨迹）、CL5d（desire）、PDM-Lite 同路线配对。
 读法（写在数字之前）：X 的障碍类 SR 不低于 CL5（配对差 CI 下界 > −10 pp）→ 第三层的瓶颈是判断，执行用几何就够，文章里执行层写成可替换模块；X 明显低于 CL5 → 学出来的轨迹带了几何路径没有的东西（例如与对向车的时机），单独分析。
 在 G + K 闭环链里排在 K1、K2 之前；约 120 次路线运行。
+
+- [F] 2026-09-26 18:05 CST X 的操作性选择（写于任何 X 数字之前）。代码 `jevdrive/nq4_x.py`（`XState`、导出、离线检查）、`scripts/nq4_x_agent.py`（`b2d_zeroshot_agent` 的 head 路径原样，加按路线选折与 X 这一步）。
+  1. **模式头** = G 的 `q2` 考生同一份交叉拟合 Q2 head（上面 G 的 [F] 第 9 条），触发只来自它在我们自己的相机特征上的输出，不读登记。
+  2. **几何** = PDM-Lite `shift_route_smoothly` 的几何原样：每个 dense route 点的 CARLA map waypoint 的 `get_left_lane()` / `get_right_lane()` 中心（没有就用路线点本身），平移系数 1，过渡 8 m（`transition_smoothness_distance`），余弦缓入缓出（`_smooth_transition`）。
+     感知不给障碍位置，所以起点 = 模式头第一次输出 bypass 时自车所在的路线弧长（「障碍前 50 m 内」由头只在看见障碍之后才出 bypass 来实现），保持到最后一次 bypass 输出时自车位置之后 30 m（覆盖事故 / 施工 2–3 个障碍物约 20 m 的长度加车长），再 8 m 回到原车道；
+     方向取这一次平移里第一次 bypass 的方向。
+  3. **速度**：平移期间把 head 自己轨迹 0.25–5 s 的弧长剖面放到平移后的路径上（纵向仍是学出来的，与 CL5 相同，只换横向）；stop / wait：20 个点都在原点（目标速度 0，P7 按它自己的规律刹停）；keep：head 自己的轨迹（即 CL5），平移还没结束时用平移后的路径。
+  4. **配对**：主配对 = X − `q2`（同一交叉拟合 head 直接开，G 的 `q2` 考生的 orig 运行，同路线同 seed），两者只差「执行用几何还是用学出来的横向」；lane B 的 CL5（全量 head，看过部分路线）、CL5d、PDM-Lite 并列作描述。判据文字不变（配对差 CI 下界 > −10 pp）。
+  5. **规则 8**：3 条障碍路线（2534 Accident、2668 ParkedObstacleTwoWays、1790 HazardAtSideLane，orig，seed 0），每个请求 dump：(a) server 的 `temporal` / ego 经离线 `Head(dir)` 得到的轨迹与模式逐位相同；
+     (b) 每个 plan 的（模式、head 轨迹、位姿）经离线 `XState` 重放得到的路径与交给 P7 的逐位相同；(c) `fold.json` 的选折符合规则。不过就停。
 
 ## P. 行人的真实数据（2026-09-26 18:30 补，专家回复第 1 问）
 
