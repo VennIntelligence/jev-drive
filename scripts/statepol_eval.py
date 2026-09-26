@@ -31,6 +31,7 @@ PLANNER_ARGS = {
     "idm": ["--planner.type", "idm"],
     "pdm": ["--planner.type", "pdm"],
     "cv": ["--planner.type", "constant_velocity"],
+    "expert": ["--planner.type", "expert"],
 }
 TRAFFIC_ARGS = {
     "expert": ["--traffic.type", "expert"],
