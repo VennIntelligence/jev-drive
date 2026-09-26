@@ -74,11 +74,11 @@ labels() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k labels >> "$1/log.txt" 2
 fit() { wait_gpu 12000; CUDA_VISIBLE_DEVICES=$GPU taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k fit >> "$1/log.txt" 2>&1; }
 
 case ${1:-all} in
-    lead) step lead 1.0 lead ;;
+    lead) step lead 1.5 lead ;;
     labels) step labels 0.2 labels ;;
     fit) step fit 0.5 fit ;;
     all) trap 'exit 129' HUP INT TERM
-         step lead 1.0 lead; step labels 0.2 labels; step fit 0.5 fit
+         step lead 1.5 lead; step labels 0.2 labels; step fit 0.5 fit
          status done "lead, labels, fit done; closed-loop rule-8 step: scripts/nq4_k.sh cl <gpu>" ;;
     *) sed -n 2,11p "$0"; exit 1 ;;
 esac
