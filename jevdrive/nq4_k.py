@@ -632,6 +632,12 @@ def fit(eigh: str = "cuda"):
     rl.log.info("full K0 vs lane B heads.npz: %s", lb)
     assert lb["max_abs_pred"] <= 1e-3, lb
     export(D, rl)
+    # [K] 17:30 (3): on the same frames the cross-fitted K0 differs from CL3's full-data head only through its training set
+    other = np.where(D["fold"] == "R1", "R2", "R1")
+    xf = np.where((other == "R1")[:, None, None], PRED["R1"]["K0"][:n], PRED["R2"]["K0"][:n])
+    dd = np.abs(xf - ref).max((1, 2))
+    lb["xfit_unseen_vs_laneB_per_row_max_abs_m"] = {"p50": float(np.median(dd)), "p95": float(np.percentile(dd, 95)),
+                                                    "max": float(dd.max())}
     res = {"info": info, "timing_s": timing, "k0_full_vs_laneB": lb, "eigh": eigh}
     kdir("checks").mkdir(parents=True, exist_ok=True)
     (kdir("checks") / "fit.json").write_text(json.dumps(res, indent=1, default=float))
