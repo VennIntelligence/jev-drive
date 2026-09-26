@@ -125,7 +125,7 @@ if [[ ! -f $R/q3smoke/DONE ]]; then
     W=$W0
     $PY -m jevdrive.nq3_a recovery --gen "$R/v1/gen" --file "$(cat $R/v1/ids_smoke.txt)" --out "$RES/q3/recovery_smoke.csv" \
         | tee "$R/q3smoke/result.txt"
-    if python3 -c "
+    if $PY -c "
 import pandas as pd, sys
 d = pd.read_csv('$RES/q3/recovery_smoke.csv')
 sys.exit(0 if len(d) and d.back_by_3s.mean() >= 0.80 else 1)"; then
@@ -143,7 +143,7 @@ if [[ ! -f $R/v0rr/DONE ]]; then
     gen v0rr "$R/v0rr/ids.txt" "$R/agent_v0rr.json" "$DATA_DIR/runs/p6/pairs.xml" "$R/v0rr/gen" "$EST_V0RR" 3
     $PY -m jevdrive.nq3_a check-det --gen "$R/v0rr/gen" --need "$R/v0rr/need.json" --out "$RES/q1/v0rr_e1.csv" | tail -3 \
         | tee "$R/v0rr/e1.txt"
-    python3 -c "
+    $PY -c "
 import pandas as pd, sys
 d = pd.read_csv('$RES/q1/v0rr_e1.csv')
 d = d[~d.flow.astype(bool)]            # flow worlds are not reproducible even under the v0 recorder ([A] 17:35)
