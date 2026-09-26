@@ -63,6 +63,11 @@ def req():
     assert (z["keys"] == np.array([e["token"] for e in samples])).all()
     np.savez(run_dir("req", "nusc.npz"), **{k: z[k] for k in z.files}, group=np.array([e["scene"] for e in samples]),
              t=np.array([e["t0"] for e in samples], np.int64))
+    # the fp32 navtest check: the first 16 tokens, base arm only (verify() compares with T2's fp32 export)
+    n = np.load(run_dir("req", "navtest.npz"))
+    np.savez(run_dir("req", "navcheck.npz"), **{k: n[k][:16] for k in n.files})
+    np.savez(run_dir("req", "navcheck_arms.npz"), names=np.array(["base"]),
+             ego8=np.concatenate([n["ego"][:16], np.eye(4)[n["cmd"][:16]]], 1)[None].astype(np.float32), hist=n["hist"][:16][None])
     log.info("requests: navtest %d, nusc %d", len(idx), len(samples))
 
 
@@ -209,15 +214,15 @@ def nav_name(m: str, a: str) -> str:
     return f"nq3q5_{m}_{a.replace('+', 'p').replace('-', 'm').replace('.', '')}"
 
 
-def nav_jobs():
+def nav_jobs(models=MODELS):
     lines = []
-    for m in MODELS:
+    for m in models:
         z = np.load(run_dir("preds", f"navtest_{m}.npz"))
         for a, traj in zip(z["names"], z["traj"]):
             p = run_dir("nav", f"{m}_{a}.npz")
             np.savez(p, tokens=z["keys"], poses=traj.astype(np.float32))
             lines.append(f"v1 navtest {nav_name(m, a)} {p}")
-    run_dir("nav", "jobs.txt").write_text("\n".join(lines) + "\n")
+    run_dir("nav", f"jobs_{'_'.join(models)}.txt").write_text("\n".join(lines) + "\n")
     log.info("%d devkit jobs", len(lines))
 
 
@@ -415,6 +420,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("step", choices=("req", "arms", "verify", "nav-jobs", "frag-prep", "tables", "select"))
     ap.add_argument("--workers", type=int, default=16)
+    ap.add_argument("--model", default="drivor,wajepa")
     a = ap.parse_args()
     if a.step == "req":
         req()
@@ -423,7 +429,7 @@ def main():
     elif a.step == "verify":
         verify()
     elif a.step == "nav-jobs":
-        nav_jobs()
+        nav_jobs(tuple(a.model.split(",")))
     elif a.step == "frag-prep":
         frag_prep(a.workers)
     elif a.step == "select":
