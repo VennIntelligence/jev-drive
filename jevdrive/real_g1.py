@@ -230,6 +230,214 @@ def wod_lead(model: str, names: np.ndarray) -> dict:
     return {k: np.concatenate([p[k] for p in parts])[i] for k in ("temporal", "lead", "lead_prob")}
 
 
+# ---------------------------------------------------------------- g2
+
+def _wod_label_worker(args):
+    """Per frame: (ped / cyclist in the logged-path corridor, nearest in-corridor vehicle range or inf)."""
+    from . import elicit_e3 as E3
+    from .fusion_diag import project
+    out = []
+    for fut, pts, cls in args:
+        ped, rv = False, np.inf
+        if len(pts):
+            s, d, _, _ = project(E3.extend(np.r_[[[0.0, 0.0]], fut]), pts)
+            inn = (np.abs(d) <= E3.HALF_W) & (s > 0) & (s <= E3.REACH)
+            ped = bool((inn & (cls != "vehicle")).any())
+            v = inn & (cls == "vehicle")
+            if v.any():
+                rv = float(np.linalg.norm(pts[v], axis=1).min())
+        out.append((ped, rv))
+    return out
+
+
+def wod_labels(name: str) -> pd.DataFrame:
+    """[G1] 08:50 (2) on a G0 WOD set: YOLO detections (score > 0.25, lifted) on the logged 5 s path extended to 30 m
+    (+-1.5 m); pedestrian / cyclist, or the nearest in-corridor vehicle 0.2 m closer than 0.4 s before (frame - 4)."""
+    from multiprocessing import Pool
+    from . import real_g0 as G0, waymo as W
+    from .common import n_cpus
+    fr = pd.read_parquet(G0.root(name, "frames.parquet"))
+    d = pd.read_parquet(G0.root(name, "dets.parquet"), columns=["frame_id", "prompt", "score", "gx", "gy", "lift_ok"])
+    d = d[d.lift_ok & (d.score > G0.SCORE)]
+    _, future = W.load_ego()
+    at = pd.Series(np.arange(len(fr)), index=fr.frame_id.to_numpy())
+    fi = at.reindex(d.frame_id).to_numpy().astype(int)
+    by = pd.Series(np.arange(len(d))).groupby(fi).indices
+    pts, cls = d[["gx", "gy"]].to_numpy(float), d.prompt.to_numpy()
+    fut = future[fr.row.to_numpy(), :, :2].astype(np.float64)
+    jobs = [(fut[i], pts[by[i]] if i in by else np.zeros((0, 2)), cls[by[i]] if i in by else np.zeros(0, object))
+            for i in range(len(fr))]
+    with Pool(min(48, n_cpus())) as p:
+        res = sum(p.map(_wod_label_worker, [jobs[i:i + 512] for i in range(0, len(jobs), 512)]), [])
+    ped = np.array([r[0] for r in res])
+    rv = pd.Series([r[1] for r in res], index=fr.frame_id.to_numpy())
+    seq = fr.frame_id.str.rsplit("-", n=1).str[0]
+    num = fr.frame_id.str.rsplit("-", n=1).str[1].astype(int)
+    prev = rv.reindex((seq + "-" + (num - 4).map("{:03d}".format)).to_numpy()).to_numpy()
+    has_prev = ~np.isnan(prev)
+    approach = has_prev & np.isfinite(rv.to_numpy()) & (np.nan_to_num(prev, nan=np.inf) - rv.to_numpy() >= 0.2)
+    lab = pd.DataFrame({"frame_id": fr.frame_id, "sequence": seq, "ped_cyc": ped, "vehicle_approach": approach,
+                        "has_prev": has_prev})
+    lab["label"] = lab.ped_cyc | lab.vehicle_approach
+    log.info("WOD %s labels: %d frames, positive %.3f (ped/cyc %.3f, approaching vehicle %.3f), with a previous frame %.3f",
+             name, len(lab), lab.label.mean(), lab.ped_cyc.mean(), lab.vehicle_approach.mean(), has_prev.mean())
+    return lab
+
+
+def nav_labels(split: str, tokens: np.ndarray) -> pd.DataFrame:
+    """GT: elicit_e3.cause_flags_nav's in_pedestrian | in_bicycle | cause_vehicle on the logged-path corridor."""
+    from . import elicit_e3 as E3
+    with np.load(data_dir() / "runs/navsim_zs/index" / f"{split}_future.npz") as f:
+        pos = dict(zip(f["tokens"].tolist(), range(len(f["tokens"]))))
+        fut = f["poses"][[pos[t] for t in tokens]].astype(np.float32)
+    fl = E3.cause_flags_nav(tokens, fut[:, :, :2], E3.extract(split))
+    lab = pd.DataFrame({"frame_id": tokens, "label": (fl.in_pedestrian | fl.in_bicycle | fl.cause_vehicle).to_numpy(),
+                        "ped_cyc": (fl.in_pedestrian | fl.in_bicycle).to_numpy(), "vehicle_approach": fl.cause_vehicle.to_numpy()})
+    log.info("NAVSIM %s labels: %d tokens, positive %.3f (ped/cyc %.3f, approaching vehicle %.3f)", split, len(lab),
+             lab.label.mean(), lab.ped_cyc.mean(), lab.vehicle_approach.mean())
+    return lab
+
+
+def _folds(groups: np.ndarray, k: int = 5, seed: int = 0) -> np.ndarray:
+    u = np.unique(groups)
+    f = dict(zip(np.random.default_rng(seed).permutation(u), np.arange(len(u)) % k))
+    return np.array([f[g] for g in groups])
+
+
+class Probe:
+    """[G1] 08:50 (3): standardised embedding -> L2 logistic (C by grouped OOF log-loss) -> Platt on the OOF logits."""
+
+    CS = (0.01, 0.1, 1.0, 10.0)
+
+    def fit(self, X, y, groups, rl=None, tag=""):
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import log_loss
+        self.mu, sd = X.mean(0), X.std(0)
+        self.sd = np.where(sd > 1e-6, sd, 1.0)
+        Z = (X - self.mu) / self.sd
+        folds = _folds(groups)
+        best = None
+        for C in self.CS:
+            oof = np.zeros(len(y))
+            for f in range(5):
+                lr = LogisticRegression(C=C, max_iter=3000).fit(Z[folds != f], y[folds != f])
+                oof[folds == f] = lr.decision_function(Z[folds == f])
+            ll = log_loss(y, 1 / (1 + np.exp(-oof)))
+            if rl is not None:
+                rl.event("g2_c", tag=tag, C=C, oof_logloss=ll)
+            log.info("g2 %s C=%g: OOF log-loss %.4f", tag, C, ll)
+            if best is None or ll < best[0]:
+                best = (ll, C, oof)
+        _, self.C, oof = best
+        self.platt = LogisticRegression(C=1e6, max_iter=1000).fit(oof[:, None], y)
+        self.lr = LogisticRegression(C=self.C, max_iter=3000).fit(Z, y)
+        self.oof = self.platt.predict_proba(oof[:, None])[:, 1].astype(np.float32)
+        return self
+
+    def __call__(self, X):
+        return self.platt.predict_proba(self.lr.decision_function((X - self.mu) / self.sd)[:, None])[:, 1].astype(np.float32)
+
+
+def i3_labels(t3: pd.DataFrame, obs3: pd.DataFrame, null3: pd.DataFrame) -> np.ndarray:
+    """[G1] 08:50 (2): x+ frames of reactive pairs (|Delta_expert| > tau_exp, p5_exam.exam's rule) -> 1, all else 0."""
+    from . import p5_exam as E
+    tau_exp = max(float(np.quantile(np.abs(null3.d_expert), 0.95)) if len(null3) else 0.0, E.TAU_EXP_MIN)
+    pos = set(obs3.fn_plus[np.abs(obs3.d_expert) > tau_exp])
+    return t3.frame_name.isin(pos).to_numpy()
+
+
+def g2_fit(rl):
+    """g2 on WOD train (G0's t4 set) and navtrain; the final probe on WOD val / navtest, OOF values on the training rows."""
+    from . import real_g0 as G0
+    out = {}
+    for ds, tr, ev in (("wod", "wod_train", "wod_val"), ("nav", "navtrain", "navtest")):
+        fr, X = G0.load_embed(tr)
+        lab = wod_labels(tr) if ds == "wod" else nav_labels(tr, fr.frame_id.to_numpy())
+        assert (lab.frame_id.to_numpy() == fr.frame_id.to_numpy()).all()
+        groups = lab.sequence.to_numpy() if ds == "wod" else _nav_logs(tr, fr.frame_id.to_numpy())
+        y = lab.label.to_numpy().astype(int)
+        pr = Probe().fit(X, y, groups, rl, ds)
+        fe, Xe = G0.load_embed(ev)
+        ge = pr(Xe)
+        lab.assign(oof=pr.oof).to_parquet(rl.dir / f"g2_{ds}_train_oof.parquet", index=False)
+        np.savez_compressed(rl.dir / f"g2_{ds}_eval.npz", frame_id=fe.frame_id.to_numpy(), gate=ge)
+        with open(rl.dir / f"g2_{ds}.pkl", "wb") as f:
+            import pickle
+            pickle.dump(pr, f)
+        out[ds] = {"C": pr.C, "rows": len(y), "positive": float(y.mean()), "platt": [float(pr.platt.coef_[0, 0]),
+                   float(pr.platt.intercept_[0])], "eval_rows": len(ge)}
+        rl.event("g2_fit", dataset=ds, **out[ds])
+        log.info("g2 %s: %s", ds, out[ds])
+    return out
+
+
+def _nav_logs(split: str, tokens: np.ndarray) -> np.ndarray:
+    from . import navsim_zs as Z
+    lg = {e["token"]: e["log_name"] for e in Z.load_index(split, slim=True)}
+    return np.array([lg[t] for t in tokens])
+
+
+def g2_i3(t3: pd.DataFrame, obs3: pd.DataFrame, null3: pd.DataFrame, rl=None) -> np.ndarray:
+    """g2 on I3: probe on I3's own embedding, rule-expert conflict labels, OOF over 5 scene folds, Platt-calibrated."""
+    from . import real_g0 as G0
+    fr, X = G0.load_embed("i3")
+    at = pd.Series(np.arange(len(fr)), index=fr.frame_id.to_numpy()).reindex(t3.frame_name).astype(int).to_numpy()
+    X, groups = X[at], fr.base_id.to_numpy()[at]
+    y = i3_labels(t3, obs3, null3).astype(int)
+    return Probe().fit(X, y, groups, rl, "i3").oof
+
+
+def select(rl, g1_oof_run: str, g1_nav_run: str, g2_run: str) -> pd.DataFrame:
+    """[G1] 08:40 (4) / 08:50 (4): AUC of each gate against the g2 label on the 10% selection rows; the main arm."""
+    from sklearn.metrics import roc_auc_score
+    from . import navsim_zs as Z, waymo
+    D = data_dir() / OUT / "g1"
+    rows = []
+    # WOD
+    names = np.array((D / "sel_wod_frames.txt").read_text().split())
+    lab = pd.read_parquet(data_dir() / g2_run / "g2_wod_train_oof.parquet").set_index("frame_id").loc[names]
+    df = waymo.load_index()
+    past, _ = waymo.load_ego()
+    r = pd.Series(np.arange(len(df)), index=waymo.frame_names(df)).reindex(names).astype(int).to_numpy()
+    v_ego = np.linalg.norm(past[r, -1, 2:4], axis=1)
+    for m in MODELS:
+        z = np.load(data_dir() / g1_oof_run / f"g1_wod_{m}_oof.npz")
+        g1v = pd.Series(z["gate"], index=z["frame_name"].astype(str)).reindex(names).to_numpy()
+        parts = [np.load(f) for f in sorted((data_dir() / "processed/drive_backbones/op_lead_g1sel" / m).glob("*.npz"))
+                 if ".tmp" not in f.name]
+        nm = np.concatenate([p["name"] for p in parts]).astype(str)
+        li = pd.Series(np.arange(len(nm)), index=nm).reindex(names).astype(int).to_numpy()
+        g3v = g3(np.concatenate([p["lead"] for p in parts])[li], np.concatenate([p["lead_prob"] for p in parts])[li], v_ego)
+        for g, v in (("g1", g1v), ("g2", lab.oof.to_numpy()), ("g3", g3v)):
+            rows.append({"dataset": "WOD", "model": m, "gate": g, "n": len(names), "positive": float(lab.label.mean()),
+                         "auc": float(roc_auc_score(lab.label.to_numpy(), v))})
+    # NAVSIM
+    tok = np.array((D / "sel_navtrain_tokens.txt").read_text().split())
+    lab = pd.read_parquet(data_dir() / g2_run / "g2_nav_train_oof.parquet").set_index("frame_id").loc[tok]
+    vel = {e["token"]: np.linalg.norm(e["vel"][-1]) for e in Z.load_index("navtrain", slim=True)}
+    v_ego = np.array([vel[t] for t in tok])
+    for m in MODELS:
+        z = np.load(data_dir() / g1_nav_run / f"g1_nav_{m}_oof.npz")
+        g1v = pd.Series(z["gate"], index=z["tokens"]).reindex(tok).to_numpy()
+        ld = np.load(data_dir() / "runs/navsim_zs/openpilot/navtrain" / f"{m}_temporal_lead.npz")
+        li = pd.Series(np.arange(len(ld["tokens"])), index=ld["tokens"]).reindex(tok).astype(int).to_numpy()
+        g3v = g3(ld["lead"][li], ld["lead_prob"][li], v_ego)
+        for g, v in (("g1", g1v), ("g2", lab.oof.to_numpy()), ("g3", g3v)):
+            rows.append({"dataset": "NAVSIM", "model": m, "gate": g, "n": len(tok), "positive": float(lab.label.mean()),
+                         "auc": float(roc_auc_score(lab.label.to_numpy(), v))})
+    t = pd.DataFrame(rows)
+    simple = {"g3": 0, "g2": 1, "g1": 2}
+    main = []
+    for (ds, m), g in t.groupby(["dataset", "model"]):
+        top = g.auc.max()
+        cand = g[g.auc >= top - 0.005].assign(k=lambda x: x.gate.map(simple)).sort_values("k")
+        main.append({"dataset": ds, "model": m, "main": cand.gate.iloc[0]})
+    t = t.merge(pd.DataFrame(main), on=["dataset", "model"])
+    t.to_csv(rl.dir / "selection_auc.csv", index=False)
+    log.info("selection\n%s", t.to_markdown(index=False, floatfmt=".4f"))
+    return t
+
+
 # ================================================================ judges
 
 def gate_desc(g: np.ndarray, scopes: dict) -> list[dict]:
@@ -278,7 +486,7 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
         pd.DataFrame(rows_).to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
 
 
-def run_i3(rl, gate_fns: dict):
+def run_i3(rl, gate_fns: dict, with_g2: bool = False):
     """p5_exam.exam, unchanged, on the I3 pairs with the M-C correction gated frame by frame (elicit_i3's judge)."""
     from . import elicit_i3 as I, p5_exam as E, p5_openpilot
     with I.p5_set(I.I3):
@@ -292,6 +500,7 @@ def run_i3(rl, gate_fns: dict):
     ego = E.ego_input(t3, past3)
     v_ego = np.linalg.norm(past3[:, -1, 2:4], axis=1)
     preds, gdesc, checks = {}, [], []
+    g2v = g2_i3(t3, obs3, null3, rl) if with_g2 else None
     fam = pd.Series("none", index=t3.frame_name)
     for w, sub in (("fn_plus", obs3), ("fn_minus", obs3)):
         fam[sub[w].to_numpy()] = np.where(w == "fn_plus", sub.family.to_numpy(), "minus")
@@ -305,9 +514,8 @@ def run_i3(rl, gate_fns: dict):
         preds[f"ridge_late op-{m} temporal"], preds[f"M-C pair [{m}]"] = prior, mc
         gs = {"g1": gate_fns["g1"][m](np.concatenate([ego, op3[f"op-{m} temporal"]], 1)),
               "g3": g3(lead3[f"op-{m} lead"], lead3[f"op-{m} lead_prob"], v_ego)}
-        for k, fn in gate_fns.items():
-            if k not in gs:
-                gs[k] = fn[m](t3)
+        if g2v is not None:
+            gs["g2"] = g2v
         x, v, p = lead_decode(lead3[f"op-{m} lead"], lead3[f"op-{m} lead_prob"])
         st = (fam == "static").to_numpy() & (p > 0.5)
         checks.append({"model": m, "check": "static world, P(lead) > 0.5", "n": int(st.sum()),
@@ -417,7 +625,12 @@ def mc_taus() -> dict:
     return {m: float(fl[(fl.examinee == f"M-C pair [{m}]") & (fl.scope == "pooled")].tau_model.iloc[0]) for m in MODELS}
 
 
-def wod_gates(rl, g1: dict):
+def _g2_eval(g2_run: str, ds: str, keys: np.ndarray) -> np.ndarray:
+    z = np.load(data_dir() / g2_run / f"g2_{ds}_eval.npz", allow_pickle=True)
+    return pd.Series(z["gate"], index=z["frame_id"].astype(str)).reindex(keys.astype(str)).to_numpy().astype(np.float32)
+
+
+def wod_gates(rl, g1: dict, g2_run: str = ""):
     """{model: f(d, v_ego) -> {gate: (n,)}} on E1's WOD frames; checks the lead re-run's `temporal` against the stored one."""
     from . import elicit_e1 as E1, waymo
 
@@ -432,12 +645,16 @@ def wod_gates(rl, g1: dict):
             past, _ = waymo.load_ego()
             rows = E1._rows(pd.Series(names), waymo.frame_names(df))
             ego = np.concatenate([waymo.ego_state(past[rows]), waymo.intent_onehot(df.iloc[rows])], 1)
-            return {"g1": g1[m](np.concatenate([ego, d[f"op {m}"]], 1)), "g3": g3(ld["lead"], ld["lead_prob"], v_ego)}
+            out = {"g1": g1[m](np.concatenate([ego, d[f"op {m}"]], 1)), "g3": g3(ld["lead"], ld["lead_prob"], v_ego)}
+            if g2_run:
+                out["g2"] = _g2_eval(g2_run, "wod", names)
+                assert not np.isnan(out["g2"]).any()
+            return out
         return f
     return {m: gates_for(m) for m in MODELS}
 
 
-def nav_gates(g1_run: str) -> dict:
+def nav_gates(g1_run: str, g2_run: str = "") -> dict:
     """{model: {gate: (n,)}} on navtest in token order: g1 from its fit run, g3 from the lead re-run."""
     from . import navsim_zs as Z
     idx = Z.load_index("navtest", slim=True)
@@ -450,6 +667,9 @@ def nav_gates(g1_run: str) -> dict:
         at = pd.Series(np.arange(len(ld["tokens"])), index=ld["tokens"]).reindex(tok).astype(int).to_numpy()
         assert (z["tokens"] == tok).all()
         out[m] = {"g1": z["gate"], "g3": g3(ld["lead"][at], ld["lead_prob"][at], v_ego)}
+        if g2_run:
+            out[m]["g2"] = _g2_eval(g2_run, "nav", tok)
+            assert not np.isnan(out[m]["g2"]).any()
     return out
 
 
@@ -457,11 +677,14 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("g1-wod", "g1-nav", "i3", "wod", "nav-write", "nav-table"))
+    ap.add_argument("what", choices=("g1-wod", "g1-nav", "g2", "select", "i3", "wod", "nav-write", "nav-table"))
     ap.add_argument("--g1-run", default="", help="the g1 fit run dir (relative to DATA_DIR)")
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--oof-rows", default="", help="g1-wod: selection rows file -> out-of-fold fits")
     ap.add_argument("--tags", default="mc")
+    ap.add_argument("--g1-nav-run", default="")
+    ap.add_argument("--g1-oof-run", default="")
+    ap.add_argument("--g2-run", default="", help="the g2 run dir; given -> g2 joins the arms")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))
     models = tuple(a.models.split(","))
@@ -470,17 +693,21 @@ def main():
         g1_wod(rl, models, a.oof_rows, a.g1_run)
     elif a.what == "g1-nav":
         g1_nav(rl, models)
+    elif a.what == "g2":
+        g2_fit(rl)
+    elif a.what == "select":
+        select(rl, a.g1_oof_run, a.g1_nav_run, a.g2_run)
     elif a.what == "i3":
-        run_i3(rl, {"g1": load_g1("wod", a.g1_run)})
+        run_i3(rl, {"g1": load_g1("wod", a.g1_run)}, with_g2=bool(a.g2_run))
     elif a.what == "wod":
         deltas = {m: np.load(data_dir() / E1_WOD / f"wod_delta_{m}.npz")["delta"] for m in MODELS}
-        run_wod(rl, wod_gates(rl, load_g1("wod", a.g1_run)), deltas, mc_taus(), "mc")
+        run_wod(rl, wod_gates(rl, load_g1("wod", a.g1_run), a.g2_run), deltas, mc_taus(), "mc")
     elif a.what == "nav-write":
         deltas = {}
         for m in MODELS:
             z = np.load(data_dir() / E1_NAV / f"navtest_delta_{m}.npz")
             deltas[m] = (z["tokens"], z["delta"])
-        nav_write(rl, nav_gates(a.g1_run), deltas, "mc", mc_taus())
+        nav_write(rl, nav_gates(a.g1_nav_run, a.g2_run), deltas, "mc", mc_taus())
     elif a.what == "nav-table":
         pairs = {}
         for tag in a.tags.split(","):
