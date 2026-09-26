@@ -28,8 +28,21 @@ E1_NAV = "runs/elicitation/e1-navsim/20260926-020742"
 I3_EXAM = "runs/elicitation/i3-exam/20260926-012841"
 MC_RUN = "runs/reactivity/mc-carla_p5v1_ba/20260925-233126"
 WOD_LEAD = "processed/drive_backbones/op_lead_g1eval"
+E5_RUN = "runs/elicitation/e5-fit/20260926-021421"
+STUDENT_ARMS, SEEDS = ("A", "B"), (0, 1, 2)
 TTC_ON, TTC_OFF, CLOSING = 2.0, 6.0, 0.1          # g3's mapping, fixed in the [G1] 08:40 entry
 ACT_HARM = 0.07
+
+
+def G0_DIR() -> Path:
+    return data_dir() / "processed/real_transfer/g0"
+
+
+def student_taus() -> dict:
+    """{(model, arm, seed): tau} from the E5 run ([G0] 08:52, [G1] 09:10 (1))."""
+    fl = pd.read_csv(data_dir() / E5_RUN / "flip_rates.csv")
+    fl = fl[fl.scope == "pooled"].set_index("examinee").tau_model
+    return {(m, a, sd): float(fl[f"E5 {a} s{sd} [{m}]"]) for m in MODELS for a in STUDENT_ARMS for sd in SEEDS}
 
 
 def rd(*p) -> Path:
@@ -509,7 +522,7 @@ def wod_sam_labels(names: np.ndarray) -> pd.DataFrame:
                          "ped_cyc": (f.in_pedestrian | f.in_cyclist).astype(bool).to_numpy()})
 
 
-def run_i3(rl, gate_fns: dict, with_g2: bool = False):
+def run_i3(rl, gate_fns: dict, with_g2: bool = False, students: bool = False):
     """p5_exam.exam, unchanged, on the I3 pairs with the M-C correction gated frame by frame (elicit_i3's judge)."""
     from . import elicit_i3 as I, p5_exam as E, p5_openpilot
     with I.p5_set(I.I3):
@@ -543,8 +556,18 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False):
         st = (fam == "static").to_numpy() & (p > 0.5)
         checks.append({"model": m, "check": "static world, P(lead) > 0.5", "n": int(st.sum()),
                        "v_lead_median": float(np.median(v[st])), "v_ego_median": float(np.median(v_ego[st]))})
-        for gname, g in gs.items():
-            preds[f"M-C pair [{m}] x {gname}"] = prior + g[:, None, None] * delta
+        sources = {f"M-C pair [{m}]": delta}
+        if students:
+            for arm in STUDENT_ARMS:
+                for sd in SEEDS:
+                    zs = np.load(G0_DIR() / f"i3_delta_{m}_{arm}_s{sd}.npz", allow_pickle=True)
+                    at = pd.Series(np.arange(len(zs["frame_name"])), index=zs["frame_name"].astype(str))
+                    ds = zs["delta"][at.reindex(t3.frame_name).astype(int).to_numpy()]
+                    sources[f"student {arm} s{sd} [{m}]"] = ds
+                    preds[f"student {arm} s{sd} [{m}]"] = prior + ds
+        for src, dl in sources.items():
+            for gname, g in gs.items():
+                preds[f"{src} x {gname}"] = prior + g[:, None, None] * dl
             gdesc += [{"model": m, "gate": gname, **r} for r in
                       gate_desc(g, {k: (fam == k).to_numpy() for k in ("static", "cutin", "oncoming", "minus", "null_world")})]
     E.TFV6 = {}
@@ -557,7 +580,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False):
         return ((np.sign(sub[ex]) == np.sign(sub.d_expert)) & E._moved(sub[ex], taus[ex])).astype(float).to_numpy()
     for m in MODELS:
         pr = f"ridge_late op-{m} temporal"
-        for ex in [k for k in preds if k.startswith(f"M-C pair [{m}]")]:
+        for ex in [k for k in preds if f"[{m}]" in k and k != pr]:
             for scope, sub in [("pooled", r[r.family.isin(res["pooled_families"])])] + [(fa, r[r.family == fa]) for fa in sorted(r.family.unique())]:
                 dd, lo, hi = E.boot_ratio(flips(sub, ex) - flips(sub, pr), np.ones(len(sub)), sub.base_id.to_numpy())
                 rows.append({"examinee": ex, "vs": pr, "scope": scope, "n": len(sub), "delta": dd, "lo": lo, "hi": hi})
@@ -594,7 +617,7 @@ def nav_write(rl, gates: dict, deltas: dict, tag: str, taus: dict):
             arm = p["poses"].copy()
             arm[..., :2] += g[:, None, None] * delta[:, 1:16:2]
             name = f"g1_{tag}_{gname}_ridge_late_{m}"
-            if gname != "none" or tag != "mc":          # the ungated M-C arm is E1's, already scored
+            if gname != "none":                         # the ungated arms are E1's / G0's, already scored
                 np.savez(rl.dir / f"navtest_{name}.npz", tokens=tok, poses=arm.astype(np.float32))
                 jobs += [f"{v} navtest {name} {rl.dir / f'navtest_{name}.npz'}" for v in ("v1", "v2")]
             act = (np.abs(P.v2(E1._grid20(arm)) - P.v2(E1._grid20(p["poses"]))) >= taus[m]).astype(float)
@@ -641,6 +664,11 @@ def nav_table(rl, pairs: dict):
 
 def load_g1(kind: str, run: str) -> dict:
     return {m: Gate.load(data_dir() / run / f"g1_{kind}_{m}.pt") for m in MODELS}
+
+
+def E1_names() -> np.ndarray:
+    """E1's 19 663 WOD evaluation frames in elicit_e1.wod_frames order (the qwenvid_p3 index)."""
+    return pd.read_parquet(data_dir() / "processed/waymo_e2e/features/qwenvid_p3/index.parquet").frame_name.to_numpy().astype(str)
 
 
 def mc_taus() -> dict:
@@ -721,24 +749,49 @@ def main():
     elif a.what == "select":
         select(rl, a.g1_oof_run, a.g1_nav_run, a.g2_run)
     elif a.what == "i3":
-        run_i3(rl, {"g1": load_g1("wod", a.g1_run)}, with_g2=bool(a.g2_run))
+        run_i3(rl, {"g1": load_g1("wod", a.g1_run)}, with_g2=bool(a.g2_run), students=True)
     elif a.what == "wod":
+        from . import elicit_e1 as E1
         deltas = {m: np.load(data_dir() / E1_WOD / f"wod_delta_{m}.npz")["delta"] for m in MODELS}
-        run_wod(rl, wod_gates(rl, load_g1("wod", a.g1_run), a.g2_run), deltas, mc_taus(), "mc")
+        fns = wod_gates(rl, load_g1("wod", a.g1_run), a.g2_run)
+        d = E1.wod_frames()
+        from . import waymo
+        past, _ = waymo.load_ego()
+        rows = E1._rows(pd.Series(d["frame_name"]), waymo.frame_names(waymo.load_index()))
+        gates = {m: fns[m](d, np.linalg.norm(past[rows, -1, 2:4], axis=1)) for m in MODELS}
+        del d
+        run_wod(rl, gates, deltas, mc_taus(), "mc")
+        taus = student_taus()
+        for arm in STUDENT_ARMS:
+            for sd in SEEDS:
+                dl = {}
+                for m in MODELS:
+                    z = np.load(G0_DIR() / f"wod_val_delta_{m}_{arm}_s{sd}.npz", allow_pickle=True)
+                    at = pd.Series(np.arange(len(z["frame_name"])), index=z["frame_name"].astype(str))
+                    dl[m] = z["delta"][at.reindex(E1_names()).astype(int).to_numpy()]
+                run_wod(rl, gates, dl, {m: taus[(m, arm, sd)] for m in MODELS}, f"st{arm}s{sd}")
     elif a.what == "nav-write":
+        gates = nav_gates(a.g1_nav_run, a.g2_run)
         deltas = {}
         for m in MODELS:
             z = np.load(data_dir() / E1_NAV / f"navtest_delta_{m}.npz")
             deltas[m] = (z["tokens"], z["delta"])
-        nav_write(rl, nav_gates(a.g1_nav_run, a.g2_run), deltas, "mc", mc_taus())
+        nav_write(rl, gates, deltas, "mc", mc_taus())
+        taus = student_taus()
+        for sd in SEEDS:                                  # [G1] 09:10 (2): NAVSIM students = arm A
+            dl = {}
+            for m in MODELS:
+                z = np.load(G0_DIR() / f"navtest_delta_{m}_A_s{sd}.npz", allow_pickle=True)
+                dl[m] = (z["tokens"].astype(str), z["delta"])
+            nav_write(rl, gates, dl, f"stAs{sd}", {m: taus[(m, "A", sd)] for m in MODELS})
     elif a.what == "nav-table":
         pairs = {}
         for tag in a.tags.split(","):
             for m in MODELS:
                 prior = f"heads_ridge_late_{m}_temporal"
-                if tag == "mc":
-                    pairs[f"mc none {m}"] = (f"e1_ridge_late_{m}_plus_mc", prior)
-                for g in ("g1", "g2", "g3") + (("none",) if tag != "mc" else ()):
+                pairs[f"{tag} none {m}"] = ((f"e1_ridge_late_{m}_plus_mc", prior) if tag == "mc" else
+                                            (f"g0_{tag[2]}_s{tag[-1]}_{m}_plus_student", prior))
+                for g in ("g1", "g2", "g3"):
                     pairs[f"{tag} {g} {m}"] = (f"g1_{tag}_{g}_ridge_late_{m}", prior)
         nav_table(rl, pairs)
     rl.close()
