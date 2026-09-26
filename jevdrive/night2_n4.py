@@ -253,17 +253,78 @@ def fit(rl, models=("cinque", "lebowski")):
     rl.log.info("criteria\n%s", crit.to_markdown(index=False, floatfmt=".3f"))
 
 
+# ---------------------------------------------------------------- latency
+
+def build_tokens(res, pca_mu, pca_V) -> np.ndarray:
+    """Detector output for the three cameras of one frame -> the 672-d row (the same rule as `tokens`)."""
+    tok = np.zeros((len(CAMS), K_TOK, TOK_D), np.float32)
+    for c, (lab, sc, bx, f, (H, W)) in enumerate(res):
+        if not len(lab):
+            continue
+        o = np.argsort(-bx[:, 3], kind="stable")[:K_TOK]
+        z = (f[o].astype(np.float32) - pca_mu) @ pca_V
+        v = tok[c, :len(o)]
+        v[:, c] = 1
+        v[:, 3], v[:, 4] = (bx[o, 0] + bx[o, 2]) / 2 / W, (bx[o, 1] + bx[o, 3]) / 2 / H
+        v[:, 5], v[:, 6] = (bx[o, 2] - bx[o, 0]) / W, (bx[o, 3] - bx[o, 1]) / H
+        v[np.arange(len(o)), 7 + np.array([CLASSES.index(x) for x in lab[o]])] = 1
+        v[:, 10], v[:, 11:11 + PCA_D], v[:, -1] = sc[o], z, 1
+    return tok.reshape(-1)
+
+
+def latency(rl, n: int = 200, warm: int = 20):
+    """E5's protocol at batch 1, three cameras in one call (envs/ultralytics, an idle card): YOLO alone; YOLO + the
+    RoIAlign hook; token build (CPU); the B / C MLP forward (GPU). p50 / p95 per component."""
+    import torch
+    from .elicit_e5 import _mlp
+    from .sam_detect import _reader, decode
+    t = _index()
+    fr = t[t.role == "obs"].frame_name.iloc[:: max(1, len(t[t.role == "obs"]) // (n + warm))].iloc[:n + warm]
+    lst = pd.read_parquet(data_dir() / "processed/elicit_e5/images.parquet").set_index("key")
+    frames = [[np.ascontiguousarray(decode(_reader({"path": lst.loc[f"{f}|{c}", "path"]})).permute(1, 2, 0).numpy()[:, :, ::-1])
+               for c in CAMS] for f in fr]
+    det = Detector()
+    pca = np.load(out("pca.npz"))
+    mu, V = pca["mu"], pca["V"]
+    nets = {"B": _mlp(512 + len(CAMS) * K_TOK * TOK_D, 0).eval(), "C": _mlp(512 + len(CAMS) * K_TOK * TOK_D + 64, 0).eval()}
+    sync = torch.cuda.synchronize
+    ts = {k: [] for k in ("yolo_only", "yolo_roi", "tokens_cpu", "mlp_B", "mlp_C")}
+    for ims in frames:
+        sync(); a = time.perf_counter()
+        det.m.predict(ims, imgsz=det.imgsz, conf=SCORE, half=True, retina_masks=True, verbose=False)
+        sync(); ts["yolo_only"].append(1000 * (time.perf_counter() - a))
+    for ims in frames:
+        sync(); a = time.perf_counter()
+        res = det(ims)
+        sync(); b = time.perf_counter()
+        x = build_tokens(res, mu, V)
+        c = time.perf_counter()
+        for arm, net in nets.items():
+            xx = torch.zeros(1, net[0].in_features, device="cuda")
+            xx[0, 512:512 + len(x)] = torch.as_tensor(x, device="cuda")
+            sync(); d0 = time.perf_counter()
+            with torch.no_grad():
+                net(xx)
+            sync(); ts[f"mlp_{arm}"].append(1000 * (time.perf_counter() - d0))
+        ts["yolo_roi"].append(1000 * (b - a)), ts["tokens_cpu"].append(1000 * (c - b))
+    res_ = {k: {"p50_ms": float(np.percentile(v[warm:], 50)), "p95_ms": float(np.percentile(v[warm:], 95)), "n": len(v) - warm}
+            for k, v in ts.items()}
+    res_["gpu"] = torch.cuda.get_device_name(0)
+    (rl.dir / "latency.json").write_text(json.dumps(res_, indent=1))
+    rl.log.info(json.dumps(res_, indent=1))
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("detect", "tokens", "fit"))
+    ap.add_argument("step", choices=("detect", "tokens", "fit", "latency"))
     ap.add_argument("--part", default="0/1")
     a = ap.parse_args()
     if a.step == "detect":
         return detect(a.part)
     from .runlog import RunLog
     rl = RunLog("night2", f"n4-{a.step}")
-    {"tokens": tokens, "fit": fit}[a.step](rl)
+    {"tokens": tokens, "fit": fit, "latency": latency}[a.step](rl)
     rl.close()
 
 
