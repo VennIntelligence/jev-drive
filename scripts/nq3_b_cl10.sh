@@ -29,6 +29,10 @@
 #               relative to the lead root; b2d_route runs from the Bench2Drive root). Agent =
 #               scripts/nq3_b_cl10_bridgedrive.py: the author's SensorAgent with the three start-up shims of the T3
 #               smoke (GPU-name whitelist, undefined debug_mode, ffmpeg check); nothing touching control changes.
+#               Every produce_* output is switched off through the same variable (as in T3): the released config
+#               returns produce_debug_video = True even with debug_mode off, and its visualizer then opens
+#               3rd_party/Roboto-Regular.ttf relative to the lead root and crashes the agent at tick 2 (smoke
+#               17:27). The visualizer runs after the control is computed and only draws, so this is output only.
 #               The author evaluates with LEAD's Bench2Drive copy + leaderboard_evaluator_v2.py, which differs from
 #               the official evaluator only in launching CARLA itself and in restart counts, so the official tree.
 #   simlingo    SimLingo (RenzKa/simlingo 743b243, $DATA_DIR/third_party/simlingo/team_code/agent_simlingo.py),
@@ -65,7 +69,7 @@ case $agent in
     L=$DATA_DIR/third_party/bridgedrive/lead
     export LEAD_PROJECT_ROOT=$L PYTHONPATH=$L${PYTHONPATH:+:$PYTHONPATH} NUMBA_NUM_THREADS=3 IS_BENCH2DRIVE=1 \
         PLANNER_TYPE=only_traj \
-        LEAD_CLOSED_LOOP_CONFIG="steer_modality=route throttle_modality=target_speed brake_modality=target_speed step_num=20 diffusion_speed=False" \
+        LEAD_CLOSED_LOOP_CONFIG="steer_modality=route throttle_modality=target_speed brake_modality=target_speed step_num=20 diffusion_speed=False $(printf 'produce_%s=False ' {demo,debug,input,grid}_{image,video} input_log)" \
         LEAD_TRAINING_CONFIG="diffusion_speed=False plan_anchor_path=$L/anchor_utils/anchor_data/lead_cp_kmeans_60_10.npy"
     py=$DATA_DIR/envs/bridgedrive/bin/python ag=scripts/nq3_b_cl10_bridgedrive.py cfg=$DATA_DIR/models/bridgedrive ;;
   simlingo)

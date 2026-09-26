@@ -7,7 +7,8 @@ Nothing that touches control is changed. Three start-up shims, the same ones as 
   1. TrainingConfig.gpu_name raises on any GPU outside the author's list (ours: RTX PRO 6000 Blackwell); it only
      feeds training-time mixed-precision switches, so an unknown card maps to "" (the author's no-GPU value).
   2. config_closed_loop.py reads self.debug_mode in every produce_* property but never defines it; define it False,
-     as the author's '# Shu' branches intend for evaluation (every produce_* output is then off).
+     as the author's '# Shu' branches intend for evaluation. (produce_debug_video still returns True with it; the
+     runner switches every produce_* output off through LEAD_CLOSED_LOOP_CONFIG.)
   3. setup() refuses to start without ffmpeg, which only compresses videos that are never produced.
 The anchor path (relative to the lead root in the author's script) is made absolute through the author's own
 LEAD_TRAINING_CONFIG by scripts/nq3_b_cl10.sh, not here. SAVE_PATH defaults to <attempt>/lead_save, so the
