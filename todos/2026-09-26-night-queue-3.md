@@ -35,6 +35,10 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
    (d) 这一轮不调 P7 的任何参数。
 10. **闭环读数**：Bench2Drive 官方 220 路线、官方评测器（4000-tick 截断、完成阈值 99%），报 DS、SR、按第 38 条 hazard family 分组的 SR（突发 hazard / 让行与博弈 / obstacle bypass / 其余），
     配对差按路线整组 bootstrap（10 000）；多 seed 时先对 seed 取均值再 bootstrap。单次运行的噪声约 ±3 DS（第 41 条 P6 对 P5），单 seed 的差只写「同一水平」。
+    **2026-09-26 18:10 CST 补（main，写于任何 CL3 / CL4 / CL6 / CL5 分数被读之前）**：P5 v0 / v1 与 P6 的路线都取自 `bench2drive220.xml`，所以我们的 head（P5 v1 BA 上训）在闭环里有一部分路线**训练时见过它的录像**，
+    这正是我们要在榜单模型上查的「背题」。所以我们所有 head 臂（CL3–CL6、CL9）的每张表都按路线拆成三组分开报：seen（该 head 的训练集里有这条路线的录像）、unseen（220 里从未录过的路线）、合并；
+    与 openpilot 原生、Alpamayo、作者执行层各臂的配对差**以 unseen 组为主读数**，合并只作参照。seen / unseen 名单由执行员从训练集的路线号直接导出，写进 `runs/nq3/b/route_split.json`，先于读分。
+    判据 1–3 的主读数相应改为 unseen 组（unseen 组若少于 30 条路线，判据降为描述，写明）。干净的做法（交叉拟合）在 [队列 4](2026-09-26-night-queue-4.md) 的 K 里做。
 
 ## 各节的目标与判据
 
