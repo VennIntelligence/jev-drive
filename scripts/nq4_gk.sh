@@ -17,9 +17,11 @@
 #   variants   orig ghost shift swap (G, runs/nq4/gk/g_routes.xml) | k (the official 220, K)
 #   routesets  g (the 80 G routes / 50 for swap), gob (the 40 obstacle routes), grec (G routes recorded in K's
 #              training data), k220 (all 220), krec (the 220 routes recorded in K's training data)
-# Budget: after every step the whole queue is re-estimated from measured worker-minutes per route (prior until an
-# examinee has >= 5 finished routes). Projected total > $BUDGET_WH worker-hours (600) -> the todo's cut: first drop every
-# swap step, then keep shift only for tfv6 / bridgedrive / blue / mc. Each step stops at twice its estimate (ERROR).
+# Budget: after every step the whole queue is re-estimated from measured worker-minutes per route (median x 1.15, prior
+# until an examinee has >= 5 finished routes; the first 20 G routes of the queue are that profiling). G projected (done +
+# remaining) > $BUDGET_WH worker-hours (600) -> the todo's cut: first drop every swap step, then keep shift only for
+# tfv6 / bridgedrive / blue / mc; still over -> OVER_BUDGET, the queue runs on in priority order. K and X are projected
+# and shown (PROJECTED_WH) but not cut. Each step stops at twice its estimate (ERROR).
 # Resources: GPUs 0-5 x <= 6 servers, cores 60-149. Server index i binds RPC 2000 + 50 i (+1, +2) and TM 8000 + 50 i, i.e.
 # the RPC port of index i + 120, so a block must keep i, i + 120 and i - 120 clear of every other lane's indices (lane B
 # 300-479, lane A 600-689, K 170-179): GPU g uses [60 + 18 g, 78 + 18 g), 60-167 in all (i + 120 in 180-287, i - 120 <= 47).
@@ -220,7 +222,7 @@ from pathlib import Path
 G, cand = Path(sys.argv[1]), sys.argv[2]
 w = []
 for base in ("arms", "arms_k"):
-    for f in (G / base).glob(f"{cand}*/**/done/*.json") if base == "arms_k" else (G / base / cand).glob("*/s*/done/*.json"):
+    for f in (G / base).glob(f"{cand}_*/s*/done/*.json") if base == "arms_k" else (G / base / cand).glob("*/s*/done/*.json"):
         try:
             w.append(float(json.loads(f.read_text())["wall_s"]) / 60.0)
         except Exception:
@@ -382,47 +384,64 @@ ready_for() {  # an examinee's inputs exist (heads exported, K's READY); else th
         *) return 0 ;;
     esac
 }
-project() {  # project <queue file>: projected worker-hours of every step (done steps at their measured cost)
-    local tot=0 line c v s rs n w
+project() {  # project <queue file>: remaining worker-hours per step and per part (G / K / X)
+    local c v s rs n w sd cf wh g=0 k=0 x=0
     while read -r c v s rs; do
         n=0
         for sd in ${s//,/ }; do
-            if [[ -e $(arm_dir "$c" "$v" "$sd")/DONE ]]; then continue; fi
-            local cf=$G/counts/$c.$v.$sd.$rs
+            [[ -e $(arm_dir "$c" "$v" "$sd")/DONE ]] && continue
+            cf=$G/counts/$c.$v.$sd.$rs
             [[ -s $cf ]] || { mkdir -p "$G/counts"; n_ids "$(ids_for "$c" "$v" "$sd" "$rs")" > "$cf"; }
             n=$(( n + $(cat "$cf") ))
         done
         w=$(wmin "$c")
-        tot=$(python3 -c "print($tot + $n * $w / 60)")
-        printf '%-12s %-6s %-6s %-5s %4d routes x %5s wmin = %6.1f worker-h\n' "$c" "$v" "$s" "$rs" "$n" "$w" "$(python3 -c "print($n * $w / 60)")"
+        wh=$(python3 -c "print(round($n * $w / 60, 2))")
+        case $v:$c in k:*) k=$(python3 -c "print($k + $wh)") ;; *:x) x=$(python3 -c "print($x + $wh)") ;; *) g=$(python3 -c "print($g + $wh)") ;; esac
+        printf '%-12s %-6s %-6s %-5s %4d routes x %5s wmin = %6.1f worker-h\n' "$c" "$v" "$s" "$rs" "$n" "$w" "$wh"
     done < "$1"
-    echo "TOTAL_REMAINING_WH $tot"
+    echo "REMAINING_WH G $g K $k X $x"
 }
-apply_cuts() {  # apply_cuts <queue file>: the todo's cut rule, once the projection exceeds the budget
-    local qf=$1 rem done_wh total
-    rem=$(project "$qf" | awk '/^TOTAL_REMAINING_WH/ {print $2}')
-    done_wh=$(python3 - "$G" <<'EOF'
+done_wh() {  # worker-hours already spent: G, K
+    python3 - "$G" <<'EOF'
 import json, sys
 from pathlib import Path
-print(round(sum(float(json.loads(f.read_text())["wall_s"]) for f in Path(sys.argv[1]).glob("arms*/**/done/*.json")) / 3600 * 1.15, 1))
+G = Path(sys.argv[1])
+f = lambda pat: round(sum(float(json.loads(p.read_text())["wall_s"]) for p in G.glob(pat)) / 3600 * 1.15, 1)
+print(f("arms/*/*/s*/done/*.json"), f("arms_k/*/s*/done/*.json"))
 EOF
-)
-    total=$(python3 -c "print(round($rem + $done_wh, 1))")
-    echo "$total" > "$G/PROJECTED_WH"
+}
+apply_cuts() {  # apply_cuts <queue file>: the todo's G cut rule (G = orig / ghost / shift / swap without X), budget BUDGET_WH
+    local qf=$1 rem dg dk g k x total nw
+    rem=$(project "$qf" | awk '/^REMAINING_WH/ {print $3, $5, $7}')
+    read -r g k x <<< "$rem"
+    read -r dg dk <<< "$(done_wh)"
+    total=$(python3 -c "print(round($g + $dg, 1))")
+    nw=$(( $(wc -w <<< "$GPUS") * WORKERS ))
+    printf 'G %s (done %s) | K %s (done %s) | X %s worker-h remaining; all remaining at %d workers: %.1f h\n' \
+        "$total" "$dg" "$k" "$dk" "$x" "$nw" "$(python3 -c "print(($g + $k + $x) / $nw)")" > "$G/PROJECTED_WH"
+    # cut only on measured costs: every G examinee left in the queue has >= 5 finished routes, or the queue has reached
+    # the shift / swap steps (by then every examinee has run its ghost step)
+    local unmeasured="" cc
+    for cc in $(awk '$2 != "k" && $1 != "x" {print $1}' "$qf" | sort -u); do [[ -z $(measured_wmin "$cc") ]] && unmeasured+=" $cc"; done
+    if [[ -n $unmeasured && ${2:-} != force ]]; then
+        echo "(priors for:$unmeasured; no cut before they are measured)" >> "$G/PROJECTED_WH"
+        return 0
+    fi
     if python3 -c "import sys; sys.exit(0 if $total > $BUDGET_WH else 1)"; then
         if grep -q ' swap ' "$qf"; then
             grep -v ' swap ' "$qf" > "$qf.tmp" && mv "$qf.tmp" "$qf"
-            ev cut "\"what\": \"swap\", \"projected_wh\": $total"; log "projected $total worker-h > $BUDGET_WH: swap steps cut"
-            apply_cuts "$qf"; return
+            ev cut "\"what\": \"swap\", \"projected_G_wh\": $total"; log "projected G $total worker-h > $BUDGET_WH: swap steps cut"
+            apply_cuts "$qf" force; return
         fi
         if grep -E ' shift ' "$qf" | grep -qvE '^(tfv6|bridgedrive|blue|mc) '; then
             grep -vE '^(pdm|simlingo|cinque|q2|k3seen) shift ' "$qf" > "$qf.tmp" && mv "$qf.tmp" "$qf"
-            ev cut "\"what\": \"shift to tfv6 / bridgedrive / blue / mc\", \"projected_wh\": $total"
-            log "projected $total worker-h > $BUDGET_WH: shift cut to tfv6 / bridgedrive / blue / mc"
-            apply_cuts "$qf"; return
+            ev cut "\"what\": \"shift to tfv6 / bridgedrive / blue / mc\", \"projected_G_wh\": $total"
+            log "projected G $total worker-h > $BUDGET_WH: shift cut to tfv6 / bridgedrive / blue / mc"
+            apply_cuts "$qf" force; return
         fi
-        [[ -e $G/OVER_BUDGET ]] || { echo "$(date '+%F %T') projected $total worker-h after both cuts" > "$G/OVER_BUDGET"
-                                     ev over_budget "\"projected_wh\": $total"; log "still over budget after both cuts ($total worker-h); the queue runs in priority order"; }
+        [[ -e $G/OVER_BUDGET ]] || { echo "$(date '+%F %T') projected G $total worker-h after both cuts" > "$G/OVER_BUDGET"
+                                     ev over_budget "\"projected_G_wh\": $total"
+                                     log "G still over budget after both cuts ($total worker-h): the queue runs on in priority order; main decides"; }
     fi
 }
 
@@ -431,7 +450,7 @@ status_loop() {
         {
             echo "# nq4-gk status $(date '+%F %T %Z')"; echo
             echo "- current: $(cat "$G/CURRENT" 2>/dev/null)"
-            echo "- projected total worker-h: $(cat "$G/PROJECTED_WH" 2>/dev/null) (budget $BUDGET_WH)$( [[ -e $G/OVER_BUDGET ]] && echo ', OVER BUDGET after both cuts')"
+            echo "- projection: $(cat "$G/PROJECTED_WH" 2>/dev/null) (G budget $BUDGET_WH)$( [[ -e $G/OVER_BUDGET ]] && echo '; G OVER BUDGET after both cuts')"
             echo "- steps left: $(grep -c . "$G/QUEUE" 2>/dev/null)"
             echo "- GPUs $GPUS, workers/GPU $WORKERS, cores $CPUS; pids.current $(cat /sys/fs/cgroup/pids.current), load $(cut -d' ' -f1-3 /proc/loadavg)"
             echo; echo '```'; nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader; echo '```'
@@ -467,6 +486,9 @@ chain() {
         while read -r c v s rs; do
             step_done "$c" "$v" "$s" && continue
             ready_for "$c" || continue
+            if [[ $v == shift || $v == swap ]] && [[ ! -e $G/CUT_CHECKED ]]; then   # last chance for the cut rule
+                touch "$G/CUT_CHECKED"; apply_cuts "$G/QUEUE" force; ran=1; break
+            fi
             ran=1
             run_step "$c" "$v" "$s" "$rs" < /dev/null
             srv_stop_all
