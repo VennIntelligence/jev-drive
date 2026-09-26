@@ -466,11 +466,20 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
     v_ego = np.linalg.norm(past[rows, -1, 2:4], axis=1)
     scopes = {"all": np.ones(len(rows), bool), "straight_yaw": d["straight_yaw"], "pre_onset": d["pre_onset"],
               "Pedestrians": d["cluster"] == "Pedestrian", "Cyclists": d["cluster"] == "Cyclist"}
-    tabs, acts, descs, verdicts = [], [], [], []
+    tabs, acts, descs, verdicts, aucs = [], [], [], [], []
+    sam = wod_sam_labels(d["frame_name"].astype(str)) if tag == "mc" else None
     for m in MODELS:
         if m not in deltas:
             continue
         gm = gates[m](d, v_ego) if callable(gates.get(m)) else gates[m]
+        if sam is not None:              # [G1] 08:50 (2): the non-circular description, not a selection input
+            from sklearn.metrics import roc_auc_score
+            for gname, g in gm.items():
+                for lab in ("any", "ped_cyc"):
+                    y = sam[lab].to_numpy()
+                    aucs.append({"model": m, "gate": gname, "label": f"SAM {lab}", "n": len(y), "positive": float(y.mean()),
+                                 "auc": float(roc_auc_score(y, g))})
+            np.savez_compressed(rl.dir / f"wod_gates_{m}.npz", frame_name=d["frame_name"], **gm)
         for gname, g in {"none": np.ones(len(rows), np.float32), **gm}.items():
             tab, act = E1.readouts(d, d[f"prior {m}"], g[:, None, None] * deltas[m], taus[m])
             meta = {"model": m, "gate": gname, "delta": tag}
@@ -482,8 +491,21 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
             rl.event("g1_wod_verdict", **meta, verdict=v)
             log.info("WOD %s / %s gate %s: %s\n%s", m, tag, gname, v,
                      tab[tab.judge == "RFS (rater)"].to_markdown(index=False, floatfmt=".3f"))
-    for name, rows_ in (("wod_deltas", tabs), ("wod_activation", acts), ("wod_gate_desc", descs), ("wod_verdict", verdicts)):
+    for name, rows_ in (("wod_deltas", tabs), ("wod_activation", acts), ("wod_gate_desc", descs), ("wod_verdict", verdicts),
+                        ("wod_sam_auc", aucs)):
         pd.DataFrame(rows_).to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
+
+
+def wod_sam_labels(names: np.ndarray) -> pd.DataFrame:
+    """Q2b's SAM 3.1 detections on WOD val by E3 (8)'s rule (score > 0.5, logged-path corridor, single frame)."""
+    from . import elicit_e3 as E3, fusion_q4 as Q, waymo
+    df = waymo.load_index()
+    _, future = waymo.load_ego()
+    lst = pd.read_parquet(Q.root("lists") / "wod.parquet")
+    f = E3.sam_flags(df, waymo.frame_names(df), future, lst).set_index("key").reindex(names)
+    assert f.in_any.notna().all(), f"{int(f.in_any.isna().sum())} eval frames without SAM detections"
+    return pd.DataFrame({"any": (f.in_pedestrian | f.in_cyclist | f.in_vehicle).astype(bool).to_numpy(),
+                         "ped_cyc": (f.in_pedestrian | f.in_cyclist).astype(bool).to_numpy()})
 
 
 def run_i3(rl, gate_fns: dict, with_g2: bool = False):
