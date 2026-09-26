@@ -211,6 +211,32 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   T2 = DrivoR + WA-JEPA：I3 补渲 CAM_BACK + 10 Hz，再 P5 / WOD / NAVSIM / nuScenes；等下一个执行员收工空出卡再开。
   T3 = BridgeDrive + BLUE 的 P5 重录（约 30 个 CARLA server）：等 night-queue-2 A 的 N1 批量结束、CARLA 容量空出来再开。
   各路在本节下写 [T1] / [T2] / [T3] 条目，结果写「结果」。B2D 闭环那一项仍按 5.1 另立 todo，不在这里跑。
+- 2026-09-26 10:05 CST [T1] 开工，分步估时（GPU 4 为主，box load ~146，CPU 池子按空余核数开、不超过 12 个 worker）：
+
+  | 步 | 内容 | 墙钟 | GPU·h |
+  |:--|:--|--:|--:|
+  | 1 | 相机适配器（虚拟 nuPlan 相机渲染）+ navtest 256 token 上的适配器等价检查 | 1.5 h | < 0.1 |
+  | 2 | P5 v1 BA（19 428 帧）+ I3（6 232 帧）推理，两个模型 | 0.5 h | 0.3 |
+  | 3 | judge（`p5_exam.exam` 原样 + E4 的按对）、表 | 0.5 h | — |
+  | 4 | WOD-E2E val（479 + 958 帧）适配 + 推理 + RFS / ADE | 1.5 h | < 0.1 |
+  | 5 | NAVSIM 复现：SparseDriveV2 navtest PDMS（v1.1）、ZTRS navhard two-stage EPDMS；devkit 打分等别人的打分空出来 | 2 h | 0.6 |
+  | 6 | nuScenes main 4636（两个模型都只用 L0 / F0 / R0，不需要补解压 CAM_BACK） | 1 h | 0.1 |
+  | 7 | 写结果、leaderboard-vs-ability、decisions | 1 h | — |
+  | 合计 | | 约 8 h | 约 1.2 |
+
+- 2026-09-26 10:05 CST [T1] P5 / I3 的操作性选择（写于任何 SparseDriveV2 / ZTRS 的 P5、I3 输出之前）：
+  1. **judge 的范围**：5.3 写「judge 是 `p5_exam.exam` 原样」，而它（与 I1 的 BA 集标签）只有纵向 Δ，没有横向标签和绕行 family，所以横向翻转率与 4 类反应一致率在这张卷上**算不出来，不报**；
+     判格只用纵向那一半：「有 E 层能力（纵向）」= 合并逐帧定向翻转率的 CI 下界 > 该考生的样本外 null false-flip（第 42 条的用法）。逐帧是主读数，按对用 `elicit_e4.score` 的 (b) 原样并报。
+     I3 同 `elicit_i3` 的 judge（`p5_exam.exam`，去掉 TFv6 列，τ 由 I3 null 定，场景 bootstrap）。P5 表里 TFv6、openpilot prior、M-C 用已发表的 run 作参照行，不重算。
+  2. **相机**：两个模型的预处理都把输入写死成 nuPlan 的 1920×1080（SparseDriveV2 的 resize 用 config 里的 H / W 而不是实际图宽，ZTRS 按固定像素裁剪拼接），所以不能直接喂 972×1079 / 800×450 的图。
+     适配器渲染虚拟 nuPlan 相机：nuPlan 内参（f = 1545，主点 (960, 560)）与 nuPlan 畸变（k1 = −0.356，模型训练时看的是未去畸变的原图），朝向 = nuPlan CAM_F0 的朝向绕 z 转到映射源相机的 yaw
+     （5.2 的映射原样：f0 ← front，l0 / r0 ← front_left / front_right；P5 为 0 / ±45°，I3 为各场景 rig 的实际 yaw，约 ±55°），纯旋转重投影（`camgeom.choose_sources`：每个像素取离光轴最近的源相机），源相机都看不到的像素填黑。
+     SparseDriveV2 的 `projection_mat` 用虚拟相机自己的标定算（NAVSIM 的 lidar 系 = 后轴 ego 系）；相机位置取映射源相机的安装位置，I3 的前相机原点放在 nuPlan CAM_F0 的 (1.67, 0, 1.52) m，输出轨迹再平移回前相机原点（对 2 s 速度无影响）。
+  3. **ego 输入**：照 night-queue-2 [B] 09:58 (2) 的 NAVSIM ego 构造（`past` 的 t0 速度、每步速度变化 / 0.25 s，旋到该步车体系；GO_LEFT → left、GO_STRAIGHT → straight、GO_RIGHT → right、UNKNOWN → unknown）。
+     SparseDriveV2 只读当前帧；ZTRS 的 t−0.5 s 状态与图像只进 `ec_target` 那一遍，而那一遍只进 loss（`no_cond = True`，smoke 已核对关掉后选中轨迹逐位相同），所以关掉 `ec_target`，其余原样。
+  4. **checkpoint 与推理配置**：SparseDriveV2 = `sparsedrive_navsimv1_92p2.ckpt` + 仓库 `run_pdm_score_navtest_v1.sh` 的推理设置（smoke 同款）；ZTRS = `ztrs_vov.ckpt` + `docs/ztrs_inference.md` 的 8192 词表（NAVSIM 复现用同一套）。
+  5. **输出换算**：5.2 原样，(0, 0) + 模型输出点做三次样条插到 0.25 s 网格（ZTRS 的 10 Hz 同样处理）；4 s 以后按最后两点匀速外推到 5 s（只有 WOD 的 RFS 用到）。
+  6. **适配器等价检查（先于任何考卷数字）**：navtest 256 个 token，把 nuPlan 自己的 F0 / L0 / R0 当作源相机走同一条渲染路径，与模型原生管线的输出比：两个模型选中同一条轨迹（SparseDriveV2 为同一 path / velocity 组合，ZTRS 为同一词表项）的比例 ≥ 90% 才开考；不过就停下查。
 - 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
   所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
 
