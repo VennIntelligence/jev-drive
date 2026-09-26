@@ -69,8 +69,12 @@ def heads(rl, models=MODELS, folds=None, out: Path | None = None):
         hasq = t6.frame_name.isin(qn).to_numpy()
         Q6 = np.zeros((len(t6), Q.shape[1]), np.float32)
         Q6[hasq] = P.load_features(t6[hasq], ("L18_last",))["L18_last"]
-    ti = pd.read_parquet(proc("nq3_tokB_index.parquet")).frame_name
-    tok6 = np.load(proc("nq3_tokB.npy"))[pd.Series(np.arange(len(ti)), index=ti)[t6.frame_name].to_numpy()]
+    if proc("nq3_tokB_index.parquet").exists():
+        ti = pd.read_parquet(proc("nq3_tokB_index.parquet")).frame_name
+        tok6 = np.load(proc("nq3_tokB.npy"))[pd.Series(np.arange(len(ti)), index=ti)[t6.frame_name].to_numpy()]
+    else:                                      # the pre-batch check only (P6 rows never enter a fit)
+        assert out is not None, "image-plane tokens missing: run nq3_feats tokens first"
+        tok6 = np.zeros((len(t6), tokB.shape[1]), np.float32)
     n, n6 = len(t), len(t6)
     rl.log.info("P5 v1 BA %d rows; P6 %d exam rows (%d with Qwen)", n, n6, int(hasq.sum()))
     ta = pd.concat([t[["frame_name", "role", "base_id", "intent"]],
