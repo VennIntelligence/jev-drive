@@ -115,6 +115,28 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   顺序跑的旧编排约 6.7 h（p0 + 1），并行编排（T1 链 SDv2 → ZTRS ‖ DrivoR，之后 WA-JEPA 共 8 进程，自己的显存 ≤ 约 28 GB）约 2 h。
   估时：全部 18 782 帧约 2.8 h，超 2.5 h，**按 16:45 条 (1) 退到 priority 0 + 1（12 155 帧）**，估约 2 h，另加等显存的时间（每个 GPU 作业先等 GPU 6 有空闲显存，失败重试）。priority 2 这一轮不跑。
 
+- 2026-09-26 17:32 CST [C] Q1 / Q2 的操作性选择、链的顺序与验证记录（代码 `jevdrive/nq3_p6.py`（判卷）、`nq3_q1.py`、`nq3_q2.py`、`nq3_head.py`、`nq3_feats.py`，链 `scripts/nq3_c.sh` + `scripts/nq3_c_steps.sh`）。
+  **披露**：17:23 验证判卷代码时看到过一次 smoke 数（LOCO、seed 0、Cinque、A0–A3：bypass 翻转约 4%、τ_lat ≈ 3.0 m、四臂都「no bypass」）；下面的判卷参数与各臂定义在那之前已写进代码，之后没有改；A4 不进闭环候选是 17:35 因为没有导出路径加的（技术原因，写明）。
+  1. **考卷帧**（rule 7）：主读数 = 8 类（9 类可用里 Emergency 因 t_div ≥ t_vis 0 / 15 全部出局）；VehicleOpensDoorTwoWays、InvadingTurn、Emergency 在分 scenario 表里单列。每个 case 的窗 = t_vis 到 t_div_lat(x₁₀, x₀₀) + 2 s，只取 x₁₀ 世界级模式为绕行且 t_div ≥ t_vis 的对（`nq3_exam_frames.parquet`，18 782 个唯一帧）。
+     读数：bypass = x₁₀ − x₀₀；天气 null = wnull − x₁₀（seed 0 的窗）；放置 null = shoulder − x₀₀（seed 0 的窗，40 个 keep 世界）；negotiation = x₁₁ − x₀₁（t_vis 到 t_div_lat(x₁₁, x₀₁) + 2 s，x₀₁ 录完就止）；镜像 = mirror − x₀₁（seed 0 的 bypass 窗）。
+  2. **读数**：Δ_lat = 考生自己 ego 系（后轴、左正）y(3 s) 之差；视野不到 3 s 的考生（TFv6 waypoint 8 × 0.25 s）用 y(2 s)。τ_lat、τ_lon = 天气 null 对上 |Δ_lat|、|Δv(2 s)| 的 95 分位；「天气 null 样本外误翻率」= `p5_exam` 的两半交叉（一半路线定 τ、另一半算任意方向误翻，取均值）。
+     todo 的「x₀₀ 误翻率」P6 没有第二个 x₀₀ 可比，按「无障碍参照的同向误翻率」理解：用天气 null 对的同向（expert 绕行方向）误翻率作选择性的参照，另报 x₀₀ 自身 y(3 s) 越过 τ_lat 的比例（只报）。bootstrap 10 000 次，路线整组。
+     negotiation：每个 2W case，x₁₀ 的 |Δ_lat| 首次过 τ_lat 的 tick 与 x₁₁ 的比；x₁₁ 晚 ≥ 1 s 或窗内没过（且窗比 x₁₀ 首过多 ≥ 1 s）记「晚」；x₁₀ 没过的 case 不计。镜像：mirror − x₀₁ 的 Δ_lat > τ_lat（向左）的帧比例。
+     考生世界级模式（描述）：窗内每帧的 5 s 轨迹按 §2.1（`p6.mode_21`，ego 系）分类，连续 ≥ 2 帧绕行类 → bypass_[侧]（之前有 stop 帧 → wait_then_bypass），否则连续 ≥ 2 帧 stop → stop，否则 keep；与 N1 `worlds.csv` 比一致率。
+  3. **考生**：openpilot 原生 plan = 同 N2 的逐世界零状态流，`plan_pos` 插到 0.25 s 格、+1.519 m 平移到后轴、y 取反（流的 `temporal` 与已存 `op_streams_vis` 逐位相同）。TFv6 waypoint 取 recorder 已录的 shadow，y 的符号按与 expert y(2 s) 的相关定；TFv6 route + target speed 只读纵向（期望 target speed，只报 stop 替代）。
+     P5 v1 上训的读出按 I3 的协议（`elicit_i3.exam`）：P5 v1 BA 上逐 fold 按已存配方拟合、P6 帧只随行不进任何拟合与标准化、取 5 个 fold 模型的均值，并对已存 run 做逐 fold 核对：`ridge_late` 与 M-C pair（< 1e-3 m）、`cls_late`（`night2_n3.p5cls` seed 0，fold 顶 1 anchor 取均值）、
+     E5 student 取 CL6 的那一版（第 50 条 B arm：image-plane token，seed 0，N4 的 PCA）。Qwen 特征只抽 priority ≤ 1 的 12 155 帧（HF processor 每个 12 图 clip 约 4 core·s，30 核撑不起全部），所以 M-C 没有 negotiation / 镜像读数。
+     Alpamayo：保持 batch 1（逐位成对），priority 0 跑完为止，可能过 23:30；链里的 Q1 判卷在 NAVSIM 族完成后先跑一次（Alpamayo 用已完成的整 case），Alpamayo 写 DONE 后再判一次（`q1_judge_final`）。
+  4. **Q2**：各臂定义见 `jevdrive/nq3_q2.py` 文件头。训练行 = 训练折的 x₁₀ / x₀₀ / x₁₁ / x₀₁；配对 = 训练折各类的 bypass 窗（x₁₀, x₀₀）同 tick；LOCO 9 折 = 8 个主类 + VehicleOpensDoorTwoWays，InvadingTurn / Emergency 只当训练行。
+     模式标签 = expert 自己录像的 k 到 k + 5 s 上按第 52 条世界规则（路线系 d）贴：bypass（max|d| ≥ 1 m，侧按符号）、wait（lateral 起动前停过）、stop、keep。A2 = [ego 输入 | temporal] 上的五类多项 logistic（float64 L-BFGS，λ 取 `planner.LAM_CLS` 里 20% 路线分组内验证交叉熵最小者），模板 = 训练行上该模式的平均横向残差。
+     A3：logit 上的 pair-Δ，目标 c(e₁₀ − e₀₀) − (logit₁₀ − logit₀₀)，c = log 16；A1 / A3 的 λ 用 M-C 网格、3 折路线分组内 CV。seed s = 内 CV 分组置换、模式头内验证切分、A4 K-means 的种子、route 折的置换。A4 的 λ 选择同 p5cls，vocabulary = 训练未来 K-means 1024 + 训练 x₁₀ bypass 形状 64 + WOD train bypass 形状 64。
+     backbone 对照：prior 仍是 Cinque `temporal` 的 A0 / A2，只把 A1 / A3 的 Δ 流换成 Qwen `L18_last`（priority ≤ 1 帧）或 V-JEPA 2 `mean`，只在 v0 上跑。**A4 只跑 seed 0**（共享卡上每折约 7 min），它的读数只能写「同一水平」。副读数 route 5 折跑 A0–A3 × 3 seed；WOD 21 / 18 帧的副读数不进链（留给主会话）。
+  5. **交付闭环（写死在 `nq3_q2.choose` / `export`）**：LOCO、Cinque、3 个 seed 都过 rule 7 判格的轨迹臂里取平均 bypass 翻转最高者，没有就 A1；A4 没有导出路径，不作候选（若只有 A4 过，照样用 A1，并在结果里写明）；CL5d 的模式头 = A3（三个 seed 都过判格时）否则 A2。
+     全部 v0 训练世界（所有类）上按 seed 0 重训、导出 `runs/nq3/q2/closed_loop_head/{head.npz, manifest.json, READY}`，numpy 加载器 `jevdrive.nq3_head.Head`；导出时在 1 024 行上核对加载器与拟合的输出（轨迹 ≤ 1e-3 m、模式一致，验证时 2.5e-5 m / 0 不一致）。
+  6. **v1**（等 `runs/nq3/a/v1/DONE`，最迟 08:00）：同一代码，帧集 `processed/carla_p6_v1`（lane A 建）、expert 统计 `research/results/nq3/q3/`；切分 town（lane A 的 Town13 测试组，单折）、LOCO、route，A0–A3 × 3 seed × 2 模型；v0 镜像题标旗（任一臂 > 50%）才加 A5（A1 + (x₁₁, x₁₀) 配对项）与 A5m（A3 同理）。
+  7. **链的顺序**（与 todo 列的 Q1 → 判卷 → Q2 不同，因为 Q2 不依赖 Q1 的任何数）：后台起特征 → Q2 pilot（LOCO A0–A3）→ READY → 等特征 → openpilot 原生 plan → P5 读出 → backbone 对照 → route 折 → A4 → 等 NAVSIM 族（最迟 01:30）→ Q1 判卷 → Q2 表 → 等 v1 → v1 准备 → Q2 v1 → 等 Alpamayo（最迟 08:30）→ Q1 终判。
+  8. **优化与一致性记录**：openpilot 原生 plan 18.5 ms / 帧（6 流子集，`temporal` 逐位同已存）；V-JEPA 2 110 clip/s（解码受限，5 worker，8.5 min 全量）；Qwen 在共卡上 CPU 受限，每分片 1.2–1.5 s / 帧 → 缩到 priority ≤ 1；模式头从 GPU `ce_solve` 的 58 s / 折改 CPU float64 L-BFGS 25 s / 折（GPU 被五个作业时间片切碎）；A4 共卡上 406 s / 折。
+
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
 特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。
