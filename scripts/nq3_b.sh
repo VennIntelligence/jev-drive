@@ -15,6 +15,10 @@
 #            tmp/2026-09-26-codex-handoff.md "全局调度"): GPUS, WORKERS, B_CPUS, B_IDX ("g:index ..." server index base
 #            per GPU, default 300 + 30 g), B_EXPAND_GPUS / B_EXPAND_WORKERS / B_CPUS_WIDE (the post-lane-A expansion).
 #   $B/SKIP  "arm seed" lines: the chain skips those queue steps (re-read before every step).
+#   B_PILOT_DIR  staged-launch gate (user rule 2026-09-26: 1 unit -> ~10 units + checklist -> full batch): an arm starts
+#            only when $B_PILOT_DIR/arms/<arm>/s0/verdict.json says PASS (scripts/sch_cl_pilots.sh) or the arm is listed
+#            in $B/APPROVED (main's decision); until then the chain runs the next arm whose gate is open, and waits when
+#            none is. Unset = no gate (the behaviour before).
 #   B_DIR    lane directory (default runs/nq3/b); B_REPORT=0 skips the table refresh (pilots in their own B_DIR).
 #
 # Resources (fixed by main): GPUs 0,1,2, <= 6 CARLA servers each, 50 cores (taskset $B_CPUS), --client-threads 8; after
@@ -321,6 +325,12 @@ maybe_expand() {  # after lane A's v1 is done and no CARLA server is left on the
 }
 
 # ---------------------------------------------------------------- the queue
+gate_open() {  # gate_open <arm>: the staged-launch gate (see the header); always open without B_PILOT_DIR
+    [[ -z ${B_PILOT_DIR:-} ]] && return 0
+    grep -qxF "$1" "$B/APPROVED" 2>/dev/null && return 0
+    python3 -c "import json, sys; sys.exit(json.load(open(sys.argv[1]))['verdict'] != 'PASS')" \
+        "$B_PILOT_DIR/arms/$1/s0/verdict.json" 2>/dev/null
+}
 chain() {
     status_loop & local st=$!
     trap 'kill $st 2>/dev/null; [[ -f $B/CURRENT ]] && { set -- $(cat "$B/CURRENT"); kill_runs "$B/arms/$1/s$2"; }; srv_stop_all' EXIT
@@ -334,7 +344,7 @@ chain() {
                 "cl2 2 all ${EST_CL2:-1.5}" "cl3 2 all ${EST_CL3:-2.0}" "cl4 2 all ${EST_CL4:-4.5}"
                 "tfv6 0 all ${EST_CL10:-3.0}" "bridgedrive 0 all ${EST_CL10:-3.0}" "blue 0 all ${EST_CL10:-3.0}"
                 "simlingo 0 all ${EST_SIMLINGO:-8.0}")      # SimLingo ~1.1 s / tick, single-core bound (CL10 smoke)
-    local inserted=0 appended=0 s
+    local inserted=0 appended=0 s last_held=""
     while (( ${#Q[@]} )); do
         load_go
         maybe_expand
@@ -348,13 +358,27 @@ chain() {
             "$PY_VENV" -m jevdrive.nq3_cl convert-mc-real0 >> "$B/log.txt" 2>&1 || error "mc_real0 package conversion failed" "$B/log.txt"
             Q+=("mc_real0 0 all ${EST_CL4:-4.5}"); appended=1; ev append '"what": "mc_real0"'; log "Q4a PASS: mc_real0 appended"
         fi
-        s=${Q[0]}; Q=("${Q[@]:1}")
+        local i pick=-1 keep=() held=""
+        for i in "${!Q[@]}"; do          # drop DONE / SKIP steps; take the first step whose gate is open, keep the rest
+            set -- ${Q[$i]}
+            [[ -e $B/arms/$1/s$2/DONE ]] && continue
+            if grep -qxF "$1 $2" "$B/SKIP" 2>/dev/null; then
+                ev skip "\"arm\": \"$1\", \"seed\": $2"; log "skip $1 seed $2 (listed in $B/SKIP)"; continue
+            fi
+            if (( pick < 0 )) && gate_open "$1"; then pick=$i; continue; fi
+            gate_open "$1" || held+=" $1"
+            keep+=("${Q[$i]}")
+        done
+        if (( pick < 0 )); then
+            Q=("${keep[@]}")
+            printf '%s\n' "${Q[@]}" > "$B/QUEUE"
+            (( ${#Q[@]} )) || break
+            [[ $held == "${last_held:-}" ]] || { log "waiting: no open gate (pilot PASS / APPROVED) for$held"; ev gate_wait "\"held\": \"$held\""; }
+            last_held=$held; sleep 60; continue
+        fi
+        s=${Q[$pick]}; Q=("${keep[@]}"); last_held=""
         printf '%s\n' "${Q[@]}" > "$B/QUEUE"
         set -- $s
-        [[ -e $B/arms/$1/s$2/DONE ]] && continue
-        if grep -qxF "$1 $2" "$B/SKIP" 2>/dev/null; then
-            ev skip "\"arm\": \"$1\", \"seed\": $2"; log "skip $1 seed $2 (listed in $B/SKIP)"; continue
-        fi
         run_arm "$1" "$2" "$3" "$4"
         srv_stop_all             # free the cards between arms (the next arm starts its own servers)
     done
