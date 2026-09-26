@@ -19,3 +19,5 @@ CPU实时用量与亲和分别检查；GPU1不授batch；不新增CARLA，不申
 修正 `3cbe48d` 已main push/box pull：Q4b/Q6 GPU槽改192–195,197–199，Q5用180–195,197–199；只有 K 的 cl/DONE+READY 或 OPL ERROR 已存在且相应runner确已不在时，从本队列的只读容量计算排除该旧pilot承诺，原SCH表不改。现存CARLA始终计入实时probe。首次无子进程的dispatcher按记录start_ticks核对后退出，manifest旧hash保留。
 
 正式窗口 `jev:cx-orchestration-v2`，dispatcher PID542401。14:17:57 UTC 已实际准入：Q6 inputs worker PID543399，Q4b inputs worker PID543400；两者分别使用CPU180–191和192–195,197–199，CUDA隐藏。运行目录 `$DATA_DIR/runs/nq4/cx/orchestration/{pid,identity.json,log.txt,events.jsonl,STATUS.md,state.json,resources.json,jobs/}`。每个job有自身命令PID、日志、结果与完成标记。Q5等待CPU槽释放。正式计算的首批PID在下条补记。
+
+14:18:42 UTC 两个输入审计均成功 DONE：WOD读入19,663帧、478 rater、1,458 pre_onset、11,597 straight_yaw；Q4b和Q6实际消费者的array/token覆盖与provenance核验通过。14:18:55 UTC **正式科学命令已经同时启动**：Q6 `rt-wod` worker PID546743、命令PID546751，CPU180–191；Q4b `hydra` worker PID546747、命令PID546752，GPU5、CPU192–195,197–199、预留20GB。Q6 refit与Q5按已占用CPU槽等待。之后由持久脚本接棒，不进行模型持续轮询。
