@@ -106,6 +106,14 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   batch 4 在共享卡上快 3.2 倍，但批内逐行的随机抽样不同，轨迹与 batch 1 最大差 10–15 m、CoT 8 帧只有 4 帧相同，过不了逐位条件，所以不用（`ALP_BATCH` 留作主执行员的选项）。
   (8) 覆盖：priority 0 的 6 042 帧必跑完；之后按 (priority, base_id, seed) 整组单元依次开，上一个 part 的实测速度预计能在 23:30 前跑完才开，第一个放不下的单元即收尾。
   吞吐（此刻 GPU 6 100%，C1 特征 3 进程 + lane D 共卡）：batch 1 实测 14.4 s/帧，瓶颈是 time-slicing 下的逐 token decode（22 token 占 10 s）。按这个速度 priority 0 要约 24 h；C1 收工后能降多少未知，所以 priority 0 大概率跑过 23:30。
+- 2026-09-26 17:22 CST [C-nav] 等价检查、profiling 与估时（写于这四个考生任何 P6 判卷数字之前）。脚本 `scripts/nq3_c_nav.sh`（tmux `jev:nq3-c-nav`），日志与 `DONE` 在 `runs/nq3/c/q1_nav/`，检查 `scripts/nq3_c_nav_check.py`。
+  等价（规则 8，32 帧，rng 0）：T1 新 p6 plan 对「同一组 JPEG + P5 plan 的 rig 与 maps + 未优化的 `render`」：虚拟相机图像逐像素相同，特征张量与轨迹 max |Δ| = 0（ZTRS 选中 index 32 / 32 相同）；
+  T2 的 p6 请求行对 `req_p5` 路径逐位相同，DrivoR / WA-JEPA 轨迹 max |Δ| = 0。改动不碰旧集：p5 的 plan 与两份请求重建后与已存文件逐位相同。
+  profiling（200 帧；GPU 6 被 C1 特征、C-alp、lane D 占到 100%、显存 84–90 / 96 GB）：瓶颈是 GPU 6 的时间片，CPU 不是。T1 每帧 CPU 125 ms（SparseDriveV2：解码 19、渲染 48、特征 58）/ 67 ms（ZTRS），
+  GPU 前向 70 / 160 ms；DrivoR 前向 294 ms / 帧（bs 16，fp32），读图 158 ms CPU（worker 里并行）；WA-JEPA（batch 1）单进程 1 450 ms / 样本，6 进程合计 345 ms / 样本，
+  每张唯一图只解码一次进缓存（替代每次 188 ms 的解码），分片 + 缓存对单进程逐次解码 32 帧逐位相同。dtype 与 batch 全按 P5 不动（SDv2 16、ZTRS 32、DrivoR 16 fp32，WA-JEPA bf16 batch 1）。
+  顺序跑的旧编排约 6.7 h（p0 + 1），并行编排（T1 链 SDv2 → ZTRS ‖ DrivoR，之后 WA-JEPA 共 8 进程，自己的显存 ≤ 约 28 GB）约 2 h。
+  估时：全部 18 782 帧约 2.8 h，超 2.5 h，**按 16:45 条 (1) 退到 priority 0 + 1（12 155 帧）**，估约 2 h，另加等显存的时间（每个 GPU 作业先等 GPU 6 有空闲显存，失败重试）。priority 2 这一轮不跑。
 
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
