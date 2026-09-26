@@ -493,7 +493,8 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
                      tab[tab.judge == "RFS (rater)"].to_markdown(index=False, floatfmt=".3f"))
     for name, rows_ in (("wod_deltas", tabs), ("wod_activation", acts), ("wod_gate_desc", descs), ("wod_verdict", verdicts),
                         ("wod_sam_auc", aucs)):
-        pd.DataFrame(rows_).to_csv(rl.dir / f"{name}_{tag}.csv", index=False)
+        (pd.concat(rows_) if rows_ and isinstance(rows_[0], pd.DataFrame) else pd.DataFrame(rows_)).to_csv(
+            rl.dir / f"{name}_{tag}.csv", index=False)
 
 
 def wod_sam_labels(names: np.ndarray) -> pd.DataFrame:
