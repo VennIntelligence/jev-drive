@@ -5,12 +5,12 @@
 #
 #   drivor  DrivoR repo (navsim v1.1 fork): navsim/planning/script/run_pdm_score_multi_gpu.py with the README's
 #           NAVSIM-v1 overrides, metric cache = our v1.1 navtest cache (same MetricCache class and scorer code)
-#   wajepa  WA-JEPA repo: eval.navsim_export_trajectory_cache (its NAVSIM agent, fp32, 3 processes on one GPU),
+#   wajepa  WA-JEPA repo: its trajectory export made resumable (wajepa_export.py: its NAVSIM agent, fp32, NPROC ranks on one GPU),
 #           then eval.navsim_score_trajectory_cache on the v2 devkit (EPDMS, one-stage) and the v1.1 devkit (PDMS).
 #           The v1.1 config already has sensor_blobs_path (same path), so the scorer's "+<key>=" append goes to an
 #           unused key instead of failing on the existing one.
 #
-# Usage (on the box, in tmux): GPU=4 CPUS=0-3 scripts/top10_t2/navsim_repro.sh drivor|wajepa [extra hydra overrides, drivor]
+# Usage (on the box, in tmux): [RUN=<dir>] GPU=4 CPUS=0-3 [NPROC=3 SCORE_WORKERS=8] scripts/top10_t2/navsim_repro.sh drivor|wajepa [extra hydra overrides, drivor]
 # CPUS pins the whole job (inference, data loading, scoring workers) to a core list: the box is CPU-bound.
 set -euo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -18,8 +18,9 @@ model=${1:?drivor|wajepa}
 GPU=${GPU:-4}
 CPUS=${CPUS:-0-3}
 pin=(taskset -c "$CPUS")
+NPROC=${NPROC:-3}; SCORE_WORKERS=${SCORE_WORKERS:-8}
 TP=$DATA_DIR/third_party
-run=$DATA_DIR/runs/top10_t2/navsim/$model/$(date +%Y%m%d-%H%M%S)
+run=${RUN:-$DATA_DIR/runs/top10_t2/navsim/$model/$(date +%Y%m%d-%H%M%S)}   # RUN=<old run dir> resumes (wajepa)
 mkdir -p "$run"
 exec > >(tee -a "$run/log.txt") 2>&1
 export OPENSCENE_DATA_ROOT=$DATA_DIR/datasets/navsim NUPLAN_MAPS_ROOT=$DATA_DIR/datasets/navsim/maps
@@ -44,22 +45,39 @@ case $model in
   wajepa)
     cd "$TP/wajepa"
     py=$DATA_DIR/envs/wajepa/bin/python
-    traj=$run/trajectory_cache/navtest_trajectories.pkl
+    ex=$DATA_DIR/jev-drive/scripts/top10_t2/wajepa_export.py
+    tdir=$run/trajectory_cache
+    traj=$tdir/navtest_trajectories.pkl
     # configs/wa_jepa_hugsim.yaml = the EPDMS preset with only the V-JEPA 2.1 pretrained-encoder load disabled
-    # (the full state dict is restored strictly afterwards) plus an unused hugsim: block; see the repo's own diff note
-    CUDA_VISIBLE_DEVICES=$GPU,$GPU,$GPU PYTHONPATH=$TP/wajepa:$TP/navsim "${pin[@]}" "$py" -m eval.navsim_export_trajectory_cache \
-      --navsim-root "$TP/navsim" --openscene-root "$OPENSCENE_DATA_ROOT" --output-path "$traj" \
-      --config configs/wa_jepa_hugsim.yaml --checkpoint "$DATA_DIR/models/wajepa/model_state_dict.pt" --num-gpus 3
+    # (the full state dict is restored strictly afterwards) plus an unused hugsim: block; see the repo's own diff note.
+    # Export = the repo's _run_worker made resumable (wajepa_export.py); NPROC ranks share one GPU.
+    export PYTHONPATH=$TP/wajepa:$TP/navsim
+    mkdir -p "$tdir"
+    if [[ ! -f $traj ]]; then
+      pids=()
+      for r in $(seq 0 $((NPROC - 1))); do
+        CUDA_VISIBLE_DEVICES=$GPU "${pin[@]}" "$py" "$ex" --rank "$r" --num-shards "$NPROC" --out-dir "$tdir" \
+          --config configs/wa_jepa_hugsim.yaml --checkpoint "$DATA_DIR/models/wajepa/model_state_dict.pt" \
+          --navsim-root "$TP/navsim" --openscene-root "$OPENSCENE_DATA_ROOT" > "$tdir/rank_$r.log" 2>&1 &
+        pids+=($!)
+      done
+      tail -qF "$tdir"/rank_*.log | grep --line-buffered "\[export\]" &
+      tailer=$!
+      rc=0; for p in "${pids[@]}"; do wait "$p" || rc=1; done; kill $tailer
+      (( rc == 0 )) || { echo "an export rank failed"; exit 1; }
+      "$py" "$ex" --merge --num-shards "$NPROC" --out-dir "$tdir" --navsim-root "$TP/navsim"
+    fi
     echo "[$(date +%T)] export done; scoring v2 (EPDMS)"
-    PYTHONPATH=$TP/wajepa:$TP/navsim "${pin[@]}" "$py" -m eval.navsim_score_trajectory_cache --navsim-version v2 \
+    "${pin[@]}" "$py" -m eval.navsim_score_trajectory_cache --navsim-version v2 \
       --navsim-root "$TP/navsim" --openscene-root "$OPENSCENE_DATA_ROOT" --metric-cache-path "$CACHE/v2_navtest" \
       --trajectory-cache-path "$traj" --output-dir "$run/v2" --experiment-name worldmodel_navtest_v2_cached \
-      --override worker.max_workers=8
+      --override worker.max_workers=$SCORE_WORKERS
     echo "[$(date +%T)] scoring v1.1 (PDMS)"
     PYTHONPATH=$TP/wajepa:$TP/navsim-v1.1 "${pin[@]}" "$py" -m eval.navsim_score_trajectory_cache --navsim-version v1 \
       --navsim-root "$TP/navsim-v1.1" --openscene-root "$OPENSCENE_DATA_ROOT" --metric-cache-path "$CACHE/v1_navtest" \
       --trajectory-cache-path "$traj" --output-dir "$run/v1_1" --experiment-name worldmodel_navtest_v1_1_cached \
-      --v1-sensor-path-key jev_unused_sensor_path --override worker=single_machine_thread_pool --override worker.max_workers=8 || echo "v1.1 scoring failed" ;;
+      --v1-sensor-path-key jev_unused_sensor_path --override worker=single_machine_thread_pool \
+      --override worker.max_workers=$SCORE_WORKERS || echo "v1.1 scoring failed" ;;
   *) echo "unknown model $model" >&2; exit 1 ;;
 esac
 echo "[$(date +%T)] done -> $run"
