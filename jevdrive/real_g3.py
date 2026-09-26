@@ -122,6 +122,30 @@ def g3a(rl):
     rl.event("g3a_verdict", qwen_ratio=qr, verdict=verdict)
 
 
+def g3a_yolo_e2(rl):
+    """The E2 side of G3a's YOLO row (description): the same statistic on the navtrain edit pairs' real-data
+    embedding (G0's definition), edit vs placebo, log bootstrap."""
+    from . import elicit_e2 as E2
+    from .elicit_e2_train import _ratio_ci
+    pairs = pd.read_parquet(E2.out_root("navtrain", "main") / "pairs.parquet")
+    emb = {}
+    for sd in SIDES:
+        z = np.load(g3_root(f"edit_embed_{sd}.npz"), allow_pickle=True)
+        emb[sd] = pd.DataFrame(z["embed"], index=z["tokens"])
+    toks, pl = pairs.token.to_numpy(), pairs.token[pairs.n_placebo_imgs > 0].to_numpy()
+    X = emb["plus"].loc[toks].to_numpy()
+    s = X.std(0)
+    sd = np.where(s > 1e-6, s, 1.0)
+    e, p = _shift(X, emb["minus"].loc[toks].to_numpy(), sd), _shift(emb["plus"].loc[pl].to_numpy(), emb["placebo"].loc[pl].to_numpy(), sd)
+    lg = pairs.set_index("token").log
+    r, lo, hi = _ratio_ci(e, p, lg[toks].to_numpy(), lg[pl].to_numpy())
+    out = pd.DataFrame([{"feature": "YOLO embedding (G0 real-data)", "n_edit": len(e), "n_placebo": len(p),
+                         "median_edit": float(np.median(e)), "median_placebo": float(np.median(p)), "ratio": r, "lo": lo, "hi": hi,
+                         "share_edit_zero": float((e == 0).mean()), "share_placebo_zero": float((p == 0).mean())}])
+    out.to_csv(rl.dir / "e2_yolo_shift.csv", index=False)
+    rl.info("E2 side, YOLO embedding\n" + out.to_markdown(index=False, floatfmt=".3f"))
+
+
 # ---------------------------------------------------------------- G3b (1): PDM scorer label (c)
 
 T8 = np.arange(1, 9) * 0.5
@@ -579,15 +603,15 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc", "edit-list", "edit-embed", "p5-embed", "student", "figs"))
+    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc", "edit-list", "edit-embed", "p5-embed", "student", "figs", "g3a-yolo-e2"))
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
     if a.step == "figs":
         return figs()
-    name = a.step if a.step.startswith("g3") else "g3" + a.step.replace("-", "") + (f"-s{a.args[0]}" if a.step == "mc" else "")
+    name = a.step.replace("-", "") if a.step.startswith("g3") else "g3" + a.step.replace("-", "") + (f"-s{a.args[0]}" if a.step == "mc" else "")
     rl = RunLog("real-data-transfer", name)
     {"g3a": g3a, "g3c": g3c, "pdm-prep": pdm_prep, "pdm-read": pdm_read, "mc": mc, "edit-list": edit_list,
-     "edit-embed": edit_embed, "p5-embed": p5_embed, "student": student}[a.step](rl, *a.args)
+     "edit-embed": edit_embed, "p5-embed": p5_embed, "student": student, "g3a-yolo-e2": g3a_yolo_e2}[a.step](rl, *a.args)
     rl.close()
 
 
