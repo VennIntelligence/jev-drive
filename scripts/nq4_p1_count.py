@@ -86,6 +86,18 @@ def _project_to_path(points: np.ndarray, path: np.ndarray, yaw: float) -> tuple[
     return arclength, lateral
 
 
+def _extend_path_to_30m(path: np.ndarray, yaw: float) -> np.ndarray:
+    """Extend a short path in its last valid direction, falling back to pose yaw."""
+    steps = np.diff(path, axis=0)
+    lengths = np.linalg.norm(steps, axis=1)
+    total = float(lengths.sum())
+    if total >= MAX_PATH_M - 1e-9:
+        return path
+    valid = np.flatnonzero(lengths > 1e-5)
+    direction = steps[valid[-1]] / lengths[valid[-1]] if len(valid) else np.asarray([math.cos(yaw), math.sin(yaw)])
+    return np.vstack((path, path[-1] + (MAX_PATH_M - total) * direction))
+
+
 def _is_consecutive(previous: dict[str, Any] | None, current: dict[str, Any]) -> bool:
     if previous is None:
         return False
@@ -142,6 +154,7 @@ def _count_log(task: tuple[str, str]) -> dict[str, Any]:
             track_tokens = [str(anns["track_tokens"][idx]) for idx in pedestrian_idx]
             instance_tokens = [str(anns["instance_tokens"][idx]) for idx in pedestrian_idx]
             yaw = _yaw_from_quaternion(row["ego2global_rotation"])
+            path_xy = _extend_path_to_30m(path_xy, yaw)
             arclength, lateral = _project_to_path(boxes[:, :2], path_xy, yaw)
             speed = float(np.linalg.norm(np.asarray(row["ego_dynamic_state"][:2], dtype=np.float64)))
             for local_idx, token in enumerate(track_tokens):
@@ -238,6 +251,13 @@ def _self_test() -> None:
     assert np.array_equal(short_path, xy[:2])
     along, lateral = _project_to_path(np.asarray([[1.0, 0.0]]), np.zeros((3, 2)), 0.0)
     assert np.isnan(along[0]) and np.isinf(lateral[0])
+    extended = _extend_path_to_30m(np.asarray([[0.0, 0.0], [0.0, 10.0]]), 0.0)
+    assert np.allclose(extended[-1], [0.0, 30.0])
+    stationary = _extend_path_to_30m(np.zeros((3, 2)), math.pi / 2)
+    assert np.allclose(stationary[-1], [0.0, 30.0])
+    along, lateral = _project_to_path(np.asarray([[25.0, 3.0], [31.0, 0.0]]),
+                                   _extend_path_to_30m(np.zeros((1, 2)), 0.0), 0.0)
+    assert np.allclose([along[0], lateral[0]], [25.0, 3.0]) and np.isnan(along[1])
     assert not _is_consecutive({"token": "a", "timestamp": 1}, {"sample_prev": "b", "timestamp": 2})
     assert [_speed_bin(x) for x in (0.0, 1.999, 2.0, 4.999, 5.0, 9.999, 10.0)] == [
         "0–2", "0–2", "2–5", "2–5", "5–10", "5–10", ">10"
@@ -270,6 +290,9 @@ def main() -> None:
         "future rear-axle polyline clipped at 30 m arclength; qualify at arclength [0,30] m and lateral distance "
         "at most 4 m. One event is a maximal consecutive qualifying-frame run for one track token."
     )
+    runlog.line("Boundary definition: future paths do not cross sample-link breaks; short paths extend along the last "
+                "valid segment to 30 m; no-valid-segment paths use current pose yaw. Points beyond either endpoint "
+                "are excluded. Boundary counts describe original paths before extension.")
     runlog.line("Speed bins: [0,2), [2,5), [5,10), [10,infinity) m/s; city is map_location metadata.")
     runlog.event("start", logs_root=str(args.logs_root), inventory=inventory, workers=args.workers)
 
@@ -310,6 +333,7 @@ def main() -> None:
             "corridor_lateral_m": MAX_LATERAL_M,
             "corridor_forward_arclength_m": MAX_PATH_M,
             "event": "maximal consecutive qualifying-frame run per track token",
+            "short_future": "extend last valid segment to 30 m; stationary uses current pose yaw",
             "speed_bins_mps": ["[0,2)", "[2,5)", "[5,10)", "[10,infinity)"],
         },
     }

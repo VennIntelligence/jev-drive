@@ -186,6 +186,8 @@ Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：�
 
 - [CX] 2026-09-26 17:15 CST 开工口径：评测单位是 `bench2drive220.xml` 的一个 `route` 及其原始 scenario 触发点。对官方 B2D base / full、TFv6 / BridgeDrive 实际使用的 LEAD、SimLingo / BLUE 实际使用的 SimLingo 数据集，仅以有论文、README 或代码 manifest 行级出处的成员关系为准；同一训练 clip 只要有一个元数据触发点与评测触发点的 CARLA town 标识和原始 scenario 类字符串完全相同，且 CARLA 世界平面坐标的欧氏距离严格小于 30 m，就对该路线计一个近邻；多触发点取 clip ID 并集，不重复计数。缺 town / 类别 / 坐标的样本排除并报数，不推断；族数据集查不到就写「未查清」。只取元数据，预计下载量超过 5 GB 即停。估时 2 h（出处核查 45 min、元数据盘点与取得 45 min、匹配 QA 与报表 30 min），超过 4 h 即停并报问题。
 
+- [CX] 2026-09-26 18:27 CST main 授权描述性 fallback，写于计数之前：仅统计公开 clip 清单中 town 与原始 scenario 类和评测 route 完全相同的实际 clip 数，**不检查触发点距离**；B2D base / full 用固定 commit 的官方 JSON 文件名解析，其他族成员关系不足的标 `not determinable`。每 clip 每 route 最多一次，多 scenario 取并集。产出 `overlap_fallback.csv`，原 `< 30 m` 近邻计数仍不可得；不与 G 做相关。预计 10 min，超过 20 min 停。
+
 ## W. 世界模型配对测试（GPU 探索，不训 policy）
 
 问的是：在 latent 里预测未来的世界模型，能不能分清有没有 hazard、能不能推演不同动作的后果。这是「JEPA 世界模型 + openpilot 低成本训策略」的前置检查，过了才考虑下一轮的 latent MPC。
@@ -264,6 +266,8 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 - 两条都不通：论文里写「真实数据上行人通道 = 外接检测（metric depth 放置，N5）+ 规则」，作为可部署的下限与限定。
 
 - [CX] 2026-09-26 17:15 CST 开工口径：扫描 box 上 `$DATA_DIR/datasets/navsim/navsim_logs/<split>/` 实际存在的 OpenScene / nuPlan log pickle，先把 split 与 log 盘点写入运行日志。对每个 GT 行人框中心（不含骑行者），投影到从当前 rear-axle pose 开始、按 logged future 归迹弧长截到 30 m 的前向折线；要求投影弧长在 [0, 30] m 且绝对横向距离 ≤ 4 m。同一 track token 在连续采样帧中持续合格只算一次；离开走廊或不合格后再进入则是新事件。城市优先取 log / scenario 的 map/location 元数据；速度取事件起始帧 logged velocity 的模，速度档为 [0, 2)、[2, 5)、[5, 10)、[10, ∞) m/s。每个事件在起始时向 CSV 写一行，并做手工样本和汇总一致性核对。估时 90 min，超过 180 min 即停并报问题；只用 CPU 2 核并限制在 196–199 号核中。
+
+- [main] 2026-09-26 18:27 CST P1 边界口径已明确：logged future（实际记录的未来轨迹）不足 30 m 时，沿最后一段有效行进方向直线延长到弧长 30 m，走廊仍为 ±4 m；完全静止、没有有效线段时，按当前 ego pose 的朝向构造前方 30 m 直线。前后端点外投影排除；future 不跨连续采样断链。CX 按此口径恢复 CPU 计数，核 196–197、2 worker、线程 1，估时仍为 90 min，超过 180 min 停止。
 
 ## E. 专家汇总的补充
 
