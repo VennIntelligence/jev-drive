@@ -17,6 +17,7 @@ deviation-log entries [G3], written before any G3 number).
   p5-embed   the same real-data embedding on the P5 v1 BA rows from E5's stored detections (for R2)
   student    E5's student recipe on the navtrain edit pairs (labels (c) judged, (a) described; arms A / B; seeds 0-2),
         R1 / R2 / R3 exactly as E2
+  figs  (on the Mac) research/figs/real-g3a-shift.{pdf,png} from the pulled small tables
 
 Run on the box: P5_SET=carla_p5v1_ba python -m jevdrive.real_g3 g3a
 """
@@ -535,13 +536,54 @@ def student(rl):
     rl.info("R3 WOD done")
 
 
+# ---------------------------------------------------------------- figures (pulled tables -> research/figs)
+
+def figs(rl=None, res_dir="research/results/real-data-transfer/g3", out_dir="research/figs"):
+    """G3a: median feature shift (edit vs null / placebo) and their ratio, CARLA pedestrian pairs vs E2 navtrain."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    s = pd.read_csv(Path(res_dir) / "g3a_side_by_side.csv")
+    names = {"Qwen L18_last": "Qwen $L18$", "openpilot cinque temporal": "op Cinque", "openpilot lebowski temporal": "op Lebowski",
+             "YOLO embedding (E5)": "YOLO emb."}
+    col = {"carla": plots.OKABE_ITO[5], "e2": plots.OKABE_ITO[6]}
+    x = np.arange(len(s))
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, (a0, a1) = plt.subplots(1, 2, figsize=(plots.PAGE, 2.0), gridspec_kw={"width_ratios": [1.25, 1]})
+        w = 0.19
+        for j, (c, dom, lab) in enumerate((("carla_median_edit", "carla", "CARLA: remove hazard"),
+                                           ("carla_median_null", "carla", "CARLA: weather null"),
+                                           ("e2_median_edit", "e2", "E2 navtrain: erase pedestrian"),
+                                           ("e2_median_placebo", "e2", "E2 navtrain: placebo patch"))):
+            filled = "edit" in c
+            a0.bar(x + (j - 1.5) * w, s[c], w, color=col[dom] if filled else "white", edgecolor=col[dom], lw=0.7,
+                   hatch=None if filled else "////", label=lab)
+        a0.set_yscale("log")
+        a0.set_xticks(x, [names[f] for f in s.feature])
+        a0.set_ylabel("Median shift (RMS, $x^+$ std units)")
+        a0.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, fontsize=6)
+        for k, (dom, lab) in enumerate((("carla", "CARLA pedestrian pairs / weather null"), ("e2", "E2 navtrain edits / placebo"))):
+            v, lo, hi = s[f"{dom}_ratio"], s[f"{dom}_lo"], s[f"{dom}_hi"]
+            ok = v.notna().to_numpy()
+            a1.errorbar(x[ok] + (k - 0.5) * 0.25, v[ok], yerr=[(v - lo)[ok], (hi - v)[ok]], fmt="o", color=col[dom], ms=3,
+                        lw=0.8, capsize=1.5, label=lab)
+        for yv, ls in ((2, "--"), (3, ":")):
+            a1.axhline(yv, color="0.4", ls=ls, lw=0.6)
+        a1.set_yscale("log")
+        a1.set_xticks(x, [names[f] for f in s.feature])
+        a1.set_ylabel("Shift ratio, edit / null")
+        a1.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=1, fontsize=6)
+        plots.save(fig, Path(out_dir), "real-g3a-shift")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc", "edit-list", "edit-embed", "p5-embed", "student"))
+    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc", "edit-list", "edit-embed", "p5-embed", "student", "figs"))
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
+    if a.step == "figs":
+        return figs()
     name = a.step if a.step.startswith("g3") else "g3" + a.step.replace("-", "") + (f"-s{a.args[0]}" if a.step == "mc" else "")
     rl = RunLog("real-data-transfer", name)
     {"g3a": g3a, "g3c": g3c, "pdm-prep": pdm_prep, "pdm-read": pdm_read, "mc": mc, "edit-list": edit_list,
