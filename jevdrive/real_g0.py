@@ -482,7 +482,7 @@ def students(rl):
     from . import elicit_e5 as E5
     os.environ["P5_SET"] = "carla_p5v1_ba"
     keep = {}
-    E5.fit(rl, keep=keep)
+    E5.fit(rl, store=keep)
     run = data_dir() / E5_RUN
     ref, new = np.load(run / "preds_obs.npz"), np.load(rl.dir / "preds_obs.npz")
     ev = lambda f: {(e["tag"], e["seed"]): e["best_step"] for e in map(json.loads, open(f)) if e.get("kind") == "e5_fit"}  # noqa: E731
