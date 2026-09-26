@@ -26,6 +26,7 @@ nq3_alpamayo_parts/ make the run resumable; the two files are rebuilt from them 
   run     the batch: priority 0 in full, then whole (priority, base_id, seed) units while they fit before --deadline
 """
 import argparse
+import io
 import json
 import queue
 import re
@@ -229,7 +230,7 @@ def read_parts():
     for p in sorted(PARTS.glob("part_?????.npz")):
         z = np.load(p)
         xs.append(z["xyz"])
-        ms.append(pd.read_json(str(z["meta"]), orient="records", dtype=False))
+        ms.append(pd.read_json(io.StringIO(str(z["meta"])), orient="records", dtype=False))
     if not xs:
         return None, None
     return np.concatenate(xs), pd.concat(ms, ignore_index=True)
