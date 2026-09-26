@@ -1,0 +1,45 @@
+arm,scope,n,nonreactive_flip
+prior [cinque],all,6752,0.04206161137440758
+prior [cinque],DynamicObjectCrossing,316,0.0031645569620253164
+M-C pair [cinque],all,6752,0.04013625592417062
+M-C pair [cinque],DynamicObjectCrossing,316,0.11708860759493671
+E5 A s0 [cinque],all,6752,0.03821090047393365
+E5 A s0 [cinque],DynamicObjectCrossing,316,0.12658227848101267
+E5 A s1 [cinque],all,6752,0.03658175355450237
+E5 A s1 [cinque],DynamicObjectCrossing,316,0.12658227848101267
+E5 A s2 [cinque],all,6752,0.03347156398104265
+E5 A s2 [cinque],DynamicObjectCrossing,316,0.0981012658227848
+N4 B s0 [cinque],all,6752,0.05494668246445498
+N4 B s0 [cinque],DynamicObjectCrossing,316,0.10759493670886076
+N4 B s1 [cinque],all,6752,0.054502369668246446
+N4 B s1 [cinque],DynamicObjectCrossing,316,0.11075949367088607
+N4 B s2 [cinque],all,6752,0.05553909952606635
+N4 B s2 [cinque],DynamicObjectCrossing,316,0.11708860759493671
+N4 C s0 [cinque],all,6752,0.03880331753554502
+N4 C s0 [cinque],DynamicObjectCrossing,316,0.06962025316455696
+N4 C s1 [cinque],all,6752,0.054354265402843605
+N4 C s1 [cinque],DynamicObjectCrossing,316,0.08860759493670886
+N4 C s2 [cinque],all,6752,0.04354265402843602
+N4 C s2 [cinque],DynamicObjectCrossing,316,0.0981012658227848
+prior [lebowski],all,6752,0.054206161137440756
+prior [lebowski],DynamicObjectCrossing,316,0.006329113924050633
+M-C pair [lebowski],all,6752,0.03998815165876777
+M-C pair [lebowski],DynamicObjectCrossing,316,0.10443037974683544
+E5 A s0 [lebowski],all,6752,0.049022511848341235
+E5 A s0 [lebowski],DynamicObjectCrossing,316,0.11392405063291139
+E5 A s1 [lebowski],all,6752,0.04576421800947867
+E5 A s1 [lebowski],DynamicObjectCrossing,316,0.11708860759493671
+E5 A s2 [lebowski],all,6752,0.04724526066350711
+E5 A s2 [lebowski],DynamicObjectCrossing,316,0.11392405063291139
+N4 B s0 [lebowski],all,6752,0.03687796208530806
+N4 B s0 [lebowski],DynamicObjectCrossing,316,0.12025316455696203
+N4 B s1 [lebowski],all,6752,0.036285545023696686
+N4 B s1 [lebowski],DynamicObjectCrossing,316,0.11075949367088607
+N4 B s2 [lebowski],all,6752,0.035989336492890996
+N4 B s2 [lebowski],DynamicObjectCrossing,316,0.11708860759493671
+N4 C s0 [lebowski],all,6752,0.049022511848341235
+N4 C s0 [lebowski],DynamicObjectCrossing,316,0.0981012658227848
+N4 C s1 [lebowski],all,6752,0.05020734597156398
+N4 C s1 [lebowski],DynamicObjectCrossing,316,0.10443037974683544
+N4 C s2 [lebowski],all,6752,0.052280805687203794
+N4 C s2 [lebowski],DynamicObjectCrossing,316,0.10759493670886076

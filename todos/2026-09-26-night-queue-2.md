@@ -259,6 +259,12 @@
   N4 fit 在 GPU 1 上 11:06 起跑、12 min 没出第一个 fold（box 负载 300+，CPU 端 eigh 被挤），11:18 手动停掉，恢复后整段重跑。box 上已没有 B 的进程。恢复命令同 11:08 条。
 - 2026-09-26 12:28 [B] 恢复（box 12:25 重启后，main 分配：GPU 4 与 G2 / C 共用，打分 + devkit 合计 ≤ 24 个 worker）：`S1_CPUS=64-75 S2_CPUS=160-171 scripts/night2_b_resume.sh 4`。
   seed 1 / 2 打分各 12 个进程（续跑 141 / 246 个 chunk，估计约 2 h），N4 fit 在 GPU 4。记下的 PID（只杀这些）：打分 `elicit_e6_score.py` 1984（s1）/ 2007（s2），外层脚本 1919 / 1958；N4 fit 2010。
+- 2026-09-26 12:56 [B] **吞吐整改（main 12:4x 指出 N4 fit 占 54 核）**。原因：N4 fit 每个 fold 调 `reactivity_mc.fit_fold` 只为拿 prior，但它顺带解五个 M-C arm，在 3 072 维双流上做 CPU float64 eigh（MKL 线程不受 OMP 限制），N4 从不读这些 arm。
+  改法：`night2_n4._prior` 只保留 fit_fold 里 prior 的那几行（同一组 `ridge_cv` 调用），student 本来就在 GPU 上全批训练；线程显式限到 4（`torch.set_num_threads` + OMP / MKL / OPENBLAS）、钉在 64–75 核。
+  等价性：每个 fold 的 prior 仍对 E5 已存 prior 断言 ≤ 1e-2 m（`n4_prior_check` 事件，10 个 fold 全过），与旧路径是同一段代码。
+  前后：旧路径每 fold 27 s（空机）到 12 min（box 负载 285），CPU 约 5 450%；新路径每 fold 约 15 s（含 6 次 student 拟合），CPU 约 140%，整个 fit 3 min（12:50–12:53）。旧 run 11:05 / 12:27 两次都手动停掉（PID 2010），新 run PID 418944 已正常结束。
+  Hydra 逐 anchor 打分（`elicit_e6_score.py`）：热路径是 devkit 的 PDM simulator（LQR）+ scorer（shapely 几何），属于第三方评分代码，按规矩原样跑，不改成 GPU；24 个进程在上限内。实测 13 core·s / token（E6 空机 7、重启前争用时 17），
+  剩余 s1 ≈ 100 个 chunk、s2 ≈ 210 个 chunk，按现在的速度 s1 约 14:30、s2 约 16:20 打完；s1 打完后把它的 12 个核并给 s2（杀 s2 的记录 PID 重启，已完成的 chunk 保留）。
 
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
@@ -385,6 +391,38 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 ## 结果
 
 （按节追加，每条带出处路径。）
+
+### N4（执行员 B，2026-09-26 12:57 CST；GPU 4 检测约 42 min + 拟合 3 min + 延迟 2 min）
+
+口径见 N4 节 [B] 10:12。代码 `jevdrive/night2_n4.py`（`detect` / `tokens` / `fit` / `latency` / `figs`）；run：检测 `processed/night2/n4/dets/`，token `runs/night2/n4-tokens/20260926-105446`，拟合 `runs/night2/n4-fit/20260926-125031`，延迟 `runs/night2/n4-latency/`；
+小表 [research/results/night2/N4/](../research/results/night2/N4/)。检测重跑与 E5 已存检测逐图三类检测数一致 99.86%（140 109 张）；PCA-16 解释原始 1 920 维检测特征方差的 65.8%；11.6% 的相机图像检测数 ≥ 8 被截断。
+
+| arm（P5 v1 BA，406 个行人 reactive 帧） | 行人翻转 seed 0 [CI]（seed 1 / 2） | cut-in 对 prior Δ pp [CI] | null false-flip | DOC 非反应误翻（seed 0 / 1 / 2） | 判格 |
+|:--|:--|:--|--:|:--|:--|
+| Cinque A（E5，抬升 + 走廊） | 52.7 [41.7, 62.1]（52.2 / 53.4） | −1.3 [−5.1, +2.1] | 5.1% | 12.7 / 12.7 / 9.8% | — |
+| Cinque **B（image-plane）** | **57.4 [47.6, 66.4]**（56.4 / 57.9） | +0.6 [−2.8, +4.3] | 5.1% | 10.8 / 11.1 / 11.7% | **改 image-plane**（3 seed 一致） |
+| Cinque C（B ⊕ A） | 51.7 [42.1, 59.8]（52.7 / 53.4） | −0.4 [−5.5, +3.7] | 5.0% | 7.0 / 8.9 / 9.8% | 描述 |
+| Lebowski A | 55.7 [46.9, 63.1]（55.2 / 56.4） | +6.5 [+0.0, +13.5] | 5.1% | 11.4 / 11.7 / 11.4% | — |
+| Lebowski **B** | **48.5 [36.1, 59.6]**（50.0 / 50.5） | +0.0 [−10.9, +8.7] | 5.2% | 12.0 / 11.1 / 11.7% | **改 image-plane**（3 seed 一致） |
+| Lebowski C | 55.4 [45.0, 63.8]（57.9 / 58.1） | +6.8 [+1.8, +12.5] | 4.9% | 9.8 / 10.4 / 10.8% | 描述 |
+
+判格按登记：两个模型、三个 seed，B 的行人 CI 上界都 ≥ A 的 CI 下界，DOC 非反应误翻 B − A 在 −1.9 到 +1.9 pp（门槛 +3），**判「快通道改为 image-plane，lift 只留在测量里」**。
+读法：Cinque 上 B 的点估计比 A 高 5 pp、Lebowski 上低 7 pp，CI 都大幅重叠，所以是「同一水平」，不是「更好」；去掉抬升和走廊筛以后，配对差分自己从图像平面坐标 + 检测外观里读出了同样多的行人反应。
+代价在 cut-in：Lebowski 的 A 对 prior 有 +6.5 pp，B 掉到 0（CI 跨零），C（两者都给）又回到 +6.8；Cinque 三个 arm 都在零附近。即走廊几何对车辆 cut-in 有用，对行人没用（推测：cut-in 是「车进入本车道」，走廊横距 d 正好是这个量）。
+
+**延迟**（E5 口径重测，batch 1、三路一次调用；GPU 4 与 G2 / C 共卡，CPU 钉 4 核，所以 YOLO 比 E5 独占卡时的 20 ms 慢，A / B 在同一条件下比）：
+
+| p95 (ms) | YOLO26x-seg fp16 | 检测特征 RoIAlign（hook 额外） | 抬升 + 走廊 / token 构造（CPU） | MLP | openpilot | 合计 |
+|:--|--:|--:|--:|--:|--:|--:|
+| A | 35.7 | — | 3.2 | 0.8 | 2.3 | 42.0 |
+| B | 35.7 | +2.4（hook 版整体 38.0） | 0.5 | 0.3 | 2.3 | 41.2 |
+
+两者都在 50 ms 内，B 省掉抬升与走廊（3.2 → 0.5 ms）但多 RoIAlign（约 2 ms），端到端打平。
+
+![N4](../research/figs/night2-n4-image-plane.png)
+
+左：行人 reactive 帧定向翻转率（点 = seed 0 与路线 bootstrap 95% CI，× = seed 1 / 2）；中：cut-in 对 prior 的逐帧配对差；右：DynamicObjectCrossing 非反应帧误翻。蓝 = Cinque，橙 = Lebowski。
+要看的是：B（不抬升、不筛）在行人上与 A 同一水平、误翻不多；Lebowski 的 cut-in 增益只在带走廊几何的 A / C 上出现。
 
 ### N5（执行员 C，2026-09-26 11:40 CST；DA3 副读数待 box 重启后补）
 
