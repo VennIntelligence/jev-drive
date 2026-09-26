@@ -141,7 +141,7 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   1. **路线池**：「Bench2Drive 全量」在 box 上只有 220 集（每类 5 条，v0 已用）与 0.0.4 val 集（每类 3–12 条），凑不够每类 20 条；Bench2Drive 自己的 clip 是从 Leaderboard 2.0 的长路线切出来的，
      所以按同一方式补：`routes_training.xml`（Town12）与 `routes_validation.xml`（Town13）里 9 类障碍的每个 scenario 实例切一条 clip（离线用同一 OpenDRIVE 地图、1 m GlobalRoutePlanner 复现 leaderboard 的稠密路线，
      触发点前 12 m 到后 122 m，关键点每 2 m——Bench2Drive 114 条障碍 clip 的中位数；scenario 元素原样；天气取长路线在触发点处的插值，定值）。共切 1 419 条；
-     同一 scenario 实例（同 town 触发点 5 m 内）只留一条，优先级 v0 > 0.0.4 val > 长路线 clip（去掉 909 条重复），池里 624 条。
+     同一 scenario 实例（同 town 触发点 5 m 内）只留一条，优先级 v0 > 0.0.4 val > 长路线 clip（去掉 908 条重复，v0 的路线之间不去重），池里 625 条。
   2. **选路与 town 留出**：测试组 = **Town13 的全部路线**。每类新加 **16 条**（4 条 Town13 + 12 条其余 town），每组内先取 0.0.4 val clip、再取长路线 clip，组内按 seed 0 随机序；v0 的 45 条全部保留（其中 Town13 8 条）。
      合计 189 条路线，每类 21 条（≥ 20），测试组 44 条 = 23%（登记区间 20–30%）。v1 的新路线只跑 seed 0（路线数优先于 seed 数），世界类型与 v0 的 seed 0 相同：1W 4 个（x₁₀、x₀₀、天气 null、放置 null），2W 7 个（再加 x₁₁、x₀₁、镜像）。
   3. **录制窗口**：`pass_stop_s` 从 8 s 改为 15 s（ego 越过全部曾在前方的 scenario actor 10 m 后再录 15 s；「障碍后 15 s」），其余照 v0（触发后 40 s、静止 40 s、70 s 封顶）。

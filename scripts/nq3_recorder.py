@@ -169,7 +169,9 @@ class NQ3Recorder(p5.P5PairAgent):
     def sensors(self):
         c = self.cfg
         period = int(c["cam_period"])
-        tick = p4.DELTA * period if period > 1 else 0.0
+        # A shade under period x 0.05 s: at exactly 0.2 s the float sum of four 0.05 s steps sometimes falls short and the
+        # camera slips a tick (smoke: 2 of 42 camera ticks); 0.1999 s fires on every 4th tick for > 100 s of simulation.
+        tick = p4.DELTA * period - 1e-4 if period > 1 else 0.0
         lean = c["rig"] == "lean"
         own = [{"type": "sensor.camera.rgb", "id": name, "x": x + p4.REAR_AXLE_X, "y": -y, "z": z - c["origin_z"],
                 "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": c["render_w"], "height": c["render_h"], "fov": self.fov,

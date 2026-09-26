@@ -116,26 +116,25 @@ def _pose(adir: Path) -> pd.DataFrame:
     return p.set_index("k")
 
 
-def check_det(gen: Path, need_file: Path, ids=None) -> pd.DataFrame:
-    """E1 (T3's, on P6): per world, ticks compared up to need_k, max position / heading / speed difference, first tick
-    past P5's divergence threshold (1 cm or 0.1 deg), and whether the camera-tick grids agree."""
-    need_k = json.loads(Path(need_file).read_text())
-    g0, rows = p6.root("gen"), []
+def check_det(gen: Path, need_file: Path | None, ids=None, ref: Path | None = None) -> pd.DataFrame:
+    """E1 (T3's, on P6): per world, ticks compared up to need_k (default: the shorter recording), max position /
+    heading / speed difference, first tick past P5's divergence threshold (1 cm or 0.1 deg), and whether the
+    camera-tick grids agree. Reference: the P6 v0 recording (default) or another generation dir (v1's re-drive)."""
+    need_k = json.loads(Path(need_file).read_text()) if need_file else {}
+    g0, rows = ref or p6.root("gen"), []
     for rid in ids or sorted(need_k):
         a, o = attempt(gen, rid), attempt(g0, rid)
         if a is None or o is None:
             continue
         A, B = _pose(a), _pose(o)
-        lim = need_k[rid]
+        lim = need_k.get(rid, min(A.index.max(), B.index.max()))
         m = A[["x", "y", "yaw", "vx", "vy"]].join(B[["x", "y", "yaw", "vx", "vy"]], rsuffix="_o", how="inner")
         m = m[m.index <= lim]
         d = np.hypot(m.x - m.x_o, m.y - m.y_o)
         dy = np.abs((m.yaw - m.yaw_o + 180) % 360 - 180)
         dv = np.hypot(m.vx - m.vx_o, m.vy - m.vy_o)
         bad = np.flatnonzero((d >= P.DIV_M) | (dy >= P.DIV_DEG))
-        ka = set(pd.read_json(a / "frames.jsonl", lines=True).k)
-        fo = pd.read_json(o / "frames.jsonl", lines=True)
-        ko = set((fo.t / P.TICK).round().astype(int))
+        ka, ko = (set((pd.read_json(x / "frames.jsonl", lines=True).t / P.TICK).round().astype(int)) for x in (a, o))
         rows.append({"rid": rid, "ticks": len(m), "need_k": lim, "max_pos_m": float(d.max()), "max_yaw_deg": float(dy.max()),
                      "max_dv_mps": float(dv.max()), "first_div_k": int(m.index[bad[0]]) if len(bad) else None,
                      "cam_grid_same": {k for k in ka if k <= lim} == {k for k in ko if k <= lim}})
@@ -262,6 +261,25 @@ def ids(file: str, gen: str, head: int = 0):
     print(",".join(todo[:head] if head else todo))
 
 
+def smoke_ids() -> list[str]:
+    """Q3 [A] 17:15 item 4: the v0 1W routes by id, the first of each class and Accident's second; odd ones (+1.0, -1.5),
+    even ones (+1.5, -1.0)."""
+    r = pd.read_csv(_res("q3") / "routes.csv", dtype={"base_id": str})
+    r = r[(r.source == "v0") & (r.cls == "1W")].assign(n=lambda d: d.base_id.astype(int)).sort_values("n")
+    pick = [g.base_id.iloc[0] for _, g in r.groupby("scenario", sort=True)]
+    pick.append(r[r.scenario == "Accident"].base_id.iloc[1])
+    out = []
+    for i, b in enumerate(pick, 1):
+        out += [rec_id(b, n) for n in (("L10", "R15") if i % 2 else ("L15", "R10"))]
+    return out
+
+
+def e1_ids(frac: float = 0.05, seed: int = 0) -> list[str]:
+    w = [x for x in (root("v1") / "ids_main.txt").read_text().strip().split(",") if x]
+    rng = np.random.default_rng(seed)
+    return sorted(rng.choice(w, int(round(frac * len(w))), replace=False).tolist())
+
+
 # ---------------------------------------------------------------- recovery smoke
 
 def recovery(gen: Path, ids_: list[str]) -> pd.DataFrame:
@@ -313,6 +331,99 @@ def blue_plan(gen: Path, out: Path, need_file: Path | None = None, frames: str =
     log.info("blue plan: %d worlds, %d frames -> %s", len(plan), sum(len(p["ks"]) for p in plan), out)
 
 
+# ---------------------------------------------------------------- Q1: the CARLA-rig examinees on the v0 exam
+
+def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[dict, dict]:
+    """(examinee -> (n, 20, 2) aligned to the P6 v0 index, notes). Re-recorded worlds are matched to the index by
+    (world id, tick k); worlds failing E1 are left NaN."""
+    rid = t.frame_name.str.split("-").str[0]
+    pos = pd.Series(np.arange(len(t)), index=pd.MultiIndex.from_arrays([rid, t.k.astype(int)]))
+    n = len(t)
+    wp, ts = np.full((n, 20, 2), np.nan, np.float32), np.full(n, np.nan, np.float32)
+    for f in sorted((gen / "done").glob("*.json")):
+        r = f.stem
+        a = attempt(gen, r)
+        if r not in ok or a is None or not (a / "bridgedrive.jsonl").exists():
+            continue
+        cls = np.asarray(json.loads((a / "nq3_summary.json").read_text())["shadows"][0]["target_speed_classes"], float)
+        for line in open(a / "bridgedrive.jsonl"):
+            q = json.loads(line)
+            i = pos.get((r, int(q["k"])))
+            if i is None or "pred_future_waypoints" not in q:
+                continue
+            wp[i, :8] = np.asarray(q["pred_future_waypoints"], np.float32)
+            ts[i] = float(np.dot(q["pred_target_speed_distribution"], cls))
+    preds, notes = {"BridgeDrive waypoint": wp}, {}
+    tsf = np.full((n, 20, 2), np.nan, np.float32)
+    tsf[..., 0] = ts[:, None] * (0.25 * np.arange(1, 21))[None]
+    preds["BridgeDrive target speed"] = tsf
+    notes["BridgeDrive target speed"] = "longitudinal only (route + target speed channel, the one it drives with)"
+    for name, d in blue_dirs.items():
+        a = np.full((n, 20, 2), np.nan, np.float32)
+        for f in sorted(Path(d).glob("*.json")):
+            z = json.loads(f.read_text())
+            if z["rid"] not in ok:
+                continue
+            for q in z["frames"]:
+                i = pos.get((z["rid"], int(q["k"])))
+                if i is not None:
+                    w = np.asarray(q["wps"], np.float32)
+                    a[i, :len(w)] = w[:20]
+        preds[name] = a
+    return preds, notes
+
+
+def judge_rig(gen: Path, e1_csv: Path, blue_dirs: dict, out: Path | None = None) -> pd.DataFrame:
+    """Rule 7 (lane C's jevdrive.nq3_p6 judge, unchanged) for BridgeDrive (waypoint; target speed longitudinal only),
+    BLUE and SimLingo (speed waypoints, 2.5 s), each lateral sign fixed against the expert's y(2 s) on x10 frames as
+    lane C does for TFv6; worlds failing E1 are dropped."""
+    from . import nq3_p6 as J
+    out = out or _res("q1")
+    t = pd.read_parquet(data_dir() / "processed" / "carla_p6" / "index.parquet")
+    fut = np.load(data_dir() / "processed" / "carla_p6" / "future.npy")
+    e1 = pd.read_csv(e1_csv, dtype={"rid": str})
+    ok = set(e1.rid[e1.first_div_k.isna() & e1.cam_grid_same])
+    preds, notes = _rig_preds(gen, t, ok, blue_dirs)
+    x10 = (t.world == "x10").to_numpy()
+    for name, pr in preds.items():
+        if "target speed" in name:
+            continue
+        sel = np.flatnonzero(~np.isnan(pr[:, 7, 1]) & x10)
+        c = np.corrcoef(pr[sel, 7, 1], fut[sel, 7, 1])[0, 1] if len(sel) > 2 else np.nan
+        if c < 0:
+            pr[..., 1] *= -1
+        notes[name] = f"y sign {'flipped' if c < 0 else 'kept'} (corr with the expert's y(2 s) on x10 frames {c:+.2f})"
+    p = J.pairs("carla_p6")
+    rows, per, wms = [], [], []
+    for name, pr in preds.items():
+        row, pc, s = J.judge_one(name, p, pr)
+        if "target speed" in name:
+            for k in ("bypass_flip", "lo", "hi", "gate_a", "shoulder_flip", "selective", "has_bypass", "mirror_borrow"):
+                row[k] = np.nan
+            row["verdict"] = "longitudinal only"
+        else:
+            wm = J.world_modes(s, pr)
+            if len(wm):
+                wms.append(J.mode_agreement(wm).assign(examinee=name))
+        row["note"] = notes.get(name, "")
+        row["e1_worlds_ok"] = len(ok)
+        rows.append(row)
+        per.append(pc)
+    tab = pd.DataFrame(rows)
+    tab.to_csv(out / "carla_rig_summary.csv", index=False)
+    pd.concat(per).to_csv(out / "carla_rig_per_scenario.csv", index=False)
+    if wms:
+        wm = pd.concat(wms)
+        wm.groupby(["examinee", "world"]).agree.agg(["mean", "size"]).round(3).reset_index().to_csv(
+            out / "carla_rig_mode_agreement.csv", index=False)
+    cols = [c for c in ["examinee", "n_frames", "routes", "tau_lat", "bypass_flip", "lo", "hi", "null_ff_oos", "gate_a",
+                        "shoulder_flip", "shoulder_ref", "selective", "verdict", "stop_sub", "stop_lo", "stop_hi",
+                        "neg_later_rate", "neg_agree_expert", "mirror_borrow"] if c in tab]
+    (out / "carla_rig_summary.md").write_text(tab[cols].to_markdown(index=False, floatfmt=".3f") + "\n")
+    log.info("\n%s", tab[cols].to_markdown(index=False, floatfmt=".3f"))
+    return tab
+
+
 # ---------------------------------------------------------------- status
 
 def status(gen: Path, id_file: Path, t_start: float, est_h: float) -> str:
@@ -338,7 +449,11 @@ def status(gen: Path, id_file: Path, t_start: float, est_h: float) -> str:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["configs", "need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status", "pool"])
+    ap.add_argument("cmd", choices=["configs", "need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status",
+                                    "pool", "smoke-ids", "e1-ids", "judge-rig"])
+    ap.add_argument("--ref", default="")
+    ap.add_argument("--e1", default="")
+    ap.add_argument("--blue", default="", help="name=dir,name=dir of offline BLUE / SimLingo outputs")
     ap.add_argument("--gen", default="")
     ap.add_argument("--file", default="")
     ap.add_argument("--need", default="")
@@ -358,13 +473,20 @@ def main():
         print(pool().groupby(["scenario", "source", "town"]).size().to_string())
     elif a.cmd == "ids":
         ids(a.file, a.gen, a.head)
+    elif a.cmd == "smoke-ids":
+        print(",".join(smoke_ids()))
+    elif a.cmd == "e1-ids":
+        print(",".join(e1_ids()))
+    elif a.cmd == "judge-rig":
+        judge_rig(Path(a.gen), Path(a.e1), dict(x.split("=", 1) for x in a.blue.split(",") if x))
     elif a.cmd == "check-det":
-        df = check_det(Path(a.gen), Path(a.need), a.file.split(",") if a.file else None)
+        df = check_det(Path(a.gen), Path(a.need) if a.need else None, a.file.split(",") if a.file else None,
+                       Path(a.ref) if a.ref else None)
         if a.out:
             df.to_csv(a.out, index=False)
         ok = df.first_div_k.isna() & df.cam_grid_same
         print(df.to_string() if len(df) <= 40 else df.describe().to_string())
-        print(f"E1: {int(ok.sum())} / {len(df)} worlds identical to P6 v0 up to need_k")
+        print(f"E1: {int(ok.sum())} / {len(df)} worlds identical to the reference up to need_k")
     elif a.cmd == "recovery":
         df = recovery(Path(a.gen), a.file.split(","))
         if a.out:
