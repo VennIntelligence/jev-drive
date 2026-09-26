@@ -151,6 +151,17 @@
   (2) HazardAtSideLaneTwoWays 的「等」是以约 2.6 m/s 跟在自行车后面而不是停，登记的 wait / stop 定义记不到它：镜像题 5 / 5 记成 keep，x₁₁ 的 wait 比例只有 0.27。
   (3) probe a 按 scenario 拆开（Cinque / Lebowski `temporal`，5 折 OOF）：锥桶类 ConstructionObstacle 0.95–0.99、事故车 0.89–0.98、违停车 0.87–0.92，都远高于 0.70；
   自行车类和 InvadingTurn、开门车类的正例率 < 8%（障碍在动或在侧车道），AUC 0.43–0.86 没法读（`research/results/night2/N2/probe_a_by_scenario_carla_p6.csv`）。
+- 2026-09-26 15:02 CST [A] **放置 null 不过的诊断与生成器修正**（main 15:0x 按登记规则决定修生成器、重跑这 45 个世界；写于任何重跑数字之前）。
+  逐个看 10 个 stop 的世界在第一次停车时刻 ego 周围 35 m 的 actor（位置相对原路线、是否 scenario actor）与 `p6_world.json`：**登记在全部 45 个世界里都已删掉**，不是登记的问题。
+  (a) 5 个（2643、25845 AccidentTwoWays，2668、25865 ParkedObstacleTwoWays，25928 Door）停的时刻 scenario actor 都已在 ego 后方 15–34 m、ego 前方是背景车，同 case 的 x₀₀ 也 stop：背景交通，与障碍无关，生成器修不了。
+  (b) HazardAtSideLane 3 个（25300、25381、25439）：自行车仍在 d ≈ −0.96 m（原始 offset 0.55 × 半车道），`shift_m` 全是 0——生成器的补丁打在 `srunner.scenarios.route_obstacles` 上，
+  而 leaderboard 的 RouteScenario 把 scenario 文件当顶层模块 `route_obstacles` 再 import 一遍，是另一个类对象，补丁**从没生效**；PDM-Lite 把本车道里的自行车当前车跟停。
+  (c) VehicleOpensDoorTwoWays 3464：停放车最后在 d = −0.33 m（ego 车道里），AccidentTwoWays 1852：一辆事故车在 d = +1.83 m（对向车道）。位移是在 build 时按 `get_location()` 算的，
+  而新 spawn、还没 tick 过的 actor 的 `get_location()` 返回的是过时的变换（Door 的 scenario 在 spawn 后自己 `set_location` 挪到路边，这一步还没生效），于是按错误的起点平移、把车推进了车道。
+  修正（`scripts/b2d_hooks.py` `p6_world`）：非 prop 的 actor 改在**第一个 tick 之后**按新鲜的位置平移（prop 仍改 ActorTransformSetter 的目标变换，那条路径没问题）；
+  自行车改为直接改它们 `BasicAgentBehavior` 的 offset（行为树里的实例，agent 建好后 `set_offset`）并把车挪到路肩，内缘离车道边线 0.5 m。门槛、其余世界与分析口径都不变。
+  预期：修正只能救回 (b)(c) 的 5 个，(a) 的 5 个背景 stop 会留下，所以按登记口径重跑后 keep 最多 40 / 45 = 0.889，**仍可能不过 0.90**；事后的「与 x₀₀ 同模式」行照报。
+  重跑：45 个放置 null 世界移到 `runs/p6/gen/done_shoulder_v1/`（原 attempt 留着），`p6_gen.sh ONLY=<45 个 id>` 续跑；先在 1 个世界上 smoke（25300，单 server，box 当时 28 个 CARLA server）。
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
 激发的前提是冻结特征里有信息。行人那一轮 openpilot vision 层 AUC 0.51，只能外接。绕行需要三样，逐样 probe：

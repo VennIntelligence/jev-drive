@@ -315,18 +315,6 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
     if obstacle == "hide":
         ab.InvadingActorFlow.update = lambda self: running
 
-    # ---- placement null: HazardAtSideLane's bicycles are driven at a lateral offset, so the offset itself moves
-    if obstacle == "shoulder":
-        import srunner.scenarios.route_obstacles as ro
-        hz_init = ro.HazardAtSideLane._initialize_actors
-
-        def hz(self, config):
-            lw = CarlaDataProvider.get_map().get_waypoint(config.trigger_points[0].location).lane_width
-            self._offset = 2.0 * (lw / 2.0 + 0.4 + P6_SHOULDER_MARGIN_M) / lw   # bicycle half width ~0.4 m
-            return hz_init(self, config)
-
-        ro.HazardAtSideLane._initialize_actors = hz
-
     def shoulder(loc, half_width, side, extra):
         cmap = CarlaDataProvider.get_map()
         wp = cmap.get_waypoint(loc, project_to_road=True, lane_type=_carla.LaneType.Driving)
@@ -339,6 +327,7 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
         return _carla.Location(loc.x + s * r.x, loc.y + s * r.y, loc.z), s
 
     log, hidden, shifted, registry = [], [], [], {"dropped": [], "kept": []}
+    pending, bikes = [], []
     inner_build = RouteScenario.build_scenarios
 
     def build(self, ego_vehicle, debug=False):
@@ -363,11 +352,21 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
                         t = staged[a.id]
                         t.location, row["shift_m"] = shoulder(t.location, hw, side, extra)
                     else:
-                        loc, row["shift_m"] = shoulder(a.get_location(), hw, side, extra)
-                        if row["shift_m"]:
-                            a.set_location(loc)
-                            shifted.append(a.id)
+                        # Moved on the first tick, not here: before a tick get_location() returns a stale transform
+                        # (the spawn point, before the scenario's own set_location; a VehicleOpensDoorTwoWays car
+                        # ended in the ego lane, an AccidentTwoWays car in the opposite lane; [A] 15:10 diagnosis)
+                        pending.append((a, hw, side, extra, row))
                 log.append(row)
+            if obstacle == "shoulder" and name in ("HazardAtSideLane", "HazardAtSideLaneTwoWays"):
+                # The bicycles are driven by BasicAgentBehavior at a lateral offset: move the offset itself. (The
+                # first version patched srunner.scenarios.route_obstacles, but the route scenario imports the file as
+                # the top-level module `route_obstacles`, a different class object, so it never took effect.)
+                lw = CarlaDataProvider.get_map().get_waypoint(sc._starting_wp.transform.location).lane_width
+                off = lw / 2.0 + 0.4 + P6_SHOULDER_MARGIN_M          # bicycle half width ~0.4 m; offset > 0 = right
+                for b in sc.scenario_tree.iterate():
+                    if type(b).__name__ == "BasicAgentBehavior":
+                        b._opt_dict["offset"] = off
+                        bikes.append(b)
         if not mine:                                   # build_scenarios is called again later; nothing new
             return
         if oncoming in ("on", "dense"):
@@ -437,12 +436,33 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
         f._spawn_dist = f._rng.uniform(f._min_spawn_dist, f._max_spawn_dist)
 
     RouteScenario.build_scenarios = build
-    if obstacle != "hide" and oncoming not in ("on", "dense"):
+    if obstacle not in ("hide", "shoulder") and oncoming not in ("on", "dense"):
         return
     inner_tick = ScenarioManager._tick_scenario
 
     def tick(self):
         inner_tick(self)
+        while pending:                                 # placement null, first tick: transforms are fresh now
+            a, hw, side, extra, row = pending.pop()
+            loc, row["shift_m"] = shoulder(a.get_location(), hw, side, extra)
+            if row["shift_m"]:
+                a.set_location(loc)
+                shifted.append(a.id)
+            if not pending:
+                with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
+                    json.dump(log, fh)
+        for b in bikes:                                # the agent is created on the tree's first tick of the behaviour
+            if getattr(b, "_agent", None) is not None and not getattr(b, "_p6_off", False):
+                b._p6_off = True
+                if hasattr(b._agent, "set_offset"):
+                    b._agent.set_offset(b._opt_dict["offset"])
+                a = b._actor
+                loc, dsh = shoulder(a.get_location(), 0.4, 1.0, 0.0)
+                if dsh:
+                    a.set_location(loc)
+                next(r for r in log if r["id"] == a.id)["shift_m"] = dsh
+                with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
+                    json.dump(log, fh)
         for f in flows:                                # the oncoming flow, from the first tick, already established
             if getattr(f, "_p6_early", False) and not f._terminated:
                 if not f._p6_started:
