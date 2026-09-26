@@ -63,6 +63,17 @@
 `cls_late` 类读词表模式质量 Δm_bypass(x₁₀ − x₀₀)、Δm_stop(x₁₁ − x₁₀)；null 地板 = 天气 null p95、放置 null 的 bypass 率、x₀₁ − x₀₀。
 考生：openpilot `ridge_late` / `cls_late`（Cinque、Lebowski）、M-C、E5 student、TFv6 waypoint（若传感器已录）、Qwen `L18_last`、ego-only。
 
+- 2026-09-26 09:52 CST [A] 开工，分步估时（写于任何 N1 / N2 数字之前）：
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | 1 | 生成器（x₀₀ / x₁₀ / x₁₁ / x₀₁、放置 null、镜像题、天气 null 的 variant XML）+ hook（删登记、对向车流开关、障碍平移）+ recorder 补记（prop、登记状态）+ 分析模块 | 2 h（到约 12:00） | Mac + box CPU |
+  | 2 | smoke 10 个世界 = profiling pass（逐 tick 分项、每 run 墙钟），两条 smoke 判据 | 0.5 h | 1 卡 |
+  | 3 | 批量约 605 个世界（todo 的 580 + 镜像题 25），3 卡 × ≤ 6 server（受 pids.max 限制） | 约 3 h（P5 v1 PDM-Lite 实测每 run 均值 244 s；绕行类预计 5–6 min / run） | GPU 0–2，约 9 卡·h |
+  | 4 | 建 index + expert 统计表 + 两条 CPU 准备（词表 bypass anchor、220 集路线数） | 0.5 h | CPU |
+  | N2-a | probe a / b 在 P5 v1 帧上 + desire 执行器检查（与步 1–3 并行，子执行员） | 1.5–2 h | CPU + < 1 GPU·h（GPU 2 空档） |
+  | N2-b | N1 数据到后重跑 probe a / b、跑 probe c、x₁₀ 帧补 desire | 1 h | CPU + 少量 GPU |
+  合计墙钟约 7–8 h（预计 17:30–18:00 CST 收尾）。任何一步超估计 2 倍停下写日志。盘：box 剩 167 GB，P5 v1 每 run 约 70 MB → 本节约 45 GB。
+
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
 激发的前提是冻结特征里有信息。行人那一轮 openpilot vision 层 AUC 0.51，只能外接。绕行需要三样，逐样 probe：
