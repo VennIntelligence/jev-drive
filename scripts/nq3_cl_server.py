@@ -1,0 +1,163 @@
+#!/usr/bin/env python
+"""Closed-loop head server for night queue 3, lane B (todos/2026-09-26-night-queue-3.md, CL3 / CL4 / CL6 / CL5).
+envs/openpilot. Agent side: scripts/b2d_zeroshot_agent.py with "model": "head".
+
+Per connection (one CARLA worker, one route) the server keeps its own Cinque session and the last four camera sets.
+A plan request carries the P4 Waymo rig's three JPEGs of one 5 Hz camera frame (the recorder's bytes: remap + JPEG q95,
+scripts/p5_pair_agent.py), the route desire and the ego input (jevdrive.nq3_cl.ego_input, built by the agent from its
+own pose track). The server then does exactly what the P5 offline path does:
+
+  1. model frames from the JPEGs (scripts/p5_openpilot.render_blobs, the P5 calibration record), Cinque stepped four
+     times on them (the 5 Hz frame held on the 20 Hz clock, p5_openpilot.run_stream) with the desire, `temporal` tap;
+  2. arm "mc": Qwen `L18_last` of the 4-frame x 3-camera clip from the Qwen server; arm "student_b": the 672-d token
+     row from the YOLO server; both requested before step 1 and collected after it, so they overlap the Cinque steps;
+  3. the head (jevdrive.nq3_cl.Heads): prior + Delta -> (20, 2) rear-axle path at 0.25 ... 5 s.
+
+With meta "dump" = <path>.npz, the inputs and every intermediate are written there for the equivalence check
+(jevdrive.nq3_cl check, rule 8). Protocol: scripts/zeroshot_wire.py.
+
+    CUDA_VISIBLE_DEVICES=0 $DATA_DIR/envs/openpilot/bin/python scripts/nq3_cl_server.py --socket S --qwen Q --yolo Y
+"""
+import argparse
+import os
+import socket
+import sys
+import threading
+import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+sys.path[:0] = [str(HERE), str(HERE.parent)]
+import p5_openpilot as P5  # noqa: E402
+import wod_zeroshot_openpilot as WZ  # noqa: E402
+import zeroshot_wire as wire  # noqa: E402
+from jevdrive import drive_backbones as D  # noqa: E402
+from jevdrive import nq3_cl as CL  # noqa: E402
+from jevdrive.p5_openpilot import carla_calib  # noqa: E402
+
+HOLD = P5.HOLD
+MODEL = "cinque"
+
+
+class FeatClient:
+    """One connection to a feature server (per head-server connection, so requests never interleave)."""
+
+    def __init__(self, path):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.connect(path)
+
+    def __call__(self, blobs):
+        wire.send(self.sock, {}, {"jpg%d" % i: b for i, b in enumerate(blobs)})
+        return wire.recv(self.sock)
+
+    def close(self):
+        self.sock.close()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--socket", required=True)
+    ap.add_argument("--qwen", default="", help="Qwen feature server socket (arm mc)")
+    ap.add_argument("--yolo", default="", help="YOLO feature server socket (arm student_b)")
+    ap.add_argument("--pool", type=int, default=6, help="Cinque sessions built up front, one per CARLA worker")
+    ap.add_argument("--ready-file", default="")
+    a = ap.parse_args()
+    from jevdrive.openpilot.model import OPModel
+    t0 = time.time()
+    WZ._init({}, {P5.SEQ: carla_calib()}, ".")
+    heads = CL.Heads()
+    taps = D.OP_TAPS[MODEL]
+    make = lambda: OPModel(MODEL, WZ.MODELS[MODEL], context_rate=False, taps=list(taps.values()))  # noqa: E731
+    free = [make() for _ in range(a.pool)]
+    lock = threading.Lock()
+    print("head server ready after %.0f s (%d Cinque sessions)" % (time.time() - t0, len(free)), flush=True)
+    if os.path.exists(a.socket):
+        os.unlink(a.socket)
+    Path(a.socket).parent.mkdir(parents=True, exist_ok=True)
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(a.socket)
+    srv.listen(64)
+    if a.ready_file:
+        Path(a.ready_file).write_text("ready")
+    stats = {"calls": 0, "t0": time.time(), "ms": {}}
+
+    def serve(conn):
+        with lock:
+            m = free.pop() if free else make()
+        m.reset()
+        sets = deque(maxlen=4)
+        fq = FeatClient(a.qwen) if a.qwen else None
+        fy = FeatClient(a.yolo) if a.yolo else None
+        ex = ThreadPoolExecutor(2)
+        try:
+            while True:
+                meta, arrays = wire.recv(conn)
+                if meta["cmd"] == "reset":
+                    m.reset()
+                    sets.clear()
+                    wire.send(conn, {"ok": True, "server": {"model": MODEL, "taps": taps}}, {})
+                    continue
+                t = time.perf_counter()
+                arm = meta["arm"]
+                jpg = [np.array(arrays["jpg%d" % i]) for i in range(3)]
+                sets.append(jpg)
+                full = len(sets) == 4
+                fut_q = ex.submit(fq, [sets[j][c] for c in range(3) for j in range(4)]) \
+                    if arm == "mc" and full else None
+                fut_y = ex.submit(fy, jpg) if arm == "student_b" else None
+                img2 = P5.render_blobs([jpg])[0]
+                t_r = time.perf_counter()
+                desire = np.zeros(8, np.float32)
+                desire[int(meta.get("desire", 0))] = 1
+                for _ in range(HOLD):
+                    m.step(img2, desire=desire, action_t=WZ.ACTION_T)
+                op = m.tap_values[taps["temporal"]].copy()
+                t_o = time.perf_counter()
+                q = fut_q.result()[1]["q"] if fut_q else None
+                tok = fut_y.result()[1]["tok"] if fut_y else None
+                t_f = time.perf_counter()
+                ego = np.asarray(arrays["ego"], np.float32)
+                if arm == "mc" and q is None:          # the first three camera sets of a route: no 4-frame clip yet
+                    path = heads.predict("ridge_late", ego, op)
+                else:
+                    path = heads.predict(arm, ego, op, q=q, tok=tok)
+                t_h = time.perf_counter()
+                ms = {"render_ms": 1e3 * (t_r - t), "op_ms": 1e3 * (t_o - t_r), "feat_wait_ms": 1e3 * (t_f - t_o),
+                      "head_ms": 1e3 * (t_h - t_f), "server_ms": 1e3 * (t_h - t)}
+                info = {k: round(v, 2) for k, v in ms.items()}
+                info["full_clip"] = full
+                wire.send(conn, info, {"path": path.astype(np.float64)})
+                if meta.get("dump"):
+                    extra = {"q": q} if q is not None else {}
+                    if tok is not None:
+                        extra["tok"] = tok
+                    np.savez(meta["dump"], jpg0=jpg[0], jpg1=jpg[1], jpg2=jpg[2], desire=np.int64(meta.get("desire", 0)), ego=ego, img2=img2, op=op, path=path, arm=arm,
+                             frame=np.int64(meta.get("frame", -1)), **extra)
+                stats["calls"] += 1
+                for k, v in ms.items():
+                    stats["ms"][k] = stats["ms"].get(k, 0.0) + v
+                if stats["calls"] % 1000 == 0:
+                    print("calls %d, mean ms %s" % (stats["calls"], {k: round(v / stats["calls"], 1)
+                                                                      for k, v in stats["ms"].items()}), flush=True)
+        except ConnectionError:
+            pass
+        finally:
+            conn.close()
+            ex.shutdown(wait=False)
+            for c in (fq, fy):
+                if c is not None:
+                    c.close()
+            with lock:
+                free.append(m)
+
+    while True:
+        conn, _ = srv.accept()
+        threading.Thread(target=serve, args=(conn,), daemon=True).start()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

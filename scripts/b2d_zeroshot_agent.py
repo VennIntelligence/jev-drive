@@ -65,6 +65,17 @@ the pre-registered smoke:
                     PoseFilter as in the L1 harness (b2d_agent.py), everything else to Controller unchanged
   "lateral"         "plan" (the fixed controller tracks the plan) | "curvature": exploratory, steer from the
                     model's desired curvature through the bicycle model, longitudinal still from the plan
+  "ctl_every"       1 | k: hand only every k-th accepted plan to the controller (night queue 3: Cinque steps at 20 Hz,
+                    "plan_every": 1, and P7 gets its plan at 5 Hz, "ctl_every": 4)
+  "cameras"         true | false: no camera at all ("replay" only); a plan every "plan_ticks" ticks (default 4 = 5 Hz)
+  "model": "head"   night queue 3 lane B (jevdrive/nq3_cl.py, scripts/nq3_cl_server.py): our heads on openpilot Cinque
+                    `temporal` from the P4 / P5 Waymo rig. The three cameras are the P5 recorder's (scripts/p5_pair_agent.py:
+                    1088 x 1560 renders, "head_cam_tick" sensor_tick, default 0.0 = every tick as the recorder), remapped
+                    and JPEG'd as the recorder does on every 4th tick (5 Hz); frame k is sent one tick later, when the
+                    pose of tick k + 1 exists, with the ego input built from the agent's own per-tick pose track exactly
+                    as p4_carla.route_rows builds it from the recorder's (central-difference velocity), the 15 m route
+                    intent and the route desire. "arm": "ridge_late" | "mc" | "student_b". "dump_every": n dumps every
+                    n-th request's inputs and intermediates (server side) for the rule-8 equivalence check.
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
 """
 import json
@@ -84,6 +95,7 @@ from srunner.scenariomanager.timer import GameTime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import zeroshot_rigs as rigs  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import zeroshot_wire as wire  # noqa: E402
 from b2d_controller import Controller  # noqa: E402
 from b2d_controller_adapter import FrameRouter, GPSProjector, PoseFilter, RouteAdapter, controller_speed  # noqa: E402
@@ -173,6 +185,10 @@ class ZeroShotAgent(AutonomousAgent):
             self.cfg = json.load(fh)
         self.model = self.cfg["model"]
         self.alpamayo = self.model == "alpamayo"
+        self.head = self.model == "head"
+        self.ctl_every = int(self.cfg.get("ctl_every", 1))
+        self.plan_ticks = int(self.cfg.get("plan_ticks", 4))
+        self.head_pending, self.track = None, []
         self.plan_every = int(self.cfg.get("plan_every", 5 if self.alpamayo else 1))
         self.op_tick = float(self.cfg.get("op_camera_tick", rigs.OP_CAMERA_TICK))
         self.plan_origin = self.cfg.get("plan_origin", "camera")
@@ -184,6 +200,18 @@ class ZeroShotAgent(AutonomousAgent):
         self.op_mount = tuple(self.cfg.get("op_mount", rigs.OP_MOUNT_RIG))
         self.cam_specs = rigs.alpamayo_sensor_specs() if self.alpamayo else rigs.openpilot_sensor_specs(self.op_tick,
                                                                                                         self.op_mount)
+        if self.head:
+            import p4_carla_agent as P4A
+            hc = dict(P4A.DEFAULT)
+            fov = math.degrees(2 * math.atan(hc["render_w"] / 2.0 / hc["f"]))
+            self.cam_specs = [{"type": "sensor.camera.rgb", "id": name, "x": x + P4A.REAR_AXLE_X, "y": -y, "z": z,
+                               "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": hc["render_w"], "height": hc["render_h"],
+                               "fov": fov, "sensor_tick": float(self.cfg.get("head_cam_tick", 0.0))}
+                              for name, x, y, z, yaw in P4A.WAYMO_CAMS]
+            self.head_maps, self.head_q = P4A.distortion_maps(hc), int(hc["jpeg_q"])
+        elif not self.cfg.get("cameras", True):
+            assert self.cfg.get("replay"), "a camera-less agent only replays"
+            self.cam_specs = []
         self.cam_tags = [s["id"] for s in self.cam_specs]
         with open(self.cfg["controller_config"]) as fh:
             params = json.load(fh)
@@ -234,7 +262,8 @@ class ZeroShotAgent(AutonomousAgent):
             if getattr(self, "_dense_plan", None):      # the evaluator set the route before setup()
                 self.partner.set_global_plan(self._dense_gps, self._dense_plan)
         router_tags = self.cam_tags + (self.partner.camera_tags() if self.partner else [])
-        every_tick = not self.alpamayo and self.op_tick <= DELTA
+        every_tick = self.head and float(self.cfg.get("head_cam_tick", 0.0)) == 0.0 or \
+            not self.head and not self.alpamayo and self.op_tick <= DELTA
         self.router = SyncRouter(router_tags, 32, self.cam_tags if every_tick else ())
         self.cam_sets = deque(maxlen=4)          # (frame, sim time, {tag: BGRA}, {tag: frame})
         self.latest = {t: (-1, None) for t in self.cam_tags}
@@ -318,7 +347,14 @@ class ZeroShotAgent(AutonomousAgent):
         if self.zoo is not None:   # shipped AD-MLP: the route planner advances on every tick
             self.zoo_target = self.zoo.target(np.asarray(data["GPS"][1]), float(imu[6]))
         plan_ms = 0.0
-        for f, tags in sorted(self.router.frames.items()):
+        if self.head:
+            plan_ms += self._head_tick(data, frame, now)
+        elif not self.cam_tags:        # camera-less replay: a plan every plan_ticks ticks
+            if (self.tick - 1) % self.plan_ticks == 0 and self.poses:
+                self.cam_sets.append((frame, now, {}, {}))
+                self.n_sets += 1
+                plan_ms += self._plan(speed)
+        for f, tags in sorted(self.router.frames.items()) if self.cam_tags and not self.head else ():
             if f < self.first_frame:
                 continue            # rendered while the scenario was being built, before the route started
             for tag in self.cam_tags:
@@ -600,8 +636,10 @@ class ZeroShotAgent(AutonomousAgent):
                 steer, throttle, brake, zoo_meta = self.zoo.control(p, t, speed, self.zoo_target)
                 self.zoo_control = (throttle, steer, brake)
             accepted = True
-        else:
+        elif self.n_plans % self.ctl_every == 0:
             accepted = self.controller.update(np.asarray(drive_path, float), t_frame)
+        else:
+            accepted = None                   # stepped the model only; the controller keeps the last plan
         self.n_plans += 1
         ms = 1e3 * (time.perf_counter() - t_start)
         self.timings["plan_ms"].append(ms)
@@ -618,6 +656,71 @@ class ZeroShotAgent(AutonomousAgent):
         rec.update(self._truth())
         rec.update({k: v for k, v in meta.items() if k in ("nav_text", "desire", "seed", "dump")})
         rec.update(info)
+        if accepted is not None:              # stepped-only plans (ctl_every > 1) are not logged
+            self.plan_log.write(json.dumps(rec) + "\n")
+        return ms
+
+    # ---- model "head" (night queue 3, lane B) ------------------------------------------------------------------
+    def _head_tick(self, data, frame, now):
+        """Per tick: extend the pose track; evaluate the frame captured last tick (its ego input needs this tick's
+        pose); on every 4th tick capture the three cameras as the P5 recorder writes them."""
+        import cv2
+        if self.poses:
+            self.track.append((self.poses[-1][1], self.poses[-1][2]))
+        elif self.track:
+            self.track.append(self.track[-1])
+        ms = 0.0
+        if self.head_pending is not None and len(self.track) > self.head_pending[0] + 1:
+            ms = self._head_plan()
+        if (self.tick - 1) % 4 == 0 and self.track:
+            got = [data.get(tag) for tag in self.cam_tags]
+            if all(g is not None and g[0] == frame for g in got):
+                mx, my = self.head_maps
+                jpgs = []
+                for g in got:
+                    img = cv2.remap(np.ascontiguousarray(g[1][:, :, :3]), mx, my, cv2.INTER_LINEAR,
+                                    borderMode=cv2.BORDER_REPLICATE)
+                    ok, buf = cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, self.head_q])
+                    jpgs.append(np.frombuffer(buf.tobytes(), np.uint8))
+                desire = self.route.desire() if self.cfg.get("desire", True) else DESIRE_NONE
+                self.head_pending = (len(self.track) - 1, frame, now, jpgs, desire)
+                self.n_sets += 1
+            else:
+                self.head_missing = getattr(self, "head_missing", 0) + 1
+        return ms
+
+    def _head_plan(self):
+        from jevdrive import nq3_cl as CL
+        t_start = time.perf_counter()
+        k, f, t_frame, jpgs, desire = self.head_pending
+        self.head_pending = None
+        xy = np.array([p[0] for p in self.track], float)
+        yaw = np.array([p[1] for p in self.track], float)
+        ra, th = CL.rh_track(xy, yaw)
+        it = CL.intent(self.route.xy, self.route.cmd, self.route.s, xy[k])
+        ego = CL.ego_input(CL.ego_past(ra, th, k), it)
+        every = int(self.cfg.get("dump_every", 0))
+        dump = os.path.join(self.out, "frames", "%06d.npz" % f) if every and self.n_plans % every == 0 else ""
+        meta = {"cmd": "plan", "arm": self.cfg["arm"], "desire": int(desire), "frame": int(f), "dump": dump}
+        arrays = {"jpg%d" % i: b for i, b in enumerate(jpgs)}
+        arrays["ego"] = ego
+        wire.send(self.sock, meta, arrays)
+        info, out = wire.recv(self.sock)
+        path = np.asarray(out["path"], float)
+        if self.first_set_t is None:
+            self.first_set_t = t_frame
+        warm = t_frame - self.first_set_t < self.warmup_s - 1e-6
+        self.warm_now = warm
+        accepted = False if warm else self.controller.update(path, t_frame)
+        self.n_plans += 1
+        ms = 1e3 * (time.perf_counter() - t_start)
+        self.timings["plan_ms"].append(ms)
+        rec = {"frame": f, "t": t_frame, "k": k, "speed": float(np.hypot(*(ra[k] - ra[k - 1])) / DELTA) if k else 0.0,
+               "accepted": accepted, "path": np.round(path, 3).tolist(), "round_trip_ms": round(ms, 1),
+               "pose": [float(xy[k, 0]), float(xy[k, 1]), float(yaw[k])], "intent": it, "desire": int(desire),
+               "warmup": bool(warm), "dump": dump}
+        rec.update(info)
+        rec.update(self._truth())
         self.plan_log.write(json.dumps(rec) + "\n")
         return ms
 

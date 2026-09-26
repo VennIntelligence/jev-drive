@@ -38,13 +38,18 @@ HOLD = 4          # 20 Hz steps per 5 Hz frame for the queued (20 Hz clock) mode
 def render(files: list, seq: str = SEQ) -> np.ndarray:
     """Packed (n, 2, 6, 128, 256) [road, wide] model frames from (front, front_left, front_right) JPEG triplets.
     `seq` picks the calibration (one rig for CARLA; one per scene for the HUGSIM pairs, plan["calibs"])."""
+    return render_blobs([[Path(f).read_bytes() for f in trip] for trip in files], seq)
+
+
+def render_blobs(trips: list, seq: str = SEQ) -> np.ndarray:
+    """`render` on JPEG bytes instead of paths (the closed-loop head server, scripts/nq3_cl_server.py, shares it)."""
     from PIL import Image
     idx = _maps(seq)
-    out = np.empty((len(files), 2, 6, 128, 256), np.uint8)
-    for j, trip in enumerate(files):
+    out = np.empty((len(trips), 2, 6, 128, 256), np.uint8)
+    for j, trip in enumerate(trips):
         planes = []
         for f in trip:
-            im = Image.open(io.BytesIO(Path(f).read_bytes()))
+            im = Image.open(io.BytesIO(bytes(f)))
             im.draft("YCbCr", im.size)
             planes.append(np.asarray(im.convert("YCbCr")).reshape(-1, 3))
         cat = np.concatenate(planes + [BLACK])     # index -1 (uncovered, HUGSIM Waymo rigs only) -> black
