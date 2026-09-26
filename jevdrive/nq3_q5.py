@@ -43,8 +43,17 @@ def run_dir(*p) -> Path:
     return d
 
 
+WJ_STRIDE = {"nusc": 4, "navtest": 10}     # WA-JEPA runs on every k-th request only ([D] 17:30 amendment)
+
+
 def arm_names(model: str) -> list:
-    return ["base", "S0", "A0", "C0", "Sk", "Ak", "Ck", "Ss", "As", "Cs", "ALL0"] + (["H0"] if model == "wajepa" else [])
+    if model == "wajepa":
+        return ["base", "S0", "A0", "C0", "ALL0", "H0"]
+    return ["base", "S0", "A0", "C0", "Sk", "Ak", "Ck", "Ss", "As", "Cs", "ALL0"]
+
+
+def req_path(set_: str, model: str) -> Path:
+    return run_dir("req", f"{set_}_wajepa.npz" if model == "wajepa" else f"{set_}.npz")
 
 
 # ---------------------------------------------------------------- requests and arms
@@ -87,6 +96,9 @@ def swap_index(group: np.ndarray, t: np.ndarray) -> tuple[np.ndarray, int]:
 
 def arms(set_: str, model: str) -> dict:
     z = np.load(run_dir("req", f"{set_}.npz"))
+    if model == "wajepa":
+        z = {k: z[k][::WJ_STRIDE[set_]] for k in z.files}
+        np.savez(req_path(set_, model), **z)
     ego, hist = z["ego"].astype(np.float64), z["hist"].astype(np.float32)
     oh = np.eye(4)[z["cmd"]]
     base = np.concatenate([ego, oh], 1)
@@ -129,9 +141,16 @@ def verify():
     for m in MODELS:
         p = np.load(run_dir("preds", f"nusc_{m}.npz"))
         t2 = np.load(data_dir() / "runs/top10_t2/preds" / f"nusc_{m}.npz")
-        assert (p["keys"] == t2["keys"]).all()
+        at = pd.Series(np.arange(len(t2["keys"])), index=t2["keys"])[p["keys"]].to_numpy()
         b = p["traj"][list(p["names"]).index("base")]
-        res[f"nusc_{m}_base_vs_t2_max_abs"] = float(np.abs(b - t2["traj"]).max())
+        d = np.abs(b - t2["traj"][at])
+        if m == "wajepa":        # batched path: a numeric floor, reported, not a gate ([D] 17:30)
+            disp = np.linalg.norm(b[..., :2] - t2["traj"][at][..., :2], axis=-1)
+            res.update({"nusc_wajepa_batched_base_vs_t2_mean_disp_m": float(disp.mean()),
+                        "nusc_wajepa_batched_base_vs_t2_p95_ade_m": float(np.percentile(disp.mean(1), 95)),
+                        "nusc_wajepa_batched_base_vs_t2_maxdiff": float(d.max()), "nusc_wajepa_n": int(len(b))})
+        else:
+            res[f"nusc_{m}_base_vs_t2_max_abs"] = float(d.max())
     f = run_dir("preds", "navcheck_wajepa_fp32.npz")
     if f.exists():
         z = np.load(f)
@@ -155,15 +174,19 @@ def exam_nusc():
     toks = [e["token"] for e in samples]
     cv = np.stack([nz.load_preds(idx)["cv"][t] for t in toks])
     scene_ids = np.unique([e["scene"] for e in samples], return_inverse=True)[1]
-    n_sc = scene_ids.max() + 1
-    Bidx = np.random.default_rng(0).integers(0, n_sc, (B, n_sc))
 
-    def boot(v):
-        s, c = np.bincount(scene_ids, v, n_sc), np.bincount(scene_ids, None, n_sc)
-        return s[Bidx].sum(1) / c[Bidx].sum(1)
+    def booter(sid):
+        u, sid = np.unique(sid, return_inverse=True)
+        n_sc = len(u)
+        Bidx = np.random.default_rng(0).integers(0, n_sc, (B, n_sc))
 
-    def metrics(p):
-        h = Z.horizons(Z.per_sample(p.astype(np.float64), samples))
+        def boot(v):
+            s, c = np.bincount(sid, v, n_sc), np.bincount(sid, None, n_sc)
+            return s[Bidx].sum(1) / c[Bidx].sum(1)
+        return boot
+
+    def metrics(p, smp=samples):
+        h = Z.horizons(Z.per_sample(p.astype(np.float64), smp))
         return {"l2": (h["l2_1s"] + h["l2_2s"] + h["l2_3s"]) / 3,
                 "col_vad": (h["col_vad_1s"] + h["col_vad_2s"] + h["col_vad_3s"]) / 3,
                 "col_bevp": (h["col_bevp_1s"] + h["col_bevp_2s"] + h["col_bevp_3s"]) / 3}
@@ -172,30 +195,33 @@ def exam_nusc():
     rows = []
     for m in MODELS:
         z = np.load(run_dir("preds", f"nusc_{m}.npz"))
-        assert (z["keys"] == np.array(toks)).all()
+        rows_m = pd.Series(np.arange(len(toks)), index=toks)[z["keys"]].to_numpy()
+        sm = [samples[i] for i in rows_m]
         names = list(z["names"])
         M = {}
         for a, traj in zip(names, z["traj"]):
             pts = np.stack([Z.to_lidar_point(t8, tr[:, :2], tr[:, 2], idx["scenes"][e["scene"]]["lidar_xyz"], e["fut_t"])[0]
-                            for tr, e in zip(traj, samples)])
-            M[a] = metrics(pts)
-        adv_b = mcv["l2"] - M["base"]["l2"]
+                            for tr, e in zip(traj, sm)])
+            M[a] = metrics(pts, sm)
+        cvm = {k: v[rows_m] for k, v in mcv.items()}
+        sid = scene_ids[rows_m]
+        boot = booter(sid)
+        adv_b = cvm["l2"] - M["base"]["l2"]
         adv_b_ci = np.percentile(boot(adv_b), [2.5, 97.5])
         for a in names:
-            r = {"model": NAME[m], "arm": a, "n": len(toks), "l2": float(M[a]["l2"].mean()),
+            r = {"model": NAME[m], "arm": a, "n": len(sm), "cv_l2": float(cvm["l2"].mean()), "l2": float(M[a]["l2"].mean()),
                  "col_vad": float(M[a]["col_vad"].mean()), "col_bevp": float(M[a]["col_bevp"].mean())}
             for k in ("l2", "col_vad", "col_bevp"):
                 d = M[a][k] - M["base"][k]
                 r[f"d_{k}_vs_base"] = float(d.mean())
                 r[f"d_{k}_lo"], r[f"d_{k}_hi"] = np.percentile(boot(d), [2.5, 97.5])
-            adv = mcv["l2"] - M[a]["l2"]
+            adv = cvm["l2"] - M[a]["l2"]
             r["adv_vs_cv"] = float(adv.mean())
             r["adv_lo"], r["adv_hi"] = np.percentile(boot(adv), [2.5, 97.5])
             r["adv_shrink"] = float(1 - adv.mean() / adv_b.mean())
             r["base_adv_ci_gt0"] = bool(adv_b_ci[0] > 0)
             rows.append(r)
     df = pd.DataFrame(rows)
-    df.insert(2, "cv_l2", float(mcv["l2"].mean()))
     verdict = []
     for m in MODELS:
         g = df[df.model == NAME[m]].set_index("arm")
@@ -221,7 +247,9 @@ def nav_jobs(models=MODELS):
         for a, traj in zip(z["names"], z["traj"]):
             p = run_dir("nav", f"{m}_{a}.npz")
             np.savez(p, tokens=z["keys"], poses=traj.astype(np.float32))
-            lines.append(f"v1 navtest {nav_name(m, a)} {p}")
+            tf = run_dir("nav", f"tokens_{m}.txt")
+            tf.write_text("\n".join(z["keys"]) + "\n")
+            lines.append(f"v1 navtest {nav_name(m, a)} {p} {tf if m == 'wajepa' else ''}".rstrip())
     run_dir("nav", f"jobs_{'_'.join(models)}.txt").write_text("\n".join(lines) + "\n")
     log.info("%d devkit jobs", len(lines))
 

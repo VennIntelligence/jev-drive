@@ -14,8 +14,9 @@ R=$DATA_DIR/runs/nq3/q5; L=$R/logs; mkdir -p "$R/preds" "$R/frag" "$L"
 pin=(taskset -c "$CPUS")
 py=("${pin[@]}" env OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 "$repo/.venv/bin/python" -m jevdrive.nq3_q5)
 say() { echo "[$(date +%T)] q5: $*"; }
-say "estimate (GPU 6 shared): DrivoR 11 arms x 16 782 requests ~0.5 h; WA-JEPA 12 arms x 16 782 at bs $WJ_BS ~${WJ_EST:-3} h;" \
-    "devkit v1.1 23 navtest jobs ~1.5 h (overlaps WA-JEPA); rig perturbation 256 tokens x 6 arms ~20 min; total ~${Q5_EST:-4} h"
+kill_tree() { local c; for c in $(ps -o pid= --ppid "$1" 2>/dev/null); do kill_tree "$c"; done; kill "$1" 2>/dev/null || true; }
+say "estimate (GPU 6 shared with lane C, measured 17:20): DrivoR 11 arms x 16 782 requests ~1.5 h; WA-JEPA 6 arms x 2 374" \
+    "requests (subsets) + rig arms ~2.5 h, in parallel; devkit v1.1 17 navtest jobs ~1 h (overlaps); rig images ~5 min; total ~3 h"
 
 [[ -f $R/req/arms.json ]] || { "${py[@]}" req; "${py[@]}" arms; }
 [[ -f $R/frag/arms_wajepa.npz ]] || "${py[@]}" frag-prep --workers 16
@@ -33,12 +34,12 @@ wajepa() {   # set request arms out [extra args]
     "$repo/scripts/nq3_d/wajepa_arms.py" "$2" "$3" --out "$4" "${@:5}" > "$L/wajepa_$1.log" 2>&1)
 }
 score() {    # jobs file
-  local ver split name npz
-  while read -r ver split name npz; do
+  local ver split name npz tok
+  while read -r ver split name npz tok; do
     [[ -z $ver ]] && continue
     if compgen -G "$DATA_DIR/runs/navsim/eval/${ver}_${split}_${name}/*/*.csv" > /dev/null; then continue; fi
     say "devkit $name"
-    NAVSIM_THREADS=$SCORE_THREADS "${pin[@]}" "$repo/scripts/navsim_zs_score.sh" score "$ver" "$split" "$name" "$npz" \
+    TOKENS_FILE=${tok:-} NAVSIM_THREADS=$SCORE_THREADS "${pin[@]}" "$repo/scripts/navsim_zs_score.sh" score "$ver" "$split" "$name" "$npz" \
       > "$L/score_$name.log" 2>&1 || { say "devkit FAILED $name (see $L/score_$name.log)"; return 1; }
   done < "$1"
 }
@@ -49,18 +50,19 @@ frag() {     # model runner
   done
 }
 
-drivor nusc "$R/req/nusc.npz" "$R/req/nusc_drivor_arms.npz" "$R/preds/nusc_drivor.npz"
-drivor navtest "$R/req/navtest.npz" "$R/req/navtest_drivor_arms.npz" "$R/preds/navtest_drivor.npz"
-frag drivor drivor
 (
   wajepa navcheck "$R/req/navcheck.npz" "$R/req/navcheck_arms.npz" "$R/preds/navcheck_wajepa_fp32.npz" --no-amp --workers 2
-  wajepa nusc "$R/req/nusc.npz" "$R/req/nusc_wajepa_arms.npz" "$R/preds/nusc_wajepa.npz" --bs "$WJ_BS" --workers 6
-  wajepa navtest "$R/req/navtest.npz" "$R/req/navtest_wajepa_arms.npz" "$R/preds/navtest_wajepa.npz" --bs "$WJ_BS" --workers 6
+  wajepa nusc "$R/req/nusc_wajepa.npz" "$R/req/nusc_wajepa_arms.npz" "$R/preds/nusc_wajepa.npz" --bs "$WJ_BS" --workers 6
+  wajepa navtest "$R/req/navtest_wajepa.npz" "$R/req/navtest_wajepa_arms.npz" "$R/preds/navtest_wajepa.npz" --bs "$WJ_BS" --workers 6
   frag wajepa wajepa --bs "$WJ_BS" --workers 4
 ) > "$L/wajepa_chain.log" 2>&1 &
 wj=$!
+say "WA-JEPA chain in the background (pid $wj, log $L/wajepa_chain.log)"
+drivor nusc "$R/req/nusc.npz" "$R/req/nusc_drivor_arms.npz" "$R/preds/nusc_drivor.npz" 6 || { kill_tree "$wj"; exit 1; }
+drivor navtest "$R/req/navtest.npz" "$R/req/navtest_drivor_arms.npz" "$R/preds/navtest_drivor.npz" 6 || { kill_tree "$wj"; exit 1; }
+frag drivor drivor || { kill_tree "$wj"; exit 1; }
 "${py[@]}" nav-jobs --model drivor
-score "$R/nav/jobs_drivor.txt" || { kill "$wj" 2>/dev/null; exit 1; }
+score "$R/nav/jobs_drivor.txt" || { kill_tree "$wj"; exit 1; }
 say "DrivoR scored; waiting for WA-JEPA (pid $wj)"
 wait "$wj" || { say "WA-JEPA chain FAILED (see $L/wajepa_chain.log)"; exit 1; }
 "${py[@]}" nav-jobs --model wajepa
