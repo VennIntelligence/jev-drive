@@ -1,3 +1,4 @@
 set,n,bypass_shape,mode_keep,mode_stop,mode_nudge_return,mode_nudge_hold,mode_lane_change,mode_curve_or_other,mode_turn,nearest_anchor_bypass_share,min_ade_median_m,nearest_anchor_modes
-anchors,1024,0,299.0,47.0,0.0,0.0,1.0,347.0,330.0,,,
-wod_train,415663,493,,,,,,,,0.0,0.772,"{""curve_or_other"": 255, ""keep"": 229, ""turn"": 5, ""stop"": 4}"
+anchors,1024,0,298.0,47.0,0.0,0.0,1.0,347.0,331.0,,,
+wod_train,415663,493,,,,,,,,0.0,0.776,"{""curve_or_other"": 255, ""keep"": 230, ""turn"": 4, ""stop"": 4}"
+p6_x10_expert,8859,552,,,,,,,,0.0,1.563,"{""keep"": 377, ""curve_or_other"": 173, ""stop"": 2}"

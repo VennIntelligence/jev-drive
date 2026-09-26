@@ -3267,7 +3267,7 @@ null false-flip 4.8–5.2%；副 tap 与 Lebowski prior 判格不变。
 **状态**：**待定**。限定：只在 CARLA（BA 集）；pooled 特征、线性 head；DINOv2 输入按竖图改成 350 × 322；DINOv3 未测。图：[night2-n6-backbone-flips](figs/night2-n6-backbone-flips.png)。
 **会推翻或推进本条的证据**：V-JEPA 2 只喂当前帧（1 帧重复成 clip）行人翻转掉到 DINOv2 的水平（那就是「时间」而不是「视频预训练」）；V-JEPA 流替换 Qwen 进 E5 student 后在真实数据上不再有害（推进快通道换 backbone）。
 
-## 49. openpilot 的冻结特征里有「前方停着的车」「旁边车道有车」「对向来车」的线性可读信息；desire 脉冲方向总对，但低速开环下变道幅度不够当绕行执行器（**待定**，P5 v1 两个 expert 集，绕行类障碍待 N1 重跑）
+## 49. openpilot 的冻结特征里有「前方静止障碍（含锥桶、事故车）」「旁边车道有车」「对向来车」的线性可读信息；desire 脉冲方向总对，但开环下变道幅度不够当绕行执行器（**待定**，P5 v1 两个 expert 集 + N1 的 P6 帧；2026-09-26 15:00 就地补 N1 重跑，原标题写「前方停着的车」「绕行类障碍待 N1 重跑」）
 
 2026-09-26。预登记与操作性选择在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N2（`[A-N2]` 条目写于任何数字之前，10:43 的 ego 速度对照是看到 probe a 之后登记的事后行），
 小表在 [results/night2/N2/](results/night2/N2/)，代码 `jevdrive/night2_n2.py`、`scripts/night2_desire.py`。接第 42 条（行人信息在 openpilot vision 层 AUC 0.51，只能外接）和第 47 条（第三层没有量具）：
@@ -3290,6 +3290,11 @@ desire 执行器检查（零训练，P5 v1 直行帧，每个目标帧 8 s 零�
 **状态**：**待定**。限定：只在 CARLA；车道由 route 折线横向距离定（3.5 m 车道假设，没查 map）；YOLO 在 PDM 集未测；高速档没有数据。
 **会推翻或推进本条的证据**：N1 x₁₀ 帧上 probe a 对锥桶 / 事故车掉到 ≤ 0.60（那就是「车」可读、「障碍物」不可读，要外接检测）；闭环里 desire 触发后 openpilot 真的完成变道（推进执行器路线）；
 x₁₀ 帧上（有障碍时）desire 横移明显变大（说明 plan 会结合场景放大 desire）。
+
+**2026-09-26 15:00 N1 重跑（就地补）**：在 P6 的 605 个世界（37 317 帧，锥桶、事故车、违停车、自行车、开门车，第 52 条）上按同一口径重跑（[A-N2] 12:31）：
+probe a 0.884–0.911、b 0.861–0.888、c（2W 帧）0.854–0.918，行驶帧 v ≥ 3 m/s 上 a 0.882–0.920（ego 速度一维 0.50）；事后按 scenario 拆开，锥桶类 0.95–0.99、事故车 0.89–0.98、违停车 0.87–0.92。
+上面「会推翻」的第一条（锥桶 / 事故车掉到 ≤ 0.60）没有发生，第 1 点里「障碍物可能读不出」的保留因此撤掉。
+desire 在 x₁₀ 有障碍的直行帧上：5–10 m/s（33 帧）Cinque 0.74 m、Lebowski 0.89 m，10–15 m/s（28 帧）0.86 / 1.14 m，比 P5 v1 直行帧略大，但没有一档到 1.5 m，执行器结论不变。
 
 ## 50. 快通道的检测输入不需要平地抬升和走廊筛：image-plane token（相机、框、类别、score、检测外观）经配对差分读出的行人反应与抬升版同一水平；走廊几何只对车辆 cut-in 有用（**待定**，P5 v1 BA，3 seed，两个 openpilot 模型）
 
@@ -3340,3 +3345,37 @@ openpilot 那条线的执行器检查（night-queue-2 N2）仍是第三层的主
 
 **状态**：**待定**。限定：反应式对手（traffic = PPO）那一臂没跑，A 的 (c) 只在不反应的对手上读；B 只有 171 个直路 episode，障碍全是 4.8 × 2.0 m 的车，没考路口和对向来车；cond_caut / aggr / PDM 只跑了 B。
 **会推翻或推进本条的证据**：traffic = PPO 下 PPO 的 at-fault 碰撞差 ≤ 5 pp（(c) 过，negotiation 判定升级）；GPUDrive 的 HF policy 装上后在同一考卷上过有效性门槛且会回线（执行层有了候选）。
+
+## 52. 第三层的第一版考卷（P6 v0）成立：PDM-Lite 在 9 类障碍上 100% 绕、删登记后 0% 绕、分叉都在障碍可见之后；对向车流造出了 negotiation（65% 先等）；放置 null 不过，InvadingTurn、开门车、救护车不进主读数；`cls_late` 的词表里没有绕行 anchor（**待定**，CARLA 220 集 55 条路线 × 3 seed，单 expert）
+
+2026-09-26。预登记与全部操作性选择在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N1（`[A]` 条目，写于每一步数字之前；对向车流的实现在 smoke 里改过两次，改动与原因都在 10:09 / 10:59 / 11:12 条），
+小表在 [results/night2/N1/](results/night2/N1/)，代码 `jevdrive/p6.py`、`scripts/b2d_hooks.py`（`p6_world`）、`scripts/p6_gen.sh`。接第 47 条（第三层没有量具）。
+设计：每条障碍类路线造 x₁₀（障碍在、无对向车）、x₀₀（障碍的 actor 全部藏到地下**并删掉 PDM-Lite 读的 `active_scenarios` 登记**）、2W 另加 x₁₁（障碍 + 对向车流，固定间距 25–45 m、从第一个 tick 起流动）
+和 x₀₁（无障碍 + 对向车流），seed 0 另有天气 null、放置 null（障碍挪到路肩）、镜像题（2W，对向车流 10–14 m 不断），共 605 个世界。
+
+| 量 | 结果 | 门 | |
+|:--|:--|:--|:--|
+| x₁₀ bypass 比例（每类 15 个世界） | 8 类 1W / 2W 障碍全部 1.00（1W 里 27% 先停后绕）；Emergency 1.00；VehicleOpensDoorTwoWays 0.67；InvadingTurn 0.40 | ≥ 0.70 | 9 类可用，2 类不可用 |
+| x₀₀ bypass | 0 / 165（x₀₀ 的 12 个 stop 与 x₀₁ 相同，是背景交通） | smoke：≥ 95% 帧 \|d\| < 0.3 m | 1 670 / 1 670 帧 |
+| t_div ≥ t_vis | 9 类障碍 135 / 135；InvadingTurn 12 / 15；Emergency 0 / 15（救护车在后方，前向相机看不到） | 只取通过的对 | |
+| negotiation：x₁₁ 里先等（wait-then-bypass 或 stop） | 0.65（x₁₀ 0.07）；AccidentTwoWays / Construction 2W 1.00，ParkedObstacle 2W 0.40，Door 0.60，HazardAtSideLane 2W 0.27 | ≥ 0.50 | 过 |
+| 放置 null keep | 35 / 45 = 0.78（其中 5 个 stop 在 x₀₀ 里也 stop，事后） | ≥ 0.90 | **不过，要修生成器** |
+| 镜像题 stop | 20 / 25 = 0.80（HazardAtSideLane 2W 的 5 个是跟车不停） | ≥ 0.80 | 过（踩线） |
+| 天气 null / x₀₁ 与对照的模式一致 | 55 / 55、75 / 75 | — | |
+
+![P6 expert modes](figs/night2_n1_expert_modes.png)
+
+图：每类 scenario 在四种世界里 expert 的世界级模式占比（左到右：x₁₀、x₁₁、镜像题、放置 null；n/a = 该类没有这种世界）。看 x₁₀ 一栏几乎全是绕（蓝），
+x₁₁ 一栏里黄（先等后绕）和橙（录制窗内一直在等）占了大头，镜像题基本全橙；放置 null 应该全灰，橙色那几格就是不过的地方。
+
+1. **P6 的 bypass 对比（x₁₀ − x₀₀）可以用了**：9 类障碍 135 对都干净（删登记后 PDM-Lite 不再「对空气绕行」，分叉在障碍可见之后 2.4–3.7 s，横向 0.3 m 分叉在可见后约 6 s）。
+2. **negotiation 对比（x₁₁ − x₁₀）也造出来了**，但是靠我们自己布的对向车流（B2D 自带的对向流在触发后 5 s、从障碍前方约 75 m 起流，smoke 里从没赶上 ego），
+   所以它量的是「PDM-Lite 的 gap check 对这张车流表的反应」，与 B2D 闭环 SR 里的 2W 难度不是同一个量。HazardAtSideLane 类的「等」是跟车，登记定义记不到，读考生时单列。
+3. **放置 null 不过**：路肩位移对自行车（它们仍被当成前车）和一部分 2W 不够。按规则先修生成器（加大偏移）并重跑这 45 个世界，才能读「考生是否只对『有东西』起反应」。
+4. **`cls_late` 的 K = 1024 词表里没有一个 bypass 形状的 anchor**（3 s 处 |y| ≥ 1 m 且 5 s 内回到 ±0.5 m）：WOD train 的 493 条、P6 x₁₀ expert 的 552 条 bypass 形状的未来，最近 anchor 没有一个是 bypass 形状
+   （P6 的 minADE 中位 1.56 m，最近 anchor 多是 keep）。第 47 条里 `cls_late` 在 WOD 绕行帧上 0 / 21，至少有一部分是 vocabulary 造成的；在 P6 上读 `cls_late` 的 Δm_bypass 之前要先换词表。
+
+**状态**：**待定**。限定：只在 CARLA、只用 220 集、单 expert（PDM-Lite 靠特权登记绕，横向是几何决定的）；B2D 短路线在障碍后很快结束，很多帧没有完整的回正段；
+negotiation 的车流表是我们定的；Emergency 的 t_div 早于前向可见，要么加后视相机要么只当对照。
+**会推翻或推进本条的证据**：修过的放置 null 过门后，考生在放置 null 上的 bypass 率 ≈ x₁₀（那是「只对有东西反应」，P5 的行人翻转也要打折）；换成有 bypass anchor 的词表后 `cls_late` 仍 Δm_bypass ≈ 0（那才是 representation 的问题）；
+第二个 expert（例如 TFv6 的 waypoint 当 teacher）在同一批世界上与 PDM-Lite 的模式一致率低（考卷的标签依赖单一规则 expert）。

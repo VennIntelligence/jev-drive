@@ -145,6 +145,12 @@
   可见性 4、快照 0.6；server 的 world tick 74。我们自己的代码不到 client 时间的 5%，大头是第三方的 TFv6 shadow（它就是要给 TFv6 考生录的，批量中途去掉会让一部分世界没有 TFv6 输出，不改）和 CARLA 渲染。
   结论：不改。线程数已限（OMP 2、NUMBA 3；环境里继承的 MKL_NUM_THREADS = 175 实测没有起线程），减少 server 数只会减少我们在容器配额里的份额，不会更快。12:31–12:44 完成 82 个世界（都是短的 1W / IT / EV）。
 
+- 2026-09-26 14:55 CST [A] 批量完成（14:22，605 / 605；最后一轮 485 个世界里 25 次 server rc 139、3 次 harness_error，都由第二次尝试补齐）。以下三条是**事后**（看到 expert 统计之后）登记的解读行，原判格不改：
+  (1) 放置 null 的 10 个 stop 里 5 个在同 case 的 x₀₀ 里也 stop（背景交通 / 红灯，与障碍无关）；按「放置 null 的模式 = x₀₀ 的模式」计是 40 / 45 = 0.889，仍低于 0.90。
+  另 5 个是障碍放到路肩后仍然让 PDM-Lite 停下：HazardAtSideLane 3 个（自行车改了横向 offset 但仍被当成前车）、AccidentTwoWays 1、VehicleOpensDoorTwoWays 1。
+  (2) HazardAtSideLaneTwoWays 的「等」是以约 2.6 m/s 跟在自行车后面而不是停，登记的 wait / stop 定义记不到它：镜像题 5 / 5 记成 keep，x₁₁ 的 wait 比例只有 0.27。
+  (3) probe a 按 scenario 拆开（Cinque / Lebowski `temporal`，5 折 OOF）：锥桶类 ConstructionObstacle 0.95–0.99、事故车 0.89–0.98、违停车 0.87–0.92，都远高于 0.70；
+  自行车类和 InvadingTurn、开门车类的正例率 < 8%（障碍在动或在侧车道），AUC 0.43–0.86 没法读（`research/results/night2/N2/probe_a_by_scenario_carla_p6.csv`）。
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
 激发的前提是冻结特征里有信息。行人那一轮 openpilot vision 层 AUC 0.51，只能外接。绕行需要三样，逐样 probe：
@@ -483,6 +489,81 @@ Qwen 行复现：CPU `eigh` 的 seed 0 与已存 M-C「pair qwen」criteria 逐�
 
 **资源**：墙钟 09:55 → 11:40（约 1.75 h，登记 5 h 的前半段做完了 N5 主读数与整个 N6）。GPU 3：抽特征 18.5 min、op small 7 min、UniDepth 47 min、DA3 约 70 min（被打断）、拟合约 1 h（含 CPU `eigh` 的慢跑）≈ 3.2 GPU·h（多个进程共卡，按墙钟计偏高）。GPU 4 没借。
 超过估计 2 倍的一步：N6 拟合最初在 CPU `eigh` 上（盒子过载，d = 3584 一次 559 s），发现后改 GPU `eigh`，没有继续等。
+
+### N1（执行员 A，2026-09-26 14:55 CST；605 个世界，GPU 0–3）
+
+数据：`runs/p6/gen`（605 个世界，每个世界的 recorder 输出同 P5 v1 并加 prop 与 PDM-Lite 登记），帧集 `processed/carla_p6`（37 317 个 5 Hz 帧）。表：`research/results/night2/N1/`
+（`worlds.csv` 每个世界的模式、`pairs_bypass.csv` t_div / t_vis、`negotiation.csv`、`frame_modes.csv`、`expert_stats.md` 全表、`vocab_bypass.csv`），图 `research/figs/night2_n1_expert_modes.png`。
+
+**x₁₀ 的 expert 模式**（每类 15 个世界 = 5 路线 × 3 seed；门 = bypass 比例 ≥ 0.70）
+
+| scenario | bypass_L / R | wait-then-bypass | stop | keep | bypass 比例 | 可用 |
+|:--|--:|--:|--:|--:|--:|:--|
+| Accident | 11 / 0 | 4 | 0 | 0 | 1.00 | 是 |
+| ConstructionObstacle | 11 / 0 | 4 | 0 | 0 | 1.00 | 是 |
+| ParkedObstacle | 10 / 0 | 5 | 0 | 0 | 1.00 | 是 |
+| HazardAtSideLane | 13 / 0 | 2 | 0 | 0 | 1.00 | 是 |
+| AccidentTwoWays | 15 / 0 | 0 | 0 | 0 | 1.00 | 是 |
+| ConstructionObstacleTwoWays | 15 / 0 | 0 | 0 | 0 | 1.00 | 是 |
+| ParkedObstacleTwoWays | 15 / 0 | 0 | 0 | 0 | 1.00 | 是 |
+| HazardAtSideLaneTwoWays | 15 / 0 | 0 | 0 | 0 | 1.00 | 是 |
+| VehicleOpensDoorTwoWays | 10 / 0 | 0 | 5 | 0 | 0.67 | **否** |
+| InvadingTurn | 0 / 6 | 0 | 3 | 6 | 0.40 | **否** |
+| YieldToEmergencyVehicle | 9 / 6 | 0 | 0 | 0 | 1.00 | 是（但 t_div 早于 t_vis，见下） |
+
+x₀₀（删障碍 + 删登记）165 个世界里没有一个 bypass（1W 60 / 60 keep；2W 63 keep、12 stop，这 12 个 stop 在同 case 的 x₀₁ 里一模一样，是背景交通）；
+天气 null 与同 case x₁₀ 的模式 55 / 55 相同；x₀₁ 与 x₀₀ 的模式 75 / 75 相同（对向车本身不引起反应）。
+
+**t_div 与 t_vis**（x₁₀ 对 x₀₀；主读数只取 t_div ≥ t_vis 的对）：9 类障碍 135 / 135 对通过，ego 分叉（1 cm）中位在障碍首次可见后 2.4–3.7 s，横向分叉（0.3 m）在可见后 5.8–7.0 s；
+InvadingTurn 12 / 15 通过（3 对提前）、中位 0.6 s / 1.2 s；**Emergency 0 / 15**（12 对提前、3 对从未可见，救护车从后方来，前向三路相机看不到）。
+删登记 smoke 在全部数据上：x₁₀ 在 3 s 处正在绕的 1 670 帧（143 对）上 x₀₀ 的 |d(k + 3 s)| 全部 < 0.3 m。
+
+**negotiation（x₁₁ − x₁₀，2W，每类 15 个 case）**
+
+| scenario | x₁₁ wait 比例 | x₁₀ wait 比例 | 横向起动延迟中位（s） | x₁₀ 起动时刻的速度差 x₁₁ − x₁₀ 中位（m/s） |
+|:--|--:|--:|--:|--:|
+| AccidentTwoWays | 1.00 | 0.00 | 29.4 | −6.7 |
+| ConstructionObstacleTwoWays | 1.00 | 0.00 | 12.4 | −9.5 |
+| ParkedObstacleTwoWays | 0.40 | 0.00 | 3.0 | −7.2 |
+| HazardAtSideLaneTwoWays | 0.27 | 0.00 | 20.2 | −0.7 |
+| VehicleOpensDoorTwoWays | 0.60 | 0.33 | 2.2 | −8.4 |
+| **合并** | **0.65**（门 ≥ 0.50，**过**） | 0.07 | | |
+
+**null 与镜像题**：放置 null keep 35 / 45 = **0.78（门 ≥ 0.90，不过）**；镜像题 stop 20 / 25 = **0.80（门 ≥ 0.80，过）**，HazardAtSideLaneTwoWays 的 5 个是跟车不停（记成 keep）。
+对向车流 smoke 在全部数据上：窗口内至少 1 辆对向车的比例 x₁₁ 69 / 75、x₀₁ 53 / 75、镜像 23 / 25，x₁₀ 2 / 75、x₀₀ 1 / 75（登记是「每个 2W 世界」，全量上 x₀₁ 有 22 个世界窗口内没有来车，如实报）。
+
+**CPU 准备**：(i) `cls_late` 的 K = 1024 词表 bypass 形状 anchor 0 / 1024；bypass 形状的目标轨迹里最近 anchor 是 bypass 形状的比例：WOD train 0 / 493（minADE 中位 0.78 m），
+**P6 x₁₀ expert 0 / 552**（占 x₁₀ 帧的 6.2%，minADE 中位 1.56 m，最近 anchor 377 个是 keep）。(ii) 220 集每类 5 条路线（val 集数见 11:41 条）。
+
+**判读**：第三层的第一版考卷在 9 类障碍上成立（expert 100% 绕、删登记后 0% 绕、分叉在可见之后），negotiation 被造出来了（x₁₁ 里 65% 先等），镜像题踩线过；
+放置 null 不过——按 todo 写死的规则「不过就修生成器」：路肩位移对自行车与部分 2W 不够，考生读放置 null 之前要先修（加大 HazardAtSideLane 的 offset、2W 的路肩余量）并重跑这 45 个世界。
+InvadingTurn 和 VehicleOpensDoorTwoWays 不进 bypass 主读数；Emergency 只能当「看不见的触发」对照，不进主读数。`cls_late` 的词表里没有能表示绕行的 anchor，它在第三层上的零读数先归 vocabulary。
+资源：墙钟 09:50–14:22（其中 11:39–12:28 box 重启停摆），约 12 卡·h（smoke 1 卡 1.7 h、a 段 2 卡 1.5 h、续跑 4 卡 1.9 h）；CPU 被别的执行员打满期间每 run 慢 3 倍、25 次 CARLA 渲染线程超时崩溃（重试补齐）。
+
+### N2 的 N1 部分（执行员 A，2026-09-26 14:55 CST；GPU 3 约 0.3 h）
+
+口径见 [A-N2] 12:31。帧集 `processed/carla_p6`（37 317 帧，605 个世界），openpilot 两个模型按世界成流抽取（605 流、40 342 帧、10.5 min）。表 `research/results/night2/N2/probe_carla_p6.csv`、`desire_bins_carla_p6.csv`。
+
+| probe（5 折 AUC 均值） | n / 正例率 | Cinque temporal | Lebowski temporal | Cinque vision | Lebowski vision | ego 速度一维 | 判定 |
+|:--|:--|--:|--:|--:|--:|--:|:--|
+| a 本车道前方 ≤ 30 m 静止 actor（含锥桶、prop） | 37 317 / 0.31 | 0.911 | 0.887 | 0.884 | 0.904 | 0.728 | 有信息 |
+| b 相邻车道 ±20 m 有车 | 37 317 / 0.75 | 0.861 | 0.883 | 0.866 | 0.888 | 0.677 | 有信息 |
+| c 左侧对向车道 ≤ 50 m 来车（2W 帧） | 26 779 / 0.54 | 0.854 | 0.897 | 0.904 | 0.918 | 0.665 | 有信息 |
+| a，v ≥ 3 m/s（事后） | 20 914 / 0.17 | 0.920 | 0.903 | 0.882 | 0.902 | 0.498 | |
+| c，2W 且 v ≥ 3 m/s（事后） | 13 729 / 0.41 | 0.870 | 0.897 | 0.903 | 0.936 | 0.571 | |
+
+折间 sd 最大 0.04–0.11（c 最大）。YOLO token 在 P6 帧上没有检测，未测。
+
+desire 补跑（x₁₀、本车道前方有静止障碍、直行、v ≥ 5 m/s 的帧；主读点 = 含脉冲的那一步）：
+
+| 档（m/s） | n | Cinque 中位 \|Δ_lat(3 s)\| / 方向正确 | Lebowski 中位 / 方向正确 | 判定 |
+|:--|--:|:--|:--|:--|
+| 5–10 | 33 | 0.74 m / 92% | 0.89 m / 96% | Cinque「不按 desire 变道」、Lebowski「之间」 |
+| 10–15 | 28 | 0.86 m / 95% | 1.14 m / 96% | 之间 |
+| > 15 | 1 | 1.51 m | 1.69 m | n < 20，只报数不判 |
+
+**判读**：绕行要的三样信息（本车道静止障碍、旁车道车、对向来车）在 openpilot 冻结特征里都线性可读，锥桶和事故车也读得出（事后按 scenario 拆开 0.89–0.99），而且在行驶帧上远高于 ego 速度一维；
+第 49 条留下的「障碍物可能读不出」的反例没有出现。desire 在有障碍时横移比 P5 v1 直行帧略大（5–10 m/s：0.74 / 0.89 m 对 0.61 / 0.68 m），但仍没有一档到「执行器可用」。
 
 ### N2 的 P5 v1 部分（执行员 A 的子执行员，2026-09-26 11:35 CST；N1 数据到后由 A 重跑 a / b 并跑 c）
 
