@@ -362,10 +362,39 @@ def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm")) -> pd.DataFrame:
     return tab
 
 
+def fig_desire(out_dir=REPO / "research" / "figs", read: int = 0):
+    """|Delta_lat(3 s)| of the desire arms against ego speed (1 m/s bins, median and IQR), both models, both
+    directions, with the registered 0.8 m / 1.5 m lines."""
+    import matplotlib as mpl
+    from . import plots
+    d = pd.read_csv(RESULTS / "desire_frames.csv")
+    d = d[d.read == read]
+    d["vb"] = np.floor(d.v_ego).clip(upper=15)
+    col = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    with mpl.rc_context(plots.STYLE):
+        fig, ax = plots.plt.subplots(figsize=(plots.COL, 2.0))
+        for m in ("cinque", "lebowski"):
+            for side, ls, sgn in (("left", "-", 1), ("right", "--", -1)):
+                g = d[d.model == m].groupby("vb")[f"d_{side}"]
+                q = g.quantile([0.25, 0.5, 0.75]).unstack() * sgn
+                n = g.size()
+                q = q[n >= 5]
+                ax.plot(q.index + 0.5, q[0.5], ls, marker="o", color=col[m],
+                        label=f"{m.capitalize()} {side}")
+                ax.fill_between(q.index + 0.5, q[0.25], q[0.75], color=col[m], alpha=0.12, lw=0)
+        for y, c in ((1.5, "#7F7F7F"), (0.8, "#7F7F7F")):
+            ax.axhline(y, color=c, lw=0.6, ls=":")
+        ax.set_xlabel("ego speed (m/s)")
+        ax.set_ylabel(r"$|\Delta_{lat}(3\,s)|$ toward desire (m)")
+        ax.set_ylim(bottom=0)
+        plots.legend_below(fig, ax, ncol=2)
+        plots.save(fig, Path(out_dir), "night2_n2_desire_speed")
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("labels", "probe", "controls", "targets", "desire"))
+    ap.add_argument("step", choices=("labels", "probe", "controls", "targets", "desire", "fig"))
     ap.add_argument("--set", default="carla_p5v1_ba")
     ap.add_argument("--dets", default="", help="probe: YOLO detection root (E5: processed/elicit_e5/dets)")
     ap.add_argument("--workers", type=int, default=24)
@@ -378,6 +407,8 @@ def main():
         print(controls(a.set, a.dets or None).to_markdown(index=False))
     elif a.step == "targets":
         print(targets(a.set))
+    elif a.step == "fig":
+        fig_desire()
     else:
         print(desire_table().to_markdown(index=False))
 
