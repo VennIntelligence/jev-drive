@@ -439,7 +439,10 @@ def data(with_lead: bool = True) -> dict:
     t6, past6 = Q1._p6_rows()
     with I.p5_set(SET_P6):
         op6 = PO.load(t6, (MODEL,), sub="op_streams_vis")[f"op-{MODEL} temporal"]
-        ld6 = PO.load(t6, (MODEL,), arrays, sub="op_streams_lead") if with_lead else {}
+        try:                                    # the P6 lead re-run comes after the fit (export-p6 fills K3 there)
+            ld6 = PO.load(t6, (MODEL,), arrays, sub="op_streams_lead") if with_lead else {}
+        except (FileNotFoundError, AssertionError):
+            ld6 = {f"op-{MODEL} {k}": np.full((len(t6), ld[f"op-{MODEL} {k}"].shape[1]), np.nan, np.float32) for k in arrays}
     lab = np.load(kdir("labels", "route.npz"))
     assert (lab["frame_name"].astype(str) == t.frame_name.to_numpy()).all()
     sp = load_split()
@@ -586,9 +589,9 @@ def _numpy_check(D, tag) -> dict:
     """The saved heads through KHead (what the server runs) against the fit's own predictions."""
     kh = KHead()
     ego, op = D["ego"], D["op"]
-    return {"K0": float(np.abs(kh.predict("K0", tag, ego, op)[0] - PRED[tag]["K0"]).max()),
-            "K1": float(np.abs(kh.predict("K1", tag, ego, op)[0] - PRED[tag]["K1"]).max()),
-            "K3": float(np.abs(kh.predict("K3", tag, ego, op, D["lead"], D["lead_prob"])[0] - PRED[tag]["K3"]).max())}
+    return {"K0": float(np.nanmax(np.abs(kh.predict("K0", tag, ego, op)[0] - PRED[tag]["K0"]))),
+            "K1": float(np.nanmax(np.abs(kh.predict("K1", tag, ego, op)[0] - PRED[tag]["K1"]))),
+            "K3": float(np.nanmax(np.abs(kh.predict("K3", tag, ego, op, D["lead"], D["lead_prob"])[0] - PRED[tag]["K3"])))}
 
 
 PRED: dict = {}
@@ -663,6 +666,24 @@ def export(D, rl):
     rl.log.info("open-loop exports -> %s (P6 readouts %s)", out, dict(zip(*np.unique(r6, return_counts=True))))
 
 
+def export_p6():
+    """K3 on the P6 exam rows once their lead re-run exists (the fit wrote NaN there)."""
+    from . import elicit_i3 as I, nq3_q1 as Q1, p5_exam as E, p5_openpilot as PO
+    t6, past6 = Q1._p6_rows()
+    with I.p5_set(SET_P6):
+        op6 = PO.load(t6, (MODEL,), sub="op_streams_vis")[f"op-{MODEL} temporal"]
+        ld = PO.load(t6, (MODEL,), ("lead", "lead_prob"), sub="op_streams_lead")
+    ego6 = E.ego_input(t6, past6).astype(np.float32)
+    kh = KHead()
+    z = dict(np.load(kdir("openloop", "p6_K3.npz"), allow_pickle=True))
+    assert (z["frame_name"].astype(str) == t6.frame_name.to_numpy()).all()
+    for f in FOLDS:
+        z[f] = kh.predict("K3", f, ego6, op6, ld[f"op-{MODEL} lead"], ld[f"op-{MODEL} lead_prob"])[0].astype(np.float32)
+    z["unseen"] = np.where((z["readout"] == "R1")[:, None, None], z["R1"], z["R2"])
+    np.savez_compressed(kdir("openloop", "p6_K3.npz"), **z)
+    print({"p6_rows": len(t6), "nan_left": int(np.isnan(z["unseen"]).any((1, 2)).sum())})
+
+
 def check_eigh():
     """[K] 17:30 (K3 step): fold R1 fitted with the float64 grams diagonalised on the CPU (the stock path) and on the
     GPU; predictions must agree within 1 mm; the wall times are the before / after of the optimisation."""
@@ -693,7 +714,7 @@ def check_eigh():
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh"))
+    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh", "export-p6"))
     ap.add_argument("--set", default=SET_BA)
     a = ap.parse_args()
     if a.step == "split":
@@ -706,6 +727,8 @@ def main():
         fit()
     elif a.step == "check-eigh":
         check_eigh()
+    elif a.step == "export-p6":
+        export_p6()
 
 
 if __name__ == "__main__":

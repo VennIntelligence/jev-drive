@@ -54,31 +54,33 @@ guard() {  # guard <pid> <estimate h> <log>: wait for a background job, kill it 
 }
 
 # ---------------------------------------------------------------- K2: Cinque lead outputs on P5 v1 BA and P6 v0
-lead() {
-    local d=$1 est=$2 pids=() s set
-    for set in carla_p5v1_ba carla_p6; do
-        wait_gpu 6000
-        for s in 0 1; do
-            P5_SET=$set CUDA_VISIBLE_DEVICES=$GPU setsid taskset -c "$K_CPUS" "$PY_OP" scripts/p5_openpilot.py --models cinque \
-                --arrays temporal lead lead_prob --out-sub op_streams_lead --shard $s/2 --workers 2 >> "$d/log-$set-$s.txt" 2>&1 &
-            pids+=($!); echo "${pids[*]}" > "$d/pids"
-        done
-        for s in "${pids[@]}"; do guard "$s" "$est" "$d/log-$set-0.txt" || return 1; done
-        pids=()
-        P5_SET=$set taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k check-lead --set "$set" >> "$d/log.txt" 2>&1 || return 1
-        P5_SET=$set taskset -c "$K_CPUS" "$PY" -m jevdrive.p5_openpilot finalize --arrays temporal,lead,lead_prob \
-            --sub op_streams_lead --models cinque >> "$d/log.txt" 2>&1 || return 1
+lead_set() {  # lead_set <dir> <estimate h> <set>: 4 single-model processes (GPU 6 is time-sliced among ~10 processes;
+    # each openpilot process spin-waits at 100% of one core, so 4 processes = the 4 cores and 4 shares of the card)
+    local d=$1 est=$2 set=$3 pids=() s
+    wait_gpu 8000
+    for s in 0 1 2 3; do
+        P5_SET=$set CUDA_VISIBLE_DEVICES=$GPU setsid taskset -c "$K_CPUS" "$PY_OP" scripts/p5_openpilot.py --models cinque \
+            --arrays temporal lead lead_prob --out-sub op_streams_lead --shard $s/4 --workers 1 >> "$d/log-$set-$s.txt" 2>&1 &
+        pids+=($!); echo "${pids[*]}" > "$d/pids"
     done
+    for s in "${pids[@]}"; do guard "$s" "$est" "$d/log-$set-0.txt" || return 1; done
+    P5_SET=$set taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k check-lead --set "$set" >> "$d/log.txt" 2>&1 || return 1
+    P5_SET=$set taskset -c "$K_CPUS" "$PY" -m jevdrive.p5_openpilot finalize --arrays temporal,lead,lead_prob \
+        --sub op_streams_lead --models cinque >> "$d/log.txt" 2>&1
 }
+lead_ba() { lead_set "$1" "$2" carla_p5v1_ba; }
+lead_p6() { lead_set "$1" "$2" carla_p6; }
 labels() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k labels >> "$1/log.txt" 2>&1; }
 fit() { wait_gpu 12000; CUDA_VISIBLE_DEVICES=$GPU taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k fit >> "$1/log.txt" 2>&1; }
+export_p6() { taskset -c "$K_CPUS" "$PY" -m jevdrive.nq4_k export-p6 >> "$1/log.txt" 2>&1; }
 
 case ${1:-all} in
-    lead) step lead 1.5 lead ;;
+    lead) step lead_ba 1.5 lead_ba; step lead_p6 1.0 lead_p6 ;;
     labels) step labels 0.2 labels ;;
     fit) step fit 0.5 fit ;;
+    labels-fit) step labels 0.2 labels; step fit 0.5 fit ;;
     all) trap 'exit 129' HUP INT TERM
-         step lead 1.5 lead; step labels 0.2 labels; step fit 0.5 fit
+         step lead_ba 1.5 lead_ba; step labels 0.2 labels; step fit 0.5 fit; step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6
          status done "lead, labels, fit done; closed-loop rule-8 step: scripts/nq4_k.sh cl <gpu>" ;;
     *) sed -n 2,11p "$0"; exit 1 ;;
 esac
