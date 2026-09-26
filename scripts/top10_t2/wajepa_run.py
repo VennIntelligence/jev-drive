@@ -51,16 +51,47 @@ def image(path: str) -> torch.Tensor:
     return torch.full((3, H, W), -1.0)
 
 
+def _prep(path: str) -> np.ndarray:
+    return cv2.resize(np.array(Image.open(path)), (W, H), interpolation=cv2.INTER_AREA)
+
+
+def build_cache(paths, d: Path, workers: int):
+    """Every unique image decoded and resized once (the same ops as `image`) into a uint8 memmap: history frames are
+    shared between neighbouring requests, so this does ~3x less JPEG work on a CPU-starved box. Reused if present."""
+    from multiprocessing import Pool
+    from tqdm import tqdm
+    d.mkdir(parents=True, exist_ok=True)
+    u = np.unique([p for p in paths if p])
+    if (d / "done").exists() and (np.load(d / "paths.npy") == u).all():
+        return u, np.load(d / "cache.npy", mmap_mode="r")
+    mm = np.lib.format.open_memmap(d / "cache.npy", "w+", np.uint8, (len(u), H, W, 3))
+    with Pool(workers) as pool:
+        for i, a in enumerate(tqdm(pool.imap(_prep, u, chunksize=16), total=len(u), desc="cache", mininterval=30)):
+            mm[i] = a
+    mm.flush()
+    np.save(d / "paths.npy", u)
+    (d / "done").touch()
+    return u, np.load(d / "cache.npy", mmap_mode="r")
+
+
 class Req(torch.utils.data.Dataset):
-    def __init__(self, z, idx):
+    def __init__(self, z, idx, cache=None):
         self.z, self.idx = z, idx
+        self.row = {p: i for i, p in enumerate(cache[0])} if cache is not None else None
+        self.mm = cache[1] if cache is not None else None
+
+    def img(self, p: str) -> torch.Tensor:
+        if self.mm is None or not p:
+            return image(p)
+        t = torch.from_numpy(np.array(self.mm[self.row[p]])).permute(2, 0, 1).float() / 255.0
+        return t.mul(2.0).sub(1.0).clamp(-1.0, 1.0)
 
     def __len__(self):
         return len(self.idx)
 
     def __getitem__(self, j):
         i, z = self.idx[j], self.z
-        imgs = torch.stack([image(str(p)) for p in z["img"][i]]).reshape(4, 4, 3, H, W)
+        imgs = torch.stack([self.img(str(p)) for p in z["img"][i]]).reshape(4, 4, 3, H, W)
         cmd = int(z["cmd"][i])
         ego = np.r_[np.eye(4)[min(cmd, 3)], z["ego"][i]].astype(np.float32)
         return {"history_images": imgs, "history_trajectory": torch.tensor(z["hist"][i], dtype=torch.float32),
@@ -69,9 +100,9 @@ class Req(torch.utils.data.Dataset):
 
 
 @torch.no_grad()
-def run(model, z, idx, amp: bool, workers=4) -> np.ndarray:
+def run(model, z, idx, amp: bool, workers=4, cache=None) -> np.ndarray:
     from tqdm import tqdm
-    dl = torch.utils.data.DataLoader(Req(z, idx), batch_size=1, num_workers=workers, pin_memory=True,
+    dl = torch.utils.data.DataLoader(Req(z, idx, cache), batch_size=1, num_workers=workers, pin_memory=True,
                                      prefetch_factor=4 if workers else None)
     out = []
     for f in tqdm(dl, desc="wajepa", unit="sample", mininterval=10):
@@ -125,6 +156,8 @@ def main():
     ap.add_argument("--shard", type=int, nargs=2, default=(0, 1))
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--merge", nargs="*", help="shard outputs to merge into --out")
+    ap.add_argument("--cache", help="dir of the decoded-image memmap (built on first use; --cache-only builds and exits)")
+    ap.add_argument("--cache-only", action="store_true")
     a = ap.parse_args()
     if a.merge:
         zs = [np.load(p) for p in a.merge]
@@ -132,6 +165,10 @@ def main():
         o = np.argsort(idx)
         np.savez_compressed(a.out, keys=np.concatenate([z["keys"] for z in zs])[o],
                             traj=np.concatenate([z["traj"] for z in zs])[o])
+        return
+    if a.cache_only:
+        with np.load(a.request) as f:
+            build_cache(f["img"].ravel(), Path(a.cache), a.workers)
         return
     agent = build_agent()
     if a.check:
@@ -143,7 +180,8 @@ def main():
         z = {k: f[k] for k in f.files}
     idx = np.arange(len(z["keys"]))[a.shard[0]::a.shard[1]]
     t0 = time.time()
-    traj = run(agent.model, z, idx, not a.no_amp, a.workers)
+    cache = build_cache(z["img"].ravel(), Path(a.cache), a.workers) if a.cache else None
+    traj = run(agent.model, z, idx, not a.no_amp, a.workers, cache)
     np.savez_compressed(a.out, keys=z["keys"][idx], idx=idx, traj=traj)
     print(f"{len(traj)} plans in {time.time() - t0:.0f} s -> {a.out}")
 
