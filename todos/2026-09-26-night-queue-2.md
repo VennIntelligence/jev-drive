@@ -92,6 +92,24 @@
 第三层可以走「模式头 → desire → openpilot plan」；中位 < 0.8 m → 记「openpilot 不按 desire 变道，执行器另找」。N1 的 x₁₀ 帧到后再补一遍（有障碍时）。
 09-25 的 2b 是拿 desire 当导航（有害），这里是反应式触发，两者分开写。
 
+- 2026-09-26 09:55 CST [A-N2] P5 v1 部分的操作性选择（写于任何 probe / desire 数字之前；代码 `jevdrive/night2_n2.py`）：
+  - **帧**：两个 expert 集（`processed/carla_p5v1_{ba,pdm}`）各自 index 里 `source == p5` 的全部行（x⁺ / x⁻ / null 都用；P4 训练路线不算 P5 v1 帧）。
+  - **几何**：每帧在本 run 的 `route.json` 折线上投影 ego 与 `actors.npz` 同一 server frame 的所有 vehicle / walker，得 (Δs, d)。ego 车道 = |d| ≤ 1.75 m，相邻车道 = 1.75 < |d| ≤ 5.25 m（按 3.5 m 车道；不查 CARLA map，因为不起 server）。
+    藏在地下的 actor（|z − z_ego| > 5 m）不算。
+  - **probe a 标签**：存在 vehicle 或 walker，速度 < 0.5 m/s，0 < Δs ≤ 30 m，|d| ≤ 1.75 m。**probe b 标签**（登记口径）：存在 vehicle，|Δs| ≤ 20 m，1.75 < |d| ≤ 5.25 m；
+    另报「只算前方 0 ≤ Δs ≤ 20 m」一列作补充（三路相机都朝前，后方车看不见），判格按登记口径。
+  - **probe**：训练折内标准化 + L2 logistic regression（C = 1），GroupKFold(5) 按 base 路线分组；判格用 5 折 AUC 的均值，另报折间标准差和 OOF 合并 AUC。
+  - **特征**：openpilot `temporal`（Cinque / Lebowski，512 维）；「`driving_vision` 输出」取 tap 表里的 `vision`（temporal 模块之前的 pooled vision encoder 输出：Cinque `mean` 512 维、
+    Lebowski `view_40` 3072 维），都是 `op_streams_vis` 已抽好的；YOLO26x-seg image-plane token 集 = E5 的检测（score ≥ 0.25，行人 / 骑车人 / 车）每路相机按 score 取前 8 个，
+    每个 (类别 one-hot 3, u_c/W, v_c/H, w/W, h/H, score, mask) → 3 × 8 × 8 = 192 维，不 lift、不筛。**YOLO 只有 BA 集**（PDM 集没有检测，补跑约 1.6 GPU·h，超本节预算，写「未测」）。
+  - **desire 目标帧**：index 的 p5 行里 v_ego ≥ 5 m/s、intent = GO_STRAIGHT、前方 60 m 路线航向变化 < 10°、该 attempt 里目标帧之前至少 40 个相机帧；每个集每档最多 150 帧
+    （每 attempt 最多 2 帧、相隔 ≥ 10 s，seed 0 抽样）。
+  - **desire 协议**：每个目标帧三臂（无 / laneChangeLeft = 3 / laneChangeRight = 4），每臂都从目标帧前 40 帧（8 s）的零状态起跑，前 40 帧三臂逐字节相同；
+    desire one-hot 从目标帧起一直保持（modeld 的 DesireHelper 在变道期间就是这样保持的），`OPModel` 只在上升沿发脉冲。
+    **主读数 = 目标帧那一步的输出**（含脉冲的那次 forward；图像仍是直行 log，开环），另报 +0.2 s、+1.0 s 两个读点作补充，不用于判格。
+    Δ_lat(3 s) = y_left(3 s | desire) − y_left(3 s | 无)，y_left = −plan_pos[:, 1] 在 T_IDXS 上插值到 3 s；方向正确 = Left 时 Δ > 0、Right 时 Δ < 0。
+    每档的中位 |Δ| 和方向正确率把左右两臂合在一起算；Cinque、Lebowski 分别判格；两个 expert 集分别报并报合并。
+
 ## N3. 榜单 head × 反应：能力包的 2 × 2（CPU 为主，< 2 GPU·h）
 
 同一个冻结 `temporal` 上，回答「榜单最优的 head 保不保反应、能力 head 掉不掉榜单分、叠起来两边能不能都留住」。
