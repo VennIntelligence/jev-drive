@@ -1,0 +1,7 @@
+option,pairs,independent_events,scan_gpu_h,build_gpu_h,qwen_gpu_h,op_stream_edit_gpu_h,total_gpu_h,wall_h_5_cards,note
+"E2 as run (0.8 s SAM scan, one per sequence per 5 s)",216,216,1.3,0.102,0.045720000000000004,0.0,1.4477200000000001,0.289544,measured
+"full 10 Hz SAM scan, one per sequence per 5 s",247,247,10.397573600153935,0.11663888888888889,0.052281666666666664,0.0,10.566494155709492,2.1132988311418983,
+"full 10 Hz SAM scan, every in-corridor frame",5023,230,10.397573600153935,2.3718909349410984,1.0631652308383042,0.0,13.832629765933337,2.7665259531866675,frames of one event are near-duplicates
+"full 10 Hz YOLO scan + SAM masks on hits, every in-corridor frame",5023,230,0.4159029440061574,2.3718909349410984,1.0631652308383042,0.0,3.8509591097855598,0.770191821957112,YOLO recall not below SAM (decision 45); SAM only inside the build
+"existing 0.8 s scan, every in-corridor frame (no new scan)",628,230,0.0,0.2965555555555555,0.13292666666666667,0.0,0.4294822222222222,0.08589644444444444,
+"full YOLO scan, every in-corridor frame, + openpilot stream edited",5023,230,0.4159029440061574,2.3718909349410984,1.0631652308383042,3.5028534827785265,7.353812592564086,1.4707625185128173,per-frame LaMa; video-consistent inpainting would add to this

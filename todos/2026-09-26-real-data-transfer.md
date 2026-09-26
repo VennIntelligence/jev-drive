@@ -125,7 +125,7 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (5) **判格读 Qwen `L18_last` 行人 scope 的点估计**（本节读法写的是「CARLA 上 Qwen 的比值」）：< 2 → 编辑质量不是 E2 的瓶颈，做 G3b；[2, 3) → 做 G3b，标「灰区」；≥ 3 → 停在 G3a。openpilot 与 YOLO 两行只描述。
   (6) **限定先写下**：E2 的分母是「同形补丁贴空路面」的安慰剂（只量管线噪声），CARLA 的分母是昼夜互换（全图外观大变），两者不是同一种 null；按登记用天气 null 判。
   为了不让这一点被数字掩盖，另报一个描述量：两边编辑对的分子本身（各自 x⁺ 标准差单位下的 RMS 位移中位数，CARLA 行人 vs E2 的 0.322 / 0.070 / 0.076）。
-- 2026-09-26 08:36 CST [G3] G3a 判格与 G3b 的登记（写于 G3b 的任何标签、拟合与读数之前）。G3a run `runs/real-data-transfer/g3a/20260926-083005`：CARLA 行人 scope 的 Qwen 比值 **0.23 [0.19, 0.29]** < 2，
+- 2026-09-26 08:36 CST [G3] G3a 判格与 G3b 的登记（写于 G3b 的任何标签、拟合与读数之前）。G3a run `runs/real-data-transfer/g3a/20260926-083003`：CARLA 行人 scope 的 Qwen 比值 **0.23 [0.19, 0.29]** < 2，
   按读法做 G3b（不是灰区）。数字与读法见结果节。
   **G3b (1) PDM 标签**：911 个有效对的 token，官方 v1.1（`third_party/navsim-v1.1`，`envs/navsim1`）只为这些 token 建 metric cache（`scripts/elicit_e3_scorer.sh` 同一口径：`run_metric_caching.py` 加 token 过滤、`run_pdm_score.py` 经 `navsim_agent.PrecomputedAgent` 回放）。
   两条 proposal 的几何**就是 E2 标签 (b) / (c) 自己的轨迹**：「继续」= `elicit_e2_train.cv_path`（t0 速度匀速、最后 0.5 s 的 yaw rate），「刹停」= `ctra(decel=3)`（同一弧线 3 m/s² 减到停）；

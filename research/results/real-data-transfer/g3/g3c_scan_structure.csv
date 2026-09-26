@@ -1,0 +1,2 @@
+train_frames_full,train_sequences,scan_frames,scan_corridor_frames,corridor_share,scan_events,event_sequences,event_duration_median_s,event_duration_p90_s,full_rate_corridor_frames_est,full_rate_candidates_5s_rule_est,e2_pairs
+415663,2037,51970,628,0.012083894554550702,230,182,1.6,4.0,5022.827862228209,247,216
