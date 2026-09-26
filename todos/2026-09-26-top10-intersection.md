@@ -230,7 +230,7 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
      I3 同 `elicit_i3` 的 judge（`p5_exam.exam`，去掉 TFv6 列，τ 由 I3 null 定，场景 bootstrap）。P5 表里 TFv6、openpilot prior、M-C 用已发表的 run 作参照行，不重算。
   2. **相机**：两个模型的预处理都把输入写死成 nuPlan 的 1920×1080（SparseDriveV2 的 resize 用 config 里的 H / W 而不是实际图宽，ZTRS 按固定像素裁剪拼接），所以不能直接喂 972×1079 / 800×450 的图。
      适配器渲染虚拟 nuPlan 相机：nuPlan 内参（f = 1545，主点 (960, 560)）与 nuPlan 畸变（k1 = −0.356，模型训练时看的是未去畸变的原图），朝向 = nuPlan CAM_F0 的朝向绕 z 转到映射源相机的 yaw
-     （5.2 的映射原样：f0 ← front，l0 / r0 ← front_left / front_right；P5 为 0 / ±45°，I3 为各场景 rig 的实际 yaw，约 ±55°），纯旋转重投影（`camgeom.choose_sources`：每个像素取离光轴最近的源相机），源相机都看不到的像素填黑。
+     （5.2 的映射原样：f0 ← front，l0 / r0 ← front_left / front_right；P5 为 0 / ±45°，I3 为各场景 rig 的实际 yaw，约 ±55°），纯旋转重投影：映射源相机看得到的像素取它，看不到的取其余源相机里离光轴最近的（`camgeom.choose_sources`），都看不到的填黑（10:15 改定，原写「每个像素都取离光轴最近的源相机」，改成映射源优先是为了让 f0 ← front 字面成立；仍在任何输出之前）。
      SparseDriveV2 的 `projection_mat` 用虚拟相机自己的标定算（NAVSIM 的 lidar 系 = 后轴 ego 系）；相机位置取映射源相机的安装位置，I3 的前相机原点放在 nuPlan CAM_F0 的 (1.67, 0, 1.52) m，输出轨迹再平移回前相机原点（对 2 s 速度无影响）。
   3. **ego 输入**：照 night-queue-2 [B] 09:58 (2) 的 NAVSIM ego 构造（`past` 的 t0 速度、每步速度变化 / 0.25 s，旋到该步车体系；GO_LEFT → left、GO_STRAIGHT → straight、GO_RIGHT → right、UNKNOWN → unknown）。
      SparseDriveV2 只读当前帧；ZTRS 的 t−0.5 s 状态与图像只进 `ec_target` 那一遍，而那一遍只进 loss（`no_cond = True`，smoke 已核对关掉后选中轨迹逐位相同），所以关掉 `ec_target`，其余原样。
