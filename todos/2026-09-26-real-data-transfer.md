@@ -125,6 +125,29 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (5) **判格读 Qwen `L18_last` 行人 scope 的点估计**（本节读法写的是「CARLA 上 Qwen 的比值」）：< 2 → 编辑质量不是 E2 的瓶颈，做 G3b；[2, 3) → 做 G3b，标「灰区」；≥ 3 → 停在 G3a。openpilot 与 YOLO 两行只描述。
   (6) **限定先写下**：E2 的分母是「同形补丁贴空路面」的安慰剂（只量管线噪声），CARLA 的分母是昼夜互换（全图外观大变），两者不是同一种 null；按登记用天气 null 判。
   为了不让这一点被数字掩盖，另报一个描述量：两边编辑对的分子本身（各自 x⁺ 标准差单位下的 RMS 位移中位数，CARLA 行人 vs E2 的 0.322 / 0.070 / 0.076）。
+- 2026-09-26 08:40 CST（box 时钟）[G1] 分步时间估计与 g₁ / g₃ / 统一接口 / I3 的操作化，写于 G1 的任何数字之前（此前只读过 E1 / E5 / I3 / 第 23 条 (e) 的已发表数字与代码）。
+  代码 `jevdrive/real_g1.py`，run `runs/real-data-transfer/g1-*/<time>`，小表 `research/results/real-data-transfer/g1/`。g₂ 的标签与训练行、student 的 Δ 等 G0 的交接说明，另记一条，时间早于 g₂ / student 的任何数字。
+  **时间估计**（墙钟）：接口 + g₁ + g₃ 工程 1.5 h；g₁ 训练（WOD train 41 万行 × 3 个 L1 × 2 模型，外加 5 折 OOF；navtrain 同样）GPU 约 40 min；lead 头补跑（I3 8.7k 帧、WOD val 那 19 663 帧所在的流、navtest 12k token、
+  AUC 用的训练行抽样）单卡约 1 h，可与 g₁ 并行；I3 过一遍 15 min；WOD 表 CPU 15 min；NAVSIM 官方 devkit 打分（每个 arm v1.1 PDMS 约 3 min、main EPDMS 约 6 min，16 线程，6 路并行）约 1 h；
+  g₂ 与 student 两路（G0 交接后）约 2 h；写表、图、第 44 条约 1.5 h。合计约 8–9 h，不含等 G0 的时间。
+  (1) **统一接口**：gate 是逐帧标量 g(x) ∈ [0, 1]，gated arm = prior + g(x)·Δ(x)（软乘，不二值化）；Δ 与 prior 都是 E1 / G0 已有的那一个（M-C 用 E1 存下的 `wod_delta_<m>.npz` / `navtest_delta_<m>.npz`，即 CARLA 训练行标准化的主口径）。
+  读数函数一字不改：WOD 用 `elicit_e1.readouts(d, prior, g·Δ, τ)`，τ 仍是该 Δ 头在 P5 null 上定的那个（M-C Cinque 1.628、Lebowski 1.655 m/s）；NAVSIM 按 `elicit_e1.run_navsim` 的写法把 g·Δ 加到 `ridge_late` prior 上，官方 devkit 打分，`navsim_table` 同一段配对 bootstrap。
+  I3 上 g 逐帧作用（x⁺ 帧用 g(x⁺)、x⁻ / null 帧各用自己的 g），τ 由 `p5_exam.exam` 在 gated 预测的 null 对上照常重定（judge 原样）。gate 与 Δ 按模型配对（Cinque gate × Cinque Δ），主判 Cinque。
+  (2) **g₁**（第 23 条 (e) 的配方）：`waymo_ladder.GatedResidual('mlp')`，输入 = 标准化的 [ego（`waymo_p0.load_all` 的 ego_state + intent，与 P5 / I3 的 `ego_input` 同一函数）⊕ op-<m> `temporal`]，
+  目标 = 同一批 WOD train 行上 `ridge ego` 的残差，L1 ∈ {0, 1e-3, 1e-2} 按 inner split 的 pre-onset ADE 选，训练与早停是 `waymo_ladder._train` 原样（train_context 的 direction 0：fit = 全部 WOD train，不碰 val）；只取 gate 分支。
+  标准化统计量用 gate 自己的 WOD train 行，I3 / WOD val 上同一张映射。NAVSIM：navtrain stage-one 行，输入 [32 维 ego（`navsim_heads.ego_features`）⊕ op-<m> `temporal`]，目标 = `ridge ego` 的 OOF 残差（x, y，8 点），
+  早停与 L1 选择用按 log 分的 20% inner split（NAVSIM 没有 pre-onset 子集，改用 inner 整体 ADE），其余同 WOD。单 seed（0），gate 不是 Δ 头，不在「所有 head 报 3 seed」之列；如判格落在边界上再补 seed。
+  (3) **g₃**：g₃ = p_lead · h(TTC)，p_lead = sigmoid(lead_prob[0])，lead 取 Q4c 的解码（`mu[:, 0, 0]` 的 x 与 v，selection 0、t = 0）；TTC = x_lead / (v_ego − v_lead)，仅当 v_ego − v_lead > 0.1 m/s，否则 TTC = ∞；
+  h(TTC) = clip((6 − TTC) / (6 − 2), 0, 1)，即 TTC ≤ 2 s 全开、≥ 6 s 全关、中间线性。常数现在写死，不调。v_ego = 当前自车速度（WOD / I3：`past` 最后一步的 |(vx, vy)|；NAVSIM：`vel[-1]` 的模）。
+  前提核对（任何 g₃ 数字之前）：openpilot 的 lead v 是对地速度——I3 `static` 世界里停着的车，v_lead 中位数应接近 0 而不是 −v_ego；不成立就改用相对速度并照记。
+  lead 头输出不在盘上，补跑：WOD 用 `op_<m>_p3_trainval` 的同一流协议，只跑含评测帧的流并核对 `temporal` 与已存逐位相同；I3 用 `p5_openpilot.py` 的 I3 plan；navtest 用 `navsim_zs_openpilot.py feat` 的同一 rollout。三处都只加 `lead` / `lead_prob` 两个原始输出切片，默认输出不变。
+  (4) **主 arm 的选择**（不看评测数）：每个数据集 × 模型一次，候选 g₁ / g₂ / g₃，比较量 = gate 在「训练行」上对 g₂ 的 hazard 标签的 AUC；g₁ 与 g₂ 用按 sequence / log 的 5 折 OOF 值，g₃ 无训练直接算。
+  训练行 = g₂ 的训练行（WOD 与 navtrain 各自的，具体见 G0 交接后的 g₂ 条目）；g₃ 在这些行上补跑 lead 头。AUC 最高者为主 arm，平手（差 < 0.005）取更简单的（g₃ > g₂ > g₁）。
+  (5) **I3 上的检查**（登记原文）：M-C Cinque 的双流翻转对 `ridge_late` prior 的逐帧配对差（`paired_vs_prior` 同一算法，场景 bootstrap）点估计 ≥ 0 且样本外 null false-flip ≤ 7% 记「gate 起作用」；g₁、g₃ 先，g₂ 用 I3 的 GT actor 标签训（按场景 5 折），等 I3 的 YOLO embedding。
+  g₁ 在 I3 上用 WOD train 训的那一个（I3 的 ego / op 特征与 P5 同格式），不在 I3 上重训。
+  (6) **NAVSIM 范围**：navtest 全部 12 146 token 与 E1 的分组（走廊内行人 / cyclist 897、直行、其余），`ridge_late` prior，PDMS（v1.1，主指标）与 EPDMS（main @ 0a380a9）；
+  navhard two-stage 与 `cls_late` prior 不做（g₂ / g₃ 在 navhard 的合成帧上没有输入，`cls_late` 在 E1 里也只是描述）。
+  (7) **判格**按 G1 节写死的两格，WOD 与 NAVSIM 各判一次（WOD：straight_yaw 激活率、全部 rater 帧与 Pedestrians 的 RFS Δ；NAVSIM：直行 token 激活率、全部与行人组的 PDMS Δ）；每个 arm 都报，主 arm 的格是 G1 的结论。
 
 ## 结果
 
