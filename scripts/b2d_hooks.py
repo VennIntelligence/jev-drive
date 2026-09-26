@@ -233,7 +233,8 @@ def track_hazards(out_dir, hide):
 
 P6_SHOULDER_MARGIN_M = 0.5      # placement null: gap between the obstacle's inner edge and the ego lane's edge
 P6_DOOR_EXTRA_M = 1.2           # ... plus the reach of an opened door (VehicleOpensDoorTwoWays)
-P6_DENSE_GAP_M = (14.0, 20.0)   # mirror world: oncoming spacing, ~1.5-2 s headway, no gap PDM-Lite accepts
+P6_FLOW_GAP_M = (25.0, 45.0)    # x11 / x01: oncoming spacing, ~2.5-4.5 s headway: the ego meets traffic and waits for some gaps
+P6_DENSE_GAP_M = (10.0, 14.0)   # mirror world: ~1-1.5 s headway, no gap PDM-Lite accepts
 
 
 def p6_world(out_dir, obstacle, oncoming, tm_seed):
@@ -250,6 +251,8 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
     oncoming  None        not a two-way scenario, nothing changes
               "off"       the oncoming flow the scenario starts after its trigger never spawns (OppositeActorFlow; for
                           HazardAtSideLaneTwoWays, whose flow is the background's, its opposite sources are switched off)
+              (revised after the smoke: the background's opposite lane is off in every two-way world and x11 / x01 /
+              mirror run one OppositeActorFlow from the first tick at a fixed spacing, P6_FLOW_GAP_M / P6_DENSE_GAP_M)
               "on"        as shipped
               "dense"     mirror world: the same flow at ~1 s headway, so the opposite lane never opens
     Every world writes hidden.json with the scenario's actors (so worlds can be matched, as in track_hazards) and draws
@@ -279,8 +282,7 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
         flow_start, flow_update = ab.OppositeActorFlow.initialise, ab.OppositeActorFlow.update
 
         def init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs):
-            if oncoming == "dense":
-                spawn_dist_interval = list(P6_DENSE_GAP_M)
+            spawn_dist_interval = list(P6_DENSE_GAP_M if oncoming == "dense" else P6_FLOW_GAP_M)
             flow_init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs)
             self._rng = np.random.RandomState(3000 + int(tm_seed))
             self._spawn_dist = self._rng.uniform(self._min_spawn_dist, self._max_spawn_dist)
@@ -305,12 +307,9 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
         opp_init = bm.ChangeOppositeBehavior.__init__
 
         def opp(self, source_dist=None, spawn_dist=None, active=None, name="ChangeOppositeBehavior"):
-            if spawn_dist is not None and active is None:      # only HazardAtSideLaneTwoWays sets a spawn distance
-                spawn_dist, active = (None, False) if oncoming == "off" else (
-                    float(np.mean(P6_DENSE_GAP_M)) if oncoming == "dense" else spawn_dist, True)
-            elif active:                                       # the scenarios' end-of-scenario re-enable
-                active = oncoming != "off" and active
-            opp_init(self, source_dist, spawn_dist, active, name)
+            # the background never drives the opposite lane in a two-way world (HazardAtSideLaneTwoWays' own flow is
+            # replaced by an OppositeActorFlow below, like the other two-way scenarios)
+            opp_init(self, source_dist, None, False, name)
 
         bm.ChangeOppositeBehavior.__init__ = opp
     if obstacle == "hide":
@@ -373,10 +372,14 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
             return
         if oncoming in ("on", "dense"):
             for sc in self.list_scenarios[n0:]:
-                if type(sc).__name__ == "HazardAtSideLaneTwoWays":   # its flow is the background's opposite sources
-                    d = float(np.mean(P6_DENSE_GAP_M)) if oncoming == "dense" else float(sc._opposite_frequency)
-                    py_trees.blackboard.Blackboard().set("BA_ChangeOppositeBehavior", [None, d, True], overwrite=True)
-                    registry["flow"] = "background spawn_dist %.1f" % d
+                if type(sc).__name__ == "HazardAtSideLaneTwoWays":   # shipped: the background's opposite sources
+                    wp = CarlaDataProvider.get_map().get_waypoint(sc.other_actors[-1].get_location()).get_left_lane()
+                    ab.OppositeActorFlow(wp, ego_vehicle, list(P6_FLOW_GAP_M))   # registers itself in `flows`
+                elif type(sc).__name__ == "VehicleOpensDoorTwoWays":
+                    # shipped, its flow's reference is the parked car's lane's left neighbour, i.e. the ego lane when
+                    # the car is parked on the right: take the lane left of the ego lane, as the other scenarios do
+                    for f in flows:
+                        f._reference_wp = sc._front_wp.get_left_lane()
             for f in flows:
                 f._p6_early = True
                 registry["flow"] = "OppositeActorFlow %s m" % [round(f._min_spawn_dist, 1), round(f._max_spawn_dist, 1)]
