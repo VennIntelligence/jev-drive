@@ -337,11 +337,312 @@ def gates(rl):
     np.savez_compressed(out("gates.npz"), **res)
 
 
+# ---------------------------------------------------------------- compatibility check, exams, NAVSIM jobs
+
+def _sel_files() -> dict:
+    """{(model, seed): latest sel_<model>_s<seed>.npz} over the n3-fit runs."""
+    out_ = {}
+    for f in sorted((data_dir() / "runs/night2/n3-fit").glob("*/sel_*_s*.npz")):
+        m, sd = f.stem.split("_")[1], int(f.stem.split("_s")[-1])
+        out_[(m, sd)] = f
+    return out_
+
+
+def _null_frames(obs_null: pd.DataFrame) -> np.ndarray:
+    return pd.unique(np.r_[obs_null.fn_plus.to_numpy(), obs_null.fn_null.to_numpy()])
+
+
+def compat(rl) -> pd.DataFrame:
+    """[B] 09:58 (3): top-10 overlap of Hydra's selected anchors (P5 / I3 null frames vs navtest) and the sigma(DAC)
+    difference, per model x seed; seed 0 decides."""
+    p5n = _null_frames(pd.read_parquet(data_dir() / "processed/carla_p5v1_ba/null.parquet"))
+    i3n = _null_frames(pd.read_parquet(data_dir() / "processed/hugsim_pairs/null.parquet"))
+    rows = []
+    for (m, sd), f in sorted(_sel_files().items()):
+        z = np.load(f, allow_pickle=True)
+        top = lambda sel: set(pd.Series(sel).value_counts().index[:10])  # noqa: E731
+        nav_top = top(z["navtest_hydra"])
+        for s, fr in (("p5", p5n), ("i3", i3n)):
+            keys = pd.Series(np.arange(len(z[f"{s}_keys"])), index=z[f"{s}_keys"].astype(str))
+            r = keys.reindex(fr.astype(str)).dropna().astype(int).to_numpy()
+            ov = len(top(z[f"{s}_hydra"][r]) & nav_top) / 10
+            rows.append({"model": m, "seed": sd, "set": s, "null_frames": len(r), "top10_overlap": ov,
+                         "distinct_anchors_null": int(len(np.unique(z[f"{s}_hydra"][r]))),
+                         "distinct_anchors_navtest": int(len(np.unique(z["navtest_hydra"]))),
+                         "dac_sel_null": float(z[f"{s}_dac_sel"][r].mean()), "dac_sel_navtest": float(z["navtest_dac_sel"].mean()),
+                         "dac_sel_diff": float(z[f"{s}_dac_sel"][r].mean() - z["navtest_dac_sel"].mean()),
+                         "dac_all_diff": float(z[f"{s}_dac_mean"][r].mean() - z["navtest_dac_mean"].mean()),
+                         "comparable": ov >= 0.3})
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "compat.csv", index=False)
+    rl.log.info("compatibility\n%s", t.to_markdown(index=False, floatfmt=".3f"))
+    return t
+
+
+def _grid(p8: np.ndarray) -> np.ndarray:
+    from .elicit_e1 import _grid20
+    return _grid20(p8)
+
+
+def _rows_of(keys_all: np.ndarray, keys: np.ndarray) -> np.ndarray:
+    return pd.Series(np.arange(len(keys_all)), index=keys_all.astype(str)).reindex(keys.astype(str)).astype(int).to_numpy()
+
+
+def exam(rl):
+    """P5 v1 BA and I3 exams of every N3 examinee (p5_exam.exam unchanged; I3 without the TFv6 columns), the pedestrian /
+    cut-in criteria (reactivity_mc.criteria) against each seed's P5 prior, and the NAVSIM devkit job list."""
+    from . import p5_exam as E, reactivity_mc as MC
+    sels = _sel_files()
+    nr = np.load(out("navridge.npz"), allow_pickle=True)
+    gt = np.load(out("gates.npz"), allow_pickle=True)
+    p5, i3 = p5_data(), i3_data()
+    t, n, rows = p5["t"], len(p5["t"]), p5["rows"]
+    t3, n3 = i3["t"], len(i3["t"])
+    g5 = {k: gt[f"p5_{k}"][_rows_of(gt["p5_keys"], t.frame_name.to_numpy()[rows])] for k in ("g2nav", "g2wod")}
+    g3i = {k: gt[f"i3_{k}"][_rows_of(gt["i3_keys"], t3.frame_name.to_numpy())] for k in ("g2nav", "g2wod")}
+    z3 = np.load(data_dir() / I3_EXAM / "preds_i3.npz", allow_pickle=True)
+    assert (z3["frame_name"].astype(str) == t3.frame_name.to_numpy()).all()
+    P5, P3 = {}, {}
+
+    def put5(name, v):                     # v: (len(rows), 20, 2)
+        a = np.full((n, 20, 2), np.nan, np.float32)
+        a[rows] = v
+        P5[name] = a
+    mc = {sd: np.load(data_dir() / MC_RUNS[sd] / "preds_obs.npz") for sd in SEEDS}
+    for sd in SEEDS:
+        assert (mc[sd]["rows"] == rows).all()
+    for m in MODELS:
+        dP5 = mc[0][f"M-C pair [{m}]"] - mc[0][f"prior [{m}]"]
+        dI3 = z3[f"M-C pair [{m}]"] - z3[f"ridge_late op-{m} temporal"]
+        put5(f"M-C pair [{m}]", mc[0][f"M-C pair [{m}]"])
+        for sd in SEEDS:
+            put5(f"prior s{sd} [{m}]", mc[sd][f"prior [{m}]"])
+        P3[f"ridge_late op-{m} temporal"], P3[f"M-C pair [{m}]"] = z3[f"ridge_late op-{m} temporal"], z3[f"M-C pair [{m}]"]
+        put5(f"ridge_late NAV [{m}]", _grid(nr[f"p5_{m}"][_rows_of(nr["p5_keys"], t.frame_name.to_numpy()[rows])]))
+        P3[f"ridge_late NAV [{m}]"] = _grid(nr[f"i3_{m}"][_rows_of(nr["i3_keys"], t3.frame_name.to_numpy())])
+        for sd in SEEDS:
+            c = np.load(out(f"p5cls_s{sd}.npz"), allow_pickle=True)
+            put5(f"cls_late P5 s{sd} [{m}]", c[f"p5_{m}"][_rows_of(c["p5_keys"], t.frame_name.to_numpy()[rows])])
+            P3[f"cls_late P5 s{sd} [{m}]"] = c[f"i3_{m}"][_rows_of(c["i3_keys"], t3.frame_name.to_numpy())]
+            if (m, sd) not in sels:
+                log.warning("no Hydra fit for %s seed %d", m, sd)
+                continue
+            z = np.load(sels[(m, sd)], allow_pickle=True)
+            A = z["anchors"]
+            r5, r3 = _rows_of(z["p5_keys"], t.frame_name.to_numpy()[rows]), _rows_of(z["i3_keys"], t3.frame_name.to_numpy())
+            hy5, hy3 = _grid(A[z["p5_hydra"][r5]]), _grid(A[z["i3_hydra"][r3]])
+            put5(f"cls_late NAV s{sd} [{m}]", _grid(A[z["p5_clsref"][r5]]))
+            P3[f"cls_late NAV s{sd} [{m}]"] = _grid(A[z["i3_clsref"][r3]])
+            put5(f"Hydra s{sd} [{m}]", hy5)
+            P3[f"Hydra s{sd} [{m}]"] = hy3
+            for tag, g5v, g3v in (("", np.ones(len(rows)), np.ones(n3)), (" x g2", g5["g2nav"], g3i["g2nav"]),
+                                  (" x g2wod", g5["g2wod"], g3i["g2wod"])):
+                put5(f"Hydra s{sd} + Delta{tag} [{m}]", hy5 + g5v[:, None, None] * dP5)
+                P3[f"Hydra s{sd} + Delta{tag} [{m}]"] = hy3 + g3v[:, None, None] * dI3
+    np.savez_compressed(rl.dir / "preds_p5_obs.npz", rows=rows, **{k: v[rows] for k, v in P5.items()})
+    np.savez_compressed(rl.dir / "preds_i3.npz", frame_name=t3.frame_name.to_numpy(), **P3)
+    # P5
+    oo, nn = E.deltas(p5["obs"], p5["null"], t, P5)
+    res = E.exam(oo, nn, p5["pairs"], list(P5))
+    res["flips"].to_csv(rl.dir / "p5_flip_rates.csv", index=False)
+    crit = []
+    for m in MODELS:
+        for sd in SEEDS:
+            arms = [k for k in P5 if k.endswith(f"[{m}]") and (f"s{sd} " in k or (sd == 0 and " s" not in k))]
+            crit.append(MC.criteria(res, arms, f"prior s{sd} [{m}]").assign(model=m, seed=sd))
+    crit = pd.concat(crit)
+    crit.to_csv(rl.dir / "p5_criteria.csv", index=False)
+    # I3
+    tfv6, E.TFV6 = E.TFV6, {}
+    o3, n3_ = E.deltas(i3["obs"], i3["null"], t3, P3)
+    r3 = E.exam(o3, n3_, i3["pairs"], list(P3))
+    E.TFV6 = tfv6
+    r3["flips"].to_csv(rl.dir / "i3_flip_rates.csv", index=False)
+    rl.log.info("P5 criteria\n%s", crit.to_markdown(index=False, floatfmt=".3f"))
+    fl = r3["flips"]
+    rl.log.info("I3 pooled\n%s", fl[fl.scope == "pooled"][["examinee", "tau_model", "flip_rate", "flip_lo", "flip_hi",
+                                                            "false_flip_null_oos"]].to_markdown(index=False, floatfmt=".3f"))
+
+
+def navjobs(rl):
+    """navtest predictions for the devkit: Hydra (every model x seed), Hydra + g2 * Delta (E1's M-C correction on
+    0.5 ... 4.0 s, heading kept) and Hydra + Delta ungated (seed 0); the activation of Delta on navtest (description)."""
+    from . import elicit_e1 as E1, p5_pairs as P
+    from .real_g1 import mc_taus
+    sc = pd.read_csv(data_dir() / E1_NAV / "navtest_scopes.csv")
+    g2 = np.load(data_dir() / G2_RUN / "g2_nav_eval.npz", allow_pickle=True)
+    taus, jobs, acts = mc_taus(), [], []
+    for (m, sd), f in sorted(_sel_files().items()):
+        fitdir = f.parent
+        hy = np.load(fitdir / f"navtest_hydra_{m}_s{sd}.npz")
+        tok = hy["tokens"]
+        d = np.load(data_dir() / E1_NAV / f"navtest_delta_{m}.npz")
+        assert (d["tokens"] == tok).all() and (sc.token.to_numpy() == tok).all()
+        g = pd.Series(g2["gate"], index=g2["frame_id"].astype(str)).reindex(tok.astype(str)).to_numpy().astype(np.float32)
+        assert not np.isnan(g).any()
+        arms = {f"n3_hydra_{m}_s{sd}": hy["poses"]}
+        for tag, gv in (("g2mc", g), ("mc", np.ones(len(tok), np.float32))):
+            if tag == "mc" and sd != 0:
+                continue
+            a = hy["poses"].copy()
+            a[..., :2] += gv[:, None, None] * d["delta"][:, 1:16:2]
+            arms[f"n3_hydra_{tag}_{m}_s{sd}"] = a
+            act = (np.abs(P.v2(E1._grid20(a)) - P.v2(E1._grid20(hy["poses"]))) >= taus[m]).astype(float)
+            for k, msk in (("all", np.ones(len(tok), bool)), ("straight", sc.straight.to_numpy()), ("ped_cyc_corridor", sc.ped_cyc_corridor.to_numpy())):
+                acts.append({"model": m, "seed": sd, "arm": tag, "scope": k, "n": int(msk.sum()), "activation": float(act[msk].mean()),
+                             "gate_mean": float(gv[msk].mean())})
+        for name, poses in arms.items():
+            path = rl.dir / f"navtest_{name}.npz"
+            np.savez(path, tokens=tok, poses=poses.astype(np.float32))
+            jobs += [f"{v} navtest {name} {path}" for v in ("v1", "v2")]
+    (rl.dir / "score_jobs.txt").write_text("\n".join(jobs) + "\n")
+    pd.DataFrame(acts).to_csv(rl.dir / "navsim_activation.csv", index=False)
+    rl.log.info("%d devkit jobs -> %s\n%s", len(jobs), rl.dir / "score_jobs.txt", pd.DataFrame(acts).to_markdown(index=False, floatfmt=".3f"))
+
+
+def navtable(rl):
+    """Official navtest scores with token-bootstrap CIs, and the paired deltas the N3 table and criterion read."""
+    from .openloop_standing import _latest
+    f = lambda df: df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)].set_index("token")["score"].astype(float)  # noqa: E731
+    sc = pd.read_csv(data_dir() / E1_NAV / "navtest_scopes.csv").set_index("token")
+    names = {}
+    for m in MODELS:
+        names[f"ridge_late [{m}]"] = f"heads_ridge_late_{m}_temporal"
+        names[f"cls_late G3 [{m}]"] = f"heads_cls_late_{m}_temporal"
+        names[f"ridge_late + Delta [{m}]"] = f"ridge_late_{m}_plus_mc"
+        for sd in SEEDS:
+            names[f"Hydra s{sd} [{m}]"] = f"n3_hydra_{m}_s{sd}"
+            names[f"Hydra s{sd} + g2 Delta [{m}]"] = f"n3_hydra_g2mc_{m}_s{sd}"
+        names[f"Hydra s0 + Delta [{m}]"] = f"n3_hydra_mc_{m}_s0"
+    sco, rows, pairs = {}, [], []
+    rng = np.random.default_rng(0)
+    for ver, metric in (("v1", "PDMS"), ("v2", "EPDMS")):
+        for label, name in names.items():
+            df = _latest(ver, "navtest", name)
+            if df is None:
+                log.warning("%s %s missing (%s)", metric, label, name)
+                continue
+            v = f(df)
+            sco[(metric, label)] = v
+            bs = v.to_numpy()[rng.integers(0, len(v), (2000, len(v)))].mean(1)
+            rows.append({"metric": metric, "row": label, "n": len(v), "score": 100 * v.mean(), "lo": 100 * np.percentile(bs, 2.5),
+                         "hi": 100 * np.percentile(bs, 97.5)})
+        for m in MODELS:
+            cmp = [(f"Hydra s{sd} [{m}]", f"ridge_late [{m}]") for sd in SEEDS] + \
+                  [(f"Hydra s{sd} + g2 Delta [{m}]", f"Hydra s{sd} [{m}]") for sd in SEEDS] + \
+                  [(f"Hydra s0 + Delta [{m}]", "Hydra s0 [%s]" % m), (f"ridge_late + Delta [{m}]", f"ridge_late [{m}]")]
+            for a, b in cmp:
+                if (metric, a) not in sco or (metric, b) not in sco:
+                    continue
+                x, y = sco[(metric, a)].align(sco[(metric, b)], join="inner")
+                for grp, msk in (("all", None), ("ped_cyc_corridor", sc.ped_cyc_corridor), ("straight", sc.straight)):
+                    keep = np.ones(len(x), bool) if msk is None else msk.reindex(x.index).fillna(False).to_numpy(bool)
+                    dd = (x - y).to_numpy()[keep]
+                    bs = dd[rng.integers(0, len(dd), (10000, len(dd)))].mean(1)
+                    pairs.append({"metric": metric, "a": a, "b": b, "group": grp, "n": len(dd), "delta": 100 * dd.mean(),
+                                  "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5)})
+    pd.DataFrame(rows).to_csv(rl.dir / "navsim_scores.csv", index=False)
+    pd.DataFrame(pairs).to_csv(rl.dir / "navsim_paired.csv", index=False)
+    rl.log.info("scores\n%s\npaired\n%s", pd.DataFrame(rows).to_markdown(index=False, floatfmt=".2f"),
+                pd.DataFrame(pairs).query("group == 'all'").to_markdown(index=False, floatfmt=".2f"))
+
+
+# ---------------------------------------------------------------- the two side cells
+
+NUSC_RUN = "runs/nusc_backbones/ladder/20260925-144240"
+E5_FIT = "runs/elicitation/e5-fit/20260926-021421"
+
+
+def nusc(rl):
+    """[B] 09:58 (7): collision of the frozen nuScenes heads (decision 40 (4)'s ladder predictions) under decision 39's
+    exam code: rear-axle 0.25 s points -> LIDAR_TOP point at the GT keyframe times, VAD and BEV-Planner collision."""
+    from . import nuscenes_zs as Z
+    z = np.load(data_dir() / NUSC_RUN / "nusc_preds.npz", allow_pickle=True)
+    idx = Z.load_index("val")
+    by = {e["token"]: e for e in idx["samples"] if e.get("valid") and "boxes" in e}
+    keep = np.array([t in by for t in z["token"]])
+    rl.log.info(f"{keep.sum()} / {len(keep)} ladder val samples have decision 39's GT boxes")
+    samples = [by[t] for t in z["token"][keep]]
+    lid = [idx["scenes"][e["scene"]]["lidar_xyz"] for e in samples]
+    t_src = np.arange(1, 13) * 0.25
+    arms = {k[5:]: v[keep] for k, v in z.items() if k.startswith("pred_")}
+    arms["log future (sanity)"] = z["fut"][keep]
+    v0 = np.linalg.norm(np.stack([e["gt_rear"][0] for e in samples]), axis=1) / np.array([e["fut_t"][0] for e in samples])
+    arms["CV (speed of the first 0.5 s)"] = (v0[:, None] * t_src[None])[..., None] * np.array([1.0, 0.0])
+    scene = z["scene"][keep]
+    per, rows = {}, []
+    for a, P in arms.items():
+        pl = np.stack([Z.to_lidar_point(t_src, P[i], Z.traj_yaw(P[i].astype(np.float64)), lid[i], samples[i]["fut_t"])[0]
+                       for i in range(len(P))])
+        per[a] = Z.horizons(Z.per_sample(pl, samples))
+    u, inv = np.unique(scene, return_inverse=True)
+    draws = np.random.default_rng(0).integers(len(u), size=(2000, len(u)))
+    M = np.stack([np.bincount(d, minlength=len(u)) for d in draws]).astype(float)
+    cnt = np.bincount(inv, minlength=len(u)).astype(float)
+
+    def boot(v):
+        s_ = np.bincount(inv, v, minlength=len(u))
+        b = (M @ s_) / (M @ cnt)
+        return float(v.mean()), float(np.quantile(b, 0.025)), float(np.quantile(b, 0.975))
+    base = "ridge ego"
+    for a, h in per.items():
+        r = {"arm": a, "n": len(scene)}
+        for k in ("l2", "col_vad", "col_bevp"):
+            mean_ = (h[f"{k}_1s"] + h[f"{k}_2s"] + h[f"{k}_3s"]) / 3
+            r[f"{k}_avg"], r[f"{k}_lo"], r[f"{k}_hi"] = boot(mean_)
+            if a != base:
+                d, lo, hi = boot(mean_ - (per[base][f"{k}_1s"] + per[base][f"{k}_2s"] + per[base][f"{k}_3s"]) / 3)
+                r[f"d_{k}"], r[f"d_{k}_lo"], r[f"d_{k}_hi"] = d, lo, hi
+            for t_ in (1, 2, 3):
+                r[f"{k}_{t_}s"] = float(h[f"{k}_{t_}s"].mean())
+        rows.append(r)
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "nusc_collision.csv", index=False)
+    rl.log.info("\n%s", t[["arm", "n", "l2_avg", "col_vad_avg", "col_vad_lo", "col_vad_hi", "d_col_vad", "d_col_vad_lo", "d_col_vad_hi",
+                           "col_bevp_avg", "d_col_bevp", "d_col_bevp_lo", "d_col_bevp_hi"]].to_markdown(index=False, floatfmt=".3f"))
+
+
+def e4c_students(rl):
+    """[B] 09:58 (7): elicit_e4c's curves on the BA set with E5's students added (L = 0.1 s), from their stored preds."""
+    from . import elicit_e4 as E4, elicit_e4c as C, elicit_i3 as I, p5_exam as E
+    obs, null, taus, pooled, _ = E4.load("ba")
+    with I.p5_set(I.BA):
+        t, _, _, o0, n0, _ = E.load()
+    z = np.load(data_dir() / E5_FIT / "preds_obs.npz")
+    names = [k for k in z.keys() if k.startswith("E5 ")]
+    preds = {}
+    for k in names:
+        a = np.full((len(t), 20, 2), np.nan, np.float32)
+        a[z["rows"]] = z[k]
+        preds[k] = a
+    tfv6, E.TFV6 = E.TFV6, {}
+    oo, nn = E.deltas(o0, n0, t, preds)
+    E.TFV6 = tfv6
+    key, nkey = ["base_id", "seed", "k", "fn_plus"], ["base_id", "seed", "k", "fn_plus", "fn_null"]
+    for df in (oo, nn):
+        df["base_id"] = df.base_id.astype(str)
+    obs = obs.merge(oo[key + names], on=key, how="left", validate="1:1")
+    null = null.merge(nn[nkey + names], on=nkey, how="left", validate="1:1")
+    assert obs[names].notna().all().all() and null[names].notna().all().all()
+    fl = pd.read_csv(data_dir() / E5_FIT / "flip_rates.csv")
+    taus |= fl[fl.scope == "pooled"].set_index("examinee").tau_model.loc[names].to_dict()
+    lat = E4.latency
+    E4.latency = lambda ex: 0.1 if ex.startswith("E5 ") else lat(ex)
+    ex = names + ["prior [cinque]", "M-C pair [cinque]", "M-C pair op [cinque]", "prior [lebowski]", "M-C pair [lebowski]"]
+    c, a, f, _ = C.curves(obs, null, taus, pooled, ex, rl, "ba")
+    E4.latency = lat
+    c.to_csv(rl.dir / "curves.csv", index=False)
+    a.to_csv(rl.dir / "areas.csv", index=False)
+    f.to_csv(rl.dir / "first_flips.csv", index=False)
+    rl.log.info("\n%s", a[a.scope != "pooled"][["examinee", "scope", "L_s", "pairs", "area_L_10", "area_minus_null", "diff_lo", "diff_hi",
+                                              "A3", "A3_minus_null", "A3_diff_lo", "A3_diff_hi"]].to_markdown(index=False, floatfmt=".3f"))
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "fit", "navridge", "p5cls", "gates"))
+    ap.add_argument("step", choices=("prep", "fit", "navridge", "p5cls", "gates", "compat", "exam", "navjobs", "navtable", "nusc", "e4c"))
     ap.add_argument("--seed", default="0", help="comma list for fit / p5cls")
     ap.add_argument("--model", default="cinque,lebowski", help="comma list for fit")
     a = ap.parse_args()
@@ -358,7 +659,8 @@ def main():
         for sd in seeds:
             p5cls(rl, sd)
     else:
-        {"navridge": navridge, "gates": gates}[a.step](rl)
+        {"navridge": navridge, "gates": gates, "compat": compat, "exam": exam, "navjobs": navjobs, "navtable": navtable,
+         "nusc": nusc, "e4c": e4c_students}[a.step](rl)
     rl.close()
 
 
