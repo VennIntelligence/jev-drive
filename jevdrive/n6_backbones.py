@@ -265,6 +265,8 @@ def fit(seed: int, which, rl, priors=("cinque", "lebowski"), eigh: str = "cpu") 
 
 
 MC_STORED = "reactivity/mc-carla_p5v1_ba/20260925-233126"     # the stored M-C run on this set (seed 0)
+# the CPU-eigh seed-0 run of qwen + opsmall is runs/night2/n6/fit-seed0/20260926-101157 (the later fit-seed0 dirs were
+# killed before writing results)
 RESULTS = Path(__file__).resolve().parents[1] / "research/results/night2/N6"
 
 
@@ -282,7 +284,7 @@ def repro() -> "pd.DataFrame":
     import pandas as pd
     from .common import data_dir
     st = data_dir() / "runs" / MC_STORED
-    cpu, gpu = _latest("night2/n6/fit-seed0/*"), _latest("night2/n6/fit-seed0-cuda/*")
+    cpu, gpu = data_dir() / "runs/night2/n6/fit-seed0/20260926-101157", _latest("night2/n6/fit-seed0-cuda/*")
     zs, zc, zg = (np.load(d / "preds_obs.npz") for d in (st, cpu, gpu))
     rows = []
     for m in ("cinque", "lebowski"):
