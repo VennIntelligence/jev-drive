@@ -37,7 +37,7 @@ def export(a):
     log_names, _ = _load_scene_filter(a.navsim_root)
     scene_filter = instantiate(OmegaConf.load(_scene_filter_path(a.navsim_root)))
     scene_filter.log_names = _shard_logs(log_names, a.num_shards)[a.rank]
-    part = a.out_dir / f"rank_{a.rank:02d}.partial.pkl"
+    part = a.out_dir / f"rank_{a.rank:02d}.partial{'' if a.seed is None else f'.n{a.num_shards}'}.pkl"
     done = pickle.load(open(part, "rb"))["trajectories"] if part.exists() else {}
     agent = WorldModelNavsimAgent(config_path=str(a.config), checkpoint_path=str(a.checkpoint), device="cuda")
     agent.initialize()
@@ -56,7 +56,8 @@ def export(a):
             _dump({"trajectories": done}, part)
             print(f"[export] rank={a.rank} {len(done)}/{len(loader.tokens)} ({(time.time() - t0) / i:.2f} s/token)",
                   flush=True)
-    _dump({"trajectories": done}, a.out_dir / f"rank_{a.rank:02d}.pkl")
+    own = [str(t) for t in loader.tokens]         # the partial may hold another sharding's tokens; merge wants disjoint ranks
+    _dump({"trajectories": {k: done[k] for k in own}}, a.out_dir / f"rank_{a.rank:02d}.pkl")
 
 
 def main():
