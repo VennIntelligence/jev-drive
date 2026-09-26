@@ -139,6 +139,16 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   **(3) student**：E5 arm A / B 的配方搬到 navtrain 编辑对（MLP [z_op, e] → 16 点 × 2，零初始化输出层、AdamW、早停与 seed 0–2 同 E5），标签 (c) 为判格 arm、(a) 作描述；
   e = G0 登记的真实数据 embedding，编辑图上的 YOLO 我在最空的卡上补跑（x⁺ / x⁻ / 安慰剂三侧 t0 帧、三路，约 6 千张，检测配置 = E5 / G0 原样）。损失里的「非配对行 Δ 二阶矩」项、P5 与 WOD 上 embedding 的来源，
   在看到 G0 的交接说明之后、任何 student 数字之前另起一条登记。
+- 2026-09-26 08:54 CST [G3] G3b student 的登记（写于任何 student 拟合与读数之前；此前已出的 G3b 数只有 PDM 标签描述、M-C (c) 的 seed 0 表，G3a 另有一个描述数：E2 侧 YOLO embedding 的编辑 / 安慰剂位移比）。
+  (1) **输入**：e = G0 的真实数据 embedding（`real_g0` 的定义：ego 历史圆弧走廊、逐 token 标定、前向三路、框高按焦距归一），navtrain μ 行用 G0 的 `navtrain` 集，WOD val 用 G0 的 `wod_val` 集；
+  编辑对三侧的 t0 三路图我在 GPU 0 上补跑 YOLO（`scripts/real_g3_detect.sh`，E5 / G0 配置原样，5 991 张，4.4 min），再用 `real_g0.geometry` 与同一段 embedding 计算（`real_g3.edit_embed`）；
+  R2 需要在 P5 上用**同一定义**：E5 已存的 P5 检测、P5 rig 标定、P5 ego 过去 1 s 的位置定圆弧（`real_g3.p5_embed`），不用 E5 的路线中心线。z = [openpilot `temporal` / √512 ⊕ e / √64]，两路都用 μ 行的统计量逐列标准化（mask 位不标准化，同 E5）。
+  若 G0 之后登记的定义与此不同，按 G0 的重算后再拟合。
+  (2) **损失**（E5 arm A 搬过来）：mean_pair ‖Δ_s(x⁺) − Δ_s(x⁻) − [(y⁺ − y⁻) − (p⁺ − p⁻)]‖² + mean_μ ‖Δ_s(x)‖²。配对行 = 911 个编辑对 + 175 个安慰剂对（目标 −(p⁺ − p_pl)，与 E2 M-C 把安慰剂当 null 对相同）；
+  μ 行 = E2 prior 的 navtrain 训练行（stage one、未来完整）里有 G0 embedding 的全部（E5 的二阶矩项在 CARLA 上用的是 role = train 帧）。arm B = A + 1.0 × mean ‖Δ_s − Δ_t‖²，只在训练切分内的配对三侧上（μ 行没有 Qwen 特征，teacher 算不了），
+  Δ_t = 同标签的 E2 M-C 双流 head（seed 0 重训的那一个）。输出 16 点 × 2（navtrain 网格），用到 P5 / WOD 时按 E2 的 `extend20` 外推到 20 点。MLP 结构、AdamW、早停（配对行按 log 的 GroupShuffleSplit 留出 20%，seed 0）、seed {0, 1, 2} 全部同 E5。
+  (3) **标签**：(c) 判格，(a) 描述。**读数与判格**同 E2 / M-C：R1（编辑 / 安慰剂 Δ 幅值中位比 ≥ 2）、WOD Pedestrians RFS Δ CI 整体 > 0、直行激活 ≤ 7%；P5 BA 行人翻转、cut-in Δ、null false-flip 照报；
+  按 arm × 模型分别判，主判 arm A 与 B 的 Cinque seed 0（E5 的主读数口径），seed 1 / 2 与 Lebowski 照报。
 - 2026-09-26 08:40 CST（box 时钟）[G1] 分步时间估计与 g₁ / g₃ / 统一接口 / I3 的操作化，写于 G1 的任何数字之前（此前只读过 E1 / E5 / I3 / 第 23 条 (e) 的已发表数字与代码）。
   代码 `jevdrive/real_g1.py`，run `runs/real-data-transfer/g1-*/<time>`，小表 `research/results/real-data-transfer/g1/`。g₂ 的标签与训练行、student 的 Δ 等 G0 的交接说明，另记一条，时间早于 g₂ / student 的任何数字。
   **时间估计**（墙钟）：接口 + g₁ + g₃ 工程 1.5 h；g₁ 训练（WOD train 41 万行 × 3 个 L1 × 2 模型，外加 5 折 OOF；navtrain 同样）GPU 约 40 min；lead 头补跑（I3 8.7k 帧、WOD val 那 19 663 帧所在的流、navtest 12k token、
