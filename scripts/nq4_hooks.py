@@ -17,6 +17,9 @@ neither, nothing here is imported. Route attributes (written by jevdrive/nq4_g.p
              "swap"   an actor of the same class: obstacle and pedestrian <-> bicycle swaps are scenario-type swaps done in
                       the XML (no hook); `nq4_swap="van"` swaps the cut-in vehicle's class (base_type car -> van, special
                       type none) for StaticCutIn / ParkingCutIn / HighwayCutIn, blockers and parked cars unchanged.
+  nq4_stop_m  G runs only: end the route (ScenarioManager._running = False, the evaluator still writes its record) once the
+             hero's actor centre has passed this arc length of the dense route (every G readout lives before it), or
+  nq4_stall_s  once it has not advanced 1 m along the route for this many simulated seconds. K runs carry neither.
   nq4_vis    "1"      also run the visibility camera (instance segmentation at the P5 recorder's front-camera pose and
                       field of view, half its render resolution, 5 Hz; P5's pixel rule, jevdrive/p5_pairs.PX_ACTOR)
                       for the scenario's actors: when the hazard is first visible, the reference for readout 2.
@@ -76,7 +79,10 @@ def install(out_dir, routes, route_id, tm_seed):
         _swap_cut_in()
     elif world not in ("orig", "swap"):
         raise ValueError("unknown nq4_world %r" % world)
-    Trace(out_dir, world, attrs, vis=attrs.get("nq4_vis") == "1").install()
+    tr = Trace(out_dir, world, attrs, vis=attrs.get("nq4_vis") == "1")
+    tr.stop_m = float(attrs["nq4_stop_m"]) if "nq4_stop_m" in attrs else None
+    tr.stall_s = float(attrs["nq4_stall_s"]) if "nq4_stall_s" in attrs else None
+    tr.install()
 
 
 # ---------------------------------------------------------------- shift
@@ -157,6 +163,8 @@ class Trace(object):
         self.pending = {}                     # frame -> (tick, rows of scenario actors) awaiting its segmentation image
         self.last_flush = 0
         self.hero = None
+        self.stop_m = self.stall_s = self.route_s = None
+        self.stopped = None
 
     def install(self):
         from leaderboard.scenarios.route_scenario import RouteScenario
@@ -190,9 +198,35 @@ class Trace(object):
             inner_tick(self)
             if self.tick_count != n:
                 trace._record(self.tick_count)
+                why = trace._stop_reason()
+                if why and self._running:
+                    self._running = False
+                    trace.stopped = why
+                    trace.flush()
 
         ScenarioManager._tick_scenario = tick
         atexit.register(self.flush)
+
+    def _stop_reason(self):
+        """G early stop: progress along the dense route (a moving pointer, forward-only window of 30 points)."""
+        if (self.stop_m is None and self.stall_s is None) or not self.ego or self.route is None:
+            return None
+        if self.route_s is None:
+            P = np.asarray(self.route, float)
+            self.route_P, self.route_s = P, np.r_[0.0, np.cumsum(np.hypot(*np.diff(P, axis=0).T))]
+            self.ptr, self.best_s, self.best_t = 0, 0.0, self.ego[-1][1]
+        x, y, t = self.ego[-1][2], self.ego[-1][3], self.ego[-1][1]
+        j = self.ptr + int(np.argmin(np.hypot(self.route_P[self.ptr:self.ptr + 30, 0] - x,
+                                              self.route_P[self.ptr:self.ptr + 30, 1] - y)))
+        self.ptr = j
+        s = float(self.route_s[j])
+        if s > self.best_s + 1.0:
+            self.best_s, self.best_t = s, t
+        if self.stop_m is not None and s >= self.stop_m:
+            return "passed_stop_m"
+        if self.stall_s is not None and t - self.best_t > self.stall_s:
+            return "stalled"
+        return None
 
     def _spawn_camera(self, hero):
         from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
@@ -303,7 +337,7 @@ class Trace(object):
     def _write_meta(self):
         meta = {"variant": self.world_name, "attrs": self.attrs, "hero": self.hero, "route_xy": self.route,
                 "configs": getattr(self, "configs", []), "built": self.scen, "shifted": SHIFTED, "swapped": SWAPPED,
-                "vis": self.vis, "kinds": {str(i): list(v[1:3]) for i, v in self.kinds.items() if v},
+                "vis": self.vis, "stopped": self.stopped, "stop_m": self.stop_m, "stall_s": self.stall_s, "kinds": {str(i): list(v[1:3]) for i, v in self.kinds.items() if v},
                 "extents": {str(i): v[3] for i, v in self.kinds.items() if v}}
         tmp = os.path.join(self.out, "nq4_meta.json.tmp")
         with open(tmp, "w") as fh:

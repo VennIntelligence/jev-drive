@@ -77,7 +77,11 @@ def route_table() -> pd.DataFrame:
     return t.drop(columns=["route_id"]).reset_index(drop=True)
 
 
-def build_xml(t: pd.DataFrame, out: Path) -> pd.DataFrame:
+STALL_S = 60.0                    # G early stop: no 1 m progress for 60 s of simulated time
+STOP_MARGIN_M = 10.0
+
+
+def build_xml(t: pd.DataFrame, out: Path, w: pd.DataFrame | None = None) -> pd.DataFrame:
     src = ET.parse(data_dir() / B2D_XML).getroot()
     official = {r.get("id") for r in src.iter("route")}
     by_id = {r.get("id"): r for r in src.iter("route")}
@@ -92,6 +96,14 @@ def build_xml(t: pd.DataFrame, out: Path) -> pd.DataFrame:
             r.set("id", i)
             r.set("nq4_world", v)
             r.set("nq4_base", b)
+            if w is not None:            # early stop past every readout (zone end of this variant's trigger, control windows)
+                ww = w[w.base == b]
+                tr = ww[ww.kind == "trigger"]
+                if len(tr):
+                    st = float(tr.s_trig.iloc[0]) + (shift if v == "shift" else 0.0)
+                    stop = max([st + ZONE[1]] + ww[ww.kind.isin(["trigger", "control", "control_alt"])].s1.tolist()) + STOP_MARGIN_M
+                    r.set("nq4_stop_m", "%.1f" % stop)
+                    r.set("nq4_stall_s", "%.0f" % STALL_S)
             if v == "orig":
                 r.set("nq4_vis", "1")
             elif v == "shift":
@@ -225,12 +237,12 @@ def build():
     out = root()
     t = route_table()
     t.to_csv(out / "routes.csv", index=False)
-    v = build_xml(t, out / "g_routes.xml")
-    v.to_csv(out / "variants.csv", index=False)
     pd.DataFrame([hazard_point(b) for b in t.base]).to_csv(out / "hazard_points.csv", index=False)
     windows(t, "rule12").to_csv(out / "windows_rule12.csv", index=False)
     w = windows(t)
     w.to_csv(out / "windows.csv", index=False)
+    v = build_xml(t, out / "g_routes.xml", w)
+    v.to_csv(out / "variants.csv", index=False)
     res = root("results", "g")
     w.to_csv(res / "windows.csv", index=False)
     t.to_csv(res / "routes.csv", index=False)

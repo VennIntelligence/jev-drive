@@ -84,6 +84,9 @@
      读数 5 的巡航速度 = orig 对照窗口内的平均速度，完成时间 = 完成路线的 `duration_game`。
   7. **复用**：orig 里 night-queue-3 已跑过的同考生、同路线、同 seed 直接读：PDM-Lite seed 0 = `runs/nq3/b/cl1_expert`（SimLingo 树，PDM-Lite 靠登记绕行，所以 PDM-Lite 的所有 G 运行都在 SimLingo 树里跑，其余考生在官方树里跑），
      openpilot Cinque 原生 = CL2 / CL9，作者执行层 = CL10（`nq3_b_cl10.sh` 原样的四个 recipe，只把路线文件换成 G 的 XML）。
+  8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
+     G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
+- [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server（index 480–481），核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。
 
 ## K. 材料包阶梯：分数动、能力不动
 
