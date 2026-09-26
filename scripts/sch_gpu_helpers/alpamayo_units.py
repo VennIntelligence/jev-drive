@@ -5,7 +5,7 @@ Same model load (I.load + the runner's expert_graph config), same Prep / infer /
 bit-identical path). Takes whole priority-0 units from the END of the runner's order (the runner walks from the start),
 one O_EXCL claim per unit, and writes one part per unit as nq3_alpamayo_parts/part_9UUUU.npz (UUUU = unit index):
 the runner's glob picks them up at its next consolidate, and its own numbering (count of parts at start) never
-reaches 90000. It never consolidates while the runner lives. It stops before a unit within --gap frames of the
+reaches 90000. It never consolidates while the runner lives, and takes no new unit after --stop-at (08:00). It stops before a unit within --gap frames of the
 runner's last written frame, so the two never work on the same unit.
 Run in the alpamayo1.5 venv from the repo root.
 
@@ -80,6 +80,9 @@ def cmd_run(a, log):
         part = A.PARTS / f"part_9{u:04d}.npz"
         if part.exists():
             continue
+        if time.strftime("%H:%M") >= a.stop_at and time.strftime("%H:%M") < "12:00":
+            log.info(f"stop: {a.stop_at} reached, no new unit")
+            break
         rp = runner_parts()
         dn = done_frames(rp)
         last = max((i for i, (_, gg) in enumerate(units) if gg.frame_name.isin(dn).any()), default=-1)
@@ -134,6 +137,7 @@ if __name__ == "__main__":
     ap.add_argument("--priority", type=int, default=0)
     ap.add_argument("--gap", type=int, default=600, help="frames kept free ahead of the runner's last written frame")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--stop-at", default="08:00", help="box clock (morning): no new unit from then on")
     ap.add_argument("--owner-pid", type=int, default=0)
     a = ap.parse_args()
     torch.set_num_threads(1)
