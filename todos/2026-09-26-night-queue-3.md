@@ -245,6 +245,34 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   3. 「desire 执行器闭环可用」= CL5d 里触发的 desire 在 8 s 内完成横移 ≥ 2.5 m 的比例 ≥ 70%，且 obstacle 类路线 SR ≥ CL5 的 SR − 10 pp。
   4. 「openpilot 能开」（第 33 条悬而未决的那一半）：CL2 完成率与 DS 如实报，对 CL1 天花板写差距，不设门。
   5. CL10 与 P7 列只并列，按规则 9 (c) 不比总分；作者执行层列内部可以配对比（BridgeDrive − TFv6、BLUE − SimLingo，对第 46 条 T3 的开环结论作闭环复核）。
+- 2026-09-26 16:52 CST [B] 开工（执行员 B，lane B），**操作性选择与分步估时**（写于本 lane 任何闭环数字之前；此前只跑了 CL1 的专家录轨，它本身不是考生读数）。
+  代码：`scripts/nq3_b.sh`（链式脚本，`expert` / `smoke` / `chain`）、`scripts/b2d_zeroshot_agent.py` 的 `"model": "head"` / `"cameras": false` / `"ctl_every"`、
+  `scripts/nq3_cl_server.py`（head server，envs/openpilot）、`scripts/nq3_feat_server.py`（Qwen / YOLO 特征 server）、`jevdrive/nq3_cl.py`（head 导出与 numpy apply）、`jevdrive/nq3_cl_report.py`（表）。
+  run 在 `runs/nq3/b/`，每臂 `runs/nq3/b/arms/<arm>/s<seed>/`；小表先写 `runs/nq3/b/results/`，轮询时拉回 `research/results/nq3/cl/`（box 只 pull，不在 box 的 repo 里生成要提交的文件）。
+  资源：GPU 0、1、2，每卡 1 个 runner、≤ 6 个 CARLA server（index 300–479，端口在 ephemeral 段以下），`taskset -c 60-109`（50 核），OMP / MKL / OpenBLAS / NUMBA = 2；
+  A 写出 `a/v1/DONE` 且卡 3–5 上没有 CarlaUE4 后扩到 GPU 0–5、`taskset -c 60-149`（90 核，不碰 A 的 0–59 与 C / D 的 150–199）；新 server 启动前 `pids.current` > 17 000 就等（`B2D_PIDS_WAIT`，b2d_run 里实现）。
+  1. **CL1 的专家轨迹**：box 上只有 20 条验收路线的专家 log，所以先在 SimLingo 的 Bench2Drive 树里把 PDM-Lite（`b2d_expert_agent.py`，原样）在 220 条上跑一遍（TM seed 0），
+     再在**官方树**里按验收协议 replay（`"replay_plan": "time"`，5 Hz，P7，与其他 P7 臂同一个评测器）。replay 不挂相机（`"cameras": false`，plan 每 4 tick 一次）：相机不影响仿真，只花渲染。
+  2. **openpilot 臂（CL2 Cinque、CL7 Lebowski）**：A 部分修过的适配器原样（`op_camera_tick` 0.05 每步渲染同帧配对、`plan_origin: rear` 后轴变换、`warmup_s` 5 s 刹车保持、路口 / 变道 desire），
+     控制器换成 P7（`controller_preset: pursuit`，`P7.json`，不调参）。Cinque 在 20 Hz 时钟上每 tick 走一步（它的原生节奏），只把每第 4 个 plan 交给 P7（`"ctl_every": 4`，即 5 Hz）；Lebowski 5 Hz context 每次都交。
+     **不接 TCP 伙伴、不接 route oracle 起步**：本 todo 没写，迁移文档 D 节那些是 Zoo PID 时代的做法；所以「从静止起步」如实归 openpilot 自己（判据 4 不设门）。
+  3. **我们的 head（CL3 `ridge_late`、CL4 M-C、CL6 E5 student）**：P5 表里的数字是 5 折路线 CV 的 fold 内拟合，没有单一 checkpoint；所以按同一套代码在 P5 v1 BA **全部** train 行与全部配对行上重拟合一版
+     （`reactivity_mc.fit_fold` 的 prior 与 `pair` 臂、`night2_n4` 的 arm B student seed 0，λ 仍按原来的内层 CV 选），存成数组（`runs/nq3/b/heads/heads.npz`），numpy apply 与 torch 拟合的差 ≤ 3e-5 m。模型输入与 P5 离线路径同一条：
+     P4 的 Waymo 三路相机（1088×1560 渲染、remap、JPEG q95，recorder 的参数与 env），5 Hz 帧在 Cinque 的 20 Hz 时钟上保持 4 步（`p5_openpilot.run_stream`），`temporal` tap；
+     M-C 的 Qwen `L18_last` 用 P5 的 4 帧 × 3 路 clip（同一 extractor，batch 1，存 float16）；student 的 image-plane token 用同一个 YOLO26x-seg 与 PCA-16。
+     ego 输入（96 维历史 + 4 维 intent）按 `p4_carla.route_rows` 的公式从 **agent 自己的传感器位姿轨迹**（PoseFilter，后轴）算，不用仿真真值；速度是 ±1 tick 中心差分，所以第 k 帧在 k+1 tick 才送出（plan 时间戳仍是 k，P7 按时间戳重投影）；
+     intent 用 P5 的 15 m 前视。**desire 与 openpilot 原生同一套**（按本节第一条；P5 训练特征是 desire 0，这是有意的偏离，记在这里）。head 输出本来就是后轴系 (x 前, y 左) 0.25–5 s 的 20 点，直接给 P7，不做相机原点变换。
+     开头 5 s 刹车保持（与 openpilot 臂同一个 warm-up，也保证 4 帧 clip 和 1 s 真实历史都有）。
+  4. **seed** = TM seed（`--tm-seed`）；CL9 的 seed 1、2 同一个 head checkpoint。
+  5. **hazard 分组**（规则 10）：突发 hazard = 第 38 条的五个 family；让行与博弈 = unprotected_turn + merge_lane_change + emergency_vehicle；obstacle bypass = obstacle_bypass；其余 = routine_control。
+     DS 报两种：按 220 条平均、没跑完的记 0（官方 merge 口径），和只对跑完的平均；SR 按 `merge_route_json.py`。
+  6. **CL0 等价检查（规则 8）**：3 条 smoke 路线（2084 NonSignalizedJunctionLeftTurn、24211、2668 ParkedObstacle）上 head 臂每个请求都 dump（JPEG、desire、ego、model frame、`temporal`、Qwen / token、输出轨迹），
+     离线在同一张卡上用离线代码（`render_blobs`、新 Cinque session 按同一顺序步进、Qwen / YOLO 同一调用、`Heads`）重算，要求逐位相同；ego 输入另拿一条 P5 v1 recorder 路线的 pose 轨迹核 `ego_past` 与 `route_rows` 一致。openpilot / Alpamayo 臂的 server 是已验收过的原样路径，只做 smoke。
+     第三方 agent（CL10）的 smoke 放在 CL10 开跑时，原样跑。
+  7. **闭环 dump 关掉**：不存图像；每条路线只留 route 结果 json、`plans.jsonl`（每个交给 P7 的 plan 一行）与 `ticks.jsonl`（CL5d 的横移判据要用），几百 MB / 轮。
+  8. **分步估时（profiling 前的粗估，profiling 后在下一条更新）**：CL1 专家录轨约 1 h（12 worker）；CL0 约 1.5 h（含等价检查）；每轮 220 条按 18 worker：CL1 replay 约 0.7 h、CL2 / CL7 约 1.5 h、CL3 约 1.5 h、CL6 约 1.5 h、
+     CL4 约 2 h（Qwen 每 plan 约 0.25 s，是最贵的一项）、CL8 约 3 h（Alpamayo 每 plan 约 1 s）、CL9 六轮约 10 h、CL5 / CL5d 六轮 obstacle 子集约 3 h。合计约 26 h > 到 09:00 的约 16 h，
+     A 在 03:00 左右交卡后容量翻倍；按优先级跑，CL8 之后的部分与 CL10 视余量顺延。任何一步超估计 2 倍，脚本停该步写 ERROR。
 
 ## 时间表与资源（box 时钟 CST；每条 lane 固定卡与核段，`taskset` 绑核，OMP / MKL / OpenBLAS / NUMBA 线程按 lane 上限设）
 

@@ -23,7 +23,7 @@ NQ=$DATA_DIR/runs/nq3
 B=$NQ/b
 mkdir -p "$B/srv" "$B/cfg" "$B/arms" "$B/steps"
 B_CPUS=${B_CPUS:-60-109}
-B_CPUS_WIDE=${B_CPUS_WIDE:-20-109}
+B_CPUS_WIDE=${B_CPUS_WIDE:-60-149}
 GPUS=${GPUS:-0 1 2}
 WORKERS=${WORKERS:-6}
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000}
