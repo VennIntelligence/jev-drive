@@ -8,7 +8,9 @@ neither, nothing here is imported. Route attributes (written by jevdrive/nq4_g.p
   nq4_world  "orig"   the route as shipped
              "ghost"  the scenario deleted with the P5 x- / P6 x00 mechanism (rule 11): scripts/b2d_hooks.py
                       p6_world(obstacle="hide") keeps every actor the scenario spawns 500 m under the road, physics off,
-                      after every scenario tick, and deletes the scenario's entry in CarlaDataProvider.active_scenarios
+                      after every scenario tick (made unconditional and applied right after the build, _ghost_strict:
+                      the original lets a newly placed actor show for one frame), and deletes the scenario's entry in
+                      CarlaDataProvider.active_scenarios
                       (the registry PDM-Lite plans on). Only SimLingo's Bench2Drive copy has that registry; the official
                       tree gets an empty list so the same code runs in both.
              "shift"  the scenario's trigger point moved along the route by `nq4_shift_m` (+ = later), on the dense
@@ -73,6 +75,7 @@ def install(out_dir, routes, route_id, tm_seed):
         if not hasattr(CarlaDataProvider, "active_scenarios"):
             CarlaDataProvider.active_scenarios = []          # official tree: no registry; p6_world then finds nothing
         b2d_hooks.p6_world(out_dir, "hide", None, tm_seed)
+        _ghost_strict()
     elif world == "shift":
         _shift(float(attrs["nq4_shift_m"]))
     elif world == "swap" and attrs.get("nq4_swap") == "van":
@@ -83,6 +86,48 @@ def install(out_dir, routes, route_id, tm_seed):
     tr.stop_m = float(attrs["nq4_stop_m"]) if "nq4_stop_m" in attrs else None
     tr.stall_s = float(attrs["nq4_stall_s"]) if "nq4_stall_s" in attrs else None
     tr.install()
+
+
+def _ghost_strict():
+    """p6_world's hide moves an actor down only when its (cached, one tick old) location is above ground, so an actor
+    shows for one frame when the scenario places it (smoke 18:41: a DynamicObjectCrossing walker at 57 m for one tick,
+    its container on the first tick). Here every scenario actor goes 500 m under the hero right after the build, and is
+    set there again after every scenario tick, unconditionally, after the tree's own transform commands of that tick."""
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    from leaderboard.scenarios.scenario_manager import ScenarioManager
+    from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+    held = []                                        # [actor, x, y, z]
+    inner_build = RouteScenario.build_scenarios
+
+    def build(self, ego_vehicle, debug=False):
+        n0 = len(self.list_scenarios)
+        inner_build(self, ego_vehicle, debug=debug)
+        z = ego_vehicle.get_location().z - 500.0
+        for sc in self.list_scenarios[n0:]:
+            for a in sc.other_actors:
+                if a is None or any(h[0].id == a.id for h in held):
+                    continue
+                loc = a.get_location()
+                a.set_simulate_physics(False)
+                a.set_location(carla.Location(loc.x, loc.y, z))
+                held.append([a, loc.x, loc.y, z])
+
+    RouteScenario.build_scenarios = build
+    inner_tick = ScenarioManager._tick_scenario
+
+    def tick(self):
+        inner_tick(self)
+        for h in held:
+            a = h[0]
+            if not a.is_alive:
+                continue
+            loc = a.get_location()
+            if loc.z > h[3] + 1.0:                   # moved by the scenario since the last tick: keep its new x, y
+                h[1], h[2] = loc.x, loc.y
+            a.set_simulate_physics(False)
+            a.set_location(carla.Location(h[1], h[2], h[3]))
+
+    ScenarioManager._tick_scenario = tick
 
 
 # ---------------------------------------------------------------- shift
