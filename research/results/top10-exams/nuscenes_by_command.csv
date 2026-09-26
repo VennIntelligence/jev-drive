@@ -11,3 +11,5 @@ openpilot Lebowski,straight,4027,1.057,0.3477
 openpilot Lebowski,turn,609,1.4155,1.04
 DrivoR,straight,4027,0.6949,0.4635
 DrivoR,turn,609,0.6954,0.3831
+WA-JEPA,straight,4027,0.3977,0.3642
+WA-JEPA,turn,609,0.4966,0.0547
