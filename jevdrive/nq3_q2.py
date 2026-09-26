@@ -416,6 +416,11 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
 
 # ---------------------------------------------------------------- pilot
 
+PAIR_COMPARISONS = (("A1", "A0"), ("A3", "A2"), ("A1", "A2"), ("A3", "A0"),
+                    ("A4", "A0"), ("A5", "A1"), ("A5m", "A3"))
+PAIR_COLUMNS = ("split", "seed", "model", "stream", "arm", "vs", "delta", "lo", "hi")
+
+
 def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MODELS, arms=ARMS, streams=(),
         tag: str = "", out: Path | None = None) -> pd.DataFrame:
     """Fit every arm per (seed, model, fold), judge per arm, paired differences; predictions and tables to `out`
@@ -448,12 +453,12 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
                 rl.log.info("  %s: flip %.3f [%.3f, %.3f] ff %.3f shoulder %.3f ref %.3f stop %.3f mirror %.3f -> %s", a,
                             row["bypass_flip"], row["lo"], row["hi"], row["null_ff_oos"], row["shoulder_flip"],
                             row["shoulder_ref"], row["stop_sub"], row["mirror_borrow"], row["verdict"])
-            for a, b in (("A1", "A0"), ("A3", "A2"), ("A1", "A2"), ("A3", "A0"), ("A4", "A0"), ("A5", "A1"), ("A5m", "A3")):
+            for a, b in PAIR_COMPARISONS:
                 if a in scored and b in scored:
                     d, lo, hi = J.paired_diff(scored[a], scored[b])
                     diffs.append({"split": split, "seed": seed, "model": m, "stream": stream or "op", "arm": a, "vs": b,
                                   "delta": d, "lo": lo, "hi": hi})
-    tab, dif = pd.DataFrame(rows), pd.DataFrame(diffs)
+    tab, dif = pd.DataFrame(rows), pd.DataFrame(diffs, columns=PAIR_COLUMNS)
     tab.to_csv(out / f"summary_{split}{tag}.csv", index=False)
     dif.to_csv(out / f"paired_{split}{tag}.csv", index=False)
     pd.DataFrame(infos).to_csv(out / f"folds_{split}{tag}.csv", index=False)
@@ -462,7 +467,19 @@ def run(rl, set_: str = "carla_p6", split: str = "loco", seeds=SEEDS, models=MOD
 
 def gather(d: Path, split: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     tab = pd.concat([pd.read_csv(f) for f in sorted(Path(d).glob(f"summary_{split}*.csv"))], ignore_index=True)
-    dif = pd.concat([pd.read_csv(f) for f in sorted(Path(d).glob(f"paired_{split}*.csv"))], ignore_index=True)
+    paired = []
+    for f in sorted(Path(d).glob(f"paired_{split}*.csv")):
+        try:
+            paired.append(pd.read_csv(f))
+        except pd.errors.EmptyDataError:
+            # Legacy single-arm/control runs wrote a newline when no registered pair existed.
+            companion = pd.read_csv(f.with_name(f.name.replace("paired_", "summary_", 1)))
+            groups = companion.groupby(["split", "seed", "model", "stream"])
+            if companion.empty or any(any(a in set(g.examinee) and b in set(g.examinee)
+                                          for a, b in PAIR_COMPARISONS) for _, g in groups):
+                raise
+            paired.append(pd.DataFrame(columns=PAIR_COLUMNS))
+    dif = pd.concat(paired, ignore_index=True)
     return tab, dif
 
 
