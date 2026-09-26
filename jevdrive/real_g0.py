@@ -680,6 +680,22 @@ def verdicts(wod_run, nav_run, nav_table_run, out: Path) -> pd.DataFrame:
 
 
 
+
+def run_i3(rl):
+    """Student Delta on every I3 index row (openpilot `op_streams`, as elicit_i3), stored for G1 / G2; no readout."""
+    from . import p5_openpilot
+    fr, Emb = load_embed("i3")
+    os.environ["P5_SET"] = "hugsim_pairs"
+    t = pd.DataFrame({"frame_name": fr.frame_id})
+    for m in MODELS:
+        Xop = p5_openpilot.load(t, (m,), sub="op_streams")[f"op-{m} temporal"]
+        for arm in ARMS:
+            for seed in SEEDS:
+                np.savez_compressed(g0_dir(f"i3_delta_{m}_{arm}_s{seed}.npz"), frame_name=fr.frame_id.to_numpy(),
+                                    delta=student_delta(m, arm, seed, Xop, Emb))
+    rl.info("I3 student deltas written")
+
+
 def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/figs"):
     """WOD RFS delta per cluster, NAVSIM PDMS delta per group, straight / pedestrian activation; students A / B x models,
     seed 0 with CI and seeds 1-2 as crosses."""
@@ -728,7 +744,7 @@ def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/fig
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("lists", "embed", "status", "geom", "students", "wod", "navsim", "navsim-table", "verdict", "figs"))
+    ap.add_argument("step", choices=("lists", "embed", "status", "geom", "students", "wod", "navsim", "navsim-table", "verdict", "figs", "i3"))
     ap.add_argument("--slices", type=int, default=30)
     ap.add_argument("--sets", nargs="+", default=list(SETS))
     ap.add_argument("--runs", nargs="*", default=[], help="navsim-table: the g0-navsim run; verdict: wod, navsim, navsim-table runs")
@@ -740,7 +756,7 @@ def main():
             log.info("%s: %d / %d images detected, READY %s", n, *slices_done(n), root(n, "READY.json").exists())
     elif a.step == "figs":
         figs()
-    elif a.step in ("students", "wod", "navsim", "navsim-table", "verdict", "figs"):
+    elif a.step in ("students", "wod", "navsim", "navsim-table", "verdict", "figs", "i3"):
         from .runlog import RunLog
         rl = RunLog("real-data-transfer", f"g0-{a.step}")
         if a.step == "navsim-table":
@@ -748,7 +764,7 @@ def main():
         elif a.step == "verdict":
             rl.info(verdicts(*a.runs, rl.dir).to_markdown(index=False, floatfmt=".3f"))
         else:
-            {"students": students, "wod": run_wod, "navsim": run_navsim}[a.step](rl)
+            {"students": students, "wod": run_wod, "navsim": run_navsim, "i3": run_i3}[a.step](rl)
         rl.close()
     elif a.step == "geom":
         from .runlog import RunLog
