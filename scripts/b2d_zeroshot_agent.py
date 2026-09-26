@@ -49,6 +49,13 @@ the pre-registered smoke:
                     (scripts/b2d_partner.py): TCP drives from standstill and (junctions) through route turns, the model
                     everything else; who drives is logged every tick ("driver", "w_model"); "tcp_only": true makes TCP
                     drive the whole route (reference arm; the model still plans, in shadow)
+  "launch"          absent | {"ckpt": path, "socket": path}: night queue 4 OPL, mode op_native_launch - the "partner" above
+                    with junctions off and tcp_only off, i.e. the TCP partner only launches the car from standstill (and
+                    drives through the model's warm-up) and hands back once the car rolls and the model's own control
+                    stops braking (b2d_partner.Arbiter, unchanged); exclusive with "partner"
+                    (todos/2026-09-26-night-queue-3.md, CL section, [OPL] entries)
+  "raw_dump"        0 | n: openpilot models - save the first n requests' raw inputs (road / wide BGRA, desire, speed) and
+                    the server's outputs to frames/raw_<k>.npz, for the rule-8 offline recomputation (scripts/nq4_opl_check.py)
   "replay"          absent | path of an expert log (scripts/b2d_expert_agent.py; "{route}" is replaced by the route id)
                     | "route": no model and no socket; each
                     planning step returns the expert's own track from where the hero is, at the expert's pace (waits
@@ -269,6 +276,10 @@ class ZeroShotAgent(AutonomousAgent):
             self.server_meta = wire.recv(self.sock)[0]["server"]
         self.partner = self.arbiter = None
         pcfg = self.cfg.get("partner")
+        if self.cfg.get("launch"):               # op_native_launch: the D3 partner for launches only
+            assert not pcfg, "launch and partner are exclusive"
+            pcfg = dict(self.cfg["launch"], junctions=False, tcp_only=False)
+        self.partner_cfg = pcfg
         if pcfg:
             from b2d_partner import TCPPartner
             self.partner = TCPPartner(pcfg["ckpt"], pcfg["socket"], hero=getattr(self, "hero_actor", None))
@@ -421,7 +432,7 @@ class ZeroShotAgent(AutonomousAgent):
         if self.partner is not None:
             if self.arbiter is None:
                 from b2d_partner import Arbiter
-                pc = self.cfg["partner"]
+                pc = self.partner_cfg
                 self.arbiter = Arbiter(self.route.xy, self.route.cmd, bool(pc.get("junctions", True)),
                                        bool(pc.get("tcp_only", False)))
             has_ctrl = self.zoo_control is not None if self.zoo is not None else \
@@ -681,6 +692,11 @@ class ZeroShotAgent(AutonomousAgent):
         else:
             wire.send(self.sock, meta, arrays)
             info, out = wire.recv(self.sock)
+            if not self.alpamayo and self.n_plans < int(self.cfg.get("raw_dump", 0)):
+                np.savez(os.path.join(self.out, "frames", "raw_%06d.npz" % self.n_plans), frame=np.int64(f),
+                         road=arrays["OP_ROAD"], wide=arrays["OP_WIDE"], desire=np.int64(meta["desire"]),
+                         speed=np.float64(speed), **{"out_" + k: np.asarray(v) for k, v in out.items()},
+                         **{"info_" + k: np.float64(info[k]) for k in ("curvature", "accel", "engaged") if k in info})
             if self.alpamayo:
                 path = resample(out["t"], out["xy"], times)
             else:
