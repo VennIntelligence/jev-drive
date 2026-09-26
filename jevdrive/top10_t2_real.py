@@ -345,6 +345,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=("fetch-wod", "req-wod", "exam-wod", "req-nusc", "exam-nusc"))
+    ap.add_argument("--boot", type=int, default=10000)
     a = ap.parse_args()
     if a.cmd == "fetch-wod":
         fetch_wod()
@@ -354,7 +355,7 @@ def main():
         req_nusc()
     else:
         rl = RunLog("top10_t2", a.cmd)
-        (exam_wod if a.cmd == "exam-wod" else exam_nusc)(rl)
+        (exam_wod if a.cmd == "exam-wod" else exam_nusc)(rl, a.boot)
         rl.close()
 
 
