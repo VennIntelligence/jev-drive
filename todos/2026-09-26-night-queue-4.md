@@ -97,6 +97,34 @@ Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：�
   2. **动作敏感**：在 x⁺ 的 hazard 帧上把动作换成「保持速度」对「刹停」、「保持车道」对「向 expert 绕行方向横移」，预测的碰撞 / 本车道障碍距离 probe 朝正确方向变化的比例 ≥ 70%。
   3. 两条都过 → 下一轮登记 latent MPC 选轨（对 Hydra 的词表做 rollout 打分），与 Hydra 在 P6 和闭环上比；1 不过 → 这套 latent 的世界模型推演不出 hazard，JEPA + openpilot 训策略这条路先搁置，写进 decisions。
 - 预算：约 4–6 GPU·h。
+- [E] 2026-09-26 17:30 CST 开工与分步估时（写于任何 W 数字之前）：代码 `jevdrive/nq4_w.py`，链式脚本 `scripts/nq4_w.sh`，运行目录 `$DATA_DIR/runs/nq4/w/`。
+  分步：(1) 缺的 V-JEPA 2 `mean` 补抽（P5 v1 PDM 的 obs 行 17 340、P6 未抽的约 18 500 行，每行 3 相机，约 10.8 万个 4 帧 clip，按 nq3 实测 ~100 clip/s 估 20–30 min，先在 BA 已存行上做抽取等价检查）；
+  (2) 标签与动作（CPU，10 min）；(3) 子集 profile + 一次短训练 smoke（40 min）；(4) 3 seed × 5 折训练与 probe 读数（链式，估 1.5–2.5 GPU·h）；(5) 出表（10 min）。合计约 3–4 h 墙钟、≤ 3 GPU·h；超 2 倍（8 h 墙钟或 6 GPU·h）停。
+  GPU 6、显存 ≤ 16 GB、核 200–207（`taskset`，线程数 8）。按 2026-09-26 17:25 用户新规，smoke 过后链式脚本交 Codex 看护（`tmp/2026-09-26-codex-handoff.md`），P3 可行性留给 Opus 执行员。
+- [E] 2026-09-26 17:40 CST 操作性选择（写于任何 W 数字之前；smoke 只读训练折内的 loss，不读 probe / 判据）：
+  - **数据宇宙**：`carla_p5v1_ba` 与 `carla_p5v1_pdm` 的 `role == obs` 行（5 Hz，含 plus / minus / null 世界），`carla_p6` 全部行（5 Hz，七种世界）。P5 的 train 行是 2.5 Hz，不进。
+    z = Cinque `temporal`（`op_cinque_vis`，512 维）⊕ V-JEPA 2 ViT-L `mean`（4 帧 clip、三相机拼接，3 072 维；BA 与 P6 已存的直接用，缺的用同一模型与 transform 补抽）。
+    每个 run 按帧号切成间隔恰为 4 tick（0.2 s）的连续段，窗口 = 18 个连续帧（8 帧历史，锚点 t₀ 是第 8 帧，10 帧未来），步长 1。
+  - **动作**：锚点前后每帧的 (a, ω) = ((v_{t+1} − v_t)/0.2 s, wrap(ψ_{t+1} − ψ_t)/0.2 s)，v、ψ 取 `pose.jsonl` 在该帧与 +4 tick 的平面速度与 yaw（rad）。历史 token 带上一步动作与 v_t，未来 query token 带该步动作。
+  - **分折**：按 base 路线（三个集合合在一起，同一路线不跨折）5 折，seed s 决定路线排列、模型初始化与 batch 顺序；每折再按 seed 留 10% 训练路线作 inner-val，只用于选 checkpoint 与 ridge 的 λ。
+  - **模型**（约 23 M 参数）：输入 z 按训练折统计量逐维标准化；线性投到 d = 512；8 个历史 token + 10 个未来 query token（动作 → MLP 嵌入 + 可学位置编码），6 层 pre-LN Transformer encoder（8 头，FFN 2 048，GELU，dropout 0.1，全注意力），
+    query 位置输出 512 → 3 584 的 Δz，预测 ẑ_{t+h} = z_t + Δz_h（h = 1…10，一次并行出，不自回归）。loss = 两个块（Cinque 512 维、V-JEPA 3 072 维）各自的逐维 MSE 取平均后再等权平均。
+    AdamW（lr 3e-4、wd 0.05、β 0.9 / 0.95），batch 256，500 步 warmup + cosine，bf16 autocast，梯度裁剪 1.0；总步数在 smoke 里按训练折 loss 定一次（写在下一条 [E]），之后 15 次训练一律不变；每 1 000 步算 inner-val loss，取最低的 checkpoint。
+  - **probe**（每折只在训练折路线的**真实** z 上训，同一套标准化）：N2 的 a / b / c（`night2_labels.parquet`，P6 同名文件）；新增三个 ego 坐标系的 GT 标签（`actors.npz`，可见 = 与 ego 高差 ≤ 5 m，同 N2）：
+    `ped` = 有行人在 ego 前方 0 < x ≤ 30 m、|y| ≤ 4 m（第 48 条的「行人在走廊」，走廊宽度照 P1）；`occ` = 有车或行人在 0 < x ≤ 30 m、|y| ≤ 1.75 m；`d_front` = 0 < x ≤ 40 m、|y| ≤ 1.75 m 内最近 actor 的 x（没有记 40 m）。
+    分类 probe 用 N2 的 `logreg_auc` 同款（标准化 L2 logistic，C = 1，L-BFGS）；`d_front` 用 ridge，λ ∈ {1e1, 1e2, 1e3, 1e4, 1e5} 按 inner-val 选。
+  - **判据 1 配对分离**：测试折里 x⁺ / x⁻ 对 = P5 两个集合的 `obs.parquet`（按 k 对齐）与 P6 的 x10 / x00（同 base、seed、k），锚点 k 两边都有完整 18 帧窗口；P6 只取 k ≥ t_vis。
+    两边都喂 **x⁺ 的** expert 动作（历史与未来）与 x⁺ 的 v。hazard probe 按类：行人 4 个 family → `ped`；cut-in 3 个 family → `occ`；P6 障碍 → `a`。
+    HardBreakRoute（x⁻ 里前车还在）、OppositeVehicleRunningRedLight 与 Light 没有对应 probe，只描述不判。天气 null 对 = P5 的 `null.parquet`（x⁺ 对 null）与 P6 的 x10 / wnull（seed 0），同一流程；
+    AUC = 测试折合并后 x⁺ 读数对 x⁻ 读数的 ROC AUC（每个 seed 五折 OOF 合并），null 的 AUC 取 max(AUC, 1 − AUC)（天气可能把读数往任一方向推）。
+    每类判「能分清」= 3 seed 平均 AUC 在 1 s 与 2 s 都 ≥ 0.70，且都 ≥ 同类 null AUC + 0.10；**判据 1 过 = 行人、cut-in、障碍三类都过**，只过一部分按类写。
+    同时报（描述、不进判格）：persistence（probe 读真实 z_{t₀}）与 oracle（probe 读真实 z_{t₀+h}）的同一 AUC、成对胜率、按路线 bootstrap 的 CI、seed 极差。
+  - **判据 2 动作敏感**：hazard 帧 = 测试折 x⁺ 世界（P5 plus 与 P6 x10）里锚点真实 `occ = 1` 且 v ≥ 3 m/s 的窗口。
+    纵向：「保持速度」= 未来 10 步 a = 0、ω 取 expert 的；「刹停」= a = −5 m/s² 直到按动作积分的速度到 0（之后 0）、ω 同上；读 `d_front` 预测，正确 = 刹停 > 保持。
+    横向（只 P6 x10、expert 模式 bypass_L / R / wait_then_bypass、锚点 k < t_div_lat 即 expert 还没横移）：「保持车道」= expert 的 a、ω = 0；「横移」= expert 的 a、ω 先 +s·ω₀ 1 s 再 −s·ω₀ 1 s，ω₀ = min(3.5 m / v, 0.6 rad/s)，s 是 expert 绕行方向的 yaw 符号
+    （CARLA 左手系，左绕 = ω < 0；在读任何 probe 之前先用 expert 在绕行段的实测 ω 核一次符号）；读 `d_front` 预测，正确 = 横移 > 保持。
+    判「动作敏感」= 纵向与横向的 2 s 正确比例（3 seed 平均）都 ≥ 70%；1 s 与 `occ` 读数只描述。
+  - 读法照 W 节第 3 条；另：判据 1 在 persistence 上就已过而 oracle 更高时，写明「分清」有多少来自历史里已经看见的 hazard（描述，不改判格）。
 
 ## X. 判断与执行拆开：模式头 → 几何路径 → P7（闭环，CARLA；2026-09-26 18:30 补，专家回复第 6 问）
 
