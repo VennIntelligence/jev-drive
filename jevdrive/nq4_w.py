@@ -630,7 +630,12 @@ def bench(steps: int = 300, workers: int = 7) -> dict:
         if s == 20:
             torch.cuda.synchronize()
             t0 = time.time()
-        zh, ha, fa, zf = (x.cuda(non_blocking=True) for x in next(it))
+        try:
+            b = next(it)
+        except StopIteration:
+            it = iter(dl)
+            b = next(it)
+        zh, ha, fa, zf = (x.cuda(non_blocking=True) for x in b)
         loss = block_mse(model((zh - mu) / sd, ha, fa), (zf - mu) / sd)
         opt.zero_grad()
         loss.backward()
