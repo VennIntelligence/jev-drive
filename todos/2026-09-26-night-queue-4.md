@@ -48,6 +48,19 @@
 **规模**：ghost 90 × 3 × 9 考生 ≈ 2 400 次路线运行，shift / swap ≈ 1 400，orig 补跑约 700（作者执行层 seed 1、2 与阳性对照）；B2D 短路线按 4–8 worker·min 估，约 330–600 worker·h。
 链式脚本先跑前 20 条路线 profiling，按实测重估；超 600 worker·h 按优先级砍（先砍 `swap`，再砍 `shift` 的考生到 TFv6 / BridgeDrive / BLUE / 我们的 M-C）。
 
+- [F] 2026-09-26 17:25 CST 开工与分步估时（执行员 F；写于任何 G / X 数字之前）。代码：`scripts/nq4_hooks.py`（ghost / shift / swap 的世界 hook 与 20 Hz 自车 / actor 轨迹、可见性记录，
+  由 `scripts/b2d_route.py` 按路线 XML 的 `nq4_world` 属性与 `B2D_NQ4_TRACE=1` 挂上，缺省时对别的 lane 没有任何作用）、`jevdrive/nq4_g.py`（路线与窗口清单、变体 XML、读数、小表）、
+  `scripts/nq4_x_agent.py` + `jevdrive/nq4_x.py`（X 的几何路径与交叉拟合 head 导出）、链式脚本 `scripts/nq4_gk.sh`（tmux `jev:nq4-gk`），run 在 `$DATA_DIR/runs/nq4/gk/`。
+  资源（批量前）：写代码不占资源；smoke 借 1 张卡 ≤ 2 个 CARLA server（server index 480–489，不与 lane B 的 300–479 重叠），核 ≤ 4，借哪张卡写在下一条。
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | F0 | 代码：hook、读数、X agent、链式脚本 | 17:25–23:00 | Mac |
+  | F1 | G-prep smoke：新 hook 10 个世界（ghost / shift / swap），PDM-Lite 按 P6 expert 统计口径核对 | 1 h | 借 1 卡 2 server |
+  | F2 | X：交叉拟合 Q2 head（等 lane C 的 `q2/closed_loop_head/READY` 与 K 的 `route_split.json`，没到位先用占位接口）、3 条路线逐 tick 等价检查 | 1.5 h | 借 1 卡 2 server + GPU 6 小量 |
+  | F3 | 各考生 2–3 条路线的 profiling（每路线 worker·h、每 tick CPU / GPU 分解），定每卡 server 数与 worker 数 | 1.5 h | 借 1 卡 2 server |
+  | F4 | `nq4_gk.sh` 空跑（假臂验证队列、熔断、STATUS、出表），挂进 tmux 等门 | 0.5 h | CPU |
+  | 批量 | 等 `runs/nq3/b/DONE` 且 lane B 的 server 全部退出；前 20 条路线 profiling 后重估 | 约 12–18 h（按 profiling 重估） | GPU 0–5、每卡 ≤ 6 server、90 核 |
+
 ## K. 材料包阶梯：分数动、能力不动
 
 同一个 openpilot Cinque `temporal` 读出，逐项加榜单配方，每一级同时报榜单分和能力读数。
