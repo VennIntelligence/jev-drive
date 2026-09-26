@@ -3166,7 +3166,7 @@ NAVSIM 上 g₂ 开度 0.43（直行 0.50，navtrain 标签里接近车辆占 40
 **N5 补一行（2026-09-26，[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N5，判据先于数字；只改测量，不进模型）**：把平地抬升换成按相机内参的单目 metric depth（UniDepth v2 ViT-L，主读数；接地点沿射线放到预测深度），
 同一批 YOLO26x-640 检测、同一套评测，20–40 m 行人 BEV 召回 **nuScenes 0.22 → 0.57（过 0.40 线）、P5 0.13 → 0.397（差 0.003 到线，登记的「之间」）**；近处不坏（nuScenes 0–10 m 0.67 → 0.94，P5 0.90 → 0.85），P5 hazard 行人全部 0.50 → 0.68。
 所以「缺口在放置」在真实相机上得到了修法（单目 metric depth 给内参就够，不需要地面高度）；CARLA 上修回大半，残差来自 P5 上深度整体偏近 10–15%（推测是渲染域差）。SAM 3.1 检测 + 同一深度 P5 0.49 / nuScenes 0.56（副读数）。
-DA3METRIC-LARGE 副读数待补。表：[results/night2/N5/](results/night2/N5/)，图：[night2-n5-depth-recall](figs/night2-n5-depth-recall.png)。
+副读数 DA3METRIC-LARGE（焦距换算成米，2026-09-26 box 重启后补齐）同向：YOLO26x-640 检测上 20–40 m 行人 **P5 0.402、nuScenes 0.590**，两个数据集都过 0.40 线，近处 P5 0.91 / nuScenes 0.93；主读数（UniDepth v2）与副读数只在 P5 这一格跨线（0.397 对 0.402），判格按登记仍以主读数写「P5 之间」。两个互相独立的深度模型给出几乎相同的数，说明 P5 的残差不是某一个模型的问题。表：[results/night2/N5/](results/night2/N5/)，图：[night2-n5-depth-recall](figs/night2-n5-depth-recall.png)。
 **会推翻或推进本条的证据**：在 YOLO26 状态上复跑 Q6-SAM 的规则门，行人 family 翻转不低于 SAM 状态（推进：可以直接替换）；给接地点加按相机标定尺度的深度或地面高度后，P5 / nuScenes 行人召回向 oracle 高度上界（0.70–0.81 / 0.52–0.67）靠拢（推进结构化感知通道）。
 
 ## 46. 多榜前 10 的交集：没有一个方法族同时在真实数据开环榜和 CARLA 闭环榜上都进前 10；交集由训练数据生态和输入契约决定，不是能力信号（**待定**）
