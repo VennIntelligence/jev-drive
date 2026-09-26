@@ -724,11 +724,92 @@ def nav_gates(g1_run: str, g2_run: str = "") -> dict:
     return out
 
 
+# ---------------------------------------------------------------- summary tables (research/results/real-data-transfer/g1)
+
+def _ci(r, k=2, scale=1.0):
+    return f"{scale * r.delta:+.{k}f} [{scale * r.lo:+.{k}f}, {scale * r.hi:+.{k}f}]"
+
+
+def summarize(out, wod_run="", i3_run="", nav_run="", navtab_run="", sel_run=""):
+    """Small tables for the repo: WOD, I3, NAVSIM, gate descriptions, selection."""
+    import glob
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    D = data_dir()
+    if wod_run:
+        R = D / wod_run
+        t = pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "wod_deltas_*.csv")))])
+        a = pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "wod_activation_*.csv")))])
+        v = pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "wod_verdict_*.csv")))])
+        t.to_csv(out / "wod_deltas.csv", index=False)
+        a.to_csv(out / "wod_activation.csv", index=False)
+        v.to_csv(out / "wod_verdict.csv", index=False)
+        key = ["source", "model", "gate"]
+        rows = []
+        for k, g in t.groupby(key, sort=False):
+            gi = g.set_index(["scope", "judge"])
+            ai = a[(a.source == k[0]) & (a.model == k[1]) & (a.gate == k[2])].set_index("scope").activation
+            rows.append(dict(zip(key, k), **{
+                "RFS all": _ci(gi.loc[("all", "RFS (rater)")]), "RFS Ped.": _ci(gi.loc[("Pedestrians", "RFS (rater)")]),
+                "RFS Cyc.": _ci(gi.loc[("Cyclists", "RFS (rater)")]), "ADE dec1-9 (m)": f"{gi.loc[('all', 'ADE dec1-9')].delta:+.2f}",
+                "act straight": f"{100 * ai['straight_yaw']:.1f}%", "act Ped.": f"{100 * ai['Pedestrians']:.1f}%",
+                "act all": f"{100 * ai['all']:.1f}%",
+                "verdict": v[(v.source == k[0]) & (v.model == k[1]) & (v.gate == k[2])].verdict.iloc[0]}))
+        pd.DataFrame(rows).to_csv(out / "wod_table.csv", index=False)
+        (out / "wod_table.md").write_text(pd.DataFrame(rows).to_markdown(index=False))
+        gd = pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "wod_gate_desc_mc.csv")))])
+        gd.to_csv(out / "wod_gate_desc.csv", index=False)
+        pd.read_csv(R / "wod_sam_auc_mc.csv").to_csv(out / "wod_sam_auc.csv", index=False)
+    if i3_run:
+        R = D / i3_run
+        f = pd.read_csv(R / "i3_flip_rates.csv")
+        pv = pd.read_csv(R / "i3_paired_vs_prior.csv")
+        f.to_csv(out / "i3_flip_rates.csv", index=False)
+        pv.to_csv(out / "i3_paired_vs_prior.csv", index=False)
+        pd.read_csv(R / "i3_gate_desc.csv").to_csv(out / "i3_gate_desc.csv", index=False)
+        pd.read_csv(R / "i3_checks.csv").to_csv(out / "i3_checks.csv", index=False)
+        f = f[f.scope == "pooled"].set_index("examinee")
+        pv = pv[pv.scope == "pooled"].set_index("examinee")
+        rows = []
+        for ex, r in f.iterrows():
+            rows.append({"examinee": ex, "tau": f"{r.tau_model:.2f}", "flip": f"{100 * r.flip_rate:.1f} [{100 * r.flip_lo:.1f}, {100 * r.flip_hi:.1f}]",
+                         "vs prior (pp)": _ci(pv.loc[ex], 1, 100) if ex in pv.index else "",
+                         "null ff (oos)": f"{100 * r.false_flip_null_oos:.1f}%", "non-reactive ff": f"{100 * r.false_flip_nonreactive:.1f}%"})
+        pd.DataFrame(rows).to_csv(out / "i3_table.csv", index=False)
+        (out / "i3_table.md").write_text(pd.DataFrame(rows).to_markdown(index=False))
+    if nav_run:
+        R = D / nav_run
+        pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "navsim_activation_*.csv")))]).to_csv(out / "navsim_activation.csv", index=False)
+        pd.concat([pd.read_csv(f) for f in sorted(glob.glob(str(R / "navsim_gate_desc_*.csv")))]).to_csv(out / "navsim_gate_desc.csv", index=False)
+    if navtab_run:
+        t = pd.read_csv(D / navtab_run / "navsim_paired.csv")
+        t.to_csv(out / "navsim_paired.csv", index=False)
+        a = pd.read_csv(out / "navsim_activation.csv")
+        rows = []
+        for arm, g in t.groupby("arm", sort=False):
+            src, gate, m = arm.split()
+            gi = g.set_index(["metric", "group"])
+            ai = a[(a.source == src) & (a.model == m) & (a.gate == gate)].set_index("scope").activation
+            if ("PDMS", "all") not in gi.index:
+                continue
+            pa, pp = gi.loc[("PDMS", "all")], gi.loc[("PDMS", "ped_cyc_corridor")]
+            holds = ai["straight"] <= ACT_HARM and not pa.hi < 0 and not pp.hi < 0
+            rows.append({"source": src, "model": m, "gate": gate, "PDMS all": _ci(pa), "PDMS ped/cyc (897)": _ci(pp),
+                         "EPDMS all": _ci(gi.loc[("EPDMS", "all")]) if ("EPDMS", "all") in gi.index else "",
+                         "EPDMS ped/cyc": _ci(gi.loc[("EPDMS", "ped_cyc_corridor")]) if ("EPDMS", "all") in gi.index else "",
+                         "act straight": f"{100 * ai['straight']:.1f}%", "act ped/cyc": f"{100 * ai['ped_cyc_corridor']:.1f}%",
+                         "verdict": "useful" if holds and pp.lo > 0 else "holds" if holds else "fails"})
+        pd.DataFrame(rows).to_csv(out / "navsim_table.csv", index=False)
+        (out / "navsim_table.md").write_text(pd.DataFrame(rows).to_markdown(index=False))
+    if sel_run:
+        pd.read_csv(D / sel_run / "selection_auc.csv").to_csv(out / "selection_auc.csv", index=False)
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("g1-wod", "g1-nav", "g2", "select", "i3", "wod", "nav-write", "nav-table"))
+    ap.add_argument("what", choices=("g1-wod", "g1-nav", "g2", "select", "i3", "wod", "nav-write", "nav-table", "summary"))
     ap.add_argument("--g1-run", default="", help="the g1 fit run dir (relative to DATA_DIR)")
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--oof-rows", default="", help="g1-wod: selection rows file -> out-of-fold fits")
@@ -736,9 +817,14 @@ def main():
     ap.add_argument("--g1-nav-run", default="")
     ap.add_argument("--g1-oof-run", default="")
     ap.add_argument("--g2-run", default="", help="the g2 run dir; given -> g2 joins the arms")
+    ap.add_argument("--runs", default="", help="summary: wod,i3,nav-write,nav-table,select run dirs (empty = skip)")
+    ap.add_argument("--out", default="research/results/real-data-transfer/g1")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))
     models = tuple(a.models.split(","))
+    if a.what == "summary":
+        summarize(a.out, *a.runs.split(","))
+        return
     rl = RunLog("real-data-transfer", a.what)
     if a.what == "g1-wod":
         g1_wod(rl, models, a.oof_rows, a.g1_run)
