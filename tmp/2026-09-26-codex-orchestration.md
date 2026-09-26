@@ -39,3 +39,5 @@ pids按resident加尚未实现的任务claim预算；CARLA既有runner的17000�
 后测是7次采样、实际89.54秒：CPU79.554/175，GPU0–6均值78.0/2.4/76.3/45.3/61.0/20.1/85.9%（batch均值61.1%）；pids13858–14344，对比前测15360–16446。前后工作集变化，评分完成释放资源，不能声称“占用率提高”或凭此推导加速百分比。可靠的推进证据是DONE步从5增至9，原来卡住的compat/exam/refit完成；refit109秒，随后的等价检查预测最大差与帧差都是0。Q5继续图片准备，后测结束后三个single-frame seed worker622911/622912/622913均已实际并行启动。
 
 最终补上重启检查：比较RUNNING任务自己的不可变launch.json中的实际命令，避免下次重启把Q5的resource-only SCORE_THREADS=6误判为相对旧模板14的命令变化。改文件前再次只停dispatcher610518，记录并核对Q5worker612015及三个seed worker仍活；不改/重启科学worker。第8项回归覆盖该重启情形和真正命令变化必须拒绝。测量输出新增真实elapsed_s，避免把30秒sleep意图当实测窗口长度。
+
+最终版本 `1fb1352` 已main push/boxpull，8项回归在两端PASS。持久supervisor现为 **PID631108 / jev:cx-orchestration-v4**。三个single-frame seed实际于22:41:47同时进入fit，日志分别在22:44:02（135秒）、22:44:05（138秒）、22:45:04（197秒）正常结束；Q6 real verdict已DONE。当前三个fit全部成功日志，状态poll会补marker；Q5worker612015保持原身份继续。之后只需低频看STATUS/WAIT，不让模型连续监控。没有根据前后不同工作集的GPU利用率算假加速比。
