@@ -110,6 +110,9 @@
   镜像题的间距从 10–14 m 改成 14–20 m（背景 source 离 ego 的距离 = 2 × 间距，10–14 m 会让车在 ego 前 20 多米凭空出现）。第 2 轮 smoke：25896 与 25854（HazardAtSideLaneTwoWays）的 x₁₀ / x₀₀ / x₁₁ / x₀₁ / 镜像，10 个世界。
 - 2026-09-26 10:11 CST [A] 批量 a 段开跑：1W、InvadingTurn、Emergency 共 230 个世界（它们不走对向车流的代码路径，第 1 轮 smoke 的删登记与放置 null 已过），GPU 1、2 各 6 实例，
   `runs/p6/gen`（tmux `p6-gen-a`，server index 850–949）。2W 的 375 个世界等第 2 轮 smoke 过了再上 GPU 0。
+- 2026-09-26 10:21 CST [A] 容器 CPU 被打满：`cpu.max` = 125 核配额，load average 350，每个 CFS 周期都被 throttle（别的执行员的 HUGSIM 渲染 6 路 × 5 核、N5 depth、N4 detect 等不 pin 核）。
+  第 2 轮 smoke 与 a 段的前 9 个 route 全部在第一个 tick 之前就被 240 s 看门狗判 hung。停掉重开（无损，没有完成的世界），看门狗放到 600 s；
+  吞吐会比估计慢，a 段 + 2W 段若超过估计的 2 倍（6 h）就停下报告。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
