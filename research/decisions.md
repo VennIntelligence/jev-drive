@@ -3283,3 +3283,23 @@ desire 执行器检查（零训练，P5 v1 直行帧，每个目标帧 8 s 零�
 **状态**：**待定**。限定：只在 CARLA；车道由 route 折线横向距离定（3.5 m 车道假设，没查 map）；YOLO 在 PDM 集未测；高速档没有数据。
 **会推翻或推进本条的证据**：N1 x₁₀ 帧上 probe a 对锥桶 / 事故车掉到 ≤ 0.60（那就是「车」可读、「障碍物」不可读，要外接检测）；闭环里 desire 触发后 openpilot 真的完成变道（推进执行器路线）；
 x₁₀ 帧上（有障碍时）desire 横移明显变大（说明 plan 会结合场景放大 desire）。
+
+## 50. 快通道的检测输入不需要平地抬升和走廊筛：image-plane token（相机、框、类别、score、检测外观）经配对差分读出的行人反应与抬升版同一水平；走廊几何只对车辆 cut-in 有用（**待定**，P5 v1 BA，3 seed，两个 openpilot 模型）
+
+2026-09-26。预登记、全部表与延迟在 [todos/2026-09-26-night-queue-2.md](../todos/2026-09-26-night-queue-2.md) N4 节（[B] 10:12）与结果节，小表 [results/night2/N4/](results/night2/N4/)。
+接第 45 条（召回缺口在 20–40 m 的平地放置，图像里看见的行人 BEV 里只剩 12–22%）和第 42 条的 E5 student（openpilot `temporal` ⊕ YOLO26x-seg 检测经平地抬升、路线走廊 ±4 m 筛出前 8 个，配对差分，行人 51–57%）。
+这一条问：不做几何、把每路相机的前 8 个检测原样（image-plane 坐标 + 16 维检测外观，即 YOLO neck 特征的 RoIAlign 经 PCA）交给同一个 student，配对差分能不能自己学出来。
+
+| P5 v1 BA 行人翻转（seed 0 [CI]） | Cinque | Lebowski |
+|:--|:--|:--|
+| A 抬升 + 走廊（E5） | 52.7 [41.7, 62.1] | 55.7 [46.9, 63.1] |
+| **B image-plane，不抬升不筛** | **57.4 [47.6, 66.4]** | **48.5 [36.1, 59.6]** |
+| C = A ⊕ B | 51.7 [42.1, 59.8] | 55.4 [45.0, 63.8] |
+| cut-in 对 prior 的 Δ：A / B / C（pp） | −1.3 / +0.6 / −0.4（CI 都跨零） | **+6.5** / +0.0 / **+6.8** |
+
+**结论**：按预登记判「快通道改为 image-plane，lift 只留在测量里」——两个模型三个 seed，B 的行人 CI 都与 A 重叠（点估计 Cinque 高 5 pp、Lebowski 低 7 pp，同一水平，不是更好），
+DynamicObjectCrossing 非反应误翻 B − A 在 ±1.9 pp（门槛 +3），null false-flip 5.0–5.5% 不变。端到端延迟在同一台共卡的 GPU 上 A 42.0 / B 41.2 ms（p95），B 省下抬升与走廊（3.2 → 0.5 ms）又花在检测特征的 RoIAlign 上（约 2 ms）。
+第 45 条的放置误差因此不必挡在快通道前面：反应读出绕开了 BEV 放置。代价是车辆：Lebowski 上 A / C 对 prior 有 +6.5 / +6.8 pp 的 cut-in 增益，B 没有（Cinque 三个 arm 都在零附近）。
+推测：cut-in 的判别量就是「车是否进入本车道」，走廊横距直接给出它；行人只要「在不在画面下半部、有多大」就够。验证：B 的 token 里加一维「框底中点到 route 在图像上投影的横向像素距离」（不用深度），看 Lebowski cut-in 是否回到 +6。
+
+**状态**：**待定**。限定：只在 CARLA（BA 集），检测外观来自 COCO 训练的 YOLO，真实数据上 image-plane token 的迁移（G0 那一问）没测；Lebowski 的 cut-in 增益本身 CI 下端就贴着 0；延迟在共卡上量，绝对值比 E5 独占卡时高约 15 ms。
