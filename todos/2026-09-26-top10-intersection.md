@@ -280,6 +280,35 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
      5.3 抄来的「横向定向翻转」与「反应类别一致率」在 BA 集上**不报**：BA 集没有横向标签（BehaviorAgent 不绕行，第 47 条），反应类别的阈值 P5 v1 从未写死，照「不新设门槛」不补。
   6. **WOD 相机**：直接映射（F0 ← FRONT、L0 / R0 ← FRONT_LEFT / RIGHT、B0 ← REAR），不做纯旋转重投影（与 P5 / I3 喂 ±45° 侧前视的做法一致）。
   7. **NAVSIM 复现**只跑 5.1 里本 brief 要的两项（DrivoR v1 PDMS 93.7、WA-JEPA navtest EPDMS 91.7）；DrivoR 的 v2 ckpt（navhard EPDMS）不在盘上，不下载、不跑。
+- 2026-09-26 11:15 CST [T2] **box 11:45 重启（加第 6 张卡）前的暂停记录**。还没有任何考生分数。
+  **已完成**：
+  - 推理器等价核对（`runs/top10_t2/checks/`）：DrivoR 推理器对它自己的 feature builder + forward，32 个 navtest token，图像张量逐位相同、轨迹最大差 1.1e-5 m，batch 8 对 batch 1 差 4e-6 m；
+    WA-JEPA 推理器（fp32）对它自己的 `agent.compute_trajectory`，16 个 token，**逐位相同**；bf16 autocast 对 fp32 的 ADE 0.06 m（最大 0.18 m）。WA-JEPA 必须 batch 1：`predict_trajectory` 每次调用重设 seed、噪声按 (batch, …) 抽，
+    batch 化会让配对的 x⁺ / x⁻ 拿到不同噪声（两个 repo 自带适配器也都是 batch 1）。
+  - I3 补渲的核对：第一个场景（kitti360-0000_10320_10520，3 个世界）前三路 324 张 5 Hz 帧与原 JPEG **逐字节相同**；全量渲染到 11:14 完成 47 / 65 个场景（每个场景都在 meta.json 里记 `check_vs_5hz`）。
+  - P5 v1 BA 的请求（19 428 帧 × 2 模型，`runs/top10_t2/requests/p5_*.npz`；WA-JEPA 历史槽 119 个钳到流起点）；nuScenes samples/CAM_BACK 解压完成（34 149 张）。
+  **被杀 / 停掉的**（全部没有输出，也没有半写的文件）：P5 的 DrivoR（59%）与 WA-JEPA（15%）推理，11:13 手动停，赶不上 11:40；推理器已改成每 1024 / 256 个请求原子写一个 chunk（`<out>.part/`），以后被杀可续。
+  I3 补渲 11:40 停（按场景续：没有 meta.json 的场景目录整场重渲）。NAVSIM 复现（子执行员）11:07 停，无部分输出；WOD / nuScenes（子执行员）见它自己的条目。
+  **慢的原因（超估计 2 倍的记录）**：box load 300–450 / 125 核、GPU 3 / 4 都 100% 占用，WA-JEPA 单样本 1.0–1.9 s（smoke 空卡 0.15 s），DrivoR 每 16 个 2.5–4.8 s；
+  另外补渲 worker 没有钉核时每个吃 3–11 核（torch / cv2 线程），10:52 改为每个 `taskset` 3 核重启。WA-JEPA 的图像改成每张唯一图只解码一次（`--cache`，P5 有 69 606 张唯一图、23 万次引用，建缓存 6 min），与逐次解码逐位相同。
+  **续跑命令**（box 上，`~/data/jev-drive`，GPU 按重启后的分配改 `CUDA_VISIBLE_DEVICES`）：
+  ```
+  R=$DATA_DIR/runs/top10_t2
+  # 1. I3 补渲（6 个 shard，按场景续）
+  scripts/tmux_run.sh t2-i3-render bash -c 'cd $DATA_DIR/third_party/HUGSIM; for i in 0 1 2 3 4 5; do CUDA_VISIBLE_DEVICES=<g> OMP_NUM_THREADS=2 taskset -c <3 核> $DATA_DIR/envs/hugsim/bin/python -u ~/data/jev-drive/scripts/hugsim/pairs_render_10hz.py --skip-done --shard $i 6 & done; wait'
+  # 2. P5 推理（chunk 续跑；WA-JEPA 的 /dev/shm 缓存重启后没了，第一次调用自动重建约 6 min）
+  cd $DATA_DIR/third_party/drivor && CUDA_VISIBLE_DEVICES=<g> $DATA_DIR/envs/drivor/bin/python ~/data/jev-drive/scripts/top10_t2/drivor_run.py $R/requests/p5_drivor.npz --out $R/preds/p5_drivor.npz --workers 4
+  cd $DATA_DIR/third_party/wajepa && $DATA_DIR/envs/wajepa/bin/python ~/data/jev-drive/scripts/top10_t2/wajepa_run.py $R/requests/p5_wajepa.npz --cache /dev/shm/t2cache_p5 --cache-only --workers 8
+  for i in 0 1 2; do CUDA_VISIBLE_DEVICES=<g> $DATA_DIR/envs/wajepa/bin/python ~/data/jev-drive/scripts/top10_t2/wajepa_run.py $R/requests/p5_wajepa.npz --out $R/preds/p5_wajepa.s$i.npz --shard $i 3 --workers 1 --cache /dev/shm/t2cache_p5 & done; wait
+  $DATA_DIR/envs/wajepa/bin/python ~/data/jev-drive/scripts/top10_t2/wajepa_run.py --merge $R/preds/p5_wajepa.s{0,1,2}.npz --out $R/preds/p5_wajepa.npz
+  # 3. I3（补渲完之后）：请求、两个推理器（同上，换 i3_*），考试；P5 考试
+  $DATA_DIR/envs/jevdrive/bin/python -m jevdrive.top10_t2 req-i3      # 然后 exam-i3 / exam-p5
+  # 4. NAVSIM 复现（子执行员的续跑脚本，WA-JEPA 导出每 100 个 token 存盘）
+  scripts/tmux_run.sh t2-nav-wajepa env GPU=<g> CPUS=<8 核> NPROC=3 scripts/top10_t2/navsim_repro.sh wajepa
+  scripts/tmux_run.sh t2-nav-drivor env GPU=<g> CPUS=<4 核> PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True scripts/top10_t2/navsim_repro.sh drivor dataloader.params.batch_size=8 dataloader.params.num_workers=4
+  ```
+  续跑需要的时间（按空一点的卡估）：补渲剩余约 20 min；P5 两个模型约 1 h；I3 约 40 min；NAVSIM 约 2.5 h（与前面并行）；WOD / nuScenes 另见子执行员。
+  **事故**：NAVSIM 子执行员 11:06:53 清理自己的进程时用了 `pgrep -f run_pdm_score_multi_gpu`，误杀了 T1 的 `t1-nav-sd`（SparseDriveV2 navtest，37%，exit 143）；已报 main 转告 T1。
 
 ## 结果
 
