@@ -9,7 +9,7 @@ reaches 90000. It never consolidates while the runner lives, and takes no new un
 runner's last written frame, so the two never work on the same unit.
 Run in the alpamayo1.5 venv from the repo root.
 
-  verify --n 3     the first n frames the runner already wrote, recomputed here and compared (xyz bit for bit, text)
+  verify --unit 0  one whole unit the runner already wrote, recomputed here and compared (xyz bit for bit, text)
   run              the loop above
   consolidate --owner-pid P   the runner's consolidate(), refused while P is alive
 """
@@ -45,24 +45,27 @@ def done_frames(parts) -> set:
 
 
 def cmd_verify(a, log):
-    _, meta = A.read_parts()
-    xyz_ref = np.load(runner_parts()[0])["xyz"]
-    t = A.frames().set_index("frame_name")
+    """Recompute one whole unit the runner already wrote (--unit, default its first) and compare with its parts."""
+    xyz_all, meta = A.read_parts()
+    at = {f: i for i, f in enumerate(meta.frame_name)}
+    t = A.frames()
+    units = [g for _, g in t.groupby(["priority", "base_id", "seed"], sort=False)]
+    g = units[a.unit]
+    assert g.frame_name.isin(at).all(), f"unit {a.unit} is not finished by the runner"
     model, processor = load()
     prep = A.Prep(processor)
     res = []
-    for i in range(a.n):
+    for p in A.prefetch(prep, list(g.itertuples()), a.workers, 4 * a.workers):
+        i = at[p["row"].frame_name]
         m = meta.iloc[i]
-        r = t.loc[[m.frame_name]].reset_index().iloc[0]
-        p = prep(r)
-        assert p["seed"] == m.seed
         o = A.infer(model, A.to_cuda(p["inputs"]), p["seed"])
-        res.append({"frame": m.frame_name, "xyz_equal": bool(np.array_equal(o["xyz"], xyz_ref[i])),
-                    "max_abs": float(np.abs(o["xyz"] - xyz_ref[i]).max()), "cot_equal": o.get("cot", "") == m.cot,
+        res.append({"frame": m.frame_name, "seed_equal": p["seed"] == m.seed, "xyz_equal": bool(np.array_equal(o["xyz"], xyz_all[i])),
+                    "max_abs": float(np.abs(o["xyz"] - xyz_all[i]).max()), "cot_equal": o.get("cot", "") == m.cot,
                     "wall_s": o["wall"]})
         log.info(str(res[-1]))
-    ok = all(r["xyz_equal"] and r["cot_equal"] for r in res)
-    log.info(f"verify {a.n} frames: {'identical' if ok else 'DIFFERENT'}")
+    ok = all(r["xyz_equal"] and r["cot_equal"] and r["seed_equal"] for r in res)
+    log.info(f"verify unit {a.unit}, {len(res)} frames: {'identical' if ok else 'DIFFERENT'}, "
+             f"{np.mean([r['wall_s'] for r in res]):.2f} s/frame GPU")
     sys.exit(0 if ok else 1)
 
 
@@ -133,7 +136,7 @@ def cmd_consolidate(a, log):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=("verify", "run", "consolidate"))
-    ap.add_argument("--n", type=int, default=3)
+    ap.add_argument("--unit", type=int, default=0)
     ap.add_argument("--priority", type=int, default=0)
     ap.add_argument("--gap", type=int, default=600, help="frames kept free ahead of the runner's last written frame")
     ap.add_argument("--workers", type=int, default=4)
