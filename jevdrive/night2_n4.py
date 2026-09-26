@@ -90,16 +90,17 @@ class Detector:
         return out_
 
 
-def detect(part: str, batch: int = 12, shard: int = 3000, workers: int = 3):
-    """Slice `part` = i/n of E5's image list (interleaved by shard) -> out/dets/part-<k>.parquet + feat-<k>.npy."""
+def detect(part: str, batch: int = 12, shard: int = 3000, workers: int = 3, images: str = "", dst: str = ""):
+    """Slice `part` = i/n of E5's image list (interleaved by shard) -> out/dets/part-<k>.parquet + feat-<k>.npy.
+    `images` / `dst` point at another image list (key, path) and output dir (night queue 3, lane C: the P6 frames)."""
     import torch
     from torch.utils.data import DataLoader
     from .sam_detect import _collate, _Images
     i, n = map(int, part.split("/"))
-    t = pd.read_parquet(data_dir() / "processed/elicit_e5/images.parquet")
+    t = pd.read_parquet(images or data_dir() / "processed/elicit_e5/images.parquet")
     det = Detector()
-    d = out("dets")
-    d.mkdir(exist_ok=True)
+    d = Path(dst) if dst else out("dets")
+    d.mkdir(parents=True, exist_ok=True)
     for k, s0 in enumerate(range(0, len(t), shard)):
         if k % n != i or (d / f"part-{k:04d}.parquet").exists():
             continue
@@ -375,9 +376,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("step", choices=("detect", "tokens", "fit", "latency", "figs"))
     ap.add_argument("--part", default="0/1")
+    ap.add_argument("--images", default="")
+    ap.add_argument("--dst", default="")
+    ap.add_argument("--batch", type=int, default=12)
+    ap.add_argument("--workers", type=int, default=3)
     a = ap.parse_args()
     if a.step == "detect":
-        return detect(a.part)
+        return detect(a.part, a.batch, workers=a.workers, images=a.images, dst=a.dst)
     if a.step == "figs":
         return figs()
     from .runlog import RunLog
