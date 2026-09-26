@@ -181,7 +181,16 @@ def main():
     idx = np.arange(len(z["keys"]))[a.shard[0]::a.shard[1]]
     t0 = time.time()
     cache = build_cache(z["img"].ravel(), Path(a.cache), a.workers) if a.cache else None
-    traj = run(agent.model, z, idx, not a.no_amp, a.workers, cache)
+    part = Path(a.out + ".part")                   # resumable: one atomically written file per 256 requests
+    part.mkdir(parents=True, exist_ok=True)
+    res = []
+    for c0 in range(0, len(idx), 256):
+        f = part / f"{c0:07d}.npz"
+        if not f.exists():
+            np.savez(part / "tmp.npz", traj=run(agent.model, z, idx[c0:c0 + 256], not a.no_amp, a.workers, cache))
+            os.replace(part / "tmp.npz", f)
+        res.append(np.load(f)["traj"])
+    traj = np.concatenate(res)
     np.savez_compressed(a.out, keys=z["keys"][idx], idx=idx, traj=traj)
     print(f"{len(traj)} plans in {time.time() - t0:.0f} s -> {a.out}")
 

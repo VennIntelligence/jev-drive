@@ -118,6 +118,21 @@ def check(agent, n: int, out: Path):
     print(json.dumps(res, indent=1))
 
 
+def chunked(fn, n: int, out: str, size: int = 1024) -> np.ndarray:
+    """fn(slice) per chunk of `size` requests, each saved atomically under <out>.part/, so a killed run resumes at the
+    first missing chunk."""
+    part = Path(out + ".part")
+    part.mkdir(parents=True, exist_ok=True)
+    res = []
+    for c0 in range(0, n, size):
+        f = part / f"{c0:07d}.npz"
+        if not f.exists():
+            np.savez(part / "tmp.npz", traj=fn(slice(c0, c0 + size)))
+            os.replace(part / "tmp.npz", f)
+        res.append(np.load(f)["traj"])
+    return np.concatenate(res)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("request", nargs="?")
@@ -132,9 +147,10 @@ def main():
         o.mkdir(parents=True, exist_ok=True)
         check(agent, a.check, o / "drivor_check.json")
         return
-    z = np.load(a.request)
+    with np.load(a.request) as f:
+        z = {k: f[k] for k in f.files}
     t0 = time.time()
-    traj = run(agent, z, a.bs, a.workers)
+    traj = chunked(lambda sl: run(agent, {k: v[sl] for k, v in z.items()}, a.bs, a.workers), len(z["keys"]), a.out)
     np.savez_compressed(a.out, keys=z["keys"], traj=traj)
     print(f"{len(traj)} plans in {time.time() - t0:.0f} s -> {a.out}")
 
