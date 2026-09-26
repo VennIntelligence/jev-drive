@@ -314,7 +314,7 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 
 | 项 | 本轮核查结果 | 判格 | 待处理问题 |
 |:--|:--|:--|:--|
-| P1 | 复用既有盘点：test 147 个 log，trainval 1 310 个 log；草稿尚未运行计数 | 未出判格 | logged future 无非零线段、尾部不足 30 m 时的处理未规定；草稿端点截断会计入身后与 30 m 端点外的点，先停下确认 |
+| P1 | CX 产出，待 main 复核：1 457 log、798 141 帧，独立事件 33 490；[逐事件 CSV](../research/results/nq4/p1/events.csv)、[城市 × 速度汇总](../research/results/nq4/p1/summary.md) | ≥ 2 000 → 开 P2（仅判格，未启动） | main 已明确短路径沿末段延长、静止按 pose 朝向；CPU 2 核计数 114.93 s，完整性与抽样复算通过 |
 | O | 已核查训练数据出处及已有元数据；[来源与阻塞表](../research/results/nq4/o/summary.md) | 描述性任务，无门槛；近邻数尚未计算 | B2D clip 到触发点的映射未核实；BLUE gate 数据尚未公开；不能以路线模板替代实际训练 clip 或把未知写为零 |
 
 按任务书第 5 条暂停，问题详见 `tmp/2026-09-26-codex-status.md`。不启动 P2，不做与 G 的相关，不修改 decisions。

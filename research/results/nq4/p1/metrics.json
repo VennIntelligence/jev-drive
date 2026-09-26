@@ -1,0 +1,112 @@
+{
+  "inventory": {
+    "test": 147,
+    "trainval": 1310
+  },
+  "logs_processed": 1457,
+  "frames_processed": 798141,
+  "pedestrian_boxes": 17399540,
+  "boundary_counts": {
+    "frames_with_short_future_path": 58903,
+    "pedestrian_frames_with_short_future_path": 54939,
+    "frames_without_valid_future_segment": 1465,
+    "pedestrian_frames_without_valid_future_segment": 1280
+  },
+  "independent_events": 33490,
+  "by_city_speed": [
+    {
+      "city": "sg-one-north",
+      "speed_bin_mps": "0–2",
+      "events": 118
+    },
+    {
+      "city": "sg-one-north",
+      "speed_bin_mps": "2–5",
+      "events": 134
+    },
+    {
+      "city": "sg-one-north",
+      "speed_bin_mps": "5–10",
+      "events": 144
+    },
+    {
+      "city": "sg-one-north",
+      "speed_bin_mps": ">10",
+      "events": 6
+    },
+    {
+      "city": "us-ma-boston",
+      "speed_bin_mps": "0–2",
+      "events": 866
+    },
+    {
+      "city": "us-ma-boston",
+      "speed_bin_mps": "2–5",
+      "events": 287
+    },
+    {
+      "city": "us-ma-boston",
+      "speed_bin_mps": "5–10",
+      "events": 397
+    },
+    {
+      "city": "us-ma-boston",
+      "speed_bin_mps": ">10",
+      "events": 22
+    },
+    {
+      "city": "us-nv-las-vegas-strip",
+      "speed_bin_mps": "0–2",
+      "events": 20596
+    },
+    {
+      "city": "us-nv-las-vegas-strip",
+      "speed_bin_mps": "2–5",
+      "events": 4674
+    },
+    {
+      "city": "us-nv-las-vegas-strip",
+      "speed_bin_mps": "5–10",
+      "events": 3870
+    },
+    {
+      "city": "us-nv-las-vegas-strip",
+      "speed_bin_mps": ">10",
+      "events": 1953
+    },
+    {
+      "city": "us-pa-pittsburgh-hazelwood",
+      "speed_bin_mps": "0–2",
+      "events": 160
+    },
+    {
+      "city": "us-pa-pittsburgh-hazelwood",
+      "speed_bin_mps": "2–5",
+      "events": 77
+    },
+    {
+      "city": "us-pa-pittsburgh-hazelwood",
+      "speed_bin_mps": "5–10",
+      "events": 168
+    },
+    {
+      "city": "us-pa-pittsburgh-hazelwood",
+      "speed_bin_mps": ">10",
+      "events": 18
+    }
+  ],
+  "elapsed_s": 114.92582549992949,
+  "definition": {
+    "category": "pedestrian",
+    "corridor_lateral_m": 4.0,
+    "corridor_forward_arclength_m": 30.0,
+    "event": "maximal consecutive qualifying-frame run per track token",
+    "short_future": "extend last valid segment to 30 m; stationary uses current pose yaw",
+    "speed_bins_mps": [
+      "[0,2)",
+      "[2,5)",
+      "[5,10)",
+      "[10,infinity)"
+    ]
+  }
+}
