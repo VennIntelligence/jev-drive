@@ -3143,3 +3143,55 @@ student 是第 42 条里 E5 那个不含 Qwen 的快通道（openpilot `temporal
 
 **状态**：**待定**。限定：P5 是 v0 的 hazard 帧；nuScenes 只取 1/3 scene；延迟在 RTX PRO 6000 上、batch 1，Ultralytics 的时间里一半是 CPU 前后处理；YOLOE 类别词与 fp16 是事后加的 side 变体；没有复跑第 43 条 Q6 的规则门（行为读出）。
 **会推翻或推进本条的证据**：在 YOLO26 状态上复跑 Q6-SAM 的规则门，行人 family 翻转不低于 SAM 状态（推进：可以直接替换）；给接地点加按相机标定尺度的深度或地面高度后，P5 / nuScenes 行人召回向 oracle 高度上界（0.70–0.81 / 0.52–0.67）靠拢（推进结构化感知通道）。
+
+## 46. 多榜前 10 的交集：没有一个方法族同时在真实数据开环榜和 CARLA 闭环榜上都进前 10；交集由训练数据生态和输入契约决定，不是能力信号（**待定**）
+
+2026-09-26。只读榜单汇总 + 装机 smoke，没有跑任何考试。预登记、逐榜前 10 与出处在 [todos/2026-09-26-top10-intersection.md](../todos/2026-09-26-top10-intersection.md)
+（明细 `boards.md`、`boards/*.csv`、HF 榜原始抓取）。起因是用户的判断：真正好的模型应该在开环榜上都靠前，或开环闭环都靠前；上一轮审计每榜只取前 4–7 且漏了几个第一名。
+
+**上一轮漏掉的第一名**（本次补齐；根因是上次用 sota2 转录与论文表，没有直接拉官方榜 JSON）：Bench2Drive 第一是 BridgeDrive 96.34（2026-09-24 才进官方榜），不是 TFv6；
+NAVSIM v1 与 navhard 的 HF 官方榜第一是匿名队 EABOT（95.61 / 58.63），可查身份的是 FPD-Drive-Pro，TOAD 实际第 8；WOD-E2E 第一是 ZSD-Titan 8.167；
+CARLA LB2 MAP 赛道是 Kyber-E2E 12.455；HUGSIM 是 DriveZero-Scale 46.6，但与 WA-JEPA 的 436 场景协议不同。navhard 前 8 个学习式条目全部超过特权 PDM-Closed 56.6。
+
+**交集**（8 类榜 12 张子榜，各取前 10，按同代码库 / 同作者组归族）：
+
+| 生态 | 占据前 10 的族 | 与其他生态的交集 |
+|:--|:--|:--|
+| CARLA 闭环（B2D、Longest6、LB2） | TransFuser-LEAD（TFv6、BridgeDrive）、SimLingo 系（SimLingo、BLUE、LinkVLA、FIVE-VLA、SteerVLA、RoG-DAgger） | 只有 SparseDrive（B2D #10），且其 B2D 版读 CARLA 真值位姿 |
+| 真实数据（NAVSIM v1 / v2、HUGSIM、WOD） | DrivoR 系（DrivoR、TOAD、DriveZero、NTR）、AFARI（WA-JEPA、ChainFlow-VLA）；WOD 前 10 全是无代码条目 | HUGSIM 前 10 几乎全是 navtrain 上训、零样本进 HUGSIM 的 NAVSIM 模型，不是独立证据 |
+| nuScenes 开环 | 前 10 全用 ego status，与所有其他榜零交集 | 0 |
+| nuPlan（Val14、Test14-hard、interPlan） | 全是吃 GT 目标 + 地图的 planner | 0（进不了传感器考卷） |
+
+**读法**：跨榜交集主要由训练数据属于哪个生态和输入契约决定，不是能力的直接信号；这与第 35 条 (b) 量到的低跨榜相关（B2D↔Longest6 ρ=0.05、NAVSIM v1↔v2 顶部 ρ=0.21）一致。
+交集小恰好说明榜单排序大部分是配方；值得上我们仪器的只有交集里的几个族。NAVSIM v1 有 9 个学习式条目超过 human 94.8，能查到机制的新条目都用 learned PDM 子分数 scorer 选轨；前 10 里 4（v1）/ 6（navhard）个是匿名队。
+
+**选出的 6 个族与已装机的模型**：DrivoR 系（DrivoR）、AFARI（WA-JEPA）、TransFuser-LEAD（TFv6 已有 + BridgeDrive）、SimLingo 系（SimLingo 已有 + BLUE）、SparseDrive（SparseDriveV2 NAVSIM 版）、
+NVlabs Hydra 的 ZTRS 作对照（只用 PDM 奖励训练、无模仿，是「对准 metric 的配方」的纯样本）。新装 6 个模型全部在独立 env 里装通并在真实输入上 smoke（每个 5–17 min，延迟 14–614 ms）。
+
+**对方向的含义**：这 6 族按 todo 的预登记进 P5 v1 BA 配对、I3、WOD 零样本、NAVSIM（约 17 GPU·h，另约 7 卡·h 重录 P5 v1 给 BridgeDrive / BLUE、补渲 I3 的 CAM_BACK 给 DrivoR / WA-JEPA）。
+BLUE 是第 38 条里唯一在突发 hazard 上显著更好的方法，它的 gate 在 P5 上是否复现是最先要看的一格。
+
+**状态**：**待定**。限定：榜单快照到 2026-09-26；BridgeDrive 仓库无 LICENSE、HF 未写 96.34 出自哪个 ckpt；WOD 新条目只有榜单行没有论文代码；NAVSIM 模型只出 4 s 轨迹，考 WOD 要外推到 5 s，对它们不利。
+**会推翻本条的证据**：这 6 族在 P5 / I3 上的翻转率普遍显著高于各自 null 地板且跨外观成立，则「交集不是能力信号」要改写为「交集里的族确有能力」。
+
+## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
+
+2026-09-26。只读调研 + 在已提交的 WOD `per_frame.npz` 上算的一版零成本读数，全文 [behavior-layer-instruments.md](behavior-layer-instruments.md)；
+无 hack 方法的机制复核在 [nohack-mechanisms.md](nohack-mechanisms.md)；矩阵盘点在 [ablation-matrix-inventory.md](ablation-matrix-inventory.md)。P5 量的是「看到因素后有没有减速反应」；这一条讲的是反应之后的行为，P5 v1 的路线里横向避让类几乎没出题。
+
+**结论**：
+1. 公开量具里能把「停下」和「绕过去」分开的只有闭环 SR，而且是间接的（B2D 的 obstacle_bypass 路线停着会被 blocked 终止）。WOD RFS、NAVSIM EPDMS 都不按行为模式计分；navhard Stage 2 在人类终点周围横向 ±2 m 取起点，量的是 recovery 不是 bypass；
+   negotiation 没有一个榜单单独报，最近的是 interPlan 的 assertive agent 和 B2D 的 unprotected turn SR。B2D 里 2W（要借对向车道）比 1W 明显掉的方法缺的正是 negotiation（Orion −52 pp、SparseDriveV2 −17 pp），两格都 ≥ 87% 的只有 PDM-Lite 和 TFv6；每个 scenario 只有 5 条路线，单格差一条就是 20 pp。
+2. PDM-Lite 会绕（obstacle_bypass SR 92%，YieldToEmergencyVehicle 100%），但靠 scenario_runner 写进 `active_scenarios` 的特权登记：距障碍 50 m 内把路线平移到相邻车道中心，TwoWays 用对向车真值速度做 gap check。
+   BehaviorAgent 只有 tailgating 变道，锥桶等 static prop 不在它的检测表里，Construction 类会撞上去或卡住。所以第三层的 expert 只能用 PDM-Lite，BehaviorAgent 只能当「只会停」的反例考生。
+3. WOD-E2E val 479 帧里 rater 最高分是严格 S 形 nudge 的只有 21 帧（4.4%）；两种模式都被打过分的 18 帧里 nudge 高 11、stop 高 7；21 帧里 13 帧的非绕行替代轨迹也 ≥ 7 分。RFS 几乎不惩罚「该绕时停下」。
+   在这 21 帧上我们的 `cls_late`（K = 1024）预测 nudge 0 / 21、stop 29%；Alpamayo 1.5 17%、openpilot 14–24%；n 太小只算提示。Alpamayo 的 CoT 在 180 帧说 nudge，与它自己的轨迹对不上。
+4. 无 hack 方法里超出噪声带且落到 E 层 / 第三层的只有三条（BLUE gate、RAM 同权重推理、RoG-DAgger），增益都落在 Give_Way、Emergency_Brake、SR recovery，也就是这一层。第 38 条说的「榜单真正拉开差距的是 unprotected turn、obstacle bypass」与此是同一件事。
+
+**对方向的含义**：第三层是榜单差距所在、也是我们仪器的空白，所以开 P6 开环配对「行为模式考试」（草案在 behavior-layer-instruments.md §3，数据生成预登记为 [night-queue-2](../todos/2026-09-26-night-queue-2.md) N1）：
+障碍 {有, 无} × 对向车 {有, 无}，expert = PDM-Lite，**x⁻ 必须同时删掉 `active_scenarios` 里的登记**，否则 PDM-Lite 会对空气绕行、标签全假；另加放置 null 与镜像题防「永远绕」。
+激发绕行的前提（openpilot temporal 里有没有本车道静止障碍、邻道有车、对向来车的信息）和执行器（desire 脉冲能否让原生 plan 变道）登记为 N2，先于任何训练。
+
+**状态**：**待定**。限定：WOD 的 21 帧只能当 sanity check；宽口径 133 帧混有弯道，WOD 没有 map 分不开；`cls_late` 词表里 bypass 形状的 anchor 有多少还没数，0 / 21 可能是 vocabulary 造成的而不是 representation。
+**会推翻或推进本条的证据**：N1 里 PDM-Lite 在 bypass 类的绕行比例 < 70%（考卷造不出来）；词表里 bypass anchor 覆盖足够而 `cls_late` 在 P6 上仍为 0（第 25 条的 reaction decoder 只会「刹」，第三层要用横向目标重训）；
+TFv6 waypoint 在 P6 上有显著 Δ_lat（第 38 条「TFv6 高分主要不是 E 层」在 obstacle_bypass 这一格要改写）。

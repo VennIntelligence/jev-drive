@@ -188,6 +188,8 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 
 共同点：增益都能落到"训练时改了什么"，而不是"推理时怎么选"。它们在 B2D 上齐刷刷停在 90–91 这一档，与 TFv6 95.2 的差距主要是 LiDAR（+3.1）加规则/接口（账本外，我们测到接口 +14 是相对 waypoint 而言）。**推测**：B2D 上 90→95 这 5 分不是智能差距，是传感器和控制接口的差距；验证方法是给任一 VLA 方法接上 TFv6 的 route + target speed 接口和 LiDAR 安全框重跑。
 
+**2026-09-26 就地修正**：上面「接口」一项用错了比较对象。第 31 条的 +14 是 TFv6 内部 route + target speed 对它自己 waypoint 的差；SimLingo 系本来就输出 path + speed waypoint 加两个 PID（FIVE-VLA p.7），已经是解耦接口，所以 +14 解释不了 VLA 与 TFv6 的差距。TFv6 纯相机 91.6 已与 VLA 同档，传感器那一项是 B 级证据；规则约 1 且双方都有；95.2 在第三方单 ckpt 重跑里是 89.6（decisions 第 38 条），差距是否存在未定。此外 FIVE-VLA 的 Give_Way 76.67 超过该项 50% 的上限（YTEV 所有学习式方法 SR 0），RAM 的 E 层证据改以同权重推理 +2.72 DS 为主。复核全文见 [nohack-mechanisms.md](nohack-mechanisms.md)。
+
 ### 4.5 ego prior 在各榜上的符号
 
 这是对 R 层最直接的证据：
@@ -328,6 +330,7 @@ R 层 = routine（保持车道、转弯、跟车、按灯停、起步），E 层
 ### 7.2 直接移植 vs 从模型里提取
 
 **直接移植（R 层，不稀缺）**：控制接口 + 作者 PID（我们已测 +14）、route target point 编码、path / speed 解耦输出、停牌与脱困规则（标定后）、测距传感器。这些都是配方，拿来就能用，且 W1 显示无技巧的 VLA 方法齐刷刷停在 B2D 90–91，与 TFv6 95 的差距主要就是 LiDAR + 接口。
+（2026-09-26 就地修正：末句的「+ 接口」不成立，SimLingo 系已经是 path + speed + PID 接口，+14 是 TFv6 内部两种读法的差；差距若存在，对应测距传感器，见 4.4 节修正与 decisions 第 35 条。）
 
 **值得提取（E 层，稀缺）**：
 - **TFv6 的 waypoint 通道**：P5 上定向翻转率 39%（按对 73%），从不反向；拿分的 target speed 通道只有 2%。它是目前唯一一个"在配对考试上确证会反应"的公开模型输出，是 Δ-distillation 的第一个 teacher 候选。
