@@ -221,6 +221,7 @@ run_arm() {  # run_arm <arm> <seed> <ids> <est_h> <raw_dump> <dump_every> <out>
     local arm=$1 seed=$2 ids=$3 est=$4 raw=$5 dump=$6 out=$7 k=0 pids=() g t0=$SECONDS try nreq ndone dead
     mkdir -p "$out"
     rm -f "$out"/claims/*.lock
+    [[ -f $out/requested.json ]] || python3 -c "import json, sys; print(json.dumps(sys.argv[1].split(',')))" "$ids" > "$out/requested.json"
     echo "$arm $seed $out" > "$O/CURRENT"
     ev step_start "\"arm\": \"$arm\", \"seed\": $seed, \"routes\": $(tr ',' '\n' <<< "$ids" | wc -l), \"est_h\": $est, \"out\": \"$out\""
     log "start $arm seed $seed: $(tr ',' '\n' <<< "$ids" | wc -l) routes, estimate $est h, GPUs $GPUS x $WORKERS workers, cores $OPL_CPUS"
