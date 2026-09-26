@@ -139,7 +139,7 @@
   （不带 ONLY 就是全部 605 个，已完成的跳过；多给卡就在 GPUS 里加，每卡一条链、server index 800 + 50j）。剩 485 个世界，按停前实测（CPU 被打满时每 run 7–13 min）约 5–6 h / 18 实例，CPU 不被打满时约 2.5 h。
 - 2026-09-26 12:28 CST [A] 续跑（box 12:25 重启后：7 卡、175 核）。main 分配 GPU 0–3、每卡 6 server、约 80 核：`GPUS="0 1 2 3" WORKERS=6 CORES=3`，tmux `p6-gen`，
   剩 485 个世界（a 段剩 110 + 2W 375）。`p6_gen.sh` 现在把自己起的每个 PID 记进 `runs/p6/gen/pids.txt`，`scripts/p6_stop.sh` 只停这些 PID 及其子进程（不再按进程名匹配）。
-- 2026-09-26 12:48 CST [A] 吞吐检查（main 12:43 的要求）。按记录的 PID 量：24 个 CARLA server 合计约 29 核（每个约 1.2 核、约 310 线程），24 个 route client 合计约 18 核
+- 2026-09-26 12:45 CST [A] 吞吐检查（main 12:43 的要求）。按记录的 PID 量：24 个 CARLA server 合计约 29 核（每个约 1.2 核、约 310 线程），24 个 route client 合计约 18 核
   （每个约 1.1 核；一个 client 的线程里主线程 40%、两条 CARLA 回调线程 28% / 23%，其余 40 条线程几乎空闲，没有过订阅），共约 47 核，在 80 核配额内。
   client 的逐 tick 分项（205 个完成世界的中位数，ms）：agent 368 = TFv6 shadow（相机 tick 428，其中 GPU forward 274；其余 tick 100）约占一半，PDM-Lite 31，我们的存图 50（仅相机 tick，3 线程 remap + JPEG）、
   可见性 4、快照 0.6；server 的 world tick 74。我们自己的代码不到 client 时间的 5%，大头是第三方的 TFv6 shadow（它就是要给 TFv6 考生录的，批量中途去掉会让一部分世界没有 TFv6 输出，不改）和 CARLA 渲染。
