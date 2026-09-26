@@ -359,7 +359,7 @@ smoke() {  # CL0: every P7 agent on 3 routes (profiling); the head arms dump eve
 case ${1:-} in
     smoke) trap 'exit 129' HUP INT TERM; smoke ;;
     expert) expert "${2:-0,1}" ;;
-    arm) shift; trap 'srv_stop_all; [[ -n ${6:-} ]] && kill_runs "$6"' EXIT; trap 'exit 129' HUP INT TERM; run_arm "$@" ;;
+    arm) shift; trap 'srv_stop_arm "$1"; [[ -n ${6:-} ]] && kill_runs "$6"' EXIT; trap 'exit 129' HUP INT TERM; run_arm "$@" ;;
     chain) chain ;;
     *) sed -n 2,19p "$0"; exit 1 ;;
 esac

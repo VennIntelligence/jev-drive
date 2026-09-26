@@ -365,7 +365,7 @@ class ZeroShotAgent(AutonomousAgent):
         # can span two adjacent frames; its frame is the newest, and the per-camera frames are logged.
         last = self.cam_sets[-1][3] if self.cam_sets else {t: -1 for t in self.cam_tags}
         synced = self.alpamayo or self.op_tick > DELTA or len({self.latest[t][0] for t in self.cam_tags}) == 1
-        if synced and all(self.latest[t][0] > last[t] for t in self.cam_tags):
+        if self.cam_tags and not self.head and synced and all(self.latest[t][0] > last[t] for t in self.cam_tags):
             f = max(self.latest[t][0] for t in self.cam_tags)
             self.cam_sets.append((f, self.frame_time.get(f, now), {t: self.latest[t][1] for t in self.cam_tags},
                                   {t: self.latest[t][0] for t in self.cam_tags}))
