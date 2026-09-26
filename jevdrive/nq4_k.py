@@ -306,15 +306,46 @@ def replay_rules(ticks: list) -> dict:
     return {"ticks": n, "different": bad}
 
 
+# ================================================================ K2 step: the lead re-run against the stored `temporal`
+
+def check_lead(set_: str) -> dict:
+    """Every re-run stream's `temporal` must equal the stored op_streams_vis stream bit for bit (same plan, same targets)."""
+    base = Path(os.environ["DATA_DIR"]) / "processed" / set_
+    new, old = base / "op_streams_lead" / MODEL, base / "op_streams_vis" / MODEL
+    fs = sorted(f for f in new.glob("*.npz") if ".tmp" not in f.name)
+    bad, n, mx = [], 0, 0.0
+    for f in fs:
+        with np.load(f) as a, np.load(old / f.name) as b:
+            ok = np.array_equal(a["name"], b["name"]) and a["temporal"].dtype == b["temporal"].dtype \
+                and np.array_equal(a["temporal"], b["temporal"])
+            n += len(a["name"])
+            if not ok:
+                bad.append(f.name)
+                if a["temporal"].shape == b["temporal"].shape:
+                    mx = max(mx, float(np.abs(a["temporal"] - b["temporal"]).max()))
+    res = {"set": set_, "streams": len(fs), "stored_streams": len(list(old.glob("*.npz"))), "rows": n,
+           "different": len(bad), "max_abs": mx, "examples": bad[:5]}
+    out = kdir("checks")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / f"lead_vs_vis_{set_}.json").write_text(json.dumps(res, indent=1))
+    print(json.dumps(res))
+    if bad or len(fs) != res["stored_streams"]:
+        raise SystemExit("lead re-run differs from the stored temporal: " + json.dumps(res))
+    return res
+
+
 # ================================================================ entry point
 
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("split",))
+    ap.add_argument("step", choices=("split", "check-lead"))
+    ap.add_argument("--set", default=SET_BA)
     a = ap.parse_args()
     if a.step == "split":
         split()
+    elif a.step == "check-lead":
+        check_lead(a.set)
 
 
 if __name__ == "__main__":
