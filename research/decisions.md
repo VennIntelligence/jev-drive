@@ -3032,7 +3032,7 @@ nuScenes 的检查 (d) 是批量之后补做的目检。
 **会推翻或推进本条的证据**：I1（P5 v1：PDM-Lite、101 条路线 × 3 seed）上 Q9b 行人翻转过 20%（那就是数据量问题，Qwen 空间 token 可以留作行人通道）；Q6 在 PDM-Lite 标签下 GT 规则 floor ≥ 80%（反应主要是几何）；
 给 SAM 接地点加地面高度估计后 P5 / nuScenes 行人召回过登记门槛（结构化感知通道成立）。
 
-## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的（WOD 与 NAVSIM 都是）；log 里挖孪生对、真实帧抹人造对，两条路本轮都没把它带到真实数据上（**待定**）
+## 44. 配对差分从 CARLA 到真实数据：CARLA 上激发出来的 reaction head 直接加到真实特征上是有害的（WOD 与 NAVSIM 都是；不含 Qwen 的 20 Hz student 害小一个量级但仍有害）；log 里挖孪生对、真实帧抹人造对，两条路本轮都没把它带到真实数据上（**待定**）
 
 2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-elicitation-program.md](../todos/2026-09-26-elicitation-program.md)（E1–E3），小表在 [research/results/elicitation/](results/elicitation/)。
 接第 42 条：M-C 双流 reaction head（Qwen `L18_last` ⊕ openpilot `temporal`，线性，配对差分监督）在 P5 v1 BA 集上行人翻转 43%。这一条问它能不能走出 CARLA。
@@ -3084,11 +3084,30 @@ navtrain 训的 head 到 WOD 上有害（2 Hz → 10 Hz 的输入分布差，与
 加 teacher 目标（B）则全部帧整体 < 0。P5 上 student 的行人翻转 1–2%（Lebowski A (c) 16–17%）。
 (c) **扩量的上限**（G3c）：WOD train 走廊内有行人的帧在 0.8 s 扫描里只连成约 230 个独立事件（182 个 sequence），「扩到 4–12k 张」是这些事件的近重复帧；帧级扩量最便宜的方案（YOLO 扫描 + 造对时跑 SAM）约 4 GPU·h。
 
-**对方向的含义**：配对差分在 CARLA 里激发得出来（第 42 条，以及同一条里 E5 的 20 Hz student），但本轮三条通往真实数据的路（零样本迁移、log 孪生对、真实帧编辑对）都没通：
-零样本有害，孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
+**G0（第二轮，[todos/2026-09-26-real-data-transfer.md](../todos/2026-09-26-real-data-transfer.md) 的 G0 节）：E5 的 20 Hz student 零样本上真实数据——有害，但比 E1 小一个量级。**
+student 是第 42 条里 E5 那个不含 Qwen 的快通道（openpilot `temporal` ⊕ YOLO26x-seg 走廊检测 embedding → MLP，P5 v1 BA 配对差分训出，行人翻转 51–57%），权重按 E5 代码逐位复现、不重训不调；
+真实数据上的 embedding 用 G0 登记的操作化（走廊 = ego 历史圆弧，每帧自己的标定平地抬升，框高按焦距归一）。prior、读数函数、帧与 E1 相同，可逐帧配对。2 模型 × 2 arm × 3 seed 共 12 组，**12 组都判「有害」**：
+
+| prior + student Δ − prior | E1（M-C 双流，Cinque） | student A / B（Cinque，seed 0；三个 seed 范围） | student A / B（Lebowski） |
+|:--|:--|:--|:--|
+| WOD RFS Δ，全部 478 rater 帧 | −1.02 [−1.21, −0.82] | **−0.11 [−0.20, −0.03]**（−0.09 … −0.11）/ −0.03 [−0.11, +0.05] | −0.05 [−0.12, +0.01] / +0.02 [−0.05, +0.09] |
+| WOD RFS Δ，Pedestrians（52） | −1.19 | −0.17 [−0.51, +0.12] / −0.03 [−0.33, +0.26] | +0.10 [−0.05, +0.32] / +0.10 [−0.08, +0.30] |
+| WOD straight_yaw 激活率（门槛 7%） | 16.7% | 4.2% / 2.2% | 2.8% / 1.7% |
+| navtest PDMS Δ，全部 12 146 | −8.2 [−8.9, −7.5] | **−1.30 [−1.55, −1.04]**（−1.10 … −1.30）/ **−1.93 [−2.23, −1.63]** | **−2.00** / **−2.73**（CI 全部 < 0） |
+| navtest PDMS Δ，走廊内有行人 / cyclist（897） | −6.0 | −1.30 [−2.17, −0.49] / −2.31 [−3.26, −1.41] | −1.70 / −1.59 [−2.95, −0.27] |
+| navtest PDMS Δ，直行 token（4 365） | −5.1 | −2.24 / −3.68 | −4.24 / −5.18 |
+| navtest 直行激活率 | 14.1% | 1.4% / 1.2% | 2.9% / 6.3% |
+
+所有格子的「有害」都来自同一条：navtest 全部 token 的 PDMS Δ CI 整体 < 0（12 组都是），Cinque A 另有 WOD 全部帧 RFS CI 整体 < 0（三个 seed 都是）；激活率一条从没触发（WOD ≤ 4.2%，NAVSIM ≤ 6.3%）。
+也就是说 student 在真实数据上大多「安静」，Δ 的幅值中位只有 0.1–0.2 m、低于它自己的 τ，但这个小修正有方向：行人组并不比其余 token 好，直行 token 上掉得最多，WOD 上 Pedestrians 也不为正（Lebowski 点估计 +0.1，CI 跨零）。
+它读的不是真实帧里的行人，而是一个与场景无关的小偏置；和 E1 一样，NAVSIM（2 Hz 输入）比 WOD 更重。按 G0 登记的预期，「有害」意味着 MLP 在 embedding 上也学了 CARLA 的分布，G1 的 gate 是必需的；
+而且害来自全部帧上的系统偏移而不是激活，gate 必须把非 hazard 帧上的 Δ 压到零，只卡激活门槛不够。图：[real-g0-student-transfer](figs/real-g0-student-transfer.png)，小表 [research/results/real-data-transfer/g0/](results/real-data-transfer/g0/)。
+
+**对方向的含义**：配对差分在 CARLA 里激发得出来（第 42 条，以及同一条里 E5 的 20 Hz student），但本轮三条通往真实数据的路（零样本迁移、log 孪生对、真实帧编辑对）都没通，第二轮加上的不含 Qwen 的 student 零样本（G0）也没通：
+零样本有害（student 的害小一个量级，但 NAVSIM 全部 token 上仍整体 < 0；原写只有 M-C 的零样本），孪生对的分叉不是场景造成的，编辑对训出的修正在 WOD 行人帧上不为正（原写「编辑对的信号在管线噪声量级」；G3 表明这只对 Qwen / openpilot 的 pooled 特征成立，检测 embedding 读得出编辑，读出来的修正仍然没有用）。
 瓶颈不在 head 的训练信号，在「真实数据上有没有干净的配对标签」。
 
-**状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
+**状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。G0 限定：真实数据上的走廊是 ego 历史圆弧（P5 上与路线走廊的行人标记一致 99.5%），20–40 m 的平地放置误差中位 6 m；NAVSIM 地面高度按 navtrain GT 车辆框定为 −0.36 m。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
 **怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选（都要新登记，未做）：几何一致的真实外观配对（HUGSIM 3DGS，I3 已有 65 个车辆场景；
 在那里 CARLA 拟合的 openpilot 读出零样本翻 70%，而 M-C Δ 反而 −11 pp，见 [i3 子文档](../todos/2026-09-25-reactivity-program/i3-hugsim-pairs.md)）；以及带门控的部署形式。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
 

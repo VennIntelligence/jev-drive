@@ -725,8 +725,8 @@ def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/fig
             ax.set_xticks(np.arange(len(keys)), labels)
             ax.set_ylabel(ylab)
         ax = axes[2]
-        acts = [("WOD straight", wa, "straight_yaw"), ("WOD ped.", wa, "Pedestrians"), ("nav straight", na, "straight"),
-                ("nav ped.", na, "ped_cyc_corridor")]
+        acts = [("WOD\nstraight", wa, "straight_yaw"), ("WOD\nped.", wa, "Pedestrians"), ("nav.\nstraight", na, "straight"),
+                ("nav.\nped./cyc.", na, "ped_cyc_corridor")]
         for k, (m, a, c, mk) in enumerate(series):
             x = np.arange(len(acts)) + (k - 1.5) * 0.17
             for sd in SEEDS:
@@ -735,9 +735,11 @@ def figs(res_dir="research/results/real-data-transfer/g0", out_dir="research/fig
                 ax.plot(x + (0.06 if sd else 0), y, mk if sd == 0 else "x", color=c, ms=3 if sd == 0 else 2.5,
                         mfc=(c if a == "A" else "white") if sd == 0 else None, mew=0.6, ls="none")
         ax.axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
-        ax.set_xticks(np.arange(len(acts)), [n for n, *_ in acts], rotation=25, ha="right")
+        ax.set_xticks(np.arange(len(acts)), [n for n, *_ in acts])
+        ax.set_ylim(0, 8)
         ax.set_ylabel("Activation rate (%)")
-        plots.legend_below(fig, axes[0], ncol=4)
+        h, lab = axes[0].get_legend_handles_labels()       # above the panels: the two-line ticks sit where legend_below goes
+        fig.legend(h, lab, loc="lower center", bbox_to_anchor=(0.5, 0.98), ncol=4, columnspacing=1.4, handlelength=1.8)
         plots.save(fig, out_dir, "real-g0-student-transfer")
 
 

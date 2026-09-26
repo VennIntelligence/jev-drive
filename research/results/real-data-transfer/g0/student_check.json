@@ -1,0 +1,20 @@
+{
+ "best_steps_identical": true,
+ "n_fits": 60,
+ "step_mismatch": [],
+ "max_abs_diff_m": 0.0,
+ "per_arm": {
+  "E5 A s0 [cinque]": 0.0,
+  "E5 A s1 [cinque]": 0.0,
+  "E5 A s2 [cinque]": 0.0,
+  "E5 B s0 [cinque]": 0.0,
+  "E5 B s1 [cinque]": 0.0,
+  "E5 B s2 [cinque]": 0.0,
+  "E5 A s0 [lebowski]": 0.0,
+  "E5 A s1 [lebowski]": 0.0,
+  "E5 A s2 [lebowski]": 0.0,
+  "E5 B s0 [lebowski]": 0.0,
+  "E5 B s1 [lebowski]": 0.0,
+  "E5 B s2 [lebowski]": 0.0
+ }
+}
