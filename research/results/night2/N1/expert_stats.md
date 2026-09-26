@@ -18,12 +18,12 @@
 
 |                    |   n |   keep |   stop |   bypass_L |   bypass_R |   wait_then_bypass_L |   no_window |   bypass_share |
 |:-------------------|----:|-------:|-------:|-----------:|-----------:|---------------------:|------------:|---------------:|
-| ('1W', 'shoulder') |  20 |     17 |      3 |          0 |          0 |                    0 |           0 |          0     |
+| ('1W', 'shoulder') |  20 |     20 |      0 |          0 |          0 |                    0 |           0 |          0     |
 | ('1W', 'wnull')    |  20 |      0 |      0 |         17 |          0 |                    3 |           0 |          1     |
 | ('1W', 'x00')      |  60 |     60 |      0 |          0 |          0 |                    0 |           0 |          0     |
 | ('1W', 'x10')      |  60 |      0 |      0 |         45 |          0 |                   15 |           0 |          1     |
 | ('2W', 'mirror')   |  25 |      5 |     20 |          0 |          0 |                    0 |           0 |          0     |
-| ('2W', 'shoulder') |  25 |     18 |      7 |          0 |          0 |                    0 |           0 |          0     |
+| ('2W', 'shoulder') |  25 |     20 |      5 |          0 |          0 |                    0 |           0 |          0     |
 | ('2W', 'wnull')    |  25 |      0 |      1 |         24 |          0 |                    0 |           0 |          0.96  |
 | ('2W', 'x00')      |  75 |     63 |     12 |          0 |          0 |                    0 |           0 |          0     |
 | ('2W', 'x01')      |  75 |     63 |     12 |          0 |          0 |                    0 |           0 |          0     |
@@ -66,19 +66,19 @@ smoke 1: x00 |d(k+3 s)| < 0.3 m on 1670 / 1670 x10-bypass frames (1.000; gate >=
 
 pooled wait share x11 0.653 (gate >= 0.50), x10 0.067
 
-placement null keep: 35 / 45 = 0.778 (gate >= 0.90)
+placement null keep: 40 / 45 = 0.889 (gate >= 0.90)
 
 | scenario                    |   n |   keep |   stop |   bypass_share |
 |:----------------------------|----:|-------:|-------:|---------------:|
 | Accident                    |   5 |      5 |      0 |              0 |
-| AccidentTwoWays             |   5 |      2 |      3 |              0 |
+| AccidentTwoWays             |   5 |      3 |      2 |              0 |
 | ConstructionObstacle        |   5 |      5 |      0 |              0 |
 | ConstructionObstacleTwoWays |   5 |      5 |      0 |              0 |
-| HazardAtSideLane            |   5 |      2 |      3 |              0 |
+| HazardAtSideLane            |   5 |      5 |      0 |              0 |
 | HazardAtSideLaneTwoWays     |   5 |      5 |      0 |              0 |
 | ParkedObstacle              |   5 |      5 |      0 |              0 |
 | ParkedObstacleTwoWays       |   5 |      3 |      2 |              0 |
-| VehicleOpensDoorTwoWays     |   5 |      3 |      2 |              0 |
+| VehicleOpensDoorTwoWays     |   5 |      4 |      1 |              0 |
 
 mirror stop: 20 / 25 = 0.800 (gate >= 0.80)
 
@@ -97,7 +97,7 @@ weather null: same world mode as x10 in 55 / 55
 | world    |   worlds |   with >= 1 oncoming |   mean oncoming |
 |:---------|---------:|---------------------:|----------------:|
 | mirror   |       25 |                   23 |            7.52 |
-| shoulder |       25 |                    4 |            0.16 |
+| shoulder |       25 |                    1 |            0.04 |
 | wnull    |       25 |                    1 |            0.04 |
 | x00      |       75 |                    1 |            0.01 |
 | x01      |       75 |                   53 |            3.01 |

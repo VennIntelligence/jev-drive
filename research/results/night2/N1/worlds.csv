@@ -10,7 +10,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 1790,HazardAtSideLane,1W,0,x10,179010,bypass_L,161.0,3.252,3.252,164.0,0.0,5,route_end,395,,HazardAtSideLane,
 1790,HazardAtSideLane,1W,0,x00,179020,keep,,0.001,-0.001,,0.0,5,route_end,260,HazardAtSideLane,,
 1790,HazardAtSideLane,1W,0,wnull,179030,bypass_L,162.0,3.252,3.252,164.0,0.0,5,route_end,395,,HazardAtSideLane,
-1790,HazardAtSideLane,1W,0,shoulder,179060,keep,,0.002,0.002,,0.0,5,route_end,526,HazardAtSideLane,,
+1790,HazardAtSideLane,1W,0,shoulder,179060,keep,,0.001,-0.001,,0.0,5,route_end,260,HazardAtSideLane,,
 1790,HazardAtSideLane,1W,1,x10,179011,bypass_L,149.0,3.25,3.25,,0.0,5,route_end,286,,HazardAtSideLane,
 1790,HazardAtSideLane,1W,1,x00,179021,keep,,0.001,-0.001,,0.0,5,route_end,261,HazardAtSideLane,,
 1790,HazardAtSideLane,1W,2,x10,179012,wait_then_bypass_L,256.0,3.25,3.25,157.0,0.0,5,route_end,401,,HazardAtSideLane,
@@ -18,7 +18,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 1792,HazardAtSideLane,1W,0,x10,179210,bypass_L,105.0,3.499,3.499,,0.001,5,route_end,236,,HazardAtSideLane,
 1792,HazardAtSideLane,1W,0,x00,179220,keep,,0.004,0.004,,0.001,5,route_end,207,HazardAtSideLane,,
 1792,HazardAtSideLane,1W,0,wnull,179230,bypass_L,105.0,3.499,3.499,,0.001,5,route_end,236,,HazardAtSideLane,
-1792,HazardAtSideLane,1W,0,shoulder,179260,keep,,0.004,0.004,,0.001,5,after_trigger,845,HazardAtSideLane,,
+1792,HazardAtSideLane,1W,0,shoulder,179260,keep,,0.004,0.004,,0.001,5,route_end,207,HazardAtSideLane,,
 1792,HazardAtSideLane,1W,1,x10,179211,bypass_L,103.0,3.499,3.499,,0.001,5,route_end,241,,HazardAtSideLane,
 1792,HazardAtSideLane,1W,1,x00,179221,keep,,0.004,0.004,,0.001,5,route_end,205,HazardAtSideLane,,
 1792,HazardAtSideLane,1W,2,x10,179212,bypass_L,122.0,3.5,3.5,131.0,0.0,5,route_end,296,,HazardAtSideLane,
@@ -28,7 +28,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 1825,ConstructionObstacleTwoWays,2W,0,wnull,182530,bypass_L,119.0,3.243,3.243,,7.275,45,route_end,271,,ConstructionObstacleTwoWays,0.0
 1825,ConstructionObstacleTwoWays,2W,0,x11,182540,stop,,0.011,0.011,155.0,0.0,45,after_trigger,845,,ConstructionObstacleTwoWays,6.0
 1825,ConstructionObstacleTwoWays,2W,0,x01,182550,keep,,0.001,0.001,,7.444,45,route_end,276,ConstructionObstacleTwoWays,,3.0
-1825,ConstructionObstacleTwoWays,2W,0,shoulder,182560,keep,,0.001,0.001,,7.444,45,route_end,276,ConstructionObstacleTwoWays,,0.0
+1825,ConstructionObstacleTwoWays,2W,0,shoulder,182560,keep,,0.002,-0.002,,7.444,45,route_end,276,ConstructionObstacleTwoWays,,0.0
 1825,ConstructionObstacleTwoWays,2W,0,mirror,182570,stop,,0.008,-0.008,135.0,0.0,45,after_trigger,845,,ConstructionObstacleTwoWays,8.0
 1825,ConstructionObstacleTwoWays,2W,1,x10,182511,bypass_L,120.0,3.128,3.128,,7.174,45,route_end,272,,ConstructionObstacleTwoWays,0.0
 1825,ConstructionObstacleTwoWays,2W,1,x00,182521,keep,,0.002,0.002,,7.343,45,route_end,277,ConstructionObstacleTwoWays,,0.0
@@ -43,7 +43,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 1833,ConstructionObstacleTwoWays,2W,0,wnull,183330,bypass_L,136.0,3.085,3.085,,0.0,5,route_end,279,,ConstructionObstacleTwoWays,0.0
 1833,ConstructionObstacleTwoWays,2W,0,x11,183340,stop,,0.001,0.001,158.0,0.0,5,after_trigger,857,,ConstructionObstacleTwoWays,6.0
 1833,ConstructionObstacleTwoWays,2W,0,x01,183350,keep,,0.001,-0.001,,0.0,5,route_end,286,ConstructionObstacleTwoWays,,3.0
-1833,ConstructionObstacleTwoWays,2W,0,shoulder,183360,keep,,0.002,0.002,,0.0,5,route_end,286,ConstructionObstacleTwoWays,,0.0
+1833,ConstructionObstacleTwoWays,2W,0,shoulder,183360,keep,,0.003,0.003,,0.0,5,route_end,286,ConstructionObstacleTwoWays,,0.0
 1833,ConstructionObstacleTwoWays,2W,0,mirror,183370,stop,,0.002,-0.002,139.0,0.0,5,after_trigger,857,,ConstructionObstacleTwoWays,7.0
 1833,ConstructionObstacleTwoWays,2W,1,x10,183311,bypass_L,132.0,3.214,3.214,,0.0,5,route_end,276,,ConstructionObstacleTwoWays,0.0
 1833,ConstructionObstacleTwoWays,2W,1,x00,183321,keep,,0.001,-0.001,,0.0,5,route_end,281,ConstructionObstacleTwoWays,,0.0
@@ -58,7 +58,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 1852,AccidentTwoWays,2W,0,wnull,185230,bypass_L,145.0,3.122,3.122,,0.0,5,route_end,289,,AccidentTwoWays,0.0
 1852,AccidentTwoWays,2W,0,x11,185240,stop,,0.014,0.014,176.0,0.0,5,after_trigger,857,,AccidentTwoWays,6.0
 1852,AccidentTwoWays,2W,0,x01,185250,keep,,0.001,-0.001,,0.0,5,route_end,289,AccidentTwoWays,,5.0
-1852,AccidentTwoWays,2W,0,shoulder,185260,stop,,0.001,-0.001,172.0,0.0,5,after_trigger,857,AccidentTwoWays,,0.0
+1852,AccidentTwoWays,2W,0,shoulder,185260,keep,,0.001,-0.001,,0.0,5,route_end,289,AccidentTwoWays,,0.0
 1852,AccidentTwoWays,2W,0,mirror,185270,stop,,0.005,0.005,165.0,0.0,5,after_trigger,857,,AccidentTwoWays,10.0
 1852,AccidentTwoWays,2W,1,x10,185211,bypass_L,143.0,3.115,3.115,,0.0,5,route_end,284,,AccidentTwoWays,0.0
 1852,AccidentTwoWays,2W,1,x00,185221,keep,,0.001,0.001,,0.0,5,route_end,286,AccidentTwoWays,,0.0
@@ -113,7 +113,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 2606,ConstructionObstacleTwoWays,2W,0,wnull,260630,bypass_L,132.0,3.071,3.071,,0.0,5,route_end,273,,ConstructionObstacleTwoWays,0.0
 2606,ConstructionObstacleTwoWays,2W,0,x11,260640,stop,,0.003,0.003,162.0,0.0,5,after_trigger,853,,ConstructionObstacleTwoWays,6.0
 2606,ConstructionObstacleTwoWays,2W,0,x01,260650,keep,,0.001,0.001,,0.0,5,route_end,280,ConstructionObstacleTwoWays,,3.0
-2606,ConstructionObstacleTwoWays,2W,0,shoulder,260660,keep,,0.074,0.074,,0.0,5,route_end,280,ConstructionObstacleTwoWays,,0.0
+2606,ConstructionObstacleTwoWays,2W,0,shoulder,260660,keep,,0.114,0.114,,0.0,5,route_end,283,ConstructionObstacleTwoWays,,0.0
 2606,ConstructionObstacleTwoWays,2W,0,mirror,260670,stop,,0.002,0.002,147.0,0.0,5,after_trigger,853,,ConstructionObstacleTwoWays,9.0
 2606,ConstructionObstacleTwoWays,2W,1,x10,260611,bypass_L,130.0,3.106,3.106,,0.0,5,route_end,271,,ConstructionObstacleTwoWays,0.0
 2606,ConstructionObstacleTwoWays,2W,1,x00,260621,keep,,0.001,0.001,,0.0,5,route_end,277,ConstructionObstacleTwoWays,,0.0
@@ -128,7 +128,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 2643,AccidentTwoWays,2W,0,wnull,264330,bypass_L,134.0,3.043,3.043,199.0,0.0,5,passed,345,,AccidentTwoWays,0.0
 2643,AccidentTwoWays,2W,0,x11,264340,wait_then_bypass_L,209.0,2.989,2.989,140.0,0.0,5,passed,429,,AccidentTwoWays,4.0
 2643,AccidentTwoWays,2W,0,x01,264350,stop,,0.003,0.003,222.0,0.0,5,passed,357,AccidentTwoWays,,4.0
-2643,AccidentTwoWays,2W,0,shoulder,264360,stop,,0.001,-0.001,235.0,0.0,5,passed,357,AccidentTwoWays,,1.0
+2643,AccidentTwoWays,2W,0,shoulder,264360,stop,,0.001,-0.001,235.0,0.0,5,passed,357,AccidentTwoWays,,0.0
 2643,AccidentTwoWays,2W,0,mirror,264370,stop,,0.002,-0.002,141.0,0.0,5,after_trigger,849,,AccidentTwoWays,7.0
 2643,AccidentTwoWays,2W,1,x10,264311,bypass_L,135.0,3.207,3.207,223.0,0.0,5,passed,345,,AccidentTwoWays,0.0
 2643,AccidentTwoWays,2W,1,x00,264321,stop,,0.002,0.002,234.0,0.0,5,passed,357,AccidentTwoWays,,0.0
@@ -143,7 +143,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 2664,ParkedObstacleTwoWays,2W,0,wnull,266430,bypass_L,134.0,1.612,1.612,,0.0,5,route_end,288,,ParkedObstacleTwoWays,0.0
 2664,ParkedObstacleTwoWays,2W,0,x11,266440,bypass_L,149.0,1.625,1.625,,0.0,5,route_end,310,,ParkedObstacleTwoWays,4.0
 2664,ParkedObstacleTwoWays,2W,0,x01,266450,keep,,0.001,0.001,,0.0,5,route_end,289,ParkedObstacleTwoWays,,4.0
-2664,ParkedObstacleTwoWays,2W,0,shoulder,266460,keep,,0.001,0.001,,0.0,5,passed,233,ParkedObstacleTwoWays,,1.0
+2664,ParkedObstacleTwoWays,2W,0,shoulder,266460,keep,,0.001,0.001,,0.0,5,route_end,289,ParkedObstacleTwoWays,,0.0
 2664,ParkedObstacleTwoWays,2W,0,mirror,266470,stop,,0.001,0.001,192.0,0.0,5,after_trigger,849,,ParkedObstacleTwoWays,6.0
 2664,ParkedObstacleTwoWays,2W,1,x10,266411,bypass_L,136.0,1.609,1.609,,0.0,5,route_end,291,,ParkedObstacleTwoWays,0.0
 2664,ParkedObstacleTwoWays,2W,1,x00,266421,keep,,0.001,0.001,,0.0,5,route_end,290,ParkedObstacleTwoWays,,0.0
@@ -238,7 +238,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 3436,HazardAtSideLaneTwoWays,2W,0,wnull,343630,bypass_L,180.0,2.738,2.738,,0.0,5,route_end,301,,HazardAtSideLaneTwoWays,0.0
 3436,HazardAtSideLaneTwoWays,2W,0,x11,343640,bypass_L,539.0,2.73,2.73,,0.0,5,route_end,580,,HazardAtSideLaneTwoWays,5.0
 3436,HazardAtSideLaneTwoWays,2W,0,x01,343650,keep,,0.004,0.004,,0.0,5,route_end,303,HazardAtSideLaneTwoWays,,0.0
-3436,HazardAtSideLaneTwoWays,2W,0,shoulder,343660,keep,,0.002,0.002,,0.0,5,route_end,718,HazardAtSideLaneTwoWays,,0.0
+3436,HazardAtSideLaneTwoWays,2W,0,shoulder,343660,keep,,0.002,0.002,,0.0,5,route_end,715,HazardAtSideLaneTwoWays,,0.0
 3436,HazardAtSideLaneTwoWays,2W,0,mirror,343670,keep,,0.002,0.002,,0.0,5,route_end,718,,HazardAtSideLaneTwoWays,9.0
 3436,HazardAtSideLaneTwoWays,2W,1,x10,343611,bypass_L,157.0,2.738,2.738,,0.0,5,route_end,280,,HazardAtSideLaneTwoWays,0.0
 3436,HazardAtSideLaneTwoWays,2W,1,x00,343621,keep,,0.001,-0.001,,0.0,5,route_end,282,HazardAtSideLaneTwoWays,,0.0
@@ -253,7 +253,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 3457,ParkedObstacleTwoWays,2W,0,wnull,345730,bypass_L,193.0,1.519,1.519,,0.0,5,passed,429,,ParkedObstacleTwoWays,1.0
 3457,ParkedObstacleTwoWays,2W,0,x11,345740,wait_then_bypass_L,283.0,1.519,1.519,160.0,0.0,5,passed,521,,ParkedObstacleTwoWays,6.0
 3457,ParkedObstacleTwoWays,2W,0,x01,345750,keep,,0.003,0.003,,0.0,5,passed,349,ParkedObstacleTwoWays,,5.0
-3457,ParkedObstacleTwoWays,2W,0,shoulder,345760,keep,,0.002,0.002,,0.0,5,passed,353,ParkedObstacleTwoWays,,0.0
+3457,ParkedObstacleTwoWays,2W,0,shoulder,345760,keep,,0.002,0.002,,0.0,5,passed,349,ParkedObstacleTwoWays,,0.0
 3457,ParkedObstacleTwoWays,2W,0,mirror,345770,stop,,0.004,0.004,202.0,0.0,5,after_trigger,873,,ParkedObstacleTwoWays,8.0
 3457,ParkedObstacleTwoWays,2W,1,x10,345711,bypass_L,132.0,1.478,1.478,294.0,0.0,5,passed,341,,ParkedObstacleTwoWays,1.0
 3457,ParkedObstacleTwoWays,2W,1,x00,345721,keep,,0.001,-0.001,,0.0,5,passed,325,ParkedObstacleTwoWays,,0.0
@@ -268,7 +268,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 3464,VehicleOpensDoorTwoWays,2W,0,wnull,346430,bypass_L,154.0,1.096,1.096,,0.0,5,route_end,329,,VehicleOpensDoorTwoWays,0.0
 3464,VehicleOpensDoorTwoWays,2W,0,x11,346440,wait_then_bypass_L,265.0,1.191,1.191,161.0,0.0,5,route_end,455,,VehicleOpensDoorTwoWays,5.0
 3464,VehicleOpensDoorTwoWays,2W,0,x01,346450,keep,,0.001,-0.001,,0.0,5,route_end,329,VehicleOpensDoorTwoWays,,4.0
-3464,VehicleOpensDoorTwoWays,2W,0,shoulder,346460,stop,,0.006,-0.006,191.0,0.0,5,after_trigger,869,VehicleOpensDoorTwoWays,,1.0
+3464,VehicleOpensDoorTwoWays,2W,0,shoulder,346460,keep,,0.001,-0.001,,0.0,5,route_end,329,VehicleOpensDoorTwoWays,,0.0
 3464,VehicleOpensDoorTwoWays,2W,0,mirror,346470,stop,,0.003,0.003,186.0,0.0,5,after_trigger,869,,VehicleOpensDoorTwoWays,7.0
 3464,VehicleOpensDoorTwoWays,2W,1,x10,346411,bypass_L,128.0,1.123,1.123,,0.0,5,route_end,307,,VehicleOpensDoorTwoWays,0.0
 3464,VehicleOpensDoorTwoWays,2W,1,x00,346421,keep,,0.001,-0.001,,0.0,5,route_end,307,VehicleOpensDoorTwoWays,,0.0
@@ -372,7 +372,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 24258,HazardAtSideLaneTwoWays,2W,0,wnull,2425830,bypass_L,139.0,3.162,3.162,,2.993,21,route_end,273,,HazardAtSideLaneTwoWays,0.0
 24258,HazardAtSideLaneTwoWays,2W,0,x11,2425840,bypass_L,560.0,3.147,3.147,,0.006,21,route_end,623,,HazardAtSideLaneTwoWays,4.0
 24258,HazardAtSideLaneTwoWays,2W,0,x01,2425850,keep,,0.166,-0.166,,0.006,21,route_end,293,HazardAtSideLaneTwoWays,,0.0
-24258,HazardAtSideLaneTwoWays,2W,0,shoulder,2425860,keep,,0.168,-0.168,,0.003,21,after_trigger,849,HazardAtSideLaneTwoWays,,0.0
+24258,HazardAtSideLaneTwoWays,2W,0,shoulder,2425860,keep,,0.168,-0.168,,2.993,21,route_end,279,HazardAtSideLaneTwoWays,,0.0
 24258,HazardAtSideLaneTwoWays,2W,0,mirror,2425870,keep,,0.168,-0.168,,0.015,21,after_trigger,861,,HazardAtSideLaneTwoWays,9.0
 24258,HazardAtSideLaneTwoWays,2W,1,x10,2425811,bypass_L,139.0,3.16,3.16,,3.019,21,route_end,273,,HazardAtSideLaneTwoWays,0.0
 24258,HazardAtSideLaneTwoWays,2W,1,x00,2425821,keep,,0.168,-0.168,,3.019,21,route_end,278,HazardAtSideLaneTwoWays,,0.0
@@ -385,7 +385,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 24367,ConstructionObstacle,1W,0,x10,2436710,bypass_L,113.0,3.497,3.497,,0.0,5,route_end,296,,ConstructionObstacle,
 24367,ConstructionObstacle,1W,0,x00,2436720,keep,,0.001,0.001,,0.0,5,route_end,280,ConstructionObstacle,,
 24367,ConstructionObstacle,1W,0,wnull,2436730,bypass_L,113.0,3.497,3.497,,0.0,5,route_end,296,,ConstructionObstacle,
-24367,ConstructionObstacle,1W,0,shoulder,2436760,keep,,0.005,0.005,,0.0,5,route_end,280,ConstructionObstacle,,
+24367,ConstructionObstacle,1W,0,shoulder,2436760,keep,,0.017,-0.017,,0.0,5,route_end,280,ConstructionObstacle,,
 24367,ConstructionObstacle,1W,1,x10,2436711,bypass_L,125.0,3.497,3.497,,0.0,5,route_end,303,,ConstructionObstacle,
 24367,ConstructionObstacle,1W,1,x00,2436721,keep,,0.001,-0.001,,0.0,5,route_end,277,ConstructionObstacle,,
 24367,ConstructionObstacle,1W,2,x10,2436712,wait_then_bypass_L,168.0,3.495,3.495,124.0,0.0,5,route_end,351,,ConstructionObstacle,
@@ -425,7 +425,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25300,HazardAtSideLane,1W,0,x10,2530010,bypass_L,146.0,3.546,3.546,154.0,0.001,49,route_end,334,,HazardAtSideLane,
 25300,HazardAtSideLane,1W,0,x00,2530020,keep,,0.087,0.087,,9.566,49,route_end,247,HazardAtSideLane,,
 25300,HazardAtSideLane,1W,0,wnull,2530030,bypass_L,146.0,3.546,3.546,154.0,0.001,49,route_end,334,,HazardAtSideLane,
-25300,HazardAtSideLane,1W,0,shoulder,2530060,stop,,0.08,0.08,533.0,0.0,49,after_trigger,857,HazardAtSideLane,,
+25300,HazardAtSideLane,1W,0,shoulder,2530060,keep,,0.087,0.087,,9.566,49,route_end,247,HazardAtSideLane,,
 25300,HazardAtSideLane,1W,1,x10,2530011,bypass_L,194.0,3.554,3.554,,6.563,49,route_end,339,,HazardAtSideLane,
 25300,HazardAtSideLane,1W,1,x00,2530021,keep,,0.071,0.071,,7.53,49,route_end,322,HazardAtSideLane,,
 25300,HazardAtSideLane,1W,2,x10,2530012,bypass_L,173.0,3.549,3.549,,0.012,49,route_end,339,,HazardAtSideLane,
@@ -448,7 +448,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25381,HazardAtSideLane,1W,0,x10,2538110,bypass_L,5.0,3.5,3.5,,0.007,5,route_end,290,,HazardAtSideLane,
 25381,HazardAtSideLane,1W,0,x00,2538120,keep,5.0,0.983,0.983,,0.116,5,route_end,218,HazardAtSideLane,,
 25381,HazardAtSideLane,1W,0,wnull,2538130,bypass_L,5.0,3.5,3.5,,0.007,5,route_end,290,,HazardAtSideLane,
-25381,HazardAtSideLane,1W,0,shoulder,2538160,stop,5.0,0.983,0.983,819.0,0.0,5,after_trigger,857,HazardAtSideLane,,
+25381,HazardAtSideLane,1W,0,shoulder,2538160,keep,5.0,0.983,0.983,,0.116,5,route_end,218,HazardAtSideLane,,
 25381,HazardAtSideLane,1W,1,x10,2538111,bypass_L,5.0,3.5,3.5,,0.012,5,route_end,298,,HazardAtSideLane,
 25381,HazardAtSideLane,1W,1,x00,2538121,keep,5.0,0.983,-0.983,,0.091,5,route_end,223,HazardAtSideLane,,
 25381,HazardAtSideLane,1W,2,x10,2538112,bypass_L,5.0,3.5,3.5,150.0,0.0,5,route_end,404,,HazardAtSideLane,
@@ -479,7 +479,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25439,HazardAtSideLane,1W,0,x10,2543910,bypass_L,163.0,3.479,3.479,,0.0,5,route_end,327,,HazardAtSideLane,
 25439,HazardAtSideLane,1W,0,x00,2543920,keep,,0.043,-0.043,,0.0,5,route_end,268,HazardAtSideLane,,
 25439,HazardAtSideLane,1W,0,wnull,2543930,bypass_L,163.0,3.479,3.479,,0.0,5,route_end,327,,HazardAtSideLane,
-25439,HazardAtSideLane,1W,0,shoulder,2543960,stop,,0.035,-0.035,443.0,0.0,5,after_trigger,853,HazardAtSideLane,,
+25439,HazardAtSideLane,1W,0,shoulder,2543960,keep,,0.043,-0.043,,0.0,5,route_end,268,HazardAtSideLane,,
 25439,HazardAtSideLane,1W,1,x10,2543911,bypass_L,173.0,3.478,3.478,,0.0,5,route_end,325,,HazardAtSideLane,
 25439,HazardAtSideLane,1W,1,x00,2543921,keep,,0.046,-0.046,,0.0,5,route_end,282,HazardAtSideLane,,
 25439,HazardAtSideLane,1W,2,x10,2543912,wait_then_bypass_L,201.0,3.463,3.463,156.0,0.0,5,route_end,355,,HazardAtSideLane,
@@ -489,7 +489,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25845,AccidentTwoWays,2W,0,wnull,2584530,bypass_L,138.0,3.787,3.787,,0.0,5,route_end,284,,AccidentTwoWays,0.0
 25845,AccidentTwoWays,2W,0,x11,2584540,stop,,0.004,0.004,143.0,0.0,5,after_trigger,857,,AccidentTwoWays,5.0
 25845,AccidentTwoWays,2W,0,x01,2584550,stop,,0.004,0.004,251.0,0.0,5,passed,357,AccidentTwoWays,,5.0
-25845,AccidentTwoWays,2W,0,shoulder,2584560,stop,,0.006,0.006,260.0,0.0,5,route_end,329,AccidentTwoWays,,1.0
+25845,AccidentTwoWays,2W,0,shoulder,2584560,stop,,0.004,0.004,258.0,0.0,5,route_end,356,AccidentTwoWays,,1.0
 25845,AccidentTwoWays,2W,0,mirror,2584570,stop,,0.004,0.004,140.0,0.0,5,after_trigger,857,,AccidentTwoWays,10.0
 25845,AccidentTwoWays,2W,1,x10,2584511,bypass_L,129.0,3.816,3.816,,0.0,5,route_end,258,,AccidentTwoWays,0.0
 25845,AccidentTwoWays,2W,1,x00,2584521,keep,,0.005,0.005,,0.0,5,route_end,258,AccidentTwoWays,,0.0
@@ -504,7 +504,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25854,HazardAtSideLaneTwoWays,2W,0,wnull,2585430,bypass_L,111.0,3.495,3.495,,7.644,61,route_end,216,,HazardAtSideLaneTwoWays,0.0
 25854,HazardAtSideLaneTwoWays,2W,0,x11,2585440,bypass_L,430.0,3.467,3.467,,1.781,61,route_end,485,,HazardAtSideLaneTwoWays,4.0
 25854,HazardAtSideLaneTwoWays,2W,0,x01,2585450,keep,,0.19,-0.19,,0.155,61,route_end,210,HazardAtSideLaneTwoWays,,0.0
-25854,HazardAtSideLaneTwoWays,2W,0,shoulder,2585460,keep,,0.189,-0.189,,0.009,61,route_end,650,HazardAtSideLaneTwoWays,,0.0
+25854,HazardAtSideLaneTwoWays,2W,0,shoulder,2585460,keep,,0.19,-0.19,,2.673,61,route_end,210,HazardAtSideLaneTwoWays,,0.0
 25854,HazardAtSideLaneTwoWays,2W,0,mirror,2585470,keep,,0.19,-0.19,,0.007,61,route_end,661,,HazardAtSideLaneTwoWays,10.0
 25854,HazardAtSideLaneTwoWays,2W,1,x10,2585411,bypass_L,120.0,3.491,3.491,,3.285,69,route_end,236,,HazardAtSideLaneTwoWays,0.0
 25854,HazardAtSideLaneTwoWays,2W,1,x00,2585421,keep,,0.181,-0.181,,2.106,69,route_end,215,HazardAtSideLaneTwoWays,,0.0
@@ -579,7 +579,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25951,HazardAtSideLaneTwoWays,2W,0,wnull,2595130,bypass_L,147.0,3.55,3.55,,0.0,5,route_end,280,,HazardAtSideLaneTwoWays,0.0
 25951,HazardAtSideLaneTwoWays,2W,0,x11,2595140,bypass_L,546.0,3.524,3.524,,0.0,5,route_end,600,,HazardAtSideLaneTwoWays,4.0
 25951,HazardAtSideLaneTwoWays,2W,0,x01,2595150,keep,,0.049,0.049,,0.0,5,route_end,293,HazardAtSideLaneTwoWays,,0.0
-25951,HazardAtSideLaneTwoWays,2W,0,shoulder,2595160,keep,,0.047,0.047,,0.0,5,route_end,830,HazardAtSideLaneTwoWays,,0.0
+25951,HazardAtSideLaneTwoWays,2W,0,shoulder,2595160,keep,,0.049,0.049,,0.0,5,route_end,284,HazardAtSideLaneTwoWays,,0.0
 25951,HazardAtSideLaneTwoWays,2W,0,mirror,2595170,keep,,0.047,0.047,,0.0,5,route_end,830,,HazardAtSideLaneTwoWays,9.0
 25951,HazardAtSideLaneTwoWays,2W,1,x10,2595111,bypass_L,151.0,3.548,3.548,,0.0,5,route_end,284,,HazardAtSideLaneTwoWays,0.0
 25951,HazardAtSideLaneTwoWays,2W,1,x00,2595121,keep,,0.048,0.048,,0.0,5,route_end,287,HazardAtSideLaneTwoWays,,0.0
@@ -594,7 +594,7 @@ base_id,scenario,cls,seed,world,rid,mode,t_lat,max_abs_d,d_at_max,t_first_stop,v
 25955,HazardAtSideLaneTwoWays,2W,0,wnull,2595530,bypass_L,110.0,3.597,3.597,,0.0,5,route_end,219,,HazardAtSideLaneTwoWays,0.0
 25955,HazardAtSideLaneTwoWays,2W,0,x11,2595540,wait_then_bypass_L,224.0,3.592,3.592,155.0,0.0,5,route_end,315,,HazardAtSideLaneTwoWays,4.0
 25955,HazardAtSideLaneTwoWays,2W,0,x01,2595550,keep,,0.141,0.141,,0.0,5,route_end,210,HazardAtSideLaneTwoWays,,4.0
-25955,HazardAtSideLaneTwoWays,2W,0,shoulder,2595560,keep,,0.071,0.071,,0.0,5,route_end,636,HazardAtSideLaneTwoWays,,0.0
+25955,HazardAtSideLaneTwoWays,2W,0,shoulder,2595560,keep,,0.145,0.145,,0.0,5,route_end,210,HazardAtSideLaneTwoWays,,0.0
 25955,HazardAtSideLaneTwoWays,2W,0,mirror,2595570,keep,,0.072,0.072,,0.0,5,route_end,676,,HazardAtSideLaneTwoWays,8.0
 25955,HazardAtSideLaneTwoWays,2W,1,x10,2595511,bypass_L,112.0,3.596,3.596,,0.0,5,route_end,221,,HazardAtSideLaneTwoWays,0.0
 25955,HazardAtSideLaneTwoWays,2W,1,x00,2595521,keep,,0.146,0.146,,0.0,5,route_end,214,HazardAtSideLaneTwoWays,,0.0

@@ -3355,7 +3355,7 @@ openpilot 那条线的执行器检查（night-queue-2 N2）仍是第三层的主
 **状态**：**待定**。限定：反应式对手（traffic = PPO）那一臂没跑，A 的 (c) 只在不反应的对手上读；B 只有 171 个直路 episode，障碍全是 4.8 × 2.0 m 的车，没考路口和对向来车；cond_caut / aggr / PDM 只跑了 B。
 **会推翻或推进本条的证据**：traffic = PPO 下 PPO 的 at-fault 碰撞差 ≤ 5 pp（(c) 过，negotiation 判定升级）；GPUDrive 的 HF policy 装上后在同一考卷上过有效性门槛且会回线（执行层有了候选）。
 
-## 52. 第三层的第一版考卷（P6 v0）成立：PDM-Lite 在 9 类障碍上 100% 绕、删登记后 0% 绕、分叉都在障碍可见之后；对向车流造出了 negotiation（65% 先等）；放置 null 不过，InvadingTurn、开门车、救护车不进主读数；`cls_late` 的词表里没有绕行 anchor（**待定**，CARLA 220 集 55 条路线 × 3 seed，单 expert）
+## 52. 第三层的第一版考卷（P6 v0）成立：PDM-Lite 在 9 类障碍上 100% 绕、删登记后 0% 绕、分叉都在障碍可见之后；对向车流造出了 negotiation（65% 先等）；放置 null 修生成器重跑后 0.889，按登记仍差一个世界（剩下的都是背景交通停车）；InvadingTurn、开门车、救护车不进主读数；`cls_late` 的词表里没有绕行 anchor（**待定**，CARLA 220 集 55 条路线 × 3 seed，单 expert）
 
 2026-09-26。预登记与全部操作性选择在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N1（`[A]` 条目，写于每一步数字之前；对向车流的实现在 smoke 里改过两次，改动与原因都在 10:09 / 10:59 / 11:12 条），
 小表在 [results/night2/N1/](results/night2/N1/)，代码 `jevdrive/p6.py`、`scripts/b2d_hooks.py`（`p6_world`）、`scripts/p6_gen.sh`。接第 47 条（第三层没有量具）。
@@ -3368,7 +3368,7 @@ openpilot 那条线的执行器检查（night-queue-2 N2）仍是第三层的主
 | x₀₀ bypass | 0 / 165（x₀₀ 的 12 个 stop 与 x₀₁ 相同，是背景交通） | smoke：≥ 95% 帧 \|d\| < 0.3 m | 1 670 / 1 670 帧 |
 | t_div ≥ t_vis | 9 类障碍 135 / 135；InvadingTurn 12 / 15；Emergency 0 / 15（救护车在后方，前向相机看不到） | 只取通过的对 | |
 | negotiation：x₁₁ 里先等（wait-then-bypass 或 stop） | 0.65（x₁₀ 0.07）；AccidentTwoWays / Construction 2W 1.00，ParkedObstacle 2W 0.40，Door 0.60，HazardAtSideLane 2W 0.27 | ≥ 0.50 | 过 |
-| 放置 null keep | 35 / 45 = 0.78（其中 5 个 stop 在 x₀₀ 里也 stop，事后） | ≥ 0.90 | **不过，要修生成器** |
+| 放置 null keep | 40 / 45 = 0.889（修生成器、重跑后；5 个 stop 在 x₀₀ 里也 stop，事后「与 x₀₀ 同模式」45 / 45） | ≥ 0.90 | **按登记不过** |
 | 镜像题 stop | 20 / 25 = 0.80（HazardAtSideLane 2W 的 5 个是跟车不停） | ≥ 0.80 | 过（踩线） |
 | 天气 null / x₀₁ 与对照的模式一致 | 55 / 55、75 / 75 | — | |
 
@@ -3380,7 +3380,10 @@ x₁₁ 一栏里黄（先等后绕）和橙（录制窗内一直在等）占了
 1. **P6 的 bypass 对比（x₁₀ − x₀₀）可以用了**：9 类障碍 135 对都干净（删登记后 PDM-Lite 不再「对空气绕行」，分叉在障碍可见之后 2.4–3.7 s，横向 0.3 m 分叉在可见后约 6 s）。
 2. **negotiation 对比（x₁₁ − x₁₀）也造出来了**，但是靠我们自己布的对向车流（B2D 自带的对向流在触发后 5 s、从障碍前方约 75 m 起流，smoke 里从没赶上 ego），
    所以它量的是「PDM-Lite 的 gap check 对这张车流表的反应」，与 B2D 闭环 SR 里的 2W 难度不是同一个量。HazardAtSideLane 类的「等」是跟车，登记定义记不到，读考生时单列。
-3. **放置 null 不过**：路肩位移对自行车（它们仍被当成前车）和一部分 2W 不够。按规则先修生成器（加大偏移）并重跑这 45 个世界，才能读「考生是否只对『有东西』起反应」。
+3. **放置 null 按登记不过，但剩下的失败与障碍无关**（2026-09-26 16:00 就地改；原写「路肩位移对自行车和一部分 2W 不够，要先修生成器并重跑」，第一版是 35 / 45 = 0.78）。
+   第一版生成器有三处 bug：自行车的补丁打在了另一个模块对象上、从没生效；平移方向按「最近的驾驶车道」取，两车道对向的路上会取到对向车道；开着物理的停放车被放到路缘后被弹回车道或弹出地图。
+   三处都修了（按 ego 路线求方向、首 tick 平移、平移后关物理），45 个世界重跑后 40 / 45 keep；剩下 5 个 stop 在同 case 的 x₀₀（没有障碍）里一模一样，是背景交通。
+   读考生「是否只对『有东西』起反应」时用这 40 个世界，并写明登记门槛（0.90）未过。
 4. **`cls_late` 的 K = 1024 词表里没有一个 bypass 形状的 anchor**（3 s 处 |y| ≥ 1 m 且 5 s 内回到 ±0.5 m）：WOD train 的 493 条、P6 x₁₀ expert 的 552 条 bypass 形状的未来，最近 anchor 没有一个是 bypass 形状
    （P6 的 minADE 中位 1.56 m，最近 anchor 多是 keep）。第 47 条里 `cls_late` 在 WOD 绕行帧上 0 / 21，至少有一部分是 vocabulary 造成的；在 P6 上读 `cls_late` 的 Δm_bypass 之前要先换词表。
 
