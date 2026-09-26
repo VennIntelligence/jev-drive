@@ -321,6 +321,8 @@ def world_modes(s: pd.DataFrame, pred: np.ndarray) -> pd.DataFrame:
             continue
         idx = g[f"i{side_ab}"].to_numpy()
         ok = ~np.isnan(pred[idx, :, 0]).any(1)
+        if not ok.any():                      # horizon < 5 s (TFv6 waypoints) or not read here
+            continue
         m = np.full(len(g), "", object)
         m[ok] = p6.mode_21(pred[idx[ok]])
         yp = np.full(len(g), 0.0)
