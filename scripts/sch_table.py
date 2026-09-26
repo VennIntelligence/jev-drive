@@ -23,7 +23,9 @@ GO file (shell-sourceable, re-read by a lane at its step boundaries): GPUS="4 5"
 
 Index rule (docs: tmp/2026-09-26-codex-handoff.md, "CARLA 端口"): index i binds RPC 2000 + 50 i (+1, +2) and its traffic
 manager scans TM 8000 + 50 i .. +49 = the RPC block of i + 120, so two rows conflict when an index of one equals an index,
-or an index +- 120, of the other.
+or an index +- 120, of the other. New blocks also stay at index <= 494, so that RPC and TM ports sit below the kernel's
+ephemeral range (32768-60999), where an outgoing connection can hold a port and crash a starting server
+(docs/closed-loop-acceptance.md); rows whose status starts with "legacy" (lane A's 600-689) are exempt.
 """
 from __future__ import annotations
 
@@ -77,8 +79,15 @@ def indices(r) -> set[int]:
     return {s + j for s in starts for j in range(span)}
 
 
+EPHEMERAL_LO = 32768   # net.ipv4.ip_local_port_range starts here: an outgoing connection can hold a port above it
+
+
 def conflicts(rows) -> list[str]:
     out, live = [], [r for r in rows if not r["status"].startswith(("done", "revoked"))]
+    for r in live:
+        top = max(indices(r), default=-1)
+        if top >= 0 and 8000 + 50 * top + 49 >= EPHEMERAL_LO and not r["status"].startswith("legacy"):
+            out.append(f"{r['lane']}: index {top} puts TM ports in the ephemeral range (keep every index <= 494)")
     for a in range(len(live)):
         for b in range(a + 1, len(live)):
             A, B = indices(live[a]), indices(live[b])
