@@ -154,19 +154,24 @@ def _split():
     return json.loads((data_dir() / "runs" / "nq4" / "k" / "route_split.json").read_text())["routes"]
 
 
-def export_q2(rl):
+def export_q2(rl, placeholder: bool = False):
     """Lane C's closed-loop head (its manifest's trajectory / mode arms), refitted once per fold on the P6 v0 training worlds
-    of that fold's routes (K's split: the fold label of each P6 base route), nq3_q2.fit_fold otherwise unchanged."""
+    of that fold's routes (K's split: the fold label of each P6 base route), nq3_q2.fit_fold otherwise unchanged.
+    placeholder: before lane C's READY, the registered fallbacks (trajectory A1, mode head A2) into heads_xfit/q2_placeholder,
+    only for the smoke and the rule-8 check of the X agent; the chain drives with heads_xfit/q2 (lane C's arms) only."""
     import pandas as pd
     from . import nq3_q2 as Q
     from .common import data_dir
-    man = json.loads((data_dir() / "runs" / "nq3" / "q2" / "closed_loop_head" / "manifest.json").read_text())
+    if placeholder:
+        man, name = {"trajectory_arm": "A1", "mode_arm": "A2", "model": "cinque", "placeholder": True}, "q2_placeholder"
+    else:
+        man, name = json.loads((data_dir() / "runs" / "nq3" / "q2" / "closed_loop_head" / "manifest.json").read_text()), "q2"
     arm, mode_arm, model = man["trajectory_arm"], man["mode_arm"], man.get("model", "cinque")
     split = _split()
     D = Q.load("carla_p6", (model,))
     base = D["t"].base_id.astype(str).to_numpy()
     for fk in ("R1", "R2"):
-        out = xfit_root("q2", fk)
+        out = xfit_root(name, fk)
         mine = np.array([split.get(b, {}).get("fold") == fk for b in base])
         fold = np.where(mine, 0, 1)
         head = {}
@@ -184,7 +189,7 @@ def export_q2(rl):
         (out / "manifest.json").write_text(json.dumps(m, indent=1, default=float))
         rl.event("export_q2", fold=fk, rows=int(r["info"]["n_train"]), traj_diff=dt, mode_mismatch=dm)
         assert dt <= 1e-3 and dm <= 1e-3, (fk, dt, dm)
-    (xfit_root("q2") / "READY").write_text(json.dumps({"arm": arm, "mode_arm": mode_arm, "model": model}))
+    (xfit_root(name) / "READY").write_text(json.dumps({"arm": arm, "mode_arm": mode_arm, "model": model}))
 
 
 def export_mc(rl):
@@ -263,7 +268,7 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("export-q2", "export-mc", "check"))
+    ap.add_argument("cmd", choices=("export-q2", "export-q2-placeholder", "export-mc", "check"))
     ap.add_argument("dirs", nargs="*")
     a = ap.parse_args()
     if a.cmd == "check":
@@ -271,7 +276,10 @@ def main():
         print(json.dumps(res, indent=1))
         raise SystemExit(0 if all(r["differing"] == 0 and r["plans"] > 0 for r in res.values()) else 1)
     rl = RunLog("nq4_x", a.cmd)
-    export_q2(rl) if a.cmd == "export-q2" else export_mc(rl)
+    if a.cmd == "export-mc":
+        export_mc(rl)
+    else:
+        export_q2(rl, placeholder=a.cmd == "export-q2-placeholder")
     rl.close()
 
 
