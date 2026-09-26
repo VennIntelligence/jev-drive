@@ -113,6 +113,13 @@
 - 2026-09-26 10:21 CST [A] 容器 CPU 被打满：`cpu.max` = 125 核配额，load average 350，每个 CFS 周期都被 throttle（别的执行员的 HUGSIM 渲染 6 路 × 5 核、N5 depth、N4 detect 等不 pin 核）。
   第 2 轮 smoke 与 a 段的前 9 个 route 全部在第一个 tick 之前就被 240 s 看门狗判 hung。停掉重开（无损，没有完成的世界），看门狗放到 600 s；
   吞吐会比估计慢，a 段 + 2W 段若超过估计的 2 倍（6 h）就停下报告。
+- 2026-09-26 10:59 CST [A] smoke 第 2 轮（结果不全：GPU 0 上 5 次 CARLA 以 rc 139 崩溃，日志是「GameThread timed out waiting for RenderThread after 60 s」，即 CPU 饿死；
+  另清掉了先前被停的 runner 留下的 5 个孤儿 server）。已完成的世界：x₁₀ 里窗口内对向车 0 辆（背景对向车已关，✓），x₁₁ / x₀₁ 窗口内各 1–2 辆（smoke 2 按字面**过**）；
+  但 25896 的 x₁₁ 与 x₁₀ 仍逐 tick 相同（路线 XML 的 frequency 38–119 m，ego 到时正好有空档），25854 的镜像题（背景流，间距下限 17 m）等了 30 s 后仍然绕过去了，镜像题 stop 0 / 1，不过。
+  修改（写于第 3 轮之前）：所有 2W 的 x₁₁ / x₀₁ / 镜像题都由 hook 从第一个 tick 起驱动**一条** `OppositeActorFlow`，间距不再取 XML 的 frequency，而是固定区间：x₁₁ / x₀₁ 25–45 m（车头时距约 2.5–4.5 s，
+  ego 到达时大概率面对车流、要等其中一部分空档），镜像题 10–14 m（约 1–1.5 s，没有 PDM-Lite 接受的空档）；HazardAtSideLaneTwoWays 也改成同一种流（参考车道 = 自行车所在车道的左邻），
+  背景在 2W 世界里从不驱动对向车道；VehicleOpensDoorTwoWays 的流参考车道改成 ego 车道的左邻（原版取停放车所在车道的左邻，停在右侧时那就是 ego 车道本身）。
+  第 3 轮 smoke：25896 x₁₁ / 镜像，25854 x₁₀ / x₁₁ / 镜像，25928（VehicleOpensDoorTwoWays）x₁₀ / x₁₁ / 镜像，8 个世界，GPU 0。a 段照跑（它不走这段代码）。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
