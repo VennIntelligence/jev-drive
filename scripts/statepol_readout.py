@@ -199,12 +199,12 @@ def exam_b(data, run, planner, traffic):
             w = np.abs(u) <= 10
             return (float(np.abs(lat[w]).max()) if w.any() else 0.0), float(u.max())
 
-        col, off, _ = outcome(r)
+        col, off, goal = outcome(r)
         lat, umax = window_lat(r["ego"])
         e = r["ego"]
         last = e[e[:, 0] > -9000]
         v_end = float(np.hypot(*last[-1, 2:4])) if len(last) else 0.0
-        passed = umax >= OBS_HALF + 3
+        passed = umax >= OBS_HALF + 3 or (goal and not col)  # the goal lies beyond the obstacle; ego is removed there
         k = ("collide" if col else "offroad" if off else "bypass" if passed and lat >= 1.0
              else "stop" if not passed and v_end < 0.5 else "other")
         cls.append(k)
@@ -259,11 +259,14 @@ def exam_c(data, run, planner, traffic):
 
 
 def validity(data, run, planner, traffic):
-    b = load(run, "nopartner", planner, traffic)
-    if b is None:
-        return None
-    o = np.array([outcome(r) for r in b.values()])
-    return dict(n=len(o), goal=float(o[:, 2].mean()), collide=float(o[:, 0].mean()), offroad=float(o[:, 1].mean()))
+    res = {}
+    for v in ("nopartner", "base"):
+        b = load(run, v, planner, traffic)
+        if b is None:
+            continue
+        o = np.array([outcome(r) for r in b.values()])
+        res[v] = dict(n=len(o), goal=float(o[:, 2].mean()), collide=float(o[:, 0].mean()), offroad=float(o[:, 1].mean()))
+    return res or None
 
 
 def main():
