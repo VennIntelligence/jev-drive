@@ -1,0 +1,13 @@
+{
+  "pass": true,
+  "failed": [],
+  "facts": {
+    "routes": 10,
+    "finished": 10,
+    "attempts": 10,
+    "crashed_attempts": 0,
+    "stalled": 0,
+    "blocked": 0,
+    "moving": 10
+  }
+}

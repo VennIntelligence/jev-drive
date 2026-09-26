@@ -1,0 +1,34 @@
+{
+  "pass_": true,
+  "low_speed_stop_plans": 86,
+  "high_speed_stop_plans": 23,
+  "attempts": {
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage1/attempts/253490/1": {
+      "path": {
+        "plans": 142,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/rule8/attempts/266890/1": {
+      "path": {
+        "plans": 95,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/rule8/attempts/179090/1": {
+      "path": {
+        "plans": 85,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    }
+  }
+}

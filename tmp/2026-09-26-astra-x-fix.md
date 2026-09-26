@@ -43,3 +43,11 @@ round02 闭环结果：自动容量门在pids15062、GPU1两个既有CARLA/19.22
 round03 的单路已通过：wrapper448786、GPU1/index0–2/CPU134–141，初门pids15131、三个已有CARLA；head加载后的真正开车门再次通过。253490首个attempt完成，668 tick、167次head请求（含warmup）、142次X执行，最高8.0276 m/s；完成1/1，启动崩溃0，blocked0，stalled0，原stage1 sanity PASS。142次X路径/元信息离线逐位一致（最大差0）、head check返回0、unseen fold正确。实际11个低速stop目标均8.0 m/s，4个高速stop目标均0；raw模式keep19/stop15/bypass_L108。这里终于有真实起步与两侧门控证据，前两轮仍只记运维/导出结果。
 
 仍不能写“X能力判格通过”：此刻只完成登记的2534这一条；另两条2668、1790的rule8和约10路sanity在同一round继续自动执行，full从未启动。控制候选从de39c51保持不变；aa4133d只是运行资源与安全复核。小表：`research/results/nq4/x/fix/round03/stage1_pilot.json`、`stage1_behavior.json`。
+
+登记三路rule8随后齐全：2534/2668/1790分别142/95/85次X计划，共322次路径/metadata差0，三个head返回0、fold全部正确；共86个低速stop、23个高速stop。三路均首attempt完成，未崩溃/blocked/stalled。**额外两条rule8路线的运动诊断只有1/2超过3 m/s**，因此该小组的movement checklist为false；不能把“三路等价通过”写成“整体pilot通过”。真正的10-route stage2仍按原≥80%移动、≥90%完成等门执行。当前stage2只因GPU1已有四个CARLA而排队（global pids7757）；GPU0/2暂时没有CARLA，可能是B转步，不擅借批量卡。root已收此弱项与调度快照。
+
+精确逐路速度核对与通信更正：2668的最高速度1.8195 m/s，1790为8.1932 m/s。曾在给root的短消息里把1/2 aggregate的弱路线猜成1790，这是错误归属，已立即更正。10条路线来自事先提交代码固定的首十条obstacle记录，包含1790但不包含2668；不能声称“十条已覆盖那条弱路线”。路线选择没有看结果后修改。无论十路结果如何，2668这个已知慢行样本仍保留并明确报告。
+
+round03 最终 `result.json` 为 **validated**：固定十路全部首attempt完成，10/10 finished、10/10 moving（原 >3 m/s），crashed attempts 0/10、stalled 0、blocked 0；原 sanity 的所有门均通过。共3801 tick、2119.4 route wall-seconds，runner 无重启；最终全路线离线rule8通过。单路+登记三路+约十路验证均完成，最多10轮的授权在第3轮获得合格技术结果，保留这一候选，无需凑满10轮。`full_batch_started=false`，未启动任何全量X批次。登记2668的慢行已知弱项仍按上段保留，不因十路PASS消失；此处是技术起步/验收结果，不是科学能力优于基线的结论。
+
+最终可审计小表已收本机：`round03/{result,rule8,config,inputs,stage2_pilot}.json`；共13个独立attempt（登记三路+固定十路），1021次X计划路径/metadata逐位一致、最大差0，13个head检查均返回0、fold均正确；实际141次低速stop、40次高速stop。完成时间为2026-09-26 23:40:18 JST。wrapper448786和head450720确认已退出，自己的已结束tmux窗口已关闭；未停止他人的任何进程。

@@ -1,0 +1,15 @@
+{
+  "pass": false,
+  "failed": [
+    "ego above 3 m/s in only 1 / 2 runs (degenerate drive)"
+  ],
+  "facts": {
+    "routes": 2,
+    "finished": 2,
+    "attempts": 2,
+    "crashed_attempts": 0,
+    "stalled": 0,
+    "blocked": 0,
+    "moving": 1
+  }
+}

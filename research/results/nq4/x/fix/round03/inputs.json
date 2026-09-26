@@ -1,0 +1,12 @@
+{
+  "/root/autodl-tmp/ujs/jev-drive/todos/2026-09-23-tfv6-controller/controller-eval/P7.json": "1546e6be87ce9b5af85c04e41412a7eea541a1f46b98e9a2d85e5deadf7c8e81",
+  "/root/autodl-tmp/ujs/runs/nq4/k/route_split.json": "8e1560b0ece01aa4a0e94ede3cef47f8c495fbcfc613bef003ffabc1784b9f43",
+  "/root/autodl-tmp/ujs/runs/nq4/gk/g_routes.xml": "2bf48935a927acfdcf34fc33846a20cf1ed0b5669273f9b2c49d8a838b4c3954",
+  "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R1/manifest.json": "9e3b1155bd3640b7ba7a04a78b495f96bac27d9aeaf7b29005e7976018b6f79e",
+  "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R2/manifest.json": "498a872cd5c2e20e33a2abc16dd4c24a5ac7c6686e367aa7735c5054375e1ef2",
+  "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R1/head.npz": "f9beb807d9563d9abf94e7980519f6b0273052184be4031f0876f0fd2f3cdb50",
+  "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R2/head.npz": "3092b2221b73bdc81da3317cda1e780be8b344f839ad133c9ecc9e9f98386547",
+  "/root/autodl-tmp/ujs/jev-drive/scripts/nq4_x_agent.py": "5c6f03143e0749da37cf7a0c1f6e45f3b4204c62c50f52323f4f3b099ececac2",
+  "/root/autodl-tmp/ujs/jev-drive/scripts/nq4_x_controller.py": "e9aae385c165189854db0f14c5085a3e9e2399b0feeb2477a0d69cfff3b2947f",
+  "/root/autodl-tmp/ujs/jev-drive/jevdrive/nq4_x.py": "a124e476a8a837f26641bf40e3dad6d9d39b7c1d46d44de6667217d60863b6cc"
+}

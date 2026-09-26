@@ -1,0 +1,124 @@
+{
+  "pass_": true,
+  "low_speed_stop_plans": 141,
+  "high_speed_stop_plans": 40,
+  "attempts": {
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage1/attempts/253490/1": {
+      "path": {
+        "plans": 142,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/rule8/attempts/266890/1": {
+      "path": {
+        "plans": 95,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/rule8/attempts/179090/1": {
+      "path": {
+        "plans": 85,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/177390/1": {
+      "path": {
+        "plans": 118,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/179090/1": {
+      "path": {
+        "plans": 86,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/179290/1": {
+      "path": {
+        "plans": 85,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/182590/1": {
+      "path": {
+        "plans": 34,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/183390/1": {
+      "path": {
+        "plans": 24,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/185290/1": {
+      "path": {
+        "plans": 24,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/250990/1": {
+      "path": {
+        "plans": 92,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/251390/1": {
+      "path": {
+        "plans": 142,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/253490/1": {
+      "path": {
+        "plans": 50,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    },
+    "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/stage2/attempts/253990/1": {
+      "path": {
+        "plans": 44,
+        "differing": 0,
+        "max_abs_diff_m": 0.0
+      },
+      "fold_correct": true,
+      "head_returncode": 0
+    }
+  }
+}

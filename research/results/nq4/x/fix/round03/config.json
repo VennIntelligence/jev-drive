@@ -1,0 +1,23 @@
+{
+  "model": "head",
+  "warmup_s": 5.0,
+  "desire": true,
+  "head_cam_tick": 0.0,
+  "arm": "q2",
+  "x": true,
+  "socket": "/root/autodl-tmp/ujs/runs/nq4/cx/x-fix/round03/head.sock",
+  "controller": "fixed",
+  "controller_preset": "pursuit",
+  "controller_config": "/root/autodl-tmp/ujs/jev-drive/todos/2026-09-23-tfv6-controller/controller-eval/P7.json",
+  "seed": 0,
+  "dump_every": 1,
+  "cruise_mps": 8.0,
+  "folds": {
+    "split": "/root/autodl-tmp/ujs/runs/nq4/k/route_split.json",
+    "key": "q2_dir",
+    "R1": "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R1",
+    "R2": "/root/autodl-tmp/ujs/runs/nq4/gk/heads_xfit/q2/R2",
+    "pick": "unseen",
+    "rule": "label"
+  }
+}
