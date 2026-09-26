@@ -110,7 +110,8 @@ def run_shard(job):
     sys.argv += ["--output-dir", str(tmp_out), "--map-ids", ",".join(map(str, map_ids))]
     null = open(os.devnull, "w")
     so, se = sys.stdout, sys.stderr
-    sys.stdout = sys.stderr = null
+    if not os.environ.get("STATEPOL_DEBUG"):
+        sys.stdout = sys.stderr = null
     try:
         E.main()
     finally:
