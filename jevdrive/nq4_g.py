@@ -12,6 +12,7 @@
 
 Readouts (G, registered): ghost reaction per (run, window); pre-visibility reaction per orig run with the visibility
 camera; scenario pass per run (no collision in the scenario zone [s_trig - 30, s_trig + 80] and the car reached its end).
+Windows: WINDOW_RULE (see windows(); the literal rule 12 does not fit Bench2Drive's ~130 m routes, [F] entry).
 """
 from __future__ import annotations
 
@@ -164,7 +165,15 @@ def shape(P, s, a, b) -> str:
     return "turn" if np.degrees(np.abs(h[m] - h[m][0]).max()) > TURN_DEG else "straight"
 
 
-def windows(t: pd.DataFrame) -> pd.DataFrame:
+WINDOW_RULE = "hazard"          # "rule12" = the todo's literal rule 12; "hazard" = [F] proposal (pending main)
+CTRL_AFTER_GAP, CTRL_END_MARGIN_H = 20.0, 10.0
+
+
+def windows(t: pd.DataFrame, rule: str = WINDOW_RULE) -> pd.DataFrame:
+    """rule12: trigger window around the XML trigger point, <= 2 control windows >= 80 m away (never fit: B2D routes
+    are ~130 m with the trigger at ~11 m). hazard: trigger window [s_h - 30, s_h + 10] around the hazard point
+    (hazard_point, from the PDM-Lite recordings), one control window [s_h + 20, s_h + 60] of the same shape class that
+    ends >= 10 m before the route end."""
     src = {r.get("id"): r for r in ET.parse(data_dir() / B2D_XML).getroot().iter("route")}
     rows = []
     for b in t.base:
@@ -177,9 +186,19 @@ def windows(t: pd.DataFrame) -> pd.DataFrame:
         s = arc(P)
         L = float(s[-1])
         st = float(project(P, s, [[float(tp.get("x")), float(tp.get("y"))]])[0][0])
-        a, z = max(0.0, st + TRIG_WIN[0]), min(L, st + TRIG_WIN[1])
+        sh = hazard_point(b)["s_hazard"] if rule == "hazard" else st
+        if not np.isfinite(sh):
+            rows.append({"base": b, "kind": "missing_hazard"})
+            continue
+        a, z = max(0.0, sh + TRIG_WIN[0]), min(L, sh + TRIG_WIN[1])
         shp = shape(P, s, a, z)
-        rows.append({"base": b, "kind": "trigger", "k": 0, "s0": a, "s1": z, "shape": shp, "s_trig": st, "route_len": L})
+        common = {"s_trig": st, "s_hazard": sh, "route_len": L, "rule": rule}
+        rows.append({"base": b, "kind": "trigger", "k": 0, "s0": a, "s1": z, "shape": shp, **common})
+        if rule == "hazard":
+            c, c1 = sh + CTRL_AFTER_GAP, sh + CTRL_AFTER_GAP + CTRL_LEN
+            if c1 <= L - CTRL_END_MARGIN_H and shape(P, s, c, c1) == shp:
+                rows.append({"base": b, "kind": "control", "k": 1, "s0": c, "s1": c1, "shape": shp, **common})
+            continue
         cands = []
         T = np.array([float(tp.get("x")), float(tp.get("y"))])
         for c in np.arange(CTRL_START, L - CTRL_END_MARGIN - CTRL_LEN + 1e-6, CTRL_STEP):
@@ -195,7 +214,7 @@ def windows(t: pd.DataFrame) -> pd.DataFrame:
             if len(chosen) < CTRL_MAX and all(c1 <= x0 or c >= x1 for x0, x1 in chosen):
                 chosen.append((c, c1))
         for k, (c, c1) in enumerate(sorted(chosen), 1):
-            rows.append({"base": b, "kind": "control", "k": k, "s0": c, "s1": c1, "shape": shp, "s_trig": st, "route_len": L})
+            rows.append({"base": b, "kind": "control", "k": k, "s0": c, "s1": c1, "shape": shp, **common})
     return pd.DataFrame(rows)
 
 
@@ -205,6 +224,8 @@ def build():
     t.to_csv(out / "routes.csv", index=False)
     v = build_xml(t, out / "g_routes.xml")
     v.to_csv(out / "variants.csv", index=False)
+    pd.DataFrame([hazard_point(b) for b in t.base]).to_csv(out / "hazard_points.csv", index=False)
+    windows(t, "rule12").to_csv(out / "windows_rule12.csv", index=False)
     w = windows(t)
     w.to_csv(out / "windows.csv", index=False)
     res = root("results", "g")
