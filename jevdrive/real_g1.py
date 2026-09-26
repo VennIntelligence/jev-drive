@@ -482,7 +482,7 @@ def run_wod(rl, gates: dict, deltas: dict, taus: dict, tag: str = "mc"):
             np.savez_compressed(rl.dir / f"wod_gates_{m}.npz", frame_name=d["frame_name"], **gm)
         for gname, g in {"none": np.ones(len(rows), np.float32), **gm}.items():
             tab, act = E1.readouts(d, d[f"prior {m}"], g[:, None, None] * deltas[m], taus[m])
-            meta = {"model": m, "gate": gname, "delta": tag}
+            meta = {"model": m, "gate": gname, "source": tag}
             tabs.append(tab.assign(**meta))
             acts.append(act.assign(**meta, tau=taus[m]))
             descs += [{**meta, **r} for r in gate_desc(g, scopes)]
@@ -599,9 +599,9 @@ def nav_write(rl, gates: dict, deltas: dict, tag: str, taus: dict):
                 jobs += [f"{v} navtest {name} {rl.dir / f'navtest_{name}.npz'}" for v in ("v1", "v2")]
             act = (np.abs(P.v2(E1._grid20(arm)) - P.v2(E1._grid20(p["poses"]))) >= taus[m]).astype(float)
             for k, msk in scopes.items():
-                acts.append({"model": m, "delta": tag, "gate": gname, "scope": k, "n": int(msk.sum()), "tau": taus[m],
+                acts.append({"model": m, "source": tag, "gate": gname, "scope": k, "n": int(msk.sum()), "tau": taus[m],
                              "activation": float(act[msk].mean())})
-            descs += [{"model": m, "delta": tag, "gate": gname, **r} for r in gate_desc(g, scopes)]
+            descs += [{"model": m, "source": tag, "gate": gname, **r} for r in gate_desc(g, scopes)]
     pd.DataFrame(acts).to_csv(rl.dir / f"navsim_activation_{tag}.csv", index=False)
     pd.DataFrame(descs).to_csv(rl.dir / f"navsim_gate_desc_{tag}.csv", index=False)
     (rl.dir / f"score_jobs_{tag}.txt").write_text("\n".join(jobs) + "\n")
