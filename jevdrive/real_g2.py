@@ -1,5 +1,5 @@
 """Real-data transfer G2 (retrain the reaction head on the HUGSIM 3DGS vehicle pairs) and G1c (g3 x a constant brake)
-(todos/2026-09-26-real-data-transfer.md, G2 and deviation-log entry [G2] 10:50, written before any number).
+(todos/2026-09-26-real-data-transfer.md, G2 and deviation-log entry [G2] 10:48, written before any number).
 
   fit        per model x seed: 5 scene folds of I3; in each fold, with the other four folds' scenes only,
              M-C `pair` (reactivity_mc's closed form), the `hard` / `uniform` controls and E5's students A / B on the
@@ -92,7 +92,7 @@ def i3_data() -> dict:
 # ================================================================ fits
 
 def fit_model_seed(D: dict, m: str, s: int, rl) -> tuple[dict, dict]:
-    """Held-out Delta (n, 20, 2) per head and the fold heads (for transfer) of one model x seed ([G2] 10:50 (1)-(6))."""
+    """Held-out Delta (n, 20, 2) per head and the fold heads (for transfer) of one model x seed ([G2] 10:48 (1)-(6))."""
     from . import elicit_e5 as E5, p5_exam as E, reactivity_mc as MC
     MC.EIGH_DEVICE = DEV                              # float64 eigh on the GPU ([G2] 10:53): the box's CPUs are saturated
     t = D["t"]
@@ -180,7 +180,7 @@ def i3_exam(rl, D: dict, held: dict) -> dict:
                 preds[f"G2 M-C {arm} s{s} [{m}]"] = prior + held[m, s][arm]
             for arm in STUDENTS:
                 preds[f"G2 student {arm} s{s} [{m}]"] = prior + held[m, s][arm]
-            for src, k in (("M-C pair", "pair"), ("student A", "A")):     # [G2] 10:50 (10): g2 x the G2 Delta, descriptive
+            for src, k in (("M-C pair", "pair"), ("student A", "A")):     # [G2] 10:48 (10): g2 x the G2 Delta, descriptive
                 preds[f"G2 {src} s{s} x g2 [{m}]"] = prior + g2v[:, None, None] * held[m, s][k]
         # G1c on I3 (descriptive): the g3-weighted mean of CARLA's M-C Delta, longitudinal only / 2-D
         g = g3(*D[f"lead {m}"], D["v_ego"])
@@ -356,7 +356,7 @@ def run_transfer(rl, fit_run: str):
             for k, msk in scopes.items():
                 nacts.append({"model": m, "head": head, "seed": s, "scope": k, "n": int(msk.sum()), "tau": tau,
                               "activation": float(act[msk].mean()), "delta_mag_median_m": float(np.median(mag[msk]))})
-            if head in ("M-C pair", "student A") or s == 0:     # [G2] 10:50 (8): controls only seed 0
+            if head in ("M-C pair", "student A") or s == 0:     # [G2] 10:48 (8): controls only seed 0
                 np.savez(rl.dir / f"navtest_{name}.npz", tokens=tok, poses=arm.astype(np.float32))
                 jobs.append(f"v1 navtest {name} {rl.dir / f'navtest_{name}.npz'}")
     pd.DataFrame(nacts).to_csv(rl.dir / "navsim_activation.csv", index=False)
@@ -367,7 +367,7 @@ def run_transfer(rl, fit_run: str):
 # ================================================================ G1c
 
 def _const(g: np.ndarray, delta: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """[G2] 10:50: c = sum g3 Delta / sum g3 over the dataset's evaluation frames; longitudinal only, and 2-D."""
+    """[G2] 10:48: c = sum g3 Delta / sum g3 over the dataset's evaluation frames; longitudinal only, and 2-D."""
     c = (g[:, None, None] * delta).sum(0) / g.sum()
     return c * np.array([1.0, 0.0], np.float32), c
 
