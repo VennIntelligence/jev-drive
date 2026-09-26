@@ -3310,3 +3310,33 @@ DynamicObjectCrossing 非反应误翻 B − A 在 ±1.9 pp（门槛 +3），null
 推测：cut-in 的判别量就是「车是否进入本车道」，走廊横距直接给出它；行人只要「在不在画面下半部、有多大」就够。验证：B 的 token 里加一维「框底中点到 route 在图像上投影的横向像素距离」（不用深度），看 Lebowski cut-in 是否回到 +6。
 
 **状态**：**待定**。限定：只在 CARLA（BA 集），检测外观来自 COCO 训练的 YOLO，真实数据上 image-plane token 的迁移（G0 那一问）没测；Lebowski 的 cut-in 增益本身 CI 下端就贴着 0；延迟在共卡上量，绝对值比 E5 独占卡时高约 15 ms。
+
+## 48. 公开的 state-space RL policy 只有 BehaviorBench 的两个权重能装上跑；negotiation 上 PPO 的反应是 IDM 的 3 倍且带横向，bypass 由 reward 系数决定，recovery 没有一个会；两个都不能直接当 openpilot desire 之后的执行层（**待定**）
+
+2026-09-26。预登记、执行日志与全部表格在 [todos/2026-09-26-state-space-policies.md](../todos/2026-09-26-state-space-policies.md)，候选清单在 [state-space-policies.md](state-space-policies.md)。
+起因是第 47 条：判断之后的行为（绕行、让行 / 博弈、恢复）我们没有量具，也没有来源；用户认为 Gigaflow 类自博弈 state-space policy 可能有公开权重。
+
+**候选**：Gigaflow 本体无权重；GPUDrive 的 HF policy 需要 Madrona 构建，本轮没装；真正下载得到、装得上的只有 BehaviorBench（Bosch，PufferDrive fork，AGPL-3.0，arXiv 2605.10034）随仓库发布的
+`simple_ppo.pt`（自博弈 PPO，奖励只有到达 / 碰撞 / 出界）和 `conditioned_ppo.pt`（Gigaflow 式 reward conditioning，normal / cautious / aggressive 三组系数）。对照 IDM、仓库版 PDM、constant velocity。
+仿真 PufferDrive 10 Hz，WOMD validation_interactive，其余车按 log 回放；量法沿用第 47 条的反事实配对 + 各自 null。
+
+**先结掉的两个坑**：(1) PufferDrive eval 把一进入 goal 半径的车标成 removed，它从所有观测和 IDM / PDM 的前车检测里消失但仍参与碰撞检测——路边停着的车和插入的障碍车在第 1 步就成了看不见但撞得上的幽灵，
+IDM 撞插入车 94.7%；把这类车的 goal 推远后 3.5%，停车 92.4%。v1 全部数字作废，下表只用修复后的 v2。用 BehaviorBench 评测 WOMD 的人都受这个影响。
+(2) PPO 在不平移的直路上 1 s 就离 log 路径 1.6 m，是 policy 本身不居中（奖励里没有居中项；仓库自己的车道指标给出同样排序），不是适配问题。
+
+**结果**（有效性门槛 goal ≥ 80% 且碰撞 ≤ 10%：PPO 过，cond_normal 不过（55.9% / 15.2%），它的数字只作描述）：
+
+| 考卷 | PPO | conditioned PPO | IDM / PDM |
+|:--|:--|:--|:--|
+| A negotiation（1000 对，x⁻ = 删对手） | 让行反应 **43.0%**（null 2.0%），横向避让 **37.0%**（null 1.4%） | normal 档 14.0% / 3.7% | IDM 13.8% / 0.9% |
+| B bypass（171 个直路 episode，插一辆静止车） | 过障碍 81.3%，但 x⁻ 上自然晃出 ≥ 1 m 的就有 82.5%，按判据无结论 | aggressive 档绕 **79.5%**（null 19.9%，撞 15.8%）判「会绕」；normal / cautious 档撞 40–57%，既不绕也不及时停 | 停 92%，撞 3.5%，「只会停」 |
+| C recovery（343，起点平移 ±1.5 m） | 不回（不平移也只 15.7% 达标，判据对它无效） | 不回：保持 1.4–1.5 m 偏移平行开 | 不回 |
+
+A 的第三条判据（对手在场不多撞 5 pp）三者都不过，连 IDM 也是，因为 log 回放的对手不会反应；真正分开三者的是反应量级。
+
+**对方向的含义**：作为「模式头 → desire → 执行层」里的现成执行层，这两个权重都不够（PPO 不居中、不回线；conditioned 的保守设置碰撞 40% 以上）。
+能拿走的是两样：量法（反事实对 + 各自 null，与 P6 同构，可以直接搬到 CARLA / 真实数据上），和「同一 checkpoint 里绕不绕由 reward 系数决定」这个现象，它说明第三层的行为是可调的策略而不是感知问题，与 Gigaflow 的 reward-coefficient conditioning 设计一致。
+openpilot 那条线的执行器检查（night-queue-2 N2）仍是第三层的主路。
+
+**状态**：**待定**。限定：反应式对手（traffic = PPO）那一臂没跑，A 的 (c) 只在不反应的对手上读；B 只有 171 个直路 episode，障碍全是 4.8 × 2.0 m 的车，没考路口和对向来车；cond_caut / aggr / PDM 只跑了 B。
+**会推翻或推进本条的证据**：traffic = PPO 下 PPO 的 at-fault 碰撞差 ≤ 5 pp（(c) 过，negotiation 判定升级）；GPUDrive 的 HF policy 装上后在同一考卷上过有效性门槛且会回线（执行层有了候选）。
