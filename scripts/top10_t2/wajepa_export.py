@@ -2,7 +2,8 @@
 
 Same scene filter, same log sharding, same agent (eval.navsim_agent.WorldModelNavsimAgent.compute_trajectory) and the
 same output format; the only addition is that each rank checkpoints its trajectories every CKPT_EVERY tokens and
-skips tokens it already has, so a killed run continues where it stopped. The model seeds its flow sampler per call
+skips tokens it already has, so a killed run continues where it stopped. To change the number of ranks mid-run:
+--consolidate the finished tokens into done_union.pkl, then start the new ranks with --seed done_union.pkl. The model seeds its flow sampler per call
 (MultiViewCausalFutureMaskedJEPA._make_inference_generator), so a token's trajectory does not depend on call order.
 
 Run from the WA-JEPA checkout with PYTHONPATH=<wajepa>:<navsim devkit>:
@@ -43,6 +44,9 @@ def export(a):
     loader = SceneLoader(original_sensor_path=a.openscene_root / "sensor_blobs/test",
                          data_path=a.openscene_root / "navsim_logs/test", scene_filter=scene_filter,
                          sensor_config=agent.get_sensor_config())
+    if a.seed and a.seed.exists():            # trajectories of an earlier sharding (see --consolidate), own tokens only
+        own = {str(t) for t in loader.tokens}
+        done |= {k: v for k, v in pickle.load(open(a.seed, "rb"))["trajectories"].items() if k in own and k not in done}
     todo = [t for t in loader.tokens if str(t) not in done]
     print(f"[export] rank={a.rank} {len(loader.tokens)} tokens, {len(done)} already done, {len(todo)} to go", flush=True)
     t0 = time.time()
@@ -65,9 +69,18 @@ def main():
     ap.add_argument("--navsim-root", type=Path, required=True)
     ap.add_argument("--openscene-root", type=Path)
     ap.add_argument("--merge", action="store_true")
+    ap.add_argument("--seed", type=Path, help="union pickle from --consolidate; lets a run change --num-shards")
+    ap.add_argument("--consolidate", action="store_true",
+                    help="union of every rank_*.pkl / rank_*.partial.pkl in --out-dir -> done_union.pkl")
     a = ap.parse_args()
     a.out_dir.mkdir(parents=True, exist_ok=True)
-    if a.merge:
+    if a.consolidate:
+        u = {}
+        for f in sorted(a.out_dir.glob("rank_*.pkl")):
+            u |= pickle.load(open(f, "rb"))["trajectories"]
+        _dump({"trajectories": u}, a.out_dir / "done_union.pkl")
+        print(f"[export] consolidated {len(u)} tokens")
+    elif a.merge:
         _, tokens = _load_scene_filter(a.navsim_root)
         _merge_rank_pickles([a.out_dir / f"rank_{r:02d}.pkl" for r in range(a.num_shards)],
                             a.out_dir / "navtest_trajectories.pkl", tokens)
