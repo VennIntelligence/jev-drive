@@ -345,6 +345,41 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   **11:39 更新**：I3 补渲在停之前已全部完成：65 / 65 个场景、68 728 个视图、5.8 GB（`processed/hugsim_pairs_10hz/`）；核对：前三路 5 Hz 帧 **26 136 / 26 136 张与原 JPEG 逐字节相同**（= 原集合全部 JPEG），
   判据 max |Δ| = 0 通过。续跑命令里的第 1 步不再需要。
   **事故**：NAVSIM 子执行员 11:06:53 清理自己的进程时用了 `pgrep -f run_pdm_score_multi_gpu`，误杀了 T1 的 `t1-nav-sd`（SparseDriveV2 navtest，37%，exit 143）；已报 main 转告 T1。
+- 2026-09-26 10:16 / 10:25 CST [T2-real]（WOD / nuScenes 子执行员）的操作性选择，写于这两张卷的任何 DrivoR / WA-JEPA 数字之前，原文登记在 box 的 `runs/top10_t2/registrations.md`（英文，逐字抄在下面；14:00 抄进本文件）。事后记录的偏差：nuScenes 的 ego 用位姿差分而不是 CAN bus（索引里没有 CAN bus，与 nuscenes_zs 同源，见 (4)）；WOD 实际补抓 4 089 条记录 / 9.3 GB（登记写约 4.3k / 10 GB）；WOD 有 3 个历史槽按 (2) 钳到后一个槽。
+  ```
+  - 2026-09-26 10:16 CST [T2-real] WOD-E2E val inputs for DrivoR / WA-JEPA, written before any DrivoR or WA-JEPA WOD number.
+    (1) Frame sets: the frozen rater (479) and ADE-extra (<= 958) sets of processed/wod_zeroshot/sets.npz, unchanged.
+    (2) Images: full 8-camera records exist on disk only for f-3..f (Alpamayo fetch). WA-JEPA needs f-15, f-10, f-5, f with REAR,
+        which the slim shards do not keep, so the f-15 / f-10 / f-5 records are fetched from the raw GCS val shards with the same
+        code path as the Alpamayo exam (wod_zeroshot.fetch_records, context.name verified), about 4.3k records / ~10 GB.
+        Cameras used: FRONT, FRONT_LEFT, FRONT_RIGHT, REAR (ids 1, 2, 3, 7), JPEG bytes written to files unchanged.
+        A history slot before the sequence start (none expected: rater frames 147-203, extra frames >= 100) or a record that
+        cannot be fetched is clamped to the nearest later history slot that exists (all four cameras together); the count is reported.
+    (3) History poses (WA-JEPA history_trajectory): WOD past_states at -1.5 / -1.0 / -0.5 / 0 s (4 Hz grid indices 9, 11, 13, 15)
+        x, y; yaw = direction of that sample velocity (held from the next later sample below 0.5 m/s, 0 at t0), as p5_hist /
+        night2_n3.nav_ego do. Ego vx, vy, ax, ay: top10_t2.ego_rows DrivoR convention for both models on WOD (lateral terms
+        filled, as in the WA-JEPA NAVSIM path; T2 choice 3).
+    (4) Command: WOD intent -> NAVSIM one-hot via top10_t2.NAV_CMD (UNKNOWN -> unknown slot).
+    (5) Outputs: 8 poses @2 Hz in the rear-axle frame = WOD ego frame (no shift); top10_t2.grid(..., extrap=True): cubic spline to
+        0.25 ... 4.0 s, 4.25 ... 5.0 s by the last two points constant velocity.
+    (6) Judge (copied): RFS cluster mean / frame mean with 10 000 bootstrap (cluster-stratified / frame), paired against cv, logged
+        future, ours cls ego, Alpamayo 1.5 nav (E[1 sample]) and openpilot Cinque; decision 22 main read = ADE@5s vs logged future on
+        s_ego deciles 1-9 (edges and s_ego from runs/drive_backbones/heads_train/20260925-110819 dir0, the file E1 used),
+        over rater + extra frames pooled, sequence bootstrap, paired; top decile reported separately.
+  - 2026-09-26 10:25 CST [T2-real] nuScenes main (4636) inputs for DrivoR / WA-JEPA, written before any DrivoR or WA-JEPA nuScenes number.
+    (1) Set: nuscenes-physicalai main (valid keyframes with t0 >= 1.5 s after the scene start), n = 4636, unchanged.
+    (2) Images: CAM_FRONT_LEFT / CAM_FRONT / CAM_FRONT_RIGHT / CAM_BACK -> l0 / f0 / r0 / b0; the four keyframes i-3 ... i of the
+        same scene (2 Hz, t0-1.5 ... t0), each camera's frame nearest to the keyframe timestamp (nuscenes_zs.frame_at). DrivoR reads i.
+    (3) History poses: 20 Hz LIDAR_TOP ego poses (rear axle) at the four keyframe times, in the t0 frame (x, y, yaw).
+    (4) Ego state: the index has no CAN bus; nuscenes_zs itself derives speed from ego poses, so the same source is used:
+        velocity = backward 0.2 s displacement of the ego poses at t0 in the t0 frame, acceleration = (v(t0) - v(t0-0.5 s)) / 0.5,
+        nothing from the future. Both models get [vx, vy, ax, ay] (lateral terms filled).
+    (5) Command: the VAD converter rule of the index (GT lateral offset at 3 s, future_label_conditioning as in nuscenes-physicalai)
+        -> NAVSIM one-hot (left 0, straight 1, right 2).
+    (6) Outputs: 8 rear-axle poses @2 Hz -> LIDAR_TOP point at each GT keyframe time by nuscenes_zs.to_lidar_point (linear in time,
+        rigid offset of the lidar); only 0.5 ... 3.0 s are used. Judge copied: VAD / ST-P3 primary, BEV-Planner beside, scene
+        bootstrap 10 000, paired vs CV; openpilot rows (stored preds on main) as context.
+  ```
 - 2026-09-26 12:50 CST [T2] 重启后续跑（12:28 起，GPU 6 独占，CPU 上限 16）。核分配：T2 全部进程 `taskset` 在 192–207（WOD / nuScenes 子执行员 192–195，NAVSIM 196–201，P5 / I3 推理 202–207），
   所有进程 OMP / OPENBLAS = 1；NAVSIM 打分用 devkit 的 worker 数上限（`SCORE_WORKERS=6`，同一核段内），v2 EPDMS 与 v1.1 PDMS 是两种分，不是同一打分跑两遍。
   **12:45 吞吐检查**（main 要求）：T2 进程实测合计约 10 核（每个推理进程约 1 核、DrivoR 两个 loader 各 0.4 核），全部在 192–207 内；GPU 6 100%，瓶颈是这张卡，
