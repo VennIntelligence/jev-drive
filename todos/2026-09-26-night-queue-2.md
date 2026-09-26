@@ -265,6 +265,7 @@
   前后：旧路径每 fold 27 s（空机）到 12 min（box 负载 285），CPU 约 5 450%；新路径每 fold 约 15 s（含 6 次 student 拟合），CPU 约 140%，整个 fit 3 min（12:50–12:53）。旧 run 11:05 / 12:27 两次都手动停掉（PID 2010），新 run PID 418944 已正常结束。
   Hydra 逐 anchor 打分（`elicit_e6_score.py`）：热路径是 devkit 的 PDM simulator（LQR）+ scorer（shapely 几何），属于第三方评分代码，按规矩原样跑，不改成 GPU；24 个进程在上限内。实测 13 core·s / token（E6 空机 7、重启前争用时 17），
   剩余 s1 ≈ 100 个 chunk、s2 ≈ 210 个 chunk，按现在的速度 s1 约 14:30、s2 约 16:20 打完；s1 打完后把它的 12 个核并给 s2（杀 s2 的记录 PID 重启，已完成的 chunk 保留）。
+- 2026-09-26 13:40 [B] main 把 CPU 上限提到 40：s2 停掉（记录的 PID 1958 / 2007 及其 12 个 worker，已完成 255 个 chunk 保留）后在 160–187 核上以 28 个进程重启（新 PID：脚本 507140，pool 507247）；s1 的 12 个进程照跑，合计 40，每 worker 1 个 BLAS 线程。s1 打完后它的 12 核给 seed 1 的 devkit。
 
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
