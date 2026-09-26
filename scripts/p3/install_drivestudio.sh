@@ -33,7 +33,7 @@ echo "== drivestudio: torch + pure-python deps"
 pip "$ENV" "torch==2.8.0" "torchvision==0.23.0" "numpy>=1.26,<2" "setuptools<80" wheel ninja \
   "timm>=0.9.5" "pytorch_msssim==1.0.0" "omegaconf==2.3.0" "torchmetrics>=1.0,<1.5" tensorboard wandb \
   matplotlib plotly "viser==0.2.1" "nerfview==0.0.3" imageio imageio-ffmpeg scikit-image opencv-python \
-  "open3d==0.19.0" "pyquaternion==0.9.9" chumpy "kornia==0.7.2" tqdm gdown "lpips==0.1.4" trimesh \
+  "open3d==0.19.0" "pyquaternion==0.9.9" "kornia==0.7.2" tqdm gdown "lpips==0.1.4" trimesh \
   nuscenes-devkit "transformers>=4.44,<5" pandas pyarrow jaxtyping rich
 "$ENV/bin/python" -c "import torch; a = torch.cuda.get_arch_list(); assert 'sm_120' in a, a"
 
