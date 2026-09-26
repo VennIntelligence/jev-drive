@@ -20,9 +20,11 @@
 # Budget: after every step the whole queue is re-estimated from measured worker-minutes per route (prior until an
 # examinee has >= 5 finished routes). Projected total > $BUDGET_WH worker-hours (600) -> the todo's cut: first drop every
 # swap step, then keep shift only for tfv6 / bridgedrive / blue / mc. Each step stops at twice its estimate (ERROR).
-# Resources: GPUs 0-5 x <= 6 servers (index 300 + 30 g, lane B's blocks, free once lane B is done), cores 60-149.
-# Server index i binds RPC 2000 + 50 i and TM 8000 + 50 i = the RPC port of index i + 120: a smoke next to other lanes
-# needs an i with i, i + 120 and i - 120 all unused (100-179 while A uses 600-689 and B 300-479).
+# Resources: GPUs 0-5 x <= 6 servers, cores 60-149. Server index i binds RPC 2000 + 50 i (+1, +2) and TM 8000 + 50 i, i.e.
+# the RPC port of index i + 120, so a block must keep i, i + 120 and i - 120 clear of every other lane's indices (lane B
+# 300-479, lane A 600-689, K 170-179): GPU g uses [60 + 18 g, 78 + 18 g), 60-167 in all (i + 120 in 180-287, i - 120 <= 47).
+# Before every step each GPU's block is checked against the listening sockets (/proc/net/tcp): fewer than WORKERS + 2
+# clean indices -> wait (2 min polls, 30 min at most), then ERROR.
 # Only processes whose PIDs this script recorded are ever killed. Hand-offs: runs/nq4/gk/{STATUS.md,ERROR,DONE,events.jsonl}.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -35,8 +37,8 @@ mkdir -p "$G/srv" "$G/cfg" "$G/arms" "$G/arms_k" "$G/steps"
 GPUS=${GPUS:-0 1 2 3 4 5}
 WORKERS=${WORKERS:-6}
 CPUS=${CPUS:-60-149}
-SIDX0=${SIDX0:-300}
-SPAN=${SPAN:-30}
+SIDX0=${SIDX0:-60}          # GPU g: server indices [60 + 18 g, 60 + 18 g + 18), i.e. 60-167 on GPUs 0-5 ([F] entry)
+SPAN=${SPAN:-18}
 BUDGET_WH=${BUDGET_WH:-600}
 CUR_OUTS=""
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_NQ4_TRACE=1
@@ -220,6 +222,28 @@ EOF
 wmin() { local m; m=$(measured_wmin "${1%%_*}"); echo "${m:-${PRIOR[${1%%_*}]:-10}}"; }
 n_ids() { local s=$1; [[ -z $s ]] && { echo 0; return; }; echo $(( $(tr -cd , <<< "$s" | wc -c) + 1 )); }
 
+ports_ok() {  # ports_ok <first index>: >= WORKERS + 2 indices of the block with RPC (+1, +2) and TM ports not listening
+    local t0=$SECONDS n
+    while :; do
+        n=$(python3 - "$1" "$SPAN" <<'EOF'
+import sys
+i0, span = int(sys.argv[1]), int(sys.argv[2])
+busy = set()
+for f in ("/proc/net/tcp", "/proc/net/tcp6"):
+    for l in open(f).readlines()[1:]:
+        x = l.split()
+        if x[3] == "0A":                                # LISTEN
+            busy.add(int(x[1].split(":")[1], 16))
+print(sum(1 for i in range(i0, i0 + span)
+          if not busy & {2000 + 50 * i, 2001 + 50 * i, 2002 + 50 * i, 8000 + 50 * i, 8001 + 50 * i}))
+EOF
+)
+        (( n >= (WORKERS + 2 < SPAN ? WORKERS + 2 : SPAN) )) && return 0
+        (( SECONDS - t0 > 1800 )) && return 1
+        log "server block from index $1: only $n clean indices; waiting"; sleep 120
+    done
+}
+
 # ---------------------------------------------------------------- one step
 arm_dir() {  # arm_dir <cand> <variant> <seed>
     if [[ $2 == k ]]; then echo "$G/${ARMS:-arms}_k/$1/s$3"; else echo "$G/${ARMS:-arms}/$1/$2/s$3"; fi
@@ -247,6 +271,7 @@ run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]
     CUR_OUTS="${OUT[*]}"
     ev step_start "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"routes\": $total, \"est_h\": $est, \"wmin\": $w"
     log "start $c $v seeds $3 ($rs, $total routes, $w worker-min/route, estimate $est h)"
+    for g in "${gl[@]}"; do ports_ok $((SIDX0 + SPAN * g)) || error "server block of GPU $g has fewer than $((WORKERS + 2)) free indices for 30 min" "$G/log.txt"; done
     for i in "${!gl[@]}"; do servers_for "$c" "${gl[$i]}" || error "server start failed for $c on GPU ${gl[$i]}" "$G/log.txt"; done
     local pids=()
     for i in "${!gl[@]}"; do
