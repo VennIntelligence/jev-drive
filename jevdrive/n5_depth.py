@@ -181,13 +181,42 @@ def placement_ratio(tag: str) -> "pd.DataFrame":
     return pd.DataFrame(rows)
 
 
+COLS = ["p5_ped_0-10", "p5_ped_10-20", "p5_ped_20-40", "p5_ped_le40", "nusc_ped_0-10", "nusc_ped_10-20", "nusc_ped_20-40",
+        "nusc_ped_le40", "p5_haz_ped_all", "p5_haz_ped_le20", "p5_haz_ped_le20_bev_med", "nusc_ped_prec", "p5_veh_le40",
+        "nusc_veh_le40"]
+
+
+def verdict(x: float) -> str:
+    return "fixed (>= 0.40)" if x >= 0.40 else "not enough (< 0.30)" if x < 0.30 else "in between"
+
+
+def table(run: Path, out: Path) -> "pd.DataFrame":
+    """Every row.json of an eval run -> out/recall.csv (all readings) and out/recall_main.md (the N5 table)."""
+    import pandas as pd
+    rows = []
+    for f in sorted(run.glob("*/row.json")):
+        r = json.loads(f.read_text())
+        det = next(d for d in DETS if r["name"].startswith(d + "-"))
+        place, gate = r["name"][len(det) + 1:].rsplit("-", 1)
+        rows.append({"detector": det, "placement": place, "gate": gate, **{c: r.get(c) for c in COLS}})
+    t = pd.DataFrame(rows).sort_values(["gate", "detector", "placement"])
+    out.mkdir(parents=True, exist_ok=True)
+    t.to_csv(out / "recall.csv", index=False, float_format="%.4f")
+    m = t[t.gate == "gate"].assign(p5_verdict=lambda d: d["p5_ped_20-40"].map(verdict),
+                                   nusc_verdict=lambda d: d["nusc_ped_20-40"].map(verdict))
+    (out / "recall_main.md").write_text(m.to_markdown(index=False, floatfmt=".3f") + "\n\nfixed 2 m gate (side)\n\n"
+                                        + t[t.gate == "fixed2m"].to_markdown(index=False, floatfmt=".3f") + "\n")
+    return t
+
+
 def main():
     import argparse
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("depth", "eval", "ratio"))
+    ap.add_argument("step", choices=("depth", "eval", "ratio", "table"))
+    ap.add_argument("--run", default="", help="table: the eval run dir")
     ap.add_argument("--model", choices=MODELS)
     ap.add_argument("--tags", default="", help="eval / ratio: comma list of <det>-<model|flat>")
     ap.add_argument("--workers", type=int, default=16)
@@ -197,6 +226,9 @@ def main():
     rl.event("start", args=vars(a), gpu=os.environ.get("CUDA_VISIBLE_DEVICES"))
     if a.step == "depth":
         rl.info(f"depth {a.model}: {json.dumps(depth(a.model, a.workers, a.limit, rl))}")
+    elif a.step == "table":
+        t = table(Path(a.run), Path(__file__).resolve().parents[1] / "research/results/night2/N5")
+        rl.info("\n" + t.to_markdown(index=False, floatfmt=".3f"))
     elif a.step == "eval":
         for tag in a.tags.split(","):
             evaluate(tag, rl)
