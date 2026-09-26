@@ -21,6 +21,9 @@ Once a conclusion is settled, write the final English version in `docs/` or in c
   driver changes. See [docs/tokyo-box.md](docs/tokyo-box.md).
 - Data, checkpoints and envs stay on the remote data disk, never in git.
 - Never commit secrets: passwords, keys, proxy configs, subscription URLs.
+- No Artifact web pages (claude.ai artifacts, published HTML). Every report, briefing, summary and write-up is a
+  Markdown file in the repo (`tmp/`, `research/`, `todos/` or `docs/` by its nature). Existing artifact pages are
+  not updated or republished; when one goes stale, the Markdown doc carries the correction.
 - Anything longer than ~1 min runs in the box's tmux session `jev` (`scripts/tmux_run.sh`), with tqdm progress,
   and writes `log.txt` (human), `events.jsonl` (machine) and `tb/` (TensorBoard curves) to its run dir.
   See [docs/long-runs.md](docs/long-runs.md).
