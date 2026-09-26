@@ -139,7 +139,8 @@ def main():
         o.mkdir(parents=True, exist_ok=True)
         check(agent, a.check, o / "wajepa_check.json")
         return
-    z = np.load(a.request)
+    with np.load(a.request) as f:                 # materialise: DataLoader workers must not share the zip handle
+        z = {k: f[k] for k in f.files}
     idx = np.arange(len(z["keys"]))[a.shard[0]::a.shard[1]]
     t0 = time.time()
     traj = run(agent.model, z, idx, not a.no_amp, a.workers)
