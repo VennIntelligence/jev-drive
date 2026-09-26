@@ -129,11 +129,54 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 数据同第 45 条：P5 hazard 行人帧 + nuScenes 子集。**判据**：20–40 m 行人 BEV 召回（2 m 容差）从 0.12–0.22 升到 ≥ 0.40 → 第 45 条「缺口在放置」得到修法；
 仍 < 0.30 → 记「单目 metric depth 也不够，需要地面高度」。第 45 条就地补一行。
 
+- 2026-09-26 09:55 CST [C] 开工（执行员 C，N5 → N6，GPU 3；N6 抽特征时若 GPU 4 空着借来分片）。分步估时（写于任何 N5 / N6 数字之前）：
+
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | N5-1 | `envs/depth`（torch 2.13 cu130 同 `envs/sam3`）+ UniDepth v2 ViT-L 与 DA3METRIC-LARGE 权重（各约 1.3 GB） | 30–45 min | CPU、网络 |
+  | N5-2 | 子集 S 上逐图 metric depth（P5 9 918 张 + nuScenes 6 024 张 × 2 个模型），在 YOLO26x-640 与 SAM 3.1 的已存检测接地点上取深度 | 30–45 min | GPU 3，≤ 20 核 |
+  | N5-3 | `fastperc.evaluate --contact depth` 原样（2 模型 × 2 检测器 + 固定 2 m 门 side）+ 表 | 20–30 min | CPU |
+  | N6-1 | 抽特征模块 + 与 `features.py` 原类的逐位等价检查 + 吞吐 smoke | 45 min | Mac + GPU 3 |
+  | N6-2 | V-JEPA 2 / DINOv2 / SigLIP2：46 703 行 × 3 路（去重后约 14 万个 clip），解码与推理重叠 | 30–60 min | GPU 3（+ GPU 4），≤ 48 核 |
+  | N6-3 | openpilot small `temporal`：P5 v1 BA 的 858 个 stream、7.4 万帧，6 个分片（与 N6-2 并行） | 20–40 min | GPU 3，≤ 30 核 |
+  | N6-4 | `ridge_late` + pair-Δ：5 个 backbone（含 Qwen 复现行）× 3 seed | 30 min | GPU 3 |
+  | N6-5 | 表、图、decisions、todo 结果 | 60 min | Mac |
+
+  合计墙钟约 5 h（到约 15:00），GPU 约 2.5 GPU·h。特征体积：三个图像 backbone 主 + 副 tap 共约 1.7 GB（float16），small `temporal` < 0.2 GB；数据盘现剩 168 GB（不是 260 GB），够。
+  任何一步超估计 2 倍就停下写日志。
+
+- 2026-09-26 09:55 CST [C] **N5 的操作性选择**（写于任何深度数字之前）：
+  - **两个模型都测，主读数 = UniDepth v2**（`lpiccinelli/unidepth-v2-vitl14`，作者仓库 `infer(rgb, K)`，给针孔内参 fx / fy / cx / cy，输出沿光轴的 z 深度）；
+    副读数 = Depth Anything 3 `DA3METRIC-LARGE`（作者 API，默认处理分辨率，按作者 README 的焦距换算成米）。理由：N5 写「给相机内参」，UniDepth v2 把内参当输入条件，
+    DA3 metric 只在输出上按焦距缩放。两个权重 2026-09-26 都核实可下载（HF 未 gated）。判格按主读数下；副读数不一致时两个都写。
+  - P5 相机有 Waymo k1 / k2 畸变，给深度模型的 K 不含畸变；接地点的射线仍由 `fusion_q4.lift` 去畸变，深度沿这条射线放（`fastperc._depth_place` 原样，射线光轴分量为 1，所以深度即 z 深度）。
+  - 检测不重跑：主 = YOLO26x-seg 640（快通道检测器，E5 用的也是它）的已存检测，副 = SAM 3.1 原样（第 43 / 45 条基线）。取深度的规则沿用 `fastperc.depth_sample`：接地点上方 3 px 起 5 × 5 窗口的中位数，深度图在原图分辨率上。
+  - 「2 m 容差」按第 45 条那组 0.12–0.22 实际用的匹配门理解：`fusion_q4.gate` = max(2 m, 0.1 d)（20–40 m 处 2–4 m），不改；另报固定 2 m 门作 side（平地与深度两边都算）。
+  - 判读对象：行人 recall (ii)（≤ 40 m、在图内，P5 = 背景 actor，nuScenes = visibility ≥ 3）20–40 m 档，P5 与 nuScenes 各判：≥ 0.40 → 修法成立，< 0.30 → 不够，之间如实报。
+    本条判格：两个数据集都 ≥ 0.40 才写「得到修法」，都 < 0.30 才写「需要地面高度」，否则分数据集写。并列报 0–10 / 10–20 m、hazard 行人（全部 / ≤ 20 m）和深度 / 平地放置距离比的中位数，
+    因为 YOLO26x-depth 那次近处被弄坏（第 45 条），修远处不能以坏近处为代价，这一条只描述、不进判格。
+
 ## N6. backbone 行补到 P5 v1 BA（GPU 2–4 h）
 
 `ablation-matrix.md` 的空格：V-JEPA 2（权重在 box）、DINOv2、SigLIP2、openpilot small 在 P5 v1 BA 集上抽特征（29 757 张，三路），拟合 `ridge_late` 和 pair-Δ，
 读行人 / cut-in 翻转与 null。回答「视频 / 图像自监督特征里有没有 E 层信号」，与 WA-JEPA 的 +6 对照（`nohack-mechanisms.md` 说那是微调 encoder，与我们冻结不同口径，报时注明）。
 **判据**：pair-Δ 行人翻转 CI 下界 > 该 backbone 自身 null p95 + 10 pp → 「有 E 层信号」。DINOv3 无权重，写「未测」。
+
+- 2026-09-26 09:55 CST [C] **N6 的操作性选择**（写于任何 N6 特征或数字之前）：
+  - **行数**：P5 v1 BA 索引 46 703 行（P4 训练 9 529 + P5 训练 17 746 + 观测 19 428），每行三路相机；本节写的「29 757 张」与索引对不上，按索引全量抽
+    （`ridge_late` 与 pair-Δ 的训练行都要）。按 JPEG 真实路径去重后约 14 万个（行, 相机）单元。
+  - **输入与主 tap**（每个 backbone 一个主 tap 进判格，副 tap 只并列）：V-JEPA 2 ViT-L（`vjepa2-vitl-fpc64-256`）每路相机用索引里同一个 4 帧 clip（5 Hz、跨 0.6 s，
+    与 WOD 阶梯的 4 帧 × 0.2 s 相同），256² 拉伸，主 `mean`（WOD 的主 tap）、副 `last_mean`；DINOv2-base 当前帧，保持宽高比缩到 350 × 322（25 × 23 patch，
+    约等于 nuScenes 配方 252 × 448 的 576 个 patch；原配方是横图，直接用会把 972 × 1079 的竖图压扁），主 `patch_mean`、副 `cls`；SigLIP2 so400m 当前帧 384² 拉伸（原生），
+    主 `patch_mean`、副 `pooled`；openpilot small `temporal`（`scripts/p5_openpilot.py` 原样，5 Hz 每帧 hold 4 步，同 Cinque）。前三个的三路按 front / front_left / front_right 拼接。
+    预处理用 `jevdrive/features.py` 里的原类（`VJepaFeatures`、`DinoFeatures`、`SiglipFeatures`），只换外面的循环。
+  - **head**：`ridge_late <bb>` = `p5_exam.heads` 原样；**pair-Δ 主读数 = 单流**：`reactivity_mc.fit_fold` 原样、把 Qwen 流换成该 backbone，prior = openpilot Cinque `ridge_late`，
+    Δ 只看该 backbone（= 第 42 条 M-C「只 Qwen」那一格，Qwen 行人 42.1%）；双流（backbone ⊕ Cinque `temporal`）与 Lebowski prior 并列作 side。λ 网格、μ、fold 规则一字不改。
+    Qwen `L18_last` 作为第 5 个「backbone」在同一驱动里重跑一遍，seed 0 必须逐位复现已存的 M-C「pair qwen [cinque]」，不复现就先查驱动。
+  - **seed**：route fold 排列 0 / 1 / 2（`2026-09-26-overnight-queue.md` [SEEDS]）。
+  - **判据的操作化**：τ = 考生自身 null |Δ| 的 p95（`p5_exam` 原样），所以「null p95」对应的翻转率就是该考生的样本外 null false-flip（构造上约 5%）；
+    判据读作：行人翻转的路线 bootstrap CI 下界 > 该考生（同一 seed）样本外 null false-flip + 10 pp。3 个 seed 都过 → 「有 E 层信号」，都不过 → 「没有」，混合 → 「不稳定」如实写。
+    cut-in 报翻转率与对 prior 的配对 Δ（M-C `criteria` 口径），不进判格。
 
 ## N7. state-space policy（另一执行员，已派，`todos/2026-09-26-state-space-policies.md`）
 
