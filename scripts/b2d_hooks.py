@@ -231,6 +231,163 @@ def track_hazards(out_dir, hide):
     ScenarioManager._tick_scenario = tick
 
 
+P6_SHOULDER_MARGIN_M = 0.5      # placement null: gap between the obstacle's inner edge and the ego lane's edge
+P6_DOOR_EXTRA_M = 1.2           # ... plus the reach of an opened door (VehicleOpensDoorTwoWays)
+P6_DENSE_GAP_M = (10.0, 14.0)   # mirror world: oncoming spacing, ~1 s headway, never a gap PDM-Lite accepts
+
+
+def p6_world(out_dir, obstacle, oncoming, tm_seed):
+    """P6 behaviour-mode pairs (todos/2026-09-26-night-queue-2.md N1): one world of the 2 x 2 obstacle x oncoming
+    design on the Bench2Drive obstacle-bypass scenarios, InvadingTurn and YieldToEmergencyVehicle, run under PDM-Lite.
+
+    obstacle  "on"        the scenario as shipped
+              "hide"      every actor the scenario spawns (vehicles, bicycles, props, the emergency vehicle) is kept 500 m
+                          under the road, InvadingTurn's invading flow never spawns, and the scenario's entry in
+                          CarlaDataProvider.active_scenarios is deleted. The entry is what PDM-Lite bypasses on
+                          (route shift within 50 m, 2-D distance): hiding the actors alone would leave it bypassing air.
+              "shoulder"  placement null: every actor is moved sideways onto the shoulder, clear of the ego lane, and
+                          the entry is deleted (the obstacle is seen but blocks nothing)
+    oncoming  None        not a two-way scenario, nothing changes
+              "off"       the oncoming flow the scenario starts after its trigger never spawns (OppositeActorFlow; for
+                          HazardAtSideLaneTwoWays, whose flow is the background's, its opposite sources are switched off)
+              "on"        as shipped
+              "dense"     mirror world: the same flow at ~1 s headway, so the opposite lane never opens
+    Every world writes hidden.json with the scenario's actors (so worlds can be matched, as in track_hazards) and draws
+    OppositeActorFlow's spacing and blueprints from a stream of its own seeded by the TM seed, so the oncoming flow is
+    the same table in x11, x01 and the mirror world whatever the background drew before."""
+    import carla as _carla
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    from srunner.scenariomanager.scenarioatomics import atomic_behaviors as ab
+    from srunner.tools import background_manager as bm
+    running = py_trees.common.Status.RUNNING
+
+    # ---- oncoming flow
+    flow_init, flow_spawn = ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor
+
+    def init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs):
+        if oncoming == "dense":
+            spawn_dist_interval = list(P6_DENSE_GAP_M)
+        flow_init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs)
+        self._rng = np.random.RandomState(3000 + int(tm_seed))
+        self._spawn_dist = self._rng.uniform(self._min_spawn_dist, self._max_spawn_dist)
+        self._bp_state = np.random.RandomState(4000 + int(tm_seed)).get_state()
+
+    def spawn(self):
+        shared = CarlaDataProvider._rng            # BackgroundActivity holds this object: swap its state, not the object
+        outer = shared.get_state()
+        shared.set_state(self._bp_state)
+        try:
+            return flow_spawn(self)
+        finally:
+            self._bp_state = shared.get_state()
+            shared.set_state(outer)
+
+    ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor = init, spawn
+    if oncoming == "off":
+        ab.OppositeActorFlow.update = lambda self: running
+    if oncoming in ("off", "dense"):
+        opp_init = bm.ChangeOppositeBehavior.__init__
+
+        def opp(self, source_dist=None, spawn_dist=None, active=None, name="ChangeOppositeBehavior"):
+            if spawn_dist is not None and active is None:      # only HazardAtSideLaneTwoWays sets a spawn distance
+                if oncoming == "off":
+                    spawn_dist, active = None, False
+                else:
+                    spawn_dist = float(np.mean(P6_DENSE_GAP_M))
+            opp_init(self, source_dist, spawn_dist, active, name)
+
+        bm.ChangeOppositeBehavior.__init__ = opp
+    if obstacle == "hide":
+        ab.InvadingActorFlow.update = lambda self: running
+
+    # ---- placement null: HazardAtSideLane's bicycles are driven at a lateral offset, so the offset itself moves
+    if obstacle == "shoulder":
+        import srunner.scenarios.route_obstacles as ro
+        hz_init = ro.HazardAtSideLane._initialize_actors
+
+        def hz(self, config):
+            lw = CarlaDataProvider.get_map().get_waypoint(config.trigger_points[0].location).lane_width
+            self._offset = 2.0 * (lw / 2.0 + 0.4 + P6_SHOULDER_MARGIN_M) / lw   # bicycle half width ~0.4 m
+            return hz_init(self, config)
+
+        ro.HazardAtSideLane._initialize_actors = hz
+
+    def shoulder(loc, half_width, side, extra):
+        cmap = CarlaDataProvider.get_map()
+        wp = cmap.get_waypoint(loc, project_to_road=True, lane_type=_carla.LaneType.Driving)
+        r = wp.transform.get_right_vector()
+        o = (loc.x - wp.transform.location.x) * r.x + (loc.y - wp.transform.location.y) * r.y
+        target = side * (wp.lane_width / 2.0 + half_width + P6_SHOULDER_MARGIN_M + extra)
+        if abs(o) >= abs(target):                   # already off the lane (the side warning sign)
+            return loc, 0.0
+        s = target - o
+        return _carla.Location(loc.x + s * r.x, loc.y + s * r.y, loc.z), s
+
+    log, hidden, shifted = [], [], []
+    inner_build = RouteScenario.build_scenarios
+
+    def build(self, ego_vehicle, debug=False):
+        n0 = len(self.list_scenarios)
+        inner_build(self, ego_vehicle, debug=debug)
+        mine = set()
+        for sc in self.list_scenarios[n0:]:
+            name = type(sc).__name__
+            side = -1.0 if getattr(sc, "_direction", "right") == "left" else 1.0
+            extra = P6_DOOR_EXTRA_M if name == "VehicleOpensDoorTwoWays" else 0.0
+            staged = {a.id: t for a, t in getattr(sc, "_construction_transforms", [])}
+            for a in [a for a in sc.other_actors if a is not None]:
+                mine.add(a.id)
+                row = {"scenario": name, "id": a.id, "type_id": a.type_id, "role": a.attributes.get("role_name", ""),
+                       "hidden": obstacle == "hide", "shift_m": 0.0}
+                if obstacle == "hide":
+                    a.set_simulate_physics(False)
+                    hidden.append([a, None])
+                elif obstacle == "shoulder" and name not in ("HazardAtSideLane", "HazardAtSideLaneTwoWays"):
+                    hw = a.bounding_box.extent.y
+                    if a.id in staged:                 # props placed later by ActorTransformSetter: move the target
+                        t = staged[a.id]
+                        t.location, row["shift_m"] = shoulder(t.location, hw, side, extra)
+                    else:
+                        loc, row["shift_m"] = shoulder(a.get_location(), hw, side, extra)
+                        if row["shift_m"]:
+                            a.set_location(loc)
+                            shifted.append(a.id)
+                log.append(row)
+        if obstacle != "on":
+            keep = [e for e in CarlaDataProvider.active_scenarios
+                    if not any(x is not None and hasattr(x, "id") and x.id in mine for x in e[1][:2])]
+            dropped = [e[0] for e in CarlaDataProvider.active_scenarios if e not in keep]
+            CarlaDataProvider.active_scenarios[:] = keep
+        else:
+            dropped = []
+        with open(os.path.join(out_dir, "hidden.json"), "w") as fh:
+            json.dump(log, fh)
+        with open(os.path.join(out_dir, "p6_world.json"), "w") as fh:
+            json.dump({"obstacle": obstacle, "oncoming": oncoming, "tm_seed": int(tm_seed),
+                       "registry_dropped": dropped,
+                       "registry_kept": [e[0] for e in CarlaDataProvider.active_scenarios]}, fh)
+
+    RouteScenario.build_scenarios = build
+    if obstacle != "hide":
+        return
+    inner_tick = ScenarioManager._tick_scenario
+
+    def tick(self):
+        inner_tick(self)
+        for h in hidden:                               # as in track_hazards
+            a = h[0]
+            if not a.is_alive:
+                continue
+            loc = a.get_location()
+            if h[1] is None:
+                h[1] = CarlaDataProvider.get_hero_actor().get_location().z - 500.0
+            a.set_simulate_physics(False)
+            if loc.z > h[1] + 1.0:
+                a.set_location(carla.Location(loc.x, loc.y, h[1]))
+
+    ScenarioManager._tick_scenario = tick
+
+
 def _patch_lights():
     from srunner.scenariomanager.lights_sim import RouteLightsBehavior
 

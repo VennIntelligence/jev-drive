@@ -155,6 +155,9 @@ def main():
     suppress = _route_attr(a.routes, a.route_id, "p5_suppress")
     if suppress is not None:
         b2d_hooks.track_hazards(a.out, hide=suppress == "1")
+    p6 = _route_attr(a.routes, a.route_id, "p6_obstacle")
+    if p6 is not None:
+        b2d_hooks.p6_world(a.out, p6, _route_attr(a.routes, a.route_id, "p6_oncoming"), a.tm_seed)
     _patch_setup_simulation(LeaderboardEvaluator, a)
     _patch_signal_handler(LeaderboardEvaluator)
     if a.max_ticks:

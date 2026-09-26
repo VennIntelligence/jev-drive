@@ -26,6 +26,12 @@ Outputs, in the attempt directory B2D_ATTEMPT_OUT:
                   and the pixel count of every actor (vehicle, walker, traffic light) in an instance-segmentation
                   view of the Waymo front image, i.e. what the camera actually sees of it
   tfv6.jsonl      per tick: TFv6 target-speed distribution and scalar, 8 waypoints, 10 route points
+
+P6 (todos/2026-09-26-night-queue-2.md N1) adds three switches, all off by default so P5 outputs are unchanged:
+record_props (static props, e.g. cones and warning signs, go into actors.npz and the visibility count like vehicles),
+frames.jsonl "reg" with driver pdm_lite (PDM-Lite's CarlaDataProvider.active_scenarios entries, actors as ids), and
+pass_stop_s (stop that long after the ego has passed every scenario actor listed in hidden.json that was ever ahead of
+it by pass_margin_m, so a finished bypass does not record 40 s of empty road).
   cams/<cam>/<frame>.jpg   the three Waymo-calibrated cameras of P4, unchanged
 
 Python 3.10: runs in envs/scout-tfv6 (carla 0.9.15 cp310, torch 2.8 cu128); with driver pdm_lite in envs/p5v1-pdm
@@ -53,7 +59,8 @@ from lead.inference.sensor_agent import SensorAgent
 
 TFV6_SPEEDS = (0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0)
 DEFAULT = dict(p4.DEFAULT, sensor_tick=0.0, max_sim_s=50.0, stuck_s=30.0, after_trigger_s=20.0, tfv6_model_dir="",
-               actor_radius=100.0, vis_radius=60.0, driver="behavior", save_threads=0)
+               actor_radius=100.0, vis_radius=60.0, driver="behavior", save_threads=0,
+               record_props=False, pass_stop_s=0.0, pass_margin_m=10.0)
 FRONT = p4.WAYMO_CAMS[0]                         # ("front", x, y, z, yaw) in Waymo's rear-axle frame
 
 
@@ -227,7 +234,8 @@ class P5PairAgent(SensorAgent):
         if k == 0:
             a = self._world.get_actor(aid)
             k = None
-            if a is not None and (a.type_id.startswith("vehicle.") or a.type_id.startswith("walker.")) \
+            if a is not None and (a.type_id.startswith("vehicle.") or a.type_id.startswith("walker.")
+                                  or (self.cfg["record_props"] and a.type_id.startswith("static.prop."))) \
                     and a.id != self._hero.id:
                 b = a.bounding_box
                 k = (a.type_id, a.attributes.get("role_name", ""), _xyz(b.location) + [b.extent.x, b.extent.y, b.extent.z])
@@ -308,7 +316,8 @@ class P5PairAgent(SensorAgent):
             tf = carla.Transform(carla.Location(x, y, z), carla.Rotation(yaw=yaw))
             box = carla.BoundingBox(carla.Location(*bb[:3]), carla.Vector3D(*bb[3:]))
             corners = np.array([[q.x, q.y, q.z] for q in box.get_world_vertices(tf)])
-            n = pixels(corners, (12,) if tid.startswith("walker.") else (13, 14, 15, 16, 17, 18, 19))
+            n = pixels(corners, (12,) if tid.startswith("walker.") else (20, 21, 22) if tid.startswith("static.")
+                       else (13, 14, 15, 16, 17, 18, 19))
             if n:
                 out[str(aid)] = n
         near = np.flatnonzero(((self._light_xyz[:, :2] - [cam.x, cam.y]) ** 2).sum(1) <= R2) if len(self._light_xyz) else []
@@ -320,6 +329,45 @@ class P5PairAgent(SensorAgent):
             if n:
                 out["L%d" % self._lights[i].id] = n
         return out
+
+    @staticmethod
+    def _registry():
+        """PDM-Lite's view of the scenarios it bypasses: CarlaDataProvider.active_scenarios, actors as their ids."""
+        def enc(x):
+            if hasattr(x, "id") and hasattr(x, "type_id"):
+                return int(x.id)
+            if isinstance(x, (bool, str)) or x is None:
+                return x
+            try:
+                return round(float(x), 3)
+            except (TypeError, ValueError):
+                return str(x)
+        return [[typ] + [enc(x) for x in data] for typ, data in CarlaDataProvider.active_scenarios]
+
+    def _passed(self, t):
+        """True pass_stop_s after the ego has left behind (by pass_margin_m, along its heading) every scenario actor
+        that was ever ahead of it; hidden actors count at their x, y (they sit under their own spot)."""
+        if not hasattr(self, "_ahead"):
+            f = self.out / "hidden.json"
+            self._ahead = {h["id"]: False for h in json.loads(f.read_text())} if f.exists() else {}
+            self._passed_since = None
+        if not self._ahead:
+            return False
+        tf = self._hero.get_transform()
+        fw, hl = tf.get_forward_vector(), tf.location
+        behind = []
+        for aid in self._ahead:
+            a = self._world.get_actor(aid)
+            if a is None or not a.is_alive:
+                behind.append(True)
+                continue
+            l = a.get_location()
+            dot = (l.x - hl.x) * fw.x + (l.y - hl.y) * fw.y
+            self._ahead[aid] |= dot > 0
+            behind.append(dot < -self.cfg["pass_margin_m"])
+        done = any(self._ahead.values()) and all(b for b, (_, ah) in zip(behind, self._ahead.items()) if ah)
+        self._passed_since = (self._passed_since if self._passed_since is not None else t) if done else None
+        return self._passed_since is not None and t - self._passed_since > self.cfg["pass_stop_s"]
 
     def _light_states(self):
         hl = self._hero.get_location()
@@ -428,9 +476,13 @@ class P5PairAgent(SensorAgent):
             trig = [bool(bb.get("ScenarioRouteNumber%d" % i)) for i in range(2)]
             if trig[0] and self._t_trig is None:
                 self._t_trig = t
-            self._frames.write(json.dumps({"frame": frame, "tick": self._tick, "t": round(t, 4), "files": files,
-                                           "std": std, "trig": trig, "lights": self._light_states(),
-                                           "px": px}) + "\n")
+            rec = {"frame": frame, "tick": self._tick, "t": round(t, 4), "files": files, "std": std, "trig": trig,
+                   "lights": self._light_states(), "px": px}
+            if self._pdm is not None:
+                rec["reg"] = self._registry()
+            if self.cfg["pass_stop_s"] > 0 and self._passed(t):
+                p4.STOP.update(flag=True, why="passed")
+            self._frames.write(json.dumps(rec) + "\n")
         t0 = time.perf_counter()
         if self._pdm is not None:
             control = self._pdm_step(input_data, t)
