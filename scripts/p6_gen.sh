@@ -71,7 +71,7 @@ chain() {  # chain <j>
             taskset -c "$cpus" "$PY" scripts/b2d_run.py --routes "$R/pairs.xml" --route-ids "$ids" --out "$OUT" \
             --workers "$w" --server-index "$base" --index-span "$span" --gpu-rank "$g" --tm-seed-from-id \
             --agent scripts/p5_pair_agent.py --agent-config "$R/agent-p6.json" --python "$DATA_DIR/envs/p5v1-pdm/bin/python" \
-            --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8
+            --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8 --stall-s ${STALL_S:-600}
     done
     echo "$(date +%T) chain gpu $g end"
 }
