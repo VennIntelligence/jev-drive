@@ -241,7 +241,7 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 读法（写在数字之前）：X 的障碍类 SR 不低于 CL5（配对差 CI 下界 > −10 pp）→ 第三层的瓶颈是判断，执行用几何就够，文章里执行层写成可替换模块；X 明显低于 CL5 → 学出来的轨迹带了几何路径没有的东西（例如与对向车的时机），单独分析。
 在 G + K 闭环链里排在 K1、K2 之前；约 120 次路线运行。
 
-- [F] 2026-09-26 18:05 CST X 的操作性选择（写于任何 X 数字之前）。代码 `jevdrive/nq4_x.py`（`XState`、导出、离线检查）、`scripts/nq4_x_agent.py`（`b2d_zeroshot_agent` 的 head 路径原样，加按路线选折与 X 这一步）。
+- [F] 2026-09-26 18:00 CST X 的操作性选择（写于任何 X 数字之前）。代码 `jevdrive/nq4_x.py`（`XState`、导出、离线检查）、`scripts/nq4_x_agent.py`（`b2d_zeroshot_agent` 的 head 路径原样，加按路线选折与 X 这一步）。
   1. **模式头** = G 的 `q2` 考生同一份交叉拟合 Q2 head（上面 G 的 [F] 第 9 条），触发只来自它在我们自己的相机特征上的输出，不读登记。
   2. **几何** = PDM-Lite `shift_route_smoothly` 的几何原样：每个 dense route 点的 CARLA map waypoint 的 `get_left_lane()` / `get_right_lane()` 中心（没有就用路线点本身），平移系数 1，过渡 8 m（`transition_smoothness_distance`），余弦缓入缓出（`_smooth_transition`）。
      感知不给障碍位置，所以起点 = 模式头第一次输出 bypass 时自车所在的路线弧长（「障碍前 50 m 内」由头只在看见障碍之后才出 bypass 来实现），保持到最后一次 bypass 输出时自车位置之后 30 m（覆盖事故 / 施工 2–3 个障碍物约 20 m 的长度加车长），再 8 m 回到原车道；
