@@ -398,3 +398,28 @@ SparseDriveV2 就有 60% 的 token 换了轨迹，ZTRS 34%，平均 0.24–0.32 
 (3) E 层：真实外观车辆配对上 scorer 族**有**纵向反应，而且不看人类轨迹、只用 PDM 奖励训出来的 ZTRS（45.5%）比 SparseDriveV2（23.6%）强，但都只到 openpilot 线性读出（70%）的 1/3–2/3；
 CARLA 配对上两者都没有（外观 + rig 双重分布外，按预登记标「domain 混杂」，不作能力结论）。所以 7.1 节「NAVSIM 顶部 4 分基本是配方」在这两个模型上的具体形态是：PDM 子分数头学到了一部分对车辆的反应，但这部分能力绑在 NAVSIM 的相机与速度分布上。
 推测（未验证）：ZTRS 比 SparseDriveV2 强的来源是 TTC / NC 子分数在奖励训练里被直接优化；验证办法是对 ZTRS 的 TTC / NC 头做消融，看 I3 翻转掉多少。
+
+## 9. CARLA 榜首两族在配对考卷上（T3：BridgeDrive + BLUE，2026-09-26，**待定**）
+
+预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T3」，小表 [results/top10-exams/](results/top10-exams/)（`p5_t3_*`）。
+BridgeDrive（B2D 96.34，第一）是 TransFuser-LEAD 族在 TFv6 上加 diffusion bridge 的 route 头；BLUE（B2D 90.58）是 SimLingo 加一个 0.11M 的语言 gate（判断这一帧要不要先生成语言再出动作）。
+两者都只吃 CARLA 自己的 rig，所以 P5 v1 BA 的 570 个世界按原 expert 重录，挂它们各自的传感器（shadow：模型只读，BehaviorAgent 开车；568 / 570 个世界的 expert 轨迹与原记录逐 tick 相同）。
+
+| 考生（通道） | 合并逐帧翻转 [95% CI] | 行人 | cut-in | 样本外 null false-flip | 对 TFv6 waypoint 的同帧差 | 判格（纵向） |
+|:--|:--|--:|--:|--:|:--|:--|
+| BridgeDrive route + target speed（它控车用的通道） | 0.2% [0.0, 0.6] | 0.0% | 0.3% | 4.7% | — | 没有 |
+| BridgeDrive waypoint | 27.2% [20.6, 34.6] | 24.1% | 30.1% | 5.1% | −2.7 pp [−10.8, +5.9] | 有 |
+| BLUE speed waypoints | 26.5% [17.0, 36.5] | 5.9% | 39.9% | 5.4% | −3.5 pp（行人 −23.7 [−29.3, −17.4]；cut-in +8.1 [−6.3, +23.8]） | 有（cut-in） |
+| *参照* TFv6 target speed / waypoint（原记录） | 0.0% / 30.4% [23.9, 37.0] | 0 / 29.3% | 0 / 32.5% | 4.7% / 5.5% | — | 没有 / 有 |
+
+![top10-t3-flip-rates](figs/top10-t3-flip-rates.png)
+
+图：P5 v1 BA 配对上各考生的定向翻转率，(a) 逐帧按 family，(b) 按对（窗口内任一 reactive 帧翻对即算过；按对的 null case 误翻很高，waypoint 通道约 50%、BLUE 33%，读 (b) 要对着它看）；误差棒是路线整组 bootstrap 的 95% CI。
+该看的是 BridgeDrive 两根柱子与 TFv6 两根几乎重合，BLUE 在行人三个 family 上接近 0、在 cut-in 上最高。
+
+**读法**。(1) **B2D 第一名的增量不在 E 层**：BridgeDrive 控车的 route + target speed 通道对突发 hazard 几乎不翻（0.2%），会翻的 waypoint 通道（27%）它不用来开车，而且与 TFv6 的 waypoint 同帧差 −2.7 pp、CI 跨 0。
+这与第 31 / 32 条对 TFv6 的结论一模一样：B2D 高分来自 route + target speed 接口与规则，而这个接口在我们的配对考卷上不反应。BridgeDrive 比 TFv6 多的 +1 DS 只能来自接口 / 规则 / 其余配方，不来自对 hazard 的反应。
+(2) **BLUE 的纵向反应集中在车辆 cut-in，行人上几乎没有**：cut-in 39.9%（与 TFv6 同量级，点估计略高但 CI 跨 0），行人 5.9%，比 TFv6 低 24 pp，按对（23.8%）还低于它自己 null case 的误翻（33%）。
+第 38 条里 BLUE「在突发 hazard 上显著更好」是 B2D 公开逐路线数据上的差；在我们的配对考卷上它没有以「对行人更会减速」的形式出现。gate 在 reactive 帧上开语言的比例是非反应帧的 3 倍（13.7% vs 4.4%），开了语言的帧翻转更高（44% vs 24%），但只有 145 帧、CI 很宽。
+推测（未验证）：BLUE 的行人不反应可能与 SimLingo 单前视 1024×512、下缘裁掉 30%（`tick` 里的裁剪）有关，近处从车侧冲出的行人在图里出现得晚；验证办法是按行人第一次进入 BLUE 相机视野的 tick 重新对齐窗口再算。
+(3) 与 SimLingo 本体的比较（5.5 的最后一条）这次做不了：SimLingo 没有 P5 读数；BLUE 与 SimLingo 同一 rig，重录的图可以直接给 SimLingo 离线跑，是一个 < 1 GPU·h 的补充。

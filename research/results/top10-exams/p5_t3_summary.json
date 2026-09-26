@@ -1,0 +1,19 @@
+{
+ "tau_exp": 0.5,
+ "pooled_families": [
+  "DynamicObjectCrossing",
+  "HighwayCutIn",
+  "Light",
+  "ParkingCrossingPedestrian",
+  "ParkingCutIn",
+  "PedestrianCrossing",
+  "StaticCutIn"
+ ],
+ "tau TFv6 target speed": 8.253849813714613,
+ "tau TFv6 waypoint speed 2 s": 2.408644632544593,
+ "tau TFv6 target speed (decoded scalar)": 8.25,
+ "tau BridgeDrive target speed": 8.266019943833802,
+ "tau BridgeDrive target speed (decoded scalar)": 8.310979843139648,
+ "tau BridgeDrive waypoint speed 2 s": 3.3606611905934014,
+ "tau BLUE waypoint speed 2 s": 4.9976790214071105
+}

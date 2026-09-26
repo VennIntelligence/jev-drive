@@ -1,0 +1,13 @@
+a,b,n,diff,lo,hi,scope
+BridgeDrive waypoint speed 2 s,TFv6 waypoint speed 2 s,1072,-0.027052238805970148,-0.10821457471677755,0.0590629702131389,
+BridgeDrive waypoint speed 2 s,TFv6 waypoint speed 2 s,396,-0.05303030303030303,-0.10027014253461361,-0.005565444714224033,pedestrian
+BridgeDrive waypoint speed 2 s,TFv6 waypoint speed 2 s,667,-0.01649175412293853,-0.15292620735087,0.11783583539599853,cut-in
+BLUE waypoint speed 2 s,TFv6 waypoint speed 2 s,1072,-0.03451492537313433,-0.13365768908306347,0.07049280810722457,
+BLUE waypoint speed 2 s,TFv6 waypoint speed 2 s,396,-0.23737373737373738,-0.29342285778846616,-0.17435835351089587,pedestrian
+BLUE waypoint speed 2 s,TFv6 waypoint speed 2 s,667,0.08095952023988005,-0.06305493233932799,0.23804914754454767,cut-in
+BLUE waypoint speed 2 s,BridgeDrive waypoint speed 2 s,1072,-0.007462686567164179,-0.1212406015037594,0.11286327043938102,
+BLUE waypoint speed 2 s,BridgeDrive waypoint speed 2 s,396,-0.18434343434343434,-0.25290450754487875,-0.11776516645074082,pedestrian
+BLUE waypoint speed 2 s,BridgeDrive waypoint speed 2 s,667,0.09745127436281859,-0.07188093751696432,0.274726142239957,cut-in
+BridgeDrive target speed,TFv6 target speed,1072,0.0018656716417910447,0.0,0.005714421898406645,
+BridgeDrive target speed,TFv6 target speed,396,0.0,0.0,0.0,pedestrian
+BridgeDrive target speed,TFv6 target speed,667,0.0029985007496251873,0.0,0.009104704097116844,cut-in

@@ -530,3 +530,48 @@ ZTRS navhard 推理约 25 min（重启前，GPU 4）、适配器检查两轮约 
 
 看什么：(a) CARLA 配对上两个 scorer 模型（橙、蓝）在合并与行人 family 上都贴着 5% 的 null 线（虚线），只有 HighwayCutIn 有信号；同一 judge 下 TFv6 waypoint（绿）和 P5 内拟合的 openpilot 读出（灰）明显高于它。
 (b) 换成真实外观的 HUGSIM 车辆配对，两个模型都离开 null 线，ZTRS 约 45%、SparseDriveV2 约 24%，三个 family 一致，但都低于零样本的 openpilot 读出（70%）。误差线是按路线 / 场景 bootstrap 的 95% CI。
+
+### T3：BridgeDrive + BLUE（P5 v1 BA 重录，2026-09-26 13:39–15:41 CST，GPU 5 → GPU 0–3 + 5）
+
+所有选择在 [T3] 12:40 / 13:05 / 13:35 条目里写于数字之前；代码 `scripts/top10_t3_agent.py`（BridgeDrive shadow recorder）、`scripts/top10_t3_blue.py`（BLUE 离线）、`jevdrive/top10_t3.py`（need / 等价检查 / judge）、
+`scripts/top10_t3_{gen,batch,stop,blue_loop}.sh`；小表 `research/results/top10-exams/p5_t3_*`，图 [top10-t3-flip-rates.png](../research/figs/top10-t3-flip-rates.png)；run dir `$DATA_DIR/runs/top10_t3/`（judge `judge/20260926-154059`）。
+
+**考卷是否成立**：570 个世界全部录完（583 次 attempt，13 次是已知的 server setup 崩溃 rc139 后重试成功）；E1 复核 568 / 570 个世界的 expert 与原 BA 记录逐 tick 相同，
+2 个分叉（null 世界 2451930 在 k = 109、2253520），按预登记整个世界剔除，剩 1 072 个 reactive 帧（原 1 081）、3 139 个 null 帧（原 3 176），49 条路线、146 对。BridgeDrive 录制 0 次 shadow 报错；BLUE 19 428 帧全部有输出。
+
+**P5 v1 BA 配对（纵向；judge `p5_exam.exam` 原样，CI 按路线 bootstrap；TFv6 为原记录的参照行）**
+
+| 考生（通道） | τ (m/s) | 合并逐帧翻转 [95% CI] | 行人 | cut-in | 反方向 | 非反应帧误翻 | 样本外 null false-flip | 按对 [CI]（null case 误翻） | 判格（纵向） |
+|:--|--:|:--|--:|--:|--:|--:|--:|:--|:--|
+| BridgeDrive route + target speed（期望目标速度，主读数） | 8.27 | 0.2% [0.0, 0.6] | 0.0% | 0.3% | 0.0% | 1.9% | 4.7% | 1.4% [0.0, 4.1]（12.8%） | **没有** |
+| BridgeDrive 同通道，驱动用的解码标量 | 8.31 | 0.2% [0.0, 0.6] | 0.0% | 0.3% | 0.0% | 1.9% | 5.0% | | 没有 |
+| BridgeDrive waypoint（1.75 → 2.0 s） | 3.36 | **27.2% [20.6, 34.6]** | 24.1% | 30.1% | 1.8% | 17.1% | 5.1% | 67.1% [55.8, 78.6]（50.0%） | **有** |
+| BLUE speed waypoints（1.75 → 2.0 s） | 5.00 | **26.5% [17.0, 36.5]** | 5.9% | 39.9% | 1.4% | 12.3% | 5.4% | 46.6% [34.2, 59.4]（33.0%） | **有**（主要来自 cut-in） |
+| *参照* TFv6 target speed | 8.25 | 0.0% | 0.0% | 0.0% | 0.0% | 1.5% | 4.7% | 0.0%（14.7%） | 没有 |
+| *参照* TFv6 waypoint | 2.41 | 30.4% [23.9, 37.0] | 29.3% | 32.5% | 0.6% | 17.6% | 5.5% | 67.3% [55.8, 79.6]（50.5%） | 有 |
+
+逐 family（逐帧；n 为 reactive 帧）：BLUE 在 HighwayCutIn（207）61.8%、StaticCutIn（243）42.4%、ParkingCutIn（217）16.1%，行人三个 family DynamicObjectCrossing（293）2.7%、ParkingCrossingPedestrian（76）9.2%、PedestrianCrossing（27）0%；
+BridgeDrive waypoint 各 family 23–34%，与 TFv6 waypoint（27–42%）逐格同量级。**同帧配对差**（翻对指示的差，路线 bootstrap，`p5_t3_paired_diff.csv`）：
+
+| 比较 | 合并 | 行人 | cut-in |
+|:--|:--|:--|:--|
+| BridgeDrive waypoint − TFv6 waypoint | −2.7 pp [−10.8, +5.9] | −5.3 [−10.0, −0.6] | −1.6 [−15.3, +11.8] |
+| BLUE − TFv6 waypoint | −3.5 [−13.4, +7.0] | **−23.7 [−29.3, −17.4]** | +8.1 [−6.3, +23.8] |
+| BLUE − BridgeDrive waypoint | −0.7 [−12.1, +11.3] | −18.4 [−25.3, −11.8] | +9.7 [−7.2, +27.5] |
+| BridgeDrive target speed − TFv6 target speed | +0.2 [0.0, +0.6] | 0 | +0.3 [0.0, +0.9] |
+
+**creep 单列**：按作者计数规则从 20 Hz 自车速度离线算，BridgeDrive（> 1100 帧）与 BLUE（> 800 帧）在全部考卷帧上 **0 帧**生效（录制 ≤ 50 s、静止 30 s 即停），主读数不受 creep 影响。
+**BLUE 的 gate**：pair 帧里 5.7% 至少一侧开了语言（7 805 帧），reactive 帧 13.7%、非反应帧 4.4%、null 帧 7.8%；gate 开的 reactive 帧翻转 44.1% [15.6, 69.4]（145 帧），关的 23.7% [14.5, 33.5]（927 帧）。描述性，CI 很宽，不设门槛。
+
+**按 5.5 的读法（待定）**
+- 「BridgeDrive 的 target speed 通道翻转仍像 TFv6 一样接近 0、waypoint 通道 ≥ 30%：B2D 榜首的增量属于接口与规则」：target speed 通道 0.2%（TFv6 0%），成立；waypoint 通道 27.2%，点估计低于 30% 但 CI [20.6, 34.6] 覆盖 30%，
+  且与 TFv6 waypoint 同帧差 −2.7 pp [−10.8, +5.9]。实质读法：**BridgeDrive 在 E 层纵向上与 TFv6 分不开**——它控车用的那个通道（route + target speed）对突发 hazard 不翻，会翻的 waypoint 通道它不用来开车；
+  B2D 上 +1 DS 的增量不来自 E 层反应，只能来自接口 / 规则 / 其余配方（diffusion bridge 只产 route，route 不是速度读数；ts 与 waypoint 头与 TFv6 同架构）。
+- 「BLUE 在 P5 v1 突发 family 上显著高于 SimLingo」：**这一格读不出**——SimLingo 没有进过 P5 考卷（它的 P5 读数不存在），与它的比较只能等 SimLingo 用同一个 recorder 重录（BLUE 的 rig 与 SimLingo 相同，BLUE 的图可以直接复用，只差跑一遍 SimLingo 的离线 runner）。
+  能读的是：BLUE 的纵向 E 层**有**，但集中在 cut-in（与 TFv6 同量级或略高，CI 跨 0），**行人上几乎没有**（5.9%，比 TFv6 低 24 pp，按对 23.8% 低于它自己 null case 的 33%）。
+  所以第 38 条「BLUE 在突发 hazard 上显著更好」在我们的配对考卷上没有以「对行人更会减速」的形式复现；如果它在 B2D 上的突发 hazard 优势是真的，来源要到 CARLA 闭环里的别处找（评测器改动、完成阈值、creep、或车辆类 hazard）。
+
+**偏离**：(1) 规模按 BA 索引重录 570 个世界而不是 5.1 写的 322 个 run（322 只是 v1 新录那部分），各录到最后引用 tick；(2) E2 门槛由「逐位」改为「不大于同配置重录两次的差」（13:25 更正，写于数字之前，原因是 CARLA LiDAR / radar 每次运行不同）；
+(3) 5.5 的 BLUE vs SimLingo 一格因 SimLingo 无 P5 读数未判；(4) 批量先在 GPU 5 上开（main 13:38 指示），14:27 扩到 GPU 0–3 + 5。
+**墙钟与算力**：工程 + smoke 12:40–13:39；批量 13:39–15:39（2.0 h：GPU 5 单链 47 min，之后 30 个 server），36.3 server·h（583 次 attempt）；BridgeDrive shadow 前向约 2.4 GPU·h（在 recorder 里，与渲染共卡）；
+BLUE 离线 6 个 worker 与批量重叠，合计 5.8 worker·h（模型约 1.6 GPU·h，其余是作者 `tick` 的 CPU 预处理）；判卷 1 min。约合 7 卡·h（GPU 5 约 2 h，GPU 0–3 各约 1.3 h）。

@@ -3223,6 +3223,11 @@ NAVSIM 榜分完整复现（SparseDriveV2 navtest PDMS 92.22 对论文 92.2；ZT
 **对本条的含义**：交集里的 scorer 族在真实外观车辆配对上确有一部分 E 层纵向反应（「推翻条件」的一半成立：高于 null，但不跨外观——CARLA 上没有），同时它们的开环能力绑在 navtrain 生态上，出了生态比 cv 差；
 「交集由训练生态决定、不是能力信号」对 SD / HY 两族**维持**，但要加一句：scorer 头里的 PDM 子分数确实带车辆反应，只是强度不到 openpilot 线性读出的 2/3。状态仍**待定**（T2 / T3 的族还没出数；I3 只有车辆、规则标签）。
 
+**T3 考试：BridgeDrive + BLUE（2026-09-26 下午，P5 v1 BA 的 570 个世界挂各自 rig 重录，568 个 expert 轨迹与原记录逐 tick 相同；todo「结果 / T3」，[leaderboard-vs-ability 第 9 节](leaderboard-vs-ability.md)）**。
+BridgeDrive 控车用的 route + target speed 通道纵向翻转 0.2% [0.0, 0.6]（TFv6 0%），waypoint 通道 27.2% [20.6, 34.6]，与 TFv6 waypoint 同帧差 −2.7 pp [−10.8, +5.9] → **与 TFv6 分不开，B2D 榜首的增量不在 E 层**（5.5 的读法成立，waypoint 点估计略低于预登记写的 30%，CI 覆盖）。
+BLUE speed waypoints 合并 26.5% [17.0, 36.5]（null 5.4%）→ 有纵向反应，但集中在 cut-in（39.9%），行人 5.9%，比 TFv6 低 23.7 pp [−29.3, −17.4]；第 38 条「BLUE 在突发 hazard 上更好」在配对考卷上**没有复现为行人反应**；与 SimLingo 本体的比较因 SimLingo 无 P5 读数未做。
+creep 在全部考卷帧上 0 帧生效。**对本条的含义**：CARLA 榜首两族（LEAD、SimLingo）的新成员在 E 层上没有超过族内老成员，「交集 / 榜首由配方决定」对这两族**维持**。状态仍**待定**（只有 BA 一个 expert、只有纵向；T2 的族还没出数）。
+
 ## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
 
 2026-09-26。只读调研 + 在已提交的 WOD `per_frame.npz` 上算的一版零成本读数，全文 [behavior-layer-instruments.md](behavior-layer-instruments.md)；
