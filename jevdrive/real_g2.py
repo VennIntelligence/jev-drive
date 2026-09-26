@@ -358,7 +358,7 @@ def run_transfer(rl, fit_run: str):
                 nacts.append({"model": m, "head": head, "seed": s, "scope": k, "n": int(msk.sum()), "tau": tau,
                               "activation": float(act[msk].mean()), "delta_mag_median_m": float(np.median(mag[msk]))})
             if head in ("M-C pair", "student A") or s == 0:     # [G2] 10:48 (8): controls only seed 0
-                np.savez(rl.dir / f"navtest_{name}.npz", tokens=tok, poses=arm.astype(np.float32))
+                np.savez(rl.dir / f"navtest_{name}.npz", tokens=tok.astype(str), poses=arm.astype(np.float32))
                 jobs.append(f"v1 navtest {name} {rl.dir / f'navtest_{name}.npz'}")
     pd.DataFrame(nacts).to_csv(rl.dir / "navsim_activation.csv", index=False)
     (rl.dir / "score_jobs.txt").write_text("\n".join(jobs) + "\n")
@@ -595,7 +595,7 @@ def figs(res_dir, out_dir, model: str = "cinque"):
     x = np.arange(len(heads))
     c_carla, c_i3 = "0.55", plots.OKABE_ITO[5]
     with plots.mpl.rc_context(plots.STYLE):
-        fig, ax = plt.subplots(1, 4, figsize=(plots.PAGE, 2.0))
+        fig, ax = plt.subplots(1, 4, figsize=(plots.PAGE, 2.3))
         for i, (h, _) in enumerate(heads):
             cex = f"CARLA {'M-C ' + h.split()[-1] if h.startswith('M-C') else h + ' s0'} [{model}]"
             r = fl.loc[cex]
@@ -608,14 +608,14 @@ def figs(res_dir, out_dir, model: str = "cinque"):
                                    fmt="o", color=c_i3, ms=3, lw=0.8, capsize=1.2, label="I3-trained (held-out scenes)" if i == 0 else None)
                 else:
                     ax[0].plot(i + 0.2, 100 * r.flip_rate, "x", color=c_i3, ms=3, mew=0.7)
-            for k, (scope, col) in enumerate((("Cut_ins", c_i3), ("all", plots.OKABE_ITO[6]))):
+            for k, (scope, col) in enumerate((("Cut_ins", plots.OKABE_ITO[3]), ("all", plots.OKABE_ITO[6]))):
                 for s in SEEDS:
                     w = wd[(wd.model == model) & (wd["head"] == h) & (wd.seed == s) & (wd.stats == "i3") & (wd.gate == "none")
                            & (wd.judge == "RFS (rater)") & (wd.scope == scope)].iloc[0]
                     xx = i + (k - 0.5) * 0.3 + (0 if s == 0 else 0.08)
                     if s == 0:
                         ax[1].errorbar(xx, w.delta, yerr=[[w.delta - w.lo], [w.hi - w.delta]], fmt="o", color=col, ms=3, lw=0.8,
-                                       capsize=1.2, label={"Cut_ins": "Cut-ins (20)", "all": "All rater (478)"}[scope] if i == 0 else None)
+                                       capsize=1.2, label={"Cut_ins": "WOD Cut-ins (20)", "all": "WOD all rater (478)"}[scope] if i == 0 else None)
                     else:
                         ax[1].plot(xx, w.delta, "x", color=col, ms=3, mew=0.7)
             for s in SEEDS:
@@ -634,14 +634,15 @@ def figs(res_dir, out_dir, model: str = "cinque"):
         ax[0].axhline(100 * fl.loc[f"ridge_late op-{model} temporal", "flip_rate"], color="0.3", ls=":", lw=0.7)
         ax[2].axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
         for a_, yl in zip(ax, ("I3 flip rate (%)", r"WOD $\Delta$RFS", "WOD straight activation (%)",
-                               r"NAVSIM $\Delta$PDMS, approaching veh.")):
+                               r"NAVSIM $\Delta$PDMS (approach. veh.)")):
             if a_ is not ax[0]:
                 a_.axhline(0, color="0.5", lw=0.6)
             a_.set_xticks(x, [n for _, n in heads], rotation=35, ha="right")
             a_.set_ylabel(yl)
-        ax[0].legend(loc="lower left", fontsize=6)
-        ax[1].legend(loc="lower left", fontsize=6)
-        fig.tight_layout(w_pad=0.6)
+        fig.tight_layout(w_pad=0.6, rect=(0, 0.1, 1, 1))
+        hs = [h for a_ in ax[:2] for h in a_.get_legend_handles_labels()[0]]
+        ls = [lb for a_ in ax[:2] for lb in a_.get_legend_handles_labels()[1]]
+        fig.legend(hs, ls, loc="lower center", ncol=4, frameon=False)
         plots.save(fig, Path(out_dir), "real-g2-i3-retrain")
 
 
