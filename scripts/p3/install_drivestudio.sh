@@ -16,11 +16,15 @@ export CUDA_HOME=/usr/local/cuda-12.8 PATH=/usr/local/cuda-12.8/bin:$PATH
 export TORCH_CUDA_ARCH_LIST=12.0 MAX_JOBS=${MAX_JOBS:-8} FORCE_CUDA=1
 pip() { local py=$1; shift; uv pip install --python "$py/bin/python" "$@"; }
 
-clone() {  # clone <github repo> <dir> <commit>
-  [[ -d $2 ]] || (source /etc/network_turbo >/dev/null 2>&1; git clone -q --recursive "https://github.com/$1" "$2")
-  git -C "$2" checkout -q "$3" && git -C "$2" submodule update -q --init --recursive
+mkdir -p "$DEPS"
+clone() {  # clone <github repo> <dir> <tag or commit>; shallow for tags, turbo first, then Clash
+  if [[ ! -d $2 ]]; then
+    local c=(git clone -q --recursive --shallow-submodules --depth 1 --branch "$3" "https://github.com/$1" "$2")
+    (source /etc/network_turbo >/dev/null 2>&1; "${c[@]}") || { rm -rf "$2"; bash -lc "proxy_on >/dev/null 2>&1; $(printf '%q ' "${c[@]}")"; }
+  fi
+  git -C "$2" checkout -q "$3" 2>/dev/null || true
 }
-clone ziyc/drivestudio "$DS" e59bda4
+[[ -d $DS ]] || { git clone -q --recursive https://github.com/ziyc/drivestudio "$DS"; git -C "$DS" checkout -q e59bda4; }
 clone nerfstudio-project/gsplat "$DEPS/gsplat" v1.3.0
 clone facebookresearch/pytorch3d "$DEPS/pytorch3d" v0.7.8
 
