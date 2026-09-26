@@ -508,6 +508,10 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
      主链只在 PASS 或 main 写进 `runs/nq3/b/APPROVED` 后才开某臂，否则跑下一个已开门的步，都没开门就等。**CL2 / CL7 等 main**：smoke 3 / 3 blocked，pilot 大概率 FLAG；按判据 4「如实报、不设门」照跑就写 APPROVED，等 OPL 的起步修复版就写 SKIP。
      代价：每个新臂第一次开之前要等它的 pilot（CL3 这一次 B 空等约 40 min，之后 pilot 都跑在主链前面）。
 
+- 2026-09-26 19:55 CST [main] OPL 验收判定：`op_native_launch` 的 smoke 路线上伙伴接管 tick 比例 89%（按模型行驶距离 55%），超过登记上限 50%，按登记**不接受**。
+  CL2p / CL7p / CL5dp 的全量不跑（`nq4_opl.sh` 不启动）；smoke 的数字（规则 8 逐位一致 200 / 200 × 3 路线、G1–G5 过、接管 89%）作为第 33 条「openpilot 能开」的读数：
+  即使只帮起步，openpilot 原生 plan 在 B2D 闭环里大部分时间也要伙伴开，按登记写「openpilot 原生 plan 不能独立完成 B2D 路线」（**待定**）。CL2 / CL7 按 T1 规则 SKIP。
+
 ## 结果
 
 （待写）
