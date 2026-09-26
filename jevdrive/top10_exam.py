@@ -18,7 +18,7 @@ from . import navsim_rig as R
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
-SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs", "wod": None}
+SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs", "wod": None, "nusc": None}
 MODELS = {"sparsedrivev2": "SparseDriveV2", "ztrs": "ZTRS"}
 # I3's origin is the front camera; place it where nuPlan's CAM_F0 sits over the rear axle (the [T1] 10:05 entry)
 I3_FRONT = np.array([1.67, 0.0, 1.52])
@@ -82,10 +82,52 @@ def plan_wod() -> dict:
     return {"frame_name": names, "files": files, "ego": nav_ego(past, intent), "rig": seq}, rigs, np.zeros(2)
 
 
+NUSC_CAMS = ("CAM_FRONT", "CAM_FRONT_LEFT", "CAM_FRONT_RIGHT")
+
+
+def nusc_past(scene: dict, t0: int) -> np.ndarray:
+    """(16, 6) WOD-shaped past from the 20 Hz ego poses (no CAN bus on the box, [T1] nuScenes entry): rear-axle
+    position at t0 - 3.75 ... t0 in the t0 frame, velocity by central difference over +-50 ms, and the velocity change
+    per 0.25 s step in the accel columns (the WOD / P4 convention)."""
+    from . import nuscenes_zs as N
+    t = t0 + (np.arange(16) - 15) * 250_000
+    x0, R0 = N.ego_at(scene, [t0])
+    to0 = lambda xyz: (xyz - x0[0]) @ R0[0]                        # noqa: E731  world -> t0 frame (rows: R^T x)
+    pos = to0(N.ego_at(scene, t)[0])
+    v = (to0(N.ego_at(scene, t + 50_000)[0]) - to0(N.ego_at(scene, t - 50_000)[0])) / 0.1
+    dv = np.r_[np.zeros((1, 3)), np.diff(v, axis=0)]
+    return np.c_[pos[:, :2], v[:, :2], dv[:, :2]].astype(np.float32)
+
+
+def plan_nusc() -> tuple:
+    """nuScenes val main (4636): CAM_FRONT / FRONT_LEFT / FRONT_RIGHT keyframe images, one rig per scene; command from
+    the VAD converter rule (as the zero-shot exam) -> NAVSIM one-hot through the WOD intent codes."""
+    from . import nuscenes_zs as N
+    from .common import dataroot
+    from .night2_n3 import nav_ego
+    idx = N.load_index()
+    main = set(json.loads(N.index_path().with_name("sets.json").read_text())["main"])
+    rows = [e for e in idx["samples"] if e["token"] in main]
+    files, rig, past, intent, rigs = [], [], [], [], {}
+    code = {"straight": 1, "left": 2, "right": 3}                  # waymo.INTENTS
+    for e in rows:
+        sc = idx["scenes"][e["scene"]]
+        files.append([str(dataroot() / sc["cams"][c]["path"][N.frame_at(sc, c, e["t0"])]) for c in NUSC_CAMS])
+        rig.append(e["scene"])
+        past.append(nusc_past(sc, e["t0"]))
+        intent.append(code[e["cmd"]])
+        if e["scene"] not in rigs:
+            rigs[e["scene"]] = _rig([{k: (np.asarray(v).tolist() if isinstance(v, np.ndarray) else v)
+                                      for k, v in N.cam_calib(sc, c).items()} for c in NUSC_CAMS])
+    fr = {"frame_name": np.array([e["token"] for e in rows]), "files": np.array(files, object), "rig": np.array(rig),
+          "ego": nav_ego(np.stack(past), np.array(intent))}
+    return fr, rigs, np.zeros(2)
+
+
 def plan(set_: str) -> dict:
     from . import elicit_i3 as I, p5_exam as E
-    if set_ == "wod":
-        fr, rigs, offset = plan_wod()
+    if set_ in ("wod", "nusc"):
+        fr, rigs, offset = plan_wod() if set_ == "wod" else plan_nusc()
         return _write_plan(set_, fr, rigs, offset)
     with I.p5_set(SETS[set_]):
         t, past, _, obs, null, _ = E.load()
@@ -275,6 +317,40 @@ def judge_wod(rl, models=tuple(MODELS), B: int = 10000):
                                                               "d_cv_hi"]].to_markdown(index=False, floatfmt=".3f"))
 
 
+# ---------------------------------------------------------------- nuScenes main (zeroshot-exam/nuscenes-physicalai.md)
+
+def judge_nusc(rl, models=tuple(MODELS)):
+    """The zero-shot exam's own scoring (scripts/nusc_zs.py cmd_score, main + valid sets) with our rows added: raw
+    rear-axle trajectories + headings -> LIDAR_TOP points at the GT times (nuscenes_zs.to_lidar_point, as Alpamayo's)."""
+    import importlib.util
+    from types import SimpleNamespace
+    from . import nuscenes_zs as N
+    spec = importlib.util.spec_from_file_location("nusc_zs_script", REPO / "scripts" / "nusc_zs.py")
+    S = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(S)
+    idx = N.load_index()
+    by = {e["token"]: e for e in idx["samples"]}
+    extra = {}
+    for m in models:
+        z = np.load(root("nusc", f"{m}.npz"), allow_pickle=True)
+        dt = 0.5 if z["raw"].shape[1] == 8 else 0.1
+        ts = np.arange(1, z["raw"].shape[1] + 1) * dt
+        extra[f"t1:{m}"] = {t: N.to_lidar_point(ts, r[:, :2], r[:, 2], idx["scenes"][by[t]["scene"]]["lidar_xyz"],
+                                                by[t]["fut_t"])[0].astype(np.float32)
+                            for t, r in zip(z["frame_name"].astype(str), z["raw"])}
+        S.ROWS[MODELS[m]] = f"t1:{m}"
+    lp = S.load_preds
+    S.load_preds = lambda i: lp(i) | extra
+    zr = N.root
+    N.root = lambda *p: rl.dir if p == ("score",) else zr(*p)      # never overwrite the zero-shot exam's own score dir
+    try:
+        S.cmd_score(SimpleNamespace(sets="main", boot=10000), rl)
+    finally:
+        N.root, S.load_preds = zr, lp
+    for f in ("results.csv", "by_command.csv"):
+        (RESULTS / f"nusc_{f}").write_text((rl.dir / f).read_text())
+
+
 def main():
     import argparse
     from .runlog import RunLog
@@ -288,7 +364,8 @@ def main():
     else:
         rl = RunLog("top10_exam", f"judge-{a.set}")
         RESULTS.mkdir(parents=True, exist_ok=True)
-        (judge_wod if a.set == "wod" else judge)(rl, *([] if a.set == "wod" else [a.set]), tuple(a.models.split(",")))
+        ms = tuple(a.models.split(","))
+        {"wod": lambda: judge_wod(rl, ms), "nusc": lambda: judge_nusc(rl, ms)}.get(a.set, lambda: judge(rl, a.set, ms))()
         rl.close()
 
 
