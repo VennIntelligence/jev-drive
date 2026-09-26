@@ -204,8 +204,58 @@ def accept(dirs: list[str]) -> dict:
     return res
 
 
+def sanity(arm_dir: str, routes: str, cl1_dir: str | None = None) -> dict:
+    """The registered pilot checklist of a staged launch ([OPL] 18:35 item 4) on the routes of one stage (1 or ~10):
+    S1 every route has a record, <= 20 % needed a retry; S2 <= 30 % blocked; S3 >= 90 % launched within 20 s; S4 pooled
+    partner tick share <= 50 %; S5 no collision while blending, <= 50 % of routes with a collision; S6 (>= 5 routes) mean
+    DS >= 5 and <= the same routes' CL1 mean + 15 (CL1 = expert track via P7; only >= 5 without it)."""
+    d, ids = Path(arm_dir), routes.split(",")
+    rows = []
+    for rid in ids:
+        done = d / "done" / f"{rid}.json"
+        n_att = len(list((d / "attempts" / rid).glob("*"))) if (d / "attempts" / rid).exists() else 0
+        rec = adir = None
+        if done.exists():
+            adir = d / "attempts" / rid / str(json.loads(done.read_text())["attempt"])
+            rec = R._record(adir)
+        r = {"route": rid, "record": rec is not None, "attempts": n_att}
+        if rec is not None:
+            inf = rec.get("infractions", {})
+            r.update(DS=float(rec["scores"]["score_composed"]), status=rec["status"],
+                     blocked="blocked" in rec["status"].lower() or bool(inf.get("vehicle_blocked")),
+                     collisions=sum(len(inf.get(k, [])) for k in ("collisions_layout", "collisions_pedestrian", "collisions_vehicle")),
+                     **shared_control(adir))
+        rows.append(r)
+    t = pd.DataFrame(rows)
+    f = t[t.record]
+    n = len(ids)
+    chk = {"S1_records": bool(len(f) == n and (t.attempts > 1).mean() <= 0.2)}
+    if len(f):
+        chk["S2_blocked"] = bool(f.blocked.mean() <= 0.3)
+        chk["S3_launch"] = bool((f.t_move_s <= 20).mean() >= 0.9)
+        share = float((f.partner_tick_share * f.ticks).sum() / max(f.ticks.sum(), 1))
+        chk["S4_partner_share"] = bool(share <= 0.5)
+        chk["S5_collisions"] = bool(f.get("blend_collisions", pd.Series(0)).fillna(0).sum() == 0 and (f.collisions > 0).mean() <= 0.5)
+        ref = None
+        if n >= 5:
+            if cl1_dir and Path(cl1_dir).exists():
+                recs = [R._record(Path(cl1_dir) / "attempts" / rid / str(json.loads((Path(cl1_dir) / "done" / f"{rid}.json").read_text())["attempt"]))
+                        for rid in f.route if (Path(cl1_dir) / "done" / f"{rid}.json").exists()]
+                recs = [x for x in recs if x is not None]
+                ref = float(np.mean([x["scores"]["score_composed"] for x in recs])) if len(recs) >= 5 else None
+            chk["S6_DS"] = bool(f.DS.mean() >= 5 and (ref is None or f.DS.mean() <= ref + 15))
+        chk.update(partner_tick_share=share, DS_mean=float(f.DS.mean()), CL1_DS_mean=ref)
+    chk["pass"] = all(v for k, v in chk.items() if k[:1] == "S")
+    chk["routes"] = t.replace({np.nan: None}).to_dict("records")
+    return chk
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "accept":
         print(json.dumps(accept(sys.argv[2:]), indent=1, default=str))
+    elif len(sys.argv) > 1 and sys.argv[1] == "sanity":       # sanity <arm dir> <route,ids> [cl1 arm dir]
+        res = sanity(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
+        print(json.dumps(res, indent=1, default=str))
+        sys.exit(0 if res["pass"] else 1)
     else:
         write()
