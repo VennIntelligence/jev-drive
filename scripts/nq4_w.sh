@@ -21,6 +21,7 @@ STEPS=(vjepa prep seed0 seed1 seed2 report)
 declare -A EST=([vjepa]=30 [prep]=15 [seed0]=40 [seed1]=40 [seed2]=40 [report]=10)   # minutes; 2x = stop
 
 status() {
+    local s
     { echo "# nq4 W chain ($(date '+%F %H:%M:%S'))"; echo
       for s in "${STEPS[@]}"; do
           if [[ -f $D/$s.done ]]; then echo "- $s: done $(cat "$D/$s.done")"
