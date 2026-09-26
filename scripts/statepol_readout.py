@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-T0 = 10
+T0 = 0  # rollout starts at log frame 0
 k_at = lambda sec: int(round(sec * 10)) - 1
 OBS_HALF = 2.4
 
@@ -55,8 +55,22 @@ def outcome(r):
 
 
 def load(run, variant, planner, traffic):
+    """Rollouts with sim positions moved back into the log (JSON) frame."""
     p = Path(run) / f"{variant}__{planner}__{traffic}.pkl"
-    return pickle.load(open(p, "rb")) if p.exists() else None
+    if not p.exists():
+        return None
+    data = pickle.load(open(p, "rb"))
+    metas = {m["map_id"]: m for m in pickle.load(open(Path(DATA) / variant / "meta.pkl", "rb"))}
+    for mid, r in data.items():
+        m = metas[mid]
+        e0 = m["ego_xy"][0] + (m.get("shift_vec", 0) if variant == "shift" else 0)
+        off = e0 - r["traj0"]
+        for key in ("ego", "partner"):
+            a = r[key]
+            if len(a):
+                ok = a[:, 0] > -9000
+                a[ok, :2] += off.astype(a.dtype)
+    return data
 
 
 def exam_a(data, run, planner, traffic):
@@ -257,6 +271,8 @@ def main():
     ap.add_argument("--planners", default="ppo,cond_normal,cond_caut,cond_aggr,idm,pdm,cv")
     ap.add_argument("--traffic", default="expert,ppo")
     a = ap.parse_args()
+    global DATA
+    DATA = a.data
     out = {}
     for tr in a.traffic.split(","):
         for p in a.planners.split(","):

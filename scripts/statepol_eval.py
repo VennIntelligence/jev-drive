@@ -86,6 +86,8 @@ def run_shard(job):
                 st = st[0] if isinstance(st, list) else st
                 ents = st.get("entities", [])
                 e = ents[ego_e]
+                if "traj0" not in log:  # sim coords are the log minus a per-scene world mean
+                    log["traj0"] = (e["traj_x"][0], e["traj_y"][0])
                 log["ego"].append((e["x"], e["y"], e["vx"], e["vy"], e["heading"], e.get("collision_state", 0)))
                 if 0 <= par_e < len(ents):
                     p = ents[par_e]
@@ -126,7 +128,7 @@ def run_shard(job):
     res = {}
     for mid, log in rec.items():
         res[mid] = dict(ego=np.asarray(log["ego"], np.float32), partner=np.asarray(log["partner"], np.float32),
-                        metrics=mets.get(mid))
+                        traj0=np.asarray(log.get("traj0", (np.nan, np.nan)), np.float64), metrics=mets.get(mid))
     return res
 
 

@@ -25,7 +25,7 @@ from pathlib import Path
 
 import numpy as np
 
-T0, T = 10, 91
+T0, T = 0, 91  # BehaviorBench eval starts the rollout at log frame 0 (init_steps=0)
 SPLIT = "validation_interactive"  # PufferDrive only accepts known split names; one data root per variant
 NULL_DIST, OBS_LEN, OBS_W, SHIFT = 30.0, 4.8, 2.0, 1.5
 
@@ -137,7 +137,7 @@ def _build(json_path, ego, rng_seed):
             q = s3["objects"][ego]["position"][t]
             q["x"] += float(n[0]); q["y"] += float(n[1])
         out["shift"] = (s3, ego)
-        meta["shift_sign"] = sign
+        meta.update(shift_sign=sign, shift_vec=n)
     return meta, out
 
 
