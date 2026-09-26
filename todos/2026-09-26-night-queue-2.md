@@ -162,7 +162,7 @@
   自行车改为直接改它们 `BasicAgentBehavior` 的 offset（行为树里的实例，agent 建好后 `set_offset`）并把车挪到路肩，内缘离车道边线 0.5 m。门槛、其余世界与分析口径都不变。
   预期：修正只能救回 (b)(c) 的 5 个，(a) 的 5 个背景 stop 会留下，所以按登记口径重跑后 keep 最多 40 / 45 = 0.889，**仍可能不过 0.90**；事后的「与 x₀₀ 同模式」行照报。
   重跑：45 个放置 null 世界移到 `runs/p6/gen/done_shoulder_v1/`（原 attempt 留着），`p6_gen.sh ONLY=<45 个 id>` 续跑；先在 1 个世界上 smoke（25300，单 server，box 当时 28 个 CARLA server）。
-- 2026-09-26 15:32 CST [A] 放置 null 修正的 smoke（GPU 3、单 server，3 个世界）与第二处修正（写于 45 个世界重跑之前）。25300 HazardAtSideLane：自行车全程在 d ≈ −2.6 m（路肩），expert keep ✓。
+- 2026-09-26 15:27 CST [A] 放置 null 修正的 smoke（GPU 3、单 server，3 个世界）与第二处修正（写于 45 个世界重跑之前）。25300 HazardAtSideLane：自行车全程在 d ≈ −2.6 m（路肩），expert keep ✓。
   1852 AccidentTwoWays、3464 VehicleOpensDoorTwoWays 仍 stop，逐 tick 看障碍位置：Door 的停放车在 x₁₀ 里在 d = −2.39 m，放置 null 里被挪到 −0.78 m（**往 ego 车道挪了 1.6 m**），
   两辆事故车一辆挪到 d = +2.5 m（对向车道），一辆掉出地图（z 到 −257 m）。所以 15:02 条里 (c) 的「过时的 get_location」不是主因（首 tick 后的新鲜位置给出的位移与原来相同），
   真正的问题是**方向**：位移按「离 actor 最近的驾驶车道」的右向量算，两车道对向的路上那条车道可能是对向车道，右向量反了。
