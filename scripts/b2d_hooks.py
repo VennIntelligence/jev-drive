@@ -233,7 +233,7 @@ def track_hazards(out_dir, hide):
 
 P6_SHOULDER_MARGIN_M = 0.5      # placement null: gap between the obstacle's inner edge and the ego lane's edge
 P6_DOOR_EXTRA_M = 1.2           # ... plus the reach of an opened door (VehicleOpensDoorTwoWays)
-P6_DENSE_GAP_M = (10.0, 14.0)   # mirror world: oncoming spacing, ~1 s headway, never a gap PDM-Lite accepts
+P6_DENSE_GAP_M = (14.0, 20.0)   # mirror world: oncoming spacing, ~1.5-2 s headway, no gap PDM-Lite accepts
 
 
 def p6_world(out_dir, obstacle, oncoming, tm_seed):
@@ -261,39 +261,55 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
     from srunner.tools import background_manager as bm
     running = py_trees.common.Status.RUNNING
 
-    # ---- oncoming flow
-    flow_init, flow_spawn = ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor
+    # ---- oncoming flow (two-way scenarios only). The opposite lane carries nothing but the scenario's own flow: the
+    # background's opposite sources are off from the start in every two-way world, and in x11 / x01 / mirror the flow
+    # runs from the first tick (as shipped it starts 5 s after the trigger, from ~75 m beyond the obstacle, and in the
+    # smoke never reached the ego before it had passed, so x11 = x10).
+    flows = []
+    if oncoming is not None:
+        from srunner.scenarios.background_activity import BackgroundBehavior
+        bg_init = BackgroundBehavior.__init__
 
-    def init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs):
-        if oncoming == "dense":
-            spawn_dist_interval = list(P6_DENSE_GAP_M)
-        flow_init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs)
-        self._rng = np.random.RandomState(3000 + int(tm_seed))
-        self._spawn_dist = self._rng.uniform(self._min_spawn_dist, self._max_spawn_dist)
-        self._bp_state = np.random.RandomState(4000 + int(tm_seed)).get_state()
+        def bg(self, *args, **kwargs):
+            bg_init(self, *args, **kwargs)
+            self._active_opposite_sources = False
 
-    def spawn(self):
-        shared = CarlaDataProvider._rng            # BackgroundActivity holds this object: swap its state, not the object
-        outer = shared.get_state()
-        shared.set_state(self._bp_state)
-        try:
-            return flow_spawn(self)
-        finally:
-            self._bp_state = shared.get_state()
-            shared.set_state(outer)
+        BackgroundBehavior.__init__ = bg
+        flow_init, flow_spawn = ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor
+        flow_start, flow_update = ab.OppositeActorFlow.initialise, ab.OppositeActorFlow.update
 
-    ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor = init, spawn
-    if oncoming == "off":
+        def init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs):
+            if oncoming == "dense":
+                spawn_dist_interval = list(P6_DENSE_GAP_M)
+            flow_init(self, reference_wp, reference_actor, spawn_dist_interval, *args, **kwargs)
+            self._rng = np.random.RandomState(3000 + int(tm_seed))
+            self._spawn_dist = self._rng.uniform(self._min_spawn_dist, self._max_spawn_dist)
+            self._bp_state = np.random.RandomState(4000 + int(tm_seed)).get_state()
+            self._p6_started = False
+            flows.append(self)
+
+        def spawn(self):
+            shared = CarlaDataProvider._rng        # BackgroundActivity holds this object: swap its state, not the object
+            outer = shared.get_state()
+            shared.set_state(self._bp_state)
+            try:
+                return flow_spawn(self)
+            finally:
+                self._bp_state = shared.get_state()
+                shared.set_state(outer)
+
+        ab.OppositeActorFlow.__init__, ab.OppositeActorFlow._spawn_actor = init, spawn
+        # the tree's own calls do nothing: in "off" the flow never runs, otherwise the tick hook drives it from tick 1
+        ab.OppositeActorFlow.initialise = lambda self: ab.AtomicBehavior.initialise(self)
         ab.OppositeActorFlow.update = lambda self: running
-    if oncoming in ("off", "dense"):
         opp_init = bm.ChangeOppositeBehavior.__init__
 
         def opp(self, source_dist=None, spawn_dist=None, active=None, name="ChangeOppositeBehavior"):
             if spawn_dist is not None and active is None:      # only HazardAtSideLaneTwoWays sets a spawn distance
-                if oncoming == "off":
-                    spawn_dist, active = None, False
-                else:
-                    spawn_dist = float(np.mean(P6_DENSE_GAP_M))
+                spawn_dist, active = (None, False) if oncoming == "off" else (
+                    float(np.mean(P6_DENSE_GAP_M)) if oncoming == "dense" else spawn_dist, True)
+            elif active:                                       # the scenarios' end-of-scenario re-enable
+                active = oncoming != "off" and active
             opp_init(self, source_dist, spawn_dist, active, name)
 
         bm.ChangeOppositeBehavior.__init__ = opp
@@ -355,6 +371,15 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
                 log.append(row)
         if not mine:                                   # build_scenarios is called again later; nothing new
             return
+        if oncoming in ("on", "dense"):
+            for sc in self.list_scenarios[n0:]:
+                if type(sc).__name__ == "HazardAtSideLaneTwoWays":   # its flow is the background's opposite sources
+                    d = float(np.mean(P6_DENSE_GAP_M)) if oncoming == "dense" else float(sc._opposite_frequency)
+                    py_trees.blackboard.Blackboard().set("BA_ChangeOppositeBehavior", [None, d, True], overwrite=True)
+                    registry["flow"] = "background spawn_dist %.1f" % d
+            for f in flows:
+                f._p6_early = True
+                registry["flow"] = "OppositeActorFlow %s m" % [round(f._min_spawn_dist, 1), round(f._max_spawn_dist, 1)]
         if obstacle != "on":
             keep = [e for e in CarlaDataProvider.active_scenarios
                     if not any(x is not None and hasattr(x, "id") and x.id in mine for x in e[1][:2])]
@@ -365,15 +390,22 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
             json.dump(log, fh)
         with open(os.path.join(out_dir, "p6_world.json"), "w") as fh:
             json.dump({"obstacle": obstacle, "oncoming": oncoming, "tm_seed": int(tm_seed),
-                       "registry_dropped": registry["dropped"], "registry_kept": registry["kept"]}, fh)
+                       "registry_dropped": registry["dropped"], "registry_kept": registry["kept"],
+                       "flow": registry.get("flow")}, fh)
 
     RouteScenario.build_scenarios = build
-    if obstacle != "hide":
+    if obstacle != "hide" and oncoming not in ("on", "dense"):
         return
     inner_tick = ScenarioManager._tick_scenario
 
     def tick(self):
         inner_tick(self)
+        for f in flows:                                # the oncoming flow, from the first tick
+            if getattr(f, "_p6_early", False) and not f._terminated:
+                if not f._p6_started:
+                    flow_start(f)
+                    f._p6_started = True
+                flow_update(f)
         for h in hidden:                               # as in track_hazards
             a = h[0]
             if not a.is_alive:
