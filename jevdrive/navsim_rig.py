@@ -19,8 +19,11 @@ W, H = 1920, 1080
 # nuPlan camera model as NAVSIM ships it (navsim_logs/test, every CAM_* of the first log): K and OpenCV distortion
 K = np.array([[1545.0, 0, 960.0], [0, 1545.0, 560.0], [0, 0, 1]])
 DIST = np.array([-0.3561, 0.1725, -0.0021, 0.0005, -0.0523])      # k1 k2 p1 p2 k3
-# CAM_F0 sensor2lidar (OpenCV camera axes -> ego) and position, same log; L0 / R0 sit at yaw +-55.2 deg
-R_F0 = np.array([[0.0031, -0.0253, 0.9997], [-1.0, -0.0088, 0.0029], [0.0088, -0.9996, -0.0253]])
+# nuPlan CAM_L0 / F0 / R0 sensor2lidar rotations (OpenCV camera axes -> ego) and F0's position, same log. A virtual
+# camera keeps its template's mounting (pitch, roll) and is only turned about z to the mapped source camera's yaw.
+R_TEMPLATE = {"cam_l0": np.array([[0.8209, 0.0059, 0.5711], [-0.5709, -0.0157, 0.8209], [0.0138, -0.9999, -0.0095]]),
+              "cam_f0": np.array([[0.0031, -0.0253, 0.9997], [-1.0, -0.0088, 0.0029], [0.0088, -0.9996, -0.0253]]),
+              "cam_r0": np.array([[-0.8236, 0.0132, 0.567], [-0.567, 0.0007, -0.8237], [-0.0112, -0.9999, 0.0069]])}
 T_F0 = np.array([1.6701, -0.0259, 1.5226])
 WOD_IN_CV = np.array([[0.0, -1, 0], [0, 0, -1], [1, 0, 0]])     # camgeom camera axes expressed in OpenCV axes
 NAMES = ("cam_l0", "cam_f0", "cam_r0")
@@ -31,11 +34,18 @@ def _orth(R: np.ndarray) -> np.ndarray:
     return u @ vt
 
 
-def virtual(yaw_deg: float, pos) -> dict:
-    """One virtual camera: sensor2lidar rotation (OpenCV axes -> ego), translation, K, distortion."""
-    c, s = np.cos(np.radians(yaw_deg)), np.sin(np.radians(yaw_deg))
-    Rz = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
-    return {"sensor2lidar_rotation": Rz @ _orth(R_F0), "sensor2lidar_translation": np.asarray(pos, np.float64),
+def optical_yaw(R: np.ndarray) -> float:
+    """Yaw (deg) of a camera's optical axis (OpenCV z) in the ego frame."""
+    return float(np.degrees(np.arctan2(R[1, 2], R[0, 2])))
+
+
+def virtual(name: str, yaw_deg: float, pos) -> dict:
+    """Virtual camera `name` (cam_l0 / cam_f0 / cam_r0): its nuPlan template turned about z so the optical axis points
+    at yaw_deg; sensor2lidar rotation (OpenCV axes -> ego), translation, K, distortion."""
+    R0 = _orth(R_TEMPLATE[name])
+    a = np.radians(yaw_deg - optical_yaw(R0))
+    Rz = np.array([[np.cos(a), -np.sin(a), 0], [np.sin(a), np.cos(a), 0], [0, 0, 1]])
+    return {"sensor2lidar_rotation": Rz @ R0, "sensor2lidar_translation": np.asarray(pos, np.float64),
             "intrinsics": K.copy(), "distortion": DIST.copy()}
 
 
@@ -73,15 +83,49 @@ def rays(v: dict) -> np.ndarray:
     return _cam_rays(v["intrinsics"], v["distortion"]) @ v["sensor2lidar_rotation"].T.astype(np.float32)
 
 
+def project(rays: np.ndarray, calib: dict):
+    """camgeom.waymo_project with one change: the radius up to which a ray counts as seen is taken from the image
+    corners *undistorted* (camgeom bounds the undistorted r^2 by the distorted corner's, which is right for WOD's
+    mild lenses but cuts the corners off a strongly barrel-distorted nuPlan source)."""
+    fu, fv, cu, cv, k1, k2, p1, p2, k3 = (float(x) for x in calib["intrinsic"])
+    w, h = calib["width"], calib["height"]
+    rd2 = max(((a - cu) / fu) ** 2 + ((b - cv) / fv) ** 2 for a in (0, w) for b in (0, h))
+    r = np.sqrt(rd2)
+    rr = np.linspace(0, 3 * r + 1, 30001)                              # radial model only, first crossing of r_d
+    f = rr * (1 + k1 * rr ** 2 + k2 * rr ** 4 + k3 * rr ** 6)
+    mono = np.r_[True, np.diff(f) > 0].cumprod().astype(bool)
+    hit = np.flatnonzero(mono & (f >= r))
+    ru2 = (rr[hit[0]] if len(hit) else rr[mono][-1]) ** 2
+    R = np.asarray(calib["extrinsic"], np.float64).reshape(4, 4)[:3, :3]
+    p = rays @ R.astype(rays.dtype)
+    fwd = p[..., 0]
+    safe = np.where(fwd > 1e-6, fwd, 1)
+    x, y = -p[..., 1] / safe, -p[..., 2] / safe
+    r2 = x * x + y * y
+    rad = 1 + k1 * r2 + k2 * r2 ** 2 + k3 * r2 ** 3
+    u = fu * (x * rad + 2 * p1 * x * y + p2 * (r2 + 2 * x * x)) + cu
+    v = fv * (y * rad + p1 * (r2 + 2 * y * y) + 2 * p2 * x * y) + cv
+    ok = (fwd > 0.05) & (r2 < 1.3 * max(ru2, rd2)) & (u >= -0.5) & (u <= w - 0.5) & (v >= -0.5) & (v <= h - 0.5)
+    return u, v, ok
+
+
 def maps(src: list, virt: list, primary: list) -> list:
-    """Per virtual camera: (source index or -1, U, V) as float32 / int8. src: camgeom records; primary[i]: the source
-    virtual camera i is mapped to (it wins wherever it sees the ray)."""
+    """Per virtual camera: (source index or -1, U, V) as int8 / float32. src: camgeom records; primary[i]: the source
+    virtual camera i is mapped to. The primary source wins wherever it sees the ray; elsewhere the source that sees it
+    closest to its optical axis (camgeom.choose_sources' rule)."""
+    axes = [np.asarray(c["extrinsic"], np.float64).reshape(4, 4)[:3, 0].astype(np.float32) for c in src]
     out = []
     for v, p in zip(virt, primary):
         r = rays(v)
-        s, U, V = G.choose_sources(np, r, {i: c for i, c in enumerate(src)})
-        u, w, ok = G.waymo_project(np, r, src[p])
-        s, U, V = np.where(ok, p, s), np.where(ok, u, U), np.where(ok, w, V)
+        s = np.full(r.shape[:2], -1, np.int8)
+        U, V = np.zeros(r.shape[:2], np.float32), np.zeros(r.shape[:2], np.float32)
+        best = np.full(r.shape[:2], -2.0, np.float32)
+        for i in [j for j in range(len(src)) if j != p] + [p]:           # primary last: it overrides where it sees
+            u, w, ok = project(r, src[i])
+            take = ok if i == p else ok & (r @ axes[i] > best)
+            if i != p:
+                best = np.where(take, r @ axes[i], best)
+            s, U, V = np.where(take, i, s), np.where(take, u, U), np.where(take, w, V)
         out.append((s.astype(np.int8), U.astype(np.float32), V.astype(np.float32)))
     return out
 

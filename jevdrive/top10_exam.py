@@ -47,7 +47,8 @@ def _rig(src: list, shift=np.zeros(3)) -> dict:
         r["extrinsic"] = E.ravel().tolist()
     pos = [np.asarray(r["extrinsic"]).reshape(4, 4)[:3, 3] for r in src]
     order = (1, 0, 2)                                           # l0 <- front_left, f0 <- front, r0 <- front_right
-    return {"src": src, "virt": [R.virtual(_yaw(src[i]), pos[i]) for i in order], "primary": list(order)}
+    return {"src": src, "virt": [R.virtual(n, _yaw(src[i]), pos[i]) for n, i in zip(R.NAMES, order)],
+            "primary": list(order)}
 
 
 def _frames(t: pd.DataFrame, past: np.ndarray, rows: np.ndarray) -> dict:

@@ -262,9 +262,8 @@ def check(rl, M, n_tok: int, batch: int):
                 if arm == "a":
                     virt = [cams[k] for k in R.NAMES]
                 else:
-                    yaw = lambda k: float(np.degrees(np.arctan2(cams[k]["sensor2lidar_rotation"][1, 2],  # noqa: E731
-                                                                cams[k]["sensor2lidar_rotation"][0, 2])))
-                    virt = [R.virtual(yaw(k), cams[k]["sensor2lidar_translation"]) for k in R.NAMES]
+                    virt = [R.virtual(k, R.optical_yaw(cams[k]["sensor2lidar_rotation"]), cams[k]["sensor2lidar_translation"])
+                            for k in R.NAMES]
                 key = (arm, np.round(np.concatenate([np.ravel(c[k]) for c in virt for k in sorted(c)]), 4).tobytes(),
                        json.dumps(src))
                 if key not in map_cache:                     # nuPlan calibrations repeat across logs of a vehicle
@@ -322,25 +321,46 @@ def navsim(rl, M, split: str, workers: int, batch: int):
                          sensor_config=M.sensor_config)
     toks = sorted(loader.tokens)
     rl.log.info("%s: %d tokens", split, len(toks))
-    dl = torch.utils.data.DataLoader(Tokens(loader, toks, M.native), batch_size=batch, num_workers=workers,
-                                     collate_fn=lambda xs: ([x[0] for x in xs], M.collate([x[1] for x in xs])),
-                                     prefetch_factor=2)
     dev = torch.device("cuda")
     M.agent.to(dev).eval()
-    poses = np.zeros((len(toks), 8, 3), np.float32)
+    parts = DATA / "processed/top10_exam/navsim" / f"{rl.model}_{split}.parts"
+    parts.mkdir(parents=True, exist_ok=True)
+    done = set()
+    for f in parts.glob("*.npz"):                               # resumable: finished chunks are kept, never redone
+        done |= set(np.load(f)["tokens"].tolist())
+    todo = [t for t in toks if t not in done]
+    rl.log.info("%d tokens already in %s, %d to go", len(done), parts, len(todo))
+    dl = torch.utils.data.DataLoader(Tokens(loader, todo, M.native), batch_size=batch, num_workers=workers,
+                                     collate_fn=lambda xs: ([x[0] for x in xs], M.collate([x[1] for x in xs])),
+                                     prefetch_factor=2)
     step = int(round(0.5 / M.dt))
+    buf_t, buf_p = [], []
+
+    def flush():
+        if buf_t:
+            tmp = parts / f"{len(list(parts.glob('*.npz'))):05d}.tmp.npz"
+            np.savez(tmp, tokens=np.asarray(buf_t), poses=np.concatenate(buf_p))
+            tmp.rename(tmp.with_name(tmp.name.replace(".tmp", "")))
+            buf_t.clear(), buf_p.clear()
     from tqdm import tqdm
     t0 = time.time()
     with torch.no_grad():
         for k, (ids, b) in enumerate(tqdm(dl, mininterval=30)):
             tr = M.forward(to_dev(b, dev))[0].float().cpu().numpy()
-            poses[ids] = tr[:, step - 1::step][:, :8]
-            if k % 50 == 0:
-                rl.event("progress", done=(k + 1) * batch, n=len(toks), seconds=time.time() - t0)
+            buf_t.extend(todo[i] for i in ids)
+            buf_p.append(tr[:, step - 1::step][:, :8].astype(np.float32))
+            if k % 25 == 24:
+                flush()
+                rl.event("progress", done=len(done) + (k + 1) * batch, n=len(toks), seconds=time.time() - t0)
+    flush()
+    got = {}
+    for f in sorted(parts.glob("*.npz")):
+        z = np.load(f)
+        got.update(zip(z["tokens"].tolist(), z["poses"]))
+    assert set(got) == set(toks), f"{len(set(toks) - set(got))} tokens missing"
     out = DATA / "processed/top10_exam/navsim" / f"{rl.model}_{split}.npz"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(out, tokens=np.asarray(toks), poses=poses)
-    rl.log.info("%d tokens in %.0f s -> %s", len(toks), time.time() - t0, out)
+    np.savez(out, tokens=np.asarray(toks), poses=np.stack([got[t] for t in toks]))
+    rl.log.info("%d tokens (%d this run) in %.0f s -> %s", len(toks), len(todo), time.time() - t0, out)
 
 
 def main():
