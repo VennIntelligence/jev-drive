@@ -28,19 +28,42 @@ import zeroshot_wire as wire  # noqa: E402
 
 
 class Qwen:
+    """make_fx's transform split in two: the per-frame decode + resize (cached per connection by JPEG bytes: the 4-frame
+    clip slides by one frame per plan, so 9 of its 12 frames were resized one plan earlier) and the processor call on
+    the 12 resized frames; then the forward. `features` = the uncached path, what the offline check runs."""
+
     def __init__(self):
         import torch
         from jevdrive import waymo_qwenvid as qv
-        self.torch = torch
+        self.torch, self.qv = torch, qv
         self.fx = qv.make_fx(compile=False)
+
+    def _frame(self, b, cache):
+        import hashlib
+        from PIL import Image
+        k = hashlib.sha1(memoryview(b)).digest()
+        if k not in cache:
+            if len(cache) > 32:
+                cache.pop(next(iter(cache)))
+            cache[k] = self.fx._resize(Image.open(io.BytesIO(bytes(b))).convert("RGB"))
+        return cache[k]
+
+    def prepare(self, blobs, cache):
+        fr = [self._frame(b, cache) for b in blobs]
+        n, F = len(self.qv.waymo.CAMS), self.qv.FRAMES
+        o = self.fx.proc(text=[self.fx.prompt], videos=[fr[i * F:(i + 1) * F] for i in range(n)], return_tensors="pt")
+        return self.fx.collate([(o["input_ids"][0], o["mm_token_type_ids"][0],
+                                 o["pixel_values_videos"].to(self.torch.bfloat16), o["video_grid_thw"])])
+
+    def forward(self, batch):
+        with self.torch.inference_mode():
+            f = self.fx(batch)["L18_last"]
+        return {"q": f.to(self.torch.float16).float().cpu().numpy()[0]}
 
     def features(self, blobs):
         from PIL import Image
         imgs = [Image.open(io.BytesIO(bytes(b))).convert("RGB") for b in blobs]
-        batch = self.fx.collate([self.fx.transform(imgs)])
-        with self.torch.inference_mode():
-            f = self.fx(batch)["L18_last"]
-        return {"q": f.to(self.torch.float16).float().cpu().numpy()[0]}
+        return self.forward(self.fx.collate([self.fx.transform(imgs)]))
 
 
 class Yolo:
@@ -52,12 +75,17 @@ class Yolo:
         z = np.load(head_dir() / "heads.npz")
         self.mu, self.V = z["pca_mu"], z["pca_V"]
 
-    def features(self, blobs):
+    def prepare(self, blobs, cache=None):
         from jevdrive.sam_detect import decode
-        ims = [np.ascontiguousarray(decode(bytes(b)).permute(1, 2, 0).numpy()[:, :, ::-1]) for b in blobs]
+        return [np.ascontiguousarray(decode(bytes(b)).permute(1, 2, 0).numpy()[:, :, ::-1]) for b in blobs]
+
+    def forward(self, ims):
         res = self.det(ims)
         return {"tok": self.N4.build_tokens(res, self.mu, self.V).astype(np.float32),
                 "n_det": np.array([len(r[0]) for r in res], np.int32)}
+
+    def features(self, blobs):
+        return self.forward(self.prepare(blobs))
 
 
 def main():
@@ -88,17 +116,21 @@ def main():
     stats = {"calls": 0, "busy": 0.0, "t0": time.time()}
 
     def serve(conn):
+        cache = {}
         try:
             while True:
                 meta, arrays = wire.recv(conn)
                 blobs = [arrays["jpg%d" % i] for i in range(n_in)]
+                t0_ = time.perf_counter()
+                item = m.prepare(blobs, cache)          # CPU, outside the lock: overlaps other connections' forwards
+                prep = time.perf_counter() - t0_
                 with lock:
                     t = time.perf_counter()
-                    out = m.features(blobs)
+                    out = m.forward(item)
                     busy = time.perf_counter() - t
                 stats["calls"] += 1
                 stats["busy"] += busy
-                wire.send(conn, {"ms": round(1e3 * busy, 2)}, out)
+                wire.send(conn, {"ms": round(1e3 * busy, 2), "prep_ms": round(1e3 * prep, 2)}, out)
                 if stats["calls"] % 500 == 0:
                     up = time.time() - stats["t0"]
                     print("calls %d, busy %.0f%% of %.0f s" % (stats["calls"], 100 * stats["busy"] / up, up), flush=True)
