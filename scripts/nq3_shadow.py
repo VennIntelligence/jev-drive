@@ -121,6 +121,8 @@ class Shadow:
         self.np, self.carla, self.model, self.SensorAgent = np, carla, model, SensorAgent
         self.stub = _Stub(init["town"])
         CDP.get_hero_actor = staticmethod(lambda: self.stub)
+        from leaderboard.autoagents import autonomous_agent as AA   # Bench2Drive's base looks the hero up at init
+        AA.AutonomousAgent.get_hero = lambda self_: setattr(self_, "hero_actor", self.stub)
         self.agent = SensorAgent("127.0.0.1", 0, False)
         a = self.agent
         a.set_global_plan([({"lat": la, "lon": lo, "z": z}, RoadOption(o)) for la, lo, z, o in init["plan_gps"]],
