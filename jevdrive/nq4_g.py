@@ -4,7 +4,7 @@
   build    route table, variant XML and the registered windows ($DATA_DIR/runs/nq4/gk/):
              routes.csv      the G routes: Bench2Drive 220 routes whose trigger spawns the hazard actor, i.e. P5's
                              families without HardBreakRoute / Light (8 x 5) and P6's 8 usable obstacle classes (8 x 5)
-             g_routes.xml    variants per base route b, id = 10 b + code: orig 0 (visibility camera on), ghost 1,
+             g_routes.xml    variants per base route b, id = 100 b + 90 + code: orig 0 (visibility camera on), ghost 1,
                              shift 2 (+15 m for odd b, -15 m for even b), swap 3 (only where a same-class swap exists)
              windows.csv     trigger window [s_trig - 30, s_trig + 10] m and <= 2 control windows (40 m, >= 80 m from the
                              trigger along the route and in the plane, same shape class, the nearest to the trigger)
@@ -56,7 +56,8 @@ def root(*p) -> Path:
 
 
 def vid(base, variant: str) -> str:
-    return str(int(base) * 10 + VARIANTS[variant])
+    """100 b + 90 + code: above every official id (< 100 000) and apart from P5 / P6 variant ids (100 b + 10 w + seed, w <= 7)."""
+    return str(int(base) * 100 + 90 + VARIANTS[variant])
 
 
 # ---------------------------------------------------------------- routes, variants, windows
