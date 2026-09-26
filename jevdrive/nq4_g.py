@@ -609,9 +609,12 @@ def report():
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("build", "report"))
+    ap.add_argument("cmd", choices=("build", "report", "smoke"))
     a = ap.parse_args()
-    build() if a.cmd == "build" else report()
+    if a.cmd == "smoke":
+        print(smoke_report().to_string())
+    else:
+        build() if a.cmd == "build" else report()
 
 
 
@@ -653,6 +656,58 @@ def hazard_point(base: str) -> dict:
                 how = "closest"
             return {"base": base, "s_hazard": float(ss[j]), "lat": float(ll[j]), "how": how, "src": str(a.relative_to(D))}
     return {"base": base, "s_hazard": np.nan, "how": "missing"}
+
+
+
+def smoke_report(arms: Path | None = None) -> pd.DataFrame:
+    """F1: every smoke run of the new hooks, PDM-Lite behaviour in P6's expert terms (max |lateral offset| from the route,
+    lowest speed once moving, scenario pass) next to the same route's orig PDM-Lite run of night queue 3 (cl1_expert)."""
+    arms = arms or root("smoke")
+    w = pd.read_csv(root() / "windows.csv", dtype={"base": str})
+    rows = []
+    for d in sorted(arms.glob("pdm/*/s0")):
+        for f in sorted((d / "done").glob("*.json")):
+            rid = f.stem
+            b = rid[:-2] if int(rid) >= 100000 else rid
+            a = finished_attempt(d, rid)
+            rec, tr = record(a), ego_track(a)
+            P = dense_route(b)
+            s = arc(P)
+            meta = tr["meta"] if tr else {}
+            st = float(w[(w.base == b) & (w.kind == "trigger")].s_trig.iloc[0])
+            if meta.get("shifted"):
+                st += float(meta["shifted"][0]["shift_m"])
+            r = {"variant": d.parent.name, "id": rid, "base": b, "status": rec["status"] if rec else None,
+                 "RC": rec["scores"]["score_route"] if rec else None, "stopped": meta.get("stopped"),
+                 "built": ";".join(f"{x['type']}[{','.join(sorted(set(t.split('.')[0] + '.' + t.split('.')[1] for t in x['type_ids'])))}]"
+                                   for x in meta.get("built", [])),
+                 "swapped": ";".join(str(x.get("type_id")) for x in meta.get("swapped", [])),
+                 "shift": ";".join("%+.0f m (s %.1f -> %.1f)" % (x["shift_m"], x["s_before"], x["s_after"]) for x in meta.get("shifted", []))}
+            pw = a / "p6_world.json"
+            if pw.exists():
+                r["registry_dropped"] = ",".join(json.loads(pw.read_text())["registry_dropped"])
+            if tr is not None:
+                se, le = project(P, s, tr["xy"])
+                moving = np.flatnonzero(tr["v"] > 2.0)
+                r.update(max_lat=float(np.abs(le).max()), v_min_moving=float(tr["v"][moving[0]:].min()) if len(moving) else np.nan)
+                ww = w[(w.base == b) & (w.kind == "trigger")].iloc[0]
+                g = ghost_reaction(tr, P, s, ww.s0, ww.s1)
+                r.update({f"trig_{k}": v for k, v in g.items() if k in ("status", "decel", "lat", "reaction", "v_entry")})
+                if tr["vis"] is not None and len(tr["vis_ticks"]):
+                    vv = tr["vis"][tr["vis"][:, 2] >= PX_ACTOR]
+                    r.update(vis_frames=int(len(tr["vis_ticks"])), first_visible_tick=int(vv[:, 0].min()) if len(vv) else None)
+            if rec is not None:
+                r.update(scenario_pass(rec, P, s, st, {i for x in meta.get("built", []) for i in x["ids"]}))
+            e = data_dir() / "runs" / "nq3" / "b" / "cl1_expert" / "logs" / f"{b}.jsonl"
+            if e.exists():
+                x = pd.read_json(e, lines=True)
+                _, le = project(P, s, x[["x", "y"]].to_numpy())
+                mv = np.flatnonzero(x.v.to_numpy() > 2.0)
+                r.update(orig_max_lat=float(np.abs(le).max()), orig_v_min_moving=float(x.v.to_numpy()[mv[0]:].min()) if len(mv) else np.nan)
+            rows.append(r)
+    df = pd.DataFrame(rows)
+    df.to_csv(root("results", "g") / "smoke_hooks.csv", index=False)
+    return df
 
 
 if __name__ == "__main__":
