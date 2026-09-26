@@ -568,6 +568,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False, students: bool = False):
         for src, dl in sources.items():
             for gname, g in gs.items():
                 preds[f"{src} x {gname}"] = prior + g[:, None, None] * dl
+        for gname, g in gs.items():
             gdesc += [{"model": m, "gate": gname, **r} for r in
                       gate_desc(g, {k: (fam == k).to_numpy() for k in ("static", "cutin", "oncoming", "minus", "null_world")})]
     E.TFV6 = {}
