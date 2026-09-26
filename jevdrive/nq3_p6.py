@@ -147,7 +147,7 @@ def pairs(set_: str = "carla_p6") -> pd.DataFrame:
     for rd, (wa, wb) in READ_WORLDS.items():
         f = fr[fr.reading == rd]
         a = f[f.world == wa][["base_id", "seed", "k", "frame_name"]]
-        b = f[f.world == wb][["base_id", "seed", "k", "frame_name"]]
+        b = fr[fr.world == wb][["base_id", "seed", "k", "frame_name"]].drop_duplicates(["base_id", "seed", "k"])
         m = a.merge(b, on=["base_id", "seed", "k"], suffixes=("_a", "_b"))
         out.append(m.assign(reading=rd))
     p = pd.concat(out, ignore_index=True)
