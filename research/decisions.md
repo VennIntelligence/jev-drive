@@ -2696,6 +2696,10 @@ baseline 行逐位复现了第 2 条的数字。
   唯一同 checkpoint 的 RAP-DINO 从 v1 #4 掉到 v2 #13。开环 L2 与闭环 DS 无关（ρ=−0.16），与 Efficiency 同向；DS 与 Comfortness 反向。
 - (c) 全部账本里能归到 E 层的增益只有四条（FIVE-VLA RAM 的 Give_Way +26.7、RoG-DAgger 的 SR +7、TFv6 LiDAR 的 SR +6、RAP 恢复数据 v1 0.0 / v2 +4.4），
   全部只在闭环或反应式协议上显形；nuScenes、NAVSIM v1、WOD 三个开环/代理榜上没有一条增益能归到 E 层。
+  **2026-09-26 就地修正（RAM 的证据口径）**：原来把 RAM 的 E 层证据押在 Give_Way +26.7 上。B2D 的 Give_Way 只含 InvadingTurn 与 YieldToEmergencyVehicle 共 10 条路线，
+  公开逐路线结果里所有学习式方法在 YTEV 上 SR 都是 0（第 38 条），所以 Give_Way 的上限是 50%；FIVE-VLA 报的 76.67 超过这个上限，又没有逐路线结果可核。
+  在核实之前，RAM 的 E 层证据降为「同权重推理 bypass → accumulation +2.72 DS / +4.85 SR，Emergency_Brake +6.1，Overtaking +7.4」（[nohack-mechanisms.md](nohack-mechanisms.md) §1.2）。
+  同一份复核还指出：九个无 hack 方法里没有一个是只改分不改行为的；超出噪声带且落到 E 层的只有 BLUE gate（突发 hazard SR +10.8）、RAM 同权重推理、RoG-DAgger SR +7 三条。
 - (d) 同一个 ego prior 开环加分、闭环减分（FIVE-VLA 显式 ego 历史：NVIDIA 开环 ADE 改善，B2D −3.95 DS / SR −8.6）。
 - (e) 只有 Bench2Drive SR（和 Longest6 的 IP）可当 E 层证据；没有一个榜单单独报告"突发事件时反应对不对"。评测噪声：B2D 第 2–6 名间距 <0.7，
   在训练 run 间 ≈1.5 的噪声内；Longest6 单次噪声 ±5–8 大于 B2D 前 7 名总差距。
@@ -2706,6 +2710,11 @@ P5 v1 按文章 7.3 节的 12 条攻击面加固，其中四条直接从七榜�
 
 **推测**（已标明，待验证）：NAVSIM v2 前排分数里 10–15 分是"scorer 对不对准 v2 公式"；simlingo#43 里 DS +11 而 SR 一条未变，
 SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11 DS）；B2D 上 90→95 这 5 分是传感器和接口的差距而不是智能差距。
+**2026-09-26 就地修正（「接口」归因）**：上一句里的「接口」一项用错了比较对象。第 31 条的 +14.3 DS 是同一个 TFv6 checkpoint 的 route + target speed 对它自己的 waypoint 通道，
+而 SimLingo 系（LinkVLA、FIVE-VLA、SteerVLA、BLUE、RoG-DAgger）本来就输出 path + speed waypoint 加两个 PID，已经是解耦接口；+14 解释的是「TFv6 为什么不用自己的 waypoint」，
+解释不了「VLA 为什么比 TFv6 低」。TFv6 论文内部纯相机 91.6 → 加 LiDAR 94.7（+3.1，3 seed），纯相机版已与 VLA 的 90–91 同档，所以传感器那一项有 B 级证据；规则约 1 DS 且双方都有；
+而 95.2 这个数在第三方单 ckpt 重跑里是 89.6（第 38 条），这 5 分是否存在本身未定。修正后的读法：「90→95 的差距若存在，主要对应测距传感器；接口不适用于这个比较；规则不够解释」。
+同一处对 [leaderboard-vs-ability.md](leaderboard-vs-ability.md) 4.4 与 7.2 节已同步就地修正。
 
 **怎么才能定下来**（都未执行）：(1) TFv6 规则开/关 × 接口 A/B，P5 配对 + 220 路线；(2) SimLingo 同 ckpt 原版 vs 定制 Bench2Drive 目录各 3 次；
 (3) 同一冻结 checkpoint × {v1, v2, HUGSIM} × {官方权重, 各榜重调权重}。

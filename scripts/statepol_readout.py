@@ -167,7 +167,9 @@ def exam_a(data, run, planner, traffic):
     a = res["yield_rate"] >= max(0.10, 2 * res["yield_null"])
     b = res.get("order_agree", 0) >= 0.70
     cc = res["col_with"] <= res["col_without"] + 0.05
-    res["verdict"] = ("negotiates" if a and b and cc else "yields, order not human-like" if a
+    res.update(crit_a=bool(a), crit_b=bool(b), crit_c=bool(cc))
+    res["verdict"] = ("negotiates" if a and b and cc else "yields, order not human-like" if a and not b
+                      else "yields, human-like order, but more collisions with partner present" if a
                       else "no reaction to partner")
     return res
 

@@ -67,9 +67,10 @@ def _inner_splits(groups: np.ndarray, k: int = INNER):
     return list(GroupKFold(k).split(groups, groups=groups))
 
 
-def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam=None, head_out=None) -> dict:
+def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam=None, head_out=None, arms=None) -> dict:
     """Predictions (n, 40) on every row for every arm, fitted without fold f. `head_out` (a dict), when given, receives
-    the dual-stream `pair` arm's head: W, the training rows and their mean z (elicitation E1 transfers it)."""
+    the dual-stream `pair` arm's head: W, the training rows and their mean z (elicitation E1 transfers it).
+    `arms` (default: all) restricts which arms are fitted; each fitted arm is computed exactly as with all of them."""
     n = len(t)
     role, seq = t.role.to_numpy(), t.base_id.to_numpy()
     tr = np.flatnonzero((role == "train") & (fold != f))
@@ -93,6 +94,8 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam
     inner = _inner_splits(grp)
     streams = {"pair": (Q, Xop), "pair qwen": (Q,), "pair op": (Xop,)}
     for arm, parts in streams.items():
+        if arms is not None and arm not in arms:
+            continue
         Z = torch.cat([_std(x, tr) for x in parts], 1)
         Zc = Z[tr] - Z[tr].mean(0)
         mu = len(ip) / len(tr)
@@ -118,7 +121,7 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam
                 rl.event("mc_insample", fold=f, arm=arm, model=tag, group=grp_name, n=int(big.sum()),
                          slope_fit=float(np.polyfit(dt[big], dm[big], 1)[0]) if big.sum() > 2 else None,
                          slope_prior=float(np.polyfit(dt[big], dp[big], 1)[0]) if big.sum() > 2 else None)
-        if arm == "pair":           # sensitivity only: no zero constraint
+        if arm == "pair" and (arms is None or "pair (mu=0)" in arms):   # sensitivity only: no zero constraint
             W0 = _solve_pair(D, Rp, Zc, 0.0, [LAMS[best]])[0]
             out["M-C pair (mu=0)"] = prior + (Z - Z[tr].mean(0)) @ W0
         rl.event("mc_fold", fold=f, arm=arm, model=tag, lam=float(LAMS[best]), lam_edge=best in (0, len(LAMS) - 1),
@@ -132,6 +135,8 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam
     g = seq[rows].astype(str)
     inner_r = _inner_splits(g)
     for arm, w in (("hard", s_ego[rows] / s_ego[rows].mean()), ("uniform", torch.ones(len(rows), device=F.device))):
+        if arms is not None and arm not in arms:
+            continue
         score = np.zeros(len(LAMS))
         for a, b in inner_r:
             fits = _solve_weighted(Z[rows[a]], Y[a], w[a], LAMS)
