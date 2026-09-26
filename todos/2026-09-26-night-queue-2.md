@@ -101,7 +101,7 @@
   - **probe**：训练折内标准化 + L2 logistic regression（C = 1），GroupKFold(5) 按 base 路线分组；判格用 5 折 AUC 的均值，另报折间标准差和 OOF 合并 AUC。
   - **特征**：openpilot `temporal`（Cinque / Lebowski，512 维）；「`driving_vision` 输出」取 tap 表里的 `vision`（temporal 模块之前的 pooled vision encoder 输出：Cinque `mean` 512 维、
     Lebowski `view_40` 3072 维），都是 `op_streams_vis` 已抽好的；YOLO26x-seg image-plane token 集 = E5 的检测（score ≥ 0.25，行人 / 骑车人 / 车）每路相机按 score 取前 8 个，
-    每个 (类别 one-hot 3, u_c/W, v_c/H, w/W, h/H, score, mask) → 3 × 8 × 8 = 192 维，不 lift、不筛。**YOLO 只有 BA 集**（PDM 集没有检测，补跑约 1.6 GPU·h，超本节预算，写「未测」）。
+    每个 (类别 one-hot 3, u_c/W, v_c/H, w/W, h/H, score, mask) → 3 × 8 × 9 = 216 维（初稿误写 192，10:10 改正，未出数），不 lift、不筛。**YOLO 只有 BA 集**（PDM 集没有检测，补跑约 1.6 GPU·h，超本节预算，写「未测」）。
   - **desire 目标帧**：index 的 p5 行里 v_ego ≥ 5 m/s、intent = GO_STRAIGHT、前方 60 m 路线航向变化 < 10°、该 attempt 里目标帧之前至少 40 个相机帧；每个集每档最多 150 帧
     （每 attempt 最多 2 帧、相隔 ≥ 10 s，seed 0 抽样）。
   - **desire 协议**：每个目标帧三臂（无 / laneChangeLeft = 3 / laneChangeRight = 4），每臂都从目标帧前 40 帧（8 s）的零状态起跑，前 40 帧三臂逐字节相同；
