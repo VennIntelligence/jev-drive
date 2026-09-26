@@ -223,6 +223,10 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   **判格的实现**：NAVSIM 的「主指标」= PDMS（EPDMS 并列报，不进判格）。每个 模型 × arm × seed 单独判：**有害** = WOD 全部 rater 帧 RFS Δ CI 整体 < 0，或 navtest 全部 token PDMS Δ CI 整体 < 0，或 WOD straight_yaw 激活率 > 7%，或 NAVSIM 直行 token 激活率 > 7%；
   **有用** = 不有害，且 WOD Pedestrians RFS Δ 的 CI 下端 > 0 或 NAVSIM 行人组 PDMS Δ 的 CI 下端 > 0；**无害但没用** = 不有害、不有用，且主指标的全部分组 Δ（WOD 全部 + 5 个 cluster 的 RFS，NAVSIM 4 组的 PDMS）CI 都跨零；其余记「三格都不沾」照实写。ADE 与 EPDMS 只描述。
   一个 arm 的总判格 = 三个 seed 一致时的那一格，否则写「随 seed 变」并列出；主判 Cinque，Lebowski 复现。
+- 2026-09-26 09:04 CST [G0] **共享检测与 embedding 已 READY，交接说明 `$DATA_DIR/processed/real_transfer/HANDOFF.md`**（`runs/real-data-transfer/HANDOFF.md` 是它的链接）。
+  五个帧集 i3 / wod_val / navtest / wod_train / navtrain 全部 READY（每个 `yolo/<set>/READY.json`），读法 `jevdrive.real_g0.load_embed(<set>)` → (frames, (n, 64))；逐帧原始检测在 `yolo/<set>/dets.parquet`（含抬升点、走廊坐标与 embedding 槽位）。
+  检测 08:40–09:02 墙钟 22 min（5 卡 × 6 进程，843 570 张，约 645 张 / s；估计 20–25 min，未超），卡已释放；中间第一次启动因 30 个进程的线程池按宿主 208 核铺开、负载冲到约 480 而卡住，限线程后重启，结果不受影响（每张图独立）。
+  student 权重恢复：60 个 fit 的 early-stop 步数与原 run 全部相同，obs 行预测对已存预测**逐位相同**（最大差 0.0 m），权重在 `g0/students.pt`；student 在 WOD val、navtest、I3 全部行上的 Δ 已存（`g0/*_delta_<model>_<arm>_s<seed>.npz`），给 G1 当 Δ 来源。
 
 ## 结果
 
