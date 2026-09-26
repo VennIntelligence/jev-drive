@@ -307,6 +307,9 @@ run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]
             "$c" "$v" "$s" "$done_" "$req" "$wall" "$(date '+%F %T')" > "${OUT[$s]}/DONE"
         python3 -c "import sys; sys.exit(0 if ($req - $done_) / max($req, 1) <= 0.10 else 1)" || bad=1
     done
+    if [[ $c == simlingo || $c == blue ]]; then          # the author agents' debug images: output only, ~60 MB a route
+        for s in "${seeds[@]}"; do rm -rf "${OUT[$s]}/viz"; done
+    fi
     ev step_end "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"wall_h\": $wall"
     log "done $c $v seeds $3 in $wall h"
     report_now
@@ -358,7 +361,12 @@ step_done() {  # every seed dir of the step has DONE
 ready_for() {  # an examinee's inputs exist (heads exported, K's READY); else the step waits for a later pass
     case $1 in
         mc) [[ -e $G/heads_xfit/mc/READY ]] ;;
-        q2|x) [[ -e $G/heads_xfit/q2/READY ]] ;;
+        q2|x) [[ -e $G/heads_xfit/q2/READY ]] && return 0
+              [[ -e $NQ3/q2/closed_loop_head/READY ]] || return 1
+              log "lane C's head is READY: exporting the cross-fitted Q2 head (GPU ${GPUS%% *})"
+              CUDA_VISIBLE_DEVICES=${GPUS%% *} taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_x export-q2 >> "$G/export_q2.log" 2>&1 \
+                  || error "cross-fitted Q2 export failed" "$G/export_q2.log"
+              ev export '"what": "q2 cross-fit"'; [[ -e $G/heads_xfit/q2/READY ]] ;;
         k*) [[ -e $K/READY ]] && declare -F k_cfg >/dev/null ;;
         *) return 0 ;;
     esac
