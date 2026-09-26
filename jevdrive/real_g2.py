@@ -520,23 +520,12 @@ def _ci(r, k=2, scale=1.0):
     return f"{scale * r.delta:+.{k}f} [{scale * r.lo:+.{k}f}, {scale * r.hi:+.{k}f}]"
 
 
-def summarize(out, fit_run: str, transfer_run: str, g1c_wod_run: str, navtab_run: str):
+def summarize(out):
+    """Tables from the result files pulled into `out` (i3_*, wod_*, navsim_*, g1c_*): g2_table, i3_reference, g1c_table."""
     out = Path(out)
-    out.mkdir(parents=True, exist_ok=True)
-    D = data_dir()
-    fl = pd.read_csv(D / fit_run / "i3_flip_rates.csv")
-    pv = pd.read_csv(D / fit_run / "i3_paired.csv")
-    wd = pd.read_csv(D / transfer_run / "wod_deltas.csv")
-    wa = pd.read_csv(D / transfer_run / "wod_activation.csv")
-    na = pd.read_csv(D / transfer_run / "navsim_activation.csv")
-    nt = pd.read_csv(D / navtab_run / "navsim_paired.csv")
-    for f in ("i3_flip_rates.csv", "i3_paired.csv", "i3_g1c_const.csv"):
-        pd.read_csv(D / fit_run / f).to_csv(out / f, index=False)
-    for f in ("wod_deltas.csv", "wod_activation.csv", "navsim_activation.csv"):
-        pd.read_csv(D / transfer_run / f).to_csv(out / f, index=False)
-    nt.to_csv(out / "navsim_paired.csv", index=False)
-    for f in ("g1c_wod_deltas.csv", "g1c_wod_activation.csv", "g1c_wod_const.csv"):
-        pd.read_csv(D / g1c_wod_run / f).to_csv(out / f, index=False)
+    fl, pv = pd.read_csv(out / "i3_flip_rates.csv"), pd.read_csv(out / "i3_paired.csv")
+    wd, wa = pd.read_csv(out / "wod_deltas.csv"), pd.read_csv(out / "wod_activation.csv")
+    na, nt = pd.read_csv(out / "navsim_activation.csv"), pd.read_csv(out / "navsim_paired.csv")
     fp = fl[fl.scope == "pooled"].set_index("examinee")
     ref = {m: fp.loc[f"CARLA M-C pair [{m}]", "flip_rate"] for m in MODELS}
     rows, verd = [], []
@@ -545,7 +534,7 @@ def summarize(out, fit_run: str, transfer_run: str, g1c_wod_run: str, navtab_run
             for s in SEEDS:
                 ex = f"G2 {head} s{s} [{m}]"
                 r = fp.loc[ex]
-                sel = lambda t: t[(t.model == m) & (t.head == head) & (t.seed == s) & (t.stats == "i3") & (t.gate == "none")]  # noqa: E731
+                sel = lambda t: t[(t.model == m) & (t["head"] == head) & (t.seed == s) & (t.stats == "i3") & (t.gate == "none")]  # noqa: E731
                 w = sel(wd)
                 w = w[w.judge == "RFS (rater)"].set_index("scope")
                 a = sel(wa).set_index("scope").activation
@@ -555,7 +544,7 @@ def summarize(out, fit_run: str, transfer_run: str, g1c_wod_run: str, navtab_run
                 why = [] if i3_ok else [f"I3 flip {100 * r.flip_rate:.1f}% < {100 * ref[m]:.1f}%" if r.flip_rate < ref[m] else
                                         f"null {100 * r.false_flip_null_oos:.1f}% > 7%"]
                 why += [] if wod_ok else ["WOD Cut_ins CI < 0" if w.loc["Cut_ins", "hi"] < 0 else "straight activation > 7%"]
-                n = na[(na.model == m) & (na.head == head) & (na.seed == s)].set_index("scope").activation
+                n = na[(na.model == m) & (na["head"] == head) & (na.seed == s)].set_index("scope").activation
                 nv = nt[(nt.arm == f"G2 {head} s{s} {m}") & (nt.metric == "PDMS")].set_index("group")
                 rows.append({"model": m, "head": head, "seed": s, "tau": f"{r.tau_model:.2f}",
                              "I3 flip": f"{100 * r.flip_rate:.1f} [{100 * r.flip_lo:.1f}, {100 * r.flip_hi:.1f}]",
@@ -565,8 +554,7 @@ def summarize(out, fit_run: str, transfer_run: str, g1c_wod_run: str, navtab_run
                              "WOD RFS all": _ci(w.loc["all"]), "WOD RFS Cut_ins": _ci(w.loc["Cut_ins"]),
                              "WOD RFS Ped.": _ci(w.loc["Pedestrians"]), "WOD act straight": f"{100 * a['straight_yaw']:.1f}%",
                              "WOD Delta med (m)": f"{sel(wa).set_index('scope').delta_mag_median_m['all']:.2f}",
-                             "NAV PDMS all": _ci(nv.loc["all"]) if "all" in nv.index else "",
-                             "NAV PDMS veh.": _ci(nv.loc["vehicle_approach"]) if "all" in nv.index else "",
+                             "NAV PDMS veh.": _ci(nv.loc["vehicle_approach"]) if "vehicle_approach" in nv.index else "",
                              "NAV act straight": f"{100 * n['straight']:.1f}%",
                              "verdict": "pass" if i3_ok and wod_ok else "fail: " + "; ".join(why)})
                 verd.append({"model": m, "head": head, "seed": s, "i3_ok": i3_ok, "wod_ok": wod_ok, "pass": i3_ok and wod_ok})
@@ -586,6 +574,10 @@ def summarize(out, fit_run: str, transfer_run: str, g1c_wod_run: str, navtab_run
                        "null ff": f"{100 * r.false_flip_null_oos:.1f}%", "non-reactive ff": f"{100 * r.false_flip_nonreactive:.1f}%"})
     pd.DataFrame(cr).to_csv(out / "i3_reference.csv", index=False)
     (out / "i3_reference.md").write_text(pd.DataFrame(cr).to_markdown(index=False))
+    g = nt[nt.arm.str.startswith("G1c")]
+    gt = g.assign(ci=[_ci(r) for r in g.itertuples()]).pivot_table(index=["arm", "metric"], columns="group", values="ci", aggfunc="first")
+    gt.to_csv(out / "g1c_nav_table.csv")
+    (out / "g1c_nav_table.md").write_text(gt.to_markdown())
 
 
 def figs(res_dir, out_dir, model: str = "cinque"):
@@ -664,12 +656,11 @@ def main():
     ap.add_argument("--seeds", default="0,1,2")
     ap.add_argument("--transfer-run", default="")
     ap.add_argument("--g1c-run", default="", help="the g1c-nav-write run dir")
-    ap.add_argument("--runs", default="", help="summary: fit,transfer,g1c-wod,nav-table run dirs")
     ap.add_argument("--out", default="research/results/real-data-transfer/g2")
     ap.add_argument("--fig-out", default="research/figs")
     a = ap.parse_args()
     if a.what == "summary":
-        summarize(a.out, *a.runs.split(","))
+        summarize(a.out)
         return
     if a.what == "figs":
         figs(a.out, a.fig_out)
