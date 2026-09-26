@@ -280,3 +280,28 @@ class T3Agent(SensorAgent):
             {"ticks": self._tick, "stop": p4.STOP["why"] or "route_end", "t_trigger": self._t_trig,
              "need_k": self.need_k, "bd_errors": self._errors, "shadow": self.cfg["shadow"], "ms_mean": ms,
              "ms_p95": {k: round(1e3 * float(np.percentile(v, 95)), 2) for k, v in self._t.items() if v}}))
+
+
+def smoke_check(capture: str, model_dir: str):
+    """The recorder's model path (the author's SensorAgent.setup under this file's env config and shims, forward with
+    the reseed) on the BridgeDrive smoke's captured network inputs, against the predictions the author's agent made
+    live on those ticks (scripts/top10_smoke/bridgedrive_smoke.py)."""
+    agent = SensorAgent.__new__(SensorAgent)
+    with mock.patch("shutil.which", return_value="/bin/true"):
+        agent.setup(model_dir)
+    out = []
+    for f in sorted(Path(capture).glob("frame_*.pth")):
+        rec = torch.load(f, weights_only=False)
+        data = {k: (v.to(agent.device, torch.float32) if isinstance(v, torch.Tensor) else v) for k, v in rec["data"].items()}
+        torch.manual_seed(0)
+        with torch.inference_mode():
+            p = agent.closed_loop_inference.forward(data)
+        out.append({"frame": f.name, **{k: float((getattr(p, k).detach().float().cpu() - rec["live"][k].float()).abs().max())
+                                         for k in ("pred_future_waypoints", "pred_route", "pred_target_speed_scalar",
+                                                   "pred_target_speed_distribution")}})
+    print(json.dumps({"frames": len(out), "max_abs": {k: max(o[k] for o in out) for k in out[0] if k != "frame"}}, indent=1))
+
+
+if __name__ == "__main__":
+    import sys
+    smoke_check(sys.argv[1], sys.argv[2])
