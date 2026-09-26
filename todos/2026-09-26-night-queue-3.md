@@ -142,6 +142,26 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - **选择性表**：反应帧翻转 − 非反应帧误翻，六族 + openpilot + M-C，P5 与 I3 各一张（已有读数，纯 CPU）；< 10 pp 标「见车就减速」。
 - **scorer argmax 脆弱性**：DrivoR、WA-JEPA 补 T1 同款扰动（±0.5° yaw、±5 cm 高度），报换轨迹率与平均位移，描述性。
 
+- 2026-09-26 16:50 CST [D] **Q5 的操作化**（写于 Q5 的任何数字之前；此前只读过 T1 / T2 / T3 已发表的表）。代码 `jevdrive/nq3_q5.py`（请求、扰动、读数、表）与 `scripts/nq3_d/{drivor,wajepa}_arms.py`（模型 env 里的推理器），入口 `scripts/nq3_d/q5.sh`，run 在 `runs/nq3/q5/`，小表 `research/results/nq3/q5/`。
+  (1) **请求**：nuScenes = T2 的 `runs/top10_t2/requests/nusc.npz` 原样（main 4 636，ego 由位姿差分，[T2-real] 10:25）；navtest = 我们冻结的 navtest 索引（`navsim_zs.load_index`，12 146 token）：4 个历史帧 × L0 / F0 / R0 / B0 的原图、相对当前帧的历史位姿、当前帧的 velocity / acceleration、`driving_command` 的 argmax。
+  开跑前核对：16 个 token 上这些字段与 NAVSIM `SceneLoader` 给 agent 的逐项相同，WA-JEPA fp32 在这些 token 上的输出与 T2 已导出的 fp32 轨迹逐位相同；不过就停。
+  (2) **扰动臂**：变量 S = (vx, vy)、A = (ax, ay)、C = 命令 one-hot。「置零」：S、A 置 0，C 置全零向量；「置常数」（todo 里的「cv 常数」）：S、A 换成该评测集全体的均值（nuScenes 4 636 帧、navtest 12 146 token 各算一次），C 换成该集最常见的命令，
+  即一个不带逐帧信息的数据集常数（A 的均值约为 0，等于匀速假设）；「换帧」：换成同一 scene（nuScenes）/ 同一 log（navtest）里另一帧的值，组内按时间排序后循环平移 ⌊n/2⌋ 位，组里只有一帧的保留原值（个数照报）。
+  每个模型 9 个单变量臂 + base + ALL0（S、A、C 同时置零）；WA-JEPA 另加 H0（history_trajectory 四个位姿置零，即「一直停着」），因为它的历史位姿本身带着速度，只扰 ego_status 会低估它对 ego 的依赖。
+  **判格臂 = S0、A0、C0**（todo「分别置零」），其余全部是描述。
+  (3) **精度与路径**：每个模型所有臂（含 base）走同一条路径：WA-JEPA = 推理器 bf16 autocast、batch 1（T2 考 nuScenes 的路径；nuScenes 的 base 必须与 T2 已存的 `nusc_wajepa` 逐位相同），T2 的 navtest fp32 EPDMS 91.71 只作参照；
+  DrivoR = 推理器 fp32、batch 16（base 与 T2 的 `nusc_drivor` 逐位相同）。NAVSIM 一律用我们的 devkit v1.1 PDMS（`navsim_zs_score.sh`，回放 agent），base 也在同一条路径上重打。
+  (4) **判据的操作化**：nuScenes 读数 = `top10_t2_real.exam_nusc` 的指标原样（VAD 口径 L2 1 / 2 / 3 s 均值、两种 collision），scene bootstrap 10 000，臂 − base 配对。优势 adv = L2(CV) − L2(模型)；
+  S0 / A0 / C0 任一臂的 (adv_base − adv_arm) / adv_base ≥ 0.5（点估计，配对 CI 并报）→「nuScenes 分数主要来自 ego prior」。**只在 base 对 CV 的优势 CI 整体 > 0 时判**：DrivoR 在 T2 里对 CV −0.011 [−0.078, +0.059]，写「不适用（本来没有对 CV 的优势）」，只报 ΔL2。
+  NAVSIM：navtest 全部 token 的 v1.1 PDMS，臂 − base 逐 token 配对 bootstrap 10 000；任一判格臂 base − arm ≥ 5（点估计）→ 同一标注。
+  (5) **选择性表**：只读已存的合并行（`research/results/top10-exams/` 的 `t1_*`、`t2_*`、`p5_t3_*`，M-C 与 openpilot `ridge_late` 的 P5 run `runs/reactivity/mc-carla_p5v1_ba*/flip_rates.csv`、I3 考试 `runs/elicitation/i3-exam/*/flip_rates.csv`），
+  选择性 = 反应帧翻转率 − 非反应帧误翻率（点估计；已存的是汇总表，不重做逐帧 bootstrap）。标注顺序：翻转率 CI 下界 ≤ 该考生样本外 null false-flip →「无反应」；否则选择性 < 10 pp →「见车就减速」。
+  P5 行：SparseDriveV2、ZTRS、DrivoR、WA-JEPA、BridgeDrive / BLUE / SimLingo / TFv6 的 waypoint 2 s 通道、openpilot `ridge_late` 与 M-C 双流（Cinque / Lebowski，seed 0）；I3 行：前四个 + openpilot + M-C，其余 I3 没考过，写「未考」。
+  (6) **scorer argmax 扰动**（描述）：navtest 索引顺序里每 ⌊12 146 / 256⌋ 个取一个，共 256 token。整个 rig 一起动（四路相机、四个历史帧同一个扰动），5 个臂：恒等、yaw ±0.5°（绕 ego z）、高度 ±5 cm。
+  yaw 用 `navsim_rig` 的纯旋转重投影（源 = 该相机自己的原图，边缘看不到的像素为黑）；高度没有深度就无法精确渲染，用「地平面 + 无穷远」近似：虚拟相机的光线若在 200 m 内打到地面（NAVSIM 后轴系 z = −0.36 m，G0 的值）就取交点再投回原相机，否则按无穷远方向处理（地面以上的物体被当成无穷远，是近似）。
+  五个臂都经过同一套渲染 + JPEG q95 落盘，比较对象是恒等臂（恒等臂对原图另报一次，是重编码的噪声地板）。读数：DrivoR 换选中候选的比例（任一位姿差 > 1e-3 m）与平均位移；WA-JEPA 是连续输出，报平均位移与位移 > 0.1 m 的比例。
+  (7) **资源**：GPU 6（≤ 20 GB，与 lane C 共卡），CPU 全部 `taskset -c 180-199`，devkit ≤ 16 个 worker、每个 1 个 BLAS 线程。
+
 ### Q6. 主表口径统一 + 第 48 条的两个后续
 
 - 按 [ablation-matrix-inventory](../research/ablation-matrix-inventory.md) 的 15 处不一致逐条定口径，从已存特征与 checkpoint 重算 backbone × head × 考卷主表（P5 v1 BA / PDM、I3、WOD、NAVSIM；P6 与闭环列等 Q1 / Q2 / CL 出来后补）。与旧表不同的格子逐个写原因；与 decisions 冲突的就地修正。
