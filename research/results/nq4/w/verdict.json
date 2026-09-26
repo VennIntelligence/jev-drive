@@ -1,0 +1,18 @@
+{
+ "criterion1_by_class": {
+  "cutin": false,
+  "obstacle": true,
+  "ped": false
+ },
+ "criterion1": false,
+ "criterion2_by_test": {
+  "lat": false,
+  "long": false
+ },
+ "criterion2": false,
+ "seeds": [
+  0,
+  1,
+  2
+ ]
+}
