@@ -108,7 +108,8 @@ def exam_a(data, run, planner, traffic):
         if ep in idx["nopartner"] and idx["nopartner"][ep] in nop:
             rn = nop[idx["nopartner"][ep]]
             eff.append(deltas(rb, rn, m))
-            cols.append((outcome(rb)[0], outcome(rn)[0]))
+            af = lambda r: bool(((r.get("metrics") or {}).get("at_fault_collision_rate") or 0) > 0)
+            cols.append((outcome(rb)[0], outcome(rn)[0], af(rb), af(rn)))
         if ep in idx["nullrm"] and idx["nullrm"][ep] in nul:
             nulls.append(deltas(rb, nul[idx["nullrm"][ep]], m))
         # passing order on crossing pairs (log vs sim), partner = recorded partner state
@@ -159,7 +160,8 @@ def exam_a(data, run, planner, traffic):
                lat_rate=float((el3 > tau_l).mean()), lat_null=float((nl3 > tau_l).mean()),
                dprog5_median=float(np.median(ep5)), dv3_median=float(np.median(arr(eff, "dv3"))))
     c = np.array(cols)
-    res.update(col_with=float(c[:, 0].mean()), col_without=float(c[:, 1].mean()))
+    res.update(col_with=float(c[:, 0].mean()), col_without=float(c[:, 1].mean()),
+               atfault_with=float(c[:, 2].mean()), atfault_without=float(c[:, 3].mean()))  # descriptive only
     o = np.array(order)
     if len(o):
         res.update(n_cross=len(o), order_agree=float((o[:, 0] == o[:, 1]).mean()),
