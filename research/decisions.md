@@ -3384,7 +3384,7 @@ negotiation 的车流表是我们定的；Emergency 的 t_div 早于前向可见
 **会推翻或推进本条的证据**：修过的放置 null 过门后，考生在放置 null 上的 bypass 率 ≈ x₁₀（那是「只对有东西反应」，P5 的行人翻转也要打折）；换成有 bypass anchor 的词表后 `cls_late` 仍 Δm_bypass ≈ 0（那才是 representation 的问题）；
 第二个 expert（例如 TFv6 的 waypoint 当 teacher）在同一批世界上与 PDM-Lite 的模式一致率低（考卷的标签依赖单一规则 expert）。
 
-## 51. 榜单最优的 Hydra 打分头在 CARLA 配对考卷上不可比；把 CARLA 激发的反应 Δ 经真实数据 gate 叠到它上面，NAVSIM 掉 5–8 分，「能力包」不成立（**待定**，NAVSIM navtest + P5 v1 BA + I3，3 seed，两个 openpilot 模型）
+## 53. 榜单最优的 Hydra 打分头在 CARLA 配对考卷上不可比；把 CARLA 激发的反应 Δ 经真实数据 gate 叠到它上面，NAVSIM 掉 5–8 分，「能力包」不成立（**待定**，NAVSIM navtest + P5 v1 BA + I3，3 seed，两个 openpilot 模型）
 
 2026-09-26。预登记、兼容检查与全部表在 [todos/2026-09-26-night-queue-2.md](../todos/2026-09-26-night-queue-2.md) N3 节（[B] 09:58 / 10:10）与结果节，小表 [results/night2/N3/](results/night2/N3/)，图 [night2-n3-heads](figs/night2-n3-heads.png)。
 问两件事：榜单最优的 head（第 40 条 6 的 Hydra 式打分头，NAVSIM 84 PDMS）在配对考卷上保不保反应；把能力 head（M-C 配对差分 Δ，第 42 条）经 G1 选出的真实数据 gate g₂（第 44 条）叠到它上面，榜单分和反应能不能都留住。
