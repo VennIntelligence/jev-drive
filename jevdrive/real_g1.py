@@ -805,11 +805,58 @@ def summarize(out, wod_run="", i3_run="", nav_run="", navtab_run="", sel_run="")
         pd.read_csv(D / sel_run / "selection_auc.csv").to_csv(out / "selection_auc.csv", index=False)
 
 
+def figs(res_dir, out_dir, model: str = "cinque"):
+    """One figure, Cinque: I3 flip change vs the prior, WOD RFS delta (all rater frames), WOD straight-frame activation and
+    NAVSIM PDMS delta (all tokens), per gate, M-C and student A (3 seeds) side by side."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    res_dir, out_dir = Path(res_dir), Path(out_dir)
+    gates = ["none", "g1", "g2", "g3"]
+    srcs = [("mc", "M-C (Qwen + op)", plots.OKABE_ITO[6], "o", 0.0)] + \
+           [(f"stAs{sd}", "Student A (op + YOLO)" if sd == 0 else None, plots.OKABE_ITO[5], "s", 0.12 + 0.06 * sd) for sd in SEEDS]
+    x = np.arange(len(gates))
+    i3 = pd.read_csv(res_dir / "i3_paired_vs_prior.csv")
+    i3 = i3[i3.scope == "pooled"]
+    wod = pd.read_csv(res_dir / "wod_deltas.csv")
+    act = pd.read_csv(res_dir / "wod_activation.csv")
+    nav = pd.read_csv(res_dir / "navsim_paired.csv") if (res_dir / "navsim_paired.csv").exists() else None
+
+    def i3_name(src, g):
+        base = f"M-C pair [{model}]" if src == "mc" else f"student A s{src[-1]} [{model}]"
+        return base if g == "none" else f"{base} x {g}"
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, ax = plt.subplots(1, 4, figsize=(plots.PAGE, 1.9))
+        for src, lab, c, mk, off in srcs:
+            r = i3.set_index("examinee").reindex([i3_name(src, g) for g in gates])
+            ax[0].errorbar(x + off - 0.09, 100 * r.delta, yerr=[100 * (r.delta - r.lo), 100 * (r.hi - r.delta)], fmt=mk, color=c,
+                           ms=3, lw=0.8, capsize=1.2, label=lab)
+            w = wod[(wod.source == src) & (wod.model == model) & (wod.scope == "all") & (wod.judge == "RFS (rater)")].set_index("gate").reindex(gates)
+            ax[1].errorbar(x + off - 0.09, w.delta, yerr=[w.delta - w.lo, w.hi - w.delta], fmt=mk, color=c, ms=3, lw=0.8, capsize=1.2)
+            a = act[(act.source == src) & (act.model == model) & (act.scope == "straight_yaw")].set_index("gate").reindex(gates)
+            ax[2].errorbar(x + off - 0.09, 100 * a.activation, yerr=[100 * (a.activation - a.lo), 100 * (a.hi - a.activation)], fmt=mk,
+                           color=c, ms=3, lw=0.8, capsize=1.2)
+            if nav is not None:
+                n = nav[(nav.arm.isin([f"{src} {g} {model}" for g in gates])) & (nav.metric == "PDMS") & (nav.group == "all")]
+                n = n.assign(gate=n.arm.str.split().str[1]).set_index("gate").reindex(gates)
+                ax[3].errorbar(x + off - 0.09, n.delta, yerr=[n.delta - n.lo, n.hi - n.delta], fmt=mk, color=c, ms=3, lw=0.8, capsize=1.2)
+        for a_, yl in zip(ax, ("I3 flip vs prior (pp)", r"WOD $\Delta$RFS, all rater frames", "WOD straight activation (%)",
+                               r"NAVSIM $\Delta$PDMS, navtest")):
+            a_.axhline(0, color="0.5", lw=0.6)
+            a_.set_xticks(x, ["none", "$g_1$", "$g_2$", "$g_3$"])
+            a_.set_xlim(-0.5, len(gates) - 0.3)
+            a_.set_ylabel(yl)
+        ax[2].axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
+        ax[2].text(len(gates) - 0.35, 100 * ACT_HARM + 0.4, "7%", ha="right", va="bottom", fontsize=6.5, color="0.3")
+        fig.tight_layout(w_pad=0.8)
+        plots.legend_below(fig, ax[0], ncol=2)
+        plots.save(fig, out_dir, "real-g1-gates")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("g1-wod", "g1-nav", "g2", "select", "i3", "wod", "nav-write", "nav-table", "summary"))
+    ap.add_argument("what", choices=("g1-wod", "g1-nav", "g2", "select", "i3", "wod", "nav-write", "nav-table", "summary", "figs"))
     ap.add_argument("--g1-run", default="", help="the g1 fit run dir (relative to DATA_DIR)")
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--oof-rows", default="", help="g1-wod: selection rows file -> out-of-fold fits")
@@ -819,11 +866,15 @@ def main():
     ap.add_argument("--g2-run", default="", help="the g2 run dir; given -> g2 joins the arms")
     ap.add_argument("--runs", default="", help="summary: wod,i3,nav-write,nav-table,select run dirs (empty = skip)")
     ap.add_argument("--out", default="research/results/real-data-transfer/g1")
+    ap.add_argument("--fig-out", default="research/figs")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))
     models = tuple(a.models.split(","))
     if a.what == "summary":
         summarize(a.out, *a.runs.split(","))
+        return
+    if a.what == "figs":
+        figs(a.out, a.fig_out)
         return
     rl = RunLog("real-data-transfer", a.what)
     if a.what == "g1-wod":
