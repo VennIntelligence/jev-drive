@@ -338,6 +338,19 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   **11:39 更新**：I3 补渲在停之前已全部完成：65 / 65 个场景、68 728 个视图、5.8 GB（`processed/hugsim_pairs_10hz/`）；核对：前三路 5 Hz 帧 **26 136 / 26 136 张与原 JPEG 逐字节相同**（= 原集合全部 JPEG），
   判据 max |Δ| = 0 通过。续跑命令里的第 1 步不再需要。
   **事故**：NAVSIM 子执行员 11:06:53 清理自己的进程时用了 `pgrep -f run_pdm_score_multi_gpu`，误杀了 T1 的 `t1-nav-sd`（SparseDriveV2 navtest，37%，exit 143）；已报 main 转告 T1。
+- 2026-09-26 12:40 CST [T3] 开工（BridgeDrive + BLUE 的 P5 v1 BA 重录与考试）。先核对了规模：BA 考卷的索引（`processed/carla_p5v1_ba`）不是 322 个 run，
+  而是 707 个世界（322 个 v1 新录 + 385 个从 v0 链接进 `gen-ba` 的），其中 570 个世界出了 obs / null 帧（19 428 个唯一帧）；每个世界只需录到它最后一个被引用的 tick，
+  合计 13.5 万 tick（全长是 30.5 万）。所以重录这 570 个世界、各录到最后引用帧为止，工作量与 5.4 估的 322 个全长 run 同量级。**分步估时**：
+
+  | 步 | 内容 | 墙钟 | GPU·h |
+  |:--|:--|--:|--:|
+  | 1 | 工程：recorder（BridgeDrive shadow + BLUE 输入落盘）、BLUE 离线 runner、判卷 | 2 h | — |
+  | 2 | GPU 4 上 ≤ 2 个 server 的 smoke：2 对（含 null）重录；expert 轨迹对原记录逐 tick 比；BridgeDrive 5 Hz shadow 对作者 20 Hz run_step、BLUE 离线对作者 agent 的等价检查；每 tick 分项耗时 | 1 h | 0.3 |
+  | 3 | 等 night-queue-2 A 收工 | — | — |
+  | 4 | 批量重录 570 个世界（GPU 0–4，每卡 ≤ 6 server）；按 smoke 的分项耗时再估，> 3 h 先做 2 对 profiling | 1–1.5 h（估 25–30 server·h） | 含 BridgeDrive 前向约 1 |
+  | 5 | BLUE 离线推理（19 428 帧 + 每 tick 的 UKF / route planner），与 4 重叠 | 1 h | 1.5 |
+  | 6 | 判卷（`p5_exam.exam` 原样 + E4 (b) 按对）、creep 单列、表、图、回填 | 1.5 h | — |
+  | 合计 | | 约 7 h（不含等卡） | 约 3 |
 
 ## 结果
 
