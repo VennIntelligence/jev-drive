@@ -345,3 +345,61 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 ## 结果
 
 （按节追加，每条带出处路径。）
+
+### N5（执行员 C，2026-09-26 11:40 CST；DA3 副读数待 box 重启后补）
+
+run：深度 `$DATA_DIR/processed/night2/n5/dets/<检测>-<模型>/`，评测 `runs/night2/n5/eval/20260926-104953`（平地）与 `20260926-105909`（UniDepth），GPU 3；
+小表 [research/results/night2/N5/](../research/results/night2/N5/)（`recall.csv` 全部读数，`recall_main.md`，`placement_ratio_unidepth.csv`）。代码 `jevdrive/n5_depth.py`、`scripts/n5_depth.sh`、`scripts/n5_depth_setup.sh`。
+
+| 行人 BEV 召回（匹配门 max(2 m, 0.1 d)） | P5 0–10 / 10–20 / **20–40 m** | nuScenes 0–10 / 10–20 / **20–40 m** | P5 hazard 行人全部 / ≤ 20 m | 判格（20–40 m：≥ 0.40 修法成立，< 0.30 不够） |
+|:--|:--|:--|:--|:--|
+| YOLO26x-640 + 平地（第 45 条基线，复现） | 0.90 / 0.71 / 0.131 | 0.67 / 0.44 / 0.219 | 0.50 / 0.89 | — |
+| **YOLO26x-640 + UniDepth v2（主读数）** | 0.85 / 0.73 / **0.397** | 0.94 / 0.82 / **0.574** | 0.68 / 0.93 | P5 **之间**（差 0.003 到线）；nuScenes **成立** |
+| SAM 3.1 + 平地 | 0.90 / 0.68 / 0.127 | 0.65 / 0.44 / 0.206 | 0.49 / 0.88 | — |
+| SAM 3.1 + UniDepth v2（副） | 0.86 / 0.72 / 0.489 | 0.85 / 0.78 / 0.561 | 0.73 / 0.93 | 两个都成立（不进判格） |
+| 图像平面召回（不经 BEV，YOLO26x，第 45 条 side） | 0.91 / 0.79 / 0.46 | 0.74 / 0.66 / 0.61 | — | 上界参照 |
+| 固定 2 m 门（side），YOLO26x + UniDepth / 平地 | 20–40 m：0.320 / 0.107 | 20–40 m：0.459 / 0.170 | 0.64 / 0.49 | — |
+
+**判定（按登记，主读数）**：nuScenes 20–40 m 行人 0.219 → 0.574，过 0.40；P5 0.131 → 0.397，落在 0.30–0.40 之间（差 0.003 到线，如实写「之间」）。
+两个数据集没有同时过线，按登记不写「得到修法」，分数据集写：**真实相机（nuScenes）上按内参给的单目 metric depth 就把远处放置修好了；CARLA 上修回了大半但没过线**。
+不是「需要地面高度」那一格（两边都 ≥ 0.30）。近处没有被弄坏（第 45 条 YOLO26x-depth 不给内参时 P5 0–10 m 从 0.90 掉到 0.48）：P5 0–10 m 0.90 → 0.85（小降），nuScenes 0–10 m 0.67 → 0.94。
+nuScenes 上 BEV 召回超过图像平面召回，是两个口径的定义差（图像平面要求 GT footprint 最近点落在框内，近处和截断的行人常落在框外），不是矛盾。
+深度 / 平地放置距离比的中位数：P5 行人 20–40 m 0.85、车辆 0.90；nuScenes 行人 0.94–0.98、车辆 1.0–1.06——P5 的放置整体偏近约 10–15%，这是 CARLA 渲染对单目深度的域差（推测），P5 没过线的主因。
+副读数 DA3METRIC-LARGE 的 P5 部分已算完、nuScenes 部分被 box 重启打断，恢复后补（命令见 11:13 条目），不影响判格。
+
+### N6（执行员 C，2026-09-26 11:30 CST）
+
+run：特征 `processed/carla_p5v1_ba/bb_{vjepa2,dinov2,siglip2}/`、`op_small_vis/`；拟合 `runs/night2/n6/fit-seed{0,1,2}-cuda/20260926-1109*`（GPU 3，`--eigh cuda`），CPU `eigh` 复现 run `runs/night2/n6/fit-seed0/20260926-101157`；
+小表 [research/results/night2/N6/](../research/results/night2/N6/)（`summary.csv` 三 seed 汇总、`criteria_seeds.csv` 逐 seed、`qwen_reproduction.csv`）。代码 `jevdrive/n6_backbones.py`、`scripts/n6_{extract,fit,op_small}.sh`。
+
+P5 v1 BA，行人 reactive 帧 406 个，prior = openpilot Cinque `ridge_late`，三个 route-fold seed 的均值 [最小, 最大]；判据：每个 seed 的行人翻转 CI 下界 > 该考生样本外 null false-flip + 10 pp。
+
+| backbone（主 tap） | `ridge_late` 行人 / cut-in | **pair-Δ 单流 行人** | 最小 CI 下界 | null（oos） | pair-Δ cut-in / 对 prior Δ | 双流（+ Cinque）行人 | 判格 |
+|:--|:--|:--|--:|--:|:--|:--|:--|
+| Qwen3-VL-4B `L18_last`（参照，复现第 42 条） | 0.0% / 0.0% | 41.5% [40.4, 42.1] | 32.4% | 5.2% | 73.0% / −4.6 pp | 43.1% | 3/3 过 |
+| **V-JEPA 2 ViT-L `mean`**（4 帧 clip） | 0.0% / 0.0% | **47.0% [45.8, 47.8]** | 36.8% | 5.0% | 77.0% / −0.6 pp | 47.5% | **有 E 层信号**（3/3） |
+| **SigLIP2 so400m `patch_mean`** | 0.0% / 12.1% | **33.8% [30.5, 37.0]** | 20.5% | 5.0% | 74.0% / −3.6 pp | 40.6% | **有 E 层信号**（3/3） |
+| **DINOv2-B `patch_mean`** | 0.0% / 0.2% | **7.1% [4.2, 10.3]** | 2.1% | 4.9% | 80.2% / +2.6 pp | 18.0% | **没有**（0/3） |
+| **openpilot small `temporal`** | 0.2% / 42.7% | **3.0% [2.0, 3.7]** | 0.3% | 4.8% | 82.9% / +5.3 pp | 7.6% | **没有**（0/3） |
+| DINOv3 | — | — | — | — | — | — | **未测**（无权重） |
+
+副 tap 同向：V-JEPA `last_mean` 46.6%（3/3）、SigLIP2 `pooled` 35.4%（3/3）、DINOv2 `cls` 11.1%（0/3）。Lebowski prior（side）：V-JEPA 45.7%、SigLIP2 32.1%、DINOv2 10.3%、small 7.6%、Qwen 37.6%，判格不变。
+Qwen 行复现：CPU `eigh` 的 seed 0 与已存 M-C「pair qwen」criteria 逐位相同（42.18% / 39.16%），预测最大差 0.6 mm（与 prior 自身的差相同，GPU ridge 的浮点不确定性）；GPU `eigh` 对 CPU 0.5 mm。
+
+读法：
+1. **均匀 imitation 的 `ridge_late` 在所有通用 backbone 上行人翻转都是 0**，与第 42 条的 Qwen 一样；信号只有配对差分才激发得出来。所以「冻结通用特征 + ridge 在 P5 上是 0」不能读成特征里没有 E 层信息。
+2. 配对差分下 V-JEPA 2（47.0%）与 Qwen（41.5%）同一水平（seed 0 的 CI [36.8, 54.9] 与 [33.5, 50.0] 重叠，不写「更好」），SigLIP2 低一档（33.8%），DINOv2 与 openpilot small 贴地板。
+   V-JEPA 吃的是 4 帧 clip、DINOv2 / SigLIP2 只看当前帧，所以「视频 vs 图像」和「有没有时间」是混在一起的；SigLIP2 过而 DINOv2 不过，提示语言对齐的图像特征里行人更线性可读（推测，未分离：分辨率 384² 对 350 × 322、pooling 相同）。
+3. openpilot small 与 Cinque / Lebowski 一样没有行人信息（第 42 条 D0），cut-in 的 `ridge_late` 只有 42.7%（Cinque 76.9%），车辆反应的读出随模型代际变强。
+4. 与 WA-JEPA 的 +6 EPDMS 不是同一口径：那是 NAVSIM 上微调 encoder、全 token 网格、EPDMS；这里是冻结、mean-pool、CARLA 配对翻转。能说的只是：冻结的 V-JEPA 2 在 imitation 下与其他通用 backbone 同档（第 24 / 40 条），在配对差分下它的行人信号至少与 Qwen 一样强。
+
+![N6 backbone flips](../research/figs/night2-n6-backbone-flips.png)
+
+图：P5 v1 BA、Cinque prior，三个 seed 的均值，误差线是 seed 间的最小–最大；黑色短横是该考生的 null false-flip + 10 pp（判据线）。要看的是 (a) 里灰色 `ridge_late` 全部为 0、只有配对差分把 V-JEPA / Qwen / SigLIP2 抬过线，(b) 里 cut-in 在所有 pair-Δ 上都保住了。
+
+![N5 depth recall](../research/figs/night2-n5-depth-recall.png)
+
+图：YOLO26x-640 检测，行人 BEV 召回按距离档；灰 = 平地，蓝 = UniDepth v2（给内参），斜线 = 不经 BEV 的图像平面召回；虚线 0.40、点线 0.30 是 N5 的判据线。要看的是 20–40 m：nuScenes 上 UniDepth 几乎追平图像平面召回，P5 停在线下 0.003。
+
+**资源**：墙钟 09:55 → 11:40（约 1.75 h，登记 5 h 的前半段做完了 N5 主读数与整个 N6）。GPU 3：抽特征 18.5 min、op small 7 min、UniDepth 47 min、DA3 约 70 min（被打断）、拟合约 1 h（含 CPU `eigh` 的慢跑）≈ 3.2 GPU·h（多个进程共卡，按墙钟计偏高）。GPU 4 没借。
+超过估计 2 倍的一步：N6 拟合最初在 CPU `eigh` 上（盒子过载，d = 3584 一次 559 s），发现后改 GPU `eigh`，没有继续等。
