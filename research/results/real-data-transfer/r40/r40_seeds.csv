@@ -1,0 +1,13 @@
+model,seed,run_dir,cls_late_rfs_frame_mean,native_rfs_frame_mean,delta_cls_late_minus_native,ci_lo,ci_hi,G,G_ci_lo,G_ci_hi,verdict
+cinque,0 (decision-40 source run),drive_backbones/heads_train/20260925-110819,7.652608,7.941206,-0.288598,-0.472200,-0.100079,0.402809,-0.021117,0.752848,does not close the gap
+cinque,1,drive_backbones/heads_train-seed1/20260926-020802,7.480919,7.941206,-0.460287,-0.661324,-0.255632,0.047536,-0.515222,0.425806,does not close the gap
+cinque,2,drive_backbones/heads_train-seed2/20260926-021025,7.521950,7.941206,-0.419256,-0.601966,-0.226704,0.132445,-0.376276,0.477208,does not close the gap
+cinque,mean of 3-seed predictions,drive_backbones/heads_train-seed-mean/20260926-mean,7.679537,7.941206,-0.261669,-0.429026,-0.069066,0.458533,0.084876,0.799746,closes part of the gap
+lebowski,0 (decision-40 source run),drive_backbones/heads_train/20260925-110819,7.703487,7.804686,-0.101199,-0.292232,0.093553,0.696102,0.166673,1.417588,reaches native
+lebowski,1,drive_backbones/heads_train-seed1/20260926-020802,7.452303,7.804686,-0.352383,-0.555108,-0.164524,-0.058213,-1.223522,0.468931,does not close the gap
+lebowski,2,drive_backbones/heads_train-seed2/20260926-021025,7.574752,7.804686,-0.229934,-0.418980,-0.042064,0.309511,-0.487494,0.859554,does not close the gap
+lebowski,mean of 3-seed predictions,drive_backbones/heads_train-seed-mean/20260926-mean,7.698896,7.804686,-0.105790,-0.285736,0.074580,0.682312,0.164451,1.347873,reaches native
+
+# reproducibility check (not one of the 3 seeds; run with the same --seed 0 as the seed-1/2 pair, [SEEDS] queue reproducibility probe)
+cinque,0-rerun (--seed 0, [SEEDS] probe),drive_backbones/heads_train-seed0/20260926-011909,7.652079,7.941206,-0.289127,-0.476043,-0.094560,0.401713,-0.013588,0.750280,does not close the gap
+lebowski,0-rerun (--seed 0, [SEEDS] probe),drive_backbones/heads_train-seed0/20260926-011909,7.673595,7.804686,-0.131091,-0.319645,0.059360,0.606331,0.032130,1.260305,reaches native

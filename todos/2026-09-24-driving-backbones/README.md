@@ -363,8 +363,11 @@ run（box）：`$DATA_DIR/runs/drive_backbones/heads_train/20260925-110819/`，�
 - **增益集中在第 10 档**：`cls_late` 的第 10 档 RFS 比 `ridge ego` 高 1.26–1.39，ridge_late 只有 0.51–0.59。多模态的顶档里，分类头押中 rater 偏好那一支的能力是 ridge 没有的。
 - **够不够到 8.0 取决于拿谁当「原生」**：Lebowski 的原生 plan 自己只有 7.89（cluster），`cls_late` 7.73 与它的差 −0.10 [−0.29, +0.09] 跨零，按预登记判「够到」；
   Cinque 的原生是 8.00，`cls_late` 7.64 仍差 0.29（CI 不跨零），G 只有 0.40，对 ridge_late 的提升 CI 擦过 0，按字面判「没补上」。
-  两者合起来的读法：**线性分类头把「冻结特征 → 原生 plan」的缺口补上了一半左右（G 0.4–0.7），剩下 0.1–0.3 RFS 不在单 mode 读出上**；
+  两者合起来的读法（按 seed 0）：线性分类头把「冻结特征 → 原生 plan」的缺口补上了一半左右（G 0.4–0.7），剩下 0.1–0.3 RFS 不在单 mode 读出上；
   我们这族 head 的最好成绩是 7.73（Lebowski `cls_late`），比全项目此前最好的 train 训 head（`ridge_late` Lebowski 7.52）高 0.21，比 Cinque 原生低 0.27。
+  **2026-09-26 就地修正（[R40 结果](../../research/results/real-data-transfer/r40/README.md)，按第 40 条原判据的 3 seed 重算）**：上一句「G 0.4–0.7」只是 seed 0 一次的读数。
+  3 seed（此表这次 run 当 seed 0，另跑 seed 1 / 2）上 G 是 Cinque 0.40 / 0.05 / 0.13、Lebowski 0.70 / −0.06 / 0.31，两模型三个 seed 共 6 个点跨 **−0.06 到 0.70**（均值 Cinque 0.19、Lebowski 0.32），
+   不是稳定的「一半左右」。**Cinque 三个 seed 都判「没补上」；Lebowski 只在 seed 0 上「够到原生」，seed 1、2 都「没补上」**，即「是否够到原生随词表 seed 变」。
 - 代价照例在 ADE：两个 `cls_late` 的 pre-onset Δ 为正（+0.18 / +0.21，CI 跨零），比 ridge_late 差 0.5 m。第 10 条的「分类输 ADE、赢 trust region」在这里原样成立。
 - `cls ego` 的 λ 选在网格下端（1e-7，warning），与 P0 同一现象；`cls_late` 的 λ 是 1e-3，在网格内部。
 

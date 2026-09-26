@@ -175,7 +175,38 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   **分步估计**：(a) 图像列表与分片启动器，工程 30 min；单卡吞吐试跑 5 min。(b) 检测：E5 在争用卡上单进程 17 张 / s，空卡每卡多进程估 120–150 张 / s，5 卡 600–750 张 / s → 20–25 min 墙钟（约 2 GPU·h），读盘约 200 GB；预算 40 min，超 80 min 停。
   (c) 真实数据 embedding 代码 + 少量帧的抬升几何核对（不看任何 Δ / 指标）1 h，CPU。(d) student 权重恢复，工程 30 min + GPU 约 10 min。(e) WOD 读数 CPU 15 min；NAVSIM 2 模型 × 2 arm × 3 seed = 12 组预测 × PDMS / EPDMS 共 24 次官方 devkit 打分，并行约 1 h。
   (f) 表、图、交接说明、第 44 条与结果节 1.5 h。合计约 5–6 h 墙钟。
+- 2026-09-26 09:00 CST [R40] 判定前的一条澄清：seed 0（`heads_train/20260925-110819`，第 40 条源 run）逐位复现第 40 条已有数字；
+  用 `--seed 0` 显式重跑一次不能逐位复现（cls 头 GPU k-means / L-BFGS 非确定性，[SEEDS] 队列 01:31 已定性为 WOD cluster mean 差 0.00–0.05），
+  实测差 0.015 / 0.051，在该范围内。按已有定性，判为已知噪声、不是新问题，不停，用 seed 0（源 run）+ seed 1 + seed 2 三点继续判定；
+  `--seed 0` 重跑另列一行作噪声参照，不计入三点。三个 seed 的逐帧预测另按元素平均、走同一套代码算一遍，作为 ensemble 读数单独报告。
 
 ## 结果
 
-（待填。）
+### R40（2026-09-26，完成）
+
+代码原样：`jevdrive.drive_backbones.heads_train` + `heads_readout`（第 40 条 (iii) 的配方，seed 只改 K=1024 词表的
+k-means 种子与 cls λ 的内层 sequence 划分）。复现检查：第 40 条源 run（`heads_train/20260925-110819`，等价 seed 0）
+逐位复现第 40 条写的两个数（Cinque −0.29 [−0.47, −0.10]、Lebowski −0.10 [−0.29, +0.09]）；用 `--seed 0` 显式重跑一次
+不能逐位复现（cluster mean 差 0.015 / 0.051），在 [SEEDS] 队列 01:31 已定性的 GPU k-means / L-BFGS 非确定性范围（0.00–0.05）内，
+按已有定性不停，继续判定。
+
+| 模型 | seed | `cls_late` − 原生 [95% CI] | 够到原生？ | G [95% CI] |
+|:--|:--|:--|:--|:--|
+| Cinque | 0（第 40 条源 run） | −0.289 [−0.472, −0.100] | 否 | 0.403 [−0.021, 0.753] |
+| Cinque | 1 | −0.460 [−0.661, −0.256] | 否 | 0.048 [−0.515, 0.426] |
+| Cinque | 2 | −0.419 [−0.602, −0.227] | 否 | 0.132 [−0.376, 0.477] |
+| Lebowski | 0（第 40 条源 run） | −0.101 [−0.292, +0.094] | **是** | 0.696 [0.167, 1.418] |
+| Lebowski | 1 | −0.352 [−0.555, −0.165] | 否 | −0.058 [−1.224, 0.469] |
+| Lebowski | 2 | −0.230 [−0.419, −0.042] | 否 | 0.310 [−0.487, 0.860] |
+
+**判定**：Cinque 三个 seed 都判「没补上」，不随 seed 变。Lebowski 只在 seed 0 上「够到原生」，seed 1、2 都「没补上」——
+按预登记报法，本格写「是否够到原生随词表 seed 变，均值 G = 0.32（Lebowski）/ 0.19（Cinque）」。两模型三个 seed 共 6 个
+G 点从 −0.06 到 0.70，第 40 条原写的「0.4–0.7」只是 seed 0 一次的读数。3-seed 预测取平均（同一套代码，ensemble 读数）：
+Cinque −0.262 [−0.429, −0.069]（判「补上部分缺口」）、Lebowski −0.106 [−0.286, +0.075]（判「够到原生」）。
+
+**改动**：第 40 条（`research/decisions.md`）与 `todos/2026-09-24-driving-backbones/README.md` 的对应段落已就地修正
+（写明原来只是 seed 0 的读数、为什么改）。「openpilot 中期检验」claude.ai artifact（`https://claude.ai/artifact/1iH872HuP5eq5Tr4KjFJrs`）
+里同一行只存在于该发布页面，未改；应改成的句子：把「薄 head 收回原生 plan 差距的 0.4–0.7」换成
+「薄 head 收回原生 plan 差距的比例随词表 seed 大幅波动（两模型三个 seed 共 6 个 G 点从 −0.06 到 0.70）；Lebowski『够到原生』只在 seed 0 成立，Cinque 三个 seed 都没补上」。
+
+小表与说明：[research/results/real-data-transfer/r40/](../research/results/real-data-transfer/r40/)。
