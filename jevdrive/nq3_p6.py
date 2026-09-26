@@ -254,6 +254,9 @@ def negotiation(s: pd.DataFrame, tl: float) -> dict:
 def judge_one(name: str, p: pd.DataFrame, pred: np.ndarray, scopes=True) -> tuple[dict, pd.DataFrame, pd.DataFrame]:
     """Rule 7 for one examinee: the summary row, the per-class rows and the scored pairs."""
     s = score(p, pred)
+    if not ((s.reading == "wnull") & s.dlat.notna()).any():
+        return {"examinee": name, "readout": s.how.iloc[0] if len(s) else "", "n_frames": 0,
+                "verdict": "not read (no weather-null predictions)"}, pd.DataFrame(), s.iloc[:0]
     tl, tv = taus(s)
     s = flips(s, tl, tv)
     ff = oos_ff(s)
