@@ -186,7 +186,8 @@ def exam_nusc():
     nz = TR._script("nusc_zs")
     idx, samples = TR.nusc_main()
     toks = [e["token"] for e in samples]
-    cv = np.stack([nz.load_preds(idx)["cv"][t] for t in toks])
+    src = nz.load_preds(idx)["cv"]
+    cv = np.stack([src[t] for t in toks])
     scene_ids = np.unique([e["scene"] for e in samples], return_inverse=True)[1]
 
     def booter(sid):
