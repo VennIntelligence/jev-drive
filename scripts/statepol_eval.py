@@ -128,7 +128,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--variants", default="base,nopartner,nullrm,obstacle,shift")
+    ap.add_argument("--variants", default="base,nopartner,nullrm,obstacle,obsctrl,shift")
     ap.add_argument("--planners", default="ppo,cond_normal,cond_caut,cond_aggr,idm,pdm,cv")
     ap.add_argument("--traffic", default="expert")
     ap.add_argument("--limit", type=int, default=0)
@@ -149,7 +149,7 @@ def main():
             if a.limit:
                 metas = metas[: a.limit]
             partners = {m["map_id"]: (m["partner"] - (m["partner"] > m["null_removed"]) if variant == "nullrm"
-                                      else m["partner"] if variant != "nopartner" else -1) for m in metas}
+                                      else m["partner"] if variant in ("base", "shift") else -1) for m in metas}
             ids = [m["map_id"] for m in metas]
             for planner in a.planners.split(","):
                 dst = out / f"{variant}__{planner}__{traffic}.pkl"

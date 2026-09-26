@@ -159,11 +159,11 @@ def exam_a(data, run, planner, traffic):
 
 
 def exam_b(data, run, planner, traffic):
-    ob, base = load(run, "obstacle", planner, traffic), load(run, "base", planner, traffic)
+    ob, base = load(run, "obstacle", planner, traffic), load(run, "obsctrl", planner, traffic)
     if ob is None or base is None:
         return None
     mo = pickle.load(open(Path(data) / "obstacle/meta.pkl", "rb"))
-    bidx = {m["episode"]: m["map_id"] for m in pickle.load(open(Path(data) / "base/meta.pkl", "rb"))}
+    bidx = {m["episode"]: m["map_id"] for m in pickle.load(open(Path(data) / "obsctrl/meta.pkl", "rb"))}
     cls, nul = [], []
     for m in mo:
         r = ob.get(m["map_id"])

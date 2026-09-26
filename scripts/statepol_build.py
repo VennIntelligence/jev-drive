@@ -9,6 +9,8 @@ plus meta.pkl describing every episode (see todos/2026-09-26-state-space-policie
   nopartner  the other tracks_to_predict vehicle removed           (exam A, x-)
   nullrm     one vehicle >= 30 m from the ego log path removed     (exam A, null)
   obstacle   a static 4.8 x 2.0 m car inserted on the ego log path (exam B, x+)
+  obsctrl    same scene without the car (exam B, x-); vehicles whose log passes within 5 m of the
+             obstacle spot are removed from both B arms
   shift      ego history (t <= t0) shifted +-1.5 m laterally        (exam C)
 
 Run with the statepol env (needs pufferlib from behavior-bench on sys.path).
@@ -110,21 +112,24 @@ def _build(json_path, ego, rng_seed):
     v0 = np.linalg.norm(ev[T0])
     meta.update(v0=v0, path_len=length, dheading=dh)
     if v0 >= 5 and length >= 40 and dh < np.deg2rad(20):
-        others = [(arr(o)[0], arr(o)[3]) for j, o in enumerate(objs) if j != ego]
-        for s_obs in (max(20.0, 2.5 * v0), max(20.0, 2.5 * v0) + 10):
-            if s_obs > length - 5:
-                break
+        # vehicles whose logged track passes within 5 m of the obstacle are removed from both B arms
+        s_obs = max(20.0, 2.5 * v0)
+        if s_obs <= length - 5:
             c, h = path_point(fut, s_obs)
-            if all((np.linalg.norm(p[T0:][va[T0:]] - c, axis=1) >= 5).all() for p, va in others):
-                s2 = copy.deepcopy(scene)
+            clash = [j for j, o in enumerate(objs) if j != ego and
+                     (np.linalg.norm(arr(o)[0][T0:][arr(o)[3][T0:]] - c, axis=1) < 5).any()]
+            if len(clash) <= 3:
+                ctrl, e2 = scene, ego
+                for j in sorted(clash, reverse=True):
+                    ctrl, e2 = remove(ctrl, j), e2 - (e2 > j)
+                s2 = copy.deepcopy(ctrl)
                 s2["objects"].append(dict(
                     type="vehicle", id=987654, width=OBS_W, length=OBS_LEN, height=1.5, mark_as_expert=1,
                     position=[dict(x=float(c[0]), y=float(c[1]), z=float(objs[ego]["position"][T0].get("z", 0)))] * T,
                     velocity=[dict(x=0.0, y=0.0)] * T, heading=[h] * T, valid=[1] * T,
                     goalPosition=dict(x=float(c[0]), y=float(c[1]), z=0.0)))
-                out["obstacle"] = (s2, ego)
-                meta.update(obs_xy=c, obs_h=h, obs_s=s_obs)
-                break
+                out["obstacle"], out["obsctrl"] = (s2, e2), (ctrl, e2)
+                meta.update(obs_xy=c, obs_h=h, obs_s=s_obs, obs_removed=clash)
         sign = 1.0 if rng_seed % 2 == 0 else -1.0
         n = np.array([-np.sin(eh[T0]), np.cos(eh[T0])]) * SHIFT * sign
         s3 = copy.deepcopy(scene)
@@ -151,7 +156,7 @@ def main():
     jobs = [(Path(a.enriched) / r["original_filename"], int(r["ego_agent_idx"]), k, str(out)) for k, r in enumerate(rows)]
     with Pool(a.workers) as pool:
         res = [r for r in pool.imap(build, jobs, chunksize=2) if r is not None][: a.max_episodes]
-    metas = {v: [] for v in ("base", "nopartner", "nullrm", "obstacle", "shift")}
+    metas = {v: [] for v in ("base", "nopartner", "nullrm", "obstacle", "obsctrl", "shift")}
     for ep_id, meta in enumerate(res):
         meta["episode"] = ep_id
         for v, ego in meta["ego_entity"].items():
