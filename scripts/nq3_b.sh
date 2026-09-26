@@ -27,6 +27,7 @@ B_CPUS_WIDE=${B_CPUS_WIDE:-60-149}
 GPUS=${GPUS:-0 1 2}
 WORKERS=${WORKERS:-6}
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000}
+export B2D_SENSOR_TICK=1        # cameras honour their spec's sensor_tick (b2d_hooks; the leaderboard drops it otherwise)
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 NUMBA_NUM_THREADS=2
 SIM=$DATA_DIR/third_party/simlingo
 XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml
@@ -111,7 +112,7 @@ server_names() {  # the server names an arm uses on one GPU
 
 # ---------------------------------------------------------------- agent configs
 arm_cfg() {  # arm_cfg <arm> <gpu> <seed> <dump_every> -> path of the agent config
-    local arm=$1 g=$2 seed=$3 dump=$4 f=$B/cfg/$1-g$2-s$3-d$4.json
+    local arm=$1 g=$2 seed=$3 dump=$4 f=$B/cfg/${CFG_TAG:-x}-$1-g$2-s$3-d$4.json
     local ctl="\"controller\": \"fixed\", \"controller_preset\": \"pursuit\", \"controller_config\": \"$P7\""
     local op="\"op_camera_tick\": 0.05, \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": true"
     local head="\"model\": \"head\", \"warmup_s\": 5.0, \"desire\": true, \"head_cam_tick\": ${HEAD_CAM_TICK:-0.0}"
@@ -137,6 +138,7 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
     local arm=$1 seed=$2 routes=$3 est=$4 dump=${5:-0} out=${6:-$B/arms/$1/s$2}
     local sel k=0 pids=() g t0=$SECONDS try
     mkdir -p "$out"
+    CFG_TAG=$(echo "$out" | md5sum | cut -c1-8)
     case $routes in
         all) sel=(--routes "$XML" --towns all) ;;
         obstacle) sel=(--routes "$XML" --route-ids "$(obstacle_routes)") ;;
@@ -157,6 +159,7 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
                 --server-index $((300 + 30 * g)) --index-span 30 --gpu-rank "$g" --tm-seed "$seed" --no-spectator \
                 --no-reap --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 3600 --out "$out" \
                 --python "$(route_python "$arm")" --agent scripts/b2d_zeroshot_agent.py --agent-config "$cfg" \
+                ${RUN_FLAGS---fast-copy --cache-lights} \
                 >> "$out/runner-g$g.log" 2>&1 &
             pids+=($!)
             echo "${pids[*]}" > "$out/runner.pids"
