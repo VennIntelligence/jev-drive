@@ -235,7 +235,9 @@ def _oncoming(W: dict, ks: range) -> int:
 
 def _load(g: Path, rid: str, cache: dict):
     if rid not in cache:
-        a = P.attempt(g, rid) if rid else None
+        # the attempt b2d_run recorded as done (a stopped or crashed attempt may also have written a summary)
+        f = g / "done" / (rid + ".json") if rid else None
+        a = g / "attempts" / rid / str(json.loads(f.read_text())["attempt"]) if f is not None and f.exists() else None
         if a is None:
             cache[rid] = None
         else:
