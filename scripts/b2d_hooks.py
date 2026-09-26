@@ -396,6 +396,46 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
                        "registry_dropped": registry["dropped"], "registry_kept": registry["kept"],
                        "flow": registry.get("flow")}, fh)
 
+    def _p6_populate(f):
+        """Fill the flow's whole source -> sink stretch with vehicles at its drawn spacing, moving at the flow's speed,
+        as if it had been running for a while (routes reach the obstacle ~5 s after the start; a flow that starts empty
+        at its source, ~75 m beyond the obstacle, never reached the ego in the smoke). Nothing within 25 m of the ego.
+        Spawned sink side first, so f._actor_list[-1] stays the one nearest the source, as the flow's spawner expects."""
+        ego = CarlaDataProvider.get_hero_actor().get_location()
+        wps, acc, last = [], 0.0, None
+        for wp, _ in f._route:
+            if last is not None:
+                acc += wp.transform.location.distance(last)
+            last = wp.transform.location
+            wps.append((acc, wp))
+        slots, x = [], f._spawn_dist
+        while x < acc - 5.0:
+            slots.append(x)
+            x += f._rng.uniform(f._min_spawn_dist, f._max_spawn_dist)
+        shared = CarlaDataProvider._rng
+        for x in reversed(slots):
+            i = min(range(len(wps)), key=lambda j: abs(wps[j][0] - x))
+            wp = wps[i][1]
+            if wp.transform.location.distance(ego) < 25.0:
+                continue
+            t = _carla.Transform(wp.transform.location + _carla.Location(z=0.3), wp.transform.rotation)
+            outer = shared.get_state()
+            shared.set_state(f._bp_state)
+            try:
+                actor = CarlaDataProvider.request_new_actor('vehicle.*', t, rolename='scenario',
+                                                            attribute_filter=f._attribute_filter, tick=False)
+            finally:
+                f._bp_state = shared.get_state()
+                shared.set_state(outer)
+            if actor is None:
+                continue
+            ctl = ab.BasicAgent(actor, f._speed, f._opt_dict, f._map, f._grp)
+            ctl.set_global_plan(f._route[i:])
+            fw = wp.transform.get_forward_vector()
+            actor.set_target_velocity(_carla.Vector3D(fw.x * f._speed / 3.6, fw.y * f._speed / 3.6, 0.0))
+            f._actor_list.append([actor, ctl])
+        f._spawn_dist = f._rng.uniform(f._min_spawn_dist, f._max_spawn_dist)
+
     RouteScenario.build_scenarios = build
     if obstacle != "hide" and oncoming not in ("on", "dense"):
         return
@@ -403,10 +443,11 @@ def p6_world(out_dir, obstacle, oncoming, tm_seed):
 
     def tick(self):
         inner_tick(self)
-        for f in flows:                                # the oncoming flow, from the first tick
+        for f in flows:                                # the oncoming flow, from the first tick, already established
             if getattr(f, "_p6_early", False) and not f._terminated:
                 if not f._p6_started:
                     flow_start(f)
+                    _p6_populate(f)
                     f._p6_started = True
                 flow_update(f)
         for h in hidden:                               # as in track_hazards
