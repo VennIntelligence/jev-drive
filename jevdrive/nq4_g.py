@@ -39,6 +39,7 @@ SWAP_TYPE = {"Accident": "ConstructionObstacle", "ConstructionObstacle": "Parked
 SWAP_VAN = ("StaticCutIn", "ParkingCutIn", "HighwayCutIn")
 VARIANTS = {"orig": 0, "ghost": 1, "shift": 2, "swap": 3}
 SHIFT_M = 15.0
+SHIFT_START_MARGIN_M = 5.0        # the shifted trigger must stay >= 5 m after the route start
 TRIG_WIN = (-30.0, 10.0)
 CTRL_LEN, CTRL_GAP, CTRL_MAX, CTRL_START, CTRL_END_MARGIN, CTRL_STEP = 40.0, 80.0, 2, 50.0, 20.0, 5.0
 TURN_DEG = 20.0                   # a 40 m window whose heading departs > 20 deg from its start heading is "turn"
@@ -96,6 +97,11 @@ def build_xml(t: pd.DataFrame, out: Path, w: pd.DataFrame | None = None) -> pd.D
             r.set("id", i)
             r.set("nq4_world", v)
             r.set("nq4_base", b)
+            if v == "shift" and w is not None:
+                # a backward shift that would pass the route start (the ego spawns there) goes forward instead ([F] entry)
+                st0 = float(w[(w.base == b) & (w.kind == "trigger")].s_trig.iloc[0])
+                if shift < 0 and st0 + shift < SHIFT_START_MARGIN_M:
+                    shift = -shift
             if w is not None:            # early stop past every readout (zone end of this variant's trigger, control windows)
                 ww = w[w.base == b]
                 tr = ww[ww.kind == "trigger"]
@@ -116,7 +122,8 @@ def build_xml(t: pd.DataFrame, out: Path, w: pd.DataFrame | None = None) -> pd.D
                     s.set("type", swap)
                     s.set("name", s.get("name").replace(sc, swap))
             xml.append(r)
-            rows.append({"id": i, "base": b, "variant": v, "scenario": sc, "swap_to": swap if v == "swap" else ""})
+            rows.append({"id": i, "base": b, "variant": v, "scenario": sc, "swap_to": swap if v == "swap" else "",
+                         "shift_m": shift if v == "shift" else np.nan})
     ET.indent(xml)
     ET.ElementTree(xml).write(out)
     return pd.DataFrame(rows)
