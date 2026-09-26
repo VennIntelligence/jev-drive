@@ -110,6 +110,21 @@ server_names() {  # the server names an arm uses on one GPU
     esac
 }
 
+kill_runs() {  # kill_runs <out>: the runners, route processes and CARLA servers recorded under one arm's out dir
+    local out=$1 p f
+    for p in $(cat "$out/runner.pids" 2>/dev/null); do kill "$p" 2>/dev/null; done
+    sleep 5
+    for f in "$out"/attempts/*/*/route.pid; do
+        p=$(cat "$f" 2>/dev/null) || continue
+        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }
+    done
+    for f in "$out"/servers/carla-*.pid; do       # the CarlaUE4.sh wrapper and its shipping child
+        p=$(cat "$f" 2>/dev/null) || continue
+        kill -0 "$p" 2>/dev/null || continue
+        pkill -P "$p" 2>/dev/null; kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null
+    done
+}
+
 # ---------------------------------------------------------------- agent configs
 arm_cfg() {  # arm_cfg <arm> <gpu> <seed> <dump_every> -> path of the agent config
     local arm=$1 g=$2 seed=$3 dump=$4 f=$B/cfg/${CFG_TAG:-x}-$1-g$2-s$3-d$4.json
@@ -171,7 +186,7 @@ run_arm() {  # run_arm <arm> <seed> <routes: all | obstacle | id,id,...> <estima
             for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive=1; done
             (( alive )) || break
             if (( SECONDS - t0 > $(python3 -c "print(int(2 * $est * 3600))") )); then
-                for p in "${pids[@]}"; do kill "$p" 2>/dev/null; done
+                kill_runs "$out"
                 error "$arm seed $seed exceeded twice its estimate ($est h)" "$out/runner-g${GPUS%% *}.log"
             fi
             for g in $GPUS; do       # a model server that died is restarted at once; its routes retry
@@ -287,7 +302,7 @@ maybe_expand() {  # after lane A's v1 is done and its CARLA servers are gone: GP
 # ---------------------------------------------------------------- the queue
 chain() {
     status_loop & local st=$!
-    trap 'kill $st 2>/dev/null; srv_stop_all' EXIT
+    trap 'kill $st 2>/dev/null; [[ -f $B/CURRENT ]] && { set -- $(cat "$B/CURRENT"); kill_runs "$B/arms/$1/s$2"; }; srv_stop_all' EXIT
     trap 'exit 129' HUP INT TERM
     [[ -e $B/cl0/DONE ]] || error "CL0 (smoke + rule-8 equivalence) has not passed; run the smoke first"
     [[ -e $B/cl1_expert/DONE ]] || expert "${GPUS// /,}"
@@ -333,7 +348,7 @@ smoke() {  # CL0: every P7 agent on 3 routes (profiling); the head arms dump eve
 case ${1:-} in
     smoke) trap 'srv_stop_all' EXIT; smoke ;;
     expert) expert "${2:-0,1}" ;;
-    arm) shift; trap 'srv_stop_all' EXIT; run_arm "$@" ;;
+    arm) shift; trap 'srv_stop_all; [[ -n ${6:-} ]] && kill_runs "$6"' EXIT; trap 'exit 129' HUP INT TERM; run_arm "$@" ;;
     chain) chain ;;
     *) sed -n 2,19p "$0"; exit 1 ;;
 esac
