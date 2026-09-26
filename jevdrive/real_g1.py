@@ -309,24 +309,134 @@ def run_i3(rl, gate_fns: dict):
              pd.DataFrame(rows).query("scope == 'pooled'").to_markdown(index=False, floatfmt=".3f"))
 
 
+# ---------------------------------------------------------------- NAVSIM (elicit_e1.run_navsim / navsim_table's code paths)
+
+NAV_PRIOR = "runs/navsim_zs/heads/20260925-232810"
+
+
+def nav_lead(model: str) -> dict:
+    z = np.load(data_dir() / "runs/navsim_zs/openpilot/navtest" / f"{model}_temporal_lead.npz")
+    return {k: z[k] for k in ("tokens", "temporal", "lead", "lead_prob")}
+
+
+def nav_write(rl, gates: dict, deltas: dict, tag: str, taus: dict):
+    """prior (`ridge_late`) + g * Delta on navtest's 0.5 ... 4.0 s poses (heading kept, as E1), the activation table, and
+    the devkit job list (scripts/navsim_zs_score.sh; names g1_<tag>_<gate>_ridge_late_<model>)."""
+    from . import elicit_e1 as E1, p5_pairs as P
+    sc = pd.read_csv(data_dir() / E1_NAV / "navtest_scopes.csv")
+    scopes = {"all": np.ones(len(sc), bool), "straight": sc.straight.to_numpy(), "ped_cyc_corridor": sc.ped_cyc_corridor.to_numpy(),
+              "no ped_cyc": ~sc.ped_cyc_corridor.to_numpy()}
+    acts, descs, jobs = [], [], []
+    for m, (tok, delta) in deltas.items():
+        p = np.load(data_dir() / NAV_PRIOR / f"navtest_ridge_late_{m}_temporal.npz")
+        assert (p["tokens"] == tok).all() and (sc.token.to_numpy() == tok).all()
+        for gname, g in {"none": np.ones(len(tok), np.float32), **gates[m]}.items():
+            arm = p["poses"].copy()
+            arm[..., :2] += g[:, None, None] * delta[:, 1:16:2]
+            name = f"g1_{tag}_{gname}_ridge_late_{m}"
+            if gname != "none" or tag != "mc":          # the ungated M-C arm is E1's, already scored
+                np.savez(rl.dir / f"navtest_{name}.npz", tokens=tok, poses=arm.astype(np.float32))
+                jobs += [f"{v} navtest {name} {rl.dir / f'navtest_{name}.npz'}" for v in ("v1", "v2")]
+            act = (np.abs(P.v2(E1._grid20(arm)) - P.v2(E1._grid20(p["poses"]))) >= taus[m]).astype(float)
+            for k, msk in scopes.items():
+                acts.append({"model": m, "delta": tag, "gate": gname, "scope": k, "n": int(msk.sum()), "tau": taus[m],
+                             "activation": float(act[msk].mean())})
+            descs += [{"model": m, "delta": tag, "gate": gname, **r} for r in gate_desc(g, scopes)]
+    pd.DataFrame(acts).to_csv(rl.dir / f"navsim_activation_{tag}.csv", index=False)
+    pd.DataFrame(descs).to_csv(rl.dir / f"navsim_gate_desc_{tag}.csv", index=False)
+    (rl.dir / f"score_jobs_{tag}.txt").write_text("\n".join(jobs) + "\n")
+    log.info("NAVSIM %s: %d devkit jobs -> %s\n%s", tag, len(jobs), rl.dir / f"score_jobs_{tag}.txt",
+             pd.DataFrame(acts).pivot_table(index=["model", "gate"], columns="scope", values="activation").to_markdown(floatfmt=".3f"))
+
+
+def nav_table(rl, pairs: dict):
+    """elicit_e1.navsim_table's paired token bootstrap for {label: (arm devkit name, prior devkit name)}."""
+    from .openloop_standing import _latest
+    sc = pd.read_csv(data_dir() / E1_NAV / "navtest_scopes.csv").set_index("token")
+    groups = {"all": None, "ped_cyc_corridor": sc.ped_cyc_corridor, "no ped_cyc": ~sc.ped_cyc_corridor, "straight": sc.straight}
+    rows = []
+    rng = np.random.default_rng(0)
+    f = lambda df: df[df["token"].str.fullmatch(r"[0-9a-f]{16,17}") & df["valid"].astype(bool)].set_index("token")["score"].astype(float)  # noqa: E731
+    for label, (arm, prior) in pairs.items():
+        for ver, metric in (("v1", "PDMS"), ("v2", "EPDMS")):
+            a, b = _latest(ver, "navtest", arm), _latest(ver, "navtest", prior)
+            if a is None or b is None:
+                log.warning("%s %s: devkit scores missing (%s / %s)", label, metric, a is None, b is None)
+                continue
+            x, y = f(a).align(f(b), join="inner")
+            for g, msk in groups.items():
+                keep = np.ones(len(x), bool) if msk is None else msk.reindex(x.index).fillna(False).to_numpy(bool)
+                d = (x - y).to_numpy()[keep]
+                bs = d[rng.integers(0, len(d), (10000, len(d)))].mean(1)
+                rows.append({"arm": label, "metric": metric, "group": g, "n": len(d), "prior_score": 100 * y.to_numpy()[keep].mean(),
+                             "arm_score": 100 * x.to_numpy()[keep].mean(), "delta": 100 * d.mean(),
+                             "lo": 100 * np.percentile(bs, 2.5), "hi": 100 * np.percentile(bs, 97.5)})
+    t = pd.DataFrame(rows)
+    t.to_csv(rl.dir / "navsim_paired.csv", index=False)
+    log.info("navtest\n%s", t.to_markdown(index=False, floatfmt=".2f"))
+    return t
+
+
 # ================================================================ entry points
 
 def load_g1(kind: str, run: str) -> dict:
     return {m: Gate.load(data_dir() / run / f"g1_{kind}_{m}.pt") for m in MODELS}
 
 
+def mc_taus() -> dict:
+    fl = pd.read_csv(data_dir() / MC_RUN / "flip_rates.csv")
+    return {m: float(fl[(fl.examinee == f"M-C pair [{m}]") & (fl.scope == "pooled")].tau_model.iloc[0]) for m in MODELS}
+
+
+def wod_gates(rl, g1: dict):
+    """{model: f(d, v_ego) -> {gate: (n,)}} on E1's WOD frames; checks the lead re-run's `temporal` against the stored one."""
+    from . import elicit_e1 as E1, waymo
+
+    def gates_for(m):
+        def f(d, v_ego):
+            names = d["frame_name"].astype(str)
+            ld = wod_lead(m, names)
+            diff = float(np.abs(ld["temporal"] - d[f"op {m}"]).max())
+            rl.event("g1_wod_lead_equiv", model=m, temporal_max_abs_diff=diff)
+            log.info("WOD %s: re-run temporal vs stored max |diff| %.2e", m, diff)
+            df = waymo.load_index()
+            past, _ = waymo.load_ego()
+            rows = E1._rows(pd.Series(names), waymo.frame_names(df))
+            ego = np.concatenate([waymo.ego_state(past[rows]), waymo.intent_onehot(df.iloc[rows])], 1)
+            return {"g1": g1[m](np.concatenate([ego, d[f"op {m}"]], 1)), "g3": g3(ld["lead"], ld["lead_prob"], v_ego)}
+        return f
+    return {m: gates_for(m) for m in MODELS}
+
+
+def nav_gates(g1_run: str) -> dict:
+    """{model: {gate: (n,)}} on navtest in token order: g1 from its fit run, g3 from the lead re-run."""
+    from . import navsim_zs as Z
+    idx = Z.load_index("navtest", slim=True)
+    tok = np.array([e["token"] for e in idx])
+    v_ego = np.array([np.linalg.norm(e["vel"][-1]) for e in idx])
+    out = {}
+    for m in MODELS:
+        z = np.load(data_dir() / g1_run / f"g1_nav_{m}_navtest.npz")
+        ld = nav_lead(m)
+        at = pd.Series(np.arange(len(ld["tokens"])), index=ld["tokens"]).reindex(tok).astype(int).to_numpy()
+        assert (z["tokens"] == tok).all()
+        out[m] = {"g1": z["gate"], "g3": g3(ld["lead"][at], ld["lead_prob"][at], v_ego)}
+    return out
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("g1-wod", "g1-nav", "i3", "wod"))
-    ap.add_argument("--g1-run", default="", help="the g1-wod run dir (relative to DATA_DIR)")
+    ap.add_argument("what", choices=("g1-wod", "g1-nav", "i3", "wod", "nav-write", "nav-table"))
+    ap.add_argument("--g1-run", default="", help="the g1 fit run dir (relative to DATA_DIR)")
     ap.add_argument("--models", default=",".join(MODELS))
     ap.add_argument("--exclude", default="")
+    ap.add_argument("--tags", default="mc")
     a = ap.parse_args()
     torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", 16)))
     models = tuple(a.models.split(","))
-    rl = RunLog("real-data-transfer", f"g1-{a.what}")
+    rl = RunLog("real-data-transfer", a.what)
     if a.what == "g1-wod":
         g1_wod(rl, models, a.exclude)
     elif a.what == "g1-nav":
@@ -334,33 +444,24 @@ def main():
     elif a.what == "i3":
         run_i3(rl, {"g1": load_g1("wod", a.g1_run)})
     elif a.what == "wod":
-        from . import elicit_e1 as E1
-        fl = pd.read_csv(data_dir() / MC_RUN / "flip_rates.csv")
-        taus = {m: float(fl[(fl.examinee == f"M-C pair [{m}]") & (fl.scope == "pooled")].tau_model.iloc[0]) for m in MODELS}
-        d_names = None
+        deltas = {m: np.load(data_dir() / E1_WOD / f"wod_delta_{m}.npz")["delta"] for m in MODELS}
+        run_wod(rl, wod_gates(rl, load_g1("wod", a.g1_run)), deltas, mc_taus(), "mc")
+    elif a.what == "nav-write":
         deltas = {}
         for m in MODELS:
-            z = np.load(data_dir() / E1_WOD / f"wod_delta_{m}.npz")
-            d_names = z["frame_name"].astype(str)
-            deltas[m] = z["delta"]
-        g1 = load_g1("wod", a.g1_run)
-
-        def gates_for(m):
-            def f(d, v_ego):
-                assert (d["frame_name"].astype(str) == d_names).all()
-                ld = wod_lead(m, d_names)
-                diff = float(np.abs(ld["temporal"] - d[f"op {m}"]).max())
-                rl.event("g1_wod_lead_equiv", model=m, temporal_max_abs_diff=diff)
-                log.info("WOD %s: re-run temporal vs stored max |diff| %.2e", m, diff)
-                from . import waymo
-                df = waymo.load_index()
-                past, _ = waymo.load_ego()
-                rows = E1._rows(pd.Series(d_names), waymo.frame_names(df))
-                ego = np.concatenate([waymo.ego_state(past[rows]), waymo.intent_onehot(df.iloc[rows])], 1)
-                return {"g1": g1[m](np.concatenate([ego, d[f"op {m}"]], 1)),
-                        "g3": g3(ld["lead"], ld["lead_prob"], v_ego)}
-            return f
-        run_wod(rl, {m: gates_for(m) for m in MODELS}, deltas, taus, "mc")
+            z = np.load(data_dir() / E1_NAV / f"navtest_delta_{m}.npz")
+            deltas[m] = (z["tokens"], z["delta"])
+        nav_write(rl, nav_gates(a.g1_run), deltas, "mc", mc_taus())
+    elif a.what == "nav-table":
+        pairs = {}
+        for tag in a.tags.split(","):
+            for m in MODELS:
+                prior = f"heads_ridge_late_{m}_temporal"
+                if tag == "mc":
+                    pairs[f"mc none {m}"] = (f"e1_ridge_late_{m}_plus_mc", prior)
+                for g in ("g1", "g2", "g3") + (("none",) if tag != "mc" else ()):
+                    pairs[f"{tag} {g} {m}"] = (f"g1_{tag}_{g}_ridge_late_{m}", prior)
+        nav_table(rl, pairs)
     rl.close()
 
 
