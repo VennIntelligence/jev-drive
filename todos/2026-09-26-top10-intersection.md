@@ -401,6 +401,9 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   相对原 BA 生成（TFv6 shadow + 三路 Waymo 存图 + 可见性），每个相机 tick 省掉约 105 ms CPU 的存图与可见性、每 tick 省掉 3 路 1088×1560 与 1 路分割相机的渲染。
   **批量估时**：570 个世界、13.6 万 tick，按原 BA 生成的逐 town 墙钟回归（setup + 每 tick）估 32 server·h，按 smoke 在负载下的慢 1.5 倍估约 45 server·h，30 个 server 墙钟约 1.5–1.8 h（< 3 h，2 对的 profiling 已在上面）；BLUE 离线与批量重叠，约 2.5 CPU·h + 0.8 GPU·h。
   smoke 通过，等 night-queue-2 A 的 GPU 0–3。
+- 2026-09-26 13:39 CST [T3] 批量开跑（main 13:38：不等 A，先上 GPU 5）。GPU 5 一条链 6 个 server（index 200–247，`--client-threads 8`），CPU 124–141；BLUE 离线循环 6 个 worker 同在 GPU 5，CPU 142–153（合计 30 核）。
+  tmux `t3-gen` / `t3-blue`，链 PID 记在 `runs/top10_t3/gen/pids.txt`，停用 `scripts/top10_t3_stop.sh`（只停记录的 PID 及其子进程与本批 server）。A 释放 GPU 0–3 后按每卡 6 个 server 加链（server block 250 起），按世界续跑。
+  box 13:38 在 smoke 世界上试跑过一次判卷流程（只为验证代码能跑通，输出已删，不作任何读数）。
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
