@@ -42,7 +42,8 @@ def check_op(adirs):
     from jevdrive.openpilot.model import OPModel
     from jevdrive.p5_openpilot import carla_calib
     WZ._init({}, {P5.SEQ: carla_calib()}, ".")
-    heads = CL.Heads()
+    from jevdrive import nq4_k as NK
+    heads, kh = CL.Heads(), NK.KHead()
     taps = D.OP_TAPS["cinque"]
     m = OPModel("cinque", WZ.MODELS["cinque"], context_rate=False, taps=list(taps.values()))
     res = []
@@ -56,14 +57,19 @@ def check_op(adirs):
             desire = np.zeros(8, np.float32)
             desire[int(d["desire"])] = 1
             for _ in range(P5.HOLD):
-                m.step(img2, desire=desire, action_t=WZ.ACTION_T)
+                raw = m.step(img2, desire=desire, action_t=WZ.ACTION_T)
             op = m.tap_values[taps["temporal"]].copy()
             n["op"] += same(op, d["op"])
             n["op_max_abs"] = max(n["op_max_abs"], float(np.abs(op - d["op"]).max()))
             arm = str(d["arm"])
             if arm == "mc" and "q" not in d:
                 arm = "ridge_late"
-            path = heads.predict(arm, d["ego"], op, q=d.get("q"), tok=d.get("tok"))
+            if arm in NK.ARMS:                  # night queue 4 K-prep: lead outputs and the fold's readout too
+                lead, lp = raw[m.slices["lead"]], raw[m.slices["lead_prob"]]
+                n["lead"] = n.get("lead", 0) + (same(lead, d["lead"]) and same(lp, d["lead_prob"]))
+                path = kh.predict(arm, str(d["kfold"]), d["ego"], op, lead, lp)[0]
+            else:
+                path = heads.predict(arm, d["ego"], op, q=d.get("q"), tok=d.get("tok"))
             n["path"] += same(path, d["path"])
             n["path_max_abs"] = max(n["path_max_abs"], float(np.abs(path - d["path"]).max()))
         res.append({"attempt": str(adir), **n})

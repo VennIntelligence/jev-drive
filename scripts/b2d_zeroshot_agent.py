@@ -76,6 +76,12 @@ the pre-registered smoke:
                     as p4_carla.route_rows builds it from the recorder's (central-difference velocity), the 15 m route
                     intent and the route desire. "arm": "ridge_late" | "mc" | "student_b". "dump_every": n dumps every
                     n-th request's inputs and intermediates (server side) for the rule-8 equivalence check.
+  "arm": "k0" ... "k3"  night queue 4, K-prep (jevdrive/nq4_k.py): the recipe ladder's cross-fitted readouts. The fold is
+                    picked per route from "k_split" (default runs/nq4/k/route_split.json) and "k_view" ("unseen":
+                    the readout that never saw this route's recordings; "seen": its own) and sent as meta "kfold";
+                    k2 / k3 add the TFv6 rules (nq4_k.Tfv6Rules: creeping, stop sign) on the controller's throttle /
+                    brake, with privileged stand-ins for the author's LiDAR safety box and stop-sign detections, and
+                    log their per-tick inputs in ticks.jsonl ("rules") for the offline replay.
 Ground truth (the hero's rear-axle pose) is logged every tick for evaluation only; it never reaches control.
 """
 import json
@@ -189,6 +195,13 @@ class ZeroShotAgent(AutonomousAgent):
         self.ctl_every = int(self.cfg.get("ctl_every", 1))
         self.plan_ticks = int(self.cfg.get("plan_ticks", 4))
         self.head_pending, self.pose_track, self.head_gaps = None, [], {}
+        self.kfold = self.rules = self.k_signs = None
+        if self.head and str(self.cfg.get("arm", "")) in ("k0", "k1", "k2", "k3"):
+            from jevdrive import nq4_k as NK
+            split = NK.load_split(self.cfg.get("k_split") or None)
+            self.kfold = NK.readout(split, os.environ.get("BENCHMARK_ROUTE_ID", ""), self.cfg.get("k_view", "unseen"))
+            assert self.kfold is not None, "k_view seen needs a recorded route"
+            self.rules = NK.Tfv6Rules() if self.cfg["arm"] in ("k2", "k3") else None
         self.plan_every = int(self.cfg.get("plan_every", 5 if self.alpamayo else 1))
         self.op_tick = float(self.cfg.get("op_camera_tick", rigs.OP_CAMERA_TICK))
         self.plan_origin = self.cfg.get("plan_origin", "camera")
@@ -424,6 +437,9 @@ class ZeroShotAgent(AutonomousAgent):
                              partner_ms=round(1e3 * (time.perf_counter() - t_p), 1))
             else:
                 self.partner.advance(data)
+        rules = None
+        if self.rules is not None and self.poses:
+            throttle, brake, rules = self._k_rules(speed_raw, float(throttle), float(brake))
         self.last_steer = float(steer)
         self.control = carla.VehicleControl(throttle=float(throttle), steer=float(steer), brake=float(brake))
         tick_ms = 1e3 * (time.perf_counter() - t_start)
@@ -435,9 +451,71 @@ class ZeroShotAgent(AutonomousAgent):
             rec["zoo_desired"] = round(zoo_tick["desired_speed"], 3)
         if share is not None:
             rec.update(share)
+        if rules is not None:
+            rec["rules"] = rules
         rec.update(self._truth())
         self.tick_log.write(json.dumps(rec) + "\n")
         return self.control
+
+    # ---- night queue 4, K2 / K3: the TFv6 rules with privileged stand-ins ([K] 17:30 (5)) ---------------------------
+    BEV_X, BEV_Y = (-32.0, 64.0), 40.0                   # LEAD's leaderboard-mode BEV (min / max_x_meter, |y| <= 40)
+
+    def _k_rules(self, speed, throttle, brake):
+        _, xy, yaw = self.poses[-1]
+        c = (xy[0] - self.rear_offset * math.cos(yaw), xy[1] - self.rear_offset * math.sin(yaw))   # vehicle centre
+        det = self._k_stop_detection(c, yaw)
+        throttle, brake, log = self.rules.step(speed, throttle, brake, self._k_safety_occupied, det, c, yaw)
+        log.update(v=speed, ego_c=[c[0], c[1], yaw])
+        return throttle, brake, log
+
+    def _k_stop_detection(self, c, yaw):
+        """The next stop sign on the route (its trigger volume covers a dense-route point at or ahead of the car's
+        progress), not cleared by the rule, with its trigger-volume centre inside the BEV: (actor id, world x, y)."""
+        if self.k_signs is None:
+            from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+            self.k_signs = []
+            for a in CarlaDataProvider.get_world().get_actors().filter("*traffic.stop*"):
+                tf, tv = a.get_transform(), a.trigger_volume
+                cen = tf.transform(tv.location)
+                ya = math.radians(tf.rotation.yaw + tv.rotation.yaw)
+                d = self.route.xy - np.array([cen.x, cen.y])
+                lx = d[:, 0] * math.cos(ya) + d[:, 1] * math.sin(ya)
+                ly = -d[:, 0] * math.sin(ya) + d[:, 1] * math.cos(ya)
+                idx = np.flatnonzero((np.abs(lx) <= tv.extent.x) & (np.abs(ly) <= tv.extent.y))
+                if len(idx):
+                    self.k_signs.append((int(a.id), float(cen.x), float(cen.y), int(idx.max())))
+        best = None
+        for sid, x, y, last in self.k_signs:
+            if last < self.route.i or sid in self.rules.cleared:
+                continue
+            dx, dy = x - c[0], y - c[1]
+            ex, ey = dx * math.cos(yaw) + dy * math.sin(yaw), -dx * math.sin(yaw) + dy * math.cos(yaw)
+            if self.BEV_X[0] < ex < self.BEV_X[1] and abs(ey) < self.BEV_Y and (best is None or math.hypot(ex, ey) < best[0]):
+                best = (math.hypot(ex, ey), sid, x, y)
+        return None if best is None else (best[1], best[2], best[3])
+
+    def _k_safety_occupied(self):
+        """LEAD's creeping safety box (ego frame x in [ext_x, ext_x + 2.5], |y| < 0.8 ext_y, z in [0.5, 1.5]) against
+        every vehicle / walker / static prop bounding box (separating axes in the ground plane, then the z overlap)."""
+        from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
+        hero = CarlaDataProvider.get_hero_actor()
+        htf = hero.get_transform()
+        hy = math.radians(htf.rotation.yaw)
+        ex_, ey_ = 2.4508416652679443, 1.0641621351242065
+        box = np.array([[ex_, -0.8 * ey_], [ex_ + 2.5, -0.8 * ey_], [ex_ + 2.5, 0.8 * ey_], [ex_, 0.8 * ey_]])
+        for a in CarlaDataProvider.get_world().get_actors():
+            if a.id == hero.id or not a.type_id.startswith(("vehicle.", "walker.", "static.prop")):
+                continue
+            v = a.bounding_box.get_world_vertices(a.get_transform())
+            P = np.array([[p.x - htf.location.x, p.y - htf.location.y, p.z - htf.location.z] for p in v])
+            q = np.stack([P[:, 0] * math.cos(hy) + P[:, 1] * math.sin(hy), -P[:, 0] * math.sin(hy) + P[:, 1] * math.cos(hy)], 1)
+            if P[:, 2].max() < 0.5 or P[:, 2].min() > 1.5:
+                continue
+            ay = math.radians(a.get_transform().rotation.yaw) - hy
+            axes = [(1.0, 0.0), (0.0, 1.0), (math.cos(ay), math.sin(ay)), (-math.sin(ay), math.cos(ay))]
+            if all(not ((box @ ax).max() < (q @ ax).min() or (q @ ax).max() < (box @ ax).min()) for ax in axes):
+                return True
+        return False
 
     def _truth(self):
         """Rear-axle pose of the hero from the simulator, for evaluation logs only."""
@@ -710,6 +788,8 @@ class ZeroShotAgent(AutonomousAgent):
         every = int(self.cfg.get("dump_every", 0))
         dump = os.path.join(self.out, "frames", "%06d.npz" % f) if every and self.n_plans % every == 0 else ""
         meta = {"cmd": "plan", "arm": self.cfg["arm"], "desire": int(desire), "frame": int(f), "dump": dump}
+        if self.kfold is not None:
+            meta["kfold"] = self.kfold
         arrays = {"jpg%d" % i: b for i, b in enumerate(jpgs)}
         arrays["ego"] = ego
         wire.send(self.sock, meta, arrays)

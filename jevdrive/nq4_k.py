@@ -299,7 +299,7 @@ def replay_rules(ticks: list) -> dict:
         if k is None:
             continue
         occ = k["safety"]
-        thr, brk, _ = r.step(rec["v"], k["rule_in"][0], k["rule_in"][1], lambda: occ,
+        thr, brk, _ = r.step(k["v"], k["rule_in"][0], k["rule_in"][1], lambda: occ,
                              None if k["stop_det"] is None else tuple(k["stop_det"]), k["ego_c"][:2], k["ego_c"][2])
         n += 1
         bad += not (thr == k["rule_out"][0] and brk == k["rule_out"][1])
@@ -334,18 +334,378 @@ def check_lead(set_: str) -> dict:
     return res
 
 
+# ================================================================ K1 labels (repo .venv, CPU)
+
+REAR_AXLE_X = -1.388633220                                        # p4_carla: rear axle behind the vehicle centre
+
+
+def _route_label_one(args):
+    """Route checkpoints for the rows of one recorded attempt: the recorder's dense route (route.json, CARLA world) in
+    each frame's rear-axle frame; s* = arc length of the origin's projection, first checkpoint at s* + sqrt(2.5^2 - d^2)
+    (where the 2.5 m circle meets a straight route at lateral offset d), then every 1 m; straight on past the end."""
+    import pandas as pd
+    adir, frames, prog = args
+    a = Path(adir)
+    pose = pd.read_json(a / "pose.jsonl", lines=True).drop_duplicates("frame").set_index("frame")
+    route = pd.read_json(a / "route.json")
+    R = np.stack([route.x.to_numpy(float), -route.y.to_numpy(float)], -1)       # right-handed world
+    out, dperp = np.zeros((len(frames), ROUTE_N, 2), np.float32), np.zeros(len(frames), np.float32)
+    for i, (f, p) in enumerate(zip(frames, prog)):
+        r = pose.loc[f]
+        th = -math.radians(float(r.yaw))
+        c, h = np.array([float(r.x), -float(r.y)]), np.array([math.cos(th), math.sin(th)])
+        ra = c + REAR_AXLE_X * h
+        lo, hi = max(int(p) - 3, 0), min(int(p) + 60, len(R))
+        d = R[lo:hi] - ra
+        e = np.stack([h[0] * d[:, 0] + h[1] * d[:, 1], -h[1] * d[:, 0] + h[0] * d[:, 1]], -1)
+        if len(e) < 2:                                    # the route's last point: straight on along the heading
+            e = np.array([[0.0, 0.0], [1.0, 0.0]]) if not len(e) else np.r_[e, e[-1:] + [1.0, 0.0]]
+        seg = np.diff(e, axis=0)
+        L = np.linalg.norm(seg, axis=1)
+        S = np.r_[0.0, np.cumsum(L)]
+        tt = np.clip(-(e[:-1] * seg).sum(1) / np.maximum(L ** 2, 1e-12), 0, 1)
+        q = e[:-1] + tt[:, None] * seg
+        j = int(np.argmin(np.linalg.norm(q, axis=1)))
+        dp = float(np.linalg.norm(q[j]))
+        s0 = S[j] + tt[j] * L[j] + math.sqrt(max(ROUTE_FIRST ** 2 - dp ** 2, 0.0))
+        sq = s0 + ROUTE_STEP * np.arange(ROUTE_N)
+        last = seg[-1] / max(L[-1], 1e-9)
+        x = np.interp(sq, S, e[:, 0]) + np.maximum(sq - S[-1], 0) * last[0]
+        y = np.interp(sq, S, e[:, 1]) + np.maximum(sq - S[-1], 0) * last[1]
+        out[i], dperp[i] = np.stack([x, y], -1), dp
+    return out, dperp
+
+
+def speed_label(fut: np.ndarray) -> np.ndarray:
+    """[K] 17:30 (4): the expert's mean speed over 0.75 ... 1.25 s (future rows 2 and 4 of the 0.25 s grid)."""
+    return np.linalg.norm(fut[:, 4] - fut[:, 2], axis=-1) / 0.5
+
+
+def labels(workers: int = 4) -> dict:
+    from concurrent.futures import ProcessPoolExecutor
+
+    import pandas as pd
+    from . import elicit_i3 as I, p5_exam as E
+    with I.p5_set(SET_BA):
+        t, _, fut, _, _, _ = E.load()
+    t = t.assign(adir=[str(Path(f[0]).parents[2]) for f in t.files], i=np.arange(len(t)))
+    groups = [(a, g.frame.to_numpy(), g.route_progress.to_numpy(), g.i.to_numpy()) for a, g in t.groupby("adir")]
+    route, dperp = np.zeros((len(t), ROUTE_N, 2), np.float32), np.zeros(len(t), np.float32)
+    with ProcessPoolExecutor(workers) as ex:
+        for (a, fr, pr, ii), (r, d) in zip(groups, ex.map(_route_label_one, [g[:3] for g in groups], chunksize=8)):
+            route[ii], dperp[ii] = r, d
+    v = speed_label(fut)
+    out = kdir("labels")
+    out.mkdir(parents=True, exist_ok=True)
+    np.savez(out / "route.npz", frame_name=t.frame_name.to_numpy(), route=route, dperp=dperp, speed=v.astype(np.float32))
+    st = {"rows": len(t), "attempts": len(groups), "dperp_p50": float(np.median(dperp)), "dperp_p95": float(np.percentile(dperp, 95)),
+          "off_route_gt_2_5m": float((dperp > ROUTE_FIRST).mean()), "first_ckpt_x_p50": float(np.median(route[:, 0, 0])),
+          "speed_p50": float(np.median(v)), "speed_max": float(v.max()), "speed_gt_20": float((v > 20).mean())}
+    (out / "route_stats.json").write_text(json.dumps(st, indent=1))
+    print(json.dumps(st))
+    return st
+
+
+# ================================================================ fits (repo .venv, GPU)
+
+def _gpu_eigh(dev: str):
+    """nq3_q6._gpu_eigh: float64 eigh of the ridge / pair-Delta grams on `dev` (cpu = the stock path)."""
+    import torch
+    from . import planner, reactivity_mc as MC
+    MC.EIGH_DEVICE = dev
+
+    def _gram_eigh(A):
+        e, V = torch.linalg.eigh((A.T @ A).double().to(dev))
+        return e.float().to(A.device), V.float().to(A.device)
+    planner.gram_eigh = _gram_eigh
+
+
+def data(with_lead: bool = True) -> dict:
+    """P5 v1 BA rows first, then the I3 exam rows and the P6 v0 exam rows riding along (never fitted, never standardised on)."""
+    import pandas as pd
+    from . import elicit_i3 as I, nq3_q1 as Q1, p5_exam as E, p5_openpilot as PO, p5_pairs as P
+    arrays = ("lead", "lead_prob") if with_lead else ()
+    with I.p5_set(SET_BA):
+        t, past, fut, obs, null, pairs = E.load()
+        op = PO.load(t, (MODEL,), sub="op_streams_vis")[f"op-{MODEL} temporal"]
+        Q = P.load_features(t, ("L18_last",))["L18_last"]
+        ld = PO.load(t, (MODEL,), arrays, sub="op_streams_lead") if with_lead else {}
+    with I.p5_set(SET_I3):
+        ta, pa, _, _, _, _ = E.load()
+        keep = ta.frame_name.isin(set(I.needed())).to_numpy()
+        t3, past3 = ta[keep].reset_index(drop=True), pa[keep]
+        op3 = PO.load(t3, (MODEL,), sub="op_streams")[f"op-{MODEL} temporal"]
+        ld3 = PO.load(t3, (MODEL,), arrays, sub="op_streams_lead") if with_lead else {}
+    t6, past6 = Q1._p6_rows()
+    with I.p5_set(SET_P6):
+        op6 = PO.load(t6, (MODEL,), sub="op_streams_vis")[f"op-{MODEL} temporal"]
+        ld6 = PO.load(t6, (MODEL,), arrays, sub="op_streams_lead") if with_lead else {}
+    lab = np.load(kdir("labels", "route.npz"))
+    assert (lab["frame_name"].astype(str) == t.frame_name.to_numpy()).all()
+    sp = load_split()
+    n, n3, n6 = len(t), len(t3), len(t6)
+    fold = t.base_id.astype(str).map(lambda r: sp["routes"][r]["fold"]).to_numpy()
+    d = {"t": t, "t3": t3, "t6": t6, "n": n, "n3": n3, "n6": n6, "past": past, "fut": fut, "obs": obs, "null": null,
+         "fold": fold, "Q": Q, "split": sp,
+         "ego": np.r_[E.ego_input(t, past), E.ego_input(t3, past3), E.ego_input(t6, past6)].astype(np.float32),
+         "op": np.r_[op, op3, op6].astype(np.float32), "route": lab["route"], "speed": lab["speed"],
+         "seq": np.r_[t.base_id.astype(str), "i3:" + t3.base_id.astype(str), "p6:" + t6.base_id.astype(str)]}
+    if with_lead:
+        d["lead"] = np.r_[ld[f"op-{MODEL} lead"], ld3[f"op-{MODEL} lead"], ld6[f"op-{MODEL} lead"]].astype(np.float32)
+        d["lead_prob"] = np.r_[ld[f"op-{MODEL} lead_prob"], ld3[f"op-{MODEL} lead_prob"], ld6[f"op-{MODEL} lead_prob"]].astype(np.float32)
+    pos = pd.Series(np.arange(n), index=t.frame_name)
+    d["ip"] = np.r_[pos[obs.fn_plus].to_numpy(), pos[null.fn_plus].to_numpy()]
+    d["im"] = np.r_[pos[obs.fn_minus].to_numpy(), pos[null.fn_null].to_numpy()]
+    d["grp"] = np.r_[obs.base_id.to_numpy(), null.base_id.to_numpy()].astype(str)
+    return d
+
+
+def _stats(X, tr):
+    """planner.standardize's statistics as numpy (float64 mean / population sd, sd <= 1e-6 -> 1, cast to float32)."""
+    import torch
+    mu, sd = X[tr].double().mean(0), X[tr].double().std(0, correction=0)
+    return mu.float().cpu().numpy(), torch.where(sd > 1e-6, sd, 1).float().cpu().numpy()
+
+
+def fit_fold(D: dict, tr: np.ndarray, rows_k: np.ndarray, pair_keep: np.ndarray, rl, tag: str, levels=("K0", "K1", "K3")) -> dict:
+    """One fold's readouts on train rows `tr` (all rows ride along). rows_k: the BA rows of this fold (K3's constant);
+    pair_keep: its pair rows. Returns {level: head params} and {level: predictions (N, 20, 2)}."""
+    from types import SimpleNamespace
+
+    import torch
+    from sklearn.model_selection import GroupShuffleSplit
+    from . import navsim_heads as H, planner, reactivity_mc as MC, waymo_stage_a as sa
+    dev = "cuda"
+    N, seq = len(D["ego"]), D["seq"]
+    n = D["n"]
+    ALL = np.arange(N)
+    Ego, Xop = torch.as_tensor(D["ego"], device=dev), torch.as_tensor(D["op"], device=dev)
+    fut = np.zeros((N, 20, 2), np.float32)
+    fut[:n] = D["fut"]
+    F = torch.as_tensor(fut.reshape(N, -1), device=dev)
+    sp = SimpleNamespace(train=tr, val=tr, seq=seq)
+    em, es = _stats(Ego, tr)
+    om, osd = _stats(Xop, tr)
+    Xe, Xi = planner.standardize(Ego, tr), planner.standardize(Xop, tr)
+    heads, preds, info = {}, {}, {}
+
+    def ridge_late(Y, T):                           # reactivity_mc.fit_fold's prior, for any target
+        y3 = Y.reshape(N, T, 2).cpu().numpy()
+        _, st_e, We = sa.ridge_cv(Xe, Y, sp, y3)
+        base = planner.linear_apply(We, Xe, ALL)[0]
+        R0 = Y - base
+        _, st_p, Wp = sa.ridge_cv(Xi, R0, sp, R0.reshape(N, T, 2).cpu().numpy())
+        return We[0].cpu().numpy(), Wp[0].cpu().numpy(), base + planner.linear_apply(Wp, Xi, ALL)[0], st_e["lam"], st_p["lam"]
+    We, Wp, prior, le, lp = ridge_late(F, 20)
+    info["K0"] = {"lam_ego": le, "lam_op": lp, "n_train": int(len(tr))}
+    heads["K0"] = {"ego_mu": em, "ego_sd": es, "op_mu": om, "op_sd": osd, "We": We, "Wp": Wp}
+    preds["K0"] = prior.reshape(N, 20, 2).cpu().double().numpy()
+    if "K1" in levels or "K3" in levels:
+        rt = np.zeros((N, ROUTE_N, 2), np.float32)
+        rt[:n] = D["route"]
+        Re, Rp, rpred, le, lp = ridge_late(torch.as_tensor(rt.reshape(N, -1), device=dev), ROUTE_N)
+        ids, w = np.zeros((N, 2), np.int64), np.zeros((N, 2), np.float32)
+        ids[:n], w[:n] = two_hot(D["speed"])
+        tgt = (ids, w)
+        a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=0).split(tr, groups=seq[tr]))
+        fit_r, sel_r = tr[a], tr[b]
+        ti, tw = torch.as_tensor(ids, device=dev), torch.as_tensor(w, device=dev)
+
+        def ce(W, X, rows, off=None):               # mean two-hot cross-entropy of every lam's W on `rows`
+            z = planner.linear_apply(W, X, rows)
+            if off is not None:
+                z = z + off[rows]
+            lp_ = z.log_softmax(-1)
+            return (-(lp_.gather(2, ti[rows].unsqueeze(0).expand(len(W), -1, -1)) * tw[rows]).sum(-1).mean(-1)).cpu().numpy()
+
+        def pick(X, off=None, what="cls"):
+            W, _ = planner.ce_solve(X, tgt, fit_r, planner.LAM_CLS, len(SPEEDS), offset=off)
+            return float(planner.LAM_CLS[planner._pick(ce(W, X, sel_r, off), planner.LAM_CLS, what)])
+        lam_e = pick(Xe, what="speed ego")
+        Ce, _ = planner.ce_solve(Xe, tgt, tr, [lam_e], len(SPEEDS))
+        off = planner.linear_apply(Ce, Xe, ALL)[0]
+        inner = H._group_folds(seq[tr], 5, seed=0)
+        for k in range(5):                          # night2_n3.p5cls: out-of-fold ego logits on the training rows
+            Wk, _ = planner.ce_solve(Xe, tgt, tr[inner != k], [lam_e], len(SPEEDS))
+            off[tr[inner == k]] = planner.linear_apply(Wk, Xe, tr[inner == k])[0]
+        lam_l = pick(Xi, off, "speed late")
+        Cp, st_c = planner.ce_solve(Xi, tgt, tr, [lam_l], len(SPEEDS), offset=off)
+        info["K1"] = {"lam_route_ego": le, "lam_route_op": lp, "lam_speed_ego": lam_e, "lam_speed_op": lam_l, **st_c}
+        k1 = {"ego_mu": em, "ego_sd": es, "op_mu": om, "op_sd": osd, "Re": Re, "Rp": Rp,
+              "Ce": Ce[0].cpu().numpy(), "Cp": Cp[0].cpu().numpy(), "speeds": SPEEDS}
+        heads["K1"] = heads["K2"] = k1
+        hk = KHead.__new__(KHead)
+        hk.p = {("K1", "x"): k1}
+        route, v = hk.k1("x", D["ego"], D["op"])
+        preds["K1"] = preds["K2"] = path_from_route(route, v)
+        info["K1"]["torch_vs_numpy_route_max"] = float(np.abs(route.reshape(N, -1) - rpred.cpu().numpy()).max())
+        preds["_v"], preds["_route"] = v, route
+    if "K3" in levels:
+        Q = torch.as_tensor(np.r_[D["Q"], np.zeros((N - n, D["Q"].shape[1]), np.float32)], device=dev)
+        ip, im, grp = D["ip"][pair_keep], D["im"][pair_keep], D["grp"][pair_keep]
+        Rpair = (F[ip] - F[im]) - (prior[ip] - prior[im])
+        Z = torch.cat([MC._std(Q, tr), MC._std(Xop, tr)], 1)
+        zbar = Z[tr].mean(0)
+        Zc, Dz, mu = Z[tr] - zbar, Z[ip] - Z[im], len(ip) / len(tr)
+        score = np.zeros(len(MC.LAMS))
+        for a_, b_ in MC._inner_splits(grp):
+            Ws = MC._solve_pair(Dz[a_], Rpair[a_], Zc, mu, MC.LAMS)
+            score += [float(((Dz[b_] @ W - Rpair[b_]) ** 2).sum()) for W in Ws]
+        best = int(np.argmin(score))
+        W = MC._solve_pair(Dz, Rpair, Zc, mu, [MC.LAMS[best]])[0]
+        delta = ((Z[rows_k] - zbar) @ W).reshape(-1, 20, 2).cpu().double().numpy()
+        g = g3(D["lead"][rows_k], D["lead_prob"][rows_k], v_ego_of(D["ego"][rows_k])).astype(np.float64)
+        c = (g[:, None, None] * delta).sum(0) / g.sum()
+        c = (c * np.array([1.0, 0.0])).astype(np.float64)
+        heads["K3"] = {**heads["K1"], "c": c, "ttc": np.array([TTC_ON, TTC_OFF, CLOSING])}
+        info["K3"] = {"lam_mc": float(MC.LAMS[best]), "lam_edge": best in (0, len(MC.LAMS) - 1), "n_pair": int(len(ip)),
+                      "g3_sum": float(g.sum()), "g3_open": float((g > 0.5).mean()), "c_x_2s": float(c[7, 0]), "c_x_4s": float(c[15, 0])}
+        gall = g3(D["lead"], D["lead_prob"], v_ego_of(D["ego"])).astype(np.float64)
+        preds["K3"] = path_from_route(preds["_route"], preds["_v"], gall[:, None] * c[:, 0])
+        preds["_g3"] = gall
+    for k, v in info.items():
+        rl.event("k_fit", fold=tag, level=k, **v)
+        rl.log.info("%s %s: %s", tag, k, v)
+    return heads, preds, info
+
+
+def _fold_masks(D, tag):
+    role, n = D["t"].role.to_numpy(), D["n"]
+    own = np.ones(n, bool) if tag == "full" else D["fold"] == tag
+    return np.flatnonzero((role == "train") & own), np.flatnonzero(own), own[D["ip"]]
+
+
+def _save_heads(heads: dict, tag: str):
+    for level, h in heads.items():
+        d = kdir(level, tag)
+        d.mkdir(parents=True, exist_ok=True)
+        np.savez(d / "head.npz", **{k: np.asarray(v) for k, v in h.items()})
+
+
+def _numpy_check(D, tag) -> dict:
+    """The saved heads through KHead (what the server runs) against the fit's own predictions."""
+    kh = KHead()
+    ego, op = D["ego"], D["op"]
+    return {"K0": float(np.abs(kh.predict("K0", tag, ego, op)[0] - PRED[tag]["K0"]).max()),
+            "K1": float(np.abs(kh.predict("K1", tag, ego, op)[0] - PRED[tag]["K1"]).max()),
+            "K3": float(np.abs(kh.predict("K3", tag, ego, op, D["lead"], D["lead_prob"])[0] - PRED[tag]["K3"]).max())}
+
+
+PRED: dict = {}
+
+
+def fit(eigh: str = "cuda"):
+    """[K] 17:30 (3)-(7): R1, R2 and the full-data control; heads -> <level>/<fold>/head.npz; cross-fitted open-loop
+    predictions -> openloop/; the full K0 against lane B's heads.npz."""
+    import time
+
+    import pandas as pd
+    from . import nq3_cl as CL
+    from .runlog import RunLog
+    rl = RunLog("nq4_k", "fit")
+    _gpu_eigh(eigh)
+    t0 = time.time()
+    D = data()
+    rl.log.info("data: %d BA rows, %d I3, %d P6 (%.0f s)", D["n"], D["n3"], D["n6"], time.time() - t0)
+    info, timing = {}, {}
+    for tag in ("R1", "R2", "full"):
+        t1 = time.time()
+        tr, rows_k, pk = _fold_masks(D, tag)
+        heads, PRED[tag], info[tag] = fit_fold(D, tr, rows_k, pk, rl, tag)
+        _save_heads(heads, tag)
+        timing[tag] = time.time() - t1
+        info[tag]["numpy_vs_fit"] = _numpy_check(D, tag)
+        rl.log.info("%s: %.0f s, numpy apply vs fit max |diff| %s", tag, timing[tag], info[tag]["numpy_vs_fit"])
+        assert max(info[tag]["numpy_vs_fit"].values()) < 1e-3, info[tag]["numpy_vs_fit"]
+    # full-data K0 = CL3's recipe: lane B's heads.npz must come out again
+    H = CL.Heads()
+    n = D["n"]
+    ref = H.prior(D["ego"][:n], D["op"][:n]).reshape(n, 20, 2)
+    lb = {"max_abs_pred": float(np.abs(ref - PRED["full"]["K0"][:n]).max()),
+          "We_max_abs": float(np.abs(H.p["We"] - np.load(kdir("K0", "full", "head.npz"))["We"]).max()),
+          "Wp_max_abs": float(np.abs(H.p["Wp"] - np.load(kdir("K0", "full", "head.npz"))["Wp"]).max()),
+          "lam": [info["full"]["K0"]["lam_ego"], info["full"]["K0"]["lam_op"],
+                  json.loads((CL.head_dir() / "meta.json").read_text())["lam_ego"], json.loads((CL.head_dir() / "meta.json").read_text())["lam_op"]]}
+    rl.log.info("full K0 vs lane B heads.npz: %s", lb)
+    assert lb["max_abs_pred"] <= 1e-3, lb
+    export(D, rl)
+    res = {"info": info, "timing_s": timing, "k0_full_vs_laneB": lb, "eigh": eigh}
+    kdir("checks").mkdir(parents=True, exist_ok=True)
+    (kdir("checks") / "fit.json").write_text(json.dumps(res, indent=1, default=float))
+    rl.close()
+
+
+def export(D, rl):
+    """[K] 17:30 (7): per level, BA rows by the readout that never saw their route (and by their own fold: seen), I3 by
+    R1 (R2 kept), P6 exam rows by the readout the closed loop would use on their route."""
+    n, n3, n6 = D["n"], D["n3"], D["n6"]
+    sp = D["split"]
+    out = kdir("openloop")
+    out.mkdir(parents=True, exist_ok=True)
+    other = np.where(D["fold"] == "R1", "R2", "R1")
+    r6 = np.array([readout(sp, str(b).split("-")[0].split("_")[0], "unseen") for b in D["t6"].base_id])
+    for level in LEVELS:
+        P = {f: PRED[f][level] for f in ("R1", "R2", "full")}
+        unseen = np.where((other == "R1")[:, None, None], P["R1"][:n], P["R2"][:n])
+        seen = np.where((D["fold"] == "R1")[:, None, None], P["R1"][:n], P["R2"][:n])
+        aux = {}
+        for key in ("_v", "_g3"):
+            if key in PRED["R1"] and level in ("K1", "K2", "K3") and (key == "_v" or level == "K3"):
+                aux[key[1:] + "_unseen"] = np.where(other == "R1", PRED["R1"][key][:n], PRED["R2"][key][:n]).astype(np.float32)
+        np.savez_compressed(out / f"ba_{level}.npz", frame_name=D["t"].frame_name.to_numpy(), unseen=unseen.astype(np.float32),
+                            seen=seen.astype(np.float32), full=P["full"][:n].astype(np.float32), readout_unseen=other,
+                            **aux)
+        np.savez_compressed(out / f"i3_{level}.npz", frame_name=D["t3"].frame_name.to_numpy(),
+                            R1=P["R1"][n:n + n3].astype(np.float32), R2=P["R2"][n:n + n3].astype(np.float32))
+        p6 = np.where((r6 == "R1")[:, None, None], P["R1"][n + n3:], P["R2"][n + n3:])
+        np.savez_compressed(out / f"p6_{level}.npz", frame_name=D["t6"].frame_name.to_numpy(), unseen=p6.astype(np.float32),
+                            readout=r6, R1=P["R1"][n + n3:].astype(np.float32), R2=P["R2"][n + n3:].astype(np.float32))
+    rl.log.info("open-loop exports -> %s (P6 readouts %s)", out, dict(zip(*np.unique(r6, return_counts=True))))
+
+
+def check_eigh():
+    """[K] 17:30 (K3 step): fold R1 fitted with the float64 grams diagonalised on the CPU (the stock path) and on the
+    GPU; predictions must agree within 1 mm; the wall times are the before / after of the optimisation."""
+    import time
+
+    from .runlog import RunLog
+    rl = RunLog("nq4_k", "check-eigh")
+    D = data()
+    tr, rows_k, pk = _fold_masks(D, "R1")
+    res = {}
+    for dev in ("cuda", "cpu"):
+        _gpu_eigh(dev)
+        t0 = time.time()
+        _, PRED[dev], _ = fit_fold(D, tr, rows_k, pk, rl, f"R1-{dev}")
+        res[f"wall_s_{dev}"] = time.time() - t0
+    for level in ("K0", "K1", "K3"):
+        res[f"{level}_max_abs_m"] = float(np.abs(PRED["cuda"][level] - PRED["cpu"][level]).max())
+    res["v_max_abs"] = float(np.abs(PRED["cuda"]["_v"] - PRED["cpu"]["_v"]).max())
+    rl.log.info("GPU vs CPU eigh: %s", res)
+    kdir("checks").mkdir(parents=True, exist_ok=True)
+    (kdir("checks") / "eigh.json").write_text(json.dumps(res, indent=1))
+    rl.close()
+    assert max(res[f"{lv}_max_abs_m"] for lv in ("K0", "K1", "K3")) <= 1e-3, res
+
+
 # ================================================================ entry point
 
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("split", "check-lead"))
+    ap.add_argument("step", choices=("split", "check-lead", "labels", "fit", "check-eigh"))
     ap.add_argument("--set", default=SET_BA)
     a = ap.parse_args()
     if a.step == "split":
         split()
     elif a.step == "check-lead":
         check_lead(a.set)
+    elif a.step == "labels":
+        labels()
+    elif a.step == "fit":
+        fit()
+    elif a.step == "check-eigh":
+        check_eigh()
 
 
 if __name__ == "__main__":

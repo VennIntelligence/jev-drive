@@ -43,6 +43,7 @@ import wod_zeroshot_openpilot as WZ  # noqa: E402
 import zeroshot_wire as wire  # noqa: E402
 from jevdrive import drive_backbones as D  # noqa: E402
 from jevdrive import nq3_cl as CL  # noqa: E402
+from jevdrive import nq4_k as NK  # noqa: E402
 from jevdrive.p5_openpilot import RIG, carla_calib  # noqa: E402
 
 HOLD = P5.HOLD
@@ -96,6 +97,13 @@ def main():
             from jevdrive.nq3_head import Head
             q2[d] = Head(d)
         return q2[d]
+
+    khead = {}
+
+    def kheads():
+        if "h" not in khead:
+            khead["h"] = NK.KHead()
+        return khead["h"]
 
     def heads_for(p=None):
         """The full-data heads, or (night queue 4, meta "heads") one cross-fitted fold's heads.npz."""
@@ -162,7 +170,7 @@ def main():
                 tok = fut_y.result()[1]["tok"] if fut_y else None
                 t_f = time.perf_counter()
                 ego = np.asarray(arrays["ego"], np.float32)
-                mode = None
+                mode, kinfo = None, None
                 if arm in ("q2", "q2d"):
                     traj, md = q2head(meta.get("q2_dir"))(op, ego)
                     mode = int(md[0]) if md is not None else None
@@ -172,6 +180,8 @@ def main():
                     else:
                         dd = decode(raw, m.slices, float(meta.get("speed", 0.0)))
                         path = np.asarray(openpilot_to_rear(dd["plan_pos"], dd["plan_yaw"], T_IDXS, front_xy), np.float64)
+                elif arm in NK.ARMS:                                      # night queue 4, K-prep: the fold is the agent's
+                    path, kinfo = kheads().predict(arm, meta["kfold"], ego, op, raw[m.slices["lead"]], raw[m.slices["lead_prob"]])
                 elif arm in ("mc", "mc_real0") and q is None:          # the first three camera sets of a route: no 4-frame clip yet
                     path = heads_for(meta.get("heads")).predict("ridge_late", ego, op)
                 else:
@@ -183,11 +193,15 @@ def main():
                 info["full_clip"] = full
                 if mode is not None:
                     info.update(mode=mode, desire_used=d_idx)
+                if kinfo:
+                    info.update({k: float(v) for k, v in kinfo.items()})
                 wire.send(conn, info, {"path": path.astype(np.float64)})
                 if meta.get("dump"):
                     extra = {"q": q} if q is not None else {}
                     if tok is not None:
                         extra["tok"] = tok
+                    if arm in NK.ARMS:
+                        extra.update(kfold=str(meta["kfold"]), lead=raw[m.slices["lead"]], lead_prob=raw[m.slices["lead_prob"]])
                     np.savez(meta["dump"], jpg0=jpg[0], jpg1=jpg[1], jpg2=jpg[2], desire=np.int64(meta.get("desire", 0)), ego=ego, img2=img2, op=op, path=path, arm=arm,
                              frame=np.int64(meta.get("frame", -1)), **extra)
                 stats["calls"] += 1
