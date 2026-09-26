@@ -44,7 +44,7 @@ status() {  # STATUS.md every 10 min: step, progress, ETA, GPUs, cores, threads
             echo "- steps done: $(cd $R && ls -d */DONE 2>/dev/null | tr '\n' ' ')"
             echo "- GPUs 3-5: $(nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader | sed -n 4,6p | tr '\n' ';')"
             echo "- load $(cut -d' ' -f1-3 /proc/loadavg); pids.current $(cat /sys/fs/cgroup/pids.current) / 20480"
-            echo "- CARLA servers on lane A's ports: $(ps -eo args | grep -c 'carla-rpc-port=3[2-6][0-9][0-9][0-9] ')"
+            echo "- CARLA servers on lane A's ports: $(ps -eo args | grep -c '^[^ ]*Shipping .*carla-rpc-port=3[2-6][0-9][0-9][0-9] ')"
         } > "$R/STATUS.md.tmp" && mv "$R/STATUS.md.tmp" "$R/STATUS.md"
         sleep 600
     done
