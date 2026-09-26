@@ -393,6 +393,23 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   8. **分步估时（profiling 前的粗估，profiling 后在下一条更新）**：CL1 专家录轨约 1 h（12 worker）；CL0 约 1.5 h（含等价检查）；每轮 220 条按 18 worker：CL1 replay 约 0.7 h、CL2 / CL7 约 1.5 h、CL3 约 1.5 h、CL6 约 1.5 h、
      CL4 约 2 h（Qwen 每 plan 约 0.25 s，是最贵的一项）、CL8 约 3 h（Alpamayo 每 plan 约 1 s）、CL9 六轮约 10 h、CL5 / CL5d 六轮 obstacle 子集约 3 h。合计约 26 h > 到 09:00 的约 16 h，
      A 在 03:00 左右交卡后容量翻倍；按优先级跑，CL8 之后的部分与 CL10 视余量顺延。任何一步超估计 2 倍，脚本停该步写 ERROR。
+- 2026-09-26 17:48 CST [B] **CL0 完成：管线 profiling、规则 8 等价检查、队列开跑**（CL1 起的数字都在这之后；smoke 路线 2084 / 24211 / 2668 的分数只作管线核对，不进任何表）。
+  1. **等价检查全过**（`runs/nq3/b/cl0/check_*.json`）：head 臂 3 条路线上每个请求都 dump，离线代码在新进程里重算，model frame、Cinque `temporal`、head 轨迹 1 524 / 1 524 逐位相同；
+     Qwen `L18_last` 503 / 503、YOLO token 498 / 498 逐位相同；`ego_past` 在 6 条 P5 recorder 路线上与 `p4_carla.route_rows` 逐位相同，intent 全部一致。CL1 replay、CL2、CL7、CL8 的 smoke 跑通（agent 路径是验收过的原样，只换 P7）。
+  2. **profiling 与改动（每 tick 墙钟，3 worker / 卡，smoke 路线中位）**：瓶颈依次是 head 臂的相机回传（3 路 1088×1560 每 tick 渲染，agent 侧 ~110–160 ms / tick）和 CL4 的 Qwen（每 plan 前向 ~300 ms、CPU 预处理 ~350–500 ms）。
+     改动：相机按 spec 的 `sensor_tick` 渲染（`B2D_SENSOR_TICK=1`，否则 leaderboard 丢掉这个属性、Alpamayo 的 10 Hz 相机也每 tick 渲染）、`--fast-copy`（同字节）与 `--cache-lights`（已核等价）；
+     Qwen server 把预处理放到 GPU 锁外、按 JPEG 字节缓存每帧 resize（滑动 clip 12 帧里 9 帧复用，缓存路径与不缓存路径逐位相同），head server 让 Qwen / YOLO 请求与 Cinque 步进重叠。
+     **试过但否决**：head 相机 `sensor_tick` 0.19（只在第 4 tick 渲染）把 agent 侧降到 30–70 ms / tick，但帧间隔在 2–61 tick 之间抖（24211 上 1 022 帧里只有 698 个间隔是 4），
+     这正是迁移文档 A 的 bug 2，所以 head 臂保持每 tick 渲染、每第 4 tick 取帧（间隔 4 的比例 100%），与 recorder 一致。
+     结果（ms / tick 墙钟）：CL1 replay 70–140、CL2 Cinque 144–266、CL7 Lebowski 79–202、CL3 148–301、CL6 130–326、CL4 350–500（Qwen 排队 ~700 ms / plan 为主）、CL8 Alpamayo 240–380（~1.1 s / plan）。
+     按此定：每卡 6 个 CARLA server、1 个 head server（Cinque session 池 6）+ 按臂 1 个 Qwen / YOLO server；估时（一轮 220 条、18 worker）CL1 1.0 h、CL2 / CL7 1.5 h、CL3 2.0 h、CL6 2.5 h、CL4 4.5 h（Qwen 受限，3 卡约 13 tick/s/卡）、CL8 4.0 h、CL5 / CL5d obstacle 子集每轮 0.8 h、CL10 每臂 3 h（SimLingo 约 1.1 s / tick、单核受限，8 h，排在 CL10 最后）。CL10 的四个作者 agent 在官方树里原样跑（`scripts/nq3_b_cl10.sh`，24211 上 smoke 都 Completed）；偏离只有启动 shim：BridgeDrive 三个 start-up shim 并关掉只画图的 debug 输出（作者 config 的 visualizer 用相对路径读字体，tick 2 就崩），BLUE 加 `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1`；BLUE 作者自己的 B2D copy 去掉了 4000-tick 截断、完成阈值 90%，这里按规则 10 用官方评测器。
+  3. smoke 里看到、如实记下的两件事（不是判读）：openpilot 原生 plan（CL2、CL7）在 3 条路线上都没起步，60 s 后被判 blocked（迁移文档 D1 的静止起步问题，本轮不接伙伴，见上一条第 2 点）；
+     CL1 replay 在 3 条上都 Completed，DS 36–60（P7 的纵向滞后在冲突点吃罚分，与验收一致）。
+  4. **CL5 / CL5d 的接法**（写在 Q2 交付之前）：CL5 = lane C 的 `jevdrive.nq3_head.Head` 在同一条 P4 rig `temporal` + ego 输入上的轨迹；CL5d = 同一条 Cinque 流上 openpilot 自己的 plan（相机原点取 rig 的 FRONT 相机，
+     后轴变换同 `wod_zeroshot.openpilot_to_wod`），模式头上一帧判 bypass-L / R 时把 desire 换成 laneChangeLeft / Right（上升沿由 OPModel 生成）。所以 CL5d 的 openpilot 是 Waymo rig 上的 openpilot，与 CL2 的原生 rig 不同，CL5d 只与 CL5 比（判据 3）。
+     `mc_real0`（Q4a PASS 后追加）= CL4 的 prior + lane D 包里 5 个 fold head 的平均 Δ（`elicit_e1.correction`），与 CL4 的全数据重拟合 Δ 不是同一种拟合，配对差要带这个限定。
+  5. 链式脚本 `scripts/nq3_b.sh chain` 17:47 在 `jev:nq3-b` 开跑（CL1 → CL2 → CL3 → CL4 → CL6 → CL7 → CL8 → CL9 → CL10，CL5 / CL5d 与 `mc_real0` 按文件插入 / 追加，A 的 `v1/DONE` 后扩到 GPU 0–5、`taskset -c 60-149`）；
+     之后由 Codex 按 [tmp/2026-09-26-codex-handoff.md](../tmp/2026-09-26-codex-handoff.md) 的 lane B 一节看护。
 
 ## 时间表与资源（box 时钟 CST；每条 lane 固定卡与核段，`taskset` 绑核，OMP / MKL / OpenBLAS / NUMBA 线程按 lane 上限设）
 

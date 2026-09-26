@@ -319,8 +319,8 @@ chain() {
                 "cl6 0 all ${EST_CL6:-2.5}" "cl7 0 all ${EST_CL7:-1.5}" "cl8 0 all ${EST_CL8:-4.0}"
                 "cl2 1 all ${EST_CL2:-1.5}" "cl3 1 all ${EST_CL3:-2.0}" "cl4 1 all ${EST_CL4:-4.5}"
                 "cl2 2 all ${EST_CL2:-1.5}" "cl3 2 all ${EST_CL3:-2.0}" "cl4 2 all ${EST_CL4:-4.5}"
-                "tfv6 0 all ${EST_CL10:-3.0}" "bridgedrive 0 all ${EST_CL10:-3.0}" "simlingo 0 all ${EST_CL10:-3.0}"
-                "blue 0 all ${EST_CL10:-3.0}")
+                "tfv6 0 all ${EST_CL10:-3.0}" "bridgedrive 0 all ${EST_CL10:-3.0}" "blue 0 all ${EST_CL10:-3.0}"
+                "simlingo 0 all ${EST_SIMLINGO:-8.0}")      # SimLingo ~1.1 s / tick, single-core bound (CL10 smoke)
     local inserted=0 appended=0 s
     while (( ${#Q[@]} )); do
         maybe_expand
