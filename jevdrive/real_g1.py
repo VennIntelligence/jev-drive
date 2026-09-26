@@ -815,7 +815,7 @@ def figs(res_dir, out_dir, model: str = "cinque"):
     import matplotlib.pyplot as plt
     from . import plots
     res_dir, out_dir = Path(res_dir), Path(out_dir)
-    gates = ["none", "g1", "g2", "g3"]
+    gates = ["none", "g1", "g2", "g3", "c2"]                 # c2: the post-hoc constant control (no NAVSIM)
     srcs = [("mc", "M-C (Qwen + op)", plots.OKABE_ITO[6], "o", 0.0)] + \
            [(f"stAs{sd}", "Student A (op + YOLO)" if sd == 0 else None, plots.OKABE_ITO[5], "s", 0.12 + 0.06 * sd) for sd in SEEDS]
     x = np.arange(len(gates))
@@ -846,7 +846,8 @@ def figs(res_dir, out_dir, model: str = "cinque"):
         for a_, yl in zip(ax, ("I3 flip vs prior (pp)", r"WOD $\Delta$RFS, all rater frames", "WOD straight activation (%)",
                                r"NAVSIM $\Delta$PDMS, navtest")):
             a_.axhline(0, color="0.5", lw=0.6)
-            a_.set_xticks(x, ["none", "$g_1$", "$g_2$", "$g_3$"])
+            a_.set_xticks(x, ["none", "$g_1$", "$g_2$", "$g_3$", r"$\bar{g}_2$"])
+            a_.axvspan(len(gates) - 1.5, len(gates) - 0.3, color="0.93", lw=0, zorder=0)
             a_.set_xlim(-0.5, len(gates) - 0.3)
             a_.set_ylabel(yl)
         ax[2].axhline(100 * ACT_HARM, color="0.3", ls="--", lw=0.7)
