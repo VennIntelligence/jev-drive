@@ -98,7 +98,7 @@
   - **门**：每类 scenario 的 x₁₀ bypass 比例 ≥ 70% 才算可用（IT、Emergency 也按这条报）；放置 null keep ≥ 90%；镜像题 stop ≥ 80%。
   - **卡与 server**：GPU 0–2，每卡 ≤ 6 个 CARLA server（受 pids.max 实时限制），server index 800–949，每实例 3 核（开跑时取没有被 pin 的核）。
 - 2026-09-26 10:01 CST [A] 补两条（写于看 smoke 的任何数字之前）：世界级模式里的「停」只算 ego 曾经快过 3 m/s 之后（出生点原地不动不算停）；帧级 §2.1 的航向用 3 点滑动平均后相对 t₀ 的变化。
-- 2026-09-26 10:07 CST [A] CPU 准备 (i) 的口径（写于算之前）：词表 = `waymo_heads.vocabularies` 的 K = 1024 k-means（WOD train futures，seed 0，即 P0 / `cls_late` 的配方；
+- 2026-09-26 10:03 CST [A] CPU 准备 (i) 的口径（写于算之前）：词表 = `waymo_heads.vocabularies` 的 K = 1024 k-means（WOD train futures，seed 0，即 P0 / `cls_late` 的配方；
   box 上没有存盘的那一份，按同一配方重算）。bypass 形状：ego 系 y 在 3 s 处 |y| ≥ 1.0 m，且 3–5 s 之间某点回到 |y| ≤ 0.5 m（todo 写死的阈值），另按 §2.1 给每个 anchor 分类并列。
   oracle 覆盖率：在同一规则下为 bypass 形状的目标轨迹上，最近 anchor（20 点平均 L2）也是 bypass 形状的比例，以及 minADE 中位数；目标轨迹两套：WOD train futures、P6 x₁₀ 里 expert 的 5 s 未来（数据到后补）。
 
