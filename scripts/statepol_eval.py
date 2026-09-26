@@ -25,9 +25,9 @@ import numpy as np
 W = Path(os.environ.get("BB_ROOT", Path.home() / "data/third_party/statepol/behavior-bench"))
 PLANNER_ARGS = {
     "ppo": ["--planner.type", "ppo", "--planner.ppo.weights-path", str(W / "weights/simple_ppo.pt")],
-    "cond_normal": ["--planner.type", "conditioned_normal", "--planner.conditioned_normal.weights-path", str(W / "weights/conditioned_ppo.pt")],
-    "cond_caut": ["--planner.type", "conditioned_caut", "--planner.conditioned_caut.weights-path", str(W / "weights/conditioned_ppo.pt")],
-    "cond_aggr": ["--planner.type", "conditioned_aggr", "--planner.conditioned_aggr.weights-path", str(W / "weights/conditioned_ppo.pt")],
+    "cond_normal": ["--planner.type", "conditioned_normal", "--planner.conditioned-normal.weights-path", str(W / "weights/conditioned_ppo.pt")],
+    "cond_caut": ["--planner.type", "conditioned_caut", "--planner.conditioned-caut.weights-path", str(W / "weights/conditioned_ppo.pt")],
+    "cond_aggr": ["--planner.type", "conditioned_aggr", "--planner.conditioned-aggr.weights-path", str(W / "weights/conditioned_ppo.pt")],
     "idm": ["--planner.type", "idm"],
     "pdm": ["--planner.type", "pdm"],
     "cv": ["--planner.type", "constant_velocity"],
@@ -45,7 +45,7 @@ def run_shard(job):
     os.environ["DRIVE_BINARIES_DATA_ROOT"] = str(variant_dir)
     sys.argv = ["eval", "--eval.split", "validation_interactive", *PLANNER_ARGS[planner], *TRAFFIC_ARGS[traffic]]
     for k in ("planner", "traffic"):
-        for t in ("ppo", "conditioned_normal", "conditioned_caut", "conditioned_aggr"):
+        for t in ("ppo", "conditioned-normal", "conditioned-caut", "conditioned-aggr"):
             sys.argv += [f"--{k}.{t}.device", "cpu"]
     import pufferlib.ocean.drive.drive as D
 
@@ -114,6 +114,10 @@ def run_shard(job):
         sys.stdout = sys.stderr = null
     try:
         E.main()
+    except BaseException as ex:  # argparse exits or crashes must not hang the pool
+        sys.stdout, sys.stderr = so, se
+        print(f"shard {map_ids[:3]}... failed: {ex!r}", flush=True)
+        return {}
     finally:
         sys.stdout, sys.stderr = so, se
     ev = captured["ev"]
