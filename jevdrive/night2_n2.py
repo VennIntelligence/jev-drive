@@ -268,6 +268,22 @@ def probe(set_name: str, det_root: str | None = None) -> pd.DataFrame:
     return tab
 
 
+def controls(set_name: str, det_root: str | None = None, v_min: float = 3.0) -> pd.DataFrame:
+    """Post-hoc ([A-N2] 10:43): the same probes on ego speed alone, and every feature refitted on v_ego >= v_min frames."""
+    lab = pd.read_parquet(proc(set_name, "night2_labels.parquet"))
+    rows = [probe_table(lab, {"ego speed only": lab[["v_ego"]].to_numpy(np.float32)}, tag=set_name).assign(frames="all")]
+    moving = (lab.v_ego >= v_min).to_numpy()
+    feats = op_features(set_name, lab.index.to_series())
+    if det_root:
+        feats["YOLO26x-seg image-plane tokens"] = yolo_tokens(Path(det_root), lab.index.to_series())
+    feats = {k: v[moving] for k, v in feats.items() if v is not None}
+    feats["ego speed only"] = lab[["v_ego"]].to_numpy(np.float32)[moving]
+    rows.append(probe_table(lab[moving], feats, tag=set_name).assign(frames=f"v_ego>={v_min:g}"))
+    tab = pd.concat(rows, ignore_index=True)
+    tab.to_csv(RESULTS / f"probe_controls_{set_name}.csv", index=False)
+    return tab
+
+
 # ---------------------------------------------------------------- desire check
 
 BINS = ((5.0, 10.0, "5-10"), (10.0, 15.0, "10-15"), (15.0, np.inf, ">15"))
@@ -349,7 +365,7 @@ def desire_table(set_names=("carla_p5v1_ba", "carla_p5v1_pdm")) -> pd.DataFrame:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("labels", "probe", "targets", "desire"))
+    ap.add_argument("step", choices=("labels", "probe", "controls", "targets", "desire"))
     ap.add_argument("--set", default="carla_p5v1_ba")
     ap.add_argument("--dets", default="", help="probe: YOLO detection root (E5: processed/elicit_e5/dets)")
     ap.add_argument("--workers", type=int, default=24)
@@ -358,6 +374,8 @@ def main():
         labels(a.set, a.workers)
     elif a.step == "probe":
         print(probe(a.set, a.dets or None).to_markdown(index=False))
+    elif a.step == "controls":
+        print(controls(a.set, a.dets or None).to_markdown(index=False))
     elif a.step == "targets":
         print(targets(a.set))
     else:
