@@ -3246,3 +3246,27 @@ null false-flip 4.8–5.2%；副 tap 与 Lebowski prior 判格不变。
 
 **状态**：**待定**。限定：只在 CARLA（BA 集）；pooled 特征、线性 head；DINOv2 输入按竖图改成 350 × 322；DINOv3 未测。图：[night2-n6-backbone-flips](figs/night2-n6-backbone-flips.png)。
 **会推翻或推进本条的证据**：V-JEPA 2 只喂当前帧（1 帧重复成 clip）行人翻转掉到 DINOv2 的水平（那就是「时间」而不是「视频预训练」）；V-JEPA 流替换 Qwen 进 E5 student 后在真实数据上不再有害（推进快通道换 backbone）。
+
+## 49. openpilot 的冻结特征里有「前方停着的车」「旁边车道有车」「对向来车」的线性可读信息；desire 脉冲方向总对，但低速开环下变道幅度不够当绕行执行器（**待定**，P5 v1 两个 expert 集，绕行类障碍待 N1 重跑）
+
+2026-09-26。预登记与操作性选择在 [夜间队列 2](../todos/2026-09-26-night-queue-2.md) N2（`[A-N2]` 条目写于任何数字之前，10:43 的 ego 速度对照是看到 probe a 之后登记的事后行），
+小表在 [results/night2/N2/](results/night2/N2/)，代码 `jevdrive/night2_n2.py`、`scripts/night2_desire.py`。接第 42 条（行人信息在 openpilot vision 层 AUC 0.51，只能外接）和第 47 条（第三层没有量具）：
+绕行要三样信息，逐样用 linear probe（冻结特征 + 标准化 L2 logistic regression，按 base 路线分 5 折）测 AUC；判据 ≥ 0.70「有信息，可激发」、≤ 0.60「没有，要外接」。
+
+| probe（P5 v1 全部帧，BA / PDM） | openpilot 四个 tap（Cinque / Lebowski 的 `temporal` 与 vision） | YOLO image-plane（BA） | ego 速度一维（事后） | 行驶帧 v ≥ 3 m/s 上 openpilot（事后） |
+|:--|:--|:--|:--|:--|
+| a 本车道前方 ≤ 30 m 有静止 actor | 0.972–0.974 / 0.980–0.992 | 0.901 | 0.830 / 0.786 | 0.960–0.969 / 0.870–0.928（速度一维 0.62 / 0.73） |
+| b 相邻车道 ±20 m 有车 | 0.765–0.785 / 0.728–0.750 | 0.731 | 0.617 / 0.518 | 0.818–0.848 / 0.821–0.840 |
+| c 左侧对向车道 ≤ 50 m 来车（附带；登记数据是 N1 2W） | 0.760–0.820 / 0.696–0.778 | 0.660 | 0.541 / 0.534 | 0.827–0.900 / 0.829–0.890 |
+
+desire 执行器检查（零训练，P5 v1 直行帧，每个目标帧 8 s 零状态预热后 laneChangeLeft / Right 上升沿脉冲，读含脉冲那一步的原生 plan 3 s 处横移）：
+5–10 m/s（300 帧）Cinque 中位 0.61 m、Lebowski 0.68 m →「openpilot 不按 desire 变道」；10–15 m/s（99 帧）0.92 / 1.35 m →「之间」；> 15 m/s 只有 2 帧，未测。方向正确 ≥ 99.8%。
+
+1. **与第 42 条的行人结论不同，绕行需要的「车」类信息在 openpilot 冻结特征里线性可读**，而且在行驶帧上明显超过 ego 速度一维，不只是「ego 停着」的代理。
+   但 P5 v1 的「静止障碍」几乎都是排队 / 停着的车，b 的正例里有大量路边车位，probe 可能部分读的是道路类型（推测）；锥桶、事故车、开门的车这类绕行障碍要等 N1 的 x₁₀ / x₀₀ 帧。
+2. **desire 懂方向不懂幅度**：幅度随车速单调变大（图 [night2_n2_desire_speed](figs/night2_n2_desire_speed.png)），Cinque 右变道明显弱于左。开环里图像不跟着横移，
+   3 s 处给出的是半条车道以内的「变道开头」（推测）。所以「模式头 → desire → openpilot plan」这条执行器路线**目前不成立**，至少低速不成立；与 09-25 的 2b（intent 当 turn desire，有害）不是同一件事。
+
+**状态**：**待定**。限定：只在 CARLA；车道由 route 折线横向距离定（3.5 m 车道假设，没查 map）；YOLO 在 PDM 集未测；高速档没有数据。
+**会推翻或推进本条的证据**：N1 x₁₀ 帧上 probe a 对锥桶 / 事故车掉到 ≤ 0.60（那就是「车」可读、「障碍物」不可读，要外接检测）；闭环里 desire 触发后 openpilot 真的完成变道（推进执行器路线）；
+x₁₀ 帧上（有障碍时）desire 横移明显变大（说明 plan 会结合场景放大 desire）。
