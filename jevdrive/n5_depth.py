@@ -184,7 +184,8 @@ def placement_ratio(tag: str) -> "pd.DataFrame":
 
 COLS = ["p5_ped_0-10", "p5_ped_10-20", "p5_ped_20-40", "p5_ped_le40", "nusc_ped_0-10", "nusc_ped_10-20", "nusc_ped_20-40",
         "nusc_ped_le40", "p5_haz_ped_all", "p5_haz_ped_le20", "p5_haz_ped_le20_bev_med", "nusc_ped_prec", "p5_veh_le40",
-        "nusc_veh_le40"]
+        "nusc_veh_le40", "p5_ped_img_0-10", "p5_ped_img_10-20", "p5_ped_img_20-40", "nusc_ped_img_0-10",
+        "nusc_ped_img_10-20", "nusc_ped_img_20-40"]
 
 
 def verdict(x: float) -> str:
