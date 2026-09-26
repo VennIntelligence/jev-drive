@@ -22,6 +22,12 @@
 11. **世界变体的生成**复用已有的 hook：删 scenario 用 P5 x⁻ 与 P6 x₀₀ 的机制（actor 藏到地下**并删掉 PDM-Lite 读的 `active_scenarios` 登记**，`scripts/b2d_hooks.py`）；
     新写的 hook（触发点平移、actor 换类）先 smoke 10 个世界，PDM-Lite 在变体里的行为按 P6 的 expert 统计口径核一遍，再给考生用。
 12. **位置窗口**：每条路线的「触发窗口」= 原版里 scenario 触发点沿路线 [−30 m, +10 m]；「对照窗口」= 同一路线上离任何 scenario 触发点 ≥ 80 m、路形同类（直行 / 路口，按路线折线曲率分）的 40 m 段，每条路线最多 2 个。
+    - 2026-09-26 17:40 CST [main] 规则 12 更正（只看路线几何，写于任何窗口读数之前）。原文：「每条路线的『触发窗口』= 原版里 scenario 触发点沿路线 [−30 m, +10 m]；『对照窗口』= 同一路线上离任何 scenario 触发点 ≥ 80 m、路形同类（直行 / 路口，按路线折线曲率分）的 40 m 段，每条路线最多 2 个。」
+      更正原因（执行员 F 从 dense route 算出）：G 的 80 条路线长 68–154 m（中位 132 m），XML 的 trigger_point 在离起点约 11 m 处（2–17 m），原触发窗口落在 0–21 m 的起步段（P7 臂还有 5 s 刹车保持），入口速度约 0，「减速 ≥ 3 m/s」测不出；
+      离触发点 ≥ 80 m 的 40 m 对照段要求路线 ≳ 170 m，80 条里 0 条放得下。hazard 真正与路线相遇的位置 s_h 中位 55 m（25–75% 49–65 m）。
+      更正为：(1) 触发窗口 = [s_h − 30, s_h + 10] m，s_h = 同一路线 PDM-Lite 的 P6 x₁₀ / P5 x⁺ 录像（seed 0）里 scenario actor 首次进入路线中心线 2 m 以内的那一 tick 的路线弧长位置（藏在地下的记录不算），从未进入的 5 条取最近点（`jevdrive/nq4_g.py hazard_point`，结果 `runs/nq4/gk/hazard_points.csv`）；
+      (2) 对照窗口 = [s_h + 20, s_h + 60] m，路形同类、结束点离路线终点 ≥ 10 m，只在放得下的 35 / 80 条路线上有；「位置记忆」判格里考生的对照率取这些路线的合并率，判格本身不变：幽灵率 CI 下界 > max(合并对照率, PDM-Lite ghost 幽灵率) + 10 pp；
+      [s_h + 10, s_h + 50] 的变体（45 条）只作描述；(3) 灵敏度注记：每张表报每个考生、每种世界的触发窗口入口速度 < 5 m/s 的比例（那里「减速 ≥ 3 m/s」偏弱），并在旁边给只用入口 ≥ 5 m/s 的幽灵率，都是描述，判格仍用主幽灵率。
 
 ## G. ghost test 与扰动崩塌（闭环，CARLA）
 
@@ -60,6 +66,24 @@
   | F3 | 各考生 2–3 条路线的 profiling（每路线 worker·h、每 tick CPU / GPU 分解），定每卡 server 数与 worker 数 | 1.5 h | 借 1 卡 2 server |
   | F4 | `nq4_gk.sh` 空跑（假臂验证队列、熔断、STATUS、出表），挂进 tmux 等门 | 0.5 h | CPU |
   | 批量 | 等 `runs/nq3/b/DONE` 且 lane B 的 server 全部退出；前 20 条路线 profiling 后重估 | 约 12–18 h（按 profiling 重估） | GPU 0–5、每卡 ≤ 6 server、90 核 |
+- [F] 2026-09-26 17:45 CST G 的操作性选择（写于任何 G 数字之前；窗口按上面的 [main] 规则 12 更正）。代码 `jevdrive/nq4_g.py`（`build` / `report`），`scripts/nq4_hooks.py`。
+  1. **路线**：G 节的定义句「trigger 是生成的 actor 的路线」为准：P5 的 10 个 family 去掉 HardBreakRoute（因素是背景车刹车）与 Light（因素是灯），剩 8 类 × 5 = 40 条（全是第 38 条的突发 hazard family），
+     加 P6 的 8 类可用障碍 × 5 = 40 条，共 **80 条**（todo 写「约 90」= 10 × 5 + 8 × 5；这两类删 scenario 没有「actor 藏起来」的意义）。B2D 220 每类正好 5 条，全取；清单 `runs/nq4/gk/routes.csv`。
+  2. **变体**（`runs/nq4/gk/g_routes.xml`，id = 100 × 路线号 + 90 + 码，orig 0 / ghost 1 / shift 2 / swap 3，与官方 id 和 P5 / P6 变体 id 都不重）：
+     `ghost` = `b2d_hooks.p6_world(obstacle="hide")` 原样（actor 藏到地下 500 m、每 tick 关物理、删 `active_scenarios` 登记；官方树没有登记，给一个空表，同一段代码两边跑）；
+     `shift` = 在 RouteScenario 过滤 scenario 之前把 trigger_point 沿 dense route 平移，**奇数路线号 +15 m（往后）、偶数 −15 m**，scenario 相对触发点摆放的一切随之移动；
+     `swap` = Accident → ConstructionObstacle → ParkedObstacle → Accident（TwoWays 同样轮换，参数名三者相同）、VehicleTurningRoutePedestrian → VehicleTurningRoute（行人 → 自行车，同一文件的两个 scenario 类），
+     cut-in 三类把 cut-in 车的蓝图过滤 base_type car → van（special_type 空；StaticCutIn 只换第 `_back_vehicles` + 1 个请求即 cut-in 车，阻挡车不变）；其余路线（三类行人横穿、闯红灯、HazardAtSideLane 两类）没有同类可换，不进 swap，共 50 条。
+     scenario 模块被 RouteScenario 二次导入，所以不 patch 类对象，一律在 `CarlaDataProvider` / `RouteScenario` 层做（night-queue-2 N1 的教训）；每次运行在 `nq4_meta.json` 记下实际建出的 scenario、平移前后的触发点、换出来的蓝图，建不出来的路线在 smoke 里剔除。
+  3. **轨迹记录**：每次运行（G 的全部变体、K、X）由 route 进程里的 hook 写 `nq4_trace.npz`：20 Hz 自车位姿与速度，60 m 内全部车 / 行人 / 静态 prop（藏在自车下方 50 m 以下的不记），与考生无关，第三方 agent 不动；
+     `orig` 另挂可见性相机（P5 recorder 前视相机的位姿与 FOV、半分辨率、5 Hz 的 instance segmentation，只算 scenario actor，P5 的 20 像素规则）。night-queue-3 复用的 orig 运行没有这些记录，读数 2 只在有记录的运行上算，读数 3 / 5 的通过率两边都能算。
+  4. **读数 1 的操作化**：窗口内自车（actor 中心）投影到 dense route 得弧长与横向偏移；入口 = 首个弧长 ≥ 窗口起点的 tick，出口 = 首个 ≥ 终点的 tick；减速 = 入口速度 − 窗口内最低速度，横向 = 窗口内 |偏移| 最大值；
+     窗口内任一 tick 有车或行人在自车前方 (0, 30] m、离路线中心 < 1.75 m → 该窗口记「跟车」，不进分母；自车没开到窗口终点 → 「未到达」，不进分母（两者的数量随表报）。每条路线先对 seed 平均，路线整组 bootstrap 10 000。
+  5. **读数 2**：可见 = scenario actor ≥ 20 像素的首个 5 Hz 帧；减速起点 = 加速度（±0.25 s 中心差分）连续 0.5 s < −1 m/s² 的首个 tick，落在「首次可见前 5 s 到前 1 s」之间算「可见前反应」；起点处前方 30 m 本车道有车 / 行人的记「跟车」，不进分母。
+  6. **读数 3 / 5 的通过**：scenario 区 = 该变体实际触发点沿路线 [−30, +80] m；通过 = 官方记录的 RC × 路线长 ≥ 区终点（路线更短就取终点前 1 m）且没有落在区内（横向 ≤ 10 m）或撞到 scenario actor 的碰撞。
+     读数 5 的巡航速度 = orig 对照窗口内的平均速度，完成时间 = 完成路线的 `duration_game`。
+  7. **复用**：orig 里 night-queue-3 已跑过的同考生、同路线、同 seed 直接读：PDM-Lite seed 0 = `runs/nq3/b/cl1_expert`（SimLingo 树，PDM-Lite 靠登记绕行，所以 PDM-Lite 的所有 G 运行都在 SimLingo 树里跑，其余考生在官方树里跑），
+     openpilot Cinque 原生 = CL2 / CL9，作者执行层 = CL10（`nq3_b_cl10.sh` 原样的四个 recipe，只把路线文件换成 G 的 XML）。
 
 ## K. 材料包阶梯：分数动、能力不动
 

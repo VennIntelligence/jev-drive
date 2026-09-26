@@ -165,7 +165,7 @@ def shape(P, s, a, b) -> str:
     return "turn" if np.degrees(np.abs(h[m] - h[m][0]).max()) > TURN_DEG else "straight"
 
 
-WINDOW_RULE = "hazard"          # "rule12" = the todo's literal rule 12; "hazard" = [F] proposal (pending main)
+WINDOW_RULE = "hazard"          # [main] rule 12 correction (todo); "rule12" = the literal original, kept for the record
 CTRL_AFTER_GAP, CTRL_END_MARGIN_H = 20.0, 10.0
 
 
@@ -198,6 +198,9 @@ def windows(t: pd.DataFrame, rule: str = WINDOW_RULE) -> pd.DataFrame:
             c, c1 = sh + CTRL_AFTER_GAP, sh + CTRL_AFTER_GAP + CTRL_LEN
             if c1 <= L - CTRL_END_MARGIN_H and shape(P, s, c, c1) == shp:
                 rows.append({"base": b, "kind": "control", "k": 1, "s0": c, "s1": c1, "shape": shp, **common})
+            c, c1 = sh + 10.0, sh + 10.0 + CTRL_LEN              # description only ([main] correction, item 2)
+            if c1 <= L - CTRL_END_MARGIN_H and shape(P, s, c, c1) == shp:
+                rows.append({"base": b, "kind": "control_alt", "k": 1, "s0": c, "s1": c1, "shape": shp, **common})
             continue
         cands = []
         T = np.array([float(tp.get("x")), float(tp.get("y"))])
@@ -463,20 +466,33 @@ def g_tables(df: pd.DataFrame, out: Path):
         ok["reaction"] = ok.w_reaction.astype(float)
         cov = W.groupby(["cand", "variant", "wkind"]).w_status.value_counts().unstack(fill_value=0).reset_index()
         cov.to_csv(out / "ghost_coverage.csv", index=False)
-        per_route = ok.groupby(["cand", "variant", "wkind", "base"]).reaction.mean().reset_index()   # seeds (and windows) averaged
+        per_route = ok.groupby(["cand", "variant", "wkind", "base"]).reaction.mean().reset_index()   # seeds averaged
+        fast = ok[ok.w_v_entry >= 5.0].groupby(["cand", "variant", "wkind", "base"]).reaction.mean().reset_index()
         rates = []
         pdm = per_route[(per_route.cand == "pdm") & (per_route.variant == "ghost") & (per_route.wkind == "trigger")].reaction.mean()
         for cand, g in per_route[per_route.variant == "ghost"].groupby("cand"):
             tg = g[g.wkind == "trigger"].reaction
-            cg = g[g.wkind == "control"].reaction
             m, lo, hi, n = boot(tg.to_numpy())
+            cg = g[g.wkind == "control"].reaction            # pooled over the routes that have a control window
             ctrl = float(cg.mean()) if len(cg) else np.nan
+            ca = g[g.wkind == "control_alt"].reaction
             ref = np.nanmax([ctrl, pdm]) if np.isfinite([ctrl, pdm]).any() else np.nan
+            e = ok[(ok.cand == cand) & (ok.variant == "ghost") & (ok.wkind == "trigger")]
+            f = fast[(fast.cand == cand) & (fast.variant == "ghost") & (fast.wkind == "trigger")].reaction
+            mf, lof, hif, nf = boot(f.to_numpy())
             rates.append({"cand": cand, "ghost_rate": m, "lo": lo, "hi": hi, "routes": n, "control_rate": ctrl,
-                          "pdm_ghost_rate": pdm, "position_memory": bool(np.isfinite(lo) and np.isfinite(ref) and lo > ref + 0.10)})
+                          "control_routes": len(cg), "pdm_ghost_rate": pdm,
+                          "position_memory": bool(np.isfinite(lo) and np.isfinite(ref) and lo > ref + 0.10),
+                          "desc_control_alt_rate": float(ca.mean()) if len(ca) else np.nan, "desc_control_alt_routes": len(ca),
+                          "desc_entry_lt5_share": float((e.w_v_entry < 5.0).mean()) if len(e) else np.nan,
+                          "desc_ghost_rate_entry_ge5": mf, "desc_ge5_lo": lof, "desc_ge5_hi": hif, "desc_ge5_routes": nf})
+        slow = ok[ok.wkind == "trigger"].groupby(["cand", "variant"]).w_v_entry.apply(lambda v: float((v < 5.0).mean()))
+        slow.rename("entry_lt5_share").reset_index().to_csv(out / "entry_speed_caveat.csv", index=False)
         rt = pd.DataFrame(rates)
         rt.to_csv(out / "ghost_rate.csv", index=False)
         md += ["## Readout 1: ghost reaction (ghost worlds; route bootstrap, seeds averaged)", rt.to_markdown(index=False, floatfmt=".3f"),
+               "### caveat: share of trigger-window entries below 5 m/s (decel >= 3 m/s is weak there), per examinee and world",
+               slow.rename("entry_lt5_share").reset_index().to_markdown(index=False, floatfmt=".3f"),
                "### coverage (windows by status)", cov.to_markdown(index=False)]
         cr = ok[(ok.variant == "orig") & (ok.wkind == "control")].groupby(["cand", "base"]).w_v_mean.mean().groupby("cand").mean()
         md += ["### orig: mean speed in the control windows (m/s)", cr.to_frame("cruise_mps").to_markdown(floatfmt=".2f")]
@@ -586,9 +602,6 @@ def main():
     build() if a.cmd == "build" else report()
 
 
-if __name__ == "__main__":
-    main()
-
 
 # ---------------------------------------------------------------- hazard point (proposal, [F] entry)
 
@@ -628,3 +641,7 @@ def hazard_point(base: str) -> dict:
                 how = "closest"
             return {"base": base, "s_hazard": float(ss[j]), "lat": float(ll[j]), "how": how, "src": str(a.relative_to(D))}
     return {"base": base, "s_hazard": np.nan, "how": "missing"}
+
+
+if __name__ == "__main__":
+    main()
