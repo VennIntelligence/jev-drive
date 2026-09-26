@@ -84,6 +84,7 @@ srv_start() {  # srv_start <name> <gpu> <cmd ...>: start unless alive, wait for 
 }
 srv_alive() { local p; p=$(cat "$B/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_stop() { local p; p=$(cat "$B/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$B/srv/$1.pid"; }
+srv_stop_arm() { local g n; for g in $GPUS; do for n in $(server_names "$1" "$g"); do srv_stop "$n"; done; done; }
 srv_stop_all() { local f; for f in "$B"/srv/*.pid; do [[ -e $f ]] && srv_stop "$(basename "$f" .pid)"; done; }
 
 servers_for() {  # servers_for <arm> <gpu>: the model servers an arm needs on one GPU
@@ -106,7 +107,7 @@ servers_for() {  # servers_for <arm> <gpu>: the model servers an arm needs on on
 server_names() {  # the server names an arm uses on one GPU
     case $1 in
         cl2) echo op-cinque-g$2 ;; cl7) echo op-lebowski-g$2 ;; cl8) echo alpamayo-g$2 ;; cl3|cl5|cl5d) echo head-g$2 ;;
-        cl4|mc_real0) echo qwen-g$2 headq-g$2 ;; cl6) echo yolo-g$2 heady-g$2 ;;
+        cl4|mc_real0) echo qwen-g$2 headq-g$2 ;; cl6) echo yolo-g$2 heady-g$2 ;; cl9_cl2) echo op-cinque-g$2 ;;
     esac
 }
 
@@ -341,12 +342,12 @@ smoke() {  # CL0: every P7 agent on 3 routes (profiling); the head arms dump eve
         local d=0
         [[ $arm == cl3 || $arm == cl4 || $arm == cl6 ]] && d=1
         [[ -e $B/cl0/$arm/DONE ]] || run_arm "$arm" 0 "$SMOKE_ROUTES" 1.0 "$d" "$B/cl0/$arm"
-        srv_stop_all
+        srv_stop_arm "$arm"
     done
 }
 
 case ${1:-} in
-    smoke) trap 'srv_stop_all' EXIT; smoke ;;
+    smoke) trap 'exit 129' HUP INT TERM; smoke ;;
     expert) expert "${2:-0,1}" ;;
     arm) shift; trap 'srv_stop_all; [[ -n ${6:-} ]] && kill_runs "$6"' EXIT; trap 'exit 129' HUP INT TERM; run_arm "$@" ;;
     chain) chain ;;
