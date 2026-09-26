@@ -105,14 +105,247 @@ def lists(n_slices: int) -> dict:
     return summ
 
 
+
+# ---------------------------------------------------------------- real-data embedding (deviation [G0], registered
+# before any G0 number): E5's k = 8 corridor embedding with three operational substitutions --
+#   corridor  E5's route centreline -> the ego-history arc: the circle tangent to the current heading through the
+#             ego's own position 1 s ago (kappa = 2 y / (x^2 + y^2); straight below 2 m of travel, |kappa| <= 0.1),
+#             60 m long, built exactly like E5's route path (vehicle-centre origin, points ahead of it)
+#   geometry  each frame's own camera calibration and ground plane (WOD per sequence, NAVSIM per token, I3 per scene)
+#   box size  box height / image height -> box height / focal length x (f / H of the P5 rig), so that the same
+#             object at the same range gives the same number on every camera (identical to E5 on the P5 / WOD rig)
+
+K_DET, HALF_W, REACH, ROUTE_LEN = 8, 4.0, 40.0, 60.0         # elicit_e5, unchanged
+CLS3 = ("pedestrian", "cyclist", "vehicle")
+SCORE = 0.25
+ARC_T, ARC_MIN, KAPPA_MAX = 1.0, 2.0, 0.1
+I3_CAM_FWD = 1.73        # HUGSIM ego (front camera) ahead of the nuScenes rear axle (hugsim_zs.rear_offset of the rig)
+
+
+def p5_f_over_h() -> float:
+    c = json.loads((data_dir() / "processed/carla_p5v1_ba/op_plan.json").read_text())["calib"]["1"]
+    return float(c["intrinsic"][1]) / float(c["height"])
+
+
+def arc_path(p1: np.ndarray, x_off: float) -> np.ndarray:
+    """Ego-history arc through p1 (native frame, position ARC_T s ago), moved to the vehicle-centre frame (x += x_off)
+    and cut like elicit_e5._route_path: origin, then the arc from its first point ahead of the origin, <= ROUTE_LEN."""
+    r2 = float(p1 @ p1)
+    k = 0.0 if r2 < ARC_MIN ** 2 else float(np.clip(2 * p1[1] / r2, -KAPPA_MAX, KAPPA_MAX))
+    s = np.arange(0.0, ROUTE_LEN + 10.0 + 1e-9, 0.5)
+    pts = np.c_[s, np.zeros_like(s)] if abs(k) < 1e-6 else np.c_[np.sin(k * s) / k, (1 - np.cos(k * s)) / k]
+    pts[:, 0] += x_off
+    fwd = pts[:, 0] > 0
+    pts = pts[int(fwd.argmax()):] if fwd.any() else pts[-1:]
+    path = np.r_[[[0.0, 0.0]], pts]
+    cum = np.r_[0.0, np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
+    return path[: max(2, int(np.searchsorted(cum, ROUTE_LEN)) + 1)]
+
+
+def arc_kappa(p1: np.ndarray) -> np.ndarray:
+    r2 = (p1 ** 2).sum(1)
+    return np.where(r2 < ARC_MIN ** 2, 0.0, np.clip(2 * p1[:, 1] / np.maximum(r2, 1e-9), -KAPPA_MAX, KAPPA_MAX))
+
+
+def _embed_frames(args):
+    """elicit_e5._embed_group with the path given: (frame index, path, dets (m, 7)) -> (index, 64-d, selected rows)."""
+    from .fusion_diag import project
+    out = []
+    for i, path, d, rows in args:
+        e = np.zeros((K_DET, 8), np.float32)
+        sel_rows = np.zeros(0, np.int64)
+        s_all = d_all = np.zeros(0)
+        if len(d):
+            s_all, d_all, _, _ = project(path, d[:, 3:5])
+            keep = (np.abs(d_all) <= HALF_W) & (s_all > 0) & (s_all <= REACH)
+            sel = np.flatnonzero(keep)[np.argsort(s_all[keep], kind="stable")][:K_DET]
+            for j, q in enumerate(sel):
+                e[j, int(d[q, 0])] = 1.0
+                e[j, 3:7] = d[q, 3], d[q, 4], d[q, 5], d[q, 6]
+                e[j, 7] = 1.0
+            sel_rows = rows[sel]
+        out.append((i, e.reshape(-1), rows, s_all, d_all, sel_rows))
+    return out
+
+
+# per-set geometry: calibration of every (frame, camera), ego position ARC_T s ago, native -> vehicle-centre x offset
+
+def _lift_fmt(K, D, R_cv2ego, t) -> dict:
+    from .fusion_q4 import OPENCV_TO_WOD
+    E = np.eye(4)
+    E[:3, :3] = np.asarray(R_cv2ego, np.float64) @ OPENCV_TO_WOD.T
+    E[:3, 3] = t
+    K = np.asarray(K, np.float64)
+    return {"intrinsic": [K[0, 0], K[1, 1], K[0, 2], K[1, 2], *[float(x) for x in D]], "extrinsic": E.ravel().tolist()}
+
+
+def geometry(name: str, fr: pd.DataFrame) -> tuple:
+    """(calibs {key: calib}, cal_key per (frame, cam) as a DataFrame, p1 (n, 2), x_off (n,))."""
+    from .fusion_q4 import REAR_AXLE_X
+    n = len(fr)
+    if name.startswith("wod"):
+        from . import waymo as W
+        cal = {}
+        for f in (data_dir() / "processed/wod_zeroshot/op_calib.json", data_dir() / "processed/drive_backbones/op_calib_trainval.json"):
+            if f.exists():
+                for seq, c in json.loads(f.read_text()).items():
+                    for i, cam in enumerate(CAMS):
+                        cal.setdefault(f"{seq}|{cam}", c[str(i + 1)])
+        miss = set(fr.sequence) - {k.split("|")[0] for k in cal}
+        assert not miss, f"{len(miss)} WOD sequences without calibration"
+        keys = pd.DataFrame({cam: fr.sequence + f"|{cam}" for cam in CAMS})
+        past, _ = W.load_ego()
+        p1 = past[fr.row.to_numpy(), -int(ARC_T / 0.25) - 1, :2].astype(np.float64)
+        return cal, keys, p1, np.full(n, REAR_AXLE_X)
+    if name.startswith("nav"):
+        from . import navsim_zs as Z
+        idx = {e["token"]: e for e in Z.load_index(name)}
+        cal, keys = {}, {cam: [] for cam in CAMS}
+        p1 = np.zeros((n, 2))
+        for i, t in enumerate(fr.frame_id):
+            e = idx[t]
+            p1[i] = e["pose"][1][:2]                     # 4 poses at -1.5, -1.0, -0.5, 0 s
+            for cam in CAMS:
+                c = e["cams"][-1][NAV_CAMS[cam]]
+                k = hash((np.round(c["K"], 4).tobytes(), np.round(c["D"], 5).tobytes(), np.round(c["R"], 5).tobytes(),
+                          np.round(c["t"], 4).tobytes()))
+                if k not in cal:
+                    cal[k] = _lift_fmt(c["K"], c["D"], c["R"], c["t"])
+                keys[cam].append(k)
+        assert np.allclose(np.stack([idx[t]["pose"][-1] for t in fr.frame_id[:100]]), 0)
+        return cal, pd.DataFrame(keys), p1, np.full(n, REAR_AXLE_X)
+    if name == "i3":
+        import pickle
+        from .hugsim_pairs import scenes_dir
+        past = np.load(data_dir() / "processed/hugsim_pairs/past.npy")
+        t = pd.read_parquet(data_dir() / "processed/hugsim_pairs/index.parquet")
+        assert (t.frame_name.to_numpy() == fr.frame_id.to_numpy()).all()
+        cal = {}
+        for key in fr.base_id.unique():
+            m = json.loads((data_dir() / "processed/hugsim_pairs/scenes" / key / "meta.json").read_text())
+            with open(scenes_dir() / m["dataset"] / m["scene"] / "ground_param.pkl", "rb") as f:
+                ch = float(pickle.load(f)[1])
+            for cam in CAMS:
+                c = m["cams"]["CAM_" + cam.upper()]
+                c2f = np.asarray(c["c2front"], np.float64)
+                from .hugsim_zs import CV2V
+                R, tr = CV2V @ c2f[:3, :3], CV2V @ c2f[:3, 3]      # OpenCV camera -> ego M (x fwd, y left, z up)
+                tr = tr + np.array([0.0, 0.0, ch])               # ground plane at z = 0: the ego is ch above it
+                cal[f"{key}|{cam}"] = _lift_fmt(np.asarray(c["K"])[:3, :3], [0] * 5, R, tr)
+        keys = pd.DataFrame({cam: fr.base_id + f"|{cam}" for cam in CAMS})
+        p1 = past[:, -int(ARC_T / 0.25) - 1, :2].astype(np.float64)
+        return cal, keys, p1, np.full(n, I3_CAM_FWD + REAR_AXLE_X)
+    raise ValueError(name)
+
+
+def load_set_dets(name: str) -> pd.DataFrame:
+    """All slices' detections of one set, score > SCORE (fusion_q4.load_dets' rule), E5's three classes."""
+    from .fusion_q4 import load_dets
+    ds = [load_dets(p, SCORE) for p in sorted(root("dets").glob("s*")) if p.is_dir()]
+    d = pd.concat(ds, ignore_index=True)
+    d = d[d.key.str.startswith(name + ":") & d.prompt.isin(CLS3)].reset_index(drop=True)
+    k = d.key.str.slice(len(name) + 1).str.split("|")
+    d["frame_id"], d["cam"] = k.str[0], k.str[1]
+    return d
+
+
+def slices_done(name: str) -> tuple[int, int]:
+    """(images of `name` covered by finished part files, images of `name` in all lists)."""
+    got = tot = 0
+    for f in sorted(root("slices").glob("slice_*.parquet")):
+        keys = pd.read_parquet(f, columns=["key"]).key
+        mine = keys.str.startswith(name + ":").to_numpy()
+        d = root("dets") / f"s{f.stem.split('_')[1]}"
+        n_parts = len(list(d.glob("part-*.parquet"))) if d.exists() else 0
+        covered = np.zeros(len(keys), bool)
+        covered[: n_parts * 2000] = True                          # fastperc.detect: shard = 2000 images, in order
+        got += int((mine & covered).sum())
+        tot += int(mine.sum())
+    return got, tot
+
+
+def embed_set(name: str, workers: int | None = None) -> dict:
+    """<set>/embed.npy (n, 64) aligned with <set>/frames.parquet, <set>/dets.parquet (lifted, with corridor
+    coordinates and the embedding rank), <set>/READY.json."""
+    from multiprocessing import Pool
+    from . import fusion_q4 as Q
+    from .common import n_cpus
+    got, tot = slices_done(name)
+    assert got == tot, f"{name}: detections cover {got} / {tot} images"
+    fr = pd.read_parquet(root(name, "frames.parquet"))
+    cal, keys, p1, x_off = geometry(name, fr)
+    at = pd.Series(np.arange(len(fr)), index=fr.frame_id.to_numpy())
+    d = load_set_dets(name)
+    fi = at.reindex(d.frame_id).to_numpy()
+    assert not np.isnan(fi).any()
+    d["fi"] = fi.astype(np.int64)
+    ck = np.empty(len(d), object)
+    for cam in CAMS:
+        m = (d.cam == cam).to_numpy()
+        ck[m] = keys[cam].to_numpy()[d.fi.to_numpy()[m]]
+    d = Q.lift_dets(d, ck, cal)
+    fv = np.array([cal[k]["intrinsic"][1] for k in ck])
+    d["h_feat"] = (d.y1 - d.y0).to_numpy() / fv * p5_f_over_h()
+    d["xc"], d["yc"] = d.gx.to_numpy() + x_off[d.fi.to_numpy()], d.gy.to_numpy()
+    d["s"], d["d"], d["rank"] = np.nan, np.nan, -1
+    ok = d.lift_ok.to_numpy()
+    arr = np.c_[d.prompt.map({c: i for i, c in enumerate(CLS3)}).to_numpy(), np.zeros((len(d), 2)), d.xc, d.yc,
+                d.h_feat, d.score]
+    rows_ok = np.flatnonzero(ok)
+    by = pd.Series(rows_ok).groupby(d.fi.to_numpy()[rows_ok]).indices
+    kap = arc_kappa(p1)
+    jobs, chunk = [], []
+    for i in range(len(fr)):
+        r = rows_ok[by[i]] if i in by else np.zeros(0, np.int64)
+        chunk.append((i, arc_path(p1[i], x_off[i]), arr[r], r))
+        if len(chunk) == 256:
+            jobs.append(chunk)
+            chunk = []
+    jobs.append(chunk)
+    E = np.zeros((len(fr), K_DET * 8), np.float32)
+    S, Dl, rank = d.s.to_numpy(), d.d.to_numpy(), d["rank"].to_numpy()
+    with Pool(workers or min(64, n_cpus())) as p:
+        for part in p.imap_unordered(_embed_frames, jobs):
+            for i, e, r, s_, d_, sel in part:
+                E[i] = e
+                S[r], Dl[r] = s_, d_
+                rank[sel] = np.arange(len(sel))
+    d["s"], d["d"], d["rank"] = S, Dl, rank
+    np.save(root(name, "embed.npy"), E)
+    np.save(root(name, "kappa.npy"), kap.astype(np.float32))
+    cols = ["frame_id", "cam", "prompt", "score", "x0", "y0", "x1", "y1", "area", "cu", "cv", "gx", "gy", "lift_ok",
+            "h_feat", "xc", "yc", "s", "d", "rank"]
+    d[cols].to_parquet(root(name, "dets.parquet"), index=False)
+    m = E.reshape(len(E), K_DET, 8)
+    summ = {"set": name, "frames": len(fr), "images": tot, "dets": len(d), "dets_lifted": int(ok.sum()),
+            "rows_with_any": float((m[:, :, 7].sum(1) > 0).mean()), "mean_in_corridor": float(m[:, :, 7].sum(1).mean()),
+            "rows_with_ped": float((m[:, :, 0].sum(1) > 0).mean()), "kappa_nonzero": float((kap != 0).mean())}
+    root(name, "READY.json").write_text(json.dumps(summ, indent=1))
+    log.info("%s: %s", name, summ)
+    return summ
+
+
+def load_embed(name: str) -> tuple[pd.DataFrame, np.ndarray]:
+    """(frames, (n, 64) embedding) of a READY set; the reader G1 / G2 / G3 use."""
+    assert root(name, "READY.json").exists(), f"{name} is not READY"
+    return pd.read_parquet(root(name, "frames.parquet")), np.load(root(name, "embed.npy"))
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("lists",))
+    ap.add_argument("step", choices=("lists", "embed", "status"))
     ap.add_argument("--slices", type=int, default=30)
+    ap.add_argument("--sets", nargs="+", default=list(SETS))
     a = ap.parse_args()
     if a.step == "lists":
         lists(a.slices)
+    elif a.step == "status":
+        for n in a.sets:
+            log.info("%s: %d / %d images detected, READY %s", n, *slices_done(n), root(n, "READY.json").exists())
+    else:
+        for n in a.sets:
+            embed_set(n)
 
 
 if __name__ == "__main__":
