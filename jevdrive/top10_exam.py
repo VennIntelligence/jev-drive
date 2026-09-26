@@ -6,7 +6,8 @@
   judge  the runner's trajectories -> the exam's own judge, unchanged: P5 v1 BA = p5_exam.exam (+ elicit_e4's per-pair
          window), I3 = elicit_i3's judge (p5_exam.exam without the TFv6 columns)
 
-The runner is scripts/top10_exam_infer.py (one per model env). Sets: p5 (P5 v1 BehaviorAgent), i3 (HUGSIM pairs).
+The runner is scripts/top10_exam_infer.py (one per model env). Sets: p5 (P5 v1 BehaviorAgent), i3 (HUGSIM pairs),
+wod, nusc, p6 (P6 v0 exam frames of night queue 3, lane C: jevdrive.nq3_p6 frame list, P5 v1's recorder and rig).
 """
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ from . import navsim_rig as R
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
-SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs", "wod": None, "nusc": None}
+SETS = {"p5": "carla_p5v1_ba", "i3": "hugsim_pairs", "wod": None, "nusc": None, "p6": "carla_p6"}
 MODELS = {"sparsedrivev2": "SparseDriveV2", "ztrs": "ZTRS"}
 # I3's origin is the front camera; place it where nuPlan's CAM_F0 sits over the rear axle (the [T1] 10:05 entry)
 I3_FRONT = np.array([1.67, 0.0, 1.52])
@@ -125,10 +126,24 @@ def plan_nusc() -> tuple:
     return fr, rigs, np.zeros(2)
 
 
+def plan_p6() -> tuple:
+    """Every frame of the P6 v0 exam frame list (nq3_exam_frames.parquet, all priorities). P6 was recorded by P5 v1's
+    recorder: same index layout, same rig, so the p5 branch's frames, ego statuses and rig apply unchanged."""
+    from .p5_openpilot import carla_calib
+    d = data_dir() / "processed" / SETS["p6"]
+    t = pd.read_parquet(d / "index.parquet")
+    need = set(pd.read_parquet(d / "nq3_exam_frames.parquet", columns=["frame_name"]).frame_name)
+    rows = np.flatnonzero(t.frame_name.isin(need).to_numpy())
+    fr = _frames(t, np.load(d / "past.npy", mmap_mode="r"), rows)
+    c = carla_calib()
+    fr["rig"] = np.full(len(rows), "p5", object)
+    return fr, {"p5": _rig([c["1"], c["2"], c["3"]])}, np.zeros(2)
+
+
 def plan(set_: str) -> dict:
     from . import elicit_i3 as I, p5_exam as E
-    if set_ in ("wod", "nusc"):
-        fr, rigs, offset = plan_wod() if set_ == "wod" else plan_nusc()
+    if set_ in ("wod", "nusc", "p6"):
+        fr, rigs, offset = {"wod": plan_wod, "nusc": plan_nusc, "p6": plan_p6}[set_]()
         return _write_plan(set_, fr, rigs, offset)
     with I.p5_set(SETS[set_]):
         t, past, _, obs, null, _ = E.load()

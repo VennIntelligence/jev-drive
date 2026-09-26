@@ -63,6 +63,12 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   | C6 | 等 `runs/nq3/a/v1/DONE`（约 03:00）；v1 帧的 openpilot 流与 backbone 特征 | 0.5 h + 1.5 h | GPU 6 |
   | C7 | Q2 v1（加 town 留出，必要时 A5） | 1.5 h | CPU + GPU 6 |
   任何一步超估计 2 倍，脚本停该步写 `runs/nq3/c/ERROR`。
+- 2026-09-26 16:45 CST [C-nav] NAVSIM 族 4 个考生（SparseDriveV2、ZTRS、DrivoR、WA-JEPA）在 P6 v0 考卷帧上的操作口径（写于这四个考生的任何 P6 数字之前）。
+  (1) 帧：`nq3_exam_frames.parquet` 的全部 18 782 个唯一帧（三档 priority 都跑），每帧读一次，同一帧出现在几个 reading 里共用同一条预测。估时超 2.5 h 才退到 priority 0 + 1，另写一条。
+  (2) 输入与 P5 v1 BA 的 T1 / T2 路径逐项相同（P6 由 P5 v1 的 recorder 录，索引布局与相机 rig 相同）：T1 = 当前帧三路 JPEG → `carla_calib()` rig 的虚拟 nuPlan 相机，ego = `nav_ego(past, intent)`；
+  T2 = `req_p5` 的构造（DrivoR 当前帧三路 + 黑后视；WA-JEPA 历史取最近的 5 Hz 帧 −1.4 / −1.0 / −0.4 / 0 s，早于流起点的钳到起点；ego 按 [T2] choice 3；命令 = `NAV_CMD[intent]`）。WA-JEPA 照 P5 用 bf16 autocast、batch 1。
+  (3) 输出 `processed/top10_exam/p6/<model>.npz`（frame_name、raw、grid (n, 20, 2)，rear axle ego 系，x 前 y 左，米）。grid 沿用各自 P5 的转换：T1 `spline_grid`（4 s 之后按末两点直线外推），
+  T2 `grid(traj)`（不平移，4 s 之后 NaN）。规则 7 只读 2 s / 3 s，两种约定对判卷没有影响。
 
 ### Q2. 在 openpilot 冻结特征上激发绕行
 

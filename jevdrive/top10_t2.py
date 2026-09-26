@@ -7,6 +7,7 @@ and the [T2] entries under "执行分派", written before the numbers they affec
            complete-history sensitivity
   exam-p5  per frame (p5_exam.exam, reproduced through elicit_e4.score) and per pair (E4 (b)), with the stored
            reference examinees of the official BA runs as context rows
+  req-p6 / export-p6  P6 v0 exam frames (night queue 3, lane C): requests, and predictions -> T1's p6 grid layout
 
 Requests (npz): keys, img (n, 16) paths time-major t-1.5 ... t x [l0, f0, r0, b0] ('' = black), hist (n, 4, 3) poses of
 the four history frames relative to the current one (x fwd, y left, yaw ccw), ego (n, 4) = vx, vy, ax, ay, cmd (n,)
@@ -183,6 +184,11 @@ def _frame_path(p: str, dticks: int) -> str:
 
 def req_p5():
     t, past, rows = p5_rows()
+    req_carla("p5", t, past, rows)
+
+
+def req_carla(set_: str, t: pd.DataFrame, past: np.ndarray, rows: np.ndarray):
+    """Requests for index rows of a set recorded by P5 v1's recorder (5 Hz frames, P5 index layout)."""
     tr = t.iloc[rows]
     img, hist, clamped = [], [], 0
     first = {}
@@ -207,8 +213,32 @@ def req_p5():
         assert Path(p).exists(), p
     cmd = tr.intent.map(NAV_CMD).to_numpy()
     for m in MODELS:
-        save_req(f"p5_{m}", tr.frame_name, img, hist, ego_rows(past[rows, -1], m), cmd)
-    log.info("P5: %d frames, %d history slots clamped to the stream start", len(rows), clamped)
+        save_req(f"{set_}_{m}", tr.frame_name, img, hist, ego_rows(past[rows, -1], m), cmd)
+    log.info("%s: %d frames, %d history slots clamped to the stream start", set_, len(rows), clamped)
+
+
+# ---------------------------------------------------------------- P6 v0 exam frames (night queue 3, lane C, Q1)
+
+P6 = "carla_p6"
+
+
+def req_p6():
+    """Every frame of the P6 v0 exam frame list (jevdrive.nq3_p6, all priorities), in index order; P6 was recorded by
+    P5 v1's recorder, so the P5 request path applies unchanged."""
+    d = data_dir() / "processed" / P6
+    t = pd.read_parquet(d / "index.parquet")
+    need = set(pd.read_parquet(d / "nq3_exam_frames.parquet", columns=["frame_name"]).frame_name)
+    req_carla("p6", t, np.load(d / "past.npy", mmap_mode="r"), np.flatnonzero(t.frame_name.isin(need).to_numpy()))
+
+
+def export_p6():
+    """preds/p6_<model>.npz -> processed/top10_exam/p6/<model>.npz (frame_name, raw (n, 8, 3), grid (n, 20, 2)) in the
+    T1 layout that top10_exam.load_preds reads: P5's conversion, grid(traj) (rear axle, no shift, NaN after 4 s)."""
+    out = data_dir() / "processed" / "top10_exam" / "p6"
+    out.mkdir(parents=True, exist_ok=True)
+    for m, (keys, traj) in load_preds("p6").items():
+        np.savez_compressed(out / f"{m}.npz", frame_name=keys, raw=traj, grid=grid(traj))
+        log.info("p6 %s: %d frames -> %s", m, len(keys), out / f"{m}.npz")
 
 
 def p5_hist(pr: np.ndarray, dts: np.ndarray) -> np.ndarray:
@@ -322,7 +352,7 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("req-i3", "req-p5", "exam-i3", "exam-p5", "fig"))
+    ap.add_argument("cmd", choices=("req-i3", "req-p5", "req-p6", "export-p6", "exam-i3", "exam-p5", "fig"))
     ap.add_argument("--i3-run")
     ap.add_argument("--p5-run")
     ap.add_argument("--out", default=".")
@@ -331,6 +361,10 @@ def main():
         req_i3()
     elif a.cmd == "req-p5":
         req_p5()
+    elif a.cmd == "req-p6":
+        req_p6()
+    elif a.cmd == "export-p6":
+        export_p6()
     elif a.cmd == "fig":
         print(fig(Path(a.i3_run), Path(a.p5_run), Path(a.out)))
     else:
