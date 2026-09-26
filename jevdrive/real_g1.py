@@ -504,7 +504,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False):
     fam = pd.Series("none", index=t3.frame_name)
     for w, sub in (("fn_plus", obs3), ("fn_minus", obs3)):
         fam[sub[w].to_numpy()] = np.where(w == "fn_plus", sub.family.to_numpy(), "minus")
-    fam[null3.fn_null.to_numpy()] = "null"
+    fam[null3.fn_null.to_numpy()] = "null_world"         # not "null": pandas reads that back as NaN
     for m in MODELS:
         d_eq = float(np.abs(lead3[f"op-{m} temporal"] - op3[f"op-{m} temporal"]).max())
         checks.append({"model": m, "temporal_max_abs_diff": d_eq})
@@ -523,7 +523,7 @@ def run_i3(rl, gate_fns: dict, with_g2: bool = False):
         for gname, g in gs.items():
             preds[f"M-C pair [{m}] x {gname}"] = prior + g[:, None, None] * delta
             gdesc += [{"model": m, "gate": gname, **r} for r in
-                      gate_desc(g, {k: (fam == k).to_numpy() for k in ("static", "cutin", "oncoming", "minus", "null")})]
+                      gate_desc(g, {k: (fam == k).to_numpy() for k in ("static", "cutin", "oncoming", "minus", "null_world")})]
     E.TFV6 = {}
     oo, nn = E.deltas(obs3, null3, t3, preds)
     res = E.exam(oo, nn, pairs3, list(preds))
