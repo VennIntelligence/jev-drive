@@ -31,7 +31,7 @@ class Head:
         xe = (ego - p["ego_mu"]) / p["ego_sd"]
         xi = (temporal - p["op_mu"]) / p["op_sd"]
         P = (self._lin(xe, p["We"]) + self._lin(xi, p["Wp"])).reshape(-1, 20, 2)
-        z = (temporal - p["z_mu"]) / p["z_sd"] / np.sqrt(float(p["z_dim"]))
+        z = (temporal - p["z_mu"]) / p["z_sd"] / np.sqrt(float(self.man["scalars"]["z_dim"]))
         logit = self._lin(np.concatenate([xe, xi], 1), p["W2"]) if "W2" in p else None
         if logit is not None and "A3_W" in p:
             logit3 = logit + (z - p["A3_zbar"]) @ p["A3_W"]
