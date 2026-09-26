@@ -248,7 +248,10 @@ def main():
             sh.tick(m[1])
             continue
         s = sh.summary()
-        s.update(idle_s=round(t_idle, 1), queue_max=max(lag) if lag else 0,
+        import resource
+        ru = resource.getrusage(resource.RUSAGE_SELF)
+        s.update(cpu_s=round(ru.ru_utime + ru.ru_stime, 1), maxrss_mb=round(ru.ru_maxrss / 1024),
+                 idle_s=round(t_idle, 1), queue_max=max(lag) if lag else 0,
                  queue_mean=round(sum(lag) / len(lag), 1) if lag else 0, wall_s=round(time.time() - t_start, 1))
         if m[0] == "end":
             send(("done", s))

@@ -331,6 +331,53 @@ def blue_plan(gen: Path, out: Path, need_file: Path | None = None, frames: str =
     log.info("blue plan: %d worlds, %d frames -> %s", len(plan), sum(len(p["ks"]) for p in plan), out)
 
 
+# ---------------------------------------------------------------- v1 post-processing (mechanical)
+
+def _rec_index(g: Path, rid: str, base: str, name: str, town: str, meta: dict):
+    a = attempt(g, rid)
+    if a is None:
+        return None
+    r = P.world_rows(a, rid, town)
+    if r is None:
+        return None
+    t, past, fut = r
+    return t.assign(base_id=base, world=name, seed=0, source="p6v1", role="obs", **meta), past, fut
+
+
+def v1_post(workers: int = 24):
+    """Expert statistics of P6 v1 exactly as P6 v0's (jevdrive.p6._case / report) -> research/results/nq3/q3/, the
+    recovery table, and the 5 Hz frame index of every finished v1 world -> processed/carla_p6_v1 (P6 v0's layout plus
+    split and source; recovery worlds carry world = their recovery name) for lane C's Q2 v1."""
+    from joblib import Parallel, delayed
+    g, out = root("v1") / "gen", _res("q3")
+    c = pd.read_csv(out / "cases.csv", dtype=str, keep_default_na=False).astype({"seed": int})
+    main, rec = c[c.cls != "REC"], c[c.cls == "REC"]
+    res = Parallel(workers)(delayed(p6._case)(g, r) for _, r in main.iterrows())
+    pd.DataFrame([w for r in res for w in r[0]]).to_csv(out / "worlds.csv", index=False)
+    pd.DataFrame([r[1] for r in res]).to_csv(out / "pairs_bypass.csv", index=False)
+    pd.DataFrame([f for r in res for f in r[2]]).to_csv(out / "frame_modes.csv", index=False)
+    pd.DataFrame([r[3] for r in res if r[3]]).to_csv(out / "negotiation.csv", index=False)
+    p6.report(out)
+    rid = [r[n] for _, r in rec.iterrows() for n in REC if r.get(n)]
+    rv = recovery(g, rid)
+    if len(rv):
+        rv.to_csv(out / "recovery.csv", index=False)
+    jobs = [(p6._world_index, (g, r[w], r.town, {"scenario": r.scenario, "cls": r.cls, "split": r.split, "src": r.source}))
+            for _, r in main.iterrows() for w in p6.WORLDS if r[w]]
+    jobs += [(_rec_index, (g, r[n], r.base_id, n, r.town, {"scenario": r.scenario, "cls": "REC", "split": r.split,
+                                                           "src": r.source}))
+             for _, r in rec.iterrows() for n in REC if r.get(n)]
+    got = [x for x in Parallel(workers)(delayed(f)(*a) for f, a in jobs) if x is not None]
+    t = pd.concat([x[0] for x in got], ignore_index=True)
+    d = data_dir() / "processed" / "carla_p6_v1"
+    d.mkdir(parents=True, exist_ok=True)
+    t.to_parquet(d / "index.parquet", index=False)
+    np.save(d / "past.npy", np.concatenate([x[1] for x in got]))
+    np.save(d / "future.npy", np.concatenate([x[2] for x in got]))
+    log.info("carla_p6_v1: %d frames from %d worlds; by split / world %s", len(t), len(got),
+             t.groupby(["split", "world"]).size().to_dict())
+
+
 # ---------------------------------------------------------------- Q1: the CARLA-rig examinees on the v0 exam
 
 def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[dict, dict]:
@@ -450,7 +497,7 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["configs", "need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status",
-                                    "pool", "smoke-ids", "e1-ids", "judge-rig"])
+                                    "pool", "smoke-ids", "e1-ids", "judge-rig", "v1-post"])
     ap.add_argument("--ref", default="")
     ap.add_argument("--e1", default="")
     ap.add_argument("--blue", default="", help="name=dir,name=dir of offline BLUE / SimLingo outputs")
@@ -473,6 +520,8 @@ def main():
         print(pool().groupby(["scenario", "source", "town"]).size().to_string())
     elif a.cmd == "ids":
         ids(a.file, a.gen, a.head)
+    elif a.cmd == "v1-post":
+        v1_post()
     elif a.cmd == "smoke-ids":
         print(",".join(smoke_ids()))
     elif a.cmd == "e1-ids":

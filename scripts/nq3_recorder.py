@@ -289,6 +289,7 @@ class NQ3Recorder(p5.P5PairAgent):
         input_data = self._read(frame, cam_tick)
         self._t["read"].append(time.perf_counter() - t0)
         if not self._inited:
+            self._t_first = round(time.time() - T_IMPORT, 1)
             self._init_world()
             self._inited = True
         t0 = time.perf_counter()
@@ -406,8 +407,13 @@ class NQ3Recorder(p5.P5PairAgent):
             self._blue_fh.close()
         p5.P5PairAgent.destroy(self, results)
         ms = {k: round(1e3 * float(np.mean(v)), 2) for k, v in self._t.items() if v}
+        import resource
+        ru = resource.getrusage(resource.RUSAGE_SELF)
         (self.out / "nq3_summary.json").write_text(json.dumps(
+            {"cpu_s": round(ru.ru_utime + ru.ru_stime, 1), "wall_s": round(time.time() - T_IMPORT, 1),
+             "t_first_tick": getattr(self, "_t_first", None),
+             **
             {"ticks": self._tick, "stop": p4.STOP["why"] or "route_end", "t_trigger": self._t_trig,
              "need_k": self.need_k, "rig": self.cfg["rig"], "cam_period": self.cfg["cam_period"],
              "cam_miss": self._cam_miss, "setup": getattr(self, "_setup_s", {}), "shadows": shadows, "ms_mean": ms,
-             "ms_p95": {k: round(1e3 * float(np.percentile(v, 95)), 2) for k, v in self._t.items() if v}}))
+             "ms_p95": {k: round(1e3 * float(np.percentile(v, 95)), 2) for k, v in self._t.items() if v}}}))
