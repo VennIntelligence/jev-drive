@@ -263,7 +263,7 @@
   处理：seed 1 在 64–111 核上续跑（已完成的 48 个 chunk 保留，被打断的 chunk 重算），seed 2 同时在 160–199 核上跑；预计 12:30 前两个 seed 都打完。其余 N3 步骤先用 seed 0 做，seed 1 / 2 到了再补同一套代码。
 - 2026-09-26 10:10 [B] **兼容检查的结果（按 09:58 (3) 先写进来，此时没算过任何 N3 的翻转数）**：seed 0 上 Hydra 选中 anchor 的 top-10 与 navtest 的重叠，P5 null 帧（6 352 帧）Cinque 10%、Lebowski 0%，I3 null 帧（1 584 帧）Cinque 10%、Lebowski 0%，
   全部 < 30%；选中 anchor 的 σ(DAC) 均值差 P5 +0.05 / +0.00、I3 −0.10 / −0.08（Cinque / Lebowski），全部 anchor 上 +0.15 / +0.12、−0.01 / +0.02。
-  **按登记：Hydra 与 Hydra + gated Δ 在 P5 与 I3 列写「不可比」，这些格不读**（exam 照算、原始 csv 留在 box 的 run 目录，汇总表不收这些行）。所以 N3 的第一个判据（榜单 head 压不压反应）在 CARLA 内无法判，第二个判据（能力包）只剩 NAVSIM 一半可读，总判「不可判」。
+  **按登记：Hydra 与 Hydra + gated Δ 在 P5 与 I3 列写「不可比」，这些格不读**（exam 照算、原始 csv 留在 box 的 run 目录，汇总表不收这些行）。所以 N3 的第一个判据（榜单 head 压不压反应）在 CARLA 内无法判，第二个判据（能力包）只剩 NAVSIM 一半可读。（*15:15 就地修正*：这里原写总判「不可判」。能力包要求 NAVSIM 与 P5 两条同时满足，NAVSIM 那一条 3 个 seed、两个模型都不满足（PDMS 掉 5.1–8.5，门槛 1.0），所以不论 P5 那一半能否读，能力包都判「不成立」；见结果节 N3。）
   seed 1 / 2 的 Hydra 照跑，只为 NAVSIM 列的 3 seed 与 Lebowski 行。
 - 2026-09-26 10:11 [B] **事后加一个描述（看过上面的重叠数之后，不改任何判格）**：同一统计量对同词表的 NAVSIM `cls_late`（(a′)，模仿头）也算一次，看低重叠是 Hydra 打分头特有，还是 NAVSIM 训的读出在 CARLA 帧上普遍如此（后者指向输入 / 场景分布差，而非打分头本身）。
 - 2026-09-26 11:08 [B] **暂停（box 11:45 重启加卡）**。已完成：Hydra seed 0（两模型）重拟合与兼容检查；NAVSIM `ridge_late` 零样本；P5 训的 `cls_late` 3 seed；g₂ 在 P5 / I3；P5 / I3 考试（seed 0 Hydra 行按兼容检查不读）；nuScenes collision；E4c 加 student；
@@ -409,6 +409,46 @@ lift 只留在测量里；B 明显更低（CI 不重叠）→ 记「几何先验
 ## 结果
 
 （按节追加，每条带出处路径。）
+
+### N3（执行员 B，2026-09-26 15:15 CST；墙钟 09:50–15:15，中间 11:38–12:28 box 重启停机；GPU 4 合计约 0.3 GPU·h，CPU 大头是 Hydra seed 1 / 2 的逐 anchor 打分约 2 × 80 core·h）
+
+口径见 N3 节 [B] 09:58 / 10:10 / 10:11。代码 `jevdrive/night2_n3.py`，run 在 `runs/night2/n3-*`；小表 [research/results/night2/N3/](../research/results/night2/N3/)。
+
+**兼容检查**（先于任何翻转数，`compat.csv`）：seed 0 上 Hydra 选中 anchor 的 top-10 与 navtest 重叠，P5 null 帧 Cinque 10% / Lebowski 0%，I3 10% / 0%（seed 1 / 2：P5 10–30% / 0–20%，I3 0–20%），全部低于 30% → **Hydra 与 Hydra + gated Δ 的 P5 / I3 格「不可比」，不读**。
+事后描述：同词表的 NAVSIM `cls_late` 重叠 0–10%，所以不是打分头特有，NAVSIM 训的读出在 CARLA 帧上普遍选不同的轨迹（输入协议 2 Hz / 5 Hz 与场景分布的差，这里分不开）。
+
+**2 × 2 主表**（NAVSIM = navtest 12 146 token，官方 devkit PDMS v1.1 / EPDMS main @ 0a380a9，token bootstrap 95% CI；P5 = v1 BA，行人 406 个 reactive 帧，路线 bootstrap；I3 = 1 832 reactive 帧，场景 bootstrap）：
+
+| head（Cinque；Lebowski） | NAVSIM PDMS / EPDMS | WOD RFS | P5 行人翻转 [CI] / cut-in 翻转 | I3 翻转 [CI] |
+|:--|:--|:--|:--|:--|
+| `ridge_late`（各基准自己训的） | 73.5 / 73.9；72.4 / 72.9 | 7.45；7.52 | 0.2 [0.0, 0.8] / 76.9；2.7 / 70.6 | 70.0 [65.5, 74.5]；70.5 |
+| `cls_late`（NAVSIM：G3；P5：P5 训、3 seed） | 77.9 / 77.4；77.3 / 76.7 | 7.64；7.73 | 1.7 / 0.5 / 0.7 与 28.1 / 21.3 / 21.7；1.0 / 0.7 / 0.2 与 18.0 / 23.5 / 11.8 | 46.0 / 39.2 / 40.6；37.3 / 33.1 / 37.2 |
+| Hydra 打分头（seed 0 / 1 / 2） | **84.2 / 83.8 / 84.3**，EPDMS 82.6 / 78.0 / 82.3；**84.4 / 84.2 / 84.2**，82.2 / 82.0 / 82.1 | 不适用 | 不可比（不读） | 不可比（不读） |
+| pair-Δ（M-C）不加 gate | ridge_late + Δ：−8.2；−11（E1） | −1.02；−1.52（E1） | 43.3 [35.0, 50.7] / 80.0；41.6 / 77.2 | 58.7 [54.2, 63.1]；67.4 |
+| Hydra + g₂·Δ（seed 0 / 1 / 2） | 79.1 / 78.6 / 78.8；76.0 / 75.7 / 76.3 | — | 不可比（不读） | 不可比（不读） |
+
+读法：Hydra 头 3 seed 都在 83.8–84.4，与 E6 的 84.2 同一水平，Lebowski 行 84.2–84.4；E6 的「单 seed」限定可以去掉。Cinque seed 1 的 EPDMS 低 4.6 分全在 extended comfort（0.75 → 0.34）：该 seed 的留出权重选到 w_im = 0，没有模仿项，选择在帧间跳。
+同 seed 配对的 Hydra − `ridge_late`：PDMS +10.2 到 +12.0（CI 全 > 0），走廊有行人的 897 个 token 上 +11.8 到 +13.7。
+
+**判格**（按登记）：
+1. 「榜单 head 压不压反应」：Hydra 在 P5 / I3 不可比，**CARLA 内不可判**。
+2. 「能力包」：Hydra + g₂·Δ 对同 seed Hydra 的 PDMS 配对 Δ，Cinque −5.14 [−5.52, −4.76] / −5.11 / −5.49，Lebowski −8.33 [−8.78, −7.87] / −8.48 / −7.86，走廊有行人的 token 上更差（−8.9 到 −13.5）；门槛是掉 ≤ 1.0，**3 seed × 2 模型都不满足 → 「能力包不成立」**（P5 那一半不读，不影响这一格）。
+   g₂ 在 navtest 上均值 0.43，只把 E1 的 −15 / −20 分（不加 gate 的 Hydra + Δ）减到 −5 / −8；navtest 激活率 Cinque 1.1%、Lebowski 15.8%（直行 24%）。
+
+**描述行**（不进判格）：NAVSIM 训的 `ridge_late` 零样本上 P5 cut-in 翻转 23.2%（Cinque）/ 9.2%（Lebowski），P5 训的 prior 76.9 / 70.6% → 消融矩阵建议的「2 Hz → 5 Hz sanity」不过，与兼容检查一致。
+P5 训的 `cls_late` 在 P5 上行人 0.2–1.7%、cut-in 12–28%（prior 71–79%），I3 上 33–46%（prior 70%）：离散 anchor 让 null 对上的 |Δv₂| 变大，τ 从 prior 的 1.16 m/s 升到 0.6–5.2 m/s，翻转被 τ 吃掉；「分类头比回归头保反应」在配对考卷上不成立。
+
+**顺带两格**：
+- nuScenes 冻结 head 的 collision（第 39 条考试代码原样，150 个 val scene、3 632 个样本；`nusc_collision.csv`）：`ridge ego` VAD 口径 0.21%、BEV-Planner 口径 0.81%；
+  op Cinque `temporal` 0.12% / 0.39%（对 `ridge ego` −0.09 [−0.18, −0.01] / −0.42 [−0.70, −0.16] pp），Lebowski 0.15% / 0.41%（−0.07 [−0.15, +0.01] / −0.40 [−0.67, −0.16]），Qwen `L18_mean` 0.23% / 0.88%（CI 跨零）；log 未来 0.00%（sanity）。
+  即 openpilot 冻结特征在 nuScenes 上 L2 降 18% 的同时 BEV-Planner 口径的碰撞也减半，Qwen 两样都不动。
+- E4c 加 E5 student（BA，`elicit_e4c` 曲线原样，L = 0.1 s；`e4c_students_areas.csv`）：行人 [L, 10 s] 面积减 null 地板 student A +0.41 到 +0.44（Cinque）/ +0.50 到 +0.55（Lebowski），A₃ +0.24 到 +0.34，CI 都 > 0；
+  首翻相对 BA expert onset 中位晚 0.6 s（teacher M-C 0.8 s），首翻早于 onset 的对 0–9%。**student 是看见后反应，不是提前刹**；DOC 的 12.7% 非反应误翻因此是「行人进走廊就减速」，比 expert 早但不早于可见。
+
+![N3](../research/figs/night2-n3-heads.png)
+
+左：navtest PDMS（点 = seed 0 与 token bootstrap 95% CI，× = seed 1 / 2）；中、右：P5 v1 BA 行人与 cut-in 翻转率中能读的 head（Hydra 行不可比，不画）。蓝 = Cinque，橙 = Lebowski。
+要看的是：Hydra 的 +10 分 PDMS 3 seed 稳定，但叠上 gated Δ 立刻掉 5–8 分；在 CARLA 配对考卷上，除了配对差分训的 M-C，没有一个读出（回归、分类、NAVSIM 训的）有行人反应，而 cut-in 反应只在 P5 自己训的回归 prior 上保住。
 
 ### N4（执行员 B，2026-09-26 12:57 CST；GPU 4 检测约 42 min + 拟合 3 min + 延迟 2 min）
 

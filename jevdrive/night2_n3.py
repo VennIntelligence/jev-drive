@@ -660,7 +660,7 @@ def figs(res_dir="research/results/night2/N3", out_dir="research/figs"):
     cr = pd.read_csv(R / "p5_criteria.csv")
     cols = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
     nav_rows = [("ridge_late [{m}]", "ridge$_{late}$"), ("cls_late G3 [{m}]", "cls$_{late}$"), ("Hydra s{sd} [{m}]", "Hydra"),
-                ("Hydra s{sd} + g2 Delta [{m}]", r"Hydra + $g_2\Delta$"), ("ridge_late + Delta [{m}]", r"ridge$_{late}$ + $\Delta$")]
+                ("Hydra s{sd} + g2 Delta [{m}]", r"Hydra + $g_2\Delta$"), ("Hydra s{sd} + Delta [{m}]", r"Hydra + $\Delta$")]
     p5_rows = [("prior s{sd} [{m}]", "ridge$_{late}$ (P5)"), ("cls_late P5 s{sd} [{m}]", "cls$_{late}$ (P5)"),
                ("ridge_late NAV [{m}]", "ridge$_{late}$ (NAV)"), ("cls_late NAV s{sd} [{m}]", "cls$_{late}$ (NAV)"),
                ("M-C pair [{m}]", "M-C")]
@@ -688,7 +688,7 @@ def figs(res_dir="research/results/night2/N3", out_dir="research/figs"):
                         a_.errorbar(x + 0.08 * sd, 100 * g[val], yerr=err, fmt="o" if sd == 0 else "x", color=col, ms=3, lw=0.8, capsize=1.2)
         ax[0].set_xticks(range(len(nav_rows)), [n for _, n in nav_rows], rotation=30, ha="right")
         ax[0].set_ylabel("navtest PDMS")
-        ax[0].legend(loc="lower left")
+        ax[0].legend(loc="upper left")
         for a_, yl in zip(ax[1:], ("P5 pedestrian flip rate (%)", "P5 cut-in flip rate (%)")):
             a_.set_xticks(range(len(p5_rows)), [n for _, n in p5_rows], rotation=30, ha="right")
             a_.set_ylabel(yl)
