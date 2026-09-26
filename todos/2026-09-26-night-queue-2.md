@@ -74,6 +74,30 @@
   | N2-b | N1 数据到后重跑 probe a / b、跑 probe c、x₁₀ 帧补 desire | 1 h | CPU + 少量 GPU |
   合计墙钟约 7–8 h（预计 17:30–18:00 CST 收尾）。任何一步超估计 2 倍停下写日志。盘：box 剩 167 GB，P5 v1 每 run 约 70 MB → 本节约 45 GB。
 
+- 2026-09-26 09:58 CST [A] N1 的操作性选择（写于任何 P6 世界生成之前；代码 `jevdrive/p6.py`、`scripts/b2d_hooks.py` 的 `p6_world`、`scripts/p6_gen.sh`，recorder 仍是 `scripts/p5_pair_agent.py`）：
+  - **世界与规模**：220 集 55 条路线（1W 20、2W 25、InvadingTurn 5、Emergency 5，都不在崩溃表里），3 个 TM seed。每 case 有 x₁₀、x₀₀，2W 再加 x₁₁、x₀₁；seed 0 另加天气 null（x₁₀ 换天气）、
+    放置 null（1W / 2W）和镜像题（只 2W）。合计 **605 个世界**（x₁₀ 165、x₀₀ 165、x₁₁ 75、x₀₁ 75、天气 null 55、放置 null 45、镜像 25），比 todo 的约 580 多出镜像题 25 个。variant id = base × 100 + 世界码 × 10 + seed。
+  - **x₀₀（障碍删）**：scenario 照常构建和运行（对背景的命令不变），它 spawn 的**全部** actor（车、自行车、锥桶和警示牌等 prop、救护车）每 tick 压在地下 500 m（沿用 P5 的藏法），
+    并从 `CarlaDataProvider.active_scenarios` 删掉它的登记；InvadingTurn 的侵入车流（`InvadingActorFlow`）不 spawn。
+  - **对向车流**：x₁₀ / x₀₀ / 天气 null / 放置 null 里，2W scenario 在触发后起的 `OppositeActorFlow` 不 spawn；HazardAtSideLaneTwoWays 的对向流来自背景（`ChangeOppositeBehavior(spawn_dist)`），这几个世界里改成关掉对向 source。
+    触发前的背景对向车在所有世界里相同（不删）。`OppositeActorFlow` 的间距与车型改从一条以 TM seed 播种的私有随机流抽（「spawn 表写死」），x₁₁ / x₀₁ / 镜像题的车流表相同。
+  - **放置 null**：每个 actor 沿其所在驾驶车道（`get_waypoint(lane_type=Driving)`）的法向移到障碍一侧，内缘离车道边线 0.5 m（VehicleOpensDoorTwoWays 再加 1.2 m 的开门余量），已在车道外的（侧边警示牌）不动；
+    HazardAtSideLane 的自行车改的是它们的行驶横向 offset；登记删掉。
+  - **镜像题**：只做 2W（1W 的相邻车道同向、没有「一直不断的对向车流」可造；护栏类改动不做）。对向车流间距 10–14 m（约 1 s 车头时距），PDM-Lite 的 gap check 应一直不通过。
+  - **recorder**：与 P5 v1 的 PDM-Lite 配置相同（TFv6 shadow 照录，触发后 40 s、静止 40 s、仿真 70 s），另记 static prop 的位置与可见像素（语义类 20–22）、每个相机帧 PDM-Lite 的登记状态（`frames.jsonl` 的 `reg`），
+    并在 ego 越过全部曾在前方的 scenario actor 10 m 后再录 8 s 就停（省空路）。
+  - **横向量 d(t)**：ego 位置到原路线（`route.json`，未平移）折线的有符号距离，左正。Δ_lat(τ) 在帧 k 处 = d(k + τ)。
+  - **smoke 1**（删登记）：每个 (x₁₀, x₀₀) 对，取 x₁₀ 的 |d(k + 3 s)| ≥ 1.0 m 的相机帧 k（x₁₀ 在 3 s 处正在绕）；判据量 = 这些帧上 x₀₀ 的 |d(k + 3 s)| < 0.3 m 的比例，合并 ≥ 95% 过。
+  - **smoke 2**（对向车流）：对向车 = 航向与 ego 相反 > 135°、离 ego ≤ 50 m 的车。窗口 = 同 case x₁₁ 的横向起动时刻前 10 s 到后 3 s（x₁₁ 不绕则取触发后 5–25 s）；每个 x₁₁ / x₀₁ 世界窗口内至少 1 辆才过。x₁₀ 同窗口的对向车数并列报（只报不判）。
+  - **世界级模式**（expert 统计的主读数）：窗口 = t_vis（x₁₀ 里障碍首次 ≥ 20 px 可见的相机帧；没有障碍的世界用同 case x₁₀ 的 t_vis；从未可见用触发帧）到录制结束。
+    横向起动 t_lat = |d| ≥ 0.5 m 且持续 ≥ 0.5 s 的第一个 tick；bypass = 窗口内 max|d| ≥ 1.0 m（§2.1 的 1 m 门槛），侧别取 max 处的符号；
+    停 = 速度 < 0.5 m/s 持续 ≥ 1 s。模式：bypass 且 t_lat 之前停过 → wait-then-bypass；bypass → bypass_L / bypass_R；没 bypass 但停过 → stop；其余 keep。
+    「bypass 比例」= bypass_L + bypass_R + wait-then-bypass。帧级另按 §2.1 在 Frenet 坐标（Δd、相对路线切向的航向）上分类，作为副读数和之后考生混淆矩阵的口径。
+  - **t_div**：沿用 P5 的 ego 分叉（1 cm / 0.1°），(x₁₀, x₀₀) 对上算；另报横向分叉 t_div_lat（|d_x₁₀ − d_x₀₀| ≥ 0.3 m 的第一个 tick）。主读数只取 t_div ≥ t_vis 的对，提前的对单列。
+  - **negotiation**：同 case 的 x₁₁ − x₁₀，报横向起动延迟 t_lat(x₁₁) − t_lat(x₁₀) 与 x₁₀ 起动时刻两侧的速度差 Δv；「wait」= x₁₁ 的世界级模式为 wait-then-bypass 或 stop，门槛 ≥ 50%。
+  - **门**：每类 scenario 的 x₁₀ bypass 比例 ≥ 70% 才算可用（IT、Emergency 也按这条报）；放置 null keep ≥ 90%；镜像题 stop ≥ 80%。
+  - **卡与 server**：GPU 0–2，每卡 ≤ 6 个 CARLA server（受 pids.max 实时限制），server index 800–949，每实例 3 核（开跑时取没有被 pin 的核）。
+
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
 激发的前提是冻结特征里有信息。行人那一轮 openpilot vision 层 AUC 0.51，只能外接。绕行需要三样，逐样 probe：
