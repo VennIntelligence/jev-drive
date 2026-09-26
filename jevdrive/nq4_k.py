@@ -397,7 +397,7 @@ def labels(workers: int = 4) -> dict:
     v = speed_label(fut)
     out = kdir("labels")
     out.mkdir(parents=True, exist_ok=True)
-    np.savez(out / "route.npz", frame_name=t.frame_name.to_numpy(), route=route, dperp=dperp, speed=v.astype(np.float32))
+    np.savez(out / "route.npz", frame_name=t.frame_name.to_numpy().astype(str), route=route, dperp=dperp, speed=v.astype(np.float32))
     st = {"rows": len(t), "attempts": len(groups), "dperp_p50": float(np.median(dperp)), "dperp_p95": float(np.percentile(dperp, 95)),
           "off_route_gt_2_5m": float((dperp > ROUTE_FIRST).mean()), "first_ckpt_x_p50": float(np.median(route[:, 0, 0])),
           "speed_p50": float(np.median(v)), "speed_max": float(v.max()), "speed_gt_20": float((v > 20).mean())}
@@ -655,13 +655,13 @@ def export(D, rl):
         for key in ("_v", "_g3"):
             if key in PRED["R1"] and level in ("K1", "K2", "K3") and (key == "_v" or level == "K3"):
                 aux[key[1:] + "_unseen"] = np.where(other == "R1", PRED["R1"][key][:n], PRED["R2"][key][:n]).astype(np.float32)
-        np.savez_compressed(out / f"ba_{level}.npz", frame_name=D["t"].frame_name.to_numpy(), unseen=unseen.astype(np.float32),
+        np.savez_compressed(out / f"ba_{level}.npz", frame_name=D["t"].frame_name.to_numpy().astype(str), unseen=unseen.astype(np.float32),
                             seen=seen.astype(np.float32), full=P["full"][:n].astype(np.float32), readout_unseen=other,
                             **aux)
-        np.savez_compressed(out / f"i3_{level}.npz", frame_name=D["t3"].frame_name.to_numpy(),
+        np.savez_compressed(out / f"i3_{level}.npz", frame_name=D["t3"].frame_name.to_numpy().astype(str),
                             R1=P["R1"][n:n + n3].astype(np.float32), R2=P["R2"][n:n + n3].astype(np.float32))
         p6 = np.where((r6 == "R1")[:, None, None], P["R1"][n + n3:], P["R2"][n + n3:])
-        np.savez_compressed(out / f"p6_{level}.npz", frame_name=D["t6"].frame_name.to_numpy(), unseen=p6.astype(np.float32),
+        np.savez_compressed(out / f"p6_{level}.npz", frame_name=D["t6"].frame_name.to_numpy().astype(str), unseen=p6.astype(np.float32),
                             readout=r6, R1=P["R1"][n + n3:].astype(np.float32), R2=P["R2"][n + n3:].astype(np.float32))
     rl.log.info("open-loop exports -> %s (P6 readouts %s)", out, dict(zip(*np.unique(r6, return_counts=True))))
 
