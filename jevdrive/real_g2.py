@@ -337,6 +337,7 @@ def run_transfer(rl, fit_run: str):
     fl = E3.cause_flags_nav(tok, fz["poses"][:, :, :2], E3.extract("navtest"))
     sc["vehicle_approach"] = fl.cause_vehicle.to_numpy()
     sc.to_csv(rl.dir / "navtest_scopes.csv", index=False)
+    (rl.dir / "tokens.txt").write_text("\n".join(tok[sc.vehicle_approach.to_numpy()]) + "\n")   # [G2] 11:00 (2)
     Qn = NQ.load("navtest", tok)["L18_last"]
     scopes = {"all": np.ones(len(tok), bool), "vehicle_approach": sc.vehicle_approach.to_numpy(),
               "ped_cyc_corridor": sc.ped_cyc_corridor.to_numpy(), "straight": sc.straight.to_numpy()}
@@ -430,6 +431,13 @@ def run_g1c_nav_write(rl):
             jobs += [f"{v} navtest {nm} {rl.dir / f'navtest_{nm}.npz'}" for v in vers]
             act = (np.abs(P.v2(E1._grid20(arm)) - P.v2(E1._grid20(p["poses"]))) >= taus[m]).astype(float)
             acts.append({"model": m, "arm": name, "activation_all": float(act.mean())})
+    # [G2] 11:00 (1): score only tokens where some model's g3 > 0, plus 200 g3 = 0 tokens that must equal the prior
+    gs = np.stack([np.load(rl.dir / f"navtest_g3_{m}.npz")["g3"] for m in MODELS])
+    on = (gs > 0).any(0)
+    chk = np.random.default_rng(0).choice(np.flatnonzero(~on), 200, replace=False)
+    (rl.dir / "tokens.txt").write_text("\n".join(tok[np.sort(np.r_[np.flatnonzero(on), chk])]) + "\n")
+    (rl.dir / "check_tokens.txt").write_text("\n".join(tok[np.sort(chk)]) + "\n")
+    log.info("G1c tokens: %d with g3 > 0, + 200 checks", on.sum())
     pd.DataFrame(cs).to_csv(rl.dir / "g1c_nav_const.csv", index=False)
     pd.DataFrame(acts).to_csv(rl.dir / "g1c_nav_activation.csv", index=False)
     (rl.dir / "score_jobs.txt").write_text("\n".join(jobs) + "\n")
@@ -451,11 +459,14 @@ def nav_paired(pairs: dict, groups: dict, metrics=(("v1", "PDMS"), ("v2", "EPDMS
     """elicit_e1.navsim_table's paired token bootstrap (10 000, rng 0) for {label: (arm devkit name, reference name)}."""
     rows = []
     rng = np.random.default_rng(0)
-    for label, (arm, ref) in pairs.items():
+    for label, (arm, ref, *fill) in pairs.items():
         for ver, metric in metrics:
             a, b = _scores(ver, arm), _scores(ver, ref)
             if a is None or b is None:
                 continue
+            if fill:        # [G2] 11:00 (1): tokens not scored are the prior's prediction bit for bit -> the prior's score
+                f = _scores(ver, fill[0])
+                a, b = a.reindex(f.index).fillna(f), b.reindex(f.index).fillna(f)
             x, y = a.align(b, join="inner")
             for g, msk in groups.items():
                 keep = np.ones(len(x), bool) if msk is None else msk.reindex(x.index).fillna(False).to_numpy(bool)
@@ -471,7 +482,7 @@ def run_nav_table(rl, transfer_run: str, g1c_run: str):
     sc = pd.read_csv(data_dir() / transfer_run / "navtest_scopes.csv").set_index("token")
     groups = {"all": None, "vehicle_approach": sc.vehicle_approach, "ped_cyc_corridor": sc.ped_cyc_corridor,
               "straight": sc.straight}
-    out = []
+    out, checks = [], []
     # G1c: arm vs prior, M-C vs const, on all / g3-open tokens
     for m in MODELS:
         gz = np.load(data_dir() / g1c_run / f"navtest_g3_{m}.npz")
@@ -479,14 +490,24 @@ def run_nav_table(rl, transfer_run: str, g1c_run: str):
         gg = {**groups, "g3_open": gopen}
         prior = f"heads_ridge_late_{m}_temporal"
         mc = f"g1_mc_g3_ridge_late_{m}"
-        pairs = {f"G1c g3 x M-C {m}": (mc, prior), f"G1c g3 x const {m}": (f"g1c_g3_const_ridge_late_{m}", prior),
-                 f"G1c g3 x const2d {m}": (f"g1c_g3_const2d_ridge_late_{m}", prior),
-                 f"G1c M-C - const {m}": (mc, f"g1c_g3_const_ridge_late_{m}"),
-                 f"G1c M-C - const2d {m}": (mc, f"g1c_g3_const2d_ridge_late_{m}")}
+        cst, c2d = f"g1c_g3_const_ridge_late_{m}", f"g1c_g3_const2d_ridge_late_{m}"
+        chk_tok = (data_dir() / g1c_run / "check_tokens.txt").read_text().split()
+        for ver, name in (("v1", cst), ("v2", cst), ("v1", c2d)):
+            a, b = _scores(ver, name), _scores(ver, prior)
+            if a is not None:
+                d = (a.reindex(chk_tok) - b.reindex(chk_tok)).abs()
+                checks.append({"model": m, "arm": name, "version": ver, "n_check": len(chk_tok), "n_scored": int(d.notna().sum()),
+                               "max_abs_diff": float(d.max()), "n_scored_total": len(a)})
+        pairs = {f"G1c g3 x M-C {m}": (mc, prior), f"G1c g3 x const {m}": (cst, prior, prior),
+                 f"G1c g3 x const2d {m}": (c2d, prior, prior),
+                 f"G1c M-C - const {m}": (mc, cst, prior), f"G1c M-C - const2d {m}": (mc, c2d, prior)}
         out.append(nav_paired(pairs, gg))
         g2p = {f"G2 {h} s{s} {m}": (f"g2_{h.replace(' ', '')}_s{s}_{m}", prior)
                for h in ("M-C pair", "student A", "M-C hard", "M-C uniform") for s in SEEDS}
-        out.append(nav_paired(g2p, groups, (("v1", "PDMS"),)))
+        out.append(nav_paired(g2p, {"vehicle_approach": None}, (("v1", "PDMS"),)))     # scored on those tokens only
+    pd.DataFrame(checks).to_csv(rl.dir / "g1c_check.csv", index=False)
+    log.info("G1c determinism check (g3 = 0 tokens vs the prior's stored scores)\n%s", pd.DataFrame(checks).to_markdown(index=False))
+    assert all(c["max_abs_diff"] == 0 for c in checks), "scores of unchanged tokens differ from the prior: score in full"
     t = pd.concat(out)
     t.to_csv(rl.dir / "navsim_paired.csv", index=False)
     log.info("navtest\n%s", t.to_markdown(index=False, floatfmt=".2f"))

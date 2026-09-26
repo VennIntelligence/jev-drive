@@ -262,6 +262,11 @@ G2 等 G0、G1 出来后排；行人资产另行调研
 - 2026-09-26 10:53 CST（box 时钟；随代码提交 9e3c5ad，原手写 11:05 是估计错的时间）[G2] 两处实现细节，写于任何 G2 拟合之前。(1) student 的标准化用 `planner.standardize` 的规则（std ≤ 1e-6 的维取 1），不用 E5 的 `clamp_min(1e-6)`：
   I3 的 μ 行（minus 世界）里 embedding 的若干行人 one-hot 槽位恒为 0，E5 的写法会把 x⁺ 帧与 WOD 帧上这些维放大 10⁶ 倍；两种写法在 μ 行上逐位相同。
   (2) M-C 与对照的闭式解用 `reactivity_mc` 的 N6 选项 `EIGH_DEVICE = "cuda"`（float64 eigh 放 GPU），同一个解，只因 box 的 CPU 饱和（负载 ~400 / 125 核）。
+- 2026-09-26 11:00 CST（box 时钟）[G2] NAVSIM 打分缩到必要的 token，写于 G1c 与 G2 的任何 NAVSIM 数字之前（G1c 的全量打分 10:55 开跑后停掉，没有产出分数；已看过的只有 G1c 的 WOD 表与常数本身）。
+  实测 devkit 在当前负载下一次全量 navtest v1 打分约 30 min（8 线程），登记的 6 + 16 次全量打分要 4 h 以上，超估计 2 倍。改法：
+  (1) **G1c**：只打 g₃ > 0 的 token（两个模型的并集）；g₃ = 0 的 token 上 arm 的预测与 prior 逐位相同，PDM 打分逐 token 独立、确定，直接取 prior 已存的逐 token 分数。
+  核对：另从 g₃ = 0 的 token 里按 `default_rng(0)` 抽 200 个一起打，它们的分数必须与 prior 已存分数逐个相等，不等就停、改回全量。
+  (2) **G2**：只打「有接近车辆」的 token（登记的 NAVSIM 读数就是这一组）；全部 / 行人 / 直行三组的 PDMS 不再打，激活率仍在全部 token 上报。arm 不变（M-C pair 与 student A 各 3 seed、hard / uniform seed 0，两个模型）。
 
 ## 结果
 
