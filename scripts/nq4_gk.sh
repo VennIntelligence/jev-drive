@@ -9,7 +9,7 @@
 #   scripts/nq4_gk.sh plan         print the queue with its current worker-hour estimate, apply no cut
 #
 # Capacity (first come, first served; no wait for other lanes' DONE): the batch runs on the cards of the GO file
-# runs/sched/nq4-gk.go (shell vars GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS; the i-th card of GPUS uses server indices
+# runs/nq4/gk/GO (SCH's table runs/sched/table.tsv; shell vars GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS; the i-th card of GPUS uses server indices
 # [IDX0 + i IDX_SPAN, IDX0 + (i + 1) IDX_SPAN)), written by SCH / Codex once the pilots pass; it is re-read before every step.
 # The pilots run on the validation card of runs/sched/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN,
 # PILOT_CPUS). No card starts more CARLA servers than fit its 6 (other lanes' counted).
@@ -278,10 +278,12 @@ EOF
 }
 
 # ---------------------------------------------------------------- capacity (GO file, pilot card), execution of one route set
-load_go() {  # the batch cards: $SCHED/nq4-gk.go (GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS), written by SCH or Codex
-    [[ -f $SCHED/nq4-gk.go ]] || return 1
+load_go() {  # the batch cards: runs/nq4/gk/GO (SCH's table, runs/sched/table.tsv; runs/sched/nq4-gk.go also read), shell
+             # vars GPUS, WORKERS, IDX0, IDX_SPAN and the lane's cores (NQ4GK_CPUS / NQ4_GK_CPUS / GK_CPUS / CPUS)
+    local f; for f in "$G/GO" "$SCHED/nq4-gk.go"; do [[ -f $f ]] && break; done
+    [[ -f $f ]] || return 1
     local GPUS_= WORKERS_= IDX0_= IDX_SPAN_= CPUS_=
-    eval "$(set +u; source "$SCHED/nq4-gk.go"; echo "GPUS_='$GPUS' WORKERS_='$WORKERS' IDX0_='$IDX0' IDX_SPAN_='$IDX_SPAN' CPUS_='${NQ4GK_CPUS:-$CPUS}'")"
+    eval "$(set +u; source "$f"; echo "GPUS_='${GPUS//,/ }' WORKERS_='$WORKERS' IDX0_='$IDX0' IDX_SPAN_='$IDX_SPAN' CPUS_='${NQ4GK_CPUS:-${NQ4_GK_CPUS:-${GK_CPUS:-$CPUS}}}'")"
     [[ -n $GPUS_ ]] || return 1
     GPUS=$GPUS_; WORKERS=${WORKERS_:-6}; SIDX0=${IDX0_:-60}; SPAN=${IDX_SPAN_:-18}; CPUS=${CPUS_:-60-149}
 }
@@ -540,7 +542,7 @@ status_loop() {
     while sleep 600; do
         {
             echo "# nq4-gk status $(date '+%F %T %Z')"; echo
-            echo "- batch: $( [[ -f $SCHED/nq4-gk.go ]] && echo "GO ($(tr '\n' ' ' < "$SCHED/nq4-gk.go"))" || echo 'waiting for runs/sched/nq4-gk.go')"
+            echo "- batch: $( [[ -f $G/GO ]] && echo "GO ($(tr '\n' ' ' < "$G/GO"))" || echo 'waiting for runs/nq4/gk/GO')"
             echo "- pilot card: $( [[ -f $SCHED/nq4-gk.pilot ]] && tr '\n' ' ' < "$SCHED/nq4-gk.pilot" || echo 'waiting for runs/sched/nq4-gk.pilot')"
             echo "- current batch step: $(cat "$G/CURRENT" 2>/dev/null)"
             echo "- pilots passed: $(ls "$G"/pilot/*/PASS 2>/dev/null | wc -l); blocked examinees: $(ls "$G/blocked" 2>/dev/null | tr '\n' ' ')"
@@ -579,7 +581,7 @@ pilot_loop() {  # on the validation card: the staged pilot of every examinee x w
 }
 
 chain() {
-    echo "waiting for runs/sched/nq4-gk.go" > "$G/CURRENT"
+    echo "waiting for runs/nq4/gk/GO" > "$G/CURRENT"
     status_loop & local st=$!
     [[ -e $G/prep/DONE ]] || error "G-prep has not passed (runs/nq4/gk/prep/DONE missing)"
     [[ -f $G/QUEUE ]] || queue > "$G/QUEUE"
@@ -588,7 +590,7 @@ chain() {
     trap 'kill $st 2>/dev/null; kill $pl 2>/dev/null; for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT
     trap 'exit 129' HUP INT TERM
     local said=0
-    until load_go; do (( said++ == 0 )) && log "waiting for the GO file $SCHED/nq4-gk.go"; sleep 120; done
+    until load_go; do (( said++ == 0 )) && log "waiting for the GO file $G/GO"; sleep 120; done
     ev go "\"gpus\": \"$GPUS\", \"workers\": $WORKERS, \"idx0\": $SIDX0, \"span\": $SPAN, \"cpus\": \"$CPUS\""
     log "GO: GPUs $GPUS, $WORKERS workers each, server indices from $SIDX0 (span $SPAN), cores $CPUS"
     apply_cuts "$G/QUEUE"
