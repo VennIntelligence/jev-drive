@@ -75,15 +75,18 @@ case $agent in
   simlingo)
     S=$DATA_DIR/third_party/simlingo
     export PYTHONPATH=$S:$S/team_code${PYTHONPATH:+:$PYTHONPATH} B2D_PREPEND_PATH=$S SAVE_PATH=$out/viz TRANSFORMERS_OFFLINE=1
-    py=$DATA_DIR/envs/simlingo/bin/python ag=$S/team_code/agent_simlingo.py cfg=$SL_CKPT ;;
+    py=$DATA_DIR/envs/simlingo/bin/python ag=$S/team_code/agent_simlingo.py cfg="$SL_CKPT+/run" ;;
   blue)
     S=$DATA_DIR/third_party/blue
     export PYTHONPATH=$S:$S/team_code${PYTHONPATH:+:$PYTHONPATH} B2D_PREPEND_PATH=$S SAVE_PATH=$out/viz TRANSFORMERS_OFFLINE=1 \
         BLUE_MODE=trained_gate BLUE_GATE_CKPT=$S/gate/weights/blue_simlingo_gate.pt BLUE_GATE_THRESHOLD=0.66 \
         BLUE_OUTPUT_DIR=$out/blue NCCL_NVLS_ENABLE=0 TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
-    py=$DATA_DIR/envs/blue/bin/python ag=$S/team_code/agent_simlingo.py cfg=$SL_CKPT ;;
+    py=$DATA_DIR/envs/blue/bin/python ag=$S/team_code/agent_simlingo.py cfg="$SL_CKPT+/run" ;;
   *) echo "agent must be tfv6|bridgedrive|simlingo|blue" >&2; exit 2 ;;
 esac
+# SimLingo / BLUE: the "+/run" suffix (as simlingo_catalogue_run.sh) keeps b2d_route's Path.resolve() from following
+# the HF-cache symlink of pytorch_model.pt into blobs/ (the agent finds its .hydra config three levels up from the path
+# it is given); the agents take the part after "+" as their debug save root under $SAVE_PATH.
 # SimLingo / BLUE load InternVL2-1B from ./pretrained relative to the evaluator's cwd (the Bench2Drive root)
 [[ $agent != simlingo && $agent != blue ]] || [[ -e $B2D/pretrained/InternVL2-1B && -f $SL_CKPT ]] \
     || { echo "missing $B2D/pretrained/InternVL2-1B or $SL_CKPT" >&2; exit 1; }
