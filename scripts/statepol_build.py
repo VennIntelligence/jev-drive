@@ -26,6 +26,7 @@ from pathlib import Path
 import numpy as np
 
 T0, T = 0, 91  # BehaviorBench eval starts the rollout at log frame 0 (init_steps=0)
+DEGHOST = True
 SPLIT = "validation_interactive"  # PufferDrive only accepts known split names; one data root per variant
 NULL_DIST, OBS_LEN, OBS_W, SHIFT = 30.0, 4.8, 2.0, 1.5
 
@@ -57,6 +58,26 @@ def path_point(xy, s_query):
     return xy[i] + a * d, float(np.arctan2(d[1], d[0]))
 
 
+def deghost(scene, ego):
+    """PufferDrive eval (goal_behavior=3) marks an agent `removed` once it is within goal_radius of its goal:
+    removed agents vanish from every observation and from IDM/PDM, but collision_check still hits them.
+    Vehicles whose logged goal equals their start (parked cars) become invisible, collidable ghosts at step 1.
+    Push such goals 1 km ahead so log-replayed parked cars stay visible. Returns the number patched."""
+    n = 0
+    for j, o in enumerate(scene["objects"]):
+        if j == ego or o.get("type") != "vehicle":
+            continue
+        p, _, h, va = arr(o)
+        if not va.any():
+            continue
+        k = int(np.argmax(va))
+        g = o.get("goalPosition", {})
+        if np.hypot(g.get("x", 0) - p[k, 0], g.get("y", 0) - p[k, 1]) < 3.0:
+            o["goalPosition"] = dict(x=float(p[k, 0] + 1000 * np.cos(h[k])), y=float(p[k, 1] + 1000 * np.sin(h[k])), z=0.0)
+            n += 1
+    return n
+
+
 def build(args):
     json_path, ego, rng_seed, out_dir = args
     r = _build(json_path, ego, rng_seed)
@@ -75,6 +96,7 @@ def build(args):
 
 def _build(json_path, ego, rng_seed):
     scene = json.load(open(json_path))
+    n_ghost = deghost(scene, ego) if DEGHOST else 0
     objs = scene["objects"]
     ep, ev, eh, eva = arr(objs[ego])
     if not eva[T0] or eva[T0:].sum() < 60:
@@ -85,7 +107,7 @@ def _build(json_path, ego, rng_seed):
     if partner is None:
         return None
     rng = np.random.default_rng(rng_seed)
-    meta = dict(scenario_id=scene.get("scenario_id", ""), json=str(json_path), ego=ego, partner=partner,
+    meta = dict(scenario_id=scene.get("scenario_id", ""), json=str(json_path), ego=ego, partner=partner, n_ghost=n_ghost,
                 ego_xy=ep, ego_h=eh, ego_valid=eva, partner_xy=arr(objs[partner])[0], partner_valid=arr(objs[partner])[3])
     out = {"base": (scene, ego)}
     out["nopartner"] = (remove(scene, partner), ego - (ego > partner))
@@ -127,7 +149,8 @@ def _build(json_path, ego, rng_seed):
                     type="vehicle", id=987654, width=OBS_W, length=OBS_LEN, height=1.5, mark_as_expert=1,
                     position=[dict(x=float(c[0]), y=float(c[1]), z=float(objs[ego]["position"][T0].get("z", 0)))] * T,
                     velocity=[dict(x=0.0, y=0.0)] * T, heading=[h] * T, valid=[1] * T,
-                    goalPosition=dict(x=float(c[0]), y=float(c[1]), z=0.0)))
+                    # goal far ahead: a goal at its own position would mark it removed (invisible) at step 1
+                    goalPosition=dict(x=float(c[0] + 1000 * np.cos(h)), y=float(c[1] + 1000 * np.sin(h)), z=0.0)))
                 out["obstacle"], out["obsctrl"] = (s2, e2), (ctrl, e2)
                 meta.update(obs_xy=c, obs_h=h, obs_s=s_obs, obs_removed=clash)
         sign = 1.0 if rng_seed % 2 == 0 else -1.0
@@ -148,7 +171,10 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--max-episodes", type=int, default=1000)
     ap.add_argument("--workers", type=int, default=32)
+    ap.add_argument("--keep-ghosts", action="store_true", help="leave parked-car goals as shipped (v1 behaviour)")
     a = ap.parse_args()
+    global DEGHOST
+    DEGHOST = not a.keep_ghosts
     rows = list(csv.DictReader(open(a.manifest)))
     rng = np.random.default_rng(0)
     rows = [rows[i] for i in sorted(rng.permutation(len(rows))[: int(a.max_episodes * 1.3)])]
