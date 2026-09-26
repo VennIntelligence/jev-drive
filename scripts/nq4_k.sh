@@ -86,6 +86,7 @@ XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive220.xml
 P7=$(pwd)/todos/2026-09-23-tfv6-controller/controller-eval/P7.json
 PY_CARLA=$DATA_DIR/envs/carla/bin/python PY_SCOUT=$DATA_DIR/envs/scout-tfv6/bin/python
 CL_ROUTES=${K_CL_ROUTES:-2416,3540,17752}      # [K] 17:30 (8): stop sign, HardBreakRoute, DynamicObjectCrossing
+K_CL_WORKERS=${K_CL_WORKERS:-1}            # [K] 18:37: 2 servers on 4 cores starved the render thread (UE4 "GameThread timed out waiting for RenderThread")
 K_CL_INDEX=${K_CL_INDEX:-170}                   # [K] 17:58: 170-179 (i, i + 120, i - 120 all unused; 490-499 collided with A's RPC)
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
 emptiest_gpu() {  # the card among 0-5 with the fewest CARLA servers (ties: the lowest index)
@@ -107,7 +108,7 @@ cl() {
     [[ -n $busy ]] && { log "cl: ports in use:$busy"; return 1; }
     mkdir -p "$srv"; log "cl: GPU $g ($(nvidia-smi -i "$g" --query-compute-apps=process_name --format=csv,noheader | grep -c CarlaUE4) CARLA servers there), cores $K_CPUS"
     echo "$g" > "$d/gpu"
-    ( CUDA_VISIBLE_DEVICES=$g PYTHONUNBUFFERED=1 setsid taskset -c "$K_CPUS" "$PY_OP" scripts/nq3_cl_server.py --pool 2 \
+    ( CUDA_VISIBLE_DEVICES=$g PYTHONUNBUFFERED=1 setsid taskset -c "$K_CPUS" "$PY_OP" scripts/nq3_cl_server.py --pool "$K_CL_WORKERS" \
           --socket "$srv/head.sock" --ready-file "$srv/head.ready" >> "$srv/head.log" 2>&1 & echo $! > "$srv/head.pid"; wait ) &
     local t0=$SECONDS
     until [[ -e $srv/head.ready ]]; do (( SECONDS - t0 > 900 )) && return 1; sleep 5; done
@@ -116,7 +117,7 @@ cl() {
         printf '{"model": "head", "warmup_s": 5.0, "desire": true, "head_cam_tick": 0.0, "arm": "%s", "k_view": "unseen", "k_split": "%s", "socket": "%s", "controller": "fixed", "controller_preset": "pursuit", "controller_config": "%s", "seed": 0, "dump_every": 1}\n' \
             "$arm" "$K/route_split.json" "$srv/head.sock" "$P7" > "$cfg"
         [[ -e $out/DONE ]] && continue
-        taskset -c "$K_CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$CL_ROUTES" --workers 2 \
+        taskset -c "$K_CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$CL_ROUTES" --workers "$K_CL_WORKERS" \
             --server-index "$K_CL_INDEX" --index-span 10 --gpu-rank "$g" --tm-seed 0 --no-spectator --no-reap --client-threads 8 \
             --max-attempts 2 --stall-s 480 --route-timeout-s 3600 --out "$out" --python "$PY_SCOUT" \
             --agent scripts/b2d_zeroshot_agent.py --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
@@ -140,12 +141,12 @@ case ${1:-all} in
     labels) step labels 0.2 labels ;;
     fit) step fit 0.5 fit ;;
     labels-fit) step labels 0.2 labels; step fit 0.5 fit ;;
-    cl) step cl 1.0 cl ;;
+    cl) step cl 1.5 cl ;;
     check-eigh) step check_eigh 0.5 check_eigh ;;
     ready) step ready 0.05 ready ;;
     all) trap 'exit 129' HUP INT TERM
          step lead_ba 1.5 lead_ba; step labels 0.2 labels; step fit 0.5 fit; step check_eigh 0.5 check_eigh
-         step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6; step cl 1.0 cl; step ready 0.05 ready
+         step lead_p6 1.0 lead_p6; step export_p6 0.1 export_p6; step cl 1.5 cl; step ready 0.05 ready
          status done "lead, labels, fit done; closed-loop rule-8 step: scripts/nq4_k.sh cl <gpu>" ;;
     *) sed -n 2,11p "$0"; exit 1 ;;
 esac
