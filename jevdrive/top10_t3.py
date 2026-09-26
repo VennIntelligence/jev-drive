@@ -60,7 +60,14 @@ def need():
 
 
 def attempt(gen: Path, rid: str) -> Path | None:
-    """The finished attempt of a re-recorded world (t3_summary.json written, most pose lines)."""
+    """The finished attempt of a re-recorded world: the one b2d_run's done/<rid>.json names, else (a world still
+    running or never finished) None; without a done/ directory (checks), the attempt with the most pose lines."""
+    done = gen / "done" / (rid + ".json")
+    if done.exists():
+        a = gen / "attempts" / rid / str(json.loads(done.read_text())["attempt"])
+        return a if (a / "t3_summary.json").exists() else None
+    if (gen / "done").exists():
+        return None
     best, n = None, -1
     for a in sorted((gen / "attempts" / rid).glob("*")):
         if not (a / "t3_summary.json").exists():
