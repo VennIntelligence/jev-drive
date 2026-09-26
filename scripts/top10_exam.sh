@@ -12,5 +12,6 @@ case $model in
 esac
 cd "$DATA_DIR/third_party/$code"
 export OPENBLAS_CORETYPE=Haswell NAVSIM_DEVKIT_ROOT=$PWD NUPLAN_MAP_VERSION=nuplan-maps-v1.0
+export OMP_NUM_THREADS=${OMP_NUM_THREADS:-2} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-2} MKL_NUM_THREADS=${MKL_NUM_THREADS:-2}
 export NUPLAN_MAPS_ROOT=$DATA_DIR/datasets/navsim/maps OPENSCENE_DATA_ROOT=$DATA_DIR/datasets/navsim
 exec "$DATA_DIR/envs/$env/bin/python" "$repo/scripts/top10_exam_infer.py" --model "$model" "$@"
