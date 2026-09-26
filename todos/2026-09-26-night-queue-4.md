@@ -92,6 +92,57 @@
      night-queue-3 里我们 head 的合并分数与 unseen 分数差不多也由此得到说明。
 - 读法：1 成立 → 文章第 2 部分的因果证据（分数由配方推高、能力不动）；1 里 DS 涨而能力也涨 → 那一级配方不是纯 hack，单独写。
 
+- [K] 2026-09-26 17:30 CST 开工与分步估时（执行员 K，K-prep；写于任何 K 数字之前）。代码：`jevdrive/nq4_k.py`（分折、标签、拟合、导出、numpy apply、规则、离线等价检查），
+  闭环接线是对 `scripts/nq3_cl_server.py`（新 arm `k0`–`k3`）与 `scripts/b2d_zeroshot_agent.py`（按路线选折、K2 / K3 的规则后处理）的增量改动，lane B 的既有 arm 行为不变。
+  产物在 `$DATA_DIR/runs/nq4/k/`，齐了写 `READY`。资源：GPU 6 空档（显存 ≤ 16 GB），核 `taskset -c 146-149`（4 核；lane D 的 Q4a 收工后可扩到 146-153），
+  BLAS / OMP 线程 = 4；闭环等价检查借 1 张卡 ≤ 2 个 CARLA server（server index 490–499，不与 lane B 的 300–479、F 的 480–489 重叠），借哪张卡开跑前在这里写一行。
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | K0 | 代码（上面几个文件） | 17:30–21:30 | Mac |
+  | K1 | `route_split.json`（下一条的规则），先于任何训练，commit 后 F 的 X 也用它 | 18:15 前 | CPU |
+  | K2 | Cinque 的 lead 输出：P5 v1 BA 全部 858 条流、P6 v0 全部 605 条流重跑一次（`scripts/p5_openpilot.py --arrays temporal lead lead_prob`），`temporal` 对已存 `op_streams_vis` 逐位相同才用 | 1–1.5 h | GPU 6 ≤ 4 GB，2 进程 |
+  | K3 | K1 的 route 标签（每帧的 B2D 稠密路线）；K0 / K1 / M-C（K3 的常数）× {R₁, R₂, 全量} 拟合；GPU 与 CPU `eigh` 对照（预测差 ≤ 1 mm）；全量 K0 对 lane B `heads.npz` 的复现 | 0.5 h | GPU 6 ≤ 8 GB |
+  | K4 | 开环导出：P5 v1 BA（交叉拟合）、I3、P6 v0 考卷帧上每级的 (n, 20, 2) 预测 | 0.3 h | GPU 6 |
+  | K5 | 闭环等价检查（规则 8）：4 级 × 3 条路线，每个请求 dump，离线重算逐位比；规则层按逐 tick 日志离线重放逐位比 | 2 h | 1 卡 2 server |
+  | K6 | 写 `READY`、交接 | 0.2 h | |
+  目标 02:00 前写齐 `READY`（todo 的截止 03:00）；任何一步超估计 2 倍就停，写 `runs/nq4/k/ERROR`。
+- [K] 2026-09-26 17:40 CST **操作性选择**（写于任何 K 拟合与任何 K 数字之前；此前只读过 night-queue-3 CL 节、第 31 / 33 条、G1c 代码、LEAD `730bc1a` 与 SimLingo 作者 agent 的规则代码，以及 P5 v1 BA 各路线的帧数）。
+  1. **分折（`route_split.json`）**。录过的路线 = P5 v1 BA 里出现的全部 216 条 base 路线（151 条来自 P4、65 条只来自 P5；其中 170 条在 `bench2drive220.xml` 里，46 条不在 220 里，是 P5 v1 从别的路线集补的）。
+     分层的类 = 路线在 220 里的 scenario 类型（220 每条恰好一个）；不在 220 里的 46 条用 P5 的 family（`pairs.csv`，含 `Light`）。字面的「路线号奇偶」在 8 个类里把全部录过的路线分到同一边
+     （例如 OppositeVehicleTakingPriority 5 / 0、ConstructionObstacle 2 / 0），那样另一折的读出连这个 scenario 类都没见过，unseen 就混进了「类没见过」，所以改成**类内按路线号排序后的奇偶位**：
+     每个类里先排录过的路线（按路线号升序）、再排 220 里没录过的路线（同样升序），沿这个顺序交替分给 R₁ / R₂；起始折在「路线数为奇数的类」之间按类名顺序轮换，使两折总数差 ≤ 1。
+     这样 220 的每条路线都有折标签（F 的 X 用 P6 路线的折标签做它自己的交叉拟合），而 K 的读出只在录过的路线上有 seen / unseen 之分：录过的路线由另一折的读出开（unseen），
+     从未录过的 50 条路线由 R₁ 的读出开（todo 原文）；seen 版 = 录过的路线由自己那一折的读出开。
+  2. **seed**。四级的读出全是确定性拟合（闭式 ridge、从零初始化的凸 logistic 回归、闭式 M-C），同一折重拟合逐位相同，所以每级每折只有一份权重（Q6 的口径标「确定性」）；
+     3 seed 是闭环的 TM seed，由 F 的链跑。不另造「内层 CV 置换」的伪 seed。
+  3. **K0**：`jevdrive.nq3_cl.export` 的 prior 部分原样（`ridge ego` + Cinque `temporal`（`op_streams_vis`）上的 `ridge_late`，λ 由 `ridge_cv` 的 4 折按路线分组内层 CV 选），
+     训练行 = role == train 且 base 路线在 R_k 里的行。全量版（全部 train 行）必须复现 lane B 的 `runs/nq3/b/heads/heads.npz`（We、Wp、统计量，预测差 ≤ 1e-3 m），不过就停。
+  4. **K1（TFv6 接口）**。同一输入（96 维 ego 历史 + 4 维 intent，Cinque `temporal`）、同一训练行，两头都是 late fusion（先 ego、再 `temporal` 修残差 / 加 logit 偏置，与 `ridge_late` / `cls_late` 同构）：
+     - **route**：TFv6 的 10 个 checkpoint（LEAD `num_route_points_prediction` 10，第一个点距原点 2.5 m、之后每 1 m 一个，`smooth_path`）。标签取该帧录制时的 B2D 稠密路线（recorder 的 `route.json`，1 m 点列），
+       从最近点起变到该帧后轴系（x 前 y 左），第一个点 = 沿路线第一个离原点 ≥ 2.5 m 的点，之后按弧长每 1 m（1 m 点列上弧长与 LEAD 的圆弧截点差 < 1 cm）；回归头 = `ridge ego` → `ridge_late`，与 K0 同一 `ridge_cv`。
+     - **target speed**：TFv6 的 8 档 [0, 4, 8, 10, 13.89, 16, 17.78, 20] m/s，two-hot 软标签（LEAD `encode_two_hot` 的线性插值，> 20 记 20），解码 = 期望（`decode_two_hot`）。
+       标签速度 = expert 未来轨迹 0.75–1.25 s 段的平均速度（P5 BA 没有 expert 的目标速度指令，取约 1 s 后的实际速度作代理：TFv6 的目标速度是 expert 当下的指令，实际速度落后约 1 s）。
+       分类头 = `planner.ce_solve`（软标签交叉熵 + L2，L-BFGS），先 ego 后 `temporal`（偏置 = ego 头的 logit），λ 在 `planner.LAM_CLS` 上按 80 / 20 路线分组留出（`GroupShuffleSplit`，random_state 0）的交叉熵选，再在全部训练行上重拟合。
+     - **交给 P7 的轨迹**：折线 [原点, 10 个 checkpoint] 按弧长 s(t) = v̂·t 取 0.25 … 5 s 的 20 点，超出最后一个 checkpoint 沿末段方向直线外推。TFv6 作者 PID 的 brake 条件（v̂ < 0.01 或 v / v̂ > 1.1）
+       不照搬：执行层按规则 9 一律是 P7（纵向由 P7 的 accel 模式跟这条等速轨迹），这是表示的替换，不是控制器的替换。开环读数用同一条 (20, 2) 轨迹。
+  5. **K2（规则，照抄 LEAD `730bc1a` `sensor_agent.py` 的 README 95 分配置）**，作用在 P7 输出的油门 / 刹车上，顺序同作者（先 creeping、再 stop sign）：
+     - **creeping**（`ForceMovePostProcessor`）：速度 < 0.1 m/s 连续 > 1100 tick 后强制 20 tick 油门 ≥ 0.4、刹车 0；安全盒（车体系 x ∈ [2.45, 4.95] m、|y| < 0.85 m、z ∈ [0.5, 1.5] m）里有东西就改为刹停并把 20 tick 重置。
+       作者用 LiDAR 点判安全盒；我们的 agent 没有 LiDAR，改用 CARLA 里 vehicle / walker / static prop 的包围盒与安全盒相交（特权替身，只在 creeping 进行中查询；漏掉的是建筑、护栏等非 actor 几何）。
+       SimLingo 作者 agent 的 creep（800 tick / 15 tick / 0.4，无安全盒）不用：K1 用的是 TFv6 的接口，规则跟着 TFv6。
+     - **stop sign**（`StopSignPostProcessor`）：阈值 1.0 m、清除冷却 120 tick、减速计数 40 tick、减速时油门上限 0.1，逻辑逐行照抄。作者的停车牌框来自网络检测，训练标签是「影响本车且未清除的停车牌」的 trigger volume 中心；
+       我们没有停车牌检测，用特权替身：`traffic.stop` actor 的 trigger volume 中心（车体中心系）落在 TFv6 的 BEV（x ∈ (−32, 64)、y ∈ (−40, 40) m）内、且 trigger volume 覆盖本车前方的稠密路线点、且未被本规则清除过的，当作检测到。
+       这比作者网络的检测更准（上界），写作时照写。
+     - Kalman（作者的第三项）只滤 GPS 给网络的 target point，我们没有这个输入，不适用。
+  6. **K3 = K2 + G1c**：plan 加 g3 · c，g3 = `real_g1.g3`（Cinque 同一步的 lead / lead_prob 输出，v_ego = ego 输入里 t0 的速度模长，TTC 2–6 s 的映射原样），
+     c = `real_g2._const` 的定义：Σ g3·Δ / Σ g3，Δ = M-C `pair`（Qwen `L18_last` ⊕ `temporal`，`reactivity_mc.fit_fold` 的闭式解、λ 网格与内层 CV 原样），只取纵向分量；
+     交叉拟合版的 Δ 与 Σ 都只用 R_k 的数据（R_k 的配对行拟合、R_k 的全部行求加权平均）。表示是 route + speed，所以「纵向」按沿轨迹弧长加：s′(t) = s(t) + g3·c_x(t)，截到 ≥ 0 并取累计最大（不倒车）；直路上与 G1c 的 x 向加法相同。
+     BA 与 P6 没有存 lead 输出，按 K2 步重跑一次；I3 用已存的 `hugsim_pairs/op_streams_lead`。
+  7. **开环导出**（供 F 的链出表，本 lane 不判格）：P5 v1 BA 的每一行由没见过它路线的读出预测（交叉拟合）；I3 与 P6 v0 考卷帧当作不进拟合、不进标准化的附加行（`elicit_i3` / `nq3_q1` 的做法），
+     I3 与未录路线用 R₁ 读出（另存 R₂ 版），P6 帧按它的路线走第 1 条的规则；K2 的开环预测 = K1（规则只在闭环里起作用）。全量 K0 另存一份作代码路径对照。
+  8. **等价检查（规则 8）**：3 条路线 = 一条停车牌路线（VanillaNonSignalizedTurnEncounterStopsign）、一条前车急刹（HardBreakRoute，g3 会开）、一条行人（DynamicObjectCrossing），各取 220 里录过的、路线号最小的一条，
+     4 级各跑一遍（K0 / K1 unseen，K2 / K3 unseen），每个请求 dump；离线用同一份 JPEG、新 Cinque session 同顺序步进、`nq4_k` 的 apply 重算，轨迹、v̂、g3 逐位相同；规则层把逐 tick 的输入（速度、P7 的油门 / 刹车、停车牌替身、安全盒）
+     记进 `ticks.jsonl`，离线重放规则类得到的油门 / 刹车逐位相同。不过就停。
+
 ## O. B2D 训练数据与 220 评测路线的重叠（只读，CPU）
 
 Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：同 town、同 scenario 类、触发点距离 < 30 m 的训练 clip 数；按榜单族实际用的训练集（TFv6 / BridgeDrive 用 LEAD 数据、SimLingo / BLUE 用 SimLingo 数据集，执行员先查清各自的数据来源）分别报。
@@ -196,3 +247,12 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
 ## 结果
 
 （待写）
+
+### CX 产出，待 main 复核（2026-09-26 17:29 CST）
+
+| 项 | 本轮核查结果 | 判格 | 待处理问题 |
+|:--|:--|:--|:--|
+| P1 | 复用既有盘点：test 147 个 log，trainval 1 310 个 log；草稿尚未运行计数 | 未出判格 | logged future 无非零线段、尾部不足 30 m 时的处理未规定；草稿端点截断会计入身后与 30 m 端点外的点，先停下确认 |
+| O | 已核查训练数据出处及已有元数据；[来源与阻塞表](../research/results/nq4/o/summary.md) | 描述性任务，无门槛；近邻数尚未计算 | B2D clip 到触发点的映射未核实；BLUE gate 数据尚未公开；不能以路线模板替代实际训练 clip 或把未知写为零 |
+
+按任务书第 5 条暂停，问题详见 `tmp/2026-09-26-codex-status.md`。不启动 P2，不做与 G 的相关，不修改 decisions。
