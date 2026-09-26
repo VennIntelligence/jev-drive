@@ -647,15 +647,66 @@ def e4c_students(rl):
                                               "A3", "A3_minus_null", "A3_diff_lo", "A3_diff_hi"]].to_markdown(index=False, floatfmt=".3f"))
 
 
+# ---------------------------------------------------------------- figure
+
+def figs(res_dir="research/results/night2/N3", out_dir="research/figs"):
+    """(a) navtest PDMS per head (95% token-bootstrap CI), Hydra and Hydra + g2 Delta per seed; (b) P5 v1 BA pedestrian
+    and (c) cut-in flip rates of the heads readable on P5 (Hydra rows are 'not comparable' and left out)."""
+    import matplotlib.pyplot as plt
+    from . import plots
+    R = Path(res_dir)
+    sc = pd.read_csv(R / "navsim_scores.csv")
+    sc = sc[sc.metric == "PDMS"].set_index("row")
+    cr = pd.read_csv(R / "p5_criteria.csv")
+    cols = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    nav_rows = [("ridge_late [{m}]", "ridge$_{late}$"), ("cls_late G3 [{m}]", "cls$_{late}$"), ("Hydra s{sd} [{m}]", "Hydra"),
+                ("Hydra s{sd} + g2 Delta [{m}]", r"Hydra + $g_2\Delta$"), ("ridge_late + Delta [{m}]", r"ridge$_{late}$ + $\Delta$")]
+    p5_rows = [("prior s{sd} [{m}]", "ridge$_{late}$ (P5)"), ("cls_late P5 s{sd} [{m}]", "cls$_{late}$ (P5)"),
+               ("ridge_late NAV [{m}]", "ridge$_{late}$ (NAV)"), ("cls_late NAV s{sd} [{m}]", "cls$_{late}$ (NAV)"),
+               ("M-C pair [{m}]", "M-C")]
+    with plots.mpl.rc_context(plots.STYLE):
+        fig, ax = plt.subplots(1, 3, figsize=(plots.PAGE, 2.0), gridspec_kw={"width_ratios": [1.1, 1, 1]})
+        for k, (m, col) in enumerate(cols.items()):
+            for i, (r, _) in enumerate(nav_rows):
+                x = i + (k - 0.5) * 0.3
+                for sd in ((0, 1, 2) if "{sd}" in r else (0,)):
+                    name = r.format(m=m, sd=sd)
+                    if name not in sc.index:
+                        continue
+                    v = sc.loc[name]
+                    ax[0].errorbar(x + 0.08 * sd, v.score, yerr=[[v.score - v.lo], [v.hi - v.score]], fmt="o" if sd == 0 else "x",
+                                   color=col, ms=3, lw=0.8, capsize=1.2, label=m.capitalize() if i == 0 and sd == 0 else None)
+            for a_, (val, lo, hi) in zip(ax[1:], (("ped_flip", "ped_lo", "ped_hi"), ("cutin_flip", None, None))):
+                for i, (r, _) in enumerate(p5_rows):
+                    x = i + (k - 0.5) * 0.3
+                    for sd in ((0, 1, 2) if "{sd}" in r else (0,)):
+                        g = cr[(cr.arm == r.format(m=m, sd=sd)) & (cr.seed == sd)]
+                        if not len(g):
+                            continue
+                        g = g.iloc[0]
+                        err = None if lo is None else [[100 * (g[val] - g[lo])], [100 * (g[hi] - g[val])]]
+                        a_.errorbar(x + 0.08 * sd, 100 * g[val], yerr=err, fmt="o" if sd == 0 else "x", color=col, ms=3, lw=0.8, capsize=1.2)
+        ax[0].set_xticks(range(len(nav_rows)), [n for _, n in nav_rows], rotation=30, ha="right")
+        ax[0].set_ylabel("navtest PDMS")
+        ax[0].legend(loc="lower left")
+        for a_, yl in zip(ax[1:], ("P5 pedestrian flip rate (%)", "P5 cut-in flip rate (%)")):
+            a_.set_xticks(range(len(p5_rows)), [n for _, n in p5_rows], rotation=30, ha="right")
+            a_.set_ylabel(yl)
+        fig.tight_layout(w_pad=0.6)
+        plots.save(fig, Path(out_dir), "night2-n3-heads")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "fit", "navridge", "p5cls", "gates", "compat", "exam", "navjobs", "navtable", "nusc", "e4c"))
+    ap.add_argument("step", choices=("figs", "prep", "fit", "navridge", "p5cls", "gates", "compat", "exam", "navjobs", "navtable", "nusc", "e4c"))
     ap.add_argument("--seed", default="0", help="comma list for fit / p5cls")
     ap.add_argument("--model", default="cinque,lebowski", help="comma list for fit")
     a = ap.parse_args()
     seeds = [int(x) for x in a.seed.split(",")]
+    if a.step == "figs":
+        return figs()
     rl = RunLog("night2", f"n3-{a.step}" + (f"-s{a.seed}" if a.step == "prep" else ""))
     if a.step == "prep":
         prep(rl, seeds[0])
