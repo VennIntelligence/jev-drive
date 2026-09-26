@@ -552,9 +552,9 @@ def run(seed: int, rl, steps: int | None = None, folds_only=None) -> dict:
         for side, col in (("plus", "r_plus"), ("other", "r_other")):
             st = pf[col].to_numpy() - (HIST - 1)
             pred = predict(model, data, torch.as_tensor(st, device="cuda"), fact, ast)
-            real = data.Z[torch.as_tensor(st, device="cuda")[:, None] + data.off].float()
+            a0 = torch.as_tensor(st + HIST - 1, device="cuda")
             for h in (5, 10):
-                for src, X in (("pred", pred[:, h - 1]), ("persist", real[:, HIST - 1]), ("oracle", real[:, HIST - 1 + h])):
+                for src, X in (("pred", pred[:, h - 1]), ("persist", data.Z[a0].float()), ("oracle", data.Z[a0 + h].float())):
                     for p, val in apply_probes(P, X).items():
                         pair_rows.append(pd.DataFrame({"pair": pf.index.to_numpy(), "side": side, "h": h, "src": src,
                                                        "probe": p, "score": val}))
@@ -584,7 +584,8 @@ def run(seed: int, rl, steps: int | None = None, folds_only=None) -> dict:
                 act_rows.append(pd.DataFrame({"row": rows_, "test": test, "h": h, "fold": f,
                                               "d_base": sc["base"]["d_front"], "d_alt": sc["alt"]["d_front"],
                                               "occ_base": sc["base"]["occ"], "occ_alt": sc["alt"]["occ"]}))
-        rl.info(f"fold {f}: {len(pf)} pairs, {len(hz)} hazard anchors, {len(lat)} lateral anchors, {time.time() - t0:.0f} s")
+        rl.info(f"fold {f}: {len(pf)} pairs, {len(hz)} hazard anchors, {len(lat)} lateral anchors, {time.time() - t0:.0f} s, "
+                f"peak VRAM {torch.cuda.max_memory_allocated() / 1e9:.1f} GB")
         del data, model
         torch.cuda.empty_cache()
     d = rl.dir

@@ -3,7 +3,7 @@
 #   vjepa -> prep -> run seed 0 / 1 / 2 (5 folds each: train, probes, paired + action readouts) -> report
 # Idempotent: a step with its .done marker is skipped, so re-running the script resumes. Each step is retried once;
 # a second failure writes ERROR and stops. STATUS.md is rewritten at every step; DONE ends the chain.
-# GPU: picked before every step - GPU 6 if it has >= 18 GB free, else an idle card among 5 / 4 / 3 (< 5 GB used, no
+# GPU: picked before every step - GPU 6 if it has >= 8 GB free (a fold peaks at ~3-4 GB; cap 16 GB), else an idle card among 5 / 4 / 3 (< 5 GB used, no
 # CARLA process); it waits (60 s polls) until one is free, so a CARLA server that takes a borrowed card back is left alone.
 # Cores 200-207 (taskset), 8 threads.   Start: scripts/tmux_run.sh nq4-w scripts/nq4_w.sh   (W_UNTIL=<step> stops after it)
 set -uo pipefail
@@ -15,7 +15,7 @@ exec 9>"$D/lock"
 flock -n 9 || { echo "nq4-w: another chain holds $D/lock"; exit 1; }
 [[ -f $D/DONE ]] && { echo "nq4-w: DONE already: $(cat "$D/DONE")"; exit 0; }
 rm -f "$D/ERROR"
-export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 TOKENIZERS_PARALLELISM=false
 CPUS=200-207
 STEPS=(vjepa prep seed0 seed1 seed2 report)
 declare -A EST=([vjepa]=30 [prep]=15 [seed0]=40 [seed1]=40 [seed2]=40 [report]=10)   # minutes; 2x = stop
@@ -34,7 +34,7 @@ pick_gpu() {
     while true; do
         local used
         used=$(nvidia-smi -i 6 --query-gpu=memory.used,memory.total --format=csv,noheader,nounits | tr -d ' ')
-        if (( ${used#*,} - ${used%,*} >= 18000 )); then echo 6; return; fi
+        if (( ${used#*,} - ${used%,*} >= 8000 )); then echo 6; return; fi
         for g in 5 4 3; do
             local uuid u
             uuid=$(nvidia-smi -i $g --query-gpu=uuid --format=csv,noheader)
