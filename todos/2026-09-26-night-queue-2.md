@@ -110,6 +110,38 @@
   Hydra + gated Δ 的 NAVSIM PDMS 掉 ≤ 1.0 且 P5 行人翻转 ≥ M-C 的 80% → 「能力包成立（CARLA 内）」。
 - 顺带补两格：nuScenes 冻结 head 的 collision 率；E5 student 的 E4c latency 曲线。特征、标签、预测都在 box 上。
 
+**[B] 执行记录（执行员 B；时间为 box 时钟 CST，每条早于它影响的数字）**
+
+- 2026-09-26 09:55 [B] **分步估时**（N3 + N4，墙钟）：N3 代码（NAVSIM 头搬到 P5 / I3、兼容检查、P5 训的 `cls_late`、Hydra + gated Δ）2.5 h，与下面的 CPU 打分并行；
+  Hydra seed 1 / 2 的逐 anchor 子分（E6 的 20 000 token × 1024 anchor，每个新词表约 37 core·h，≤ 48 核）约 1.5–2 h；6 次 Hydra 拟合 GPU 4 约 15 min；
+  P5 / I3 考试与兼容检查 30 min；devkit（v1.1 PDMS + main EPDMS，navtest）约 22 个 job、4 路并行约 1 h；nuScenes collision + E4c student 1.5 h；表、图、decisions 1.5 h。N3 合计约 7 h，GPU < 0.5 GPU·h。
+  N4：检测 embedding 补跑（YOLO26x-seg 在 P5 v1 BA 140 109 张图上重跑并取逐检测特征，GPU 4 约 20–30 min）+ 代码 1.5 h；60 次 student 拟合约 15 min GPU；延迟 20 min；写表 1 h。N4 合计约 4 h，< 0.5 GPU·h。
+- 2026-09-26 09:58 [B] **N3 的操作化**（写于 N3 的任何新数字之前；此前只读过 G1 已提交的 `selection_auc.csv` 与 E6 / E1 / E5 / I3 已发表的数）。
+  (0) **gate = G1 的主 arm g₂**：G1 按登记的训练行 AUC 已选出主 arm（`runs/real-data-transfer/select/20260926-091241/selection_auc.csv`：WOD、NAVSIM、两个模型都是 g₂，AUC 0.74 / 0.73；G1 的结果节尚未写，若它之后改主 arm，本节另记一行）。所以不用 P2(e) gate。
+  (1) **Hydra 的 seed**（沿用 [SEEDS] (b) 的 NAVSIM 薄 head 口径）：seed s = CPU 确定性 k-means 词表 seed s + 留出 log 划分 seed s + 1；带子分标签的 20 000 个 navtrain token（E6 的 seed 0 子集）与它的 v1.1 metric cache 固定不变（相当于训练数据固定）。
+  s = 0 直接用 E6 的逐 anchor 子分；s = 1、2 用 `scripts/elicit_e6_score.py` 原样给新词表重打分。拟合是 `elicit_e6.fit` 原样，只加「存 head 权重与标准化统计量」和「对任意特征矩阵出 logits」。
+  s = 0 重拟合对 E6 已存 navtest 选择的一致率报出（GPU L-BFGS 非逐位确定，[SEEDS] 01:31 已定性；≥ 99% 同一 anchor 视为复现，否则停下报）。Lebowski 用同一批子分，`--model lebowski`，同样 3 seed。
+  NAVSIM 读数 = navtest 官方 devkit（PDMS v1.1、EPDMS main @ 0a380a9），逐 token 配对 bootstrap 10 000 次（E6 `report` 的代码）；navhard 不做（表的列是 navtest）。
+  (2) **P5 / I3 上的 NAVSIM 头**（零样本）：NAVSIM 训的 `ridge_late`（`navsim_heads.fit_ridge` 原样重拟合，确定性）、`cls_late`（同 seed 的 (a′)，与 Hydra 共用词表与模仿 logits）、Hydra。
+  32 维 NAVSIM ego 输入由 P5 / I3 的 `past`（16 × 0.25 s，t0 帧的后轴位置、速度、每步速度变化）造：t = −1.5 / −1.0 / −0.5 / 0 s 取 past 第 9 / 11 / 13 / 15 步的位置；朝向 = 该步速度方向（速度 < 0.5 m/s 时沿用更晚一步的朝向，t0 为 0）；
+  速度与加速度（past 的每步速度变化 / 0.25 s）旋到该步自己的车体系；command：GO_LEFT → left、GO_STRAIGHT → straight、GO_RIGHT → right、UNKNOWN → unknown。
+  特征 = P5 `op_streams_vis` 的 `temporal`（M-C 同一份）、I3 `op_streams` 的 `temporal`（I3 考试同一份），都用 navtrain 的标准化统计量。输出的 8 个 0.5 s 位姿用 `elicit_e1._grid20` 放到 0.25 s 网格（1.75 s 取 1.5 / 2.0 s 的中点，与 E1 / G1 在 NAVSIM 上的激活率口径相同），
+  judge = `p5_exam.exam` 原样（τ 由各自的 null 定）；I3 = `elicit_i3` 的 judge（去掉 TFv6 列）。
+  (3) **兼容检查**（在任何 Hydra 的 P5 / I3 翻转数之前算、先写进结果）：P5 null 表引用的全部帧（fn_plus 与 fn_null）上，Hydra 选中 anchor 的频次 top-10 与 navtest 上的 top-10 的交集 / 10；
+  「走廊内 DAC 子分均值差」操作化为：选中 anchor 的 σ(DAC head) 均值，P5 null 帧减 navtest（另报全部 1024 个 anchor 上的均值差，描述）。按模型 × seed 各报，**主判 seed 0**：top-10 重叠 < 30% → P5 列 Hydra 与 Hydra + gated Δ 写「不可比」、不读。
+  I3 列同样在 I3 null 帧上检查一次。另报描述性 sanity（消融矩阵建议的）：NAVSIM 训的 `ridge_late` 在 P5 cut-in 上的翻转对 P5 训的 prior（76.9%），不作门。
+  (4) **表里 `cls_late` 的 P5 / I3 格**：按「每列用该基准自己训的 head」读（`ridge_late` 的 P5「有」就是 P5 训的 prior），补 **P5 训的 `cls_late`**：P5 路线 5 折（`p5_exam.folds`，seed s），训练行未来 20 × 2 上 K = 1024 k-means（seed s），
+  `cls ego`（ego 输入 = `p5_exam.ego_input`）λ 按 20% base 路线内层划分（seed s）上的 top-1 ADE 选，`cls ego` 在训练行上的 5 折 OOF logits 作 `cls_late` 的 offset，`cls_late` 输入 = 标准化 op `temporal`，λ 同规则；
+  obs 行取所在 fold 的 top-1 anchor；I3 = 5 个 fold head 选中 anchor 的平均（与 `elicit_i3` 的 5 fold 平均同）。NAVSIM 训的 `cls_late` / `ridge_late` 零样本并列作 Hydra 的同训练源参照。
+  (5) **判格**：主判按原文，`ridge_late` 的点估计 = P5 训的 prior（M-C 同 fold seed s 的 `prior [m]`，seed 0 为 Cinque 0.2% / Lebowski 2.7%）；Hydra 每个 seed 各判一次，三个 seed 一致取那一格，否则写「随 seed 变」（[G0] 的规则）；
+  另把同一规则对 NAVSIM 训的 `ridge_late` 零样本、以及对 cut-in 各算一次，只作描述。
+  (6) **Hydra + gated Δ**：pred = Hydra_s + g₂ · Δ，Δ = M-C 配对双流（seed 0，三处同一个 head 族）：NAVSIM 用 E1 的 `navtest_delta_<m>.npz`（加在 0.5 … 4.0 s，heading 不动，同 E1 / G1），P5 用 M-C seed 0 run 的逐 fold 交叉拟合 Δ（`M-C pair [m]` − `prior [m]`），
+  I3 用 I3 考试的 `M-C pair [m]` − `ridge_late op-m temporal`。g₂：NAVSIM = G1 的 `g2_nav_eval.npz`；P5 与 I3 = **同一个 navtrain 训的 g₂ probe**（`g2_nav.pkl`）作用在 G0 格式的 embedding 上（I3 = `real_g0.load_embed('i3')`；P5 = 用 `real_g0.geom_check` (1) 的代码在 E5 检测上重算历史圆弧走廊的 embedding），
+  即整个包（Hydra + Δ + gate）在三处是同一套权重；WOD 训的 g₂ 在 P5 / I3 上只作描述。判据原文：NAVSIM PDMS 对同 seed Hydra 的配对 Δ 点估计 ≥ −1.0，且 P5 行人翻转 ≥ 0.8 × M-C（seed 0 为 0.8 × 43.3% = 34.6%）→「能力包成立（CARLA 内）」；按 seed 各判，合并规则同 (5)。
+  另报不加 gate 的 Hydra + Δ（P5 / I3 全部 seed，NAVSIM 只 seed 0）作描述。
+  (7) **顺带两格**：nuScenes = `runs/nusc_backbones/ladder/20260925-144240/nusc_preds.npz` 里的冻结 head 预测（0.5 … 3.0 s 六个点，从后轴 t0 系换到 LIDAR_TOP 系，第 39 条考试的 `nuscenes_zs.per_sample` / `horizons` 原样），
+  报 VAD 与 BEV-Planner 两种 collision（1 / 2 / 3 s）与 L2，scene bootstrap；只在第 39 条 index 里有 GT 框的 val 样本上算（n 照报）。E4c = `elicit_e4c` 的曲线代码原样，加 E5 student A / B（seed 0 主，1 / 2 并报），L = 0.1 s（与 openpilot 同，端到端 30 ms）。
+
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
 
 第 45 条把召回缺口归到 flat-ground 放置；E5 的 embedding 又用同一条 lift 加手写走廊筛检测。改成不做几何、让配对差分自己学：
