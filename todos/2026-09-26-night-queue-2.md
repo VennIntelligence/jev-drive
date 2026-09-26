@@ -97,7 +97,7 @@
   - **negotiation**：同 case 的 x₁₁ − x₁₀，报横向起动延迟 t_lat(x₁₁) − t_lat(x₁₀) 与 x₁₀ 起动时刻两侧的速度差 Δv；「wait」= x₁₁ 的世界级模式为 wait-then-bypass 或 stop，门槛 ≥ 50%。
   - **门**：每类 scenario 的 x₁₀ bypass 比例 ≥ 70% 才算可用（IT、Emergency 也按这条报）；放置 null keep ≥ 90%；镜像题 stop ≥ 80%。
   - **卡与 server**：GPU 0–2，每卡 ≤ 6 个 CARLA server（受 pids.max 实时限制），server index 800–949，每实例 3 核（开跑时取没有被 pin 的核）。
-- 2026-09-26 10:12 CST [A] 补两条（写于看 smoke 的任何数字之前）：世界级模式里的「停」只算 ego 曾经快过 3 m/s 之后（出生点原地不动不算停）；帧级 §2.1 的航向用 3 点滑动平均后相对 t₀ 的变化。
+- 2026-09-26 10:01 CST [A] 补两条（写于看 smoke 的任何数字之前）：世界级模式里的「停」只算 ego 曾经快过 3 m/s 之后（出生点原地不动不算停）；帧级 §2.1 的航向用 3 点滑动平均后相对 t₀ 的变化。
 
 ## N2. openpilot 里有没有绕行需要的信息 + desire 执行器检查（CPU + 少量 GPU，< 1 h）
 
