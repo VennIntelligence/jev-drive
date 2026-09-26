@@ -192,11 +192,11 @@ def verdict(x: float) -> str:
     return "fixed (>= 0.40)" if x >= 0.40 else "not enough (< 0.30)" if x < 0.30 else "in between"
 
 
-def table(run: Path, out: Path) -> "pd.DataFrame":
-    """Every row.json of an eval run -> out/recall.csv (all readings) and out/recall_main.md (the N5 table)."""
+def table(runs, out: Path) -> "pd.DataFrame":
+    """Every row.json of the eval runs -> out/recall.csv (all readings) and out/recall_main.md (the N5 table)."""
     import pandas as pd
     rows = []
-    for f in sorted(run.glob("*/row.json")):
+    for f in sorted(f for run in runs for f in Path(run).glob("*/row.json")):
         r = json.loads(f.read_text())
         det = next(d for d in DETS if r["name"].startswith(d + "-"))
         place, gate = r["name"][len(det) + 1:].rsplit("-", 1)
@@ -218,7 +218,7 @@ def main():
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=("depth", "eval", "ratio", "table"))
-    ap.add_argument("--run", default="", help="table: the eval run dir")
+    ap.add_argument("--run", default="", help="table: comma list of eval run dirs")
     ap.add_argument("--model", choices=MODELS)
     ap.add_argument("--tags", default="", help="eval / ratio: comma list of <det>-<model|flat>")
     ap.add_argument("--workers", type=int, default=16)
@@ -229,7 +229,7 @@ def main():
     if a.step == "depth":
         rl.info(f"depth {a.model}: {json.dumps(depth(a.model, a.workers, a.limit, rl))}")
     elif a.step == "table":
-        t = table(Path(a.run), Path(__file__).resolve().parents[1] / "research/results/night2/N5")
+        t = table(a.run.split(","), Path(__file__).resolve().parents[1] / "research/results/night2/N5")
         rl.info("\n" + t.to_markdown(index=False, floatfmt=".3f"))
     elif a.step == "eval":
         for tag in a.tags.split(","):
