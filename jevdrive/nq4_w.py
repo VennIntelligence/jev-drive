@@ -521,7 +521,7 @@ def run(seed: int, rl, steps: int | None = None, folds_only=None) -> dict:
     anchors_all = starts_all + HIST - 1
     pairs = pair_table(meta)
     sgn = bypass_sign(meta)
-    s_left = float(np.sign(sgn["L"]["median"]))
+    s_left = float(np.sign(sgn["L"]["mean"]))          # CARLA left-handed: a left bypass is omega < 0
     rl.info(f"seed {seed}: {len(meta)} rows, {len(starts_all)} windows, {len(pairs)} anchor pairs; expert bypass yaw rate {sgn}")
     rl.event("bypass_sign", **{k: v for k, v in sgn.items()})
     anc_fold = fold[anchors_all]
