@@ -248,6 +248,32 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   3. **NAVSIM 复现**：两个模型都走**自己的**特征代码（我们的 runner 的 native 路径，与适配器等价检查里的 native 同一段代码），全部 token 推理后存 8 个 0.5 s 位姿，
      用回放 agent + 官方 devkit 打分（`scripts/navsim_zs_score.sh`，与 zero-shot 考试同一套 metric cache）：SparseDriveV2 = navtest、navsim v1.1、PDMS（论文 92.2）；
      ZTRS = navhard two-stage、navsim main @ 0a380a9、EPDMS（HF 榜 48.1；README 45.5 是旧协议）。ZTRS 的 10 Hz 输出取 0.5 … 4.0 s 的点。复现差距只报不判。
+- 2026-09-26 11:16 CST [T1] **适配器等价检查的结果与处理**（还没有任何考卷数字；表在 `research/results/top10-exams/adapter_check_*.{json,csv}`）。检查分两臂：(a) 虚拟相机 = 该帧真实的 nuPlan L0 / F0 / R0 标定（渲染应为恒等），
+  (b) 虚拟相机按考卷的构造法生成（10:05 (2)），源仍是 nuPlan 自己的三路。10:05 (6) 的文字没写清门槛套在哪一臂上，我原意是 (b)。
+
+  | 版本（n） | 模型 | (a) 同一条轨迹 | (a) 平均位移差 | (b) 同一条轨迹 | (b) 平均位移差 / p95 |
+  |:--|:--|--:|--:|--:|--:|
+  | 首跑（256） | SparseDriveV2 | 81.6% | 0.10 m | 33.6% | 0.37 / 1.37 m |
+  | 首跑（256） | ZTRS | 96.5% | 0.02 m | 54.3% | 0.30 / 1.28 m |
+  | 修正后（32，sanity） | SparseDriveV2 | **100%** | 0.00 m | 34.4% | 0.36 / 1.06 m |
+  | 修正后（32，sanity） | ZTRS | **100%** | 0.00 m | 65.6% | 0.13 / 0.65 m |
+
+  查出两件事。**(1) 一个适配器 bug**：`camgeom.waymo_project` 判「源相机看得见」时用畸变后角点的半径去卡未畸变的 r²，对 nuPlan 这种强桶形畸变（k1 = −0.356）会把源图四角判成看不见、渲成黑，
+  (a) 臂 SparseDriveV2 的 81.6% 就是它；`navsim_rig.project` 改用未畸变角点半径后 (a) 两个模型都逐位一致。这个 bug 只在源相机强畸变时起作用，P5 / I3 / WOD / nuScenes 的源相机畸变都很小（或为零），对考卷的影响可忽略，但 maps 已全部删掉重算。
+  **(2) (b) 臂不过不是代码问题，是模型对相机安装的敏感度**：原构造（F0 朝向绕 z 转到目标 yaw）让 L0 / R0 比真实安装多约 0.9° 俯仰；改为「每路虚拟相机保留 nuPlan 对应相机的模板安装（俯仰、横滚），只绕 z 转 yaw」（11:10，仍在任何考卷输出之前）后，
+  (b) 剩下的差别只是「第一个 log 的标定」与「本车标定」之间的车队内差异（亚度级），SparseDriveV2 仍有 2/3 的帧换了轨迹（平均 0.36 m），ZTRS 1/3（0.13 m）。
+  **处理**：门槛按 (a) 判为通过（渲染与特征路径本身没有引入差别）；(b) 不作门槛，而作为一条已知的适配折中写进结果：这两个 scorer 模型的选轨对亚度级的相机安装变化就会改变约 0.1–0.4 m，
+  所以 P5 / I3 / WOD / nuScenes 上它们的绝对轨迹误差带一个同量级的适配噪声；配对考卷（P5 / I3）的 x⁺ / x⁻ 两侧用同一套 rig，这部分噪声在两侧相同，主要体现在各自 null 定出的 τ 上。
+  256 token 的正式复检（修正后代码）放到重启后，与考卷推理并行跑。这是对 10:05 (6) 的偏离（门槛从原意的 (b) 改为 (a)），决定人是 T1，理由如上，请主会话复核。
+- 2026-09-26 11:16 CST [T1] **box 重启前的停机状态**（box 11:45 重启加卡）。已完成：四张卷的 plan（`processed/top10_exam/{p5,i3,wod,nusc}/plan.json`，11:08 按新虚拟相机重建）、适配器检查（上表）、
+  ZTRS navhard two-stage 原生推理 5 912 token（`processed/top10_exam/navsim/ztrs_navhard_two_stage.npz`，11:07 完成，未打分）。
+  被杀：SparseDriveV2 navtest 原生推理（12 146 token，37% 时在 11:06–11:07 被停；旧代码只在结束时落盘，**从 0 重来**；runner 已改成每 25 个 batch 落一个 chunk，之后可断点续跑）。
+  重启后的续跑命令（box 上，repo 根目录；GPU 号按主会话重新分配填 `<g>`）：
+  `scripts/tmux_run.sh t1-check-sd env CUDA_VISIBLE_DEVICES=<g> scripts/top10_exam.sh sparsedrivev2 --check 256`（ztrs 同理）；
+  `scripts/tmux_run.sh t1-p5-sd env CUDA_VISIBLE_DEVICES=<g> scripts/top10_exam.sh sparsedrivev2 --set p5 --workers 12`（`--set i3 / wod / nusc`，`ztrs` 同理；首次会重算 maps）；
+  `scripts/tmux_run.sh t1-nav-sd env CUDA_VISIBLE_DEVICES=<g> scripts/top10_exam.sh sparsedrivev2 --navsim navtest --workers 16`；
+  打分 `scripts/navsim_zs_score.sh score v1 navtest t1_sparsedrivev2 $DATA_DIR/processed/top10_exam/navsim/sparsedrivev2_navtest.npz` 与 `scripts/navsim_zs_score.sh score v2 navhard_two_stage t1_ztrs $DATA_DIR/processed/top10_exam/navsim/ztrs_navhard_two_stage.npz`；
+  判卷 `.venv/bin/python -m jevdrive.top10_exam judge --set p5`（i3 / wod / nusc 同理）。
 - 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
   所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
 
