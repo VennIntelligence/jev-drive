@@ -804,7 +804,27 @@ def pilot_check(cand: str, variant: str, out: Path, ids: list[str]) -> dict:
                     failed.append(f"{i}: cut-in vehicle not a van: {[x.get('type_id') for x in sw]}")
             elif to and not any(s["type"] == to for s in built):
                 failed.append(f"{i}: swapped scenario {to} not built ({[s['type'] for s in built]})")
-    # DS against night queue 3's run of the same examinee (full routes only: K, and orig reuse examinees)
+    # G: how far the car gets (the scenario zone reached), against night queue 3's full run of the same examinee on the same
+    # base routes (G runs stop early, so their DS is not comparable; reaching the zone end is)
+    if variant in VARIANTS and cand in [k for k, _ in reuse_dirs()]:
+        w = pd.read_csv(root() / "windows.csv", dtype={"base": str})
+        mine, theirs = [], []
+        for i, a, rec, tr in runs:
+            b = var.loc[i, "base"] if i in var.index else i
+            wt = w[(w.base == b) & (w.kind == "trigger")]
+            ref = [finished_attempt(d, b) for d in reuse_dirs().get((cand, 0), [])]
+            rr = next((record(x) for x in ref if x is not None and record(x) is not None), None)
+            if rec is None or rr is None or not len(wt):
+                continue
+            P = dense_route(b)
+            st = float(wt.s_trig.iloc[0])
+            mine.append(scenario_pass(rec, P, arc(P), st)["reached_m"] >= min(st + ZONE[1], arc(P)[-1] - 1.0))
+            theirs.append(scenario_pass(rr, P, arc(P), st)["reached_m"] >= min(st + ZONE[1], arc(P)[-1] - 1.0))
+        if len(mine) >= 3:
+            facts.update(zone_reached=float(np.mean(mine)), zone_reached_nq3=float(np.mean(theirs)), zone_ref_n=len(mine))
+            if np.mean(mine) < np.mean(theirs) - 0.3:
+                failed.append(f"scenario zone reached {np.mean(mine):.0%} vs night-queue-3 {np.mean(theirs):.0%} on the same routes")
+    # DS against night queue 3's run of the same examinee (full routes only: K)
     ref = {"k0": "cl3", "k3": "cl3", "k1": "cl3", "k2": "cl3", "cinque": "cl2", "tfv6": "tfv6", "bridgedrive": "bridgedrive",
            "simlingo": "simlingo", "blue": "blue"}.get(cand[:2] if cand.startswith("k") and variant == "k" else cand)
     if variant == "k" and ref:
