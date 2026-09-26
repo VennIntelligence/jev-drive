@@ -201,6 +201,7 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   5. **规模**：主世界 816（1W 64 × 4 + 2W 80 × 7）+ recovery 504（smoke 过的话）= 1 320，比「约 1 200」多 10%，差在 recovery 也造在 v0 的 20 条 1W 路线上；recovery 世界排在主世界之后，时间不够先砍 v0 路线上的 recovery。
   6. **E1 在 v1 上**：新世界没有原记录可比，「全量核」做不到；改为 v1 主世界随机 5%（seed 0，41 个）用不挂 shadow / BLUE / Waymo 渲染的配置（`agent_e1`）各重开一次，expert 逐 tick 比，门同 v0 重录（位置 < 1 cm、航向 < 0.1°）；不同的比例 > 10% 就在 decisions 里把 v1 标成「recorder 改仿真」。
   7. **门**（照 v0，写死）：每类 x₁₀ bypass ≥ 0.70 才进主读数；x₀₀ 在 x₁₀ 正绕时 ≥ 95% 帧 |d| < 0.3 m；t_div ≥ t_vis；放置 null 主口径改「与同 case x₀₀ 同模式」，登记门槛 0.90 照报。
+- 2026-09-26 17:50 CST [A] **recovery smoke 过**（登记的 10 个世界，GPU 3，`research/results/nq3/q3/recovery_smoke.csv`）：PDM-Lite 出生后 3 s 内回到 |d| < 0.3 m 的比例 **10 / 10 = 1.00**（门 ≥ 0.80），回线时刻 1.75–2.00 s，3 s 时 |d| ≤ 0.043 m；v1 带 504 个 recovery 世界。链式脚本 `scripts/nq3_a.sh` 17:50 起跑 v0 重录（第一次起跑时 smoke 门的检查用了没有 pandas 的系统 python，误写 FAIL，停下修正后重开，无数据损失）。
 
 ### Q4. 真实数据上压住 Δ（第 53 条的翻案条件）
 
