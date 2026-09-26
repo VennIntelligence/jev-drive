@@ -225,6 +225,8 @@
   `jev:n4-fit`（GPU 4 被别的进程占满后 11:06 改在 GPU 1 上跑，带 11:38 的超时；只在最后写结果，没写完就整段重跑）。
   **恢复命令**（box 上，repo 根目录）：`scripts/night2_b_resume.sh <N4 fit 用的卡>`；打分完之后依次 `scripts/night2_n3_gpu.sh fit:1,2`、`.venv/bin/python -m jevdrive.night2_n3 navjobs --seed 1,2`（再用 `scripts/real_g1_score.sh <job 文件> 4` 打分）、`night2_n3 exam`、`night2_n3 navtable`。
   恢复所需：打分约 1–1.5 h（视核数），devkit 约 1 h，N4 fit 约 20 min 与之并行。
+- 2026-09-26 11:38 [B] 已停：seed 1 / 2 打分停在 259 / 400、154 / 400 个 chunk（进程已杀，在途 chunk 重算）；seed 0 的 12 个 devkit job 在停之前全部打完；
+  N4 fit 在 GPU 1 上 11:06 起跑、12 min 没出第一个 fold（box 负载 300+，CPU 端 eigh 被挤），11:18 手动停掉，恢复后整段重跑。box 上已没有 B 的进程。恢复命令同 11:08 条。
 
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
