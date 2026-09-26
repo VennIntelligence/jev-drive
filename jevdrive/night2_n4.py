@@ -121,14 +121,150 @@ def detect(part: str, batch: int = 12, shard: int = 3000, workers: int = 3):
     torch.cuda.empty_cache()
 
 
+# ---------------------------------------------------------------- tokens
+
+def _index() -> pd.DataFrame:
+    return pd.read_parquet(data_dir() / "processed/carla_p5v1_ba/index.parquet")
+
+
+def tokens(rl):
+    """PCA-16 on the train-role detections, then the 672-d image-plane rows in P5 v1 BA index order ([B] 10:12 (3)-(4))."""
+    import glob
+    t = _index()
+    parts = sorted(glob.glob(str(out("dets", "part-*.parquet"))))
+    d = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
+    F = np.concatenate([np.load(p.replace("part-", "feat-").replace(".parquet", ".npy")) for p in parts]).astype(np.float32)
+    assert len(F) == len(d)
+    fn, cam = d.key.str.split("|").str[0].to_numpy(), d.key.str.split("|").str[1].to_numpy()
+    role = t.set_index("frame_name").role.reindex(fn).to_numpy()
+    tr = role == "train"
+    mu = F[tr].mean(0)
+    C = np.cov((F[tr] - mu).T)
+    ev, V = np.linalg.eigh(C)
+    V = V[:, ::-1][:, :PCA_D].astype(np.float32)
+    Z = (F - mu) @ V
+    rl.log.info(f"{len(d)} detections over {d.key.nunique()} images; PCA-{PCA_D} fitted on {tr.sum()} train-role detections, "
+                f"explained variance {ev[::-1][:PCA_D].sum() / ev.sum():.3f}")
+    np.savez(out("pca.npz"), mu=mu, V=V, explained=ev[::-1][:PCA_D] / ev.sum())
+    # E5's stored detections: per-image count agreement (description)
+    e5 = pd.concat([pd.read_parquet(p, columns=["key", "prompt", "score"]) for p in glob.glob(str(data_dir() / "processed/elicit_e5/dets/*/part-*.parquet"))])
+    e5 = e5[(e5.score > SCORE) & e5.prompt.isin(CLASSES)].groupby("key").size()
+    mine = d.groupby("key").size()
+    keys = pd.read_parquet(data_dir() / "processed/elicit_e5/images.parquet").key
+    agree = float((mine.reindex(keys).fillna(0).to_numpy() == e5.reindex(keys).fillna(0).to_numpy()).mean())
+    rl.log.info(f"per-image detection count equal to E5's stored detections on {agree:.4f} of {len(keys)} images")
+    rl.event("n4_tokens", detections=len(d), images=int(d.key.nunique()), explained=float(ev[::-1][:PCA_D].sum() / ev.sum()), count_agree=agree)
+    # first k per camera by box bottom, lowest first
+    d = d.assign(_z=list(range(len(d))), fn=fn, cam=cam).sort_values(["key", "y1"], ascending=[True, False], kind="stable")
+    d["rank"] = d.groupby("key").cumcount()
+    d = d[d["rank"] < K_TOK]
+    rows = pd.Series(np.arange(len(t)), index=t.frame_name).reindex(d.fn).to_numpy()
+    ci = d.cam.map({c: i for i, c in enumerate(CAMS)}).to_numpy()
+    tok = np.zeros((len(t), len(CAMS), K_TOK, TOK_D), np.float32)
+    W, H = d.W.to_numpy(np.float32), d.H.to_numpy(np.float32)
+    v = np.zeros((len(d), TOK_D), np.float32)
+    v[np.arange(len(d)), ci] = 1
+    v[:, 3], v[:, 4] = (d.x0 + d.x1).to_numpy() / 2 / W, (d.y0 + d.y1).to_numpy() / 2 / H
+    v[:, 5], v[:, 6] = (d.x1 - d.x0).to_numpy() / W, (d.y1 - d.y0).to_numpy() / H
+    v[np.arange(len(d)), 7 + d.prompt.map({c: i for i, c in enumerate(CLASSES)}).to_numpy()] = 1
+    v[:, 10] = d.score.to_numpy()
+    v[:, 11:11 + PCA_D] = Z[d._z.to_numpy()]
+    v[:, -1] = 1
+    tok[rows, ci, d["rank"].to_numpy()] = v
+    np.save(out("tokB.npy"), tok.reshape(len(t), -1))
+    rl.log.info(f"tokens: {len(t)} rows x {tok.shape[1] * K_TOK * TOK_D}; rows with any detection {(tok[..., -1].sum((1, 2)) > 0).mean():.3f}, "
+                f"camera-images truncated at k = {K_TOK}: {(d.groupby('key').size() >= K_TOK).mean():.3f}")
+
+
+# ---------------------------------------------------------------- students
+
+def fit(rl, models=("cinque", "lebowski")):
+    """Arms B (op + image-plane tokens) and C (op + tokens + E5's lifted embedding): E5's student and fold set-up
+    unchanged, pair-difference loss only; arm A = E5's stored student A; one exam over A / B / C."""
+    import torch
+    from . import elicit_e5 as E5, elicit_i3 as I, p5_exam as E, p5_openpilot, p5_pairs as P, reactivity_mc as MC
+    with I.p5_set(I.BA):
+        t, past, fut, obs, null, pairs = E.load()
+        Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device="cuda")
+        op = p5_openpilot.load(t, models, sub="op_streams_vis")
+    n = len(t)
+    B = torch.as_tensor(np.load(out("tokB.npy")), device="cuda")
+    A = torch.as_tensor(np.load(data_dir() / "processed/elicit_e5/embed.npy"), device="cuda")
+    fold = E.folds(t, pairs)
+    F = torch.as_tensor(fut.reshape(n, -1), device="cuda")
+    Ego = torch.as_tensor(E.ego_input(t, past), device="cuda")
+    pos = pd.Series(np.arange(n), index=t.frame_name)
+    pr_ip = np.r_[pos[obs.fn_plus].to_numpy(), pos[null.fn_plus].to_numpy()]
+    pr_im = np.r_[pos[obs.fn_minus].to_numpy(), pos[null.fn_null].to_numpy()]
+    pr_group = np.r_[obs.base_id.to_numpy(), null.base_id.to_numpy()].astype(str)
+    obs_rows = np.flatnonzero(t.role.to_numpy() == "obs")
+    role = t.role.to_numpy()
+    ref = np.load(data_dir() / E5_FIT / "preds_obs.npz")
+    assert (ref["rows"] == obs_rows).all()
+    at = pd.Series(np.arange(len(obs_rows)), index=obs_rows)
+    preds = {}
+    mB = torch.as_tensor(np.arange(B.shape[1]) % TOK_D == TOK_D - 1, device="cuda")
+    mA = torch.as_tensor(np.arange(64) % 8 == 7, device="cuda")
+
+    def z(X, tr, mask=None):
+        mu, sd = X[tr].mean(0), X[tr].std(0, correction=0).clamp_min(1e-6)
+        s_ = (X - mu) / sd
+        return (s_ if mask is None else torch.where(mask, X, s_)) / np.sqrt(X.shape[1])
+    for m in models:
+        Xop = torch.as_tensor(op[f"op-{m} temporal"], device="cuda")
+        for key in [f"prior [{m}]", f"M-C pair [{m}]"] + [f"E5 A s{sd} [{m}]" for sd in E5.SEEDS]:
+            preds[key] = np.full((n, 20, 2), np.nan, np.float32)
+            preds[key][obs_rows] = ref[key]
+        for f in range(E.K_FOLDS):
+            ev = obs_rows[fold[obs_rows] == f]
+            tr = np.flatnonzero((role == "train") & (fold != f))
+            o = MC.fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, m)
+            prior = o["prior"]
+            diff = float(np.abs(prior[ev].reshape(-1, 20, 2).cpu().numpy() - ref[f"prior [{m}]"][at[ev].to_numpy()]).max())
+            rl.event("n4_prior_check", model=m, fold=f, max_abs_diff=diff)
+            assert diff < 1e-2, f"prior of fold {f} does not reproduce E5's ({diff})"
+            zo, zb, za = z(Xop, tr), z(B, tr, mB), z(A, tr, mA)
+            keep = fold[pr_ip] != f
+            ip, im, grp = pr_ip[keep], pr_im[keep], pr_group[keep]
+            R = (F[ip] - F[im]) - (prior[ip] - prior[im])
+            for arm, X in (("B", torch.cat([zo, zb], 1).float()), ("C", torch.cat([zo, zb, za], 1).float())):
+                for sd in E5.SEEDS:
+                    d = E5.train_student(X, ip, im, R, tr, grp, None, sd, rl, f"{m} f{f} {arm}")
+                    preds.setdefault(f"N4 {arm} s{sd} [{m}]", np.full((n, 20, 2), np.nan, np.float32))[ev] = \
+                        (prior[ev] + d[ev]).reshape(-1, 20, 2).cpu().numpy()
+            rl.log.info("%s fold %d done", m, f)
+            del X, zo, zb, za
+        del Xop
+        torch.cuda.empty_cache()
+    oo, nn = E.deltas(obs, null, t, preds)
+    res = E.exam(oo, nn, pairs, list(preds))
+    crit = pd.concat([MC.criteria(res, [k for k in preds if k.endswith(f"[{m}]")], f"prior [{m}]") for m in models])
+    o = res["obs"]
+    nr = []
+    for ex in preds:
+        tau = res["taus"][ex]
+        for scope, sub in (("all", o[~o.reactive]), ("DynamicObjectCrossing", o[~o.reactive & (o.family == "DynamicObjectCrossing")])):
+            nr.append({"arm": ex, "scope": scope, "n": len(sub), "nonreactive_flip": float(E._moved(sub[ex], tau).mean())})
+    d = rl.dir
+    res["flips"].to_csv(d / "flip_rates.csv", index=False)
+    crit.to_csv(d / "criteria.csv", index=False)
+    pd.DataFrame(nr).to_csv(d / "nonreactive.csv", index=False)
+    np.savez_compressed(d / "preds_obs.npz", rows=obs_rows, **{k: v[obs_rows] for k, v in preds.items()})
+    rl.log.info("criteria\n%s", crit.to_markdown(index=False, floatfmt=".3f"))
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("detect",))
+    ap.add_argument("step", choices=("detect", "tokens", "fit"))
     ap.add_argument("--part", default="0/1")
     a = ap.parse_args()
     if a.step == "detect":
-        detect(a.part)
+        return detect(a.part)
+    from .runlog import RunLog
+    rl = RunLog("night2", f"n4-{a.step}")
+    {"tokens": tokens, "fit": fit}[a.step](rl)
+    rl.close()
 
 
 if __name__ == "__main__":
