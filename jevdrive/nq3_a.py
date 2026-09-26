@@ -36,6 +36,9 @@ REC_BASE = 5_000_000
 REC = {"center": (1, 0.0, False), "center_wnull": (2, 0.0, True), "L15": (3, 1.5, False), "L10": (4, 1.0, False),
        "R10": (5, -1.0, False), "R15": (6, -1.5, False)}
 REC_TICKS = 200                   # record 10 s after birth (the reading is 1-3 s after birth)
+# worlds with the oncoming flow populated from the first tick: not reproducible run to run even under the P6 v0
+# recorder itself (smoke, [A] 17:35), so E1 exclusions there are per frame and they do not count for the E1 breaker
+FLOW = ("x11", "x01", "mirror")
 
 
 def root(*p) -> Path:
@@ -74,12 +77,12 @@ def configs():
     p6v0 = {"save_threads": 3, "driver": "pdm_lite", "after_trigger_s": 40.0, "stuck_s": 40.0, "max_sim_s": 70.0,
             "record_props": True, "pass_stop_s": 8.0}       # runs/p6/agent-p6.json, P6 v0
     a = root()
-    cfgs = {"v0rr": dict(p6v0, rig="lean", cam_period=4, blue=1, shadows=[bd], need=str(a / "v0rr/need.json")),
-            "full": dict(p6v0, rig="p5", cam_period=4, blue=1, shadows=[tf, bd]),
+    cfgs = {"v0rr": dict(p6v0, rig="lean", cam_period=1, blue=1, shadows=[bd], need=str(a / "v0rr/need.json")),
+            "full": dict(p6v0, rig="p5", cam_period=4, blue=1, shadows=[tf, bd]),   # smoke only: decimated cameras slip
             "full_c1": dict(p6v0, rig="p5", cam_period=1, blue=1, shadows=[tf, bd]),
-            "v1": dict(p6v0, rig="p5", cam_period=4, blue=1, shadows=[tf, bd], pass_stop_s=15.0,
+            "v1": dict(p6v0, rig="p5", cam_period=1, blue=1, shadows=[tf, bd], pass_stop_s=15.0,
                        need=str(a / "v1/need.json")),
-            "e1": dict(p6v0, rig="lean", cam_period=4, blue=0, shadows=[], pass_stop_s=15.0, need=str(a / "v1/need.json"))}
+            "e1": dict(p6v0, rig="lean", cam_period=1, blue=0, shadows=[], pass_stop_s=15.0, need=str(a / "v1/need.json"))}
     for k, v in cfgs.items():
         (a / ("agent_%s.json" % k)).write_text(json.dumps(v, indent=1))
     log.info("configs: %s", sorted(cfgs))
@@ -135,7 +138,11 @@ def check_det(gen: Path, need_file: Path | None, ids=None, ref: Path | None = No
         dv = np.hypot(m.vx - m.vx_o, m.vy - m.vy_o)
         bad = np.flatnonzero((d >= P.DIV_M) | (dy >= P.DIV_DEG))
         ka, ko = (set((pd.read_json(x / "frames.jsonl", lines=True).t / P.TICK).round().astype(int)) for x in (a, o))
-        rows.append({"rid": rid, "ticks": len(m), "need_k": lim, "max_pos_m": float(d.max()), "max_yaw_deg": float(dy.max()),
+        try:
+            world = p6.parse_id(rid)[1]
+        except KeyError:
+            world = "rec"
+        rows.append({"rid": rid, "world": world, "flow": world in FLOW, "ticks": len(m), "need_k": lim, "max_pos_m": float(d.max()), "max_yaw_deg": float(dy.max()),
                      "max_dv_mps": float(dv.max()), "first_div_k": int(m.index[bad[0]]) if len(bad) else None,
                      "cam_grid_same": {k for k in ka if k <= lim} == {k for k in ko if k <= lim}})
     return pd.DataFrame(rows)
@@ -380,9 +387,10 @@ def v1_post(workers: int = 24):
 
 # ---------------------------------------------------------------- Q1: the CARLA-rig examinees on the v0 exam
 
-def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[dict, dict]:
+def _rig_preds(gen: Path, t: pd.DataFrame, ok: dict, blue_dirs: dict) -> tuple[dict, dict]:
     """(examinee -> (n, 20, 2) aligned to the P6 v0 index, notes). Re-recorded worlds are matched to the index by
-    (world id, tick k); worlds failing E1 are left NaN."""
+    (world id, tick k); ok = {world: first tick at which its expert left the P6 v0 trajectory (inf if never)}, and
+    frames from that tick on are left NaN (worlds missing from ok: all NaN)."""
     rid = t.frame_name.str.split("-").str[0]
     pos = pd.Series(np.arange(len(t)), index=pd.MultiIndex.from_arrays([rid, t.k.astype(int)]))
     n = len(t)
@@ -396,7 +404,7 @@ def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[di
         for line in open(a / "bridgedrive.jsonl"):
             q = json.loads(line)
             i = pos.get((r, int(q["k"])))
-            if i is None or "pred_future_waypoints" not in q:
+            if i is None or "pred_future_waypoints" not in q or int(q["k"]) >= ok[r]:
                 continue
             wp[i, :8] = np.asarray(q["pred_future_waypoints"], np.float32)
             ts[i] = float(np.dot(q["pred_target_speed_distribution"], cls))
@@ -413,7 +421,7 @@ def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[di
                 continue
             for q in z["frames"]:
                 i = pos.get((z["rid"], int(q["k"])))
-                if i is not None:
+                if i is not None and int(q["k"]) < ok[z["rid"]]:
                     w = np.asarray(q["wps"], np.float32)
                     a[i, :len(w)] = w[:20]
         preds[name] = a
@@ -423,13 +431,14 @@ def _rig_preds(gen: Path, t: pd.DataFrame, ok: set, blue_dirs: dict) -> tuple[di
 def judge_rig(gen: Path, e1_csv: Path, blue_dirs: dict, out: Path | None = None) -> pd.DataFrame:
     """Rule 7 (lane C's jevdrive.nq3_p6 judge, unchanged) for BridgeDrive (waypoint; target speed longitudinal only),
     BLUE and SimLingo (speed waypoints, 2.5 s), each lateral sign fixed against the expert's y(2 s) on x10 frames as
-    lane C does for TFv6; worlds failing E1 are dropped."""
+    lane C does for TFv6; frames from a world's first E1 divergence on are dropped ([A] 17:35)."""
     from . import nq3_p6 as J
     out = out or _res("q1")
     t = pd.read_parquet(data_dir() / "processed" / "carla_p6" / "index.parquet")
     fut = np.load(data_dir() / "processed" / "carla_p6" / "future.npy")
     e1 = pd.read_csv(e1_csv, dtype={"rid": str})
-    ok = set(e1.rid[e1.first_div_k.isna() & e1.cam_grid_same])
+    e1 = e1[e1.cam_grid_same.astype(bool)]
+    ok = dict(zip(e1.rid, e1.first_div_k.fillna(np.inf)))
     preds, notes = _rig_preds(gen, t, ok, blue_dirs)
     x10 = (t.world == "x10").to_numpy()
     for name, pr in preds.items():
@@ -453,7 +462,8 @@ def judge_rig(gen: Path, e1_csv: Path, blue_dirs: dict, out: Path | None = None)
             if len(wm):
                 wms.append(J.mode_agreement(wm).assign(examinee=name))
         row["note"] = notes.get(name, "")
-        row["e1_worlds_ok"] = len(ok)
+        row["e1_worlds_identical"] = int(np.isinf(list(ok.values())).sum())
+        row["e1_worlds_diverged"] = int((~np.isinf(list(ok.values()))).sum())
         rows.append(row)
         per.append(pc)
     tab = pd.DataFrame(rows)
@@ -535,8 +545,10 @@ def main():
         if a.out:
             df.to_csv(a.out, index=False)
         ok = df.first_div_k.isna() & df.cam_grid_same
-        print(df.to_string() if len(df) <= 40 else df.describe().to_string())
-        print(f"E1: {int(ok.sum())} / {len(df)} worlds identical to the reference up to need_k")
+        print(df.to_string() if len(df) <= 40 else df.groupby("world").agg(n=("rid", "size"),
+              identical=("first_div_k", lambda x: int(x.isna().sum()))).to_string())
+        print(f"E1: {int(ok.sum())} / {len(df)} worlds identical to the reference up to need_k; without the flow worlds "
+              f"{int(ok[~df.flow].sum())} / {int((~df.flow).sum())}")
     elif a.cmd == "recovery":
         df = recovery(Path(a.gen), a.file.split(","))
         if a.out:

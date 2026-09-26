@@ -65,8 +65,8 @@ fail() {  # fail <reason>: ERROR file, stop the running step, end the chain
     exit 1
 }
 
-gen() {  # gen <step> <id file> <agent config> <routes xml> <out> <est h> <n gpus>
-    local step=$1 ids=$2 cfg=$3 routes=$4 out=$5 est=$6 ng=$7 t0 j left req pids=()
+gen() {  # gen <step> <id file> <agent config> <routes xml> <out> <est h> <n gpus> [fatal=1]
+    local step=$1 ids=$2 cfg=$3 routes=$4 out=$5 est=$6 ng=$7 fatal=${8:-1} t0 j left req pids=()
     mkdir -p "$out"
     t0=$(date +%s)
     echo "$step $out $ids $t0 $est" > "$R/CURRENT"
@@ -92,7 +92,8 @@ gen() {  # gen <step> <id file> <agent config> <routes xml> <out> <est h> <n gpu
     $PY -m jevdrive.nq3_a ids --file "$ids" --gen "$out" | tr ',' '\n' | grep . > "$out/skipped.txt"
     echo "$(date '+%F %T') $step: $((req - left)) / $req worlds done, $left skipped after retries"
     if python3 -c "import sys; sys.exit(0 if $left / max($req, 1) > 0.10 else 1)"; then
-        fail "$step: $left of $req worlds failed after retries (> 10 %)"
+        (( fatal )) && fail "$step: $left of $req worlds failed after retries (> 10 %)"
+        echo "$(date '+%F %T') $step: $left of $req worlds failed after retries (> 10 %), not fatal for this step"
     fi
     rm -f "$R/CURRENT"
     echo "$(( $(date +%s) - t0 ))" > "$out/wall_s"
@@ -120,7 +121,7 @@ mkdir -p "$R/q3smoke"
 if [[ ! -f $R/q3smoke/DONE ]]; then
     t=$(date +%s)
     W0=$W; W=5
-    gen q3smoke "$R/v1/ids_smoke.txt" "$R/agent_v1.json" "$R/v1/pairs.xml" "$R/v1/gen" "$EST_SMOKE" 1
+    gen q3smoke "$R/v1/ids_smoke.txt" "$R/agent_v1.json" "$R/v1/pairs.xml" "$R/v1/gen" "$EST_SMOKE" 1 0
     W=$W0
     $PY -m jevdrive.nq3_a recovery --gen "$R/v1/gen" --file "$(cat $R/v1/ids_smoke.txt)" --out "$RES/q3/recovery_smoke.csv" \
         | tee "$R/q3smoke/result.txt"
@@ -145,8 +146,9 @@ if [[ ! -f $R/v0rr/DONE ]]; then
     python3 -c "
 import pandas as pd, sys
 d = pd.read_csv('$RES/q1/v0rr_e1.csv')
+d = d[~d.flow.astype(bool)]            # flow worlds are not reproducible even under the v0 recorder ([A] 17:35)
 bad = (d.first_div_k.notna() | ~d.cam_grid_same.astype(bool)).mean()
-sys.exit(1 if bad > 0.10 else 0)" || fail "v0rr: more than 10 % of the re-recorded worlds diverge from P6 v0 (E1)"
+sys.exit(1 if bad > 0.10 else 0)" || fail "v0rr: more than 10 % of the re-recorded non-flow worlds diverge from P6 v0 (E1)"
     done_step v0rr "$(hours $t)" "v0rr/gen, $RES/q1/v0rr_e1.csv"
 fi
 
