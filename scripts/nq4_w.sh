@@ -31,6 +31,8 @@ status() {
 }
 
 pick_gpu() {
+    # W_GPU pins the card (main places the job when the default cards stay busy).
+    if [[ -n ${W_GPU:-} ]]; then echo "$W_GPU"; return; fi
     while true; do
         local used
         used=$(nvidia-smi -i 6 --query-gpu=memory.used,memory.total --format=csv,noheader,nounits | tr -d ' ')
