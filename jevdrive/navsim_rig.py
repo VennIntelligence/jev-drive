@@ -130,6 +130,47 @@ def maps(src: list, virt: list, primary: list) -> list:
     return out
 
 
+PAD = 2          # replicated border around every source in the atlas (cv2 bilinear reads x and x + 1)
+
+
+def fast_maps(mp: list, sizes: list) -> dict:
+    """Precompute render()'s sampling as one fixed-point cv2.remap per virtual camera over an atlas of the sources
+    (stacked vertically, each with a PAD-pixel replicated border, and a black block for uncovered pixels). The fixed
+    point maps are cv2.convertMaps of the very float maps render() hands cv2.remap, shifted by whole pixels only,
+    so every output pixel is bit-identical to render(). sizes[i] = (w, h) of source i."""
+    import cv2
+    wmax = max(w for w, _ in sizes) + 2 * PAD
+    offs, y = [], 0
+    for w, h in sizes:
+        offs.append(y)
+        y += h + 2 * PAD
+    black = y
+    out = []
+    for s, U, V in mp:
+        m1, m2 = cv2.convertMaps(U, V, cv2.CV_16SC2)
+        m1 = m1.astype(np.int32)
+        dy = np.full(s.shape, black + PAD, np.int32)
+        dx = np.full(s.shape, PAD, np.int32)
+        for i, off in enumerate(offs):
+            dy[s == i] = off + PAD
+        m1[..., 0] += dx
+        m1[..., 1] += dy
+        m2 = np.where(s >= 0, m2, 0).astype(np.uint16)
+        m1[s < 0] = (PAD, black + PAD)
+        out.append((m1.astype(np.int16), m2))
+    return {"maps": out, "offs": offs, "shape": (black + 4 * PAD + 2, wmax), "sizes": list(sizes)}
+
+
+def render_fast(images: list, fm: dict) -> list:
+    """render() through fast_maps(): bit-identical output, one remap per virtual camera."""
+    import cv2
+    atlas = np.zeros(fm["shape"] + images[0].shape[2:], np.uint8)
+    for img, off in zip(images, fm["offs"]):
+        b = cv2.copyMakeBorder(img, PAD, PAD, PAD, PAD, cv2.BORDER_REPLICATE)
+        atlas[off:off + b.shape[0], :b.shape[1]] = b
+    return [cv2.remap(atlas, m1, m2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT) for m1, m2 in fm["maps"]]
+
+
 def render(images: list, mp: list) -> list:
     """RGB uint8 source images -> one (H, W, 3) uint8 image per virtual camera (bilinear, uncovered = 0)."""
     return [G.render_np(s, U, V, images) for s, U, V in mp]
