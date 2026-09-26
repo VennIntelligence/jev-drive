@@ -1,0 +1,13 @@
+{
+ "segments": 1000,
+ "with_corridor_ped": 247,
+ "with_target": 78,
+ "day": 807,
+ "qualifies": 66,
+ "picked": 10,
+ "events_failing_window": 529,
+ "events_failing_speed": 328,
+ "events_failing_visible": 80,
+ "events_failing_crowd": 60,
+ "in_sceneflow": 1000
+}

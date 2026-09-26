@@ -1,0 +1,12 @@
+{
+ "segments": 10,
+ "with_corridor_ped": 4,
+ "with_target": 1,
+ "day": 7,
+ "qualifies": 0,
+ "picked": 0,
+ "events_failing_window": 10,
+ "events_failing_speed": 3,
+ "events_failing_visible": 1,
+ "events_failing_crowd": 0
+}

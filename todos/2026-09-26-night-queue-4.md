@@ -325,6 +325,16 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
     null 误翻率 = null 帧中 |v2(`plus`) − v2(`real`)| > τ 的比例，按场景汇总、按场景 bootstrap 给 CI；门 = 合并误翻率 ≤ 7%。Lebowski（τ 0.73）同样报，只作描述。
     (`plus`, `minus`) 的翻转率只作描述（这里没有规则 expert 标签，不判格）。残影：每场景存 `real` / `plus` / `minus` / |plus − minus| 四联图（f₀ 附近 3 个时刻），另报删除框投影外扩 12 px 以外超阈值（任一通道 > 8/255）的像素数，肉眼判定标「待 main 复核」。
   - **重建质量**：每场景报 `plus` 对 `real` 的 PSNR / SSIM（全图，与 drivestudio 自己的 eval 同口径）与行人框内的 PSNR。
+- [P3] 2026-09-26 19:15 CST 选场景结果与一处偏离。
+  - WOD v2 全部 1 000 段（training 798 + validation 202，全部在 scene-flow 桶里）：有走廊行人的 247 段，有合格目标事件的 78 段，白天且合格的 **66 段**；
+    事件被筛掉的原因依次是 f₀ 不在 [3, 16.5] s（529 个）、ego 速度 < 2 m/s（328）、前相机不可见 1 s（80）、窗口内走廊行人 > 5（60）。按 crc32 取前 10（9 段 training、1 段 validation），
+    f₀ 在 4.5–14.3 s，f₀ 时 ego 速度 3.8–12.2 m/s，每段要删 1–4 个行人。表：[selection_wod.csv](../research/results/nq4/p3/selection_wod.csv)、[漏斗](../research/results/nq4/p3/selection_wod_funnel.json)。
+    10 段 tfrecord（约 10 GB）已下到 `$DATA_DIR/datasets/waymo_perception/sceneflow/`，drivestudio 预处理在 CPU 上跑（核 60–67）。
+  - **偏离（待 main 复核）**：nuScenes smoke 没做。按同一规则，`v1.0-mini` 的 10 个场景里 **0 个合格**（有走廊行人的 4 个，只有 1 个有合格事件而那是夜景；[漏斗](../research/results/nq4/p3/selection_nusc_funnel.json)），
+    box 上的 trainval 只解了相机，LiDAR 只有 mini 的；而 WOD 10 段只花了约 3 min 就下完了，nuScenes smoke 原本「不让 GPU 等 WOD 下载」的理由不存在了。
+    所以场景 1 的 smoke 直接用 WOD 的第 0 段（`2265177645248606981_2340_000_2360_000`，f₀ = 12.8 s，删 4 个行人）在调试卡 GPU 1 上做，检查清单与门不变。
+  - 装机：torch 2.8.0 + cu128、gsplat v1.3.0 与 pytorch3d V0.7.8 按 sm_120 源码编译（`scripts/p3/install_drivestudio.sh`）；Waymo 预处理另一个 env（TF 2.12 + waymo-open-dataset 1.6.4）。
+    天空 mask 用 HF 上同一个 SegFormer-B5 Cityscapes 权重（drivestudio 原脚本依赖的 mmseg 旧栈在 sm_120 上装不了），类 10 = sky，与原脚本同一判定。
 
 ## E. 专家汇总的补充
 

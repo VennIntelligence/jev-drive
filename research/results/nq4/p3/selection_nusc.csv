@@ -1,0 +1,11 @@
+name,day,n_frames,n_ped_tracks,n_corridor_tracks,n_events,n_targets,fail_window,fail_speed,fail_visible,fail_crowd,qualifies,split,description,target_track,f0,t0,v0,n_delete,delete_tracks,picked
+scene-0103,True,40,46,0,0,0,0,0,0,0,False,v1.0-mini,"Many peds right, wait for turning car, long bike rack left, cyclist",,,,,,,False
+scene-1100,False,40,11,6,6,0,3,3,0,0,False,v1.0-mini,"Night, peds in sidewalk, peds cross crosswalk, scooter, PMD, difficult lighting",,,,,,,False
+scene-0916,True,41,23,0,0,0,0,0,0,0,False,v1.0-mini,"Parking lot, bicycle rack, parked bicycles, bus, many peds, parked scooters, parked motorcycle",,,,,,,False
+scene-0757,True,41,2,0,0,0,0,0,0,0,False,v1.0-mini,"Arrive at busy intersection, bus, wait at intersection, bicycle, peds",,,,,,,False
+scene-0553,True,41,12,3,3,0,3,0,0,0,False,v1.0-mini,"Wait at intersection, bicycle, large truck, peds crossing crosswalk, ped with stroller",,,,,,,False
+scene-0655,True,41,7,0,0,0,0,0,0,0,False,v1.0-mini,"Parking lot, parked cars, jaywalker, bendy bus, gardening vehicles",,,,,,,False
+scene-0796,True,40,11,0,0,0,0,0,0,0,False,v1.0-mini,"Scooter, peds on sidewalk, bus, cars, truck, fake construction worker, bicycle, cross intersection, car overtaking us",,,,,,,False
+scene-0061,True,39,60,2,2,0,1,0,1,0,False,v1.0-mini,"Parked truck, construction, intersection, turn left, following a van",,,,,,,False
+scene-1094,False,40,55,5,5,2,3,0,0,0,False,v1.0-mini,"Night, after rain, many peds, PMD, ped with bag, jaywalker, truck, scooter",98e2b15c113a477a9f291b25194cab62,26.0,13.0,9.12,2.0,"[""1ab7d92d3ed3455ea628c6962906d4e7"", ""98e2b15c113a477a9f291b25194cab62""]",False
+scene-1077,False,41,0,0,0,0,0,0,0,0,False,v1.0-mini,"Night, big street, bus stop, high speed, construction vehicle",,,,,,,False
