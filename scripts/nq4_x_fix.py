@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import sys
 import time
@@ -94,12 +95,19 @@ class Run:
                 fcntl.flock(lock, fcntl.LOCK_EX)
                 rows = [r for r in SCH.load() if r['lane'] != LANE]
                 used_ports = set()
-                ss = subprocess.check_output(['ss', '-H', '-ltn'], text=True)
-                for line in ss.splitlines():
-                    try:
+                if shutil.which('ss'):
+                    ss = subprocess.check_output(['ss', '-H', '-ltn'], text=True)
+                    for line in ss.splitlines():
                         used_ports.add(int(line.split()[3].rsplit(':', 1)[1]))
-                    except (IndexError, ValueError):
-                        pass
+                    port_source = 'ss -H -ltn'
+                else:
+                    # Same kernel TCP inventory as ss; include every bound state,
+                    # not just LISTEN, so this fallback is more conservative.
+                    for table in ('/proc/net/tcp', '/proc/net/tcp6'):
+                        for line in Path(table).read_text().splitlines()[1:]:
+                            used_ports.add(int(line.split()[1].rsplit(':', 1)[1], 16))
+                    port_source = '/proc/net/tcp + tcp6 (ss unavailable)'
+                self.event('port_inventory', source=port_source, bound_ports=sorted(used_ports))
                 for index in range(0, 493):
                     row = dict(lane=LANE, gpus='1', workers='1', idx0=str(index), idx_span='3',
                                cpus=self.cpus, status='debug X isolated validation', go='-')
@@ -162,12 +170,20 @@ class Run:
         self.release()
         self.tb.close()
 
-    def prepare(self):
+    def export_head(self):
         root = G.root()
         q2 = root / 'heads_xfit/q2'
         if not (q2 / 'READY').exists():
             if not (DATA / 'runs/nq3/q2/closed_loop_head/READY').exists():
                 raise RuntimeError('Formal Q2 source not READY')
+            while True:
+                probe = SCH.probe()
+                gpu = next(g for g in probe['gpus'] if g['gpu'] == 1)
+                if probe['pids'] + 64 <= SCH.PIDS_CAP and probe['cores_used'] <= SCH.CPU_CAP - 4 and gpu['used_gb'] <= 72:
+                    break
+                self.event('waiting_export_capacity', probe=probe)
+                time.sleep(60)
+            self.event('gpu_only_export_capacity', gpu=1, cpus=self.cpus, probe=probe)
             claim = root / 'heads_xfit/q2.lock'
             claim.mkdir()  # Do not interfere with a concurrent exporter.
             p = self.start(['taskset', '-c', self.cpus, sys.executable, '-m', 'jevdrive.nq4_x', 'export-q2'],
@@ -175,6 +191,10 @@ class Run:
             self.wait(p, 3600)
             if not (q2 / 'READY').exists():
                 raise RuntimeError('Formal Q2 export did not write READY')
+    def prepare(self):
+        root = G.root()
+        q2 = root / 'heads_xfit/q2'
+        assert (q2 / 'READY').exists()
         cfg = dict(model='head', warmup_s=5., desire=True, head_cam_tick=0., arm='q2', x=True,
                    socket=str(self.out / 'head.sock'), controller='fixed', controller_preset='pursuit',
                    controller_config=str(REPO / 'todos/2026-09-23-tfv6-controller/controller-eval/P7.json'),
@@ -252,6 +272,7 @@ class Run:
 
     def run(self):
         progress = tqdm(total=3, desc='X validation stages')
+        self.export_head()
         self.capacity()
         self.prepare()
         # Prespecified rule-8 routes; no selection based on outcomes.

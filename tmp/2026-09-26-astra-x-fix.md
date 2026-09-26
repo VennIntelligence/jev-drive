@@ -19,3 +19,13 @@
 隔离验证脚本 `scripts/nq4_x_fix.py --round 1`：GPU1 容量空余后在 table.tsv 登记合法 3-index 重试段，检查 i±120 与实际 ss、sch_table check=0；启动前 pids+600≤16000、GPU1 CARLA<4、至少约24 GB空余。先正式 Q2 xfit（源 READY 后，如已存在则只读），1 route=2534 orig seed0；通过原 pilot checklist 后运行其余登记 rule8 路线 2668、1790，然后十条 obstacle 路线、原 checklist 与逐位检查。不会启动 full batch。
 
 资源快照：初次读 pids16370/20480、GPU1六个 CARLA，`sch_table show` 返回1；不能启动新 CARLA。后续读 pids16270、GPU1用46.9GB。仅建设本机代码，没有停止任何已有进程；待 gate 放行后才计 CARLA 数字。当前暂无完成/崩溃/blocked/起步读数。
+
+部署：`de39c51` 已 main push / box ff-only pull，box 同样回归 PASS；`jev:cx-x-fix-r01`，wrapper PID272666。首个 gate 快照 pids16149、GPU1五个 CARLA，因此自动等待，没有登记新 index、启动新 head 或 CARLA。等待不计一次科学失败，round01 仍进行中。
+
+round01 的实际结束：资源稍后放行，但 box 没有 `ss`，端口检查调用在启动模型前抛 `FileNotFoundError`；wrapper 已退出。`round01/result.json` 明确 `infrastructure_error, model_verdict=false`。CARLA/模型请求数都是 0，不能报成模型起步失败。
+
+## round02：补端口盘点，先完成 GPU-only 正式 head
+
+假设/修改：round01 的控制实现本机与 box 均过回归；唯一实测失败是运维依赖。端口读数在有 ss 时仍用 ss；缺失时读相同内核的 `/proc/net/tcp` 与 `tcp6`，并包括所有已绑定 TCP 状态，比只查 LISTEN 更严格。i±120、index≤494、sch_table check 与资源阈值不变。根据用户指出“非 CARLA 的 GPU 任务可以先跑”，正式 Q2 xfit 导出移到 CARLA 容量门之前；仍按 GPU1 显存、CPU、pids+64 门和 q2.lock 防重写。独立 formal export 的输入/输出检查没有降低。
+
+最新外部机械快照（Sol capacity）：pids15300，GPU1约10.5GB/18%、1 CARLA；CPU约95/175核。round02 仍自行复核，不把单次 utilization 当启动依据。round01 的等待/错误产物保留；round02 新目录与 PID。
