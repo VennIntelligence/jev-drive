@@ -297,7 +297,21 @@ def _case(g: Path, c: pd.Series) -> tuple[list, dict, list]:
         if c.cls == "2W" and onc_win is not None:
             row["oncoming_in_window"] = _oncoming(W, onc_win)
         worlds.append(row)
-    return worlds, pair, frames
+    neg = {}
+    if c.cls == "2W":
+        wr = {r["world"]: r for r in worlds}
+        x10, x11 = wr.get("x10", {}), wr.get("x11", {})
+        neg = {q: c[q] for q in ("base_id", "scenario", "seed")}
+        neg.update(mode_x10=x10.get("mode"), mode_x11=x11.get("mode"), t_lat_x10=x10.get("t_lat"),
+                   t_lat_x11=x11.get("t_lat"))
+        if X10 is not None and X11 is not None and x10.get("t_lat") is not None:
+            k = int(x10["t_lat"])
+            l10, l11 = X10[1], X11[1]
+            if k in l11.index:
+                neg.update(v_x10_at_tlat=round(float(l10.v[k]), 3), v_x11_at_tlat=round(float(l11.v[k]), 3))
+            if x11.get("t_lat") is not None:
+                neg["lat_delay_s"] = round((int(x11["t_lat"]) - k) * P.TICK, 2)
+    return worlds, pair, frames, neg
 
 
 def stats(g: Path | None = None, out: Path | None = None, workers: int = 16):
@@ -312,10 +326,84 @@ def stats(g: Path | None = None, out: Path | None = None, workers: int = 16):
     worlds = pd.DataFrame([w for r in res for w in r[0]])
     pairs = pd.DataFrame([r[1] for r in res])
     frames = pd.DataFrame([f for r in res for f in r[2]])
+    neg = pd.DataFrame([r[3] for r in res if r[3]])
+    neg.to_csv(out / "negotiation.csv", index=False)
     worlds.to_csv(out / "worlds.csv", index=False)
     pairs.to_csv(out / "pairs_bypass.csv", index=False)
     frames.to_csv(out / "frame_modes.csv", index=False)
     return worlds, pairs, frames
+
+
+MODES = ("keep", "stop", "bypass_L", "bypass_R", "wait_then_bypass_L", "wait_then_bypass_R")
+
+
+def _modes(w: pd.DataFrame, by: str) -> pd.DataFrame:
+    t = w.pivot_table(index=by, columns="mode", values="rid", aggfunc="count", fill_value=0)
+    t = t.reindex(columns=[m for m in MODES if m in t.columns] + [m for m in t.columns if m not in MODES], fill_value=0)
+    t.insert(0, "n", t.sum(1))
+    byp = t[[m for m in t.columns if str(m).startswith(("bypass", "wait_then"))]].sum(1)
+    t["bypass_share"] = (byp / t.n).round(3)
+    return t
+
+
+def report(out: Path | None = None) -> str:
+    """Expert statistics tables (todo N1's delivery) from stats()' CSVs -> expert_stats.md."""
+    out = out or RESULTS
+    w = pd.read_csv(out / "worlds.csv", dtype={"base_id": str, "rid": str})
+    w = w[w["mode"] != "missing"]
+    pr = pd.read_csv(out / "pairs_bypass.csv", dtype={"base_id": str})
+    ng = pd.read_csv(out / "negotiation.csv", dtype={"base_id": str}) if (out / "negotiation.csv").stat().st_size > 1 else pd.DataFrame()
+    fm = pd.read_csv(out / "frame_modes.csv", dtype={"base_id": str}) if (out / "frame_modes.csv").stat().st_size > 1 else pd.DataFrame()
+    md = []
+    t1 = _modes(w[w.world == "x10"], "scenario")
+    t1["usable (>= 0.70)"] = np.where(t1.bypass_share >= 0.7, "yes", "no")
+    md += ["## x10: expert mode per scenario", t1.to_markdown()]
+    md += ["## mode per world and class", _modes(w, ["cls", "world"]).to_markdown()]
+    if len(pr):
+        pr["div_minus_vis_s"] = (pr.t_div - pr.t_vis) * P.TICK
+        pr["divlat_minus_vis_s"] = (pr.t_div_lat - pr.t_vis) * P.TICK
+        t2 = pr.groupby("scenario").agg(pairs=("reason", "size"), ok=("reason", lambda r: int((r == "ok").sum())),
+                                        early=("reason", lambda r: int((r == "early").sum())),
+                                        never_visible=("reason", lambda r: int((r == "never_visible").sum())),
+                                        med_div_minus_vis_s=("div_minus_vis_s", "median"),
+                                        med_divlat_minus_vis_s=("divlat_minus_vis_s", "median")).round(2)
+        md += ["## t_div vs t_vis (x10 vs x00)", t2.to_markdown()]
+        sm = pr[pr.smoke1_frames > 0]
+        md += [f"smoke 1: x00 |d(k+3 s)| < {SMOKE_KEEP} m on {int(sm.smoke1_keep.sum())} / {int(sm.smoke1_frames.sum())} "
+               f"x10-bypass frames ({sm.smoke1_keep.sum() / max(sm.smoke1_frames.sum(), 1):.3f}; gate >= 0.95), "
+               f"{len(sm)} pairs with such frames of {len(pr)}"]
+    if len(ng):
+        ng["wait_x11"] = ng.mode_x11.astype(str).str.startswith("wait") | (ng.mode_x11 == "stop")
+        ng["wait_x10"] = ng.mode_x10.astype(str).str.startswith("wait") | (ng.mode_x10 == "stop")
+        ng["dv"] = ng.get("v_x11_at_tlat", np.nan) - ng.get("v_x10_at_tlat", np.nan)
+        t3 = ng.groupby("scenario").agg(cases=("wait_x11", "size"), wait_share_x11=("wait_x11", "mean"),
+                                        wait_share_x10=("wait_x10", "mean"), med_lat_delay_s=("lat_delay_s", "median"),
+                                        med_dv_x11_minus_x10=("dv", "median")).round(3)
+        tot = ng[["wait_x11", "wait_x10"]].mean().round(3)
+        md += ["## negotiation: x11 - x10 (2W)", t3.to_markdown(),
+               f"pooled wait share x11 {tot.wait_x11} (gate >= 0.50), x10 {tot.wait_x10}"]
+    sh, mi = w[w.world == "shoulder"], w[w.world == "mirror"]
+    if len(sh):
+        md += [f"placement null keep: {int((sh['mode'] == 'keep').sum())} / {len(sh)} = {(sh['mode'] == 'keep').mean():.3f} (gate >= 0.90)",
+               _modes(sh, "scenario").to_markdown()]
+    if len(mi):
+        md += [f"mirror stop: {int((mi['mode'] == 'stop').sum())} / {len(mi)} = {(mi['mode'] == 'stop').mean():.3f} (gate >= 0.80)",
+               _modes(mi, "scenario").to_markdown()]
+    wn = w[w.world == "wnull"].merge(w[w.world == "x10"][["base_id", "seed", "mode"]], on=["base_id", "seed"],
+                                     suffixes=("", "_x10"))
+    if len(wn):
+        md += [f"weather null: same world mode as x10 in {int((wn['mode'] == wn.mode_x10).sum())} / {len(wn)}"]
+    if "oncoming_in_window" in w:
+        o = w[w.cls == "2W"].groupby("world").oncoming_in_window.agg(["size", lambda x: int((x >= 1).sum()), "mean"])
+        o.columns = ["worlds", "with >= 1 oncoming", "mean oncoming"]
+        md += ["## smoke 2: oncoming vehicles within 50 m in the lane-change window (2W)", o.round(2).to_markdown()]
+    if len(fm):
+        for col in ("mode_x10", "mode_x00"):
+            md += [f"## frame-level section 2.1 modes ({col}, frames from t_vis on)",
+                   fm.pivot_table(index="cls", columns=col, values="k", aggfunc="count", fill_value=0).to_markdown()]
+    text = "\n\n".join(md) + "\n"
+    (out / "expert_stats.md").write_text(text)
+    return text
 
 
 # ---------------------------------------------------------------- CPU check (i): bypass anchors in cls_late's vocabulary
@@ -387,7 +475,7 @@ def vocab_check(out: Path | None = None, p6_futures: np.ndarray | None = None) -
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab"])
+    ap.add_argument("cmd", choices=["build", "ids", "stats", "vocab", "report"])
     ap.add_argument("--only", default="")
     ap.add_argument("--out", default="", help="generation dir (default runs/p6/gen)")
     ap.add_argument("--results", default="", help="stats output dir (default research/results/night2/N1)")
@@ -398,8 +486,11 @@ def main():
         ids(a.only, a.out)
     elif a.cmd == "vocab":
         vocab_check()
+    elif a.cmd == "report":
+        print(report(Path(a.results) if a.results else None))
     else:
         stats(Path(a.out) if a.out else None, Path(a.results) if a.results else None)
+        print(report(Path(a.results) if a.results else None))
 
 
 if __name__ == "__main__":
