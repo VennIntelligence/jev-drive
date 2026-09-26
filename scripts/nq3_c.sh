@@ -82,12 +82,19 @@ step() {
   echo "$(date '+%T') done $n in $w min"
 }
 
-STEPS=("feats:90" "q1_op:25")
+# order ([C] entry 17:40): features start in the background, the Q2 pilot and READY first (no data dependency on
+# Q1; READY is the cross-lane hand-off), then the Q1 readouts, the remaining Q2 splits, the Q1 judge, v1.
+STEPS=("feats_start:5" "q2_pilot:45" "ready:15" "feats_wait:180" "q1_op:25" "q1_heads:75" "q2_controls:40" "q2_route:30" "q2_a4:150"
+       "q1_wait_nav:420" "q1_judge:30" "q2_report:10" "wait_v1:720" "v1_prep:75" "q2_v1:180" "q1_wait_alp:720"
+       "q1_judge_final:30")
 
 status_loop & SPID=$!
 trap 'kill $SPID 2>/dev/null' EXIT
 ev start "\"only\": \"$ONLY\""
-step feats 90 feats
-step q1_op 25 q1_op
+for s in "${STEPS[@]}"; do
+  n=${s%%:*}; est=${s#*:}
+  fn=$n; [[ $n == q1_judge_final ]] && fn=q1_judge
+  step "$n" "$est" "$fn"
+done
 [[ -z $ONLY ]] && { date '+%F %T %Z' > "$R/DONE"; ev end; }
 echo "lane C: finished ($ONLY)"
