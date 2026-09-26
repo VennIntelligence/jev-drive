@@ -84,6 +84,8 @@
      读数 5 的巡航速度 = orig 对照窗口内的平均速度，完成时间 = 完成路线的 `duration_game`。
   7. **复用**：orig 里 night-queue-3 已跑过的同考生、同路线、同 seed 直接读：PDM-Lite seed 0 = `runs/nq3/b/cl1_expert`（SimLingo 树，PDM-Lite 靠登记绕行，所以 PDM-Lite 的所有 G 运行都在 SimLingo 树里跑，其余考生在官方树里跑），
      openpilot Cinque 原生 = CL2 / CL9，作者执行层 = CL10（`nq3_b_cl10.sh` 原样的四个 recipe，只把路线文件换成 G 的 XML）。
+  8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
+     G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
   9. **交叉拟合的 M-C 与 Q2 head**（G 的 `mc` / `q2` 考生与 X 共用，`jevdrive/nq4_x.py export-mc / export-q2`，写 `runs/nq4/gk/heads_xfit/{mc,q2}/R{1,2}` + `READY`）：折 = K 的 `route_split.json`。
      M-C = lane B `nq3_cl.export` 的同一段代码（prior + `pair` 双流），训练行 = P5 v1 BA 里 R_k 路线的 train 行、配对行 = 两端都在 R_k 路线上的配对，λ 仍按原内层 CV 选（17:52 已导出：R₁ 13 197 行 / 5 476 对、R₂ 14 078 / 5 543，numpy apply 对 torch ≤ 5.2e-5 m）；
      Q2 = lane C 闭环 head 的 manifest 里的两个臂（轨迹臂、模式臂），`nq3_q2.fit_fold` 原样、训练世界只取 R_k 的 P6 路线（numpy Head 对 in-process 拟合 1 024 行 ≤ 1e-3 m、模式逐一相同，否则停）。
@@ -101,8 +103,6 @@
   13. **资源（用户 18:30：先到先得，不再等 lane B 的 DONE）**：pilot 在 SCH 指定的验证卡上跑（`runs/sched/nq4-gk.pilot`），全量在 SCH / Codex 发的 GO 文件的卡上跑（`runs/sched/nq4-gk.go`：GPUS、WORKERS、IDX0、IDX_SPAN、NQ4GK_CPUS，
       每步前重读；第 i 张卡用 index [IDX0 + i·IDX_SPAN, IDX0 + (i+1)·IDX_SPAN)）；每张卡按实际剩余位（6 − 别人的 server）开 worker。smoke 从 18:38 起挪到 **GPU 1**（GPU 4 上 lane A 加到 4–6 个 server 之后，
       我们每次新起的 server 在载图时都因 RenderThread 超时崩溃，13 次里 12 次）。
-  8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
-     G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
 - [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server，核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。server index 起初用 480–481，它的 TM 端口（8000 + 50 i）正是 lane A index 600–601 的 RPC 端口，server 起不来，17:56 改到 **150–151**（规则：i、i + 120、i − 120 都不能落在别的 lane 的 index 段里）。
 
 ## K. 材料包阶梯：分数动、能力不动
