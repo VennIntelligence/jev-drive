@@ -26,7 +26,7 @@ clone() {  # clone <github repo> <dir> <tag or commit>; shallow for tags, turbo 
 }
 [[ -d $DS ]] || { git clone -q --recursive https://github.com/ziyc/drivestudio "$DS"; git -C "$DS" checkout -q e59bda4; }
 clone nerfstudio-project/gsplat "$DEPS/gsplat" v1.3.0
-clone facebookresearch/pytorch3d "$DEPS/pytorch3d" v0.7.8
+clone facebookresearch/pytorch3d "$DEPS/pytorch3d" V0.7.8
 
 [[ $("$ENV/bin/python" -V 2>/dev/null) == "Python 3.10"* ]] || uv venv --clear "$ENV" --python 3.10
 echo "== drivestudio: torch + pure-python deps"
