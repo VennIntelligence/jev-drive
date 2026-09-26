@@ -110,7 +110,7 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (2) GPU：YOLO26x-seg 的检测一次性在 5 张卡上分片跑完（WOD val 子集、navtest、I3 帧、g₂ 需要的 WOD train / navtrain 训练帧），由 G0 代理负责，其余代理复用；之后的小 GPU 任务各自挑最空的卡。
   (3) G3a 的读法补一格：比值落在 [2, 3) 时照做 G3b，并在结果里标「灰区」；比值 ≥ 3 时停在 G3a，视频一致 inpainting 的登记交给用户。
   (4) E5 的 embedding 用的是 CARLA `route.json` 走廊与三路相机的平地抬升；真实数据上走廊（WOD / NAVSIM 没有路线中心线）、相机标定与只有前视这三处的操作化，由 [G0] 在任何 G0 数字之前登记，G1 / G2 / G3b 的 student 一律沿用。
-- 2026-09-26 08:33 CST（box 时钟，下同）[G3] 分步时间估计与 G3a 的操作化，写于 G3 的任何数字之前（此前只读过 E2 / E5 的已发表数字与代码）。代码 `jevdrive/real_g3.py`，run `runs/real-data-transfer/g3*/<time>`，小表 `research/results/real-data-transfer/g3/`。
+- 2026-09-26 08:28 CST（box 时钟，下同；原写 08:33 是手填的估计，已按提交 1b2795a 的时间改正，G3a 的 run 在 08:30:05 开始）[G3] 分步时间估计与 G3a 的操作化，写于 G3 的任何数字之前（此前只读过 E2 / E5 的已发表数字与代码）。代码 `jevdrive/real_g3.py`，run `runs/real-data-transfer/g3*/<time>`，小表 `research/results/real-data-transfer/g3/`。
   **时间估计**：G3a 工程 30 min + CPU < 5 min；G3c 桌面估算 45 min（复用 E2 WOD 扫描 / 造对 / Qwen 抽取的实测速率）；G3b 若开：PDM 标签（911 个 token 的 v1.1 metric cache + 两条 proposal 各打一次，E3 实测 600 token 16 线程 345 s）约 15 min 墙钟，
   M-C 按 E2 代码重训 + R1–R3 约 20 min，student（等 G0 的 embedding 定义；编辑图上 YOLO 几千张约 5 min GPU、3 seed 拟合 + 读数约 30 min）工程约 2 h。合计约 4.5 h，不含等 G0 的时间。
   **G3a 口径**：(1) 统计量就是 E2 门 (d) 的 `elicit_e2_train.feature_floor`：每路按 x⁺ 行逐维标准化（std ≤ 1e-6 的维取 1）、逐行 RMS 位移，编辑对中位数 / null 对中位数，`_ratio_ci` 原样（2000 次，seed 0），
