@@ -349,6 +349,7 @@ execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run rout
 pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 = examinee blocked, 2 = not run (busy elsewhere)
     local c=$1 v=$2 sd=$3 ids=$4 d=$PIL/$1.$2 st r
     [[ -e $d/PASS ]] && return 0
+    [[ -z $ids ]] && return 0                              # nothing to run for this seed (all reused)
     [[ -e $BLK/$c ]] && return 1
     mkdir -p "$PIL"; mkdir "$d" 2>/dev/null || return 2          # another loop is piloting it
     local one=${ids%%,*} ten; ten=$(tr , '\n' <<< "$ids" | head -10 | paste -sd,)
