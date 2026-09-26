@@ -169,7 +169,9 @@ def main():
                 with ctx.Pool(a.workers, maxtasksperchild=4) as pool:
                     for r in tqdm(pool.imap_unordered(run_shard, jobs), total=len(jobs), desc=dst.stem):
                         res.update(r)
-                pickle.dump(res, open(dst, "wb"))
+                tmp = dst.with_suffix(".tmp")
+                pickle.dump(res, open(tmp, "wb"))
+                tmp.rename(dst)  # finished pkls are checkpoints: a rerun skips them
                 rec = dict(variant=variant, planner=planner, traffic=traffic, n=len(res), sec=round(time.time() - t0, 1))
                 ev_log.write(json.dumps(rec) + "\n"); ev_log.flush()
                 print(rec, flush=True)
