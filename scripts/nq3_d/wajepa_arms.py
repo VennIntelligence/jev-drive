@@ -86,7 +86,62 @@ def flow(model, E: dict, ego: torch.Tensor, hist: torch.Tensor) -> torch.Tensor:
     return ad.inference_output(model, traj)
 
 
-def run(model, img, arms: dict, idx, amp: bool, workers: int, separate: bool = False) -> np.ndarray:
+@torch.no_grad()
+def flow_batched(model, E: dict, ego: torch.Tensor, hist: torch.Tensor, A: int) -> torch.Tensor:
+    """flow() for B samples x A arms in one pass (rows arm-major: arm a, sample b at a * B + b). Every separate call
+    re-seeds the generator, so every sample and arm starts from the same noise: it is drawn once at batch size 1, exactly
+    as a batch-1 call draws it, and broadcast. Only the batch size of the predictor differs from separate calls."""
+    ad = model.driving_condition_adapter
+    p = next(model.predictor.parameters())
+    b = ad.prepare_batch({"ego_status": ego, "history_trajectory": hist}, dtype=p.dtype, device=p.device)
+    dc = ad.inference_conditions(b)
+    ctx0, dev, B = E["ctx"], E["dev"], E["bsz"]
+    n = A * B
+    ctx = ctx0.repeat(A, *([1] * (ctx0.ndim - 1)))
+    cti = E["cti"].repeat(A, *([1] * (E["cti"].ndim - 1)))
+    fcs = model._future_mask_condition(n, device=dev, dtype=ctx.dtype)
+    gen, sdev = model._make_inference_generator(dev)
+    scene = model._randn_for_inference((1, model.predictor.num_scene_tokens, model.scene_projector.scene_dim), device=dev,
+                                       dtype=ctx.dtype, generator=gen, sample_device=sdev) * model.flow_inference_noise_scale
+    traj = ad.initial_inference_trajectory(model, 1, device=dev, dtype=ctx.dtype, generator=gen, sample_device=sdev)
+    scene, traj = scene.expand(n, *scene.shape[1:]).contiguous(), traj.expand(n, *traj.shape[1:]).contiguous()
+    gc = dc.select(torch.arange(n, device=dev))
+    ti = ad.prepare_inference_inputs(model, gc, dtype=ctx.dtype, device=dev)
+    steps = max(model.flow_num_inference_steps, 1)
+    dt = 1.0 / float(steps)
+    for step in range(steps):
+        t_value = min(float(step) / float(steps), 1.0 - 1e-4)
+        t_cont = torch.full((n,), t_value, device=dev, dtype=ctx.dtype)
+        ti["noisy_trajectory"] = traj
+        pred_scene, pred_traj = model.predictor(context_scene=ctx, context_token_indices=cti, noisy_future_scene=scene,
+                                                future_condition_scene=fcs, t_cont=t_cont, trajectory_inputs=ti)
+        denom = (1.0 - t_cont).clamp_min(1e-3)
+        scene = scene + dt * (pred_scene - scene) / denom.view(-1, 1, 1)
+        traj = traj + dt * (pred_traj - traj) / denom.view(-1, 1, 1)
+    return ad.inference_output(model, traj)
+
+
+def run_batched(model, img, arms: dict, idx, amp: bool, workers: int, bs: int) -> np.ndarray:
+    from tqdm import tqdm
+    A = len(arms["names"])
+    out = np.zeros((A, len(idx), 8, 3), np.float32)
+    dl = torch.utils.data.DataLoader(Imgs(img, idx), batch_size=bs, num_workers=workers, pin_memory=True,
+                                     prefetch_factor=4 if workers else None)
+    j0 = 0
+    for h, i in tqdm(dl, desc="wajepa-arms", unit="batch", mininterval=30):
+        h, i = h.cuda(non_blocking=True), i.numpy()
+        ego = torch.cat([torch.cat([ego_status(e) for e in arms["ego8"][a, i]]) for a in range(A)]).cuda()
+        hist = torch.from_numpy(arms["hist"][:, i].reshape(-1, 4, 3).astype(np.float32)).cuda()
+        with torch.autocast("cuda", dtype=torch.bfloat16, enabled=amp):
+            y = flow_batched(model, encode(model, h), ego, hist, A)
+        out[:, j0:j0 + len(i)] = y.float().cpu().numpy().reshape(A, len(i), 8, 3)
+        j0 += len(i)
+    return out
+
+
+def run(model, img, arms: dict, idx, amp: bool, workers: int, separate: bool = False, bs: int = 0) -> np.ndarray:
+    if bs:
+        return run_batched(model, img, arms, idx, amp, workers, bs)
     """(A, len(idx), 8, 3). separate=True: one full predict_trajectory call per arm (the reference path)."""
     from tqdm import tqdm
     A = len(arms["names"])
@@ -120,6 +175,7 @@ def main():
     ap.add_argument("--check", type=int, default=0, help="first N requests: reuse path vs separate calls, timings")
     ap.add_argument("--shard", type=int, nargs=2, default=(0, 1))
     ap.add_argument("--chunk", type=int, default=256)
+    ap.add_argument("--bs", type=int, default=0, help="> 0: B samples x all arms per predictor pass (flow_batched)")
     a = ap.parse_args()
     torch.backends.cudnn.benchmark = False
     with np.load(a.request) as f:
@@ -139,6 +195,13 @@ def main():
         res = {"n": int(a.check), "arms": int(len(arms["names"])), "amp": amp,
                "max_abs_diff_m": float(np.abs(got - ref)[..., :2].max()), "bitwise_equal": bool((got == ref).all()),
                "s_per_sample_separate": (t1 - t0) / a.check, "s_per_sample_reuse": (t2 - t1) / a.check}
+        if a.bs:
+            t3 = time.time()
+            bat = run(model, img, arms, idx, amp, a.workers, bs=a.bs)
+            d = np.linalg.norm(bat[..., :2] - ref[..., :2], axis=-1)
+            res.update({"batched_bs": a.bs, "batched_max_abs_diff_m": float(np.abs(bat - ref)[..., :2].max()),
+                        "batched_mean_disp_m": float(d.mean()), "batched_p99_disp_m": float(np.percentile(d, 99)),
+                        "s_per_sample_batched": (time.time() - t3) / a.check})
         print(json.dumps(res, indent=1))
         if a.out:
             Path(a.out).write_text(json.dumps(res, indent=1))
@@ -150,7 +213,7 @@ def main():
     for c0 in range(0, len(idx), a.chunk):
         f = part / f"{c0:07d}.npz"
         if not f.exists():
-            np.savez(part / "tmp.npz", traj=run(model, img, arms, idx[c0:c0 + a.chunk], amp, a.workers))
+            np.savez(part / "tmp.npz", traj=run(model, img, arms, idx[c0:c0 + a.chunk], amp, a.workers, bs=a.bs))
             os.replace(part / "tmp.npz", f)
         res.append(np.load(f)["traj"])
     traj = np.concatenate(res, 1)
