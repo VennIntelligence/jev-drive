@@ -192,6 +192,27 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (4) **AUC 选择的行**：g₃ 要在训练行上补跑 lead 头，WOD t4 全量要跑约 55 万流帧（约 2 h 卡），所以按 sequence / log 抽 10%（`numpy` rng 0）：WOD 203 / 2 037 个 sequence、13 531 帧；navtrain 119 / 1 192 个 log、12 690 token。
   三个 gate 都在这同一批行上算 AUC（对 (2) 的标签）；g₁ 的 OOF 只在这批行上做（按 sequence / log 5 折，L1 固定为主拟合选出的那个），g₂ 的 OOF 取 (3) 的 5 折。这改掉 08:40 (4) 里「g₁ 5 折 OOF 覆盖全部训练行」的写法，只缩行、不改量。
   (5) 同一个 gate 乘 M-C 与 student 两种 Δ；选择与 Δ 无关，每个数据集 × 模型各选一次，主判 Cinque。
+- 2026-09-26 08:52 CST [G0] **真实数据上的 embedding 操作化**（main (4) 交给 G0 的三处；写于任何 G0 数字之前，此前只看过下面的几何核对，没算过任何 Δ 或指标）。G1 / G2 / G3b 的 student 一律沿用；读取用 `jevdrive.real_g0.load_embed(<set>)`。
+  除下面三处替换外，与 E5 同一段逻辑（`elicit_e5._embed_group` 的走廊筛选与排序原样搬进 `real_g0._embed_frames`）：检测 score > 0.25、三类（pedestrian / cyclist / vehicle）、`lift_ok`、|d| ≤ 4 m、0 < s ≤ 40 m、按 s 取前 8 个，每个 7 维 + mask 位，三路合并不去重。
+  (1) **走廊：路线中心线 → ego 历史圆弧**。WOD / NAVSIM / I3 都没有路线；agent 推理时合法的输入里，最接近「自车接下来要走的路」而又不依赖任何模型或拟合的是自车历史。定义：过当前原点、与当前朝向相切、并经过自车 1 s 前位置 (x₁, y₁)（当前帧坐标）的圆，
+  κ = 2y₁ / (x₁² + y₁²)，1 s 内位移 < 2 m 时取直线，|κ| ≤ 0.1 m⁻¹（R ≥ 10 m）；弧长 60 m，按 `_route_path` 同样的方式构造（车辆中心原点、从第一个在原点前方的点起）。
+  不用 prior 的预测路径：那会让 e(x) 随模型与拟合变（Cinque / Lebowski 各一套），而且 WOD train / navtrain 上没有样本外的 prior 预测；不用 logged 未来：非法。
+  **几何核对（描述，不看任何 Δ）**：在 P5 v1 BA 的 E5 检测上把路线走廊换成圆弧，46 703 行里 embedding 逐位相同 61.8%（obs 行 69.0%），「有行人」标记一致 99.5%，路线走廊里有行人的行 94.6% 在圆弧走廊里仍有；
+  WOD val 上圆弧对 logged 5 s 路径（延长到 60 m，oracle，只作尺度参照）逐位相同 66.6%，行人标记一致 96.5%。差别集中在弯道上的车辆排序，行人几乎不受影响。
+  (2) **相机与地面**：每帧用自己的标定平地抬升（`fusion_q4.lift` 原样）。WOD：逐序列三路标定（`op_calib*.json` 的 1 / 2 / 3），与 P5 rig 逐项相同，原点后轴、地面 z = 0（与 P5、Q2b 相同），检测 x 加 `REAR_AXLE_X` 移到车辆中心（E5 原样）。
+  NAVSIM：逐 token 当前帧 CAM_F0 / L0 / R0 的 K、Brown 畸变、sensor2ego（lidar2ego 为单位阵）；**地面 z = −0.36 m**：NAVSIM 的原点是后轴、在车轮中心高度而不在路面上，navtrain 上 5–30 m 的 GT 车辆框底面中位数 −0.36 m（15 万个框；navtest −0.37），
+  按 z = 0 抬升时行人被系统性拉近（射程比中位 0.94 / 0.87）；改后 navtest 上检测到的行人对最近 GT 行人的距离中位 0–10 m 0.75 m、10–20 m 1.9 m、20–40 m 5.9 m。x 同样加 `REAR_AXLE_X`。
+  I3：HUGSIM 的 ego 就是前相机、高于路面 `ground_param.pkl` 的相机高度（1.49–2.2 m），相机外参 = meta 的 `c2front`（含 cam_rect），无畸变；原点移到车辆中心 = 前相机后方 1.73 m（nuScenes rig 的 CAM_FRONT 到后轴）再加 `REAR_AXLE_X`。
+  插入车辆对最近的抬升车辆检测：0–10 m 中位 1.5 m、10–20 m 2.2 m、20–40 m 6.3 m（接地点是车尾而不是车心，远处是平地假设的误差，与第 45 条「召回缺口在 BEV 放置」同一件事）。
+  (3) **框高**：E5 的「框高 / 图高」换成「框高 / 焦距 fᵥ × (P5 rig 的 fᵥ / H = 1.032)」，同一物体在同一距离上在任何相机里给同一个数；在 P5 与 WOD（fᵥ 1112 vs 1113.5）上与 E5 的定义逐位相差 < 0.2%，NAVSIM（fᵥ 1545、H 1080）与 I3（fᵥ 626–772、H 450）上才有差别。
+  **帧集的 embedding 统计**（描述）：走廊内至少一个检测的帧 WOD val 66.5%、navtest 64.5%、I3 63.8%（E5 的 P5 是 81.6%）；有行人的帧 7.0% / 7.3% / 1.4%（P5 5.7%）。
+  **G0 的口径**（照 E1 逐列，写死）：Δ = 5 个 fold student 的平均（每个 fold 用自己的 CARLA 训练行统计量，与 E1 主读数同）；WOD 另报一个用 WOD train（共享帧集 137 533 帧）统计量标准化的描述版，只描述。
+  prior：WOD 用第 40 条 (iii) 的 train 训 `ridge_late`，NAVSIM 用 navtrain 训的 `ridge_late`（`runs/navsim_zs/heads/20260925-232810`），都与 E1 相同；Δ 加法、NAVSIM 上取 0.5 … 4.0 s 八点、heading 不动，均与 E1 相同。
+  τ = 该 student 自己在 P5 null 上的 τ（E5 run `flip_rates.csv` 里 `E5 <arm> s<seed> [<model>]` 的 `tau_model`）。WOD 读数 = `elicit_e1.readouts` 原样（19 663 帧，rater 478）；NAVSIM = 官方 devkit（v1.1 出 PDMS、main @ 0a380a9 出 EPDMS，与 E1 同），
+  打分名 `g0_<arm>_s<seed>_<model>_plus_student`，与已存的 `heads_ridge_late_<model>_temporal` 配对、token bootstrap 10 000 次（E1 的代码），分组 = E1 的 `nav_scopes`（全部、走廊内有行人 / cyclist 的 897、其余、直行）。navhard 不在 G0 登记里，不做。
+  **判格的实现**：NAVSIM 的「主指标」= PDMS（EPDMS 并列报，不进判格）。每个 模型 × arm × seed 单独判：**有害** = WOD 全部 rater 帧 RFS Δ CI 整体 < 0，或 navtest 全部 token PDMS Δ CI 整体 < 0，或 WOD straight_yaw 激活率 > 7%，或 NAVSIM 直行 token 激活率 > 7%；
+  **有用** = 不有害，且 WOD Pedestrians RFS Δ 的 CI 下端 > 0 或 NAVSIM 行人组 PDMS Δ 的 CI 下端 > 0；**无害但没用** = 不有害、不有用，且主指标的全部分组 Δ（WOD 全部 + 5 个 cluster 的 RFS，NAVSIM 4 组的 PDMS）CI 都跨零；其余记「三格都不沾」照实写。ADE 与 EPDMS 只描述。
+  一个 arm 的总判格 = 三个 seed 一致时的那一格，否则写「随 seed 变」并列出；主判 Cinque，Lebowski 复现。
 
 ## 结果
 
