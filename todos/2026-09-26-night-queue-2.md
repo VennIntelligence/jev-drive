@@ -244,6 +244,8 @@
   恢复所需：打分约 1–1.5 h（视核数），devkit 约 1 h，N4 fit 约 20 min 与之并行。
 - 2026-09-26 11:38 [B] 已停：seed 1 / 2 打分停在 259 / 400、154 / 400 个 chunk（进程已杀，在途 chunk 重算）；seed 0 的 12 个 devkit job 在停之前全部打完；
   N4 fit 在 GPU 1 上 11:06 起跑、12 min 没出第一个 fold（box 负载 300+，CPU 端 eigh 被挤），11:18 手动停掉，恢复后整段重跑。box 上已没有 B 的进程。恢复命令同 11:08 条。
+- 2026-09-26 12:28 [B] 恢复（box 12:25 重启后，main 分配：GPU 4 与 G2 / C 共用，打分 + devkit 合计 ≤ 24 个 worker）：`S1_CPUS=64-75 S2_CPUS=160-171 scripts/night2_b_resume.sh 4`。
+  seed 1 / 2 打分各 12 个进程（续跑 141 / 246 个 chunk，估计约 2 h），N4 fit 在 GPU 4。记下的 PID（只杀这些）：打分 `elicit_e6_score.py` 1984（s1）/ 2007（s2），外层脚本 1919 / 1958；N4 fit 2010。
 
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
