@@ -236,6 +236,7 @@ def collect() -> tuple[pd.DataFrame, dict, dict]:
     preds["TFv6 waypoint"] = wp
     tsf = np.full((len(t), 20, 2), np.nan, np.float32)
     tsf[..., 0] = ts[:, None] * (0.25 * np.arange(1, 21))[None]
+    tsf[..., 1] = np.where(np.isnan(ts), np.nan, 0.0)[:, None]      # no lateral channel: Delta_lat = 0, never a flip
     preds["TFv6 target speed"] = tsf
     notes["TFv6 target speed"] = "longitudinal only (route + target speed channel): stop substitution"
     if proc("nq3_p5heads.npz").exists():
