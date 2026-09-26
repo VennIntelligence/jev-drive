@@ -47,7 +47,8 @@ def _p6_rows():
     return t6, np.load(proc("past.npy"))[at]
 
 
-def heads(rl):
+def heads(rl, models=MODELS, folds=None, out: Path | None = None):
+    """`models` / `folds` / `out` restrict and redirect the run for the subset check before the batch."""
     from sklearn.model_selection import GroupShuffleSplit
     from . import elicit_e5 as E5, elicit_i3 as I, night2_n3 as N3, night2_n4 as N4, nq3_feats as NF
     from . import navsim_heads as H, p5_exam as E, p5_openpilot, p5_pairs as P, planner, reactivity_mc as MC, traj
@@ -101,9 +102,11 @@ def heads(rl):
         s_ = (X - mu) / sd
         return (s_ if mask is None else torch.where(mask, X, s_)) / np.sqrt(X.shape[1])
 
-    for m in MODELS:
+    MODELS_ = models
+    folds = list(folds) if folds is not None else list(range(E.K_FOLDS))
+    for m in MODELS_:
         Xop = torch.as_tensor(np.r_[op[f"op-{m} temporal"], op6[f"op-{m} temporal"]], device=dev)
-        for f in range(E.K_FOLDS):
+        for f in folds:
             o = MC.fit_fold(f, fold_a, ta, F, Ego, Xop, Qa, pr_ip, pr_im, pr_group, rl, m, arms=("pair",))
             ev = obs_rows[fold[obs_rows] == f]
             for arm, key in (("M-C pair", f"M-C pair [{m}]"), ("prior", f"prior [{m}]")):
@@ -130,11 +133,11 @@ def heads(rl):
         torch.cuda.empty_cache()
     # cls_late: night2_n3.p5cls (seed 0) with the P6 rows in place of I3's
     seed = 0
-    Axy_sum = {m: np.zeros((n6, 20, 2)) for m in MODELS}
+    Axy_sum = {m: np.zeros((n6, 20, 2)) for m in MODELS_}
     ref_cls = np.load(data_dir() / P5CLS)
     seq = ta.base_id.to_numpy().astype(str)
     futa = np.r_[fut, np.zeros((n6, 20, 2), np.float32)]
-    for f in range(E.K_FOLDS):
+    for f in folds:
         tr = np.flatnonzero((role == "train") & (fold_a != f))
         ev = obs_rows[fold[obs_rows] == f]
         a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=seed).split(tr, groups=seq[tr]))
@@ -151,7 +154,7 @@ def heads(rl):
         for k in range(5):
             Wk, _ = planner.ce_solve(Xe, tgt, tr[inner != k], [lam_e], H.K)
             off[tr[inner == k]] = planner.linear_apply(Wk, Xe, tr[inner == k])[0]
-        for m in MODELS:
+        for m in MODELS_:
             Xf = planner.standardize(torch.as_tensor(np.r_[op[f"op-{m} temporal"], op6[f"op-{m} temporal"]], device=dev), tr)
             lam_l = N3._pick_cls(Xf, tgt, fit_r, sel_r, Axy, futa, off)
             Wl, _ = planner.ce_solve(Xf, tgt, tr, [lam_l], H.K, offset=off)
@@ -163,17 +166,18 @@ def heads(rl):
             del Xf, Wl
         del Xe, We, off
         torch.cuda.empty_cache()
-    for m in MODELS:
+    for m in MODELS_:
         preds[f"cls_late [{m}]"] = Axy_sum[m]
     ck = pd.DataFrame(checks)
     ck.to_csv(rl.dir / "head_checks.csv", index=False)
     rl.log.info("head checks (max |diff| vs stored P5 runs)\n%s", ck.groupby(["model", "arm"]).max_abs_diff.max().to_string())
-    out = {k: v.astype(np.float32) for k, v in preds.items()}
-    for k in list(out):
+    out_path = out
+    res = {k: v.astype(np.float32) for k, v in preds.items()}
+    for k in list(res):
         if k.startswith("M-C"):
-            out[k][~hasq] = np.nan                   # no Qwen features on the negotiation / mirror frames
-    np.savez_compressed(proc("nq3_p5heads.npz"), frame_name=t6.frame_name.to_numpy(), **out)
-    return out
+            res[k][~hasq] = np.nan                   # no Qwen features on the negotiation / mirror frames
+    np.savez_compressed(Path(out_path) if out_path else proc("nq3_p5heads.npz"), frame_name=t6.frame_name.to_numpy(), **res)
+    return res
 
 
 # ---------------------------------------------------------------- collect
