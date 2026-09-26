@@ -414,7 +414,7 @@ def select(rl, g1_oof_run: str, g1_nav_run: str, g2_run: str) -> pd.DataFrame:
     r = pd.Series(np.arange(len(df)), index=waymo.frame_names(df)).reindex(names).astype(int).to_numpy()
     v_ego = np.linalg.norm(past[r, -1, 2:4], axis=1)
     for m in MODELS:
-        z = np.load(data_dir() / g1_oof_run / f"g1_wod_{m}_oof.npz")
+        z = np.load(data_dir() / g1_oof_run / f"g1_wod_{m}_oof.npz", allow_pickle=True)
         g1v = pd.Series(z["gate"], index=z["frame_name"].astype(str)).reindex(names).to_numpy()
         parts = [np.load(f) for f in sorted((data_dir() / "processed/drive_backbones/op_lead_g1sel" / m).glob("*.npz"))
                  if ".tmp" not in f.name]
@@ -430,7 +430,7 @@ def select(rl, g1_oof_run: str, g1_nav_run: str, g2_run: str) -> pd.DataFrame:
     vel = {e["token"]: np.linalg.norm(e["vel"][-1]) for e in Z.load_index("navtrain", slim=True)}
     v_ego = np.array([vel[t] for t in tok])
     for m in MODELS:
-        z = np.load(data_dir() / g1_nav_run / f"g1_nav_{m}_oof.npz")
+        z = np.load(data_dir() / g1_nav_run / f"g1_nav_{m}_oof.npz", allow_pickle=True)
         g1v = pd.Series(z["gate"], index=z["tokens"]).reindex(tok).to_numpy()
         ld = np.load(data_dir() / "runs/navsim_zs/openpilot/navtrain" / f"{m}_temporal_lead.npz")
         li = pd.Series(np.arange(len(ld["tokens"])), index=ld["tokens"]).reindex(tok).astype(int).to_numpy()
