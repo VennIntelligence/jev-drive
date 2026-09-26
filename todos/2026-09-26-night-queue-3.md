@@ -137,6 +137,21 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - 规模：**约 1 200 个世界**（首版写 2 000，按时间表缩：v0 实测每世界约 0.12 server·h → 约 140 server·h，18 个 server 约 8 h；60 MB / 世界 → 约 75 GB）。
 - 门照 v0：每类 x₁₀ bypass ≥ 0.70 才进主读数；x₀₀ ≥ 95% 帧 |d| < 0.3 m；t_div ≥ t_vis。
 
+- 2026-09-26 17:15 CST [A] Q3 的操作性选择（写于任何 v1 世界生成之前；代码 `scripts/nq3_clips.py`、`jevdrive/nq3_a.py pool / build-v1`、`scripts/b2d_hooks.py p6_shift`）：
+  1. **路线池**：「Bench2Drive 全量」在 box 上只有 220 集（每类 5 条，v0 已用）与 0.0.4 val 集（每类 3–12 条），凑不够每类 20 条；Bench2Drive 自己的 clip 是从 Leaderboard 2.0 的长路线切出来的，
+     所以按同一方式补：`routes_training.xml`（Town12）与 `routes_validation.xml`（Town13）里 9 类障碍的每个 scenario 实例切一条 clip（离线用同一 OpenDRIVE 地图、1 m GlobalRoutePlanner 复现 leaderboard 的稠密路线，
+     触发点前 12 m 到后 122 m，关键点每 2 m——Bench2Drive 114 条障碍 clip 的中位数；scenario 元素原样；天气取长路线在触发点处的插值，定值）。共切 1 419 条；
+     同一 scenario 实例（同 town 触发点 5 m 内）只留一条，优先级 v0 > 0.0.4 val > 长路线 clip（去掉 909 条重复），池里 624 条。
+  2. **选路与 town 留出**：测试组 = **Town13 的全部路线**。每类新加 **16 条**（4 条 Town13 + 12 条其余 town），每组内先取 0.0.4 val clip、再取长路线 clip，组内按 seed 0 随机序；v0 的 45 条全部保留（其中 Town13 8 条）。
+     合计 189 条路线，每类 21 条（≥ 20），测试组 44 条 = 23%（登记区间 20–30%）。v1 的新路线只跑 seed 0（路线数优先于 seed 数），世界类型与 v0 的 seed 0 相同：1W 4 个（x₁₀、x₀₀、天气 null、放置 null），2W 7 个（再加 x₁₁、x₀₁、镜像）。
+  3. **录制窗口**：`pass_stop_s` 从 8 s 改为 15 s（ego 越过全部曾在前方的 scenario actor 10 m 后再录 15 s；「障碍后 15 s」），其余照 v0（触发后 40 s、静止 40 s、70 s 封顶）。
+  4. **recovery**：每条 1W 路线（新 64 条 + v0 20 条）造 6 个世界：出生点横移 +1.5 / +1.0 / −1.0 / −1.5 m（左正，沿路线首点的右向量）、x_center（不移）与 x_center 的天气 null；障碍一律按 x₀₀ 藏起并删登记（「无障碍」），
+     路线本身不动（PDM-Lite 要自己回线），TM seed 0，只录出生后 10 s。世界 id = (路线 id + 5 000 000) × 100 + 码 × 10。
+     **smoke（10 个世界，门 ≥ 0.80）**：v0 的 1W 路线按 id 排序、每类取第一条再加 Accident 第二条，共 5 条，奇数条取 (+1.0, −1.5)、偶数条取 (+1.5, −1.0)；判据量 = 出生后 3 s（60 tick）内 |d| 第一次 < 0.3 m 的世界比例。不过就不生成 recovery 世界、写日志。
+  5. **规模**：主世界 816（1W 64 × 4 + 2W 80 × 7）+ recovery 504（smoke 过的话）= 1 320，比「约 1 200」多 10%，差在 recovery 也造在 v0 的 20 条 1W 路线上；recovery 世界排在主世界之后，时间不够先砍 v0 路线上的 recovery。
+  6. **E1 在 v1 上**：新世界没有原记录可比，「全量核」做不到；改为 v1 主世界随机 5%（seed 0，41 个）用不挂 shadow / BLUE / Waymo 渲染的配置（`agent_e1`）各重开一次，expert 逐 tick 比，门同 v0 重录（位置 < 1 cm、航向 < 0.1°）；不同的比例 > 10% 就在 decisions 里把 v1 标成「recorder 改仿真」。
+  7. **门**（照 v0，写死）：每类 x₁₀ bypass ≥ 0.70 才进主读数；x₀₀ 在 x₁₀ 正绕时 ≥ 95% 帧 |d| < 0.3 m；t_div ≥ t_vis；放置 null 主口径改「与同 case x₀₀ 同模式」，登记门槛 0.90 照报。
+
 ### Q4. 真实数据上压住 Δ（第 53 条的翻案条件）
 
 - **Q4a 训练时的真实帧零约束**：M-C 的 pair-Δ 训练加 λ·‖Δ(x)‖²，x = navtrain 与 WOD train 里走廊 ±4 m、30 m 内没有行人 / cyclist / 切入车的帧（GT 框只用于筛选），λ ∈ {0.1, 1, 10}，按 navtrain 留出 10% 的 PDMS 选 λ（先于任何 navtest 数字）。

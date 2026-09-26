@@ -178,7 +178,7 @@ def pool() -> pd.DataFrame:
     for town, g in df.groupby("town"):
         xy = g[["tx", "ty"]].to_numpy()
         for j, i in enumerate(g.index):
-            if j and (np.hypot(*(xy[:j] - xy[j]).T) < 5.0)[keep[g.index[:j]]].any():
+            if j and df.source[i] != "v0" and (np.hypot(*(xy[:j] - xy[j]).T) < 5.0)[keep[g.index[:j]]].any():
                 keep[i] = False
     log.info("route pool: %d candidates, %d dropped as the same scenario instance", len(df), int((~keep).sum()))
     return df[keep].reset_index(drop=True)
