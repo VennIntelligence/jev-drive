@@ -328,9 +328,14 @@ def gates(rl):
     fr, X3 = G0.load_embed("i3")
     at = pd.Series(np.arange(len(fr)), index=fr.frame_id.to_numpy()).reindex(i3["t"].frame_name).astype(int).to_numpy()
     res = {"p5_keys": names, "i3_keys": i3["t"].frame_name.to_numpy()}
+    from .real_g1 import Probe
+
+    class _U(pickle.Unpickler):             # G1 pickled the probe from `python -m jevdrive.real_g1`, i.e. as __main__.Probe
+        def find_class(self, mod, name):
+            return Probe if name == "Probe" else super().find_class(mod, name)
     for ds in ("nav", "wod"):
         with open(data_dir() / G2_RUN / f"g2_{ds}.pkl", "rb") as f:
-            pr = pickle.load(f)
+            pr = _U(f).load()
         res[f"p5_g2{ds}"], res[f"i3_g2{ds}"] = pr(Ea), pr(X3[at])
         rl.log.info(f"g2 {ds} probe: P5 mean {res[f'p5_g2{ds}'].mean():.3f} (> 0.5: {(res[f'p5_g2{ds}'] > 0.5).mean():.3f}), "
                     f"I3 mean {res[f'i3_g2{ds}'].mean():.3f}")
