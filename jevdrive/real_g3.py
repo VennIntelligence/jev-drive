@@ -12,6 +12,11 @@ deviation-log entries [G3], written before any G3 number).
         only: E2's measured rates, the 0.8 s SAM scan's corridor frames and their event structure)
   mc    E2's training and readouts (elicit_e2_train.run, unchanged) with label (c) present; seed s >= 1 only replaces
         the inner lambda split (reactivity_mc._inner_splits: logs permuted with default_rng(s), then 3 folds)
+  edit-list / edit-embed   t0 images (3 cameras) of every side of the edit pairs -> YOLO (scripts/real_g3_detect.sh,
+        E5 / G0 config) -> G0's real-data embedding (real_g0: ego-history arc corridor, per-token calibration)
+  p5-embed   the same real-data embedding on the P5 v1 BA rows from E5's stored detections (for R2)
+  student    E5's student recipe on the navtrain edit pairs (labels (c) judged, (a) described; arms A / B; seeds 0-2),
+        R1 / R2 / R3 exactly as E2
 
 Run on the box: P5_SET=carla_p5v1_ba python -m jevdrive.real_g3 g3a
 """
@@ -275,16 +280,272 @@ def mc(rl, seed: str = "0"):
     E2T.run(rl)
 
 
+# ---------------------------------------------------------------- G3b (3): the student on the edit pairs
+
+SIDES = ("plus", "minus", "placebo")
+MC_G3_RUN = "runs/real-data-transfer/g3mc-s0"          # the seed-0 M-C retrain (latest run dir inside), teacher of arm B
+
+
+def g3_root(*p) -> Path:
+    d = data_dir() / "processed" / "real_transfer" / "g3"
+    d.mkdir(parents=True, exist_ok=True)
+    return d.joinpath(*p)
+
+
+def edit_list(rl):
+    """Detector list: the current frame of CAM_F0 / L0 / R0 on every side (x+ original, x- / placebo edited where
+    elicit_e2 edited them), keys '<side>:<token>|<cam>' with G0's camera names."""
+    from . import navsim_qwen as NQ
+    from .real_g0 import CAMS
+    rows = []
+    for sd in SIDES:
+        q = pd.read_parquet(NQ.root(f"e2nav_{sd}", "index.parquet"))
+        for tok, files in zip(q.token, q.files):
+            for i, cam in enumerate(CAMS):                  # files: CAM_F0 / L0 / R0 x 4 frames, oldest first
+                assert ("CAM_F0", "CAM_L0", "CAM_R0")[i] in files[4 * i + 3], files[4 * i + 3]
+                rows.append({"key": f"{sd}:{tok}|{cam}", "path": files[4 * i + 3], "shard": "", "off": 0, "len": 0})
+    li = pd.DataFrame(rows)
+    li.to_parquet(g3_root("edit_images.parquet"), index=False)
+    rl.info(f"{len(li)} images: " + str(li.key.str.split(":").str[0].value_counts().to_dict()))
+
+
+def _embed(d: pd.DataFrame, n: int, cal: dict, keys: pd.DataFrame, p1: np.ndarray, x_off: np.ndarray) -> np.ndarray:
+    """real_g0.embed_set's computation for detections d (columns of fusion_q4.load_dets + fi, cam) of n frames."""
+    from multiprocessing import Pool
+    from . import fusion_q4 as Q
+    from .common import n_cpus
+    from .real_g0 import CAMS, CLS3, K_DET, _embed_frames, arc_path, p5_f_over_h
+    ck = np.empty(len(d), object)
+    for cam in CAMS:
+        m = (d.cam == cam).to_numpy()
+        ck[m] = keys[cam].to_numpy()[d.fi.to_numpy()[m]]
+    d = Q.lift_dets(d, ck, cal)
+    fv = np.array([cal[k]["intrinsic"][1] for k in ck])
+    arr = np.c_[d.prompt.map({c: i for i, c in enumerate(CLS3)}).to_numpy(), np.zeros((len(d), 2)),
+                d.gx.to_numpy() + x_off[d.fi.to_numpy()], d.gy.to_numpy(), (d.y1 - d.y0).to_numpy() / fv * p5_f_over_h(),
+                d.score.to_numpy()]
+    rows_ok = np.flatnonzero(d.lift_ok.to_numpy())
+    by = pd.Series(rows_ok).groupby(d.fi.to_numpy()[rows_ok]).indices
+    jobs = [[(i, arc_path(p1[i], x_off[i]), arr[rows_ok[by[i]]] if i in by else np.zeros((0, 7)),
+              rows_ok[by[i]] if i in by else np.zeros(0, np.int64)) for i in range(a, min(a + 256, n))]
+            for a in range(0, n, 256)]
+    E = np.zeros((n, K_DET * 8), np.float32)
+    with Pool(min(48, n_cpus())) as p:
+        for part in p.imap_unordered(_embed_frames, jobs):
+            for i, e, *_ in part:
+                E[i] = e
+    return E
+
+
+def edit_embed(rl):
+    from . import fusion_q4 as Q
+    from .real_g0 import CLS3, SCORE, geometry
+    d = Q.load_dets(g3_root("dets"), SCORE)
+    d = d[d.prompt.isin(CLS3)].reset_index(drop=True)
+    li = pd.read_parquet(g3_root("edit_images.parquet"))
+    k = li.key.str.split(":", n=1)
+    toks = pd.unique(k.str[1].str.split("|").str[0])
+    fr = pd.DataFrame({"frame_id": toks})
+    cal, keys, p1, x_off = geometry("navtrain", fr)
+    at = pd.Series(np.arange(len(fr)), index=toks)
+    kd = d.key.str.split(":", n=1)
+    d["side"], d["frame_id"], d["cam"] = kd.str[0], kd.str[1].str.split("|").str[0], kd.str[1].str.split("|").str[1]
+    for sd in SIDES:
+        ds = d[d.side == sd].reset_index(drop=True)
+        ds["fi"] = at[ds.frame_id].to_numpy()
+        E = _embed(ds, len(fr), cal, keys, p1, x_off)
+        mine = pd.unique(k.str[1][k.str[0] == sd].str.split("|").str[0])
+        E = E[at[mine].to_numpy()]
+        np.savez(g3_root(f"edit_embed_{sd}.npz"), tokens=mine, embed=E)
+        m = E.reshape(len(E), 8, 8)
+        rl.info(f"{sd}: {len(E)} tokens, rows with any {float((m[:, :, 7].sum(1) > 0).mean()):.3f}, "
+                f"mean in corridor {float(m[:, :, 7].sum(1).mean()):.2f}, rows with ped {float((m[:, :, 0].sum(1) > 0).mean()):.3f}")
+
+
+def p5_embed(rl):
+    """G0's real-data embedding on the P5 v1 BA index rows: E5's detections, the P5 rig, the ego-history arc."""
+    from . import fusion_q4 as Q, p5_exam as E, waymo as W
+    from .real_g0 import CAMS, CLS3, SCORE
+    assert os.environ.get("P5_SET") == "carla_p5v1_ba"
+    t, past, *_ = E.load()
+    wp, _ = W.load_ego()
+    assert past.shape[1:] == wp.shape[1:], (past.shape, wp.shape)      # the WOD past layout, 0.25 s steps
+    subs = sorted(p for p in (data_dir() / "processed/elicit_e5/dets").iterdir() if p.is_dir())
+    d = pd.concat([Q.load_dets(s_, SCORE) for s_ in subs], ignore_index=True)
+    d = d[d.prompt.isin(CLS3)].reset_index(drop=True)
+    kd = d.key.str.split("|")
+    d["cam"] = kd.str[1]
+    d["fi"] = pd.Series(np.arange(len(t)), index=t.frame_name)[kd.str[0]].to_numpy()
+    cal = Q.p5_calib()
+    keys = pd.DataFrame({cam: [cam] * len(t) for cam in CAMS})
+    p1 = past[:, -5, :2].astype(np.float64)                             # 1 s ago (real_g0.ARC_T), like WOD
+    Em = _embed(d, len(t), cal, keys, p1, np.full(len(t), Q.REAR_AXLE_X))
+    np.save(g3_root("p5_embed.npy"), Em)
+    m = Em.reshape(len(Em), 8, 8)
+    e5 = np.load(data_dir() / "processed/elicit_e5/embed.npy").reshape(len(Em), 8, 8)
+    rl.info(f"P5 rows {len(Em)}: rows with any {float((m[:, :, 7].sum(1) > 0).mean()):.3f} (E5 route corridor "
+            f"{float((e5[:, :, 7].sum(1) > 0).mean()):.3f}), with ped {float((m[:, :, 0].sum(1) > 0).mean()):.3f} "
+            f"(E5 {float((e5[:, :, 0].sum(1) > 0).mean()):.3f})")
+
+
+def _mlp32(d_in: int, seed: int):
+    """elicit_e5._mlp with the navtrain 16-point output (32)."""
+    import torch
+    from .elicit_e5 import HIDDEN
+    torch.manual_seed(seed)
+    net = torch.nn.Sequential(torch.nn.Linear(d_in, HIDDEN), torch.nn.GELU(), torch.nn.Linear(HIDDEN, HIDDEN),
+                              torch.nn.GELU(), torch.nn.Linear(HIDDEN, 32))
+    torch.nn.init.zeros_(net[-1].weight)
+    torch.nn.init.zeros_(net[-1].bias)
+    return net.cuda()
+
+
+def _train(X, ip, im, R, tr, grp, teacher, rows_t, seed: int, rl, tag: str):
+    """elicit_e5.train_student with the 32-d output and the teacher term on the given rows (pair sides only)."""
+    import copy
+    import torch
+    from sklearn.model_selection import GroupShuffleSplit
+    from .elicit_e5 import EVAL_EVERY, LR, MAX_STEPS, PATIENCE, TEACHER_W, WD
+    a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=0).split(ip, groups=grp))
+    net = _mlp32(X.shape[1], seed)
+    opt = torch.optim.AdamW(net.parameters(), lr=LR, weight_decay=WD)
+    if teacher is not None:
+        rows_t = np.intersect1d(rows_t, np.r_[ip[a], im[a]])
+    best, best_step, best_state = np.inf, 0, copy.deepcopy(net.state_dict())
+    for step in range(1, MAX_STEPS + 1):
+        net.train()
+        loss = ((net(X[ip[a]]) - net(X[im[a]]) - R[a]) ** 2).sum(1).mean() + (net(X[tr]) ** 2).sum(1).mean()
+        if teacher is not None:
+            loss = loss + TEACHER_W * ((net(X[rows_t]) - teacher[rows_t]) ** 2).sum(1).mean()
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        opt.step()
+        if step % EVAL_EVERY == 0:
+            net.eval()
+            with torch.no_grad():
+                v = float(((net(X[ip[b]]) - net(X[im[b]]) - R[b]) ** 2).sum(1).mean())
+            if v < best:
+                best, best_step, best_state = v, step, copy.deepcopy(net.state_dict())
+            elif step - best_step >= PATIENCE:
+                break
+    net.load_state_dict(best_state)
+    net.eval()
+    rl.event("g3_student_fit", tag=tag, seed=seed, best_step=best_step, stop_step=step, holdout_mse=best)
+    rl.tb.add_scalar(f"holdout_mse/{tag}", best, seed) if rl.tb else None
+    return net
+
+
+def student(rl):
+    import glob
+    import pickle
+    import torch
+    from . import elicit_e1 as E1, elicit_e2_train as E2T, navsim_heads as NH, p5_exam as E, p5_openpilot
+    from . import reactivity_mc as MC
+    from .real_g0 import load_embed
+    assert os.environ.get("P5_SET") == "carla_p5v1_ba"
+    d = E2T.load_data(rl)
+    assert "c" in d["dy"], "label (c) missing: run scripts/real_g3_pdm.sh first"
+    toks, pl, lg = d["tokens"], d["pl_tokens"], d["log"]
+    ipl = np.array([list(toks).index(x) for x in pl])
+    emb = {}
+    for sd, tk in (("plus", toks), ("minus", toks), ("placebo", pl)):
+        z = np.load(g3_root(f"edit_embed_{sd}.npz"), allow_pickle=True)
+        emb[sd] = z["embed"][pd.Series(np.arange(len(z["tokens"])), index=z["tokens"])[tk].to_numpy()]
+    mc_run = sorted(glob.glob(str(data_dir() / MC_G3_RUN / "*/heads.pkl")))[-1]
+    teach_heads = pickle.load(open(mc_run, "rb"))
+    rl.info(f"teacher heads: {mc_run}")
+    # mu rows: E2's prior training rows of navtrain (stage one, complete future) with G0's embedding
+    tr = NH.load("navtrain", True)
+    keep = (tr["stage"] == "one") & ~np.isnan(tr["fut"]).any((1, 2))
+    fr_nav, emb_nav = load_embed("navtrain")
+    at = pd.Series(np.arange(len(fr_nav)), index=fr_nav.frame_id)
+    has = keep & np.isin(tr["tokens"], fr_nav.frame_id.to_numpy())
+    rl.info(f"mu rows: {int(has.sum())} of {int(keep.sum())} navtrain training rows have G0's embedding")
+    Emu = emb_nav[at[tr["tokens"][has]].to_numpy()]
+    # foreign rows: P5 v1 BA (R2) and WOD val (R3)
+    t, past, fut, obs, null, pairs = E.load()
+    ref = np.load(data_dir() / E1.MC_RUN / "preds_obs.npz")
+    rows = ref["rows"]
+    Ep5 = np.load(g3_root("p5_embed.npy"))[rows]
+    w = E1.wod_frames()
+    fr_w, emb_w = load_embed("wod_val")
+    aw = pd.Series(np.arange(len(fr_w)), index=fr_w.frame_id)
+    Ew = emb_w[aw[w["frame_name"]].to_numpy()]
+    mask_col = np.arange(64) % 8 == 7
+    n = len(t)
+    preds, r1_rows, nets_meta = {}, {}, []
+    for m in MODELS:
+        Opmu = tr[m][has]
+        mo, so = Opmu.mean(0), np.where(Opmu.std(0) > 1e-6, Opmu.std(0), 1.0)
+        me, se = Emu.mean(0), np.where(Emu.std(0) > 1e-6, Emu.std(0), 1.0)
+        me[mask_col], se[mask_col] = 0.0, 1.0
+
+        def z(op, e):
+            return np.concatenate([(op - mo) / so / np.sqrt(op.shape[1]), (e - me) / se / np.sqrt(e.shape[1])], 1).astype(np.float32)
+        Xs = [z(Opmu, Emu)] + [z(d[f"op {m} {sd}"], emb[sd]) for sd in SIDES]
+        off = np.cumsum([0] + [len(x) for x in Xs])
+        X = torch.as_tensor(np.concatenate(Xs), device="cuda")
+        i_mu, i_p, i_m, i_pl = (np.arange(off[k], off[k + 1]) for k in range(4))
+        ip, im = np.r_[i_p, i_p[ipl]], np.r_[i_m, i_pl]
+        grp = np.r_[lg, lg[ipl]]
+        Xp5 = torch.as_tensor(z(p5_openpilot.load(t, (m,), sub="op_streams_vis")[f"op-{m} temporal"][rows], Ep5), device="cuda")
+        Xw = torch.as_tensor(z(w[f"op {m}"], Ew), device="cuda")
+        pp, pm, ppl = d[f"prior {m} plus"], d[f"prior {m} minus"], d[f"prior {m} placebo"]
+        R0 = (-(pp[ipl] - ppl)).reshape(len(ipl), -1)
+        preds[f"prior [{m}]"] = np.full((n, 20, 2), np.nan, np.float32)
+        preds[f"prior [{m}]"][rows] = ref[f"prior [{m}]"]
+        for lab in ("c", "a"):
+            R = torch.as_tensor(np.concatenate([(d["dy"][lab] - (pp - pm)).reshape(len(toks), -1), R0]), dtype=torch.float32, device="cuda")
+            h = teach_heads[m][f"E2 pair ({lab})"]
+            tch = np.zeros((len(X), 32), np.float32)
+            for sd, ix in (("plus", i_p), ("minus", i_m), ("placebo", i_pl)):
+                tch[ix] = E2T.apply(h, {s_: d[f"{s_} {sd}"] for s_ in h["streams"]})[:, :16].reshape(len(ix), -1)
+            tch = torch.as_tensor(tch, device="cuda")
+            for arm in ("A", "B"):
+                for seed in (0, 1, 2):
+                    tag = f"G3 student {arm} ({lab}) s{seed}"
+                    net = _train(X, ip, im, R, i_mu, grp, tch if arm == "B" else None, np.r_[i_p, i_m, i_pl], seed, rl, f"{m} {tag}")
+                    with torch.no_grad():
+                        f16 = lambda Z_: E2T.extend20(net(Z_).reshape(-1, 16, 2).cpu().numpy())  # noqa: E731
+                        r1_rows[f"{tag} [{m}]"] = [f16(X[ix]) for ix in (i_p, i_m, i_pl)]
+                        v = np.full((n, 20, 2), np.nan, np.float32)
+                        v[rows] = ref[f"prior [{m}]"] + f16(Xp5)
+                        preds[f"{tag} [{m}]"] = v
+                        preds_w = f16(Xw)
+                    nets_meta.append((m, tag, preds_w))
+        del X, Xp5, Xw
+        torch.cuda.empty_cache()
+    t1 = E2T.r1(d, r1_rows)
+    t1.to_csv(rl.dir / "r1_magnitude.csv", index=False)
+    rl.info("R1\n" + t1[t1.pairs == "all"].to_markdown(index=False, floatfmt=".3f"))
+    oo, nn = E.deltas(obs, null, t, preds)
+    res = E.exam(oo, nn, pairs, list(preds))
+    crit = pd.concat([MC.criteria(res, [k for k in preds if k.endswith(f"[{m}]")], f"prior [{m}]") for m in MODELS])
+    res["flips"].to_csv(rl.dir / "p5_flip_rates.csv", index=False)
+    crit.to_csv(rl.dir / "p5_criteria.csv", index=False)
+    rl.info("R2 P5 v1 BA\n" + crit.to_markdown(index=False, floatfmt=".3f"))
+    tabs, acts = [], []
+    for m, tag, delta in nets_meta:
+        tau = res["taus"][f"{tag} [{m}]"]
+        tab, act = E1.readouts(w, w[f"prior {m}"], delta, tau)
+        tabs.append(tab.assign(model=m, arm=tag))
+        acts.append(act.assign(model=m, arm=tag, tau=tau))
+    pd.concat(tabs).to_csv(rl.dir / "wod_deltas.csv", index=False)
+    pd.concat(acts).to_csv(rl.dir / "wod_activation.csv", index=False)
+    rl.info("R3 WOD done")
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc"))
+    ap.add_argument("step", choices=("g3a", "g3c", "pdm-prep", "pdm-read", "mc", "edit-list", "edit-embed", "p5-embed", "student"))
     ap.add_argument("args", nargs="*")
     a = ap.parse_args()
     name = a.step if a.step.startswith("g3") else "g3" + a.step.replace("-", "") + (f"-s{a.args[0]}" if a.step == "mc" else "")
     rl = RunLog("real-data-transfer", name)
-    {"g3a": g3a, "g3c": g3c, "pdm-prep": pdm_prep, "pdm-read": pdm_read, "mc": mc}[a.step](rl, *a.args)
+    {"g3a": g3a, "g3c": g3c, "pdm-prep": pdm_prep, "pdm-read": pdm_read, "mc": mc, "edit-list": edit_list,
+     "edit-embed": edit_embed, "p5-embed": p5_embed, "student": student}[a.step](rl, *a.args)
     rl.close()
 
 
