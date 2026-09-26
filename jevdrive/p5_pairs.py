@@ -166,6 +166,12 @@ def load_world(adir: Path) -> dict:
     f2k = dict(zip(pose.frame, pose.k))
     frames = pd.read_json(adir / "frames.jsonl", lines=True)
     frames["k"] = (frames.t / TICK).round().astype(int)
+    # The recorder snapshots actors/cameras before writing pose. A final interrupted tick can therefore
+    # have a recorded camera timestamp but no pose; use that timestamp without inventing an ego pose.
+    for frame, k in zip(frames.frame, frames.k):
+        if frame in f2k and f2k[frame] != k:
+            raise ValueError(f"pose/camera tick mismatch in {adir}: frame {frame}")
+        f2k.setdefault(frame, k)
     tf = pd.read_json(adir / "tfv6.jsonl", lines=True) if (adir / "tfv6.jsonl").stat().st_size else pd.DataFrame()
     if len(tf):
         tf["k"] = tf.frame.map(f2k)
