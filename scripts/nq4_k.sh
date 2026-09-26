@@ -56,11 +56,13 @@ guard() {  # guard <pid> <estimate h> <log>: wait for a background job, kill it 
 # ---------------------------------------------------------------- K2: Cinque lead outputs on P5 v1 BA and P6 v0
 lead_set() {  # lead_set <dir> <estimate h> <set>: 4 single-model processes (GPU 6 is time-sliced among ~10 processes;
     # each openpilot process spin-waits at 100% of one core, so 4 processes = the 4 cores and 4 shares of the card)
-    local d=$1 est=$2 set=$3 pids=() s
-    wait_gpu 8000
-    for s in 0 1 2 3; do
+    local d=$1 est=$2 set=$3 pids=() s nsh
+    wait_gpu 3600
+    nsh=$(( ($(free_mb) - 1000) / 2600 )); (( nsh > 4 )) && nsh=4; (( nsh < 1 )) && nsh=1   # ~2.6 GB per process
+    log "lead $set: $nsh processes (GPU $GPU free $(free_mb) MB)"
+    for (( s = 0; s < nsh; s++ )); do
         P5_SET=$set CUDA_VISIBLE_DEVICES=$GPU setsid taskset -c "$K_CPUS" "$PY_OP" scripts/p5_openpilot.py --models cinque \
-            --arrays temporal lead lead_prob --out-sub op_streams_lead --shard $s/4 --workers 1 >> "$d/log-$set-$s.txt" 2>&1 &
+            --arrays temporal lead lead_prob --out-sub op_streams_lead --shard $s/$nsh --workers 1 >> "$d/log-$set-$s.txt" 2>&1 &
         pids+=($!); echo "${pids[*]}" > "$d/pids"
     done
     for s in "${pids[@]}"; do guard "$s" "$est" "$d/log-$set-0.txt" || return 1; done
