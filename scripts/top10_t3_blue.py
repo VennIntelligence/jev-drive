@@ -53,9 +53,16 @@ def make_agent(A, torch, cache=True):
     import hydra
     inst, load = hydra.utils.instantiate, torch.load
 
-    def cached_inst(*a, **k):
-        if "model" not in _CACHE:
+    depth = [0]
+
+    def cached_inst(*a, **k):                      # only the outermost call (the model); inner ones build submodules
+        if depth[0] or "model" in _CACHE:
+            return _CACHE["model"] if not depth[0] else inst(*a, **k)
+        depth[0] += 1
+        try:
             _CACHE["model"] = inst(*a, **k)
+        finally:
+            depth[0] -= 1
         return _CACHE["model"]
 
     def cached_load(f, *a, **k):
