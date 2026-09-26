@@ -42,17 +42,32 @@ def run_shard(job):
     variant_dir, planner, traffic, map_ids, partners = job
     import torch
     torch.set_num_threads(1)
-    os.environ["DRIVE_BINARIES_DATA_ROOT"] = str(Path(variant_dir).parent)
-    sys.argv = ["eval", "--eval.split", Path(variant_dir).name, *PLANNER_ARGS[planner], *TRAFFIC_ARGS[traffic]]
+    os.environ["DRIVE_BINARIES_DATA_ROOT"] = str(variant_dir)
+    sys.argv = ["eval", "--eval.split", "validation_interactive", *PLANNER_ARGS[planner], *TRAFFIC_ARGS[traffic]]
     for k in ("planner", "traffic"):
         for t in ("ppo", "conditioned_normal", "conditioned_caut", "conditioned_aggr"):
             sys.argv += [f"--{k}.{t}.device", "cpu"]
-    from pufferlib.planning.registry import load_eval_config, create_ego_planner, create_traffic_controller
-    from pufferlib.evaluation import Evaluator, EvaluatorConfig
+    import pufferlib.ocean.drive.drive as D
+
+    # Neural planners build a throwaway Drive env per map only to read obs/action shapes; that env probes
+    # hundreds of maps (7-8 s of the ~9 s per episode). Cache it per kwargs and make close() a no-op.
+    orig_drive, cache = D.Drive, {}
+
+    def drive_factory(*args, **kw):
+        if kw.get("max_controlled_agents") == 1 and "map_id" not in kw:
+            key = repr(sorted(kw.items()))
+            if key not in cache:
+                env = orig_drive(*args, **kw)
+                env.close = lambda: None
+                cache[key] = env
+            return cache[key]
+        return orig_drive(*args, **kw)
+
+    D.Drive = drive_factory
+    from pufferlib.evaluation import Evaluator
     import pufferlib.ocean.benchmark.eval as E
 
     logging.disable(logging.CRITICAL)
-    config = load_eval_config()
     rec = {}
 
     class RecEvaluator(Evaluator):
@@ -91,7 +106,7 @@ def run_shard(job):
             captured["ev"] = self
 
     E.Evaluator = Capture
-    tmp_out = Path(variant_dir).parent / "_evaltmp"
+    tmp_out = Path(variant_dir) / "_evaltmp"
     sys.argv += ["--output-dir", str(tmp_out), "--map-ids", ",".join(map(str, map_ids))]
     null = open(os.devnull, "w")
     so, se = sys.stdout, sys.stderr
@@ -120,6 +135,8 @@ def main():
     ap.add_argument("--workers", type=int, default=60)
     ap.add_argument("--shard", type=int, default=8)
     a = ap.parse_args()
+    for k in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        os.environ[k] = "1"
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     ev_log = open(out / "events.jsonl", "a")

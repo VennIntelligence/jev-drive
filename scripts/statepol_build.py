@@ -2,7 +2,7 @@
 
 Input: the enriched GPUDrive JSONs and manifest.csv written by BehaviorBench's
 data_utils/womd/extract_interactive_benchmark.py (one row per (scenario, ego track)).
-Output: one split dir per variant under --out, each with map_XXXXXX.bin + manifest.csv,
+Output: one data root per variant under --out, each with <SPLIT>/map_XXXXXX.bin + manifest.csv,
 plus meta.pkl describing every episode (see todos/2026-09-26-state-space-policies.md):
 
   base       original scene
@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 
 T0, T = 10, 91
+SPLIT = "validation_interactive"  # PufferDrive only accepts known split names; one data root per variant
 NULL_DIST, OBS_LEN, OBS_W, SHIFT = 30.0, 4.8, 2.0, 1.5
 
 
@@ -62,7 +63,7 @@ def build(args):
     from pufferlib.ocean.drive.drive import save_map_binary
     meta, variants = r
     for v, (scene, e) in variants.items():
-        d = Path(out_dir) / v
+        d = Path(out_dir) / v / SPLIT
         d.mkdir(parents=True, exist_ok=True)
         save_map_binary(scene, str(d / f"tmp_{rng_seed:06d}.bin"), rng_seed)
     meta["ego_entity"] = {v: e for v, (_, e) in variants.items()}
@@ -155,12 +156,12 @@ def main():
         meta["episode"] = ep_id
         for v, ego in meta["ego_entity"].items():
             k = len(metas[v])
-            (out / v / f"tmp_{meta['job']:06d}.bin").rename(out / v / f"map_{k:06d}.bin")
+            (out / v / SPLIT / f"tmp_{meta['job']:06d}.bin").rename(out / v / SPLIT / f"map_{k:06d}.bin")
             metas[v].append(dict(meta, map_id=k, ego_entity=ego))
-    for p in out.glob("*/tmp_*.bin"):
+    for p in out.glob(f"*/{SPLIT}/tmp_*.bin"):
         p.unlink()
     for v, ms in metas.items():
-        with open(out / v / "manifest.csv", "w", newline="") as f:
+        with open(out / v / SPLIT / "manifest.csv", "w", newline="") as f:
             w = csv.DictWriter(f, ["new_filename", "ego_agent_idx", "episode", "scenario_id"])
             w.writeheader()
             for m in ms:
