@@ -273,6 +273,7 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   没有被杀的作业（11:15 之后没有再启动任何作业）。**剩下的**：G2 的 16 次 NAVSIM PDMS 打分（4 726 个接近车辆 token，每次约 12 min / 8 线程，当前负载下 16 次约 1 h）、再跑配对表、汇总表、图与文字。恢复命令（box 上 repo 根目录）：
   `R=runs/real-data-transfer; T=$DATA_DIR/$R/g2-transfer/20260926-111136; scripts/tmux_run.sh g2-score env NAVSIM_THREADS=8 TOKENS_FILE=$T/tokens.txt scripts/real_g1_score.sh $T/score_jobs_registered.txt 4`，
   完成后 `python -m jevdrive.real_g2 nav-table --transfer-run $R/g2-transfer/20260926-111136 --g1c-run $R/g2-g1c-nav-write/20260926-105928`（`score_jobs_registered.txt` = transfer 写出的 18 行去掉未登记的 student B s0 两行）。
+- 2026-09-26 12:28 CST（box 时钟）[G2] box 12:25 重启完成（7 卡、175 核），按 11:22 的命令恢复 G2 的 16 次 PDMS 打分；并行度从 4 改成 3（3 × 8 = 24 线程，守 main 分配的 24 线程上限），其余不变。
 
 ## 结果
 
