@@ -304,3 +304,18 @@ def replay_rules(ticks: list) -> dict:
         n += 1
         bad += not (thr == k["rule_out"][0] and brk == k["rule_out"][1])
     return {"ticks": n, "different": bad}
+
+
+# ================================================================ entry point
+
+def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("step", choices=("split",))
+    a = ap.parse_args()
+    if a.step == "split":
+        split()
+
+
+if __name__ == "__main__":
+    main()
