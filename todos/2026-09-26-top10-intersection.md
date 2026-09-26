@@ -335,6 +335,8 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   scripts/tmux_run.sh t2-nav-drivor env GPU=<g> CPUS=<4 核> PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True scripts/top10_t2/navsim_repro.sh drivor dataloader.params.batch_size=8 dataloader.params.num_workers=4
   ```
   续跑需要的时间（按空一点的卡估）：补渲剩余约 20 min；P5 两个模型约 1 h；I3 约 40 min；NAVSIM 约 2.5 h（与前面并行）；WOD / nuScenes 另见子执行员。
+  **11:39 更新**：I3 补渲在停之前已全部完成：65 / 65 个场景、68 728 个视图、5.8 GB（`processed/hugsim_pairs_10hz/`）；核对：前三路 5 Hz 帧 **26 136 / 26 136 张与原 JPEG 逐字节相同**（= 原集合全部 JPEG），
+  判据 max |Δ| = 0 通过。续跑命令里的第 1 步不再需要。
   **事故**：NAVSIM 子执行员 11:06:53 清理自己的进程时用了 `pgrep -f run_pdm_score_multi_gpu`，误杀了 T1 的 `t1-nav-sd`（SparseDriveV2 navtest，37%，exit 143）；已报 main 转告 T1。
 
 ## 结果
