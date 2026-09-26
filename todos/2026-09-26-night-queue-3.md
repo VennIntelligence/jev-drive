@@ -74,6 +74,28 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   (3) 输出 `processed/top10_exam/p6/<model>.npz`（frame_name、raw、grid (n, 20, 2)，rear axle ego 系，x 前 y 左，米）。grid 沿用各自 P5 的转换：T1 `spline_grid`（4 s 之后按末两点直线外推），
   T2 `grid(traj)`（不平移，4 s 之后 NaN）。规则 7 只读 2 s / 3 s，两种约定对判卷没有影响。
 
+- 2026-09-26 17:05 CST [A] 开工（执行员 A，lane A），分步估时（写于本 lane 任何数字之前）。资源：GPU 3、4、5，每卡 ≤ 6 个 CARLA server（server index 600–689，每卡一段 30 个），
+  核段 `taskset -c 0-59`（每卡一条链 20 核），OMP / MKL / OpenBLAS = 2、NUMBA = 3，`--client-threads 8`，新 server 前 `pids.current` > 17 000 就等（`B2D_PIDS_WAIT`）。
+  链式脚本 `scripts/nq3_a.sh`（tmux `jev:nq3-a`），状态 `runs/nq3/a/`。
+  | 步 | 内容 | 估墙钟 | 资源 |
+  |:--|:--|:--|:--|
+  | A0 | 代码：新 recorder（PDM-Lite 驾驶照 P6 v0；TFv6 / BridgeDrive 各在独立进程里 shadow，不挡仿真；BLUE 相机）、B2D clip 切割、v1 路线池与世界表、recovery 出生横移 hook、链式脚本 | 16:40–18:00 | Mac + box CPU |
+  | A1 | smoke + profiling + 等价检查：6 个 v0 世界（E1 对原记录、BridgeDrive 进程外 shadow）、2 个世界的全挂载版对 v0 recorder 原样版（同卡同并发，前后吞吐、TFv6 读数对原记录） | 18:00–19:00 | GPU 3–5 小量 |
+  | A2 | v0 重录 522 个世界（见下条），各录到考卷最后引用 tick | 约 1.5–2 h（约 30 server·h：setup 约 150 s / 世界占大头） | GPU 3–5 × 6 server |
+  | A3 | Q3：recovery smoke 10 个世界 + v1 世界表（与 A2 尾巴重叠） | 0.3 h | 1 卡 |
+  | A4 | v1 批量约 1 300 个世界（主世界约 800 + recovery 约 500，recovery 只录 10 s） | 约 5 h（按 A1 实测再估，超 2 倍停） | GPU 3–5 × 6 server |
+  | A5 | v1 的 E1 抽查（5% 世界无 shadow 重开）、BLUE / SimLingo 离线推理（v0 重录与 A4 重叠跑）、Q1 CARLA-rig 考生判卷（lane C 的 `nq3_p6` 判卷原样） | 03:00 起 1–2 h | A 交卡后 ≤ 10 核 |
+- 2026-09-26 17:05 CST [A] Q1 v0 重录的操作性选择（写于任何重录数字之前；代码 `scripts/nq3_recorder.py`、`scripts/nq3_shadow.py`、`jevdrive/nq3_a.py need-v0`）：
+  1. **世界清单**：lane C 的考卷帧（`processed/carla_p6/nq3_exam_frames.parquet`，规则 7 的五个 reading）引用到的全部世界，**522 个**（x₁₀ / x₀₀ 各 132、x₁₁ 75、x₀₁ 75、天气 null 45、放置 null 39、镜像 24）。
+     比 todo 的「约 400」多：negotiation 与镜像的对照世界是 x₀₁（lane C 16:39 的口径），镜像题也要读，所以都录。每个世界录到它被引用的最后一个 tick k 再加 2 个 tick（T3 的 `need_k`，因果：k 时刻的输出只看 k 以前），共 8.9 万 tick（全长 18.8 万）。
+  2. **recorder**：驾驶照 P6 v0（PDM-Lite 作 inner agent，同一条 numpy 随机流，同一组 hook，`record_props`、`pass_stop_s 8`）。BridgeDrive 的 shadow 跑作者代码的方式与 T3 逐字相同（相机 tick 跑完整 `run_step`、其余 tick 跑 `BaseAgent.tick`、
+     Kalman 喂 expert 上一 tick 的控制、每次前向前 `torch.manual_seed(0)`，lead `a41d116`、同一 checkpoint 与配置），只是放在**独立进程**里：recorder 每 tick 把作者 rig 的数据经管道发过去就继续，模型落后多少都不挡仿真；
+     作者 `_init` 取的 hero / world 句柄换成替身（视频输出全关，唯一还在用的是 town 名，由 recorder 发过去；别的访问会报错并计入 shadow 错误）。BLUE 相机与 T3 相同（rgb_0 1024×512 FOV 110，PNG 无损，GNSS / IMU / 速度每 tick）。
+  3. **与 v0 相同的仿真**：v0 的三路 Waymo 相机与可见性分割相机照样按原顺序生成（后面生成的 actor 拿到与 v0 相同的 id），但设成不渲染（`sensor_tick` 1e4 s）、不存；BLUE 相机只在相机 tick 渲染（`sensor_tick 0.2`）。
+     E1 照 T3：重录的 expert 对 v0 原记录逐 tick 比到 need_k（位置差 < 1 cm、航向差 < 0.1°、相机 tick 网格相同），不同的世界整体剔除并报数。
+  4. **shadow 等价（规则 8）**：smoke 上 (a) 进程外 BridgeDrive 的读数与 T3 进程内版同样的方式比（LiDAR / radar 每次运行不同，门槛沿用 T3 13:25 更正：差不大于同配置重录两次的差）；
+     (b) 全挂载版（TFv6 与 BridgeDrive 两个进程 + Waymo 相机）上 TFv6 的读数对 v0 原记录，同一门槛。不过就停。
+
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
 特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。
