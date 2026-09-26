@@ -257,13 +257,73 @@ def fit(seed: int, which, rl, priors=("cinque", "lebowski"), eigh: str = "cpu") 
     return {"seed": seed, "examinees": len(preds)}
 
 
+MC_STORED = "reactivity/mc-carla_p5v1_ba/20260925-233126"     # the stored M-C run on this set (seed 0)
+RESULTS = Path(__file__).resolve().parents[1] / "research/results/night2/N6"
+
+
+def _latest(pattern: str) -> Path:
+    import glob
+    from .common import data_dir
+    fs = sorted(glob.glob(str(data_dir() / "runs" / pattern)))
+    assert fs, pattern
+    return Path(fs[-1])
+
+
+def repro() -> "pd.DataFrame":
+    """The Qwen reference row against the stored M-C run: CPU-eigh seed 0 must be bit-identical; GPU-eigh seed 0 is
+    compared to the CPU one (float64 eigh on another device)."""
+    import pandas as pd
+    from .common import data_dir
+    st = data_dir() / "runs" / MC_STORED
+    cpu, gpu = _latest("night2/n6/fit-seed0/*"), _latest("night2/n6/fit-seed0-cuda/*")
+    zs, zc, zg = (np.load(d / "preds_obs.npz") for d in (st, cpu, gpu))
+    rows = []
+    for m in ("cinque", "lebowski"):
+        a, b = f"M-C pair qwen [{m}]", f"pair-Δ qwen L18_last [{m}]"
+        if b not in zc.files:
+            continue
+        cs = pd.read_csv(st / "criteria.csv").set_index("arm").loc[a]
+        cc = pd.read_csv(cpu / "criteria.csv").set_index("arm").loc[b]
+        rows.append({"prior": m, "stored_vs_cpu_max_abs_m": float(np.nanmax(np.abs(zs[a] - zc[b]))),
+                     "cpu_vs_gpu_max_abs_m": float(np.nanmax(np.abs(zc[b] - zg[b]))) if b in zg.files else np.nan,
+                     "ped_flip_stored": cs.ped_flip, "ped_flip_cpu": cc.ped_flip,
+                     "prior_stored_vs_cpu_max_abs_m": float(np.nanmax(np.abs(zs[f"prior [{m}]"] - zc[f"prior [{m}]"])))})
+    return pd.DataFrame(rows)
+
+
+def report() -> "pd.DataFrame":
+    """3-seed table from the GPU-eigh fits: per examinee and seed, pedestrian flip [CI], null false flip (oos), the
+    N6 criterion (CI low > null + 10 pp), cut-in flip and its delta against the prior."""
+    import pandas as pd
+    rows = []
+    for s in (0, 1, 2):
+        c = pd.read_csv(_latest(f"night2/n6/fit-seed{s}-cuda/*") / "criteria.csv")
+        rows.append(c.assign(seed=s))
+    c = pd.concat(rows, ignore_index=True)
+    c["e_layer"] = c.ped_lo > c.null_ff_oos + 0.10
+    long = c[["seed", "prior", "arm", "ped_reactive", "ped_flip", "ped_lo", "ped_hi", "null_ff_oos", "e_layer", "cutin_flip",
+              "cutin_delta_vs_prior", "cutin_lo", "cutin_hi"]]
+    g = long.groupby(["prior", "arm"], sort=False)
+    summ = g.agg(ped_s0=("ped_flip", "first"), ped_mean=("ped_flip", "mean"), ped_min=("ped_flip", "min"),
+                 ped_max=("ped_flip", "max"), ped_lo_min=("ped_lo", "min"), null_mean=("null_ff_oos", "mean"),
+                 null_max=("null_ff_oos", "max"), cutin_mean=("cutin_flip", "mean"),
+                 cutin_delta_mean=("cutin_delta_vs_prior", "mean"), seeds_pass=("e_layer", "sum"), n_seeds=("seed", "nunique")
+                 ).reset_index()
+    summ["verdict"] = np.where(summ.seeds_pass == summ.n_seeds, "E-layer signal",
+                               np.where(summ.seeds_pass == 0, "none", "unstable"))
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    long.to_csv(RESULTS / "criteria_seeds.csv", index=False, float_format="%.4f")
+    summ.to_csv(RESULTS / "summary.csv", index=False, float_format="%.4f")
+    return summ
+
+
 def main():
     import argparse
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("plan", "extract", "check", "finalize", "fit"))
+    ap.add_argument("step", choices=("plan", "extract", "check", "finalize", "fit", "report"))
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--workers", type=int, default=24)
@@ -286,6 +346,14 @@ def main():
         r = check()
     elif a.step == "finalize":
         r = finalize()
+    elif a.step == "report":
+        rp = repro()
+        RESULTS.mkdir(parents=True, exist_ok=True)
+        rp.to_csv(RESULTS / "qwen_reproduction.csv", index=False)
+        rl.info("reproduction\n" + rp.to_markdown(index=False))
+        sm = report()
+        rl.info("summary\n" + sm.to_markdown(index=False, floatfmt=".3f"))
+        r = {"rows": len(sm)}
     else:
         r = fit(a.seed, a.backbones.split(","), rl, tuple(a.priors.split(",")), a.eigh)
     rl.info(json.dumps(r, default=float))
