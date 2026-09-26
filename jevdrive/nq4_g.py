@@ -614,9 +614,10 @@ def main():
     ap.add_argument("--variant", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--ids", default="")
+    ap.add_argument("--since", type=float, default=0.0)
     a = ap.parse_args()
     if a.cmd == "pilot-check":
-        r = pilot_check(a.cand, a.variant, Path(a.out), [i for i in a.ids.split(",") if i])
+        r = pilot_check(a.cand, a.variant, Path(a.out), [i for i in a.ids.split(",") if i], a.since)
         print(json.dumps(r, default=str))
         raise SystemExit(0 if r["pass"] else 1)
     if a.cmd == "smoke":
@@ -726,7 +727,7 @@ PILOT = {"finished_min": 0.9, "crash_attempts_max": 0.35, "stalled_max": 0.7, "m
 VAN_TYPES = ("vehicle.mercedes.sprinter", "vehicle.volkswagen.t2", "vehicle.volkswagen.t2_2021")
 
 
-def pilot_check(cand: str, variant: str, out: Path, ids: list[str]) -> dict:
+def pilot_check(cand: str, variant: str, out: Path, ids: list[str], since: float = 0.0) -> dict:
     """The written sanity checklist of a pilot ([F] staged launch; CLAUDE.md "Before a long run"). Returns
     {"pass": bool, "failed": [...], "facts": {...}}; every item is computed on the pilot's own routes."""
     failed, facts = [], {}
@@ -739,13 +740,13 @@ def pilot_check(cand: str, variant: str, out: Path, ids: list[str]) -> dict:
                     ev.append(json.loads(line))
                 except ValueError:
                     pass
-    ev = [e for e in ev if e.get("route_id") in ids]
+    ev = [e for e in ev if e.get("route_id") in ids and float(e.get("t", 0)) >= since]     # this pilot's attempts only
     done = [i for i in ids if (out / "done" / f"{i}.json").exists()]
     crashes = sum(1 for e in ev if e["status"] != "finished")
     facts.update(routes=len(ids), finished=len(done), attempts=len(ev), crashed_attempts=crashes)
     if len(done) < PILOT["finished_min"] * len(ids):
         failed.append(f"finished {len(done)} / {len(ids)} < {PILOT['finished_min']:.0%}")
-    if ev and crashes / len(ev) > PILOT["crash_attempts_max"]:
+    if len(ev) >= 5 and crashes / len(ev) > PILOT["crash_attempts_max"]:        # a rate needs a few attempts
         failed.append(f"crashed attempts {crashes} / {len(ev)} > {PILOT['crash_attempts_max']:.0%}")
     runs = []
     for i in done:

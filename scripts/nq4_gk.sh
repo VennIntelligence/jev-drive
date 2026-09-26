@@ -352,7 +352,7 @@ pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 
     [[ -z $ids ]] && return 0                              # nothing to run for this seed (all reused)
     [[ -e $BLK/$c ]] && return 1
     mkdir -p "$PIL"; mkdir "$d" 2>/dev/null || return 2          # another loop is piloting it
-    local one=${ids%%,*} ten; ten=$(tr , '\n' <<< "$ids" | head -10 | paste -sd,)
+    local one=${ids%%,*} ten since; ten=$(tr , '\n' <<< "$ids" | head -10 | paste -sd,); since=$(date +%s)
     for st in 1 2; do
         local sel=$one; [[ $st == 2 ]] && sel=$ten
         log "pilot $c $v stage $st: $(n_ids "$sel") route(s) on GPUs $GPUS"
@@ -363,7 +363,7 @@ pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 
             sleep 120
         done
         srv_stop_gpus "$GPUS"
-        r=$(taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g pilot-check --cand "$c" --variant "$v" --out "$(arm_dir "$c" "$v" "$sd")" --ids "$sel" 2>> "$d/check.err")
+        r=$(taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g pilot-check --cand "$c" --variant "$v" --out "$(arm_dir "$c" "$v" "$sd")" --ids "$sel" --since "$since" 2>> "$d/check.err")
         echo "$r" > "$d/stage$st.json"
         if ! python3 -c "import json,sys; sys.exit(0 if json.loads(sys.argv[1])['pass'] else 1)" "$r" 2>/dev/null; then
             mkdir -p "$BLK"; echo "$r" > "$BLK/$c"
