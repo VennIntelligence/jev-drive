@@ -498,16 +498,17 @@ def run_nav_table(rl, transfer_run: str, g1c_run: str):
                 d = (a.reindex(chk_tok) - b.reindex(chk_tok)).abs()
                 checks.append({"model": m, "arm": name, "version": ver, "n_check": len(chk_tok), "n_scored": int(d.notna().sum()),
                                "max_abs_diff": float(d.max()), "n_scored_total": len(a)})
-        pairs = {f"G1c g3 x M-C {m}": (mc, prior), f"G1c g3 x const {m}": (cst, prior, prior),
-                 f"G1c g3 x const2d {m}": (c2d, prior, prior),
+        out.append(nav_paired({f"G1c g3 x M-C {m}": (mc, prior)}, gg))
+        # [G2] 11:20: the subset check holds for v1 PDMS only; subset EPDMS differs from full-run EPDMS -> PDMS only
+        pairs = {f"G1c g3 x const {m}": (cst, prior, prior), f"G1c g3 x const2d {m}": (c2d, prior, prior),
                  f"G1c M-C - const {m}": (mc, cst, prior), f"G1c M-C - const2d {m}": (mc, c2d, prior)}
-        out.append(nav_paired(pairs, gg))
+        out.append(nav_paired(pairs, gg, (("v1", "PDMS"),)))
         g2p = {f"G2 {h} s{s} {m}": (f"g2_{h.replace(' ', '')}_s{s}_{m}", prior)
                for h in ("M-C pair", "student A", "M-C hard", "M-C uniform") for s in SEEDS}
         out.append(nav_paired(g2p, {"vehicle_approach": None}, (("v1", "PDMS"),)))     # scored on those tokens only
     pd.DataFrame(checks).to_csv(rl.dir / "g1c_check.csv", index=False)
     log.info("G1c determinism check (g3 = 0 tokens vs the prior's stored scores)\n%s", pd.DataFrame(checks).to_markdown(index=False))
-    assert all(c["max_abs_diff"] == 0 for c in checks), "scores of unchanged tokens differ from the prior: score in full"
+    assert all(c["max_abs_diff"] == 0 for c in checks if c["version"] == "v1"), "PDMS of unchanged tokens differ: score in full"
     t = pd.concat(out)
     t.to_csv(rl.dir / "navsim_paired.csv", index=False)
     log.info("navtest\n%s", t.to_markdown(index=False, floatfmt=".2f"))
