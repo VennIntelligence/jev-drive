@@ -95,7 +95,7 @@ echo "$(date '+%F %T') cl10 $agent: gpu $gpu, $workers workers, server index $si
     | tee -a "$out/cl10.log"
 # shellcheck disable=SC2086
 exec taskset -c "${B_CPUS:-60-109}" "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py \
-    --routes "$B2D/leaderboard/data/bench2drive220.xml" "${sel[@]}" --out "$out" --workers "$workers" \
+    --routes "${CL10_ROUTES:-$B2D/leaderboard/data/bench2drive220.xml}" "${sel[@]}" --out "$out" --workers "$workers" \
     --server-index "$sidx" --index-span "${INDEX_SPAN:-$((2 * workers))}" --gpu-rank "$gpu" --tm-seed "$seed" \
     --python "$py" --agent "$ag" --agent-config "$cfg" --no-spectator --no-reap --client-threads 8 --max-attempts 3 \
     --stall-s 480 --route-timeout-s "${ROUTE_TIMEOUT_S:-10800}" ${RUN_FLAGS---fast-copy --cache-lights}
