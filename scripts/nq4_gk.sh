@@ -21,6 +21,8 @@
 # examinee has >= 5 finished routes). Projected total > $BUDGET_WH worker-hours (600) -> the todo's cut: first drop every
 # swap step, then keep shift only for tfv6 / bridgedrive / blue / mc. Each step stops at twice its estimate (ERROR).
 # Resources: GPUs 0-5 x <= 6 servers (index 300 + 30 g, lane B's blocks, free once lane B is done), cores 60-149.
+# Server index i binds RPC 2000 + 50 i and TM 8000 + 50 i = the RPC port of index i + 120: a smoke next to other lanes
+# needs an i with i, i + 120 and i - 120 all unused (100-179 while A uses 600-689 and B 300-479).
 # Only processes whose PIDs this script recorded are ever killed. Hand-offs: runs/nq4/gk/{STATUS.md,ERROR,DONE,events.jsonl}.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -160,9 +162,8 @@ kill_runs() {  # the runners, route processes and CARLA servers recorded under o
         p=$(cat "$f" 2>/dev/null) || continue
         tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }
     done
-    for f in "$out"/servers/carla-*.pid; do
-        p=$(cat "$f" 2>/dev/null) || continue
-        kill -0 "$p" 2>/dev/null || continue
+    for f in "$out"/servers/carla-*.pid; do       # the CarlaUE4.sh wrapper's process group: its shipping child survives
+        p=$(cat "$f" 2>/dev/null) || continue      # the wrapper when a runner dies by a signal
         pkill -P "$p" 2>/dev/null; kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null
     done
 }
