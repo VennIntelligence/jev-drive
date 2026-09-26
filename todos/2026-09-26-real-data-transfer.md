@@ -179,6 +179,19 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   用 `--seed 0` 显式重跑一次不能逐位复现（cls 头 GPU k-means / L-BFGS 非确定性，[SEEDS] 队列 01:31 已定性为 WOD cluster mean 差 0.00–0.05），
   实测差 0.015 / 0.051，在该范围内。按已有定性，判为已知噪声、不是新问题，不停，用 seed 0（源 run）+ seed 1 + seed 2 三点继续判定；
   `--seed 0` 重跑另列一行作噪声参照，不计入三点。三个 seed 的逐帧预测另按元素平均、走同一套代码算一遍，作为 ensemble 读数单独报告。
+- 2026-09-26 08:50 CST（box 时钟）[G1] g₂ 与 AUC 选择的操作化，写于 g₂ 的任何拟合、任何 AUC 与任何 G1 读数之前（embedding 按 [G0] 08:35 与 `real_g0.embed_set`，reader `real_g0.load_embed`）。
+  (1) **g₂ 的输入**：G0 的 64 维检测 embedding（历史弧走廊 ±4 m、≤ 40 m、k = 8），逐维按训练行标准化（std ≤ 1e-6 取 1）。
+  (2) **标签**。WOD：训练行 = G0 的 WOD train 帧集（`qwenvid_train_t4` 137 533 帧）。登记写「用 Q2b 的 SAM 检测当标签」，但 SAM 只跑过 val 的 20 237 帧（E3 (8) 已记），train 上没有，
+  所以改用 G0 的 YOLO 检测（score > 0.25、`lift_ok`）；走廊 = logged 5 s 路径延长到 30 m（`elicit_e3.extend`）、±1.5 m、0 < s ≤ 30 m，与 E3 (8) 和 E1 NAVSIM 分组同一走廊（不是 embedding 自己的历史弧走廊）。
+  行人或 cyclist 在走廊内 → 1；车辆：同一 sequence 的前一个 t4 帧（frame − 4，0.4 s 前）也在帧集里时，本帧走廊内最近车辆的距离比前一帧（它自己的走廊）最近车辆小 ≥ 0.2 m（接近 ≥ 0.5 m/s，对应 E3 的 −0.5 m/s）→ 1；没有前一帧时车辆项记 0。
+  **限定先写下**：WOD 的标签与 g₂ 的输入来自同一个检测器，g₂ 在 WOD 上的 AUC 会因此偏高；选择照登记不修正，另报一个不循环的描述：WOD val 上以 Q2b 的 SAM 检测按 E3 (8) 同一口径（score > 0.5，行人 / cyclist / 车辆在走廊内，单帧不要求接近）为标签，三个 gate 的 AUC，不进选择。
+  navtrain：GT，`elicit_e3.cause_flags_nav`（E1 NAVSIM 分组同一函数）的 in_pedestrian | in_bicycle | cause_vehicle（车辆接近速度 < −0.5 m/s）。
+  I3（登记写「GT actor 当标签」）：规则 expert 的冲突，x⁺ 帧且该对 reactive（|Δ_expert| > τ_exp）→ 1，x⁻、null 与非 reactive 的 x⁺ → 0。
+  (3) **probe 与 Platt**：`sklearn` LogisticRegression（L2），C ∈ {0.01, 0.1, 1, 10} 按 sequence / log / 场景分组 5 折的 OOF log-loss 选；Platt = 在所选 C 的 OOF logit 上拟一维 logistic；
+  最终 probe 在全部训练行上重拟，gate = Platt(最终 logit)。评测帧（WOD val 19 663、navtest）用最终 probe；I3 的帧既是训练行又是评测行，用按场景 5 折的 OOF 值经 Platt。
+  (4) **AUC 选择的行**：g₃ 要在训练行上补跑 lead 头，WOD t4 全量要跑约 55 万流帧（约 2 h 卡），所以按 sequence / log 抽 10%（`numpy` rng 0）：WOD 203 / 2 037 个 sequence、13 531 帧；navtrain 119 / 1 192 个 log、12 690 token。
+  三个 gate 都在这同一批行上算 AUC（对 (2) 的标签）；g₁ 的 OOF 只在这批行上做（按 sequence / log 5 折，L1 固定为主拟合选出的那个），g₂ 的 OOF 取 (3) 的 5 折。这改掉 08:40 (4) 里「g₁ 5 折 OOF 覆盖全部训练行」的写法，只缩行、不改量。
+  (5) 同一个 gate 乘 M-C 与 student 两种 Δ；选择与 Δ 无关，每个数据集 × 模型各选一次，主判 Cinque。
 
 ## 结果
 
