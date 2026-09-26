@@ -399,6 +399,28 @@ SparseDriveV2 就有 60% 的 token 换了轨迹，ZTRS 34%，平均 0.24–0.32 
 CARLA 配对上两者都没有（外观 + rig 双重分布外，按预登记标「domain 混杂」，不作能力结论）。所以 7.1 节「NAVSIM 顶部 4 分基本是配方」在这两个模型上的具体形态是：PDM 子分数头学到了一部分对车辆的反应，但这部分能力绑在 NAVSIM 的相机与速度分布上。
 推测（未验证）：ZTRS 比 SparseDriveV2 强的来源是 TTC / NC 子分数在奖励训练里被直接优化；验证办法是对 ZTRS 的 TTC / NC 头做消融，看 I3 翻转掉多少。
 
+
+### 8.2 T2：DrivoR + WA-JEPA（2026-09-26，**待定**）
+
+预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节、[T2] 条目与「结果 / T2」，小表 [results/top10-exams/](results/top10-exams/)（`t2_*`、`wod_*`、`nuscenes_*`、`navsim_*`）。
+DrivoR（DrivoR 系，NAVSIM / HUGSIM / WOD 多榜覆盖最广）是 scorer 式规划器：64 条学出来的候选轨迹 + learned PDM 子分数选一条；WA-JEPA（AFARI，navtest-v2 #1、HUGSIM 436 协议 #1）是 V-JEPA 2.1 视频世界模型 + flow matching 轨迹头，
+读 4 路相机 × 4 帧 0.5 s 历史。I3 为它们按 HUGSIM rig 补渲了 CAM_BACK 和 10 Hz（前三路与原帧逐字节相同）。
+
+| 卷 | DrivoR | WA-JEPA | 同卷参照 |
+|:--|:--|:--|:--|
+| NAVSIM 复现（各自评测路径原样） | navtest PDMS **93.69**（论文 93.7） | navtest EPDMS **91.71**（论文 91.7） | — |
+| I3 HUGSIM 车辆配对（真实外观） | 33.7% [27.0, 40.7]，null 5.3% → 有 | **66.1% [62.5, 69.7]**，null 6.3% → 有；非反应帧误翻 40% | openpilot `ridge_late`（零样本）70.0% |
+| P5 v1 BA 配对，纵向翻转（CARLA，缺后视） | 3.1% [0.6, 6.4]，null 5.7% → 没有 | 13.2% [8.1, 19.2]，null 5.5% → 弱（行人 7.6% 不过） | TFv6 waypoint 30.4%，M-C 双流 66.3% |
+| WOD val RFS，对 cv 的 Δ | −0.63 [−0.99, −0.28] | **+0.33 [+0.03, +0.63]** | Alpamayo +0.75、openpilot Cinque +0.90、`cls ego` +0.21 |
+| WOD ADE@5 s（s_ego 1–9 档），对 cv 的 Δ | +0.68 m [+0.37, +1.01] | −0.38 m [−0.61, −0.14] | Alpamayo −0.92、`cls ego` −0.77 |
+| nuScenes L2 均值，对 CV 的 Δ | −0.01 m [−0.08, +0.06] | **−0.30 m [−0.35, −0.24]** | openpilot Cinque +0.25 |
+
+**读法**。(1) 两个模型的榜分都能按作者的评测路径复现（DrivoR 差 −0.01 PDMS，WA-JEPA 差 +0.01 EPDMS），所以下面的差别不是复现问题。
+(2) **scorer 与表征驱动在我们的卷上分开了**：真实外观车辆配对上 WA-JEPA 的翻转是 DrivoR 的两倍、与零样本 openpilot 读出同量级；零样本开环上 WA-JEPA 在 WOD 和 nuScenes 都赢 CV，DrivoR 在 WOD 上输给 CV（静止起步、高速太慢，与 T1 的两个 scorer 模型同形）、nuScenes 上与 CV 持平。
+把 T1 合起来，三个 scorer 模型（SparseDriveV2 / DrivoR / ZTRS）在 I3 上是 24% / 34% / 46%，全部在零样本开环上输给或持平匀速外推；唯一一个表征驱动的多榜族在两类卷上都更好。这是第 35 条「NAVSIM 顶部是配方」在前 10 族上的第一个对照读数。
+(3) 限定：WA-JEPA 在 I3 非反应帧上 40% 也减速（openpilot 18%），它的高翻转有一部分是「前方有车就慢下来」的谨慎，不全是冲突判断；在 WOD 上它仍输给 Alpamayo / openpilot、也不高于我们的 `cls ego`；
+CARLA 配对对两者都是双重分布外（外观 + 缺后视），WA-JEPA 在那里只剩 13%。推测（未验证）：WA-JEPA 的优势来自视频预训练的时序表征（与第 24 条「V-JEPA 2 效应在 train split 上没活下来」相对），验证办法是用同一 WA-JEPA ckpt 只喂当前帧（4 帧重复）重跑 I3，看翻转掉多少。
+
 ## 9. CARLA 榜首两族在配对考卷上（T3：BridgeDrive + BLUE，2026-09-26，**待定**）
 
 预登记与全部表在 [top10-intersection todo](../todos/2026-09-26-top10-intersection.md) 的第 5 节与「结果 / T3」，小表 [results/top10-exams/](results/top10-exams/)（`p5_t3_*`）。

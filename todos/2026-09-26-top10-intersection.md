@@ -542,6 +542,96 @@ ZTRS navhard 推理约 25 min（重启前，GPU 4）、适配器检查两轮约 
 看什么：(a) CARLA 配对上两个 scorer 模型（橙、蓝）在合并与行人 family 上都贴着 5% 的 null 线（虚线），只有 HighwayCutIn 有信号；同一 judge 下 TFv6 waypoint（绿）和 P5 内拟合的 openpilot 读出（灰）明显高于它。
 (b) 换成真实外观的 HUGSIM 车辆配对，两个模型都离开 null 线，ZTRS 约 45%、SparseDriveV2 约 24%，三个 family 一致，但都低于零样本的 openpilot 读出（70%）。误差线是按路线 / 场景 bootstrap 的 95% CI。
 
+
+### T2：DrivoR + WA-JEPA（2026-09-26 10:05–11:40、12:28–16:33 CST，GPU 4 / 3 → 重启后 GPU 6 + 4）
+
+所有操作性选择写在 [T2] 10:05 条目（1–7）与 [T2-real] 10:16 / 10:25 条目里，先于任何考生数字。代码：`scripts/hugsim/pairs_render_10hz.py`（I3 补渲）、`scripts/top10_t2/{drivor,wajepa}_run.py`（模型 env 里的推理器）、
+`jevdrive/top10_t2.py`（I3 / P5 请求与考试、图）、`jevdrive/top10_t2_real.py`（WOD / nuScenes）、`scripts/top10_t2/{navsim_repro.sh,wajepa_export.py,navsim_summary.py}`（NAVSIM 复现）；
+小表 `research/results/top10-exams/`（`t2_*`、`wod_*`、`nuscenes_*`、`navsim_*`），run dir `$DATA_DIR/runs/top10_t2/`。DrivoR 是 scorer 式规划器（64 条学出来的候选 + learned PDM 子分数选一条），
+WA-JEPA 是视频 JEPA 世界模型 + flow matching 轨迹头（4 路 × 4 帧 0.5 s 历史）。
+
+**先读的三个检查**：
+- **I3 补渲**：65 个场景、242 个世界、68 728 个视图（10 Hz、前三路 + CAM_BACK，5.8 GB）；前三路在 5 Hz 时刻的 26 136 张与原 JPEG **逐字节相同**（= 原集合全部），判据 max |Δ| = 0 通过。
+- **推理器等价**：DrivoR 推理器对它自己的 feature builder + forward（32 个 navtest token）轨迹最大差 1.1e-5 m；WA-JEPA 推理器（fp32）对它自己的 `agent.compute_trajectory`（16 个 token）逐位相同，bf16 autocast 对 fp32 的 ADE 0.06 m。
+  考试里 WA-JEPA 一律 batch 1（每次调用重设 flow 噪声 seed，与它自己的两个适配器一致），所以 x⁺ / x⁻ 两侧拿到的是同一份噪声。
+- **judge 复现**：I3 上同一 judge 里的 openpilot `ridge_late` Cinque 参照行 70.0% [65.5, 74.5]，与已存的 I3 考试逐位相同；P5 上 `elicit_e4.score` 的逐帧合并数与 `p5_exam.exam` 差 0；WOD / nuScenes 的参照行（cv 7.103、log 8.131、`cls ego` 7.311、Alpamayo 7.857、Cinque 8.005；CV L2 0.706）与第 34 条、nuScenes 旧表一致。
+
+**I3 HUGSIM 车辆配对（1 832 个 reactive 帧，65 个场景；judge `p5_exam.exam` 原样去掉 TFv6 列，τ 由 24 个 null 场景定，CI 按场景 bootstrap）**
+
+| 考生 | τ (m/s) | 合并翻转 [95% CI] | static（959） | cut-in（216） | oncoming（657） | 反方向 | 非反应帧误翻 | 样本外 null false-flip | 判格 |
+|:--|--:|:--|--:|--:|--:|--:|--:|--:|:--|
+| DrivoR | 1.24 | 33.7% [27.0, 40.7] | 35.6% | 35.2% | 30.6% | 1.3% | 11.1% | 5.3% | **有**（车辆，纵向） |
+| WA-JEPA | 0.45 | **66.1% [62.5, 69.7]** | 80.0% | 55.6% | 49.3% | 1.0% | **39.5%** | 6.3% | **有**（车辆，纵向） |
+| *参照* openpilot `ridge_late` Cinque（P5 拟合，零样本） | 0.53 | 70.0% [65.5, 74.5] | 77.1% | 66.7% | 60.7% | 9.2% | 18.0% | 4.4% | 有 |
+
+WA-JEPA 的历史敏感性：6 232 帧里 1 140 帧的 1.5 s 历史早于渲染窗口（按它的 HUGSIM 适配器钳到窗口第一帧），但 1 832 个 reactive 帧**全部**历史完整；只用完整历史帧重算，WA-JEPA 66.3%、DrivoR 33.3%，不变。
+读法：两个模型对真实外观里的车辆都有定向反应，CI 下界远高于 null，反方向都只有 1%。WA-JEPA 的翻转率与零样本的 openpilot 读出同量级（66% 对 70%，CI 重叠），DrivoR 约一半。
+但 WA-JEPA 的非反应帧误翻 39.5%（static 58%）是 openpilot 的两倍：车一出现在前方它就减速，比规则 expert 判冲突早得多——这些帧按 P5 约定只作描述，不算错，但它说明 WA-JEPA 的「翻转」有相当一部分是对「前方有车」的普遍谨慎，
+不全是对冲突的判断。DrivoR（scorer）的 τ 大（1.24 m/s，选轨在候选之间跳），翻转在三个 family 之间很平。
+
+**P5 v1 BA 配对（纵向；1 081 个 reactive 帧，49 条路线，147 对；缺后视喂黑图，按 5.1 标「适配折中」，WA-JEPA 另标「domain 混杂」；CI 按路线 bootstrap）**
+
+| 考生 | τ (m/s) | 合并逐帧翻转 [95% CI] | 行人（406） | cut-in（676） | 反方向 | 非反应帧误翻 | 样本外 null false-flip | 按对 [CI]（null case 误翻） | 判格（纵向） |
+|:--|--:|:--|:--|:--|--:|--:|--:|:--|:--|
+| DrivoR | 2.47 | 3.1% [0.6, 6.4] | 0.0% | 4.9% [1.0, 10.1] | 0.1% | 0.9% | 5.7% | 9.5% [2.7, 17.0]（34.7%） | **没有** |
+| WA-JEPA | 1.07 | 13.2% [8.1, 19.2] | 7.6% [3.0, 14.2] | 16.7% [9.1, 25.5] | 0.0% | 5.5% | 5.5% | 43.5% [32.0, 55.1]（61.1%） | **弱：逐帧合并刚过，行人与按对不过** |
+| *参照* TFv6 waypoint 2 s | 2.41 | 30.4% [23.9, 37.0] | 29.3% | 32.5% | | 17.6% | 5.5% | 67.3%（52.6%） | 有 |
+| *参照* openpilot `ridge_late` Cinque（P5 内拟合） | 1.17 | 48.2% [35.5, 60.2] | 0.2% | 76.9% | | 6.9% | 5.1% | 53.1%（39.9%） | 有 |
+| *参照* M-C 配对双流 Cinque | 1.63 | 66.3% [58.5, 73.7] | 43.3% | 80.0% | | 6.7% | 5.1% | 84.4%（54.8%） | 有 |
+
+逐 family 只有 HighwayCutIn 两者都有信号（WA-JEPA 38.2% [18.8, 58.0]、DrivoR 15.5% [5.0, 28.6]），PedestrianCrossing 上 WA-JEPA 44%（27 帧、2 条路线，太少）。横向与 4 类反应一致率不报（[T2] 10:05 (5)），
+所以 5.3「有 E 层能力」的第二个条件（类别一致率高于随机基线）两者都无法判，判格只按纵向。这张卷对两个模型都是双重分布外（CARLA 外观 + 缺后视），不据此判能力，I3 才是它们的主卷。
+
+**WOD-E2E val 零样本（rater 479 帧 RFS，cluster 均值、cluster 分层 bootstrap；第 22 条主判 = s_ego 1–9 档 ADE@5 s 对 logged future，rater + ADE-extra 1 232 帧，按 sequence bootstrap；Δ 全部配对）**
+
+| 行 | RFS [CI] | 对 cv 的 Δ [CI] | 对 `cls ego` | 对 Alpamayo | 对 Cinque | ADE@5 s（1–9 档） | 对 cv 的 Δ [CI] | 对 `cls ego` 的 Δ | 顶档 ADE（205） | 5 s 纵向偏差 |
+|:--|:--|:--|:--|:--|:--|--:|:--|:--|--:|--:|
+| cv | 7.10 [6.85, 7.35] | — | | | | 2.51 | — | | 6.82 | |
+| DrivoR | 6.48 [6.24, 6.71] | **−0.63 [−0.99, −0.28]** | −0.84 [−1.14, −0.54] | −1.38 | −1.53 | 3.19 | **+0.68 [+0.37, +1.01]** | +1.45 | 4.18 | +0.43 m |
+| WA-JEPA | 7.43 [7.19, 7.67] | **+0.33 [+0.03, +0.63]** | +0.12 [−0.16, +0.40] | −0.42 [−0.65, −0.20] | −0.57 [−0.82, −0.32] | 2.13 | **−0.38 [−0.61, −0.14]** | +0.39 [+0.23, +0.58] | 5.13 | +2.95 m |
+
+按 wod-e2e 的判法：DrivoR「CI 整体 < 0，比匀速外推差」；WA-JEPA「CI 整体 > 0，超过 ego prior」，但低于 Alpamayo / openpilot，也不高于我们的 `cls ego`（RFS 跨 0、主判 ADE 差 0.39 m）。两者都够不到 logged future 8.13。
+DrivoR 的失败与 T1 的两个 scorer 模型同形（描述，不改任何东西）：120 个静止帧里它起步开走（5 s +6.5 m，RFS 5.9 对 cv 7.6），> 10 m/s 的帧太慢（−6.8 m），右转帧平均横向偏 2.5 m。
+WOD 有 3 个 WA-JEPA 历史槽按登记 (2) 钳到后一个槽。
+
+**nuScenes main 4 636（零样本；VAD / ST-P3 口径为主，BEV-Planner 并报；按 scene bootstrap；Δ 对 CV 配对）**
+
+| 行 | L2 1 / 2 / 3 s (m) | L2 均值 [CI] | 对 CV 的 Δ [CI] | collision VAD 均值 % | Δ [CI] | collision BEV-Planner 均值 % | Δ [CI] |
+|:--|:--|:--|:--|--:|:--|--:|:--|
+| CV | 0.28 / 0.66 / 1.18 | 0.706 | — | 0.30 | — | 1.08 | — |
+| DrivoR | 0.22 / 0.61 / 1.25 | 0.695 [0.67, 0.72] | −0.011 [−0.078, +0.059] | 0.12 | −0.18 [−0.37, −0.03] | 0.45 | −0.63 [−1.15, −0.19] |
+| WA-JEPA | 0.18 / 0.37 / 0.68 | **0.411 [0.39, 0.43]** | **−0.295 [−0.347, −0.244]** | 0.03 | −0.27 [−0.46, −0.12] | 0.32 | −0.76 [−1.31, −0.28] |
+
+按 nuscenes-physicalai 的判法：DrivoR 与 CV 分不开；WA-JEPA 比 CV 好，但没到 AD-MLP / Ego-MLP（0.29–0.35），所以仍不排除「靠 ego prior」；collision 两者都比 CV 低、CI 都不跨 0。
+按命令拆（转弯 609 帧，命令来自 GT 未来，future_label_conditioning）：L2 DrivoR 0.70、WA-JEPA 0.50、CV 1.43。ego 状态按 [T2-real] 10:25 (4) 由位姿差分得到（索引里没有 CAN bus）。
+
+**NAVSIM 复现（各自评测路径原样；复现差距只报不判）**
+
+| 模型 | 卷 / devkit | 我们 | 论文 | 差 |
+|:--|:--|--:|--:|--:|
+| DrivoR（`drivor_Nav1_25epochs.pth`，README v1 覆盖项） | navtest 12 146，DrivoR 仓库自带的 navsim 1.1 fork，`run_pdm_score_multi_gpu.py`，我们的 v1 metric cache | **93.69**（NC 99.0、DAC 98.9、EP 89.9、TTC 96.7、C 100） | 93.7 | −0.01 |
+| WA-JEPA（`model_state_dict.pt`） | navtest 12 146，navsim main @ 0a380a9（与 v2.2 代码逐字节相同），它的导出 + `navsim_score_trajectory_cache`，fp32 | **91.71**（NC 99.4、DAC 98.2、DDC 99.7、TLC 99.9、EP 87.9、TTC 98.9、LK 98.4、HC 98.3、EC 88.1） | 91.7 | +0.01 |
+
+WA-JEPA 的偏离：用作者的 `configs/wa_jepa_hugsim.yaml`（与 EPDMS 预设同架构，只是不先加载 V-JEPA 2.1 预训练 encoder——我们没有，随后整份 ckpt 严格加载）；导出改成可续跑并在重启后按 3 → 6 → 8 → 16 个 rank 重新分片
+（`wajepa_export.py --consolidate / --seed / --split`；每个 token 的轨迹与调用顺序无关，43 个 token 上两次独立运行逐位相同）。DrivoR 只把 batch 从 32 降到 8（显存），分数无关。WA-JEPA 的 v1.1 PDMS（论文 91.8，非本 brief 要求的附加项）没出数：它的打分脚本对 navtest 要求 v1.1 devkit 里没有的 one-stage 入口，navsim_repro.sh 没加 `--no-one-stage`，不再补跑。
+打分另有一次无效的提速尝试（15:32–15:55）：v2 打分只在结束时写结果、不能按 scenario 续，12 worker 那一份在 43% 时有一个 1 469 个 scenario 的长尾 shard，于是并行起了一份 56 worker 的全量打分，实测合计只有约 87 scenario/min（12 worker 那份约 120），按记录停掉了后起的那份，原打分 16:33 结束，未受影响。
+
+**墙钟与算力**：墙钟 10:05–11:40 与 12:28–16:33（不含重启停机）；估时 7–8 h，实际约 5.7 h（10:05–11:40、12:28–16:33，不含重启停机；另写作约 0.7 h）。重启前 box load 300–450 / 125 核，所有推理慢 5–10 倍（WA-JEPA 单样本 1.0–1.9 s 对 smoke 的 0.15 s），P5 推理在 11:13 停掉、无产出；
+重启后 GPU 6 独占 + GPU 4 共享，GPU 进程时间约 10 GPU·h（共享卡上的进程时间，折成独占卡更少）。I3 补渲 1.5 h 墙钟（CPU 抢占，超估计 45 min 的 2 倍，已记在 11:15 条目）；WOD 记录补抓 4 089 条 / 9.3 GB，10 min。
+
+**按 5.5 的读法（待定级）**：
+1. 5.5 第一条（「DR / HY 在 P5 与 I3 上翻转不高于 null，而 AF 明显更高」）**只成立一半**：AF（WA-JEPA）在两张卷上都明显高于 DR（DrivoR）——I3 66% 对 34%、P5 13% 对 3%——但 DR 在 I3 上也显著高于 null（34%，下界 27%），不是「不高于」。
+   与 T1 的两个 scorer 模型合起来看，I3 上三个 scorer 模型是 24% / 34% / 46%，表征驱动的 WA-JEPA 66%，零样本 openpilot 读出 70%。
+2. 第二条（「scorer 族在 I3 上与 openpilot 70% 同量级 → scorer = 纯配方要降级」）：DrivoR 34% 不是同量级，不触发。
+3. 开环零样本上两族也分开：WA-JEPA 在 WOD 与 nuScenes 上都赢 CV（RFS +0.33、L2 −0.30 m），DrivoR 在 WOD 上输给 CV、nuScenes 上与 CV 持平；两者 NAVSIM 榜分都完整复现或复现（差 ≤ 0.01）。
+   所以「多榜覆盖最广的 DR 系」出了 navtrain 生态的表现与 T1 的 scorer 模型同形（比 cv 差、速度两端崩），而 AF 带出了一部分：零样本迁移和真实外观车辆反应都在 scorer 族之上。
+4. 限定：WA-JEPA 在 I3 上的非反应帧误翻 40%，它的高翻转有一部分是「前方有车就减速」的普遍谨慎；I3 只有车辆、规则标签；P5 对两者都是双重分布外；WOD 5 s 点是外推的；单 ckpt、单 seed。
+
+![T2 flip rates](../research/figs/top10-t2-flips.png)
+
+看什么：(a) 真实外观的 HUGSIM 车辆配对上，WA-JEPA（蓝）三个 family 都接近或达到零样本 openpilot 读出（灰斜线），DrivoR（橙）约一半，但都远高于各自的样本外 null false-flip（× 号）；
+(b) CARLA 配对上两者都掉到接近 null（DrivoR 合并 3%、WA-JEPA 13%，行人 0% / 8%），同卷的 TFv6 waypoint、P5 内拟合的 openpilot 读出和 M-C 双流明显更高。误差线是按场景 / 路线 bootstrap 的 95% CI。
+
 ### T3：BridgeDrive + BLUE（P5 v1 BA 重录，2026-09-26 13:39–15:41 CST，GPU 5 → GPU 0–3 + 5）
 
 所有选择在 [T3] 12:40 / 13:05 / 13:35 条目里写于数字之前；代码 `scripts/top10_t3_agent.py`（BridgeDrive shadow recorder）、`scripts/top10_t3_blue.py`（BLUE 离线）、`jevdrive/top10_t3.py`（need / 等价检查 / judge）、

@@ -3228,6 +3228,14 @@ BridgeDrive 控车用的 route + target speed 通道纵向翻转 0.2% [0.0, 0.6]
 BLUE speed waypoints 合并 26.5% [17.0, 36.5]（null 5.4%）→ 有纵向反应，但集中在 cut-in（39.9%），行人 5.9%，比 TFv6 低 23.7 pp [−29.3, −17.4]；第 38 条「BLUE 在突发 hazard 上更好」在配对考卷上**没有复现为行人反应**；与 SimLingo 本体的比较因 SimLingo 无 P5 读数未做。
 creep 在全部考卷帧上 0 帧生效。**对本条的含义**：CARLA 榜首两族（LEAD、SimLingo）的新成员在 E 层上没有超过族内老成员，「交集 / 榜首由配方决定」对这两族**维持**。状态仍**待定**（只有 BA 一个 expert、只有纵向；T2 的族还没出数）。
 
+**T2 考试：DrivoR + WA-JEPA（2026-09-26 下午，预登记与表在 todo「结果 / T2」，[leaderboard-vs-ability 第 8.2 节](leaderboard-vs-ability.md)）**。
+NAVSIM 榜分按作者评测路径复现（DrivoR navtest PDMS 93.69 对 93.7；WA-JEPA navtest EPDMS 91.71 对 91.7）。真实外观 I3 车辆配对：DrivoR 33.7% [27.0, 40.7]、**WA-JEPA 66.1% [62.5, 69.7]**（null 5–6%，零样本 openpilot 读出 70.0%），
+但 WA-JEPA 非反应帧误翻 40%。CARLA P5 v1 BA（缺后视，双重分布外）：DrivoR 3.1% → 没有，WA-JEPA 13.2% [8.1, 19.2] → 逐帧合并刚过 null 5.5%，行人与按对不过。
+零样本开环：WOD RFS 对 cv DrivoR −0.63（CI < 0）、WA-JEPA **+0.33 [+0.03, +0.63]**；nuScenes L2 对 CV DrivoR −0.01（分不开）、WA-JEPA **−0.30 m**。
+**对本条的含义**：多榜覆盖最广的 DR 系（DrivoR）在我们的卷上与 T1 的两个 scorer 模型同形——真实外观车辆有一部分反应（34%），出了 navtrain 生态比 cv 差或持平；
+表征驱动的 AF 族（WA-JEPA）在车辆反应和零样本迁移两类卷上都明显更好，是前 10 族里第一个「推翻条件」两半（高于 null、跨卷）都部分成立的族，但它仍低于 Alpamayo / openpilot 的零样本 WOD 分数，且 CARLA 上只有弱信号。
+「交集由训练生态决定、不是能力信号」对 DR 族**维持**，对 AF 族**降级**为「交集里至少这一族带出了可迁移的车辆反应与开环能力」。状态仍**待定**（T1 / T2 / T3 三路合起来的读法留给 main；I3 只有车辆、规则标签；单 ckpt、单 seed）。
+
 ## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
 
 2026-09-26。只读调研 + 在已提交的 WOD `per_frame.npz` 上算的一版零成本读数，全文 [behavior-layer-instruments.md](behavior-layer-instruments.md)；

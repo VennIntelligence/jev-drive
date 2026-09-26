@@ -1,0 +1,2 @@
+model,metric,score,paper,n_tokens,n_valid,devkit,metric_cache,no_at_fault_collisions,drivable_area_compliance,driving_direction_compliance,traffic_light_compliance,ego_progress,time_to_collision_within_bound,lane_keeping,history_comfort,two_frame_extended_comfort,run_dir,csv,gap
+wajepa,EPDMS v2,91.71,91.7,12146,12146,navsim main @0a380a9 (navsim/ tree identical to tag v2.2),runs/navsim/metric_cache/v2_navtest,99.4,98.2,99.71,99.87,87.87,98.89,98.44,98.31,88.05,/home/ujs/data/runs/top10_t2/navsim/wajepa/20260926-122804,2026.09.26.16.32.53.csv,0.01
