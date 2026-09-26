@@ -233,6 +233,8 @@ Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：�
   - profile（同一模型、batch 256、GPU 5 独占、核 200–207）：(a) memmap + DataLoader 7 workers + fp32 eager 30.7 step/s，GPU 利用 ~20%，瓶颈是 Python 端 kernel launch 而不是数据；(b) z 标准化后常驻 GPU（bf16，0.53 GB）、卡上 index gather、bf16 autocast、fused AdamW，eager 仍 ~30 step/s；(c) 再加 `torch.compile(mode="reduce-overhead")`（CUDA graphs）112 step/s，GPU 利用 43%，3.7 倍。等价：同 seed 2 000 步 eager 与 compiled 的 inner-val loss 曲线 0.4926/0.3831/0.3637/0.3596 对 0.4898/0.3882/0.3631/0.3596。峰值显存 2.3 GB。
   - 步数：seed 0 fold 0 训 12 000 步，inner-val loss 1k 0.390 → 5k 0.327 → 8k 0.323（最低）→ 12k 0.327，train loss 0.07（明显过拟合，靠 inner-val 选点）。**定总步数 8 000**（`CFG` 默认），15 次训练一律不变。单折含 probe 与读数 154 s，单 seed 约 13 min，三 seed 约 40 min，GPU 用量 < 1 GPU·h，远低于 4–6 GPU·h 预算。
 
+- [CX] 2026-09-26 18:14 CST W 调度补充（用户要求给 GPU 0 / 4 / 5 追加实际工作）：只将尚未启动的 seed 2 在 GPU 5 并行运行，原链的 seed 1 继续在 GPU 1；不改数据、分折、8 000 步、模型或任何判据。新增逐 seed 文件锁与成功产物复用，避免原串行链随后重复启动 seed 2；只有完整五折产物验证成功才写 seed 完成标记。新增进程限 4 CPU 核、BLAS / OMP 线程 4，核 114–117；预计 25 min，超过估时两倍（50 min）停止并记录 ERROR。峰值按已登记的 16 GB 上限预留，启动前核实 GPU 5 空闲显存至少 20 GB；与既有 CARLA 共卡，不追加 CARLA server。通过 SSH / tmux 启动，不在 box 运行 Codex。
+
 ## X. 判断与执行拆开：模式头 → 几何路径 → P7（闭环，CARLA；2026-09-26 18:30 补，专家回复第 6 问）
 
 P7 的横向过了验收（cross-track p95 0.11 m、lateral ratio 0.9），没过的是纵向，所以只要读出给出绕行轨迹，执行器已经有了。这里加一个把判断和执行完全拆开的臂：

@@ -776,7 +776,13 @@ def main():
     elif a.step == "bench":
         r = bench(workers=a.workers)
     elif a.step == "run":
-        r = run(a.seed, rl, a.steps or None, [int(x) for x in a.folds.split(",")] if a.folds else None)
+        if a.folds:
+            r = run(a.seed, rl, a.steps or None, [int(x) for x in a.folds.split(",")])
+        else:
+            from .nq4_w_guard import guarded_seed, signature_for
+            signature = signature_for(CFG, a.steps or CFG["steps"], [wdir("meta.parquet"), wdir("z.npy")])
+            r = guarded_seed(data_dir() / "runs/nq4/w", a.seed, signature,
+                             lambda: run(a.seed, rl, a.steps or None))
     else:
         o = report()
         rl.info("criterion 1\n" + o["criterion1"].to_markdown(index=False, floatfmt=".3f"))
