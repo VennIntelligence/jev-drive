@@ -439,6 +439,8 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
 - 2026-09-26 13:39 CST [T3] 批量开跑（main 13:38：不等 A，先上 GPU 5）。GPU 5 一条链 6 个 server（index 200–247，`--client-threads 8`），CPU 124–141；BLUE 离线循环 6 个 worker 同在 GPU 5，CPU 142–153（合计 30 核）。
   tmux `t3-gen` / `t3-blue`，链 PID 记在 `runs/top10_t3/gen/pids.txt`，停用 `scripts/top10_t3_stop.sh`（只停记录的 PID 及其子进程与本批 server）。A 释放 GPU 0–3 后按每卡 6 个 server 加链（server block 250 起），按世界续跑。
   box 13:38 在 smoke 世界上试跑过一次判卷流程（只为验证代码能跑通，输出已删，不作任何读数）。
+- 2026-09-26 14:27 CST [T3] 扩容（main 14:25：A 的 P6 14:22 结束）：GPU 0–3 各加一条 6 server 的链（block 250 / 300 / 350 / 400，CPU 0–10 / 11–21 / 22–32 / 33–43），连同 GPU 5 共 30 个 server，CPU 合计约 74 核。
+  扩容时已完成 130 / 570 个世界；前 99 个的 E1 复核：98 个与原记录逐 tick 相同，1 个（null 世界 2451930）在 k = 109 分叉（0.09 m / 0.48°），按预登记整个世界剔除，判卷时对全部世界再核一次。
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
