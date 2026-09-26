@@ -178,14 +178,31 @@ def tokens(rl):
 
 # ---------------------------------------------------------------- students
 
+def _prior(tr, ev, t, F, Ego, Xop):
+    """reactivity_mc.fit_fold's prior only (`ridge ego` then `ridge_late` on op `temporal`, the same calls): fit_fold
+    also solves the five M-C arms on the 3072-d dual stream with float64 eighs on the CPU, which N4 never reads."""
+    from types import SimpleNamespace
+    from . import planner, waymo_stage_a as sa
+    n = len(t)
+    sp = SimpleNamespace(train=tr, val=ev, seq=t.base_id.to_numpy())
+    Xe = planner.standardize(Ego, tr)
+    _, _, We = sa.ridge_cv(Xe, F, sp, F.reshape(n, 20, 2).cpu().numpy())
+    base = planner.linear_apply(We, Xe, np.arange(n))[0]
+    Xi = planner.standardize(Xop, tr)
+    R0 = F - base
+    _, _, Wp = sa.ridge_cv(Xi, R0, sp, R0.reshape(n, 20, 2).cpu().numpy())
+    return base + planner.linear_apply(Wp, Xi, np.arange(n))[0]
+
+
+
 def fit(rl, models=("cinque", "lebowski")):
     """Arms B (op + image-plane tokens) and C (op + tokens + E5's lifted embedding): E5's student and fold set-up
     unchanged, pair-difference loss only; arm A = E5's stored student A; one exam over A / B / C."""
     import torch
-    from . import elicit_e5 as E5, elicit_i3 as I, p5_exam as E, p5_openpilot, p5_pairs as P, reactivity_mc as MC
+    from . import elicit_e5 as E5, elicit_i3 as I, p5_exam as E, p5_openpilot, reactivity_mc as MC
+    torch.set_num_threads(int(os.environ.get("OMP_NUM_THREADS", "8")))
     with I.p5_set(I.BA):
         t, past, fut, obs, null, pairs = E.load()
-        Q = torch.as_tensor(P.load_features(t, ("L18_last",))["L18_last"], device="cuda")
         op = p5_openpilot.load(t, models, sub="op_streams_vis")
     n = len(t)
     B = torch.as_tensor(np.load(out("tokB.npy")), device="cuda")
@@ -218,8 +235,7 @@ def fit(rl, models=("cinque", "lebowski")):
         for f in range(E.K_FOLDS):
             ev = obs_rows[fold[obs_rows] == f]
             tr = np.flatnonzero((role == "train") & (fold != f))
-            o = MC.fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, m)
-            prior = o["prior"]
+            prior = _prior(tr, ev, t, F, Ego, Xop)
             diff = float(np.abs(prior[ev].reshape(-1, 20, 2).cpu().numpy() - ref[f"prior [{m}]"][at[ev].to_numpy()]).max())
             rl.event("n4_prior_check", model=m, fold=f, max_abs_diff=diff)
             assert diff < 1e-2, f"prior of fold {f} does not reproduce E5's ({diff})"
