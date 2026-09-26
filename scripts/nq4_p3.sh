@@ -73,6 +73,7 @@ step() {
 scene_job() {   # scene_job <k> <gpu>: sky, train, render of one scene
     local k=$1 g=$2 kk
     kk=$(printf %03d "$1")
+    wait_prep "$kk" || { log "prep of scene $kk failed or stopped"; return 1; }
     step "sky_$kk" sky "$g" $DSPY scripts/p3/ds.py sky "$PROC/training/$kk" || return 1
     step "train_$kk" train "$g" $DSPY scripts/p3/ds.py train --scene "$k" --data-root "$PROC/training" --out-root "$RUNS" || return 1
     step "render_$kk" render "$g" $DSPY scripts/p3/ds.py render --run "$RUNS/p3/$kk" --target "$D/targets/$kk.json" \
@@ -95,8 +96,23 @@ readout() {    # readout <tag>: index -> openpilot features -> exam -> report ov
 step install install - bash scripts/p3/install_drivestudio.sh || fail "install failed; see $D/install.out"
 step scenes scenes - $JV -m jevdrive.nq4_p3 scenes || fail "scenes"
 [[ $(ls "$RAW"/*.tfrecord 2>/dev/null | wc -l) -ge 10 ]] || fail "expected 10 scene-flow tfrecords in $RAW"
-step prep prep - env CUDA_VISIBLE_DEVICES= $PREP "$REPO/scripts/p3/ds.py" prep --raw "$RAW" --out "$PROC" \
-    --scenes "$D/scenes.json" --workers 8 || fail "prep (Waymo preprocess) failed; see $D/prep.out"
+# prep (CPU) runs in the background for all 10 scenes; a scene job waits only for its own scene (instances_info.json is
+# the last file drivestudio's converter writes). $D/prep.pid holds the prep shell, so a resumed chain does not start a second one.
+if [[ ! -f $D/prep.done ]] && ! { [[ -f $D/prep.pid ]] && kill -0 "$(cat "$D/prep.pid")" 2>/dev/null; }; then
+    ( t0=$(date +%s)
+      CUDA_VISIBLE_DEVICES= timeout $(( EST[prep] * 2 * 60 )) taskset -c "$CPUS" $PREP "$REPO/scripts/p3/ds.py" prep --raw "$RAW" \
+          --out "$PROC" --scenes "$D/scenes.json" --workers 8 >> "$D/prep.out" 2>&1 \
+        && echo "$(date '+%H:%M') after $(( ($(date +%s) - t0) / 60 )) min on GPU -" > "$D/prep.done" \
+        || echo "prep failed; see $D/prep.out" > "$D/prep.failed" ) &
+    echo $! > "$D/prep.pid"; log "prep started in the background (pid $!)"
+fi
+wait_prep() {   # wait_prep <kk>
+    until [[ -f $PROC/training/$1/instances/instances_info.json ]]; do
+        [[ -f $D/prep.failed ]] && return 1
+        [[ -f $D/prep.done ]] || kill -0 "$(cat "$D/prep.pid")" 2>/dev/null || return 1
+        sleep 30
+    done
+}
 DEBUG_GPU_OR_BATCH=$DEBUG_GPU
 if [[ ! -f $D/SMOKE ]]; then
     t0=$(date +%s)
@@ -153,6 +169,7 @@ done
 wait
 [[ -s $D/scene_failures.txt ]] && fail "$(cat "$D/scene_failures.txt" | tr '\n' ';')"
 DEBUG_GPU_OR_BATCH=${GPUS%% *}
+until [[ -f $D/prep.done ]]; do [[ -f $D/prep.failed ]] && fail "prep failed"; sleep 30; done
 readout all || fail "final readout failed; see $D/*_all.out"
 echo "$(date '+%F %H:%M') all 10 scenes rendered and read out; report in $D/report_all" > "$D/DONE"
 ev done_all
