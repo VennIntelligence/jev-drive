@@ -199,14 +199,39 @@ def _pair_delta(Z, tr, ip, im, R, groups, seed, head=None, tag=""):
     return (Z - zbar) @ W, float(MC.LAMS[best]), best in (0, len(MC.LAMS) - 1)
 
 
-def _ce_pick(X, lab, fit_r, sel_r, K, seed):
+def _mlr(X: torch.Tensor, y: np.ndarray, rows: np.ndarray, lam: float, K: int, W0=None) -> torch.Tensor:
+    """Multinomial logistic regression, mean cross-entropy + lam / 2 |W|^2 (bias unpenalised, planner.ce_solve's
+    objective), (d + 1, K), full-batch L-BFGS on the CPU in float64 (a 5-class problem is too small for a time-sliced
+    GPU)."""
+    Xr = torch.cat([X[rows].double(), torch.ones(len(rows), 1, dtype=torch.float64)], 1)
+    yr = torch.as_tensor(y[rows])
+    W = torch.zeros(X.shape[1] + 1, K, dtype=torch.float64) if W0 is None else W0.clone()
+    W.requires_grad_(True)
+    opt = torch.optim.LBFGS([W], lr=1, max_iter=500, tolerance_grad=1e-9, tolerance_change=1e-12, history_size=20,
+                            line_search_fn="strong_wolfe")
+
+    def closure():
+        opt.zero_grad()
+        loss = torch.nn.functional.cross_entropy(Xr @ W, yr) + lam / 2 * (W[:-1] ** 2).sum()
+        loss.backward()
+        return loss
+    opt.step(closure)
+    return W.detach()
+
+
+def _mode_head(X: torch.Tensor, lab: np.ndarray, tr: np.ndarray, groups: np.ndarray, seed: int, K: int):
+    """lambda from planner.LAM_CLS by inner-validation cross-entropy on a 20 % route-grouped split, then the fit on tr."""
+    from sklearn.model_selection import GroupShuffleSplit
     from . import planner
-    tgt = (lab[:, None], np.ones((len(lab), 1), np.float32))
-    W, _ = planner.ce_solve(X, tgt, fit_r, planner.LAM_CLS, K)
-    s = planner.linear_apply(W, X, sel_r)                       # (P, len(sel), K)
-    y = torch.as_tensor(lab[sel_r], device=X.device)
-    ll = [float(torch.nn.functional.cross_entropy(s[i], y)) for i in range(len(planner.LAM_CLS))]
-    return float(planner.LAM_CLS[planner._pick(ll, planner.LAM_CLS, "mode head")])
+    a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=seed).split(tr, groups=groups[tr]))
+    Xb = torch.cat([X[tr[b]].double(), torch.ones(len(b), 1, dtype=torch.float64)], 1)
+    ll, W = [], None
+    for lam in planner.LAM_CLS[::-1]:                        # strong -> weak, warm started
+        W = _mlr(X, lab, tr[a], float(lam), K, W)
+        ll.append(float(torch.nn.functional.cross_entropy(Xb @ W, torch.as_tensor(lab[tr[b]]))))
+    lams = planner.LAM_CLS[::-1]
+    lam = float(lams[planner._pick(ll, lams, "mode head")])
+    return _mlr(X, lab, tr, lam, K), lam
 
 
 _WOD_ANCHORS = {}
@@ -285,12 +310,10 @@ def fit_fold(D: dict, fold: np.ndarray, f: int, m: str, seed: int, arms=ARMS, st
         out["A1"] = v
         info.update(lam_A1=lam, edge_A1=edge)
     if {"A2", "A3"} & set(arms):
-        X2 = torch.cat([Xe, Xi], 1).cpu()      # K = 5: the CPU beats a GPU time-sliced with other lanes (~60 -> ~5 s)
-        g_tr = seq[tr]
-        a, b = next(GroupShuffleSplit(1, test_size=0.2, random_state=seed).split(tr, groups=g_tr))
-        lam2 = _ce_pick(X2, lab.clip(0), tr[a], tr[b], len(MODES), seed)
-        W2, _ = planner.ce_solve(X2, (lab.clip(0)[:, None], np.ones((n, 1), np.float32)), tr, [lam2], len(MODES))
-        logit = planner.linear_apply(W2, X2, np.arange(n))[0].to(DEV)         # (n, 5)
+        X2 = torch.cat([Xe, Xi], 1).cpu()
+        W2, lam2 = _mode_head(X2, lab.clip(0), tr, seq, seed, len(MODES))
+        logit = (X2.double() @ W2[:-1] + W2[-1]).float().to(DEV)              # (n, 5)
+        W2 = W2.float()[None]
         res_y = (Fy - Py).cpu().numpy()
         T = np.zeros((len(MODES), 20), np.float32)
         for c in range(len(MODES)):
