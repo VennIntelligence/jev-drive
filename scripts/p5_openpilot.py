@@ -77,7 +77,17 @@ def job(st):
     return st, render(st["files"], st.get("seq", SEQ))
 
 
-ARRAYS = ("temporal", "vision", "hidden", "lead", "lead_prob")   # lead*: raw output slices (fusion Q4c)
+ARRAYS = ("temporal", "vision", "hidden", "lead", "lead_prob", "plan")   # lead*: raw output slices (fusion Q4c)
+PLAN_T = 0.25 * np.arange(1, 21)
+CAM_X = P.RIG[0][1]      # the calibrated frame's origin (front camera) ahead of the rear axle
+
+
+def plan_grid(m, out) -> np.ndarray:
+    """The native plan (openpilot calibrated frame: x fwd, y right, origin at the camera) as the P5 / P6 future:
+    (20, 2) on the 0.25 s grid to 5 s, rear-axle ego frame, x fwd, y left (night queue 3, lane C, Q1)."""
+    from jevdrive.openpilot.model import T_IDXS, decode
+    pp = decode(out, m.slices, 0.0, WZ.ACTION_T)["plan_pos"]
+    return np.stack([np.interp(PLAN_T, T_IDXS, pp[:, 0]) + CAM_X, -np.interp(PLAN_T, T_IDXS, pp[:, 1])], 1)
 
 
 def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
@@ -88,8 +98,8 @@ def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
         for _ in range(1 if m.skip == 1 else HOLD):
             out = m.step(frames[j], action_t=WZ.ACTION_T)
         if j in tset:
-            rows[j] = {k: (out[m.slices["hidden_state"]] if k == "hidden" else out[m.slices[k]] if k.startswith("lead")
-                           else m.tap_values[taps[k]]).copy() for k in arrays}
+            rows[j] = {k: (plan_grid(m, out) if k == "plan" else out[m.slices["hidden_state"]] if k == "hidden"
+                           else out[m.slices[k]] if k.startswith("lead") else m.tap_values[taps[k]]).copy() for k in arrays}
     return rows
 
 
@@ -97,7 +107,7 @@ def save(path, st, rows, arrays=("temporal",)):
     """`temporal` stays float32 (bit-for-bit comparable with earlier runs); the wide arrays are stored float16."""
     tg = sorted(rows)
     tmp = path.with_suffix(".tmp.npz")
-    arr = {k: np.stack([rows[j][k] for j in tg]).astype(np.float32 if k == "temporal" or k.startswith("lead") else np.float16)
+    arr = {k: np.stack([rows[j][k] for j in tg]).astype(np.float32 if k in ("temporal", "plan") or k.startswith("lead") else np.float16)
            for k in arrays}
     np.savez(tmp, name=np.array([st["names"][j] for j in tg]), hist=np.array(tg), **arr)
     tmp.replace(path)
