@@ -89,7 +89,7 @@ def _models():
 
 def _collate(b):
     import torch
-    return [x[0] for x in b], *(torch.stack([x[j] for x in b]).pin_memory() for j in (1, 2, 3))
+    return [x[0] for x in b], *(torch.stack([x[j] for x in b]) for j in (1, 2, 3))
 
 
 def _forward(fx, v, d, s) -> dict:
@@ -113,7 +113,7 @@ def extract(shard: str = "0/1", batch: int = 64, workers: int = 24, limit: int =
         return {"skipped": str(out)}
     fx = _models()
     dl = DataLoader(Units([u.files.iloc[i] for i in ids], fx), batch_size=batch, num_workers=workers,
-                    collate_fn=_collate, prefetch_factor=4, persistent_workers=False)
+                    collate_fn=_collate, prefetch_factor=4, pin_memory=True)
     res, t0, n = {}, time.time(), 0
     pending = None
     for idx, v, d, s in tqdm(dl, desc=f"shard {si}/{sn}", mininterval=30):
