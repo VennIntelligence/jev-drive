@@ -1,0 +1,330 @@
+"""Night queue 3, lane A: CARLA generation for P6 (todos/2026-09-26-night-queue-3.md, Q1 / Q3 and the [A] entries).
+
+  need-v0    the v0 re-record: every world lane C's exam reads (processed/carla_p6/nq3_exam_frames.parquet) and the last
+             tick k it reads -> runs/nq3/a/v0rr/{need.json, ids.txt}, research/results/nq3/q1/v0rr_worlds.csv
+  build-v1   P6 v1: route pool (Bench2Drive 0.0.4 val clips + clips cut from the Leaderboard 2.0 long routes,
+             scripts/nq3_clips.py), per-class selection, town hold-out, variant XML incl. the recovery worlds
+             -> runs/nq3/a/v1/{pairs.xml, need.json, ids_*.txt}, research/results/nq3/q3/{routes,cases}.csv
+  ids        worlds of an id file not yet done in a generation dir (comma list, for scripts/nq3_a.sh)
+  check-det  E1: a re-recorded world's expert against its P6 v0 recording, tick by tick up to need_k
+  recovery   the recovery smoke's gate: share of shifted worlds whose expert is back within |d| < 0.3 m by 3 s
+  blue-plan  scripts/top10_t3_blue.py's plan over a generation dir (world, attempt dir, referenced camera ticks)
+  status     progress of a generation dir (done / total, failures, rate, ETA) as markdown
+"""
+import json
+import time
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from . import p5_pairs as P
+from . import p6
+from .common import data_dir, get_logger
+
+log = get_logger(__name__)
+REPO = Path(__file__).resolve().parents[1]
+RES = REPO / "research" / "results" / "nq3"
+B2D = "third_party/Bench2Drive/leaderboard/data/"
+OBST = ("Accident", "ConstructionObstacle", "ParkedObstacle", "HazardAtSideLane", "AccidentTwoWays",
+        "ConstructionObstacleTwoWays", "ParkedObstacleTwoWays", "HazardAtSideLaneTwoWays", "VehicleOpensDoorTwoWays")
+TEST_TOWNS = ("Town13",)
+NEW_PER_CLASS, NEW_TEST_PER_CLASS = 16, 4
+# recovery worlds: own id space (base + 5e6), TM seed 0 like the seed-0 main worlds; shift in m, left positive
+REC_BASE = 5_000_000
+REC = {"center": (1, 0.0, False), "center_wnull": (2, 0.0, True), "L15": (3, 1.5, False), "L10": (4, 1.0, False),
+       "R10": (5, -1.0, False), "R15": (6, -1.5, False)}
+REC_TICKS = 200                   # record 10 s after birth (the reading is 1-3 s after birth)
+
+
+def root(*p) -> Path:
+    d = data_dir() / "runs" / "nq3" / "a" / Path(*p)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _res(sec: str) -> Path:
+    d = RES / sec
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+# ---------------------------------------------------------------- v0 re-record
+
+def need_v0():
+    fr = pd.read_parquet(data_dir() / "processed" / "carla_p6" / "nq3_exam_frames.parquet")
+    fr["rid"] = fr.frame_name.str.split("-").str[0]
+    need = fr.groupby("rid").k.max()
+    order = [v for v in p6.variants(p6.cases()) if v in need.index]
+    d = root("v0rr")
+    (d / "need.json").write_text(json.dumps({r: int(need[r]) for r in order}))
+    (d / "ids.txt").write_text(",".join(order))
+    rows = fr.groupby(["rid", "base_id", "seed", "world"]).agg(frames=("k", "size"), k_min=("k", "min"),
+                                                              k_max=("k", "max"),
+                                                              readings=("reading", lambda r: ",".join(sorted(set(r)))))
+    rows.reset_index().to_csv(_res("q1") / "v0rr_worlds.csv", index=False)
+    log.info("v0 re-record: %d worlds %s, %d ticks to record", len(order),
+             rows.reset_index().groupby("world").size().to_dict(), int(sum(need[r] + 3 for r in order)))
+
+
+def attempt(gen: Path, rid: str) -> Path | None:
+    f = gen / "done" / (rid + ".json")
+    if not f.exists():
+        return None
+    return gen / "attempts" / rid / str(json.loads(f.read_text())["attempt"])
+
+
+def _pose(adir: Path) -> pd.DataFrame:
+    p = pd.read_json(adir / "pose.jsonl", lines=True).drop_duplicates("frame")
+    p["k"] = (p.t / P.TICK).round().astype(int)
+    return p.set_index("k")
+
+
+def check_det(gen: Path, need_file: Path, ids=None) -> pd.DataFrame:
+    """E1 (T3's, on P6): per world, ticks compared up to need_k, max position / heading / speed difference, first tick
+    past P5's divergence threshold (1 cm or 0.1 deg), and whether the camera-tick grids agree."""
+    need_k = json.loads(Path(need_file).read_text())
+    g0, rows = p6.root("gen"), []
+    for rid in ids or sorted(need_k):
+        a, o = attempt(gen, rid), attempt(g0, rid)
+        if a is None or o is None:
+            continue
+        A, B = _pose(a), _pose(o)
+        lim = need_k[rid]
+        m = A[["x", "y", "yaw", "vx", "vy"]].join(B[["x", "y", "yaw", "vx", "vy"]], rsuffix="_o", how="inner")
+        m = m[m.index <= lim]
+        d = np.hypot(m.x - m.x_o, m.y - m.y_o)
+        dy = np.abs((m.yaw - m.yaw_o + 180) % 360 - 180)
+        dv = np.hypot(m.vx - m.vx_o, m.vy - m.vy_o)
+        bad = np.flatnonzero((d >= P.DIV_M) | (dy >= P.DIV_DEG))
+        ka = set(pd.read_json(a / "frames.jsonl", lines=True).k)
+        fo = pd.read_json(o / "frames.jsonl", lines=True)
+        ko = set((fo.t / P.TICK).round().astype(int))
+        rows.append({"rid": rid, "ticks": len(m), "need_k": lim, "max_pos_m": float(d.max()), "max_yaw_deg": float(dy.max()),
+                     "max_dv_mps": float(dv.max()), "first_div_k": int(m.index[bad[0]]) if len(bad) else None,
+                     "cam_grid_same": {k for k in ka if k <= lim} == {k for k in ko if k <= lim}})
+    return pd.DataFrame(rows)
+
+
+# ---------------------------------------------------------------- v1
+
+def _single(route) -> ET.Element | None:
+    sc = list(route.iter("scenario"))
+    return sc[0] if len(sc) == 1 and sc[0].get("type") in OBST else None
+
+
+def pool() -> pd.DataFrame:
+    """Every candidate route: Bench2Drive 0.0.4 val clips (not in the 220 set, not a known crasher) and the long-route
+    clips of scripts/nq3_clips.py; the v0 routes (220 set) are listed with source v0."""
+    rows = []
+    v0 = {r.get("id") for r in ET.parse(data_dir() / B2D / "bench2drive220.xml").getroot().findall("route")}
+    for r in ET.parse(data_dir() / B2D / "bench2drive220.xml").getroot().findall("route"):
+        sc = _single(r)
+        if sc is not None and r.get("id") not in P.CRASHERS:
+            rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "v0"})
+    for r in ET.parse(data_dir() / B2D / "bench2drive_0.0.4_val.xml").getroot().findall("route"):
+        sc = _single(r)
+        if sc is not None and r.get("id") not in v0 and r.get("id") not in P.CRASHERS:
+            rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "b2d_val"})
+    for r in ET.parse(root("q3") / "clips.xml").getroot().findall("route"):
+        sc = _single(r)
+        rows.append({"base_id": r.get("id"), "town": r.get("town"), "scenario": sc.get("type"), "source": "lb2_clip",
+                     "origin": r.get("source")})
+    return pd.DataFrame(rows)
+
+
+def select(pl: pd.DataFrame, seed: int = 0) -> pd.DataFrame:
+    """Per class NEW_PER_CLASS new routes: NEW_TEST_PER_CLASS in the test towns, the rest elsewhere; Bench2Drive's own
+    val clips before long-route clips, random order (seed 0) within a source; the v0 routes all kept. A class short on
+    one side is filled from the other (reported by the split counts)."""
+    rng = np.random.default_rng(seed)
+    pl = pl.assign(u=rng.random(len(pl)), pri=pl.source.map({"v0": 0, "b2d_val": 1, "lb2_clip": 2}))
+    pl["test"] = pl.town.isin(TEST_TOWNS)
+    keep = [pl[pl.source == "v0"]]
+    for c in OBST:
+        cand = pl[(pl.scenario == c) & (pl.source != "v0")].sort_values(["pri", "u"])
+        t = cand[cand.test].head(NEW_TEST_PER_CLASS)
+        o = cand[~cand.test].head(NEW_PER_CLASS - len(t))
+        if len(t) + len(o) < NEW_PER_CLASS:
+            t = cand[cand.test].head(NEW_PER_CLASS - len(o))
+        keep.append(pd.concat([t, o]))
+    s = pd.concat(keep, ignore_index=True).drop(columns=["u", "pri"])
+    s["cls"] = s.scenario.map(p6.CLASS)
+    s["split"] = np.where(s.test, "test", "train")
+    return s.drop(columns=["test"])
+
+
+def rec_id(base: str, name: str) -> str:
+    return str((int(base) + REC_BASE) * 100 + REC[name][0] * 10)
+
+
+def build_v1():
+    """Variant XML of P6 v1 (seed 0): the new routes' main worlds as P6 v0 builds them, and the recovery worlds on every
+    1W route (new and v0): obstacle hidden (x00's hook), ego born shifted, the centre twin and its weather null."""
+    pl = pool()
+    sel = select(pl)
+    src = {}
+    for f in ("bench2drive220.xml", "bench2drive_0.0.4_val.xml"):
+        src.update({r.get("id"): r for r in ET.parse(data_dir() / B2D / f).getroot().findall("route")})
+    src.update({r.get("id"): r for r in ET.parse(root("q3") / "clips.xml").getroot().findall("route")})
+    out, cases, need = ET.Element("routes"), [], {}
+    for _, s in sel.sort_values(["town", "base_id"]).iterrows():
+        r0 = src[s.base_id]
+        if s.source != "v0":
+            ws = p6.worlds_of(s.cls, 0)
+            for w in ws:
+                out.append(p6._variant(r0, s.cls, w, 0))
+            cases.append({"base_id": s.base_id, "town": s.town, "scenario": s.scenario, "cls": s.cls, "seed": 0,
+                          "split": s.split, "source": s.source,
+                          **{w: p6.variant_id(s.base_id, w, 0) if w in ws else "" for w in p6.WORLDS}})
+        if s.cls == "1W":
+            row = {}
+            for name, (code, shift, wnull) in REC.items():
+                v = p6._variant(r0, s.cls, "wnull" if wnull else "x00", 0)
+                v.set("id", rec_id(s.base_id, name))
+                v.set("p6_shift", "%.1f" % shift)
+                out.append(v)
+                need[v.get("id")] = REC_TICKS
+                row[name] = v.get("id")
+            cases.append({"base_id": s.base_id, "town": s.town, "scenario": s.scenario, "cls": "REC", "seed": 0,
+                          "split": s.split, "source": s.source, **row})
+    ET.indent(out)
+    d = root("v1")
+    ET.ElementTree(out).write(d / "pairs.xml")
+    (d / "need.json").write_text(json.dumps(need))
+    c = pd.DataFrame(cases)
+    c.to_csv(_res("q3") / "cases.csv", index=False)
+    sel.to_csv(_res("q3") / "routes.csv", index=False)
+    main = [c.loc[i, w] for i in c.index for w in p6.WORLDS if w in c and isinstance(c.loc[i, w], str) and c.loc[i, w]]
+    rec = [c.loc[i, n] for i in c.index for n in REC if n in c and isinstance(c.loc[i, n], str) and c.loc[i, n]]
+    (d / "ids_main.txt").write_text(",".join(main))
+    (d / "ids_rec.txt").write_text(",".join(rec))
+    by = sel.groupby(["scenario", "split"]).size().unstack(fill_value=0)
+    log.info("v1: %d routes (%d new), %d main worlds, %d recovery worlds; test share %.2f\n%s", len(sel),
+             int((sel.source != "v0").sum()), len(main), len(rec), (sel.split == "test").mean(), by)
+    return sel, c
+
+
+def ids(file: str, gen: str, head: int = 0):
+    want = [x for x in Path(file).read_text().strip().split(",") if x]
+    todo = [v for v in want if not (Path(gen) / "done" / (v + ".json")).exists()]
+    print(",".join(todo[:head] if head else todo))
+
+
+# ---------------------------------------------------------------- recovery smoke
+
+def recovery(gen: Path, ids_: list[str]) -> pd.DataFrame:
+    """Per shifted world: initial offset d0, |d| at 1 / 2 / 3 s after birth, first tick back within 0.3 m."""
+    rows = []
+    for rid in ids_:
+        a = attempt(gen, rid)
+        if a is None:
+            continue
+        W = P.load_world(a)
+        lat = p6.lateral(W)
+        k0 = int(lat.index.min())
+        d = lat.d
+        back = d.index[(np.abs(d) < 0.3) & (d.index > k0)]
+        rows.append({"rid": rid, "shift": json.loads((a / "p6_shift.json").read_text())["shift_m"], "d0": round(float(d.iloc[0]), 3),
+                     **{"d_%ds" % s: round(float(d.get(k0 + 20 * s, np.nan)), 3) for s in (1, 2, 3)},
+                     "t_back_s": round((int(back[0]) - k0) * P.TICK, 2) if len(back) else None,
+                     "v_3s": round(float(lat.v.get(k0 + 60, np.nan)), 2)})
+    df = pd.DataFrame(rows)
+    if len(df):
+        df["back_by_3s"] = df.t_back_s.notna() & (df.t_back_s <= 3.0)
+    return df
+
+
+# ---------------------------------------------------------------- BLUE / SimLingo plan
+
+def blue_plan(gen: Path, out: Path, need_file: Path | None = None, frames: str = "exam"):
+    """The offline runner's plan: world id, attempt dir and the camera ticks to read (frames "exam": lane C's exam ticks
+    for v0 re-record worlds; "all": every camera tick recorded)."""
+    ks = {}
+    if frames == "exam":
+        fr = pd.read_parquet(data_dir() / "processed" / "carla_p6" / "nq3_exam_frames.parquet")
+        fr["rid"] = fr.frame_name.str.split("-").str[0]
+        ks = fr.groupby("rid").k.apply(lambda k: sorted(set(int(x) for x in k))).to_dict()
+    plan = []
+    for f in sorted((gen / "done").glob("*.json")):
+        rid = f.stem
+        a = attempt(gen, rid)
+        if a is None or not (a / "blue_inputs.jsonl").exists():
+            continue
+        if frames == "exam":
+            if rid not in ks:
+                continue
+            k = ks[rid]
+        else:
+            k = [json.loads(l)["k"] for l in open(a / "frames.jsonl") if json.loads(l).get("blue")]
+        plan.append({"rid": rid, "adir": str(a), "ks": k})
+    Path(out).write_text(json.dumps(plan))
+    log.info("blue plan: %d worlds, %d frames -> %s", len(plan), sum(len(p["ks"]) for p in plan), out)
+
+
+# ---------------------------------------------------------------- status
+
+def status(gen: Path, id_file: Path, t_start: float, est_h: float) -> str:
+    want = [x for x in Path(id_file).read_text().strip().split(",") if x]
+    done = [v for v in want if (gen / "done" / (v + ".json")).exists()]
+    fails = 0
+    ev = gen / "events.jsonl"
+    if ev.exists():
+        for line in open(ev):
+            try:
+                e = json.loads(line)
+            except ValueError:
+                continue
+            if e.get("kind") == "route_end" and e.get("status") not in ("finished", None):
+                fails += 1
+    el = (time.time() - t_start) / 3600
+    rate = len(done) / el if el > 0 else 0.0
+    eta = (len(want) - len(done)) / rate if rate > 0 else float("nan")
+    return (f"{len(done)} / {len(want)} worlds done ({len(done) / max(len(want), 1):.1%}), {fails} failed attempts; "
+            f"elapsed {el:.2f} h of an estimated {est_h:.2f} h, {rate:.0f} worlds/h, ETA {eta:.2f} h")
+
+
+def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cmd", choices=["need-v0", "build-v1", "ids", "check-det", "recovery", "blue-plan", "status", "pool"])
+    ap.add_argument("--gen", default="")
+    ap.add_argument("--file", default="")
+    ap.add_argument("--need", default="")
+    ap.add_argument("--out", default="")
+    ap.add_argument("--head", type=int, default=0)
+    ap.add_argument("--frames", default="exam")
+    ap.add_argument("--t0", type=float, default=0.0)
+    ap.add_argument("--est-h", type=float, default=0.0)
+    a = ap.parse_args()
+    if a.cmd == "need-v0":
+        need_v0()
+    elif a.cmd == "build-v1":
+        build_v1()
+    elif a.cmd == "pool":
+        print(pool().groupby(["scenario", "source", "town"]).size().to_string())
+    elif a.cmd == "ids":
+        ids(a.file, a.gen, a.head)
+    elif a.cmd == "check-det":
+        df = check_det(Path(a.gen), Path(a.need), a.file.split(",") if a.file else None)
+        if a.out:
+            df.to_csv(a.out, index=False)
+        ok = df.first_div_k.isna() & df.cam_grid_same
+        print(df.to_string() if len(df) <= 40 else df.describe().to_string())
+        print(f"E1: {int(ok.sum())} / {len(df)} worlds identical to P6 v0 up to need_k")
+    elif a.cmd == "recovery":
+        df = recovery(Path(a.gen), a.file.split(","))
+        if a.out:
+            df.to_csv(a.out, index=False)
+        print(df.to_string())
+        if len(df):
+            print(f"back within 0.3 m by 3 s: {int(df.back_by_3s.sum())} / {len(df)} = {df.back_by_3s.mean():.2f} (gate >= 0.80)")
+    elif a.cmd == "blue-plan":
+        blue_plan(Path(a.gen), Path(a.out), Path(a.need) if a.need else None, a.frames)
+    elif a.cmd == "status":
+        print(status(Path(a.gen), Path(a.file), a.t0, a.est_h))
+
+
+if __name__ == "__main__":
+    main()
