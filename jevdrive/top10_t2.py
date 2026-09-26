@@ -28,6 +28,7 @@ NAV_CMD = {0: 3, 1: 1, 2: 0, 3: 2}      # WOD intent (UNKNOWN, STRAIGHT, LEFT, R
 F0_REAR = np.array([1.655, -0.012])      # nuPlan CAM_F0 in the rear-axle frame (median of 500 navtest tokens' sensor2lidar t)
 I3_SRC, I3_10 = "hugsim_pairs", "hugsim_pairs_10hz"
 HIST_S = (-1.5, -1.0, -0.5, 0.0)
+REF_I3 = "openpilot ridge_late (Cinque)"
 
 
 def root(*p) -> Path:
@@ -137,6 +138,10 @@ def exam_i3(rl):
         assert (keys == t.frame_name.to_numpy()).all()
         preds[NAME[m]] = grid(traj, shift=F0_REAR)
     np.savez_compressed(rl.dir / "preds_i3_grid.npz", frame_name=t.frame_name.to_numpy(), **preds)
+    from .night2_n3 import I3_EXAM          # context row: openpilot `ridge_late` (Cinque), the stored I3 exam's predictions
+    z3 = np.load(data_dir() / I3_EXAM / "preds_i3.npz", allow_pickle=True)
+    assert (z3["frame_name"].astype(str) == t.frame_name.to_numpy()).all()
+    preds[REF_I3] = z3["ridge_late op-cinque temporal"]
     tfv6, E.TFV6 = E.TFV6, {}
     try:
         oo, nn = E.deltas(obs, null, t, preds)
@@ -261,16 +266,72 @@ def exam_p5(rl):
     return sc
 
 
+# ---------------------------------------------------------------- figure
+
+FIG_COLORS = {"DrivoR": "#D55E00", "WA-JEPA": "#0072B2", REF_I3: "#777777", "prior [cinque]": "#777777",
+              "TFv6 waypoint speed 2 s": "#56B4E9", "M-C pair [cinque]": "#E69F00"}
+FIG_LABEL = {"prior [cinque]": "openpilot ridge_late (Cinque)", "TFv6 waypoint speed 2 s": "TFv6 waypoint 2 s",
+             "M-C pair [cinque]": "M-C dual-stream (Cinque)"}
+
+
+def fig(i3_run: Path, p5_run: Path, out: Path):
+    """(a) I3 directional flip rate per family, (b) P5 v1 BA per-frame flip rate per scope; scene / route bootstrap
+    95% CIs; crosses = the examinee's out-of-sample null false flip (pooled)."""
+    import matplotlib.pyplot as plt
+    from .p4_carla import _style
+    ps = _style()
+    f3 = pd.read_csv(i3_run / "flip_rates.csv")
+    f3 = f3[f3.subset == "all"]
+    s5 = pd.read_csv(p5_run / "p5_scores.csv")
+    s5 = s5[s5.window == "per frame"]
+    fig_, axs = plt.subplots(1, 2, figsize=(ps.DOUBLE_COLUMN_IN, 2.35), gridspec_kw={"width_ratios": [1, 1]})
+    panels = ((axs[0], f3.rename(columns={"flip_rate": "flip", "flip_lo": "lo", "flip_hi": "hi",
+                                          "false_flip_null_oos": "null_ff_oos"}),
+               ["pooled", "static", "cutin", "oncoming"], ["DrivoR", "WA-JEPA", REF_I3], "(a) I3 (HUGSIM 3DGS, vehicles)"),
+              (axs[1], s5, ["pooled", "pedestrian", "cut-in"],
+               ["DrivoR", "WA-JEPA", "TFv6 waypoint speed 2 s", "prior [cinque]", "M-C pair [cinque]"],
+               "(b) P5 v1 BehaviorAgent set (CARLA)"))
+    for ax, d, scopes, ex, title in panels:
+        ex = [e for e in ex if e in set(d.examinee)]
+        w = 0.8 / len(ex)
+        for j, e in enumerate(ex):
+            g = d[d.examinee == e].set_index("scope").reindex(scopes)
+            x = np.arange(len(scopes)) + (j - (len(ex) - 1) / 2) * w
+            ax.bar(x, g.flip, w, color=FIG_COLORS[e], label=FIG_LABEL.get(e, e), linewidth=0,
+                   hatch="//" if e in (REF_I3, "prior [cinque]") else None, edgecolor="white")
+            ax.errorbar(x, g.flip, yerr=[g.flip - g.lo, g.hi - g.flip], fmt="none", ecolor="#333333", elinewidth=0.5,
+                        capsize=1.2)
+            ax.plot(x[0], g.null_ff_oos.iloc[0], marker="x", color="#222222", markersize=3.5, mew=0.8, linestyle="none")
+        n = d[d.examinee == ex[0]].set_index("scope").reindex(scopes)
+        nn = n.n_reactive if "n_reactive" in n else n.n
+        ax.set_xticks(np.arange(len(scopes)))
+        ax.set_xticklabels([f"{sc} ($n$={int(k)})" for sc, k in zip(scopes, nn)], fontsize=7)
+        ax.set_ylim(0, 1)
+        ax.set_ylabel("Directional flip rate")
+        ps.bars(ax)
+        ps.panel(ax, title)
+        ax.legend(fontsize=6.3, loc="upper right", ncol=1)
+    fig_.tight_layout(pad=0.3)
+    info = ps.save(fig_, out / "top10-t2-flips")
+    plt.close(fig_)
+    return info
+
+
 def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("req-i3", "req-p5", "exam-i3", "exam-p5"))
+    ap.add_argument("cmd", choices=("req-i3", "req-p5", "exam-i3", "exam-p5", "fig"))
+    ap.add_argument("--i3-run")
+    ap.add_argument("--p5-run")
+    ap.add_argument("--out", default=".")
     a = ap.parse_args()
     if a.cmd == "req-i3":
         req_i3()
     elif a.cmd == "req-p5":
         req_p5()
+    elif a.cmd == "fig":
+        print(fig(Path(a.i3_run), Path(a.p5_run), Path(a.out)))
     else:
         rl = RunLog("top10_t2", a.cmd)
         (exam_i3 if a.cmd == "exam-i3" else exam_p5)(rl)
