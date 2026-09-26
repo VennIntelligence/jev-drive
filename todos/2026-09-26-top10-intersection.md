@@ -204,6 +204,14 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
 - 若 BridgeDrive 的 target speed 通道翻转仍像 TFv6 一样接近 0、waypoint 通道 ≥ 30%：B2D 榜首的增量属于接口与规则，不属于 E 层。
 - 若 BLUE 在 P5 v1 突发 family 上显著高于 SimLingo：第 38 条「BLUE 在突发 hazard 上真的更好」从公开逐路线数据升级为我们的配对证据。
 
+## 执行分派（中央执行员）
+
+- 2026-09-26 10:00 CST [main] 按 5.4 的建议顺序拆成三路，插进空出来的卡（用户：谁先完成、卡空了就插谁）：
+  T1 = SparseDriveV2 + ZTRS：P5 v1 BA + I3 先出数，再 WOD / NAVSIM 复现 / nuScenes；契约直接对得上，最便宜，现在卡空着就先开，放 GPU 4（与 night-queue-2 B 的零散 GPU 共用）。
+  T2 = DrivoR + WA-JEPA：I3 补渲 CAM_BACK + 10 Hz，再 P5 / WOD / NAVSIM / nuScenes；等下一个执行员收工空出卡再开。
+  T3 = BridgeDrive + BLUE 的 P5 重录（约 30 个 CARLA server）：等 night-queue-2 A 的 N1 批量结束、CARLA 容量空出来再开。
+  各路在本节下写 [T1] / [T2] / [T3] 条目，结果写「结果」。B2D 闭环那一项仍按 5.1 另立 todo，不在这里跑。
+
 ## 结果
 
 跑完再填。smoke 的 run dir：`~/data/runs/top10_smoke/{drivor,wajepa,sparsedrivev2,gtrs,bridgedrive,blue}/`。
