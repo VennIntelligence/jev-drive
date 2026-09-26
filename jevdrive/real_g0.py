@@ -119,6 +119,9 @@ K_DET, HALF_W, REACH, ROUTE_LEN = 8, 4.0, 40.0, 60.0         # elicit_e5, unchan
 CLS3 = ("pedestrian", "cyclist", "vehicle")
 SCORE = 0.25
 ARC_T, ARC_MIN, KAPPA_MAX = 1.0, 2.0, 0.1
+# NAVSIM's ego origin is the rear axle at wheel-centre height, not on the road: GT vehicle boxes 5-30 m away have their
+# bottom at z = -0.36 m (navtrain median, 152k boxes; navtest -0.37), so the flat ground is lifted onto z = -0.36
+NAV_GROUND_Z = -0.36
 I3_CAM_FWD = 1.73        # HUGSIM ego (front camera) ahead of the nuScenes rear axle (hugsim_zs.rear_offset of the rig)
 
 
@@ -210,7 +213,7 @@ def geometry(name: str, fr: pd.DataFrame) -> tuple:
                 k = hash((np.round(c["K"], 4).tobytes(), np.round(c["D"], 5).tobytes(), np.round(c["R"], 5).tobytes(),
                           np.round(c["t"], 4).tobytes()))
                 if k not in cal:
-                    cal[k] = _lift_fmt(c["K"], c["D"], c["R"], c["t"])
+                    cal[k] = _lift_fmt(c["K"], c["D"], c["R"], np.asarray(c["t"], np.float64) - [0.0, 0.0, NAV_GROUND_Z])
                 keys[cam].append(k)
         assert np.allclose(np.stack([idx[t]["pose"][-1] for t in fr.frame_id[:100]]), 0)
         return cal, pd.DataFrame(keys), p1, np.full(n, REAR_AXLE_X)
