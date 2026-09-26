@@ -217,6 +217,13 @@
   **按登记：Hydra 与 Hydra + gated Δ 在 P5 与 I3 列写「不可比」，这些格不读**（exam 照算、原始 csv 留在 box 的 run 目录，汇总表不收这些行）。所以 N3 的第一个判据（榜单 head 压不压反应）在 CARLA 内无法判，第二个判据（能力包）只剩 NAVSIM 一半可读，总判「不可判」。
   seed 1 / 2 的 Hydra 照跑，只为 NAVSIM 列的 3 seed 与 Lebowski 行。
 - 2026-09-26 10:11 [B] **事后加一个描述（看过上面的重叠数之后，不改任何判格）**：同一统计量对同词表的 NAVSIM `cls_late`（(a′)，模仿头）也算一次，看低重叠是 Hydra 打分头特有，还是 NAVSIM 训的读出在 CARLA 帧上普遍如此（后者指向输入 / 场景分布差，而非打分头本身）。
+- 2026-09-26 11:08 [B] **暂停（box 11:45 重启加卡）**。已完成：Hydra seed 0（两模型）重拟合与兼容检查；NAVSIM `ridge_late` 零样本；P5 训的 `cls_late` 3 seed；g₂ 在 P5 / I3；P5 / I3 考试（seed 0 Hydra 行按兼容检查不读）；nuScenes collision；E4c 加 student；
+  N4 的检测（140 109 张，GPU 4 约 42 min，与别的进程共卡）与 token（672 维）已完成；devkit 打分 12 个 job 里完成 7 个。小结果已提交在 `research/results/night2/N3/`。
+  会被杀掉：`jev:n3-score-s1` / `n3-score-s2`（Hydra seed 1 / 2 的逐 anchor 打分，已完成 147 / 400、64 / 400 个 chunk，按 chunk 文件续跑，在途的 chunk 重算）、`jev:n3-score-s0`（剩余的 devkit job，无 csv 的重跑）；
+  `jev:n4-fit`（GPU 4 被别的进程占满后 11:06 改在 GPU 1 上跑，带 11:38 的超时；只在最后写结果，没写完就整段重跑）。
+  **恢复命令**（box 上，repo 根目录）：`scripts/night2_b_resume.sh <N4 fit 用的卡>`；打分完之后依次 `scripts/night2_n3_gpu.sh fit:1,2`、`.venv/bin/python -m jevdrive.night2_n3 navjobs --seed 1,2`（再用 `scripts/real_g1_score.sh <job 文件> 4` 打分）、`night2_n3 exam`、`night2_n3 navtable`。
+  恢复所需：打分约 1–1.5 h（视核数），devkit 约 1 h，N4 fit 约 20 min 与之并行。
+
 
 ## N4. 快通道去 lift：E5-b image-plane token（CPU + < 0.5 GPU·h）
 
