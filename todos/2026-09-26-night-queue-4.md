@@ -90,6 +90,17 @@
      每条路线由没见过它的那一折开（路线自己 fold 标签的另一折；没有标签的用 R₁，K 的规则）；K3 的 seen 版由 K 的 recipe 反过来取。lane C 的 `READY` 之前只有登记的后备（A1 / A2）占位版 `q2_placeholder`，只给 smoke 和规则 8 用。
   10. **批量的 server index**：GPU g 用 [60 + 18 g, 78 + 18 g)，共 60–167；i + 120 落在 180–287、i − 120 ≤ 47，与 lane B（300–479）、lane A（600–689）、K（170–179）都不撞。
      每步开始前按 `/proc/net/tcp` 查每张卡的段里至少 WORKERS + 2 个 index 的 RPC / TM 端口没被监听，不够就每 2 min 等一次，30 min 还不够写 ERROR。
+  11. **ghost 的藏法加严**（18:41 smoke 的清单抓到的）：`p6_world` 的 hide 只在 actor「上一 tick 缓存的位置」在地面以上时才把它压到地下，所以 scenario 摆放 actor 的那一 tick 会露出一帧
+     （DynamicObjectCrossing 的行人在 57 m 处露了 1 tick，集装箱在第 1 tick），P5 x⁻ / P6 x₀₀ 原来就是这样。G 的 ghost 在它之上再加一层（`nq4_hooks._ghost_strict`）：build 之后立刻压到地下，
+     之后每个 scenario tick 在树的摆放命令之后无条件再压一次（保留 scenario 给它的新 x、y），所以 ghost 世界里 scenario 的 actor 一帧也不出现；登记的删除不变。
+  12. **分级启动**（用户 18:30 的新规矩，CLAUDE.md「Before a long run」）：每个「考生 × 世界类型」先跑 1 条路线、核清单，再跑 10 条、核清单，过了才跑全量；pilot 的路线就是该步 seed 0 的前 10 条，计入结果。
+      清单（`jevdrive/nq4_g.py pilot_check`，写在任何 G 数字之前）：完成率 ≥ 90%；崩溃的 attempt ≤ 35%；卡死（G 的 60 s 无进展提前结束）+ blocked ≤ 70%；≥ 80% 的运行自车速度到过 3 m/s；
+      每条运行都有 20 Hz 轨迹（P7 考生另要 `plans.jsonl`）；ghost：scenario 的 actor 没有一帧出现在自车 60 m 内地面上，PDM-Lite 的 ghost 运行 |横向偏移| ≤ 1.0 m、障碍类路线的登记确实删掉；
+      shift：触发点确实移动了 15 ± 3 m、scenario 建出来了；swap：建出来的是换后的 scenario 类，cut-in 车确实是 van；orig / ghost / shift / swap 到达 scenario 区终点的比例不低于 night-queue-3 同考生同路线完整运行的比例 − 30 pp；
+      K：同路线 DS 与 night-queue-3 的 CL3（K0–K3）差 ≤ 25。不过就把这个考生整个挡下（`runs/nq4/gk/ERROR.<考生>`、`blocked/<考生>`），其余考生照跑。
+  13. **资源（用户 18:30：先到先得，不再等 lane B 的 DONE）**：pilot 在 SCH 指定的验证卡上跑（`runs/sched/nq4-gk.pilot`），全量在 SCH / Codex 发的 GO 文件的卡上跑（`runs/sched/nq4-gk.go`：GPUS、WORKERS、IDX0、IDX_SPAN、NQ4GK_CPUS，
+      每步前重读；第 i 张卡用 index [IDX0 + i·IDX_SPAN, IDX0 + (i+1)·IDX_SPAN)）；每张卡按实际剩余位（6 − 别人的 server）开 worker。smoke 从 18:38 起挪到 **GPU 1**（GPU 4 上 lane A 加到 4–6 个 server 之后，
+      我们每次新起的 server 在载图时都因 RenderThread 超时崩溃，13 次里 12 次）。
   8. **G 运行的提前结束**（省掉卡死路线跑到 4000 tick 的尾巴；K 的运行不提前结束，它们要官方 DS）：自车沿 dense route 过了「该变体的 scenario 区终点、各窗口终点」里最远的一个再加 10 m，或连续 60 s 仿真时间没有前进 1 m，就结束路线（评测器照常写记录）。
      G 的读数全在这个点之前；读数 5 的「路线完成时间」因此只在 night-queue-3 复用的完整运行上有，新跑的 orig 只报巡航速度。
 - [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server，核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。server index 起初用 480–481，它的 TM 端口（8000 + 50 i）正是 lane A index 600–601 的 RPC 端口，server 起不来，17:56 改到 **150–151**（规则：i、i + 120、i − 120 都不能落在别的 lane 的 index 段里）。
