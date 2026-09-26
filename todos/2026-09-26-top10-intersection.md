@@ -275,6 +275,13 @@ BridgeDrive 与 TFv6 一样两个通道都报：waypoint 通道（2 s 处）与 
   打分 `scripts/navsim_zs_score.sh score v1 navtest t1_sparsedrivev2 $DATA_DIR/processed/top10_exam/navsim/sparsedrivev2_navtest.npz` 与 `scripts/navsim_zs_score.sh score v2 navhard_two_stage t1_ztrs $DATA_DIR/processed/top10_exam/navsim/ztrs_navhard_two_stage.npz`；
   判卷 `.venv/bin/python -m jevdrive.top10_exam judge --set p5`（i3 / wod / nusc 同理）。
 - 2026-09-26 11:25 CST [main] 复核：同意门槛按 (a) 判；(b) 作为适配噪声与 scorer 脆弱性的读数并报；理由：两臂都在任何考卷数字之前，(b) 测的是模型对安装的敏感度而非适配器正确性，配对考卷两侧同 rig。
+- 2026-09-26 12:55 CST [T1] 重启后续跑（GPU 5，≤ 16 核）。**正式 256 token 复检（修正后代码，先于任何考卷数字）**：(a) 两个模型都是 **100%** 同一条轨迹、平均差 0.00 m，门槛过；
+  (b) SparseDriveV2 40.2% 同轨（平均 0.32 m，p95 1.39 m），ZTRS 66.4%（0.24 m，p95 1.24 m），按 11:25 [main] 作为 scorer 对安装的脆弱性与绝对指标的适配噪声地板并报（`research/results/top10-exams/adapter_check_{sparsedrivev2,ztrs}.json`）。
+  **吞吐**（主会话 12:43 的 throughput pass）：剖析单帧 CPU（1 线程，box 负载下）：JPEG 解码 24 ms、渲染 468 ms、模型自己的特征代码 86 ms，瓶颈是渲染（每个虚拟相机对三个源各做一次整图 remap 再按掩码拼）。
+  改成把三个源叠成一张带 2 px 复制边的 atlas、用 `cv2.convertMaps` 的定点 map 平移整数像素后每路只做一次 remap（`navsim_rig.fast_maps / render_fast`）：
+  四张卷各 12 帧 × 3 路 **逐像素相同**（0 / 36 张图有差），渲染 370–410 → 14–20 ms / 帧；因为图逐像素相同，适配器检查的结论原样适用。
+  前后：SparseDriveV2 约 10 → 40 帧 / s，ZTRS 约 10 → 38 帧 / s（两者并行时 29–40），GPU 5 利用率约 10% → 100%，两条链合计 14 个 worker。SparseDriveV2 batch 32 会让它的 deformable aggregation kernel 报 invalid configuration，保持 16；ZTRS 用 32。
+  12:37 起跑的旧链（未落盘）已停，12:49 起按新路径重跑。
 - 2026-09-26 10:05 CST [T2] 开工（main 10:00 起卡空着，提前开）。GPU 用 4（与 T1 共卡，推理 + 渲染各 ≤ 10 GB），不碰 0–2；开工时 load 148 / 125 核，
   所以 CPU 池子压到每个作业 ≤ 8 核、打分 ≤ 8 线程。**分步估时**（墙钟，GPU·h 按一张卡）：
 
