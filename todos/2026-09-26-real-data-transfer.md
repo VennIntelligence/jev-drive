@@ -148,6 +148,19 @@ G2 等 G0、G1 出来后排；行人资产另行调研
   (6) **NAVSIM 范围**：navtest 全部 12 146 token 与 E1 的分组（走廊内行人 / cyclist 897、直行、其余），`ridge_late` prior，PDMS（v1.1，主指标）与 EPDMS（main @ 0a380a9）；
   navhard two-stage 与 `cls_late` prior 不做（g₂ / g₃ 在 navhard 的合成帧上没有输入，`cls_late` 在 E1 里也只是描述）。
   (7) **判格**按 G1 节写死的两格，WOD 与 NAVSIM 各判一次（WOD：straight_yaw 激活率、全部 rater 帧与 Pedestrians 的 RFS Δ；NAVSIM：直行 token 激活率、全部与行人组的 PDMS Δ）；每个 arm 都报，主 arm 的格是 G1 的结论。
+- 2026-09-26 08:35 CST [G0] 分步时间估计、共享检测的帧集与 student 权重恢复（写于任何检测数字与 G0 数字之前）。代码 `jevdrive/real_g0.py`，run `runs/real-data-transfer/g0-*/<time>`，小表 `research/results/real-data-transfer/g0/`。
+  **帧集**（281 190 帧 × 3 路 = 843 570 张）：WOD val `p2p3_v1` 全部 20 237 帧（E1 的 19 663 帧是其子集，多出的 574 帧留给 G1 与 Q2b 的 SAM 标签对齐）；WOD train `qwenvid_train_t4` 的 137 533 帧（train 每 4 帧取 1、已有 Qwen 与 openpilot 特征的那批，
+  给 G1 的 g₁ / g₂ 当训练行）；navtest 全部 12 146 token；navtrain 全部 103 288 token（有 openpilot `temporal` 的全部）；I3 `index.parquet` 全部 7 986 行（obs + stream）。
+  **每帧三路**：front / front_left / front_right 的当前帧（E5 就是这三路）。WOD-E2E 自带这三路，且逐序列标定与 P5 rig 逐项相同（P5 的 CARLA 相机就是按 WOD rig 建的：同内参、同外参、972 × 1079）；NAVSIM 用 CAM_F0 / L0 / R0，I3 用 HUGSIM 的前三路。
+  main (4) 里的「只有前视」我按「前向三路」执行：三路都是 agent 推理时可得的输入、与 E5 同一 rig 语义，只取正前一路会系统性丢掉走廊近端（≤ 8 m）从侧面进来的行人。
+  **检测配置 = E5 原样**：`jevdrive.fastperc detect`，`yolo:yolo26x-seg.pt:640:half`，`--keep 0.25`（读取时 score > 0.25），`COCO_MAP`，接地点 = mask 最低 3 行平均列（`sam_detect.contact`），batch 16。
+  分片：全部图像按帧集优先级（I3 → WOD val → navtest → WOD train → navtrain）交错切成 5 卡 × P 个进程的互不重叠切片，P 由单卡试跑定；每个切片的结果与哪张卡、哪个进程跑无关（同一 E5 调用，逐图独立）。
+  **student 权重恢复**：E5 的 fit 只存了 obs 行预测（`runs/elicitation/e5-fit/20260926-021421/preds_obs.npz`），没有存 MLP 权重与标准化统计量。做法同 E1 (1)：用 `elicit_e5.fit` 同一段代码、同一 seed、同一 GPU 型号逐 fit 重拟合，
+  只加「把每个 fold 的网络权重与训练行统计量存盘」，核对两条：每个 fit 的 early-stop 最佳步数与原 run 的 `e5_fit` 事件相同，obs 行预测对已存预测的最大差 ≤ 1e-2 m（E5 自己的 prior 核对门槛，prior 重算本身就差 0.4–1.8 mm）；任一不过就停。
+  迁移用的 Δ = 5 个 fold student 的 Δ 取平均（每个 fold 用它自己的 CARLA 训练行统计量标准化），每个 arm × 模型 × seed 各一份，不重训、不调。
+  **分步估计**：(a) 图像列表与分片启动器，工程 30 min；单卡吞吐试跑 5 min。(b) 检测：E5 在争用卡上单进程 17 张 / s，空卡每卡多进程估 120–150 张 / s，5 卡 600–750 张 / s → 20–25 min 墙钟（约 2 GPU·h），读盘约 200 GB；预算 40 min，超 80 min 停。
+  (c) 真实数据 embedding 代码 + 少量帧的抬升几何核对（不看任何 Δ / 指标）1 h，CPU。(d) student 权重恢复，工程 30 min + GPU 约 10 min。(e) WOD 读数 CPU 15 min；NAVSIM 2 模型 × 2 arm × 3 seed = 12 组预测 × PDMS / EPDMS 共 24 次官方 devkit 打分，并行约 1 h。
+  (f) 表、图、交接说明、第 44 条与结果节 1.5 h。合计约 5–6 h 墙钟。
 
 ## 结果
 
