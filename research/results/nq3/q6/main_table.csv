@@ -1,0 +1,447 @@
+row,column,value,lo,hi,n_seeds,seed_min,seed_max,source,status,note
+Qwen3-VL-4B | ridge_late,P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | ridge_late,P5 BA cut-in,0.0000,,,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | ridge_late,P5 BA null,5.2000,,,3,5.1100,5.3200,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Cinque),P5 BA ped,41.4600,33.5000,50.0000,3,40.3900,42.1200,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Cinque),P5 BA cut-in,72.9800,,,3,71.4500,74.4100,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Cinque),P5 BA null,5.1667,,,3,4.9300,5.3400,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P5 BA ped,43.1033,35.0400,50.6700,3,42.3600,43.6000,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P5 BA cut-in,81.1133,,,3,80.0300,81.9500,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P5 BA null,4.9733,,,3,4.8800,5.1000,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),P5 BA ped,37.6033,30.2700,47.5800,3,36.7000,39.1600,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),P5 BA cut-in,65.2367,,,3,64.3500,66.7200,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),P5 BA null,4.8800,,,3,4.7300,5.0000,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P5 BA ped,40.8867,32.4400,50.0000,3,39.1600,41.8700,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P5 BA cut-in,77.1700,,,3,75.7400,78.5500,research/results/night2/N6/criteria_seeds.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P5 BA null,5.0200,,,3,4.9100,5.1900,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | ridge_late,P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | ridge_late,P5 BA cut-in,0.0000,,,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | ridge_late,P5 BA null,5.2500,,,3,4.8000,5.8600,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Cinque),P5 BA ped,47.0433,36.8300,54.9300,3,45.8100,47.7800,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Cinque),P5 BA cut-in,77.0200,,,3,75.5900,77.9600,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Cinque),P5 BA null,5.0200,,,3,4.5700,5.8400,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),P5 BA ped,47.4533,38.1700,56.3300,3,47.0400,47.7800,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),P5 BA cut-in,81.6067,,,3,81.3600,81.9500,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),P5 BA null,5.1567,,,3,4.8800,5.4000,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Lebowski),P5 BA ped,45.7300,39.3600,53.4700,3,45.3200,46.5500,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Lebowski),P5 BA cut-in,75.0033,,,3,73.6700,76.7800,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ single (prior Lebowski),P5 BA null,5.0967,,,3,5.0200,5.2100,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),P5 BA ped,45.2400,38.8100,52.8400,3,44.0900,46.0600,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),P5 BA cut-in,79.9800,,,3,78.4000,81.6600,research/results/night2/N6/criteria_seeds.csv,take,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),P5 BA null,5.2700,,,3,5.0800,5.4300,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | ridge_late,P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | ridge_late,P5 BA cut-in,12.0833,,,3,9.4700,13.9100,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | ridge_late,P5 BA null,5.4100,,,3,5.1400,5.5700,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Cinque),P5 BA ped,33.8267,28.3200,45.8100,3,30.5400,36.9500,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Cinque),P5 BA cut-in,74.0133,,,3,73.5200,74.7000,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Cinque),P5 BA null,5.0433,,,3,4.7400,5.2200,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Cinque),P5 BA ped,40.5567,36.2800,52.0800,3,36.2100,44.3300,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Cinque),P5 BA cut-in,79.7333,,,3,78.5500,80.7700,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Cinque),P5 BA null,5.3633,,,3,4.8900,5.6900,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Lebowski),P5 BA ped,32.1033,19.5200,38.4300,3,28.8200,38.1800,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Lebowski),P5 BA cut-in,70.0200,,,3,68.7900,70.8600,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ single (prior Lebowski),P5 BA null,5.3233,,,3,4.9500,5.7200,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Lebowski),P5 BA ped,39.3267,32.6600,48.9200,3,36.4500,40.8900,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Lebowski),P5 BA cut-in,76.9233,,,3,75.1500,78.2500,research/results/night2/N6/criteria_seeds.csv,take,
+SigLIP2 so400m | pair-Δ dual (⊕ Lebowski),P5 BA null,5.3133,,,3,4.8800,5.5800,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | ridge_late,P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | ridge_late,P5 BA cut-in,0.2467,,,3,0.0000,0.4400,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | ridge_late,P5 BA null,6.6600,,,3,5.5800,7.6300,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Cinque),P5 BA ped,7.1433,4.8300,16.5900,3,4.1900,10.3400,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Cinque),P5 BA cut-in,80.2267,,,3,78.9900,80.9200,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Cinque),P5 BA null,4.9400,,,3,4.8300,5.0300,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Cinque),P5 BA ped,17.9767,14.2400,30.4100,3,15.0200,22.4100,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Cinque),P5 BA cut-in,82.5933,,,3,81.8000,83.5800,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Cinque),P5 BA null,4.9800,,,3,4.8800,5.1200,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Lebowski),P5 BA ped,10.3433,7.7400,18.6200,3,7.8800,13.0500,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Lebowski),P5 BA cut-in,73.5200,,,3,72.7800,75.0000,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ single (prior Lebowski),P5 BA null,5.3367,,,3,5.0500,5.8400,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Lebowski),P5 BA ped,24.5467,17.5400,34.8200,3,22.4100,26.3500,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Lebowski),P5 BA cut-in,79.1433,,,3,78.4000,80.1800,research/results/night2/N6/criteria_seeds.csv,take,
+DINOv2-B | pair-Δ dual (⊕ Lebowski),P5 BA null,5.0233,,,3,4.9300,5.1100,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | ridge_late,P5 BA ped,0.2500,0.0000,0.7800,3,0.2500,0.2500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | ridge_late,P5 BA cut-in,42.6567,,,3,41.7200,43.2000,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | ridge_late,P5 BA null,5.1367,,,3,4.8900,5.3900,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Cinque),P5 BA ped,2.9533,1.2300,5.2200,3,1.9700,3.6900,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Cinque),P5 BA cut-in,82.8900,,,3,81.6600,83.7300,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Cinque),P5 BA null,4.8167,,,3,4.6100,4.9900,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Cinque),P5 BA ped,7.6333,3.9700,13.2100,3,7.1400,8.3700,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Cinque),P5 BA cut-in,85.2100,,,3,84.6200,85.6500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Cinque),P5 BA null,4.9167,,,3,4.5800,5.1100,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Lebowski),P5 BA ped,7.6367,4.3200,11.4100,3,6.9000,8.1300,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Lebowski),P5 BA cut-in,79.6333,,,3,79.4400,79.7300,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ single (prior Lebowski),P5 BA null,5.3433,,,3,5.1500,5.5200,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Lebowski),P5 BA ped,18.4733,10.2500,24.2900,3,17.4900,19.2100,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Lebowski),P5 BA cut-in,82.0000,,,3,81.9500,82.1000,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot small | pair-Δ dual (⊕ Lebowski),P5 BA null,5.1200,,,3,4.9500,5.2100,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Cinque | ridge_late (= prior),P5 BA ped,0.1667,0.0000,0.7900,3,0.0000,0.2500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Cinque | ridge_late (= prior),P5 BA cut-in,77.6133,,,3,76.9200,78.5500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Cinque | ridge_late (= prior),P5 BA null,4.6600,,,3,4.4400,5.0500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Lebowski | ridge_late (= prior),P5 BA ped,2.7933,0.3100,5.9000,3,2.2200,3.4500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Lebowski | ridge_late (= prior),P5 BA cut-in,70.5133,,,3,70.2700,70.7100,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Lebowski | ridge_late (= prior),P5 BA null,5.2167,,,3,5.1600,5.2500,research/results/night2/N6/criteria_seeds.csv,take,
+openpilot Cinque | M-C pair op (single),P5 BA ped,7.1433,2.9925,11.6013,3,6.1600,8.3700,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Cinque | M-C pair op (single),P5 BA cut-in,85.0592,77.4316,91.6042,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Cinque | M-C pair op (single),P5 BA null,4.9333,,,3,4.6200,5.1700,elicitation/seeds/mc_seeds.csv,take,
+openpilot Cinque | M-C hard (control),P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Cinque | M-C hard (control),P5 BA cut-in,77.5148,67.5466,86.2070,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Cinque | M-C hard (control),P5 BA null,5.0133,,,3,4.9200,5.1000,elicitation/seeds/mc_seeds.csv,take,
+openpilot Cinque | M-C uniform (control),P5 BA ped,0.0000,0.0000,0.0000,3,0.0000,0.0000,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Cinque | M-C uniform (control),P5 BA cut-in,77.9586,67.8491,86.6074,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Cinque | M-C uniform (control),P5 BA null,4.8033,,,3,4.6800,5.0100,elicitation/seeds/mc_seeds.csv,take,
+openpilot Lebowski | M-C pair op (single),P5 BA ped,18.3900,10.6595,24.5001,3,17.7300,19.4600,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Lebowski | M-C pair op (single),P5 BA cut-in,83.7278,76.3070,89.7780,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Lebowski | M-C pair op (single),P5 BA null,5.2367,,,3,5.1200,5.3900,elicitation/seeds/mc_seeds.csv,take,
+openpilot Lebowski | M-C hard (control),P5 BA ped,3.2000,0.9171,6.4678,3,2.4600,3.6900,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Lebowski | M-C hard (control),P5 BA cut-in,69.8225,58.9331,79.9711,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Lebowski | M-C hard (control),P5 BA null,5.5400,,,3,5.4700,5.6100,elicitation/seeds/mc_seeds.csv,take,
+openpilot Lebowski | M-C uniform (control),P5 BA ped,3.1200,0.7979,6.5429,3,2.4600,3.4500,elicitation/seeds/mc_seeds.csv + e4/e4_all.csv (CI seed 0),take,
+openpilot Lebowski | M-C uniform (control),P5 BA cut-in,71.5976,60.9579,81.1660,1,,,elicitation/e4/e4_all.csv,take,seed 0 only
+openpilot Lebowski | M-C uniform (control),P5 BA null,5.2967,,,3,5.2200,5.4300,elicitation/seeds/mc_seeds.csv,take,
+ego-only | ridge ego,P5 BA ped,7.6355,4.9292,10.3904,1,,,elicitation/e4/e4_all.csv,take,"τ = 0 label artefact, not a reaction"
+ego-only | ridge ego,P5 BA cut-in,3.8462,1.9490,5.8826,1,,,elicitation/e4/e4_all.csv,take,"τ = 0 label artefact, not a reaction"
+ego-only | ridge ego,P5 BA null,0.5419,,,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | waypoint 2 s,P5 BA ped,29.3103,21.9798,36.6764,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | waypoint 2 s,P5 BA cut-in,32.5444,22.9184,42.1857,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | waypoint 2 s,P5 BA null,5.5367,,,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | target speed,P5 BA ped,0.0000,0.0000,0.0000,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | target speed,P5 BA cut-in,0.0000,0.0000,0.0000,1,,,elicitation/e4/e4_all.csv,take,
+TFv6 | target speed,P5 BA null,4.6660,,,1,,,elicitation/e4/e4_all.csv,take,
+ego-only | ridge ego,P5 PDM per pair,40.0000,29.0780,50.7042,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+TFv6 | waypoint 2 s,P5 PDM per pair,25.7143,15.3272,37.1429,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+openpilot Cinque | ridge_late (= prior),P5 PDM per pair,2.8571,0.0000,6.5217,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+openpilot Lebowski | ridge_late (= prior),P5 PDM per pair,5.0000,0.7193,10.5634,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P5 PDM per pair,6.4286,2.1425,11.4286,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P5 PDM per pair,9.2857,3.4965,16.9145,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+Qwen3-VL-4B | pair-Δ single (prior Cinque),P5 PDM per pair,2.8571,0.0000,6.4286,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+Qwen3-VL-4B | ridge_late,P5 PDM per pair,0.0000,0.0000,0.0000,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+openpilot Cinque | M-C pair op (single),P5 PDM per pair,5.0000,1.4085,9.7235,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+openpilot Cinque | M-C hard (control),P5 PDM per pair,2.1429,0.0000,5.7143,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+openpilot Cinque | M-C uniform (control),P5 PDM per pair,2.8571,0.0000,6.5217,1,,,elicitation/e4/e4_all.csv,take,"PDM-Lite set, per pair (E4 decision), seed 0"
+ego-only | ridge ego,P5 BA A3 ped,0.1587,0.0552,0.2729,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+TFv6 | waypoint 2 s,P5 BA A3 ped,0.1524,-0.0163,0.3325,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+openpilot Cinque | ridge_late (= prior),P5 BA A3 ped,-0.1540,-0.2667,-0.0619,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+openpilot Lebowski | ridge_late (= prior),P5 BA A3 ped,-0.1365,-0.2401,-0.0399,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P5 BA A3 ped,0.2477,0.0729,0.4282,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P5 BA A3 ped,0.2460,0.0540,0.4546,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+Qwen3-VL-4B | ridge_late,P5 BA A3 ped,-0.0595,-0.1191,-0.0085,1,,,elicitation/e4c/areas.csv,take,"area minus null floor, seed 0"
+openpilot Cinque | E5 student A,P5 BA A3 ped,0.2526,0.0745,0.4407,3,0.2434,0.2577,night2/N3/e4c_students_areas.csv,take,
+openpilot Cinque | E5 student B,P5 BA A3 ped,0.2372,0.0615,0.4382,3,0.2243,0.2492,night2/N3/e4c_students_areas.csv,take,
+openpilot Lebowski | E5 student A,P5 BA A3 ped,0.3222,0.1266,0.5010,3,0.3037,0.3397,night2/N3/e4c_students_areas.csv,take,
+openpilot Lebowski | E5 student B,P5 BA A3 ped,0.1914,0.0384,0.3556,3,0.1862,0.1952,night2/N3/e4c_students_areas.csv,take,
+openpilot Cinque | cls_late (P5-trained),P5 BA ped,0.9852,0.2463,3.7131,3,0.4926,1.7241,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Cinque | cls_late (P5-trained),P5 BA cut-in,23.7179,,,3,21.3018,28.1065,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Cinque | cls_late (P5-trained),P5 BA null,5.1489,,,3,4.9200,5.3431,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",P5 BA ped,2.7915,0.7480,4.5240,3,1.9704,3.9409,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",P5 BA cut-in,11.6371,,,3,7.8402,17.6036,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",P5 BA null,5.6120,,,3,4.9927,6.2128,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",P5 BA ped,3.9409,1.9108,6.2364,1,,,research/results/night2/N3/p5_criteria.csv,take,deterministic
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",P5 BA cut-in,23.2249,,,1,,,research/results/night2/N3/p5_criteria.csv,take,deterministic
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",P5 BA null,5.0454,,,1,,,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Cinque | Hydra,P5 BA ped,,,,0,,,night2/N3/compat.csv,text,不可比（N3 兼容检查 top-10 重叠 < 30%；Q4b 重检）
+openpilot Cinque | Hydra,I3,,,,0,,,night2/N3/compat.csv,text,不可比（N3 兼容检查 top-10 重叠 < 30%；Q4b 重检）
+openpilot Lebowski | cls_late (P5-trained),P5 BA ped,0.6568,0.0000,2.2451,3,0.2463,0.9852,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Lebowski | cls_late (P5-trained),P5 BA cut-in,17.8008,,,3,11.8343,23.5207,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Lebowski | cls_late (P5-trained),P5 BA null,4.9812,,,3,4.9065,5.0510,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",P5 BA ped,3.7767,1.1694,5.4757,3,2.7094,5.4187,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",P5 BA cut-in,8.3333,,,3,7.6923,9.1716,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",P5 BA null,5.0206,,,3,4.8936,5.2286,research/results/night2/N3/p5_criteria.csv,take,
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",P5 BA ped,3.2020,1.2625,5.4405,1,,,research/results/night2/N3/p5_criteria.csv,take,deterministic
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",P5 BA cut-in,9.1716,,,1,,,research/results/night2/N3/p5_criteria.csv,take,deterministic
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",P5 BA null,5.2084,,,1,,,research/results/night2/N3/p5_criteria.csv,take,
+openpilot Lebowski | Hydra,P5 BA ped,,,,0,,,night2/N3/compat.csv,text,不可比（N3 兼容检查 top-10 重叠 < 30%；Q4b 重检）
+openpilot Lebowski | Hydra,I3,,,,0,,,night2/N3/compat.csv,text,不可比（N3 兼容检查 top-10 重叠 < 30%；Q4b 重检）
+openpilot Cinque | E5 student A,P5 BA ped,52.7915,41.7155,62.0696,3,52.2167,53.4483,elicitation/e5/criteria.csv,take,
+openpilot Cinque | E5 student A,P5 BA cut-in,75.0986,,,3,73.9645,75.7396,elicitation/e5/criteria.csv,take,
+openpilot Cinque | E5 student A,P5 BA null,5.0393,,,3,4.8544,5.1491,elicitation/e5/criteria.csv,take,
+openpilot Cinque | E5 student B,P5 BA ped,54.0230,39.2635,61.8613,3,51.4778,56.6502,elicitation/e5/criteria.csv,take,
+openpilot Cinque | E5 student B,P5 BA cut-in,79.7830,,,3,79.2899,80.6213,elicitation/e5/criteria.csv,take,
+openpilot Cinque | E5 student B,P5 BA null,5.0180,,,3,4.9014,5.1248,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student A,P5 BA ped,55.7471,46.9444,63.1165,3,55.1724,56.4039,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student A,P5 BA cut-in,77.4162,,,3,77.0710,77.9586,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student A,P5 BA null,5.0345,,,3,4.9112,5.1135,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student B,P5 BA ped,51.0673,41.0734,60.3016,3,50.7389,51.4778,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student B,P5 BA cut-in,74.1617,,,3,73.2249,74.7041,elicitation/e5/criteria.csv,take,
+openpilot Lebowski | E5 student B,P5 BA null,5.0171,,,3,4.9628,5.0562,elicitation/e5/criteria.csv,take,
+SparseDriveV2 | native (zero-shot),P5 BA ped,0.4926,,,1,,,top10-exams/t1_p5_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+SparseDriveV2 | native (zero-shot),P5 BA cut-in,8.4320,,,1,,,top10-exams/t1_p5_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+SparseDriveV2 | native (zero-shot),P5 BA pooled,5.4579,2.1190,9.5662,1,,,top10-exams/t1_p5_flip_rates.csv,take,
+SparseDriveV2 | native (zero-shot),P5 BA null,5.1135,,,1,,,top10-exams/t1_p5_flip_rates.csv,take,
+ZTRS | native (zero-shot),P5 BA ped,0.7389,,,1,,,top10-exams/t1_p5_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+ZTRS | native (zero-shot),P5 BA cut-in,8.8757,,,1,,,top10-exams/t1_p5_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+ZTRS | native (zero-shot),P5 BA pooled,6.0130,1.8898,11.1421,1,,,top10-exams/t1_p5_flip_rates.csv,take,
+ZTRS | native (zero-shot),P5 BA null,5.0619,,,1,,,top10-exams/t1_p5_flip_rates.csv,take,
+BridgeDrive | waypoint 2 s,P5 BA ped,24.1379,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+BridgeDrive | waypoint 2 s,P5 BA cut-in,30.1349,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+BridgeDrive | waypoint 2 s,P5 BA pooled,27.2388,20.5875,34.5608,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+BridgeDrive | waypoint 2 s,P5 BA null,5.0964,,,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+BridgeDrive | target speed,P5 BA ped,0.0000,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+BridgeDrive | target speed,P5 BA cut-in,0.2999,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+BridgeDrive | target speed,P5 BA pooled,0.1866,0.0000,0.5714,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+BridgeDrive | target speed,P5 BA null,4.7493,,,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+BLUE | waypoint 2 s,P5 BA ped,5.9113,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+BLUE | waypoint 2 s,P5 BA cut-in,39.8801,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+BLUE | waypoint 2 s,P5 BA pooled,26.4925,16.9755,36.5483,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+BLUE | waypoint 2 s,P5 BA null,5.4004,,,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+SimLingo | waypoint 2 s,P5 BA ped,9.1133,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over pedestrian families, no CI"
+SimLingo | waypoint 2 s,P5 BA cut-in,51.1244,,,1,,,top10-exams/p5_t3_flip_rates.csv,recompute,"n-weighted over cut-in families, no CI"
+SimLingo | waypoint 2 s,P5 BA pooled,34.6082,23.8556,45.5620,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+SimLingo | waypoint 2 s,P5 BA null,5.8348,,,1,,,top10-exams/p5_t3_flip_rates.csv,take,
+DrivoR | native (zero-shot),P5 BA ped,0.0000,0.0000,0.0000,1,,,top10-exams/t2_p5_scores.csv,take,black rear camera (adapter compromise)
+DrivoR | native (zero-shot),P5 BA cut-in,4.8817,,,1,,,top10-exams/t2_p5_scores.csv,take,
+DrivoR | native (zero-shot),P5 BA pooled,3.0527,0.5576,6.3511,1,,,top10-exams/t2_p5_scores.csv,take,
+DrivoR | native (zero-shot),P5 BA null,5.7081,,,1,,,top10-exams/t2_p5_scores.csv,take,
+WA-JEPA | native (zero-shot),P5 BA ped,7.6355,2.9698,14.2496,1,,,top10-exams/t2_p5_scores.csv,take,black rear camera (adapter compromise)
+WA-JEPA | native (zero-shot),P5 BA cut-in,16.7160,,,1,,,top10-exams/t2_p5_scores.csv,take,
+WA-JEPA | native (zero-shot),P5 BA pooled,13.2285,8.0645,19.1973,1,,,top10-exams/t2_p5_scores.csv,take,
+WA-JEPA | native (zero-shot),P5 BA null,5.5098,,,1,,,top10-exams/t2_p5_scores.csv,take,
+ego-only | ridge ego,I3,0.0000,0.0000,0.0000,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head); 0 by construction (both sides share the ego)
+ego-only | ridge ego,I3 null,0.0000,,,1,,,elicitation/i3/flip_rates.csv,take,
+Qwen3-VL-4B | ridge_late,I3,2.8384,1.3345,4.7486,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+Qwen3-VL-4B | ridge_late,I3 null,5.4293,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Cinque | ridge_late (= prior),I3,69.9782,65.4973,74.4611,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Cinque | ridge_late (= prior),I3 null,4.4192,,,1,,,elicitation/i3/flip_rates.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),I3,58.7336,54.1844,63.1286,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),I3 null,5.8081,,,1,,,elicitation/i3/flip_rates.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Cinque),I3,59.6070,55.5975,63.6715,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+Qwen3-VL-4B | pair-Δ single (prior Cinque),I3 null,5.0505,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Cinque | M-C pair op (single),I3,68.6681,64.2581,72.9382,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Cinque | M-C pair op (single),I3 null,5.0505,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Cinque | M-C hard (control),I3,64.5742,59.3375,69.6992,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Cinque | M-C hard (control),I3 null,4.5455,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Cinque | M-C uniform (control),I3,69.7598,65.3437,74.1565,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Cinque | M-C uniform (control),I3 null,4.7980,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Lebowski | ridge_late (= prior),I3,70.4694,65.8410,74.8002,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Lebowski | ridge_late (= prior),I3 null,4.9242,,,1,,,elicitation/i3/flip_rates.csv,take,
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),I3,67.3581,62.8385,71.6911,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),I3 null,5.1768,,,1,,,elicitation/i3/flip_rates.csv,take,
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),I3,63.9738,59.3399,68.2983,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),I3 null,4.7980,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Lebowski | M-C pair op (single),I3,70.5786,65.8602,74.9080,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Lebowski | M-C pair op (single),I3 null,4.4192,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Lebowski | M-C hard (control),I3,68.4498,63.7028,73.1552,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Lebowski | M-C hard (control),I3 null,4.7980,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Lebowski | M-C uniform (control),I3,70.3057,65.7433,74.7024,1,,,elicitation/i3/flip_rates.csv,take,single run (5-fold mean head)
+openpilot Lebowski | M-C uniform (control),I3 null,5.0505,,,1,,,elicitation/i3/flip_rates.csv,take,
+openpilot Cinque | cls_late (P5-trained),I3,41.9396,42.3009,49.9726,3,39.1921,46.0153,night2/N3/i3_flip_rates.csv,take,
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",I3,16.7031,11.6771,19.7889,3,15.6659,18.0677,night2/N3/i3_flip_rates.csv,take,
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",I3,47.4891,42.8723,52.0363,1,,,night2/N3/i3_flip_rates.csv,take,
+openpilot Lebowski | cls_late (P5-trained),I3,35.8624,33.0681,41.7447,3,33.0786,37.3362,night2/N3/i3_flip_rates.csv,take,
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",I3,11.2445,8.9821,14.4478,3,10.8624,11.5721,night2/N3/i3_flip_rates.csv,take,
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",I3,25.1638,20.8242,29.3874,1,,,night2/N3/i3_flip_rates.csv,take,
+openpilot Cinque | E5 student A,I3,61.6000,,,3,59.8000,62.9000,real-data-transfer/g2/i3_reference.csv,take,
+openpilot Cinque | E5 student B,I3,62.2333,,,3,60.8000,63.3000,real-data-transfer/g2/i3_reference.csv,take,
+SparseDriveV2 | native (zero-shot),I3,23.5808,18.8999,28.5959,1,,,top10-exams/t1_i3_flip_rates.csv,take,
+SparseDriveV2 | native (zero-shot),I3 null,4.7980,,,1,,,top10-exams/t1_i3_flip_rates.csv,take,
+ZTRS | native (zero-shot),I3,45.4694,40.0000,51.1473,1,,,top10-exams/t1_i3_flip_rates.csv,take,
+ZTRS | native (zero-shot),I3 null,5.8081,,,1,,,top10-exams/t1_i3_flip_rates.csv,take,
+DrivoR | native (zero-shot),I3,33.7336,26.9799,40.7310,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+DrivoR | native (zero-shot),I3 null,5.3030,,,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+WA-JEPA | native (zero-shot),I3,66.1026,62.5346,69.6891,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+WA-JEPA | native (zero-shot),I3 null,6.3131,,,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+openpilot ridge_late (Cinque) | native (zero-shot),I3,69.9782,65.4973,74.4611,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+openpilot ridge_late (Cinque) | native (zero-shot),I3 null,4.4192,,,1,,,top10-exams/t2_i3_flip_rates.csv,take,
+ego-only | ridge ego,WOD RFS,7.0651,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+ego-only | cls ego,WOD RFS,7.2445,,,3,7.2202,7.2767,"driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv + box heads_train-seed{0,1,2}",take,"cluster mean, W-train"
+ego-only | cls ego,WOD pre-onset ΔADE,0.3397,0.1103,0.6829,1,,,driving-backbones/heads-train/pre_onset_dec19_p3drive_heads.csv,take,"s_ego deciles 1-9 vs ridge ego (decision 22 footnote), n = 1291"
+openpilot Cinque | ridge_late (= prior),WOD RFS,7.4489,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+openpilot Cinque | ridge_late (= prior),WOD pre-onset ΔADE,-0.2937,-0.4235,-0.1677,1,,,driving-backbones/heads-train/pre_onset_dec19_p3drive_heads.csv,take,"s_ego deciles 1-9 vs ridge ego (decision 22 footnote), n = 1291"
+openpilot Cinque | cls_late,WOD RFS,7.5502,,,3,7.4967,7.6521,"driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv + box heads_train-seed{0,1,2}",take,"cluster mean, W-train"
+openpilot Cinque | cls_late,WOD pre-onset ΔADE,0.2072,-0.0573,0.5273,1,,,driving-backbones/heads-train/pre_onset_dec19_p3drive_heads.csv,take,"s_ego deciles 1-9 vs ridge ego (decision 22 footnote), n = 1291"
+openpilot Cinque | native plan,WOD RFS,8.0049,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+openpilot Lebowski | ridge_late (= prior),WOD RFS,7.5216,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+openpilot Lebowski | ridge_late (= prior),WOD pre-onset ΔADE,-0.3180,-0.4491,-0.1974,1,,,driving-backbones/heads-train/pre_onset_dec19_p3drive_heads.csv,take,"s_ego deciles 1-9 vs ridge ego (decision 22 footnote), n = 1291"
+openpilot Lebowski | cls_late,WOD RFS,7.5729,,,3,7.4622,7.6832,"driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv + box heads_train-seed{0,1,2}",take,"cluster mean, W-train"
+openpilot Lebowski | cls_late,WOD pre-onset ΔADE,0.1823,-0.0847,0.5495,1,,,driving-backbones/heads-train/pre_onset_dec19_p3drive_heads.csv,take,"s_ego deciles 1-9 vs ridge ego (decision 22 footnote), n = 1291"
+openpilot Lebowski | native plan,WOD RFS,7.8855,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+openpilot small | native plan,WOD RFS,7.6397,,,1,,,driving-backbones/heads-train/heads_rfs_arms_p3drive_heads.csv,take,"cluster mean, W-train; deterministic or no fit"
+Qwen3-VL-4B | ridge_late,WOD RFS,6.9416,6.7400,7.1607,1,,,driving-backbones/p3drive_train_arms.csv,take,W-train arm A = single-frame L18_mean (item 13)
+Qwen3-VL-4B | ridge_late,WOD pre-onset ΔADE,-0.0045,-0.0552,0.0474,1,,,driving-backbones/pre_onset_dec19_p3drive_train.csv,take,n = 1291
+V-JEPA 2 ViT-L | ridge_late,WOD RFS,6.7553,6.5761,6.9894,1,,,p3-backbone-ladder/p3train_arms.csv,take,"W-train, front camera only, n_rater 478 (its ridge ego: 6.966)"
+V-JEPA 2 ViT-L | ridge_late,WOD pre-onset ΔADE,-0.0299,-0.1037,0.0410,1,,,p3-backbone-ladder/rejudge_p3train.csv,take,n = 1249
+SigLIP2 so400m | ridge_late,WOD RFS,,,,0,,,,text,无 W-train（只在 W-half / W-xfit 或从未抽过）
+DINOv2-B | ridge_late,WOD RFS,,,,0,,,,text,无 W-train（只在 W-half / W-xfit 或从未抽过）
+openpilot small | ridge_late,WOD RFS,,,,0,,,,text,无 W-train（只在 W-half / W-xfit 或从未抽过）
+DrivoR | native (zero-shot),WOD RFS,6.4753,6.2406,6.7128,1,,,top10-exams/wod_rater.csv,take,"cluster mean, zero-shot, 5 s by constant-velocity extrapolation"
+WA-JEPA | native (zero-shot),WOD RFS,7.4328,7.1912,7.6686,1,,,top10-exams/wod_rater.csv,take,"cluster mean, zero-shot, 5 s by constant-velocity extrapolation"
+Alpamayo 1.5 | native plan (nav),WOD RFS,7.8569,7.6697,8.0364,1,,,top10-exams/wod_rater.csv,take,cluster mean
+SparseDriveV2 | native (zero-shot),WOD RFS,6.4210,6.1898,6.6584,1,,,top10-exams/t1_wod_rfs.csv,take,cluster mean
+ZTRS | native (zero-shot),WOD RFS,6.7008,6.4683,6.9282,1,,,top10-exams/t1_wod_rfs.csv,take,cluster mean
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),WOD RFS paired Δ,-1.0154,-1.2106,-0.8236,1,,,elicitation/e1/wod_deltas.csv,take,"E1, seed 0, frame mean vs WOD-train ridge_late prior"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),WOD RFS paired Δ,-1.5184,-1.7376,-1.3012,1,,,elicitation/e1/wod_deltas.csv,take,"E1, seed 0, frame mean vs WOD-train ridge_late prior"
+openpilot Cinque | E5 student A,WOD RFS paired Δ,-0.1027,-0.1973,-0.0315,3,-0.1113,-0.0896,real-data-transfer/g0/verdict.csv,take,"G0 zero-shot, frame mean"
+openpilot Cinque | E5 student A,NAVSIM PDMS paired Δ,-1.1870,-1.5509,-1.0447,3,-1.2951,-1.0970,real-data-transfer/g0/verdict.csv,take,G0 zero-shot vs NAVSIM ridge_late
+openpilot Cinque | E5 student B,WOD RFS paired Δ,-0.0399,-0.1104,0.0517,3,-0.0479,-0.0291,real-data-transfer/g0/verdict.csv,take,"G0 zero-shot, frame mean"
+openpilot Cinque | E5 student B,NAVSIM PDMS paired Δ,-1.8282,-2.2343,-1.6256,3,-1.9276,-1.7688,real-data-transfer/g0/verdict.csv,take,G0 zero-shot vs NAVSIM ridge_late
+openpilot Lebowski | E5 student A,WOD RFS paired Δ,-0.0513,-0.1152,0.0074,3,-0.0560,-0.0447,real-data-transfer/g0/verdict.csv,take,"G0 zero-shot, frame mean"
+openpilot Lebowski | E5 student A,NAVSIM PDMS paired Δ,-2.1723,-2.2657,-1.7385,3,-2.3439,-1.9988,real-data-transfer/g0/verdict.csv,take,G0 zero-shot vs NAVSIM ridge_late
+openpilot Lebowski | E5 student B,WOD RFS paired Δ,0.0058,-0.0520,0.0867,3,-0.0020,0.0186,real-data-transfer/g0/verdict.csv,take,"G0 zero-shot, frame mean"
+openpilot Lebowski | E5 student B,NAVSIM PDMS paired Δ,-2.5048,-3.0812,-2.3898,3,-2.7321,-2.2869,real-data-transfer/g0/verdict.csv,take,G0 zero-shot vs NAVSIM ridge_late
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),WOD RFS paired Δ (cluster),-1.0410,-1.2622,-0.8200,1,,,/root/autodl-tmp/ujs/runs/elicitation/e1-wod/20260926-003138,recompute,cluster mean; prior 7.457 -> 6.417
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),WOD RFS paired Δ (cluster),-1.6669,-1.9251,-1.4110,1,,,/root/autodl-tmp/ujs/runs/elicitation/e1-wod/20260926-003138,recompute,cluster mean; prior 7.532 -> 5.865
+ego-only | ridge ego,NAVSIM PDMS,62.6630,61.9491,63.3769,3,62.6630,62.6630,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap
+ego-only | ridge ego,NAVSIM EPDMS,64.2060,63.4403,64.9717,3,64.2060,64.2060,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap
+ego-only | cls ego,NAVSIM PDMS,68.1511,67.7246,69.1384,3,67.6601,68.4315,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap
+ego-only | cls ego,NAVSIM EPDMS,67.5536,67.0895,68.6051,3,67.1658,67.8473,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap
+openpilot Cinque | ridge_late (= prior),NAVSIM PDMS,73.5746,72.8608,74.1862,3,73.5235,73.6557,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Cinque | ridge_late (= prior),NAVSIM EPDMS,73.9119,73.1661,74.5361,3,73.8511,74.0049,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Cinque | cls_late,NAVSIM PDMS,77.7045,77.2638,78.4924,3,77.3967,77.8781,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Cinque | cls_late,NAVSIM EPDMS,77.2141,76.7901,78.0097,3,76.9441,77.3999,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Lebowski | ridge_late (= prior),NAVSIM PDMS,72.4226,71.7536,73.0764,3,72.4150,72.4346,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Lebowski | ridge_late (= prior),NAVSIM EPDMS,72.8725,72.1829,73.5625,3,72.8665,72.8782,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Lebowski | cls_late,NAVSIM PDMS,77.0715,76.6278,77.8782,3,76.7836,77.2530,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Lebowski | cls_late,NAVSIM EPDMS,76.4820,76.0249,77.2983,3,76.2720,76.6616,elicitation/seeds/navsim_seeds.csv,take,3 seeds; CI = seed 0 token bootstrap; 2 Hz protocol
+openpilot Cinque | Hydra,NAVSIM PDMS,84.0660,83.7041,84.6956,3,83.7525,84.2624,night2/N3/navsim_scores.csv,take,3 seeds (N3); openpilot features at 2 Hz
+openpilot Cinque | Hydra,NAVSIM EPDMS,80.9515,82.0600,83.0622,3,77.9645,82.5728,night2/N3/navsim_scores.csv,take,3 seeds (N3); openpilot features at 2 Hz
+openpilot Lebowski | Hydra,NAVSIM PDMS,84.2434,83.9109,84.8648,3,84.1639,84.3695,night2/N3/navsim_scores.csv,take,3 seeds (N3); openpilot features at 2 Hz
+openpilot Lebowski | Hydra,NAVSIM EPDMS,82.1028,81.6606,82.6815,3,82.0153,82.1516,night2/N3/navsim_scores.csv,take,3 seeds (N3); openpilot features at 2 Hz
+openpilot Cinque | native plan,NAVSIM PDMS,52.0700,51.2800,52.8500,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+openpilot Cinque | native plan,NAVSIM EPDMS,46.1600,45.4200,46.9000,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+openpilot Lebowski | native plan,NAVSIM PDMS,50.8900,50.1500,51.6300,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+openpilot Lebowski | native plan,NAVSIM EPDMS,45.4800,44.7300,46.1700,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+openpilot small | native plan,NAVSIM PDMS,47.3500,46.5700,48.1800,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+openpilot small | native plan,NAVSIM EPDMS,42.5200,41.7700,43.2800,1,,,navsim-zeroshot/results_navtest.csv,take,2 Hz sample-and-hold protocol reading (item 14)
+Alpamayo 1.5 | native plan (nav),NAVSIM PDMS,44.2800,43.5300,45.0300,1,,,navsim-zeroshot/results_navtest.csv,take,zero-shot
+Alpamayo 1.5 | native plan (nav),NAVSIM EPDMS,43.1700,42.4000,43.9200,1,,,navsim-zeroshot/results_navtest.csv,take,zero-shot
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),NAVSIM PDMS paired Δ,-8.1656,-8.8674,-7.4497,1,,,elicitation/e1/navsim_paired.csv,take,"E1, seed 0, vs NAVSIM ridge_late"
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),NAVSIM PDMS paired Δ,-11.1779,-11.9335,-10.4133,1,,,elicitation/e1/navsim_paired.csv,take,"E1, seed 0, vs NAVSIM ridge_late"
+DrivoR | native (zero-shot),NAVSIM PDMS,93.6900,,,1,,,top10-exams/navsim_drivor.csv,take,"reproduction (paper 93.7); navtrain-trained, not zero-shot on NAVSIM"
+WA-JEPA | native (zero-shot),NAVSIM EPDMS,91.7100,,,1,,,top10-exams/navsim_wajepa.csv,take,"reproduction (paper 91.7); navtrain-trained, not zero-shot on NAVSIM"
+V-JEPA 2 ViT-L (1 frame x 4) | pair-Δ single (prior Cinque),P5 BA ped,37.3567,28.6100,45.9000,3,35.2200,40.1500,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_single_frame.csv,recompute,Q6 (b)
+V-JEPA 2 ViT-L (1 frame x 4) | pair-Δ single (prior Cinque),P5 BA null,5.1900,,,3,4.9500,5.5600,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_single_frame.csv,recompute,
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),WOD RFS paired Δ,-0.4626,-0.6140,-0.3021,3,-0.4679,-0.4560,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),WOD RFS paired Δ (cluster),-0.4503,-0.6295,-0.2754,3,-0.4563,-0.4466,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),NAVSIM PDMS paired Δ,-6.5165,-6.8501,-5.8323,3,-6.7956,-6.3299,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),WOD RFS paired Δ,-0.4291,-0.6281,-0.3194,3,-0.4738,-0.4022,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),WOD RFS paired Δ (cluster),-0.4374,-0.6399,-0.3026,3,-0.4670,-0.4202,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),NAVSIM PDMS paired Δ,-3.6748,-4.9907,-3.8508,3,-4.4208,-3.2334,/root/autodl-tmp/ujs/jev-drive/research/results/nq3/q6/vjepa_real_verdict.csv,recompute,Q6 (c)
+Qwen3-VL-4B | ridge_late,P6,,,,0,,,,text,待 Q1 / Q2
+Qwen3-VL-4B | ridge_late,closed loop,,,,0,,,,text,待 CL
+Qwen3-VL-4B | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+Qwen3-VL-4B | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Cinque),closed loop,,,,0,,,,text,待 CL
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+Qwen3-VL-4B | pair-Δ single (prior Lebowski),closed loop,,,,0,,,,text,待 CL
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+Qwen3-VL-4B | pair-Δ dual = M-C (⊕ Lebowski),closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L | ridge_late,P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L | ridge_late,closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Cinque),closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L | pair-Δ single (prior Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L | pair-Δ single (prior Lebowski),closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L | pair-Δ dual (⊕ Lebowski),closed loop,,,,0,,,,text,待 CL
+SigLIP2 so400m | ridge_late,P6,,,,0,,,,text,待 Q1 / Q2
+SigLIP2 so400m | ridge_late,closed loop,,,,0,,,,text,待 CL
+SigLIP2 so400m | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+SigLIP2 so400m | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL
+SigLIP2 so400m | pair-Δ dual (⊕ Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+SigLIP2 so400m | pair-Δ dual (⊕ Cinque),closed loop,,,,0,,,,text,待 CL
+SigLIP2 so400m | pair-Δ single (prior Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+SigLIP2 so400m | pair-Δ single (prior Lebowski),closed loop,,,,0,,,,text,待 CL
+SigLIP2 so400m | pair-Δ dual (⊕ Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+SigLIP2 so400m | pair-Δ dual (⊕ Lebowski),closed loop,,,,0,,,,text,待 CL
+DINOv2-B | ridge_late,P6,,,,0,,,,text,待 Q1 / Q2
+DINOv2-B | ridge_late,closed loop,,,,0,,,,text,待 CL
+DINOv2-B | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+DINOv2-B | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL
+DINOv2-B | pair-Δ dual (⊕ Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+DINOv2-B | pair-Δ dual (⊕ Cinque),closed loop,,,,0,,,,text,待 CL
+DINOv2-B | pair-Δ single (prior Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+DINOv2-B | pair-Δ single (prior Lebowski),closed loop,,,,0,,,,text,待 CL
+DINOv2-B | pair-Δ dual (⊕ Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+DINOv2-B | pair-Δ dual (⊕ Lebowski),closed loop,,,,0,,,,text,待 CL
+openpilot small | ridge_late,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | ridge_late,closed loop,,,,0,,,,text,待 CL
+openpilot small | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL
+openpilot small | pair-Δ dual (⊕ Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | pair-Δ dual (⊕ Cinque),closed loop,,,,0,,,,text,待 CL
+openpilot small | pair-Δ single (prior Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | pair-Δ single (prior Lebowski),closed loop,,,,0,,,,text,待 CL
+openpilot small | pair-Δ dual (⊕ Lebowski),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | pair-Δ dual (⊕ Lebowski),closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | ridge_late (= prior),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | ridge_late (= prior),closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | ridge_late (= prior),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | ridge_late (= prior),closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | M-C pair op (single),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | M-C pair op (single),closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | M-C hard (control),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | M-C hard (control),closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | M-C uniform (control),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | M-C uniform (control),closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | M-C pair op (single),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | M-C pair op (single),closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | M-C hard (control),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | M-C hard (control),closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | M-C uniform (control),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | M-C uniform (control),closed loop,,,,0,,,,text,待 CL
+ego-only | ridge ego,P6,,,,0,,,,text,待 Q1 / Q2
+ego-only | ridge ego,closed loop,,,,0,,,,text,待 CL
+TFv6 | waypoint 2 s,P6,,,,0,,,,text,待 Q1 / Q2
+TFv6 | waypoint 2 s,closed loop,,,,0,,,,text,待 CL
+TFv6 | target speed,P6,,,,0,,,,text,待 Q1 / Q2
+TFv6 | target speed,closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | E5 student A,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | E5 student A,closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | E5 student B,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | E5 student B,closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | E5 student A,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | E5 student A,closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | E5 student B,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | E5 student B,closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | cls_late (P5-trained),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | cls_late (P5-trained),closed loop,,,,0,,,,text,待 CL
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",P6,,,,0,,,,text,待 Q1 / Q2
+"openpilot Cinque | cls_late (NAVSIM-trained, zero-shot)",closed loop,,,,0,,,,text,待 CL
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",P6,,,,0,,,,text,待 Q1 / Q2
+"openpilot Cinque | ridge_late (NAVSIM-trained, zero-shot)",closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | Hydra,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | Hydra,closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | cls_late (P5-trained),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | cls_late (P5-trained),closed loop,,,,0,,,,text,待 CL
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",P6,,,,0,,,,text,待 Q1 / Q2
+"openpilot Lebowski | cls_late (NAVSIM-trained, zero-shot)",closed loop,,,,0,,,,text,待 CL
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",P6,,,,0,,,,text,待 Q1 / Q2
+"openpilot Lebowski | ridge_late (NAVSIM-trained, zero-shot)",closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | Hydra,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | Hydra,closed loop,,,,0,,,,text,待 CL
+SparseDriveV2 | native (zero-shot),P6,,,,0,,,,text,待 Q1 / Q2
+SparseDriveV2 | native (zero-shot),closed loop,,,,0,,,,text,待 CL
+ZTRS | native (zero-shot),P6,,,,0,,,,text,待 Q1 / Q2
+ZTRS | native (zero-shot),closed loop,,,,0,,,,text,待 CL
+BridgeDrive | waypoint 2 s,P6,,,,0,,,,text,待 Q1 / Q2
+BridgeDrive | waypoint 2 s,closed loop,,,,0,,,,text,待 CL
+BridgeDrive | target speed,P6,,,,0,,,,text,待 Q1 / Q2
+BridgeDrive | target speed,closed loop,,,,0,,,,text,待 CL
+BLUE | waypoint 2 s,P6,,,,0,,,,text,待 Q1 / Q2
+BLUE | waypoint 2 s,closed loop,,,,0,,,,text,待 CL
+SimLingo | waypoint 2 s,P6,,,,0,,,,text,待 Q1 / Q2
+SimLingo | waypoint 2 s,closed loop,,,,0,,,,text,待 CL
+DrivoR | native (zero-shot),P6,,,,0,,,,text,待 Q1 / Q2
+DrivoR | native (zero-shot),closed loop,,,,0,,,,text,待 CL
+WA-JEPA | native (zero-shot),P6,,,,0,,,,text,待 Q1 / Q2
+WA-JEPA | native (zero-shot),closed loop,,,,0,,,,text,待 CL
+openpilot ridge_late (Cinque) | native (zero-shot),P6,,,,0,,,,text,待 Q1 / Q2
+openpilot ridge_late (Cinque) | native (zero-shot),closed loop,,,,0,,,,text,待 CL
+ego-only | cls ego,P6,,,,0,,,,text,待 Q1 / Q2
+ego-only | cls ego,closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | cls_late,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | cls_late,closed loop,,,,0,,,,text,待 CL
+openpilot Cinque | native plan,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Cinque | native plan,closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | cls_late,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | cls_late,closed loop,,,,0,,,,text,待 CL
+openpilot Lebowski | native plan,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot Lebowski | native plan,closed loop,,,,0,,,,text,待 CL
+openpilot small | native plan,P6,,,,0,,,,text,待 Q1 / Q2
+openpilot small | native plan,closed loop,,,,0,,,,text,待 CL
+Alpamayo 1.5 | native plan (nav),P6,,,,0,,,,text,待 Q1 / Q2
+Alpamayo 1.5 | native plan (nav),closed loop,,,,0,,,,text,待 CL
+V-JEPA 2 ViT-L (1 frame x 4) | pair-Δ single (prior Cinque),P6,,,,0,,,,text,待 Q1 / Q2
+V-JEPA 2 ViT-L (1 frame x 4) | pair-Δ single (prior Cinque),closed loop,,,,0,,,,text,待 CL

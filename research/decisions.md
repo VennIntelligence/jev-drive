@@ -2720,6 +2720,11 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 (3) 同一冻结 checkpoint × {v1, v2, HUGSIM} × {官方权重, 各榜重调权重}。
 **会推翻本条的证据**：实验 (1) 里关掉规则后 target speed 通道的翻转率显著上升（"不反应"是规则掩盖的）；实验 (3) 里官方权重与重调权重的 EPDMS 差 <3。
 
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q5 NAVSIM速度置零S0：DrivoR PDMS差−22.115 [−22.657,−21.578]；WA-JEPA −8.159 [−9.406,−6.942]，均下降≥5，按原判格 ego prior。nuScenes DrivoR原verdict not applicable，WA-JEPA原verdict nuScenes score mainly from the ego prior (S0)；原L2表与CI见 todo引用（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
+
 ## 36. openpilot 换相机 rig 基本不掉，掉的是朝向标定和时间轴；真实数据上安装高度不重要（**待定**，comma1M 8 段 + WOD 479 帧）
 
 2026-09-25，[openpilot-migration.md](../todos/2026-09-24-zeroshot-exam/openpilot-migration.md) B 部分。在 comma1M 真实视频上合成 44 种输入
@@ -3161,6 +3166,11 @@ student 是唯一贴近可用的（Cut_ins 跨零、激活贴 7%），但全部�
 **状态**：**待定**。E1 限定：单个 CARLA 集（BA）训的 head、WOD 评测只在 19 663 帧子集上。G0 限定：真实数据上的走廊是 ego 历史圆弧（P5 上与路线走廊的行人标记一致 99.5%），20–40 m 的平地放置误差中位 6 m；NAVSIM 地面高度按 navtrain GT 车辆框定为 −0.36 m。E3 限定：τ_ego 两边都偏宽（2 Hz 历史只有 4 步），WOD 的原因物体只能用 SAM（行人召回 0.36）。E2 限定见上。
 **怎么推进**：E2 已按登记不过，配对差分在真实数据上目前没有已登记的路（纵向孪生对已由用户决定不开）。候选：几何一致的真实外观配对（HUGSIM 3DGS）G2 已做（原列为「要新登记，未做」的候选，见上：I3 上不超过 prior，带不到 WOD）；带门控的部署形式 G1 已做（见上，原列为候选）：「g₃ × 常数减速」对照 G1c 已做（原写「下一步只剩」这一项）：常数刹车不比 M-C 差，openpilot lead 门若要登记，是作为与配对无关的车辆规则，不是配对 Δ 的部署门。（原来还列了「更高信噪比的编辑（视频一致 inpainting、只编辑 clip 中的所有帧）」，G3a 按登记读法判定编辑质量不是瓶颈，这一项不投。）
 
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q6 的 V-JEPA 2 双流 M-C：Cinque/Lebowski 均0/3 candidate seed，WOD/NAVSIM 配对差 CI 均不覆盖0；数字与 CI 见 todo 的 Q6 表。原判格 not a candidate（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
+
 ## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
 
 2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-fast-perception.md](../todos/2026-09-26-fast-perception.md)，小表在 [research/results/fast-perception/](results/fast-perception/)。
@@ -3239,6 +3249,11 @@ NAVSIM 榜分按作者评测路径复现（DrivoR navtest PDMS 93.69 对 93.7；
 表征驱动的 AF 族（WA-JEPA）在车辆反应和零样本迁移两类卷上都明显更好，是前 10 族里第一个「推翻条件」两半（高于 null、跨卷）都部分成立的族，但它仍低于 Alpamayo / openpilot 的零样本 WOD 分数，且 CARLA 上只有弱信号。
 「交集由训练生态决定、不是能力信号」对 DR 与 AF 两族都**降级**为「两族在真实外观车辆配对上都有约 25 pp 的选择性反应（反应帧翻转 − 非反应帧误翻：WA-JEPA 66 − 40、DrivoR 34 − 11，冻结 openpilot `ridge_late` 70 − 18 = 52 pp），约为 openpilot 线性读出的一半；CARLA 外观上不可判」（2026-09-26 18:30 就地改，原写「对 DR 族维持，对 AF 族降级为『交集里至少这一族带出了可迁移的车辆反应与开环能力』」：DrivoR 在 I3 上也显著高于 null，选择性与 WA-JEPA 同一水平；CARLA 上没有可比读数，谈不上跨外观迁移；WA-JEPA 的 66% 里有 40 pp 是非选择性的减速）。状态仍**待定**（T1 / T2 / T3 三路合起来的读法留给 main；I3 只有车辆、规则标签；单 ckpt、单 seed）。
 
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q1 固定 verdict：除特权 PDM-Lite expert 外，具横向读数的公开考生均 no bypass；target-speed 为 longitudinal only。Q5 选择性差 <10pp 的登记标注逐格见 todo Q5 表；保留原 CSV 的 no reaction label，不新增解释（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
+
 ## 47. 「判断之后的行为」（绕行、让行 / 博弈、恢复）目前没有量具：公开开环榜不按行为模式计分；PDM-Lite 会绕但靠特权登记，BehaviorAgent 不绕；WOD val 上人类明确要绕的只有 21 / 479 帧，我们的 `cls_late` 在这些帧上 0 / 21（**待定**）
 
 2026-09-26。只读调研 + 在已提交的 WOD `per_frame.npz` 上算的一版零成本读数，全文 [behavior-layer-instruments.md](behavior-layer-instruments.md)；
@@ -3260,6 +3275,11 @@ NAVSIM 榜分按作者评测路径复现（DrivoR navtest PDMS 93.69 对 93.7；
 **状态**：**待定**。限定：WOD 的 21 帧只能当 sanity check；宽口径 133 帧混有弯道，WOD 没有 map 分不开；`cls_late` 词表里 bypass 形状的 anchor 有多少还没数，0 / 21 可能是 vocabulary 造成的而不是 representation。
 **会推翻或推进本条的证据**：N1 里 PDM-Lite 在 bypass 类的绕行比例 < 70%（考卷造不出来）；词表里 bypass anchor 覆盖足够而 `cls_late` 在 P6 上仍为 0（第 25 条的 reaction decoder 只会「刹」，第三层要用横向目标重训）；
 TFv6 waypoint 在 P6 上有显著 Δ_lat（第 38 条「TFv6 高分主要不是 E 层」在 obstacle_bypass 这一格要改写）。
+
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q1 规则7的逐考生 bypass 点数、CI、天气null、选择性与原 verdict 已抄到 todo Q1 表；Q2 全seed过线与判格已抄到 todo，但更细 decisions 映射 WAIT。只登记数字与原判格（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
 
 ## 48. 冻结的视频 / 图像自监督特征里有 E 层（行人反应）信号，但只有配对差分激发得出来：V-JEPA 2 与 Qwen 同一水平，SigLIP2 低一档，DINOv2 与 openpilot small 没有（**待定**，P5 v1 BA，3 seed）
 
@@ -3286,6 +3306,11 @@ null false-flip 4.8–5.2%；副 tap 与 Lebowski prior 判格不变。
 
 **状态**：**待定**。限定：只在 CARLA（BA 集）；pooled 特征、线性 head；DINOv2 输入按竖图改成 350 × 322；DINOv3 未测。图：[night2-n6-backbone-flips](figs/night2-n6-backbone-flips.png)。
 **会推翻或推进本条的证据**：V-JEPA 2 只喂当前帧（1 帧重复成 clip）行人翻转掉到 DINOv2 的水平（那就是「时间」而不是「视频预训练」）；V-JEPA 流替换 Qwen 进 E5 student 后在真实数据上不再有害（推进快通道换 backbone）。
+
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q6 Cinque pair-Δ mean 主臂：单帧行人翻转 seed0/1/2=0.3670/0.3522/0.4015，4帧=0.4581/0.4754/0.4778，各seed CI重叠；原登记读法“视频预训练本身”。全部CI见 todo Q6 表，其他臂不外推（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
 
 ## 49. openpilot 的冻结特征里有「前方静止障碍（含锥桶、事故车）」「旁边车道有车」「对向来车」的线性可读信息；desire 脉冲方向总对，但开环下变道幅度不够当绕行执行器（**待定**，P5 v1 两个 expert 集 + N1 的 P6 帧；2026-09-26 15:00 就地补 N1 重跑，原标题写「前方停着的车」「绕行类障碍待 N1 重跑」）
 
@@ -3403,6 +3428,11 @@ negotiation 的车流表是我们定的；Emergency 的 t_div 早于前向可见
 **会推翻或推进本条的证据**：修过的放置 null 过门后，考生在放置 null 上的 bypass 率 ≈ x₁₀（那是「只对有东西反应」，P5 的行人翻转也要打折）；换成有 bypass anchor 的词表后 `cls_late` 仍 Δm_bypass ≈ 0（那才是 representation 的问题）；
 第二个 expert（例如 TFv6 的 waypoint 当 teacher）在同一批世界上与 PDM-Lite 的模式一致率低（考卷的标签依赖单一规则 expert）。
 
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q3：九类x10 bypass≥0.70均过；x00 844/1186=0.712<0.95；登记放置null keep118/140=0.843<0.90；mirror stop61/80=0.762<0.80；x11 wait0.475<0.50；early0、never_visible1。事后同case x00模式口径汇总缺项 WAIT，不拿keep率替代。recovery原smoke10/10≥0.80（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
+
 ## 53. 榜单最优的 Hydra 打分头在 CARLA 配对考卷上不可比；把 CARLA 激发的反应 Δ 经真实数据 gate 叠到它上面，NAVSIM 掉 5–8 分，「能力包」不成立（**待定**，NAVSIM navtest + P5 v1 BA + I3，3 seed，两个 openpilot 模型）
 
 2026-09-26。预登记、兼容检查与全部表在 [todos/2026-09-26-night-queue-2.md](../todos/2026-09-26-night-queue-2.md) N3 节（[B] 09:58 / 10:10）与结果节，小表 [results/night2/N3/](results/night2/N3/)，图 [night2-n3-heads](figs/night2-n3-heads.png)。
@@ -3425,3 +3455,7 @@ negotiation 的车流表是我们定的；Emergency 的 t_div 早于前向可见
 
 **状态**：**待定**。限定：Hydra 的子分标签只用 navtrain 的 2 万 token；Δ 只用 M-C seed 0；g₂ 是 G1 的主 arm（按训练行 AUC 选），P5 / I3 上用的是 navtrain 训的同一个 probe；NAVSIM 的 EPDMS 用 main @ 0a380a9 devkit。
 **会推翻或推进本条的证据**：用 NAVSIM 协议（2 Hz sample-and-hold）在 P5 帧上重抽 openpilot 特征后兼容检查过线（那时第 1 条可判）；或一个在真实数据上把非 hazard 帧的 Δ 压到零的 gate 让 Hydra + Δ 的 PDMS 损失 ≤ 1（第 2 条翻案）。
+
+### 2026-09-27 新读数（GPT 按登记判格，待人复核）
+
+Q4b NAVSIM2Hz seed0 top10重叠：Cinque=0.20、Lebowski=0.20，均低于0.30，按登记不可比；Hydra P5翻转 SKIP，未标PASS。Q4a仍原复现 assertion WAIT（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。

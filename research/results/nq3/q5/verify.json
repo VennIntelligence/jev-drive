@@ -1,0 +1,9 @@
+{
+ "nusc_drivor_base_vs_t2_max_abs": 0.0,
+ "nusc_wajepa_batched_base_vs_t2_mean_disp_m": 0.026702992618083954,
+ "nusc_wajepa_batched_base_vs_t2_p95_ade_m": 0.06940860748291014,
+ "nusc_wajepa_batched_base_vs_t2_maxdiff": 0.78125,
+ "nusc_wajepa_n": 1159,
+ "navtest_wajepa_fp32_vs_t2_export_max_abs": 0.0,
+ "navtest_wajepa_fp32_n": 16
+}

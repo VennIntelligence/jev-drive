@@ -1,0 +1,6 @@
+{
+ "verdict": "video pre-training itself (single-frame CI overlaps the 4-frame one in every seed)",
+ "ped_1f_mean": 0.3735632183908046,
+ "ped_4f_mean": 0.47044334975369456,
+ "ci_overlap_seeds": 3
+}

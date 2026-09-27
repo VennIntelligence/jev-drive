@@ -1,0 +1,5 @@
+model,set,verdict
+DrivoR,nuScenes,not applicable (no advantage over CV at base)
+WA-JEPA,nuScenes,nuScenes score mainly from the ego prior (S0)
+DrivoR,NAVSIM navtest,PDMS mainly from the ego prior (S0)
+WA-JEPA,NAVSIM navtest,PDMS mainly from the ego prior (S0)

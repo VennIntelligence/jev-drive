@@ -519,3 +519,154 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 ## 结果
 
 （待写）
+
+### 2026-09-27 新读数：Q1–Q6（GPT 按登记判格，待人复核）
+
+本节只抄固定小表与登记比较；比例保留原表单位，CI 均为原脚本产物，不把 seed 极差或不同 seed 的 CI 合并成新 CI。A/C 完成；Q4b/Q5/Q6 使用独立组合已完成产物，D 整链旧 Q4a-fit assertion 仍保留，Q4a 不判。
+
+#### Q1：规则 7
+
+| 考生 | n | bypass [CI] | 天气 null | 选择性 | 登记判格 |
+| --- | --- | --- | --- | --- | --- |
+| openpilot cinque native plan | 3920 | 0.0508 [0.0359, 0.0702] | 0.0514955536375365 | True | no bypass |
+| openpilot lebowski native plan | 3920 | 0.0495 [0.0344, 0.0679] | 0.050249008327343705 | True | no bypass |
+| TFv6 waypoint | 3920 | 0.0732 [0.0556, 0.0926] | 0.0533022173169052 | True | no bypass |
+| TFv6 target speed | 3920 | N/A | 0.0 |  | longitudinal only |
+| ridge_late [cinque] | 3920 | 0.0372 [0.0239, 0.0530] | 0.052678944661808794 | True | no bypass |
+| M-C pair [cinque] | 3920 | 0.0406 [0.0262, 0.0576] | 0.04777621729886112 | True | no bypass |
+| E5 student B [cinque] | 3920 | 0.0293 [0.0181, 0.0429] | 0.05085423690074853 | True | no bypass |
+| ridge_late [lebowski] | 3920 | 0.0594 [0.0431, 0.0787] | 0.05758392753496793 | True | no bypass |
+| M-C pair [lebowski] | 3920 | 0.0605 [0.0448, 0.0795] | 0.05636444834731248 | True | no bypass |
+| E5 student B [lebowski] | 3920 | 0.0561 [0.0404, 0.0738] | 0.05514496915965705 | True | no bypass |
+| cls_late [cinque] | 3920 | 0.0309 [0.0216, 0.0405] | 0.05271728833540339 | True | no bypass |
+| cls_late [lebowski] | 3920 | 0.0436 [0.0334, 0.0545] | 0.053331538949654006 | True | no bypass |
+| SparseDriveV2 | 3920 | 0.0247 [0.0169, 0.0332] | 0.05027156342945817 | True | no bypass |
+| ZTRS | 3920 | 0.0276 [0.0093, 0.0509] | 0.053914212420944366 | True | no bypass |
+| DrivoR | 3920 | 0.0523 [0.0356, 0.0704] | 0.07349805575019773 | True | no bypass |
+| WA-JEPA | 3920 | 0.0482 [0.0301, 0.0697] | 0.05328417323521363 | True | no bypass |
+| Alpamayo 1.5 | 3623 | 0.0522 [0.0366, 0.0699] | 0.058207200190064326 | True | no bypass |
+| PDM-Lite expert (future) | 3920 | 0.4028 [0.3436, 0.4604] | 0.06382116510635483 | True | has bypass |
+| BridgeDrive waypoint | 3682 | 0.0918 [0.0686, 0.1162] | 0.059720512322080394 | True | no bypass |
+| BridgeDrive target speed | 0 | N/A |  |  | longitudinal only |
+| BLUE speed waypoints | 3682 | 0.0997 [0.0703, 0.1325] | 0.06229906942665318 | True | no bypass |
+| SimLingo speed waypoints | 3682 | 0.0929 [0.0630, 0.1259] | 0.06547989905081851 | True | no bypass |
+
+判据：CI 下界 > 天气 null + 0.10 且放置 null 选择性过线，按原 verdict 列逐格抄录。target-speed 行为纵向描述，不判 bypass。Alpamayo 仅 3623 帧，缺失覆盖仍明示；不补造全帧。
+
+#### Q2：固定分折判格
+
+| 数据 | 折 | 模型 | 流 | A1全seed | A3全seed | 绕行被激发 | 仅词表 | 镜像>50% |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| q2 | loco | cinque | op | False | False | False | False | WAIT（空值） |
+| q2 | loco | cinque | qwen L18_last | False | False | False | False | WAIT（空值） |
+| q2 | loco | cinque | vjepa2 mean | False | False | False | False | WAIT（空值） |
+| q2 | loco | lebowski | op | False | False | False | False | WAIT（空值） |
+| q2 | route | cinque | op | False | False | False | False | WAIT（空值） |
+| q2 | route | lebowski | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | loco | cinque | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | loco | lebowski | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | route | cinque | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | route | lebowski | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | town | cinque | op | False | False | False | False | WAIT（空值） |
+| q2_v1 | town | lebowski | op | False | False | False | False | WAIT（空值） |
+
+各 arm/seed 的点数与路线 bootstrap CI 原样见 [v0 完整数表](../research/results/nq3/q2/q2.md)、[v1 完整数表](../research/results/nq3/q2_v1/q2.md)。空值保留 WAIT，不当 False。按登记，A1/A3 均无全 seed 过线；不从导出 READY 推导科学 PASS。Q2 与 decisions 的具体条目映射仍 WAIT，未新增解释。
+
+#### Q3：专家门与 smoke
+
+x10 各类 bypass ≥0.70：
+
+| scenario                    |   n |   keep |   stop |   bypass_L |   bypass_R |   wait_then_bypass_L |   wait_then_bypass_R |   bypass_share | usable (>= 0.70)   |
+|:----------------------------|----:|-------:|-------:|-----------:|-----------:|---------------------:|---------------------:|---------------:|:-------------------|
+| Accident                    |  15 |      0 |      2 |          7 |          0 |                    6 |                    0 |          0.867 | yes                |
+| AccidentTwoWays             |  14 |      2 |      1 |         11 |          0 |                    0 |                    0 |          0.786 | yes                |
+| ConstructionObstacle        |  16 |      1 |      1 |          8 |          1 |                    5 |                    0 |          0.875 | yes                |
+| ConstructionObstacleTwoWays |  15 |      0 |      0 |         15 |          0 |                    0 |                    0 |          1     | yes                |
+| HazardAtSideLane            |  15 |      0 |      0 |          9 |          0 |                    6 |                    0 |          1     | yes                |
+| HazardAtSideLaneTwoWays     |  16 |      2 |      0 |         14 |          0 |                    0 |                    0 |          0.875 | yes                |
+| ParkedObstacle              |  16 |      0 |      3 |          6 |          3 |                    3 |                    1 |          0.812 | yes                |
+| ParkedObstacleTwoWays       |  16 |      1 |      2 |         13 |          0 |                    0 |                    0 |          0.812 | yes                |
+| VehicleOpensDoorTwoWays     |  16 |      2 |      2 |         12 |          0 |                    0 |                    0 |          0.75  | yes                |
+
+
+| 判据 | 读数 | 登记判格 |
+| --- | --- | --- |
+| recovery smoke ≥0.80 | 10/10 = 1.00 | 成立（原 smoke） |
+| x00 ≥95%帧 \|d\|<0.3m | 844/1186 = 0.712 | 不成立 |
+| t_div ≥ t_vis | early=0；never_visible=1 | 可见且分叉对成立；不可见对不纳入 |
+| 放置null keep ≥0.90（登记口径） | 118/140 = 0.843 | 不成立 |
+| 放置null与同case x00同模式（事后口径） | 原报告无汇总率 | WAIT，未替换为keep率 |
+| mirror stop ≥0.80 | 61/80 = 0.762 | 不成立 |
+| x11 wait ≥0.50 | 0.475 | 不成立 |
+
+以上是比例/count；原表没有 CI 的 gate 不造 CI。考生 recovery 回线比率/天气 null CI 无固定汇总小表，保持 WAIT；[原专家报告](../research/results/nq3/q3/expert_stats.md)、[recovery 明细](../research/results/nq3/q3/recovery.csv)。
+
+#### Q4a/Q4b
+
+| 模型 | seed0 top10重叠 | 门 | 判格 |
+| --- | --- | --- | --- |
+| cinque | 0.2000 | ≥0.30 | 不可比；Hydra P5翻转 SKIP |
+| lebowski | 0.2000 | ≥0.30 | 不可比；Hydra P5翻转 SKIP |
+
+Q4a：WAIT 原复现 assertion，未新跑。Q4b 不可比不等于科学 PASS。登记读法原文：“P5 上 NAVSIM 训的读出选不同轨迹不是时间协议造成的，是场景 / rig 分布差”。
+
+#### Q5：ego status 与选择性
+
+| 模型 | 臂 | n | PDMS差 [CI] | 下降≥5 |
+| --- | --- | --- | --- | --- |
+| DrivoR | S0 | 12146 | -22.1150 [-22.6570, -21.5780] | True |
+| DrivoR | A0 | 12146 | -3.6350 [-3.9910, -3.2880] | False |
+| DrivoR | C0 | 12146 | -0.7940 [-1.0020, -0.5720] | False |
+| WA-JEPA | S0 | 1215 | -8.1590 [-9.4060, -6.9420] | True |
+| WA-JEPA | A0 | 1215 | -0.6130 [-1.1530, -0.1070] | False |
+| WA-JEPA | C0 | 1215 | 0.2020 [-0.1990, 0.5720] | False |
+
+nuScenes 各臂 L2、优势缩减与 CI 见 [原表](../research/results/nq3/q5/ego_nusc.csv)；DrivoR 基线对 CV 优势 CI 不过 0，按原 verdict 为 not applicable；WA-JEPA 速度置零 S0 标 ego prior。WA-JEPA 子集 nusc1159/navtest1215，同一路径 bf16，main 已在18:40批准；子样本 CI 变宽，路径噪声地板仍记录。
+
+| 考卷 | 考生 | 翻转 | 非反应误翻 | 差pp | <10pp |
+| --- | --- | --- | --- | --- | --- |
+| P5 v1 BA | SparseDriveV2 | 0.0546 | 0.019 | 3.5543 | 见车就减速 |
+| I3 | SparseDriveV2 | 0.2358 | 0.0932 | 14.2583 | 不满足此标注门 |
+| P5 v1 BA | ZTRS | 0.0601 | 0.0166 | 4.3566 | 见车就减速 |
+| I3 | ZTRS | 0.4547 | 0.1054 | 34.9309 | 不满足此标注门 |
+| P5 v1 BA | DrivoR | 0.0305 | 0.0087 | 2.1875 | 见车就减速 |
+| I3 | DrivoR | 0.3373 | 0.1106 | 22.674 | 不满足此标注门 |
+| P5 v1 BA | WA-JEPA | 0.1323 | 0.0546 | 7.765 | 见车就减速 |
+| I3 | WA-JEPA | 0.661 | 0.3955 | 26.5543 | 不满足此标注门 |
+| P5 v1 BA | BridgeDrive waypoint speed 2 s | 0.2724 | 0.1706 | 10.182 | 不满足此标注门 |
+| P5 v1 BA | TFv6 waypoint speed 2 s | 0.3043 | 0.1763 | 12.8081 | 不满足此标注门 |
+| P5 v1 BA | BLUE waypoint speed 2 s | 0.2649 | 0.1225 | 14.2415 | 不满足此标注门 |
+| P5 v1 BA | SimLingo waypoint speed 2 s | 0.3461 | 0.1467 | 19.9419 | 不满足此标注门 |
+| P5 v1 BA | openpilot ridge_late (cinque) | 0.482 | 0.0695 | 41.2493 | 不满足此标注门 |
+| P5 v1 BA | M-C pair (cinque) | 0.6633 | 0.0667 | 59.6526 | 不满足此标注门 |
+| I3 | openpilot ridge_late (cinque) | 0.6998 | 0.1801 | 51.9701 | 不满足此标注门 |
+| I3 | M-C pair (cinque) | 0.5873 | 0.0457 | 54.1592 | 不满足此标注门 |
+| P5 v1 BA | openpilot ridge_late (lebowski) | 0.4514 | 0.09 | 36.1446 | 不满足此标注门 |
+| P5 v1 BA | M-C pair (lebowski) | 0.6392 | 0.0665 | 57.2721 | 不满足此标注门 |
+| I3 | openpilot ridge_late (lebowski) | 0.7047 | 0.1905 | 51.4191 | 不满足此标注门 |
+| I3 | M-C pair (lebowski) | 0.6736 | 0.0938 | 57.9777 | 不满足此标注门 |
+
+按登记 <10pp 逐格机械标注；原表自身 label=“no reaction”的格仍保留在 CSV，二者不被擅自合并为新解释。rig 扰动只有描述，无登记判格。
+
+#### Q6：单帧与真实数据
+
+| seed | 单帧 [CI] | 4帧 [CI] | CI重叠 | 单帧<10% |
+| --- | --- | --- | --- | --- |
+| 0 | 0.3670 [0.2861, 0.4590] | 0.4581 [0.3683, 0.5493] | True | False |
+| 1 | 0.3522 [0.2783, 0.4338] | 0.4754 [0.3940, 0.5610] | True | False |
+| 2 | 0.4015 [0.3125, 0.5041] | 0.4778 [0.4005, 0.5576] | True | False |
+
+固定 verdict 所用 Cinque pair-Δ mean 主臂：3seed CI 重叠，单帧均不低于10%；登记读法“视频预训练本身”。其他臂保留原表，不将主臂结论扩成所有臂（Lebowski 单流seed1不重叠）。
+
+| 模型 | seed | WOD Δ [CI] | NAVSIM Δ [CI] | candidate | 原G0格 |
+| --- | --- | --- | --- | --- | --- |
+| cinque | 0 | -0.4560 [-0.6140, -0.3021] | -6.3299 [-6.8501, -5.8323] | False | harmful |
+| cinque | 1 | -0.4639 [-0.6209, -0.3115] | -6.4239 [-6.9426, -5.9055] | False | harmful |
+| cinque | 2 | -0.4679 [-0.6262, -0.3122] | -6.7956 [-7.3197, -6.2851] | False | harmful |
+| lebowski | 0 | -0.4738 [-0.6281, -0.3194] | -4.4208 [-4.9907, -3.8508] | False | harmful |
+| lebowski | 1 | -0.4022 [-0.5450, -0.2607] | -3.2334 [-3.7715, -2.7089] | False | harmful |
+| lebowski | 2 | -0.4112 [-0.5562, -0.2663] | -3.3702 [-3.9018, -2.8363] | False | harmful |
+
+“对不加 Δ 的配对差 CI 覆盖 0”门未满足，原 summary 两模型各0 candidate seed。主表 [main_table.md](../research/results/nq3/q6/main_table.md) 与 [旧表差异逐格](../research/results/nq3/q6/diff_vs_old.csv) 已收；P6/CL 在固定源码中是 literal 待，不重跑同命令填数，映射 WAIT。旧表 reason code 的科学解释及 decisions 冲突修正留人复核。
+
+T7 lane A 墙钟：v0rr/gen/wall_s=6034 s（1.676 h），v1/gen/wall_s=24704 s（6.862 h）；route_end 事件分别557、1438（含重试，不当成功世界数）。精确 server·h 缺累计运行区间汇总，保持 WAIT，不把配置18 server乘总墙钟当实测。

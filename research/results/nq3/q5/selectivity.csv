@@ -1,0 +1,21 @@
+exam,family,examinee,flip,flip_lo,false_flip_nonreactive,null_ff_oos,selectivity_pp,label
+P5 v1 BA,SD,SparseDriveV2,0.0546,0.0212,0.019,0.0511,3.5543,no reaction
+I3,SD,SparseDriveV2,0.2358,0.189,0.0932,0.048,14.2583,selective
+P5 v1 BA,HY,ZTRS,0.0601,0.0189,0.0166,0.0506,4.3566,no reaction
+I3,HY,ZTRS,0.4547,0.4,0.1054,0.0581,34.9309,selective
+P5 v1 BA,DR,DrivoR,0.0305,0.0056,0.0087,0.0571,2.1875,no reaction
+I3,DR,DrivoR,0.3373,0.2698,0.1106,0.053,22.674,selective
+P5 v1 BA,AF,WA-JEPA,0.1323,0.0806,0.0546,0.0551,7.765,slows for any car
+I3,AF,WA-JEPA,0.661,0.6253,0.3955,0.0631,26.5543,selective
+P5 v1 BA,LEAD,BridgeDrive waypoint speed 2 s,0.2724,0.2059,0.1706,0.051,10.182,selective
+P5 v1 BA,LEAD,TFv6 waypoint speed 2 s,0.3043,0.2394,0.1763,0.0554,12.8081,selective
+P5 v1 BA,SL,BLUE waypoint speed 2 s,0.2649,0.1698,0.1225,0.054,14.2415,selective
+P5 v1 BA,SL,SimLingo waypoint speed 2 s,0.3461,0.2386,0.1467,0.0583,19.9419,selective
+P5 v1 BA,openpilot,openpilot ridge_late (cinque),0.482,0.355,0.0695,0.0505,41.2493,selective
+P5 v1 BA,M-C,M-C pair (cinque),0.6633,0.5846,0.0667,0.051,59.6526,selective
+I3,openpilot,openpilot ridge_late (cinque),0.6998,0.655,0.1801,0.0442,51.9701,selective
+I3,M-C,M-C pair (cinque),0.5873,0.5418,0.0457,0.0581,54.1592,selective
+P5 v1 BA,openpilot,openpilot ridge_late (lebowski),0.4514,0.3354,0.09,0.0516,36.1446,selective
+P5 v1 BA,M-C,M-C pair (lebowski),0.6392,0.5617,0.0665,0.0496,57.2721,selective
+I3,openpilot,openpilot ridge_late (lebowski),0.7047,0.6584,0.1905,0.0492,51.4191,selective
+I3,M-C,M-C pair (lebowski),0.6736,0.6284,0.0938,0.0518,57.9777,selective
