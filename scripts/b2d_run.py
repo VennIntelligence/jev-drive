@@ -65,6 +65,20 @@ WINDOWED = os.environ.get("CARLA_WINDOWED", "1" if os.environ.get("DISPLAY") els
 # manager wants room of its own, so the slots are 50 apart - the same spacing scripts/carla_server.sh
 # uses. Our first 44-route run used 4 and lost two worker slots to a traffic-manager bind error.
 PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
+# CARLA sizes its RPC, streaming and secondary-server thread pools from the host's CPU count (208 here), not the
+# cgroup quota or the affinity mask. N = 4 each, what a 16-thread desktop gets by default, takes a server from 301
+# threads to 109 with no measurable change in throughput or route outcomes (docs/carla.md, "Threads per server").
+# Added unless --server-args already sets the flag; B2D_CARLA_POOLS=stock launches stock servers.
+POOL_ARGS = ("-RPCThreads=4", "-StreamingThreads=4", "-SecondaryThreads=4")
+
+
+def server_args(extra):
+    """CarlaUE4 arguments beyond the fixed ones: `extra` plus the reduced thread pools it does not set."""
+    extra = list(extra)
+    if os.environ.get("B2D_CARLA_POOLS", "reduced") == "stock":
+        return extra
+    have = {a.split("=")[0].lower() for a in extra}
+    return extra + [f for f in POOL_ARGS if f.split("=")[0].lower() not in have]
 
 # Towns the base 0.9.15 package actually ships, read off a running server with
 # `client.get_available_maps()`. Town06, Town07 and Town11-15 are in AdditionalMaps, which is
@@ -267,7 +281,7 @@ class Server(object):
                  span=0):
         self.index = index
         self.base, self.span = (index if base is None else base), span
-        self.extra_args = list(extra_args)
+        self.extra_args = server_args(extra_args)
         self.gpu_rank = gpu_rank
         self.windowed = WINDOWED if windowed is None else windowed
         self.stride = stride or 1
@@ -393,7 +407,8 @@ class Runner(object):
         self.lock = threading.RLock()
         self.queue = list(routes)
         self.requested = list(routes)
-        manifest = {"config": vars(a), "routes": [{"route_id": rid, "town": town} for rid, town in routes]}
+        manifest = {"config": vars(a), "carla_args": server_args(a.server_args.split()),
+                    "routes": [{"route_id": rid, "town": town} for rid, town in routes]}
         # Unique invocation files preserve shards and resume history sharing the output directory.
         mdir = self.out / "invocations"
         mdir.mkdir(exist_ok=True)
@@ -543,7 +558,8 @@ class Runner(object):
                         self.release(rid)
                         return
                     if not server.alive():
-                        self.event("server_start", worker=wi, index=server.index, port=server.port)
+                        self.event("server_start", worker=wi, index=server.index, port=server.port,
+                                   args=getattr(server, "extra_args", None))
                         self.staggered_start(server)
                         self.learn_maps(server)
                     if self.stop_flag:
@@ -668,6 +684,7 @@ class Runner(object):
 
         record = {"route_id": rid, "attempt": attempt, "wall_s": round(time.time() - t0, 1),
                   "worker": wi, "server_index": server.index, "server_log": str(server.log),
+                  "server_args": list(getattr(server, "extra_args", ())),
                   # R7's raw material: how many route attempts this server process had already
                   # served before this one, and how long it had been up. summary.json bins on them.
                   "server_age_routes": server.routes_served,
