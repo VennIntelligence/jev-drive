@@ -50,3 +50,7 @@ K1原pilot和READY追加门均PASS（blocked5/ref5、moving_target_median3.414�
 原dispatcher下一轮14:53即起K1 seed0/GPU2 worker463944；14:55起seed1/GPU3 worker468093。为防重复故障新增`cx_gk_batch_v2.py`：自动回收真实完成且无writer的B旧预留；每卡具体WAIT写events及admission.json；使用原注册400线程/worker、真实claims衡量未兑现workers，不把尾部空闲worker重复当未来负载；同一16000/165/88GB门下动态选1–6worker。GPU1只预留其尚未兑现的两pilot槽，已居民不再双算。supervisor重启仅调度器并认领原worker身份，不停止实验。
 
 新增4项回归通过：7437真实快照可给三空卡各6worker、预算不足动态降worker但不越16000、尾部worker不虚占、B有活writer绝不回收、无端口WAIT可持久且去重。旧live dispatcher/bash均不修改；新版本迁移只精确旧dispatcher PID，保留K0/K1正在跑的worker。
+
+`bceef80`已main push/Box pull，两端4项新回归通过。`jev:cx-gk-batch-v2`的dispatcher471873从原state接管，supervisor只重启调度器。迁移先冻结旧dispatcher359401核state/进程一致，再精确终止该PID；359432/359610/359933（K0）及463944/468093（K1）原PID/startticks全部保留，记录`runs/nq4/cx/gk-batch/migration-v2.json`。没有修改任何live bash。
+
+14:58:25，K1 s0/GPU2真实runner467279、6claims、heartbeat920ticks；s1/GPU3 worker468093、s2/GPU4 worker472109也已启动独立模型服务，各登记6worker，尚加载时不声称路线已开始。GPU3/4显存5.3GB/0.6GB；pids9108，计划16000保持。admission.json明确余下未通过/未齐门的候选K2/K3，不再静默等待。三卡真实路线的有界验收下面追加。

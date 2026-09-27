@@ -160,3 +160,7 @@ G/K `8bbcda1`已部署`jev:cx-gk-pilots`，owner97841、K0 pilot97843/start80188
 ## 13:45 CST 已PASS K批量动态补位
 
 `79c2ebb` batch + pidfd登录解释器兼容已Box部署；`43ab2c0`统一controller登记已生效。K0原10pilot及K READY检查均PASS；正式seed0/1/2实际runner360626/361390/363521，在GPU0/6/5各6worker。0/1已有405/234真实ticks；seed0复用10条旧完成。dispatcher359401持续将新PASS层直接排空卡，GPU1 pilot97841独立继续。B尾部不动。P3已科学FAIL停止并释放全部GPU/CPUclaim，controller361054实时认领GK[0,1,5,6]。详见gk-pilot-launch最新验收。
+
+## 14:58 CST K1空卡根因已修
+
+K1原与READY额外门都PASS。B14:01已DONE但旧port预留未回收，free_block=None且oldbatch静默continue。核无Bwriter后撤过期行，合法block立即60；K1 GPU2 runner467279已920ticks，GPU3/4独立head加载。`bceef80`新batch_v2已部署，dispatcher471873保留全部原worker；自动完成B回收、具体WAIT持久日志、真实pending及1–6动态worker。GPU2/3/4三seed均已承接，各6worker，继续有界验收首路线；详见gk-pilot-launch。
