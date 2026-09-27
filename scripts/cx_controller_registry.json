@@ -170,6 +170,9 @@
           "tools/train.py",
           "--project",
           "p3"
+        ],
+        [
+          "$DATA_DIR/runs/nq4/p3/prep.resume.py"
         ]
       ],
       "done": [
@@ -202,7 +205,11 @@
         "$DATA_DIR/runs/nq4/p3/gpu_enable.events.jsonl",
         "$DATA_DIR/runs/nq4/p3/prep.resume.out"
       ],
-      "stall_s": 10800
+      "stall_s": 10800,
+      "errors": [
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_sky.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene0.ERROR"
+      ]
     },
     {
       "id": "OPL",

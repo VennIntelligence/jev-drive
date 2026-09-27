@@ -46,12 +46,17 @@ def main():
         while not path.exists():
             if (d / "gpu_enable_sky.ERROR").exists() or (d / "prep.failed").exists():
                 raise RuntimeError(f"Dependency failed while waiting for {path}")
+            ownerfile = d / ("gpu_enable_sky.pid" if path.name == "sky_000.done" else "prep.pid")
+            if ownerfile.exists() and not Path(f"/proc/{int(ownerfile.read_text())}").exists():
+                raise RuntimeError(f"Dependency owner exited while waiting for {path}")
             if time.time() - started > 14400:
                 raise TimeoutError(f"Dependency wait exceeded four hours: {path}")
             time.sleep(15)
 
-    def step(name, argv, seconds, extra=None):
+    def step(name, argv, seconds, extra=None, verify=None):
         if (d / f"{name}.done").exists():
+            if verify:
+                verify()
             return
         cg = Path("/sys/fs/cgroup")
         while True:
@@ -71,13 +76,33 @@ def main():
         event(event="exit", step=name, rc=result.returncode)
         if result.returncode:
             raise RuntimeError(f"{name} rc={result.returncode}; inspect {d / (name + '.out')}")
+        if verify:
+            verify()
         (d / f"{name}.done").write_text(time.strftime("%F %T") + "\n")
+
+    def files_ok(*paths):
+        for path in paths:
+            if not path.is_file() or not path.stat().st_size:
+                raise RuntimeError(f"Missing or empty output: {path}")
+
+    def sky_ok(sd):
+        expected = [f for f in (sd / "images").glob("*.jpg") if int(f.stem.split("_")[1]) in (0, 1, 2)]
+        if not expected:
+            raise RuntimeError(f"No sky input images: {sd}")
+        files_ok(*(sd / "sky_masks" / (f.stem + ".png") for f in expected))
+
+    def train_ok(runroot):
+        files_ok(runroot / "p3/000/config.yaml")
+        checkpoints = list((runroot / "p3/000").glob("checkpoint_*.pth"))
+        if not checkpoints:
+            raise RuntimeError(f"No trained checkpoint: {runroot}")
+        files_ok(*checkpoints)
 
     if a.mode == "sky":
         for k in range(10):
             sd = proc / f"{k:03d}"
             wait_for(sd / "instances/instances_info.json")
-            step(f"sky_{k:03d}", [ds, "scripts/p3/ds.py", "sky", str(sd)], 3600)
+            step(f"sky_{k:03d}", [ds, "scripts/p3/ds.py", "sky", str(sd)], 3600, verify=lambda: sky_ok(sd))
         return
 
     wait_for(d / "sky_000.done")
@@ -90,10 +115,12 @@ def main():
         train = [ds, "scripts/p3/ds.py", "train", "--scene", "0", "--data-root", str(proc), "--out-root", str(runroot)]
         if short:
             train += ["--iters", "3000"]
-        step(f"{tag}_train_000", train, 28800)
+        step(f"{tag}_train_000", train, 3600 if short else 14400, verify=lambda: train_ok(runroot))
         step(f"{tag}_render_000", [ds, "scripts/p3/ds.py", "render", "--run", str(runroot / "p3/000"),
-                                  "--target", str(d / "targets/000.json"), "--out", str(scene)], 3600)
-        step(f"{tag}_index", [jv, "-m", "jevdrive.nq4_p3", "index", "--processed-root", str(proc)], 900, extra)
+                                  "--target", str(d / "targets/000.json"), "--out", str(scene)], 1800,
+             verify=lambda: files_ok(scene / "meta.json", scene / "render_stats.csv", *(scene / w / "frames.jsonl" for w in ("real", "plus", "minus"))))
+        step(f"{tag}_index", [jv, "-m", "jevdrive.nq4_p3", "index", "--processed-root", str(proc)], 600, extra,
+             verify=lambda: files_ok(*(data / "processed" / dataset / f for f in ("index.parquet", "past.npy", "future.npy", "op_plan.json"))))
         step(f"{tag}_op", [op, "scripts/p5_openpilot.py", "--models", "cinque", "lebowski", "--workers", "1"], 7200, extra)
         step(f"{tag}_opfin", [jv, "-m", "jevdrive.p5_openpilot", "finalize", "--models", "cinque,lebowski"], 900, extra)
         step(f"{tag}_exam", [jv, "-m", "jevdrive.nq4_p3", "exam"], 3600, extra)
@@ -102,7 +129,8 @@ def main():
         if not exams:
             raise RuntimeError("Exam exited without null_gate.csv")
         step(f"{tag}_report", [jv, "-m", "jevdrive.nq4_p3", "report", "--exam-dir", str(exams[-1]),
-                              "--out", str(d / tag / "report")], 900, extra)
+                              "--out", str(d / tag / "report")], 600, extra,
+             verify=lambda: files_ok(d / tag / "report/scenes.csv", d / tag / "report/null_gate_pooled.csv"))
     (d / "SCENE0_REVIEW_REQUIRED").write_text("Default 30000-iteration scene zero readout complete. Inspect automatic gates and four-panel ghosting figures; no GO or visual PASS granted.\n")
 
 

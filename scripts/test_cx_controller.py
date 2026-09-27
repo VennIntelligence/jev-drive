@@ -123,7 +123,7 @@ class ControllerTest(unittest.TestCase):
 
     def test_authorized_p3_adopts_independent_runner_and_reserves_without_go(self):
         job=dict(id='P3',authorization='USER_AUTHORIZED_BUILD_AND_SMOKE',
-                 process_match=[['scripts/p3/gpu_enable.py']],
+                 process_match=[['scripts/p3/gpu_enable.py'],['$DATA_DIR/runs/nq4/p3/prep.resume.py']],
                  output_roots=['$DATA_DIR/processed/waymo_ds','$DATA_DIR/ckpt/nq4_p3_short3000'],
                  resource_claims=dict(gpus=[1,6],cpus='180-189',prep_cpus='182-189',scope='build_scene0_smoke'))
         c=self.controller([job]);sch.TABLE=self.data/'runs/sched/table.tsv'
@@ -139,6 +139,9 @@ class ControllerTest(unittest.TestCase):
         self.assertEqual(c.state['queue']['physically_idle_gpus'],[1,6])
         self.assertEqual(sch.load()[0]['gpus'],'1,6')
         self.assertFalse((self.data/'runs/nq4/p3/GO').exists())
+        parent=self.proc(argv=['python','-u',str(self.data/'runs/nq4/p3/prep.resume.py')])
+        c.tick({42:parent},g)
+        self.assertEqual(c.state['jobs']['P3']['status'],'RUNNING')
         c.tick({},g)
         self.assertEqual(c.state['jobs']['P3']['status'],'AUTHORIZED_AWAITING_OWNER')
     def test_p3_training_output_root_cannot_match_neighbor_project(self):

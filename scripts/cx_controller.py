@@ -177,6 +177,8 @@ class Controller:
     def observe(self, job, rows, gpus):
         name = job['id']; old = self.state['jobs'].get(name, {})
         expanded_job = dict(job)
+        expanded_job['process_match'] = [[str(self.path(token)) if '$DATA_DIR' in token or '$REPO' in token else token
+                                          for token in pattern] for pattern in job.get('process_match', [])]
         if job.get('output_root'): expanded_job['output_root'] = str(self.path(job['output_root']))
         expanded_job['output_roots'] = [str(self.path(root)) for root in job.get('output_roots', [])]
         procs = members(expanded_job, old, rows)
