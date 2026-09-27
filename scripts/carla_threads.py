@@ -12,6 +12,9 @@ so no rebuild or LD_PRELOAD is needed. UE4's own pools (TaskGraph, PoolThread) f
         load a map, drive a blocking six-camera loop (the leaderboard waits for every sensor each tick), sample
         threads / CPU / VRAM, stop them by PID; one JSON row per server to --out
   carla_threads.py bench --port P ...                     (internal) the client side of one probe server
+  carla_threads.py compare base-a=DIR reduced-a=DIR ... --out DIR
+        route equivalence of PDM-Lite runs (scripts/carla_threads_routes.sh): DS, infractions, game time and
+        trajectory deviation for every pair of arms, grouped by the arm kinds (the name before '-')
 
 Python 3.8: runs in envs/carla. Starts only servers it owns and stops them by process group it created.
 """
@@ -308,10 +311,82 @@ def cmd_bench(a):
                           cam_std_min=round(min(stds or [0]), 1))), flush=True)
 
 
+# ------------------------------------------------------------------------------------------------ route equivalence
+def route_record(arm_dir, rid):
+    done = Path(arm_dir) / "done" / ("%s.json" % rid)
+    if not done.exists():
+        return None
+    d = json.loads(done.read_text())
+    adir = Path(arm_dir) / "attempts" / rid / str(d["attempt"])
+    rec = json.loads((adir / "results.json").read_text())["_checkpoint"]["records"][0]
+    traj = {}
+    for line in (adir / "expert.jsonl").read_text().splitlines():
+        e = json.loads(line)
+        traj[round(e["t"] / 0.05)] = (e["x"], e["y"])
+    s = rec["scores"]
+    return dict(status=rec["status"], ds=s["score_composed"], rc=s["score_route"], pen=s["score_penalty"],
+                game_s=rec["meta"]["duration_game"], attempt=d["attempt"], traj=traj,
+                infr={k: len(v) for k, v in rec["infractions"].items() if k != "min_speed_infractions" and v})
+
+
+def cmd_compare(a):
+    arms = dict(x.split("=", 1) for x in a.arms)          # name=dir; the name's prefix before '-' is its kind
+    recs = {n: {} for n in arms}
+    for n, d in arms.items():
+        for f in sorted((Path(d) / "done").glob("*.json")):
+            recs[n][f.stem] = route_record(d, f.stem)
+    routes = sorted(set.intersection(*(set(r) for r in recs.values())), key=int)
+    per_route, pairs = [], collections.defaultdict(list)
+    names = list(arms)
+    for rid in routes:
+        row = dict(route=rid)
+        for n in names:
+            r = recs[n][rid]
+            row.update({n + "_ds": round(r["ds"], 2), n + "_game_s": r["game_s"], n + "_infr": json.dumps(r["infr"])})
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                A, B = recs[names[i]][rid], recs[names[j]][rid]
+                common = sorted(set(A["traj"]) & set(B["traj"]))
+                dist = [((A["traj"][k][0] - B["traj"][k][0]) ** 2 + (A["traj"][k][1] - B["traj"][k][1]) ** 2) ** .5
+                        for k in common]
+                split = next((k * 0.05 for k, x in zip(common, dist) if x > 0.1), None)
+                kinds = "-".join(sorted(n.split("-")[0] for n in (names[i], names[j])))
+                pr = dict(route=rid, pair=names[i] + "|" + names[j], kinds=kinds, d_ds=round(abs(A["ds"] - B["ds"]), 2),
+                          d_game_s=round(abs(A["game_s"] - B["game_s"]), 2), same_infr=A["infr"] == B["infr"],
+                          dev_max_m=round(max(dist or [0]), 2), dev_med_m=round(statistics.median(dist or [0]), 3),
+                          split_t=split)
+                pairs[kinds].append(pr)
+        per_route.append(row)
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    for name, rows in (("routes.csv", per_route), ("pairs.csv", [p for v in pairs.values() for p in v])):
+        keys = list(rows[0])
+        (out / name).write_text("\n".join([",".join(keys)] + [",".join('"%s"' % r[k] if "," in str(r[k]) else str(r[k])
+                                                                   for k in keys) for r in rows]) + "\n")
+    lines = ["| pair kind | pairs | DS identical | mean abs dDS | max abs dDS | same infractions | "
+             "mean abs d game time (s) | median of per-route max deviation (m) | trajectories bit-identical |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for kinds, v in sorted(pairs.items()):
+        lines.append("| %s | %d | %d | %.2f | %.2f | %d | %.2f | %.2f | %d |" % (
+            kinds, len(v), sum(p["d_ds"] == 0 for p in v), statistics.mean(p["d_ds"] for p in v),
+            max(p["d_ds"] for p in v), sum(p["same_infr"] for p in v), statistics.mean(p["d_game_s"] for p in v),
+            statistics.median(p["dev_max_m"] for p in v), sum(p["dev_max_m"] == 0 for p in v)))
+    means = ["| arm | routes | mean DS | completed |", "|---|---:|---:|---:|"]
+    for n in names:
+        rs = [recs[n][r] for r in routes]
+        means.append("| %s | %d | %.2f | %d |" % (n, len(rs), statistics.mean(r["ds"] for r in rs),
+                                                  sum(r["status"] == "Completed" for r in rs)))
+    (out / "summary.md").write_text("\n".join(means + [""] + lines) + "\n")
+    print("\n".join(means + [""] + lines))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("count")
+    c = sub.add_parser("compare", help="route equivalence: name=arm_dir ... (b2d_run --out dirs of the PDM-Lite runs)")
+    c.add_argument("arms", nargs="+")
+    c.add_argument("--out", required=True)
     q = sub.add_parser("probe")
     q.add_argument("--tag", required=True)
     q.add_argument("--server-args", default="", help="extra CarlaUE4 arguments; reduced pools: '%s'" % REDUCED)
@@ -336,7 +411,7 @@ def main():
     b.add_argument("--tm-port", type=int, required=True)
     b.add_argument("--start-at", type=float, default=0.0)
     a = p.parse_args()
-    return {"count": cmd_count, "probe": cmd_probe, "bench": cmd_bench}[a.cmd](a)
+    return {"count": cmd_count, "probe": cmd_probe, "bench": cmd_bench, "compare": cmd_compare}[a.cmd](a)
 
 
 if __name__ == "__main__":
