@@ -122,7 +122,20 @@ def stored() -> dict:
             yp, yo = y[g.r_plus.to_numpy() + h], y[g.r_other.to_numpy() + h]
             s_all, y_all = np.r_[g.plus, g.other], np.r_[yp, yo]
             on = yp & ~yo
-            rows.append({"seed": s, "cls": cls, "h": h, "src": src, "n_pairs": len(g),
+            # ego motion matched: both sides' speed at t0 + h within 0.5 m/s and speed at t0 within 0.5 m/s (the expert
+            # has not yet reacted differently), so the probe cannot be reading the ego's own braking
+            vv = m.v.to_numpy()
+            same = (np.abs(vv[g.r_plus.to_numpy() + h] - vv[g.r_other.to_numpy() + h]) < 0.5) & \
+                   (np.abs(vv[g.r_plus.to_numpy()] - vv[g.r_other.to_numpy()]) < 0.5)
+            onm = on & same
+            rows.append({"pair_auc_label_on_speed_matched": _auc(np.r_[np.ones(onm.sum()), np.zeros(onm.sum())],
+                                                                 np.r_[g.plus.to_numpy()[onm], g.other.to_numpy()[onm]]),
+                         "n_label_on_speed_matched": int(onm.sum()),
+                         "probe_auc_vs_label_speed_matched": _auc(np.r_[yp[same], yo[same]],
+                                                                  np.r_[g.plus.to_numpy()[same], g.other.to_numpy()[same]]),
+                         "speed_only_pair_auc_label_on": _auc(np.r_[np.ones(on.sum()), np.zeros(on.sum())],
+                                                              -np.r_[vv[g.r_plus.to_numpy()[on] + h], vv[g.r_other.to_numpy()[on] + h]])})
+            rows[-1].update({"seed": s, "cls": cls, "h": h, "src": src, "n_pairs": len(g),
                          "x_plus_label_on": yp.mean(), "x_minus_label_on": yo.mean(),
                          "label_pair_auc_ceiling": _auc(np.r_[np.ones(len(g)), np.zeros(len(g))], np.r_[yp, yo]),
                          "probe_auc_vs_label": _auc(y_all, s_all),
@@ -194,17 +207,30 @@ def pedprobe() -> pd.DataFrame:
         mm = m.iloc[k]
         y = mm.ped.fillna(False).to_numpy(bool)
         feats = {"Cinque temporal": np.asarray(z[k, :W.D_OP], np.float32), "V-JEPA 2 mean": np.asarray(z[k, W.D_OP:], np.float32),
-                 "W latent (temporal + V-JEPA mean)": np.asarray(z[k], np.float32)}
+                 "W latent (temporal + V-JEPA mean)": np.asarray(z[k], np.float32),
+                 "ego kinematics only (v, a_prev, w_prev)": mm[["v", "a_prev", "w_prev"]].to_numpy(np.float32)}
         if extra:
             feats.update(_feats_ba(mm.frame_name))
+        # same-k x+ / x- pairs where the x+ label is on and the ego speed agrees within 0.5 m/s (expert not yet reacting)
+        key = mm.base_id.astype(str) + "|" + mm.seed.astype(str) + "|" + mm.k.astype(str)
+        mw = mm.world.to_numpy()
+        mk = pd.Series(np.flatnonzero(mw == "minus"), index=key.to_numpy()[mw == "minus"])
+        mk = mk[~mk.index.duplicated()]
+        pl = np.flatnonzero((mw == "plus") & y)
+        mi = mk.reindex(key.to_numpy()[pl]).to_numpy()
+        pl, mi = pl[~np.isnan(mi)], mi[~np.isnan(mi)].astype(int)
+        vv = mm.v.to_numpy()
+        pl_m, mi_m = pl[np.abs(vv[pl] - vv[mi]) < 0.5], mi[np.abs(vv[pl] - vv[mi]) < 0.5]
         for name, X in feats.items():
             s = _oof_logreg(X, y.astype(np.float32), mm.base_id.to_numpy())
             plus = mm.world.to_numpy() == "plus"
+            pair_on = _auc(np.r_[np.ones(len(pl_m)), np.zeros(len(mi_m))], np.r_[s[pl_m], s[mi_m]])
             rows.append({"set": sets[0], "feature": name, "dim": X.shape[1], "n": len(y), "n_routes": mm.base_id.nunique(),
                          "pos_rate": y.mean(), "oof_auc": _auc(y, s),
                          "oof_auc_x_plus_only": _auc(y[plus], s[plus]),
                          "oof_auc_label_vs_minus_world": _auc(np.r_[np.ones((plus & y).sum()), np.zeros((mm.world == "minus").sum())],
-                                                              np.r_[s[plus & y], s[(mm.world == "minus").to_numpy()]])})
+                                                              np.r_[s[plus & y], s[(mm.world == "minus").to_numpy()]]),
+                         "pair_auc_label_on_speed_matched": pair_on, "n_pairs_speed_matched": len(pl_m)})
             log.info("%s %s: OOF AUC %.3f", sets[0], name, rows[-1]["oof_auc"])
     r = pd.DataFrame(rows)
     OUT.mkdir(parents=True, exist_ok=True)
