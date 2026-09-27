@@ -2,7 +2,8 @@
 
 Short 3000-iteration technical smoke and default 30000-iteration scene zero
 have separate checkpoints, processed data and markers. No visual PASS or GO
-is inferred here. Every admission retains 1024 tasks plus 256 launch margin.
+is inferred here. Every admission retains 1024 tasks plus 128 launch margin
+(measured single-affinity sky CUDA and OmniRe imports each used five threads).
 """
 import argparse
 import fcntl
@@ -28,7 +29,7 @@ def main():
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     (d / f"gpu_enable_{a.mode}.pid").write_text(str(os.getpid()))
     env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(a.gpu), TOKENIZERS_PARALLELISM="false", HF_HUB_DISABLE_XET="1",
-               HF_ENDPOINT="https://hf-mirror.com")
+               HF_ENDPOINT="https://hf-mirror.com", MAX_JOBS="1", CUDA_HOME="/usr/local/cuda-12.8")
     for k in ["OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
               "TF_NUM_INTRAOP_THREADS", "TF_NUM_INTEROP_THREADS"]:
         env[k] = "1"
@@ -58,11 +59,13 @@ def main():
             if verify:
                 verify()
             return
+        admission = open(d / "gpu_admission.lock", "w")
+        fcntl.flock(admission, fcntl.LOCK_EX)
         cg = Path("/sys/fs/cgroup")
         while True:
             used = int((cg / "pids.current").read_text())
             limit = (cg / "pids.max").read_text().strip()
-            if limit != "max" and int(limit) - used < 1280:
+            if limit != "max" and int(limit) - used < 1152:
                 event(event="admission_wait", step=name, pids_current=used, pids_max=limit)
                 time.sleep(15)
                 continue
@@ -70,8 +73,16 @@ def main():
         event(event="start", step=name, argv=argv, cpus=a.cpus, pids_current=used)
         (d / f"{name}.rc").unlink(missing_ok=True)
         with open(d / f"{name}.out", "a") as out:
-            result = subprocess.run(["timeout", str(seconds), "taskset", "-c", a.cpus, *argv],
-                                    env={**env, **(extra or {})}, stdout=out, stderr=subprocess.STDOUT)
+            result = subprocess.Popen(["timeout", str(seconds), "taskset", "-c", a.cpus, *argv],
+                                      env={**env, **(extra or {})}, stdout=out, stderr=subprocess.STDOUT)
+            # Serialize admission through startup so both cards cannot consume
+            # the same observed spare tasks. Recheck capacity for every child.
+            time.sleep(5)
+            event(event="startup_capacity", step=name, child=result.pid,
+                  pids_current=int((cg / "pids.current").read_text()))
+            fcntl.flock(admission, fcntl.LOCK_UN)
+            admission.close()
+            result.wait()
         (d / f"{name}.rc").write_text(str(result.returncode))
         event(event="exit", step=name, rc=result.returncode)
         if result.returncode:
