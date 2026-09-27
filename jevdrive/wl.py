@@ -7,7 +7,7 @@ Generation (CARLA, scripts/wl_gen.sh with scripts/wl_fork_agent.py):
              expert's reaction (P5: the x+ / x- ego divergence; P6: the lateral divergence), kept when k3 > k2 and
              v(k) >= 3 m/s; seven actions each; route-grouped eval split (40 routes: P5 pedestrian 12, cut-in 8, P6 20)
              -> runs/wl/{forks.parquet, split.json, jobs.json, forks-<set>.xml}
-  d2         D2 random-intervention runs: Bench2Drive 220 base routes (minus the eval routes' bases) x TM seeds 0, 1
+  d2         D2 random-intervention runs: Bench2Drive 220 routes (minus the eval routes) x TM seeds 0, 1, PDM-Lite
   ids        route ids of a stage (pilot1 / pilot10 / full) still without a done record, for b2d_run --route-ids
   sanity     the registered checklist on the finished fork runs of a stage -> research/results/wl/sanity_<stage>.csv
   prefix     the first check: a fork run's ticks before the fork against its source run (pose, actors, JPEG bytes)
@@ -168,6 +168,33 @@ def forks(branch_s: float = 3.0, cont_s: float = 20.0) -> dict:
     return info
 
 
+def d2(seeds=(0, 1), max_s: float = 70.0) -> dict:
+    """D2: Bench2Drive 220 routes whose base is not an eval route, TM seeds 0 and 1, PDM-Lite with random windows from
+    10 s on (ids 8 + 5-digit base + seed). Appends to jobs.json; writes d2.parquet and forks-d2.xml."""
+    import xml.etree.ElementTree as ET
+    sp = json.loads(rundir("split.json").read_text())
+    b2d = Path(os.environ.get("BENCH2DRIVE_ROOT", data_dir() / "third_party/Bench2Drive")) / "leaderboard/data/bench2drive220.xml"
+    root = ET.parse(b2d).getroot()
+    out, rows = ET.Element("routes"), []
+    jobs = json.loads(rundir("jobs.json").read_text())
+    for e in root.iter("route"):
+        base = e.get("id")
+        if base in sp["eval"]:
+            continue
+        for sd in seeds:
+            rid = "8%05d%d" % (int(base), sd)
+            x = ET.fromstring(ET.tostring(e))
+            x.set("id", rid)
+            out.append(x)
+            rows.append({"set": "d2", "route_id": rid, "base_id": base, "seed": sd, "split": "train"})
+            jobs[rid] = {"fork_tick": None, "action": None, "op_plan": None, "iv_from_s": 10.0, "max_s": max_s, "iv_s": 2.0,
+                         "iv_gap": [6.0, 10.0], "seed": int(rid), "pre_cams": 100000}
+    ET.ElementTree(out).write(rundir("forks-d2.xml"))
+    pd.DataFrame(rows).to_parquet(rundir("d2.parquet"), index=False)
+    rundir("jobs.json").write_text(json.dumps(jobs))
+    return {"d2_runs": len(rows), "routes": len(rows) // len(seeds)}
+
+
 # ================================================================ stages
 
 def stage_ids(stage: str) -> pd.DataFrame:
@@ -188,8 +215,11 @@ def stage_ids(stage: str) -> pd.DataFrame:
 
 
 def ids(stage: str, set_name: str, out: str) -> str:
-    r = stage_ids(stage)
-    r = r[r.set == set_name]
+    if set_name == "d2":
+        r = pd.read_parquet(rundir("d2.parquet")) if stage == "full" else pd.DataFrame({"route_id": []})
+    else:
+        r = stage_ids(stage)
+        r = r[r.set == set_name]
     done = {p.stem for p in (Path(out) / "done").glob("*.json")} if (Path(out) / "done").exists() else set()
     return ",".join(x for x in r.route_id if x not in done)
 
@@ -339,13 +369,15 @@ def sanity(out: str, stage: str) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("forks", "ids", "prefix", "sanity"))
+    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "sanity"))
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
-    ap.add_argument("--set", default="ba", choices=tuple(SRC))
+    ap.add_argument("--set", default="ba", choices=tuple(SRC) + ("d2",))
     ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"), help="generation root (per-set subdirs)")
     a = ap.parse_args()
     if a.step == "forks":
         print(json.dumps(forks(), indent=1, default=str))
+    elif a.step == "d2":
+        print(json.dumps(d2(), indent=1))
     elif a.step == "ids":
         print(ids(a.stage, a.set, os.path.join(a.out, a.set)))
     elif a.step == "prefix":
