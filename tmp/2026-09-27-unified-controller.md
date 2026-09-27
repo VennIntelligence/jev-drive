@@ -30,4 +30,17 @@ cat /root/autodl-tmp/ujs/runs/sched/controller/STATUS.md
 
 ## 部署证据
 
-部署后追加真实 commit、box 状态、A 回收和 B 接卡状态。不能将模拟测试或 GO 内容当成实际五卡接卡。
+代码 commit `aa97fee` 已 push main，box 检查变更只有新 controller/registry/supervisor/test、sch_table 工具和本文，live chain 无 diff，然后 ff-only pull，启动 `jev:cx-controller`。13 项测试及编译/语法检查通过。
+
+2026-09-27 **09:04:31、09:05:01 JST** 两轮实际 heartbeat 均 ONLINE、间隔 30 秒；controller PID `760047`、startticks `800835949`；supervisor PID `760043`、startticks `800835948`，supervisor.log 无异常。实际接管结果：
+
+| 对象 | 现场证据 |
+|---|---|
+| A / A-v1 | COMPLETE、无剩余进程；table 的 nq3-a 已自动变为 `revoked controller: verified no resident owner` |
+| 独立组合 | 17/17 真实 DONE/result/产物核验完成 |
+| B | `bridgedrive 0`，219/220 route DONE，过去 15 min 完成 12 条、60 min 完成 132 条；仅 GPU0 的旧 worker9 runner531717 尚在；GPU2 runner 已退出 |
+| B 接卡 | GO 已五卡×6，但仍 `WAIT_EXISTING_ARM_BOUNDARY`，不能宣称五卡已实际运行；接下来固定队列 BLUE0、SimLingo0，均 READY |
+| C | 已解除 A 依赖，在 GPU6 跑 `v1_prep`；08:05:22 CST 日志为 840/1293 worlds、38695 frames，当前提取步骤日志 ETA 6 min；这不是整个 C 的 ETA |
+| D/GK/P3/OPL | D 原科学 ERROR 独立隔离并写 inbox；后三项 BLOCKED_HUMAN；未新造 gate、未启动 |
+
+B 剩 1 条是尾部任务，不能用 12条/15分钟把它线性估成约1分钟；BLUE/SimLingo 尚未在新五卡规模测得吞吐，因此不由该数声称全队列精确 ETA。控制器会自己继续盘点、检查下一臂五卡 ack 或落盘具体告警，模型不需守着轮询。
