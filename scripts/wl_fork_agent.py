@@ -79,7 +79,7 @@ class WLForkAgent(P5PairAgent):
                          "action": acts[rng.randint(len(acts))], "kind": "random", "post": int(j.get("post_cams_iv", 10))})
             t += iv
         self.wins, self.end_tick = wins, int(round(end / TICK))
-        pre = int(j.get("pre_cams", 11))
+        pre = int(j.get("pre_cams", self.cfg.get("wl_pre_cams", 11)))
         self.save_ranges = [(w["tick"] - pre * p4.CAM_TICKS, w["tick"] + w["post"] * p4.CAM_TICKS) for w in wins]
         self.ctl = pursuit_from_config(str(P7))
         self.rear = float(json.loads(P7.read_text())["rear_axle_offset_m"])

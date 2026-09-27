@@ -164,6 +164,7 @@ def main():
     ap.add_argument("--arrays", nargs="+", default=["temporal"], choices=ARRAYS)
     ap.add_argument("--out-sub", default="op_streams")
     ap.add_argument("--key-prefix", default="", help="only streams whose key starts with this (p5_: the P5 worlds)")
+    ap.add_argument("--keys", default="", help="only these stream keys: comma list, or @file with one key per line")
     a = ap.parse_args()
     from jevdrive.openpilot.model import OPModel
     si, sn = map(int, a.shard.split("/"))
@@ -203,7 +204,8 @@ def main():
         log.event("check", rows=res, max_abs_diff=max(r["max_abs_diff"] for r in res))
         return
 
-    items = [s for s in plan["streams"] if s["key"].startswith(a.key_prefix)][si::sn]
+    keys = set((open(a.keys[1:]).read().split() if a.keys.startswith("@") else a.keys.split(",")) if a.keys else [])
+    items = [s for s in plan["streams"] if s["key"].startswith(a.key_prefix) and (not keys or s["key"] in keys)][si::sn]
     items = [s for s in items if not all((outdir[k] / f"{s['key']}.npz").exists() for k in a.models)]
     items = items[: a.limit or None]
     del plan
