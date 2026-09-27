@@ -295,7 +295,8 @@ load_go() {  # the batch cards: runs/nq4/gk/GO (SCH's table, runs/sched/table.ts
     [[ -n $GPUS_ ]] || return 1
     GPUS=$GPUS_; WORKERS=${WORKERS_:-6}; SIDX0=${IDX0_:-60}; SPAN=${IDX_SPAN_:-18}; CPUS=${CPUS_:-60-149}; CTX=batch
 }
-load_pilot() {  # the validation card: $SCHED/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN, PILOT_CPUS)
+load_pilot() {  # the validation card(s): $SCHED/nq4-gk.pilot (PILOT_GPU: one card or a space list, PILOT_WORKERS per card,
+                # PILOT_IDX0, PILOT_SPAN per card, PILOT_CPUS)
     [[ -f $SCHED/nq4-gk.pilot ]] || return 1
     local P_= W_= I_= S_= C_=
     eval "$(set +u; source "$SCHED/nq4-gk.pilot"; echo "P_='$PILOT_GPU' W_='$PILOT_WORKERS' I_='$PILOT_IDX0' S_='$PILOT_SPAN' C_='$PILOT_CPUS'")"
@@ -310,10 +311,13 @@ free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card
     # a card with more than FOREIGN_MAX foreign jobs gets none, and every new server needs 8 GB of free VRAM.
     # Why: on 2026-09-27 seven servers per card (or a pilot's four on four cores) made CARLA die at Large Map loads with
     # "GameThread timed out waiting for RenderThread" (Town13 66 / 74 attempts, pdm ghost), which failed whole steps.
-    [[ ${CTX:-batch} == pilot ]] && { echo "$WORKERS"; return; }
-    python3 - "$1" "$CARD_CAP" "$WORKERS" "${FOREIGN_COST:-2}" "${FOREIGN_MAX:-1}" "$SCHED/table.tsv" <<'EOF'
+    # A pilot counts the servers actually on its card (the batch's included); the batch also keeps the pilot's registered
+    # workers free. PILOT_SHARED=0 restores the old dedicated validation card (PILOT_WORKERS as granted, no check).
+    [[ ${CTX:-batch} == pilot && ${PILOT_SHARED:-1} == 0 ]] && { echo "$WORKERS"; return; }
+    python3 - "$1" "$CARD_CAP" "$WORKERS" "${FOREIGN_COST:-2}" "${FOREIGN_MAX:-1}" "$SCHED/table.tsv" "${CTX:-batch}" <<'EOF'
 import csv, subprocess, sys
-gpu, cap, workers, cost, fmax, table = sys.argv[1], *map(int, sys.argv[2:6]), sys.argv[6]
+gpu, cap, workers, cost, fmax, table, ctx = sys.argv[1], *map(int, sys.argv[2:6]), *sys.argv[6:8]
+mine = ("nq4-gk", "nq4-gk-pilot") if ctx == "pilot" else ("nq4-gk",)
 q = lambda what: subprocess.run(["nvidia-smi", "-i", gpu, f"--query-{what}", "--format=csv,noheader,nounits"],
                                 capture_output=True, text=True).stdout.splitlines()
 used, total = map(float, q("gpu=memory.used,memory.total")[0].split(","))
@@ -332,7 +336,7 @@ for line in q("compute-apps=pid,process_name,used_memory"):
 reserved = 0
 try:
     for r in csv.DictReader(open(table), delimiter="\t"):
-        if (r["lane"] not in ("nq4-gk", "nq4-gk-pilot") and gpu in r["gpus"].split(",") and r["workers"].isdigit()
+        if (r["lane"] not in mine and gpu in r["gpus"].split(",") and r["workers"].isdigit()
                 and not r["status"].startswith(("done", "revoked", "legacy"))):
             reserved += int(r["workers"])
 except (OSError, KeyError):
