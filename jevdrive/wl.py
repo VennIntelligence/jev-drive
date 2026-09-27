@@ -276,14 +276,15 @@ def prefix(out: str, stage: str = "pilot1") -> pd.DataFrame:
 
 def _gap_front(adir: Path, t0: int, t1: int) -> dict:
     """Min longitudinal gap to any road actor in the ego lane (|y| <= 1.75 m, ego frame) over ticks [t0, t1], and the
-    ego's travel. Actor rows come from actors.npz, tick-aligned through frames.jsonl's first frame."""
+    ego's travel, and the min time to collision with those actors (gap / closing speed along the ego heading). Actor rows
+    come from actors.npz, tick-aligned through frames.jsonl's first frame."""
     p = _pose(adir)
     fr0 = int(_frames(adir).frame.iloc[0])
     z = np.load(adir / "actors.npz")
     kinds = json.loads((adir / "actor_kinds.json").read_text())
     road = {int(k) for k, v in kinds.items() if v[0].startswith(("walker.", "vehicle.", "static.prop."))}
     tick = z["frame"] - fr0 + 1
-    gap = np.inf
+    gap, ttc = np.inf, np.inf
     for t in range(t0, min(t1, p.index.max()) + 1):
         e = p.loc[t]
         m = (tick == t) & np.isin(z["id"], list(road))
@@ -295,15 +296,21 @@ def _gap_front(adir: Path, t0: int, t1: int) -> dict:
         x, y = dx * c + dy * s, -dx * s + dy * c
         ok = (x > 0) & (np.abs(y) <= 1.75) & (np.abs(q[:, 2] - e.z) <= 5) & (np.hypot(dx, dy) > 2.0)
         if ok.any():
-            gap = min(gap, float(x[ok].min()) - 2.4)          # front bumper to the actor's reference point
+            g = x[ok] - 2.4                                   # front bumper to the actor's reference point
+            gap = min(gap, float(g.min()))
+            va = z["v"][m][ok].astype(float)                  # actor velocity along the ego heading
+            closing = (e.vx * c + e.vy * s) - (va[:, 0] * c + va[:, 1] * s)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                tt = np.where(closing > 0.1, np.maximum(g, 0.0) / closing, np.inf)
+            ttc = min(ttc, float(tt.min()))
     k1 = min(t1, p.index.max())
     travel = float(np.hypot(np.diff(p.x[t0:k1]), np.diff(p.y[t0:k1])).sum())
-    return {"gap_min_m": gap, "travel_m": travel}
+    return {"gap_min_m": gap, "ttc_min_s": ttc, "travel_m": travel}
 
 
 def outcome(adir: Path, fork_tick: int, branch_s: float = 3.0) -> dict:
     """Branch outcome: collision in the branch (collisions.jsonl, tick-aligned), min in-lane gap, ego travel, lateral
-    offset from the fork pose's heading line at the branch end; unsafe = collision or gap < 2 m."""
+    offset from the fork pose's heading line at the branch end; unsafe = collision or gap < 2 m or TTC < 1.0 s."""
     t1 = fork_tick + int(round(branch_s / TICK))
     fr0 = int(_frames(adir).frame.iloc[0])
     col = [json.loads(l) for l in (adir / "collisions.jsonl").read_text().splitlines()] if (adir / "collisions.jsonl").exists() else []
@@ -314,7 +321,7 @@ def outcome(adir: Path, fork_tick: int, branch_s: float = 3.0) -> dict:
     c, s = np.cos(np.radians(e0.yaw)), np.sin(np.radians(e0.yaw))
     lat = float(-(e1.x - e0.x) * s + (e1.y - e0.y) * c)       # CARLA y right: positive = right of the start heading
     return {"collision": bool(hit), "collision_types": sorted({h["other_type"] for h in hit}), **g, "lateral_right_m": lat,
-            "unsafe": bool(hit) or g["gap_min_m"] < 2.0, "ticks": int(p.index.max())}
+            "unsafe": bool(hit) or g["gap_min_m"] < 2.0 or g["ttc_min_s"] < 1.0, "ticks": int(p.index.max())}
 
 
 def sanity(out: str, stage: str) -> dict:
