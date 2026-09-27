@@ -210,6 +210,9 @@ def render(a):
 
 
 def main():
+    # Absolute interpreter invocation does not activate its console tools.
+    # nvdiffrast JIT needs the ninja executable installed in this same env.
+    os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("prep"); p.add_argument("--raw"); p.add_argument("--out"); p.add_argument("--scenes")
