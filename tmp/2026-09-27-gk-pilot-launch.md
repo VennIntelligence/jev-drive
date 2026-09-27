@@ -22,3 +22,13 @@
 已部署`jev:cx-gk-pilots`：owner97841；K0 pilot shell97843/startticks801884298；首阶段容量检查97888。原pilot已选定首路线并进入持久等待，但**没有启动CARLA或模型实负载**。现场pids18199、pending_B=3（B的30claims对27实际CARLA），一worker含pending/head预算后超过16000。GPU1已清到0.04GB/0CARLA；CPU62/175，B五卡100%，P3 GPU6 18.3GB/85%。唯一阻塞是全机线程预算，不是GPU1显存/端口，也不再是原F/main未授权。
 
 队列每30秒在Box自行重新核查，容量足够即启动首K0路线，原检查通过才进10路；之后失败候选隔离、下一合法候选接续。没有为了制造首个PID越过16000门或停止B/P3科学工作。首个真实runner PID应由`runs/nq4/gk/cx_pilot_20260927_k/k0_unseen/s0/runner.pids`及`G/events.jsonl`的server_ready核查；等待shell PID不能当作路线已开始的证据。
+
+## 13:30CST：通过后批量补位
+
+用户再次明确要求已通过pilot立即进入空卡批量，不等其他K层全部检查完。K0原两stage真实PASS：10/10、10attempt、0crash、blocked7/10（原70%上限内），DS6.199对同10路CL3的6.891。13:30:11原pilot结算后K1已真实runner353656。此时pids约4549，线程不再阻塞；原pilot-only脚本没有批量接续，是GPU0/6等空闲的直接原因。
+
+发现旧head329147及其包装shell329145仍活是cleanup兼容错误：tmux登录python3缺os.pidfd_open（SSH测试解释器有）。当前K1正在复用该head，不能杀。helper补Linux pidfd syscall兼容，保持精确身份且不使用groupkill；下一阶段清理自动使用修复。
+
+新增`cx_gk_batch.py`持久补位和`cx_gk_batch_worker.sh`，不修改运行中的GK bash/pilot队列。每个已通过K层按原seed0/1/2及官方220路安排独立卡，顺序K0/K3/K1/K2；不等整臂/所有层完成。批量除原两stage PASS外，再核K READY已有的计划有限值、模型/fold身份、blocked≤CL3+2、v_target/g3/rules原检查；未知或缺证据不放行。各批量lease（资源租用）隔离head/socket/cfg/log/清理，结果进原arms_k，seed0硬链接复用已完成10路线，避免重跑。
+
+每张卡需真实无居民且无B runner，独立合法8-index段经SCH表及±120/全TCP端口校验；B旧注册段保持，不抢它的尾部端口。按真实pids+尚未兑现worker×600+调试两worker余量核≤16000，CPU≤165；最多6worker/卡。P3正式scene0原主门失败，无合法后续；P3 owner明确释放GPU6/CPU180–189，6c626fc registry已Box拉取并迁移唯一controller生效，旧nq4-p3 table claim清为'-'。
