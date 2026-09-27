@@ -88,6 +88,11 @@ def fit_fold(f, fold, t, F, Ego, Xop, Q, pr_ip, pr_im, pr_group, rl, tag, pr_fam
     prior = base + planner.linear_apply(Wp, Xi, np.arange(n))[0]
     s_ego = (base - F).reshape(n, 20, 2).norm(dim=-1).mean(1)
     out = {"prior": prior}
+    if arms is not None and len(arms) == 0:
+        # Prior-only callers do not supply Q; no paired or reweighting arm
+        # was requested, so do not prepare their unused dual-stream inputs.
+        rl.log.info("fold %d %s: ridge ego lam %g, prior lam %g", f, tag, st_e["lam"], st_p["lam"])
+        return out
     # pair rows of the training folds
     keep = fold[pr_ip] != f
     ip, im, grp = pr_ip[keep], pr_im[keep], pr_group[keep]
