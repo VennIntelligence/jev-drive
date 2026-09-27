@@ -41,7 +41,9 @@ N_NAV, HOLD_FRAC, SPLIT_SEED = 2000, 0.10, 0      # N_NAV 6000 -> 2000 before an
 QSPLIT = "nq3_navtrain2"
 PED_RATIO, PDMS_DROP = 0.8, -1.0
 G2_RUN = "runs/real-data-transfer/g2/20260926-090503"
-RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "nq3" / "q4"
+RESULTS = Path(__file__).resolve().parents[1] / "research" / "results" / "nq3" / "q4a"
+REPRO_TOL = 1e-2       # m; 1e-3 -> 1e-2 by the user-authorized deviation of 2026-09-27 20:50 (MKL thread noise up to 1.75 mm)
+EXAM_CELLS = ("ped_flip", "ped_lo", "ped_hi", "cutin_flip", "pass")   # must equal the stored M-C criteria (same deviation)
 
 
 def out(*p) -> Path:
@@ -310,7 +312,7 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
                         rl.event("q4a_repro", model=m, seed=s, fold=f, lam=float(MC.LAMS[best]), lam_ref=ref_lam.get(f), max_abs_diff=diff)
                         rl.log.info("%s s%d fold %d lam_r 0: lam %g (stored %s), max |pred - stored| %.2e m", m, s, f,
                                     MC.LAMS[best], ref_lam.get(f), diff)
-                        assert np.isclose(MC.LAMS[best], ref_lam[f]) and diff < 1e-3, "lam_r = 0 does not reproduce M-C"
+                        assert np.isclose(MC.LAMS[best], ref_lam[f]) and diff < REPRO_TOL, "lam_r = 0 does not reproduce M-C"
                 p5["prior"][ev] = prior[ev].reshape(-1, 20, 2).cpu().numpy()
                 i3["prior"] += prior[I3r].reshape(-1, 20, 2).cpu().double().numpy() / E.K_FOLDS
                 del Z, Zc, D, Rg, base
@@ -322,6 +324,13 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
                 oo, nn = E.deltas(obs, null, t, preds)
                 res = E.exam(oo, nn, pairs, list(preds))
             crit = MC.criteria(res, list(preds), f"prior [{m}]").assign(model=m, seed=s)
+            # second reproduction check: the lam_r = 0 exam cells equal the stored M-C's
+            got = crit.set_index("arm").loc[f"M-C pair [{m}]"]
+            want = pd.read_csv(ref_run / "criteria.csv").set_index("arm").loc[f"M-C pair [{m}]"]
+            same = {c: bool(np.isclose(float(got[c]), float(want[c]), rtol=0, atol=1e-12)) for c in EXAM_CELLS}
+            rl.event("q4a_repro_exam", model=m, seed=s, **{c: [float(got[c]), float(want[c])] for c in EXAM_CELLS}, same=same)
+            rl.log.info("%s s%d lam_r 0 exam cells vs stored M-C: %s", m, s, same)
+            assert all(same.values()), f"lam_r = 0 exam cells differ from the stored M-C: {same}"
             fl = res["flips"].assign(model=m, seed=s)
             # I3: elicit_i3's judge (no TFv6 columns), fold-mean predictions
             pi3 = {f"ridge_late op-{m} temporal": i3["prior"].astype(np.float32),

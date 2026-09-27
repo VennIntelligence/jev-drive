@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Resume path for night queue 3 Q4a once its lam_r = 0 reproduction check can pass (tmp/2026-09-27-q4a-fp64.md; not
-# run: the float64 fit misses the stored M-C, a human decides the reference first). Same steps, commands
+# Resume path for night queue 3 Q4a after the user-authorized deviation of 2026-09-27 20:50 (tolerance of the lam_r = 0
+# check 1e-3 -> 1e-2 m plus exact P5 exam cells; tmp/2026-09-27-q4a-fp64.md). Same steps, commands
 # and state layout as scripts/nq3_d.sh (runs/nq3/d/<step>/{log.txt,DONE}, stop at 2x the estimate -> runs/nq3/d/ERROR),
 # but only the Q4a steps, no git pull inside, and staged: run the stages given on the command line, in order.
 #   stages: fit hydra hold-pilot hold nav-pilot nav
@@ -62,7 +62,7 @@ for s in "$@"; do
     hold-pilot) step q4a-hold-pilot 20 "$q hold-jobs && head -n 1 $Q/hold/jobs.txt > $Q/hold/jobs_pilot.txt && NAVSIM_THREADS=$NT $score $Q/hold/jobs_pilot.txt 1 $NT" ;;
     hold)       step q4a-hold 40 "$score $Q/hold/jobs.txt $PAR $NT && $q select" ;;
     nav-pilot)  step q4a-nav-pilot 40 "test -f $Q/lam_select.json && $q nav-jobs && head -n 1 $Q/navtest/jobs.txt > $Q/navtest/jobs_pilot.txt && $score $Q/navtest/jobs_pilot.txt 1 $NT" ;;
-    nav)        step q4a-nav 60 "$score $Q/navtest/jobs.txt $PAR $NT && CUDA_VISIBLE_DEVICES=$GPU $q report" ;;
+    nav)        step q4a-nav 90 "$score $Q/navtest/jobs.txt $PAR $NT && CUDA_VISIBLE_DEVICES=$GPU $q report" ;;
     *) echo "unknown stage $s"; exit 1 ;;
   esac
 done
