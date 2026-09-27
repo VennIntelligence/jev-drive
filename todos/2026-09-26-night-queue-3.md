@@ -249,6 +249,14 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
   (7) **交给 CL**：Cinque 的合并判格是「成立」才写 `runs/nq3/q4a/PASS`（CL 的 M-C 臂是 Cinque）；`mc_real0` = Cinque seed 0、λ\*(seed 0) 的 5 个 fold head（W、z̄、两路标准化统计量、λ，E1 `fold_heads` 的格式）放 `runs/nq3/q4a/mc_real0/`，附说明。
 - 2026-09-26 16:55 CST [D] **Q4a 偏离（写于任何 Q4a 数字之前）**：navtrain 的 Qwen 抽取在 GPU 6 上实测 3.1 s / token / 进程（navtest 当初 0.63 s，GPU 6 此时被 9 个进程共用、100% 占用），8 068 个 token 要约 3.5 h，超估计 2 倍，已停（只抽了 22 个）。
   改为：navtrain 零约束行从 6 000 减到 **2 000**（同一 rng 0 从干净帧里抽），留出 2 068 个 token 不变且排在抽取队列最前；步骤估时改 120 min。WOD 干净帧（68 570，已有特征）不受影响，两个数据集仍各占一半权重。
+- 2026-09-27 20:50 CST **Q4a 偏离：放宽 λ_r = 0 复现检查的逐预测容差（用户授权，经调度转达；写于任何新的 Q4a 留出 / navtest 数字之前）**。
+  背景（精度诊断，[tmp/2026-09-27-q4a-fp64.md](../tmp/2026-09-27-q4a-fp64.md)，小表 [results/nq3/q4a/](../research/results/nq3/q4a/)）：09-26 的断言失败（cinque s1 fold 4，1.11e-3 m）来自 prior 的 float32 ridge 解随 MKL 线程数变化：
+  同一代码、同一输入，已存 prior 在 1 / 8 / 12 / 16 / 20 线程下相对已存预测变动 0 – 1.75 mm，12 线程逐位复现已存 seed 1 / 2；float64 端到端与已存差 1.9–46 cm，但 P5 判卷 6 格逐格相同。用户判断毫米级的线程数不稳定是预期的数值噪声，1e-3 m 过严。
+  改为：(a) λ 相同的要求不变；(b) 逐预测容差 1e-3 m → **1e-2 m**（线程数本身让已存 prior 变动到 1.75 mm，真正的 bug 在 cm–dm 级出现）；
+  (c) 新增第二道表征级检查：λ_r = 0 拟合在 P5 v1 BA 上的判卷格（行人翻转及其 CI、cut-in 翻转、pass）必须与已存 M-C 的 `criteria.csv` 完全相同。
+  其余一字不改：同一 float32 代码路径、与链相同的线程设置（BLAS / OMP 20）、同一 λ 网格、fold、判据与 navtest 门槛；λ_r 候选、留出选 λ、`lam_select.json` 先于 navtest 的顺序不变。
+  写这条时已知的 Q4a 数字：只有 λ_r = 0 的逐 fold 复现差（诊断）与 09-26 已进日志的 cinque seed 0 P5 读数（λ_r 0.1 / 1 / 10 行人翻转 0.436 / 0.441 / 0.352）；没有任何留出 PDMS、navtest 或其余 seed 的 λ_r > 0 数字。
+  执行：09-26 的 `runs/nq3/d/ERROR` 与旧 fit 目录加后缀 `.20260926-fp32-assert` 归档，用 `scripts/nq3_d/q4a_resume.sh` 分阶段续跑（每个 devkit 批先跑 1 个 job 检查）。
 - 2026-09-26 17:20 CST [D] **Q4b 的操作化**（写于 Q4b 的任何数字之前）。
   (1) **只换时间协议**：P5 v1 BA 全部 obs 行（19 428 帧，兼容检查用其中 null 表引用的 6 352 帧，翻转用全部）按 NAVSIM 的输入协议重抽 openpilot `temporal`：NAVSIM 的 4 个 2 Hz 历史槽（−1.5 / −1.0 / −0.5 / 0 s）取最近的 5 Hz 录制帧
   （等距取较晚的：−1.4 / −1.0 / −0.4 / 0 s，与 T2 给 WA-JEPA 的取法相同；早于流起点的钳到第一帧，比例照报），每帧仍用 P5 自己的三路 rig 渲染（`p5_openpilot.render` 原样，与 `op_streams_vis` 同一渲染），
