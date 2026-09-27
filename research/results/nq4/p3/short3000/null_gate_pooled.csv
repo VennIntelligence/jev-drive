@@ -1,0 +1,3 @@
+examinee,tau_i3,n_null_frames,scenes,null_false_flip,lo,hi,gate,passes,pair_moved,pair_slower,pair_moved_after_f0,scope
+ridge_late op-cinque temporal,0.5268521547317493,23,1.0,0.217391304347826,0.217391304347826,0.217391304347826,0.07,False,0.0,0.0,0.0,pooled
+ridge_late op-lebowski temporal,0.7339016199111937,23,1.0,0.1304347826086956,0.1304347826086956,0.1304347826086956,0.07,False,0.0,0.0,0.0,pooled

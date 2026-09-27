@@ -1,0 +1,2 @@
+scene,segment,f0_s,v0,n_deleted,deleted_missing,psnr,psnr_ped,determinism_max_abs,del_diff_px_out,del_diff_px_in,train_min,render_s,null_ff_cinque,pair_moved_cinque,null_ff_lebowski,pair_moved_lebowski
+p3_000,2265177645248606981_2340_000_2360_000,12.8,4.71,4,0,25.524473824297427,23.941533795804396,0.0,19999,500561,,81.5,0.217391304347826,0.0,0.1304347826086956,0.0
