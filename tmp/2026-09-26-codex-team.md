@@ -156,3 +156,7 @@ B控制器修复 `d55d9ed` 已Box部署；唯一v2 PID954435/startticks801438503
 Astra orchestration负责GPU1 K0–K3原1→10pilot再合法G候选，见[gk-pilot-launch](2026-09-27-gk-pilot-launch.md)。P3保留GPU6/CPU180–189；旧Alp已核无调用者并精确停止。全机pids仍超过16000，持久队列必须等容量释放；不写全量GO/prepDONE，不降科学门。原GK无活链，先修精确PID清理再部署。
 
 G/K `8bbcda1`已部署`jev:cx-gk-pilots`，owner97841、K0 pilot97843/start801884298，容量wait97888。10:59CST pids18199、B pending3，尚无GK真实CARLA负载；GPU1已清空但需保持16000计划门。Box持久队列30秒自行重试，不需模型轮询。P3GPU6原owner不变。
+
+## 13:45 CST 已PASS K批量动态补位
+
+`79c2ebb` batch + pidfd登录解释器兼容已Box部署；`43ab2c0`统一controller登记已生效。K0原10pilot及K READY检查均PASS；正式seed0/1/2实际runner360626/361390/363521，在GPU0/6/5各6worker。0/1已有405/234真实ticks；seed0复用10条旧完成。dispatcher359401持续将新PASS层直接排空卡，GPU1 pilot97841独立继续。B尾部不动。P3已科学FAIL停止并释放全部GPU/CPUclaim，controller361054实时认领GK[0,1,5,6]。详见gk-pilot-launch最新验收。

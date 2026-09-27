@@ -36,3 +36,9 @@
 `79c2ebb`已Box部署；登录python3.12缺os.pidfd_open现场重测fallback清理成功，无关同组进程存活。K0追加READY检查实际PASS（blocked7 vsCL3=5，恰在+2线上）；原PASS不因此扩到其他K层。
 
 13:40:46 CST首batch已启动：dispatcher359401，seed0 worker359432/startticks802853522、GPU0 head359463；GPU6 seed1 worker359610/startticks802855529按20秒错峰接续。GPU0 index0–7、GPU6 index22–29经过全TCP占用和SCH±120检查；P3旧claim已清。此时head处于加载、不能把它写成路线完成；后续runner由原execute在ready后启动。
+
+## 实际路线与资源验收（13:44–13:45 CST）
+
+三个K0正式runner均已出现：seed0/GPU0=360626，seed1/GPU6=361390，seed2/GPU5=363521，各6worker、各6个claims。seed0/1最新真实heartbeat已到405/234 ticks；seed2刚开始第一个CARLA。seed0已完成计数10来自复用，**不是新批量已经新增完成10条**。现场pids4431、CPU21/175；GPU0/6已24.1/19.7GB并各3/2个CARLA，GPU5第1个CARLA起步，原runner继续20秒错峰铺满。
+
+控制器注册`43ab2c0`已部署并仅迁移controller/supervisor，PID361054/startticks802869930，`GK RUNNING actual_gpus=[0,1,5,6]`；P3资源声明为空。B尾路GPU2/4和GPU1 K1 pilot保持原身份，GPU3暂无新的已完成K gate可分配。新持久batch每轮读取真实K门，一通过就给空卡排该层seed，不等K0三个seed全结束。G全量的原prep/科学门没有伪造；G pilot仍原队列继续。
