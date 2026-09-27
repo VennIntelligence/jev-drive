@@ -12,6 +12,7 @@ so no rebuild or LD_PRELOAD is needed. UE4's own pools (TaskGraph, PoolThread) f
         load a map, drive a blocking six-camera loop (the leaderboard waits for every sensor each tick), sample
         threads / CPU / VRAM, stop them by PID; one JSON row per server to --out
   carla_threads.py bench --port P ...                     (internal) the client side of one probe server
+  carla_threads.py summary FILE.jsonl ...                 per-round / per-arm markdown tables of probe output
   carla_threads.py compare base-a=DIR reduced-a=DIR ... --out DIR
         route equivalence of PDM-Lite runs (scripts/carla_threads_routes.sh): DS, infractions, game time and
         trajectory deviation for every pair of arms, grouped by the arm kinds (the name before '-')
@@ -386,10 +387,43 @@ def cmd_compare(a):
     print("\n".join(means + [""] + lines))
 
 
+def cmd_summary(a):
+    """Per-round and per-arm tables of probe JSONL files (a round = one probe call; it starts at its first index)."""
+    out = []
+    for path in a.files:
+        rows, rnd, first = [json.loads(l) for l in open(path)], -1, None
+        for r in rows:
+            first = r["index"] if first is None else first
+            rnd += r["index"] == first
+            r["round"] = rnd
+        out += ["### " + Path(path).name, "",
+                "| round | arm | starts | crashed at start (RenderThread / other) | threads per server | "
+                "aggregate FPS | ms/tick mean (median) | server cores | server core-s per tick | VRAM GB |",
+                "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        arms = collections.defaultdict(lambda: collections.Counter())
+        for k in range(rnd + 1):
+            R = [r for r in rows if r["round"] == k]
+            ok = [r for r in R if r["status"] == "ok"]
+            rt = sum(bool(r.get("render_timeout")) for r in R)
+            bad = len(R) - len(ok)
+            arms[R[0]["tag"]].update(starts=len(R), rt=rt, other=bad - rt)
+            m = lambda f: statistics.mean(f(r) for r in ok) if ok else float("nan")
+            out.append("| %d | %s | %d | %d (%d / %d) | %d | %.1f | %.0f (%.0f) | %.2f | %.3f | %.1f |" % (
+                k, R[0]["tag"], len(R), bad, rt, bad - rt, R[0]["threads_idle"]["total"] if R[0].get("threads_idle") else -1,
+                sum(r["bench"]["fps"] for r in ok), m(lambda r: r["bench"]["ms_mean"]), m(lambda r: r["bench"]["ms_median"]),
+                m(lambda r: r["server_cores"]), m(lambda r: r["server_cores"] * r["bench"]["ms_mean"] / 1e3),
+                m(lambda r: r["vram_mib"] / 1024)))
+        out += [""] + ["- %s: %d starts, %d RenderThread-timeout crashes, %d other failures" % (t, c["starts"], c["rt"], c["other"])
+                       for t, c in arms.items()] + [""]
+    print("\n".join(out))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("count")
+    s = sub.add_parser("summary", help="markdown tables of probe JSONL files")
+    s.add_argument("files", nargs="+")
     c = sub.add_parser("compare", help="route equivalence: name=arm_dir ... (b2d_run --out dirs of the PDM-Lite runs)")
     c.add_argument("arms", nargs="+")
     c.add_argument("--out", required=True)
@@ -417,7 +451,7 @@ def main():
     b.add_argument("--tm-port", type=int, required=True)
     b.add_argument("--start-at", type=float, default=0.0)
     a = p.parse_args()
-    return {"count": cmd_count, "probe": cmd_probe, "bench": cmd_bench, "compare": cmd_compare}[a.cmd](a)
+    return {"count": cmd_count, "probe": cmd_probe, "bench": cmd_bench, "compare": cmd_compare, "summary": cmd_summary}[a.cmd](a)
 
 
 if __name__ == "__main__":

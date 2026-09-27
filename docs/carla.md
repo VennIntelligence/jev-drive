@@ -73,9 +73,15 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   servers on 2026-09-25 (14 of 91 starts in the profiling runs) and 19 on 2026-09-23. Not a port conflict and not
   the container's thread cap (`pids.events` did not move); seen while 20-29 CARLA servers ran on the box, and
   once with a single server on an idle card. Cause open. b2d_run's retry absorbs it at 60-90 s per hit.
-- **The container's thread cap (pids.max 20480) bounds the number of workers.** A server has ~430 threads, a
-  route client ~215 (`carla.Client` opens one worker per host hardware thread); at the cap, new route clients
-  fail with `RuntimeError: Resource temporarily unavailable`. Run `b2d_run.py --client-threads 8`.
+  It is the commonest way a server dies: of 1558 server logs written 2026-09-24..27 under `runs/nq3`, `runs/nq4`,
+  `runs/nq4_k` and `runs/infra-accept`, 712 end with it (187 with a plain Signal 11, 33 with a bind error, 626
+  clean). In the 2026-09-27 thread probe it hit 7 of 36 starts with six servers loading and ticking on one card and
+  16 CPUs, and 0 of 6 single-server starts; the thread flags did not raise it (stock 5/18, reduced 2/18).
+- **The container's thread cap (pids.max 20480) bounds the number of workers.** A stock server has ~430
+  threads unpinned and 301 at a 16-CPU affinity, a route client ~215 (`carla.Client` opens one worker per host
+  hardware thread); at the cap, new route clients fail with `RuntimeError: Resource temporarily unavailable`.
+  Run `b2d_run.py --client-threads 8` (a route client then has ~29), and see "Threads per server" below for the
+  server side: `-RPCThreads=4 -StreamingThreads=4 -SecondaryThreads=4` takes a server from 301 to 109.
 - **`SDL_VIDEODRIVER=offscreen` breaks CARLA.** It exits 1 immediately, printing nothing past
   `Disabling core dumps.`. `-RenderOffScreen` already does the headless part; SDL is not involved.
   Unset it, or use `dummy`. Setting it is a natural thing to try, which is why it is listed here.
@@ -115,6 +121,53 @@ Debugging aids that do **not** work here, so nobody spends the time: the contain
 kernel messages, so `dmesg` never shows the segfault; and UE4 writes no crash report
 (`CarlaUE4/Saved/Crashes` never appears) because its own handler suppresses core dumps and
 re-raises. A real backtrace needs `gdb` with `-nocrashhandler`.
+
+## Threads per server
+
+Measured 2026-09-27 with `scripts/carla_threads.py` (raw rows and tables in
+`research/results/infra/carla-threads/`). Two thread populations make up a server, and they are sized differently:
+
+| Pool | Sized by | Threads at a 16-CPU affinity | Override |
+|---|---|---:|---|
+| CARLA RPC (rpclib, thread name `server`) | `(hardware_concurrency - 2) / 3` = (208 - 2) / 3 | 68 | `-RPCThreads=N` |
+| CARLA sensor streaming (unnamed) | same | 68 | `-StreamingThreads=N` |
+| CARLA multi-GPU secondary server (unnamed) | same | 68 | `-SecondaryThreads=N` |
+| UE4 TaskGraph (3 priority sets) | affinity mask: 3 x (CPUs - 1) | 45 | CPU affinity only |
+| UE4 `PoolThread` | affinity mask: ~2 x CPUs + 5 | 37 | CPU affinity only |
+| main, RenderThread, RHIThread, Vulkan, stats, ... | fixed | ~15 | - |
+| **total** | | **301** (stock), **109** with N = 4 | |
+
+The CARLA part is `FCarlaServer::AsyncRun` (`Plugins/Carla/Source/Carla/Server/CarlaServer.cpp`, 0.9.15), fed by
+`FCarlaEngine_GetNumberOfThreadsForRPCServer() = max(std::thread::hardware_concurrency(), 4) - 2`
+(`Game/CarlaEngine.cpp`). `hardware_concurrency` is `get_nprocs()`, the host's online CPUs (208), not the cgroup
+quota (175) and not the affinity mask, which is why pinning barely touches it. The shipped binary parses the three
+flags (they are in its strings), so no rebuild or LD_PRELOAD is needed. N = 4 is what the default gives on a
+16-thread desktop, the machine CARLA is normally run on. The UE4 pools follow the affinity mask
+(`sched_getaffinity`): 32 CPUs give 361 stock / 169 reduced; a server that inherits no affinity has ~430 stock.
+
+**Equivalence, measured on GPU 1 while nothing else ran on it:**
+
+| Test | Stock pools | `-RPCThreads=4 -StreamingThreads=4 -SecondaryThreads=4` |
+|---|---|---|
+| one server, six 1600x900 cameras, blocking sensor wait, Town10HD_Opt + 30 TM cars (3 runs each, alternating) | 9.4 / 10.2 / 9.5 FPS, 0.32-0.35 core-s per tick | 9.8 / 9.4 / 9.4 FPS, 0.33-0.34 core-s per tick |
+| six servers on one card and 16 CPUs, same load (3 rounds each, alternating) | aggregate 26.3 / 28.8 / 32.2 FPS with 3 / 4 / 6 servers alive | 26.1 / 30.2 / 30.4 FPS with 5 alive each |
+| server starts in those six-server rounds | 18 starts, 5 RenderThread-timeout crashes | 18 starts, 2 RenderThread-timeout crashes, 1 plain Signal 11 |
+| PDM-Lite, 20 Bench2Drive routes, 5 workers (3 stock runs incl. two from 2026-09-25, 2 reduced) | 60 stock-stock pairs: 54 DS-identical, mean abs dDS 3.43 | 120 stock-reduced pairs: 111 DS-identical, mean abs dDS 2.14 |
+
+VRAM per server is the same (8.5-9.9 GB here). Aggregate throughput tracks the number of servers alive; at 5 alive the
+reduced rounds sit on the stock line within its noise, so a difference below ~10% cannot be excluded. The route test
+is the decisive one: closed loop is not bitwise deterministic (no pair of runs, stock or reduced, had identical
+trajectories; they part after 0.75-9 s of game time), and every DS disagreement, stock-stock and stock-reduced alike,
+comes from the same three routes (1956, 3564, 17563), whose outcome flips between runs regardless of the flags.
+The other 17 routes gave the same DS in all ten pairs.
+
+**Budget with the reduced pools:** a worker (server + route client at `--client-threads 8`) is ~140 threads instead
+of ~330, so the thread cap stops binding well above what the GPUs and CPUs can serve (see bench2drive-cost.md,
+"Recommended layout", for the 6-servers-per-card GPU knee that `CARD_CAP` in `scripts/nq4_gk.sh` encodes).
+
+**`SIGTERM` does not stop a server promptly.** The wrapper `CarlaUE4.sh` dies at once, but the binary's graceful
+shutdown can hold its VRAM and ports for more than a minute. Kill the process group, wait for the group to be empty,
+then `SIGKILL` it (b2d_run and carla_threads both do).
 
 ## Town12 and Large Maps
 
