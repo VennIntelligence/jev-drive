@@ -23,11 +23,16 @@ if sys.argv[1] == "orig-fit":      # orig-fit <model> <seed>: nq3_q4a.fit as it 
     from jevdrive.runlog import RunLog
     base = data_dir() / "runs/nq3/q4a/precision_diag" / f"fit_rerun_{sys.argv[2]}_s{sys.argv[3]}"
 
-    def _out(*p):
+    orig_out = Q.out
+
+    def _out(*p):         # fit outputs go to the side directory, prep inputs are read from the real one
+        if not p or p[0] != "fit":
+            return orig_out(*p)
         d = base / Path(*p)
         d.parent.mkdir(parents=True, exist_ok=True)
         return d
     Q.out = _out
+    Q._stamp = lambda msg: None
     Q.fit(RunLog("nq3", "q4a-precision-fit-rerun"), (sys.argv[2],), (int(sys.argv[3]),))
     sys.exit(0)
 M_, S_ = sys.argv[1], int(sys.argv[2])
