@@ -219,7 +219,7 @@ def tfv6(t: pd.DataFrame, need: set, workers: int = 8) -> tuple[np.ndarray, np.n
     return wp, ts
 
 
-def collect() -> tuple[pd.DataFrame, dict, dict]:
+def collect(tfv6_workers: int = 8) -> tuple[pd.DataFrame, dict, dict]:
     """(P6 index, {examinee: (n, 20, 2)}, {examinee: note}); target-speed channel as a constant-speed pseudo-future
     (x = v t, y NaN) so the judge reads only its 2 s speed."""
     t = pd.read_parquet(proc("index.parquet"))
@@ -235,7 +235,7 @@ def collect() -> tuple[pd.DataFrame, dict, dict]:
             ok = pd.Index(z["name"]).isin(pos.index)
             arr[pos[z["name"][ok]].to_numpy()] = z["plan"][ok]
         preds[f"openpilot {m} native plan"] = arr
-    wp, ts = tfv6(t, need)
+    wp, ts = tfv6(t, need, workers=tfv6_workers)
     sel = np.flatnonzero(~np.isnan(wp[:, 7, 1]) & (t.world == "x10").to_numpy())
     c = np.corrcoef(wp[sel, 7, 1], fut[sel, 7, 1])[0, 1]
     if c < 0:
@@ -277,6 +277,53 @@ def collect() -> tuple[pd.DataFrame, dict, dict]:
 
 
 # ---------------------------------------------------------------- judge
+
+def tau_alt(rl, out: Path | None = None) -> pd.DataFrame:
+    """Master handoff T4: descriptive alternative tau; does not change rule-7 judgments."""
+    out = out or RESULTS
+    dest = out / "tau_alt.csv"
+    if dest.exists():
+        rl.log.info("reuse existing %s", dest)
+        return pd.read_csv(dest)
+    assert (data_dir() / "runs/nq3/c/DONE").exists(), "lane C must finish first"
+    t, preds, _ = collect(tfv6_workers=1)
+    fr = pd.read_parquet(proc("nq3_exam_frames.parquet"))
+    c = pd.read_parquet(proc("nq3_cases.parquet"))
+    key = ["base_id", "seed", "k"]
+    a = fr[fr.world == "x01"][key + ["frame_name"]].drop_duplicates(key)
+    b = fr[fr.world == "x00"][key + ["frame_name"]].drop_duplicates(key)
+    alt = a.merge(b, on=key, suffixes=("_a", "_b"))
+    alt = alt.merge(c.loc[c.mode_x01 == "keep", ["base_id", "seed"]], on=["base_id", "seed"])
+    pos = pd.Series(np.arange(len(t)), index=t.frame_name)
+    alt["ia"], alt["ib"] = pos[alt.frame_name_a].to_numpy(), pos[alt.frame_name_b].to_numpy()
+    p = J.pairs(SET)
+    rows = []
+    for name, pred in preds.items():
+        y, _, how = J.lat_v(pred)
+        d = y[alt.ia] - y[alt.ib]
+        valid = np.isfinite(d)
+        row = dict(examinee=name, readout=how, n_null_frames=int(valid.sum()),
+                   null_routes=alt.loc[valid, "base_id"].nunique(), tau_lat_alt=np.nan,
+                   n_frames=0, routes=0, bypass_flip=np.nan, lo=np.nan, hi=np.nan)
+        if name == "TFv6 target speed":
+            row["note"] = "longitudinal only"
+        elif valid.any():
+            tl = float(np.quantile(np.abs(d[valid]), 0.95))
+            s = J.score(p, pred)
+            s = J.flips(s, tl, 0.0)  # only the lateral flip column is read below
+            by = s[(s.reading == "bypass") & s.main]
+            rate, lo, hi = J.boot(by.flip.to_numpy(), by.base_id.to_numpy())
+            row.update(tau_lat_alt=tl, n_frames=len(by), routes=by.base_id.nunique(),
+                       bypass_flip=rate, lo=lo, hi=hi,
+                       note="descriptive; does not enter rule-7 judgments")
+        else:
+            row["note"] = "not read (no matched x01/x00 keep predictions)"
+        rows.append(row)
+        rl.log.info("tau-alt %s: %s", name, row)
+    tab = pd.DataFrame(rows)
+    out.mkdir(parents=True, exist_ok=True)
+    tab.to_csv(dest, index=False)
+    return tab
 
 def judge(rl, out: Path | None = None) -> pd.DataFrame:
     out = out or RESULTS
@@ -340,10 +387,15 @@ def main():
     import argparse
     from .runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("heads", "judge"))
+    ap.add_argument("cmd", choices=("heads", "judge", "tau-alt"))
     a = ap.parse_args()
     rl = RunLog("nq3_c", f"q1-{a.cmd}")
-    heads(rl) if a.cmd == "heads" else judge(rl)
+    if a.cmd == "heads":
+        heads(rl)
+    elif a.cmd == "judge":
+        judge(rl)
+    else:
+        tau_alt(rl)
     rl.close()
 
 
