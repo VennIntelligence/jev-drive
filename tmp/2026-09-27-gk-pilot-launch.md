@@ -32,3 +32,7 @@
 新增`cx_gk_batch.py`持久补位和`cx_gk_batch_worker.sh`，不修改运行中的GK bash/pilot队列。每个已通过K层按原seed0/1/2及官方220路安排独立卡，顺序K0/K3/K1/K2；不等整臂/所有层完成。批量除原两stage PASS外，再核K READY已有的计划有限值、模型/fold身份、blocked≤CL3+2、v_target/g3/rules原检查；未知或缺证据不放行。各批量lease（资源租用）隔离head/socket/cfg/log/清理，结果进原arms_k，seed0硬链接复用已完成10路线，避免重跑。
 
 每张卡需真实无居民且无B runner，独立合法8-index段经SCH表及±120/全TCP端口校验；B旧注册段保持，不抢它的尾部端口。按真实pids+尚未兑现worker×600+调试两worker余量核≤16000，CPU≤165；最多6worker/卡。P3正式scene0原主门失败，无合法后续；P3 owner明确释放GPU6/CPU180–189，6c626fc registry已Box拉取并迁移唯一controller生效，旧nq4-p3 table claim清为'-'。
+
+`79c2ebb`已Box部署；登录python3.12缺os.pidfd_open现场重测fallback清理成功，无关同组进程存活。K0追加READY检查实际PASS（blocked7 vsCL3=5，恰在+2线上）；原PASS不因此扩到其他K层。
+
+13:40:46 CST首batch已启动：dispatcher359401，seed0 worker359432/startticks802853522、GPU0 head359463；GPU6 seed1 worker359610/startticks802855529按20秒错峰接续。GPU0 index0–7、GPU6 index22–29经过全TCP占用和SCH±120检查；P3旧claim已清。此时head处于加载、不能把它写成路线完成；后续runner由原execute在ready后启动。

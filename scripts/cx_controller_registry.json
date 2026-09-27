@@ -131,6 +131,12 @@
       "process_match": [
         [
           "nq4_gk.sh"
+        ],
+        [
+          "scripts/cx_gk_batch.py"
+        ],
+        [
+          "cx_gk_batch_worker.sh"
         ]
       ],
       "done": [
@@ -139,7 +145,13 @@
       "artifacts": [
         "$DATA_DIR/runs/nq4/gk/results/g/summary.csv"
       ],
-      "disabled": "F/main review + prep + GO missing; smoke PASS not transferable"
+      "disabled": "Passed K pilots may run registered K seeds; remaining G full batch still requires original prep/scientific gates",
+      "output_roots": [
+        "$DATA_DIR/runs/nq4/gk/arms_k",
+        "$DATA_DIR/runs/nq4/gk/cx_pilot_20260927_k",
+        "$DATA_DIR/runs/nq4/cx/gk-batch/leases"
+      ],
+      "authorization": "USER_AUTHORIZED_STAGED_PILOTS_AND_PASSED_K_BATCH"
     },
     {
       "id": "P3",
