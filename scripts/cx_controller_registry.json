@@ -185,6 +185,9 @@
         ],
         [
           "$DATA_DIR/runs/nq4/p3/prep.resume.py"
+        ],
+        [
+          "scripts/p3/pool.py"
         ]
       ],
       "done": [
@@ -193,13 +196,7 @@
       "artifacts": [
         "$DATA_DIR/runs/nq4/p3/prep.done"
       ],
-      "authorization": "FORMAL_SCENE0_FINISHED_RESOURCES_RELEASED",
-      "resource_claims": {
-        "gpus": [],
-        "cpus": "-",
-        "scope": "none",
-        "release_reason": "Formal scene0 readout completed rc0; primary Cinque null gate failed (3/23 > 7%); no legal automatic GPU continuation."
-      },
+      "authorization": "USER_AUTHORIZED_SCENES_1_9_POOLED_GATE",
       "output_roots": [
         "$DATA_DIR/processed/waymo_ds",
         "$DATA_DIR/ckpt/nq4_p3_short3000",
@@ -209,12 +206,23 @@
       ],
       "heartbeats": [
         "$DATA_DIR/runs/nq4/p3/gpu_enable.events.jsonl",
-        "$DATA_DIR/runs/nq4/p3/prep.resume.out"
+        "$DATA_DIR/runs/nq4/p3/prep.resume.out",
+        "$DATA_DIR/runs/nq4/p3/pool/log.txt"
       ],
       "stall_s": 10800,
       "errors": [
         "$DATA_DIR/runs/nq4/p3/gpu_enable_sky.ERROR",
-        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene0.ERROR"
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene0.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_001.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_002.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_003.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_004.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_005.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_006.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_007.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_008.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_scene_009.ERROR",
+        "$DATA_DIR/runs/nq4/p3/gpu_enable_readout_formal10.ERROR"
       ],
       "previous_resource_claims": {
         "gpus": [
@@ -228,10 +236,27 @@
         "scope": "build_scene0_smoke",
         "full_batch_gate": "pilot_plus_human_ghosting_review"
       },
-      "disabled": "Formal scene0 primary scientific gate failed: Cinque null 3/23 = 13.043% > 7%. Ghosting review remains pending; no automatic scenes 1-9.",
+      "disabled": "Scene-0 human ghosting review accepted 2026-09-27; user authorized scenes 1-9 and the registered pooled 10-scene gate. External owners: scripts/p3/gpu_enable.py scene/readout and scripts/p3/pool.py; no scene beyond 9 and no >= 60-scene reconstruction without a separate OK.",
       "retired": true,
       "schedule_lane": "nq4-p3",
-      "readout_result": "$REPO/research/results/nq4/p3/formal30000/verdict.json"
+      "readout_result": "$REPO/research/results/nq4/p3/formal30000/verdict.json",
+      "previous_resource_claims_scene0": {
+        "gpus": [],
+        "cpus": "-",
+        "scope": "none",
+        "release_reason": "Formal scene0 readout completed rc0; primary Cinque null gate failed (3/23 > 7%); no legal automatic GPU continuation."
+      },
+      "resource_claims": {
+        "gpus": [
+          5,
+          6
+        ],
+        "cpus": "182-199,202,203,206,207",
+        "scene_cpus": "182-197 (2 per scene)",
+        "pool_prep_cpus": "198,199,202,203,206,207",
+        "scope": "scenes_1_9_formal_and_pooled_10_scene_readout",
+        "granted": "2026-09-27 user authorization relayed by main; expansion beyond scene 9 not authorized"
+      }
     },
     {
       "id": "OPL",
