@@ -11,6 +11,9 @@ the segments still in flight). Also writes pool/scenes66.json and pool/targets/<
 
   scripts/tmux_run.sh p3-pool python3 scripts/p3/pool.py --cpus 198,199,202,203,206,207 --sky-gpu 6
 Outputs: $DATA_DIR/runs/nq4/p3/pool/{log.txt, events.jsonl, STATUS.md, prep_<k>.done}, runs/nq4/p3/sky_<k>.done.
+Resumable after a kill or reboot: rerun the same command. A segment counts as done only with both markers; an
+unfinished prep reruns the converter over its dir, an unfinished sky redoes all masks of that scene, and a partial
+download (`*.part*`) is fetched again.
 """
 import argparse
 import csv
@@ -146,6 +149,9 @@ def main():
     def sky_worker():
         while (k := sky_q.get()) is not None:
             if not sky_ok(k):
+                # ds.py sky skips masks that exist; after an interrupted run one may be truncated, so redo the scene
+                for f in (PROC / f"{k:03d}" / "sky_masks").glob("*.png"):
+                    f.unlink()
                 t0 = time.time()
                 with open(P / f"sky_{k:03d}.out", "a") as out:
                     rc = subprocess.call(["taskset", "-c", cpus[0], str(DATA / "envs/drivestudio/bin/python"),
