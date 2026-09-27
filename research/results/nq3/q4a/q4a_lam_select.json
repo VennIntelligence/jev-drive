@@ -1,0 +1,12 @@
+{
+ "written": "2026-09-27 21:27:22 CST",
+ "lam_star": {
+  "cinque_s0": 10.0,
+  "cinque_s1": 10.0,
+  "cinque_s2": 10.0,
+  "lebowski_s0": 10.0,
+  "lebowski_s1": 10.0,
+  "lebowski_s2": 10.0
+ },
+ "rule": "argmax held-out v1.1 PDMS of Hydra_s + Delta_lam"
+}
