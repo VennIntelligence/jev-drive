@@ -411,12 +411,12 @@ def hold_jobs(rl, models=MODELS, seeds=SEEDS):
     jobs = []
     for m in models:
         for s in seeds:
-            hz = np.load(out("hydra", f"hold_{m}_s{s}.npz"))
-            tok = hz["tokens"]
+            hz = np.load(out("hydra", f"hold_{m}_s{s}.npz"), allow_pickle=True)
+            tok = hz["tokens"].astype(str)          # saved as an object array by `hydra`; the devkit agent needs str
             arms = {f"hydra_{m}_s{s}": hz["poses"]}
             for lr in CAND:
-                dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"))
-                assert (dz["hold_keys"] == tok).all()
+                dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"), allow_pickle=True)
+                assert (dz["hold_keys"].astype(str) == tok).all()
                 arms[f"hydra_real{lr:g}_{m}_s{s}"] = _add(hz["poses"], dz["hold"])
             for name, p in arms.items():
                 path = out("hold", f"{name}.npz")
@@ -472,10 +472,10 @@ def _check_hydra_hold(rl, m: str):
         toks.append(z["tokens"]), pdms.append(z["pdms"])
     at = pd.Series(np.arange(sum(map(len, toks))), index=np.concatenate(toks))
     pdms = np.concatenate(pdms)
-    hz = np.load(out("hydra", f"hold_{m}_s0.npz"))
+    hz = np.load(out("hydra", f"hold_{m}_s0.npz"), allow_pickle=True)
     an = np.load(P / "anchors.npz")["anchors"]
     k = np.abs(hz["poses"][:, None] - an[None]).max((2, 3)).argmin(1)
-    ref = pd.Series(pdms[at[hz["tokens"]].to_numpy(), k], index=hz["tokens"])
+    ref = pd.Series(pdms[at[hz["tokens"]].to_numpy(), k], index=hz["tokens"].astype(str))
     dk = _scores("nq3hold", f"hydra_{m}_s0")
     x, y = dk.align(ref, join="inner")
     d = np.abs(x - y)
@@ -493,9 +493,9 @@ def nav_jobs(rl, models=MODELS, seeds=SEEDS):
         for s in seeds:
             lr = sel[f"{m}_s{s}"]
             hy = np.load(N3._sel_files()[(m, s)].parent / f"navtest_hydra_{m}_s{s}.npz")
-            tok = hy["tokens"]
-            dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"))
-            assert (dz["navtest_keys"] == tok).all()
+            tok = hy["tokens"].astype(str)
+            dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"), allow_pickle=True)
+            assert (dz["navtest_keys"].astype(str) == tok).all()
             g = pd.Series(g2["gate"], index=g2["frame_id"].astype(str)).reindex(tok.astype(str)).to_numpy().astype(np.float32)
             for name, p in ((f"nq3_hydra_real_{m}_s{s}", _add(hy["poses"], dz["navtest"])),
                             (f"nq3_hydra_g2real_{m}_s{s}", _add(hy["poses"], dz["navtest"], g))):
@@ -570,8 +570,8 @@ def report(rl, models=MODELS, seeds=SEEDS):
             r["p5_ok"] = r["ped"] >= PED_RATIO * r["mc_ped"]
             r["package"] = bool(r["nav_ok"] and r["p5_ok"])
             rows.append(r)
-            dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"))
-            assert (dz["wod_keys"] == wd["frame_name"]).all()
+            dz = np.load(out("fit", f"{m}_s{s}", f"delta_lam{lr:g}.npz"), allow_pickle=True)
+            assert (dz["wod_keys"].astype(str) == np.asarray(wd["frame_name"]).astype(str)).all()
             prior = wd[f"prior {m}"]
             wr = {"model": m, "seed": s, "lam_star": lr, **_rfs_cluster(wd, prior, dz["wod"])}
             tab, act = E1.readouts(wd, prior, dz["wod"], taus[m])
