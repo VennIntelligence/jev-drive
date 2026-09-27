@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# WL features, training and readouts after the fork generation (todos/2026-09-28-wm-loop.md). One-shot chain:
+#   scripts/tmux_run.sh wl-pipe scripts/wl_pipeline.sh     env: GPU=0 CPUS=150-165 STEPS="index opspec op vjepa z outcomes
+#                                                               train report" (default: all, in this order), ARMS, SEEDS
+# Each step appends to runs/wl/pipe/STATUS.md; the chain ends with DONE or ERROR (the failing step) in runs/wl/pipe/.
+# Resumable: vjepa / op skip what exists; train re-runs an arm x seed only without a preds.npz.
+set -uo pipefail
+: "${DATA_DIR:?DATA_DIR is not set}"
+cd "$(dirname "$0")/.."
+P=$DATA_DIR/runs/wl/pipe
+mkdir -p "$P"
+rm -f "$P/DONE" "$P/ERROR"
+exec > >(tee -a "$P/log.txt") 2>&1
+GPU=${GPU:-0} CPUS=${CPUS:-150-165}
+read -ra STEPS <<< "${STEPS:-index opspec op vjepa z outcomes train report}"
+read -ra ARMS <<< "${ARMS:-main worig intonly holdout}"
+read -ra SEEDS <<< "${SEEDS:-0 1 2}"
+PY=".venv/bin/python"
+OPPY=$DATA_DIR/envs/openpilot/bin/python
+export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8
+status() { echo "$(date '+%F %T') $*" | tee -a "$P/STATUS.md"; }
+run() {  # run <name> <cmd...>
+    status "start $1"
+    local t0=$SECONDS
+    shift
+    if ! CUDA_VISIBLE_DEVICES=$GPU taskset -c "$CPUS" "$@"; then status "FAILED after $(( SECONDS - t0 )) s"; echo "$*" > "$P/ERROR"; exit 1; fi
+    status "ok ($(( SECONDS - t0 )) s)"
+}
+for s in "${STEPS[@]}"; do
+    case $s in
+        index|opspec|vjepa|z|prune) run "$s" $PY -m jevdrive.wl_data "$s" ;;
+        op) run op env P5_SET=wl_gen OMP_NUM_THREADS=2 $OPPY scripts/p5_openpilot.py --models cinque --arrays temporal \
+                --out-sub op_streams_vis --workers 10 ;;
+        outcomes) run outcomes $PY -m jevdrive.wl_model outcomes ;;
+        train)
+            for a in "${ARMS[@]}"; do for sd in "${SEEDS[@]}"; do
+                if compgen -G "$DATA_DIR/runs/wl/model/$a/seed$sd/*/preds.npz" > /dev/null; then status "skip $a seed $sd (done)"; continue; fi
+                run "train $a seed $sd" $PY -m jevdrive.wl_model train --arm "$a" --seed "$sd"
+            done; done ;;
+        report) run report $PY -m jevdrive.wl_model report ;;
+        *) status "unknown step $s"; echo "$s" > "$P/ERROR"; exit 1 ;;
+    esac
+done
+touch "$P/DONE"
+status "DONE"
