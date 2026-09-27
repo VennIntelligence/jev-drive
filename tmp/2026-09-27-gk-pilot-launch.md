@@ -54,3 +54,9 @@ K1原pilot和READY追加门均PASS（blocked5/ref5、moving_target_median3.414�
 `bceef80`已main push/Box pull，两端4项新回归通过。`jev:cx-gk-batch-v2`的dispatcher471873从原state接管，supervisor只重启调度器。迁移先冻结旧dispatcher359401核state/进程一致，再精确终止该PID；359432/359610/359933（K0）及463944/468093（K1）原PID/startticks全部保留，记录`runs/nq4/cx/gk-batch/migration-v2.json`。没有修改任何live bash。
 
 14:58:25，K1 s0/GPU2真实runner467279、6claims、heartbeat920ticks；s1/GPU3 worker468093、s2/GPU4 worker472109也已启动独立模型服务，各登记6worker，尚加载时不声称路线已开始。GPU3/4显存5.3GB/0.6GB；pids9108，计划16000保持。admission.json明确余下未通过/未齐门的候选K2/K3，不再静默等待。三卡真实路线的有界验收下面追加。
+
+## 三卡真实路线验收（15:02:07 CST）
+
+有界脚本已观察到三组均实际推进：K1 seed0/GPU2 runner467279、6claims、最新1862ticks；seed1/GPU3 runner474047、6claims、62ticks；seed2/GPU4 runner479659、6claims、18ticks。GPU3/4原head服务分别169/181秒冷启动后ready，随后原b2d_run错峰起CARLA。现场pids11434<16000，K0三个seed原身份保留。验收脚本已正常退出，不留模型轮询。
+
+因此此次2/3/4空卡的具体缺口已经修复并有真实负载证据；不能再把B旧端口预留或固定整卡预算当作科学WAIT。后续新通过层由471873及其supervisor自动接续，未知门仍记录WAIT；无需root手动触发启动。

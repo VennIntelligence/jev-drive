@@ -164,3 +164,5 @@ G/K `8bbcda1`已部署`jev:cx-gk-pilots`，owner97841、K0 pilot97843/start80188
 ## 14:58 CST K1空卡根因已修
 
 K1原与READY额外门都PASS。B14:01已DONE但旧port预留未回收，free_block=None且oldbatch静默continue。核无Bwriter后撤过期行，合法block立即60；K1 GPU2 runner467279已920ticks，GPU3/4独立head加载。`bceef80`新batch_v2已部署，dispatcher471873保留全部原worker；自动完成B回收、具体WAIT持久日志、真实pending及1–6动态worker。GPU2/3/4三seed均已承接，各6worker，继续有界验收首路线；详见gk-pilot-launch。
+
+15:02:07CST三卡补位实负载最终验收：K1 s0/GPU2 runner467279、s1/GPU3 runner474047、s2/GPU4 runner479659，每卡6claims，分别1862/62/18真实ticks；pids11434。GPU3/4head原169/181秒加载已完成，非授卡虚报。bceef80 v2持续自动回填，模型有界验收退出。
