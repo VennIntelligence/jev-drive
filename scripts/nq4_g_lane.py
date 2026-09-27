@@ -17,7 +17,7 @@ from night queue 3 needs no pilot (as in the chain).
 Scheduling: every POLL_S the lane measures each card (CARLA servers on it, VRAM) and starts one b2d_run runner per card
 with room for the most urgent cell that still has unclaimed routes (pilot stages first); several runners, also on
 different cards, share a cell (b2d_run's route claims). Room = CARD_CAP - CARLA servers of others - this lane's
-workers there, limited by free VRAM (per-examinee need) and by the thread cap (pids + 450 per new worker <= 16000).
+workers there, limited by free VRAM (per-examinee need) and by the thread cap (pids + 700 per new worker <= 16000).
 A route gets at most MAX_TRIES attempts in all (3 per runner, one registered retry); a cell with more than 10 % of its
 routes unfinished after that is failed (ERROR.cell.*), the rest goes on. The lane never kills a runner on exit;
 a restarted lane adopts the live ones. Ports: GPU g uses indices [420 + 10 g, 430 + 10 g) (SCH row nq4-g).
@@ -51,7 +51,7 @@ CARD_CAP = int(os.environ.get("CARD_CAP", 5))
 MAX_W = int(os.environ.get("RUNNER_WORKERS", 5))
 MAX_TRIES = 6
 POLL_S = 20
-PIDS_CAP, PIDS_PER_WORKER = 16000, 450
+PIDS_CAP, PIDS_PER_WORKER = 16000, 700      # measured 2026-09-27: CARLA server 457 threads + route client 150-280
 NEED_GB = {"pdm": 8, "tfv6": 11, "bridgedrive": 11, "blue": 14, "simlingo": 14}   # CARLA server + author model, per worker
 IDX0, IDX_SPAN = 420, 10
 CPUS = os.environ.get("G_CPUS", "0-39,56-81,118-179")
