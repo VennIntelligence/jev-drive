@@ -12,7 +12,7 @@
 # runs/nq4/gk/GO (SCH's table runs/sched/table.tsv; shell vars GPUS, WORKERS, IDX0, IDX_SPAN, NQ4GK_CPUS; the i-th card of GPUS uses server indices
 # [IDX0 + i IDX_SPAN, IDX0 + (i + 1) IDX_SPAN)), written by SCH / Codex once the pilots pass; it is re-read before every step.
 # The pilots run on the validation card of runs/sched/nq4-gk.pilot (PILOT_GPU, PILOT_WORKERS, PILOT_IDX0, PILOT_SPAN,
-# PILOT_CPUS). No card starts more CARLA servers than fit its 6 (other lanes' counted).
+# PILOT_CPUS). No card starts more CARLA servers than fit its CARD_CAP (default 6; other lanes' counted).
 # Staged launch (CLAUDE.md "Before a long run"): every examinee x world type runs 1 route, is checked, then 10 routes, is
 # checked against the written checklist (jevdrive.nq4_g.pilot_check: completion, crash, stalled / blocked, moving,
 # plans / trace present, PDM-Lite ghost stays in lane, ghost actors really absent, shift / swap really applied, K DS near
@@ -50,6 +50,7 @@ K=$DATA_DIR/runs/nq4/k
 mkdir -p "$G/srv" "$G/cfg" "$G/arms" "$G/arms_k" "$G/steps"
 GPUS=${GPUS:-0 1 2 3 4 5}
 WORKERS=${WORKERS:-6}
+CARD_CAP=${CARD_CAP:-6}      # CARLA servers per batch card; operator resource parameter, default 6
 CPUS=${CPUS:-60-149}
 SIDX0=${SIDX0:-60}          # GPU g: server indices [60 + 18 g, 60 + 18 g + 18), i.e. 60-167 on GPUs 0-5 ([F] entry)
 SPAN=${SPAN:-18}
@@ -302,11 +303,11 @@ load_pilot() {  # the validation card: $SCHED/nq4-gk.pilot (PILOT_GPU, PILOT_WOR
     GPUS=$P_; WORKERS=${W_:-2}; SIDX0=${I_:-150}; SPAN=${S_:-10}; CPUS=${C_:-110-113}; CTX=pilot
 }
 block_of() { echo $(( SIDX0 + SPAN * $1 )); }         # <position of the GPU in $GPUS> -> its first server index
-free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card (<= 6 a card, other lanes' counted); on the
-               # validation card SCH's table already splits the slots between lanes, so there it is PILOT_WORKERS as granted
+free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card (<= CARD_CAP a card, other lanes' counted);
+               # on the validation card SCH's table already splits the slots between lanes, so there it is PILOT_WORKERS as granted
     [[ ${CTX:-batch} == pilot ]] && { echo "$WORKERS"; return; }
     local n; n=$(nvidia-smi -i "$1" --query-compute-apps=process_name --format=csv,noheader 2>/dev/null | grep -c CarlaUE4)
-    echo $(( 6 - n > WORKERS ? WORKERS : (6 - n > 0 ? 6 - n : 0) ))
+    echo $(( CARD_CAP - n > WORKERS ? WORKERS : (CARD_CAP - n > 0 ? CARD_CAP - n : 0) ))
 }
 
 execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run route sets on the context's cards (GPUS,
