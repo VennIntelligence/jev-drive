@@ -240,7 +240,7 @@ class Lane:
 
     # work list -------------------------------------------------------
     def jobs(self):
-        """Units that may take a runner now, most urgent first: pilot stages, then cells by tier."""
+        """Units that may take a runner now, most urgent first: by tier, a tier's pilot stages ahead of its cells."""
         out = []
         for tier, cells in enumerate(TIERS):
             for c, v, s in cells:
@@ -253,7 +253,7 @@ class Lane:
                     event("cell_end", cell=key, state="BLOCKED")
                 elif p["state"] == "STAGE":
                     if s == p["seed"] and not p["launched"]:
-                        out.append(dict(kind="pilot", cand=c, variant=v, seed=s, tier=-1, key=f"pilot:{c}.{v}",
+                        out.append(dict(kind="pilot", cand=c, variant=v, seed=s, tier=tier - 0.5, key=f"pilot:{c}.{v}",
                                         ids=self.pilot_ids(c, v, p)))
                 else:
                     out.append(dict(kind="cell", cand=c, variant=v, seed=s, tier=tier, key=key, ids=requested(c, v, s)))
