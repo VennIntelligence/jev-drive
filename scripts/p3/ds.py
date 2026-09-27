@@ -31,7 +31,15 @@ def sky(a):
     import numpy as np, torch
     from PIL import Image
     from transformers import SegformerForSemanticSegmentation
-    m = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b5-finetuned-cityscapes-1024-1024").cuda().eval().half()
+    revision = "2c6f153e4c23c229e2fa2b188eb250607e030cd8"
+    cached = DS.parents[1] / "ckpt/p3-segformer" / revision
+    if (cached / "DONE").exists():
+        m = SegformerForSemanticSegmentation.from_pretrained(str(cached), local_files_only=True)
+    else:
+        m = SegformerForSemanticSegmentation.from_pretrained(
+            "nvidia/segformer-b5-finetuned-cityscapes-1024-1024", revision=revision)
+    print(f"sky model revision={revision}, local_cache={cached if (cached / 'DONE').exists() else None}", flush=True)
+    m = m.cuda().eval().half()
     mean = torch.tensor([0.485, 0.456, 0.406], device="cuda").view(1, 3, 1, 1)
     std = torch.tensor([0.229, 0.224, 0.225], device="cuda").view(1, 3, 1, 1)
     for sd in map(Path, a.scene_dirs):
