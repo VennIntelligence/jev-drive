@@ -1,0 +1,32 @@
+[
+ {
+  "exam": "I3 R1 (all families)",
+  "k1_v_recompute_vs_export_max_abs": 0.001756431658186397,
+  "k1_v_recompute_vs_export_median_abs": 8.845248187228094e-07,
+  "k1_maxp_median_reactive_frames": 0.721260530052425,
+  "k1_share_maxp_gt_0.9_reactive_frames": 0.1793220338983051,
+  "spearman_K1_vs_K0_delta_2s": 0.5243561002817871,
+  "spearman_K1_vs_K0_delta_1s": 0.6113210415307727,
+  "expert_v2_vs_d_expert_max_abs": 1.0184491314291222e-05
+ },
+ {
+  "exam": "P5 cut-in (unseen)",
+  "k1_v_recompute_vs_export_max_abs": 4.7436803107814285e-07,
+  "k1_v_recompute_vs_export_median_abs": 3.967662376425096e-08,
+  "k1_maxp_median_reactive_frames": 0.7695214017331038,
+  "k1_share_maxp_gt_0.9_reactive_frames": 0.0,
+  "spearman_K1_vs_K0_delta_2s": 0.710406024179459,
+  "spearman_K1_vs_K0_delta_1s": 0.7822717503935547,
+  "expert_v2_vs_d_expert_max_abs": 2.384185791015625e-07
+ },
+ {
+  "exam": "P5 pedestrian (unseen)",
+  "k1_v_recompute_vs_export_max_abs": 4.7436803107814285e-07,
+  "k1_v_recompute_vs_export_median_abs": 3.967662376425096e-08,
+  "k1_maxp_median_reactive_frames": 0.7790447141834824,
+  "k1_share_maxp_gt_0.9_reactive_frames": 0.019704433497536946,
+  "spearman_K1_vs_K0_delta_2s": 0.8300155955328369,
+  "spearman_K1_vs_K0_delta_1s": 0.839579122337743,
+  "expert_v2_vs_d_expert_max_abs": 2.384185791015625e-07
+ }
+]
