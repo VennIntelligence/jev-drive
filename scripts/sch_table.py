@@ -30,6 +30,7 @@ ephemeral range (32768-60999), where an outgoing connection can hold a port and 
 from __future__ import annotations
 
 import csv
+import fcntl
 import os
 import subprocess
 import sys
@@ -48,7 +49,8 @@ CPU_CAP = 165                                    # of the cgroup's 175
 def load() -> list[dict]:
     if not TABLE.exists():
         return []
-    rows = list(csv.DictReader(TABLE.open(), delimiter="\t"))
+    with TABLE.open() as stream:
+        rows = list(csv.DictReader(stream, delimiter="\t"))
     for r in rows:
         for c in COLS:
             r[c] = (r.get(c) or "-").strip() or "-"
@@ -218,5 +220,15 @@ def revoke(lane: str) -> int:
 
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "show"
+    # One scheduler owns all mutations. Read-only diagnostics remain available.
+    owner = None
+    if cmd in {"grant", "revoke"}:
+        owner_path = DATA / "runs/sched/owner.lock"
+        owner_path.parent.mkdir(parents=True, exist_ok=True)
+        owner = owner_path.open("a")
+        try:
+            fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            sys.exit("schedule owner is active; record a request in controller inbox, do not race GO/table writers")
     sys.exit({"show": lambda: show(), "check": lambda: show(True), "grant": lambda: grant(sys.argv[2:]),
               "revoke": lambda: revoke(sys.argv[2])}[cmd]())
