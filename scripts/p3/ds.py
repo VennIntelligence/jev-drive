@@ -116,7 +116,9 @@ def render(a):
                                       num_train_images=len(ds.train_image_set), num_full_images=len(ds.full_image_set),
                                       test_set_indices=ds.test_timesteps, scene_aabb=ds.get_aabb().reshape(2, 3), device="cuda")
     ckpt = a.ckpt or str(sorted(run.glob("checkpoint_*.pth"))[-1])
-    tr.resume_from_checkpoint(ckpt_path=ckpt, load_only_model=True)
+    # Upstream checkpoints contain NumPy scalars, so PyTorch >=2.6's new
+    # weights-only default rejects our own locally trained checkpoint.
+    tr.load_state_dict(torch.load(ckpt, weights_only=False), load_only_model=True, strict=True)
     tr.set_eval()
     sel = json.loads(Path(a.target).read_text())
     ps = ds.pixel_source
