@@ -201,6 +201,9 @@ def render(a):
     intr = {c: np.loadtxt(Path(cfg.data.data_root) / f"{cfg.data.scene_idx:03d}" / "intrinsics" / f"{i}.txt").tolist()
             for i, c in enumerate(CAMS)}
     meta = {**sel, "ckpt": ckpt, "frames": frames, "calib": calib, "extrinsics_cam_to_ego": ext, "intrinsics_raw": intr,
+            "node_mapping": [{"node_index": i, "dataset_instance": int(k),
+                              "true_id": int(ps.instances_true_id[k]), "waymo_id": wid_of[i],
+                              "deleted": i in delete} for i, k in enumerate(keys)],
             "deleted_node_instances": delete, "deleted_missing": missing, "determinism_max_abs": det,
             "n_deformable_instances": len(keys), "render_s": round(time.time() - t_start, 1)}
     (out / "meta.json").write_text(json.dumps(meta, indent=1))

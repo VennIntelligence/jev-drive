@@ -214,6 +214,8 @@ def report(exam_dir: str | None, out: str):
     import matplotlib.pyplot as plt
     from PIL import Image
     outd, figd = Path(out), Path(out).parents[2] / "figs"
+    if SET != "nq4_p3":
+        figd = outd / "figs"  # short smoke figures must survive the formal report
     outd.mkdir(parents=True, exist_ok=True)
     figd.mkdir(parents=True, exist_ok=True)
     per = []
