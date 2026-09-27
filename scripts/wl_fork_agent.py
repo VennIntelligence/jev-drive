@@ -19,7 +19,8 @@ Loaded like the P5 / P6 recorder: `scripts/b2d_run.py --agent scripts/wl_fork_ag
 Inside a window the ego follows the window's candidate trajectory (fixed in world coordinates at the window start,
 re-expressed in the current ego frame at every camera tick and handed to P7, stepped every tick); the expert keeps
 running on the same inputs and its control is discarded, so it picks up from the real state when the window ends.
-Camera JPEGs are written only inside [start - pre_cams, start + post_cams] of each window (disk: ~250 KB per image).
+Camera JPEGs are written from pre_cams camera frames before the first window to the end of the run (disk: ~250 KB per
+image; the pipeline prunes them once the features are extracted). post_cams is kept in the job for bookkeeping only.
 
 Extra outputs: wl.json (job, window schedule, every window's candidates in ego coordinates, the fork pose),
 wl_ticks.jsonl (per tick inside a window: applied control, controller diagnostics, pose), collisions.jsonl (every
@@ -80,7 +81,9 @@ class WLForkAgent(P5PairAgent):
             t += iv
         self.wins, self.end_tick = wins, int(round(end / TICK))
         pre = int(j.get("pre_cams", self.cfg.get("wl_pre_cams", 11)))
-        self.save_ranges = [(w["tick"] - pre * p4.CAM_TICKS, w["tick"] + w["post"] * p4.CAM_TICKS) for w in wins]
+        # one contiguous range from pre_cams before the first window to the end: openpilot's recurrent `temporal` needs an
+        # unbroken stream (the source run's frames supply everything before it); JPEGs are pruned after feature extraction
+        self.save_ranges = [(wins[0]["tick"] - pre * p4.CAM_TICKS, self.end_tick)] if wins else []
         self.ctl = pursuit_from_config(str(P7))
         self.rear = float(json.loads(P7.read_text())["rear_axle_offset_m"])
         self.active, self.wl_log = None, {"job": j, "windows": wins, "end_tick": self.end_tick, "cands": []}
