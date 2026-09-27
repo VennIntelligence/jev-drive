@@ -73,12 +73,14 @@ def matches(p, patterns):
 def members(job, previous, rows):
     seeds = {p['pid'] for p in rows.values() if matches(p, job.get('process_match', []))}
     seeds |= {p['pid'] for p in previous.get('processes', []) if same(p, rows)}
-    root = job.get('output_root')
-    if root:
-        for p in rows.values():
-            argv = p['argv']
-            if '--out' in argv and argv[argv.index('--out') + 1].startswith(root.rstrip('/') + '/'):
-                seeds.add(p['pid'])
+    roots = job.get('output_roots', []) + ([job['output_root']] if job.get('output_root') else [])
+    for p in rows.values():
+        argv = p['argv']
+        outputs = [argv[i + 1] for i, arg in enumerate(argv[:-1])
+                   if arg in ('--out', '--out-root', '--output_root', '--run')]
+        if any(value == root.rstrip('/') or value.startswith(root.rstrip('/') + '/')
+               for root in roots for value in outputs):
+            seeds.add(p['pid'])
     owned = set(seeds)
     while True:
         extra = {p['pid'] for p in rows.values() if p['ppid'] in owned}
@@ -176,6 +178,7 @@ class Controller:
         name = job['id']; old = self.state['jobs'].get(name, {})
         expanded_job = dict(job)
         if job.get('output_root'): expanded_job['output_root'] = str(self.path(job['output_root']))
+        expanded_job['output_roots'] = [str(self.path(root)) for root in job.get('output_roots', [])]
         procs = members(expanded_job, old, rows)
         pids = {p['pid'] for p in procs}
         held = [g for g, v in gpus.items() if pids.intersection(v['pids'])]
@@ -187,10 +190,12 @@ class Controller:
                 error = None  # Older ERROR is historical evidence, not a new failure.
         if error: done = False
         value = dict(old, processes=procs, actual_gpus=held, resources_released=not procs,
-                     complete=done, error=error, observed_at=time.time())
+                     complete=done, error=error, observed_at=time.time(),
+                     authorization=job.get('authorization'), resource_claims=job.get('resource_claims', {}))
         if error: status = 'QUARANTINED'
         elif done: status = 'COMPLETE_DRAINING' if procs else 'COMPLETE'
         elif procs: status = 'RUNNING'
+        elif job.get('authorization') == 'USER_AUTHORIZED_BUILD_AND_SMOKE': status = 'AUTHORIZED_AWAITING_OWNER'
         elif job.get('disabled'): status = 'BLOCKED_HUMAN'
         else: status = 'PENDING'
         value['status'] = status
@@ -371,6 +376,36 @@ class Controller:
         self.event('B_OWNER_LOSS_RETRY', rc=r.returncode, output=r.stdout, error=r.stderr)
         if r.returncode: self.alert('B:retry_launch_failed', r.stderr or r.stdout)
 
+    def authorized_resource_claims(self):
+        """Record the explicit P3 reservation; its external owner alone launches.
+
+        This never writes P3 GO, prep, pilot, DONE or scientific review markers.
+        A reservation is separate from both current residents and full-batch permission.
+        """
+        import sch_table as sch
+        claims = {}
+        for job in self.config['jobs']:
+            if job['id'] != 'P3' or job.get('authorization') != 'USER_AUTHORIZED_BUILD_AND_SMOKE': continue
+            claim = job.get('resource_claims', {})
+            if claim.get('gpus') != [1, 6] or claim.get('cpus') != '180-189':
+                self.alert('P3:claim_registration', 'Unrecognized P3 reservation; keep prior allocation pending review.')
+                continue
+            claims[job['id']] = dict(claim, allocation='reserved_for_external_owner',
+                                    launch_permission='build_and_scene0_only; full_batch_gates_unchanged')
+            sch.TABLE = self.data / 'runs/sched/table.tsv'
+            table = sch.load()
+            row = next((r for r in table if r['lane'] == 'nq4-p3'), None)
+            if row is None:
+                self.alert('P3:missing_table_row', 'P3 reservation recorded in state; existing scheduling row missing.')
+                continue
+            expected = dict(gpus='1,6', workers='-', idx0='-', idx_span='-', cpus='180-189',
+                            status='user-authorized build/scene0 smoke; external owner; full-batch gates retained')
+            if any(row.get(k) != v for k,v in expected.items()):
+                row.update(expected); sch.save(table)
+                self.event('AUTHORIZED_RESOURCE_CLAIM', job='P3', claim=claims[job['id']])
+        self.state['authorized_resource_claims'] = claims
+        return {g for claim in claims.values() for g in claim.get('gpus', [])}
+
     def reclaim(self, gpus=None):
         import sch_table as sch
         sch.TABLE = self.data / 'runs/sched/table.tsv'
@@ -406,6 +441,7 @@ class Controller:
                 self.alert(job['id'] + ':observation', str(e))
         self.audit_b(rows, gpus)
         self.reclaim(gpus)
+        reserved_gpus = self.authorized_resource_claims()
         if now < dt.datetime.fromisoformat(self.config['deadline']).timestamp(): self.b_grant(rows, gpus)
         self.b_recover(rows, now)
         free = {g for g,v in gpus.items() if not v['pids'] and v['used_mb'] < 1024}
@@ -413,7 +449,8 @@ class Controller:
         pending_ready = self.b_ready_queue()
         self.state['queue'] = dict(status='DEADLINE_NO_NEW_CONTROLLER_LAUNCH' if now >= deadline else
                                   'READY_DELEGATED_TO_B' if pending_ready else 'NO_READY_WORK', ready=pending_ready,
-                                  free_gpus=sorted(free), note='Existing B chain owns its fixed queue and arm boundaries')
+                                  free_gpus=sorted(free - reserved_gpus), physically_idle_gpus=sorted(free),
+                                  reserved_gpus=sorted(reserved_gpus), note='Existing B chain owns its fixed queue and arm boundaries')
         if now >= deadline: self.alert('deadline', 'Admission deadline reached; preserve active work and partial outputs; no killing.')
         self.save()
         lines = ['# Unified controller', '', 'Durable alerts: inbox.jsonl (no automatic LLM wake-up).', '', f'Queue: {self.state["queue"]["status"]}', '', '| Job | State | GPUs | Resources exited |', '|---|---|---|---|']

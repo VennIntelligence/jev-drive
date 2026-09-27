@@ -18,7 +18,7 @@ import pandas as pd
 from .common import data_dir, get_logger
 
 log = get_logger(__name__)
-SET = "nq4_p3"
+SET = os.environ.get("P3_SET", "nq4_p3")  # isolate the registered 3k technical smoke from the default 30k run
 WORLDS = ("real", "plus", "minus")
 CAMS = ("front", "front_left", "front_right")
 I3_EXAM = "runs/elicitation/i3-exam/20260926-012841"
@@ -215,6 +215,7 @@ def report(exam_dir: str | None, out: str):
     from PIL import Image
     outd, figd = Path(out), Path(out).parents[2] / "figs"
     outd.mkdir(parents=True, exist_ok=True)
+    figd.mkdir(parents=True, exist_ok=True)
     per = []
     for sd in sorted(root("scenes").glob("p3_*")):
         if not (sd / "meta.json").exists():
@@ -271,7 +272,7 @@ def main():
         print(json.dumps(index(a.processed_root)))
     elif a.cmd == "exam":
         from .runlog import RunLog
-        rl = RunLog("nq4", "p3-exam")
+        rl = RunLog("nq4", "p3-exam" if SET == "nq4_p3" else f"{SET}-exam")
         exam(rl)
         print(rl.dir)
         rl.close()

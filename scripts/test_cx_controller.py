@@ -121,4 +121,30 @@ class ControllerTest(unittest.TestCase):
         c.b_recover({},101)
         self.assertNotIn('owner_absent_since',c.state['jobs']['B'])
 
+    def test_authorized_p3_adopts_independent_runner_and_reserves_without_go(self):
+        job=dict(id='P3',authorization='USER_AUTHORIZED_BUILD_AND_SMOKE',
+                 process_match=[['scripts/p3/gpu_enable.py']],
+                 output_roots=['$DATA_DIR/processed/waymo_ds','$DATA_DIR/ckpt/nq4_p3_short3000'],
+                 resource_claims=dict(gpus=[1,6],cpus='180-189',prep_cpus='182-189',scope='build_scene0_smoke'))
+        c=self.controller([job]);sch.TABLE=self.data/'runs/sched/table.tsv'
+        sch.save([dict(zip(sch.COLS,['nq4-p3','-','-','-','-','-','waiting','$DATA_DIR/runs/nq4/p3/GO']))])
+        # The independent prep output can equal its registered root exactly.
+        p=self.proc(argv=['python','scripts/p3/ds.py','prep','--out',str(self.data/'processed/waymo_ds')])
+        g={1:dict(pids=[],used_mb=0,total_mb=96000),6:dict(pids=[],used_mb=0,total_mb=96000)}
+        c.tick({42:p},g)
+        self.assertEqual(c.state['jobs']['P3']['status'],'RUNNING')
+        self.assertEqual(c.state['jobs']['P3']['authorization'],'USER_AUTHORIZED_BUILD_AND_SMOKE')
+        self.assertEqual(c.state['queue']['reserved_gpus'],[1,6])
+        self.assertEqual(c.state['queue']['free_gpus'],[])
+        self.assertEqual(c.state['queue']['physically_idle_gpus'],[1,6])
+        self.assertEqual(sch.load()[0]['gpus'],'1,6')
+        self.assertFalse((self.data/'runs/nq4/p3/GO').exists())
+        c.tick({},g)
+        self.assertEqual(c.state['jobs']['P3']['status'],'AUTHORIZED_AWAITING_OWNER')
+    def test_p3_training_output_root_cannot_match_neighbor_project(self):
+        job=dict(output_roots=['/data/ckpt/nq4_p3'])
+        expected=self.proc(argv=['python','tools/train.py','--output_root','/data/ckpt/nq4_p3/p3/000'])
+        neighbor=self.proc(pid=43,argv=['python','tools/train.py','--output_root','/data/ckpt/nq4_p3_other'])
+        self.assertEqual([p['pid'] for p in m.members(job,{}, {42:expected,43:neighbor})],[42])
+
 if __name__=='__main__': unittest.main()

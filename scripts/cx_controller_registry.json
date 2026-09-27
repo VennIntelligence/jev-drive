@@ -146,6 +146,30 @@
       "process_match": [
         [
           "nq4_p3.sh"
+        ],
+        [
+          "scripts/p3/gpu_enable.py"
+        ],
+        [
+          "scripts/p3/ds.py",
+          "prep"
+        ],
+        [
+          "scripts/p3/ds.py",
+          "sky"
+        ],
+        [
+          "scripts/p3/ds.py",
+          "train"
+        ],
+        [
+          "scripts/p3/ds.py",
+          "render"
+        ],
+        [
+          "tools/train.py",
+          "--project",
+          "p3"
         ]
       ],
       "done": [
@@ -154,7 +178,31 @@
       "artifacts": [
         "$DATA_DIR/runs/nq4/p3/prep.done"
       ],
-      "disabled": "Input preparation and manual reconstruction required"
+      "authorization": "USER_AUTHORIZED_BUILD_AND_SMOKE",
+      "resource_claims": {
+        "gpus": [
+          1,
+          6
+        ],
+        "cpus": "180-189",
+        "prep_cpus": "182-189",
+        "sky_cpus": "180",
+        "scene0_cpus": "181",
+        "scope": "build_scene0_smoke",
+        "full_batch_gate": "pilot_plus_human_ghosting_review"
+      },
+      "output_roots": [
+        "$DATA_DIR/processed/waymo_ds",
+        "$DATA_DIR/ckpt/nq4_p3_short3000",
+        "$DATA_DIR/ckpt/nq4_p3",
+        "$DATA_DIR/processed/nq4_p3_short3000",
+        "$DATA_DIR/processed/nq4_p3"
+      ],
+      "heartbeats": [
+        "$DATA_DIR/runs/nq4/p3/gpu_enable.events.jsonl",
+        "$DATA_DIR/runs/nq4/p3/prep.resume.out"
+      ],
+      "stall_s": 10800
     },
     {
       "id": "OPL",

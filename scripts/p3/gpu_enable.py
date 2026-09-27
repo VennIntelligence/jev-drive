@@ -1,0 +1,117 @@
+"""Low-thread, exclusive P3 GPU continuation; CPU prep has a separate owner.
+
+Short 3000-iteration technical smoke and default 30000-iteration scene zero
+have separate checkpoints, processed data and markers. No visual PASS or GO
+is inferred here. Every admission retains 1024 tasks plus 256 launch margin.
+"""
+import argparse
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("mode", choices=["sky", "scene0"])
+    ap.add_argument("--gpu", type=int, required=True)
+    ap.add_argument("--cpus", required=True)
+    a = ap.parse_args()
+    data = Path(os.environ["DATA_DIR"])
+    repo = Path(__file__).resolve().parents[2]
+    os.chdir(repo)
+    d = data / "runs/nq4/p3"
+    d.mkdir(parents=True, exist_ok=True)
+    lock = open(d / f"gpu_enable_{a.mode}.lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    (d / f"gpu_enable_{a.mode}.pid").write_text(str(os.getpid()))
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(a.gpu), TOKENIZERS_PARALLELISM="false", HF_HUB_DISABLE_XET="1",
+               HF_ENDPOINT="https://hf-mirror.com")
+    for k in ["OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS",
+              "TF_NUM_INTRAOP_THREADS", "TF_NUM_INTEROP_THREADS"]:
+        env[k] = "1"
+    ds = str(data / "envs/drivestudio/bin/python")
+    jv = str(data / "envs/jevdrive/bin/python")
+    op = str(data / "envs/openpilot/bin/python")
+    proc = data / "processed/waymo_ds/training"
+
+    def event(**kw):
+        with open(d / "gpu_enable.events.jsonl", "a") as f:
+            f.write(json.dumps(dict(t=time.time(), owner=os.getpid(), mode=a.mode, gpu=a.gpu, **kw)) + "\n")
+
+    def wait_for(path):
+        started = time.time()
+        while not path.exists():
+            if (d / "gpu_enable_sky.ERROR").exists() or (d / "prep.failed").exists():
+                raise RuntimeError(f"Dependency failed while waiting for {path}")
+            if time.time() - started > 14400:
+                raise TimeoutError(f"Dependency wait exceeded four hours: {path}")
+            time.sleep(15)
+
+    def step(name, argv, seconds, extra=None):
+        if (d / f"{name}.done").exists():
+            return
+        cg = Path("/sys/fs/cgroup")
+        while True:
+            used = int((cg / "pids.current").read_text())
+            limit = (cg / "pids.max").read_text().strip()
+            if limit != "max" and int(limit) - used < 1280:
+                event(event="admission_wait", step=name, pids_current=used, pids_max=limit)
+                time.sleep(15)
+                continue
+            break
+        event(event="start", step=name, argv=argv, cpus=a.cpus, pids_current=used)
+        (d / f"{name}.rc").unlink(missing_ok=True)
+        with open(d / f"{name}.out", "a") as out:
+            result = subprocess.run(["timeout", str(seconds), "taskset", "-c", a.cpus, *argv],
+                                    env={**env, **(extra or {})}, stdout=out, stderr=subprocess.STDOUT)
+        (d / f"{name}.rc").write_text(str(result.returncode))
+        event(event="exit", step=name, rc=result.returncode)
+        if result.returncode:
+            raise RuntimeError(f"{name} rc={result.returncode}; inspect {d / (name + '.out')}")
+        (d / f"{name}.done").write_text(time.strftime("%F %T") + "\n")
+
+    if a.mode == "sky":
+        for k in range(10):
+            sd = proc / f"{k:03d}"
+            wait_for(sd / "instances/instances_info.json")
+            step(f"sky_{k:03d}", [ds, "scripts/p3/ds.py", "sky", str(sd)], 3600)
+        return
+
+    wait_for(d / "sky_000.done")
+    for short in (True, False):
+        tag = "short3000" if short else "formal"
+        dataset = "nq4_p3_short3000" if short else "nq4_p3"
+        runroot = data / "ckpt" / dataset
+        scene = data / "processed" / dataset / "scenes/p3_000"
+        extra = {"P3_SET": dataset, "P5_SET": dataset}
+        train = [ds, "scripts/p3/ds.py", "train", "--scene", "0", "--data-root", str(proc), "--out-root", str(runroot)]
+        if short:
+            train += ["--iters", "3000"]
+        step(f"{tag}_train_000", train, 28800)
+        step(f"{tag}_render_000", [ds, "scripts/p3/ds.py", "render", "--run", str(runroot / "p3/000"),
+                                  "--target", str(d / "targets/000.json"), "--out", str(scene)], 3600)
+        step(f"{tag}_index", [jv, "-m", "jevdrive.nq4_p3", "index", "--processed-root", str(proc)], 900, extra)
+        step(f"{tag}_op", [op, "scripts/p5_openpilot.py", "--models", "cinque", "lebowski", "--workers", "1"], 7200, extra)
+        step(f"{tag}_opfin", [jv, "-m", "jevdrive.p5_openpilot", "finalize", "--models", "cinque,lebowski"], 900, extra)
+        step(f"{tag}_exam", [jv, "-m", "jevdrive.nq4_p3", "exam"], 3600, extra)
+        examroot = data / "runs/nq4" / (f"{dataset}-exam" if short else "p3-exam")
+        exams = sorted(p for p in examroot.iterdir() if (p / "null_gate.csv").exists())
+        if not exams:
+            raise RuntimeError("Exam exited without null_gate.csv")
+        step(f"{tag}_report", [jv, "-m", "jevdrive.nq4_p3", "report", "--exam-dir", str(exams[-1]),
+                              "--out", str(d / tag / "report")], 900, extra)
+    (d / "SCENE0_REVIEW_REQUIRED").write_text("Default 30000-iteration scene zero readout complete. Inspect automatic gates and four-panel ghosting figures; no GO or visual PASS granted.\n")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as exc:
+        import sys
+        mode = sys.argv[1] if len(sys.argv) > 1 else "unknown"
+        d = Path(os.environ["DATA_DIR"]) / "runs/nq4/p3"
+        (d / f"gpu_enable_{mode}.ERROR").write_text(f"{type(exc).__name__}: {exc}\n")
+        raise

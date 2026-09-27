@@ -44,3 +44,7 @@ cat /root/autodl-tmp/ujs/runs/sched/controller/STATUS.md
 | D/GK/P3/OPL | D 原科学 ERROR 独立隔离并写 inbox；后三项 BLOCKED_HUMAN；未新造 gate、未启动 |
 
 B 剩 1 条是尾部任务，不能用 12条/15分钟把它线性估成约1分钟；BLUE/SimLingo 尚未在新五卡规模测得吞吐，因此不由该数声称全队列精确 ETA。控制器会自己继续盘点、检查下一臂五卡 ack 或落盘具体告警，模型不需守着轮询。
+
+## P3 授权更新（用户后续指令）
+
+用户已明确授权 P3 使用 GPU1/6 做建设与 scene0 technical smoke（技术冒烟），后续正式 scene0 与科学门检由唯一 P3 执行 owner 接续；原 `BLOCKED_HUMAN` 只描述上一轮快照，不再代表禁止技术调通。prep 实际 owner 为 PID840483/startticks801070489，CPU182–189，子进程840749/startticks801071534；独立运行器不经过旧 `nq4_p3.sh`，registry 必须认领其精确 argv 和输出目录。GPU1 的 sky 与 GPU6 的训练可在 owner 真实容量检查后并行；残影可视判断仍待审，3000-iteration 技术输出与正式30000-iteration输出分开。控制器不得创建第二个 P3 owner；更新仅迁移 controller 自身，不停止实验进程。
