@@ -1,5 +1,15 @@
 # P3 GPU enable — 2026-09-27
 
+## Current state — formal chain completed; resources released for scheduling
+
+Formal scene zero completed normally at 11:12:57 CST on 2026-09-27. All seven formal stage rc files are0, all done artifacts exist, SCENE0_REVIEW_REQUIRED exists, and no GPU-enable/train process remains. At root's13:30 check GPU6 was1MiB/0%; this was genuine idleness after completion, not continuing P3 work.
+
+Primary Cinque null=3/23=13.043% exceeds unchanged7%; this scientific scene-zero gate FAILED. Lebowski0/23 does not replace the primary. PSNR29.894dB, pedestrian PSNR26.989dB,4deleted/0missing, determinism0, ten baseline checks max0.000480652<1e-3. Human ghosting review remains pending. No scenes1–9 or GO were launched. Local SHA-verified formal result and unjudged figure: research/results/nq4/p3/formal30000/.
+
+P3 has no legal automatic GPU continuation. Both GPUs1/6 and CPUs180–189 are released, allowing the G/K owner to reuse GPU6 for its already-PASS batch while GPU1's existing pilot remains untouched. Registry-only change marks the formal gate failure and empty resource claims; astra_orchestrator owns the controller identity-safe reload and clearing the stale P3 table row. This replaces the old persistent reservation; no process signals are sent to experimental workers.
+
+## Historical audit (superseded by the current state above)
+
 ## Current state — 2026-09-27 10:00 CST
 
 Short technical chain is complete, including actual exam/report. GPU6 is running the registered default 30000-iteration scene-zero reconstruction: owner 982976, trainer 983705, CPU181, 9 threads; 1500/30001 at10:00:36, observed optimization ETA27min plus default post-evaluation/render/readout. GPU1 completed all ten sky jobs and currently has no independent legal P3 task before the scene-zero feasibility/human gate; only old Alpamayo587198 remains resident there, untouched. Reservation is not claimed as utilization.

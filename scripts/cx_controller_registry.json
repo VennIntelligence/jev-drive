@@ -181,18 +181,12 @@
       "artifacts": [
         "$DATA_DIR/runs/nq4/p3/prep.done"
       ],
-      "authorization": "USER_AUTHORIZED_BUILD_AND_SMOKE",
+      "authorization": "FORMAL_SCENE0_FINISHED_RESOURCES_RELEASED",
       "resource_claims": {
-        "gpus": [
-          1,
-          6
-        ],
-        "cpus": "180-189",
-        "prep_cpus": "182-189",
-        "sky_cpus": "180",
-        "scene0_cpus": "181",
-        "scope": "build_scene0_smoke",
-        "full_batch_gate": "pilot_plus_human_ghosting_review"
+        "gpus": [],
+        "cpus": "-",
+        "scope": "none",
+        "release_reason": "Formal scene0 readout completed rc0; primary Cinque null gate failed (3/23 > 7%); no legal automatic GPU continuation."
       },
       "output_roots": [
         "$DATA_DIR/processed/waymo_ds",
@@ -209,7 +203,23 @@
       "errors": [
         "$DATA_DIR/runs/nq4/p3/gpu_enable_sky.ERROR",
         "$DATA_DIR/runs/nq4/p3/gpu_enable_scene0.ERROR"
-      ]
+      ],
+      "previous_resource_claims": {
+        "gpus": [
+          1,
+          6
+        ],
+        "cpus": "180-189",
+        "prep_cpus": "182-189",
+        "sky_cpus": "180",
+        "scene0_cpus": "181",
+        "scope": "build_scene0_smoke",
+        "full_batch_gate": "pilot_plus_human_ghosting_review"
+      },
+      "disabled": "Formal scene0 primary scientific gate failed: Cinque null 3/23 = 13.043% > 7%. Ghosting review remains pending; no automatic scenes 1-9.",
+      "retired": true,
+      "schedule_lane": "nq4-p3",
+      "readout_result": "$REPO/research/results/nq4/p3/formal30000/verdict.json"
     },
     {
       "id": "OPL",
