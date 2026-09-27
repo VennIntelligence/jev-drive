@@ -1,0 +1,5 @@
+mkl_threads,fp32_prior_vs_stored_m,fp32_q4a_vs_stored_m,fp32prior_fp64delta_vs_stored_m
+12,0,1.29e-05,0.000539
+20,0.00109,0.00111,0.00128
+1,0.000895,0.000888,0.00111
+8,0.00135,0.00136,0.00149

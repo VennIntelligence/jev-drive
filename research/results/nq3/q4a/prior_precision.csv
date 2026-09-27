@@ -1,0 +1,5 @@
+model,seed,fold,ego_dim,ego_gram_eigs_below_lam_n,ego_gram_fp32_abs_err_max,ego_lam_fp32,ego_lam_fp64,ego_sel_ade_fp32,ego_sel_ade_fp64,fp32_prior_vs_stored_m,fp64_prior_vs_stored_m
+cinque,1,4,100,46,0.082,3.16e-05,3.16e-05,3.77982,3.77985,0,0.186
+cinque,1,2,100,46,0.0977,3.16e-05,3.16e-05,3.94193,3.94185,0,0.104
+cinque,2,4,100,47,0.0703,3.16e-05,3.16e-05,3.87574,3.87573,0,0.462
+lebowski,0,3,100,48,0.0508,3.16e-05,3.16e-05,3.92122,3.92109,0.000381,0.293

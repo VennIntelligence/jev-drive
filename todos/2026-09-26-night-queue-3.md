@@ -610,6 +610,18 @@ x10 各类 bypass ≥0.70：
 
 Q4a：WAIT 原复现 assertion，未新跑。Q4b 不可比不等于科学 PASS。登记读法原文：“P5 上 NAVSIM 训的读出选不同轨迹不是时间协议造成的，是场景 / rig 分布差”。
 
+**Q4a 精度诊断（2026-09-27，用户授权修精度、不改门槛；按登记判格，待人复核）**。登记检查：λ_r = 0 逐 fold 复现已存 M-C，max |pred − stored| < 1e-3 m 且 λ 相同，不过就停。
+原失败的来源是 prior 的 float32 ridge（`planner.gram_eigh` 把 float64 `eigh` cast 回 float32；100 维 ego gram 有 46–48 个特征值低于 λ·n），MKL 线程数改变舍入：同一代码 12 线程逐位复现已存 seed 1 / 2，20 线程（链的设置）复现 09-26 的 1.11e-3。
+float64 端到端（prior + Δ）确定（两种线程数差 1.4e-10 m）、λ 30 / 30 相同，但对已存 M-C 差 1.9–46 cm，检查不过。详见 [tmp/2026-09-27-q4a-fp64.md](../tmp/2026-09-27-q4a-fp64.md)，小表 [results/nq3/q4a/](../research/results/nq3/q4a/)。
+
+| 版本（3 seed × 2 模型 × 5 fold） | max \|pred − stored\|（m） | ≥ 1e-3 的 fold | λ 相同 | 判格 |
+| --- | --- | --- | --- | --- |
+| 原 float32 代码，20 线程（登记链） | 1.11e-3 | 2 / 30 | 30 / 30 | 不过 |
+| 原 float32 代码，12 线程 | 3.9e-4 | 0 / 30 | 30 / 30 | 过（线程数配置，未采用，待人定） |
+| float64 端到端（授权的精度修复） | 0.46（最小 0.019） | 30 / 30 | 30 / 30 | 不过 → 按授权停 |
+
+float64 的 M-C 与 prior 在 P5 v1 BA 判卷上与已存逐格相同（6 格行人翻转、CI、cut-in、pass 全同）。Q4a 判格：**不可判**（复现检查未过，hydra / 留出选 λ / navtest / PASS / `mc_real0` 均未跑、未写）。
+
 #### Q5：ego status 与选择性
 
 | 模型 | 臂 | n | PDMS差 [CI] | 下降≥5 |
