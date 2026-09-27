@@ -103,7 +103,7 @@ def candidates(op_plan, route_ego, v0, t=T):
     return out
 
 
-FINE = 0.05 * np.arange(1, 61)
+FINE = 0.05 * np.arange(1, 121)
 
 
 def command_actions(op_plan, route_ego, v0, dt=0.2, n=10):
