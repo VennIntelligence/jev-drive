@@ -74,6 +74,18 @@ ev_ref = {e["fold"]: e for e in map(json.loads, open(ref_run / "events.jsonl"))
           if e.get("kind") == "mc_fold" and e.get("arm") == "pair" and e.get("model") == M_}
 
 
+def solve32(D, R, M, lams, dev):
+    """nq3_q4a._solve before the 2026-09-27 fix: float32 gram, float64 eigh cast back to float32."""
+    ev_, V = torch.linalg.eigh((D.T @ D + M).double().to(dev))
+    ev_, V = ev_.float().to(D.device), V.float().to(D.device)
+    B = V.T @ (D.T @ R)
+    return [V @ (B / (ev_[:, None] + lam)) for lam in lams]
+
+
+def zmap32(X, mu, sd):
+    return (X - mu.float()) / sd.float() / np.sqrt(X.shape[1])
+
+
 def solve64(D, R, M, lams, eig_dev="cpu"):
     """Everything in float64: gram, eigh, back-substitution."""
     ev_, V = torch.linalg.eigh((D.T @ D + M).to(eig_dev))
@@ -92,7 +104,7 @@ def q4a_delta(f, prior, Qx, Xx, F, fa, tr, variant):
         Z = torch.cat([(Qx.double() - sq[0]) / sq[1] / np.sqrt(Qx.shape[1]), (Xx.double() - so[0]) / so[1] / np.sqrt(Xx.shape[1])], 1)
         Rp = Rp.double()
     else:
-        Z = torch.cat([Q._zmap(Qx, *sq), Q._zmap(Xx, *so)], 1)
+        Z = torch.cat([zmap32(Qx, *sq), zmap32(Xx, *so)], 1)
     zbar = Z[tr].mean(0)
     Zc = Z[tr] - zbar
     mu = len(ip) / len(tr)
@@ -102,7 +114,7 @@ def q4a_delta(f, prior, Qx, Xx, F, fa, tr, variant):
         sol = lambda D_, R_, lams: solve64(D_, R_, M, lams, "cpu" if variant == "fp64" else "cuda")  # noqa: E731
     else:
         edev = variant.split("-")[1]
-        sol = lambda D_, R_, lams: Q._solve(D_, R_, M, lams, edev)  # noqa: E731
+        sol = lambda D_, R_, lams: solve32(D_, R_, M, lams, edev)  # noqa: E731
     score = np.zeros(len(MC.LAMS))
     for a, b in inner:
         Ws = sol(D[a], Rp[a], MC.LAMS)
@@ -151,5 +163,18 @@ for f in FOLDS:
         if var == "fp32-cuda":
             p32 = p
     row["fp32cuda_vs_fp64"] = np.abs(p32 - p64).max()
+    # the fix: prior and Delta in float64 (nq3_q4a._float64_planner around reactivity_mc.fit_fold, float64 inputs)
+    if hasattr(Q, "_float64_planner"):
+        t0 = time.time()
+        d64 = lambda x: x.to(torch.float64)  # noqa: E731
+        with Q._float64_planner():
+            p64a = MC.fit_fold(f, fold_a, ta, d64(Fa), d64(Egoa), d64(Xa), Qa, pr_ip, pr_im, pr_group, rl, M_, arms=())["prior"]
+        d, lam, sc = q4a_delta(f, p64a, Qa, d64(Xa), d64(Fa), fold_a, tr_a, "fp64-cuda")
+        p = (p64a + d)[ev].reshape(-1, 20, 2).cpu().numpy()
+        row["fix_prior_vs_stored"] = np.abs(p64a[ev].reshape(-1, 20, 2).cpu().numpy() - stored_prior).max()
+        row["fix_vs_stored"] = np.abs(p.astype(np.float32).astype(np.float64) - stored).max()
+        row["fix_lam"] = lam
+        row["fix_s"] = time.time() - t0
+        np.save(data_dir() / "runs/nq3/q4a/precision_diag" / f"fix_{M_}_s{S_}_f{f}_th{os.environ.get('OMP_NUM_THREADS')}.npy", p)
     # stored path fp32 (cpu eigh, n rows) against fp64
     print(json.dumps({k: (float(v) if isinstance(v, (np.floating, float)) else v) for k, v in row.items()}), flush=True)
