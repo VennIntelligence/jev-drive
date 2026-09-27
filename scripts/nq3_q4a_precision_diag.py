@@ -35,6 +35,9 @@ if sys.argv[1] == "orig-fit":      # orig-fit <model> <seed>: nq3_q4a.fit as it 
     Q._stamp = lambda msg: None
     Q.fit(RunLog("nq3", "q4a-precision-fit-rerun"), (sys.argv[2],), (int(sys.argv[3]),))
     sys.exit(0)
+PRIOR_MODE = sys.argv[1] == "prior"      # prior <model> <seed> <folds>: where the float64 prior departs from the stored one
+if PRIOR_MODE:
+    sys.argv.pop(1)
 M_, S_ = sys.argv[1], int(sys.argv[2])
 FOLDS = [int(x) for x in sys.argv[3].split(",")]
 dev = "cuda"
@@ -124,6 +127,48 @@ def q4a_delta(f, prior, Qx, Xx, F, fa, tr, variant):
     delta = (Z - zbar) @ W
     return delta, MC.LAMS[best], score / len(ip)
 
+
+if PRIOR_MODE:
+    from types import SimpleNamespace
+    from jevdrive import planner as PL, waymo_stage_a as sa
+    lg = logging.getLogger("jevdrive.planner")
+    for f in FOLDS:
+        ev = obs_rows[fold[obs_rows] == f]
+        tr = np.flatnonzero((t.role.to_numpy() == "train") & (fold != f))
+        sp = SimpleNamespace(train=tr, val=ev, seq=t.base_id.to_numpy())
+        stored_prior = ref[f"prior [{M_}]"][ref_at[ev].to_numpy()].reshape(len(ev), -1).astype(np.float64)
+        row = {"model": M_, "seed": S_, "fold": f, "n_train": len(tr)}
+        for tag, cm in (("fp32", None), ("fp64", Q._float64_planner)):
+            dt = torch.float32 if tag == "fp32" else torch.float64
+            F_, Eg, X_ = Fn.to(dt), Egon.to(dt), Xn.to(dt)
+            ctx = cm() if cm else __import__("contextlib").nullcontext()
+            with ctx:
+                Xe = PL.standardize(Eg, tr)
+                _, st_e, We = sa.ridge_cv(Xe, F_, sp, F_.reshape(n, 20, 2).cpu().numpy())
+                base = PL.linear_apply(We, Xe, np.arange(n))[0]
+                Xi = PL.standardize(X_, tr)
+                R0 = F_ - base
+                _, st_p, Wp = sa.ridge_cv(Xi, R0, sp, R0.reshape(n, 20, 2).cpu().numpy())
+                prior = base + PL.linear_apply(Wp, Xi, np.arange(n))[0]
+                A = Xe[tr] - Xe[tr].mean(0)
+                g = (A.T @ A).double().cpu()
+            row.update({f"{tag}_ego_lam": st_e["lam"], f"{tag}_op_lam": st_p["lam"], f"{tag}_ego_sel_ade": st_e["sel_ade"],
+                        f"{tag}_prior_vs_stored": float(np.abs(prior[ev].double().cpu().numpy() - stored_prior).max())})
+            if tag == "fp64":
+                e64 = torch.linalg.eigvalsh(g)
+                row["ego_gram_eig_min_max"] = [float(e64[0]), float(e64[-1])]
+                row["ego_gram_eigs_below_lam_n"] = int((e64 < st_e["lam"] * len(tr)).sum())
+                row["ego_dim"] = int(g.shape[0])
+            else:
+                g32 = g
+        A64 = Q._float64_planner
+        with A64():
+            A = PL.standardize(Egon.double(), tr)[tr]
+        A = A - A.mean(0)
+        gt = (A.T @ A).cpu()
+        row["ego_gram_fp32_abs_err_max"] = float((g32 - gt).abs().max())
+        print(json.dumps(row), flush=True)
+    sys.exit(0)
 
 res = []
 for f in FOLDS:
