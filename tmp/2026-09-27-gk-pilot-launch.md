@@ -14,3 +14,11 @@
 - `runs/nq4/cx/gk-pilots/{pid,state.json,STATUS.md,events.jsonl,log.txt}`持久记录，tmux继续无需模型轮询。重启认领原worker，禁止重复launch；未知/部分结果记TECHNICAL_WAIT，不生成PASS。
 
 验证：4个针对性测试通过（B pending预算、PID复用不认领无关子进程、部分/失败不能PASS、2路线不能替10路）；bash语法通过。尚未由这些测试宣称真实pilot成功；部署实负载证据下面追加。
+
+## 部署与首次现场状态（10:59 CST）
+
+`8bbcda1` main已push、Box ff-only pull。两端4项针对测试通过；另在Linux实际创建父/子进程和同进程组无关sentinel（哨兵）执行owned stop测试，父子精确退出，sentinel存活。没有按组发信号。
+
+已部署`jev:cx-gk-pilots`：owner97841；K0 pilot shell97843/startticks801884298；首阶段容量检查97888。原pilot已选定首路线并进入持久等待，但**没有启动CARLA或模型实负载**。现场pids18199、pending_B=3（B的30claims对27实际CARLA），一worker含pending/head预算后超过16000。GPU1已清到0.04GB/0CARLA；CPU62/175，B五卡100%，P3 GPU6 18.3GB/85%。唯一阻塞是全机线程预算，不是GPU1显存/端口，也不再是原F/main未授权。
+
+队列每30秒在Box自行重新核查，容量足够即启动首K0路线，原检查通过才进10路；之后失败候选隔离、下一合法候选接续。没有为了制造首个PID越过16000门或停止B/P3科学工作。首个真实runner PID应由`runs/nq4/gk/cx_pilot_20260927_k/k0_unseen/s0/runner.pids`及`G/events.jsonl`的server_ready核查；等待shell PID不能当作路线已开始的证据。
