@@ -1,13 +1,51 @@
-# P3 formal scene 000, default 30000 iterations
+# P3 formal readout, registered scenes 000-009, default 30000 iterations
 
-The complete registered scene-zero chain finished normally at 11:12:57 CST on 2026-09-27. Training, real/plus/minus rendering, indexing, both openpilot models, finalize, exam and report all returned rc0. There is no active P3 owner or pending executable GPU step.
+Registration: `todos/2026-09-26-night-queue-4.md`, P section, [P3] 18:50 entry. Every scene ran the same formal chain as
+scene 000 (`scripts/p3/gpu_enable.py scene`: drivestudio OmniRe without SMPL, default 30000 iterations, then
+`ds.py render` of real / x+ / x-), and one pooled readout re-ran index, openpilot `temporal`, the I3-fitted `ridge_late`
+exam and the report over all ten scenes (`gpu_enable.py readout --tag formal10`, 23:25:57 CST 2026-09-27; exam dir in
+`exam_dir.txt`). Thresholds, tau, iterations, scene selection, examinees and readout code are unchanged.
 
-**The registered primary gate failed:** Cinque null false flips are 3/23 = 13.043%, above the unchanged 7% threshold, using the unchanged I3 tau 0.5268521547 m/s. Lebowski is 0/23, but is not a replacement for the registered primary examinee. Scenes 1–9 were not launched and no GO was written.
+## Registered gate (pooled over the ten scenes)
 
-Full-image PSNR is 29.894 dB (registered minimum 25 dB); pedestrian-box PSNR is 26.989 dB. All four requested nodes were removed with zero missing; repeated-view max absolute difference is 0.0. All ten prior-reproduction checks are below the original 1e-3 tolerance (maximum 0.000480652). These successful technical checks do not override the failed primary null gate.
+| examinee | tau (I3) | null frames | false flips | rate | 95% CI (scene bootstrap) | gate <= 7% |
+|:--|--:|--:|--:|--:|:--|:--|
+| `ridge_late` Cinque (primary) | 0.527 | 230 | 10 | 4.35% | [1.30%, 7.39%] | passes |
+| `ridge_late` Lebowski (descriptive) | 0.734 | 230 | 4 | 1.74% | [0.00%, 4.35%] | (descriptive) |
 
-The four-panel image is provided for human ghosting review; no visual PASS was assigned. meta.json records the real checkpoint, selected tracks and all node mappings. No thresholds, training length, scene selection or learned baseline were altered.
+`verdict.json` holds the pooled verdict; the ghosting half of the gate is a human judgement: scene 000 was accepted by
+the user on 2026-09-27, scenes 001-009 are pending. The scene-000-only verdict (3/23, written before scenes 1-9 ran)
+and its files are kept in `scene0/`.
 
-GPU6 became idle because the chain completed. Its old P3 reservation was not reclaimed automatically after the gate stopped further work; the registry now releases both P3 GPUs and CPUs180–189. The controller owner applies this release and clears only the stale P3 scheduling row; GPU1 G/K jobs are untouched. Scientific or human review may decide later work, but the GPUs are not held during that wait.
+## Per scene
 
-Source exam: DATA/runs/nq4/p3-exam/20260927-111241. Every formal stage rc was read as0, and config.yaml records num_iters30000. All five collected files match the remote SHA256 digests in SHA256SUMS.json. The PNG passed all chunk CRCs and complete-IEND validation. verdict.json separates technical completion, the primary scientific failure, pending human review and resource release.
+`scenes.csv` / `scenes.md` (PSNR is x+ against the log image, full frame and inside pedestrian boxes; `del_diff_px_*`
+count x+ vs x- pixels differing by more than 8/255 inside / outside the 12 px-padded deleted boxes).
+Technical checks: every stage rc0; 0 deleted tracks missing as nodes; determinism max |d| 0.0 in every scene; the ten
+prior-reproduction head checks max 4.8e-4 < 1e-3 (`head_checks.csv`, identical to the scene-000 run).
+Scene 004 has full-image PSNR 24.52 dB, below the 25 dB smoke-checklist line; it stays in the gate as registered.
+Scene 000's figure, render metadata and head checks are byte-identical to the scene-000-only run.
+
+## Four-panel figures (for the human ghosting review)
+
+Front camera at f0 - 1 s, f0, f0 + 1 s; columns real, x+, x- and |x+ - x-|. Look at whether the x- column still shows
+a pedestrian-shaped residue where corridor pedestrians were deleted (the |x+ - x-| column shows where the deletion acted);
+pedestrians outside the corridor are not deleted by design.
+
+- [p3_000](nq4-p3-p3_000.png) (reviewed, accepted) - [p3_001](nq4-p3-p3_001.png) - [p3_002](nq4-p3-p3_002.png)
+- [p3_003](nq4-p3-p3_003.png) - [p3_004](nq4-p3-p3_004.png) - [p3_005](nq4-p3-p3_005.png) - [p3_006](nq4-p3-p3_006.png)
+- [p3_007](nq4-p3-p3_007.png) - [p3_008](nq4-p3-p3_008.png) - [p3_009](nq4-p3-p3_009.png)
+
+## Descriptive: openpilot native plan (not part of the gate)
+
+`native_plan.csv` / `native_plan.md`: Cinque and Lebowski's own plan from the same modeld forward, same frames and flip
+rule (v2 = 2 s longitudinal speed, null = x+ vs real, pair = x+ vs x-). No native-plan tau exists on the I3 null, so tau
+is borrowed from each model's I3 `ridge_late` examinee and labelled as borrowed; |delta| median / p90 / p95 are reported
+per scene and pooled. The plan capture re-ran openpilot into a separate stream set; its `temporal` equals the gate's
+stored streams bit for bit for all 30 streams x 2 models (`native_identity.csv`).
+
+## Other files
+
+`null_gate_all_scopes.csv` (exam output, pooled and per scene), `meta/` (render metadata with node mapping and
+render_stats per scene), `timing.json` (train / render wall minutes and card per scene), `SHA256SUMS_formal10.txt`
+(digests on the box before transfer; `figs/` and `meta/` paths there are the staging layout, figures now sit here).

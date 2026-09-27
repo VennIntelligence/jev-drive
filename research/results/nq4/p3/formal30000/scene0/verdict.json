@@ -1,0 +1,32 @@
+{
+  "status": "PRIMARY_SCENE0_GATE_FAILED",
+  "technical_chain": "COMPLETE_RC0",
+  "iterations": 30000,
+  "completed_at": "2026-09-27T11:12:57+08:00",
+  "n_scenes": 1,
+  "n_null_frames": 23,
+  "primary_examinee": "ridge_late op-cinque temporal",
+  "primary_null_false_flips": 3,
+  "primary_null_false_flip_rate": 0.13043478260869565,
+  "primary_tau_i3": 0.5268521547317493,
+  "unchanged_gate": 0.07,
+  "primary_gate_passes": false,
+  "psnr": 29.894372434934976,
+  "psnr_ped": 26.98927742395178,
+  "n_deleted": 4,
+  "deleted_missing": 0,
+  "determinism_max_abs": 0.0,
+  "head_check_max_abs_diff": 0.00048065185546875,
+  "head_check_tolerance": 0.001,
+  "ghosting_review": "PENDING_HUMAN",
+  "automatic_continuation": "NONE",
+  "scenes_1_to_9_launched": false,
+  "resource_release_authorized": {
+    "gpus": [
+      1,
+      6
+    ],
+    "cpus": "180-189"
+  },
+  "controller_release_application": "astra_orchestrator applies registry reload and clears only P3 stale table row"
+}

@@ -1,0 +1,1289 @@
+{
+ "scene": 3,
+ "key": "p3_003",
+ "segment": "9243656068381062947_1297_428_1317_428",
+ "split": "validation",
+ "f0": 138,
+ "t0": 13.8,
+ "v0": 5.4,
+ "target_track": "cVQ8mnF-51htJ-mDdc-G6Q",
+ "delete_tracks": [
+  "EGJ1ewyUNd0Tw-Q6lCoctQ",
+  "cVQ8mnF-51htJ-mDdc-G6Q"
+ ],
+ "ckpt": "/root/autodl-tmp/ujs/ckpt/nq4_p3/p3/003/checkpoint_final.pth",
+ "frames": [
+  108,
+  110,
+  112,
+  114,
+  116,
+  118,
+  120,
+  122,
+  124,
+  126,
+  128,
+  130,
+  132,
+  134,
+  136,
+  138,
+  140,
+  142,
+  144,
+  146,
+  148,
+  150,
+  152,
+  154,
+  156,
+  158
+ ],
+ "calib": {
+  "front": {
+   "K": [
+    [
+     1039.7554931640625,
+     0.0,
+     476.9678649902344
+    ],
+    [
+     0.0,
+     1039.7554931640625,
+     330.7906799316406
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  },
+  "front_left": {
+   "K": [
+    [
+     1040.349365234375,
+     0.0,
+     488.6635437011719
+    ],
+    [
+     0.0,
+     1040.349365234375,
+     316.2379455566406
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  },
+  "front_right": {
+   "K": [
+    [
+     1040.4931640625,
+     0.0,
+     470.6127014160156
+    ],
+    [
+     0.0,
+     1040.4931640625,
+     327.8268127441406
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  }
+ },
+ "extrinsics_cam_to_ego": {
+  "front": [
+   [
+    0.9999558812277093,
+    -4.412690247759514e-05,
+    -0.009393276900625495,
+    1.5442298691351966
+   ],
+   [
+    6.784166429129727e-05,
+    0.9999968115246617,
+    0.0025243490286893143,
+    -0.024168247502349863
+   ],
+   [
+    0.009393135558690344,
+    -0.002524874913047423,
+    0.9999526958866851,
+    2.1160897275662878
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "front_left": [
+   [
+    0.7089571663398213,
+    -0.7051510985232661,
+    -0.011902291663465786,
+    1.4973873828948512
+   ],
+   [
+    0.7052319594025751,
+    0.7089622769308642,
+    0.0045136821121232115,
+    0.09458677695157652
+   ],
+   [
+    0.00525544789867745,
+    -0.011593883751176521,
+    0.9999189777811743,
+    2.115551011713135
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "front_right": [
+   [
+    0.7092666455779335,
+    0.7049349656100427,
+    -0.00274221279156223,
+    1.4941266146614325
+   ],
+   [
+    -0.7048864843969088,
+    0.7092551996941002,
+    0.009597177785605534,
+    -0.0972704762621969
+   ],
+   [
+    0.008710314873332486,
+    -0.004874009360898961,
+    0.9999501859830606,
+    2.116182498683677
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "intrinsics_raw": {
+  "front": [
+   2079.511010136365,
+   2079.511010136365,
+   953.9357583878485,
+   661.581335767017,
+   0.05019843858057041,
+   -0.3504384383187902,
+   0.0008853193863969079,
+   -0.0005546413059651889,
+   0.0
+  ],
+  "front_left": [
+   2080.6988389982985,
+   2080.6988389982985,
+   977.3270852195849,
+   632.4759158337583,
+   0.047488730312327206,
+   -0.36454964289020547,
+   0.0020007887746285855,
+   0.0018176118817226673,
+   0.0
+  ],
+  "front_right": [
+   2080.986268964519,
+   2080.986268964519,
+   941.2254295459188,
+   655.6536556582644,
+   0.04907869827091568,
+   -0.3593311572104782,
+   0.0009630266336550262,
+   -0.0005789350910098867,
+   0.0
+  ]
+ },
+ "node_mapping": [
+  {
+   "node_index": 0,
+   "dataset_instance": 0,
+   "true_id": 0,
+   "waymo_id": "-ZYGSxOT-J9LTtb2s8OJDw",
+   "deleted": false
+  },
+  {
+   "node_index": 1,
+   "dataset_instance": 1,
+   "true_id": 1,
+   "waymo_id": "-d6l_d8BqCvG22pCvL63LA",
+   "deleted": false
+  },
+  {
+   "node_index": 2,
+   "dataset_instance": 3,
+   "true_id": 3,
+   "waymo_id": "0FITG7Z5X3GlmY07-t6jVg",
+   "deleted": false
+  },
+  {
+   "node_index": 3,
+   "dataset_instance": 4,
+   "true_id": 4,
+   "waymo_id": "0SqtKeexhg9cxNmn_TRX3w",
+   "deleted": false
+  },
+  {
+   "node_index": 4,
+   "dataset_instance": 5,
+   "true_id": 5,
+   "waymo_id": "18m7oYPGK4VmlnBirmxC6Q",
+   "deleted": false
+  },
+  {
+   "node_index": 5,
+   "dataset_instance": 6,
+   "true_id": 6,
+   "waymo_id": "1ErFJDgE3H9qq7NI7gX6aw",
+   "deleted": false
+  },
+  {
+   "node_index": 6,
+   "dataset_instance": 7,
+   "true_id": 7,
+   "waymo_id": "3Cke57XBqC_OnPSsccMzfw",
+   "deleted": false
+  },
+  {
+   "node_index": 7,
+   "dataset_instance": 8,
+   "true_id": 8,
+   "waymo_id": "3Ynit0hGXjoW2d0sOMx2-w",
+   "deleted": false
+  },
+  {
+   "node_index": 8,
+   "dataset_instance": 9,
+   "true_id": 9,
+   "waymo_id": "3dB72joMM0RuCYaQcprdmQ",
+   "deleted": false
+  },
+  {
+   "node_index": 9,
+   "dataset_instance": 10,
+   "true_id": 10,
+   "waymo_id": "3kH5Xuw_vmmjnWE2eIXBaw",
+   "deleted": false
+  },
+  {
+   "node_index": 10,
+   "dataset_instance": 11,
+   "true_id": 11,
+   "waymo_id": "4AZ4Ry52VIFssqLf127cpw",
+   "deleted": false
+  },
+  {
+   "node_index": 11,
+   "dataset_instance": 12,
+   "true_id": 12,
+   "waymo_id": "4NrZysOeo7HB47pOrlbgnw",
+   "deleted": false
+  },
+  {
+   "node_index": 12,
+   "dataset_instance": 13,
+   "true_id": 13,
+   "waymo_id": "6134SVMaIuZRj3_MRSbEIg",
+   "deleted": false
+  },
+  {
+   "node_index": 13,
+   "dataset_instance": 15,
+   "true_id": 15,
+   "waymo_id": "6dd4qQpyiyv00hBg1vjl_w",
+   "deleted": false
+  },
+  {
+   "node_index": 14,
+   "dataset_instance": 17,
+   "true_id": 17,
+   "waymo_id": "8KYD76UaiuHSsS1gbsVJzg",
+   "deleted": false
+  },
+  {
+   "node_index": 15,
+   "dataset_instance": 18,
+   "true_id": 18,
+   "waymo_id": "8batKB8o3gSWyeXujHG4Qw",
+   "deleted": false
+  },
+  {
+   "node_index": 16,
+   "dataset_instance": 21,
+   "true_id": 21,
+   "waymo_id": "AGFwtWSG4T3Pf95ebqE6zA",
+   "deleted": false
+  },
+  {
+   "node_index": 17,
+   "dataset_instance": 22,
+   "true_id": 22,
+   "waymo_id": "ClvGSCuxqd6kJtUAR0yk4g",
+   "deleted": false
+  },
+  {
+   "node_index": 18,
+   "dataset_instance": 23,
+   "true_id": 23,
+   "waymo_id": "CyIX5aRj3PtoIeRzjBJgjg",
+   "deleted": false
+  },
+  {
+   "node_index": 19,
+   "dataset_instance": 24,
+   "true_id": 24,
+   "waymo_id": "Dm6XDA6YJlyOT_m9voRQlQ",
+   "deleted": false
+  },
+  {
+   "node_index": 20,
+   "dataset_instance": 25,
+   "true_id": 25,
+   "waymo_id": "E1bTvS365VnbHuwwrWbEUg",
+   "deleted": false
+  },
+  {
+   "node_index": 21,
+   "dataset_instance": 26,
+   "true_id": 26,
+   "waymo_id": "EjiK4eV2w6-CF7PjqT2h9Q",
+   "deleted": false
+  },
+  {
+   "node_index": 22,
+   "dataset_instance": 27,
+   "true_id": 27,
+   "waymo_id": "Es5TULkbHiaA-uryvuljdA",
+   "deleted": false
+  },
+  {
+   "node_index": 23,
+   "dataset_instance": 31,
+   "true_id": 31,
+   "waymo_id": "G_MHPCgVnKSsLItJYNgjaA",
+   "deleted": false
+  },
+  {
+   "node_index": 24,
+   "dataset_instance": 32,
+   "true_id": 32,
+   "waymo_id": "Gds2FVLgTUe7lRA9C8KPuQ",
+   "deleted": false
+  },
+  {
+   "node_index": 25,
+   "dataset_instance": 34,
+   "true_id": 34,
+   "waymo_id": "HbN_lmuqpHzps05WuD-qkQ",
+   "deleted": false
+  },
+  {
+   "node_index": 26,
+   "dataset_instance": 35,
+   "true_id": 35,
+   "waymo_id": "HeJOerJrIctaMcnto6Zo4Q",
+   "deleted": false
+  },
+  {
+   "node_index": 27,
+   "dataset_instance": 36,
+   "true_id": 36,
+   "waymo_id": "Ijksd49hw5XhlDYgNCZD6w",
+   "deleted": false
+  },
+  {
+   "node_index": 28,
+   "dataset_instance": 37,
+   "true_id": 37,
+   "waymo_id": "JDmRZoh19C93xzQYOxYxqQ",
+   "deleted": false
+  },
+  {
+   "node_index": 29,
+   "dataset_instance": 38,
+   "true_id": 38,
+   "waymo_id": "KgY8us9qjpRUXtxP8h7bRA",
+   "deleted": false
+  },
+  {
+   "node_index": 30,
+   "dataset_instance": 39,
+   "true_id": 39,
+   "waymo_id": "Kuk4XkhLQ1fP2kEko_1DWQ",
+   "deleted": false
+  },
+  {
+   "node_index": 31,
+   "dataset_instance": 41,
+   "true_id": 41,
+   "waymo_id": "Lkdlqr62TRAuvxQHkdQeKw",
+   "deleted": false
+  },
+  {
+   "node_index": 32,
+   "dataset_instance": 42,
+   "true_id": 42,
+   "waymo_id": "LsZIFNoYF5DbsYRhYlMc2A",
+   "deleted": false
+  },
+  {
+   "node_index": 33,
+   "dataset_instance": 43,
+   "true_id": 43,
+   "waymo_id": "NI9816_DgBvF0bEoZCKGUQ",
+   "deleted": false
+  },
+  {
+   "node_index": 34,
+   "dataset_instance": 44,
+   "true_id": 44,
+   "waymo_id": "NyfgKk9fysi6zd9yHGRn2g",
+   "deleted": false
+  },
+  {
+   "node_index": 35,
+   "dataset_instance": 45,
+   "true_id": 45,
+   "waymo_id": "O4KBVrxoa5sXUZpZ5K0CJg",
+   "deleted": false
+  },
+  {
+   "node_index": 36,
+   "dataset_instance": 46,
+   "true_id": 46,
+   "waymo_id": "OoVN-y2FHJZBOu1nFwuxfw",
+   "deleted": false
+  },
+  {
+   "node_index": 37,
+   "dataset_instance": 47,
+   "true_id": 47,
+   "waymo_id": "Ouj4J1NhpxGdQQ1HfGgB8g",
+   "deleted": false
+  },
+  {
+   "node_index": 38,
+   "dataset_instance": 49,
+   "true_id": 49,
+   "waymo_id": "RDJ2cntOaA434ToGg4qvlA",
+   "deleted": false
+  },
+  {
+   "node_index": 39,
+   "dataset_instance": 50,
+   "true_id": 50,
+   "waymo_id": "TMgm_y4-MZOhHV1eR9Pciw",
+   "deleted": false
+  },
+  {
+   "node_index": 40,
+   "dataset_instance": 51,
+   "true_id": 51,
+   "waymo_id": "TbZlTohJlhev8fqUXI29jQ",
+   "deleted": false
+  },
+  {
+   "node_index": 41,
+   "dataset_instance": 52,
+   "true_id": 52,
+   "waymo_id": "Ux_NzlEfEfX36l2eIgS5mQ",
+   "deleted": false
+  },
+  {
+   "node_index": 42,
+   "dataset_instance": 53,
+   "true_id": 53,
+   "waymo_id": "VRFjg5JepJkyv5XfzKj-zA",
+   "deleted": false
+  },
+  {
+   "node_index": 43,
+   "dataset_instance": 54,
+   "true_id": 54,
+   "waymo_id": "Vp07La1Mg4E6Upjoeii0jw",
+   "deleted": false
+  },
+  {
+   "node_index": 44,
+   "dataset_instance": 55,
+   "true_id": 55,
+   "waymo_id": "WSwTHF54IIKRvU-mDIcogg",
+   "deleted": false
+  },
+  {
+   "node_index": 45,
+   "dataset_instance": 57,
+   "true_id": 57,
+   "waymo_id": "ZMqJt-NxT4uc0RW0jCs32g",
+   "deleted": false
+  },
+  {
+   "node_index": 46,
+   "dataset_instance": 58,
+   "true_id": 58,
+   "waymo_id": "ZnoxRs7IRDkCcS9kC3WNgQ",
+   "deleted": false
+  },
+  {
+   "node_index": 47,
+   "dataset_instance": 59,
+   "true_id": 59,
+   "waymo_id": "_IO4F7c9pk8diF2j9GkOkw",
+   "deleted": false
+  },
+  {
+   "node_index": 48,
+   "dataset_instance": 61,
+   "true_id": 61,
+   "waymo_id": "aU_y2mITOOjmJtO97F2xgA",
+   "deleted": false
+  },
+  {
+   "node_index": 49,
+   "dataset_instance": 62,
+   "true_id": 62,
+   "waymo_id": "b8C8ywP3GP1ji34z34rdrQ",
+   "deleted": false
+  },
+  {
+   "node_index": 50,
+   "dataset_instance": 63,
+   "true_id": 63,
+   "waymo_id": "bEdKHzKll3Jm_YotA6uA1A",
+   "deleted": false
+  },
+  {
+   "node_index": 51,
+   "dataset_instance": 64,
+   "true_id": 64,
+   "waymo_id": "cR7FgZ0brJp7bqMr-RMmig",
+   "deleted": false
+  },
+  {
+   "node_index": 52,
+   "dataset_instance": 65,
+   "true_id": 65,
+   "waymo_id": "dBnt6wsMFPDFS6GQsqFnDw",
+   "deleted": false
+  },
+  {
+   "node_index": 53,
+   "dataset_instance": 66,
+   "true_id": 66,
+   "waymo_id": "e-zQtDUg8t-3mnLoAPhrxw",
+   "deleted": false
+  },
+  {
+   "node_index": 54,
+   "dataset_instance": 69,
+   "true_id": 69,
+   "waymo_id": "g9ZvHWHXKyH3MEEnlOpmaQ",
+   "deleted": false
+  },
+  {
+   "node_index": 55,
+   "dataset_instance": 71,
+   "true_id": 71,
+   "waymo_id": "hDXs5ag0V-G_k18iNvvv5Q",
+   "deleted": false
+  },
+  {
+   "node_index": 56,
+   "dataset_instance": 73,
+   "true_id": 73,
+   "waymo_id": "hsjSvxzBlUaDb7kHl3x7mA",
+   "deleted": false
+  },
+  {
+   "node_index": 57,
+   "dataset_instance": 74,
+   "true_id": 74,
+   "waymo_id": "hx_l-o6bZIU5gw4w-WNPcA",
+   "deleted": false
+  },
+  {
+   "node_index": 58,
+   "dataset_instance": 75,
+   "true_id": 75,
+   "waymo_id": "hxb5FFNYqInqmRoo_dTyAg",
+   "deleted": false
+  },
+  {
+   "node_index": 59,
+   "dataset_instance": 76,
+   "true_id": 76,
+   "waymo_id": "j3uU-MMSBI2NCvSwfbYEfg",
+   "deleted": false
+  },
+  {
+   "node_index": 60,
+   "dataset_instance": 78,
+   "true_id": 78,
+   "waymo_id": "kGt_iNLRuGbXu6sBpZwhMA",
+   "deleted": false
+  },
+  {
+   "node_index": 61,
+   "dataset_instance": 79,
+   "true_id": 79,
+   "waymo_id": "kJei_RvTWuVgf0Bk0NgKzA",
+   "deleted": false
+  },
+  {
+   "node_index": 62,
+   "dataset_instance": 80,
+   "true_id": 80,
+   "waymo_id": "kNmHprv2xUvz8N3NnQV0ew",
+   "deleted": false
+  },
+  {
+   "node_index": 63,
+   "dataset_instance": 81,
+   "true_id": 81,
+   "waymo_id": "kpWnSA1vB_BYr3TZ2ee89A",
+   "deleted": false
+  },
+  {
+   "node_index": 64,
+   "dataset_instance": 84,
+   "true_id": 84,
+   "waymo_id": "m69imgPZLLJ2C4e24yZIGg",
+   "deleted": false
+  },
+  {
+   "node_index": 65,
+   "dataset_instance": 86,
+   "true_id": 86,
+   "waymo_id": "nz2quN3Dz4KFSZZ4E1-NfQ",
+   "deleted": false
+  },
+  {
+   "node_index": 66,
+   "dataset_instance": 88,
+   "true_id": 88,
+   "waymo_id": "q0gHeKkIrCv4Boap-BXnnQ",
+   "deleted": false
+  },
+  {
+   "node_index": 67,
+   "dataset_instance": 89,
+   "true_id": 89,
+   "waymo_id": "q6_n_BN8ahcAS5_biF_W5g",
+   "deleted": false
+  },
+  {
+   "node_index": 68,
+   "dataset_instance": 90,
+   "true_id": 90,
+   "waymo_id": "qDhlB3ARopcOmp1HJnG68g",
+   "deleted": false
+  },
+  {
+   "node_index": 69,
+   "dataset_instance": 91,
+   "true_id": 91,
+   "waymo_id": "qmHIwq2ezfdnVZG8CLwAyw",
+   "deleted": false
+  },
+  {
+   "node_index": 70,
+   "dataset_instance": 92,
+   "true_id": 92,
+   "waymo_id": "sRlZu_XPTNL60qn6l0HsbQ",
+   "deleted": false
+  },
+  {
+   "node_index": 71,
+   "dataset_instance": 93,
+   "true_id": 93,
+   "waymo_id": "t7Mc_hSJjos7RrJBDogJwg",
+   "deleted": false
+  },
+  {
+   "node_index": 72,
+   "dataset_instance": 94,
+   "true_id": 94,
+   "waymo_id": "uPTn2e2aJlMwz92VuxmQIw",
+   "deleted": false
+  },
+  {
+   "node_index": 73,
+   "dataset_instance": 95,
+   "true_id": 95,
+   "waymo_id": "w1eYL1WlIFsm54U6py7pRg",
+   "deleted": false
+  },
+  {
+   "node_index": 74,
+   "dataset_instance": 96,
+   "true_id": 96,
+   "waymo_id": "wU5gEATHw71Y5mNKqN1mjQ",
+   "deleted": false
+  },
+  {
+   "node_index": 75,
+   "dataset_instance": 97,
+   "true_id": 97,
+   "waymo_id": "yRvXkqBUkDysVfXCkbh-Zg",
+   "deleted": false
+  },
+  {
+   "node_index": 76,
+   "dataset_instance": 99,
+   "true_id": 99,
+   "waymo_id": "6KjwMliF6C1DjBMC_3Xb_A",
+   "deleted": false
+  },
+  {
+   "node_index": 77,
+   "dataset_instance": 101,
+   "true_id": 101,
+   "waymo_id": "VAQMzN9IPtc4_s71p6m_ow",
+   "deleted": false
+  },
+  {
+   "node_index": 78,
+   "dataset_instance": 102,
+   "true_id": 102,
+   "waymo_id": "jmehpH5HyNRAhVdbSy-Siw",
+   "deleted": false
+  },
+  {
+   "node_index": 79,
+   "dataset_instance": 103,
+   "true_id": 103,
+   "waymo_id": "x3He740sHNafkbLcG9l_pw",
+   "deleted": false
+  },
+  {
+   "node_index": 80,
+   "dataset_instance": 107,
+   "true_id": 107,
+   "waymo_id": "TCMArUVwYJSw068WBj88-Q",
+   "deleted": false
+  },
+  {
+   "node_index": 81,
+   "dataset_instance": 109,
+   "true_id": 109,
+   "waymo_id": "jeWxRfHIbSEbUD9cqP7pYQ",
+   "deleted": false
+  },
+  {
+   "node_index": 82,
+   "dataset_instance": 113,
+   "true_id": 113,
+   "waymo_id": "cVQ8mnF-51htJ-mDdc-G6Q",
+   "deleted": true
+  },
+  {
+   "node_index": 83,
+   "dataset_instance": 114,
+   "true_id": 114,
+   "waymo_id": "EGJ1ewyUNd0Tw-Q6lCoctQ",
+   "deleted": true
+  },
+  {
+   "node_index": 84,
+   "dataset_instance": 115,
+   "true_id": 115,
+   "waymo_id": "P0xegRy_o3Wh9UZ_If6fMQ",
+   "deleted": false
+  },
+  {
+   "node_index": 85,
+   "dataset_instance": 116,
+   "true_id": 116,
+   "waymo_id": "e8hvLh6ZR9jZDH4zr_WNoQ",
+   "deleted": false
+  },
+  {
+   "node_index": 86,
+   "dataset_instance": 117,
+   "true_id": 117,
+   "waymo_id": "LgTiuWCAenkpghBMMnrYPg",
+   "deleted": false
+  },
+  {
+   "node_index": 87,
+   "dataset_instance": 118,
+   "true_id": 118,
+   "waymo_id": "0foUWxAV4ywEy0obik7D-w",
+   "deleted": false
+  },
+  {
+   "node_index": 88,
+   "dataset_instance": 119,
+   "true_id": 119,
+   "waymo_id": "QUMoTVbIbaqrzH-5a8kfAw",
+   "deleted": false
+  },
+  {
+   "node_index": 89,
+   "dataset_instance": 120,
+   "true_id": 120,
+   "waymo_id": "o6WrLo-gMNhWz83_wgH7rQ",
+   "deleted": false
+  },
+  {
+   "node_index": 90,
+   "dataset_instance": 121,
+   "true_id": 121,
+   "waymo_id": "yNs1se-cQBfXOJL9D2x0pw",
+   "deleted": false
+  },
+  {
+   "node_index": 91,
+   "dataset_instance": 122,
+   "true_id": 122,
+   "waymo_id": "MTcaOpXbxEEdhJKePdQ5ew",
+   "deleted": false
+  },
+  {
+   "node_index": 92,
+   "dataset_instance": 123,
+   "true_id": 123,
+   "waymo_id": "kaxzgspZsdTjf4a9Z8Bvpg",
+   "deleted": false
+  },
+  {
+   "node_index": 93,
+   "dataset_instance": 124,
+   "true_id": 124,
+   "waymo_id": "XeNx5XXqleQoUloUI8QnDQ",
+   "deleted": false
+  },
+  {
+   "node_index": 94,
+   "dataset_instance": 125,
+   "true_id": 125,
+   "waymo_id": "cemnUym1VrEnjRefudxkbA",
+   "deleted": false
+  },
+  {
+   "node_index": 95,
+   "dataset_instance": 126,
+   "true_id": 126,
+   "waymo_id": "wjnAtZUVd1T5GLjXZW_g7A",
+   "deleted": false
+  },
+  {
+   "node_index": 96,
+   "dataset_instance": 127,
+   "true_id": 127,
+   "waymo_id": "3tgBrVhjFUvxNUraQ880Cg",
+   "deleted": false
+  },
+  {
+   "node_index": 97,
+   "dataset_instance": 128,
+   "true_id": 128,
+   "waymo_id": "HcJYuriK1uq1awsEeczgvg",
+   "deleted": false
+  },
+  {
+   "node_index": 98,
+   "dataset_instance": 129,
+   "true_id": 129,
+   "waymo_id": "z-Ze2vW3mozXDSLBu2ojBA",
+   "deleted": false
+  },
+  {
+   "node_index": 99,
+   "dataset_instance": 131,
+   "true_id": 131,
+   "waymo_id": "Z0e4A9ux-Nd1PWnzAQC2bQ",
+   "deleted": false
+  },
+  {
+   "node_index": 100,
+   "dataset_instance": 132,
+   "true_id": 132,
+   "waymo_id": "ecp78bKpEggBb6LA6ljzQA",
+   "deleted": false
+  },
+  {
+   "node_index": 101,
+   "dataset_instance": 133,
+   "true_id": 133,
+   "waymo_id": "tZDLdbSynUhqzYYkylkI6Q",
+   "deleted": false
+  },
+  {
+   "node_index": 102,
+   "dataset_instance": 134,
+   "true_id": 134,
+   "waymo_id": "nTvLqfdG7E05EXg8dDGz6w",
+   "deleted": false
+  },
+  {
+   "node_index": 103,
+   "dataset_instance": 135,
+   "true_id": 135,
+   "waymo_id": "xb8osclhxkiC-MXW1f-eKA",
+   "deleted": false
+  },
+  {
+   "node_index": 104,
+   "dataset_instance": 136,
+   "true_id": 136,
+   "waymo_id": "u2iP84Gazf5ihIrhdIAeHA",
+   "deleted": false
+  },
+  {
+   "node_index": 105,
+   "dataset_instance": 137,
+   "true_id": 137,
+   "waymo_id": "6vGNzFStTVVOm-sMVtd42w",
+   "deleted": false
+  },
+  {
+   "node_index": 106,
+   "dataset_instance": 139,
+   "true_id": 139,
+   "waymo_id": "a6YzVu4XmPow8ntYWA1pJQ",
+   "deleted": false
+  },
+  {
+   "node_index": 107,
+   "dataset_instance": 140,
+   "true_id": 140,
+   "waymo_id": "bqBSpdMyFEeqr-pQ0RRQgg",
+   "deleted": false
+  },
+  {
+   "node_index": 108,
+   "dataset_instance": 142,
+   "true_id": 142,
+   "waymo_id": "UAQEVEW6cFv7CZiOeP1UmA",
+   "deleted": false
+  },
+  {
+   "node_index": 109,
+   "dataset_instance": 143,
+   "true_id": 143,
+   "waymo_id": "fMeYLPhBuoLvStUCdGsN3A",
+   "deleted": false
+  },
+  {
+   "node_index": 110,
+   "dataset_instance": 146,
+   "true_id": 146,
+   "waymo_id": "YW1Gks9IA-c4fOujR8q4mw",
+   "deleted": false
+  },
+  {
+   "node_index": 111,
+   "dataset_instance": 147,
+   "true_id": 147,
+   "waymo_id": "Z3GSgX3adKGkCyCtYSWyFw",
+   "deleted": false
+  },
+  {
+   "node_index": 112,
+   "dataset_instance": 149,
+   "true_id": 149,
+   "waymo_id": "_t_XF4w9pwLyG0irE21cDg",
+   "deleted": false
+  },
+  {
+   "node_index": 113,
+   "dataset_instance": 150,
+   "true_id": 150,
+   "waymo_id": "HbEpQoimSOLTfeP_mhf3qw",
+   "deleted": false
+  },
+  {
+   "node_index": 114,
+   "dataset_instance": 151,
+   "true_id": 151,
+   "waymo_id": "RmgiElWi8VNRhvCNkeUV1A",
+   "deleted": false
+  },
+  {
+   "node_index": 115,
+   "dataset_instance": 152,
+   "true_id": 152,
+   "waymo_id": "YamBsRe9mJvcJJKOqI1GyA",
+   "deleted": false
+  },
+  {
+   "node_index": 116,
+   "dataset_instance": 154,
+   "true_id": 154,
+   "waymo_id": "uWaUUW7l6wkyG_Th7qWOvA",
+   "deleted": false
+  },
+  {
+   "node_index": 117,
+   "dataset_instance": 156,
+   "true_id": 156,
+   "waymo_id": "VFo4QbNAL7XdTyRTxuvihg",
+   "deleted": false
+  },
+  {
+   "node_index": 118,
+   "dataset_instance": 158,
+   "true_id": 158,
+   "waymo_id": "byvfz0bP2lnckVcc9caTvw",
+   "deleted": false
+  },
+  {
+   "node_index": 119,
+   "dataset_instance": 159,
+   "true_id": 159,
+   "waymo_id": "ojpChbPNtEiiwJ-F2QI4Hg",
+   "deleted": false
+  },
+  {
+   "node_index": 120,
+   "dataset_instance": 160,
+   "true_id": 160,
+   "waymo_id": "WvPlS8qujADii79aKkIQuQ",
+   "deleted": false
+  },
+  {
+   "node_index": 121,
+   "dataset_instance": 161,
+   "true_id": 161,
+   "waymo_id": "yzRbrp9Y8qptUq97jqRtfw",
+   "deleted": false
+  },
+  {
+   "node_index": 122,
+   "dataset_instance": 162,
+   "true_id": 162,
+   "waymo_id": "5eMpqWw3Q2fXbHsR5vpriw",
+   "deleted": false
+  },
+  {
+   "node_index": 123,
+   "dataset_instance": 163,
+   "true_id": 163,
+   "waymo_id": "reF6esUSOaIjB6p4B5_AQQ",
+   "deleted": false
+  },
+  {
+   "node_index": 124,
+   "dataset_instance": 164,
+   "true_id": 164,
+   "waymo_id": "NFNCGpgOmQE4Zv-bEQ16rw",
+   "deleted": false
+  },
+  {
+   "node_index": 125,
+   "dataset_instance": 165,
+   "true_id": 165,
+   "waymo_id": "AdT-wvc8He9KdPUtcG_hKw",
+   "deleted": false
+  },
+  {
+   "node_index": 126,
+   "dataset_instance": 167,
+   "true_id": 167,
+   "waymo_id": "CNHwTguMkHnRV8B0LJRXRQ",
+   "deleted": false
+  },
+  {
+   "node_index": 127,
+   "dataset_instance": 168,
+   "true_id": 168,
+   "waymo_id": "MuAwooMC_uFZtv-nt_Qeqg",
+   "deleted": false
+  },
+  {
+   "node_index": 128,
+   "dataset_instance": 169,
+   "true_id": 169,
+   "waymo_id": "w7Rkpxk-CIytl5p2vlDbQg",
+   "deleted": false
+  },
+  {
+   "node_index": 129,
+   "dataset_instance": 170,
+   "true_id": 170,
+   "waymo_id": "EHG3FkVQFZWh37279DnawQ",
+   "deleted": false
+  },
+  {
+   "node_index": 130,
+   "dataset_instance": 171,
+   "true_id": 171,
+   "waymo_id": "T32l1K0egOVPBSKSYNXvNg",
+   "deleted": false
+  },
+  {
+   "node_index": 131,
+   "dataset_instance": 175,
+   "true_id": 175,
+   "waymo_id": "hORGcVjChALyv6oWfrW_gg",
+   "deleted": false
+  },
+  {
+   "node_index": 132,
+   "dataset_instance": 176,
+   "true_id": 176,
+   "waymo_id": "kla2h8rq7f-GV4f3pjDrQg",
+   "deleted": false
+  },
+  {
+   "node_index": 133,
+   "dataset_instance": 178,
+   "true_id": 178,
+   "waymo_id": "oaX0tb-BbgRholPW3zFxAg",
+   "deleted": false
+  },
+  {
+   "node_index": 134,
+   "dataset_instance": 184,
+   "true_id": 184,
+   "waymo_id": "yalV-s6IhdGsVDRwfaYusg",
+   "deleted": false
+  },
+  {
+   "node_index": 135,
+   "dataset_instance": 186,
+   "true_id": 186,
+   "waymo_id": "7Pdbb0y91tDO6PiSpASIww",
+   "deleted": false
+  },
+  {
+   "node_index": 136,
+   "dataset_instance": 191,
+   "true_id": 191,
+   "waymo_id": "RFcz0Me47nl7KYU93fBqqg",
+   "deleted": false
+  },
+  {
+   "node_index": 137,
+   "dataset_instance": 192,
+   "true_id": 192,
+   "waymo_id": "YyjxKx8uYKcJU86A6Ltclg",
+   "deleted": false
+  },
+  {
+   "node_index": 138,
+   "dataset_instance": 198,
+   "true_id": 198,
+   "waymo_id": "GGrWngp6RFJoLEzAlU0S_Q",
+   "deleted": false
+  },
+  {
+   "node_index": 139,
+   "dataset_instance": 202,
+   "true_id": 202,
+   "waymo_id": "KFL7lFaEQI-JT_yTtNfl7A",
+   "deleted": false
+  },
+  {
+   "node_index": 140,
+   "dataset_instance": 205,
+   "true_id": 205,
+   "waymo_id": "8z6VVeu0zQvwQvjrAbJkTQ",
+   "deleted": false
+  },
+  {
+   "node_index": 141,
+   "dataset_instance": 211,
+   "true_id": 211,
+   "waymo_id": "BRN-FU2QWbpG0y6FyhRnVg",
+   "deleted": false
+  },
+  {
+   "node_index": 142,
+   "dataset_instance": 212,
+   "true_id": 212,
+   "waymo_id": "Fd7IvtYlLmliLqupZn3AYg",
+   "deleted": false
+  },
+  {
+   "node_index": 143,
+   "dataset_instance": 213,
+   "true_id": 213,
+   "waymo_id": "GIzhsocHA2lAIoAuM0Rtaw",
+   "deleted": false
+  },
+  {
+   "node_index": 144,
+   "dataset_instance": 215,
+   "true_id": 215,
+   "waymo_id": "N9GXnjAMCHq0DXlPYsiMVg",
+   "deleted": false
+  },
+  {
+   "node_index": 145,
+   "dataset_instance": 216,
+   "true_id": 216,
+   "waymo_id": "kHSUgirgORb8tiHoWeQZkg",
+   "deleted": false
+  },
+  {
+   "node_index": 146,
+   "dataset_instance": 219,
+   "true_id": 219,
+   "waymo_id": "qGRGpCRw65-rOhm2bSCxEA",
+   "deleted": false
+  },
+  {
+   "node_index": 147,
+   "dataset_instance": 220,
+   "true_id": 220,
+   "waymo_id": "P0WA7slwcOnkCxOkiRhvNw",
+   "deleted": false
+  },
+  {
+   "node_index": 148,
+   "dataset_instance": 224,
+   "true_id": 224,
+   "waymo_id": "R-pqUTpPzoWCJgkglygQMg",
+   "deleted": false
+  },
+  {
+   "node_index": 149,
+   "dataset_instance": 225,
+   "true_id": 225,
+   "waymo_id": "wbQdvzhBruZxt5KADLDHQg",
+   "deleted": false
+  }
+ ],
+ "deleted_node_instances": [
+  83,
+  82
+ ],
+ "deleted_missing": [],
+ "determinism_max_abs": 0.0,
+ "n_deformable_instances": 150,
+ "render_s": 135.2
+}

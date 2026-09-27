@@ -3179,6 +3179,14 @@ student 是唯一贴近可用的（Cut_ins 跨零、激活贴 7%），但全部�
 
 Q6 的 V-JEPA 2 双流 M-C：Cinque/Lebowski 均0/3 candidate seed，WOD/NAVSIM 配对差 CI 均不覆盖0；数字与 CI 见 todo 的 Q6 表。原判格 not a candidate（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
 
+### 2026-09-27 新读数：night-queue-4 P3 真实外观行人考卷可行性（按登记判格，待人复核）
+
+WOD scene-flow 10 个登记场景，drivestudio OmniRe 默认 30 000 迭代，删掉走廊行人节点得 x⁻，null = (real, x⁺)，τ 固定为 I3 的值。
+合并 null 误翻：`ridge_late` Cinque 10/230 = 4.35% [1.30, 7.39]（场景 bootstrap）；Lebowski 1.74% [0.00, 4.35]（描述）。逐场景 Cinque 3/0/0/0/3/1/2/0/0/1（每场景 23 帧）。
+重建：全图 PSNR 24.52–33.34 dB（p3_004 低于 25 dB 清单线），17 个删除 track 缺失 0，determinism 0，head check 最大 4.8e-4。
+登记判格：误翻率 ≤ 7% **成立**；残影一半场景 0 人审可接受（+1 s 走廊无人可删，0 s / −1 s 的走廊行人已删，走廊外人行道行人按设计保留），场景 1–9 **待人看**；整体未判（**待定**）。
+描述（不进判格）：openpilot 原生 plan，τ 借用 I3 `ridge_late`：null 误翻 Cinque 11.7% [0.9, 29.6]、Lebowski 5.2% [0.4, 13.0]；x⁺ 对 x⁻ 翻转 6.1% / 2.6%。[结果表](../todos/2026-09-26-night-queue-4.md)、[结果目录](results/nq4/p3/formal30000/)。
+
 ## 45. 快通道感知：YOLO26x-seg 640 以 SAM 3.1 的 1/25 延迟拿到不劣的行人召回；SAM 3 系的延迟下限在 grounding 头，蒸馏编码器不救；召回缺口在 BEV 放置，换检测器不改变它（**待定**，P5 v0 + nuScenes 子集）
 
 2026-09-26。预登记、偏离日志与全部表在 [todos/2026-09-26-fast-perception.md](../todos/2026-09-26-fast-perception.md)，小表在 [research/results/fast-perception/](results/fast-perception/)。

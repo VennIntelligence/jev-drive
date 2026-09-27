@@ -1,5 +1,7 @@
 # P3 GPU enable — 2026-09-27
 
+> 后续（2026-09-27 23:26）：用户审过场景 0 残影并批准场景 1–9；10 场景合并门已跑完，见 [2026-09-27-p3-scenes.md](2026-09-27-p3-scenes.md)。下面的「当前状态」已过时。
+
 ## Current state — formal chain completed; resources released for scheduling
 
 Formal scene zero completed normally at 11:12:57 CST on 2026-09-27. All seven formal stage rc files are0, all done artifacts exist, SCENE0_REVIEW_REQUIRED exists, and no GPU-enable/train process remains. At root's13:30 check GPU6 was1MiB/0%; this was genuine idleness after completion, not continuing P3 work.

@@ -1,0 +1,342 @@
+{
+ "scene": 5,
+ "key": "p3_005",
+ "segment": "11846396154240966170_3540_000_3560_000",
+ "split": "training",
+ "f0": 96,
+ "t0": 9.6,
+ "v0": 4.72,
+ "target_track": "6823Cu5Z1Es-JIyBmHvABA",
+ "delete_tracks": [
+  "6823Cu5Z1Es-JIyBmHvABA"
+ ],
+ "ckpt": "/root/autodl-tmp/ujs/ckpt/nq4_p3/p3/005/checkpoint_final.pth",
+ "frames": [
+  66,
+  68,
+  70,
+  72,
+  74,
+  76,
+  78,
+  80,
+  82,
+  84,
+  86,
+  88,
+  90,
+  92,
+  94,
+  96,
+  98,
+  100,
+  102,
+  104,
+  106,
+  108,
+  110,
+  112,
+  114,
+  116
+ ],
+ "calib": {
+  "front": {
+   "K": [
+    [
+     1022.254150390625,
+     0.0,
+     474.7873229980469
+    ],
+    [
+     0.0,
+     1022.254150390625,
+     316.6211242675781
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  },
+  "front_left": {
+   "K": [
+    [
+     1028.195068359375,
+     0.0,
+     477.2098083496094
+    ],
+    [
+     0.0,
+     1028.195068359375,
+     322.99658203125
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  },
+  "front_right": {
+   "K": [
+    [
+     1022.8416137695312,
+     0.0,
+     480.0428466796875
+    ],
+    [
+     0.0,
+     1022.8416137695312,
+     323.1113586425781
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "wh": [
+    960,
+    640
+   ]
+  }
+ },
+ "extrinsics_cam_to_ego": {
+  "front": [
+   [
+    0.9999943159291765,
+    -0.0027625635198727494,
+    0.001932964597970193,
+    1.5386347086190375
+   ],
+   [
+    0.0027454768460688306,
+    0.9999576234529306,
+    0.008787130092066883,
+    -0.024394341231793928
+   ],
+   [
+    -0.0019571576906416434,
+    -0.008781773235849106,
+    0.9999595241771579,
+    2.1150940771840068
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "front_left": [
+   [
+    0.7163396788741659,
+    -0.6976509050178981,
+    0.011860826200755095,
+    1.4932419022539194
+   ],
+   [
+    0.6974830347662007,
+    0.7164320658222547,
+    0.015572773516212033,
+    0.0913950095778348
+   ],
+   [
+    -0.01936183575458978,
+    -0.0028826705264463123,
+    0.9998083864055394,
+    2.114795130058838
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ],
+  "front_right": [
+   [
+    0.7120642700229384,
+    0.7020068376374895,
+    0.012283129361501813,
+    1.4896876828664394
+   ],
+   [
+    -0.7020696805586868,
+    0.7121072654921671,
+    0.001185779697812082,
+    -0.09436909329453995
+   ],
+   [
+    -0.007914480205509807,
+    -0.009467964062021184,
+    0.9999238564308768,
+    2.1156351351584624
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "intrinsics_raw": {
+  "front": [
+   2044.5083584358413,
+   2044.5083584358413,
+   949.5746451352071,
+   633.2422462156501,
+   0.040358363932006036,
+   -0.33001662226602974,
+   0.0010402702690110032,
+   -0.0015669020781401406,
+   0.0
+  ],
+  "front_left": [
+   2056.3902134214923,
+   2056.3902134214923,
+   954.4196030939092,
+   645.9931938280515,
+   0.03308693956285257,
+   -0.33009329556765854,
+   0.003240251750927568,
+   0.0013151606060510855,
+   0.0
+  ],
+  "front_right": [
+   2045.6832826227512,
+   2045.6832826227512,
+   960.0856653382356,
+   646.2227371650151,
+   0.033290883138275176,
+   -0.29599929802405006,
+   0.0016776228215584818,
+   -0.0015923673698739012,
+   0.0
+  ]
+ },
+ "node_mapping": [
+  {
+   "node_index": 0,
+   "dataset_instance": 8,
+   "true_id": 8,
+   "waymo_id": "6823Cu5Z1Es-JIyBmHvABA",
+   "deleted": true
+  },
+  {
+   "node_index": 1,
+   "dataset_instance": 40,
+   "true_id": 40,
+   "waymo_id": "gdruij2kshZ3iRD0LYPn0g",
+   "deleted": false
+  },
+  {
+   "node_index": 2,
+   "dataset_instance": 43,
+   "true_id": 43,
+   "waymo_id": "lqrY4Uhr52_vLHtPUxVi6w",
+   "deleted": false
+  },
+  {
+   "node_index": 3,
+   "dataset_instance": 45,
+   "true_id": 45,
+   "waymo_id": "oL-Kfczg8PHZ86RoSPzqsw",
+   "deleted": false
+  },
+  {
+   "node_index": 4,
+   "dataset_instance": 53,
+   "true_id": 53,
+   "waymo_id": "vNkcNh0MRhTWinfJmdfMiw",
+   "deleted": false
+  },
+  {
+   "node_index": 5,
+   "dataset_instance": 56,
+   "true_id": 56,
+   "waymo_id": "w5U2JLNNqg0Z4C54Z8ah4Q",
+   "deleted": false
+  },
+  {
+   "node_index": 6,
+   "dataset_instance": 61,
+   "true_id": 61,
+   "waymo_id": "e_tBdbOIBem-Nf5EN01hvA",
+   "deleted": false
+  },
+  {
+   "node_index": 7,
+   "dataset_instance": 63,
+   "true_id": 63,
+   "waymo_id": "PxNkRIyUhO4tXXdxXa5n_Q",
+   "deleted": false
+  },
+  {
+   "node_index": 8,
+   "dataset_instance": 74,
+   "true_id": 74,
+   "waymo_id": "RIo-YMD_LjEeOhxJ9QpY3A",
+   "deleted": false
+  },
+  {
+   "node_index": 9,
+   "dataset_instance": 81,
+   "true_id": 81,
+   "waymo_id": "N4e9j4iQe7GVU0Ej3hvWRw",
+   "deleted": false
+  },
+  {
+   "node_index": 10,
+   "dataset_instance": 84,
+   "true_id": 84,
+   "waymo_id": "eEafHvWoFCVHkDWwAo05tA",
+   "deleted": false
+  },
+  {
+   "node_index": 11,
+   "dataset_instance": 87,
+   "true_id": 87,
+   "waymo_id": "no6BkxBbTEhTAndI3vLmkg",
+   "deleted": false
+  },
+  {
+   "node_index": 12,
+   "dataset_instance": 90,
+   "true_id": 90,
+   "waymo_id": "vcthX4ODx2Z-XI-7gbgtyw",
+   "deleted": false
+  },
+  {
+   "node_index": 13,
+   "dataset_instance": 96,
+   "true_id": 96,
+   "waymo_id": "lQQvJ1MTyd7twRWhKD2GvA",
+   "deleted": false
+  },
+  {
+   "node_index": 14,
+   "dataset_instance": 130,
+   "true_id": 130,
+   "waymo_id": "4-CAT_Jl4usCn4Y-1MshWw",
+   "deleted": false
+  }
+ ],
+ "deleted_node_instances": [
+  0
+ ],
+ "deleted_missing": [],
+ "determinism_max_abs": 0.0,
+ "n_deformable_instances": 15,
+ "render_s": 96.1
+}

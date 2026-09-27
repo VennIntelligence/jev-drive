@@ -1,0 +1,23 @@
+examinee,tau_i3,n_null_frames,scenes,null_false_flip,lo,hi,gate,passes,pair_moved,pair_slower,pair_moved_after_f0,scope
+ridge_late op-cinque temporal,0.5268521547317493,230,10.0,0.043478260869565216,0.013043478260869565,0.07391304347826087,0.07,True,0.004347826086956522,0.004347826086956522,0.00909090909090909,pooled
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.13043478260869565,,,,,0.0,,,p3_000
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.0,,,,,0.0,,,p3_001
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.0,,,,,0.043478260869565216,,,p3_002
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.0,,,,,0.0,,,p3_003
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.13043478260869565,,,,,0.0,,,p3_004
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.043478260869565216,,,,,0.0,,,p3_005
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.08695652173913043,,,,,0.0,,,p3_006
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.0,,,,,0.0,,,p3_007
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.0,,,,,0.0,,,p3_008
+ridge_late op-cinque temporal,0.5268521547317493,23,,0.043478260869565216,,,,,0.0,,,p3_009
+ridge_late op-lebowski temporal,0.7339016199111937,230,10.0,0.017391304347826087,0.0,0.043478260869565216,0.07,True,0.02608695652173913,0.02608695652173913,0.045454545454545456,pooled
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_000
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_001
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.043478260869565216,,,,,0.043478260869565216,,,p3_002
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_003
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.13043478260869565,,,,,0.0,,,p3_004
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_005
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_006
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_007
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.21739130434782608,,,p3_008
+ridge_late op-lebowski temporal,0.7339016199111937,23,,0.0,,,,,0.0,,,p3_009

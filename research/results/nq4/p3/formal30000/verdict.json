@@ -1,32 +1,63 @@
 {
-  "status": "PRIMARY_SCENE0_GATE_FAILED",
+  "status": "REGISTERED_POOLED_GATE_PASSES_PENDING_HUMAN_REVIEW",
+  "rule": "pooled Cinque ridge_late null false-flip over the registered 10 scenes <= 0.07, tau fixed at I3; scene-bootstrap CI reported; Lebowski descriptive",
   "technical_chain": "COMPLETE_RC0",
   "iterations": 30000,
-  "completed_at": "2026-09-27T11:12:57+08:00",
-  "n_scenes": 1,
-  "n_null_frames": 23,
+  "completed_at": "2026-09-27T23:25:57+08:00",
+  "n_scenes": 10,
+  "n_null_frames": 230,
   "primary_examinee": "ridge_late op-cinque temporal",
-  "primary_null_false_flips": 3,
-  "primary_null_false_flip_rate": 0.13043478260869565,
   "primary_tau_i3": 0.5268521547317493,
-  "unchanged_gate": 0.07,
-  "primary_gate_passes": false,
-  "psnr": 29.894372434934976,
-  "psnr_ped": 26.98927742395178,
-  "n_deleted": 4,
-  "deleted_missing": 0,
+  "primary_null_false_flips": 10,
+  "primary_null_false_flip_rate": 0.0434782608695652,
+  "primary_ci95_scene_bootstrap": [
+    0.0130434782608695,
+    0.0739130434782608
+  ],
+  "gate": 0.07,
+  "primary_gate_passes": true,
+  "lebowski_descriptive": {
+    "tau_i3": 0.7339016199111937,
+    "null_false_flips": 4,
+    "rate": 0.017391304347826,
+    "ci95": [
+      0.0,
+      0.0434782608695652
+    ]
+  },
+  "per_scene_cinque_null_flips": {
+    "p3_000": 3,
+    "p3_001": 0,
+    "p3_002": 0,
+    "p3_003": 0,
+    "p3_004": 3,
+    "p3_005": 1,
+    "p3_006": 2,
+    "p3_007": 0,
+    "p3_008": 0,
+    "p3_009": 1
+  },
+  "psnr_min": 24.51921318094087,
+  "scenes_below_25db_psnr": [
+    "p3_004"
+  ],
+  "deleted_missing_total": 0,
   "determinism_max_abs": 0.0,
   "head_check_max_abs_diff": 0.00048065185546875,
   "head_check_tolerance": 0.001,
-  "ghosting_review": "PENDING_HUMAN",
-  "automatic_continuation": "NONE",
-  "scenes_1_to_9_launched": false,
-  "resource_release_authorized": {
-    "gpus": [
-      1,
-      6
-    ],
-    "cpus": "180-189"
+  "ghosting_review": {
+    "p3_000": "HUMAN_ACCEPTED_2026-09-27 (nothing in the corridor to delete at +1 s; corridor pedestrians deleted at 0 s / -1 s; out-of-corridor sidewalk pedestrians stay by design)",
+    "p3_001": "PENDING_HUMAN",
+    "p3_002": "PENDING_HUMAN",
+    "p3_003": "PENDING_HUMAN",
+    "p3_004": "PENDING_HUMAN",
+    "p3_005": "PENDING_HUMAN",
+    "p3_006": "PENDING_HUMAN",
+    "p3_007": "PENDING_HUMAN",
+    "p3_008": "PENDING_HUMAN",
+    "p3_009": "PENDING_HUMAN"
   },
-  "controller_release_application": "astra_orchestrator applies registry reload and clears only P3 stale table row"
+  "native_plan": "descriptive only, native_plan.csv; not part of the gate; temporal recomputed alongside is bit-identical to the gate streams (60/60)",
+  "scenes_beyond_9": "not launched; >= 60-scene expansion needs a separate OK",
+  "scene0_only_verdict": "scene0/verdict.json (one scene, 3/23, superseded by this pooled registered gate)"
 }
