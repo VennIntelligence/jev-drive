@@ -84,6 +84,9 @@ class WLForkAgent(P5PairAgent):
         self.ctl = pursuit_from_config(str(P7))
         self.rear = float(json.loads(P7.read_text())["rear_axle_offset_m"])
         self.active, self.wl_log = None, {"job": j, "windows": wins, "end_tick": self.end_tick, "cands": []}
+        # optional no-rendering prefix: rendering off from the first tick until 2 camera frames before the first save
+        self.norender_until = (min(a for a, _ in self.save_ranges) - 2 * p4.CAM_TICKS) if self.cfg.get("wl_norender") and wins else 0
+        self.norender, self._unpatch_at = False, None
         self._ticks = open(self.out / "wl_ticks.jsonl", "w")
         self._coll = open(self.out / "collisions.jsonl", "w", buffering=1)
 
@@ -97,6 +100,42 @@ class WLForkAgent(P5PairAgent):
             {"frame": e.frame, "other_id": e.other_actor.id, "other_type": e.other_actor.type_id,
              "impulse": [e.normal_impulse.x, e.normal_impulse.y, e.normal_impulse.z]}) + "\n"))
         self._route_xy = np.array([[t.location.x, t.location.y] for t, _ in self._dense], float)
+        if self.norender_until > self._tick:
+            self._set_render(False)
+
+    def _set_render(self, on):
+        """Rendering on / off for the no-rendering prefix. While off, the leaderboard's sensor wait takes only the
+        non-camera sensors (cameras deliver nothing), and the visibility count is skipped."""
+        st = self._world.get_settings()
+        st.no_rendering_mode = not on
+        self._world.apply_settings(st)
+        si = self.sensor_interface
+        if on:
+            self._unpatch_at = self._tick + 1        # this tick was simulated without rendering: keep the patch once more
+        else:
+            self.norender = True
+            from queue import Empty
+            cams = {x["id"] for x in self.sensors() if x["type"].startswith("sensor.camera")}
+            need = [k for k in si._sensors_objects if k not in cams]
+
+            def get_data(frame):
+                out = {}
+                while any(k not in out for k in need):
+                    try:
+                        d = si._data_buffers.get(True, si._queue_timeout)
+                    except Empty:
+                        from leaderboard.envs.sensor_interface import SensorReceivedNoData
+                        raise SensorReceivedNoData("A sensor took too long to send their data")
+                    if d[1] == frame and d[0] not in cams:
+                        out[d[0]] = (d[1], d[2])
+                return out
+            si.get_data = get_data
+
+    def _visibility(self, frame, rows):
+        if self.norender:
+            self._seg_first = True                     # the first frame after rendering resumes has no image yet
+            return None
+        return super()._visibility(frame, rows)
 
     def _rear_pose(self):
         tf = self._hero.get_transform()
@@ -137,6 +176,11 @@ class WLForkAgent(P5PairAgent):
     # ------------------------------------------------------------------ per tick
 
     def __call__(self):
+        if self.norender and getattr(self, "_unpatch_at", None) is not None and self._tick + 1 >= self._unpatch_at:
+            self.sensor_interface.__dict__.pop("get_data", None)
+            self.norender, self._unpatch_at = False, None
+        elif self.norender and getattr(self, "_unpatch_at", None) is None and self._tick + 1 >= self.norender_until:
+            self._set_render(True)                    # the next world tick renders again
         control = super().__call__()                  # recorder + expert (its control is kept outside windows)
         now = GameTime.get_time()
         if self._tick < self.end_tick and p4.STOP["flag"] and p4.STOP["why"] in ("after_trigger", "passed", "stuck",

@@ -342,7 +342,7 @@ def main():
     ap.add_argument("step", choices=("forks", "ids", "prefix", "sanity"))
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
     ap.add_argument("--set", default="ba", choices=tuple(SRC))
-    ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"))
+    ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"), help="generation root (per-set subdirs)")
     a = ap.parse_args()
     if a.step == "forks":
         print(json.dumps(forks(), indent=1, default=str))

@@ -2,14 +2,14 @@
 # WL fork generation (todos/2026-09-28-wm-loop.md): the fork runs of one stage under scripts/wl_fork_agent.py, one
 # b2d_run chain per GPU, every chain working through the sets in turn (claims make chains share a set safely).
 #   scripts/tmux_run.sh wl-gen scripts/wl_gen.sh      env: STAGE=pilot1|pilot10|full GPUS="1 2" WORKERS=6 CORES=3
-#                                                          SETS="ba p6" TFV6=0|1 PRE_CAMS=11 BLOCK=1200
+#                                                          SETS="ba p6" TFV6=0|1 NORENDER=0|1 PRE_CAMS=11 BLOCK=1200
 # Needs runs/wl/{forks.parquet, jobs.json, forks-<set>.xml} (python -m jevdrive.wl forks). Out: runs/wl/gen/<set>/
 # (b2d_run layout), log.txt and chain-gpu<g>.log in runs/wl/gen/. Resumable: re-run skips done/<id>.json.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
 R=$DATA_DIR/runs/wl
-OUT=$R/gen
+OUT=${OUT:-$R/gen}
 PY=$DATA_DIR/envs/carla/bin/python
 STAGE=${STAGE:-pilot1}
 read -ra G <<< "${GPUS:-1}"
@@ -18,16 +18,16 @@ W=${WORKERS:-6} CORES=${CORES:-3} BLOCK=${BLOCK:-1200}
 mkdir -p "$OUT"
 echo "gen $$" >> "$OUT/pids.txt"
 exec > >(tee -a "$OUT/log.txt") 2>&1
-echo "$(date '+%F %T') wl-gen start: stage $STAGE, sets [${S[*]}], GPUs [${G[*]}] x $W, $CORES cores each, TFV6=${TFV6:-0}"
+echo "$(date '+%F %T') wl-gen start: stage $STAGE, sets [${S[*]}], GPUs [${G[*]}] x $W, $CORES cores each, TFV6=${TFV6:-0} NORENDER=${NORENDER:-0} OUT=$OUT"
 
 tree() { [[ $1 == p6 ]] && echo "$DATA_DIR/third_party/simlingo/Bench2Drive" || echo "$DATA_DIR/third_party/Bench2Drive"; }
 pyenv() { [[ $1 == p6 ]] && echo "$DATA_DIR/envs/p5v1-pdm/bin/python" || echo "$DATA_DIR/envs/scout-tfv6/bin/python"; }
 srcagent() { [[ $1 == p6 ]] && echo "$DATA_DIR/runs/p6/agent-p6.json" || echo "$DATA_DIR/runs/p5v1/agent-ba.json"; }
 for s in "${S[@]}"; do   # the source recorder config + the WL job table (TFV6=0 drops the TFv6 shadow)
-    python3 - "$(srcagent "$s")" "$R/agent-$s.json" "$R/jobs.json" "${TFV6:-0}" "${PRE_CAMS:-11}" <<'PYEOF'
+    python3 - "$(srcagent "$s")" "$R/agent-$s.json" "$R/jobs.json" "${TFV6:-0}" "${PRE_CAMS:-11}" "${NORENDER:-0}" <<'PYEOF'
 import json, sys
 c = json.load(open(sys.argv[1]))
-c.update(wl_jobs=sys.argv[3], wl_pre_cams=int(sys.argv[5]))
+c.update(wl_jobs=sys.argv[3], wl_pre_cams=int(sys.argv[5]), wl_norender=sys.argv[6] == "1")
 if sys.argv[4] != "1":
     c["tfv6_model_dir"] = ""
 json.dump(c, open(sys.argv[2], "w"))
