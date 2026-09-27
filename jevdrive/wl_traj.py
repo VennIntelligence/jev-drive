@@ -77,7 +77,7 @@ def op_extended(op_plan, t=T):
 
 
 def candidates(op_plan, route_ego, v0, t=T):
-    """{action: (len(t), 2) ego points at times t}. op_plan: (20, 2) ego plan (None -> op-derived actions are skipped);
+    """{action: (len(t), 2) ego points at times t}. op_plan: (20, 2) ego plan (None -> the route centre line at v0);
     route_ego: the dense route ahead in ego coordinates (n, 2), starting near the ego; v0: speed (m/s)."""
     T = np.asarray(t, float)
     out = {}
@@ -86,6 +86,8 @@ def candidates(op_plan, route_ego, v0, t=T):
     route = route[route[:, 0] > 0.1] if (route[:, 0] > 0.1).sum() >= 2 else route   # the part ahead of the rear axle
     out["hold"] = _along(route, _speed_profile(v0, 0.0, T))
     out["brake_hard"] = _along(route, _speed_profile(v0, BRAKE_DECEL, T))
+    if op_plan is None:                                # no openpilot plan (random windows): the route at the current speed
+        op_plan = _along(route, v0 * OP_T)
     if op_plan is not None:
         op, s_op = op_extended(op_plan, T)
         out["op"] = op

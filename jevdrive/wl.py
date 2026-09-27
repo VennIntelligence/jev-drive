@@ -137,6 +137,8 @@ def forks(branch_s: float = 3.0, cont_s: float = 20.0) -> dict:
                              "v0": float(pp.v[k]), "src_frame": fn, "has_op": fn in plans[r.set],
                              "split": "eval" if r.base_id in sp["eval"] else "train"})
     f = pd.DataFrame(rows)
+    n_no_op = int((~f.has_op).sum())
+    f = f[f.has_op].reset_index(drop=True)             # the op-derived branches need openpilot's own plan at the fork
     f["fork_id"] = np.arange(len(f))
     runs = f.loc[f.index.repeat(len(ACTIONS))].reset_index(drop=True)
     runs["action"] = np.tile(ACTIONS, len(f))
@@ -162,7 +164,7 @@ def forks(branch_s: float = 3.0, cont_s: float = 20.0) -> dict:
     rundir("split.json").write_text(json.dumps(sp, indent=1))
     info = {"sources": len(src), "missing_source_runs": miss, "fork_points": len(f), "runs": len(runs),
             "by_set_split": f.groupby(["set", "split"]).size().to_dict().__repr__(),
-            "by_k": f.k_name.value_counts().to_dict(), "op_plan_missing": int((~f.has_op).sum()),
+            "by_k": f.k_name.value_counts().to_dict(), "dropped_no_op_plan": n_no_op,
             "routes_by_cls_split": f.groupby(["cls", "split"]).base_id.nunique().to_dict().__repr__()}
     rundir("forks_info.json").write_text(json.dumps(info, indent=1, default=str))
     return info
