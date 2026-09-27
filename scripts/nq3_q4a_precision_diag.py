@@ -168,10 +168,9 @@ if EXAM_MODE:
         P64["prior"][ev] = p[ev].reshape(-1, 20, 2).cpu().numpy()
         P64["mc"][ev] = (p + d)[ev].reshape(-1, 20, 2).cpu().numpy()
         lams.append(float(lam))
-    full = lambda k: np.where(np.isin(np.arange(n), ref["rows"])[:, None, None], 0, np.nan).astype(np.float32)  # noqa: E731
     preds = {}
     for k, arm in ((f"prior [{M_}]", "prior"), (f"M-C pair [{M_}]", "mc")):
-        a = full(k)
+        a = np.full((n, 20, 2), np.nan, np.float32)
         a[ref["rows"]] = ref[k]
         preds[f"stored {k}"] = a
         preds[f"fp64 {k}"] = P64[arm]
