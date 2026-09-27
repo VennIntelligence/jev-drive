@@ -78,6 +78,7 @@ def main():
     ap.add_argument("--sky-gpu", type=int, required=True)
     ap.add_argument("--min-free-gb", type=float, default=150)
     ap.add_argument("--reserve-gb", type=float, default=15, help="kept for the running P3 scenes' checkpoints")
+    ap.add_argument("--downloads", type=int, default=3, help="objects downloading at once")
     ap.add_argument("--first", type=int, default=10)
     ap.add_argument("--last", type=int, default=65)
     a = ap.parse_args()
@@ -161,42 +162,50 @@ def main():
     sky_t = threading.Thread(target=sky_worker)
     sky_t.start()
     stop_reason = None
-    with ThreadPoolExecutor(len(cpus)) as ex:
+
+    def fetch_then_prep(k):
+        """Download (if needed) on a downloader thread, then hand the segment to the prep pool."""
+        raw = RAW / f"segment-{rows[k]['name']}_with_camera_labels.tfrecord"
+        if not complete(k, int(rows[k]["n_frames"])) and not raw.exists():
+            t0 = time.time()
+            part = raw.with_suffix(".part")
+            r = subprocess.run([str(GCLOUD), "storage", "cp", rows[k]["gcs"], str(part)], env=env_gc,
+                               capture_output=True, text=True, timeout=3600)
+            if r.returncode:
+                part.unlink(missing_ok=True)
+                stats["failed"].append(k)
+                log(f"FAILED download {k:03d}: {r.stderr[-500:]}", event="error", k=k, stage="download")
+                with _lock:
+                    inflight.discard(k)
+                return
+            part.rename(raw)
+            sz, dt = raw.stat().st_size, time.time() - t0
+            log(f"download {k:03d} {sz / 1e9:.2f} GB in {dt:.0f} s ({sz / 1e6 / dt:.1f} MB/s)",
+                event="download", k=k, bytes=sz, s=dt)
+            stats["downloaded"] += 1
+        ex.submit(prep_one, k)
+
+    # gcloud gets ~3.6 MB/s per object through Clash; a few objects in flight fill the shared link instead.
+    with ThreadPoolExecutor(len(cpus)) as ex, ThreadPoolExecutor(a.downloads) as dl:
         for k in todo:
-            name = rows[k]["name"]
             if (P / f"prep_{k:03d}.done").exists():
                 sky_q.put(k)
                 continue
-            while True:     # admission: disk floor after in-flight segments, and at most 2 downloads ahead of prep
+            while True:     # admission: at most `downloads` segments waiting beyond the prep cores
                 with _lock:
                     need = (len(inflight) + 1) * (PROC_GB + RAW_GB) + a.reserve_gb
                     busy = len(inflight)
-                if busy < len(cpus) + 2:
+                if busy < len(cpus) + a.downloads:
                     break
                 time.sleep(10)
-            if free_gb() - need < a.min_free_gb:
+            if free_gb() - need < a.min_free_gb:     # disk floor after every in-flight segment lands
                 stop_reason = f"disk floor: {free_gb():.0f} GB free, next segment needs {need:.0f} GB above {a.min_free_gb} GB"
                 log(f"STOP admission at scene {k:03d}: {stop_reason}", event="stop", k=k, reason=stop_reason)
                 break
-            raw = RAW / f"segment-{name}_with_camera_labels.tfrecord"
-            if not complete(k, int(rows[k]["n_frames"])) and not raw.exists():
-                t0 = time.time()
-                part = raw.with_suffix(".part")
-                r = subprocess.run([str(GCLOUD), "storage", "cp", rows[k]["gcs"], str(part)], env=env_gc,
-                                   capture_output=True, text=True, timeout=3600)
-                if r.returncode:
-                    part.unlink(missing_ok=True)
-                    stats["failed"].append(k)
-                    log(f"FAILED download {k:03d}: {r.stderr[-500:]}", event="error", k=k, stage="download")
-                    continue
-                part.rename(raw)
-                sz = raw.stat().st_size
-                log(f"download {k:03d} {sz / 1e9:.2f} GB in {time.time() - t0:.0f} s ({sz / 1e6 / (time.time() - t0):.1f} MB/s)",
-                    event="download", k=k, bytes=sz, s=time.time() - t0)
-                stats["downloaded"] += 1
             with _lock:
                 inflight.add(k)
-            ex.submit(prep_one, k)
+            dl.submit(fetch_then_prep, k)
+        dl.shutdown(wait=True)
     sky_q.put(None)
     sky_t.join()
     done = sorted(k for k in range(a.first, a.last + 1) if (P / f"prep_{k:03d}.done").exists() and (D / f"sky_{k:03d}.done").exists())
