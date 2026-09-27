@@ -3477,3 +3477,23 @@ Q4b NAVSIM2Hz seed0 top10重叠：Cinque=0.20、Lebowski=0.20，均低于0.30，
 偏离（用户授权，写于任何留出 / navtest 数字之前，todo Q4 2026-09-27 20:50）：λ_r = 0 复现检查容差 1e-3 → 1e-2 m，另要求 P5 判卷格与已存 M-C 全等；其余不变。复现：30 / 30 fold λ 相同、max 1.11e-3 m，判卷格 6 / 6 全等。λ*（navtrain 留出 PDMS 选）6 / 6 为 10（候选网格上端）。
 navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.01 / −0.09，Lebowski −0.23 / −0.12 / −0.20（门 ≥ −1.0，6 / 6 满足）。P5 v1 BA 行人翻转：Cinque 0.352 / 0.313 / 0.365 对门 0.347 / 0.349 / 0.339，Lebowski 0.286 / 0.276 / 0.305 对门 0.333 / 0.313 / 0.335。
 登记判格：Cinque **随 seed 变**（seed 0、2 成立，seed 1 不成立），Lebowski **能力包不成立**；Cinque 合并判格不是「成立」，不写 PASS，不加 `mc_real0` 闭环臂。描述：WOD RFS cluster 配对差 +0.003 到 +0.009（CI 约 ±0.05），激活率 0；I3 车辆翻转约束版 0.69–0.70，与 prior 0.70 同、高于 M-C 0.59–0.69。[结果表](../todos/2026-09-26-night-queue-3.md)、[小表](results/nq3/q4a/)、[图](figs/nq3-q4a-zero-constraint.png)。
+
+## 54. W：冻结 latent（openpilot `temporal` ⊕ V-JEPA 2 `mean`）上的 action-conditioned 世界模型，失败的原因是训练日志里的动作—场景因果混淆，不是 latent 装不下 hazard；JEPA + openpilot 主线不搁置，改用 CARLA 动作分叉数据重做（**待定**，P5 v1 两集 + P6 v0，3 seed）
+
+2026-09-26 登记、2026-09-27 诊断。登记与原判格在 [night-queue-4 的 W 节](../todos/2026-09-26-night-queue-4.md)（「2026-09-26 新读数：W」），诊断在 [tmp/2026-09-27-wm-loop-diagnosis.md](../tmp/2026-09-27-wm-loop-diagnosis.md)（Mac 本地），小表 [results/nq4/w/](results/nq4/w/) 与 [results/nq4/wdiag/](results/nq4/wdiag/)，代码 `jevdrive/nq4_w.py`、`jevdrive/nq4_wdiag.py`。
+下一轮登记：[todos/2026-09-28-wm-loop.md](../todos/2026-09-28-wm-loop.md)（WL，2026-09-27 用户批准）。
+
+**原判格（GPT 按登记判，2026-09-26）**：判据 1（x⁺ / x⁻ 配对分离，AUC ≥ 0.70 且 ≥ null + 0.10）只有障碍过（2 s 0.712），行人 0.541、cut-in 0.694 不过；判据 2（动作敏感 ≥ 70%）纵向刹停 > 保持 6.5%、横向 30.5%，不过。
+按登记读法原先写的是：「1 不过 → 这套 latent 的世界模型推演不出 hazard，JEPA + openpilot 训策略这条路先搁置」。
+
+**2026-09-27 就地修正（诊断，代码与已存 run 原样复读 + seed 0 重训四个变体，`full` 变体逐位复现纵向 6.45%）**：上面那句读法的前提不成立，改为下面三条。
+1. **行人与 cut-in 的判据 1 是做不到的题**：配对锚点里 x⁺ 在 t₀ + h 真有行人在走廊的只有 8%，拿真实标签当读数的配对 AUC 上限是 0.54（cut-in 1 s / 2 s 0.60 / 0.65），低于 0.70 的门槛。
+   只看「x⁺ 标签为真、两边 ego 速度差 < 0.5 m/s」的配对（只读 ego 速度 AUC 0.50），W 的行人 probe 在真实 latent 上 0.90、在预测 latent 上 0.88；按路线分折、只在 P5 行人路线上重训的 probe：W latent 0.76（BA）/ 0.81（PDM），
+   其中 V-JEPA 块 0.77 / 0.82、openpilot `temporal` 0.64 / 0.57（与第 42 条一致），Qwen `L18_last` 0.87、YOLO image-plane token 0.82。所以「行人不在 latent 里」不成立，latent 读得出行人但比 Qwen / 检测 token 弱一档。
+2. **预测器会推演 ego 自身运动，hazard 前瞻有限**：latent MSE 比 persistence 低 60%，打乱未来动作后误差涨到 2.6–2.9 倍；速度匹配的配对上，障碍 2 s 把 persistence → oracle 的差距补回约六成，cut-in 约三成，行人没有差距可补。
+3. **动作效应反向的原因是数据**：专家日志里，同样的 (d_front, v) 下接下来 2 s 刹车（ā ≤ −1.5 m/s²）的窗口 2 s 后前车比匀速窗口近 6.9–10.4 m（运动学应远 5.3–5.9 m），车道空着时接下来刹车的窗口 2 s 后被占概率 47.7% 对 26.1%。
+   预测器学到的正是它：刹车 − 保持的预测 d_front −4.5 m（运动学 +9.2），同时预测车速 100% 朝对的方向降。只用 V-JEPA 块重训反向更重（1.6%），只用 `temporal` 12.6%，所以「openpilot 的策略意图 token 加重混淆」不成立。
+   任何只用「看见了才反应」的策略日志（包括 openpilot 自己的 on-policy 日志）训练、把未来动作当输入的预测器都会学到这个相关。
+
+**对选型的含义**：JEPA + openpilot 的闭环主线不搁置；唯一要改的是数据——动作与场景统计独立的干预数据（CARLA 同状态动作分叉 + 随机干预窗口），latent 与预测器结构不变，W 原版作阳性对照（WL 判据 1）。
+**会推翻本条的证据**：WL 里在干预数据上训练的同一预测器，刹停 > 保持仍 < 85%（那就是 latent 本身对 ego 运动后果不敏感，不是数据）；或 W 原版在 WL 的分叉点上也 ≥ 85%（那诊断的第 3 条要重写）。

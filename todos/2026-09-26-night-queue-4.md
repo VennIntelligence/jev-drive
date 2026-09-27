@@ -428,6 +428,10 @@ P1 与 main 授权的 O fallback 均已完成，待 main 复核；原 O 触发�
 
 登记读法原文：“1 不过 → 这套 latent 的世界模型推演不出 hazard，JEPA + openpilot 训策略这条路先搁置，写进 decisions。”按本次判格落入此分支。**GPT 按登记判格，待人复核；状态：待定。**
 
+- 2026-09-27 [main] 就地修正（诊断之后，[decisions 第 54 条](../research/decisions.md)）：上面「按本次判格落入此分支」即「latent 推演不出 hazard、主线搁置」的读法不成立。
+  判格本身不变（两条判据都没过），但行人与 cut-in 的判据 1 门槛高于标签本身的配对 AUC 上限（0.54 / 0.60–0.65），在行人真在走廊、ego 速度一致的配对上 latent 读得出行人（0.76–0.90）；
+  判据 2 的反向来自专家日志里「未来刹车 ⇔ 未来前车更近」的因果混淆（同 (d, v) 格内近 7–10 m），换 latent 块不改善。主线不搁置，改用 CARLA 动作分叉数据重做：[todos/2026-09-28-wm-loop.md](2026-09-28-wm-loop.md)。
+
 ### 2026-09-27 新读数：K 的能力读数（按登记判格，待人复核）
 
 来源：K-prep 已存的开环导出 `runs/nq4/k/openloop/{ba,i3,p6}_<级>.npz`，不重拟合、不重导出；判卷代码原样（P5：`p5_exam.exam` + `reactivity_mc.criteria`；I3：`elicit_i3.exam` 的判卷，即去掉 TFv6 列的 `p5_exam.exam`；P6：night-queue-3 规则 7 的 `nq3_p6.judge_one`，同 Q1）。
