@@ -157,6 +157,10 @@ box 现在基本空着（7 卡各占 7–20 GB / 96 GB，load 28 / 175 核，线
 - 2026-09-26 17:45 CST [C] 链重启（17:42，写于任何 pilot 数字之前）：GPU 6 被五个 lane 的作业挤满（86–88 / 96 GB），Qwen 两个分片载入即 OOM、Q2 一折要 6 min。改动：Q2 pilot 先只跑 Cinque（READY 按 Cinque 选），Lebowski 放到 READY 之后（`q2_pilot_leb`）；
   Qwen 改一个进程 12 个 loader worker，载入 OOM 就等 2 min 重试（最多约 7 h）；GPU 步骤都加了同样的 OOM 重试。P5 读出的子集核对（Cinque、fold 0）已过：prior 0、M-C 2.3e-5 m、`cls_late` 3.2e-5 m、E5 student 6 mm（MLP 训练在 GPU 上不逐位确定）。
 
+### Q1 描述性补充结果
+
+- 2026-09-27 08:45 CST [GPT/T4] `research/results/nq3/q1/tau_alt.csv`：同天气、expert 保持车道的 x₀₁ − x₀₀ 对上各考生 |Δ_lat| 的 95 分位作为 τ_lat_alt，其余按规则 7 重算合并逐帧 bypass 翻转与路线 bootstrap CI；看过 smoke 后加的描述性读数，不进判格。
+
 ### Q2. 在 openpilot 冻结特征上激发绕行
 
 特征 = Cinque / Lebowski `temporal`（主），Qwen `L18_last`、V-JEPA 2 `mean` 作 backbone 对照（只跑 A1、A3）。每臂 3 seed × 2 模型。

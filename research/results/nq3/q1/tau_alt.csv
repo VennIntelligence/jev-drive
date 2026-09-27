@@ -1,0 +1,19 @@
+examinee,readout,n_null_frames,null_routes,tau_lat_alt,n_frames,routes,bypass_flip,lo,hi,note
+openpilot cinque native plan,y at 3 s,1906,21,1.5966599583625793,3920,40,0.12295918367346939,0.091598564714005,0.15679769759134002,descriptive; does not enter rule-7 judgments
+openpilot lebowski native plan,y at 3 s,1906,21,1.7059569954872131,3920,40,0.10816326530612246,0.0767388671200176,0.1429670351249451,descriptive; does not enter rule-7 judgments
+TFv6 waypoint,y at 2 s (horizon < 3 s),1906,21,0.5275499820709229,3920,40,0.12066326530612245,0.09284411052395009,0.15006966947110578,descriptive; does not enter rule-7 judgments
+TFv6 target speed,y at 3 s,1906,21,,0,0,,,,longitudinal only
+ridge_late [cinque],y at 3 s,1906,21,1.4490803480148315,3920,40,0.09209183673469387,0.06871973963880582,0.11630369976391329,descriptive; does not enter rule-7 judgments
+M-C pair [cinque],y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+E5 student B [cinque],y at 3 s,1906,21,1.3515096604824066,3920,40,0.09362244897959184,0.06966763281839052,0.11857824624539638,descriptive; does not enter rule-7 judgments
+ridge_late [lebowski],y at 3 s,1906,21,1.3977776169776917,3920,40,0.11428571428571428,0.08979037398671105,0.14048170998658502,descriptive; does not enter rule-7 judgments
+M-C pair [lebowski],y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+E5 student B [lebowski],y at 3 s,1906,21,1.416236251592636,3920,40,0.11862244897959184,0.09317232086239695,0.14527527998629272,descriptive; does not enter rule-7 judgments
+cls_late [cinque],y at 3 s,1906,21,1.4348834455013275,3920,40,0.10408163265306122,0.08095969543992668,0.1303250462421031,descriptive; does not enter rule-7 judgments
+cls_late [lebowski],y at 3 s,1906,21,1.538910061120987,3920,40,0.11938775510204082,0.09879806285119022,0.14069975371619778,descriptive; does not enter rule-7 judgments
+SparseDriveV2,y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+ZTRS,y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+DrivoR,y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+WA-JEPA,y at 3 s,0,0,,0,0,,,,not read (no matched x01/x00 keep predictions)
+Alpamayo 1.5,y at 3 s,1853,21,3.2787984848022447,3623,40,0.09301683687551753,0.06846929093537138,0.12021437550757044,descriptive; does not enter rule-7 judgments
+PDM-Lite expert (future),y at 3 s,1906,21,0.8963948488235474,3920,40,0.24821428571428572,0.20679422243712736,0.28936798657968443,descriptive; does not enter rule-7 judgments
