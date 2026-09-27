@@ -42,3 +42,11 @@
 三个K0正式runner均已出现：seed0/GPU0=360626，seed1/GPU6=361390，seed2/GPU5=363521，各6worker、各6个claims。seed0/1最新真实heartbeat已到405/234 ticks；seed2刚开始第一个CARLA。seed0已完成计数10来自复用，**不是新批量已经新增完成10条**。现场pids4431、CPU21/175；GPU0/6已24.1/19.7GB并各3/2个CARLA，GPU5第1个CARLA起步，原runner继续20秒错峰铺满。
 
 控制器注册`43ab2c0`已部署并仅迁移controller/supervisor，PID361054/startticks802869930，`GK RUNNING actual_gpus=[0,1,5,6]`；P3资源声明为空。B尾路GPU2/4和GPU1 K1 pilot保持原身份，GPU3暂无新的已完成K gate可分配。新持久batch每轮读取真实K门，一通过就给空卡排该层seed，不等K0三个seed全结束。G全量的原prep/科学门没有伪造；G pilot仍原队列继续。
+
+## 14:51CST 静默空卡故障与修复
+
+K1原pilot和READY追加门均PASS（blocked5/ref5、moving_target_median3.414，failed=[]）；GPU2/3/4闲、pids7437，不是科学门失败。真实原因是B虽14:01:21 DONE，旧SCH行仍占300–389/60–119等大块；新K0三段与其他pilot预留叠加后，`free_block`返回None，原batch代码静默continue。现场撤销前None，核完整B DONE/结果、无B链953934/任何B output writer后仅撤B表行，立即变合法index60；未杀953938孤立status watcher。
+
+原dispatcher下一轮14:53即起K1 seed0/GPU2 worker463944；14:55起seed1/GPU3 worker468093。为防重复故障新增`cx_gk_batch_v2.py`：自动回收真实完成且无writer的B旧预留；每卡具体WAIT写events及admission.json；使用原注册400线程/worker、真实claims衡量未兑现workers，不把尾部空闲worker重复当未来负载；同一16000/165/88GB门下动态选1–6worker。GPU1只预留其尚未兑现的两pilot槽，已居民不再双算。supervisor重启仅调度器并认领原worker身份，不停止实验。
+
+新增4项回归通过：7437真实快照可给三空卡各6worker、预算不足动态降worker但不越16000、尾部worker不虚占、B有活writer绝不回收、无端口WAIT可持久且去重。旧live dispatcher/bash均不修改；新版本迁移只精确旧dispatcher PID，保留K0/K1正在跑的worker。
