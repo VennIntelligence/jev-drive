@@ -108,6 +108,12 @@
       我们每次新起的 server 在载图时都因 RenderThread 超时崩溃，13 次里 12 次）。
 - [F] 2026-09-26 17:55 CST smoke 借 **GPU 4**（此刻 0 个 CARLA、显存 26 MiB），≤ 2 个 server，核 `taskset -c 110-113`（lane B 扩卡前空着的段；K 用 146-149）。server index 起初用 480–481，它的 TM 端口（8000 + 50 i）正是 lane A index 600–601 的 RPC 端口，server 起不来，17:56 改到 **150–151**（规则：i、i + 120、i − 120 都不能落在别的 lane 的 index 段里）。
 
+- [user] 2026-09-27 21:30 CST **范围决定（用户，经 main 转达）**：G 现在只跑模型与执行层都已完整的榜单考生——BridgeDrive、SimLingo、TFv6、BLUE（作者执行层）加 PDM-Lite 对照。
+  基于 openpilot 的 G 考生（openpilot Cinque 原生、M-C、Q2 绕行 head、K3 seen 阳性对照 `k3seen`）**撤掉，不是暂缓**：openpilot 还没调好，现在跑没有用，明天由用户决定 openpilot 怎么办。
+  由此阳性对照不在本轮，读法第 4 条「K3 seen 版不位置记忆 → 主读数不下结论」这一支本轮无数可判，主读数照登记报、判格按原文。
+  执行顺序：`orig` + `ghost` seed 0 → seeds 1–2 → `shift`（1 seed）→ `swap`（1 seed，填尾）；分级 pilot（1 → 10 → 全量）照旧，按「考生 × 世界」各自挡，失败只挡这一格。
+  执行：`scripts/nq4_g_lane.py`（tmux `jev:nq4-g`，状态 `runs/nq4/g-lane/`），取代 `nq4_gk.sh chain`；经过见 `tmp/2026-09-27-gk-restart.md`。
+
 ## K. 材料包阶梯：分数动、能力不动
 
 同一个 openpilot Cinque `temporal` 读出，逐项加榜单配方，每一级同时报榜单分和能力读数。
@@ -195,6 +201,9 @@
 - [K] 2026-09-26 18:29 CST 拟合与检查（`$DATA_DIR/runs/nq4/k/checks/`）。lead 重跑的 `temporal` 对已存 `op_streams_vis` 逐位相同（BA 858 流 46 703 行、P6 605 流 37 317 行，差 0）。R₁ / R₂ / 全量三份读出共 1.5 min（GPU 2）；numpy apply 对拟合 K0 ≤ 4e-5 m、K1 / K3 为 0。全量 K0 对 lane B `heads.npz`：同一组 λ（3e-5 / 0.1），预测最大差 0.89 mm（≤ 1e-3 m，过；病态的 `ridge ego` 让 We 差到 0.019，两边都走 CPU `eigh`，剩下的是卡上 float32 gram 的累加次序）。GPU / CPU 对照（R₁）：只有 M-C 放卡上时 K0 / K1 差 0、K3 差 5e-7 m（过），M-C 段 2.7 s 对 6.2 s；若 ridge 的 gram 也放卡上，K0 差到 3.8 cm，这就是 17:58 条把 ridge 留在 CPU 的原因。前后墙钟：GPU 6 上的试拟合（全部在忙卡上）304 s → 现在每折 14 s（速度头的 L-BFGS 10 s 占大头）。K3 的常数 c 的纵向分量：R₁ 2 s −0.12 m / 4 s −0.59 m，R₂ −0.14 / −0.58 m（M-C 的 λ 两折都落在网格下沿 0.1，与原登记网格一致，照报）。闭环等价检查 18:28 开跑：CARLA 最少的卡是 GPU 2（4 个 server），借它开 2 个（index 170–179），核 146–149。
 - [K] 2026-09-26 18:37 CST 闭环等价检查第一次开跑，3 条路线里 2 条的 CARLA 在 1–2 min 内段错误（UE4「GameThread timed out waiting for RenderThread after 60 s」）：2 个 server、route client 和 head server 挤在 4 个核上，渲染线程饿死。已按记录的 PID 停掉，改为 1 个 server 顺序跑（4 级 × 3 条路线，估 1.5 h），仍在 GPU 2、核 146–149。另：用户新规定的「基础设施卡」写在 `runs/sched/table.tsv`，此刻该文件还不存在，所以沿用 brief 的「CARLA 最少的卡、≤ 2 server」。
 
+- [user] 2026-09-27 21:30 CST **范围决定（用户，经 main 转达）**：K2 / K3 的批量、全部 K seen 运行（K0 / K3 seen）**撤掉**（openpilot 读出还没调好）；正在跑的 K1 unseen seed 2 跑完即止，卡随后释放。
+  所以判据 2 / 3（背题溢价）本轮不判；判据 1 的 DS 半边只有 K0 / K1 的 unseen 三 seed。K2 / K3 的 pilot 失败（blocked）经只读诊断是真实行为不是接线 bug，保持 FAILED，证据在 `tmp/2026-09-27-gk-restart.md`。
+
 ## O. B2D 训练数据与 220 评测路线的重叠（只读，CPU）
 
 Bench2Drive 官方训练集（base / full）与 220 条评测路线逐条比：同 town、同 scenario 类、触发点距离 < 30 m 的训练 clip 数；按榜单族实际用的训练集（TFv6 / BridgeDrive 用 LEAD 数据、SimLingo / BLUE 用 SimLingo 数据集，执行员先查清各自的数据来源）分别报。
@@ -272,6 +281,8 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
   4. **配对**：主配对 = X − `q2`（同一交叉拟合 head 直接开，G 的 `q2` 考生的 orig 运行，同路线同 seed），两者只差「执行用几何还是用学出来的横向」；lane B 的 CL5（全量 head，看过部分路线）、CL5d、PDM-Lite 并列作描述。判据文字不变（配对差 CI 下界 > −10 pp）。
   5. **规则 8**：3 条障碍路线（2534 Accident、2668 ParkedObstacleTwoWays、1790 HazardAtSideLane，orig，seed 0），每个请求 dump：(a) server 的 `temporal` / ego 经离线 `Head(dir)` 得到的轨迹与模式逐位相同；
      (b) 每个 plan 的（模式、head 轨迹、位姿）经离线 `XState` 重放得到的路径与交给 P7 的逐位相同；(c) `fold.json` 的选折符合规则。不过就停。
+
+- [user] 2026-09-27 21:30 CST **范围决定（用户，经 main 转达）**：X **撤掉**（基于 openpilot 的 Q2 模式头，openpilot 还没调好），明天由用户决定。
 
 ## P. 行人的真实数据（2026-09-26 18:30 补，专家回复第 1 问）
 
