@@ -151,15 +151,21 @@ class Server:
                 pass
 
     def stop(self):
-        try:
-            os.killpg(self.proc.pid, signal.SIGTERM)       # our own group: setsid made pgid == our child's pid
-            self.proc.wait(20)
-        except (OSError, subprocess.TimeoutExpired):
+        # Our own group: setsid made pgid == our child's pid. The wrapper dies at once on SIGTERM, but the binary's
+        # graceful shutdown can take minutes with VRAM still held, so wait for the whole group, then SIGKILL it.
+        for sig, wait in ((signal.SIGTERM, 30), (signal.SIGKILL, 30)):
             try:
-                os.killpg(self.proc.pid, signal.SIGKILL)
+                os.killpg(self.proc.pid, sig)
             except OSError:
-                pass
-            self.proc.wait()
+                break
+            deadline = time.time() + wait
+            while time.time() < deadline:
+                self.proc.poll()
+                try:
+                    os.killpg(self.proc.pid, 0)
+                except OSError:
+                    return
+                time.sleep(1)
 
 
 def cmd_probe(a):
