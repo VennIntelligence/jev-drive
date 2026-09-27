@@ -148,3 +148,5 @@ root负责验收、协调和范围内Git检查。
 ## 2026-09-27 B 尾部补位核查
 
 见[work-conserving记录](2026-09-27-work-conserving.md)。BLUE09:40:21 CST自然220/220完成；SimLingo最后一臂已五卡各6worker，PID935741/936497/937705/939009/940835。之前整臂屏障造成尾部空闲属实；本次未实施跨臂接管。最后空QUEUE触发controller解析异常，新增v2只修空白记录并迁移唯一控制器，保持B/P3进程。B后继QUEUE空，17组合已完成，未知科学门继续WAIT，不新增无任务调度器。
+
+B控制器修复 `d55d9ed` 已Box部署；唯一v2 PID954435/startticks801438503，supervisor954433，jev:cx-controller-v2。B原链/五runner未变。09:45CST实际五batch GPU97–100%（GPU5 96%），pids14965、CPU48核；NO_READY_WORK准确反映后继队列空，P3 GPU1/6保留。详见work-conserving部署验收；这是自然换臂负载，不宣称跨臂优化已实施。

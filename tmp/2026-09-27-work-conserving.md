@@ -25,3 +25,11 @@
 迁移只终止精确身份879209/startticks801166192（无trap的旧supervisor）与879213/startticks801166193（旧controller）。不向进程组发信号，全部B/P3 worker和原链保留。新控制器沿用 `runs/sched/controller/{state,events,heartbeat,STATUS}`，仍只有一个owner。
 
 验证：`python3 -m unittest discover -s scripts -p test_cx_controller_v2.py`通过33项（原回归继承及3个新场景）：真实单换行QUEUE可完成tick、写出ONLINE/NO_READY_WORK同时保留RUNNING；混合空行不绕过PASS/SKIP/DONE；非空坏行仍报错。部署证据待下面追加。
+
+## 部署验收
+
+代码 `d55d9ed` 已 main push、Box fetch核对仅新增文件后ff-only pull；两端33项测试通过。新窗口`jev:cx-controller-v2`，supervisor954433、controller954435/startticks801438503，01:44:56UTC（09:44:56CST）首次ONLINE。迁移journal在`runs/sched/controller/migration.jsonl`；B链953934及表中五runner逐一验证原startticks仍相同。
+
+09:45CST后测：pids14965（计划16000、硬限20480）、实际CPU48/175核；GPU0/2/3/4/5显存51.4/52.7/43.6/38.9/31.6GB，瞬时利用率100/100/100/97/96%。现场CARLA计数6/5/6/5/4，30claims仍在启动或执行，SimLingo尚0条DONE，不能把启动认作完成或据此估最终耗时。相比09:37的四空卡，这是原链自然换臂后的真实负载提升。
+
+下一tick01:45:26UTC也正常落盘：`RUNNER_AND_GPU_ACK`、`NO_READY_WORK`、ready=[]、reserved_gpus=[1,6]；物理空闲GPU6仍受P3保留，不被误授。原抛错已经恢复，无第二套实验调度器、无新模型轮询。后续由该唯一持久控制器及B原链继续，root低频检查。
