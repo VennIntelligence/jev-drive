@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Resume path for night queue 3 Q4a after the float64 precision fix (tmp/2026-09-27-q4a-fp64.md). Same steps, commands
+# Resume path for night queue 3 Q4a once its lam_r = 0 reproduction check can pass (tmp/2026-09-27-q4a-fp64.md; not
+# run: the float64 fit misses the stored M-C, a human decides the reference first). Same steps, commands
 # and state layout as scripts/nq3_d.sh (runs/nq3/d/<step>/{log.txt,DONE}, stop at 2x the estimate -> runs/nq3/d/ERROR),
 # but only the Q4a steps, no git pull inside, and staged: run the stages given on the command line, in order.
 #   stages: fit hydra hold-pilot hold nav-pilot nav

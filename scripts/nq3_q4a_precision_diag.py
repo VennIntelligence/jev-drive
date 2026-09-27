@@ -6,6 +6,7 @@ Usage (box): P5_SET=carla_p5v1_ba CUDA_VISIBLE_DEVICES=<gpu> PYTHONPATH=. python
 Prints one JSON line per fold: the stored M-C code path, the Q4a code path in float32 (GPU / CPU eigh) and in float64,
 each as max |pred - stored preds_obs.npz| (m), plus the selected lam and the inner-CV scores."""
 import json, logging, os, sys, time
+from contextlib import contextmanager
 import numpy as np, pandas as pd, torch
 os.environ.setdefault("P5_SET", "carla_p5v1_ba")
 from jevdrive import elicit_e1 as E1, elicit_i3 as I, night2_n3 as N3, p5_exam as E, p5_openpilot, p5_pairs as P
@@ -35,6 +36,10 @@ if sys.argv[1] == "orig-fit":      # orig-fit <model> <seed>: nq3_q4a.fit as it 
     Q._stamp = lambda msg: None
     Q.fit(RunLog("nq3", "q4a-precision-fit-rerun"), (sys.argv[2],), (int(sys.argv[3]),))
     sys.exit(0)
+EXAM_MODE = sys.argv[1] == "exam64"     # exam64 <model> <seed>: P5 criteria of the float64 prior / M-C vs the stored ones
+if EXAM_MODE:
+    sys.argv.pop(1)
+    sys.argv.append("0,1,2,3,4")
 PRIOR_MODE = sys.argv[1] == "prior"      # prior <model> <seed> <folds>: where the float64 prior departs from the stored one
 if PRIOR_MODE:
     sys.argv.pop(1)
@@ -75,6 +80,28 @@ ref = np.load(ref_run / "preds_obs.npz")
 ref_at = pd.Series(np.arange(len(ref["rows"])), index=ref["rows"])
 ev_ref = {e["fold"]: e for e in map(json.loads, open(ref_run / "events.jsonl"))
           if e.get("kind") == "mc_fold" and e.get("arm") == "pair" and e.get("model") == M_}
+
+
+@contextmanager
+def float64_planner():
+    """The float64 candidate fix (tried in nq3_q4a, reverted: it misses the stored M-C by 2-46 cm): planner.standardize /
+    gram_eigh without their float32 casts around reactivity_mc.fit_fold's prior (same standardisation, grouped-CV
+    ridge_cv, lam grid); restored on exit."""
+    from jevdrive import planner as PL
+    std, gram = PL.standardize, PL.gram_eigh
+
+    def standardize(X, rows):
+        mu, sd = X[rows].double().mean(0), X[rows].double().std(0, correction=0)
+        return (X.to(torch.float64) - mu) / torch.where(sd > 1e-6, sd, 1)
+
+    def gram_eigh(A):
+        ev, V = torch.linalg.eigh((A.T @ A).to("cpu", torch.float64))
+        return ev.to(A.device), V.to(A.device)
+    PL.standardize, PL.gram_eigh = standardize, gram_eigh
+    try:
+        yield
+    finally:
+        PL.standardize, PL.gram_eigh = std, gram
 
 
 def solve32(D, R, M, lams, dev):
@@ -128,6 +155,35 @@ def q4a_delta(f, prior, Qx, Xx, F, fa, tr, variant):
     return delta, MC.LAMS[best], score / len(ip)
 
 
+if EXAM_MODE:
+    d64 = lambda x: x.to(torch.float64)  # noqa: E731
+    P64 = {k: np.full((n, 20, 2), np.nan, np.float32) for k in ("prior", "mc")}
+    lams = []
+    for f in FOLDS:
+        ev = obs_rows[fold[obs_rows] == f]
+        tr_a = np.flatnonzero((ta.role.to_numpy() == "train") & (fold_a != f))
+        with float64_planner():
+            p = MC.fit_fold(f, fold_a, ta, d64(Fa), d64(Egoa), d64(Xa), Qa, pr_ip, pr_im, pr_group, rl, M_, arms=())["prior"]
+        d, lam, _ = q4a_delta(f, p, Qa, d64(Xa), d64(Fa), fold_a, tr_a, "fp64-cuda")
+        P64["prior"][ev] = p[ev].reshape(-1, 20, 2).cpu().numpy()
+        P64["mc"][ev] = (p + d)[ev].reshape(-1, 20, 2).cpu().numpy()
+        lams.append(float(lam))
+    full = lambda k: np.where(np.isin(np.arange(n), ref["rows"])[:, None, None], 0, np.nan).astype(np.float32)  # noqa: E731
+    preds = {}
+    for k, arm in ((f"prior [{M_}]", "prior"), (f"M-C pair [{M_}]", "mc")):
+        a = full(k)
+        a[ref["rows"]] = ref[k]
+        preds[f"stored {k}"] = a
+        preds[f"fp64 {k}"] = P64[arm]
+    with I.p5_set(I.BA):
+        oo, nn = E.deltas(obs, null, t, preds)
+        r = E.exam(oo, nn, pairs, list(preds))
+    crit = pd.concat([MC.criteria(r, [f"{v} prior [{M_}]", f"{v} M-C pair [{M_}]"], f"{v} prior [{M_}]") for v in ("stored", "fp64")])
+    crit = crit.assign(model=M_, seed=S_, fp64_lams=str(lams))
+    out_dir = data_dir() / "runs/nq3/q4a/precision_diag"
+    crit.to_csv(out_dir / f"exam64_{M_}_s{S_}.csv", index=False)
+    print(crit[["arm", "ped_flip", "ped_lo", "ped_hi", "null_ff_oos", "cutin_flip", "pass"]].to_string(index=False), flush=True)
+    sys.exit(0)
 if PRIOR_MODE:
     from types import SimpleNamespace
     from jevdrive import planner as PL, waymo_stage_a as sa
@@ -138,7 +194,7 @@ if PRIOR_MODE:
         sp = SimpleNamespace(train=tr, val=ev, seq=t.base_id.to_numpy())
         stored_prior = ref[f"prior [{M_}]"][ref_at[ev].to_numpy()].reshape(len(ev), -1).astype(np.float64)
         row = {"model": M_, "seed": S_, "fold": f, "n_train": len(tr)}
-        for tag, cm in (("fp32", None), ("fp64", Q._float64_planner)):
+        for tag, cm in (("fp32", None), ("fp64", float64_planner)):
             dt = torch.float32 if tag == "fp32" else torch.float64
             F_, Eg, X_ = Fn.to(dt), Egon.to(dt), Xn.to(dt)
             ctx = cm() if cm else __import__("contextlib").nullcontext()
@@ -161,7 +217,7 @@ if PRIOR_MODE:
                 row["ego_dim"] = int(g.shape[0])
             else:
                 g32 = g
-        A64 = Q._float64_planner
+        A64 = float64_planner
         with A64():
             A = PL.standardize(Egon.double(), tr)[tr]
         A = A - A.mean(0)
@@ -208,11 +264,11 @@ for f in FOLDS:
         if var == "fp32-cuda":
             p32 = p
     row["fp32cuda_vs_fp64"] = np.abs(p32 - p64).max()
-    # the fix: prior and Delta in float64 (nq3_q4a._float64_planner around reactivity_mc.fit_fold, float64 inputs)
-    if hasattr(Q, "_float64_planner"):
+    # float64 end to end: prior (float64_planner around reactivity_mc.fit_fold, float64 inputs) and Delta
+    if True:
         t0 = time.time()
         d64 = lambda x: x.to(torch.float64)  # noqa: E731
-        with Q._float64_planner():
+        with float64_planner():
             p64a = MC.fit_fold(f, fold_a, ta, d64(Fa), d64(Egoa), d64(Xa), Qa, pr_ip, pr_im, pr_group, rl, M_, arms=())["prior"]
         d, lam, sc = q4a_delta(f, p64a, Qa, d64(Xa), d64(Fa), fold_a, tr_a, "fp64-cuda")
         p = (p64a + d)[ev].reshape(-1, 20, 2).cpu().numpy()

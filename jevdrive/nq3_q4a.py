@@ -23,7 +23,6 @@ Run on the box: P5_SET=carla_p5v1_ba python -m jevdrive.nq3_q4a <step>
 import json
 import os
 import time
-from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -211,46 +210,16 @@ def real_rows(model: str) -> dict:
 
 # ---------------------------------------------------------------- fit
 
-# Precision fix, 2026-09-27 (tmp/2026-09-27-q4a-fp64.md): the fit runs in float64 end to end, the prior included.
-# In float32 the prior's ridge solves (planner.gram_eigh: a float64 CPU eigh cast back to float32) turn the MKL thread
-# count of that eigh into 0.9-1.4 mm of prediction (the stored M-C is reproduced bit for bit at 12 threads, 1.11 mm off
-# at the chain's 20), and the lam = 0.1 Delta solve adds up to 0.75 mm of its own; the fixed 1e-3 m reproduction check
-# was a lottery. The check, its threshold, the grids and the folds are unchanged.
-DT = torch.float64
-
-
-@contextmanager
-def _float64_planner():
-    """planner.standardize / gram_eigh without their float32 casts, for reactivity_mc.fit_fold's prior (the same
-    estimator: standardisation, grouped-CV ridge_cv, lam grid); restored on exit."""
-    from . import planner as PL
-    std, gram = PL.standardize, PL.gram_eigh
-
-    def standardize(X, rows):
-        mu, sd = X[rows].double().mean(0), X[rows].double().std(0, correction=0)
-        return (X.to(DT) - mu) / torch.where(sd > 1e-6, sd, 1)
-
-    def gram_eigh(A):
-        ev, V = torch.linalg.eigh((A.T @ A).to("cpu", DT))
-        return ev.to(A.device), V.to(A.device)
-    PL.standardize, PL.gram_eigh = standardize, gram_eigh
-    try:
-        yield
-    finally:
-        PL.standardize, PL.gram_eigh = std, gram
-
-
 def _solve(D, R, M, lams, dev):
-    """W for every lam of min |D W - R|^2 + W^T M W + lam |W|^2 (reactivity_mc._solve_pair with M in place of mu Zc'Zc),
-    float64 throughout."""
-    ev, V = torch.linalg.eigh((D.T @ D + M).to(dev, DT))
-    ev, V = ev.to(D.device), V.to(D.device)
+    """W for every lam of min |D W - R|^2 + W^T M W + lam |W|^2 (reactivity_mc._solve_pair with M in place of mu Zc'Zc)."""
+    ev, V = torch.linalg.eigh((D.T @ D + M).double().to(dev))
+    ev, V = ev.float().to(D.device), V.float().to(D.device)
     B = V.T @ (D.T @ R)
     return [V @ (B / (ev[:, None] + lam)) for lam in lams]
 
 
 def _zmap(X: torch.Tensor, mu: torch.Tensor, sd: torch.Tensor) -> torch.Tensor:
-    return (X.to(DT) - mu.to(DT)) / sd.to(DT) / np.sqrt(X.shape[1])
+    return (X - mu.float()) / sd.float() / np.sqrt(X.shape[1])
 
 
 def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
@@ -271,8 +240,8 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
     n, n3 = len(t), len(t3)
     ta = pd.concat([t[["frame_name", "role", "base_id", "intent"]],
                     t3[["frame_name", "base_id", "intent"]].assign(role="i3", base_id="i3:" + t3.base_id)], ignore_index=True)
-    F = torch.as_tensor(np.r_[fut.reshape(n, -1), np.zeros((n3, 40), np.float32)], device=dev, dtype=DT)
-    Ego = torch.as_tensor(np.r_[E.ego_input(t, past), E.ego_input(t3, past3)], device=dev, dtype=DT)
+    F = torch.as_tensor(np.r_[fut.reshape(n, -1), np.zeros((n3, 40), np.float32)], device=dev)
+    Ego = torch.as_tensor(np.r_[E.ego_input(t, past), E.ego_input(t3, past3)], device=dev)
     Qa = torch.as_tensor(np.r_[Q, Q3], device=dev)
     pos = pd.Series(np.arange(n), index=t.frame_name)
     pr_ip = np.r_[pos[obs.fn_plus].to_numpy(), pos[null.fn_plus].to_numpy()]
@@ -288,7 +257,7 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
                     len(real["wod"]["keys"]), len(real["hold"]["keys"]), len(real["navtest"]["keys"]), len(wd["Q"]))
         Rq = {k: torch.as_tensor(real[k]["Q"], device=dev) for k in ("nav", "wod")}
         Ro = {k: torch.as_tensor(real[k]["O"], device=dev) for k in ("nav", "wod")}
-        Xop = torch.as_tensor(np.r_[op[f"op-{m} temporal"], op3[f"op-{m} temporal"]], device=dev, dtype=DT)
+        Xop = torch.as_tensor(np.r_[op[f"op-{m} temporal"], op3[f"op-{m} temporal"]], device=dev)
         for s in seeds:
             fold = E.folds(t, pairs, s)
             fold_a = np.r_[fold, np.full(n3, -2)]
@@ -304,8 +273,7 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
             for f in range(E.K_FOLDS):
                 tr = np.flatnonzero((ta.role.to_numpy() == "train") & (fold_a != f))
                 ev = obs_rows[fold[obs_rows] == f]
-                with _float64_planner():
-                    prior = MC.fit_fold(f, fold_a, ta, F, Ego, Xop, Qa, pr_ip, pr_im, pr_group, rl, m, arms=())["prior"]
+                prior = MC.fit_fold(f, fold_a, ta, F, Ego, Xop, Qa, pr_ip, pr_im, pr_group, rl, m, arms=())["prior"]
                 keepp = fold[pr_ip] != f
                 ip, im, grp = pr_ip[keepp], pr_im[keepp], pr_group[keepp]
                 Rp = (F[ip] - F[im]) - (prior[ip] - prior[im])
@@ -332,7 +300,7 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
                     W = _solve(D, Rp, M, [MC.LAMS[best]], eigh_dev)[0]
                     pred = prior + (Z - zbar) @ W
                     p5[lr][ev] = pred[ev].reshape(-1, 20, 2).cpu().numpy()
-                    i3[lr] += pred[I3r].reshape(-1, 20, 2).cpu().numpy() / E.K_FOLDS
+                    i3[lr] += pred[I3r].reshape(-1, 20, 2).cpu().double().numpy() / E.K_FOLDS
                     heads[lr].append({"W": W.double().cpu(), "zbar": zbar.double().cpu(), "lam": float(MC.LAMS[best]),
                                       "q": tuple(x.cpu() for x in sq), "op": tuple(x.cpu() for x in so)})
                     rl.event("q4a_fold", model=m, seed=s, fold=f, lam_r=lr, lam=float(MC.LAMS[best]),
@@ -344,7 +312,7 @@ def fit(rl, models=MODELS, seeds=SEEDS, eigh_dev="cuda"):
                                     MC.LAMS[best], ref_lam.get(f), diff)
                         assert np.isclose(MC.LAMS[best], ref_lam[f]) and diff < 1e-3, "lam_r = 0 does not reproduce M-C"
                 p5["prior"][ev] = prior[ev].reshape(-1, 20, 2).cpu().numpy()
-                i3["prior"] += prior[I3r].reshape(-1, 20, 2).cpu().numpy() / E.K_FOLDS
+                i3["prior"] += prior[I3r].reshape(-1, 20, 2).cpu().double().numpy() / E.K_FOLDS
                 del Z, Zc, D, Rg, base
                 torch.cuda.empty_cache()
             # P5 exam: p5_exam + reactivity_mc.criteria unchanged
