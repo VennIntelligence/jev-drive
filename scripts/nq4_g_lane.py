@@ -289,7 +289,7 @@ class Lane:
                                                          f"{len(req) - n} / {len(req)} routes unfinished after {MAX_TRIES} attempts\n")
                 if c in ("simlingo", "blue"):
                     subprocess.run(["rm", "-rf", str(out / "viz")])   # the author agents' debug images: output only
-                cell.update(state="DONE" if ok else "FAILED", done=n, requested=len(req), t=now())
+                cell.update(state="DONE" if ok else "FAILED", done=n, requested=len(req), at=time.strftime("%F %T"))
                 event("cell_end", cell=key, **cell)
 
     # scheduling ------------------------------------------------------
