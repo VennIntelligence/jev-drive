@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # WL fork generation (todos/2026-09-28-wm-loop.md): the fork runs of one stage under scripts/wl_fork_agent.py, one
 # b2d_run chain per GPU, every chain working through the sets in turn (claims make chains share a set safely).
-#   scripts/tmux_run.sh wl-gen scripts/wl_gen.sh      env: STAGE=pilot1|pilot10|full GPUS="1 2" WORKERS=6 CORES=3
-#                                                          SETS="ba p6 d2" TFV6=0|1 NORENDER=0|1 PRE_CAMS=11 BLOCK=1200
+#   scripts/tmux_run.sh wl-gen scripts/wl_gen.sh      env: STAGE=pilot1|pilot10|full SETS="ba p6 d2" TFV6=0|1 NORENDER=0|1
+#                                                          PRE_CAMS=11 [ONE_GPU=1: only the row's first GPU, for pilots]
+# Cards, CARLA workers per card, server indices and cores come from the `wm-loop` row of $DATA_DIR/runs/sched/table.tsv
+# (scripts/sch_table.py; GPU at position k uses indices idx0 + k*span ..); nothing here picks its own. The row must pass
+# `sch_table.py check` before the chain starts. WORKERS=n caps the row's workers per card (pilots).
 # Needs runs/wl/{forks.parquet, jobs.json, forks-<set>.xml} (python -m jevdrive.wl forks). Out: runs/wl/gen/<set>/
 # (b2d_run layout), log.txt and chain-gpu<g>.log in runs/wl/gen/. Resumable: re-run skips done/<id>.json.
 set -uo pipefail
@@ -12,13 +15,30 @@ R=$DATA_DIR/runs/wl
 OUT=${OUT:-$R/gen}
 PY=$DATA_DIR/envs/carla/bin/python
 STAGE=${STAGE:-pilot1}
-read -ra G <<< "${GPUS:-1}"
 read -ra S <<< "${SETS:-ba p6}"
-W=${WORKERS:-6} CORES=${CORES:-3} BLOCK=${BLOCK:-1200}
+CORES=${CORES:-3}
+eval "$(python3 - "$DATA_DIR/runs/sched/table.tsv" <<'PYEOF'
+import csv, sys
+rows = [r for r in csv.DictReader(open(sys.argv[1]), delimiter="\t") if r["lane"] == "wm-loop"]
+if not rows:
+    print('echo "no wm-loop row in table.tsv" >&2; exit 1'); sys.exit()
+r = rows[0]
+g = [x for x in r["gpus"].split(",") if x not in ("", "-")]
+if ":" in r["idx0"]:
+    m = dict(x.split(":") for x in r["idx0"].split(","))
+    idx = [int(m[x]) for x in g]
+else:
+    idx = [int(r["idx0"]) + k * int(r["idx_span"]) for k in range(len(g))]
+print('G=(%s) IDX=(%s) ROW_W=%s SPAN=%s ROW_CPUS=%s' % (" ".join(g), " ".join(map(str, idx)), r["workers"], r["idx_span"], r["cpus"]))
+PYEOF
+)"
+python3 scripts/sch_table.py check > /dev/null || { echo "sch_table.py check fails: not starting"; exit 1; }
+[[ ${ONE_GPU:-0} == 1 ]] && { G=("${G[0]}"); IDX=("${IDX[0]}"); }
+W=$(( ${WORKERS:-$ROW_W} < ROW_W ? ${WORKERS:-$ROW_W} : ROW_W ))
 mkdir -p "$OUT"
 echo "gen $$" >> "$OUT/pids.txt"
 exec > >(tee -a "$OUT/log.txt") 2>&1
-echo "$(date '+%F %T') wl-gen start: stage $STAGE, sets [${S[*]}], GPUs [${G[*]}] x $W, $CORES cores each, TFV6=${TFV6:-0} NORENDER=${NORENDER:-0} OUT=$OUT"
+echo "$(date '+%F %T') wl-gen start: stage $STAGE, sets [${S[*]}], GPUs [${G[*]}] x $W (indices ${IDX[*]}, span $SPAN), cores $ROW_CPUS, TFV6=${TFV6:-0} NORENDER=${NORENDER:-0} OUT=$OUT"
 
 tree() { [[ $1 != ba ]] && echo "$DATA_DIR/third_party/simlingo/Bench2Drive" || echo "$DATA_DIR/third_party/Bench2Drive"; }
 pyenv() { [[ $1 != ba ]] && echo "$DATA_DIR/envs/p5v1-pdm/bin/python" || echo "$DATA_DIR/envs/scout-tfv6/bin/python"; }
@@ -34,27 +54,15 @@ json.dump(c, open(sys.argv[2], "w"))
 PYEOF
 done
 
-free_cpus() {  # free_cpus <n>: n CPUs no live process is pinned to
-    python3 - "$1" <<'PYEOF'
-import os, sys
-def parse(s):
-    out = []
-    for part in s.split(","):
-        a, _, b = part.partition("-")
-        out += range(int(a), int(b or a) + 1)
-    return out
-n, busy = int(sys.argv[1]), set()
-for d in os.listdir("/proc"):
-    try:
-        for line in open("/proc/%s/status" % d):
-            if line.startswith("Cpus_allowed_list"):
-                c = parse(line.split(":")[1].strip())
-                if len(c) < 100:
-                    busy |= set(c)
-    except (OSError, ValueError):
-        continue
-mine = parse(open("/proc/self/status").read().split("Cpus_allowed_list:")[1].split()[0])
-print(",".join(str(c) for c in [c for c in mine if c not in busy][:n]))
+row_cpus() {  # row_cpus <chain j> <n>: the j-th slice of n cores of the row's core list
+    python3 - "$ROW_CPUS" "$1" "$2" <<'PYEOF'
+import sys
+out = []
+for part in sys.argv[1].split(","):
+    a, _, b = part.partition("-")
+    out += range(int(a), int(b or a) + 1)
+j, n = int(sys.argv[2]), int(sys.argv[3])
+print(",".join(map(str, out[j * n:(j + 1) * n] or out)))
 PYEOF
 }
 
@@ -63,15 +71,14 @@ export B2D_RESEED_AFTER_BUILD=1 B2D_CAPTURE_CRITERION_EVENTS=1 LEAD_PROJECT_ROOT
 export PYTHONPATH=$LEAD_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}
 
 chain() {  # chain <j>
-    local j=$1 g=${G[$1]} base=$(( BLOCK + $1 * 50 )) w=$W span cpus pass ids s per=${THREADS_PER_SERVER:-350} room
+    local j=$1 g=${G[$1]} base=${IDX[$1]} w=$W span=$SPAN cpus pass ids s per=${THREADS_PER_SERVER:-350} room
     while :; do       # container thread cap: thread-reduced CARLA servers + route clients
         room=$(( (${PIDS_BUDGET:-19000} - $(cat /sys/fs/cgroup/pids.current)) / per ))
         (( room >= 1 )) && break
         echo "$(date +%T) gpu $g: waiting for thread room"; sleep 60
     done
     (( room < w )) && { echo "$(date +%T) gpu $g: thread cap allows $room of $w instances"; w=$room; }
-    span=$(( 50 / w * w ))
-    cpus=$(free_cpus $(( w * CORES )))
+    cpus=$(row_cpus "$j" $(( w * CORES )))
     echo "$(date +%T) chain gpu $g: $w instances, CPUs $cpus, server index $base-$(( base + span - 1 ))"
     for pass in 1 2; do
         for s in "${S[@]}"; do
