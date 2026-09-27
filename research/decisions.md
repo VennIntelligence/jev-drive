@@ -2725,6 +2725,14 @@ SimLingo 系四个方法的 B2D 分数可能对官方协议偏高（上限约 11
 
 Q5 NAVSIM速度置零S0：DrivoR PDMS差−22.115 [−22.657,−21.578]；WA-JEPA −8.159 [−9.406,−6.942]，均下降≥5，按原判格 ego prior。nuScenes DrivoR原verdict not applicable，WA-JEPA原verdict nuScenes score mainly from the ego prior (S0)；原L2表与CI见 todo引用（**待定**）。 [机械结果表](../todos/2026-09-26-night-queue-3.md)。
 
+### 2026-09-27 新读数：night-queue-4 K 的能力读数（按登记判格，待人复核）
+
+K0–K3 两折交叉拟合读出，已存开环导出上原样判卷（P5 v1 BA unseen；I3 R₁；P6 unseen），各级对 K0 的配对差按路线整组 bootstrap。
+P5 行人翻转：K0 0.49% [0.00, 1.58]；K1 = K2 = K3 0.99% [0.00, 3.20]，对 K0 +0.49 pp [−1.39, +2.94]（±10 pp 内，「不动」）。
+I3 车辆翻转：K0 67.7% [63.8, 71.7]；K1 = K2 50.4% [43.1, 57.7]，对 K0 −17.4 pp [−23.6, −11.6]；K3 53.6% [46.4, 60.6]，对 K0 −14.2 pp [−20.6, −8.3]（跨出 ±10 pp，「动了」）。
+P6 bypass 翻转（描述）：K0 5.77% [4.03, 7.65]，K1 = K2 4.31%，K3 4.34%，四级 rule 7 都是 no bypass。
+登记判格：判据 1（材料包成立）**不成立**（能力半边 I3 不满足；DS 半边闭环未出数）；判据 2、3 未判（闭环 seen / unseen DS 未出数）（**待定**）。[结果表](../todos/2026-09-26-night-queue-4.md)。
+
 ## 36. openpilot 换相机 rig 基本不掉，掉的是朝向标定和时间轴；真实数据上安装高度不重要（**待定**，comma1M 8 段 + WOD 479 帧）
 
 2026-09-25，[openpilot-migration.md](../todos/2026-09-24-zeroshot-exam/openpilot-migration.md) B 部分。在 comma1M 真实视频上合成 44 种输入
