@@ -1,0 +1,13 @@
+set,feature,dim,n,n_routes,pos_rate,oof_auc,oof_auc_x_plus_only,oof_auc_label_vs_minus_world,pair_auc_label_on_speed_matched,n_pairs_speed_matched
+carla_p5v1_ba,Cinque temporal,512,10300,42,0.1558,0.8558,0.8853,0.8222,0.6399,1206
+carla_p5v1_ba,V-JEPA 2 mean,3072,10300,42,0.1558,0.9009,0.9098,0.8760,0.7723,1206
+carla_p5v1_ba,W latent (temporal + V-JEPA mean),3584,10300,42,0.1558,0.9022,0.9142,0.8762,0.7583,1206
+carla_p5v1_ba,"ego kinematics only (v, a_prev, w_prev)",3,10300,42,0.1558,0.6822,0.7108,0.6532,0.5000,1206
+carla_p5v1_ba,V-JEPA 2 last_mean,3072,10300,42,0.1558,0.9070,0.9139,0.8915,0.8069,1206
+carla_p5v1_ba,SigLIP2 patch_mean,3456,10300,42,0.1558,0.8725,0.8519,0.8676,0.8300,1206
+carla_p5v1_ba,Qwen3-VL-4B L18_last,2560,10300,42,0.1558,0.9285,0.9275,0.9322,0.8663,1206
+carla_p5v1_ba,YOLO26x image-plane tokens,672,10300,42,0.1558,0.9242,0.9350,0.9146,0.8197,1206
+carla_p5v1_pdm,Cinque temporal,512,13858,42,0.0580,0.8524,0.8371,0.8255,0.5688,439
+carla_p5v1_pdm,V-JEPA 2 mean,3072,13858,42,0.0580,0.9420,0.9313,0.9363,0.8201,439
+carla_p5v1_pdm,W latent (temporal + V-JEPA mean),3584,13858,42,0.0580,0.9546,0.9556,0.9554,0.8144,439
+carla_p5v1_pdm,"ego kinematics only (v, a_prev, w_prev)",3,13858,42,0.0580,0.5904,0.5743,0.5741,0.5040,439

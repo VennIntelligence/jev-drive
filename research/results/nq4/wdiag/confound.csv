@@ -1,0 +1,5 @@
+subset,n,n_routes,coef_a_bar_data_m_per_mps2,coef_a_bar_kinematic,n_brake,brake_minus_steady_d10_data_m,brake_minus_steady_d10_kinematic_m,brake_minus_steady_occ10_data,strata,p_occ10_brake,p_occ10_steady,p_occ10_all
+all v>=3,18820,119,2.2887,-2.1631,3739,-6.8628,5.8527,0.1267,43.0000,,,
+lane occupied at t (d0<40),7871,99,3.3997,-2.1055,2319,-8.2781,5.4476,0.1244,35.0000,,,
+hazard anchors (occ at t),6087,91,4.1071,-2.0896,1971,-10.4335,5.3154,0.2147,23.0000,,,
+free lane at t: P(occ at t+2 s),12733,104,,,1768,,,,,0.4768,0.2609,0.3313
