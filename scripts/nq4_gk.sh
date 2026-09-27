@@ -303,33 +303,72 @@ load_pilot() {  # the validation card: $SCHED/nq4-gk.pilot (PILOT_GPU, PILOT_WOR
     GPUS=$P_; WORKERS=${W_:-2}; SIDX0=${I_:-150}; SPAN=${S_:-10}; CPUS=${C_:-110-113}; CTX=pilot
 }
 block_of() { echo $(( SIDX0 + SPAN * $1 )); }         # <position of the GPU in $GPUS> -> its first server index
-free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card (<= CARD_CAP a card, other lanes' counted);
-               # on the validation card SCH's table already splits the slots between lanes, so there it is PILOT_WORKERS as granted
+free_slots() {  # free_slots <gpu>: CARLA servers that still fit on a batch card; on the validation card SCH's table already
+               # splits the slots between lanes, so there it is PILOT_WORKERS as granted.
+    # Batch card: CARD_CAP minus the CARLA servers already there (or other lanes' registered workers, whichever is larger),
+    # minus FOREIGN_COST per foreign GPU job (a >= 2 GB process that is neither CARLA nor ours, e.g. a 3DGS training);
+    # a card with more than FOREIGN_MAX foreign jobs gets none, and every new server needs 8 GB of free VRAM.
+    # Why: on 2026-09-27 seven servers per card (or a pilot's four on four cores) made CARLA die at Large Map loads with
+    # "GameThread timed out waiting for RenderThread" (Town13 66 / 74 attempts, pdm ghost), which failed whole steps.
     [[ ${CTX:-batch} == pilot ]] && { echo "$WORKERS"; return; }
-    local n; n=$(nvidia-smi -i "$1" --query-compute-apps=process_name --format=csv,noheader 2>/dev/null | grep -c CarlaUE4)
-    echo $(( CARD_CAP - n > WORKERS ? WORKERS : (CARD_CAP - n > 0 ? CARD_CAP - n : 0) ))
+    python3 - "$1" "$CARD_CAP" "$WORKERS" "${FOREIGN_COST:-2}" "${FOREIGN_MAX:-1}" "$SCHED/table.tsv" <<'EOF'
+import csv, subprocess, sys
+gpu, cap, workers, cost, fmax, table = sys.argv[1], *map(int, sys.argv[2:6]), sys.argv[6]
+q = lambda what: subprocess.run(["nvidia-smi", "-i", gpu, f"--query-{what}", "--format=csv,noheader,nounits"],
+                                capture_output=True, text=True).stdout.splitlines()
+used, total = map(float, q("gpu=memory.used,memory.total")[0].split(","))
+carla = foreign = 0
+for line in q("compute-apps=pid,process_name,used_memory"):
+    pid, name, mem = [x.strip() for x in line.rsplit(",", 2)] if line.count(",") >= 2 else ("0", line, "0")
+    if "CarlaUE4" in name:
+        carla += 1
+        continue
+    try:
+        argv = open(f"/proc/{pid}/cmdline", "rb").read().decode(errors="replace")
+    except OSError:
+        argv = ""
+    ours = any(m in argv for m in ("/runs/nq4/", "/runs/nq3/", "b2d_", "leaderboard", "_agent.py"))
+    foreign += not ours and (not mem.replace(".", "").isdigit() or float(mem) >= 2048)
+reserved = 0
+try:
+    for r in csv.DictReader(open(table), delimiter="\t"):
+        if (r["lane"] not in ("nq4-gk", "nq4-gk-pilot") and gpu in r["gpus"].split(",") and r["workers"].isdigit()
+                and not r["status"].startswith(("done", "revoked", "legacy"))):
+            reserved += int(r["workers"])
+except (OSError, KeyError):
+    pass
+n = 0 if foreign > fmax else cap - max(carla, reserved) - cost * foreign
+n = min(n, workers, int((total - used) / 1024 // 8))
+print(max(n, 0))
+EOF
 }
 
 execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run route sets on the context's cards (GPUS,
              # WORKERS, SIDX0, SPAN, CPUS), at most <cap> workers in all; seeds side by side when there are enough cards
     local c=$1 v=$2 est=$3 cap=$4; shift 4
     local xml=$XML_G; [[ $v == k ]] && xml=$XML_K
-    local gl=($GPUS) sets=("$@") t0=$SECONDS i g s ids n pids=() outs=() used=0
-    (( ${#gl[@]} < ${#sets[@]} && ${#sets[@]} > 1 )) && { for s in "${sets[@]}"; do execute "$c" "$v" "$est" "$cap" "$s" || return 1; done; return 0; }
+    local all=($GPUS) gl=() slots=() sets=("$@") t0=$SECONDS i g s ids n pids=() outs=() used=0
+    declare -A pos=() slot=()
+    for i in "${!all[@]}"; do                            # only cards with a free slot take part (their index block stays
+        n=$(free_slots "${all[$i]}")                     # the one of their position in GPUS)
+        (( n > 0 )) && { gl+=("${all[$i]}"); pos[${all[$i]}]=$i; slot[${all[$i]}]=$n; }
+    done
+    (( ${#gl[@]} )) || { log "no free CARLA slot on GPUs $GPUS"; return 3; }
+    (( ${#gl[@]} < ${#sets[@]} && ${#sets[@]} > 1 )) && { for s in "${sets[@]}"; do execute "$c" "$v" "$est" "$cap" "$s" || return $?; done; return 0; }
     if [[ ${CX_GK_PILOT_GUARD:-0} == 1 ]]; then
         local needed=$WORKERS; (( needed > cap )) && needed=$cap
         python3 scripts/cx_gk_pilots.py admit --workers "$needed" || return 4
     fi
     t0=$SECONDS  # Waiting for capacity does not consume the execution timeout.
-    for i in "${!gl[@]}"; do ports_ok "$(block_of "$i")" || { log "server block of GPU ${gl[$i]} has no free indices for 30 min"; return 1; }; done
+    for i in "${!gl[@]}"; do ports_ok "$(block_of "${pos[${gl[$i]}]}")" || { log "server block of GPU ${gl[$i]} has no free indices for 30 min"; return 1; }; done
     for i in "${!gl[@]}"; do servers_for "$c" "${gl[$i]}" || { log "server start failed for $c on GPU ${gl[$i]}"; return 1; }; done
     for i in "${!gl[@]}"; do
         g=${gl[$i]}; s=${sets[$(( i % ${#sets[@]} ))]}; ids=${s#*=}; s=${s%%=*}
         [[ -z $ids ]] && continue
-        n=$(free_slots "$g"); (( n > cap - used )) && n=$(( cap - used ))
+        n=${slot[$g]}; (( n > cap - used )) && n=$(( cap - used ))
         (( n <= 0 )) && continue
         local out; out=$(arm_dir "$c" "$v" "$s"); outs+=("$out")
-        local p; p=$(launch "$c" "$g" "$s" "$xml" "$ids" "$out" "$n" "$(block_of "$i")")
+        local p; p=$(launch "$c" "$g" "$s" "$xml" "$ids" "$out" "$n" "$(block_of "${pos[$g]}")")
         pids+=("$p"); echo "$p" >> "$out/runner.pids"; used=$(( used + n ))
         sleep 10
     done
@@ -424,26 +463,60 @@ run_step() {  # run_step <cand> <variant> <seeds a,b,c> <routeset> [est_h]: pilo
     echo "$c $v $3 $rs" > "$G/CURRENT"
     ev step_start "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"routes\": $total, \"est_h\": $est, \"wmin\": $w, \"workers\": $nw"
     log "start $c $v seeds $3 ($rs, $total routes, $w worker-min/route, $nw workers, estimate $est h)"
-    execute "$c" "$v" "$est" 999 "${sets[@]}"; local r=$?
-    srv_stop_gpus "$GPUS"
-    (( r == 3 )) && return 2                          # no free slot right now: the chain comes back to it
-    (( r == 2 )) && error "$c $v seeds $3 exceeded twice its estimate ($est h)" "$G/log.txt"
-    (( r == 1 )) && error "$c $v seeds $3: servers / ports failed (see log.txt)" "$G/log.txt"
-    local bad=0 req done_ wall out
+    local r round bad req done_ wall out
+    for round in 1 2; do
+        execute "$c" "$v" "$est" 999 "${sets[@]}"; r=$?
+        srv_stop_gpus "$GPUS"
+        (( r == 3 )) && return 2                      # no free slot right now: the chain comes back to it
+        (( r == 2 )) && error "$c $v seeds $3 exceeded twice its estimate ($est h)" "$G/log.txt"
+        (( r == 1 )) && error "$c $v seeds $3: servers / ports failed (see log.txt)" "$G/log.txt"
+        bad=$(unfinished "$c" "$v" "${seeds[@]}")
+        [[ $bad == ok ]] && break
+        # The registered retry (codex handoff, nq4-gk): > 10 % unfinished because CARLA died (server_died_*, hung, harness)
+        # may be retried once; b2d_run resumes only the unfinished routes. Anything else, or a second time: the step fails.
+        [[ $round == 1 && $bad == infra* ]] || break
+        ev step_retry "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"why\": \"$bad\""
+        log "$c $v seeds $3: $bad; retrying the unfinished routes once"
+    done
     wall=$(python3 -c "print(round(($SECONDS - $t0) / 3600, 3))")
     for s in "${seeds[@]}"; do
         out=$(arm_dir "$c" "$v" "$s"); req=$(python3 -c "import json;print(len(json.load(open('$out/requested.json'))))")
         done_=$(ls "$out/done" 2>/dev/null | wc -l)
-        printf '{"cand": "%s", "variant": "%s", "seed": %s, "done": %s, "requested": %s, "wall_h": %s, "finished": "%s"}\n' \
-            "$c" "$v" "$s" "$done_" "$req" "$wall" "$(date '+%F %T')" > "$out/DONE"
-        python3 -c "import sys; sys.exit(0 if ($req - $done_) / max($req, 1) <= 0.10 else 1)" || bad=1
+        python3 -c "import sys; sys.exit(0 if ($req - $done_) / max($req, 1) <= 0.10 else 1)" &&   # DONE only when complete
+            printf '{"cand": "%s", "variant": "%s", "seed": %s, "done": %s, "requested": %s, "wall_h": %s, "finished": "%s"}\n' \
+                "$c" "$v" "$s" "$done_" "$req" "$wall" "$(date '+%F %T')" > "$out/DONE"
         [[ $c == simlingo || $c == blue ]] && rm -rf "$out/viz"     # the author agents' debug images: output only
     done
     ev step_end "\"cand\": \"$c\", \"variant\": \"$v\", \"seeds\": \"$3\", \"wall_h\": $wall"
     log "done $c $v seeds $3 in $wall h"
     report_now
-    (( bad )) && error "$c $v seeds $3: more than 10% of the routes never finished" "$G/log.txt"
+    if [[ $bad != ok ]]; then                         # only this step stops; independent steps go on
+        { echo "# nq4-gk step FAILED: $c $v seeds $3 ($(date '+%F %T %Z'))"; echo; echo "$bad"; } > "$G/ERROR.step.$c.$v"
+        ev step_failed "\"cand\": \"$c\", \"variant\": \"$v\", \"why\": \"$bad\""
+        log "step $c $v FAILED ($bad): $G/ERROR.step.$c.$v; the queue goes on"
+        return 1
+    fi
     return 0
+}
+unfinished() {  # unfinished <cand> <variant> <seeds...>: "ok", or why a seed has > 10 % of its routes unfinished
+                # ("infra: ..." when every unfinished route only ever failed by CARLA dying / hanging / the harness)
+    local c=$1 v=$2; shift 2
+    local s dirs=(); for s in "$@"; do dirs+=("$(arm_dir "$c" "$v" "$s")"); done
+    python3 - "${dirs[@]}" <<'EOF2'
+import json, sys
+from pathlib import Path
+bad, infra = [], True
+for out in map(Path, sys.argv[1:]):
+    req = json.loads((out / "requested.json").read_text())
+    miss = [r for r in req if not (out / "done" / f"{r}.json").exists()]
+    if len(miss) <= 0.10 * max(len(req), 1):
+        continue
+    bad.append(f"{out.name} {len(miss)}/{len(req)}")
+    for r in miss:
+        st = [json.loads(a.read_text()).get("status", "") for a in (out / "attempts" / r).glob("*/attempt.json")]
+        infra &= bool(st) and all(x.startswith(("server_died", "hung_no_tick", "harness_error")) for x in st)
+print("ok" if not bad else ("infra" if infra else "other") + ": more than 10% unfinished in " + ", ".join(bad))
+EOF2
 }
 report_now() { taskset -c "$CPUS" "$PY_VENV" -m jevdrive.nq4_g report >> "$G/report.log" 2>&1 || log "report failed (report.log)"; }
 
@@ -578,8 +651,8 @@ status_loop() {
         } > "$G/STATUS.md.tmp" && mv "$G/STATUS.md.tmp" "$G/STATUS.md"
     done
 }
-step_skip() {  # a step is settled: every seed dir has DONE, or its examinee is blocked
-    [[ -e $BLK/$1 ]] || step_done "$1" "$2" "$3"
+step_skip() {  # a step is settled: every seed dir has DONE, its examinee is blocked, or the step failed (ERROR.step.*)
+    [[ -e $BLK/$1 || -e $G/ERROR.step.$1.$2 ]] || step_done "$1" "$2" "$3"
 }
 pilot_loop() {  # on the validation card: the staged pilot of every examinee x world, in queue order, ahead of the batch
     trap 'for o in $CUR_OUTS; do kill_runs "$o"; done; srv_stop_gpus "$GPUS"' EXIT
