@@ -89,15 +89,25 @@ srv_start() {  # srv_start <name> <gpu> <cmd ...>
     local name=$1 gpu=$2; shift 2
     srv_alive "$name" && return 0
     local ready=$G/srv/$name.ready
-    rm -f "$ready" "$G/srv/$name.sock"
+    local previous; previous=$(cat "$G/srv/$name.pid" 2>/dev/null) || previous=
+    if [[ -n $previous ]] && kill -0 "$previous" 2>/dev/null; then
+        log "server $name has a live PID without a matching owned identity; refusing replacement"; return 1
+    fi
+    rm -f "$ready" "$G/srv/$name.sock" "$G/srv/$name.pid" "$G/srv/$name.owned.json"
     (
         CUDA_VISIBLE_DEVICES=$gpu PYTHONUNBUFFERED=1 HF_ENDPOINT=https://hf-mirror.com setsid taskset -c "$CPUS" \
             "$@" --socket "$G/srv/$name.sock" --ready-file "$ready" >> "$G/srv/$name.log" 2>&1 &
-        echo $! > "$G/srv/$name.pid"
-        wait $!
+        local child=$!
+        echo "$child" > "$G/srv/$name.pid"
+        python3 scripts/cx_owned_process.py capture "$G/srv/$name.owned.json" "$child"
+        wait "$child"
         echo "$(date '+%F %T') server $name exited rc=$?" >> "$G/srv/$name.log"
     ) &
-    until [[ -s $G/srv/$name.pid ]]; do sleep 0.2; done
+    local capture_deadline=$((SECONDS + 10))
+    until [[ -s $G/srv/$name.owned.json ]]; do
+        (( SECONDS > capture_deadline )) && { log "server $name identity capture failed"; return 1; }
+        sleep 0.2
+    done
     local t0=$SECONDS
     until [[ -e $ready ]]; do
         srv_alive "$name" || { log "server $name died at start-up"; return 1; }
@@ -106,8 +116,12 @@ srv_start() {  # srv_start <name> <gpu> <cmd ...>
     done
     ev server_ready "\"name\": \"$name\", \"pid\": $(cat "$G/srv/$name.pid")"
 }
-srv_alive() { local p; p=$(cat "$G/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
-srv_stop() { local p; p=$(cat "$G/srv/$1.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$G/srv/$1.pid"; }
+srv_alive() { python3 scripts/cx_owned_process.py alive "$G/srv/$1.owned.json"; }
+srv_stop() {
+    [[ -f $G/srv/$1.pid ]] || return 0
+    python3 scripts/cx_owned_process.py stop "$G/srv/$1.owned.json" || return 1
+    rm -f "$G/srv/$1.pid"
+}
 srv_stop_all() { local f; for f in "$G"/srv/*.pid; do [[ -e $f ]] && srv_stop "$(basename "$f" .pid)"; done; }
 srv_stop_gpus() { local g f; for g in $1; do for f in "$G"/srv/*-g$g.pid; do [[ -e $f ]] && srv_stop "$(basename "$f" .pid)"; done; done; }
 
@@ -182,25 +196,15 @@ launch() {  # launch <cand> <gpu> <seed> <xml> <ids> <out> <workers> <first inde
                 --route-timeout-s 3600 --python "$py" --agent "$ag" --agent-config "$(cfg_for "$c" "$g" "$seed")" \
                 --fast-copy --cache-lights >> "$out/runner-g$g.log" 2>&1 & ;;
     esac
-    echo $!
+    local child=$!
+    python3 scripts/cx_owned_process.py capture "$out/runner-$child.owned.json" "$child"
+    echo "$child"
 }
 
-kill_runs() {  # the runners, route processes and CARLA servers recorded under one out dir
-    local out=$1 p f
-    for p in $(cat "$out/runner.pids" 2>/dev/null); do kill "$p" 2>/dev/null; pkill -P "$p" 2>/dev/null; done
-    sleep 5
-    local left=()
-    for f in "$out"/attempts/*/*/route.pid; do
-        p=$(cat "$f" 2>/dev/null) || continue
-        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; left+=("$p"); }
-    done
-    sleep 10                                        # a route process can sit in the evaluator's SIGTERM handler: KILL it
-    for p in "${left[@]}"; do
-        tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF "$out/" && { kill -9 -- -"$p" 2>/dev/null; kill -9 "$p" 2>/dev/null; }
-    done
-    for f in "$out"/servers/carla-*.pid; do       # the CarlaUE4.sh wrapper's process group: its shipping child survives
-        p=$(cat "$f" 2>/dev/null) || continue      # the wrapper when a runner dies by a signal
-        pkill -P "$p" 2>/dev/null; kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null
+kill_runs() {  # Only identities captured by this invocation and their verified descendants.
+    local out=$1 record
+    for record in "$out"/runner-*.owned.json; do
+        [[ -f $record ]] && python3 scripts/cx_owned_process.py stop "$record"
     done
 }
 
@@ -311,6 +315,11 @@ execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run rout
     local xml=$XML_G; [[ $v == k ]] && xml=$XML_K
     local gl=($GPUS) sets=("$@") t0=$SECONDS i g s ids n pids=() outs=() used=0
     (( ${#gl[@]} < ${#sets[@]} && ${#sets[@]} > 1 )) && { for s in "${sets[@]}"; do execute "$c" "$v" "$est" "$cap" "$s" || return 1; done; return 0; }
+    if [[ ${CX_GK_PILOT_GUARD:-0} == 1 ]]; then
+        local needed=$WORKERS; (( needed > cap )) && needed=$cap
+        python3 scripts/cx_gk_pilots.py admit --workers "$needed" || return 4
+    fi
+    t0=$SECONDS  # Waiting for capacity does not consume the execution timeout.
     for i in "${!gl[@]}"; do ports_ok "$(block_of "$i")" || { log "server block of GPU ${gl[$i]} has no free indices for 30 min"; return 1; }; done
     for i in "${!gl[@]}"; do servers_for "$c" "${gl[$i]}" || { log "server start failed for $c on GPU ${gl[$i]}"; return 1; }; done
     for i in "${!gl[@]}"; do
@@ -328,7 +337,9 @@ execute() {  # execute <cand> <variant> <est_h> <cap> <seed>=<ids> ...: run rout
     local limit; limit=$(python3 -c "print(int(2 * $est * 3600))")
     while :; do
         local alive=0 p
-        for p in "${pids[@]}"; do kill -0 "$p" 2>/dev/null && alive=1; done
+        for i in "${!pids[@]}"; do
+            python3 scripts/cx_owned_process.py alive "${outs[$i]}/runner-${pids[$i]}.owned.json" && alive=1
+        done
         (( alive )) || break
         if (( SECONDS - t0 > limit )); then
             for s in "${outs[@]}"; do kill_runs "$s"; done
@@ -361,6 +372,7 @@ pilot() {  # pilot <cand> <variant> <seed> <ids>: 0 = passed (now or before), 1 
         ev pilot_start "\"cand\": \"$c\", \"variant\": \"$v\", \"stage\": $st"
         while :; do                                    # no free slot is not a pilot failure: wait for one
             execute "$c" "$v" "$( [[ $st == 1 ]] && echo 0.5 || echo 1.5)" "$( [[ $st == 1 ]] && echo 1 || echo 10)" "$sd=$sel"; r=$?
+            (( r == 4 )) && return 2  # Admission deadline/unknown is not a scientific pilot failure.
             (( r == 3 )) || break
             sleep 120
         done
