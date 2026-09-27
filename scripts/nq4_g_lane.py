@@ -126,12 +126,17 @@ def cards(rows):
     bus = {}
     for line in smi("gpu=index,pci.bus_id,memory.used,memory.total"):
         i, b, u, t = [x.strip() for x in line.split(",")]
-        bus[b.lower()[-12:]] = dict(gpu=int(i), used=float(u) / 1024, total=float(t) / 1024, other=0, mine=0)
+        bus[b.lower()[-12:]] = dict(gpu=int(i), used=float(u) / 1024, total=float(t) / 1024, other=0, mine=0, foreign=0)
     by_pid = {}
-    for line in smi("compute-apps=gpu_bus_id,pid,process_name"):
-        b, pid, name = [x.strip() for x in line.split(",", 2)]
-        if "CarlaUE4" in name and b.lower()[-12:] in bus:
+    for line in smi("compute-apps=gpu_bus_id,pid,used_memory,process_name"):
+        b, pid, mem, name = [x.strip() for x in line.split(",", 3)]
+        if b.lower()[-12:] not in bus:
+            continue
+        if "CarlaUE4" in name:
             by_pid[int(pid)] = bus[b.lower()[-12:]]
+        elif mem.isdigit() and int(mem) >= 2048 and not any(
+                m in " ".join(rows.get(int(pid), {}).get("argv", [])) for m in ("/runs/nq4/", "b2d_", "leaderboard")):
+            bus[b.lower()[-12:]]["foreign"] += 1      # another lane's GPU job (e.g. a 3DGS training): pilots avoid it
     for pid, card in by_pid.items():
         port = next((a.split("=")[1] for a in rows.get(pid, {}).get("argv", []) if a.startswith("-carla-rpc-port=")), None)
         mine = port is not None and IDX0 <= (int(port) - 2000) // 50 < IDX0 + 7 * IDX_SPAN
@@ -311,7 +316,11 @@ class Lane:
         young = [r for r in self.st["runners"].values() if alive(r, rows) and now() - r["t0"] < 300]
         pids = pids_now() + PIDS_PER_WORKER * sum(r["workers"] for r in young)   # servers that may still be starting
         mine = {g: sum(r["workers"] for r in self.st["runners"].values() if r["gpu"] == g and alive(r, rows)) for g in info}
-        for gpu in sorted(info, key=lambda g: info[g]["other"] + mine[g]):
+        load = {g: info[g]["other"] + mine[g] + 2 * info[g]["foreign"] for g in info}
+        # A pilot's crash-rate check must not measure a crowded card: pilot stages go only to the least loaded card
+        # with room (fewest CARLA servers, other lanes' GPU jobs counted as two).
+        calm = min((load[g] for g in info if CARD_CAP - info[g]["other"] - mine[g] > 0), default=None)
+        for gpu in sorted(info, key=lambda g: load[g]):
             card = info[gpu]
             room = CARD_CAP - card["other"] - mine[gpu]
             if room <= 0:
@@ -324,6 +333,8 @@ class Lane:
                     p = self.st["pilots"][f"{c}.{v}"]
                     if p["launched"]:
                         continue              # one runner per stage, checked when it ends
+                    if j["rest"] and load[gpu] > calm:
+                        continue
                     if not j["rest"]:         # every stage route already finished earlier: check at once
                         p.update(launched=True, runner=None, t0=now())
                         continue
