@@ -11,7 +11,12 @@ data=${2:-nav}
 d=$DATA_DIR/runs/op_interp/$data
 ver=${3:-v1} split=${4:-navtest}
 cpus=${1:-}
-export TOKENS_FILE=$d/tokens.txt NAVSIM_THREADS=${NAVSIM_THREADS:-16}
+export NAVSIM_THREADS=${NAVSIM_THREADS:-16}
+# TOKENS_FILE restricts scoring to a subset via a scene_filter.tokens=[...] hydra override on the command line; only
+# "nav" (the 2000-token diagnostic) is a subset. A full-benchmark run dir (navfull, navhard) already predicts every
+# token of its split, so it must NOT set TOKENS_FILE: navsim_zs_score.sh's per-token override for 12146+ tokens blows
+# past the shell's ARG_MAX ("Argument list too long") -- and it would be a no-op restriction anyway.
+if [[ $data == nav ]]; then export TOKENS_FILE=$d/tokens.txt; else unset TOKENS_FILE; fi
 # name includes the run dir except for the original "nav" (2000-token) diagnostic, kept as-is for backward
 # compatibility: pose files of the same stem (e.g. warp-cinque__base) exist in more than one run dir (nav's
 # 2000-token subset vs navfull's/navhard's full set) and must not share one eval directory -- they score different
