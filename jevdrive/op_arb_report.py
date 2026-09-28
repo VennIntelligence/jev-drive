@@ -346,6 +346,19 @@ def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
                     row.update({f"{name}_v": round(q.v, 2), f"{name}_decel": round(q.vp0 - q.vp3, 2), f"{name}_vp5": round(q.vp5, 2),
                                 f"{name}_want": bool((q.vp5 < 1.0) or (q.vp5 < 0.3 * q.vp0)), f"{name}_brk0": round(q.brk0, 2),
                                 f"{name}_lp": round(q.lp0, 2)})
+            # post hoc (added after the registered reading turned out uninformative): the start of the final deceleration,
+            # i.e. the fastest step in the 6 s before the stop; "wants to slow" = plan v(3 s) < 0.6 x its own v(0)
+            w = g[(g.t >= g.t[i] - 6) & (g.t < g.t[i])]
+            d = w.loc[w.v.idxmax()] if len(w) else b
+            row.update({"ri_top": int(d.ri), "v_top": round(d.v, 2), "cl_top_vp": [round(d.vp0, 2), round(d.vp3, 2), round(d.vp5, 2)],
+                        "cl_top_slow": bool(d.vp3 < 0.6 * d.vp0), "cl_top_brk0": round(d.brk0, 2), "cl_top_lp": round(d.lp0, 2)})
+            for name, s_ in sh.items():
+                s2 = s_[(s_.route == rid) & ~s_.warm]
+                m = s2[(s2.ri - d.ri).abs() <= 2]
+                if len(m):
+                    q = m.iloc[0]
+                    row.update({f"{name}_top_v": round(q.v, 2), f"{name}_top_vp": [round(q.vp0, 2), round(q.vp3, 2), round(q.vp5, 2)],
+                                f"{name}_top_slow": bool(q.vp3 < 0.6 * q.vp0), f"{name}_top_brk0": round(q.brk0, 2)})
             pos.setdefault(rid, []).append(int(b.ri))
             rows.append(row)
     ev = pd.DataFrame(rows)
@@ -365,6 +378,21 @@ def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
                      "median decel 0-3 s": round(float(e2[f"{name}_decel"].median()), 2), "median brake@0": round(float(e2[f"{name}_brk0"].median()), 2),
                      "median lead_prob": round(float(e2[f"{name}_lp"].median()), 2), "median speed": round(float(e2[f"{name}_v"].median()), 2),
                      "base rate": round(base_rate, 3)})
+    summ.append({"run": "post hoc: e2e closed loop (decel start)", "n": len(ev), "want-stop rate": round(float(ev.cl_top_slow.mean()), 3),
+                 "median speed": round(float(ev.v_top.median()), 2), "median brake@0": round(float(ev.cl_top_brk0.median()), 2)})
+    for name, s_ in sh.items():
+        if f"{name}_top_slow" not in ev:
+            continue
+        s2 = s_[~s_.warm & (s_.v > 0.5)].copy()
+        s2["ctx"] = context(s2)
+        far = np.array([all(abs(r - p) > 10 for p in pos.get(rt, [])) for rt, r in zip(s2.route, s2.ri)])
+        f = s2[(s2.ctx == "free") & far]
+        e2 = ev.dropna(subset=[f"{name}_top_slow"])
+        summ.append({"run": f"post hoc: shadow {name} (decel start)", "n": len(e2),
+                     "want-stop rate": round(float(e2[f"{name}_top_slow"].astype(bool).mean()), 3),
+                     "median speed": round(float(e2[f"{name}_top_v"].median()), 2),
+                     "median brake@0": round(float(e2[f"{name}_top_brk0"].median()), 2),
+                     "base rate": round(float((f.vp3 < 0.6 * f.vp0).mean()), 3)})
     t = pd.DataFrame(summ)
     t.to_csv(out / "phantom_summary.csv", index=False)
     return {"phantom_summary": t, "phantom_events": ev}
