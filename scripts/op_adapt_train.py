@@ -135,10 +135,12 @@ def main():
     ap.add_argument("--dtype", default="fp16", choices=DTYPES)
     ap.add_argument("--limit-scenes", type=int, default=0, help="smoke test: first n train scenes")
     ap.add_argument("--eval-every", type=int, default=500)
+    ap.add_argument("--seed", type=int, default=0, help="aux-head init and batch sampling (the scene split stays seed 0)")
     a = ap.parse_args()
     import pandas as pd
     torch.backends.cudnn.allow_tf32 = torch.backends.cuda.matmul.allow_tf32 = a.dtype == "tf32"
-    log = RunLog("op_adapt", f"train-lam{a.lam_d:g}")
+    torch.manual_seed(a.seed)
+    log = RunLog("op_adapt", f"train-lam{a.lam_d:g}" + (f"-s{a.seed}" if a.seed else ""))
     log.event("start", args=vars(a))
     dev = torch.device("cuda")
     lab = pd.read_parquet(D.root() / "nusc_labels.parquet")
@@ -186,7 +188,7 @@ def main():
             idx = draw(rng)
             x, v, tc = st.batch(idx, dev)
             q.put((idx, x, v, tc))
-    th = [threading.Thread(target=producer, args=(k,), daemon=True) for k in range(3)]
+    th = [threading.Thread(target=producer, args=(1000 * a.seed + k,), daemon=True) for k in range(3)]
     for t in th:
         t.start()
     di = torch.as_tensor(didx, device=dev)
