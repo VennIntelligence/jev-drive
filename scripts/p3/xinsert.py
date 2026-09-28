@@ -207,17 +207,19 @@ def load_bank():
     return out
 
 
-def donor_track(d, cache={}):
-    """Donor node poses (trans, yaw) over all its frames, from the checkpoint (node poses cached per checkpoint)."""
+def donor_track(d, cache={}, with_fv=False):
+    """Donor node poses (trans, yaw) over all its frames, from the checkpoint (node poses cached per checkpoint);
+    with_fv also returns its per-frame validity."""
     import torch
     if d["ckpt"] not in cache:
         sd = torch.load(d["ckpt"], map_location="cpu", weights_only=False)["models"]["DeformableNodes"]
         q = sd["instances_quats"].double()
         q = q / q.norm(dim=-1, keepdim=True)
         w, x, y, z = q.unbind(-1)
-        cache[d["ckpt"]] = (sd["instances_trans"].double().numpy(), torch.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)).numpy())
-    T, yaw = cache[d["ckpt"]]
-    return T[:, d["node"]], yaw[:, d["node"]]
+        cache[d["ckpt"]] = (sd["instances_trans"].double().numpy(), torch.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)).numpy(),
+                            sd["instances_fv"].numpy())
+    T, yaw, fv = cache[d["ckpt"]]
+    return (T[:, d["node"]], yaw[:, d["node"]], fv[:, d["node"]]) if with_fv else (T[:, d["node"]], yaw[:, d["node"]])
 
 
 def cam_table(g, frames):
@@ -270,6 +272,8 @@ def place(g, path, t_star, d, win, side, ttr, null=False, cams=None):
 # walks in at its own gait speed (1.0-1.8 m/s) or stands still, is visible to the front camera outside the lane for
 # >= 1.5 s before it enters the lane, and never overlaps a reconstructed actor (margin 0.3 m around a 0.3 m body).
 V_WALK, KERB_STEP, KERB_OFF, VIS_OUT_S, BODY_R, CLEAR = (1.0, 1.8), 0.06, 0.6, 1.5, 0.3, 0.3
+LEAD_INS = 50            # insertion clips start 5 s before the conflict point: room to walk in from the kerb
+SHIFTS = (0.0, -0.2, 0.2, -0.4, 0.4, -0.6, 0.6, -0.8, 0.8, -1.0, 1.0)   # TTR shift (s) to find a gap between parked cars
 KERB_CACHE = {}
 
 
@@ -339,7 +343,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
     walk starts the donor stands at the start point. mode along: walks parallel to the path on the sidewalk at kerb + 1 m
     (the null). mode stand: stands still at the point for the whole clip. Returns the per-frame (donor frame, x, y), the
     rotation, the checks and the view gap, or {"fail": reason}."""
-    T, yaw = donor_track(d)
+    T, yaw, fvd = donor_track(d, with_fv=True)
     s_c = win["s0"] + PRE
     Q, th, _ = path.at(S_conf)
     right = np.array([np.sin(th), -np.cos(th)])
@@ -359,13 +363,18 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
             return {"fail": f"donor speed {vd} outside {V_WALK}"}
         start = max(kb + KERB_OFF, lat_target + 1.0)
         n_walk = int(np.ceil((start - lat_target) / vd * HZ))
-        if n_walk > lead or s_c - n_walk < win["s0"]:
+        # the walk may begin before the bank window: the donor must be tracked and walk straight over the whole walk
+        if n_walk > lead or s_c - n_walk < 1 or not fvd[s_c - n_walk - 1:s_c + post + 2].all():
             return {"fail": f"cannot walk in from {start:.1f} m within {lead / HZ:.1f} s at {vd} m/s"}
+        seg_ = T[s_c - n_walk:s_c + 1, :2]
+        a1, a2 = seg_[len(seg_) // 2] - seg_[0], seg_[-1] - seg_[len(seg_) // 2]
+        turn = abs(np.degrees(INS.wrap(np.arctan2(a2[1], a2[0]) - np.arctan2(a1[1], a1[0]))))
+        chord = np.linalg.norm(seg_[-1] - seg_[0])
+        if turn > TURN_MAX or np.linalg.norm(np.diff(seg_, axis=0), axis=1).sum() / max(chord, 1e-6) > STRAIGHT:
+            return {"fail": "donor walk not straight over the walk-in"}
         u = T[s_c, :2] - T[s_c - n_walk, :2]
         phi = INS.wrap(np.arctan2(-side * right[1], -side * right[0]) - np.arctan2(u[1], u[0]))
         s_of = {t: max(s_c + (t - t_conf), s_c - n_walk) for t in frames}
-        if max(s_of.values()) > win["s0"] + WIN - 1:
-            return {"fail": "donor window too short after the conflict point"}
         anchor_s, anchor_p = s_c, Q + side * lat_target * right
     else:                                                                     # along: the null on the sidewalk
         if not V_WALK[0] <= vd <= V_WALK[1]:
@@ -425,15 +434,15 @@ def plan_one(k: int, bank_: list) -> dict:
     path = INS.Path2D(g["E"])
     seg = json.loads((DATA / "runs/nq4/p3/targets" / f"{k:03d}.json").read_text())["segment"] if \
         (DATA / "runs/nq4/p3/targets" / f"{k:03d}.json").exists() else f"scene{k}"
-    ok_t = [t for t in range(max(50, PRE + 1), min(151, g["n"] - POST - 1)) if path.v[t] >= 2.0]
+    ok_t = [t for t in range(max(50, LEAD_INS + 1), min(151, g["n"] - POST - 1)) if path.v[t] >= 2.0]
     if not ok_t:
         return {"scene": k, "segment": seg, "item": False, "reason": "ego never >= 2 m/s in [5, 15] s"}
     ts = min(ok_t, key=lambda t: INS.crc(f"{seg}/xinsert/{t}"))
-    gr = Ground(g, range(ts - PRE, ts + POST + 1))
+    gr = Ground(g, range(ts - LEAD_INS, ts + POST + 1))
     actors = scene_actors(g)
     # the crossing point may move by up to +-0.5 s of TTR (nearest first) to find a gap between parked cars
     cands, fails, shift = [], {}, 0.0
-    for shift in (0.0, -0.2, 0.2, -0.4, 0.4, -0.5, 0.5):
+    for shift in SHIFTS:
         S3 = path.Se[ts] + FRONT + (3.0 + shift) * max(path.v[ts], V_FLOOR)
         if not np.isfinite(gr(path.at(S3)[0])):
             fails["no LiDAR ground at the placement"] = fails.get("no LiDAR ground at the placement", 0) + 1
@@ -445,7 +454,7 @@ def plan_one(k: int, bank_: list) -> dict:
                     fails["donor speed outside 1.0-1.8 m/s"] = fails.get("donor speed outside 1.0-1.8 m/s", 0) + 2
                     continue
                 for side in (1.0, -1.0):
-                    b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, PRE, POST, "cross")
+                    b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, LEAD_INS, POST, "cross")
                     if "fail" in b:
                         key = b["fail"].split(" at frame")[0].split(" (")[0].split(" from ")[0].split(" only")[0]
                         fails[key] = fails.get(key, 0) + 1
@@ -464,11 +473,11 @@ def plan_one(k: int, bank_: list) -> dict:
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
            "window": w, "side": side, "ttr_shift": shift, "n_candidates": len(cands), "fails": fails,
-           "rules": "walk-in v2 (2026-09-28 16:30)"}
+           "rules": "walk-in v2 (2026-09-28 16:30)", "lead": LEAD_INS}
     res["variants"] = {}
     for name, ttr, mode in (("ins2", 2.0, "cross"), ("ins3", 3.0, "cross"), ("ins4", 4.0, "cross"), ("null", 3.0, "along")):
         S = path.Se[ts] + FRONT + (ttr + shift) * max(path.v[ts], V_FLOOR)
-        bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, PRE, POST, mode)
+        bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, LEAD_INS, POST, mode)
         res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
                                  if "fail" not in bb else {"fail": bb["fail"]})
     return res
@@ -569,7 +578,7 @@ def render(a):
     g = scene_geom(k)
     path = INS.Path2D(g["E"])
     ts = pl["t_star"]
-    frames = list(range(ts - PRE, ts + POST + 1))
+    frames = list(range(ts - pl.get("lead", PRE), ts + POST + 1))
     gr = Ground(g, frames)
     dev = node.instances_trans.device
     d = pl["donor"]

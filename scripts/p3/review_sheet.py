@@ -65,9 +65,9 @@ def clip(out: Path, iid: str, left, right, rel, caption):
     return p.stat().st_size
 
 
-def window(ticks, anchor_tick, step):
-    """16 frames at 5 Hz from anchor - 2 s (ticks are 20 Hz file indices = 2 x the 10 Hz frame)."""
-    want = [anchor_tick + 4 * i for i in range(-10, 6)]
+def window(ticks, anchor_tick, step, pre_s=2.0):
+    """Frames at 5 Hz from anchor - pre_s to anchor + 1 s (ticks are 20 Hz file indices = 2 x the 10 Hz frame)."""
+    want = [anchor_tick + 4 * i for i in range(-int(round(pre_s * 5)), 6)]
     have = set(ticks)
     return [t for t in want if t in have]
 
@@ -107,7 +107,7 @@ def render(a):
         if pl.get("rules") != "walk-in v2 (2026-09-28 16:30)" or "traj" not in v3:
             continue                                          # rendered before the walk-in rules: not an exam item
         src = md.parent
-        win = window([2 * t for t in m["frames"]], 2 * m["t_star"], 1)
+        win = window([2 * t for t in m["frames"]], 2 * m["t_star"], 1, pre_s=pl.get("lead", 30) / 10)   # the whole walk-in
         iid = f"PI-{int(m['scene'][3:]):03d}"
         dn = pl["donor"]
         cap = (f"pedestrian insertion, cross-scene donor p3_{dn['scene']:03d}/{dn['node']}, walk-in from the kerb ({v3['walk_s']:.1f} s at "
