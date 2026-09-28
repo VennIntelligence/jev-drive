@@ -234,14 +234,16 @@ class RIFE:
         self.net.load_state_dict({k.replace("module.", ""): v for k, v in sd.items()}, strict=False)
         self.device = device
 
-    def __call__(self, i0, i1, t):
-        """i0, i1 (B, 3, H, W) float in [0, 1]; t (B,) -> (B, 3, H, W)."""
+    def __call__(self, i0, i1, ss):
+        """i0, i1 (B, 3, H, W) float in [0, 1]; ss: fractions in (0, 1) -> [(B, 3, H, W)] per fraction."""
         import torch
+        out = []
         with torch.no_grad():
             x = torch.cat([i0, i1], 1)
-            ts = t.view(-1, 1, 1, 1).to(x)
-            _, _, merged = self.net(x, ts, [16, 8, 4, 2, 1])
-        return merged[-1].clamp(0, 1)
+            for s in ss:
+                _, _, merged = self.net(x, torch.full((len(x), 1, 1, 1), s).to(x), [16, 8, 4, 2, 1])
+                out.append(merged[-1].clamp(0, 1))
+        return out
 
 
 class GIMM:
@@ -267,16 +269,15 @@ class GIMM:
         self.net = self.net.to(device).eval()
         self.device = device
 
-    def __call__(self, i0, i1, t):
+    def __call__(self, i0, i1, ss):
+        """All fractions in one forward: the flow between the two frames is estimated once (as the repo's video_Nx)."""
         import torch
         with torch.no_grad():
             xs = torch.stack([i0, i1], 2)
-            B, s = xs.shape[0], xs.shape[-2:]
-            ts = sorted(set(float(v) for v in t.tolist()))
-            assert len(ts) == 1, "one t per batch"
-            coord = [(self.net.sample_coord_input(B, s, [ts[0]], device=xs.device, upsample_ratio=1.0), None)]
-            out = self.net(xs, coord, t=[torch.full((B,), ts[0], device=xs.device)], ds_factor=1.0)
-        return out["imgt_pred"][0].clamp(0, 1)
+            B, hw = xs.shape[0], xs.shape[-2:]
+            coord = [(self.net.sample_coord_input(B, hw, [s], device=xs.device, upsample_ratio=1.0), None) for s in ss]
+            out = self.net(xs, coord, t=[torch.full((B,), s, device=xs.device) for s in ss], ds_factor=1.0)
+        return [o.clamp(0, 1) for o in out["imgt_pred"]]
 
 
 def synth_vfi(keys, model, times, batch: int = 64, device="cuda") -> np.ndarray:
@@ -286,21 +287,23 @@ def synth_vfi(keys, model, times, batch: int = 64, device="cuda") -> np.ndarray:
     N = keys.shape[0]
     out = np.empty((N, len(times)) + keys.shape[2:], np.uint8)
     kt = torch.from_numpy(np.ascontiguousarray(keys)).to(device)
-    jobs = []                                        # (slot j, i0, i1, s)
+    gaps = {}                                        # (i0, i1) -> [(slot j, s)]
     for j, t in enumerate(times):
         k = np.flatnonzero(np.isclose(T_KEY, t))
         if len(k):
             out[:, j] = keys[:, k[0]]
         else:
-            jobs.append((j, *neighbours(t)))
+            i0, i1, s = neighbours(t)
+            gaps.setdefault((i0, i1), []).append((j, s))
     rgb = to_rgb(kt.flatten(0, 2)).view(N, 4, 2, 3, H, W)      # (N, 4 keys, 2 views, 3, H, W)
-    for j, i0, i1, s in jobs:
-        a = rgb[:, i0].flatten(0, 1)
-        b = rgb[:, i1].flatten(0, 1)
-        res = []
+    for (i0, i1), js in gaps.items():
+        a, b = rgb[:, i0].flatten(0, 1), rgb[:, i1].flatten(0, 1)
+        res = [[] for _ in js]
         for q in range(0, a.shape[0], batch):
-            res.append(from_rgb(model(a[q:q + batch], b[q:q + batch], torch.full((len(a[q:q + batch]),), s, device=device))))
-        out[:, j] = torch.cat(res).view(N, 2, 6, 128, 256).cpu().numpy()
+            for r, im in zip(res, model(a[q:q + batch], b[q:q + batch], [s for _, s in js])):
+                r.append(from_rgb(im))
+        for (j, _), r in zip(js, res):
+            out[:, j] = torch.cat(r).view(N, 2, 6, 128, 256).cpu().numpy()
     return out
 
 
