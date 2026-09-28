@@ -7,7 +7,13 @@ j, j - c, .., j - 8c (zero hidden where < 0, like a stream started from a zero s
         pair (f-2, f), c = 2
   p5    the P5 v1 BA streams (processed/carla_p5v1_ba/op_plan.json, frames held 4 steps): slots = frames, pair (f-1, f), c = 1
 
-Output: processed/op_adapt/<dataset>/<key>.npz with trunk (n, 1024, 8, 16) fp16, stride, and per-slot metadata.
+  wodtrain  WOD train streams of processed/op_adapt/wod_train_plan.json (even frame numbers only): slots = those
+            frames, pair (f-2, f), c = 1 (labels: wod_train_labels.parquet)
+  navtrain  NAVSIM navtrain on its 2 Hz sample-and-hold protocol, one file per log: the unique image pairs of the
+            tokens' 9-slot contexts (t = -1.6 .. 0 at 0.2 s, each the latest 2 Hz frame; before -1.5 s a zero hidden
+            state / zero image), `ctx` (n_tokens, 9) = slot index per context position (-1 = zero hidden state)
+
+Output: processed/op_adapt/<dataset>/<key>.npz with trunk (n, 1024, 8, 16) fp16, stride (or ctx), per-slot metadata.
 
   CUDA_VISIBLE_DEVICES=2 python scripts/op_adapt_cache.py nusc --workers 24
 """
@@ -59,6 +65,14 @@ def wod_job(st):
                                  "traffic": np.array([1.0, 0.0], np.float32)}
 
 
+def wod_train_job(st):
+    import drive_backbones_openpilot as R
+    fr = R.render(st["names"])
+    prev = np.concatenate([np.zeros_like(fr[:1]), fr[:-1]])
+    return st["key"], prev, fr, {"stride": 1, "names": np.array(st["names"]), "targets": np.array(st["targets"]),
+                                 "traffic": np.array([1.0, 0.0], np.float32)}
+
+
 def p5_job(st):
     import p5_openpilot as P
     fr = P.render(st["files"], st.get("seq", P.SEQ))
@@ -67,7 +81,61 @@ def p5_job(st):
                                  "traffic": np.array([1.0, 0.0], np.float32)}
 
 
+def navtrain_job(job):
+    import navsim_zs_openpilot as NZ
+    from jevdrive import navsim_zs as Z
+    log, entries = job
+    T = np.round(np.arange(-8, 1) * 0.2, 3)
+    slot = lambda t: int(np.searchsorted(Z.T_HIST2, t + 1e-6) - 1) if t >= -1.5 - 1e-6 else -1  # noqa: E731
+    paths, frames, pairs, ctx, toks, tcs = {}, [], {}, [], [], []
+    for e in entries:
+        cams = e["cams"][-1]
+        key = Z.calib_key({"CAM_F0": cams["CAM_F0"]})
+        m = NZ._maps.get(key) or NZ._maps.setdefault(key, Z.OpenpilotMaps(cams["CAM_F0"]))
+
+        def fidx(k):
+            p = e["cams"][k]["CAM_F0"]["path"]
+            if p not in paths:
+                paths[p] = len(frames)
+                frames.append(m(m.decode(p)))
+            return paths[p]
+        row = []
+        for t in T:
+            c = slot(t)
+            if c < 0:
+                row.append(-1)
+                continue
+            pr = slot(round(t - 0.2, 3))
+            pk = (fidx(pr) if pr >= 0 else -1, fidx(c))
+            row.append(pairs.setdefault(pk, len(pairs)))
+        ctx.append(row)
+        toks.append(e["token"])
+        tcs.append((0.0, 1.0) if e["map"] in NZ.LHT_MAPS else (1.0, 0.0))
+    F = np.concatenate([np.zeros((1, 2, 6, 128, 256), np.uint8), np.stack(frames)])      # row 0 = zero image
+    pk = np.array(list(pairs), np.int64) + 1
+    return log, F[pk[:, 0]], F[pk[:, 1]], {"ctx": np.array(ctx, np.int32), "tokens": np.array(toks),
+                                           "traffic": np.array(tcs, np.float32)}
+
+
 def items(a):
+    if a.dataset == "wodtrain":
+        import wod_zeroshot_openpilot as WZ
+        from jevdrive import drive_backbones as DB
+        from jevdrive import wod_zeroshot as Z
+        plan = json.loads((DB.root() / DB.plan_name("trainval")).read_text())
+        calib = json.loads((Z.root() / "op_calib.json").read_text()) | json.loads((DB.root() / "op_calib_trainval.json").read_text())
+        sts = json.loads((D.root() / "wod_train_plan.json").read_text())["streams"]
+        return sts, wod_train_job, WZ._init, (plan["spans"], calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))
+    if a.dataset == "navtrain":
+        from collections import defaultdict
+        import pandas as pd
+        from jevdrive import navsim_zs as Z
+        keep = set(pd.read_parquet(D.root() / "navtrain_labels.parquet").token)
+        by = defaultdict(list)
+        for e in Z.load_index("navtrain", slim=True):
+            if e["token"] in keep:
+                by[e["log_name"]].append(e)
+        return sorted(by.items()), navtrain_job, None, ()
     if a.dataset == "nusc":
         from jevdrive import nuscenes_zs as Z
         idx = Z.load_index("trainval")
@@ -94,7 +162,7 @@ def items(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("dataset", choices=("nusc", "wod", "p5"))
+    ap.add_argument("dataset", choices=("nusc", "wod", "p5", "wodtrain", "navtrain"))
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--limit", type=int, default=0, help="wod: number of streams (random, seed 0); others: first n")
     a = ap.parse_args()
@@ -103,12 +171,12 @@ def main():
     if a.dataset != "wod" and a.limit:
         its = its[: a.limit]
     out = D.root(a.dataset)
-    key = (lambda x: x) if a.dataset == "nusc" else (lambda x: x["key"])
+    key = (lambda x: x) if a.dataset == "nusc" else (lambda x: x[0]) if a.dataset == "navtrain" else (lambda x: x["key"])
     its = [x for x in its if not (out / f"{key(x)}.npz").exists()]
     log.info(f"{len(its)} streams to cache -> {out}")
     t0, n, nslot = time.time(), 0, 0
     from drive_backbones_openpilot import bounded_map
-    with ProcessPoolExecutor(a.workers, initializer=init, initargs=initargs) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=init, initargs=initargs) if init else ProcessPoolExecutor(a.workers) as ex:
         list(ex.map(int, range(a.workers)))       # fork the render workers before CUDA exists in this process
         net = A.load("cinque", torch.float16).cuda()
         for k, prev, cur, meta in bounded_map(ex, job, its, 2 * a.workers):
