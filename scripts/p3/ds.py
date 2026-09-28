@@ -64,9 +64,11 @@ def config(a) -> Path:
     cfg = OmegaConf.load(DS / "configs/omnire.yaml")
     del cfg.model["SMPLNodes"]
     cfg.model.DeformableNodes.init.only_moving = False
+    if getattr(a, "rigid_all", False):          # vehicle pairs: stopped vehicles must be nodes too, to be deletable
+        cfg.model.RigidNodes.init.only_moving = False
     if a.iters:
         cfg.trainer.optim.num_iters = a.iters
-    p = Path(a.out_root) / f"omnire_nosmpl_{a.iters or 'default'}.yaml"
+    p = Path(a.out_root) / f"omnire_nosmpl_{a.iters or 'default'}{'_rigidall' if getattr(a, 'rigid_all', False) else ''}.yaml"
     p.parent.mkdir(parents=True, exist_ok=True)
     OmegaConf.save(cfg, p)
     return p
@@ -100,7 +102,7 @@ def _box_mask(pose, size, K, c2w, H, W, pad=12):
     return None if x0 >= x1 or y0 >= y1 else (x0, y0, x1, y1)
 
 
-def _load(run: Path, ckpt: str | None):
+def _load(run: Path, ckpt: str | None, node_type: str = "DeformableNodes"):
     """Dataset, trainer (eval mode, checkpoint loaded), pixel source, deformable node model, node -> dataset instance
     keys and node -> Waymo laser id, from a finished OmniRe run."""
     import torch
@@ -124,10 +126,11 @@ def _load(run: Path, ckpt: str | None):
     info = json.loads((Path(cfg.data.data_root) / f"{cfg.data.scene_idx:03d}" / "instances/instances_info.json").read_text())
     true2wid = {int(k): v["id"] for k, v in info.items()}
     peds = [k for k in range(len(ps.instances_true_id)) if info[str(int(ps.instances_true_id[k]))]["class_name"] == "Pedestrian"]
-    dcfg = cfg.model.DeformableNodes.init
-    keys = list(ds.get_init_objects(cur_node_type="DeformableNodes", instance_max_pts=dcfg.instance_max_pts,
-                                    only_moving=dcfg.only_moving, traj_length_thres=dcfg.traj_length_thres, exclude_smpl=False))
-    node = tr.models["DeformableNodes"]
+    dcfg = cfg.model[node_type].init
+    kw = {"exclude_smpl": False} if node_type == "DeformableNodes" else {}
+    keys = list(ds.get_init_objects(cur_node_type=node_type, instance_max_pts=dcfg.instance_max_pts,
+                                    only_moving=dcfg.only_moving, traj_length_thres=dcfg.traj_length_thres, **kw))
+    node = tr.models[node_type]
     assert len(keys) == node.instances_fv.shape[1], (len(keys), node.instances_fv.shape)
     wid_of = [true2wid[int(ps.instances_true_id[k])] for k in keys]
     return cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt
@@ -138,8 +141,8 @@ def render(a):
     from PIL import Image
     t_start = time.time()
     run = Path(a.run)
-    cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = _load(run, a.ckpt)
     sel = json.loads(Path(a.target).read_text())
+    cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = _load(run, a.ckpt, sel.get("node_type", "DeformableNodes"))
     delete = [wid_of.index(w) for w in sel["delete_tracks"] if w in wid_of]
     missing = [w for w in sel["delete_tracks"] if w not in wid_of]
     ds_del = [keys[k] for k in delete]
@@ -310,6 +313,7 @@ def main():
     p = sp.add_parser("sky"); p.add_argument("scene_dirs", nargs="+"); p.add_argument("--cams", type=int, nargs="+", default=[0, 1, 2])
     p = sp.add_parser("train"); p.add_argument("--scene", type=int); p.add_argument("--data-root"); p.add_argument("--out-root")
     p.add_argument("--iters", type=int, default=0)
+    p.add_argument("--rigid-all", action="store_true", help="every vehicle a rigid node (vehicle deletion pairs)")
     p = sp.add_parser("render"); p.add_argument("--run"); p.add_argument("--target"); p.add_argument("--out"); p.add_argument("--ckpt")
     p = sp.add_parser("clip"); p.add_argument("--run"); p.add_argument("--target"); p.add_argument("--labels"); p.add_argument("--out")
     p.add_argument("--ckpt"); p.add_argument("--pre", type=float, default=4.0); p.add_argument("--post", type=float, default=4.0)
