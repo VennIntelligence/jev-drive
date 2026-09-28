@@ -435,6 +435,9 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
   - **调度**：扩量 lane 同时排行人 / 车辆 / 插入三个队列，各自分级；卡 = GPU 6（测试卡，2 个）+ 协调员 11:3x 让出的 GPU 3/4/5（与 CARLA 同卡，各 2 个，开新场景要 ≥ 30 GB 空闲，保证 ≥ 8 GB 给 CARLA）。lane 不轮询 nvidia-smi。
   - **事故**：11:17 重启 lane 时关掉 tmux 窗口，把 p3_010 的 gpu_enable 父进程（pid 361310）一起关掉了，训练进程 361324 活着；新 lane 两次误起重复训练（11:17 GPU 6、11:54 GPU 3），都在 1 min 内按 PID 停掉，同一 run 目录的 config 与原来逐字节相同。
     处理：孤儿训练跑完后由 `expand/finish_orphan_010.sh` 按 gpu_enable 的格式写训练完成标记，`expand/skip/ped_010` 在此之前挡住该场景；场景子进程改为独立 session，以后重启 lane 不会再带掉它们。
+- [P3] 2026-09-28 12:34 CST **登记：插入的标准构造（用户 2026-09-28 约 14:00 看过修正视频，原话「非常好 — 就按照这样做」）**。每道插入题一律：脚贴激光雷达地面（地面标签点 0.8 m 中位，不足 5 点放宽到 2 m，1.1 s 滑动中位）、
+  亮度比匹配原位置（增益限 [0.75, 1.33]）、环境光遮蔽式接触阴影（半径 0.35 m、最多压暗 50%）、供体视角差 ≤ 20°（原登记 45°；超过的供体排除，没有供体的场景不出插入题）。其余（供体挑法、PSNR ≥ 22 dB、TTR 2 / 3 / 4 s、null 4.5 m）不变。
+  已有 0–9 的插入题（45° 规则）移到 `runs/nq4/p3/insert_batch_az45_gain2/`，按新标准重渲。人工复核：所有题用 `scripts/p3/review_sheet.py` 同一版式渲染，汇总在 [research/p3-review-sheet.md](../research/p3-review-sheet.md)。
   - 扩量（`scripts/p3/expand.py`，表行 `nq4-p3-expand`）：p3_010 在 GPU 6 上训练中；盒子 2026-09-28 上午 CARLA 启动卡住，恢复检查通过前以 `runs/nq4/p3/expand/HOLD` 暂停新场景启动；lane 不再轮询 nvidia-smi（CARLA 数从 /proc 读，显存最多 5 min 查一次）。
 
 ## E. 专家汇总的补充
