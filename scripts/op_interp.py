@@ -185,7 +185,28 @@ def image_metrics(tag):
 
 # ---------------------------------------------------------------- openpilot
 
+def _run_tag(a):
+    return f"{a.frames}@{a.model}" + (f"_start{a.start:g}" if a.start is not None else "") + (f"_{a.backend}" if a.backend else "")
+
+
 def cmd_run(a):
+    """One process per shard: a single ORT/TensorRT session is bound by one CPU core's launch overhead on this box, so
+    `--procs` sessions share the card and the shards are merged in order."""
+    if a.procs > 1 and not a.shard:
+        import subprocess
+        argv = [sys.executable, __file__, "run", "--data", a.data, "--frames", a.frames, "--model", a.model] + \
+               (["--backend", a.backend] if a.backend else []) + (["--start", str(a.start)] if a.start is not None else [])
+        ps = [subprocess.Popen(argv + ["--shard", f"{k}/{a.procs}"]) for k in range(a.procs)]
+        assert all(p.wait() == 0 for p in ps), "a shard failed"
+        tag = _run_tag(a)
+        parts = [root(a.data, "plans") / f"{tag}.part{k}of{a.procs}.npz" for k in range(a.procs)]
+        zs = [dict(np.load(f)) for f in parts]
+        out = {k: np.concatenate([z[k] for z in zs]) for k in zs[0] if k not in ("names", "steps", "ms_per_scene")}
+        np.savez(root(a.data, "plans") / f"{tag}.npz", names=np.array(meta(a.data)["names"]), steps=zs[0]["steps"],
+                 ms_per_scene=np.mean([z["ms_per_scene"] for z in zs]), **out)
+        for f in parts:
+            f.unlink()
+        return
     from jevdrive.openpilot.model import OPModel, decode
     fr = np.load(root(a.data) / f"{a.frames}.npy", mmap_mode="r")
     times = np.array(json.loads((root(a.data) / f"{a.frames}.json").read_text())["times"]) if a.frames != "real" else I.T10
@@ -197,24 +218,29 @@ def cmd_run(a):
     if a.start is not None:                        # warm-up ablation: drop the frames before `start`
         sched = [s for s, t in zip(sched, _step_times(times, cr)) if t >= a.start - 1e-6]
     n = len(fr)
+    k, K = map(int, (a.shard or "0/1").split("/"))
+    rows = np.array_split(np.arange(n), K)[k]
     P = {"plan_pos": np.zeros((n, 33, 3), np.float32), "plan_vel": np.zeros((n, 33, 3), np.float32),
          "plan_yaw": np.zeros((n, 33), np.float32), "lead_prob": np.zeros((n, 3), np.float32)}
+    lht = mt.get("lht", [False] * n)
     t0, tg = time.time(), 0.0
-    for i in range(n):
+    for i in rows:
         f = np.ascontiguousarray(fr[i])
-        tc = (0, 1) if mt.get("lht", [False] * n)[i] else (1, 0)
+        tc = (0, 1) if lht[i] else (1, 0)
         t = time.perf_counter()
         m.reset()
         for s in sched:
             raw = m.step(f[s], traffic=tc, action_t=ACTION_T)
         tg += time.perf_counter() - t
         d = decode(raw, m.slices, float(mt["speed"][i]), ACTION_T)
-        for k in ("plan_pos", "plan_vel", "plan_yaw"):
-            P[k][i] = d[k]
+        for q in ("plan_pos", "plan_vel", "plan_yaw"):
+            P[q][i] = d[q]
         P["lead_prob"][i] = d["lead_prob"]
-    tag = f"{a.frames}@{a.model}" + (f"_start{a.start:g}" if a.start is not None else "") + (f"_{a.backend}" if a.backend else "")
-    np.savez(root(a.data, "plans") / f"{tag}.npz", names=np.array(mt["names"]), steps=len(sched), **P)
-    print(f"{tag}: {n} scenes, {len(sched)} steps, {1e3 * tg / n:.1f} ms/scene GPU, {time.time() - t0:.0f} s wall")
+    tag = _run_tag(a) + (f".part{k}of{K}" if a.shard else "")
+    P = {q: v[rows] for q, v in P.items()}
+    np.savez(root(a.data, "plans") / f"{tag}.npz", names=np.array(mt["names"])[rows], steps=len(sched),
+             ms_per_scene=1e3 * tg / len(rows), **P)
+    print(f"{tag}: {len(rows)} scenes, {len(sched)} steps, {1e3 * tg / len(rows):.1f} ms/scene, {time.time() - t0:.0f} s wall")
 
 
 def _step_times(times, cr):
@@ -373,6 +399,8 @@ if __name__ == "__main__":
     p.add_argument("--model", choices=list(BACKENDS), required=True)
     p.add_argument("--backend", default="")
     p.add_argument("--start", type=float, default=None, help="first step time (warm-up ablation)")
+    p.add_argument("--procs", type=int, default=4, help="ORT sessions in parallel (shards)")
+    p.add_argument("--shard", default="", help="k/K: run only shard k (set by --procs)")
     p = sp.add_parser("score-wod")
     p.add_argument("--adapters", nargs="+", default=["base", "retime"])
     p.add_argument("--boot", type=int, default=5000)
