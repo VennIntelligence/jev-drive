@@ -41,12 +41,11 @@ E = D / "expand"
 STAGES = [[10], list(range(11, 20)), list(range(20, 66))]
 TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 90, 6 * 3600
 MAX_TRIES, RETRY_WAIT_S = 3, 600
-# GPU 1 runs the Cosmos-Transfer2.5 pilot (~65 GB, no CARLA server most of the time, so carla_per_card() alone
-# does not see it): never eligible for P3, regardless of live VRAM (coordinator 2026-09-28, after a veh scene
-# briefly landed there at 14:23 when Cosmos had not yet ramped up). GPU 2 stays eligible, capped through
-# shared_cards.json (coordinator grant, 2 slots, <= 42 GB, next to the openpilot trainability probe).
-EXCLUDED_GPUS = {1}
-CORES = {6: ["168,169", "172,173"], **{k: [f"{24 * k + 22},{24 * k + 23}", f"{24 * k + 20},{24 * k + 21}"] for k in range(6)}}
+# GPU 1's Cosmos-Transfer2.5 pilot finished 2026-09-28 (coordinator); given to P3, 3 slots via shared_cards.json,
+# cores from its 24-47 CPU slice. A future runs/sched/demand/cosmos-pilot.json (any *.json there, see
+# demand_cards()) stops new P3 starts on it again, the same way wm-loop's demand file already does for 4/5.
+CORES = {6: ["168,169", "172,173"], 1: ["46,47", "44,45", "42,43"],
+         **{k: [f"{24 * k + 22},{24 * k + 23}", f"{24 * k + 20},{24 * k + 21}"] for k in range(6) if k != 1}}
 
 
 def log(msg, **ev):
@@ -107,8 +106,10 @@ def g_cards() -> set:
 
 
 def demand_cards() -> set:
+    """Cards any lane's demand file claims (runs/sched/demand/*.json, {gpu: truthy}): wm-loop today, a future
+    cosmos-pilot.json (or any other lane) the same way, with no per-lane hardcoding here."""
     out = set()
-    for f in (DATA / "runs/sched/demand").glob("wm-loop*.json"):
+    for f in (DATA / "runs/sched/demand").glob("*.json"):
         try:
             out |= {int(k) for k, v in json.loads(f.read_text()).items() if v}
         except (ValueError, OSError):
@@ -261,13 +262,12 @@ def main():
         order = [(kd.name, k) for tup in __import__("itertools").zip_longest(*queues) for kd, k in zip(ks, tup) if k is not None]
         if order and not (E / "HOLD").exists():
             carla = carla_per_card()
-            eligible = [TEST_GPU] + [g for g in range(6) if g not in EXCLUDED_GPUS and g not in g_cards()
-                                     and g not in demand_cards() and not carla.get(g)]
+            eligible = [TEST_GPU] + [g for g in range(6) if g not in g_cards() and g not in demand_cards() and not carla.get(g)]
             try:                                   # cards shared with CARLA by the coordinator's grant: {"3": 1, ...} slots
                 shared = {int(g): int(n) for g, n in json.loads((E / "shared_cards.json").read_text()).items()}
             except (OSError, ValueError):
                 shared = {}
-            eligible += [g for g in shared if g not in eligible and g not in EXCLUDED_GPUS]   # a CARLA demand file asks for server slots, not VRAM
+            eligible += [g for g in shared if g not in eligible]   # a CARLA demand file asks for server slots, not VRAM
             cap = {g: shared.get(g, SLOTS) if g in shared and g != TEST_GPU else SLOTS for g in eligible}
             want = [g for g in eligible if sum(v[1] == g for v in running.values()) < cap[g]]
             info = free_gb() if want else {}
