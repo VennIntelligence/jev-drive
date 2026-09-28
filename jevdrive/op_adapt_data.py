@@ -87,7 +87,8 @@ def labels() -> "pd.DataFrame":
         g_r = e.get("gt_rear")
         fut = np.asarray(g_r, np.float64).reshape(-1, 2) if g_r is not None and len(g_r) else np.zeros((0, 2))
         r = {"token": e["token"], "scene": e["scene"], "split": e["split"], "t0": e["t0"], "valid": bool(e.get("valid", False)),
-             "n_vru": len(a), "ped_corr": False, "ped_wide": False, "vru_corr": False, "vru_wide": False, "ped_dist": np.nan}
+             "n_vru": len(a), "ped_corr": False, "ped_wide": False, "vru_corr": False, "vru_wide": False, "ped_dist": np.nan,
+             "ped_dist_wide": np.nan}
         if a:
             ped = np.array([x[0] for x in a])
             g = np.array([x[1] for x in a])
@@ -99,7 +100,8 @@ def labels() -> "pd.DataFrame":
             wd = corridor(fut, xy, yaw, lw, WIDE_W, WIDE_R)
             r.update(ped_corr=bool((cn & ped).any()), ped_wide=bool((wd & ped).any()), vru_corr=bool(cn.any()),
                      vru_wide=bool(wd.any()),
-                     ped_dist=float(np.hypot(*xy[cn & ped].T).min()) if (cn & ped).any() else np.nan)
+                     ped_dist=float(np.hypot(*xy[cn & ped].T).min()) if (cn & ped).any() else np.nan,
+                     ped_dist_wide=float(np.hypot(*xy[wd & ped].T).min()) if (wd & ped).any() else np.nan)
         rows.append(r)
     df = pd.DataFrame(rows)
     df.to_parquet(root() / "nusc_labels.parquet", index=False)
