@@ -80,6 +80,9 @@ def check2_3(v: str, names: list) -> pd.DataFrame:
             if f"lpips_{k}" in pj:
                 r[f"lpips_{k}"] = float(np.median(pj[f"lpips_{k}"]))
                 r[f"psnr_{k}"] = float(np.median(np.minimum(pj[f"psnr_{k}"], 99.0)))
+        for k in ("pair", "alt", "raw"):
+            x = [v_ for v_ in pj.get(f"ring_mad_{k}", []) if v_ is not None]
+            r[f"ring_mad_{k}"] = float(np.median(x)) if x else np.nan
         pre = np.array(pj["px"]) < 50
         if pre.any():
             r["lpips_pair_previs"] = float(np.median(np.array(pj["lpips_pair"])[pre]))
@@ -90,7 +93,8 @@ def check2_3(v: str, names: list) -> pd.DataFrame:
             A, B = op[f"{a}/temporal"][WARM:], op[f"{b}/temporal"][WARM:]
             return float(np.median(1 - (A * B).sum(1) / (np.linalg.norm(A, axis=1) * np.linalg.norm(B, axis=1))))
         pv = lambda s: s if s.startswith("raw") else f"{v}_{s}"  # noqa: E731
-        for name, (a, b) in {"comp": ("comp", "minus"), "rep": ("rep", "minus"), "alt": ("alt", "minus"),
+        alt_ref = "altbase" if f"{v}_altbase/temporal" in op.files else "minus"
+        for name, (a, b) in {"comp": ("comp", "minus"), "rep": ("rep", "minus"), "alt": ("alt", alt_ref),
                              "raw_comp": ("raw_comp", "raw_minus"), "full": ("plus", "minus"),
                              "raw_full": ("raw_plus", "raw_minus")}.items():
             if f"{pv(a)}/temporal" in op.files and f"{pv(b)}/temporal" in op.files:
@@ -104,6 +108,23 @@ def check2_3(v: str, names: list) -> pd.DataFrame:
                  v2_raw=float(np.median(op[f"{c}/v2"][WARM:])), v2_tr=float(np.median(op[f"{t}/v2"][WARM:])))
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def per_pair_rule(per: pd.DataFrame) -> pd.DataFrame:
+    """v2 per-pair pass rule (registered in the todo before any v2 output): a pair passes when
+    1. R_T >= 0.8 R_C (pairs with >= 10 visible units) and H_T <= H_C + 1 pp;
+    2. outside-region LPIPS <= 1/3 seed-change LPIPS, PSNR >= 28 dB, openpilot d_comp <= d_raw_comp + 0.001;
+    3. ring MAD (1-12 px outside the pedestrian mask) <= 2 x CARLA's + 2 grey levels and <= 1/4 seed-change ring MAD."""
+    p = per.copy()
+    small = p.vis_frames < 10
+    p["pp1"] = (small | (p.R_plus >= 0.8 * p.R_raw_plus)) & (p.H_minus <= p.H_raw_minus + 0.01)
+    p["pp2"] = (p.lpips_pair <= p.lpips_alt / 3) & (p.psnr_pair >= 28) & (p.d_comp <= p.d_raw_comp + 0.001)
+    if "ring_mad_pair" in p:
+        p["pp3"] = (p.ring_mad_pair <= 2 * p.ring_mad_raw + 2) & (p.ring_mad_pair <= p.ring_mad_alt / 4)
+    else:
+        p["pp3"] = False
+    p["pair_pass"] = p.pp1 & p.pp2 & p.pp3
+    return p
 
 
 def cost(v: str) -> dict:
@@ -156,6 +177,7 @@ def report(variants: list, only: str = ""):
         c1, fr = check1(v, names_v)
         c23 = check2_3(v, names_v)
         per = c1.merge(c23, on="pair")
+        per = per_pair_rule(per)
         per.to_csv(RESULTS / f"per_pair_{v}.csv", index=False)
         rec = fr[fr.stream.isin(["raw_plus", "plus"]) & fr.vis]
         R = {s: rec[rec.stream == s].hit.mean() for s in ("raw_plus", "plus")}
@@ -196,6 +218,10 @@ def report(variants: list, only: str = ""):
         s["pass3"] = bool(s["flicker_ratio_med"] <= P["flicker_ratio"] and s["dv_med"] <= P["dv_med"] and s["dv_p90"] <= P["dv_p90"]
                           and s["dy_med"] <= P["dy_med"] and s["lead_agree"] >= P["lead_agree"])
         s["pass4"] = bool(s.get("gpuh_2000_pairs", np.inf) <= P["gpuh_2000"])
+        s["pairs_pass"] = f"{int(per.pair_pass.sum())}/{len(per)}"
+        s["ring_mad_pair_med"] = float(per.ring_mad_pair.median()) if "ring_mad_pair" in per else np.nan
+        s["ring_mad_raw_med"] = float(per.ring_mad_raw.median()) if "ring_mad_raw" in per else np.nan
+        s["ring_mad_alt_med"] = float(per.ring_mad_alt.median()) if "ring_mad_alt" in per else np.nan
         summ.append(s)
     out = pd.DataFrame(summ)
     out.to_csv(RESULTS / "summary.csv", index=False)

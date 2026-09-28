@@ -62,7 +62,7 @@ def _one(job) -> list:
     return rows
 
 
-def run(variants=("edgeA", "edgeB", "seg")):
+def run(variants=("edgeA", "edgeB", "seg"), tag: str = ""):
     jobs = []
     for v in variants:
         od = ROOT / "out" / v
@@ -72,18 +72,19 @@ def run(variants=("edgeA", "edgeB", "seg")):
                 if not f.exists():
                     continue
                 ctrl = {"edgeA": od / f"{pair}_{m}_{v}_s{SEED}_control_edge.mp4",
-                        "edgeB": root("clips", pair, m) / "edge.mp4"}.get(v, "")
+                        "edgeB": root("clips", pair, m) / "edge.mp4", "P2": root("clips", pair, m) / "edge.mp4",
+                        **{k: root("clips", pair, m) / "edgeC.mp4" for k in ("E2", "G2b", "M2")}}.get(v, "")
                 jobs.append((pair, m, v, str(f), str(ctrl)))
     with ProcessPoolExecutor(min(20, len(jobs))) as ex:
         d = pd.DataFrame([x for rows in ex.map(_one, jobs) for x in rows])
     d["is_white"] = (d.white >= WHITE_FRAC) & (d.white_raw <= RAW_MAX)
     pale = lambda v, s_, t, t_ref: (v >= 140) & (s_ <= 0.25) & (t <= 0.6 * t_ref)  # noqa: E731
     d["is_pale"] = pale(d.v_cos, d.s_cos, d.tex_cos, d.tex_raw) & ~((d.v_raw >= 140) & (d.s_raw <= 0.25) & (d.tex_raw <= 20))
-    d.to_csv(RESULTS / "white_units.csv.gz", index=False)
-    return summarize(d)
+    d.to_csv(RESULTS / f"white_units{tag}.csv.gz", index=False)
+    return summarize(d, tag=tag)
 
 
-def summarize(d: pd.DataFrame, flag: str = "is_pale") -> str:
+def summarize(d: pd.DataFrame, flag: str = "is_pale", tag: str = "") -> str:
     out = [f"flag: {flag}"]
     d = d.assign(is_white=d[flag])
     g = d.groupby(["variant", "cls"]).agg(units=("is_white", "size"), white=("is_white", "mean")).unstack(0)
@@ -110,7 +111,7 @@ def summarize(d: pd.DataFrame, flag: str = "is_pale") -> str:
                                                                           last_t=("t", "max"), px_med=("px", "median"))
     out.append("## where (pair, member, class)\n\n" + w.to_markdown())
     txt = "\n\n".join(out) + "\n"
-    (RESULTS / "white.md").write_text(txt)
+    (RESULTS / f"white{tag}.md").write_text(txt)
     print(txt)
     return txt
 
@@ -120,8 +121,9 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--variants", default="edgeA,edgeB,seg")
     ap.add_argument("--summarize", action="store_true", help="re-summarize white_units.csv.gz")
+    ap.add_argument("--tag", default="")
     a = ap.parse_args()
     if a.summarize:
         summarize(pd.read_csv(RESULTS / "white_units.csv.gz"))
     else:
-        run(tuple(a.variants.split(",")))
+        run(tuple(a.variants.split(",")), a.tag)

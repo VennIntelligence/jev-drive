@@ -118,6 +118,10 @@ def main():
             f = cos / f"{name}.npy"
             if f.exists():
                 clips[key] = np.load(f)
+        b = {"M2": "E2", "P2": "E2"}.get(v)          # borrowed seed floor (jevdrive.cosmos_eval.ALT_FROM)
+        if f"{v}_alt" not in clips and b and (ROOT / "out" / b / f"{pair}_minus_{b}_s{SEED_ALT}.npy").exists():
+            clips[f"{v}_alt"] = np.load(ROOT / "out" / b / f"{pair}_minus_{b}_s{SEED_ALT}.npy")
+            clips[f"{v}_altbase"] = np.load(ROOT / "out" / b / f"{pair}_minus_{b}_s{SEED}.npy")
         clips["raw_comp"] = np.where(region, clips["raw_minus"], clips["raw_plus"])
         if f"{v}_plus" in clips and f"{v}_minus" in clips:
             clips[f"{v}_comp"] = np.where(region, clips[f"{v}_minus"], clips[f"{v}_plus"])

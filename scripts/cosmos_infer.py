@@ -62,6 +62,54 @@ class NvmlPeak:
         self.peak = 0
 
 
+def patch_guided_distilled():
+    """Guided generation for the distilled (DMD2, trigflow) sampler, which ignores x0_spatial_condition as shipped.
+    Same rule as the base model's sampler (vid2vid_model_control_vace_rectified_flow): before every step, the latent
+    where x_sigma_mask = 1 is replaced by the anchor latent noised to that step's level; here also the final x0, so
+    the anchored region decodes to the anchor (up to the VAE). Trigflow: x_t = cos(t) x0 / sigma_data + sin(t) noise."""
+    import math
+
+    import torch
+    from cosmos_transfer2._src.interactive.methods.cosmos2_interactive_model import Cosmos2InteractiveModel as M
+    orig = M.generate_samples_from_batch
+
+    def gen(self, data_batch, seed=1, state_shape=None, n_sample=None, num_steps=4, init_noise=None,
+            net_type="student", **kw):
+        cond = data_batch.pop("x0_spatial_condition", None)
+        if cond is None:
+            return orig(self, data_batch, seed=seed, state_shape=state_shape, n_sample=n_sample, num_steps=num_steps,
+                        init_noise=init_noise, net_type=net_type, **kw)
+        assert net_type == "student" and num_steps <= len(self.config.selected_sampling_time)
+        self._normalize_video_databatch_inplace(data_batch)
+        self._augment_image_dim_inplace(data_batch)
+        key = self.input_data_key
+        n_sample = n_sample or data_batch[key].shape[0]
+        _T, _H, _W = data_batch[key].shape[-3:]
+        f = self.tokenizer.spatial_compression_factor
+        shape = [self.config.state_ch, self.tokenizer.get_latent_num_frames(_T), _H // f, _W // f]
+        x0_fn = self.get_x0_fn_from_batch(data_batch, net_type=net_type)
+        g = torch.Generator(device=self.tensor_kwargs["device"])
+        g.manual_seed(seed)
+        noise = torch.randn(n_sample, *shape, dtype=torch.float32, device=self.tensor_kwargs["device"], generator=g)
+        x0a = cond["x0"].to(torch.float64)
+        mask = cond["x_sigma_mask"].to(torch.float64)
+        sd = self.config.sigma_data
+        x = noise.to(torch.float64)
+        ones = torch.ones(x.size(0), device=x.device, dtype=x.dtype)
+        t_steps = self.config.selected_sampling_time[:num_steps] + [0]
+        for t_cur, t_next in zip(t_steps[:-1], t_steps[1:]):
+            anchor_t = math.cos(t_cur) * x0a / sd + math.sin(t_cur) * noise
+            x_t = anchor_t * mask + x * (1 - mask)
+            x0_pred = x0_fn(x_t.float(), t_cur * ones).to(torch.float64)
+            x = x0_pred
+            if t_next > 1e-5:
+                x = math.cos(t_next) * x / sd + math.sin(t_next) * noise
+        x = x0a * mask + x * (1 - mask)
+        return torch.nan_to_num(x.float())
+
+    M.generate_samples_from_batch = gen
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--specs", required=True)
@@ -87,6 +135,7 @@ def main():
             SGI.get_siglip2_model_processor = SG.get_siglip2_model_processor
     except ImportError:
         pass
+    patch_guided_distilled()
     from cosmos_oss.init import init_environment
     from cosmos_transfer2.config import InferenceArguments, SetupArguments
     from cosmos_transfer2.inference import Control2WorldInference

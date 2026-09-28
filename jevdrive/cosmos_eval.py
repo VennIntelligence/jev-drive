@@ -39,12 +39,19 @@ def pairs() -> list[str]:
     return [r["pair"] for r in csv.DictReader(open(RESULTS / "pairs.csv"))]
 
 
+ALT_FROM = {"M2": "E2", "P2": "E2"}     # arms without their own seed floor borrow E2's (same prompt, same x- geometry)
+
+
 def streams(pair: str, v: str) -> dict:
     """name -> loader for every clip of a pair that exists."""
     c, o = ROOT / "clips" / pair, ROOT / "out" / v
     s = {"raw_plus": c / "plus" / "rgb.mp4", "raw_minus": c / "minus" / "rgb.mp4",
          "plus": o / f"{pair}_plus_{v}_s{SEED}.npy", "minus": o / f"{pair}_minus_{v}_s{SEED}.npy",
          "rep": o / f"{pair}_minus_{v}_s{SEED}_rep.npy", "alt": o / f"{pair}_minus_{v}_s{SEED_ALT}.npy"}
+    if not s["alt"].exists() and v in ALT_FROM:
+        b = ALT_FROM[v]
+        s["alt"], s["alt_base"] = (ROOT / "out" / b / f"{pair}_minus_{b}_s{SEED_ALT}.npy",
+                                   ROOT / "out" / b / f"{pair}_minus_{b}_s{SEED}.npy")
     return {k: p for k, p in s.items() if p.exists()}
 
 
@@ -118,7 +125,17 @@ def pixels(v: str, only: str = "", gpu: int = 0):
         S = {k: load(p) for k, p in streams(pair, v).items()}
         out = {"pair": pair, "vis": (g["px"] >= VIS_PX).tolist(), "px": g["px"].tolist()}
         # (x, y): compare x to y outside the region; LPIPS on x with the region filled from y
-        for name, (x, y) in {"pair": ("plus", "minus"), "rep": ("rep", "minus"), "alt": ("alt", "minus"),
+        # edge leak (v2): ring 1-12 px outside the pedestrian's own pixel mask, frames where it is >= VIS_PX
+        import cv2
+        k12 = np.ones((25, 25), np.uint8)
+        ring = np.stack([(cv2.dilate(m.astype(np.uint8), k12) > 0) & ~m for m in g["mask"]])
+        rv = g["px"] >= VIS_PX
+        alt_ref = "alt_base" if "alt_base" in S else "minus"
+        for name, (x, y) in {"pair": ("plus", "minus"), "alt": ("alt", alt_ref), "raw": ("raw_plus", "raw_minus")}.items():
+            if x in S and y in S:
+                out[f"ring_mad_{name}"] = [float(np.abs(S[x][t].astype(np.int16) - S[y][t])[ring[t]].mean()) if rv[t] else None
+                                           for t in range(len(rv))]
+        for name, (x, y) in {"pair": ("plus", "minus"), "rep": ("rep", "minus"), "alt": ("alt", alt_ref),
                              "raw": ("raw_plus", "raw_minus"), "tr_minus": ("minus", "raw_minus")}.items():
             if x in S and y in S:
                 comp = np.where(region[..., None], S[y], S[x])
