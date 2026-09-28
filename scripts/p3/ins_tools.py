@@ -135,6 +135,7 @@ def scene_geometry(key, meta):
                 return float(np.median(gp[d <= r, 2]))
         return float("nan")
 
+    ground.points = gp
     return K, E, c2e, ground, proc
 
 
@@ -230,9 +231,21 @@ def veh(a):
     Q, th, _ = path.at(S)
     Rw = np.array([[np.cos(th), -np.sin(th), 0], [np.sin(th), np.cos(th), 0], [0, 0, 1]])
     corners = np.array([[sx * l / 2, sy * w / 2] for sx in (-1, 1) for sy in (-1, 1)]) @ Rw[:2, :2].T + Q
-    zg = float(np.nanmedian([ground(c, 1.0) for c in [*corners, Q]]))
-    Rt = torch.tensor(Rw, dtype=torch.float64) @ M
+    # the car sits on a plane fitted to the LiDAR ground under its footprint (+1 m): height, pitch and roll
+    gp = ground.points
+    loc_g = (gp[:, :2] - Q) @ Rw[:2, :2]
+    near = (np.abs(loc_g[:, 0]) <= l / 2 + 1.0) & (np.abs(loc_g[:, 1]) <= w / 2 + 1.0)
+    A = np.c_[np.ones(near.sum()), loc_g[near]]
+    coef = np.linalg.lstsq(A, gp[near, 2], rcond=None)[0]              # z = c0 + c1 * forward + c2 * left
+    zg = float(coef[0])
+    up = np.array([-coef[1], -coef[2], 1.0])
+    up /= np.linalg.norm(up)
+    fwd = np.array([1.0, 0.0, coef[1]])
+    fwd /= np.linalg.norm(fwd)
+    Rp = np.c_[fwd, np.cross(up, fwd), up]                              # car frame on the plane, in the path frame
+    Rt = torch.tensor(Rw @ Rp, dtype=torch.float64) @ M
     tvec = torch.tensor([Q[0], Q[1], zg - bottom], dtype=torch.float64)
+    corners = np.c_[corners, zg + (np.array([[sx * l / 2, sy * w / 2] for sx in (-1, 1) for sy in (-1, 1)]) @ coef[1:])]
     dev = "cuda"
     means = (xyz @ Rt.T + tvec)[keep].float().to(dev)
     qr = matrix_to_quaternion(Rt[None].float())[0]
@@ -270,8 +283,7 @@ def veh(a):
             boxes.append(b or (0, 0, 0, 0))
             regs.append(box_region(b) if b else (0, 0, 0, 0))
             c2w_np = c2w.double().cpu().numpy()
-            pts = np.c_[corners, np.full(4, zg)]
-            uv, z = project(K, c2w_np, pts)
+            uv, z = project(K, c2w_np, corners)
             cps.append(uv[np.argmax(uv[:, 1])])                         # nearest bottom corner = lowest contact row
     rd = run_dir(key)
     old = dict(np.load(rd / "geom.npz"))
@@ -279,7 +291,7 @@ def veh(a):
                 "veh_pose": np.r_[Q, zg, th], "veh_wlh": np.array([w, l, h])})
     np.savez(rd / "geom.npz", **old)
     info = {"asset": aid, "wlh": [w, l, h], "S_ahead_m": float(S - path.Se[ts]), "ego_v_t_star": float(path.v[ts]),
-            "ground_z": zg, "flip": a.flip, "wall_s": round(time.time() - t0, 1)}
+            "ground_z": zg, "ground_slope_fwd_left": [float(coef[1]), float(coef[2])], "ground_pts": int(near.sum()), "flip": a.flip, "wall_s": round(time.time() - t0, 1)}
     (rd / "veh.json").write_text(json.dumps(info, indent=1))
     print(json.dumps(info))
 
