@@ -259,8 +259,9 @@ class GIMM:
         sys.path.insert(0, str(repo / "src"))
         os.chdir(repo)                                   # RAFT loads pretrained_ckpt/raft-things.pth relative to cwd
         from models import create_model
-        cfg = OmegaConf.load(repo / "configs/gimmvfi/gimmvfi_r_arb.yaml")
-        self.net, _ = create_model(cfg.arch)
+        from utils.config import augment_arch_defaults, load_config
+        cfg = load_config(repo / "configs/gimmvfi/gimmvfi_r_arb.yaml")
+        self.net, _ = create_model(augment_arch_defaults(cfg.arch))
         sd = torch.load(ck / "gimmvfi_r_arb_lpips.pt", map_location="cpu")
         self.net.load_state_dict(sd["state_dict"], strict=True)
         self.net = self.net.to(device).eval()
