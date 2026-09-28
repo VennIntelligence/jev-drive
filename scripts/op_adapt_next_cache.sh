@@ -12,7 +12,7 @@ GPU=${GPU:-2}
 CPUS=${CPUS:-48-67}
 WORKERS=${WORKERS:-20}
 MIN_FREE_MB=${MIN_FREE_MB:-20000}
-DISK_FLOOR_GB=${DISK_FLOOR_GB:-450}      # the two caches need ~150 GB; stop instead of filling the shared disk
+DISK_FLOOR_GB=${DISK_FLOOR_GB:-150}      # the two caches need ~150 GB; stop instead of filling the shared disk
 st() { echo "$(date '+%F %T') $*" | tee -a "$OUT/STATUS"; }
 rm -f "$OUT/DONE" "$OUT/ERROR"
 
