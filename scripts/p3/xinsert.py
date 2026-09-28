@@ -352,11 +352,11 @@ class XDonor:
         n = self.means.shape[0]
         x = self.means / self.size[2] * 2
         dxyz, dq, dsc = self.net(x, self.ts[s].reshape(1, 1).repeat(n, 1), self.embed[None].repeat(n, 1))
-        world = (self.means + dxyz) @ R.T + T
+        world = (self.means + (dxyz if dxyz is not None else 0)) @ R.T + T
         qR = __import__("pytorch3d.transforms", fromlist=["matrix_to_quaternion"]).matrix_to_quaternion(R)
-        q = self._quats / self._quats.norm(dim=-1, keepdim=True) + dq
+        q = self._quats / self._quats.norm(dim=-1, keepdim=True) + (dq if dq is not None else 0)
         quats = quat_mult(qR[None].repeat(n, 1), q / q.norm(dim=-1, keepdim=True))
-        scales = torch.exp(self._scales) + dsc
+        scales = torch.exp(self._scales) + (dsc if dsc is not None else 0)
         vd = world.detach() - cam.camtoworlds.data[..., :3, 3]
         vd = (vd @ R) @ Rd.T                                            # into the donor's own world frame
         vd = vd / vd.norm(dim=-1, keepdim=True)
