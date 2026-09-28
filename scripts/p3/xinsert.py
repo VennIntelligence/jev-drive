@@ -12,8 +12,9 @@ gain cap 1.33, view gap <= 20 deg). todos/2026-09-26-night-queue-4.md, P section
          x entry side, the donor walks the target lane perpendicular to the logged path (from the entry side), centred
          at t* on the lane centre with TTR 3 s; view gap = max over the frames it is in the front camera of the smallest
          azimuth difference to what the log saw of the donor. Donor rules: box PSNR >= 22 dB, height 1.0-2.1 m,
-         gaussian vertical extent / box height 0.8-1.25. The minimal-gap placement wins (ties: higher PSNR); an item
-         exists when that gap is <= 20 deg. TTR 2 / 4 s reuse it; the null walks along the path 4.5 m off the lane on
+         gaussian vertical extent / box height 0.8-1.25. Among the placements within 5 deg of the best gap (or the best
+         one when it is larger) the crc32-minimal (target, donor, window, side) wins, so targets get different donors;
+         an item exists when the chosen gap is <= 20 deg. TTR 2 / 4 s reuse it; the null walks along the path 4.5 m off the lane on
          the entry side, direction of the smaller gap.  -> xinsert/plan/p3_<k>.json
   render (GPU, one target with a plan)  the target OmniRe run plus the donor's gaussians and its own deformation network
          (evaluated at the donor's frame), placed rigidly, feet on the target LiDAR ground (1.1 s median), SH evaluated
@@ -45,7 +46,7 @@ DATA = Path(os.environ["DATA_DIR"])
 X = DATA / "runs/nq4/p3/xinsert"
 PROC = DATA / "processed/waymo_ds/training"
 HZ, PRE, POST, FRONT, V_FLOOR = 10, 30, 20, 4.0, 3.0
-AZ_MAX, PSNR_MIN, GAIN_MAX, SHADE = 20.0, 22.0, 1.33, 0.6
+AZ_MAX, PSNR_MIN, GAIN_MAX, SHADE, DIVERSE_GAP = 20.0, 22.0, 1.33, 0.6, 5.0
 H_RANGE, SPAN_RANGE, SPEED_RANGE, TURN_MAX, STRAIGHT = (1.0, 2.1), (0.8, 1.25), (0.5, 2.5), 25.0, 1.15
 WIN = PRE + POST + 1
 
@@ -276,8 +277,11 @@ def plan_one(k: int, bank_: list) -> dict:
                     cands.append((b["gap"], -d["psnr"], d, w, side, b))
     if not cands:
         return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no donor in view"}
+    # among the placements within DIVERSE_GAP of the best, pick by crc32(target / donor / window / side): with a large
+    # bank many donors fit almost perfectly, and a PSNR tie-break sends every target the same donor
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
-    gap, _, d, w, side, b = cands[0]
+    near = [c for c in cands if c[0] <= max(cands[0][0], DIVERSE_GAP)]
+    gap, _, d, w, side, b = min(near, key=lambda c: INS.crc(f"{seg}/{c[2]['scene']}/{c[2]['node']}/{c[3]['s0']}/{c[4]}"))
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
            "window": w, "side": side, "n_candidates": len(cands),
