@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Donor bank expansion (user 2026-09-28, (b)): bank every reconstructed scene - the pedestrian pool (ckpt/nq4_p3/p3/<k>)
 # and the vehicle-deletion segments (ckpt/nq4_p3_veh/p3/<j>, donor scene id 1000 + j) - two jobs at a time on shared cards
-# with >= 30 GB free (never GPU 1: Cosmos demand; not GPU 6: the dose renders), re-scanning every 20 min for new
+# with >= 20 GB free (a bank job holds ~12 GB with CPU preload; never GPU 1: Cosmos demand; not GPU 6: the dose renders), re-scanning every 20 min for new
 # reconstructions until the P3 lane writes expand/DONE. Markers in runs/nq4/p3/xinsert/bank/: PASS1_DONE after the first
 # full pass, WATCH_DONE at the end, <name>.fail for a job that failed (not retried; the watcher goes on).
 #   scripts/tmux_run.sh p3-bank bash scripts/p3/bank_watch.sh
@@ -25,7 +25,7 @@ pick_gpu() {
   while true; do
     for g in "${CARDS[@]}"; do
       free=$(nvidia-smi -i "$g" --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null)
-      [ -n "$free" ] && [ "$free" -ge 30000 ] && { echo "$g"; return; }
+      [ -n "$free" ] && [ "$free" -ge 20000 ] && { echo "$g"; return; }
     done
     sleep 60
   done
