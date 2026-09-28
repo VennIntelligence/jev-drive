@@ -224,7 +224,11 @@ class LegacyOPModel:
     """Pre-0.9.5 supercombo (C++ modeld: selfdrive/modeld/models/driving.cc at v0.8.16 / v0.9.4), stepped at 20 Hz.
 
     Images: [previous 20 Hz frame, current] per camera (ModelFrame keeps the last frame; zeros before the first),
-    float = pixel / 128 - 1 as loadyuv.cl writes it. sc0816: the 512-d output hidden_state fed back as initial_state.
+    raw pixel values as floats (loadyuv.cl's convert_float; any normalisation is folded into the stem conv: on logged
+    P3 frames x / 128 - 1 gives a constant plan speed, raw values one that follows the log). These models read ego
+    speed from the motion between the two frames, so they need true 20 Hz frames: 5 Hz frames held for 4 steps give
+    a plan speed near 0, and 5 Hz pairs stepped once per frame about 3x the logged speed (check 2026-09-28,
+    todos/2026-09-28-ped-dose-response.md). sc0816: the 512-d output hidden_state fed back as initial_state.
     sc094: a 100 x 8 desire-pulse history (shifted before the step) and a 99 x 128 feature buffer of past hidden
     states (shifted after it), nav features zero. step() returns the output in the current layout so decode(),
     plan_grid() and nq4_k.lead_decode() read it unchanged: plan = best of the 5 hypotheses (mu, log-std), lead =
@@ -270,7 +274,7 @@ class LegacyOPModel:
         desire[0] = 0
         pulse = np.where(desire - self.prev_desire > .99, desire, 0).astype(np.float32)
         self.prev_desire = desire
-        x = lambda c: (np.concatenate([self.prev_img[c], img2[c]]).astype(np.float32) * 0.0078125 - 1.0)[None].astype(self.dt)  # noqa: E731
+        x = lambda c: np.concatenate([self.prev_img[c], img2[c]])[None].astype(self.dt)  # noqa: E731
         f = {"input_imgs": x(0), "big_input_imgs": x(1), "traffic_convention": np.asarray(traffic, self.dt).reshape(1, 2)}
         if "initial_state" in self.state:
             f |= {"desire": pulse[None].astype(self.dt), "initial_state": self.state["initial_state"]}
