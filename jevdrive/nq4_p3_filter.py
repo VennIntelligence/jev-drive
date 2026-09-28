@@ -245,9 +245,11 @@ def item_readout(ped: pd.DataFrame, v: np.ndarray, f0: int, delete: list[str], f
 def _segment(job: tuple[str, str]) -> dict:
     split, seg = job
     D = load(split, seg)
+    res = {"seg": seg, "split": split, "day": D["day"], "n_frames": len(D["t"]), "A": [], "B": [], "ev": []}
+    if not (D["box"].type == 2).any():
+        return res
     ped, eg = frame_features(D)
     t, v, n = eg["t"], eg["v"], eg["n"]
-    res = {"seg": seg, "split": split, "day": D["day"], "n_frames": n}
     # label / projection sanity: FRONT labels over pedestrians whose 3D box centre is in the FRONT frustum at <= 40 m
     fr = ped[(ped.x > 4) & (ped.x <= 40) & (np.abs(np.arctan2(ped.y, ped.x)) <= np.radians(22))]
     res["frustum_labelled"] = float(fr.labelled.mean()) if len(fr) else np.nan
@@ -356,6 +358,12 @@ def scenes(out: Path, exam_dir: Path, native: Path):
                            "unseen": bool((h.conflict & ~h.lead & ~h.seen).any())})
         items.append({"scene": tg["key"], "segment": tg["segment"], "f0": f0, "v0": tg["v0"], "n_delete": len(dl),
                       **item_readout(ped, eg["v"], f0, dl, fr)})
+        # every 10 Hz frame's labels of the deleted tracks, for the review clips (scripts/p3/ds.py clip)
+        cl = {str(f): {r.track: {"d": r.d, "L": r.L, "ttr": r.ttr, "in_lane": bool(r.in_lane), "lead": bool(r.lead),
+                                 "lab_h": None if r.lab_h != r.lab_h else float(r.lab_h), "seen": bool(r.seen), "react": bool(r.react)}
+                       for r in g.itertuples()} for f, g in ped[ped.track.isin(dl)].groupby("frame")}
+        (out / "clip_labels").mkdir(parents=True, exist_ok=True)
+        (out / "clip_labels" / f"{tg['key']}.json").write_text(json.dumps({"v": eg["v"].round(3).tolist(), "frames": cl}))
     P, F, I = pd.DataFrame(peds), pd.DataFrame(frames), pd.DataFrame(items)
     pr = P[P.react].groupby("scene").psnr_box.mean()
     I["psnr_react"] = I.scene.map(pr)

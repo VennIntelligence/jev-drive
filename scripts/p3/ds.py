@@ -100,27 +100,25 @@ def _box_mask(pose, size, K, c2w, H, W, pad=12):
     return None if x0 >= x1 or y0 >= y1 else (x0, y0, x1, y1)
 
 
-def render(a):
-    import numpy as np, torch
+def _load(run: Path, ckpt: str | None):
+    """Dataset, trainer (eval mode, checkpoint loaded), pixel source, deformable node model, node -> dataset instance
+    keys and node -> Waymo laser id, from a finished OmniRe run."""
+    import torch
     from omegaconf import OmegaConf
-    from PIL import Image
     os.chdir(DS)
     sys.path.insert(0, str(DS))
     from datasets.driving_dataset import DrivingDataset
     from utils.misc import import_str
-    t_start = time.time()
-    run = Path(a.run)
     cfg = OmegaConf.load(run / "config.yaml")
     ds = DrivingDataset(data_cfg=cfg.data)
     tr = import_str(cfg.trainer.type)(**cfg.trainer, num_timesteps=ds.num_img_timesteps, model_config=cfg.model,
                                       num_train_images=len(ds.train_image_set), num_full_images=len(ds.full_image_set),
                                       test_set_indices=ds.test_timesteps, scene_aabb=ds.get_aabb().reshape(2, 3), device="cuda")
-    ckpt = a.ckpt or str(sorted(run.glob("checkpoint_*.pth"))[-1])
+    ckpt = ckpt or str(sorted(run.glob("checkpoint_*.pth"))[-1])
     # Upstream checkpoints contain NumPy scalars, so PyTorch >=2.6's new
     # weights-only default rejects our own locally trained checkpoint.
     tr.load_state_dict(torch.load(ckpt, weights_only=False), load_only_model=True, strict=True)
     tr.set_eval()
-    sel = json.loads(Path(a.target).read_text())
     ps = ds.pixel_source
     # node instance k <-> dataset instance <-> Waymo laser_object_id (instances_info.json "id")
     info = json.loads((Path(cfg.data.data_root) / f"{cfg.data.scene_idx:03d}" / "instances/instances_info.json").read_text())
@@ -132,6 +130,16 @@ def render(a):
     node = tr.models["DeformableNodes"]
     assert len(keys) == node.instances_fv.shape[1], (len(keys), node.instances_fv.shape)
     wid_of = [true2wid[int(ps.instances_true_id[k])] for k in keys]
+    return cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt
+
+
+def render(a):
+    import numpy as np, torch
+    from PIL import Image
+    t_start = time.time()
+    run = Path(a.run)
+    cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = _load(run, a.ckpt)
+    sel = json.loads(Path(a.target).read_text())
     delete = [wid_of.index(w) for w in sel["delete_tracks"] if w in wid_of]
     missing = [w for w in sel["delete_tracks"] if w not in wid_of]
     ds_del = [keys[k] for k in delete]
@@ -214,6 +222,83 @@ def render(a):
     print(json.dumps({k: meta[k] for k in ("deleted_node_instances", "deleted_missing", "determinism_max_abs", "render_s")}))
 
 
+def clip(a):
+    """Review clip of one scene: FRONT camera at 10 Hz over [f0 - pre, f0 + post]; 2 x 2 grid of the log image, x+,
+    x- and |x+ - x-| (deleted pedestrians' boxes outlined there only, red on the filter's react frames), with a caption
+    from the exam-item filter labels (jevdrive.nq4_p3_filter scenes -> clip_labels/<key>.json). H.264 MP4, real time."""
+    import imageio.v2 as imageio
+    import numpy as np, torch
+    from PIL import Image, ImageDraw, ImageFont
+    run = Path(a.run)
+    cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = _load(run, a.ckpt)
+    sel = json.loads(Path(a.target).read_text())
+    lab = json.loads(Path(a.labels).read_text())
+    delete = [wid_of.index(w) for w in sel["delete_tracks"] if w in wid_of]
+    ds_del = {keys[k]: wid_of[k] for k in delete}
+    nf = ps.num_timesteps if hasattr(ps, "num_timesteps") else ds.num_img_timesteps
+    f0 = int(sel["f0"])
+    frames = list(range(max(f0 - int(a.pre * HZ), 0), min(f0 + int(a.post * HZ), nf - 1) + 1))
+    fv = node.instances_fv.clone()
+    hide = fv.clone()
+    hide[:, delete] = False
+    ttf = Path(sys.executable).parents[1] / "lib/python3.10/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf"
+    font, big = ImageFont.truetype(str(ttf), 17), ImageFont.truetype(str(ttf), 26)
+    names = {w: chr(65 + i) for i, w in enumerate(sel["delete_tracks"])}
+    to8 = lambda x: (x.clamp(0, 1) * 255 + 0.5).byte().cpu().numpy()
+    out = Path(a.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    wr = imageio.get_writer(out, fps=HZ, codec="libx264", quality=8, pixelformat="yuv420p", macro_block_size=16)
+    with torch.no_grad():
+        for t in frames:
+            ii, ci_ = ds.full_image_set.get_image(t * ps.num_cams + 0, 1)
+            ii = {k: v.cuda() if torch.is_tensor(v) else v for k, v in ii.items()}
+            ci_ = {k: v.cuda() if torch.is_tensor(v) else v for k, v in ci_.items()}
+            node.instances_fv.copy_(fv)
+            plus = to8(tr(ii, ci_)["rgb"])
+            node.instances_fv.copy_(hide)
+            minus = to8(tr(ii, ci_)["rgb"])
+            node.instances_fv.copy_(fv)
+            real = to8(ii["pixels"])
+            H, W = real.shape[:2]
+            K = ci_["intrinsics"].cpu().numpy().astype(np.float64)
+            c2w = ci_["camera_to_world"].cpu().numpy().astype(np.float64)
+            d = np.abs(plus.astype(np.int16) - minus.astype(np.int16)).max(-1)
+            dimg = np.stack([np.clip(d * 4, 0, 255).astype(np.uint8)] * 3, -1)
+            fl = lab["frames"].get(str(t), {})
+            panels = [Image.fromarray(x) for x in (real, plus, minus, dimg)]
+            dr = ImageDraw.Draw(panels[3])
+            for k, w in ds_del.items():
+                if ps.per_frame_instance_mask[t, k]:
+                    r = _box_mask(ps.instances_pose[t, k].cpu().numpy(), ps.instances_size[k].cpu().numpy(), K, c2w, H, W, 0)
+                    if r:
+                        react = fl.get(w, {}).get("react", False)
+                        dr.rectangle(r, outline=(255, 40, 40) if react else (255, 210, 0), width=3)
+                        dr.text((r[0], max(r[1] - 22, 0)), names[w], fill=(255, 255, 255), font=font)
+            for p, txt in zip(panels, ("log", "x+ (re-render)", "x- (deleted)", "|x+ - x-| x4, deleted boxes")):
+                ImageDraw.Draw(p).text((10, 8), txt, fill=(255, 255, 255), font=big, stroke_width=2, stroke_fill=(0, 0, 0))
+            grid = Image.new("RGB", (2 * W, 2 * H + 112), (20, 20, 20))
+            for i, p in enumerate(panels):
+                grid.paste(p, ((i % 2) * W, (i // 2) * H))
+            g = ImageDraw.Draw(grid)
+            react_any = any(v.get("react") for v in fl.values())
+            head = (f"{sel['key']}  t - f0 = {(t - f0) / HZ:+.1f} s  ego {lab['v'][t]:.1f} m/s   "
+                    f"{'REACT (filter: should-react frame)' if react_any else 'no react'}"
+                    f"{'   [scored 5 Hz frame]' if (t - f0) % 2 == 0 and -24 <= t - f0 <= 20 else ''}")
+            g.text((12, 2 * H + 8), head, fill=(255, 90, 90) if react_any else (230, 230, 230), font=big)
+            parts = []
+            for w in sel["delete_tracks"]:
+                v = fl.get(w)
+                parts.append(f"{names[w]}: -" if v is None else
+                             f"{names[w]}: d {v['d']:.0f} m, lat {v['L']:+.1f} m, ttr {v['ttr']:.1f} s, "
+                             f"{'lane' if v['in_lane'] else 'off-lane'}, {'LEAD' if v['lead'] else 'no lead'}, "
+                             + (f"label {v['lab_h']:.0f} px" if v["lab_h"] is not None else "no label"))
+            for j in range(0, len(parts), 2):
+                g.text((12, 2 * H + 44 + 30 * (j // 2)), "   |   ".join(parts[j:j + 2]), fill=(210, 210, 210), font=font)
+            wr.append_data(np.asarray(grid))
+    wr.close()
+    print(json.dumps({"clip": str(out), "frames": len(frames), "deleted": len(delete)}))
+
+
 def main():
     # Absolute interpreter invocation does not activate its console tools.
     # nvdiffrast JIT needs the ninja executable installed in this same env.
@@ -226,8 +311,10 @@ def main():
     p = sp.add_parser("train"); p.add_argument("--scene", type=int); p.add_argument("--data-root"); p.add_argument("--out-root")
     p.add_argument("--iters", type=int, default=0)
     p = sp.add_parser("render"); p.add_argument("--run"); p.add_argument("--target"); p.add_argument("--out"); p.add_argument("--ckpt")
+    p = sp.add_parser("clip"); p.add_argument("--run"); p.add_argument("--target"); p.add_argument("--labels"); p.add_argument("--out")
+    p.add_argument("--ckpt"); p.add_argument("--pre", type=float, default=4.0); p.add_argument("--post", type=float, default=4.0)
     a = ap.parse_args()
-    {"prep": prep, "sky": sky, "train": train, "render": render}[a.cmd](a)
+    {"prep": prep, "sky": sky, "train": train, "render": render, "clip": clip}[a.cmd](a)
 
 
 if __name__ == "__main__":
