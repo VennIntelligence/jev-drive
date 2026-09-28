@@ -370,7 +370,6 @@ def render(a):
     import torch
     from PIL import Image, ImageDraw, ImageFilter
     from scipy.ndimage import binary_dilation
-    from models.trainers.base import GSModelType
     from pytorch3d.transforms import quaternion_to_matrix
     t_start = time.time()
     k = a.target
@@ -380,6 +379,7 @@ def render(a):
     assert pl["item"], f"{key}: no cross-scene item ({pl.get('reason') or pl.get('view_gap')})"
     run = DATA / "ckpt/nq4_p3/p3" / kk
     cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = DSM._load(run, None)
+    from models.trainers.base import GSModelType                      # importable once _load put drivestudio on the path
     g = scene_geom(k)
     path = INS.Path2D(g["E"])
     ts = pl["t_star"]
