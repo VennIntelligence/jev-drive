@@ -370,6 +370,22 @@ def vace(a):
     # vace_blocks) streams from pinned CPU memory to the GPU for its own forward and is dropped afterwards. WanVace's own
     # model.to(device) calls become no-ops.
     orig = wv.VaceWanModel.from_pretrained.__func__
+    import torch.nn.functional as F
+    import wan.modules.model as wm
+
+    def sdpa(q, k, v, q_lens=None, k_lens=None, dropout_p=0.0, softmax_scale=None, q_scale=None, causal=False,
+             window_size=(-1, -1), deterministic=False, dtype=torch.bfloat16, version=None):
+        """flash_attention stand-in (no flash-attn build for sm_120 here): PyTorch SDPA with the key-length mask."""
+        out_dtype = q.dtype
+        q, k, v = (x.transpose(1, 2).to(dtype) for x in (q, k, v))           # [B, N, L, C]
+        if q_scale is not None:
+            q = q * q_scale
+        mask = None
+        if k_lens is not None and bool((k_lens < k.shape[2]).any()):
+            mask = (torch.arange(k.shape[2], device=k.device)[None] < k_lens.to(k.device)[:, None])[:, None, None, :]
+        o = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, is_causal=causal, scale=softmax_scale)
+        return o.transpose(1, 2).contiguous().to(out_dtype)
+    wm.flash_attention = sdpa
 
     def bf16_streamed(cls, *args, **kw):
         m = orig(cls, *args, **kw).to(torch.bfloat16).eval().requires_grad_(False)
