@@ -281,13 +281,17 @@ def scene_actors(g) -> dict:
     """Frame -> (n, 6) boxes of every labelled actor in the reconstruction's world frame: cx, cy, yaw, length, width, height."""
     info = json.loads((g["dir"] / "instances/instances_info.json").read_text())
     E0 = np.linalg.inv(np.loadtxt(g["dir"] / "ego_pose/000.txt"))
-    per = {}
+    per, peds = {}, []
     for v in info.values():
         fa = v["frame_annotations"]
         for f, M, sz in zip(fa["frame_idx"], fa["obj_to_world"], fa["box_size"]):
             M = E0 @ np.asarray(M)
             per.setdefault(int(f), []).append((M[0, 3], M[1, 3], np.arctan2(M[1, 0], M[0, 0]), sz[0], sz[1], sz[2]))
-    return {f: np.asarray(b) for f, b in per.items()}
+            if v["class_name"] == "Pedestrian":
+                peds.append((M[0, 3], M[1, 3]))
+    out = {f: np.asarray(b) for f, b in per.items()}
+    out["peds"] = np.asarray(peds).reshape(-1, 2)      # every labelled pedestrian position of the log (where people walk)
+    return out
 
 
 def in_boxes(p, boxes, margin):
@@ -313,9 +317,12 @@ def occluded(cam_xy, p, boxes):
     return bool(in_boxes(q, b, 0.0).any())
 
 
-def kerb(gr, path, S, side):
+def kerb(gr, path, S, side, peds=None):
     """Lateral offset (m, >= 1.75) of the kerb on `side` (+1 right, -1 left) at arc S: the first 0.5 m in which the LiDAR
-    ground stands >= KERB_STEP above the road at the path centre; None when there is no step within 8 m."""
+    ground stands >= KERB_STEP above the road at the path centre. Where no such step exists within 8 m (sloped streets,
+    ground points missing behind parked cars), the log's own pedestrians decide: the 10th percentile of the lateral offset
+    of every labelled pedestrian within +-15 m of arc S on that side (1.75-10 m, at least 20 samples) minus KERB_OFF, i.e.
+    the start point is where people of this log actually walked. None when neither exists."""
     Q, th, _ = path.at(S)
     right = np.array([np.sin(th), -np.cos(th)])
     key = (round(float(S), 2), side)
@@ -333,6 +340,15 @@ def kerb(gr, path, S, side):
             if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
                 res = float(step[i][0])
                 break
+    if res is None and peds is not None and len(peds):
+        near = peds[np.linalg.norm(peds - Q, axis=1) <= 25]
+        lat = []
+        for p_ in near:
+            Sp, Lp = path.locate(p_)
+            if abs(Sp - S) <= 15 and 1.75 <= side * -Lp <= 10:          # right of the path = negative L (L is left +)
+                lat.append(side * -Lp)
+        if len(lat) >= 20:
+            res = float(max(1.75, np.percentile(lat, 10) - KERB_OFF))
     KERB_CACHE[id(gr)][key] = res
     return res
 
@@ -347,7 +363,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
     s_c = win["s0"] + PRE
     Q, th, _ = path.at(S_conf)
     right = np.array([np.sin(th), -np.cos(th)])
-    kb = kerb(gr, path, S_conf, side)
+    kb = kerb(gr, path, S_conf, side, actors.get("peds"))
     if kb is None:
         return {"fail": "no kerb step within 8 m"}
     vd = win["speed"]
