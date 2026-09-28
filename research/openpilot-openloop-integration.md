@@ -225,3 +225,21 @@ GIMM 在这里只补 5 Hz 相位的 6 帧（第 2 节第 5 点）。全部行在
 5. **更好的补帧**：SGM-VFI / BiM-VFI 权重只在 Google Drive；深度引导的 warp（单目深度 + 自车位姿）能不能把 warp 的 −2.3 m 纵向偏差修掉，没测。
    按第 2 节的量级，补帧器再好也最多收回 GIMM 到 real 的 0.05–0.3 RFS。
 6. **全量验证**：这里是 2 000 个 token 的子集、单次运行；上榜前在全量 navtest（GIMM 约 7.4 GPU·h）和 navhard two-stage（第二阶段是 3DGS 合成图，补帧器没见过这种画面）上各跑一次。
+
+## 用户决定（2026-09-28）
+
+- **plan retiming 不进默认 pipeline，只作消融报告。** 第 7 节「推荐的接法」已经这么写（第 4 节读法第 3 点的理由：两个榜上符号相反），
+  这里是确认：下面第 9 节的全量跑只跑 base 适配器（杠杆臂 + 线性重采样，不 retime），retime 的全量数字如果跑，只放进消融表。
+- **B / C 适配（[op-adapt](../todos/2026-09-28-op-adapt.md)）训练用同一条补帧输入管线。** 若最终要上 NAVSIM，训练帧不能是「20 Hz
+  真实帧训练、补帧考试」这种契约差，上面开放问题 2 已经提过，这里定下来：用。
+- 第 9 节的全量 navtest / navhard 跑优先级低，"反正空着也是空着"：占的是 GPU 6（或 op-adapt navtrain cache 跑完后的
+  GPU 2）和一段空闲 CPU 核，不抢占跑着的 lane；转弯 / 进度的差距（第 6 节）留给以后改进 route 输入再重考。
+
+## 9. 全量跑：navtest（12 146）与 navhard two-stage（5 912）
+
+开放问题 6 点名的全量验证。默认 pipeline（Cinque 原生 plan，不 retime）、两种补帧器：ego-motion warp（CPU）与
+GIMM-VFI 的 context-rate 网格（GPU，第 2 节第 5 点：与全 10 Hz 补帧逐位相同）。navtest 用 NAVSIM v1.1 PDMS（与第 4 节的
+2 000-token 子集同一指标，可直接比）；navhard two-stage 没有 v1 PDMS（v1.1 devkit 没有这个 split），用仓库其余地方
+（`elicit_e1.py`、`navsim_zs_score.sh`）统一用的 v2 EPDMS（`run_pdm_score.py` 的 reactive two-stage 打分）。
+
+(占位：跑完后这里贴 PDMS / EPDMS 主表 + 子分项表，small 表见 [results/op-interp/](results/op-interp/)。)
