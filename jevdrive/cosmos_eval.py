@@ -126,9 +126,8 @@ def pixels(v: str, only: str = "", gpu: int = 0):
         out = {"pair": pair, "vis": (g["px"] >= VIS_PX).tolist(), "px": g["px"].tolist()}
         # (x, y): compare x to y outside the region; LPIPS on x with the region filled from y
         # edge leak (v2): ring 1-12 px outside the pedestrian's own pixel mask, frames where it is >= VIS_PX
-        import cv2
-        k12 = np.ones((25, 25), np.uint8)
-        ring = np.stack([(cv2.dilate(m.astype(np.uint8), k12) > 0) & ~m for m in g["mask"]])
+        mt = torch.from_numpy(g["mask"]).float()[:, None]
+        ring = (torch.nn.functional.max_pool2d(mt, 25, 1, 12)[:, 0].numpy() > 0) & ~g["mask"]   # 12 px dilation
         rv = g["px"] >= VIS_PX
         alt_ref = "alt_base" if "alt_base" in S else "minus"
         for name, (x, y) in {"pair": ("plus", "minus"), "alt": ("alt", alt_ref), "raw": ("raw_plus", "raw_minus")}.items():
