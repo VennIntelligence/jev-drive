@@ -78,6 +78,7 @@ PIDS_PER_WORKER = int(os.environ.get("G_PIDS_PER_WORKER", 700))
 # Per-card budget (user 2026-09-28): a worker of agent a takes 1 / cap(a) of the card's render budget and CPU_A[a] cores
 # of its slice; heavy agents' cap is CARD_CAP (the knee, SCH row workers), light agents render little and go further.
 # A card is full when the render shares sum to 1, the slice is CPU_FILL busy, or it holds SERVER_MAX servers.
+HEAVY_PER_CARD = int(os.environ.get("G_HEAVY_PER_CARD", 3))   # while light work is queued: keeps every card mixed
 HEAVY = {"simlingo", "blue"}      # VLM-sized (~14 GB, high render + compute share); user 2026-09-28: BridgeDrive is light
 CAP_A = {"tfv6": 10, "pdm": 12, **{k: int(v) for k, v in (e.split("=") for e in os.environ.get("G_CAPS", "").split(",") if e)}}
 CPU_A = {"simlingo": 2.0, "blue": 2.0, "bridgedrive": 2.0, "tfv6": 2.0, "pdm": 1.2}   # cores / worker, measured 2026-09-28
@@ -479,7 +480,7 @@ class Lane:
             cores = n_cores(card_cpus(gpu)) if gpu in BLOCKS else 24
             unstarted = sum(r["workers"] for r in young if r["gpu"] == gpu)
             free_gb = card["total"] - card["used"] - 8 * unstarted - 8   # keep >= 8 GB per card (sch_table.py)
-            heavy_ok = gpu not in GPUS or nheavy[gpu] <= floor or not light_left
+            heavy_ok = gpu not in GPUS or not light_left or (nheavy[gpu] <= floor and nheavy[gpu] < HEAVY_PER_CARD)
             want_heavy = heavy_ok and nheavy[gpu] <= floor
             for j in sorted(jobs, key=lambda j: (j["cand"] in HEAVY) != want_heavy):
                 c, v, s = j["cand"], j["variant"], j["seed"]
@@ -502,7 +503,7 @@ class Lane:
                 if j["kind"] == "pilot" and p["stage"] == 1:
                     w = min(w, 1)
                 if j["kind"] == "cell" and c in HEAVY and gpu in GPUS and light_left:
-                    w = min(w, floor + 1 - nheavy[gpu])
+                    w = min(w, floor + 1 - nheavy[gpu], HEAVY_PER_CARD - nheavy[gpu])
                 free = self.blocks_free(gpu, rows)
                 fits = lambda n: next((i for i in free if all(i + k in free for k in range(2 * n))), None)
                 while w > 0 and fits(w) is None:
