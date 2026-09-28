@@ -3575,7 +3575,7 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 **会推翻或推进本条的证据**：sim + real 混训后 P5 D0 ≥ 0.60 且 (b) 仍过（推进 B 作主方法）；同一 B 在更大的真实数据（WOD 全量 + YOLO 标签）上 (a) 过 +0.10；闭环里改后模型对行人的停车率高于原模型而正常路线不掉分。
 
 
-## 56. Cosmos-Transfer2.5 把 CARLA 配对重画成真实感：行人留得住，但两段独立翻译会让 x⁺ / x⁻ 在行人以外也不同；按现在的做法不能拿来训配对差分（**待定**，P5 v1 BA 行人 10 对，1 seed）
+## 56. Cosmos-Transfer2.5 把 CARLA 配对重画成真实感：两段独立翻译会让 x⁺ / x⁻ 在行人以外也不同（v1 no-go）；v2 改成「x⁻ 翻一次 + 行人像素区锚定重画」后区外逐像素相同、行人不再发白，剩下车内痕迹 1 / 10 明显（**待定**，P5 v1 BA 行人 10 对，1 seed；2026-09-29 v2 后就地补充，原标题只有 v1 的结论）
 
 2026-09-28。预登记、偏离与全部表在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md)，小表在 [results/cosmos/](results/cosmos/)，并排图在 [figs/cosmos/](figs/cosmos/)。
 问题：Cosmos-Transfer2.5（NVIDIA 的 ControlNet 式视频 sim2real 模型）分别重画一对 x⁺ / x⁻ 之后，两者的差别是不是还只有那个行人。做法：P5 录制器原样重开 20 个世界（逐 tick 位姿差 0.000 m），加一台 20 Hz、1280 × 704、64° 的前视相机录 RGB / 深度 / 实例分割，
@@ -3592,8 +3592,13 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 3. 只做像素合成（x⁺ = Cosmos x⁻ 在行人区外、Cosmos x⁺ 在区内）按构造消掉 mask 外差别，召回 0.79（只有仪表台那一对变差）；下一步是 x⁻ 翻一次、行人区局部重画（guided generation / inpainting），去掉 prompt 里的「behind the windshield」，行人区加 seg。
 4. 顺带：P5 v1 BA 有 4 / 303 对 x⁺ / x⁻ 前视平均亮度差 > 20（24206 s0 是 15 对 54），同 weather，原因未查；这几对在考卷里的差别不止 hazard。
 
+**v2（2026-09-29，用户审阅后，[todo 的 v2 节](../todos/2026-09-28-cosmos-pilot.md)，判据先于输出）**：
+1. 白色物体的原因是控制里物体只有轮廓、内部为空：同一对上几何边缘 edgeB 有、带内部纹理的 edgeA 与 seg 都没有（edgeA 也是 4 步无 CFG、同 prompt，所以不是步数 / guidance / prompt）；给物体内部加 Canny 后行人发白率 12.2% → 0%，杆子 7.3% → 4.7%。
+2. 仪表台：只改 prompt 无效（4 对里 3 对照旧），蒸馏模型进不去 negative prompt；给地面加纹理边缘后第 1 阶段 4 对底部都消失，10 对里还剩 27515（无纹理的混凝土路面）明显、24519 轻微。
+3. 冻结的 G4（x⁻ 翻一次；x⁺ 在行人像素 + 24 px 以外每步锚定到 x⁻ 的 latent，再羽化混合；蒸馏采样器的 guided generation 是自己补的）10 对：召回 0.982（CARLA 0.976），区外 LPIPS / openpilot 差按构造为 0，行人外 12 px 环上 MAD 9.9（CARLA 原图配对自己也是 9.9），openpilot lead 一致 95.5%，2 000 对约 118 GPU·h。
+   登记的逐对判据只过 1 / 10，全部卡在「环 MAD ≤ ¼ 换 seed」这一条，CARLA 原图自己 9 / 10 对也过不了；去掉后 10 / 10。按字面判 no-go，是否作废这条和如何去掉仪表台（相机上仰约 6°，底部 117 px 本来不进 openpilot）等用户拍板。
 **状态**：**待定**。限定：10 对、1 seed、BehaviorAgent 集、只有前视单相机；检查 3 的参照是 CARLA 原图，本身有域差。
-**会推翻或推进本条的证据**：「x⁻ 翻一次 + 行人区局部重画」在同样 10 对上检查 1 过、openpilot 差在行人区外的占比回到 CARLA 原图的量级（< 20%），且成本仍在 250 GPU·h 内（推进为训练数据源）。
+**会推翻或推进本条的证据**：「x⁻ 翻一次 + 行人区局部重画」在同样 10 对上检查 1 过、openpilot 差在行人区外的占比回到 CARLA 原图的量级（< 20%），且成本仍在 250 GPU·h 内（推进为训练数据源）。〔v2 已触发：G4 检查 1 过、区外差为 0、118 GPU·h；未决的是车内痕迹与一条作废的环判据〕
 
 ## 57. openpilot 进 B2D 闭环：起不了步是静止先验、不转弯是 turn desire 在路口前不改 plan；无感知的路线 base 单独就有 DS 57，openpilot 只做纵向 modifier 时对 base +10 [−6, +27]，让它横向驾驶则 −30 到 −48（**待定**，dev 10 条 + 诊断 6 条，1 seed）
 
