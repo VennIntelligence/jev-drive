@@ -124,6 +124,12 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   inside a CARLA worker thread; an uncaught exception there calls `terminate()` and aborts the
   client. `sensor.stop()` on every sensor, `world.tick()` once to drain, then
   `client.apply_batch_sync`. Report results before tearing down.
+- **A same-seed rerun is not always tick-identical.** WL stage 3 (2026-09-28, fully rendered, same XML, TM seed and
+  code) reproduced 36 of 37 fork points to 0.000 m before the fork, but the seven reruns of P6
+  ParkedObstacleTwoWays base 3457 (x10, source run 345710) split into two clusters: an actor is 1 cm off at tick 2, a
+  static prop 5.5 m off at tick 4, the ego 0.25 / 0.55 m off by tick 145. Root cause open (CARLA side: spawn order or
+  physics of that scenario). Any "rerun to tick k" design must check every rerun against its source and drop the
+  mismatches (`python -m jevdrive.wl drops`), not assume determinism from a passing sample.
 
 Debugging aids that do **not** work here, so nobody spends the time: the container surfaces no host
 kernel messages, so `dmesg` never shows the segfault; and UE4 writes no crash report

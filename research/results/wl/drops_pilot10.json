@@ -1,0 +1,32 @@
+{
+ "groups_total": 402,
+ "checked": 37,
+ "dropped": 1,
+ "frac": 0.02702702702702703,
+ "per_set": {
+  "ba": {
+   "checked": 30,
+   "dropped": 0,
+   "frac": 0.0
+  },
+  "p6": {
+   "checked": 7,
+   "dropped": 1,
+   "frac": 0.14285714285714285
+  }
+ },
+ "cos_checked_runs": 0,
+ "dropped_groups": [
+  {
+   "fork_id": 357,
+   "set": "p6",
+   "pos": 0.5503191802070502,
+   "cos": NaN,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "3457",
+   "k_name": "k3",
+   "world": "plus"
+  }
+ ],
+ "gate_fail": false
+}
