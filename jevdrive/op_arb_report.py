@@ -302,6 +302,73 @@ def evaluate(rootdir: Path, out: Path, phase: str = "p2") -> dict:
     return {"arms": agg, "paired": tp, "routes": df}
 
 
+# ------------------------------------------------------------------------------------------------ phantom stops (D1)
+def wants_stop(df: pd.DataFrame) -> pd.Series:
+    """Registered criterion: the plan's v(5 s) < 1 m/s or < 0.3 x its own v(0)."""
+    return (df.vp5 < 1.0) | (df.vp5 < 0.3 * df.vp0)
+
+
+def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
+    """e2e stop-latch onsets on a ground-truth free road; the plan at the onset of the plan binding that led there, in
+    closed loop and in open-loop shadow runs (someone else drives) at the same route progress."""
+    out.mkdir(parents=True, exist_ok=True)
+    _, e = load(rootdir / "arms" / "p2-e2e")
+    e = e[~e.warm]
+    sh = {k: load(rootdir / "arms" / f"p2-{k}")[1] for k in shadows if (rootdir / "arms" / f"p2-{k}" / "done").exists()}
+    rows, pos = [], {}
+    for rid, g in e.groupby("route"):
+        g = g.reset_index(drop=True)
+        ctx = context(g)
+        lat = g.latch.to_numpy()
+        for i in np.flatnonzero(lat[1:] & ~lat[:-1]) + 1:
+            if ctx[i] != "free":
+                continue
+            j = i - 1
+            while j >= 0 and g.src[j] != "plan" and g.t[i] - g.t[j] < 10:
+                j -= 1
+            k = j
+            while k > 0 and g.src[k - 1] == "plan":
+                k -= 1
+            if j < 0 or g.src[j] != "plan":
+                k = i
+            b = g.iloc[k]
+            pre = g[(g.t >= b.t - 3) & (g.t <= b.t)]
+            row = {"route": rid, "t_latch": round(g.t[i], 1), "t_bind": round(b.t, 1), "ri_bind": int(b.ri), "v_bind": round(b.v, 2),
+                   "v_3s_before_bind": round(float(pre.v.iloc[0]), 2), "cl_decel": round(b.vp0 - b.vp3, 2), "cl_vp5": round(b.vp5, 2),
+                   "cl_want": bool(wants_stop(b.to_frame().T.astype({"vp5": float, "vp0": float})).iloc[0]),
+                   "cl_brk0": round(b.brk0, 2), "cl_lp": round(b.lp0, 2), "cl_leadx": round(b.lead_x, 1), "junc": b.c_junc, "cmd": b.cmd_k}
+            for name, s_ in sh.items():
+                s2 = s_[(s_.route == rid) & ~s_.warm]
+                m = s2[(s2.ri - b.ri).abs() <= 2]
+                if len(m):
+                    q = m.iloc[0]
+                    row.update({f"{name}_v": round(q.v, 2), f"{name}_decel": round(q.vp0 - q.vp3, 2), f"{name}_vp5": round(q.vp5, 2),
+                                f"{name}_want": bool((q.vp5 < 1.0) or (q.vp5 < 0.3 * q.vp0)), f"{name}_brk0": round(q.brk0, 2),
+                                f"{name}_lp": round(q.lp0, 2)})
+            pos.setdefault(rid, []).append(int(b.ri))
+            rows.append(row)
+    ev = pd.DataFrame(rows)
+    ev.to_csv(out / "phantom_events.csv", index=False)
+    summ = [{"run": "e2e closed loop (bind onset)", "n": len(ev), "want-stop rate": round(float(ev.cl_want.mean()), 3),
+             "median decel 0-3 s": round(float(ev.cl_decel.median()), 2), "median brake@0": round(float(ev.cl_brk0.median()), 2),
+             "median lead_prob": round(float(ev.cl_lp.median()), 2), "median speed": round(float(ev.v_bind.median()), 2), "base rate": np.nan}]
+    for name, s_ in sh.items():
+        if f"{name}_want" not in ev:
+            continue
+        s2 = s_[~s_.warm & (s_.v > 0.5)].copy()
+        s2["ctx"] = context(s2)
+        far = np.array([all(abs(r - p) > 10 for p in pos.get(rt, [])) for rt, r in zip(s2.route, s2.ri)])
+        base_rate = float(wants_stop(s2[(s2.ctx == "free") & far]).mean())
+        e2 = ev.dropna(subset=[f"{name}_want"])
+        summ.append({"run": f"shadow: {name}", "n": len(e2), "want-stop rate": round(float(e2[f"{name}_want"].astype(bool).mean()), 3),
+                     "median decel 0-3 s": round(float(e2[f"{name}_decel"].median()), 2), "median brake@0": round(float(e2[f"{name}_brk0"].median()), 2),
+                     "median lead_prob": round(float(e2[f"{name}_lp"].median()), 2), "median speed": round(float(e2[f"{name}_v"].median()), 2),
+                     "base rate": round(base_rate, 3)})
+    t = pd.DataFrame(summ)
+    t.to_csv(out / "phantom_summary.csv", index=False)
+    return {"phantom_summary": t, "phantom_events": ev}
+
+
 def attribute(adir: Path, inf: dict, st: pd.DataFrame) -> dict:
     """Each located infraction -> the arbitration source of the nearest step (by ground-truth position in ticks.jsonl)."""
     try:
@@ -329,14 +396,14 @@ def attribute(adir: Path, inf: dict, st: pd.DataFrame) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("diag", "eval"))
+    ap.add_argument("step", choices=("diag", "eval", "phantom"))
     ap.add_argument("--root", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--phase", default="p2")
     a = ap.parse_args()
     rd = Path(a.root) if a.root else root()
     out = Path(a.out) if a.out else rd / "results"
-    res = diag(rd, out) if a.step == "diag" else evaluate(rd, out, a.phase)
+    res = diag(rd, out) if a.step == "diag" else phantom(rd, out) if a.step == "phantom" else evaluate(rd, out, a.phase)
     for k, t in res.items():
         print(f"== {k}\n{t.to_string(index=False)}\n")
 
