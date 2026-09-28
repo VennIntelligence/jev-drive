@@ -73,7 +73,8 @@ def run(variants=("edgeA", "edgeB", "seg"), tag: str = ""):
                     continue
                 ctrl = {"edgeA": od / f"{pair}_{m}_{v}_s{SEED}_control_edge.mp4",
                         "edgeB": root("clips", pair, m) / "edge.mp4", "P2": root("clips", pair, m) / "edge.mp4",
-                        **{k: root("clips", pair, m) / "edgeC.mp4" for k in ("E2", "G2b", "M2")}}.get(v, "")
+                        **{k: root("clips", pair, m) / "edgeC.mp4" for k in ("E2", "G2b", "M2")},
+                        **{k: root("clips", pair, m) / "edgeD.mp4" for k in ("E3", "G3b")}}.get(v, "")
                 jobs.append((pair, m, v, str(f), str(ctrl)))
     with ProcessPoolExecutor(min(20, len(jobs))) as ex:
         d = pd.DataFrame([x for rows in ex.map(_one, jobs) for x in rows])

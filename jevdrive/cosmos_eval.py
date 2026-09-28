@@ -39,7 +39,7 @@ def pairs() -> list[str]:
     return [r["pair"] for r in csv.DictReader(open(RESULTS / "pairs.csv"))]
 
 
-ALT_FROM = {"M2": "E2", "P2": "E2"}     # arms without their own seed floor borrow E2's (same prompt, same x- geometry)
+ALT_FROM = {"M2": "E2", "P2": "E2"}     # G*b link their base arm's x- and floor     # arms without their own seed floor borrow E2's (same prompt, same x- geometry)
 
 
 def streams(pair: str, v: str) -> dict:

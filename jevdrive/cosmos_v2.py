@@ -28,6 +28,7 @@ from .cosmos_pilot import (PLACE, RESULTS, SEED, SEED_ALT, _attempt, _load_frame
 
 log = get_logger(__name__)
 OBJ = (5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+GROUND = (1, 2, 10, 24, 25)               # road, sidewalk, terrain, road line, ground
 # CARLA 0.9.15 CityScapesPalette, by semantic tag
 PALETTE = {0: (0, 0, 0), 1: (128, 64, 128), 2: (244, 35, 232), 3: (70, 70, 70), 4: (102, 102, 156), 5: (190, 153, 153),
            6: (153, 153, 153), 7: (250, 170, 30), 8: (220, 220, 0), 9: (107, 142, 35), 10: (152, 251, 152),
@@ -44,12 +45,17 @@ ARMS = {  # name: (model, steps, controls {key: (file, weight)}, anchored)
     "P2": ("edge/distilled", 4, {"edge": ("edge.mp4", 1.0)}, False),
     "E2": ("edge/distilled", 4, {"edge": ("edgeC.mp4", 1.0)}, False),
     "G2": ("edge/distilled", 4, {"edge": ("edgeC.mp4", 1.0)}, True),
+    "E3": ("edge/distilled", 4, {"edge": ("edgeD.mp4", 1.0)}, False),
+    "G3": ("edge/distilled", 4, {"edge": ("edgeD.mp4", 1.0)}, True),
     "M2": ("seg", 35, {"edge": ("edgeC.mp4", 1.0), "depth": ("depth.mp4", 0.5), "seg": ("segc.mp4", 1.0)}, False),
 }
 NEG2 = ("The video is recorded from inside a car: dashboard, windshield glass, reflections on the glass, raindrops "
         "on the windshield, wipers, the hood of the car, car interior. White mannequins, blank white silhouettes, "
         "ghostly transparent people. The video captures a game playing, with bad crappy graphics and cartoonish frames. "
         "The lighting looks very fake. The textures are very raw and basic. The geometries are very primitive.")
+
+
+BASE_OF = {"G2": "E2", "G3": "E3"}
 
 
 def prompt2(town: str, weather: dict) -> str:
@@ -84,15 +90,20 @@ def _controls2(pair: str):
         a = _attempt(root("gen"), r[m])
         rgb = read_mp4(root("clips", pair, m) / "rgb.mp4")
         edge = read_mp4(root("clips", pair, m) / "edge.mp4")[..., 0] > 127
-        ec, sc = [], []
+        ec, sc, ed = [], [], []
         for t, k in enumerate(ks):
             _, _, tag, _ = _load_frame(a, k)
             obj = cv2.erode(np.isin(tag, OBJ).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
             canny = cv2.Canny(cv2.cvtColor(rgb[t], cv2.COLOR_RGB2GRAY), 100, 200) > 0
             e = edge[t] | (canny & obj)
             ec.append(np.repeat((e * 255).astype(np.uint8)[..., None], 3, -1))
+            # edgeD: also the ground's own texture (low Canny thresholds), so the bottom of the frame is not empty
+            gnd = np.isin(tag, GROUND)
+            e2 = e | (cv2.Canny(cv2.cvtColor(rgb[t], cv2.COLOR_RGB2GRAY), 30, 90) > 0) & gnd
+            ed.append(np.repeat((e2 * 255).astype(np.uint8)[..., None], 3, -1))
             sc.append(LUT[tag])
         write_mp4(root("clips", pair, m) / "edgeC.mp4", np.stack(ec))
+        write_mp4(root("clips", pair, m) / "edgeD.mp4", np.stack(ed))
         write_mp4(root("clips", pair, m) / "segc.mp4", np.stack(sc))
     from .cosmos_eval import gt
     g = gt(pair)
@@ -130,7 +141,7 @@ def specs2(arm: str, which: str, floors: bool = True, members: str = "plus,minus
             for key, (f, wgt) in ctrls.items():
                 x[key] = {"control_path": str(cd / f), "control_weight": wgt}
             if anchored:     # anchor = the x- of E2 (lossless mp4), free region = the pedestrian region
-                x["video_path"] = str(root("anchor") / f"{r.pair}_E2.mp4")
+                x["video_path"] = str(root("anchor") / f"{r.pair}_{BASE_OF[arm]}.mp4")
                 x["guided_generation_mask"] = str(root("clips", r.pair) / "anchor_mask.mp4")
                 x["guided_generation_step_threshold"] = 99
             lines.append(x)
@@ -145,8 +156,9 @@ def anchor(arm: str, which: str):
         write_mp4(root("anchor") / f"{pair}_{arm}.mp4", np.load(root("out", arm) / f"{pair}_minus_{arm}_s{SEED}.npy"))
 
 
-def blend(which: str, src: str = "G2", base: str = "E2"):
+def blend(which: str, src: str = "G2", base: str | None = None):
     """G2b: feathered blend of the regenerated x+ into E2's x-; x- and the seed floor are E2's."""
+    base = base or BASE_OF[src]
     d = root("out", src + "b")
     for pair in _pair_rows(which).pair:
         a = np.load(root("clips", pair) / "alpha.npy").astype(np.float32)[..., None]
@@ -177,7 +189,7 @@ def main():
     elif a.step == "anchor":
         anchor(a.arm, a.which)
     else:
-        blend(a.which)
+        blend(a.which, a.arm if a.arm in BASE_OF else "G2")
 
 
 if __name__ == "__main__":

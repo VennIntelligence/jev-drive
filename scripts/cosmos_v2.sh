@@ -16,14 +16,20 @@ py() { $E/jevdrive/bin/python -m jevdrive.cosmos_v2 "$@"; }
 infer() { $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$1" --model "$2" --out "$R/out/$3"; }
 has() { [[ ",$arms," == *",$1,"* ]]; }
 st "controls2 on $which"
-py controls2 --which "$which"
+[[ ${SKIP_CONTROLS:-0} == 1 ]] || py controls2 --which "$which"
 eval_arms=()
 if has E2; then st "E2"; infer "$(py specs2 --arm E2 --which "$which" | tail -1)" edge/distilled E2; eval_arms+=(E2); fi
 if has P2; then st "P2 (x- only, prompt ablation)"; infer "$(py specs2 --arm P2 --which "$which" --members minus --no-floors | tail -1)" edge/distilled P2; fi
 if has G2; then
   st "G2 guided x+"; py anchor --arm E2 --which "$which"
   infer "$(py specs2 --arm G2 --which "$which" | tail -1)" edge/distilled G2
-  py blend --which "$which"; eval_arms+=(G2b)
+  py blend --which "$which" --arm G2; eval_arms+=(G2b)
+fi
+if has E3; then st "E3"; infer "$(py specs2 --arm E3 --which "$which" | tail -1)" edge/distilled E3; eval_arms+=(E3); fi
+if has G3; then
+  st "G3 guided x+"; py anchor --arm E3 --which "$which"
+  infer "$(py specs2 --arm G3 --which "$which" | tail -1)" edge/distilled G3
+  py blend --which "$which" --arm G3; eval_arms+=(G3b)
 fi
 if has M2; then st "M2 multicontrol base on $mpairs"; infer "$(py specs2 --arm M2 --which "$mpairs" --no-floors | tail -1)" seg M2; eval_arms+=(M2); fi
 for v in "${eval_arms[@]}"; do
