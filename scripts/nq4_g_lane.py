@@ -59,6 +59,10 @@ TIERS = ([[(c, v, 0) for c in CANDS for v in ("ghost", "orig")],
           [(c, v, s) for s in (1, 2) for c in CANDS for v in ("ghost", "orig")],
           [(c, "shift", 0) for c in CANDS],
           [(c, "swap", 0) for c in CANDS]])
+# User 2026-09-28: no more closed-loop capacity on the privileged expert beyond its ghost baseline (seeds 0-2); orig seed 0
+# stays reused from night queue 3. Dropped cells take no new runner; routes already running finish.
+DROPPED = {"pdm.orig.1", "pdm.orig.2", "pdm.shift.0", "pdm.swap.0"}
+END = ("DONE", "FAILED", "BLOCKED", "DROPPED")
 PILOT_SEED = {("pdm", "orig"): 1}          # PDM-Lite orig seed 0 is night queue 3's cl1_expert (registered step 1,2)
 CARD_CAP = int(os.environ.get("CARD_CAP", 5))
 MAX_W = int(os.environ.get("RUNNER_WORKERS", 6))       # a runner's workers, further capped by CARD_CAP
@@ -335,7 +339,10 @@ class Lane:
         for tier, cells in enumerate(TIERS):
             for c, v, s in cells:
                 key = f"{c}.{v}.{s}"
-                if self.st["cells"].get(key, {}).get("state") in ("DONE", "FAILED", "BLOCKED"):
+                if key in DROPPED and self.st["cells"].get(key, {}).get("state") != "DROPPED":
+                    self.st["cells"][key] = dict(state="DROPPED", at=time.strftime("%F %T"), done=len(done(c, v, s)))
+                    event("cell_end", cell=key, state="DROPPED")
+                if self.st["cells"].get(key, {}).get("state") in END:
                     continue
                 p = self.pilot(c, v)
                 if p["state"] == "BLOCKED":
@@ -363,7 +370,7 @@ class Lane:
             for c, v, s in cells:
                 key = f"{c}.{v}.{s}"
                 cell = self.st["cells"].setdefault(key, {})
-                if cell.get("state") in ("DONE", "FAILED", "BLOCKED"):
+                if cell.get("state") in END:
                     continue
                 if self.pilot(c, v)["state"] not in ("PASS", "WAIVED") or self.live(key, rows) or left(c, v, s):
                     continue
@@ -523,7 +530,7 @@ class Lane:
         for t, cells in enumerate(TIERS):
             if t in self.st["tier_reported"]:
                 continue
-            if all(self.st["cells"].get(f"{c}.{v}.{s}", {}).get("state") in ("DONE", "FAILED", "BLOCKED") for c, v, s in cells):
+            if all(self.st["cells"].get(f"{c}.{v}.{s}", {}).get("state") in END for c, v, s in cells):
                 with (OUT / "report.log").open("a") as log:   # G readout tables, runs/nq4/gk/results/g (background)
                     subprocess.Popen(["taskset", "-c", card_cpus(), str(PY_VENV), "-m", "jevdrive.nq4_g", "report"], cwd=REPO,
                                      stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
@@ -564,7 +571,7 @@ class Lane:
                         self.status(process_snapshot())
                         last_status = now()
                     fails = 0
-                    if all(self.st["cells"].get(f"{c}.{v}.{s}", {}).get("state") in ("DONE", "FAILED", "BLOCKED")
+                    if all(self.st["cells"].get(f"{c}.{v}.{s}", {}).get("state") in END
                            for cells in TIERS for c, v, s in cells):
                         atomic(OUT / "DONE", dict(finished=time.strftime("%F %T"), cells=self.st["cells"]))
                         event("end")
@@ -584,6 +591,8 @@ def plan():
     for t, cells in enumerate(TIERS):
         wh = 0.0
         for c, v, s in cells:
+            if f"{c}.{v}.{s}" in DROPPED:
+                continue
             req = requested(c, v, s)
             n = len(left(c, v, s))
             wh += n * WMIN[c] / 60

@@ -113,6 +113,10 @@
   由此阳性对照不在本轮，读法第 4 条「K3 seen 版不位置记忆 → 主读数不下结论」这一支本轮无数可判，主读数照登记报、判格按原文。
   执行顺序：`orig` + `ghost` seed 0 → seeds 1–2 → `shift`（1 seed）→ `swap`（1 seed，填尾）；分级 pilot（1 → 10 → 全量）照旧，按「考生 × 世界」各自挡，失败只挡这一格。
   执行：`scripts/nq4_g_lane.py`（tmux `jev:nq4-g`，状态 `runs/nq4/g-lane/`），取代 `nq4_gk.sh chain`；经过见 `tmp/2026-09-27-gk-restart.md`。
+- [user] 2026-09-28 09:4x CST **PDM-Lite 范围收窄（用户，经 main 转达）**：PDM-Lite 是特权专家，闭环算力不再花在它身上，只保留它的 `ghost` seeds 0–2。
+  ghost 是 G 位置记忆判据 `max(控制窗口, PDM-Lite ghost) + 10 pp` 里登记的基线：seeds 0、1 已跑完，ghost.2 补完剩下的路线。
+  **撤掉** PDM-Lite 的 `orig` seeds 1–2 和 `shift` / `swap`：orig seed 0 继续复用 night-queue-3；一个照着登记表开车的专家在 shift / swap 下给不出信息。
+  正在跑的 pdm.orig.1 路线跑完为止，不再起新的；腾出的名额给重的榜单考生。执行：`nq4_g_lane.py` 的 `DROPPED`，格子状态记 `DROPPED`，已有输出原样保留。
 
 ## K. 材料包阶梯：分数动、能力不动
 
