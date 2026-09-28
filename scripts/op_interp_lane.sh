@@ -13,7 +13,7 @@ st() { echo "$(date '+%F %T') $*" | tee -a "$R/STATUS"; }
 die() { st "ERROR $*"; echo "$*" > "$R/ERROR"; exit 1; }
 synth() { local d=$1 m=$2; shift 2; local tag=${TAG:-$m}
   [[ -f $R/$d/$tag.json ]] && return 0
-  local py=$OP; [[ $m == rife || $m == gimm ]] && py=$VF
+  local py=$VF                                           # torch + pandas (image metrics)
   st "synth $d $tag"; $py synth --data "$d" --method "$m" "$@" || die "synth $d $tag"; }
 run() { local d=$1 f=$2 m=$3; shift 3; local tag="$f@$m${SUF:-}"
   [[ -f $R/$d/plans/$tag.npz ]] && return 0

@@ -83,8 +83,8 @@ def plans(adir: Path) -> pd.DataFrame:
     df["lp0"] = [x[0] for x in df.lp]
     df["lead_x"] = [x[0][0] for x in df.lead]
     df["lead_v_op"] = [x[0][2] for x in df.lead]
-    df["gas2"] = [x[0] for x in df.gas]
-    df["brk2"] = [x[0] for x in df.brk]
+    df["gas0"], df["gas2"] = [x[0] for x in df.gas], [x[1] for x in df.gas]      # meta gas / brake press at t = 0 and 2 s
+    df["brk0"], df["brk2"] = [x[0] for x in df.brk], [x[1] for x in df.brk]
     df["hb"] = [max(x) for x in df.hb3]
     df["cmd_k"] = [c[0] for c in df.cmd]
     df["cmd_d"] = [c[1] if c[1] is not None else np.nan for c in df.cmd]
@@ -130,7 +130,8 @@ def diag(rootdir: Path, out: Path) -> dict:
         rows.append(s)
     ss = pd.concat(rows, ignore_index=True)
     sig = {"plan v@1s": "vp1", "plan v@3s": "vp3", "plan v@5s": "vp5", "plan x@5s": "x5", "action accel": "act_a",
-           "lead_prob": "lp0", "lead x": "lead_x", "gas_press@2s": "gas2", "brake_press@2s": "brk2", "vision v": "pose_v"}
+           "lead_prob": "lp0", "lead x": "lead_x", "gas_press@0": "gas0", "gas_press@2s": "gas2", "brake_press@0": "brk0",
+           "brake_press@2s": "brk2", "vision v": "pose_v"}
     tab = []
     for (arm, c), g in ss.groupby(["arm", "ctx"]):
         tab.append({"arm": arm, "context": c, "steps": len(g), "routes": g.route.nunique(),
@@ -177,7 +178,7 @@ def diag(rootdir: Path, out: Path) -> dict:
         for lab in ("must_lead", "must_red", "must_ped"):
             pos = m[m[lab]]
             for k, v in {"plan speed drop 0-3 s": "decel", "-action accel": "neg_a", "lead_prob": "lp0",
-                         "brake_press@2s": "brk2", "hard_brake": "hb"}.items():
+                         "brake_press@0": "brk0", "brake_press@2s": "brk2", "hard_brake": "hb"}.items():
                 rows.append({"arm": arm, "event": lab[5:], "signal": k, "n event": len(pos), "n free": int(free.sum()),
                              "routes": pos.route.nunique(), "AUC": round(auc(pos[v], m[free][v]), 3),
                              "median event": round(float(pos[v].median()), 3) if len(pos) else np.nan,
