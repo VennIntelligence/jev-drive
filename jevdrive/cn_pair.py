@@ -506,10 +506,49 @@ def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 416, q: int = 40)
     return rows
 
 
+def summary(scenes: list[str]):
+    """runs/cn_pair/pairs.json: per (scene, arm) the clip facts, Cosmos seconds per member, the review clip, and one
+    descriptive number (mean |x+ - x-| outside the edit region dilated 24 px, 0-255), for the review page."""
+    import cv2
+    secs = {}
+    for ev in sorted((data_dir() / "runs" / "cn_pair" / "infer").glob("*/*/events.jsonl")):
+        for line in ev.read_text().splitlines():
+            e = json.loads(line)
+            if e.get("kind") == "sample":
+                secs[e["name"]] = e["s"]
+    rows = []
+    k24 = np.ones((49, 49), np.uint8)
+    for key in scenes:
+        d = out("clips", key)
+        if not (d / "prep.json").exists():
+            continue
+        info = json.loads((d / "prep.json").read_text())
+        ins = json.loads((d / "ins.json").read_text()) if (d / "ins.json").exists() else None
+        for arm in ("E", "Ed", "EGb", "BV", "EI", "EIGb", "BVI"):
+            gp, gm = out("gen", arm) / f"{key}_plus_{arm}.npy", out("gen", arm) / f"{key}_minus_{arm}.npy"
+            if not (gp.exists() and gm.exists() and (out("figs") / f"{key}_{arm}.webp").exists()):
+                continue
+            is_ins = arm.rstrip("b") in INS
+            reg = unpack(np.load(d / ("ins.npz" if is_ins else "clip.npz"))["region"])
+            P, M = np.load(gp), np.load(gm)
+            o = ~np.stack([cv2.dilate(x.astype(np.uint8), k24) > 0 for x in reg])
+            diff = float(np.abs(P.astype(np.int16) - M.astype(np.int16)).mean(-1)[o].mean())
+            base = arm.rstrip("b")
+            own = [secs.get(f"{key}_{m}_{base}") for m in ("plus", "minus")]
+            rows.append({"key": key, "arm": arm, "segment": info["segment"], "start": info["start"],
+                         "n_vis": info["n_vis"], "n_yolo": info["n_yolo"], "n_hull": info["n_hull"],
+                         "dist": [min(x for x in info["dist"] if x is not None), max(x for x in info["dist"] if x is not None)],
+                         "frame_info": info["frame_info"], "ins": ins if is_ins else None, "out_diff": round(diff, 2),
+                         "s_plus": own[0], "s_minus": own[1] if base not in ("EG", "EI", "EIG", "BVI") else None,
+                         "webp": f"{key}_{arm}.webp", "kb": (out("figs") / f"{key}_{arm}.webp").stat().st_size // 1024})
+    (data_dir() / "runs" / "cn_pair" / "pairs.json").write_text(json.dumps(rows, indent=1))
+    log.info("%d rows", len(rows))
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "specs", "anchor", "blend", "webp", "depth", "insert", "link"))
+    ap.add_argument("step", choices=("prep", "specs", "anchor", "blend", "webp", "depth", "insert", "link", "summary"))
     ap.add_argument("--scenes", default="p3_000")
     ap.add_argument("--arm", default="E")
     ap.add_argument("--base", default="E")
@@ -531,6 +570,8 @@ def main():
         insert(sc)
     elif a.step == "link":
         link_minus(a.arm, sc)
+    elif a.step == "summary":
+        summary(sc)
     else:
         webp(a.arm, sc)
 
