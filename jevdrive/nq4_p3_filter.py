@@ -369,11 +369,13 @@ def _vehicle_segment(job: tuple[str, str]) -> dict:
         fr = g.frame.to_numpy()
         byf = pd.Series(np.arange(len(g)), index=fr)
         # obstacle: a stopped vehicle in the straight lane of the current heading, the ego moving and not turning
-        obst = (g.lane0 & (g.spd < 1.0) & (g.ttc0 <= TTR_S)).to_numpy() & (v[fr] >= MIN_SPEED)
+        # (deviation 2026-09-28, from a 48-segment pilot: also aligned with the lane, rel <= 30 deg, and within 4 m of the
+        # logged path, so a parked car straight ahead of an ego that turns away is not an obstacle; no turn over 4 s)
+        obst = (g.lane0 & (g.spd < 1.0) & (g.ttc0 <= TTR_S) & (g.rel <= 30) & (g.L.abs() <= 4.0)).to_numpy() & (v[fr] >= MIN_SPEED)
         starts = []
         if obst.any():
             for i in fr[obst]:
-                if lateral_dev(xy, yaw, int(i), int(RESP_POST * HZ))[1] < 15:
+                if lateral_dev(xy, yaw, int(i), int(4 * HZ))[1] < 15:
                     starts.append(("obstacle", int(i)))
                     break
         conf = g.conflict.to_numpy()
