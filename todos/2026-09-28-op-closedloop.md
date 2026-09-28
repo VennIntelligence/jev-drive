@@ -80,3 +80,6 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
   3. 兜底：锁存 20 s 后 base 自己放行（`latch_max_s` 20，真车上相当于驾驶员按 resume），每次放行记原因（signal / timeout），兜底的比例单独报。
   4. 先按分级规则在 2 条诊断路线（27787 红灯起点、24721 前车急刹）上各跑 e2e、switch 一次看状态机，不计分；然后 phase 2 五臂（base、acc、e2e、switch、oplat）× 10 条。
      oplat = switch 去掉路口转弯区（openpilot 自己过路口，只有起步和锁存归 base），用来在闭环里直接量「带 desire 的 openpilot 会不会转弯」。
+- 2026-09-28 14:42–14:58 CST 状态机 smoke（诊断路线 27787、24721，不计分）：e2e 两条都 Completed，锁存按 openpilot 信号放行 8 次、兜底 1 次；switch 在 27787 上 agent 崩溃，
+  原因是 `governor` 在不到 3 m 的路径上 `np.convolve(..., "same")` 多返回一个点（代码 bug，已修，行为不变）；switch 在 24721 上 openpilot 开车跟停前车后车头偏出路线，base 接手后顶住不动被判 blocked（驾驶结果，不是接线问题）。
+  15:0x 起 phase 2（`jev:op-arb-p2`）：base、acc、e2e、switch、oplat × 10 条，参数按上一条。
