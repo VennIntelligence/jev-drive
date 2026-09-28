@@ -431,23 +431,28 @@ def plan_one(k: int, bank_: list) -> dict:
     ts = min(ok_t, key=lambda t: INS.crc(f"{seg}/xinsert/{t}"))
     gr = Ground(g, range(ts - PRE, ts + POST + 1))
     actors = scene_actors(g)
-    S3 = path.Se[ts] + FRONT + 3.0 * max(path.v[ts], V_FLOOR)
-    if not np.isfinite(gr(path.at(S3)[0])):
-        return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no LiDAR ground at the placement"}
-    cands, fails = [], {}
-    for d in bank_:
-        obs = np.radians(np.asarray(d["az"]))
-        for w in d["windows"]:
-            if not V_WALK[0] <= w["speed"] <= V_WALK[1]:
-                fails["donor speed outside 1.0-1.8 m/s"] = fails.get("donor speed outside 1.0-1.8 m/s", 0) + 2
-                continue
-            for side in (1.0, -1.0):
-                b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, PRE, POST, "cross")
-                if "fail" in b:
-                    key = b["fail"].split(" at frame")[0].split(" (")[0].split(" from ")[0].split(" only")[0]
-                    fails[key] = fails.get(key, 0) + 1
+    # the crossing point may move by up to +-0.5 s of TTR (nearest first) to find a gap between parked cars
+    cands, fails, shift = [], {}, 0.0
+    for shift in (0.0, -0.2, 0.2, -0.4, 0.4, -0.5, 0.5):
+        S3 = path.Se[ts] + FRONT + (3.0 + shift) * max(path.v[ts], V_FLOOR)
+        if not np.isfinite(gr(path.at(S3)[0])):
+            fails["no LiDAR ground at the placement"] = fails.get("no LiDAR ground at the placement", 0) + 1
+            continue
+        for d in bank_:
+            obs = np.radians(np.asarray(d["az"]))
+            for w in d["windows"]:
+                if not V_WALK[0] <= w["speed"] <= V_WALK[1]:
+                    fails["donor speed outside 1.0-1.8 m/s"] = fails.get("donor speed outside 1.0-1.8 m/s", 0) + 2
                     continue
-                cands.append((b["gap"], -d["psnr"], d, w, side, b))
+                for side in (1.0, -1.0):
+                    b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, PRE, POST, "cross")
+                    if "fail" in b:
+                        key = b["fail"].split(" at frame")[0].split(" (")[0].split(" from ")[0].split(" only")[0]
+                        fails[key] = fails.get(key, 0) + 1
+                        continue
+                    cands.append((b["gap"], -d["psnr"], d, w, side, b))
+        if cands:
+            break
     if not cands:
         return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no feasible walk-in", "fails": fails}
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
@@ -458,10 +463,11 @@ def plan_one(k: int, bank_: list) -> dict:
     obs = np.radians(np.asarray(d["az"]))
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
-           "window": w, "side": side, "n_candidates": len(cands), "fails": fails, "rules": "walk-in v2 (2026-09-28 16:30)"}
+           "window": w, "side": side, "ttr_shift": shift, "n_candidates": len(cands), "fails": fails,
+           "rules": "walk-in v2 (2026-09-28 16:30)"}
     res["variants"] = {}
     for name, ttr, mode in (("ins2", 2.0, "cross"), ("ins3", 3.0, "cross"), ("ins4", 4.0, "cross"), ("null", 3.0, "along")):
-        S = path.Se[ts] + FRONT + ttr * max(path.v[ts], V_FLOOR)
+        S = path.Se[ts] + FRONT + (ttr + shift) * max(path.v[ts], V_FLOOR)
         bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, PRE, POST, mode)
         res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
                                  if "fail" not in bb else {"fail": bb["fail"]})
