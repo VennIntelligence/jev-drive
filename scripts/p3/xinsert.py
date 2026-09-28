@@ -540,7 +540,8 @@ def plan_one(k: int, bank_: list) -> dict:
         if cands:
             break
     if not cands:
-        return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no feasible walk-in", "fails": fails}
+        return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no feasible walk-in", "fails": fails,
+                "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)"}
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
     near = [c for c in cands if c[0] <= max(cands[0][0], DIVERSE_GAP)]
     donors = {(c[2]["scene"], c[2]["node"]) for c in near}
@@ -835,6 +836,32 @@ def render(a):
                       "shadow": meta["shadow_on_fraction"], "render_s": meta["render_s"]}))
 
 
+def item(a):
+    """One insertion item end to end, for the P3 expansion lane (scripts/p3/expand.py, kind ins): plan the target under
+    the current rules if its plan is missing or older, then render it, or write items/p3_<k>/skip.json with the reason
+    when there is no compliant walk-in (a result, not a failure)."""
+    k = a.target
+    kk = f"{k:03d}"
+    (X / "items").mkdir(parents=True, exist_ok=True)
+    (X / "items" / f"p3_{kk}.pid").write_text(str(os.getpid()))
+    pf = X / "plan" / f"p3_{kk}.json"
+    pl = json.loads(pf.read_text()) if pf.exists() else {}
+    if pl.get("edge_rule") != "drivable edge (2026-09-28 19:00)" and pl.get("reason") != "ego never >= 2 m/s in [5, 15] s":
+        pl = plan_one(k, load_bank())
+        pl.setdefault("edge_rule", "drivable edge (2026-09-28 19:00)")
+        (X / "plan").mkdir(parents=True, exist_ok=True)
+        pf.write_text(json.dumps(pl, indent=1))
+    out = X / "items" / f"p3_{kk}"
+    if not pl["item"]:
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "skip.json").write_text(json.dumps({"scene": k, "reason": pl.get("reason") or f"view gap {pl.get('view_gap')} > {AZ_MAX}",
+                                                   "fails": pl.get("fails"), "at": time.strftime("%F %T")}, indent=1))
+        print(json.dumps({"scene": k, "skipped": pl.get("reason") or pl.get("view_gap")}))
+        return
+    a.out = X / "items"
+    render(a)
+
+
 def clip(a):
     """Before | after for the docs: log | same-scene insertion (grounded standard; 'excluded' when that scene had no
     donor within 20 deg) | cross-scene insertion, TTR 3 s, front camera, 400 x 267 each, 5 fps over [t* - 2, t* + 1] s."""
@@ -881,6 +908,9 @@ def main():
     p = sp.add_parser("plan")
     p.add_argument("--targets", type=int, nargs="+", required=True)
     sp.add_parser("yield")
+    p = sp.add_parser("item")
+    p.add_argument("--target", type=int, required=True)
+    p.add_argument("--gpu-tag", default="", help="ignored; lets the lane read the card from the command line")
     p = sp.add_parser("clip")
     p.add_argument("--targets", type=int, nargs="+", required=True)
     p.add_argument("--out", type=Path, default=X / "clips")
@@ -891,7 +921,7 @@ def main():
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
     if a.cmd == "clip":
         a.out.mkdir(parents=True, exist_ok=True)
-    {"bank": bank, "plan": plan, "yield": yield_, "render": render, "clip": clip}[a.cmd](a)
+    {"bank": bank, "plan": plan, "yield": yield_, "render": render, "clip": clip, "item": item}[a.cmd](a)
 
 
 if __name__ == "__main__":

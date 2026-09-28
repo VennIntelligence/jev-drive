@@ -124,8 +124,9 @@ class Kind:
     def __init__(self, name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile):
         self.name, self.stages, self.run, self.sd, self.marker, self.cmd, self.ready, self.pidfile = \
             name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile
+        self.tag = "insx" if name == "ins" else name                   # insx: the cross-scene walk-in standard
         self.si, self.active, self.tries, self.wait = 0, True, {}, {}
-        while self.si < len(stages) and (E / f"{name}.stage{self.si}.ok").exists():
+        while self.si < len(stages) and (E / f"{self.tag}.stage{self.si}.ok").exists():
             self.si += 1
 
     def done(self, k):
@@ -161,16 +162,17 @@ def kinds():
                lambda k, g, c: ["python3", "scripts/p3/veh.py", "scene", "--j", str(k), "--gpu", str(g), "--cpus", c,
                                 "--train-timeout", str(TRAIN_TIMEOUT)],
                lambda k: (V / f"prep_{k:03d}.done").exists(), lambda k: V / f"scene_{k:03d}.pid")
-    # insertion items (amendment 2, option 3; user 2026-09-28: batch over every reconstructed pedestrian scene with a
-    # valid donor): registered variants plus the grounded ones (--fix), one scene at a time after its reconstruction
-    I = D / "insert_batch"
-    ins = Kind("ins", [list(range(10)), list(range(10, 66))], I, lambda k: I / f"p3_{k:03d}", None,
-               lambda k, g, c: ["taskset", "-c", c, str(DATA / "envs/drivestudio/bin/python"), "scripts/p3/insert.py", "--scene", str(k),
-                                "--fix", "--out", str(I), "--gpu-tag", str(g)],
-               lambda k: k < 10 or ped.done(k), lambda k: I / f"scene_{k:03d}.pid")
-    ins.done = lambda k: (I / f"p3_{k:03d}" / "meta.json").exists()
-    ins.check = lambda k: (True, False, {"kind": "ins", "scene": k,
-                                         "chosen": json.loads((I / f"p3_{k:03d}" / "meta.json").read_text()).get("chosen")})
+    # insertion items: the current standard (user 2026-09-28) = cross-scene donor bank + walk-in trajectory rules (+ the
+    # drivable-area edge where there is no kerb), scripts/p3/xinsert.py item: plan (if needed) and render one target, or
+    # write items/p3_<k>/skip.json with the reason when no compliant walk-in exists. A skip is a result, not a failure.
+    XI = D / "xinsert/items"
+    ins = Kind("ins", [list(range(10)), list(range(10, 66))], XI, lambda k: XI / f"p3_{k:03d}", None,
+               lambda k, g, c: ["taskset", "-c", c, str(DATA / "envs/drivestudio/bin/python"), "scripts/p3/xinsert.py", "item",
+                                "--target", str(k), "--gpu-tag", str(g)],
+               lambda k: (DATA / "ckpt/nq4_p3/p3" / f"{k:03d}/checkpoint_final.pth").exists() and (k < 10 or ped.done(k)),
+               lambda k: XI / f"p3_{k:03d}.pid")
+    ins.done = lambda k: (XI / f"p3_{k:03d}" / "meta.json").exists() or (XI / f"p3_{k:03d}" / "skip.json").exists()
+    ins.check = lambda k: (True, False, {"kind": "ins", "scene": k, "skipped": (XI / f"p3_{k:03d}" / "skip.json").exists()})
     return [ped, veh, ins]
 
 
@@ -247,13 +249,13 @@ def main():
             if all(kd.done(k) for k in st) and not any(kn == kd.name for kn, _ in running):
                 res = [kd.check(k) for k in st]
                 flags, bad = [f for _, fl, f in res if fl], [f for ok, _, f in res if not ok]
-                (E / f"{kd.name}.stage{kd.si}.checklist.json").write_text(json.dumps([f for _, _, f in res], indent=1))
+                (E / f"{kd.tag}.stage{kd.si}.checklist.json").write_text(json.dumps([f for _, _, f in res], indent=1))
                 if bad or len(flags) > max(1, len(st) // 10):
                     kd.active = False
                     (E / f"ERROR.{kd.name}").write_text(f"stage {kd.si + 1} checklist failed: bad {bad}, psnr flags {flags}\n")
                     log(f"ERROR: {kd.name} stage {kd.si + 1} checklist failed", event="checklist_failed", kind=kd.name, bad=bad, flags=flags)
                     continue
-                (E / f"{kd.name}.stage{kd.si}.ok").write_text(time.strftime("%F %T") + "\n")
+                (E / f"{kd.tag}.stage{kd.si}.ok").write_text(time.strftime("%F %T") + "\n")
                 log(f"{kd.name} stage {kd.si + 1} checklist ok ({len(flags)} PSNR flags)", event="stage_ok", kind=kd.name, stage=kd.si)
                 kd.si += 1
         if all(not kd.active or kd.si >= len(kd.stages) for kd in ks) and not running:
@@ -277,7 +279,8 @@ def main():
                     kn, k = order.pop(0)
                     cores = next(c for c in CORES[g] if c not in [running[u][2] for u in mine])
                     with open(E / f"{kn}_{k:03d}.out", "a") as out:
-                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env={**env, "CUDA_VISIBLE_DEVICES": str(g)} if kn == "ins" else env,
+                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env={**env, "CUDA_VISIBLE_DEVICES": str(g), "P3_PRELOAD_DEVICE": "cpu",
+                                                  "TORCH_EXTENSIONS_DIR": str(DATA / "cache/torch_ext_p3x")} if kn == "ins" else env,
                                              stdout=out, stderr=subprocess.STDOUT,
                                              start_new_session=True)   # survives a lane restart; adopted by pid
                     running[(kn, k)] = (p, g, cores, time.time())
