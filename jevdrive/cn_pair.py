@@ -65,7 +65,10 @@ def project(pts_w: np.ndarray, cam) -> tuple[np.ndarray, np.ndarray]:
     p = pts_w @ w2c[:3, :3].T + w2c[:3, 3]
     cv = np.stack([-p[:, 1], -p[:, 2], p[:, 0]], 1)
     z = cv[:, 2].copy()
-    uv, _ = cv2.projectPoints(np.where(z[:, None] > 0.1, cv, np.array([0, 0, 1.0])), np.zeros(3), np.zeros(3), K, dist)
+    # normalised coordinates clipped to +-0.75 (the image spans about +-0.47 x +-0.31): far outside the field of view
+    # the distortion polynomial folds points back into the image
+    xn = np.clip(cv[:, :2] / np.maximum(z, 0.1)[:, None], -0.75, 0.75)
+    uv, _ = cv2.projectPoints(np.c_[xn, np.ones(len(xn))], np.zeros(3), np.zeros(3), K, dist)
     uv = uv[:, 0] * S - np.array([0, CROP_Y0 * S])
     return uv, z
 
@@ -157,6 +160,9 @@ def prep(scenes: list[str]):
                     if _match(db, b["box"]) and _iou(db, b["box"]) >= bi:
                         best, bi = j, _iou(db, b["box"])
             hull = _hull(b["uv"])
+            if best is None and hull.mean() > 0.2:                   # box mostly outside the view: no usable hull
+                src.append("none")
+                continue
             if best is not None:
                 mk = r.masks.data[best].cpu().numpy() > 0.5
                 tmask[i] = mk
