@@ -374,6 +374,8 @@ def specs(variant: str, which: str = "all", floors: str = "both") -> Path:
     p = pairs()
     if which == "pilot1":
         p = p[p.base_id == PILOT1]
+    elif which != "all":                      # explicit pair list, e.g. 24252-s0,27582-s0
+        p = p[p.pair.isin(which.split(","))]
     det = pd.read_csv(RESULTS / "determinism.csv", dtype={"pair": str}).set_index("pair")
     lines = []
     for _, r in p.iterrows():
@@ -385,7 +387,7 @@ def specs(variant: str, which: str = "all", floors: str = "both") -> Path:
             c = {"control_weight": 1.0} | ({"control_path": str(cd / ctrl)} if ctrl else {})
             lines.append({"name": f"{r.pair}_{m}_{variant}_s{seed}{suf}", "prompt": pr, "video_path": str(cd / "rgb.mp4"),
                           "seed": seed, "num_steps": steps, "guidance": 3, key: c})
-    f = root("specs") / f"{variant}_{which}_{floors}.jsonl"
+    f = root("specs") / f"{variant}_{which.replace(',', '+')}_{floors}.jsonl"
     f.write_text("".join(json.dumps(x) + "\n" for x in lines))
     log.info("%d samples -> %s (model %s)", len(lines), f, model)
     return f

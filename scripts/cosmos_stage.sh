@@ -10,18 +10,19 @@ cd "$(dirname "$0")/.."
 which=$1 variants=$2
 E=$DATA_DIR/envs R=$DATA_DIR/runs/cosmos
 export CUDA_VISIBLE_DEVICES=${COSMOS_GPU:-1} PYTHONPATH=$PWD
-tag=$R/stage-$which
+tag=$R/stage-${STAGE_TAG:-$which}
 rm -f "$tag.DONE" "$tag.ERROR"
 trap 'echo "failed at line $LINENO ($(date +%H:%M))" > "$tag.ERROR"' ERR
 st() { echo "$(date '+%m-%d %H:%M') $*" | tee -a "$tag.STATUS"; }
 only=$($E/jevdrive/bin/python -c "
 import pandas as pd; p = pd.read_csv('research/results/cosmos/pairs.csv', dtype={'base_id': str})
 from jevdrive.cosmos_pilot import PILOT1
-print(','.join(p[p.base_id == PILOT1].pair if '$which' == 'pilot1' else p.pair))")
+w = '$which'
+print(','.join(p[p.base_id == PILOT1].pair if w == 'pilot1' else p.pair if w == 'all' else w.split(',')))")
 for v in ${variants//,/ }; do
   # the same-seed re-render is bit-identical (pilot pair, edge/distilled), so the 35-step seg model only gets the
   # other-seed floor
-  case $v in seg) model=seg floors=alt ;; *) model=edge/distilled floors=${FLOORS:-both} ;; esac
+  case $v in seg) model=seg floors=${SEG_FLOORS:-alt} ;; *) model=edge/distilled floors=${FLOORS:-both} ;; esac
   spec=$($E/jevdrive/bin/python -m jevdrive.cosmos_pilot specs --variant "$v" --which "$which" --floors "$floors" | tail -1)
   st "$v: cosmos ($model) on $only"
   $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$spec" --model "$model" --out "$R/out/$v"
