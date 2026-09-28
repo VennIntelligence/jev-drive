@@ -384,22 +384,33 @@ def cmd_nav_report(a):
     # different run dirs (e.g. warp-cinque__base in both nav/ and navfull/) never collide on one eval directory.
     prefix = f"{a.ver}_{a.split}_opi_" + ("" if a.data == "nav" else f"{a.data}_")
     toks = set(meta(a.data)["names"])
-    res = {}
-    for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{prefix}*"))):
+    # navhard_two_stage's v2 EPDMS is NOT the mean of the per-token "score" column: the devkit's pseudo closed-loop
+    # combination appends summary rows (token "extended_pdm_score_{stage_one,stage_two,combined}") to the same CSV,
+    # and only "extended_pdm_score_combined"["score"] is the official EPDMS (verified against decisions.md #37's
+    # hold reference: combined row gives 9.30 for cinque_none, naive per-token mean gives a bogus 28.66). Same
+    # convention as scripts/navsim_zs_report.py's navhard_table().
+    two_stage = a.ver == "v2" and a.split == "navhard_two_stage"
+    res, combined = {}, {}
+
+    def load(d, name):
         fs = sorted(glob.glob(d + "/*/*.csv"))
         if not fs:
-            continue
-        df = pd.read_csv(fs[-1])
-        df = df[df["token"].isin(toks) & df["valid"].astype(bool)]
-        res[Path(d).name[len(prefix):]] = df.set_index("token")
+            return
+        raw = pd.read_csv(fs[-1])
+        if two_stage:
+            summ = raw[raw["token"].astype(str).str.startswith("extended_pdm_score")].set_index("token")
+            if "extended_pdm_score_combined" in summ.index:
+                combined[name] = summ  # rows: extended_pdm_score_{stage_one,stage_two,combined}
+        res[name] = raw[raw["token"].isin(toks) & raw["valid"].astype(bool)].set_index("token")
+
+    for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{prefix}*"))):
+        load(d, Path(d).name[len(prefix):])
     # the exam's own full-split runs on the same tokens (reproduction check and reference rows), whichever exist
     exam_names = ("cinque_none", "lebowski_none", "small_none", "cv", "human", "heads_cls_late_cinque_temporal",
                   "heads_cls_ego_K1024") if a.ver == "v1" else ("cinque_none", "lebowski_none", "small_none", "cv", "human")
     for name in exam_names:
-        fs = sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{a.ver}_{a.split}_{name}" / "*" / "*.csv")))
-        if fs:
-            df = pd.read_csv(fs[-1])
-            res[f"exam {name}"] = df[df["token"].isin(toks) & df["valid"].astype(bool)].set_index("token")
+        d = str(data_dir() / "runs/navsim/eval" / f"{a.ver}_{a.split}_{name}")
+        load(d, f"exam {name}")
     # benchmark-free readout: ADE / FDE of the pose file against the logged future (<split>_future.npz), longitudinal
     # bias at 4 s; navhard_two_stage's future file only covers the 450 real stage-one tokens (no logged future for
     # the synthetic stage-two continuations), so this is a partial-coverage diagnostic there, not the main number.
@@ -419,6 +430,24 @@ def cmd_nav_report(a):
     rows = []
     rng = np.random.default_rng(0)
     for k, df in res.items():
+        if two_stage:
+            # official combined EPDMS is a single aggregate over the whole run (stage-one hard metrics feed a
+            # reactive stage-two IDM rollout), not a per-token statistic, so there is no token-bootstrap CI here.
+            if k not in combined:
+                continue
+            summ, c = combined[k], combined[k].loc["extended_pdm_score_combined"]
+            row = dict(name=k, n=len(df), pdms=100 * float(c["score"]), lo=np.nan, hi=np.nan,
+                       stage1=100 * float(summ.loc["extended_pdm_score_stage_one", "score"])
+                       if "extended_pdm_score_stage_one" in summ.index else np.nan,
+                       stage2=100 * float(summ.loc["extended_pdm_score_stage_two", "score"])
+                       if "extended_pdm_score_stage_two" in summ.index else np.nan,
+                       **{f"{s}_s1": 100 * float(c[f"{s}_stage_one"]) for s in subs
+                          if f"{s}_stage_one" in c and pd.notna(c[f"{s}_stage_one"])},
+                       **{f"{s}_s2": 100 * float(c[f"{s}_stage_two"]) for s in subs
+                          if f"{s}_stage_two" in c and pd.notna(c[f"{s}_stage_two"])},
+                       **geo.get(k, {}))
+            rows.append(row)
+            continue
         v = df["score"].to_numpy(float)
         bs = v[rng.integers(0, len(v), (2000, len(v)))].mean(1)
         row = dict(name=k, n=len(v), pdms=100 * v.mean(), lo=100 * np.percentile(bs, 2.5), hi=100 * np.percentile(bs, 97.5),
