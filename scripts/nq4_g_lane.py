@@ -78,7 +78,7 @@ PIDS_PER_WORKER = int(os.environ.get("G_PIDS_PER_WORKER", 700))
 # Per-card budget (user 2026-09-28): a worker of agent a takes 1 / cap(a) of the card's render budget and CPU_A[a] cores
 # of its slice; heavy agents' cap is CARD_CAP (the knee, SCH row workers), light agents render little and go further.
 # A card is full when the render shares sum to 1, the slice is CPU_FILL busy, or it holds SERVER_MAX servers.
-HEAVY = {"simlingo", "blue", "bridgedrive"}
+HEAVY = {"simlingo", "blue"}      # VLM-sized (~14 GB, high render + compute share); user 2026-09-28: BridgeDrive is light
 CAP_A = {"tfv6": 10, "pdm": 12, **{k: int(v) for k, v in (e.split("=") for e in os.environ.get("G_CAPS", "").split(",") if e)}}
 CPU_A = {"simlingo": 2.0, "blue": 2.0, "bridgedrive": 2.0, "tfv6": 2.0, "pdm": 1.2}   # cores / worker, measured 2026-09-28
 SERVER_MAX, CPU_FILL = int(os.environ.get("G_SERVER_MAX", 10)), 0.85
@@ -467,18 +467,26 @@ class Lane:
         # among those the least loaded one with room.
         granted = [g for g in info if g in GPUS or g in PILOT_GPUS]
         calm = min((load[g] for g in granted if g in PILOT_GPUS and budget(g)[0] < 1), default=None)
+        # Placement (user 2026-09-28): heavy workers spread evenly over the batch cards - a card takes a heavy worker only
+        # while it holds no more heavy workers than the least-heavy batch card (+1 inside one launch); the rest of its
+        # room goes to light cells. With no light work queued a card still takes heavy work (work-conserving).
+        nheavy = {g: sum(n for c, n in use[g].items() if c in HEAVY) for g in info}
+        floor = min((nheavy[g] for g in granted if g in GPUS), default=0)
+        light_left = any(j["kind"] == "cell" and j["cand"] not in HEAVY and len(j["rest"]) > j["busy"] for j in jobs)
         for gpu in sorted(granted, key=lambda g: load[g]):
             card = info[gpu]
             share, cpu, nsrv = budget(gpu)
             cores = n_cores(card_cpus(gpu)) if gpu in BLOCKS else 24
             unstarted = sum(r["workers"] for r in young if r["gpu"] == gpu)
             free_gb = card["total"] - card["used"] - 8 * unstarted - 8   # keep >= 8 GB per card (sch_table.py)
-            heavy = sum(n / cap(c) for c, n in use[gpu].items() if c in HEAVY)
-            want_heavy = heavy <= share - heavy   # mix: the card's under-represented class first, then priority order
+            heavy_ok = gpu not in GPUS or nheavy[gpu] <= floor or not light_left
+            want_heavy = heavy_ok and nheavy[gpu] <= floor
             for j in sorted(jobs, key=lambda j: (j["cand"] in HEAVY) != want_heavy):
                 c, v, s = j["cand"], j["variant"], j["seed"]
                 if (j["kind"] == "pilot") != (gpu in PILOT_GPUS):
                     continue                  # pilots only on the test card, cells only on batch cards
+                if j["kind"] == "cell" and c in HEAVY and not heavy_ok:
+                    continue
                 if j["kind"] == "pilot":
                     p = self.st["pilots"][f"{c}.{v}"]
                     if p["launched"]:
@@ -493,6 +501,8 @@ class Lane:
                         SERVER_MAX - nsrv, int(free_gb // NEED_GB[c]), (PIDS_CAP - pids) // PIDS_PER_WORKER)
                 if j["kind"] == "pilot" and p["stage"] == 1:
                     w = min(w, 1)
+                if j["kind"] == "cell" and c in HEAVY and gpu in GPUS and light_left:
+                    w = min(w, floor + 1 - nheavy[gpu])
                 free = self.blocks_free(gpu, rows)
                 fits = lambda n: next((i for i in free if all(i + k in free for k in range(2 * n))), None)
                 while w > 0 and fits(w) is None:
@@ -502,6 +512,9 @@ class Lane:
                 r = launch(j, gpu, w, fits(w), 2 * w, j["rest"])
                 r.update(key=j["key"], kind=j["kind"], cand=c, variant=v, seed=s)
                 self.st["runners"][str(r["pid"])] = r
+                use[gpu][c] = use[gpu].get(c, 0) + w
+                if c in HEAVY:
+                    nheavy[gpu] += w
                 if j["kind"] == "pilot":
                     p.update(launched=True, runner=r["pid"], t0=r["t0"])
                 j["busy"] += w
