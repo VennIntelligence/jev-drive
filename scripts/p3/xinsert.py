@@ -13,7 +13,7 @@ gain cap 1.33, view gap <= 20 deg). todos/2026-09-26-night-queue-4.md, P section
          at t* on the lane centre with TTR 3 s; view gap = max over the frames it is in the front camera of the smallest
          azimuth difference to what the log saw of the donor. Donor rules: box PSNR >= 22 dB, height 1.0-2.1 m,
          gaussian vertical extent / box height 0.8-1.25. Among the placements within 5 deg of the best gap (or the best
-         one when it is larger) the crc32-minimal (target, donor, window, side) wins, so targets get different donors;
+         one when it is larger) the crc32-minimal (target, donor) donor wins with its best window and side, so targets get different donors;
          an item exists when the chosen gap is <= 20 deg. TTR 2 / 4 s reuse it; the null walks along the path 4.5 m off the lane on
          the entry side, direction of the smaller gap.  -> xinsert/plan/p3_<k>.json
   render (GPU, one target with a plan)  the target OmniRe run plus the donor's gaussians and its own deformation network
@@ -281,7 +281,9 @@ def plan_one(k: int, bank_: list) -> dict:
     # bank many donors fit almost perfectly, and a PSNR tie-break sends every target the same donor
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
     near = [c for c in cands if c[0] <= max(cands[0][0], DIVERSE_GAP)]
-    gap, _, d, w, side, b = min(near, key=lambda c: INS.crc(f"{seg}/{c[2]['scene']}/{c[2]['node']}/{c[3]['s0']}/{c[4]}"))
+    donors = {(c[2]["scene"], c[2]["node"]) for c in near}
+    pick = min(donors, key=lambda q: INS.crc(f"{seg}/{q[0]}/{q[1]}"))       # the donor first, then its best placement
+    gap, _, d, w, side, b = min((c for c in near if (c[2]["scene"], c[2]["node"]) == pick), key=lambda c: c[0])
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
            "window": w, "side": side, "n_candidates": len(cands),
