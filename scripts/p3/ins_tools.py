@@ -37,8 +37,9 @@ REPO = Path(__file__).resolve().parents[2]
 HZ, W, H = 10, 960, 640
 PRE, POST = 29, 19                                   # 49 frames = 4 * 12 + 1 (Wan's frame grid)
 OPENCV2DATASET = np.array([[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=np.float64)
-LABELS = {"ped_omni": "(a) OmniRe as is", "ped_fix": "(b) manual fix", "ped_r3d2": "(c) R3D2", "ped_vace": "(d) VACE-14B",
-          "veh_omni": "(a) 3DGS asset as is", "veh_r3d2": "(c) R3D2", "veh_vace": "(d) VACE-14B"}
+LABELS = {"ped_omni": "(a) OmniRe as is", "ped_fix": "(b) manual fix", "ped_r3d2": "(c) R3D2 on (a)", "ped_r3d2big": "(c) R3D2-big on (a)",
+          "ped_fix_r3d2": "(c') R3D2 on (b)", "ped_fix_r3d2big": "(c') R3D2-big on (b)", "ped_vace": "(d) VACE-14B on (a)",
+          "veh_omni": "(a) 3DGS asset as is", "veh_r3d2": "(c) R3D2", "veh_r3d2big": "(c) R3D2-big", "veh_vace": "(d) VACE-14B"}
 PROMPT = {"ped": "Dashcam video of a sunny street. A pedestrian walks across the asphalt road in front of the car, "
                  "lit by the same sunlight as the scene, feet on the ground, casting a soft shadow on the road.",
           "veh": "Dashcam video of a sunny street. A car stands in the lane ahead on the asphalt road, lit by the same "
@@ -310,7 +311,7 @@ def r3d2(a):
     sync = torch.cuda.synchronize if dev == "cuda" else (lambda: None)
     yc = int(np.median([(r[1] + r[3]) for r in regs]))            # 2x the region centre row
     y0 = int(np.clip(yc - 540, 0, 2 * H - 1080))
-    name = f"{cls}_r3d2" + ("" if a.model == "R3D2" else "big")
+    name = src.replace("_omni", "") + "_r3d2" + ("" if a.model == "R3D2" else "big")     # ped_r3d2big, ped_fix_r3d2big, ...
     od, rd_ = opt_frames(key, name), opt_frames(key, name + "_raw")
     tt = []
     for t, reg in list(zip(frames, regs))[:a.limit]:
