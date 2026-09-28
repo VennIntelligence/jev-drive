@@ -81,7 +81,8 @@ def _flags(d: pd.DataFrame) -> pd.DataFrame:
     # washed out (added after 25863 in fog: a dark coat against a light road came out as a light-grey figure): the
     # object's contrast to its own 8 px background ring falls below half of CARLA's, where CARLA's is >= 20 grey levels
     d["is_washed"] = (d.con_raw >= 20) & (d.con_cos < 0.5 * d.con_raw)
-    d["is_white_any"] = d.is_pale | d.is_mannequin | d.is_washed
+    # descriptive only: it also fires on any relighting (a dark CARLA night scene painted as dusk), 10-18% of cars
+    d["is_white_any"] = d.is_pale | d.is_mannequin
     return d
 
 
@@ -111,6 +112,8 @@ def summarize(d: pd.DataFrame, flag: str = "is_white_any", tag: str = "") -> str
     out = [f"flag: {flag}"]
     d = d.assign(is_white=d[flag])
     g = d.groupby(["variant", "cls"]).agg(units=("is_white", "size"), white=("is_white", "mean")).unstack(0)
+    out.append("## washed-out (descriptive, contrast to own background < 1/2 of CARLA's; fires on relighting too)\n\n"
+               + d.groupby(["variant", "cls"]).is_washed.mean().unstack(0).round(3).to_markdown())
     out.append("## White units by variant and class (share of object-frames >= 300 px)\n\n" + g.round(3).to_markdown())
     d["depth_bin"] = pd.cut(d.depth, [0, 10, 20, 40, 1000], labels=["<10 m", "10-20", "20-40", ">40"])
     d["size_bin"] = pd.cut(d.px, [0, 1000, 3000, 10000, 1e9], labels=["<1k px", "1-3k", "3-10k", ">10k"])
