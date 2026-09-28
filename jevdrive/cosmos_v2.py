@@ -18,6 +18,7 @@ Arms:
   M2   base 35 steps, multicontrol edgeC 1.0 + depth 0.5 + class seg 1.0, prompt v2 + negative prompt v2
 """
 import json
+import os
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -113,10 +114,12 @@ def _controls2(pair: str):
             e3 = e2 | ((cv2.Canny(eq, 30, 90) > 0) & obj)
             ee.append(np.repeat((e3 * 255).astype(np.uint8)[..., None], 3, -1))
             sc.append(LUT[tag])
-        write_mp4(root("clips", pair, m) / "edgeC.mp4", np.stack(ec))
-        write_mp4(root("clips", pair, m) / "edgeD.mp4", np.stack(ed))
-        write_mp4(root("clips", pair, m) / "edgeE.mp4", np.stack(ee))
-        write_mp4(root("clips", pair, m) / "segc.mp4", np.stack(sc))
+        only = os.environ.get("COSMOS_CTRL_ONLY", "")       # e.g. "edgeE": leave files another job may be reading
+        for name, fr in (("edgeC", ec), ("edgeD", ed), ("edgeE", ee), ("segc", sc)):
+            if not only or name in only.split(","):
+                write_mp4(root("clips", pair, m) / f"{name}.mp4", np.stack(fr))
+    if os.environ.get("COSMOS_CTRL_ONLY"):
+        return pair, np.nan, np.nan
     from .cosmos_eval import gt
     g = gt(pair)
     region = g["region"]
