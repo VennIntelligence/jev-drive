@@ -1,0 +1,37 @@
+arm,event,signal,n event,n free,routes,AUC,median event,median free
+native,lead,plan speed drop 0-3 s,0,0,0,,,
+native,lead,-action accel,0,0,0,,,
+native,lead,lead_prob,0,0,0,,,
+native,lead,brake_press@0,0,0,0,,,
+native,lead,brake_press@2s,0,0,0,,,
+native,lead,hard_brake,0,0,0,,,
+native,red,plan speed drop 0-3 s,0,0,0,,,
+native,red,-action accel,0,0,0,,,
+native,red,lead_prob,0,0,0,,,
+native,red,brake_press@0,0,0,0,,,
+native,red,brake_press@2s,0,0,0,,,
+native,red,hard_brake,0,0,0,,,
+native,ped,plan speed drop 0-3 s,0,0,0,,,
+native,ped,-action accel,0,0,0,,,
+native,ped,lead_prob,0,0,0,,,
+native,ped,brake_press@0,0,0,0,,,
+native,ped,brake_press@2s,0,0,0,,,
+native,ped,hard_brake,0,0,0,,,
+oshadow,lead,plan speed drop 0-3 s,80,718,2,0.945,2.768,-0.592
+oshadow,lead,-action accel,80,718,2,0.968,1.235,-0.23
+oshadow,lead,lead_prob,80,718,2,0.726,0.992,0.374
+oshadow,lead,brake_press@0,80,718,2,0.934,0.778,0.103
+oshadow,lead,brake_press@2s,80,718,2,0.925,0.861,0.15
+oshadow,lead,hard_brake,80,718,2,0.744,0.016,0.007
+oshadow,red,plan speed drop 0-3 s,108,718,2,0.678,1.51,-0.592
+oshadow,red,-action accel,108,718,2,0.643,0.159,-0.23
+oshadow,red,lead_prob,108,718,2,0.433,0.339,0.374
+oshadow,red,brake_press@0,108,718,2,0.755,0.518,0.103
+oshadow,red,brake_press@2s,108,718,2,0.747,0.694,0.15
+oshadow,red,hard_brake,108,718,2,0.728,0.015,0.007
+oshadow,ped,plan speed drop 0-3 s,30,718,1,0.83,2.002,-0.592
+oshadow,ped,-action accel,30,718,1,0.908,0.443,-0.23
+oshadow,ped,lead_prob,30,718,1,0.625,0.947,0.374
+oshadow,ped,brake_press@0,30,718,1,0.757,0.337,0.103
+oshadow,ped,brake_press@2s,30,718,1,0.735,0.481,0.15
+oshadow,ped,hard_brake,30,718,1,0.444,0.008,0.007

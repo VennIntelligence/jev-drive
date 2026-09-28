@@ -81,7 +81,7 @@ def governor(path, v0, cruise, alat, amax, bmax, end_stop):
     p = place(path, grid)
     h = np.unwrap(np.arctan2(np.gradient(p[:, 1]), np.gradient(p[:, 0]))) if len(p) > 2 else np.zeros(len(p))
     k = np.abs(np.gradient(h)) if len(p) > 2 else np.zeros(len(p))
-    k = np.convolve(k, np.ones(3) / 3, "same")
+    k = np.convolve(k, np.ones(3) / 3, "same")[: len(p)]      # "same" returns max(len, 3) points
     cap = np.minimum(cruise, np.sqrt(alat / np.maximum(k, 1e-4)))
     if end_stop:
         cap[-1] = 0.0

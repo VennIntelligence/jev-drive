@@ -1,0 +1,13 @@
+route,status,DS,RC,coll_veh,coll_ped,coll_layout,red_light,stop_sign,off_lane,route_dev,blocked,timeout,yield_ev,scen_timeout,min_speed,SR,arm,t_first_move_s
+17749,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+24721,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+26537,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+26872,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+27787,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+334,Failed - Agent got blocked,0.0,0.0,0,0,0,0,0,0,0,1,0,0,0,0,0,native,
+17749,Completed,100.0,100.0,0,0,0,0,0,0,0,0,0,0,0,20,1,oshadow,5.7
+24721,Completed,100.0,100.0,0,0,0,0,0,0,0,0,0,0,0,20,1,oshadow,5.8
+26537,Completed,100.0,100.0,0,0,0,0,0,0,0,0,0,0,0,20,1,oshadow,5.8
+26872,Completed,60.0,100.0,1,0,0,0,0,0,0,0,0,0,0,18,0,oshadow,5.7
+27787,Completed,70.0,100.0,0,0,0,1,0,0,0,0,0,0,0,16,0,oshadow,5.8
+334,Failed - TickRuntime,28.278,47.13,1,0,0,0,0,0,0,0,0,0,0,8,0,oshadow,5.8

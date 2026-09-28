@@ -1,0 +1,3 @@
+arm,where,steps,routes,n @10 m,route |y| @10 m,plan follow @10 m,twin follow @10 m,n @15 m,route |y| @15 m,plan follow @15 m,twin follow @15 m,P(turn) desire_pred plan,P(turn) desire_pred twin,desire on
+oshadow,approach (0-20 m before),210,3,22,2.59,-0.06,-0.06,79,2.77,-0.05,-0.1,0.375,0.375,1.0
+oshadow,inside the turn,200,3,161,2.85,1.12,1.06,169,6.59,1.04,0.98,0.615,0.615,1.0
