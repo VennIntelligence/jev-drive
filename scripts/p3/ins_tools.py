@@ -300,35 +300,35 @@ def r3d2(a):
     import torch
     from diffusers import DiffusionPipeline
     from PIL import Image
-    from torchvision.transforms.functional import to_tensor
     key, src = a.key, a.src
     cls = src.split("_")[0]
     frames, regs, _ = _regions(key, cls)
     mp = str(DATA / "models/r3d2" / a.model)
-    pipe = DiffusionPipeline.from_pretrained(mp, custom_pipeline=mp, torch_dtype=torch.float16 if a.fp16 else torch.float32)
-    pipe.to("cuda")
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    pipe = DiffusionPipeline.from_pretrained(mp, custom_pipeline=mp, trust_remote_code=True,
+                                             torch_dtype=torch.float16 if a.fp16 else torch.float32).to(dev)
+    sync = torch.cuda.synchronize if dev == "cuda" else (lambda: None)
     yc = int(np.median([(r[1] + r[3]) for r in regs]))            # 2x the region centre row
     y0 = int(np.clip(yc - 540, 0, 2 * H - 1080))
     name = f"{cls}_r3d2" + ("" if a.model == "R3D2" else "big")
     od, rd_ = opt_frames(key, name), opt_frames(key, name + "_raw")
     tt = []
-    for t, reg in zip(frames, regs):
+    for t, reg in list(zip(frames, regs))[:a.limit]:
         inp = load_rgb(opt_frames(key, src) / jpg(int(t)))
         up = np.asarray(Image.fromarray(inp).resize((2 * W, 2 * H), Image.BICUBIC))
-        x = to_tensor(up[y0:y0 + 1080]).to("cuda", torch.float16 if a.fp16 else torch.float32)
-        torch.cuda.synchronize()
+        sync()
         t1 = time.time()
         with torch.no_grad():
-            y = pipe(x).images[0]
-        torch.cuda.synchronize()
+            y = pipe(Image.fromarray(up[y0:y0 + 1080])).images[0]
+        sync()
         tt.append(time.time() - t1)
         full = up.copy()
         full[y0:y0 + 1080] = np.asarray(y.convert("RGB").resize((2 * W, 1080), Image.BICUBIC))
         raw = np.asarray(Image.fromarray(full).resize((W, H), Image.BICUBIC))
         save_rgb(rd_ / jpg(int(t)), raw)
         save_rgb(od / jpg(int(t)), _paste(inp, raw, reg))
-    info = {"model": a.model, "fp16": a.fp16, "window_rows_2x": [y0, y0 + 1080], "s_per_frame_median": float(np.median(tt[2:])),
-            "frames": len(tt), "peak_vram_gb": torch.cuda.max_memory_allocated() / 2 ** 30}
+    info = {"model": a.model, "fp16": a.fp16, "window_rows_2x": [y0, y0 + 1080], "s_per_frame_median": float(np.median(tt[2:] or tt)),
+            "frames": len(tt), "peak_vram_gb": torch.cuda.max_memory_allocated() / 2 ** 30 if dev == "cuda" else None}
     (run_dir(key) / f"{name}.json").write_text(json.dumps(info, indent=1))
     print(json.dumps(info))
 
@@ -612,6 +612,7 @@ def main():
         if n == "r3d2":
             p.add_argument("--model", default="R3D2")
             p.add_argument("--fp16", action="store_true")
+            p.add_argument("--limit", type=int, default=None, help="first n frames only (smoke)")
         if n == "vace":
             p.add_argument("--steps", type=int, default=50)
             p.add_argument("--shift", type=float, default=16.0)
