@@ -219,10 +219,12 @@ def bank_name(k: int) -> str:
 
 
 def close_dist(g, T, fv) -> float:
-    """Closest horizontal distance (m) from a front camera (front, front-left, front-right) at which the donor was seen in
-    its own log: the finest scale its gaussians were fitted at (resolution gate, user 2026-09-28)."""
-    ds_ = [np.linalg.norm(T[t, :2] - cam_axis(g, t, c)[0][:2]) for t in np.flatnonzero(fv[: g["n"]])
-           for c in range(3) if in_fov(g, t, T[t], c, dist=80.0)]
+    """Closest horizontal distance (m) from the FRONT camera at which the donor was seen in its own log: the finest scale
+    its gaussians were fitted at from roughly the direction we render it from (resolution gate, user 2026-09-28). Side
+    cameras are left out on purpose: they see sidewalk pedestrians close but from the side, and a donor seen closest at
+    9.8 m by a side camera but only at 20 m by the front one rendered as a ghost at 8-12 m in the dose smoke."""
+    ds_ = [np.linalg.norm(T[t, :2] - cam_axis(g, t, 0)[0][:2]) for t in np.flatnonzero(fv[: g["n"]])
+           if in_fov(g, t, T[t], 0, dist=80.0)]
     return round(float(min(ds_)), 2) if ds_ else float("inf")
 
 
