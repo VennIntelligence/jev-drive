@@ -97,15 +97,15 @@ def vision_feeds(prev: torch.Tensor, cur: torch.Tensor) -> dict:
     return {VISION_IN[0]: pair[:, 0:1], VISION_IN[1]: pair[:, 1:2]}
 
 
-def policy_feeds(net: OnnxTorch, ctx: torch.Tensor, action_t) -> dict:
-    """ctx: (B, 9, 32, 512) hidden states [H_{t-8}, ..., H_t] (zeros where the stream had not started)."""
-    B = ctx.shape[0]
+def policy_feeds(net: OnnxTorch, ctx: torch.Tensor, action_t, traffic=None) -> dict:
+    """ctx: (B, 9, 32, 512) hidden states [H_{t-8}, ..., H_t] (zeros where the stream had not started).
+    traffic: (B, 2) traffic convention ([1, 0] right-hand, [0, 1] left-hand), default right-hand."""
+    B, dt, dev = ctx.shape[0], net.dtype, ctx.device
     past = torch.cat([ctx.new_zeros(B, 1, 24, *H_SHAPE), ctx[:, None, :-1]], 2)   # (B, 1, 32, 32, 512): 24 unused slots
-    dt = net.dtype
+    tc = torch.tensor([[1.0, 0.0]], device=dev).expand(B, 2) if traffic is None else traffic
     return {"_to_copy_1": past.to(dt), "view_39": ctx[:, None, -1].to(dt),
-            "_to_copy": torch.zeros(B, 1, 33, 8, dtype=dt, device=ctx.device),
-            "_to_copy_2": torch.tensor([[1.0, 0.0]], dtype=dt, device=ctx.device).expand(B, 1, 2),
-            "_to_copy_3": torch.tensor([action_t], dtype=dt, device=ctx.device).expand(B, 1, 2)}
+            "_to_copy": torch.zeros(B, 1, 33, 8, dtype=dt, device=dev),
+            "_to_copy_2": tc.to(dt)[:, None], "_to_copy_3": torch.tensor([action_t], dtype=dt, device=dev).expand(B, 1, 2)}
 
 
 POLICY_OUT = ["outputs", "select_4", "mean"]
@@ -128,3 +128,82 @@ def decomposed_wod(net: OnnxTorch, frames: np.ndarray, action_t, dev, batch: int
             raw.append(o["outputs"].reshape(len(ctx), -1).float())
             tmp.append(o["select_4"].reshape(len(ctx), -1).float())
     return torch.cat(raw).cpu().numpy(), torch.cat(tmp).cpu().numpy()
+
+
+# ---------------------------------------------------------------- the adapted model (B: stage 4 unfrozen)
+TRUNK_OUT = "permute_73"        # (1, 1024, 8, 16): stage 3 output after its LN, input of stage 4's downsample conv
+STAGE4 = ("conv2d_36", "view_39")
+
+
+def node_weights(onnx_path, first: str, last: str) -> list[str]:
+    """Float initializers consumed by the nodes from the producer of `first` to the producer of `last`."""
+    import onnx
+    from onnx import numpy_helper
+    g = onnx.load(str(onnx_path), load_external_data=False).graph
+    fl = {t.name for t in g.initializer if t.data_type in (1, 10, 11, 16)}
+    prod = {o: k for k, n in enumerate(g.node) for o in n.output}
+    return sorted({i for n in g.node[prod[first]:prod[last] + 1] for i in n.input if i in fl})
+
+
+def stage4_weights(model="cinque") -> list[str]:
+    return node_weights(MODELS_DIR / FILES[model], *STAGE4)
+
+
+def stage4_matmuls(model="cinque") -> list[str]:
+    """The 2-D MLP weights of stage 4 (LoRA targets)."""
+    import onnx
+    from onnx import numpy_helper
+    g = onnx.load(str(MODELS_DIR / FILES[model])).graph
+    w = set(stage4_weights(model))
+    return sorted(t.name for t in g.initializer if t.name in w and len(t.dims) == 2)
+
+
+class AuxHeads(torch.nn.Module):
+    """Pedestrian heads: (i) MLP on the temporal token, (ii) attention pooling over the current frame's 32 hidden
+    tokens. Each outputs [corridor logit, wide-corridor logit, distance / 10]."""
+
+    def __init__(self, d=512, h=256, k=3):
+        super().__init__()
+        self.t = torch.nn.Sequential(torch.nn.LayerNorm(d), torch.nn.Linear(d, h), torch.nn.GELU(), torch.nn.Linear(h, k))
+        self.q = torch.nn.Parameter(torch.zeros(4, d))
+        self.v_norm = torch.nn.LayerNorm(d)
+        self.v = torch.nn.Sequential(torch.nn.Linear(4 * d, h), torch.nn.GELU(), torch.nn.Linear(h, k))
+
+    def forward(self, temporal, tokens):
+        x = self.v_norm(tokens.float())                                             # (B, 32, 512)
+        att = torch.softmax(torch.einsum("qd,bnd->bqn", self.q, x) / x.shape[-1] ** 0.5, -1)
+        pooled = torch.einsum("bqn,bnd->bqd", att, x).flatten(1)
+        return self.t(temporal.float()), self.v(pooled)
+
+
+def stage4_policy(net: OnnxTorch, trunk: torch.Tensor, action_t, traffic=None, valid=None) -> dict:
+    """trunk: (B, 9, 1024, 8, 16) stage-3 outputs of the 9 context frames (zeros rows = no stream yet, see `mask`)
+    -> outputs (B, n), select_4 (B, 512), mean (B, 512), tokens (B, 32, 512) of the current frame."""
+    B = trunk.shape[0]
+    H = net.run_batched({TRUNK_OUT: trunk.reshape(B * CONTEXT, 1, *trunk.shape[2:]).to(net.dtype)}, ["view_39"])["view_39"]
+    H = H.reshape(B, CONTEXT, *H_SHAPE)
+    return _policy(net, H, action_t, traffic, valid)
+
+
+def _policy(net, H, action_t, traffic, valid=None):
+    if valid is not None:                       # frames before the stream start carry a zero hidden state
+        H = H * valid[:, :, None, None].to(H.dtype)
+    o = net.run_batched(policy_feeds(net, H, action_t, traffic), POLICY_OUT)
+    B = H.shape[0]
+    return {"outputs": o["outputs"].reshape(B, -1), "select_4": o["select_4"].reshape(B, -1),
+            "mean": o["mean"].reshape(B, -1), "tokens": H[:, -1]}
+
+
+def full_policy(net: OnnxTorch, prev: torch.Tensor, cur: torch.Tensor, action_t, traffic=None, grad_past=True) -> dict:
+    """C: the whole vision stack on the 9 context frames. prev / cur: (B, 9, 2, 6, 128, 256) uint8 image pairs.
+    grad_past=False runs the 8 past frames without autograd (C')."""
+    B = cur.shape[0]
+    f = lambda p, c: net.run_batched(vision_feeds(p.reshape(-1, *p.shape[2:]), c.reshape(-1, *c.shape[2:])),  # noqa: E731
+                                     ["view_39"])["view_39"].reshape(p.shape[0], p.shape[1], *H_SHAPE)
+    if grad_past:
+        H = f(prev, cur)
+    else:
+        with torch.no_grad():
+            Hp = f(prev[:, :-1], cur[:, :-1])
+        H = torch.cat([Hp, f(prev[:, -1:], cur[:, -1:])], 1)
+    return _policy(net, H, action_t, traffic)

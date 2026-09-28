@@ -44,7 +44,7 @@ class OnnxTorch(torch.nn.Module):
         meta = {p.key: p.value for p in m.metadata_props}
         self.slices = pickle.loads(base64.b64decode(meta["output_slices"])) if "output_slices" in meta else {}
         self.params = torch.nn.ParameterDict()
-        self.consts: dict[str, torch.Tensor] = {}
+        self.cnames: set[str] = set()
         self.ints: dict[str, list] = {}
         trainable = set(trainable)
         self.half = set()
@@ -58,7 +58,8 @@ class OnnxTorch(torch.nn.Module):
                                        requires_grad=tr)
                 self.params[_key(t.name)] = p
             else:
-                self.consts[t.name] = torch.from_numpy(a.copy())
+                self.register_buffer("c_" + _key(t.name), torch.from_numpy(a.copy()), persistent=False)
+                self.cnames.add(t.name)
                 if a.dtype.kind in "iu" and a.ndim <= 1:
                     self.ints[t.name] = a.reshape(-1).tolist()
         self.fnames = {t.name for t in g.initializer if numpy_helper.to_array(t).dtype.kind == "f"}
@@ -98,7 +99,7 @@ class OnnxTorch(torch.nn.Module):
             have_s, need, stack = set(have), set(), list(want)
             while stack:
                 v = stack.pop()
-                if v in have_s or v in self.fnames or v in self.consts or v == "" or v in need:
+                if v in have_s or v in self.fnames or v in self.cnames or v == "" or v in need:
                     continue
                 if v not in self.producer:
                     raise KeyError(f"value {v} is neither fed nor produced")
@@ -109,7 +110,10 @@ class OnnxTorch(torch.nn.Module):
         return self._plans[key]
 
     def _w(self, name):
-        return self.params[_key(name)] if name in self.fnames else self.consts[name]
+        return self.params[_key(name)] if name in self.fnames else self._c(name)
+
+    def _c(self, name):
+        return getattr(self, "c_" + _key(name))
 
     def run(self, feeds: dict, want: list[str]) -> dict:
         """One sample: feeds {value name: tensor} -> {name: tensor} for the wanted values."""
@@ -180,15 +184,16 @@ class OnnxTorch(torch.nn.Module):
 
     def op_Gather(self, x, at, ins):
         d, ax = x[0], at.get("axis", 0)
-        i = self.consts[ins[1]] if ins[1] in self.consts else x[1]
+        i = x[1]
         if i.dim() == 0:
-            return d.select(ax, int(i) % d.shape[ax])
+            v = self.ints[ins[1]][0] if ins[1] in self.ints else int(i)
+            return d.select(ax, v % d.shape[ax])
         i = torch.where(i < 0, i + d.shape[ax], i).to(d.device)
         return torch.index_select(d, ax, i.reshape(-1)).reshape(*d.shape[:ax], *i.shape, *d.shape[ax + 1:])
 
     def op_GatherND(self, x, at, ins):
         assert at.get("batch_dims", 0) == 0
-        i = self.consts[ins[1]] if ins[1] in self.consts else x[1]
+        i = x[1]
         assert i.shape[-1] == 1
         return x[0][i[..., 0].to(x[0].device)]
 
