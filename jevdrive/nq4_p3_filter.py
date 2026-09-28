@@ -406,7 +406,7 @@ def _vehicle_segment(job: tuple[str, str]) -> dict:
             resp = rs["responded"] or (cat == "obstacle" and lat >= 1.0 and turn < 15)
             res["events"].append({"seg": seg, "track": tr, "cat": cat, "f0": fc, "t0": t[fc], "v0": v[fc], "d": r.d, "x": r.x, "L": r.L,
                                   "y": r.y, "rel": r.rel, "ttc": r.ttc0 if cat == "obstacle" else r.ttc, "spd": r.spd, "a_long": r.a_long,
-                                  "between": between, "seen": bool(r.seen), "lab_h": r.lab_h, "dv": rs["dv"], "decel": rs["responded"],
+                                  "vbetween": between, "seen": bool(r.seen), "lab_h": r.lab_h, "dv": rs["dv"], "decel": rs["responded"],
                                   "lat_dev": lat, "turn": turn, "responded": bool(resp), "post_s": rs["post_s"],
                                   "ok_window": bool(F0_RANGE[0] <= t[fc] <= F0_RANGE[1]), "ok_speed": bool(v[fc] >= MIN_SPEED)})
     cand = np.flatnonzero((v >= MIN_SPEED) & (np.arange(n) + RESP_POST * HZ < n) & (np.arange(n) >= 10))
@@ -419,12 +419,17 @@ def vehicles(out: Path, workers: int):
     jobs = [(sp, p.stem) for sp in ("training", "validation") for p in sorted((V2 / sp / "lidar_box").glob("*.parquet"))]
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(_vehicle_segment, jobs, chunksize=4))
-    ev = pd.DataFrame([e for r in res for e in r["events"]])
-    base = pd.DataFrame([b for r in res for b in r["base"]])
+    out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([e for r in res for e in r["events"]]).to_csv(out / "vehicle_events.csv", index=False)
+    pd.DataFrame([b for r in res for b in r["base"]]).to_csv(out / "vehicle_baseline.csv", index=False)
+    vehicle_funnel(out)
+
+
+def vehicle_funnel(out: Path):
+    ev, base = pd.read_csv(out / "vehicle_events.csv"), pd.read_csv(out / "vehicle_baseline.csv")
     seg = pd.read_csv(out / "segments.csv").set_index("seg")
     ev["day"] = ev.seg.map(seg.day)
-    ev["valid"] = (ev.cat.isin(VEH_CATS) & ev.ok_speed & ~ev.between & ev.seen & ev.responded & ev.ok_window & ev.day)
-    out.mkdir(parents=True, exist_ok=True)
+    ev["valid"] = ev.cat.isin(VEH_CATS) & ev.ok_speed & ~ev["vbetween"] & ev.seen & ev.responded & ev.ok_window & ev.day
     ev.to_csv(out / "vehicle_events.csv", index=False)
     q66 = set(seg.index[seg.qualifies])
     ped = pd.read_csv(out / "survivors.csv")
@@ -432,10 +437,10 @@ def vehicles(out: Path, workers: int):
     for cat in (*VEH_CATS, "lead_follow", "other"):
         e = ev[ev.cat == cat]
         m = e.ok_speed & e.ok_window & e.day
-        rows.append({"category": cat, "events": len(e), "events_moving_window_day": int(m.sum()),
-                     "no_vehicle_between": int((m & ~e.between).sum()), "seen": int((m & ~e.between & e.seen).sum()),
-                     "responded": int((m & ~e.between & e.seen & e.responded).sum()),
-                     "response_rate_given_seen": float(e[m & ~e.between & e.seen].responded.mean()) if (m & ~e.between & e.seen).any() else np.nan,
+        nb = m & ~e["vbetween"]
+        rows.append({"category": cat, "events": len(e), "moving_window_day": int(m.sum()), "no_vehicle_between": int(nb.sum()),
+                     "seen": int((nb & e.seen).sum()), "responded": int((nb & e.seen & e.responded).sum()),
+                     "response_rate_given_seen": float(e[nb & e.seen].responded.mean()) if (nb & e.seen).any() else np.nan,
                      "segments_valid": e[e.valid].seg.nunique() if cat in VEH_CATS else np.nan,
                      "segments_valid_in_ped_pool66": len(set(e[e.valid].seg) & q66) if cat in VEH_CATS else np.nan})
     rows.append({"category": "any valid vehicle event", "events": int(ev.valid.sum()), "segments_valid": ev[ev.valid].seg.nunique(),
