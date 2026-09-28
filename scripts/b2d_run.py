@@ -461,6 +461,13 @@ class Runner(object):
 
     def next_route(self):
         with self.lock:
+            # Drain (B2D_DRAIN_FILE): once the file exists, workers take no new route; each finishes the route it
+            # is on and exits, so a scheduler can hand the card to another lane without killing a route.
+            drain = os.environ.get("B2D_DRAIN_FILE")
+            if drain and os.path.exists(drain):
+                if self.queue:
+                    self.event("drained", file=drain, routes_left=len(self.queue))
+                return None
             while self.queue:
                 rid, town = self.queue.pop(0)
                 if self.available_maps is not None and town not in self.available_maps:
