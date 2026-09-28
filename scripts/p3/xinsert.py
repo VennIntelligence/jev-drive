@@ -421,9 +421,9 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
     Q, th, _ = path.at(S_conf)
     right = np.array([np.sin(th), -np.cos(th)])
     kbs = kerb(gr, path, S_conf, side, actors.get("peds"), actors.get("vehs"))
-    if kbs is None:
+    if kbs is None and mode != "stand":                                     # standing needs no walk-in, so no kerb
         return {"fail": "no kerb step within 8 m"}
-    kb, kb_src = kbs
+    kb, kb_src = kbs if kbs is not None else (np.nan, None)
     vd = win["speed"]
     frames = list(range(t_conf - lead, t_conf + post + 1))
     if mode == "stand":
@@ -480,7 +480,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
         cam = cam_axis(g, t)[0][:2]
         vis.append(bool(in_fov(g, t, np.r_[xy, 0.0]) and not occluded(cam, xy, actors.get(t))))
         tr_[t] = (int(s), float(xy[0]), float(xy[1]))
-    if abs(lat_[0]) < kb + 0.3 and mode != "stand":
+    if mode != "stand" and abs(lat_[0]) < kb + 0.3:
         return {"fail": f"on the carriageway at the clip start (|lat| {abs(lat_[0]):.1f} m, kerb {kb:.1f} m)"}
     vis_out = 0.0
     if mode == "cross" and lat_target <= 1.75:
