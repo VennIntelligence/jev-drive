@@ -182,40 +182,42 @@ def left(c, v, s, ids=None) -> list[str]:
 
 
 # ---------------------------------------------------------------- cards
-def smi(q):
-    return subprocess.run(["nvidia-smi", f"--query-{q}", "--format=csv,noheader,nounits"], capture_output=True,
-                          text=True, timeout=30).stdout.splitlines()
+_SMI = {}
 
 
-def card_cpus(gpu=None):
-    """The taskset list for a runner on `gpu` (None: every core the lane holds, for its CPU-side helpers)."""
-    if ":" not in CPUS:
-        return CPUS
-    m = dict(e.split(":") for e in CPUS.split(","))
-    return m[str(gpu)] if gpu is not None else ",".join(m.values())
+def smi(q, max_age=60.0):
+    """nvidia-smi query, cached: every call takes the driver's device lock, and on 2026-09-28 per-round queries from
+    several lanes helped CARLA start-ups pile up on it (D state). At most one real query per kind per minute."""
+    t, out = _SMI.get(q, (0.0, None))
+    if out is None or now() - t > max_age:
+        out = subprocess.run(["nvidia-smi", f"--query-{q}", "--format=csv,noheader,nounits"], capture_output=True,
+                             text=True, timeout=60).stdout.splitlines()
+        _SMI[q] = (now(), out)
+    return out
 
 
 def cards(rows, own=frozenset()):
-    """Per card: VRAM, CARLA servers of this lane (RPC port index in `own`, the live runners' blocks) and of others."""
-    bus = {}
+    """Per card: VRAM (cached query), CARLA servers of this lane (RPC port index in `own`, the live runners' blocks) and
+    of others, counted from the process table (-graphicsadapter = CUDA card on this box), and other lanes' big GPU jobs."""
+    bus, by_gpu = {}, {}
     for line in smi("gpu=index,pci.bus_id,memory.used,memory.total"):
         i, b, u, t = [x.strip() for x in line.split(",")]
-        bus[b.lower()[-12:]] = dict(gpu=int(i), used=float(u) / 1024, total=float(t) / 1024, other=0, mine=0, foreign=0)
-    by_pid = {}
+        bus[b.lower()[-12:]] = by_gpu[int(i)] = dict(gpu=int(i), used=float(u) / 1024, total=float(t) / 1024, other=0,
+                                                     mine=0, foreign=0)
     for line in smi("compute-apps=gpu_bus_id,pid,used_memory,process_name"):
         b, pid, mem, name = [x.strip() for x in line.split(",", 3)]
-        if b.lower()[-12:] not in bus:
-            continue
-        if "CarlaUE4" in name:
-            by_pid[int(pid)] = bus[b.lower()[-12:]]
-        elif mem.isdigit() and int(mem) >= 2048 and not any(
+        if b.lower()[-12:] in bus and "CarlaUE4" not in name and mem.isdigit() and int(mem) >= 2048 and not any(
                 m in " ".join(rows.get(int(pid), {}).get("argv", [])) for m in ("/runs/nq4/", "b2d_", "leaderboard")):
             bus[b.lower()[-12:]]["foreign"] += 1      # another lane's GPU job (e.g. a 3DGS training): pilots avoid it
-    for pid, card in by_pid.items():
-        port = next((a.split("=")[1] for a in rows.get(pid, {}).get("argv", []) if a.startswith("-carla-rpc-port=")), None)
-        mine = port is not None and (int(port) - 2000) // 50 in own
-        card["mine" if mine else "other"] += 1
-    return {c["gpu"]: c for c in bus.values()}
+    for r in rows.values():
+        a = r.get("argv", [])
+        if not a or "CarlaUE4-Linux-Shipping" not in a[0]:
+            continue
+        g = next((int(x.split("=")[1]) for x in a if x.startswith("-graphicsadapter=")), None)
+        port = next((int(x.split("=")[1]) for x in a if x.startswith("-carla-rpc-port=")), None)
+        if g in by_gpu:
+            by_gpu[g]["mine" if port is not None and (port - 2000) // 50 in own else "other"] += 1
+    return by_gpu
 
 
 def cap(c):

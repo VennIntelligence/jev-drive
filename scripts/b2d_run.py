@@ -39,6 +39,7 @@ spectator view. Windowed timings include that view's rendering cost; label them 
 Python 3.8: runs in envs/carla.
 """
 import argparse
+import fcntl
 import json
 import math
 import os
@@ -70,6 +71,28 @@ PORT_BASE, TM_BASE, PORT_STRIDE = 2000, 8000, 50
 # threads to 109 with no measurable change in throughput or route outcomes (docs/carla.md, "Threads per server").
 # Added unless --server-args already sets the flag; B2D_CARLA_POOLS=stock launches stock servers.
 POOL_ARGS = ("-RPCThreads=4", "-StreamingThreads=4", "-SecondaryThreads=4")
+
+
+# Box-wide limit on CARLA servers in start-up (2026-09-28): ~50 servers starting and restarting at once, each opening
+# every GPU through Vulkan, piled up on the NVIDIA driver's device lock (processes in D state in os_acquire_rwlock_read /
+# drm_open), start-up passed UE4's 60 s RenderThread wait and every new server died at map load. A start holds one of
+# B2D_START_SLOTS box-wide flock slots from launch until its RPC port opens.
+START_LOCKS = Path(os.environ.get("B2D_START_LOCK_DIR", str(DATA_DIR / "runs/sched/carla-start")))
+START_SLOTS = int(os.environ.get("B2D_START_SLOTS", "2"))
+
+
+def start_slot():
+    """Block until one of the START_SLOTS box-wide start slots is free; return its open file (closing releases it)."""
+    START_LOCKS.mkdir(parents=True, exist_ok=True)
+    while True:
+        for k in range(START_SLOTS):
+            fh = open(str(START_LOCKS / ("slot-%d.lock" % k)), "w")
+            try:
+                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return fh
+            except OSError:
+                fh.close()
+        time.sleep(1.0)
 
 
 def server_args(extra):
@@ -315,6 +338,13 @@ class Server(object):
         env = dict(os.environ, VK_ICD_FILENAMES=str(nvidia_icd))
         display_args = (["-windowed", "-ResX=1280", "-ResY=720"] if self.windowed
                         else ["-RenderOffScreen"])
+        slot = start_slot()
+        try:
+            return self._launch(env, display_args, timeout)
+        finally:
+            slot.close()
+
+    def _launch(self, env, display_args, timeout):
         with open(self.log, "wb") as fh:
             self.proc = subprocess.Popen(
                 [str(CARLA_ROOT / "CarlaUE4.sh")] + display_args + ["-nosound",
