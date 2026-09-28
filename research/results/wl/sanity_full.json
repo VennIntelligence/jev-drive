@@ -1,0 +1,99 @@
+{
+ "checks": {
+  "prefix_ego_le_1cm_runs": NaN,
+  "prefix_dropped": {
+   "checked": 402,
+   "dropped": 4,
+   "frac": 0.009950248756218905,
+   "per_set": {
+    "ba": {
+     "checked": 322,
+     "dropped": 3,
+     "frac": 0.009316770186335404
+    },
+    "p6": {
+     "checked": 80,
+     "dropped": 1,
+     "frac": 0.0125
+    }
+   }
+  },
+  "ped_nonped_both_fork_points": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   16,
+   17,
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33,
+   34,
+   35,
+   126,
+   127,
+   128,
+   129,
+   130,
+   131,
+   308,
+   309,
+   310,
+   311,
+   314,
+   315
+  ],
+  "brake_travel_lt_hold": 1.0,
+  "shift_n_evaluated": 634,
+  "shift_n_censored": 170,
+  "shift_sign_ok": 0.9968454258675079,
+  "shift_ge_2m": 0.9874476987447699,
+  "hit_or_gap_hold_or_op_ped_plus": 0.6530612244897959,
+  "hit_or_gap_hold_or_op_ped_minus": 0.21212121212121213,
+  "hit_or_gap_hold_or_op_cutin_plus": 0.25,
+  "hit_or_gap_hold_or_op_cutin_minus": 0.0,
+  "hit_or_gap_hold_or_op_ped_minus_attributable": 0.012658227848101266,
+  "unsafe_hold_or_op_ped_plus": 0.7653061224489796,
+  "unsafe_hold_or_op_ped_minus": 0.25252525252525254,
+  "unsafe_hold_or_op_cutin_plus": 0.2833333333333333,
+  "unsafe_hold_or_op_cutin_minus": 0.03225806451612903,
+  "unsafe_hold_or_op_ped_minus_attributable": 0.06329113924050633,
+  "obstacle_plus_hold_collision": 0.7317073170731707,
+  "obstacle_plus_a_shift_no_collision": 0.9512195121951219,
+  "obstacle_plus_hold_unsafe": 0.9024390243902439,
+  "obstacle_plus_a_shift_no_unsafe": 0.43902439024390244,
+  "n_fork_points": {
+   "ped_plus": 98,
+   "ped_minus": 99,
+   "cutin_plus": 60,
+   "cutin_minus": 62,
+   "obstacle_plus": 41,
+   "obstacle_minus": 38
+  },
+  "harness_fail": 0.0
+ },
+ "verdict": {
+  "prefix": true,
+  "brake": true,
+  "shift": true,
+  "outcomes": true,
+  "harness": true
+ }
+}

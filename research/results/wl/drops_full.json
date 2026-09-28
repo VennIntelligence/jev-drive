@@ -1,0 +1,2332 @@
+{
+ "groups_total": 402,
+ "checked": 402,
+ "dropped": 231,
+ "frac": 0.5746268656716418,
+ "per_set": {
+  "ba": {
+   "checked": 322,
+   "dropped": 189,
+   "frac": 0.5869565217391305
+  },
+  "p6": {
+   "checked": 80,
+   "dropped": 42,
+   "frac": 0.525
+  }
+ },
+ "cos_checked_runs": 2786,
+ "dropped_groups": [
+  {
+   "fork_id": 0,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970185160636902,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10552",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 1,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9971344470977783,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10552",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 2,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970307946205139,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10552",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 3,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970036745071411,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10552",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 4,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9988760352134705,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10791",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 6,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998529851436615,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10791",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 8,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9963006973266602,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10793",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 9,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9967307448387146,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10793",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 10,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987832903862,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10793",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 11,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998753011226654,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10793",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 14,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9972591996192932,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10857",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 15,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9973443746566772,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "10857",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 19,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9989572763442993,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11010",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 22,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998910129070282,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11177",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 24,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9914050102233887,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11215",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 26,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9872344732284546,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11215",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 27,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9911139011383057,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11215",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 32,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9983038306236267,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11381",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 33,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987854361534119,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11381",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 35,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985819458961487,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "11381",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 36,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.997933566570282,
+   "family": "PedestrianCrossing",
+   "base_id": "13674",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 39,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.997697114944458,
+   "family": "PedestrianCrossing",
+   "base_id": "13674",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 40,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9816088676452637,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 41,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9976015090942383,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 42,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9980769157409668,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 43,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9727751612663269,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 44,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9404655694961548,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 45,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.8955973386764526,
+   "family": "PedestrianCrossing",
+   "base_id": "14194",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 46,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.34730660915374756,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 47,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9679250121116638,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 48,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9629204273223877,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 49,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9968762993812561,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 50,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.903306245803833,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 51,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9901750683784485,
+   "family": "PedestrianCrossing",
+   "base_id": "14382",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 52,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9958142638206482,
+   "family": "ParkingCutIn",
+   "base_id": "1711",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 53,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9980000853538513,
+   "family": "ParkingCutIn",
+   "base_id": "1711",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 54,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.8368944525718689,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 55,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9984839558601379,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 56,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9683955311775208,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 57,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9650287628173828,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 58,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9981404542922974,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 59,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9976353645324707,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17749",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 66,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9962451457977295,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17853",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 67,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9972432255744934,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17853",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 68,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9969668984413147,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17853",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 69,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978866577148438,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17853",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 70,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9919151663780212,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17892",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 71,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9899959564208984,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17892",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 72,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9924729466438293,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17892",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 73,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987348914146423,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17892",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 74,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9983633160591125,
+   "family": "DynamicObjectCrossing",
+   "base_id": "17892",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 94,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9950527548789978,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18073",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 95,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9910858273506165,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18073",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 96,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9975060224533081,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18073",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 98,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970497488975525,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18073",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 99,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985693097114563,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18073",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 100,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9982547760009766,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 101,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985037446022034,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 102,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970797896385193,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 103,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9977311491966248,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 104,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9955691695213318,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 105,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9965627789497375,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18160",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 106,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985983371734619,
+   "family": "DynamicObjectCrossing",
+   "base_id": "18174",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 112,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9855114817619324,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 113,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9865736365318298,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 114,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9960530400276184,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 115,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9877944588661194,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 116,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9941724538803101,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 117,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9954900741577148,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "18252",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 122,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.992470383644104,
+   "family": "ParkingCutIn",
+   "base_id": "18344",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 123,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987583160400391,
+   "family": "ParkingCutIn",
+   "base_id": "18344",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 124,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.993717610836029,
+   "family": "ParkingCutIn",
+   "base_id": "18356",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 125,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9938925504684448,
+   "family": "ParkingCutIn",
+   "base_id": "18356",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 128,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9989571571350098,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "2164",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 129,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998725950717926,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "2164",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 132,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9981314539909363,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 133,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9867526292800903,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 134,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9984508156776428,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 135,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978901147842407,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 136,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.996890127658844,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 137,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9974051117897034,
+   "family": "StaticCutIn",
+   "base_id": "22331",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 140,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985483288764954,
+   "family": "StaticCutIn",
+   "base_id": "22531",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 154,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998045802116394,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 155,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9956699013710022,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 156,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9980555772781372,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 157,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9981238842010498,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 158,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978543519973755,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 159,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9988790154457092,
+   "family": "HighwayCutIn",
+   "base_id": "2299",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 160,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9981728196144104,
+   "family": "HighwayCutIn",
+   "base_id": "23697",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 161,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.998073935508728,
+   "family": "HighwayCutIn",
+   "base_id": "23697",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 162,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9979511499404907,
+   "family": "HighwayCutIn",
+   "base_id": "23697",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 166,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9967416524887085,
+   "family": "HighwayCutIn",
+   "base_id": "23842",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 167,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9957908391952515,
+   "family": "HighwayCutIn",
+   "base_id": "23842",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 168,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9974296689033508,
+   "family": "HighwayCutIn",
+   "base_id": "23842",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 169,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978883266448975,
+   "family": "HighwayCutIn",
+   "base_id": "23842",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 171,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978991746902466,
+   "family": "HighwayCutIn",
+   "base_id": "23842",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 172,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9733105897903442,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 173,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9852034449577332,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 174,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9090251922607422,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 175,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9038923978805542,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 176,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9597536325454712,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 177,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9962642788887024,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24206",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 178,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9712727665901184,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 179,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9775080680847168,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 180,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9851080775260925,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 181,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9904861450195312,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 182,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9957489967346191,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 183,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9921092987060547,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24211",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 187,
+   "set": "ba",
+   "pos": 3.0517578125e-05,
+   "cos": 0.9986234307289124,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24224",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 189,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986500144004822,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24224",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 190,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9963152408599854,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 191,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9955316781997681,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 192,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9968634843826294,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 193,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9943293333053589,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 194,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9968349933624268,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 195,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9968792796134949,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24252",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 202,
+   "set": "ba",
+   "pos": 0.023900251976235118,
+   "cos": NaN,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24333",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 203,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9934957027435303,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24333",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 204,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9906795024871826,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24333",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 205,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9944413900375366,
+   "family": "DynamicObjectCrossing",
+   "base_id": "24333",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 206,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9957548975944519,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 207,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9956685900688171,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 208,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9947715997695923,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 209,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9946177005767822,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 210,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9879855513572693,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 211,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9975083470344543,
+   "family": "ParkingCutIn",
+   "base_id": "24416",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 212,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9932041168212891,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24519",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 213,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9816190600395203,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24519",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 214,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9917480945587158,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24519",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 215,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9780706763267517,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "24519",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 216,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986340403556824,
+   "family": "DynamicObjectCrossing",
+   "base_id": "2460",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 218,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9972531199455261,
+   "family": "DynamicObjectCrossing",
+   "base_id": "2460",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 219,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978761672973633,
+   "family": "DynamicObjectCrossing",
+   "base_id": "2460",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 222,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9961931109428406,
+   "family": "ParkingCutIn",
+   "base_id": "24679",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 223,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9862959980964661,
+   "family": "ParkingCutIn",
+   "base_id": "24679",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 224,
+   "set": "ba",
+   "pos": 0.004285628599632947,
+   "cos": 0.9911190271377563,
+   "family": "ParkingCutIn",
+   "base_id": "24759",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 225,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9971730709075928,
+   "family": "ParkingCutIn",
+   "base_id": "24759",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 232,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9944613575935364,
+   "family": "PedestrianCrossing",
+   "base_id": "25863",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 233,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9975064992904663,
+   "family": "PedestrianCrossing",
+   "base_id": "25863",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 234,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.993521511554718,
+   "family": "PedestrianCrossing",
+   "base_id": "25863",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 235,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9972094297409058,
+   "family": "PedestrianCrossing",
+   "base_id": "25863",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 236,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9977241158485413,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 237,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9978204965591431,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 238,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9979122877120972,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 239,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986494779586792,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 240,
+   "set": "ba",
+   "pos": 0.03570051238978882,
+   "cos": NaN,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 241,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9979005455970764,
+   "family": "StaticCutIn",
+   "base_id": "26396",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 245,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986652731895447,
+   "family": "StaticCutIn",
+   "base_id": "26405",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 246,
+   "set": "ba",
+   "pos": 0.09096196111089858,
+   "cos": NaN,
+   "family": "StaticCutIn",
+   "base_id": "26405",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 248,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9963058829307556,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 249,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9966569542884827,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 250,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9965540766716003,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 251,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9943031668663025,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 252,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9928013682365417,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 253,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9940360188484192,
+   "family": "StaticCutIn",
+   "base_id": "2709",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 264,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.98228919506073,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 265,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9912902116775513,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 266,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9257790446281433,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 267,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9414294958114624,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 268,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9249540567398071,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 269,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.8962221145629883,
+   "family": "PedestrianCrossing",
+   "base_id": "27529",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 274,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9969772100448608,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 275,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9966907501220703,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 276,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9830794930458069,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 277,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.989409327507019,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 278,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9955406785011292,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 279,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9908366799354553,
+   "family": "HighwayCutIn",
+   "base_id": "3072",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 291,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9914124011993408,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "3248",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 292,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9538024663925171,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "3255",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 293,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9279943108558655,
+   "family": "ParkingCrossingPedestrian",
+   "base_id": "3255",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 294,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9801568388938904,
+   "family": "StaticCutIn",
+   "base_id": "3483",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 295,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9612361192703247,
+   "family": "StaticCutIn",
+   "base_id": "3483",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 296,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.957583487033844,
+   "family": "StaticCutIn",
+   "base_id": "3483",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 297,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.929100751876831,
+   "family": "StaticCutIn",
+   "base_id": "3483",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 299,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9857463240623474,
+   "family": "StaticCutIn",
+   "base_id": "3483",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 300,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9981458187103271,
+   "family": "StaticCutIn",
+   "base_id": "3502",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 301,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986396431922913,
+   "family": "StaticCutIn",
+   "base_id": "3502",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 302,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9970465302467346,
+   "family": "StaticCutIn",
+   "base_id": "3502",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 303,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987269043922424,
+   "family": "StaticCutIn",
+   "base_id": "3502",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 306,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9666499495506287,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3731",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 307,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.971464991569519,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3731",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 308,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9705721139907837,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3731",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 309,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9707569479942322,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3731",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 310,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9977923035621643,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3737",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 311,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9985037446022034,
+   "family": "VehicleTurningRoutePedestrian",
+   "base_id": "3737",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 316,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9986706376075745,
+   "family": "HighwayCutIn",
+   "base_id": "3813",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 317,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9987006187438965,
+   "family": "HighwayCutIn",
+   "base_id": "3813",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 318,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9979071617126465,
+   "family": "HighwayCutIn",
+   "base_id": "3813",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 319,
+   "set": "ba",
+   "pos": 0.0,
+   "cos": 0.9977388978004456,
+   "family": "HighwayCutIn",
+   "base_id": "3813",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 322,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9820358157157898,
+   "family": "ParkedObstacle",
+   "base_id": "1773",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 323,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9908052682876587,
+   "family": "ParkedObstacle",
+   "base_id": "1773",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 326,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9964624643325806,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 327,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9966443777084351,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 328,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9930438995361328,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 329,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9920833706855774,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 330,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9871494770050049,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 331,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9924802184104919,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "1825",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 337,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9931018948554993,
+   "family": "ConstructionObstacle",
+   "base_id": "2513",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 338,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9965484142303467,
+   "family": "ConstructionObstacle",
+   "base_id": "2513",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 339,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9915580749511719,
+   "family": "Accident",
+   "base_id": "2539",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 340,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9948117136955261,
+   "family": "Accident",
+   "base_id": "2539",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 345,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9887904524803162,
+   "family": "AccidentTwoWays",
+   "base_id": "2643",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 346,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9924057126045227,
+   "family": "AccidentTwoWays",
+   "base_id": "2643",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 349,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9859693050384521,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "2668",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 350,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9926355481147766,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "2668",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 351,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9989417195320129,
+   "family": "Accident",
+   "base_id": "3307",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 352,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9982032179832458,
+   "family": "Accident",
+   "base_id": "3307",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 353,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9776820540428162,
+   "family": "AccidentTwoWays",
+   "base_id": "3410",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 354,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9880076050758362,
+   "family": "AccidentTwoWays",
+   "base_id": "3410",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 355,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9843925833702087,
+   "family": "HazardAtSideLaneTwoWays",
+   "base_id": "3436",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 356,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9819166660308838,
+   "family": "HazardAtSideLaneTwoWays",
+   "base_id": "3436",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 357,
+   "set": "p6",
+   "pos": 0.5503191802070502,
+   "cos": NaN,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "3457",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 359,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9919270277023315,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "20920",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 360,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.997661292552948,
+   "family": "ConstructionObstacleTwoWays",
+   "base_id": "20920",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 361,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9750536680221558,
+   "family": "Accident",
+   "base_id": "24240",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 365,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9986312985420227,
+   "family": "HazardAtSideLaneTwoWays",
+   "base_id": "24258",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 366,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9658118486404419,
+   "family": "ConstructionObstacle",
+   "base_id": "24367",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 367,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9711667895317078,
+   "family": "ConstructionObstacle",
+   "base_id": "24367",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 368,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9896844625473022,
+   "family": "ParkedObstacle",
+   "base_id": "24757",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 369,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9865660071372986,
+   "family": "ParkedObstacle",
+   "base_id": "24757",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 370,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9915637969970703,
+   "family": "ConstructionObstacle",
+   "base_id": "24785",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 372,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.952110767364502,
+   "family": "Accident",
+   "base_id": "24816",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 373,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9644856452941895,
+   "family": "Accident",
+   "base_id": "24816",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 392,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9166451692581177,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k1",
+   "world": "plus"
+  },
+  {
+   "fork_id": 393,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9277108907699585,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k1",
+   "world": "minus"
+  },
+  {
+   "fork_id": 394,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.914734959602356,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k2",
+   "world": "plus"
+  },
+  {
+   "fork_id": 395,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9320942163467407,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k2",
+   "world": "minus"
+  },
+  {
+   "fork_id": 396,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9815078377723694,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 397,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.988700807094574,
+   "family": "ParkedObstacleTwoWays",
+   "base_id": "25896",
+   "k_name": "k3",
+   "world": "minus"
+  },
+  {
+   "fork_id": 400,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9829695224761963,
+   "family": "HazardAtSideLaneTwoWays",
+   "base_id": "25955",
+   "k_name": "k3",
+   "world": "plus"
+  },
+  {
+   "fork_id": 401,
+   "set": "p6",
+   "pos": 0.0,
+   "cos": 0.9938638210296631,
+   "family": "HazardAtSideLaneTwoWays",
+   "base_id": "25955",
+   "k_name": "k3",
+   "world": "minus"
+  }
+ ],
+ "gate_fail": true
+}
