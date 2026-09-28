@@ -98,10 +98,14 @@ def plan_grid(m, out) -> np.ndarray:
 def run_stream(m, frames, targets, arrays=("temporal",)) -> dict:
     """One stream through one model from a zero state; the requested arrays at every target: {j: {array: vec}}."""
     m.reset()
-    taps, tset, rows = D.OP_TAPS[m.name], set(targets), {}
+    taps, tset, rows = D.OP_TAPS.get(m.name, {}), set(targets), {}
+    steps = 1 if m.skip == 1 else HOLD
+    read = getattr(m, "read_step", steps - 1)       # legacy models: which held step is read (default the last)
     for j in range(len(frames)):
-        for _ in range(1 if m.skip == 1 else HOLD):
-            out = m.step(frames[j], action_t=WZ.ACTION_T)
+        for s in range(steps):
+            o = m.step(frames[j], action_t=WZ.ACTION_T)
+            if s == read:
+                out = o
         if j in tset:
             rows[j] = {k: (plan_grid(m, out) if k == "plan" else out[m.slices["hidden_state"]] if k == "hidden"
                            else out[m.slices[k]] if k.startswith("lead") else m.tap_values[taps[k]]).copy() for k in arrays}
@@ -154,9 +158,18 @@ def geometry_check(calib) -> dict:
     return out
 
 
+def make_model(k: str, read_step: int | None = None):
+    """Current models (OPModel with their taps) or a pre-0.9.5 supercombo (LegacyOPModel: sc0816, sc094)."""
+    from jevdrive.openpilot.model import LEGACY, LegacyOPModel, OPModel
+    if k in LEGACY:
+        return LegacyOPModel(k, "cuda", **({} if read_step is None else {"read_step": read_step}))
+    return OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", default=list(P.MODELS))
+    ap.add_argument("--legacy-read-step", type=int, default=None, help="legacy models: held 20 Hz step read (0-3)")
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--limit", type=int, default=0)
@@ -174,7 +187,7 @@ def main():
     calibs = plan.get("calibs") or {SEQ: calib}      # HUGSIM pairs (elicit_i3.op_prepare): one per scene
     WZ._init({}, calibs, ".")
     outdir = {k: P.root(a.out_sub, k) for k in a.models}
-    log.event("start", args=vars(a), taps={k: D.OP_TAPS[k]["temporal"] for k in a.models})
+    log.event("start", args=vars(a), taps={k: D.OP_TAPS[k]["temporal"] for k in a.models if k in D.OP_TAPS})
 
     if a.check:
         g = geometry_check(calib)
@@ -211,8 +224,7 @@ def main():
     del plan
     with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=({}, calibs, ".")) as ex:
         list(ex.map(int, range(a.workers)))     # fork before the TensorRT sessions exist (see drive_backbones_openpilot)
-        models = {k: OPModel(k, WZ.MODELS[k], context_rate=(k == "lebowski"), taps=list(D.OP_TAPS[k].values()))
-                  for k in a.models}
+        models = {k: make_model(k, a.legacy_read_step) for k in a.models}
         n_frames = sum(len(s["names"]) for s in items)
         log.info(f"{len(items)} streams, {n_frames} frames, models {list(models)}, {a.workers} render workers")
         t0, tm, n, nf = time.time(), {k: 0.0 for k in models}, 0, 0

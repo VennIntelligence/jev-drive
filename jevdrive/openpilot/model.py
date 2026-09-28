@@ -217,6 +217,78 @@ class OPModel:
         return out
 
 
+LEGACY = {"sc0816": "old/supercombo_v0.8.16.onnx", "sc094": "old/supercombo_v0.9.4.onnx"}   # openpilot release
+
+
+class LegacyOPModel:
+    """Pre-0.9.5 supercombo (C++ modeld: selfdrive/modeld/models/driving.cc at v0.8.16 / v0.9.4), stepped at 20 Hz.
+
+    Images: [previous 20 Hz frame, current] per camera (ModelFrame keeps the last frame; zeros before the first),
+    float = pixel / 128 - 1 as loadyuv.cl writes it. sc0816: the 512-d output hidden_state fed back as initial_state.
+    sc094: a 100 x 8 desire-pulse history (shifted before the step) and a 99 x 128 feature buffer of past hidden
+    states (shifted after it), nav features zero. step() returns the output in the current layout so decode(),
+    plan_grid() and nq4_k.lead_decode() read it unchanged: plan = best of the 5 hypotheses (mu, log-std), lead =
+    per selection the best of the 2 hypotheses ((3, 6, 4) mu, then log-std), lead_prob / lane lines / meta as they are.
+    read_step: which of the 20 Hz steps a held 5 Hz frame gets is read (the runner holds each frame for 4)."""
+
+    def __init__(self, name: str, backend: str = "cuda", read_step: int = FRAME_SKIP - 1):
+        self.name, self.skip, self.queued, self.read_step = name, FRAME_SKIP, False, read_step
+        so = ort.SessionOptions()
+        so.log_severity_level, so.intra_op_num_threads = 3, 1
+        self.sess = ort.InferenceSession(str(MODELS_DIR / LEGACY[name]), so, providers=providers(backend, MODELS_DIR / "trt_cache"))
+        raw = pickle.loads(base64.b64decode(self.sess.get_modelmeta().custom_metadata_map["output_slices"]))
+        n = self.sess.get_outputs()[0].shape[-1]
+        self.raw = {k: slice(*s.indices(n)[:2]) for k, s in raw.items()}
+        self.inputs = {i.name: (tuple(i.shape), np.float16 if "float16" in i.type else np.float32) for i in self.sess.get_inputs()}
+        self.dt = self.inputs["input_imgs"][1]
+        keep = {"plan": 990, "lead": 144, "lead_prob": 3, "lane_lines": 528, "lane_lines_prob": 8,
+                "meta": self.raw["meta"].stop - self.raw["meta"].start,
+                "hidden_state": self.raw["hidden_state"].stop - self.raw["hidden_state"].start}
+        o = np.cumsum([0, *keep.values()])
+        self.slices = {k: slice(int(a), int(b)) for k, a, b in zip(keep, o[:-1], o[1:])}
+        self.taps, self.tap_values = [], {}
+        self.reset()
+
+    def reset(self):
+        self.prev_desire = np.zeros(8, np.float32)
+        self.prev_img = np.zeros((2, 6, 128, 256), np.uint8)
+        self.state = {k: np.zeros(s, d) for k, (s, d) in self.inputs.items() if k in ("initial_state", "features_buffer", "desire", "nav_features")}
+        self.n = 0
+
+    def _canon(self, out):
+        r = lambda k: out[self.raw[k]]  # noqa: E731
+        plan = r("plan").reshape(5, 991)
+        best = plan[np.argmax(plan[:, -1])]
+        lead = r("lead").reshape(2, 51)
+        sel = np.argmax(lead[:, 48:51], 0)                                   # best hypothesis per selection (0, 2, 4 s)
+        mu, sd = lead[sel, :24], lead[sel, 24:48]
+        return np.concatenate([best[:990], mu.ravel(), sd.ravel(), r("lead_prob"), r("lane_lines"), r("lane_lines_prob"),
+                               r("meta"), r("hidden_state")]).astype(np.float32)
+
+    def step(self, img2, desire=np.zeros(8), traffic=(1, 0), action_t=None):
+        desire = np.asarray(desire, np.float32).copy()
+        desire[0] = 0
+        pulse = np.where(desire - self.prev_desire > .99, desire, 0).astype(np.float32)
+        self.prev_desire = desire
+        x = lambda c: (np.concatenate([self.prev_img[c], img2[c]]).astype(np.float32) * 0.0078125 - 1.0)[None].astype(self.dt)  # noqa: E731
+        f = {"input_imgs": x(0), "big_input_imgs": x(1), "traffic_convention": np.asarray(traffic, self.dt).reshape(1, 2)}
+        if "initial_state" in self.state:
+            f |= {"desire": pulse[None].astype(self.dt), "initial_state": self.state["initial_state"]}
+        else:
+            self.state["desire"] = np.concatenate([self.state["desire"][:, 1:], pulse[None, None].astype(self.dt)], 1)
+            f |= self.state
+        out = self.sess.run(None, f)[0][0].astype(np.float32)
+        hid = out[self.raw["hidden_state"]]
+        if "initial_state" in self.state:
+            self.state["initial_state"] = hid[None].astype(self.dt)
+        else:
+            fb = self.state["features_buffer"]
+            self.state["features_buffer"] = np.concatenate([fb[:, 1:], hid[None, None].astype(self.dt)], 1)
+        self.prev_img = np.asarray(img2, np.uint8).copy()
+        self.n += 1
+        return self._canon(out)
+
+
 # ---- output decoding ----
 def sigmoid(x):
     return 1 / (1 + np.exp(-np.clip(x, -11, np.inf)))
