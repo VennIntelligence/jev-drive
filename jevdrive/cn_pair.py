@@ -466,12 +466,12 @@ def _font(size):
     return ImageFont.load_default()
 
 
-def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 560):
+def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 416, q: int = 50):
     """real (target outlined) | x+ | x- , every `step`-th frame, 10 / step fps, caption with scene / arm / frame."""
     import cv2
     from PIL import Image, ImageDraw
     ph = round(pw * H / W)
-    f1, f2 = _font(16), _font(13)
+    f1, f2 = _font(13), _font(12)
     figs = out("figs")
     rows = []
     for key in scenes:
@@ -487,19 +487,19 @@ def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 560):
         for t in range(0, T, step):
             r = rgb[t].copy()
             cs, _ = cv2.findContours(reg[t].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(r, cs, -1, (255, 220, 0), 3)
-            G = Image.new("RGB", (3 * pw, ph + 26), (18, 18, 18))
+            cv2.drawContours(r, cs, -1, (255, 220, 0), 4)
+            G = Image.new("RGB", (3 * pw, ph + 22), (18, 18, 18))
             labs = (("real (walker path outlined)", "x+ (walker added to controls)", "x- (target removed)") if ins else
                     ("real (target outlined)", "x+ (target in controls)", "x- (target removed from controls)"))
             for k, (im, lab) in enumerate(zip((r, P[t], M[t]), labs)):
                 G.paste(Image.fromarray(im).resize((pw, ph), Image.LANCZOS), (k * pw, 0))
                 ImageDraw.Draw(G).text((k * pw + 6, 4), lab, fill=(255, 255, 255), font=f1, stroke_width=2,
                                        stroke_fill=(0, 0, 0))
-            ImageDraw.Draw(G).text((8, ph + 5), f"{key}  arm {arm}  frame {t:02d}/{T - 1}  (log frame {info['start'] + t}, "
+            ImageDraw.Draw(G).text((8, ph + 4), f"{key}  arm {arm}  frame {t:02d}/{T - 1}  (log frame {info['start'] + t}, "
                                    f"10 Hz)", fill=(220, 220, 220), font=f2)
             frames.append(G)
         p = figs / f"{key}_{arm}.webp"
-        frames[0].save(p, save_all=True, append_images=frames[1:], duration=int(100 * step), loop=0, quality=60,
+        frames[0].save(p, save_all=True, append_images=frames[1:], duration=int(100 * step), loop=0, quality=q,
                        method=6)
         rows.append({"key": key, "arm": arm, "file": p.name, "kb": p.stat().st_size // 1024})
         log.info("%s %s -> %s (%d KB)", key, arm, p.name, p.stat().st_size // 1024)
