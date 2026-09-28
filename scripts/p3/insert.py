@@ -32,7 +32,9 @@ import ds as DSM  # noqa: E402  (scripts/p3/ds.py: the OmniRe loader and box pro
 
 DATA = Path(os.environ["DATA_DIR"])
 HZ, FRONT, V_FLOOR, PRE, POST = 10, 4.0, 3.0, 30, 20
-TTRS, NULL_LAT, AZ_MAX, PSNR_MIN = (2.0, 3.0, 4.0), 4.5, 45.0, 22.0
+# AZ_MAX 45 -> 20 deg and the grounded variants (--fix, gain cap 1.33) became the standard construction on 2026-09-28
+# (user review of the floating-fix clips: "非常好 - 就按照这样做"); todos/2026-09-26-night-queue-4.md, P section
+TTRS, NULL_LAT, AZ_MAX, PSNR_MIN = (2.0, 3.0, 4.0), 4.5, 20.0, 22.0
 CAMS = DSM.CAMS
 
 
@@ -220,7 +222,7 @@ def main():
     ap.add_argument("--donors", type=Path, default=DATA / "runs/nq4/p3/filter/donors")
     ap.add_argument("--gpu-tag", default="", help="ignored; lets the scheduler read the card from the command line")
     ap.add_argument("--az-max", type=float, default=AZ_MAX, help="donor view-gap limit, deg (registered 45)")
-    ap.add_argument("--gain-max", type=float, default=2.0, help="exposure gain clip [1 / g, g] of the grounded variants")
+    ap.add_argument("--gain-max", type=float, default=1.33, help="exposure gain clip [1 / g, g] of the grounded variants")
     ap.add_argument("--fix", action="store_true", help="also render the grounded variants (<name>f): feet snapped to the LiDAR "
                     "ground, local exposure matched, contact shadow; plus a before | after clip of TTR 3 s")
     a = ap.parse_args()
