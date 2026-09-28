@@ -1,6 +1,6 @@
 # TFv6 规则 × 控制接口，以及 Bench2Drive 按 hazard family 拆分
 
-状态: running（预登记 2026-09-25 00:30 box 时间提交，写于任何计分 run 之前；此前只跑过 smoke，smoke 的 run 不计入结果）
+状态: 实验 6 公开部分已出（decisions 第 38 条）；实验 1 与我们的 TFv6 重复评测没有结果：slot `tfv6-exp` 2026-09-25 01:15 起跑，box 上 `runs/tfv6_rules` 最后写入是 2026-09-25 14:57，之后没有进程在跑，结果没有写回本文件（2026-09-28 盘点；原写「running」）。预登记 2026-09-25 00:30 box 时间提交，写于任何计分 run 之前；此前只跑过 smoke，smoke 的 run 不计入结果
 主题: ../../research/leaderboard-vs-ability.md（7.4 节实验 1 与 6）、../../research/capability-vs-leaderboard.md；决策背景 ../../research/decisions.md 第 31、32、35 条
 前提: [P5 v0](../2026-09-24-p5-carla-pairs-v0.md)（配对生成器、`_rng` 重置、藏 hazard actor、天气 null 全部沿用），
 [TFv6 controller W2/W2b/D3](../2026-09-23-tfv6-controller/report-w2b.md)（A/B 臂的 config 切换、作者规则的审计沿用；本实验不用我们的 controller）

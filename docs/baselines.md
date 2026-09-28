@@ -2,7 +2,8 @@
 
 Read this when you need a competitor's latency on our card, want to re-run one, or wonder why a baseline is missing.
 
-Protocol, shared by every row: one RTX PRO 6000 Blackwell (sm_120), **batch 1**, serial requests, the release's own
+Protocol, shared by every row: one RTX PRO 6000 Blackwell (sm_120; the previous box's 96 GB card: every latency and
+VRAM number below was measured there, not on the RTX 6000D in the box since 2026-09-28, see remote-box.md), **batch 1**, serial requests, the release's own
 code, weights, precision and preprocessing, no tuning. 20 warmup then **200 timed** requests, each bracketed by
 `torch.cuda.synchronize()` (openjev: one blocking HTTP round trip); the table reports **mean / p50 / p95** in ms,
 peak VRAM of the process, and the timed span in its own column. Same input everywhere: the WOD-E2E demo scene

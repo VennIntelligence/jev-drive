@@ -581,12 +581,13 @@ three cameras in one forward:
 **This path is GPU-bound, not preprocessing-bound.** The GPU wants an item every 132 ms and one core produces
 one every 63 ms, so two workers already keep it fed; end-to-end throughput (125 - 132 ms/frame) equals the
 forward alone, i.e. I/O and preprocessing are fully hidden. `loader_workers()` therefore defaults to
-`max(2, min(6, n_cpus() // 4))` = 6 here, a 3x margin that leaves the other 19 cores to whatever is
-downloading the shards; the old `n_cpus() // 2` = 12 bought nothing.
+`max(2, min(6, n_cpus() // 4))` = 6 on the 25-core container of that day, a 3x margin that left the other 19
+cores to whatever was downloading the shards (on today's 175-core container the formula still gives 6); the old `n_cpus() // 2` = 12 bought nothing.
 
 Inside the forward, at batch 8: ViT 44.5 ms, the 36 decoder layers 72.8 ms, merger + DeepStack + pooling +
 H2D 10.3 ms. The decoder part is ~3.0 B non-embedding parameters over 3 074 tokens, i.e. ~18.4 TFLOP in
-72.8 ms = **253 TFLOPS bf16, at this card's dense roofline**. There is nothing left to win in the pipeline:
+72.8 ms = **253 TFLOPS bf16, at this card's dense roofline** (the previous RTX PRO 6000; the RTX 6000D in the box since
+2026-09-28 measures ~144 TFLOPS bf16 dense, docs/remote-box.md, so expect this forward to take up to ~1.8x longer). There is nothing left to win in the pipeline:
 the only ways to go faster are fewer tokens (lower resolution) or fewer layers (a real early exit), and both
 change the stored features.
 

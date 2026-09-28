@@ -328,7 +328,8 @@ Configuration: stock MKZ2020, stock CARLA0.9.15, Python `/data/envs/carla/bin/py
 windowed, front3 at 800×450, cameras/plans at 5 Hz, motion/control at 20 Hz, `policy=none`,
 nominal cruise 8 m/s. The route is a diagnostic input; it supplies no obstacle avoidance,
 yielding or traffic-light planner. This is not the learned TCP checkpoint experiment above.
-The physical GPU was **GPU 1**, UUID `GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`, selected
+The physical GPU was **GPU 1** of the Tokyo host at that time (it now exposes one RTX 3090 at CUDA index 0, see the top
+of this doc), UUID `GPU-b90dd90e-394b-7800-f23f-5892a8e3d0f1`, selected
 with CARLA `--gpu-rank 0` / `-graphicsadapter=0`. Preserve the UUID check after launch.
 
 | Preset | All-route ticks min / median / max | Completed-route ticks min / median / max | Failed-route ticks | Group wall |

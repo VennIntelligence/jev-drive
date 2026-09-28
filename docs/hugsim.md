@@ -107,7 +107,8 @@ scripts/tmux_run.sh hugsim-build scripts/hugsim/install.sh      # ~10 min if the
 
 `install.sh` clones HUGSIM @ 62c690d and the dependency repos at pinned commits (`$DATA_DIR/third_party/HUGSIM`,
 `$DATA_DIR/third_party/hugsim_deps/`), applies `patches/hugsim/*.patch`, builds, and ends with an import check.
-All four CUDA extensions run on the RTX PRO 6000 (checked with a 100k-Gaussian rasterization, a tcnn MLP and
+All four CUDA extensions ran on the previous box's RTX PRO 6000 (not rechecked on the RTX 6000D since 2026-09-28; both
+are sm_120) (checked with a 100k-Gaussian rasterization, a tcnn MLP and
 `distCUDA2`). What the patches change and why: [patches/hugsim/README.md](../patches/hugsim/README.md). In short:
 `closed_loop.py` gets our scene path and accepts our agent launcher; `simple_knn.cu` gets `<cfloat>`; three
 release-vs-code mismatches that abort scenarios are fixed (actor asset path suffix `postprocess/shadow.pth`,

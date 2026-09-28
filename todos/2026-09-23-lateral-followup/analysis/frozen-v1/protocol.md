@@ -14,9 +14,9 @@
 
 ## 2. 固定基线与覆盖
 
-基线必须为上轮原始`baseline-max`：`lookahead=max(3,.5*speed)`，pursuit/max，PI Kp=.5/Ki=.25，near速度窗，steer_rate=2/s、max_steer=.8、同实测MKZ参数与原适配器/定位链。以[原基线JSON](../2026-09-23-tcp-controller/turns/configs/baseline-max.json)与实际运行归档核对缺省值；不能只拷JSON而遗失默认项。失败的`.375`仅可列历史参照，不参与新候选获胜判定。
+基线必须为上轮原始`baseline-max`：`lookahead=max(3,.5*speed)`，pursuit/max，PI Kp=.5/Ki=.25，near速度窗，steer_rate=2/s、max_steer=.8、同实测MKZ参数与原适配器/定位链。以[原基线JSON](../../../2026-09-23-tcp-controller/turns/configs/baseline-max.json)与实际运行归档核对缺省值；不能只拷JSON而遗失默认项。失败的`.375`仅可列历史参照，不参与新候选获胜判定。
 
-沿用同一[三路线XML](../2026-09-23-tcp-controller/turns/routes.xml)、天气与空scenarios，保持三条完整路线、终点停车，以及四个独立窗口：
+沿用同一[三路线XML](../../../2026-09-23-tcp-controller/turns/routes.xml)、天气与空scenarios，保持三条完整路线、终点停车，以及四个独立窗口：
 
 | 路线 | 巡航m/s | core站距m | 主要pad窗口m |
 |---|---:|---|---|

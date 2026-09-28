@@ -1,6 +1,6 @@
 # Zero-shot 闭环考试：Alpamayo 1.5 与 openpilot 在 Bench2Drive 上
 
-状态: 预注册已冻结（2026-09-24 17:20，smoke 之前；plumbing 只用来查适配，不计分）；smoke 完成；全量 220 条 Alpamayo（用户已批准，openpilot 不跑）**已暂停**，13/220 完成，见下方「全量暂停记录」
+状态: 预注册已冻结（2026-09-24 17:20，smoke 之前；plumbing 只用来查适配，不计分）；smoke 完成；全量 220 条 Alpamayo（用户已批准，openpilot 不跑）**已暂停**。原写「13/220 完成」，之后又变了两次：旧控制器下的 13/220 作废；Zoo PID 下重跑的全量停在 119/220 并作废（[停车诊断](alpamayo-closed-loop-diagnosis.md)）；re-smoke 选了 f1，f1 全量被用户暂停在 17/220。见下方「全量暂停记录」
 主题: ../../research/openpilot-and-open-driving-models.md、../../research/benchmarks-and-evaluation.md
 **openpilot 的 smoke 分数（DS 2.7）作废**：来自适配 bug，诊断与修复见 [openpilot-migration.md](openpilot-migration.md)；修复后在 Zoo 官方 PID 下的 smoke 与 220 条全量（Cinque v3）按该文 D 节预注册。
 相关: [Alpamayo smoke](../2026-09-24-alpamayo-smoke/README.md)、[openpilot smoke](../2026-09-24-openpilot-smoke/README.md)、

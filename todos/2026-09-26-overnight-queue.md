@@ -1,6 +1,6 @@
 # 夜间队列（2026-09-26 深夜，5–6 h 空卡）：只排预登记过、不需要新决定、跑错也不亏的活
 
-状态: 待排（写于 2026-09-26 00:50，用户睡前；由 elicitation agent 按卡空出的顺序领取）
+状态: 已执行，结果见下「结果」节（原写「待排」；写于 2026-09-26 00:50，用户睡前；由 elicitation agent 按卡空出的顺序领取）
 上游: [激发计划](2026-09-26-elicitation-program.md)、[fast-perception](2026-09-26-fast-perception.md)、[I3 HUGSIM 配对](2026-09-25-reactivity-program/i3-hugsim-pairs.md)（已渲染 65 个场景）、
 [融合前诊断](2026-09-25-fusion-diagnostics.md)、[reactivity 计划](2026-09-25-reactivity-program.md)
 夜间汇总写在 `tmp/2026-09-26-overnight.md`（agent 维护），本文件只定队列与规则。

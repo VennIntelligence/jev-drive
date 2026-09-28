@@ -1,6 +1,6 @@
 # reactivity 计划：决定性检查、方法实验、仪器加固（排 GPU 用）
 
-状态: 进行中（预登记写于任何新抽取之前，2026-09-25）；D0、M-C（v0 smoke）、I3、I4 已出，I1 生成在跑，M-A 等用户
+状态: 进行中（预登记写于任何新抽取之前，2026-09-25）；D0、M-C（v0 smoke）、I3、I4 已出，I1 生成已完成（P5 v1 101 条路线，用于 decisions 第 42、43 条；原写「I1 生成在跑」），M-A 等用户
 上游: [op-temporal-p5-and-route](2026-09-25-openpilot-temporal-p5-and-route.md)（实验 1、2a 已出，2b 在跑）、第 25 条（continuation prior + reaction decoder）、第 32 条（P5 v0）、第 40 条
 主线: openpilot 冻结 vision；闭环考试仍暂停（memory：infra 验收未过）；本文件全部是开环或离线渲染。
 不重复做的（别人已做，只当动机引用）：真实帧抹行人的 model-agnostic 考试（2609.22582，6 个 ckpt，1.9%）、meta-action 考试（CoLT-Drive，11 个）、闭环 shift（Fail2Drive，7 个）。

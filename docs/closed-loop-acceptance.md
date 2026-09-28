@@ -8,7 +8,7 @@ Working notes, pre-registrations and every table: [todos/2026-09-25-closed-loop-
 
 | Part | Verdict | Where |
 |---|---|---|
-| CARLA harness cost and layout | measured; GPU render binds first, **6 servers per GPU**, ~2.5 cores per worker; the container thread cap binds the box | [bench2drive-cost.md](bench2drive-cost.md) "Harness cost and layout on the five-GPU box" |
+| CARLA harness cost and layout | measured; GPU render binds first, **6 servers per GPU**, ~2.5 cores per worker; the container thread cap bound the five-card box of 2026-09-25 (no longer binds with reduced thread pools, see carla.md) | [bench2drive-cost.md](bench2drive-cost.md) "Harness cost and layout on the five-GPU box" |
 | B2D controllers (Zoo PID as used for Alpamayo / openpilot, fixed 20 Hz tracker, lateral fixes P1 / P2, P5, P6, P7) | **none passes**; P5 / P6 (time-indexed replay) are closest: lateral passes at 1 / 2 / 5 Hz, longitudinal still lags ~2.6 m (starts ~0.5 s late); P7's 2 m/s² launch cap doubles that lag; Zoo PID fails outright | below |
 | HUGSIM controllers | official **fail**, PR #57 **fail**, fixed2 **pass** | [hugsim.md](hugsim.md) "Controller acceptance" |
 | Unexplained SIGKILLs | not kernel OOM, not our code; most likely the platform's memory enforcement; forensics now armed | [long-runs.md](long-runs.md), todo `sigkill.md` |
@@ -122,7 +122,8 @@ the one whose controller passed acceptance; readers get both and the paired diff
 
 - **GPU render** binds a card at about six CARLA servers (Town12, Alpamayo-like rig: 34.8 aggregate ticks/s at 6,
   38.2 at 12). Spread workers over cards before stacking one past six.
-- **The container thread cap** (`/sys/fs/cgroup/pids.max` = 20480, counts threads) binds the box: a default worker
+- **The container thread cap** (`/sys/fs/cgroup/pids.max` = 20480, counts threads) bound the box on 2026-09-25 (it no
+  longer binds once servers run with reduced thread pools, ~140-220 threads per worker; carla.md): a default worker
   holds ~650 threads (server ~430, route client ~215 because `carla.Client` starts one worker per host hardware
   thread, 208 here). It was hit 12 times on 2026-09-25 and shows up as `RuntimeError: Resource temporarily
   unavailable` at `carla.Client()`. Run route clients with `b2d_run.py --client-threads 8` (~16 threads, behaviour
@@ -148,6 +149,11 @@ here); both now kill only groups that still write into their own run directory.
 
 ## Before closed-loop exams resume
 
+(Written 2026-09-25, before the closed-loop lanes ran; the CL and G lanes have run since. Later results on
+item 1: P6 and P7 failed the same expert-replay acceptance on the longitudinal layer, and research/decisions.md #41
+recommends C/D for planners co-trained with their authors' execution layer (TFv6) and P7 for other planners and
+low-rate VLA planners.)
+
 1. B2D: drop Zoo PID (and P1 / P2). P5 is the best candidate (lateral accepted at 1 / 2 / 5 Hz), but no controller has
    passed: its launch / restart lag (~0.5 s) must be fixed or explained before a B2D score can be attributed to a model
    (`scripts/infra_ctl_accept.sh v2 <gpu> <arm>:<index> ...`, ~1.5 h for four arms on one card). Use a controller only at
@@ -155,7 +161,7 @@ here); both now kill only groups that still write into their own run directory.
 2. Done: the replay is time-indexed with smooth catch-up (`"replay_plan": "time"`); use it for every further run.
 3. HUGSIM: run every model under **both** the official controller and fixed2 (`zs_run.py --controller fixed2`) and
    report both; see "HUGSIM reporting rule" below.
-4. Size CARLA jobs by threads: `--client-threads 8` on every runner, <= 6 servers per GPU, <= 30 on the box.
+4. Size CARLA jobs by threads: `--client-threads 8` on every runner, <= 6 servers per GPU (<= 30 on the five-card box of that day; 7 x 6 on the current seven-card box).
 5. Report retries with every score (~15% of server starts die in setup with a RenderThread timeout, cause unknown).
 6. Keep application memory under ~85% of the container limit; read `<slot>.death-*.txt` and boxwatch at the next kill.
 7. Mark existing closed-loop scores (Alpamayo / openpilot on B2D with Zoo PID; HUGSIM under official) as

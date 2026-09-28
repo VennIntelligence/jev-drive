@@ -6,7 +6,9 @@ this one is about getting a server up and the traps in doing so.
 
 **Status: CARLA 0.9.15 runs headless on our Blackwell card and renders real frames on the GPU.
 A real Bench2Drive route runs end to end on Town12, the heaviest map.** All 220 routes are
-available. We have not decided to run them.
+available and full-220 runs have been made (the 3.11 h harness run in [bench2drive-cost.md](bench2drive-cost.md),
+the Alpamayo zero-shot full run in `todos/2026-09-24-zeroshot-exam/`). (Was: "We have not decided to run them";
+changed once closed-loop exams were decided in research/decisions.md #21.)
 
 ## Vulkan in the container: the one hard blocker, and its fix
 
@@ -345,6 +347,9 @@ Two corrections to that paragraph, both from 2026-09-22 and both in
 - **"The 96 GB card is over-provisioned for this" holds only for the small towns it was measured
   on.** A Town12 server holds about 6.3 GB, so ten instances sit at 83.5 GB with peaks at 87.4 and
   twelve do not fit. On Town12, VRAM is the binding constraint, not the GPU and not the cores.
+  (Measured on the previous instance's 96 GB RTX PRO 6000. Since 2026-09-28 the cards are RTX 6000D with
+  83.6 GiB, and the schedule caps a card at 75 GB (`VRAM_CAP_GB` in `scripts/sch_table.py`, 7.5 GB budgeted
+  per worker), so ten Town12 servers no longer have headroom; six per card remains the layout, see remote-box.md.)
 
 **From the real leaderboard via `scripts/b2d_run.py`** - closed-loop, real routes, blocking sensor
 waits and the scenario tree included. These are the numbers that count. See

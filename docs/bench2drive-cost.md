@@ -10,9 +10,15 @@ processes finished, which did not mean 209 driving successes. The later Tokyo co
 Dev10 seed0 diagnostic logged **17.91 minutes through the completion marker for three sets
 of ten routes**, with no model inference. Hardware, driver, camera schedule and route mix differ, so these are not a speedup pair.
 
-## Harness cost and layout on the five-GPU box (2026-09-25)
+**Hardware note (2026-09-28).** Every GPU-box number in this doc was measured on earlier instances (RTX PRO 6000,
+96 GB, ~253 bf16 TFLOPS on real models; 5 cards / 125 cores / 600 GB on 2026-09-25, later more cards). Since 2026-09-28 the box has seven RTX 6000D (83.6 GiB, ~144 bf16 TFLOPS dense), 175 cores and 644 GiB
+([remote-box.md](remote-box.md)). The per-server CARLA costs and the six-servers-per-card knee were rechecked
+there (remote-box.md, carla.md "In production"); the whole-box totals, the thread-cap arithmetic and the
+"ten per card" options below were not, and are corrected inline where they are now wrong.
 
-Measured on the current box (5 RTX PRO 6000 96 GB, cgroup 125 cores, 600 GB RAM) with our launch path
+## Harness cost and layout on the five-GPU box (2026-09-25, previous instance)
+
+Measured on the box of that day (5 RTX PRO 6000 96 GB, cgroup 125 cores, 600 GB RAM) with our launch path
 (`b2d_run.Server`: `-RenderOffScreen -quality-level=Epic -graphicsadapter=<gpu>`, then `b2d_route.py` with
 leaderboard + scenario_runner + traffic manager in the route process), 20 Hz synchronous mode.
 [Working notes, method and every table](../todos/2026-09-25-closed-loop-infra-acceptance/profiling.md);
@@ -92,7 +98,9 @@ the old 25-core container and from rigs rendered every fourth tick; on this box 
 - **Shard over GPUs before stacking on one**: one `b2d_run.py` per card (`--gpu-rank`, own `--server-index`
   block, shared `--out`).
 - **Whole box**: 5 x 6 = 30 workers, ~75 cores, ~150 GB VRAM, ~220 GB RSS - which only fits under the thread
-  cap below with `--client-threads 8`.
+  cap below with `--client-threads 8`. (That was the five-card box. On the seven-card RTX 6000D box it is
+  7 x 6 = 42 servers, and with reduced thread pools a worker is ~140-220 threads, so the thread cap no longer
+  binds; see carla.md, "Budget with the reduced pools" and "In production".)
 - **Run with `--client-threads 8`.** It is what lets 30 workers fit under the container's thread cap (next
   subsection); it changes neither CPU nor tick rate.
 - Machine-readable, as logged in gpu-plan.md: `servers_per_gpu=6 cores_per_server=2.5 threads_per_server=650
@@ -462,7 +470,8 @@ is amortised over a real round, not over 24 routes.
 **The free step is four to six: the per-instance cost does not move at all** (84.5 -> 84.1) for 1.49x
 the throughput. Six to eight costs 22% per instance to gain 15%.
 
-**Ten instances is where the 96 GB card finally binds.** Each Town12 server holds about 6.3 GB, so
+**Ten instances is where the 96 GB card finally binds** (previous instance; the current 83.6 GiB RTX 6000D under
+the 75 GB schedule cap binds earlier). Each Town12 server holds about 6.3 GB, so
 ten of them plus the policy server sit at 83.5 GB with peaks at 87.4; twelve do not fit. The load
 average is over the cgroup's 25 cores as well. So the sentence this document used to carry - that the
 card is over-provisioned for closed-loop work and a quarter of the memory would do - **is true only
@@ -562,7 +571,8 @@ Once the optimised configuration removes the sensor wait (0.03 ms/tick), what is
 | Bench2Drive as shipped, our 3-camera rig, Qwen3-VL every tick at 1600x900 | 4 | **~15 h** (extrapolated) |
 | optimised: 800x450, every 4th tick, overlapped, zero-copy | 8 | **3.11 h** (measured) |
 
-Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
+Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly (an inference on the previous instance; the
+current RTX 6000D cards are slower for GPU-bound work, remote-box.md).
 
 ### Three things that would move the measured number, in order
 
@@ -581,8 +591,9 @@ Four RTX PRO 6000s divide the 3.1 h again, since routes shard cleanly.
   `downsample_route(..., 50)`, so `_steer_to_route` aims at a sparse route and cannot take corners.
   [research/trajectory-to-control.md](../research/trajectory-to-control.md) works out what should
   replace it.
-- **Ten workers instead of eight** is about 23% on Town12, and is available whenever this card is
-  not shared - see the Large Map ladder above for why we did not take it here.
+- **Ten workers instead of eight** is about 23% on Town12, and was available on the 96 GB card whenever it was
+  not shared - see the Large Map ladder above for why we did not take it here. On the 83.6 GiB RTX 6000D
+  under the 75 GB schedule cap it no longer fits with headroom.
 - ~~`--cache-lights`~~: measured 2026-09-25 (see "Harness cost and layout"); no gain, and the CPU does not bind on
   this box.
 

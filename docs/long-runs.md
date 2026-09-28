@@ -68,10 +68,16 @@ Last verified: 2026-09-20
 ## Sharing the box between several agents
 
 When more than one agent (or person) runs jobs on the box at the same time:
-- `$DATA_DIR/runs/schedule.md` is the timetable: slots, owner, GPU, CARLA worker / core caps, dependencies.
-  One owner (the main session) edits it; everyone else reads it. On the five-GPU box the GPU binds first for
-  CARLA (about 6 servers per card, ~2.5 cores per worker), and the container's thread cap (pids.max 20480, ~650
-  threads per worker, ~450 with `--client-threads 8`) caps the box; see docs/bench2drive-cost.md (2026-09-25).
+- The box's schedule is `$DATA_DIR/runs/sched/table.tsv`, one row per lane (GPUs, CARLA workers per GPU, server
+  index block, core list, status, GO file), kept by `scripts/sch_table.py` (`show`, `check`, `grant`, `revoke`).
+  A grant writes the lane's shell-sourceable GO file, which the lane re-reads at its step boundaries; the G lane
+  (`scripts/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
+  `runs/sched/demand/<lane>.json`. (Was: `$DATA_DIR/runs/schedule.md`, a hand-edited timetable for the old
+  five-GPU box; it went out of use on 2026-09-26/27 when the table and GO grants replaced it.)
+  CARLA sizing: about 6 servers per card is still the GPU knee on the RTX 6000D box (docs/remote-box.md). The old
+  thread-cap limit (pids.max 20480, ~650 threads per worker) no longer binds with reduced thread pools
+  (docs/carla.md, "Budget with the reduced pools"); docs/bench2drive-cost.md has the 2026-09-25 measurements from the previous
+  instance.
 - Launch every scheduled job through `scripts/slot_run.sh <slot> [--after a,b] [--gpu N --vram-gb G] -- cmd`
   inside tmux. It waits with plain `sleep` until the dependency sentinels `$DATA_DIR/runs/sched/<slot>.done`
   exist (and the GPU has room), runs the command, then writes `<slot>.done` or `<slot>.failed`. A failed
