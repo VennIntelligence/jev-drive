@@ -7,10 +7,15 @@
 #    to the worker-hour count (runs/wl/pipe/gen_wh) and drains the runners (no new route, no route killed) with ERROR
 #    at the stop line BUDGET_WH or below the disk floor; STALL appears while no run finished for STALL_MIN (and goes
 #    away with the next one); an hourly progress line goes to STATUS.md.
+#    Hourly, and once more at the end, the prefix check of checklist amendment (a) (python -m jevdrive.wl drops: a fork
+#    group whose branches' prefixes disagree with the source run is dropped whole): more than 5 % dropped, overall or
+#    per set (per set once 20 groups are checked), drains and stops like the stop line.
 # 3. Harness failure (runs without a done record) <= 5 %, the registered checklist item; the whole checklist on the
 #    full set (python -m jevdrive.wl sanity --stage full) is written as a description.
-# 4. demand shrunk to FEAT_DEMAND workers on the row's first card; scripts/wl_pipeline.sh STEPS="index opspec op vjepa z"
-#    on that card and the row's cores. 5. demand file removed. STATUS.md, DONE / ERROR / STALL in runs/wl/pipe/.
+# 4. demand shrunk to FEAT_DEMAND workers on the row's first card; scripts/wl_pipeline.sh STEPS="index opspec op" on that
+#    card and the row's cores, the drop check again with the openpilot `temporal` cosine, then STEPS="index vjepa z"
+#    (index again so newly dropped groups leave the universe). 5. demand file removed.
+# STATUS.md, DONE / ERROR / STALL in runs/wl/pipe/. Waits (STATUS line) while `sch_table.py check` fails at the start.
 # Resumable: wl_gen skips finished runs, wl_pipeline skips finished feature chunks, gen_wh carries over.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -69,10 +74,27 @@ PYEOF
         if (( $(date +%s) - last > STALL_MIN * 60 )) && [[ ! -e $P/STALL ]]; then
             status "STALL: no run finished for $STALL_MIN min ($nd done, $n servers up)"; touch "$P/STALL"
         fi
-        (( ++tick % 12 == 0 )) && status "progress: $nd / $TOTAL runs done, $n CARLA up, $wh worker-h, $free GB free"
+        if (( ++tick % 12 == 0 )); then
+            status "progress: $nd / $TOTAL runs done, $n CARLA up, $wh worker-h, $free GB free"
+            if ! drops_gate 20; then
+                touch "$OUT/DRAIN"; status "prefix drops above 5 %, draining"; echo "prefix drops above 5 %" > "$P/ERROR"; return
+            fi
+        fi
     done
 }
 
+drops_gate() {  # drops_gate <per-set min groups>: amendment (a) check, one STATUS line; non-zero when it fails
+    local r rc
+    r=$(taskset -c "$CPUS" .venv/bin/python -m jevdrive.wl drops --gate --gate-min "$1" --out "$OUT" 2>>"$P/log.txt"); rc=$?
+    status "prefix drops: $(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["dropped"], "/", d["checked"], "groups", d["per_set"], "cos runs", d["cos_checked_runs"], "ids", d["dropped_fork_ids"])' "$r" 2>/dev/null || echo "$r")"
+    (( rc == 0 ))
+}
+
+n=0
+until python3 scripts/sch_table.py check > "$P/sch_check.txt" 2>&1; do
+    (( n++ % 6 == 0 )) && status "waiting: sch_table.py check fails ($(grep CHECK "$P/sch_check.txt" | tr '\n' ' '))"
+    sleep 300
+done
 TOTAL=$(total)
 status "wl-full start: cards ${G[*]} x $W, cores $CPUS, $(ndone) / $TOTAL runs already done, stop line $BUDGET_WH worker-h (spent $(cat "$P/gen_wh" 2>/dev/null || echo 0))"
 demand "$W" "${G[@]}"
@@ -90,14 +112,21 @@ for s in ba p6 d2; do
 done
 status "generation end: $(ndone) / $TOTAL done, harness failure $left / $TOTAL, $(cat "$P/gen_wh") worker-h"
 python3 -c "import sys; sys.exit(not $left > 0.05 * $TOTAL)" && { rm -f "$DEM"; fail "harness failure $left / $TOTAL above 5 %"; }
+drops_gate 0 || { rm -f "$DEM"; fail "prefix drops above 5 % (runs/wl/drops.json)"; }
 status "checklist on the full set (description)"
 taskset -c "$CPUS" .venv/bin/python -m jevdrive.wl sanity --stage full --out "$OUT" > "$P/sanity_full.json" \
     || status "sanity readout failed (description only; generation stands)"
 
 demand "${FEAT_DEMAND:-2}" "${G[0]}"
 status "features on GPU ${G[0]}, demand $(cat "$DEM")"
-GPU=${G[0]} CPUS=$CPUS STEPS="index opspec op vjepa z" scripts/wl_pipeline.sh > /dev/null   # it logs to the same log.txt itself
+# wl_pipeline logs to the same log.txt itself
+GPU=${G[0]} CPUS=$CPUS STEPS="index opspec op" NO_DONE=1 scripts/wl_pipeline.sh > /dev/null
 rc=$?
+if (( rc == 0 )); then
+    drops_gate 0 || { rm -f "$DEM"; fail "prefix drops above 5 % with the temporal cosine (runs/wl/drops.json)"; }
+    GPU=${G[0]} CPUS=$CPUS STEPS="index vjepa z" scripts/wl_pipeline.sh > /dev/null
+    rc=$?
+fi
 rm -f "$DEM"
 status "demand file removed"
 (( rc == 0 )) || { status "ERROR: wl_pipeline.sh exit $rc (see STATUS.md above)"; [[ -e $P/ERROR ]] || echo "wl_pipeline $rc" > "$P/ERROR"; exit 1; }

@@ -11,6 +11,10 @@ Generation (CARLA, scripts/wl_gen.sh with scripts/wl_fork_agent.py):
   ids        route ids of a stage (pilot1 / pilot10 / full) still without a done record, for b2d_run --route-ids
   sanity     the registered checklist on the finished fork runs of a stage -> research/results/wl/sanity_<stage>.csv
   prefix     the first check: a fork run's ticks before the fork against its source run (pose, actors, JPEG bytes)
+  drops      checklist amendment (a), 2026-09-28: every fork group whose branches are all done is checked once against
+             its source run (ego pose before k <= 0.01 m; Cinque `temporal` cosine >= 0.999 once the run's openpilot
+             stream exists) and dropped as a whole when a branch disagrees -> runs/wl/drops.json; --gate exits 3 when
+             the dropped fraction exceeds 5 %, overall or per set
 """
 import json
 import os
@@ -462,13 +466,122 @@ def shift_offsets(out: str, stage: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+PREFIX_POS_M, PREFIX_COS, DROP_MAX = 0.01, 0.999, 0.05
+
+
+def _prefix_pose(args) -> dict:
+    rid, adir, src, k = args
+    try:
+        pa, ps = _pose(Path(adir)), _pose(Path(src))
+        n = min(int(k) - 1, pa.index.max(), ps.index.max())
+        d = np.hypot(pa.x[:n].to_numpy() - ps.x[:n].to_numpy(), pa.y[:n].to_numpy() - ps.y[:n].to_numpy())
+        return {"route_id": rid, "ego_max_dpos_m": float(d.max())}
+    except Exception as e:
+        return {"route_id": rid, "ego_max_dpos_m": np.inf, "error": repr(e)}
+
+
+def _prefix_cos(args) -> dict:
+    """Min Cinque `temporal` cosine of the run's own pre-fork frames against the source run's stored stream at the same
+    ticks (processed/wl_gen/op_streams_vis from the wl_data op step; NaN until that stream exists)."""
+    rid, adir, src, src_route, set_name, k = args
+    f = data_dir() / "processed" / "wl_gen" / "op_streams_vis" / "cinque" / f"wl_{rid}.npz"
+    pre = "p5" if set_name == "ba" else set_name
+    g = data_dir() / "processed" / SRC[set_name]["proc"] / "op_streams_plan" / "cinque" / f"{pre}_{src_route}.npz"
+    if not f.exists() or not g.exists():
+        return {"route_id": rid, "op_cos_min": np.nan}
+    fa, fs = _frames(Path(adir)), _frames(Path(src))
+    tick_of = {f"{rid}-{fr:07d}": t for t, fr in zip(fa.index, fa.frame)}
+    name_src = {t: f"{src_route}-{fr:07d}" for t, fr in zip(fs.index, fs.frame)}
+    with np.load(g) as z:
+        ref = dict(zip(z["name"], z["temporal"]))
+    cos = []
+    with np.load(f) as q:
+        for n, v in zip(q["name"], q["temporal"]):
+            t = tick_of.get(str(n))
+            u = ref.get(name_src.get(t)) if t is not None and t < k else None
+            if u is not None:
+                cos.append(float(v @ u / np.linalg.norm(v) / np.linalg.norm(u)))
+    return {"route_id": rid, "op_cos_min": min(cos) if cos else np.nan, "op_frames": len(cos)}
+
+
+def drops(out: str | None = None, workers: int = 16, gate_min: int = 0) -> dict:
+    """Checklist amendment (a) (todo, 2026-09-28 13:30 CST): per fork group, once all its branches are done. Results are
+    cached per run in runs/wl/prefix_check.parquet (pose once; the cosine is filled in when the openpilot stream
+    appears). A group is dropped when any branch has pose > PREFIX_POS_M or cosine < PREFIX_COS. The gate (exit 3 in
+    main) fails when the dropped fraction of checked groups exceeds DROP_MAX overall or in a set with >= gate_min
+    checked groups."""
+    from multiprocessing import Pool
+    out = Path(out or rundir("gen"))
+    runs = pd.read_parquet(rundir("forks.parquet"))
+    runs["adir"] = [_fork_attempt(out / s_, r) for s_, r in zip(runs.set, runs.route_id)]
+    size = runs.groupby("fork_id").size()
+    ok_n = runs[runs.adir.notna()].groupby("fork_id").size()
+    full = set(ok_n[ok_n == size.reindex(ok_n.index)].index)
+    r = runs[runs.fork_id.isin(full)].copy()
+    r["adir"] = r.adir.astype(str)
+    cache_f = rundir("prefix_check.parquet")
+    cache = pd.read_parquet(cache_f) if cache_f.exists() else pd.DataFrame({"route_id": pd.Series(dtype=str), "adir": pd.Series(dtype=str),
+                                                                               "ego_max_dpos_m": pd.Series(dtype=float), "op_cos_min": pd.Series(dtype=float)})
+    cache = cache[cache.route_id.isin(r.route_id)]
+    cache = cache.merge(r[["route_id", "adir"]], on=["route_id", "adir"])          # a re-run attempt is checked again
+    todo = r[~r.route_id.isin(cache.route_id)]
+    with Pool(workers) as p:
+        new = pd.DataFrame(p.map(_prefix_pose, list(zip(todo.route_id, todo.adir, todo.src_dir, todo.fork_tick)), chunksize=8))
+        if len(new):
+            new = new.merge(todo[["route_id", "adir"]], on="route_id").assign(op_cos_min=np.nan)
+            cache = pd.concat([cache, new], ignore_index=True)
+        c = r[r.route_id.isin(cache[cache.op_cos_min.isna()].route_id)]
+        if len(c):
+            cos = pd.DataFrame(p.map(_prefix_cos, list(zip(c.route_id, c.adir, c.src_dir, c.src_route, c.set, c.fork_tick)), chunksize=8))
+            cache = cache.set_index("route_id")
+            cache.loc[cos.route_id, "op_cos_min"] = cos.set_index("route_id").op_cos_min
+            cache = cache.reset_index()
+    cache.to_parquet(cache_f, index=False)
+    t = r[["route_id", "fork_id", "set", "cls", "family", "base_id", "k_name", "world"]].merge(cache, on="route_id")
+    t["bad"] = (t.ego_max_dpos_m > PREFIX_POS_M) | (t.op_cos_min < PREFIX_COS)
+    g = t.groupby("fork_id").agg(set=("set", "first"), bad=("bad", "any"), pos=("ego_max_dpos_m", "max"),
+                                 cos=("op_cos_min", "min"), family=("family", "first"), base_id=("base_id", "first"),
+                                 k_name=("k_name", "first"), world=("world", "first"))
+    per = {s_: {"checked": int(len(x)), "dropped": int(x.bad.sum()), "frac": float(x.bad.mean())} for s_, x in g.groupby("set")}
+    res = {"groups_total": int(size.size), "checked": int(len(g)), "dropped": int(g.bad.sum()),
+           "frac": float(g.bad.mean()) if len(g) else 0.0, "per_set": per,
+           "cos_checked_runs": int(t.op_cos_min.notna().sum()),
+           "dropped_groups": [{"fork_id": int(i), **{k: (v if isinstance(v, str) else float(v)) for k, v in x.items() if k != "bad"}}
+                              for i, x in g[g.bad].iterrows()]}
+    res["gate_fail"] = bool(res["frac"] > DROP_MAX or any(v["frac"] > DROP_MAX for v in per.values() if v["checked"] >= gate_min))
+    rundir("drops.json").write_text(json.dumps(res, indent=1, default=str))
+    return res
+
+
+def dropped_forks() -> set:
+    """Fork ids dropped by amendment (a) (runs/wl/drops.json); empty before the first check."""
+    f = rundir("drops.json")
+    return {d["fork_id"] for d in json.loads(f.read_text())["dropped_groups"]} if f.exists() else set()
+
+
+def nonped_both(t: pd.DataFrame) -> set:
+    """Checklist amendment (b): pedestrian fork points whose `hold` or `op` branch hits a non-pedestrian actor in BOTH
+    worlds (x+ and x- of the same base route and k) -> both fork ids. The hazard there is not the pedestrian's; the
+    fork points stay in the data and are listed separately in C3. `t` needs fork_id, base_id, k_name, cls, world,
+    action, collision_types (list or JSON string)."""
+    x = t[(t.cls == "ped") & t.action.isin(["hold", "op"])].copy()
+    ty = x.collision_types.map(lambda v: json.loads(v) if isinstance(v, str) else (list(v) if v is not None and not
+                                                                                     (isinstance(v, float) and np.isnan(v)) else []))
+    x["nonped"] = ty.map(lambda v: any(not str(c).startswith("walker.") for c in v))
+    w = x.groupby(["base_id", "k_name", "world"]).nonped.any().unstack("world")
+    if not {"plus", "minus"} <= set(w):
+        return set()
+    both = w[w.plus.fillna(False).astype(bool) & w.minus.fillna(False).astype(bool)].index
+    return set(x[x.set_index(["base_id", "k_name"]).index.isin(both)].fork_id.unique())
+
+
 def sanity(out: str, stage: str) -> dict:
     """The registered checklist (todo, "分叉数据的 sanity checklist"); every item -> pass / fail."""
     runs = stage_ids(stage)
     rows = []
     for r in runs.itertuples():
         a = _fork_attempt(Path(out) / r.set, r.route_id)
-        rec = {"route_id": r.route_id, "fork_id": r.fork_id, "set": r.set, "cls": r.cls, "family": r.family, "world": r.world,
+        rec = {"route_id": r.route_id, "fork_id": r.fork_id, "base_id": r.base_id, "set": r.set, "cls": r.cls, "family": r.family, "world": r.world,
                "k_name": r.k_name, "action": r.action, "done": a is not None}
         if a is not None:
             try:
@@ -477,8 +590,11 @@ def sanity(out: str, stage: str) -> dict:
                 rec["error"] = repr(e)
         rows.append(rec)
     t = pd.DataFrame(rows)
-    pre = prefix(out, stage)
-    fin = t[t.done & t.get("error", pd.Series(np.nan, index=t.index)).isna()]
+    pre = prefix(out, stage) if stage != "full" else pd.DataFrame()   # the full set: pose via drops() only
+    dr = drops(out)
+    gone = {d["fork_id"] for d in dr["dropped_groups"]}
+    fin = t[t.done & t.get("error", pd.Series(np.nan, index=t.index)).isna() & ~t.fork_id.isin(gone)]
+    npb = nonped_both(fin)
     piv = fin.pivot_table(index="fork_id", columns="action", values="travel_m")
     lat = fin.pivot_table(index="fork_id", columns="action", values="lateral_right_m")
     cls = fin.groupby("fork_id")[["cls", "world"]].first()
@@ -487,7 +603,9 @@ def sanity(out: str, stage: str) -> dict:
     hog = fin.pivot_table(index="fork_id", columns="action", values="hit_or_gap", aggfunc="max")
     col = fin.pivot_table(index="fork_id", columns="action", values="collision", aggfunc="max")
     chk = {}
-    chk["prefix_ego_le_1cm"] = float((pre.ego_max_dpos_m <= 0.01).mean()) if len(pre) else np.nan
+    chk["prefix_ego_le_1cm_runs"] = float((pre.ego_max_dpos_m <= 0.01).mean()) if len(pre) else np.nan
+    chk["prefix_dropped"] = {k: dr[k] for k in ("checked", "dropped", "frac", "per_set")}
+    chk["ped_nonped_both_fork_points"] = sorted(int(i) for i in npb)
     chk["brake_travel_lt_hold"] = float((piv.brake_hard < piv.hold).mean()) if {"brake_hard", "hold"} <= set(piv) else np.nan
     sh = shift_offsets(out, stage)
     if len(sh):
@@ -505,6 +623,8 @@ def sanity(out: str, stage: str) -> dict:
             for c_, w_ in (("ped", "plus"), ("ped", "minus"), ("cutin", "plus"), ("cutin", "minus")):
                 m = (u.cls == c_) & (u.world == w_)
                 chk[f"{name}_hold_or_op_{c_}_{w_}"] = float(hold_op[m].mean()) if m.any() else np.nan
+            m = (u.cls == "ped") & (u.world == "minus") & ~u.index.isin(npb)     # amendment (b): the registered x- item
+            chk[f"{name}_hold_or_op_ped_minus_attributable"] = float(hold_op[m].mean()) if m.any() else np.nan
     for name, tab in (("collision", col), ("unsafe", unsafe)):
         u = tab.join(cls)
         m = (u.cls == "obstacle") & (u.world == "plus")
@@ -515,10 +635,11 @@ def sanity(out: str, stage: str) -> dict:
                             for c_, w_ in cls.drop_duplicates().itertuples(index=False)}
     chk["harness_fail"] = float(1 - t.done.mean() + (t.get("error", pd.Series(np.nan, index=t.index)).notna().mean()))
     verdict = {
-        "prefix": chk["prefix_ego_le_1cm"] == 1.0,
+        "prefix": not dr["gate_fail"],
         "brake": chk.get("brake_travel_lt_hold") == 1.0,
         "shift": chk.get("shift_sign_ok", 0) >= 0.95 and chk.get("shift_ge_2m", 0) >= 0.80,
-        "outcomes": (chk.get("hit_or_gap_hold_or_op_ped_plus", 0) >= 0.20 and chk.get("hit_or_gap_hold_or_op_ped_minus", 1) <= 0.05
+        "outcomes": (chk.get("hit_or_gap_hold_or_op_ped_plus", 0) >= 0.20
+                     and chk.get("hit_or_gap_hold_or_op_ped_minus_attributable", 1) <= 0.05
                      and chk.get("obstacle_plus_hold_collision", 0) >= 0.30
                      and chk.get("obstacle_plus_a_shift_no_collision", 0) >= 0.50),
         "harness": chk["harness_fail"] <= 0.05}
@@ -531,7 +652,9 @@ def sanity(out: str, stage: str) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity"))
+    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity", "drops"))
+    ap.add_argument("--gate", action="store_true", help="drops: exit 3 when the dropped fraction exceeds 5 %%")
+    ap.add_argument("--gate-min", type=int, default=0, help="drops: per-set gate only for sets with this many checked groups")
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
     ap.add_argument("--set", default="ba", choices=tuple(SRC) + ("d2",))
     ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"), help="generation root (per-set subdirs)")
@@ -547,6 +670,11 @@ def main():
     elif a.step in ("prefix_spec", "prefix_read"):
         r = prefix_feats(a.out, a.stage, a.step.split("_")[1])
         print(r.to_string(index=False) if isinstance(r, pd.DataFrame) else json.dumps(r))
+    elif a.step == "drops":
+        r = drops(a.out, gate_min=a.gate_min)
+        print(json.dumps({k: v for k, v in r.items() if k != "dropped_groups"} | {"dropped_fork_ids": [d["fork_id"] for d in r["dropped_groups"]]}))
+        if a.gate and r["gate_fail"]:
+            raise SystemExit(3)
     else:
         print(json.dumps(sanity(a.out, a.stage), indent=1, default=str))
 

@@ -454,6 +454,14 @@ def report() -> dict:
               "picks": sel.pick.value_counts().to_dict()}
         c3["pass"] = bool(c3["rel_reduction"] >= 0.5 and c3["diff_ci"][0] > 0 and c3["travel_ratio_minus"] >= 0.9
                           and c3["unsafe_pick_minus"] <= c3["unsafe_op_minus"] + 0.02)
+        # checklist amendment (b), description only (C3's registered rules above are unchanged): pedestrian fork points
+        # whose hold / op branch hits a non-pedestrian actor in both worlds, listed separately
+        npb = WL.nonped_both(tr)
+        sel["nonped_both"] = sel.fork_id.isin(npb)
+        x = sel[sel.nonped_both]
+        c3["nonped_both"] = {"n": len(x), "fork_ids": sorted(int(i) for i in x.fork_id),
+                             **{f"{c}_{w}": float(x[x.world == w][c].mean()) if (x.world == w).any() else None
+                                for c in ("unsafe_pick", "unsafe_op", "unsafe_oracle") for w in ("plus", "minus")}}
         c2["c3"] = c3
         sel.to_csv(WL.RESULTS / "c3_selection.csv", index=False)
     WL.RESULTS.mkdir(parents=True, exist_ok=True)

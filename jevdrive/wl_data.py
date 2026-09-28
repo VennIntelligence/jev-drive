@@ -34,8 +34,10 @@ def pdir(*p) -> Path:
 
 
 def finished(out: Path) -> pd.DataFrame:
-    """Every run of forks.parquet / d2.parquet with a done record, and its attempt dir."""
-    runs = [pd.read_parquet(WL.rundir("forks.parquet"))]
+    """Every run of forks.parquet / d2.parquet with a done record, and its attempt dir; fork groups dropped by checklist
+    amendment (a) (runs/wl/drops.json, `python -m jevdrive.wl drops`) are left out whole."""
+    f = pd.read_parquet(WL.rundir("forks.parquet"))
+    runs = [f[~f.fork_id.isin(WL.dropped_forks())]]
     if WL.rundir("d2.parquet").exists():
         runs.append(pd.read_parquet(WL.rundir("d2.parquet")))
     r = pd.concat(runs, ignore_index=True)

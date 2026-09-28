@@ -3,7 +3,8 @@
 #   scripts/tmux_run.sh wl-pipe scripts/wl_pipeline.sh     env: GPU=0 CPUS=150-165 STEPS="index opspec op vjepa z outcomes
 #                                                               train report" (default: all, in this order), ARMS, SEEDS
 # Each step appends to runs/wl/pipe/STATUS.md; the chain ends with DONE or ERROR (the failing step) in runs/wl/pipe/.
-# Resumable: vjepa / op skip what exists; train re-runs an arm x seed only without a preds.npz.
+# Resumable: vjepa / op skip what exists; train re-runs an arm x seed only without a preds.npz. NO_DONE=1: no DONE at the
+# end (a caller such as scripts/wl_full.sh runs more steps after these).
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
@@ -41,5 +42,6 @@ for s in "${STEPS[@]}"; do
         *) status "unknown step $s"; echo "$s" > "$P/ERROR"; exit 1 ;;
     esac
 done
+[[ -n ${NO_DONE:-} ]] && { status "steps ${STEPS[*]} ok (NO_DONE: the caller goes on)"; exit 0; }
 touch "$P/DONE"
 status "DONE"
