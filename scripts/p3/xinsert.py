@@ -538,6 +538,44 @@ def render(a):
                       "shadow": meta["shadow_on_fraction"], "render_s": meta["render_s"]}))
 
 
+def clip(a):
+    """Before | after for the docs: log | same-scene insertion (grounded standard; 'excluded' when that scene had no
+    donor within 20 deg) | cross-scene insertion, TTR 3 s, front camera, 400 x 267 each, 5 fps over [t* - 2, t* + 1] s."""
+    from PIL import Image, ImageDraw
+    import review_sheet as RS
+    f1, f2 = RS._font(15), RS._font(13)
+    for k in a.targets:
+        key = f"p3_{k:03d}"
+        xm = json.loads((X / "items" / key / "meta.json").read_text())
+        same = DATA / "runs/nq4/p3/insert_batch" / key
+        sm = json.loads((same / "meta.json").read_text()) if (same / "meta.json").exists() else {}
+        frames = []
+        ts = xm["t_star"]
+        for t in range(ts - 20, ts + 11, 2):
+            G = Image.new("RGB", (1200, 267 + 40), (18, 18, 18))
+            fn = f"{2 * t:07d}.jpg"
+            tiles = [(X / "items" / key / "real/cams/front" / fn, "log")]
+            if sm.get("chosen"):
+                st = sm["t_star"]
+                sfn = f"{2 * (st + t - ts):07d}.jpg"
+                tiles.append((same / ("ins3f" if (same / "ins3f").exists() else "ins3") / "cams/front" / sfn, "same-scene donor"))
+            else:
+                tiles.append((None, "same-scene: excluded (no donor <= 20 deg)"))
+            tiles.append((X / "items" / key / "ins3/cams/front" / fn, "cross-scene donor"))
+            for i, (f, lab) in enumerate(tiles):
+                if f is not None and Path(f).exists():
+                    G.paste(Image.open(f).convert("RGB").resize((400, 267), Image.LANCZOS), (i * 400, 0))
+                ImageDraw.Draw(G).text((i * 400 + 6, 4), lab, fill=(255, 255, 255), font=f1, stroke_width=2, stroke_fill=(0, 0, 0))
+            dn = xm["plan"]["donor"]
+            ImageDraw.Draw(G).text((8, 270), f"{key}  TTR 3 s   t - t* {(t - ts) / HZ:+.1f} s   donor p3_{dn['scene']:03d} node {dn['node']}  "
+                                   f"view gap {xm['plan']['view_gap']:.0f} deg  gain {'/'.join(f'{x:.2f}' for x in xm['gain_rgb'])}  "
+                                   f"shadow {xm['shadow_on_fraction'].get('ins3', 0):.0%} of frames", fill=(220, 220, 220), font=f2)
+            frames.append(G)
+        p = a.out / f"xinsert_{key}.webp"
+        frames[0].save(p, save_all=True, append_images=frames[1:], duration=200, loop=0, quality=70, method=6)
+        print(json.dumps({"clip": str(p), "bytes": p.stat().st_size}))
+
+
 def main():
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -546,12 +584,17 @@ def main():
     p = sp.add_parser("plan")
     p.add_argument("--targets", type=int, nargs="+", required=True)
     sp.add_parser("yield")
+    p = sp.add_parser("clip")
+    p.add_argument("--targets", type=int, nargs="+", required=True)
+    p.add_argument("--out", type=Path, default=X / "clips")
     p = sp.add_parser("render")
     p.add_argument("--target", type=int, required=True)
     p.add_argument("--out", type=Path, default=X / "items")
     a = ap.parse_args()
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
-    {"bank": bank, "plan": plan, "yield": yield_, "render": render}[a.cmd](a)
+    if a.cmd == "clip":
+        a.out.mkdir(parents=True, exist_ok=True)
+    {"bank": bank, "plan": plan, "yield": yield_, "render": render, "clip": clip}[a.cmd](a)
 
 
 if __name__ == "__main__":
