@@ -2,16 +2,157 @@
 
 [返回总表](../p3-review-sheet.md)
 
-每段视频：前相机，左边是录像，右边是编辑后的画面；锚点前 2 s 到后 1 s，5 帧每秒循环。最后一列留给你填：keep / drop / 备注。
+每段视频：前相机，左边是录像，右边是编辑后的画面；锚点前 2 s 到后 1 s，5 帧每秒循环。在「结论（用户填）」那一行后面直接写 keep / drop / 备注，可以在 GitHub 上直接编辑这一行。
 
-| 视频 | 编号 | 类别 | 视角差 | 框内 PSNR (dB) | 结论（keep / drop / 备注） |
-|:--|:--|:--|--:|--:|:--|
-| ![PI-001](../figs/p3/review/PI-001.webp) | PI-001<br>p3_001 | must-react (TTR 2 / 3 / 4 s) + null; changed 2026-09-28: walk-in rules, cross-scene donor  |  放大 2.61x (donor closest 11.0 m)  |  待清晰度门槛复查（可能剔除） | 1° | 26.9 |  |
-| ![PI-002](../figs/p3/review/PI-002.webp) | PI-002<br>p3_002 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 1.93x (donor closest 11.6 m)  |  待清晰度门槛复查（可能剔除） | 14° | 24.6 |  |
-| ![PI-007](../figs/p3/review/PI-007.webp) | PI-007<br>p3_007 | must-react (TTR 2 / 3 / 4 s) + null; changed 2026-09-28: walk-in rules, cross-scene donor  |  放大 4.60x (donor closest 24.1 m)  |  待清晰度门槛复查（可能剔除） | 1° | 22.7 |  |
-| ![PI-008](../figs/p3/review/PI-008.webp) | PI-008<br>p3_008 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 3.14x (donor closest 24.1 m)  |  待清晰度门槛复查（可能剔除） | 1° | 22.7 |  |
-| ![PI-009](../figs/p3/review/PI-009.webp) | PI-009<br>p3_009 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 3.93x (donor closest 24.1 m)  |  待清晰度门槛复查（可能剔除） | 1° | 22.7 |  |
-| ![PI-012](../figs/p3/review/PI-012.webp) | PI-012<br>p3_012 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 3.77x (donor closest 24.1 m)  |  待清晰度门槛复查（可能剔除） | 1° | 22.7 |  |
-| ![PI-013](../figs/p3/review/PI-013.webp) | PI-013<br>p3_013 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 4.58x (donor closest 24.1 m)  |  待清晰度门槛复查（可能剔除） | 2° | 22.7 |  |
-| ![PI-015](../figs/p3/review/PI-015.webp) | PI-015<br>p3_015 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 2.61x (donor closest 15.7 m)  |  待清晰度门槛复查（可能剔除） | 2° | 28.6 |  |
-| ![PI-016](../figs/p3/review/PI-016.webp) | PI-016<br>p3_016 | must-react (TTR 2 / 3 / 4 s) + null  |  放大 2.44x (donor closest 11.0 m)  |  待清晰度门槛复查（可能剔除） | 2° | 26.9 |  |
+### PI-001
+
+![PI-001](../figs/p3/review/PI-001.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null; changed 2026-09-28: walk-in rules, cross-scene donor |
+| 场景 | p3_001 |
+| 供体 | p3_008/2 |
+| 放大倍数 / 视角差 | 2.61x / 1° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 26.9 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-002
+
+![PI-002](../figs/p3/review/PI-002.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_002 |
+| 供体 | p3_000/41 |
+| 放大倍数 / 视角差 | 1.93x / 14° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 24.6 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-007
+
+![PI-007](../figs/p3/review/PI-007.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null; changed 2026-09-28: walk-in rules, cross-scene donor |
+| 场景 | p3_007 |
+| 供体 | p3_000/21 |
+| 放大倍数 / 视角差 | 4.60x / 1° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 22.7 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-008
+
+![PI-008](../figs/p3/review/PI-008.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_008 |
+| 供体 | p3_000/21 |
+| 放大倍数 / 视角差 | 3.14x / 1° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 22.7 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-009
+
+![PI-009](../figs/p3/review/PI-009.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_009 |
+| 供体 | p3_000/21 |
+| 放大倍数 / 视角差 | 3.93x / 1° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 22.7 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-012
+
+![PI-012](../figs/p3/review/PI-012.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_012 |
+| 供体 | p3_000/21 |
+| 放大倍数 / 视角差 | 3.77x / 1° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 22.7 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-013
+
+![PI-013](../figs/p3/review/PI-013.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_013 |
+| 供体 | p3_000/21 |
+| 放大倍数 / 视角差 | 4.58x / 2° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 22.7 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-015
+
+![PI-015](../figs/p3/review/PI-015.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_015 |
+| 供体 | p3_009/59 |
+| 放大倍数 / 视角差 | 2.61x / 2° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 28.6 dB |
+
+**结论（用户填）：** 
+
+---
+
+### PI-016
+
+![PI-016](../figs/p3/review/PI-016.webp)
+
+| | |
+|:--|:--|
+| 类别 | must-react (TTR 2 / 3 / 4 s) + null |
+| 场景 | p3_016 |
+| 供体 | p3_008/2 |
+| 放大倍数 / 视角差 | 2.44x / 2° |
+| 门槛 | 待清晰度门槛复查（可能剔除） |
+| 框内 PSNR | 26.9 dB |
+
+**结论（用户填）：** 
+
+---

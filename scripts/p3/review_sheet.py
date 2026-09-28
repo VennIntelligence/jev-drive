@@ -20,6 +20,20 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 W, H, BAR, N, STEP5 = 480, 320, 40, 16, 2          # panel size, caption bar, frames, 10 Hz -> 5 Hz stride
 
+_XI = [None]
+
+
+def _xinsert():
+    """Lazy, cached import of scripts/p3/xinsert.py, for the read-only magnification helpers (close_dist,
+    donor_track, magnification, scene_geom) an item without a gate.json yet needs; never calls xinsert's own
+    mutating entry points (bank / gatecheck), so this never touches anything under xinsert/."""
+    if _XI[0] is None:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import xinsert
+        _XI[0] = xinsert
+    return _XI[0]
+
 
 def _font(size):
     from PIL import ImageFont
@@ -123,9 +137,21 @@ def render(a):
         if dropped:
             cat = (f"DROPPED 2026-09-28 by the resolution gate: magnification {max(gate['mag'].values()):.2f} > 1.25 (donor seen no closer "
                    f"than {gate['d_close']:.1f} m in its own log); re-planned with the expanded donor bank")
+        if gate:
+            mag, d_close = max(gate["mag"].values()), gate["d_close"]
+        else:                                                  # not gate-checked yet: compute it read-only, same
+            XIm = _xinsert()                                    # functions gatecheck itself uses, no files touched
+            g = XIm.scene_geom(int(m["scene"][3:]))
+            T, _, fv = XIm.donor_track(dn, with_fv=True)
+            d_close = XIm.close_dist(XIm.scene_geom(dn["scene"]), T, fv)
+            mags = {v: XIm.magnification(g, {int(t): tuple(x) for t, x in V["traj"].items()}, {"d_close": d_close})
+                     for v, V in pl["variants"].items() if V and "traj" in V}
+            mag = max(mags.values()) if mags else None
         items.append({"id": iid, "type": "PI", "scene": m["scene"], "segment": m["target_segment"], "dropped": dropped,
                       "category": cat,
                       "view_gap": pl["view_gap"], "psnr": dn["psnr"], "donor": f"p3_{dn['scene']:03d}/{dn['node']}",
+                      "mag": round(mag, 2) if mag is not None else None, "d_close": d_close,
+                      "over_gate": mag is not None and mag > 1.25,
                       "walk_s": v3["walk_s"], "vis_out_s": v3["vis_out_s"], "gain": m.get("gain_rgb"),
                       "shadow_frac": m.get("shadow_on_fraction", {}).get("ins3"), "changed": changed, "bytes": size})
     pi_none = [json.loads(p.read_text())["scene"] for p in sorted((X / "plan").glob("p3_*.json")) if not json.loads(p.read_text())["item"]]
@@ -154,24 +180,55 @@ PAGES = {"PI": ("ped-insert", "行人插入（跨场景供体、从路边走进�
          "VD": ("veh-delete", "车辆删除（事件车辆）")}
 
 
+VERDICT_PREFIX = "**结论（用户填）：**"
+
+
 def _existing_verdicts(rdir: Path) -> dict:
-    """id -> verdict text already on disk, keyed by item id, so a regenerate never wipes a human's keep / drop / note."""
+    """id -> verdict text already on disk, keyed by item id, so a regenerate never wipes a human's keep / drop /
+    note. Parses both the old one-row-per-item table (| ![id](...) | id<br>scene | category | view gap | psnr |
+    verdict |) and the new per-item '### id' section with a trailing verdict line, so migrating from the old
+    layout carries every filled-in verdict over."""
     verdicts = {}
     for slug, _ in PAGES.values():
         p = rdir / f"{slug}.md"
         if not p.exists():
             continue
+        cur = None
         for line in p.read_text().splitlines():
-            if not line.startswith("| !["):
-                continue
-            cells = [c.strip() for c in line.strip().strip("|").split("|")]
-            if len(cells) < 6:
-                continue
-            iid = cells[1].split("<br>")[0].strip()
-            verdict = cells[5].strip()
-            if iid and verdict:
-                verdicts[iid] = verdict
+            if line.startswith("### "):
+                cur = line[4:].strip()
+            elif line.startswith("| !["):                       # old table layout: verdict is always the LAST
+                cells = [c.strip() for c in line.strip().strip("|").split("|")]  # cell, not a fixed index -- a
+                if len(cells) >= 3:                                              # category with its own "|" (e.g.
+                    iid = cells[1].split("<br>")[0].strip()                      # a magnification note) shifts
+                    verdict = cells[-1].strip()                                  # every fixed column after it
+                    if iid and verdict:
+                        verdicts[iid] = verdict
+            elif line.startswith(VERDICT_PREFIX) and cur:        # new per-item section layout
+                verdict = line[len(VERDICT_PREFIX):].strip()
+                if verdict:
+                    verdicts[cur] = verdict
     return verdicts
+
+
+def _kv_rows(i: dict) -> list:
+    """Key/value pairs for an item's info table, item-type aware (PI carries donor / magnification, PD / VD don't)."""
+    rows = [("类别", i["category"]), ("场景", str(i["scene"]))]
+    if i.get("donor"):
+        rows.append(("供体", i["donor"]))
+    vg = "—" if i.get("view_gap") is None else f"{i['view_gap']:.0f}°"
+    rows.append(("放大倍数 / 视角差", f"{i['mag']:.2f}x / {vg}") if i.get("mag") is not None else ("视角差", vg))
+    if i.get("over_gate") and not i.get("dropped"):
+        rows.append(("门槛", "待清晰度门槛复查（可能剔除）"))
+    rows.append(("框内 PSNR", f"{i['psnr']:.1f} dB"))
+    return rows
+
+
+def _item_block(i: dict, verdict: str) -> list:
+    lines = [f"### {i['id']}", "", f"![{i['id']}](../figs/p3/review/{i['id']}.webp)", "", "| | |", "|:--|:--|"]
+    lines += [f"| {k} | {v} |" for k, v in _kv_rows(i)]
+    lines += ["", f"{VERDICT_PREFIX} {verdict}", "", "---", ""]
+    return lines
 
 
 def md(a):
@@ -185,20 +242,18 @@ def md(a):
         its = [i for i in items if i["type"] == t]
         rows[t] = len(its)
         lines = [f"# P3 人工复核：{title}", "", "[返回总表](../p3-review-sheet.md)", "",
-                 "每段视频：前相机，左边是录像，右边是编辑后的画面；锚点前 2 s 到后 1 s，5 帧每秒循环。最后一列留给你填：keep / drop / 备注。", "",
-                 "| 视频 | 编号 | 类别 | 视角差 | 框内 PSNR (dB) | 结论（keep / drop / 备注） |", "|:--|:--|:--|--:|--:|:--|"]
+                 "每段视频：前相机，左边是录像，右边是编辑后的画面；锚点前 2 s 到后 1 s，5 帧每秒循环。"
+                 "在「结论（用户填）」那一行后面直接写 keep / drop / 备注，可以在 GitHub 上直接编辑这一行。", ""]
         for i in its:
-            vg = "—" if i["view_gap"] is None else f"{i['view_gap']:.0f}°"
-            v = verdicts.get(i["id"], "")
-            lines.append(f"| ![{i['id']}](../figs/p3/review/{i['id']}.webp) | {i['id']}<br>{i['scene']} | {i['category']} | {vg} | {i['psnr']:.1f} | {v} |")
-        (rdir / f"{slug}.md").write_text("\n".join(lines) + "\n")
+            lines += _item_block(i, verdicts.get(i["id"], ""))
+        (rdir / f"{slug}.md").write_text("\n".join(lines).rstrip() + "\n")
     total = len(items)
     mb = sum(i["bytes"] for i in items) / 1e6
     idx = [f"# P3 考题人工复核总表", "",
            f"**现有 {total} 道题可看**（{a.stamp}）：行人插入 {rows['PI']}、行人删除 {rows['PD']}、车辆删除 {rows['VD']}；视频合计 {mb:.1f} MB。"
            f"用户原先预期约 60 道，这里按实际数量列。", "", a.pending, "",
-           "所有题用同一个脚本、同一种版式渲染（`scripts/p3/review_sheet.py`）：前相机，左录像、右编辑后，锚点前 2 s 到后 1 s，每道题一段约 0.3 MB 的循环 WebP。"
-           "请在各分页最后一列填 keep / drop / 备注。背景与规则见 [p3-exam-filter.md](p3-exam-filter.md)。", "",
+           "所有题用同一个脚本、同一种版式渲染（`scripts/p3/review_sheet.py`）：前相机，左录像、右编辑后，锚点前 2 s 到后 1 s，每道题一段约 0.3 MB 的循环 WebP，视频独占一行、按页面宽度显示。"
+           "请在各分页每道题「结论（用户填）」那一行后面直接写 keep / drop / 备注。背景与规则见 [p3-exam-filter.md](p3-exam-filter.md)。", "",
            "| 分页 | 题数 | 说明 |", "|:--|--:|:--|"]
     notes = {"PI": f"同一供体另有到达时间 2 s、4 s 和车道外对照三个版本，版式相同不重复列。2026-09-28 按用户对 p3_003 的意见改为「从路边走进来」的轨迹（整段都在、先在车道外被看见 ≥ 1.5 s、不穿过任何车），类别栏标了 changed 的是按新规则重做的题；找不到合规走法的场景不出题（目前 {len(j['pi_no_donor'])} 个）",
              "PD": "类别按登记目标事件的过滤结果：must-react = 有该反应帧且司机减速；null-type = 窗口内没有该反应帧，只能当删除型对照",
