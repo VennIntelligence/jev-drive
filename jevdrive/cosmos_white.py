@@ -62,6 +62,17 @@ def _one(job) -> list:
     return rows
 
 
+def _flags(d: pd.DataFrame) -> pd.DataFrame:
+    d["is_white"] = (d.white >= WHITE_FRAC) & (d.white_raw <= RAW_MAX)
+    pale = lambda v, s_, t, t_ref: (v >= 140) & (s_ <= 0.25) & (t <= 0.6 * t_ref)  # noqa: E731
+    d["is_pale"] = pale(d.v_cos, d.s_cos, d.tex_cos, d.tex_raw) & ~((d.v_raw >= 140) & (d.s_raw <= 0.25) & (d.tex_raw <= 20))
+    # absolute white mannequin (added after seeing 25863 in fog, where CARLA's own object is pale too and the relative
+    # flag cannot fire): Cosmos object near-white, grey, flat, while CARLA's object is not near-white
+    d["is_mannequin"] = (d.v_cos >= 170) & (d.s_cos <= 0.15) & (d.tex_cos <= 25) & ~((d.v_raw >= 170) & (d.s_raw <= 0.15))
+    d["is_white_any"] = d.is_pale | d.is_mannequin
+    return d
+
+
 def run(variants=("edgeA", "edgeB", "seg"), tag: str = ""):
     jobs = []
     for v in variants:
@@ -74,18 +85,17 @@ def run(variants=("edgeA", "edgeB", "seg"), tag: str = ""):
                 ctrl = {"edgeA": od / f"{pair}_{m}_{v}_s{SEED}_control_edge.mp4",
                         "edgeB": root("clips", pair, m) / "edge.mp4", "P2": root("clips", pair, m) / "edge.mp4",
                         **{k: root("clips", pair, m) / "edgeC.mp4" for k in ("E2", "G2b", "M2")},
-                        **{k: root("clips", pair, m) / "edgeD.mp4" for k in ("E3", "G3b")}}.get(v, "")
+                        **{k: root("clips", pair, m) / "edgeD.mp4" for k in ("E3", "G3b")},
+                        **{k: root("clips", pair, m) / "edgeE.mp4" for k in ("E4", "G4b")}}.get(v, "")
                 jobs.append((pair, m, v, str(f), str(ctrl)))
     with ProcessPoolExecutor(min(20, len(jobs))) as ex:
         d = pd.DataFrame([x for rows in ex.map(_one, jobs) for x in rows])
-    d["is_white"] = (d.white >= WHITE_FRAC) & (d.white_raw <= RAW_MAX)
-    pale = lambda v, s_, t, t_ref: (v >= 140) & (s_ <= 0.25) & (t <= 0.6 * t_ref)  # noqa: E731
-    d["is_pale"] = pale(d.v_cos, d.s_cos, d.tex_cos, d.tex_raw) & ~((d.v_raw >= 140) & (d.s_raw <= 0.25) & (d.tex_raw <= 20))
+    d = _flags(d)
     d.to_csv(RESULTS / f"white_units{tag}.csv.gz", index=False)
     return summarize(d, tag=tag)
 
 
-def summarize(d: pd.DataFrame, flag: str = "is_pale", tag: str = "") -> str:
+def summarize(d: pd.DataFrame, flag: str = "is_white_any", tag: str = "") -> str:
     out = [f"flag: {flag}"]
     d = d.assign(is_white=d[flag])
     g = d.groupby(["variant", "cls"]).agg(units=("is_white", "size"), white=("is_white", "mean")).unstack(0)
@@ -125,6 +135,7 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default="")
     a = ap.parse_args()
     if a.summarize:
-        summarize(pd.read_csv(RESULTS / "white_units.csv.gz"))
+        from .cosmos_white import _flags
+        summarize(_flags(pd.read_csv(RESULTS / f"white_units{a.tag}.csv.gz")), tag=a.tag)
     else:
         run(tuple(a.variants.split(",")), a.tag)

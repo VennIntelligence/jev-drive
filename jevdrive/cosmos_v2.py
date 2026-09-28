@@ -49,6 +49,8 @@ ARMS = {  # name: (model, steps, controls {key: (file, weight)}, anchored)
     "G2": ("edge/distilled", 4, {"edge": ("edgeC.mp4", 1.0)}, True),
     "E3": ("edge/distilled", 4, {"edge": ("edgeD.mp4", 1.0)}, False),
     "G3": ("edge/distilled", 4, {"edge": ("edgeD.mp4", 1.0)}, True),
+    "E4": ("edge/distilled", 4, {"edge": ("edgeE.mp4", 1.0)}, False),
+    "G4": ("edge/distilled", 4, {"edge": ("edgeE.mp4", 1.0)}, True),
     "M2": ("seg", 35, {"edge": ("edgeC.mp4", 1.0), "depth": ("depth.mp4", 0.5), "seg": ("segc.mp4", 1.0)}, False),
 }
 NEG2 = ("The video is recorded from inside a car: dashboard, windshield glass, reflections on the glass, raindrops "
@@ -57,7 +59,7 @@ NEG2 = ("The video is recorded from inside a car: dashboard, windshield glass, r
         "The lighting looks very fake. The textures are very raw and basic. The geometries are very primitive.")
 
 
-BASE_OF = {"G2": "E2", "G3": "E3"}
+BASE_OF = {"G2": "E2", "G3": "E3", "G4": "E4"}
 
 
 def prompt2(town: str, weather: dict) -> str:
@@ -86,13 +88,15 @@ def _pair_rows(which: str) -> pd.DataFrame:
 
 def _controls2(pair: str):
     import cv2
+    global CLAHE
+    CLAHE = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
     r = pairs().set_index("pair").loc[pair]
     ks = range(int(r.k0), int(r.k1))
     for m in ("plus", "minus"):
         a = _attempt(root("gen"), r[m])
         rgb = read_mp4(root("clips", pair, m) / "rgb.mp4")
         edge = read_mp4(root("clips", pair, m) / "edge.mp4")[..., 0] > 127
-        ec, sc, ed = [], [], []
+        ec, sc, ed, ee = [], [], [], []
         for t, k in enumerate(ks):
             _, _, tag, _ = _load_frame(a, k)
             obj = cv2.erode(np.isin(tag, OBJ).astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
@@ -103,9 +107,15 @@ def _controls2(pair: str):
             gnd = np.isin(tag, GROUND)
             e2 = e | (cv2.Canny(cv2.cvtColor(rgb[t], cv2.COLOR_RGB2GRAY), 30, 90) > 0) & gnd
             ed.append(np.repeat((e2 * 255).astype(np.uint8)[..., None], 3, -1))
+            # edgeE: edgeD, plus dense interior edges of objects on a contrast-equalised frame (CLAHE, Canny 30 / 90):
+            # a dark coat in fog has no Canny 100 / 200 edges and came out as a white mannequin (25863, E3 / G3)
+            eq = CLAHE.apply(cv2.cvtColor(rgb[t], cv2.COLOR_RGB2GRAY))
+            e3 = e2 | ((cv2.Canny(eq, 30, 90) > 0) & obj)
+            ee.append(np.repeat((e3 * 255).astype(np.uint8)[..., None], 3, -1))
             sc.append(LUT[tag])
         write_mp4(root("clips", pair, m) / "edgeC.mp4", np.stack(ec))
         write_mp4(root("clips", pair, m) / "edgeD.mp4", np.stack(ed))
+        write_mp4(root("clips", pair, m) / "edgeE.mp4", np.stack(ee))
         write_mp4(root("clips", pair, m) / "segc.mp4", np.stack(sc))
     from .cosmos_eval import gt
     g = gt(pair)
@@ -154,7 +164,7 @@ def specs2(arm: str, which: str, floors: bool = True, members: str = "plus,minus
                 x[key] = {"control_path": str(cd / f), "control_weight": wgt}
             if anchored:     # anchor = the x- of E2 (lossless mp4), free region = the pedestrian region
                 x["video_path"] = str(root("anchor") / f"{r.pair}_{BASE_OF[arm]}.mp4")
-                x["guided_generation_mask"] = str(root("clips", r.pair) / ("anchor_mask_tight.mp4" if arm == "G3" else
+                x["guided_generation_mask"] = str(root("clips", r.pair) / ("anchor_mask_tight.mp4" if arm in ("G3", "G4") else
                                                                           "anchor_mask.mp4"))
                 x["guided_generation_step_threshold"] = 99
             lines.append(x)
@@ -174,7 +184,7 @@ def blend(which: str, src: str = "G2", base: str | None = None):
     base = base or BASE_OF[src]
     d = root("out", src + "b")
     for pair in _pair_rows(which).pair:
-        a = np.load(root("clips", pair) / ("alpha_tight.npy" if src == "G3" else "alpha.npy")).astype(np.float32)[..., None]
+        a = np.load(root("clips", pair) / ("alpha_tight.npy" if src in ("G3", "G4") else "alpha.npy")).astype(np.float32)[..., None]
         gen = np.load(root("out", src) / f"{pair}_plus_{src}_s{SEED}.npy").astype(np.float32)
         neg = np.load(root("out", base) / f"{pair}_minus_{base}_s{SEED}.npy")
         np.save(d / f"{pair}_plus_{src}b_s{SEED}.npy", np.rint(a * gen + (1 - a) * neg).astype(np.uint8))

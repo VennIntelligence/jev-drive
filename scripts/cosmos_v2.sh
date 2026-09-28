@@ -37,6 +37,12 @@ if has G3; then
   infer "$(py specs2 --arm G3 --which "$which" | tail -1)" edge/distilled G3
   py blend --which "$which" --arm G3; eval_arms+=(G3b)
 fi
+if has E4; then st "E4"; infer "$(py specs2 --arm E4 --which "$which" | tail -1)" edge/distilled E4; eval_arms+=(E4); fi
+if has G4; then
+  st "G4 guided x+"; py anchor --arm E4 --which "$which"
+  infer "$(py specs2 --arm G4 --which "$which" | tail -1)" edge/distilled G4
+  py blend --which "$which" --arm G4; eval_arms+=(G4b)
+fi
 if has M2; then st "M2 multicontrol base on $mpairs"; infer "$(py specs2 --arm M2 --which "$mpairs" --no-floors | tail -1)" seg M2; eval_arms+=(M2); fi
 for v in "${eval_arms[@]}"; do
   only=$([[ $v == M2 ]] && echo "$mpairs" || echo "$which"); [[ $only == all ]] && only=""
