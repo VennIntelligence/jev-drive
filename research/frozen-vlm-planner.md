@@ -1,7 +1,9 @@
 # Frozen VLM + 薄 head 的轨迹规划
 
-状态: 主线主题，2026-09-20 立项。前身是 [qwen-latent-driving.md](qwen-latent-driving.md)（probe 路线，
-已降级为本主题的 analysis 部分，结论见那份文档）。
+状态: 2026-09-20 立项时的主线主题，**现在不再是主线**（2026-09-28 更正：原写「主线主题」）。之后的决策把主线换掉了：
+[decisions.md](decisions.md) 第 40 条判定冻结特征 + 薄 head 上 openpilot 的 `temporal` 比所有通用 backbone（含本文的 Qwen3-VL-4B）都好，
+第 54 条把 openpilot `temporal` ⊕ V-JEPA 2 上的世界模型闭环定为不搁置的主线。本文保留作为立项时的设计记录，下面的阶段计划不再是当前计划。
+前身是 [qwen-latent-driving.md](qwen-latent-driving.md)（probe 路线，已降级为本主题的 analysis 部分，结论见那份文档）。
 
 ## 一句话
 
@@ -73,7 +75,9 @@ difference-of-differences（onset 的增量减去 straight 的增量），结果
 也就是四个子集的增量几乎一样，probe 那个"集中"的模式**在轨迹任务上没有复现**；
 信任域口径上 onset 甚至反而更差（DiD +0.060，显著）。两个任务问的不是同一件事
 （"会不会转" vs "轨迹长什么样"），而 nuScenes 的 onset 子集只有 135 帧，先天测不动。
-**这正是 claim 1 要在 Waymo 上重做的事**，判据已经预登记在 [decisions.md](decisions.md) 第 3d 条。
+**这正是 claim 1 要在 Waymo 上重做的事**，判据预登记在 [decisions.md](decisions.md) 第 3d 条，**已经做完**（2026-09-28 更正：原文写作待做）：
+train split 训、完整 val 评，DiD +0.111 [+0.059, +0.162]，pre-onset 的 delta 不显著且排除了 straight 那一档的增益，
+即视觉的增量在 pre-onset 上更小而不是更大，第 3c 条的证伪条件第二次触发（第 3d 条「train split 复核」）。
 
 ## 对照 backbone 怎么选
 
@@ -109,9 +113,11 @@ V-JEPA 2 这一条其实比原计划更强：文献里 Drive-JEPA 那条线用�
   temporal head（Stage B），还是直接进 VLM 的长上下文（Stage C），要看 oracle 增益。
 - **早退是不是真的。** 只在中层取特征、但仍然跑完整个 LLM，不算节省。要真截断才能声称。
   planner v0 已经实测：真截断到 L22，batch 8 省 31%，但 batch 1 只省 7%（launch overhead 主导）。
-- **ADE 已经饱和，主指标必须是 RFS。** 官方 ADE 是对着评分最高的 rater 轨迹算的，
-  logged future 自己只有 2.63 m，而公开最好的 test ADE 是 2.65 m。所以 ADE 上没有空间，
-  RFS 才有（rater 上限 9.53，logged future 8.08）。见 [decisions.md](decisions.md) 第 2 条。
+- **主判口径是 s_ego 第 1–9 档的 ADE，RFS 并排报**（[decisions.md](decisions.md) 第 22 条，2026-09-22 已决定）。
+  这里原写「ADE 已经饱和，主指标必须是 RFS」（第 2 条）：官方 ADE 对着评分最高的 rater 轨迹算，logged future 自己只有 2.63 m，
+  公开最好的 test ADE 是 2.65 m，所以全集 ADE 上没有空间，RFS 才有（rater 上限 9.53，logged future 8.08）。
+  改的原因（第 22 条）：「关键时刻视觉有没有用」的真假取决于用哪个 judge；顶档上 logged future 落在被打分的三条 proposal 之外，
+  对着单条 log 的 ADE 和 RFS 都读不准，所以主判放在第 1–9 档的 ADE，顶档单独报。
 
 ## 分阶段
 

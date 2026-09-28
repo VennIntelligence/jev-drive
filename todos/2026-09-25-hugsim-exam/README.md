@@ -167,6 +167,11 @@ PandaSet 021 开完），轨迹是原地打转：heading 转置让直行 plan �
 同一批场景上 route follower 在 official 下 7/10 完成，所以这是 “控制器缺陷 × 会外推自身 yaw 的模型” 的相互作用，按预注册
 official 仍是 headline，fixed 是配对次结果。
 
+![HUGSIM checklist trajectories](../../research/figs/hugsim-exam-checklist.png)
+
+看什么：灰线是录制路线，实线是 fixed 控制器、点线是 official 控制器，× 是 run 结束处。official 下的点线都在起点附近打转或撞停（最远不到约 20 m）；
+fixed 下 Lebowski 在 0071 开头绕圈后沿路线开完、在 0062 停在前车后，Cinque 在 0071 / 0062 / 0920 向一侧冲出路线，0071-standstill 两个模型都没有起步。
+
 **fixed 控制器下仍有的闭环打转**（Lebowski 0071 开头 3 圈、Cinque engage 后 14 圈）只出现在没有车道线的货场里：模型把刚执行出的
 yaw 外推成更大的弯。推测（未验证）：HUGSIM 的 bicycle 把前相机当后轴积分，转弯时相机没有真车前相机那 ω·1.7 m 的横向速度，
 模型看到的运动与训练分布不同。验证办法是在仿真器里把渲染位姿前移 1.7 m 做对照，这超出适配层，不做。

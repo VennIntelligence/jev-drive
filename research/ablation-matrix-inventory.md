@@ -1,8 +1,9 @@
 # 消融矩阵盘点（2026-09-26，只读）
 
 状态: 调研报告，2026-09-26 由 Opus 子代理只读写成，主会话落盘；数字以所引出处为准，结论已进 [decisions.md](decisions.md) 第 46、47 条（就地修正见第 35 条）。
+**这是 2026-09-26 的快照**（2026-09-28 更正：原文把下面几格写成「在跑 / 没有」，之后都有了结果）：G0 / G1 / G3b 已跑完，结果在第 44 条；Hydra 打分头上了 P5 v1 BA 与 I3，见第 53 条；V-JEPA 2 等冻结特征上了 P5 v1 BA，见第 48 条。空格表以 decisions.md 为准。
 
-范围：decisions.md 第 20–45 条、research/results/**、todos 2026-09-24 driving-backbones、2026-09-25-*、2026-09-26-*。只抄已有数字；找不到写「未见」；「进行中」= 已登记、box 上在跑、没出数（G0 / G1 / G3b）。
+范围：decisions.md 第 20–45 条、research/results/**、todos 2026-09-24 driving-backbones、2026-09-25-*、2026-09-26-*。只抄已有数字；找不到写「未见」；「进行中」= 2026-09-26 时已登记、box 上在跑、没出数（G0 / G1 / G3b；这三项后来都跑完了，见第 44 条）。
 Box 核对：2026-09-26 只读 `ls` / `du`，没跑任何东西。
 
 ## 0. 协议代号（同一格多个数时靠它区分）
@@ -159,9 +160,9 @@ Box 上已有（`ls` / `du` 核过）：
 | 9 | **Alpamayo `L27_last` 上 P5 或 W-train 复现** | VLA 深层 last-token 是全阶梯唯一两向过门槛的 arm，但只是 10 个次要 array 之一；上 P5 能区分「驾驶微调给了反应」还是多重比较 | GPU 约 20 h（W-train）；P5 更便宜但未估 |
 
 四个点名问题的现状：
-- **Hydra 上过 P5 / I3 吗**：没有。Hydra 只有 NAVSIM Cinque 一行（E6）。
-- **同一 backbone 上 pair-Δ head 上过 NAVSIM / WOD 吗**：上过（无 gate，Cinque / Lebowski 的 M-C）。WOD RFS −1.02 [−1.21, −0.82] / −1.52 [−1.74, −1.30]，NAVSIM PDMS −8.2 / −11、EPDMS −13.0 / −16；编辑对训的也有害（WOD −2.16）。gate 版和 student 版在跑。
-- **V-JEPA 2、DINOv3 上过 P5 吗**：都没有。V-JEPA 权重在盘上但 P5 没抽特征；DINOv3 没有权重。
+- **Hydra 上过 P5 / I3 吗**：2026-09-26 时没有，只有 NAVSIM Cinque 一行（E6）。后来上了：第 53 条在 P5 v1 BA 与 I3 上测了 Hydra 打分头（在配对考卷上不可比，叠加 gated Δ 后 NAVSIM 掉 5–8 分）。
+- **同一 backbone 上 pair-Δ head 上过 NAVSIM / WOD 吗**：上过（无 gate，Cinque / Lebowski 的 M-C）。WOD RFS −1.02 [−1.21, −0.82] / −1.52 [−1.74, −1.30]，NAVSIM PDMS −8.2 / −11、EPDMS −13.0 / −16；编辑对训的也有害（WOD −2.16）。gate 版和 student 版当时在跑，结果见第 44 条（G0 / G1）。
+- **V-JEPA 2、DINOv3 上过 P5 吗**：2026-09-26 时都没有。V-JEPA 2 后来上了 P5 v1 BA（第 48 条：配对差分激发出行人反应，与 Qwen 同一水平）；DINOv3 仍没有权重。
 - **ego-only 在 P5 / I3 上的读数**：P5 v0 6.5% [3.6, 10.3]，v1 BA 6.0%，PDM 7.9%（行人 11.7%），null 0.2–0.6%，全部来自 τ = 0 的标签伪影；I3 0.0%（两侧 ego 相同，按构造）。所以 ego-only 的「反应」读数实际是零。
 
 ## 9. 口径不一致

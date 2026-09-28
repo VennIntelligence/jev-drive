@@ -44,7 +44,7 @@
 - **内容**：坐标轴写单位；有多次运行或 bootstrap 时画 error bar 或 CI，并在说明里写清楚是哪一种。
 - **格式**：每张图同时导出 PDF（矢量，给论文用）和 PNG（300 dpi，给文档预览用）。
 - **风格统一**：所有图都通过代码里同一个 plot style 模块出图（第一次画图时建立），不在单个脚本里手调样式。
-- **存放**：图画完就从 box 拉回本地，放 `research/figs/`，只提交 PNG，单张不超过约 500 KB。
+- **存放**：图画完就从 box 拉回本地，放 `research/figs/`，只提交 PNG，单张不超过约 500 KB。例外：`figs/p3/` 下的小体积循环 WebP 审阅片段（2x2 拼图、5 fps）也提交，给 [p3-exam-filter.md](p3-exam-filter.md) 看逐场景动态用。
   PDF、checkpoint、feature 和原始数据留在 box 的 `$DATA_DIR/runs/`；小的结果文件
   （`results.csv`、`results.md`、metrics、timings）也一并拉回来提交，方便以后对照。
 - **图和文档互相引用**：每张图都要有一份文档收拢它、说明该看什么；孤立的图，或者指向不存在的图的文档，
@@ -54,5 +54,5 @@
 
 ## 文献报告（`research/lit/`）
 
-Deep research 跑出来的长报告放这里。**不进 git**（太大、且是外部生成的材料），只在 box 和本地保留。
+Deep research 跑出来的长报告放这里。**不进 git**（太大、且是外部生成的材料），只在这台 Mac 上保留（2026-09-28 更正：原写「在 box 和本地」；按 CLAUDE.md，研究材料以 Mac 为准，不往 box 拷）。
 结论要用的话，摘进对应的主题文档，并注明 arXiv 号和年月。

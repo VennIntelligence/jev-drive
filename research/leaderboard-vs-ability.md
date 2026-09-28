@@ -28,7 +28,7 @@
 
 **哪些榜单的高分能当能力证据**：Longest6 / LB2 的 RC、NAVSIM v2 的 LK / TLC / EC 子项、HUGSIM RC 乘子可当 R 层证据；**只有 Bench2Drive SR**（和 Longest6 的 IP）可当 E 层证据，WOD RFS 是没有后果的意图级 E 层；nuScenes L2、NAVSIM v1 顶部 4 分、跨长度的 DS 绝对值不能当任何一层的证据。**没有一个榜单单独报告"突发事件时反应对不对"**。
 
-**对我们的含义**（第 7 节）。骨架里"R 层配方不稀缺、E 层稀缺"的判断成立：W1 全部 1,121 行里能归到 E 层的增益只有四条（RAM 的 Give_Way +26.7、DAgger 的 SR、LiDAR 的 SR、RAP 恢复数据 v1 0.0 / v2 +4.4），全部只在闭环或反应式协议里显形。R 层可以直接移植：控制接口 + 作者 PID、route target point、path/speed 解耦、规则（标定后）、测距传感器。值得提取的 E 层来源目前只有一个确证的：TFv6 的 waypoint 通道（P5 定向翻转 39%，按对 73%；拿分的 target speed 通道 2%）。我们的 CARLA 配对考试要防 12 条攻击面（7.3 节），其中四条是从七榜的盲区直接翻译过来的：停着不动是安全的、读哪个通道答案差 20 倍、规则层替代反应、窗口由谁定义。
+**对我们的含义**（第 7 节）。骨架里"R 层配方不稀缺、E 层稀缺"的判断成立：W1 全部 1,121 行里能归到 E 层的增益只有四条（RAM 同权重推理 +2.72 DS / +4.85 SR、DAgger 的 SR、LiDAR 的 SR、RAP 恢复数据 v1 0.0 / v2 +4.4；RAM 一项原写「Give_Way +26.7」，2026-09-26 降级，理由见 4.4 节），全部只在闭环或反应式协议里显形。R 层可以直接移植：控制接口 + 作者 PID、route target point、path/speed 解耦、规则（标定后）、测距传感器。值得提取的 E 层来源目前只有一个确证的：TFv6 的 waypoint 通道（P5 定向翻转 39%，按对 73%；拿分的 target speed 通道 2%）。我们的 CARLA 配对考试要防 12 条攻击面（7.3 节），其中四条是从七榜的盲区直接翻译过来的：停着不动是安全的、读哪个通道答案差 20 倍、规则层替代反应、窗口由谁定义。
 
 **最值得先跑的两个实验**（7.4 节，都没有跑）：TFv6 规则开/关 × 接口 A/B 上 P5 配对（回答"拿分通道不反应"是接口性质还是规则掩盖）；SimLingo 同 ckpt 原版 vs 定制 Bench2Drive 目录（simlingo#43 里 DS +11 而 SR 一条未变，若复现则 SimLingo 系四个方法的 B2D 分数要重标）。
 
@@ -118,7 +118,7 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 | | RoG-DAgger offline DAgger：同 backbone 86.59→90.34（+3.75，SR +7.15） | E 层（恢复分布外状态；SR 涨幅大于 DS） | C | rog_dagger T4 |
 | | LinkVLA action tokenization：85.07→89.57（+4.50） | 表征 | C | linkvla T5 |
 | | TFv6 LiDAR：91.6→94.7（+3.1，SR +6.1）；radar 单加 +2.6，两者叠加 +0.3 | E 层感知（"有一个测距传感器"），**B2D 的 220 条短路线以碰撞类 scenario 为主，被榜单放大** | B | tfv6 T5 |
-| | FIVE-VLA RAM：88.49→90.95（+2.46）；同权重推理 bypass→accumulation +2.72；**Give_Way 50.00→76.67，Emergency_Brake 81.67→87.78** | **E 层，账本里唯一能落到具体突发场景的证据** | A−/C | five_vla T4/T7/T8 |
+| | FIVE-VLA RAM：88.49→90.95（+2.46）；**同权重推理 bypass→accumulation +2.72 DS / +4.85 SR**，Emergency_Brake 81.67→87.78；论文报的 Give_Way 50.00→76.67 超过该项 50% 的上限（YTEV 上学习式方法 SR 全 0），无逐路线结果可核 | E 层，证据以同权重推理 +2.72 为主（2026-09-26 降级：原写「Give_Way +26.7，账本里唯一能落到具体突发场景的证据」，见 decisions 第 35 条） | A−/C | five_vla T4/T7/T8 |
 | CARLA LB2 | 视觉预训练：去掉后 6.87→0.45 | 一般能力 | D | carllava T2 |
 | | **早停**：同权重 1300 m 3.93 / 1800 m 4.49 / 2100 m 6.87 / 2400 m 6.35；TF++ Town13 同模型 DS 0.96→5.10 而 RC 68.5→11.5、normalized DS 4.94→2.27 | **纯 metric**：唯一有 RC 的对照显示归一化分数**下降** | A−/D | simlingo_base T9; tfpp T5 |
 | | Kyber-E2E 把 privileged 检测/跟踪换成真实模块：27.25→7.76 / 11.84 | E 层感知是长路线的死因 | C | kyber T-I |
@@ -147,7 +147,7 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 
 - **nuScenes**：top-3 全是 ego-state prior。这个榜测的是 R 层 continuation prior 的拟合精度，视觉几乎不参与。
 - **NAVSIM v2**：top-2 都是 EPDMS 代理评分器（TOAD、GTRS）。v2 navhard 榜首位置基本被评分器方法占据；无评分器的方法（WA-JEPA 91.7 是 navtest；DriveFuture 无 GTRS-Dense scorer 时 34.6，提交 55.5）不在榜首。
-- **Bench2Drive**：top-5 是真实能力（gate、DAgger、tokenization、LiDAR、RAM），并且 FIVE-VLA 的能力分项把 RAM 定位到 Give_Way / Emergency_Brake。但 B2D 也有账本没覆盖的规则/接口部分（第 3 节）：TFv6 从 Table 3 的 89.29 到 Table 5 的 91.6（360° camera 基线）之间有 +2.3 的空档，正是论文未消融的"规则 + 数据量 + 控制接口"。
+- **Bench2Drive**：top-5 是真实能力（gate、DAgger、tokenization、LiDAR、RAM），并且 FIVE-VLA 的能力分项把 RAM 定位到 Emergency_Brake（论文还报了 Give_Way +26.7，但超出该项 50% 的上限，2026-09-26 已降级，见 4.4 节）。但 B2D 也有账本没覆盖的规则/接口部分（第 3 节）：TFv6 从 Table 3 的 89.29 到 Table 5 的 91.6（360° camera 基线）之间有 +2.3 的空档，正是论文未消融的"规则 + 数据量 + 控制接口"。
 - **WOD-E2E**：数据（领域预训练）决定 95%，RFS 直接优化的段落只加 0.08–0.09，而且在难例上反降。
 
 
@@ -176,7 +176,7 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 
 | 方法 | 榜 / 分 | 增益来源 | 备注 |
 |---|---|---|---|
-| FIVE-VLA | B2D 90.95 | 结构：RAM（+2.46；推理同权重 +2.72）；感知：FastViTHD（+2.61） | 增益落到 Give_Way / Emergency_Brake；预算配平后仍 +2.25 |
+| FIVE-VLA | B2D 90.95 | 结构：RAM（+2.46；推理同权重 +2.72）；感知：FastViTHD（+2.61） | 增益落到 Emergency_Brake（Give_Way 数字超出该项上限，已降级）；预算配平后仍 +2.25 |
 | RoG-DAgger | B2D 90.34 | 训练数据：offline DAgger（同 backbone +3.75） | 收益在 SR，是恢复能力 |
 | LinkVLA | B2D 91.01 | 表征：action tokenization（+4.50）；language-action alignment（+1.16） | 逐级消融，第一级占 75% |
 | SteerVLA | B2D 90.71 | 结构：hierarchical meta-action（+2.87）；grounded reasoning labels（+1.90） | 复合改动 |
@@ -186,9 +186,8 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 | Poutine | WOD 7.99 | 领域预训练（+2.36） | GRPO 只 +0.08 |
 | OmniSpace | nuScenes 0.28 | 3D 几何蒸馏 + Plücker ray + epipolar（合计 −0.09 m） | ego prior 之外能拿到的全部空间 |
 
-共同点：增益都能落到"训练时改了什么"，而不是"推理时怎么选"。它们在 B2D 上齐刷刷停在 90–91 这一档，与 TFv6 95.2 的差距主要是 LiDAR（+3.1）加规则/接口（账本外，我们测到接口 +14 是相对 waypoint 而言）。**推测**：B2D 上 90→95 这 5 分不是智能差距，是传感器和控制接口的差距；验证方法是给任一 VLA 方法接上 TFv6 的 route + target speed 接口和 LiDAR 安全框重跑。
-
-**2026-09-26 就地修正**：上面「接口」一项用错了比较对象。第 31 条的 +14 是 TFv6 内部 route + target speed 对它自己 waypoint 的差；SimLingo 系本来就输出 path + speed waypoint 加两个 PID（FIVE-VLA p.7），已经是解耦接口，所以 +14 解释不了 VLA 与 TFv6 的差距。TFv6 纯相机 91.6 已与 VLA 同档，传感器那一项是 B 级证据；规则约 1 且双方都有；95.2 在第三方单 ckpt 重跑里是 89.6（decisions 第 38 条），差距是否存在未定。此外 FIVE-VLA 的 Give_Way 76.67 超过该项 50% 的上限（YTEV 所有学习式方法 SR 0），RAM 的 E 层证据改以同权重推理 +2.72 DS 为主。复核全文见 [nohack-mechanisms.md](nohack-mechanisms.md)。
+共同点：增益都能落到"训练时改了什么"，而不是"推理时怎么选"。它们在 B2D 上齐刷刷停在 90–91 这一档。与 TFv6 95.2 的差距**若存在，主要对应测距传感器**：TFv6 纯相机 91.6 已与 VLA 同档，加 LiDAR 到 94.7（+3.1，3 seed，B 级证据）；规则约 1 DS 且双方都有；而 95.2 在第三方单 ckpt 重跑里是 89.6（decisions 第 38 条），这 5 分是否存在本身未定。**推测**：B2D 上 90→95 不是智能差距；验证方法是给任一 VLA 方法接上 LiDAR 安全框重跑。
+（2026-09-26 就地修正：原写「差距主要是 LiDAR 加规则/接口，90→95 是传感器和控制接口的差距」。接口一项用错了比较对象：第 31 条的 +14 是 TFv6 内部 route + target speed 对它自己 waypoint 的差，SimLingo 系本来就输出 path + speed waypoint 加两个 PID（FIVE-VLA p.7），已经是解耦接口，所以 +14 解释不了 VLA 与 TFv6 的差距。同一复核把 FIVE-VLA 的 Give_Way 76.67 判为超过该项 50% 的上限，RAM 的 E 层证据改以同权重推理 +2.72 DS 为主。复核全文见 [nohack-mechanisms.md](nohack-mechanisms.md)。）
 
 ### 4.5 ego prior 在各榜上的符号
 
@@ -202,7 +201,7 @@ W1 账本 1,121 行里主榜 872 行；有 seed 的只有 69 行（TFv6、BLUE�
 | aux:nvidia 开环 | 同一改动 | speed_ADE 0.549→0.373 | 同一改动开环加分 |
 
 **结论**：同一个 R 层 prior，短时开环上饱和，闭环上是负的。这与 causal confusion / copycat 文献一致，也与我们 P0/P1 的"RFS 口径上 ego-only 排第一"一致。
-**推测**：E 层能力只在闭环或反应式协议里显形（RAM 的 Give_Way、DAgger 的 SR、LiDAR 的 SR、RAP 恢复数据 v1 0.0 → v2 +4.4）。
+**推测**：E 层能力只在闭环或反应式协议里显形（RAM 的同权重推理 +2.72 DS / +4.85 SR、DAgger 的 SR、LiDAR 的 SR、RAP 恢复数据 v1 0.0 → v2 +4.4）。
 
 ## 5. 跨榜一致性：排序能互相当证据吗（W2）
 
@@ -316,7 +315,7 @@ R 层 = routine（保持车道、转弯、跟车、按灯停、起步），E 层
 | 停牌规则、卡住蠕行 | R（停牌）/ R（脱困） | **替代**网络，可移植但要重新标定 | TFv6 三项联合约 1 DS；其余无数字 |
 | 测距传感器（LiDAR 或 radar，二选一） | E（感知） | 正面 | +3.1 DS、SR +6.1；两者不叠加 |
 | LiDAR 安全框（蠕行前检查前方为空） | E | 替代（规则式的"有没有障碍"） | 无数字 |
-| FIVE-VLA RAM（动作记忆） | **E** | 正面，值得提取 | Give_Way +26.7、Emergency_Brake +6.1，同权重推理 +2.7 |
+| FIVE-VLA RAM（动作记忆） | **E** | 正面，值得提取 | 同权重推理 +2.72 DS / +4.85 SR、Emergency_Brake +6.1（原列的 Give_Way +26.7 超出该项上限，2026-09-26 降级，见 4.4 节） |
 | DAgger 恢复数据（RoG-DAgger） | E | 正面（数据配方） | SR +7.15 |
 | 恢复扰动数据（RAP） | E | 正面，且证明 v1 不奖励恢复 | v1 0.0 / v2 +4.4 |
 | 合成困难场景（DrivoR SimScale） | E（推测） | 正面，预算未配平 | +6.3 EPDMS |
@@ -329,12 +328,11 @@ R 层 = routine（保持车道、转弯、跟车、按灯停、起步），E 层
 
 ### 7.2 直接移植 vs 从模型里提取
 
-**直接移植（R 层，不稀缺）**：控制接口 + 作者 PID（我们已测 +14）、route target point 编码、path / speed 解耦输出、停牌与脱困规则（标定后）、测距传感器。这些都是配方，拿来就能用，且 W1 显示无技巧的 VLA 方法齐刷刷停在 B2D 90–91，与 TFv6 95 的差距主要就是 LiDAR + 接口。
-（2026-09-26 就地修正：末句的「+ 接口」不成立，SimLingo 系已经是 path + speed + PID 接口，+14 是 TFv6 内部两种读法的差；差距若存在，对应测距传感器，见 4.4 节修正与 decisions 第 35 条。）
+**直接移植（R 层，不稀缺）**：控制接口 + 作者 PID（我们已测 +14）、route target point 编码、path / speed 解耦输出、停牌与脱困规则（标定后）、测距传感器。这些都是配方，拿来就能用，且 W1 显示无技巧的 VLA 方法齐刷刷停在 B2D 90–91；与 TFv6 95 的差距若存在，对应测距传感器（2026-09-26 就地修正：原写「差距主要就是 LiDAR + 接口」，但 SimLingo 系已经是 path + speed + PID 接口，+14 是 TFv6 内部两种读法的差，见 4.4 节与 decisions 第 35 条）。
 
 **值得提取（E 层，稀缺）**：
 - **TFv6 的 waypoint 通道**：P5 上定向翻转率 39%（按对 73%），从不反向；拿分的 target speed 通道只有 2%。它是目前唯一一个"在配对考试上确证会反应"的公开模型输出，是 Δ-distillation 的第一个 teacher 候选。
-- **FIVE-VLA 的 RAM**：账本里唯一能落到 Give_Way / Emergency_Brake 的结构性增益，但无代码（W5 可核验度 0）。只能按论文复现结构，不能提取权重。
+- **FIVE-VLA 的 RAM**：同权重推理 +2.72 DS / +4.85 SR、Emergency_Brake +6.1 的结构性增益（原写「唯一能落到 Give_Way 的」，Give_Way 数字超出上限已降级），但无代码（W5 可核验度 0）。只能按论文复现结构，不能提取权重。
 - **DAgger / 恢复扰动 / 合成困难场景**：三者都是"让训练分布覆盖 E 层状态"的数据配方，且 RAP 的 v1 0.0 / v2 +4.4 说明只有反应式协议才能看见它们。这与我们的干预对（intervention pair）思路同构：pair 就是最小的恢复数据。
 
 **推测**（骨架里的判断，现在有了材料支撑）：R 层的配方不稀缺、E 层稀缺。W1 里 E 层证据一共就四条（RAM、DAgger、LiDAR 的 SR、RAP 恢复数据），且全在闭环或 v2；nuScenes、NAVSIM v1、WOD 三个开环/代理榜上没有任何一条增益能归到 E 层。

@@ -146,7 +146,7 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
   NAVSIM 上 2 Hz 输入让原生 plan 失效，特征却基本没坏。
 - **原生 plan 只在输入协议匹配时有意义**：WOD 上 Cinque 原生是全表最强的单轨迹行（8.00，公开榜第一梯队的量级）；NAVSIM 上它不代表模型。
   以后报 openpilot 的榜单数字，按数据集的帧率决定报原生还是「特征 + head」，不混用。
-- **读出是下一步的主要空间**：WOD 上最好的 head 仍比 Cinque 原生低 0.24 RFS；NAVSIM 上离 TransFuser 还差 6 PDMS。两边的缺口都在「单 mode 线性读出」这一层（第 40 条第 3 点）。
+- **读出层的缺口**：WOD 上最好的 head 仍比 Cinque 原生低 0.24 RFS（3 seed 重算后 Cinque 三个 seed 都没补上，见第 40 条 R40 修正）。NAVSIM 上离 TransFuser 的 6 PDMS 已经补上：同一份冻结 `temporal`、同一套候选轨迹，只把「选哪条」换成 Hydra-MDP 式按 PDM 子分打分，navtest PDMS 77.9 → 84.2（3 seed 84.2 / 83.8 / 84.3），[decisions.md](decisions.md) 第 40 条第 6 点把这 6 分判为对准 metric 的 R 层配方，不是表征。（2026-09-28 更正：原写「两边的缺口都在单 mode 线性读出这一层」，是 E6 打分头出结果之前的判断。）
 - **route 不从 desire 进**（p5route 2b）：WOD 上 intent → desire 让 Cinque 原生 −0.13、静止帧 −0.66；NAVSIM 的 cmd desire 同样拖分（−1.0 到 −1.2 EPDMS）。
 
 ## 6. 缺口
@@ -155,5 +155,5 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 |:--|:--|
 | WOD test split 的提交 | 数据在下（共享网络 2–5 MB/s，剩约 65 个 shard，ETA 约 15 h），链式脚本自动生成 Cinque / Lebowski 原生 plan 的提交包，**不上传**。要不要用一次配额（每 30 天 6 次）、交哪一行（原生 Cinque，或 `temporal` + `cls_late`，后者还要在 test 帧上抽特征）由用户决定 |
 | NAVSIM 的 10 Hz 原始相机（nuPlan sensor blobs） | 不做：TB 级下载。第 2 节给出同一问题在 WOD 上的量级；第 3 节说明特征 + head 已绕开它 |
-| NAVSIM 上的多模态读出、多相机 | 没做；是离 specialist 那 6 分的候选来源 |
-| 单 seed | 所有 head 都是一次拟合；WOD 的 CI 半宽约 0.2 RFS，NAVSIM 约 0.7 PDMS |
+| NAVSIM 上的多模态读出、多相机 | 多模态读出做了（Hydra 式打分头 84.2 PDMS，3 seed，第 40 条第 6 点；原写「没做」）；多相机没做 |
+| seed | 已补到 3 seed（原写「单 seed，所有 head 都是一次拟合」）：WOD `cls_late` 见 [夜间队列](../todos/2026-09-26-overnight-queue.md) 第 2 项与第 40 条 R40 修正（「Lebowski 够到原生」只在 seed 0 上成立），NAVSIM 打分头见夜间队列 2 的 N3 |

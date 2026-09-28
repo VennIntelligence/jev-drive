@@ -1,6 +1,7 @@
 # 2026-09 预诊断轮：方法选型之前的开环测量
 
-状态: 进行中，2026-09-22 起。结果随到随记，每一节末尾标「已测 / 在跑 / 待做」。
+状态: **已完成**（2026-09-22 起，P0–P5 都已测完；2026-09-28 更正：原写「进行中」）。结果随到随记，各节里的「在跑 / 待做」是当时的状态，以本表和 decisions 为准。
+之后的选型已经往前走：第 40 条把表征定为 openpilot `temporal`，第 54 条把主线定为 openpilot ⊕ V-JEPA 2 上的世界模型闭环。
 背景: [decisions.md](../decisions.md) 第 21 条（方向：AD 方法论文）、第 25 条（方法假设：reaction decoder）；
 文献现状见 [survey-counterfactual-video-gen.md](../survey-counterfactual-video-gen.md)。
 每个预诊断的计划和判据在 `todos/2026-09-22-p*-*.md`，数字的权威版本在 decisions 第 3d、20、22、23、24 条，
@@ -13,7 +14,7 @@
 
 | # | 预诊断 | 回答 | 状态 |
 |---|---|---|---|
-| P0 | train split 复核 3d / L0 | 半 val 的结论在 10 倍数据下站不站得住 | **已测**（分类头的 RFS 行在跑） |
+| P0 | train split 复核 3d / L0 | 半 val 的结论在 10 倍数据下站不站得住 | **已测**（分类头的 RFS 行也已测完，见第 20 条的 train split 复核；原写「在跑」） |
 | P1 | judge 口径 | 高 surprise 段用什么当 judge | **已测，口径已定（第 22 条）** |
 | P2 | 读出阶梯 | 失败在 readout / 输入还是表征 | **已测** |
 | P3 | backbone 阶梯 | 表征换谁 | **全部完成**：(a) 32B null；(d)(d′)(d‴) V-JEPA 家族 train 训后缩到 −0.03、测不动；(c) Wan 零；(d″) Qwen 原生视频唯一两方向 CI 不跨零，因素是时间；(b) H3 **关闭**（2026-09-23：重开条件是 Wan 有信号，Wan 为零，不再做）；(e) 驾驶专用 backbone（2026-09-25，第 40 条）：openpilot `temporal` 比所有通用 backbone 好一个量级，train 训后 pre-onset −0.29 |
@@ -201,6 +202,11 @@ ViT-g −0.027 [−0.096, +0.045]；late fusion −0.036 [−0.101, +0.032]。�
 限定：这分不开「表征里没有」和「global mean-pool 读出太弱」，Wan 没跑非 mean-pool 的对照，所以能说的是 DriveLaW 那份配方在这里为零，
 不是生成式表征整体为零。加上 (a) 已把 H3 的理解侧量成零，H3 两个可能的来源都指向无，(b) deferred 的赌注兑现。
 
+![P3 all arms decile](../figs/p3-all-decile-relative-gain.png)
+
+看什么：同一张图上叠了 P3 的全部 arm（(a) 32B、(c) Wan 四个 tap、(d) V-JEPA 2、(d″) Qwen 原生视频）和对照 A，纵轴是对 ego 的相对增益（向上为更好）。
+Wan 的四条线在十个 s_ego 档上都贴着 0，既不像别的 arm 那样在第 4–9 档拿到 5–12% 的增益，也不像它们那样在第 1–2 档比 ego 差——它对 ego 几乎没有改动，这就是「不只是 pre-onset 上的零」。
+
 ### (a) Qwen3-VL-32B：放大同族 VLM 是一个干净的 null
 
 20 237 帧、633 ms / 帧、3 h 33 min、峰值 63.8 GB，只跑到第 50 层（H3 当 conditioner 用的那一层），实测 268 TFLOPS bf16，贴着屋顶。
@@ -223,9 +229,8 @@ RFS 八个里七个更差（最低 −0.151）。实际执行的非 embedding �
 
 抽取成本：V-JEPA 2 8.1 ms / 帧（0.75 GB 显存），Qwen-4B 网格 90.9 ms / 帧，Qwen-32B 621 ms / 帧（63.8 GB 显存）。
 
-在跑和已排：(a) Qwen3-VL-32B 第 32、50 层，约 3.5 h；(d') V-JEPA 2 ladder：三相机（拼接）、8 / 16 帧、ViT-g、
-与 Qwen L18 的 late fusion（2.1 版跳过：hub 上只有第三方转传，按第 12 条的出处规矩不用），回答方向不一致是不是单相机和样本量造成的；(b) H3 DiT 和 (c) Wan2.2-5B 卡在下载
-（3–5 MB/s，71 GB 和 23 GB），抽取代码已写好，噪声水平扫 σ ∈ {0.2, 0.8} 两端。
+（2026-09-28 更正：这里原写「在跑和已排：(a) 32B、(d′) V-JEPA 2 ladder 在跑，(b) H3 DiT 和 (c) Wan2.2-5B 卡在下载」。都已了结：(a) 与 (d′) 结果见上面各节；(c) Wan 处处为零；
+(b) H3 在 2026-09-23 按用户决定关闭，重开条件是 Wan 有信号，Wan 为零，不再做（decisions 第 24 条）。）
 
 ### (e) 驾驶专用 backbone：openpilot 的时序特征比所有通用 backbone 都好（2026-09-25，第 40 条）
 
@@ -369,7 +374,7 @@ proposal 不含这一模态）；**4 帧是「log 本来就被认可」**（[2] 
 - readout：不换。pooled ridge 是这批特征上最好的读出，非线性 head 在这个数据量上只有损失。按第 22 条口径重报后差距更大。
 - 表征：时间要长进 backbone 里，不能拼在读出端；做到这一点的是 **Qwen 自己的视频路径**（d″，两方向 CI 不跨零，DiD 归零），不是 JEPA（train 训后缩到 −0.03）也不是生成式 DiT（Wan 为零）。
   放大同族 backbone 没有用（32B 八个 tap 全在噪声带）。Stage B 的表征选择：Qwen3-VL-4B + 原生视频输入，再往上是给它更长的 clip。
-  *2026-09-25 修正*：上一句原来是结论，现在被 P3(e) 推翻——在驾驶视频上训过的时序表征（openpilot `temporal`）在同一 head、同一 judge 下全部帧 ΔADE −0.32 m、RFS +0.29，train 训后 pre-onset −0.29，远超 Qwen 原生视频（−0.05 / −0.02 / ≈0）；Stage B 的表征候选改为 openpilot `temporal`，Qwen 视频路径降为对照（第 40 条，待定）。
+  *2026-09-25 修正*：上一句原来是结论，现在被 P3(e) 推翻——在驾驶视频上训过的时序表征（openpilot `temporal`）在同一 head、同一 judge 下全部帧 ΔADE −0.32 m、RFS +0.29，train 训后 pre-onset −0.29，远超 Qwen 原生视频（−0.05 / −0.02 / ≈0）；Stage B 的表征候选改为 openpilot `temporal`，Qwen 视频路径降为对照（第 40 条：openpilot 部分 2026-09-25 已由待定升为**已定**，WOD 与 nuScenes 两个数据集；Alpamayo 部分仍待定。2026-09-28 更正：原写「第 40 条，待定」）。
 - 评测：pre-onset 的 power 被 479 个 val sequence 锁死，train 训多十倍数据不改半宽（d‴）。要判 0.05 m 以下的效应得改评测设计，不是加数据。
 - 反应通道（第 25 条）：「什么时候反应」真实数据学得会，「怎么反应」学不会，配对监督的靶子是后者。
 - 仿真配对（P4）：Waymo 训的 head 不能拿 CARLA 帧来考，P5 已改成 CARLA 内训考（下面的 P5 节）：考卷成立，公开 planner 在 waypoint 上过四成，我们的 CARLA 内薄 head 翻转率为 0。
