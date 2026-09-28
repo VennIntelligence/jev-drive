@@ -466,7 +466,9 @@ def shift_offsets(out: str, stage: str) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-PREFIX_POS_M, PREFIX_COS, DROP_MAX = 0.01, 0.999, 0.05
+# DROP_SET_MIN: the per-set drop fraction is judged once a set has this many checked groups (one drop in stage 3's
+# seven P6 groups is 14 %); the overall fraction always, and the full set at its end with no minimum (scripts/wl_full.sh).
+PREFIX_POS_M, PREFIX_COS, DROP_MAX, DROP_SET_MIN = 0.01, 0.999, 0.05, 20
 
 
 def _prefix_pose(args) -> dict:
@@ -591,7 +593,7 @@ def sanity(out: str, stage: str) -> dict:
         rows.append(rec)
     t = pd.DataFrame(rows)
     pre = prefix(out, stage) if stage != "full" else pd.DataFrame()   # the full set: pose via drops() only
-    dr = drops(out)
+    dr = drops(out, gate_min=DROP_SET_MIN)
     gone = {d["fork_id"] for d in dr["dropped_groups"]}
     fin = t[t.done & t.get("error", pd.Series(np.nan, index=t.index)).isna() & ~t.fork_id.isin(gone)]
     npb = nonped_both(fin)
