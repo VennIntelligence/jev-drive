@@ -100,7 +100,10 @@ def render(a):
     X = data / "runs/nq4/p3/xinsert"
     old_pi = {json.loads(p.read_text())["scene"] for p in (data / "runs/nq4/p3/insert_batch").glob("p3_*/meta.json")
               if json.loads(p.read_text()).get("chosen")}
-    for md in sorted((X / "items").glob("p3_[0-9][0-9][0-9]/meta.json")):
+    # items dropped by the resolution gate (user 2026-09-28) stay on the sheet as dropped rows, id suffix -d
+    mds = [(md, False) for md in sorted((X / "items").glob("p3_[0-9][0-9][0-9]/meta.json"))]
+    mds += [(md, True) for md in sorted((X / "items_dropped_gate").glob("p3_[0-9][0-9][0-9]/meta.json"))]
+    for md, dropped in mds:
         m = json.loads(md.read_text())
         pl = m["plan"]
         v3 = pl["variants"].get("ins3") or {}
@@ -108,15 +111,20 @@ def render(a):
             continue                                          # rendered before the walk-in rules: not an exam item
         src = md.parent
         win = window([2 * t for t in m["frames"]], 2 * m["t_star"], 1, pre_s=pl.get("lead", 30) / 10)   # the whole walk-in
-        iid = f"PI-{int(m['scene'][3:]):03d}"
+        iid = f"PI-{int(m['scene'][3:]):03d}" + ("-d" if dropped else "")
+        gate = json.loads((src / "gate.json").read_text()) if (src / "gate.json").exists() else None
         dn = pl["donor"]
         cap = (f"pedestrian insertion, cross-scene donor p3_{dn['scene']:03d}/{dn['node']}, walk-in from the kerb ({v3['walk_s']:.1f} s at "
                f"{v3['speed']:.1f} m/s), TTR 3 s  |  view gap {pl['view_gap']:.0f} deg  |  donor PSNR {dn['psnr']:.1f} dB")
         size = clip(out, iid, [src / "real/cams/front" / f"{t:07d}.jpg" for t in win], [src / "ins3/cams/front" / f"{t:07d}.jpg" for t in win],
                     [(t - 2 * m["t_star"]) / 20 for t in win], cap)
         changed = m["scene"] in old_pi
-        items.append({"id": iid, "type": "PI", "scene": m["scene"], "segment": m["target_segment"],
-                      "category": "must-react (TTR 2 / 3 / 4 s) + null" + ("; changed 2026-09-28: walk-in rules, cross-scene donor" if changed else ""),
+        cat = "must-react (TTR 2 / 3 / 4 s) + null" + ("; changed 2026-09-28: walk-in rules, cross-scene donor" if changed else "")
+        if dropped:
+            cat = (f"DROPPED 2026-09-28 by the resolution gate: magnification {max(gate['mag'].values()):.2f} > 1.25 (donor seen no closer "
+                   f"than {gate['d_close']:.1f} m in its own log); re-planned with the expanded donor bank")
+        items.append({"id": iid, "type": "PI", "scene": m["scene"], "segment": m["target_segment"], "dropped": dropped,
+                      "category": cat,
                       "view_gap": pl["view_gap"], "psnr": dn["psnr"], "donor": f"p3_{dn['scene']:03d}/{dn['node']}",
                       "walk_s": v3["walk_s"], "vis_out_s": v3["vis_out_s"], "gain": m.get("gain_rgb"),
                       "shadow_frac": m.get("shadow_on_fraction", {}).get("ins3"), "changed": changed, "bytes": size})

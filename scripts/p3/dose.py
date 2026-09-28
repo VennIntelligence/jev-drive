@@ -129,18 +129,34 @@ def render(a):
         crossing = from the sidewalk at the donor's gait into the point, reached at t*. {t: (R, T, Rd, s)}, feet, gap,
         or (None, None, reason)."""
         S = path.Se[ts] + XI.FRONT + dist
+        # resolution gate (user 2026-09-28): only donors seen in their own log at <= MAG_MAX x this cell's farthest
+        # possible camera distance can pass xinsert.walk_plan's exact per-frame check, so the rest are not tried
+        reach = XI.MAG_MAX * (dist + XI.FRONT + abs(lat) + 8.0)
+        cand = [q for q in bank_ if q["d_close"] <= reach]
         if st == "stand":
-            # a standing person may face any way: the facing (15 deg steps) with the smallest view gap
-            opts = [XI.walk_plan(g, path, gr, actors, obs_all, d, win, 1.0, ts, S, lat, PRE_R, POST_R, "stand", face=f)
-                    for f in np.radians(np.arange(0, 360, 15))]
-            ok = [o for o in opts if "fail" not in o]
-            b = min(ok, key=lambda o: o["gap"]) if ok else opts[0]
-            b["donor"] = d
+            # over the donor bank (resolution gate: a scene donor is rarely seen close enough), any facing in 15 deg
+            # steps: the feasible placement with the smallest view gap
+            best, why = None, {}
+            for dd in cand:
+                ob = np.radians(np.asarray(dd["az"]))
+                for f in np.radians(np.arange(0, 360, 15)):
+                    o = XI.walk_plan(g, path, gr, actors, ob, dd, dd["windows"][0], 1.0, ts, S, lat, PRE_R, POST_R, "stand", face=f)
+                    if "fail" in o:
+                        k_ = o["fail"].split(" at frame")[0].split(" (")[0].split(":")[0]
+                        why[k_] = why.get(k_, 0) + 1
+                    elif best is None or o["gap"] < best["gap"]:
+                        best = {**o, "window": dd["windows"][0], "donor": dd}
+            if best is None:
+                return None, None, "no feasible standing placement: " + (", ".join(f"{k_} {v_}" for k_, v_ in sorted(why.items(), key=lambda q: -q[1])[:3])
+                                                                          or f"no donor seen closer than {reach:.0f} m")
+            if best["gap"] > XI.AZ_MAX:
+                return None, None, f"best view gap {best['gap']:.0f} deg > {XI.AZ_MAX:.0f}"
+            b = best
         else:
             # crossing: over the whole donor bank and every 1.0-1.8 m/s window, the feasible walk-in with the smallest
             # view gap (a walking donor is seen from where the log saw it walk; one scene donor rarely fits every cell)
             best, why = None, {}
-            for dd in bank_:
+            for dd in cand:
                 ob = np.radians(np.asarray(dd["az"]))
                 for w_ in dd["windows"]:
                     if not XI.V_WALK[0] <= w_["speed"] <= XI.V_WALK[1]:
@@ -152,7 +168,8 @@ def render(a):
                     elif best is None or o["gap"] < best["gap"]:
                         best = {**o, "window": w_, "donor": dd}
             if best is None:
-                return None, None, "no feasible walk-in: " + ", ".join(f"{k_} {v_}" for k_, v_ in sorted(why.items(), key=lambda q: -q[1])[:3])
+                return None, None, "no feasible walk-in: " + (", ".join(f"{k_} {v_}" for k_, v_ in sorted(why.items(), key=lambda q: -q[1])[:3])
+                                                              or f"no donor seen closer than {reach:.0f} m")
             if best["gap"] > XI.AZ_MAX:
                 return None, None, f"best view gap {best['gap']:.0f} deg > {XI.AZ_MAX:.0f}"
             b = best
@@ -301,7 +318,7 @@ def render(a):
             xd.pose = {}
             mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "view_gap": gap, "gain": [float(x) for x in gain],
                   "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "kerb_src": b["kerb_src"], "walk_s": b["walk_s"],
-                  "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"],
+                  "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"], "mag": b.get("mag"), "donor_d_close": b["donor"]["d_close"],
                   "donor": f"p3_{b['donor']['scene']:03d}/{b['donor']['node']}"}
             (cd / "meta.json").write_text(json.dumps(mc))
             meta_cells[cid] = mc
@@ -310,6 +327,50 @@ def render(a):
             "render_s": round(time.time() - t0, 1)}
     (out / "meta.json").write_text(json.dumps(meta, indent=1, default=float))
     print(json.dumps({"done": f"p3_{kk}_{state}", "cells": len(meta_cells), "render_s": meta["render_s"]}))
+
+
+def gatecheck(a):
+    """Resolution gate on cells rendered before it (user 2026-09-28): the pedestrian's closest front-camera distance over
+    the clip from the cell geometry (standing: the fixed point; crossing: perpendicular to the path at the donor's speed
+    from its start point, at the point at t*, walking on after it), against the donor's closest logged distance. A cell
+    over the magnification cap moves to <item>/_gate_dropped/<cell> with the reason; the next render pass re-places it."""
+    import shutil
+    dc = {f"p3_{q['scene']:03d}/{q['node']}": q["d_close"] for q in XI.load_bank()}
+    n = {"kept": 0, "dropped": 0, "placed_under_gate": 0}
+    for sd in sorted((DO / "items").glob("p3_*_*")):
+        if not (sd / "meta.json").exists() or sd.name.count("_") != 2:
+            continue
+        m = json.loads((sd / "meta.json").read_text())
+        g = XI.scene_geom(m["scene"])
+        path = INS.Path2D(g["E"])
+        ts = m["t_star"]
+        for cd in sorted(p for p in sd.iterdir() if (p / "meta.json").exists() and p.name not in ("real", "minus")):
+            mc = json.loads((cd / "meta.json").read_text())
+            if mc.get("mag") is not None:
+                n["placed_under_gate"] += 1
+                continue
+            donor = mc.get("donor") or f"p3_{m['donor']['scene']:03d}/{m['donor']['node']}"
+            Q, th, _ = path.at(path.Se[ts] + XI.FRONT + mc["dist"])
+            right = np.array([np.sin(th), -np.cos(th)])
+            stand = mc["ped_state"] == "stand"
+            start = mc["lat"] if stand else max(mc["kerb"] + XI.KERB_OFF, mc["lat"] + 1.0)
+            ds = []
+            for t in range(ts - PRE_R, ts + POST_R + 1):
+                xy = Q + (mc["lat"] if stand else min(start, mc["lat"] + mc["donor_speed"] * (ts - t) / HZ)) * right
+                if XI.in_fov(g, t, np.r_[xy, 0.0]):
+                    ds.append(np.linalg.norm(xy - XI.cam_axis(g, t)[0][:2]))
+            mag = dc[donor] / min(ds) if ds else 0.0
+            if mag <= XI.MAG_MAX:
+                n["kept"] += 1
+                continue
+            dst = sd / "_gate_dropped" / cd.name
+            dst.parent.mkdir(exist_ok=True)
+            shutil.move(str(cd), str(dst))
+            (dst / "gate.json").write_text(json.dumps({"mag": round(mag, 2), "donor": donor, "d_close": dc[donor],
+                                                       "closest_cam_m": round(min(ds), 2), "rule": XI.GATE_RULE}))
+            n["dropped"] += 1
+            print(json.dumps({"item": sd.name, "cell": cd.name, "mag": round(mag, 2)}), flush=True)
+    print(json.dumps(n))
 
 
 def stage(a):
@@ -345,9 +406,10 @@ def main():
     p.add_argument("--scene", type=int, required=True)
     p.add_argument("--state", choices=("pull", "creep", "cruise"), required=True)
     sp.add_parser("stage")
+    sp.add_parser("gatecheck")
     a = ap.parse_args()
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
-    {"anchors": anchors, "render": render, "stage": stage}[a.cmd](a)
+    {"anchors": anchors, "render": render, "stage": stage, "gatecheck": gatecheck}[a.cmd](a)
 
 
 if __name__ == "__main__":

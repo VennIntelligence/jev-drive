@@ -45,14 +45,25 @@ DSM = INS.DSM
 DATA = Path(os.environ["DATA_DIR"])
 X = DATA / "runs/nq4/p3/xinsert"
 PROC = DATA / "processed/waymo_ds/training"
+PROC_VEH, VEH_OFF = DATA / "processed/waymo_ds_veh/training", 1000   # vehicle-deletion segments as donor sources: id 1000 + k
+GATE_RULE = "resolution <= 1.25x (2026-09-28 23:30)"
+MAG_MAX = 1.25     # resolution gate (user 2026-09-28): target camera distance >= donor's closest logged distance / MAG_MAX
 HZ, PRE, POST, FRONT, V_FLOOR = 10, 30, 20, 4.0, 3.0
 AZ_MAX, PSNR_MIN, GAIN_MAX, SHADE, DIVERSE_GAP = 20.0, 22.0, 1.33, 0.6, 5.0
 H_RANGE, SPAN_RANGE, SPEED_RANGE, TURN_MAX, STRAIGHT = (1.0, 2.1), (0.8, 1.25), (0.5, 2.5), 25.0, 1.15
 WIN = PRE + POST + 1
 
 
+def scene_dir(k: int) -> Path:
+    return PROC_VEH / f"{k - VEH_OFF:03d}" if k >= VEH_OFF else PROC / f"{k:03d}"
+
+
+def run_dir(k: int) -> Path:
+    return DATA / "ckpt/nq4_p3_veh/p3" / f"{k - VEH_OFF:03d}" if k >= VEH_OFF else DATA / "ckpt/nq4_p3/p3" / f"{k:03d}"
+
+
 def scene_geom(k: int) -> dict:
-    d = PROC / f"{k:03d}"
+    d = scene_dir(k)
     n = len(list((d / "ego_pose").glob("*.txt")))
     E0 = np.linalg.inv(np.loadtxt(d / "ego_pose/000.txt"))
     E = np.stack([E0 @ np.loadtxt(d / "ego_pose" / f"{t:03d}.txt") for t in range(n)])
@@ -124,7 +135,7 @@ def bank(a):
     from pytorch3d.transforms import quaternion_to_matrix
     k = a.scene
     kk = f"{k:03d}"
-    run = DATA / "ckpt/nq4_p3/p3" / kk
+    run = run_dir(k)
     cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = DSM._load(run, None)
     g = scene_geom(k)
     nf = g["n"]
@@ -195,18 +206,40 @@ def bank(a):
                 if len(ps_l) >= 8:
                     break
         out.append({"scene": k, "node": j, "waymo_id": wid_of[j], "height": round(h, 2), "span": round(span, 2),
+                    "d_close": close_dist(g, T0[:, j], fv[:, j]),
                     "psnr": round(float(np.mean(ps_l)), 2) if ps_l else None, "ratio": np.median(rat, 0).round(3).tolist() if rat else None,
                     "n_az": len(az), "az": az[::max(len(az) // 400, 1)], "windows": wins, "ckpt": ckpt})
     (X / "bank").mkdir(parents=True, exist_ok=True)
-    (X / "bank" / f"p3_{kk}.json").write_text(json.dumps(out))
+    (X / "bank" / f"{bank_name(k)}.json").write_text(json.dumps(out))
     print(json.dumps({"scene": k, "donors": len(out)}))
+
+
+def bank_name(k: int) -> str:
+    return f"v3_{k - VEH_OFF:03d}" if k >= VEH_OFF else f"p3_{k:03d}"
+
+
+def close_dist(g, T, fv) -> float:
+    """Closest horizontal distance (m) from a front camera (front, front-left, front-right) at which the donor was seen in
+    its own log: the finest scale its gaussians were fitted at (resolution gate, user 2026-09-28)."""
+    ds_ = [np.linalg.norm(T[t, :2] - cam_axis(g, t, c)[0][:2]) for t in np.flatnonzero(fv[: g["n"]])
+           for c in range(3) if in_fov(g, t, T[t], c, dist=80.0)]
+    return round(float(min(ds_)), 2) if ds_ else float("inf")
 
 
 # ---------------------------------------------------------------- placement
 def load_bank():
+    """Qualified donors of every bank file (pedestrian pool p3_*, vehicle-deletion segments v3_*); a donor without its
+    closest logged distance gets it here once (written back to its bank file)."""
     out = []
-    for f in sorted((X / "bank").glob("p3_*.json")):
-        for d in json.loads(f.read_text()):
+    for f in sorted((X / "bank").glob("*.json")):
+        B = json.loads(f.read_text())
+        if any("d_close" not in d for d in B):
+            for d in B:
+                if "d_close" not in d:
+                    T, _, fv = donor_track(d, with_fv=True)
+                    d["d_close"] = close_dist(scene_geom(d["scene"]), T, fv)
+            f.write_text(json.dumps(B))
+        for d in B:
             ok = (d["psnr"] is not None and d["psnr"] >= PSNR_MIN and H_RANGE[0] <= d["height"] <= H_RANGE[1]
                   and SPAN_RANGE[0] <= d["span"] <= SPAN_RANGE[1] and d["ratio"] is not None and d["n_az"] >= 10)
             if ok:
@@ -503,8 +536,20 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
             gaps.append(np.degrees(np.abs(INS.wrap(obs - azimuth(g, t, np.array([x, y]), yaw[sI] + phi))).min()))
     if len(gaps) < 5:
         return {"fail": "in the front camera for < 5 frames"}
+    mag = magnification(g, tr_, d)
+    if mag > MAG_MAX:
+        return {"fail": f"resolution: magnification {mag:.2f} > {MAG_MAX} (donor seen no closer than {d['d_close']:.1f} m)"}
     return {"traj": {int(t): v for t, v in tr_.items()}, "phi": float(phi), "gap": float(max(gaps)), "kerb": kb, "kerb_src": kb_src,
-            "speed": vd, "walk_s": n_walk / HZ, "vis_out_s": vis_out, "t_in": t_in, "mode": mode}
+            "speed": vd, "walk_s": n_walk / HZ, "vis_out_s": vis_out, "t_in": t_in, "mode": mode, "mag": round(mag, 3)}
+
+
+def magnification(g, traj: dict, d: dict) -> float:
+    """Resolution gate: the donor's closest logged distance over the closest front-camera distance of the placed donor
+    across the clip (frames where it is in the front camera); > MAG_MAX means it is rendered larger than it was ever seen.
+    traj: {frame: (donor frame, x, y)}."""
+    dc = [np.linalg.norm(np.array([x, y]) - cam_axis(g, t)[0][:2]) for t, (_, x, y) in traj.items()
+          if in_fov(g, int(t), np.array([x, y, 0.0]))]
+    return float(d["d_close"] / max(min(dc), 1e-3)) if dc else 0.0
 
 
 def plan_one(k: int, bank_: list) -> dict:
@@ -542,7 +587,7 @@ def plan_one(k: int, bank_: list) -> dict:
             break
     if not cands:
         return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no feasible walk-in", "fails": fails,
-                "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)"}
+                "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)", "gate_rule": GATE_RULE}
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
     near = [c for c in cands if c[0] <= max(cands[0][0], DIVERSE_GAP)]
     donors = {(c[2]["scene"], c[2]["node"]) for c in near}
@@ -550,14 +595,15 @@ def plan_one(k: int, bank_: list) -> dict:
     gap, _, d, w, side, b = min((c for c in near if (c[2]["scene"], c[2]["node"]) == pick), key=lambda c: c[0])
     obs = np.radians(np.asarray(d["az"]))
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
-           "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
+           "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt", "d_close")},
            "window": w, "side": side, "ttr_shift": shift, "n_candidates": len(cands), "fails": fails,
-           "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)", "lead": LEAD_INS}
+           "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)", "gate_rule": GATE_RULE,
+           "lead": LEAD_INS}
     res["variants"] = {}
     for name, ttr, mode in (("ins2", 2.0, "cross"), ("ins3", 3.0, "cross"), ("ins4", 4.0, "cross"), ("null", 3.0, "along")):
         S = path.Se[ts] + FRONT + (ttr + shift) * max(path.v[ts], V_FLOOR)
         bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, LEAD_INS, POST, mode)
-        res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "kerb_src", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
+        res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "kerb_src", "speed", "walk_s", "vis_out_s", "t_in", "mode", "mag")}
                                  if "fail" not in bb else {"fail": bb["fail"]})
     return res
 
@@ -851,7 +897,7 @@ def item(a):
     (X / "items" / f"p3_{kk}.pid").write_text(str(os.getpid()))
     pf = X / "plan" / f"p3_{kk}.json"
     pl = json.loads(pf.read_text()) if pf.exists() else {}
-    if pl.get("edge_rule") != "drivable edge (2026-09-28 19:00)" and pl.get("reason") != "ego never >= 2 m/s in [5, 15] s":
+    if pl.get("gate_rule") != GATE_RULE and pl.get("reason") != "ego never >= 2 m/s in [5, 15] s":
         pl = plan_one(k, load_bank())
         pl.setdefault("edge_rule", "drivable edge (2026-09-28 19:00)")
         (X / "plan").mkdir(parents=True, exist_ok=True)
@@ -865,6 +911,56 @@ def item(a):
         return
     a.out = X / "items"
     render(a)
+
+
+def gatecheck(a):
+    """Resolution gate on insertion items rendered before it (user 2026-09-28): every rendered variant's trajectory
+    against the donor's closest logged distance (xinsert.magnification). An item with any variant over the cap moves to
+    items_dropped_gate/ (its plan to plan_pre_gate/) and is planned again; a passing item's plan is tagged. With
+    --replan-skipped, targets that had no compliant walk-in move to items_skip_pre_gate/ to be planned again with the
+    expanded bank."""
+    import shutil
+    dc = {(q["scene"], q["node"]): q["d_close"] for q in load_bank()}
+    n = {"kept": 0, "dropped": 0, "skip_replanned": 0}
+    for md in sorted((X / "items").glob("p3_[0-9][0-9][0-9]/meta.json")):
+        m = json.loads(md.read_text())
+        pl = m["plan"]
+        if pl.get("gate_rule") == GATE_RULE:
+            continue
+        k = int(m["scene"][3:])
+        g = scene_geom(k)
+        dn = pl["donor"]
+        if (dn["scene"], dn["node"]) not in dc:
+            T, _, fv = donor_track(dn, with_fv=True)
+            dc[(dn["scene"], dn["node"])] = close_dist(scene_geom(dn["scene"]), T, fv)
+        d = {"d_close": dc[(dn["scene"], dn["node"])]}
+        mags = {v: round(magnification(g, {int(t): tuple(x) for t, x in V["traj"].items()}, d), 3)
+                for v, V in pl["variants"].items() if V and "traj" in V}
+        ok = all(x <= MAG_MAX for x in mags.values())
+        rec = {"mag": mags, "d_close": d["d_close"], "pass": ok, "rule": GATE_RULE}
+        (md.parent / "gate.json").write_text(json.dumps(rec))
+        pf = X / "plan" / f"p3_{k:03d}.json"
+        if ok:
+            pl.update(gate_rule=GATE_RULE, gate=rec)
+            pf.write_text(json.dumps(pl, indent=1))
+            n["kept"] += 1
+        else:
+            for src, dst in ((md.parent, X / "items_dropped_gate" / md.parent.name), (pf, X / "plan_pre_gate" / pf.name)):
+                dst.parent.mkdir(exist_ok=True)
+                if dst.exists():
+                    shutil.rmtree(dst) if dst.is_dir() else dst.unlink()
+                shutil.move(str(src), str(dst))
+            n["dropped"] += 1
+        print(json.dumps({"scene": k, **rec}), flush=True)
+    if a.replan_skipped:
+        for sk in sorted((X / "items").glob("p3_[0-9][0-9][0-9]/skip.json")):
+            dst = X / "items_skip_pre_gate" / sk.parent.name
+            dst.parent.mkdir(exist_ok=True)
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.move(str(sk.parent), str(dst))
+            n["skip_replanned"] += 1
+    print(json.dumps(n))
 
 
 def clip(a):
@@ -921,6 +1017,8 @@ def main():
     p = sp.add_parser("clip")
     p.add_argument("--targets", type=int, nargs="+", required=True)
     p.add_argument("--out", type=Path, default=X / "clips")
+    p = sp.add_parser("gatecheck")
+    p.add_argument("--replan-skipped", action="store_true")
     p = sp.add_parser("render")
     p.add_argument("--target", type=int, required=True)
     p.add_argument("--out", type=Path, default=X / "items")
@@ -928,7 +1026,7 @@ def main():
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
     if a.cmd == "clip":
         a.out.mkdir(parents=True, exist_ok=True)
-    {"bank": bank, "plan": plan, "yield": yield_, "render": render, "clip": clip, "item": item}[a.cmd](a)
+    {"bank": bank, "plan": plan, "yield": yield_, "render": render, "clip": clip, "item": item, "gatecheck": gatecheck}[a.cmd](a)
 
 
 if __name__ == "__main__":
