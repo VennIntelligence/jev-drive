@@ -1,0 +1,11 @@
+category,events,moving_window_day,no_vehicle_between,seen,responded,response_rate_given_seen,segments_valid,segments_valid_in_ped_pool66
+cut_in,29.0,15.0,14.0,9.0,1.0,0.1111111111111111,1.0,0.0
+lead_brake,1.0,0.0,0.0,0.0,0.0,,0.0,0.0
+obstacle,258.0,114.0,92.0,92.0,89.0,0.967391304347826,82.0,7.0
+crossing,270.0,21.0,21.0,9.0,6.0,0.6666666666666666,6.0,2.0
+oncoming,25.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0
+lead_follow,109.0,32.0,31.0,31.0,15.0,0.4838709677419355,,
+other,245.0,62.0,54.0,52.0,36.0,0.6923076923076923,,
+any valid vehicle event,97.0,,,,,,90.0,9.0
+"pedestrian (amendment 1, B strict)",,,,,,,10.0,
+random moving frames (baseline),5819.0,,,,,0.23904450936587043,,
