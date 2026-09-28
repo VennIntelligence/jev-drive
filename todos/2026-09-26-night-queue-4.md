@@ -130,6 +130,8 @@
   判格与窗口清单都不改，只更正这里的计数（`windows.csv`，2026-09-26 19:10 生成，此后没有重建）。
 - 2026-09-28 11:10 CST 应用户要求取了一次 **seed 0 描述性预览**（不进判格、不是结果）：登记读数代码原样只喂 seed 0，另加描述表；
   见 [tmp/2026-09-28-g-seed0-prelim.md](../tmp/2026-09-28-g-seed0-prelim.md)，表在 `research/results/nq4/g/prelim_s0/`。判格仍等 3 个 seed。
+- [main] 2026-09-28 post-hoc amendment (after seeing blue.swap pilot): the pilot 'zone reached ≥ NQ3 − 30 pp' item is judged per world, using the other examinees on the same routes. When they reach the zone, a single examinee's stall is its outcome, not a harness failure: blue.swap.0 stalled on 5/10 pilot routes (zone 60% vs NQ3 100%; TFv6 100%, BridgeDrive 100% on the same routes). Stalls count as scenario failures (route blocked) in readout 3.
+  (X = TFv6's own zone-reached fraction on the same 10 routes, 10/10; TFv6 has no NQ3 arm under `runs/nq3/b/arms/tfv6` for a cross-check, but it also shows 0/10 stalled, 0 blocked, 10/10 moving there. Y = BridgeDrive's zone_reached from its own stage-2 pilot_check, cross-checked against its NQ3 arm at 100%.)
 
 ## K. 材料包阶梯：分数动、能力不动
 
