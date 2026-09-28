@@ -362,8 +362,21 @@ def vace(a):
     region of the composite, which it also sees (VACE's reactive frames), everything else is its inactive context."""
     import torch
     sys.path[:0] = [str(DATA / "third_party/ins/VACE"), str(DATA / "third_party/ins/VACE/vace")]
+    from accelerate import cpu_offload
+    import models.wan.wan_vace as wv
     from models.wan import WanVace
     from models.wan.configs import WAN_CONFIGS
+    # The 17B checkpoint is stored in fp32 (69 GB) and the test card is shared (~34 GB free): keep the DiT in bf16 on the
+    # CPU and stream each block to the GPU during its forward (accelerate cpu_offload); WanVace's own .to(device) calls
+    # become no-ops. Numerics: bf16 weights under the bf16 autocast Wan already runs.
+    orig = wv.VaceWanModel.from_pretrained.__func__
+
+    def bf16_offloaded(cls, *args, **kw):
+        m = orig(cls, *args, **kw).to(torch.bfloat16).eval().requires_grad_(False)
+        cpu_offload(m, execution_device=torch.device("cuda"))
+        m.to = lambda *a_, **k_: m                                         # noqa: E731
+        return m
+    wv.VaceWanModel.from_pretrained = classmethod(bf16_offloaded)
     key, src = a.key, a.src
     cls = src.split("_")[0]
     frames, regs, _ = _regions(key, cls)
@@ -378,7 +391,7 @@ def vace(a):
     vid = torch.from_numpy(inp[:, y0:y0 + ch, x0:x0 + cw]).permute(3, 0, 1, 2).float().div(127.5).sub(1).cuda()
     mk = torch.from_numpy(msk[:, y0:y0 + ch, x0:x0 + cw])[None].cuda()
     t0 = time.time()
-    model = WanVace(config=WAN_CONFIGS["vace-14B"], checkpoint_dir=str(DATA / "models/vace/Wan2.1-VACE-14B"), device_id=0, rank=0,
+    model = WanVace(config=WAN_CONFIGS["vace-14B"], checkpoint_dir=str(a.ckpt), device_id=0, rank=0,
                     t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=True)   # T5 on the CPU: the test card is shared
     t_load = time.time() - t0
     torch.cuda.synchronize()
@@ -648,6 +661,7 @@ def main():
             p.add_argument("--steps", type=int, default=50)
             p.add_argument("--shift", type=float, default=16.0)
             p.add_argument("--seed", type=int, default=2025)
+            p.add_argument("--ckpt", type=Path, default=DATA / "models/vace/Wan2.1-VACE-14B")
         if n == "masks":
             p.add_argument("--opts", nargs="*")
         if n == "clip":
