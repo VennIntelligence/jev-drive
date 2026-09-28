@@ -1,4 +1,7 @@
-"""P3 expansion (user 2026-09-28, option 4): reconstruct and render pool scenes 010-065 with the registered formal chain.
+"""P3 expansion (user 2026-09-28, option 4): reconstruct and render pool scenes 010-065 with the registered formal chain,
+and (user approval 2026-09-28) the vehicle deletion scenes of scripts/p3/veh.py, each kind with its own staged gate
+(vehicles: scene 0 -> 1-9 -> the rest, a scene becomes ready when its prep is done); the two queues share the slots
+round-robin, and a kind that fails its checklist stops alone (ERROR.<kind>).
 
 Each scene runs `scripts/p3/gpu_enable.py scene --scene k` exactly as scenes 000-009 did (OmniRe without SMPL, default
 30000 iterations, then real / x+ / x- at the registered target; pool/targets/<k>.json, copied to targets/ after an
@@ -35,7 +38,7 @@ D = DATA / "runs/nq4/p3"
 E = D / "expand"
 STAGES = [[10], list(range(11, 20)), list(range(20, 66))]
 TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 300, 6 * 3600
-CORES = {6: ["168,169", "170,171"], **{k: [f"{24 * k + 20},{24 * k + 21}", f"{24 * k + 22},{24 * k + 23}"] for k in range(6)}}
+CORES = {6: ["168,169", "172,173"], **{k: [f"{24 * k + 20},{24 * k + 21}", f"{24 * k + 22},{24 * k + 23}"] for k in range(6)}}
 
 
 def log(msg, **ev):
@@ -105,28 +108,61 @@ def demand_cards() -> set:
     return out
 
 
-def done(k: int) -> bool:
-    return (D / f"formal_render_{k:03d}.done").exists() and (DATA / f"processed/nq4_p3/scenes/p3_{k:03d}/meta.json").exists()
+class Kind:
+    """One queue of scenes with its own staged gate: pedestrian pool scenes (gpu_enable.py scene) or vehicle deletion
+    scenes (veh.py scene)."""
+
+    def __init__(self, name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile):
+        self.name, self.stages, self.run, self.sd, self.marker, self.cmd, self.ready, self.pidfile = \
+            name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile
+        self.si, self.active, self.tries = 0, True, {}
+        while self.si < len(stages) and (E / f"{name}.stage{self.si}.ok").exists():
+            self.si += 1
+
+    def done(self, k):
+        return (self.run / self.marker("render", k, "done")).exists() and (self.sd(k) / "meta.json").exists()
+
+    def check(self, k):
+        """(technical ok, psnr flag, facts): the scene-0 checklist."""
+        m = json.loads((self.sd(k) / "meta.json").read_text())
+        rows = list(csv.DictReader(open(self.sd(k) / "render_stats.csv")))
+        psnr = sum(float(r["psnr"]) for r in rows) / len(rows)
+        rc = [(self.run / self.marker(x, k, "rc")).read_text().strip() for x in ("train", "render")]
+        f = {"kind": self.name, "scene": k, "deleted_missing": len(m["deleted_missing"]), "determinism": m["determinism_max_abs"],
+             "psnr": round(psnr, 2), "rc_train": rc[0], "rc_render": rc[1]}
+        return f["deleted_missing"] == 0 and f["determinism"] == 0 and rc == ["0", "0"] and psnr >= 22, psnr < 25, f
+
+    def todo(self, running):
+        if not self.active or self.si >= len(self.stages):
+            return []
+        return [k for k in self.stages[self.si] if not self.done(k) and (self.name, k) not in running and self.ready(k)]
 
 
-def check(k: int) -> tuple[bool, bool, dict]:
-    """(technical ok, psnr flag, facts) for one rendered scene."""
-    sd = DATA / f"processed/nq4_p3/scenes/p3_{k:03d}"
-    m = json.loads((sd / "meta.json").read_text())
-    rows = list(csv.DictReader(open(sd / "render_stats.csv")))
-    psnr = sum(float(r["psnr"]) for r in rows) / len(rows)
-    f = {"scene": k, "deleted_missing": len(m["deleted_missing"]), "determinism": m["determinism_max_abs"], "psnr": round(psnr, 2),
-         "rc_train": (D / f"formal_train_{k:03d}.rc").read_text().strip(), "rc_render": (D / f"formal_render_{k:03d}.rc").read_text().strip()}
-    tech = f["deleted_missing"] == 0 and f["determinism"] == 0 and f["rc_train"] == "0" and f["rc_render"] == "0" and psnr >= 22
-    return tech, psnr < 25, f
+def kinds():
+    ped = Kind("ped", STAGES, D, lambda k: DATA / f"processed/nq4_p3/scenes/p3_{k:03d}",
+               lambda step, k, ext: f"formal_{step}_{k:03d}.{ext}",
+               lambda k, g, c: ["python3", "scripts/p3/gpu_enable.py", "scene", "--scene", str(k), "--gpu", str(g), "--cpus", c,
+                                "--train-timeout", str(TRAIN_TIMEOUT)],
+               lambda k: (D / f"sky_{k:03d}.done").exists(), lambda k: D / f"gpu_enable_scene_{k:03d}.pid")
+    V = DATA / "runs/nq4/p3veh"
+    n = len(json.loads((V / "scenes.json").read_text())["segments"]) if (V / "scenes.json").exists() else 0
+    veh = Kind("veh", [[0], list(range(1, min(10, n))), list(range(10, n))] if n else [], V,
+               lambda k: DATA / f"processed/nq4_p3_veh/scenes/p3_v{k:03d}", lambda step, k, ext: f"{step}_{k:03d}.{ext}",
+               lambda k, g, c: ["python3", "scripts/p3/veh.py", "scene", "--j", str(k), "--gpu", str(g), "--cpus", c,
+                                "--train-timeout", str(TRAIN_TIMEOUT)],
+               lambda k: (V / f"prep_{k:03d}.done").exists(), lambda k: V / f"scene_{k:03d}.pid")
+    return [ped, veh]
 
 
-def status(running, stage_i):
-    lines = [f"# P3 expansion {time.strftime('%F %T')}", "", f"stage {stage_i + 1} of {len(STAGES)}; pid {os.getpid()}", "",
-             "| scene | card | cores | started |", "|--:|--:|:--|:--|"]
-    lines += [f"| {k:03d} | {g} | {c} | {time.strftime('%H:%M', time.localtime(t0))} |" for k, (p, g, c, t0) in sorted(running.items())]
-    n_done = sum(done(k) for s in STAGES for k in s)
-    lines += ["", f"done {n_done} / {sum(map(len, STAGES))} pool scenes; log {E / 'log.txt'}"]
+def status(running, ks):
+    lines = [f"# P3 expansion {time.strftime('%F %T')}", "", f"pid {os.getpid()}", ""]
+    for kd in ks:
+        n_done = sum(kd.done(k) for s in kd.stages for k in s)
+        lines.append(f"- {kd.name}: stage {min(kd.si + 1, len(kd.stages))} of {len(kd.stages)}, done {n_done} / "
+                     f"{sum(map(len, kd.stages))}{'' if kd.active else ' (STOPPED: see ERROR.' + kd.name + ')'}")
+    lines += ["", "| kind | scene | card | cores | started |", "|:--|--:|--:|:--|:--|"]
+    lines += [f"| {kd} | {k:03d} | {g} | {c} | {time.strftime('%H:%M', time.localtime(t0))} |" for (kd, k), (p, g, c, t0) in sorted(running.items())]
+    lines += ["", f"log {E / 'log.txt'}"]
     (E / "STATUS.md").write_text("\n".join(lines) + "\n")
 
 
@@ -135,7 +171,9 @@ def main():
     lock = open(E / "owner.lock", "w")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     (E / "pid").write_text(str(os.getpid()))
-    (E / "ERROR").unlink(missing_ok=True)
+    for k in (0, 1, 2):                            # legacy single-kind stage markers
+        if (E / f"stage{k}.ok").exists() and not (E / f"ped.stage{k}.ok").exists():
+            (E / f"stage{k}.ok").rename(E / f"ped.stage{k}.ok")
     pool = json.loads((D / "pool/scenes66.json").read_text())["segments"]
     for k in range(10, 66):                       # render targets: pool targets, equal to the registered selection
         src, dst = D / "pool/targets" / f"{k:03d}.json", D / "targets" / f"{k:03d}.json"
@@ -145,90 +183,86 @@ def main():
             assert json.loads(dst.read_text()) == t, f"target {k} differs"
         else:
             dst.write_text(src.read_text())
-        assert (D / f"sky_{k:03d}.done").exists(), f"sky masks of {k} missing"
     env = dict(os.environ, PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
-    running, tries = {}, {}
-    for k in range(10, 66):                       # adopt live scene processes of an earlier instance
-        pf = D / f"gpu_enable_scene_{k:03d}.pid"
-        if pf.exists() and not done(k):
-            pid = int(pf.read_text())
-            try:
-                cmd = Path(f"/proc/{pid}/cmdline").read_bytes()
-            except OSError:
-                continue
-            if b"gpu_enable.py" in cmd and b"scene" in cmd:
-                args = cmd.split(b"\0")
-                g = int(args[args.index(b"--gpu") + 1])
-                c = args[args.index(b"--cpus") + 1].decode()
-                running[k] = (Adopted(pid), g, c, time.time())
-                log(f"adopted scene {k:03d} (pid {pid}, GPU {g})", event="adopt", scene=k, pid=pid)
-    for si, stage in enumerate(STAGES):
-        if (E / f"stage{si}.ok").exists():
-            continue
-        log(f"stage {si + 1}: scenes {stage[0]:03d}-{stage[-1]:03d}", event="stage", stage=si, scenes=stage)
-        while True:
-            for k, (p, g, c, t0) in list(running.items()):
-                rc = p.poll()
-                if rc is None:
+    ks = kinds()
+    running = {}
+    for kd in ks:                                  # adopt live scene processes of an earlier instance
+        for k in [k for s in kd.stages for k in s]:
+            pf = kd.pidfile(k)
+            if pf.exists() and not kd.done(k):
+                pid = int(pf.read_text())
+                try:
+                    args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+                except OSError:
                     continue
-                del running[k]
-                if done(k):
-                    log(f"scene {k:03d} done on GPU {g} in {(time.time() - t0) / 60:.0f} min", event="scene_done", scene=k, gpu=g,
-                        minutes=round((time.time() - t0) / 60, 1))
-                else:
-                    tries[k] = tries.get(k, 0) + 1
-                    log(f"scene {k:03d} failed rc={rc} on GPU {g} (try {tries[k]})", event="scene_failed", scene=k, gpu=g, rc=rc)
-                    (D / f"gpu_enable_scene_{k:03d}.ERROR").unlink(missing_ok=True)
-                    if tries[k] >= 2:
-                        (E / "ERROR").write_text(f"scene {k:03d} failed twice; see {D}/formal_*_{k:03d}.out\n")
-                        log("ERROR: stopping; running scenes finish on their own", event="error", scene=k)
-                        return
-            todo = [k for k in stage if not done(k) and k not in running]
-            if not todo and not running:
-                break
-            if (E / "HOLD").exists() or not todo:
-                status(running, si)
-                time.sleep(POLL_S)
+                if b"--gpu" in args and b"scene" in args:
+                    g, c = int(args[args.index(b"--gpu") + 1]), args[args.index(b"--cpus") + 1].decode()
+                    running[(kd.name, k)] = (Adopted(pid), g, c, time.time())
+                    log(f"adopted {kd.name} {k:03d} (pid {pid}, GPU {g})", event="adopt", kind=kd.name, scene=k, pid=pid)
+    by = {kd.name: kd for kd in ks}
+    while True:
+        for (kn, k), (p, g, c, t0) in list(running.items()):
+            if p.poll() is None:
                 continue
+            del running[(kn, k)]
+            kd = by[kn]
+            if kd.done(k):
+                log(f"{kn} {k:03d} done on GPU {g} in {(time.time() - t0) / 60:.0f} min", event="scene_done", kind=kn, scene=k, gpu=g,
+                    minutes=round((time.time() - t0) / 60, 1))
+            else:
+                kd.tries[k] = kd.tries.get(k, 0) + 1
+                log(f"{kn} {k:03d} failed on GPU {g} (try {kd.tries[k]})", event="scene_failed", kind=kn, scene=k, gpu=g)
+                (D / f"gpu_enable_scene_{k:03d}.ERROR").unlink(missing_ok=True)
+                if kd.tries[k] >= 2:
+                    kd.active = False
+                    (E / f"ERROR.{kn}").write_text(f"{kn} scene {k:03d} failed twice\n")
+                    log(f"ERROR: {kn} stopped (scene {k:03d} failed twice); the other kind goes on", event="error", kind=kn, scene=k)
+        for kd in ks:                              # stage gates
+            if not kd.active or kd.si >= len(kd.stages):
+                continue
+            st = kd.stages[kd.si]
+            if all(kd.done(k) for k in st) and not any(kn == kd.name for kn, _ in running):
+                res = [kd.check(k) for k in st]
+                flags, bad = [f for _, fl, f in res if fl], [f for ok, _, f in res if not ok]
+                (E / f"{kd.name}.stage{kd.si}.checklist.json").write_text(json.dumps([f for _, _, f in res], indent=1))
+                if bad or len(flags) > max(1, len(st) // 10):
+                    kd.active = False
+                    (E / f"ERROR.{kd.name}").write_text(f"stage {kd.si + 1} checklist failed: bad {bad}, psnr flags {flags}\n")
+                    log(f"ERROR: {kd.name} stage {kd.si + 1} checklist failed", event="checklist_failed", kind=kd.name, bad=bad, flags=flags)
+                    continue
+                (E / f"{kd.name}.stage{kd.si}.ok").write_text(time.strftime("%F %T") + "\n")
+                log(f"{kd.name} stage {kd.si + 1} checklist ok ({len(flags)} PSNR flags)", event="stage_ok", kind=kd.name, stage=kd.si)
+                kd.si += 1
+        if all(not kd.active or kd.si >= len(kd.stages) for kd in ks) and not running:
+            break
+        queues = [kd.todo(running) for kd in ks]
+        order = [(kd.name, k) for tup in __import__("itertools").zip_longest(*queues) for kd, k in zip(ks, tup) if k is not None]
+        if order and not (E / "HOLD").exists():
             carla = carla_per_card()
             eligible = [TEST_GPU] + [g for g in range(6) if g not in g_cards() and g not in demand_cards() and not carla.get(g)]
             want = [g for g in eligible if sum(v[1] == g for v in running.values()) < SLOTS]
             info = free_gb() if want else {}
             for g in want:
-                mine = [k for k, v in running.items() if v[1] == g]
-                while todo and len(mine) < SLOTS and info.get(g, 0) >= MIN_FREE_GB:
-                    k = todo.pop(0)
-                    cores = next(c for c in CORES[g] if c not in [running[j][2] for j in mine])
-                    with open(E / f"scene_{k:03d}.out", "a") as out:
-                        p = subprocess.Popen(["python3", "scripts/p3/gpu_enable.py", "scene", "--scene", str(k), "--gpu", str(g),
-                                              "--cpus", cores, "--train-timeout", str(TRAIN_TIMEOUT)],
-                                             cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT)
-                    running[k] = (p, g, cores, time.time())
-                    mine.append(k)
+                mine = [u for u, v in running.items() if v[1] == g]
+                while order and len(mine) < SLOTS and info.get(g, 0) >= MIN_FREE_GB:
+                    kn, k = order.pop(0)
+                    cores = next(c for c in CORES[g] if c not in [running[u][2] for u in mine])
+                    with open(E / f"{kn}_{k:03d}.out", "a") as out:
+                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT)
+                    running[(kn, k)] = (p, g, cores, time.time())
+                    mine.append((kn, k))
                     info[g] -= MIN_FREE_GB
-                    log(f"scene {k:03d} started on GPU {g}, cores {cores}, pid {p.pid}", event="scene_start", scene=k, gpu=g, pid=p.pid)
-                    time.sleep(20)                 # let the first allocations land before the next VRAM reading
-            status(running, si)
-            time.sleep(POLL_S)
-        res = [check(k) for k in stage]
-        flags = [f for ok, fl, f in res if fl]
-        bad = [f for ok, fl, f in res if not ok]
-        (E / f"stage{si}.checklist.json").write_text(json.dumps([f for _, _, f in res], indent=1))
-        if bad or len(flags) > max(1, len(stage) // 10):
-            (E / "ERROR").write_text(f"stage {si + 1} checklist failed: bad {bad}, psnr flags {flags}\n")
-            log("ERROR: checklist failed", event="checklist_failed", bad=bad, flags=flags)
-            return
-        (E / f"stage{si}.ok").write_text(time.strftime("%F %T") + "\n")
-        log(f"stage {si + 1} checklist ok ({len(flags)} PSNR flags)", event="stage_ok", stage=si, flags=flags)
-    scenes = sorted(int(p.parent.name[3:]) for p in (DATA / "processed/nq4_p3/scenes").glob("p3_*/meta.json"))
-    log(f"readout over {len(scenes)} scenes on GPU {TEST_GPU}", event="readout", scenes=scenes)
-    rc = subprocess.call(["python3", "scripts/p3/gpu_enable.py", "readout", "--tag", "expand66", "--scenes", *map(str, scenes),
-                          "--gpu", str(TEST_GPU), "--cpus", "168-171"], cwd=REPO, env=env,
-                         stdout=open(E / "readout.out", "a"), stderr=subprocess.STDOUT)
-    if rc:
-        (E / "ERROR").write_text(f"readout rc={rc}; see {E / 'readout.out'}\n")
-        log("ERROR: readout failed", event="error", rc=rc)
-        return
+                    log(f"{kn} {k:03d} started on GPU {g}, cores {cores}, pid {p.pid}", event="scene_start", kind=kn, scene=k, gpu=g, pid=p.pid)
+                    time.sleep(20)
+        status(running, ks)
+        time.sleep(POLL_S)
+    if by["ped"].si >= len(STAGES):
+        scenes = sorted(int(p.parent.name[3:]) for p in (DATA / "processed/nq4_p3/scenes").glob("p3_*/meta.json"))
+        log(f"pedestrian readout over {len(scenes)} scenes on GPU {TEST_GPU}", event="readout", scenes=scenes)
+        rc = subprocess.call(["python3", "scripts/p3/gpu_enable.py", "readout", "--tag", "expand66", "--scenes", *map(str, scenes),
+                              "--gpu", str(TEST_GPU), "--cpus", "168-171"], cwd=REPO, env=env,
+                             stdout=open(E / "readout.out", "a"), stderr=subprocess.STDOUT)
+        log(f"pedestrian readout rc={rc}", event="readout_done", rc=rc)
     (E / "DONE").write_text(time.strftime("%F %T") + "\n")
     log("DONE", event="done")
 
