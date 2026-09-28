@@ -14,6 +14,7 @@ mode runs the same openpilot session on the same frames; only what reaches P7 di
   acc      base path; speed = min(base profile, IDM on openpilot's lead head)             (openpilot chill mode)
   e2e      acc + openpilot's plan as a speed constraint while moving, with a stop latch     (openpilot experimental mode)
   switch   openpilot's own plan (lateral + longitudinal) while rolling outside turn zones; e2e for launches and route turns
+           ("zones": false: openpilot's plan also through route turns, i.e. only launches and stop latches are the base's)
 
 The base (observable inputs only: the route every Bench2Drive agent gets, the sensor pose, the speedometer) is the
 route geometry (b2d_controller_adapter.RouteAdapter's rejoin path) timed by a speed governor: a set speed ("cruise"),
@@ -46,7 +47,7 @@ DT_SIM, HORIZON = 0.05, 5.0
 MODES = ("native", "base", "oshadow", "acc", "e2e", "switch")
 DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3.0, "twin": False, "lead_p": 0.5,
             "plan_vmin": 1.0, "plan_form": "abs", "release": "none", "release_th": 0.5, "latch_max_s": 20.0,
-            "plan_gate": "always", "brake_th": 0.5, "meta_k": 0,
+            "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0}
 
 
@@ -157,7 +158,7 @@ class OpArbAgent(Z.ZeroShotAgent):
                 i = j + 1
             else:
                 i += 1
-        self.zones = zones
+        self.zones = zones if a["zones"] else []
         self.tl_stops = None                                 # ground truth, built lazily (evaluation / oshadow only)
 
     def in_zone(self):
@@ -298,14 +299,15 @@ class OpArbAgent(Z.ZeroShotAgent):
                 self.binding_t = t_frame
         rel = None
         if use_plan and not self.latch and self.moved and self.stop_t > 0 and t_frame - self.binding_t < 1.5:
-            self.latch, self.latch_t = True, 0.0
+            self.latch, self.latch_t, self.rel_t = True, 0.0, 0.0
         if self.latch:
             self.latch_t += dt
             gas = float(mt0[gi])
             x5 = float(op_path[-1, 0])
             rel = {"gas": gas > A["release_th"], "planx": x5 > A["release_th"], "nobrake": mt0[bi] < A["release_th"],
                    "none": False}[A["release"]]
-            if rel or self.latch_t > A["latch_max_s"] or speed > 1.0:
+            self.rel_t = self.rel_t + dt if rel else 0.0          # the release signal must hold release_s seconds
+            if (rel and self.rel_t >= A["release_s"]) or self.latch_t > A["latch_max_s"] or speed > 1.0:
                 self.latch = False
             else:
                 cons["latch"] = np.zeros(len(TIMES))

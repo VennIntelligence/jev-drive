@@ -114,6 +114,42 @@ def load(arm_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     return pd.DataFrame(recs), (pd.concat(steps, ignore_index=True) if steps else pd.DataFrame())
 
 
+def at_arc(pts, s):
+    """Point at arc length s on the polyline origin -> pts (nan past its end)."""
+    p = np.r_[[[0.0, 0.0]], np.asarray(pts, float)]
+    a = np.r_[0, np.cumsum(np.linalg.norm(np.diff(p, axis=0), axis=1))]
+    return np.array([np.nan, np.nan]) if s > a[-1] else np.array([np.interp(s, a, p[:, k]) for k in range(2)])
+
+
+def turn_rows(arm: str, m: pd.DataFrame, arcs=(10.0, 15.0)) -> list:
+    """Steps before a route turn (0 < d <= 20 m, "approach") and inside it (d = 0), and straight steps: the plan's
+    (route desire) and the twin's (no desire) lateral offset at a fixed arc as a fraction of the route's own offset there
+    (1 = follows the route, 0 = keeps straight), over steps where the route's offset is >= 1 m."""
+    base_s = np.array([5.0, 10, 15, 20, 30])
+    rows = []
+    where = {"approach (0-20 m before)": m.cmd_k.isin([1, 2]) & (m.cmd_d > 0) & (m.cmd_d <= 20),
+             "inside the turn": m.cmd_k.isin([1, 2]) & (m.cmd_d == 0)}
+    for name, sel in where.items():
+        g = m[sel]
+        if not len(g):
+            continue
+        row = {"arm": arm, "where": name, "steps": len(g), "routes": g.route.nunique()}
+        for s_ in arcs:
+            yr = np.array([np.interp(s_, base_s, np.array(b)[:, 1]) for b in g.base_xy])
+            yp = np.array([at_arc(p, s_)[1] for p in g.op_xy])
+            yt = np.array([at_arc(p, s_)[1] for p in g.tw_xy])
+            ok = (np.abs(yr) >= 1.0) & np.isfinite(yp) & np.isfinite(yt)
+            row[f"n @{s_:.0f} m"] = int(ok.sum())
+            row[f"route |y| @{s_:.0f} m"] = round(float(np.median(np.abs(yr[ok]))), 2) if ok.any() else np.nan
+            row[f"plan follow @{s_:.0f} m"] = round(float(np.median(yp[ok] / yr[ok])), 2) if ok.any() else np.nan
+            row[f"twin follow @{s_:.0f} m"] = round(float(np.median(yt[ok] / yr[ok])), 2) if ok.any() else np.nan
+        row["P(turn) desire_pred plan"] = round(float(np.mean([dp[0][1] + dp[0][2] for dp in g.dp])), 3)
+        row["P(turn) desire_pred twin"] = round(float(np.mean([dp[0][1] + dp[0][2] for dp in g.tw_dp])), 3)
+        row["desire on"] = round(float((g.desire.isin([1, 2])).mean()), 3)
+        rows.append(row)
+    return rows
+
+
 # ------------------------------------------------------------------------------------------------ diagnosis
 def diag(rootdir: Path, out: Path) -> dict:
     out.mkdir(parents=True, exist_ok=True)
@@ -186,40 +222,12 @@ def diag(rootdir: Path, out: Path) -> dict:
     t3 = pd.DataFrame(rows)
     t3.to_csv(out / "hazard_auc.csv", index=False)
     res["hazard"] = t3
-    # ---- 4. turns: plan heading vs route heading
+    # ---- 4. turns: how much of the route's lateral offset the plan follows, with and without the route desire
     rows = []
     for arm, (_, st) in arms.items():
         if not len(st) or "tw_xy" not in st:
             continue
-        m = st[(st.v > 1.0) & ~st.warm].copy()
-        turn = m.cmd_k.isin([1, 2]) & (m.cmd_d <= 20)
-        straight = m.cmd_k.isin([3, 4]) | m.cmd_k.isna()
-        for name, g in (("turn zone", m[turn]), ("elsewhere", m[~turn & straight])):
-            if not len(g):
-                continue
-            r_ang, o_ang, t_ang, side = [], [], [], []
-            for _, r in g.iterrows():
-                base = np.array(r.base_xy)
-                for pts, acc in ((r.op_xy, o_ang), (r.tw_xy, t_ang)):
-                    p = np.array(pts)[2]                   # 3 s
-                    acc.append(math.degrees(math.atan2(p[1], max(p[0], 1e-3))))
-                p = np.array(r.op_xy)[2]
-                d = float(np.hypot(*p))
-                ba = np.r_[0, np.cumsum(np.linalg.norm(np.diff(np.r_[[[0, 0]], base], axis=0), axis=1))]
-                q = np.array([np.interp(d, ba, np.r_[0, base[:, k]]) for k in range(2)])
-                r_ang.append(math.degrees(math.atan2(q[1], max(q[0], 1e-3))))
-                side.append(1 if r.cmd_k == 1 else -1 if r.cmd_k == 2 else 0)
-            r_ang, o_ang, t_ang, side = map(np.array, (r_ang, o_ang, t_ang, side))
-            row = {"arm": arm, "where": name, "steps": len(g), "routes": g.route.nunique(),
-                   "route bearing @3s-arc (deg, median |.|)": round(float(np.median(np.abs(r_ang))), 1),
-                   "|plan - route| (deg)": round(float(np.median(np.abs(o_ang - r_ang))), 1),
-                   "|twin - route| (deg)": round(float(np.median(np.abs(t_ang - r_ang))), 1)}
-            if name == "turn zone":
-                row["plan turns >= half route bearing"] = round(float(np.mean(o_ang * np.sign(r_ang) >= 0.5 * np.abs(r_ang))), 3)
-                row["twin turns >= half route bearing"] = round(float(np.mean(t_ang * np.sign(r_ang) >= 0.5 * np.abs(r_ang))), 3)
-                row["P(turn desire_pred) plan"] = round(float(np.mean([dp[0][1] + dp[0][2] for dp in g.dp])), 3)
-                row["P(turn desire_pred) twin"] = round(float(np.mean([dp[0][1] + dp[0][2] for dp in g.tw_dp])), 3)
-            rows.append(row)
+        rows += turn_rows(arm, st[(st.v > 1.0) & ~st.warm])
     t4 = pd.DataFrame(rows)
     t4.to_csv(out / "turn.csv", index=False)
     res["turn"] = t4

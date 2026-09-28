@@ -75,6 +75,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         acc)     arb='{"mode": "acc"}' ;;
         e2e)     arb="{\"mode\": \"e2e\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
         switch)  arb="{\"mode\": \"switch\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
+        oplat)   arb="{\"mode\": \"switch\", \"zones\": false${E2E_ARGS:+, $E2E_ARGS}}" ;;
         *) error "unknown arm $arm" ;;
     esac
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
@@ -114,7 +115,7 @@ case ${1:-} in
     phase)
         trap 'srv_stop' EXIT
         k=$2; ids=$(routes "$k")
-        arms=${ARMS:-$([[ $k == 1 ]] && echo "native oshadow" || echo "base acc e2e switch")}
+        arms=${ARMS:-$([[ $k == 1 ]] && echo "native oshadow" || echo "base acc e2e switch oplat")}
         for a in $arms; do
             [[ -e $O/arms/p$k-$a/DONE ]] && continue
             echo "phase $k arm $a $(date '+%F %T')" > "$O/STATUS"
