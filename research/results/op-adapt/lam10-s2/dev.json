@@ -1,0 +1,22 @@
+{
+ "auc_temporal_head": 0.9423437357838231,
+ "auc_token_head": 0.9468519697934673,
+ "drift_median": 0.06630263477563858,
+ "drift_p95": 0.18971353769302368,
+ "n_key": 2011,
+ "n_pos": 116,
+ "n_normal": 1631,
+ "steps": 9633,
+ "samples": 616512,
+ "train_gpu_s": 2704.183218240738,
+ "lam_d": 10.0,
+ "before": {
+  "auc_temporal_head": 0.42086707305977616,
+  "auc_token_head": 0.41419798016559006,
+  "drift_median": 0.0,
+  "drift_p95": 0.0,
+  "n_key": 2011,
+  "n_pos": 116,
+  "n_normal": 1631
+ }
+}

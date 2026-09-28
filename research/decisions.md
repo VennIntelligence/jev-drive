@@ -3509,7 +3509,7 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 **会推翻本条的证据**：WL 里在干预数据上训练的同一预测器，刹停 > 保持仍 < 85%（那就是 latent 本身对 ego 运动后果不敏感，不是数据）；或 W 原版在 WL 的分叉点上也 ≥ 85%（那诊断的第 3 条要重写）。
 
 
-## 55. openpilot 的 vision 层可以便宜地改而不坏：精确的 PyTorch port、stage 4 解冻 + 蒸馏在跨数据集上漂移 6 cm；但只用真实数据监督，行人可读性只涨 +0.08（没过 +0.10），完全带不到 CARLA；原模型在真实数据上本来就读得出近处行人（**待定**，nuScenes val + WOD val + P5 v1 BA，1 seed）
+## 55. openpilot 的 vision 层可以便宜地改而不坏：精确的 PyTorch port、stage 4 解冻 + 蒸馏在跨数据集上漂移 6 cm；但只用真实数据监督，行人可读性只涨 +0.08（没过 +0.10），完全带不到 CARLA；原模型在真实数据上本来就读得出近处行人（**待定**，nuScenes val + WOD val + P5 v1 BA，3 seed；原写「1 seed」）
 
 2026-09-28。预登记、偏离与全部表在 [todos/2026-09-28-op-adapt.md](../todos/2026-09-28-op-adapt.md)，小表 [results/op-adapt/](results/op-adapt/)，代码 `jevdrive/op_torch.py`、`jevdrive/op_adapt.py`、`scripts/op_adapt_*.py`。
 问题：论文主方法要不要改 openpilot 本身（vision 层），改得动吗、会不会坏。
@@ -3534,6 +3534,8 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 4. 对 B / C：trunk（stage 3）里已有的线性信息（0.83）比 B 达到的（0.79）只高 0.04，所以在这个读数上 C 的上限空间很小，而成本是 B 的 11 倍；先不做 C。
    数据：10 万样本的 B 只要 0.07 GPU·h，瓶颈不在算力，在监督信号——需要 sim + real 同时在场的行人信号（Cosmos 重渲染的 CARLA 对 + 真实 GT），把 P5 当 held-out。
 
-**状态**：**待定**。限定：1 seed；只用 nuScenes（CAM_FRONT、2 Hz GT）监督；(a) 的正例 203 个、CI 宽；只测了线性可读性和开环漂移，没有测行为（plan 对行人的反应）和闭环；Lebowski 没有 fp32 参照、没有训练。
+*2026-09-28 补 seed 1 / 2（同一配置，只换辅助头初始化与采样；[todo](../todos/2026-09-28-op-adapt.md)「后续 1」）*：(a) Δ +0.094 / +0.073（seed 0 +0.076），(b) 漂移中位 0.055–0.062 m、WOD ADE +0.26% / +0.53%，(c) Δ +0.010 / +0.009；三个 seed 判格相同（a 不过、b 过、c 不过）。
+
+**状态**：**待定**。限定：3 seed（原写「1 seed」，2026-09-28 补齐）；只用 nuScenes（CAM_FRONT、2 Hz GT）监督；(a) 的正例 203 个、CI 宽；只测了线性可读性和开环漂移，没有测行为（plan 对行人的反应）和闭环；Lebowski 没有 fp32 参照、没有训练。
 **会推翻或推进本条的证据**：sim + real 混训后 P5 D0 ≥ 0.60 且 (b) 仍过（推进 B 作主方法）；同一 B 在更大的真实数据（WOD 全量 + YOLO 标签）上 (a) 过 +0.10；闭环里改后模型对行人的停车率高于原模型而正常路线不掉分。
 
