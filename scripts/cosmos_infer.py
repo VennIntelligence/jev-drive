@@ -77,6 +77,16 @@ def main():
         [self.repository, "--repo-type", "model", "--revision", self.revision, self.filename])
     import numpy as np
     import torch
+    # the base (35-step) models load SigLIP2 for image context from the HF hub; use the local ModelScope copy
+    from cosmos_transfer2._src.transfer2.networks import siglip2 as SG
+    get_sg = SG.get_siglip2_model_processor
+    SG.get_siglip2_model_processor = lambda name: get_sg(str(LOCAL / name.split("/", 1)[1]))
+    try:
+        from cosmos_transfer2._src.transfer2.networks import siglip2_image_context as SGI
+        if hasattr(SGI, "get_siglip2_model_processor"):
+            SGI.get_siglip2_model_processor = SG.get_siglip2_model_processor
+    except ImportError:
+        pass
     from cosmos_oss.init import init_environment
     from cosmos_transfer2.config import InferenceArguments, SetupArguments
     from cosmos_transfer2.inference import Control2WorldInference
