@@ -40,6 +40,7 @@ HZ = 10
 DISTS, LATS, STATES_PED = (3, 5, 8, 12, 20, 30), (0.0, 1.5, 3.0, 5.0), ("stand", "cross")
 PRE_R, POST_R = 40, 4                     # rendered window in 10 Hz frames, 5 Hz stride (4 s lead-in: walk-in rules)
 SHADE, GAIN_MAX = 0.6, 1.33
+NEAR_HOLD_D = 20                          # m: cells nearer than this wait while runs/nq4/p3/dose/NEAR_HOLD exists
 
 
 def anchors(a):
@@ -239,6 +240,11 @@ def render(a):
             cid = cell_id(dist, lat, st)
             cd = out / cid
             if (cd / "meta.json").exists():
+                continue
+            if dist < NEAR_HOLD_D and (DO / "NEAR_HOLD").exists():
+                # user 2026-09-28: near cells wait for the resolution gate and the expanded donor bank (no file written,
+                # so a later pass renders them)
+                print(json.dumps({"cell": cid, "held": "near-range hold"}), flush=True)
                 continue
             pose, feet, b = place(dist, lat, st)
             if pose is not None:
