@@ -1,0 +1,38 @@
+{
+ "checks": {
+  "prefix_ego_le_1cm": 0.972972972972973,
+  "brake_travel_lt_hold": 1.0,
+  "shift_n_evaluated": 64,
+  "shift_n_censored": 10,
+  "shift_sign_ok": 1.0,
+  "shift_ge_2m": 1.0,
+  "hit_or_gap_hold_or_op_ped_plus": 0.7,
+  "hit_or_gap_hold_or_op_ped_minus": 0.2,
+  "hit_or_gap_hold_or_op_cutin_plus": 0.0,
+  "hit_or_gap_hold_or_op_cutin_minus": 0.0,
+  "unsafe_hold_or_op_ped_plus": 0.8,
+  "unsafe_hold_or_op_ped_minus": 0.2,
+  "unsafe_hold_or_op_cutin_plus": 0.0,
+  "unsafe_hold_or_op_cutin_minus": 0.0,
+  "obstacle_plus_hold_collision": 0.75,
+  "obstacle_plus_a_shift_no_collision": 1.0,
+  "obstacle_plus_hold_unsafe": 0.75,
+  "obstacle_plus_a_shift_no_unsafe": 0.5,
+  "n_fork_points": {
+   "ped_plus": 10,
+   "ped_minus": 10,
+   "cutin_plus": 5,
+   "cutin_minus": 5,
+   "obstacle_plus": 4,
+   "obstacle_minus": 3
+  },
+  "harness_fail": 0.0
+ },
+ "verdict": {
+  "prefix": false,
+  "brake": true,
+  "shift": true,
+  "outcomes": false,
+  "harness": true
+ }
+}
