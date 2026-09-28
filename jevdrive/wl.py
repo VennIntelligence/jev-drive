@@ -303,6 +303,81 @@ def prefix(out: str, stage: str = "pilot1") -> pd.DataFrame:
     return t
 
 
+def prefix_feats(out: str, stage: str = "pilot1", step: str = "spec") -> pd.DataFrame | dict:
+    """The registered prefix item: Cinque `temporal` cosine >= 0.999 on every pre-fork frame, plus V-JEPA 2 `mean` cosine
+    (description). step "spec": processed/wl_check_<out dir name>/op_plan.json, one stream per fork run = the source run's
+    frames before the run's first saved frame + the run's own frames up to the fork (then run
+    P5_SET=wl_check_<name> scripts/p5_openpilot.py --models cinque --arrays temporal --out-sub op_streams_vis);
+    step "read": both cosines against the source run's stored streams / features at the same ticks."""
+    from . import nq4_w as W
+    from .p5_openpilot import carla_calib
+    name = "wl_check_" + Path(out).name
+    d = data_dir() / "processed" / name
+    d.mkdir(parents=True, exist_ok=True)
+    runs = stage_ids(stage)
+    cams = ("front", "front_left", "front_right")
+    if step == "spec":
+        streams = []
+        for r in runs.itertuples():
+            a = _fork_attempt(Path(out) / r.set, r.route_id)
+            if a is None:
+                continue
+            fa, fs = _frames(a), _frames(Path(r.src_dir))
+            fa = fa[fa.files.map(bool) & (fa.index < r.fork_tick)]
+            src = fs[fs.index < fa.index.min()]
+            names = [f"{r.src_route}-{f:07d}" for f in src.frame] + [f"{r.route_id}-{f:07d}" for f in fa.frame]
+            files = [[f"{r.src_dir}/{x[c]}" for c in cams] for x in src.files] + [[f"{a}/{x[c]}" for c in cams] for x in fa.files]
+            streams.append({"key": f"wl_{r.route_id}", "names": names, "targets": list(range(len(src), len(names))),
+                            "files": files, "gaps": 0})
+        (d / "op_plan.json").write_text(json.dumps({"calib": carla_calib(), "streams": streams}))
+        return {"streams": len(streams), "dir": str(d)}
+    rows = []
+    src_op = data_dir() / "processed" / SRC["ba"]["proc"] / "op_streams_plan" / "cinque"
+    for r in runs.itertuples():
+        a = _fork_attempt(Path(out) / r.set, r.route_id)
+        f = d / "op_streams_vis" / "cinque" / f"wl_{r.route_id}.npz"
+        if a is None or not f.exists():
+            continue
+        fa, fs = _frames(a), _frames(Path(r.src_dir))
+        tick_of = {f"{r.route_id}-{fr:07d}": t for t, fr in zip(fa.index, fa.frame)}
+        name_src = {t: f"{r.src_route}-{fr:07d}" for t, fr in zip(fs.index, fs.frame)}
+        q = np.load(f)
+        so = np.load(src_op / f"p5_{r.src_route}.npz") if (src_op / f"p5_{r.src_route}.npz").exists() else None
+        ref = dict(zip(so["name"], so["temporal"])) if so is not None else {}
+        cos = []
+        for n, v in zip(q["name"], q["temporal"]):
+            u = ref.get(name_src.get(tick_of.get(str(n))))
+            if u is not None:
+                cos.append(float(v @ u / np.linalg.norm(v) / np.linalg.norm(u)))
+        rows.append({"route_id": r.route_id, "action": r.action, "op_frames_compared": len(cos),
+                     "op_cos_min": min(cos) if cos else np.nan, "op_cos_mean": float(np.mean(cos)) if cos else np.nan})
+    t = pd.DataFrame(rows)
+    # V-JEPA 2 on the pre-fork frames with 3 predecessors inside the run, against the same ticks of the source run
+    from . import features as F
+    fx = F.VJepaFeatures(frames=4)
+    vrows = []
+    for r in runs.itertuples():
+        a = _fork_attempt(Path(out) / r.set, r.route_id)
+        if a is None:
+            continue
+        fa, fs = _frames(a), _frames(Path(r.src_dir))
+        ta = [t for t in fa.index if fa.files[t] and t < r.fork_tick]
+        ta = [t for t in ta if all(t - 4 * j in ta for j in range(4)) and t in fs.index and all(t - 4 * j in fs.index for j in range(4))]
+        if not ta:
+            continue
+        mk = lambda root, fr, t: sum(([f"{root}/{fr.files[t - 4 * (3 - j)][c]}" for j in range(4)] for c in cams), [])
+        tab = pd.DataFrame({"files": [mk(a, fa, t) for t in ta] + [mk(r.src_dir, fs, t) for t in ta]})
+        z = W._extract_rows(tab, fx, 16, 4).astype(np.float32)
+        za, zs = z[: len(ta)], z[len(ta):]
+        c = (za * zs).sum(1) / np.linalg.norm(za, axis=1) / np.linalg.norm(zs, axis=1)
+        vrows.append({"route_id": r.route_id, "vjepa_frames_compared": len(ta), "vjepa_cos_min": float(c.min()),
+                      "vjepa_cos_mean": float(c.mean())})
+    t = t.merge(pd.DataFrame(vrows), on="route_id", how="outer") if vrows else t
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    t.to_csv(RESULTS / f"prefix_feats_{stage}.csv", index=False, float_format="%.6f")
+    return t
+
+
 def _gap_front(adir: Path, t0: int, t1: int) -> dict:
     """Min longitudinal gap to any road actor in the ego lane (|y| <= 1.75 m, ego frame) over ticks [t0, t1], and the
     ego's travel, and the min time to collision with those actors (gap / closing speed along the ego heading). Actor rows
@@ -407,7 +482,7 @@ def sanity(out: str, stage: str) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "sanity"))
+    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity"))
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
     ap.add_argument("--set", default="ba", choices=tuple(SRC) + ("d2",))
     ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"), help="generation root (per-set subdirs)")
@@ -420,6 +495,9 @@ def main():
         print(ids(a.stage, a.set, os.path.join(a.out, a.set)))
     elif a.step == "prefix":
         print(prefix(a.out, a.stage).to_string(index=False))
+    elif a.step in ("prefix_spec", "prefix_read"):
+        r = prefix_feats(a.out, a.stage, a.step.split("_")[1])
+        print(r.to_string(index=False) if isinstance(r, pd.DataFrame) else json.dumps(r))
     else:
         print(json.dumps(sanity(a.out, a.stage), indent=1, default=str))
 
