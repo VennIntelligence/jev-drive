@@ -207,7 +207,7 @@ class WLForkAgent(P5PairAgent):
         self._ticks.write(json.dumps({"tick": self._tick, "t": round(now, 4), "kind": self.active["w"]["kind"],
                                       "action": self.active["w"]["action"], "throttle": c.throttle, "steer": c.steer,
                                       "brake": c.brake, "accepted": accepted, "speed": speed, "rear_xy": xy.tolist(),
-                                      "yaw": yaw, "diag": self.ctl.diagnostics() if accepted is not None else None}, default=str) + "\n")
+                                      "yaw": yaw, "diag": self.ctl.diagnostics if accepted is not None else None}, default=str) + "\n")
         if now >= self.active["until"]:
             self.active = None
         return c

@@ -200,15 +200,17 @@ def d2(seeds=(0, 1), max_s: float = 70.0) -> dict:
 # ================================================================ stages
 
 def stage_ids(stage: str) -> pd.DataFrame:
-    """pilot1: one P5 pedestrian fork point (k1, x+, an eval route) x 7 actions; pilot10: every fork point of 10 routes
+    """pilot1: one P5 pedestrian x+ fork point with fork tick >= 200 x 7 actions; pilot10: every fork point of 10 routes
     (P5 pedestrian 4, cut-in 2, P6 4, training split); full: everything."""
     runs = pd.read_parquet(rundir("forks.parquet"))
     if stage == "full":
         return runs
     rng = np.random.RandomState(SPLIT_SEED + 1)
     if stage == "pilot1":
-        c = runs[(runs.cls == "ped") & (runs.k_name == "k1") & (runs.world == "plus") & runs.has_op]
-        return runs[runs.fork_id == c.fork_id.iloc[0]]
+        # a P5 pedestrian x+ fork point late in its run (fork tick >= 200, the earliest such), so that a
+        # no-rendering prefix has room before the first saved frame
+        c = runs[(runs.cls == "ped") & (runs.world == "plus") & runs.has_op & (runs.fork_tick >= 200)]
+        return runs[runs.fork_id == c.sort_values(["fork_tick", "fork_id"]).fork_id.iloc[0]]
     pick = []
     for cls, n in (("ped", 4), ("cutin", 2), ("obstacle", 4)):
         b = np.array(sorted(runs[(runs.cls == cls) & (runs.split == "train") & runs.has_op].base_id.unique()))
