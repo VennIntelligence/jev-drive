@@ -19,26 +19,28 @@ run() { local d=$1 f=$2 m=$3; shift 3; local tag="$f@$m${SUF:-}"
   [[ -f $R/$d/plans/$tag.npz ]] && return 0
   st "run $d $tag"; $OP run --data "$d" --frames "$f" --model "$m" "$@" || die "run $d $tag"; }
 what=${1:-all}
+MS=${METHODS:-hold blend warp rife gimm}          # a re-run with the full list resumes
 
 if [[ $what == wod || $what == all ]]; then
   [[ -f $R/wod/meta.json ]] || { st "wod-cache"; $OP wod-cache --workers 16 || die wod-cache; }
-  for m in hold blend warp rife gimm; do synth wod $m; done
+  for m in $MS; do synth wod $m; done
   TAG=warp_pre1.5 synth wod warp --preroll 1.5
   TAG=warp_pre3.3 synth wod warp --preroll 3.3
-  for mdl in cinque small lebowski; do for f in real hold blend warp rife gimm; do run wod $f $mdl; done; done
+  for mdl in cinque small lebowski; do for f in real $MS; do run wod $f $mdl; done; done
   run wod warp_pre1.5 cinque; run wod warp_pre3.3 lebowski
   SUF=_start-0.5 run wod real cinque --start -0.5
+  [[ $MS == *gimm* ]] || { st "wod partial (no gimm)"; exit 0; }
   st "score-wod"; $PJ score-wod --adapters base retime > "$R/wod/score.log" 2>&1 || die score-wod
   st "wod done"
 fi
 
 if [[ $what == nav || $what == all ]]; then
   [[ -f $R/nav/meta.json ]] || { st "nav-cache"; $OP nav-cache --n 2000 --workers 16 || die nav-cache; }
-  for m in hold blend warp rife gimm; do synth nav $m; done
+  for m in $MS; do synth nav $m; done
   TAG=hold_nominal synth nav hold --keys nominal
   TAG=rife_nominal synth nav rife --keys nominal
   TAG=rife_pre1.5 synth nav rife --preroll 1.5
-  for f in hold blend warp rife gimm hold_nominal rife_nominal rife_pre1.5; do run nav $f cinque; done
+  for f in $MS hold_nominal rife_nominal rife_pre1.5; do run nav $f cinque; done
   for mdl in small lebowski; do for f in hold warp rife; do run nav $f $mdl; done; done
   SUF=_start-0.5 run nav rife cinque --start -0.5
   st "nav-export"; $PJ nav-export --adapters base || die nav-export
