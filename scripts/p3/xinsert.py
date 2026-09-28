@@ -563,13 +563,17 @@ def plan_one(k: int, bank_: list) -> dict:
 
 
 def plan(a):
+    global LEAD_INS
     b = load_bank()
-    (X / "plan").mkdir(parents=True, exist_ok=True)
+    pdir = Path(a.plan_dir) if a.plan_dir else X / "plan"
+    pdir.mkdir(parents=True, exist_ok=True)
+    if a.lead:
+        LEAD_INS = a.lead                                          # sensitivity only: a longer walk-in lead-in
     for k in a.targets:
         if not (PROC / f"{k:03d}/lidar").exists():
             continue
         r = plan_one(k, b)
-        (X / "plan" / f"p3_{k:03d}.json").write_text(json.dumps(r, indent=1))
+        (pdir / f"p3_{k:03d}.json").write_text(json.dumps(r, indent=1))
         print(json.dumps({q: r.get(q) for q in ("scene", "item", "view_gap", "reason")} | {"donor": (r.get("donor") or {}).get("scene")}), flush=True)
 
 
@@ -908,6 +912,8 @@ def main():
     p.add_argument("--scene", type=int, required=True)
     p = sp.add_parser("plan")
     p.add_argument("--targets", type=int, nargs="+", required=True)
+    p.add_argument("--plan-dir", default="", help="sensitivity runs: write the plans here instead of xinsert/plan")
+    p.add_argument("--lead", type=int, default=0, help="sensitivity runs: walk-in lead-in in 10 Hz frames")
     sp.add_parser("yield")
     p = sp.add_parser("item")
     p.add_argument("--target", type=int, required=True)
