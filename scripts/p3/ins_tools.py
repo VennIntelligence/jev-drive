@@ -279,7 +279,7 @@ def veh(a):
             comp = al * crgb.clamp(0, 1) + (1 - al) * rgb
             save_rgb(base_d / jpg(t), to8(rgb))
             save_rgb(omni_d / jpg(t), to8(comp))
-            b = bbox((calpha > 0.05).cpu().numpy())
+            b = bbox((al[..., 0] > 0.05).cpu().numpy())                  # visible part only (depth-tested)
             boxes.append(b or (0, 0, 0, 0))
             regs.append(box_region(b) if b else (0, 0, 0, 0))
             c2w_np = c2w.double().cpu().numpy()
