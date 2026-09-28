@@ -91,7 +91,7 @@ chain() {  # chain <j>
                 "$PY" scripts/b2d_run.py --routes "$R/forks-$s.xml" --route-ids "$ids" --out "$OUT/$s" \
                 --workers "$w" --server-index "$base" --index-span "$span" --gpu-rank "$g" --tm-seed-from-id \
                 --agent scripts/wl_fork_agent.py --agent-config "$OUT/agent-$s.json" --python "$(pyenv "$s")" \
-                --fast-copy --no-spectator --no-reap --max-attempts 2 --stagger-s 20 --client-threads 8 --stall-s ${STALL_S:-600} &
+                --fast-copy --no-spectator --no-reap --max-attempts ${MAX_ATTEMPTS:-3} --stagger-s ${STAGGER_S:-30} --client-threads 8 --stall-s ${STALL_S:-600} &
             echo "runner $! gpu $g $s" >> "$OUT/pids.txt"
             wait $!
         done

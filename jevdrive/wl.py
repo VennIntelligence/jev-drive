@@ -424,8 +424,41 @@ def outcome(adir: Path, fork_tick: int, branch_s: float = 3.0) -> dict:
     e0, e1 = p.loc[fork_tick], p.loc[min(t1, p.index.max())]
     c, s = np.cos(np.radians(e0.yaw)), np.sin(np.radians(e0.yaw))
     lat = float(-(e1.x - e0.x) * s + (e1.y - e0.y) * c)       # CARLA y right: positive = right of the start heading
-    return {"collision": bool(hit), "collision_types": sorted({h["other_type"] for h in hit}), **g, "lateral_right_m": lat,
+    first_hit = min((c["frame"] - fr0 + 1 for c in hit), default=None)
+    road_hit = [h for h in hit if h["other_type"].startswith(("vehicle.", "walker."))]
+    return {"collision": bool(hit), "collision_road": bool(road_hit), "first_collision_tick": first_hit,
+            "collision_types": sorted({h["other_type"] for h in hit}), **g, "lateral_right_m": lat,
             "unsafe": bool(hit) or g["gap_min_m"] < 2.0 or g["ttc_min_s"] < 1.0, "ticks": int(p.index.max())}
+
+
+def shift_offsets(out: str, stage: str) -> pd.DataFrame:
+    """Checklist item "shift": the executed shift branch's rear-axle position against the op candidate's path (the path it
+    shifts), as a signed left offset along that path's local normal, at t = min(3 s, first collision - 1 tick): after a
+    collision the car is held by the obstacle and says nothing about the shift. Sign correct = left for shift_L."""
+    from .wl_traj import T as TT, world_to_ego
+    runs = stage_ids(stage)
+    rows = []
+    for r in runs[runs.action.isin(["shift_L", "shift_R"])].itertuples():
+        a = _fork_attempt(Path(out) / r.set, r.route_id)
+        if a is None or not (a / "wl.json").exists():
+            continue
+        c = json.loads((a / "wl.json").read_text())["cands"][0]
+        tk = pd.read_json(a / "wl_ticks.jsonl", lines=True).set_index("tick")
+        o = outcome(a, r.fork_tick)
+        t_end = r.fork_tick + 60 if o["first_collision_tick"] is None else min(r.fork_tick + 60, o["first_collision_tick"] - 1)
+        t_end = max(t for t in tk.index if t <= t_end) if (tk.index <= t_end).any() else None
+        if t_end is None:
+            continue
+        p = world_to_ego(np.array([tk.rear_xy[t_end]]), np.array(c["rear_xy"]), c["yaw"])[0]
+        op = np.vstack([[0.0, 0.0], np.array(c["cands"]["op"])])
+        i = int(np.argmin(np.hypot(*(op - p).T)))
+        j = min(i + 1, len(op) - 1)
+        d = op[j] - op[max(j - 1, 0)]
+        n = np.array([-d[1], d[0]]) / max(np.hypot(*d), 1e-6)
+        off = float((p - op[i]) @ n)
+        rows.append({"route_id": r.route_id, "action": r.action, "t_eval_s": (t_end - r.fork_tick) * TICK,
+                     "offset_left_m": off, "sign_ok": off > 0 if r.action == "shift_L" else off < 0})
+    return pd.DataFrame(rows)
 
 
 def sanity(out: str, stage: str) -> dict:
@@ -452,9 +485,13 @@ def sanity(out: str, stage: str) -> dict:
     chk = {}
     chk["prefix_ego_le_1cm"] = float((pre.ego_max_dpos_m <= 0.01).mean()) if len(pre) else np.nan
     chk["brake_travel_lt_hold"] = float((piv.brake_hard < piv.hold).mean()) if {"brake_hard", "hold"} <= set(piv) else np.nan
-    if {"shift_L", "shift_R"} <= set(lat):
-        chk["shift_sign_ok"] = float(pd.concat([lat.shift_L < 0, lat.shift_R > 0]).mean())     # left = negative right
-        chk["shift_ge_2m"] = float(pd.concat([lat.shift_L <= -2, lat.shift_R >= 2]).mean())
+    sh = shift_offsets(out, stage)
+    if len(sh):
+        ok = sh[sh.t_eval_s >= 1.0]
+        chk["shift_n_evaluated"], chk["shift_n_censored"] = len(ok), int((sh.t_eval_s < 1.0).sum())
+        chk["shift_sign_ok"] = float(ok.sign_ok.mean()) if len(ok) else np.nan
+        full = ok[ok.t_eval_s >= 2.0]
+        chk["shift_ge_2m"] = float((full.offset_left_m.abs() >= 2.0).mean()) if len(full) else np.nan
     u = unsafe.join(cls)
     hold_op = u[["hold", "op"]].max(axis=1) if {"hold", "op"} <= set(u) else None
     if hold_op is not None:
