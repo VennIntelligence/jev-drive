@@ -55,3 +55,8 @@ Cinque、Lebowski（box 上已有），再加一个**更早的 supercombo**，�
 ## 偏离记录
 
 （出数前的任何改动写在这里，写明原因。）
+
+- 2026-09-28 14:10 CST 旧模型已取到（出数前）：从 GitHub LFS 下载了 openpilot **v0.8.16**（2022-08 发布）和 **v0.9.4**（2023-07 发布）的 `selfdrive/modeld/models/supercombo.onnx`，放在 `$DATA_DIR/models/openpilot/old/`。
+  sha256：v0.8.16 `15d9eb01…4eca`，v0.9.4 `d7f95f6b…f8a8`。两个模型的输入都是 2 × 12×128×256 的 YUV 双相机 + desire + traffic_convention，v0.8.16 另有 512 维循环状态，v0.9.4 另有 99×128 的特征缓冲和导航特征；输出里都有 plan、lead、lead_prob 这几段（slice 表在 ONNX 元数据里）。
+  适配写好后，先在录像帧上复核再用。
+
