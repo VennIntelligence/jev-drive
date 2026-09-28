@@ -99,6 +99,12 @@ CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/i
   server before connecting, and retries `load_world` up to 20 times (and the traffic manager 40),
   treating a server that will not come up as routine. Our `carla_server.sh` returns as soon as the
   port accepts, which is 4-7 s. The port check is a liveness gate, not a readiness one.
+- **Many servers starting at once wedge the NVIDIA driver.** On 2026-09-28 about 50 servers on one box were starting and
+  restarting at the same time (per-card caps raised to 8-10, churn from small runners), plus nvidia-smi polling every
+  round. Processes piled up in D state on the driver's device lock (`os_acquire_rwlock_read`, `drm_open`), `vulkaninfo`
+  took minutes, GPU use fell to ~0 %, and every new server died at map load with the RenderThread 60 s timeout. `b2d_run`
+  now holds one of `B2D_START_SLOTS` (2) box-wide flock slots per start until the RPC port opens, and the G lane caches
+  nvidia-smi for 60 s. The box recovered within 30 min, with no restart.
 - **A healthy server prints nothing.** Shipping builds stop at `Disabling core dumps.` and stay
   silent. Silence is not a hang.
 - **`Exiting abnormally (error code: 143)` is not a crash.** 143 is `128 + SIGTERM`, usually your
