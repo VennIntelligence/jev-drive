@@ -3565,3 +3565,18 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 
 **状态**：**待定**。限定：10 对、1 seed、BehaviorAgent 集、只有前视单相机；检查 3 的参照是 CARLA 原图，本身有域差。
 **会推翻或推进本条的证据**：「x⁻ 翻一次 + 行人区局部重画」在同样 10 对上检查 1 过、openpilot 差在行人区外的占比回到 CARLA 原图的量级（< 20%），且成本仍在 250 GPU·h 内（推进为训练数据源）。
+
+## 57. openpilot 进 B2D 闭环：起不了步是静止先验、不转弯是 turn desire 在路口前不改 plan；无感知的路线 base 单独就有 DS 57，openpilot 只做纵向 modifier 时对 base +10 [−6, +27]，让它横向驾驶则 −30 到 −48（**待定**，dev 10 条 + 诊断 6 条，1 seed）
+
+2026-09-28。计划与登记在 [todos/2026-09-28-op-closedloop.md](../todos/2026-09-28-op-closedloop.md)，全文与表在 [openpilot-closedloop-integration.md](openpilot-closedloop-integration.md)，小表 [results/op_arb/](results/op_arb/)。
+路线取 Bench2Drive 0.0.4 val（不是 220 考卷），GPU 6 测试卡，约 9.5 worker·h。
+
+1. **起步**：native（openpilot 原生 plan → P7）6 / 6 条从不动；静止且无障碍时 plan 5 s 只走 0.97 m、meta 头「驾驶员踩刹车」0.80，画面估的车速 −0.02（知道自己停着），前车读得准。被带到 1 m/s 以上后 plan 反而要加速。缺的是真车上驾驶员按 resume。
+2. **转弯**：转弯前 0–20 m，带 turn desire 的 plan 在 15 m 处跟了路线横移的 −5%，无 desire 的 twin −10%；进弯后都跟 100%。desire 不改变 desire_pred。
+3. **仲裁 pilot**（10 条，DS）：base（路线几何 + 8 m/s，无感知）56.6；acc（+ lead 头 IDM）58.2 / 62.9（两次运行）；e2e（+ 行驶中 plan 约束 + openpilot 放行的停车锁存）66.2，对 base +9.7 [−5.5, +27.0]；
+   switch（直路上 openpilot 自己开）26.1；oplat（连路口也给它）8.5。e2e 的 42 次 plan 引起的停车里 30 次真值无障碍，24 / 41 次放行靠 20 s 兜底，均速 0.96 m/s 对 base 2.69。
+4. **读法**：B2D 短路线的大半分数来自「按路线走完」，openpilot 结构上做不了；它当纵向 modifier 能加分（lead 头避免追尾、plan 在几处避免闯灯 / 撞人），但 plan 在闭环里的幽灵停车与「慢就安全」混在一起，10 条分不开。
+   openpilot 的贡献只能按对 base 的配对差报。
+
+**状态**：**待定**。限定：10 条 dev 路线单 seed，同配置重复运行在一条路线上差 47 DS；行人在 CARLA 里是 sim 域差（第 55 条），不是这里能测的。
+**会推翻或推进本条的证据**：220 条 × 3 seed 上 e2e − base 的配对差 CI 下界 > 0（推进）；幽灵停车用 `plan_form` rel 或 brake 门修掉后 e2e 的均速回到 base 的一半以上且配对差不降（推进）；同一位置 shadow 与闭环的 plan 减速配对显示幽灵停车来自画面而不是自我强化（改机制读法）。

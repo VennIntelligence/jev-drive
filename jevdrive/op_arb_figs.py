@@ -2,7 +2,7 @@
 results.json per finished attempt) and writes research/figs/op_arb_*.png / .pdf through research/plot_style.
 
     .venv/bin/python -m jevdrive.op_arb_figs p1 <runs/op_arb dir>      # phase-1 diagnosis panels
-    .venv/bin/python -m jevdrive.op_arb_figs p2 <runs/op_arb dir>      # phase-2 per-route DS by arm
+    .venv/bin/python -m jevdrive.op_arb_figs p2 <dir with per_route.csv>  # phase-2 per-route DS by arm
 """
 from __future__ import annotations
 
@@ -92,11 +92,11 @@ def p1(rootdir: Path) -> None:
 
 def p2(rootdir: Path) -> None:
     S.apply()
-    res = R.evaluate(rootdir, rootdir / "results_fig", "p2")["routes"]
-    arms = [a for a in ("base", "acc", "e2e", "switch", "oplat") if a in set(res.arm)]
+    res = pd.read_csv(rootdir / "per_route.csv", dtype={"route": str})   # jevdrive.op_arb_report eval output
+    arms = [a for a in ("base", "acc", "acc2", "e2e", "switch", "oplat") if a in set(res.arm)]
     routes = sorted(res.route.unique(), key=int)
     fig, ax = plt.subplots(figsize=(S.DOUBLE_COLUMN_IN, 2.0))
-    col = {"base": S.BASELINE, "acc": S.PALETTE["sky_blue"], "e2e": S.PALETTE["blue"], "switch": S.PALETTE["orange"],
+    col = {"base": S.BASELINE, "acc": S.PALETTE["sky_blue"], "acc2": S.PALETTE["green"], "e2e": S.PALETTE["blue"], "switch": S.PALETTE["orange"],
            "oplat": S.PALETTE["vermillion"]}
     for k, a in enumerate(arms):
         g = res[res.arm == a].set_index("route").reindex(routes)

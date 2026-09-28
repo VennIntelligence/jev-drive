@@ -1,6 +1,6 @@
 # openpilot 进 Bench2Drive 闭环：base 路线跟随器 + openpilot modifier（op-arb）
 
-状态: running（计划写于 2026-09-28 15:40 CST，任何 op-arb 闭环数字之前）
+状态: done（pilot，2026-09-28 18:54；计划写于 15:40 CST，任何 op-arb 闭环数字之前）
 主题: [research/openpilot-closedloop-integration.md](../research/openpilot-closedloop-integration.md)（结果与设计讨论）
 相关: [decisions.md](../research/decisions.md) 第 31、33、38、41、49、51 条；[openpilot 迁移](2026-09-24-zeroshot-exam/openpilot-migration.md) D1–D5；
 [night-queue-3](2026-09-26-night-queue-3.md) CL 节与 [OPL] 条目
@@ -86,3 +86,9 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
 - 2026-09-28 16:0x CST **bug：phase 2 的 base 臂不是纯 base**。`op_arb_agent.py` 只在 oshadow 里去掉 lead 约束，base 模式也把 openpilot lead 头的 IDM 算进了 min，所以已跑完的 `p2-base` 实际上是 acc 的第二次运行
   （10 条里 9 条 DS 与 acc 相同）。处理：box 上改名为 `p2-acc2`，作 acc 的重复运行（同 seed 的运行噪声参照）报；代码改为 lead 约束只进 acc / e2e / switch；phase 2 其余臂跑完后重跑 base（10 条），
   base 的数字只用重跑版。e2e 臂正在跑，这个改动只影响 base 模式，不影响它。
+- 2026-09-28 18:54 CST phase 2 与 base 重跑完成，SCH 行 `op-arb` 标 done，box 上没有本 lane 的进程。结果（10 条，DS）：base 56.6、acc 58.2、acc2 62.9、e2e 66.2（对 base +9.7 [−5.5, +27.0]）、switch 26.1、oplat 8.5。
+  表在 `research/results/op_arb/p2/`，读法与推荐在 research 文档第 3–6 节，决策日志第 57 条。
+
+## 结果
+
+见 [research/openpilot-closedloop-integration.md](../research/openpilot-closedloop-integration.md) 与 [decisions.md](../research/decisions.md) 第 57 条。状态: done（pilot），220 条 × 3 seed 的正式配对待用户与 main 讨论后再登记。

@@ -1,0 +1,6 @@
+arm - base,n routes,mean dDS,95% CI (route bootstrap),routes better / worse / same
+acc,10,1.6,"[-14.0, 19.1]",1 / 2 / 7
+acc2,10,6.3,"[-0.3, 19.2]",1 / 1 / 8
+e2e,10,9.7,"[-5.5, 27.0]",4 / 3 / 3
+oplat,10,-48.1,"[-63.7, -33.2]",0 / 10 / 0
+switch,10,-30.5,"[-42.6, -19.1]",1 / 9 / 0

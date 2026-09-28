@@ -6,7 +6,22 @@
 
 ## 结论先行
 
-【P2 结论待填】
+1. **起不了步是模型的静止先验，不是执行层、不是缺车速输入、也不是把前车读错。** native（openpilot 原生 plan → P7）6 / 6 条诊断路线车速始终为 0；
+   静止且前方无障碍时 plan 5 s 只走 0.97 m（中位），action accel −0.02，meta 头预测「驾驶员此刻踩刹车」0.80；画面估的自车速度 −0.02 m/s（知道自己停着），前车读得很准（lead_prob 1.00、x 3.9 m）。
+   一旦被带到 1 m/s 以上，plan 反而要加速（1–4 m/s 时 5 s 后比当前快 3.5–6 m/s）：缺的只是真车上驾驶员按 resume 的那一下。
+2. **不转弯是因为 openpilot 不发起路口转弯，turn desire 在路口前不改变 plan。** 转弯前 0–20 m，带 turnLeft desire 的 plan 在 15 m 处只跟了路线横移的 −5%，不给 desire 的 twin 是 −10%；进弯以后两者都跟 100%。
+   闭环里把路口交给 openpilot（oplat）10 / 10 条失败，DS 8.5，3 条 route deviation。
+3. **base 本身就很强，这是本研究最需要讨论的一点。** 一个没有任何感知、只按路线走、8 m/s 巡航的 base，在 10 条 dev 路线上 DS 56.6、RC 93.5（native openpilot 是 0，第 33 条 / CL3 / K0 / K1 是 7–10）。
+   Bench2Drive 的短路线里，大部分分数来自「按路线走完」，而这正是 openpilot 结构上做不了的那部分。
+4. **openpilot 当 modifier 加了东西，但信号弱、噪声大。** 纵向 = min(base, openpilot lead 头 IDM, openpilot plan)、plan 引起的停车锁存到 openpilot 放行（e2e）：DS 66.2，对 base +9.7 [−5.5, +27.0]（4 条好 / 3 条差 / 3 条同）。
+   好在：StaticCutIn 36 → 100（lead 头避免了两次追尾）、VehicleTurningRoutePedestrian 25 → 70（没撞行人）、两条路口 42 → 60（没闯灯）；差在：plan 在闭环里频繁把车带停在无事可停的地方
+   （42 次锁存里 30 次真值「无障碍」，41 次放行里 24 次靠 20 s 兜底），车均速 0.96 m/s 对 base 2.69，T_Junction 与 MergerIntoSlowTraffic 因此超时或丢分。
+   只接 lead 头（acc）两次运行 58.2 / 62.9，对 base +1.6 / +6.3，主要就是 StaticCutIn 那一条；**同配置两次运行在一条路线上差 47 DS**，所以 10 条单 seed 只能给方向。
+5. **让 openpilot 横向驾驶（switch、oplat）明显更差**：DS 26.1 / 8.5，对 base −30.5 [−42.6, −19.1] / −48.1。openpilot 自己开时 7 / 10 条出车道、5 条 blocked。
+6. **推荐**：base（路线几何 + 巡航）管横向与起步，openpilot 只做纵向 modifier（lead 头 ACC + 行驶中的 plan 约束），停车锁存由 openpilot 自己放行。
+   这与 openpilot 真车 experimental 模式的分工一致（驾驶员管路线与 resume），加在外面的东西是通用的几何与一条 IDM；最大的 trick 风险不在这些规则，而在第 3 点：B2D 的分数大半是 base 的。
+   论文里 openpilot 的贡献必须用「对 base 的配对差」和按 hazard 归因的违规来报，不能报绝对 DS。
+7. **行人在 CARLA 里不要指望 openpilot**（第 55 条：真实 nuScenes 上 AUC 0.83，CARLA P5 上 0.506，只用真实数据改 vision 也带不过来）。27297 上 e2e 没撞行人，更可能是它当时正被 plan 压得很慢。
 
 ## 1. 背景：已有的闭环读数
 
@@ -111,16 +126,92 @@ oshadow 行驶中（> 2 m/s）的 tick，按真值「必须减速」事件对「
 | desire 脉冲过路口（未单独跑） | 路口前按路线发 turn desire，让 openpilot 自己转 | — | 驾驶员打灯 | 诊断显示 turn desire 不改变 plan，已含在 oplat 里 |
 | 混合（blending）而不是切换 | 横向按置信度混 openpilot 与 base 的偏移 | — | — | 诊断显示直路上两者重合（|plan − route| 0.2°），转弯前 openpilot 是直的，混合只会把转弯拉直，未跑 |
 
-【P2 表：各方案 DS / RC / SR / 碰撞 / 闯灯 / blocked / openpilot binding 比例】
+### 3.1 pilot 结果（phase 2，10 条 dev 路线，TM seed 0）
+
+路线（Bench2Drive 0.0.4 val，与 phase 1 不重）：27043 SignalizedJunctionRightTurn、15102 VanillaSignalizedTurnEncounterGreenLight、24944 T_Junction、27870 VanillaNonSignalizedTurn、22535 StaticCutIn、
+37969 MergerIntoSlowTrafficV2、24497 ConstructionObstacle、27297 VehicleTurningRoutePedestrian、9196 OppositeVehicleTakingPriority、28147 SignalizedJunctionLeftTurnEnterFlow。
+表来自 [arms.csv](results/op_arb/p2/arms.csv)、[paired.csv](results/op_arb/p2/paired.csv)、[per_route.csv](results/op_arb/p2/per_route.csv)；「openpilot binding」= 非预热 tick 里 openpilot 的约束（lead / plan / 锁存 / 原生 plan）是最紧那一个的比例。
+
+| 方案 | DS | RC | SR | 车辆 / 行人 / 静物碰撞 | 闯红灯 | blocked | 出车道 | openpilot binding（tick / 距离） | 对 base 的 DS 差 [95% CI]，好 / 差 / 同 |
+|:--|--:|--:|--:|:--|--:|--:|--:|:--|:--|
+| base（openpilot 关） | 56.6 | 93.5 | 0.2 | 5 / 2 / 1 | 4 | 0 | 1 | 0 / 0 | — |
+| acc | 58.2 | 85.3 | 0.3 | 2 / 2 / 2 | 4 | 0 | 1 | 0.20 / 0.19 | +1.6 [−14.0, +19.1]，1 / 2 / 7 |
+| acc2（同配置重复运行，见执行日志的 bug 一条） | 62.9 | 93.3 | 0.3 | 3 / 2 / 1 | 4 | 0 | 1 | 0.19 / 0.23 | +6.3 [−0.3, +19.2]，1 / 1 / 8 |
+| **e2e** | **66.2** | 89.9 | 0.3 | 4 / 0 / 1 | 3 | 0 | 1 | 0.76 / 0.60 | **+9.7 [−5.5, +27.0]，4 / 3 / 3** |
+| switch | 26.1 | 56.1 | 0.0 | 10 / 0 / 6 | 0 | 5 | 7 | 0.62 / 0.87 | −30.5 [−42.6, −19.1]，1 / 9 / 0 |
+| oplat | 8.5 | 16.8 | 0.0 | 7 / 0 / 6 | 1 | 2 | 4 | 0.48 / 0.89 | −48.1 [−63.7, −33.2]，0 / 10 / 0 |
+| 参照：native（phase 1 的 6 条） | 0.0 | 0.0 | 0 | — | — | 6 | — | 1 | — |
+
+![op-arb phase 2](figs/op_arb_p2_ds.png)
+
+逐路线 DS，每个点是一个方案在一条路线上的单次运行。看三件事：base / acc / acc2 在 7 条路线上重合（openpilot 的 lead 头只在 22535 上决定了结果）；e2e 在 9196、27043、27297 上高出一截、在 24944、37969 上掉下来；switch / oplat 几乎全在底部。
+
+读法：
+
+- **openpilot 的 lead 头是可靠的 modifier，但在这 10 条里用得上的只有一条。** acc 的 binding 有 82% 发生在真值 30 m 内无车的 tick 上（它对 30 m 以外的慢车也在减速），这些不改变结果；
+  22535（StaticCutIn）是唯一一条 base 追尾、acc 不追尾的路线。
+- **openpilot 的 plan 约束同时带来好处和「幽灵停车」。** e2e 里 plan 是最紧约束的 tick 有 69% 真值无障碍、18% 红黄灯；42 次锁存（plan 把车带停）里 30 次在无障碍处，7 次红灯、4 次前车。
+  plan 的停车有真信号（三条路线上避免了闯灯或碰撞），但假阳性更多；锁存的放行信号（plan 5 s 位移 > 2 m）只放行了 17 次，24 次靠 20 s 兜底。
+  推测机制：闭环里车一旦按 plan 减速，模型 5 s 的隐状态历史就看到自己在减速，接着预测继续减速直到停（人类数据里「开始减速」常常就是「要停」），这是一个自我强化的停车吸引子，
+  开环 shadow 里（phase 1，车由别人开）看不到。验证：同一位置在 oshadow（别人开）与 e2e（自己开）下 plan 的减速量配对比较，或在 plan 约束里只用 plan 相对它自己当前速度估计的减速（`plan_form` rel）再跑一次。
+- **B2D 的 DS 奖励慢。** e2e 平均车速 0.96 m/s，base 2.69，DS 却更高：DS 只按违规打折，慢本身几乎不扣分（这些运行每条都有十几次 min-speed 违规，但 15102 上 base 带着 20 次 min-speed 违规照样 DS 100）。这与第 38 条「保守驾驶本身抬高 hazard SR」是同一件事，
+  所以 e2e 的 +9.7 里有多少是「看见了」、多少是「开得慢所以撞不上」，这 10 条分不开。按路线看 e2e 比 base 少掉的违规：27043、9196 各少一次闯红灯（碰撞仍在），27297 少两次撞行人（但多一次闯红灯），
+  而 22535 的两次追尾 acc 也避免了（那是 lead 头的功劳）；这些位置 e2e 的车速都很低。
+- **openpilot 自己横向开会离开路线。** switch 让 openpilot 在直路上接管横纵，7 / 10 条出车道、5 条 blocked，碰撞多数记在 base 接回之后（车已经偏出车道）；oplat 连路口也给它，3 条直接 route deviation。
+  这与 phase 1 里 shadow plan 在直路上与路线只差 0.2° 不矛盾：shadow 里车一直在路线上，闭环里 openpilot 的横向误差会累积，而且它在低速（大部分时间 < 2 m/s）的横向本来就差（第 49 条 desire 幅度随车速变小是同一现象）。机制没有单独隔离。
 
 ## 4. 推荐设计
 
-【待 P2】
+```mermaid
+flowchart LR
+  R[B2D route + sensor pose] --> B[base: route geometry + set speed + curvature cap]
+  C[road + wide cameras 20 Hz] --> O[openpilot Cinque, route desire]
+  O -->|lead head| A[IDM on lead]
+  O -->|plan, v >= 1 m/s| P[plan position profile]
+  O -->|plan x@5s > 2 m for 1 s| L[stop latch release]
+  B -->|lateral path| M
+  B -->|speed profile| M[min of speed profiles]
+  A --> M
+  P --> M
+  L --> M
+  M --> P7[P7 executor, 5 Hz]
+```
+
+- **分工**：横向永远是 base（路线几何）；纵向 = min(base 巡航剖面, lead 头 IDM, 行驶中的 plan 剖面)；plan 造成的停车锁存，openpilot 自己的 plan 给出「要走」时放行，20 s 兜底。
+  这就是 e2e 臂，也是 openpilot experimental 模式在真车上的分工：驾驶员给路线、设定速度、按 resume，模型管纵向。openpilot 占多少：非预热 tick 里 76% 由 openpilot 的约束决定速度（按距离 60%），横向 0%。
+- **为什么不是 switch / blending**：openpilot 在直路上的横向与路线重合（没东西可加），进路口前不转（加进来只会把弯拉直），自己开时累积偏离（switch −30 DS）。横向给它唯一有意义的场景是绕行，而第 49 条和 Q1 都说它不绕。
+- **为什么不是小的学习型 base**：K0 / K1 已经是「openpilot 特征上的 route-conditioned 读出」，闭环 DS 7–8；几何 base 零训练就是 56.6。学出来的 base 只在它能看见东西时才值得，而那是 openpilot 该做的事。
+- **trick 风险（逐项）**：路线几何与设定速度（B2D 给每个 agent 的路线；真车上是导航与驾驶员，通用，风险低）；20 s 兜底放行（真车上驾驶员的耐心，是 B2D 专用的数字，中）；放行阈值 2 m / 1 s（6 条诊断路线上定的一个数，中）；
+  IDM 参数（通用教科书值，低）。最大的风险是结构性的：base 单独 56.6，所以任何「openpilot + base」的绝对 DS 都主要是 base 的；只有对 base 的配对差才是 openpilot 的。
+- **下一步要修的一件事**：plan 约束的幽灵停车。候选（先登记再跑）：`plan_form` rel（只取 plan 相对它自己当前速度估计的减速）；或 plan 约束只在 meta brake_press 同时高时生效（`plan_gate` brake，phase 1 里 brake@0 对前车 / 红灯的 AUC 0.93 / 0.76）。
+  两者都已在 `op_arb_agent.py` 里实现为开关，没跑。
 
 ## 5. 要不要等适配线（op-adapt B / C、世界模型想象训练）
 
-【待写】
+不用等，大部分集成与它们正交；但有两处会随它们变，要留接口。
+
+| 部分 | 依赖适配线吗 | 现在能做 |
+|:--|:--|:--|
+| base（路线几何、巡航、曲率限速）、P7、起步锁存状态机、IDM | 不依赖 | 已实现（`op_arb_agent.py`），可以直接上 220 条 |
+| 仲裁接口（openpilot 只输出 plan / lead / meta，外面取 min） | 不依赖：适配后的 Cinque 输出同样的头，换权重即可 | 已实现；op-adapt 的 PyTorch port 与 ORT 同输出，换进 server 是一行 |
+| 静止起步 | 不依赖。这是训练数据里「resume 由人触发」造成的先验，vision 层的适配改不了它；世界模型里的想象训练理论上能学会「何时走」，但在那之前锁存 + 放行是必要的 | 保持锁存；想象训练出来后，放行信号直接换成它的 plan |
+| 路口转弯 | 不依赖。desire 在路口前不改变 plan；除非适配线加 route / nav 输入（目前两条线都没有），base 一直负责 | — |
+| 行人 / VRU 反应 | **依赖，而且目前两条线都不解决**：第 55 条说 CARLA 行人是 sim 域差，真实数据的适配带不过来 | 闭环考 VRU 时要么接 sim + real 混训后的模型，要么明写「openpilot 在 CARLA 看不见行人」 |
+| plan 的幽灵停车 | 可能依赖：如果是闭环自我强化（推测），在世界模型里做 on-policy 的想象训练正好对着它；vision 适配不会改 | 先用 `plan_form` rel / `plan_gate` brake 两个开关在 dev 上测，登记后跑 |
+
+所以现在就能推进的是：用 e2e 的仲裁在 220 条（或 dev + held-out）上给出 base、acc、e2e 三臂 3 seed 的配对差，作为「openpilot 当 modifier 能加多少」的基线；
+适配线出来以后，同一个 agent 只换 server 里的权重，再跑同一组配对，读数就是「适配加了多少」。
+
+## 预算
+
+CARLA 只在 GPU 6（与 G 的 pilot 共卡，本 lane 2 个 server），phase 1 约 1.3 worker·h、两次 smoke 约 0.5、phase 2（五臂加一次 base 重跑）约 7.7，合计约 9.5 worker·h（上限 20）。
+单 tick 约 0.5–1.1 s 墙钟，主要是共卡时两路 1928×1208 相机的渲染；openpilot + twin 每步约 90 ms。
 
 ## 6. 讨论的开放问题
 
-【待写】
+1. **base 占了大半分数，论文怎么报？** 建议只报对 base 的配对差（按 hazard family 与违规归因），不报绝对 DS；或者换一个 base 做不到的考卷（第 38 条说 B2D 的差距在规划 / 让行类路线）。要不要这样定？
+2. **慢是不是作弊？** e2e 均速是 base 的 1/3，DS 却更高。是否在读数里加一个进度 / 速度护栏（例如对 base 的平均车速不低于 x%），或者报「每 km 违规」而不是 DS？
+3. **20 s 兜底放行算不算 trick？** 它对应真车上驾驶员不耐烦按 resume；去掉它 e2e 会在幽灵停车处永久停住。要不要把「兜底放行次数」作为一个必须报的数？
+4. **起步放行交给谁？** 现在是 openpilot 自己的 plan（5 s 位移 > 2 m）。phase 1 里它在 8 段「该等」里 0 误放，但在 13 段「该走」里只放了 4 段。要不要允许一个同样小的外部信号（例如只看 lead 头：前车离开即走），代价是红灯前会走（它不看灯）？
+5. **幽灵停车的机制**：是闭环自我强化（推测），还是 CARLA 画面里的什么东西（路边停车、路口形状）让它想停？用 oshadow 与 e2e 同一位置的 plan 配对就能分开，要不要先做这个再上 220 条？
+6. **横向要不要彻底放弃 openpilot？** 当前证据（switch −30、oplat −48、desire 不转弯、不绕行）都说放弃；唯一的保留是绕行（第三层），那需要外部的模式头（Q2 / X 那条线），与 openpilot 无关。
