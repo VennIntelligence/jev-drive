@@ -65,6 +65,8 @@ class OnnxTorch(torch.nn.Module):
         self.nodes = [(n.op_type, list(n.input), list(n.output),
                        {a.name: onnx.helper.get_attribute_value(a) for a in n.attribute}) for n in g.node]
         self.inputs = [i.name for i in g.input]
+        self.in_types = {i.name: i.type.tensor_type.elem_type for i in g.input}
+        self.in_shapes = {i.name: tuple(d.dim_value for d in i.type.tensor_type.shape.dim) for i in g.input}
         self.outputs = [o.name for o in g.output]
         self.producer = {o: k for k, n in enumerate(self.nodes) for o in n[2]}
         self._plans = {}
