@@ -23,7 +23,7 @@ lateral acceleration <= alat on the path's curvature, accel <= amax, and a stop 
 Config: the b2d_zeroshot_agent keys, plus "arb": {"mode", "cruise", "alat", "amax", "bmax", "twin", "lead_p",
 "plan_vmin", "plan_form" ("abs" | "rel"), "plan_gate" ("always" | "brake": only while meta brake_press > brake_th), "meta_k" (meta time slot: 0 = now, 1 = 2 s),
 "release" ("none" | "gas" | "planx" | "nobrake"), "release_th", "latch_max_s",
-"zone_before_m", "zone_after_m"}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
+"zone_before_m", "zone_after_m", "cruise_by_route" ({route id: set speed})}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
 arbitration state, and ground-truth context (evaluation only; only mode oshadow reads it for control).
 """
 import json
@@ -135,6 +135,10 @@ class OpArbAgent(Z.ZeroShotAgent):
     def setup(self, path_to_conf_file):
         super().setup(path_to_conf_file)
         self.arb = dict(DEFAULTS, **self.cfg.get("arb", {}))
+        by_route = self.arb.get("cruise_by_route") or {}      # matched-speed control: a set speed per route id
+        rid = os.environ.get("BENCHMARK_ROUTE_ID", "")
+        if rid in by_route:
+            self.arb["cruise"] = float(by_route[rid])
         assert self.arb["mode"] in MODES and not self.alpamayo and not self.head and not self.replay, self.arb
         self.latch = self.moved = False
         self.latch_t = self.stop_t = 0.0

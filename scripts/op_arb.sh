@@ -75,6 +75,8 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         acc)     arb='{"mode": "acc"}' ;;
         e2e)     arb="{\"mode\": \"e2e\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
         switch)  arb="{\"mode\": \"switch\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
+        baseslow) arb="{\"mode\": \"base\", \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
+        e2enofb) arb="{\"mode\": \"e2e\"${E2E_ARGS:+, $E2E_ARGS}, \"latch_max_s\": 1e9}" ;;
         oplat)   arb="{\"mode\": \"switch\", \"zones\": false${E2E_ARGS:+, $E2E_ARGS}}" ;;
         *) error "unknown arm $arm" ;;
     esac

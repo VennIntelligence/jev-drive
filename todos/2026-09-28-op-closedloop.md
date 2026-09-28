@@ -92,3 +92,25 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
 ## 结果
 
 见 [research/openpilot-closedloop-integration.md](../research/openpilot-closedloop-integration.md) 与 [decisions.md](../research/decisions.md) 第 57 条。状态: done（pilot），220 条 × 3 seed 的正式配对待用户与 main 讨论后再登记。
+
+## 后续：两个诊断（用户 2026-09-28 ~19:00 决定后；登记写于 19:1x CST，任何诊断数字之前）
+
+用户判定：五种仲裁都不满意，集成设计搁置，以后再好好调。现在只做两个诊断，同样的 10 条 dev 路线，GPU 6、≤ 2 server、≤ 15 worker·h（SCH 行 `op-arb` 重开）。
+
+**D1 幽灵停车：闭环自我强化，还是只看画面也想停？**
+- 事件：e2e 臂（`p2-e2e`）里停车锁存的起点，真值情境为「无障碍」的那些（上一节数到 30 / 42，脚本重算）。每个事件取锁存前 10 s 内最后一段连续「plan 是最紧约束」的起点作为 binding 起点，记它的路线进度 ri_b、车速。
+- 闭环读数（binding 起点那一步）：plan 的减速 v(0) − v(3 s)、v(5 s)、meta brake@0 s、lead_prob、lead x。
+- shadow 读数：在「别人开、openpilot 只看」的运行里，取同一路线进度（|ri − ri_b| ≤ 2，第一次经过）那一步的同样读数。两个 shadow：`p2-base`（8 m/s 巡航，已跑）和下面 D2 的 `p2-baseslow`（与 e2e 同均速）。
+- 「想停」的判据（写死）：plan 的 v(5 s) < 1 m/s 或 v(5 s) < 0.3 · v(0)。基线率 = 同一 shadow 运行里真值无障碍、离任何幽灵停车位置 > 10 m 的所有行驶步上的同一比例。
+- 读法（写死）：两个 shadow 里至少一个在幽灵停车位置的「想停」比例 ≥ 50% 且 ≥ 2 × 基线率 →「openpilot 只看画面也想停」（画面里有东西让它停）；两个 shadow 都 ≤ 20% 或 ≤ 1.5 × 基线率 →「闭环自我强化」；其余写「混合」。
+  另报闭环里 binding 起点之前 3 s 的车速轨迹（是不是已经被 plan 压慢了才停）。
+
+**D2 同均速对照：「看见了」还是「慢所以撞不上」**
+- 新臂 `baseslow`：base 单独开（openpilot 只记录），每条路线的设定速度 c_r = 8 m/s × (e2e 在该路线的平均车速 / base 在该路线的平均车速)，截在 [0.5, 8]：
+  15102 1.28、22535 1.69、24497 7.62、24944 0.61、27043 2.25、27297 2.51、27870 6.51、28147 0.92、37969 2.91、9196 2.53（平均车速取非预热步的时间平均，e2e 与 base 取 phase 2 的运行）。
+  限定：只匹配平均车速，不匹配速度剖面（e2e 是「正常开 + 长时间停」，baseslow 是匀速慢开）。
+- 新臂 `e2enofb`：e2e 去掉 20 s 兜底放行（其余参数不变），只靠 openpilot 自己的放行信号。
+- 读数：每臂 DS、RC、车辆 / 行人 / 静物碰撞、闯红灯、blocked；e2e、e2enofb 分别对 baseslow 的逐路线违规数差与 DS 差（10 条，只作方向）。
+- 读法（写死）：e2e 的碰撞 + 闯灯总数比 baseslow 少 ≥ 3 次，且少的发生在 e2e 的 openpilot 约束（lead / plan / 锁存）当时 binding 的路线上 →「看见了」有贡献；
+  baseslow 的违规数 ≤ e2e →「e2e 对 base 的 +9.7 可以用开得慢解释」；其余写「分不开」。
+- 有兜底 / 无兜底两组数字都报：e2enofb 的 DS、blocked 数、锁存靠 openpilot 信号放行的次数与比例。
