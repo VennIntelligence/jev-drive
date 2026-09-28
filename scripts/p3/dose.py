@@ -119,7 +119,20 @@ def render(a):
         crossing = from the sidewalk at the donor's gait into the point, reached at t*. {t: (R, T, Rd, s)}, feet, gap,
         or (None, None, reason)."""
         S = path.Se[ts] + XI.FRONT + dist
-        b = XI.walk_plan(g, path, gr, actors, obs_all, d, win, 1.0, ts, S, lat, PRE_R, POST_R, "stand" if st == "stand" else "cross")
+        if st == "stand":
+            # a standing person may face any way: the facing (15 deg steps) with the smallest view gap
+            opts = [XI.walk_plan(g, path, gr, actors, obs_all, d, win, 1.0, ts, S, lat, PRE_R, POST_R, "stand", face=f)
+                    for f in np.radians(np.arange(0, 360, 15))]
+            ok = [o for o in opts if "fail" not in o]
+            b = min(ok, key=lambda o: o["gap"]) if ok else opts[0]
+        else:
+            # crossing: the scene's donor, its fastest 1.0-1.8 m/s window that can walk in from the edge in time
+            b = {"fail": "no donor window"}
+            for w_ in sorted((w for w in d["windows"] if XI.V_WALK[0] <= w["speed"] <= XI.V_WALK[1]), key=lambda w: -w["speed"]):
+                b = XI.walk_plan(g, path, gr, actors, obs_all, d, w_, 1.0, ts, S, lat, PRE_R, POST_R, "cross")
+                if "fail" not in b:
+                    b["window"] = w_
+                    break
         if "fail" in b:
             return None, None, b["fail"]
         phi = b["phi"]

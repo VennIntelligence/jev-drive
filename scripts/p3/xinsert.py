@@ -410,7 +410,7 @@ def kerb(gr, path, S, side, peds=None, vehs=None):
     return out
 
 
-def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross"):
+def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross", face=None):
     """Donor trajectory for one item. mode cross: from the sidewalk (kerb + 0.6 m, at least lat_target + 1 m) walking
     perpendicular to the path into the point `lat_target` (m, on `side`) at arc S_conf, reached at frame t_conf; before its
     walk starts the donor stands at the start point. mode along: walks parallel to the path on the sidewalk at kerb + 1 m
@@ -427,7 +427,8 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
     vd = win["speed"]
     frames = list(range(t_conf - lead, t_conf + post + 1))
     if mode == "stand":
-        target_dir = np.arctan2(-side * right[1], -side * right[0])            # facing the lane
+        # facing the lane by default; `face` (rad, world) overrides it (a standing person may face any way)
+        target_dir = np.arctan2(-side * right[1], -side * right[0]) if face is None else face
         phi = INS.wrap(target_dir - yaw[s_c])
         P = Q + side * lat_target * right
         n_walk, s_of = 0, {t: s_c for t in frames}
