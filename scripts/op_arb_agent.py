@@ -20,7 +20,8 @@ route geometry (b2d_controller_adapter.RouteAdapter's rejoin path) timed by a sp
 lateral acceleration <= alat on the path's curvature, accel <= amax, and a stop at the route end. It has no perception.
 
 Config: the b2d_zeroshot_agent keys, plus "arb": {"mode", "cruise", "alat", "amax", "bmax", "twin", "lead_p",
-"plan_vmin", "plan_form" ("abs" | "rel"), "release" ("none" | "gas" | "planx"), "release_th", "latch_max_s",
+"plan_vmin", "plan_form" ("abs" | "rel"), "plan_gate" ("always" | "brake": only while meta brake_press > brake_th), "meta_k" (meta time slot: 0 = now, 1 = 2 s),
+"release" ("none" | "gas" | "planx" | "nobrake"), "release_th", "latch_max_s",
 "zone_before_m", "zone_after_m"}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
 arbitration state, and ground-truth context (evaluation only; only mode oshadow reads it for control).
 """
@@ -45,6 +46,7 @@ DT_SIM, HORIZON = 0.05, 5.0
 MODES = ("native", "base", "oshadow", "acc", "e2e", "switch")
 DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3.0, "twin": False, "lead_p": 0.5,
             "plan_vmin": 1.0, "plan_form": "abs", "release": "none", "release_th": 0.5, "latch_max_s": 20.0,
+            "plan_gate": "always", "brake_th": 0.5, "meta_k": 0,
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0}
 
 
@@ -286,7 +288,10 @@ class OpArbAgent(Z.ZeroShotAgent):
         if speed > 1.0:
             self.moved = True
         # the plan constrains while rolling, and keeps constraining a stop it started down to standstill
-        plan_on = use_plan and not warm and (speed >= A["plan_vmin"] or t_frame - self.binding_t < 1.5)
+        mt0 = np.asarray(out["meta"], float)
+        gi, bi = 31 + 4 * A["meta_k"], 32 + 4 * A["meta_k"]  # meta gas / brake press at t = 0, 2, 4 ... s (k = 0, 1, 2 ...)
+        gate = A["plan_gate"] == "always" or mt0[bi] > A["brake_th"]      # "brake": P(driver brakes) from the meta head
+        plan_on = use_plan and not warm and gate and (speed >= A["plan_vmin"] or t_frame - self.binding_t < 1.5)
         if plan_on:
             cons["plan"] = s_plan
             if s_plan[-1] < min(v[-1] for k, v in cons.items() if k != "plan") - 0.5:
@@ -296,9 +301,10 @@ class OpArbAgent(Z.ZeroShotAgent):
             self.latch, self.latch_t = True, 0.0
         if self.latch:
             self.latch_t += dt
-            gas = float(np.asarray(out["meta"])[31])        # P(driver presses gas within 2 s)
+            gas = float(mt0[gi])
             x5 = float(op_path[-1, 0])
-            rel = {"gas": gas > A["release_th"], "planx": x5 > A["release_th"], "none": False}[A["release"]]
+            rel = {"gas": gas > A["release_th"], "planx": x5 > A["release_th"], "nobrake": mt0[bi] < A["release_th"],
+                   "none": False}[A["release"]]
             if rel or self.latch_t > A["latch_max_s"] or speed > 1.0:
                 self.latch = False
             else:
