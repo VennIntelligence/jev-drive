@@ -1,0 +1,11 @@
+scene,segment,f0,v0,n_delete,n_scored,n_react,n_conflict,n_conflict_lead,n_conflict_unseen,react_tracks,t_c_rel,responded,survives,psnr_react,psnr_ok,survives_all
+p3_000,2265177645248606981_2340_000_2360_000,128,4.71,4,23,0,0,0,0,[],,False,False,,False,False
+p3_001,7189996641300362130_3360_000_3380_000,143,5.33,1,23,0,0,0,0,[],,False,False,,False,False
+p3_002,1730266523558914470_305_260_325_260,95,4.04,2,23,0,0,0,0,[],,False,False,,False,False
+p3_003,9243656068381062947_1297_428_1317_428,138,5.4,2,23,0,0,0,0,[],,False,False,,False,False
+p3_004,12681651284932598380_3585_280_3605_280,113,12.2,1,23,0,0,0,0,[],,False,False,,False,False
+p3_005,11846396154240966170_3540_000_3560_000,96,4.72,1,23,0,0,0,0,[],,False,False,,False,False
+p3_006,9820553434532681355_2820_000_2840_000,103,5.13,1,23,0,0,0,0,[],,False,False,,False,False
+p3_007,17144150788361379549_2720_000_2740_000,45,3.84,2,23,0,0,0,0,[],,False,False,,False,False
+p3_008,9058545212382992974_5236_200_5256_200,59,4.53,2,23,0,0,0,0,[],,False,False,,False,False
+p3_009,6378340771722906187_1120_000_1140_000,84,6.11,1,23,0,0,0,0,[],,False,False,,False,False

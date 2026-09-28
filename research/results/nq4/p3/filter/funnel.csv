@@ -1,0 +1,43 @@
+config,rule set,segments,in_qualifying66
+base,"A: registered anchor, react frame + responded (of the 66)",11,11
+base,"B: re-anchored, all registered rules + responded",10,10
+base,"B without the speed rule, stopped items need release gap in [0, 2] s",12,10
+base,B without the crowd rule,14,12
+base,B without speed and crowd rules (no response rule),42,13
+base,"B ceiling: any react event, daytime",66,16
+ttr5,"A: registered anchor, react frame + responded (of the 66)",15,15
+ttr5,"B: re-anchored, all registered rules + responded",14,14
+ttr5,"B without the speed rule, stopped items need release gap in [0, 2] s",14,14
+ttr5,B without the crowd rule,18,16
+ttr5,B without speed and crowd rules (no response rule),47,16
+ttr5,"B ceiling: any react event, daytime",70,18
+ttr6,"A: registered anchor, react frame + responded (of the 66)",16,16
+ttr6,"B: re-anchored, all registered rules + responded",15,14
+ttr6,"B without the speed rule, stopped items need release gap in [0, 2] s",19,14
+ttr6,B without the crowd rule,20,16
+ttr6,B without speed and crowd rules (no response rule),48,17
+ttr6,"B ceiling: any react event, daytime",71,19
+lane25,"A: registered anchor, react frame + responded (of the 66)",13,13
+lane25,"B: re-anchored, all registered rules + responded",14,13
+lane25,"B without the speed rule, stopped items need release gap in [0, 2] s",17,13
+lane25,B without the crowd rule,18,15
+lane25,B without speed and crowd rules (no response rule),53,19
+lane25,"B ceiling: any react event, daytime",81,22
+seen05,"A: registered anchor, react frame + responded (of the 66)",11,11
+seen05,"B: re-anchored, all registered rules + responded",10,10
+seen05,"B without the speed rule, stopped items need release gap in [0, 2] s",12,10
+seen05,B without the crowd rule,14,12
+seen05,B without speed and crowd rules (no response rule),43,13
+seen05,"B ceiling: any react event, daytime",70,17
+hmin0,"A: registered anchor, react frame + responded (of the 66)",11,11
+hmin0,"B: re-anchored, all registered rules + responded",11,10
+hmin0,"B without the speed rule, stopped items need release gap in [0, 2] s",11,10
+hmin0,B without the crowd rule,15,12
+hmin0,B without speed and crowd rules (no response rule),43,13
+hmin0,"B ceiling: any react event, daytime",74,18
+loose,"A: registered anchor, react frame + responded (of the 66)",16,16
+loose,"B: re-anchored, all registered rules + responded",17,15
+loose,"B without the speed rule, stopped items need release gap in [0, 2] s",21,15
+loose,B without the crowd rule,21,17
+loose,B without speed and crowd rules (no response rule),60,24
+loose,"B ceiling: any react event, daytime",89,25

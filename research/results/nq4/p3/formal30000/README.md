@@ -14,7 +14,9 @@ exam and the report over all ten scenes (`gpu_enable.py readout --tag formal10`,
 | `ridge_late` Lebowski (descriptive) | 0.734 | 230 | 4 | 1.74% | [0.00%, 4.35%] | (descriptive) |
 
 `verdict.json` holds the pooled verdict; the ghosting half of the gate is a human judgement: scene 000 was accepted by
-the user on 2026-09-27, scenes 001-009 are pending. The scene-000-only verdict (3/23, written before scenes 1-9 ran)
+the user on 2026-09-27 and scenes 001-009 on 2026-09-28 (deletions essentially fine), so both halves of the registered
+gate hold. A proposed exam-item filter (pending user approval) finds no should-react frame in these ten scenes; see
+[../filter/](../filter/) and the P section of the night-queue-4 todo. The scene-000-only verdict (3/23, written before scenes 1-9 ran)
 and its files are kept in `scene0/`.
 
 ## Per scene
@@ -32,7 +34,10 @@ Front camera at f0 - 1 s, f0, f0 + 1 s; columns real, x+, x- and |x+ - x-|. Look
 a pedestrian-shaped residue where corridor pedestrians were deleted (the |x+ - x-| column shows where the deletion acted);
 pedestrians outside the corridor are not deleted by design.
 
-- [p3_000](nq4-p3-p3_000.png) (reviewed, accepted) - [p3_001](nq4-p3-p3_001.png) - [p3_002](nq4-p3-p3_002.png)
+All ten were reviewed and accepted by the user (scene 000 on 2026-09-27, 001-009 on 2026-09-28). Motion review clips
+(10 Hz, log / x+ / x- / |x+ - x-|) replace single frames for later reviews: `$DATA_DIR/runs/nq4/p3/filter/clips/` on the box.
+
+- [p3_000](nq4-p3-p3_000.png) - [p3_001](nq4-p3-p3_001.png) - [p3_002](nq4-p3-p3_002.png)
 - [p3_003](nq4-p3-p3_003.png) - [p3_004](nq4-p3-p3_004.png) - [p3_005](nq4-p3-p3_005.png) - [p3_006](nq4-p3-p3_006.png)
 - [p3_007](nq4-p3-p3_007.png) - [p3_008](nq4-p3-p3_008.png) - [p3_009](nq4-p3-p3_009.png)
 

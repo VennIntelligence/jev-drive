@@ -1,5 +1,5 @@
 {
-  "status": "REGISTERED_POOLED_GATE_PASSES_PENDING_HUMAN_REVIEW",
+  "status": "REGISTERED_POOLED_GATE_PASSES_HUMAN_REVIEWED",
   "rule": "pooled Cinque ridge_late null false-flip over the registered 10 scenes <= 0.07, tau fixed at I3; scene-bootstrap CI reported; Lebowski descriptive",
   "technical_chain": "COMPLETE_RC0",
   "iterations": 30000,
@@ -47,17 +47,19 @@
   "head_check_tolerance": 0.001,
   "ghosting_review": {
     "p3_000": "HUMAN_ACCEPTED_2026-09-27 (nothing in the corridor to delete at +1 s; corridor pedestrians deleted at 0 s / -1 s; out-of-corridor sidewalk pedestrians stay by design)",
-    "p3_001": "PENDING_HUMAN",
-    "p3_002": "PENDING_HUMAN",
-    "p3_003": "PENDING_HUMAN",
-    "p3_004": "PENDING_HUMAN",
-    "p3_005": "PENDING_HUMAN",
-    "p3_006": "PENDING_HUMAN",
-    "p3_007": "PENDING_HUMAN",
-    "p3_008": "PENDING_HUMAN",
-    "p3_009": "PENDING_HUMAN"
+    "p3_001": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_002": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_003": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_004": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_005": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_006": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_007": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_008": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)",
+    "p3_009": "HUMAN_ACCEPTED_2026-09-28 (user reviewed the four-panel figures of scenes 0-9: deletions essentially fine)"
   },
   "native_plan": "descriptive only, native_plan.csv; not part of the gate; temporal recomputed alongside is bit-identical to the gate streams (60/60)",
   "scenes_beyond_9": "not launched; >= 60-scene expansion needs a separate OK",
-  "scene0_only_verdict": "scene0/verdict.json (one scene, 3/23, superseded by this pooled registered gate)"
+  "scene0_only_verdict": "scene0/verdict.json (one scene, 3/23, superseded by this pooled registered gate)",
+  "human_review": "2026-09-28: ghosting accepted for scenes 0-9 (scene 000 on 2026-09-27); both halves of the registered gate hold",
+  "exam_item_validity": "proposed pre-registration amendment 2026-09-28, pending user approval (todos/2026-09-26-night-queue-4.md, P section): only frames where a deleted pedestrian is in the ego lane within 4 s time-to-reach, not behind a lead, and seen in the FRONT camera for 1 s count as should-react items; descriptively 0 of the 230 scored frames of scenes 0-9 qualify; research/results/nq4/p3/filter/"
 }
