@@ -412,21 +412,24 @@ class Lane:
         return e
 
     def drain(self, rows, other):
-        """On a card where another lane's demand plus this lane's undrained workers exceed CARD_CAP, drain runners
-        (fewest workers that cover the excess first); each finishes its current routes and exits."""
+        """Only where a G_RESPECT lane has written a demand: if its claim plus this lane's undrained render share exceed
+        the card, drain runners (smallest share that covers the excess first); each finishes its current routes and
+        exits. Without a demand nothing is drained."""
         for g in GPUS:
+            if not DEMAND.get(g):
+                continue
             live = [r for r in self.st["runners"].values() if r["gpu"] == g and alive(r, rows) and r.get("drain")]
-            excess = other.get(g, 0) + sum(r["workers"] for r in live if not r.get("drained")) - CARD_CAP
-            while excess > 0:
+            sh = lambda r: r.get("eff", r["workers"]) / cap(r["cand"])
+            excess = other.get(g, 0) / CARD_CAP + sum(sh(r) for r in live if not r.get("drained")) - 1
+            while excess > 1e-6:
                 cand = [r for r in live if not r.get("drained")]
                 if not cand:
                     break
-                r = min((r for r in cand if r["workers"] >= excess), key=lambda r: r["workers"],
-                        default=max(cand, key=lambda r: r["workers"]))
+                r = min((r for r in cand if sh(r) >= excess), key=sh, default=max(cand, key=sh))
                 Path(r["drain"]).parent.mkdir(parents=True, exist_ok=True)
                 Path(r["drain"]).touch()
                 r["drained"] = now()
-                excess -= r["workers"]
+                excess -= sh(r)
                 event("drain", gpu=g, pid=r["pid"], workers=r["workers"], job=r["key"], demand=DEMAND.get(g, 0))
 
     def schedule(self, rows):
