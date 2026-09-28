@@ -1,0 +1,10 @@
+run,n,want-stop rate,median decel 0-3 s,median brake@0,median lead_prob,median speed,base rate
+e2e closed loop (bind onset),30,0.033,-1.83,0.36,0.12,2.24,
+shadow: base,30,0.033,0.18,0.17,0.04,7.31,0.0
+shadow: baseslow,30,0.2,-0.66,0.31,0.26,1.25,0.017
+post hoc: e2e closed loop (decel start),30,0.033,,0.24,,4.86,
+post hoc: shadow base (decel start),30,0.033,,0.1,,7.86,0.041
+post hoc: shadow baseslow (decel start),30,0.2,,0.48,,1.02,0.022
+"post hoc: e2e closed loop, min plan v(3s)/v(0) over the final decel span",30,0.8,0.34,,,,
+"post hoc: shadow base, min plan v(3s)/v(0) over the final decel span",30,0.333,0.71,,,,
+"post hoc: shadow baseslow, min plan v(3s)/v(0) over the final decel span",18,0.5,0.69,,,,

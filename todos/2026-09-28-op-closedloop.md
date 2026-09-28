@@ -114,3 +114,5 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
 - 读法（写死）：e2e 的碰撞 + 闯灯总数比 baseslow 少 ≥ 3 次，且少的发生在 e2e 的 openpilot 约束（lead / plan / 锁存）当时 binding 的路线上 →「看见了」有贡献；
   baseslow 的违规数 ≤ e2e →「e2e 对 base 的 +9.7 可以用开得慢解释」；其余写「分不开」。
 - 有兜底 / 无兜底两组数字都报：e2enofb 的 DS、blocked 数、锁存靠 openpilot 信号放行的次数与比例。
+- 2026-09-28 19:22–20:30 CST 两个诊断臂跑完（baseslow、e2enofb 各 10 条），SCH 行 `op-arb` 标 done、check 0，box 上无本 lane 进程。结果见 research 文档第 7 节与 decisions 第 57 条的「诊断」段。
+  偏离：D1 的登记读数（binding 起点）在闭环里本身就不想停，读数无信息；加了两个标明事后的读数（最后一段减速的起点与全程），判格不改。执行中发现 CARLA 低速刹停（1–2 m/s 轻刹 0.1 s 内停住）是幽灵停车变成停车的直接原因。
