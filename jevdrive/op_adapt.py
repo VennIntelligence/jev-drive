@@ -207,3 +207,34 @@ def full_policy(net: OnnxTorch, prev: torch.Tensor, cur: torch.Tensor, action_t,
             Hp = f(prev[:, :-1], cur[:, :-1])
         H = torch.cat([Hp, f(prev[:, -1:], cur[:, -1:])], 1)
     return _policy(net, H, action_t, traffic)
+
+
+# ---------------------------------------------------------------- distillation targets
+MDN_HALF = ("plan", "lead", "lane_lines", "road_edges", "pose", "wide_from_device_euler", "road_transform", "action")
+FULL = ("lane_lines_prob", "meta", "desire_pred", "lead_prob", "desire_state")
+
+
+def distill_index(slices: dict) -> np.ndarray:
+    """Output-vector positions distilled: the MDN means (first half) of every MDN head plus the logit heads; the
+    queued hidden state and the MDN spreads are left out."""
+    idx = []
+    for k, s in slices.items():
+        if k in MDN_HALF:
+            idx.append(np.arange(s.start, s.start + (s.stop - s.start) // 2))
+        elif k in FULL:
+            idx.append(np.arange(s.start, s.stop))
+    return np.concatenate(idx)
+
+
+def plan_index(slices: dict) -> np.ndarray:
+    """Positions of the plan MDN mean (33 x 15) inside the output vector."""
+    return np.arange(slices["plan"].start, slices["plan"].start + 495)
+
+
+T_IDXS = np.array([10.0 * (i / 32) ** 2 for i in range(33)])
+T5 = np.flatnonzero(T_IDXS <= 5.0)
+
+
+def plan_drift(p_new: np.ndarray, p_ref: np.ndarray) -> np.ndarray:
+    """Per sample mean L2 distance of the plan positions (x, y) over the plan points up to 5 s. p: (n, 33, 15)."""
+    return np.linalg.norm(p_new[:, T5, :2] - p_ref[:, T5, :2], axis=-1).mean(1)

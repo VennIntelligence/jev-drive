@@ -50,9 +50,9 @@ def main():
     for model in a.models:                           # onnxruntime backends against each other: the tolerance scale
         sl = A.load(model).slices
         for k in streams:
-            r = {be: np.load(ref / f"{model}_{be}_{k}.npz") for be in ("cpu", "cuda", "trt") if (ref / f"{model}_{be}_{k}.npz").exists()}
+            r = {be: np.load(ref / f"{model}_{be}_{k}.npz") for be in ("cpu32", "cpu", "cuda", "trt") if (ref / f"{model}_{be}_{k}.npz").exists()}
             q = {be: quantities(v["raw"], {"temporal": v["temporal"], "vision": v["vision"]}, sl) for be, v in r.items()}
-            for b1, b2 in (("cuda", "cpu"), ("trt", "cpu"), ("trt", "cuda")):
+            for b1, b2 in (("cpu", "cpu32"), ("cuda", "cpu32"), ("trt", "cpu32"), ("cuda", "cpu"), ("trt", "cpu"), ("trt", "cuda")):
                 if b1 in q and b2 in q:
                     for n in q[b1]:
                         if q[b1][n] is None:
@@ -72,7 +72,7 @@ def main():
                 raw, tmp, vis = st.run_stream(frames, ACTION_T)
                 ms = 1e3 * (time.perf_counter() - t0) / len(raw)
                 mine = quantities(raw, {"temporal": tmp, "vision": vis}, net.slices)
-                for be in ("cpu", "cuda", "trt"):
+                for be in ("cpu32", "cpu", "cuda", "trt"):
                     f = ref / f"{model}_{be}_{k}.npz"
                     if not f.exists():
                         continue
