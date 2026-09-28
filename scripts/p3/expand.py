@@ -137,7 +137,8 @@ class Kind:
     def todo(self, running):
         if not self.active or self.si >= len(self.stages):
             return []
-        return [k for k in self.stages[self.si] if not self.done(k) and (self.name, k) not in running and self.ready(k)]
+        return [k for k in self.stages[self.si] if not self.done(k) and (self.name, k) not in running and self.ready(k)
+                and not (E / "skip" / f"{self.name}_{k:03d}").exists()]        # held by an operator (e.g. an orphan run)
 
 
 def kinds():
