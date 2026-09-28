@@ -379,7 +379,7 @@ def vace(a):
     mk = torch.from_numpy(msk[:, y0:y0 + ch, x0:x0 + cw])[None].cuda()
     t0 = time.time()
     model = WanVace(config=WAN_CONFIGS["vace-14B"], checkpoint_dir=str(DATA / "models/vace/Wan2.1-VACE-14B"), device_id=0, rank=0,
-                    t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=False)
+                    t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=True)   # T5 on the CPU: the test card is shared
     t_load = time.time() - t0
     torch.cuda.synchronize()
     t1 = time.time()
