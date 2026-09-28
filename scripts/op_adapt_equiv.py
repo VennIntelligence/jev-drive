@@ -21,13 +21,14 @@ from jevdrive.common import data_dir  # noqa: E402
 from jevdrive.runlog import RunLog  # noqa: E402
 
 ACTION_T = (0.275, 0.525)
+T5 = [i for i in range(33) if 10.0 * (i / 32) ** 2 <= 5.0]      # plan points up to 5 s
 
 
 def quantities(raw, taps, slices):
     """The compared quantities of a (steps, n) raw output block: MDN means of plan / lead, lead_prob logits, taps."""
     s = lambda k: raw[:, slices[k]]  # noqa: E731
     plan = s("plan")[:, :495].reshape(-1, 33, 15)
-    return {"plan_pos": plan[:, :, 0:3], "plan_vel": plan[:, :, 3:6], "plan_all": plan,
+    return {"plan_pos": plan[:, :, 0:3], "plan_pos_5s": plan[:, T5, 0:3], "plan_vel": plan[:, :, 3:6], "plan_all": plan,
             "lead": s("lead")[:, :72], "lead_prob": s("lead_prob"), "action": s("action")[:, :2] if "action" in slices else None,
             "temporal": taps["temporal"], "vision": taps["vision"]}
 
@@ -36,12 +37,31 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", default=["cinque", "lebowski"])
     ap.add_argument("--dtypes", nargs="+", default=["float32", "bfloat16", "float16"])
+    ap.add_argument("--tf32", action="store_true", help="leave cuDNN's TF32 convolutions on (torch default)")
     a = ap.parse_args()
+    torch.backends.cudnn.allow_tf32 = a.tf32          # fp32 means fp32: torch runs fp32 convs in TF32 by default
+    torch.backends.cuda.matmul.allow_tf32 = a.tf32
     log = RunLog("op_adapt", "equiv")
     ref = data_dir() / "runs" / "op_adapt" / "ref"
     streams = sorted(int(p.stem.split("_")[1]) for p in ref.glob("frames_*.npz"))
     rows, curves = [], {}
     dev = torch.device("cuda")
+    from jevdrive.op_torch import OnnxTorch  # noqa: F401  (slices only)
+    for model in a.models:                           # onnxruntime backends against each other: the tolerance scale
+        sl = A.load(model).slices
+        for k in streams:
+            r = {be: np.load(ref / f"{model}_{be}_{k}.npz") for be in ("cpu", "cuda", "trt") if (ref / f"{model}_{be}_{k}.npz").exists()}
+            q = {be: quantities(v["raw"], {"temporal": v["temporal"], "vision": v["vision"]}, sl) for be, v in r.items()}
+            for b1, b2 in (("cuda", "cpu"), ("trt", "cpu"), ("trt", "cuda")):
+                if b1 in q and b2 in q:
+                    for n in q[b1]:
+                        if q[b1][n] is None:
+                            continue
+                        d = np.abs(q[b1][n] - q[b2][n]).reshape(len(q[b1][n]), -1)
+                        rows.append(dict(model=model, dtype=f"ort-{b1}", stream=k, ref=b2, q=n, steps=len(d),
+                                         max_abs=float(d.max()), p99_abs=float(np.percentile(d, 99)), mean_abs=float(d.mean()),
+                                         ref_p99=float(np.percentile(np.abs(q[b2][n]), 99)),
+                                         first50_max=float(d.max(1)[:50].max()), last50_max=float(d.max(1)[-50:].max())))
     for model in a.models:
         for dt in a.dtypes:
             net = A.load(model, getattr(torch, dt)).to(dev)
