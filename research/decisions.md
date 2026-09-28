@@ -3545,3 +3545,23 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 **状态**：**待定**。限定：3 seed（原写「1 seed」，2026-09-28 补齐）；只用 nuScenes（CAM_FRONT、2 Hz GT）监督；(a) 的正例 203 个、CI 宽；只测了线性可读性和开环漂移，没有测行为（plan 对行人的反应）和闭环；Lebowski 没有 fp32 参照、没有训练。
 **会推翻或推进本条的证据**：sim + real 混训后 P5 D0 ≥ 0.60 且 (b) 仍过（推进 B 作主方法）；同一 B 在更大的真实数据（WOD 全量 + YOLO 标签）上 (a) 过 +0.10；闭环里改后模型对行人的停车率高于原模型而正常路线不掉分。
 
+
+## 56. Cosmos-Transfer2.5 把 CARLA 配对重画成真实感：行人留得住，但两段独立翻译会让 x⁺ / x⁻ 在行人以外也不同；按现在的做法不能拿来训配对差分（**待定**，P5 v1 BA 行人 10 对，1 seed）
+
+2026-09-28。预登记、偏离与全部表在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md)，小表在 [results/cosmos/](results/cosmos/)，并排图在 [figs/cosmos/](figs/cosmos/)。
+问题：Cosmos-Transfer2.5（NVIDIA 的 ControlNet 式视频 sim2real 模型）分别重画一对 x⁺ / x⁻ 之后，两者的差别是不是还只有那个行人。做法：P5 录制器原样重开 20 个世界（逐 tick 位姿差 0.000 m），加一台 20 Hz、1280 × 704、64° 的前视相机录 RGB / 深度 / 实例分割，
+窗口 93 帧（4.65 s）内两边 ego 相同；两个成员同 prompt、同 seed。
+
+| 变体（对数） | 行人召回 Cosmos / CARLA | mask 外 LPIPS 配对 / 换 seed | mask 外 PSNR | openpilot `temporal` 差在行人区外的占比 | op 2 s 速度差中位 | s / clip，2 000 对 GPU·h |
+|:--|:--|:--|--:|--:|--:|:--|
+| Edge Distilled，CARLA 几何边缘（10） | 0.88 / 0.98 | 0.077 / 0.307 | 28.4 dB | 80%（CARLA 原图 7%） | 0.46 m/s | 91 s，101 |
+| seg base 35 步（4） | 0.77 / 0.98 | 0.078 / 0.430 | 30.1 dB | — | 1.17 m/s | 1 145 s，1 270 |
+
+**结论**：
+1. Edge Distilled 按登记的合并线过了检查 1、2、4，没过 3（lead 一致率 83% < 85%）；但检查 2 是擦线过，4 / 10 对单独越线：行人一出现在控制视频里，整段 clip 的风格跟着变（24252 从行人还在 60 m 外的第 0 帧起配对 LPIPS 就是 0.17），三人横穿的一对 x⁻ 凭空长出了仪表台。openpilot 看到的翻译后配对差 80% 不在行人上，是配对差分监督的直接捷径，所以判 no-go。
+2. seg 把这两个坏对的 mask 外差别修好了，但随机色的 seg 不告诉模型那是人，远处行人被画成路牌（27297 召回 0.03），而且贵 12 倍。
+3. 只做像素合成（x⁺ = Cosmos x⁻ 在行人区外、Cosmos x⁺ 在区内）按构造消掉 mask 外差别，召回 0.79（只有仪表台那一对变差）；下一步是 x⁻ 翻一次、行人区局部重画（guided generation / inpainting），去掉 prompt 里的「behind the windshield」，行人区加 seg。
+4. 顺带：P5 v1 BA 有 4 / 303 对 x⁺ / x⁻ 前视平均亮度差 > 20（24206 s0 是 15 对 54），同 weather，原因未查；这几对在考卷里的差别不止 hazard。
+
+**状态**：**待定**。限定：10 对、1 seed、BehaviorAgent 集、只有前视单相机；检查 3 的参照是 CARLA 原图，本身有域差。
+**会推翻或推进本条的证据**：「x⁻ 翻一次 + 行人区局部重画」在同样 10 对上检查 1 过、openpilot 差在行人区外的占比回到 CARLA 原图的量级（< 20%），且成本仍在 250 GPU·h 内（推进为训练数据源）。

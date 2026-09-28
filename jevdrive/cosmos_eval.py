@@ -132,10 +132,25 @@ def pixels(v: str, only: str = "", gpu: int = 0):
               flush=True)
 
 
+def composite(src: str = "edgeB", dst: str = "edgeBc"):
+    """Pixel composite, no new generation: x+ = Cosmos x- outside the dilated hazard region, Cosmos x+ inside; the x-
+    members are links to the source variant's (todo, "what to change" 1)."""
+    s, d = ROOT / "out" / src, ROOT / "out" / dst
+    d.mkdir(parents=True, exist_ok=True)
+    for p in pairs():
+        r = gt(p)["region"][..., None]
+        plus, minus = np.load(s / f"{p}_plus_{src}_s{SEED}.npy"), np.load(s / f"{p}_minus_{src}_s{SEED}.npy")
+        np.save(d / f"{p}_plus_{dst}_s{SEED}.npy", np.where(r, plus, minus))
+        for a, b in ((f"{p}_minus_{src}_s{SEED}.npy", f"{p}_minus_{dst}_s{SEED}.npy"),
+                     (f"{p}_minus_{src}_s{SEED_ALT}.npy", f"{p}_minus_{dst}_s{SEED_ALT}.npy")):
+            (d / b).unlink(missing_ok=True)
+            (d / b).symlink_to(s / a)
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("detect", "pixels", "report", "webp"))
+    ap.add_argument("step", choices=("detect", "pixels", "report", "webp", "composite"))
     ap.add_argument("--variant", default="edgeA")
     ap.add_argument("--only", default="")
     ap.add_argument("--gpu", type=int, default=0)
@@ -144,6 +159,8 @@ def main():
         detect(a.variant, a.only)
     elif a.step == "pixels":
         pixels(a.variant, a.only, a.gpu)
+    elif a.step == "composite":
+        composite(a.variant, a.variant + "c")
     elif a.step == "webp":
         from .cosmos_report import webp
         FIGS.mkdir(parents=True, exist_ok=True)

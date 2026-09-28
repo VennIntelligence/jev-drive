@@ -111,3 +111,14 @@
   更合理的方向是把公共依赖（torch/cuda 那几 GB）抽出来共享，而不是删掉某个 env，这个不是"列出来删"能解决的，需要工程改动。
 - `cache/huggingface/hub` 里除了上面点名的几个大条目，还有十几个 1–5 GB 的模型缓存没有逐个核实是否在用；152G 里能叫上名字的部分大约占了一半。
 - `third_party`（46G，未细看）、`datasets/womd`、`datasets/comma1M`、`datasets/bench2drive-mini` 等中等大小目录没有展开核实。
+
+## 已执行（用户批准）
+
+2026-09-28 用户批准删除本文件点名的两项（`cache/uv/archive-v0`，`models/vace` + `envs/vace`），其余全部保留，包括第 3 项的模型权重。
+删前查过 `/proc/*/cwd`、`lsof +D`、`ps aux | grep envs/vace`，三项均无进程在用，也没有 tmux 窗口在写。用 `rm -rf --` 删除：
+
+- `cache/uv/archive-v0`（34G）
+- `models/vace` + `envs/vace`（92G + 7.1G = 99.1G）
+
+`df -h /root/autodl-tmp`：删除前 3.6T used / 669G avail（85%），删除后 3.5T used / 800G avail（82%），腾出约 131G
+（与 34 + 99.1 ≈ 133G 基本对上，差额是同一时段其他 lane 并发写入/释放）。
