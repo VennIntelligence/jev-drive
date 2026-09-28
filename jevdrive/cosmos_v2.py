@@ -11,6 +11,8 @@ jevdrive/cosmos_eval.py (YOLO, pixels), scripts/cosmos_openpilot.py.
 Arms:
   P2   Edge Distilled, the v1 geometry edges (edgeB), prompt v2 (roof camera, no windshield)
   E2   Edge Distilled, edgeC, prompt v2; x+ and x- generated independently
+  E3 / G3  as E2 / G2 with edgeD (ground texture edges too, against the dashboard) and, for G3, the tight free region
+       and blend support (pedestrian pixels, not its box)
   G2   x- = E2's x-; x+ regenerated with the edgeC x+ control while the latents outside the free region are held at
        E2's x- at every step (guided generation, patched into the distilled sampler); then feathered pixel blend (G2b)
   M2   base 35 steps, multicontrol edgeC 1.0 + depth 0.5 + class seg 1.0, prompt v2 + negative prompt v2
@@ -115,6 +117,16 @@ def _controls2(pair: str):
                                  cv2.dilate(m_.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32))
                       for r_, m_ in zip(region, g["mask"])])
     np.save(root("clips", pair) / "alpha.npy", alpha.astype(np.float16))
+    # tight variant (G3): free latent region = the pedestrian's own pixels dilated 24 px (not its box), blend support =
+    # pixels dilated 6 px with a 3 px feather, so the background inside the box (e.g. a bin behind the person) stays x-
+    k24, k6 = np.ones((49, 49), np.uint8), np.ones((13, 13), np.uint8)
+    mt = np.stack([cv2.dilate(m_.astype(np.uint8), k24) > 0 for m_ in g["mask"]])
+    free_t = np.stack([mt[max(0, t - FREE_DILATE_T):t + FREE_DILATE_T + 1].any(0) for t in range(len(mt))])
+    write_mp4(root("clips", pair) / "anchor_mask_tight.mp4",
+              np.repeat(((~free_t) * 255).astype(np.uint8)[..., None], 3, -1))
+    at = np.stack([np.maximum(cv2.GaussianBlur((cv2.dilate(m_.astype(np.uint8), k6) > 0).astype(np.float32), (0, 0), 3.0),
+                              m_.astype(np.float32)) for m_ in g["mask"]])
+    np.save(root("clips", pair) / "alpha_tight.npy", at.astype(np.float16))
     return pair, float(free.mean()), float((alpha > 0.01).mean())
 
 
@@ -142,7 +154,8 @@ def specs2(arm: str, which: str, floors: bool = True, members: str = "plus,minus
                 x[key] = {"control_path": str(cd / f), "control_weight": wgt}
             if anchored:     # anchor = the x- of E2 (lossless mp4), free region = the pedestrian region
                 x["video_path"] = str(root("anchor") / f"{r.pair}_{BASE_OF[arm]}.mp4")
-                x["guided_generation_mask"] = str(root("clips", r.pair) / "anchor_mask.mp4")
+                x["guided_generation_mask"] = str(root("clips", r.pair) / ("anchor_mask_tight.mp4" if arm == "G3" else
+                                                                          "anchor_mask.mp4"))
                 x["guided_generation_step_threshold"] = 99
             lines.append(x)
     f = root("specs") / f"{arm}_{which.replace(',', '+')}{'' if floors else '_nofloor'}.jsonl"
@@ -161,7 +174,7 @@ def blend(which: str, src: str = "G2", base: str | None = None):
     base = base or BASE_OF[src]
     d = root("out", src + "b")
     for pair in _pair_rows(which).pair:
-        a = np.load(root("clips", pair) / "alpha.npy").astype(np.float32)[..., None]
+        a = np.load(root("clips", pair) / ("alpha_tight.npy" if src == "G3" else "alpha.npy")).astype(np.float32)[..., None]
         gen = np.load(root("out", src) / f"{pair}_plus_{src}_s{SEED}.npy").astype(np.float32)
         neg = np.load(root("out", base) / f"{pair}_minus_{base}_s{SEED}.npy")
         np.save(d / f"{pair}_plus_{src}b_s{SEED}.npy", np.rint(a * gen + (1 - a) * neg).astype(np.uint8))
