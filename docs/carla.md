@@ -161,6 +161,11 @@ trajectories; they part after 0.75-9 s of game time), and every DS disagreement,
 comes from the same three routes (1956, 3564, 17563), whose outcome flips between runs regardless of the flags.
 The other 17 routes gave the same DS in all ten pairs.
 
+**In production (G lane, 2026-09-28, RTX 6000D box):** runners pinned to one 24-core slice per card (`cpus` map in the
+`nq4-g` SCH row). A reduced server there has 149 threads (at 8 cores 69, at 128 cores 263), a SimLingo route client 69,
+so a worker is ~220 threads and the lane admits at 250 per new worker (`G_PIDS_PER_WORKER`); six SimLingo workers
+use ~62 GB of one card and keep its 24 cores ~57% busy.
+
 **Budget with the reduced pools:** a worker (server + route client at `--client-threads 8`) is ~140 threads instead
 of ~330, so the thread cap stops binding well above what the GPUs and CPUs can serve (see bench2drive-cost.md,
 "Recommended layout", for the 6-servers-per-card GPU knee that `CARD_CAP` in `scripts/nq4_gk.sh` encodes).
