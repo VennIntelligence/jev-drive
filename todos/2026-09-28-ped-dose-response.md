@@ -67,4 +67,6 @@ Cinque、Lebowski（box 上已有），再加一个**更早的 supercombo**，�
 - 2026-09-28 14:10 CST 旧模型已取到（出数前）：从 GitHub LFS 下载了 openpilot **v0.8.16**（2022-08 发布）和 **v0.9.4**（2023-07 发布）的 `selfdrive/modeld/models/supercombo.onnx`，放在 `$DATA_DIR/models/openpilot/old/`。
   sha256：v0.8.16 `15d9eb01…4eca`，v0.9.4 `d7f95f6b…f8a8`。两个模型的输入都是 2 × 12×128×256 的 YUV 双相机 + desire + traffic_convention，v0.8.16 另有 512 维循环状态，v0.9.4 另有 99×128 的特征缓冲和导航特征；输出里都有 plan、lead、lead_prob 这几段（slice 表在 ONNX 元数据里）。
   适配写好后，先在录像帧上复核再用。
+- 2026-09-28 18:50 CST 按用户对插入轨迹的审阅（行人不能凭空出现）改了格子的摆法（出数前）：「站立」整段都站着不动；「横穿」从路缘那一侧的人行道出发，用供体自己 1.0–1.8 m/s 的步速在 t* 到达格子的位置。两种都做每帧和已重建物体的重叠检查（`xinsert.walk_plan`），不合规的格子跳过并记原因。
+  为给步行留时间，渲染窗口从 [t* − 2.4, t* + 0.4] s 改为 [t* − 4.0, t* + 0.4] s，读数时刻不变（t* 和 t* + 0.4 s）。已渲的 p3_000 起步冒烟用的是旧摆法，作废（移到 `items/p3_000_pull_v1rules`）。
 
