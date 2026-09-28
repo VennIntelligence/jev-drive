@@ -47,9 +47,9 @@ fi
 # --- weights ---------------------------------------------------------------------------------------------------------
 export HF_TOKEN=${HF_TOKEN:-$(cat "$D/cache/huggingface/token" 2>/dev/null || true)}
 for m in R3D2 R3D2-big; do
-  [[ -f $D/models/r3d2/$m/DONE ]] || { turbo "$D/envs/r3d2/bin/hf" download "bertaveira/$m" --local-dir "$D/models/r3d2/$m" && touch "$D/models/r3d2/$m/DONE"; }
+  [[ -f $D/models/r3d2/$m/DONE ]] || for try in 1 2 3; do turbo "$D/envs/r3d2/bin/hf" download "bertaveira/$m" --local-dir "$D/models/r3d2/$m" && { touch "$D/models/r3d2/$m/DONE"; break; }; done
 done
-for m in stabilityai/sd-turbo madebyollin/taesd; do turbo "$D/envs/r3d2/bin/hf" download "$m" >/dev/null; done
+# the exported R3D2 pipelines are self-contained (unet, vae, text encoder); sd-turbo itself is only needed for training
 if [[ ! -f $D/models/vace/Wan2.1-VACE-14B/DONE ]]; then
   "$D/envs/vace/bin/modelscope" download --model Wan-AI/Wan2.1-VACE-14B --local_dir "$D/models/vace/Wan2.1-VACE-14B"
   touch "$D/models/vace/Wan2.1-VACE-14B/DONE"
