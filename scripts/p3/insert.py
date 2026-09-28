@@ -218,6 +218,7 @@ def main():
     ap.add_argument("--scene", type=int, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--donors", type=Path, default=DATA / "runs/nq4/p3/filter/donors")
+    ap.add_argument("--gpu-tag", default="", help="ignored; lets the scheduler read the card from the command line")
     ap.add_argument("--az-max", type=float, default=AZ_MAX, help="donor view-gap limit, deg (registered 45)")
     ap.add_argument("--gain-max", type=float, default=2.0, help="exposure gain clip [1 / g, g] of the grounded variants")
     ap.add_argument("--fix", action="store_true", help="also render the grounded variants (<name>f): feet snapped to the LiDAR "
@@ -230,6 +231,8 @@ def main():
     from pytorch3d.transforms import matrix_to_quaternion, quaternion_to_matrix
     t_start = time.time()
     kk = f"{a.scene:03d}"
+    a.out.mkdir(parents=True, exist_ok=True)
+    (a.out / f"scene_{kk}.pid").write_text(str(os.getpid()))
     key = f"p3_{kk}"
     run = DATA / "ckpt/nq4_p3/p3" / kk
     cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = DSM._load(run, None)

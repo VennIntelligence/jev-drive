@@ -154,7 +154,17 @@ def kinds():
                lambda k, g, c: ["python3", "scripts/p3/veh.py", "scene", "--j", str(k), "--gpu", str(g), "--cpus", c,
                                 "--train-timeout", str(TRAIN_TIMEOUT)],
                lambda k: (V / f"prep_{k:03d}.done").exists(), lambda k: V / f"scene_{k:03d}.pid")
-    return [ped, veh]
+    # insertion items (amendment 2, option 3; user 2026-09-28: batch over every reconstructed pedestrian scene with a
+    # valid donor): registered variants plus the grounded ones (--fix), one scene at a time after its reconstruction
+    I = D / "insert_batch"
+    ins = Kind("ins", [list(range(10)), list(range(10, 66))], I, lambda k: I / f"p3_{k:03d}", None,
+               lambda k, g, c: ["taskset", "-c", c, str(DATA / "envs/drivestudio/bin/python"), "scripts/p3/insert.py", "--scene", str(k),
+                                "--fix", "--out", str(I), "--gpu-tag", str(g)],
+               lambda k: k < 10 or ped.done(k), lambda k: I / f"scene_{k:03d}.pid")
+    ins.done = lambda k: (I / f"p3_{k:03d}" / "meta.json").exists()
+    ins.check = lambda k: (True, False, {"kind": "ins", "scene": k,
+                                         "chosen": json.loads((I / f"p3_{k:03d}" / "meta.json").read_text()).get("chosen")})
+    return [ped, veh, ins]
 
 
 def status(running, ks):
@@ -198,8 +208,10 @@ def main():
                     args = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
                 except OSError:
                     continue
-                if b"--gpu" in args and b"scene" in args:
-                    g, c = int(args[args.index(b"--gpu") + 1]), args[args.index(b"--cpus") + 1].decode()
+                gk = b"--gpu" if b"--gpu" in args else b"--gpu-tag" if b"--gpu-tag" in args else None
+                if gk and (b"scene" in args or b"--scene" in args):
+                    g = int(args[args.index(gk) + 1])
+                    c = args[args.index(b"--cpus") + 1].decode() if b"--cpus" in args else CORES[g][0]
                     running[(kd.name, k)] = (Adopted(pid), g, c, time.time())
                     log(f"adopted {kd.name} {k:03d} (pid {pid}, GPU {g})", event="adopt", kind=kd.name, scene=k, pid=pid)
     by = {kd.name: kd for kd in ks}
@@ -257,7 +269,8 @@ def main():
                     kn, k = order.pop(0)
                     cores = next(c for c in CORES[g] if c not in [running[u][2] for u in mine])
                     with open(E / f"{kn}_{k:03d}.out", "a") as out:
-                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT,
+                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env={**env, "CUDA_VISIBLE_DEVICES": str(g)} if kn == "ins" else env,
+                                             stdout=out, stderr=subprocess.STDOUT,
                                              start_new_session=True)   # survives a lane restart; adopted by pid
                     running[(kn, k)] = (p, g, cores, time.time())
                     mine.append((kn, k))
