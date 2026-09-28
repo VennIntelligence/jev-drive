@@ -2,7 +2,7 @@
 # WL fork generation (todos/2026-09-28-wm-loop.md): the fork runs of one stage under scripts/wl_fork_agent.py, one
 # b2d_run chain per GPU, every chain working through the sets in turn (claims make chains share a set safely).
 #   scripts/tmux_run.sh wl-gen scripts/wl_gen.sh      env: STAGE=pilot1|pilot10|full SETS="ba p6 d2" TFV6=0|1 NORENDER=0|1
-#                                                          PRE_CAMS=11 [ONE_GPU=k: only the row's k-th GPU (0-based), pilots]
+#                                                          PRE_CAMS=11 [ONE_GPU=g: only the row's GPU g (a GPU id), pilots]
 # Cards, CARLA workers per card, server indices and cores come from the `wm-loop` row of $DATA_DIR/runs/sched/table.tsv
 # (scripts/sch_table.py; GPU at position k uses indices idx0 + k*span ..); nothing here picks its own. The row must pass
 # `sch_table.py check` before the chain starts. WORKERS=n caps the row's workers per card (pilots).
@@ -34,7 +34,11 @@ PYEOF
 python3 scripts/sch_table.py check > /dev/null || { echo "sch_table.py check fails: not starting"; exit 1; }
 NCH=${#G[@]}                              # the row's cores are split evenly over the row's cards
 POS=($(seq 0 $(( NCH - 1 ))))
-[[ -n ${ONE_GPU:-} ]] && { G=("${G[$ONE_GPU]}"); IDX=("${IDX[$ONE_GPU]}"); POS=("$ONE_GPU"); }
+if [[ -n ${ONE_GPU:-} ]]; then
+    k=-1; for i in "${!G[@]}"; do [[ ${G[$i]} == "$ONE_GPU" ]] && k=$i; done
+    (( k >= 0 )) || { echo "GPU $ONE_GPU is not in the wm-loop row (${G[*]})"; exit 1; }
+    G=("${G[$k]}"); IDX=("${IDX[$k]}"); POS=("$k")
+fi
 W=$(( ${WORKERS:-$ROW_W} < ROW_W ? ${WORKERS:-$ROW_W} : ROW_W ))
 mkdir -p "$OUT"
 echo "gen $$" >> "$OUT/pids.txt"
