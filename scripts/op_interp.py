@@ -115,7 +115,7 @@ def cmd_nav_cache(a):
 def keys_of(data, variant=""):
     if data == "wod":
         return np.load(root("wod") / "real.npy", mmap_mode="r")[:, [0, 5, 10, 15]]
-    return np.load(root("nav") / f"keys{'_' + variant if variant else ''}.npy", mmap_mode="r")
+    return np.load(root(data) / f"keys{'_' + variant if variant else ''}.npy", mmap_mode="r")
 
 
 def tracks(data):
