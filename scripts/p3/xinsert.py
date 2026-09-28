@@ -254,6 +254,157 @@ def place(g, path, t_star, d, win, side, ttr, null=False, cams=None):
     return best
 
 
+# ---------------------------------------------------------------- walk-in trajectories (user review 2026-09-28 16:30)
+# Every inserted pedestrian exists for the whole clip, starts off the carriageway (kerb found as a LiDAR ground step),
+# walks in at its own gait speed (1.0-1.8 m/s) or stands still, is visible to the front camera outside the lane for
+# >= 1.5 s before it enters the lane, and never overlaps a reconstructed actor (margin 0.3 m around a 0.3 m body).
+V_WALK, KERB_STEP, KERB_OFF, VIS_OUT_S, BODY_R, CLEAR = (1.0, 1.8), 0.06, 0.6, 1.5, 0.3, 0.3
+
+
+def scene_actors(g) -> dict:
+    """Frame -> (n, 6) boxes of every labelled actor in the reconstruction's world frame: cx, cy, yaw, length, width, height."""
+    info = json.loads((g["dir"] / "instances/instances_info.json").read_text())
+    E0 = np.linalg.inv(np.loadtxt(g["dir"] / "ego_pose/000.txt"))
+    per = {}
+    for v in info.values():
+        fa = v["frame_annotations"]
+        for f, M, sz in zip(fa["frame_idx"], fa["obj_to_world"], fa["box_size"]):
+            M = E0 @ np.asarray(M)
+            per.setdefault(int(f), []).append((M[0, 3], M[1, 3], np.arctan2(M[1, 0], M[0, 0]), sz[0], sz[1], sz[2]))
+    return {f: np.asarray(b) for f, b in per.items()}
+
+
+def in_boxes(p, boxes, margin):
+    if boxes is None or not len(boxes):
+        return np.zeros(len(np.atleast_2d(p)), bool)
+    p = np.atleast_2d(p)
+    d = p[:, None, :] - boxes[None, :, :2]
+    c, s_ = np.cos(boxes[:, 2]), np.sin(boxes[:, 2])
+    x = d[..., 0] * c + d[..., 1] * s_
+    y = -d[..., 0] * s_ + d[..., 1] * c
+    return ((np.abs(x) <= boxes[:, 3] / 2 + margin) & (np.abs(y) <= boxes[:, 4] / 2 + margin)).any(1)
+
+
+def occluded(cam_xy, p, boxes):
+    """The ground-plane sight line from the camera to the pedestrian passes through an actor box >= 1.2 m high."""
+    if boxes is None or not len(boxes):
+        return False
+    b = boxes[boxes[:, 5] >= 1.2]
+    dist = np.linalg.norm(p - cam_xy)
+    if dist < 1.5:
+        return False
+    q = cam_xy + np.outer(np.arange(0.5, dist - 0.8, 0.25), (p - cam_xy) / dist)
+    return bool(in_boxes(q, b, 0.0).any())
+
+
+def kerb(gr, path, S, side):
+    """Lateral offset (m, >= 1.75) of the kerb on `side` (+1 right, -1 left) at arc S: the first 0.5 m in which the LiDAR
+    ground stands >= KERB_STEP above the road at the path centre; None when there is no step within 8 m."""
+    Q, th, _ = path.at(S)
+    right = np.array([np.sin(th), -np.cos(th)])
+    prof = []
+    for l in np.arange(-1.0, 8.01, 0.25):
+        pt = Q + side * l * right
+        d = np.linalg.norm(gr.p[:, :2] - pt, axis=1)
+        m = d <= 0.35
+        prof.append((l, float(np.median(gr.p[m, 2])) if m.sum() >= 3 else np.nan))
+    z0 = np.nanmedian([z for l, z in prof if -1.0 <= l <= 1.0])
+    if not np.isfinite(z0):
+        return None
+    step = [(l, z) for l, z in prof if l >= 1.75]
+    for i in range(len(step) - 1):
+        if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
+            return float(step[i][0])
+    return None
+
+
+def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross"):
+    """Donor trajectory for one item. mode cross: from the sidewalk (kerb + 0.6 m, at least lat_target + 1 m) walking
+    perpendicular to the path into the point `lat_target` (m, on `side`) at arc S_conf, reached at frame t_conf; before its
+    walk starts the donor stands at the start point. mode along: walks parallel to the path on the sidewalk at kerb + 1 m
+    (the null). mode stand: stands still at the point for the whole clip. Returns the per-frame (donor frame, x, y), the
+    rotation, the checks and the view gap, or {"fail": reason}."""
+    T, yaw = donor_track(d)
+    s_c = win["s0"] + PRE
+    Q, th, _ = path.at(S_conf)
+    right = np.array([np.sin(th), -np.cos(th)])
+    kb = kerb(gr, path, S_conf, side)
+    if kb is None:
+        return {"fail": "no kerb step within 8 m"}
+    vd = win["speed"]
+    frames = list(range(t_conf - lead, t_conf + post + 1))
+    if mode == "stand":
+        target_dir = np.arctan2(-side * right[1], -side * right[0])            # facing the lane
+        phi = INS.wrap(target_dir - yaw[s_c])
+        P = Q + side * lat_target * right
+        n_walk, s_of = 0, {t: s_c for t in frames}
+        anchor_s, anchor_p = s_c, P
+    elif mode == "cross":
+        if not V_WALK[0] <= vd <= V_WALK[1]:
+            return {"fail": f"donor speed {vd} outside {V_WALK}"}
+        start = max(kb + KERB_OFF, lat_target + 1.0)
+        n_walk = int(np.ceil((start - lat_target) / vd * HZ))
+        if n_walk > lead or s_c - n_walk < win["s0"]:
+            return {"fail": f"cannot walk in from {start:.1f} m within {lead / HZ:.1f} s at {vd} m/s"}
+        u = T[s_c, :2] - T[s_c - n_walk, :2]
+        phi = INS.wrap(np.arctan2(-side * right[1], -side * right[0]) - np.arctan2(u[1], u[0]))
+        s_of = {t: max(s_c + (t - t_conf), s_c - n_walk) for t in frames}
+        if max(s_of.values()) > win["s0"] + WIN - 1:
+            return {"fail": "donor window too short after the conflict point"}
+        anchor_s, anchor_p = s_c, Q + side * lat_target * right
+    else:                                                                     # along: the null on the sidewalk
+        if not V_WALK[0] <= vd <= V_WALK[1]:
+            return {"fail": f"donor speed {vd} outside {V_WALK}"}
+        n_walk = 0
+        u = T[win["s0"] + WIN - 1, :2] - T[win["s0"], :2]
+        phi = INS.wrap(th - np.arctan2(u[1], u[0]))                           # walking with the traffic direction
+        s_of = {t: win["s0"] + (t - frames[0]) for t in frames}
+        anchor_s, anchor_p = s_c, Q + side * (kb + 1.0) * right
+    c, s_ = np.cos(phi), np.sin(phi)
+    Rz = np.array([[c, -s_], [s_, c]])
+    tr_, lat_, clear = {}, [], []
+    t_in, vis = None, []
+    for t in frames:
+        s = s_of[t]
+        xy = Rz @ (T[s, :2] - T[anchor_s, :2]) + anchor_p
+        if not np.isfinite(gr(xy)):
+            return {"fail": f"no LiDAR ground under the path at frame {t}"}
+        if in_boxes(xy, actors.get(t), BODY_R + CLEAR)[0]:
+            return {"fail": f"overlaps a reconstructed actor at frame {t}"}
+        _, L = path.locate(xy)
+        Sx, _ = path.locate(xy)
+        lat_.append(L)
+        if t_in is None and abs(L) <= 1.75 and Sx - path.Se[t] >= FRONT:
+            t_in = t
+        cam = cam_axis(g, t)[0][:2]
+        vis.append(bool(in_fov(g, t, np.r_[xy, 0.0]) and not occluded(cam, xy, actors.get(t))))
+        tr_[t] = (int(s), float(xy[0]), float(xy[1]))
+    if abs(lat_[0]) < kb + 0.3 and mode != "stand":
+        return {"fail": f"on the carriageway at the clip start (|lat| {abs(lat_[0]):.1f} m, kerb {kb:.1f} m)"}
+    vis_out = 0.0
+    if mode == "cross" and lat_target <= 1.75:
+        if t_in is None:
+            return {"fail": "never enters the lane"}
+        run, best_run = 0, 0
+        for t, v_, L in zip(frames, vis, lat_):
+            if t >= t_in:
+                break
+            run = run + 1 if (v_ and abs(L) > 1.75) else 0
+            best_run = max(best_run, run)
+        vis_out = best_run / HZ
+        if vis_out < VIS_OUT_S:
+            return {"fail": f"visible outside the lane only {vis_out:.1f} s before entering"}
+    gaps = []
+    for t in frames:
+        sI, x, y = tr_[t]
+        if in_fov(g, t, np.array([x, y, 0.0])):
+            gaps.append(np.degrees(np.abs(INS.wrap(obs - azimuth(g, t, np.array([x, y]), yaw[sI] + phi))).min()))
+    if len(gaps) < 5:
+        return {"fail": "in the front camera for < 5 frames"}
+    return {"traj": {int(t): v for t, v in tr_.items()}, "phi": float(phi), "gap": float(max(gaps)), "kerb": kb,
+            "speed": vd, "walk_s": n_walk / HZ, "vis_out_s": vis_out, "t_in": t_in, "mode": mode}
+
+
 def plan_one(k: int, bank_: list) -> dict:
     g = scene_geom(k)
     path = INS.Path2D(g["E"])
@@ -264,34 +415,38 @@ def plan_one(k: int, bank_: list) -> dict:
         return {"scene": k, "segment": seg, "item": False, "reason": "ego never >= 2 m/s in [5, 15] s"}
     ts = min(ok_t, key=lambda t: INS.crc(f"{seg}/xinsert/{t}"))
     gr = Ground(g, range(ts - PRE, ts + POST + 1))
-    Q, _, _ = path.at(path.Se[ts] + FRONT + 3.0 * max(path.v[ts], V_FLOOR))
-    if not np.isfinite(gr(Q)):
+    actors = scene_actors(g)
+    S3 = path.Se[ts] + FRONT + 3.0 * max(path.v[ts], V_FLOOR)
+    if not np.isfinite(gr(path.at(S3)[0])):
         return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no LiDAR ground at the placement"}
-    cands = []
-    cams = cam_table(g, range(ts - PRE, ts + POST + 1))
+    cands, fails = [], {}
     for d in bank_:
+        obs = np.radians(np.asarray(d["az"]))
         for w in d["windows"]:
             for side in (1.0, -1.0):
-                b = place(g, path, ts, d, w, side, 3.0, cams=cams)
-                if b:
-                    cands.append((b["gap"], -d["psnr"], d, w, side, b))
+                b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, PRE, POST, "cross")
+                if "fail" in b:
+                    key = b["fail"].split(" at frame")[0].split(" (")[0].split(" from ")[0].split(" only")[0]
+                    fails[key] = fails.get(key, 0) + 1
+                    continue
+                cands.append((b["gap"], -d["psnr"], d, w, side, b))
     if not cands:
-        return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no donor in view"}
-    # among the placements within DIVERSE_GAP of the best, pick by crc32(target / donor / window / side): with a large
-    # bank many donors fit almost perfectly, and a PSNR tie-break sends every target the same donor
+        return {"scene": k, "segment": seg, "item": False, "t_star": ts, "reason": "no feasible walk-in", "fails": fails}
     cands.sort(key=lambda c: (round(c[0], 1), c[1]))
     near = [c for c in cands if c[0] <= max(cands[0][0], DIVERSE_GAP)]
     donors = {(c[2]["scene"], c[2]["node"]) for c in near}
     pick = min(donors, key=lambda q: INS.crc(f"{seg}/{q[0]}/{q[1]}"))       # the donor first, then its best placement
     gap, _, d, w, side, b = min((c for c in near if (c[2]["scene"], c[2]["node"]) == pick), key=lambda c: c[0])
+    obs = np.radians(np.asarray(d["az"]))
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
-           "window": w, "side": side, "n_candidates": len(cands),
-           "runner_up": [{"gap": round(c[0], 1), "donor_scene": c[2]["scene"], "node": c[2]["node"]} for c in cands[1:4]]}
+           "window": w, "side": side, "n_candidates": len(cands), "fails": fails, "rules": "walk-in v2 (2026-09-28 16:30)"}
     res["variants"] = {}
-    for name, ttr, null in (("ins2", 2.0, False), ("ins3", 3.0, False), ("ins4", 4.0, False), ("null", 3.0, True)):
-        bb = place(g, path, ts, d, w, side, ttr, null, cams=cams)
-        res["variants"][name] = {"phi": bb["phi"], "Q": bb["Q"], "view_gap": round(bb["gap"], 1)} if bb else None
+    for name, ttr, mode in (("ins2", 2.0, "cross"), ("ins3", 3.0, "cross"), ("ins4", 4.0, "cross"), ("null", 3.0, "along")):
+        S = path.Se[ts] + FRONT + ttr * max(path.v[ts], V_FLOOR)
+        bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, PRE, POST, mode)
+        res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
+                                 if "fail" not in bb else {"fail": bb["fail"]})
     return res
 
 
@@ -355,8 +510,7 @@ class XDonor:
         from models.gaussians.basics import quat_mult, quat_to_rotmat, spherical_harmonics
         if self.cur not in self.pose:
             return None
-        s = self.frame_map[self.cur]
-        R, T, Rd = self.pose[self.cur]                                  # placed rotation, translation; donor's own rotation
+        R, T, Rd, s = self.pose[self.cur]           # placed rotation, translation; donor's own rotation; donor frame
         n = self.means.shape[0]
         x = self.means / self.size[2] * 2
         dxyz, dq, dsc = self.net(x, self.ts[s].reshape(1, 1).repeat(n, 1), self.embed[None].repeat(n, 1))
@@ -407,24 +561,25 @@ def render(a):
     tr.gaussian_classes["XDonor"] = GSModelType.DeformableNodes
 
     def poses(v):
+        """Per frame the donor frame and ground-plane position from the walk-in plan (xinsert.walk_plan), the rotation
+        Rz(phi) of the donor, feet on the LiDAR ground (1.1 s median)."""
         phi = v["phi"]
         Rz = np.array([[np.cos(phi), -np.sin(phi), 0], [np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
-        Q = np.asarray(v["Q"])
         raw = {}
         for t in frames:
-            s = fmap[t]
-            xy = (Rz[:2, :2] @ (Tn[s, :2] - Tn[s_star, :2])) + Q
+            s, x, y = v["traj"][str(t)] if str(t) in v["traj"] else v["traj"][t]
+            xy = np.array([x, y])
             Rw = Rz @ Rq[s]
             feet = np.percentile((Mloc @ Rw.T)[:, 2], 1)               # lowest gaussians relative to the node origin
-            raw[t] = (xy, Rw, gr(xy) - feet, Rq[s])
+            raw[t] = (xy, Rw, gr(xy) - feet, Rq[s], s)
         z = np.array([raw[t][2] for t in frames])
         z = np.where(np.isfinite(z), z, np.nanmedian(z))
         zs = np.array([np.median(z[max(i - 5, 0):i + 6]) for i in range(len(z))])
         out = {}
         for i, t in enumerate(frames):
-            xy, Rw, _, Rd = raw[t]
+            xy, Rw, _, Rd, s = raw[t]
             out[t] = (torch.tensor(Rw, dtype=torch.float32, device=dev), torch.tensor(np.r_[xy, zs[i]], dtype=torch.float32, device=dev),
-                      torch.tensor(Rd, dtype=torch.float32, device=dev))
+                      torch.tensor(Rd, dtype=torch.float32, device=dev), int(s))
         return out, {t: (raw[t][0], zs[i] + np.percentile((Mloc @ raw[t][1].T)[:, 2], 1)) for i, t in enumerate(frames)}
 
     to8 = lambda x: (x.clamp(0, 1) * 255 + 0.5).byte().cpu().numpy()  # noqa: E731
@@ -439,7 +594,7 @@ def render(a):
         return ii, cc
 
     out = a.out / key
-    V = {n: poses(v) for n, v in pl["variants"].items() if v}
+    V = {n: poses(v) for n, v in pl["variants"].items() if v and "traj" in v}
     # exposure / white balance: per-channel gain from TTR 3 s frames (donor / ring ratio vs its own log), clipped
     rat0 = np.asarray(d["ratio"])
     # exposure / white balance per variant and frame (the donor may walk from sun into shade): per-channel gain that

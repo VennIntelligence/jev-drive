@@ -5,10 +5,12 @@
            creep (0.5-2.0 m/s), cruise (>= 5 m/s).  -> runs/nq4/p3/dose/anchors.json
   render   (GPU, one scene x state) the 48 cells: longitudinal d in {3, 5, 8, 12, 20, 30} m ahead of the bumper at t*
            (along the logged path), lateral offset to the right of the path centre in {0, 1.5, 3.0, 5.0} m (lane
-           centre / lane edge / kerb / sidewalk), pedestrian standing (the donor frozen at its window centre, facing
-           the lane) or crossing (its own walk, perpendicular to the path, from the kerb side, at that point at t*);
-           plus x- (the target re-render) and the log, 5 Hz over [t* - 2.4, t* + 0.4] s, three front cameras.
-           Donor = the scene's cross-scene plan donor (scripts/p3/xinsert.py), placed with the approved grounded
+           centre / lane edge / kerb / sidewalk), pedestrian standing (still for the whole clip, facing the lane) or
+           crossing (walking in from the sidewalk at its own gait, reaching the point at t*), under the walk-in rules of
+           xinsert.walk_plan (no spawning, visible outside the lane >= 1.5 s before entering it, no overlap with any
+           reconstructed actor; a cell that cannot satisfy them is skipped with the reason); plus x- (the target
+           re-render) and the log, 5 Hz over [t* - 4.0, t* + 0.4] s, three front cameras.
+           Donor = one per scene, crc32 order over the donor bank, the first with a 1.0-1.8 m/s window, placed with the approved grounded
            standard: feet on the LiDAR ground, per-channel gain at t* (clip 1.33), contact shadow only where the ground
            under the feet is lit. View gap per cell is recorded.  -> runs/nq4/p3/dose/items/<scene>_<state>/<cell>/
   stage    (CPU) the rendered cells as the P3 set nq4_p3_dose (scene dirs <scene>_<state>_<cell> with real / plus = the
@@ -36,7 +38,7 @@ DATA = Path(os.environ["DATA_DIR"])
 DO = DATA / "runs/nq4/p3/dose"
 HZ = 10
 DISTS, LATS, STATES_PED = (3, 5, 8, 12, 20, 30), (0.0, 1.5, 3.0, 5.0), ("stand", "cross")
-PRE_R, POST_R = 24, 4                     # rendered window in 10 Hz frames, 5 Hz stride
+PRE_R, POST_R = 40, 4                     # rendered window in 10 Hz frames, 5 Hz stride (4 s lead-in: walk-in rules)
 SHADE, GAIN_MAX = 0.6, 1.33
 
 
@@ -78,8 +80,13 @@ def render(a):
     kk = f"{k:03d}"
     anc = json.loads((DO / "anchors.json").read_text())[str(k)][state]
     ts = anc["t_star"]
-    pl = json.loads((XI.X / "plan" / f"p3_{kk}.json").read_text())
-    d = pl["donor"]
+    seg = json.loads((DATA / "runs/nq4/p3/targets" / f"{kk}.json").read_text())["segment"]
+    bank_ = XI.load_bank()
+    # one donor per scene (registered): crc32(segment / dose / donor) order, first with a 1.0-1.8 m/s walking window
+    cand = sorted(bank_, key=lambda q: INS.crc(f"{seg}/dose/{q['scene']}/{q['node']}"))
+    d, win = next((q, w) for q in cand for w in q["windows"] if XI.V_WALK[0] <= w["speed"] <= XI.V_WALK[1])
+    pl = {"donor": {kk_: d[kk_] for kk_ in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")}, "window": win}
+    obs_all = np.radians(np.asarray(d["az"]))
     run = DATA / "ckpt/nq4_p3/p3" / kk
     cfg, ds, tr, ps, node, keys, wid_of, peds, ckpt = DSM._load(run, None)
     from models.trainers.base import GSModelType
@@ -92,15 +99,7 @@ def render(a):
     tr.models["XDonor"] = xd
     tr.gaussian_classes["XDonor"] = GSModelType.DeformableNodes
     Rq = quaternion_to_matrix(xd.iq / xd.iq.norm(dim=-1, keepdim=True)).double().cpu().numpy()
-    Tn = xd.trans.double().cpu().numpy()
     Mloc = xd.means.double().cpu().numpy()
-    s0 = pl["window"]["s0"]
-    s_star = s0 + XI.PRE
-    yawd = np.arctan2(Rq[:, 1, 0], Rq[:, 0, 0])
-    u = Tn[s0 + XI.WIN - 1, :2] - Tn[s0, :2]
-    walk_head = np.arctan2(u[1], u[0])
-    obs = np.radians(np.asarray(json.loads((XI.X / "bank" / f"p3_{d['scene']:03d}.json").read_text())
-                                [[e["node"] for e in json.loads((XI.X / "bank" / f"p3_{d['scene']:03d}.json").read_text())].index(d["node"])]["az"]))
     out = DO / "items" / f"p3_{kk}_{state}"
     camK = {}
     to8 = lambda x: (x.clamp(0, 1) * 255 + 0.5).byte().cpu().numpy()  # noqa: E731
@@ -112,36 +111,34 @@ def render(a):
         camK[(t, ci)] = (cc["intrinsics"].cpu().numpy().astype(np.float64), cc["camera_to_world"].cpu().numpy().astype(np.float64))
         return ii, cc
 
+    actors = XI.scene_actors(g)
+    frames10 = list(range(ts - PRE_R, ts + POST_R + 1))
+
     def place(dist, lat, st):
-        """{t: (R 3x3, T 3, Rd 3x3)} tensors, feet {t: (xy, z)}, view gap (deg)."""
+        """Walk-in rules (xinsert.walk_plan, right-hand kerb side): standing = still for the whole clip at the point;
+        crossing = from the sidewalk at the donor's gait into the point, reached at t*. {t: (R, T, Rd, s)}, feet, gap,
+        or (None, None, reason)."""
         S = path.Se[ts] + XI.FRONT + dist
-        Q, th, _ = path.at(S)
-        right = np.array([np.sin(th), -np.cos(th)])
-        P = Q + lat * right
-        target = np.arctan2(-right[1], -right[0])                    # facing / walking toward the lane (leftward)
-        if st == "stand":
-            phi = INS.wrap(target - yawd[s_star])
-        else:
-            phi = INS.wrap(target - walk_head)
+        b = XI.walk_plan(g, path, gr, actors, obs_all, d, win, 1.0, ts, S, lat, PRE_R, POST_R, "stand" if st == "stand" else "cross")
+        if "fail" in b:
+            return None, None, b["fail"]
+        phi = b["phi"]
         Rz = np.array([[np.cos(phi), -np.sin(phi), 0], [np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
-        res, feet, gaps = {}, {}, []
         zs = []
         for t in frames:
-            s = s_star if st == "stand" else s_star + (t - ts)
-            xy = P if st == "stand" else Rz[:2, :2] @ (Tn[s, :2] - Tn[s_star, :2]) + P
-            Rw = Rz @ Rq[s]
+            s_, x, y = b["traj"][t]
+            xy = np.array([x, y])
+            Rw = Rz @ Rq[s_]
             f = np.percentile((Mloc @ Rw.T)[:, 2], 1)
-            zs.append((t, s, xy, Rw, gr(xy) - f, f))
-            if XI.in_fov(g, t, np.r_[xy, 0.0]):
-                gaps.append(np.degrees(np.abs(INS.wrap(obs - XI.azimuth(g, t, xy, yawd[s] + phi))).min()))
+            zs.append((t, s_, xy, Rw, gr(xy) - f, f))
         z = np.array([q[4] for q in zs])
         z = np.where(np.isfinite(z), z, np.nanmedian(z) if np.isfinite(z).any() else 0.0)
-        for (t, s, xy, Rw, _, f), zz in zip(zs, z):
+        res, feet = {}, {}
+        for (t, s_, xy, Rw, _, f), zz in zip(zs, z):
             res[t] = (torch.tensor(Rw, dtype=torch.float32, device=dev), torch.tensor(np.r_[xy, zz], dtype=torch.float32, device=dev),
-                      torch.tensor(Rq[s], dtype=torch.float32, device=dev))
+                      torch.tensor(Rq[s_], dtype=torch.float32, device=dev), int(s_))
             feet[t] = (xy, zz + f)
-            xd.frame_map[t] = s
-        return res, feet, (float(max(gaps)) if gaps else None)
+        return res, feet, b
 
     def lum(im):
         return im[..., :3].astype(np.float64) @ np.array([0.299, 0.587, 0.114])
@@ -207,7 +204,13 @@ def render(a):
             cd = out / cid
             if (cd / "meta.json").exists():
                 continue
-            pose, feet, gap = place(dist, lat, st)
+            pose, feet, b = place(dist, lat, st)
+            if pose is None:
+                (cd).mkdir(parents=True, exist_ok=True)
+                (cd / "skipped.json").write_text(json.dumps({"cell": cid, "reason": b}))
+                print(json.dumps({"cell": cid, "skipped": b}), flush=True)
+                continue
+            gap = b["gap"]
             # per-channel gain at t* (one value per cell)
             ii, cc = view(ts)
             xd.gain_map, xd.pose = {}, pose
@@ -251,7 +254,8 @@ def render(a):
             (cd / "plus/frames.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
             xd.pose = {}
             mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "view_gap": gap, "gain": [float(x) for x in gain],
-                  "shadow_on_frac": float(np.mean(list(on.values())))}
+                  "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "walk_s": b["walk_s"],
+                  "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"]}
             (cd / "meta.json").write_text(json.dumps(mc))
             meta_cells[cid] = mc
             print(json.dumps(mc), flush=True)
