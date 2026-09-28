@@ -83,3 +83,6 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
 - 2026-09-28 14:42–14:58 CST 状态机 smoke（诊断路线 27787、24721，不计分）：e2e 两条都 Completed，锁存按 openpilot 信号放行 8 次、兜底 1 次；switch 在 27787 上 agent 崩溃，
   原因是 `governor` 在不到 3 m 的路径上 `np.convolve(..., "same")` 多返回一个点（代码 bug，已修，行为不变）；switch 在 24721 上 openpilot 开车跟停前车后车头偏出路线，base 接手后顶住不动被判 blocked（驾驶结果，不是接线问题）。
   15:0x 起 phase 2（`jev:op-arb-p2`）：base、acc、e2e、switch、oplat × 10 条，参数按上一条。
+- 2026-09-28 16:0x CST **bug：phase 2 的 base 臂不是纯 base**。`op_arb_agent.py` 只在 oshadow 里去掉 lead 约束，base 模式也把 openpilot lead 头的 IDM 算进了 min，所以已跑完的 `p2-base` 实际上是 acc 的第二次运行
+  （10 条里 9 条 DS 与 acc 相同）。处理：box 上改名为 `p2-acc2`，作 acc 的重复运行（同 seed 的运行噪声参照）报；代码改为 lead 约束只进 acc / e2e / switch；phase 2 其余臂跑完后重跑 base（10 条），
+  base 的数字只用重跑版。e2e 臂正在跑，这个改动只影响 base 模式，不影响它。

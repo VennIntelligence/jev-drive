@@ -272,7 +272,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         lp = float(np.asarray(out["lead_prob"])[0])
         v_plan = np.asarray(out["vel"], float)
         cons = {"base": s_base}
-        if lp > A["lead_p"]:
+        if lp > A["lead_p"] and A["mode"] in ("acc", "e2e", "switch"):
             cons["lead"] = idm(speed, float(lead[0, 0]) - CAM_TO_BUMPER, float(lead[0, 2]), float(lead[0, 3]),
                                A["cruise"], A["amax"], A["idm_b"], A["idm_s0"], A["idm_T"])
         s_plan = plan_arc(op_path, speed, float(v_plan[0]), A["plan_form"])
