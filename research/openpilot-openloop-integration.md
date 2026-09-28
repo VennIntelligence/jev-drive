@@ -242,4 +242,47 @@ GIMM-VFI 的 context-rate 网格（GPU，第 2 节第 5 点：与全 10 Hz 补�
 2 000-token 子集同一指标，可直接比）；navhard two-stage 没有 v1 PDMS（v1.1 devkit 没有这个 split），用仓库其余地方
 （`elicit_e1.py`、`navsim_zs_score.sh`）统一用的 v2 EPDMS（`run_pdm_score.py` 的 reactive two-stage 打分）。
 
-(占位：跑完后这里贴 PDMS / EPDMS 主表 + 子分项表，small 表见 [results/op-interp/](results/op-interp/)。)
+**navtest 全量（12 146，v1 PDMS）**：
+
+| 输入 | PDMS [CI] | NC | DAC | EP | TTC | + 2 000-token 子集参照 |
+|:--|:--|--:|--:|--:|--:|--:|
+| GIMM-VFI | **84.2** [83.7, 84.6] | 98.3 | 95.6 | 73.1 | 95.4 | 84.7（第 4 节，n=2 000） |
+| ego-motion warp | 82.0 [81.4, 82.5] | 96.9 | 93.2 | 73.9 | 93.4 | 83.1（第 4 节，n=2 000） |
+| 参照：hold（decisions.md #37，Cinque） | 52.1 | 78.4 | 75.7 | 55.7 | 67.8 | 51.9（第 0 节） |
+| 参照：human / cv | 94.6 / 20.7 | | | | | |
+
+直行 / 左转 / 右转 / 起步（by_command.txt，7 125 / 2 224 / 1 358 / 1 439 个 token）：
+
+| | 直行 | 左转 | 右转 | 起步 v0<1 |
+|:--|--:|--:|--:|--:|
+| GIMM-VFI PDMS | 87.9 | 77.5 | 73.6 | 86.1 |
+| warp PDMS | 87.0 | 75.5 | 73.2 | 75.1 |
+
+**navhard two-stage 全量（5 912，v2 EPDMS）**：navhard 的 EPDMS 不是逐 token「score」列的平均——devkit 的 pseudo closed-loop
+打分把 stage-one（真实场景）与 stage-two（3DGS 合成、reactive IDM 续开）合并成整跑一个聚合数（CSV 里以
+`extended_pdm_score_{stage_one,stage_two,combined}` 三行汇总），只有 `combined` 行是官方 EPDMS；下表按这个口径，
+子分项也按 stage 分列（没有单一的「合并子分」）：
+
+| 输入 | EPDMS | stage 1 | stage 2 |
+|:--|--:|--:|--:|
+| GIMM-VFI | **33.3** | 71.6 | 47.0 |
+| ego-motion warp | 27.7 | 66.3 | 42.5 |
+| 参照：hold（decisions.md #37，Cinque） | 9.3 | 28.1 | 29.4 |
+| 参照：cv | 11.5 | 29.0 | 34.2 |
+
+读法：
+
+1. **全量数字和 2 000-token 子集同量级、方向不变**：GIMM 84.2 对子集 84.7（−0.5），warp 82.0 对 83.1（−1.1），补帧后的 PDMS 仍然
+   远高于同批 token 的 hold 参照（52.1）、低于 human 上限（94.6），legality check 通过。直行（87–88）与左右转（74–78）的 14 分
+   左右差距（第 4 节第 7 点已提过的「没有 route，转弯靠猜」）在全量上原样保留。
+2. **navhard 上补帧收益的比例比 navtest 更大**：hold 只有 9.3 EPDMS（比 cv 11.5 还低，第 37 条已经这么读），GIMM 补帧后到
+   33.3、warp 到 27.7，相对 hold 涨了 2.6–3.6 倍（navtest 上是 1.6–1.7 倍）；但两个补帧器的绝对分都远没到 navtest 上补帧后的水平，
+   navhard 本身更难（3DGS 合成续开 + reactive IDM）压低了整体量级，stage 2 比 stage 1 还低几分（GIMM 71.6 → 47.0），说明反应式
+   续开阶段暴露出更多问题，不只是输入契约。
+3. **这条修正了第 0 节第 6 点悬而未决的「全量验证」**：全量结果和 2 000-token 子集一致，「openpilot 原生 plan 的低分几乎全是输入
+   契约」这条结论在全量 navtest 与全量 navhard 上都站得住；navhard 上补帧后的绝对分数仍然低，是该榜本身难、不是契约问题。
+
+跑全量过程中顺手修了 `scripts/op_interp.py` 的 `cmd_nav_report`：v2 + navhard_two_stage 分支之前把 devkit 的汇总行当成普通 token
+过滤掉了，退化成对逐 token「score」列取平均，hold 参照算出 28.7 EPDMS，和 decisions.md #37 已经定下的 9.3 对不上（第一个全量分数
+就没通过上面「legality check」的合法性判断标准，逼着去查）；改成读官方 `extended_pdm_score_combined` 汇总行后，hold 参照精确复现
+9.30，见 commit history。

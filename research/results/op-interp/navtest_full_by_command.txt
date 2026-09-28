@@ -1,0 +1,14 @@
+{'straight': 7125, 'left': 2224, 'start (v0<1)': 1439, 'right': 1358}
+
+grp                          left  right  start (v0<1)  straight
+name                                                            
+gimm_g0.2-cinque__base PDMS  77.5   73.6          86.1      87.9
+                       NC    96.3   96.7          98.6      99.1
+                       DAC   90.6   87.2          99.6      97.9
+                       EP    68.1   61.4          70.9      77.4
+                       TTC   91.1   92.6          98.3      96.7
+warp-cinque__base      PDMS  75.5   73.2          75.1      87.0
+                       NC    95.5   95.8          94.4      98.0
+                       DAC   86.0   84.0          99.4      95.9
+                       EP    70.9   66.0          50.3      81.2
+                       TTC   89.2   90.7          98.1      94.2

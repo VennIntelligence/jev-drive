@@ -2794,6 +2794,14 @@ navtest 随机 2 000 个 token 上 Cinque 原生 plan PDMS 51.9 → 84.7（GIMM-
 WOD 上用真实 10 Hz 帧作上限，GIMM 补帧收回帧率差的 89%。所以 openpilot 原生 plan 离 specialist 不是 30–40 分，而是与 TransFuser（84.0，全量、不可配对）同量级；
 剩下的差距集中在转弯（左 / 右转 PDMS 78 / 76，直行 88，DAC 89–91），推测是没有 route 输入。仍是**待定**：2 000 个 token 的子集、单次运行，全量 navtest 与 navhard 还没跑。
 
+**2026-09-29 就地修正（全量 navtest / navhard，[openpilot-openloop-integration.md](openpilot-openloop-integration.md) 第 9 节）**：上一段留的限定
+「2 000 个 token 的子集、单次运行，全量 navtest 与 navhard 还没跑」已经补上。默认 pipeline（Cinque 原生 plan，不 retime，只 base 适配器）在
+全量 navtest（12 146 token，v1 PDMS）上：hold 52.1 → **84.2**（GIMM-VFI）/ **82.0**（ego-motion warp），和 2 000-token 子集（84.7 / 83.1）同量级，
+差 0.5–1.1 分；在全量 navhard_two_stage（5 912 token，v2 EPDMS，v1.1 devkit 没有这个 split）上：hold **9.3** → **33.3**（GIMM-VFI）/ **27.7**
+（ego-motion warp），相对 hold 涨 2.6–3.6 倍，但绝对分远没到 navtest 的水平（navhard 本身更难：3DGS 合成续开的 stage 2 比真实场景的
+stage 1 还低几分，GIMM 71.6 → 47.0）。结论不变：openpilot 原生 plan 的低分基本是输入协议的读数，全量数字进一步坐实。
+navhard 的 EPDMS 只能从 devkit 输出的 `extended_pdm_score_combined` 汇总行读（不是逐 token 平均，第一次算错过一次，见第 9 节末尾）。
+
 
 ## 38. Bench2Drive 榜单前几名的总分差在评测噪声以内；按 hazard family 拆开后，突发 hazard 近乎饱和，真正的差距在规划 / 让行类路线（**待定**）
 
