@@ -402,7 +402,7 @@ def _vehicle_segment(job: tuple[str, str]) -> dict:
             r = g.iloc[byf[fc]]
             rs = response(v, fc)
             lat, turn = lateral_dev(xy, yaw, fc, int(4 * HZ))
-            between = bool(r.between0) if cat == "obstacle" else bool(r.between)
+            between = bool(r["between0"]) if cat == "obstacle" else bool(r["between"])  # r.between is Series.between
             resp = rs["responded"] or (cat == "obstacle" and lat >= 1.0 and turn < 15)
             res["events"].append({"seg": seg, "track": tr, "cat": cat, "f0": fc, "t0": t[fc], "v0": v[fc], "d": r.d, "x": r.x, "L": r.L,
                                   "y": r.y, "rel": r.rel, "ttc": r.ttc0 if cat == "obstacle" else r.ttc, "spd": r.spd, "a_long": r.a_long,
