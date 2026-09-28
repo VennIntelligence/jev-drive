@@ -264,6 +264,15 @@ def adapt(z, i, mt, t_out, mode="lever", retime=False, interp="linear"):
     return I.to_rear(pos, yaw, T_IDXS, mt["cam"][i][:2], t_out, mode, interp), r
 
 
+def _cluster_ci(v, codes, rng, B=5000):
+    """95% CI of the cluster mean, frames resampled within each cluster (jevdrive.openloop_standing._cluster_ci)."""
+    reps = np.zeros(B)
+    for c in range(codes.max() + 1):
+        g = np.flatnonzero(codes == c)
+        reps += v[g][rng.integers(0, len(g), (B, len(g)))].mean(1)
+    return tuple(np.percentile(reps / (codes.max() + 1), [2.5, 97.5]))
+
+
 def cmd_score_wod(a):
     import pandas as pd
     from jevdrive import waymo as W
@@ -295,12 +304,14 @@ def cmd_score_wod(a):
                 per[f"exam {v}@{m}|base"] = dict(rfs=W.rater_feedback_score(p, traj, sc, speed),
                                                  ade5=np.linalg.norm(p - best, axis=-1).mean(-1),
                                                  lon5=p[:, -1, 0] - log_xy[:, -1, 0], r=np.ones(len(p)))
+    codes = pd.factorize(cl)[0]
     rows = []
     for k, q in per.items():
         frames, rest = k.split("@")
         model = rest.split("|")[0].split("_")[0]
+        lo, hi = _cluster_ci(q["rfs"], codes, np.random.default_rng(0))
         row = dict(frames=frames, model=rest.split("|")[0], adapter=k.split("|")[1], n=len(q["rfs"]),
-                   rfs=float(pd.Series(q["rfs"]).groupby(cl).mean().mean()), rfs_frame=float(q["rfs"].mean()),
+                   rfs=float(pd.Series(q["rfs"]).groupby(cl).mean().mean()), rfs_lo=lo, rfs_hi=hi, rfs_frame=float(q["rfs"].mean()),
                    ade5=float(q["ade5"].mean()), lon5=float(q["lon5"].mean()), lon5_moving=float(q["lon5"][speed > 5].mean()),
                    retime_r_med=float(np.median(q["r"])))
         for ref in ("real", "hold"):
@@ -312,6 +323,9 @@ def cmd_score_wod(a):
                         f"drift_{ref}": float(np.linalg.norm(preds[k] - preds[rk], axis=-1).mean())}
         rows.append(row)
     res = pd.DataFrame(rows).sort_values(["model", "adapter", "rfs"], ascending=[True, True, False])
+    ref = res[res.adapter == "base"].set_index(["frames", "model"])["rfs"]
+    res["recovered"] = [(r.rfs - ref.get(("hold", r.model), np.nan)) / (ref.get(("real", r.model), np.nan) - ref.get(("hold", r.model), np.nan))
+                        for r in res.itertuples()]   # share of the real-1.5 s minus hold gap won back
     res.to_csv(root("wod") / "results.csv", index=False)
     np.savez_compressed(root("wod") / "rfs_per_frame.npz", **{k.replace("|", "__"): v["rfs"] for k, v in per.items()})
     with pd.option_context("display.width", 250, "display.max_columns", 40):
