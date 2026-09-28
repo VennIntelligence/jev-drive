@@ -26,7 +26,9 @@ gpus = the cards it may start runners on, workers = CARD_CAP, cpus = the runners
 all cards or a per-card map "g:a-b,g:a-b" (UE4 sizes its TaskGraph and PoolThread pools from the affinity mask, so a
 server pinned to 24 cores has ~110 threads instead of ~260 on 128; docs/carla.md "Threads per server"), idx0 = the
 per-card index blocks as a map "g:i,g:i" (idx_span indices each). Another lane gets cards or cores by editing that row (sch_table.py
-grant nq4-g ...); runners already on a card that left the grant finish their routes. A revoked / done row stops new
+grant nq4-g ...); runners already on a card that left the grant finish their routes. Rows named in G_RESPECT (default
+wm-loop) reserve their workers on the cards they list: room there is CARD_CAP - max(their reservation, CARLA servers of
+others) - this lane's workers, so an idle reservation stays free. A revoked / done row stops new
 launches. Without a row: the old fixed layout (cards 0-6, 5 per card, indices 420 + 10 g).
 """
 from __future__ import annotations
@@ -66,6 +68,7 @@ IDX0, IDX_SPAN = 420, 10                    # fallback layout when the SCH row i
 CPUS = os.environ.get("G_CPUS", "0-39,56-81,118-179")
 LANE, SCH = "nq4-g", DATA / "runs/sched/table.tsv"
 GPUS, BLOCKS = list(range(7)), {g: range(IDX0 + IDX_SPAN * g, IDX0 + IDX_SPAN * (g + 1)) for g in range(7)}
+RESPECT, RESERVED = os.environ.get("G_RESPECT", "wm-loop").split(","), {}
 WMIN = {"pdm": 2.0, "tfv6": 8.4, "bridgedrive": 5.2, "blue": 4.4, "simlingo": 15.0}   # prior worker-min / route
 PY_CARLA, PY_SL, PY_VENV = DATA / "envs/carla/bin/python", DATA / "envs/simlingo/bin/python", REPO / ".venv/bin/python"
 SIM = DATA / "third_party/simlingo"
@@ -77,12 +80,19 @@ def now():
 
 def load_grant():
     """Re-read this lane's SCH row into GPUS, CARD_CAP, CPUS and BLOCKS (module docstring, "Grant")."""
-    global GPUS, CARD_CAP, CPUS, BLOCKS
+    global GPUS, CARD_CAP, CPUS, BLOCKS, RESERVED
     import csv
     if not SCH.exists():
         return
     with SCH.open() as f:
-        row = next((r for r in csv.DictReader(f, delimiter="\t") if r["lane"] == LANE), None)
+        rows = list(csv.DictReader(f, delimiter="\t"))
+    row = next((r for r in rows if r["lane"] == LANE), None)
+    RESERVED = {}
+    for r in rows:
+        if r["lane"] in RESPECT and r["workers"].isdigit() and not r["status"].startswith(("done", "revoked")):
+            for g in r["gpus"].split(","):
+                if g.isdigit():
+                    RESERVED[int(g)] = RESERVED.get(int(g), 0) + int(r["workers"])
     if row is None:
         return
     if row["status"].startswith(("done", "revoked")):
@@ -356,14 +366,15 @@ class Lane:
         young = [r for r in self.st["runners"].values() if alive(r, rows) and now() - r["t0"] < 300]
         pids = pids_now() + PIDS_PER_WORKER * sum(r["workers"] for r in young)   # servers that may still be starting
         mine = {g: sum(r["workers"] for r in self.st["runners"].values() if r["gpu"] == g and alive(r, rows)) for g in info}
-        load = {g: info[g]["other"] + mine[g] + 2 * info[g]["foreign"] for g in info}
+        other = {g: max(info[g]["other"], RESERVED.get(g, 0)) for g in info}
+        load = {g: other[g] + mine[g] + 2 * info[g]["foreign"] for g in info}
         # A pilot's crash-rate check must not measure a crowded card: pilot stages go only to the least loaded card
         # with room (fewest CARLA servers, other lanes' GPU jobs counted as two).
         granted = [g for g in info if g in GPUS]
-        calm = min((load[g] for g in granted if CARD_CAP - info[g]["other"] - mine[g] > 0), default=None)
+        calm = min((load[g] for g in granted if CARD_CAP - other[g] - mine[g] > 0), default=None)
         for gpu in sorted(granted, key=lambda g: load[g]):
             card = info[gpu]
-            room = CARD_CAP - card["other"] - mine[gpu]
+            room = CARD_CAP - other[gpu] - mine[gpu]
             if room <= 0:
                 continue
             unstarted = sum(r["workers"] for r in young if r["gpu"] == gpu)
@@ -450,9 +461,9 @@ class Lane:
             while True:
                 try:
                     load_grant()
-                    if grant != (GPUS, CARD_CAP, CPUS, BLOCKS):
-                        grant = (GPUS, CARD_CAP, CPUS, BLOCKS)
-                        event("grant", gpus=GPUS, card_cap=CARD_CAP, cpus=CPUS,
+                    if grant != (GPUS, CARD_CAP, CPUS, BLOCKS, RESERVED):
+                        grant = (GPUS, CARD_CAP, CPUS, BLOCKS, RESERVED)
+                        event("grant", gpus=GPUS, card_cap=CARD_CAP, cpus=CPUS, reserved=RESERVED,
                               blocks={g: f"{b.start}-{b.stop - 1}" for g, b in BLOCKS.items()})
                     rows = process_snapshot()
                     for pid, r in list(self.st["runners"].items()):
