@@ -15,7 +15,9 @@ scene is waiting. While $DATA_DIR/runs/nq4/p3/expand/HOLD exists no new scene st
 lane adopts the live scene processes from their gpu_enable pid files.
   GPU 6 (the test card) always; card k in 0-5 only when it has left the nq4-g grant (not in the row's gpus, or the row is
   done / revoked), runs no CARLA server of any owner, and is not named in a wm-loop demand file.
-  At most SLOTS scenes per card, a new one only with >= MIN_FREE_GB free VRAM. Cores: 2 per slot, GPU 6 -> 168-171,
+  At most SLOTS scenes per card, a new one only with >= MIN_FREE_GB free VRAM (a scene takes ~20 GB, so >= 8 GB stay free
+  for CARLA). Cards the coordinator shares while CARLA runs on them are listed in expand/shared_cards.json ({"3": 1}):
+  they take that many scenes. Cores: 2 per slot, GPU 6 -> 168-171,
   card k -> the last 4 cores of that card's G slice (24 k + 20 .. 24 k + 23).
 Checklist (the scene-0 list): train and render rc0; deleted_missing == 0; determinism max |d| == 0; full-image PSNR
 >= 25 dB. PSNR below 25 dB is a flag (at most one per 10 scenes, as p3_004 in the gate set); below 22 dB, a technical
@@ -38,7 +40,7 @@ D = DATA / "runs/nq4/p3"
 E = D / "expand"
 STAGES = [[10], list(range(11, 20)), list(range(20, 66))]
 TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 300, 6 * 3600
-CORES = {6: ["168,169", "172,173"], **{k: [f"{24 * k + 20},{24 * k + 21}", f"{24 * k + 22},{24 * k + 23}"] for k in range(6)}}
+CORES = {6: ["168,169", "172,173"], **{k: [f"{24 * k + 22},{24 * k + 23}", f"{24 * k + 20},{24 * k + 21}"] for k in range(6)}}
 
 
 def log(msg, **ev):
@@ -240,11 +242,17 @@ def main():
         if order and not (E / "HOLD").exists():
             carla = carla_per_card()
             eligible = [TEST_GPU] + [g for g in range(6) if g not in g_cards() and g not in demand_cards() and not carla.get(g)]
-            want = [g for g in eligible if sum(v[1] == g for v in running.values()) < SLOTS]
+            try:                                   # cards shared with CARLA by the coordinator's grant: {"3": 1, ...} slots
+                shared = {int(g): int(n) for g, n in json.loads((E / "shared_cards.json").read_text()).items()}
+            except (OSError, ValueError):
+                shared = {}
+            eligible += [g for g in shared if g not in eligible and g not in demand_cards()]
+            cap = {g: shared.get(g, SLOTS) if g in shared and g != TEST_GPU else SLOTS for g in eligible}
+            want = [g for g in eligible if sum(v[1] == g for v in running.values()) < cap[g]]
             info = free_gb() if want else {}
             for g in want:
                 mine = [u for u, v in running.items() if v[1] == g]
-                while order and len(mine) < SLOTS and info.get(g, 0) >= MIN_FREE_GB:
+                while order and len(mine) < cap[g] and info.get(g, 0) >= MIN_FREE_GB:
                     kn, k = order.pop(0)
                     cores = next(c for c in CORES[g] if c not in [running[u][2] for u in mine])
                     with open(E / f"{kn}_{k:03d}.out", "a") as out:
