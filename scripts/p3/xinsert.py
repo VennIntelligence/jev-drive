@@ -85,18 +85,25 @@ def azimuth(g, t, p, yaw, c=0):
 
 class Ground:
     def __init__(self, g, frames):
-        pts = []
+        pts, other = [], []
         for t in range(max(min(frames) - 30, 0), min(max(frames) + 30, g["n"]), 3):
             L = np.fromfile(g["dir"] / "lidar" / f"{t:03d}.bin", dtype=np.float32).reshape(-1, 14)
-            L = L[L[:, 10] == 1][:, 3:6].astype(np.float64)
-            pts.append(L @ g["E"][t][:3, :3].T + g["E"][t][:3, 3])
+            gnd = L[:, 10] == 1
+            W = L[:, 3:6].astype(np.float64) @ g["E"][t][:3, :3].T + g["E"][t][:3, 3]
+            pts.append(W[gnd])
+            other.append(W[~gnd][::4])
         self.p = np.concatenate(pts)
+        self.o = np.concatenate(other)                  # non-ground returns (kerb-side surfaces, cars, walls)
         from scipy.spatial import cKDTree
         self.tree = cKDTree(self.p[:, :2])
+        self.otree = cKDTree(self.o[:, :2])
         self.cache = {}
 
     def near(self, xy, r):
         return self.p[self.tree.query_ball_point(np.asarray(xy, np.float64)[:2], r)]
+
+    def near_other(self, xy, r):
+        return self.o[self.otree.query_ball_point(np.asarray(xy, np.float64)[:2], r)]
 
     def __call__(self, xy):
         key = (round(float(xy[0]), 2), round(float(xy[1]), 2))
@@ -339,6 +346,18 @@ def kerb(gr, path, S, side, peds=None):
         for i in range(len(step) - 1):
             if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
                 res = float(step[i][0])
+                break
+        if res is None:
+            # the labelled road surface ends (>= 1 m without ground points) and a low surface continues beyond it:
+            # non-ground returns whose lowest 10 % lie 0.03-0.35 m above the road, i.e. a raised walkway, not a car body
+            for i, (l, z) in enumerate(step):
+                if np.isfinite(z) or any(np.isfinite(zz) for _, zz in step[i:i + 4]):
+                    continue
+                q = gr.near_other(Q + side * (l + 0.5) * right, 0.5)
+                if len(q) >= 5:
+                    lo = np.percentile(q[:, 2], 10) - z0
+                    if 0.03 <= lo <= 0.35:
+                        res = float(l)
                 break
     if res is None and peds is not None and len(peds):
         near = peds[np.linalg.norm(peds - Q, axis=1) <= 25]
