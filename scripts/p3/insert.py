@@ -144,7 +144,7 @@ def post_fix(a, out, variants, frames, j, dk, T0, p0, ground, view, apply, tr, p
             if m.sum() >= 200:
                 ring = _ring(m)
                 gains.append(ratio0 / (np.median(_lum(im)[m]) / max(np.median(_lum(mi)[ring]), 1.0)))
-        gain = float(np.clip(np.median(gains), 0.5, 2.0)) if gains and np.isfinite(ratio0) else 1.0
+        gain = float(np.clip(np.median(gains), 1 / a.gain_max, a.gain_max)) if gains and np.isfinite(ratio0) else 1.0
         res[f"gain_{name}"] = gain
         for t in frames:
             fn = f"{2 * t:07d}.jpg"
@@ -218,6 +218,8 @@ def main():
     ap.add_argument("--scene", type=int, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--donors", type=Path, default=DATA / "runs/nq4/p3/filter/donors")
+    ap.add_argument("--az-max", type=float, default=AZ_MAX, help="donor view-gap limit, deg (registered 45)")
+    ap.add_argument("--gain-max", type=float, default=2.0, help="exposure gain clip [1 / g, g] of the grounded variants")
     ap.add_argument("--fix", action="store_true", help="also render the grounded variants (<name>f): feet snapped to the LiDAR "
                     "ground, local exposure matched, contact shadow; plus a before | after clip of TTR 3 s")
     a = ap.parse_args()
@@ -258,7 +260,7 @@ def main():
         return wrap(np.arctan2(d[1], d[0]) - np.arctan2(R[1, 0], R[0, 0]))
 
     report, chosen = [], None
-    for j in cand[:6]:
+    for j in cand[:10]:
         w = wid_of[j]
         ok_t = [t for t in range(max(50, PRE + 1), min(151, nf - POST - 1)) if path.v[t] >= 2.0 and fv[t - PRE - 1:t + POST + 2, j].all()]
         rec = {"donor": w, "node": j, "front_labelled": lab.get(w, 0), "t_candidates": len(ok_t)}
@@ -331,8 +333,8 @@ def main():
         if not (psnr >= PSNR_MIN):
             report.append({**rec, "reject": f"box PSNR {psnr:.1f} < {PSNR_MIN}"})
             continue
-        if worst > AZ_MAX:
-            report.append({**rec, "reject": f"viewing azimuth {worst:.0f} deg > {AZ_MAX:.0f}"})
+        if worst > a.az_max:
+            report.append({**rec, "reject": f"viewing azimuth {worst:.0f} deg > {a.az_max:.0f}"})
             continue
         chosen = (j, ts, p0, variants, frames, rec)
         report.append({**rec, "reject": None})
