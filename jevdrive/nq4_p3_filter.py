@@ -66,10 +66,17 @@ def load(split: str, seg: str) -> dict:
                         "type": b[L_ + "type"].to_numpy(), "npts": b[L_ + "num_lidar_points_in_box"].to_numpy(),
                         **{k: b[L_ + c].to_numpy() for k, c in (("x", "box.center.x"), ("y", "box.center.y"), ("z", "box.center.z"),
                                                                 ("sx", "box.size.x"), ("sy", "box.size.y"), ("sz", "box.size.z"),
-                                                                ("hd", "box.heading"))}}).dropna(subset=["frame"])
+                                                                ("hd", "box.heading"), ("vx", "speed.x"), ("vy", "speed.y"),
+                                                                ("ax", "acceleration.x"), ("ay", "acceleration.y"))}}).dropna(subset=["frame"])
     box["frame"] = box.frame.astype(int)
     cb = pd.read_parquet(V2 / split / "camera_box" / f"{seg}.parquet")
-    cb = cb[(cb["key.camera_name"] == 1) & (cb[C_ + "type"] == 2)]
+    cb = cb[cb["key.camera_name"] == 1]
+    cv = cb[cb[C_ + "type"] == 1]                    # vehicle labels: no 2D-3D association in WOD, matched by IoU later
+    vlab = pd.DataFrame({"frame": fidx.reindex(cv["key.frame_timestamp_micros"]).to_numpy(),
+                         **{k: cv[C_ + c].to_numpy() for k, c in (("u", "box.center.x"), ("v", "box.center.y"),
+                                                                  ("w", "box.size.x"), ("h", "box.size.y"))}}).dropna(subset=["frame"])
+    vlab["frame"] = vlab.frame.astype(int)
+    cb = cb[cb[C_ + "type"] == 2]
     asc = pd.read_parquet(V2 / split / "camera_to_lidar_box_association" / f"{seg}.parquet")
     cb = cb.merge(asc, on=["key.frame_timestamp_micros", "key.camera_name", "key.camera_object_id"])
     lab = pd.DataFrame({"frame": fidx.reindex(cb["key.frame_timestamp_micros"]).to_numpy(), "track": cb["key.laser_object_id"].to_numpy(),
@@ -81,7 +88,7 @@ def load(split: str, seg: str) -> dict:
     cal = {"f": (cc[K_ + "intrinsic.f_u"], cc[K_ + "intrinsic.f_v"]), "c": (cc[K_ + "intrinsic.c_u"], cc[K_ + "intrinsic.c_v"]),
            "ext": np.asarray(cc[K_ + "extrinsic.transform"], float).reshape(4, 4), "wh": (int(cc[K_ + "width"]), int(cc[K_ + "height"]))}
     st = pd.read_parquet(V2 / split / "stats" / f"{seg}.parquet", columns=["[StatsComponent].time_of_day"])
-    return {"seg": seg, "split": split, "t": (ts - ts[0]) / 1e6, "T": T, "box": box, "lab": lab, "cal": cal,
+    return {"seg": seg, "split": split, "t": (ts - ts[0]) / 1e6, "T": T, "box": box, "lab": lab, "vlab": vlab, "cal": cal,
             "day": bool((st["[StatsComponent].time_of_day"] == "Day").all())}
 
 
@@ -134,7 +141,7 @@ def project(P: np.ndarray, cum: np.ndarray, W: np.ndarray, s_lo: float, s_hi: fl
     ln = np.sqrt(n2[j])
     S = cum[k[j]] + u[r, j] * ln
     L = (ab[j, 0] * rel[r, j, 1] - ab[j, 1] * rel[r, j, 0]) / ln
-    return S, L
+    return S, L, np.arctan2(ab[j, 1], ab[j, 0])
 
 
 def run_len(flag: np.ndarray) -> np.ndarray:
@@ -157,7 +164,7 @@ def frame_features(D: dict) -> tuple[pd.DataFrame, dict]:
     rows = []
     for i, g in box.groupby("frame"):
         W = (T[i] @ np.c_[g[["x", "y", "z"]].to_numpy(), np.ones(len(g))].T).T[:, :2]
-        S, L = project(P, cum, W, Se[i] - 10, Se[i] + FRONT + REACH + 60)
+        S, L, _ = project(P, cum, W, Se[i] - 10, Se[i] + FRONT + REACH + 60)
         rows.append(g.assign(S=S, L=L, d=S - Se[i]))
     ob = pd.concat(rows, ignore_index=True)
     ped = ob[ob.type == 2].copy()
@@ -193,6 +200,7 @@ def frame_features(D: dict) -> tuple[pd.DataFrame, dict]:
         seen[g.index] = run_len(full_vis)[f] >= seen_n
     ped["conflict"] = enter & (ped.d >= FRONT) & (ped.d <= FRONT + REACH) & (ped.ttr <= TTR_S)
     ped["seen"] = seen
+    ped["lane2"] = enter & (ped.d >= FRONT)                                # in the lane now or within ENTER_S, ahead
     ped["react"] = ped.conflict & ~ped.lead & ped.seen
     return ped, {"v": v, "t": t, "n": n}
 
@@ -203,6 +211,238 @@ def response(v: np.ndarray, i: int) -> dict:
     vp, vm = float(v[a:i + 1].max()), float(v[i:b + 1].min())
     return {"v_pre": vp, "v_min_post": vm, "dv": vp - vm, "post_s": (b - i) / HZ,
             "responded": bool(vp - vm >= max(DV_MIN, DV_FRAC * vp))}
+
+
+# ---------------------------------------------------------------- amendment 2: frame categories
+CATS = ("react", "react_unconfirmed", "stopped_hold", "behind_lead", "not_yet_visible", "stopped_other", "gray_far", "clean")
+
+
+def released(ob: pd.DataFrame, v: np.ndarray, tr, f: int, n: int) -> bool:
+    """Stopped ego held by object tr at frame f: the ego moves off (>= 1 m/s) within 2 s after tr leaves the lane."""
+    lane = set(ob[(ob.track == tr) & ob.in_lane].frame)
+    clear = next((x for x in range(f, n) if x not in lane), n)
+    go = next((x for x in range(f, n) if v[x] >= 1.0), n)
+    return clear < n and go < n and 0 <= (go - clear) / HZ <= 2
+
+
+def object_classes(ob: pd.DataFrame, v: np.ndarray, n: int) -> pd.Series:
+    """Amendment-2 class of each (frame, deleted object) row; ob carries lane2, conflict, lead, seen, in_lane."""
+    mov = v[ob.frame.to_numpy()] >= MIN_SPEED
+    raw = mov & ob.conflict.to_numpy() & ~ob.lead.to_numpy() & ob.seen.to_numpy()
+    resp = np.zeros(len(ob), bool)
+    for tr, g in ob[raw].groupby("track"):                 # driver response per run of react frames
+        f = g.frame.to_numpy()
+        run = np.cumsum(np.r_[True, np.diff(f) > 2])
+        for r in np.unique(run):
+            resp[ob.index.get_indexer(g.index[run == r])] = response(v, int(f[run == r][0]))["responded"]
+    stop = ~mov & ob.lane2.to_numpy()
+    ok = stop & ~ob.lead.to_numpy() & ob.seen.to_numpy()
+    hold = np.zeros(len(ob), bool)
+    for j in np.flatnonzero(ok):
+        hold[j] = released(ob, v, ob.track.iat[j], int(ob.frame.iat[j]), n)
+    lane2, conf, lead, seen = (ob[c].to_numpy() for c in ("lane2", "conflict", "lead", "seen"))
+    cls = np.select([raw & resp, raw, ok & hold, (conf | lane2) & lead, mov & conf & ~lead & ~seen, stop, mov & lane2 & ~conf],
+                    list(CATS[:7]), "clean")
+    return pd.Series(cls, index=ob.index)
+
+
+def frame_category(classes: pd.Series, frames: pd.Series) -> dict:
+    """frame -> the highest-priority class among the deleted objects present (clean when none is)."""
+    rank = {c: i for i, c in enumerate(CATS)}
+    out = {}
+    for f, c in zip(frames, classes):
+        if f not in out or rank[c] < rank[out[f]]:
+            out[f] = c
+    return out
+
+
+# ---------------------------------------------------------------- amendment 2: vehicle events
+VEH_CATS = ("cut_in", "lead_brake", "obstacle", "crossing", "oncoming")
+
+
+def _iou(a, b) -> float:
+    w, h = min(a[2], b[2]) - max(a[0], b[0]), min(a[3], b[3]) - max(a[1], b[1])
+    if w <= 0 or h <= 0:
+        return 0.0
+    i = w * h
+    return i / ((a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - i)
+
+
+def vehicle_features(D: dict) -> tuple[pd.DataFrame, dict]:
+    """Per (frame, vehicle track): path S / L / d, heading and velocity relative to the path, ego-frame x / y,
+    TTC, lane flags, 'another vehicle between', FRONT-label visibility (IoU >= 0.3 match)."""
+    t, T, box = D["t"], D["T"], D["box"]
+    n = len(t)
+    xy, yaw = T[:, :2, 3], np.arctan2(T[:, 1, 0], T[:, 0, 0])
+    v = speed(t, xy)
+    P, cum, Se = path_coords(xy, yaw)
+    ob = box[box.type.isin(LEAD_TYPES)].copy()
+    S, L, th = np.zeros(len(ob)), np.zeros(len(ob)), np.zeros(len(ob))
+    for i, idx in ob.groupby("frame").indices.items():
+        g = ob.iloc[idx]
+        W = (T[i] @ np.c_[g[["x", "y", "z"]].to_numpy(), np.ones(len(g))].T).T[:, :2]
+        S[idx], L[idx], th[idx] = project(P, cum, W, Se[i] - 10, Se[i] + FRONT + REACH + 60)
+    f = ob.frame.to_numpy()
+    ob["S"], ob["L"], ob["d"] = S, L, S - Se[f]
+    yw = yaw[f]
+    ob["rel"] = np.degrees(np.abs(np.angle(np.exp(1j * (yw + ob.hd.to_numpy() - th)))))
+    c, s_ = np.cos(yw - th), np.sin(yw - th)                  # vehicle-frame vectors -> along the path tangent
+    ob["v_long"] = c * ob.vx.to_numpy() - s_ * ob.vy.to_numpy()
+    ob["a_long"] = c * ob.ax.to_numpy() - s_ * ob.ay.to_numpy()
+    ob["spd"] = np.hypot(ob.vx, ob.vy)
+    ob["in_lane"] = (ob.L.abs() <= LANE) & (ob.d >= FRONT) & (ob.d <= FRONT + REACH)
+    ob["ttc"] = (ob.d - FRONT - ob.sx / 2) / np.maximum(v[f] - ob.v_long, 0.5)
+    ob["lane0"] = (ob.y.abs() <= LANE) & (ob.x >= FRONT) & (ob.x <= FRONT + REACH)
+    ob["ttc0"] = (ob.x - FRONT - ob.sx / 2) / np.maximum(v[f], 0.5)
+    # another vehicle / cyclist between ego and this one, on the path lane and on the straight lane
+    between, between0 = np.zeros(len(ob), bool), np.zeros(len(ob), bool)
+    for i, idx in ob.groupby("frame").indices.items():
+        g = ob.iloc[idx]
+        dl = g.d.to_numpy()[g.in_lane.to_numpy()]
+        x0 = g.x.to_numpy()[g.lane0.to_numpy()]
+        between[idx] = [(dl < d - 1).any() for d in g.d.to_numpy()]
+        between0[idx] = [(x0 < x - 1).any() for x in g.x.to_numpy()]
+    ob["between"], ob["between0"] = between, between0
+    # FRONT-camera visibility by greedy IoU matching of projected 3D boxes to the vehicle labels
+    lab_h = np.full(len(ob), np.nan)
+    vl = {fr: g[["u", "v", "w", "h"]].to_numpy() for fr, g in D["vlab"].groupby("frame")}
+    for i, idx in ob.groupby("frame").indices.items():
+        if i not in vl:
+            continue
+        lb = np.c_[vl[i][:, 0] - vl[i][:, 2] / 2, vl[i][:, 1] - vl[i][:, 3] / 2, vl[i][:, 0] + vl[i][:, 2] / 2, vl[i][:, 1] + vl[i][:, 3] / 2]
+        cand = []
+        for j in idx:
+            r = ob.iloc[j]
+            if r.x < 1 or r.x > 80:
+                continue
+            bx = project_box(r, D["cal"])
+            if bx:
+                for k, l in enumerate(lb):
+                    iou = _iou(bx, l)
+                    if iou >= 0.3:
+                        cand.append((iou, j, k))
+        used_j, used_k = set(), set()
+        for iou, j, k in sorted(cand, reverse=True):
+            if j not in used_j and k not in used_k:
+                used_j.add(j), used_k.add(k)
+                lab_h[j] = vl[i][k, 3]
+    ob["lab_h"] = lab_h
+    ob = ob.sort_values(["track", "frame"]).reset_index(drop=True)
+    E, seen_n = int(ENTER_S * HZ), int(round(SEEN_S * HZ))
+    lane2, seen = np.zeros(len(ob), bool), np.zeros(len(ob), bool)
+    for tr, idx in ob.groupby("track").indices.items():
+        g = ob.iloc[idx]
+        fr = g.frame.to_numpy()
+        full = np.zeros(n + E + 1, bool)
+        full[fr] = g.in_lane.to_numpy()
+        cs = np.r_[0, np.cumsum(full)]
+        lane2[idx] = cs[fr + E + 1] - cs[fr] > 0
+        vis = np.zeros(n, bool)
+        vis[fr] = np.nan_to_num(g.lab_h.to_numpy()) >= H_MIN
+        seen[idx] = run_len(vis)[fr] >= seen_n
+    ob["lane2"] = lane2 & (ob.d >= FRONT)
+    ob["seen"] = seen
+    ob["conflict"] = ob.lane2 & (ob.d <= FRONT + REACH) & (ob.ttc <= TTR_S)
+    ob["lead"] = ob.between
+    return ob, {"v": v, "t": t, "n": n, "yaw": yaw, "xy": xy}
+
+
+def lateral_dev(xy: np.ndarray, yaw: np.ndarray, i: int, horizon: int) -> tuple[float, float]:
+    """Max |lateral offset| of the logged path over the next `horizon` frames from the straight line of pose i, and the
+    heading change over the same span (deg)."""
+    j = min(i + horizon, len(xy) - 1)
+    d = xy[i:j + 1] - xy[i]
+    lat = -np.sin(yaw[i]) * d[:, 0] + np.cos(yaw[i]) * d[:, 1]
+    return float(np.abs(lat).max()), float(np.degrees(abs(np.angle(np.exp(1j * (yaw[j] - yaw[i]))))))
+
+
+def _vehicle_segment(job: tuple[str, str]) -> dict:
+    split, seg = job
+    D = load(split, seg)
+    res = {"seg": seg, "split": split, "day": D["day"], "events": [], "base": []}
+    if not D["box"].type.isin(LEAD_TYPES).any():
+        return res
+    ob, eg = vehicle_features(D)
+    v, t, n, yaw, xy = eg["v"], eg["t"], eg["n"], eg["yaw"], eg["xy"]
+    for tr, idx in ob.groupby("track").indices.items():
+        g = ob.iloc[idx]
+        fr = g.frame.to_numpy()
+        byf = pd.Series(np.arange(len(g)), index=fr)
+        # obstacle: a stopped vehicle in the straight lane of the current heading, the ego moving and not turning
+        obst = (g.lane0 & (g.spd < 1.0) & (g.ttc0 <= TTR_S)).to_numpy() & (v[fr] >= MIN_SPEED)
+        starts = []
+        if obst.any():
+            for i in fr[obst]:
+                if lateral_dev(xy, yaw, int(i), int(RESP_POST * HZ))[1] < 15:
+                    starts.append(("obstacle", int(i)))
+                    break
+        conf = g.conflict.to_numpy()
+        if conf.any():
+            f_c = fr[conf]
+            for fc in f_c[np.r_[True, np.diff(f_c) > 2]]:
+                r = g.iloc[byf[fc]]
+                prev = g[(g.frame >= fc - 30) & (g.frame <= fc - 10)]
+                if 45 <= r.rel <= 135:
+                    cat = "crossing"
+                elif r.rel > 135:
+                    cat = "oncoming"
+                elif len(prev) >= 10 and ((prev.L.abs() > LANE) & (prev.L.abs() <= 3 * LANE)).all():
+                    cat = "cut_in"
+                elif len(g[(g.frame >= fc - 30) & (g.frame <= fc) & g.in_lane]) >= 24 and \
+                        g[(g.frame >= fc - 10) & (g.frame <= fc)].a_long.min() <= -3.0:
+                    cat = "lead_brake"
+                elif len(g[(g.frame >= fc - 30) & (g.frame <= fc) & g.in_lane]) >= 24:
+                    cat = "lead_follow"
+                else:
+                    cat = "other"
+                starts.append((cat, int(fc)))
+        for cat, fc in starts:
+            r = g.iloc[byf[fc]]
+            rs = response(v, fc)
+            lat, turn = lateral_dev(xy, yaw, fc, int(4 * HZ))
+            between = bool(r.between0) if cat == "obstacle" else bool(r.between)
+            resp = rs["responded"] or (cat == "obstacle" and lat >= 1.0 and turn < 15)
+            res["events"].append({"seg": seg, "track": tr, "cat": cat, "f0": fc, "t0": t[fc], "v0": v[fc], "d": r.d, "x": r.x, "L": r.L,
+                                  "y": r.y, "rel": r.rel, "ttc": r.ttc0 if cat == "obstacle" else r.ttc, "spd": r.spd, "a_long": r.a_long,
+                                  "between": between, "seen": bool(r.seen), "lab_h": r.lab_h, "dv": rs["dv"], "decel": rs["responded"],
+                                  "lat_dev": lat, "turn": turn, "responded": bool(resp), "post_s": rs["post_s"],
+                                  "ok_window": bool(F0_RANGE[0] <= t[fc] <= F0_RANGE[1]), "ok_speed": bool(v[fc] >= MIN_SPEED)})
+    cand = np.flatnonzero((v >= MIN_SPEED) & (np.arange(n) + RESP_POST * HZ < n) & (np.arange(n) >= 10))
+    for i0 in cand[::20]:
+        res["base"].append({"seg": seg, "frame": int(i0), "v0": v[i0], **response(v, int(i0))})
+    return res
+
+
+def vehicles(out: Path, workers: int):
+    jobs = [(sp, p.stem) for sp in ("training", "validation") for p in sorted((V2 / sp / "lidar_box").glob("*.parquet"))]
+    with ProcessPoolExecutor(workers) as ex:
+        res = list(ex.map(_vehicle_segment, jobs, chunksize=4))
+    ev = pd.DataFrame([e for r in res for e in r["events"]])
+    base = pd.DataFrame([b for r in res for b in r["base"]])
+    seg = pd.read_csv(out / "segments.csv").set_index("seg")
+    ev["day"] = ev.seg.map(seg.day)
+    ev["valid"] = (ev.cat.isin(VEH_CATS) & ev.ok_speed & ~ev.between & ev.seen & ev.responded & ev.ok_window & ev.day)
+    out.mkdir(parents=True, exist_ok=True)
+    ev.to_csv(out / "vehicle_events.csv", index=False)
+    q66 = set(seg.index[seg.qualifies])
+    ped = pd.read_csv(out / "survivors.csv")
+    rows = []
+    for cat in (*VEH_CATS, "lead_follow", "other"):
+        e = ev[ev.cat == cat]
+        m = e.ok_speed & e.ok_window & e.day
+        rows.append({"category": cat, "events": len(e), "events_moving_window_day": int(m.sum()),
+                     "no_vehicle_between": int((m & ~e.between).sum()), "seen": int((m & ~e.between & e.seen).sum()),
+                     "responded": int((m & ~e.between & e.seen & e.responded).sum()),
+                     "response_rate_given_seen": float(e[m & ~e.between & e.seen].responded.mean()) if (m & ~e.between & e.seen).any() else np.nan,
+                     "segments_valid": e[e.valid].seg.nunique() if cat in VEH_CATS else np.nan,
+                     "segments_valid_in_ped_pool66": len(set(e[e.valid].seg) & q66) if cat in VEH_CATS else np.nan})
+    rows.append({"category": "any valid vehicle event", "events": int(ev.valid.sum()), "segments_valid": ev[ev.valid].seg.nunique(),
+                 "segments_valid_in_ped_pool66": len(set(ev[ev.valid].seg) & q66)})
+    rows.append({"category": "pedestrian (amendment 1, B strict)", "segments_valid": int(ped.in_B.sum())})
+    rows.append({"category": "random moving frames (baseline)", "events": len(base), "response_rate_given_seen": float(base.responded.mean())})
+    F = pd.DataFrame(rows)
+    F.to_csv(out / "vehicle_funnel.csv", index=False)
+    log.info("vehicle funnel:\n%s", F.to_string())
 
 
 # ---------------------------------------------------------------- events over all segments
@@ -358,6 +598,10 @@ def scenes(out: Path, exam_dir: Path, native: Path):
                                psnr_box=float(-10 * np.log10(max((e ** 2).mean(), 1e-10))), del_frac=float((dm > 8).mean()))
                 peds.append(row)
         rf = set(q[q.react].frame)
+        qa = ped[ped.track.isin(dl)]
+        qa = qa.assign(cls=object_classes(qa, eg["v"], eg["n"]))
+        qs = qa[qa.frame.isin(fr)]
+        fcat = frame_category(qs.cls, qs.frame)
         for f in fr:
             h = q[q.frame == f]
             frames.append({"scene": tg["key"], "frame": int(f), "sfx": f"{2 * f:07d}", "t_rel": round((f - f0) / HZ, 1), "v": eg["v"][f],
@@ -366,7 +610,8 @@ def scenes(out: Path, exam_dir: Path, native: Path):
                            # react = item (actions should differ); gray = a deleted pedestrian in the ego lane but not a
                            # react frame (farther than TTR_S, behind a lead or not yet seen); clean = every deleted
                            # pedestrian off the ego lane (actions should agree: a deletion null)
-                           "cls": "react" if f in rf else "gray" if bool(h.in_lane.any() or h.conflict.any()) else "clean"})
+                           "cls": "react" if f in rf else "gray" if bool(h.in_lane.any() or h.conflict.any()) else "clean",
+                           "cat": fcat.get(f, "clean")})
         items.append({"scene": tg["key"], "segment": tg["segment"], "f0": f0, "v0": tg["v0"], "n_delete": len(dl),
                       **item_readout(ped, eg["v"], f0, dl, fr)})
         # every 10 Hz frame's labels of the deleted tracks, for the review clips (scripts/p3/ds.py clip)
@@ -382,7 +627,7 @@ def scenes(out: Path, exam_dir: Path, native: Path):
     I["survives_all"] = I.survives & I.psnr_ok
     # readouts (registered flip rule, I3 tau) on frame subsets; ridge_late is the registered examinee, native descriptive
     key = ["base_id", "sfx"]
-    lab = F.rename(columns={"scene": "base_id"})[key + ["react", "conflict", "lead", "unseen", "cls"]]
+    lab = F.rename(columns={"scene": "base_id"})[key + ["react", "conflict", "lead", "unseen", "cls", "cat"]]
     lab = lab.merge(I.rename(columns={"scene": "base_id"})[["base_id", "survives", "survives_all"]], on="base_id")
     taus = pd.read_csv(data_dir() / "runs/elicitation/i3-exam/20260926-012841/flip_rates.csv").query("scope == 'pooled'").set_index("examinee").tau_model
     sources = [("ridge_late", pd.read_parquet(exam_dir / "frames_scored.parquet"), "ridge_late op-{m} temporal")]
@@ -400,6 +645,7 @@ def scenes(out: Path, exam_dir: Path, native: Path):
                    "non-react frames, all items": ~fs.react,
                    "clean frames (every deleted pedestrian off the ego lane)": fs.cls == "clean",
                    "gray frames (a deleted pedestrian in the lane, not react)": fs.cls == "gray",
+                   **{f"category {c}": fs.cat == c for c in CATS},
                    "conflict frames with a lead": fs.lead,
                    "conflict frames, pedestrian not yet seen": fs.unseen}
         for m in ("cinque", "lebowski"):
@@ -460,7 +706,7 @@ def summary(out: Path, sens: list[Path]):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("events", "scenes", "summary"))
+    ap.add_argument("cmd", choices=("events", "scenes", "summary", "vehicles"))
     ap.add_argument("--out", type=Path, default=data_dir() / "runs/nq4/p3/filter")
     ap.add_argument("--workers", type=int, default=0, help="events: worker processes (default min(8, n_cpus()))")
     ap.add_argument("--exam-dir", type=Path, default=data_dir() / "runs/nq4/p3-exam/20260927-232404")
@@ -475,6 +721,8 @@ def main():
         globals()[k] = float(v)
     if a.cmd == "events":
         events(a.out, a.workers or min(8, n_cpus()))
+    elif a.cmd == "vehicles":
+        vehicles(a.out, a.workers or min(8, n_cpus()))
     elif a.cmd == "scenes":
         scenes(a.out, a.exam_dir, a.native)
     else:
