@@ -668,6 +668,17 @@ def scenes(out: Path, exam_dir: Path, native: Path):
     log.info("readout:\n%s", R.to_string())
 
 
+def donors(out: Path, keys: list[int]):
+    """Insertion donors (amendment 2): per pedestrian track of a rendered scene, its FRONT-labelled frame count."""
+    sc = {t["scene"]: t for t in json.loads((data_dir() / "runs/nq4/p3/scenes.json").read_text())["targets"]}
+    (out / "donors").mkdir(parents=True, exist_ok=True)
+    for k in keys:
+        tg = sc.get(k) or json.loads((data_dir() / "runs/nq4/p3/targets" / f"{k:03d}.json").read_text())
+        D = load("validation" if tg["split"] == "validation" else "training", tg["segment"])
+        n = D["lab"][D["lab"].lab_h >= H_MIN].groupby("track").size().sort_values(ascending=False)
+        (out / "donors" / f"p3_{k:03d}.json").write_text(json.dumps({"segment": tg["segment"], "front_labelled": n.to_dict()}, indent=1))
+
+
 # ---------------------------------------------------------------- summary tables (CPU, reads the events outputs)
 def _survivors(d: Path, seg: pd.DataFrame) -> dict:
     q66 = set(seg.index[seg.qualifies])
@@ -708,7 +719,8 @@ def summary(out: Path, sens: list[Path]):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("events", "scenes", "summary", "vehicles"))
+    ap.add_argument("cmd", choices=("events", "scenes", "summary", "vehicles", "donors"))
+    ap.add_argument("--keys", type=int, nargs="*", default=list(range(10)), help="donors: scene indices")
     ap.add_argument("--out", type=Path, default=data_dir() / "runs/nq4/p3/filter")
     ap.add_argument("--workers", type=int, default=0, help="events: worker processes (default min(8, n_cpus()))")
     ap.add_argument("--exam-dir", type=Path, default=data_dir() / "runs/nq4/p3-exam/20260927-232404")
@@ -723,6 +735,8 @@ def main():
         globals()[k] = float(v)
     if a.cmd == "events":
         events(a.out, a.workers or min(8, n_cpus()))
+    elif a.cmd == "donors":
+        donors(a.out, a.keys)
     elif a.cmd == "vehicles":
         vehicles(a.out, a.workers or min(8, n_cpus()))
     elif a.cmd == "scenes":
