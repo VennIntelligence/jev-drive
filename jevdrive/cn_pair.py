@@ -11,7 +11,8 @@ resized to 1280 x 704. Everything lives under $DATA_DIR/runs/cn_pair/.
            mask dilated; clean plate = big-lama inside the region per frame; canny edges of both
   specs    Cosmos spec (jsonl) for an arm and a scene list (scripts/cosmos_infer.py runs it)
   anchor   an arm's x- as lossless mp4, anchor of a guided x+ ; blend: feathered paste of a guided x+ into x-
-  insert   walking CARLA pedestrian (P5 v1 clips of the Cosmos pilot) pasted into the x- controls along a kerb-to-lane path
+  depth    (envs/depth, GPU) DA3-metric depth of the clean plate, to occlude an inserted walker
+  insert   walking CARLA pedestrian (a Cosmos v1 CARLA clip, read-only) added to the x- controls on a kerb-to-lane path
   webp     real | x+ | x- review clip per (scene, arm) -> runs/cn_pair/figs/ (pulled to research/figs/cn_pair/)
 """
 import json
@@ -208,6 +209,161 @@ def _edges(d: Path, rgb, clean, region):
     np.save(d / "alpha.npy", alpha.astype(np.float16))
 
 
+# ------------------------------------------------------------------ depth (envs/depth) and insertion (envs/jevdrive)
+
+def depth(scenes: list[str]):
+    """DA3-metric depth of the clean plate (the x- world), for occluding an inserted walker; float16 metres."""
+    import torch
+    from .n5_depth import DA3Metric
+    m = DA3Metric()
+    for key in scenes:
+        d = out("clips", key)
+        if (d / "depth_clean.npy").exists():
+            continue
+        info = json.loads((d / "prep.json").read_text())
+        sd = data_dir() / "processed/waymo_ds/training" / f"{info['wds_scene']:03d}"
+        K = _cam(sd, info["frames"][0])[1] * S
+        K[2, 2] = 1
+        K[1, 2] -= CROP_Y0 * S
+        clean = np.load(d / "clean.npy")
+        dep = np.stack([m(torch.from_numpy(x).permute(2, 0, 1), K).cpu().numpy() for x in clean])
+        np.save(d / "depth_clean.npy", dep.astype(np.float16))
+        log.info("%s depth: median %.1f m", key, float(np.median(dep)))
+
+
+WALK_SRC, WALK_HZ = "27515-s0", 0          # Cosmos v1 CARLA clip (PedestrianCrossing, ego stopped), hazard walker 0
+WALK_V, WALK_H, WALK_YMAX = 1.5, 1.75, 7.5  # m/s, body height m, walker drawn only within this lateral offset (m)
+T_ARR, AHEAD_END = 80, 6.0                   # walker at the lane centre at frame 80; that point is 6 m ahead of the
+                                             # ego's last-frame pose (the clip ends before the ego reaches it)
+
+
+def _sprites():
+    """Walk cycle of one CARLA walker: per 20 Hz tick, the RGB crop, mask crop and foot anchor, looped on its gait period."""
+    import cv2
+    from .cosmos_eval import gt
+    from .cosmos_pilot import read_mp4
+    src = data_dir() / "runs" / "cosmos" / "clips" / WALK_SRC
+    rgb = read_mp4(src / "plus" / "rgb.mp4")
+    mask = gt(WALK_SRC)["mask"]
+    box = np.load(src / "gt_boxes.npz")["box"]
+    ok = []
+    for t in range(len(box)):
+        b = box[t, WALK_HZ]
+        others = [box[t, j] for j in range(box.shape[1]) if j != WALK_HZ and box[t, j, 0] >= 0]
+        clear = all(o[2] < b[0] - 8 or o[0] > b[2] + 8 for o in others)
+        ok.append(b[0] > 2 and b[2] < W - 2 and clear)
+    runs, cur = [], []
+    for t, o in enumerate(ok):
+        cur = cur + [t] if o else []
+        if len(cur) > len(runs):
+            runs = cur
+    sp = []
+    for t in runs:
+        x0, y0, x1, y1 = box[t, WALK_HZ]
+        x0, y0, x1, y1 = max(x0 - 4, 0), max(y0 - 4, 0), min(x1 + 5, W), min(y1 + 5, H)
+        mk = mask[t, y0:y1, x0:x1]
+        ys, xs = np.nonzero(mk)
+        foot = (float(xs[ys >= ys.max() - 6].mean()), float(ys.max()))
+        sp.append({"rgb": rgb[t, y0:y1, x0:x1], "mask": mk, "foot": foot, "h": float(ys.max() - ys.min())})
+    # gait period: the lag whose foot-aligned silhouettes match best
+    def norm(s):
+        m = s["mask"].astype(np.uint8)
+        fx, fy = s["foot"]
+        M = np.float32([[64 / s["h"], 0, 32 - fx * 64 / s["h"]], [0, 64 / s["h"], 70 - fy * 64 / s["h"]]])
+        return cv2.warpAffine(m, M, (64, 72)) > 0
+    ns = [norm(s) for s in sp]
+    def dist(p):
+        a = [np.logical_xor(ns[i], ns[i + p]).sum() / max(np.logical_or(ns[i], ns[i + p]).sum(), 1) for i in range(len(ns) - p)]
+        return float(np.mean(a))
+    period = min(range(14, min(40, len(sp) - 4)), key=dist)
+    n = (len(sp) // period) * period
+    log.info("walker sprites: %d clear ticks (%d-%d), gait period %d ticks (%.2f s), loop %d", len(sp), runs[0], runs[-1],
+             period, period / 20, n)
+    return sp[:n]
+
+
+def _walker_path(sd: Path, frames: list[int]):
+    """World foot positions of the inserted walker per clip frame (None = not drawn) and the world up vector."""
+    n = len(list((sd / "ego_pose").glob("*.txt")))
+    poses = np.stack([np.loadtxt(sd / "ego_pose" / f"{f:03d}.txt") for f in range(n)])
+    end = poses[frames[-1]]
+    xc = end[:3, 3] + end[:3, 0] * AHEAD_END
+    j = int(np.argmin(np.linalg.norm(poses[:, :2, 3] - xc[:2], axis=1)))
+    g = poses[j]
+    up, fwd = g[:3, 2], g[:3, 0]
+    xc = xc - up * np.dot(xc - g[:3, 3], up)                     # onto the ground plane of the nearest ego pose
+    left = np.cross(up, fwd)
+    feet = []
+    for t in range(len(frames)):
+        y = -WALK_V * (T_ARR - t) / FPS                              # from the right kerb (negative = right) leftwards
+        feet.append(xc + left * y if abs(y) <= WALK_YMAX else None)
+    return feet, up
+
+
+def insert(scenes: list[str]):
+    """x+ controls with a walking CARLA pedestrian added to the x- (clean) world: its canny edges (and, for the vis arm,
+    its pixels in the input video) at a kerb-to-lane path, scaled by projection, hidden where the clean plate's depth is
+    nearer. x- of an insertion pair is the removal pair's x-."""
+    import cv2
+    sp = _sprites()
+    for key in scenes:
+        d = out("clips", key)
+        info = json.loads((d / "prep.json").read_text())
+        sd = data_dir() / "processed/waymo_ds/training" / f"{info['wds_scene']:03d}"
+        clean = np.load(d / "clean.npy")
+        dep = np.load(d / "depth_clean.npy").astype(np.float32)
+        em = cv2_read_edges(d / "edge_minus.mp4")
+        feet, up = _walker_path(sd, info["frames"])
+        vid, edges = clean.copy(), em.copy()
+        wmask = np.zeros((T, H, W), bool)
+        hpx = []
+        for t, f in enumerate(info["frames"]):
+            if feet[t] is None:
+                hpx.append(0)
+                continue
+            cam = _cam(sd, f)
+            uv, z = project(np.stack([feet[t], feet[t] + up * WALK_H]), cam)
+            if z[0] < 1.0:
+                hpx.append(0)
+                continue
+            h = float(uv[0, 1] - uv[1, 1])
+            s = sp[(2 * t) % len(sp)]
+            k = h / s["h"]
+            M = np.float32([[k, 0, uv[0, 0] - s["foot"][0] * k], [0, k, uv[0, 1] - s["foot"][1] * k]])
+            m = cv2.warpAffine(s["mask"].astype(np.uint8), M, (W, H), flags=cv2.INTER_NEAREST) > 0
+            m &= dep[t] > z[0] - 0.5                                  # occluded by nearer scene parts
+            if m.sum() < 30:
+                hpx.append(0)
+                continue
+            im = cv2.warpAffine(s["rgb"], M, (W, H), flags=cv2.INTER_LINEAR)
+            vid[t][m] = im[m]
+            ed = cv2.Canny(cv2.cvtColor(np.where(m[..., None], im, 0).astype(np.uint8), cv2.COLOR_RGB2GRAY), *CANNY) > 0
+            md = cv2.dilate(m.astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
+            edges[t] = np.where(md, ed, edges[t])
+            wmask[t] = m
+            hpx.append(round(h))
+        write_mp4(d / "ins_video.mp4", vid, fps=FPS)
+        write_mp4(d / "edge_ins.mp4", np.repeat((edges * 255).astype(np.uint8)[..., None], 3, -1), fps=FPS)
+        k = np.ones((2 * FREE_DIL + 1,) * 2, np.uint8)
+        r = np.stack([cv2.dilate(x.astype(np.uint8), k) > 0 for x in wmask])
+        free = np.stack([r[max(0, t - FREE_T):t + FREE_T + 1].any(0) for t in range(T)])
+        write_mp4(d / "anchor_mask_ins.mp4", np.repeat(((~free) * 255).astype(np.uint8)[..., None], 3, -1), fps=FPS)
+        alpha = np.stack([np.maximum(cv2.GaussianBlur((cv2.dilate(x.astype(np.uint8), np.ones((21, 21), np.uint8)) > 0)
+                                                      .astype(np.float32), (0, 0), 4.0), x.astype(np.float32)) for x in wmask])
+        np.save(d / "alpha_ins.npy", alpha.astype(np.float16))
+        np.savez_compressed(d / "ins.npz", region=pack(wmask))
+        vis = [t for t in range(T) if wmask[t].any()]
+        (d / "ins.json").write_text(json.dumps({"src": WALK_SRC, "hazard": WALK_HZ, "h_px": hpx, "visible": len(vis),
+                                                "first": vis[0] if vis else None, "last": vis[-1] if vis else None}))
+        log.info("%s insert: walker visible in %d frames (%s-%s), height %d-%d px", key, len(vis), vis[0] if vis else "-",
+                 vis[-1] if vis else "-", min([x for x in hpx if x] or [0]), max(hpx))
+
+
+def cv2_read_edges(p: Path) -> np.ndarray:
+    from .cosmos_pilot import read_mp4
+    return read_mp4(p)[..., 0] > 127
+
+
 # ------------------------------------------------------------------ specs
 
 def prompt(fi: dict) -> str:
@@ -233,7 +389,12 @@ ARMS = {
     # base 35 steps, edge + vis (Cosmos blurs the input video on the fly: real for x+, clean plate for x-)
     "BV": ("edge", 35, {"edge": ("edge_plus.mp4", "edge_minus.mp4", 1.0), "vis": (None, None, 0.5)}, None),
     "B": ("edge", 35, {"edge": ("edge_plus.mp4", "edge_minus.mp4", 1.0)}, None),
+    # insertion: x+ = walker added to the x- controls; x- is the removal arm's x- (linked, not regenerated)
+    "EI": ("edge/distilled", 4, {"edge": ("edge_ins.mp4", None, 1.0)}, None),
+    "EIG": ("edge/distilled", 4, {"edge": ("edge_ins.mp4", None, 1.0)}, "E"),
+    "BVI": ("edge", 35, {"edge": ("edge_ins.mp4", None, 1.0), "vis": (None, None, 0.5)}, None),
 }
+INS = {"EI": "E", "EIG": "E", "BVI": "BV"}
 
 
 def specs(arm: str, scenes: list[str], members: str = "plus,minus", tag: str = "") -> Path:
@@ -242,10 +403,10 @@ def specs(arm: str, scenes: list[str], members: str = "plus,minus", tag: str = "
     for key in scenes:
         d = out("clips", key)
         fi = json.loads((d / "prep.json").read_text())["frame_info"]
-        jobs = ["plus"] if anchored else members.split(",")
+        jobs = ["plus"] if anchored or arm in INS else members.split(",")
         for mem in jobs:
             x = {"name": f"{key}_{mem}_{arm}", "prompt": prompt(fi), "seed": SEED, "num_steps": steps, "guidance": 3,
-                 "video_path": str(d / ("real.mp4" if mem == "plus" else "clean.mp4"))}
+                 "video_path": str(d / ("ins_video.mp4" if arm in INS else "real.mp4" if mem == "plus" else "clean.mp4"))}
             if model != "edge/distilled":
                 x["negative_prompt"] = NEG
             for c, (fp, fm, wgt) in ctrls.items():
@@ -253,7 +414,7 @@ def specs(arm: str, scenes: list[str], members: str = "plus,minus", tag: str = "
                 x[c] = {"control_weight": wgt} | ({"control_path": str(d / f)} if f else {})
             if anchored:
                 x["video_path"] = str(out("anchor") / f"{key}_{anchored}.mp4")
-                x["guided_generation_mask"] = str(d / "anchor_mask.mp4")
+                x["guided_generation_mask"] = str(d / ("anchor_mask_ins.mp4" if arm in INS else "anchor_mask.mp4"))
                 x["guided_generation_step_threshold"] = 99
             lines.append(x)
     f = out("specs") / f"{arm}{tag}.jsonl"
@@ -267,11 +428,19 @@ def anchor(arm: str, scenes: list[str]):
         write_mp4(out("anchor") / f"{key}_{arm}.mp4", np.load(out("gen", arm) / f"{key}_minus_{arm}.npy"), fps=FPS)
 
 
+def link_minus(arm: str, scenes: list[str]):
+    """Insertion arms share the removal arm's x-."""
+    for key in scenes:
+        link = out("gen", arm) / f"{key}_minus_{arm}.npy"
+        link.unlink(missing_ok=True)
+        link.symlink_to(out("gen", INS[arm]) / f"{key}_minus_{INS[arm]}.npy")
+
+
 def blend(arm: str, base: str, scenes: list[str]):
     """Guided x+ -> feathered paste into the base arm's x- (outside the alpha support x+ == x- exactly)."""
     dst = out("gen", arm + "b")
     for key in scenes:
-        a = np.load(out("clips", key) / "alpha.npy").astype(np.float32)[..., None]
+        a = np.load(out("clips", key) / ("alpha_ins.npy" if arm in INS else "alpha.npy")).astype(np.float32)[..., None]
         g = np.load(out("gen", arm) / f"{key}_plus_{arm}.npy").astype(np.float32)
         neg = np.load(out("gen", base) / f"{key}_minus_{base}.npy")
         np.save(dst / f"{key}_plus_{arm}b.npy", np.rint(a * g + (1 - a) * neg).astype(np.uint8))
@@ -305,7 +474,8 @@ def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 560):
         if not (gp.exists() and gm.exists()):
             continue
         rgb, P, M = np.load(d / "rgb.npy"), np.load(gp), np.load(gm)
-        reg = unpack(np.load(d / "clip.npz")["region"])
+        ins = arm.rstrip("b") in INS
+        reg = unpack(np.load(d / ("ins.npz" if ins else "clip.npz"))["region"])
         info = json.loads((d / "prep.json").read_text())
         frames = []
         for t in range(0, T, step):
@@ -313,8 +483,9 @@ def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 560):
             cs, _ = cv2.findContours(reg[t].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             cv2.drawContours(r, cs, -1, (255, 220, 0), 3)
             G = Image.new("RGB", (3 * pw, ph + 26), (18, 18, 18))
-            for k, (im, lab) in enumerate(((r, "real (target outlined)"), (P[t], "x+ (target in controls)"),
-                                           (M[t], "x- (target removed from controls)"))):
+            labs = (("real (walker path outlined)", "x+ (walker added to controls)", "x- (target removed)") if ins else
+                    ("real (target outlined)", "x+ (target in controls)", "x- (target removed from controls)"))
+            for k, (im, lab) in enumerate(zip((r, P[t], M[t]), labs)):
                 G.paste(Image.fromarray(im).resize((pw, ph), Image.LANCZOS), (k * pw, 0))
                 ImageDraw.Draw(G).text((k * pw + 6, 4), lab, fill=(255, 255, 255), font=f1, stroke_width=2,
                                        stroke_fill=(0, 0, 0))
@@ -332,7 +503,7 @@ def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 560):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "specs", "anchor", "blend", "webp"))
+    ap.add_argument("step", choices=("prep", "specs", "anchor", "blend", "webp", "depth", "insert", "link"))
     ap.add_argument("--scenes", default="p3_000")
     ap.add_argument("--arm", default="E")
     ap.add_argument("--base", default="E")
@@ -348,6 +519,12 @@ def main():
         anchor(a.arm, sc)
     elif a.step == "blend":
         blend(a.arm, a.base, sc)
+    elif a.step == "depth":
+        depth(sc)
+    elif a.step == "insert":
+        insert(sc)
+    elif a.step == "link":
+        link_minus(a.arm, sc)
     else:
         webp(a.arm, sc)
 
