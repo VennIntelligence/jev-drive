@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-card CARLA knee on the real G workload: N b2d_run workers of one examinee on one card, sweep N.
 
-  carla_knee.py run --agent simlingo --n 5 8 6 7 --gpu 6 --cpus 144-167 --idx 20 --window 720
+  carla_knee.py run --agent simlingo --n 6 8 --gpu 6 --cpus 144-167 --idx 20 --window 240
   carla_knee.py summary                      markdown table of every point in $DATA_DIR/runs/infra/knee-6000d
 
 Each point starts one runner exactly as scripts/nq4_g_lane.py does (its launch(): nq3_b_cl10.sh / b2d_run, reduced CARLA
@@ -95,7 +95,7 @@ def point(a, n, rep):
     r = L.launch(dict(cand=a.agent, variant="ghost", seed=1), a.gpu, n, a.idx, 2 * n, ids)
     pid = r["pid"]
     print(time.strftime("%T"), tag, "runner", pid, "foreign CARLA on card:", others, flush=True)
-    # warm-up: every worker has an attempt that ticks, then one more minute
+    # warm-up: every worker has an attempt that ticks, then half a minute more
     deadline = time.time() + 900
     while time.time() < deadline:
         running = [t for t, st in attempts(out).values() if st is None and t > 0]
@@ -103,7 +103,7 @@ def point(a, n, rep):
             break
         time.sleep(10)
     warm = time.time() - t_launch
-    time.sleep(60)
+    time.sleep(30)
     cores = cores_of(a.cpus)
     a0, c0, t0 = attempts(out), cpu_times(cores), time.time()
     vram, util = [], []
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     ap.add_argument("--gpu", type=int, default=6)
     ap.add_argument("--cpus", default="144-167")
     ap.add_argument("--idx", type=int, default=20)
-    ap.add_argument("--window", type=float, default=720)
+    ap.add_argument("--window", type=float, default=240)
     ap.add_argument("--extend", type=int, default=10, help="largest N the automatic extension may reach (0: off)")
     a = ap.parse_args()
     ROOT.mkdir(parents=True, exist_ok=True)
