@@ -367,7 +367,7 @@ Q2 的模式头（交叉拟合的 unseen 版）判 bypass-L / R 时，按 PDM-Li
     场景 0–9 的 200 个 clean 帧上四个读数（`ridge_late` Cinque / Lebowski、原生 plan 两个）的配对翻转全为 0，登记报的配对翻转全部落在 30 个 gray 帧。
   - **读法**：扩量只收至少有一个 react 帧且司机减速、PSNR 过线的事件；门与读数口径（τ、翻转定义、`ridge_late` 考生）不变，react 帧上报配对翻转，clean 帧上报删除型 null。
   - 描述性结果（不是判格）：登记的 10 场景 0 个 react 帧；改锚后 p3_002 成题（t_c = 12.4 s）。66 个合格段里 A（登记锚点）11 段、B（改锚）10 段，并集 12 段；全部 1 000 段 B 为 10 段，几何放到最松 17 段。**≥ 60 在 WOD v2 上靠删除不可达。**
-    明细、敏感性和四条出路见 [tmp/2026-09-28-p3-filter.md](../tmp/2026-09-28-p3-filter.md)，表在 [research/results/nq4/p3/filter/](../research/results/nq4/p3/filter/)，代码 `jevdrive/nq4_p3_filter.py`。
+    面向读者的整理（含视频片段）：[research/p3-exam-filter.md](../research/p3-exam-filter.md)。明细、敏感性和四条出路见 [tmp/2026-09-28-p3-filter.md](../tmp/2026-09-28-p3-filter.md)，表在 [research/results/nq4/p3/filter/](../research/results/nq4/p3/filter/)，代码 `jevdrive/nq4_p3_filter.py`。
 
 ## E. 专家汇总的补充
 
