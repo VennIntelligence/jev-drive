@@ -95,12 +95,12 @@ def main():
     ap.add_argument("--variant", required=True)
     ap.add_argument("--pairs", default="")
     a = ap.parse_args()
-    import pandas as pd
+    import csv
     from jevdrive.openpilot.model import OPModel
     from jevdrive.runlog import RunLog
     rl = RunLog("cosmos", "openpilot", a.variant)
-    p = pd.read_csv(Path(__file__).resolve().parents[1] / "research/results/cosmos/pairs.csv", dtype={"base_id": str})
-    names = [x for x in a.pairs.split(",") if x] or list(p.pair)
+    p = csv.DictReader(open(Path(__file__).resolve().parents[1] / "research/results/cosmos/pairs.csv"))
+    names = [x for x in a.pairs.split(",") if x] or [r["pair"] for r in p]
     m = OPModel("cinque", WZ.MODELS["cinque"], taps=list(D.OP_TAPS["cinque"].values()))
     idx = maps()
     od = ROOT / "op" / a.variant
