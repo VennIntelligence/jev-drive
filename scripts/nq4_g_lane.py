@@ -67,6 +67,13 @@ POLL_S = 20
 # Thread budget per new worker, measured 2026-09-27 with stock servers: CARLA server 457 threads + route client 150-280.
 PIDS_CAP = int(os.environ.get("G_PIDS_CAP", 16000))
 PIDS_PER_WORKER = int(os.environ.get("G_PIDS_PER_WORKER", 700))
+# Per-card budget (user 2026-09-28): a worker of agent a takes 1 / cap(a) of the card's render budget and CPU_A[a] cores
+# of its slice; heavy agents' cap is CARD_CAP (the knee, SCH row workers), light agents render little and go further.
+# A card is full when the render shares sum to 1, the slice is CPU_FILL busy, or it holds SERVER_MAX servers.
+HEAVY = {"simlingo", "blue", "bridgedrive"}
+CAP_A = {"tfv6": 10, "pdm": 12, **{k: int(v) for k, v in (e.split("=") for e in os.environ.get("G_CAPS", "").split(",") if e)}}
+CPU_A = {"simlingo": 2.0, "blue": 2.0, "bridgedrive": 2.0, "tfv6": 2.0, "pdm": 1.2}   # cores / worker, measured 2026-09-28
+SERVER_MAX, CPU_FILL = int(os.environ.get("G_SERVER_MAX", 10)), 0.85
 NEED_GB = {"pdm": 8, "tfv6": 11, "bridgedrive": 11, "blue": 14, "simlingo": 14}   # CARLA server + author model, per worker
 IDX0, IDX_SPAN = 420, 10                    # fallback layout when the SCH row is missing
 CPUS = os.environ.get("G_CPUS", "0-39,56-81,118-179")
@@ -201,6 +208,24 @@ def cards(rows, own=frozenset()):
         mine = port is not None and (int(port) - 2000) // 50 in own
         card["mine" if mine else "other"] += 1
     return {c["gpu"]: c for c in bus.values()}
+
+
+def cap(c):
+    return CAP_A.get(c, CARD_CAP)
+
+
+def n_cores(spec):
+    return sum(int(b or a) - int(a) + 1 for a, _, b in (x.partition("-") for x in spec.split(",")))
+
+
+def up_indices(rows):
+    """Server indices of every live CARLA server (from its RPC port)."""
+    out = set()
+    for r in rows.values():
+        a = r.get("argv", [])
+        if a and "CarlaUE4-Linux-Shipping" in a[0]:
+            out |= {(int(x.split("=")[1]) - 2000) // 50 for x in a if x.startswith("-carla-rpc-port=")}
+    return out
 
 
 def pids_now():
@@ -366,6 +391,19 @@ class Lane:
         used = self.own(rows)
         return [i for i in BLOCKS.get(gpu, ()) if i not in used]
 
+    def eff(self, r, up):
+        """Workers of a runner that still hold a server. A worker whose share of routes ran out exits for good, so after
+        start-up (300 s) a count below the last one that holds for three polls lowers it (a server restart is shorter)."""
+        n = sum(1 for i in range(r["idx"], r["idx"] + r["span"]) if i in up)
+        e = r.get("eff", r["workers"])
+        if now() - r["t0"] < 300 or n >= e:
+            r["low"] = 0
+        else:
+            r["low"] = r.get("low", 0) + 1
+            if r["low"] >= 3:
+                r["eff"], e = n, n
+        return e
+
     def drain(self, rows, other):
         """On a card where another lane's demand plus this lane's undrained workers exceed CARD_CAP, drain runners
         (fewest workers that cover the excess first); each finishes its current routes and exits."""
@@ -388,28 +426,40 @@ class Lane:
         jobs = self.jobs()
         for j in jobs:                        # routes still to run and workers already on them, once per round
             j["rest"] = left(j["cand"], j["variant"], j["seed"], j["ids"])
-            j["busy"] = sum(r["workers"] for r in self.live(j["key"], rows) if not r.get("drained"))
+            j["busy"] = sum(r.get("eff", r["workers"]) for r in self.live(j["key"], rows) if not r.get("drained"))
         if not jobs:
             return
         info = cards(rows, self.own(rows))
-        young = [r for r in self.st["runners"].values() if alive(r, rows) and now() - r["t0"] < 300]
+        up = up_indices(rows)
+        live = [r for r in self.st["runners"].values() if alive(r, rows)]
+        young = [r for r in live if now() - r["t0"] < 300]
         pids = pids_now() + PIDS_PER_WORKER * sum(r["workers"] for r in young)   # servers that may still be starting
-        mine = {g: sum(r["workers"] for r in self.st["runners"].values() if r["gpu"] == g and alive(r, rows)) for g in info}
+        use = {g: {} for g in info}           # card -> agent -> workers that hold a server (or are still starting)
+        for r in live:
+            if r["gpu"] in use:
+                use[r["gpu"]][r["cand"]] = use[r["gpu"]].get(r["cand"], 0) + self.eff(r, up)
         other = {g: max(info[g]["other"], DEMAND.get(g, 0)) for g in info}
-        load = {g: other[g] + mine[g] + 2 * info[g]["foreign"] for g in info}
         self.drain(rows, other)
+
+        def budget(g):                        # render share, cores and servers in use on card g
+            u = use[g]
+            return (sum(n / cap(c) for c, n in u.items()) + other[g] / CARD_CAP,
+                    sum(n * CPU_A[c] for c, n in u.items()) + 2.0 * other[g], sum(u.values()) + other[g])
+
+        load = {g: budget(g)[0] + 0.5 * info[g]["foreign"] for g in info}
         # Pilot stages go only to the test card(s); a pilot's crash-rate check must not measure a crowded card, so
-        # among those the least loaded one with room (other lanes' GPU jobs counted as two).
+        # among those the least loaded one with room.
         granted = [g for g in info if g in GPUS or g in PILOT_GPUS]
-        calm = min((load[g] for g in granted if g in PILOT_GPUS and CARD_CAP - other[g] - mine[g] > 0), default=None)
+        calm = min((load[g] for g in granted if g in PILOT_GPUS and budget(g)[0] < 1), default=None)
         for gpu in sorted(granted, key=lambda g: load[g]):
             card = info[gpu]
-            room = CARD_CAP - other[gpu] - mine[gpu]
-            if room <= 0:
-                continue
+            share, cpu, nsrv = budget(gpu)
+            cores = n_cores(card_cpus(gpu)) if gpu in BLOCKS else 24
             unstarted = sum(r["workers"] for r in young if r["gpu"] == gpu)
             free_gb = card["total"] - card["used"] - 8 * unstarted - 8   # keep >= 8 GB per card (sch_table.py)
-            for j in jobs:
+            heavy = sum(n / cap(c) for c, n in use[gpu].items() if c in HEAVY)
+            want_heavy = heavy <= share - heavy   # mix: the card's under-represented class first, then priority order
+            for j in sorted(jobs, key=lambda j: (j["cand"] in HEAVY) != want_heavy):
                 c, v, s = j["cand"], j["variant"], j["seed"]
                 if (j["kind"] == "pilot") != (gpu in PILOT_GPUS):
                     continue                  # pilots only on the test card, cells only on batch cards
@@ -423,7 +473,8 @@ class Lane:
                         p.update(launched=True, runner=None, t0=now())
                         continue
                 need = len(j["rest"]) - j["busy"]
-                w = min(room, need, MAX_W, int(free_gb // NEED_GB[c]), (PIDS_CAP - pids) // PIDS_PER_WORKER)
+                w = min(need, MAX_W, int((1 - share) * cap(c) + 1e-6), int((CPU_FILL * cores - cpu) // CPU_A[c]),
+                        SERVER_MAX - nsrv, int(free_gb // NEED_GB[c]), (PIDS_CAP - pids) // PIDS_PER_WORKER)
                 if j["kind"] == "pilot" and p["stage"] == 1:
                     w = min(w, 1)
                 free = self.blocks_free(gpu, rows)
@@ -438,7 +489,8 @@ class Lane:
                 if j["kind"] == "pilot":
                     p.update(launched=True, runner=r["pid"], t0=r["t0"])
                 j["busy"] += w
-                event("launch", job=j["key"], gpu=gpu, workers=w, idx=r["idx"], routes=len(j["rest"]), pid=r["pid"])
+                event("launch", job=j["key"], gpu=gpu, workers=w, idx=r["idx"], routes=len(j["rest"]), pid=r["pid"],
+                      share=round(share, 2), cpu=round(cpu, 1), servers=nsrv)
                 self.save()
                 pids += PIDS_PER_WORKER * w
                 time.sleep(10)
