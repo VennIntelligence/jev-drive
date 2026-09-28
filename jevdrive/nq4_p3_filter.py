@@ -268,6 +268,12 @@ def _segment(job: tuple[str, str]) -> dict:
             win = corr[(t[corr.frame] >= t[fc] - WIN_PRE) & (t[corr.frame] <= t[fc] + WIN_POST)]
             dl = sorted(map(str, win.track.unique()))
             rs = response(v, int(fc))
+            # stopped / creeping ego: was this pedestrian what held it? release gap = first frame the ego moves off
+            # (>= 1 m/s) minus the first frame the pedestrian is out of the lane, both after the anchor
+            lane = set(ped[(ped.track == tr) & ped.in_lane].frame)
+            clear = next((f for f in range(int(fc), n) if f not in lane), n)
+            go = next((f for f in range(int(fc), n) if v[f] >= 1.0), n)
+            rs["release_gap"] = (go - clear) / HZ if go < n and clear < n else np.nan
             B.append({"seg": seg, "variant": "B", "track": tr, "f0": int(fc), "t0": t[fc], "v0": v[fc], "n_delete": len(dl),
                       "delete": json.dumps(dl), "deletable": tr in dl, "crc": SEL.crc(f"{seg}/{tr}/{fc}"),
                       "ok_window": bool(F0_RANGE[0] <= t[fc] <= F0_RANGE[1]), "ok_speed": bool(v[fc] >= MIN_SPEED),
