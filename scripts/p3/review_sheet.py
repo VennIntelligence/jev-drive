@@ -143,11 +143,32 @@ PAGES = {"PI": ("ped-insert", "行人插入（贴地标准构造，展示到达�
          "VD": ("veh-delete", "车辆删除（事件车辆）")}
 
 
+def _existing_verdicts(rdir: Path) -> dict:
+    """id -> verdict text already on disk, keyed by item id, so a regenerate never wipes a human's keep / drop / note."""
+    verdicts = {}
+    for slug, _ in PAGES.values():
+        p = rdir / f"{slug}.md"
+        if not p.exists():
+            continue
+        for line in p.read_text().splitlines():
+            if not line.startswith("| !["):
+                continue
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) < 6:
+                continue
+            iid = cells[1].split("<br>")[0].strip()
+            verdict = cells[5].strip()
+            if iid and verdict:
+                verdicts[iid] = verdict
+    return verdicts
+
+
 def md(a):
     j = json.loads(Path(a.items).read_text())
     items = j["items"]
     rdir = REPO / "research/p3-review"
     rdir.mkdir(parents=True, exist_ok=True)
+    verdicts = _existing_verdicts(rdir)
     rows = {}
     for t, (slug, title) in PAGES.items():
         its = [i for i in items if i["type"] == t]
@@ -157,7 +178,8 @@ def md(a):
                  "| 视频 | 编号 | 类别 | 视角差 | 框内 PSNR (dB) | 结论（keep / drop / 备注） |", "|:--|:--|:--|--:|--:|:--|"]
         for i in its:
             vg = "—" if i["view_gap"] is None else f"{i['view_gap']:.0f}°"
-            lines.append(f"| ![{i['id']}](../figs/p3/review/{i['id']}.webp) | {i['id']}<br>{i['scene']} | {i['category']} | {vg} | {i['psnr']:.1f} |  |")
+            v = verdicts.get(i["id"], "")
+            lines.append(f"| ![{i['id']}](../figs/p3/review/{i['id']}.webp) | {i['id']}<br>{i['scene']} | {i['category']} | {vg} | {i['psnr']:.1f} | {v} |")
         (rdir / f"{slug}.md").write_text("\n".join(lines) + "\n")
     total = len(items)
     mb = sum(i["bytes"] for i in items) / 1e6
