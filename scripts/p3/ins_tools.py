@@ -362,21 +362,37 @@ def vace(a):
     region of the composite, which it also sees (VACE's reactive frames), everything else is its inactive context."""
     import torch
     sys.path[:0] = [str(DATA / "third_party/ins/VACE"), str(DATA / "third_party/ins/VACE/vace")]
-    from accelerate import cpu_offload
     import models.wan.wan_vace as wv
     from models.wan import WanVace
     from models.wan.configs import WAN_CONFIGS
-    # The 17B checkpoint is stored in fp32 (69 GB) and the test card is shared (~34 GB free): keep the DiT in bf16 on the
-    # CPU and stream each block to the GPU during its forward (accelerate cpu_offload); WanVace's own .to(device) calls
-    # become no-ops. Numerics: bf16 weights under the bf16 autocast Wan already runs.
+    # The 17B checkpoint is stored in fp32 (69 GB) and the test card is shared (~34 GB free): the DiT runs in bf16 (under
+    # the bf16 autocast Wan already uses); the small modules live on the GPU, and each transformer block (blocks,
+    # vace_blocks) streams from pinned CPU memory to the GPU for its own forward and is dropped afterwards. WanVace's own
+    # model.to(device) calls become no-ops.
     orig = wv.VaceWanModel.from_pretrained.__func__
 
-    def bf16_offloaded(cls, *args, **kw):
+    def bf16_streamed(cls, *args, **kw):
         m = orig(cls, *args, **kw).to(torch.bfloat16).eval().requires_grad_(False)
-        cpu_offload(m, execution_device=torch.device("cuda"))
+        for n, c in m.named_children():
+            if n not in ("blocks", "vace_blocks"):
+                c.cuda()
+        for b in [*m.blocks, *m.vace_blocks]:
+            pairs = [(p_, p_.data.pin_memory()) for p_ in b.parameters()]
+            for p_, cpu in pairs:
+                p_.data = cpu
+
+            def pre(mod, inp, pairs=pairs):
+                for p_, cpu in pairs:
+                    p_.data = cpu.to("cuda", non_blocking=True)
+
+            def post(mod, inp, out, pairs=pairs):
+                for p_, cpu in pairs:
+                    p_.data = cpu
+            b.register_forward_pre_hook(pre)
+            b.register_forward_hook(post)
         m.to = lambda *a_, **k_: m                                         # noqa: E731
         return m
-    wv.VaceWanModel.from_pretrained = classmethod(bf16_offloaded)
+    wv.VaceWanModel.from_pretrained = classmethod(bf16_streamed)
     key, src = a.key, a.src
     cls = src.split("_")[0]
     frames, regs, _ = _regions(key, cls)
