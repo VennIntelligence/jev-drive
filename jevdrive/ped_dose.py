@@ -28,6 +28,7 @@ from .p5_pairs import v2
 
 log = get_logger(__name__)
 MODELS = ("cinque", "lebowski")
+DISTS = (3, 5, 8, 12, 20, 30)
 CAM_X = 1.519            # front camera ahead of the rear axle (m): the WOD rig in jevdrive.p5_openpilot.RIG
 FRONT = 4.0
 
@@ -123,14 +124,68 @@ def curves(w: pd.DataFrame, out: Path):
     return R
 
 
+LAT_NAME = {0.0: "lane centre (0 m)", 1.5: "lane edge (1.5 m)", 3.0: "kerb (3 m)", 5.0: "sidewalk (5 m)"}
+
+
+def delta_fig(w: pd.DataFrame, out: Path):
+    """Paired differences x+ - x- at t*, per ego state: native-plan speed at 2 s (top) and P(lead) (bottom) against
+    distance, one column per lateral position; median over scenes, IQR band when a cell has several scenes.
+    The dashed grey line is -tau (Cinque's; Lebowski's is drawn only when it differs by > 0.05 m/s)."""
+    from . import plots
+    import matplotlib.pyplot as plt
+    plt.rcParams.update(plots.STYLE)
+    w0 = w[w.t_rel_f0 == 0.0]
+    taus = pd.read_csv(data_dir() / I3_EXAM / "flip_rates.csv").query("scope == 'pooled'").set_index("examinee").tau_model
+    col = {"cinque": plots.OKABE_ITO[5], "lebowski": plots.OKABE_ITO[6]}
+    lats = sorted(w0.lat.unique())
+    for st, ws in w0.groupby("state"):
+        fig, axes = plt.subplots(2, len(lats), figsize=(plots.PAGE, 3.0), sharex=True, sharey="row", squeeze=False)
+        for j, lat in enumerate(lats):
+            for m in MODELS:
+                ws_ = ws.assign(dlead=ws[f"{m}|lead_p_plus"] - ws[f"{m}|lead_p_minus"])
+                for ps, ls, mk in (("stand", "-", "o"), ("cross", "--", "s")):
+                    g = ws_[(ws_.lat == lat) & (ws_.ped_state == ps)].groupby("dist")
+                    for i, v in enumerate((f"{m}|dv2", "dlead")):
+                        q = g[v].quantile([0.25, 0.5, 0.75]).unstack()
+                        if q.empty:
+                            continue
+                        ax = axes[i, j]
+                        ax.plot(q.index, q[0.5], ls, color=col[m], marker=mk, mfc="white" if ps == "cross" else col[m],
+                                label=f"{m.capitalize()}, {'standing' if ps == 'stand' else 'crossing'}")
+                        if (g.size() > 1).any():
+                            ax.fill_between(q.index, q[0.25], q[0.75], color=col[m], alpha=0.12, lw=0)
+            for i in range(2):
+                ax = axes[i, j]
+                ax.axhline(0, color="0.6", lw=0.5)
+                ax.set_xscale("log")
+                ax.set_xticks(list(DISTS))
+                ax.set_xticklabels([str(d) for d in DISTS])
+                ax.minorticks_off()
+            tc = float(taus["ridge_late op-cinque temporal"])
+            axes[0, j].axhline(-tc, color="0.4", lw=0.6, ls=":")
+            axes[1, j].axhline(0.3, color="0.4", lw=0.6, ls=":")
+            axes[0, j].set_title(LAT_NAME.get(lat, f"{lat} m"))
+        fig.supxlabel("distance ahead of the bumper at $t^*$ (m)", y=-0.03, fontsize=8)
+        axes[0, 0].set_ylabel("$\\Delta$ plan speed at 2 s (m/s)")
+        axes[1, 0].set_ylabel("$\\Delta$ P(lead)")
+        hl = {lb: h for ax in axes.ravel() for h, lb in zip(*ax.get_legend_handles_labels())}
+        fig.legend(hl.values(), hl.keys(), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, columnspacing=1.4, handlelength=2.2)
+        plots.save(fig, out, f"ped-dose-delta-{st}")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exam-dir", type=Path, required=True)
+    ap.add_argument("--exam-dir", type=Path)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--replot", action="store_true", help="figures only, from <out>/cells.csv")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    w = cells_table(a.exam_dir)
-    w.to_csv(a.out / "cells.csv", index=False)
+    if a.replot:
+        w = pd.read_csv(a.out / "cells.csv")
+    else:
+        w = cells_table(a.exam_dir)
+        w.to_csv(a.out / "cells.csv", index=False)
+    delta_fig(w, a.out)
     R = curves(w, a.out)
     log.info("curves:\n%s", R.round(3).to_string())
 
