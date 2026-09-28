@@ -378,13 +378,25 @@ def cmd_nav_report(a):
         if fs:
             df = pd.read_csv(fs[-1])
             res[f"exam {name}"] = df[df["token"].isin(toks) & df["valid"].astype(bool)].set_index("token")
+    # benchmark-free readout: ADE / FDE of the pose file against the logged future (navtest_future.npz), longitudinal bias at 4 s
+    fut = np.load(data_dir() / "runs/navsim_zs/index/navtest_future.npz")
+    gt = dict(zip(fut["tokens"].tolist(), fut["poses"]))
+    names = meta("nav")["names"]
+    G = np.stack([gt[t] for t in names])
+    geo = {}
+    for f in root("nav", "preds").glob("*.npz"):
+        z = np.load(f)
+        P = dict(zip(z["tokens"].tolist(), z["poses"]))
+        P = np.stack([P[t] for t in names])
+        e = np.linalg.norm(P[..., :2] - G[..., :2], axis=-1)
+        geo[f.stem] = dict(ade=e.mean(), fde=e[:, -1].mean(), lon4=(P[:, -1, 0] - G[:, -1, 0]).mean())
     rows = []
     rng = np.random.default_rng(0)
     for k, df in res.items():
         v = df["score"].to_numpy(float)
         bs = v[rng.integers(0, len(v), (2000, len(v)))].mean(1)
         row = dict(name=k, n=len(v), pdms=100 * v.mean(), lo=100 * np.percentile(bs, 2.5), hi=100 * np.percentile(bs, 97.5),
-                   **{s: 100 * df[s].mean() for s in subs})
+                   **{s: 100 * df[s].mean() for s in subs}, **geo.get(k, {}))
         for ref in a.refs:
             if ref in res and ref != k:
                 x, y = df["score"].align(res[ref]["score"], join="inner")
