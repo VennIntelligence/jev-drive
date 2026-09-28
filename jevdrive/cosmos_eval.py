@@ -135,7 +135,7 @@ def pixels(v: str, only: str = "", gpu: int = 0):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("detect", "pixels", "report"))
+    ap.add_argument("step", choices=("detect", "pixels", "report", "webp"))
     ap.add_argument("--variant", default="edgeA")
     ap.add_argument("--only", default="")
     ap.add_argument("--gpu", type=int, default=0)
@@ -144,6 +144,12 @@ def main():
         detect(a.variant, a.only)
     elif a.step == "pixels":
         pixels(a.variant, a.only, a.gpu)
+    elif a.step == "webp":
+        from .cosmos_report import webp
+        FIGS.mkdir(parents=True, exist_ok=True)
+        for pair in a.only.split(","):
+            out = FIGS / f"{pair}_{a.variant}.webp"
+            print(out, webp(a.variant, pair, out))
     else:
         from .cosmos_report import report
         report(a.variant.split(","), a.only)
