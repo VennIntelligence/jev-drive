@@ -1,4 +1,444 @@
 arm,seed,route,attempts,finished,status,DS,RC,success,collisions,scenario,family,group
+blue,0,1711,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+blue,0,1773,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+blue,0,1790,1,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+blue,0,1792,1,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+blue,0,1825,2,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,1833,3,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,1852,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+blue,0,1956,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+blue,0,2050,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,2082,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+blue,0,2084,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,2086,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,2091,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,2115,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,2127,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+blue,0,2129,1,True,Failed - Agent got blocked,29.97,29.97,False,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+blue,0,2143,1,True,Completed,60.0,100.0,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+blue,0,2144,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+blue,0,2164,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+blue,0,2201,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+blue,0,2204,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+blue,0,2215,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+blue,0,2273,2,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+blue,0,2283,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+blue,0,2286,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+blue,0,2373,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+blue,0,2390,2,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+blue,0,2397,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+blue,0,2403,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+blue,0,2416,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+blue,0,2509,1,True,Completed,36.0,100.0,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+blue,0,2513,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+blue,0,2534,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+blue,0,2539,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+blue,0,2554,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+blue,0,2606,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,2643,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+blue,0,2664,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,2668,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,2709,1,True,Completed,60.0,100.0,False,1.0,StaticCutIn,cut_in,sudden
+blue,0,2715,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+blue,0,2790,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+blue,0,2802,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+blue,0,2844,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+blue,0,2847,1,True,Completed,60.0,100.0,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+blue,0,2881,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,2903,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,2913,1,True,Completed,60.0,100.0,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+blue,0,2943,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+blue,0,2989,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+blue,0,3048,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+blue,0,3072,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+blue,0,3074,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+blue,0,3080,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+blue,0,3086,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+blue,0,3090,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+blue,0,3093,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+blue,0,3099,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+blue,0,3100,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+blue,0,3144,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+blue,0,3178,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+blue,0,3184,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+blue,0,3189,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+blue,0,3248,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+blue,0,3255,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+blue,0,3307,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+blue,0,3364,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+blue,0,3373,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+blue,0,3378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+blue,0,3380,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+blue,0,3410,1,True,Completed,60.0,100.0,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+blue,0,3436,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+blue,0,3457,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,3464,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+blue,0,3472,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+blue,0,3476,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+blue,0,3482,1,True,Completed,36.0,100.0,False,2.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+blue,0,3514,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+blue,0,3520,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+blue,0,3540,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+blue,0,3561,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+blue,0,3564,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+blue,0,3572,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+blue,0,3575,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+blue,0,3666,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,3670,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,3676,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,3697,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+blue,0,3708,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+blue,0,3712,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+blue,0,3717,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+blue,0,3731,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+blue,0,3737,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+blue,0,3749,1,True,Failed - TickRuntime,65.34,65.34,False,0.0,EnterActorFlow,merge_lane_change,yield
+blue,0,3785,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+blue,0,3800,1,True,Completed,54.671922,100.0,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+blue,0,3813,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+blue,0,3865,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+blue,0,3869,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+blue,0,3876,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+blue,0,3890,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+blue,0,3904,1,True,Failed - Agent got blocked,17.814,29.69,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+blue,0,3905,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+blue,0,3936,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,4183,1,True,Failed - TickRuntime,25.296,42.16,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,4468,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,4669,1,True,Failed - TickRuntime,29.226,48.71,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,4683,1,True,Failed - TickRuntime,27.546,45.91,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,4937,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,10857,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+blue,0,11381,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+blue,0,11715,1,True,Completed,100.0,100.0,True,0.0,EnterActorFlow,merge_lane_change,yield
+blue,0,11755,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+blue,0,14194,1,True,Completed,80.0,100.0,False,0.0,PedestrianCrossing,vru_crossing,sudden
+blue,0,14842,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+blue,0,14862,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+blue,0,14909,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+blue,0,17563,1,True,Completed,60.0,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+blue,0,17569,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+blue,0,17598,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+blue,0,17635,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+blue,0,17655,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+blue,0,17752,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+blue,0,18252,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+blue,0,18305,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+blue,0,18311,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+blue,0,18356,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+blue,0,20920,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,23658,1,True,Failed - Agent deviated from the route,76.14,76.14,False,0.0,HighwayExit,merge_lane_change,yield
+blue,0,23659,1,True,Completed,83.451386,100.0,False,0.0,HighwayExit,merge_lane_change,yield
+blue,0,23670,1,True,Failed - Agent got blocked,54.717,84.18,False,1.0,HighwayExit,merge_lane_change,yield
+blue,0,23687,1,True,Completed,100.0,100.0,False,0.0,HighwayExit,merge_lane_change,yield
+blue,0,23695,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+blue,0,23700,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+blue,0,23708,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+blue,0,23771,1,True,Completed,60.0,100.0,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+blue,0,23901,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+blue,0,23910,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+blue,0,23918,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+blue,0,23930,1,True,Completed,60.0,100.0,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+blue,0,24041,1,True,Completed,100.0,100.0,False,0.0,HighwayExit,merge_lane_change,yield
+blue,0,24071,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+blue,0,24078,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+blue,0,24092,1,True,Completed,60.0,100.0,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+blue,0,24098,1,True,Failed - Agent deviated from the route,93.15,93.15,False,0.0,InterurbanActorFlow,merge_lane_change,yield
+blue,0,24206,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+blue,0,24211,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+blue,0,24224,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+blue,0,24240,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+blue,0,24252,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+blue,0,24258,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+blue,0,24294,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+blue,0,24330,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+blue,0,24333,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+blue,0,24340,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+blue,0,24367,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+blue,0,24757,1,True,Completed,60.0,100.0,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+blue,0,24759,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+blue,0,24781,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+blue,0,24784,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+blue,0,24785,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+blue,0,24795,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+blue,0,24816,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+blue,0,24841,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+blue,0,25300,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+blue,0,25318,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+blue,0,25358,1,True,Failed - TickRuntime,33.69,33.69,False,0.0,StaticCutIn,cut_in,sudden
+blue,0,25378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+blue,0,25381,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+blue,0,25383,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+blue,0,25424,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,25439,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+blue,0,25845,1,True,Failed - TickRuntime,34.866,58.11,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+blue,0,25854,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+blue,0,25857,1,True,Completed,36.0,100.0,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+blue,0,25863,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+blue,0,25865,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,25896,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+blue,0,25928,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+blue,0,25951,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+blue,0,25955,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+blue,0,25968,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+blue,0,25975,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+blue,0,26393,1,True,Failed - TickRuntime,0.0,0.0,False,0.0,ParkingExit,merge_lane_change,yield
+blue,0,26394,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+blue,0,26396,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+blue,0,26401,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+blue,0,26405,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+blue,0,26406,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+blue,0,26408,1,True,Failed - TickRuntime,15.24,15.24,False,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+blue,0,26418,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+blue,0,26435,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+blue,0,26456,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+blue,0,26458,1,True,Completed,57.963268,100.0,False,1.0,T_Junction,routine_control,other
+blue,0,26944,1,True,Completed,80.0,100.0,False,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+blue,0,26950,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+blue,0,26956,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,26966,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,26990,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+blue,0,27018,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+blue,0,27494,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+blue,0,27506,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+blue,0,27515,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+blue,0,27529,1,True,Completed,80.0,100.0,False,0.0,PedestrianCrossing,vru_crossing,sudden
+blue,0,27532,1,True,Completed,90.05161,100.0,False,0.0,BlockedIntersection,junction_violator,sudden
+blue,0,27582,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+blue,0,28035,1,True,Completed,70.0,100.0,False,0.0,T_Junction,routine_control,other
+blue,0,28048,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+blue,0,28087,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28093,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28099,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28111,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+blue,0,28154,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+blue,0,28198,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28210,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28219,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28229,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28241,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28243,1,True,Completed,70.0,100.0,False,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+blue,0,28330,1,True,Failed - TickRuntime,24.505126,69.21,False,2.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,1711,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+bridgedrive,0,1773,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+bridgedrive,0,1790,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+bridgedrive,0,1792,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+bridgedrive,0,1825,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,1833,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,1852,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,1956,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+bridgedrive,0,2050,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,2082,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+bridgedrive,0,2084,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,2086,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,2091,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,2115,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,2127,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+bridgedrive,0,2129,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+bridgedrive,0,2143,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+bridgedrive,0,2144,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+bridgedrive,0,2164,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+bridgedrive,0,2201,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+bridgedrive,0,2204,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+bridgedrive,0,2215,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+bridgedrive,0,2273,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+bridgedrive,0,2283,1,True,Completed,100.0,100.0,False,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+bridgedrive,0,2286,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+bridgedrive,0,2373,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+bridgedrive,0,2390,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+bridgedrive,0,2397,1,True,Completed,95.888417,100.0,False,0.0,VanillaNonSignalizedTurn,routine_control,other
+bridgedrive,0,2403,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+bridgedrive,0,2416,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+bridgedrive,0,2509,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+bridgedrive,0,2513,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+bridgedrive,0,2534,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+bridgedrive,0,2539,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+bridgedrive,0,2554,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+bridgedrive,0,2606,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,2643,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,2664,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,2668,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,2709,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+bridgedrive,0,2715,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+bridgedrive,0,2790,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+bridgedrive,0,2802,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+bridgedrive,0,2844,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+bridgedrive,0,2847,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+bridgedrive,0,2881,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,2903,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,2913,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+bridgedrive,0,2943,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+bridgedrive,0,2989,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+bridgedrive,0,3048,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+bridgedrive,0,3072,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+bridgedrive,0,3074,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+bridgedrive,0,3080,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+bridgedrive,0,3086,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+bridgedrive,0,3090,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+bridgedrive,0,3093,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+bridgedrive,0,3099,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+bridgedrive,0,3100,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+bridgedrive,0,3144,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+bridgedrive,0,3178,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+bridgedrive,0,3184,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+bridgedrive,0,3189,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+bridgedrive,0,3248,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+bridgedrive,0,3255,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+bridgedrive,0,3307,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+bridgedrive,0,3364,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+bridgedrive,0,3373,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+bridgedrive,0,3378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+bridgedrive,0,3380,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+bridgedrive,0,3410,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3436,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3457,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3464,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3472,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3476,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3482,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,3514,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+bridgedrive,0,3520,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+bridgedrive,0,3540,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+bridgedrive,0,3561,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+bridgedrive,0,3564,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+bridgedrive,0,3572,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+bridgedrive,0,3575,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+bridgedrive,0,3666,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,3670,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,3676,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,3697,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+bridgedrive,0,3708,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+bridgedrive,0,3712,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+bridgedrive,0,3717,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+bridgedrive,0,3731,1,True,Completed,25.0,100.0,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+bridgedrive,0,3737,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+bridgedrive,0,3749,1,True,Failed - TickRuntime,64.1,64.1,False,0.0,EnterActorFlow,merge_lane_change,yield
+bridgedrive,0,3785,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+bridgedrive,0,3800,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+bridgedrive,0,3813,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+bridgedrive,0,3865,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+bridgedrive,0,3869,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+bridgedrive,0,3876,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+bridgedrive,0,3890,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+bridgedrive,0,3904,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+bridgedrive,0,3905,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+bridgedrive,0,3936,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,4183,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,4468,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,4669,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,4683,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,4937,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,10857,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+bridgedrive,0,11381,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+bridgedrive,0,11715,1,True,Completed,100.0,100.0,True,0.0,EnterActorFlow,merge_lane_change,yield
+bridgedrive,0,11755,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+bridgedrive,0,14194,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+bridgedrive,0,14842,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+bridgedrive,0,14862,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+bridgedrive,0,14909,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+bridgedrive,0,17563,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+bridgedrive,0,17569,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+bridgedrive,0,17598,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+bridgedrive,0,17635,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+bridgedrive,0,17655,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+bridgedrive,0,17752,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+bridgedrive,0,18252,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+bridgedrive,0,18305,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+bridgedrive,0,18311,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+bridgedrive,0,18356,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+bridgedrive,0,20920,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,23658,1,True,Completed,100.0,100.0,True,0.0,HighwayExit,merge_lane_change,yield
+bridgedrive,0,23659,1,True,Failed - Agent deviated from the route,75.87,75.87,False,0.0,HighwayExit,merge_lane_change,yield
+bridgedrive,0,23670,1,True,Completed,100.0,100.0,True,0.0,HighwayExit,merge_lane_change,yield
+bridgedrive,0,23687,1,True,Completed,100.0,100.0,False,0.0,HighwayExit,merge_lane_change,yield
+bridgedrive,0,23695,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+bridgedrive,0,23700,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+bridgedrive,0,23708,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+bridgedrive,0,23771,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+bridgedrive,0,23901,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+bridgedrive,0,23910,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+bridgedrive,0,23918,1,True,Completed,100.0,100.0,False,0.0,InterurbanActorFlow,merge_lane_change,yield
+bridgedrive,0,23930,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+bridgedrive,0,24041,1,True,Completed,100.0,100.0,True,0.0,HighwayExit,merge_lane_change,yield
+bridgedrive,0,24071,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+bridgedrive,0,24078,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+bridgedrive,0,24092,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+bridgedrive,0,24098,1,True,Completed,100.0,100.0,True,0.0,InterurbanActorFlow,merge_lane_change,yield
+bridgedrive,0,24206,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+bridgedrive,0,24211,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+bridgedrive,0,24224,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+bridgedrive,0,24240,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+bridgedrive,0,24252,2,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+bridgedrive,0,24258,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,24294,1,True,Completed,50.0,100.0,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+bridgedrive,0,24330,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+bridgedrive,0,24333,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+bridgedrive,0,24340,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+bridgedrive,0,24367,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+bridgedrive,0,24757,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+bridgedrive,0,24759,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+bridgedrive,0,24781,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+bridgedrive,0,24784,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+bridgedrive,0,24785,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+bridgedrive,0,24795,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+bridgedrive,0,24816,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+bridgedrive,0,24841,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+bridgedrive,0,25300,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+bridgedrive,0,25318,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+bridgedrive,0,25358,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+bridgedrive,0,25378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+bridgedrive,0,25381,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+bridgedrive,0,25383,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+bridgedrive,0,25424,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25439,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+bridgedrive,0,25845,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25854,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25857,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25863,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+bridgedrive,0,25865,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25896,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25928,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25951,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25955,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+bridgedrive,0,25968,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+bridgedrive,0,25975,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+bridgedrive,0,26393,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+bridgedrive,0,26394,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+bridgedrive,0,26396,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+bridgedrive,0,26401,1,True,Completed,60.0,100.0,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+bridgedrive,0,26405,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+bridgedrive,0,26406,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+bridgedrive,0,26408,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+bridgedrive,0,26418,2,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+bridgedrive,0,26435,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+bridgedrive,0,26456,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+bridgedrive,0,26458,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+bridgedrive,0,26944,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+bridgedrive,0,26950,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+bridgedrive,0,26956,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,26966,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,26990,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+bridgedrive,0,27018,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+bridgedrive,0,27494,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+bridgedrive,0,27506,1,True,Completed,100.0,100.0,True,0.0,EnterActorFlow,merge_lane_change,yield
+bridgedrive,0,27515,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+bridgedrive,0,27529,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+bridgedrive,0,27532,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+bridgedrive,0,27582,1,True,Completed,70.0,100.0,False,0.0,PedestrianCrossing,vru_crossing,sudden
+bridgedrive,0,28035,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+bridgedrive,0,28048,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+bridgedrive,0,28087,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28093,1,True,Failed - TickRuntime,33.32,33.32,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28099,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28111,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+bridgedrive,0,28154,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+bridgedrive,0,28198,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28210,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28219,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28229,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28241,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28243,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+bridgedrive,0,28330,1,True,Completed,70.0,100.0,False,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
 cl1,0,1711,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
 cl1,0,1773,1,True,Completed,60.0,100.0,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
 cl1,0,1790,2,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
@@ -219,3 +659,1223 @@ cl1,0,28229,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnE
 cl1,0,28241,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
 cl1,0,28243,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
 cl1,0,28330,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,1711,1,True,Failed - TickRuntime,6.386834,43.66,False,2.0,ParkingCutIn,cut_in,sudden
+cl3,0,1773,1,True,Failed - Agent deviated from the route,8.161756,75.77,False,3.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,0,1790,1,True,Failed - TickRuntime,15.348182,87.41,False,3.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,0,1792,1,True,Failed - TickRuntime,2.487064,27.12,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,0,1825,3,False,missing,0.0,0.0,False,,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,1833,3,False,missing,0.0,0.0,False,,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,1852,2,True,Failed - Agent got blocked,2.5025,3.85,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,0,1956,3,False,missing,0.0,0.0,False,,ParkingExit,merge_lane_change,yield
+cl3,0,2050,1,True,Failed - TickRuntime,7.012884,36.27,False,3.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,2082,1,True,Failed - TickRuntime,3.1785,4.89,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,0,2084,1,True,Failed - TickRuntime,8.422747,24.12,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,2086,1,True,Failed - TickRuntime,10.9707,28.13,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,2091,3,False,missing,0.0,0.0,False,,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,2115,3,False,missing,0.0,0.0,False,,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,2127,3,False,missing,0.0,0.0,False,,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,0,2129,3,False,missing,0.0,0.0,False,,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,0,2143,1,True,Failed - Agent got blocked,1.695844,7.7,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,0,2144,3,True,Failed - Agent got blocked,1.805937,8.15,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,0,2164,1,True,Failed - Agent got blocked,8.748339,21.48,False,1.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,0,2201,1,True,Failed - TickRuntime,5.554319,24.27,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,0,2204,1,True,Failed - TickRuntime,10.473775,24.79,False,2.0,BlockedIntersection,junction_violator,sudden
+cl3,0,2215,1,True,Failed - Agent got blocked,11.902199,76.54,False,2.0,BlockedIntersection,junction_violator,sudden
+cl3,0,2273,1,True,Failed - Agent deviated from the route,11.789773,23.42,False,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,0,2283,1,True,Failed - TickRuntime,7.858781,44.83,False,3.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,0,2286,1,True,Completed,4.740301,100.0,False,5.0,HighwayCutIn,cut_in,sudden
+cl3,0,2373,1,True,Failed - TickRuntime,12.297498,42.25,False,2.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,0,2390,1,True,Failed - Agent got blocked,6.560499,24.71,False,2.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,0,2397,1,True,Failed - Agent got blocked,4.9985,7.69,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,0,2403,3,False,missing,0.0,0.0,False,,VanillaNonSignalizedTurn,routine_control,other
+cl3,0,2416,2,True,Completed,2.374423,100.0,False,4.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,0,2509,3,False,missing,0.0,0.0,False,,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,0,2513,1,True,Failed - Agent deviated from the route,16.702458,34.88,False,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,0,2534,1,True,Failed - TickRuntime,6.462274,10.7,False,1.0,Accident,obstacle_bypass,obstacle
+cl3,0,2539,2,True,Failed - TickRuntime,16.172565,88.76,False,2.0,Accident,obstacle_bypass,obstacle
+cl3,0,2554,1,True,Completed,2.215887,100.0,False,7.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,0,2606,1,True,Failed - Agent got blocked,3.21945,7.62,False,2.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,2643,1,True,Failed - TickRuntime,4.339002,27.27,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,0,2664,1,True,Failed - TickRuntime,1.252028,13.58,False,3.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,2668,1,True,Failed - Agent deviated from the route,21.27478,33.66,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,2709,1,True,Failed - Agent got blocked,2.378564,37.15,False,4.0,StaticCutIn,cut_in,sudden
+cl3,0,2715,3,True,Failed - Agent deviated from the route,6.848718,13.61,False,0.0,StaticCutIn,cut_in,sudden
+cl3,0,2790,3,True,Failed - TickRuntime,4.653436,20.24,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,0,2802,1,True,Failed - TickRuntime,9.318992,19.69,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,0,2844,1,True,Failed - Agent deviated from the route,1.268379,62.24,False,8.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,0,2847,1,True,Failed - Agent got blocked,1.6705,2.57,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,0,2881,1,True,Failed - TickRuntime,1.655715,39.5,False,3.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,2903,1,True,Failed - TickRuntime,3.721269,12.25,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,2913,1,True,Failed - TickRuntime,4.517048,37.45,False,2.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,0,2943,1,True,Failed - Agent got blocked,3.549996,16.2,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,0,2989,1,True,Failed - TickRuntime,9.1936,21.76,False,2.0,BlockedIntersection,junction_violator,sudden
+cl3,0,3048,1,True,Failed - TickRuntime,20.825743,55.89,False,2.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,0,3072,3,True,Failed - Agent got blocked,23.118769,48.7,False,1.0,HighwayCutIn,cut_in,sudden
+cl3,0,3074,1,True,Completed,17.842685,100.0,False,3.0,HighwayCutIn,cut_in,sudden
+cl3,0,3080,1,True,Failed - Agent got blocked,4.81,7.4,False,1.0,HighwayCutIn,cut_in,sudden
+cl3,0,3086,1,True,Failed - TickRuntime,10.3272,26.48,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,0,3090,1,True,Failed - TickRuntime,7.533634,68.72,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,0,3093,1,True,Failed - Agent deviated from the route,1.845006,23.31,False,5.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,0,3099,1,True,Failed - Agent deviated from the route,1.853108,21.09,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,0,3100,1,True,Failed - TickRuntime,4.9257,12.63,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,0,3144,1,True,Failed - Agent got blocked,1.591188,5.6,False,2.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,0,3178,1,True,Failed - TickRuntime,2.1255,3.27,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,0,3184,1,True,Failed - Agent deviated from the route,0.0,14.58,False,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,0,3189,1,True,Failed - Agent got blocked,0.0,3.38,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,0,3248,1,True,Failed - Agent got blocked,7.02195,16.62,False,2.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,0,3255,1,True,Failed - TickRuntime,0.423225,79.51,False,7.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,0,3307,1,True,Failed - TickRuntime,0.969039,34.62,False,6.0,Accident,obstacle_bypass,obstacle
+cl3,0,3364,1,True,Completed,11.554201,100.0,False,4.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,0,3373,1,True,Completed,1.412187,100.0,False,8.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,0,3378,1,True,Failed - Agent deviated from the route,27.187016,72.57,False,1.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,0,3380,1,True,Completed,6.788781,100.0,False,5.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,0,3410,1,True,Failed - TickRuntime,7.3775,11.35,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,0,3436,1,True,Failed - Agent deviated from the route,48.512097,95.46,False,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,0,3457,1,True,Failed - Agent got blocked,1.9955,3.07,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,3464,1,True,Failed - TickRuntime,5.4275,8.35,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,0,3472,1,True,Failed - TickRuntime,7.005544,21.09,False,2.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,0,3476,1,True,Failed - TickRuntime,5.071497,49.65,False,4.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,0,3482,1,True,Failed - TickRuntime,14.659897,35.01,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,0,3514,1,True,Failed - TickRuntime,5.310391,15.87,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,0,3520,1,True,Failed - TickRuntime,1.007947,6.06,False,1.0,ParkingExit,merge_lane_change,yield
+cl3,0,3540,1,True,Completed,64.426385,100.0,False,0.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,0,3561,1,True,Failed - Agent got blocked,2.834878,15.12,False,3.0,ControlLoss,routine_control,other
+cl3,0,3564,1,True,Failed - TickRuntime,6.409,9.86,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,0,3572,1,True,Failed - Agent deviated from the route,16.936795,21.88,False,0.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,0,3575,1,True,Failed - Agent deviated from the route,12.609561,64.12,False,2.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,0,3666,1,True,Failed - TickRuntime,11.265118,41.02,False,3.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,3670,1,True,Failed - TickRuntime,4.726661,31.87,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,3676,1,True,Failed - TickRuntime,7.0811,16.76,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,3697,1,True,Completed,3.240552,100.0,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,0,3708,1,True,Failed - Agent got blocked,16.762656,28.8,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,0,3712,1,True,Failed - Agent deviated from the route,4.51939,21.77,False,2.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,0,3717,1,True,Failed - Agent deviated from the route,4.978959,20.46,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,0,3731,1,True,Failed - Agent deviated from the route,1.874804,26.66,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,0,3737,1,True,Failed - Agent got blocked,2.939546,25.99,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,0,3749,1,True,Failed - TickRuntime,5.481188,24.91,False,3.0,EnterActorFlow,merge_lane_change,yield
+cl3,0,3785,1,True,Failed - TickRuntime,8.486959,27.38,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,0,3800,3,False,missing,0.0,0.0,False,,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,0,3813,1,True,Failed - Agent got blocked,22.8497,38.0,False,1.0,HighwayCutIn,cut_in,sudden
+cl3,0,3865,1,True,Failed - Agent deviated from the route,1.994801,96.91,False,2.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,0,3869,1,True,Failed - Agent got blocked,1.197858,3.49,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,0,3876,1,True,Failed - TickRuntime,2.457,3.78,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,0,3890,1,True,Failed - Agent got blocked,14.263007,95.34,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,0,3904,1,True,Failed - Agent got blocked,6.277941,15.47,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,0,3905,1,True,Failed - TickRuntime,21.4708,41.29,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,0,3936,1,True,Failed - TickRuntime,2.863286,36.93,False,4.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,4183,1,True,Failed - TickRuntime,7.1682,18.38,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,4468,1,True,Failed - TickRuntime,3.403562,12.97,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,4669,1,True,Failed - Agent deviated from the route,8.59245,27.2,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,4683,1,True,Failed - TickRuntime,8.675027,27.47,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,4937,1,True,Failed - TickRuntime,9.099324,24.6,False,2.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,10857,1,True,Failed - Agent got blocked,1.815494,28.96,False,4.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,0,11381,1,True,Failed - TickRuntime,6.152271,19.8,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,0,11715,1,True,Failed - Agent deviated from the route,24.643881,30.48,False,0.0,EnterActorFlow,merge_lane_change,yield
+cl3,0,11755,1,True,Failed - Agent deviated from the route,14.863743,33.37,False,0.0,EnterActorFlow,merge_lane_change,yield
+cl3,0,14194,1,True,Failed - Agent deviated from the route,9.715752,44.73,False,2.0,PedestrianCrossing,vru_crossing,sudden
+cl3,0,14842,1,True,Failed - Agent got blocked,1.259568,3.67,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,0,14862,2,True,Failed - Agent got blocked,2.230921,5.05,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,0,14909,1,True,Failed - Agent got blocked,0.0,3.47,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,0,17563,1,True,Failed - TickRuntime,7.394142,13.11,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,0,17569,1,True,Failed - TickRuntime,11.411303,50.5,False,3.0,SequentialLaneChange,merge_lane_change,yield
+cl3,0,17598,1,True,Failed - TickRuntime,5.471793,71.6,False,5.0,SequentialLaneChange,merge_lane_change,yield
+cl3,0,17635,1,True,Failed - TickRuntime,5.784,9.64,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,0,17655,1,True,Failed - TickRuntime,7.032999,12.47,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,0,17752,1,True,Failed - TickRuntime,1.626231,21.13,False,4.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,0,18252,1,True,Failed - Agent got blocked,2.014175,82.72,False,5.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,0,18305,1,True,Failed - Agent got blocked,2.010055,7.6,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,0,18311,1,True,Failed - Agent got blocked,7.711846,19.01,False,2.0,ParkingCutIn,cut_in,sudden
+cl3,0,18356,1,True,Failed - Agent got blocked,1.260502,34.88,False,3.0,ParkingCutIn,cut_in,sudden
+cl3,0,20920,1,True,Failed - Agent got blocked,2.489315,6.1,False,1.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,23658,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl3,0,23659,1,True,Completed,14.344054,100.0,False,3.0,HighwayExit,merge_lane_change,yield
+cl3,0,23670,1,True,Completed,58.641834,100.0,False,0.0,HighwayExit,merge_lane_change,yield
+cl3,0,23687,1,True,Failed - TickRuntime,8.644229,22.81,False,2.0,HighwayExit,merge_lane_change,yield
+cl3,0,23695,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,0,23700,1,True,Failed - TickRuntime,3.127745,23.01,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,0,23708,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,0,23771,1,True,Completed,2.983668,100.0,False,7.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,0,23901,1,True,Failed - Agent deviated from the route,5.300372,27.32,False,3.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,0,23910,1,True,Failed - Agent deviated from the route,8.000192,37.58,False,2.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,0,23918,1,True,Failed - Agent deviated from the route,1.385631,83.02,False,7.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,0,23930,1,True,Failed - Agent deviated from the route,12.906044,31.3,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,0,24041,3,True,Failed - Agent got blocked,18.5306,81.82,False,2.0,HighwayExit,merge_lane_change,yield
+cl3,0,24071,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,0,24078,1,True,Failed - Agent got blocked,12.228116,21.34,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,0,24092,1,True,Completed,1.414826,100.0,False,8.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,0,24098,1,True,Failed - Agent got blocked,17.072418,37.58,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,0,24206,1,True,Failed - Agent got blocked,13.24697,25.06,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,0,24211,1,True,Failed - Agent got blocked,3.522796,48.51,False,4.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,0,24224,1,True,Failed - TickRuntime,6.9225,10.65,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,0,24240,1,True,Completed,5.291222,100.0,False,5.0,Accident,obstacle_bypass,obstacle
+cl3,0,24252,1,True,Failed - Agent deviated from the route,21.122547,50.42,False,0.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,0,24258,1,True,Failed - TickRuntime,2.909796,8.96,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,0,24294,1,True,Failed - TickRuntime,12.052964,19.51,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,0,24330,1,True,Failed - Agent got blocked,3.747568,25.52,False,3.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,0,24333,1,True,Completed,1.141568,100.0,False,8.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,0,24340,1,True,Failed - Agent got blocked,15.740668,95.01,False,3.0,ControlLoss,routine_control,other
+cl3,0,24367,1,True,Failed - TickRuntime,10.85616,19.73,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,0,24757,1,True,Failed - TickRuntime,17.171578,28.67,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,0,24759,1,True,Failed - TickRuntime,6.834849,12.75,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,0,24781,1,True,Failed - Agent got blocked,1.236707,12.54,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,0,24784,1,True,Completed,11.959342,100.0,False,4.0,ControlLoss,routine_control,other
+cl3,0,24785,1,True,Failed - TickRuntime,7.865,12.1,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,0,24795,1,True,Failed - TickRuntime,2.893655,33.88,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,0,24816,1,True,Failed - TickRuntime,7.084097,57.65,False,4.0,Accident,obstacle_bypass,obstacle
+cl3,0,24841,1,True,Failed - Agent got blocked,6.006,9.24,False,1.0,ControlLoss,routine_control,other
+cl3,0,25300,1,True,Failed - Agent got blocked,3.6075,5.55,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,0,25318,1,True,Completed,4.544639,100.0,False,6.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,0,25358,1,True,Failed - Agent got blocked,3.283145,59.35,False,5.0,StaticCutIn,cut_in,sudden
+cl3,0,25378,1,True,Failed - Agent got blocked,5.726517,18.01,False,2.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,0,25381,3,False,missing,0.0,0.0,False,,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,0,25383,1,True,Failed - Agent deviated from the route,1.175448,16.53,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,0,25424,1,True,Failed - Agent deviated from the route,3.88491,5.77,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,25439,1,True,Failed - TickRuntime,9.896504,28.03,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,0,25845,1,True,Failed - Agent got blocked,2.5415,3.91,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,0,25854,1,True,Failed - TickRuntime,5.702772,16.04,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,0,25857,1,True,Failed - TickRuntime,9.013441,16.17,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,0,25863,1,True,Failed - Agent deviated from the route,11.106727,64.34,False,2.0,PedestrianCrossing,vru_crossing,sudden
+cl3,0,25865,1,True,Failed - Agent deviated from the route,9.192616,78.18,False,3.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,25896,1,True,Failed - TickRuntime,16.091958,26.21,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,0,25928,3,False,missing,0.0,0.0,False,,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,0,25951,1,True,Failed - TickRuntime,2.377113,90.24,False,7.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,0,25955,1,True,Failed - TickRuntime,31.346594,81.14,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,0,25968,1,True,Failed - Agent got blocked,5.996297,12.83,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,0,25975,1,True,Failed - TickRuntime,3.9195,6.03,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,0,26393,1,True,Failed - Agent got blocked,9.700569,48.85,False,3.0,ParkingExit,merge_lane_change,yield
+cl3,0,26394,1,True,Completed,23.616215,100.0,False,3.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,0,26396,1,True,Failed - Agent got blocked,8.3052,23.07,False,2.0,StaticCutIn,cut_in,sudden
+cl3,0,26401,3,False,missing,0.0,0.0,False,,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,0,26405,1,True,Failed - Agent got blocked,5.90282,10.59,False,1.0,StaticCutIn,cut_in,sudden
+cl3,0,26406,1,True,Failed - Agent got blocked,3.4645,5.33,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,0,26408,1,True,Failed - Agent deviated from the route,42.131106,44.83,False,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,0,26418,1,True,Failed - Agent deviated from the route,9.117009,45.48,False,1.0,ControlLoss,routine_control,other
+cl3,0,26435,1,True,Failed - Agent got blocked,3.703328,18.94,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,0,26456,1,True,Failed - TickRuntime,2.634063,14.58,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,0,26458,1,True,Failed - TickRuntime,8.775325,20.77,False,2.0,T_Junction,routine_control,other
+cl3,0,26944,1,True,Failed - Agent deviated from the route,25.278463,56.72,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,0,26950,3,False,missing,0.0,0.0,False,,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,0,26956,1,True,Failed - Agent deviated from the route,3.472846,15.0,False,2.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,26966,1,True,Failed - TickRuntime,21.026991,33.64,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,26990,1,True,Completed,0.406195,100.0,False,10.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,0,27018,1,True,Failed - TickRuntime,16.7635,25.79,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,0,27494,1,True,Failed - TickRuntime,10.3155,15.87,False,1.0,BlockedIntersection,junction_violator,sudden
+cl3,0,27506,1,True,Failed - TickRuntime,9.077351,37.6,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,0,27515,1,True,Failed - Agent got blocked,15.32212,53.31,False,2.0,PedestrianCrossing,vru_crossing,sudden
+cl3,0,27529,1,True,Failed - Agent got blocked,9.345711,25.81,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,0,27532,1,True,Completed,13.762818,100.0,False,1.0,BlockedIntersection,junction_violator,sudden
+cl3,0,27582,1,True,Failed - Agent deviated from the route,16.27,16.27,False,0.0,PedestrianCrossing,vru_crossing,sudden
+cl3,0,28035,1,True,Failed - TickRuntime,2.081214,60.52,False,6.0,T_Junction,routine_control,other
+cl3,0,28048,1,True,Failed - Agent got blocked,4.800656,19.57,False,1.0,T_Junction,routine_control,other
+cl3,0,28087,1,True,Failed - Agent deviated from the route,4.400316,22.89,False,3.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28093,1,True,Failed - Agent deviated from the route,39.92,39.92,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28099,3,False,missing,0.0,0.0,False,,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28111,1,True,Failed - TickRuntime,2.750681,56.57,False,5.0,T_Junction,routine_control,other
+cl3,0,28154,1,True,Failed - TickRuntime,6.092463,22.05,False,2.0,T_Junction,routine_control,other
+cl3,0,28198,1,True,Failed - TickRuntime,9.5095,14.63,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28210,1,True,Failed - TickRuntime,17.13012,36.81,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28219,1,True,Failed - Agent deviated from the route,7.372625,17.45,False,2.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28229,1,True,Failed - Agent deviated from the route,10.532964,69.11,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28241,1,True,Failed - TickRuntime,5.596138,33.95,False,4.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28243,1,True,Failed - TickRuntime,13.426119,30.34,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,0,28330,1,True,Failed - Agent deviated from the route,3.540274,22.93,False,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,1711,1,True,Completed,5.588004,100.0,False,3.0,ParkingCutIn,cut_in,sudden
+cl3,1,1773,3,False,missing,0.0,0.0,False,,ParkedObstacle,obstacle_bypass,obstacle
+cl3,1,1790,1,True,Failed - TickRuntime,10.514925,59.7,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,1,1792,1,True,Failed - TickRuntime,2.042828,82.72,False,7.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,1,1825,3,False,missing,0.0,0.0,False,,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,1833,3,False,missing,0.0,0.0,False,,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,1852,1,True,Failed - Agent got blocked,2.5025,3.85,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,1,1956,3,False,missing,0.0,0.0,False,,ParkingExit,merge_lane_change,yield
+cl3,1,2050,1,True,Completed,4.14391,100.0,False,5.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,2082,1,True,Failed - Agent got blocked,3.1785,4.89,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,1,2084,2,True,Failed - TickRuntime,6.9016,17.81,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,2086,1,True,Failed - TickRuntime,18.406845,31.95,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,2091,1,True,Failed - TickRuntime,3.267488,19.83,False,4.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,2115,3,False,missing,0.0,0.0,False,,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,2127,1,True,Failed - TickRuntime,10.228683,20.96,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,1,2129,1,True,Failed - Agent got blocked,13.043088,60.22,False,2.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,1,2143,3,True,Failed - Agent got blocked,3.352995,8.98,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,1,2144,3,False,missing,0.0,0.0,False,,VehicleTurningRoute,vru_crossing,sudden
+cl3,1,2164,1,True,Failed - Agent got blocked,1.614494,54.91,False,7.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,1,2201,1,True,Failed - TickRuntime,5.554123,21.85,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,1,2204,1,True,Failed - Agent deviated from the route,4.425571,26.16,False,4.0,BlockedIntersection,junction_violator,sudden
+cl3,1,2215,1,True,Failed - Agent got blocked,11.902473,68.26,False,2.0,BlockedIntersection,junction_violator,sudden
+cl3,1,2273,1,True,Failed - TickRuntime,3.38359,13.25,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,1,2283,1,True,Failed - TickRuntime,0.975,1.5,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,1,2286,1,True,Failed - TickRuntime,25.763537,72.4,False,2.0,HighwayCutIn,cut_in,sudden
+cl3,1,2373,1,True,Failed - Agent got blocked,1.738947,19.85,False,3.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,1,2390,1,True,Failed - Agent got blocked,6.560499,24.71,False,2.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,1,2397,1,True,Failed - Agent got blocked,4.0105,6.17,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,1,2403,1,True,Failed - Agent deviated from the route,5.953065,68.78,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,1,2416,1,True,Failed - Agent got blocked,9.5524,18.37,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,1,2509,3,False,missing,0.0,0.0,False,,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,1,2513,3,False,missing,0.0,0.0,False,,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,1,2534,1,True,Failed - TickRuntime,7.937936,12.97,False,1.0,Accident,obstacle_bypass,obstacle
+cl3,1,2539,1,True,Failed - TickRuntime,2.999113,33.3,False,2.0,Accident,obstacle_bypass,obstacle
+cl3,1,2554,3,False,missing,0.0,0.0,False,,ParkedObstacle,obstacle_bypass,obstacle
+cl3,1,2606,3,True,Failed - Agent got blocked,1.939275,4.59,False,2.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,2643,1,True,Failed - TickRuntime,3.3293,7.88,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,1,2664,1,True,Failed - TickRuntime,0.441646,30.11,False,5.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,2668,1,True,Failed - Agent deviated from the route,17.275604,60.19,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,2709,1,True,Failed - Agent got blocked,8.4672,23.52,False,2.0,StaticCutIn,cut_in,sudden
+cl3,1,2715,1,True,Failed - Agent deviated from the route,2.184257,32.39,False,4.0,StaticCutIn,cut_in,sudden
+cl3,1,2790,1,True,Failed - Agent deviated from the route,7.15796,14.2,False,0.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,1,2802,1,True,Failed - TickRuntime,10.47872,39.32,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,1,2844,1,True,Failed - Agent got blocked,7.76555,18.38,False,2.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,1,2847,1,True,Failed - Agent got blocked,1.6705,2.57,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,1,2881,1,True,Failed - TickRuntime,3.349242,7.69,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,2903,3,False,missing,0.0,0.0,False,,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,2913,1,True,Failed - Agent got blocked,5.898612,19.27,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,1,2943,1,True,Failed - Agent got blocked,5.295012,16.2,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,1,2989,1,True,Failed - TickRuntime,7.829567,29.86,False,3.0,BlockedIntersection,junction_violator,sudden
+cl3,1,3048,1,True,Failed - TickRuntime,5.642284,43.18,False,4.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,1,3072,1,True,Completed,2.524466,100.0,False,7.0,HighwayCutIn,cut_in,sudden
+cl3,1,3074,1,True,Failed - Agent got blocked,43.660193,93.43,False,1.0,HighwayCutIn,cut_in,sudden
+cl3,1,3080,1,True,Failed - Agent got blocked,7.7571,19.89,False,2.0,HighwayCutIn,cut_in,sudden
+cl3,1,3086,1,True,Failed - TickRuntime,15.653731,71.19,False,1.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,1,3090,1,True,Failed - Agent deviated from the route,2.622148,80.75,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,1,3093,1,True,Failed - TickRuntime,4.207636,25.63,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,1,3099,3,False,missing,0.0,0.0,False,,CrossingBicycleFlow,vru_crossing,sudden
+cl3,1,3100,1,True,Failed - Agent deviated from the route,2.081872,15.13,False,4.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,1,3144,1,True,Failed - Agent got blocked,6.020668,36.49,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,1,3178,1,True,Failed - Agent got blocked,10.348,15.92,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,1,3184,1,True,Failed - Agent got blocked,0.0,3.31,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,1,3189,2,True,Failed - Agent got blocked,0.0,3.38,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,1,3248,1,True,Failed - Agent got blocked,1.859219,9.11,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,1,3255,1,True,Failed - Agent got blocked,5.6095,8.63,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,1,3307,1,True,Failed - TickRuntime,2.747781,45.14,False,5.0,Accident,obstacle_bypass,obstacle
+cl3,1,3364,1,True,Completed,7.457215,100.0,False,5.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,1,3373,1,True,Failed - TickRuntime,5.64732,22.41,False,2.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,1,3378,1,True,Failed - TickRuntime,8.903946,56.89,False,2.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,1,3380,1,True,Completed,42.0,100.0,False,1.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,1,3410,1,True,Failed - TickRuntime,5.750225,13.61,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,1,3436,1,True,Failed - TickRuntime,15.751402,63.65,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,1,3457,1,True,Failed - TickRuntime,1.9955,3.07,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,3464,1,True,Failed - TickRuntime,7.243985,27.88,False,3.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,1,3472,1,True,Failed - Agent deviated from the route,2.623237,72.19,False,6.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,1,3476,1,True,Failed - TickRuntime,11.26476,48.14,False,3.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,1,3482,1,True,Failed - TickRuntime,20.538862,57.68,False,2.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,1,3514,1,True,Failed - Agent got blocked,1.927713,12.11,False,3.0,ParkingExit,merge_lane_change,yield
+cl3,1,3520,1,True,Failed - TickRuntime,0.655208,10.57,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,1,3540,1,True,Completed,22.921608,100.0,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,1,3561,1,True,Failed - Agent got blocked,9.561223,91.74,False,2.0,ControlLoss,routine_control,other
+cl3,1,3564,1,True,Failed - TickRuntime,6.409,9.86,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,1,3572,3,False,missing,0.0,0.0,False,,InvadingTurn,obstacle_bypass,obstacle
+cl3,1,3575,1,True,Failed - Agent deviated from the route,26.298713,66.06,False,0.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,1,3666,1,True,Failed - TickRuntime,10.582728,23.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,3670,1,True,Failed - TickRuntime,6.376483,60.19,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,3676,1,True,Failed - TickRuntime,7.067398,30.66,False,3.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,3697,1,True,Failed - Agent deviated from the route,5.401326,35.55,False,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,1,3708,1,True,Failed - Agent got blocked,11.870128,25.79,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,1,3712,1,True,Failed - Agent deviated from the route,5.87767,21.77,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,1,3717,1,True,Failed - Agent deviated from the route,1.761137,19.11,False,3.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,1,3731,1,True,Failed - Agent deviated from the route,0.141406,25.4,False,8.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,1,3737,1,True,Failed - Agent got blocked,4.662767,28.71,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,1,3749,1,True,Failed - TickRuntime,14.586,22.44,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,1,3785,1,True,Failed - TickRuntime,25.080475,39.93,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,1,3800,3,False,missing,0.0,0.0,False,,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,1,3813,3,False,missing,0.0,0.0,False,,HighwayCutIn,cut_in,sudden
+cl3,1,3865,1,True,Completed,37.296285,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,1,3869,1,True,Failed - TickRuntime,1.197858,3.49,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,1,3876,1,True,Failed - Agent got blocked,2.455875,27.27,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,1,3890,1,True,Failed - Agent got blocked,3.15264,89.12,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,1,3904,1,True,Failed - Agent got blocked,2.328495,6.98,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,1,3905,1,True,Failed - Agent got blocked,14.597195,34.27,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,1,3936,1,True,Failed - TickRuntime,4.822277,28.25,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,4183,1,True,Failed - TickRuntime,10.188,16.98,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,4468,1,True,Failed - TickRuntime,3.403562,12.97,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,4669,1,True,Failed - Agent deviated from the route,9.368025,18.19,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,4683,1,True,Failed - Agent deviated from the route,3.6084,19.66,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,4937,1,True,Failed - TickRuntime,6.036089,12.35,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,10857,1,True,Failed - TickRuntime,1.429323,25.03,False,4.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,1,11381,3,False,missing,0.0,0.0,False,,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,1,11715,3,False,missing,0.0,0.0,False,,EnterActorFlow,merge_lane_change,yield
+cl3,1,11755,1,True,Failed - Agent deviated from the route,9.661034,39.53,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,1,14194,1,True,Failed - Agent got blocked,17.38086,36.76,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,1,14842,1,True,Failed - Agent got blocked,1.259568,3.67,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,1,14862,1,True,Failed - Agent got blocked,2.231935,6.67,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,1,14909,1,True,Failed - Agent got blocked,0.0,3.47,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,1,17563,1,True,Failed - TickRuntime,7.957686,13.11,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,1,17569,1,True,Completed,0.839935,100.0,False,8.0,SequentialLaneChange,merge_lane_change,yield
+cl3,1,17598,1,True,Completed,31.495945,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,1,17635,1,True,Failed - TickRuntime,0.932312,30.56,False,6.0,SequentialLaneChange,merge_lane_change,yield
+cl3,1,17655,3,False,missing,0.0,0.0,False,,SequentialLaneChange,merge_lane_change,yield
+cl3,1,17752,1,True,Failed - Agent got blocked,1.748192,25.63,False,4.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,1,18252,1,True,Failed - Agent got blocked,4.40024,55.67,False,3.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,1,18305,1,True,Failed - Agent got blocked,2.007899,4.59,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,1,18311,1,True,Failed - Agent got blocked,7.071122,18.25,False,2.0,ParkingCutIn,cut_in,sudden
+cl3,1,18356,1,True,Failed - Agent got blocked,2.4895,3.83,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,1,20920,1,True,Failed - Agent got blocked,1.298519,3.83,False,2.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,23658,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl3,1,23659,1,True,Failed - TickRuntime,20.455369,65.35,False,2.0,HighwayExit,merge_lane_change,yield
+cl3,1,23670,1,True,Failed - TickRuntime,24.663277,42.2,False,1.0,HighwayExit,merge_lane_change,yield
+cl3,1,23687,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl3,1,23695,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,1,23700,1,True,Failed - Agent got blocked,18.248651,39.85,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,1,23708,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,1,23771,1,True,Failed - TickRuntime,5.087205,23.67,False,2.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,1,23901,1,True,Failed - Agent got blocked,21.034,32.36,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,1,23910,1,True,Failed - Agent deviated from the route,3.379658,30.95,False,4.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,1,23918,1,True,Failed - TickRuntime,9.280123,59.92,False,3.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,1,23930,1,True,Completed,9.874831,100.0,False,3.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,1,24041,1,True,Completed,26.80376,100.0,False,2.0,HighwayExit,merge_lane_change,yield
+cl3,1,24071,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,1,24078,1,True,Failed - TickRuntime,8.943721,17.13,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,1,24092,1,True,Failed - TickRuntime,4.400108,84.11,False,6.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,1,24098,1,True,Failed - Agent got blocked,9.823231,16.05,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,1,24206,1,True,Failed - TickRuntime,1.711341,89.47,False,6.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,1,24211,2,True,Failed - TickRuntime,1.411087,39.42,False,5.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,1,24224,1,True,Failed - Agent got blocked,3.824628,41.69,False,3.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,1,24240,1,True,Failed - TickRuntime,24.003719,38.07,False,1.0,Accident,obstacle_bypass,obstacle
+cl3,1,24252,1,True,Failed - Agent deviated from the route,10.869932,20.37,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,1,24258,2,True,Failed - TickRuntime,2.448064,14.96,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,1,24294,1,True,Failed - Agent got blocked,12.33799,36.96,False,2.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,1,24330,1,True,Failed - Agent got blocked,6.519107,23.23,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,1,24333,1,True,Failed - Agent got blocked,13.0416,33.44,False,2.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,1,24340,1,True,Completed,60.0,100.0,False,1.0,ControlLoss,routine_control,other
+cl3,1,24367,1,True,Completed,0.339344,100.0,False,10.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,1,24757,1,True,Completed,3.624141,100.0,False,7.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,1,24759,1,True,Failed - Agent got blocked,5.384218,13.5,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,1,24781,1,True,Failed - Agent got blocked,1.236707,12.54,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,1,24784,1,True,Failed - Agent got blocked,12.6815,19.51,False,1.0,ControlLoss,routine_control,other
+cl3,1,24785,1,True,Completed,0.431497,100.0,False,11.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,1,24795,1,True,Failed - TickRuntime,4.2408,33.88,False,3.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,1,24816,1,True,Failed - TickRuntime,15.2856,42.46,False,2.0,Accident,obstacle_bypass,obstacle
+cl3,1,24841,1,True,Failed - Agent got blocked,6.789576,34.41,False,3.0,ControlLoss,routine_control,other
+cl3,1,25300,1,True,Failed - TickRuntime,7.149429,70.63,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,1,25318,1,True,Failed - TickRuntime,13.267209,34.92,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,1,25358,1,True,Failed - TickRuntime,7.6032,35.2,False,3.0,StaticCutIn,cut_in,sudden
+cl3,1,25378,1,True,Failed - Agent got blocked,11.020043,22.21,False,1.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,1,25381,1,True,Failed - TickRuntime,15.626,24.04,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,1,25383,2,True,Failed - TickRuntime,1.959538,18.05,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,1,25424,2,True,Failed - Agent deviated from the route,3.89,3.89,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,25439,1,True,Failed - TickRuntime,10.196099,17.24,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,1,25845,1,True,Failed - Agent got blocked,2.05335,4.86,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,1,25854,1,True,Failed - TickRuntime,2.409066,21.85,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,1,25857,1,True,Failed - TickRuntime,9.0155,13.87,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,1,25863,1,True,Failed - Agent deviated from the route,14.686099,64.34,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,1,25865,1,True,Failed - Agent deviated from the route,29.710729,53.43,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,25896,1,True,Failed - TickRuntime,4.756227,8.77,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,1,25928,1,True,Failed - Agent deviated from the route,7.842,13.07,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,1,25951,1,True,Failed - TickRuntime,1.04039,67.72,False,8.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,1,25955,1,True,Failed - TickRuntime,43.801914,69.68,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,1,25968,1,True,Failed - Agent got blocked,5.9945,16.43,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,1,25975,1,True,Failed - TickRuntime,3.9195,6.03,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,1,26393,1,True,Failed - Agent got blocked,14.437293,48.85,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,1,26394,1,True,Failed - Agent deviated from the route,46.13,46.13,False,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,1,26396,1,True,Failed - Agent got blocked,10.693122,47.96,False,3.0,StaticCutIn,cut_in,sudden
+cl3,1,26401,1,True,Failed - Agent deviated from the route,9.45582,56.23,False,3.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,1,26405,1,True,Failed - Agent got blocked,5.90282,10.59,False,1.0,StaticCutIn,cut_in,sudden
+cl3,1,26406,1,True,Failed - Agent got blocked,4.9335,7.59,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,1,26408,1,True,Failed - TickRuntime,32.2075,49.55,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,1,26418,3,True,Failed - Agent deviated from the route,8.381684,38.67,False,0.0,ControlLoss,routine_control,other
+cl3,1,26435,1,True,Failed - Agent got blocked,0.174227,46.71,False,5.0,ParkingExit,merge_lane_change,yield
+cl3,1,26456,1,True,Failed - TickRuntime,4.071355,44.43,False,4.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,1,26458,1,True,Failed - Agent got blocked,12.662906,20.77,False,1.0,T_Junction,routine_control,other
+cl3,1,26944,1,True,Failed - Agent got blocked,22.566614,54.41,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,1,26950,1,True,Failed - Agent deviated from the route,35.411533,51.58,False,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,1,26956,1,True,Failed - Agent deviated from the route,5.342854,21.29,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,26966,1,True,Failed - TickRuntime,20.188465,32.35,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,26990,1,True,Failed - Agent deviated from the route,9.1221,23.39,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,1,27018,1,True,Failed - TickRuntime,16.763219,30.93,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,1,27494,1,True,Failed - TickRuntime,2.981369,9.1,False,1.0,BlockedIntersection,junction_violator,sudden
+cl3,1,27506,1,True,Failed - TickRuntime,11.523542,20.24,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,1,27515,1,True,Failed - Agent got blocked,14.547,22.38,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,1,27529,1,True,Failed - Agent deviated from the route,7.284725,22.96,False,2.0,PedestrianCrossing,vru_crossing,sudden
+cl3,1,27532,1,True,Failed - Agent deviated from the route,8.722322,21.56,False,0.0,BlockedIntersection,junction_violator,sudden
+cl3,1,27582,1,True,Failed - Agent deviated from the route,16.271657,26.51,False,0.0,PedestrianCrossing,vru_crossing,sudden
+cl3,1,28035,1,True,Failed - TickRuntime,6.335877,20.79,False,2.0,T_Junction,routine_control,other
+cl3,1,28048,1,True,Failed - Agent got blocked,4.800656,19.57,False,1.0,T_Junction,routine_control,other
+cl3,1,28087,1,True,Failed - TickRuntime,10.589833,33.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28093,1,True,Failed - Agent deviated from the route,20.744467,35.78,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28099,1,True,Failed - Agent deviated from the route,3.892623,30.55,False,3.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28111,1,True,Failed - TickRuntime,6.610875,61.3,False,3.0,T_Junction,routine_control,other
+cl3,1,28154,1,True,Failed - TickRuntime,8.54511,73.17,False,4.0,T_Junction,routine_control,other
+cl3,1,28198,1,True,Failed - TickRuntime,16.662195,37.67,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28210,1,True,Failed - TickRuntime,3.3035,11.27,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28219,1,True,Completed,14.499701,100.0,False,2.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28229,1,True,Failed - Agent deviated from the route,4.637789,20.65,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28241,1,True,Failed - TickRuntime,6.110431,23.55,False,3.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28243,1,True,Failed - TickRuntime,7.917,12.18,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,1,28330,1,True,Failed - TickRuntime,2.301375,19.51,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,1711,1,True,Failed - Agent got blocked,0.687272,51.93,False,4.0,ParkingCutIn,cut_in,sudden
+cl3,2,1773,1,True,Failed - Agent deviated from the route,6.744277,48.51,False,3.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,2,1790,1,True,Failed - TickRuntime,10.682664,85.73,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,2,1792,1,True,Failed - TickRuntime,0.282057,89.48,False,11.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,2,1825,1,True,Failed - TickRuntime,7.904,12.16,False,1.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,1833,1,True,Failed - TickRuntime,3.639266,24.12,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,1852,1,True,Failed - Agent got blocked,2.5025,3.85,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,2,1956,1,True,Failed - Agent got blocked,1.305867,21.87,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,2,2050,1,True,Failed - TickRuntime,7.012884,36.27,False,3.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,2082,1,True,Failed - Agent got blocked,3.1785,4.89,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,2,2084,1,True,Failed - TickRuntime,7.658479,17.81,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,2086,1,True,Failed - TickRuntime,10.971813,33.22,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,2091,1,True,Failed - TickRuntime,5.6862,14.58,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,2115,1,True,Failed - TickRuntime,8.226075,19.47,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,2127,1,True,Failed - Agent got blocked,3.43654,13.12,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,2,2129,1,True,Failed - Agent got blocked,7.411233,37.5,False,2.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,2,2143,1,True,Failed - Agent got blocked,3.350297,7.7,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,2,2144,1,True,Failed - Agent got blocked,1.805937,8.15,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,2,2164,1,True,Failed - TickRuntime,1.25172,24.16,False,5.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,2,2201,1,True,Failed - Agent deviated from the route,5.554123,21.85,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,2,2204,1,True,Failed - TickRuntime,13.363675,31.63,False,2.0,BlockedIntersection,junction_violator,sudden
+cl3,2,2215,1,True,Completed,20.857148,100.0,False,0.0,BlockedIntersection,junction_violator,sudden
+cl3,2,2273,1,True,Failed - TickRuntime,3.967004,93.44,False,6.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,2,2283,1,True,Failed - TickRuntime,7.674232,44.83,False,3.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,2,2286,1,True,Failed - Agent got blocked,25.7985,39.69,False,1.0,HighwayCutIn,cut_in,sudden
+cl3,2,2373,1,True,Failed - Agent got blocked,23.401918,51.0,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,2,2390,1,True,Failed - Agent got blocked,6.559488,26.03,False,2.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,2,2397,1,True,Failed - Agent got blocked,4.9985,7.69,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,2,2403,1,True,Completed,36.260815,100.0,False,0.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,2,2416,1,True,Completed,13.307556,100.0,False,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,2,2509,1,True,Failed - TickRuntime,4.222996,51.92,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,2,2513,1,True,Failed - Agent deviated from the route,11.841223,34.88,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,2,2534,1,True,Failed - TickRuntime,6.461,9.94,False,1.0,Accident,obstacle_bypass,obstacle
+cl3,2,2539,1,True,Completed,1.919742,100.0,False,7.0,Accident,obstacle_bypass,obstacle
+cl3,2,2554,1,True,Failed - TickRuntime,0.44665,63.65,False,8.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,2,2606,1,True,Failed - TickRuntime,4.171554,15.19,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,2643,1,True,Failed - TickRuntime,4.558775,16.6,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,2,2664,1,True,Failed - TickRuntime,1.251609,30.86,False,3.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,2668,1,True,Failed - Agent deviated from the route,17.731212,19.5,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,2709,1,True,Failed - Agent got blocked,10.3752,28.82,False,2.0,StaticCutIn,cut_in,sudden
+cl3,2,2715,1,True,Failed - Agent got blocked,2.983973,33.14,False,4.0,StaticCutIn,cut_in,sudden
+cl3,2,2790,1,True,Failed - TickRuntime,6.615849,26.28,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,2,2802,1,True,Failed - TickRuntime,10.477422,25.04,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,2,2844,1,True,Failed - Agent deviated from the route,10.41258,40.05,False,3.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,2,2847,1,True,Failed - TickRuntime,1.6705,2.57,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,2,2881,1,True,Failed - TickRuntime,3.349242,7.69,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,2903,1,True,Failed - TickRuntime,7.135049,27.97,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,2913,1,True,Failed - TickRuntime,2.585192,21.82,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,2,2943,1,True,Failed - Agent got blocked,8.787497,18.89,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,2,2989,1,True,Failed - TickRuntime,8.001722,25.81,False,1.0,BlockedIntersection,junction_violator,sudden
+cl3,2,3048,1,True,Failed - TickRuntime,27.701424,72.24,False,2.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,2,3072,1,True,Failed - Agent got blocked,10.632785,60.38,False,3.0,HighwayCutIn,cut_in,sudden
+cl3,2,3074,1,True,Completed,10.172966,100.0,False,3.0,HighwayCutIn,cut_in,sudden
+cl3,2,3080,1,True,Failed - TickRuntime,8.711394,39.51,False,3.0,HighwayCutIn,cut_in,sudden
+cl3,2,3086,1,True,Failed - Agent deviated from the route,15.888,26.48,False,1.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,2,3090,1,True,Failed - Agent got blocked,17.959906,68.72,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,2,3093,1,True,Failed - TickRuntime,4.207636,25.63,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,2,3099,1,True,Failed - Agent deviated from the route,21.086475,23.42,False,0.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,2,3100,1,True,Failed - TickRuntime,5.898903,17.62,False,2.0,CrossingBicycleFlow,vru_crossing,sudden
+cl3,2,3144,1,True,Failed - Agent got blocked,1.718102,17.01,False,3.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,2,3178,1,True,Failed - TickRuntime,2.1255,3.27,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,2,3184,1,True,Failed - Agent deviated from the route,0.0,12.97,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,2,3189,1,True,Failed - Agent got blocked,0.0,3.38,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,2,3248,1,True,Failed - Agent got blocked,7.6557,18.12,False,2.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,2,3255,1,True,Failed - Agent got blocked,5.6095,8.63,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,2,3307,1,True,Failed - TickRuntime,0.292648,58.67,False,9.0,Accident,obstacle_bypass,obstacle
+cl3,2,3364,1,True,Failed - TickRuntime,1.617631,90.3,False,8.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,2,3373,1,True,Failed - Agent got blocked,29.3748,69.94,False,1.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,2,3378,1,True,Completed,33.769497,100.0,False,1.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,2,3380,1,True,Completed,12.564107,100.0,False,4.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,2,3410,1,True,Failed - TickRuntime,14.00165,33.14,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,2,3436,1,True,Failed - TickRuntime,13.832022,62.14,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,2,3457,1,True,Failed - Agent got blocked,1.9955,3.07,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,3464,1,True,Failed - TickRuntime,5.4275,8.35,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,2,3472,1,True,Failed - TickRuntime,5.854347,35.37,False,3.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,2,3476,1,True,Failed - TickRuntime,3.626726,46.64,False,5.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,2,3482,1,True,Failed - TickRuntime,6.710886,42.57,False,3.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,2,3514,1,True,Failed - Agent got blocked,3.282883,34.65,False,4.0,ParkingExit,merge_lane_change,yield
+cl3,2,3520,1,True,Failed - TickRuntime,1.007519,13.57,False,1.0,ParkingExit,merge_lane_change,yield
+cl3,2,3540,1,True,Failed - Agent deviated from the route,13.125551,50.42,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,2,3561,1,True,Failed - Agent got blocked,13.733685,33.9,False,1.0,ControlLoss,routine_control,other
+cl3,2,3564,1,True,Failed - TickRuntime,10.240766,37.29,False,3.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,2,3572,1,True,Failed - TickRuntime,5.22614,16.94,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,2,3575,1,True,Failed - Agent deviated from the route,6.604499,27.27,False,2.0,InvadingTurn,obstacle_bypass,obstacle
+cl3,2,3666,1,True,Failed - TickRuntime,6.661228,57.41,False,5.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,3670,1,True,Failed - TickRuntime,5.893369,29.12,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,3676,1,True,Failed - TickRuntime,10.894,16.76,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,3697,1,True,Failed - Agent deviated from the route,3.240696,92.14,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl3,2,3708,1,True,Failed - TickRuntime,13.827975,22.78,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,2,3712,1,True,Failed - Agent got blocked,5.050549,21.77,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,2,3717,1,True,Failed - Agent got blocked,1.309394,19.11,False,3.0,VehicleTurningRoute,vru_crossing,sudden
+cl3,2,3731,1,True,Failed - Agent deviated from the route,0.92977,24.14,False,4.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,2,3737,1,True,Failed - Agent got blocked,2.365142,25.99,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,2,3749,1,True,Failed - TickRuntime,5.8183,60.18,False,4.0,EnterActorFlow,merge_lane_change,yield
+cl3,2,3785,1,True,Failed - TickRuntime,5.578079,32.31,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,2,3800,1,True,Completed,25.025445,100.0,False,3.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl3,2,3813,1,True,Failed - Agent got blocked,20.034957,84.34,False,3.0,HighwayCutIn,cut_in,sudden
+cl3,2,3865,1,True,Failed - Agent deviated from the route,13.130102,20.19,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,2,3869,1,True,Failed - Agent got blocked,6.038332,20.81,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,2,3876,1,True,Failed - Agent got blocked,2.457,3.78,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl3,2,3890,1,True,Failed - Agent got blocked,11.516287,92.23,False,2.0,VanillaNonSignalizedTurn,routine_control,other
+cl3,2,3904,1,True,Failed - Agent got blocked,2.746589,10.38,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,2,3905,1,True,Failed - Agent got blocked,16.910232,36.03,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl3,2,3936,1,True,Failed - TickRuntime,6.728456,22.14,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,4183,1,True,Failed - TickRuntime,4.6605,7.17,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,4468,1,True,Failed - TickRuntime,10.104172,20.7,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,4669,1,True,Failed - Agent deviated from the route,14.000614,25.91,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,4683,1,True,Failed - TickRuntime,5.008627,31.37,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,4937,1,True,Failed - TickRuntime,9.099324,24.6,False,2.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,10857,1,True,Failed - Agent got blocked,7.809308,27.65,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,2,11381,1,True,Failed - Agent got blocked,6.152579,23.73,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl3,2,11715,2,True,Failed - Agent deviated from the route,19.050851,67.32,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl3,2,11755,1,True,Failed - Agent deviated from the route,12.400427,32.12,False,0.0,EnterActorFlow,merge_lane_change,yield
+cl3,2,14194,1,True,Failed - Agent got blocked,13.884,34.71,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,2,14842,1,True,Failed - TickRuntime,1.164,1.94,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,2,14862,1,True,Failed - TickRuntime,1.089878,8.29,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,2,14909,1,True,Failed - Agent got blocked,2.25941,6.85,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,2,17563,1,True,Failed - TickRuntime,29.435715,47.02,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,2,17569,1,True,Failed - TickRuntime,7.404096,14.86,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,2,17598,1,True,Failed - TickRuntime,20.8143,53.37,False,2.0,SequentialLaneChange,merge_lane_change,yield
+cl3,2,17635,1,True,Failed - TickRuntime,6.830322,13.12,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl3,2,17655,1,True,Failed - TickRuntime,10.654801,28.97,False,2.0,SequentialLaneChange,merge_lane_change,yield
+cl3,2,17752,1,True,Failed - Agent deviated from the route,0.571723,79.72,False,9.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,2,18252,1,True,Failed - Agent got blocked,6.064668,47.41,False,2.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,2,18305,1,True,Failed - TickRuntime,2.009495,9.1,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,2,18311,1,True,Failed - Agent got blocked,7.07265,16.74,False,2.0,ParkingCutIn,cut_in,sudden
+cl3,2,18356,1,True,Failed - Agent got blocked,2.491726,16.71,False,1.0,ParkingCutIn,cut_in,sudden
+cl3,2,20920,1,True,Failed - Agent got blocked,2.489315,6.1,False,1.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,23658,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl3,2,23659,1,True,Completed,6.285156,100.0,False,4.0,HighwayExit,merge_lane_change,yield
+cl3,2,23670,1,True,Failed - TickRuntime,22.290426,50.71,False,1.0,HighwayExit,merge_lane_change,yield
+cl3,2,23687,1,True,Failed - TickRuntime,10.406757,27.33,False,2.0,HighwayExit,merge_lane_change,yield
+cl3,2,23695,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,2,23700,1,True,Failed - TickRuntime,7.848361,13.76,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,2,23708,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,2,23771,1,True,Failed - TickRuntime,8.559672,61.89,False,4.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,2,23901,1,True,Failed - TickRuntime,15.309125,24.18,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,2,23910,1,True,Failed - Agent got blocked,11.0435,16.99,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,2,23918,1,True,Failed - Agent got blocked,22.44,37.4,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,2,23930,1,True,Completed,47.145271,100.0,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,2,24041,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl3,2,24071,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,2,24078,1,True,Failed - Agent got blocked,10.03754,21.34,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl3,2,24092,1,True,Failed - TickRuntime,7.007971,70.2,False,4.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,2,24098,1,True,Failed - Agent got blocked,12.284529,38.54,False,2.0,InterurbanActorFlow,merge_lane_change,yield
+cl3,2,24206,1,True,Failed - Agent got blocked,3.991577,35.2,False,2.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,2,24211,1,True,Failed - Agent got blocked,9.873824,28.82,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,2,24224,1,True,Failed - Agent got blocked,6.9225,10.65,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,2,24240,1,True,Failed - TickRuntime,8.908104,39.21,False,3.0,Accident,obstacle_bypass,obstacle
+cl3,2,24252,2,True,Failed - Agent deviated from the route,18.117156,33.14,False,0.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,2,24258,1,True,Failed - TickRuntime,1.89111,7.46,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,2,24294,1,True,Failed - Agent got blocked,12.051,18.54,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl3,2,24330,1,True,Failed - Agent got blocked,5.502259,35.79,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,2,24333,1,True,Failed - Agent got blocked,8.9037,22.83,False,2.0,DynamicObjectCrossing,vru_emerging,sudden
+cl3,2,24340,1,True,Failed - Agent got blocked,20.568735,75.16,False,2.0,ControlLoss,routine_control,other
+cl3,2,24367,1,True,Completed,1.06314,100.0,False,8.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,2,24757,1,True,Failed - Agent deviated from the route,13.70209,39.94,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,2,24759,1,True,Failed - TickRuntime,5.127726,20.95,False,2.0,ParkingCutIn,cut_in,sudden
+cl3,2,24781,1,True,Failed - TickRuntime,9.166407,21.91,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,2,24784,1,True,Failed - Agent got blocked,12.051,18.54,False,1.0,ControlLoss,routine_control,other
+cl3,2,24785,1,True,Failed - TickRuntime,1.762424,45.91,False,6.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,2,24795,1,True,Failed - Agent got blocked,3.077827,87.99,False,7.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl3,2,24816,1,True,Completed,27.945556,100.0,False,2.0,Accident,obstacle_bypass,obstacle
+cl3,2,24841,1,True,Failed - Agent got blocked,6.006,9.24,False,1.0,ControlLoss,routine_control,other
+cl3,2,25300,1,True,Completed,3.356202,100.0,False,7.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,2,25318,1,True,Completed,7.293001,100.0,False,5.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,2,25358,1,True,Completed,7.165999,100.0,False,3.0,StaticCutIn,cut_in,sudden
+cl3,2,25378,1,True,Failed - Agent got blocked,9.379848,60.06,False,3.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl3,2,25381,1,True,Failed - TickRuntime,8.95752,38.28,False,3.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,2,25383,1,True,Failed - TickRuntime,1.959549,13.51,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl3,2,25424,1,True,Failed - Agent deviated from the route,3.88491,5.77,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,25439,1,True,Failed - TickRuntime,13.218159,21.88,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl3,2,25845,1,True,Failed - Agent got blocked,3.159,4.86,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,2,25854,1,True,Failed - TickRuntime,17.0365,26.21,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,2,25857,1,True,Failed - TickRuntime,15.500458,26.15,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl3,2,25863,1,True,Failed - Agent deviated from the route,13.022922,44.34,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,2,25865,1,True,Failed - Agent deviated from the route,29.710718,53.43,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,25896,1,True,Failed - TickRuntime,18.035596,29.2,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl3,2,25928,1,True,Failed - Agent deviated from the route,49.042145,78.02,False,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl3,2,25951,1,True,Failed - Agent deviated from the route,4.134811,19.57,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,2,25955,1,True,Failed - TickRuntime,12.627871,58.22,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl3,2,25968,1,True,Failed - Agent got blocked,5.9922,11.02,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,2,25975,1,True,Failed - Agent got blocked,11.707227,98.09,False,3.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl3,2,26393,1,True,Failed - Agent got blocked,5.796585,29.62,False,1.0,ParkingExit,merge_lane_change,yield
+cl3,2,26394,1,True,Completed,34.083516,100.0,False,2.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,2,26396,1,True,Failed - Agent got blocked,10.46811,28.35,False,2.0,StaticCutIn,cut_in,sudden
+cl3,2,26401,1,True,Failed - TickRuntime,18.674933,51.18,False,2.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,2,26405,1,True,Failed - Agent deviated from the route,7.865548,19.66,False,1.0,StaticCutIn,cut_in,sudden
+cl3,2,26406,1,True,Failed - TickRuntime,3.4645,5.33,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,2,26408,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl3,2,26418,1,True,Failed - Agent deviated from the route,6.110531,22.77,False,0.0,ControlLoss,routine_control,other
+cl3,2,26435,1,True,Failed - TickRuntime,0.634523,11.68,False,2.0,ParkingExit,merge_lane_change,yield
+cl3,2,26456,1,True,Completed,13.012076,100.0,False,4.0,HardBreakRoute,lead_hard_brake,sudden
+cl3,2,26458,1,True,Failed - TickRuntime,1.251829,19.48,False,6.0,T_Junction,routine_control,other
+cl3,2,26944,1,True,Failed - Agent got blocked,15.57929,61.78,False,3.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,2,26950,1,True,Failed - Agent got blocked,18.304,28.16,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl3,2,26956,1,True,Failed - Agent deviated from the route,5.341135,25.35,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,26966,1,True,Failed - TickRuntime,18.512,28.48,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,26990,1,True,Failed - TickRuntime,5.927658,26.88,False,3.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl3,2,27018,1,True,Failed - TickRuntime,16.763347,28.36,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl3,2,27494,1,True,Failed - TickRuntime,10.310967,22.63,False,1.0,BlockedIntersection,junction_violator,sudden
+cl3,2,27506,1,True,Failed - TickRuntime,2.584415,32.8,False,3.0,EnterActorFlow,merge_lane_change,yield
+cl3,2,27515,1,True,Failed - Agent got blocked,7.887425,34.67,False,2.0,PedestrianCrossing,vru_crossing,sudden
+cl3,2,27529,1,True,Failed - Agent got blocked,9.348479,20.1,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl3,2,27532,1,True,Failed - Agent deviated from the route,27.262584,35.82,False,0.0,BlockedIntersection,junction_violator,sudden
+cl3,2,27582,1,True,Failed - Agent deviated from the route,17.74,17.74,False,0.0,PedestrianCrossing,vru_crossing,sudden
+cl3,2,28035,1,True,Failed - TickRuntime,2.504174,41.48,False,6.0,T_Junction,routine_control,other
+cl3,2,28048,1,True,Failed - Agent got blocked,4.802582,17.14,False,1.0,T_Junction,routine_control,other
+cl3,2,28087,2,True,Failed - Agent deviated from the route,9.838742,24.15,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28093,1,True,Failed - Agent deviated from the route,24.685081,34.55,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28099,1,True,Failed - TickRuntime,15.295543,29.38,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28111,1,True,Failed - TickRuntime,4.653661,69.58,False,4.0,T_Junction,routine_control,other
+cl3,2,28154,1,True,Failed - TickRuntime,17.504705,30.47,False,1.0,T_Junction,routine_control,other
+cl3,2,28198,1,True,Failed - TickRuntime,14.98773,30.28,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28210,1,True,Failed - Agent got blocked,2.849869,50.74,False,3.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28219,1,True,Failed - TickRuntime,6.154648,27.37,False,3.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28229,1,True,Failed - Agent deviated from the route,4.636276,29.79,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28241,1,True,Failed - TickRuntime,3.184942,32.65,False,5.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28243,1,True,Failed - TickRuntime,11.545711,50.71,False,2.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl3,2,28330,1,True,Failed - Agent deviated from the route,11.438703,30.92,False,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl5,0,1773,1,True,Failed - TickRuntime,14.403938,81.83,False,3.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,0,1790,1,True,Failed - TickRuntime,2.524697,51.31,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,0,1792,1,True,Completed,9.917843,100.0,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,0,1825,1,True,Failed - TickRuntime,10.896835,28.82,False,2.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,1833,1,True,Failed - TickRuntime,7.63846,35.39,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,1852,1,True,Completed,9.8865,100.0,False,5.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,0,2509,1,True,Failed - TickRuntime,10.752031,44.41,False,3.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,0,2513,1,True,Failed - TickRuntime,14.1921,36.39,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,0,2534,1,True,Failed - Agent got blocked,35.165748,93.95,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,0,2539,1,True,Failed - TickRuntime,3.830116,85.76,False,6.0,Accident,obstacle_bypass,obstacle
+cl5,0,2554,1,True,Completed,26.731005,100.0,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,0,2606,1,True,Failed - TickRuntime,1.163646,7.62,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,2643,1,True,Failed - TickRuntime,13.41522,57.33,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,0,2664,1,True,Failed - TickRuntime,10.777,16.58,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,2668,1,True,Failed - TickRuntime,17.209205,65.5,False,2.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,3307,2,True,Failed - TickRuntime,11.920461,42.13,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,0,3410,1,True,Failed - TickRuntime,3.471,5.34,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,0,3436,1,True,Failed - TickRuntime,6.515881,56.08,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,0,3457,1,True,Failed - TickRuntime,1.843742,12.16,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,20920,1,True,Completed,0.333862,100.0,False,9.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,24240,1,True,Failed - Agent deviated from the route,34.650062,51.77,False,0.0,Accident,obstacle_bypass,obstacle
+cl5,0,24258,1,True,Completed,2.391001,100.0,False,7.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,0,24367,1,True,Completed,12.96,100.0,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,0,24757,1,True,Completed,37.113309,100.0,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,0,24785,1,True,Completed,12.96,100.0,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,0,24795,1,True,Failed - TickRuntime,4.433832,31.58,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,0,24816,1,True,Completed,12.69351,100.0,False,4.0,Accident,obstacle_bypass,obstacle
+cl5,0,25300,1,True,Completed,37.461209,100.0,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,0,25318,1,True,Failed - TickRuntime,20.952,34.92,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,0,25381,1,True,Completed,27.565249,100.0,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,0,25383,1,True,Failed - TickRuntime,25.978598,74.2,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,0,25424,2,True,Failed - TickRuntime,24.590109,47.26,False,1.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,25439,1,True,Failed - TickRuntime,5.873952,50.67,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,0,25845,1,True,Completed,4.177046,100.0,False,7.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,0,25854,1,True,Completed,60.0,100.0,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,0,25857,1,True,Failed - TickRuntime,6.761041,42.82,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,0,25865,1,True,Completed,36.0,100.0,False,2.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,25896,1,True,Failed - TickRuntime,23.46,39.1,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,0,25951,1,True,Failed - Agent got blocked,4.407,6.78,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,0,25955,1,True,Failed - TickRuntime,14.924,22.96,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,1,1773,1,True,Failed - TickRuntime,12.555851,53.05,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,1,1790,1,True,Completed,16.662604,100.0,False,3.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,1,1792,1,True,Completed,2.938889,100.0,False,5.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,1,1825,1,True,Failed - TickRuntime,6.743567,36.39,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,1833,1,True,Failed - TickRuntime,2.451265,54.17,False,7.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,1852,1,True,Failed - TickRuntime,3.971407,66.95,False,6.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,1,2509,1,True,Completed,9.262141,100.0,False,5.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,1,2513,1,True,Failed - TickRuntime,1.556388,57.59,False,6.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,1,2534,1,True,Completed,34.363227,100.0,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,1,2539,1,True,Failed - Agent got blocked,4.9985,7.69,False,1.0,Accident,obstacle_bypass,obstacle
+cl5,1,2554,1,True,Completed,46.369237,100.0,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,1,2606,1,True,Failed - TickRuntime,4.23345,16.7,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,2643,1,True,Failed - TickRuntime,20.1279,47.64,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,1,2664,1,True,Failed - TickRuntime,6.198836,37.62,False,4.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,2668,1,True,Completed,19.341102,100.0,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,3307,2,True,Failed - TickRuntime,5.286704,41.38,False,3.0,Accident,obstacle_bypass,obstacle
+cl5,1,3410,1,True,Failed - Agent got blocked,3.471,5.34,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,1,3436,1,True,Failed - TickRuntime,4.153424,42.45,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,1,3457,1,True,Failed - TickRuntime,1.012918,9.13,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,20920,1,True,Failed - TickRuntime,1.355341,9.89,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,24240,1,True,Failed - TickRuntime,17.150402,42.64,False,1.0,Accident,obstacle_bypass,obstacle
+cl5,1,24258,1,True,Completed,2.531439,100.0,False,7.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,1,24367,1,True,Completed,7.776,100.0,False,5.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,1,24757,1,True,Failed - Agent got blocked,3.471,5.34,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,1,24785,1,True,Failed - TickRuntime,7.439591,45.15,False,4.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,1,24795,1,True,Completed,3.283768,100.0,False,7.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,1,24816,1,True,Failed - TickRuntime,3.082404,35.27,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,1,25300,1,True,Completed,21.922763,100.0,False,3.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,1,25318,1,True,Completed,13.85655,100.0,False,4.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,1,25381,1,True,Completed,13.729115,100.0,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,1,25383,1,True,Failed - TickRuntime,9.352295,74.2,False,4.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,1,25424,2,True,Failed - Agent deviated from the route,20.858131,44.43,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,25439,1,True,Failed - TickRuntime,9.088134,71.6,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,1,25845,1,True,Failed - TickRuntime,10.0893,23.88,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,1,25854,1,True,Completed,23.4,100.0,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,1,25857,1,True,Failed - TickRuntime,2.16721,23.85,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,1,25865,2,True,Failed - Agent deviated from the route,41.553079,89.09,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,25896,1,True,Failed - TickRuntime,23.46,39.1,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,1,25951,1,True,Failed - TickRuntime,4.453584,15.81,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,1,25955,1,True,Failed - TickRuntime,10.503957,42.94,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,2,1773,1,True,Completed,40.009289,100.0,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,2,1790,1,True,Failed - TickRuntime,3.883804,59.7,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,2,1792,1,True,Completed,1.22174,100.0,False,8.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,2,1825,1,True,Failed - TickRuntime,6.746032,43.97,False,4.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,1833,1,True,Failed - TickRuntime,9.35415,36.9,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,1852,1,True,Failed - TickRuntime,17.318562,46.66,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,2,2509,2,True,Failed - TickRuntime,20.078569,36.9,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,2,2513,1,True,Failed - Agent deviated from the route,18.919101,71.23,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,2,2534,1,True,Failed - TickRuntime,7.943272,34.19,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,2,2539,1,True,Failed - Agent got blocked,4.9985,7.69,False,1.0,Accident,obstacle_bypass,obstacle
+cl5,2,2554,1,True,Completed,52.730211,100.0,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,2,2606,1,True,Failed - TickRuntime,3.019764,50.02,False,6.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,2643,1,True,Failed - TickRuntime,18.9865,29.21,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,2,2664,1,True,Failed - TickRuntime,10.777,16.58,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,2668,1,True,Failed - TickRuntime,5.7785,8.89,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,3307,1,True,Failed - TickRuntime,7.931649,42.13,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,2,3410,1,True,Failed - TickRuntime,8.921499,42.9,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,2,3436,1,True,Failed - TickRuntime,8.209141,22.77,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,2,3457,1,True,Failed - TickRuntime,1.013033,12.16,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,20920,1,True,Failed - TickRuntime,5.074056,33.36,False,4.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,24240,1,True,Failed - Agent deviated from the route,16.085882,52.91,False,2.0,Accident,obstacle_bypass,obstacle
+cl5,2,24258,1,True,Completed,0.51206,100.0,False,10.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,2,24367,1,True,Failed - TickRuntime,13.6032,34.88,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,2,24757,1,True,Completed,15.729595,100.0,False,4.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,2,24785,1,True,Completed,5.9319,100.0,False,6.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,2,24795,1,True,Failed - TickRuntime,7.74774,33.11,False,3.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl5,2,24816,1,True,Failed - TickRuntime,3.156293,79.22,False,6.0,Accident,obstacle_bypass,obstacle
+cl5,2,25300,1,True,Completed,36.845698,100.0,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,2,25318,1,True,Failed - TickRuntime,5.096,7.84,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,2,25381,1,True,Completed,3.714202,100.0,False,5.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,2,25383,1,True,Failed - Agent deviated from the route,11.180345,39.29,False,2.0,ParkedObstacle,obstacle_bypass,obstacle
+cl5,2,25424,1,True,Failed - Agent deviated from the route,18.029714,37.83,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,25439,1,True,Failed - TickRuntime,2.070935,21.88,False,4.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl5,2,25845,1,True,Failed - TickRuntime,7.0672,42.89,False,4.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,2,25854,1,True,Completed,21.6,100.0,False,3.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,2,25857,1,True,Failed - TickRuntime,5.228079,45.8,False,4.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl5,2,25865,1,True,Failed - Agent deviated from the route,23.780969,72.23,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,25896,1,True,Failed - TickRuntime,14.076,39.1,False,2.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl5,2,25951,1,True,Failed - TickRuntime,15.579696,38.38,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl5,2,25955,1,True,Failed - TickRuntime,22.598176,36.98,False,1.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,1711,2,True,Failed - Agent got blocked,2.014039,42.91,False,1.0,ParkingCutIn,cut_in,sudden
+cl6,0,1773,1,True,Failed - TickRuntime,2.9835,4.59,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl6,0,1790,1,True,Failed - TickRuntime,11.169703,59.7,False,2.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl6,0,1792,2,True,Failed - TickRuntime,1.001339,79.71,False,8.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl6,0,1825,2,True,Failed - TickRuntime,0.387586,98.49,False,8.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,1833,1,True,Failed - TickRuntime,0.529354,69.2,False,8.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,1852,1,True,Failed - TickRuntime,5.43335,12.86,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl6,0,1956,2,True,Failed - TickRuntime,2.304,3.84,False,1.0,ParkingExit,merge_lane_change,yield
+cl6,0,2050,3,False,missing,0.0,0.0,False,,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,2082,2,True,Failed - TickRuntime,3.1785,4.89,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl6,0,2084,3,True,Failed - TickRuntime,5.015248,12.76,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,2086,1,True,Failed - TickRuntime,9.978825,28.13,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,2091,1,True,Failed - TickRuntime,7.2228,18.52,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,2115,3,True,Failed - Agent deviated from the route,10.85382,19.47,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,2127,1,True,Failed - Agent got blocked,3.43654,13.12,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl6,0,2129,1,True,Failed - TickRuntime,13.520838,48.65,False,2.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl6,0,2143,2,True,Failed - Agent got blocked,3.350297,7.7,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl6,0,2144,3,False,missing,0.0,0.0,False,,VehicleTurningRoute,vru_crossing,sudden
+cl6,0,2164,1,True,Failed - TickRuntime,1.25165,18.81,False,5.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl6,0,2201,1,True,Failed - TickRuntime,5.554123,21.85,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl6,0,2204,1,True,Failed - Agent deviated from the route,9.896851,26.16,False,2.0,BlockedIntersection,junction_violator,sudden
+cl6,0,2215,1,True,Failed - Agent got blocked,10.865853,72.4,False,1.0,BlockedIntersection,junction_violator,sudden
+cl6,0,2273,1,True,Failed - TickRuntime,7.664535,24.96,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl6,0,2283,1,True,Failed - TickRuntime,23.248587,39.12,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl6,0,2286,1,True,Failed - Agent got blocked,27.651,42.54,False,1.0,HighwayCutIn,cut_in,sudden
+cl6,0,2373,1,True,Failed - TickRuntime,24.054414,51.0,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl6,0,2390,1,True,Failed - Agent got blocked,11.094136,26.03,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl6,0,2397,1,True,Failed - Agent got blocked,2.028,3.12,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl6,0,2403,1,True,Failed - TickRuntime,12.526587,56.88,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl6,0,2416,1,True,Failed - Agent got blocked,9.5524,18.37,False,1.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl6,0,2509,1,True,Completed,0.255575,100.0,False,11.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl6,0,2513,1,True,Failed - TickRuntime,10.855974,48.51,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl6,0,2534,1,True,Failed - TickRuntime,0.907038,66.74,False,8.0,Accident,obstacle_bypass,obstacle
+cl6,0,2539,1,True,Failed - TickRuntime,5.462634,52.79,False,4.0,Accident,obstacle_bypass,obstacle
+cl6,0,2554,1,True,Failed - TickRuntime,3.962395,7.61,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl6,0,2606,1,True,Failed - TickRuntime,2.710792,16.7,False,4.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,2643,1,True,Failed - TickRuntime,4.175443,25.33,False,4.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl6,0,2664,1,True,Failed - Agent got blocked,1.290389,6.06,False,2.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,2668,1,True,Failed - Agent deviated from the route,17.732917,40.73,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,2709,1,True,Completed,1.831491,100.0,False,7.0,StaticCutIn,cut_in,sudden
+cl6,0,2715,1,True,Failed - Agent deviated from the route,4.211508,27.13,False,3.0,StaticCutIn,cut_in,sudden
+cl6,0,2790,1,True,Failed - Agent deviated from the route,8.166733,21.25,False,0.0,InvadingTurn,obstacle_bypass,obstacle
+cl6,0,2802,1,True,Completed,8.837913,100.0,False,3.0,InvadingTurn,obstacle_bypass,obstacle
+cl6,0,2844,1,True,Failed - Agent deviated from the route,6.767172,37.91,False,4.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl6,0,2847,1,True,Failed - Agent got blocked,1.6705,2.57,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl6,0,2881,1,True,Failed - TickRuntime,3.349242,7.69,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,2903,1,True,Failed - TickRuntime,3.721384,13.46,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,2913,1,True,Failed - TickRuntime,6.922816,53.24,False,3.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl6,0,2943,1,True,Failed - Agent got blocked,3.549996,16.2,False,1.0,VehicleTurningRoute,vru_crossing,sudden
+cl6,0,2989,1,True,Failed - TickRuntime,10.33435,24.46,False,2.0,BlockedIntersection,junction_violator,sudden
+cl6,0,3048,1,True,Failed - TickRuntime,9.962475,43.18,False,3.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl6,0,3072,1,True,Failed - Agent deviated from the route,7.964125,29.0,False,3.0,HighwayCutIn,cut_in,sudden
+cl6,0,3074,1,True,Failed - TickRuntime,13.040606,76.55,False,3.0,HighwayCutIn,cut_in,sudden
+cl6,0,3080,1,True,Failed - Agent got blocked,6.101759,25.54,False,3.0,HighwayCutIn,cut_in,sudden
+cl6,0,3086,1,True,Failed - TickRuntime,6.713225,83.19,False,3.0,CrossingBicycleFlow,vru_crossing,sudden
+cl6,0,3090,1,True,Failed - TickRuntime,36.649101,58.79,False,1.0,CrossingBicycleFlow,vru_crossing,sudden
+cl6,0,3093,1,True,Failed - TickRuntime,3.898323,25.63,False,4.0,CrossingBicycleFlow,vru_crossing,sudden
+cl6,0,3099,1,True,Failed - TickRuntime,7.640103,21.09,False,1.0,CrossingBicycleFlow,vru_crossing,sudden
+cl6,0,3100,1,True,Failed - Agent got blocked,3.608343,40.86,False,3.0,CrossingBicycleFlow,vru_crossing,sudden
+cl6,0,3144,1,True,Failed - Agent deviated from the route,5.595418,11.09,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl6,0,3178,1,True,Failed - Agent got blocked,2.1255,3.27,False,1.0,VanillaNonSignalizedTurn,routine_control,other
+cl6,0,3184,1,True,Failed - Agent deviated from the route,3.306049,12.97,False,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl6,0,3189,1,True,Failed - Agent got blocked,0.0,3.38,False,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl6,0,3248,1,True,Failed - TickRuntime,4.11,6.85,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl6,0,3255,1,True,Failed - Agent got blocked,10.812953,49.62,False,3.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl6,0,3307,1,True,Failed - TickRuntime,7.847915,15.08,False,1.0,Accident,obstacle_bypass,obstacle
+cl6,0,3364,1,True,Failed - Agent got blocked,13.183385,58.28,False,3.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl6,0,3373,1,True,Failed - Agent got blocked,4.966101,90.3,False,5.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl6,0,3378,1,True,Completed,8.755671,100.0,False,4.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl6,0,3380,1,True,Completed,21.6,100.0,False,3.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl6,0,3410,1,True,Failed - TickRuntime,6.417986,23.37,False,3.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl6,0,3436,1,True,Failed - TickRuntime,9.490514,62.14,False,4.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,3457,1,True,Failed - Agent got blocked,1.9955,3.07,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,3464,1,True,Failed - TickRuntime,5.4275,8.35,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl6,0,3472,1,True,Failed - Agent deviated from the route,4.583359,36.87,False,3.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl6,0,3476,1,True,Completed,1.123358,100.0,False,9.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl6,0,3482,1,True,Failed - TickRuntime,12.846453,36.52,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl6,0,3514,1,True,Failed - Agent deviated from the route,2.320823,65.45,False,7.0,ParkingExit,merge_lane_change,yield
+cl6,0,3520,1,True,Failed - TickRuntime,0.425895,19.59,False,3.0,ParkingExit,merge_lane_change,yield
+cl6,0,3540,1,True,Completed,27.303122,100.0,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl6,0,3561,1,True,Failed - Agent got blocked,2.380639,27.14,False,2.0,ControlLoss,routine_control,other
+cl6,0,3564,1,True,Failed - TickRuntime,14.926925,35.33,False,2.0,InvadingTurn,obstacle_bypass,obstacle
+cl6,0,3572,1,True,Failed - TickRuntime,3.887694,90.11,False,6.0,InvadingTurn,obstacle_bypass,obstacle
+cl6,0,3575,1,True,Failed - TickRuntime,13.943116,27.27,False,1.0,InvadingTurn,obstacle_bypass,obstacle
+cl6,0,3666,1,True,Failed - TickRuntime,4.209998,43.36,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,3670,1,True,Failed - TickRuntime,10.856379,19.46,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,3676,1,True,Failed - TickRuntime,7.080629,19.54,False,2.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,3697,1,True,Failed - Agent deviated from the route,5.401468,34.24,False,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+cl6,0,3708,1,True,Failed - Agent got blocked,30.304038,31.81,False,0.0,VehicleTurningRoute,vru_crossing,sudden
+cl6,0,3712,1,True,Failed - TickRuntime,3.821009,20.5,False,2.0,VehicleTurningRoute,vru_crossing,sudden
+cl6,0,3717,1,True,Failed - Agent got blocked,2.935228,19.11,False,2.0,VehicleTurningRoute,vru_crossing,sudden
+cl6,0,3731,1,True,Failed - Agent deviated from the route,0.496972,22.88,False,6.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl6,0,3737,1,True,Failed - TickRuntime,2.365218,28.71,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl6,0,3749,1,True,Failed - TickRuntime,4.12281,29.86,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl6,0,3785,1,True,Failed - TickRuntime,8.924953,48.0,False,2.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl6,0,3800,1,True,Completed,23.017132,100.0,False,3.0,MergerIntoSlowTraffic,merge_lane_change,yield
+cl6,0,3813,1,True,Failed - Agent got blocked,23.312275,38.0,False,1.0,HighwayCutIn,cut_in,sudden
+cl6,0,3865,1,True,Failed - Agent got blocked,7.220913,65.99,False,2.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl6,0,3869,1,True,Failed - Agent got blocked,1.197858,3.49,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl6,0,3876,1,True,Failed - Agent got blocked,2.457,3.78,False,1.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+cl6,0,3890,1,True,Failed - Agent got blocked,6.133906,89.12,False,2.0,VanillaNonSignalizedTurn,routine_control,other
+cl6,0,3904,1,True,Failed - Agent got blocked,2.987225,12.07,False,2.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl6,0,3905,1,True,Failed - Agent got blocked,1.282804,7.94,False,2.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+cl6,0,3936,1,True,Failed - TickRuntime,1.895182,23.36,False,3.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,4183,1,True,Failed - TickRuntime,6.6222,16.98,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,4468,1,True,Failed - TickRuntime,8.074284,24.57,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,4669,1,True,Failed - Agent deviated from the route,7.5933,19.47,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,4683,1,True,Failed - Agent deviated from the route,2.862484,19.66,False,2.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,4937,1,True,Failed - TickRuntime,6.03459,15.41,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,10857,1,True,Failed - Agent deviated from the route,2.364555,32.89,False,4.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl6,0,11381,1,True,Failed - TickRuntime,5.599385,26.35,False,2.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+cl6,0,11715,1,True,Failed - Agent deviated from the route,33.281069,58.97,False,1.0,EnterActorFlow,merge_lane_change,yield
+cl6,0,11755,1,True,Failed - Agent deviated from the route,14.863743,33.37,False,0.0,EnterActorFlow,merge_lane_change,yield
+cl6,0,14194,1,True,Failed - Agent deviated from the route,6.157514,46.06,False,4.0,PedestrianCrossing,vru_crossing,sudden
+cl6,0,14842,1,True,Failed - Agent got blocked,2.3855,3.67,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl6,0,14862,1,True,Failed - Agent got blocked,2.230921,5.05,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl6,0,14909,1,True,Failed - Agent got blocked,0.0,3.47,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl6,0,17563,1,True,Failed - TickRuntime,7.392576,12.24,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl6,0,17569,1,True,Completed,2.79936,100.0,False,7.0,SequentialLaneChange,merge_lane_change,yield
+cl6,0,17598,1,True,Completed,57.484333,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl6,0,17635,1,True,Failed - TickRuntime,26.634442,42.71,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl6,0,17655,1,True,Failed - TickRuntime,7.032999,12.47,False,1.0,SequentialLaneChange,merge_lane_change,yield
+cl6,0,17752,1,True,Failed - Agent got blocked,4.975352,27.89,False,3.0,DynamicObjectCrossing,vru_emerging,sudden
+cl6,0,18252,1,True,Failed - Agent got blocked,5.910915,13.6,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl6,0,18305,1,True,Failed - Agent got blocked,2.010055,7.6,False,1.0,ParkingCutIn,cut_in,sudden
+cl6,0,18311,1,True,Failed - Agent got blocked,5.9605,9.17,False,1.0,ParkingCutIn,cut_in,sudden
+cl6,0,18356,1,True,Failed - Agent got blocked,2.886228,50.02,False,4.0,ParkingCutIn,cut_in,sudden
+cl6,0,20920,1,True,Failed - TickRuntime,0.844776,13.68,False,3.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,23658,3,False,missing,0.0,0.0,False,,HighwayExit,merge_lane_change,yield
+cl6,0,23659,1,True,Failed - Agent deviated from the route,3.031925,70.79,False,6.0,HighwayExit,merge_lane_change,yield
+cl6,0,23670,1,True,Failed - TickRuntime,24.66199,44.63,False,1.0,HighwayExit,merge_lane_change,yield
+cl6,0,23687,1,True,Failed - TickRuntime,2.766314,38.96,False,5.0,HighwayExit,merge_lane_change,yield
+cl6,0,23695,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl6,0,23700,1,True,Failed - Agent got blocked,20.430644,34.8,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl6,0,23708,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl6,0,23771,1,True,Failed - TickRuntime,0.546683,92.49,False,10.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl6,0,23901,1,True,Failed - Agent deviated from the route,17.20758,67.88,False,3.0,InterurbanActorFlow,merge_lane_change,yield
+cl6,0,23910,1,True,Failed - Agent got blocked,4.923056,36.61,False,3.0,InterurbanActorFlow,merge_lane_change,yield
+cl6,0,23918,1,True,Failed - Agent got blocked,1.092344,78.53,False,7.0,InterurbanActorFlow,merge_lane_change,yield
+cl6,0,23930,1,True,Completed,41.858182,100.0,False,2.0,InterurbanActorFlow,merge_lane_change,yield
+cl6,0,24041,1,True,Failed - TickRuntime,5.661814,20.78,False,1.0,HighwayExit,merge_lane_change,yield
+cl6,0,24071,3,False,missing,0.0,0.0,False,,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl6,0,24078,1,True,Failed - TickRuntime,7.848116,17.13,False,1.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+cl6,0,24092,1,True,Failed - TickRuntime,5.058847,17.6,False,2.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl6,0,24098,1,True,Failed - Agent got blocked,13.867841,36.61,False,2.0,InterurbanActorFlow,merge_lane_change,yield
+cl6,0,24206,1,True,Failed - Agent got blocked,2.859953,7.11,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl6,0,24211,1,True,Failed - TickRuntime,1.586797,39.42,False,5.0,DynamicObjectCrossing,vru_emerging,sudden
+cl6,0,24224,1,True,Failed - Agent got blocked,7.903284,18.97,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl6,0,24240,1,True,Failed - TickRuntime,21.776955,50.62,False,1.0,Accident,obstacle_bypass,obstacle
+cl6,0,24252,1,True,Failed - Agent deviated from the route,18.869492,25.63,False,0.0,DynamicObjectCrossing,vru_emerging,sudden
+cl6,0,24258,1,True,Failed - TickRuntime,4.079694,11.96,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,24294,1,True,Failed - Agent got blocked,12.051,18.54,False,1.0,ParkingCrossingPedestrian,vru_emerging,sudden
+cl6,0,24330,1,True,Failed - Agent got blocked,4.424914,58.6,False,3.0,HardBreakRoute,lead_hard_brake,sudden
+cl6,0,24333,1,True,Failed - Agent got blocked,12.786,21.31,False,1.0,DynamicObjectCrossing,vru_emerging,sudden
+cl6,0,24340,1,True,Failed - Agent got blocked,22.518802,40.35,False,1.0,ControlLoss,routine_control,other
+cl6,0,24367,1,True,Failed - TickRuntime,5.137372,19.73,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl6,0,24757,1,True,Completed,1.819584,100.0,False,8.0,ParkedObstacle,obstacle_bypass,obstacle
+cl6,0,24759,1,True,Failed - Agent got blocked,6.332505,26.91,False,2.0,ParkingCutIn,cut_in,sudden
+cl6,0,24781,1,True,Failed - Agent got blocked,1.237261,15.67,False,2.0,HardBreakRoute,lead_hard_brake,sudden
+cl6,0,24784,1,True,Failed - Agent got blocked,10.2921,24.36,False,2.0,ControlLoss,routine_control,other
+cl6,0,24785,1,True,Failed - TickRuntime,7.449477,34.64,False,3.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl6,0,24795,1,True,Failed - TickRuntime,10.094178,33.11,False,2.0,ConstructionObstacle,obstacle_bypass,obstacle
+cl6,0,24816,1,True,Failed - Agent deviated from the route,4.625968,72.83,False,4.0,Accident,obstacle_bypass,obstacle
+cl6,0,24841,1,True,Failed - Agent got blocked,6.159867,17.63,False,2.0,ControlLoss,routine_control,other
+cl6,0,25300,1,True,Failed - TickRuntime,2.580391,87.06,False,7.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl6,0,25318,1,True,Failed - TickRuntime,32.1555,49.47,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl6,0,25358,1,True,Failed - Agent got blocked,10.643826,93.98,False,3.0,StaticCutIn,cut_in,sudden
+cl6,0,25378,1,True,Failed - Agent deviated from the route,8.562005,81.08,False,3.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+cl6,0,25381,1,True,Failed - TickRuntime,19.032,29.28,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl6,0,25383,3,True,Failed - TickRuntime,1.95908,16.53,False,1.0,ParkedObstacle,obstacle_bypass,obstacle
+cl6,0,25424,1,True,Failed - Agent deviated from the route,3.88491,5.77,False,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,25439,1,True,Failed - TickRuntime,14.221175,23.42,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+cl6,0,25845,1,True,Failed - Agent got blocked,2.05335,4.86,False,2.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl6,0,25854,1,True,Completed,39.0,100.0,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,25857,1,True,Failed - TickRuntime,12.012,18.48,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+cl6,0,25863,1,True,Failed - Agent deviated from the route,13.855402,60.78,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl6,0,25865,1,True,Failed - Agent deviated from the route,34.651266,85.12,False,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,25896,1,True,Failed - TickRuntime,3.813378,7.32,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+cl6,0,25928,1,True,Failed - TickRuntime,7.221933,60.03,False,2.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+cl6,0,25951,1,True,Failed - TickRuntime,4.878456,18.82,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,25955,1,True,Failed - TickRuntime,15.28484,43.7,False,2.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+cl6,0,25968,1,True,Failed - TickRuntime,8.335398,25.77,False,1.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl6,0,25975,1,True,Failed - TickRuntime,6.036582,30.82,False,3.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+cl6,0,26393,1,True,Failed - TickRuntime,4.88435,38.49,False,3.0,ParkingExit,merge_lane_change,yield
+cl6,0,26394,1,True,Completed,25.584233,100.0,False,3.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl6,0,26396,1,True,Failed - Agent got blocked,22.835556,36.64,False,1.0,StaticCutIn,cut_in,sudden
+cl6,0,26401,1,True,Failed - Agent deviated from the route,10.389692,30.66,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl6,0,26405,1,True,Failed - Agent deviated from the route,7.86741,24.21,False,1.0,StaticCutIn,cut_in,sudden
+cl6,0,26406,1,True,Failed - Agent got blocked,3.4645,5.33,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+cl6,0,26408,1,True,Failed - TickRuntime,36.936805,58.85,False,1.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+cl6,0,26418,1,True,Failed - Agent deviated from the route,4.59565,40.94,False,0.0,ControlLoss,routine_control,other
+cl6,0,26435,1,True,Failed - Agent got blocked,0.74955,26.21,False,3.0,ParkingExit,merge_lane_change,yield
+cl6,0,26456,1,True,Failed - TickRuntime,1.890732,40.62,False,3.0,HardBreakRoute,lead_hard_brake,sudden
+cl6,0,26458,1,True,Failed - Agent got blocked,8.775325,20.77,False,2.0,T_Junction,routine_control,other
+cl6,0,26944,1,True,Failed - Agent deviated from the route,15.158154,55.57,False,2.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl6,0,26950,1,True,Failed - Agent got blocked,10.009694,23.06,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+cl6,0,26956,1,True,Failed - Agent deviated from the route,3.471927,22.64,False,2.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,26966,1,True,Failed - TickRuntime,18.510891,31.06,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,26990,1,True,Failed - TickRuntime,10.0308,25.72,False,2.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+cl6,0,27018,1,True,Failed - TickRuntime,16.763347,28.36,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+cl6,0,27494,1,True,Failed - TickRuntime,11.778,18.12,False,1.0,BlockedIntersection,junction_violator,sudden
+cl6,0,27506,1,True,Failed - TickRuntime,4.500975,38.85,False,2.0,EnterActorFlow,merge_lane_change,yield
+cl6,0,27515,1,True,Failed - Agent got blocked,13.043262,27.26,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl6,0,27529,1,True,Failed - Agent got blocked,14.921414,34.39,False,1.0,PedestrianCrossing,vru_crossing,sudden
+cl6,0,27532,1,True,Failed - Agent deviated from the route,8.719218,25.83,False,0.0,BlockedIntersection,junction_violator,sudden
+cl6,0,27582,1,True,Failed - Agent deviated from the route,20.66,20.66,False,0.0,PedestrianCrossing,vru_crossing,sudden
+cl6,0,28035,1,True,Failed - TickRuntime,3.20873,19.96,False,3.0,T_Junction,routine_control,other
+cl6,0,28048,1,True,Failed - Agent got blocked,4.800656,19.57,False,1.0,T_Junction,routine_control,other
+cl6,0,28087,1,True,Failed - Agent deviated from the route,4.902257,21.63,False,2.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28093,1,True,Failed - TickRuntime,38.939295,58.14,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28099,1,True,Failed - TickRuntime,8.452489,24.7,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28111,1,True,Failed - TickRuntime,4.562915,53.02,False,3.0,T_Junction,routine_control,other
+cl6,0,28154,1,True,Failed - Agent got blocked,8.047,12.38,False,1.0,T_Junction,routine_control,other
+cl6,0,28198,1,True,Completed,8.639652,100.0,False,3.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28210,1,True,Failed - TickRuntime,3.3035,11.27,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28219,1,True,Failed - TickRuntime,3.907591,33.56,False,4.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28229,1,True,Failed - Agent deviated from the route,8.06868,95.42,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28241,1,True,Failed - TickRuntime,6.8575,10.55,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28243,1,True,Failed - Agent deviated from the route,7.335234,26.71,False,3.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+cl6,0,28330,1,True,Failed - Agent deviated from the route,4.681062,20.65,False,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,1711,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+simlingo,0,1773,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+simlingo,0,1790,1,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+simlingo,0,1792,2,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+simlingo,0,1825,1,True,Failed - TickRuntime,25.47,42.45,False,1.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,1833,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,1852,1,True,Completed,100.0,100.0,True,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+simlingo,0,1956,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+simlingo,0,2050,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,2082,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+simlingo,0,2084,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,2086,3,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,2091,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,2115,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,2127,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+simlingo,0,2129,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+simlingo,0,2143,2,True,Completed,60.0,100.0,False,1.0,OppositeVehicleTakingPriority,junction_violator,sudden
+simlingo,0,2144,2,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+simlingo,0,2164,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+simlingo,0,2201,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+simlingo,0,2204,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+simlingo,0,2215,2,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+simlingo,0,2273,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+simlingo,0,2283,2,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+simlingo,0,2286,1,True,Completed,60.0,100.0,False,1.0,HighwayCutIn,cut_in,sudden
+simlingo,0,2373,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+simlingo,0,2390,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+simlingo,0,2397,2,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+simlingo,0,2403,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+simlingo,0,2416,2,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+simlingo,0,2509,1,True,Completed,60.0,100.0,False,1.0,ConstructionObstacle,obstacle_bypass,obstacle
+simlingo,0,2513,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+simlingo,0,2534,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+simlingo,0,2539,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+simlingo,0,2554,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+simlingo,0,2606,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,2643,1,True,Failed - TickRuntime,28.584,47.64,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+simlingo,0,2664,1,True,Completed,60.0,100.0,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,2668,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,2709,1,True,Completed,60.0,100.0,False,1.0,StaticCutIn,cut_in,sudden
+simlingo,0,2715,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+simlingo,0,2790,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+simlingo,0,2802,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+simlingo,0,2844,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+simlingo,0,2847,1,True,Completed,60.0,100.0,False,1.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+simlingo,0,2881,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,2903,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,2913,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+simlingo,0,2943,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+simlingo,0,2989,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+simlingo,0,3048,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTraffic,merge_lane_change,yield
+simlingo,0,3072,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+simlingo,0,3074,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+simlingo,0,3080,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+simlingo,0,3086,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+simlingo,0,3090,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+simlingo,0,3093,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+simlingo,0,3099,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+simlingo,0,3100,1,True,Completed,100.0,100.0,True,0.0,CrossingBicycleFlow,vru_crossing,sudden
+simlingo,0,3144,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+simlingo,0,3178,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+simlingo,0,3184,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+simlingo,0,3189,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+simlingo,0,3248,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+simlingo,0,3255,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+simlingo,0,3307,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+simlingo,0,3364,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+simlingo,0,3373,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+simlingo,0,3378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+simlingo,0,3380,1,True,Completed,100.0,100.0,True,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+simlingo,0,3410,1,True,Failed - TickRuntime,24.39,40.65,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+simlingo,0,3436,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+simlingo,0,3457,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,3464,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+simlingo,0,3472,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+simlingo,0,3476,1,True,Completed,60.0,100.0,False,1.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+simlingo,0,3482,1,True,Completed,36.0,100.0,False,2.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+simlingo,0,3514,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+simlingo,0,3520,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+simlingo,0,3540,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+simlingo,0,3561,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+simlingo,0,3564,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+simlingo,0,3572,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+simlingo,0,3575,1,True,Completed,100.0,100.0,True,0.0,InvadingTurn,obstacle_bypass,obstacle
+simlingo,0,3666,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,3670,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,3676,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,3697,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleTakingPriority,junction_violator,sudden
+simlingo,0,3708,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+simlingo,0,3712,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+simlingo,0,3717,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoute,vru_crossing,sudden
+simlingo,0,3731,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+simlingo,0,3737,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+simlingo,0,3749,1,True,Failed - TickRuntime,42.174,70.29,False,1.0,EnterActorFlow,merge_lane_change,yield
+simlingo,0,3785,1,True,Completed,60.0,100.0,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+simlingo,0,3800,1,True,Completed,62.605252,100.0,False,1.0,MergerIntoSlowTraffic,merge_lane_change,yield
+simlingo,0,3813,1,True,Completed,100.0,100.0,True,0.0,HighwayCutIn,cut_in,sudden
+simlingo,0,3865,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+simlingo,0,3869,1,True,Completed,70.0,100.0,False,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+simlingo,0,3876,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterRedLight,routine_control,other
+simlingo,0,3890,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurn,routine_control,other
+simlingo,0,3904,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+simlingo,0,3905,1,True,Completed,100.0,100.0,True,0.0,VanillaNonSignalizedTurnEncounterStopsign,routine_control,other
+simlingo,0,3936,1,True,Failed - TickRuntime,28.566,47.61,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,4183,1,True,Failed - TickRuntime,25.296,42.16,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,4468,1,True,Failed - TickRuntime,27.318,45.53,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,4669,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,4683,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,4937,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,10857,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+simlingo,0,11381,1,True,Completed,100.0,100.0,True,0.0,VehicleTurningRoutePedestrian,vru_crossing,sudden
+simlingo,0,11715,3,False,missing,0.0,0.0,False,,EnterActorFlow,merge_lane_change,yield
+simlingo,0,11755,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+simlingo,0,14194,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+simlingo,0,14842,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+simlingo,0,14862,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+simlingo,0,14909,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+simlingo,0,17563,1,True,Completed,60.0,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+simlingo,0,17569,1,True,Completed,60.0,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+simlingo,0,17598,1,True,Completed,100.0,100.0,True,0.0,SequentialLaneChange,merge_lane_change,yield
+simlingo,0,17635,1,True,Completed,60.0,100.0,False,1.0,SequentialLaneChange,merge_lane_change,yield
+simlingo,0,17655,1,True,Completed,36.0,100.0,False,2.0,SequentialLaneChange,merge_lane_change,yield
+simlingo,0,17752,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+simlingo,0,18252,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+simlingo,0,18305,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+simlingo,0,18311,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+simlingo,0,18356,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+simlingo,0,20920,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,23658,1,True,Failed - Agent deviated from the route,76.14,76.14,False,0.0,HighwayExit,merge_lane_change,yield
+simlingo,0,23659,1,True,Completed,60.0,100.0,False,1.0,HighwayExit,merge_lane_change,yield
+simlingo,0,23670,1,True,Failed - Agent got blocked,54.717,84.18,False,1.0,HighwayExit,merge_lane_change,yield
+simlingo,0,23687,1,True,Completed,100.0,100.0,True,0.0,HighwayExit,merge_lane_change,yield
+simlingo,0,23695,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+simlingo,0,23700,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+simlingo,0,23708,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+simlingo,0,23771,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+simlingo,0,23901,1,True,Completed,79.177319,100.0,False,0.0,InterurbanActorFlow,merge_lane_change,yield
+simlingo,0,23910,1,True,Completed,60.0,100.0,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+simlingo,0,23918,1,True,Completed,59.546578,100.0,False,1.0,InterurbanActorFlow,merge_lane_change,yield
+simlingo,0,23930,1,True,Completed,99.080505,100.0,False,0.0,InterurbanActorFlow,merge_lane_change,yield
+simlingo,0,24041,1,True,Completed,100.0,100.0,True,0.0,HighwayExit,merge_lane_change,yield
+simlingo,0,24071,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+simlingo,0,24078,1,True,Completed,100.0,100.0,True,0.0,InterurbanAdvancedActorFlow,merge_lane_change,yield
+simlingo,0,24092,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+simlingo,0,24098,1,True,Failed - Agent deviated from the route,96.08,96.08,False,0.0,InterurbanActorFlow,merge_lane_change,yield
+simlingo,0,24206,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+simlingo,0,24211,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+simlingo,0,24224,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+simlingo,0,24240,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+simlingo,0,24252,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+simlingo,0,24258,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+simlingo,0,24294,1,True,Completed,100.0,100.0,True,0.0,ParkingCrossingPedestrian,vru_emerging,sudden
+simlingo,0,24330,1,True,Completed,60.0,100.0,False,1.0,HardBreakRoute,lead_hard_brake,sudden
+simlingo,0,24333,1,True,Completed,100.0,100.0,True,0.0,DynamicObjectCrossing,vru_emerging,sudden
+simlingo,0,24340,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+simlingo,0,24367,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+simlingo,0,24757,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+simlingo,0,24759,1,True,Completed,100.0,100.0,True,0.0,ParkingCutIn,cut_in,sudden
+simlingo,0,24781,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+simlingo,0,24784,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+simlingo,0,24785,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+simlingo,0,24795,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacle,obstacle_bypass,obstacle
+simlingo,0,24816,1,True,Completed,100.0,100.0,True,0.0,Accident,obstacle_bypass,obstacle
+simlingo,0,24841,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+simlingo,0,25300,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+simlingo,0,25318,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+simlingo,0,25358,1,True,Failed - TickRuntime,32.18,32.18,False,0.0,StaticCutIn,cut_in,sudden
+simlingo,0,25378,1,True,Completed,70.0,100.0,False,0.0,YieldToEmergencyVehicle,emergency_vehicle,yield
+simlingo,0,25381,1,True,Completed,60.0,100.0,False,1.0,HazardAtSideLane,obstacle_bypass,obstacle
+simlingo,0,25383,1,True,Completed,100.0,100.0,True,0.0,ParkedObstacle,obstacle_bypass,obstacle
+simlingo,0,25424,1,True,Completed,100.0,100.0,True,0.0,ConstructionObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,25439,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLane,obstacle_bypass,obstacle
+simlingo,0,25845,1,True,Failed - TickRuntime,25.164,41.94,False,1.0,AccidentTwoWays,obstacle_bypass,obstacle
+simlingo,0,25854,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+simlingo,0,25857,1,True,Failed - TickRuntime,33.83,33.83,False,0.0,AccidentTwoWays,obstacle_bypass,obstacle
+simlingo,0,25863,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+simlingo,0,25865,2,True,Completed,100.0,100.0,True,0.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,25896,1,True,Failed - TickRuntime,40.362,67.27,False,1.0,ParkedObstacleTwoWays,obstacle_bypass,obstacle
+simlingo,0,25928,1,True,Completed,100.0,100.0,True,0.0,VehicleOpensDoorTwoWays,obstacle_bypass,obstacle
+simlingo,0,25951,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+simlingo,0,25955,1,True,Completed,100.0,100.0,True,0.0,HazardAtSideLaneTwoWays,obstacle_bypass,obstacle
+simlingo,0,25968,1,True,Completed,88.694715,100.0,False,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+simlingo,0,25975,1,True,Completed,100.0,100.0,True,0.0,VanillaSignalizedTurnEncounterGreenLight,routine_control,other
+simlingo,0,26393,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+simlingo,0,26394,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+simlingo,0,26396,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+simlingo,0,26401,1,True,Completed,100.0,100.0,True,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+simlingo,0,26405,1,True,Completed,100.0,100.0,True,0.0,StaticCutIn,cut_in,sudden
+simlingo,0,26406,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+simlingo,0,26408,1,True,Failed - TickRuntime,25.71,25.71,False,0.0,MergerIntoSlowTrafficV2,merge_lane_change,yield
+simlingo,0,26418,1,True,Completed,100.0,100.0,True,0.0,ControlLoss,routine_control,other
+simlingo,0,26435,1,True,Completed,100.0,100.0,True,0.0,ParkingExit,merge_lane_change,yield
+simlingo,0,26456,1,True,Completed,100.0,100.0,True,0.0,HardBreakRoute,lead_hard_brake,sudden
+simlingo,0,26458,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+simlingo,0,26944,1,True,Completed,80.0,100.0,False,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+simlingo,0,26950,1,True,Completed,100.0,100.0,True,0.0,OppositeVehicleRunningRedLight,junction_violator,sudden
+simlingo,0,26956,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,26966,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,26990,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurn,unprotected_turn,yield
+simlingo,0,27018,1,True,Completed,42.0,100.0,False,1.0,SignalizedJunctionRightTurn,unprotected_turn,yield
+simlingo,0,27494,1,True,Completed,100.0,100.0,True,0.0,BlockedIntersection,junction_violator,sudden
+simlingo,0,27506,1,True,Completed,60.0,100.0,False,1.0,EnterActorFlow,merge_lane_change,yield
+simlingo,0,27515,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+simlingo,0,27529,1,True,Completed,80.0,100.0,False,0.0,PedestrianCrossing,vru_crossing,sudden
+simlingo,0,27532,1,True,Completed,60.0,100.0,False,1.0,BlockedIntersection,junction_violator,sudden
+simlingo,0,27582,1,True,Completed,100.0,100.0,True,0.0,PedestrianCrossing,vru_crossing,sudden
+simlingo,0,28035,1,True,Completed,70.0,100.0,False,0.0,T_Junction,routine_control,other
+simlingo,0,28048,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+simlingo,0,28087,1,True,Completed,80.0,100.0,False,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28093,1,True,Completed,48.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28099,1,True,Completed,60.0,100.0,False,1.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28111,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+simlingo,0,28154,1,True,Completed,100.0,100.0,True,0.0,T_Junction,routine_control,other
+simlingo,0,28198,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28210,1,True,Completed,100.0,100.0,True,0.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28219,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28229,1,True,Completed,60.0,100.0,False,1.0,NonSignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28241,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28243,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
+simlingo,0,28330,1,True,Completed,100.0,100.0,True,0.0,SignalizedJunctionLeftTurnEnterFlow,unprotected_turn,yield
