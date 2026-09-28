@@ -1,6 +1,6 @@
 """P3 human review sheet: every exam item rendered the same way, one Markdown page per item type (user 2026-09-28).
 
-Item types: PI = pedestrian insertion (grounded standard construction, TTR 3 s shown; the 2 / 4 s and null variants are
+Item types: PI = pedestrian insertion (cross-scene donor, walk-in rules, grounded standard; TTR 3 s shown; the 2 / 4 s and null variants are
 the same donor and placement rule), PD = pedestrian deletion (registered target), VD = vehicle deletion (event vehicle).
 Every clip: front camera, the log on the left and the edited frame on the right (PI: donor inserted; PD / VD: object
 deleted), both 480 x 320, 16 frames at 5 fps over [anchor - 2 s, anchor + 1 s], a caption bar with the item id, category,
@@ -95,29 +95,32 @@ def render(a):
         size = clip(out, iid, fs["real"], fs["minus"], [(t - 2 * m["f0"]) / 20 for t in win], cap)
         items.append({"id": iid, "type": "PD", "scene": m["key"], "segment": m["segment"], "category": cat, "view_gap": None,
                       "psnr": round(ps, 1), "n_deleted": len(m["delete_tracks"]), "bytes": size})
-    # PI
-    for md in sorted((data / "runs/nq4/p3/insert_batch").glob("p3_*/meta.json")):
+    # PI: cross-scene donors under the walk-in rules (runs/nq4/p3/xinsert/items; user review 2026-09-28 16:30). The
+    # same-scene items of runs/nq4/p3/insert_batch were built before those rules and are retired (they appeared mid-clip)
+    X = data / "runs/nq4/p3/xinsert"
+    old_pi = {json.loads(p.read_text())["scene"] for p in (data / "runs/nq4/p3/insert_batch").glob("p3_*/meta.json")
+              if json.loads(p.read_text()).get("chosen")}
+    for md in sorted((X / "items").glob("p3_[0-9][0-9][0-9]/meta.json")):
         m = json.loads(md.read_text())
-        c = m.get("chosen")
-        if not c:
-            continue
+        pl = m["plan"]
+        v3 = pl["variants"].get("ins3") or {}
+        if pl.get("rules") != "walk-in v2 (2026-09-28 16:30)" or "traj" not in v3:
+            continue                                          # rendered before the walk-in rules: not an exam item
         src = md.parent
-        ticks = [2 * t for t in m["frames"]]
-        win = window(ticks, 2 * m["t_star"], 1)
-        v = "ins3f" if (src / "ins3f").exists() else "ins3"
+        win = window([2 * t for t in m["frames"]], 2 * m["t_star"], 1)
         iid = f"PI-{int(m['scene'][3:]):03d}"
-        dg = m.get("diagnostics", {})
-        foot = m["variants"].get("ins3", {}).get("foot_offset_m", {})
-        f0 = sorted(foot.values())[len(foot) // 2] if foot else float("nan")
-        cap = (f"pedestrian insertion, TTR 3 s, grounded  |  view gap {c['az_worst_deg']:.0f} deg  |  donor box PSNR {c['psnr_box']:.1f} dB"
-               f"  |  foot offset before fix {f0:+.2f} m, gain {dg.get('gain_ins3f', 1):.2f}")
-        size = clip(out, iid, [src / "real/cams/front" / f"{t:07d}.jpg" for t in win], [src / v / "cams/front" / f"{t:07d}.jpg" for t in win],
+        dn = pl["donor"]
+        cap = (f"pedestrian insertion, cross-scene donor p3_{dn['scene']:03d}/{dn['node']}, walk-in from the kerb ({v3['walk_s']:.1f} s at "
+               f"{v3['speed']:.1f} m/s), TTR 3 s  |  view gap {pl['view_gap']:.0f} deg  |  donor PSNR {dn['psnr']:.1f} dB")
+        size = clip(out, iid, [src / "real/cams/front" / f"{t:07d}.jpg" for t in win], [src / "ins3/cams/front" / f"{t:07d}.jpg" for t in win],
                     [(t - 2 * m["t_star"]) / 20 for t in win], cap)
-        items.append({"id": iid, "type": "PI", "scene": m["scene"], "segment": m["segment"], "category": "must-react (TTR 2 / 3 / 4 s) + null",
-                      "view_gap": c["az_worst_deg"], "psnr": c["psnr_box"], "donor": c["donor"], "foot_offset_before_m": f0,
-                      "gain": dg.get("gain_ins3f"), "bytes": size})
-    pi_none = [json.loads(p.read_text())["scene"] for p in sorted((data / "runs/nq4/p3/insert_batch").glob("p3_*/meta.json"))
-               if not json.loads(p.read_text()).get("chosen")]
+        changed = m["scene"] in old_pi
+        items.append({"id": iid, "type": "PI", "scene": m["scene"], "segment": m["target_segment"],
+                      "category": "must-react (TTR 2 / 3 / 4 s) + null" + ("; changed 2026-09-28: walk-in rules, cross-scene donor" if changed else ""),
+                      "view_gap": pl["view_gap"], "psnr": dn["psnr"], "donor": f"p3_{dn['scene']:03d}/{dn['node']}",
+                      "walk_s": v3["walk_s"], "vis_out_s": v3["vis_out_s"], "gain": m.get("gain_rgb"),
+                      "shadow_frac": m.get("shadow_on_fraction", {}).get("ins3"), "changed": changed, "bytes": size})
+    pi_none = [json.loads(p.read_text())["scene"] for p in sorted((X / "plan").glob("p3_*.json")) if not json.loads(p.read_text())["item"]]
     # VD
     V = data / "runs/nq4/p3veh"
     for sd in sorted((data / "processed/nq4_p3_veh/scenes").glob("p3_v*")):
@@ -138,7 +141,7 @@ def render(a):
     print(json.dumps({"items": len(items), "MB": round(sum(i["bytes"] for i in items) / 1e6, 1)}))
 
 
-PAGES = {"PI": ("ped-insert", "行人插入（贴地标准构造，展示到达时间 3 s 的版本）"),
+PAGES = {"PI": ("ped-insert", "行人插入（跨场景供体、从路边走进车道、贴地标准构造，展示到达时间 3 s 的版本）"),
          "PD": ("ped-delete", "行人删除（登记的目标事件）"),
          "VD": ("veh-delete", "车辆删除（事件车辆）")}
 
@@ -189,7 +192,7 @@ def md(a):
            "所有题用同一个脚本、同一种版式渲染（`scripts/p3/review_sheet.py`）：前相机，左录像、右编辑后，锚点前 2 s 到后 1 s，每道题一段约 0.3 MB 的循环 WebP。"
            "请在各分页最后一列填 keep / drop / 备注。背景与规则见 [p3-exam-filter.md](p3-exam-filter.md)。", "",
            "| 分页 | 题数 | 说明 |", "|:--|--:|:--|"]
-    notes = {"PI": f"同一供体另有到达时间 2 s、4 s 和车道外对照三个版本，版式相同不重复列；视角差 > 20° 或没有合格供体的场景不出题（目前 {len(j['pi_no_donor'])} 个场景没有合格供体）",
+    notes = {"PI": f"同一供体另有到达时间 2 s、4 s 和车道外对照三个版本，版式相同不重复列。2026-09-28 按用户对 p3_003 的意见改为「从路边走进来」的轨迹（整段都在、先在车道外被看见 ≥ 1.5 s、不穿过任何车），类别栏标了 changed 的是按新规则重做的题；找不到合规走法的场景不出题（目前 {len(j['pi_no_donor'])} 个）",
              "PD": "类别按登记目标事件的过滤结果：must-react = 有该反应帧且司机减速；null-type = 窗口内没有该反应帧，只能当删除型对照",
              "VD": "类别是事件类型（车道内静止车、路口横穿、加塞、对向）；全部是按登记车辆规则选出的「必须反应」事件"}
     for t, (slug, title) in PAGES.items():
