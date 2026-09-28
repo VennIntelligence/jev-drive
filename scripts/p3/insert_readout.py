@@ -58,7 +58,7 @@ def main():
     a = ap.parse_args()
     if not stage() or a.stage_only:
         return
-    env = dict(os.environ, P3_SET=SET, P5_SET=SET)
+    env = dict(os.environ, P3_SET=SET, P5_SET=SET, P3_HEAD_TOL=os.environ.get("P3_HEAD_TOL", "0.5"))   # new box, see nq4_p3.exam
     jv, op = str(DATA / "envs/jevdrive/bin/python"), str(DATA / "envs/openpilot/bin/python")
     for argv in ([jv, "-m", "jevdrive.nq4_p3", "index", "--processed-root", str(DATA / "processed/waymo_ds/training")],
                  [op, "scripts/p5_openpilot.py", "--models", "cinque", "lebowski", "--workers", "1"],

@@ -205,7 +205,9 @@ def main():
             assert json.loads(dst.read_text()) == t, f"target {k} differs"
         else:
             dst.write_text(src.read_text())
-    env = dict(os.environ, PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
+    # P3_HEAD_TOL: on the RTX 6000D box the I3 ridge_late refit differs from the stored run by up to 0.32 m (GPU
+    # reductions), while the registered P3 readout reproduces flip for flip (todo P section, 2026-09-28 20:40)
+    env = dict(os.environ, PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True", P3_HEAD_TOL=os.environ.get("P3_HEAD_TOL", "0.5"))
     ks = kinds()
     running = {}
     for kd in ks:                                  # adopt live scene processes of an earlier instance
@@ -295,7 +297,7 @@ def main():
         log(f"pedestrian readout over {len(scenes)} scenes on GPU {TEST_GPU}", event="readout", scenes=scenes)
         rc = subprocess.call(["python3", "scripts/p3/gpu_enable.py", "readout", "--tag", "expand66", "--scenes", *map(str, scenes),
                               "--gpu", str(TEST_GPU), "--cpus", "168-171"], cwd=REPO, env=env,
-                             stdout=open(E / "readout.out", "a"), stderr=subprocess.STDOUT)
+                             stdout=open(E / "readout.out", "a"), stderr=subprocess.STDOUT)   # env: P3_HEAD_TOL (new box)
         log(f"pedestrian readout rc={rc}", event="readout_done", rc=rc)
     (E / "DONE").write_text(time.strftime("%F %T") + "\n")
     log("DONE", event="done")
