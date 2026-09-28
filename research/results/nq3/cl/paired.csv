@@ -1,11 +1,1 @@
-a,b,seeds,subset,scope,metric,n_routes,diff,lo,hi,collisions_a,collisions_b,reading
-blue,simlingo,0,all,all,DS,220,1.9752406500000002,-1.1352488832954546,5.043567373863631,40.0,,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,all,SR,220,0.03636363636363636,-0.022727272727272728,0.09545454545454546,40.0,,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,sudden,DS,65,-0.28412907692307715,-3.668686776923077,2.7711512307692305,4.0,6.0,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,sudden,SR,65,-0.015384615384615385,-0.07692307692307693,0.046153846153846156,4.0,6.0,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,yield,DS,75,3.0249704000000004,-4.140729883666666,10.121123064333334,23.0,,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,yield,SR,75,0.05333333333333334,-0.08,0.18666666666666668,23.0,,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,obstacle,DS,50,6.18132,0.9241550000000001,12.194177999999997,11.0,13.0,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,obstacle,SR,50,0.1,0.0,0.2,11.0,13.0,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,other,DS,30,-2.7639149000000005,-9.644205966666668,2.3768428333333333,2.0,0.0,"criterion 5: author column, closed-loop check of T3"
-blue,simlingo,0,all,other,SR,30,0.0,-0.13333333333333333,0.13333333333333333,2.0,0.0,"criterion 5: author column, closed-loop check of T3"
+
