@@ -69,3 +69,14 @@ openpilot 必须证明自己加了东西，否则分数是 base 挣的。论文�
 - 停进程只按记录的 PID。
 
 ## 执行日志
+- 2026-09-28 13:53 CST smoke（1 条路线 24721，oshadow，不计入任何表）：管线通，每 tick 约 176 ms（agent 167 ms，其中 openpilot + twin 约 92 ms），Completed。
+- 2026-09-28 13:58–14:38 CST phase 1（native、oshadow × 6 条）跑完，读数在 `research/results/op_arb/p1/`。要点（详见 research 文档第 2 节）：native 6 / 6 从头到尾车速 0，被判 blocked；
+  静止时 plan 5 s 位移中位数：无障碍 0.97 m、红灯 0.18 m、前车 ≤ 15 m 0.08 m；一旦在走（oshadow 带着走），1–4 m/s 上 plan 的 5 s 速度比当前高 3.5–6 m/s（会加速），所以起步失败只发生在静止；
+  路口前 0–20 m 带 turn desire 的 plan 在 10 / 15 m 处只跟路线横移的 −0.06 / −0.05（等于直行），无 desire 的 twin 一样，进了弯以后才跟（1.04–1.12）。
+- 2026-09-28 14:5x CST **phase 2 的 e2e / switch / oplat 参数（写于任何 phase 2 数字之前；只用 phase 1 的 6 条诊断路线定）**：
+  1. plan 约束：`plan_gate` always（行驶中 plan 没有低速偏置，不需要门）、`plan_form` abs（openpilot 自己的位置）、`plan_vmin` 1.0 m/s；plan 只在车速 ≥ 1 m/s 时算「binding」，binding 之后 1.5 s 内继续约束到停下（修掉了一个 bug：静止时的 plan 永远比 base 小，原代码会让它一直 binding，等于回到「起不了步」）。
+  2. 停车锁存的放行：`release` planx，openpilot plan 的 5 s 位移 > 2.0 m 持续 1.0 s（`release_th` 2.0、`release_s` 1.0）。依据：phase 1 静止片段按真值分成「该等」（红灯、前车）8 段、「该走」13 段，
+     这个规则在 8 段「该等」里 0 段误放、在 13 段「该走」里 4 段放行（最快 0.95 s）；1.5 m 阈值会在 1 段 50 s 红灯里误放，gas_press 系列会在前车等待里误放。
+  3. 兜底：锁存 20 s 后 base 自己放行（`latch_max_s` 20，真车上相当于驾驶员按 resume），每次放行记原因（signal / timeout），兜底的比例单独报。
+  4. 先按分级规则在 2 条诊断路线（27787 红灯起点、24721 前车急刹）上各跑 e2e、switch 一次看状态机，不计分；然后 phase 2 五臂（base、acc、e2e、switch、oplat）× 10 条。
+     oplat = switch 去掉路口转弯区（openpilot 自己过路口，只有起步和锁存归 base），用来在闭环里直接量「带 desire 的 openpilot 会不会转弯」。

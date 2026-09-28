@@ -295,8 +295,8 @@ class OpArbAgent(Z.ZeroShotAgent):
         plan_on = use_plan and not warm and gate and (speed >= A["plan_vmin"] or t_frame - self.binding_t < 1.5)
         if plan_on:
             cons["plan"] = s_plan
-            if s_plan[-1] < min(v[-1] for k, v in cons.items() if k != "plan") - 0.5:
-                self.binding_t = t_frame
+            if speed >= A["plan_vmin"] and s_plan[-1] < min(v[-1] for k, v in cons.items() if k != "plan") - 0.5:
+                self.binding_t = t_frame                       # refreshed only while rolling: a standstill plan never binds
         rel = None
         if use_plan and not self.latch and self.moved and self.stop_t > 0 and t_frame - self.binding_t < 1.5:
             self.latch, self.latch_t, self.rel_t = True, 0.0, 0.0
@@ -307,8 +307,10 @@ class OpArbAgent(Z.ZeroShotAgent):
             rel = {"gas": gas > A["release_th"], "planx": x5 > A["release_th"], "nobrake": mt0[bi] < A["release_th"],
                    "none": False}[A["release"]]
             self.rel_t = self.rel_t + dt if rel else 0.0          # the release signal must hold release_s seconds
-            if (rel and self.rel_t >= A["release_s"]) or self.latch_t > A["latch_max_s"] or speed > 1.0:
-                self.latch = False
+            why = "signal" if rel and self.rel_t >= A["release_s"] else "timeout" if self.latch_t > A["latch_max_s"] \
+                else "rolling" if speed > 1.0 else None
+            if why:
+                self.latch, rel = False, why
             else:
                 cons["latch"] = np.zeros(len(TIMES))
         src = min(cons, key=lambda k: cons[k][-1] + 1e-3 * (k == "base"))
