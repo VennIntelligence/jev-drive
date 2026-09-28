@@ -127,7 +127,7 @@ def cmd_synth(a):
     keys = keys_of(a.data, a.keys)
     mt = meta(a.data)
     times = I.grid(-1.5 - a.preroll)
-    tag = a.method + (f"_pre{a.preroll:g}" if a.preroll else "") + (f"_{a.keys}" if a.keys else "")
+    tag = a.method + (f"_pre{a.preroll:g}" if a.preroll else "") + (f"_{a.keys}" if a.keys else "") + (f"_g{a.grid:g}" if a.grid else "")
     out = np.lib.format.open_memmap(root(a.data) / f"{tag}.npy", "w+", np.uint8, (len(keys), len(times), 2, 6, 128, 256))
     t0 = time.time()
     if a.method in ("hold", "blend", "warp"):
@@ -141,9 +141,18 @@ def cmd_synth(a):
         import torch
         model = {"rife": I.RIFE, "gimm": I.GIMM}[a.method](VFI_ROOT)
         pre = times < -1.5 - 1e-6                    # preroll frames (before the first keyframe) come from warp
+        # --grid 0.2: synthesize only the context-rate times t0 - 0.2 k (the frames a Cinque / small output at t0 reads),
+        # every other slot shows the latest synthesized or key frame before it
+        on = np.isclose(times / a.grid, np.round(times / a.grid)) | np.isclose(times[:, None], I.T_KEY).any(1) if a.grid else ~pre
+        on &= ~pre
+        src = np.array([np.flatnonzero(on & (times <= t + 1e-9))[-1] if (on & (times <= t + 1e-9)).any() else j
+                        for j, t in enumerate(times)])
         for q in range(0, len(keys), a.chunk):
-            out[q:q + a.chunk, ~pre] = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times[~pre],
-                                                  batch=a.batch or {"rife": 64, "gimm": 8}[a.method])
+            syn = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times[on], batch=a.batch or {"rife": 64, "gimm": 8}[a.method])
+            full = np.empty((len(syn), len(times)) + syn.shape[2:], np.uint8)
+            full[:, on] = syn
+            full[:, ~pre & ~on] = full[:, src[~pre & ~on]]
+            out[q:q + a.chunk, ~pre] = full[:, ~pre]
             torch.cuda.synchronize()
         if pre.any():
             tr = tracks(a.data)
@@ -159,7 +168,7 @@ def cmd_synth(a):
             "workers": a.workers if a.method in ("hold", "blend", "warp") else 1}
     (root(a.data) / f"{tag}.json").write_text(json.dumps(info))
     print(json.dumps(info | {"times": len(times)}))
-    if a.data == "wod" and not a.preroll:
+    if a.data == "wod" and not a.preroll and not a.grid:
         image_metrics(tag)
 
 
@@ -406,6 +415,7 @@ if __name__ == "__main__":
     p.add_argument("--keys", default="", help="nav keyframe variant, e.g. nominal")
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--chunk", type=int, default=128)
+    p.add_argument("--grid", type=float, default=0.0, help="VFI only on this time grid (0.2 = context rate), hold between")
     p.add_argument("--batch", type=int, default=0, help="VFI pairs per forward (0: 64 RIFE, 8 GIMM, <= ~12 GB)")
     p = sp.add_parser("run")
     p.add_argument("--data", choices=("wod", "nav"), required=True)
