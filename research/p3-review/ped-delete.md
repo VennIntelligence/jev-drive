@@ -24,3 +24,4 @@
 | ![PD-015](../figs/p3/review/PD-015.webp) | PD-015<br>p3_015 | no must-react frame (null-type) | — | 26.5 |  |
 | ![PD-016](../figs/p3/review/PD-016.webp) | PD-016<br>p3_016 | no must-react frame (null-type) | — | 30.1 |  |
 | ![PD-017](../figs/p3/review/PD-017.webp) | PD-017<br>p3_017 | no must-react frame (null-type) | — | 23.9 |  |
+| ![PD-018](../figs/p3/review/PD-018.webp) | PD-018<br>p3_018 | no must-react frame (null-type) | — | 26.3 |  |
