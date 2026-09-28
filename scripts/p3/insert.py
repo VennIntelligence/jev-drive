@@ -76,12 +76,150 @@ class Path2D:
         ln = np.sqrt(n2[j])
         return self.cum[j] + u[j] * ln, float((ab[j, 0] * (p - a[j])[1] - ab[j, 1] * (p - a[j])[0]) / ln)
 
+ALPHA_SHADOW, R_SHADOW, DONOR_THR = 0.5, 0.35, 15
+
+
+def _lum(im):
+    return im[..., :3].astype(np.float64) @ np.array([0.299, 0.587, 0.114])
+
+
+def _ring(mask):
+    """Background ring around a donor mask: its bounding box widened by half its width each side and extended 30 %
+    below, minus the (dilated) donor itself."""
+    ys, xs = np.nonzero(mask)
+    h, w = ys.max() - ys.min() + 1, xs.max() - xs.min() + 1
+    r = np.zeros_like(mask)
+    r[max(ys.min(), 0):min(ys.max() + int(0.3 * h) + 1, mask.shape[0]), max(xs.min() - w // 2, 0):min(xs.max() + w // 2 + 1, mask.shape[1])] = True
+    from scipy.ndimage import binary_dilation
+    return r & ~binary_dilation(mask, iterations=3)
+
+
+def post_fix(a, out, variants, frames, j, dk, T0, p0, ground, view, apply, tr, ps, to8, DSM):
+    """Exposure match and contact shadow on the grounded variants (their saved frames are rewritten in place).
+    Exposure: the donor keeps the donor / local-background luminance ratio it has in the log at its original place
+    (median over up to 8 front views where its box is >= 40 px); one gain per variant, clipped to [0.5, 2].
+    Shadow: an ambient-occlusion blob, a disc of radius R_SHADOW on the LiDAR ground under the feet, projected into each
+    camera, Gaussian-softened, darkening non-donor pixels by up to ALPHA_SHADOW."""
+    import torch
+    from PIL import Image, ImageDraw, ImageFilter
+    from scipy.ndimage import binary_dilation
+    ratios = []
+    with torch.no_grad():
+        vis = [t for t in range(ps.instances_pose.shape[0]) if bool(ps.per_frame_instance_mask[t, dk])]
+        for t in vis[::max(len(vis) // 16, 1)]:
+            ii, cc = view(t)
+            K, c2w = cc["intrinsics"].cpu().numpy().astype(np.float64), cc["camera_to_world"].cpu().numpy().astype(np.float64)
+            real = to8(ii["pixels"])
+            r = DSM._box_mask(ps.instances_pose[t, dk].cpu().numpy(), ps.instances_size[dk].cpu().numpy(), K, c2w, *real.shape[:2], 0)
+            if not r or r[3] - r[1] < 40:
+                continue
+            apply("plus")
+            plus = to8(tr(ii, cc)["rgb"])
+            apply("minus")
+            minus = to8(tr(ii, cc)["rgb"])
+            m = np.abs(plus.astype(int) - minus.astype(int)).max(-1) > DONOR_THR
+            box = np.zeros_like(m)
+            box[r[1]:r[3], r[0]:r[2]] = True
+            m &= box
+            if m.sum() < 200:
+                continue
+            ring = _ring(m)
+            Y = _lum(real)
+            ratios.append(np.median(Y[m]) / max(np.median(Y[ring]), 1.0))
+            if len(ratios) >= 8:
+                break
+        apply("plus")
+    ratio0 = float(np.median(ratios)) if ratios else float("nan")
+    res = {"exposure_ratio_orig": ratio0, "exposure_views": len(ratios)}
+    for name, g in variants.items():
+        if not g.get("fixed"):
+            continue
+        d = out / name
+        gains = []
+        for t in frames:
+            fn = f"{2 * t:07d}.jpg"
+            im = np.asarray(Image.open(d / "cams/front" / fn))
+            mi = np.asarray(Image.open(out / "minus/cams/front" / fn))
+            m = np.abs(im.astype(int) - mi.astype(int)).max(-1) > DONOR_THR
+            if m.sum() >= 200:
+                ring = _ring(m)
+                gains.append(ratio0 / (np.median(_lum(im)[m]) / max(np.median(_lum(mi)[ring]), 1.0)))
+        gain = float(np.clip(np.median(gains), 0.5, 2.0)) if gains and np.isfinite(ratio0) else 1.0
+        res[f"gain_{name}"] = gain
+        for t in frames:
+            fn = f"{2 * t:07d}.jpg"
+            xy = (g["Rz"] @ (T0[t, j] - p0) + g["off"])[:2]
+            zg = ground(xy)
+            for ci, c in enumerate(CAMS):
+                im = np.asarray(Image.open(d / "cams" / c / fn)).astype(np.float64)
+                mi = np.asarray(Image.open(out / "minus/cams" / c / fn))
+                m = np.abs(im.astype(int) - mi.astype(int)).max(-1) > DONOR_THR
+                soft = np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.5))) / 255.0
+                im = im * (1 + (gain - 1) * soft[..., None])
+                _, cc = view(t, ci)
+                K, c2w = cc["intrinsics"].cpu().numpy().astype(np.float64), cc["camera_to_world"].cpu().numpy().astype(np.float64)
+                ang = np.linspace(0, 2 * np.pi, 32, endpoint=False)
+                disc = np.c_[xy[0] + R_SHADOW * np.cos(ang), xy[1] + R_SHADOW * np.sin(ang), np.full(32, zg), np.ones(32)]
+                pc = (np.linalg.inv(c2w) @ disc.T).T[:, :3]
+                if np.isfinite(zg) and (pc[:, 2] > 0.5).all():
+                    uv = (K @ pc.T).T
+                    uv = uv[:, :2] / uv[:, 2:]
+                    sh = Image.new("L", (im.shape[1], im.shape[0]), 0)
+                    ImageDraw.Draw(sh).polygon([tuple(p) for p in uv], fill=255)
+                    rad = max(1.5, 0.25 * (uv[:, 0].max() - uv[:, 0].min()))
+                    sh = np.asarray(sh.filter(ImageFilter.GaussianBlur(rad))) / 255.0
+                    sh = sh * ~binary_dilation(m, iterations=2)
+                    im = im * (1 - ALPHA_SHADOW * sh[..., None])
+                Image.fromarray(np.clip(im + 0.5, 0, 255).astype(np.uint8)).save(d / "cams" / c / fn, quality=95)
+    return res
+
+
+def compare_clip(a, out, key, frames, ts, variants, diag, ttf):
+    """Before | after (TTR 3 s): full front view on top, a 2.5x crop around the donor's feet below."""
+    import imageio.v2 as imageio
+    from PIL import Image, ImageDraw, ImageFont
+    f1, f2 = ImageFont.truetype(str(ttf), 18), ImageFont.truetype(str(ttf), 16)
+    before, after = variants["ins3"], variants["ins3f"]
+    wr = imageio.get_writer(a.out / f"{key}_fix.mp4", fps=HZ, codec="libx264", quality=8, pixelformat="yuv420p", macro_block_size=16)
+    small = []
+    for i, t in enumerate(frames):
+        fn = f"{2 * t:07d}.jpg"
+        mi = np.asarray(Image.open(out / "minus/cams/front" / fn))
+        G = Image.new("RGB", (1280, 854 + 58), (20, 20, 20))
+        for k, (name, title) in enumerate((("ins3", "before: rigid move"), ("ins3f", "after: grounded + exposure + contact shadow"))):
+            im = Image.open(out / name / "cams/front" / fn)
+            arr = np.asarray(im)
+            m = np.abs(arr.astype(int) - mi.astype(int)).max(-1) > DONOR_THR
+            G.paste(im.resize((640, 427), Image.LANCZOS), (k * 640, 0))
+            if m.sum() >= 50:
+                ys, xs = np.nonzero(m)
+                cx, cy = int(np.median(xs)), int(ys.max())
+            else:
+                cx, cy = arr.shape[1] // 2, arr.shape[0] // 2
+            x0, y0 = int(np.clip(cx - 128, 0, arr.shape[1] - 256)), int(np.clip(cy - 120, 0, arr.shape[0] - 171))
+            G.paste(im.crop((x0, y0, x0 + 256, y0 + 171)).resize((640, 427), Image.LANCZOS), (k * 640, 427))
+            d = ImageDraw.Draw(G)
+            d.text((k * 640 + 8, 6), title, fill=(255, 255, 255), font=f1, stroke_width=2, stroke_fill=(0, 0, 0))
+            off = before["foot_offset_m"].get(t, float("nan")) if name == "ins3" else 0.0
+            d.text((k * 640 + 8, 427 + 6), f"zoom x2.5   foot above LiDAR ground {off:+.2f} m", fill=(255, 255, 255), font=f2,
+                   stroke_width=2, stroke_fill=(0, 0, 0))
+        ImageDraw.Draw(G).text((10, 862), f"{key}  insertion, TTR 3 s   t - t* = {(t - ts) / HZ:+.1f} s   exposure gain "
+                               f"{diag.get('gain_ins3f', 1):.2f}   donor at its own place: foot {diag['orig_foot_offset_m']:+.2f} m",
+                               fill=(230, 230, 230), font=f1)
+        wr.append_data(np.asarray(G))
+        if i % 2 == 0:
+            small.append(G.resize((1024, 730), Image.LANCZOS))
+    wr.close()
+    small[0].save(a.out / f"{key}_fix.webp", save_all=True, append_images=small[1:], duration=200, loop=0, quality=78, method=6)
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scene", type=int, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--donors", type=Path, default=DATA / "runs/nq4/p3/filter/donors")
+    ap.add_argument("--fix", action="store_true", help="also render the grounded variants (<name>f): feet snapped to the LiDAR "
+                    "ground, local exposure matched, contact shadow; plus a before | after clip of TTR 3 s")
     a = ap.parse_args()
     # nvdiffrast JIT needs this env's ninja on PATH (as in ds.py main)
     os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
@@ -207,6 +345,36 @@ def main():
         return
     j, ts, p0, variants, frames, rec = chosen
     dk = keys[j]
+    # ---- ground contact diagnostics (fix iteration 2026-09-28): LiDAR ground (drivestudio ground label) around the donor
+    gp = []
+    for t in range(max(frames[0] - 30, 0), min(frames[-1] + 30, nf), 3):
+        Lr = np.fromfile(proc / "lidar" / f"{t:03d}.bin", dtype=np.float32).reshape(-1, 14)
+        Lr = Lr[Lr[:, 10] == 1][:, 3:6].astype(np.float64)
+        gp.append(Lr @ E[t][:3, :3].T + E[t][:3, 3])
+    gp = np.concatenate(gp)
+
+    def ground(xy):
+        d = np.linalg.norm(gp[:, :2] - xy, axis=1)
+        for r in (0.8, 2.0):
+            if (d <= r).sum() >= 5:
+                return float(np.median(gp[d <= r, 2]))
+        return float("nan")
+
+    Mloc = node._means.detach()[node.point_ids[:, 0] == j].cpu().numpy().astype(np.float64)
+    mod = list(range(frames[0] - 1, frames[-1] + 2))
+    feet = {t: float(np.percentile((Mloc @ R0[t, j].T)[:, 2], 1) + T0[t, j, 2]) for t in mod}   # lowest 1 % of the gaussians
+    orig_off = [feet[t] - ground(T0[t, j, :2]) for t in frames]
+    diag = {"orig_foot_offset_m": float(np.nanmedian(orig_off)),
+            "jitter_z_m": float(np.std(np.diff(T0[frames, j, 2], 2))), "jitter_xy_m": float(np.std(np.linalg.norm(np.diff(T0[frames, j, :2], 2, axis=0), axis=1)))}
+    if a.fix:
+        for name in list(variants):
+            g = variants[name]
+            xy = {t: (g["Rz"] @ (T0[t, j] - p0) + g["off"])[:2] for t in mod}
+            off = np.array([feet[t] - p0[2] + g["off"][2] - ground(xy[t]) for t in mod])
+            off = np.where(np.isfinite(off), off, np.nanmedian(off))
+            sm = np.array([np.median(off[max(i - 5, 0):i + 6]) for i in range(len(off))])      # 1.1 s median: no jitter added
+            g["foot_offset_m"] = {int(t): float(o) for t, o in zip(mod, off)}
+            variants[name + "f"] = {**g, "dzs": {int(t): float(-o) for t, o in zip(mod, sm)}, "fixed": True}
     pose0 = ps.instances_pose[:, dk].clone()
     fv0 = node.instances_fv.detach().clone()
 
@@ -233,8 +401,12 @@ def main():
             M[:, :3, :3] = Rp @ M[:, :3, :3]
             M[:, :3, 3] = (M[:, :3, 3] - p0p) @ Rp.T + op_
             ps.instances_pose[torch.tensor(mod, device=dv), dk] = M
+            if "dzs" in g:                                        # feet snapped to the LiDAR ground, per frame
+                dz = torch.tensor([g["dzs"][t] for t in mod], dtype=torch.float32)
+                node.instances_trans.data[fr, j, 2] += dz.to(trans0.device)
+                ps.instances_pose[torch.tensor(mod, device=dv), dk, 2, 3] += dz.to(dv)
 
-    names = ["real", "plus", "minus", "ins2", "ins3", "ins4", "null"]
+    names = ["real", "plus", "minus", "ins2", "ins3", "ins4", "null"] + ([f"{n}f" for n in ("ins2", "ins3", "ins4", "null")] if a.fix else [])
     rows = {n: [] for n in names}
     with torch.no_grad():
         for n in names:
@@ -252,6 +424,8 @@ def main():
                 rows[n].append({"frame": 2 * t, "t": t / HZ, "files": rec_f})
             (out / n / "frames.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows[n]))
     apply("plus")
+    if a.fix:
+        diag.update(post_fix(a, out, variants, frames, j, dk, T0, p0, ground, view, apply, tr, ps, to8, DSM))
     # inserted donor geometry per frame (distance ahead and lateral on the logged path) for the captions
     geo = {}
     for name, g in variants.items():
@@ -261,7 +435,7 @@ def main():
             geo[f"{name}/{t}"] = (float(S - path.Se[t]), L)
     meta = {"scene": key, "segment": tg["segment"], "ckpt": ckpt, "donors": report, "chosen": rec, "t_star": ts, "frames": frames,
             "variants": {k: {kk: (v.tolist() if isinstance(v, np.ndarray) else v) for kk, v in g.items()} for k, g in variants.items()},
-            "ego_v_t_star": float(path.v[ts]), "render_s": round(time.time() - t_start, 1)}
+            "ego_v_t_star": float(path.v[ts]), "diagnostics": diag, "render_s": round(time.time() - t_start, 1)}
     (out / "meta.json").write_text(json.dumps(meta, indent=1, default=float))
     # review clip: log | x- | null  /  TTR 2 | TTR 3 | TTR 4
     ttf = Path(sys.executable).parents[1] / "lib/python3.10/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf"
@@ -292,7 +466,9 @@ def main():
             small.append(G.resize((960, 447), Image.LANCZOS))
     wr.close()
     small[0].save(a.out / f"{key}.webp", save_all=True, append_images=small[1:], duration=200, loop=0, quality=80, method=6)
-    print(json.dumps({"scene": key, "chosen": rec, "render_s": meta["render_s"]}, default=float))
+    if a.fix:
+        compare_clip(a, out, key, frames, ts, variants, diag, ttf)
+    print(json.dumps({"scene": key, "chosen": rec, "diagnostics": diag, "render_s": meta["render_s"]}, default=float))
 
 
 if __name__ == "__main__":
