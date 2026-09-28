@@ -166,7 +166,7 @@ def post_fix(a, out, variants, frames, j, dk, T0, p0, ground, view, apply, tr, p
                     uv = uv[:, :2] / uv[:, 2:]
                     sh = Image.new("L", (im.shape[1], im.shape[0]), 0)
                     ImageDraw.Draw(sh).polygon([tuple(p) for p in uv], fill=255)
-                    rad = max(1.5, 0.25 * (uv[:, 0].max() - uv[:, 0].min()))
+                    rad = float(max(1.5, 0.25 * (uv[:, 0].max() - uv[:, 0].min())))
                     sh = np.asarray(sh.filter(ImageFilter.GaussianBlur(rad))) / 255.0
                     sh = sh * ~binary_dilation(m, iterations=2)
                     im = im * (1 - ALPHA_SHADOW * sh[..., None])
