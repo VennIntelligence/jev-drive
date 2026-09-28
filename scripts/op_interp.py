@@ -379,7 +379,10 @@ def cmd_nav_report(a):
     import glob
     import pandas as pd
     subs = V1_SUBS if a.ver == "v1" else V2_SUBS
-    prefix = f"{a.ver}_{a.split}_opi_"
+    # matches scripts/op_interp_score.sh: "nav" (the original 2000-token diagnostic) keeps its original,
+    # un-prefixed eval names; every other run dir is prefixed with its own name so same-stem pose files from
+    # different run dirs (e.g. warp-cinque__base in both nav/ and navfull/) never collide on one eval directory.
+    prefix = f"{a.ver}_{a.split}_opi_" + ("" if a.data == "nav" else f"{a.data}_")
     toks = set(meta(a.data)["names"])
     res = {}
     for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{prefix}*"))):

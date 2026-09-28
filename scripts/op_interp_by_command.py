@@ -40,7 +40,7 @@ def main():
     mt = json.loads((root(a.data) / "meta.json").read_text())
     grp = {t: ("start (v0<1)" if s < 1 else CMD[c]) for t, c, s in zip(mt["names"], mt["cmd"], mt["speed"])}
     counts = pd.Series(grp).value_counts().to_dict()
-    prefix = f"{a.ver}_{a.split}_opi_"
+    prefix = f"{a.ver}_{a.split}_opi_" + ("" if a.data == "nav" else f"{a.data}_")  # matches op_interp_score.sh
     rows = []
     for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{prefix}*"))):
         fs = sorted(glob.glob(d + "/*/*.csv"))
