@@ -9,7 +9,7 @@
            has no 3D boxes, so the labels come from the YOLO26x detections of real_transfer/yolo/wod_train (score >
            0.25, flat-ground lift gx, gy in the rear-axle frame, a 0.7 x 0.7 m footprint around the ground point) and
            the logged 5 s future (waymo_e2e/future.npy); a pedestrian / cyclist that the lift could not place makes
-           the frame `uncertain`. Samples are the even stream offsets (context stride 2 = 5 Hz), labels where YOLO ran.
+           the frame `uncertain`. Samples are the even frame numbers (context stride 2 = 5 Hz; 82 % of the YOLO frames are even), labels where YOLO ran.
            NAVSIM navtrain: GT boxes of the e3 agent cache and navtrain_future (decisions 44 / 53), one sample per token
            on the NAVSIM 2 Hz sample-and-hold protocol (scripts/navsim_zs_openpilot.py; decision 36: off-protocol for
            openpilot, kept as its own dataset tag).
@@ -162,7 +162,7 @@ def labels_wod(workers: int = 16, limit_seq: int = 0):
     for i, st in enumerate(plan["streams"]):
         if st["sequence"] not in set(seqs):
             continue
-        names = st["names"][0::2]
+        names = [n for n in st["names"] if int(n.rsplit("-", 1)[1]) % 2 == 0]    # YOLO ran mostly on multiples of 4
         streams.append({"key": f"{i:04d}_{st['sequence']}", "names": names})
         keep |= set(names)
     fr = fr[fr.frame_id.isin(keep)]
