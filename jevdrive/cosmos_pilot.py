@@ -277,27 +277,36 @@ def _controls_pair(r) -> dict:
     cd = root("clips", r.pair)
     vids = {m: {v: [] for v in ("rgb", "seg", "depth", "edge")} for m in worlds}
     gt = {"mask": [], "box": [], "region": [], "walk_minus": [], "corridor": [], "px": []}
-    cache, diff_inst = {}, []
+    cache, diff_inst, seg_diff, rgb_diff = {}, [], [], []
     for k in ks:
-        fr_ = {}
-        for m, (a, _, fr) in worlds.items():
-            rgb, depth, tag, inst = _load_frame(a, k)
-            seg = seg_image(tag, inst, cache)
-            vids[m]["rgb"].append(rgb)
-            vids[m]["seg"].append(seg)
-            vids[m]["depth"].append(depth_image(depth))
-            vids[m]["edge"].append(edge_image(seg, depth))
-            fr_[m] = (np.array(fr.loc[k, "cam"]), tag, inst)
-        M, tag, inst = fr_["plus"]
+        fr_ = {m: (np.array(fr.loc[k, "cam"]), *_load_frame(a, k)) for m, (a, _, fr) in worlds.items()}
+        M, _, _, tag, inst = fr_["plus"]
         sel = act["k"] == k
         boxes = [box_corners(act["xyz"][sel][act["id"][sel] == h][0], act["yaw"][sel][act["id"][sel] == h][0],
                              kinds[str(h)][2]) for h in haz if (act["id"][sel] == h).any()]
         mask, boxm = _hazard_mask(M, tag, inst, boxes)
-        _, tag_m, inst_m = fr_["minus"]
+        _, _, _, tag_m, inst_m = fr_["minus"]
         region = cv2.dilate((mask | boxm).astype(np.uint8), np.ones((2 * REGION_DILATE + 1,) * 2, np.uint8)) > 0
-        # same object, same id in both runs? share of non-region "thing" pixels whose (tag, id) differs
-        th = np.isin(tag, list(THINGS)) & ~region
-        diff_inst.append(float(((tag != tag_m) | (inst != inst_m))[th].mean()) if th.any() else 0.0)
+        # Instance ids are per run, not per actor (measured: 100% of x+ / x- thing pixels differ). Give each x-
+        # instance the x+ id it overlaps most outside the hazard region, so the same object gets the same seg colour.
+        th = np.isin(tag, list(THINGS)) & (tag == tag_m) & ~region
+        diff_inst.append(float((inst != inst_m)[th].mean()) if th.any() else 0.0)
+        remap = inst_m.copy()
+        if th.any():
+            pm = pd.DataFrame({"m": inst_m[th], "p": inst[th]}).value_counts().reset_index()
+            best = pm.sort_values("count", ascending=False).drop_duplicates("m")
+            lut = dict(zip(best.m, best.p))
+            thm = np.isin(tag_m, list(THINGS))
+            remap[thm] = pd.Series(inst_m[thm]).map(lambda i: lut.get(i, i + 1_000_000)).to_numpy()
+        for m, (tg, ins) in (("plus", (tag, inst)), ("minus", (tag_m, remap))):
+            _, rgb, depth = fr_[m][:3]
+            seg = seg_image(tg, ins, cache)
+            vids[m]["rgb"].append(rgb)
+            vids[m]["seg"].append(seg)
+            vids[m]["depth"].append(depth_image(depth))
+            vids[m]["edge"].append(edge_image(seg, depth))
+        seg_diff.append(float((vids["plus"]["seg"][-1] != vids["minus"]["seg"][-1]).any(-1)[~region].mean()))
+        rgb_diff.append(float(np.abs(vids["plus"]["rgb"][-1].astype(np.int16) - vids["minus"]["rgb"][-1])[~region].mean()))
         gt["mask"].append(np.packbits(mask))
         gt["region"].append(np.packbits(region))
         gt["walk_minus"].append(np.packbits(tag_m == PED_TAG))
@@ -320,7 +329,8 @@ def _controls_pair(r) -> dict:
     px = np.array(gt["px"])
     row.update(frames=len(ks), vis_frames=int((px >= VIS_PX).sum()), px_max=int(px.max()),
                first_vis=int(np.argmax(px >= VIS_PX)) if (px >= VIS_PX).any() else -1,
-               inst_mismatch_outside=float(np.mean(diff_inst)), hazards=len(haz),
+               inst_id_differs=float(np.mean(diff_inst)), seg_diff_outside=float(np.mean(seg_diff)),
+               rgb_absdiff_outside=float(np.mean(rgb_diff)), hazards=len(haz),
                weather=json.dumps(json.loads((ap / "meta.json").read_text())["weather"]))
     return row
 
