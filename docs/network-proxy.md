@@ -102,3 +102,14 @@ Notes:
   then `scp -C` it to `~/data/clash/config.yaml`.
 
 Last verified: 2026-09-22
+
+## Big weights: split the files across two sources (2026-09-28)
+
+Wan2.1-VACE-14B, 69 GB in 7 shards plus an 11 GB T5. `modelscope download` (direct, one connection per file, 4 files
+at a time) ran at 1.5-2 MB/s per file, about 7 MB/s in total, so a 2.5 h ETA. Starting a second download of only the
+missing files from HuggingFace in parallel (`hf download --max-workers 8 --include ...` under `source /etc/network_turbo`,
+into its own `--local-dir`) did not slow the ModelScope side: sampled over 6 min, ModelScope ran at 5.4 MB/s and HF at
+2.6-3.9 MB/s per file, about 12 MB/s in total. The two routes have separate bottlenecks, so the gain comes from using
+both, not from more connections on one (see the table above: four parallel curls on one route stayed at 3 MB/s).
+Take each file from whichever side finishes it first and check its size against the repo listing. `aria2c` is not
+installed on the box.
