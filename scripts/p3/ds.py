@@ -112,6 +112,8 @@ def _load(run: Path, ckpt: str | None, node_type: str = "DeformableNodes"):
     from datasets.driving_dataset import DrivingDataset
     from utils.misc import import_str
     cfg = OmegaConf.load(run / "config.yaml")
+    if os.environ.get("P3_PRELOAD_DEVICE"):          # e.g. cpu: keep the images in RAM to fit a shared card (render only)
+        cfg.data.preload_device = os.environ["P3_PRELOAD_DEVICE"]
     ds = DrivingDataset(data_cfg=cfg.data)
     tr = import_str(cfg.trainer.type)(**cfg.trainer, num_timesteps=ds.num_img_timesteps, model_config=cfg.model,
                                       num_train_images=len(ds.train_image_set), num_full_images=len(ds.full_image_set),
