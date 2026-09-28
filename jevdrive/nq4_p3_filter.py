@@ -23,6 +23,7 @@ proposed amendment 2026-09-28), all on WOD v2 labels, evaluated per 10 Hz frame 
 
   python -m jevdrive.nq4_p3_filter events --out <dir>    # all WOD v2 segments -> events.parquet, frames of scenes 0-9
   python -m jevdrive.nq4_p3_filter scenes --out <dir>    # scenes 0-9: frame flags, per-pedestrian box PSNR, readouts
+  python -m jevdrive.nq4_p3_filter summary --out <dir> --sens <dir>/sens/*   # funnel, survivors, response evidence
 """
 from __future__ import annotations
 
@@ -361,7 +362,11 @@ def scenes(out: Path, exam_dir: Path, native: Path):
             h = q[q.frame == f]
             frames.append({"scene": tg["key"], "frame": int(f), "sfx": f"{2 * f:07d}", "t_rel": round((f - f0) / HZ, 1), "v": eg["v"][f],
                            "react": f in rf, "conflict": bool(h.conflict.any()), "lead": bool((h.conflict & h.lead).any()),
-                           "unseen": bool((h.conflict & ~h.lead & ~h.seen).any())})
+                           "unseen": bool((h.conflict & ~h.lead & ~h.seen).any()),
+                           # react = item (actions should differ); gray = a deleted pedestrian in the ego lane but not a
+                           # react frame (farther than TTR_S, behind a lead or not yet seen); clean = every deleted
+                           # pedestrian off the ego lane (actions should agree: a deletion null)
+                           "cls": "react" if f in rf else "gray" if bool(h.in_lane.any() or h.conflict.any()) else "clean"})
         items.append({"scene": tg["key"], "segment": tg["segment"], "f0": f0, "v0": tg["v0"], "n_delete": len(dl),
                       **item_readout(ped, eg["v"], f0, dl, fr)})
         # every 10 Hz frame's labels of the deleted tracks, for the review clips (scripts/p3/ds.py clip)
@@ -377,7 +382,7 @@ def scenes(out: Path, exam_dir: Path, native: Path):
     I["survives_all"] = I.survives & I.psnr_ok
     # readouts (registered flip rule, I3 tau) on frame subsets; ridge_late is the registered examinee, native descriptive
     key = ["base_id", "sfx"]
-    lab = F.rename(columns={"scene": "base_id"})[key + ["react", "conflict", "lead", "unseen"]]
+    lab = F.rename(columns={"scene": "base_id"})[key + ["react", "conflict", "lead", "unseen", "cls"]]
     lab = lab.merge(I.rename(columns={"scene": "base_id"})[["base_id", "survives", "survives_all"]], on="base_id")
     taus = pd.read_csv(data_dir() / "runs/elicitation/i3-exam/20260926-012841/flip_rates.csv").query("scope == 'pooled'").set_index("examinee").tau_model
     sources = [("ridge_late", pd.read_parquet(exam_dir / "frames_scored.parquet"), "ridge_late op-{m} temporal")]
@@ -393,6 +398,8 @@ def scenes(out: Path, exam_dir: Path, native: Path):
                    "react frames, all items": fs.react,
                    "non-react frames, surviving items": ~fs.react & fs.survives,
                    "non-react frames, all items": ~fs.react,
+                   "clean frames (every deleted pedestrian off the ego lane)": fs.cls == "clean",
+                   "gray frames (a deleted pedestrian in the lane, not react)": fs.cls == "gray",
                    "conflict frames with a lead": fs.lead,
                    "conflict frames, pedestrian not yet seen": fs.unseen}
         for m in ("cinque", "lebowski"):
@@ -413,13 +420,52 @@ def scenes(out: Path, exam_dir: Path, native: Path):
     log.info("readout:\n%s", R.to_string())
 
 
+# ---------------------------------------------------------------- summary tables (CPU, reads the events outputs)
+def _survivors(d: Path, seg: pd.DataFrame) -> dict:
+    q66 = set(seg.index[seg.qualifies])
+    A, B = pd.read_csv(d / "items_A.csv"), pd.read_csv(d / "items_B.csv")
+    B["day"] = B.seg.map(seg.day)
+    core = B.day & B.ok_window & B.deletable
+    stop_bind = (B.v0 < MIN_SPEED) & B.get("release_gap", pd.Series(np.nan, index=B.index)).between(0, 2)
+    sets = {"A: registered anchor, react frame + responded (of the 66)": A[A.survives & A.seg.isin(q66)].seg,
+            "B: re-anchored, all registered rules + responded": B[core & B.ok_speed & B.ok_crowd & B.responded].seg,
+            "B without the speed rule, stopped items need release gap in [0, 2] s": B[core & B.ok_crowd & ((B.ok_speed & B.responded) | stop_bind)].seg,
+            "B without the crowd rule": B[core & B.ok_speed & B.responded].seg,
+            "B without speed and crowd rules (no response rule)": B[core].seg,
+            "B ceiling: any react event, daytime": B[B.day].seg}
+    return {k: sorted(set(v)) for k, v in sets.items()}
+
+
+def summary(out: Path, sens: list[Path]):
+    seg = pd.read_csv(out / "segments.csv").set_index("seg")
+    order = seg[seg.qualifies].sort_values("seg", key=lambda s: s.map(SEL.crc)).index.tolist()     # pool scene k
+    rows, ids = [], {}
+    for d in [out, *sens]:
+        tag = "base" if d == out else d.name
+        for k, v in _survivors(d, seg).items():
+            rows.append({"config": tag, "rule set": k, "segments": len(v), "in_qualifying66": sum(s in order for s in v)})
+            if tag == "base":
+                ids[k] = v
+    pd.DataFrame(rows).to_csv(out / "funnel.csv", index=False)
+    base = sorted(set(ids["A: registered anchor, react frame + responded (of the 66)"]) |
+                  set(ids["B: re-anchored, all registered rules + responded"]))
+    pd.DataFrame({"seg": base, "pool_scene": [order.index(s) if s in order else -1 for s in base],
+                  "in_A": [s in ids["A: registered anchor, react frame + responded (of the 66)"] for s in base],
+                  "in_B": [s in ids["B: re-anchored, all registered rules + responded"] for s in base]}).sort_values("pool_scene").to_csv(out / "survivors.csv", index=False)
+    ev = pd.read_csv(out / "response_evidence.csv")
+    ev.groupby("cat").agg(n=("responded", "size"), responded=("responded", "mean"), dv_median=("dv", "median"),
+                          v0_median=("v0", "median")).to_csv(out / "response_by_category.csv")
+    log.info("funnel:\n%s", pd.DataFrame(rows).to_string())
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("events", "scenes"))
+    ap.add_argument("cmd", choices=("events", "scenes", "summary"))
     ap.add_argument("--out", type=Path, default=data_dir() / "runs/nq4/p3/filter")
-    ap.add_argument("--workers", type=int, default=min(8, n_cpus()))
+    ap.add_argument("--workers", type=int, default=0, help="events: worker processes (default min(8, n_cpus()))")
     ap.add_argument("--exam-dir", type=Path, default=data_dir() / "runs/nq4/p3-exam/20260927-232404")
     ap.add_argument("--native", type=Path, default=data_dir() / "runs/nq4/p3/formal10/native/native_frames.parquet")
+    ap.add_argument("--sens", type=Path, nargs="*", default=[], help="summary: sensitivity output dirs")
     ap.add_argument("--set", nargs="*", default=[], metavar="NAME=VALUE",
                     help="sensitivity runs only: override a rule constant (LANE, TTR_S, SEEN_S, H_MIN, ...)")
     a = ap.parse_args()
@@ -427,7 +473,12 @@ def main():
         k, v = kv.split("=")
         assert k in globals() and isinstance(globals()[k], float), k
         globals()[k] = float(v)
-    events(a.out, a.workers) if a.cmd == "events" else scenes(a.out, a.exam_dir, a.native)
+    if a.cmd == "events":
+        events(a.out, a.workers or min(8, n_cpus()))
+    elif a.cmd == "scenes":
+        scenes(a.out, a.exam_dir, a.native)
+    else:
+        summary(a.out, a.sens)
 
 
 if __name__ == "__main__":
