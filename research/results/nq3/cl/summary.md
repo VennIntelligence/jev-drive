@@ -5,28 +5,3 @@ DS over the requested routes (missing = 0, the official merge); SR = Bench2Drive
 | arm | seed | executor | finished / requested | DS | DS (finished) | SR % | sudden | yield | obstacle | other | collisions | retries |
 |:--|--:|:--|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
 | CL1 expert track via P7 (ceiling) | 0 | P7 | 219 / 220 | 82.6 | 82.9 | 60.5 | 70.8 (65) | 44.0 (75) | 62.0 (50) | 76.7 (30) | 80.0 | 72 |
-| CL3 Cinque + ridge_late | 0 | P7 | 201 / 220 | 8.0 | 8.8 | 0.0 | 0.0 (65) | 0.0 (75) | 0.0 (50) | 0.0 (30) | 429.0 | 52 |
-| CL3 Cinque + ridge_late | 1 | P7 | 198 / 220 | 8.3 | 9.2 | 0.0 | 0.0 (65) | 0.0 (75) | 0.0 (50) | 0.0 (30) | 410.0 | 56 |
-| CL3 Cinque + ridge_late | 2 | P7 | 215 / 220 | 9.8 | 10.0 | 0.5 | 0.0 (65) | 1.3 (75) | 0.0 (50) | 0.0 (30) | 445.0 | 13 |
-| CL5 Cinque + Q2 bypass head | 0 | P7 | 40 / 40 | 15.5 | 15.5 | 0.0 |  (0) |  (0) | 0.0 (40) |  (0) | 111.0 | 2 |
-| CL5 Cinque + Q2 bypass head | 1 | P7 | 40 / 40 | 11.4 | 11.4 | 0.0 |  (0) |  (0) | 0.0 (40) |  (0) | 120.0 | 3 |
-| CL5 Cinque + Q2 bypass head | 2 | P7 | 40 / 40 | 12.6 | 12.6 | 0.0 |  (0) |  (0) | 0.0 (40) |  (0) | 108.0 | 1 |
-| CL6 E5 student (image-plane) | 0 | P7 | 214 / 220 | 8.8 | 9.0 | 0.0 | 0.0 (65) | 0.0 (75) | 0.0 (50) | 0.0 (30) | 470.0 | 24 |
-| BridgeDrive (author executor) | 0 | author | 220 / 220 | 96.1 | 96.1 | 88.2 | 95.4 (65) | 72.0 (75) | 100.0 (50) | 93.3 (30) | 12.0 | 2 |
-| SimLingo (author executor) | 0 | author | 219 / 220 | 86.8 | 87.2 | 69.5 | 86.2 (65) | 46.7 (75) | 74.0 (50) | 83.3 (30) | 49.0 | 12 |
-| BLUE (author executor) | 0 | author | 220 / 220 | 88.8 | 88.8 | 73.2 | 84.6 (65) | 52.0 (75) | 84.0 (50) | 83.3 (30) | 40.0 | 5 |
-
-## Paired differences (a - b, same routes and seeds; route-grouped bootstrap 10 000, seeds averaged per route first; SR in pp)
-
-| a - b | seeds | subset | scope | metric | n | diff [95% CI] | collisions a / b | reading |
-|:--|:--|:--|:--|:--|--:|:--|:--|:--|
-| blue - simlingo | 0 | all | all | DS | 220 | +2.0 [-1.1, +5.0] | 40 / nan | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | all | SR | 220 | +3.6 [-2.3, +9.5] | 40 / nan | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | sudden | DS | 65 | -0.3 [-3.7, +2.8] | 4 / 6 | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | sudden | SR | 65 | -1.5 [-7.7, +4.6] | 4 / 6 | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | yield | DS | 75 | +3.0 [-4.1, +10.1] | 23 / nan | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | yield | SR | 75 | +5.3 [-8.0, +18.7] | 23 / nan | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | obstacle | DS | 50 | +6.2 [+0.9, +12.2] | 11 / 13 | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | obstacle | SR | 50 | +10.0 [+0.0, +20.0] | 11 / 13 | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | other | DS | 30 | -2.8 [-9.6, +2.4] | 2 / 0 | criterion 5: author column, closed-loop check of T3 |
-| blue - simlingo | 0 | all | other | SR | 30 | +0.0 [-13.3, +13.3] | 2 / 0 | criterion 5: author column, closed-loop check of T3 |
