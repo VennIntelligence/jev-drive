@@ -141,3 +141,46 @@ worker·h 是按旧 box 的每路线耗时先验算的，SimLingo / BLUE 在新�
 - 任何人要求改每卡上限、调 `G_CAPS` / `G_SERVER_MAX`、改启动槽位数，或者重做 per-card knee 测量（那是新测量，不是运行）。
 - 用户对范围、顺序或考生的新决定；所有要写进 `todos/` 的判断。
 - 所有格子结束（`DONE`）：报告给 main，小表由 Mac 拉回 `research/results/nq4/g/`。
+
+## 当前状态（2026-09-28 晚，给下一个 Sonnet 执行员）
+
+前一个执行员被换下（省 token），这是交接快照，写于 20:53 CST。
+
+**owner**：PID `770170`，box 上 `.venv/bin/python scripts/nq4_g_lane.py run`，tmux 窗口 `jev:nq4-g-r15`（`r13`、`r14`
+是之前两次重启留下的空壳，进程已退出，窗口可能还挂着但没有内容）。`$DATA_DIR/runs/nq4/g-lane/pid` 是当前 owner 的准的来源，别看窗口名猜。
+
+**box 端等待脚本**：tmux 窗口 `jev:g-lane-watch`，跑 `$DATA_DIR/runs/nq4/g-lane/g_lane_watch.sh > .../watch.out 2>&1`，15:51:26 起挂着，
+watching `owner_pid=770170`（当前有效，不用重挂）。它是本执行员写的一次性脚本（不在 git 里），逻辑：`tail -F log.txt` 事件驱动 + 每 9000 s（2.5 h，按用户 2026-09-28
+晚间新规矩改的，原来是 1 h）兜底检查一次 owner 存活 / DONE / ERROR / 新的 `ERROR.cell.*` / `ERROR.<key>` / `arms_blocked/*`；触发条件命中就写一行 `TRIGGER=...` 到
+`watch.out` 然后自己退出（连带 tmux 窗口关掉，需要重开）。**新执行员请直接接上这个脚本**（不用重写）：`ssh autodl 'tail -F -n0 $DATA_DIR/runs/nq4/g-lane/watch.out | grep -m1 "TRIGGER="'`
+挂一个阻塞等待即可；如果 `jev:g-lane-watch` 窗口已经不在了（脚本已经触发过一次退出），照第 7 节的方式重开：
+`tmux new-window -t jev -n g-lane-watch "bash $DATA_DIR/runs/nq4/g-lane/g_lane_watch.sh > $DATA_DIR/runs/nq4/g-lane/watch.out 2>&1"`。
+脚本本体在 box 上：`$DATA_DIR/runs/nq4/g-lane/g_lane_watch.sh`（没提交到仓库，纯 ops 脚本）。
+
+**Mac 端监听**：本执行员挂的 `ssh ... tail -F | grep TRIGGER` 后台任务已按精确 task id 停掉（`beamen6f9`），没有留下任何本地后台进程 —
+换人之后是干净的，新执行员自己重新挂一个指向上面 watch.out 的监听即可。
+
+**格子表快照（20:53 CST，`cat $D/g-lane/STATUS.md`）**：`shift`/`swap`/`ghost`/`orig` seed 0 基本全 DONE，只剩 SimLingo 还在跑
+（`simlingo.shift.0` 20/80、`simlingo.swap.0` 46/50，在卡 0、3 上共 11 个 worker）；`ghost`+`orig` seeds 1–2 里没起的还有
+`simlingo.ghost.1`(0/80)、`simlingo.orig.1`(0/80)、`blue.ghost.2`(0/80)、`blue.orig.2`(0/80)、`simlingo.ghost.2`(0/80)、`simlingo.orig.2`(0/80)——
+这 6 格排在 SimLingo/BLUE 前面的活干完之后应该自动起。PDM-Lite 的 `shift`/`swap`/`orig.1`/`orig.2` 仍是登记的 `DROPPED`，原样不动。
+GPU 4、5 已经被 wm-loop 的 demand file 要回去（20:53 的 STATUS 显示这两张卡上「this lane」是 0 worker、「CARLA others」各 6 个）——drain 机制照设计工作，不是异常。
+
+**blue.swap 的修正与归档**：main 2026-09-28 下午判定「zone reached ≥ NQ3 − 30 pp」这条清单项要按世界判（同路线上其它考生都到区就是该考生自己的结果，不是评测器坏了）。
+核对：TFv6、BridgeDrive 在 blue.swap 用的同 10 条 pilot 路线上都是 100% 到区（TFv6 没有 NQ3 tfv6 臂做对照，用的是它自己的到区比例；BridgeDrive 有臂，两边一致）。
+处理：
+- 原判决归档到 `$D/gk/arms_blocked.behaviour-20260928/blue.swap`（附 README）、`$D/gk/ERROR.blue.swap` 改名为 `ERROR.blue.swap.behaviour-20260928`（和 storm 系列的归档同一手法）。
+- `state.json` 里 `pilots["blue.swap"]` 手动改成 `PASS`（`how` 字段写清楚是 main override，不是清单本身过了），`cells["blue.swap.0"]` 清空重置，然后重启 owner 让它接上——
+  10 条 pilot 路线的 `done/*.json` 本来就在批量要读的同一个 `arm_dir` 里，所以批量只补剩下的 40 条，没有重跑 pilot。现在 `blue.swap.0` 已经 DONE（50/50）。
+- 判据原文本身没有改（下次别的考生在别的世界也这样卡，还是要按第 5/9 节走一遍核实，不能直接套用这次的结论）。
+- 决定写在 `todos/2026-09-26-night-queue-4.md` 的 G 节（`[main] 2026-09-28 post-hoc amendment`），已 commit/push（`e63d3a1`）。
+
+**这次交接学到的、原笔记没写的事**：
+1. **`state.json` 有写竞态**：owner 每 `POLL_S=20 s` 一轮会用自己内存里的状态整份覆写 `state.json`。在 owner 还活着的时候直接改这个文件会在下一轮被它自己的旧内存值盖掉
+   （亲身验证过一次：改完文件、等了几秒发 `kill -TERM`，owner 在这几秒里又存了一次盘，把我的改动冲掉了）。正确顺序是：**先 `kill -TERM` + 确认进程真的没了（`ps -p` 查不到），再改 `state.json`，最后重启 owner**——
+   笔记第 5 节写的顺序（先改文件再重启）在这台机器上不安全，除非能保证改完立刻杀、中间不隔一轮。
+2. **`CARD_CAP`（比如 6）不是硬性的 server 数上限**：代码里轻模型（TFv6、BridgeDrive）按 per-candidate 预算走，能比 CARD_CAP 走得更远，卡 0、3 长期跑在 6→7 个 CARLA
+   是设计内的正常状态，不是残留/僵尸进程。`sch_table.py check` 真正卡的是显存（75 GB）、pids、CPU 核数三项，不查 server 数。之前一次 GPU3 撞到 76 GB 是因为 7 个里混进了两个重模型（BLUE），
+   给其中一个打了 drain（路线边界退出，没杀路线），显存就回落了——这不是 bug，遇到类似情况不用当成异常处理，先看是不是「重模型混进去」再决定要不要 drain。
+3. **GPU 1（cosmos-pilot 的卡，不归 G lane）晚上 `sch_table.py check` 报过 75 GB 超限**：只读到，没有动它（第 GPU1/2 不归我们，硬约束里写了）——交接给下一个人时提一句，免得被当成 G lane 自己的问题去查。
+4. 临时诊断脚本 `$DATA_DIR/runs/nq4/g-lane/reopen_blue_swap.py` 留在 box 上（记录了上面第 2 条 state.json 改动的确切内容），没提交到仓库，纯留痕，可以留着或删，不影响 lane。
