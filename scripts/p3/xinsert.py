@@ -399,7 +399,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
         start = max(kb + KERB_OFF, lat_target + 1.0)
         n_walk = int(np.ceil((start - lat_target) / vd * HZ))
         # the walk may begin before the bank window: the donor must be tracked and walk straight over the whole walk
-        if n_walk > lead or s_c - n_walk < 1 or not fvd[s_c - n_walk - 1:s_c + post + 2].all():
+        if n_walk > lead or s_c - n_walk < 1 or s_c + post + 2 > len(fvd) or not fvd[s_c - n_walk - 1:s_c + post + 2].all():
             return {"fail": f"cannot walk in from {start:.1f} m within {lead / HZ:.1f} s at {vd} m/s"}
         seg_ = T[s_c - n_walk:s_c + 1, :2]
         a1, a2 = seg_[len(seg_) // 2] - seg_[0], seg_[-1] - seg_[len(seg_) // 2]
@@ -417,7 +417,10 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
         n_walk = 0
         u = T[win["s0"] + WIN - 1, :2] - T[win["s0"], :2]
         phi = INS.wrap(th - np.arctan2(u[1], u[0]))                           # walking with the traffic direction
-        s_of = {t: win["s0"] + (t - frames[0]) for t in frames}
+        s_of = {t: s_c + (t - t_conf) for t in frames}
+        lo, hi = min(s_of.values()), max(s_of.values())
+        if lo < 0 or hi >= len(fvd) or not fvd[lo:hi + 1].all():
+            return {"fail": "donor not tracked over the whole clip"}
         anchor_s, anchor_p = s_c, Q + side * (kb + 1.0) * right
     c, s_ = np.cos(phi), np.sin(phi)
     Rz = np.array([[c, -s_], [s_, c]])
