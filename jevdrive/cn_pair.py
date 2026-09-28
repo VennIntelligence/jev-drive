@@ -466,7 +466,7 @@ def _font(size):
     return ImageFont.load_default()
 
 
-def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 416, q: int = 40):
+def webp(arm: str, scenes: list[str], step: int = 2, pw: int = 384, q: int = 40):
     """real (target outlined) | x+ | x- , every `step`-th frame, 10 / step fps, caption with scene / arm / frame."""
     import cv2
     from PIL import Image, ImageDraw
