@@ -325,6 +325,61 @@ def _controls_pair(r) -> dict:
     return row
 
 
+# ------------------------------------------------------------------ Cosmos specs
+
+PLACE = {"Town01": "a small town street with two lanes", "Town02": "a small town street with two lanes",
+         "Town03": "a city street", "Town04": "a town road", "Town05": "a city street",
+         "Town07": "a rural village road", "Town10HD": "a downtown city street", "Town11": "a suburban road"}
+VARIANTS = {   # name: (model, num_steps, control key, control file or None = computed by Cosmos from rgb.mp4)
+    "edgeA": ("edge/distilled", 4, "edge", None),
+    "edgeB": ("edge/distilled", 4, "edge", "edge.mp4"),
+    "seg": ("seg", 35, "seg", "seg.mp4"),
+}
+SEED, SEED_ALT = 2025, 2026
+
+
+def prompt(town: str, weather: dict) -> str:
+    w = weather
+    when = ("at night, lit by street lamps" if w["sun_altitude_angle"] < 0 else
+            "at dusk with a low sun" if w["sun_altitude_angle"] < 15 else "in daylight")
+    sky = ("under a heavy overcast sky" if w["cloudiness"] > 70 else "under a clear sky" if w["cloudiness"] < 20
+           else "under a partly cloudy sky")
+    wx = []
+    if w["precipitation"] > 30:
+        wx.append("in steady rain")
+    if w["wetness"] > 50 or w["precipitation_deposits"] > 50:
+        wx.append("with a wet road surface, puddles and reflections")
+    if w["fog_density"] > 30:
+        wx.append("in light fog")
+    return (f"A realistic dashcam video recorded from behind the windshield of a car driving on {PLACE[town]} "
+            f"{when} {sky}{', ' + ', '.join(wx) if wx else ''}. The road, buildings, trees, parked cars and road "
+            "markings look like real-world footage from a car camera, with natural lighting, realistic textures and "
+            "materials, and slight sensor noise.")
+
+
+def specs(variant: str, which: str = "all", floors: bool = True) -> Path:
+    """One jsonl per variant and selection. Every member: seed SEED; with floors, x- again with SEED (determinism
+    floor, name suffix _rep) and with SEED_ALT (seed spread)."""
+    model, steps, key, ctrl = VARIANTS[variant]
+    p = pairs()
+    if which == "pilot1":
+        p = p[p.base_id == PILOT1]
+    det = pd.read_csv(RESULTS / "determinism.csv", dtype={"pair": str}).set_index("pair")
+    lines = []
+    for _, r in p.iterrows():
+        pr = prompt(r.town, json.loads(det.loc[r.pair, "weather"]))
+        jobs = [("plus", SEED, ""), ("minus", SEED, "")] + ([("minus", SEED, "_rep"), ("minus", SEED_ALT, "")] if floors else [])
+        for m, seed, suf in jobs:
+            cd = root("clips", r.pair, m)
+            c = {"control_weight": 1.0} | ({"control_path": str(cd / ctrl)} if ctrl else {})
+            lines.append({"name": f"{r.pair}_{m}_{variant}_s{seed}{suf}", "prompt": pr, "video_path": str(cd / "rgb.mp4"),
+                          "seed": seed, "num_steps": steps, "guidance": 3, key: c})
+    f = root("specs") / f"{variant}_{which}{'' if floors else '_nofloor'}.jsonl"
+    f.write_text("".join(json.dumps(x) + "\n" for x in lines))
+    log.info("%d samples -> %s (model %s)", len(lines), f, model)
+    return f
+
+
 def world_ids(which: str = "all") -> str:
     p = pairs()
     if which == "pilot1":
@@ -335,10 +390,14 @@ def world_ids(which: str = "all") -> str:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("select", "ids", "controls"))
+    ap.add_argument("step", choices=("select", "ids", "controls", "specs"))
     ap.add_argument("--which", default="all")
+    ap.add_argument("--variant", default="edgeA")
+    ap.add_argument("--no-floors", action="store_true")
     a = ap.parse_args()
-    if a.step == "select":
+    if a.step == "specs":
+        print(specs(a.variant, a.which, not a.no_floors))
+    elif a.step == "select":
         select()
     elif a.step == "controls":
         controls(a.which)

@@ -31,7 +31,9 @@ import p5_pair_agent as P5
 
 KINDS = ("rgb", "depth", "inst")
 BP = {"rgb": "sensor.camera.rgb", "depth": "sensor.camera.depth", "inst": "sensor.camera.instance_segmentation"}
-CAM = {"x": 0.5, "y": 0.0, "z": 1.30, "w": 1280, "h": 704, "fov": 64.0}
+# P4 / P5 front camera position (Waymo roof, p4_carla_agent.WAYMO_CAMS[0] in the actor frame): a camera behind the
+# windshield sees the cabin in CARLA (the instance view there is all "car"), so the rig sits on the roof like P5's.
+CAM = {"x": 1.519 - 1.388633220, "y": -0.026, "z": 1.806, "w": 1280, "h": 704, "fov": 64.0}
 
 
 def get_entry_point():
