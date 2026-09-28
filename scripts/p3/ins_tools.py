@@ -38,7 +38,7 @@ HZ, W, H = 10, 960, 640
 PRE, POST = 29, 19                                   # 49 frames = 4 * 12 + 1 (Wan's frame grid)
 OPENCV2DATASET = np.array([[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=np.float64)
 LABELS = {"ped_omni": "(a) OmniRe as is", "ped_fix": "(b) manual fix", "ped_r3d2": "(c) R3D2 on (a)", "ped_r3d2big": "(c) R3D2-big on (a)",
-          "ped_fix_r3d2": "(c') R3D2 on (b)", "ped_fix_r3d2big": "(c') R3D2-big on (b)", "ped_vace": "(d) VACE-14B on (a)",
+          "ped_fix_r3d2": "(c') R3D2 on (b)", "ped_fix_r3d2big": "(c') R3D2-big on (b)", "ped_vace": "(d) VACE-14B on (a)", "ped_fix_vace": "(d') VACE-14B on (b)",
           "veh_omni": "(a) 3DGS asset as is", "veh_r3d2": "(c) R3D2", "veh_r3d2big": "(c) R3D2-big", "veh_vace": "(d) VACE-14B"}
 PROMPT = {"ped": "Dashcam video of a sunny street. A pedestrian walks across the asphalt road in front of the car, "
                  "lit by the same sunlight as the scene, feet on the ground, casting a soft shadow on the road.",
@@ -417,7 +417,7 @@ def vace(a):
     torch.cuda.synchronize()
     t_gen = time.time() - t1
     out = ((out.clamp(-1, 1) + 1) * 127.5).permute(1, 2, 3, 0).cpu().numpy()     # (F, ch, cw, 3)
-    name = f"{cls}_vace"
+    name = src.replace("_omni", "") + "_vace"                            # ped_vace, ped_fix_vace, veh_vace
     od, rd_ = opt_frames(key, name), opt_frames(key, name + "_raw")
     for i, (t, reg) in enumerate(zip(frames, regs)):
         raw = inp[i].astype(np.float32).copy()
