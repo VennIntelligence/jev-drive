@@ -142,7 +142,8 @@ def cmd_synth(a):
         model = {"rife": I.RIFE, "gimm": I.GIMM}[a.method](VFI_ROOT)
         pre = times < -1.5 - 1e-6                    # preroll frames (before the first keyframe) come from warp
         for q in range(0, len(keys), a.chunk):
-            out[q:q + a.chunk, ~pre] = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times[~pre], batch=a.batch)
+            out[q:q + a.chunk, ~pre] = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times[~pre],
+                                                  batch=a.batch or {"rife": 64, "gimm": 8}[a.method])
             torch.cuda.synchronize()
         if pre.any():
             tr = tracks(a.data)
@@ -365,7 +366,7 @@ if __name__ == "__main__":
     p.add_argument("--keys", default="", help="nav keyframe variant, e.g. nominal")
     p.add_argument("--workers", type=int, default=16)
     p.add_argument("--chunk", type=int, default=128)
-    p.add_argument("--batch", type=int, default=64)
+    p.add_argument("--batch", type=int, default=0, help="VFI pairs per forward (0: 64 RIFE, 8 GIMM, <= ~12 GB)")
     p = sp.add_parser("run")
     p.add_argument("--data", choices=("wod", "nav"), required=True)
     p.add_argument("--frames", required=True)
