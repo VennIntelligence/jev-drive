@@ -315,6 +315,7 @@ def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
     _, e = load(rootdir / "arms" / "p2-e2e")
     e = e[~e.warm]
     sh = {k: load(rootdir / "arms" / f"p2-{k}")[1] for k in shadows if (rootdir / "arms" / f"p2-{k}" / "done").exists()}
+    sh = {k: v for k, v in sh.items() if len(v)}
     rows, pos = [], {}
     for rid, g in e.groupby("route"):
         g = g.reset_index(drop=True)
