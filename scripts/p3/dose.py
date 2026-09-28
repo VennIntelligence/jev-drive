@@ -254,7 +254,7 @@ def render(a):
             (cd / "plus/frames.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
             xd.pose = {}
             mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "view_gap": gap, "gain": [float(x) for x in gain],
-                  "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "walk_s": b["walk_s"],
+                  "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "kerb_src": b["kerb_src"], "walk_s": b["walk_s"],
                   "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"]}
             (cd / "meta.json").write_text(json.dumps(mc))
             meta_cells[cid] = mc

@@ -288,7 +288,7 @@ def scene_actors(g) -> dict:
     """Frame -> (n, 6) boxes of every labelled actor in the reconstruction's world frame: cx, cy, yaw, length, width, height."""
     info = json.loads((g["dir"] / "instances/instances_info.json").read_text())
     E0 = np.linalg.inv(np.loadtxt(g["dir"] / "ego_pose/000.txt"))
-    per, peds = {}, []
+    per, peds, vehs = {}, [], []
     for v in info.values():
         fa = v["frame_annotations"]
         for f, M, sz in zip(fa["frame_idx"], fa["obj_to_world"], fa["box_size"]):
@@ -296,8 +296,13 @@ def scene_actors(g) -> dict:
             per.setdefault(int(f), []).append((M[0, 3], M[1, 3], np.arctan2(M[1, 0], M[0, 0]), sz[0], sz[1], sz[2]))
             if v["class_name"] == "Pedestrian":
                 peds.append((M[0, 3], M[1, 3]))
+            elif v["class_name"] == "Vehicle":
+                c, s_ = np.cos(np.arctan2(M[1, 0], M[0, 0])), np.sin(np.arctan2(M[1, 0], M[0, 0]))
+                for a_, b_ in ((1, 1), (1, -1), (-1, 1), (-1, -1)):          # footprint corners: where vehicles stood / drove
+                    vehs.append((M[0, 3] + a_ * sz[0] / 2 * c - b_ * sz[1] / 2 * s_, M[1, 3] + a_ * sz[0] / 2 * s_ + b_ * sz[1] / 2 * c))
     out = {f: np.asarray(b) for f, b in per.items()}
     out["peds"] = np.asarray(peds).reshape(-1, 2)      # every labelled pedestrian position of the log (where people walk)
+    out["vehs"] = np.asarray(vehs).reshape(-1, 2)[::3]  # vehicle footprint corners of the log (drivable area)
     return out
 
 
@@ -324,17 +329,24 @@ def occluded(cam_xy, p, boxes):
     return bool(in_boxes(q, b, 0.0).any())
 
 
-def kerb(gr, path, S, side, peds=None):
+def kerb(gr, path, S, side, peds=None, vehs=None):
     """Lateral offset (m, >= 1.75) of the kerb on `side` (+1 right, -1 left) at arc S: the first 0.5 m in which the LiDAR
     ground stands >= KERB_STEP above the road at the path centre. Where no such step exists within 8 m (sloped streets,
     ground points missing behind parked cars), the log's own pedestrians decide: the 10th percentile of the lateral offset
     of every labelled pedestrian within +-15 m of arc S on that side (1.75-10 m, at least 20 samples) minus KERB_OFF, i.e.
-    the start point is where people of this log actually walked. None when neither exists."""
+    the start point is where people of this log actually walked. None when neither exists.
+    Drivable-area edge (user 2026-09-28 ~19:00, roads without a kerb: the walk-in may start on the shoulder / verge):
+    where there is no kerb step and no raised walkway, the edge is the larger of (a) the extent of the flat road surface,
+    the first lateral >= 1.75 m where the LiDAR ground leaves the road cross-slope plane (fitted on -1.75..1.75 m) by
+    > 0.08 m or has no points for >= 0.5 m, and (b) the outer side of every vehicle footprint of the log within +-15 m of
+    arc S on that side (parked cars stand on the drivable area); up to 8 m. Returns (offset, source) with source in
+    kerb / walkway / drivable_edge / ped_log; None when nothing applies. The start point is offset + KERB_OFF either way."""
     Q, th, _ = path.at(S)
     right = np.array([np.sin(th), -np.cos(th)])
     key = (round(float(S), 2), side)
     if key in KERB_CACHE.setdefault(id(gr), {}):
         return KERB_CACHE[id(gr)][key]
+    src = None
     prof = []
     for l in np.arange(-1.0, 8.01, 0.25):
         q = gr.near(Q + side * l * right, 0.35)
@@ -345,7 +357,7 @@ def kerb(gr, path, S, side, peds=None):
         step = [(l, z) for l, z in prof if l >= 1.75]
         for i in range(len(step) - 1):
             if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
-                res = float(step[i][0])
+                res, src = float(step[i][0]), "kerb"
                 break
         if res is None:
             # the labelled road surface ends (>= 1 m without ground points) and a low surface continues beyond it:
@@ -357,8 +369,33 @@ def kerb(gr, path, S, side, peds=None):
                 if len(q) >= 5:
                     lo = np.percentile(q[:, 2], 10) - z0
                     if 0.03 <= lo <= 0.35:
-                        res = float(l)
+                        res, src = float(l), "walkway"
                 break
+        if res is None:
+            ctr = [(l, z) for l, z in prof if -1.75 <= l <= 1.75 and np.isfinite(z)]
+            if len(ctr) >= 4:
+                a_, b_ = np.polyfit([c_[0] for c_ in ctr], [c_[1] for c_ in ctr], 1)
+                flat, miss = None, 0
+                for l, z in step:
+                    if not np.isfinite(z):
+                        miss += 1
+                        if miss >= 2:
+                            flat = l - 0.25
+                            break
+                        continue
+                    miss = 0
+                    if abs(z - (a_ * l + b_)) > 0.08:
+                        flat = l
+                        break
+                ext = 1.75
+                if vehs is not None and len(vehs):
+                    for p_ in vehs[np.linalg.norm(vehs - Q, axis=1) <= 25]:
+                        Sp, Lp = path.locate(p_)
+                        if abs(Sp - S) <= 15 and 0 <= side * -Lp <= 8:
+                            ext = max(ext, side * -Lp)
+                edge = max(flat if flat is not None else 1.75, ext)
+                if flat is not None or ext > 1.75:
+                    res, src = float(min(edge, 8.0)), "drivable_edge"
     if res is None and peds is not None and len(peds):
         near = peds[np.linalg.norm(peds - Q, axis=1) <= 25]
         lat = []
@@ -367,9 +404,10 @@ def kerb(gr, path, S, side, peds=None):
             if abs(Sp - S) <= 15 and 1.75 <= side * -Lp <= 10:          # right of the path = negative L (L is left +)
                 lat.append(side * -Lp)
         if len(lat) >= 20:
-            res = float(max(1.75, np.percentile(lat, 10) - KERB_OFF))
-    KERB_CACHE[id(gr)][key] = res
-    return res
+            res, src = float(max(1.75, np.percentile(lat, 10) - KERB_OFF)), "ped_log"
+    out = (res, src) if res is not None else None
+    KERB_CACHE[id(gr)][key] = out
+    return out
 
 
 def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross"):
@@ -382,9 +420,10 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
     s_c = win["s0"] + PRE
     Q, th, _ = path.at(S_conf)
     right = np.array([np.sin(th), -np.cos(th)])
-    kb = kerb(gr, path, S_conf, side, actors.get("peds"))
-    if kb is None:
+    kbs = kerb(gr, path, S_conf, side, actors.get("peds"), actors.get("vehs"))
+    if kbs is None:
         return {"fail": "no kerb step within 8 m"}
+    kb, kb_src = kbs
     vd = win["speed"]
     frames = list(range(t_conf - lead, t_conf + post + 1))
     if mode == "stand":
@@ -463,7 +502,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
             gaps.append(np.degrees(np.abs(INS.wrap(obs - azimuth(g, t, np.array([x, y]), yaw[sI] + phi))).min()))
     if len(gaps) < 5:
         return {"fail": "in the front camera for < 5 frames"}
-    return {"traj": {int(t): v for t, v in tr_.items()}, "phi": float(phi), "gap": float(max(gaps)), "kerb": kb,
+    return {"traj": {int(t): v for t, v in tr_.items()}, "phi": float(phi), "gap": float(max(gaps)), "kerb": kb, "kerb_src": kb_src,
             "speed": vd, "walk_s": n_walk / HZ, "vis_out_s": vis_out, "t_in": t_in, "mode": mode}
 
 
@@ -511,12 +550,12 @@ def plan_one(k: int, bank_: list) -> dict:
     res = {"scene": k, "segment": seg, "t_star": ts, "ego_v": float(path.v[ts]), "item": gap <= AZ_MAX, "view_gap": round(gap, 1),
            "donor": {kk: d[kk] for kk in ("scene", "node", "waymo_id", "height", "span", "psnr", "ratio", "ckpt")},
            "window": w, "side": side, "ttr_shift": shift, "n_candidates": len(cands), "fails": fails,
-           "rules": "walk-in v2 (2026-09-28 16:30)", "lead": LEAD_INS}
+           "rules": "walk-in v2 (2026-09-28 16:30)", "edge_rule": "drivable edge (2026-09-28 19:00)", "lead": LEAD_INS}
     res["variants"] = {}
     for name, ttr, mode in (("ins2", 2.0, "cross"), ("ins3", 3.0, "cross"), ("ins4", 4.0, "cross"), ("null", 3.0, "along")):
         S = path.Se[ts] + FRONT + (ttr + shift) * max(path.v[ts], V_FLOOR)
         bb = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S, 0.0, LEAD_INS, POST, mode)
-        res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
+        res["variants"][name] = ({kk: bb[kk] for kk in ("traj", "phi", "gap", "kerb", "kerb_src", "speed", "walk_s", "vis_out_s", "t_in", "mode")}
                                  if "fail" not in bb else {"fail": bb["fail"]})
     return res
 
