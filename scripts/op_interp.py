@@ -79,21 +79,30 @@ def _nominal_render(e):
 
 
 def cmd_nav_cache(a):
+    """--split navtest (default) or navhard_two_stage; --out names the run dir under runs/op_interp/ (default "nav",
+    the original 2 000-token diagnostic subset -- kept untouched unless you ask for it again). --n <= 0 or >= the
+    split's token count caches every token, in index order (a full-benchmark run); a smaller --n keeps the original
+    seeded random subsample. --nominal also renders the uncalibrated CAM_F0 keys (only used by the nolever ablation;
+    skipped by default since the default pipeline (base adapter, warp / GIMM) never reads keys_nominal.npy)."""
     from concurrent.futures import ProcessPoolExecutor
     from jevdrive import navsim_zs as Z
-    idx = Z.load_index("navtest", slim=True)
-    rng = np.random.default_rng(a.seed)
-    sel = np.sort(rng.choice(len(idx), a.n, replace=False))
-    frames = np.load(Z.root("openpilot", "navtest") / "frames.npy", mmap_mode="r")
-    assert json.loads((Z.root("openpilot", "navtest") / "frames.json").read_text())["tokens"] == [e["token"] for e in idx]
-    np.save(root("nav") / "keys.npy", np.ascontiguousarray(frames[sel]))
+    idx = Z.load_index(a.split, slim=True)
+    if a.n <= 0 or a.n >= len(idx):
+        sel = np.arange(len(idx))
+    else:
+        rng = np.random.default_rng(a.seed)
+        sel = np.sort(rng.choice(len(idx), a.n, replace=False))
+    frames = np.load(Z.root("openpilot", a.split) / "frames.npy", mmap_mode="r")
+    assert json.loads((Z.root("openpilot", a.split) / "frames.json").read_text())["tokens"] == [e["token"] for e in idx]
+    np.save(root(a.out) / "keys.npy", np.ascontiguousarray(frames[sel]))
     sub = [idx[k] for k in sel]
-    with ProcessPoolExecutor(a.workers) as ex:
-        nom = np.stack(list(ex.map(_nominal_render, sub, chunksize=8)))
-    np.save(root("nav") / "keys_nominal.npy", nom)
+    if a.nominal:
+        with ProcessPoolExecutor(a.workers) as ex:
+            nom = np.stack(list(ex.map(_nominal_render, sub, chunksize=8)))
+        np.save(root(a.out) / "keys_nominal.npy", nom)
     toks = [e["token"] for e in sub]
-    (root("nav") / "tokens.txt").write_text("\n".join(toks) + "\n")
-    (root("nav") / "meta.json").write_text(json.dumps({
+    (root(a.out) / "tokens.txt").write_text("\n".join(toks) + "\n")
+    (root(a.out) / "meta.json").write_text(json.dumps({
         "names": toks, "index": sel.tolist(), "cam": [np.asarray(e["cams"][-1]["CAM_F0"]["t"], float).tolist() for e in sub],
         "pose": [np.asarray(e["pose"], float).tolist() for e in sub], "vel": [np.asarray(e["vel"], float).tolist() for e in sub],
         "speed": [float(np.linalg.norm(e["vel"][-1])) for e in sub], "lht": [e["map"] in LHT_MAPS for e in sub],
@@ -343,14 +352,14 @@ def cmd_score_wod(a):
 
 def cmd_nav_export(a):
     from jevdrive import navsim_zs as Z
-    mt = meta("nav")
-    for f in sorted(root("nav", "plans").glob("*.npz")):
+    mt = meta(a.data)
+    for f in sorted(root(a.data, "plans").glob("*.npz")):
         if a.plans and f.stem not in a.plans:
             continue
         z = np.load(f)
         assert z["names"].tolist() == mt["names"]
         for ad in a.adapters:
-            out = root("nav", "preds") / f"{f.stem}__{ad}.npz".replace("@", "-")
+            out = root(a.data, "preds") / f"{f.stem}__{ad}.npz".replace("@", "-")
             if out.exists() and not a.force:
                 continue
             poses = np.stack([adapt(z, i, mt, Z.T_OUT, **ADAPTERS[ad])[0] for i in range(len(mt["names"]))])
@@ -358,45 +367,59 @@ def cmd_nav_export(a):
             print(out.name)
 
 
+V1_SUBS = ["no_at_fault_collisions", "drivable_area_compliance", "ego_progress", "time_to_collision_within_bound", "comfort"]
+V2_SUBS = ["no_at_fault_collisions", "drivable_area_compliance", "driving_direction_compliance", "traffic_light_compliance",
+           "ego_progress", "time_to_collision_within_bound", "lane_keeping", "history_comfort", "two_frame_extended_comfort"]
+
+
 def cmd_nav_report(a):
+    """--data (run dir, default "nav"), --ver v1|v2, --split navtest|navhard_two_stage. v1 -> PDMS (5 subscores, as
+    the 2 000-token subset in the doc); v2 -> EPDMS (9 subscores; the only official metric for navhard_two_stage,
+    which the v1.1 devkit does not have a split for)."""
     import glob
     import pandas as pd
-    subs = ["no_at_fault_collisions", "drivable_area_compliance", "ego_progress", "time_to_collision_within_bound", "comfort"]
-    toks = set(meta("nav")["names"])
+    subs = V1_SUBS if a.ver == "v1" else V2_SUBS
+    prefix = f"{a.ver}_{a.split}_opi_"
+    toks = set(meta(a.data)["names"])
     res = {}
-    for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / "v1_navtest_opi_*"))):
+    for d in sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{prefix}*"))):
         fs = sorted(glob.glob(d + "/*/*.csv"))
         if not fs:
             continue
         df = pd.read_csv(fs[-1])
         df = df[df["token"].isin(toks) & df["valid"].astype(bool)]
-        res[Path(d).name[len("v1_navtest_opi_"):]] = df.set_index("token")
-    # the exam's full-navtest runs on the same tokens (reproduction check and reference rows)
-    for name in ("cinque_none", "lebowski_none", "small_none", "cv", "human", "heads_cls_late_cinque_temporal",
-                 "heads_cls_ego_K1024"):
-        fs = sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"v1_navtest_{name}" / "*" / "*.csv")))
+        res[Path(d).name[len(prefix):]] = df.set_index("token")
+    # the exam's own full-split runs on the same tokens (reproduction check and reference rows), whichever exist
+    exam_names = ("cinque_none", "lebowski_none", "small_none", "cv", "human", "heads_cls_late_cinque_temporal",
+                  "heads_cls_ego_K1024") if a.ver == "v1" else ("cinque_none", "lebowski_none", "small_none", "cv", "human")
+    for name in exam_names:
+        fs = sorted(glob.glob(str(data_dir() / "runs/navsim/eval" / f"{a.ver}_{a.split}_{name}" / "*" / "*.csv")))
         if fs:
             df = pd.read_csv(fs[-1])
             res[f"exam {name}"] = df[df["token"].isin(toks) & df["valid"].astype(bool)].set_index("token")
-    # benchmark-free readout: ADE / FDE of the pose file against the logged future (navtest_future.npz), longitudinal bias at 4 s
-    fut = np.load(data_dir() / "runs/navsim_zs/index/navtest_future.npz")
-    gt = dict(zip(fut["tokens"].tolist(), fut["poses"]))
-    names = meta("nav")["names"]
-    G = np.stack([gt[t] for t in names])
+    # benchmark-free readout: ADE / FDE of the pose file against the logged future (<split>_future.npz), longitudinal
+    # bias at 4 s; navhard_two_stage's future file only covers the 450 real stage-one tokens (no logged future for
+    # the synthetic stage-two continuations), so this is a partial-coverage diagnostic there, not the main number.
     geo = {}
-    for f in root("nav", "preds").glob("*.npz"):
-        z = np.load(f)
-        P = dict(zip(z["tokens"].tolist(), z["poses"]))
-        P = np.stack([P[t] for t in names])
-        e = np.linalg.norm(P[..., :2] - G[..., :2], axis=-1)
-        geo[f.stem] = dict(ade=e.mean(), fde=e[:, -1].mean(), lon4=(P[:, -1, 0] - G[:, -1, 0]).mean())
+    fut_path = data_dir() / "runs/navsim_zs/index" / f"{a.split}_future.npz"
+    if fut_path.exists():
+        fut = np.load(fut_path)
+        gt = dict(zip(fut["tokens"].tolist(), fut["poses"]))
+        names = [t for t in meta(a.data)["names"] if t in gt]
+        G = np.stack([gt[t] for t in names])
+        for f in root(a.data, "preds").glob("*.npz"):
+            z = np.load(f)
+            P = dict(zip(z["tokens"].tolist(), z["poses"]))
+            P = np.stack([P[t] for t in names])
+            e = np.linalg.norm(P[..., :2] - G[..., :2], axis=-1)
+            geo[f.stem] = dict(ade=e.mean(), fde=e[:, -1].mean(), lon4=(P[:, -1, 0] - G[:, -1, 0]).mean(), n_geo=len(names))
     rows = []
     rng = np.random.default_rng(0)
     for k, df in res.items():
         v = df["score"].to_numpy(float)
         bs = v[rng.integers(0, len(v), (2000, len(v)))].mean(1)
         row = dict(name=k, n=len(v), pdms=100 * v.mean(), lo=100 * np.percentile(bs, 2.5), hi=100 * np.percentile(bs, 97.5),
-                   **{s: 100 * df[s].mean() for s in subs}, **geo.get(k, {}))
+                   **{s: 100 * df[s].mean() for s in subs if s in df.columns}, **geo.get(k, {}))
         for ref in a.refs:
             if ref in res and ref != k:
                 x, y = df["score"].align(res[ref]["score"], join="inner")
@@ -406,7 +429,7 @@ def cmd_nav_report(a):
                         f"d[{ref}]_hi": 100 * np.percentile(bb, 97.5)}
         rows.append(row)
     out = pd.DataFrame(rows).sort_values("pdms", ascending=False)
-    out.to_csv(root("nav") / "results.csv", index=False)
+    out.to_csv(root(a.data) / "results.csv", index=False)
     with pd.option_context("display.width", 250, "display.max_columns", 40):
         print(out.round(2).to_string(index=False))
 
@@ -417,11 +440,14 @@ if __name__ == "__main__":
     p = sp.add_parser("wod-cache")
     p.add_argument("--workers", type=int, default=16)
     p = sp.add_parser("nav-cache")
-    p.add_argument("--n", type=int, default=2000)
+    p.add_argument("--n", type=int, default=2000, help="<= 0 or >= split size: every token, in order (full run)")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--workers", type=int, default=16)
+    p.add_argument("--split", default="navtest", choices=("navtest", "navhard_two_stage"))
+    p.add_argument("--out", default="nav", help="run dir name under runs/op_interp/")
+    p.add_argument("--nominal", action="store_true", help="also render uncalibrated CAM_F0 keys (nolever ablation only)")
     p = sp.add_parser("synth")
-    p.add_argument("--data", choices=("wod", "nav"), required=True)
+    p.add_argument("--data", required=True, help="run dir name under runs/op_interp/ (\"wod\", \"nav\", or any --out of nav-cache)")
     p.add_argument("--method", choices=I.METHODS, required=True)
     p.add_argument("--preroll", type=float, default=0.0)
     p.add_argument("--keys", default="", help="nav keyframe variant, e.g. nominal")
@@ -430,7 +456,7 @@ if __name__ == "__main__":
     p.add_argument("--grid", type=float, default=0.0, help="VFI only on this time grid (0.2 = context rate), hold between")
     p.add_argument("--batch", type=int, default=0, help="VFI pairs per forward (0: 64 RIFE, 8 GIMM, <= ~12 GB)")
     p = sp.add_parser("run")
-    p.add_argument("--data", choices=("wod", "nav"), required=True)
+    p.add_argument("--data", required=True, help="run dir name under runs/op_interp/ (\"wod\", \"nav\", or any --out of nav-cache)")
     p.add_argument("--frames", required=True)
     p.add_argument("--model", choices=list(BACKENDS), required=True)
     p.add_argument("--backend", default="")
@@ -441,10 +467,14 @@ if __name__ == "__main__":
     p.add_argument("--adapters", nargs="+", default=["base", "retime"])
     p.add_argument("--boot", type=int, default=5000)
     p = sp.add_parser("nav-export")
+    p.add_argument("--data", default="nav", help="run dir name under runs/op_interp/")
     p.add_argument("--adapters", nargs="+", default=["base"])
     p.add_argument("--force", action="store_true")
     p.add_argument("--plans", nargs="*", default=[], help="plan file stems (default: all)")
     p = sp.add_parser("nav-report")
+    p.add_argument("--data", default="nav", help="run dir name under runs/op_interp/")
+    p.add_argument("--ver", default="v1", choices=("v1", "v2"))
+    p.add_argument("--split", default="navtest", choices=("navtest", "navhard_two_stage"))
     p.add_argument("--refs", nargs="+", default=["hold-cinque__base"])
     a = ap.parse_args()
     {"wod-cache": cmd_wod_cache, "nav-cache": cmd_nav_cache, "synth": cmd_synth, "run": cmd_run, "score-wod": cmd_score_wod,
