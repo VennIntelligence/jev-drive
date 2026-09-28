@@ -21,6 +21,7 @@ import threading
 import time
 from pathlib import Path
 
+os.environ.setdefault("COSMOS_EXPERIMENTAL_CHECKPOINTS", "1")    # registers edge/distilled
 DATA = Path(os.environ["DATA_DIR"])
 COSMOS = DATA / "third_party" / "cosmos-transfer2.5"
 LOCAL = DATA / "models" / "cosmos"
