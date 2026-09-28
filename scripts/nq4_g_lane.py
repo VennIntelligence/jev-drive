@@ -6,8 +6,8 @@
   nq4_g_lane.py run       the lane (tmux jev:nq4-g); idempotent, resumes from state, adopts its live runners
   nq4_g_lane.py stop      stop this lane's runners by their recorded identities (operator only)
 
-Cells = examinee x world x TM seed on the G route set, in priority tiers: orig + ghost seed 0 -> orig + ghost seeds 1-2
--> shift seed 0 -> swap seed 0 (tail filler). Outputs are the registered ones of scripts/nq4_gk.sh: runs/nq4/gk/arms/
+Cells = examinee x world x TM seed on the G route set, in priority tiers: shift seed 0 -> swap seed 0 -> orig + ghost
+seed 0 -> orig + ghost seeds 1-2 (user 2026-09-28; before: seed 0, seeds 1-2, shift, swap). Outputs are the registered ones of scripts/nq4_gk.sh: runs/nq4/gk/arms/
 <cand>/<variant>/s<seed> (requested.json, done/, attempts/, runner-g<gpu>.log, DONE), so the G readouts
 (jevdrive.nq4_g report) and the orig reuse of night queue 3 runs work unchanged.
 Staged gate per examinee x world, automatic: 1 route -> check -> 10 routes -> check (jevdrive.nq4_g pilot-check, the
@@ -55,10 +55,14 @@ DATA = Path(os.environ.get("DATA_DIR", "/root/autodl-tmp/ujs"))
 G = DATA / "runs/nq4/gk"
 OUT = DATA / "runs/nq4/g-lane"
 CANDS = ["pdm", "tfv6", "bridgedrive", "blue", "simlingo"]
-TIERS = ([[(c, v, 0) for c in CANDS for v in ("ghost", "orig")],
-          [(c, v, s) for s in (1, 2) for c in CANDS for v in ("ghost", "orig")],
-          [(c, "shift", 0) for c in CANDS],
-          [(c, "swap", 0) for c in CANDS]])
+# Order (user 2026-09-28, after the seed-0 peek showed no position memorisation): shift seed 0, swap seed 0, the rest of
+# seed 0, then ghost + orig seeds 1-2 as filler (still needed for the registered 3-seed ghost verdict). shift / swap pair
+# with orig on the same base and seed from the leaderboard record (jevdrive.nq4_g report), so the seed-0 orig reference
+# (night queue 3 CL10, TFv6's own run) needs no new trajectory runs.
+TIERS = ([[(c, "shift", 0) for c in CANDS],
+          [(c, "swap", 0) for c in CANDS],
+          [(c, v, 0) for c in CANDS for v in ("ghost", "orig")],
+          [(c, v, s) for s in (1, 2) for c in CANDS for v in ("ghost", "orig")]])
 # User 2026-09-28: no more closed-loop capacity on the privileged expert beyond its ghost baseline (seeds 0-2); orig seed 0
 # stays reused from night queue 3. Dropped cells take no new runner; routes already running finish.
 DROPPED = {"pdm.orig.1", "pdm.orig.2", "pdm.shift.0", "pdm.swap.0"}
