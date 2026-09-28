@@ -140,11 +140,16 @@ def cmd_synth(a):
     else:
         import torch
         model = {"rife": I.RIFE, "gimm": I.GIMM}[a.method](VFI_ROOT)
-        pre = times[times < -1.5 - 1e-6]
-        assert not len(pre), "preroll frames come from warp; synthesize them with --method warp"
+        pre = times < -1.5 - 1e-6                    # preroll frames (before the first keyframe) come from warp
         for q in range(0, len(keys), a.chunk):
-            out[q:q + a.chunk] = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times, batch=a.batch)
+            out[q:q + a.chunk, ~pre] = I.synth_vfi(np.asarray(keys[q:q + a.chunk]), model, times[~pre], batch=a.batch)
             torch.cuda.synchronize()
+        if pre.any():
+            tr = tracks(a.data)
+            with ProcessPoolExecutor(a.workers) as ex:
+                jobs = ((np.asarray(keys[i]), "warp", times[pre], tr[i], mt["cam"][i]) for i in range(len(keys)))
+                for i, fr in enumerate(ex.map(_cpu_job, jobs, chunksize=4)):
+                    out[i, pre] = fr
         dev = torch.cuda.get_device_name()
     out.flush()
     el = time.time() - t0
@@ -272,7 +277,7 @@ def cmd_score_wod(a):
                    ade5=float(q["ade5"].mean()), lon5=float(q["lon5"].mean()), lon5_moving=float(q["lon5"][speed > 5].mean()),
                    retime_r_med=float(np.median(q["r"])))
         for ref in ("real", "hold"):
-            rk = f"{ref}@{rest.split('|')[0]}|base"
+            rk = f"{ref}@{model}|base"
             if rk in per and rk != k:
                 dd = q["rfs"] - per[rk]["rfs"]
                 bs = dd[fidx].mean(1)
@@ -290,6 +295,8 @@ def cmd_nav_export(a):
     from jevdrive import navsim_zs as Z
     mt = meta("nav")
     for f in sorted(root("nav", "plans").glob("*.npz")):
+        if a.plans and f.stem not in a.plans:
+            continue
         z = np.load(f)
         assert z["names"].tolist() == mt["names"]
         for ad in a.adapters:
@@ -371,6 +378,7 @@ if __name__ == "__main__":
     p = sp.add_parser("nav-export")
     p.add_argument("--adapters", nargs="+", default=["base"])
     p.add_argument("--force", action="store_true")
+    p.add_argument("--plans", nargs="*", default=[], help="plan file stems (default: all)")
     p = sp.add_parser("nav-report")
     p.add_argument("--refs", nargs="+", default=["hold-cinque__base"])
     a = ap.parse_args()
