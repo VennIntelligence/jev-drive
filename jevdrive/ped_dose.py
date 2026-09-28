@@ -38,6 +38,62 @@ def vmin4(fut: np.ndarray) -> np.ndarray:
     return (np.linalg.norm(np.diff(pts, axis=1), axis=-1) / 0.25).min(1)
 
 
+EGO_HALF, PED_R, EGO_LEN, HORIZON = 1.0, 0.3, 5.0, 4.0     # m, m, m (bumper to rear end), s
+
+
+def threat_labels(w: pd.DataFrame, arc: dict) -> pd.DataFrame:
+    """Readout clarification (user 2026-09-28): not reacting is correct unless the pedestrian is on a collision course.
+    Geometry only, x- path = the logged ego path from t*: the ego (half width EGO_HALF) moves along it as logged; the
+    pedestrian stands at its lateral offset, or keeps crossing towards the far side at its donor speed. Conflict = within
+    HORIZON s, the pedestrian (radius PED_R) is inside the ego corridor while the ego body spans its arc position.
+    threat = must_react (conflict, ttc = first conflict time) or no_threat."""
+    tt = np.arange(0.0, HORIZON + 1e-9, 0.05)
+    ttc, reach = [], []
+    for b, dist, lat, ps, vp in zip(w.base_id, w.dist, w.lat, w.ped_state, w.donor_speed):
+        s = np.interp(tt, np.r_[0.0, 0.25 * np.arange(1, 21)], np.r_[0.0, arc[b]])
+        lt = np.full_like(tt, lat) if ps == "stand" else lat - vp * tt
+        hit = (s >= dist - PED_R) & (s <= dist + EGO_LEN + PED_R) & (np.abs(lt) <= EGO_HALF + PED_R)
+        ttc.append(tt[hit.argmax()] if hit.any() else np.nan)
+        reach.append(tt[(s >= dist - PED_R).argmax()] if (s >= dist - PED_R).any() else np.nan)
+    w["ttc"], w["t_reach"] = ttc, reach                    # t_reach: when the logged ego bumper reaches the pedestrian's arc
+    w["threat"] = np.where(np.isfinite(w.ttc), "must_react", "no_threat")
+    return w
+
+
+def _boot_ci(x: np.ndarray, g: np.ndarray, n: int = 2000) -> tuple[float, float]:
+    """95 % CI of a rate, bootstrapping scene x state clusters."""
+    if len(x) == 0:
+        return np.nan, np.nan
+    u = np.unique(g)
+    idx = [np.flatnonzero(g == k) for k in u]
+    rng = np.random.default_rng(0)
+    m = [np.concatenate([idx[i] for i in rng.integers(0, len(u), len(u))]) for _ in range(n)]
+    v = np.array([x[i].mean() for i in m])
+    return float(np.quantile(v, 0.025)), float(np.quantile(v, 0.975))
+
+
+def threat_summary(w: pd.DataFrame, out: Path) -> pd.DataFrame:
+    """React / stop / lead rates with cluster-bootstrap CIs on must-react cells (ability) and no-threat cells (restraint:
+    a reaction there is a false alarm)."""
+    w0 = w[w.t_rel_f0 == 0.0].copy()
+    w0["cl"] = w0.scene.astype(str) + "_" + w0.state
+    rows = []
+    for m in MODELS:
+        for st in [s for s in ("pull", "creep", "cruise") if (w0.state == s).any()] + ["all"]:
+            for th in ("must_react", "no_threat"):
+                g = w0[(w0.threat == th) & ((w0.state == st) | (st == "all"))]
+                row = {"model": m, "state": st, "threat": th, "cells": len(g), "scenes": g.scene.nunique()}
+                for k in ("react", "stop", "lead"):
+                    x = g[f"{m}|{k}"].astype(float).to_numpy()
+                    lo, hi = _boot_ci(x, g.cl.to_numpy())
+                    row |= {k: x.mean() if len(x) else np.nan, f"{k}_lo": lo, f"{k}_hi": hi}
+                row["dv2_median"] = g[f"{m}|dv2"].median()
+                rows.append(row)
+    T = pd.DataFrame(rows)
+    T.to_csv(out / "threat.csv", index=False)
+    return T
+
+
 def cells_table(exam_dir: Path) -> pd.DataFrame:
     import jevdrive.p5_openpilot as P5
     t = pd.read_parquet(root() / "index.parquet")
@@ -48,6 +104,10 @@ def cells_table(exam_dir: Path) -> pd.DataFrame:
         t[f"{m}|v2"], t[f"{m}|vmin"] = v2(plan), vmin4(plan)
         x, _, p = lead_decode(op[f"op-{m} lead"], op[f"op-{m} lead_prob"])
         t[f"{m}|lead_x"], t[f"{m}|lead_p"] = x, p
+    fut = np.load(root() / "future.npy").astype(np.float64)
+    arc = np.cumsum(np.linalg.norm(np.diff(np.concatenate([np.zeros_like(fut[:, :1]), fut], 1), axis=1), axis=-1), 1)
+    r0 = ((t.world == "real") & (t.t_rel_f0.round(1) == 0.0)).to_numpy()
+    arc = dict(zip(t.base_id[r0], arc[r0]))                 # logged ego path length travelled, 0.25 .. 5 s after t*
     t = t[t.t_rel_f0.round(1).isin([0.0, 0.4])]
     vals = [c for c in t.columns if "|" in c]
     w = t.pivot_table(index=["base_id", "t_rel_f0"], columns="world", values=vals).reset_index()
@@ -60,8 +120,10 @@ def cells_table(exam_dir: Path) -> pd.DataFrame:
     meta = {}
     for sd in (root() / "scenes").glob("p3_*"):
         m = json.loads((sd / "meta.json").read_text())
-        meta[sd.name] = {q: m[q] for q in ("scene", "state", "ego_v", "cell", "dist", "lat", "ped_state", "view_gap", "shadow_on_frac")}
+        meta[sd.name] = {q: m[q] for q in ("scene", "state", "ego_v", "cell", "dist", "lat", "ped_state", "view_gap", "shadow_on_frac",
+                                           "donor_speed")}
     w = w.join(pd.DataFrame(w.base_id.map(meta).tolist()))
+    w = threat_labels(w, arc)
     taus = pd.read_csv(data_dir() / I3_EXAM / "flip_rates.csv").query("scope == 'pooled'").set_index("examinee").tau_model
     for m in MODELS:
         tau = float(taus[f"ridge_late op-{m} temporal"])
@@ -186,6 +248,8 @@ def main():
         w = cells_table(a.exam_dir)
         w.to_csv(a.out / "cells.csv", index=False)
     delta_fig(w, a.out)
+    T = threat_summary(w, a.out)
+    log.info("threat:\n%s", T.round(3).to_string())
     R = curves(w, a.out)
     log.info("curves:\n%s", R.round(3).to_string())
 
