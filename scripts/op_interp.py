@@ -256,7 +256,7 @@ ADAPTERS = {"base": dict(mode="lever"), "retime": dict(mode="lever", retime=True
 
 
 def adapt(z, i, mt, t_out, mode="lever", retime=False, interp="linear"):
-    from jevdrive.openpilot.model import T_IDXS
+    T_IDXS = I.T_IDXS
     pos, yaw = z["plan_pos"][i], z["plan_yaw"][i]
     r = 1.0
     if retime:

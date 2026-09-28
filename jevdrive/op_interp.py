@@ -32,6 +32,7 @@ OP_K = {"road": np.array([[910.0, 0, 256.0], [0, 910.0, 47.6], [0, 0, 1]]),
 OPENCV_TO_VEHICLE = np.array([[0.0, 0, 1], [-1, 0, 0], [0, -1, 0]])     # columns: cam x, y, z in vehicle axes
 D_FAR = 60.0
 METHODS = ("hold", "blend", "warp", "rife", "gimm")
+T_IDXS = np.array([10.0 * (i / 32) ** 2 for i in range(33)])      # openpilot plan times (openpilot.model.T_IDXS)
 
 
 def grid(t0: float, dt: float = 0.1) -> np.ndarray:
