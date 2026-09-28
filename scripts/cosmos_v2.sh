@@ -14,8 +14,8 @@ trap 'echo "failed at line $LINENO ($(date +%H:%M))" > "$T.ERROR"' ERR
 st() { echo "$(date '+%m-%d %H:%M') $*" | tee -a "$T.STATUS"; }
 py() { $E/jevdrive/bin/python -m jevdrive.cosmos_v2 "$@"; }
 free_gb() { echo $(( $(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$CUDA_VISIBLE_DEVICES") / 1024 )); }
-infer() {  # infer <spec> <model> <arm>: waits until the card has room (distilled ~48 GB peak, base multicontrol ~60 GB)
-  local need=$([[ $2 == edge/distilled ]] && echo 50 || echo 64)
+infer() {  # infer <spec> <model> <arm>: waits until the card has room
+  local need=$([[ $2 == edge/distilled ]] && echo "${NEED_DISTILLED:-36}" || echo "${NEED_BASE:-52}")   # text encoder on CPU
   until (( $(free_gb) >= need )); do sleep 60; done
   $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$1" --model "$2" --out "$R/out/$3"
 }

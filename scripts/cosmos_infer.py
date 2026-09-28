@@ -62,6 +62,31 @@ class NvmlPeak:
         self.peak = 0
 
 
+def patch_text_encoder_offload():
+    """Keep the 7B text encoder (Reason1, ~16 GB bf16) on the CPU between prompts and cache embeddings per prompt:
+    it only runs once per distinct prompt, and the card is shared (GPU 1 next to P3 reconstructions)."""
+    import torch
+    from cosmos_transfer2._src.predict2.text_encoders.text_encoder import TextEncoder
+    orig, cache = TextEncoder.compute_text_embeddings_online, {}
+
+    def wrapped(self, data_batch, input_caption_key, *a, **kw):
+        key = (input_caption_key, tuple(map(str, data_batch[input_caption_key])))
+        if key not in cache:
+            cache[key] = orig(self, data_batch, input_caption_key, *a, **kw)
+            self.model.to("cpu")
+            torch.cuda.empty_cache()
+        return cache[key]
+    TextEncoder.compute_text_embeddings_online = wrapped
+
+
+def offload_text_encoder(inf):
+    import torch
+    te = getattr(getattr(inf.inference_pipeline, "model", None), "text_encoder", None)
+    if te is not None and getattr(te, "model", None) is not None:
+        te.model.to("cpu")
+        torch.cuda.empty_cache()
+
+
 def patch_guided_distilled():
     """Guided generation for the distilled (DMD2, trigflow) sampler, which ignores x0_spatial_condition as shipped.
     Same rule as the base model's sampler (vid2vid_model_control_vace_rectified_flow): before every step, the latent
@@ -136,6 +161,7 @@ def main():
     except ImportError:
         pass
     patch_guided_distilled()
+    patch_text_encoder_offload()
     from cosmos_oss.init import init_environment
     from cosmos_transfer2.config import InferenceArguments, SetupArguments
     from cosmos_transfer2.inference import Control2WorldInference
@@ -168,6 +194,7 @@ def main():
     t0 = time.time()
     setup = SetupArguments(output_dir=out, model=a.model, disable_guardrails=True)
     inf = Control2WorldInference(setup, batch_hint_keys=keys)
+    offload_text_encoder(inf)
     rl.info(f"model loaded in {time.time() - t0:.0f} s, card peak {peak.peak / 2**30:.1f} GiB")
     rl.event("load", s=time.time() - t0, card_peak_gib=peak.peak / 2**30)
     for i, s in enumerate(todo):
