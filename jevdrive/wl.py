@@ -237,10 +237,35 @@ def _fork_attempt(out: Path, rid: str) -> Path | None:
     return out / "attempts" / rid / str(json.loads(f.read_text())["attempt"])
 
 
+def _actors_by_tick(adir: Path, t_max: int) -> pd.DataFrame:
+    z = np.load(adir / "actors.npz")
+    kinds = json.loads((adir / "actor_kinds.json").read_text())
+    fr0 = int(_frames(adir).frame.iloc[0])
+    t = pd.DataFrame({"tick": z["frame"] - fr0 + 1, "id": z["id"], "x": z["xyz"][:, 0], "y": z["xyz"][:, 1]})
+    t["type"] = t.id.map(lambda i: kinds.get(str(i), ["?"])[0])
+    return t[t.tick < t_max]
+
+
+def _match_actors(a: pd.DataFrame, s: pd.DataFrame) -> pd.DataFrame:
+    """Server actor ids differ between runs: map each fork-run actor to the source actor of the same type nearest to it
+    at the fork-run actor's first tick, then join all ticks on (tick, mapped id)."""
+    first = a.sort_values("tick").drop_duplicates("id")
+    mp = {}
+    for r in first.itertuples():
+        c = s[(s.tick == r.tick) & (s.type == r.type)]
+        if len(c):
+            j = int(np.argmin(np.hypot(c.x - r.x, c.y - r.y)))
+            mp[r.id] = int(c.id.iloc[j])
+    a = a.assign(sid=a.id.map(mp))
+    return a.dropna(subset=["sid"]).astype({"sid": int}).merge(s, left_on=["tick", "sid"], right_on=["tick", "id"],
+                                                                 suffixes=("_a", "_s"))
+
+
 def prefix(out: str, stage: str = "pilot1") -> pd.DataFrame:
     """Every finished fork run of the stage against its source run on the ticks before the fork: max ego position
-    difference, max actor position difference (same ids), and whether the saved JPEGs before the fork are
-    byte-identical to the source's."""
+    difference, max actor position difference (actors matched by type and position, ids differ between servers),
+    and the saved JPEGs before the fork against the source's (byte-identical count, mean |pixel difference|)."""
+    from PIL import Image
     runs = stage_ids(stage)
     rows = []
     for r in runs.itertuples():
@@ -251,25 +276,27 @@ def prefix(out: str, stage: str = "pilot1") -> pd.DataFrame:
         pa, ps = _pose(a), _pose(s)
         k = min(r.fork_tick - 1, pa.index.max(), ps.index.max())
         dpos = float(np.hypot(pa.x[:k].to_numpy() - ps.x[:k].to_numpy(), pa.y[:k].to_numpy() - ps.y[:k].to_numpy()).max())
-        fa, fs = _frames(a), _frames(s)
-        za, zs = np.load(a / "actors.npz"), np.load(s / "actors.npz")
-        ta = pd.DataFrame({"frame": za["frame"], "id": za["id"], "x": za["xyz"][:, 0], "y": za["xyz"][:, 1]})
-        tsrc = pd.DataFrame({"frame": zs["frame"], "id": zs["id"], "x": zs["xyz"][:, 0], "y": zs["xyz"][:, 1]})
-        # frames are server counters: map both to ticks through the recorders' own first frame
-        ta["tick"] = ta.frame - int(fa.frame.iloc[0]) + 1
-        tsrc["tick"] = tsrc.frame - int(fs.frame.iloc[0]) + 1
-        m = ta[ta.tick < r.fork_tick].merge(tsrc[tsrc.tick < r.fork_tick], on=["tick", "id"], suffixes=("_a", "_s"))
+        m = _match_actors(_actors_by_tick(a, r.fork_tick), _actors_by_tick(s, r.fork_tick))
+        n_ids = _actors_by_tick(a, r.fork_tick).id.nunique()
         dact = float(np.hypot(m.x_a - m.x_s, m.y_a - m.y_s).max()) if len(m) else np.nan
-        same, n_img = 0, 0
+        fa, fs = _frames(a), _frames(s)
+        same, n_img, mad = 0, 0, []
         for t in fa.index[fa.index < r.fork_tick]:
             files = fa.files[t]
             if not files or t not in fs.index:
                 continue
             for cam, rel in files.items():
                 n_img += 1
-                same += (a / rel).read_bytes() == (s / fs.files[t][cam]).read_bytes()
+                ba, bs = (a / rel).read_bytes(), (s / fs.files[t][cam]).read_bytes()
+                same += ba == bs
+                if n_img <= 12 or ba != bs:
+                    ia = np.asarray(Image.open(a / rel), np.int16)
+                    ib = np.asarray(Image.open(s / fs.files[t][cam]), np.int16)
+                    mad.append(float(np.abs(ia - ib).mean()))
         rows.append({"route_id": r.route_id, "action": r.action, "fork_tick": r.fork_tick, "ego_max_dpos_m": dpos,
-                     "actor_max_dpos_m": dact, "actor_rows_matched": len(m), "images_compared": n_img, "images_identical": same})
+                     "actor_max_dpos_m": dact, "actors_matched": int(m.id_a.nunique()) if len(m) else 0, "actors": n_ids,
+                     "images_compared": n_img, "images_identical": same,
+                     "pixel_mad_mean": float(np.mean(mad)) if mad else np.nan, "pixel_mad_max": float(np.max(mad)) if mad else np.nan})
     t = pd.DataFrame(rows)
     RESULTS.mkdir(parents=True, exist_ok=True)
     t.to_csv(RESULTS / f"prefix_{stage}.csv", index=False, float_format="%.4f")
