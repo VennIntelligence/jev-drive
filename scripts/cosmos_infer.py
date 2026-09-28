@@ -72,6 +72,9 @@ def main():
 
     from cosmos_transfer2._src.imaginaire.utils import checkpoint_db
     checkpoint_db._hf_download = local_download
+    # CheckpointFileHf._download asserts that the returned path exists; route it around that assertion
+    checkpoint_db.CheckpointFileHf._download = lambda self: local_download(
+        [self.repository, "--repo-type", "model", "--revision", self.revision, self.filename])
     import numpy as np
     import torch
     from cosmos_oss.init import init_environment
