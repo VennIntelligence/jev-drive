@@ -29,13 +29,19 @@ def check1(v: str, names: list) -> tuple[pd.DataFrame, pd.DataFrame]:
         g = gt(pair)
         det = np.load(ROOT / "det" / v / f"{pair}.npz")
         vis = g["px"] >= VIS_PX
+        # per hazard pedestrian (gt_boxes.npz): a recall unit is one visible pedestrian in one frame
+        hb = np.load(ROOT / "clips" / pair / "gt_boxes.npz")
         for s in det.files:
             d = det[s]
             for t in range(len(g["px"])):
                 b = d[d[:, 0] == t, 1:5]
-                rec = {"pair": pair, "stream": s, "t": t, "px": int(g["px"][t]), "vis": bool(vis[t])}
                 if s in ("raw_plus", "plus"):
-                    rec["hit"] = bool(vis[t] and len(b) and (_iou(b, g["box"][t]) >= IOU).any())
+                    for h in range(hb["px"].shape[1]):
+                        if hb["px"][t, h] >= VIS_PX:
+                            frames.append({"pair": pair, "stream": s, "t": t, "h": h, "px": int(hb["px"][t, h]), "vis": True,
+                                           "hit": bool(len(b) and (_iou(b, hb["box"][t, h]) >= IOU).any())})
+                    continue
+                rec = {"pair": pair, "stream": s, "t": t, "px": int(g["px"][t]), "vis": bool(vis[t])}
                 if s in ("raw_minus", "minus", "rep", "alt"):
                     poly = g["corridor"][t]
                     poly = poly[~np.isnan(poly[:, 0])]
@@ -165,7 +171,7 @@ def report(variants: list, only: str = ""):
                     pix[k] += list(np.minimum(pj[k], 99.0) if k.startswith("psnr") else pj[k])
         med = {k: float(np.median(x)) if x else np.nan for k, x in pix.items()}
         big = per[per.vis_frames >= 10]
-        s = {"variant": v, "pairs": len(names_v), "vis_frames": int(len(rec) // 2),
+        s = {"variant": v, "pairs": len(names_v), "vis_units": int(len(rec) // 2),
              "R_raw": R["raw_plus"], "R_cosmos": R["plus"], "R_raw_near": Rn["raw_plus"], "R_cosmos_near": Rn["plus"],
              "R_raw_far": Rf["raw_plus"], "R_cosmos_far": Rf["plus"],
              "worst_pair_ratio": float((big.R_plus / big.R_raw_plus.clip(lower=1e-6)).min()) if len(big) else np.nan,
@@ -179,6 +185,9 @@ def report(variants: list, only: str = ""):
              "dv_med": float(per.dv_med.median()), "dv_p90": float(per.dv_p90.median()), "dy_med": float(per.dy_med.median()),
              "lead_agree": float(per.lead_agree.mean()), **{k: x for k, x in cost(v).items() if k != "variant"}}
         P = PASS
+        # descriptive, not a pass line: pairs whose own median LPIPS breaks the pooled rule
+        s["pairs_lpips_over_third_of_seed"] = int((per.lpips_pair > P["lpips_frac_of_seed"] * per.lpips_alt).sum())
+        s["pairs_psnr_below_28"] = int((per.psnr_pair < P["psnr_min"]).sum())
         s["pass1"] = bool(s["R_cosmos"] >= P["recall_ratio"] * s["R_raw"] and s["R_cosmos"] >= P["recall_abs"]
                           and not (s["worst_pair_ratio"] < P["recall_pair_ratio"])
                           and s["H_cosmos"] <= P["halluc_abs"] and s["H_cosmos"] <= s["H_raw"] + P["halluc_over_raw"])

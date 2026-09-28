@@ -391,6 +391,37 @@ def specs(variant: str, which: str = "all", floors: str = "both") -> Path:
     return f
 
 
+def hazard_boxes(which: str = "all"):
+    """Per hazard walker (PedestrianCrossing has three): GT mask pixels and tight box per frame -> gt_boxes.npz.
+    Check 1 matches a detection against ONE pedestrian's box; gt.npz only has the union of all hazards."""
+    from . import p5_pairs as PP
+    p = pairs()
+    if which == "pilot1":
+        p = p[p.base_id == PILOT1]
+    for _, r in p.iterrows():
+        a = _attempt(root("gen"), r.plus)
+        A = PP.load_world(a)
+        fr = pd.read_json(a / "op" / "frames.jsonl", lines=True).set_index("k")
+        act, kinds = A["act"], A["kinds"]
+        haz = [i for i, t in zip(A["hazards"], A["hazard_types"]) if t.startswith("walker.")]
+        ks = list(range(int(r.k0), int(r.k1)))
+        box, px = np.full((len(ks), len(haz), 4), -1, np.int32), np.zeros((len(ks), len(haz)), np.int32)
+        for i, k in enumerate(ks):
+            _, _, tag, inst = _load_frame(a, k)
+            M, sel = np.array(fr.loc[k, "cam"]), act["k"] == k
+            for j, h in enumerate(haz):
+                m = act["id"][sel] == h
+                if not m.any():
+                    continue
+                mask, _ = _hazard_mask(M, tag, inst, [box_corners(act["xyz"][sel][m][0], act["yaw"][sel][m][0], kinds[str(h)][2])])
+                ys, xs = np.nonzero(mask)
+                px[i, j] = len(xs)
+                if len(xs):
+                    box[i, j] = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+        np.savez(root("clips", r.pair) / "gt_boxes.npz", box=box, px=px, hazards=np.array(haz))
+        log.info("%s: %d hazards, visible units %d", r.pair, len(haz), int((px >= VIS_PX).sum()))
+
+
 def world_ids(which: str = "all") -> str:
     p = pairs()
     if which == "pilot1":
@@ -401,7 +432,7 @@ def world_ids(which: str = "all") -> str:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("select", "ids", "controls", "specs"))
+    ap.add_argument("step", choices=("select", "ids", "controls", "specs", "boxes"))
     ap.add_argument("--which", default="all")
     ap.add_argument("--variant", default="edgeA")
     ap.add_argument("--floors", default="both", choices=("both", "alt", "none"))
@@ -410,6 +441,8 @@ def main():
         print(specs(a.variant, a.which, a.floors))
     elif a.step == "select":
         select()
+    elif a.step == "boxes":
+        hazard_boxes(a.which)
     elif a.step == "controls":
         controls(a.which)
     elif a.step == "ids":
