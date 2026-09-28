@@ -91,13 +91,24 @@ class Ground:
             L = L[L[:, 10] == 1][:, 3:6].astype(np.float64)
             pts.append(L @ g["E"][t][:3, :3].T + g["E"][t][:3, 3])
         self.p = np.concatenate(pts)
+        from scipy.spatial import cKDTree
+        self.tree = cKDTree(self.p[:, :2])
+        self.cache = {}
+
+    def near(self, xy, r):
+        return self.p[self.tree.query_ball_point(np.asarray(xy, np.float64)[:2], r)]
 
     def __call__(self, xy):
-        d = np.linalg.norm(self.p[:, :2] - xy, axis=1)
-        for r in (0.8, 2.0):
-            if (d <= r).sum() >= 5:
-                return float(np.median(self.p[d <= r, 2]))
-        return float("nan")
+        key = (round(float(xy[0]), 2), round(float(xy[1]), 2))
+        if key not in self.cache:
+            z = float("nan")
+            for r in (0.8, 2.0):
+                q = self.near(xy, r)
+                if len(q) >= 5:
+                    z = float(np.median(q[:, 2]))
+                    break
+            self.cache[key] = z
+        return self.cache[key]
 
 
 # ---------------------------------------------------------------- bank
@@ -259,6 +270,7 @@ def place(g, path, t_star, d, win, side, ttr, null=False, cams=None):
 # walks in at its own gait speed (1.0-1.8 m/s) or stands still, is visible to the front camera outside the lane for
 # >= 1.5 s before it enters the lane, and never overlaps a reconstructed actor (margin 0.3 m around a 0.3 m body).
 V_WALK, KERB_STEP, KERB_OFF, VIS_OUT_S, BODY_R, CLEAR = (1.0, 1.8), 0.06, 0.6, 1.5, 0.3, 0.3
+KERB_CACHE = {}
 
 
 def scene_actors(g) -> dict:
@@ -302,20 +314,23 @@ def kerb(gr, path, S, side):
     ground stands >= KERB_STEP above the road at the path centre; None when there is no step within 8 m."""
     Q, th, _ = path.at(S)
     right = np.array([np.sin(th), -np.cos(th)])
+    key = (round(float(S), 2), side)
+    if key in KERB_CACHE.setdefault(id(gr), {}):
+        return KERB_CACHE[id(gr)][key]
     prof = []
     for l in np.arange(-1.0, 8.01, 0.25):
-        pt = Q + side * l * right
-        d = np.linalg.norm(gr.p[:, :2] - pt, axis=1)
-        m = d <= 0.35
-        prof.append((l, float(np.median(gr.p[m, 2])) if m.sum() >= 3 else np.nan))
+        q = gr.near(Q + side * l * right, 0.35)
+        prof.append((l, float(np.median(q[:, 2])) if len(q) >= 3 else np.nan))
     z0 = np.nanmedian([z for l, z in prof if -1.0 <= l <= 1.0])
-    if not np.isfinite(z0):
-        return None
-    step = [(l, z) for l, z in prof if l >= 1.75]
-    for i in range(len(step) - 1):
-        if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
-            return float(step[i][0])
-    return None
+    res = None
+    if np.isfinite(z0):
+        step = [(l, z) for l, z in prof if l >= 1.75]
+        for i in range(len(step) - 1):
+            if all(np.isfinite(step[i + k][1]) and step[i + k][1] - z0 >= KERB_STEP for k in (0, 1)):
+                res = float(step[i][0])
+                break
+    KERB_CACHE[id(gr)][key] = res
+    return res
 
 
 def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross"):
@@ -423,6 +438,9 @@ def plan_one(k: int, bank_: list) -> dict:
     for d in bank_:
         obs = np.radians(np.asarray(d["az"]))
         for w in d["windows"]:
+            if not V_WALK[0] <= w["speed"] <= V_WALK[1]:
+                fails["donor speed outside 1.0-1.8 m/s"] = fails.get("donor speed outside 1.0-1.8 m/s", 0) + 2
+                continue
             for side in (1.0, -1.0):
                 b = walk_plan(g, path, gr, actors, obs, d, w, side, ts, S3, 0.0, PRE, POST, "cross")
                 if "fail" in b:
