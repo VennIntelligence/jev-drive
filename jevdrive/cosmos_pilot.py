@@ -26,8 +26,8 @@ T = 93                     # Cosmos chunk (the distilled model takes exactly 93 
 FPS = 20
 PED = ("PedestrianCrossing", "DynamicObjectCrossing", "ParkingCrossingPedestrian", "VehicleTurningRoutePedestrian")
 SMALL = ("Town01", "Town02", "Town03", "Town04", "Town05", "Town07", "Town10HD", "Town11")
-# the pilot's base routes: every small-town pedestrian route of P5 v1, one per town and family first
-BASES = ("24211", "24224", "24294", "24206", "27515", "27529", "24519", "25863", "24252", "27297")
+# the pilot's base routes: small-town pedestrian routes of P5 v1 (27529 dropped: hazard visible for < 93 ticks)
+BASES = ("24211", "24224", "24294", "24206", "27515", "27582", "24519", "25863", "24252", "27297")
 PILOT1 = "24211"
 
 
