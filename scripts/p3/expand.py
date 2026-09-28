@@ -5,7 +5,11 @@ Each scene runs `scripts/p3/gpu_enable.py scene --scene k` exactly as scenes 000
 equality check). Staged: scene 010 -> check -> 011-019 -> check -> 020-065 -> check -> the pooled readout of all rendered
 scenes (gpu_enable.py readout, tag expand66) on the test card. A stage that fails the checklist stops the lane.
 
-Cards, re-evaluated every POLL_S (event-triggered, work-conserving, nothing is ever evicted):
+Cards, re-evaluated every POLL_S (event-triggered, work-conserving, nothing is ever evicted). No nvidia-smi polling
+(it takes the driver's device lock; on 2026-09-28 polling storms helped CARLA start-ups stall): CARLA servers per card are
+counted from /proc (-graphicsadapter), and free VRAM is queried at most once per SMI_S, only when a slot is free and a
+scene is waiting. While $DATA_DIR/runs/nq4/p3/expand/HOLD exists no new scene starts (running ones go on); a restarted
+lane adopts the live scene processes from their gpu_enable pid files.
   GPU 6 (the test card) always; card k in 0-5 only when it has left the nq4-g grant (not in the row's gpus, or the row is
   done / revoked), runs no CARLA server of any owner, and is not named in a wm-loop demand file.
   At most SLOTS scenes per card, a new one only with >= MIN_FREE_GB free VRAM. Cores: 2 per slot, GPU 6 -> 168-171,
@@ -30,7 +34,7 @@ REPO = Path(__file__).resolve().parents[2]
 D = DATA / "runs/nq4/p3"
 E = D / "expand"
 STAGES = [[10], list(range(11, 20)), list(range(20, 66))]
-TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, TRAIN_TIMEOUT = 6, 2, 30, 60, 6 * 3600
+TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 300, 6 * 3600
 CORES = {6: ["168,169", "170,171"], **{k: [f"{24 * k + 20},{24 * k + 21}", f"{24 * k + 22},{24 * k + 23}"] for k in range(6)}}
 
 
@@ -43,25 +47,42 @@ def log(msg, **ev):
         f.write(json.dumps({"t": time.time(), "msg": msg, **ev}) + "\n")
 
 
-def gpus() -> dict:
-    """index -> (free GB, CARLA servers on it)."""
-    q = subprocess.run(["nvidia-smi", "--query-gpu=index,pci.bus_id,memory.total,memory.used", "--format=csv,noheader,nounits"],
-                       capture_output=True, text=True, check=True).stdout
-    info, bus = {}, {}
-    for line in q.strip().splitlines():
-        i, b, tot, used = [x.strip() for x in line.split(",")]
-        info[int(i)] = [(float(tot) - float(used)) / 1024, 0]
-        bus[b.lower()] = int(i)
-    apps = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,gpu_bus_id", "--format=csv,noheader"],
-                          capture_output=True, text=True).stdout
-    for line in apps.strip().splitlines():
+_SMI = [0.0, {}]
+
+
+def free_gb() -> dict:
+    """index -> free VRAM (GB), one nvidia-smi query at most every SMI_S."""
+    if time.time() - _SMI[0] > SMI_S:
+        q = subprocess.run(["nvidia-smi", "--query-gpu=index,memory.total,memory.used", "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True, timeout=60).stdout
+        _SMI[:] = [time.time(), {int(i): (float(t) - float(u)) / 1024 for i, t, u in (l.split(",") for l in q.strip().splitlines())}]
+    return dict(_SMI[1])
+
+
+def carla_per_card() -> dict:
+    """index -> CARLA servers, from the server command lines (-graphicsadapter=k), no driver query."""
+    out = {}
+    for p in Path("/proc").iterdir():
+        if not p.name.isdigit():
+            continue
         try:
-            pid, b = [x.strip() for x in line.split(",")]
-            if b"CarlaUE4" in Path(f"/proc/{pid}/cmdline").read_bytes():
-                info[bus[b.lower()]][1] += 1
-        except (ValueError, OSError, KeyError):
-            pass
-    return info
+            cmd = (p / "cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        if cmd and b"CarlaUE4" in cmd[0]:
+            k = next((int(a.split(b"=")[1]) for a in cmd if a.startswith(b"-graphicsadapter=")), 0)
+            out[k] = out.get(k, 0) + 1
+    return out
+
+
+class Adopted:
+    """A scene process started by an earlier lane instance, followed through /proc."""
+
+    def __init__(self, pid: int):
+        self.pid = pid
+
+    def poll(self):
+        return None if Path(f"/proc/{self.pid}").exists() else -1
 
 
 def g_cards() -> set:
@@ -127,6 +148,20 @@ def main():
         assert (D / f"sky_{k:03d}.done").exists(), f"sky masks of {k} missing"
     env = dict(os.environ, PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True")
     running, tries = {}, {}
+    for k in range(10, 66):                       # adopt live scene processes of an earlier instance
+        pf = D / f"gpu_enable_scene_{k:03d}.pid"
+        if pf.exists() and not done(k):
+            pid = int(pf.read_text())
+            try:
+                cmd = Path(f"/proc/{pid}/cmdline").read_bytes()
+            except OSError:
+                continue
+            if b"gpu_enable.py" in cmd and b"scene" in cmd:
+                args = cmd.split(b"\0")
+                g = int(args[args.index(b"--gpu") + 1])
+                c = args[args.index(b"--cpus") + 1].decode()
+                running[k] = (Adopted(pid), g, c, time.time())
+                log(f"adopted scene {k:03d} (pid {pid}, GPU {g})", event="adopt", scene=k, pid=pid)
     for si, stage in enumerate(STAGES):
         if (E / f"stage{si}.ok").exists():
             continue
@@ -137,7 +172,7 @@ def main():
                 if rc is None:
                     continue
                 del running[k]
-                if rc == 0 and done(k):
+                if done(k):
                     log(f"scene {k:03d} done on GPU {g} in {(time.time() - t0) / 60:.0f} min", event="scene_done", scene=k, gpu=g,
                         minutes=round((time.time() - t0) / 60, 1))
                 else:
@@ -151,11 +186,17 @@ def main():
             todo = [k for k in stage if not done(k) and k not in running]
             if not todo and not running:
                 break
-            info = gpus()
-            eligible = [TEST_GPU] + [g for g in range(6) if g not in g_cards() and g not in demand_cards() and info[g][1] == 0]
-            for g in eligible:
+            if (E / "HOLD").exists() or not todo:
+                status(running, si)
+                time.sleep(POLL_S)
+                continue
+            carla = carla_per_card()
+            eligible = [TEST_GPU] + [g for g in range(6) if g not in g_cards() and g not in demand_cards() and not carla.get(g)]
+            want = [g for g in eligible if sum(v[1] == g for v in running.values()) < SLOTS]
+            info = free_gb() if want else {}
+            for g in want:
                 mine = [k for k, v in running.items() if v[1] == g]
-                while todo and len(mine) < SLOTS and info[g][0] >= MIN_FREE_GB:
+                while todo and len(mine) < SLOTS and info.get(g, 0) >= MIN_FREE_GB:
                     k = todo.pop(0)
                     cores = next(c for c in CORES[g] if c not in [running[j][2] for j in mine])
                     with open(E / f"scene_{k:03d}.out", "a") as out:
@@ -164,7 +205,7 @@ def main():
                                              cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT)
                     running[k] = (p, g, cores, time.time())
                     mine.append(k)
-                    info[g][0] -= MIN_FREE_GB
+                    info[g] -= MIN_FREE_GB
                     log(f"scene {k:03d} started on GPU {g}, cores {cores}, pid {p.pid}", event="scene_start", scene=k, gpu=g, pid=p.pid)
                     time.sleep(20)                 # let the first allocations land before the next VRAM reading
             status(running, si)
