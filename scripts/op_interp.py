@@ -399,7 +399,7 @@ if __name__ == "__main__":
     p.add_argument("--model", choices=list(BACKENDS), required=True)
     p.add_argument("--backend", default="")
     p.add_argument("--start", type=float, default=None, help="first step time (warm-up ablation)")
-    p.add_argument("--procs", type=int, default=4, help="ORT sessions in parallel (shards)")
+    p.add_argument("--procs", type=int, default=3, help="ORT sessions in parallel (shards)")
     p.add_argument("--shard", default="", help="k/K: run only shard k (set by --procs)")
     p = sp.add_parser("score-wod")
     p.add_argument("--adapters", nargs="+", default=["base", "retime"])
