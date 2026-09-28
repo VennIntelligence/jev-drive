@@ -426,6 +426,13 @@ def vace(a):
     model = WanVace(config=WAN_CONFIGS["vace-14B"], checkpoint_dir=str(a.ckpt), device_id=0, rank=0,
                     t5_fsdp=False, dit_fsdp=False, use_usp=False, t5_cpu=True)   # T5 on the CPU: the test card is shared
     t_load = time.time() - t0
+    if a.vae_cpu:                        # the shared card had < 8 GB free: run the Wan VAE on the CPU, only the DiT on the GPU
+        vae = model.vae
+        vae.model.to("cpu")
+        vae.scale = [s_.cpu() for s_ in vae.scale]
+        enc, dec = vae.encode, vae.decode
+        vae.encode = lambda vids: [x.cuda() for x in enc([v.float().cpu() for v in vids])]          # noqa: E731
+        vae.decode = lambda zs: [x.cuda() for x in dec([z.float().cpu() for z in zs])]              # noqa: E731
     torch.cuda.synchronize()
     t1 = time.time()
     out = model.generate(PROMPT[cls], [vid], [mk], [None], size=(cw, ch), frame_num=len(frames), shift=a.shift,
@@ -694,6 +701,7 @@ def main():
             p.add_argument("--shift", type=float, default=16.0)
             p.add_argument("--seed", type=int, default=2025)
             p.add_argument("--ckpt", type=Path, default=DATA / "models/vace/Wan2.1-VACE-14B")
+            p.add_argument("--vae-cpu", action="store_true")
         if n == "masks":
             p.add_argument("--opts", nargs="*")
         if n == "clip":
