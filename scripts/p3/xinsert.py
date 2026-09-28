@@ -17,9 +17,10 @@ gain cap 1.33, view gap <= 20 deg). todos/2026-09-26-night-queue-4.md, P section
          the entry side, direction of the smaller gap.  -> xinsert/plan/p3_<k>.json
   render (GPU, one target with a plan)  the target OmniRe run plus the donor's gaussians and its own deformation network
          (evaluated at the donor's frame), placed rigidly, feet on the target LiDAR ground (1.1 s median), SH evaluated
-         in the donor's own frame (view directions rotated back), per-channel gain on the donor's colours so that its
-         donor / background ratio equals the one in its own log (clip [0.75, 1.33]), and an ambient-occlusion contact
-         shadow only where the ground under the feet is lit (local luminance >= 0.6 x the lit-lane reference). Outputs
+         in the donor's own frame (view directions rotated back), a per-frame per-channel gain on the donor's colours so
+         that its donor / background ratio equals the one in its own log (clip [0.75, 1.33], median over +-0.3 s, so a
+         walk from sun into shade is followed), and an ambient-occlusion contact shadow only on frames where the ground
+         under the feet is lit (disc luminance >= 0.6 x the lit-lane reference, majority over +-0.2 s). Outputs
          real, minus (the target re-render), ins2 / ins3 / ins4 / null in the insert.py layout, meta.json, clips.
   yield  (CPU) summary of the plans.
 
@@ -336,7 +337,8 @@ class XDonor:
         self.net.eval()
         self.ts = torch.linspace(0, 1, self.trans.shape[0], device=device)
         self.sh = int(ncfg.get("sh_degree", 3))
-        self.cur, self.frame_map, self.pose, self.gain = None, {}, {}, torch.ones(3, device=device)
+        self.cur, self.frame_map, self.pose, self.gain_map = None, {}, {}, {}
+        self.one = torch.ones(3, device=device)
         self.step, self.in_test_set = 10 ** 6, False
 
     def set_cur_frame(self, t):
@@ -361,7 +363,7 @@ class XDonor:
         vd = (vd @ R) @ Rd.T                                            # into the donor's own world frame
         vd = vd / vd.norm(dim=-1, keepdim=True)
         colors = torch.cat((self.fdc[:, None, :], self.frest), dim=1)
-        rgb = torch.clamp(spherical_harmonics(self.sh, vd, colors) + 0.5, 0.0, 1.0) * self.gain
+        rgb = torch.clamp(spherical_harmonics(self.sh, vd, colors) + 0.5, 0.0, 1.0) * self.gain_map.get(self.cur, self.one)
         return {"_means": world, "_opacities": torch.sigmoid(self._op), "_rgbs": rgb.clamp(0, 1), "_scales": scales,
                 "_quats": quats / quats.norm(dim=-1, keepdim=True)}
 
@@ -434,22 +436,31 @@ def render(a):
     V = {n: poses(v) for n, v in pl["variants"].items() if v}
     # exposure / white balance: per-channel gain from TTR 3 s frames (donor / ring ratio vs its own log), clipped
     rat0 = np.asarray(d["ratio"])
-    gains = []
+    # exposure / white balance per variant and frame (the donor may walk from sun into shade): per-channel gain that
+    # restores its donor / background ratio from its own log, clipped to [1 / 1.33, 1.33], median over +-3 frames
+    gain_map, gain_sum = {}, {}
     with torch.no_grad():
-        xd.pose = V["ins3"][0]
-        for t in frames[::5]:
-            ii, cc = view(t)
-            xd.pose = V["ins3"][0]
-            wi = to8(tr(ii, cc)["rgb"])
-            xd.pose = {}
-            wo = to8(tr(ii, cc)["rgb"])
-            m = np.abs(wi.astype(int) - wo.astype(int)).max(-1) > INS.DONOR_THR
-            if m.sum() < 150:
-                continue
-            ring = INS._ring(m)
-            gains.append([rat0[c] * max(np.median(wo[..., c][ring]), 1.0) / max(np.median(wi[..., c][m]), 1.0) for c in range(3)])
-    gain = np.clip(np.median(gains, 0), 1 / GAIN_MAX, GAIN_MAX) if gains else np.ones(3)
-    xd.gain = torch.tensor(gain, dtype=torch.float32, device=dev)
+        for n in V:
+            raw = {}
+            for t in frames:
+                ii, cc = view(t)
+                xd.gain_map = {}
+                xd.pose = V[n][0]
+                wi = to8(tr(ii, cc)["rgb"])
+                xd.pose = {}
+                wo = to8(tr(ii, cc)["rgb"])
+                m = np.abs(wi.astype(int) - wo.astype(int)).max(-1) > INS.DONOR_THR
+                if m.sum() >= 80:
+                    ring = INS._ring(m)
+                    raw[t] = [rat0[c] * max(np.median(wo[..., c][ring]), 1.0) / max(np.median(wi[..., c][m]), 1.0) for c in range(3)]
+            fill = np.median(list(raw.values()), 0) if raw else np.ones(3)
+            seq = np.array([raw.get(t, fill) for t in frames])
+            sm = np.array([np.median(seq[max(i - 3, 0):i + 4], 0) for i in range(len(frames))])
+            sm = np.clip(sm, 1 / GAIN_MAX, GAIN_MAX)
+            gain_map[n] = {t: torch.tensor(sm[i], dtype=torch.float32, device=dev) for i, t in enumerate(frames)}
+            gain_sum[n] = {"median": np.median(sm, 0).round(3).tolist(), "min": sm.min(0).round(3).tolist(), "max": sm.max(0).round(3).tolist(),
+                           "views": len(raw)}
+    gain = np.array(gain_sum["ins3"]["median"])
     # lit-lane reference and per-frame shade test on the target re-render (front camera)
     names = ["real", "minus"] + list(V)
     rows = {n: [] for n in names}
@@ -463,6 +474,7 @@ def render(a):
                 for ci, c in enumerate(INS.CAMS):
                     ii, cc = view(t, ci)
                     xd.pose = V[n][0] if n in V else {}
+                    xd.gain_map = gain_map.get(n, {})
                     im = to8(ii["pixels"]) if n == "real" else to8(tr(ii, cc)["rgb"])
                     fn = f"{2 * t:07d}.jpg"
                     Image.fromarray(im).save(out / n / "cams" / c / fn, quality=95)
@@ -487,30 +499,44 @@ def render(a):
         def lum(im):
             return im[..., :3].astype(np.float64) @ np.array([0.299, 0.587, 0.114])
 
-        # lit-lane reference per frame: 90th percentile of the lane pixels 8-40 m ahead in the target re-render
+        # lit-lane reference per frame: 90th percentile of the luminance sampled (3 x 3 median) at lane points 8-40 m ahead
+        # (lateral -1 / 0 / +1 m, on the LiDAR ground) in the target re-render; computed once per frame
+        ref = {}
+        for t in frames:
+            mi = lum(np.asarray(Image.open(out / "minus/cams/front" / f"{2 * t:07d}.jpg")))
+            K, c2w = camK[(t, 0)]
+            w2c = np.linalg.inv(c2w)
+            vals = []
+            for sd_ in np.arange(8, 40, 1.0):
+                q, th, _ = path.at(path.Se[t] + sd_)
+                for lat in (-1.0, 0.0, 1.0):
+                    p = q + lat * np.array([-np.sin(th), np.cos(th)])
+                    z = gr(p)
+                    if not np.isfinite(z):
+                        continue
+                    pc = w2c[:3, :3] @ np.r_[p, z] + w2c[:3, 3]
+                    if pc[2] <= 1:
+                        continue
+                    u, v = (K @ pc)[:2] / pc[2]
+                    u, v = int(u), int(v)
+                    if 1 <= u < mi.shape[1] - 1 and 1 <= v < mi.shape[0] - 1:
+                        vals.append(np.median(mi[v - 1:v + 2, u - 1:u + 2]))
+            ref[t] = np.percentile(vals, 90) if len(vals) >= 5 else None
         for n in V:
             feet = V[n][1]
             sh = {}
             for t in frames:
                 mi = np.asarray(Image.open(out / "minus/cams/front" / f"{2 * t:07d}.jpg"))
-                lanes = []
-                for sd_ in np.arange(8, 40, 1.0):
-                    q, th, _ = path.at(path.Se[t] + sd_)
-                    for lat in (-1.0, 0.0, 1.0):
-                        p = q + lat * np.array([-np.sin(th), np.cos(th)])
-                        mk, _ = disc_mask(t, 0, p, gr(p), 0.3, mi.shape)
-                        if mk is not None and mk.any():
-                            lanes.append(np.median(lum(mi)[mk]))
                 xy, zf = feet[t]
                 mk, _ = disc_mask(t, 0, xy, zf, 0.6, mi.shape)
-                if mk is None or not mk.any() or len(lanes) < 5:
+                if mk is None or not mk.any() or ref[t] is None:
                     sh[t] = None
                     continue
-                sh[t] = bool(np.median(lum(mi)[mk]) >= SHADE * np.percentile(lanes, 90))
+                sh[t] = bool(np.median(lum(mi)[mk]) >= SHADE * ref[t])
             vals = [v for v in sh.values() if v is not None]
             default = (sum(vals) >= len(vals) / 2) if vals else True
             seq = [sh[t] if sh[t] is not None else default for t in frames]
-            on = {t: bool(np.mean(seq[max(i - 5, 0):i + 6]) >= 0.5) for i, t in enumerate(frames)}
+            on = {t: bool(np.mean(seq[max(i - 2, 0):i + 3]) >= 0.5) for i, t in enumerate(frames)}   # +-0.2 s majority
             shadow_on[n] = on
             for t in frames:
                 if not on[t]:
@@ -530,7 +556,7 @@ def render(a):
                     Image.fromarray(np.clip(im + 0.5, 0, 255).astype(np.uint8)).save(out / n / "cams" / c / fn, quality=95)
     meta = {"scene": key, "target_segment": pl["segment"], "ckpt": ckpt, "t_star": ts, "frames": frames, "plan": pl,
             "donor_segment": json.loads((DATA / "runs/nq4/p3/targets" / f"{d['scene']:03d}.json").read_text())["segment"],
-            "gain_rgb": [float(x) for x in gain], "gain_views": len(gains),
+            "gain_rgb": [float(x) for x in gain], "gain": gain_sum,
             "shadow_on_fraction": {n: float(np.mean(list(v.values()))) for n, v in shadow_on.items()},
             "render_s": round(time.time() - t_start, 1)}
     (out / "meta.json").write_text(json.dumps(meta, indent=1, default=float))
