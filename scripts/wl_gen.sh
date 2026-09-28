@@ -6,6 +6,9 @@
 # Cards, CARLA workers per card, server indices and cores come from the `wm-loop` row of $DATA_DIR/runs/sched/table.tsv
 # (scripts/sch_table.py; GPU at position k uses indices idx0 + k*span ..); nothing here picks its own. The row must pass
 # `sch_table.py check` before the chain starts. WORKERS=n caps the row's workers per card (pilots).
+# Before each runner a chain waits until the card's CARLA servers (any lane, from the process table) + its workers
+# <= CARD_CAP (6): the G lane drains a card only at route boundaries after runs/sched/demand/wm-loop.json appears.
+# Drain: touch $OUT/DRAIN -> runners take no new route (B2D_DRAIN_FILE), chains start nothing new.
 # Needs runs/wl/{forks.parquet, jobs.json, forks-<set>.xml} (python -m jevdrive.wl forks). Out: runs/wl/gen/<set>/
 # (b2d_run layout), log.txt and chain-gpu<g>.log in runs/wl/gen/. Resumable: re-run skips done/<id>.json.
 set -uo pipefail
@@ -72,6 +75,22 @@ print(",".join(map(str, out[k * m:(k + 1) * m])))
 PYEOF
 }
 
+carla_on() {  # carla_on <gpu>: CARLA servers rendering on that card, any lane (-graphicsadapter = CUDA index here)
+    python3 - "$1" <<'PYEOF'
+import os, sys
+flag, n = ("-graphicsadapter=" + sys.argv[1]).encode(), 0
+for p in filter(str.isdigit, os.listdir("/proc")):
+    try:
+        a = open(f"/proc/{p}/cmdline", "rb").read().split(b"\0")
+    except OSError:
+        continue
+    n += b"CarlaUE4-Linux-Shipping" in a[0] and flag in a
+print(n)
+PYEOF
+}
+
+CARD_CAP=${CARD_CAP:-6}
+export B2D_DRAIN_FILE=$OUT/DRAIN
 export B2D_RESEED_AFTER_BUILD=1 B2D_CAPTURE_CRITERION_EVENTS=1 LEAD_PROJECT_ROOT=$DATA_DIR/third_party/scout/lead-cvpr2026 \
     HF_HUB_OFFLINE=1 OMP_NUM_THREADS=2 NUMBA_NUM_THREADS=3 SAVE_PATH=$R/lead_save
 export PYTHONPATH=$LEAD_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}
@@ -90,6 +109,12 @@ chain() {  # chain <j>
         for s in "${S[@]}"; do
             ids=$(.venv/bin/python -m jevdrive.wl ids --stage "$STAGE" --set "$s" --out "$OUT")
             [[ -z $ids ]] && continue
+            [[ -e $OUT/DRAIN ]] && { echo "$(date +%T) gpu $g: drained, starting nothing"; break 2; }
+            local n0=-1 on
+            while on=$(carla_on "$g"); (( on + w > CARD_CAP )); do
+                (( on != n0 )) && echo "$(date +%T) gpu $g: $on CARLA on the card, waiting for room for $w (cap $CARD_CAP)"
+                n0=$on; sleep 60
+            done
             echo "$(date +%T) gpu $g pass $pass $s: $(tr ',' '\n' <<< "$ids" | wc -l) runs left"
             CUDA_VISIBLE_DEVICES=$g BENCH2DRIVE_ROOT=$(tree "$s") WORK_DIR=$DATA_DIR/third_party/simlingo taskset -c "$cpus" \
                 "$PY" scripts/b2d_run.py --routes "$R/forks-$s.xml" --route-ids "$ids" --out "$OUT/$s" \

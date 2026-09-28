@@ -332,8 +332,9 @@ def prefix_feats(out: str, stage: str = "pilot1", step: str = "spec") -> pd.Data
         (d / "op_plan.json").write_text(json.dumps({"calib": carla_calib(), "streams": streams}))
         return {"streams": len(streams), "dir": str(d)}
     rows = []
-    src_op = data_dir() / "processed" / SRC["ba"]["proc"] / "op_streams_plan" / "cinque"
     for r in runs.itertuples():
+        src_op = data_dir() / "processed" / SRC[r.set]["proc"] / "op_streams_plan" / "cinque"
+        pre = "p5" if r.set == "ba" else r.set
         a = _fork_attempt(Path(out) / r.set, r.route_id)
         f = d / "op_streams_vis" / "cinque" / f"wl_{r.route_id}.npz"
         if a is None or not f.exists():
@@ -342,7 +343,7 @@ def prefix_feats(out: str, stage: str = "pilot1", step: str = "spec") -> pd.Data
         tick_of = {f"{r.route_id}-{fr:07d}": t for t, fr in zip(fa.index, fa.frame)}
         name_src = {t: f"{r.src_route}-{fr:07d}" for t, fr in zip(fs.index, fs.frame)}
         q = np.load(f)
-        so = np.load(src_op / f"p5_{r.src_route}.npz") if (src_op / f"p5_{r.src_route}.npz").exists() else None
+        so = np.load(src_op / f"{pre}_{r.src_route}.npz") if (src_op / f"{pre}_{r.src_route}.npz").exists() else None
         ref = dict(zip(so["name"], so["temporal"])) if so is not None else {}
         cos = []
         for n, v in zip(q["name"], q["temporal"]):
@@ -482,6 +483,9 @@ def sanity(out: str, stage: str) -> dict:
     lat = fin.pivot_table(index="fork_id", columns="action", values="lateral_right_m")
     cls = fin.groupby("fork_id")[["cls", "world"]].first()
     unsafe = fin.pivot_table(index="fork_id", columns="action", values="unsafe", aggfunc="max")
+    fin = fin.assign(hit_or_gap=fin.collision.astype(bool) | (fin.gap_min_m < 2.0))
+    hog = fin.pivot_table(index="fork_id", columns="action", values="hit_or_gap", aggfunc="max")
+    col = fin.pivot_table(index="fork_id", columns="action", values="collision", aggfunc="max")
     chk = {}
     chk["prefix_ego_le_1cm"] = float((pre.ego_max_dpos_m <= 0.01).mean()) if len(pre) else np.nan
     chk["brake_travel_lt_hold"] = float((piv.brake_hard < piv.hold).mean()) if {"brake_hard", "hold"} <= set(piv) else np.nan
@@ -492,23 +496,31 @@ def sanity(out: str, stage: str) -> dict:
         chk["shift_sign_ok"] = float(ok.sign_ok.mean()) if len(ok) else np.nan
         full = ok[ok.t_eval_s >= 2.0]
         chk["shift_ge_2m"] = float((full.offset_left_m.abs() >= 2.0).mean()) if len(full) else np.nan
-    u = unsafe.join(cls)
-    hold_op = u[["hold", "op"]].max(axis=1) if {"hold", "op"} <= set(u) else None
-    if hold_op is not None:
-        for c_, w_ in (("ped", "plus"), ("ped", "minus"), ("obstacle", "plus")):
-            m = (u.cls == c_) & (u.world == w_)
-            chk[f"unsafe_hold_or_op_{c_}_{w_}"] = float(hold_op[m].mean()) if m.any() else np.nan
+    # Registered wording: pedestrian items = collision or min in-lane gap < 2 m; P6 items = collision. The `unsafe`
+    # label (adds TTC < 1 s) is the model's target and is reported alongside as a description.
+    for name, tab in (("hit_or_gap", hog), ("unsafe", unsafe)):
+        u = tab.join(cls)
+        if {"hold", "op"} <= set(u):
+            hold_op = u[["hold", "op"]].astype(float).max(axis=1)
+            for c_, w_ in (("ped", "plus"), ("ped", "minus"), ("cutin", "plus"), ("cutin", "minus")):
+                m = (u.cls == c_) & (u.world == w_)
+                chk[f"{name}_hold_or_op_{c_}_{w_}"] = float(hold_op[m].mean()) if m.any() else np.nan
+    for name, tab in (("collision", col), ("unsafe", unsafe)):
+        u = tab.join(cls)
         m = (u.cls == "obstacle") & (u.world == "plus")
-        if m.any() and {"shift_L", "shift_R"} <= set(u):
-            chk["obstacle_plus_hold_unsafe"] = float(u.hold[m].mean())
-            chk["obstacle_plus_a_shift_safe"] = float((~(u.shift_L[m].astype(bool) & u.shift_R[m].astype(bool))).mean())
+        if m.any() and {"hold", "shift_L", "shift_R"} <= set(u):
+            chk[f"obstacle_plus_hold_{name}"] = float(u.hold[m].astype(float).mean())
+            chk[f"obstacle_plus_a_shift_no_{name}"] = float((~(u.shift_L[m].astype(bool) & u.shift_R[m].astype(bool))).mean())
+    chk["n_fork_points"] = {f"{c_}_{w_}": int(((cls.cls == c_) & (cls.world == w_)).sum())
+                            for c_, w_ in cls.drop_duplicates().itertuples(index=False)}
     chk["harness_fail"] = float(1 - t.done.mean() + (t.get("error", pd.Series(np.nan, index=t.index)).notna().mean()))
     verdict = {
         "prefix": chk["prefix_ego_le_1cm"] == 1.0,
         "brake": chk.get("brake_travel_lt_hold") == 1.0,
         "shift": chk.get("shift_sign_ok", 0) >= 0.95 and chk.get("shift_ge_2m", 0) >= 0.80,
-        "outcomes": (chk.get("unsafe_hold_or_op_ped_plus", 0) >= 0.20 and chk.get("unsafe_hold_or_op_ped_minus", 1) <= 0.05
-                     and chk.get("obstacle_plus_hold_unsafe", 0) >= 0.30 and chk.get("obstacle_plus_a_shift_safe", 0) >= 0.50),
+        "outcomes": (chk.get("hit_or_gap_hold_or_op_ped_plus", 0) >= 0.20 and chk.get("hit_or_gap_hold_or_op_ped_minus", 1) <= 0.05
+                     and chk.get("obstacle_plus_hold_collision", 0) >= 0.30
+                     and chk.get("obstacle_plus_a_shift_no_collision", 0) >= 0.50),
         "harness": chk["harness_fail"] <= 0.05}
     RESULTS.mkdir(parents=True, exist_ok=True)
     t.to_csv(RESULTS / f"runs_{stage}.csv", index=False, float_format="%.4f")
