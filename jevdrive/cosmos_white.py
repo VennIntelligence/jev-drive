@@ -8,7 +8,6 @@ CARLA is not a failure). Per unit we also keep what the control gave the model i
 
   python -m jevdrive.cosmos_white [--variants edgeA,edgeB,seg]  -> research/results/cosmos/white_units.csv.gz, white.md
 """
-import json
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -38,6 +37,11 @@ def _one(job) -> list:
     edge = read_mp4(Path(ctrl_edge))[..., 0] > 127 if ctrl_edge and Path(ctrl_edge).exists() else None
     seg = read_mp4(root("clips", pair, member) / "seg.mp4")
     wc, wr = _white(cos), _white(raw)
+
+    def hsv(img, m):
+        x = img[m].astype(np.float32)
+        mx, mn = x.max(1), x.min(1)
+        return float(np.median(mx)), float(np.median((mx - mn) / np.maximum(mx, 1))), float(x.mean(1).std())
     rows = []
     for t, k in enumerate(range(int(r.k0), int(r.k1))):
         _, depth, tag, inst = _load_frame(a, k)
@@ -47,7 +51,10 @@ def _one(job) -> list:
         for j in np.flatnonzero(n >= MIN_PX):
             m = np.zeros(tag.shape, bool)
             m[sel] = inv == j
-            rows.append({"variant": variant, "pair": pair, "member": member, "t": t, "cls": TAGS.get(int(ks[j] // 65536), "other"),
+            vc, sc, tc = hsv(cos[t], m)
+            vr, sr, tr = hsv(raw[t], m)
+            rows.append({"v_cos": vc, "s_cos": sc, "tex_cos": tc, "v_raw": vr, "s_raw": sr, "tex_raw": tr,
+                         "variant": variant, "pair": pair, "member": member, "t": t, "cls": TAGS.get(int(ks[j] // 65536), "other"),
                          "px": int(n[j]), "depth": float(np.median(depth[m])), "white": float(wc[t][m].mean()),
                          "white_raw": float(wr[t][m].mean()), "std_cos": float(cos[t][m].std()),
                          "edge_density": float(edge[t][m].mean()) if edge is not None else np.nan,
@@ -70,12 +77,15 @@ def run(variants=("edgeA", "edgeB", "seg")):
     with ProcessPoolExecutor(min(20, len(jobs))) as ex:
         d = pd.DataFrame([x for rows in ex.map(_one, jobs) for x in rows])
     d["is_white"] = (d.white >= WHITE_FRAC) & (d.white_raw <= RAW_MAX)
+    pale = lambda v, s_, t, t_ref: (v >= 140) & (s_ <= 0.25) & (t <= 0.6 * t_ref)  # noqa: E731
+    d["is_pale"] = pale(d.v_cos, d.s_cos, d.tex_cos, d.tex_raw) & ~((d.v_raw >= 140) & (d.s_raw <= 0.25) & (d.tex_raw <= 20))
     d.to_csv(RESULTS / "white_units.csv.gz", index=False)
     return summarize(d)
 
 
-def summarize(d: pd.DataFrame) -> str:
-    out = []
+def summarize(d: pd.DataFrame, flag: str = "is_pale") -> str:
+    out = [f"flag: {flag}"]
+    d = d.assign(is_white=d[flag])
     g = d.groupby(["variant", "cls"]).agg(units=("is_white", "size"), white=("is_white", "mean")).unstack(0)
     out.append("## White units by variant and class (share of object-frames >= 300 px)\n\n" + g.round(3).to_markdown())
     d["depth_bin"] = pd.cut(d.depth, [0, 10, 20, 40, 1000], labels=["<10 m", "10-20", "20-40", ">40"])
@@ -109,4 +119,9 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--variants", default="edgeA,edgeB,seg")
-    run(tuple(ap.parse_args().variants.split(",")))
+    ap.add_argument("--summarize", action="store_true", help="re-summarize white_units.csv.gz")
+    a = ap.parse_args()
+    if a.summarize:
+        summarize(pd.read_csv(RESULTS / "white_units.csv.gz"))
+    else:
+        run(tuple(a.variants.split(",")))
