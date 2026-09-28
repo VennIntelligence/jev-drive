@@ -82,6 +82,8 @@ Lebowski 另有一项：它的 4.8 s 记忆在只给 1.5 s 时就掉 2.0 分。*
 有没有一种不改模型的喂法能救回来？把四帧当作 0.2 s 间隔「压缩」地喂（HUGSIM 考试在 4 Hz 上用过的 dilate 办法）只回来 0.23–0.30（Cinque、Lebowski，CI > 0），
 三个模型仍停在 5.1–5.4，远在 cv 之下（预登记要求回到 cv 之上才在 NAVSIM 上用它），因为 0.5 s 压成 0.2 s 同样把速度放大 2.5 倍。
 所以 NAVSIM 上测 openpilot 只剩一条路：冻结特征 + 在 navtrain 上拟合的 head（第 3 节）。
+**2026-09-28 更正**：上一句「只剩一条路」不成立。dilate 救不回来，是因为它仍然把 0.5 s 的位移当 0.2 s 喂；在 model frame 上从 4 张关键帧补出中间帧（GIMM-VFI、RIFE 或自车运动几何 warp）就能把时间轴还原：
+WOD 上收回帧率差的 77–89%，NAVSIM navtest 2 000 个 token 上 Cinque 原生 plan 从 51.9 到 80.6–84.7 PDMS，高于冻结特征 + head。全部表在 [openpilot-openloop-integration.md](openpilot-openloop-integration.md)。
 
 ## 3. NAVSIM
 

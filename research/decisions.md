@@ -2788,6 +2788,12 @@ P6 bypass 翻转（描述）：K0 5.77% [4.03, 7.65]，K1 = K2 4.31%，K3 4.34%�
 比原生 plan 高 31 EPDMS，比我们不看图像的 `cls ego`（68.4 / 67.8，与文献 Ego Status MLP 65.6 同量级）高 9.6 [8.9, 10.2]。
 标题里「离 specialist 差 30–40 分」对 openpilot 原生 plan 仍然成立，对 openpilot 作 backbone 则是 PDMS 差 TransFuser 6 分。Alpamayo 部分不变。
 
+**2026-09-28 就地修正（openpilot 原生 plan 部分，[openpilot-openloop-integration.md](openpilot-openloop-integration.md)）**：上一段写「标题里『离 specialist 差 30–40 分』对 openpilot 原生 plan 仍然成立」，
+前提是原生 plan 只能用 2 Hz 保持的喂法。现在量过了不改模型、只用 NAVSIM 契约内输入的喂法：在 openpilot model frame 上从 4 张关键帧补出 t0 − 0.2k 的 6 帧，
+navtest 随机 2 000 个 token 上 Cinque 原生 plan PDMS 51.9 → 84.7（GIMM-VFI）/ 83.1（自车运动几何 warp，零学习）/ 80.6（RIFE），比同一批 token 上 hold 输入的 `temporal` + `cls_late`（77.5）高 7.2 [5.6, 8.8]。
+WOD 上用真实 10 Hz 帧作上限，GIMM 补帧收回帧率差的 89%。所以 openpilot 原生 plan 离 specialist 不是 30–40 分，而是与 TransFuser（84.0，全量、不可配对）同量级；
+剩下的差距集中在转弯（左 / 右转 PDMS 78 / 76，直行 88，DAC 89–91），推测是没有 route 输入。仍是**待定**：2 000 个 token 的子集、单次运行，全量 navtest 与 navhard 还没跑。
+
 
 ## 38. Bench2Drive 榜单前几名的总分差在评测噪声以内；按 hazard family 拆开后，突发 hazard 近乎饱和，真正的差距在规划 / 让行类路线（**待定**）
 
