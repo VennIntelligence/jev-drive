@@ -37,7 +37,10 @@ def local_download(cmd_args: list[str]) -> str:
     fname = rest[i] if i < len(rest) and not rest[i].startswith("--") else None
     base = LOCAL / repo.split("/", 1)[1]
     path = base / fname if fname else base
-    assert path.exists(), f"missing local checkpoint {path} (for {cmd_args})"
+    # The config registry resolves every experiment's checkpoints at import time, most of them never loaded; a
+    # missing one only fails if it is actually read.
+    if not path.exists():
+        print(f"cosmos_infer: no local copy of {repo} {fname or ''} (fine unless it is loaded)", flush=True)
     return str(path)
 
 
