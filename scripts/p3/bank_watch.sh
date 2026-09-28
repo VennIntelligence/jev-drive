@@ -32,8 +32,12 @@ pick_gpu() {
 }
 
 job() {   # id name cores
-  local g; g=$(pick_gpu)
+  local g
+  # one start at a time, 120 s apart, so the second job reads the free VRAM after the first one has allocated
+  exec 9>"$B/.start.lock"; flock 9; g=$(pick_gpu)
   log "bank $2 (scene id $1) on GPU $g"
+  ( sleep 120; flock -u 9 ) &
+  exec 9>&-
   if CUDA_VISIBLE_DEVICES=$g P3_PRELOAD_DEVICE=cpu TORCH_EXTENSIONS_DIR=$DATA_DIR/cache/torch_ext_p3x OMP_NUM_THREADS=2 \
       taskset -c "$3" timeout 3600 "$PY" scripts/p3/xinsert.py bank --scene "$1" > "$X/bank_$2.out" 2>&1; then
     log "bank $2 done: $(tail -1 "$X/bank_$2.out")"
