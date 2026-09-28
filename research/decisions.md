@@ -2946,7 +2946,7 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 
 **P7：可行性整形（2026-09-26，判据登记于结果前）。** P7 = P6 + 正向加速度命令上限 2.0 m/s²。登记判据（闭环完成与碰撞不差于 C、L1 名义不劣于 D）**未通过**：L1 与碰撞通过，但 TFv6 完成 29/32 少于 C 的 31/32；1825 两个 seed、4183 seed 1 仍失败，说明"起步加速过猛"只解释了一部分。P7 在 TCP 子集上平均 DS 63.4，与 C 64.8 持平、高于原生 61.1，L1 模型噪声下最好。建议：TFv6 这类与作者执行层共训的 planner 继续用 C/D；非共训 planner 与低频 VLA planner 用 P7。剩余失败待在 dev 上单独诊断。
 
-## 42. 行人信息在 openpilot 的 vision 层就没有；双流 reaction head 用配对差分监督能让行人翻转到 43%，hard-example 重加权不能（**待定**，P5 v1 BehaviorAgent 集，101 条路线）
+## 42. 行人信息在 openpilot 的 vision 层就没有（**只在 CARLA 上**；2026-09-28 就地限定：真实 nuScenes 上原模型 `temporal` 读走廊行人 AUC 0.71、10 m 内 0.83，见第 55 条）；双流 reaction head 用配对差分监督能让行人翻转到 43%，hard-example 重加权不能（**待定**，P5 v1 BehaviorAgent 集，101 条路线）
 
 2026-09-25。预登记、偏离日志与全部表在 [todos/2026-09-25-reactivity-program.md](../todos/2026-09-25-reactivity-program.md)（D0、M-C），小表在 [research/results/reactivity/](results/reactivity/)。
 接第 40 条和 [op-temporal-p5-and-route](../todos/2026-09-25-openpilot-temporal-p5-and-route.md) 的实验 1：openpilot `temporal` 在 cut-in 上 `ridge_late` 就翻转 86–89%，行人上 probe 0.50–0.53、翻转 0。
@@ -2954,7 +2954,7 @@ Alpamayo 部分仍**待定**：`L27_last` 在 train 训协议上的复现（约 
 **D0（vision 层 probe，判据预登记）**：把 tap 从 `temporal` 换成时间模块之前的 vision encoder 输出（主 tap `vision`：Cinque 512 维 pooled、Lebowski 3072 维；次要 `hidden`），
 同一 hazard probe、同一 fold。行人 4 个 family 合并的 1999 个观测帧上，`vision` AUC **0.515 [0.503, 0.535]（Cinque）/ 0.519 [0.495, 0.552]（Lebowski）**，
 对同模型 `temporal` 的配对 Δ +0.009 [−0.003, +0.017] / +0.002 [−0.025, +0.051]；Qwen `L18_last` 在同一批帧上 0.620。两个模型都不过「AUC ≥ 0.60 且 Δ CI > 0」。
-**所以行人信息是 vision encoder 就滤掉了，不是 policy 丢的**；第 40 条「openpilot `temporal` 是最强冻结表征」对行人这一类 hazard 不成立，而且换到 vision 层也补不上。
+**所以行人信息是 vision encoder 就滤掉了，不是 policy 丢的**（2026-09-28 限定：这是 CARLA 渲染帧上的结论；原文未加限定，第 55 条在真实 nuScenes 上测到原模型的走廊行人线性 AUC 0.71、stage 3 输出 0.83，所以「vision 层没有」不能推广到真实数据）；第 40 条「openpilot `temporal` 是最强冻结表征」对行人这一类 hazard 不成立，而且换到 vision 层也补不上。
 按预登记，**M-A（冻结 vision、重训 temporal policy）单独不够**，行人要靠第二路输入（M-C）。
 
 **M-C（双流 reaction head，线性，prior = openpilot `ridge_late`）**：配对差分 loss 在 cut-in 上把翻转率从 63.6% 提到 76.9%（配对 Δ +13.3 pp [+6.6, +20.8]），
@@ -3507,3 +3507,33 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 
 **对选型的含义**：JEPA + openpilot 的闭环主线不搁置；唯一要改的是数据——动作与场景统计独立的干预数据（CARLA 同状态动作分叉 + 随机干预窗口），latent 与预测器结构不变，W 原版作阳性对照（WL 判据 1）。
 **会推翻本条的证据**：WL 里在干预数据上训练的同一预测器，刹停 > 保持仍 < 85%（那就是 latent 本身对 ego 运动后果不敏感，不是数据）；或 W 原版在 WL 的分叉点上也 ≥ 85%（那诊断的第 3 条要重写）。
+
+
+## 55. openpilot 的 vision 层可以便宜地改而不坏：精确的 PyTorch port、stage 4 解冻 + 蒸馏在跨数据集上漂移 6 cm；但只用真实数据监督，行人可读性只涨 +0.08（没过 +0.10），完全带不到 CARLA；原模型在真实数据上本来就读得出近处行人（**待定**，nuScenes val + WOD val + P5 v1 BA，1 seed）
+
+2026-09-28。预登记、偏离与全部表在 [todos/2026-09-28-op-adapt.md](../todos/2026-09-28-op-adapt.md)，小表 [results/op-adapt/](results/op-adapt/)，代码 `jevdrive/op_torch.py`、`jevdrive/op_adapt.py`、`scripts/op_adapt_*.py`。
+问题：论文主方法要不要改 openpilot 本身（vision 层），改得动吗、会不会坏。
+
+1. **port**：Cinque / Lebowski 的 ONNX 逐节点解释成 PyTorch（可训练、vmap 成批）。Cinque fp32 port 对 ORT CPU 跑的全 fp32 图副本：300 个 20 Hz step、port 自己的 recurrent state，plan 位置 max 2e-4 m、`temporal` 5e-5，不累积。
+   偏离：登记的参照是 ORT CPU 原图，它本身不是 fp32（对 fp32 图差 0.11 m，ORT CUDA 0.22 m、TensorRT 0.61 m），阈值不改、参照换成 fp32 图。bf16 误差比 fp16 大一个量级，训练用 fp16。
+2. **成本**（RTX 6000D，每样本带 9 帧 1.6 s context，含优化器）：B（stage 4 解冻、trunk 按帧缓存）0.07 GPU·h / 10 万样本，B-LoRA 0.06，C′（全量、只当前帧带梯度）0.35，C（全量、9 帧全带梯度）0.81。
+3. **B 小试**（nuScenes train 650 scene 的 GT 走廊行人做辅助监督 + 正常帧蒸馏，λ_d 按 dev 选 10，约 50 万样本、两个配置合计 0.9 GPU·h）：
+
+| 读数（全部留出） | 原模型 | 改后 | 登记线 | 判格 |
+|:--|:--|:--|:--|:--|
+| (a) nuScenes val 走廊行人，`temporal` probe AUC | 0.709 | 0.786，Δ +0.076 [+0.004, +0.166] | Δ ≥ +0.10 且 CI > 0 且 ≥ 0.70 | 不过 |
+| (b) 正常帧 plan 漂移中位 / p95：nuScenes val / WOD val | — | 0.058 / 0.196 m；0.061 / 0.179 m | ≤ 0.10 / 0.50 m | 过 |
+| (b) WOD val 原生 plan ADE 相对变化 | 2.259 m | +0.36% [−0.28%, +1.03%] | CI 上界 ≤ +2% | 过 |
+| (c) P5 v1 BA 行人 D0 AUC（CARLA） | 0.506 | 0.515，Δ +0.009 [+0.003, +0.016] | ≥ 0.60 且 Δ CI > 0 | 不过 |
+
+**结论**：
+1. **「不坏」成立，而且便宜**：蒸馏把正常帧的原生 plan 钉在 6 cm（TensorRT 数值噪声的 5 倍），在训练没见过的 WOD 上一样，ADE 不变；λ_d = 1 时漂移 0.26 m、ADE +3.5%，所以蒸馏权重是这件事的关键旋钮。
+2. **真实数据上 openpilot 本来就看得见近处行人**：原 `temporal` 对车道内 10 m 以内行人的线性 AUC 0.83，20 m 以外 0.56；stage 3 输出（当前帧、线性）0.83。与用户实车「起步时有人走到车前就停」的经验一致。
+   第 42 条的「vision 层没有行人」因此限定为 CARLA 上的结论（已就地改）；CARLA 行人读不出来更像域差，不是 openpilot 的能力缺口（推测，未分离）。
+3. **B 的增益在远处**（10–20 m +0.14、> 20 m +0.10），但只用真实数据的辅助监督对 CARLA 行人几乎没有作用（+0.009）。按验收原则（sim 和 real 都要开）这次不算学会。
+4. 对 B / C：trunk（stage 3）里已有的线性信息（0.83）比 B 达到的（0.79）只高 0.04，所以在这个读数上 C 的上限空间很小，而成本是 B 的 11 倍；先不做 C。
+   数据：10 万样本的 B 只要 0.07 GPU·h，瓶颈不在算力，在监督信号——需要 sim + real 同时在场的行人信号（Cosmos 重渲染的 CARLA 对 + 真实 GT），把 P5 当 held-out。
+
+**状态**：**待定**。限定：1 seed；只用 nuScenes（CAM_FRONT、2 Hz GT）监督；(a) 的正例 203 个、CI 宽；只测了线性可读性和开环漂移，没有测行为（plan 对行人的反应）和闭环；Lebowski 没有 fp32 参照、没有训练。
+**会推翻或推进本条的证据**：sim + real 混训后 P5 D0 ≥ 0.60 且 (b) 仍过（推进 B 作主方法）；同一 B 在更大的真实数据（WOD 全量 + YOLO 标签）上 (a) 过 +0.10；闭环里改后模型对行人的停车率高于原模型而正常路线不掉分。
+

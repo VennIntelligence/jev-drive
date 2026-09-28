@@ -1,0 +1,5 @@
+feature,task,auc
+stage3 mean+max pool (2048),ped_corr,0.831
+stage3 mean+max pool (2048),ped_wide,0.721
+stage3 2x4 grid (8192),ped_corr,0.802
+stage3 2x4 grid (8192),ped_wide,0.711
