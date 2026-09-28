@@ -2,7 +2,7 @@
 # Cosmos pilot v2 (todos/2026-09-28-cosmos-pilot.md, "v2"), one stage. GPU 1, scheduler row cosmos-pilot, cores 24-47.
 # Usage: scripts/cosmos_v2.sh <tag> <pairs (comma list or all)> <arms: E2,G2,P2,M2 subset> [M2 pairs]
 # Writes $DATA_DIR/runs/cosmos/v2-<tag>.{DONE,ERROR,STATUS}.
-set -euo pipefail
+set -Eeuo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
 tag=$1 which=$2 arms=$3 mpairs=${4:-$2}
@@ -13,11 +13,17 @@ rm -f "$T.DONE" "$T.ERROR"
 trap 'echo "failed at line $LINENO ($(date +%H:%M))" > "$T.ERROR"' ERR
 st() { echo "$(date '+%m-%d %H:%M') $*" | tee -a "$T.STATUS"; }
 py() { $E/jevdrive/bin/python -m jevdrive.cosmos_v2 "$@"; }
-infer() { $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$1" --model "$2" --out "$R/out/$3"; }
+free_gb() { echo $(( $(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits -i "$CUDA_VISIBLE_DEVICES") / 1024 )); }
+infer() {  # infer <spec> <model> <arm>: waits until the card has room (distilled ~48 GB peak, base multicontrol ~60 GB)
+  local need=$([[ $2 == edge/distilled ]] && echo 50 || echo 64)
+  until (( $(free_gb) >= need )); do sleep 60; done
+  $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$1" --model "$2" --out "$R/out/$3"
+}
 has() { [[ ",$arms," == *",$1,"* ]]; }
 st "controls2 on $which"
 [[ ${SKIP_CONTROLS:-0} == 1 ]] || py controls2 --which "$which"
 eval_arms=()
+if [[ ${EVAL_ONLY:-} ]]; then read -ra eval_arms <<< "${EVAL_ONLY//,/ }"; arms=""; fi
 if has E2; then st "E2"; infer "$(py specs2 --arm E2 --which "$which" | tail -1)" edge/distilled E2; eval_arms+=(E2); fi
 if has P2; then st "P2 (x- only, prompt ablation)"; infer "$(py specs2 --arm P2 --which "$which" --members minus --no-floors | tail -1)" edge/distilled P2; fi
 if has G2; then
