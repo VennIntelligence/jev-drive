@@ -117,6 +117,8 @@
   ghost 是 G 位置记忆判据 `max(控制窗口, PDM-Lite ghost) + 10 pp` 里登记的基线：seeds 0、1 已跑完，ghost.2 补完剩下的路线。
   **撤掉** PDM-Lite 的 `orig` seeds 1–2 和 `shift` / `swap`：orig seed 0 继续复用 night-queue-3；一个照着登记表开车的专家在 shift / swap 下给不出信息。
   正在跑的 pdm.orig.1 路线跑完为止，不再起新的；腾出的名额给重的榜单考生。执行：`nq4_g_lane.py` 的 `DROPPED`，格子状态记 `DROPPED`，已有输出原样保留。
+- 2026-09-28 11:10 CST 应用户要求取了一次 **seed 0 描述性预览**（不进判格、不是结果）：登记读数代码原样只喂 seed 0，另加描述表；
+  见 [tmp/2026-09-28-g-seed0-prelim.md](../tmp/2026-09-28-g-seed0-prelim.md)，表在 `research/results/nq4/g/prelim_s0/`。判格仍等 3 个 seed。
 
 ## K. 材料包阶梯：分数动、能力不动
 

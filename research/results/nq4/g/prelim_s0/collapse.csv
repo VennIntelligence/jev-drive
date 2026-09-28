@@ -1,0 +1,5 @@
+cand,variant,drop,lo,hi,routes,seeds,collapse
+blue,shift,0.0,0.0,0.0,1,1,False
+bridgedrive,shift,0.0,0.0,0.0,1,1,False
+pdm,shift,0.0,0.0,0.0,10,1,False
+tfv6,shift,-0.2,-0.5,0.0,10,1,False

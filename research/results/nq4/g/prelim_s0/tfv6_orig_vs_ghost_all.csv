@@ -1,0 +1,2 @@
+routes,orig_rate,ghost_rate,orig_minus_ghost,lo,hi,orig_decel_med,ghost_decel_med,orig_lat_med,ghost_lat_med,orig_ventry_med,ghost_ventry_med
+80,0.875,0.225,0.65,0.5375,0.75,6.4475425899740895,1.0823698429557034,0.9461206551244978,0.023734465325629048,6.846713490694135,7.522962121554169

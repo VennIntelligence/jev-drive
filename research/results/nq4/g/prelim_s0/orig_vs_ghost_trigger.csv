@@ -1,0 +1,2 @@
+cand,routes,orig_rate,ghost_rate,orig_minus_ghost,lo,hi,react_in_both_share,orig_decel_mean,ghost_decel_mean,orig_lat_mean,ghost_lat_mean
+tfv6,10,1.0,0.1,0.9,0.7,1.0,0.1,8.304769356591406,1.7390588382325647,3.6837924136698597,0.02624092276459098
