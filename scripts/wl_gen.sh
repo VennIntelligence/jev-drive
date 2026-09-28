@@ -37,7 +37,7 @@ POS=($(seq 0 $(( NCH - 1 ))))
 if [[ -n ${ONE_GPU:-} ]]; then
     k=-1; for i in "${!G[@]}"; do [[ ${G[$i]} == "$ONE_GPU" ]] && k=$i; done
     (( k >= 0 )) || { echo "GPU $ONE_GPU is not in the wm-loop row (${G[*]})"; exit 1; }
-    G=("${G[$k]}"); IDX=("${IDX[$k]}"); POS=("$k")
+    G=("${G[$k]}"); IDX=("${IDX[$k]}"); POS=(0); NCH=1       # a single-card pilot gets all of the row's cores
 fi
 W=$(( ${WORKERS:-$ROW_W} < ROW_W ? ${WORKERS:-$ROW_W} : ROW_W ))
 mkdir -p "$OUT"
