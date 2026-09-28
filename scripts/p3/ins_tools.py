@@ -284,7 +284,8 @@ def veh(a):
             regs.append(box_region(b) if b else (0, 0, 0, 0))
             c2w_np = c2w.double().cpu().numpy()
             uv, z = project(K, c2w_np, corners)
-            cps.append(uv[np.argmax(uv[:, 1])])                         # nearest bottom corner = lowest contact row
+            axle = np.array([[-l / 2 + 0.7, 0.0]]) @ Rw[:2, :2].T + Q                 # rear axle (overhang ~0.7 m)
+            cps.append(project(K, c2w_np, np.c_[axle, zg + (np.array([[-l / 2 + 0.7, 0.0]]) @ coef[1:])])[0][0])
     rd = run_dir(key)
     old = dict(np.load(rd / "geom.npz"))
     old.update({"veh_box": np.array(boxes), "veh_region": np.array(regs), "veh_contact_px": np.array(cps),
@@ -487,7 +488,8 @@ def metrics(a):
             rl = real[list(frames).index(t)]
             ref_lab.append(_lab(rl)[m].mean(0))
             ref_ratio.append(np.median(_lum(rl)[m]) / max(np.median(_lum(mi)[_ring(m)]), 1.0))
-    ref = {"ped": (np.mean(ref_lab, 0) if ref_lab else None, float(np.median(ref_ratio)) if ref_ratio else float("nan"))}
+    r0 = json.loads((src_dir(key) / "meta.json").read_text()).get("diagnostics", {}).get("exposure_ratio_orig", float("nan"))
+    ref = {"ped": (np.mean(ref_lab, 0) if ref_lab else None, float(np.median(ref_ratio)) if ref_ratio else float(r0))}
     for opt in sorted(p.name for p in (rd / "opts").iterdir()):
         cls = opt.split("_")[0]
         if cls not in ("ped", "veh") or opt.endswith("_base") or opt.endswith("_raw"):
@@ -502,7 +504,7 @@ def metrics(a):
             cp = g["ins3f_contact_px"] if opt == "ped_fix" else g["ins3_contact_px"]
         else:
             cp = g["veh_contact_px"]
-        foot_px, foot_m, shadow, dark, lum_a, lum_s, ratio, labs = [], [], [], [], [], [], [], []
+        foot_px, foot_m, shadow, dark, lum_a, lum_s, ratio, labs, surround = [], [], [], [], [], [], [], [], []
         outside = np.ones((len(frames), H, W), bool)
         for i, t in enumerate(frames):
             r = regs[i]
@@ -529,9 +531,13 @@ def metrics(a):
             ring = reg & ~binary_dilation(m, iterations=3)
             ring[: int(low - 0.3 * (low - np.nonzero(m.any(1))[0].min()))] = False     # the lower part of the region only
             q = _lum(im[i]) / np.maximum(_lum(base[i]), 1.0)
-            sh = ring & (q < 0.8)
-            shadow.append(sh.sum() / m.sum())
+            sh = ring & (q < 0.85)
+            shadow.append(np.clip(1 - q[ring], 0, 1).sum() / m.sum())    # darkened-pixel equivalents per actor pixel
             dark.append(float(1 - np.median(q[sh])) if sh.sum() >= 10 else 0.0)
+            if i > 0:
+                prev_o, prev_b = im[i - 1].astype(np.float64), base[i - 1].astype(np.float64)
+                keep = reg & ~binary_dilation(m | M[i - 1], iterations=4)
+                surround.append(np.abs((im[i] - prev_o) - (base[i] - prev_b)).mean(-1)[keep].mean())
             lum_a.append(_lum(im[i])[m].mean())
             lum_s.append(_lum(im[i])[ring].mean() - _lum(base[i])[ring].mean())
             ratio.append(np.median(_lum(im[i])[m]) / max(np.median(_lum(base[i])[_ring(m)]), 1.0))
@@ -543,14 +549,16 @@ def metrics(a):
                "foot_offset_px_median": float(np.nanmedian(foot_px)), "foot_offset_m_median": float(np.nanmedian(foot_m)),
                "foot_offset_m_abs_p90": float(np.nanpercentile(np.abs(foot_m), 90)),
                "shadow_area_ratio_median": float(np.nanmedian(shadow)), "shadow_darkening_median": float(np.nanmedian(dark)),
-               "shadow_frames_pct": float(100 * np.nanmean(np.array(shadow)[ok] >= 0.1)),
+               "shadow_frames_pct": float(100 * np.nanmean(np.array(shadow)[ok] >= 0.05)),
+               "flicker_surround": float(np.mean(surround)) if surround else np.nan,
                "actor_ratio_median": float(np.nanmedian(ratio)),
                "flicker_actor_pct": float(100 * np.nanstd(np.diff(la[ok])) / np.nanmean(la[ok])) if ok.sum() > 3 else np.nan,
                "flicker_shadow_zone": float(np.nanstd(np.diff(ls[ok]))) if ok.sum() > 3 else np.nan,
                "psnr_outside_vs_log": _psnr(im, real, outside), "psnr_outside_raw_vs_log": _psnr(raw, real, outside),
                "psnr_outside_raw_vs_base": _psnr(raw, base, outside), "psnr_outside_base_vs_log": _psnr(base, real, outside)}
-        if cls == "ped" and ref["ped"][0] is not None:
+        if cls == "ped":
             row["ratio_err_vs_log_donor"] = float(abs(np.log(row["actor_ratio_median"] / ref["ped"][1])))
+        if cls == "ped" and ref["ped"][0] is not None:
             row["deltaE_vs_log_donor"] = float(np.linalg.norm(np.nanmean(labs[ok], 0) - ref["ped"][0]))
         rows.append(row)
     keys_ = sorted({k for r in rows for k in r}, key=lambda k: list(rows[0]).index(k) if k in rows[0] else 99)
