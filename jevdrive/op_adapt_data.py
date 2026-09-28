@@ -84,8 +84,9 @@ def labels() -> "pd.DataFrame":
         R, t = sc["pose_R"][k], sc["pose_xyz"][k]
         yaw_e = np.arctan2(R[1, 0], R[0, 0])
         a = by_s.get(e["token"], [])
-        fut = np.asarray(e["gt_rear"], np.float64).reshape(-1, 2) if len(e["gt_rear"]) else np.zeros((0, 2))
-        r = {"token": e["token"], "scene": e["scene"], "split": e["split"], "t0": e["t0"], "valid": e["valid"],
+        g_r = e.get("gt_rear")
+        fut = np.asarray(g_r, np.float64).reshape(-1, 2) if g_r is not None and len(g_r) else np.zeros((0, 2))
+        r = {"token": e["token"], "scene": e["scene"], "split": e["split"], "t0": e["t0"], "valid": bool(e.get("valid", False)),
              "n_vru": len(a), "ped_corr": False, "ped_wide": False, "vru_corr": False, "vru_wide": False, "ped_dist": np.nan}
         if a:
             ped = np.array([x[0] for x in a])
