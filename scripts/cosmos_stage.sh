@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cosmos pilot, one stage (todos/2026-09-28-cosmos-pilot.md): for each variant, Cosmos on the selected pairs (+ the
-# x- noise floors, except for the 35-step seg variant), then YOLO, pixel metrics, openpilot, and the report.
+# x- noise floors; the 35-step seg variant only the other-seed one), then YOLO, pixel metrics, openpilot, and the report.
 # Controls must exist (python -m jevdrive.cosmos_pilot controls). GPU 1, scheduler row cosmos-pilot.
 # Usage: scripts/cosmos_stage.sh <pilot1|all> <variant[,variant...]>     e.g. scripts/cosmos_stage.sh pilot1 edgeA,edgeB
 # Writes $DATA_DIR/runs/cosmos/stage-<which>.{DONE,ERROR,STATUS}.
@@ -19,8 +19,10 @@ import pandas as pd; p = pd.read_csv('research/results/cosmos/pairs.csv', dtype=
 from jevdrive.cosmos_pilot import PILOT1
 print(','.join(p[p.base_id == PILOT1].pair if '$which' == 'pilot1' else p.pair))")
 for v in ${variants//,/ }; do
-  case $v in seg) model=seg floors=--no-floors ;; *) model=edge/distilled floors="" ;; esac
-  spec=$($E/jevdrive/bin/python -m jevdrive.cosmos_pilot specs --variant "$v" --which "$which" $floors | tail -1)
+  # the same-seed re-render is bit-identical (pilot pair, edge/distilled), so the 35-step seg model only gets the
+  # other-seed floor
+  case $v in seg) model=seg floors=alt ;; *) model=edge/distilled floors=${FLOORS:-both} ;; esac
+  spec=$($E/jevdrive/bin/python -m jevdrive.cosmos_pilot specs --variant "$v" --which "$which" --floors "$floors" | tail -1)
   st "$v: cosmos ($model) on $only"
   $E/cosmos-transfer/bin/python scripts/cosmos_infer.py --specs "$spec" --model "$model" --out "$R/out/$v"
   st "$v: detect / pixels / openpilot"

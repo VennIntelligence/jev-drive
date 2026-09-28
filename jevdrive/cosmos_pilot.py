@@ -367,7 +367,7 @@ def prompt(town: str, weather: dict) -> str:
             "materials, and slight sensor noise.")
 
 
-def specs(variant: str, which: str = "all", floors: bool = True) -> Path:
+def specs(variant: str, which: str = "all", floors: str = "both") -> Path:
     """One jsonl per variant and selection. Every member: seed SEED; with floors, x- again with SEED (determinism
     floor, name suffix _rep) and with SEED_ALT (seed spread)."""
     model, steps, key, ctrl = VARIANTS[variant]
@@ -378,13 +378,14 @@ def specs(variant: str, which: str = "all", floors: bool = True) -> Path:
     lines = []
     for _, r in p.iterrows():
         pr = prompt(r.town, json.loads(det.loc[r.pair, "weather"]))
-        jobs = [("plus", SEED, ""), ("minus", SEED, "")] + ([("minus", SEED, "_rep"), ("minus", SEED_ALT, "")] if floors else [])
+        jobs = [("plus", SEED, ""), ("minus", SEED, "")] + ([("minus", SEED, "_rep")] if floors == "both" else []) \
+            + ([("minus", SEED_ALT, "")] if floors in ("both", "alt") else [])
         for m, seed, suf in jobs:
             cd = root("clips", r.pair, m)
             c = {"control_weight": 1.0} | ({"control_path": str(cd / ctrl)} if ctrl else {})
             lines.append({"name": f"{r.pair}_{m}_{variant}_s{seed}{suf}", "prompt": pr, "video_path": str(cd / "rgb.mp4"),
                           "seed": seed, "num_steps": steps, "guidance": 3, key: c})
-    f = root("specs") / f"{variant}_{which}{'' if floors else '_nofloor'}.jsonl"
+    f = root("specs") / f"{variant}_{which}_{floors}.jsonl"
     f.write_text("".join(json.dumps(x) + "\n" for x in lines))
     log.info("%d samples -> %s (model %s)", len(lines), f, model)
     return f
@@ -403,10 +404,10 @@ def main():
     ap.add_argument("step", choices=("select", "ids", "controls", "specs"))
     ap.add_argument("--which", default="all")
     ap.add_argument("--variant", default="edgeA")
-    ap.add_argument("--no-floors", action="store_true")
+    ap.add_argument("--floors", default="both", choices=("both", "alt", "none"))
     a = ap.parse_args()
     if a.step == "specs":
-        print(specs(a.variant, a.which, not a.no_floors))
+        print(specs(a.variant, a.which, a.floors))
     elif a.step == "select":
         select()
     elif a.step == "controls":
