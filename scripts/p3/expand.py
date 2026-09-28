@@ -39,7 +39,8 @@ REPO = Path(__file__).resolve().parents[2]
 D = DATA / "runs/nq4/p3"
 E = D / "expand"
 STAGES = [[10], list(range(11, 20)), list(range(20, 66))]
-TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 300, 6 * 3600
+TEST_GPU, SLOTS, MIN_FREE_GB, POLL_S, SMI_S, TRAIN_TIMEOUT = 6, 2, 30, 120, 90, 6 * 3600
+MAX_TRIES, RETRY_WAIT_S = 3, 600
 CORES = {6: ["168,169", "172,173"], **{k: [f"{24 * k + 22},{24 * k + 23}", f"{24 * k + 20},{24 * k + 21}"] for k in range(6)}}
 
 
@@ -117,7 +118,7 @@ class Kind:
     def __init__(self, name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile):
         self.name, self.stages, self.run, self.sd, self.marker, self.cmd, self.ready, self.pidfile = \
             name, stages, run_dir, scene_dir, marker, cmd, ready, pidfile
-        self.si, self.active, self.tries = 0, True, {}
+        self.si, self.active, self.tries, self.wait = 0, True, {}, {}
         while self.si < len(stages) and (E / f"{name}.stage{self.si}.ok").exists():
             self.si += 1
 
@@ -138,7 +139,7 @@ class Kind:
         if not self.active or self.si >= len(self.stages):
             return []
         return [k for k in self.stages[self.si] if not self.done(k) and (self.name, k) not in running and self.ready(k)
-                and not (E / "skip" / f"{self.name}_{k:03d}").exists()]        # held by an operator (e.g. an orphan run)
+                and not (E / "skip" / f"{self.name}_{k:03d}").exists() and self.wait.get(k, 0) <= time.time()]        # held by an operator (e.g. an orphan run)
 
 
 def kinds():
@@ -226,9 +227,10 @@ def main():
                     minutes=round((time.time() - t0) / 60, 1))
             else:
                 kd.tries[k] = kd.tries.get(k, 0) + 1
+                kd.wait[k] = time.time() + RETRY_WAIT_S          # a failure is often a card another lane just filled
                 log(f"{kn} {k:03d} failed on GPU {g} (try {kd.tries[k]})", event="scene_failed", kind=kn, scene=k, gpu=g)
                 (D / f"gpu_enable_scene_{k:03d}.ERROR").unlink(missing_ok=True)
-                if kd.tries[k] >= 2:
+                if kd.tries[k] >= MAX_TRIES:
                     kd.active = False
                     (E / f"ERROR.{kn}").write_text(f"{kn} scene {k:03d} failed twice\n")
                     log(f"ERROR: {kn} stopped (scene {k:03d} failed twice); the other kind goes on", event="error", kind=kn, scene=k)
