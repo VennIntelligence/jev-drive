@@ -63,8 +63,11 @@ def anchors(a):
     print(json.dumps({"scenes": len(out), **{s: sum(s in v for v in out.values()) for s in ("pull", "creep", "cruise")}}))
 
 
+COLL_D = (5, 10, 15)      # (d) collision-course cells (user 2026-09-28): entry into the ego path this far ahead at t*
+
+
 def cells():
-    return [(d, lat, st) for st in STATES_PED for lat in LATS for d in DISTS]
+    return [(d, lat, st) for st in STATES_PED for lat in LATS for d in DISTS] + [(d, 0.0, "collide") for d in COLL_D]
 
 
 def cell_id(d, lat, st):
@@ -94,7 +97,7 @@ def render(a):
     g = XI.scene_geom(k)
     path = INS.Path2D(g["E"])
     frames = list(range(ts - PRE_R, ts + POST_R + 1, 2))
-    gr = XI.Ground(g, frames)
+    gr = XI.Ground(g, range(ts - PRE_R, min(ts + 50, g["n"] - 1)))     # ground past t* too: collide cells plan to t_c
     dev = node.instances_trans.device
     xds = {}
 
@@ -129,6 +132,17 @@ def render(a):
         crossing = from the sidewalk at the donor's gait into the point, reached at t*. {t: (R, T, Rd, s)}, feet, gap,
         or (None, None, reason)."""
         S = path.Se[ts] + XI.FRONT + dist
+        t_conf, lead_, post_, lat_ts = ts, PRE_R, POST_R, lat
+        if st == "collide":
+            # collision course (user 2026-09-28, (d)): the pedestrian crosses from the kerb and reaches the path centre
+            # at the moment the logged ego bumper reaches arc S (dist ahead of the bumper at t*); planned (and checked:
+            # visibility, overlap, resolution) up to t_c + 0.4 s, rendered over the usual window. Skipped when the logged
+            # ego does not get there within 4 s.
+            tc = [t for t in range(ts + 1, min(ts + 41, g["n"] - 2)) if path.Se[t] >= path.Se[ts] + dist]
+            if not tc:
+                return None, None, f"the logged ego does not reach {dist} m within 4 s"
+            t_conf = tc[0]
+            lead_, post_ = PRE_R + (t_conf - ts), POST_R
         # resolution gate (user 2026-09-28): only donors seen in their own log at <= MAG_MAX x this cell's farthest
         # possible camera distance can pass xinsert.walk_plan's exact per-frame check, so the rest are not tried
         reach = XI.MAG_MAX * (dist + XI.FRONT + abs(lat) + 8.0)
@@ -161,12 +175,12 @@ def render(a):
                 for w_ in dd["windows"]:
                     if not XI.V_WALK[0] <= w_["speed"] <= XI.V_WALK[1]:
                         continue
-                    o = XI.walk_plan(g, path, gr, actors, ob, dd, w_, 1.0, ts, S, lat, PRE_R, POST_R, "cross")
+                    o = XI.walk_plan(g, path, gr, actors, ob, dd, w_, 1.0, t_conf, S, lat, lead_, post_, "cross", gate_frames=frames10)
                     if "fail" in o:
                         k_ = o["fail"].split(" at frame")[0].split(" from ")[0].split(" only")[0].split(" (")[0]
                         why[k_] = why.get(k_, 0) + 1
                     elif best is None or o["gap"] < best["gap"]:
-                        best = {**o, "window": w_, "donor": dd}
+                        best = {**o, "window": w_, "donor": dd, "t_conf": int(t_conf)}
             if best is None:
                 return None, None, "no feasible walk-in: " + (", ".join(f"{k_} {v_}" for k_, v_ in sorted(why.items(), key=lambda q: -q[1])[:3])
                                                               or f"no donor seen closer than {reach:.0f} m")
@@ -316,7 +330,9 @@ def render(a):
                 rows.append({"frame": 2 * t, "t": t / HZ, "files": rec})
             (cd / "plus/frames.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
             xd.pose = {}
-            mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "view_gap": gap, "gain": [float(x) for x in gain],
+            _, lat_ts = path.locate(np.asarray(b["traj"][ts][1:]))           # lateral offset at t* (collide: still walking in)
+            mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "lat_tstar": round(-float(lat_ts), 2), "t_conf": b.get("t_conf"),
+                  "view_gap": gap, "gain": [float(x) for x in gain],
                   "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "kerb_src": b["kerb_src"], "walk_s": b["walk_s"],
                   "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"], "mag": b.get("mag"), "donor_d_close": b["donor"]["d_close"],
                   "donor": f"p3_{b['donor']['scene']:03d}/{b['donor']['node']}"}

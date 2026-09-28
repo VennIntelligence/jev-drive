@@ -230,7 +230,7 @@ def close_dist(g, T, fv) -> float:
 def load_bank():
     """Qualified donors of every bank file (pedestrian pool p3_*, vehicle-deletion segments v3_*); a donor without its
     closest logged distance gets it here once (written back to its bank file)."""
-    out = []
+    out, seen = [], set()
     for f in sorted((X / "bank").glob("*.json")):
         B = json.loads(f.read_text())
         if any("d_close" not in d for d in B):
@@ -242,7 +242,8 @@ def load_bank():
         for d in B:
             ok = (d["psnr"] is not None and d["psnr"] >= PSNR_MIN and H_RANGE[0] <= d["height"] <= H_RANGE[1]
                   and SPAN_RANGE[0] <= d["span"] <= SPAN_RANGE[1] and d["ratio"] is not None and d["n_az"] >= 10)
-            if ok:
+            if ok and d["waymo_id"] not in seen:            # a segment in both pools: its first reconstruction only
+                seen.add(d["waymo_id"])
                 out.append(d)
     return out
 
@@ -443,12 +444,13 @@ def kerb(gr, path, S, side, peds=None, vehs=None):
     return out
 
 
-def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross", face=None):
+def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target, lead, post, mode="cross", face=None, gate_frames=None):
     """Donor trajectory for one item. mode cross: from the sidewalk (kerb + 0.6 m, at least lat_target + 1 m) walking
     perpendicular to the path into the point `lat_target` (m, on `side`) at arc S_conf, reached at frame t_conf; before its
     walk starts the donor stands at the start point. mode along: walks parallel to the path on the sidewalk at kerb + 1 m
     (the null). mode stand: stands still at the point for the whole clip. Returns the per-frame (donor frame, x, y), the
-    rotation, the checks and the view gap, or {"fail": reason}."""
+    rotation, the checks and the view gap, or {"fail": reason}. gate_frames: the frames the resolution gate looks at when
+    only part of the planned span is rendered (default all)."""
     T, yaw, fvd = donor_track(d, with_fv=True)
     s_c = win["s0"] + PRE
     Q, th, _ = path.at(S_conf)
@@ -536,7 +538,7 @@ def walk_plan(g, path, gr, actors, obs, d, win, side, t_conf, S_conf, lat_target
             gaps.append(np.degrees(np.abs(INS.wrap(obs - azimuth(g, t, np.array([x, y]), yaw[sI] + phi))).min()))
     if len(gaps) < 5:
         return {"fail": "in the front camera for < 5 frames"}
-    mag = magnification(g, tr_, d)
+    mag = magnification(g, tr_ if gate_frames is None else {t: tr_[t] for t in gate_frames if t in tr_}, d)
     if mag > MAG_MAX:
         return {"fail": f"resolution: magnification {mag:.2f} > {MAG_MAX} (donor seen no closer than {d['d_close']:.1f} m)"}
     return {"traj": {int(t): v for t, v in tr_.items()}, "phi": float(phi), "gap": float(max(gaps)), "kerb": kb, "kerb_src": kb_src,

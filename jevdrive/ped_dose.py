@@ -49,7 +49,8 @@ def threat_labels(w: pd.DataFrame, arc: dict) -> pd.DataFrame:
     threat = must_react (conflict, ttc = first conflict time) or no_threat."""
     tt = np.arange(0.0, HORIZON + 1e-9, 0.05)
     ttc, reach = [], []
-    for b, dist, lat, ps, vp in zip(w.base_id, w.dist, w.lat, w.ped_state, w.donor_speed):
+    lat0 = w.lat_tstar.fillna(w.lat) if "lat_tstar" in w else w.lat      # collide cells are still walking in at t*
+    for b, dist, lat, ps, vp in zip(w.base_id, w.dist, lat0, w.ped_state, w.donor_speed):
         s = np.interp(tt, np.r_[0.0, 0.25 * np.arange(1, 21)], np.r_[0.0, arc[b]])
         lt = np.full_like(tt, lat) if ps == "stand" else lat - vp * tt
         hit = (s >= dist - PED_R) & (s <= dist + EGO_LEN + PED_R) & (np.abs(lt) <= EGO_HALF + PED_R)
@@ -121,7 +122,7 @@ def cells_table(exam_dir: Path) -> pd.DataFrame:
     for sd in (root() / "scenes").glob("p3_*"):
         m = json.loads((sd / "meta.json").read_text())
         meta[sd.name] = {q: m[q] for q in ("scene", "state", "ego_v", "cell", "dist", "lat", "ped_state", "view_gap", "shadow_on_frac",
-                                           "donor_speed")}
+                                           "donor_speed")} | {q: m.get(q) for q in ("lat_tstar", "mag")}
     w = w.join(pd.DataFrame(w.base_id.map(meta).tolist()))
     w = threat_labels(w, arc)
     taus = pd.read_csv(data_dir() / I3_EXAM / "flip_rates.csv").query("scope == 'pooled'").set_index("examinee").tau_model
@@ -165,7 +166,7 @@ def curves(w: pd.DataFrame, out: Path):
         for j, lat in enumerate(lats):
             ax = axes[i, j]
             for m in MODELS:
-                for ps, ls in (("stand", "-"), ("cross", "--")):
+                for ps, ls in (("stand", "-"), ("cross", "--"), ("collide", "-.")):
                     g = R[(R.model == m) & (R.state == st) & (R.lat == lat) & (R.ped_state == ps)].sort_values("dist")
                     ax.plot(g.dist, g.react, ls, color=col[m], marker="o", label=f"{m.capitalize()} react, {ps}")
                     ax.plot(g.dist, g.stop, ls, color=col[m], marker="x", alpha=0.6, label=f"{m.capitalize()} stop, {ps}")
@@ -205,7 +206,7 @@ def delta_fig(w: pd.DataFrame, out: Path):
         for j, lat in enumerate(lats):
             for m in MODELS:
                 ws_ = ws.assign(dlead=ws[f"{m}|lead_p_plus"] - ws[f"{m}|lead_p_minus"])
-                for ps, ls, mk in (("stand", "-", "o"), ("cross", "--", "s")):
+                for ps, ls, mk in (("stand", "-", "o"), ("cross", "--", "s"), ("collide", "-.", "^")):
                     g = ws_[(ws_.lat == lat) & (ws_.ped_state == ps)].groupby("dist")
                     for i, v in enumerate((f"{m}|dv2", "dlead")):
                         q = g[v].quantile([0.25, 0.5, 0.75]).unstack()
@@ -213,7 +214,7 @@ def delta_fig(w: pd.DataFrame, out: Path):
                             continue
                         ax = axes[i, j]
                         ax.plot(q.index, q[0.5], ls, color=col[m], marker=mk, mfc="white" if ps == "cross" else col[m],
-                                label=f"{m.capitalize()}, {'standing' if ps == 'stand' else 'crossing'}")
+                                label=f"{m.capitalize()}, {dict(stand='standing', cross='crossing', collide='collision course')[ps]}")
                         if (g.size() > 1).any():
                             ax.fill_between(q.index, q[0.25], q[0.75], color=col[m], alpha=0.12, lw=0)
             for i in range(2):
@@ -231,7 +232,7 @@ def delta_fig(w: pd.DataFrame, out: Path):
         axes[0, 0].set_ylabel("$\\Delta$ plan speed at 2 s (m/s)")
         axes[1, 0].set_ylabel("$\\Delta$ P(lead)")
         hl = {lb: h for ax in axes.ravel() for h, lb in zip(*ax.get_legend_handles_labels())}
-        fig.legend(hl.values(), hl.keys(), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, columnspacing=1.4, handlelength=2.2)
+        fig.legend(hl.values(), hl.keys(), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=3, columnspacing=1.4, handlelength=2.2)
         plots.save(fig, out, f"ped-dose-delta-{st}")
 
 
