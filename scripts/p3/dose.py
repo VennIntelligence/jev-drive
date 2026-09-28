@@ -95,11 +95,20 @@ def render(a):
     frames = list(range(ts - PRE_R, ts + POST_R + 1, 2))
     gr = XI.Ground(g, frames)
     dev = node.instances_trans.device
-    xd = XI.XDonor(d, dev)
+    xds = {}
+
+    def donor_obj(dd):
+        """XDonor, its per-frame rotations and local means, cached per donor (a crossing cell may use its own donor)."""
+        key = (dd["scene"], dd["node"])
+        if key not in xds:
+            x_ = XI.XDonor(dd, dev)
+            xds[key] = (x_, quaternion_to_matrix(x_.iq / x_.iq.norm(dim=-1, keepdim=True)).double().cpu().numpy(),
+                        x_.means.double().cpu().numpy())
+        return xds[key]
+
+    xd, Rq, Mloc = donor_obj(d)
     tr.models["XDonor"] = xd
     tr.gaussian_classes["XDonor"] = GSModelType.DeformableNodes
-    Rq = quaternion_to_matrix(xd.iq / xd.iq.norm(dim=-1, keepdim=True)).double().cpu().numpy()
-    Mloc = xd.means.double().cpu().numpy()
     out = DO / "items" / f"p3_{kk}_{state}"
     camK = {}
     to8 = lambda x: (x.clamp(0, 1) * 255 + 0.5).byte().cpu().numpy()  # noqa: E731
@@ -125,16 +134,30 @@ def render(a):
                     for f in np.radians(np.arange(0, 360, 15))]
             ok = [o for o in opts if "fail" not in o]
             b = min(ok, key=lambda o: o["gap"]) if ok else opts[0]
+            b["donor"] = d
         else:
-            # crossing: the scene's donor, its fastest 1.0-1.8 m/s window that can walk in from the edge in time
-            b = {"fail": "no donor window"}
-            for w_ in sorted((w for w in d["windows"] if XI.V_WALK[0] <= w["speed"] <= XI.V_WALK[1]), key=lambda w: -w["speed"]):
-                b = XI.walk_plan(g, path, gr, actors, obs_all, d, w_, 1.0, ts, S, lat, PRE_R, POST_R, "cross")
-                if "fail" not in b:
-                    b["window"] = w_
-                    break
+            # crossing: over the whole donor bank and every 1.0-1.8 m/s window, the feasible walk-in with the smallest
+            # view gap (a walking donor is seen from where the log saw it walk; one scene donor rarely fits every cell)
+            best, why = None, {}
+            for dd in bank_:
+                ob = np.radians(np.asarray(dd["az"]))
+                for w_ in dd["windows"]:
+                    if not XI.V_WALK[0] <= w_["speed"] <= XI.V_WALK[1]:
+                        continue
+                    o = XI.walk_plan(g, path, gr, actors, ob, dd, w_, 1.0, ts, S, lat, PRE_R, POST_R, "cross")
+                    if "fail" in o:
+                        k_ = o["fail"].split(" at frame")[0].split(" from ")[0].split(" only")[0].split(" (")[0]
+                        why[k_] = why.get(k_, 0) + 1
+                    elif best is None or o["gap"] < best["gap"]:
+                        best = {**o, "window": w_, "donor": dd}
+            if best is None:
+                return None, None, "no feasible walk-in: " + ", ".join(f"{k_} {v_}" for k_, v_ in sorted(why.items(), key=lambda q: -q[1])[:3])
+            if best["gap"] > XI.AZ_MAX:
+                return None, None, f"best view gap {best['gap']:.0f} deg > {XI.AZ_MAX:.0f}"
+            b = best
         if "fail" in b:
             return None, None, b["fail"]
+        xd_, Rq, Mloc = donor_obj(b["donor"])
         phi = b["phi"]
         Rz = np.array([[np.cos(phi), -np.sin(phi), 0], [np.sin(phi), np.cos(phi), 0], [0, 0, 1]])
         zs = []
@@ -218,6 +241,10 @@ def render(a):
             if (cd / "meta.json").exists():
                 continue
             pose, feet, b = place(dist, lat, st)
+            if pose is not None:
+                xd = donor_obj(b["donor"])[0]
+                tr.models["XDonor"] = xd
+                rat0 = np.asarray(b["donor"]["ratio"])
             if pose is None:
                 (cd).mkdir(parents=True, exist_ok=True)
                 (cd / "skipped.json").write_text(json.dumps({"cell": cid, "reason": b}))
@@ -268,7 +295,8 @@ def render(a):
             xd.pose = {}
             mc = {"cell": cid, "dist": dist, "lat": lat, "ped_state": st, "view_gap": gap, "gain": [float(x) for x in gain],
                   "shadow_on_frac": float(np.mean(list(on.values()))), "kerb": b["kerb"], "kerb_src": b["kerb_src"], "walk_s": b["walk_s"],
-                  "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"]}
+                  "vis_out_s": b["vis_out_s"], "donor_speed": b["speed"],
+                  "donor": f"p3_{b['donor']['scene']:03d}/{b['donor']['node']}"}
             (cd / "meta.json").write_text(json.dumps(mc))
             meta_cells[cid] = mc
             print(json.dumps(mc), flush=True)
