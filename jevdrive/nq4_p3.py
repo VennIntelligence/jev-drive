@@ -138,7 +138,10 @@ def index(processed_root: str):
 def exam(rl):
     import torch
     from . import elicit_i3 as I, p5_exam as E, p5_openpilot, p5_pairs as P, reactivity_mc as MC
-    dev = "cuda"
+    dev = os.environ.get("P3_EXAM_DEVICE", "cuda")
+    # head-check tolerance (m): 1e-3 is the registered value; the 2026-09-28 box migration (RTX PRO 6000 -> RTX 6000D)
+    # changes the GPU reductions, so a run on the new box sets P3_HEAD_TOL explicitly and reports the observed max
+    head_tol = float(os.environ.get("P3_HEAD_TOL", "1e-3"))
     with I.p5_set(I.BA):
         t, past, fut, obs, null, pairs = E.load()
         op = p5_openpilot.load(t, I.MODELS, sub="op_streams_vis")
@@ -171,7 +174,8 @@ def exam(rl):
             ev = obs_rows[fold[obs_rows] == f]
             d = float(np.abs(o["prior"][ev].reshape(-1, 20, 2).cpu().numpy() - ref[f"prior [{m}]"][at[ev].to_numpy()]).max())
             checks.append({"model": m, "fold": f, "max_abs_diff": d})
-            assert d < 1e-3, f"{m} fold {f} prior does not reproduce the stored run ({d})"
+            log.info("head check %s fold %d: max |prior - stored| = %.3g m (tolerance %.3g)", m, f, d, head_tol)
+            assert d < head_tol, f"{m} fold {f} prior does not reproduce the stored run ({d})"
             preds[name] += o["prior"][I3].reshape(-1, 20, 2).cpu().double().numpy() / E.K_FOLDS
         del Xop
         torch.cuda.empty_cache()
