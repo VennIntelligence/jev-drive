@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# openpilot closed-loop integration study: base route follower + openpilot modifier (scripts/op_arb_agent.py) on
+# Bench2Drive 0.0.4 val routes (not the 220 exam routes). Plan: todos/2026-09-28-op-closedloop.md.
+#
+#   scripts/op_arb.sh routes                         print the registered route lists (phase 1 diagnosis, phase 2 eval)
+#   scripts/op_arb.sh phase <1|2>                    every arm of the phase, one after another, on the test card
+#   scripts/op_arb.sh arm <arm> <ids> <out>          one arm over a comma list of route ids
+#
+# Resources (SCH row op-arb): GPU $GPU, $WORKERS CARLA servers at indices $IDX0.., cores $CPUS. One openpilot server
+# (Cinque, 2 sessions per worker: the route-desire session and its desire-free twin) serves every arm. Only PIDs this
+# script recorded are ever stopped. Hand-offs: $O/{log.txt, events.jsonl, STATUS, DONE-phase<k>, ERROR}.
+set -uo pipefail
+: "${DATA_DIR:?DATA_DIR is not set}"
+cd "$(dirname "$0")/.."
+REPO=$(pwd)
+O=${OP_ARB_DIR:-$DATA_DIR/runs/op_arb}
+GPU=${GPU:-6} WORKERS=${WORKERS:-2} IDX0=${IDX0:-160} CPUS=${CPUS:-144-167}
+mkdir -p "$O/srv" "$O/cfg" "$O/arms"
+export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1
+XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml
+P7=$REPO/todos/2026-09-23-tfv6-controller/controller-eval/P7.json
+PY_CARLA=$DATA_DIR/envs/carla/bin/python PY_OP=$DATA_DIR/envs/openpilot/bin/python
+SOCK=$O/srv/op.sock
+
+ev() { printf '{"t": %s, "kind": "%s"%s}\n' "$(date +%s.%N | cut -c1-14)" "$1" "${2:+, $2}" >> "$O/events.jsonl"; }
+log() { echo "$(date '+%F %T') $*" | tee -a "$O/log.txt" >&2; }
+error() { { echo "# op_arb ERROR $(date '+%F %T %Z')"; echo; echo "$1"; } > "$O/ERROR"; ev error "\"reason\": \"$1\""; log "ERROR: $1"; exit 1; }
+
+routes() {  # the registered selection: per scenario type, the first route in XML order outside Town12/13 if any, else the first
+    python3 - "$XML" "$1" <<'EOF'
+import sys, xml.etree.ElementTree as ET
+P1 = ["SignalizedJunctionLeftTurn", "VanillaSignalizedTurnEncounterRedLight", "HardBreakRoute",
+      "NonSignalizedJunctionLeftTurn", "ParkingExit", "DynamicObjectCrossing"]
+P2 = ["SignalizedJunctionRightTurn", "VanillaSignalizedTurnEncounterGreenLight", "T_Junction", "VanillaNonSignalizedTurn",
+      "StaticCutIn", "MergerIntoSlowTrafficV2", "ConstructionObstacle", "VehicleTurningRoutePedestrian",
+      "OppositeVehicleTakingPriority", "SignalizedJunctionLeftTurnEnterFlow"]
+rs = [(r.get("id"), r.get("town"), [s.get("type") for s in r.iter("scenario")][0]) for r in ET.parse(sys.argv[1]).getroot().iter("route")]
+def pick(t):
+    c = [r for r in rs if r[2] == t]
+    small = [r for r in c if r[1] not in ("Town12", "Town13")]
+    return (small or c)[0][0]
+print(",".join(pick(t) for t in (P1 if sys.argv[2] == "1" else P2)))
+EOF
+}
+
+srv_alive() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
+srv_start() {
+    srv_alive && return 0
+    rm -f "$O/srv/op.ready" "$SOCK"
+    (
+        CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" scripts/op_arb_server.py cinque \
+            --pool "$WORKERS" --backend cuda-iob --socket "$SOCK" --ready-file "$O/srv/op.ready" >> "$O/srv/op.log" 2>&1 &
+        echo $! > "$O/srv/op.pid"
+        wait $!
+        echo "$(date '+%F %T') server exited rc=$?" >> "$O/srv/op.log"
+    ) &
+    until [[ -s $O/srv/op.pid ]]; do sleep 0.2; done
+    local t0=$SECONDS
+    until [[ -e $O/srv/op.ready ]]; do
+        srv_alive || error "openpilot server died at start-up (see $O/srv/op.log)"
+        (( SECONDS - t0 > 900 )) && error "openpilot server not ready after 15 min"
+        sleep 5
+    done
+    ev server_ready "\"pid\": $(cat "$O/srv/op.pid")"
+}
+srv_stop() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && { kill -- -"$p" 2>/dev/null; kill "$p" 2>/dev/null; }; rm -f "$O/srv/op.pid"; }
+
+arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path and P7; only "arb" differs)
+    local arm=$1 arb
+    case $arm in
+        native)  arb='{"mode": "native", "twin": true}' ;;
+        oshadow) arb='{"mode": "oshadow", "twin": true}' ;;
+        base)    arb='{"mode": "base"}' ;;
+        acc)     arb='{"mode": "acc"}' ;;
+        e2e)     arb="{\"mode\": \"e2e\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
+        switch)  arb="{\"mode\": \"switch\"${E2E_ARGS:+, $E2E_ARGS}}" ;;
+        *) error "unknown arm $arm" ;;
+    esac
+    echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
+ \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": true, \"controller\": \"fixed\", \"controller_preset\": \"pursuit\",
+ \"controller_config\": \"$P7\", \"seed\": 0, \"dump_every\": 0, \"arb\": $arb}" > "$O/cfg/$arm.json"
+    python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$O/cfg/$arm.json" || error "bad config for $arm"
+    echo "$O/cfg/$arm.json"
+}
+
+run_arm() {  # run_arm <arm> <ids> <out>
+    local arm=$1 ids=$2 out=$3 cfg pid t0=$SECONDS
+    mkdir -p "$out"
+    cfg=$(arm_cfg "$arm") || exit 1
+    srv_start
+    echo "$arm $out" > "$O/CURRENT"
+    ev arm_start "\"arm\": \"$arm\", \"routes\": \"$ids\""
+    log "start $arm on $ids (GPU $GPU x $WORKERS, idx $IDX0, cores $CPUS)"
+    taskset -c "$CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$ids" --workers "$WORKERS" \
+        --server-index "$IDX0" --index-span "$WORKERS" --gpu-rank "$GPU" --tm-seed 0 --no-spectator --no-reap \
+        --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 2400 --out "$out" --python "$PY_CARLA" \
+        --agent scripts/op_arb_agent.py --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
+    pid=$!
+    echo "$pid" > "$out/runner.pid"
+    while kill -0 "$pid" 2>/dev/null; do
+        srv_alive || { log "openpilot server died during $arm; restarting"; ev server_died; srv_start; }
+        sleep 20
+    done
+    wait "$pid"
+    local n; n=$(ls "$out"/done/*.json 2>/dev/null | wc -l)
+    ev arm_end "\"arm\": \"$arm\", \"done\": $n, \"wall_min\": $(( (SECONDS - t0) / 60 ))"
+    log "done $arm: $n routes finished in $(( (SECONDS - t0) / 60 )) min"
+}
+
+case ${1:-} in
+    routes) echo "phase1 $(routes 1)"; echo "phase2 $(routes 2)" ;;
+    arm) run_arm "$2" "$3" "$4" ;;
+    phase)
+        trap 'srv_stop' EXIT
+        k=$2; ids=$(routes "$k")
+        arms=${ARMS:-$([[ $k == 1 ]] && echo "native oshadow" || echo "base acc e2e switch")}
+        for a in $arms; do
+            [[ -e $O/arms/p$k-$a/DONE ]] && continue
+            echo "phase $k arm $a $(date '+%F %T')" > "$O/STATUS"
+            run_arm "$a" "$ids" "$O/arms/p$k-$a"
+            date > "$O/arms/p$k-$a/DONE"
+        done
+        date > "$O/DONE-phase$k"; echo "phase $k done $(date '+%F %T')" > "$O/STATUS" ;;
+    *) sed -n 2,12p "$0"; exit 2 ;;
+esac
