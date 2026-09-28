@@ -248,7 +248,8 @@ def main():
                     kn, k = order.pop(0)
                     cores = next(c for c in CORES[g] if c not in [running[u][2] for u in mine])
                     with open(E / f"{kn}_{k:03d}.out", "a") as out:
-                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT)
+                        p = subprocess.Popen(by[kn].cmd(k, g, cores), cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT,
+                                             start_new_session=True)   # survives a lane restart; adopted by pid
                     running[(kn, k)] = (p, g, cores, time.time())
                     mine.append((kn, k))
                     info[g] -= MIN_FREE_GB
