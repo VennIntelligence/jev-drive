@@ -172,14 +172,27 @@ def done(c, v, s) -> set[str]:
     return {p.stem for p in d.glob("*.json")} if d.exists() else set()
 
 
-def tries(c, v, s, rid) -> int:
-    return sum(1 for p in (arm_dir(c, v, s) / "attempts" / rid).glob("*") if p.name.isdigit())
+def tries(c, v, s, rid) -> tuple[int, int]:
+    """(attempts that ran the route, all attempts). An attempt whose server died before the route ticked once never ran
+    it (2026-09-28: the driver-lock storm killed every new server at map load), so it does not use up one of the route's
+    MAX_TRIES; all attempts together stay under 2 * MAX_TRIES so a route that always kills its server still ends."""
+    real = total = 0
+    for p in (arm_dir(c, v, s) / "attempts" / rid).glob("*"):
+        if not p.name.isdigit():
+            continue
+        total += 1
+        try:
+            a = json.loads((p / "attempt.json").read_text())
+            real += not (str(a.get("status", "")).startswith("server_died") and not a.get("ticks"))
+        except (OSError, ValueError):
+            real += 1                     # running, or ended without a record: counts
+    return real, total
 
 
 def left(c, v, s, ids=None) -> list[str]:
     ids = requested(c, v, s) if ids is None else ids
     d = done(c, v, s)
-    return [r for r in ids if r not in d and tries(c, v, s, r) < MAX_TRIES]
+    return [r for r in ids if r not in d and (lambda t: t[0] < MAX_TRIES and t[1] < 2 * MAX_TRIES)(tries(c, v, s, r))]
 
 
 # ---------------------------------------------------------------- cards
@@ -195,6 +208,14 @@ def smi(q, max_age=60.0):
                              text=True, timeout=60).stdout.splitlines()
         _SMI[q] = (now(), out)
     return out
+
+
+def card_cpus(gpu=None):
+    """The taskset list for a runner on `gpu` (None: every core the lane holds, for its CPU-side helpers)."""
+    if ":" not in CPUS:
+        return CPUS
+    m = dict(e.split(":") for e in CPUS.split(","))
+    return m[str(gpu)] if gpu is not None else ",".join(m.values())
 
 
 def cards(rows, own=frozenset()):
