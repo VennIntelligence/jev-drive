@@ -22,23 +22,26 @@ from jevdrive.runlog import RunLog  # noqa: E402
 AT = (0.275, 0.525)
 
 
-def build(mode):
+DTYPES = {"bf16": torch.bfloat16, "fp16": torch.float16, "tf32": torch.float32}
+
+
+def build(mode, dt):
     if mode == "B":
-        net = A.load("cinque", torch.bfloat16, trainable=A.stage4_weights())
+        net = A.load("cinque", dt, trainable=A.stage4_weights())
     elif mode == "B-lora":
-        net = A.load("cinque", torch.bfloat16, lora={w: 16 for w in A.stage4_matmuls()})
+        net = A.load("cinque", dt, lora={w: 16 for w in A.stage4_matmuls()})
     elif mode in ("C", "C-past"):
         import onnx
         g = onnx.load(str(A.MODELS_DIR / A.FILES["cinque"])).graph
-        net = A.load("cinque", torch.bfloat16, trainable=[t.name for t in g.initializer if t.data_type in (1, 10)])
+        net = A.load("cinque", dt, trainable=[t.name for t in g.initializer if t.data_type in (1, 10)])
     else:
-        net = A.load("cinque", torch.bfloat16)
+        net = A.load("cinque", dt)
     return net.cuda()
 
 
 def batch(mode, B, dev):
     if mode.startswith("B"):
-        return (torch.randn(B, A.CONTEXT, 1024, 8, 16, device=dev, dtype=torch.bfloat16),)
+        return (torch.randn(B, A.CONTEXT, 1024, 8, 16, device=dev, dtype=torch.float16),)
     img = lambda: torch.randint(0, 255, (B, A.CONTEXT, 2, 6, 128, 256), dtype=torch.uint8, device=dev)  # noqa: E731
     return img(), img()
 
@@ -67,12 +70,14 @@ def main():
     ap.add_argument("--batches", nargs="+", type=int, default=[8, 16, 32, 64, 128])
     ap.add_argument("--iters", type=int, default=8)
     ap.add_argument("--max-gb", type=float, default=0, help="stop growing the batch past this peak (shared card)")
+    ap.add_argument("--dtypes", nargs="+", default=["fp16", "tf32", "bf16"])
     a = ap.parse_args()
+    torch.backends.cudnn.allow_tf32 = torch.backends.cuda.matmul.allow_tf32 = True
     log = RunLog("op_adapt", "bench")
     dev = torch.device("cuda")
     rows = []
-    for mode in a.modes:
-        net = build(mode)
+    for mode, dn in [(m, d) for m in a.modes for d in a.dtypes]:
+        net = build(mode, DTYPES[dn])
         heads = A.AuxHeads().to(dev)
         params = [p for p in net.parameters() if p.requires_grad] + list(heads.parameters())
         opt = torch.optim.AdamW(params, lr=1e-5, fused=True)
@@ -91,7 +96,7 @@ def main():
                 torch.cuda.synchronize()
                 dt = (time.perf_counter() - t0) / a.iters
                 peak = torch.cuda.max_memory_allocated() / 2 ** 30
-                r = dict(mode=mode, batch=B, trainable_M=ntr / 1e6, samples_per_s=B / dt, peak_gb=peak,
+                r = dict(mode=mode, dtype=dn, batch=B, trainable_M=ntr / 1e6, samples_per_s=B / dt, peak_gb=peak,
                          gpu_h_per_100k=1e5 / (B / dt) / 3600)
                 rows.append(r)
                 log.info(str(r))
@@ -100,7 +105,7 @@ def main():
                 if a.max_gb and peak > a.max_gb * 0.6:
                     break
             except torch.OutOfMemoryError:
-                log.info(f"{mode} batch {B}: OOM")
+                log.info(f"{mode} {dn} batch {B}: OOM")
                 break
             finally:
                 torch.cuda.empty_cache()
