@@ -67,7 +67,11 @@ def cells_table(exam_dir: Path) -> pd.DataFrame:
         d = w[f"{m}|v2_plus"] - w[f"{m}|v2_minus"]
         w[f"{m}|dv2"] = d
         w[f"{m}|react"] = (d <= -tau)
-        w[f"{m}|stop"] = (w[f"{m}|vmin_plus"] < 0.5) & ~(w[f"{m}|vmin_minus"] < 0.5)
+        # stop: the plan comes to a halt with the pedestrian and not without it. From standstill (pull-away) v_min is
+        # below 0.5 m/s in both worlds by construction, so there it is "hold": v2 < 0.5 m/s in x+ while x- moves off
+        hold = (w[f"{m}|v2_plus"] < 0.5) & ~(w[f"{m}|v2_minus"] < 0.5)
+        stop = (w[f"{m}|vmin_plus"] < 0.5) & ~(w[f"{m}|vmin_minus"] < 0.5)
+        w[f"{m}|stop"] = np.where(w.state == "pull", hold, stop)
         dist_cam = w.dist + FRONT - CAM_X
         w[f"{m}|lead"] = ((w[f"{m}|lead_p_plus"] - w[f"{m}|lead_p_minus"]) >= 0.3) & \
                          ((w[f"{m}|lead_x_plus"] - dist_cam).abs() <= 0.3 * dist_cam)
