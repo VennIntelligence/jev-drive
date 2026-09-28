@@ -264,3 +264,20 @@ def render_scene(name: str):
         ycc = np.asarray(im.convert("YCbCr"))
         out[r, 0], out[r, 1] = NZ.pack(ycc, ix[0]), NZ.pack(ycc, ix[1])
     return name, plan, out, inv, cov
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("what", choices=("nusc", "wod", "nav"))
+    ap.add_argument("--workers", type=int, default=16)
+    a = ap.parse_args()
+    if a.what == "nusc":
+        df = labels()
+    elif a.what == "wod":
+        df, st = labels_wod(a.workers)
+        print(f"{len(st)} streams, {sum(len(s['names']) for s in st)} slots, uncertain {df.uncertain.mean():.3f}")
+    else:
+        df = labels_nav(a.workers)
+    print(len(df), df[["ped_corr", "ped_wide", "vru_corr", "vru_wide"]].mean().round(4).to_dict(),
+          df.dist_bin.value_counts().sort_index().to_dict())
