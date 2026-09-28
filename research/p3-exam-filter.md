@@ -212,6 +212,8 @@ A、B 合起来 12 段（登记合格池里的第 2、13、19、21、24、28、4
 
 完整的 1920 像素版本在 Mac 的 `tmp/p3-clips/insert_p3_000.mp4`、`insert_p3_001.mp4`。
 
+插入的几种做法（OmniRe 原样、手工修正、R3D2、VACE）在同一组帧上的并排对比和读数，见 [insertion-options.md](insertion-options.md)。
+
 **用户的评价（2026-09-28）**：the clips look "a bit like a ghost floating", but acceptable——有点像飘着的鬼影，但可以接受。所以插入按登记的设计推进：跑插入型对照和读数，并对所有有合格供体的段批量做；每道题都记下视角差和供体框内 PSNR，以后能把「飘」的题单独分出来。贴地和接触阴影的改法只在场景 1 上试，不挡批量。
 
 ### 插入的「飘」：诊断与第一轮修正
