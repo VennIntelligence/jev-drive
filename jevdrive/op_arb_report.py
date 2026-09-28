@@ -352,8 +352,13 @@ def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
             d = w.loc[w.v.idxmax()] if len(w) else b
             row.update({"ri_top": int(d.ri), "v_top": round(d.v, 2), "cl_top_vp": [round(d.vp0, 2), round(d.vp3, 2), round(d.vp5, 2)],
                         "cl_top_slow": bool(d.vp3 < 0.6 * d.vp0), "cl_top_brk0": round(d.brk0, 2), "cl_top_lp": round(d.lp0, 2)})
+            ratio = lambda x: float(np.min(x.vp3 / np.maximum(x.vp0, 1.0))) if len(x) else np.nan  # noqa: E731
+            ri_stop = int(g.ri[i])
+            row.update(ri_stop=ri_stop, cl_span_min_ratio=round(ratio(w[w.vp0 > 1.0]), 2))
             for name, s_ in sh.items():
                 s2 = s_[(s_.route == rid) & ~s_.warm]
+                span = s2[(s2.ri >= d.ri - 2) & (s2.ri <= ri_stop + 2) & (s2.vp0 > 1.0)]
+                row[f"{name}_span_min_ratio"] = round(ratio(span), 2) if len(span) else np.nan
                 m = s2[(s2.ri - d.ri).abs() <= 2]
                 if len(m):
                     q = m.iloc[0]
@@ -393,6 +398,12 @@ def phantom(rootdir: Path, out: Path, shadows=("base", "baseslow")) -> dict:
                      "median speed": round(float(e2[f"{name}_top_v"].median()), 2),
                      "median brake@0": round(float(e2[f"{name}_top_brk0"].median()), 2),
                      "base rate": round(float((f.vp3 < 0.6 * f.vp0).mean()), 3)})
+    for name in ["cl"] + list(sh):
+        c = f"{name}_span_min_ratio"
+        if c in ev:
+            x = ev[c].dropna()
+            summ.append({"run": f"post hoc: {'e2e closed loop' if name == 'cl' else 'shadow ' + name}, min plan v(3s)/v(0) over the final decel span",
+                         "n": len(x), "want-stop rate": round(float((x < 0.6).mean()), 3), "median decel 0-3 s": round(float(x.median()), 2)})
     t = pd.DataFrame(summ)
     t.to_csv(out / "phantom_summary.csv", index=False)
     return {"phantom_summary": t, "phantom_events": ev}
