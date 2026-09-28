@@ -51,7 +51,9 @@ def run_dir(key):
 
 
 def src_dir(key):
-    return DATA / "runs/nq4/p3/insert_fix" / key
+    """The insert run of a scene: the grounded-fix run when there is one, else the first insertion smoke."""
+    d = DATA / "runs/nq4/p3/insert_fix" / key
+    return d if (d / "meta.json").exists() else DATA / "runs/nq4/p3/insert" / key
 
 
 def jpg(t):
@@ -287,7 +289,15 @@ def veh(a):
             axle = np.array([[-l / 2 + 0.7, 0.0]]) @ Rw[:2, :2].T + Q                 # rear axle (overhang ~0.7 m)
             cps.append(project(K, c2w_np, np.c_[axle, zg + (np.array([[-l / 2 + 0.7, 0.0]]) @ coef[1:])])[0][0])
     rd = run_dir(key)
-    old = dict(np.load(rd / "geom.npz"))
+    rd.mkdir(parents=True, exist_ok=True)
+    old = dict(np.load(rd / "geom.npz")) if (rd / "geom.npz").exists() else {}
+    if "frames" not in old:                                             # a vehicle-only scene (no grounded pedestrian run)
+        old.update({"frames": np.array(frames), "K": K, "c2w": np.stack([E[t] @ c2e for t in frames])})
+        d = opt_frames(key, "real")
+        d.mkdir(parents=True, exist_ok=True)
+        for t in frames:
+            (d / jpg(t)).unlink(missing_ok=True)
+            os.link(src_dir(key) / "real/cams/front" / jpg(t), d / jpg(t))
     old.update({"veh_box": np.array(boxes), "veh_region": np.array(regs), "veh_contact_px": np.array(cps),
                 "veh_pose": np.r_[Q, zg, th], "veh_wlh": np.array([w, l, h])})
     np.savez(rd / "geom.npz", **old)
