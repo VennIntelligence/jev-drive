@@ -35,7 +35,8 @@ Do not download these again.
 
 ## Region
 
-The box is in West-D (moved from West-B on 2026-09-20). autodl-fs only mounts inside one region,
-so rent multi-GPU boxes in West-D too. autodl-fs is not turned on yet (`/root/autodl-fs` does not exist).
+The box is in West-E since 2026-09-28 (West-B until 2026-09-20, then West-D). autodl-fs only mounts inside one region,
+so rent further boxes in West-E too. autodl-fs is not turned on (`/root/autodl-fs` does not exist; checked 2026-09-28).
+`/autodl-pub/data` in West-E carries the same datasets (nuScenes, KITTI, ...).
 
 Last verified: 2026-09-20

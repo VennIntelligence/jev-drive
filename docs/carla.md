@@ -45,8 +45,8 @@ Packages added as root, all from the Huawei Cloud mirror already in `/etc/apt/so
 | `vulkan-tools` | `vulkaninfo`, to check the above |
 | `libsdl2-2.0-0`, `libomp5`, `xdg-user-dirs` | CARLA's own runtime dependencies |
 
-Check with `vulkaninfo --summary`: it must list `NVIDIA RTX PRO 6000 Blackwell Server Edition`,
-Vulkan 1.4.329, driver 595.71.05. A re-created instance loses all of this; re-run the apt install.
+Check with `vulkaninfo --summary`: it must list the NVIDIA cards (since 2026-09-28 seven `NVIDIA RTX 6000D`,
+Vulkan 1.4.329, driver 595.91.07; before that `RTX PRO 6000 Blackwell Server Edition`, driver 595.71.05). A re-created instance loses all of this; re-run the apt install.
 
 `vulkan-tools` pulls in `mesa-vulkan-drivers`, which adds `llvmpipe` as a second Vulkan device.
 CARLA will pick it and render on the CPU, so pin `VK_ICD_FILENAMES=/etc/vulkan/icd.d/nvidia_icd.json`.

@@ -42,7 +42,9 @@ TABLE = DATA / "runs" / "sched" / "table.tsv"
 COLS = ["lane", "gpus", "workers", "idx0", "idx_span", "cpus", "status", "go"]
 # capacity model (SCH 2026-09-26 18:25 measurement; see the handoff section)
 PIDS_PER_WORKER, PIDS_CAP = 400, 16000          # one CARLA server ~330-430 threads + route client ~15; b2d waits at 17000
-VRAM_PER_WORKER_GB, VRAM_CAP_GB = 7.5, 88       # CARLA server 3-9 GB; leave >= 8 GB per card
+# CARLA server 3-9 GB; leave >= 8 GB per card. RTX 6000D since 2026-09-28: 83.6 GiB per card (was 96 GB, cap 88);
+# show() also caps each card at its own total - 8, so a smaller card never passes the check.
+VRAM_PER_WORKER_GB, VRAM_CAP_GB = 7.5, 75
 CPU_CAP = 165                                    # of the cgroup's 175
 
 
@@ -143,8 +145,9 @@ def show(check_only=False) -> int:
     if p["cores_used"] > CPU_CAP:
         bad.append(f"cgroup CPU {p['cores_used']:.0f} cores above {CPU_CAP}")
     for x in p["gpus"]:
-        if x["used_gb"] > VRAM_CAP_GB:
-            bad.append(f"GPU {x['gpu']} VRAM {x['used_gb']:.0f} GB above {VRAM_CAP_GB}")
+        cap = min(VRAM_CAP_GB, x["total_gb"] - 8)
+        if x["used_gb"] > cap:
+            bad.append(f"GPU {x['gpu']} VRAM {x['used_gb']:.0f} GB above {cap:.0f}")
     for b in bad:
         print("CHECK:", b)
     return 1 if bad else 0
