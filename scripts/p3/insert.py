@@ -83,6 +83,8 @@ def main():
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--donors", type=Path, default=DATA / "runs/nq4/p3/filter/donors")
     a = ap.parse_args()
+    # nvdiffrast JIT needs this env's ninja on PATH (as in ds.py main)
+    os.environ["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
     import torch
     from PIL import Image, ImageDraw, ImageFont
     from pytorch3d.transforms import matrix_to_quaternion, quaternion_to_matrix
