@@ -164,13 +164,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset", choices=("nusc", "wod", "p5", "wodtrain", "navtrain"))
     ap.add_argument("--workers", type=int, default=24)
+    ap.add_argument("--batch", type=int, default=64, help="image pairs per trunk forward (64: ~15 GB)")
+    ap.add_argument("--out-sub", default="", help="write under processed/op_adapt/<out-sub> instead of <dataset> (pilots)")
     ap.add_argument("--limit", type=int, default=0, help="wod: number of streams (random, seed 0); others: first n")
     a = ap.parse_args()
     log = RunLog("op_adapt", f"cache-{a.dataset}")
     its, job, init, initargs = items(a)
     if a.dataset != "wod" and a.limit:
         its = its[: a.limit]
-    out = D.root(a.dataset)
+    out = D.root(a.out_sub or a.dataset)
     key = (lambda x: x) if a.dataset == "nusc" else (lambda x: x[0]) if a.dataset == "navtrain" else (lambda x: x["key"])
     its = [x for x in its if not (out / f"{key(x)}.npz").exists()]
     log.info(f"{len(its)} streams to cache -> {out}")
@@ -180,7 +182,7 @@ def main():
         list(ex.map(int, range(a.workers)))       # fork the render workers before CUDA exists in this process
         net = A.load("cinque", torch.float16).cuda()
         for k, prev, cur, meta in bounded_map(ex, job, its, 2 * a.workers):
-            T = trunk(net, prev, cur)
+            T = trunk(net, prev, cur, a.batch)
             tmp = out / f"{k}.tmp.npz"
             np.savez(tmp, trunk=T, **meta)
             tmp.replace(out / f"{k}.npz")
