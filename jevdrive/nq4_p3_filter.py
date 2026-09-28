@@ -414,7 +414,13 @@ def main():
     ap.add_argument("--workers", type=int, default=min(8, n_cpus()))
     ap.add_argument("--exam-dir", type=Path, default=data_dir() / "runs/nq4/p3-exam/20260927-232404")
     ap.add_argument("--native", type=Path, default=data_dir() / "runs/nq4/p3/formal10/native/native_frames.parquet")
+    ap.add_argument("--set", nargs="*", default=[], metavar="NAME=VALUE",
+                    help="sensitivity runs only: override a rule constant (LANE, TTR_S, SEEN_S, H_MIN, ...)")
     a = ap.parse_args()
+    for kv in a.set:                   # forked workers inherit the overridden module globals
+        k, v = kv.split("=")
+        assert k in globals() and isinstance(globals()[k], float), k
+        globals()[k] = float(v)
     events(a.out, a.workers) if a.cmd == "events" else scenes(a.out, a.exam_dir, a.native)
 
 
