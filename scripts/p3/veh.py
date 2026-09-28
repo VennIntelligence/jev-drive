@@ -145,7 +145,7 @@ def prep(a):
             one(j)
         except Exception as e:                                     # noqa: BLE001
             failed.append(j)
-            log(f"FAILED {j:03d}: {e}", event="error", j=j, msg=str(e))
+            log(f"FAILED {j:03d}: {e}", event="error", j=j, err=str(e))
 
     todo = [j for j in range(len(sc["segments"])) if not (V / f"prep_{j:03d}.done").exists()]
     log(f"prep: {len(todo)} segments, cpus {cpus}", event="start", todo=todo)
