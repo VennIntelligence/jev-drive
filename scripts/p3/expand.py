@@ -259,7 +259,7 @@ def main():
                 shared = {int(g): int(n) for g, n in json.loads((E / "shared_cards.json").read_text()).items()}
             except (OSError, ValueError):
                 shared = {}
-            eligible += [g for g in shared if g not in eligible and g not in demand_cards()]
+            eligible += [g for g in shared if g not in eligible]   # a CARLA demand file asks for server slots, not VRAM
             cap = {g: shared.get(g, SLOTS) if g in shared and g != TEST_GPU else SLOTS for g in eligible}
             want = [g for g in eligible if sum(v[1] == g for v in running.values()) < cap[g]]
             info = free_gb() if want else {}
