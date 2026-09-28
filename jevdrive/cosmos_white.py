@@ -21,6 +21,7 @@ TAGS = {1: "road", 2: "sidewalk", 3: "building", 4: "wall", 5: "fence", 6: "pole
         8: "traffic sign", 9: "vegetation", 10: "terrain", 12: "pedestrian", 13: "rider", 14: "car", 15: "truck",
         16: "bus", 18: "motorcycle", 19: "bicycle", 20: "static", 21: "dynamic", 28: "guard rail"}
 OBJ = {5, 6, 7, 8, 12, 13, 14, 15, 16, 18, 19, 20, 21}          # the object-like classes the review is about
+K9 = np.ones((17, 17), np.uint8)             # 8 px ring around the object (background classes only)
 MIN_PX, WHITE_V, WHITE_S, WHITE_FRAC, RAW_MAX = 300, 215, 0.15, 0.5, 0.2
 
 
@@ -30,6 +31,7 @@ def _white(img: np.ndarray) -> np.ndarray:
 
 
 def _one(job) -> list:
+    import cv2
     pair, member, variant, out_path, ctrl_edge = job
     r = _pairs().set_index("pair").loc[pair]
     a = _attempt(root("gen"), r[member])
@@ -53,7 +55,14 @@ def _one(job) -> list:
             m[sel] = inv == j
             vc, sc, tc = hsv(cos[t], m)
             vr, sr, tr = hsv(raw[t], m)
-            rows.append({"v_cos": vc, "s_cos": sc, "tex_cos": tc, "v_raw": vr, "s_raw": sr, "tex_raw": tr,
+            ring = (cv2.dilate(m.astype(np.uint8), K9) > 0) & ~np.isin(tag, list(OBJ))
+            if ring.sum() >= 50:
+                gc, gr = cos[t].mean(-1), raw[t].mean(-1)
+                con_c = abs(float(np.median(gc[m])) - float(np.median(gc[ring])))
+                con_r = abs(float(np.median(gr[m])) - float(np.median(gr[ring])))
+            else:
+                con_c = con_r = np.nan
+            rows.append({"con_cos": con_c, "con_raw": con_r, "v_cos": vc, "s_cos": sc, "tex_cos": tc, "v_raw": vr, "s_raw": sr, "tex_raw": tr,
                          "variant": variant, "pair": pair, "member": member, "t": t, "cls": TAGS.get(int(ks[j] // 65536), "other"),
                          "px": int(n[j]), "depth": float(np.median(depth[m])), "white": float(wc[t][m].mean()),
                          "white_raw": float(wr[t][m].mean()), "std_cos": float(cos[t][m].std()),
@@ -69,7 +78,10 @@ def _flags(d: pd.DataFrame) -> pd.DataFrame:
     # absolute white mannequin (added after seeing 25863 in fog, where CARLA's own object is pale too and the relative
     # flag cannot fire): Cosmos object near-white, grey, flat, while CARLA's object is not near-white
     d["is_mannequin"] = (d.v_cos >= 170) & (d.s_cos <= 0.15) & (d.tex_cos <= 25) & ~((d.v_raw >= 170) & (d.s_raw <= 0.15))
-    d["is_white_any"] = d.is_pale | d.is_mannequin
+    # washed out (added after 25863 in fog: a dark coat against a light road came out as a light-grey figure): the
+    # object's contrast to its own 8 px background ring falls below half of CARLA's, where CARLA's is >= 20 grey levels
+    d["is_washed"] = (d.con_raw >= 20) & (d.con_cos < 0.5 * d.con_raw)
+    d["is_white_any"] = d.is_pale | d.is_mannequin | d.is_washed
     return d
 
 
