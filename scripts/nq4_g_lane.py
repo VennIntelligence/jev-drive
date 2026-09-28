@@ -22,8 +22,10 @@ workers there, limited by free VRAM (per-examinee need) and by the thread cap (p
 10 % of its routes unfinished after that is failed (ERROR.cell.*), the rest goes on. The lane never kills a runner on
 exit; a restarted lane adopts the live ones.
 Grant: the lane's SCH row (lane nq4-g in $DATA_DIR/runs/sched/table.tsv, scripts/sch_table.py) is re-read every round:
-gpus = the cards it may start runners on, workers = CARD_CAP, cpus = the runners' taskset, idx0 = the per-card index
-blocks as a map "g:i,g:i" (idx_span indices each). Another lane gets cards or cores by editing that row (sch_table.py
+gpus = the cards it may start runners on, workers = CARD_CAP, cpus = the runners' taskset, either one core list for
+all cards or a per-card map "g:a-b,g:a-b" (UE4 sizes its TaskGraph and PoolThread pools from the affinity mask, so a
+server pinned to 24 cores has ~110 threads instead of ~260 on 128; docs/carla.md "Threads per server"), idx0 = the
+per-card index blocks as a map "g:i,g:i" (idx_span indices each). Another lane gets cards or cores by editing that row (sch_table.py
 grant nq4-g ...); runners already on a card that left the grant finish their routes. A revoked / done row stops new
 launches. Without a row: the old fixed layout (cards 0-6, 5 per card, indices 420 + 10 g).
 """
@@ -150,6 +152,14 @@ def smi(q):
                           text=True, timeout=30).stdout.splitlines()
 
 
+def card_cpus(gpu=None):
+    """The taskset list for a runner on `gpu` (None: every core the lane holds, for its CPU-side helpers)."""
+    if ":" not in CPUS:
+        return CPUS
+    m = dict(e.split(":") for e in CPUS.split(","))
+    return m[str(gpu)] if gpu is not None else ",".join(m.values())
+
+
 def cards(rows, own=frozenset()):
     """Per card: VRAM, CARLA servers of this lane (RPC port index in `own`, the live runners' blocks) and of others."""
     bus = {}
@@ -188,13 +198,13 @@ def launch(job, gpu, workers, idx, span, ids):
     env.pop("B2D_NQ4_REUSE_WORLD", None)
     if c == "pdm":
         env.update(BENCH2DRIVE_ROOT=str(SIM / "Bench2Drive"), WORK_DIR=str(SIM))
-        cmd = ["taskset", "-c", CPUS, str(PY_CARLA), "scripts/b2d_run.py", "--routes", str(xml), "--route-ids", ",".join(ids),
+        cmd = ["taskset", "-c", card_cpus(gpu), str(PY_CARLA), "scripts/b2d_run.py", "--routes", str(xml), "--route-ids", ",".join(ids),
                "--out", str(out), "--workers", str(workers), "--server-index", str(idx), "--index-span", str(span),
                "--gpu-rank", str(gpu), "--tm-seed", str(s), "--no-spectator", "--no-reap", "--client-threads", "8",
                "--max-attempts", "3", "--stall-s", "480", "--route-timeout-s", "3600", "--python", str(PY_SL),
                "--agent", "scripts/b2d_expert_agent.py", "--agent-config", "expert+nq4"]
     else:
-        env.update(CL10_ROUTES=str(xml), INDEX_SPAN=str(span), B_CPUS=CPUS)
+        env.update(CL10_ROUTES=str(xml), INDEX_SPAN=str(span), B_CPUS=card_cpus(gpu))
         cmd = ["scripts/nq3_b_cl10.sh", c, str(gpu), str(workers), str(idx), str(s), str(out), ",".join(ids)]
     with (out / f"runner-g{gpu}.log").open("a") as log:
         p = subprocess.Popen(cmd, cwd=REPO, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
@@ -250,7 +260,7 @@ class Lane:
         key = f"{c}.{v}"
         d = G / "arms_pilot" / key
         d.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run(["taskset", "-c", CPUS, str(PY_VENV), "-m", "jevdrive.nq4_g", "pilot-check", "--cand", c,
+        r = subprocess.run(["taskset", "-c", card_cpus(), str(PY_VENV), "-m", "jevdrive.nq4_g", "pilot-check", "--cand", c,
                             "--variant", v, "--out", str(arm_dir(c, v, p["seed"])), "--ids", ",".join(self.pilot_ids(c, v, p)),
                             "--since", str(p["t0"])], cwd=REPO, capture_output=True, text=True)
         (d / "check.err").open("a").write(r.stderr)
@@ -357,7 +367,7 @@ class Lane:
             if room <= 0:
                 continue
             unstarted = sum(r["workers"] for r in young if r["gpu"] == gpu)
-            free_gb = card["total"] - card["used"] - 8 * unstarted - 4
+            free_gb = card["total"] - card["used"] - 8 * unstarted - 8   # keep >= 8 GB per card (sch_table.py)
             for j in jobs:
                 c, v, s = j["cand"], j["variant"], j["seed"]
                 if j["kind"] == "pilot":
@@ -420,7 +430,7 @@ class Lane:
                 continue
             if all(self.st["cells"].get(f"{c}.{v}.{s}", {}).get("state") in ("DONE", "FAILED", "BLOCKED") for c, v, s in cells):
                 with (OUT / "report.log").open("a") as log:   # G readout tables, runs/nq4/gk/results/g (background)
-                    subprocess.Popen(["taskset", "-c", CPUS, str(PY_VENV), "-m", "jevdrive.nq4_g", "report"], cwd=REPO,
+                    subprocess.Popen(["taskset", "-c", card_cpus(), str(PY_VENV), "-m", "jevdrive.nq4_g", "report"], cwd=REPO,
                                      stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                 self.st["tier_reported"].append(t)
                 event("tier_done", tier=t)
