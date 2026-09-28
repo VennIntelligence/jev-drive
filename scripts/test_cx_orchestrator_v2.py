@@ -23,6 +23,7 @@ class CapacityTests(unittest.TestCase):
     def test_q5_launch_alongside_adopted_scoring_and_fit(self):
         active=[dict(pids=384,resident_pids=900,started=0),dict(pids=128,resident_pids=30,started=0)]
         self.assertEqual(q.budget(dict(pids=1000,gpu_gb=0),list(range(10)),active,self.probe(),self.rows())[0],-1)
+    @patch.object(q.sch, 'VRAM_CAP_GB', 88)   # the fixture's 96 GB card; the live cap follows the box's cards
     def test_gpu_resident_memory_not_reserved_twice(self):
         p=self.probe();p['gpus'][1]['used_gb']=60
         active=[dict(pids=128,resident_pids=128,started=0,gpu=5,gpu_gb=20,resident_gpu_gb=20)]
