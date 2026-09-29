@@ -5,6 +5,10 @@
 #   scripts/op_arb.sh routes                         print the registered route lists (phase 1 diagnosis, phase 2 eval)
 #   scripts/op_arb.sh phase <1|2>                    every arm of the phase, one after another, on the test card
 #   scripts/op_arb.sh arm <arm> <ids> <out>          one arm over a comma list of route ids
+#   scripts/op_arb.sh set <1|2|h> <tag>              op-drive (todos/2026-09-29-op-drive.md): every arm in $ARMS x seed in
+#                                                    $SEEDS over route set 1 (tuning), 2 (dev) or h (held-out), out
+#                                                    arms/<tag>-<arm>-s<seed>; arm "dbaseslow" is speed-matched to the
+#                                                    same tag's "drive" (or $MATCH_ARM) run of the same seed
 #
 # Resources (SCH row op-arb): GPU $GPU, $WORKERS CARLA servers at indices $IDX0.., cores $CPUS. One openpilot server
 # (Cinque, 2 sessions per worker: the route-desire session and its desire-free twin) serves every arm. Only PIDs this
@@ -14,7 +18,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 REPO=$(pwd)
 O=${OP_ARB_DIR:-$DATA_DIR/runs/op_arb}
-GPU=${GPU:-6} WORKERS=${WORKERS:-2} IDX0=${IDX0:-160} CPUS=${CPUS:-144-167}
+GPU=${GPU:-6} WORKERS=${WORKERS:-2} IDX0=${IDX0:-160} CPUS=${CPUS:-144-167} SEED=${SEED:-0}
 mkdir -p "$O/srv" "$O/cfg" "$O/arms"
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1
@@ -40,7 +44,16 @@ def pick(t):
     c = [r for r in rs if r[2] == t]
     small = [r for r in c if r[1] not in ("Town12", "Town13")]
     return (small or c)[0][0]
-print(",".join(pick(t) for t in (P1 if sys.argv[2] == "1" else P2)))
+if sys.argv[2] == "h":   # held-out (op-drive): per scenario type, the first route outside Town12/13 not in P1 / P2
+    used = {pick(t) for t in P1 + P2}
+    seen, out = set(), []
+    for rid, town, t in rs:
+        if t not in seen and rid not in used and town not in ("Town12", "Town13"):
+            seen.add(t)
+            out.append(rid)
+    print(",".join(out))
+else:
+    print(",".join(pick(t) for t in (P1 if sys.argv[2] == "1" else P2)))
 EOF
 }
 
@@ -78,6 +91,13 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         baseslow) arb="{\"mode\": \"base\", \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
         e2enofb) arb="{\"mode\": \"e2e\"${E2E_ARGS:+, $E2E_ARGS}, \"latch_max_s\": 1e9}" ;;
         oplat)   arb="{\"mode\": \"switch\", \"zones\": false${E2E_ARGS:+, $E2E_ARGS}}" ;;
+        # op-drive arms (todos/2026-09-29-op-drive.md); every one coasts instead of light braking below 2.5 m/s
+        dbase)   arb='{"mode": "base", "coast_v": 2.5}' ;;
+        dbaseslow) arb="{\"mode\": \"base\", \"coast_v\": 2.5, \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
+        latp7|latk) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"$([[ $arm == latk ]] && echo curv || echo p7)\", \"lon\": \"base\", \"coast_v\": 2.5}" ;;
+        drive|dlon) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
+ \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
+ \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         *) error "unknown arm $arm" ;;
     esac
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
@@ -85,6 +105,22 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
  \"controller_config\": \"$P7\", \"seed\": 0, \"dump_every\": 0, \"arb\": $arb}" > "$O/cfg/$arm.json"
     python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$O/cfg/$arm.json" || error "bad config for $arm"
     echo "$O/cfg/$arm.json"
+}
+
+match() {  # match <drive dir> <base dir>: {route: 8 x v_drive / v_base} clipped to [0.5, 8], mean speed over non-warm steps
+    python3 - "$1" "$2" <<'EOF'
+import glob, json, os, sys
+def speeds(d):
+    out = {}
+    for f in glob.glob(os.path.join(d, "done", "*.json")):
+        rid = os.path.basename(f)[:-5]
+        p = os.path.join(d, "attempts", rid, str(json.load(open(f))["attempt"]), "plans.jsonl")
+        v = [r["v"] for r in map(json.loads, open(p)) if not r["warm"]]
+        out[rid] = sum(v) / max(len(v), 1)
+    return out
+a, b = speeds(sys.argv[1]), speeds(sys.argv[2])
+print(json.dumps({r: round(min(max(8.0 * a[r] / max(b[r], 1e-3), 0.5), 8.0), 2) for r in a if r in b}))
+EOF
 }
 
 run_arm() {  # run_arm <arm> <ids> <out>
@@ -96,7 +132,7 @@ run_arm() {  # run_arm <arm> <ids> <out>
     ev arm_start "\"arm\": \"$arm\", \"routes\": \"$ids\""
     log "start $arm on $ids (GPU $GPU x $WORKERS, idx $IDX0, cores $CPUS)"
     taskset -c "$CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$ids" --workers "$WORKERS" \
-        --server-index "$IDX0" --index-span "$WORKERS" --gpu-rank "$GPU" --tm-seed 0 --no-spectator --no-reap \
+        --server-index "$IDX0" --index-span "$WORKERS" --gpu-rank "$GPU" --tm-seed "$SEED" --no-spectator --no-reap \
         --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 2400 --out "$out" --python "$PY_CARLA" \
         --agent scripts/op_arb_agent.py --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
     pid=$!
@@ -112,7 +148,24 @@ run_arm() {  # run_arm <arm> <ids> <out>
 }
 
 case ${1:-} in
-    routes) echo "phase1 $(routes 1)"; echo "phase2 $(routes 2)" ;;
+    routes) echo "phase1 $(routes 1)"; echo "phase2 $(routes 2)"; echo "heldout $(routes h)" ;;
+    set)
+        trap 'srv_stop' EXIT
+        ids=$(routes "$2"); tag=$3
+        for seed in ${SEEDS:-0}; do
+            for a in ${ARMS:?}; do
+                d=$O/arms/$tag-$a-s$seed
+                [[ -e $d/DONE ]] && continue
+                if [[ $a == dbaseslow ]]; then
+                    CRUISE_BY_ROUTE=$(match "$O/arms/$tag-${MATCH_ARM:-drive}-s$seed" "$O/arms/$tag-dbase-s$seed") || error "speed match failed"
+                    export CRUISE_BY_ROUTE; log "dbaseslow s$seed set speeds $CRUISE_BY_ROUTE"
+                fi
+                echo "set $2 $tag arm $a seed $seed $(date '+%F %T')" > "$O/STATUS"
+                SEED=$seed run_arm "$a" "$ids" "$d"
+                date > "$d/DONE"
+            done
+        done
+        date > "$O/DONE-$tag"; echo "set $tag done $(date '+%F %T')" > "$O/STATUS" ;;
     arm) run_arm "$2" "$3" "$4" ;;
     phase)
         trap 'srv_stop' EXIT

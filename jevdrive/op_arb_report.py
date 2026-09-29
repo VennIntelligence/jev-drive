@@ -10,8 +10,12 @@ plans.jsonl with one record per openpilot step, ticks.jsonl) and writes small CS
          route desire and without (the twin session); native junction passes
   eval   per route and per arm: DS, RC, SR, infractions, share of moving steps where an openpilot constraint binds,
          infractions by the source binding at that moment, paired DS vs base
+  drive  op-drive (todos/2026-09-29-op-drive.md), arms/<tag>-<arm>-s<seed>: per route run DS / RC / infractions, mean
+         speed, who had lateral (openpilot / route zone / divergence fallback, by distance), who bound longitudinal,
+         stop latches and what released them, coasting, ground-truth distance to the route line; paired vs dbase and
+         vs dbaseslow (route bootstrap over seed-averaged routes)
 
-    .venv/bin/python -m jevdrive.op_arb_report diag|eval [--root DIR] [--out DIR]
+    .venv/bin/python -m jevdrive.op_arb_report diag|eval|drive [--root DIR] [--out DIR] [--phase TAG]
 """
 from __future__ import annotations
 
@@ -433,17 +437,110 @@ def attribute(adir: Path, inf: dict, st: pd.DataFrame) -> dict:
     return out
 
 
+# ------------------------------------------------------------------------------------------------ op-drive
+def cross_track(adir: Path) -> np.ndarray:
+    """Per tick ground-truth rear-axle distance to the route polyline (m)."""
+    route = np.asarray(json.loads((adir / "route.json").read_text())["xy"], float)
+    xy = np.array([t["truth"][:2] for t in map(json.loads, open(adir / "ticks.jsonl")) if "truth" in t], float)
+    a, d = route[:-1], np.diff(route, axis=0)
+    out = np.empty(len(xy))
+    for i in range(0, len(xy), 512):
+        q = xy[i:i + 512, None, :] - a[None]
+        u = np.clip((q * d[None]).sum(-1) / np.maximum((d * d).sum(-1), 1e-9)[None], 0, 1)
+        out[i:i + 512] = np.linalg.norm(q - u[..., None] * d[None], axis=-1).min(1)
+    return out
+
+
+def drive_row(adir: Path) -> dict:
+    r = record(adir)
+    r.pop("_inf", None)
+    st = plans(adir)
+    if not len(st):
+        return r
+    live = st[~st.warm]
+    dist = live.v * 0.05
+    km = max(dist.sum() / 1e3, 1e-6)
+    share = lambda m: round(float(dist[m].sum() / max(dist.sum(), 1e-6)), 3)  # noqa: E731
+    lat = live.get("lat", pd.Series("route", index=live.index))
+    why = live.get("lat_why", pd.Series(None, index=live.index))
+    rel = live.rel.dropna().astype(str)
+    r.update(v_mean=round(float(live.v.mean()), 2), km=round(km, 3), lat_op=share(lat == "op"),
+             lat_zone=share(why == "zone"), lat_div=share(why == "div"),
+             div_events=int(((why == "div") & (why.shift() != "div")).sum()),
+             lon_op=round(float(live[live.v > 0.5].src.isin(OP_SRC).mean()), 3), lon_op_dist=share(live.src.isin(OP_SRC)),
+             lon_lead=round(float((live.src == "lead").mean()), 3), lon_plan=round(float((live.src == "plan").mean()), 3),
+             latches=int((live.latch & ~live.latch.shift(fill_value=False)).sum()),
+             rel_signal=int((rel == "signal").sum()), rel_lead=int((rel == "lead_go").sum()),
+             rel_resume=int((rel == "timeout").sum()), rel_rolling=int((rel == "rolling").sum()),
+             stop_s=round(float((live.v < 0.2).sum() * 0.05), 1))
+    try:
+        ticks = [json.loads(line) for line in open(adir / "ticks.jsonl")]
+        r["coast_s"] = round(sum(t.get("rules") == "coast" for t in ticks) * 0.05, 1)
+        xt = cross_track(adir)
+        fr = np.array([t["frame"] for t in ticks if "truth" in t])
+        on = st.set_index("frame").reindex(fr, method="ffill")
+        opm = (on.lat == "op").to_numpy() if "lat" in on else np.zeros(len(fr), bool)
+        mov = (on.v > 0.5).to_numpy() & ~on.warm.fillna(True).astype(bool).to_numpy()
+        r.update(xt_med=round(float(np.median(xt[mov])), 3) if mov.any() else np.nan,
+                 xt_p95=round(float(np.percentile(xt[mov], 95)), 3) if mov.any() else np.nan,
+                 xt_op_med=round(float(np.median(xt[mov & opm])), 3) if (mov & opm).any() else np.nan,
+                 xt_op_p95=round(float(np.percentile(xt[mov & opm], 95)), 3) if (mov & opm).any() else np.nan,
+                 xt_gt1_per_km=round(float(((xt[mov] > 1.0) & ~np.r_[False, xt[mov][:-1] > 1.0]).sum() / km), 2))
+    except (OSError, KeyError, ValueError):
+        pass
+    return r
+
+
+def paired(df: pd.DataFrame, arm: str, ref: str, n_boot: int = 10000) -> dict:
+    g = df[df.arm.isin([arm, ref])].groupby(["arm", "route"]).DS.mean().unstack(0).dropna()
+    if arm not in g or ref not in g or not len(g):
+        return {}
+    dd = (g[arm] - g[ref]).to_numpy()
+    rng = np.random.default_rng(0)
+    boot = [rng.choice(dd, len(dd)).mean() for _ in range(n_boot)]
+    bad = ["coll_veh", "coll_ped", "coll_layout", "red_light", "stop_sign"]
+    inf = df.assign(bad=df[bad].sum(1)).groupby("arm").bad.sum()
+    return {"pair": f"{arm} - {ref}", "routes": len(dd), "dDS": round(float(dd.mean()), 1),
+            "95% CI": "[%.1f, %.1f]" % tuple(np.percentile(boot, [2.5, 97.5])),
+            "better / worse / same": "%d / %d / %d" % ((dd > 0.5).sum(), (dd < -0.5).sum(), (np.abs(dd) <= 0.5).sum()),
+            "coll+light arm / ref": f"{int(inf.get(arm, 0))} / {int(inf.get(ref, 0))}"}
+
+
+def drive(rootdir: Path, out: Path, tag: str) -> dict:
+    out.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for d in sorted(rootdir.glob(f"arms/{tag}-*-s*")):
+        arm, seed = d.name[len(tag) + 1:].rsplit("-s", 1)
+        for rid, adir in attempts(d).items():
+            rows.append({"arm": arm, "seed": int(seed), "route": rid, **drive_row(adir)})
+    df = pd.DataFrame(rows)
+    df.to_csv(out / "per_route.csv", index=False)
+    num = [c for c in df.columns if c not in ("arm", "seed", "route", "status") and pd.api.types.is_numeric_dtype(df[c])]
+    summ = {c: "sum" for c in INF_KEYS.values() if c in df} | {c: "mean" for c in num if c not in INF_KEYS.values()}
+    agg = df.groupby("arm").agg(runs=("route", "size"), **{c: (c, f) for c, f in summ.items()}).round(3).reset_index()
+    agg.to_csv(out / "arms.csv", index=False)
+    arms = set(df.arm)
+    pairs = [paired(df, a, ref) for a in sorted(arms) for ref in ("dbase", "dbaseslow") if a != ref and ref in arms]
+    tp = pd.DataFrame([p for p in pairs if p])
+    tp.to_csv(out / "paired.csv", index=False)
+    (out / "summary.md").write_text("\n".join([f"# op-drive {tag} (generated by jevdrive.op_arb_report drive; do not edit)", "",
+                                               "## arms", "", agg.to_markdown(index=False), "", "## paired", "",
+                                               tp.to_markdown(index=False) if len(tp) else "-", ""]))
+    return {"arms": agg, "paired": tp}
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("diag", "eval", "phantom"))
+    ap.add_argument("step", choices=("diag", "eval", "phantom", "drive"))
     ap.add_argument("--root", default="")
     ap.add_argument("--out", default="")
     ap.add_argument("--phase", default="p2")
     a = ap.parse_args()
     rd = Path(a.root) if a.root else root()
     out = Path(a.out) if a.out else rd / "results"
-    res = diag(rd, out) if a.step == "diag" else phantom(rd, out) if a.step == "phantom" else evaluate(rd, out, a.phase)
+    res = diag(rd, out) if a.step == "diag" else phantom(rd, out) if a.step == "phantom" else \
+        drive(rd, out, a.phase) if a.step == "drive" else evaluate(rd, out, a.phase)
     for k, t in res.items():
         print(f"== {k}\n{t.to_string(index=False)}\n")
 

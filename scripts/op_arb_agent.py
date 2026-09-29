@@ -15,6 +15,16 @@ mode runs the same openpilot session on the same frames; only what reaches P7 di
   e2e      acc + openpilot's plan as a speed constraint while moving, with a stop latch     (openpilot experimental mode)
   switch   openpilot's own plan (lateral + longitudinal) while rolling outside turn zones; e2e for launches and route turns
            ("zones": false: openpilot's plan also through route turns, i.e. only launches and stop latches are the base's)
+  drive    op-drive (todos/2026-09-29-op-drive.md): openpilot drives lateral on lane-follow route segments ("lat": "op";
+           executed as P7 tracking its plan path, "lat_exec": "p7", or its desired curvature through the bicycle model
+           at 20 Hz, "curv"); the route geometry steers in zones around route commands ("zone_m": {cmd: [before, after]})
+           and while openpilot's path and the route diverge (> div_m at div_arc m ahead, back below div_back_m for
+           div_hold_s). Longitudinal "lon": "op" = min(set speed and curvature cap, lead-head IDM, openpilot plan while
+           rolling), "base" = the set-speed governor alone. "hold": "intent" latches a standstill only when the plan itself
+           asked to stop (plan v(5 s) < 0.5 m/s) just before it; released by the plan (x@5 s > release_th for release_s),
+           a departing lead (lead head v > lead_go_v) or the driver's resume after latch_max_s of standstill.
+  Any mode: "coast_v" > 0 replaces a brake request by coasting below coast_v m/s while the arbitrated profile still
+  asks to move (CARLA's MKZ stops dead on a light brake at 1-2 m/s).
 
 The base (observable inputs only: the route every Bench2Drive agent gets, the sensor pose, the speedometer) is the
 route geometry (b2d_controller_adapter.RouteAdapter's rejoin path) timed by a speed governor: a set speed ("cruise"),
@@ -44,11 +54,15 @@ TIMES = np.arange(1, 21) * 0.25
 REAR_TO_BUMPER = 1.3886 + 2.4508       # MKZ 2020: rear axle -> centre -> front bumper (m)
 CAM_TO_BUMPER = REAR_TO_BUMPER - rigs.OP_MOUNT_RIG[0]   # openpilot's lead x is measured from the camera
 DT_SIM, HORIZON = 0.05, 5.0
-MODES = ("native", "base", "oshadow", "acc", "e2e", "switch")
+MODES = ("native", "base", "oshadow", "acc", "e2e", "switch", "drive")
 DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3.0, "twin": False, "lead_p": 0.5,
             "plan_vmin": 1.0, "plan_form": "abs", "release": "none", "release_th": 0.5, "latch_max_s": 20.0,
             "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
-            "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0}
+            "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
+            "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
+            "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
+               Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 
 
 def get_entry_point():
@@ -146,19 +160,26 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.last_src = None
         self.blend_from, self.blend_t = None, -1e9
         self.ctx_frame, self.ctx = None, {}
+        self.div_on, self.agree_t, self.intent_t, self.want_go, self.lat_src = False, 0.0, -1e9, True, "route"
+        if self.arb["lat_exec"] == "curv":
+            self.lateral = "curvature"                         # the parent's tick loop steers from self.curvature
+        if self.arb["coast_v"] > 0:
+            self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
 
     def _init_route(self):
         super()._init_route()
         self.base = RouteAdapter(self.route.xy, 10.0)
         a = dict(DEFAULTS, **self.cfg.get("arb", {}))
+        spec = {int(k): v for k, v in a["zone_m"].items()} if a["zone_m"] else DRIVE_ZONES if a["mode"] == "drive" \
+            else {Z.LEFT: (a["zone_before_m"], a["zone_after_m"]), Z.RIGHT: (a["zone_before_m"], a["zone_after_m"])}
         zones, cmd, s = [], self.route.cmd, self.route.s
         i = 0
-        while i < len(cmd):                                  # LEFT / RIGHT runs -> [start - before, end + after]
-            if cmd[i] in (Z.LEFT, Z.RIGHT):
+        while i < len(cmd):                                  # command runs -> [start - before, end + after]
+            if cmd[i] in spec:
                 j = i
                 while j + 1 < len(cmd) and cmd[j + 1] == cmd[i]:
                     j += 1
-                zones.append((s[i] - a["zone_before_m"], s[j] + a["zone_after_m"]))
+                zones.append((s[i] - spec[cmd[i]][0], s[j] + spec[cmd[i]][1]))
                 i = j + 1
             else:
                 i += 1
@@ -276,15 +297,16 @@ class OpArbAgent(Z.ZeroShotAgent):
         lp = float(np.asarray(out["lead_prob"])[0])
         v_plan = np.asarray(out["vel"], float)
         cons = {"base": s_base}
-        if lp > A["lead_p"] and A["mode"] in ("acc", "e2e", "switch"):
+        mode = A["mode"]
+        op_lon = mode in ("acc", "e2e", "switch") or (mode == "drive" and A["lon"] == "op")
+        if lp > A["lead_p"] and op_lon:
             cons["lead"] = idm(speed, float(lead[0, 0]) - CAM_TO_BUMPER, float(lead[0, 2]), float(lead[0, 3]),
                                A["cruise"], A["amax"], A["idm_b"], A["idm_s0"], A["idm_T"])
         s_plan = plan_arc(op_path, speed, float(v_plan[0]), A["plan_form"])
-        mode = A["mode"]
         if mode == "oshadow":
             cons.pop("lead", None)
             cons.update(self._oracle_cons(speed))
-        use_plan = mode in ("e2e", "switch")
+        use_plan = mode in ("e2e", "switch") or (mode == "drive" and A["lon"] == "op")
         # ---- stop latch (e2e / switch): a stop the plan caused is held until openpilot releases it
         if speed < 0.2:
             self.stop_t += dt
@@ -301,8 +323,11 @@ class OpArbAgent(Z.ZeroShotAgent):
             cons["plan"] = s_plan
             if speed >= A["plan_vmin"] and s_plan[-1] < min(v[-1] for k, v in cons.items() if k != "plan") - 0.5:
                 self.binding_t = t_frame                       # refreshed only while rolling: a standstill plan never binds
+                if float(np.interp(5.0, out["t"], v_plan)) < 0.5:
+                    self.intent_t = t_frame                    # the binding plan itself asks to stop
         rel = None
-        if use_plan and not self.latch and self.moved and self.stop_t > 0 and t_frame - self.binding_t < 1.5:
+        caused = t_frame - (self.intent_t if A["hold"] == "intent" else self.binding_t) < (2.0 if A["hold"] == "intent" else 1.5)
+        if use_plan and not self.latch and self.moved and self.stop_t > 0 and caused:
             self.latch, self.latch_t, self.rel_t = True, 0.0, 0.0
         if self.latch:
             self.latch_t += dt
@@ -311,28 +336,44 @@ class OpArbAgent(Z.ZeroShotAgent):
             rel = {"gas": gas > A["release_th"], "planx": x5 > A["release_th"], "nobrake": mt0[bi] < A["release_th"],
                    "none": False}[A["release"]]
             self.rel_t = self.rel_t + dt if rel else 0.0          # the release signal must hold release_s seconds
-            why = "signal" if rel and self.rel_t >= A["release_s"] else "timeout" if self.latch_t > A["latch_max_s"] \
-                else "rolling" if speed > 1.0 else None
+            lead_go = A["hold"] == "intent" and lp > A["lead_p"] and float(lead[0, 2]) > A["lead_go_v"]
+            why = "signal" if rel and self.rel_t >= A["release_s"] else "lead_go" if lead_go else \
+                "timeout" if self.latch_t > A["latch_max_s"] else "rolling" if speed > 1.0 else None
             if why:
                 self.latch, rel = False, why
             else:
                 cons["latch"] = np.zeros(len(TIMES))
         src = min(cons, key=lambda k: cons[k][-1] + 1e-3 * (k == "base"))
         s_fin = np.maximum.accumulate(np.maximum(np.min(np.stack(list(cons.values())), 0), 0.0))
-        arb_path = place(bpath, s_fin)
+        # ---- lateral owner (drive): openpilot on lane-follow segments; the route in command zones and on divergence
+        div = float(np.linalg.norm(place(np.r_[[[0.0, 0.0]], op_path], np.array([A["div_arc"]]))[0]
+                                   - place(bpath, np.array([A["div_arc"]]))[0]))
+        if div > A["div_m"]:
+            self.div_on, self.agree_t = True, 0.0
+        elif self.div_on:
+            self.agree_t = self.agree_t + dt if div < A["div_back_m"] else 0.0
+            self.div_on = self.agree_t < A["div_hold_s"]
+        lat_why = "warm" if warm else "zone" if self.in_zone() else "div" if self.div_on else None
+        lat_src = "op" if mode == "drive" and A["lat"] == "op" and lat_why is None else "route"
+        geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and A["lat_exec"] == "p7" else bpath
+        arb_path = place(geom, s_fin)
+        self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
+        if mode == "drive":
+            self.curvature = float(info["curvature"]) if lat_src == "op" and A["lat_exec"] == "curv" else None
         if mode == "native":
             drive_path, src = op_path, "op"
         elif mode == "switch" and not warm and speed >= 2.0 and not self.in_zone() and not self.latch:
             drive_path, src = op_path, "op"
         else:
             drive_path = arb_path
-        if mode == "switch":                                  # 1 s linear hand-over between the two drivers
-            if self.last_src is not None and (self.last_src == "op") != (src == "op"):
+        key = lat_src if mode == "drive" else src == "op"
+        if mode in ("switch", "drive"):                       # 1 s linear hand-over between the two drivers
+            if self.last_src is not None and self.last_src != key:
                 self.blend_from, self.blend_t = self.last_drive, t_frame
             w = min((t_frame - self.blend_t) / 1.0, 1.0)
             if w < 1.0 and self.blend_from is not None:
                 drive_path = w * drive_path + (1 - w) * self.blend_from
-        self.last_src, self.last_drive = src, np.asarray(drive_path, float)
+        self.last_src, self.last_drive, self.lat_src = key, np.asarray(drive_path, float), lat_src
         if warm:
             accepted = False
         elif self.n_plans % self.ctl_every == 0:
@@ -346,6 +387,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "src": src,
                "zone": self.in_zone(), "latch": self.latch, "rel": rel, "ri": int(self.route.i),
+               "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},
                "op_xy": r3(op_path[[3, 7, 11, 19]]), "base_xy": r3(place(bpath, np.array([5.0, 10, 15, 20, 30]))),
@@ -361,6 +403,13 @@ class OpArbAgent(Z.ZeroShotAgent):
         rec["ctx"] = self._ctx()
         self.plan_log.write(json.dumps(rec) + "\n")
         return ms
+
+    def _k_rules(self, speed, throttle, brake):
+        """coast_v: below coast_v m/s a brake request becomes a coast while the arbitrated profile still moves and no
+        stop is latched; a profile that stops (lead, plan stop, route end) still brakes."""
+        if brake > 0 and speed < self.arb["coast_v"] and self.want_go and not self.latch:
+            return 0.0, 0.0, "coast"
+        return throttle, brake, None
 
     def _oracle_cons(self, speed):
         """oshadow: privileged governor from ground truth (lead / walker in the path, red or yellow light ahead)."""
