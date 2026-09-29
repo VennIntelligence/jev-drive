@@ -205,7 +205,7 @@ def cmd_synth(a):
         q = root(data, f"{a.method}.chunks")
         chunks = list(range(0, n, a.chunk))[: a.limit_chunks or None]
         t0, done = time.time(), 0
-        for c in chunks:
+        for c in chunks + chunks:           # second pass: chunks whose claiming worker died meanwhile
             if not _claim(q, c // a.chunk):
                 continue
             tc = time.time()

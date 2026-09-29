@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # op-lb lane (scripts/op_lb.py): frame caches, navtrain-subset metric cache, openpilot `none` rollouts, the
 # equivalence check against op_interp's stored navfull / navhard plans, export + official scoring + report.
-# Resumable: every step is skipped once its output exists. STATUS / DONE / ERROR / logs in $DATA_DIR/runs/op_lb/lane/.
+# Resumable: every step is skipped once its output exists. STATUS / DONE_<TAG> / ERROR_<TAG> / logs in $DATA_DIR/runs/op_lb/lane/.
+# WAIT_PID: start only after that process has exited (e.g. a running GIMM chain).
 #
 #   scripts/tmux_run.sh op-lb scripts/op_lb_lane.sh [step ...]      steps (default all, in this order):
 #     prep mcache gimm warp trainrun testrun compare score report arms
@@ -23,7 +24,7 @@ PJ="$T $DATA_DIR/envs/jevdrive/bin/python scripts/op_interp.py"
 ALL=(${DATAS:-lb_navtest lb_navhard lb_navtrain})   # DATAS: restrict prep / gimm / score / report
 declare -A VER=([lb_navtest]=v1 [lb_navhard]=v2 [lb_navtrain]=v1) SPLIT=([lb_navtest]=navtest [lb_navhard]=navhard_two_stage [lb_navtrain]=navtrain)
 st() { echo "$(date '+%F %T') $*" | tee -a "$L/STATUS"; }
-die() { st "ERROR $*"; echo "$*" > "$L/ERROR"; exit 1; }
+die() { st "ERROR [$TAG] $*"; echo "$*" > "$L/ERROR_$TAG"; exit 1; }
 chunks_left() { local d=$1 m=$2 n; n=$(python3 -c "import json;print(len(json.load(open('$R/$d/meta.json'))['names']))")
   echo $(( (n + 31) / 32 - $(ls "$R/$d/$m.chunks" 2>/dev/null | grep -c '\.done$') )); }
 
@@ -107,6 +108,8 @@ step_arms() {
 }
 
 steps=("$@"); (( ${#steps[@]} )) || steps=(prep mcache gimm warp trainrun testrun compare score report arms)
-st "start: ${steps[*]} (CPUS $CPUS, GPUS $GPUS, RUN_GPU $RUN_GPU)"
+TAG=${TAG:-main}                  # names this chain's DONE_<tag> / ERROR_<tag> when several chains run at once
+st "start [$TAG]: ${steps[*]} (DATAS ${ALL[*]}, CPUS $CPUS, GPUS $GPUS, RUN_GPU $RUN_GPU)"
+if [[ -n ${WAIT_PID:-} ]]; then st "[$TAG] waiting for pid $WAIT_PID"; while kill -0 "$WAIT_PID" 2>/dev/null; do sleep 60; done; fi
 for s in "${steps[@]}"; do "step_$s"; done
-st "DONE ${steps[*]}"; touch "$L/DONE"
+st "DONE [$TAG] ${steps[*]}"; touch "$L/DONE_$TAG"
