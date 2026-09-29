@@ -75,3 +75,7 @@ GPU 0–4（Cosmos 全量在跑）与 GPU 6，每卡 ≤ 12 GB、nice 19，卡�
 ## 结果
 
 跑完再填。run root：box `$DATA_DIR/runs/op_lb/`。
+
+## WOD-E2E test 提交记录
+
+- 2026-09-29：用户手动提交了 Cinque 的 test 包（box `~/data/runs/zeroshot-exam/wod-test/cinque.r2.tar.gz`），占 30 天 6 次配额中的 1 次。成绩由用户回报后补在这里。速度校准（×1.06）不在这次的包里，要进下一次提交。
