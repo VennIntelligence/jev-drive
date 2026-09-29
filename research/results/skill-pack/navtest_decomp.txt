@@ -1,0 +1,14 @@
+         PDMS   lost    NC    DAC    EP   TTC    C  NC fail %  DAC fail %  TTC fail %  zero %  maxerr
+gimm    84.17  15.83  1.63   4.33  8.73  1.14  0.0       1.83        4.44        4.59    5.91     0.0
+hydra   84.18  15.82  1.82   6.45  6.22  1.32  0.0       2.14        6.64        5.57    8.20     0.0
+clsref  77.86  22.14  3.02  12.49  4.82  1.81  0.0       3.75       12.92        9.03   15.38     0.0
+
+per-token best-of oracle PDMS:
+ gimm|hydra 91.19  gimm|hydra|clsref 92.8
+ gimm zero & hydra >0.8: 3.34%   hydra zero & gimm >0.8: 5.03%
+ corr(gimm,hydra) PDMS: 0.291
+ gimm zero tokens: 718 NC=0: 197 DAC=0: 539 both: 18
+ mean-formula approx PDMS gimm: 81.59
+EP on jointly-valid tokens: gimm 78.0 hydra 83.8 (n=10668)
+EP<0.5 share gimm 7.5% hydra 3.7%
+hist EP gimm: [ 100  235 1366 3973 1996 2998]

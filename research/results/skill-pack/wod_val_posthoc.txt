@@ -1,0 +1,13 @@
+fold 0 s* 1.06
+fold 1 s* 1.06
+cinque                                        RFS 8.005  frame 7.942  floored 0.100  d_vs_cinque +0.000 [+0.000,+0.000]
+lebowski                                      RFS 7.886  frame 7.805  floored 0.125  d_vs_cinque -0.137 [-0.268,-0.003]
+cv                                            RFS 7.103  frame 7.046  floored 0.271  d_vs_cinque -0.896 [-1.122,-0.662]
+cls ego                                       RFS 7.311  frame 7.343  floored 0.213  d_vs_cinque -0.599 [-0.823,-0.376]
+mean(cinque,lebowski)                         RFS 7.969  frame 7.906  floored 0.104  d_vs_cinque -0.036 [-0.121,+0.042]
+cinque lon-scale (cross-fit)                  RFS 8.119  frame 8.064  floored 0.090  d_vs_cinque +0.122 [+0.052,+0.201]
+oracle best of {cinque,lebowski}              RFS 8.308  frame 8.238  floored 0.079  d_vs_cinque +0.297 [+0.222,+0.372]
+oracle best of {cinque,lebowski,cv,cls ego}   RFS 8.814  frame 8.775  floored 0.029  d_vs_cinque +0.833 [+0.696,+0.988]
+oracle best of cinque lon-scale grid          RFS 8.691  frame 8.650  floored 0.044  d_vs_cinque +0.708 [+0.591,+0.827]
+grid (frame-mean): {0.8: 6.833, 0.84: 7.071, 0.88: 7.392, 0.92: 7.682, 0.96: 7.82, 1.0: 7.942, 1.04: 8.051, 1.08: 8.021, 1.12: 7.87, 1.16: 7.638, 1.2: 7.333}
+
