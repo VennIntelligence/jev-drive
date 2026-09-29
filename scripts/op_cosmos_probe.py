@@ -279,20 +279,16 @@ def cosmos_part(rl):
     return df
 
 
-def s2_p5(rl):
-    """S2 on the P5 CARLA pairs: E0's data, folds and labels; conv head on the cached stage-3 maps."""
+_MAPS = {}
+
+
+def p5_maps(kc, rl):
+    """Cached stage-3 maps (n, 1024, 8, 16) fp16 of the P5 readout rows, in the order of the E0 feature keys `kc`."""
+    if "p5" in _MAPS:
+        return _MAPS["p5"]
     from concurrent.futures import ThreadPoolExecutor
-    os.environ["P5_SET"] = "carla_p5v1_ba"
-    from jevdrive import p5_exam as E
     from jevdrive import op_adapt_data as D
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import op_layer_probe as LP
-    kc, Xc = LP.features("p5")
-    t, past, fut, obs, null, pairs = E.load()
-    pos = pd.Series(np.arange(len(kc)), index=kc)
-    at = pos.reindex(t.frame_name).to_numpy().astype(int)
-    files = sorted(D.root("p5").glob("*.npz"))
-    files = [f for f in files if not f.stem.endswith(".tmp")]
+    files = [f for f in sorted(D.root("p5").glob("*.npz")) if not f.stem.endswith(".tmp")]
     want = pd.Series(np.arange(len(kc)), index=kc)
 
     def load(f):
@@ -308,6 +304,61 @@ def s2_p5(rl):
             maps[torch.as_tensor(j[ok].astype(int))] = torch.as_tensor(tr[ok])
             n += int(ok.sum())
     rl.info(f"P5 stage-3 maps loaded: {n} / {len(kc)} rows")
+    _MAPS["p5"] = maps
+    return maps
+
+
+def p5_pairtrain(rl):
+    """Descriptive bridge (added after the Cosmos-pair numbers, see the todo): the P5 CARLA pairs probed like the Cosmos cells,
+    i.e. trained on the pair frames themselves (x+ vs x-, groups = base route, 5 folds), linear pooled layers and the conv head."""
+    import op_adapt_readout as R
+    os.environ["P5_SET"] = "carla_p5v1_ba"
+    from jevdrive import p5_exam as E
+    import op_layer_probe as LP
+    kc, Xc = LP.features("p5")
+    t, past, fut, obs, null, pairs = E.load()
+    pos = pd.Series(np.arange(len(t)), index=t.frame_name)
+    at = pos.reindex(t.frame_name).to_numpy()
+    kpos = pd.Series(np.arange(len(kc)), index=kc)
+    o = obs[obs.family.isin(E.PED_FAMILIES)]
+    ip = kpos.reindex(o.fn_plus).to_numpy().astype(int)
+    im = kpos.reindex(o.fn_minus).to_numpy().astype(int)
+    rows_i = np.r_[ip, im]
+    y = np.r_[np.ones(len(ip)), np.zeros(len(im))].astype(int)
+    g = np.r_[o.base_id.to_numpy(), o.base_id.to_numpy()].astype(str)
+    rows = []
+    for L in LP.LAYERS:
+        s = R.oof_probe(Xc[L][rows_i], y, g)
+        r = R.paired_boot(y, s, s, g)
+        rows.append({"probe": f"pair-trained linear {L}", "auc": r["auc"], "auc_ci": r["auc_ci"], "n": r["n"], "groups": r["groups"]})
+        rl.info(f"P5 pair-trained {L}: {r['auc']:.3f} {r['auc_ci']}")
+    maps = p5_maps(kc, rl)
+    ug = np.array(sorted(set(g)))
+    fold = pd.Series(np.arange(len(ug)) % 5, index=np.random.default_rng(0).permutation(ug))[g].to_numpy()
+    s = np.full(len(y), np.nan)
+    for f in range(5):
+        tr, ev = np.flatnonzero(fold != f), np.flatnonzero(fold == f)
+        s[ev] = conv_scores(lambda i: maps[torch.as_tensor(rows_i[np.asarray(i)])], y, tr, ev)
+    lin = R.oof_probe(Xc["stage3"][rows_i], y, g)
+    r = R.paired_boot(y, s, lin, g)
+    rows.append({"probe": "pair-trained conv stage3", "auc": r["auc"], "auc_ci": r["auc_ci"], "n": r["n"], "groups": r["groups"]})
+    rl.info(f"P5 pair-trained conv stage 3: {r['auc']:.3f} {r['auc_ci']}")
+    pd.DataFrame(rows).to_csv(OUT / "probe" / "p5_pairtrain.csv", index=False)
+
+
+def s2_p5(rl):
+    """S2 on the P5 CARLA pairs: E0's data, folds and labels; conv head on the cached stage-3 maps."""
+    from concurrent.futures import ThreadPoolExecutor
+    os.environ["P5_SET"] = "carla_p5v1_ba"
+    from jevdrive import p5_exam as E
+    from jevdrive import op_adapt_data as D
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import op_layer_probe as LP
+    kc, Xc = LP.features("p5")
+    t, past, fut, obs, null, pairs = E.load()
+    pos = pd.Series(np.arange(len(kc)), index=kc)
+    at = pos.reindex(t.frame_name).to_numpy().astype(int)
+    maps = p5_maps(kc, rl)
     fold = E.folds(t, pairs)
     role, y_all = t.role.to_numpy(), t["hazard"].to_numpy(dtype=float)
     s = np.full(len(t), np.nan)
@@ -368,7 +419,7 @@ def probe(a):
     rl = RunLog("op_cosmos_probe", "probe")
     (OUT / "probe").mkdir(parents=True, exist_ok=True)
     for part in a.parts:
-        {"cosmos": cosmos_part, "p5": s2_p5, "nusc": s2_nusc}[part](rl)
+        {"cosmos": cosmos_part, "p5": s2_p5, "nusc": s2_nusc, "p5pair": p5_pairtrain}[part](rl)
     rl.event("end")
 
 
@@ -379,7 +430,7 @@ def main():
     e.add_argument("--workers", type=int, default=16)
     e.add_argument("--limit-n", type=int, default=0, help="first n pairs only (smoke test)")
     p = sp.add_parser("probe")
-    p.add_argument("--parts", nargs="+", default=["cosmos", "p5", "nusc"])
+    p.add_argument("--parts", nargs="+", default=["cosmos", "p5", "nusc", "p5pair"])
     a = ap.parse_args()
     extract(a) if a.cmd == "extract" else probe(a)
 
