@@ -3291,6 +3291,7 @@ NAVSIM 榜分完整复现（SparseDriveV2 navtest PDMS 92.22 对论文 92.2；ZT
 
 **T3 考试：BridgeDrive + BLUE（2026-09-26 下午，P5 v1 BA 的 570 个世界挂各自 rig 重录，568 个 expert 轨迹与原记录逐 tick 相同；todo「结果 / T3」，[leaderboard-vs-ability 第 9 节](leaderboard-vs-ability.md)）**。
 BridgeDrive 控车用的 route + target speed 通道纵向翻转 0.2% [0.0, 0.6]（TFv6 0%），waypoint 通道 27.2% [20.6, 34.6]，与 TFv6 waypoint 同帧差 −2.7 pp [−10.8, +5.9] → **与 TFv6 分不开，B2D 榜首的增量不在 E 层**（5.5 的读法成立，waypoint 点估计略低于预登记写的 30%，CI 覆盖）。
+（2026-09-29 收口，见第 58 条）这 0.2% 背后「反应本来就弱」还是「背下了具体位置」的疑问，night-queue-4 G 节的闭环 ghost test 给出了答案：BridgeDrive（以及 TFv6、BLUE、SimLingo）在把 hazard 藏起来的世界里都没有测出「位置记忆」，扰动（触发点平移 / 换同类 actor）也没有让闭环通过率崩——0.2% 归为开环回放的输入偏离了自己的训练分布，不是背位置。
 BLUE speed waypoints 合并 26.5% [17.0, 36.5]（null 5.4%）→ 有纵向反应，但集中在 cut-in（39.9%），行人 5.9%，比 TFv6 低 23.7 pp [−29.3, −17.4]；第 38 条「BLUE 在突发 hazard 上更好」在配对考卷上**没有复现为行人反应**。16:35 补 SimLingo（同 checkpoint、同 rig、无 gate；本段原写「与 SimLingo 本体的比较因 SimLingo 无 P5 读数未做」）：SimLingo 34.6% [23.9, 45.6]（行人 9.1%、cut-in 51.1%），**BLUE − SimLingo 合并 −8.1 pp [−12.4, −4.5]、cut-in −11.2 [−17.7, −5.4]**，CI 整体 < 0；同一个 τ 下为 −0.6 [−4.0, +2.5]，差只来自 BLUE 直出路径的 null 抖动（τ 5.0 对 4.0）。即 gate 没有给 SimLingo 增加 E 层反应，第 38 条 3. 里 BLUE 对 SimLingo 的突发 hazard SR 优势（+10.8）在配对考卷上不复现，其来源不在速度通道对 hazard 的反应。
 creep 在全部考卷帧上 0 帧生效。**对本条的含义**：CARLA 榜首两族（LEAD、SimLingo）的新成员在 E 层上没有超过族内老成员，「交集 / 榜首由配方决定」对这两族**维持**。状态仍**待定**（只有 BA 一个 expert、只有纵向；T2 的族还没出数）。
 
@@ -3620,3 +3621,68 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 
 **状态**：**待定**（设计搁置）。限定：10 条 dev 路线单 seed，同配置重复运行在一条路线上差 47 DS；行人在 CARLA 里是 sim 域差（第 55 条），不是这里能测的。
 **会推翻或推进本条的证据**：220 条 × 3 seed 上 e2e − base 的配对差 CI 下界 > 0（推进）；幽灵停车用 `plan_form` rel 或 brake 门修掉后 e2e 的均速回到 base 的一半以上且配对差不降（推进）；同一位置 shadow 与闭环的 plan 减速配对显示幽灵停车来自画面而不是自我强化（改机制读法）。
+
+## 58. G lane 的 ghost test 与扰动测试：TFv6、BridgeDrive、BLUE、SimLingo（连 PDM-Lite 参照）都不「位置记忆」，shift / swap 扰动也没有一格过「崩塌」门槛；第 46 条 T3 的 0.2% 收口为开环回放的分布偏移，不是背位置（**待定**）
+
+2026-09-29。登记与判据见 [todos/2026-09-26-night-queue-4.md 的 G 节](../todos/2026-09-26-night-queue-4.md)（「G. ghost test 与扰动崩塌」）；最终表见
+[research/results/nq4/g/final/](results/nq4/g/final/)（[g.md](results/nq4/g/final/g.md)，脚本 `g_final.py` 原样跑登记代码 `jevdrive.nq4_g.collect` /
+`g_tables`），过程记录 [tmp/2026-09-29-g-final.md](../tmp/2026-09-29-g-final.md)（Mac 本地），取代两份预览
+（[seed 0 初览](../tmp/2026-09-28-g-seed0-prelim.md)、[shift/swap 预览](../tmp/2026-09-28-g-shift-swap-prelim.md)）。
+
+**起因**（见该 todo「为什么有这一队列」）：第 46 条 T3 测到 BridgeDrive 的 route + target speed 通道对突发 hazard 几乎不反应（0.2%），但 B2D 闭环分数很高；
+这可能是「反应本来就弱」，也可能是模型背下了具体路线的位置（走到哪里就减速，不看 hazard 在不在）。开环回放分不开这两种解释，**ghost test**（闭环里把 hazard 的
+actor 藏到地下、删掉 PDM-Lite 读的 `active_scenarios` 登记，路线、Traffic Manager seed、天气都不变，看模型在 hazard 原来出现的地方还刹不刹）能测；配套的
+**扰动崩塌**测试把触发点沿路线平移（`shift`，+15 m）或换成同类的另一种 actor（`swap`），看闭环通过率会不会跟着掉——「记住了具体实例」应该在扰动后崩，
+「学会了识别这类 hazard」不应该崩。考生：TFv6、BridgeDrive、SimLingo、BLUE（作者执行层）四个榜单族，加 PDM-Lite 当参照（专家靠特权登记绕行，删了登记后
+不应该还有 ghost 反应）；基于 openpilot 的考生（M-C、Q2、阳性对照 K3 seen）2026-09-27 21:30 被撤出本轮（openpilot 还没调好），本轮因此没有阳性对照。
+
+**读数 1（幽灵反应率，主读数，`ghost` 世界，3 个 seed 全部平均）**：判格「位置记忆」= 幽灵率 CI 下界 > max(该考生同路线对照窗口比率, PDM-Lite 的 ghost 幽灵率) + 10 pp。
+
+| 考生 | ghost 幽灵率 [95% CI]（路线数） | 对照窗口比率（路线数） | 门槛 | position_memory |
+|:--|--:|--:|--:|:--|
+| PDM-Lite（参照基线） | 3.6% [0, 10.7]（28） | 0%（10） | — | False |
+| TFv6 | 5.0% [1.1, 10.0]（30） | 15.2%（11） | 25.2% | False |
+| BridgeDrive | 10.0% [3.3, 18.9]（30） | 6.7%（10） | 16.7% | False |
+| BLUE | 9.2% [2.3, 18.4]（29） | 10.0%（10） | 20.0% | False |
+| SimLingo | 13.3% [3.3, 25.6]（30） | 20.0%（10） | 30.0% | False |
+
+四家都远低于各自门槛（离门槛最近的 SimLingo 也差约 17 pp）。SimLingo 只用 seed 0 的初览曾看到 21.4%，加满 3 个 seed 后降到 13.3%——初览的高值主要是
+seed 0 噪声，不是稳定信号。
+
+**读数 3（扰动崩塌，`shift` +15 m / `swap` 同类换 actor，仍按登记只有 1 个 seed，判格只写方向）**：判格「崩塌」= 通过率下降的 CI 下界 > 10 pp。
+
+| 考生 | 扰动 | 通过率降幅 [95% CI] | 路线数 | collapse |
+|:--|:--|--:|--:|:--|
+| TFv6 | shift +15 m | +2.5 pp [−5.0, +10.0] | 80 | False |
+| BridgeDrive | shift +15 m | +7.5 pp [0.0, +15.0] | 80 | False |
+| BLUE | shift +15 m | 0 pp [−8.75, +8.75] | 80 | False |
+| SimLingo | shift +15 m | 0 pp [−10.0, +10.0] | 80 | False |
+| TFv6 | swap（同类换 actor） | +2.0 pp [−4.0, +8.0] | 50 | False |
+| BridgeDrive | swap（同类换 actor） | 0 pp [−6.0, +6.0] | 50 | False |
+| BLUE | swap（同类换 actor） | **+18.0 pp [+6.0, +30.0]** | 50 | False |
+| SimLingo | swap（同类换 actor） | +10.0 pp [−4.0, +24.0] | 50 | False |
+
+八格没有一格越过 10 pp 的崩塌门槛。BLUE 在 `swap` 上是全表点估计最高（18 pp）、也是唯一一格 CI 完全不跨 0 的（下界 +6 pp）：方向是「换了同类
+actor 之后更容易过不了这一关」，跟其余七格（点估计 0–7.5 pp、CI 基本跨 0）不是同一量级，但 6 pp 还没有过 10 pp 的门槛；`shift`/`swap` 仍是登记的
+1 seed 设计（有信号才补 seed），这一格暂记「未过门槛但要看」，是这批扰动里最值得先补 seed 的一格。
+
+PDM-Lite 的 `shift`/`swap`/`orig` seed 1–2 是 2026-09-28 09:4x 用户经 main 转达撤掉的（「闭环算力不再花在专家身上」），本条最终表
+（`research/results/nq4/g/final/`）里没有 PDM 的 shift/swap 行。**限定并更正**：commit `6f86757` 先拉回的中间表（`research/results/nq4/g/g.md`，
+非 final 目录）里混进了一行 `pdm,shift`（10 条路线、collapse False），是撤销生效前已经跑完的 10 条路线 pilot 遗留，不是完整批量，不该算进
+「PDM-Lite 的扰动读数」；`research/results/nq4/g/final/`（commit `6a32063`，第二个 G 执行员产出）已经把它排除，读数 3 只覆盖四个榜单族，是准的版本。
+
+**读数 5（第 46 条 T3 的复核，BLUE − SimLingo 在 orig 突发 hazard 组的通过率配对差，3 个 seed）**：+6.7 pp [+0.8, +13.3]（40 条路线），CI 完全不跨 0。
+这是原始通过率（能不能闯过这个 hazard），跟第 46 条 T3 测的「配对差分下有没有纵向反应」是两把不同的尺子：T3 在开环配对上量到 BLUE 的纵向反应比
+SimLingo 少 8.1 pp，本条量到 BLUE 的闭环通过率比 SimLingo 高 6.7 pp——两个读数不矛盾，只是说明 BLUE 的闭环优势不是来自更强的纵向反应（第 46 条
+已有的结论不改）；`final/g.md` 里 BLUE 的对照窗口均速 12.74 m/s 是四家里最高的，不支持单纯「开得慢」，更细的归因留给以后。
+
+**读法（登记 rule 4）**：四个榜单族在 `ghost` 上都不「位置记忆」、在 `shift`/`swap` 上都不「崩塌」→「背题」（rote memorization）这个说法撤掉；
+第 46 条 T3 的 0.2% 归为开环回放的输入偏离了它自己的训练分布，不是背下了具体位置。登记 rule 4 里另一支「K3 seen 阳性对照不『位置记忆』→ ghost test
+灵敏度不够，主读数不下结论」这次没有数据可判（阳性对照本轮撤掉）；按 2026-09-27 21:30 转达的决定，主读数仍照登记报、判格照原文——但这意味着
+ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四个榜单族的数字和 PDM-Lite 参照（同样不到门槛）互相印证。
+
+**状态**：**待定**。限定：`shift`/`swap` 只有 1 个 seed，按登记只写方向，不是正式判格；BLUE.swap 的 +18 pp [+6, +30] 是全表唯一 CI 不跨 0 的格子，
+暂未过 10 pp 门槛；没有阳性对照，ghost test 自身的灵敏度这一轮无法独立验证；只测了 P5 突发 hazard 与 P6 障碍两类共 80 条路线，行为层（第 47 条的
+绕行 / negotiation）不在这次的路线集里。
+**会推翻或推进本条的证据**：BLUE.swap 补 2–3 个 seed 后 CI 下界过 10 pp → 改判「对具体实例过拟合」（不是位置记忆，读数 1 已经排除这一支）；
+以后如果 openpilot 阳性对照（K3 seen）重新跑进 G，若它在 ghost 上也不「位置记忆」，要连带下调 ghost test 本身的灵敏度，本条的「撤销」结论要重新打问号。

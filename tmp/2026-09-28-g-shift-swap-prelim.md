@@ -1,5 +1,7 @@
 # G 扰动崩塌（shift / swap）初步读数（2026-09-28）
 
+> **已被取代**：最终读数见 [tmp/2026-09-29-g-final.md](2026-09-29-g-final.md)（`research/decisions.md` 第 58 条）。本文仅留作过程记录。
+
 > **预览（PRELIMINARY），不是最终判格。** 读数 3（扰动崩塌）登记在只写方向：`shift` / `swap` 目前只跑了 1 个 seed，
 > 登记的判格「CI 下界 > 10 pp」在 1 seed 下不下结论，只看方向。设计、口径与 2026-09-28 补充（**卡死算场景失败**）见
 > [night-queue-4 的 G 节](../todos/2026-09-26-night-queue-4.md)。计算用的是登记代码 `jevdrive.nq4_g.collect` / `g_tables`

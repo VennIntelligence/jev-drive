@@ -1,5 +1,7 @@
 # G ghost test：seed 0 初步读数（2026-09-28）
 
+> **已被取代**：最终读数见 [tmp/2026-09-29-g-final.md](2026-09-29-g-final.md)（`research/decisions.md` 第 58 条）。本文仅留作过程记录。
+
 > **seed 0 初步读数，描述性，不进判格。** 登记的判格要等 `orig` 与 `ghost` 的 3 个 seed 全部跑完；本文所有数字都只是先看一眼，
 > 不写进 todo 的「结果」、不动 decisions。设计与判据见 [night-queue-4 的 G 节](../todos/2026-09-26-night-queue-4.md)（规则 12 的窗口更正、读数 1–5）。
 

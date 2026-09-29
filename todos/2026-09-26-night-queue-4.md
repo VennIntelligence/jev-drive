@@ -31,6 +31,10 @@
 
 ## G. ghost test 与扰动崩塌（闭环，CARLA）
 
+**状态（2026-09-29 08:31 CST）**：**DONE**，登记的格子全部跑完（PDM-Lite 的 `shift`/`swap`/`orig` seeds 1–2 按 2026-09-28 09:4x 的撤回保持 `DROPPED`）。
+最终读数、判格结果与限定见「结果」一节末尾（[tmp/2026-09-29-g-final.md](../tmp/2026-09-29-g-final.md)、[research/decisions.md 第 58 条](../research/decisions.md)）。
+box 调度表的 `nq4-g` 行已收回（`sch_table.py grant nq4-g --status "done: ..."`，2026-09-29）。
+
 **路线**：B2D 220 里 trigger 是生成的 actor 的路线——P5 的 10 个可见反应 family（每类 5 条）+ P6 的 8 类可用障碍（每类 5 条），约 90 条。
 **世界变体**：
 - `orig`：原样；
@@ -584,3 +588,16 @@ CI 为按场景整组 bootstrap 的 95% 区间；τ 固定为 I3 的 0.526852154
 - 另记：p3_004 全图 PSNR 24.52 dB，低于场景 0 检查清单的 25 dB 线；这条线不是登记门的一部分，场景按登记保留在门内，留人判。
 - 描述性读数（不进门、不进判格）：openpilot 原生 plan（不经 `ridge_late`）在同一批帧、同一翻转定义上，τ 借用各自的 I3 `ridge_late` τ（I3 null 上没有原生 plan 的 τ）：null 误翻 Cinque 11.7% [0.9, 29.6]、Lebowski 5.2% [0.4, 13.0]（p3_004 分别 87% / 39%）；x⁺ 对 x⁻ 的翻转 Cinque 6.1% [0, 15.7]、Lebowski 2.6% [0, 7.8]。表见 `native_plan.csv`（含各场景 |Δ| 中位 / p90 / p95）。plan 抓取时一起重算的 `temporal` 与门用的 stream 逐位相同（30 stream × 2 模型）。
 - 扩量准备（CPU / 网络，天空 mask 在 P3 已占的卡上跑同一代码）：合格池第 010–055 段共 46 段已下载、预处理、天空 mask 完成；056–065 这 10 段因数据盘地板（剩 150 GB）停住。明细与 GPU 时估计见 `tmp/2026-09-27-p3-scenes.md`。
+
+### 2026-09-29 G 最终读数（DONE，按登记判格）
+
+G lane 08:31 CST 全部 DONE（PDM-Lite 的 `shift`/`swap`/`orig` seeds 1–2 仍是 2026-09-28 09:4x 撤掉的 `DROPPED`，其余格子齐了；`pdm.ghost.2` 74/80，
+按登记「> 10% 才算 ERROR.cell」的规则算 DONE）。读数 1（ghost 幽灵反应率，3 seed）与读数 3（shift / swap 扰动崩塌，1 seed，按登记只写方向）都是
+四个榜单族全部不过门槛；读数 5（BLUE − SimLingo 突发 hazard 通过率）三 seed 后 CI 不跨 0。完整数字、表与「怎么看」见
+[tmp/2026-09-29-g-final.md](../tmp/2026-09-29-g-final.md)，回填到 [research/decisions.md 第 58 条](../research/decisions.md)（就地收口了第 46 条 T3
+「0.2% 是弱反应还是背位置」的疑问）。表在 [research/results/nq4/g/final/](../research/results/nq4/g/final/)（commit `6a32063`，取代 commit
+`6f86757` 先拉回的中间表 `research/results/nq4/g/g.md`——那份表里混进一行撤回生效前的 `pdm,shift` pilot 遗留，10 条路线、非完整批量，final 版已排除）。
+
+唯一没有过门槛但值得记一笔的格子：BLUE 在 `swap`（同类换 actor）上通过率降幅 +18.0 pp [+6.0, +30.0]，是全表唯一一格 CI 完全不跨 0 的，但下界
+6 pp 还没过 10 pp 的「崩塌」门槛；`shift`/`swap` 仍是登记的 1 seed 设计（有信号才补），如果以后要补 seed，先补这一格。本轮因为 openpilot 阳性对照
+（K3 seen）撤出而没有数据验证 ghost test 本身的灵敏度，是本条最大的限定。
