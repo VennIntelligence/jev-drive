@@ -223,7 +223,7 @@ class WLForkAgent(P5PairAgent):
         self._rw_log.write(json.dumps({"kind": "rewind", "branch": self.rw_idx, "action": self.rw_actions[self.rw_idx],
                                        "dead_frame": GameTime.get_frame(), "dead_tick_ms": 1e3 * (time.perf_counter() - t0),
                                        "wall": time.time(), **st}) + "\n")
-        c = copy.copy(snap["control"])
+        c = carla.VehicleControl(snap["control"].throttle, snap["control"].steer, snap["control"].brake)
         c.manual_gear_shift = False
         return c
 
