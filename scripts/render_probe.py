@@ -70,8 +70,9 @@ def main():
                         time.sleep(0.005)
                     im = img.pop(f, None)
                     state["tick"] += 1
-                    srv = sum(l.is_on for l in carla.Client("localhost", server.port).get_world()
-                              .get_lightmanager().get_all_lights())
+                    probe = carla.Client("localhost", server.port)     # fresh: LightManager.is_on is a client cache
+                    probe_lm = probe.get_world().get_lightmanager()
+                    srv = sum(l.is_on for l in probe_lm.get_all_lights())
                     fh.write(json.dumps({"episode": ep, "phase": phase, "tick": state["tick"], "srv_on": srv,
                                          "luma": None if im is None else round(float(im.mean()), 2)}) + "\n")
 
