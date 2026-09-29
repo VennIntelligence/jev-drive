@@ -66,15 +66,84 @@ GPU 0–4（Cosmos 全量在跑）与 GPU 6，每卡 ≤ 12 GB、nice 19，卡�
 ## 步骤
 
 - [x] 证据：command 语义、desire 语义、旧读数失败原因、MHP（2026-09-29）
-- [ ] 重建 GIMM 缓存（navtest / navhard / navtrain 子集），`none` 复现 84.2 / 33.3
-- [ ] navtrain 选臂（Cinque；Lebowski 若便宜）
-- [ ] navtest / navhard 跑 A* 与 `none`
-- [ ] WOD-E2E 可行性与 val RFS
+- [x] 重建 GIMM 缓存（navtest / navhard / navtrain 子集），`none` 复现 84.2 / 33.3（2026-09-29，84.18 / 33.33）
+- [x] navtrain 选臂（Cinque 与 Lebowski 各选一次）
+- [x] navtest / navhard 跑 A* 与 `none`（只跑了 Cinque `lc@-1.0`；Lebowski 没有臂过线）
+- [x] WOD-E2E 可行性与 val RFS（见笔记与下面的提交记录）
 - [ ] 榜单对照表；写进 decisions 第 37 条与 midterm inventory
 
 ## 结果
 
-跑完再填。run root：box `$DATA_DIR/runs/op_lb/`。
+run root：box `$DATA_DIR/runs/op_lb/`；小结果在 [research/results/op-lb/](../research/results/op-lb/)。结论见 [decisions 第 66 条](../research/decisions.md)。选臂规则原样执行，没有改动；navtest / navhard 各只跑了一次。
+
+### 1. `none` 复现与缓存等价
+
+| | 本次 | 参照（op_interp） |
+|:--|--:|--:|
+| navtest PDMS，Cinque `none`，12 146 token | 84.18 [83.77, 84.59] | 84.2 |
+| navhard two-stage EPDMS combined，5 912 token | 33.33（stage 1 71.70 / stage 2 46.90） | 33.3 |
+
+新缓存对 op_interp 旧缓存的等价检查（[equivalence_navtest.json](../research/results/op-lb/equivalence_navtest.json)、[equivalence_navhard.json](../research/results/op-lb/equivalence_navhard.json)）：
+逐点位置差均值 0.019 / 0.020 m，token 内最大值均值 0.10 m，> 1 m 的 token 只有 1 / 0 个。这个量级就是 GIMM 在同卡上重跑两次的自身非确定性（0.16% 字节 ±1），不是 bug。
+
+### 2. GIMM 补帧的前后数字与瓶颈
+
+| 项 | 数 |
+|:--|:--|
+| 缓存格式 | 每 token 只存 6 张补帧（uint8）；navtest gimm 28.7 GB、navhard 14.0 GB、navtrain 子集 gimm 6.6 GB + warp 6.6 GB |
+| 吞吐 | GPU 6 单独 0.65–1.0 s/token；被 Cosmos 占用的卡 1.2–2.0 s/token（GPU 上有别的任务时） |
+| 瓶颈 | GIMM fp32 的 GPU 计算。TF32 / bf16 会改帧、破坏复现，所以没有不改数值的提速，只能多卡分片（6 张卡；chunk 32，峰值 11.8 GB） |
+| navtrain 3000 token metric cache | 15.5 min；navtest / navhard 已有 cache 完整 |
+| 打分 | 每个 navtrain 臂约 3 min；navtest 约 3 min，navhard 约 13 min（lane STATUS 时间戳） |
+
+### 3. navtrain 选臂（3000 token，每 command 1000；gimm 行，PDMS）
+
+Cinque `none` 82.12，Lebowski `none` 81.95。直行 token 不给 desire，所以直行分数与 `none` 逐位相同。Δ 为配对差，token bootstrap 95% CI（B = 2000）。
+
+| 臂 | Cinque PDMS | Cinque Δ [CI] | Lebowski PDMS | Lebowski Δ [CI] |
+|:--|--:|:--|--:|:--|
+| `turn@−1.5` | 80.68 | −1.44 [−2.20, −0.67] | 81.25 | −0.70 [−1.28, −0.14] |
+| `turn@−1.0` | 80.70 | −1.42 [−2.29, −0.62] | 81.60 | −0.35 [−0.95, +0.23] |
+| `turn@−0.5` | 80.94 | −1.18 [−2.02, −0.39] | **82.02（A*）** | +0.07 [−0.51, +0.65] |
+| `turn@0` | 81.45 | −0.67 [−1.51, +0.11] | 82.01 | +0.06 [−0.50, +0.62] |
+| `turn@onset` | 80.82 | −1.30 [−2.08, −0.53] | 81.52 | −0.43 [−1.03, +0.15] |
+| `lc@−1.5` | 82.82 | +0.70 [+0.07, +1.30] | 81.83 | −0.12 [−0.67, +0.43] |
+| `lc@−1.0` | **82.95（A*）** | **+0.83 [+0.20, +1.45]** | 81.61 | −0.34 [−0.94, +0.27] |
+| `lc@−0.5` | 82.55 | +0.43 [−0.27, +1.12] | 81.34 | −0.61 [−1.31, +0.04] |
+| `lc@0` | 82.06 | −0.06 [−0.77, +0.64] | 81.11 | −0.84 [−1.53, −0.18] |
+
+规则的判定：**Cinque** A* = `lc@−1.0`，CI 下界 +0.20 > 0，进测试集；**Lebowski** A* = `turn@−0.5`，CI 下界 −0.51，不进，headline 是 `none`，测试集不跑任何 Lebowski 臂。
+Cinque A* 按 command 拆（navtrain）：左 −0.07 [−1.33, +1.26]，右 +2.57 [+1.20, +3.98]，增益全在右转。全表见 [navtrain_paired.csv](../research/results/op-lb/navtrain_paired.csv)。
+
+### 4. navtest / navhard 测试集（Cinque `lc@−1.0` 对 `none`，各跑一次）
+
+navtest（12 146 token，v1 PDMS）：
+
+| 组 | n | `none` | `lc@−1.0` | 配对 Δ [95% CI] |
+|:--|--:|--:|--:|:--|
+| 全部 | 12 146 | 84.18 | **84.90** | +0.72 [+0.48, +0.95] |
+| left + right | 4 076 | 76.51 | 78.65 | **+2.14 [+1.40, +2.86]** |
+| straight | 8 070 | 88.05 | 88.05 | 0.00 |
+| 左 | 2 501 | 77.80 | 80.69 | +2.88 [+2.00, +3.82] |
+| 右 | 1 575 | 74.46 | 75.41 | +0.95 [−0.14, +2.04] |
+
+按预登记判：left + right 合并的 Δ CI 下界 +1.40 > 0，straight Δ = 0.00 ≥ −0.5，**「导航有用」成立**（数据在 [navtest_paired.csv](../research/results/op-lb/navtest_paired.csv)）。
+
+navhard two-stage（5 912 token，v2 EPDMS，只有点估计）：
+
+| | `none` | `lc@−1.0` | 差 |
+|:--|--:|--:|--:|
+| combined | 33.33 | 33.05 | −0.28 |
+| stage 1（真实） | 71.70 | 72.20 | +0.50 |
+| stage 2（3DGS 合成） | 46.90 | 46.19 | −0.71 |
+
+navhard 上没有增益（差在点估计的量级，不单独判）。
+
+### 5. 对预期的读法与限定
+
+登记时的预期是「`turn@0` 或 `turn@onset` 最好、`lc@*` 在转弯上无益」，结果**相反**：Cinque 上所有 `turn@*` 都不高于 `none`（`turn@0` −0.67 是最好的一个），有增益的是 `lc@−1.5 / −1.0`。`turn@−1.5` 与第 37 条同号（≤ 0）的预期成立。
+限定：(1) 增益 +0.7 PDMS，量级小，navhard 不复现；(2) A* 在 9 个臂里按 navtrain 分数挑出，navtest 是独立的一次，所以 navtest 的 +0.72 不受选择偏差影响，但机制没查（为什么 laneChange desire 帮到转弯，而 turn desire 不帮）；(3) 「加导航」行 84.90 是补帧输入 + 提前 1.0 s 打 laneChange 脉冲，仍是 zero-shot，没有任何参数拟合；(4) Lebowski 没有测试集数字，headline 用 navtrain 上的 `none` 81.95。
+运行事故：navtrain 打分里 `lc_0` 那次 Ray 打分空转了 1 h 52 min（所有 worker idle），按 PID 杀掉后单独重跑，分数正常（Cinque 82.06）。
 
 ## WOD-E2E test 提交记录
 
