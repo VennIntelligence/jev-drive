@@ -7,7 +7,10 @@
   opspec   the openpilot stream spec: per run, the source run's frames before the first saved tick (identical prefix,
            checked by jevdrive.wl prefix) + the run's own frames -> processed/wl_gen/op_plan.json; then
            P5_SET=wl_gen scripts/p5_openpilot.py --models cinque --arrays temporal --out-sub op_streams_vis
-  vjepa    GPU. V-JEPA 2 `mean` (4-frame clip per camera, nq4_w's extractor) for every index row, resumable chunks
+  vjepa    GPU. V-JEPA 2 `mean` (4-frame clip per camera, nq4_w's extractor) for every index row, resumable chunks;
+           default batch / workers measured 2026-09-29 on the wm-loop row's GPU 5 + 24 cores (184-207): the clip
+           DataLoader is CPU/IO-bound (peak VRAM stayed < 5 GB even at batch 256), workers 12-14 gave ~50 % more
+           rows/s than the old workers=7, batch 128+ was slower than 64 (less GPU/CPU overlap), so batch stays 64
   z        temporal | vjepa per index row -> processed/wl_gen/z.npy (float16, nq4_w's layout)
   prune    delete the JPEGs of runs whose z rows exist (pilot runs kept)
 """
@@ -127,7 +130,7 @@ def opspec() -> dict:
     return {"streams": len(streams), "frames": sum(len(s["names"]) for s in streams)}
 
 
-def vjepa(batch: int = 64, workers: int = 7, chunk: int = 3000, rl=None) -> dict:
+def vjepa(batch: int = 64, workers: int = 12, chunk: int = 3000, rl=None) -> dict:
     from . import features as F
     t = pd.read_parquet(pdir("index.parquet"))
     d = pdir("vjepa")
