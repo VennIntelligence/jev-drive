@@ -16,6 +16,10 @@ Loaded like the P5 / P6 recorder: `scripts/b2d_run.py --agent scripts/wl_fork_ag
       pre_cams      camera frames saved before each window (default 11: 8 history + 3 for V-JEPA's 4-frame clip)
       post_cams     camera frames saved after each window start (default 15 for the fork, 10 for random windows)
       src           the source attempt directory (bookkeeping only)
+      rewind        opt-in (default off; or agent-config key "wl_rewind"): one of scripts/carla_rewind.METHODS. The run
+                    then plays every action of `actions` (default: all 7) at the same fork in one route: prefix once,
+                    snapshot at fork_tick - 1, a 3 s branch, rewind, the next branch; no continuation after a branch
+                    (cont_s is ignored) and no random windows. todos/2026-09-29-carla-rewind.md has where it is exact.
 Inside a window the ego follows the window's candidate trajectory (fixed in world coordinates at the window start,
 re-expressed in the current ego frame at every camera tick and handed to P7, stepped every tick); the expert keeps
 running on the same inputs and its control is discarded, so it picks up from the real state when the window ends.
@@ -24,13 +28,17 @@ image; the pipeline prunes them once the features are extracted). post_cams is k
 
 Extra outputs: wl.json (job, window schedule, every window's candidates in ego coordinates, the fork pose),
 wl_ticks.jsonl (per tick inside a window: applied control, controller diagnostics, pose), collisions.jsonl (every
-collision event of the ego: frame, other actor id / type, impulse).
+collision event of the ego: frame, other actor id / type, impulse). A rewind run adds rewind.jsonl (per branch: action,
+first frame, restore cost) and a "branch" field in wl_ticks.jsonl / wl.json; its ticks restart at fork_tick for every
+branch (frames stay unique), so a branch is cut out of the run by frame (scripts/rewind_eval.py).
 Python 3.10: envs/scout-tfv6 (BehaviorAgent) or envs/p5v1-pdm (PDM-Lite), like the recorder.
 """
+import copy
 import json
 import math
 import os
 import sys
+import time
 from pathlib import Path
 
 import carla
@@ -60,6 +68,15 @@ class WLForkAgent(P5PairAgent):
         rid = os.environ["BENCHMARK_ROUTE_ID"]
         self.job = json.loads(Path(self.cfg["wl_jobs"]).read_text())[rid]
         j = self.job
+        rw = j.get("rewind") or self.cfg.get("wl_rewind")
+        self.rw_method = rw if rw and j.get("fork_tick") is not None else None
+        self.rw, self.rw_pending, self.rw_idx, self._t_off = None, False, 0, 0.0
+        if self.rw_method:
+            import carla_rewind as CR
+            CR.install()
+            self.rw_actions = list(j.get("actions") or WT.ACTIONS)
+            j = self.job = dict(j, action=self.rw_actions[0], cont_s=0.0)
+            self._rw_log = open(self.out / "rewind.jsonl", "w", buffering=1)
         rng = np.random.RandomState(int(j.get("seed", 0)))
         gap, iv = j.get("iv_gap", [6.0, 10.0]), float(j.get("iv_s", 2.0))
         acts = list(WT.ACTIONS)
@@ -80,6 +97,9 @@ class WLForkAgent(P5PairAgent):
                          "action": acts[rng.randint(len(acts))], "kind": "random", "post": int(j.get("post_cams_iv", 10))})
             t += iv
         self.wins, self.end_tick = wins, int(round(end / TICK))
+        if self.rw_method:
+            wins[1:] = []
+            self.fork_tick, self.end_tick = wins[0]["tick"], 10 ** 9     # the last branch's end stops the route
         pre = int(j.get("pre_cams", self.cfg.get("wl_pre_cams", 11)))
         # one contiguous range from pre_cams before the first window to the end: openpilot's recurrent `temporal` needs an
         # unbroken stream (the source run's frames supply everything before it); JPEGs are pruned after feature extraction
@@ -105,6 +125,9 @@ class WLForkAgent(P5PairAgent):
         self._route_xy = np.array([[t.location.x, t.location.y] for t, _ in self._dense], float)
         if self.norender_until > self._tick:
             self._set_render(False)
+        if self.rw_method:
+            import carla_rewind as CR
+            self.rw = CR.Rewinder(self.rw_method, self._world, self._hero, CarlaDataProvider.get_traffic_manager_port())
 
     def _set_render(self, on):
         """Rendering on / off for the no-rendering prefix. While off, the leaderboard's sensor wait takes only the
@@ -161,7 +184,12 @@ class WLForkAgent(P5PairAgent):
         traj = cands[w["action"]]
         self.active = {"w": w, "t0": now, "until": now + w["len_s"] - 1e-6,
                        "world": np.vstack([xy, WT.ego_to_world(traj, xy, yaw)])}   # t = 0, T
+        if self.rw is not None:
+            self._rw_log.write(json.dumps({"kind": "start", "branch": self.rw_idx, "action": w["action"], "tick": self._tick,
+                                           "frame": GameTime.get_frame(), "t_game": GameTime.get_time(), "t_agent": now,
+                                           "wall": time.time()}) + "\n")
         self.wl_log["cands"].append({"tick": self._tick, "t": now, "kind": w["kind"], "action": w["action"],
+                                     **({"branch": self.rw_idx} if self.rw is not None else {}),
                                      "rear_xy": xy.tolist(), "yaw": yaw, "v0": v0, "op_plan": op,
                                      "route_ego": np.round(route_ego[:120], 3).tolist(),
                                      "cands": {k: np.round(c, 3).tolist() for k, c in cands.items()}})
@@ -178,14 +206,39 @@ class WLForkAgent(P5PairAgent):
 
     # ------------------------------------------------------------------ per tick
 
+    def _rewind_tick(self):
+        """The dead tick: the world and the scenario go back to fork_tick - 1 and the expert's control of that tick is
+        replayed, so the next tick is the fork tick of the next branch."""
+        t0 = time.perf_counter()
+        st = self.rw.restore()
+        snap = self.rw.snap
+        self.ctl = copy.deepcopy(snap["extra"]["ctl"])
+        # tree methods put GameTime back; the others keep it running and shift the agent's clock instead
+        self._t_off = 0.0 if self.rw_method in ("tree", "respawn") else GameTime.get_time() - snap["t"]
+        self._tick = self.fork_tick - 1
+        self.rw_idx += 1
+        self.wins = [{"tick": self.fork_tick, "len_s": float(self.job.get("branch_s", 3.0)),
+                      "action": self.rw_actions[self.rw_idx], "kind": "fork", "post": int(self.job.get("post_cams", 15))}]
+        self.active, self.rw_pending = None, False
+        self._rw_log.write(json.dumps({"kind": "rewind", "branch": self.rw_idx, "action": self.rw_actions[self.rw_idx],
+                                       "dead_frame": GameTime.get_frame(), "dead_tick_ms": 1e3 * (time.perf_counter() - t0),
+                                       "wall": time.time(), **st}) + "\n")
+        c = copy.copy(snap["control"])
+        c.manual_gear_shift = False
+        return c
+
     def __call__(self):
+        if self.rw_pending:
+            return self._rewind_tick()
+        if self.rw is not None:
+            self.rw.unpatch()                         # the dead tick's snapshot reads end with it
         if self.norender and getattr(self, "_unpatch_at", None) is not None and self._tick + 1 >= self._unpatch_at:
             self.sensor_interface.__dict__.pop("get_data", None)
             self.norender, self._unpatch_at = False, None
         elif self.norender and getattr(self, "_unpatch_at", None) is None and self._tick + 1 >= self.norender_until:
             self._set_render(True)                    # the next world tick renders again
         control = super().__call__()                  # recorder + expert (its control is kept outside windows)
-        now = GameTime.get_time()
+        now = GameTime.get_time() - self._t_off
         if self._tick < self.end_tick and p4.STOP["flag"] and p4.STOP["why"] in ("after_trigger", "passed", "stuck",
                                                                                   "max_sim_s"):
             p4.STOP.update(flag=False, why="")       # the source run's stop rules must not cut a fork short
@@ -200,23 +253,37 @@ class WLForkAgent(P5PairAgent):
             accepted = self._plan(now)
         thr, steer, brk = self.ctl.step(now, speed if speed >= 0.01 else 0.0, yaw_rate)   # every tick: odometry
         if self.active is None:
+            if self.rw is not None and self.rw.snap is None and self._tick == self.fork_tick - 1:
+                info = self.rw.snapshot(GameTime.get_time(), control, extra={"ctl": copy.deepcopy(self.ctl), "t_agent": now})
+                self._rw_log.write(json.dumps({"kind": "snapshot", "tick": self._tick, "frame": GameTime.get_frame(),
+                                               "wall": time.time(), **info}) + "\n")
             return control
         c = carla.VehicleControl(throttle=float(thr), steer=float(steer), brake=float(brk))
         c.manual_gear_shift = False
         xy, yaw = self._rear_pose()
-        self._ticks.write(json.dumps({"tick": self._tick, "t": round(now, 4), "kind": self.active["w"]["kind"],
+        rwf = {"branch": self.rw_idx, "frame": GameTime.get_frame()} if self.rw is not None else {}
+        self._ticks.write(json.dumps({"tick": self._tick, **rwf, "t": round(now, 4), "kind": self.active["w"]["kind"],
                                       "action": self.active["w"]["action"], "throttle": c.throttle, "steer": c.steer,
                                       "brake": c.brake, "accepted": accepted, "speed": speed, "rear_xy": xy.tolist(),
                                       "yaw": yaw, "diag": self.ctl.diagnostics if accepted is not None else None}, default=str) + "\n")
         if now >= self.active["until"]:
             self.active = None
+            if self.rw is not None:
+                self._rw_log.write(json.dumps({"kind": "end", "branch": self.rw_idx, "frame": GameTime.get_frame(),
+                                               "wall": time.time()}) + "\n")
+                if self.rw_idx + 1 < len(self.rw_actions):
+                    self.rw_pending = True            # the next agent call is the dead tick
+                else:
+                    p4.STOP.update(flag=True, why="wl_end")
         return c
 
     def destroy(self, results=None):
         if getattr(self, "_csensor", None) is not None:
             self._csensor.stop()
             self._csensor.destroy()
-        for fh in ("_ticks", "_coll"):
+        if getattr(self, "rw", None) is not None:
+            self.rw.unpatch()
+        for fh in ("_ticks", "_coll", "_rw_log"):
             if getattr(self, fh, None) is not None:
                 getattr(self, fh).close()
         if hasattr(self, "wl_log"):
