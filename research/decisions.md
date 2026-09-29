@@ -3889,7 +3889,7 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 **状态**：**待定**（只是登记）。**会推翻或修改本条的证据**：V5（DDC 与 devkit 数值不一致）、V6（`rej` 不可行或单应变换画面不可用）、第 6 节第 7 条（偏离 slot 上 `op` 失败比例 < 5% 或 > 60%）任一不过，回 main 重新登记。
 
 
-## 68. Skill pack N1：补帧输入的原生 plan 占独立候选槽、用自己的子分标签训练打分头，navtest 87.32，对 N0 +2.38 [+1.94, +2.83]，按登记「成立」，高出预期上沿；增益来自独立原生槽，补帧特征只有 +0.25（**待定**，navtest 12 146，1 seed，只有 Cinque）
+## 68. Skill pack N1：补帧输入的原生 plan 占独立候选槽、用自己的子分标签训练打分头，navtest 87.32，对 N0 +2.38 [+1.94, +2.83]，按登记「成立」，高出预期上沿；增益来自独立原生槽，补帧特征只有 +0.25；**navhard 上反而比原生低 3 分，增益是 navtest 特有的**（**待定**，navtest 12 146 + navhard 5 912，1 seed，只有 Cinque；09-30 就地补充 navhard）
 
 2026-09-29。预登记 [todos/2026-09-29-n1-scorer.md](../todos/2026-09-29-n1-scorer.md)，小表 [results/skill-pack/n1/](results/skill-pack/n1/)。设置：E6 的 19 968 个 navtrain token，GIMM 补帧输入下抽 `temporal`，1 024 anchor + 4 个原生槽（拉长 1.00 / 1.05 / 1.10 / 1.15），五个线性子分头，权重与 λ 只在 held-out logs 上选，navtest 只打一次分。
 
@@ -3911,4 +3911,29 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 4. **登记偏离与遗留**：pilot 的 P3 相关 0.824 < 0.9 由 main 在结果之前放行（范数比 0.66、余弦 0.78，是输入偏移不是 bug）；全量拟合的十个头 λ 全在网格下沿 1e-5（stage B 时不是），网格偏紧、没有扩也没重跑，所以 87.32 可能低估，没测；S4 在 stage B 未单独检查，全量原生槽比例 66.3% 在范围内。
 5. **修改第 64 条的读法**：N0 的「瓶颈在打分头排序」成立，但具体是候选集与标签，不是特征。研究文档第 5.3 节 N1 行由推测改为已测。
 
-**状态**：**待定**（1 seed，navtest 一次，只有 Cinque；navhard 与 Lebowski 未做；λ 网格触边）。**会推翻本条的证据**：扩大 λ 网格或换 fold 后 N1 − N0 的 CI 跨零；navhard 上原生槽不涨分（说明 87.32 是 navtest 特有）。成本约 5 GPU·h（估计 14），`runs/op_lb/lb_n1train`（约 80 GB）未删。
+6. **09-30 就地补充（第 69 条）**：原文这里写「navhard 与 Lebowski 未做；λ 网格触边」，并把「navhard 上原生槽不涨分」列为会推翻本条的证据。两者都已测：λ 网格下扩后（N1b）navtest 87.26，对 N1 −0.06 [−0.26, +0.14]，λ 触边不是瓶颈；
+   navhard two-stage 上 N1 = 30.24，**比原生 Cinque 33.33 低**（均匀权重组 bootstrap −3.05 [−4.55, −1.53]），EP 涨而 NC、DAC（stage 2）、DDC、EC 一起掉。所以 N1 的增益是 navtest 上的 metric 对准，不迁移到偏离起点的 stage 2；「navtest +3.15」这一句仍成立，但不能写成打分头学到了可迁移的可行驶区读出。
+
+**状态**：**待定**（1 seed，只有 Cinque；navtest 增益成立，navhard 上为负，已被第 69 条证实是 navtest 特有；Lebowski 未做）。**会推翻本条的证据**：换 fold 或 seed 后 N1 − N0 的 CI 跨零。成本约 5 GPU·h（估计 14），`runs/op_lb/lb_n1train`（约 80 GB）未删。
+
+
+## 69. NAVSIM 提分 N1b：扩大 λ 网格按 navtrain held-out 重选，navtest 87.26，对 N1 −0.06 [−0.26, +0.14]，判「平」；N1 与 N1b 在 navhard 上都比原生低约 3 分（**待定**，navtest 12 146 + navhard 5 912，1 seed，只有 Cinque）
+
+2026-09-30。预登记（先于任何 N1b 拟合）与全部表在 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)；代码 `jevdrive/navsim_raise.py`，链 `scripts/navsim_raise_n1b.sh`。
+设置：数据、特征、候选、held-out logs、权重网格与 N1 全同，只把 λ 网格从 {1e-5 … 1e-2} 扩到 {0, 1e-9 … 1e-2}（12 格），按 held-out BCE 每个头各选。N1 按原网格重拟合，navtest 选择与存档逐 token 100% 相同。
+
+| 读数 | N1b | N1 | 原生 Cinque |
+|:--|--:|--:|--:|
+| navtest PDMS | 87.26 | 87.32 | 84.17 |
+| N1b − 该行（配对，95% CI） | – | −0.06 [−0.26, +0.14] | +3.09 [+2.74, +3.44] |
+| navtrain held-out PDMS（4 037 token） | 89.52 | 89.46 | 86.05 |
+| navhard EPDMS（官方） | 31.10 | 30.24 | 33.33 |
+| navhard 对原生（均匀权重，225 × 2 组 bootstrap） | −3.48 [−5.00, −1.92] | −3.05 [−4.55, −1.53] | – |
+
+1. **按登记判「平」**：选中的 λ 都在新网格内部（3e-7 到 3e-6），held-out BCE 降了，但排序不变，held-out 只 +0.06，navtest −0.06。第 68 条的「λ 触边可能低估」不成立。
+2. **navhard 为负**：打分头在 navhard 上照样选快的候选（stage 2 EP 66 → 78），但 NC、stage 2 DAC、DDC、EC 都掉，净 −3。登记前的预期（+1 到 +4，来自缺口分解第 4.1 节）被推翻。
+   打分头在 navtrain 的真实 stage-one 帧上训，stage 2 的合成偏离起点对它是分布外；E6 的 hold 特征头在 navhard 上更差（25.7）。所以 skill pack 目前只对 navtest 有效，navhard 要另想办法（偏离起点的训练数据、或门控回原生）。
+3. held-out 上的后续估计（不看 navtest）：MLP 头 +1.48，原生族 9 个额外槽 +1.47，加 hold 输入视图 +0.54，学习曲线每翻倍 +0.4 到 +0.6，fold bagging +0.03，换选择规则全负。据此登记了 N2（更强头 + 更多槽 + 视图）和 S（数据扩到 6 万），结果另写。
+
+**状态**：**待定**（1 seed，只有 Cinque；navtest 本 lane 第 3 次看）。**会推翻本条的证据**：另一个 held-out fold 上 N1b 与 N1 的差超出 ±0.3；navhard 用官方高斯权重重算后 N1 不再低于原生。
+
