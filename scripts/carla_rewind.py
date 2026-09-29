@@ -220,15 +220,17 @@ class Rewinder:
             if a.type_id.startswith(MOVING) or a.id == self.hero.id:
                 x = snap.find(a.id)
                 if x is not None:
+                    ctl = (_COPY[carla.VehicleControl](a.get_control()) if a.type_id.startswith("vehicle.") and
+                           a.id != self.hero.id else None)
                     ids[a.id] = (a, _COPY[carla.Transform](x.get_transform()), _COPY[carla.Vector3D](x.get_velocity()),
-                                 _COPY[carla.Vector3D](x.get_angular_velocity()))
+                                 _COPY[carla.Vector3D](x.get_angular_velocity()), ctl)
         self.hist.append((ids, _COPY[carla.VehicleControl](control)))
 
     def warm_step(self, i: int):
         """Warm-up dead tick i: the state of prefix tick k-1-N+i (teleport on the first, velocities after), returns the
         ego control recorded at that tick."""
         ids, ctl = self.hist[i]
-        for aid, (a, tf, v, w) in ids.items():
+        for aid, (a, tf, v, w, ctl_a) in ids.items():
             a = self.remap.get(aid, a)
             if not a.is_alive:
                 continue
@@ -238,6 +240,8 @@ class Rewinder:
             if not walker:
                 a.set_target_velocity(v)
                 a.set_target_angular_velocity(w)
+            if ctl_a is not None:
+                a.apply_control(ctl_a)
         return _COPY[carla.VehicleControl](ctl)
 
     # -- world state
@@ -249,6 +253,10 @@ class Rewinder:
              "acc": _COPY[carla.Vector3D](a.get_acceleration())}
         if a.type_id.startswith("walker.pedestrian"):
             s["ctl"] = _COPY[carla.WalkerControl](a.get_control())
+        elif a.type_id.startswith("vehicle.") and a.id != self.hero.id:
+            # the last applied control persists on the server: a scripted car (cut-in) that drove off in the last branch
+            # keeps its throttle / released hand brake unless its fork-time control is put back
+            s["ctl"] = _COPY[carla.VehicleControl](a.get_control())
         return s
 
     def snapshot(self, t_game: float, control, extra=None):
