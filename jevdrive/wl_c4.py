@@ -180,7 +180,9 @@ def run() -> dict:
     obs, null = ex["obs"], ex["null"]
     # references on the same frames: decision 42's prior and the M-C pair head, one run per fold seed
     ref_cols = []
-    for j, rdir in enumerate(sorted((data_dir() / "runs" / "reactivity").glob("mc-carla_p5v1_ba-seed*/*"))):
+    rdirs = [sorted(x for x in (data_dir() / "runs" / "reactivity" / f"mc-carla_p5v1_ba-seed{j}").glob("*") if (x / "obs_scored.parquet").exists())[-1]
+             for j in range(3)]
+    for j, rdir in enumerate(rdirs):
         o = pd.read_parquet(rdir / "obs_scored.parquet")
         nn = pd.read_parquet(rdir / "null_scored.parquet")
         for col, nm in (("prior [cinque]", f"prior ridge_late f{j}"), ("M-C pair [cinque]", f"M-C pair f{j}")):
