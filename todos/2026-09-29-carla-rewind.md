@@ -100,6 +100,32 @@ P7 控制器（纯 Python）在快照时 deepcopy、回退时换回；ego `set_t
 - 都不过 → 回退只能用在「hazard 不依赖 ego」的子集或根本不用；写清是哪一项（行人 trigger、TM、红绿灯、车辆内部状态）先坏。
 - 过了才做 WL harness 的正式选项（默认关）和文档；成本按实测写回，更正提案第 4 节。
 
+## 追加臂：跨 run 复用地图（2026-09-29 13:10 用户经 main 追加，写于任何复用数字之前）
+
+目的：装载（约 84 s / run）是最大的成本，Bench2Drive 只有十来张图。下一条 route 与上一条同图时，不调 `load_world`，而是在原世界里就地复位，再照常建 route 与 scenario；run 按图分组排程。
+smoke 的 route.log 显示「装载」其实是两段：client 进程起来 + import（含 agent 模块、LEAD / torch）约 50 s，`load_world` + `RouteScenario` 构建约 57 s（新 server 第一条 route）。复用地图只省后一段里的 `load_world`；import 另算，一并实测报出。
+
+**做法（`B2D_REUSE_MAP=1`，默认关）**：`LeaderboardEvaluator._load_and_wait_for_world` 在 server 当前地图 == 本 route 的 town 时不 `load_world`：销毁残留的车、行人、walker controller、传感器、scenario 放的 static prop，tick 一次，
+其余照原函数（设置 Large Map 流送距离、`reset_all_traffic_lights`、CarlaDataProvider、TM 种子、tick、核对地图）。TM、GameTime、CarlaDataProvider 本来就随每条 route 的新进程重建。天气由 scenario 设。
+另开 `B2D_PHASES=1`（默认关）：每个 run 写 `phases.json`（进程启动 → 进 `_load_and_wait_for_world`、装载或复位、`RouteScenario` 构建）。
+
+**跑什么**：
+- U（只复用地图）：floor 分叉点 78、148（都是 Town12）的 14 个从头分支，加 96（Town12，雨）与 60（Town12，夜）各 7 个，共 28 个从头 run，WL 原配置（含 20 s 续跑），`B2D_REUSE_MAP=1`，同一张图连续跑（每个 server 只有第一条 route 真装图）。
+- UR（复用 + 回退）：11 个分叉点的 `tree` 回退 run 按图分组连续跑（BA 的 Town12 七个接连跑），`B2D_REUSE_MAP=1`。
+- 对照 = 上面的 floor（照常每条 route `load_world`）。
+
+**判据（写在任何复用数字之前）**，都对 WL 的真值 run 比：
+
+| # | 判据 | 过线 |
+|:--|:--|:--|
+| U0 | 分叉前一致：ego 位姿差 ≤ 0.01 m（WL 的组剔除门）的 run 比例；分叉前按类型与位置对上的 actor 位置差最大值 | 比例不低于 floor；actor 最大差 ≤ max(0.05 m, 3 × floor p95) |
+| U1 | 分支的 unsafe、collision 与真值一致 | 不一致的 run 数 ≤ floor 的不一致数 + 1 |
+| U2 | 渲染：逐 run，前相机亮度与真值同 tick 差 > 10 的帧占一半以上，或过曝跳变（`render_diag.blowout`），记为渲染故障；另报逐帧 \|Δ亮度\| 的中位与 p95 | 故障 run 数 ≤ floor + 1；\|Δ亮度\| p95 的中位不超过 floor 的 2 倍 |
+| U3 | openpilot `temporal`：分叉前逐 run 最小余弦（WL 的逐 run 门 0.95）；分支 3 s 内最小余弦的中位 | 全部 ≥ 0.95；中位 ≥ floor 中位 − 0.01 |
+| UR | 复用 + 回退的 `tree` run：R1–R4 照上面的判据 | 同 R1–R4 |
+
+读法：U0–U3 全过 → 地图复用对 WL 数据是等价的，可以按图分组排程；UR 也过 → 两者叠加可用，报合起来的实测加速。U2 不过（例如夜里的灯、同图前驱的泛光，见 decisions 第 60 条）→ 只在白天切片上用，或者复用前另做灯的复位。
+
 ## 步骤
 
 1. 写 `scripts/carla_rewind.py`（快照 / 回退，按方法开关）并接进 `scripts/wl_fork_agent.py`（`wl_rewind` 配置键，job 里的 `actions` 列表；默认关，原路径逐字不变）。
