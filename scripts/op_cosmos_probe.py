@@ -279,6 +279,33 @@ def cosmos_part(rl):
     return df
 
 
+def size_bins(rl):
+    """Descriptive, added after the first Cosmos-cell numbers: AUC of the all-rows pooled probe within pedestrian-size bins
+    (x+ GT mask pixels at 1280 x 704; the x- row of the same slot goes with its x+ row)."""
+    import op_adapt_readout as R
+    from jevdrive.p4_carla import auc
+    z = dict(np.load(OUT / "feats.npz"))
+    meta = pd.read_csv(OUT / "meta.csv")
+    P, S = cosmos_rows(z, meta)
+    inst = meta.inst.to_numpy()[P].astype(str)
+    px = z["px"][P, S]
+    y = np.r_[np.ones(len(P)), np.zeros(len(P))].astype(int)
+    g = np.r_[inst, inst]
+    bins = [(100, 500), (500, 1500), (1500, 6000), (6000, 10 ** 9)]
+    rows = []
+    for L in ("stage3", "temporal"):
+        for c, (ip, im) in {"carla": (0, 1), "cosmos": (2, 3)}.items():
+            X = np.concatenate([z[L][P, ip, S], z[L][P, im, S]])
+            sc = R.oof_probe(X, y, g)
+            for lo, hi in bins:
+                m = np.r_[(px >= lo) & (px < hi), (px >= lo) & (px < hi)]
+                r = R.paired_boot(y[m], sc[m], sc[m], g[m]) if len(set(y[m])) == 2 else None
+                rows.append({"layer": L, "cell": c, "px_lo": lo, "px_hi": hi, "pairs_rows": int(m.sum() // 2),
+                             "auc": r["auc"] if r else np.nan, "auc_ci": r["auc_ci"] if r else None})
+                rl.info(f"{L} {c} px [{lo},{hi}): n {int(m.sum() // 2)} auc {rows[-1]['auc']:.3f}")
+    pd.DataFrame(rows).to_csv(OUT / "probe" / "cosmos_sizebins.csv", index=False)
+
+
 _MAPS = {}
 
 
@@ -419,7 +446,7 @@ def probe(a):
     rl = RunLog("op_cosmos_probe", "probe")
     (OUT / "probe").mkdir(parents=True, exist_ok=True)
     for part in a.parts:
-        {"cosmos": cosmos_part, "p5": s2_p5, "nusc": s2_nusc, "p5pair": p5_pairtrain}[part](rl)
+        {"cosmos": cosmos_part, "p5": s2_p5, "nusc": s2_nusc, "p5pair": p5_pairtrain, "sizebins": size_bins}[part](rl)
     rl.event("end")
 
 
