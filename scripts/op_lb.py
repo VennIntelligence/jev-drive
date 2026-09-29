@@ -9,7 +9,7 @@ Run root $DATA_DIR/runs/op_lb/<data>/, data = lb_navtest (12 146) | lb_navhard (
           keys.npy. Test splits read their keyframes in place from the navsim_zs frames cache (no copy).
   synth   the 6 context-rate frames t0 - 0.2 k (k = 1, 2, 3, 4, 6, 7; the only non-key frames a Cinque / small output
           at t0 or a Lebowski context step reads) -> <method>.npy (N, 6, 2, 6, 128, 256) uint8. gimm (envs/vfi): one
-          worker per GPU, 128-token chunks claimed from a shared queue (<method>.chunks/), batch 8 as the op_interp full
+          worker per GPU, 32-token chunks claimed from a shared queue (<method>.chunks/), batch 8 as the op_interp full
           run; pauses while the card is above --cap-gb. warp (any env with scipy + cv2): CPU pool, same queue.
   run     (envs/openpilot) one model x frames x desire schedules (SCHEDULES), zero state, plan at t0 ->
           plans/<frames>@<model>[.<schedule>].npz: the plan exactly as scripts/op_interp.py run (plan_pos / plan_vel /
@@ -183,6 +183,7 @@ def cmd_synth(a):
     log.info(f"args {vars(a)}")
     if a.method == "gimm":
         os.environ.setdefault("CUDA_DEVICE_ORDER", "PCI_BUS_ID")
+        os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
         os.environ["CUDA_VISIBLE_DEVICES"] = str(a.gpu)
         import torch
         torch.set_num_threads(2)
@@ -421,7 +422,8 @@ if __name__ == "__main__":
     p.add_argument("--gpu", type=int, default=0, help="physical GPU index (gimm)")
     p.add_argument("--vram-gb", type=float, default=12.0, help="hard cap of this process's CUDA memory")
     p.add_argument("--cap-gb", type=float, default=78.0, help="pause while the card's other users + vram-gb exceed this")
-    p.add_argument("--chunk", type=int, default=128)
+    p.add_argument("--chunk", type=int, default=32, help="tokens per claimed chunk; a multiple of 4 keeps GIMM's batch-8 "
+                   "composition (4 tokens x 2 views per forward) identical to op_interp's 128-token chunks")
     p.add_argument("--batch", type=int, default=8)
     p.add_argument("--workers", type=int, default=16, help="warp: CPU processes")
     p.add_argument("--limit-chunks", type=int, default=0, help="staging: only the first N chunks per split")

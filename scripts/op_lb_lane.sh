@@ -24,7 +24,7 @@ declare -A VER=([lb_navtest]=v1 [lb_navhard]=v2 [lb_navtrain]=v1) SPLIT=([lb_nav
 st() { echo "$(date '+%F %T') $*" | tee -a "$L/STATUS"; }
 die() { st "ERROR $*"; echo "$*" > "$L/ERROR"; exit 1; }
 chunks_left() { local d=$1 m=$2 n; n=$(python3 -c "import json;print(len(json.load(open('$R/$d/meta.json'))['names']))")
-  echo $(( (n + 127) / 128 - $(ls "$R/$d/$m.chunks" 2>/dev/null | grep -c '\.done$') )); }
+  echo $(( (n + 31) / 32 - $(ls "$R/$d/$m.chunks" 2>/dev/null | grep -c '\.done$') )); }
 
 step_prep() {
   for d in "${ALL[@]}"; do
