@@ -499,7 +499,11 @@ class Lane:
     def append(self, name: str, rows: list):
         if rows:
             f = full() / name
-            pd.DataFrame(rows).to_csv(f, mode="a", header=not f.exists() or not f.stat().st_size, index=False)
+            df = pd.DataFrame(rows)
+            new = not f.exists() or not f.stat().st_size
+            if not new:                          # keep the columns of the existing header (short rows used to land in the wrong ones)
+                df = df.reindex(columns=pd.read_csv(f, nrows=0).columns)
+            df.to_csv(f, mode="a", header=new, index=False)
 
     def disk_gb(self) -> float:
         return shutil.disk_usage(data_dir()).free / 2**30
