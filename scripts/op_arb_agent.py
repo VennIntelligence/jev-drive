@@ -346,8 +346,12 @@ class OpArbAgent(Z.ZeroShotAgent):
         src = min(cons, key=lambda k: cons[k][-1] + 1e-3 * (k == "base"))
         s_fin = np.maximum.accumulate(np.maximum(np.min(np.stack(list(cons.values())), 0), 0.0))
         # ---- lateral owner (drive): openpilot on lane-follow segments; the route in command zones and on divergence
-        div = float(np.linalg.norm(place(np.r_[[[0.0, 0.0]], op_path], np.array([A["div_arc"]]))[0]
-                                   - place(bpath, np.array([A["div_arc"]]))[0]))
+        # openpilot's path vs the route at div_arc m (or at the plan's own end when it is shorter; threshold scaled with
+        # the arc; a plan under 3 m, i.e. about to stop, keeps the current owner: extrapolating it is noise)
+        op_ext = np.r_[[[0.0, 0.0]], op_path]
+        a_div = min(A["div_arc"], float(arc(op_ext)[-1]))
+        div = float(np.linalg.norm(place(op_ext, np.array([a_div]))[0] - place(bpath, np.array([a_div]))[0])) \
+            * A["div_arc"] / max(a_div, 1e-3) if a_div >= 3.0 else (A["div_m"] if self.div_on else 0.0)
         if div > A["div_m"]:
             self.div_on, self.agree_t = True, 0.0
         elif self.div_on:
