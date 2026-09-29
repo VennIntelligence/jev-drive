@@ -139,15 +139,46 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         patch_camera_attrs(json.loads(os.environ["B2D_CAM_ATTRS"]))
     if os.environ.get("B2D_LIGHTS_FIX") == "1":
         _patch_day_night_cycle()
-    for name in filter(None, os.environ.get("B2D_MUTE_BEHAVIOR", "").split(",")):   # diagnostics: weather, lights
+    for name in filter(None, os.environ.get("B2D_MUTE_BEHAVIOR", "").split(",")):   # diagnostics, see _mute_behavior
         _mute_behavior(name)
     if os.environ.get("B2D_LIGHTS_TRUTH"):
         _trace_lights_truth(int(os.environ["B2D_LIGHTS_TRUTH"]))
 
 
+class _NoSwitchLights:
+    """A LightManager whose turn_on / turn_off do nothing (B2D_MUTE_BEHAVIOR=lights_street)."""
+
+    def __init__(self, lm):
+        self._lm = lm
+
+    def __getattr__(self, k):
+        return getattr(self._lm, k)
+
+    def turn_on(self, lights):
+        pass
+
+    def turn_off(self, lights):
+        pass
+
+
 def _mute_behavior(name):
-    """Diagnostics ($B2D_MUTE_BEHAVIOR=weather,lights): the route's RouteWeatherBehavior / RouteLightsBehavior stay in
-    the tree but their update does nothing (the weather set at scenario start stays; no light is switched)."""
+    """Diagnostics ($B2D_MUTE_BEHAVIOR=weather,lights,lights_street,lights_vehicles): the route's
+    RouteWeatherBehavior / RouteLightsBehavior stay in the tree but their update does nothing (the weather set at
+    scenario start stays; no light is switched). lights_street keeps the vehicle-light half only (no street / building
+    light is switched), lights_vehicles the street-light half only (no vehicle light state is written)."""
+    if name in ("lights_street", "lights_vehicles"):
+        from srunner.scenariomanager.lights_sim import RouteLightsBehavior as B
+        inner = B.__init__
+
+        def init(self, *args, **kwargs):
+            inner(self, *args, **kwargs)
+            if name == "lights_street":
+                self._light_manager = _NoSwitchLights(self._light_manager)
+            else:
+                self._vehicle_lights = carla.VehicleLightState.NONE
+
+        B.__init__ = init
+        return
     if name == "weather":
         from srunner.scenariomanager.weather_sim import RouteWeatherBehavior as B
     else:
