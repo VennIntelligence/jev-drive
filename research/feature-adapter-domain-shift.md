@@ -174,6 +174,8 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
 (3) 阳性对照：同批帧上 HighwayCutIn（车辆）的配对 AUC 随深度升高（stage 1 0.504、stage 3 0.647、`temporal` 0.762），管线对车有响应；行人 family 里 VehicleTurningRoutePedestrian（2 659 对）每层 0.50，PedestrianCrossing 只在 stage 1 / 2 有 0.63 / 0.61。
 表见 [research/results/e0-layer/summary.md](results/e0-layer/summary.md)。
 
+**更正（2026-09-29，E1 之后，[第 63 条](decisions.md)）**：上面的 G-none 与「特征 adapter 判不可行」原来说的是「CARLA 行人在 openpilot 前三个 stage 里没被表示」；E1 在 Cosmos 全量的 75 对（较大行人）上测到 CARLA 格池化 stage 3 = 0.815，行人大小是主导变量（< 500 px 0.57，≥ 1 500 px 0.92），所以 G-none 只适用于 P5 评测那一批（行人像素数未量，推测多为小 / 远行人），不是 CARLA 行人的一般性质；E2 的动机也随之变弱（见 E1 结果）。
+
 ### E1：2 × 2 析因，画风占多少（分解，也是 midterm-gaps F1 的扩展版）
 
 - **做法**：取 G4 全量里已完成的对（≥ 300 对即开，全部 2 000 对更好），原 Cinque 在 C⁺ / C⁻ / K⁺ / K⁻ 四段上按 stream 跑（port 或 ORT TensorRT，与第 42 条同一喂法），抽 stage 1–3、`vision`、`temporal` 与原生 plan / lead / 车道线概率。每层报：
@@ -183,6 +185,25 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
   额外定义「画风份额」= (AUC_K − AUC_C) / (AUC_real − AUC_C)，AUC_real 用 nuScenes val 同一 probe 同一层的值（`temporal` 0.709，stage 3 0.831）；只描述，不进判格。
 - **各结局的意思**：G-a 成立且画风份额 ≥ 0.7 → 域差大部分是画风，特征 adapter 值得训（E2），而且适配后的模型在闭环里需要它；G-a 成立但份额低 → 有画风，但真实一侧更好读，差在内容或 Cosmos 没画到；G-a 不成立 → 画风不是问题，任何 adapter 都不会有用，这个想法到此为止。
 - 注意 E1 只用**原模型**，不依赖第二轮 B，可以在 D2 与第二轮并行。
+
+### E1 结果（2026-09-29，[todo](../todos/2026-09-29-e1-cosmos-probe.md)，登记先于数字；决定见 [第 63 条](decisions.md)）
+
+Cosmos G4 全量起跑时刻已完成的 75 对（75 个 Town12 instance，943 个读数 slot、1 886 行 x⁺ / x⁻），四格 {CARLA, Cosmos} × {x⁺, x⁻} 走同一条单相机管线，池化线性 probe 在各格内训练与测试（5 折按 instance），AUC 为 x⁺ 对 x⁻：
+
+| 层 | CARLA 格 | Cosmos 格 | Δ Cosmos − CARLA [CI] |
+|:--|:--|:--|:--|
+| stage 1 | 0.727 | 0.725 | −0.002 [−0.021, +0.019] |
+| stage 2 | 0.767 | 0.743 | −0.025 [−0.050, +0.003] |
+| stage 3 | **0.815** [0.780, 0.848] | **0.746** [0.712, 0.782] | −0.069 [−0.098, −0.037] |
+| stage 4 | 0.803 | 0.783 | −0.020 [−0.037, −0.000] |
+| `vision` | 0.752 | 0.708 | −0.044 [−0.067, −0.015] |
+| `temporal` | 0.704 | 0.680 | −0.024 [−0.052, +0.009] |
+
+空间分辨：GT 框内 cell 池化（S1）stage 1 / 2 / 3 在 CARLA 格 0.938 / 0.966 / 0.950，Cosmos 格 0.929 / 0.920 / 0.921（框外 cell 0.56–0.74）；stage 3 图上的 1 × 1 conv + 空间 max 头（S2）0.896 / 0.861；在 E0 的数据上，P5 行人 0.521（池化 0.523）、nuScenes 0.868（池化 0.831，Δ CI 含 0）。
+
+**按登记判格**：K-restore 不成立（Cosmos stage 3 ≥ 0.65，但对 CARLA 格 Δ 为负、CI 在 0 以下），K-none 不成立，G-a 不成立（Cosmos `temporal` 0.680 < 0.70，Δ CI 含 0）也不 < 0.60，落灰区；画风份额的分母（0.831 − 0.815）近 0，无意义；S-local / S-absent 的前提在这批数据上都不成立，S-local-big（P5 上 conv 头 ≥ 0.65）不成立（0.521）。
+**核心发现**：这批 CARLA 行人本来就读得出来，Cosmos 没有「恢复」什么，反而略低；读得出与否由行人大小决定：x⁺ mask < 500 px 的读数 slot 两格都是 stage 3 0.57（Cosmos 0.577，没有比 CARLA 0.569 好），≥ 1 500 px 到 0.92 / 0.83。P5 的 x⁺ / x⁻ 行上按同样方式直接训练只有 0.54–0.60，所以 E0 与 E1 的差不是 probe 训练方式造成的，更可能是行人大小 / 距离分布（P5 的像素数未量，推测）。
+限定：75 对且 65% 是 DynamicObjectCrossing，probe 训练行只有 1 886；行人大小分档与 P5 配对训练桥是看到第一批数字之后才加的描述性读数；Cosmos 格低于 CARLA 格的原因（混合区重画损失 vs Cosmos 行人更难读）没有拆。表见 [research/results/e1-cosmos/](results/e1-cosmos/)。
 
 ### E2：G4 配对监督的 CARLA→真实感特征 adapter（只在 E0 找到位置、E1 判 G-a 成立时开）
 
