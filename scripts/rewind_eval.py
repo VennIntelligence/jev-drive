@@ -34,6 +34,7 @@ R = data_dir() / "runs" / "rewind"
 # pre-registered fork points (todo "分叉点"), in table order: the action order of fork j starts at ACTIONS[j % 7]
 FORKS = (78, 96, 60, 42, 212, 310, 131, 226, 148, 328, 378)
 FLOOR_FORKS = (78, 148)
+REUSE_SCRATCH_FORKS = (78, 148, 96, 60)      # map-reuse arm U: every action from scratch, same-map runs back to back
 METHODS = ("poc", "teleport", "tree", "respawn")
 TICK, CAM = 0.05, 4
 HORIZONS_S = (0.0, 0.5, 1.0, 2.0, 3.0)
@@ -57,15 +58,22 @@ def prep(methods=METHODS) -> dict:
             rid = rid_of(fid, METHODS.index(m), r0.route_id[-1])
             jobs[rid] = dict(jobs_wl[r0.route_id], rewind=m, actions=order, action=order[0])
             plan.append({"route_id": rid, "kind": "rewind", "method": m, "fork_id": fid, "set": r0.set,
-                         "xml_src": r0.route_id, "order": ",".join(order)})
+                         "xml_src": r0.route_id, "order": ",".join(order), "gen": "gen"})
+            if m == "tree":                    # arm UR: the same rewind run on a reused map
+                plan.append(dict(plan[-1], gen="gen_reuse"))
         if fid in FLOOR_FORKS:
             for a, r in x.iterrows():
                 jobs[r.route_id] = jobs_wl[r.route_id]
                 plan.append({"route_id": r.route_id, "kind": "floor", "method": "scratch", "fork_id": fid, "set": r.set,
-                             "xml_src": r.route_id, "order": a})
+                             "xml_src": r.route_id, "order": a, "gen": "gen"})
+        if fid in REUSE_SCRATCH_FORKS:
+            for a, r in x.iterrows():
+                jobs[r.route_id] = jobs_wl[r.route_id]
+                plan.append({"route_id": r.route_id, "kind": "floor", "method": "reuse", "fork_id": fid, "set": r.set,
+                             "xml_src": r.route_id, "order": a, "gen": "gen_reuse"})
     p = pd.DataFrame(plan)
     (R / "jobs.json").write_text(json.dumps(jobs))
-    for s, g in p.groupby("set"):
+    for s, g in p.drop_duplicates(["route_id", "set"]).groupby("set"):
         root = ET.parse(WL.rundir(f"forks-{s}.xml")).getroot()
         by_id = {e.get("id"): e for e in root.iter("route")}
         out = ET.Element("routes")
@@ -81,16 +89,16 @@ def prep(methods=METHODS) -> dict:
     return p.groupby(["set", "kind"]).size().to_dict()
 
 
-def attempt(rid: str, set_name: str) -> Path | None:
-    return WL._fork_attempt(R / "gen" / set_name, rid)
+def attempt(rid: str, set_name: str, gen: str = "gen") -> Path | None:
+    return WL._fork_attempt(R / gen / set_name, rid)
 
 
 # ---------------------------------------------------------------------------------------------------------- cut
 
 
 def _cut_one(args):
-    rid, set_name, fork_tick = args
-    a = attempt(rid, set_name)
+    rid, set_name, fork_tick, gen = args
+    a = attempt(rid, set_name, gen)
     if a is None:
         return []
     ev = [json.loads(l) for l in (a / "rewind.jsonl").read_text().splitlines()]
@@ -108,7 +116,7 @@ def _cut_one(args):
         f_end = int(ends[b]["frame"]) if b in ends else f_k + 60
         shift = f_k - (pre_last + 1)                # branch frame -> the frame a from-scratch run would have had
         keep = lambda fr: (fr <= pre_last) | ((fr >= f_k) & (fr <= f_end + 1))  # noqa: E731
-        d = R / "branches" / rid / str(b)
+        d = R / "branches" / gen / rid / str(b)
         d.mkdir(parents=True, exist_ok=True)
         p = pose[keep(pose.frame)].copy()
         p.loc[p.frame >= f_k, "frame"] -= shift
@@ -128,7 +136,7 @@ def _cut_one(args):
         for name in ("actor_kinds.json", "hidden.json", "meta.json"):
             if (a / name).exists():
                 shutil.copy(a / name, d / name)
-        out.append({"route_id": rid, "branch": b, "action": st["action"], "frame_k": f_k, "shift": shift,
+        out.append({"route_id": rid, "gen": gen, "branch": b, "action": st["action"], "frame_k": f_k, "shift": shift,
                     "vdir": str(d), "n_pose": len(p)})
     return out
 
@@ -138,8 +146,8 @@ def cut() -> pd.DataFrame:
     f = pd.read_parquet(WL.rundir("forks.parquet")).drop_duplicates("fork_id").set_index("fork_id")
     rw = p[p.kind == "rewind"]
     with Pool(24) as pool:
-        rows = pool.map(_cut_one, [(r.route_id, r.set, int(f.fork_tick[r.fork_id])) for r in rw.itertuples()])
-    t = pd.DataFrame([x for rr in rows for x in rr]).merge(rw, on="route_id")
+        rows = pool.map(_cut_one, [(r.route_id, r.set, int(f.fork_tick[r.fork_id]), r.gen) for r in rw.itertuples()])
+    t = pd.DataFrame([x for rr in rows for x in rr]).merge(rw, on=["route_id", "gen"])
     t.to_csv(R / "branches.csv", index=False)
     return t
 
@@ -227,14 +235,14 @@ def evaluate() -> dict:
     tasks = []
     for r in br.itertuples():
         trid, s, k = truth[(r.fork_id, r.action)]
-        tasks.append(("rewind", {"route_id": r.route_id, "method": r.method, "fork_id": r.fork_id, "branch": r.branch,
-                                 "action": r.action, "set": s}, r.vdir, str(WL._fork_attempt(WL.rundir("gen") / s, trid)), k))
+        tasks.append(("rewind", {"route_id": r.route_id, "gen": r.gen, "method": r.method, "fork_id": r.fork_id,
+                                 "branch": r.branch, "action": r.action, "set": s}, r.vdir, str(WL._fork_attempt(WL.rundir("gen") / s, trid)), k))
     for r in p[p.kind == "floor"].itertuples():
-        a = attempt(r.route_id, r.set)
+        a = attempt(r.route_id, r.set, r.gen)
         if a is None:
             continue
         trid, s, k = truth[(r.fork_id, r.order)]
-        tasks.append(("floor", {"route_id": r.route_id, "method": "scratch", "fork_id": r.fork_id, "branch": 0,
+        tasks.append(("floor", {"route_id": r.route_id, "gen": r.gen, "method": r.method, "fork_id": r.fork_id, "branch": 0,
                                 "action": r.order, "set": s}, str(a), str(WL._fork_attempt(WL.rundir("gen") / s, trid)), k))
     with Pool(24) as pool:
         res = pool.map(_eval_one, tasks, chunksize=2)
@@ -269,21 +277,21 @@ def opspec() -> dict:
 
     for r in br.itertuples():
         # a branch dir keeps the run's JPEG paths (relative to the run's attempt dir) with renumbered frames
-        a = attempt(r.route_id, f.set[r.fork_id])
+        a = attempt(r.route_id, f.set[r.fork_id], r.gen)
         vd = Path(r.vdir)
         fr = pd.read_json(vd / "frames.jsonl", lines=True)
         fr = fr[fr.files.map(bool)]
         sf = pd.read_json(Path(f.src_dir[r.fork_id]) / "frames.jsonl", lines=True)
         sf = sf[sf.tick < fr.tick.min()]
         src = f.src_dir[r.fork_id]
-        names = [f"{Path(src).parent.name}-{x:07d}" for x in sf.frame] + [f"rw{r.route_id}b{r.branch}-{x:07d}" for x in fr.frame]
+        names = [f"{Path(src).parent.name}-{x:07d}" for x in sf.frame] + [f"rw{r.gen}{r.route_id}b{r.branch}-{x:07d}" for x in fr.frame]
         files = [[f"{src}/{q[c]}" for c in cams] for q in sf.files] + [[f"{a}/{q[c]}" for c in cams] for q in fr.files]
-        streams.append({"key": f"rw_{r.route_id}_{r.branch}", "names": names, "targets": list(range(len(sf), len(names))),
+        streams.append({"key": f"rw_{r.gen}_{r.route_id}_{r.branch}", "names": names, "targets": list(range(len(sf), len(names))),
                         "files": files, "gaps": 0})
     for r in p[p.kind == "floor"].itertuples():
-        a = attempt(r.route_id, r.set)
+        a = attempt(r.route_id, r.set, r.gen)
         if a is not None:
-            add(f"fl_{r.route_id}", a, f.src_dir[r.fork_id], f"fl{r.route_id}")
+            add(f"fl_{r.gen}_{r.route_id}", a, f.src_dir[r.fork_id], f"fl{r.gen}{r.route_id}")
     d = data_dir() / "processed" / "rewind"
     d.mkdir(parents=True, exist_ok=True)
     (d / "op_plan.json").write_text(json.dumps({"calib": carla_calib(), "streams": streams}))
@@ -310,10 +318,11 @@ def opcos() -> dict:
         return out
 
     rows = []
-    items = [(f"rw_{r.route_id}_{r.branch}", r.vdir, f"rw{r.route_id}b{r.branch}", r.fork_id, r.action,
-              {"route_id": r.route_id, "method": r.method, "branch": r.branch}) for r in br.itertuples()]
-    items += [(f"fl_{r.route_id}", str(attempt(r.route_id, r.set)), f"fl{r.route_id}", r.fork_id, r.order,
-               {"route_id": r.route_id, "method": "scratch", "branch": 0}) for r in p[p.kind == "floor"].itertuples()]
+    items = [(f"rw_{r.gen}_{r.route_id}_{r.branch}", r.vdir, f"rw{r.gen}{r.route_id}b{r.branch}", r.fork_id, r.action,
+              {"route_id": r.route_id, "gen": r.gen, "method": r.method, "branch": r.branch}) for r in br.itertuples()]
+    items += [(f"fl_{r.gen}_{r.route_id}", str(attempt(r.route_id, r.set, r.gen)), f"fl{r.gen}{r.route_id}", r.fork_id,
+               r.order, {"route_id": r.route_id, "gen": r.gen, "method": r.method, "branch": 0})
+              for r in p[p.kind == "floor"].itertuples() if attempt(r.route_id, r.set, r.gen) is not None]
     for key, run_dir, prefix, fid, act, meta in items:
         fa = mine / f"{key}.npz"
         trid, s, k = truth[(fid, act)]
@@ -344,11 +353,15 @@ def cost() -> pd.DataFrame:
     f = pd.read_parquet(WL.rundir("forks.parquet"))
     rows = []
     for r in p.itertuples():
-        a = attempt(r.route_id, r.set)
+        a = attempt(r.route_id, r.set, r.gen)
         if a is None:
             continue
-        d = json.loads((R / "gen" / r.set / "done" / f"{r.route_id}.json").read_text())
-        row = {"route_id": r.route_id, "kind": r.kind, "method": r.method, "fork_id": r.fork_id, "set": r.set,
+        d = json.loads((R / r.gen / r.set / "done" / f"{r.route_id}.json").read_text())
+        ph = json.loads((a / "phases.json").read_text()) if (a / "phases.json").exists() else {}
+        row = {"route_id": r.route_id, "gen": r.gen, "reused": ph.get("reused"), "load_s": ph.get("load_s"),
+               "import_s": ph.get("t_load_call", np.nan) - ph.get("proc_start", np.nan),
+               "scenario_build_s": ph.get("scenario_build_s"), "server_age_routes": d.get("server_age_routes"),
+               "kind": r.kind, "method": r.method, "fork_id": r.fork_id, "set": r.set,
                "wall_s": d["wall_s"], "ticks": d.get("ticks"), "tick_ms": (d.get("profile") or {}).get("total_ms_mean")}
         if r.kind == "rewind":
             ev = [json.loads(l) for l in (a / "rewind.jsonl").read_text().splitlines()]
