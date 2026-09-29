@@ -77,6 +77,12 @@ N1b 头在 held-out 上的损失：PDMS 89.52，oracle 99.83，差 10.3 分；�
 - **预期**：held-out 对 N2 +0.3 到 +1.0（线性头的学习曲线每翻倍 +0.5，MLP 可能更陡）；navtest 对 N2 +0.2 到 +0.8，CI 下界 > 0 的把握约一半。
 - 性质：trick（数据量 × 更强的 PDM 蒸馏）。
 
+## 臂 A 结果（held-out，09-30 05:2x）
+
+**纳入规则不过**：N2 选中配置上加 8 个替代槽，fold 0 held-out 92.64 → 92.56（−0.08 < +0.2），N3 不带 alt。
+oracle 从 96.01（22 个原生槽）升到 96.94（+ 8 个替代槽），替代槽单独的 oracle 93.66：openpilot 在强制 laneChange / turn desire 下给出的 plan 里确有更好的候选，但当前打分头挑不出来。
+成本：替代 plan 抽取 train 2 h + navtest 1.5 h + navhard 0.7 h（GPU 6 小卡，4 条 rollout / token，约 2.3 s / token / shard），标签 CPU 5 min。navtest 未打分。
+
 ## N2 结果（09-30 00:30 navtest 打分）
 
 **判读：成立。** navtest N2 = **90.60**，N2 − N1 = **+3.28 [+2.89, +3.66]**（Bonferroni m = 4 [+2.79, +3.76]），N2 − N1b +3.34，N2 − 原生 +6.43 [+6.00, +6.86]。高于登记预期上沿（+0.8 到 +1.8）。
