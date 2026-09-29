@@ -338,6 +338,109 @@ def forks2(seeds=(1, 2), branch_s: float = 3.0, seed: int = 20260929) -> dict:
     return info
 
 
+# ================================================================ WL-2 pilot checklist (todos/2026-09-29-wl2-prereg.md, "分级启动")
+
+def _check_run(args) -> dict:
+    """One finished fork run: outcome labels, retries, wall time, and the ego-lane `occ` label at fork + 2 s."""
+    from . import nq4_w as W
+    rid, adir, out_set, k = args
+    a = Path(adir)
+    rec = {"route_id": rid}
+    try:
+        rec.update(outcome(a, k))
+        fr = _frames(a)
+        t2 = k + int(OCC_AT_S / TICK)
+        if t2 in fr.index:
+            rec["occ2s"] = bool(W._run_rows((str(a), [int(fr.frame[t2])]))[1][0]["occ"])
+        d = json.loads((a.parent.parent.parent / "done" / f"{rid}.json").read_text())
+        pr = d.get("profile", {})
+        loop_ms = sum(pr.get(f"{m}_ms_mean", 0.0) for m in ("world_tick", "agent", "provider"))
+        rec.update(attempt=int(d["attempt"]), wall_s=float(d["wall_s"]), ticks_used=int(pr.get("ticks_used", 0)),
+                   setup_s=float(d["wall_s"]) - pr.get("ticks_used", 0) * loop_ms / 1e3,
+                   n_attempts=len([x for x in a.parent.iterdir() if x.is_dir()]))
+    except Exception as e:                                   # a harness failure of this run
+        rec["error"] = repr(e)
+    return rec
+
+
+def check2(out: str, stage: str, workers: int = 24) -> dict:
+    """The WL-2 pilot checklist on the finished runs of a stage (items 1-8 of the prereg's table). Description +
+    pass / fail per item -> RESULTS/check2_<stage>.json, runs_<stage>.csv."""
+    from multiprocessing import Pool
+    runs = stage_ids(stage)
+    todo = [(r.route_id, str(a), r.set, int(r.fork_tick)) for r in runs.itertuples()
+            if (a := _fork_attempt(Path(out) / r.set, r.route_id)) is not None]
+    with Pool(workers) as p:
+        t = pd.DataFrame(p.map(_check_run, todo, chunksize=4))
+    t = runs.drop(columns=["src_dir"]).merge(t, on="route_id", how="left")
+    t["done"] = t.get("gap_min_m", pd.Series(np.nan, index=t.index)).notna() | t.get("attempt", pd.Series(np.nan, index=t.index)).notna()
+    err = t.get("error", pd.Series(np.nan, index=t.index)).notna()
+    dr = drops(out, gate_min=DROP_SET_MIN)
+    gone = {d["fork_id"] for d in dr["dropped_groups"]}
+    fin = t[t.done & ~err & ~t.fork_id.isin(gone)].copy()
+    chk, n = {}, len(t)
+    chk["runs"] = {"planned": n, "done": int(t.done.sum()), "errors": int(err.sum()), "harness_fail": float(1 - t.done.mean() + err.mean())}
+    chk["retries"] = {"attempt_gt1": float((t.attempt > 1).mean()), "mean_attempts": float(t.n_attempts.mean()),
+                      "ended_early": float((fin.ticks < fin.fork_tick + 60).mean())}
+    chk["timing"] = {"wall_s_mean": float(t.wall_s.mean()), "wall_s_median": float(t.wall_s.median()), "setup_s_median": float(t.setup_s.median()),
+                     "worker_h_per_run": float(t.wall_s.mean() / 3600), "worker_h_per_run_incl_retries": float((t.wall_s * t.n_attempts).mean() / 3600),
+                     "by_set_wall_s": {k: float(v) for k, v in t.groupby("set").wall_s.mean().items()}}
+    chk["prefix"] = {k: dr[k] for k in ("checked", "dropped", "frac", "per_set")} | {
+        "runs_ego_le_1cm": float((pd.read_parquet(rundir("prefix_check.parquet")).set_index("route_id").ego_max_dpos_m.reindex(t.route_id) <= PREFIX_POS_M).mean())}
+    chk["render"] = {k: dr[k] for k in ("render_checked", "render_dropped", "render_frac")}
+    lab = fin.groupby("action")[["unsafe_cg", "unsafe", "collision"]].mean().round(3)
+    chk["labels_by_action"] = lab.to_dict("index")
+    chk["labels_finite"] = float(np.isfinite(fin[["gap_min_m", "travel_m", "lateral_right_m"]].replace(np.inf, 1e3)).all(axis=1).mean())
+    piv = lambda col: fin.pivot_table(index="fork_id", columns="action", values=col)                    # noqa: E731
+    tr = piv("travel_m")
+    chk["brake_travel_lt_hold"] = float((tr.brake_hard < tr.hold).mean())
+    chk["brake_mild_between_stop_and_op"] = float(((tr.op_stop <= tr.brake_mild) & (tr.brake_mild <= tr.op)).mean())
+    chk["shift_slow_travel_lt_shift"] = {s_: float((tr[s_ + "_slow"] < tr[s_]).mean()) for s_ in ("shift_L", "shift_R")}
+    sh = shift_offsets(out, stage, ("shift_L", "shift_R", "shift_L_slow", "shift_R_slow", "nudge_L"))
+    for a_, g in sh.groupby("action"):
+        g = g[g.t_eval_s >= 1.0]
+        f2 = g[g.t_eval_s >= 2.0]
+        chk[f"offset_{a_}"] = {"n": len(g), "sign_ok": float(g.sign_ok.mean()) if len(g) else np.nan,
+                               "ge_2m": float((f2.offset_left_m.abs() >= 2.0).mean()) if len(f2) else np.nan,
+                               "in_1_2m": float(g.offset_left_m.abs().between(1.0, 2.0).mean()) if len(g) else np.nan}
+    xp = fin[fin.world == "plus"]
+    u = xp.pivot_table(index="fork_id", columns="action", values="unsafe_cg", aggfunc="max").astype(float)
+    solv = (u.op == 1) & (u.drop(columns="op").min(axis=1) == 0)
+    fk = xp.groupby("fork_id")[["set", "base_id", "seed", "cls", "split"]].first()
+    chk["headroom"] = {"x_plus_fork_points": len(u), "op_unsafe_cg": float((u.op == 1).mean()), "oracle_unsafe_cg": float(u.min(axis=1).mean()),
+                       "solvable_share": float(solv.mean()), "solvable_n": int(solv.sum()),
+                       "solvable_routes": int(fk[solv.reindex(fk.index).fillna(False)].base_id.nunique())}
+    allx = pd.read_parquet(rundir("forks.parquet")).query("world == 'plus' and split == 'eval'").drop_duplicates("fork_id")
+    chk["headroom"]["projected_solvable_n_eval_full"] = float(solv.mean() * len(allx))
+    o = fin.pivot_table(index="fork_id", columns="action", values="occ2s", aggfunc="max")
+    S = [(f_, a_) for f_ in o.index[(o.get("op", pd.Series(dtype=float)) == 1) & o.index.isin(fk.index[fk.split == "eval"])] for a_ in ("shift_L", "shift_R")
+         if a_ in o and pd.notna(o.loc[f_, a_])]
+    chk["c1c_S"] = {"pairs": len(S), "still_occupied": int(sum(bool(o.loc[f_, a_]) for f_, a_ in S)),
+                    "still_occupied_share": float(np.mean([bool(o.loc[f_, a_]) for f_, a_ in S])) if S else np.nan}
+    fp = pd.read_parquet(rundir("forks.parquet")).query("set == 'p6' and world == 'plus'").drop_duplicates("fork_id")
+    src = fp.groupby(["base_id", "seed"]).size()
+    chk["p6_tau_forks_per_source"] = {"sources": len(src), "ge2_share": float((src >= 2).mean()) if len(src) else np.nan}
+    def ok(v, lo=None, hi=None):
+        return bool(pd.notna(v) and (lo is None or v >= lo) and (hi is None or v <= hi))
+    ver = {"1 pose group drops <= 5%": not dr["pose_gate_fail"], "2 render run drops <= 10%": not dr["render_gate_fail"],
+           "3 brake_hard < hold": chk["brake_travel_lt_hold"] == 1.0,
+           "3 shift sign >= 95%, >= 2 m >= 80%": all(ok(chk.get(f"offset_{a_}", {}).get("sign_ok"), 0.95) and ok(chk.get(f"offset_{a_}", {}).get("ge_2m"), 0.80)
+                                                       for a_ in ("shift_L", "shift_R")),
+           "4 harness failure <= 5%": chk["runs"]["harness_fail"] <= 0.05,
+           "5 brake_mild between op_stop and op >= 95%": ok(chk["brake_mild_between_stop_and_op"], 0.95),
+           "5 slow shifts sign >= 95%, >= 2 m >= 80%, travel < shift >= 95%": all(
+               ok(chk.get(f"offset_{a_}_slow", {}).get("sign_ok"), 0.95) and ok(chk.get(f"offset_{a_}_slow", {}).get("ge_2m"), 0.80)
+               and ok(chk["shift_slow_travel_lt_shift"][a_], 0.95) for a_ in ("shift_L", "shift_R")),
+           "5 nudge_L offset in 1-2 m >= 95%": ok(chk.get("offset_nudge_L", {}).get("in_1_2m"), 0.95),
+           "6 P6 sources with >= 2 x+ forks >= 70%": ok(chk["p6_tau_forks_per_source"]["ge2_share"], 0.70),
+           "7 solvable share of x+ >= 25%": ok(chk["headroom"]["solvable_share"], 0.25),
+           "8 C1c still-occupied share >= 10%": ok(chk["c1c_S"]["still_occupied_share"], 0.10)}
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    t.to_csv(RESULTS / f"runs_{stage}.csv", index=False, float_format="%.4f")
+    (RESULTS / f"check2_{stage}.json").write_text(json.dumps({"checks": chk, "verdict": ver}, indent=1, default=str))
+    return {"checks": chk, "verdict": ver}
+
+
 def d2(seeds=(0, 1), max_s: float = 70.0) -> dict:
     """D2: Bench2Drive 220 routes whose base is not an eval route, TM seeds 0 and 1, PDM-Lite with random windows from
     10 s on (ids 8 + 5-digit base + seed). Appends to jobs.json; writes d2.parquet and forks-d2.xml."""
@@ -620,14 +723,14 @@ def outcome(adir: Path, fork_tick: int, branch_s: float = 3.0) -> dict:
             "ticks": int(p.index.max())}
 
 
-def shift_offsets(out: str, stage: str) -> pd.DataFrame:
+def shift_offsets(out: str, stage: str, actions=("shift_L", "shift_R")) -> pd.DataFrame:
     """Checklist item "shift": the executed shift branch's rear-axle position against the op candidate's path (the path it
     shifts), as a signed left offset along that path's local normal, at t = min(3 s, first collision - 1 tick): after a
     collision the car is held by the obstacle and says nothing about the shift. Sign correct = left for shift_L."""
     from .wl_traj import T as TT, world_to_ego
     runs = stage_ids(stage)
     rows = []
-    for r in runs[runs.action.isin(["shift_L", "shift_R"])].itertuples():
+    for r in runs[runs.action.isin(list(actions))].itertuples():
         a = _fork_attempt(Path(out) / r.set, r.route_id)
         if a is None or not (a / "wl.json").exists():
             continue
@@ -646,7 +749,7 @@ def shift_offsets(out: str, stage: str) -> pd.DataFrame:
         n = np.array([-d[1], d[0]]) / max(np.hypot(*d), 1e-6)
         off = float((p - op[i]) @ n)
         rows.append({"route_id": r.route_id, "action": r.action, "t_eval_s": (t_end - r.fork_tick) * TICK,
-                     "offset_left_m": off, "sign_ok": off > 0 if r.action == "shift_L" else off < 0})
+                     "offset_left_m": off, "sign_ok": off > 0 if "_L" in r.action else off < 0})
     return pd.DataFrame(rows)
 
 
@@ -978,7 +1081,7 @@ def sanity(out: str, stage: str) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("forks", "forks2", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity", "drops"))
+    ap.add_argument("step", choices=("forks", "forks2", "check2", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity", "drops"))
     ap.add_argument("--gate", action="store_true", help="drops: exit 3 when the dropped fraction exceeds 5 %%")
     ap.add_argument("--gate-min", type=int, default=0, help="drops: per-set gate only for sets with this many checked groups")
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
@@ -987,6 +1090,8 @@ def main():
     a = ap.parse_args()
     if a.step == "forks":
         print(json.dumps(forks(), indent=1, default=str))
+    elif a.step == "check2":
+        print(json.dumps(check2(a.out, a.stage), indent=1, default=str))
     elif a.step == "forks2":
         print(json.dumps(forks2(), indent=1, default=str))
     elif a.step == "d2":
