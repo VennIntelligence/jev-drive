@@ -23,6 +23,12 @@ Methods (what is put back; every method also restores the ego and the agent's ow
             ego controls applied) so the drivetrain spins up, then restores tick k-1 as above.
   <m>+w<N>v the same, but the last step sets only the velocities of the vehicles (no teleport), so a teleport cannot
             reset the drivetrain again; the vehicles' position error is then the warm-up's drift.
+  <m>+w<N>f the same warm-up, but the scenario tree does not tick during the warm-up ticks (tick_once is a no-op until
+            the final restore), and at the final restore every walker above ground is destroyed and respawned from the
+            snapshot. A teleported walker keeps its movement component's velocity and last control (it walks on at
+            full speed, or a KeepVelocity re-applied on the tree's held state leaves it in the wrong phase); a fresh
+            walker starts from rest, like the from-scratch one. Hidden walkers (physics off, underground) are only
+            teleported.
 Not restorable through the Python API (known gaps): traffic-light phase timers, the traffic manager's internal state
 (path buffers, PID integrators, random stream), wheel spin / gear / suspension, animation state.
 """
@@ -200,13 +206,18 @@ _READS = ("get_transform", "get_location", "get_velocity", "get_angular_velocity
 _ORIG = {k: getattr(carla.Actor, k) for k in _READS}
 
 
+def _noop(*_a, **_k):
+    return None
+
+
 class Rewinder:
     def __init__(self, method: str, world, hero, tm_port: int):
         base, _, opt = method.partition("+")
-        assert base in METHODS and re.fullmatch(r"(w\d+v?)?", opt), method
+        assert base in METHODS and re.fullmatch(r"(w\d+[vf]?)?", opt), method
         self.method, self.world, self.hero, self.tm_port = base, world, hero, tm_port
-        self.warm = int(opt[1:].rstrip("v")) if opt else 0
+        self.warm = int(opt[1:].rstrip("vf")) if opt else 0
         self.final_vel_only = opt.endswith("v")
+        self.fresh = opt.endswith("f")
         self.hist = collections.deque(maxlen=max(self.warm, 1))
         self.snap, self.remap, self.patched = None, {}, False
         self.stats = []
@@ -231,8 +242,14 @@ class Rewinder:
         ego control recorded at that tick."""
         ids, ctl = self.hist[i]
         if i == 0 and self.method in ("tree", "respawn"):
-            self.restore()            # destroy what the branch spawned, respawn what it destroyed, before the replay
-        if self.method in ("tree", "respawn"):
+            self.restore(final=False)  # destroy what the branch spawned, respawn what it destroyed, before the replay
+        if self.fresh:
+            # the tree stays out of the warm-up: its tick is a no-op (an instance attribute the final thaw deletes, as it
+            # is not in the snapshot's __dict__), so no behaviour re-applies controls or teleports on the replayed ticks
+            m = _MANAGER.get("m")
+            if m is not None:
+                m.scenario_tree.tick_once = _noop
+        elif self.method in ("tree", "respawn"):
             # the scenario tree ticks after this call: hold it at the fork state (it would otherwise see the teleports,
             # e.g. InRouteTest fails on the jump back and ends the route); the final restore sets it again
             self._restore_python()
@@ -312,7 +329,7 @@ class Rewinder:
             a.set_autopilot(True, self.tm_port)
         return a
 
-    def restore(self) -> dict:
+    def restore(self, final: bool = True) -> dict:
         """Called in the dead tick's agent call. Returns stats; the caller returns snap['control']."""
         t0 = time.perf_counter()
         s = self.snap
@@ -325,11 +342,14 @@ class Rewinder:
                 if aid not in s["actors"] and aid not in {x.id for x in self.remap.values()}:
                     a.destroy()
                     n_new += 1
+        hz = s["hero"]["tf"].location.z
+        fresh = self.fresh and final
         for aid, st in s["actors"].items():
             cur = self.remap.get(aid)
             a = cur if cur is not None and cur.is_alive else live.get(aid)
             bg = st["type"].startswith("vehicle.") and st["attrs"].get("role_name") == "background"
-            if full and a is not None and self.method == "respawn" and bg:
+            walker = st["type"].startswith("walker.pedestrian") and st["tf"].location.z > hz - 10.0
+            if full and a is not None and ((self.method == "respawn" and bg) or (fresh and walker)):
                 a.destroy()
                 a = None
             if a is None or not a.is_alive:
