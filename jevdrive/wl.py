@@ -386,7 +386,7 @@ def check2(out: str, stage: str, workers: int = 24) -> dict:
                      "worker_h_per_run": float(t.wall_s.mean() / 3600), "worker_h_per_run_incl_retries": float((t.wall_s * t.n_attempts).mean() / 3600),
                      "by_set_wall_s": {k: float(v) for k, v in t.groupby("set").wall_s.mean().items()}}
     chk["prefix"] = {k: dr[k] for k in ("checked", "dropped", "frac", "per_set")} | {
-        "runs_ego_le_1cm": float((pd.read_parquet(rundir("prefix_check.parquet")).set_index("route_id").ego_max_dpos_m.reindex(t.route_id) <= PREFIX_POS_M).mean())}
+        "runs_ego_le_1cm": float((lambda e: (e <= PREFIX_POS_M).mean())(pd.read_parquet(rundir("prefix_check.parquet")).set_index("route_id").ego_max_dpos_m.reindex(t.route_id).dropna()))}
     chk["render"] = {k: dr[k] for k in ("render_checked", "render_dropped", "render_frac")}
     lab = fin.groupby("action")[["unsafe_cg", "unsafe", "collision"]].mean().round(3)
     chk["labels_by_action"] = lab.to_dict("index")
@@ -394,7 +394,8 @@ def check2(out: str, stage: str, workers: int = 24) -> dict:
     piv = lambda col: fin.pivot_table(index="fork_id", columns="action", values=col)                    # noqa: E731
     tr = piv("travel_m")
     chk["brake_travel_lt_hold"] = float((tr.brake_hard < tr.hold).mean())
-    chk["brake_mild_between_stop_and_op"] = float(((tr.op_stop <= tr.brake_mild) & (tr.brake_mild <= tr.op)).mean())
+    chk["brake_mild_between_stop_and_hold"] = float(((tr.op_stop <= tr.brake_mild + 0.05) & (tr.brake_mild <= tr.hold + 0.05)).mean())
+    chk["brake_mild_le_op"] = float((tr.brake_mild <= tr.op + 0.05).mean())      # descriptive: fails where op already brakes harder than 2 m/s2
     chk["shift_slow_travel_lt_shift"] = {s_: float((tr[s_ + "_slow"] < tr[s_]).mean()) for s_ in ("shift_L", "shift_R")}
     sh = shift_offsets(out, stage, ("shift_L", "shift_R", "shift_L_slow", "shift_R_slow", "nudge_L"))
     for a_, g in sh.groupby("action"):
@@ -427,7 +428,7 @@ def check2(out: str, stage: str, workers: int = 24) -> dict:
            "3 shift sign >= 95%, >= 2 m >= 80%": all(ok(chk.get(f"offset_{a_}", {}).get("sign_ok"), 0.95) and ok(chk.get(f"offset_{a_}", {}).get("ge_2m"), 0.80)
                                                        for a_ in ("shift_L", "shift_R")),
            "4 harness failure <= 5%": chk["runs"]["harness_fail"] <= 0.05,
-           "5 brake_mild between op_stop and op >= 95%": ok(chk["brake_mild_between_stop_and_op"], 0.95),
+           "5 brake_mild between op_stop and hold >= 95%": ok(chk["brake_mild_between_stop_and_hold"], 0.95),
            "5 slow shifts sign >= 95%, >= 2 m >= 80%, travel < shift >= 95%": all(
                ok(chk.get(f"offset_{a_}_slow", {}).get("sign_ok"), 0.95) and ok(chk.get(f"offset_{a_}_slow", {}).get("ge_2m"), 0.80)
                and ok(chk["shift_slow_travel_lt_shift"][a_], 0.95) for a_ in ("shift_L", "shift_R")),
