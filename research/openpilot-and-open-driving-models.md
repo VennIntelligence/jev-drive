@@ -117,11 +117,11 @@ comma 公开的效果数字都很局部：0.10 的 Space Lab 把 stop-and-go 中
 | DriveLaW | 88.6 | 30.6 | world model |
 | SGDrive | 86.2 | 25.5 | VLM |
 | DriveVLA-W0 | 86.1（EC 仅 58.9） | 24.4 | VLM / world model |
-| DiffusionDrive | 84.5 | 27.5 | specialist |
+| DiffusionDrive | 88.2 | 27.5 | specialist |
 | ReCogDrive | 83.6 | 25.7 | VLM |
-| TransFuser | 76.7 | 23.1 | specialist |
+| TransFuser | 84.0 | 23.1 | specialist |
 
-来源：[SimWAM Table 2/3](https://arxiv.org/pdf/2608.07468)。navtest 上 VLM 能比 DiffusionDrive 高 1–5 分，到了 navhard 反而普遍低于它（24–26 vs 27.5），只有经过 RL 的 DriveFine 例外。VLM 在 navtest 上的高分没有转化成对扰动后状态更好的泛化。ICCV 2025 NAVSIM v2 challenge 第一名 SimpleVSF（private_test_hard 53.06）是"传统 trajectory generator + VLM 打分融合"的 hybrid（[arXiv 2510.17191，2025-10](https://arxiv.org/html/2510.17191v1)）。
+来源：[SimWAM Table 2/3](https://arxiv.org/pdf/2608.07468)。（*2026-09-29 就地修正*：TransFuser / DiffusionDrive 的 navtest EPDMS 原按 SimWAM 表抄成 76.7 / 84.5，是 navsim bugfix 之前的口径，修后（我们的 devkit 同口径）为 84.0 / 88.2，取自 arXiv 2603.28116 Table 3，见 decisions 第 37 条末段；其余行仍是各论文自报值。）navtest 上 VLM 能比 DiffusionDrive 高 1–5 分，到了 navhard 反而普遍低于它（24–26 vs 27.5），只有经过 RL 的 DriveFine 例外。VLM 在 navtest 上的高分没有转化成对扰动后状态更好的泛化。ICCV 2025 NAVSIM v2 challenge 第一名 SimpleVSF（private_test_hard 53.06）是"传统 trajectory generator + VLM 打分融合"的 hybrid（[arXiv 2510.17191，2025-10](https://arxiv.org/html/2510.17191v1)）。
 
 **WOD-E2E 2025 challenge（test set RFS，满分 10；RFS 为 rater 对长尾场景轨迹打的偏好分）**
 

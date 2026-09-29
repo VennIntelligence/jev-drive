@@ -209,15 +209,14 @@ head 在 navtrain 上拟合（run：box 上 `navsim_zs/heads/20260925-232810`）
 | Lebowski `temporal` + `ridge_late` | 72.4 [71.8, 73.1] | 72.9 [72.2, 73.6] | 17.0 | +8.7 [+7.9, +9.4] | +27.4 |
 | 我们 `cls ego` / `ridge ego`（G2） | 68.4 / 62.7 | 67.8 / 64.2 | 13.6 / 13.3 | 0 | |
 | openpilot 原生 Cinque / Lebowski | 52.1 / 50.9 | 46.2 / 45.5 | 9.3 / 10.2 | | 0 |
-| *文献* Ego Status MLP / TransFuser / DiffusionDrive | 65.6 / 84.0 / 88.1 | — / 76.7 / 84.5 | — / 23.1 / 27.5 | | |
+| *文献* Ego Status MLP / TransFuser / DiffusionDrive | 65.6 / 84.0 / 88.1 | — / 84.0 / 88.2 | — / 23.1 / 27.5 | | |
 
 （navtest 上 (x, y) ADE 对 log：`ridge_late` 0.74 / 0.76 m、`cls_late` 0.87 m、`ridge ego` 1.04 m、原生 8.4 / 9.3 m。）
 
 **判定（按预登记）**：
 - `temporal` 在 NAVSIM 上**有用**：两个模型、两种 head 的 late − ego 配对 Δ 都是 +8.7 到 +9.7 EPDMS，CI 远离零。
 - **达到 blind 文献线**（PDMS ≥ 65.6）：四个 head 全部达到。
-- **没有达到 specialist 线**（PDMS ≥ 84.0）：最好的 77.9，差 6 分。EPDMS 上 77.4 与 TransFuser 的 76.7 同量级，但我们的 devkit 版本与文献不同
-  （human 94.5 对 90.3），这一格只作量级。navhard 上 19.8，低于 TransFuser 23.1。
+- **没有达到 specialist 线**（PDMS ≥ 84.0）：最好的 77.9，差 6 分。EPDMS 上 77.4 比 TransFuser 的 84.0 低约 6.6（同为修 bug 后口径）。（*2026-09-29 就地修正*：原写「与 TransFuser 的 76.7 同量级，但 devkit 版本不同（human 94.5 对 90.3），只作量级」；76.7 是修 bug 前的数，见 decisions 第 37 条末段。）navhard 上 19.8，低于 TransFuser 23.1。
 - 预期「head 高于同族 ego 几分、低于 TransFuser、远高于原生 plan」三条都成立，增益（+9–10）比预期的「几分」大。
 
 读法：原生 plan 在 NAVSIM 上只比 cv 高 20 EPDMS，重拟合的线性读出比原生 plan 再高 31。G1 / G1b 已经说明原生 plan 差是 2 Hz 输入造成的；这里说明

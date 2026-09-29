@@ -235,13 +235,13 @@ n = 12146（no-nav 为 3000 个 token 的分层子集，见偏离 1），括号�
 | openpilot Cinque v3 | cmd | 50.7 | 45.2 | 78.0 | 74.1 | 84.1 | 97.0 | 95.1 | 74.6 | 88.4 | 52.3 | 10.0 |
 | **openpilot small** | **none** | **47.4** [46.6, 48.2] | **42.5** [41.8, 43.3] | 71.0 | 79.5 | 89.0 | 95.6 | 95.0 | 68.3 | 91.2 | 45.3 | 12.1 |
 | openpilot small | cmd | 42.3 | 39.1 | 69.7 | 72.8 | 84.3 | 95.9 | 93.1 | 67.0 | 88.1 | 55.6 | 13.5 |
-| *文献（在 navtrain 上训练）* TransFuser | | 84.0 | 76.7 | | | | | | | | | |
-| *文献* DiffusionDrive | | 88.1 | 84.5 | | | | | | | | | |
+| *文献（在 navtrain 上训练）* TransFuser | | 84.0 | 84.0 | | | | | | | | | |
+| *文献* DiffusionDrive | | 88.1 | 88.2 | | | | | | | | | |
 | *文献* VLM：AutoVLA / ReCogDrive / DriveVLA-W0 | | 89.1 / 90.8 / 90.2 | — / 83.6 / 86.1 | | | | | | | | | |
 
 sub-score 列是 EPDMS（v2）口径的均值（%）；PDMS 的 EP 定义不同（v1 相对 PDM-Closed 的比例，Alpamayo 42.6、Lebowski 49.7），不和 v2 的 EP 混排。
 文献数字取自 [research/openpilot-and-open-driving-models.md](../../research/openpilot-and-open-driving-models.md) 的表（TransFuser 的 PDMS 84.0 取自 NAVSIM v1 论文），
-不是我们重跑的，EPDMS 的 devkit 版本也可能不同。我们自己在 NAVSIM 上还没有 planner 的数字（research/decisions.md 里没有可比条目）。
+不是我们重跑的。 [2026-09-29 更正：文献 EPDMS 原为修 bug 前的 TransFuser 76.7 / DiffusionDrive 84.5，devkit 修后为 84.0 / 88.2，见 decisions 第 37 条末段]。我们自己在 NAVSIM 上还没有 planner 的数字（research/decisions.md 里没有可比条目）。
 
 ![subscores](../../research/figs/navsim-zs-subscores.png)
 
@@ -249,7 +249,7 @@ sub-score 列是 EPDMS（v2）口径的均值（%）；PDMS 的 EP 定义不同�
 openpilot 的 NC / DAC 略好，但 HC（与历史运动衔接）只有 45–52%、EC 只有 10–12%，是 sample-and-hold 输入下规划本身在抖。
 
 **读法**：按预登记的判读表，两个模型都落在「EPDMS < 50：适配损失主导或模型不会开车」一格。它们都明显好于 constant velocity
-（Alpamayo +17.3 EPDMS [16.5, 18.0]、+23.6 PDMS），但离在 navtrain 上训练的 TransFuser（76.7 / 84.0）差 30–40 分。
+（Alpamayo +17.3 EPDMS [16.5, 18.0]、+23.6 PDMS），但离在 navtrain 上训练的 TransFuser（EPDMS 84.0 / PDMS 84.0）差 30–40 分。
 三个 openpilot 模型（没有 route、只用前视）和 10B 的 Alpamayo 基本同分，Lebowski 甚至高 2.3 EPDMS [1.4, 3.2]、6.6 PDMS。
 
 ### nav 文本与 turn desire 有没有用（配对）

@@ -59,7 +59,7 @@ Box 核对：2026-09-26 只读 `ls` / `du`，没跑任何东西。
 | Lebowski Hydra | 未见 | 未见 | 未见 | — |
 | 原生 plan Cinque / Leb / small / Alpamayo | 52.1 / 50.9 / 47.4 / 44.3 | 46.2 / 45.5 / 42.5 / 43.2 | 9.3 / 10.2 / 10.2 / 10.8 | N-zs，第 37 条（2 Hz 协议读数） |
 | M-C Δ 加到 Cinque / Leb `ridge_late`（E1） | −8.2 [−8.9, −7.5] / −11 | −13.0 [−13.7, −12.3] / −16 | +4–5（无 CI） | 走廊有行人 897 token：Cinque −6.0 / −11.2 |
-| 文献 TransFuser / DiffusionDrive | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 | devkit 不同，只作量级 |
+| 文献 TransFuser / DiffusionDrive | 84.0 / 88.1 | 84.0 / 88.2 | 23.1 / 27.5 | EPDMS 已按修 bug 后 devkit 口径更正（原 76.7 / 84.5，见 decisions 第 37 条末段），与我们同口径 |
 
 未见：Qwen / V-JEPA / DINO / SigLIP / Alpamayo 特征 + head（box 上只有 navtest / navhard 的 Qwen，navtrain 没有）；openpilot small 特征 + head；gate 与 student（G1、G0 进行中）。
 

@@ -17,7 +17,7 @@
 | CARLA ↔ Waymo 特征域差 | Waymo 训的 head 读不出 CARLA 特征，domain AUC 1.0 | P4（第 32 条前置） |
 | PDM-Lite 集 | 所有考生逐帧翻转 ≈ 0，GT 规则门 4.2%：expert 在相机可见前 0.4 s 已反应 | reactivity todo I1 结果 |
 | 快通道时间窗 | ParkingCrossingPedestrian p25 0.53 s；Qwen 流 200–300 ms / 帧、SAM 3 路 558 ms 都来不及 | Q8 |
-| 冻结 `temporal` 跨数据集成立 | NAVSIM navtest 全量 12 146 token：Cinque `temporal` + 薄 head PDMS 77.9 / EPDMS 77.4，ego-only 68.4 / 67.8，原生 plan 52.1 / 46.2（2 Hz 协议所致），TransFuser 文献 84.0 / 76.7；单 seed，EPDMS 两边 devkit 版本不同只能说同量级 | 开环对比最终报告，第 37 条 |
+| 冻结 `temporal` 跨数据集成立 | NAVSIM navtest 全量 12 146 token：Cinque `temporal` + 薄 head PDMS 77.9 / EPDMS 77.4，ego-only 68.4 / 67.8，原生 plan 52.1 / 46.2（2 Hz 协议所致），TransFuser 文献 84.0 / 84.0；单 seed；EPDMS 77.4 比 TransFuser 低约 6.6（[2026-09-29 更正：原写 76.7 并说「同量级」，76.7 是修 bug 前的数，见 decisions 第 37 条末段]） | 开环对比最终报告，第 37 条 |
 | 特征比原生 plan 头对输入协议更鲁棒 | 同一份 2 Hz 输入，原生 plan 掉到 cv 以下，`temporal` 经 head 仍比 ego 高 9.6 EPDMS | 同上 |
 | NAVSIM / nuPlan 的附加条件 | 全部 agent 有 GT 轨迹（原因物体不经感知可查）；自带 PDM scorer 可对任意 proposal 打分；scorer 是可调优的代理（第 35 条），只能当标签之一 | 第 35、37 条 |
 
@@ -836,7 +836,7 @@ run：prep `runs/elicitation/e6-prep/20260926-003758`，fit `runs/elicitation/e6
 | (a) `cls_late`（G3） | 77.9 [77.2, 78.5] | 77.4 [76.8, 78.0] | 19.8 | 96.6 / 87.1 / 73.2 / 90.9 |
 | (a′) `cls_late`，新词表重拟合 | 77.9 [77.3, 78.5] | 77.4 [76.7, 78.0] | 18.2 | 96.6 / 87.1 / 73.0 / 91.0 |
 | **(b) Hydra 式打分头** | **84.2 [83.7, 84.7]** | **82.6 [82.1, 83.1]** | **25.7** | 98.0 / 93.4 / 76.8 / 94.4 |
-| *文献* TransFuser / DiffusionDrive | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 | |
+| *文献* TransFuser / DiffusionDrive | 84.0 / 88.1 | 84.0 / 88.2 | 23.1 / 27.5 | |
 
 | 配对 Δ（逐 token，10 000 次 token bootstrap） | PDMS | EPDMS |
 |:--|:--|:--|
