@@ -1,0 +1,5 @@
+arm,w_im,w_mul,w_ttc,w_ep,w_c,beta,pdms_hold
+A0 GIMM feats + native slots (N1),0.1000,1,5.0000,5,0,1.0000,87.1806
+A1 hold feats (E6 tap) + native slots,0.1000,5,5.0000,5,1,0.5000,87.6635
+"A2 GIMM feats, anchors only",0.1000,10,0.0000,5,1,0.0000,82.8885
+"A3 GIMM feats, native scored by its nearest anchor",0.1000,1,0.5000,1,0,2.0000,85.6597

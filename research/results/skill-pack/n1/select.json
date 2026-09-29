@@ -1,0 +1,72 @@
+{
+ "n_train": 19968,
+ "weights": [
+  0,
+  1,
+  1,
+  2,
+  1
+ ],
+ "beta": 0,
+ "pdms_hold": 0.8946009874343872,
+ "hold_refs": {
+  "oracle (all 1028)": 0.9982863068580627,
+  "oracle (anchors)": 0.9982370138168335,
+  "native s=1.00": 0.8605408668518066,
+  "native s=1.05": 0.8625333309173584,
+  "native s=1.10": 0.8648626804351807,
+  "native s=1.15": 0.8620025515556335,
+  "native-vs-anchor oracle": 0.9982863068580627,
+  "nearest anchor of native s=1.00 (N0's lookup for a native plan)": 0.7994045615196228
+ },
+ "hold_table": [
+  {
+   "arm": "A0 GIMM feats + native slots (N1)",
+   "w_im": 0,
+   "w_mul": 1,
+   "w_ttc": 1,
+   "w_ep": 2,
+   "w_c": 1,
+   "beta": 0,
+   "pdms_hold": 89.46009874343872
+  },
+  {
+   "arm": "A1 hold feats (E6 tap) + native slots",
+   "w_im": 0,
+   "w_mul": 2,
+   "w_ttc": 5,
+   "w_ep": 5,
+   "w_c": 1,
+   "beta": 0.5,
+   "pdms_hold": 89.2069160938263
+  },
+  {
+   "arm": "A2 GIMM feats, anchors only",
+   "w_im": 0,
+   "w_mul": 2,
+   "w_ttc": 5,
+   "w_ep": 5,
+   "w_c": 1,
+   "beta": 0,
+   "pdms_hold": 87.53223419189453
+  },
+  {
+   "arm": "A3 GIMM feats, native scored by its nearest anchor",
+   "w_im": 0,
+   "w_mul": 1,
+   "w_ttc": 1,
+   "w_ep": 5,
+   "w_c": 1,
+   "beta": 2,
+   "pdms_hold": 87.82057166099548
+  }
+ ],
+ "navtest_shares": {
+  "native": 0.6628519677260003,
+  "native_stretched": 0.5627367034414622,
+  "slot_1.00": 0.10011526428453812,
+  "slot_1.05": 0.05104561172402437,
+  "slot_1.10": 0.08101432570393545,
+  "slot_1.15": 0.4306767660135024
+ }
+}
