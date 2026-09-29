@@ -9,8 +9,13 @@ table.tsv (tab separated, one row per lane / grant; '-' = none):
             or an explicit per-GPU map "g:i,g:i" (lane B)
   idx_span  indices per GPU block
   cpus      taskset core list
-  status    free text: debug / pilot / batch / waiting / done ...
+  status    ONE current sentence (running / waiting / legacy ...), rewritten in place; never a log or history
   go        the lane's GO file ('-' for chain-owned rows that read none)
+
+Maintenance: the table holds live rows only. A lane updates its own row in place (`grant` on an existing lane rewrites it);
+when the lane finishes or is revoked, `finish <lane>` (below) moves the row to archive.tsv (append-only, same columns
+prefixed by an `archived` timestamp) and drops it here. Never append a new row for a state change, and never leave
+done / revoked rows behind.
 
 GO file (shell-sourceable, re-read by a lane at its step boundaries): GPUS="4 5", WORKERS=6, IDX0=60, IDX_SPAN=12,
 <PREFIX>_CPUS=134-145 (+ any lane-specific extras already in the file are kept below a marker line).
@@ -20,6 +25,7 @@ GO file (shell-sourceable, re-read by a lane at its step boundaries): GPUS="4 5"
   python3 scripts/sch_table.py grant <lane> --gpus 4,5 --workers 6 --idx0 60 --span 12 --cpus 134-145 \\
           --go $DATA_DIR/runs/nq4/opl/GO --prefix OPL [--status batch]
   python3 scripts/sch_table.py revoke <lane>   GO -> GPUS="" (the lane stops taking new work at its next boundary)
+  python3 scripts/sch_table.py finish <lane> [note]   lane is over: move its row to archive.tsv (note = final status), drop it here
 
 Index rule (docs: tmp/2026-09-26-codex-handoff.md, "CARLA 端口"): index i binds RPC 2000 + 50 i (+1, +2) and its traffic
 manager scans TM 8000 + 50 i .. +49 = the RPC block of i + 120, so two rows conflict when an index of one equals an index,
@@ -39,6 +45,7 @@ from pathlib import Path
 
 DATA = Path(os.environ.get("DATA_DIR", Path.home() / "data"))
 TABLE = DATA / "runs" / "sched" / "table.tsv"
+ARCHIVE = TABLE.with_name("archive.tsv")
 COLS = ["lane", "gpus", "workers", "idx0", "idx_span", "cpus", "status", "go"]
 # capacity model (SCH 2026-09-26 18:25 measurement; see the handoff section)
 PIDS_PER_WORKER, PIDS_CAP = 400, 16000          # one CARLA server ~330-430 threads + route client ~15; b2d waits at 17000
@@ -221,11 +228,31 @@ def revoke(lane: str) -> int:
     return 0
 
 
+def finish(lane: str, note: str = "") -> int:
+    """Move a finished / revoked lane's row to archive.tsv (append-only) and drop it from the live table."""
+    rows = load()
+    r = next((x for x in rows if x["lane"] == lane), None)
+    if r is None:
+        print("no such lane")
+        return 1
+    if note:
+        r["status"] = note
+    new = not ARCHIVE.exists()
+    with ARCHIVE.open("a") as f:
+        w = csv.writer(f, delimiter="\t", lineterminator="\n")
+        if new:
+            w.writerow(["archived"] + COLS)
+        w.writerow([time.strftime("%F %T")] + [r[c] for c in COLS])
+    save([x for x in rows if x is not r])
+    print("archived", lane)
+    return 0
+
+
 if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else "show"
     # One scheduler owns all mutations. Read-only diagnostics remain available.
     owner = None
-    if cmd in {"grant", "revoke"}:
+    if cmd in {"grant", "revoke", "finish"}:
         owner_path = DATA / "runs/sched/owner.lock"
         owner_path.parent.mkdir(parents=True, exist_ok=True)
         owner = owner_path.open("a")
@@ -234,4 +261,5 @@ if __name__ == "__main__":
         except BlockingIOError:
             sys.exit("schedule owner is active; record a request in controller inbox, do not race GO/table writers")
     sys.exit({"show": lambda: show(), "check": lambda: show(True), "grant": lambda: grant(sys.argv[2:]),
-              "revoke": lambda: revoke(sys.argv[2])}[cmd]())
+              "revoke": lambda: revoke(sys.argv[2]),
+              "finish": lambda: finish(sys.argv[2], " ".join(sys.argv[3:]))}[cmd]())

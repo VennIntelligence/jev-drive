@@ -69,7 +69,10 @@ Last verified: 2026-09-20
 
 When more than one agent (or person) runs jobs on the box at the same time:
 - The box's schedule is `$DATA_DIR/runs/sched/table.tsv`, one row per lane (GPUs, CARLA workers per GPU, server
-  index block, core list, status, GO file), kept by `scripts/sch_table.py` (`show`, `check`, `grant`, `revoke`).
+  index block, core list, status, GO file), kept by `scripts/sch_table.py` (`show`, `check`, `grant`, `revoke`, `finish`). The table holds live rows only: a lane
+  updates its own row in place, its status column is one current sentence (not a log), and when the lane finishes or is
+  revoked `sch_table.py finish <lane>` moves the row to `runs/sched/archive.tsv` (append-only history). Never append a row
+  per state change.
   A grant writes the lane's shell-sourceable GO file, which the lane re-reads at its step boundaries; the G lane
   (`scripts/nq4_g_lane.py`) re-reads its row every round and yields cards to lanes that write
   `runs/sched/demand/<lane>.json`. (Was: `$DATA_DIR/runs/schedule.md`, a hand-edited timetable for the old
