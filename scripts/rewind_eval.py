@@ -386,9 +386,85 @@ def cost() -> pd.DataFrame:
     return t
 
 
+# ---------------------------------------------------------------------------------------------------------- report
+
+PED_PLUS = (78, 96, 60, 42, 212, 310)
+CLASSES = {"ped": PED_PLUS, "ped_minus": (131,), "cutin": (226, 148), "p6": (328, 378)}
+
+
+def _floor_mask(b: pd.DataFrame) -> pd.Series:
+    """From-scratch reruns in the normal pipeline: the floor reruns and every rewind run's branch 0."""
+    return (b.gen == "gen") & ((b.method == "scratch") | (b.branch == 0))
+
+
+def report() -> pd.DataFrame:
+    """The pre-registered lines (todo 判据 R1-R5, U0-U3) per method -> runs/rewind/eval/summary.csv."""
+    out = R / "eval"
+    b = pd.read_csv(out / "branches.csv", dtype={"route_id": str})
+    a = pd.read_csv(out / "actors.csv", dtype={"route_id": str})
+    oc = pd.read_csv(out / "opcos.csv", dtype={"route_id": str}) if (out / "opcos.csv").exists() else None
+    key = ["route_id", "gen", "branch"]
+    b["arm"] = np.where(b.gen == "gen_reuse", "reuse:" + b.method, b.method)
+    fl = _floor_mask(b)
+    a = a.merge(b[key + ["arm"]].assign(floor=fl.values), on=key)
+    hz = a[a.hazard & (a.h > 0)]
+    walk_any = b.walk_test.notna() | b.walk_truth.notna()
+    walk_ok = b.walk_test.notna() & b.walk_truth.notna() & ((b.walk_test - b.walk_truth).abs() <= 2)
+
+    def q95(x):
+        return float(np.nanquantile(x, 0.95)) if len(x) else np.nan
+
+    fb, fh = b[fl], hz[hz.floor]
+    floor = {"ped_hz": q95(fh[fh.fork_id.isin(PED_PLUS)].dpos), "ego_pos3": q95(fb["ego_dpos_3.0"]),
+             "ego_dv": q95(fb[[f"ego_dv_{h}" for h in HORIZONS_S]].to_numpy().ravel()),
+             "ego_yaw": q95(fb[[f"ego_dyaw_{h}" for h in HORIZONS_S]].to_numpy().ravel()),
+             "unsafe_agree": float((fb.unsafe_test == fb.unsafe_truth).mean()),
+             "coll_agree": float((fb.collision_test == fb.collision_truth).mean())}
+    if oc is not None:
+        ocb = oc.merge(b[key + ["arm"]].assign(floor=fl.values), on=key, how="left")
+        floor["op_cos_med"] = float(ocb[ocb.floor == True].cos_min.median())  # noqa: E712
+    rows = [dict(arm="floor", n=int(fl.sum()), **{f"floor_{k}": v for k, v in floor.items()})]
+    lines = {"R1": max(0.25, 3 * floor["ped_hz"]), "R2_pos": max(0.3, 3 * floor["ego_pos3"]),
+             "R2_v": max(0.3, 3 * floor["ego_dv"]), "R2_yaw": max(2.0, 3 * floor["ego_yaw"])}
+    for arm, g in b[~fl | (b.gen == "gen_reuse")].groupby("arm"):
+        rb = g[(g.branch > 0) | (g.method == "reuse")]
+        if not len(rb):
+            continue
+        ha = hz[(hz.arm == arm) & (hz.route_id.isin(rb.route_id))]
+        ha = ha.merge(rb[key], on=key)
+        wa = walk_any[rb.index]
+        r = {"arm": arm, "n": len(rb), "forks": rb.fork_id.nunique(),
+             "R1_ped_hz_p95": q95(ha[ha.fork_id.isin(PED_PLUS)].dpos),
+             "R1b_walk_agree": float(walk_ok[rb.index][wa].mean()) if wa.any() else np.nan, "R1b_n": int(wa.sum()),
+             "R2_ego_pos3_p95": q95(rb["ego_dpos_3.0"]),
+             "R2_ego_dv_p95": q95(rb[[f"ego_dv_{h}" for h in HORIZONS_S]].to_numpy().ravel()),
+             "R2_ego_yaw_p95": q95(rb[[f"ego_dyaw_{h}" for h in HORIZONS_S]].to_numpy().ravel()),
+             "R3_unsafe_agree": float((rb.unsafe_test == rb.unsafe_truth).mean()),
+             "R3_coll_agree": float((rb.collision_test == rb.collision_truth).mean())}
+        for c, forks in CLASSES.items():
+            r[f"R5_{c}_hz_p95"] = q95(ha[ha.fork_id.isin(forks)].dpos)
+            x = rb[rb.fork_id.isin(forks)]
+            r[f"R3_{c}_unsafe_agree"] = float((x.unsafe_test == x.unsafe_truth).mean()) if len(x) else np.nan
+        if oc is not None:
+            o = oc.merge(rb[key], on=key)
+            r["R4_op_cos_med"] = float(o.cos_min.median()) if len(o) else np.nan
+        r["pass_R1"] = r["R1_ped_hz_p95"] <= lines["R1"] and r["R1b_walk_agree"] >= 0.95
+        r["pass_R2"] = (r["R2_ego_pos3_p95"] <= lines["R2_pos"] and r["R2_ego_dv_p95"] <= lines["R2_v"]
+                        and r["R2_ego_yaw_p95"] <= lines["R2_yaw"])
+        r["pass_R3"] = all(r[f"R3_{k}_agree"] >= max(0.98, floor[f"{k}_agree"] - 0.02) for k in ("unsafe", "coll"))
+        if "R4_op_cos_med" in r:
+            r["pass_R4"] = r["R4_op_cos_med"] >= floor["op_cos_med"] - 0.01
+        rows.append(r)
+    t = pd.DataFrame(rows)
+    t.attrs["lines"] = lines
+    t.to_csv(out / "summary.csv", index=False)
+    (out / "lines.json").write_text(json.dumps({"floor": floor, "lines": lines}, indent=1))
+    return t
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "cut", "eval", "opspec", "opcos", "cost"))
+    ap.add_argument("step", choices=("prep", "cut", "eval", "opspec", "opcos", "cost", "report"))
     ap.add_argument("--methods", default=",".join(METHODS))
     a = ap.parse_args()
     if a.step == "prep":
@@ -401,6 +477,9 @@ def main():
         print(opspec())
     elif a.step == "opcos":
         print(opcos())
+    elif a.step == "report":
+        pd.set_option("display.width", 250)
+        print(report().round(3).T.to_string())
     else:
         print(cost().to_string())
 
