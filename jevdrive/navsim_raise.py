@@ -113,6 +113,20 @@ def slots(extra) -> list:
     return [(s, 1.0) for s in N1.SCALES] + fam_list(extra)
 
 
+ALT, ALT_S = ("lcL", "lcR", "tL", "tR"), (1.00, 1.15)      # forced-desire alternative plans x stretch
+
+
+def alt_cands(tag: str = f"lb_n1train_n{N}", out: str = "cands_train.npz") -> np.ndarray:
+    """(n, 8, 8, 3): the four forced-desire alternative plans of Cinque, each at stretch 1.00 and 1.15."""
+    from .skill_pack_n0 import stretch
+    z = np.load(data_dir() / N1.FEAT / f"{tag.replace('_n', '__alt_n')}.npz")
+    c = np.stack([np.stack([stretch(p, s) for k in ALT for p in [z[f"native_{k}"][i]] for s in ALT_S])
+                  for i in range(len(z["tokens"]))]).astype(np.float32)
+    if out:
+        np.savez(run_dir("alt") / out, tokens=z["tokens"], cands=c)
+    return c
+
+
 def cands_fam():
     z = np.load(data_dir() / N1.FEAT / f"lb_n1train_n{N}.npz")
     out = run_dir("fam") / "cands_train.npz"
@@ -596,7 +610,7 @@ def n2final():
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final", "alt_cands"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
@@ -604,4 +618,4 @@ if __name__ == "__main__":
     ap.add_argument("--m", type=int, default=40000)
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final, "alt_cands": alt_cands}[a.cmd]()

@@ -76,8 +76,12 @@ def _need(q: Path, n: int):
     assert not miss, f"{len(miss)} GIMM chunks of the first {n} tokens are not done (first: {miss[:3]})"
 
 
+ALT = {"lcL": 3, "lcR": 4, "tL": 1, "tR": 2}     # forced desire held from ALT_T on, whatever the NAVSIM command
+ALT_T = -1.0
+
+
 def cmd_extract(a):
-    fdir = data_dir() / OUT / a.data
+    fdir = data_dir() / OUT / (a.data + ("__alt" if a.alt else ""))
     fdir.mkdir(parents=True, exist_ok=True)
     mt = L.meta(a.data)
     n = min(a.n, len(mt["names"]))
@@ -100,12 +104,13 @@ def cmd_extract(a):
     mine = [b for i, b in enumerate(blocks) if i % K == k]
     if not mine:
         return
-    log = RunLog("skill_pack", "n1", f"extract_{a.data}_{k}of{K}")
+    log = RunLog("skill_pack", "n1", f"extract_{a.data}{'_alt' if a.alt else ''}_{k}of{K}")
     _need(L.root(a.data, "gimm.chunks"), n)
     keys = L.Keys(a.data)
     syn = np.load(L.root(a.data) / "gimm.npy", mmap_mode="r")
     m = OPModel(MODEL, L.BACKENDS[MODEL], context_rate=False, taps=[OP_TAPS[MODEL]["temporal"]])
     ts, src = L._steps(0.0, False)
+    alt = {k: L.desire_arr(np.where(ts >= ALT_T - 1e-9, v, 0), len(ts)) for k, v in ALT.items()}
     assert len(ts) == 31 and ts[-1] == 0
     tap = OP_TAPS[MODEL]["temporal"]
     from jevdrive import navsim_zs as Z
@@ -113,11 +118,25 @@ def cmd_extract(a):
     t0, tg, cnt = time.time(), 0.0, 0
     for b in mine:
         rows = range(b, min(b + BLK, n))
-        o = {q: [] for q in ("temporal", "plan_pos", "plan_vel", "plan_yaw", "lead_prob", "native")}
+        o = {q: [] for q in (("temporal", "plan_pos", "plan_vel", "plan_yaw", "lead_prob", "native") if not a.alt
+                             else [f"native_{k}" for k in ALT])}
         for i in rows:
             kf, sf = keys[i], np.asarray(syn[i])
             frames = [np.ascontiguousarray(kf[j] if s == "k" else sf[j]) for s, j in src]
             tc = (0, 1) if mt["lht"][i] else (1, 0)
+            if a.alt:
+                for k, des in alt.items():
+                    t = time.perf_counter()
+                    m.reset()
+                    for f, dv in zip(frames, des):
+                        raw = m.step(f, desire=dv, traffic=tc, action_t=L.ACTION_T)
+                    tg += time.perf_counter() - t
+                    d = decode(raw, m.slices, float(mt["speed"][i]), L.ACTION_T)
+                    one = {q: d[q][None] for q in ("plan_pos", "plan_yaw", "plan_vel")}
+                    o[f"native_{k}"].append(OPI.adapt(one, 0, {"cam": [mt["cam"][i]], "speed": [mt["speed"][i]]}, t_out,
+                                                      **OPI.ADAPTERS["base"])[0])
+                cnt += 1
+                continue
             t = time.perf_counter()
             m.reset()
             for f in frames:
@@ -143,14 +162,15 @@ def cmd_extract(a):
 
 
 def cmd_merge(a):
-    fdir = data_dir() / OUT / a.data
+    fdir = data_dir() / OUT / (a.data + ("__alt" if a.alt else ""))
     mt = L.meta(a.data)
     n = min(a.n, len(mt["names"]))
     parts = [np.load(fdir / f"blk_{b // BLK:05d}.npz") for b in range(0, n, BLK)]
     z = {k: np.concatenate([p[k] for p in parts]) for k in parts[0].files}
     assert z["tokens"].tolist() == mt["names"][:n], "tokens out of order"
-    np.savez(data_dir() / OUT / f"{a.data}_n{n}.npz", **z)
-    print(f"{a.data}: {n} tokens; temporal {z['temporal'].shape}, NaN {int(np.isnan(z['temporal']).sum())}")
+    tag = a.data + ("__alt" if a.alt else "")
+    np.savez(data_dir() / OUT / f"{tag}_n{n}.npz", **z)
+    print(f"{tag}: {n} tokens; arrays {[(k, v.shape) for k, v in z.items()]}")
 
 
 if __name__ == "__main__":
@@ -170,6 +190,7 @@ if __name__ == "__main__":
         p = sp.add_parser(name)
         p.add_argument("--data", default=DATA)
         p.add_argument("--n", type=int, required=True)
+        p.add_argument("--alt", action="store_true", help="forced-desire alternative plans (ALT) instead of the none rollout")
         if name == "extract":
             p.add_argument("--procs", type=int, default=4)
             p.add_argument("--shard", default="")
