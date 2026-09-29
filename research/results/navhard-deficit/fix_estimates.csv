@@ -1,0 +1,28 @@
+fix,share_swapped,gain
+geometry rule: |y4|>5 m or |yaw4|>9 rad (9 = off) -> cv,0.12,-4.37
+geometry rule: |y4|>3 m or |yaw4|>9 rad (9 = off) -> cv,0.22,-7.62
+geometry rule: |y4|>9 m or |yaw4|>0.6 rad (9 = off) -> cv,0.12,-3.62
+geometry rule: |y4|>5 m or |yaw4|>0.6 rad (9 = off) -> cv,0.16,-5.21
+geometry rule: |y4|>2 m or |yaw4|>0.4 rad (9 = off) -> cv,0.32,-12.12
+geometry rule: |y4|>5 m or |yaw4|>9 rad (9 = off) -> hydra,0.12,-0.26
+geometry rule: |y4|>3 m or |yaw4|>9 rad (9 = off) -> hydra,0.22,-1.68
+geometry rule: |y4|>9 m or |yaw4|>0.6 rad (9 = off) -> hydra,0.12,-0.24
+geometry rule: |y4|>5 m or |yaw4|>0.6 rad (9 = off) -> hydra,0.16,-0.76
+geometry rule: |y4|>2 m or |yaw4|>0.4 rad (9 = off) -> hydra,0.32,-3.41
+geometry rule: |y4|>5 m or |yaw4|>9 rad (9 = off) -> cls,0.12,-1.33
+geometry rule: |y4|>3 m or |yaw4|>9 rad (9 = off) -> cls,0.22,-2.86
+geometry rule: |y4|>9 m or |yaw4|>0.6 rad (9 = off) -> cls,0.12,-0.86
+geometry rule: |y4|>5 m or |yaw4|>0.6 rad (9 = off) -> cls,0.16,-1.49
+geometry rule: |y4|>2 m or |yaw4|>0.4 rad (9 = off) -> cls,0.32,-5.02
+EC substituted from warp (per token),,2.04
+EC substituted from ztrs (per token),,1.13
+EC substituted from hydra (per token),,1.96
+EC set to 0.75 everywhere (assumed smoothing outcome),,2.99
+EP >= 0.8 on the v0 < 1 m/s tokens (standstill start),0.18,2.46
+"EP x 1.1 all tokens (speed stretch, no safety change assumed)",,1.04
+"EP x 1.2 all tokens (speed stretch, no safety change assumed)",,1.98
+per-token ORACLE over cin+lc,,2.56
+per-token ORACLE over cin+hydra,,10.86
+per-token ORACLE over cin+cls,,9.07
+per-token ORACLE over cin+lc+hydra+cls,,15.11
+per-token ORACLE over cin+lc+hydra+cls+cv,,17.51

@@ -1,0 +1,4 @@
+name,mean,lo,hi
+cin (uniform w),33.43,31.56,35.29
+lc - cin,-0.15,-1.17,0.91
+ztrs - cin,11.46,9.8,13.18

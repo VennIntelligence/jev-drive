@@ -1,0 +1,5 @@
+item,value
+groups with stage-one score 0,0.129
+combined points lost to stage-one-zero groups (their stage-two mean x share),6.854
+combined if stage one -> 1 (mean stage two),47.14
+combined if stage two -> 1 (mean stage one),71.704

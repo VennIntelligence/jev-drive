@@ -1,0 +1,6 @@
+term,mean,marginal_if_perfect
+no_at_fault_collisions,98.29,0.34
+drivable_area_compliance,95.56,2.34
+ego_progress,73.12,8.73
+time_to_collision_within_bound,95.43,1.14
+comfort,99.96,0.0
