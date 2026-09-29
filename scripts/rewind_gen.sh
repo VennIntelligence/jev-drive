@@ -13,6 +13,7 @@ R=$DATA_DIR/runs/rewind
 GEN=${GEN:-gen}
 IFS=$'\t' read -r _ G W IDX SPAN CPUS _ < <(awk -F'\t' '$1 == "carla-rewind"' "$DATA_DIR/runs/sched/table.tsv")
 [[ -n ${G:-} ]] || { echo "no carla-rewind row in table.tsv"; exit 1; }
+W=${WORKERS:-$W}; SPAN=${IDX_SPAN:-$SPAN}      # fewer servers than the row allows, e.g. to keep index 442 for a probe
 python3 scripts/sch_table.py check > /dev/null || { echo "sch_table.py check fails: not starting"; exit 1; }
 export B2D_RESEED_AFTER_BUILD=1 B2D_CAPTURE_CRITERION_EVENTS=1 LEAD_PROJECT_ROOT=$DATA_DIR/third_party/scout/lead-cvpr2026 \
     HF_HUB_OFFLINE=1 OMP_NUM_THREADS=2 NUMBA_NUM_THREADS=3 SAVE_PATH=$R/lead_save B2D_PHASES=1
