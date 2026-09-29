@@ -1,0 +1,79 @@
+{
+ "main": {
+  "n": 908,
+  "auc_learn": 0.9094910420928646,
+  "auc_learn_ci": [
+   0.8719231734977908,
+   0.9448747562275505
+  ],
+  "auc_q": 0.8683280639761949,
+  "auc_probe": 0.6917916847477941,
+  "pairwise": 0.9422028353326063,
+  "diff_learn_q": 0.04116297811666969,
+  "diff_ci": [
+   0.011009023677629348,
+   0.07034513519595793
+  ],
+  "pass_c2": true,
+  "pass_2a": true
+ },
+ "c3": {
+  "n_plus": 64,
+  "unsafe_pick_plus": 0.4375,
+  "unsafe_op_plus": 0.625,
+  "unsafe_oracle_plus": 0.28125,
+  "rel_reduction": 0.30000000000000004,
+  "diff_ci": [
+   0.05882352941176472,
+   0.3392857142857143
+  ],
+  "n_minus": 66,
+  "travel_ratio_minus": 0.9734647921893421,
+  "unsafe_pick_minus": 0.0,
+  "unsafe_op_minus": 0.10606060606060606,
+  "picks": {
+   "hold": 39,
+   "op_stop": 30,
+   "op": 20,
+   "shift_L": 18,
+   "op_slow": 13,
+   "brake_hard": 6,
+   "shift_R": 4
+  },
+  "pass": false,
+  "nonped_both": {
+   "n": 12,
+   "fork_ids": [
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    308,
+    309,
+    310,
+    311
+   ],
+   "unsafe_pick_plus": 0.0,
+   "unsafe_pick_minus": 0.0,
+   "unsafe_op_plus": 0.8333333333333334,
+   "unsafe_op_minus": 0.8333333333333334,
+   "unsafe_oracle_plus": 0.0,
+   "unsafe_oracle_minus": 0.0
+  }
+ },
+ "holdout": {
+  "n": 258,
+  "auc_learn": 0.8851693622215441,
+  "auc_q": 0.4893500152578577,
+  "diff": 0.39581934696368637,
+  "diff_ci": [
+   0.29865454014909704,
+   0.4891171602032066
+  ],
+  "pass_2b": true
+ }
+}
