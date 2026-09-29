@@ -1,6 +1,6 @@
 # CARLA 就地回退（rewind）分叉：能不能代替从头重跑，省多少（2026-09-29 登记）
 
-状态: registered（写于任何 rewind 保真度数字之前）
+状态: done 2026-09-29（判格见执行记录最后一条：回退不等价，WL-2 从头 + zygote）
 主题: [research/carla-rewind-branching.md](../research/carla-rewind-branching.md)（外部提案 + POC）；WL 分叉 [todos/2026-09-28-wm-loop.md](2026-09-28-wm-loop.md)
 调度: `runs/sched/table.tsv` 的 `carla-rewind` 行（GPU 5，≤ 3 个 CARLA，index 440–442，核 184–207，与 wm-loop 训练共卡）；预算 ≤ 6 GPU·h、约 1 天。
 
@@ -147,3 +147,44 @@ setup 里约一半是 route 进程自己的 Python import（torch、LEAD、leade
   行人开始走的时刻一致率 0–16%，unsafe 一致 70–92%。加 warm-up（回退前重放最后 N 个前缀 tick）后 ego 与 cut-in 进线（`tree+w20`：ego 3 s p95 0.33 m、cut-in 车 p95 0.30 m、标签 24/24），
   行人还不过（开始走的一致率约 53%，状态跟着上一个分支走），正在查。成本：前缀只占 WL 单 run 墙钟约 23 / 181 s，装载 60 s、import 18 s、续跑约 60 s，提案的「160 s 是前缀」不成立。
   地图复用、zygote、openpilot 余弦都还没跑。
+- [E] 2026-09-29 18:40 CST **判格**（小表 [research/results/carla-rewind/](../research/results/carla-rewind/)：summary.csv、lines.json、cost.csv、opcos.csv；box `runs/rewind/eval/`）。
+
+  **行人修复**。旧的 `tree+w<N>` 有两处坏：(1) warm-up 期间每 tick 把行为树恢复到分叉态再 tick 一次，KeepVelocity 等行为对行人反复 `apply_control`；(2) teleport 不清行人移动组件的速度与上一次控制。
+  新变体 `+w<N>f`（`scripts/carla_rewind.py`）：warm-up 期间 scenario 树的 `tick_once` 是 no-op（最终 thaw 自动删掉）；warm-up 开始时销毁并按快照重生所有地上的行人（藏在地下、physics 关的只 teleport），warm-up 期间用录下的 WalkerControl 驱动，所以分叉时正在走的行人（fork 60）也能被带到速度。
+  pilot（4 个分叉点）上开始走的时刻 24/24 相差 ≤ 1 tick 后上全部 11 个分叉点。fork 310 剩下的 2 例不一致是 ego 差 0.1–0.3 m 让 `InTriggerDistanceToLocation` 翻转，不是行人状态。
+
+  **R1–R5**（回退分支 = 第 1–6 个分支；floor 的 p95 全为 0，所以线都是固定下限）：
+
+  | 方法 | n | R1 行人 p95（≤ 0.25 m） | R1b 开始走（≥ 95%） | R2 ego 位置 / 速度 / 航向 p95（0.3 m / 0.3 m/s / 2°） | R3 unsafe / collision（≥ 98%） | R5 cut-in / P6（≤ 0.25 m） | R4 最小余弦中位（≥ 0.99） |
+  |:--|--:|:--|:--|:--|:--|:--|:--|
+  | `poc`（提案） | 61 | 7.57 ✗ | 21% ✗ | 3.79 / 4.14 / 8.1 ✗ | 78.7 / 77.0 ✗ | 12.1 / 0.0 ✗ | 0.524 ✗ |
+  | `teleport` / `tree` / `respawn`（无 warm-up，4–5 个分叉点） | 24–30 | 2.8–4.0 ✗ | 5–16% ✗ | 3.6–8.9 ✗ | 67–96 ✗ | 3.0–14.7 ✗ | — |
+  | `tree+w20`（旧行人处理，7 个分叉点） | 42 | 4.05 ✗ | 52% ✗ | 0.30 / 0.49 / 1.7 ✗ | 97.6 / 95.2 ✗ | 0.30 / — ✗ | — |
+  | `tree+w20f` | 66 | 0.10 ✓ | 91.7% ✗ | 0.79 / 1.08 / 2.1 ✗ | 97.0 / 97.0 ✗ | 0.73 / 0.19 ✗ | 0.885 ✗ |
+  | **`tree+w40f`** | 66 | **0.036 ✓** | **97.1% ✓** | 0.295 ✓ / **0.305 ✗** / 1.68 ✓ | 98.5 ✓ / **97.0 ✗**（2/66） | **0.39 ✗** / 0.07 ✓ | 0.869 ✗（42 个分支） |
+  | `tree+w80f`（8 个分叉点跑完） | 48 | 0.60 ✗ | 82% ✗ | 1.89 / 2.73 / 2.9 ✗ | 100 / 97.9 ✗ | 0.74 / 0.23 ✗ | 0.790 ✗ |
+
+  读法：没有一个方法 R1–R3 全过。最好的 `tree+w40f` 过了用户最在意的行人（R1、R1b），ego 位置、航向和 unsafe 标签也在线内；差在 ego 速度 p95（0.305 对 0.3）、collision 一致（2/66：fork 60 shift_L 真值有碰撞、回退没有；fork 131 op_stop 反过来，都是低速擦碰的临界）和 cut-in 车（0.39 m）。
+  R4 远不过：分支内 `temporal` 最小余弦中位 0.87（均值中位 0.975），分叉前的前缀一致（≥ 0.99）。warm-up 不是越长越好：w10 → w20 → w40 改善，w80 反而变差（原因没查）。
+  方法与 warm-up 长度是在这 11 个分叉点上选的，w40f 的数有选择偏差；「过线差一点」不改判格。
+  按登记的读法：回退不是 WL 标签的等价替代。**WL-2 用从头生成**（加 zygote）；回退（`tree+w40f`）只作为默认关的选项，给「只要 unsafe 标签、能接受约 1.5% 标签差」的场合用。
+
+  **地图复用 U / UR**（`B2D_REUSE_MAP=1`，同时开 zygote；4 个分叉点 28 个从头 run + 9 个分叉点的 UR）：
+  U0 不过：分叉前 ego ≤ 0.01 m 的 run 只有 32%（floor 100%），ego 最大差 0.10 m，背景车最大差 54 m（前缀的背景交通变了）。U1 过（unsafe / collision 28 / 28 一致）。
+  U2 没有渲染故障（亮度坏帧 > 一半的 0 个、blowout 0 个），但 |Δ亮度| p95 的中位 1.07，floor 为 0.055，超过 2 倍线 ✗。U3（UR 的前缀余弦 ≥ 0.95）只有 86% ✗。UR 的 R1b 91.7%、R2 0.96 m ✗。
+  结论：复用地图后的世界不是新装的世界，WL 前缀逐 tick 对上来源 run 的前提不成立，**地图复用不用于 WL**。
+
+  **zygote Z**（78、148 两个分叉点的 14 个从头分支）：分叉前 ego / actor 差 0（14 / 14），标签 14 / 14 一致，亮度 |Δ| p95 中位 0.008，前缀余弦 ≥ 0.9999。
+  严格「逐位相同」的要求：分支 3 s 位置 13 / 14 是 0，148 shift_R 差 0.04 m；但 floor 本身也不是逐位 0（14 个里有 78 shift_L 0.013 m、148 hold 0.014 m），所以按 floor 的口径判等价，**zygote 可以默认开**。
+
+  **成本（实测，BA，cost.csv；box 负载在这几个小时里变化大，所以按 setup + tick 数 × 同一 tick 时长拆开比）**：
+  | 每个 run | 从头 | zygote | 地图复用 + zygote | `tree+w40f` 回退 run（7 分支） |
+  |:--|--:|--:|--:|--:|
+  | setup = 墙钟 − tick 数 × tick（s） | 85 | 73 | 49 | 107 |
+  | 其中 `load_world` / scenario 构建（s） | 52 / 14 | 44 / 14 | 9 / 18 | 53 / 20 |
+  | tick 数 | 489（含 20 s 续跑） | 489 | 481 | 812 |
+  | 一次回退（恢复 + 死 tick，ms） | — | — | — | 24（快照 74） |
+  每个分叉点 7 个分支、不带续跑，按 0.217 s / tick：从头 7 × (85 + 171 × 0.217) ≈ 855 s；zygote 从头 ≈ 770 s；`tree+w40f` 实测 283 s（**3.0×**，对 zygote 从头 2.7×）。
+  WL-2 的 11 个分支 / 分叉点：从头 zygote ≈ 11 × 110 ≈ 1 210 s，回退 ≈ 107 + (110 + 11 × 61 + 10 × 41) × 0.217 ≈ 365 s（约 3.3×）。地图复用再省约 36 s / run，但不可用。
+  每 tick 墙钟（中位）：server `world.tick` 约 27 ms，三路 1088 × 1560 相机的传感器等待 + 传输约 100 ms，存图折合约 12 ms，expert 11 ms，scenario 树 8 ms；剩下的瓶颈仍是渲染和传图。
+  GPU 用量约 3 卡·h（GPU 6，14:50–18:40，3–6 个 CARLA）。调度行 `carla-rewind` 已 finish。

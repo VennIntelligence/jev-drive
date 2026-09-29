@@ -1,3 +1,5 @@
+> **2026-09-29 18:45 已结束**：判格写在 todo 执行记录最后一条与 decisions 第 65 条；本文件只作历史。
+
 # carla-rewind 交接状态（2026-09-29 约 14:45 CST，写给接手的 agent）
 
 登记与判据：[todos/2026-09-29-carla-rewind.md](../todos/2026-09-29-carla-rewind.md)（R1–R5，地图复用 U0–U3 / UR，zygote Z，都写在数字之前）。

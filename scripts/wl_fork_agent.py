@@ -20,6 +20,20 @@ Loaded like the P5 / P6 recorder: `scripts/b2d_run.py --agent scripts/wl_fork_ag
                     then plays every action of `actions` (default: all 7) at the same fork in one route: prefix once,
                     snapshot at fork_tick - 1, a 3 s branch, rewind, the next branch; no continuation after a branch
                     (cont_s is ignored) and no random windows. todos/2026-09-29-carla-rewind.md has where it is exact.
+                    Use "tree+w40f" if at all (the best tested; research/decisions.md 65). What it restores and what
+                    it does not, measured on 11 fork points against from-scratch reruns:
+                      exact enough: the hazard walker (position p95 0.04 m, walk start within 2 ticks in 97%), the
+                        hidden (x-) walker, P6 obstacles (p95 0.07 m), the unsafe label (98.5%);
+                      not exact: ego dynamics (3 s position p95 0.30 m, speed p95 0.31 m/s: wheel / gearbox state is
+                        not restorable), cut-in cars (p95 0.39 m), collision labels at knife-edge contacts (97%),
+                        openpilot `temporal` along the branch (min cosine median well below the from-scratch 1.0).
+                    It misses the pre-registered R2 / R3 lines, so WL generation stays from scratch; do not use it
+                    where branch video / features must match a from-scratch run. Warm-ups longer than 40 ticks
+                    (tree+w80f) are worse, not better.
+Launcher options measured in the same check (scripts/b2d_run.py, runs/rewind): --zygote (pre-warmed route process)
+gives runs equivalent to plain ones (prefix identical, labels identical, 14 / 14) and saves ~12 s of the ~85 s set-up
+per run: safe to turn on. B2D_REUSE_MAP=1 (skip load_world on a same-town server) saves ~43 s but the prefix is no
+longer the source run's (ego within 0.01 m in 32% of runs, background traffic diverges): keep it off for WL.
 Inside a window the ego follows the window's candidate trajectory (fixed in world coordinates at the window start,
 re-expressed in the current ego frame at every camera tick and handed to P7, stepped every tick); the expert keeps
 running on the same inputs and its control is discarded, so it picks up from the real state when the window ends.
