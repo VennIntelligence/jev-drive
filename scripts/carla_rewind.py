@@ -24,11 +24,12 @@ Methods (what is put back; every method also restores the ego and the agent's ow
   <m>+w<N>v the same, but the last step sets only the velocities of the vehicles (no teleport), so a teleport cannot
             reset the drivetrain again; the vehicles' position error is then the warm-up's drift.
   <m>+w<N>f the same warm-up, but the scenario tree does not tick during the warm-up ticks (tick_once is a no-op until
-            the final restore), and at the final restore every walker above ground is destroyed and respawned from the
-            snapshot. A teleported walker keeps its movement component's velocity and last control (it walks on at
-            full speed, or a KeepVelocity re-applied on the tree's held state leaves it in the wrong phase); a fresh
-            walker starts from rest, like the from-scratch one. Hidden walkers (physics off, underground) are only
-            teleported.
+            the final restore), and at the start of the warm-up every walker above ground is destroyed and respawned
+            from the snapshot, then driven through the warm-up by its recorded controls. A teleported walker keeps its
+            movement component's velocity and last control (it walks on at full speed, or a KeepVelocity re-applied on
+            the tree's held state leaves it in the wrong phase); a fresh walker starts from rest, like the from-scratch
+            one, and a walker that was walking at the fork is brought up to speed by the replay. Hidden walkers
+            (physics off, underground) are only teleported.
 Not restorable through the Python API (known gaps): traffic-light phase timers, the traffic manager's internal state
 (path buffers, PID integrators, random stream), wheel spin / gear / suspension, animation state.
 """
@@ -232,7 +233,9 @@ class Rewinder:
                 x = snap.find(a.id)
                 if x is not None:
                     ctl = (_COPY[carla.VehicleControl](a.get_control()) if a.type_id.startswith("vehicle.") and
-                           a.id != self.hero.id else None)
+                           a.id != self.hero.id else
+                           _COPY[carla.WalkerControl](a.get_control()) if self.fresh and a.type_id.startswith("walker.")
+                           else None)
                     ids[a.id] = (a, _COPY[carla.Transform](x.get_transform()), _COPY[carla.Vector3D](x.get_velocity()),
                                  _COPY[carla.Vector3D](x.get_angular_velocity()), ctl)
         self.hist.append((ids, _COPY[carla.VehicleControl](control)))
@@ -258,7 +261,7 @@ class Rewinder:
             if not a.is_alive:
                 continue
             walker = a.type_id.startswith("walker.")
-            if i == 0 or walker:
+            if i == 0 or (walker and not self.fresh):
                 a.set_transform(tf)
             if not walker:
                 a.set_target_velocity(v)
@@ -343,7 +346,9 @@ class Rewinder:
                     a.destroy()
                     n_new += 1
         hz = s["hero"]["tf"].location.z
-        fresh = self.fresh and final
+        # fresh walkers are spawned at the start of the warm-up (whose replayed controls then bring a walker that was
+        # walking at the fork up to speed), or at the final restore when there is no warm-up
+        fresh = self.fresh and final == (self.warm == 0)
         for aid, st in s["actors"].items():
             cur = self.remap.get(aid)
             a = cur if cur is not None and cur.is_alive else live.get(aid)
