@@ -237,6 +237,7 @@ def controls_pair(r, rerender: bool = False, clips: Path | None = None, keep_png
 
 def _controls(r, row, ids, g, ref, W_, clips, t_start) -> dict:
     import cv2
+    cv2.setNumThreads(int(os.environ.get("CONTROLS_CV2_THREADS", "2")))
 
     from . import cosmos_pilot as CP
     from . import cosmos_v2 as C2
@@ -362,8 +363,13 @@ def _controls(r, row, ids, g, ref, W_, clips, t_start) -> dict:
                         k=np.array(ks), shape=np.array([CP.H, CP.W]), support=np.packbits(at > 0, axis=None))
     np.savez(cd / "gt_boxes.npz", box=hb_box, px=hb_px, hazards=np.array(haz))
     meta = json.loads((ap / "meta.json").read_text())
+    cfg = meta.get("config", {})
+    harness = {"git": os.environ.get("COSMOS_FULL_GIT", ""), "carla": "0.9.15 Epic", "driver": cfg.get("driver"),
+               **{k: cfg.get(k) for k in ("rig", "tfv6_model_dir", "pass_stop_s", "pass_margin_m", "cosmos_stop",
+                                           "cosmos_cam", "cosmos_rgb_attrs", "sensor_tick", "after_trigger_s", "max_sim_s")}}
+    row["harness"] = json.dumps(harness)
     spec = {"pair": r.pair, "town": TOWN, "weather": meta["weather"], "prompt": prompt2_full(meta["weather"]),
-            "k0": int(r.k0), "k1": int(r.k1), "ids": ids, "gen": row["gen"], "family": r.family, "inst": int(r.get("inst", -1)), "v": int(r.get("v", -1))}
+            "k0": int(r.k0), "k1": int(r.k1), "ids": ids, "gen": row["gen"], "harness": harness, "family": r.family, "inst": int(r.get("inst", -1)), "v": int(r.get("v", -1))}
     (cd / "spec.json").write_text(json.dumps(spec))
     row.update(reason="ok", controls_s=round(time.time() - t_start, 1))
     (cd / "READY").write_text(json.dumps(row))
@@ -469,6 +475,10 @@ class Lane:
         self.cw = {int(k): int(v) for k, v in (e.split(":") for e in os.environ["CARLA_W"].split(","))} if \
             os.environ.get("CARLA_W") else {g: self.row["workers"] for g in self.row["gpus"]}
         self.cslots = [s for s in os.environ.get("COSMOS_SLOTS", ",".join(map(str, self.row["gpus"]))).split(",") if s]
+        # two lane instances may share the row (a staged pilot next to the full run): each takes its own sub-block
+        self.idx_off, self.span = int(os.environ.get("CARLA_IDX_OFF", "0")), int(os.environ.get("CARLA_SPAN", self.row["span"]))
+        os.environ.setdefault("COSMOS_FULL_GIT", subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO,
+                                                                capture_output=True, text=True).stdout.strip())
         self.floor = float(os.environ.get("DISK_FLOOR_GB", "150"))
         self.ctl_pool = ProcessPoolExecutor(int(os.environ.get("CONTROLS_PROCS", "16")))
         self.fut, self.inv, self.workers = {}, len(list(full("xml").glob("inv*.xml"))), {}
@@ -520,7 +530,7 @@ class Lane:
             cores = ",".join(map(str, self.row["cores"][j * per:(j + 1) * per]))
             cmd = ["taskset", "-c", cores, str(D / "envs/carla/bin/python"), "scripts/b2d_run.py", "--routes", str(xml),
                    "--route-ids", ",".join(ids), "--out", str(full("gen")), "--workers", str(self.cw[g]),
-                   "--server-index", str(self.row["idx"][g]), "--index-span", str(self.row["span"]), "--gpu-rank", str(g),
+                   "--server-index", str(self.row["idx"][g] + self.idx_off), "--index-span", str(self.span), "--gpu-rank", str(g),
                    "--tm-seed-from-id", "--agent", "scripts/cosmos_pair_agent.py", "--agent-config", str(agent),
                    "--python", str(D / "envs/scout-tfv6/bin/python"), "--fast-copy", "--no-spectator",
                    "--max-attempts", "2", "--stagger-s", "20"] + ([] if j == 0 else ["--no-reap"])
@@ -551,6 +561,7 @@ class Lane:
 
     def poll(self):
         """Collect finished controls, start new ones; supervise the Cosmos workers; disk floor."""
+        self.cosmos_go()
         if time.time() - getattr(self, "_fed", 0) > 120:
             self._fed = time.time()
             self.feed()
@@ -603,6 +614,13 @@ class Lane:
             env = dict(os.environ, CUDA_VISIBLE_DEVICES=g, PYTHONPATH=str(REPO), COSMOS_TE_CACHE=str(full("te_cache")))
             self.workers[s] = (self.spawn_worker(cmd, env, s), 0, cmd, env)
         self.status(f"Cosmos workers: {self.cslots} (late start: {sorted(late & set(self.cslots))})")
+
+    def cosmos_go(self) -> bool:
+        """Cosmos starts when lane/COSMOS_GO exists (the full run waits for the staged checklist); COSMOS_GO=1 in the
+        environment starts it at once (staged pilots)."""
+        if not self.workers and (os.environ.get("COSMOS_GO") == "1" or (self.L / "COSMOS_GO").exists()):
+            self.start_workers()
+        return bool(self.workers)
 
     # -------------------------------------------------------------- planning
 
@@ -693,8 +711,9 @@ class Lane:
         shutil.rmtree(full("cosmos", "tmp"), ignore_errors=True)
         free = self.disk_gb()
         self.status(f"start: target {self.target}, pool {len(self.pool)} instances, CARLA {self.cw}, Cosmos {self.cslots}, "
-                    f"cores {len(self.row['cores'])}, disk {free:.0f} GB free")
-        self.start_workers()
+                    f"cores {len(self.row['cores'])}, disk {free:.0f} GB free, git {os.environ['COSMOS_FULL_GIT']}")
+        if not self.cosmos_go():
+            self.status("Cosmos waits for lane/COSMOS_GO")
         from tqdm import tqdm
         bar = tqdm(total=self.target, desc="pairs (Cosmos done)", initial=self.done_pairs())
         while True:
@@ -754,7 +773,7 @@ class Lane:
         C = self.table("ctl.csv")
         self.status(f"CARLA and controls done: {C.drop_duplicates('pair', keep='last').reason.value_counts().to_dict() if len(C) else {}}")
         last = 0
-        while any(p.poll() is None for p, *_ in self.workers.values()):
+        while not self.cosmos_go() or any(p.poll() is None for p, *_ in self.workers.values()):
             self.poll()
             bar.n = self.done_pairs()
             bar.refresh()
