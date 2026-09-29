@@ -70,7 +70,7 @@ class WLForkAgent(P5PairAgent):
         j = self.job
         rw = j.get("rewind") or self.cfg.get("wl_rewind")
         self.rw_method = rw if rw and j.get("fork_tick") is not None else None
-        self.rw, self.rw_pending, self.rw_idx, self._t_off = None, False, 0, 0.0
+        self.rw, self.rw_pending, self.rw_idx, self._t_off, self._warm_i = None, False, 0, 0.0, 0
         if self.rw_method:
             import carla_rewind as CR
             CR.install()
@@ -209,12 +209,18 @@ class WLForkAgent(P5PairAgent):
     def _rewind_tick(self):
         """The dead tick: the world and the scenario go back to fork_tick - 1 and the expert's control of that tick is
         replayed, so the next tick is the fork tick of the next branch."""
+        if self._warm_i < self.rw.warm:               # warm-up: replay the recorded last prefix ticks first
+            self._warm_i += 1
+            c = self.rw.warm_step(self._warm_i - 1)
+            c.manual_gear_shift = False
+            return c
+        self._warm_i = 0
         t0 = time.perf_counter()
         st = self.rw.restore()
         snap = self.rw.snap
         self.ctl = copy.deepcopy(snap["extra"]["ctl"])
         # tree methods put GameTime back; the others keep it running and shift the agent's clock instead
-        self._t_off = 0.0 if self.rw_method in ("tree", "respawn") else GameTime.get_time() - snap["t"]
+        self._t_off = 0.0 if self.rw.method in ("tree", "respawn") else GameTime.get_time() - snap["t"]
         self._tick = self.fork_tick - 1
         self.rw_idx += 1
         self.wins = [{"tick": self.fork_tick, "len_s": float(self.job.get("branch_s", 3.0)),
@@ -263,6 +269,8 @@ class WLForkAgent(P5PairAgent):
             accepted = self._plan(now)
         thr, steer, brk = self.ctl.step(now, speed if speed >= 0.01 else 0.0, yaw_rate)   # every tick: odometry
         if self.active is None:
+            if self.rw is not None and self.rw.snap is None and self.fork_tick - 1 - self.rw.warm <= self._tick < self.fork_tick - 1:
+                self.rw.record(control)
             if self.rw is not None and self.rw.snap is None and self._tick == self.fork_tick - 1:
                 info = self.rw.snapshot(GameTime.get_time(), control, extra={"ctl": copy.deepcopy(self.ctl), "t_agent": now})
                 self._rw_log.write(json.dumps({"kind": "snapshot", "tick": self._tick, "frame": GameTime.get_frame(),

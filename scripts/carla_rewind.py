@@ -17,11 +17,19 @@ Methods (what is put back; every method also restores the ego and the agent's ow
             holds the branch's last state until the next world tick).
   respawn   tree, but every background vehicle is destroyed and respawned from the snapshot and handed back to the
             traffic manager (its per-vehicle TM settings are not restored).
+  <m>+w<N>  warm-up (any method above): set_transform + set_target_velocity leaves the wheels, engine and gearbox where
+            the last branch left them, and the car loses speed for about a second. The last N prefix ticks are
+            recorded; a rewind first replays them (N dead ticks: states forced to the recorded velocities, the recorded
+            ego controls applied) so the drivetrain spins up, then restores tick k-1 as above.
+  <m>+w<N>v the same, but the last step sets only the velocities of the vehicles (no teleport), so a teleport cannot
+            reset the drivetrain again; the vehicles' position error is then the warm-up's drift.
 Not restorable through the Python API (known gaps): traffic-light phase timers, the traffic manager's internal state
 (path buffers, PID integrators, random stream), wheel spin / gear / suspension, animation state.
 """
+import collections
 import enum
 import math
+import re
 import time
 
 import carla
@@ -30,7 +38,7 @@ import py_trees
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from srunner.scenariomanager.timer import GameTime
 
-METHODS = ("poc", "teleport", "tree", "respawn")
+METHODS = ("poc", "teleport", "tree", "respawn")         # each optionally with +w<N> or +w<N>v
 POC_RADIUS_M = 50.0
 MOVING = ("vehicle.", "walker.pedestrian", "static.prop.")
 _MANAGER = {}
@@ -194,10 +202,43 @@ _ORIG = {k: getattr(carla.Actor, k) for k in _READS}
 
 class Rewinder:
     def __init__(self, method: str, world, hero, tm_port: int):
-        assert method in METHODS, method
-        self.method, self.world, self.hero, self.tm_port = method, world, hero, tm_port
+        base, _, opt = method.partition("+")
+        assert base in METHODS and re.fullmatch(r"(w\d+v?)?", opt), method
+        self.method, self.world, self.hero, self.tm_port = base, world, hero, tm_port
+        self.warm = int(opt[1:].rstrip("v")) if opt else 0
+        self.final_vel_only = opt.endswith("v")
+        self.hist = collections.deque(maxlen=max(self.warm, 1))
         self.snap, self.remap, self.patched = None, {}, False
         self.stats = []
+
+    # -- warm-up history: per prefix tick, every moving actor's state (from the tick's world snapshot) + ego control
+    def record(self, control):
+        if not self.warm:
+            return
+        snap, ids = self.world.get_snapshot(), {}
+        for a in self.world.get_actors():
+            if a.type_id.startswith(MOVING) or a.id == self.hero.id:
+                x = snap.find(a.id)
+                if x is not None:
+                    ids[a.id] = (a, _COPY[carla.Transform](x.get_transform()), _COPY[carla.Vector3D](x.get_velocity()),
+                                 _COPY[carla.Vector3D](x.get_angular_velocity()))
+        self.hist.append((ids, _COPY[carla.VehicleControl](control)))
+
+    def warm_step(self, i: int):
+        """Warm-up dead tick i: the state of prefix tick k-1-N+i (teleport on the first, velocities after), returns the
+        ego control recorded at that tick."""
+        ids, ctl = self.hist[i]
+        for aid, (a, tf, v, w) in ids.items():
+            a = self.remap.get(aid, a)
+            if not a.is_alive:
+                continue
+            walker = a.type_id.startswith("walker.")
+            if i == 0 or walker:
+                a.set_transform(tf)
+            if not walker:
+                a.set_target_velocity(v)
+                a.set_target_angular_velocity(w)
+        return _COPY[carla.VehicleControl](ctl)
 
     # -- world state
     def _actor_state(self, a):
@@ -234,7 +275,8 @@ class Rewinder:
         return {"snapshot_ms": 1e3 * (time.perf_counter() - t0), "n_actors": len(snap["actors"])}
 
     def _set(self, a, s, physics=True):
-        a.set_transform(s["tf"])
+        if not (self.final_vel_only and self.warm and s["type"].startswith("vehicle.")):
+            a.set_transform(s["tf"])
         if physics:
             a.set_target_velocity(s["v"])
             a.set_target_angular_velocity(s["w"])
@@ -250,6 +292,7 @@ class Rewinder:
         tf = s["tf"]
         up = carla.Transform(carla.Location(tf.location.x, tf.location.y, tf.location.z + 200.0), tf.rotation)
         a = self.world.spawn_actor(bp, up)
+        a.set_transform(tf)
         self._set(a, s)
         if s["type"].startswith("vehicle.") and s["attrs"].get("role_name") == "background":
             a.set_autopilot(True, self.tm_port)
