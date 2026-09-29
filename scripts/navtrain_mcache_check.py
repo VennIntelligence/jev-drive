@@ -57,7 +57,7 @@ def main():
         pairs = [(str(f), str(ref / f.relative_to(root))) for f in files if (ref / f.relative_to(root)).exists()]
         pairs = rng.sample(pairs, min(100, len(pairs)))
         out["oplb_pairs"] = len(pairs); out["oplb_identical"] = sum(ex.map(same, pairs))
-    print(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1, default=float))
 
 
 if __name__ == "__main__":
