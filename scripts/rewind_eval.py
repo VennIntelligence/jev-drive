@@ -17,6 +17,7 @@ Run with the repo's .venv (PYTHONPATH=.) on the box.
 """
 import argparse
 import json
+import os
 import shutil
 import sys
 from multiprocessing import Pool
@@ -124,6 +125,7 @@ def _cut_one(args):
         fr = frames[keep(frames.frame)].copy()
         fr.loc[fr.frame >= f_k, "frame"] -= shift
         fr.loc[fr.frame >= pre_last + 1, "tick"] = fr.frame - fr0 + 1
+        fr["files"] = fr.files.map(lambda d: {k: str(a / v) for k, v in d.items()} if d else d)   # JPEGs stay in the run
         fr.to_json(d / "frames.jsonl", orient="records", lines=True)
         m = keep(z["frame"])
         zz = {k: v[m] for k, v in z.items()}
@@ -170,6 +172,36 @@ def _actors(adir: Path, t0: int, t1: int) -> pd.DataFrame:
     return t[(t.tick >= t0) & (t.tick <= t1)]
 
 
+def _luma(adir: Path) -> pd.DataFrame:
+    """Front camera per saved frame: mean luma (0-255) and clipped fraction (luma >= 250) at 1/4 resolution."""
+    import cv2
+    fr = WL._frames(adir)
+    fr = fr[fr.files.map(bool)]
+    rows = []
+    for t, f in zip(fr.index, fr.files):
+        im = cv2.imread(os.path.join(adir, f["front"]), cv2.IMREAD_REDUCED_GRAYSCALE_4)
+        if im is not None:
+            rows.append((t, float(im.mean()), float((im >= 250).mean())))
+    return pd.DataFrame(rows, columns=["tick", "lum", "clip"]).set_index("tick")
+
+
+def render_cmp(test: Path, truth: Path, k: int) -> dict:
+    """Front luma against the truth at the same ticks: over the prefix's saved frames and the branch's 3 s, and over
+    everything both runs saved; plus the whole-frame bloom jump (scripts/render_diag.blowout) in the test run."""
+    from render_diag import blowout
+    la, ls = _luma(test), _luma(truth)
+    j = la.join(ls, rsuffix="_s", how="inner")
+    if not len(j):
+        return {}
+    d = (j.lum - j.lum_s).abs()
+    out = {"lum_frames": len(j), "lum_bad_frac": float((d > 10).mean()), "lum_dmed": float(d.median()),
+           "lum_dp95": float(d.quantile(0.95)), "blowout": int(blowout(la.clip.values) >= 0),
+           "blowout_truth": int(blowout(ls.clip.values) >= 0)}
+    w = d[(d.index >= k - 44) & (d.index <= k + 60)]
+    out["lum_bad_frac_win"] = float((w > 10).mean()) if len(w) else np.nan
+    return out
+
+
 def _walk_start(t: pd.DataFrame, ids, k: int):
     w = t[t.id.isin(ids) & (t.tick >= k) & (t.v > 0.5)]
     return int(w.tick.min()) if len(w) else None
@@ -190,6 +222,11 @@ def compare(test: Path, truth: Path, k: int) -> tuple[dict, list]:
             row[f"ego_dpos_{h}"] = float(np.hypot(pa.x[t] - ps.x[t], pa.y[t] - ps.y[t]))
             row[f"ego_dv_{h}"] = float(abs(pa.v[t] - ps.v[t]))
             row[f"ego_dyaw_{h}"] = float(_yawd(pa.yaw[t], ps.yaw[t]))
+    pre = [t for t in pa.index if t < k and t in ps.index]
+    row["pre_ego_dmax"] = float(np.hypot(pa.x[pre] - ps.x[pre], pa.y[pre] - ps.y[pre]).max()) if pre else np.nan
+    mp = WL._match_actors(_actors(test, 1, k - 1), _actors(truth, 1, k - 1))
+    row["pre_actor_dmax"] = float(np.hypot(mp.x_a - mp.x_s, mp.y_a - mp.y_s).max()) if len(mp) else np.nan
+    row.update(render_cmp(test, truth, k))
     oa, os_ = WL.outcome(test, k), WL.outcome(truth, k)
     for key in ("collision", "collision_road", "unsafe"):
         row[f"{key}_test"], row[f"{key}_truth"] = oa[key], os_[key]
@@ -285,7 +322,7 @@ def opspec() -> dict:
         sf = sf[sf.tick < fr.tick.min()]
         src = f.src_dir[r.fork_id]
         names = [f"{Path(src).parent.name}-{x:07d}" for x in sf.frame] + [f"rw{r.gen}{r.route_id}b{r.branch}-{x:07d}" for x in fr.frame]
-        files = [[f"{src}/{q[c]}" for c in cams] for q in sf.files] + [[f"{a}/{q[c]}" for c in cams] for q in fr.files]
+        files = [[f"{src}/{q[c]}" for c in cams] for q in sf.files] + [[os.path.join(a, q[c]) for c in cams] for q in fr.files]
         streams.append({"key": f"rw_{r.gen}_{r.route_id}_{r.branch}", "names": names, "targets": list(range(len(sf), len(names))),
                         "files": files, "gaps": 0})
     for r in p[p.kind == "floor"].itertuples():
