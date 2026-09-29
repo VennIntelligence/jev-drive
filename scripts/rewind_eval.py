@@ -35,7 +35,7 @@ R = data_dir() / "runs" / "rewind"
 FORKS = (78, 96, 60, 42, 212, 310, 131, 226, 148, 328, 378)
 FLOOR_FORKS = (78, 148)
 REUSE_SCRATCH_FORKS = (78, 148, 96, 60)      # map-reuse arm U: every action from scratch, same-map runs back to back
-METHODS = ("poc", "teleport", "tree", "respawn", "tree+w10", "tree+w10v")   # index = the route id's method digits
+METHODS = ("poc", "teleport", "tree", "respawn", "tree+w10", "tree+w10v", "tree+w20", "tree+w40", "teleport+w20")  # index = route id digits
 TICK, CAM = 0.05, 4
 HORIZONS_S = (0.0, 0.5, 1.0, 2.0, 3.0)
 
