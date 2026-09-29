@@ -69,5 +69,36 @@ def main(out):
     print(json.dumps(sel, indent=1))
 
 
+
+
+def test_paired(out, model="cinque", arm="lc@m1.0"):
+    """navtest paired delta of the selected arm vs none (single pass, per the registration): all, left+right, straight,
+    left, right. Token bootstrap 95% CI, B = 2000, seed 0."""
+    root = data_dir() / "runs/op_lb/lb_navtest"
+    meta = json.load(open(root / "meta.json"))
+    toks, cmd = meta["names"], np.array([c[-1] for c in meta["cmds"]])
+
+    def load(name):
+        fs = sorted(glob.glob(str(data_dir() / f"runs/navsim/eval/v1_navtest_opi_lb_navtest_{name}/*/*.csv")))
+        r = pd.read_csv(fs[-1])
+        return r[r["token"].isin(set(toks)) & r["valid"].astype(bool)].set_index("token")["score"].reindex(toks).to_numpy()
+
+    a, n = load(stem(model, arm)), load(stem(model, "none"))
+    rng, rows = np.random.default_rng(SEED), []
+    for lab, m in (("all", cmd >= 0), ("left+right", (cmd == 0) | (cmd == 2)), ("straight", cmd == 1), ("left", cmd == 0),
+                   ("right", cmd == 2)):
+        d = ((a - n) * 100)[m]
+        lo, hi = np.percentile(d[rng.integers(0, m.sum(), (B, m.sum()))].mean(1), [2.5, 97.5])
+        rows.append(dict(model=model, arm=arm, group=lab, n=int(m.sum()), arm_pdms=a[m].mean() * 100, none_pdms=n[m].mean() * 100,
+                         delta=d.mean(), lo=lo, hi=hi))
+    out.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows)
+    df.to_csv(out / "navtest_paired.csv", index=False, float_format="%.3f")
+    print(df.round(2).to_string(index=False))
+
+
 if __name__ == "__main__":
-    main(Path(sys.argv[1] if len(sys.argv) > 1 else data_dir() / "runs/op_lb/lb_navtrain/select"))
+    if sys.argv[1:2] == ["test"]:
+        test_paired(Path(sys.argv[2] if len(sys.argv) > 2 else data_dir() / "runs/op_lb/lb_navtest/select"))
+    else:
+        main(Path(sys.argv[1] if len(sys.argv) > 1 else data_dir() / "runs/op_lb/lb_navtrain/select"))
