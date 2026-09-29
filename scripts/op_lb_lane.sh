@@ -4,22 +4,23 @@
 # Resumable: every step is skipped once its output exists. STATUS / DONE / ERROR / logs in $DATA_DIR/runs/op_lb/lane/.
 #
 #   scripts/tmux_run.sh op-lb scripts/op_lb_lane.sh [step ...]      steps (default all, in this order):
-#     prep mcache gimm warp run compare score report arms
+#     prep mcache gimm warp trainrun testrun compare score report arms
 #   arms = navtrain only: Cinque + Lebowski x every non-none desire schedule (allowed on navtrain; test splits wait
 #          for the pre-registration), exported and scored like the `none` runs.
-# Env: CPUS (taskset list), GPUS (GIMM workers, one per card), RUN_GPU (openpilot sessions), PROCS (ORT sessions),
-#      VRAM_GB / CAP_GB (per-process cap / pause threshold of the card's total use), NAVSIM_THREADS (scoring).
+# Env (tmux windows do not inherit the caller's env: scripts/tmux_run.sh <w> env GPUS="0 1" scripts/op_lb_lane.sh ...):
+#      CPUS (taskset list), GPUS (GIMM workers, one per card), RUN_GPU (openpilot sessions), PROCS / PROCS_LEB (Cinque / Lebowski ORT sessions),
+#      DATAS (subset of the run dirs), VRAM_GB / CAP_GB (per-process cap / pause threshold of the card's total use), NAVSIM_THREADS (scoring).
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd); cd "$repo"
 R=$DATA_DIR/runs/op_lb; L=$R/lane; mkdir -p "$L"
-CPUS=${CPUS:-168-183}; GPUS=${GPUS:-"0 1 2 3 4 6"}; RUN_GPU=${RUN_GPU:-6}; PROCS=${PROCS:-8}
+CPUS=${CPUS:-168-183}; GPUS=${GPUS:-"0 1 2 3 4 6"}; RUN_GPU=${RUN_GPU:-6}; PROCS=${PROCS:-8}; PROCS_LEB=${PROCS_LEB:-4}
 VRAM_GB=${VRAM_GB:-12}; CAP_GB=${CAP_GB:-78}
 export OPI_ROOT=op_lb CUDA_DEVICE_ORDER=PCI_BUS_ID NAVSIM_THREADS=${NAVSIM_THREADS:-14}
 T="nice -n 19 taskset -c $CPUS"
 OP="$T $DATA_DIR/envs/openpilot/bin/python scripts/op_lb.py"
 VF="$T $DATA_DIR/envs/vfi/bin/python scripts/op_lb.py"
 PJ="$T $DATA_DIR/envs/jevdrive/bin/python scripts/op_interp.py"
-ALL=(lb_navtest lb_navhard lb_navtrain)
+ALL=(${DATAS:-lb_navtest lb_navhard lb_navtrain})   # DATAS: restrict prep / gimm / score / report
 declare -A VER=([lb_navtest]=v1 [lb_navhard]=v2 [lb_navtrain]=v1) SPLIT=([lb_navtest]=navtest [lb_navhard]=navhard_two_stage [lb_navtrain]=navtrain)
 st() { echo "$(date '+%F %T') $*" | tee -a "$L/STATUS"; }
 die() { st "ERROR $*"; echo "$*" > "$L/ERROR"; exit 1; }
@@ -67,12 +68,11 @@ run() {   # data frames model [schedules...]
   done
   (( need )) || return 0
   st "run $d $f@$m ${s[*]}"
-  CUDA_VISIBLE_DEVICES=$RUN_GPU $OP run --data "$d" --frames "$f" --model "$m" --schedule "${s[@]}" --procs "$PROCS" || die "run $d $f $m"
+  local p=$PROCS; [[ $m == lebowski ]] && p=$PROCS_LEB    # 1.5 GB per Cinque, 2.4 GB per Lebowski session: <= 12 GB
+  CUDA_VISIBLE_DEVICES=$RUN_GPU $OP run --data "$d" --frames "$f" --model "$m" --schedule "${s[@]}" --procs "$p" || die "run $d $f $m"
 }
-step_run() {
-  run lb_navtest gimm cinque; run lb_navhard gimm cinque
-  run lb_navtrain gimm cinque; run lb_navtrain gimm lebowski; run lb_navtrain warp cinque; run lb_navtrain warp lebowski
-}
+step_trainrun() { run lb_navtrain gimm cinque; run lb_navtrain gimm lebowski; run lb_navtrain warp cinque; run lb_navtrain warp lebowski; }
+step_testrun() { run lb_navtest gimm cinque; run lb_navhard gimm cinque; }
 step_compare() {
   for p in navtest:navfull navhard:navhard; do
     local d=lb_${p%%:*} o=${p##*:}
@@ -88,7 +88,7 @@ score() {   # data
 }
 step_score() {
   for d in "${ALL[@]}"; do st "score $d"; score "$d"; done
-  if ! ls "$DATA_DIR"/runs/navsim/eval/v1_navtrain_human_oplb/*/*.csv > /dev/null 2>&1; then   # sanity reference
+  if [[ " ${ALL[*]} " == *" lb_navtrain "* ]] && ! ls "$DATA_DIR"/runs/navsim/eval/v1_navtrain_human_oplb/*/*.csv > /dev/null 2>&1; then   # sanity reference
     st "score human on the navtrain subset"
     TOKENS_FILE=$R/lb_navtrain/tokens.txt CACHE_NAME=v1_navtrain_oplb $T scripts/navsim_zs_score.sh score v1 navtrain \
       human_oplb human > "$R/lb_navtrain/score_human.log" 2>&1 || die "score human"
@@ -106,7 +106,7 @@ step_arms() {
   st "score arms lb_navtrain"; score lb_navtrain; step_report
 }
 
-steps=("$@"); (( ${#steps[@]} )) || steps=(prep mcache gimm warp run compare score report arms)
+steps=("$@"); (( ${#steps[@]} )) || steps=(prep mcache gimm warp trainrun testrun compare score report arms)
 st "start: ${steps[*]} (CPUS $CPUS, GPUS $GPUS, RUN_GPU $RUN_GPU)"
 for s in "${steps[@]}"; do "step_$s"; done
 st "DONE ${steps[*]}"; touch "$L/DONE"
