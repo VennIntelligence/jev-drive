@@ -1,0 +1,36 @@
+{
+ "sources": 218,
+ "missing_source_runs": [],
+ "fork_points": 786,
+ "runs": 8646,
+ "dropped_no_op_groups": 8,
+ "by_set_split": {
+  "ba/eval": 264,
+  "ba/train": 148,
+  "p6/eval": 230,
+  "p6/train": 144
+ },
+ "by_k": {
+  "k3": 202,
+  "tau4": 122,
+  "k1": 112,
+  "tau2": 112,
+  "k1b": 98,
+  "k2": 98,
+  "tau3": 42
+ },
+ "groups_by_set_split": {
+  "ba/eval": 132,
+  "ba/train": 74,
+  "p6/eval": 115,
+  "p6/train": 72
+ },
+ "routes_by_cls_split": {
+  "cutin/eval": 8,
+  "cutin/train": 15,
+  "obstacle/eval": 20,
+  "obstacle/train": 20,
+  "ped/eval": 12,
+  "ped/train": 20
+ }
+}
