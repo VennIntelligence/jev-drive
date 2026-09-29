@@ -675,7 +675,9 @@ class Lane:
         p1_open = [p for p in (V.pair if len(V) else []) if not (len(S) and p in set(S.pair))]
         new = pd.DataFrame()
         sel_rate = len(ok_sel) / len(S) if len(S) >= 20 else 0.6
-        if not p1_open and expect < self.target * 1.02 and not (self.L / "DRAIN").exists():
+        if p1_open and not (self.L / "DRAIN").exists():        # pass 1 of a chunk cut short by a drain: finish it first (done routes are skipped)
+            new = V[V.pair.isin(p1_open)]
+        elif expect < self.target * 1.02 and not (self.L / "DRAIN").exists():
             new = self.new_chunk(int(np.ceil((self.target * 1.03 - expect) / max(sel_rate * rate, 0.1))), V, S)
         return p2, p3, new, {"ok": n_ok, "rate": round(rate, 3), "sel_rate": round(sel_rate, 3), "inflight": len(inflight),
                              "pending2": len(pending2), "expect": round(expect)}
@@ -727,7 +729,8 @@ class Lane:
                 break
             p2, p3, new, info = self.plan()
             if len(new):
-                self.append("variants.csv", new.to_dict("records"))
+                known = set(self.table("variants.csv").get("pair", []))
+                self.append("variants.csv", new[~new.pair.isin(known)].to_dict("records"))
             V = self.table("variants.csv").set_index("pair")
             S = self.table("sel.csv").drop_duplicates("pair", keep="last").set_index("pair") if len(self.table("sel.csv")) else None
             ids = [V.loc[p, f"id{k}"] for p in p3 for k in PASS[3]] + [V.loc[p, f"id{k}"] for p in p2 for k in PASS[2]]
