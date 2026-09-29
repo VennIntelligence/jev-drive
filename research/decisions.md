@@ -3937,3 +3937,27 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**（1 seed，只有 Cinque；navtest 本 lane 第 3 次看）。**会推翻本条的证据**：另一个 held-out fold 上 N1b 与 N1 的差超出 ±0.3；navhard 用官方高斯权重重算后 N1 不再低于原生。
 
+
+## 70. NAVSIM 提分 N2：MLP 打分头 + 22 个原生族槽 + hold 输入视图，navtest 90.60，对 N1 +3.28 [+2.89, +3.66]，判「成立」；增益几乎全在 EP，四成 token 开得比 human 快；navhard 仍比原生低 3 分（**待定**，navtest 12 146 + navhard 5 912，1 次 5 seed 集成，只有 Cinque）
+
+2026-09-30。预登记（12 个配置、选择规则、判读，写于任何 N2 拟合之前）与全部表在 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)；代码 `jevdrive/navsim_raise.py`（`n2dev` / `n2final`），链 `scripts/navsim_raise_n2.sh`。
+设置：N1 的 19 968 个 navtrain token 与 held-out logs 不变；在 {线性, 共享主干 MLP（2×1024，5 seed 平均）} × {GIMM `temporal`, + E6 的 hold 输入 Cinque 与 Lebowski `temporal`} × {4, 13, 22 个原生族槽（原生 plan 沿路径拉长 0.9–1.75 倍、横向缩放 0.6–1.2 倍）} 的 12 个配置里按 fold 0 held-out 选，navtest 只打一次分。
+
+| 读数 | N2 | N1 | 原生 Cinque | human |
+|:--|--:|--:|--:|--:|
+| navtest PDMS | **90.60** | 87.32 | 84.17 | 94.55 |
+| N2 − 该行（配对，95% CI） | – | +3.28 [+2.89, +3.66] | +6.43 [+6.00, +6.86] | – |
+| EP / DAC / NC / TTC | 85.8 / 97.3 / 98.7 / 95.8 | 79.4 / 96.2 / 98.6 / 95.6 | 73.1 / 95.6 / 98.3 / 95.4 | 87.0 / 100 / 100 / 100 |
+| EP 超过 human 的 token | 40.8% | 23.0% | – | – |
+| held-out fold 0 / fold 1（配置选自 fold 0） | 92.64 / 92.69 | 89.46 / – | 86.05 / – | – |
+| navhard EPDMS（均匀权重配对 Δ 对原生） | 31.29（−3.00 [−4.96, −1.01]） | 30.24（−3.05） | 33.33 | – |
+
+1. **按登记判「成立」**，高于预期上沿（+0.8 到 +1.8）。这是本 lane 在 navtest 上第 4 次看，Bonferroni（m = 4）校正后仍是 [+2.79, +3.76]；选中配置是在 navtrain 上挑的，navtest 没参与。
+2. **来源**（held-out）：MLP 头对线性 +2.1（4 槽），原生族槽 4 → 22 +0.7（MLP）到 +1.4（线性），hold 视图 +0.1 到 +0.6。fold 1 的重复给出 +2.2（选中配置对 N1b 式线性头），方向一致。
+   N1b 那条「线性头已到头」在这里得到解释：瓶颈是头的容量，不是正则。
+3. **形状**：增益主要是 EP（+6.4 对 N1），DAC +1.1，NC / TTC 不变；四种 command 都涨，左转 +6.5。平均 EP 85.8 已接近 human 的 87.0，四成 token 超过 human。这是在规则允许的范围内开得更快，是 metric 对准（trick），不是能力。
+4. **navhard 没有变好**：stage 1 DAC 与 EP 涨，stage 2 的 NC、DDC、EC 掉，净值仍比原生低 3 分。navtrain 上训的打分头在 stage 2 的偏离起点上没有读出能力；navtest 的 +6.4 不迁移。
+5. 学习曲线：N2 配置在 1/4、1/2、全部拟合行上 held-out 90.51 / 91.33 / 92.64，每翻倍 +0.8 到 +1.3，比线性头陡，据此继续 N3（6 万行）。
+
+**状态**：**待定**（1 次 5 seed 集成、1 个 held-out 选择、只有 Cinque；navtest 看了 4 次）。**会推翻本条的证据**：另一组 seed 或另一 fold 选出的配置在 navtest 上对 N1 的 Δ 低于 +2；把原生族槽限制在拉长 ≤ 1.15 后增益大部分消失（那会说明增益主要来自「开快」这一条规则漏洞）。
+
