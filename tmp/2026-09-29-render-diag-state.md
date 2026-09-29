@@ -21,11 +21,25 @@ decisions.md 加短条目，给 main 3–5 行（原因、选项名与取值、�
      无 leaderboard 的探针（render_probe.py）在静止相机上开关 LightManager 的灯（504 → 41 盏）亮度不变，说明变暗的不是远处路灯本身。
 - E0（复用 server，7 条 route × 3 次）21 个 run 全部逐帧一致，未复现任何故障。
 
+## 接手后（10:45 起）的结果
+
+- E2（5 条链，Town13 / Town12 夜 → 同图昼各两对，共 20 个同图前驱的白天 run）：**0 / 20 泛光**，40 个 run 5 份逐帧一致。
+  按原数据约 1% 的率，这个样本量本来就期望不到 1 次；泛光这次没能复现，main 已定不再追加探索实验。
+- E5（新 server、Town03 黄昏 90012140）：只关掉 RouteLightsBehavior 的「路灯开关」一半 → 亮度 68.0（不变暗）；
+  只关掉「车灯」一半 → 18.6（照样变暗）。**变暗来自路灯 / 建筑灯的开关，不是车灯。**
+- 旁证：LightManager 列出的灯的集合随 server 历史变：Town04 夜路线在 Town03 之后跑列出 505 盏（≈ Town03 的数），在 Town13 之后跑列出 4 002 盏；
+  Town03 在新 server 上 505 盏、复用 server 上 504 盏。开关只在新 server 上真正把画面里起照明作用的灯关掉，复用 server 上基本落空。
+- 修复 `B2D_KEEP_STREET_LIGHTS=1`（b2d_hooks，默认关）：RouteLightsBehavior 不再开关路灯 / 建筑灯，车灯照旧。
+  v1（新 server）：90012270 16.5 → 67.4，90012320 21.3 → 67.8（复用 server 原值 66.9），Town11 90013340 18.3 → 18.4（附近没灯，不受影响）；90012140 三次 server 启动崩（RenderThread 超时，box 负载问题，与修复无关）。
+  v2（复用 server，E0 同一组 7 条）：白天 4 条平均 |Δ亮度| ≤ 0.22、单帧最大 1.3；Town03 黄昏 +0.7–0.8；**Town04 夜（sun −90）+13.2（最大 30.6）**。
+  v3（E2 同序，复用 server，Town12/13 夜 + 昼）：见下方运行中。
+
 ## 代码改动（都已 push，box 已 pull）
 
 - `scripts/b2d_hooks.py`：`B2D_CAM_ATTRS`（JSON，给每个 `sensor.camera.rgb` 加 blueprint 属性，包住 `carla.World.spawn_actor`，写 `cam_attrs.json`）；
   `B2D_LIGHTS_TRUTH=N`（每 N tick 用新 client 读 server 真实灯状态 → `lights_truth.jsonl`）；`B2D_LIGHTS_FIX=1`（测试用，无效）；
-  `B2D_MUTE_BEHAVIOR=weather,lights`（诊断）。
+  `B2D_MUTE_BEHAVIOR=weather,lights,lights_street,lights_vehicles`（诊断）；`B2D_KEEP_STREET_LIGHTS=1`（修复，默认关）。
+  `scripts/render_diag.py pair a b`：同路线同 tick 的前相机亮度差。
 - `scripts/b2d_route.py`：导出 `B2D_CARLA_PORT`。
 - `scripts/render_diag.sh`（重跑 WL route，全程存帧，REPS 份并行，RECYCLE=1 = 每条 route 新 server）、`scripts/render_diag.py`（frames / summary / scan）、
   `scripts/render_probe.py`（无 leaderboard 的调用顺序回放）。
