@@ -473,6 +473,15 @@ def drive_row(adir: Path) -> dict:
              rel_signal=int((rel == "signal").sum()), rel_lead=int((rel == "lead_go").sum()),
              rel_resume=int((rel == "timeout").sum()), rel_rolling=int((rel == "rolling").sum()),
              stop_s=round(float((live.v < 0.2).sum() * 0.05), 1))
+    # standstills of >= 1 s after the car first moved, by ground-truth context at their onset (who made it stop: src)
+    stopped = (live.v < 0.2).to_numpy() & (live.t > live.t[live.v > 1.0].min()).to_numpy()
+    on = np.flatnonzero(np.diff(np.r_[0, stopped.astype(int)]) == 1)
+    off = np.flatnonzero(np.diff(np.r_[stopped.astype(int), 0]) == -1)
+    ctx = context(live).to_numpy()
+    long_ = [(i, j) for i, j in zip(on, off) if j - i >= 19]
+    for k in ("red", "lead", "ped", "free", "other"):
+        r["stops_" + k] = sum(ctx[i] == k for i, _ in long_)
+    r["stops_by_src"] = json.dumps({k: int(v) for k, v in pd.Series([live.src.iloc[max(i - 10, 0)] for i, _ in long_]).value_counts().items()})
     try:
         ticks = [json.loads(line) for line in open(adir / "ticks.jsonl")]
         r["coast_s"] = round(sum(t.get("rules") == "coast" for t in ticks) * 0.05, 1)
