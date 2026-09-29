@@ -131,6 +131,7 @@ def main():
     # External experiment agents can keep telemetry with this exact attempt.
     os.environ['B2D_ATTEMPT_OUT'] = str(out)
     os.environ['BENCHMARK_ROUTE_ID'] = str(a.route_id)
+    os.environ['B2D_CARLA_PORT'] = str(a.port)
 
     import carla  # noqa: F401  (import after the path is set up, so the wheel is the one used)
     import b2d_hooks

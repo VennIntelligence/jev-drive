@@ -135,6 +135,72 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         _patch_lights()
     if os.environ.get("B2D_LIGHTS_CHECK") == "1":
         _check_lights()
+    if os.environ.get("B2D_CAM_ATTRS"):
+        patch_camera_attrs(json.loads(os.environ["B2D_CAM_ATTRS"]))
+    if os.environ.get("B2D_LIGHTS_TRUTH"):
+        _trace_lights_truth(int(os.environ["B2D_LIGHTS_TRUTH"]))
+
+
+def _trace_lights_truth(every):
+    """Diagnostics ($B2D_LIGHTS_TRUTH=N, needs $B2D_CARLA_PORT): every N scenario ticks, read every light's on/off
+    state from the server through a fresh client and compare it with the scenario's LightManager, whose `is_on` is a
+    client-side cache, and with RouteLightsBehavior's rule (on iff within max(100 m, 15 m/s * speed) of the ego).
+    Appends {tick, sun, lights, near, srv_on, srv_near_on, cache_on, cache_near_on} to <attempt>/lights_truth.jsonl."""
+    inner = ScenarioManager._tick_scenario
+    port = int(os.environ["B2D_CARLA_PORT"])
+    fh = open(os.path.join(os.environ["B2D_ATTEMPT_OUT"], "lights_truth.jsonl"), "a", buffering=1)
+    n = [0]
+
+    def tick(self):
+        inner(self)
+        n[0] += 1
+        hero = CarlaDataProvider.get_hero_actor()
+        if (n[0] - 1) % every or hero is None:
+            return
+        world, here = CarlaDataProvider.get_world(), hero.get_location()
+        radius = max(100.0, 15.0 * CarlaDataProvider.get_velocity(hero))
+        client = carla.Client("localhost", port, worker_threads=1)
+        client.set_timeout(30.0)
+        srv = {l.id: l.is_on for l in client.get_world().get_lightmanager().get_all_lights()}
+        cache = list(world.get_lightmanager().get_all_lights())
+        near = {l.id for l in cache if l.location.distance(here) <= radius}
+        fh.write(json.dumps({"tick": n[0], "sun": world.get_weather().sun_altitude_angle, "lights": len(cache),
+                             "near": len(near), "srv_on": sum(srv.values()),
+                             "srv_near_on": sum(srv.get(i, False) for i in near),
+                             "cache_on": sum(l.is_on for l in cache),
+                             "cache_near_on": sum(l.is_on for l in cache if l.id in near)}) + "\n")
+
+    ScenarioManager._tick_scenario = tick
+
+
+def patch_camera_attrs(attrs, out_dir=None):
+    """Blueprint attributes for every `sensor.camera.rgb` this process spawns ($B2D_CAM_ATTRS, a JSON object; off by
+    default). The leaderboard's sensor whitelist passes only size and fov, so every other camera attribute (exposure,
+    bloom, lens flare, ...) is otherwise CARLA's default. Wraps `carla.World.spawn_actor` / `try_spawn_actor`, so
+    it also covers cameras an agent spawns itself (scripts/cosmos_pair_agent.py). The first camera's resolved
+    attributes are written to <attempt>/cam_attrs.json."""
+    out_dir = out_dir or os.environ.get("B2D_ATTEMPT_OUT")
+    attrs = {str(k): str(v) for k, v in attrs.items()}
+    done = [False]
+
+    def apply(bp):
+        if bp.id != "sensor.camera.rgb":
+            return
+        for k, v in attrs.items():
+            bp.set_attribute(k, v)
+        if not done[0] and out_dir:
+            done[0] = True
+            with open(os.path.join(out_dir, "cam_attrs.json"), "w") as fh:
+                json.dump({"requested": attrs, "resolved": {a.id: a.as_str() for a in bp}}, fh, indent=1)
+
+    for name in ("spawn_actor", "try_spawn_actor"):
+        inner = getattr(carla.World, name)
+
+        def spawn(self, blueprint, *args, _inner=inner, **kwargs):
+            apply(blueprint)
+            return _inner(self, blueprint, *args, **kwargs)
+
+        setattr(carla.World, name, spawn)
 
 
 def reseed_after_build(tm_seed):
