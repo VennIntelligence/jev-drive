@@ -11,10 +11,16 @@ Generation (CARLA, scripts/wl_gen.sh with scripts/wl_fork_agent.py):
   ids        route ids of a stage (pilot1 / pilot10 / full) still without a done record, for b2d_run --route-ids
   sanity     the registered checklist on the finished fork runs of a stage -> research/results/wl/sanity_<stage>.csv
   prefix     the first check: a fork run's ticks before the fork against its source run (pose, actors, JPEG bytes)
-  drops      checklist amendment (a), 2026-09-28: every fork group whose branches are all done is checked once against
-             its source run (ego pose before k <= 0.01 m; Cinque `temporal` cosine >= 0.999 once the run's openpilot
-             stream exists) and dropped as a whole when a branch disagrees -> runs/wl/drops.json; --gate exits 3 when
-             the dropped fraction exceeds 5 %, overall or per set
+  drops      checklist amendments (a) + (c), 2026-09-28 / 2026-09-29 (user-approved): pose stays a group gate (every
+             fork group whose branches are all done is checked once against its source run's ego pose before k, any
+             branch > 0.01 m drops the whole group). The old group cosine >= 0.999 gate is a per-run render gate
+             instead: a run is dropped from z / training when more than half its pre-fork frames differ from the
+             source in front-camera brightness by > 10, or its prefix `temporal` cosine to the source is < 0.95; a
+             whole-run brightness scan against the run's own baseline (no source needed) adds the same per-run drop
+             for a D2 run or a fork run whose render failure starts after the prefix. A fork point leaves the C1/C2
+             paired readouts only when its `op`, `hold` or `brake_hard` branch is render-dropped; its other branches
+             still train. -> runs/wl/drops.json; --gate exits 3 when the pose-dropped groups exceed 5 % (overall or
+             per set) or the render-dropped runs exceed 10 % (overall)
 """
 import json
 import os
@@ -468,7 +474,15 @@ def shift_offsets(out: str, stage: str) -> pd.DataFrame:
 
 # DROP_SET_MIN: the per-set drop fraction is judged once a set has this many checked groups (one drop in stage 3's
 # seven P6 groups is 14 %); the overall fraction always, and the full set at its end with no minimum (scripts/wl_full.sh).
-PREFIX_POS_M, PREFIX_COS, DROP_MAX, DROP_SET_MIN = 0.01, 0.999, 0.05, 20
+PREFIX_POS_M, DROP_MAX, DROP_SET_MIN = 0.01, 0.05, 20
+# Checklist amendment (c), 2026-09-29 (user-approved, todos/2026-09-28-wm-loop.md): the per-run render gate replacing
+# the old group cosine >= 0.999 gate. RENDER_LUMA_DIFF / RENDER_LUMA_FRAC: a run is render-bad when more than
+# RENDER_LUMA_FRAC of its checked frames differ in front-camera brightness by more than RENDER_LUMA_DIFF (0-255).
+# RENDER_COS: prefix `temporal` cosine floor (a fault-free run's own p1 measured at 0.9545). RENDER_DROP_MAX: the new
+# stop line on render-dropped runs. PAIR_ACTIONS: a fork point leaves the C1/C2 paired readouts only when one of
+# these branches is render-dropped; its other branches still train (wl_data.finished drops by run, not by group).
+RENDER_COS, RENDER_LUMA_DIFF, RENDER_LUMA_FRAC, RENDER_DROP_MAX = 0.95, 10.0, 0.5, 0.10
+PAIR_ACTIONS = ("op", "hold", "brake_hard")
 
 
 def _prefix_pose(args) -> dict:
@@ -506,59 +520,178 @@ def _prefix_cos(args) -> dict:
     return {"route_id": rid, "op_cos_min": min(cos) if cos else np.nan, "op_frames": len(cos)}
 
 
-def drops(out: str | None = None, workers: int = 16, gate_min: int = 0) -> dict:
-    """Checklist amendment (a) (todo, 2026-09-28 13:30 CST): per fork group, once all its branches are done. Results are
-    cached per run in runs/wl/prefix_check.parquet (pose once; the cosine is filled in when the openpilot stream
-    appears). A group is dropped when any branch has pose > PREFIX_POS_M or cosine < PREFIX_COS. The gate (exit 3 in
-    main) fails when the dropped fraction of checked groups exceeds DROP_MAX overall or in a set with >= gate_min
-    checked groups."""
+def _luma(path: Path) -> float:
+    """Mean grayscale value (0-255) of a saved camera JPEG."""
+    from PIL import Image
+    return float(np.asarray(Image.open(path).convert("L"), dtype=np.float32).mean())
+
+
+def _prefix_luma(args) -> dict:
+    """Amendment (c) item 2: front-camera mean brightness of every pre-fork frame against the source run at the same
+    tick. Paired with _prefix_cos into the per-run render gate (fork branches only; a D2 run has no source)."""
+    rid, adir, src, k = args
+    a, s = Path(adir), Path(src)
+    fa, fs = _frames(a), _frames(s)
+    diffs = []
+    for t in fa.index[fa.index < k]:
+        fa_f, fs_f = fa.files.get(t), (fs.files.get(t) if t in fs.index else None)
+        if not fa_f or not fs_f or "front" not in fa_f or "front" not in fs_f:
+            continue
+        diffs.append(abs(_luma(a / fa_f["front"]) - _luma(s / fs_f["front"])))
+    return {"route_id": rid, "luma_bad_frac": float(np.mean([d > RENDER_LUMA_DIFF for d in diffs])) if diffs else np.nan,
+            "luma_frames": len(diffs)}
+
+
+def _run_luma(args) -> dict:
+    """Amendment (c) item 5, the whole-run brightness scan: front-camera mean brightness of every saved frame of a run
+    against its own baseline (median over its pre-fork frames for a fork branch, its first 100 ticks / 5 s for a D2
+    run, which has neither a fork nor a source). Needs no source run, so it catches a render failure whose onset is
+    after the checked prefix (fork branches) and a D2 run entirely (380 of them, invisible to _prefix_luma / _prefix_cos)."""
+    rid, adir, k = args
+    fa = _frames(Path(adir))
+    lum = {t: _luma(Path(adir) / f["front"]) for t, f in fa.files.items() if f and "front" in f}
+    if not lum:
+        return {"route_id": rid, "whole_bad_frac": np.nan, "whole_frames": 0}
+    has_fork = k is not None and not (isinstance(k, float) and np.isnan(k))
+    base_ticks = [t for t in lum if t < k] if has_fork else [t for t in lum if t <= 100]
+    base = float(np.median([lum[t] for t in (base_ticks or lum)]))
+    bad = [abs(v - base) > RENDER_LUMA_DIFF for v in lum.values()]
+    return {"route_id": rid, "whole_bad_frac": float(np.mean(bad)), "whole_frames": len(bad)}
+
+
+def drops(out: str | None = None, workers: int = 24, gate_min: int = 0) -> dict:
+    """Checklist amendments (a) + (c) (todo, 2026-09-28 13:30 / 2026-09-29, user-approved). Pose stays a group gate:
+    per fork group, once all its branches are done, any branch > PREFIX_POS_M ego pose drift against its source
+    drops the whole group. The render gate is per run instead, over every finished fork branch and every finished D2
+    run (D2 has no source at all): a run is dropped when its prefix front-camera brightness differs from the source
+    by > RENDER_LUMA_DIFF on more than RENDER_LUMA_FRAC of its pre-fork frames, its prefix `temporal` cosine to the
+    source is < RENDER_COS, or its whole-run scan against its own baseline (no source needed, so it also covers D2
+    and a failure whose onset is after the checked prefix) finds the same over RENDER_LUMA_FRAC of all its frames.
+    Results are cached per run in runs/wl/prefix_check.parquet, each metric filled once. --gate (main) fails when the
+    pose-dropped groups exceed DROP_MAX (overall, or per set once it has >= gate_min checked groups) or the
+    render-dropped runs exceed RENDER_DROP_MAX (overall)."""
     from multiprocessing import Pool
     out = Path(out or rundir("gen"))
-    runs = pd.read_parquet(rundir("forks.parquet"))
-    runs["adir"] = [_fork_attempt(out / s_, r) for s_, r in zip(runs.set, runs.route_id)]
-    size = runs.groupby("fork_id").size()
-    ok_n = runs[runs.adir.notna()].groupby("fork_id").size()
+    forks_t = pd.read_parquet(rundir("forks.parquet"))
+    forks_t["adir"] = [_fork_attempt(out / s_, r) for s_, r in zip(forks_t.set, forks_t.route_id)]
+    size = forks_t.groupby("fork_id").size()
+    ok_n = forks_t[forks_t.adir.notna()].groupby("fork_id").size()
     full = set(ok_n[ok_n == size.reindex(ok_n.index)].index)
-    r = runs[runs.fork_id.isin(full)].copy()
-    r["adir"] = r.adir.astype(str)
+    fd = forks_t[forks_t.adir.notna()].copy()                        # render universe (fork side): any finished branch
+    fd["adir"] = fd.adir.astype(str)
+    fr = fd[fd.fork_id.isin(full)]                                    # pose universe: the whole 7-branch group is done
+
+    d2f = rundir("d2.parquet")
+    if d2f.exists():
+        d2 = pd.read_parquet(d2f)
+        d2["adir"] = [_fork_attempt(out / s_, r) for s_, r in zip(d2.set, d2.route_id)]
+        d2 = d2[d2.adir.notna()].copy()
+        d2["adir"] = d2.adir.astype(str)
+    else:
+        d2 = pd.DataFrame(columns=["route_id", "adir"])
+
     cache_f = rundir("prefix_check.parquet")
-    cache = pd.read_parquet(cache_f) if cache_f.exists() else pd.DataFrame({"route_id": pd.Series(dtype=str), "adir": pd.Series(dtype=str),
-                                                                               "ego_max_dpos_m": pd.Series(dtype=float), "op_cos_min": pd.Series(dtype=float)})
-    cache = cache[cache.route_id.isin(r.route_id)]
-    cache = cache.merge(r[["route_id", "adir"]], on=["route_id", "adir"])          # a re-run attempt is checked again
-    todo = r[~r.route_id.isin(cache.route_id)]
+    metrics = ("ego_max_dpos_m", "op_cos_min", "luma_bad_frac", "whole_bad_frac")
+    cache = pd.read_parquet(cache_f) if cache_f.exists() else pd.DataFrame(
+        {"route_id": pd.Series(dtype=str), "adir": pd.Series(dtype=str), **{m: pd.Series(dtype=float) for m in metrics}})
+    for m in metrics:                                        # schema migration: a cache from before amendment (c)
+        if m not in cache.columns:
+            cache[m] = np.nan
+    universe = pd.concat([fd[["route_id", "adir"]], d2[["route_id", "adir"]]], ignore_index=True)
+    # right join on (route_id, adir): a checked run keeps its cached metrics, a new run (or a re-run attempt, whose
+    # adir changed) gets NaN in every metric and is (re)computed below.
+    cache = cache.merge(universe, on=["route_id", "adir"], how="right")
+
     with Pool(workers) as p:
-        new = pd.DataFrame(p.map(_prefix_pose, list(zip(todo.route_id, todo.adir, todo.src_dir, todo.fork_tick)), chunksize=8))
-        if len(new):
-            new = new.merge(todo[["route_id", "adir"]], on="route_id").assign(op_cos_min=np.nan)
-            cache = pd.concat([cache, new], ignore_index=True)
-        c = r[r.route_id.isin(cache[cache.op_cos_min.isna()].route_id)]
-        if len(c):
-            cos = pd.DataFrame(p.map(_prefix_cos, list(zip(c.route_id, c.adir, c.src_dir, c.src_route, c.set, c.fork_tick)), chunksize=8))
+        need_pose = cache[cache.route_id.isin(fr.route_id) & cache.ego_max_dpos_m.isna()].merge(
+            fr[["route_id", "src_dir", "fork_tick"]], on="route_id")
+        if len(need_pose):
+            new = pd.DataFrame(p.map(_prefix_pose, list(zip(need_pose.route_id, need_pose.adir, need_pose.src_dir, need_pose.fork_tick)), chunksize=8))
+            cache = cache.set_index("route_id")
+            cache.loc[new.route_id, "ego_max_dpos_m"] = new.set_index("route_id").ego_max_dpos_m
+            cache = cache.reset_index()
+
+        # cosine and luma are independent per-run reads (Cinque stream vs. JPEGs); kept as separate need-sets so a
+        # cache from before amendment (c) reuses its already-computed cosine and only backfills luma.
+        need_cos = cache[cache.route_id.isin(fd.route_id) & cache.op_cos_min.isna()].merge(
+            fd[["route_id", "src_dir", "src_route", "set", "fork_tick"]], on="route_id")
+        if len(need_cos):
+            cos = pd.DataFrame(p.map(_prefix_cos, list(zip(need_cos.route_id, need_cos.adir, need_cos.src_dir,
+                                                            need_cos.src_route, need_cos.set, need_cos.fork_tick)), chunksize=8))
             cache = cache.set_index("route_id")
             cache.loc[cos.route_id, "op_cos_min"] = cos.set_index("route_id").op_cos_min
             cache = cache.reset_index()
+
+        need_luma = cache[cache.route_id.isin(fd.route_id) & cache.luma_bad_frac.isna()].merge(
+            fd[["route_id", "src_dir", "fork_tick"]], on="route_id")
+        if len(need_luma):
+            lum = pd.DataFrame(p.map(_prefix_luma, list(zip(need_luma.route_id, need_luma.adir, need_luma.src_dir, need_luma.fork_tick)), chunksize=8))
+            cache = cache.set_index("route_id")
+            cache.loc[lum.route_id, "luma_bad_frac"] = lum.set_index("route_id").luma_bad_frac
+            cache = cache.reset_index()
+
+        ft = pd.concat([fd[["route_id", "fork_tick"]], d2[["route_id"]].assign(fork_tick=np.nan)], ignore_index=True)
+        need_whole = cache[cache.whole_bad_frac.isna()].merge(ft, on="route_id")
+        if len(need_whole):
+            whole = pd.DataFrame(p.map(_run_luma, list(zip(need_whole.route_id, need_whole.adir, need_whole.fork_tick)), chunksize=8))
+            cache = cache.set_index("route_id")
+            cache.loc[whole.route_id, "whole_bad_frac"] = whole.set_index("route_id").whole_bad_frac
+            cache = cache.reset_index()
     cache.to_parquet(cache_f, index=False)
-    t = r[["route_id", "fork_id", "set", "cls", "family", "base_id", "k_name", "world"]].merge(cache, on="route_id")
-    t["bad"] = (t.ego_max_dpos_m > PREFIX_POS_M) | (t.op_cos_min < PREFIX_COS)
+
+    # ---- pose (group) gate, amendment (a), unchanged
+    t = fr[["route_id", "fork_id", "set", "cls", "family", "base_id", "k_name", "world"]].merge(
+        cache[["route_id", "ego_max_dpos_m"]], on="route_id")
+    t["bad"] = t.ego_max_dpos_m > PREFIX_POS_M
     g = t.groupby("fork_id").agg(set=("set", "first"), bad=("bad", "any"), pos=("ego_max_dpos_m", "max"),
-                                 cos=("op_cos_min", "min"), family=("family", "first"), base_id=("base_id", "first"),
+                                 family=("family", "first"), base_id=("base_id", "first"),
                                  k_name=("k_name", "first"), world=("world", "first"))
     per = {s_: {"checked": int(len(x)), "dropped": int(x.bad.sum()), "frac": float(x.bad.mean())} for s_, x in g.groupby("set")}
+    pose_gate_fail = bool((float(g.bad.mean()) if len(g) else 0.0) > DROP_MAX
+                          or any(v["frac"] > DROP_MAX for v in per.values() if v["checked"] >= gate_min))
+
+    # ---- render (per-run) gate, amendment (c)
+    ru = cache[cache.route_id.isin(universe.route_id)].copy()
+    ru["checked"] = ru[["luma_bad_frac", "op_cos_min", "whole_bad_frac"]].notna().any(axis=1)
+    ru["bad"] = (ru.luma_bad_frac > RENDER_LUMA_FRAC) | (ru.op_cos_min < RENDER_COS) | (ru.whole_bad_frac > RENDER_LUMA_FRAC)
+    ruc = ru[ru.checked]
+    render_frac = float(ruc.bad.mean()) if len(ruc) else 0.0
+    render_gate_fail = render_frac > RENDER_DROP_MAX
+
+    # ---- amendment (c) item 3: fork points that leave the C1/C2 paired readouts (their other branches still train)
+    fa = fd[["route_id", "fork_id", "action"]].merge(ru[["route_id", "bad"]], on="route_id")
+    pair_dropped = sorted(int(i) for i in fa[fa.action.isin(PAIR_ACTIONS) & fa.bad.fillna(False)].fork_id.unique())
+
     res = {"groups_total": int(size.size), "checked": int(len(g)), "dropped": int(g.bad.sum()),
            "frac": float(g.bad.mean()) if len(g) else 0.0, "per_set": per,
-           "cos_checked_runs": int(t.op_cos_min.notna().sum()),
+           "cos_checked_runs": int(cache.op_cos_min.notna().sum()),
            "dropped_groups": [{"fork_id": int(i), **{k: (v if isinstance(v, str) else float(v)) for k, v in x.items() if k != "bad"}}
-                              for i, x in g[g.bad].iterrows()]}
-    res["gate_fail"] = bool(res["frac"] > DROP_MAX or any(v["frac"] > DROP_MAX for v in per.values() if v["checked"] >= gate_min))
+                              for i, x in g[g.bad].iterrows()],
+           "render_checked": int(len(ruc)), "render_dropped": int(ruc.bad.sum()), "render_frac": render_frac,
+           "dropped_route_ids": sorted(ruc[ruc.bad].route_id.tolist()), "pair_dropped_fork_ids": pair_dropped,
+           "pose_gate_fail": pose_gate_fail, "render_gate_fail": render_gate_fail}
+    res["gate_fail"] = bool(pose_gate_fail or render_gate_fail)
     rundir("drops.json").write_text(json.dumps(res, indent=1, default=str))
     return res
 
 
 def dropped_forks() -> set:
-    """Fork ids dropped by amendment (a) (runs/wl/drops.json); empty before the first check."""
+    """Fork ids dropped by amendment (a), the pose group gate (runs/wl/drops.json); empty before the first check."""
     f = rundir("drops.json")
     return {d["fork_id"] for d in json.loads(f.read_text())["dropped_groups"]} if f.exists() else set()
+
+
+def dropped_runs() -> set:
+    """Route ids dropped by amendment (c), the per-run render gate (runs/wl/drops.json); empty before the first check."""
+    f = rundir("drops.json")
+    return set(json.loads(f.read_text())["dropped_route_ids"]) if f.exists() else set()
+
+
+def pair_dropped_forks() -> set:
+    """Fork ids whose `op` / `hold` / `brake_hard` branch was render-dropped (amendment (c) item 3): they leave the
+    C1/C2 paired readouts; their other branches still train."""
+    f = rundir("drops.json")
+    return set(json.loads(f.read_text())["pair_dropped_fork_ids"]) if f.exists() else set()
 
 
 def nonped_both(t: pd.DataFrame) -> set:
@@ -607,6 +740,7 @@ def sanity(out: str, stage: str) -> dict:
     chk = {}
     chk["prefix_ego_le_1cm_runs"] = float((pre.ego_max_dpos_m <= 0.01).mean()) if len(pre) else np.nan
     chk["prefix_dropped"] = {k: dr[k] for k in ("checked", "dropped", "frac", "per_set")}
+    chk["render_dropped"] = {k: dr[k] for k in ("render_checked", "render_dropped", "render_frac")}
     chk["ped_nonped_both_fork_points"] = sorted(int(i) for i in npb)
     chk["brake_travel_lt_hold"] = float((piv.brake_hard < piv.hold).mean()) if {"brake_hard", "hold"} <= set(piv) else np.nan
     sh = shift_offsets(out, stage)
@@ -674,7 +808,9 @@ def main():
         print(r.to_string(index=False) if isinstance(r, pd.DataFrame) else json.dumps(r))
     elif a.step == "drops":
         r = drops(a.out, gate_min=a.gate_min)
-        print(json.dumps({k: v for k, v in r.items() if k != "dropped_groups"} | {"dropped_fork_ids": [d["fork_id"] for d in r["dropped_groups"]]}))
+        compact = {k: v for k, v in r.items() if k not in ("dropped_groups", "dropped_route_ids")} | \
+                  {"dropped_fork_ids": [d["fork_id"] for d in r["dropped_groups"]], "dropped_route_ids_n": len(r["dropped_route_ids"])}
+        print(json.dumps(compact))
         if a.gate and r["gate_fail"]:
             raise SystemExit(3)
     else:

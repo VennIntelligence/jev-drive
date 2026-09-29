@@ -35,12 +35,14 @@ def pdir(*p) -> Path:
 
 def finished(out: Path) -> pd.DataFrame:
     """Every run of forks.parquet / d2.parquet with a done record, and its attempt dir; fork groups dropped by checklist
-    amendment (a) (runs/wl/drops.json, `python -m jevdrive.wl drops`) are left out whole."""
+    amendment (a) (runs/wl/drops.json, `python -m jevdrive.wl drops`) are left out whole, and individual runs dropped
+    by amendment (c)'s per-run render gate are left out one at a time (their group's other branches stay)."""
     f = pd.read_parquet(WL.rundir("forks.parquet"))
     runs = [f[~f.fork_id.isin(WL.dropped_forks())]]
     if WL.rundir("d2.parquet").exists():
         runs.append(pd.read_parquet(WL.rundir("d2.parquet")))
     r = pd.concat(runs, ignore_index=True)
+    r = r[~r.route_id.isin(WL.dropped_runs())]
     r["adir"] = [WL._fork_attempt(out / s, rid) for s, rid in zip(r.set, r.route_id)]
     r = r[r.adir.notna()].copy()
     r["adir"] = r.adir.astype(str)

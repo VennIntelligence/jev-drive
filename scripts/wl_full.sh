@@ -7,14 +7,18 @@
 #    to the worker-hour count (runs/wl/pipe/gen_wh) and drains the runners (no new route, no route killed) with ERROR
 #    at the stop line BUDGET_WH or below the disk floor; STALL appears while no run finished for STALL_MIN (and goes
 #    away with the next one); an hourly progress line goes to STATUS.md.
-#    Hourly, and once more at the end, the prefix check of checklist amendment (a) (python -m jevdrive.wl drops: a fork
-#    group whose branches' prefixes disagree with the source run is dropped whole): more than 5 % dropped, overall or
-#    per set (per set once 20 groups are checked), drains and stops like the stop line.
+#    Hourly, and once more at the end, the drop check of checklist amendments (a) + (c), 2026-09-29 user-approved
+#    (python -m jevdrive.wl drops): (a) a fork group whose branches' prefix pose disagrees with the source run is
+#    dropped whole, > 5 % dropped overall or per set (per set once 20 groups are checked) drains and stops like the
+#    stop line; (c) a run whose prefix render (front-camera brightness / `temporal` cosine vs. the source) or
+#    whole-run brightness scan (no source needed) is bad is dropped by itself (its group's other branches stay),
+#    > 10 % of runs dropped drains and stops the same way.
 # 3. Harness failure (runs without a done record) <= 5 %, the registered checklist item; the whole checklist on the
 #    full set (python -m jevdrive.wl sanity --stage full) is written as a description.
 # 4. demand shrunk to FEAT_DEMAND workers on the row's first card; scripts/wl_pipeline.sh STEPS="index opspec op" on that
-#    card and the row's cores, the drop check again with the openpilot `temporal` cosine, then STEPS="index vjepa z"
-#    (index again so newly dropped groups leave the universe). 5. demand file removed.
+#    card and the row's cores, the drop check again (the openpilot `temporal` cosine and the whole-run scan now have
+#    what they need), then STEPS="index vjepa z" (index again so newly dropped groups / runs leave the universe).
+#    5. demand file removed.
 # STATUS.md, DONE / ERROR / STALL in runs/wl/pipe/. Waits (STATUS line) while `sch_table.py check` fails at the start.
 # Resumable: wl_gen skips finished runs, wl_pipeline skips finished feature chunks, gen_wh carries over.
 set -uo pipefail
@@ -77,16 +81,16 @@ PYEOF
         if (( ++tick % 12 == 0 )); then
             status "progress: $nd / $TOTAL runs done, $n CARLA up, $wh worker-h, $free GB free"
             if ! drops_gate 20; then
-                touch "$OUT/DRAIN"; status "prefix drops above 5 %, draining"; echo "prefix drops above 5 %" > "$P/ERROR"; return
+                touch "$OUT/DRAIN"; status "drops gate failed (pose > 5 % or render > 10 %), draining"; echo "drops gate failed (runs/wl/drops.json)" > "$P/ERROR"; return
             fi
         fi
     done
 }
 
-drops_gate() {  # drops_gate <per-set min groups>: amendment (a) check, one STATUS line; non-zero when it fails
+drops_gate() {  # drops_gate <per-set min groups>: amendments (a) pose + (c) render, one STATUS line; non-zero when either fails
     local r rc
     r=$(taskset -c "$CPUS" .venv/bin/python -m jevdrive.wl drops --gate --gate-min "$1" --out "$OUT" 2>>"$P/log.txt"); rc=$?
-    status "prefix drops: $(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["dropped"], "/", d["checked"], "groups", d["per_set"], "cos runs", d["cos_checked_runs"], "ids", d["dropped_fork_ids"])' "$r" 2>/dev/null || echo "$r")"
+    status "drops: pose $(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["dropped"], "/", d["checked"], "groups", d["per_set"], "ids", d["dropped_fork_ids"])' "$r" 2>/dev/null || echo "$r"); render $(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["render_dropped"], "/", d["render_checked"], "runs (%.1f%%), cos runs" % (100*d["render_frac"]), d["cos_checked_runs"], "pair-dropped fork points", len(d["pair_dropped_fork_ids"]))' "$r" 2>/dev/null || echo "$r")"
     (( rc == 0 ))
 }
 
@@ -112,7 +116,7 @@ for s in ba p6 d2; do
 done
 status "generation end: $(ndone) / $TOTAL done, harness failure $left / $TOTAL, $(cat "$P/gen_wh") worker-h"
 python3 -c "import sys; sys.exit(not $left > 0.05 * $TOTAL)" && { rm -f "$DEM"; fail "harness failure $left / $TOTAL above 5 %"; }
-drops_gate 0 || { rm -f "$DEM"; fail "prefix drops above 5 % (runs/wl/drops.json)"; }
+drops_gate 0 || { rm -f "$DEM"; fail "drops gate failed (pose > 5 % or render > 10 %, runs/wl/drops.json)"; }
 status "checklist on the full set (description)"
 taskset -c "$CPUS" .venv/bin/python -m jevdrive.wl sanity --stage full --out "$OUT" > "$P/sanity_full.json" \
     || status "sanity readout failed (description only; generation stands)"
@@ -123,7 +127,7 @@ status "features on GPU ${G[0]}, demand $(cat "$DEM")"
 GPU=${G[0]} CPUS=$CPUS STEPS="index opspec op" NO_DONE=1 scripts/wl_pipeline.sh > /dev/null
 rc=$?
 if (( rc == 0 )); then
-    drops_gate 0 || { rm -f "$DEM"; fail "prefix drops above 5 % with the temporal cosine (runs/wl/drops.json)"; }
+    drops_gate 0 || { rm -f "$DEM"; fail "drops gate failed after openpilot features (pose > 5 % or render > 10 %, runs/wl/drops.json)"; }
     GPU=${G[0]} CPUS=$CPUS STEPS="index vjepa z" scripts/wl_pipeline.sh > /dev/null
     rc=$?
 fi
