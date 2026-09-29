@@ -142,3 +142,8 @@ setup 里约一半是 route 进程自己的 Python import（torch、LEAD、leade
 5. 结果进本 todo、`research/decisions.md`、`research/carla-rewind-branching.md` 末尾的更正节；过了再做 harness 选项和文档。
 
 ## 执行记录
+- [E] 2026-09-29 14:45 CST 中间状态（未判格，交接 [tmp/2026-09-29-carla-rewind-state.md](../tmp/2026-09-29-carla-rewind-state.md)）。
+  floor 为 0（同配置从头重跑与 WL 真值逐位相同）。提案的 `poc` 与无 warm-up 的 `teleport` / `tree` / `respawn` 在 R1–R3 上全不过：交接时 ego 速度差中位 0.5 m/s（传动系状态没恢复），
+  行人开始走的时刻一致率 0–16%，unsafe 一致 70–92%。加 warm-up（回退前重放最后 N 个前缀 tick）后 ego 与 cut-in 进线（`tree+w20`：ego 3 s p95 0.33 m、cut-in 车 p95 0.30 m、标签 24/24），
+  行人还不过（开始走的一致率约 53%，状态跟着上一个分支走），正在查。成本：前缀只占 WL 单 run 墙钟约 23 / 181 s，装载 60 s、import 18 s、续跑约 60 s，提案的「160 s 是前缀」不成立。
+  地图复用、zygote、openpilot 余弦都还没跑。
