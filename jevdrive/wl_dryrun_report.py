@@ -22,14 +22,15 @@ from .common import data_dir, get_logger
 from .wl_traj import ACTIONS
 
 log = get_logger(__name__)
-SEEDS = M.SEEDS
+SEEDS = tuple(int(x) for x in os.environ.get("WL_DRYRUN_SEEDS", "0,1,2").split(","))
+KIND = os.environ.get("WL_DRYRUN_KIND", "dryrun")          # dryrun_smoke for the code test
 NAMES = ("W1worig", "W1main", "B", "Bi", "T")                # C1 / C1c arms
 C23 = ("W1main", "B", "Bi", "T")                             # C2 / C3 arms (7 candidates)
 HOLD = {"W1main": "W1holdout", "B": "Bh"}                    # arm -> its C2(b) holdout arm
 LABELS = ("cg", "reg")
 OUT = Path(os.environ.get("WL_DRYRUN_OUT", data_dir() / "runs" / "wl" / "dryrun_results"))
 ARM_DIR = {"W1main": ("model", "main"), "W1worig": ("model", "worig"), "W1holdout": ("model", "holdout"),
-           "B": ("dryrun", "B"), "Bh": ("dryrun", "Bh"), "Bi": ("dryrun", "Bi"), "T": ("dryrun", "T")}
+           "B": (KIND, "B"), "Bh": (KIND, "Bh"), "Bi": (KIND, "Bi"), "T": (KIND, "T")}
 
 
 def arm_dir(name: str, seed: int) -> Path | None:
