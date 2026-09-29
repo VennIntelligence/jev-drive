@@ -35,7 +35,8 @@ R = data_dir() / "runs" / "rewind"
 # pre-registered fork points (todo "分叉点"), in table order: the action order of fork j starts at ACTIONS[j % 7]
 FORKS = (78, 96, 60, 42, 212, 310, 131, 226, 148, 328, 378)
 FLOOR_FORKS = (78, 148)
-REUSE_SCRATCH_FORKS = (78, 148, 96, 60)      # map-reuse arm U: every action from scratch, same-map runs back to back
+REUSE_SCRATCH_FORKS = (78, 148, 96, 60)
+UR_METHOD = "tree+w10"                         # the rewind method of arm UR (map reuse + rewind)      # map-reuse arm U: every action from scratch, same-map runs back to back
 METHODS = ("poc", "teleport", "tree", "respawn", "tree+w10", "tree+w10v", "tree+w20", "tree+w40", "teleport+w20")  # index = route id digits
 TICK, CAM = 0.05, 4
 HORIZONS_S = (0.0, 0.5, 1.0, 2.0, 3.0)
@@ -60,13 +61,15 @@ def prep(methods=METHODS) -> dict:
             jobs[rid] = dict(jobs_wl[r0.route_id], rewind=m, actions=order, action=order[0])
             plan.append({"route_id": rid, "kind": "rewind", "method": m, "fork_id": fid, "set": r0.set,
                          "xml_src": r0.route_id, "order": ",".join(order), "gen": "gen"})
-            if m == "tree":                    # arm UR: the same rewind run on a reused map
+            if m == UR_METHOD:                 # arm UR: the same rewind run on a reused map
                 plan.append(dict(plan[-1], gen="gen_reuse"))
         if fid in FLOOR_FORKS:
             for a, r in x.iterrows():
                 jobs[r.route_id] = jobs_wl[r.route_id]
                 plan.append({"route_id": r.route_id, "kind": "floor", "method": "scratch", "fork_id": fid, "set": r.set,
                              "xml_src": r.route_id, "order": a, "gen": "gen"})
+                plan.append({"route_id": r.route_id, "kind": "floor", "method": "zygote", "fork_id": fid, "set": r.set,
+                             "xml_src": r.route_id, "order": a, "gen": "gen_zyg"})
         if fid in REUSE_SCRATCH_FORKS:
             for a, r in x.iterrows():
                 jobs[r.route_id] = jobs_wl[r.route_id]
