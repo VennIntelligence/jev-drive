@@ -2758,7 +2758,7 @@ P6 bypass 翻转（描述）：K0 5.77% [4.03, 7.65]，K1 = K2 4.31%，K3 4.34%�
 | Alpamayo 1.5（nav） | 44.3 | 43.2 | 10.8 |
 | openpilot Lebowski / Cinque v3 / small | 50.9 / 52.1 / 47.4 | 45.5 / 46.2 / 42.5 | 10.2 / 9.3 / 10.2 |
 | constant velocity（devkit） | 20.7 | 25.9 | 11.5 |
-| 文献：TransFuser / DiffusionDrive（navtrain 训练） | 84.0 / 88.1 | 76.7 / 84.5 | 23.1 / 27.5 |
+| 文献：TransFuser / DiffusionDrive（navtrain 训练） | 84.0 / 88.1 | 84.0 / 88.2 | 23.1 / 27.5 |
 
 1. **两个模型都会开，但远没到 specialist 的水平**：比 constant velocity 高 17–20 EPDMS（CI 宽约 ±1），navhard 上则不比 constant velocity 好。
    10B 的 Alpamayo 和 30M–877M、没有 route、只看前视的 openpilot 基本同分。
@@ -2802,6 +2802,13 @@ WOD 上用真实 10 Hz 帧作上限，GIMM 补帧收回帧率差的 89%。所以
 stage 1 还低几分，GIMM 71.6 → 47.0）。结论不变：openpilot 原生 plan 的低分基本是输入协议的读数，全量数字进一步坐实。
 navhard 的 EPDMS 只能从 devkit 输出的 `extended_pdm_score_combined` 汇总行读（不是逐 token 平均，第一次算错过一次，见第 9 节末尾）。
 
+
+
+**2026-09-29 就地修正（文献 EPDMS 列，TransFuser 76.7 → 84.0，DiffusionDrive 84.5 → 88.2）**：上面结果表与第 6 条引用的「文献 EPDMS」列（TransFuser 76.7、DiffusionDrive 84.5）是 navsim bugfix `359c7f7` 之前的口径
+（修前 human penalty filter 没有作用到总分），而我们的 devkit（`main @ 0a380a9`）在 fix 之后，human 是 94.5 不是 90.3，两边口径不同。核对了 arXiv 2603.28116 Table 3 原文：
+Human 90.3 / 94.5（修前 / 修后），TransFuser 76.7 / 84.0，DiffusionDrive 84.7 / 88.2；TransFuser 的 PDMS 也是 84.0（Table 2），两个 84.0 是巧合，不是抄错。
+所以与我们同口径的 TransFuser EPDMS 是 84.0，`temporal` + `cls_late` 的 77.4 比它低约 6.6，不是「同量级」（standing 第 3 节读法 3 已同步改）。DiffusionDrive 的 84.5 在该论文里找不到（原文修前 84.7），已按同口径换成 88.2。
+navhard 的 23.1 / 27.5 仍是修前数（修后 HF 榜 LTF 为 25.1），没有 TransFuser 的修后 navhard 值，只作量级。PDMS 列不受影响。
 
 ## 38. Bench2Drive 榜单前几名的总分差在评测噪声以内；按 hazard family 拆开后，突发 hazard 近乎饱和，真正的差距在规划 / 让行类路线（**待定**）
 
@@ -2919,7 +2926,7 @@ Bench2Drive 自己的 5 项 multi-ability 也一并报。噪声来自同一 chec
    离 TransFuser 的 84.0 PDMS 还差 6 分，navhard 19.8 对 23.1。
    **2026-09-26 补（[elicitation 计划](../todos/2026-09-26-elicitation-program.md) E6，描述性，预登记先于数字）：这 6 分是 R 层配方，不在表征。** 同一份 512 维冻结 Cinque `temporal`、同一套 K = 1024 候选轨迹，
    只把「选哪条」从模仿 softmax 换成 Hydra-MDP 式按 PDM 子分（NC、DAC、EP、TTC、C）各一个线性打分头、加权选 proposal（子分标签是 navtrain 2 万 token 上逐 anchor 的官方 scorer 分数，权重只在 navtrain held-out log 上定）：
-   navtest PDMS 77.9 → **84.2 [83.7, 84.7]**（同候选集配对 +6.3 [+5.7, +6.9]），EPDMS 82.6，navhard 25.7（TransFuser 84.0 / 76.7 / 23.1），按登记判「512 维冻结特征 + 配方 head 到 TransFuser 水平」（CI 跨 84，只说同一水平）。（*2026-09-26 就地修正*：原写「单 seed」。[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N3 按 [SEEDS] 口径补了 seed 1 / 2（CPU k-means 词表 seed s、留出 log 划分 s + 1，子分标签重打）与 Lebowski 行：PDMS Cinque 84.2 / 83.8 / 84.3、Lebowski 84.4 / 84.2 / 84.2，seed 0 重拟合与 E6 逐 token 同一 anchor；EPDMS 82.6 / 78.0 / 82.3 与 82.2 / 82.0 / 82.1，Cinque seed 1 低的 4.6 分全在 extended comfort（该 seed 的权重没有模仿项，选择在帧间跳）。单 seed 的限定去掉。）
+   navtest PDMS 77.9 → **84.2 [83.7, 84.7]**（同候选集配对 +6.3 [+5.7, +6.9]），EPDMS 82.6，navhard 25.7（TransFuser 84.0 / 84.0 / 23.1，EPDMS 一格 2026-09-29 由 76.7 改，见第 37 条末段），按登记判「512 维冻结特征 + 配方 head 到 TransFuser 水平」（CI 跨 84，只说同一水平）。（*2026-09-26 就地修正*：原写「单 seed」。[夜间队列 2](../todos/2026-09-26-night-queue-2.md) N3 按 [SEEDS] 口径补了 seed 1 / 2（CPU k-means 词表 seed s、留出 log 划分 s + 1，子分标签重打）与 Lebowski 行：PDMS Cinque 84.2 / 83.8 / 84.3、Lebowski 84.4 / 84.2 / 84.2，seed 0 重拟合与 E6 逐 token 同一 anchor；EPDMS 82.6 / 78.0 / 82.3 与 82.2 / 82.0 / 82.1，Cinque seed 1 低的 4.6 分全在 extended comfort（该 seed 的权重没有模仿项，选择在帧间跳）。单 seed 的限定去掉。）
    增益主要在 DAC（87 → 93），代价是 extended comfort 80 → 75。按第 35 条读：训练标签就是评测用的 scorer，这是对准 metric 的选择，不是 E 层能力，也不说明 openpilot 特征比 TransFuser 的表征好。
    附带发现：`traj.kmeans` 在 GPU 上不可复现（同 seed 个别中心差 1.8 m），G2 / G3 的词表不能逐位复现，总分不受影响（CPU 确定性词表重拟合 77.9，配对 −0.0 [−0.5, +0.5]）。
 

@@ -95,8 +95,8 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 | 行 | PDMS [95% CI] | EPDMS [95% CI] | navhard EPDMS | Δ EPDMS vs 同族 ego head | Δ EPDMS vs 原生 plan |
 |:--|:--|:--|--:|:--|:--|
 | human（log，我们的 devkit） | 94.6 | 94.5 | — | | |
-| *文献* DiffusionDrive（navtrain 训） | 88.1 | 84.5 | 27.5 | | |
-| *文献* TransFuser | 84.0 | 76.7 | 23.1 | | |
+| *文献* DiffusionDrive（navtrain 训） | 88.1 | 88.2 | 27.5 | | |
+| *文献* TransFuser | 84.0 | 84.0 | 23.1 | | |
 | **Cinque `temporal` + `cls_late`** | **77.9 [77.2, 78.5]** | **77.4 [76.8, 78.0]** | **19.8** | **+9.6 [+8.9, +10.2]** | **+31.2 [+30.4, +32.1]** |
 | Lebowski `temporal` + `cls_late` | 77.3 [76.7, 77.9] | 76.7 [76.0, 77.3] | 17.5 | +8.8 [+8.2, +9.4] | +31.2 |
 | Cinque `temporal` + `ridge_late` | 73.5 [72.9, 74.2] | 73.9 [73.2, 74.5] | 16.8 | +9.7 [+8.9, +10.4] | +27.7 |
@@ -113,7 +113,7 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 
 ![NAVSIM](figs/openloop-navsim.png)
 
-图 3：navtest 上每一行的 PDMS（左）与 EPDMS（右），95% token bootstrap CI（比点还小）；竖虚线是文献值（在 navtrain 上训的方法；EPDMS 的 devkit 版本与我们不同，只作量级）。
+图 3：navtest 上每一行的 PDMS（左）与 EPDMS（右），95% token bootstrap CI（比点还小）；竖虚线是文献值（在 navtrain 上训的方法；EPDMS 取修 bug 后的口径，与我们的 devkit 一致，navhard 列仍是修前数只作量级）。
 看三层：原生 plan 与 Alpamayo 挤在 42–52，不看图像的 ego head 在 62–68，冻结 openpilot 特征 + head 在 72–78，离 TransFuser 的 PDMS 还差 6 分。
 
 读法：
@@ -122,7 +122,7 @@ head 在 navtrain（103 288 个 token）上拟合，输入只用 NAVSIM agent �
 2. **同一个被 2 Hz 输入扭曲的 `temporal`，加一个在 navtrain 上拟合的线性读出，就到 77–78**：对原生 plan +31 EPDMS，对同族 ego head +9–10（CI 远离零）。
    也就是信息还在特征里，差的是读出。这与 nuScenes（第 40 条第 4 点）一致，是第三个数据集上的复现。
 3. **离 specialist 还有距离**：PDMS 差 TransFuser 6 分、DiffusionDrive 10 分；navhard 19.8 对 23.1 / 27.5。这些方法用 3 路相机 + LiDAR 端到端训练，
-   我们是单前视、冻结、线性读出、2 Hz 输入。EPDMS 上 77.4 与 TransFuser 的 76.7 同量级，但 devkit 版本不同（我们的 human 94.5，文献 90.3），不能说「超过」。
+   我们是单前视、冻结、线性读出、2 Hz 输入。EPDMS 上 77.4 比 TransFuser 的 84.0 低约 6.6（同为修 bug 后口径，human 94.5）。（*2026-09-29 就地修正*：原写「与 TransFuser 的 76.7 同量级，但 devkit 版本不同」；76.7 是修 bug 前的数，修后是 84.0，见 decisions 第 37 条末段，所以不是同量级。表中 DiffusionDrive EPDMS 同理由 84.5 改 88.2。）
 
 ## 4. 不看路能拿多少分（continuation share）
 
