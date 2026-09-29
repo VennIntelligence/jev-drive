@@ -8,6 +8,8 @@ pose.jsonl before a frame is used.
 Config keys on top of p5_pair_agent's (same JSON file, --agent-config):
   cosmos_windows  {route id: [k0, k1]}: record ticks k0 <= k < k1, k = round(t / 0.05) as in p5_pairs.load_world
   cosmos_cam      {"x", "y", "z", "w", "h", "fov"}: camera in the hero's actor frame (CARLA axes), pixels, horizontal fov
+  cosmos_stop     true: end the route right after the window (k >= k1); a re-render needs nothing later
+  cosmos_rgb_attrs  extra blueprint attributes of the RGB camera only, e.g. {"exposure_mode": "manual"} (render fix)
 
 Outputs, next to the P5 files in B2D_ATTEMPT_OUT:
   op/rgb/<k>.png    RGB (BGR PNG, lossless)
@@ -59,7 +61,10 @@ class CosmosPairAgent(P5.P5PairAgent):
         tf = carla.Transform(carla.Location(x=c["x"], y=c["y"], z=c["z"]))
         for k in KINDS:
             bp = lib.find(BP[k])
-            for a, v in (("image_size_x", c["w"]), ("image_size_y", c["h"]), ("fov", c["fov"])):
+            attrs = [("image_size_x", c["w"]), ("image_size_y", c["h"]), ("fov", c["fov"])]
+            if k == "rgb":
+                attrs += list(self.cfg.get("cosmos_rgb_attrs", {}).items())
+            for a, v in attrs:
                 bp.set_attribute(a, str(v))
             s = self._world.spawn_actor(bp, tf, attach_to=self._hero)
             s.listen(lambda img, k=k: self._op_buf[k].__setitem__(img.frame, bytes(img.raw_data)))
@@ -106,6 +111,8 @@ class CosmosPairAgent(P5.P5PairAgent):
             self._record(k, GameTime.get_frame(), t)
         elif k >= k1 and self._op_sensors:
             self._despawn()
+        if k >= k1 and self.cfg.get("cosmos_stop"):
+            P5.p4.STOP.update(flag=True, why="cosmos_window")
         return control
 
     def destroy(self, results=None):

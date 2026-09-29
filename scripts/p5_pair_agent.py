@@ -32,6 +32,8 @@ record_props (static props, e.g. cones and warning signs, go into actors.npz and
 frames.jsonl "reg" with driver pdm_lite (PDM-Lite's CarlaDataProvider.active_scenarios entries, actors as ids), and
 pass_stop_s (stop that long after the ego has passed every scenario actor listed in hidden.json that was ever ahead of
 it by pass_margin_m, so a finished bypass does not record 40 s of empty road).
+Cosmos full run (todos/2026-09-28-cosmos-pilot.md, "full"): rig=false drops the three Waymo cameras (a speedometer
+stands in; frames.jsonl keeps the visibility counts of the segmentation view, with no JPEGs).
   cams/<cam>/<frame>.jpg   the three Waymo-calibrated cameras of P4, unchanged
 
 Python 3.10: runs in envs/scout-tfv6 (carla 0.9.15 cp310, torch 2.8 cu128); with driver pdm_lite in envs/p5v1-pdm
@@ -60,7 +62,7 @@ from lead.inference.sensor_agent import SensorAgent
 TFV6_SPEEDS = (0.0, 4.0, 8.0, 10.0, 13.88888888, 16.0, 17.77777777, 20.0)
 DEFAULT = dict(p4.DEFAULT, sensor_tick=0.0, max_sim_s=50.0, stuck_s=30.0, after_trigger_s=20.0, tfv6_model_dir="",
                actor_radius=100.0, vis_radius=60.0, driver="behavior", save_threads=0,
-               record_props=False, pass_stop_s=0.0, pass_margin_m=10.0)
+               record_props=False, pass_stop_s=0.0, pass_margin_m=10.0, rig=True)
 FRONT = p4.WAYMO_CAMS[0]                         # ("front", x, y, z, yaw) in Waymo's rear-axle frame
 
 
@@ -116,7 +118,8 @@ class P5PairAgent(SensorAgent):
         c = self.cfg
         own = [{"type": "sensor.camera.rgb", "id": name, "x": x + p4.REAR_AXLE_X, "y": -y, "z": z - c["origin_z"],
                 "roll": 0.0, "pitch": 0.0, "yaw": -yaw, "width": c["render_w"], "height": c["render_h"], "fov": self.fov}
-               for name, x, y, z, yaw in p4.WAYMO_CAMS]
+               for name, x, y, z, yaw in p4.WAYMO_CAMS] if c["rig"] else \
+            [{"type": "sensor.speedometer", "id": "speed"}]      # rig off: no Waymo images, the leaderboard wants one
         extra = super().sensors() if self.tfv6 else []
         if self.cfg["driver"] == "pdm_lite" and not any(x["id"] == "imu" for x in extra):
             extra = extra + [{"type": "sensor.other.imu", "x": 0.0, "y": 0.0, "z": 0.0, "roll": 0.0, "pitch": 0.0,
@@ -467,7 +470,7 @@ class P5PairAgent(SensorAgent):
         self._t["snapshot"].append(time.perf_counter() - t0)
         if cam_tick:
             t0 = time.perf_counter()
-            files, std = self._save(frame, input_data)
+            files, std = self._save(frame, input_data) if self.cfg["rig"] else ({}, [])
             self._t["save"].append(time.perf_counter() - t0)
             t0 = time.perf_counter()
             px = self._visibility(frame, rows)

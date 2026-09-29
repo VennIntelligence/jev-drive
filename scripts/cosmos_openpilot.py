@@ -30,7 +30,7 @@ from jevdrive import camgeom as G  # noqa: E402
 from jevdrive import drive_backbones as D  # noqa: E402
 
 DATA = Path(os.environ["DATA_DIR"])
-ROOT = DATA / "runs" / "cosmos"
+ROOT = Path(os.environ.get("COSMOS_ROOT", DATA / "runs" / "cosmos"))
 W, H, FOV = 1280, 704, 64.0
 F = W / 2.0 / np.tan(np.radians(FOV) / 2.0)
 SEED, SEED_ALT = 2025, 2026

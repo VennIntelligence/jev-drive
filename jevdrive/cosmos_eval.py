@@ -14,9 +14,9 @@ from pathlib import Path
 import numpy as np
 
 DATA = Path(os.environ["DATA_DIR"])
-ROOT = DATA / "runs" / "cosmos"
+ROOT = Path(os.environ.get("COSMOS_ROOT", DATA / "runs" / "cosmos"))   # COSMOS_ROOT / COSMOS_RESULTS: full-run staged pilots
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "cosmos"
+RESULTS = Path(os.environ.get("COSMOS_RESULTS", REPO / "research" / "results" / "cosmos"))
 FIGS = REPO / "research" / "figs" / "cosmos"
 H, W = 704, 1280
 SEED, SEED_ALT = 2025, 2026

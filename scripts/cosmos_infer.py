@@ -13,6 +13,7 @@ Differences from examples/inference.py, all for the pair comparison:
 - per-sample wall time (model already loaded), torch peak allocation and the NVML peak of the card, in events.jsonl.
 """
 import argparse
+import hashlib
 import json
 import os
 import random
@@ -69,12 +70,24 @@ def patch_text_encoder_offload():
     from cosmos_transfer2._src.predict2.text_encoders.text_encoder import TextEncoder
     orig, cache = TextEncoder.compute_text_embeddings_online, {}
 
+    disk = Path(os.environ["COSMOS_TE_CACHE"]) if os.environ.get("COSMOS_TE_CACHE") else None
+
     def wrapped(self, data_batch, input_caption_key, *a, **kw):
         key = (input_caption_key, tuple(map(str, data_batch[input_caption_key])))
         if key not in cache:
-            cache[key] = orig(self, data_batch, input_caption_key, *a, **kw)
-            self.model.to("cpu")
-            torch.cuda.empty_cache()
+            # COSMOS_TE_CACHE: embeddings shared across worker processes (the encoder runs on the CPU here, ~1 min)
+            f = disk / (hashlib.sha1(repr(key).encode()).hexdigest() + ".pt") if disk else None
+            if f is not None and f.exists():
+                cache[key] = torch.load(f)          # same device as when it was computed
+            else:
+                cache[key] = orig(self, data_batch, input_caption_key, *a, **kw)
+                self.model.to("cpu")
+                torch.cuda.empty_cache()
+                if f is not None:
+                    f.parent.mkdir(parents=True, exist_ok=True)
+                    tmp = f.with_suffix(f".{os.getpid()}.tmp")
+                    torch.save(cache[key], tmp)
+                    tmp.replace(f)
         return cache[key]
     TextEncoder.compute_text_embeddings_online = wrapped
 
@@ -135,14 +148,9 @@ def patch_guided_distilled():
     M.generate_samples_from_batch = gen
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--specs", required=True)
-    ap.add_argument("--model", default="edge/distilled")
-    ap.add_argument("--out", required=True)
-    ap.add_argument("--only", default="", help="comma list of sample names")
-    a = ap.parse_args()
-
+def patch():
+    """Local checkpoints, raw npy outputs, guided distilled sampling, text encoder offload. Must run before anything
+    imports cosmos_transfer2.config (the config registry resolves checkpoints at import)."""
     from cosmos_transfer2._src.imaginaire.utils import checkpoint_db
     checkpoint_db._hf_download = local_download
     # CheckpointFileHf._download asserts that the returned path exists; route it around that assertion
@@ -162,11 +170,6 @@ def main():
         pass
     patch_guided_distilled()
     patch_text_encoder_offload()
-    from cosmos_oss.init import init_environment
-    from cosmos_transfer2.config import InferenceArguments, SetupArguments
-    from cosmos_transfer2.inference import Control2WorldInference
-    from jevdrive.runlog import RunLog
-
     import cosmos_transfer2.inference as CI
     save_orig = CI.save_img_or_video
 
@@ -178,7 +181,45 @@ def main():
             np.save(f"{path}.npy", v)
     CI.save_img_or_video = save
 
+
+def load_model(model: str, out: Path, keys: list):
+    from cosmos_oss.init import init_environment
+    from cosmos_transfer2.config import SetupArguments
+    from cosmos_transfer2.inference import Control2WorldInference
     init_environment()
+    setup = SetupArguments(output_dir=out, model=model, disable_guardrails=True)
+    inf = Control2WorldInference(setup, batch_hint_keys=keys)
+    offload_text_encoder(inf)
+    return inf
+
+
+def generate(inf, s, out: Path, sample_id: int, peak: "NvmlPeak") -> dict:
+    """One sample with the torch / numpy / python RNGs re-seeded by its seed; wall time and memory peaks."""
+    import numpy as np
+    import torch
+    for f in (random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all):
+        f(s.seed)
+    torch.cuda.reset_peak_memory_stats()
+    peak.reset()
+    torch.cuda.synchronize()
+    t = time.time()
+    path = inf._generate_sample(s, out, sample_id=sample_id)        # sample_id > 0: no benchmark bookkeeping
+    torch.cuda.synchronize()
+    return {"name": s.name, "s": time.time() - t, "torch_peak_gib": torch.cuda.max_memory_allocated() / 2**30,
+            "card_peak_gib": peak.peak / 2**30, "path": path}
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--specs", required=True)
+    ap.add_argument("--model", default="edge/distilled")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--only", default="", help="comma list of sample names")
+    a = ap.parse_args()
+    patch()
+    from cosmos_transfer2.config import InferenceArguments
+    from jevdrive.runlog import RunLog
+
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     rl = RunLog("cosmos", "infer", a.model.replace("/", "-"))
@@ -192,23 +233,11 @@ def main():
     phys = int(os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0])
     peak = NvmlPeak(phys)
     t0 = time.time()
-    setup = SetupArguments(output_dir=out, model=a.model, disable_guardrails=True)
-    inf = Control2WorldInference(setup, batch_hint_keys=keys)
-    offload_text_encoder(inf)
+    inf = load_model(a.model, out, keys)
     rl.info(f"model loaded in {time.time() - t0:.0f} s, card peak {peak.peak / 2**30:.1f} GiB")
     rl.event("load", s=time.time() - t0, card_peak_gib=peak.peak / 2**30)
     for i, s in enumerate(todo):
-        for f in (random.seed, np.random.seed, torch.manual_seed, torch.cuda.manual_seed_all):
-            f(s.seed)
-        torch.cuda.reset_peak_memory_stats()
-        peak.reset()
-        torch.cuda.synchronize()
-        t = time.time()
-        path = inf._generate_sample(s, out, sample_id=i + 1)        # sample_id > 0: no benchmark bookkeeping
-        torch.cuda.synchronize()
-        dt = time.time() - t
-        rec = {"name": s.name, "s": dt, "torch_peak_gib": torch.cuda.max_memory_allocated() / 2**30,
-               "card_peak_gib": peak.peak / 2**30, "path": path}
+        rec = generate(inf, s, out, i + 1, peak)
         rl.info(json.dumps(rec))
         rl.event("sample", **rec)
     rl.event("end", n=len(todo), s=time.time() - t0)
