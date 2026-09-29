@@ -28,11 +28,13 @@ decisions.md 加短条目，给 main 3–5 行（原因、选项名与取值、�
 - E5（新 server、Town03 黄昏 90012140）：只关掉 RouteLightsBehavior 的「路灯开关」一半 → 亮度 68.0（不变暗）；
   只关掉「车灯」一半 → 18.6（照样变暗）。**变暗来自路灯 / 建筑灯的开关，不是车灯。**
 - 旁证：LightManager 列出的灯的集合随 server 历史变：Town04 夜路线在 Town03 之后跑列出 505 盏（≈ Town03 的数），在 Town13 之后跑列出 4 002 盏；
-  Town03 在新 server 上 505 盏、复用 server 上 504 盏。开关只在新 server 上真正把画面里起照明作用的灯关掉，复用 server 上基本落空。
+  Town03 在新 server 上 505 盏、复用 server 上 504 盏。两种 server 的灯表都显示半径外的灯被关了（47 / 70 盏开），但只有新 server 的画面变暗：
+  复用 server 上灯表和实际渲染的灯对不上，开关在画面上落空。
+- v3（E2 同序，复用 server）：白天不变（|Δ| ≤ 0.13 平均）；Town13 夜 +2.5（最大 3.8）。Town12 的「sun −1」两条实际是白天（天气按路线百分比插值）。
+- 已写：WL todo「渲染故障的根因」小节、decisions.md 第 60 条、`research/results/wl/renderfix/`（runs.csv、pairs.txt）。GPU 6 上我的 server 都已退出。
 - 修复 `B2D_KEEP_STREET_LIGHTS=1`（b2d_hooks，默认关）：RouteLightsBehavior 不再开关路灯 / 建筑灯，车灯照旧。
   v1（新 server）：90012270 16.5 → 67.4，90012320 21.3 → 67.8（复用 server 原值 66.9），Town11 90013340 18.3 → 18.4（附近没灯，不受影响）；90012140 三次 server 启动崩（RenderThread 超时，box 负载问题，与修复无关）。
   v2（复用 server，E0 同一组 7 条）：白天 4 条平均 |Δ亮度| ≤ 0.22、单帧最大 1.3；Town03 黄昏 +0.7–0.8；**Town04 夜（sun −90）+13.2（最大 30.6）**。
-  v3（E2 同序，复用 server，Town12/13 夜 + 昼）：见下方运行中。
 
 ## 代码改动（都已 push，box 已 pull）
 
@@ -46,7 +48,7 @@ decisions.md 加短条目，给 main 3–5 行（原因、选项名与取值、�
 - 输出都在 box `$DATA_DIR/runs/wl/renderfix/<exp>/`：e0_stock、e1_fresh_night、e3_fresh_night_fix、e4_mute_weather、e4_mute_lights、
   e2_night_then_day（运行中）、probe*_*、scan_oldhost.parquet、scan_newhost_wl.parquet。
 
-## 正在跑
+## 正在跑（已结束，历史）
 
 - tmux `jev:rf-e2`：`EXP=e2_night_then_day`，5 条链 × 1 worker（server index 460–469，port 25000+），每条链按顺序跑
   Town13 夜 → Town13 昼、Town12 夜 → Town12 昼 各两对（复现「同图前驱」的白天泛光）。结束时写 `renderfix/e2_night_then_day/DONE`。
