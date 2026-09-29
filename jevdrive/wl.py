@@ -35,7 +35,7 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = REPO / "research" / "results" / "wl"
+RESULTS = Path(os.environ["WL_RESULTS"]) if os.environ.get("WL_RESULTS") else REPO / "research" / "results" / "wl"   # box: outside the tracked tree
 TICK, CAM = 0.05, 4
 PED_FAM = ("PedestrianCrossing", "DynamicObjectCrossing", "VehicleTurningRoutePedestrian", "ParkingCrossingPedestrian")
 CUTIN_FAM = ("StaticCutIn", "ParkingCutIn", "HighwayCutIn")
