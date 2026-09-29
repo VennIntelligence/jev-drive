@@ -137,8 +137,22 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         _check_lights()
     if os.environ.get("B2D_CAM_ATTRS"):
         patch_camera_attrs(json.loads(os.environ["B2D_CAM_ATTRS"]))
+    if os.environ.get("B2D_LIGHTS_FIX") == "1":
+        _patch_day_night_cycle()
     if os.environ.get("B2D_LIGHTS_TRUTH"):
         _trace_lights_truth(int(os.environ["B2D_LIGHTS_TRUTH"]))
+
+
+def _patch_day_night_cycle():
+    """Switch the server's day-night cycle on right before the route's weather is set ($B2D_LIGHTS_FIX=1, test)."""
+    from leaderboard.scenarios.route_scenario import RouteScenario
+    inner = RouteScenario._initialize_environment
+
+    def init_env(self, world):
+        world.get_lightmanager().set_day_night_cycle(True)
+        inner(self, world)
+
+    RouteScenario._initialize_environment = init_env
 
 
 def _trace_lights_truth(every):
