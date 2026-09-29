@@ -38,6 +38,11 @@ Optimisations (each behind its own flag, all off by default)
                     measured, the frames still arrive and the wait simply moves from the sensor
                     queue into the next `world.tick()`.
 
+Render fix (off by default)
+  * $B2D_KEEP_STREET_LIGHTS=1 - RouteLightsBehavior leaves street / building lights alone (vehicle lights as
+                    before); removes the dusk / night darkening on the first route of a fresh server. See
+                    `_keep_street_lights`.
+
 Python 3.8: runs in envs/carla.
 """
 import copy
@@ -139,6 +144,8 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         patch_camera_attrs(json.loads(os.environ["B2D_CAM_ATTRS"]))
     if os.environ.get("B2D_LIGHTS_FIX") == "1":
         _patch_day_night_cycle()
+    if os.environ.get("B2D_KEEP_STREET_LIGHTS") == "1":
+        _keep_street_lights()
     for name in filter(None, os.environ.get("B2D_MUTE_BEHAVIOR", "").split(",")):   # diagnostics, see _mute_behavior
         _mute_behavior(name)
     if os.environ.get("B2D_LIGHTS_TRUTH"):
@@ -146,7 +153,7 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
 
 
 class _NoSwitchLights:
-    """A LightManager whose turn_on / turn_off do nothing (B2D_MUTE_BEHAVIOR=lights_street)."""
+    """A LightManager whose turn_on / turn_off do nothing ($B2D_KEEP_STREET_LIGHTS)."""
 
     def __init__(self, lm):
         self._lm = lm
@@ -161,6 +168,24 @@ class _NoSwitchLights:
         pass
 
 
+def _keep_street_lights():
+    """Render fix, off by default ($B2D_KEEP_STREET_LIGHTS=1): RouteLightsBehavior no longer switches street / building
+    lights; they keep the state the server's day-night cycle gave them when the route's weather was set (at night: on).
+    Vehicle lights (ego and scenario vehicles) are still switched as before. Reason (todos/2026-09-28-wm-loop.md,
+    "渲染故障的根因"): on a freshly started server, the behaviour's first update (switching off every light beyond its
+    radius) darkens the whole frame of a dusk / night route within 2-3 ticks (Town03 sun 0: front luma 57 -> 6), while
+    the same update on a server that already ran a route leaves the frame as it was; with the street-light half
+    skipped, fresh and reused servers render the same."""
+    from srunner.scenariomanager.lights_sim import RouteLightsBehavior as B
+    inner = B.__init__
+
+    def init(self, *args, **kwargs):
+        inner(self, *args, **kwargs)
+        self._light_manager = _NoSwitchLights(self._light_manager)
+
+    B.__init__ = init
+
+
 def _mute_behavior(name):
     """Diagnostics ($B2D_MUTE_BEHAVIOR=weather,lights,lights_street,lights_vehicles): the route's
     RouteWeatherBehavior / RouteLightsBehavior stay in the tree but their update does nothing (the weather set at
@@ -172,12 +197,12 @@ def _mute_behavior(name):
 
         def init(self, *args, **kwargs):
             inner(self, *args, **kwargs)
-            if name == "lights_street":
-                self._light_manager = _NoSwitchLights(self._light_manager)
-            else:
-                self._vehicle_lights = carla.VehicleLightState.NONE
+            self._vehicle_lights = carla.VehicleLightState.NONE
 
-        B.__init__ = init
+        if name == "lights_street":
+            _keep_street_lights()
+        else:
+            B.__init__ = init
         return
     if name == "weather":
         from srunner.scenariomanager.weather_sim import RouteWeatherBehavior as B

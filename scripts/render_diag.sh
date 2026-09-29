@@ -31,7 +31,7 @@ export PYTHONPATH=$LEAD_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}
 [[ -n ${CAM_ATTRS:-} ]] && export B2D_CAM_ATTRS=$CAM_ATTRS
 [[ -n ${LIGHTS_FIX:-} ]] && export B2D_LIGHTS_FIX=$LIGHTS_FIX
 echo "$(date '+%F %T') render_diag $EXP: set $S, $REPS reps x $W workers on GPU $GPU, routes $ROUTES, TFV6=${TFV6:-0}" \
-     "CAM_ATTRS=${CAM_ATTRS:-} LIGHTS_FIX=${LIGHTS_FIX:-} QUALITY=${QUALITY:-Epic} RECYCLE=${RECYCLE:-0}"
+     "CAM_ATTRS=${CAM_ATTRS:-} LIGHTS_FIX=${LIGHTS_FIX:-} KEEP_STREET_LIGHTS=${B2D_KEEP_STREET_LIGHTS:-} MUTE=${B2D_MUTE_BEHAVIOR:-} QUALITY=${QUALITY:-Epic} RECYCLE=${RECYCLE:-0}"
 pids=()
 for ((r = 0; r < REPS; r++)); do
     CUDA_VISIBLE_DEVICES=$GPU BENCH2DRIVE_ROOT=$TREE WORK_DIR=$DATA_DIR/third_party/simlingo taskset -c "${CPUS:-144-167}" \
