@@ -1,6 +1,11 @@
 # Cosmos G4 全量生成：交接（2026-09-29，随阶段更新）
 
-最后更新：2026-09-29 14:10 CST（监看 agent）。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
+最后更新：2026-09-29 14:15 CST（接手的监看 agent）。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
+
+## 14:15 CST 接手：PID 预算与 GPU 5
+
+- PID：cgroup `pids.max` = 20480，当前 ~11.6k（sch_table 的 16000 只是 planning cap；`B2D_PIDS_WAIT` 没设，b2d_run 不会因此卡新 server）。构成：b2d_route 客户端 23 个 ×214 线程 ≈ 3.9k，CARLA server 25 个 ×149 ≈ 3.4k（主要是我们这条 lane），cosmos_full 驱动的 16 个 fork ×65 ≈ 1.0k，Cosmos worker 5 × 110 ≈ 0.55k，NAVSIM ray（op-lb，14:02 起）≈ 1.2k，tensorboard 服务 ≈ 0.5k，其余零散 python。僵尸 28 个，不占额度可忽略。没有已结束 lane 的孤儿进程，什么都没停。6 个 GPU 5 server 约 +2.4k，仍 < 17k。
+- GPU 5：14:07 手工起了 Cosmos worker（tmux 窗口 `cf-w5`，slot g5，env 同驱动 + CUDA_VISIBLE_DEVICES=5）。CARLA 端等 invocation 5（938 条 route，~8 route/min，约 15:40 结束）的边界再 DRAIN 重开，命令里加 `5:6`、`5`。重开前要先把 `cf-w5` 的 worker 在一对做完之后按 PID 停掉（驱动会自己起 g5），否则同一张卡两个 worker。
 
 ## 现在处于哪一步（12:25 CST）
 
