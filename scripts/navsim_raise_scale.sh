@@ -19,7 +19,7 @@ T() { taskset -c "$CPUS" nice -n 19 "$@"; }
 F=$DATA_DIR/runs/skill_pack/n1/feat; D=lb_n2train; CACHE=$DATA_DIR/runs/navsim/metric_cache/v1_navtrain
 NEV=(env NAVSIM_DEVKIT_ROOT=$DATA_DIR/third_party/navsim-v1.1 NUPLAN_MAP_VERSION=nuplan-maps-v1.0 NUPLAN_MAPS_ROOT=$DATA_DIR/datasets/navsim/maps
      OPENBLAS_CORETYPE=Haswell OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 PYTHONWARNINGS=ignore)
-[[ $MODE == pilot ]] && N=192 || N=$M
+[[ $MODE == pilot ]] && { N=192; SFX=_pilot; } || { N=$M; SFX=; }
 (( N % 64 == 0 )) || die "N must be a multiple of 64"
 
 [[ -f $R/tokens.txt ]] || { st "token list M=$M"; T $JV -m jevdrive.navsim_raise tokens2 --m "$M" >> "$R/log.txt" 2>&1 || die tokens2; }
@@ -28,17 +28,19 @@ head -n "$N" "$R/tokens.txt" > "$R/tokens_n$N.txt"
 
 st "anchor labels (CPU, $AP procs, background)"
 T "${NEV[@]}" $NAV scripts/elicit_e6_score.py run "$CACHE" "$DATA_DIR/runs/elicitation/e6-prep/20260926-003758/anchors.npz" \
-    "$R/tokens_n$N.txt" "$R/anchor_score" --procs "$AP" > "$R/anchor_score.log" 2>&1 &
+    "$R/tokens_n$N.txt" "$R/anchor_score$SFX" --procs "$AP" > "$R/anchor_score.log" 2>&1 &
 apid=$!
 
 st "GIMM frames, first $((N / 32)) chunks, $GW workers on GPU $GPU"
+nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits -i "$GPU" -lms 10000 > "$R/vram$SFX.txt" &
+vpid=$!
 pids=()
 for w in $(seq 1 "$GW"); do
   T $VFI scripts/n1_extract.py synth --data $D --gpu "$GPU" --limit-chunks $((N / 32)) >> "$R/synth_w$w.log" 2>&1 &
   pids+=($!)
 done
 for p in "${pids[@]}"; do wait "$p" || die "GIMM worker $p failed"; done
-st "GIMM done"
+st "GIMM done"; kill "$vpid" 2>/dev/null
 [[ -f $F/${D}_n$N.npz ]] || { st "Cinque features n=$N, $PROCS shards"
   T $OP scripts/n1_extract.py extract --data $D --n "$N" --procs "$PROCS" >> "$R/log.txt" 2>&1 || die extract
   T $OP scripts/n1_extract.py merge --data $D --n "$N" >> "$R/log.txt" 2>&1 || die merge; }
@@ -47,10 +49,13 @@ import numpy as np; from jevdrive.skill_pack_n0 import stretch; from jevdrive.sk
 z = np.load('$F/${D}_n$N.npz'); c = np.stack([[stretch(p, s) for s in SCALES] for p in z['native']]).astype(np.float32)
 np.savez('$R/cands_n$N.npz', tokens=z['tokens'], cands=c)" || die cands
 st "native labels ($SP procs)"
-T "${NEV[@]}" $NAV scripts/n1_score_native.py run "$CACHE" "$R/cands_n$N.npz" "$R/native_score" --procs "$SP" 2>&1 | grep -av -i warn >> "$R/log.txt"
+T "${NEV[@]}" $NAV scripts/n1_score_native.py run "$CACHE" "$R/cands_n$N.npz" "$R/native_score$SFX" --procs "$SP" 2>&1 | grep -av -i warn >> "$R/log.txt"
 wait "$apid" || die "anchor labels failed"
 st "labels done"
-[[ $MODE == pilot ]] && { st "DONE pilot"; touch "$R/DONE_pilot"; exit 0; }
+if [[ $MODE == pilot ]]; then
+  T $JV -m jevdrive.navsim_raise pilotcheck >> "$R/log.txt" 2>&1 || die "pilot checklist failed (pilot_check.json)"
+  st "DONE pilot (checklist passed)"; touch "$R/DONE_pilot"; exit 0
+fi
 
 st "fit (held-out)"; [[ $MODE == final ]] && FL=--final || FL=
 T $JV -m jevdrive.navsim_raise fit --arm scale $FL >> "$R/log.txt" 2>&1 || die fit

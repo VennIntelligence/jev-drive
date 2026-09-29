@@ -61,6 +61,33 @@ def tokens2(m: int):
     print(f"{len(pool)} tokens (pool before the cut: see log) -> {out}; held-out logs excluded: {len(hold_logs)}")
 
 
+def pilotcheck():
+    """Arm S pilot checklist (todos/2026-09-30-navsim-raise.md): exit 1 if any item fails."""
+    R = run_dir("scale")
+    f = np.load(data_dir() / N1.FEAT / "lb_n2train_n192.npz")
+    ref = np.load(data_dir() / N1.FEAT / f"lb_n1train_n{N}.npz")["temporal"][:2000]
+    an, na = _chunks(R / "anchor_score_pilot"), _chunks(R / "native_score_pilot")
+    toks = f["tokens"].tolist()
+    e6 = [np.load(q)["pdms"] for q in sorted((data_dir() / N1.E6_PREP / "score").glob("chunk_*.npz"))[:8]]
+    tf = f["temporal"]
+    c = {"C1 label coverage": float(np.mean([t in an and t in na for t in toks])),
+         "C2 native s=1.00 mean PDMS": 100 * float(np.mean([na[t][1][0] for t in toks if t in na])),
+         "C3 temporal NaN/Inf": int((~np.isfinite(tf)).sum()),
+         "C3 norm ratio (new / lb_n1train)": float(np.median(np.linalg.norm(tf, axis=1)) / np.median(np.linalg.norm(ref, axis=1))),
+         "C4 mean anchor PDMS new vs E6": [100 * float(np.mean([an[t][1].mean() for t in toks if t in an])),
+                                          100 * float(np.concatenate(e6).mean())]}
+    vr = R / "vram_pilot.txt"
+    c["C5 peak VRAM GB"] = max(float(x) for x in vr.read_text().split()) / 1024 if vr.exists() else -1
+    ok = {"C1": c["C1 label coverage"] >= 0.95, "C2": 75 <= c["C2 native s=1.00 mean PDMS"] <= 92,
+          "C3": c["C3 temporal NaN/Inf"] == 0 and 0.8 <= c["C3 norm ratio (new / lb_n1train)"] <= 1.25,
+          "C4": abs(c["C4 mean anchor PDMS new vs E6"][0] - c["C4 mean anchor PDMS new vs E6"][1]) <= 5,
+          "C5": 0 < c["C5 peak VRAM GB"] <= 80}
+    c["pass"] = ok
+    (R / "pilot_check.json").write_text(json.dumps(c, indent=1))
+    print(json.dumps(c, indent=1))
+    raise SystemExit(0 if all(ok.values()) else 1)
+
+
 # ---------------------------------------------------------------- data
 
 def lat(p: np.ndarray, l: float) -> np.ndarray:
@@ -407,7 +434,7 @@ def _mlp(p, rl, hidden=1024, epochs=60, lr=1e-3, wd=1e-4, drop=0.1, bs=512, seed
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
@@ -415,4 +442,4 @@ if __name__ == "__main__":
     ap.add_argument("--m", type=int, default=40000)
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m)}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck}[a.cmd]()
