@@ -299,7 +299,7 @@ def evaluate() -> dict:
 # ---------------------------------------------------------------------------------------------------------- openpilot
 
 
-def opspec() -> dict:
+def opspec(methods=None) -> dict:
     from jevdrive.p5_openpilot import carla_calib
     br = pd.read_csv(R / "branches.csv", dtype={"route_id": str})
     f = pd.read_parquet(WL.rundir("forks.parquet")).drop_duplicates("fork_id").set_index("fork_id")
@@ -316,6 +316,8 @@ def opspec() -> dict:
         files = [[f"{src}/{r[c]}" for c in cams] for r in sf.files] + [[f"{run_dir}/{r[c]}" for c in cams] for r in fr.files]
         streams.append({"key": key, "names": names, "targets": list(range(len(sf), len(names))), "files": files, "gaps": 0})
 
+    if methods:                        # only these rewind methods (floor reruns always)
+        br = br[br.method.isin(methods)]
     for r in br.itertuples():
         # a branch dir keeps the run's JPEG paths (relative to the run's attempt dir) with renumbered frames
         a = attempt(r.route_id, f.set[r.fork_id], r.gen)
@@ -543,7 +545,7 @@ def main():
     elif a.step == "eval":
         print(evaluate())
     elif a.step == "opspec":
-        print(opspec())
+        print(opspec(a.methods.split(",") if a.methods != ",".join(METHODS) else None))
     elif a.step == "opcos":
         print(opcos())
     elif a.step == "report":
