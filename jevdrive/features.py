@@ -345,11 +345,12 @@ class SiglipFeatures:
 class VJepaFeatures:
     """V-JEPA 2 over a clip of CLIP_FRAMES frames. `transform` receives the clip as a list of PIL images."""
 
-    def __init__(self, size: int = 256, frames: int = CLIP_FRAMES, model_id: str = VJEPA):
+    def __init__(self, size: int = 256, frames: int = CLIP_FRAMES, model_id: str = VJEPA, grid: tuple | None = None):
+        """grid=(rows, cols) adds a `grid` tap: the last temporal slice's patch tokens block-pooled to rows x cols."""
         from torchvision.transforms import v2
         from transformers import AutoModel
         self.model = AutoModel.from_pretrained(model_id, dtype=torch.bfloat16).to(DEV).eval()
-        self.model_id, self.frames = model_id, frames
+        self.model_id, self.frames, self.grid = model_id, frames, grid
         self.tf = v2.Compose([v2.PILToTensor(), v2.Resize((size, size), antialias=True),
                               v2.ToDtype(torch.float32, scale=True),
                               v2.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
@@ -364,7 +365,17 @@ class VJepaFeatures:
     def __call__(self, x):
         h = self.model.get_vision_features(x.to(DEV, torch.bfloat16, non_blocking=True)).float()
         per_frame = h.shape[1] // (self.frames // 2)  # tubelets of 2 frames, so the last tubelet is "now"
-        return {"mean": h.mean(1), "last_mean": h[:, -per_frame:].mean(1)}
+        out = {"mean": h.mean(1), "last_mean": h[:, -per_frame:].mean(1)}
+        if self.grid:
+            out["grid"] = self.pool_grid(h[:, -per_frame:], *self.grid).flatten(1)
+        return out
+
+    @staticmethod
+    def pool_grid(s: torch.Tensor, rows: int, cols: int) -> torch.Tensor:
+        """(B, S*S, C) patch tokens of one temporal slice (row-major S x S) -> (B, rows*cols, C) block-mean grid."""
+        b, n, c = s.shape
+        side = int(round(n ** 0.5))
+        return s.reshape(b, rows, side // rows, cols, side // cols, c).mean((2, 4)).reshape(b, rows * cols, c)
 
 
 BACKBONES = {"qwen": QwenFeatures, "dinov2": DinoFeatures, "siglip2": SiglipFeatures, "vjepa2": VJepaFeatures}
