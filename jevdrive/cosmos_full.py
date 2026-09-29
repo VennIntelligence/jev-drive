@@ -693,13 +693,9 @@ class Lane:
         act = [i for i in self.pool.inst if i not in bad and nxt.get(i, -1) + 1 < 30]
         if not act:
             return pd.DataFrame()
-        rounds = 1 if not len(V) else max(1, min(3, int(np.ceil(want / len(act)))))
-        rows = []
-        for rr in range(rounds):
-            for i in act:
-                v = nxt.get(i, -1) + 1 + rr
-                if v < 30:
-                    rows.append(variant(i, v, json.loads(self.pool.set_index("inst").loc[i, "weather_route"])))
+        # One variant per instance (~200 variants, ~90 delivered pairs = ~65 min of Cosmos): the next invocation runs pass 2 of this
+        # chunk ahead of the following chunk, so the Cosmos queue never drains while a long pass-1 chunk runs.
+        rows = [variant(i, nxt.get(i, -1) + 1, json.loads(self.pool.set_index("inst").loc[i, "weather_route"])) for i in act]
         return pd.DataFrame(rows)
 
     def submit(self, pair: str, rerender: bool, V: pd.DataFrame, S: pd.DataFrame):
