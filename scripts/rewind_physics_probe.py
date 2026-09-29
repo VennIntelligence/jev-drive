@@ -35,7 +35,7 @@ def main():
     ap.add_argument("--out", default="")
     a = ap.parse_args()
     client = carla.Client("127.0.0.1", a.port)
-    client.set_timeout(120)
+    client.set_timeout(600)
     world = client.load_world(a.town)
     s = world.get_settings()
     s.synchronous_mode, s.fixed_delta_seconds = True, 0.05
