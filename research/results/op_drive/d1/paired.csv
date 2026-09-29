@@ -1,0 +1,11 @@
+pair,routes,dDS,95% CI,better / worse / same,coll+light arm / ref
+dbase - dbaseslow,6,1.2,"[-9.0, 12.6]",1 / 1 / 4,6 / 6
+dbaseslow - dbase,6,-1.2,"[-12.6, 9.0]",1 / 1 / 4,6 / 6
+dlon - dbase,6,1.8,"[-11.8, 19.1]",1 / 2 / 3,5 / 6
+dlon - dbaseslow,6,3.1,"[-17.5, 23.3]",2 / 2 / 2,5 / 6
+drive - dbase,6,18.0,"[3.0, 34.7]",3 / 0 / 3,3 / 6
+drive - dbaseslow,6,19.2,"[4.2, 35.9]",3 / 0 / 3,3 / 6
+latk - dbase,6,0.0,"[0.0, 0.0]",0 / 0 / 6,6 / 6
+latk - dbaseslow,6,1.2,"[-9.0, 12.6]",1 / 1 / 4,6 / 6
+latp7 - dbase,6,-2.4,"[-7.3, 0.0]",0 / 1 / 5,7 / 6
+latp7 - dbaseslow,6,-1.2,"[-16.4, 12.6]",1 / 1 / 4,7 / 6

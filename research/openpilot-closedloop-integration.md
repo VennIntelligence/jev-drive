@@ -266,6 +266,25 @@ binding 只是因为 plan 加速得比 base 慢。所以另加了事后读数（
 - 这 10 条上，openpilot 纵向 modifier 的分数收益等于「开得慢」的收益。要说明 openpilot 看见了东西，读数必须带同均速对照；而且要换一套 base 慢开也躲不过的考题（例如必须按时通过的让行、对向车流）。
 - 锁存不该在「plan 要减速到低速」时触发；CARLA MKZ 在 1–2 m/s 的轻刹会直接刹停，执行层要么避开这一段，要么锁存判据改成「plan 自己要求停」（v(5 s) ≈ 0），而不是「车停了」。
 
+## 9. 同一套接法怎么接 HUGSIM（设计，未实现）
+
+HUGSIM（[docs/hugsim.md](../docs/hugsim.md)）是真实外观的 3DGS 闭环：nuScenes 式 6 相机 800×450、4 Hz 一步、agent 回一条 0.5 s 间隔的航点（x 右 y 前，原点是前相机），由 iLQR 跟踪，HD-Score 按「计划轨迹本身」逐步打分（NC、DAC、TTC、舒适度）再乘 RC。
+op-drive 的每个部件在那边的对应：
+
+| 部件 | CARLA / B2D（op-drive，[todo](../todos/2026-09-29-op-drive.md)） | HUGSIM | 要做的事 |
+|:--|:--|:--|:--|
+| 输入 | 每 tick 渲染真 20 Hz 的 road + wide（openpilot 原生 rig，高 1.433 m） | 4 Hz 的 CAM_FRONT，65° 水平视场，相机高约 1.5 m，没有 wide | CAM_FRONT warp 到 road 与 wide 两个相机模型（`jevdrive/hugsim_zs.py` 已有 road 的 warp）；**4 Hz → 20 Hz 用插帧**：这正是 op-adapt 训练用的输入管线（[开环文档](openpilot-openloop-integration.md) 第 1、7 节），原版 Cinque 用 1.25 倍时钟会让 2 s 横向误差 +25–38%。CARLA 的真 20 Hz 是这条管线的上界，HUGSIM 是它的实际工况 |
+| 路线与命令 | B2D 发的 dense route + RoadOption | 录制路线（`ground_param.pkl`，shadow 模式的特权跟随器已在用）+ 每步的 `command`（0 右 1 左 2 直） | 录制路线进 `RouteAdapter`；command 1 / 0 的段当 LEFT / RIGHT 区、2 在路口处当 STRAIGHT 区，其余是 lane-follow |
+| 横向归属 | openpilot 在 lane-follow，路线在区里与分歧 > 1 m 时 | 同 | 规则不变；分歧阈值按相机原点重算（HUGSIM 的原点在前相机，不在后轴） |
+| 横向执行 | `curv`：desired curvature 经单车模型 20 Hz 直接转 steer | `closed_loop.py` 只收航点，iLQR 4 Hz 跟踪 | 只能走「路径」执行：把 openpilot 的 plan 几何（区里用路线几何）按仲裁后的时间剖面采成 0.5 s 航点。op-drive L 阶段的教训（P7 5 Hz 跟踪 plan 路径会和 plan 互相耦合、漂）在 4 Hz 的 iLQR 上可能更重；备选是绕过 `traj2control`，用环境本身接受的 `{acc, steer_rate}` 从 curvature 直接给 steer rate（要改 HUGSIM 的 loop，属于改评测，需要单独说明） |
+| 纵向 | min(设定速度与曲率限速, lead 头 IDM, 行驶中 plan) + intent 锁存 + 5 s resume + 低速滑行 | 同，去掉低速滑行（HUGSIM 是运动学单车，没有 CARLA 的轻刹即停） | 同一个仲裁函数；episode 最长 100 s，停车直接吃 RC，resume 时长要按 4 Hz 步数重算 |
+| 感知强项 | lead 头可靠；CARLA 行人看不见（第 55 条） | 真实外观：lead 头与行人都在 openpilot 的训练域里（nuScenes 上 ≤ 10 m 车道内行人 AUC 0.83） | HUGSIM 是 openpilot 纵向「看见了」最该显出来的地方，对照同样是 base 与同均速 baseslow |
+| 打分特点 | DS = RC × 违规折扣，慢几乎不扣分 | 按计划轨迹打分：plan 越长越容易碰到东西；静止 PDMS≈1 但 RC≈0 | 发出去的航点用仲裁后的剖面（不是 openpilot 原始 plan），横向交接的 1 s 混合在 4 Hz 下是 4 步 |
+| 模型接口 | `op_arb_server.py`（ORT，Cinque） | 同一个 server 与 wire 协议 | 适配后的模型换权重即可，两边同时生效 |
+
+实现上唯一需要的重构：把 `OpArbAgent._plan` 里与 CARLA 无关的部分（`governor`、`idm`、`plan_arc`、`place`、横向归属与锁存状态机）抽成一个纯函数模块（例如 `jevdrive/op_drive.py`），
+CARLA agent 与 HUGSIM agent（`scripts/hugsim/zs_agent.py` 的一个新 model 分支）都调它。估计 0.5–1 天，外加 HUGSIM 上的分级 smoke；本轮没做。
+
 ## 10. 标定链审计：CARLA rig 是不是已经等价于「收敛后的 liveCalibration」（2026-09-29，只读源码 + CPU 数值，没有 CARLA）
 
 问题来自用户：真车上 calibrationd 是为了吸收「用户装得不准」而在线学 rpy；模拟器里外参是构造出来的精确值，应当直接喂先验，不需要任何 warm-up。结论先说：**我们已经在喂了，不需要 warm-up，也没有要改的代码。**
