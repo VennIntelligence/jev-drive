@@ -3961,3 +3961,19 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**（1 次 5 seed 集成、1 个 held-out 选择、只有 Cinque；navtest 看了 4 次）。**会推翻本条的证据**：另一组 seed 或另一 fold 选出的配置在 navtest 上对 N1 的 Δ 低于 +2；把原生族槽限制在拉长 ≤ 1.15 后增益大部分消失（那会说明增益主要来自「开快」这一条规则漏洞）。
 
+
+## 71. NAVSIM 提分臂 S 与 A：训练行 2 万 → 6 万使线性打分头 navtest +0.48 [+0.23, +0.74]（判「成立」）；openpilot 强制 desire 的替代 plan 抬高 oracle 但打分头用不上（held-out −0.08，不纳入）（**待定**，navtest 12 146，1 seed，只有 Cinque）
+
+2026-09-30。预登记与表在 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md) 的 S、A 节。S：navtrain 中不与 E6 集、N0 选参集和 held-out logs 重叠的 40 000 个 token，与 N1 同一 GIMM + Cinque + devkit 标签管线（GPU 5 整卡约 7.3 GPU·h，CPU 约 80 core·h），N1b 的线性配方。
+
+| 读数 | S | N1b | N1 |
+|:--|--:|--:|--:|
+| navtest PDMS | 87.74 | 87.26 | 87.32 |
+| S − 该行（配对，95% CI） | – | +0.48 [+0.23, +0.74] | +0.42 [+0.15, +0.70]（Bonferroni m = 5 [+0.06, +0.77]） |
+| held-out fold 0 | 90.11 | 89.52 | 89.46 |
+
+1. **S 按登记判「成立」**：数据量对线性头有用，held-out +0.59、navtest +0.48，与线性学习曲线（每翻倍 +0.4 到 +0.6）一致。MLP 头的学习曲线更陡（每翻倍 +0.8 到 +1.3，第 70 条），所以 N2 配置 + 6 万行（N3）已按登记起跑。
+2. **A 不纳入**：Cinque 在强制 laneChange / turn desire 下的 4 条替代 plan（各 ×1.00 / 1.15）使 held-out 上候选池的 oracle 96.0 → 96.9，但 N2 配置的打分头 92.64 → 92.56。基座自己的多模态里有更好的候选，现在的头挑不出来。
+
+**状态**：**待定**（1 seed；S 只测了线性头；navtest 本 lane 共 5 次）。**会推翻本条的证据**：换一组 4 万 token（不同种子）后 S − N1b 的 CI 跨零。
+
