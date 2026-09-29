@@ -79,3 +79,4 @@ GPU 0–4（Cosmos 全量在跑）与 GPU 6，每卡 ≤ 12 GB、nice 19，卡�
 ## WOD-E2E test 提交记录
 
 - 2026-09-29：用户手动上传了三次。前两次：原生 Cinque 的根目录 `.bin` 包，以及加了 val 两折均选出的纵向 ×1.06、按官方教程封装为 `MySubmission/part0` 的包，均报 `No shards found in submission_key`；Waymo 页面写明失败提交不扣配额。随后在 Waymo 工程师的 [#936 回复](https://github.com/waymo-research/waymo-open-dataset/issues/936)及已有成绩的 [OpenEMMA 公开代码](https://github.com/hansungkim98122/OpenEMMA-for-Waymo-E2E/blob/main/waymo_submission.ipynb)中确认，服务器实际要求分片名 `mysubmission.binproto-00000-of-00001`，与官方教程的 `part0` 不一致。第三次按该命名重包，1,505 条 test 轨迹及 protobuf 元数据与第二包相同；用户手动提交并成功出分：**RFS 7.921477、ADE@3s 1.2368475 m、ADE@5s 2.7405558 m**。[完整记录](../tmp/2026-09-29-wod-e2e-cinque-test-result.md)。读取时结果页仍显示 Publish 按钮，公开状态待确认。
+- 名次：按 2026-09-29 榜快照（154 条提交、115 个方法），按方法取最好成绩排**第 19**（逐条第 23）；在 Poutine 7.986 之下、Poutine-Base 7.909 之上。可核实的 zero-shot 行此前最高是 LightEMMA 6.52。最弱场景 Spotlight 6.93，最强 Construction 8.49。
