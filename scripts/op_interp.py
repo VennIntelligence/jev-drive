@@ -17,7 +17,7 @@ Run dir: $DATA_DIR/runs/op_interp/{wod,nav}/.
     $PY scripts/op_interp.py wod-cache && $VF scripts/op_interp.py synth --data wod --method rife
     CUDA_VISIBLE_DEVICES=2 $PY scripts/op_interp.py run --data wod --frames rife --model cinque
 """
-import argparse, json, sys, time
+import argparse, json, os, sys, time
 from pathlib import Path
 
 import numpy as np
@@ -35,7 +35,8 @@ LHT_MAPS = {"sg-one-north"}
 
 
 def root(*p) -> Path:
-    d = data_dir() / "runs" / "op_interp" / Path(*p)
+    """Run dirs live under $DATA_DIR/runs/$OPI_ROOT (default op_interp; scripts/op_lb.py uses op_lb)."""
+    d = data_dir() / "runs" / os.environ.get("OPI_ROOT", "op_interp") / Path(*p)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -462,6 +463,18 @@ def cmd_nav_report(a):
         rows.append(row)
     out = pd.DataFrame(rows).sort_values("pdms", ascending=False)
     out.to_csv(root(a.data) / "results.csv", index=False)
+    mt = meta(a.data)
+    if not two_stage and "cmd" in mt:        # per driving command at t0 and the start frames (v0 < 1 m/s), as section 6
+        grp = pd.Series(np.array(["left", "straight", "right", "unknown"])[mt["cmd"]], index=mt["names"])
+        start = pd.Series(np.array(mt["speed"]) < 1.0, index=mt["names"])
+        bc = pd.DataFrame({k: {**{g: 100 * df["score"].groupby(grp.reindex(df.index)).mean().get(g, np.nan)
+                                  for g in ("straight", "left", "right")},
+                               "start_v0<1": 100 * df["score"][start.reindex(df.index).to_numpy(bool)].mean(),
+                               "n_straight_left_right": "/".join(str(int((grp.reindex(df.index) == g).sum()))
+                                                                 for g in ("straight", "left", "right"))}
+                           for k, df in res.items()}).T
+        bc.to_csv(root(a.data) / "by_command.csv")
+        print(bc.round(2).to_string())
     with pd.option_context("display.width", 250, "display.max_columns", 40):
         print(out.round(2).to_string(index=False))
 
@@ -506,7 +519,7 @@ if __name__ == "__main__":
     p = sp.add_parser("nav-report")
     p.add_argument("--data", default="nav", help="run dir name under runs/op_interp/")
     p.add_argument("--ver", default="v1", choices=("v1", "v2"))
-    p.add_argument("--split", default="navtest", choices=("navtest", "navhard_two_stage"))
+    p.add_argument("--split", default="navtest", choices=("navtest", "navhard_two_stage", "navtrain"))
     p.add_argument("--refs", nargs="+", default=["hold-cinque__base"])
     a = ap.parse_args()
     {"wod-cache": cmd_wod_cache, "nav-cache": cmd_nav_cache, "synth": cmd_synth, "run": cmd_run, "score-wod": cmd_score_wod,

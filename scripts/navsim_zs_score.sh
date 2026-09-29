@@ -22,7 +22,7 @@ export NAVSIM_DEVKIT_ROOT=$dk PYTHONPATH=$repo${PYTHONPATH:+:$PYTHONPATH}
 # Forcing the Haswell kernel fixes it; refuse to run if linear algebra is still wrong.
 export OPENBLAS_CORETYPE=${OPENBLAS_CORETYPE:-Haswell} OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1  # ray gives the parallelism
 "$py" -c "import numpy as np; A=np.random.default_rng(0).normal(size=(40,40)); e=abs(A@np.linalg.inv(A)-np.eye(40)).max(); assert e<1e-8, f'BLAS broken: {e}'"
-cache=$DATA_DIR/runs/navsim/metric_cache/${ver}_$split
+cache=$DATA_DIR/runs/navsim/metric_cache/${CACHE_NAME:-${ver}_$split}   # CACHE_NAME: a subset cache (with TOKENS_FILE)
 threads=${NAVSIM_THREADS:-16}
 worker=(worker=ray_distributed_no_torch worker.threads_per_node=$threads)
 syn=(synthetic_sensor_path=$OPENSCENE_DATA_ROOT/navhard_two_stage/sensor_blobs
@@ -31,8 +31,9 @@ syn=(synthetic_sensor_path=$OPENSCENE_DATA_ROOT/navhard_two_stage/sensor_blobs
 
 if [[ $cmd == cache ]]; then
   key=metric_cache_path; [[ $ver == v1 ]] && key=cache.cache_path   # v1.1 names it differently
+  flt=(); [[ -n ${TOKENS_FILE:-} ]] && flt=("train_test_split.scene_filter.tokens=[$(sed "s/.*/'&'/" "$TOKENS_FILE" | paste -sd,)]")
   exec "$py" "$dk/navsim/planning/script/run_metric_caching.py" train_test_split=$split \
-    $key=$cache "${worker[@]}" "${syn[@]}"
+    $key=$cache "${worker[@]}" "${syn[@]}" "${flt[@]}"
 fi
 
 name=$4 agent=$5
