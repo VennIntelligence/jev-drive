@@ -149,26 +149,30 @@ def _claim(q: Path, c: int):
     return True
 
 
-def _vram_used_gb(gpu: int) -> float:
-    out = subprocess.check_output(["nvidia-smi", "-i", str(gpu), "--query-gpu=memory.used", "--format=csv,noheader,nounits"])
-    return int(out) / 1024
+def _vram_gb(gpu: int) -> tuple[float, float]:
+    """(total used on the card, used by this process incl. its CUDA context), GB, from nvidia-smi."""
+    q = lambda *a: subprocess.check_output(["nvidia-smi", "-i", str(gpu), *a, "--format=csv,noheader,nounits"]).decode()  # noqa: E731
+    mine = sum(int(r.split(",")[1]) for r in q("--query-compute-apps=pid,used_memory").splitlines()
+               if r.strip() and int(r.split(",")[0]) == os.getpid())
+    return int(q("--query-gpu=memory.used")) / 1024, mine / 1024
 
 
 def _gpu_gate(gpu, cap, need, log):
-    """Wait until the card has room: (used by others) + need <= cap. Our own cache is released while waiting."""
+    """Wait until the card has room: (used by other processes) + need <= cap. Our cache is released while waiting."""
     import torch
     t0 = None
     while True:
-        other = _vram_used_gb(gpu) - torch.cuda.memory_reserved() / 2 ** 30
-        if other + need <= cap:
+        used, mine = _vram_gb(gpu)
+        if used - mine + need <= cap:
             if t0 is not None:
+                log.info(f"GPU {gpu}: resumed after {time.time() - t0:.0f} s")
                 log.event("resume", gpu=gpu, paused_s=time.time() - t0)
             return
         if t0 is None:
             t0 = time.time()
             torch.cuda.empty_cache()
-            log.info(f"GPU {gpu}: others use {other:.1f} GB, + {need} > cap {cap}; paused")
-            log.event("pause", gpu=gpu, other_gb=other)
+            log.info(f"GPU {gpu}: others use {used - mine:.1f} GB, + {need:.1f} > cap {cap}; paused")
+            log.event("pause", gpu=gpu, other_gb=used - mine)
         time.sleep(60)
 
 
@@ -189,6 +193,7 @@ def cmd_synth(a):
         torch.set_num_threads(2)
         torch.cuda.set_per_process_memory_fraction(min(1.0, a.vram_gb * 2 ** 30 / torch.cuda.get_device_properties(0).total_memory))
         model = I.GIMM(data_dir() / "third_party" / "vfi")
+        need = a.vram_gb                                  # until the first chunk measured the real peak
     else:
         from concurrent.futures import ProcessPoolExecutor
         ex = ProcessPoolExecutor(a.workers)
@@ -206,9 +211,10 @@ def cmd_synth(a):
             tc = time.time()
             k = keys[c:c + a.chunk]
             if a.method == "gimm":
-                _gpu_gate(a.gpu, a.cap_gb, a.vram_gb, log)
+                _gpu_gate(a.gpu, a.cap_gb, need, log)
                 syn = I.synth_vfi(k, model, SYN_T, batch=a.batch)
                 torch.cuda.synchronize()
+                need = min(a.vram_gb, torch.cuda.max_memory_reserved() / 2 ** 30 + 0.7)   # + CUDA context
             else:
                 rows = range(c, c + len(k))
                 jobs = ((k[i - c], (mt["pose"][i], mt["vel"][i]), mt["cam"][i]) for i in rows)
@@ -218,7 +224,8 @@ def cmd_synth(a):
             (q / f"{c // a.chunk:05d}.done").touch()
             done += len(k)
             dt = time.time() - tc
-            log.info(f"{data} chunk {c // a.chunk}: {len(k)} tokens, {dt / len(k):.3f} s/token")
+            log.info(f"{data} chunk {c // a.chunk}: {len(k)} tokens, {dt / len(k):.3f} s/token"
+                     + (f", peak {torch.cuda.max_memory_reserved() / 2 ** 30:.1f} GB" if a.method == "gimm" else ""))
             log.event("chunk", data=data, chunk=c // a.chunk, n=len(k), s_per_token=dt / len(k))
         left = sum(not (q / f"{c // a.chunk:05d}.done").exists() for c in chunks)
         log.info(f"{data}: {done} tokens here in {time.time() - t0:.0f} s; chunks not done yet (any worker): {left}")
