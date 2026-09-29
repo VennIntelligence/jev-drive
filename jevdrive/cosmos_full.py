@@ -366,7 +366,7 @@ def _controls(r, row, ids, g, ref, W_, clips, t_start) -> dict:
     cfg = meta.get("config", {})
     harness = {"git": os.environ.get("COSMOS_FULL_GIT", ""), "carla": "0.9.15 Epic", "driver": cfg.get("driver"),
                **{k: cfg.get(k) for k in ("rig", "tfv6_model_dir", "pass_stop_s", "pass_margin_m", "cosmos_stop",
-                                           "cosmos_cam", "cosmos_rgb_attrs", "sensor_tick", "after_trigger_s", "max_sim_s")}}
+                                           "cosmos_cam", "cosmos_rgb_attrs", "keep_street_lights", "sensor_tick", "after_trigger_s", "max_sim_s")}}
     row["harness"] = json.dumps(harness)
     spec = {"pair": r.pair, "town": TOWN, "weather": meta["weather"], "prompt": prompt2_full(meta["weather"]),
             "k0": int(r.k0), "k1": int(r.k1), "ids": ids, "gen": row["gen"], "harness": harness, "family": r.family, "inst": int(r.get("inst", -1)), "v": int(r.get("v", -1))}
@@ -511,7 +511,8 @@ class Lane:
 
     def agent_json(self, windows: dict) -> Path:
         c = {"tfv6_model_dir": "", "rig": False, "pass_stop_s": 0.5, "cosmos_stop": True, "cosmos_windows": windows,
-             "cosmos_rgb_attrs": json.loads(os.environ.get("COSMOS_RGB_ATTRS", "{}"))}
+             "cosmos_rgb_attrs": json.loads(os.environ.get("COSMOS_RGB_ATTRS", "{}")),
+             "keep_street_lights": os.environ.get("B2D_KEEP_STREET_LIGHTS") == "1"}     # render fix, recorded per route in meta.json
         f = full() / "agent.json"
         f.write_text(json.dumps(c))
         return f
