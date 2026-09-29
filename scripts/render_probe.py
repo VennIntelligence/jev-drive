@@ -7,7 +7,8 @@ placed at a route's start (the WL front camera: 1088 x 1560, fov 52), logging th
   A  set_weather(route weather), tick, set_day_night_cycle(False) (RouteLightsBehavior.__init__), spawn the camera,
      10 ticks (AgentWrapper.setup_sensors)
   B  set_weather(same weather) again (RouteWeatherBehavior's first update), 10 ticks
-  C  turn on every light within 100 m (RouteLightsBehavior's first update), 10 ticks
+  C  RouteLightsBehavior's first update: turn on the lights within 100 m and off the others, by the client's is_on,
+     10 ticks
   D  set_day_night_cycle(True) (RouteLightsBehavior.terminate), 5 ticks, destroy the camera
 Out: <out>/probe.jsonl, one line per tick: episode, phase, tick, luma, server lights on.
 
@@ -90,7 +91,9 @@ def main():
             world.set_weather(weather)
             log("B", 10)
             here = carla.Location(x0, y0, z0)
-            lm.turn_on([l for l in lm.get_all_lights() if l.location.distance(here) <= 100 and not l.is_on])
+            lights = lm.get_all_lights()
+            lm.turn_on([l for l in lights if l.location.distance(here) <= 100 and not l.is_on])
+            lm.turn_off([l for l in lights if l.location.distance(here) > 100 and l.is_on])
             log("C", 10)
             lm.set_day_night_cycle(True)
             log("D", 5)
