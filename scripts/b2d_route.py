@@ -118,7 +118,39 @@ def parse_args(argv=None):
     return a
 
 
+ZYGOTE_PRELOAD = ("numpy", "cv2", "torch", "py_trees", "leaderboard.leaderboard_evaluator",
+                  "leaderboard.utils.statistics_manager", "leaderboard.scenarios.route_scenario",
+                  "lead.common.base_agent", "lead.inference.sensor_agent")
+
+
+def _zygote():
+    """B2D_ZYGOTE=1 (scripts/b2d_run.py --zygote): a route process started ahead of its route. It imports the heavy,
+    side-effect-free modules (torch, LEAD, leaderboard; B2D_ZYGOTE_PRELOAD overrides the list) while the previous route
+    is still running, then blocks on stdin for {"argv": [...], "log": path}, sends its output to that log and runs the
+    route exactly as a fresh process would. Our own patching modules (b2d_hooks, the agent, p4's ScenarioManager patch)
+    are not preloaded, so every patch is applied in the same order as without the zygote."""
+    import importlib
+    t0 = time.time()
+    add_bench2drive_to_path(os.environ.get("BENCH2DRIVE_ROOT", str(Path(os.environ.get("DATA_DIR", "")) / "third_party/Bench2Drive")))
+    names = [m for m in os.environ.get("B2D_ZYGOTE_PRELOAD", ",".join(ZYGOTE_PRELOAD)).split(",") if m]
+    for m in names:
+        try:
+            importlib.import_module(m)
+        except Exception as e:  # noqa: BLE001  (a module the route never needs, e.g. torch in a stub env)
+            print("zygote: preload %s failed: %r" % (m, e), flush=True)
+    t1 = time.time()
+    req = json.loads(sys.stdin.readline())
+    fd = os.open(req["log"], os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    os.dup2(fd, 1)
+    os.dup2(fd, 2)
+    sys.argv = [sys.argv[0]] + req["argv"]
+    os.environ["B2D_ZYGOTE_TIMES"] = json.dumps({"preload_s": round(t1 - t0, 2), "idle_s": round(time.time() - t1, 2),
+                                                 "handover": time.time()})
+
+
 def main():
+    if os.environ.get("B2D_ZYGOTE") == "1":
+        _zygote()
     a = parse_args()
     a.routes, a.out = str(Path(a.routes).resolve()), str(Path(a.out).resolve())
     if a.agent:

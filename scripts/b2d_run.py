@@ -158,6 +158,10 @@ def parse_args(argv=None):
     p.add_argument("--stall-s", type=float, default=240.0, help="no tick progress for this long = hung")
     p.add_argument("--route-timeout-s", type=float, default=5400.0)
     p.add_argument("--fresh", action="store_true", help="ignore existing results and redo everything")
+    p.add_argument("--zygote", action="store_true",
+                   help="start each worker's next route process while the current route runs (b2d_route.py "
+                        "B2D_ZYGOTE: heavy imports done ahead, then the route is handed over on stdin); still one "
+                        "process per route (todos/2026-09-29-carla-rewind.md)")
     p.add_argument("--no-reap", action="store_true",
                    help="do not kill servers/routes recorded in --out at start. Required for every runner that joins an "
                         "--out another live runner is using: reaping cannot tell its servers from a dead runner's.")
@@ -567,6 +571,12 @@ class Runner(object):
             # the main process exits. Daemon threads previously left both children alive.
             for t in threads:
                 t.join()
+            for z in getattr(self, "_zygotes", {}).values():   # warmed-up spares: EOF on stdin ends them
+                try:
+                    z.stdin.close()
+                    z.wait(timeout=30)
+                except Exception:  # noqa: BLE001
+                    z.kill()
             self.summarise()
         if self.stop_flag:
             return 130
@@ -714,7 +724,13 @@ class Runner(object):
                    tm_port=tm_port)
         t0 = time.time()
         log = open(str(adir / "route.log"), "wb")
-        proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
+        if self.a.zygote:
+            proc = self.zygote(wi)                    # pre-warmed; hand it this route, start the next one warming
+            proc.stdin.write((json.dumps({"argv": cmd[2:], "log": str(adir / "route.log")}) + "\n").encode())
+            proc.stdin.close()
+            self._zygotes[wi] = self.spawn_zygote(wi)
+        else:
+            proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
         (adir / "route.pid").write_text(str(proc.pid))
         reason = self.supervise(proc, adir, t0, server)
         log.close()
@@ -756,6 +772,22 @@ class Runner(object):
         self.event("route_end", worker=wi, route_id=rid, attempt=attempt,
                    status=record["status"], wall_s=record["wall_s"], ticks=record.get("ticks"))
         return ok, record
+
+    def spawn_zygote(self, wi):
+        zlog = self.out / "zygotes"
+        zlog.mkdir(exist_ok=True)
+        env = dict(os.environ, B2D_ZYGOTE="1")
+        return subprocess.Popen([self.a.python, str(HERE / "b2d_route.py")], stdin=subprocess.PIPE,
+                                stdout=open(str(zlog / ("w%d.log" % wi)), "ab"), stderr=subprocess.STDOUT,
+                                preexec_fn=os.setsid, env=env)
+
+    def zygote(self, wi):
+        if not hasattr(self, "_zygotes"):
+            self._zygotes = {}
+        z = self._zygotes.get(wi)
+        if z is None or z.poll() is not None:
+            z = self.spawn_zygote(wi)
+        return z
 
     def supervise(self, proc, adir, t0, server=None):
         """Return None if the process exited on its own, else why we killed it.

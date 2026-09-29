@@ -43,6 +43,6 @@ PYEOF
         "$DATA_DIR/envs/carla/bin/python" scripts/b2d_run.py --routes "$R/routes-$s.xml" --route-ids "$ids" --out "$R/$GEN/$s" \
         --workers "$W" --server-index "$IDX" --index-span "$SPAN" --gpu-rank "$G" --tm-seed-from-id \
         --agent scripts/wl_fork_agent.py --agent-config "$R/agent-$s.json" --python "$py" \
-        --fast-copy --no-spectator --no-reap --max-attempts 3 --stagger-s 30 --client-threads 8 --stall-s 600
+        --fast-copy --no-spectator --no-reap --max-attempts 3 --stagger-s 30 --client-threads 8 --stall-s 600 ${ZYGOTE:+--zygote}
 done
 echo "$(date '+%F %T') rewind-gen end"

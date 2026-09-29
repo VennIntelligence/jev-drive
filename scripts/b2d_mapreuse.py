@@ -32,6 +32,8 @@ def install(out_dir: str, reuse: bool):
     from leaderboard.leaderboard_evaluator import LeaderboardEvaluator
     from leaderboard.scenarios.route_scenario import RouteScenario
     ph = {"proc_start": _proc_start(), "reuse_enabled": reuse}
+    if os.environ.get("B2D_ZYGOTE_TIMES"):            # pre-warmed route process: the route started at the handover
+        ph["zygote"] = json.loads(os.environ["B2D_ZYGOTE_TIMES"])
     path = Path(out_dir) / "phases.json"
 
     def dump():
