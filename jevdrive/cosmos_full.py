@@ -815,6 +815,17 @@ class Lane:
         return s
 
 
+def prompts() -> Path:
+    """Every prompt the run can use (route weathers of the pool + the presets), for the worker's --warm."""
+    pl = pd.read_csv(main_dir() / "pool.csv")
+    ws = [json.loads(w) for w in pl.weather_route] + [w for _, w in PRESETS]
+    out = sorted({prompt2_full(w) for w in ws})
+    f = main_dir() / "te_prompts.txt"
+    f.write_text("\n".join(out) + "\n")
+    log.info("%d distinct prompts -> %s", len(out), f)
+    return f
+
+
 def checklist(stage: str, pairs: list | None = None) -> dict:
     """Staged-launch checklist (todo, registered before the full run) for runs/cosmos_full/<stage>: after
     scripts/cosmos_full_check.sh has run the v2 readouts (per_pair_G4b.csv)."""
@@ -876,7 +887,7 @@ def checklist(stage: str, pairs: list | None = None) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("build", "run", "summary", "controls-test", "checklist"))
+    ap.add_argument("step", choices=("build", "run", "summary", "controls-test", "checklist", "prompts"))
     ap.add_argument("--target", type=int, default=2000)
     ap.add_argument("--insts", default="", help="comma list of pool instances (staged pilots)")
     ap.add_argument("--keep-npy", action="store_true")
@@ -901,6 +912,8 @@ def main():
         print(json.dumps(Lane(a.target, insts, a.keep_npy).summary(), indent=1, default=str))
     elif a.step == "controls-test":
         controls_test(a.pair)
+    elif a.step == "prompts":
+        prompts()
     elif a.step == "checklist":
         checklist(a.stage)
 

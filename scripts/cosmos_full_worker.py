@@ -81,6 +81,7 @@ def main():
     ap.add_argument("--target", type=int, default=0)
     ap.add_argument("--keep-npy", action="store_true")
     ap.add_argument("--start-after", default="", help="wait for this file before loading the model")
+    ap.add_argument("--warm", default="", help="file of prompts: fill COSMOS_TE_CACHE with their embeddings and exit")
     a = ap.parse_args()
     root = Path(a.root)
     lane = root / "lane"
@@ -102,6 +103,13 @@ def main():
     inf = CI.load_model("edge/distilled", tmp, ["edge"])
     rl.info(f"model loaded in {time.time() - t0:.0f} s")
     rl.event("load", s=time.time() - t0, card_peak_gib=peak.peak / 2**30)
+    if a.warm:        # the text encoder goes onto the card for every new prompt (~16 GB); do all of them once, up front
+        te = inf.inference_pipeline.model.text_encoder
+        for i, pr in enumerate(x for x in Path(a.warm).read_text().splitlines() if x.strip()):
+            te.compute_text_embeddings_online({"prompt": [pr]}, "prompt")
+            rl.info(f"warm {i}: {pr[:90]}")
+        rl.event("warm", n=i + 1, card_peak_gib=peak.peak / 2**30)
+        return
     n = 0
     while True:
         if (lane / "DRAIN").exists():

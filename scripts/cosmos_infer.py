@@ -73,7 +73,7 @@ def patch_text_encoder_offload():
     disk = Path(os.environ["COSMOS_TE_CACHE"]) if os.environ.get("COSMOS_TE_CACHE") else None
 
     def wrapped(self, data_batch, input_caption_key, *a, **kw):
-        key = (input_caption_key, tuple(map(str, data_batch[input_caption_key])))
+        key = tuple(map(str, data_batch[input_caption_key]))          # the embedding depends on the prompt text only
         if key not in cache:
             # COSMOS_TE_CACHE: embeddings shared across worker processes (the encoder runs on the CPU here, ~1 min)
             f = disk / (hashlib.sha1(repr(key).encode()).hexdigest() + ".pt") if disk else None
