@@ -230,6 +230,8 @@ class Rewinder:
         """Warm-up dead tick i: the state of prefix tick k-1-N+i (teleport on the first, velocities after), returns the
         ego control recorded at that tick."""
         ids, ctl = self.hist[i]
+        if i == 0 and self.method in ("tree", "respawn"):
+            self.restore()            # destroy what the branch spawned, respawn what it destroyed, before the replay
         if self.method in ("tree", "respawn"):
             # the scenario tree ticks after this call: hold it at the fork state (it would otherwise see the teleports,
             # e.g. InRouteTest fails on the jump back and ends the route); the final restore sets it again
