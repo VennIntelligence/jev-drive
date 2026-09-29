@@ -139,8 +139,20 @@ def install(profile, no_spectator=False, fast_copy=False, zero_copy=False, senso
         patch_camera_attrs(json.loads(os.environ["B2D_CAM_ATTRS"]))
     if os.environ.get("B2D_LIGHTS_FIX") == "1":
         _patch_day_night_cycle()
+    for name in filter(None, os.environ.get("B2D_MUTE_BEHAVIOR", "").split(",")):   # diagnostics: weather, lights
+        _mute_behavior(name)
     if os.environ.get("B2D_LIGHTS_TRUTH"):
         _trace_lights_truth(int(os.environ["B2D_LIGHTS_TRUTH"]))
+
+
+def _mute_behavior(name):
+    """Diagnostics ($B2D_MUTE_BEHAVIOR=weather,lights): the route's RouteWeatherBehavior / RouteLightsBehavior stay in
+    the tree but their update does nothing (the weather set at scenario start stays; no light is switched)."""
+    if name == "weather":
+        from srunner.scenariomanager.weather_sim import RouteWeatherBehavior as B
+    else:
+        from srunner.scenariomanager.lights_sim import RouteLightsBehavior as B
+    B.update = lambda self: py_trees.common.Status.RUNNING
 
 
 def _patch_day_night_cycle():
