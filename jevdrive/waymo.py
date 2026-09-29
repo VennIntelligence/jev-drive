@@ -19,6 +19,7 @@ import importlib
 import io
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -1158,6 +1159,8 @@ def write_submission(frame_names, trajectories: np.ndarray, path, meta: dict, pe
     for k in ("account_name", "unique_method_name", "num_model_parameters"):
         if not fields[k]:
             raise ValueError(f"{k} is required for a valid submission")
+    if not re.fullmatch(r"\d+(\.\d+)?[KMBT]", fields["num_model_parameters"]):
+        raise ValueError("num_model_parameters must be a number with a K/M/B/T suffix (proto comment), e.g. '382M'")
 
     path.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(path, "w:gz") as tar:

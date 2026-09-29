@@ -21,11 +21,11 @@ MODEL_META = {
                    description="openpilot Cinque v3 (382M), run zero-shot (no fine-tuning, no fitted "
                                 "parameters) on WOD-E2E via a rendered calib-frame adapter from the FRONT/"
                                 "FRONT_LEFT/FRONT_RIGHT cameras; see todos/2026-09-24-zeroshot-exam/wod-e2e.md.",
-                   public_model_names=["openpilot Cinque v3"], num_model_parameters="382000000"),
+                   public_model_names=["openpilot Cinque v3"], num_model_parameters="382M"),
     "lebowski": dict(unique_method_name="openpilot_lebowski_zeroshot",
                      description="openpilot Lebowski (877M, 0.11.2 big model), run zero-shot on WOD-E2E via "
                                   "the same adapter as Cinque v3; see todos/2026-09-24-zeroshot-exam/wod-e2e.md.",
-                     public_model_names=["openpilot Lebowski"], num_model_parameters="877000000"),
+                     public_model_names=["openpilot Lebowski"], num_model_parameters="877M"),
 }
 COMMON_META = dict(account_name="liuziyue6991@gmail.com", authors=["Gaochengzhi"], affiliation="VennIntelligence",
                    method_link="", uses_public_model_pretraining=True)
