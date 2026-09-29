@@ -9,6 +9,7 @@ placed at a route's start (the WL front camera: 1088 x 1560, fov 52), logging th
   B  set_weather(same weather) again (RouteWeatherBehavior's first update), 10 ticks
   C  RouteLightsBehavior's first update: turn on the lights within 100 m and off the others, by the client's is_on,
      10 ticks
+  E  the same rule applied from a fresh client (the server's true on/off state), 10 ticks
   D  set_day_night_cycle(True) (RouteLightsBehavior.terminate), 5 ticks, destroy the camera
 Out: <out>/probe.jsonl, one line per tick: episode, phase, tick, luma, server lights on.
 
@@ -95,6 +96,12 @@ def main():
             lm.turn_on([l for l in lights if l.location.distance(here) <= 100 and not l.is_on])
             lm.turn_off([l for l in lights if l.location.distance(here) > 100 and l.is_on])
             log("C", 10)
+            probe = carla.Client("localhost", server.port)          # E: the same rule on the server's true state
+            plm = probe.get_world().get_lightmanager()
+            truth = plm.get_all_lights()
+            plm.turn_off([l for l in truth if l.location.distance(here) > 100 and l.is_on])
+            plm.turn_on([l for l in truth if l.location.distance(here) <= 100 and not l.is_on])
+            log("E", 10)
             lm.set_day_night_cycle(True)
             log("D", 5)
             cam.stop()
