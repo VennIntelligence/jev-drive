@@ -159,7 +159,7 @@ def run() -> dict:
     log.info("exam frames %d, with a full 8-step history %d", len(frames), len(ok))
     fi = frame_inputs(ok)
     cmds = candidates_for(fi)
-    out, picks = {}, []
+    out, risk, picks = {}, {}, []
     prep = prepare_rows(ok, rows_of, wm, wz)
     for s in M.SEEDS:
         ro = rollouts(s, prep, cmds)
@@ -167,6 +167,11 @@ def run() -> dict:
         sel = select(p, ro["prog"])
         v2 = fi.v0.to_numpy() + cmds[np.arange(len(ok)), sel, :, 0].sum(1) * W.DT
         out[s] = pd.Series(v2, index=ok)
+        risk[s] = pd.Series(-p[:, ACTIONS.index("hold")], index=ok)      # post hoc description: the critic's own risk of `hold`, sign-flipped
+        pick_s = pd.Series(np.array(ACTIONS)[sel], index=ok)
+        if s == M.SEEDS[0]:
+            pick_by_seed = {}
+        pick_by_seed[s] = pick_s
         picks.append(pd.DataFrame({"fn": ok, "seed": s, "pick": np.array(ACTIONS)[sel], "v2_out": v2, "p_pick": p[np.arange(len(ok)), sel]}))
         log.info("seed %d done, %.0f s", s, time.time() - t0)
     picks = pd.concat(picks)
@@ -176,6 +181,8 @@ def run() -> dict:
         df = df[df[a].isin(have) & df[b].isin(have)].copy()
         for s in M.SEEDS:
             df[f"WL selector s{s}"] = out[s][df[a]].to_numpy() - out[s][df[b]].to_numpy()
+            df[f"WL hold-risk s{s}"] = risk[s][df[a]].to_numpy() - risk[s][df[b]].to_numpy()
+            df[f"pick_changed s{s}"] = (pick_by_seed[s][df[a]].to_numpy() != pick_by_seed[s][df[b]].to_numpy())
         ex[name] = df
     obs, null = ex["obs"], ex["null"]
     # references on the same frames: decision 42's prior and the M-C pair head, one run per fold seed
@@ -189,7 +196,7 @@ def run() -> dict:
             obs[nm] = obs.merge(o[["fn_plus", "fn_minus", col]], on=["fn_plus", "fn_minus"], how="left")[col].to_numpy()
             null[nm] = null.merge(nn[["fn_plus", "fn_null", col]], on=["fn_plus", "fn_null"], how="left")[col].to_numpy()
             ref_cols.append(nm)
-    examinees = [f"WL selector s{s}" for s in M.SEEDS] + ref_cols
+    examinees = [f"WL selector s{s}" for s in M.SEEDS] + [f"WL hold-risk s{s}" for s in M.SEEDS] + ref_cols
     res = {}
     rows = []
     for cls, fams in (("ped", WL.PED_FAM), ("cutin", WL.CUTIN_FAM)):
@@ -222,6 +229,10 @@ def run() -> dict:
                                         "pass": bool(r.flip_rate >= prior - PRIOR_CUTIN_MARGIN)}
     v["cutin"]["pass"] = all(x["pass"] for x in v["cutin"]["seeds"].values())
     v["refs"] = {f"{c}": {k: float(g.loc[(cl, c)].flip_rate) for k, cl in (("ped", "ped"), ("cutin", "cutin"))} for c in ref_cols}
+    v["pick_changed"] = {nm: {f"s{s}": float(df[f"pick_changed s{s}"].mean()) for s in M.SEEDS} for nm, df in (("obs", obs), ("null", null))}
+    v["hold_risk_description"] = {c: {f"s{s}": {"flip": float(g.loc[(c, f"WL hold-risk s{s}")].flip_rate),
+                                                "null_oos": float(g.loc[(c, f"WL hold-risk s{s}")].false_flip_null_oos)} for s in M.SEEDS}
+                                  for c in ("ped", "cutin")}
     (out_dir / "c4.json").write_text(json.dumps(v, indent=1))
     log.info("C4 done in %.0f s", time.time() - t0)
     return v
