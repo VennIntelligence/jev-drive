@@ -15,9 +15,11 @@ Generation (CARLA, scripts/wl_gen.sh with scripts/wl_fork_agent.py):
              fork group whose branches are all done is checked once against its source run's ego pose before k, any
              branch > 0.01 m drops the whole group). The old group cosine >= 0.999 gate is a per-run render gate
              instead: a run is dropped from z / training when more than half its pre-fork frames differ from the
-             source in front-camera brightness by > 10, or its prefix `temporal` cosine to the source is < 0.95; a
-             whole-run brightness scan against the run's own baseline (no source needed) adds the same per-run drop
-             for a D2 run or a fork run whose render failure starts after the prefix. A fork point leaves the C1/C2
+             source in front-camera brightness by > 10, or its prefix `temporal` cosine to the source is < 0.95. A
+             whole-run brightness scan against the run's own prefix baseline is also computed (no source needed, so
+             it would also cover D2 and a failure that starts after the prefix), but it reads ordinary scene drift
+             as failure (27 % of the full set, no clean split) and is left out of the gate -- descriptive only in
+             drops.json's "whole_scan" until a reference-free method is validated. A fork point leaves the C1/C2
              paired readouts only when its `op`, `hold` or `brake_hard` branch is render-dropped; its other branches
              still train. -> runs/wl/drops.json; --gate exits 3 when the pose-dropped groups exceed 5 % (overall or
              per set) or the render-dropped runs exceed 10 % (overall)
@@ -562,14 +564,17 @@ def _run_luma(args) -> dict:
 def drops(out: str | None = None, workers: int = 24, gate_min: int = 0) -> dict:
     """Checklist amendments (a) + (c) (todo, 2026-09-28 13:30 / 2026-09-29, user-approved). Pose stays a group gate:
     per fork group, once all its branches are done, any branch > PREFIX_POS_M ego pose drift against its source
-    drops the whole group. The render gate is per run instead, over every finished fork branch and every finished D2
-    run (D2 has no source at all): a run is dropped when its prefix front-camera brightness differs from the source
-    by > RENDER_LUMA_DIFF on more than RENDER_LUMA_FRAC of its pre-fork frames, its prefix `temporal` cosine to the
-    source is < RENDER_COS, or its whole-run scan against its own baseline (no source needed, so it also covers D2
-    and a failure whose onset is after the checked prefix) finds the same over RENDER_LUMA_FRAC of all its frames.
+    drops the whole group. The render gate is per run instead, over every finished fork branch (D2 has no source, so
+    it never enters this part): a run is dropped when its prefix front-camera brightness differs from the source by
+    > RENDER_LUMA_DIFF on more than RENDER_LUMA_FRAC of its pre-fork frames, or its prefix `temporal` cosine to the
+    source is < RENDER_COS. The whole-run brightness scan (_run_luma, no source needed) is also computed and cached
+    for every fork + D2 run, but left OUT of the gate: on the full set its self-baseline (a run's own prefix median)
+    flags 27 % of runs with a wide graded distribution, not the clean split of a render failure -- it is reading
+    ordinary scene drift as the branches drive into different scenery, not a fault. Its numbers are in the returned
+    "whole_scan" (descriptive) until a reference-free method is validated; res()["gate_fail"] does not depend on it.
     Results are cached per run in runs/wl/prefix_check.parquet, each metric filled once. --gate (main) fails when the
     pose-dropped groups exceed DROP_MAX (overall, or per set once it has >= gate_min checked groups) or the
-    render-dropped runs exceed RENDER_DROP_MAX (overall)."""
+    render-dropped runs (luma / cosine only) exceed RENDER_DROP_MAX (overall)."""
     from multiprocessing import Pool
     out = Path(out or rundir("gen"))
     forks_t = pd.read_parquet(rundir("forks.parquet"))
@@ -651,12 +656,21 @@ def drops(out: str | None = None, workers: int = 24, gate_min: int = 0) -> dict:
                           or any(v["frac"] > DROP_MAX for v in per.values() if v["checked"] >= gate_min))
 
     # ---- render (per-run) gate, amendment (c)
+    # whole_bad_frac is computed and cached (below) but left OUT of the gate for now: on the full set it flags 27 %
+    # of runs (vs. 6 % for luma_bad_frac / op_cos_min alone, matching the diagnosis agent's ~5.5 % estimate), a wide
+    # graded distribution (median 0.12, p90 0.84) with no clean split -- a run's own prefix-window brightness isn't a
+    # valid whole-run baseline once the branches drive into different scenery, so this reads as normal scene drift,
+    # not render failure. whole_scan_* below is descriptive only until main picks a real reference-free method.
     ru = cache[cache.route_id.isin(universe.route_id)].copy()
-    ru["checked"] = ru[["luma_bad_frac", "op_cos_min", "whole_bad_frac"]].notna().any(axis=1)
-    ru["bad"] = (ru.luma_bad_frac > RENDER_LUMA_FRAC) | (ru.op_cos_min < RENDER_COS) | (ru.whole_bad_frac > RENDER_LUMA_FRAC)
+    ru["checked"] = ru[["luma_bad_frac", "op_cos_min"]].notna().any(axis=1)
+    ru["bad"] = (ru.luma_bad_frac > RENDER_LUMA_FRAC) | (ru.op_cos_min < RENDER_COS)
     ruc = ru[ru.checked]
     render_frac = float(ruc.bad.mean()) if len(ruc) else 0.0
     render_gate_fail = render_frac > RENDER_DROP_MAX
+    whole_checked = cache[cache.whole_bad_frac.notna()]
+    whole_scan = {"checked": int(len(whole_checked)),
+                  "flagged_gt_50pct": int((whole_checked.whole_bad_frac > RENDER_LUMA_FRAC).sum()),
+                  "median_bad_frac": float(whole_checked.whole_bad_frac.median()) if len(whole_checked) else np.nan}
 
     # ---- amendment (c) item 3: fork points that leave the C1/C2 paired readouts (their other branches still train)
     fa = fd[["route_id", "fork_id", "action"]].merge(ru[["route_id", "bad"]], on="route_id")
@@ -669,7 +683,7 @@ def drops(out: str | None = None, workers: int = 24, gate_min: int = 0) -> dict:
                               for i, x in g[g.bad].iterrows()],
            "render_checked": int(len(ruc)), "render_dropped": int(ruc.bad.sum()), "render_frac": render_frac,
            "dropped_route_ids": sorted(ruc[ruc.bad].route_id.tolist()), "pair_dropped_fork_ids": pair_dropped,
-           "pose_gate_fail": pose_gate_fail, "render_gate_fail": render_gate_fail}
+           "whole_scan": whole_scan, "pose_gate_fail": pose_gate_fail, "render_gate_fail": render_gate_fail}
     res["gate_fail"] = bool(pose_gate_fail or render_gate_fail)
     rundir("drops.json").write_text(json.dumps(res, indent=1, default=str))
     return res
