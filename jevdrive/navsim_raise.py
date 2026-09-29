@@ -109,8 +109,8 @@ def fam_list(level: int) -> list:
     return [x for _, f in FAMS[:int(level)] for x in f]
 
 
-def slots(extra) -> list:
-    return [(s, 1.0) for s in N1.SCALES] + fam_list(extra)
+def slots(extra, alt: bool = False) -> list:
+    return [(s, 1.0) for s in N1.SCALES] + fam_list(extra) + ([(f"{k}*{x:.2f}", 1.0) for k in ALT for x in ALT_S] if alt else [])
 
 
 ALT, ALT_S = ("lcL", "lcR", "tL", "tR"), (1.00, 1.15)      # forced-desire alternative plans x stretch
@@ -119,7 +119,8 @@ ALT, ALT_S = ("lcL", "lcR", "tL", "tR"), (1.00, 1.15)      # forced-desire alter
 def alt_cands(tag: str = f"lb_n1train_n{N}", out: str = "cands_train.npz") -> np.ndarray:
     """(n, 8, 8, 3): the four forced-desire alternative plans of Cinque, each at stretch 1.00 and 1.15."""
     from .skill_pack_n0 import stretch
-    z = np.load(data_dir() / N1.FEAT / f"{tag.replace('_n', '__alt_n')}.npz")
+    base, n = tag.rsplit("_n", 1)
+    z = np.load(data_dir() / N1.FEAT / f"{base}__alt_n{n}.npz")
     c = np.stack([np.stack([stretch(p, s) for k in ALT for p in [z[f"native_{k}"][i]] for s in ALT_S])
                   for i in range(len(z["tokens"]))]).astype(np.float32)
     if out:
@@ -154,7 +155,7 @@ def _chunks(dirp: Path) -> dict:
     return ns
 
 
-def _add_scale(d: dict, m: int):
+def _add_scale(d: dict, m: int, extra: int = 0, alt: bool = False):
     """Append the scale-up rows (lb_n2train, first m tokens): features, E6-style anchor labels, native labels.
     None of them comes from a held-out log (tokens2), so fold 0 stays exactly N1's held-out set."""
     from . import elicit_e6 as E6
@@ -162,15 +163,31 @@ def _add_scale(d: dict, m: int):
     f = np.load(data_dir() / N1.FEAT / f"lb_n2train_n{m}.npz")
     toks = f["tokens"].tolist()
     an, na = _chunks(run_dir("scale") / "anchor_score"), _chunks(run_dir("scale") / "native_score")
-    keep = [i for i, t in enumerate(toks) if t in an and t in na]       # tokens the devkit could score
+    srcs = [an, na]
+    if extra:
+        fa = _chunks(run_dir("scale") / "fam_score")                     # FAM + FAM2 labels of the scale rows
+        srcs.append(fa)
+    if alt:
+        al = _chunks(run_dir("scale") / "alt_score")
+        srcs.append(al)
+    keep = [i for i, t in enumerate(toks) if all(t in q for q in srcs)]   # tokens the devkit could score
     toks = [toks[i] for i in keep]
     tr = E6._navtrain(True)
     pos = dict(zip(tr["tokens"].tolist(), range(len(tr["tokens"]))))
     r = np.array([pos[t] for t in toks])
     nat = f["native"][keep]
-    c = np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)
-    sub = np.concatenate([np.stack([an[t][0] for t in toks]), np.stack([na[t][0] for t in toks])], 1)
-    pd_ = np.concatenate([np.stack([an[t][1] for t in toks]), np.stack([na[t][1] for t in toks])], 1)
+    c = [np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)]
+    parts = [(an, None), (na, None)]
+    if extra:
+        nf = len(fam_list(extra))
+        c.append(family(nat, fam_list(extra)))
+        parts.append((fa, nf))
+    if alt:
+        c.append(alt_cands(f"lb_n2train_n{m}", out="")[keep])
+        parts.append((al, None))
+    c = np.concatenate(c, 1)
+    sub = np.concatenate([np.stack([q[t][0][:k] for t in toks]) for q, k in parts], 1)
+    pd_ = np.concatenate([np.stack([q[t][1][:k] for t in toks]) for q, k in parts], 1)
     new = {"tokens": np.array(toks), "log": tr["log"][r], "ego": tr["ego"][r], "hold_feat": tr["cinque"][r],
            "gimm": f["temporal"][keep], "native": nat, "cands": c, "sub": sub, "pdms": pd_}
     for k, v in new.items():
@@ -178,14 +195,28 @@ def _add_scale(d: dict, m: int):
     log.info(f"scale-up: + {len(toks)} rows ({m - len(toks)} without devkit labels)")
 
 
-def prep(n: int = N, extra: bool = False, scale: int = 0) -> dict:
-    """Training tensors exactly as skill_pack_n1.cmd_fit builds them (GIMM features, A0); extra = + FAM slots;
-    scale = + the first `scale` scale-up tokens (their logs are never held out)."""
+def _add_alt(d: dict):
+    ns = _chunks(run_dir("alt") / "score_train")
+    toks = d["tokens"].tolist()
+    assert all(t in ns for t in toks), "alt labels missing"
+    c = np.load(run_dir("alt") / "cands_train.npz")
+    assert (c["tokens"] == d["tokens"]).all()
+    d["cands"] = np.concatenate([d["cands"], c["cands"]], 1)
+    d["sub"] = np.concatenate([d["sub"], np.stack([ns[t][0] for t in toks])], 1)
+    d["pdms"] = np.concatenate([d["pdms"], np.stack([ns[t][1] for t in toks])], 1)
+
+
+def prep(n: int = N, extra: int = 0, scale: int = 0, alt: bool = False) -> dict:
+    """Training tensors exactly as skill_pack_n1.cmd_fit builds them (GIMM features, A0); extra = + FAM (1) or
+    FAM + FAM2 (2) slots; alt = + the 8 forced-desire slots; scale = + the first `scale` scale-up tokens (their logs
+    are never held out, so the held-out rows stay N1's)."""
     d = N1.load_train(n)
     if extra:
         _add_fam(d, extra)
+    if alt:
+        _add_alt(d)
     if scale:
-        _add_scale(d, scale)
+        _add_scale(d, scale, extra, alt)
     hold = np.zeros(len(d["tokens"]), bool)
     hold[:n] = H._group_folds(d["log"][:n], 5, seed=N1.SEED_HOLD) == 0                # N1's held-out rows, unchanged
     nat = d["native"]
@@ -202,7 +233,7 @@ def prep(n: int = N, extra: bool = False, scale: int = 0) -> dict:
             "fit_r": np.flatnonzero(~hold), "hold_r": np.flatnonzero(hold), "logs": d["log"]}
 
 
-def test_inputs(split: str, d: dict, extra: bool = False) -> dict:
+def test_inputs(split: str, d: dict, extra: int = 0, alt: bool = False) -> dict:
     """Test-split features standardised with the training statistics, candidates, distances."""
     from .skill_pack_n0 import stretch
     feat, hsplit = TEST[split]
@@ -216,6 +247,8 @@ def test_inputs(split: str, d: dict, extra: bool = False) -> dict:
     c = np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)
     if extra:
         c = np.concatenate([c, family(nat, fam_list(extra))], 1)
+    if alt:
+        c = np.concatenate([c, alt_cands(feat, out="")], 1)
     A = torch.as_tensor(d["anchors"], device=H.DEV)
     Nt = torch.as_tensor(nat, device=H.DEV)
     Dm = torch.cat([N1._dist(A[None].expand(len(nat), -1, -1, -1), Nt), N1._dist(torch.as_tensor(c, device=H.DEV), Nt)], 1)
@@ -387,6 +420,15 @@ def explore(what: str):
             rl.log.info(f"iters {it}: {res[f'iters {it}']:.3f}")
     elif what == "mlp":
         res = _mlp(p, rl)
+    elif what == "mlpcurve":                     # N2's chosen configuration on 1/4, 1/2, all of the fit logs
+        p = prep(extra=2)
+        X = _with_views(p["X"], _views("train", p["d"]["tokens"]))
+        fl = p["logs"][p["fit_r"]]
+        u = np.random.default_rng(0).permutation(np.unique(fl))
+        for frac in (1 / 4, 1 / 2, 1):
+            keep = set(u[:max(1, round(frac * len(u)))])
+            rows = p["fit_r"][np.array([g in keep for g in fl])]
+            res[f"{frac:.3f} ({len(rows)} rows)"] = _eval_cfg(p, X, ("mlp", 1, 2), rows, p["hold_r"], lams, rl)["pdms_hold"]
     elif what == "feats":                        # extra input views at zero GPU cost: E6's hold-input taps
         from . import elicit_e6 as E6
         tr = E6._navtrain(True)
@@ -476,18 +518,18 @@ def _with_views(Xtr, Vtr, Xte=None, Vte=None):
     return torch.cat([Xte, *[N1._std(a, b)[1] for a, b in zip(Vtr, Vte)]], 1)
 
 
-def _mlp_net(din, S, hidden=1024, drop=0.1):
+def _mlp_net(din, S, hidden=1024, drop=0.1):  # noqa: D103
     return torch.nn.Sequential(torch.nn.Linear(din, hidden), torch.nn.GELU(), torch.nn.Dropout(drop),
                                torch.nn.Linear(hidden, hidden), torch.nn.GELU(), torch.nn.Dropout(drop),
                                torch.nn.Linear(hidden, 5 * S)).to(H.DEV)
 
 
-def train_mlp(X, Tall, fit_rows, seed, pick=None, epoch=None, evals=(), bs=512, lr=1e-3, wd=1e-4):
+def train_mlp(X, Tall, fit_rows, seed, pick=None, epoch=None, evals=(), bs=512, lr=1e-3, wd=1e-4, hidden=1024):
     """One MLP head set. pick = (rows, ) -> epoch with the lowest BCE on those rows; else the fixed `epoch`.
     Returns the logits {SUB: (n_e, S)} for every matrix in evals at that epoch, and the epoch (1-based)."""
     torch.manual_seed(seed)
     S = Tall.shape[2]
-    net = _mlp_net(X.shape[1], S)
+    net = _mlp_net(X.shape[1], S, hidden)
     opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=wd)
     fr = torch.as_tensor(fit_rows, device=H.DEV)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=EPOCHS * (len(fr) // bs + 1))
@@ -517,7 +559,7 @@ def train_mlp(X, Tall, fit_rows, seed, pick=None, epoch=None, evals=(), bs=512, 
     return best[1], best[2]
 
 
-def _eval_cfg(p, X, cfg, fit_rows, hold_rows, lams, rl) -> dict:
+def _eval_cfg(p, X, cfg, fit_rows, hold_rows, lams, rl, hidden=1024) -> dict:
     """Held-out PDMS of one N2 configuration on hold_rows (fit on fit_rows)."""
     h, v, f = cfg
     Xh = X[torch.as_tensor(hold_rows, device=H.DEV)]
@@ -529,12 +571,12 @@ def _eval_cfg(p, X, cfg, fit_rows, hold_rows, lams, rl) -> dict:
         eps = []
     else:
         Tall = torch.stack([p["T"][m] for m in SUBS], 1)
-        runs = [train_mlp(X, Tall, fit_rows, sd, pick=hold_rows, evals=(Xh,)) for sd in range(SEEDS)]
+        runs = [train_mlp(X, Tall, fit_rows, sd, pick=hold_rows, evals=(Xh,), hidden=hidden) for sd in range(SEEDS)]
         lg = {m: torch.stack([r[0][0][m] for r in runs]).mean(0) for m in SUBS}
         eps = [r[1] for r in runs]
     ho = torch.as_tensor(hold_rows, device=H.DEV)
     (w, beta, val), _ = N1.grid_search(lg, p["Dm"][ho], p["P"][ho], p["mask"])
-    out = {"cfg": list(cfg), "pdms_hold": 100 * val, "weights": list(w), "beta": beta, "epochs": eps}
+    out = {"cfg": list(cfg), "hidden": hidden, "n_fit": len(fit_rows), "pdms_hold": 100 * val, "weights": list(w), "beta": beta, "epochs": eps}
     rl.log.info(f"N2 {cfg}: held-out {100 * val:.3f} (w {w}, beta {beta}, epochs {eps})")
     return out
 
@@ -608,14 +650,110 @@ def n2final():
     rl.close()
 
 
+# ---------------------------------------------------------------- N3: N2's configuration + scale-up rows (+ alt slots)
+
+S_ROWS = 40000
+N3_GRID = [(alt, hid) for alt in (0, 1) for hid in (1024, 2048)]            # table order: simpler first
+
+
+def _folds_all(p) -> np.ndarray:
+    """N1's log folds on the first N rows; scale rows get -1 (never held out, always fitted)."""
+    f = np.full(len(p["logs"]), -1)
+    f[:N] = H._group_folds(p["logs"][:N], 5, seed=N1.SEED_HOLD)
+    return f
+
+
+def altdev():
+    """Held-out value of the 8 forced-desire slots on N2's chosen configuration (19 968 rows, fold 0)."""
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", "altdev")
+    lams, res = _lams(), {}
+    for alt in (0, 1):
+        p = prep(extra=2, alt=bool(alt))
+        X = _with_views(p["X"], _views("train", p["d"]["tokens"]))
+        f = _folds_all(p)
+        ho = torch.as_tensor(np.flatnonzero(f == 0), device=H.DEV)
+        if alt:
+            res["oracle alt 8 slots alone"] = 100 * float(p["P"][ho][:, -8:].max(1).values.mean())
+            res["oracle native 22 + alt 8"] = 100 * float(p["P"][ho][:, K:].max(1).values.mean())
+        else:
+            res["oracle native 22"] = 100 * float(p["P"][ho][:, K:].max(1).values.mean())
+        res[f"alt={alt}"] = _eval_cfg(p, X, ("mlp", 1, 2), np.flatnonzero(f != 0), np.flatnonzero(f == 0), lams, rl)
+        del p
+        torch.cuda.empty_cache()
+    (run_dir("alt") / "altdev.json").write_text(json.dumps(res, indent=1, default=float))
+    rl.close()
+
+
+def n3dev(noalt: bool = False):
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", "n3dev")
+    lams, res, V = _lams(), [], None
+    for alt in ((0,) if noalt else (0, 1)):
+        p = prep(extra=2, scale=S_ROWS, alt=bool(alt))
+        V = _views("train", p["d"]["tokens"])
+        X = _with_views(p["X"], V)
+        f = _folds_all(p)
+        for a_, hid in [g for g in N3_GRID if g[0] == alt]:
+            r = _eval_cfg(p, X, ("mlp", 1, 2), np.flatnonzero(f != 0), np.flatnonzero(f == 0), lams, rl, hidden=hid)
+            res.append({**r, "alt": alt})
+        del p, X
+        torch.cuda.empty_cache()
+    best = max(res, key=lambda r: r["pdms_hold"])
+    out = {"grid": res, "chosen": best}
+    p = prep(extra=2, scale=S_ROWS, alt=bool(best["alt"]))
+    X = _with_views(p["X"], _views("train", p["d"]["tokens"]))
+    f = _folds_all(p)
+    out["fold1_chosen"] = _eval_cfg(p, X, ("mlp", 1, 2), np.flatnonzero(f != 1), np.flatnonzero(f == 1), lams, rl,
+                                    hidden=best["hidden"])
+    (run_dir("n3") / "n3dev.json").write_text(json.dumps(out, indent=1, default=float))
+    rl.log.info(f"chosen alt {best['alt']} hidden {best['hidden']}: held-out {best['pdms_hold']:.3f}")
+    rl.close()
+
+
+def n3final():
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", "n3final")
+    dev = json.loads((run_dir("n3") / "n3dev.json").read_text())["chosen"]
+    alt, hid, w, beta = bool(dev["alt"]), dev["hidden"], tuple(dev["weights"]), dev["beta"]
+    p = prep(extra=2, scale=S_ROWS, alt=alt)
+    Vtr = _views("train", p["d"]["tokens"])
+    X = _with_views(p["X"], Vtr)
+    tests = {}
+    for split in TEST:
+        t = test_inputs(split, p["d"], 2, alt)
+        t["X"] = _with_views(p["X"], Vtr, t["X"], _views(split, t["tokens"]))
+        tests[split] = t
+    Tall = torch.stack([p["T"][m] for m in SUBS], 1)
+    names = list(tests)
+    runs = [train_mlp(X, Tall, np.arange(len(X)), sd, epoch=e, evals=[tests[sp]["X"] for sp in names], hidden=hid)[0]
+            for sd, e in zip(range(SEEDS), dev["epochs"])]
+    sel = {"alt": alt, "hidden": hid, "weights": w, "beta": beta, "n_rows": len(X)}
+    for j, sp in enumerate(names):
+        lg = {m: torch.stack([r[j][m] for r in runs]).mean(0) for m in SUBS}
+        t = tests[sp]
+        s_ = N1.scores(lg, t["Dm"], w, beta, p["mask"]).argmax(1).cpu().numpy()
+        pool = np.concatenate([np.broadcast_to(p["d"]["anchors"][None], (len(s_), K, 8, 3)), t["cands"]], 1)
+        np.savez(run_dir("n3") / f"{sp}_n3.npz", tokens=t["tokens"], poses=pool[np.arange(len(s_)), s_].astype(np.float32))
+        sel[f"{sp}_shares"] = {"anchor": float((s_ < K).mean()),
+                               **{str(x): float((s_ == K + i).mean()) for i, x in enumerate(slots(2, alt))}}
+        rl.log.info(f"{sp}: poses written")
+    (run_dir("n3") / "select.json").write_text(json.dumps(sel, indent=1, default=float))
+    rl.close()
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final", "alt_cands"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final", "alt_cands", "altdev", "n3dev", "n3final"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
     ap.add_argument("--looks", type=int, default=0)
     ap.add_argument("--m", type=int, default=40000)
+    ap.add_argument("--noalt", action="store_true")
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final, "alt_cands": alt_cands}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final, "alt_cands": alt_cands, "altdev": altdev, "n3dev": lambda: n3dev(a.noalt), "n3final": n3final}[a.cmd]()
