@@ -1,6 +1,6 @@
 # Cosmos-Transfer2.5 把 CARLA 配对重画成真实感视频：pilot（10 对）
 
-状态: v2 done，等用户拍板（v1 判据 2026-09-28 13:20、v2 判据 20:10 CST 均写于输出之前；v2 结果 2026-09-29 凌晨）
+状态: 全量生成进行中（v1 判据 2026-09-28 13:20、v2 判据 20:10 CST 均写于输出之前；v2 结果 2026-09-29 凌晨；用户 2026-09-29 拍板 go，全量规则 10:20 CST 登记于任何全量数据之前）
 主题: [research/survey-counterfactual-video-gen.md](../research/survey-counterfactual-video-gen.md) §6；[research/decisions.md](../research/decisions.md) 第 32、42、44、48 条
 
 ## 目标
@@ -366,3 +366,81 @@ x⁺ 用 x⁺ 的控制重新生成，行人区以外的 latent 每一步都钉�
 一般：25863 雾天。左边深色外套的行人比 CARLA 淡，其余行人正常。
 
 ![25863 G4b](../research/figs/cosmos/25863-s0_G4b.webp)
+
+## 用户拍板（2026-09-29 上午，经 main 转达）
+
+1. **环判据第二条（环上 MAD ≤ ¼ 换 seed）作废**。这是看到 v2 数字之后的更正，按偏离记（见「v2 的偏离」第 1 条），v2 按登记字面的 no-go 判决不改写。
+2. **Cosmos v2 的输出照原样接受**。相机不改，不做 6° 上仰。残留的仪表台 / 引擎盖痕迹都在画面最下面约 115 px 以内，openpilot 的两个 model frame 看不到这一段。
+3. **G4 go，做 2 000 对**：Cosmos 约 118 GPU·h，CARLA 重渲染约 116 server·h。用途是下一轮 op-adapt B（sim + real）的训练数据。
+
+## 全量生成（登记于任何全量数据之前，2026-09-29 10:20 CST）
+
+代码：`jevdrive/cosmos_full.py`（选窗、controls、lane 驱动）、`scripts/cosmos_full_worker.py`（Cosmos，一个 slot 一个进程）。box 上 run dir `$DATA_DIR/runs/cosmos_full/`，信号文件在 `lane/`。
+
+### 场景来源，与考卷分开
+
+- **Town12 的长路线切片**：Leaderboard 2.0 `routes_training.xml`（Town12）里行人 4 个 family 的每个 scenario 实例，按 Bench2Drive 自己的切法切成单场景 clip（`scripts/nq3_clips.py`：触发点前 12 m 到后 122 m，关键点每 2 m，天气取长路线在触发点处的插值）。
+  同 town 触发点 5 m 以内算同一个实例，只留一条；再去掉触发点离任何 Bench2Drive 220 / 0.0.4 val 行人路线（P5 v1 考卷用的路线）触发点 60 m 以内的实例。剩 **209 个实例**（DynamicObjectCrossing 115、ParkingCrossingPedestrian 40、PedestrianCrossing 30、VehicleTurningRoutePedestrian 24）。
+- **留给考卷的**：Town13 全部（`routes_validation.xml` 切出的 150 个实例）、所有小地图、Bench2Drive 220 与 0.0.4 val 的全部行人路线（含 P5 v1 BA 的 42 条）。以后的 CARLA 行人剂量考卷从这里面取，不碰 Town12 这 209 个实例。
+  清单：[research/results/cosmos/full/scenes.csv](../research/results/cosmos/full/scenes.csv)（实例、来源长路线与 scenario 名、触发点坐标），全量结束后另有 `variants.csv`（每对用了哪个实例、哪个 TM seed、哪种天气、窗口 tick）。
+- **变体**：实例 i 的第 v 个变体用 TM seed v mod 10；v = 0 用长路线自己的天气，v ≥ 1 用 14 个 CARLA 预设之一（第 (7i + v) mod 14 个；晴 / 阴 / 湿 / 小雨 / 中雨 × 正午 / 日落 / 夜，去掉 HardRain 和 DustStorm）。
+  209 个实例凑 2 000 对，每个实例要用约 10–15 个变体；同一实例的变体共享路线、行人位置和场景几何，只有背景车流和天气不同。
+
+### 两遍 CARLA
+
+同一个录制器（`scripts/cosmos_pair_agent.py` 套在 P5 录制器上，BehaviorAgent 驾驶，x⁻ 把 hazard 藏到地下），与 pilot 的差别只有三处：不跑 TFv6 shadow、不挂 Waymo 三相机（`rig: false`，只留可见性统计用的分割视图）、`pass_stop_s = 0.5`（ego 越过行人 10 m 后 0.5 s 收尾）。
+- **第 1 遍**：两个世界都开，记位姿、actor、行人在分割视图里的像素数，用来选窗。
+- **第 2 遍**：再开一次，只在窗口内挂 20 Hz、1280 × 704、64° 的前视相机（pilot 同一台），窗口结束就停。
+- 每次 CARLA 调用把上一批的第 2 遍排在下一批的第 1 遍前面，每张卡一个 `b2d_run`，server 一批只起一次。第 1 批 = 所有实例的 v = 0；之后每批给仍然有效的实例各加 1–3 个变体，直到已有的对按实测通过率能到 2 000。
+
+### 选窗规则（第 1 遍 → 窗口）
+
+与 pilot 的 `select` 同一条：
+1. hazard 里至少有一个行人；非行人的 hazard（如自行车）在窗口里可见（≥ 20 px）就丢；
+2. x⁺ 里行人首次可见（≥ 20 px）要早于两边 ego 分叉（t_div），否则丢；
+3. k1 = min(t_div, 行人最后一次 ≥ 100 px 的 tick + 5)，k0 = k1 − 93，要求 k0 ≥ 8；
+4. 窗口里行人 ≥ 100 px 的相机 tick（5 Hz）≥ 5 个，否则丢（24519 那种行人几乎看不见的对）；
+5. 窗口里没有其他在两边不同的 actor 可见（P5 的 impure 计数为 0）。
+一个实例在 v = 0 上因为结构原因失败（没有行人、从来不可见、从来不到 100 px、非行人 hazard 可见），或连续 3 个变体都失败，就不再加变体。
+
+### controls 与渲染 QC（第 2 遍 → Cosmos 输入）
+
+- **确定性**：第 2 遍两个世界在 k1 之前逐 tick 的 ego 位姿对第 1 遍，差 ≤ 0.01 m，否则丢（pilot 是 0.000 m）。
+- **渲染 QC**（WL 发现约 4.6% 的 CARLA run 渲染故障：整幅过曝泛光、黄昏路灯没亮）：逐帧算 CARLA 原图 x⁺、x⁻ 在行人区域（hazard mask ∪ 框、膨胀 24 px）以外的平均亮度 Y（0–255），
+  |Y⁺ − Y⁻| > 10 的帧占 ≥ 10%，或者两边整幅亮度的中位数 ≥ 200，就标记。两个世界在窗口内状态相同，干净的对在这里只差雨滴之类的噪声（pilot 24211 雨天中位差 3.2）。
+  标记的对**两个世界一起重渲一次**（新的 route id，同一个窗口），再查一次，还标记就丢，不喂给 Cosmos。两个世界同时出同一种故障（比如都没开路灯）这个检查看不出来，接受这个漏检。
+  如果 main 转来根因的修正（比如固定曝光），通过录制器的 `cosmos_rgb_attrs` 加到 RGB 相机上，在全量开跑之前生效。
+- **GT 可见**：Cosmos 相机里行人 mask ≥ 300 px 的帧 < 10 帧就丢（不花 Cosmos）。
+- **Cosmos 输入**：与 v2 的 G4 完全相同（edgeE、紧的锚定区、羽化 alpha；`controls_pair` 是 pilot 两段代码合成一遍，在 24211 上对 pilot 已存的输入逐位相同：rgb、edgeE、锚定 mask、alpha、GT 全部最大差 0）。
+
+### Cosmos（G4 冻结，不改）
+
+x⁻ 用 Edge Distilled 生成一次（E4，seed 2025，prompt v2；Town12 的地点短语是「a road in a mid-sized city with residential and commercial areas」，pilot 的地点表里没有 Town12），
+x⁻ 写回无损视频当锚；x⁺ 用自己的 edgeE 重新生成，行人像素膨胀 24 px、±3 帧以外的 latent 每步钉在 x⁻；再在行人像素外 6 px、羽化 3 px 内混回 x⁻（G4b）。不做换 seed 地板。
+每个 worker 进程只加载一次模型，文本编码的结果按 prompt 存盘，各 worker 共用。
+
+### 存储
+
+每对 `pairs/<pair>/`：`cosmos_plus.mp4`、`cosmos_minus.mp4`、`carla_plus.mp4`、`carla_minus.mp4`（H.264 crf 14，yuv420p，约 10–20 MB 一个）、`gt.npz`（逐帧行人 mask、区域、框、走廊、混合支撑）、`gt_boxes.npz`、`spec.json`。
+读取用 `jevdrive.cosmos_full.load_pair(pair)`：x⁺ 在混合支撑以外直接取 x⁻ 的像素，所以两段各自有损压缩之后，区外仍然逐像素相同。无损的中间文件（rgb、edgeE、锚）在 Cosmos 做完后删掉。
+
+### 分级启动的 checklist（写在任何全量数据之前）
+
+先 1 对，看一遍；再约 10 对，逐条对照：
+1. **完成率**：CARLA route 完成率 ≥ 95%，没有 server 反复崩；每个进了第 2 遍的对都有结论（ok / 标记 / 丢的原因）。
+2. **选窗与 QC**：选窗通过率、QC 标记率照报；QC 标记率 ≤ 15%（WL 是 4.6% / run，一对两个 run 约 9%），确定性检查 0 个失败。
+3. **G4 逐对数字留在 v2 的范围里**（`jevdrive/cosmos_eval.py` detect / pixels 与 `scripts/cosmos_openpilot.py`，同 v2 口径）：
+   - 召回 R_T ≥ 0.8 R_C（可见单元 ≥ 10 的对），x⁻ 走廊幻觉 H_T ≤ H_C + 1 pp；
+   - 行人区外 PSNR / LPIPS / openpilot 差按构造为 ∞ / 0 / 0（验证存储读回之后仍然成立）；
+   - 行人外 1–12 px 环上 MAD ≤ 2 × CARLA 原图 + 2（第一条环判据；第二条已作废）；
+   - openpilot 2 s 速度差中位 ≤ 1.0 m/s 的对 ≥ 80%（v2 10 对里 9 对 ≤ 0.75，24252 是 5.0）。
+   这 10 对里 ≥ 8 对全过算过；不过就停，写明哪一条、哪几对。
+4. **成本**：Cosmos 每对（x⁻ + x⁺，不含加载）中位 ≤ 260 s（v2 213 s，留 20% 给共卡）；CARLA 每对两遍合计的 server·s 照报，外推 2 000 对的 GPU·h / server·h 和墙钟。
+5. 画面：人工看 1 对的并排 WebP（CARLA x⁺ | Cosmos x⁺ | Cosmos x⁻）。
+不过的 checklist 停批，不开全量。
+
+### 资源
+
+GPU 0–4（用户给这条 lane），调度表行 `cosmos-full`；GPU 5 是 WL 特征，GPU 6 是测试卡，都不用。CARLA 与 Cosmos 共用这 5 张卡：每卡 ≤ 6 个 CARLA、≥ 8 GB 空闲、≤ 75 GB。CARLA 启动走全箱的 start slot（`b2d_run.py`）。每卡几个 CARLA、几个 Cosmos 由 profiling 定（见执行记录）。
+
+### 执行记录

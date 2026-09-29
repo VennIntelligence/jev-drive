@@ -113,7 +113,7 @@ def variant(inst: int, v: int, own: dict) -> dict:
 def build():
     p = pool()
     src = {r.get("id"): r for r in ET.parse(full() / "ped_clips.xml").getroot().findall("route")}
-    p["weather_route"] = [json.dumps({k: float(src[c].find("weathers")[0].get(k)) for k in WKEYS}) for c in p.clip]
+    p["weather_route"] = [json.dumps({k: float(src[c].find("weathers")[0].get(k)) for k in WKEYS}) for c in p["clip"]]
     p.to_csv(full() / "pool.csv", index=False)
     RES.mkdir(parents=True, exist_ok=True)
     p.drop(columns="weather_route").to_csv(RES / "scenes.csv", index=False)
