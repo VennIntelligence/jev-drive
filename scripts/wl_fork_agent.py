@@ -223,6 +223,10 @@ class WLForkAgent(P5PairAgent):
         self._rw_log.write(json.dumps({"kind": "rewind", "branch": self.rw_idx, "action": self.rw_actions[self.rw_idx],
                                        "dead_frame": GameTime.get_frame(), "dead_tick_ms": 1e3 * (time.perf_counter() - t0),
                                        "wall": time.time(), **st}) + "\n")
+        if os.environ.get("CARLA_REWIND_DEBUG") == "1":
+            import carla_rewind as CR
+            self._rw_log.write(json.dumps({"kind": "debug_dead", "branch": self.rw_idx, "frame": GameTime.get_frame(),
+                                           "t_game": GameTime.get_time(), **CR.debug_state(self._world, self._hero)}) + "\n")
         c = carla.VehicleControl(snap["control"].throttle, snap["control"].steer, snap["control"].brake)
         c.manual_gear_shift = False
         return c
@@ -239,6 +243,12 @@ class WLForkAgent(P5PairAgent):
             self._set_render(True)                    # the next world tick renders again
         control = super().__call__()                  # recorder + expert (its control is kept outside windows)
         now = GameTime.get_time() - self._t_off
+        if self.rw is not None and os.environ.get("CARLA_REWIND_DEBUG") == "1" and self._tick >= self.fork_tick - 3 \
+                and self._tick <= self.fork_tick + 20:
+            import carla_rewind as CR
+            self._rw_log.write(json.dumps({"kind": "debug", "branch": self.rw_idx, "tick": self._tick,
+                                           "frame": GameTime.get_frame(), "t_game": GameTime.get_time(),
+                                           **CR.debug_state(self._world, self._hero)}) + "\n")
         if self._tick < self.end_tick and p4.STOP["flag"] and p4.STOP["why"] in ("after_trigger", "passed", "stuck",
                                                                                   "max_sim_s"):
             p4.STOP.update(flag=False, why="")       # the source run's stop rules must not cut a fork short

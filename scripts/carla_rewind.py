@@ -21,6 +21,7 @@ Not restorable through the Python API (known gaps): traffic-light phase timers, 
 (path buffers, PID integrators, random stream), wheel spin / gear / suspension, animation state.
 """
 import enum
+import math
 import time
 
 import carla
@@ -330,3 +331,30 @@ class Rewinder:
             for name, f in _ORIG.items():
                 setattr(carla.Actor, name, f)
             self.patched = False
+
+
+def debug_state(world, hero, radius=60.0) -> dict:
+    """Walkers near the hero (location, speed, control) and the scenario nodes that drive them (status, and for
+    sequences the current child); CARLA_REWIND_DEBUG=1 in scripts/wl_fork_agent.py writes this every tick near a fork."""
+    hl = hero.get_location()
+    out = {"walkers": [], "nodes": []}
+    for a in world.get_actors().filter("walker.pedestrian.*"):
+        loc = a.get_location()
+        if loc.distance(hl) > radius:
+            continue
+        v, c = a.get_velocity(), a.get_control()
+        out["walkers"].append({"id": a.id, "xy": [round(loc.x, 3), round(loc.y, 3)], "v": round(math.hypot(v.x, v.y), 3),
+                               "ctl_speed": round(c.speed, 3)})
+    m = _MANAGER.get("m")
+    if m is not None:
+        for n in m.scenario_tree.iterate():
+            name = type(n).__name__
+            if name in ("KeepVelocity", "InTimeToArrivalToLocation", "InTriggerDistanceToLocation", "ActorDestroy",
+                        "ActorTransformSetter", "MovePedestrianWithEgo") or (name == "Sequence" and n.name == "CrossingActor"):
+                d = {"n": n.name, "c": name, "s": n.status.name}
+                if name == "KeepVelocity":
+                    d["dist"] = round(n._distance, 3)
+                if hasattr(n, "current_index"):
+                    d["i"] = n.current_index
+                out["nodes"].append(d)
+    return out
