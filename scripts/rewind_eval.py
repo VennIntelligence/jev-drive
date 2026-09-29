@@ -503,12 +503,40 @@ def report() -> pd.DataFrame:
     return t
 
 
+def pilot(method: str, gen: str, forks=None) -> pd.DataFrame:
+    """Quick per-branch readout of one method's rewind runs in an extra output dir (a pilot / debug rerun that is not
+    in plan.parquet's gen): hazard walk start, hazard / ego error, labels against the truth."""
+    p = pd.read_parquet(R / "plan.parquet")
+    f = pd.read_parquet(WL.rundir("forks.parquet"))
+    ft = f.drop_duplicates("fork_id").set_index("fork_id").fork_tick
+    truth = {(r.fork_id, r.action): (r.route_id, r.set, int(r.fork_tick)) for r in f.itertuples()}
+    rows = []
+    for r in p[(p.method == method) & (p.gen == "gen") & (p.fork_id.isin(forks) if forks else True)].itertuples():
+        for c in _cut_one((r.route_id, r.set, int(ft[r.fork_id]), gen)):
+            trid, s, k = truth[(r.fork_id, c["action"])]
+            row, ar = compare(Path(c["vdir"]), WL._fork_attempt(WL.rundir("gen") / s, trid), k)
+            hz = [x["dpos"] for x in ar if x["hazard"]]
+            rows.append({"fork": r.fork_id, "branch": c["branch"], "action": c["action"], "walk_test": row["walk_test"],
+                         "walk_truth": row["walk_truth"], "hz_dmax": max(hz) if hz else np.nan,
+                         "ego_dpos3": row.get("ego_dpos_3.0"), "ego_dv_max": max(row.get(f"ego_dv_{h}", 0) for h in HORIZONS_S),
+                         "unsafe": f"{int(row['unsafe_test'])}/{int(row['unsafe_truth'])}",
+                         "coll": f"{int(row['collision_test'])}/{int(row['collision_truth'])}",
+                         "lum_dp95": row.get("lum_dp95"), "blowout": row.get("blowout")})
+    return pd.DataFrame(rows)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("prep", "cut", "eval", "opspec", "opcos", "cost", "report"))
+    ap.add_argument("step", choices=("prep", "cut", "eval", "opspec", "opcos", "cost", "report", "pilot"))
     ap.add_argument("--methods", default=",".join(METHODS))
+    ap.add_argument("--gen", default="gen_dbg")
+    ap.add_argument("--forks", default="")
     a = ap.parse_args()
-    if a.step == "prep":
+    if a.step == "pilot":
+        pd.set_option("display.width", 250)
+        forks = [int(x) for x in a.forks.split(",") if x]
+        print(pd.concat([pilot(m, a.gen, forks) for m in a.methods.split(",")]).round(2).to_string(index=False))
+    elif a.step == "prep":
         print(prep(tuple(a.methods.split(","))))
     elif a.step == "cut":
         print(len(cut()), "branches")
