@@ -1,6 +1,6 @@
 # Skill pack N0：原生 plan ⊕ Hydra 打分头的切换器 + 纵向速度候选（NAVSIM）
 
-状态: running（预登记 2026-09-29，写于任何 N0 分数之前）
+状态: done 2026-09-29 16:55（预登记 2026-09-29，写于任何 N0 分数之前；结果见下，decisions 第 64 条）
 主题: [../research/leaderboard-skill-pack.md](../research/leaderboard-skill-pack.md) 第 3、5 节（组件 B1 + B2）；decisions 第 40 条第 6 点（E6）、第 53 条
 协调: 导航 lane [2026-09-29-op-leaderboard.md](2026-09-29-op-leaderboard.md)。N0 只读它的 navtrain 子集 plan，不碰 desire、不跑 GPU、不写它的 run dir。
 
@@ -40,11 +40,51 @@ run dir：box `$DATA_DIR/runs/skill_pack/n0/`；代码 `jevdrive/skill_pack_n0.p
 
 ## 步骤
 
-- [ ] 预登记（本文件）提交
-- [ ] navtrain 原生候选导出 + 速度拉长；打分头 CPU 重拟合；T 与 navtest 上的候选
-- [ ] T 上 5 条候选的 devkit 打分；网格选 (m*, δ*)
-- [ ] navtest 一次打分；报告；写回研究文档与 decisions
+- [x] 预登记（本文件）提交（commit 1ddbc7d）
+- [x] navtrain 原生候选导出 + 速度拉长；打分头 CPU 重拟合（模仿项 CPU 上 70 min，是全链最慢的一步）；T 与 navtest 上的候选
+- [x] T 上 5 条候选的 devkit 打分；网格选 (m*, δ*)
+- [x] navtest 一次打分；报告；写回研究文档与 decisions
 
 ## 结果
 
-跑完再填。
+run：box `$DATA_DIR/runs/skill_pack/n0/`（15:22–16:55，13 核，GPU 0）；小表 [../research/results/skill-pack/n0/](../research/results/skill-pack/n0/)。
+T = 3 000 − 572（与 E6 重叠）= 2 428 个 token。sanity：重拟合打分头在 navtest 上选中 E6 存档 anchor 的比例 0.930（预期 ≥ 0.9）。
+
+**T 上（选参）**：
+
+| 行（T，n = 2 428） | PDMS |
+|:--|--:|
+| 原生 s = 1.00 / 1.05 / 1.10 / 1.15 | 81.94 / 81.93 / 81.95 / 81.92 |
+| Hydra（重拟合） | 85.99 |
+| 逐 token 取五者最好（oracle） | 92.95 |
+| **选中：m = 1.10，δ = 0.5**（39.5% 输出原生） | **86.86** |
+| 次优：m = 1.10，δ = 1.0 / auto，δ = 0.25 | 86.78 / 86.74 |
+
+没有落在网格边缘（第 3 条不触发）。
+
+**navtest（唯一一次）**：
+
+| 行（n = 12 146） | PDMS | NC | DAC | EP | TTC | C |
+|:--|--:|--:|--:|--:|--:|--:|
+| N0 | **84.94** | 98.17 | 94.14 | 77.19 | 94.80 | 99.95 |
+| 原生 plan（84.2 那一跑） | 84.17 | 98.28 | 95.56 | 73.11 | 95.41 | 99.96 |
+| E6 Hydra 存档 | 84.18 | 98.04 | 93.36 | 76.83 | 94.43 | 99.98 |
+| human | 94.55 | 100 | 100 | 86.96 | 100 | 99.90 |
+
+| 配对 Δ（10 000 次 bootstrap） | Δ PDMS [95% CI] |
+|:--|:--|
+| N0 − 原生 | **+0.77 [+0.28, +1.27]** |
+| N0 − E6 Hydra | +0.75 [+0.49, +1.02] |
+
+| 按 command | N0 | 原生 | E6 Hydra |
+|:--|--:|--:|--:|
+| 左转 | 78.98 | 77.47 | 78.06 |
+| 右转 | 75.93 | 73.63 | 75.28 |
+| 起步（v₀ < 1） | 91.97 | 86.10 | 92.69 |
+| 直行 | 87.09 | 87.87 | 86.07 |
+
+navtest 上 48.3% 的 token 输出拉长 1.1 倍的原生 plan；N0 的 EP 高于 human 的 token 占 19.8%。
+
+**判读（按登记）**：1. **成立**（CI 下界 +0.28 > 0）。4. 预期 +2 到 +4、auto 模式——都没应验：选中的是固定 s = 1.10，增益 +0.77。
+单纯拉长在 T 上零和（EP 涨、DAC / TTC / NC 跌），所以速度候选只有经打分头门控才有用。直行 −0.8 是代价，写成「换来的」。
+
