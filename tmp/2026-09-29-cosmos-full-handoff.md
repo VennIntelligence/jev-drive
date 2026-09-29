@@ -1,6 +1,6 @@
 # Cosmos G4 全量生成：交接（2026-09-29，随阶段更新）
 
-最后更新：2026-09-29 12:25 CST（接手 agent）。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
+最后更新：2026-09-29 14:10 CST（监看 agent）。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
 
 ## 现在处于哪一步（12:25 CST）
 
@@ -9,6 +9,16 @@
 - 全量 CARLA 12:21 起是 **每卡 6 个 server**（idx 块 266..271），带 `B2D_KEEP_STREET_LIGHTS=1`；正在做的 invocation 4 是 612 个变体的第 1 遍（1224 条 route，之前的 chunk 被 DRAIN 打断后补完）。
 - 预计的风险点：手上 READY 的 93 对够 Cosmos 干约 1.1 h（12:00 起），而第 1 遍 chunk 要 ~80 min，之后第 2 遍才出新对，所以 13:10 前后 Cosmos 可能有一段空档。之后每个 invocation 先排第 2 遍（p3, p2, 再 pass 1），应当接得上。
 - 外推：Cosmos 5 卡 24.4 h（约 12:00 → 次日 12:30），CARLA 约 890 server·s / 对，30 个 server 约 16.5 h（共卡时会慢）。GPU 5 归世界模型训练，GPU 6 归另一条线，都不用。
+
+## 13:35 CST 变更：pass-1 chunk 改小（d5a2ae1）
+
+612 变体的 pass-1 chunk（72 min）把 Cosmos 饿到 0%（13:00-13:47，仅 93 对）。`new_chunk` 现在每个实例只排 1 个变体（约 160-209 个），每次 invocation = 上一 chunk 的 pass 2 在前 + 下一 chunk 的 pass 1。
+13:33 DRAIN、拉新代码、13:40 重启（invocation 5：pass 2 307 + pass 1 162）；13:47 五卡 util 100%，READY 库存 145 起。
+盒子上 `git pull` 要先 `source /etc/network_turbo`（直连 github 超时）。
+
+**加 GPU 5 未完成（阻塞）**：GPU 5 上 carla-rewind 的 CARLA 14:00 已撤走（剩 WL wl_tokens 2.4 GB）。`sch_table.py grant` 被 `runs/sched/owner.lock`（调度 owner / controller 常驻持有）拒绝：
+"schedule owner is active; record a request in controller inbox"，没有绕过。另外 cosmos-full 行若把 GPU 5 按位置 k=5 算，块 320..331 与 carla-rewind 的 440..442（±120 = 320..322）冲突；
+可行做法是把 idx0 写成 map `0:260,1:272,2:284,3:296,4:308,5:326`（驱动 `cosmos_full.py:450` 支持 map，全量 CARLA_IDX_OFF=6，GPU 5 用 332..337）。表改好后：`CARLA_W` 加 `5:6`、`COSMOS_SLOTS` 加 `5`，`touch lane/DRAIN`，等 invocation 边界驱动退出，`rm lane/DRAIN lane/ERROR`，`tmux kill-window`，用上面的启动命令重开。
 
 ## 做好了什么、在哪
 
