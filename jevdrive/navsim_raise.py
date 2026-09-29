@@ -30,6 +30,8 @@ ARMS = {"n1": ("n1", False, 0), "n1b": ("n1b", False, 0), "fam": ("n1b", True, 0
 TEST = {"navtest": ("lb_navtest_n12146", "navtest"), "navhard": ("lb_navhard_n5912", "navhard_two_stage")}
 # extra native-family slots (stretch s, lateral scale l) on top of N1's four stretches (s, 1.0), s = 1.00 ... 1.15
 FAM = ((0.90, 1.0), (1.20, 1.0), (1.25, 1.0), (1.30, 1.0), (1.40, 1.0), (1.00, 0.8), (1.00, 1.2), (1.15, 0.8), (1.15, 1.2))
+FAM2 = ((1.50, 1.0), (1.60, 1.0), (1.75, 1.0), (1.30, 0.8), (1.40, 0.8), (1.15, 0.6), (1.40, 0.6), (1.00, 0.9), (1.30, 0.9))
+FAMS = (("fam", FAM), ("fam2", FAM2))
 
 
 def run_dir(*sub) -> Path:
@@ -103,8 +105,12 @@ def family(nat: np.ndarray, fam=FAM) -> np.ndarray:
     return np.stack([[lat(stretch(p, s), l) for s, l in fam] for p in nat]).astype(np.float32)
 
 
-def slots(extra: bool) -> list:
-    return [(s, 1.0) for s in N1.SCALES] + (list(FAM) if extra else [])
+def fam_list(level: int) -> list:
+    return [x for _, f in FAMS[:int(level)] for x in f]
+
+
+def slots(extra) -> list:
+    return [(s, 1.0) for s in N1.SCALES] + fam_list(extra)
 
 
 def cands_fam():
@@ -114,18 +120,16 @@ def cands_fam():
     print(out)
 
 
-def _add_fam(d: dict):
-    ns = {}
-    for f in sorted((run_dir("fam") / "score_train").glob("chunk_*.npz")):
-        z = np.load(f)
-        ns.update({t: (z["sub"][j], z["pdms"][j]) for j, t in enumerate(z["tokens"].tolist())})
+def _add_fam(d: dict, level: int):
     toks = d["tokens"].tolist()
-    assert all(t in ns for t in toks), "family labels missing"
-    c = np.load(run_dir("fam") / "cands_train.npz")
-    assert (c["tokens"] == d["tokens"]).all()
-    d["cands"] = np.concatenate([d["cands"], c["cands"]], 1)
-    d["sub"] = np.concatenate([d["sub"], np.stack([ns[t][0] for t in toks])], 1)
-    d["pdms"] = np.concatenate([d["pdms"], np.stack([ns[t][1] for t in toks])], 1)
+    for name, _ in FAMS[:int(level)]:
+        ns = _chunks(run_dir(name) / "score_train")
+        assert all(t in ns for t in toks), f"{name} labels missing"
+        c = np.load(run_dir(name) / "cands_train.npz")
+        assert (c["tokens"] == d["tokens"]).all()
+        d["cands"] = np.concatenate([d["cands"], c["cands"]], 1)
+        d["sub"] = np.concatenate([d["sub"], np.stack([ns[t][0] for t in toks])], 1)
+        d["pdms"] = np.concatenate([d["pdms"], np.stack([ns[t][1] for t in toks])], 1)
 
 
 def _chunks(dirp: Path) -> dict:
@@ -165,7 +169,7 @@ def prep(n: int = N, extra: bool = False, scale: int = 0) -> dict:
     scale = + the first `scale` scale-up tokens (their logs are never held out)."""
     d = N1.load_train(n)
     if extra:
-        _add_fam(d)
+        _add_fam(d, extra)
     if scale:
         _add_scale(d, scale)
     hold = np.zeros(len(d["tokens"]), bool)
@@ -197,7 +201,7 @@ def test_inputs(split: str, d: dict, extra: bool = False) -> dict:
                    N1._std(d["native"].reshape(len(d["native"]), -1), nat.reshape(len(nat), -1))[1]], 1)
     c = np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)
     if extra:
-        c = np.concatenate([c, family(nat)], 1)
+        c = np.concatenate([c, family(nat, fam_list(extra))], 1)
     A = torch.as_tensor(d["anchors"], device=H.DEV)
     Nt = torch.as_tensor(nat, device=H.DEV)
     Dm = torch.cat([N1._dist(A[None].expand(len(nat), -1, -1, -1), Nt), N1._dist(torch.as_tensor(c, device=H.DEV), Nt)], 1)
@@ -264,10 +268,13 @@ def paired(a, b, rng_seed=1):
             "bs": bs}
 
 
-def report(arm: str, vs=("sp_n1_navtest", "sp_n0_navtest", "opi_navfull_gimm_g0.2-cinque__base"), looks: int = 0):
+def report(arm: str, looks: int = 0):
     import pandas as pd
     from .skill_pack_n0 import CMD, NAVFULL, V1, per_token
+    vs = ("sp_n1_navtest",) + (("sp_n1b_navtest",) if arm != "n1b" else ()) + ("sp_n0_navtest", "opi_navfull_gimm_g0.2-cinque__base")
     me = per_token(f"v1_navtest_sp_{arm}_navtest")
+    hum = per_token("v1_navtest_human")
+    print(f"share of tokens with EP > human EP: {float((me['EP'] > hum['EP'].reindex(me.index)).mean()):.3f}")
     rows = [{"row": arm, **{k: 100 * me[k].mean() for k in V1.values()}}]
     pairs = []
     for v in vs:
@@ -431,10 +438,165 @@ def _mlp(p, rl, hidden=1024, epochs=60, lr=1e-3, wd=1e-4, drop=0.1, bs=512, seed
     res["weights"] = wb
     return res
 
+# ---------------------------------------------------------------- N2: head x input views x native slots
+
+N2_GRID = [(h, v, f) for h in ("lin", "mlp") for v in (0, 1) for f in (0, 1, 2)]     # table order: simpler first
+SEEDS, EPOCHS, LIN_ITERS = 5, 60, 300
+
+
+def _views(split: str, tokens) -> list:
+    """E6's hold-input `temporal` of Cinque and Lebowski for these tokens (train: navtrain; tests: their split)."""
+    if split == "train":
+        from . import elicit_e6 as E6
+        tr = E6._navtrain(True)
+    else:
+        tr = H.load(TEST[split][1], True)
+    pos = dict(zip(tr["tokens"].tolist(), range(len(tr["tokens"]))))
+    r = np.array([pos[t] for t in list(tokens)])
+    return [tr["cinque"][r], tr["lebowski"][r]]
+
+
+def _with_views(Xtr, Vtr, Xte=None, Vte=None):
+    if Xte is None:
+        return torch.cat([Xtr, *[N1._std(v)[0] for v in Vtr]], 1)
+    return torch.cat([Xte, *[N1._std(a, b)[1] for a, b in zip(Vtr, Vte)]], 1)
+
+
+def _mlp_net(din, S, hidden=1024, drop=0.1):
+    return torch.nn.Sequential(torch.nn.Linear(din, hidden), torch.nn.GELU(), torch.nn.Dropout(drop),
+                               torch.nn.Linear(hidden, hidden), torch.nn.GELU(), torch.nn.Dropout(drop),
+                               torch.nn.Linear(hidden, 5 * S)).to(H.DEV)
+
+
+def train_mlp(X, Tall, fit_rows, seed, pick=None, epoch=None, evals=(), bs=512, lr=1e-3, wd=1e-4):
+    """One MLP head set. pick = (rows, ) -> epoch with the lowest BCE on those rows; else the fixed `epoch`.
+    Returns the logits {SUB: (n_e, S)} for every matrix in evals at that epoch, and the epoch (1-based)."""
+    torch.manual_seed(seed)
+    S = Tall.shape[2]
+    net = _mlp_net(X.shape[1], S)
+    opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=wd)
+    fr = torch.as_tensor(fit_rows, device=H.DEV)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, lr, total_steps=EPOCHS * (len(fr) // bs + 1))
+    bce = torch.nn.functional.binary_cross_entropy_with_logits
+    best = (np.inf, None, -1)
+    for ep in range(EPOCHS):
+        net.train()
+        for i in fr[torch.randperm(len(fr), device=H.DEV)].split(bs):
+            loss = bce(net(X[i]).view(-1, 5, S), Tall[i])
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            sched.step()
+        if pick is None and ep + 1 != epoch:
+            continue
+        net.eval()
+        with torch.no_grad():
+            if pick is not None:
+                pr = torch.as_tensor(pick, device=H.DEV)
+                hb = float(bce(net(X[pr]).view(-1, 5, S), Tall[pr]))
+                if hb >= best[0]:
+                    continue
+            outs = [net(E).view(-1, 5, S) for E in evals]
+            best = (hb if pick is not None else 0.0, [{m: o[:, j].clone() for j, m in enumerate(SUBS)} for o in outs], ep + 1)
+        if pick is None:
+            break
+    return best[1], best[2]
+
+
+def _eval_cfg(p, X, cfg, fit_rows, hold_rows, lams, rl) -> dict:
+    """Held-out PDMS of one N2 configuration on hold_rows (fit on fit_rows)."""
+    h, v, f = cfg
+    Xh = X[torch.as_tensor(hold_rows, device=H.DEV)]
+    if h == "lin":
+        lg = {}
+        for m in SUBS:
+            W, b = N1.bce_fit(X, p["T"][m], fit_rows, lams[m], LIN_ITERS)
+            lg[m] = Xh @ W + b
+        eps = []
+    else:
+        Tall = torch.stack([p["T"][m] for m in SUBS], 1)
+        runs = [train_mlp(X, Tall, fit_rows, sd, pick=hold_rows, evals=(Xh,)) for sd in range(SEEDS)]
+        lg = {m: torch.stack([r[0][0][m] for r in runs]).mean(0) for m in SUBS}
+        eps = [r[1] for r in runs]
+    ho = torch.as_tensor(hold_rows, device=H.DEV)
+    (w, beta, val), _ = N1.grid_search(lg, p["Dm"][ho], p["P"][ho], p["mask"])
+    out = {"cfg": list(cfg), "pdms_hold": 100 * val, "weights": list(w), "beta": beta, "epochs": eps}
+    rl.log.info(f"N2 {cfg}: held-out {100 * val:.3f} (w {w}, beta {beta}, epochs {eps})")
+    return out
+
+
+def n2dev():
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", "n2dev")
+    lams = _lams()
+    res, V = [], None
+    for f in (0, 1, 2):
+        p = prep(extra=f)
+        V = V if V is not None else _views("train", p["d"]["tokens"])
+        folds = H._group_folds(p["logs"], 5, seed=N1.SEED_HOLD)
+        for cfg in [c for c in N2_GRID if c[2] == f]:
+            X = _with_views(p["X"], V) if cfg[1] else p["X"]
+            res.append(_eval_cfg(p, X, cfg, np.flatnonzero(folds != 0), np.flatnonzero(folds == 0), lams, rl))
+        del p
+        torch.cuda.empty_cache()
+    best = max(res, key=lambda r: r["pdms_hold"])                  # max() keeps the first maximum: simpler on ties
+    out = {"grid": res, "chosen": best}
+    # fold-1 replicate (descriptive): the chosen configuration and the N1b-style linear baseline
+    p = prep(extra=best["cfg"][2])
+    folds = H._group_folds(p["logs"], 5, seed=N1.SEED_HOLD)
+    fit1, hold1 = np.flatnonzero(folds != 1), np.flatnonzero(folds == 1)
+    Xc = _with_views(p["X"], V) if best["cfg"][1] else p["X"]
+    out["fold1_chosen"] = _eval_cfg(p, Xc, tuple(best["cfg"]), fit1, hold1, lams, rl)
+    p0 = prep()
+    out["fold1_linear_n1b"] = _eval_cfg(p0, p0["X"], ("lin", 0, 0), fit1, hold1, lams, rl)
+    (run_dir("n2") / "n2dev.json").write_text(json.dumps(out, indent=1, default=float))
+    rl.log.info(f"chosen {best['cfg']} held-out {best['pdms_hold']:.3f}")
+    rl.close()
+
+
+def n2final():
+    """Refit the chosen N2 configuration on all rows; navtest / navhard poses (each scored once by the chain)."""
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", "n2final")
+    dev = json.loads((run_dir("n2") / "n2dev.json").read_text())["chosen"]
+    h, v, f = dev["cfg"]
+    w, beta = tuple(dev["weights"]), dev["beta"]
+    p = prep(extra=f)
+    Vtr = _views("train", p["d"]["tokens"]) if v else None
+    X = _with_views(p["X"], Vtr) if v else p["X"]
+    tests = {}
+    for split in TEST:
+        t = test_inputs(split, p["d"], f)
+        t["X"] = _with_views(p["X"], Vtr, t["X"], _views(split, t["tokens"])) if v else t["X"]
+        tests[split] = t
+    allr = np.arange(len(X))
+    if h == "lin":
+        lams = _lams()
+        full = {m: N1.bce_fit(X, p["T"][m], allr, lams[m], LIN_ITERS) for m in SUBS}
+        lgs = {sp: {m: t["X"] @ full[m][0] + full[m][1] for m in SUBS} for sp, t in tests.items()}
+    else:
+        Tall = torch.stack([p["T"][m] for m in SUBS], 1)
+        names = list(tests)
+        runs = [train_mlp(X, Tall, allr, sd, epoch=e, evals=[tests[sp]["X"] for sp in names])[0]
+                for sd, e in zip(range(SEEDS), dev["epochs"])]
+        lgs = {sp: {m: torch.stack([r[j][m] for r in runs]).mean(0) for m in SUBS} for j, sp in enumerate(names)}
+    sel = {"cfg": dev["cfg"], "weights": w, "beta": beta, "slots": slots(f)}
+    for sp, t in tests.items():
+        s = N1.scores(lgs[sp], t["Dm"], w, beta, p["mask"]).argmax(1).cpu().numpy()
+        pool = np.concatenate([np.broadcast_to(p["d"]["anchors"][None], (len(s), K, 8, 3)), t["cands"]], 1)
+        np.savez(run_dir("n2") / f"{sp}_n2.npz", tokens=t["tokens"], poses=pool[np.arange(len(s)), s].astype(np.float32))
+        sel[f"{sp}_shares"] = {"anchor": float((s < K).mean()),
+                               **{f"{a:.2f}x{b:.1f}": float((s == K + i).mean()) for i, (a, b) in enumerate(slots(f))}}
+        rl.log.info(f"{sp}: poses written, shares {sel[f'{sp}_shares']}")
+    (run_dir("n2") / "select.json").write_text(json.dumps(sel, indent=1, default=float))
+    rl.close()
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
@@ -442,4 +604,4 @@ if __name__ == "__main__":
     ap.add_argument("--m", type=int, default=40000)
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final}[a.cmd]()
