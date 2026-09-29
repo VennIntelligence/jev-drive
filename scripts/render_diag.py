@@ -3,6 +3,8 @@
 
     .venv/bin/python scripts/render_diag.py frames <exp> [<exp> ...]   per-frame luminance -> <exp>/frames.parquet
     .venv/bin/python scripts/render_diag.py summary <exp> [<exp> ...]  per-run verdicts     -> stdout, <exp>/runs.csv
+    .venv/bin/python scripts/render_diag.py pair <exp_a> <exp_b>      same route, same tick: front-luma difference b - a
+                                                                           per route (rep0 of each) -> stdout
     .venv/bin/python scripts/render_diag.py scan <name> <b2d_run out> ..  front camera of every finished run of existing
                                                                            b2d_run outputs -> renderfix/scan_<name>.parquet
 
@@ -108,9 +110,24 @@ def scan(name, outs):
     print(per.groupby(level=0).agg(["sum", "count"]))
 
 
+def pair(a, b):
+    """Per route present in both exps (rep0): mean and max over ticks of |front luma b - a|, and the mean signed
+    difference (how much a switch changes frames that were fine without it)."""
+    f = [pd.read_parquet(ROOT / e / "frames.parquet").query("rep == 'rep0'") for e in (a, b)]
+    m = f[0].merge(f[1], on=["route_id", "tick"], suffixes=("_a", "_b"))
+    d = m.lum_front_b - m.lum_front_a
+    o = m.assign(d=d, ad=d.abs()).groupby("route_id").agg(frames=("d", "size"), lum_a=("lum_front_a", "mean"),
+                                                          lum_b=("lum_front_b", "mean"), mean_d=("d", "mean"),
+                                                          mean_abs_d=("ad", "mean"), max_abs_d=("ad", "max"))
+    print(f"{a} -> {b}")
+    print(o.round(2).to_string())
+
+
 if __name__ == "__main__":
     cmd, exps = sys.argv[1], sys.argv[2:]
-    if cmd == "scan":
+    if cmd == "pair":
+        pair(*exps)
+    elif cmd == "scan":
         scan(exps[0], exps[1:])
     elif cmd == "frames":
         for e in exps:
