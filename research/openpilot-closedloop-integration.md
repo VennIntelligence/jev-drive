@@ -265,3 +265,43 @@ binding 只是因为 plan 加速得比 base 慢。所以另加了事后读数（
 
 - 这 10 条上，openpilot 纵向 modifier 的分数收益等于「开得慢」的收益。要说明 openpilot 看见了东西，读数必须带同均速对照；而且要换一套 base 慢开也躲不过的考题（例如必须按时通过的让行、对向车流）。
 - 锁存不该在「plan 要减速到低速」时触发；CARLA MKZ 在 1–2 m/s 的轻刹会直接刹停，执行层要么避开这一段，要么锁存判据改成「plan 自己要求停」（v(5 s) ≈ 0），而不是「车停了」。
+
+## 10. 标定链审计：CARLA rig 是不是已经等价于「收敛后的 liveCalibration」（2026-09-29，只读源码 + CPU 数值，没有 CARLA）
+
+问题来自用户：真车上 calibrationd 是为了吸收「用户装得不准」而在线学 rpy；模拟器里外参是构造出来的精确值，应当直接喂先验，不需要任何 warm-up。结论先说：**我们已经在喂了，不需要 warm-up，也没有要改的代码。**
+
+**源码版本**：box 上没有 openpilot 源码（只有 ONNX 权重，Lebowski 的 host 队列逻辑移植自 516ec1e6）；本节对照 `commaai/openpilot` master（2026-09-29 拉取，`openpilot/selfdrive/locationd/calibrationd.py`、`selfdrive/modeld/modeld.py`、`common/transformations/{camera,model}.py`）。master 里 `liveCalibration` 已改名 `extrinsicsCalibration`，字段不变。Cinque / Lebowski 的图像输入与 warp 用法与 master modeld 一致（`frames.py` 就是从这里移植的，见其 docstring）。
+
+### 10.1 调用链
+
+1. **calibrationd**（4 Hz）用 `cameraOdometry`（modeld 的 pose 头，即模型自己看出来的相机运动）在「直行且 > 15 mph 且偏航率小」时估：`rpyCalib` = (0, −atan2(trans_z, trans_x), atan2(trans_y, trans_x)) 复合到当前 rpy 上（roll 恒设 0，注释里写明模型输入不做 roll 校正），块平均（100 帧一块，至少 5 块有效才 `calibrated`）；同一处还平均了模型输出的 `wideFromDeviceEuler`（广角相对 device 的欧拉角）与 `height`（来自 pose 头的 `road_transform` 的 z）。初始值 rpy = 0、wide = 0、height = 1.22 m；`calStatus` 只是 uncalibrated / calibrated / invalid / recalibrating 的标记。
+2. **modeld**：只取 `rpyCalib`，road 与 wide 两个相机**共用同一个** `device_from_calib_euler`：`get_warp_matrix(rpy, K_cam, bigmodel_frame)`，K 来自 `DEVICE_CAMERAS` 的硬编码（road 焦距 2648，wide 567，1928×1208，主点在图像中心）。`wideFromDeviceEuler`、`height`、`calStatus` **不进 warp，也不进任何模型输入**（其余输入只有 desire、traffic convention、lateral control params）。在收到第一条 calibration 之前 `model_transform` 是全零，输出 `valid = false`（是「有没有收到」，不看 `calStatus`）。
+3. **模型输出**：plan / lane lines / lead 都在 calib 系（device 系按 rpyCalib 转正的路面对齐系，原点在相机，x 前 y 右 z 下）；pose 头里的 `wide_from_device_euler`、`road_transform` 是模型对自己外参的估计，只被 calibrationd 消费。
+4. **下游**：locationd / paramsd / lagd / controlsd 里的 `device_from_calib = rot_from_euler(rpyCalib)` 只用来把 device 系的 IMU 角速度、cameraOdometry 转到 calib 系（车身系），`lagd` 另用 `calib_valid` 作门；这些是真车控制与状态估计链，我们的闭环里没有（plan 直接进我们自己的控制器）。
+5. **写死常数处**：相机焦距与主点（`camera.py`）、model 内参 910 / 455、`MEDMODEL_CY = 47.6`、calibrationd 的初值高度 1.22 m。**没有任何一处用相机高度做输出换算**——plan 的 z 我们没有用，高度只是模型从图像里自己推断的量。
+
+### 10.2 逐项对照
+
+| 量 | openpilot 期望（收敛后） | 我们喂的 | 一致？ |
+|:--|:--|:--|:--|
+| `rpyCalib`（road 与 wide 共用） | 相机光轴相对「车行进方向」的残差；CARLA 相机水平、正对车头，车行进方向即光轴 → 收敛值 0 | `scripts/zeroshot_policy_server.py` 的 warp 用 `get_warp_matrix(np.zeros(3), …)` | 是（roll 本来就恒 0） |
+| warp 矩阵 | `model.get_warp_matrix` | `frames.get_warp_matrix`；与上文 master 公式独立重推对比，max abs diff 2e-13（rpy = 0 与两组非零 rpy，road 与 wide）；服务端预算的 gather 下标与参考矩阵逐位相同 | 是 |
+| 内参 K（road / wide） | 2648 / 567，主点 (964, 604) | CARLA fov 反推焦距 2648.000 / 567.000，相对误差 3e-8；主点为图像中心 | 是 |
+| 地平线（模型帧行） | road 47.6，wide 151.8 ↔ 相机主点行 604 | 反算 warp 后恰落在 (964, 604) | 是 |
+| road 与 wide 的相对外参（`wideFromDeviceEuler`） | 真车上是小的固定值（模型估的） | 两台 CARLA 相机位置与朝向完全相同（spec 逐项差 0），等价于 wide_from_device = 0；没有任何代码读它 | 是（构造上精确；模型自己估的值我们没存，见 10.4） |
+| 相机高度 | calibrationd 初值 1.22 m，只是模型估计的输出，不进 warp | CARLA 相机装在 1.433 m（挡风玻璃上沿，理由见 `zeroshot_rigs.py`）；输出换算不用高度 | **不同，但不是输入**：比名义高 0.21 m，20 m 处地面点在 road 模型帧上下移 9.7 px（wide 4.8 px），模型得自己吸收 |
+| `calStatus` / `validBlocks` | modeld 不看；selfdrived / lagd 才门控 | 不存在 | 无关 |
+| 车身俯仰 / 侧倾 / 坡度 | 真车同样不补偿（calibrationd 是慢变量，且只学 pitch / yaw） | CARLA 车体在加减速时俯仰，相机随车 | 与真车同类，没补偿 |
+| 广角镜头 | comma wide 是鱼眼，被 openpilot 当 567 焦距的针孔用（训练数据里就带着畸变） | CARLA wide 是真针孔（119.1°） | **不同**（外围几何不同），不是标定项，本次不量 |
+
+### 10.3 数值验证
+
+脚本 `scripts/check_op_calibration.py`（只读，纯 CPU，退出码 = 是否全通过）：上表「warp 矩阵、内参、地平线、相对外参、gather 下标」各项全过；另外量了「如果 rpy 错了模型帧会移多少」：俯仰错 0.5° 使 road 模型帧内容移 7.9 px（1° 是 15.9 px），偏航 0.5° 横移 7.9 px（与 910 px 焦距的 tan 一致）。
+box 上没有存下来的 CARLA 相机模型帧（`p5_openpilot/check/…/model_frame_example.npy` 是缓存管线的产物，不是 CARLA rig 的渲染），所以「在存下的帧上看地平线行」这一步用解析反算代替：地平线与地面点落点的误差在 1e-13 px 量级。
+
+### 10.4 结论与没做的事
+
+- **(a)** 已经是精确先验：rpy = 0、内参与 road / wide 相对外参都与 CARLA 构造一致，且从第 0 帧起就在喂（没有 uncalibrated 阶段，也没有 modeld 那个「收到 calibration 之前 warp 全零」的窗口）。calibrationd 的 warm-up 在这里没有对应物，不需要延长 warm-up 来「等标定」。此前 wl2 prereg 里的「20 s 慢瞬态」只可能来自模型时序状态或场景，不是标定。
+- **(b)** 没发现输入错配。两个非标定的差别值得记着：相机高度 1.433 vs 名义 1.22（模型得自己适应；此前 ego-gap 里 plan 横移回归增益 0.98，没有尺度偏的迹象，见 todos/2026-09-29-wl2-prereg.md），以及 wide 的针孔 vs 鱼眼。两者都是「与训练分布的差别」，不是标定没喂。
+- **(c)** 不需要修。没有加 opt-in 开关：改任何值都会让输出偏离精确标定。要做 wl2 prereg 建议 2 的标定对照时，只要把 `zeroshot_policy_server.py` 里 `np.zeros(3)` 换成参数即可，现成的偏移量表在 10.3。
+- 一项 CPU 之外才能补的读数：模型自己对外参的估计（`wide_from_device_euler`、`road_transform` 的 z，即它认为的相机高度）在 `decode()` 里被丢掉了。存下来能直接看「模型觉得 CARLA 相机装在多高、wide 相对 road 偏了多少」，是对本节 (b) 的第一手证据；随下一次有 CARLA 的 run 顺带写进 `plans.jsonl` 即可（prereg 建议 2 已有同一条）。
