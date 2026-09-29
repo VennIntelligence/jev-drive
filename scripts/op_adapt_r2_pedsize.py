@@ -37,7 +37,7 @@ F_NUSC, NUSC_CAM_X, PED_H = 1266.4, 1.70, 1.75
 REAR_AXLE_X = -1.388633220                     # hero rear axle relative to the actor centre (p4_carla)
 PX_BINS = (0, 100, 500, 1500, 6000, np.inf)
 D_BINS = (0, 10, 20, 30, np.inf)
-PED_FAMS = P.PED_FAMILIES
+PED_FAMS = ("DynamicObjectCrossing", "ParkingCrossingPedestrian", "PedestrianCrossing", "VehicleTurningRoutePedestrian")
 
 
 def _latest_attempt(gen: Path, rid: str) -> Path | None:
