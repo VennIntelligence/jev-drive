@@ -8,22 +8,26 @@
 # `sch_table.py check` before the chain starts. WORKERS=n caps the row's workers per card (pilots).
 # Before each runner a chain waits until the card's CARLA servers (any lane, from the process table) + its workers
 # <= CARD_CAP (6): the G lane drains a card only at route boundaries after runs/sched/demand/wm-loop.json appears.
+# WL-2: WL_NAME=wl2 WL_LANE=wl2-gen ZYGOTE=1 (runs/wl2, the wl2-gen row, --zygote), forks from `python -m jevdrive.wl forks2`.
 # Drain: touch $OUT/DRAIN -> runners take no new route (B2D_DRAIN_FILE), chains start nothing new.
 # Needs runs/wl/{forks.parquet, jobs.json, forks-<set>.xml} (python -m jevdrive.wl forks). Out: runs/wl/gen/<set>/
 # (b2d_run layout), log.txt and chain-gpu<g>.log in runs/wl/gen/. Resumable: re-run skips done/<id>.json.
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
-R=$DATA_DIR/runs/wl
+NAME=${WL_NAME:-wl} LANE=${WL_LANE:-wm-loop}
+R=$DATA_DIR/runs/$NAME
+export WL_NAME=$NAME
+[[ $NAME != wl ]] && export WL_RESULTS=${WL_RESULTS:-$R/results}
 OUT=${OUT:-$R/gen}
 PY=$DATA_DIR/envs/carla/bin/python
 STAGE=${STAGE:-pilot1}
 read -ra S <<< "${SETS:-ba p6}"
-eval "$(python3 - "$DATA_DIR/runs/sched/table.tsv" <<'PYEOF'
+eval "$(python3 - "$DATA_DIR/runs/sched/table.tsv" "$LANE" <<'PYEOF'
 import csv, sys
-rows = [r for r in csv.DictReader(open(sys.argv[1]), delimiter="\t") if r["lane"] == "wm-loop"]
+rows = [r for r in csv.DictReader(open(sys.argv[1]), delimiter="\t") if r["lane"] == sys.argv[2]]
 if not rows:
-    print('echo "no wm-loop row in table.tsv" >&2; exit 1'); sys.exit()
+    print('echo "no %s row in table.tsv" >&2; exit 1' % sys.argv[2]); sys.exit()
 r = rows[0]
 g = [x for x in r["gpus"].split(",") if x not in ("", "-")]
 if ":" in r["idx0"]:
@@ -120,7 +124,7 @@ chain() {  # chain <j>
                 "$PY" scripts/b2d_run.py --routes "$R/forks-$s.xml" --route-ids "$ids" --out "$OUT/$s" \
                 --workers "$w" --server-index "$base" --index-span "$span" --gpu-rank "$g" --tm-seed-from-id \
                 --agent scripts/wl_fork_agent.py --agent-config "$OUT/agent-$s.json" --python "$(pyenv "$s")" \
-                --fast-copy --no-spectator --no-reap --max-attempts ${MAX_ATTEMPTS:-3} --stagger-s ${STAGGER_S:-30} --client-threads 8 --stall-s ${STALL_S:-600} &
+                --fast-copy --no-spectator --no-reap --max-attempts ${MAX_ATTEMPTS:-3} --stagger-s ${STAGGER_S:-30} --client-threads 8 --stall-s ${STALL_S:-600} $([[ ${ZYGOTE:-0} == 1 ]] && echo --zygote) &
             echo "runner $! gpu $g $s" >> "$OUT/pids.txt"
             wait $!
         done

@@ -31,7 +31,7 @@ CAMS = ("front", "front_left", "front_right")
 
 
 def pdir(*p) -> Path:
-    d = data_dir() / "processed" / "wl_gen"
+    d = data_dir() / "processed" / f"{WL.NAME}_gen"
     d.mkdir(parents=True, exist_ok=True)
     return d.joinpath(*p)
 
@@ -197,7 +197,7 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=("index", "opspec", "vjepa", "z", "prune"))
-    ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"))
+    ap.add_argument("--out", default=str(data_dir() / "runs" / WL.NAME / "gen"))
     ap.add_argument("--workers", type=int, default=16)
     a = ap.parse_args()
     if a.step == "vjepa":

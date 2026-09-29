@@ -40,7 +40,7 @@ running on the same inputs and its control is discarded, so it picks up from the
 Camera JPEGs are written from pre_cams camera frames before the first window to the end of the run (disk: ~250 KB per
 image; the pipeline prunes them once the features are extracted). post_cams is kept in the job for bookkeeping only.
 
-Extra outputs: wl.json (job, window schedule, every window's candidates in ego coordinates, the fork pose),
+Extra outputs: route_xy.npy (the dense route centre line, world x / y, (n, 2) float32), wl.json (job, window schedule, every window's candidates in ego coordinates, the fork pose),
 wl_ticks.jsonl (per tick inside a window: applied control, controller diagnostics, pose), collisions.jsonl (every
 collision event of the ego: frame, other actor id / type, impulse). A rewind run adds rewind.jsonl (per branch: action,
 first frame, restore cost) and a "branch" field in wl_ticks.jsonl / wl.json; its ticks restart at fork_tick for every
@@ -137,6 +137,7 @@ class WLForkAgent(P5PairAgent):
             {"frame": e.frame, "other_id": e.other_actor.id, "other_type": e.other_actor.type_id,
              "impulse": [e.normal_impulse.x, e.normal_impulse.y, e.normal_impulse.z]}) + "\n"))
         self._route_xy = np.array([[t.location.x, t.location.y] for t, _ in self._dense], float)
+        np.save(self.out / "route_xy.npy", self._route_xy.astype(np.float32))    # the agent's dense global plan (WL-2 ego channel)
         if self.norender_until > self._tick:
             self._set_render(False)
         if self.rw_method:

@@ -24,18 +24,21 @@
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
 cd "$(dirname "$0")/.."
-R=$DATA_DIR/runs/wl P=$DATA_DIR/runs/wl/pipe OUT=$DATA_DIR/runs/wl/gen DEM=$DATA_DIR/runs/sched/demand/wm-loop.json
+NAME=${WL_NAME:-wl} LANE=${WL_LANE:-wm-loop} SETS=${SETS:-ba p6 d2}       # WL-2: WL_NAME=wl2 WL_LANE=wl2-gen SETS="ba p6" ZYGOTE=1
+export WL_NAME=$NAME
+R=$DATA_DIR/runs/$NAME P=$DATA_DIR/runs/$NAME/pipe OUT=$DATA_DIR/runs/$NAME/gen DEM=$DATA_DIR/runs/sched/demand/$LANE.json
+[[ $NAME != wl ]] && export WL_RESULTS=${WL_RESULTS:-$R/results}
 mkdir -p "$P" "$(dirname "$DEM")"
 rm -f "$P/DONE" "$P/ERROR" "$P/STALL" "$OUT/DRAIN"
 exec > >(tee -a "$P/log.txt") 2>&1
 BUDGET_WH=${BUDGET_WH:-290} DISK_FLOOR_GB=${DISK_FLOOR_GB:-150} STALL_MIN=${STALL_MIN:-90}
 status() { echo "$(date '+%F %T') $*" | tee -a "$P/STATUS.md"; }
 fail() { status "ERROR: $*"; echo "$*" > "$P/ERROR"; exit 1; }
-eval "$(python3 - "$DATA_DIR/runs/sched/table.tsv" <<'PYEOF'
+eval "$(python3 - "$DATA_DIR/runs/sched/table.tsv" "$LANE" <<'PYEOF'
 import csv, sys
-r = next((r for r in csv.DictReader(open(sys.argv[1]), delimiter="\t") if r["lane"] == "wm-loop"), None)
+r = next((r for r in csv.DictReader(open(sys.argv[1]), delimiter="\t") if r["lane"] == sys.argv[2]), None)
 if r is None:
-    print('echo "no wm-loop row"; exit 1'); sys.exit()
+    print('echo "no %s row"; exit 1' % sys.argv[2]); sys.exit()
 g = [x for x in r["gpus"].split(",") if x.isdigit()]
 span = int(r["idx_span"])
 m = dict(x.split(":") for x in r["idx0"].split(",")) if ":" in r["idx0"] else {x: int(r["idx0"]) + k * span for k, x in enumerate(g)}
@@ -44,7 +47,7 @@ print('G=(%s) W=%s CPUS=%s IDX="%s"' % (" ".join(g), r["workers"], r["cpus"],
 PYEOF
 )"
 demand() { python3 -c 'import json,sys; print(json.dumps({g: int(sys.argv[1]) for g in sys.argv[2:]}))' "$@" > "$DEM.tmp" && mv "$DEM.tmp" "$DEM"; }
-total() { .venv/bin/python -c "import pandas as pd; from jevdrive import wl; print(len(pd.read_parquet(wl.rundir('forks.parquet'))) + len(pd.read_parquet(wl.rundir('d2.parquet'))))"; }
+total() { .venv/bin/python -c "import pandas as pd; from jevdrive import wl; print(len(pd.read_parquet(wl.rundir('forks.parquet'))) + (len(pd.read_parquet(wl.rundir('d2.parquet'))) if wl.rundir('d2.parquet').exists() else 0))"; }
 ndone() { find "$OUT"/{ba,p6,d2}/done -name '*.json' 2>/dev/null | wc -l; }
 
 guard() {  # every 5 min: worker-hours, disk floor, stall, hourly progress (step 2)
@@ -104,13 +107,13 @@ status "wl-full start: cards ${G[*]} x $W, cores $CPUS, $(ndone) / $TOTAL runs a
 demand "$W" "${G[@]}"
 status "demand $(cat "$DEM")"
 guard & GUARD=$!
-STAGE=full SETS="ba p6 d2" scripts/wl_gen.sh
+STAGE=full SETS="$SETS" scripts/wl_gen.sh
 rc=$?
 kill "$GUARD" 2>/dev/null; wait "$GUARD" 2>/dev/null
 [[ -e $P/ERROR ]] && { rm -f "$DEM"; status "demand file removed after the stop"; exit 1; }
 (( rc == 0 )) || fail "wl_gen.sh exit $rc"
 left=0
-for s in ba p6 d2; do
+for s in $SETS; do
     n=$(.venv/bin/python -m jevdrive.wl ids --stage full --set "$s" --out "$OUT" | tr ',' '\n' | grep -c .)
     status "$s: $n runs without a done record"; left=$(( left + n ))
 done

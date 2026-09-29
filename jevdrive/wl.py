@@ -35,7 +35,8 @@ from .common import data_dir, get_logger
 
 log = get_logger(__name__)
 REPO = Path(__file__).resolve().parents[1]
-RESULTS = Path(os.environ["WL_RESULTS"]) if os.environ.get("WL_RESULTS") else REPO / "research" / "results" / "wl"   # box: outside the tracked tree
+NAME = os.environ.get("WL_NAME", "wl")                      # "wl2": WL-2 (runs/wl2, processed/wl2_gen, todos/2026-09-29-wl2-prereg.md)
+RESULTS = Path(os.environ["WL_RESULTS"]) if os.environ.get("WL_RESULTS") else REPO / "research" / "results" / NAME   # box: outside the tracked tree
 TICK, CAM = 0.05, 4
 PED_FAM = ("PedestrianCrossing", "DynamicObjectCrossing", "VehicleTurningRoutePedestrian", "ParkingCrossingPedestrian")
 CUTIN_FAM = ("StaticCutIn", "ParkingCutIn", "HighwayCutIn")
@@ -47,7 +48,7 @@ SRC = {"ba": dict(runs="runs/p5v1", gen="gen-ba", proc="carla_p5v1_ba", xml="run
 
 
 def rundir(*p) -> Path:
-    d = data_dir() / "runs" / "wl"
+    d = data_dir() / "runs" / NAME
     d.mkdir(parents=True, exist_ok=True)
     return d.joinpath(*p)
 
@@ -90,20 +91,20 @@ def _op_plans(set_name: str) -> dict:
     return out
 
 
-def _sources() -> pd.DataFrame:
-    """One row per (base route, world pair) of seed 0: set, class, family, x+ / x- route ids, t_vis, reaction tick."""
+def _sources(seeds=(0,)) -> pd.DataFrame:
+    """One row per (base route, seed, world pair): set, class, family, x+ / x- route ids, t_vis, reaction tick."""
     rows = []
     p = pd.read_csv(data_dir() / "processed" / SRC["ba"]["proc"] / "pairs.csv")
-    p = p[(p.seed == 0) & p.family.isin(PED_FAM + CUTIN_FAM) & (p.reason == "ok")]
+    p = p[p.seed.isin(seeds) & p.family.isin(PED_FAM + CUTIN_FAM) & (p.reason == "ok")]
     for r in p.itertuples():
-        rows.append({"set": "ba", "cls": "ped" if r.family in PED_FAM else "cutin", "family": r.family, "base_id": str(r.base_id),
+        rows.append({"set": "ba", "cls": "ped" if r.family in PED_FAM else "cutin", "family": r.family, "base_id": str(r.base_id), "seed": int(r.seed),
                      "plus": str(r.plus), "minus": str(r.minus), "t_vis": float(r.t_vis),
                      "t_react": float(r.t_div) if r.t_div <= r.t_last else np.nan})
     c = pd.read_parquet(data_dir() / "processed" / SRC["p6"]["proc"] / "nq3_cases.parquet")
-    c = c[(c.seed == 0) & c.main.fillna(False).astype(bool) & (c.reason == "ok")]
+    c = c[c.seed.isin(seeds) & c.main.fillna(False).astype(bool) & (c.reason == "ok")]
     for r in c.itertuples():
         react = r.t_div_lat if pd.notna(r.t_div_lat) else r.t_div
-        rows.append({"set": "p6", "cls": "obstacle", "family": r.scenario, "base_id": str(r.base_id), "plus": str(r.x10),
+        rows.append({"set": "p6", "cls": "obstacle", "family": r.scenario, "base_id": str(r.base_id), "seed": int(r.seed), "plus": str(r.x10),
                      "minus": str(r.x00), "t_vis": float(r.t_vis), "t_react": float(react) if pd.notna(react) else np.nan})
     return pd.DataFrame(rows)
 
@@ -182,6 +183,161 @@ def forks(branch_s: float = 3.0, cont_s: float = 20.0) -> dict:
     return info
 
 
+# ================================================================ WL-2 (todos/2026-09-29-wl2-prereg.md)
+
+TAU_S = (4.0, 3.0, 2.0)                  # P6 fork times: ego-to-obstacle longitudinal distance first <= v * tau
+K1B_TICKS = 8                            # "k1 + 0.3 s" on the 5 Hz camera grid: 0.2 or 0.4 s, 0.4 s taken
+OCC_AT_S = 2.0                           # P5 training forks: the source run's ego lane is occupied at k + 2 s
+WL2_CAPS = {"ba": 150, "p6": 150}        # training fork points (rows, both worlds) per set
+WL1_SPLIT = ("runs", "wl", "split.json")
+
+
+def _p6_tau_ticks(adir: Path, pp: pd.DataFrame) -> dict:
+    """{tau: first camera tick where the longitudinal distance from the ego to the nearest scenario obstacle ahead
+    (hidden.json entries that are not hidden, |lateral| <= 6 m) is <= v * tau}, from the source run's own ticks."""
+    hid = json.loads((adir / "hidden.json").read_text())
+    ids = [int(h["id"]) for h in hid if not h.get("hidden")]
+    z = np.load(adir / "actors.npz")
+    fr0 = int(_frames(adir).frame.iloc[0])
+    tick = z["frame"] - fr0 + 1
+    m = np.isin(z["id"], ids)
+    tk, xy = tick[m], z["xyz"][m][:, :2].astype(float)
+    out = {}
+    for t in pp.index[(pp.index - 1) % CAM == 0]:
+        q = xy[tk == t]
+        if not len(q) or pp.v[t] < V_MIN:
+            continue
+        e = pp.loc[t]
+        c, s = np.cos(np.radians(e.yaw)), np.sin(np.radians(e.yaw))
+        dx, dy = q[:, 0] - e.x, q[:, 1] - e.y
+        x, y = dx * c + dy * s, -dx * s + dy * c
+        ok = (x > 0) & (np.abs(y) <= 6.0)
+        if not ok.any():
+            continue
+        d = float(x[ok].min())
+        for tau in TAU_S:
+            if tau not in out and d <= pp.v[t] * tau:
+                out[tau] = int(t)
+    return out
+
+
+def forks2(seeds=(1, 2), branch_s: float = 3.0, seed: int = 20260929) -> dict:
+    """WL-2 fork table (main eval + train), 11 candidates, no continuation, from the seed 1 / 2 worlds of the P5 v1 BA /
+    P6 v0 sources; eval / train = WL-1's split (its 40 eval base routes never enter training). Times: BA k1, k1 + 0.4 s,
+    k2 = k1 + 0.6 s, k3 (0.4 s before the expert's reaction, > k2); P6 the tau = 4 / 3 / 2 s ticks and k3; v >= 3 m/s.
+    Training: BA only where the x+ source run's ego lane is occupied at k + 2 s (`occ`), capped per set (deterministic
+    group subsample); eval takes every fork the rules give. A group needs the openpilot plan at its fork frame in both
+    worlds: the missing streams are listed in plan_keys.txt (p5_openpilot --keys @file) and the call returns without
+    writing the job table until they exist. -> runs/wl2/{forks.parquet, jobs.json, forks-<set>.xml, split.json, forks_info.json}"""
+    import xml.etree.ElementTree as ET
+    from . import nq4_w as W
+    from .wl_traj import ACTIONS11
+    sp = json.loads(data_dir().joinpath(*WL1_SPLIT).read_text())
+    src = _sources(seeds)
+    plans = {s: _op_plans(s) for s in SRC}
+    rows, miss = [], []
+    for r in src.itertuples():
+        try:
+            dp, dm = attempt_dir(r.set, r.plus), attempt_dir(r.set, r.minus)
+        except FileNotFoundError:
+            miss.append((r.base_id, r.seed))
+            continue
+        pp, fp, fm = _pose(dp), _frames(dp), _frames(dm)
+        if r.set == "ba":
+            k1 = _cam_ceil(r.t_vis)
+            ks = {"k1": k1, "k1b": k1 + K1B_TICKS, "k2": k1 + 12}
+        else:
+            ks = {f"tau{int(t)}": k for t, k in sorted(_p6_tau_ticks(dp, pp).items(), reverse=True)}
+        if np.isfinite(r.t_react):
+            k3 = _cam_floor(r.t_react - 8)
+            if k3 >= max(ks.values(), default=0) + 4:
+                ks["k3"] = k3
+        seen = set()
+        for name, k in ks.items():
+            if k in seen or k not in pp.index or pp.v[k] < V_MIN or k not in fp.index or k not in fm.index:
+                continue
+            seen.add(k)
+            for world, rid, fr in (("plus", r.plus, fp), ("minus", r.minus, fm)):
+                rows.append({"set": r.set, "cls": r.cls, "family": r.family, "base_id": r.base_id, "seed": r.seed, "world": world,
+                             "src_route": rid, "src_dir": str(attempt_dir(r.set, rid)), "k_name": name, "fork_tick": int(k),
+                             "v0": float(pp.v[k]), "src_frame": f"{rid}-{int(fr.frame[k]):07d}",
+                             "split": "eval" if r.base_id in sp["eval"] else "train"})
+    f = pd.DataFrame(rows)
+    f["group"] = f.set + "/" + f.base_id + "/" + f.seed.astype(str) + "/" + f.k_name
+    # training selection: BA groups whose x+ source lane is occupied at k + 2 s, then the per-set cap
+    tr = f[f.split == "train"]
+    occ = {}
+    for (adir, world), g in tr[(tr.set == "ba") & (tr.world == "plus")].groupby(["src_dir", "world"]):
+        frs = _frames(Path(adir))
+        want = {int(k): int(frs.frame[k + int(OCC_AT_S / TICK)]) for k in g.fork_tick if k + int(OCC_AT_S / TICK) in frs.index}
+        if want:
+            res = W._run_rows((adir, sorted(want.values())))[1]
+            fo = {r_["frame"]: bool(r_["occ"]) for r_ in res}
+            for k, fr_ in want.items():
+                occ[(adir, k)] = fo.get(fr_, False)
+    keep = set(f[f.split == "eval"].group)
+    rng = np.random.RandomState(seed)
+    for s_ in SRC:
+        g = tr[tr.set == s_]
+        if s_ == "ba":
+            gp = g[g.world == "plus"]
+            grp = sorted(gp[[occ.get((a, k), False) for a, k in zip(gp.src_dir, gp.fork_tick)]].group.unique())
+        else:
+            grp = sorted(g.group.unique())
+        n_row = g.groupby("group").size()
+        order = [grp[i] for i in rng.permutation(len(grp))]
+        tot = 0
+        for gname in order:
+            if tot + n_row[gname] > WL2_CAPS[s_]:
+                continue
+            keep.add(gname)
+            tot += n_row[gname]
+    f = f[f.group.isin(keep)].copy()
+    f["has_op"] = [fn in plans[s_] for s_, fn in zip(f.set, f.src_frame)]
+    have_run = {s_: {k.rsplit("-", 1)[0] for k in plans[s_]} for s_ in SRC}          # runs with a stored plan stream
+    gone = set(f[~f.has_op].group)
+    need = f[f.group.isin(gone) & ~f.has_op & (f.set == "ba")]
+    keys = sorted({"p5_" + str(r_) for r_ in need.src_route if str(r_) not in have_run["ba"]})
+    rundir("plan_keys.txt").write_text("\n".join(keys))
+    if keys:
+        return {"status": "openpilot plans missing", "streams": len(keys), "groups": len(gone),
+                "run": "scripts/p5_openpilot.py --models cinque --arrays plan temporal --out-sub op_streams_plan --keys @runs/wl2/plan_keys.txt"}
+    n_no_op = len(gone)                                    # groups whose stream exists but not the fork frame: dropped
+    f = f[~f.group.isin(gone)]
+    f = f.sort_values(["set", "split", "seed", "base_id", "fork_tick", "world"], key=lambda c: c.map({"eval": 0, "train": 1}) if c.name == "split" else c
+                      ).reset_index(drop=True)
+    f["fork_id"] = np.arange(len(f))
+    runs = f.loc[f.index.repeat(len(ACTIONS11))].reset_index(drop=True)
+    runs["action"] = np.tile(ACTIONS11, len(f))
+    runs["route_id"] = ["7%06d%s" % (i, s_[-1]) for i, s_ in enumerate(runs.src_route)]
+    jobs = {}
+    for r in runs.itertuples():
+        op = plans[r.set].get(r.src_frame)
+        jobs[r.route_id] = {"fork_tick": r.fork_tick, "action": r.action, "op_plan": np.round(op, 4).tolist(), "branch_s": branch_s,
+                            "cont_s": 0.0, "iv_s": 2.0, "iv_gap": [6.0, 10.0], "seed": int(r.route_id), "src": r.src_dir,
+                            "fork_id": int(r.fork_id)}
+    for s_ in SRC:
+        root = ET.parse(data_dir() / SRC[s_]["xml"]).getroot()
+        by_id = {e.get("id"): e for e in root.iter("route")}
+        out = ET.Element("routes")
+        for r in runs[runs.set == s_].itertuples():
+            e = ET.fromstring(ET.tostring(by_id[r.src_route]))
+            e.set("id", r.route_id)
+            e.set("wl_src", r.src_route)
+            out.append(e)
+        ET.ElementTree(out).write(rundir(f"forks-{s_}.xml"))
+    runs.to_parquet(rundir("forks.parquet"), index=False)
+    rundir("jobs.json").write_text(json.dumps(jobs))
+    rundir("split.json").write_text(json.dumps(sp, indent=1))
+    info = {"sources": len(src), "missing_source_runs": miss, "fork_points": len(f), "runs": len(runs), "dropped_no_op_groups": n_no_op,
+            "by_set_split": {f"{a}/{b}": int(n) for (a, b), n in f.groupby(["set", "split"]).size().items()},
+            "by_k": f.k_name.value_counts().to_dict(),
+            "groups_by_set_split": {f"{a}/{b}": int(n) for (a, b), n in f.groupby(["set", "split"]).group.nunique().items()},
+            "routes_by_cls_split": {f"{a}/{b}": int(n) for (a, b), n in f.groupby(["cls", "split"]).base_id.nunique().items()}}
+    rundir("forks_info.json").write_text(json.dumps(info, indent=1, default=str))
+    return info
+
+
 def d2(seeds=(0, 1), max_s: float = 70.0) -> dict:
     """D2: Bench2Drive 220 routes whose base is not an eval route, TM seeds 0 and 1, PDM-Lite with random windows from
     10 s on (ids 8 + 5-digit base + seed). Appends to jobs.json; writes d2.parquet and forks-d2.xml."""
@@ -217,6 +373,8 @@ def stage_ids(stage: str) -> pd.DataFrame:
     runs = pd.read_parquet(rundir("forks.parquet"))
     if stage == "full":
         return runs
+    if NAME != "wl":
+        return _stage_ids2(runs, stage)
     rng = np.random.RandomState(SPLIT_SEED + 1)
     if stage == "pilot1":
         # a P5 pedestrian x+ fork point late in its run (fork tick >= 200, the earliest such), so that a
@@ -228,6 +386,22 @@ def stage_ids(stage: str) -> pd.DataFrame:
         b = np.array(sorted(runs[(runs.cls == cls) & (runs.split == "train") & runs.has_op].base_id.unique()))
         pick += list(b[rng.permutation(len(b))][:n])
     return runs[runs.base_id.isin(pick)]
+
+
+def _stage_ids2(runs: pd.DataFrame, stage: str) -> pd.DataFrame:
+    """WL-2 pilots (both on the eval side, so their runs count towards the full set): pilot1 = the first BA pedestrian
+    x+ fork point with fork tick >= 100 x 11 branches; pilot10 = every fork point of 10 sources (BA pedestrian 4,
+    cut-in 2, P6 4; a source = base route x seed) x 11 branches."""
+    ev = runs[runs.split == "eval"]
+    if stage == "pilot1":
+        c = ev[(ev.cls == "ped") & (ev.world == "plus") & (ev.fork_tick >= 100)]
+        return runs[runs.fork_id == c.fork_id.min()]
+    rng = np.random.RandomState(SPLIT_SEED + 2)
+    pick = []
+    for cls, n in (("ped", 4), ("cutin", 2), ("obstacle", 4)):
+        b = sorted(set(zip(ev[ev.cls == cls].base_id, ev[ev.cls == cls].seed)))
+        pick += [b[i] for i in rng.permutation(len(b))[:n]]
+    return runs[[(b, sd) in pick for b, sd in zip(runs.base_id, runs.seed)] & (runs.split == "eval")]
 
 
 def ids(stage: str, set_name: str, out: str) -> str:
@@ -441,7 +615,9 @@ def outcome(adir: Path, fork_tick: int, branch_s: float = 3.0) -> dict:
     road_hit = [h for h in hit if h["other_type"].startswith(("vehicle.", "walker."))]
     return {"collision": bool(hit), "collision_road": bool(road_hit), "first_collision_tick": first_hit,
             "collision_types": sorted({h["other_type"] for h in hit}), **g, "lateral_right_m": lat,
-            "unsafe": bool(hit) or g["gap_min_m"] < 2.0 or g["ttc_min_s"] < 1.0, "ticks": int(p.index.max())}
+            "unsafe": bool(hit) or g["gap_min_m"] < 2.0 or g["ttc_min_s"] < 1.0,
+            "unsafe_cg": bool(hit) or g["gap_min_m"] < 2.0,           # WL-2's main label: collision or in-lane gap < 2 m (no TTC term)
+            "ticks": int(p.index.max())}
 
 
 def shift_offsets(out: str, stage: str) -> pd.DataFrame:
@@ -802,15 +978,17 @@ def sanity(out: str, stage: str) -> dict:
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=("forks", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity", "drops"))
+    ap.add_argument("step", choices=("forks", "forks2", "d2", "ids", "prefix", "prefix_spec", "prefix_read", "sanity", "drops"))
     ap.add_argument("--gate", action="store_true", help="drops: exit 3 when the dropped fraction exceeds 5 %%")
     ap.add_argument("--gate-min", type=int, default=0, help="drops: per-set gate only for sets with this many checked groups")
     ap.add_argument("--stage", default="pilot1", choices=("pilot1", "pilot10", "full"))
     ap.add_argument("--set", default="ba", choices=tuple(SRC) + ("d2",))
-    ap.add_argument("--out", default=str(data_dir() / "runs" / "wl" / "gen"), help="generation root (per-set subdirs)")
+    ap.add_argument("--out", default=str(data_dir() / "runs" / NAME / "gen"), help="generation root (per-set subdirs)")
     a = ap.parse_args()
     if a.step == "forks":
         print(json.dumps(forks(), indent=1, default=str))
+    elif a.step == "forks2":
+        print(json.dumps(forks2(), indent=1, default=str))
     elif a.step == "d2":
         print(json.dumps(d2(), indent=1))
     elif a.step == "ids":
