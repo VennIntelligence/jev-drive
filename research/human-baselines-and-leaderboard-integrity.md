@@ -16,7 +16,7 @@
    在 RFS 这把尺子上，logged 驾驶员、榜首方法（test 8.167）和我们的 openpilot（val 8.12 校准后 / test 7.92）挤在 0.3 分以内。
 2. **有人类参照的榜，参照都是"日志回放"，不是"人在模拟器里重新开"。** NAVSIM human PDMS 94.8、navtest EPDMS 90.3，nuPlan log replay CLS-NR 94 / CLS-R 80，Waymax expert 碰撞 0.61%。
    这些分数被评测设计本身抬高或压低（下文说明），而顶尖方法已追平或超过（NAVSIM EP 超过 human，nuPlan 上 PDM-Closed 的 CLS-R 高于 log）。
-3. **没有找到任何人在 Bench2Drive 或 CARLA Leaderboard 上用官方 DS（Driving Score）给人类驾驶打过分。** 最接近的是一篇 BCI 论文：20 名健全被试用手柄在改过的 CARLA LB 2.0 城区路线上开，限速 5 mph，自定义 DS 平均 0.823（满分 1）。
+3. **没有找到任何人在 Bench2Drive 或 CARLA Leaderboard 上用官方 DS（Driving Score）给人类驾驶打过分（第 5 节二次检索后仍成立，但找到了一篇更弱的 CARLA 人机对比，见第 5 节）。** 最接近的是一篇 BCI 论文：20 名健全被试用手柄在改过的 CARLA LB 2.0 城区路线上开，限速 5 mph，自定义 DS 平均 0.823（满分 1）。
 4. **完整性**：WOD-E2E 和 NAVSIM 都是"参赛方在本地拿到 test 传感器数据、自己推理、上传轨迹"，服务器只打分，没有任何机制区分模型输出和人工 / LLM 输出；
    常设榜不要求技术报告或代码。CARLA Leaderboard 2.x 是提交 docker 镜像在组织方 AWS 上闭环跑，结构上排除了手画。
    没找到针对这些驾驶榜的"手标提交"或 test 泄漏的公开讨论；最近的先例是 ILSVRC 2015 Baidu 多账号刷提交被禁赛。
@@ -167,3 +167,51 @@ CARLA LB 2.x 服务器是否仍在正常收提交没有核实。因此"换到更
 - 预先写下的读法：人类 DS 若低于 openpilot 最好臂，支持"模拟器里的普通人并不是更高的参照线"；若远高于所有学习型 agent，说明 B2D 主要考的是"按路线开完"，也值得写。无论哪种，都要写明这是"人在 CARLA 里"，不是"人在真车里"（第 2 节的模拟器效度问题）。
 
 优先级建议：第一级先做，它直接对着 RFS 回答用户的问题，而且结果决定第二级是否值得占用 Tokyo box；第二级是填空白的新数据，但只有在闭环线有正结果时才能进故事主线。
+
+## 5. 二次定向检索：CARLA 里人类驾驶得分（2026-09-29）
+
+上一轮结论"没找到"过窄：它只覆盖了用官方 DS 打分的工作。这一轮放宽到任何 CARLA 基准指标、人机同场对比、以及近亲模拟器，结论分两层：
+**用官方 DS 给人类开车打分并和 agent 并排的工作，仍然没有找到；但存在一篇"人 vs DRL agent，同一奖励函数打分"的 CARLA 论文（Yurtsever 2020），此前漏掉了。** 除此之外的命中都是"人开过车，但没报人类分数"。
+
+### 5.1 直接命中与近似命中（CARLA）
+
+| 来源 | 模拟器 / 基准 | 人数与设备 | 路线 / 场景 | 指标与人类得分 | 与 AV 的对比 | 核验 |
+|:--|:--|:--|:--|:--|:--|:--|
+| Yurtsever et al., *Integrating DRL with Model-based Path Planners for Automated Driving*, arXiv 2002.00434 | CARLA（自建 7 条路线，非官方基准） | 4 人（25–30 岁），键盘，看屏幕绿线导航，看不到分数 | 7 类路线（直道高速 / 城区 / 桥下 / 缓弯 / 急弯 / 路口右转 / 路口左转），每人每条 5 次 | 训练 DRL 用的累计 reward，不是 DS。人类均值：43.4 / 38.1 / 45.2 / 49.5 / -8.9 / -12.1 / -25.5 | 同表 Hybrid-DQN：21.1 / 27.6 / 31.6 / 30.4 / -74.4 / -136.9 / -385.9，人类在全部 7 类上更高（有碰撞即终止的 reward，转弯类差距最大） | **读全文**（Sec. IV-D 与 Table I） |
+| Duan et al., *Enhancing E2E AD Through Synchronized Human Behavior Data*, arXiv 2408.10908（BCIMM'24） | CARLA 0.9.13 + DReyeVR，Longest6 评测 | 12 人，Logitech G920 方向盘 + 踏板，VR 眼动 + 64 通道 EEG | Town04 / Town07 默认路线上人机同路线开 | 人类只用作眼动 / 脑电 / 刹车数据源；**没有报告人类的 RC / IS / DS**；表中只有 MaskFuser 系 DS，最高 51.39 | 无人机对比 | **读全文**（相关段落与 Table 1） |
+| PersonaDrive, arXiv 2606.12616 | CARLA LB 场景，Bench2Drive 评测 agent | 8 人，G923 + 三屏，非职业司机 | 21 个场景 × 3 种风格指令 | 人类数据用作检索库，无人类 DS | 只评 agent（no-style DS 88.95，SimLingo 85.07） | **读全文**（附录 E） |
+| BCI 驾驶, arXiv 2508.11805 | CARLA LB 2.0 改编，限速 5 mph | 20 人，手柄 | Town12 城区 | 自定义 DS 0.823 | 无 | 读全文（上一轮） |
+| Hi-OBC / LangAuto-Human, arXiv 2606.08170 | CARLA LangAuto | 人数未写，键盘接管 | 8 个 town、32 长 / 16 短 / 16 微型轨迹 | 人是接管训练信号，没有独立人类 DS | 只比 agent 加不加 MOBC | 读摘要 + 网页全文摘录，人数未披露 |
+
+### 5.2 检索到但不算命中的 CARLA 工作
+
+| 来源 | 为什么不算 |
+|:--|:--|
+| CARLA 原论文（Dosovitskiy 2017，arXiv 1711.03938） | 没有人类驾驶成绩；只提到 imitation 数据 80% 来自自动 agent、20% 来自人类司机 **[读，ar5iv 全文]** |
+| QED（Quantitative Evaluation of Autonomous Driving in CARLA，OSTI 1814365） | "30 个 driver × 6 个 town"是 agent，人类是评分者，QED 与人类评分者的相关系数 0.96/0.97（easy）、0.84/0.74（hard）**[摘要 / 检索摘录]** |
+| HABIT（arXiv 2511.19109） | 人体动作数据用于行人，没有人开车；InterFuser 5.24 碰撞/km，TransFuser 7.43 碰撞/km **[读网页全文]** |
+| 神经认知奖励建模（arXiv 2603.25968） | 20 名被试在驾驶模拟器里记 EEG，用于 RL 奖励，没有人类驾驶分数 **[摘要]** |
+| CARLA LB 2.0 官方"人工执行日志" | 官方训练数据里每个场景有人工执行的 100% 分示范，这是场景可解性证明，不是人类基线 **[官网文字，检索摘录]** |
+| Take-over 研究（PMC9782608）、TeleCARL 等 | 人类接管 / 遥操作研究，关注反应时间和注视，没有 DS 类指标；**只读到搜索摘要，未读全文** |
+
+### 5.3 近亲（其他模拟器，单独列）
+
+| 来源 | 模拟器 | 人 | 指标与人类得分 | AV 对比 | 核验 |
+|:--|:--|:--|:--|:--|:--|
+| HACO, arXiv 2202.10341（ICLR 2022） | MetaDrive | 单个人类专家，方向盘 / 踏板 | test return 358.19±86.00，safety violation 0.16，success 0.98 | 同表 SAC-RS 386.77 / 0.73 / 0.82，HACO 等 | **读全文**（Table 1） |
+| NAVSIM "Human Agent" | NAVSIM v2 navtest | 不是人在开，是 log 回放 | EPDMS 90.3（检索摘录） | 与各方法同榜 | 检索摘录；本文档第 1 节已讨论"回放不等于驾驶" |
+| krishnasurya9/autonomous-driving-lab | MetaDrive | WASD 键盘 | README 里没有实际结果，仍在开发 | 计划比 LLM / RL | 读 README |
+| Sky-Drive（arXiv 2504.18010） | 多人分布式模拟平台 | 人机协同平台论文 | 未看到人类基准分 | - | 只读标题 / 摘要 |
+
+### 5.4 结论
+
+- **官方 DS 下的人类基线：没有。** Bench2Drive、Longest6、Town05 Long、NEAT / TransFuser 路线都没有找到人类 DS 或 SR。Bench2Drive 论文里的"人类"只出现在舒适度阈值（人类专家数据设阈值）和 Think2Drive 专家数据，与人类开车得分无关 **[检索摘录，未读原文]**。
+- **最接近的先例有三个，层级不同：** Yurtsever 2020（4 人键盘，同一 reward，人类全面强于 DQN，但不是官方指标）；BCI 2508.11805（20 人手柄，5 mph，自定义 DS）；Duan 2024（12 人方向盘，真人开了 Longest6 类路线，但没有报人类分数）。这三篇都不能直接拿来当"人类 DS"。
+- 这个空白对我们仍是机会：第 4 节的第二级方案（Tokyo box 上人开 B2D 路线，官方 DS 计分）依然是新数据。Duan 2024 说明"方向盘 + G920 + CARLA 0.9.13 + 几十人时"的采集流程可行，PersonaDrive 的 rig（G923 + 三屏）是可以直接复制的配置。
+- 局限：GitHub issue / Zhihu / CSDN / Bilibili 中文检索只走了搜索引擎摘要，没有逐帖翻；`human_agent` 关键词没有在 issue 里检索到人类得分讨论。这些只能算"没搜到"，不能算"不存在"。
+
+### 5.5 本轮检索词
+
+英文：human drivers CARLA "driving score" human baseline autonomous agents leaderboard；Bench2Drive human expert manual driving driving score human_agent；"human drivers" CARLA "route completion" user study steering wheel；CARLA Leaderboard human performance baseline Longest6 Town05 Long manual control；CARLA Dosovitskiy 2017 human driving performance；"driver-in-the-loop" CARLA Bench2Drive participants；human vs autonomous agent CARLA TransFuser/InterFuser/TCP；github Bench2Drive issue human driving manual_control；CARLA leaderboard 2.0 human drivers infraction score；human baseline CARLA closed-loop success rate；LangAuto-Human；QED human evaluators；human vs AI MetaDrive / highway-env / NAVSIM / nuPlan；teleoperated driving CARLA leaderboard；shared control / human-AI copilot CARLA Town05 Longest6；MetaDrive human expert success rate PVP HACO；human study perceived driving quality CARLA wheel。
+中文：人类驾驶 CARLA 驾驶分数 Bench2Drive 人工驾驶 人类基线；知乎 CARLA 真人 手动 开 Leaderboard 路线 得分；Bilibili CARLA 人类 手动驾驶 Bench2Drive 得分 对比。
+
