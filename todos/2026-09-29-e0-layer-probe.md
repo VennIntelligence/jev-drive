@@ -1,6 +1,6 @@
 # E0：CARLA 行人信息在 openpilot 的哪一层消失（逐层 probe）
 
-状态: 进行中（登记写于 2026-09-29 12:40 CST，任何逐层数字之前）
+状态: done（登记写于 2026-09-29 12:40 CST，任何逐层数字之前；结果 12:50 CST）
 主题: [research/feature-adapter-domain-shift.md](../research/feature-adapter-domain-shift.md) §5 E0；[research/decisions.md](../research/decisions.md) 第 42、55 条；[op-adapt todo](2026-09-28-op-adapt.md)
 代码: `scripts/op_layer_probe.py`（抽特征 + probe），`jevdrive/op_torch.py`（port）
 box run dir: `$DATA_DIR/runs/op_layer/`
@@ -59,8 +59,39 @@ E0 回答一个问题：**CARLA 上行人信息在 stage 1、2、3、4、`vision
 
 ## 执行日志
 
-（跑之前的检查、偏离、耗时记在这里）
+- 12:39 冒烟（nuScenes 4 个 scene）：抽特征通；发现 nuScenes 的 key 是每个 key slot 一个 token（不是 token[slot]），改了一行，登记不变。
+- 12:40–12:46 抽特征（GPU 6、CPU 48–67：`op-train` 行的 owner 已结束，box 上没有 op_adapt 进程，调度表行仍写 granted，按空闲用；20 个 render worker）：
+  nuScenes val 6 019 行 1.3 min，P5 46 703 行 4.2 min（显存峰值远低于 15 GB）。同一次前向算的 stage 3 池化与 trunk 缓存池化的最大差 0.023（fp16 存储的舍入，池化特征量级约 1–20），一致。
+- 12:47–12:54 probe：复现检查过（nuScenes val `ped_corr`：stage 3 **0.831**、`temporal` 0.709、`vision` 0.702，与第 55 条逐位一致）。
+- 总 GPU 用量约 0.2 GPU·h（登记上限 0.5）。box run：`runs/op_layer/{feats,probe,extract-*,probe}`，小表 [research/results/e0-layer/](../research/results/e0-layer/)。
+- 偏离：无。
 
 ## 结果
 
-（数字出来之前留空）
+CARLA = P5 v1 BA 行人 4 个 family 的 4 414 对 x⁺ / x⁻（42 条路线，D0 probe，路线聚类 bootstrap 500）；真实 = nuScenes val 走廊行人（6 019 keyframe、203 正例、150 scene，第 55 条 (a) probe）。全部线性 probe。
+
+| 层（池化维数） | CARLA AUC [95% CI] | CARLA Δ 对 `vision` [CI] | 真实 AUC [95% CI] | 真实 Δ 对 `vision` [CI] | CARLA MLP（描述） | 真实 MLP（描述） | 域分类器 AUC（描述） |
+|:--|:--|:--|:--|:--|--:|--:|--:|
+| stage 1（512） | 0.526 [0.508, 0.556] | +0.018 [0.000, +0.040] | 0.715 [0.628, 0.799] | +0.014 [−0.093, +0.120] | 0.533 | 0.727 | 1.000 |
+| stage 2（1 024） | 0.523 [0.504, 0.548] | +0.015 [−0.003, +0.033] | 0.740 [0.644, 0.821] | +0.039 [−0.051, +0.136] | 0.538 | 0.787 | 1.000 |
+| **stage 3（2 048）** | **0.523 [0.507, 0.544]** | +0.014 [+0.002, +0.028] | **0.831 [0.758, 0.895]** | +0.130 [+0.049, +0.230] | 0.540 | 0.805 | 0.9998 |
+| stage 4（4 096） | 0.522 [0.502, 0.546] | +0.013 [−0.002, +0.028] | 0.748 [0.666, 0.813] | +0.047 [−0.004, +0.121] | 0.518 | 0.769 | 0.9994 |
+| `vision`（512） | 0.509 [0.499, 0.520] | — | 0.702 [0.599, 0.785] | — | 0.524 | 0.765 | 0.9992 |
+| `temporal`（512） | 0.506 [0.499, 0.515] | −0.003 [−0.008, +0.003] | 0.709 [0.598, 0.799] | +0.008 [−0.140, +0.137] | 0.508 | 0.784 | 0.9944 |
+
+全表（含宽走廊、每个 CARLA family）：[summary.md](../research/results/e0-layer/summary.md)、[carla.csv](../research/results/e0-layer/carla.csv)、[real.csv](../research/results/e0-layer/real.csv)、[domain.csv](../research/results/e0-layer/domain.csv)。
+
+**按登记判格**：stage 3 = 0.523 < 0.60，不判 G-3；stage 2 = 0.523、stage 1 = 0.526，三层都 < 0.60 → **G-none**：
+CARLA 行人在 openpilot 的前三个 stage 的（池化）特征里读不出来，特征 adapter 在这一类上判**不可行**（按原文，只剩像素级 Cosmos 或重训更深）。
+stage 3 对 `vision` 的 Δ CI 下界 > 0（+0.002）但幅度只有 +0.014，AUC 远低于 0.65，所以不构成 G-3。MLP probe 没有改变结论（0.518–0.540）。
+真实一侧 stage 3 最高（0.831），stage 4 与 `vision` 明显掉（−0.08 / −0.13，第 55 条「丢在 stage 4 → 投影 → policy」的复现）；CARLA 上没有这个先升后降的形状，各层平躺在 0.51–0.53。
+
+**读法与限定（结论和推测分开）**：
+1. **CARLA 与真实不是同一个任务**：CARLA 侧是 x⁺ 对 x⁻ 的配对可分性（场景完全相同，只差行人）；真实侧是走廊内有无行人，probe 可以借场景上下文（城区、路口、人多的街）。所以真实侧 stage 1 的 0.715 不能读成「stage 1 里有行人」，很可能有一部分是上下文；并排读的是形状（有没有一个在某层升起来的行人信号），不是绝对值差。
+2. **probe 管线在 CARLA 上是有响应的（阳性对照，描述）**：同一批 P5 帧上，HighwayCutIn（车辆切入）的配对 AUC 随深度升高：stage 1 0.504、stage 3 0.647、`vision` 0.634、`temporal` 0.762；行人 family 里只有 PedestrianCrossing 在浅层有一点信号（stage 1 / 2 0.632 / 0.611，stage 3 起降到 0.60 以下，`temporal` 0.537，836 对），DynamicObjectCrossing 在 stage 3 有 0.613（609 对），VehicleTurningRoutePedestrian（2 659 对，占行人 scope 的 60%）在每一层都是 0.50。行人 scope 的 0.52 主要是被这一个 family 拉平（推测：行人在画面里太小或太远，池化 mean + max 里没有可分的统计量）。
+3. **池化 probe 对小而局部的目标不敏感**：mean + max 池化把整张特征图压成一个向量，一个占几十个像素的行人在 stage 1–2 的 32 × 64 / 16 × 32 图上只影响很少几个位置。真实侧的正例是近处的大行人（≤ 10 m 走廊各层 AUC 0.79–0.92，描述），CARLA 配对里的行人多为中远距离（推测，未按距离分档）。所以 G-none 严格说是「池化特征上的线性 / 单隐层可读性」的结论，**不是**「特征图里一个像素也没有」；这个区别没有测。
+4. **域分类器 AUC 在每一层都是 ~1.0**（stage 1 就是 1.000），即 CARLA 与真实帧在最浅层就线性可分，这与「画风差在浅层」一致，但它同样不说明行人信息在不在。
+
+## 后续（不属于本登记，未做）
+
+- 空间分辨的读法（stage 1–3 的特征图上，用 x⁺ − x⁻ 的差图落在行人 mask 内的能量占比；或在 mask 内池化后 probe），以及按行人距离 / 像素高度分档：这是把 G-none 从「池化读不出」收紧到「特征图里没有」所必需的，成本约 CPU 分钟 + 0.1 GPU·h。

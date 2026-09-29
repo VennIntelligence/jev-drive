@@ -153,6 +153,27 @@ G4 全量每一对存了四段视频（`load_pair(pair, "carla")` 与 `load_pair
 - **判据（写死）**：CARLA stage 3 行人 AUC ≥ 0.65 且对 `vision` 的配对 Δ CI 下界 > 0 → 「信息在 stage 3、stage 4 起丢」，E2 放 P2；< 0.60 → 看 stage 2 / 1，最浅的一个 ≥ 0.65 的层就是 E2 的位置；都 < 0.60 → 「CARLA 行人在 openpilot 的前三个 stage 里就没被表示」，特征 adapter 在这一类上**判不可行**，只剩像素级（Cosmos）或重训更深。
 - **各结局的意思**：第一种结局说明 CARLA 与真实的差主要在 stage 4 这一段对外观的敏感性上，恰好是 op-adapt B 在调的参数，第二轮 B 加原始 CARLA 帧大概率能把原始 CARLA 带上来；第三种结局说明域差在很浅的层，画风以外的内容差可能很大，应当把验收原则里的「sim」定义成 Cosmos 画面（midterm-gaps Q2.2），并在文中如实写这个限制。
 
+### E0 结果（2026-09-29，[todo](../todos/2026-09-29-e0-layer-probe.md)，登记先于数字；决定见 [第 62 条](decisions.md)）
+
+同一套 probe（CARLA：第 42 条 D0，P5 v1 BA 行人 4 414 对；真实：第 55 条 (a)，nuScenes val 走廊行人）逐层读，mean + max 池化，线性；stage 3 用 P5 / nuScenes 的 trunk 缓存，stage 1、2、4 由 port 从像素抽（约 0.2 GPU·h）。
+
+| 层 | CARLA AUC [95% CI] | 对 `vision` 的 Δ [CI] | 真实 AUC [95% CI] |
+|:--|:--|:--|:--|
+| stage 1 | 0.526 [0.508, 0.556] | +0.018 [0.000, +0.040] | 0.715 [0.628, 0.799] |
+| stage 2 | 0.523 [0.504, 0.548] | +0.015 [−0.003, +0.033] | 0.740 [0.644, 0.821] |
+| stage 3 | 0.523 [0.507, 0.544] | +0.014 [+0.002, +0.028] | **0.831** [0.758, 0.895] |
+| stage 4 | 0.522 [0.502, 0.546] | +0.013 [−0.002, +0.028] | 0.748 [0.666, 0.813] |
+| `vision` | 0.509 [0.499, 0.520] | — | 0.702 [0.599, 0.785] |
+| `temporal` | 0.506 [0.499, 0.515] | −0.003 [−0.008, +0.003] | 0.709 [0.598, 0.799] |
+
+**判格：G-none**（stage 1–3 全部 < 0.60；stage 3 = 0.523，远低于 G-3 的 0.65）。CARLA 上行人各层平躺在 0.51–0.53，没有真实侧那个 stage 3 升起、stage 4 掉下的形状；2 层 MLP probe 也是 0.52–0.54，域分类器 AUC 每层 ≈ 1.0（描述）。
+按 E0 原文，特征 adapter 在 CARLA 行人这一类上判**不可行**，只剩像素级（Cosmos）或重训更深；E2 不开，E1 是否单独有价值见第 62 条。
+
+限定，读的时候要带着：(1) CARLA 侧是配对可分性（场景相同、只差行人），真实侧是走廊内有无行人，probe 可借上下文，所以真实侧 stage 1 的 0.715 不是「浅层有行人」，并排比的是形状；
+(2) 池化 probe 对小而局部的目标不敏感，G-none 是「池化特征上读不出」，不是「特征图里没有」，空间分辨的读法没测；
+(3) 阳性对照：同批帧上 HighwayCutIn（车辆）的配对 AUC 随深度升高（stage 1 0.504、stage 3 0.647、`temporal` 0.762），管线对车有响应；行人 family 里 VehicleTurningRoutePedestrian（2 659 对）每层 0.50，PedestrianCrossing 只在 stage 1 / 2 有 0.63 / 0.61。
+表见 [research/results/e0-layer/summary.md](results/e0-layer/summary.md)。
+
 ### E1：2 × 2 析因，画风占多少（分解，也是 midterm-gaps F1 的扩展版）
 
 - **做法**：取 G4 全量里已完成的对（≥ 300 对即开，全部 2 000 对更好），原 Cinque 在 C⁺ / C⁻ / K⁺ / K⁻ 四段上按 stream 跑（port 或 ORT TensorRT，与第 42 条同一喂法），抽 stage 1–3、`vision`、`temporal` 与原生 plan / lead / 车道线概率。每层报：
