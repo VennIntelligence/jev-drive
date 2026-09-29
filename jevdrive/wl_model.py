@@ -82,6 +82,7 @@ def universe(arm: str):
         t = pd.read_parquet(pdir("index.parquet"))
         ok = np.load(pdir("z_ok.npy"))
         t = t[ok].copy()
+        t["action"] = t.action_x                            # per-step window candidate (the merge with forks.parquet renamed it)
         t["kind"] = np.where(t.set == "d2", "d2", "fork")
         t["base_id"] = t.base_id.astype(str)
         t["win_start"] = _segments(t, "route_id").to_numpy()
@@ -177,7 +178,9 @@ def _train(model, data, tr, va, seed, rl, tag, cfg=W.CFG):
                     tot += float(W.block_mse(model(b[0], b[1], b[2], b[4], b[5]).float(), b[3])) * len(b[0])
                     n += len(b[0])
             vl = tot / max(n, 1)
-            curve.append({"step": step, "train": float(loss), "val": vl})
+            curve.append({"step": step, "train": float(loss), "val": vl, "wall_s": time.time() - t0})
+            rl.scalar(f"{tag}/train_loss", float(loss), step)
+            rl.scalar(f"{tag}/val_loss", vl, step)
             rl.info(f"{tag} step {step}: train {float(loss):.4f}, inner-val {vl:.4f}, {step / (time.time() - t0):.1f} steps/s")
             if vl < best:
                 best, state = vl, {k: v.detach().clone() for k, v in model.state_dict().items()}
@@ -223,7 +226,7 @@ def fork_anchors(m: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(out)
 
 
-def train(arm: str, seed: int, rl) -> dict:
+def train(arm: str, seed: int, rl, steps: int | None = None) -> dict:
     import torch
     torch.manual_seed(seed)
     m, z = universe(arm)
@@ -241,7 +244,9 @@ def train(arm: str, seed: int, rl) -> dict:
     model = build(z.shape[1]).cuda()
     rl.info(f"{arm} seed {seed}: {len(m)} rows, {len(tr_st)} training windows ({int(m.src.sum())} intervention rows), "
             f"{len(va_st)} inner-val windows")
-    curve = _train(model, data, tr_st, va_st, seed, rl, f"{arm}/seed{seed}")
+    t_fit = time.time()
+    curve = _train(model, data, tr_st, va_st, seed, rl, f"{arm}/seed{seed}", cfg={**W.CFG, **({"steps": steps} if steps else {})})
+    rl.info(f"{arm}/seed{seed}: predictor fit {time.time() - t_fit:.0f} s")
     P = W.probes(data, meta_for_probes(m), tr_rows, va_rows)
     Xt, Xv = data.Z[torch.as_tensor(tr_rows, device="cuda")].float(), data.Z[torch.as_tensor(va_rows, device="cuda")].float()
     wv, muv, _ = W.fit_ridge(Xt, torch.as_tensor(m.v.to_numpy(np.float32)[tr_rows], device="cuda"), Xv,
@@ -336,6 +341,18 @@ def _boot(df, fn, n=2000, seed=0):
     return [float(np.nanpercentile(xs, 2.5)), float(np.nanpercentile(xs, 97.5))]
 
 
+def _boot_seeds(dfs, fn, n=2000, seed=0):
+    """Route bootstrap of the seed-mean of a per-seed statistic (the same route resample for every seed)."""
+    rng = np.random.RandomState(seed)
+    b = dfs[0].base_id.unique()
+    by = [{k: g for k, g in df.groupby("base_id")} for df in dfs]
+    xs = []
+    for _ in range(n):
+        pick = rng.choice(b, len(b))
+        xs.append(np.nanmean([fn(pd.concat([m[k] for k in pick])) for m in by]))
+    return [float(np.nanpercentile(xs, 2.5)), float(np.nanpercentile(xs, 97.5))]
+
+
 def _long(arm, seed):
     d = _latest(arm, seed)
     if d is None:
@@ -348,7 +365,9 @@ def _long(arm, seed):
 def report() -> dict:
     tr = _truth()
     key = tr.set_index(["fork_id", "action"])
-    out, rows = {}, []
+    WL.RESULTS.mkdir(parents=True, exist_ok=True)
+    out, rows, per_seed_rows = {}, [], []
+    exit_pairs = WL.pair_dropped_forks()                # amendment (c) item 3: op / hold / brake_hard branch render-dropped
     for arm in ARMS:
         per = []
         for s in SEEDS:
@@ -356,7 +375,6 @@ def report() -> dict:
             if r is None:
                 continue
             q, fa = r
-            ai = {a: i for i, a in enumerate(ACTIONS)}
             d = pd.DataFrame({"fork_id": np.repeat(fa.fork_id.to_numpy(), len(ACTIONS)), "action": np.tile(ACTIONS, len(fa)),
                               "d10": q["p_d_front"][:, :, 9].ravel(), "occ10": q["p_occ"][:, :, 9].ravel(),
                               "occmax": q["p_occ"].max(2).ravel(), "pedmax": q["p_ped"].max(2).ravel(),
@@ -367,19 +385,36 @@ def report() -> dict:
         d = pd.concat(per).groupby(["fork_id", "action"]).mean(numeric_only=True).reset_index().drop(columns="seed")
         d = d.join(key, on=["fork_id", "action"], rsuffix="_true")
         out[arm] = d
-        # ---- C1 on eval fork points
-        e = d[d.split == "eval"]
-        pv = lambda col: e.pivot_table(index="fork_id", columns="action", values=col)
-        d10, dtrue, occp, occt = pv("d10"), pv("d_front_true" if "d_front_true" in e else "d_front"), pv("occ10"), pv("occ")
-        base = e.groupby("fork_id")[["base_id", "cls", "world"]].first()
-        c1 = pd.DataFrame({"brake_gt_hold": d10.brake_hard > d10.hold,
-                           "err": ((d10.brake_hard - d10.hold) - (dtrue.brake_hard - dtrue.hold)).abs()}).join(base)
-        agree = pd.concat([pd.DataFrame({"ok": (occp[s_] < occp.op) == (occt[s_] < occt.op)}).join(base) for s_ in ("shift_L", "shift_R")])
-        rows.append({"arm": arm, "criterion": "C1", "n_fork_points": len(c1),
-                     "brake_gt_hold": float(c1.brake_gt_hold.mean()),
-                     "brake_gt_hold_ci": _boot(c1, lambda x: x.brake_gt_hold.mean()),
-                     "median_abs_err_m": float(c1.err.median()), "shift_occ_agreement": float(agree.ok.mean()),
-                     "pass": bool(c1.brake_gt_hold.mean() >= 0.85 and c1.err.median() <= 3.0 and agree.ok.mean() >= 0.75)})
+        # ---- C1 on eval fork points, one frame per seed (the seed-mean of the per-seed statistic is the primary read)
+        c1s = []
+        for dd in per:
+            e = dd.join(key, on=["fork_id", "action"], rsuffix="_true")
+            e = e[(e.split == "eval") & ~e.fork_id.isin(exit_pairs)]
+            pv = lambda col: e.pivot_table(index="fork_id", columns="action", values=col, dropna=False)
+            d10, dtrue, occp, occt = pv("d10"), pv("d_front"), pv("occ10"), pv("occ")
+            base = e.groupby("fork_id")[["base_id", "cls", "world"]].first()
+            c1 = pd.DataFrame({"brake_gt_hold": d10.brake_hard > d10.hold,
+                               "err": ((d10.brake_hard - d10.hold) - (dtrue.brake_hard - dtrue.hold)).abs()}).join(base)
+            for s_ in ("shift_L", "shift_R"):
+                have = occt[s_].notna() & occt.op.notna()
+                c1[f"ok_{s_}"] = ((occp[s_] < occp.op) == (occt[s_] < occt.op)).where(have)
+                c1[f"occ_op_{s_}"] = (occt.op > 0.5) & have                       # the description subset: op branch lane occupied at 2 s
+            c1["seed"] = int(dd.seed.iloc[0])
+            c1s.append(c1)
+        stat = {
+            "brake_gt_hold": lambda x: x.brake_gt_hold.mean(),
+            "median_abs_err_m": lambda x: x.err.median(),
+            "shift_occ_agreement": lambda x: pd.concat([x.ok_shift_L, x.ok_shift_R]).mean(),
+            "shift_occ_agreement_occupied": lambda x: pd.concat([x.ok_shift_L[x.occ_op_shift_L], x.ok_shift_R[x.occ_op_shift_R]]).mean()}
+        row = {"arm": arm, "criterion": "C1", "n_seeds": len(c1s), "n_fork_points": len(c1s[0]), "n_pair_exit": len(exit_pairs)}
+        for k, f in stat.items():
+            v = [f(c) for c in c1s]
+            row[k] = float(np.mean(v))
+            row[f"{k}_ci"] = _boot_seeds(c1s, f)
+            row[f"{k}_per_seed"] = [float(x) for x in v]
+        row["pass"] = bool(row["brake_gt_hold"] >= 0.85 and row["median_abs_err_m"] <= 3.0 and row["shift_occ_agreement"] >= 0.75)
+        rows.append(row)
+        pd.concat(c1s).to_csv(WL.RESULTS / f"c1_points_{arm}.csv", float_format="%.4f")
     res = pd.DataFrame(rows)
     # ---- C2 / C3 on the main (and holdout) arm
     c2 = {}
@@ -407,7 +442,7 @@ def report() -> dict:
         if not probs_l:
             continue
         lab = lab.assign(p_learn=np.mean(probs_l, 0), p_q=np.mean(probs_q, 0))
-        e = lab[(lab.split == "eval") & lab.unsafe.notna()].join(key[["base_id", "cls", "world", "travel_m"]], on=["fork_id", "action"])
+        e = lab[(lab.split == "eval") & lab.unsafe.notna() & ~lab.fork_id.isin(exit_pairs)].join(key[["base_id", "cls", "world", "travel_m"]], on=["fork_id", "action"])
         e = e.merge(out[arm][["fork_id", "action", "occmax", "pedmax", "dmin", "prog"]], on=["fork_id", "action"])
         sig = lambda x: 1 / (1 + np.exp(-x))
         e["p_probe"] = np.maximum(np.maximum(sig(e.occmax), sig(e.pedmax)), (e.dmin < 5).astype(float))
@@ -477,10 +512,11 @@ def main():
     ap.add_argument("step", choices=("outcomes", "train", "report"))
     ap.add_argument("--arm", default="main", choices=ARMS)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--steps", type=int, default=0, help="smoke run: fewer steps, written under runs/wl/model_smoke")
     a = ap.parse_args()
     if a.step == "train":
-        rl = RunLog("wl", "model", a.arm, f"seed{a.seed}")
-        r = train(a.arm, a.seed, rl)
+        rl = RunLog("wl", "model_smoke" if a.steps else "model", a.arm, f"seed{a.seed}")
+        r = train(a.arm, a.seed, rl, a.steps or None)
         rl.info(json.dumps(r))
         rl.close()
     elif a.step == "outcomes":
