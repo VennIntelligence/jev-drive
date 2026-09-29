@@ -57,7 +57,7 @@ def extract(a):
         val = set(lab[lab.split == "val"].scene.unique())
         its = [s for s in its if s in val]
         slots_of = lambda meta: np.asarray(meta["key_slot"])            # noqa: E731
-        keys_of = lambda meta, s: np.asarray(meta["tokens"])[s]         # noqa: E731
+        keys_of = lambda meta, s: np.asarray(meta["tokens"])             # noqa: E731  (one token per key slot)
     else:
         slots_of = lambda meta: np.asarray(meta["targets"])             # noqa: E731
         keys_of = lambda meta, s: np.asarray(meta["names"])[s]          # noqa: E731
