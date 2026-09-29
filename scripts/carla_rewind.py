@@ -230,6 +230,10 @@ class Rewinder:
         """Warm-up dead tick i: the state of prefix tick k-1-N+i (teleport on the first, velocities after), returns the
         ego control recorded at that tick."""
         ids, ctl = self.hist[i]
+        if self.method in ("tree", "respawn"):
+            # the scenario tree ticks after this call: hold it at the fork state (it would otherwise see the teleports,
+            # e.g. InRouteTest fails on the jump back and ends the route); the final restore sets it again
+            self._restore_python()
         for aid, (a, tf, v, w, ctl_a) in ids.items():
             a = self.remap.get(aid, a)
             if not a.is_alive:
@@ -338,23 +342,27 @@ class Rewinder:
             for tl, state in s["lights"]:
                 tl.set_state(state)
         if full:
-            done = set()
-            if s["tree"] is not None:
-                thaw(s["tree"], self.remap, done)
-            thaw(s["bb"], self.remap, done)
-            thaw(s["cdp"], self.remap, done)
-            pool = CarlaDataProvider._carla_actor_pool
-            for old, new in self.remap.items():
-                pool.pop(old, None)
-                pool[new.id] = new
-            CarlaDataProvider._spawn_index = s["spawn_index"]
-            CarlaDataProvider._all_actors = None
-            GameTime._current_game_time = s["t"]
-            self._patch_reads()
+            self._restore_python()
         st = {"restore_ms": 1e3 * (time.perf_counter() - t0), "destroyed_new": n_new, "respawned": n_resp,
               "remapped": len(self.remap)}
         self.stats.append(st)
         return st
+
+    def _restore_python(self):
+        """Scenario tree, blackboard, CarlaDataProvider, GameTime to the snapshot, and snapshot reads for this tick."""
+        s, done = self.snap, set()
+        if s["tree"] is not None:
+            thaw(s["tree"], self.remap, done)
+        thaw(s["bb"], self.remap, done)
+        thaw(s["cdp"], self.remap, done)
+        pool = CarlaDataProvider._carla_actor_pool
+        for old, new in self.remap.items():
+            pool.pop(old, None)
+            pool[new.id] = new
+        CarlaDataProvider._spawn_index = s["spawn_index"]
+        CarlaDataProvider._all_actors = None
+        GameTime._current_game_time = s["t"]
+        self._patch_reads()
 
     # -- dead-tick reads: the client cache holds the branch's last state until the next world tick
     def _patch_reads(self):
