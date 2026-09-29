@@ -97,6 +97,9 @@ CARD_CAP=${CARD_CAP:-6}
 export B2D_DRAIN_FILE=$OUT/DRAIN
 export B2D_RESEED_AFTER_BUILD=1 B2D_CAPTURE_CRITERION_EVENTS=1 LEAD_PROJECT_ROOT=$DATA_DIR/third_party/scout/lead-cvpr2026 \
     HF_HUB_OFFLINE=1 OMP_NUM_THREADS=2 NUMBA_NUM_THREADS=3 SAVE_PATH=$R/lead_save
+# THREAD_CAPS=1: BLAS / OpenMP pools of the route clients at 1 thread (the container default MKL_NUM_THREADS=175 gives a
+# BehaviorAgent client ~215 threads, a PDM-Lite one 15-45); measured in todos/2026-09-29-wl2-prereg.md, "线程上限"
+[[ ${THREAD_CAPS:-0} == 1 ]] && export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export PYTHONPATH=$LEAD_PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}
 
 chain() {  # chain <j>
