@@ -3876,3 +3876,14 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**（1 seed，navtest 一次；机制未查；navhard 无增益）。**会推翻本条的证据**：另一个 seed 的 GIMM 补帧或不同的 token 子集上 `lc@−1.0` 的 left + right Δ CI 跨零。
 **附记（同日文献口径更正）**：第 37 条的文献 EPDMS 列 TransFuser 76.7 → 84.0，见第 37 条末段就地修正。
+
+
+## 67. op-adapt r2 预登记 v3（结果前）：按 navhard 缺口分解加三处，读数加 navhard EPDMS（描述）、S_jev 加 DDC、加 navtrain 偏离起点 slot 集（**待定**，登记改动，没有训练、没有读数；用户与 main 批准）
+
+2026-09-29。依据 [navhard 缺口分解](navhard-deficit-breakdown.md)：Cinque 在 navhard 上主要丢在 DAC（对 ZTRS +7.8 分），DDC +1.2、EC +1.1，stage 2 比 stage 1 更差，v2 的损失不针对这些。改动写在 [r2 预登记](../todos/2026-09-29-op-adapt-r2-prereg.md) 的「v3 改动」节，v2 的设计与改动处的原文保留在各节。
+1. 读数：navhard EPDMS combined，描述、不设门，全部读数与判格出完后对 A、D 各 3 seed 只跑一次，与得出 `none` = 33.33（第 66 条）同一 devkit 与流程。
+2. S_jev 加 DDC 乘性项，与 NAVSIM 同定义（1 s 滑窗内逆行位移 ≤ 2 m 记 1、≤ 6 m 记 0.5、其上记 0）；v2 「借对向车道不扣分」相应收窄为只有短暂借道不扣。
+3. 偏离起点 slot：navtrain train-log 24 000 个样本（种子 20260929）+ dev 1 000 个（种子 20260930），横向 ±2 m、yaw ±0.3 rad，用地面单应变换施加，进 L_score（新增 `rej` 候选，无新损失），孪生原帧进蒸馏。Q3 因此有例外（用户批准）。
+成本约 +2 GPU·h（30 → 32），不构成实质变化。学出来的 DAC 读出（要追到约 48 所需）不在 r2 范围，只是后续候选。
+
+**状态**：**待定**（只是登记）。**会推翻或修改本条的证据**：V5（DDC 与 devkit 数值不一致）、V6（`rej` 不可行或单应变换画面不可用）、第 6 节第 7 条（偏离 slot 上 `op` 失败比例 < 5% 或 > 60%）任一不过，回 main 重新登记。

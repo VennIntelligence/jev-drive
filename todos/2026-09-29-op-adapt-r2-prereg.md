@@ -1,10 +1,25 @@
 # op-adapt 第二轮（B，sim + real）：预登记
 
-状态: 已批准（2026-09-29 用户）— 执行等 Cosmos DONE 与 main 的 go（v1 写于 2026-09-29，v2 同日按用户决定改写并批准；任何第二轮训练、任何第二轮读数之前。文中唯一的新数字是第 0 节的 M0 行人大小测量，纯 CPU、没有模型，是设计依据，不是结果）
+状态: **v3（pre-result，reason: navhard breakdown），2026-09-29 用户已批准三处改动** — 执行等 Cosmos DONE 与 main 的 go（v1 写于 2026-09-29，v2 同日按用户决定改写并批准，v3 同日按 navhard 缺口分解加三处；v3 改动清单见下面「v3 改动」节；任何第二轮训练、任何第二轮读数之前。文中唯一的新数字是第 0 节的 M0 行人大小测量，纯 CPU、没有模型，是设计依据，不是结果）
 用户决定（2026-09-29，已并入下文各节）: Q1 P5 主读数 = 可见帧 ≥ 500 px_eq，全体为副读数（批准）；Q2 行为监督**不模仿 expert 轨迹**，改成规则打分（第 2.1 节，本版的主要改动）；Q3 navtrain 只进蒸馏，不进有监督训练；Q4 Z 由 R0 门控、D 无条件跑（批准）；Q5 Cosmos 全量完全跑完之前不起训（取消 v1 的「10-01 12:00 或 K ≥ 1 000」规则），在那之前卡给别的活；Q6 B-real 进主判格；v2 的两个遗留点（批准时定）：(a) L_dir 在「可见但 < 500 px、靠近路径」一档不强制 plan 相同，(b) 让行豁免只给移动的 actor，静止障碍挡路且有安全绕行候选时干等要扣进度分（第 2.1 节）。
-主题: [research/decisions.md](../research/decisions.md) 第 42、44、45、48、50、53、55、56、62、63 条；[research/midterm-gaps.md](../research/midterm-gaps.md) 缺口二；[research/feature-adapter-domain-shift.md](../research/feature-adapter-domain-shift.md)
+主题: [research/decisions.md](../research/decisions.md) 第 42、44、45、48、50、53、55、56、62、63、67 条（67 = 本文 v3 的登记）；[research/midterm-gaps.md](../research/midterm-gaps.md) 缺口二；[research/feature-adapter-domain-shift.md](../research/feature-adapter-domain-shift.md)
+v3 的依据: [research/navhard-deficit-breakdown.md](../research/navhard-deficit-breakdown.md)（navhard 主要丢在 DAC）；navhard 的 `none` = 33.33 来自 [op-leaderboard](2026-09-29-op-leaderboard.md) 与 decisions 第 66 条
 前身: [op-adapt 第一轮](2026-09-28-op-adapt.md)（port、吞吐、B 小试、后续 1 / 2）；数据: [Cosmos G4 全量](2026-09-28-cosmos-pilot.md)；E0 / E1: [e0](2026-09-29-e0-layer-probe.md)、[e1](2026-09-29-e1-cosmos-probe.md)；打分口径与 [WL-2](2026-09-29-wl2-prereg.md) 的 cg 标签对齐
 排期约束: [tmp/2026-09-29-midterm-plan.md](../tmp/2026-09-29-midterm-plan.md)（D2–D5 卡 A 给本轮，D5–D8 闭环要用本轮选出的模型）；起训以 Cosmos 全量 lane 的 DONE 为准（Q5）
+
+## v3 改动（2026-09-29，pre-result，reason: navhard breakdown）
+
+依据 [navhard-deficit-breakdown.md](../research/navhard-deficit-breakdown.md)：openpilot Cinque 在 navhard 上主要丢在 DAC（drivable area compliance，可行驶区合规；对 ZTRS 差 +7.8 分，DAC 全对则 +14.3），DDC（driving direction compliance，逆行合规）+1.2、EC（extended comfort，相邻两帧 plan 的舒适度）+1.1，stage 2（偏离起点的第二阶段）比 stage 1 更差，stage 2 的 DAC 失败 51% 来自直行帧。v2 的损失不针对这些（该文第 5 节）。第二轮至此没有训练、没有任何读数，所以这是结果前的改动；用户与 main 批准。v2 的设计保留在下面各节，改动处就地标「v3」并写明 v2 原来怎么说。
+
+| # | 改动 | v2 原来 | 为什么 | 落在哪 |
+|:--|:--|:--|:--|:--|
+| 1 | 读数加 **navhard EPDMS combined**（描述，不设门），全部读数与判格结束后**只跑一次** | 读数里没有 navhard，N-nav 只有 navtest PDMS | 就算 r2 改了 DAC 行为，登记的读数也看不出来；要一个真实读数，不靠推测 | 第 4.6 节 |
+| 2 | S_jev 加 **DDC 项**，与 NAVSIM EPDMS 的 DDC 同定义、乘性 | S_jev = NC · DAC · (5P + 5TTC + 2C) / 12，且明说「借对向车道绕行不扣分」 | navhard 的 DDC 缺口（stage 2 逆行失败 12%）；v2 的 S_jev 允许长时间借对向车道 | 第 2.1 节打分器 |
+| 3 | 加**偏离起点 slot 集**（navtrain，横向 ±2 m、yaw ±0.3 rad），用 L_score，无新损失 | 没有偏离起点的样本；navtrain 只进蒸馏 | stage 2 的恢复场景（起点偏离车道）在 v2 训练分布里完全没有 | 第 2.1 节、3.1、3.3、5、6、7 |
+
+**范围声明**：一个**学出来的 DAC 读出**（给 plan 之外加一个 DAC 子头并校准，才有希望在 navhard 上追到约 48）**不在 r2 范围内**，只是后续候选（作为独立的 N1 / 读出线，另行登记）。r2 v3 只让 plan 本身在偏离起点时更倾向于回到可行驶区，并不预期 navhard 涨到 48；navhard 读数是描述，什么都不判。
+
+**Q3 的例外（用户批准）**：v2 写 navtrain 只进蒸馏。v3 中 navtrain 的 log pose 另外产生偏离起点 slot，进 L_score（只有 DAC / DDC 相关的打分，没有 PDMS）。navtest 仍是完全留出的 log，所以 N-nav 仍是留出读数；但它不再是「navtrain 完全没有过任何打分监督」意义上的独立，这一点在第 2.1 节「真实数据上哪里能用打分监督」与第 4.3 节写明。
 
 ## 为什么要做
 
@@ -29,6 +44,7 @@ v2 换成**规则打分、没有 expert 目标**：一条 plan 好不好，只�
 - **等效像素（px_eq）**：行人可见 mask 像素数换算到 Cosmos 相机（1280 × 704、64° HFOV、f = 1 024 px）；E1 的大小分档就是这个单位。openpilot 的 road 模型帧（f = 910）看到的面积是它的 0.79 倍，wide 帧 0.20 倍。
 - **PDM 打分器**：NAVSIM 的 PDM scorer（nuPlan 的 PDM-Closed 规则打分），PDMS = NC · DAC · (5 EP + 5 TTC + 2 C) / 12，NC 不碰撞、DAC 留在可行驶区、EP 相对进度、TTC 碰撞时间、C 舒适度。
 - **非反应式（non-reactive）打分**：其他 actor 按记录下来的未来轨迹走，不对候选 plan 做反应；**at-fault**：只算本车负责的事件（本车静止时、或对方从后面撞上来的不算，PDM 规则）。
+- **DDC（driving direction compliance）**、**EPDMS**：NAVSIM v2 的逆行合规乘性项与 extended PDMS（在 PDMS 之上加 DDC、TLC、LK、HC、EC）；**偏离起点 slot（offset slot）**：v3 加的样本，本车起点相对 log 位姿横向 / 朝向偏移，见第 2.1 节。
 - **S_jev、候选集 C(s)、Top 集**：第 2.1 节定义的打分、每个场景 s 的候选 plan 集合、分数在最高分 δ 以内的候选。
 
 ## 0. 冻结前的测量 M0：各集合的行人有多大、多远（已跑，CPU）
@@ -90,7 +106,7 @@ P5 按 family（px_eq 中位只算可见帧 ≥ 68 px，即 P5 自己的可见�
 | arm | 可训练 | 训练数据 | 损失 | seed | 回答什么 |
 |:--|:--|:--|:--|--:|:--|
 | O | —（原模型） | — | — | — | 所有读数的参照；读数与训练前的 M1 一起跑 |
-| **A**（主，纯视觉 B） | stage 4 + 辅助头 | sim（C + K 配对）+ real（WOD、nuScenes；navtrain 只进蒸馏） | L_aux + L_pair + λ_s·(L_score + L_dir) + λ_d·L_distill | 3 | 纯视觉 sim + real 能不能两边都学会 |
+| **A**（主，纯视觉 B） | stage 4 + 辅助头 | sim（C + K 配对）+ real（WOD、nuScenes；navtrain 只进蒸馏）；v3：另加 navtrain 偏离起点 slot 集（第 2.1 节） | L_aux + L_pair + λ_s·(L_score + L_dir) + λ_d·L_distill | 3 | 纯视觉 sim + real 能不能两边都学会 |
 | **D**（主，检测插件） | A 的全部 + 检测 token adapter | 同 A | 同 A | 3 | 检测 token 注入是否在 A 之上再加 |
 | A-real | 同 A | 只有 real（sim 只进蒸馏） | L_aux + λ_s·L_score（nuScenes）+ λ_d·L_distill | 1 | G-b：只加真实数据量与真实打分监督能不能过线，CARLA 动不动 |
 | A-sim | 同 A | 只有 sim 配对（real 只进蒸馏，不用真实标签） | L_aux + L_pair + λ_s·(L_score + L_dir) + λ_d·L_distill | 1 | sim 监督单独能否带到真实 |
@@ -118,13 +134,21 @@ A-bhv 留作 1 seed 对照。L_Δplan 即 v1 的定义：原生 plan 在 x⁺ �
 对场景 s（一个 5 Hz slot）里的一条候选 plan τ，把本车 footprint 沿 τ 在 H = 4 s 内按 10 Hz 推进（openpilot plan 在 T_IDXS 上的点插值；不做 PDM 的 LQR 跟踪仿真），对照被打分 actor 集 A(s) 的真实未来轨迹（非反应式），算：
 
 ```
-S_jev(τ) = NC(τ) · DAC(τ) · [ 5·P(τ) + 5·TTC(τ) + 2·C(τ) ] / 12
+S_jev(τ) = NC(τ) · DAC(τ) · DDC(τ) · [ 5·P(τ) + 5·TTC(τ) + 2·C(τ) ] / 12      （v3 加 DDC；v2 没有 DDC 项）
 ```
 
 - **NC ∈ {0, 1}（不碰撞，= WL-2 的 cg）**：任一时刻本车框与 A(s) 中任一 actor 框重叠，或本车走廊内（本车当前位姿坐标系下 |y| ≤ 1.75 m、前方）最近 actor 的纵向间距（前保险杠到 actor 参考点，`jevdrive/wl.py::_gap_front` 同一算法）< 2 m，就是 0。两条都只算 at-fault：该时刻本车速度 ≥ 0.5 m/s，碰撞点不在本车后半部。PDM 把撞静物记 0.5，这里一律记 0，与 cg 一致。
-- **DAC ∈ {0, 1}（可行驶区）**：每个时刻 footprint 四角都在可行驶区内。可行驶区 = 任意方向的行车道 + 路口 + 停车道（CARLA：OpenDRIVE 的 Driving / Bidirectional / Parking 与 junction，不含 Sidewalk / Shoulder / Border / Median，按路线两侧 ±40 m、0.2 m 栅格离线生成；nuScenes：map expansion 的 `drivable_area` 层）。所以借对向车道或相邻车道绕行不扣 DAC，那块路上有没有车交给 NC 与 TTC。
+- **DAC ∈ {0, 1}（可行驶区）**：每个时刻 footprint 四角都在可行驶区内。可行驶区 = 任意方向的行车道 + 路口 + 停车道（CARLA：OpenDRIVE 的 Driving / Bidirectional / Parking 与 junction，不含 Sidewalk / Shoulder / Border / Median，按路线两侧 ±40 m、0.2 m 栅格离线生成；nuScenes：map expansion 的 `drivable_area` 层）。所以借对向车道或相邻车道绕行不扣 DAC，那块路上有没有车交给 NC 与 TTC。（v3：借对向车道**逆行**的部分由下面新加的 DDC 处理，DAC 本身不变。）
+- **DDC ∈ {0, 0.5, 1}（逆行合规，v3 新增；与 NAVSIM EPDMS 的 DDC 同定义，乘性，不进加权和）**：
+  - 对候选 τ 的 10 Hz 时刻序列，取本车**中心点**（后轴中心）；oncoming_t = 1 当且仅当该点落在某个行车道（含路口连接段）内，且 t → t+1 的位移在该车道基线（baseline）切向上的投影为负，即在逆着车道方向走。
+  - 每步的逆行位移 d_t = ‖p_{t+1} − p_t‖ · oncoming_t；oncoming progress(t) = 在长度 1.0 s 的滑动窗内 Σ d_t，取全程最大值 D。
+  - 分段：D ≤ 2.0 m → DDC = 1；2.0 < D ≤ 6.0 m → 0.5；D > 6.0 m → 0。窗长 1.0 s、阈值 2 m 与 6 m 是 NAVSIM devkit（沿用 nuPlan 的 driving direction 指标）的默认参数，devkit 中的写法是「中心点在对向车道内的累计位移」，本文的「逆着车道方向」是同一量的切向写法。**实现前**读 devkit 源码逐项核对；核对不了以 devkit 为准，并以第 5 节 V5 的数值一致检验兜底。
+  - 地图来源：CARLA 用 OpenDRIVE 车道（Driving 与 junction，方向由 lane id 符号与道路方向给出）；nuScenes 用 map expansion 的 lane / lane connector 与 arcline path 方向；navtrain 用 nuPlan 地图（同 devkit）。
+  - 只用地图与本车自己的 τ，与 actor 无关，所以仍是非反应式、可见 actor 集不影响它。
+  - 与 v2 的不同：v2 允许长时间借对向车道绕行而不扣分。v3 之后，在对向车道里走超过 2 m（1 s 窗内）开始扣，超过 6 m 记 0；短暂借道（1 s 窗内逆行 ≤ 2 m，例如 `nudge_L` 一类小横移）不扣。这与 NAVSIM 榜一致，是有意的：对向车道上的长距离绕行在榜上就是 DDC 失败。
+  - 进度归一（下条 P）里的「安全候选」集合 N(s) 相应取 NC · DAC · DDC = 1 的候选（v2 是 NC · DAC = 1）；Top 集与「max S_jev = 0 的 slot 不进 L_score」不变，DDC = 0.5 的候选只是分数被乘 0.5，不被排除。
 - **P ∈ [0, 1]（进度，带让行豁免）**：prog(τ) = τ 在 H 末端沿参考路径（CARLA：route 中心线；nuScenes：原模型 plan 的路径）的投影弧长。
-  P(τ) = min(1, prog(τ) / max(5 m, max_{k∈N(s)} prog(k)))，N(s) 是 C(s) 中 NC · DAC = 1 的候选。
+  P(τ) = min(1, prog(τ) / max(5 m, max_{k∈N(s)} prog(k)))，N(s) 是 C(s) 中 NC · DAC · DDC = 1 的候选（v3 加 DDC）。
   **让行豁免（只给移动的 actor，用户 2026-09-29 定）**：若沿车道候选（下面候选集里 `op`、`hold` 两条中至少一条）的 NC = 0 是由行人、骑车人或移动中（≥ 0.5 m/s）的车辆造成的，N(s) 只取**不离开车道**的安全候选（横向偏移 ≤ 1 m）。
   所以：没有人挡路时，无故慢 / 停会被最好的安全候选拉低 P（「不停滞」）；有人在路径上时，停下让行拿满 P，绕行也拿满 P（被 min(1, ·) 截住），两者都不被要求；静止障碍（停着的车、锥桶）挡路且有安全绕行候选时，不豁免，干等的 P 被绕行候选拉低（第 52 条 P6 的「该绕」）。5 m 下限沿用 PDM 的 progress 门槛：谁都走不到 5 m 时全部记 1。
 - **TTC ∈ {0, 1}**：PDM 的定义与参数（devkit `default_scoring_parameters` 同值）：本车在运动时，从 τ 上每个时刻按当时速度与朝向外推 1 s，若与同一时刻前方 actor 的框相交记 0。它按框相交判，不按 WL-1 的「走廊内间距 / 接近速度」判，所以 WL-2 去掉 TTC 的理由（横移绕过的过程中对被绕物体接近速度高，被记成 unsafe）在这里不成立：绕开以后外推框不再相交。
@@ -138,6 +162,7 @@ sim：hazard 行人按分割视图像素 px_eq ≥ 68（P5 的可见门槛）；
 - openpilot 自己的 plan：Cinque 的 plan 头是单一 MDN 均值（33 × 15），没有多个 mode，所以「openpilot 自己的备选」取 desire 条件下的原模型 plan：`op`（desire 0）、`op_L` / `op_R`（laneChangeLeft / Right desire 脉冲，第 49 条：方向总对、幅度不够，作为横向候选之一）。
 - 结构化扰动：WL-2 的 11 个候选原样（`jevdrive/wl_traj.py`，候选定义与 WL-2 同一份代码）：`op`、`op_slow`（速度 × 0.5）、`op_stop`（−4 m/s² 到停）、`hold`（参考路径匀速）、`brake_hard`（−6 m/s²）、`brake_mild`（−2 m/s²）、`shift_L` / `shift_R`（±3.0 m，2 s 余弦过渡）、`shift_L_slow` / `shift_R_slow`、`nudge_L`（1.5 m）。真实侧没有 route，`hold` / `brake_hard` 的路径用 `op` 的路径。
 - 候选由原模型在同一帧（同一种画面：C 帧用 C 的 plan，K 帧用 K 的 plan）上的输出生成，离线打分并缓存；训练中不在线打分。
+- **v3：偏离起点 slot 多一条候选 `rej`**（只在该 slot 集上有）：沿参考路径（navtrain = devkit 的 PDM 中心线，取自路线 roadblock 的车道中心线，不是 log 轨迹）用 3 s 余弦过渡并入中心线，之后沿中心线，速度曲线取该帧 `op` 的速度曲线。它是 `shift_*` 的「把横向偏移收回来」版本（`shift_*` 是从中心线出发往外偏，`rej` 是从偏移位置往里收）。所以偏离起点 slot 的 C(s) 是 14 条，其余仍是 13 条。
 
 **Top 集**：Top(s) = {k ∈ C(s) : S_jev(k) ≥ max_j S_jev(j) − δ}，δ = 0.1。max_j S_jev(j) = 0（候选里没有一条不撞、不出界）的 slot 不进 L_score。
 
@@ -152,7 +177,7 @@ d(μ, τ) = mean_{t ∈ T_IDXS, t ≤ 4 s} Σ_{c ∈ {x, y, v, a}} Huber( (μ_c(
 - 这是 winner-take-all（多假设训练常用的「只罚最近的那个」）：模型自己选离它最近的好候选，不被逼到某一条，也不会被平均到「左绕与右绕的中间」（那正好撞人）。
 - **没有 expert 目标**：Top 集完全由规则打分决定，expert 只在 A-bhv 对照里出现。
 - **与蒸馏同形**：`op` 在 C(s) 里，训练开始时 μ_θ = `op`。只要原模型 plan 本来就在 Top 集里，损失为 0、梯度为 0，之后只要改后模型漂离，就被拉回最近的好候选（通常就是 `op`）。损失只在打分器判原模型 plan 不够好的 slot 上有推力，推向「改得最少的好 plan」。
-- 用在哪些 slot：sim 的 x⁺ slot（C 与 K 各一份，候选各自生成，打分几何相同）；nuScenes train 的 VRU 帧（CAM_FRONT 里可见的行人 / 骑车人在宽走廊 0–30 m 内）。正常帧与 x⁻ 帧交给 L_distill，不上 L_score，避免打分器在普通驾驶上与蒸馏拉扯（打分器在正常帧上与原模型不一致的比例作描述报，是打分器本身的 sanity 读数）。
+- 用在哪些 slot：sim 的 x⁺ slot（C 与 K 各一份，候选各自生成，打分几何相同）；nuScenes train 的 VRU 帧（CAM_FRONT 里可见的行人 / 骑车人在宽走廊 0–30 m 内）。v3 加：偏离起点 slot（下节）也上 L_score，同一个损失、同一个 λ_s，没有新超参。正常帧与 x⁻ 帧交给 L_distill，不上 L_score，避免打分器在普通驾驶上与蒸馏拉扯（打分器在正常帧上与原模型不一致的比例作描述报，是打分器本身的 sanity 读数）。
 
 #### L_dir：配对方向约束（sim）
 
@@ -165,6 +190,33 @@ L_dir = g_dir · mean_{t ∈ {1,2,3,4 s}} relu(v̂⁺(t) − v̂⁻(t)) / σ_v  
 - g_dir = 1：行人在该 slot 可见且 px_eq ≥ 500（Q1 的主读数档），且在走廊内或附近（行人 4 s 真实未来与 `op` / `hold` 路径的最小横向距离 ≤ 1.75 + 1.0 m）。x⁺ 不许比 x⁻ 快；慢多少由 L_score 决定，这里只管方向。
 - g_eq = 1：行人不可见（px_eq < 68），或可见但与路径无关（最小横向距离 > 1.75 + 3.0 m，且 x⁺ 与 x⁻ 的 Top 集相同）。两个 plan 应相同；x⁻ 一侧 stop-gradient，它已被蒸馏钉住。
 - 其余（可见但 < 500 px 且靠近路径，或处在两个距离门槛之间）不加配对约束，只由 L_score 管。「小而近」这一档留空（用户 2026-09-29 批准）：openpilot 读不出这么小的行人，逼两边相同等于教模型忽略路径上的小行人，与 L_score 相反。
+
+#### v3：偏离起点 slot 集 O_off（navtrain）
+
+目的：教 plan 在起点偏离车道中心 / 朝向偏斜时回到可行驶区、不逆行（navhard stage 2 的形状），而不碰普通驾驶帧。v2 里这类样本完全没有。
+
+**样本从哪来、多少、种子（写死，训练前不再改）**
+- 来源：NAVSIM navtrain 的 train 切分（3.2 节的 95% log，dev 的 5% log 不进）的 token，用其 log 位姿与 devkit metric cache（地图、GT agent 未来、PDM 中心线）。
+- 数量：**24 000 个训练样本**（每个 token 至多一个样本，来自 train log 的不同 token；按 driving command 分层：直行 50%（12 000）、left 25%、right 25%，直行多取是因为 navhard stage 2 的 DAC 失败 51% 来自直行帧）。抽样种子 **20260929**（`numpy.random.default_rng(20260929)`，先按 command 分层无放回抽 token，再按 token 排序后依次抽偏移）。
+- 偏移取值：横向偏移 e = s₁ · U(1.0, 2.0) m，朝向偏移 ψ = s₂ · U(0.15, 0.30) rad，符号 s₁、s₂ 独立随机（所以「朝向偏移把车带向中心线」与「带离中心线」两种都有），量级上界即用户批准的 ±2 m、±0.3 rad。横向以 log 位姿的本车左方为正。
+- dev 集（只用于读数与检查）：**1 000 个样本**，取 dev log 的 250 个 token（种子 **20260930**）× 4 个固定角点（e = ±2.0 m、ψ = ±0.3 rad 的四个组合），确定性。
+
+**偏移怎么施加**
+1. 起点位姿：把 log 的本车位姿在其本车坐标系里平移 e、转 ψ，得到偏离起点位姿 P_off。打分时 P_off 就是世界坐标里的起点，候选 plan 在 P_off 的本车坐标系里生成，DAC、DDC、NC 全部按 P_off 的 footprint 与世界地图算；GT actor 用 log 的记录（非反应式，可见 actor 集在 P_off 的相机里重新判可见）。
+2. 输入图像：模型的输入是相机画面，起点偏移必须体现在画面里。用**地面平面诱导的单应变换**（plane-induced homography：假设像素落在路面上，相机高度与内参取 navtrain 的标定，路面取 z = 0）把前视相机的每一个输入帧按同一个刚体偏移（每帧相对它自己的位姿平移 e、转 ψ，即历史轨迹整体平行偏移）重投影到 P_off 视角，视野外像素用边缘复制填充。
+   这是近似：路面（车道线、路沿）是对的，路面以上的物体（车、行人、树）会有视差畸变，这一点写进限定，不假装是新视角渲染。
+3. 上下文：9 个 context slot 全部按同样规则变换（trunk 缓存是对变换后的帧重新算，不复用未偏移的缓存）。
+4. 每个 slot 的未偏移原帧（同一 token）本来就在 navtrain 的蒸馏流里，v3 规定这 24 000 个 token 的原帧**每次都进蒸馏流**（孪生帧），使「偏离的画面 → 回到中心线」与「原画面 → 不变」在同一个 batch 里成对出现，避免模型把「回中心」泛化到不偏离的普通画面。
+
+**损失：用 L_score，不另设恢复损失**
+- 偏离 slot 的候选集 C(s) = 14 条（上一节，含 `rej`），S_jev（含 DAC、DDC、NC）决定 Top 集，L_score 原样（winner-take-all、σ_O 归一）。
+- 与 L_distill 的关系：偏离 slot 自己**不进 L_distill**（偏离画面上原模型的输出不是要保持的东西）；但 `op`（原模型在偏离画面上的 plan）在 C(s) 里，所以只要原模型在偏离画面上已经可行驶、不逆行，L_score = 0，和蒸馏同形；只有原模型出界或逆行的 slot 才有推力，推向「改得最少的、DAC · DDC 合格的候选」（可能是 `op`、`shift_*`、`rej`）。普通驾驶帧仍由 L_distill 钉在原模型上，孪生帧保证这一点。
+- 为什么不用专门的恢复损失：专门的恢复损失需要一个目标轨迹，只能来自 log（等于模仿 expert，v2 已否决）或者手写的回中心线控制器（即 `rej`，已经是候选）；用 L_score 就是让打分器 + 候选自己决定目标，一致、最简单，没有新超参。
+- 权重：偏离 slot 进每个 batch 的 10%（约 6 条 / 64 条序列，从 real 的有标签份额里划出，其余 WOD : nuScenes = 60 : 40 不变），120 万条序列里共 12 万条，24 000 个样本每个约重复 5 次。
+- **不用 L_aux、L_pair、L_dir**（没有行人标签、没有配对）。
+- 哪些 arm 用：A、D、D-only、A-noC、A-noK、A-real 带；A-sim 不带（它的 real 侧只进蒸馏，偏离 slot 属 real 打分监督）；A-bhv 不带（对照只换行为监督那一项，L_Δplan 无从定义于偏离 slot）。
+
+**这个集合的检验（第 5、6 节写死）**：`op` 在偏离 slot 上 DAC · DDC 失败比例应有可观量（下限 5%，见 6 节停批条件）；`rej` 在 dev 上应基本可行（V6）。
 
 #### 非反应式打分的偏差与处理
 
@@ -186,8 +238,8 @@ L_dir = g_dir · mean_{t ∈ {1,2,3,4 s}} relu(v̂⁺(t) − v̂⁻(t)) / σ_v  
 | at-fault | 不区分，任何碰撞都算 | 本车静止、被追尾不算 |
 | TTC | 主标签去掉 TTC；次要标签含「走廊间距 / 接近速度 < 1 s」 | PDM 的框相交外推 TTC，作加权项不作门 |
 | 进度 | 3 s 行驶距离，原值 | 4 s 投影进度，按安全候选归一，带让行豁免 |
-| 可行驶区、舒适 | 没有 | 有（DAC 门、C 加权项） |
-| 候选 | 11 个（`wl_traj.py`） | 同样 11 个 + `op_L` / `op_R` |
+| 可行驶区、逆行、舒适 | 没有 | 有（DAC 门、DDC 门（v3）、C 加权项） |
+| 候选 | 11 个（`wl_traj.py`） | 同样 11 个 + `op_L` / `op_R`（偏离起点 slot 另加 `rej`，v3） |
 
 一致性检查（第 5 节 V1）：把 S_jev 的 NC 用在 WL-1 已有的 2 814 个分支 run 的实际轨迹与记录 actor 上，与 WL 的 cg 标签的一致率要 ≥ 95%（差异只该来自 at-fault 与重叠判法）。WL-2 自己的登记不动；若它以后要换成 S_jev 口径，另行登记。
 
@@ -196,7 +248,7 @@ L_dir = g_dir · mean_{t ∈ {1,2,3,4 s}} relu(v̂⁺(t) − v̂⁻(t)) / σ_v  
 | 数据 | 有没有 agent 未来轨迹 | 打分监督 | 理由 |
 |:--|:--|:--|:--|
 | nuScenes train | 有：GT 框 + instance 跟踪，2 Hz keyframe（插值到 10 Hz），map expansion 有 `drivable_area` | **用**（L_score） | 唯一既有真值轨迹又在第一轮协议下训练过的真实集 |
-| NAVSIM navtrain | 有（metric cache 里的 agent 未来，devkit 自带 PDM 打分器） | **不用**，只进蒸馏 | (1) Q3：navtrain 只进蒸馏；打分监督就是有监督训练。(2) 第 36、53 条：navtrain 的 2 Hz sample-and-hold 输入是离协议的，在它上面学到的读出搬不到 5 Hz 的 CARLA / WOD（E2 的 navtrain 对到 WOD 上有害）。(3) 用 navtrain 的 PDM 打分训练，N-nav（navtest PDMS）就从「不坏」检查变成被优化的目标，是第 35 条说的 R 层配方，失去独立性 |
+| NAVSIM navtrain | 有（metric cache 里的 agent 未来，devkit 自带 PDM 打分器） | **v2：不用，只进蒸馏。v3：仅偏离起点 slot 集（24 000 个，第 2.1 节 v3 小节）进 L_score，其余 token 仍只进蒸馏** | (1) Q3：navtrain 只进蒸馏；打分监督就是有监督训练（v3 的例外经用户批准，只限偏离起点 slot 且只有 DAC / DDC / NC 相关打分，没有 PDMS 的进度与舒适目标）。(2) 第 36、53 条：navtrain 的 2 Hz sample-and-hold 输入是离协议的，在它上面学到的读出搬不到 5 Hz 的 CARLA / WOD（E2 的 navtrain 对到 WOD 上有害）。(3) 用 navtrain 的 PDM 打分训练，N-nav（navtest PDMS）就从「不坏」检查变成被优化的目标，是第 35 条说的 R 层配方，失去独立性（v3 对此的处理：例外只限偏离 slot，N-nav 仍读留出的 navtest；不再是「navtrain 上完全没有打分监督」意义上的独立，在结论里写明） |
 | WOD（E2E） | 没有 agent 轨迹（只有相机与 ego），YOLO 单目抬升没有跟踪、距离噪声大 | 不用；只进 L_aux 与蒸馏 | 没有可信的 actor 未来 |
 
 所以真实侧的行为监督只来自 nuScenes（约 2.8 万个 keyframe，其中走廊行人帧 1 344 个（M0），宽走廊 VRU 帧更多但同一量级），比 sim 的 x⁺ slot 小一个量级以上；真实侧的行为读数（B-real、B-score-nus）因此在留出的 nuScenes val 与从未进过打分监督的 WOD val 上都报。
@@ -226,7 +278,7 @@ L_dir = g_dir · mean_{t ∈ {1,2,3,4 s}} relu(v̂⁺(t) − v̂⁻(t)) / σ_v  
 | sim-C | 同一批对的 C⁺ / C⁻（`load_pair(pair, "carla")`） | = sim-K 的对（原画在 controls 阶段就有，但按 Q5 一起等全量结束） | 同上 | 同上 | 随 CARLA 第 2 遍产出 |
 | real-WOD | WOD-E2E train | 207 678 个 slot、113 068 帧有标签（走廊 2.4%、宽 9.3%） | YOLO 抬升，11.7% uncertain；无 agent 轨迹 | L_aux、蒸馏 | trunk 缓存已有 |
 | real-nus | nuScenes train 650 个 scene（第一轮的训练集） | 约 2.8 万个 keyframe（走廊 4.8%） | GT 框 + instance 未来 + `drivable_area` | L_aux、L_score、蒸馏 | trunk 缓存已有；map expansion 若 box 上没有先下（约 0.4 GB） |
-| real-nav | NAVSIM navtrain | 103 288 个 token | — | **只进蒸馏**（Q3） | trunk 缓存已有 |
+| real-nav | NAVSIM navtrain | 103 288 个 token | — | **蒸馏**（Q3）；v3：其中 24 000 个 train-log token 另生成偏离起点 slot 进 L_score，其原帧作孪生帧进蒸馏 | 原帧 trunk 缓存已有；偏离帧（单应变换后）的 trunk 缓存要新算 |
 
 sim 的每对取窗口里 slot ≥ 9 的 5 Hz slot（与 E1 同：9 个 context slot 都在窗口内），每对约 15 个训练 slot；每个训练样本是同一 slot 的四元组（sim-noC / noK 的 arm 是二元组）。
 
@@ -250,7 +302,7 @@ DONE 之后按最终对数：sim-K ≥ 200 对全部 arm 照跑；< 200 对则 A
 - 正例权重：主 BCE 的 pos_weight 使每个域的有效正例率约 25%（第一轮做法）。
 - **大小 / 距离过采样**：real 正例按最近走廊行人距离分档，10–20 m 与 20–30 m 档的采样权重 × 2（0–10 m、30 m+ × 1）；sim 的 x⁺ slot 按 px_eq 分档，100–500 与 500–1 500 档 × 2。理由：第一轮的增益在 10–20 m（+0.14）和 > 20 m（+0.10），E1 的可读性断崖在 500–1 500 px；考卷一半在 30 m 以外，但训练里几乎没有，那一档不做人工放大（数据不支持）。
 - nuScenes 的 VRU 帧（L_score 的真实来源）在 nuScenes 份额内 × 2，使真实打分监督每个 batch 约 3–4 条。
-- 蒸馏帧：real 正常帧（WOD、nuScenes、navtrain 按 40 : 30 : 30）+ sim x⁻，占每个 batch 的 25% 序列（与上面的比例并行抽，不挤占标签样本）。
+- 蒸馏帧：real 正常帧（WOD、nuScenes、navtrain 按 40 : 30 : 30）+ sim x⁻，占每个 batch 的 25% 序列（与上面的比例并行抽，不挤占标签样本）。v3：偏离起点 slot 占每个 batch 10% 序列（从 real 有标签份额里划出，见第 2.1 节），它们的孪生原帧在同一 step 加进蒸馏流（约 +10% 序列，不占 25% 的名额之外的标签份额）。
 - 训练量：每个 arm 120 万条序列（第一轮 50 万的 2.4 倍），约 2–3 个 sim epoch、real 约 1 个 epoch。
 
 ## 4. 读数与登记线
@@ -281,6 +333,7 @@ DONE 之后按最终对数：sim-K ≥ 200 对全部 arm 照跑；< 200 对则 A
 | B-score-nus（副） | 同上 | nuScenes val：VRU 帧；正常帧 | VRU 帧 Δ 的 scene 聚类 CI 下界 > 0；正常帧 Δ 的 CI 下界 ≥ −0.01 |
 | B-cos（描述） | 原生 plan 的 S_jev Δ 与「落在 Top 集 0.5 m 内」的比例；x⁺ / x⁻ 2 s 速度差 | Cosmos test，C 与 K | — |
 | B-log（描述） | 行人帧上 plan 对 log 未来的 ADE 配对差；log 减速的行人帧里 plan 也减速的比例 | nuScenes val、WOD val | — |
+| B-off（描述，v3） | 偏离起点 dev 集（1 000 个样本，四个固定角点各 250）上原生 plan 的 DAC 通过率、DDC 通过率、S_jev 的配对 Δ（改后 − O），按角点分报；`rej` 候选的通过率作参照 | navtrain dev log | —（描述；是被优化的量，只用来看 L_score 有没有学到东西，不进判格） |
 | B-ref（描述） | 参照行：nuScenes val 上 log 的人类轨迹、P5 上 BehaviorAgent 实际轨迹的 S_jev | 同上 | —（只用来看打分器的量级，不作目标） |
 
 真实侧没有反事实，所以 B-real 读的是「有行人比没行人多减速多少」相对原模型的变化；它不能区分「对行人反应」和「对行人常出现的场景反应」，这一点用 null 帧的速度分层和 B-log 部分对冲，结论里要写明。
@@ -293,7 +346,7 @@ B-score-nus 在真实侧补上「减速是不是对的」：同一帧上改后 p
 | N-drift | 正常帧原生 plan 漂移（第一轮 (b) 原样，nuScenes val 与 WOD val） | 两处中位 ≤ 0.10 m、p95 ≤ 0.50 m |
 | N-ade | WOD val 原生 plan 对 log 未来的 ADE 相对变化 | CI 上界 ≤ +2% |
 | N-lead | lead x 与 lead_prob（第一轮原样） | lead_prob \|Δ\| 中位 ≤ 0.02，lead x \|Δ\| 中位 ≤ 0.5 m |
-| N-nav | NAVSIM navtest PDMS（原生 plan，与原模型同一 harness：第 36 条补帧输入、同一 2 000 token 子集或当时的全集，二者同一次跑）；navtrain 不进打分监督，所以这仍是独立的不坏检查 | ≥ O − 1 |
+| N-nav | NAVSIM navtest PDMS（原生 plan，与原模型同一 harness：第 36 条补帧输入、同一 2 000 token 子集或当时的全集，二者同一次跑）；v3：navtrain 只有偏离起点 slot 进了 L_score，navtest 仍是完全留出的 log，所以这仍是留出的不坏检查，但不再是 v2 意义上完全独立的（结论里写明） | ≥ O − 1 |
 | N-rfs | WOD-E2E val RFS（与第 44 条同一 harness） | 配对 Δ 的 CI 下界 ≥ −0.10 |
 | N-cutin | P5 cut-in 翻转（车辆不能被弄坏） | 不低于 O 5 pp 以上 |
 
@@ -302,6 +355,14 @@ B-score-nus 在真实侧补上「减速是不是对的」：同一帧上改后 p
 - **行人区换回 null**：Cosmos test 与 P5 上，把 x⁺ 的行人区（mask 膨胀 24 px）换成 x⁻ 的像素再跑一遍，改后模型的 L_aux logit 差与翻转应回到 null 水平；若仍有 ≥ 一半的效应，说明学的是行人区以外的东西（第 56 条 G-d）。
 - 域分类 AUC（每层，C / K / real）只描述。
 - 打分器 sanity（描述）：训练集上原模型 plan 不在 Top 集的 slot 比例（sim x⁺、sim x⁻、nuScenes VRU 帧、nuScenes 正常帧各一个数）；全 actor 与可见 actor 的 Top 集分歧率。
+
+### 4.6 navhard EPDMS combined（v3 新增，描述，不设门）
+
+- **读什么**：NAVSIM navhard two-stage 的 EPDMS combined，另报 stage 1 / stage 2 各自的 EPDMS，以及 DAC、DDC、EC 三项的失败率或均值（与 [navhard-deficit-breakdown.md](../research/navhard-deficit-breakdown.md) 同口径），改后模型对 O 的配对 Δ（token 上的 bootstrap，按 log 聚类）。
+- **怎么读**：与得出 `none` = 33.33（stage 1 71.70 / stage 2 46.90，Cinque，decisions 第 66 条、[op-leaderboard](2026-09-29-op-leaderboard.md)）的**同一个 devkit、同一套流程**：navhard 5 912 个 token，补帧输入契约与同一份 GIMM 缓存，原生 plan，无 desire 的 `none`，官方两阶段聚合。O 的数取那一次记录的 33.33，不重跑；为保证同 harness，读数用同一个 commit 的评分脚本，O 列若要复算，必须复现到 33.33 ± 0.1。
+- **跑几次、什么时候**：读数代码与登记在全量开始前冻结；**所有其他读数与判格出完之后，对进入判格的 6 个模型（A × 3 seed、D × 3 seed）各跑一次**，只一次，不用于选 λ_s、选 seed、选 checkpoint 或改任何东西；对照 arm 不跑。
+- **性质**：描述。不是登记线，不进第 4.5 节的判格；N-nav 仍是 navtest PDMS。预期（推测，不是登记）：r2 只在偏离起点 slot 上碰 DAC / DDC，且偏离画面是单应变换的近似，所以 navhard 的 DAC 可能只小幅变动或不动；要追到约 48 需要的是学出来的 DAC 读出，那是 r2 之外的后续候选。
+- 成本：GPU 抽特征每个模型约 0.2 GPU·h（估计，未按 navhard 单独实测），CPU 打分约 15 分钟。
 
 ### 4.5 判格与各结局的意思
 
@@ -332,10 +393,12 @@ arm 之间的比较（描述，但用来归因，同一套 route / scene 聚类�
    - V2：nuScenes val 上 log 人类轨迹作为一条「候选」，S_jev ≥ 0.8 的帧 ≥ 90%（地图对齐、框与 footprint 没算错）；
    - V3：P5 与 Cosmos 已完成对上，x⁻ 的 `op` 在 Top 集的 slot ≥ 70%（打分器在没有 hazard 时不该大面积否定原模型）；
    - V4：x⁺ 可见 ≥ 500 px 且在走廊内的 slot 里，Top 集至少含一条减速或横移候选的 ≥ 90%，且 `hold` 的 NC 失败率明显高于 x⁻（打分器看得到行人）。
+   - V5（v3，DDC）：navtest 上取 devkit 自己的 PDM 与 CV 等轨迹（有逐 token 的 devkit DDC），用本文的 DDC 实现在同一批轨迹上打分，与 devkit 的 DDC 三档值一致率 ≥ 99%；不过就停，回读 devkit 源码修实现。同时 nuScenes val 的 log 人类轨迹上 DDC = 1 的比例 ≥ 99%（人不逆行；地图方向没弄反）。
+   - V6（v3，偏离起点 slot）：dev 1 000 个样本上，`rej` 的 NC · DAC · DDC = 1 的比例 ≥ 90%（恢复目标存在，Top 集里有可学的东西）；单应变换后的 20 张样张（每个角点 5 张）人工目检，路面与车道线形状合理（写进执行日志，不设数值线）。
 2. **M1 基线（零训练，约 0.5 GPU·h）**：原模型在全部读数上的数，包括 P5 ≥ 500 px_eq 子集的 D0、按大小分档、原生 plan 在 P5 上的翻转与 null false-flip、B-real 的原模型减速率、B-score 的 O 列与 B-ref 参照行、NAVSIM / RFS。不依赖 Cosmos 的部分先跑；S-cos、B-cos 的 O 列等 Cosmos DONE 后在同一份冻结代码上补。全部在任何训练之前提交。
 3. **R0**（第 2.3 节），用当时已完成的 Cosmos 对与 P5；零训练，不受 Q5 限制。
-4. **标签与目标**：Cosmos / CARLA 对的走廊标签、可见 actor 集、触发 tick、候选与 S_jev（每对 x⁺ / x⁻ × C / K）；nuScenes train / val 的候选与 S_jev；WOD val 的走廊行人标签（`labels_wod` 同一规则）；A-bhv 用的 expert Δv*（第 1 遍 `pose.jsonl`）。CPU。
-5. **缓存**：sim 对的 trunk 缓存（C 与 K，约 2 000 × 24 slot × 4 ≈ 19 万张，按第一轮的 16.6 万张 8 min 推约 10–15 min GPU）；YOLO 检测与 token（sim 对、nuScenes train / val、WOD train 缺的偶数帧、P5 前视、navtrain / navtest 若已有则复用）；teacher 输出，含 `op_L` / `op_R` 的 desire 条件前向（sim 与 nuScenes）。
+4. **标签与目标**：Cosmos / CARLA 对的走廊标签、可见 actor 集、触发 tick、候选与 S_jev（每对 x⁺ / x⁻ × C / K）；v3：navtrain 偏离起点 slot 的抽样表（24 000 训练 + 1 000 dev，种子写进 run dir）、单应变换帧、14 条候选与含 DDC 的 S_jev；nuScenes train / val 的候选与 S_jev；WOD val 的走廊行人标签（`labels_wod` 同一规则）；A-bhv 用的 expert Δv*（第 1 遍 `pose.jsonl`）。CPU。
+5. **缓存**：sim 对的 trunk 缓存（C 与 K，约 2 000 × 24 slot × 4 ≈ 19 万张，按第一轮的 16.6 万张 8 min 推约 10–15 min GPU）；YOLO 检测与 token（sim 对、nuScenes train / val、WOD train 缺的偶数帧、P5 前视、navtrain / navtest 若已有则复用）；teacher 输出，含 `op_L` / `op_R` 的 desire 条件前向（sim 与 nuScenes）；v3：偏离起点帧的 trunk 缓存（约 24 000 + 1 000 个样本 × 每样本的输入帧，按第一轮 16.6 万张 8 min 推 ≤ 10 min GPU）与 teacher 输出（`op`、`op_L`、`op_R` 三次前向）。
 
 ## 6. 分级启动与 sanity checklist
 
@@ -347,6 +410,7 @@ arm 之间的比较（描述，但用来归因，同一套 route / scene 聚类�
   4. D 与 D-only 的门 |α| 离开 0（插件真的在用）；A-real 的门不存在（结构检查）；
   5. dev x⁺ slot 中原模型不在 Top 集的那些，改后 plan 的 S_jev 高于原模型的比例 > 0.5，且 g_dir slot 上 v̂⁺ > v̂⁻ 的违例率低于 O（L_score 与 L_dir 在学对方向）；A-bhv 这一条换成 dev 配对 Δv̂ 与 Δv* 的同号率 > 0.5；
   6. 输出非退化：改后原生 plan 在 dev 正常帧上的速度分布与 O 的 KS 统计量 < 0.1；dev x⁻ 上 `op_stop` / `brake_*` 类候选成为最近 Top 候选的比例不高于 O 的 + 5 pp（没有学成一律减速）。
+  7. （v3）偏离起点 slot：训练集里 `op` 在 DAC 或 DDC 上失败的比例应落在 5%–60% 之间。< 5%：几乎没有 slot 有推力，这个集合等于空，停批回 main；> 60%：单应变换把画面毁了或偏移过狠，停批回 main。dev 上改后 plan 的 DAC · DDC 通过率高于 O；孪生原帧（未偏移）上的漂移不大于普通 navtrain dev 帧的漂移（回中心没有泛化到普通画面）。
   任一条不过就停批，写明哪一条、哪个 arm。
 - **全量**：按第 2 节的 seed 数跑完，然后第 4 节的读数一次性跑完（读数代码在全量开始前冻结并提交）。
 
@@ -362,13 +426,14 @@ arm 之间的比较（描述，但用来归因，同一套 route / scene 聚类�
 | 训练：A × 4（3 seed + 1 个 λ_s 备选）、D × 3、A-real、A-sim、A-noC、A-noK、D-only、A-bhv | 13 次 | 14.3 |
 | 读数：每个模型约 0.8（第一轮的 a / b / c 约 0.3，加 P5 原生 plan 流、Cosmos test、WOD val、NAVSIM navtest、RFS；S_jev 打分在 CPU 上） | 13 个模型 | 10.4 |
 | 分级启动的开销（1 + 10 单位） | | 1.5 |
-| **合计（不含 Z）** | | **约 30**（v1 约 28；+2 来自 A-bhv 与 desire 候选） |
+| v3 追加：偏离起点帧 trunk 缓存与 teacher 前向 0.5；孪生帧使训练序列约 +5% 至 +10%（约 +0.4，摊到 13 次训练）；navhard 读数 6 个模型 × 约 0.2 = 1.2（估计） | | +2.1 |
+| **合计（不含 Z）** | | **约 32**（v1 约 28；+2 来自 A-bhv 与 desire 候选；v3 再 +2） |
 | Z（R0 过线才开）：tele trunk 缓存 1.0 + 训练 1.3 + 读数 0.8；过线再补 2 seed +4.2 | | 3.1（+4.2） |
 
 CPU：候选生成与 S_jev 打分是向量化 NumPy，sim 约 2 000 对 × 15 slot × 2 世界 × 2 画面 × 13 候选、nuScenes 约 3.4 万帧 × 13、P5 读数帧 × 13，合计千万级「候选 × 时刻」的框检查，按 `n_cpus()` 分片约 < 1 h；可行驶区栅格（Town12 路线切片 + P5 各 Town）< 0.5 h。
 打分器实现与 V1–V4 约半天人时，放在 Cosmos 跑的这段时间里。
 
-一张卡一天 24 GPU·h：不含 Z 约 1.25 个卡日。排期（卡 A），以 Cosmos 全量 DONE 为零点（Q5）。Cosmos lane 13:39 重开，按 stage 10 实测的 82 对 / h 外推约 09-30 下午到晚上完成，以 lane 的 DONE 文件为准：
+一张卡一天 24 GPU·h：不含 Z 约 1.3 个卡日（v3 的 +2 GPU·h 约 +0.09 卡日，**不构成实质变化**，排期表不动；CPU 侧偏离 slot 的 24 000 × 14 条候选打分与 DDC 车道查询 < 0.3 h，也不改 < 1 h 的估计）。排期（卡 A），以 Cosmos 全量 DONE 为零点（Q5）。Cosmos lane 13:39 重开，按 stage 10 实测的 82 对 / h 外推约 09-30 下午到晚上完成，以 lane 的 DONE 文件为准：
 
 | 时段 | 做什么 |
 |:--|:--|
@@ -384,10 +449,13 @@ CPU：候选生成与 S_jev 打分是向量化 NumPy，sim 约 2 000 对 × 15 s
 
 v1 第 8 节的六个问题，用户 2026-09-29 的决定已并入正文：Q1 → 第 4.1、4.2 节；Q2 → 第 2.1 节（规则打分、A-bhv 对照）；Q3 → 第 2.1 节「真实数据上哪里能用打分监督」与第 3.1、3.3 节；Q4 → 第 2.3 节；Q5 → 第 3.1 节起训规则与第 7 节排期；Q6 → 第 4.2 节主判格。
 
-v2 的两个遗留点，用户批准时按 main 的建议定下，已写进第 2.1 节：(a) L_dir 在「可见但 < 500 px、靠近路径」一档不强制 plan 相同；(b) 让行豁免只给移动的 actor（行人、骑车人、移动车辆），静止障碍挡路且有安全绕行候选时干等要扣进度分。没有剩下的问题。
+v2 的两个遗留点，用户批准时按 main 的建议定下，已写进第 2.1 节：(a) L_dir 在「可见但 < 500 px、靠近路径」一档不强制 plan 相同；(b) 让行豁免只给移动的 actor（行人、骑车人、移动车辆），静止障碍挡路且有安全绕行候选时干等要扣进度分。没有剩下的问题（v2 时）。
+
+v3 的三处改动用户 2026-09-29 批准，具体参数（24 000 / 1 000 个样本、种子 20260929 / 20260930、偏移量级、孪生帧、`rej` 候选）由本文起草时按「最简单一致」的原则定下，属于登记时的选择，见执行日志；里面两个判断点 main 需要知道：(a) 偏离画面是**地面单应变换**近似而非新视角渲染，路面以上物体有畸变；(b) navtrain 因此在 Q3 之外多了偏离 slot 的打分监督（用户已批准），N-nav 不再是完全独立的检查。学出来的 DAC 读出不在 r2 范围，只是后续候选。
 
 ## 执行日志
 
 - 2026-09-29 13:3x（box 时间）M0：`scripts/op_adapt_r2_pedsize.py`，CPU，数秒；此时 Cosmos 全量有 93 对（lane 状态：13:33 drained，另一个会话随后在 13:39 重开，仍在跑；本 todo 没有碰这个 lane）。
 - 2026-09-29 v2：按用户对 v1 第 8 节的决定改写（行为监督改为规则打分 S_jev + L_score / L_dir，navtrain 只蒸馏，B-real 进主判格，起训等 Cosmos DONE，加 A-bhv 对照与 B-score 副读数）；仍是草案，没有任何第二轮数字。
 - 2026-09-29 v2 批准：用户批准修订版，遗留点 (a)(b) 按上面写定；状态改为已批准，执行等 Cosmos DONE 与 main 的 go。
+- 2026-09-29 v3（pre-result，reason: navhard breakdown）：按 [navhard 缺口分解](../research/navhard-deficit-breakdown.md) 加三处（用户与 main 批准，此前没有训练、没有读数）：(1) 读数加 navhard EPDMS combined（描述、不设门、最后只跑一次，第 4.6 节）；(2) S_jev 加 DDC 乘性项，NAVSIM 同定义（1 s 窗、2 m / 6 m 阈值），N(s) 与 v2 的「借对向车道不扣」相应改动，加 V5；(3) 加 navtrain 偏离起点 slot 集（24 000 训练 + 1 000 dev，种子 20260929 / 20260930，横向 ±2 m、yaw ±0.3 rad，单应变换施加，L_score 无新损失，`rej` 候选，孪生蒸馏帧），加 V6 与第 6 节第 7 条；成本 +约 2 GPU·h（约 32），非实质；学出来的 DAC 读出不在 r2 范围。decisions 第 67 条。v2 的原设计在各节里保留，改动处就地写明 v2 原文。
