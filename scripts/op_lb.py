@@ -324,8 +324,12 @@ def cmd_run(a):
     pdir = root(a.data, "plans_pilot" if a.limit else "plans")
     sfx = f".first{a.limit}" if a.limit else ""
     if a.procs > 1 and not a.shard:
-        ps = [subprocess.Popen([sys.executable, __file__] + sys.argv[1:] + ["--shard", f"{k}/{a.procs}"]) for k in range(a.procs)]
-        assert all(p.wait() == 0 for p in ps), "a shard failed"
+        argv = [sys.executable, __file__] + sys.argv[1:]
+        ps = [subprocess.Popen(argv + ["--shard", f"{k}/{a.procs}"]) for k in range(a.procs)]
+        for k, p in enumerate(ps):          # a shard that died (rare TensorRT start-up failure) is retried once, alone
+            if p.wait() != 0 or not all((pdir / f"{s}{sfx}.part{k}of{a.procs}.npz").exists() for s in stems):
+                print(f"shard {k}/{a.procs} failed (rc {p.returncode}); retrying")
+                assert subprocess.call(argv + ["--shard", f"{k}/{a.procs}"]) == 0, f"shard {k} failed twice"
         for stem in stems:
             parts = [pdir / f"{stem}{sfx}.part{k}of{a.procs}.npz" for k in range(a.procs)]
             zs = [dict(np.load(f)) for f in parts]
@@ -396,6 +400,9 @@ def cmd_run(a):
         np.savez(out, names=np.array(mt["names"])[rows], steps=len(ts), ms_per_scene=ms, info=info, **P[s])
     print(f"shard {a.shard or '0/1'}: {R} scenes x {len(a.schedule)} schedules, {len(ts)} steps, {ms:.1f} ms/scene, "
           f"{time.time() - t0:.0f} s wall")
+    if a.shard:                        # ORT / TensorRT teardown can hang for minutes after the outputs are written
+        sys.stdout.flush()
+        os._exit(0)
 
 # ---------------------------------------------------------------- equivalence check
 
