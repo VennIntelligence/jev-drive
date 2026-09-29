@@ -1,0 +1,257 @@
+                                                   group             quantity     n   med    p95
+                                                     all              e_y (m) 24917 0.200  7.428
+                                                     all          e_psi (rad) 24917 0.016  0.833
+                                                     all plan-route @15 m (m) 21444 0.212  5.321
+                                 route-steered arms, all              e_y (m) 20964 0.221  8.667
+                                 route-steered arms, all          e_psi (rad) 20964 0.019  0.880
+                                 route-steered arms, all plan-route @15 m (m) 18095 0.242  6.729
+                                             lane-follow              e_y (m) 11461 0.139  2.314
+                                             lane-follow          e_psi (rad) 11461 0.008  0.240
+                                             lane-follow plan-route @15 m (m)  9238 0.142  0.945
+    lane-follow, straight route (|route y@30 m| < 0.6 m)              e_y (m)  4256 0.085  0.348
+    lane-follow, straight route (|route y@30 m| < 0.6 m)          e_psi (rad)  4256 0.004  0.053
+    lane-follow, straight route (|route y@30 m| < 0.6 m) plan-route @15 m (m)  4256 0.107  0.632
+                               lane-follow, curved route              e_y (m)  1960 0.717  2.320
+                               lane-follow, curved route          e_psi (rad)  1960 0.076  0.354
+                               lane-follow, curved route plan-route @15 m (m)  1960 0.325  1.958
+                                 near junction / command              e_y (m)  9503 0.595 12.819
+                                 near junction / command          e_psi (rad)  9503 0.089  0.998
+                                 near junction / command plan-route @15 m (m)  8857 0.642 14.309
+                                                  Town01              e_y (m)  1349 0.069  0.451
+                                                  Town01          e_psi (rad)  1349 0.004  0.021
+                                                  Town01 plan-route @15 m (m)  1193 0.082  0.485
+                                                  Town02              e_y (m)  1012 0.217  7.971
+                                                  Town02          e_psi (rad)  1012 0.017  0.712
+                                                  Town02 plan-route @15 m (m)   852 0.193  2.062
+                                                  Town04              e_y (m)  1214 2.232 27.223
+                                                  Town04          e_psi (rad)  1214 0.343  1.121
+                                                  Town04 plan-route @15 m (m)   955 1.245 35.698
+                                                  Town06              e_y (m)   651 0.205  0.815
+                                                  Town06          e_psi (rad)   651 0.009  0.111
+                                                  Town06 plan-route @15 m (m)   651 0.295  1.081
+                                                  Town07              e_y (m)   762 0.426 22.522
+                                                  Town07          e_psi (rad)   762 0.034  1.085
+                                                  Town07 plan-route @15 m (m)   734 0.409  5.322
+                                                Town10HD              e_y (m)  1541 0.601 11.873
+                                                Town10HD          e_psi (rad)  1541 0.175  0.881
+                                                Town10HD plan-route @15 m (m)  1399 0.376  2.915
+                                                  Town11              e_y (m)  3558 0.312  8.190
+                                                  Town11          e_psi (rad)  3558 0.053  0.933
+                                                  Town11 plan-route @15 m (m)  2670 0.387  7.414
+                                                  Town12              e_y (m)  5650 0.130  5.855
+                                                  Town12          e_psi (rad)  5650 0.007  0.873
+                                                  Town12 plan-route @15 m (m)  4859 0.151  3.533
+                                                  Town13              e_y (m)  3016 0.204  5.462
+                                                  Town13          e_psi (rad)  3016 0.019  0.336
+                                                  Town13 plan-route @15 m (m)  2890 0.174  7.052
+                                                  Town15              e_y (m)  2211 1.362  9.606
+                                                  Town15          e_psi (rad)  2211 0.133  0.946
+                                                  Town15 plan-route @15 m (m)  1892 0.338  5.144
+                                                     day              e_y (m) 17775 0.215  8.920
+                                                     day          e_psi (rad) 17775 0.018  0.885
+                                                     day plan-route @15 m (m) 15591 0.236  6.705
+                                                   night              e_y (m)  3189 0.250  7.281
+                                                   night          e_psi (rad)  3189 0.036  0.846
+                                                   night plan-route @15 m (m)  2504 0.312  7.009
+                                                 no rain              e_y (m) 17998 0.213  8.014
+                                                 no rain          e_psi (rad) 17998 0.019  0.868
+                                                 no rain plan-route @15 m (m) 15530 0.233  7.018
+                                                    rain              e_y (m)  2966 0.261 10.709
+                                                    rain          e_psi (rad)  2966 0.024  0.950
+                                                    rain plan-route @15 m (m)  2565 0.298  3.801
+                                                  no fog              e_y (m) 17775 0.215  8.920
+                                                  no fog          e_psi (rad) 17775 0.018  0.885
+                                                  no fog plan-route @15 m (m) 15591 0.236  6.705
+                                             fog (night)              e_y (m)  3189 0.250  7.281
+                                             fog (night)          e_psi (rad)  3189 0.036  0.846
+                                             fog (night) plan-route @15 m (m)  2504 0.312  7.009
+                      lane prob (min of inner pair) <0.3              e_y (m) 11606 0.661 13.338
+                      lane prob (min of inner pair) <0.3          e_psi (rad) 11606 0.091  1.009
+                      lane prob (min of inner pair) <0.3 plan-route @15 m (m)  9854 0.479  7.290
+                   lane prob (min of inner pair) 0.3-0.5              e_y (m)  2606 0.125  1.887
+                   lane prob (min of inner pair) 0.3-0.5          e_psi (rad)  2606 0.009  0.189
+                   lane prob (min of inner pair) 0.3-0.5 plan-route @15 m (m)  2361 0.145  1.795
+                   lane prob (min of inner pair) 0.5-0.7              e_y (m)  1882 0.147  2.753
+                   lane prob (min of inner pair) 0.5-0.7          e_psi (rad)  1882 0.012  0.152
+                   lane prob (min of inner pair) 0.5-0.7 plan-route @15 m (m)  1656 0.155  7.112
+                     lane prob (min of inner pair) >=0.7              e_y (m)  4870 0.108  1.609
+                     lane prob (min of inner pair) >=0.7          e_psi (rad)  4870 0.008  0.073
+                     lane prob (min of inner pair) >=0.7 plan-route @15 m (m)  4224 0.109  4.999
+                      lane prob (max of inner pair) <0.3              e_y (m)  7828 1.314 15.476
+                      lane prob (max of inner pair) <0.3          e_psi (rad)  7828 0.187  1.107
+                      lane prob (max of inner pair) <0.3 plan-route @15 m (m)  6551 0.858  7.886
+                   lane prob (max of inner pair) 0.3-0.5              e_y (m)  1976 0.617  4.408
+                   lane prob (max of inner pair) 0.3-0.5          e_psi (rad)  1976 0.056  0.346
+                   lane prob (max of inner pair) 0.3-0.5 plan-route @15 m (m)  1777 0.339  7.674
+                   lane prob (max of inner pair) 0.5-0.7              e_y (m)  1661 0.217  4.693
+                   lane prob (max of inner pair) 0.5-0.7          e_psi (rad)  1661 0.020  0.342
+                   lane prob (max of inner pair) 0.5-0.7 plan-route @15 m (m)  1534 0.282 34.161
+                     lane prob (max of inner pair) >=0.7              e_y (m)  9499 0.103  0.896
+                     lane prob (max of inner pair) >=0.7          e_psi (rad)  9499 0.006  0.054
+                     lane prob (max of inner pair) >=0.7 plan-route @15 m (m)  8233 0.111  1.141
+                                  openpilot-steered arms              e_y (m)  3953 0.128  1.909
+                                  openpilot-steered arms          e_psi (rad)  3953 0.005  0.186
+                                  openpilot-steered arms plan-route @15 m (m)  3349 0.127  0.519
+{
+ "availability": {
+  "v<0.5 (stationary)": 0.6973166368515206,
+  "0.5<=v<3": 0.13567174656371006,
+  "v>=3": 0.16701161658476937,
+  "moving: both inner lines < 0.3 (no ego-lane line)": 0.404886514629715,
+  "moving: max < 0.5": 0.4945358895788703,
+  "moving: min < 0.5 (either line weak)": 0.7268487132901267,
+  "moving, lane-follow: max < 0.5": 0.30013844464601136,
+  "moving, near junction/command: max < 0.5": 0.7501569365976145,
+  "moving: plan shorter than 20 m": 0.0
+ },
+ "steps_after_warmup": 220805,
+ "steps_with_estimate": 36877,
+ "frac_v_below_min": 0.8329883834152306,
+ "frac_lane_low_of_moving": 0.7268487132901267,
+ "frac_lane_low_lanefollow_route": 0.6167197352812637,
+ "frac_lane_low_near": 0.8590894413948983,
+ "v_gap": {
+  "n": 16017,
+  "med": 0.3365154736927227,
+  "p95": 1.0908829595250724
+ },
+ "a_gap": {
+  "n": 16009,
+  "med": 0.4147732085852247,
+  "p95": 2.481601629975347
+ },
+ "e_y_true_lanefollow": {
+  "n": 16017,
+  "med": 0.06260000000003176,
+  "p95": 0.6270489664755233
+ },
+ "e_psi_true_lanefollow": {
+  "n": 16017,
+  "med": 0.0097880920821708,
+  "p95": 0.10745021681062608
+ },
+ "straight": {
+  "plan_minus_route_15m_signed_m": {
+   "n": 4070,
+   "median": 0.00493448216193625,
+   "p25": -0.09700701446225199,
+   "p75": 0.108409670711721
+  },
+  "ehat_y_minus_e_y_signed_m": {
+   "n": 4070,
+   "median": 0.015370097175668354,
+   "p25": -0.0698957012574751,
+   "p75": 0.09208613059086099
+  },
+  "ehat_psi_minus_e_psi_signed_rad": {
+   "n": 4070,
+   "median": -0.0011754139958225066,
+   "p25": -0.004975701254786196,
+   "p75": 0.002926856109677874
+  },
+  "lane_prob_left_minus_right": {
+   "n": 5375,
+   "median": 0.08000000000000007,
+   "p25": -0.008000000000000007,
+   "p75": 0.588
+  },
+  "lane_prob_inner_left": {
+   "n": 5375,
+   "median": 0.916,
+   "p25": 0.83,
+   "p75": 0.955
+  },
+  "lane_prob_inner_right": {
+   "n": 5375,
+   "median": 0.624,
+   "p25": 0.282,
+   "p75": 0.922
+  },
+  "per_route_median_d15_range": [
+   -1.4318732796339688,
+   0.5221604869395722,
+   65
+  ],
+  "per_route_median_d15_quantiles_10_50_90": [
+   -0.22677862394272874,
+   -0.08208075252592928,
+   0.1296120023913512
+  ],
+  "share_routes_within_0.15m": 0.5846153846153846
+ },
+ "curve_gain_plan_over_route_15m": {
+  "n": 1881,
+  "gain": 0.9774241758330344,
+  "median_ratio": 1.1114090468345346
+ },
+ "d15_abs_by_age_s": {
+  "(6.0, 10.0]": {
+   "n": 1751,
+   "med": 0.24349100986537114,
+   "p95": 0.9276241913794105
+  },
+  "(10.0, 20.0]": {
+   "n": 3688,
+   "med": 0.1622601818950946,
+   "p95": 1.2402951766962653
+  },
+  "(20.0, 40.0]": {
+   "n": 2855,
+   "med": 0.091398734603027,
+   "p95": 0.7216645420524395
+  },
+  "(40.0, 1000000000.0]": {
+   "n": 944,
+   "med": 0.09989485145115923,
+   "p95": 0.4743309690633465
+  }
+ },
+ "learned_readout_cv": {
+  "e_y": {
+   "ridge_err": {
+    "n": 24917,
+    "med": 0.17057589948284474,
+    "p95": 0.9279034348170493
+   },
+   "zero_err": {
+    "n": 24917,
+    "med": 0.061449277101568875,
+    "p95": 0.7611323220024993
+   },
+   "n": 24917,
+   "ridge_err_lanefollow": {
+    "n": 15115,
+    "med": 0.16613582728692208,
+    "p95": 0.6679668631452585
+   },
+   "zero_err_lanefollow": {
+    "n": 15115,
+    "med": 0.06162393172021175,
+    "p95": 0.48656716029873726
+   }
+  },
+  "e_psi": {
+   "ridge_err": {
+    "n": 24917,
+    "med": 0.017586233445677113,
+    "p95": 0.15642296677776776
+   },
+   "zero_err": {
+    "n": 24917,
+    "med": 0.009176720988609176,
+    "p95": 0.12545370426109057
+   },
+   "n": 24917,
+   "ridge_err_lanefollow": {
+    "n": 15115,
+    "med": 0.013365666349079933,
+    "p95": 0.08073390860352954
+   },
+   "zero_err_lanefollow": {
+    "n": 15115,
+    "med": 0.00847343901922318,
+    "p95": 0.07357859999999995
+   }
+  }
+ }
+}
