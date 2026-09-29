@@ -126,6 +126,13 @@ smoke 的 route.log 显示「装载」其实是两段：client 进程起来 + im
 
 读法：U0–U3 全过 → 地图复用对 WL 数据是等价的，可以按图分组排程；UR 也过 → 两者叠加可用，报合起来的实测加速。U2 不过（例如夜里的灯、同图前驱的泛光，见 decisions 第 60 条）→ 只在白天切片上用，或者复用前另做灯的复位。
 
+## 追加臂：预热的 route 进程（zygote）（2026-09-29 14:20 main 追加，写于任何 zygote 数字之前）
+
+setup 里约一半是 route 进程自己的 Python import（torch、LEAD、leaderboard）。`b2d_run.py --zygote`（默认关）：每个 worker 在当前 route 跑的时候就起好下一个 route 进程，
+它先 import 这些重模块（不含我们自己会打补丁的 b2d_hooks、agent、p4，补丁顺序与平时一致），然后在 stdin 上等 route 参数，拿到后照常跑。仍然是一 route 一进程，崩溃隔离不变。
+- Z（只开 zygote）：floor 分叉点 78、148 的 14 个从头分支，`ZYGOTE=1`；判据同 U0–U3（对真值；这里 floor 是逐位相同，所以要求逐位相同：U0 位姿差 0、U1 标签全同）。
+- 组合臂：U（地图复用）与 UR（复用 + 回退）都开 `ZYGOTE=1`，报三者叠加的实测墙钟；单独的收益从 `phases.json` 的 zygote 预载时间与 Z 对 floor 的 setup 差读。
+
 ## 步骤
 
 1. 写 `scripts/carla_rewind.py`（快照 / 回退，按方法开关）并接进 `scripts/wl_fork_agent.py`（`wl_rewind` 配置键，job 里的 `actions` 列表；默认关，原路径逐字不变）。
