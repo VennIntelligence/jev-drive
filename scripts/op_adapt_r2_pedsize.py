@@ -12,7 +12,7 @@ E1 size bins (decision 63: < 500 px unreadable in both cells, >= 1500 px readabl
                   "e1" = E1 read-out slots (5 Hz, slot >= 9, px >= 100), "all" = 5 Hz window frames with the pedestrian
                   visible at P5's threshold (>= 68 equivalent px)
   nuScenes        corridor-pedestrian keyframes (nusc_labels.parquet), train and val: GT distance measured; px derived
-                  with a pinhole (height 1.75 m, CAM_FRONT 1.70 m ahead of the rear axle, f = 1266.4) and the
+                  with a pinhole in the Cosmos camera (height 1.75 m, CAM_FRONT 1.70 m ahead of the rear axle) and the
                   mask / box-height^2 ratio measured on the Cosmos pairs
   WOD train       corridor-pedestrian frames, not uncertain (wod_train_labels.parquet): lifted distance; px measured
                   from the matching YOLO26x front-camera detection's box (w x h scaled, times the Cosmos fill ratio)
@@ -33,7 +33,7 @@ from jevdrive.common import data_dir, n_cpus  # noqa: E402
 
 F_COSMOS = 640.0 / math.tan(math.radians(32.0))
 F_P5_SEG = 1113.5 / 2
-F_NUSC, NUSC_CAM_X, PED_H = 1266.4, 1.70, 1.75
+NUSC_CAM_X, PED_H = 1.70, 1.75
 REAR_AXLE_X = -1.388633220                     # hero rear axle relative to the actor centre (p4_carla)
 PX_BINS = (0, 100, 500, 1500, 6000, np.inf)
 D_BINS = (0, 10, 20, 30, np.inf)
