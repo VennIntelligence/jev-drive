@@ -38,7 +38,7 @@ FLOOR_FORKS = (78, 148)
 REUSE_SCRATCH_FORKS = (78, 148, 96, 60)
 UR_METHOD = "tree+w20f"                        # the rewind method of arm UR (map reuse + rewind)
 METHODS = ("poc", "teleport", "tree", "respawn", "tree+w10", "tree+w10v", "tree+w20", "tree+w40", "teleport+w20",
-           "tree+w20f", "tree+w10f", "tree+w40f")  # index = route id digits
+           "tree+w20f", "tree+w10f", "tree+w40f", "tree+w80f")  # index = route id digits
 TICK, CAM = 0.05, 4
 HORIZONS_S = (0.0, 0.5, 1.0, 2.0, 3.0)
 
