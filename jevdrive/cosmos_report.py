@@ -116,6 +116,9 @@ def per_pair_rule(per: pd.DataFrame) -> pd.DataFrame:
     2. outside-region LPIPS <= 1/3 seed-change LPIPS, PSNR >= 28 dB, openpilot d_comp <= d_raw_comp + 0.001;
     3. ring MAD (1-12 px outside the pedestrian mask) <= 2 x CARLA's + 2 grey levels and <= 1/4 seed-change ring MAD."""
     p = per.copy()
+    for c in ("lpips_alt", "ring_mad_alt", "d_alt", "d_rep"):     # runs without seed floors (the full run)
+        if c not in p:
+            p[c] = np.nan
     small = p.vis_frames < 10
     p["pp1"] = (small | (p.R_plus >= 0.8 * p.R_raw_plus)) & (p.H_minus <= p.H_raw_minus + 0.01)
     p["pp2"] = (p.lpips_pair <= p.lpips_alt / 3) & (p.psnr_pair >= 28) & (p.d_comp <= p.d_raw_comp + 0.001)
@@ -177,7 +180,7 @@ def report(variants: list, only: str = ""):
         c1, fr = check1(v, names_v)
         c23 = check2_3(v, names_v)
         per = c1.merge(c23, on="pair")
-        per = per_pair_rule(per)
+        per = per_pair_rule(per)                 # also adds NaN floor columns a run without floors lacks
         per.to_csv(RESULTS / f"per_pair_{v}.csv", index=False)
         rec = fr[fr.stream.isin(["raw_plus", "plus"]) & fr.vis]
         R = {s: rec[rec.stream == s].hit.mean() for s in ("raw_plus", "plus")}
