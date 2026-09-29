@@ -504,7 +504,7 @@ def _stage_ids2(runs: pd.DataFrame, stage: str) -> pd.DataFrame:
     for cls, n in (("ped", 4), ("cutin", 2), ("obstacle", 4)):
         b = sorted(set(zip(ev[ev.cls == cls].base_id, ev[ev.cls == cls].seed)))
         pick += [b[i] for i in rng.permutation(len(b))[:n]]
-    return runs[[(b, sd) in pick for b, sd in zip(runs.base_id, runs.seed)] & (runs.split == "eval")]
+    return runs[np.array([(b, sd) in pick for b, sd in zip(runs.base_id, runs.seed)]) & (runs.split == "eval").to_numpy()]
 
 
 def ids(stage: str, set_name: str, out: str) -> str:
