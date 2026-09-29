@@ -28,6 +28,7 @@ from .wl_traj import ACTIONS as WL_ACTIONS
 log = get_logger(__name__)
 ARMS = ("B", "Bh", "Bi", "T")
 S_DIM, N_TOK, D_TOK = 5, 24, 128
+T_STEPS = 4000                                       # T: 26x longer sequences; half of WL-1's 8 000 steps (batch 128), see the todo
 CAP_GB = 15.0                                        # VRAM budget of this lane (GPU 5 is shared with the Cosmos run)
 
 
@@ -355,7 +356,7 @@ def train(arm: str, seed: int, rl, steps: int | None = None) -> dict:
     model = (build_tok() if arm == "T" else M.build(dz)).cuda()
     rl.info(f"{arm} seed {seed}: {len(m)} rows (dz {dz}), {len(tr_st)} training windows ({int(m.src.sum())} intervention rows), {len(va_st)} inner-val windows")
     t0 = time.time()
-    cfg = {**W.CFG, **({"steps": steps} if steps else {})}
+    cfg = {**W.CFG, "steps": steps or (T_STEPS if arm == "T" else W.CFG["steps"])}
     curve = _train(model, data, tr_st, va_st, seed, rl, f"{arm}/seed{seed}", cfg, batch=128 if arm == "T" else cfg["batch"], compile_=arm != "T")
     rl.info(f"{arm}/seed{seed}: predictor fit {time.time() - t0:.0f} s")
     P = fit_probes(data, M.meta_for_probes(m), tr_rows, va_rows)
