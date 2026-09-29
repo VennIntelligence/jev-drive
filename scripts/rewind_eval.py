@@ -195,8 +195,8 @@ def render_cmp(test: Path, truth: Path, k: int) -> dict:
         return {}
     d = (j.lum - j.lum_s).abs()
     out = {"lum_frames": len(j), "lum_bad_frac": float((d > 10).mean()), "lum_dmed": float(d.median()),
-           "lum_dp95": float(d.quantile(0.95)), "blowout": int(blowout(la.clip.values) >= 0),
-           "blowout_truth": int(blowout(ls.clip.values) >= 0)}
+           "lum_dp95": float(d.quantile(0.95)), "blowout": int(blowout(la["clip"].values) >= 0),
+           "blowout_truth": int(blowout(ls["clip"].values) >= 0)}
     w = d[(d.index >= k - 44) & (d.index <= k + 60)]
     out["lum_bad_frac_win"] = float((w > 10).mean()) if len(w) else np.nan
     return out
