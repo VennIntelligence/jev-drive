@@ -1,0 +1,2 @@
+pair,vis_frames,R_raw_plus,R_plus,H_raw_minus,H_minus,psnr_pair,lpips_pair,d_comp,ring_mad_pair,ring_mad_raw,dv_med,lead_agree,c_recall,c_halluc,c_outside,c_ring,c_dv,all
+c000v00,22,0.9545454545454546,1.0,0.0,0.0,99.0,0.0,0.0,13.195098046070791,11.370272114028092,0.3196120262145996,1.0,True,True,True,True,True,True

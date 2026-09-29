@@ -1,12 +1,14 @@
 # Cosmos G4 全量生成：交接（2026-09-29，随阶段更新）
 
-最后更新：2026-09-29 10:40 CST。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
+最后更新：2026-09-29 12:25 CST（接手 agent）。登记、规则与读数都在 [todos/2026-09-28-cosmos-pilot.md](../todos/2026-09-28-cosmos-pilot.md) 的「全量生成」节；决策是 [decisions](../research/decisions.md) 第 56 条。
 
-## 现在处于哪一步
+## 现在处于哪一步（12:25 CST）
 
-- **stage 1（1 对）**：跑完第一对 `c000v00`（Town12 DynamicObjectCrossing，实例 0，v0）。确定性 0.000 m，QC 亮度差中位 0.01，GT 可见 22 帧，Cosmos x⁻ 116 s + x⁺ 107 s = 223 s（v2 是 213 s），controls 50 s。人工看图、eval 还没做。
-- **全量 CARLA 已经开跑（Cosmos 未开）**：main 10:2x 要求立刻用空闲卡跑全量 CARLA 渲染，Cosmos 等 10 对 checklist 过了再开（门控文件 `lane/COSMOS_GO`）。
-- **stage 10（10 对，铺在 GPU 0–4 上）**：还没启动。
+- stage 1 / stage 10 已完成，checklist 5 条全过（表在 [todo 执行记录](../todos/2026-09-28-cosmos-pilot.md) 末尾，数字在 `research/results/cosmos/full/`）。
+- main 11:59 已经自己 `touch lane/COSMOS_GO`（不等 stage 10 checklist）；5 个 Cosmos worker 在 GPU 0–4 上稳态 **219 s / 对**，卡上 VRAM 57–62 GB、峰值 ≤ 65 GiB，util 100%。
+- 全量 CARLA 12:21 起是 **每卡 6 个 server**（idx 块 266..271），带 `B2D_KEEP_STREET_LIGHTS=1`；正在做的 invocation 4 是 612 个变体的第 1 遍（1224 条 route，之前的 chunk 被 DRAIN 打断后补完）。
+- 预计的风险点：手上 READY 的 93 对够 Cosmos 干约 1.1 h（12:00 起），而第 1 遍 chunk 要 ~80 min，之后第 2 遍才出新对，所以 13:10 前后 Cosmos 可能有一段空档。之后每个 invocation 先排第 2 遍（p3, p2, 再 pass 1），应当接得上。
+- 外推：Cosmos 5 卡 24.4 h（约 12:00 → 次日 12:30），CARLA 约 890 server·s / 对，30 个 server 约 16.5 h（共卡时会慢）。GPU 5 归世界模型训练，GPU 6 归另一条线，都不用。
 
 ## 做好了什么、在哪
 
@@ -26,25 +28,38 @@
 
 | tmux 窗口（session `jev`） | 做什么 | 根目录（box `$DATA_DIR/runs/…`） | 信号文件 |
 |:--|:--|:--|:--|
-| `cosmos-full`（pane 32530，驱动 python 32534） | 全量：CARLA 两遍 + controls；Cosmos 等 `COSMOS_GO` | `cosmos_full/` | `cosmos_full/lane/{STATUS,DONE,ERROR,CARLA_DONE,CONTROLS_DONE}` |
-| `cf-stage1`（pane 20171，驱动 20175） | stage 1，收尾中 | `cosmos_full/stage1/` | `cosmos_full/stage1/lane/…` |
+| `cosmos-full`（驱动 PID 用 `tmux list-panes -t jev:cosmos-full -F "#{pane_pid}"` 再取它的子进程） | 全量：CARLA 两遍 + controls + 5 个 Cosmos worker | `cosmos_full/` | `cosmos_full/lane/{STATUS,DONE,ERROR,DRAIN,CARLA_DONE,CONTROLS_DONE,COSMOS_GO}` |
+| `cf-stage1`、`cf-stage10`、`cf-warm` | 已结束（窗口里只剩 shell），可以 `tmux kill-window` | `cosmos_full/stage1`、`stage10` | 无 |
+
+全量驱动的启动命令（重开要一字不差，环境变量要放在 `env` 后面，`tmux_run.sh` 不继承 ssh 的环境；漏了就会退回默认目录，出过一次事故）：
+
+```bash
+ssh autodl 'cd ~/data/jev-drive && scripts/tmux_run.sh cosmos-full env B2D_KEEP_STREET_LIGHTS=1 CARLA_W=0:6,1:6,2:6,3:6,4:6 CARLA_IDX_OFF=6 CARLA_SPAN=6 COSMOS_SLOTS=0,1,2,3,4 scripts/cosmos_full.sh --target 2000'
+```
+
+重开前：`touch lane/DRAIN` 让驱动收尾，等驱动 PID 退出（约 3–6 min），`rm lane/DRAIN lane/ERROR`，`tmux kill-window -t jev:cosmos-full`。DRAIN 打断的第 2 遍对会被记成 `pass2_failed`（现在写进正确的列），**重开前要把 ctl.csv 里这些行删掉**（先备份 ctl.csv），否则那些对永远不会被重排；第 1 遍被打断的变体重开后自动补完。
 
 每次 CARLA 调用的 b2d_run PID 在 `<root>/carla_logs/inv<NNN>-gpu<g>.pid`，日志同名 `.log`；Cosmos worker 的 PID 在 `<root>/cosmos_logs/<slot>.pid`。
 进度：`<root>/lane/STATUS`（每次调用一行，Cosmos 阶段每小时一行）；机器可读 `runs/cosmos_full/lane/<时间戳>/events.jsonl`。
 状态表：`variants.csv`（排了哪些变体）、`sel.csv`（选窗结果）、`ctl.csv`（controls / QC 结果），`pairs/<pair>/done.json`（Cosmos 完成）。
 
-## 等待命令（box 侧阻塞，一个阶段一次）
+## 监看命令
 
 ```bash
+# one-shot status
+ssh autodl 'D=$DATA_DIR/runs/cosmos_full; tail -n 4 $D/lane/STATUS | cut -c1-250; ls $D/pairs/*/done.json | wc -l; nvidia-smi --query-gpu=index,utilization.gpu,memory.used --format=csv,noheader | head -5; df -h $DATA_DIR | tail -1'
+# Cosmos seconds / pair and card peak of the last pair per slot; READY stock vs done pairs
+ssh autodl 'D=$DATA_DIR/runs/cosmos_full; for g in 0 1 2 3 4; do grep -h card_peak $D/cosmos/g$g/*/events.jsonl | tail -1 | cut -c1-220; done; echo READY $(ls $D/clips/*/READY | wc -l) done $(ls $D/pairs/*/done.json | wc -l)'
+# blocking wait for the whole run (returns only on DONE / ERROR)
 ssh autodl 'L=$DATA_DIR/runs/cosmos_full/lane; timeout 10800 bash -c "until [ -e $L/DONE ] || [ -e $L/ERROR ]; do sleep 60; done"; tail -5 $L/STATUS'
 ```
 
-## 下一步
+看什么：Cosmos 每对应在 210–230 s；VRAM 每卡 < 80 GB（过去峰值 65 GiB）；READY 库存别降到 0（降到 0 说明 CARLA 供不上，可以在 invocation 边界给某张卡加 server，见下）；`STATUS` 里每个 invocation 的 route 完成率、选窗通过率（约 0.42–0.46）和 QC 标记率。盘低于 250 GB 驱动自己暂停 CARLA 输出。
 
-1. stage 1：看 `c000v00` 的并排图，跑 `scripts/cosmos_full_check.sh stage1 1`（注意：stage 1 的 worker 是旧代码，G4b npy 在 `stage1/eval/out/G4b/`，先 `mv` 到 `stage1/out/G4b/`）。
-2. 预热文本编码缓存（避免 worker 在卡上临时多占 16 GB）：`python -m jevdrive.cosmos_full prompts` 写 `te_prompts.txt`，再用 worker 的 `--warm` 在一张卡上算一遍（代码待提交）。
-3. stage 10：`COSMOS_FULL_DIR=cosmos_full/stage10 CARLA_W=0:1,1:1,2:1,3:1,4:1 CARLA_IDX_OFF=0 CARLA_SPAN=6 COSMOS_SLOTS=0,1,2,3,4 COSMOS_GO=1 scripts/cosmos_full.sh --target 10 --insts 0,68,123,167,11,42,7,99,4,96 --keep-npy`（tmux 窗口 `cf-stage10`），跑完 `scripts/cosmos_full_check.sh stage10 1`，按 todo 的 checklist 判。
-4. checklist 过：`touch $DATA_DIR/runs/cosmos_full/lane/COSMOS_GO`，全量的 5 个 Cosmos worker 自己起来。不过：停批（`touch …/lane/DRAIN`），报 main。
+## 还没做 / 待 main 决定
+
+- 加卡：GPU 5、6 现在不是这条 lane 的。要加卡就是三步：调度表 `cosmos-full` 行的 `gpus` 加上那张卡（idx 块是 `260 + 12k` 按在 gpus 里的位置 k 算，先 `sch_table.py check`），`CARLA_W` 里加 `5:6`，`COSMOS_SLOTS` 里加 `5`，然后按上面的 DRAIN 流程重开驱动。已有 worker 不需要停手，`COSMOS_SLOTS` 多出来的 slot 是新进程；但驱动重开时会把旧 worker 一起收掉再起，所以要在 invocation 边界做。
+- 全量结束后：`python -m jevdrive.cosmos_full summary`，把 `research/results/cosmos/full/` 拉回 Mac，decisions 第 56 条补全量结果；stage 10 里没开路灯开关渲染的日落对 c007v01 的旧输出在 `stage10/pairs_preflag/`（可以由 main 决定删不删）。
 
 ## 每种信号怎么办
 
@@ -56,6 +71,7 @@ ssh autodl 'L=$DATA_DIR/runs/cosmos_full/lane; timeout 10800 bash -c "until [ -e
 
 - 停进程只按 PID（上面的 pid 文件），不要 `pkill -f`。运行中的 bash 脚本不要被 `git pull` 改掉（`cosmos_full.sh` 一开始就 `exec` 成 python，可以 pull）。
 - 两个 lane 实例（全量 + stage）共用调度表的一行，靠 `CARLA_IDX_OFF` / `CARLA_SPAN` 分 server index 子块，不要让两个实例用同一个子块。
-- 每卡 VRAM：CARLA（带 Cosmos 相机）约 6.5 GB / 个，Cosmos worker 稳态约 30 GB，遇到新 prompt 时文本编码器临时上卡再多约 16–20 GB（stage 1 峰值 50.5 GB）。每卡 6 个 CARLA + 1 个 Cosmos 稳态约 69 GB，临时峰值会超；所以要先预热文本编码缓存。
-- 渲染 QC 只比 x⁺ / x⁻ 两边的亮度，两个世界同时出同一种故障看不出来（已登记为接受的漏检）。另一个 Opus 在 GPU 6 上查渲染故障根因；如果 main 转来修正（比如固定曝光），只影响故障 clip 的，用 `COSMOS_RGB_ATTRS` 重开驱动（之后的第 2 遍与重渲都带上），已标记的对会自动重渲一次；会改变正常帧的，先报 main。
+- 每卡 VRAM：CARLA（带 Cosmos 相机）约 6.5 GB / 个，Cosmos worker 稳态约 30 GB，遇到新 prompt 时文本编码器临时上卡再多约 16–20 GB（stage 1 峰值 50.5 GB）。每卡 6 个 CARLA + 1 个 Cosmos 稳态约 60 GB，实测峰值 65 GiB；文本编码缓存已预热（`runs/cosmos_full/te_cache`，stage 目录里是指向它的软链）。
+- 渲染 QC 只比 x⁺ / x⁻ 两边的亮度，两个世界同时出同一种故障看不出来（已登记为接受的漏检）。另一个 Opus 在 GPU 6 上查渲染故障根因；如果 main 转来修正（比如固定曝光），只影响故障 clip 的，用 `COSMOS_RGB_ATTRS` 重开驱动（之后的第 2 遍与重渲都带上），已标记的对会自动重渲一次；会改变正常帧的，先报 main。路灯修正已经用 `B2D_KEEP_STREET_LIGHTS=1` 上了（11:43 起），别忘了每次重开都要带。
 - `runs/cosmos_full/lane/DRAIN` 存在时驱动不会开新的 CARLA 调用，重开前要删掉。
+- 不要用 `pgrep -f` / `pkill -f`；用 tmux pane 的子进程或 pid 文件。

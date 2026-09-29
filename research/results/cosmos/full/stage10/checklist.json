@@ -1,0 +1,42 @@
+{
+ "stage": "stage10",
+ "variants": 36,
+ "routes_tried": 102,
+ "routes_done": 102,
+ "route_completion": 1.0,
+ "select": {
+  "ok": 15,
+  "impure": 15,
+  "window_too_early": 6
+ },
+ "select_ok_rate": 0.4166666666666667,
+ "controls_first_render": {
+  "ok": 12,
+  "qc_render": 3
+ },
+ "qc_flag_rate_first_render": 0.2,
+ "nondeterministic": 0,
+ "controls_final": {
+  "ok": 12
+ },
+ "pairs_done": 12,
+ "cosmos_s_per_pair": {
+  "median": 209.1353713274002,
+  "max": 227.42890524864197,
+  "card_peak_gib": 75.1781005859375
+ },
+ "carla_server_s_per_pair": {
+  "median": 522.0,
+  "max": 784.3999999999999
+ },
+ "route_wall_s": {
+  "median": 134.85
+ },
+ "pairs_checked": 12,
+ "pairs_all_pass": 11,
+ "dv_le_1_share": 1.0,
+ "recall_ratio_min": 0.8333333333333334,
+ "ring_mad_pair_med": 8.901985073597224,
+ "ring_mad_raw_med": 6.953276612889577,
+ "storage_outside_support_maxdiff": 0
+}

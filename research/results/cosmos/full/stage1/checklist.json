@@ -1,0 +1,40 @@
+{
+ "stage": "stage1",
+ "variants": 3,
+ "routes_tried": 10,
+ "routes_done": 10,
+ "route_completion": 1.0,
+ "select": {
+  "ok": 2,
+  "impure": 1
+ },
+ "select_ok_rate": 0.6666666666666666,
+ "controls_first_render": {
+  "ok": 2
+ },
+ "qc_flag_rate_first_render": 0.0,
+ "nondeterministic": 0,
+ "controls_final": {
+  "ok": 2
+ },
+ "pairs_done": 1,
+ "cosmos_s_per_pair": {
+  "median": 222.6699194908142,
+  "max": 222.6699194908142,
+  "card_peak_gib": 50.50811767578125
+ },
+ "carla_server_s_per_pair": {
+  "median": 320.4,
+  "max": 320.4
+ },
+ "route_wall_s": {
+  "median": 83.6
+ },
+ "pairs_checked": 1,
+ "pairs_all_pass": 1,
+ "dv_le_1_share": 1.0,
+ "recall_ratio_min": 1.0476190476190477,
+ "ring_mad_pair_med": 13.195098046070791,
+ "ring_mad_raw_med": 11.370272114028092,
+ "storage_outside_support_maxdiff": 0
+}

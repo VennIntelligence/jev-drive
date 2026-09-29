@@ -1,0 +1,17 @@
+{
+ "pairs_done": 12,
+ "variants": 36,
+ "selected_ok": 15,
+ "select_reasons": {
+  "ok": 15,
+  "impure": 15,
+  "window_too_early": 6
+ },
+ "controls_reasons": {
+  "ok": 12
+ },
+ "qc_flags_first_render": 3,
+ "cosmos_s_per_pair_median": 219.2038711309433,
+ "instances_used": 6,
+ "wall_h": 0.19
+}

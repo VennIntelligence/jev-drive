@@ -444,3 +444,23 @@ x⁻ 写回无损视频当锚；x⁺ 用自己的 edgeE 重新生成，行人像
 GPU 0–4（用户给这条 lane），调度表行 `cosmos-full`；GPU 5 是 WL 特征，GPU 6 是测试卡，都不用。CARLA 与 Cosmos 共用这 5 张卡：每卡 ≤ 6 个 CARLA、≥ 8 GB 空闲、≤ 75 GB。CARLA 启动走全箱的 start slot（`b2d_run.py`）。每卡几个 CARLA、几个 Cosmos 由 profiling 定（见执行记录）。
 
 ### 执行记录
+
+**2026-09-29 12:25 CST，分级启动结果（stage 1 与 stage 10，按上面登记的 checklist 逐条判）。** 数字在 `research/results/cosmos/full/{stage1,stage10}/`，图在 `research/figs/cosmos/`（`c*_G4b.webp` 是逐对并排，`stage10_montage.jpg` 是四对同帧拼图：CARLA x⁺ | Cosmos x⁺ | Cosmos x⁻）。
+
+| checklist 条目 | 判据 | stage 10 实测 | 结论 |
+|:--|:--|:--|:--|
+| 1 完成率 | CARLA 完成 ≥ 95%，无 server 反复崩 | 102 / 102 条 route 完成（另有 stage 1 的 10 / 10） | 过 |
+| 2 选窗与 QC | QC 标记 ≤ 15%，确定性 0 失败 | 36 个变体：选窗 ok 15、impure 15、window_too_early 6（通过率 0.42）；确定性失败 0；**真实 QC 标记 0 / 12**（`checklist.json` 里的 0.2 是把 3 个日落对手工排进重渲、按标记记账造成的，不是渲染故障） | 过 |
+| 3 G4 逐对数字 | ≥ 8 / 10 对全过 | 12 对里 11 对全过；召回比最低 0.83，x⁻ 幻觉 0，区外 PSNR 99 / LPIPS 0（存储读回后 maxdiff 0），openpilot 速度差 ≤ 1 m/s 的对 100%；唯一不过的是 c096v00 的环带 MAD（13.8，CARLA 原图 1.7，上限 5.5） | 过 |
+| 4 成本 | Cosmos 每对中位 ≤ 260 s | 中位 209 s（最大 227 s），全量共卡稳态 218–221 s | 过 |
+| 5 画面 | 人工看并排图 | 行人只在 x⁺ 里出现，x⁻ 没有；背景两边一致；c007v01（WetSunset）的树冠有 Cosmos 的发白 / 点状伪影，x⁺ 与 x⁻ 都有，不影响配对 | 过 |
+
+**渲染修正（main 转来，decisions 60）**：日落 / 夜晚第一条 route 的变暗来自 RouteLightsBehavior 关掉路灯，`B2D_KEEP_STREET_LIGHTS=1` 保住路灯。第 2 遍与重渲从 11:43 起都带这个开关（`agent.json` / `meta.json` / `spec.json` 的 `harness.keep_street_lights` 逐对记录）。此前没带开关渲过的第 2 遍里，太阳高度 < 25° 的对重渲：全量 3 对（c102v00、c164v00、c204v00，重渲后 QC 都过，亮度几乎不变，这三对本来就不是夜晚），stage 10 三个日落对（c007v01、c007v02、c099v01）。stage 10 里其余没开关渲的都是白天，保留。
+
+**这一轮暴露并修好的两个驱动 bug**（都已提交）：① `append()` 把 `pass2_failed` 这类短行写进 ctl.csv 的错列（`reason` 读回来是 NaN），导致 DRAIN 中途打断的第 2 遍对永远不会被重排；② 因为 DRAIN 被打断的第 1 遍 chunk（有 variants 没有 sel）重启后没人接手，会直接走到 CARLA_DONE。现在重启会先把没选窗的变体补完。事故：一次启动漏传环境变量，stage 10 的驱动用默认值（主目录）空转了约 1 分钟，往主 `lane/` 写了 `CARLA_DONE` / `CONTROLS_DONE` 各一个和几行 STATUS，已删除这两个文件，没有改任何数据表。
+
+**外推 2 000 对（全量共卡实测）**：Cosmos 每对 219 s，5 个 worker = 82 对 / h，2 000 对约 **24.4 h**，6 张卡约 20 h，7 张卡约 17 h。CARLA 每条 route 的墙钟：第 1 遍 123 s，第 2 遍 141 s，重渲 103 s；选窗通过率 0.42–0.46、QC 通过约 0.96，折合每交付 1 对约 **890 server·s**（含选窗失败的浪费），2 000 对 1.78 M server·s，25 个 server 约 20 h，30 个约 16.5 h。全程受 Cosmos 约束，约 24–28 h（≤ 36 h）。放宽 impure 规则（选窗通过率 0.44 → 0.6）只省 CARLA 约 19%，Cosmos 是瓶颈，不缩短墙钟。
+
+![stage 10 同帧拼图](../research/figs/cosmos/stage10_montage.jpg)
+
+四行依次是 c007v01（WetSunset）、c167v00、c099v01、c096v00；每行左为 CARLA x⁺，中为 Cosmos x⁺，右为 Cosmos x⁻。看行人：中间列有，右列没有；看背景：中、右两列除行人外一致。逐对动图：[c000v00](../research/figs/cosmos/c000v00_G4b.webp)、[c007v01](../research/figs/cosmos/c007v01_G4b.webp)、[c096v00](../research/figs/cosmos/c096v00_G4b.webp)、[c099v01](../research/figs/cosmos/c099v01_G4b.webp)、[c167v00](../research/figs/cosmos/c167v00_G4b.webp)。

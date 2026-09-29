@@ -1,0 +1,16 @@
+{
+ "pairs_done": 1,
+ "variants": 3,
+ "selected_ok": 2,
+ "select_reasons": {
+  "ok": 2,
+  "impure": 1
+ },
+ "controls_reasons": {
+  "ok": 2
+ },
+ "qc_flags_first_render": 0,
+ "cosmos_s_per_pair_median": 232.26164293289185,
+ "instances_used": 1,
+ "wall_h": 0.36
+}
