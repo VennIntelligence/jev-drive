@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # op-lb lane (scripts/op_lb.py): frame caches, navtrain-subset metric cache, openpilot `none` rollouts, the
 # equivalence check against op_interp's stored navfull / navhard plans, export + official scoring + report.
-# Resumable: every step is skipped once its output exists. STATUS / DONE / ERROR in $DATA_DIR/runs/op_lb/.
+# Resumable: every step is skipped once its output exists. STATUS / DONE / ERROR / logs in $DATA_DIR/runs/op_lb/lane/.
 #
 #   scripts/tmux_run.sh op-lb scripts/op_lb_lane.sh [step ...]      steps (default all, in this order):
 #     prep mcache gimm warp run compare score report arms
@@ -11,7 +11,7 @@
 #      VRAM_GB / CAP_GB (per-process cap / pause threshold of the card's total use), NAVSIM_THREADS (scoring).
 set -uo pipefail
 repo=$(cd "$(dirname "$0")/.." && pwd); cd "$repo"
-R=$DATA_DIR/runs/op_lb; mkdir -p "$R"
+R=$DATA_DIR/runs/op_lb; L=$R/lane; mkdir -p "$L"
 CPUS=${CPUS:-168-183}; GPUS=${GPUS:-"0 1 2 3 4 6"}; RUN_GPU=${RUN_GPU:-6}; PROCS=${PROCS:-8}
 VRAM_GB=${VRAM_GB:-12}; CAP_GB=${CAP_GB:-78}
 export OPI_ROOT=op_lb CUDA_DEVICE_ORDER=PCI_BUS_ID NAVSIM_THREADS=${NAVSIM_THREADS:-14}
@@ -21,8 +21,8 @@ VF="$T $DATA_DIR/envs/vfi/bin/python scripts/op_lb.py"
 PJ="$T $DATA_DIR/envs/jevdrive/bin/python scripts/op_interp.py"
 ALL=(lb_navtest lb_navhard lb_navtrain)
 declare -A VER=([lb_navtest]=v1 [lb_navhard]=v2 [lb_navtrain]=v1) SPLIT=([lb_navtest]=navtest [lb_navhard]=navhard_two_stage [lb_navtrain]=navtrain)
-st() { echo "$(date '+%F %T') $*" | tee -a "$R/STATUS"; }
-die() { st "ERROR $*"; echo "$*" > "$R/ERROR"; exit 1; }
+st() { echo "$(date '+%F %T') $*" | tee -a "$L/STATUS"; }
+die() { st "ERROR $*"; echo "$*" > "$L/ERROR"; exit 1; }
 chunks_left() { local d=$1 m=$2 n; n=$(python3 -c "import json;print(len(json.load(open('$R/$d/meta.json'))['names']))")
   echo $(( (n + 127) / 128 - $(ls "$R/$d/$m.chunks" 2>/dev/null | grep -c '\.done$') )); }
 
@@ -34,11 +34,11 @@ step_prep() {
 }
 step_mcache() {   # navtrain subset metric cache, v1.1 devkit (OPENBLAS_CORETYPE=Haswell enforced by navsim_zs_score.sh)
   local c=$DATA_DIR/runs/navsim/metric_cache/v1_navtrain_oplb
-  [[ -f $R/mcache.done ]] && return 0
+  [[ -f $L/mcache.done ]] && return 0
   st "metric cache v1 navtrain subset -> $c"
   TOKENS_FILE=$R/lb_navtrain/tokens.txt CACHE_NAME=v1_navtrain_oplb $T scripts/navsim_zs_score.sh cache v1 navtrain \
-    > "$R/mcache.log" 2>&1 || die mcache
-  n=$(find "$c" -name metric_cache.pkl | wc -l); st "metric cache: $n pkl"; touch "$R/mcache.done"
+    > "$L/mcache.log" 2>&1 || die mcache
+  n=$(find "$c" -name metric_cache.pkl | wc -l); st "metric cache: $n pkl"; touch "$L/mcache.done"
 }
 step_gimm() {
   local left=0 d
@@ -47,7 +47,7 @@ step_gimm() {
   st "gimm: $left chunks on GPUs $GPUS"
   local pids=()
   for g in $GPUS; do
-    $VF synth --data "${ALL[@]}" --method gimm --gpu "$g" --vram-gb "$VRAM_GB" --cap-gb "$CAP_GB" > "$R/gimm_gpu$g.log" 2>&1 &
+    $VF synth --data "${ALL[@]}" --method gimm --gpu "$g" --vram-gb "$VRAM_GB" --cap-gb "$CAP_GB" > "$L/gimm_gpu$g.log" 2>&1 &
     pids+=($!)
   done
   for p in "${pids[@]}"; do wait "$p" || st "gimm worker $p exited $?"; done
@@ -77,7 +77,7 @@ step_compare() {
   for p in navtest:navfull navhard:navhard; do
     local d=lb_${p%%:*} o=${p##*:}
     $DATA_DIR/envs/jevdrive/bin/python scripts/op_lb.py compare "$R/$d/plans/gimm@cinque.npz" \
-      "$DATA_DIR/runs/op_interp/$o/plans/gimm_g0.2@cinque.npz" --out "$R/$d/equivalence.json" | tee -a "$R/STATUS" || die "compare $d"
+      "$DATA_DIR/runs/op_interp/$o/plans/gimm_g0.2@cinque.npz" --out "$R/$d/equivalence.json" | tee -a "$L/STATUS" || die "compare $d"
   done
 }
 score() {   # data
@@ -109,4 +109,4 @@ step_arms() {
 steps=("$@"); (( ${#steps[@]} )) || steps=(prep mcache gimm warp run compare score report arms)
 st "start: ${steps[*]} (CPUS $CPUS, GPUS $GPUS, RUN_GPU $RUN_GPU)"
 for s in "${steps[@]}"; do "step_$s"; done
-st "DONE ${steps[*]}"; touch "$R/DONE"
+st "DONE ${steps[*]}"; touch "$L/DONE"

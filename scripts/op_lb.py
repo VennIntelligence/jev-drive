@@ -233,7 +233,7 @@ def cmd_synth(a):
 # modeld's rising-edge pulse, so a desire held from T on pulses once, at the first step >= T. Register new ones here.
 
 DESIRES = ("none", "turnLeft", "turnRight", "laneChangeLeft", "laneChangeRight", "keepLeft", "keepRight")
-T_ON = (-1.5, -1.0, -0.5, 0.0)
+T_ON = {"-1.5": -1.5, "-1.0": -1.0, "-0.5": -0.5, "0": 0.0}      # names as the pre-registration (todos/2026-09-29-op-leaderboard.md)
 T20 = np.round(np.arange(-30, 1) * 0.05, 3)                  # the 20 Hz steps from -1.5 s to t0
 
 
@@ -262,7 +262,7 @@ def sch_turn_onset(tok, ts, thr_deg=5.0):
 
 
 SCHEDULES = {"none": lambda tok, ts: np.zeros(len(ts), int),
-             **{f"turn@{T:g}": _held("turn", T) for T in T_ON}, **{f"lc@{T:g}": _held("lc", T) for T in T_ON},
+             **{f"turn@{k}": _held("turn", T) for k, T in T_ON.items()}, **{f"lc@{k}": _held("lc", T) for k, T in T_ON.items()},
              "turn@onset": sch_turn_onset}
 
 
