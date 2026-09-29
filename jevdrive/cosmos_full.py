@@ -17,7 +17,7 @@ controls (CPU): determinism against pass 1, the render QC, then the frozen G4 in
 and blend alpha of jevdrive/cosmos_v2.py) and GT; a flagged pair is re-rendered once, then dropped.
 Cosmos: scripts/cosmos_full_worker.py, one per Cosmos slot, takes READY pairs (x- once, x+ anchored, feathered blend).
 
-  build | select-test | controls-test | run | status | checklist        (python -m jevdrive.cosmos_full <step>)
+  build | controls-test | run | summary        (python -m jevdrive.cosmos_full <step>; the lane: scripts/cosmos_full.sh)
 Selection, QC and checklist rules are registered in the todo before any full-run data exists.
 """
 import json
@@ -69,6 +69,11 @@ def full(*parts) -> Path:
     return p
 
 
+def main_dir() -> Path:
+    """Where the scene pool lives (staged pilots run in sub-directories of it)."""
+    return data_dir() / "runs" / "cosmos_full"
+
+
 def rid(base: int, world: int, seed: int) -> str:
     return str(base * 100 + world * 10 + seed)
 
@@ -89,7 +94,7 @@ def _scenarios(path: Path) -> list[dict]:
 
 def pool() -> pd.DataFrame:
     """Town12 long-route pedestrian clips, one per instance, away from the Bench2Drive pedestrian routes."""
-    c = pd.DataFrame(_scenarios(full() / "ped_clips.xml"))
+    c = pd.DataFrame(_scenarios(main_dir() / "ped_clips.xml"))
     c = c[c.town == TOWN].reset_index(drop=True)
     xy, keep = c[["tx", "ty"]].to_numpy(), np.ones(len(c), bool)
     for i in range(1, len(c)):
@@ -112,9 +117,9 @@ def variant(inst: int, v: int, own: dict) -> dict:
 
 def build():
     p = pool()
-    src = {r.get("id"): r for r in ET.parse(full() / "ped_clips.xml").getroot().findall("route")}
+    src = {r.get("id"): r for r in ET.parse(main_dir() / "ped_clips.xml").getroot().findall("route")}
     p["weather_route"] = [json.dumps({k: float(src[c].find("weathers")[0].get(k)) for k in WKEYS}) for c in p["clip"]]
-    p.to_csv(full() / "pool.csv", index=False)
+    p.to_csv(main_dir() / "pool.csv", index=False)
     RES.mkdir(parents=True, exist_ok=True)
     p.drop(columns="weather_route").to_csv(RES / "scenes.csv", index=False)
     log.info("pool: %d %s instances %s", len(p), TOWN, p.family.value_counts().to_dict())
@@ -123,8 +128,8 @@ def build():
 
 def route_elems(rows: pd.DataFrame, worlds: list[int]) -> list:
     """Variant routes: the clip's route with its id, weather and (x-) p5_suppress."""
-    pl = pd.read_csv(full() / "pool.csv", dtype={"clip": str}).set_index("inst")
-    src = {r.get("id"): r for r in ET.parse(full() / "ped_clips.xml").getroot().findall("route")}
+    pl = pd.read_csv(main_dir() / "pool.csv", dtype={"clip": str}).set_index("inst")
+    src = {r.get("id"): r for r in ET.parse(main_dir() / "ped_clips.xml").getroot().findall("route")}
     out = []
     for _, r in rows.iterrows():
         for k in worlds:
@@ -457,7 +462,7 @@ class Lane:
         self.target, self.keep_npy = target, keep_npy
         self.L = full("lane")
         self.rl = RunLog(*full().relative_to(data_dir() / "runs").parts, "lane")
-        self.pool = pd.read_csv(full() / "pool.csv", dtype={"clip": str})
+        self.pool = pd.read_csv(main_dir() / "pool.csv", dtype={"clip": str})
         if insts is not None:
             self.pool = self.pool[self.pool.inst.isin(insts)]
         self.row = _row()
@@ -549,24 +554,35 @@ class Lane:
         if time.time() - getattr(self, "_fed", 0) > 120:
             self._fed = time.time()
             self.feed()
+        from concurrent.futures.process import BrokenProcessPool
+        broken = False
         for f in [f for f in self.fut if f.done()]:
             pair, gen = self.fut.pop(f)
             try:
                 r = f.result()
+            except BrokenProcessPool:               # a controls process was killed (OOM): redo these pairs
+                broken = True
+                continue
             except Exception as e:                  # noqa: BLE001
                 r = {"pair": pair, "gen": gen, "reason": "controls_error", "error": repr(e)[:300]}
             self.append("ctl.csv", [r])
+        if broken:
+            self.status("controls pool broken (a process was killed); new pool, the affected pairs are fed again")
+            self.ctl_pool = ProcessPoolExecutor(self.ctl_pool._max_workers)
         for slot, (p, n, cmd, env) in list(self.workers.items()):
             if p.poll() is not None and p.returncode != 0 and not (self.L / "DRAIN").exists():
                 if n >= 5:
                     self.fail(f"Cosmos worker {slot} died {n + 1} times (rc {p.returncode})")
                 self.status(f"Cosmos worker {slot} exited rc {p.returncode}; restart {n + 1}")
+                for c in full("cosmos", "claims").iterdir():     # the pair it was on goes back to the queue
+                    if c.read_text() == f"g{slot}" and not (full("pairs") / c.name / "done.json").exists():
+                        c.unlink()
                 self.workers[slot] = (self.spawn_worker(cmd, env, slot), n + 1, cmd, env)
         if self.disk_gb() < self.floor:
-            (self.L / "DRAIN").touch()
             self.fail(f"disk {self.disk_gb():.0f} GB free < floor {self.floor:.0f}")
 
     def fail(self, msg: str):
+        (self.L / "DRAIN").touch()                  # running b2d_run routes and Cosmos pairs finish, nothing new starts
         self.status("ERROR: " + msg)
         (self.L / "ERROR").write_text(msg + "\n")
         raise SystemExit(1)
@@ -602,12 +618,13 @@ class Lane:
         Vi = V.set_index("pair")
         fin = C.drop_duplicates("pair", keep="last") if len(C) else pd.DataFrame(columns=["pair", "gen", "reason"])
         seen, inflight = set(fin.pair), {p for p, _ in self.fut.values()}
+        Si = S.drop_duplicates("pair", keep="last").set_index("pair")
         for p in S[S.reason == "ok"].pair:
             if p not in seen and p not in inflight and self.done2(Vi.loc[p], 2):
-                self.submit(p, False)
+                self.submit(p, False, Vi, Si)
         for p in fin[(fin.reason == "qc_render") & (fin.gen == "gen")].pair:
             if p not in inflight and self.done2(Vi.loc[p], 3):
-                self.submit(p, True)
+                self.submit(p, True, Vi, Si)
 
     def plan(self):
         """What the next invocation runs: pass 2 of selected pairs (as many as the target still needs), re-renders of
@@ -630,6 +647,8 @@ class Lane:
         p3 = [c.pair for _, c in fin.iterrows() if c.reason == "qc_render" and c.gen == "gen" and not done2(Vi.loc[c.pair], 3)
               and c.pair not in inflight]
         # a new chunk only while pass 1 is not still owed and the expectation is short
+        if self.disk_gb() < self.floor + 100:        # Cosmos is behind: no more CARLA output until it catches up
+            return [], [], pd.DataFrame(), {"disk_pause": round(self.disk_gb())}
         p1_open = [p for p in (V.pair if len(V) else []) if not (len(S) and p in set(S.pair))]
         new = pd.DataFrame()
         sel_rate = len(ok_sel) / len(S) if len(S) >= 20 else 0.6
@@ -658,9 +677,7 @@ class Lane:
                     rows.append(variant(i, v, json.loads(self.pool.set_index("inst").loc[i, "weather_route"])))
         return pd.DataFrame(rows)
 
-    def submit(self, pair: str, rerender: bool):
-        V = self.table("variants.csv").set_index("pair")
-        S = self.table("sel.csv").drop_duplicates("pair", keep="last").set_index("pair")
+    def submit(self, pair: str, rerender: bool, V: pd.DataFrame, S: pd.DataFrame):
         r = pd.concat([V.loc[pair], S.loc[pair, ["k0", "k1"]]])
         r["pair"], r["family"] = pair, self.pool.set_index("inst").loc[int(r.inst), "family"]
         self.fut[self.ctl_pool.submit(controls_pair, r, rerender)] = (pair, "gen3" if rerender else "gen")
@@ -697,6 +714,11 @@ class Lane:
                     while self.fut:
                         self.poll()
                         time.sleep(20)
+                    continue
+                if "disk_pause" in info:
+                    for _ in range(20):
+                        self.poll()
+                        time.sleep(30)
                     continue
                 break
             win = {}
@@ -787,7 +809,16 @@ def main():
     if a.step == "build":
         build()
     elif a.step == "run":
-        Lane(a.target, insts, a.keep_npy).run()
+        lane = Lane(a.target, insts, a.keep_npy)
+        try:
+            lane.run()
+        except SystemExit:
+            raise
+        except BaseException as e:               # noqa: BLE001  (a crash of the driver itself is an ERROR too)
+            import traceback
+            lane.status(f"ERROR: driver crashed: {e!r}")
+            (lane.L / "ERROR").write_text(traceback.format_exc())
+            raise
     elif a.step == "summary":
         print(json.dumps(Lane(a.target, insts, a.keep_npy).summary(), indent=1, default=str))
     elif a.step == "controls-test":

@@ -47,19 +47,21 @@ def write_mp4(path: Path, frames: np.ndarray, crf: int = 0):
     subprocess.run(cmd, input=np.ascontiguousarray(frames).tobytes(), check=True)
 
 
-def claim(root: Path, pair: str) -> bool:
+def claim(root: Path, pair: str, slot: str) -> bool:
     try:
-        os.close(os.open(root / "cosmos" / "claims" / pair, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644))
+        fd = os.open(root / "cosmos" / "claims" / pair, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        os.write(fd, slot.encode())
+        os.close(fd)
         return True
     except FileExistsError:
         return False
 
 
-def next_pair(root: Path):
+def next_pair(root: Path, slot: str):
     ready = sorted(root.glob("clips/*/READY"), key=lambda p: p.stat().st_mtime)
     for r in ready:
         pair = r.parent.name
-        if not (root / "pairs" / pair / "done.json").exists() and not (r.parent / "FAILED").exists() and claim(root, pair):
+        if not (root / "pairs" / pair / "done.json").exists() and not (r.parent / "FAILED").exists() and claim(root, pair, slot):
             return pair
     return None
 
@@ -108,12 +110,14 @@ def main():
         if a.target and len(list(root.glob("pairs/*/done.json"))) >= a.target:
             rl.info(f"target {a.target} reached")
             break
-        pair = next_pair(root)
+        pair = next_pair(root, a.slot)
         if pair is None:
-            if (lane / "CONTROLS_DONE").exists() and next_pair(root) is None:
+            if not (lane / "CONTROLS_DONE").exists():
+                time.sleep(30)
+                continue
+            pair = next_pair(root, a.slot)      # READY files written just before CONTROLS_DONE
+            if pair is None:
                 break
-            time.sleep(30)
-            continue
         cd, od = root / "clips" / pair, root / "pairs" / pair
         try:
             t1 = time.time()
