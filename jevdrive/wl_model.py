@@ -276,6 +276,7 @@ def train(arm: str, seed: int, rl, steps: int | None = None) -> dict:
     fa.drop(columns="cmds").to_parquet(d / "forks.parquet", index=False)
     (d / "curve.json").write_text(json.dumps(curve))
     torch.save({"state": model.state_dict(), "mu": data.mu.cpu(), "sd": data.sd.cpu(), "arm": arm, "seed": seed,
+                "probes": {k: (v[0], v[1].cpu(), float(v[2]) if not hasattr(v[2], "cpu") else v[2].cpu()) for k, v in P.items()},
                 "steps": steps or W.CFG["steps"], "n_params": sum(p.numel() for p in model.parameters())}, d / "model.pt")
     return {"arm": arm, "seed": seed, "fork_points": n, "dir": str(d), "n_params": sum(p.numel() for p in model.parameters())}
 
