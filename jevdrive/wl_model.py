@@ -275,7 +275,9 @@ def train(arm: str, seed: int, rl, steps: int | None = None) -> dict:
                         cmds=np.stack(fa.cmds.to_list()), **{f"p_{k}": v for k, v in rd.items()})
     fa.drop(columns="cmds").to_parquet(d / "forks.parquet", index=False)
     (d / "curve.json").write_text(json.dumps(curve))
-    return {"arm": arm, "seed": seed, "fork_points": n, "dir": str(d)}
+    torch.save({"state": model.state_dict(), "mu": data.mu.cpu(), "sd": data.sd.cpu(), "arm": arm, "seed": seed,
+                "steps": steps or W.CFG["steps"], "n_params": sum(p.numel() for p in model.parameters())}, d / "model.pt")
+    return {"arm": arm, "seed": seed, "fork_points": n, "dir": str(d), "n_params": sum(p.numel() for p in model.parameters())}
 
 
 def meta_for_probes(m):
@@ -286,7 +288,7 @@ def meta_for_probes(m):
 # ================================================================ critics and the registered readouts
 
 def _latest(arm, seed) -> Path | None:
-    fs = sorted((data_dir() / "runs" / "wl" / "model" / arm / f"seed{seed}").glob("*/preds.npz"))
+    fs = sorted((data_dir() / "runs" / "wl" / "model" / arm / f"seed{seed}").glob("*/model.pt"))
     return fs[-1].parent if fs else None
 
 

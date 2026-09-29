@@ -3,7 +3,7 @@
 #   scripts/tmux_run.sh wl-pipe scripts/wl_pipeline.sh     env: GPU=0 CPUS=150-165 STEPS="index opspec op vjepa z outcomes
 #                                                               train report" (default: all, in this order), ARMS, SEEDS
 # Each step appends to runs/wl/pipe/STATUS.md; the chain ends with DONE or ERROR (the failing step) in runs/wl/pipe/.
-# Resumable: vjepa / op skip what exists; train re-runs an arm x seed only without a preds.npz. NO_DONE=1: no DONE at the
+# Resumable: vjepa / op skip what exists; train re-runs an arm x seed only without a model.pt. NO_DONE=1: no DONE at the
 # end (a caller such as scripts/wl_full.sh runs more steps after these).
 set -uo pipefail
 : "${DATA_DIR:?DATA_DIR is not set}"
@@ -35,7 +35,7 @@ for s in "${STEPS[@]}"; do
         outcomes) run outcomes $PY -m jevdrive.wl_model outcomes ;;
         train)
             for a in "${ARMS[@]}"; do for sd in "${SEEDS[@]}"; do
-                if compgen -G "$DATA_DIR/runs/wl/model/$a/seed$sd/*/preds.npz" > /dev/null; then status "skip $a seed $sd (done)"; continue; fi
+                if compgen -G "$DATA_DIR/runs/wl/model/$a/seed$sd/*/model.pt" > /dev/null; then status "skip $a seed $sd (done)"; continue; fi
                 run "train $a seed $sd" $PY -m jevdrive.wl_model train --arm "$a" --seed "$sd"
             done; done ;;
         report) run report $PY -m jevdrive.wl_model report ;;
