@@ -467,7 +467,7 @@ def report() -> pd.DataFrame:
     lines = {"R1": max(0.25, 3 * floor["ped_hz"]), "R2_pos": max(0.3, 3 * floor["ego_pos3"]),
              "R2_v": max(0.3, 3 * floor["ego_dv"]), "R2_yaw": max(2.0, 3 * floor["ego_yaw"])}
     for arm, g in b[~fl | (b.gen == "gen_reuse")].groupby("arm"):
-        rb = g[(g.branch > 0) | (g.method == "reuse")]
+        rb = g[(g.branch > 0) | g.method.isin(["reuse", "zygote"])]
         if not len(rb):
             continue
         ha = hz[(hz.arm == arm) & (hz.route_id.isin(rb.route_id))]
