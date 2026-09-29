@@ -15,9 +15,9 @@ T = 0.25, 0.50, ... HORIZON s after the fork tick; the agent freezes it in world
   shift_L/R   op's path and speed, plus a lateral offset of +-3.0 m (left positive) with a 2 s cosine transition
 WL-2 adds four (todos/2026-09-29-wl2-prereg.md, "候选"):
   brake_mild    op's path, v(t) = max(0, v0 - 2 t)
-  shift_L/R_slow  the shift_L/R geometry (3.0 m, cosine over the distance shift_L covers in 2 s) at half of op's speed: the
-                shift path re-timed, not a 2 s transition at half speed (that is twice as sharp; the P7 executor realised only
-                ~55 % of its offset in the WL-2 pilot, 2026-09-29)
+  shift_L/R_slow  the shift geometry (3.0 m, 2 s cosine) on op's path at half of op's speed (= op_slow's path). The P7 executor
+                realises only ~1.5 m of it in 3 s (WL-2 pilot: median 1.55 / 1.54 m, sign 100 %); re-timing the shift over the
+                same distance was tried and is worse (median 1.06 / 0.93 m), so the definition stays
   nudge_L       op's path and speed, plus a left offset of 1.5 m with a 1.5 s cosine transition
 """
 import math
@@ -94,15 +94,6 @@ def _offset(path, sgn, amp, dur, t):
     return path + sgn * amp * ramp[:, None] * n
 
 
-def _offset_by_distance(path, s_along, sgn, amp, s_tr):
-    """`path` moved sideways by sgn * amp * ramp(s_along / s_tr), a cosine transition over the arc length s_tr."""
-    ramp = 0.5 * (1 - np.cos(np.pi * np.minimum(s_along / max(s_tr, 1e-6), 1.0)))
-    d = np.gradient(np.vstack([[0.0, 0.0], path]), axis=0)[1:]
-    n = np.column_stack((-d[:, 1], d[:, 0])) / np.maximum(np.hypot(*d.T), 1e-6)[:, None]
-    n[np.hypot(*d.T) < 1e-6] = (0.0, 1.0)
-    return path + sgn * amp * ramp[:, None] * n
-
-
 def candidates(op_plan, route_ego, v0, t=T):
     """{action: (len(t), 2) ego points at times t}. op_plan: (20, 2) ego plan (None -> the route centre line at v0);
     route_ego: the dense route ahead in ego coordinates (n, 2), starting near the ego; v0: speed (m/s)."""
@@ -123,8 +114,7 @@ def candidates(op_plan, route_ego, v0, t=T):
         op20 = np.asarray(op_plan, float).reshape(20, 2)
         for side, sgn in (("shift_L", 1.0), ("shift_R", -1.0)):      # offset normal to op's own heading at each point
             out[side] = _offset(op, sgn, SHIFT_M, SHIFT_S, T)
-            s_tr = float(np.interp(SHIFT_S, np.r_[0.0, T], np.r_[0.0, s_op]))         # distance shift_L covers in SHIFT_S
-            out[side + "_slow"] = _offset_by_distance(out["op_slow"], 0.5 * s_op, sgn, SHIFT_M, s_tr)
+            out[side + "_slow"] = _offset(out["op_slow"], sgn, SHIFT_M, SHIFT_S, T)
         out["brake_mild"] = _along(op20, _speed_profile(v0, MILD_DECEL, T))
         out["nudge_L"] = _offset(op, 1.0, NUDGE_M, NUDGE_S, T)
     return out
