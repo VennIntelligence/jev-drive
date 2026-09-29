@@ -46,6 +46,8 @@ if [[ -n ${ONE_GPU:-} ]]; then
     (( k >= 0 )) || { echo "GPU $ONE_GPU is not in the wm-loop row (${G[*]})"; exit 1; }
     G=("${G[$k]}"); IDX=("${IDX[$k]}"); POS=(0); NCH=1       # a single-card pilot gets all of the row's cores
 fi
+# IDX_OFFSET=n: this chain's servers are indices IDX + n .. (a second chain on the same card next to a running one; WORKERS=k)
+for i in "${!IDX[@]}"; do IDX[$i]=$(( IDX[i] + ${IDX_OFFSET:-0} )); done
 W=$(( ${WORKERS:-$ROW_W} < ROW_W ? ${WORKERS:-$ROW_W} : ROW_W ))
 mkdir -p "$OUT"
 echo "gen $$" >> "$OUT/pids.txt"
