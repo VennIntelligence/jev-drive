@@ -796,14 +796,73 @@ class Lane:
         return s
 
 
+def checklist(stage: str, pairs: list | None = None) -> dict:
+    """Staged-launch checklist (todo, registered before the full run) for runs/cosmos_full/<stage>: after
+    scripts/cosmos_full_check.sh has run the v2 readouts (per_pair_G4b.csv)."""
+    root = main_dir() / stage
+    out = RES / stage
+    V = pd.read_csv(root / "variants.csv", dtype={f"id{k}": str for k in WORLD})
+    S = pd.read_csv(root / "sel.csv")
+    C = pd.read_csv(root / "ctl.csv") if (root / "ctl.csv").exists() else pd.DataFrame(columns=["pair", "gen", "reason"])
+    done = pd.DataFrame([json.loads(f.read_text()) for f in root.glob("pairs/*/done.json")])
+    ids = [i for c in (f"id{k}" for k in WORLD) for i in V[c]]
+    runs = {i: json.loads((root / "gen" / "done" / f"{i}.json").read_text()) for i in ids if (root / "gen" / "done" / f"{i}.json").exists()}
+    tried = {i for i in ids if (root / "gen" / "attempts" / i).exists()}
+    wall = {i: r.get("wall_s", np.nan) for i, r in runs.items()}
+    per_pair_carla = [sum(wall.get(r[f"id{k}"], 0.0) for k in WORLD) for _, r in V[V.pair.isin(done.pair if len(done) else [])].iterrows()]
+    fin = C.drop_duplicates("pair", keep="last")
+    first = C[C.gen == "gen"]
+    c = {"stage": stage, "variants": len(V), "routes_tried": len(tried), "routes_done": len(runs),
+         "route_completion": len(runs) / max(len(tried), 1),
+         "select": S.reason.value_counts().to_dict(), "select_ok_rate": float((S.reason == "ok").mean()),
+         "controls_first_render": first.reason.value_counts().to_dict(),
+         "qc_flag_rate_first_render": float((first.reason == "qc_render").mean()) if len(first) else np.nan,
+         "nondeterministic": int((C.reason == "nondeterministic").sum()),
+         "controls_final": fin.reason.value_counts().to_dict(), "pairs_done": len(done),
+         "cosmos_s_per_pair": {"median": float((done.s_minus + done.s_plus).median()), "max": float((done.s_minus + done.s_plus).max()),
+                               "card_peak_gib": float(done.card_peak_gib.max())} if len(done) else {},
+         "carla_server_s_per_pair": {"median": float(np.median(per_pair_carla)), "max": float(np.max(per_pair_carla))} if per_pair_carla else {},
+         "route_wall_s": {"median": float(np.nanmedian(list(wall.values()))) if wall else np.nan}}
+    f = out / "per_pair_G4b.csv"
+    if f.exists():
+        pp = pd.read_csv(f)
+        if pairs:
+            pp = pp[pp.pair.isin(pairs)]
+        big = pp.vis_frames >= 10
+        pp["c_recall"] = ~big | (pp.R_plus >= 0.8 * pp.R_raw_plus)
+        pp["c_halluc"] = pp.H_minus <= pp.H_raw_minus + 0.01
+        pp["c_outside"] = (pp.psnr_pair >= 98) & (pp.lpips_pair <= 1e-6) & (pp.d_comp <= 1e-9)
+        pp["c_ring"] = pp.ring_mad_pair <= 2 * pp.ring_mad_raw + 2
+        pp["c_dv"] = pp.dv_med <= 1.0
+        pp["all"] = pp.c_recall & pp.c_halluc & pp.c_outside & pp.c_ring
+        cols = ["pair", "vis_frames", "R_raw_plus", "R_plus", "H_raw_minus", "H_minus", "psnr_pair", "lpips_pair", "d_comp",
+                "ring_mad_pair", "ring_mad_raw", "dv_med", "lead_agree", "c_recall", "c_halluc", "c_outside", "c_ring", "c_dv", "all"]
+        pp[cols].to_csv(out / "checklist_pairs.csv", index=False)
+        c.update(pairs_checked=len(pp), pairs_all_pass=int(pp["all"].sum()), dv_le_1_share=float(pp.c_dv.mean()),
+                 recall_ratio_min=float((pp.R_plus / pp.R_raw_plus.clip(lower=1e-6))[big].min()) if big.any() else np.nan,
+                 ring_mad_pair_med=float(pp.ring_mad_pair.median()), ring_mad_raw_med=float(pp.ring_mad_raw.median()))
+    # storage round trip: load_pair gives x+ == x- outside the blend support, for every stored pair
+    rt = []
+    for p in (done.pair if len(done) else []):
+        a_, b_ = load_pair(p, root=root)
+        sup = np.unpackbits(np.load(root / "pairs" / p / "gt.npz")["support"])[: a_.size // 3].reshape(a_.shape[:3]).astype(bool)
+        rt.append(int(np.abs(a_.astype(np.int16) - b_)[~sup].max()))
+    c["storage_outside_support_maxdiff"] = max(rt) if rt else None
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "checklist.json").write_text(json.dumps(c, indent=1, default=float))
+    log.info("%s", json.dumps(c, indent=1, default=float))
+    return c
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=("build", "run", "summary", "controls-test"))
+    ap.add_argument("step", choices=("build", "run", "summary", "controls-test", "checklist"))
     ap.add_argument("--target", type=int, default=2000)
     ap.add_argument("--insts", default="", help="comma list of pool instances (staged pilots)")
     ap.add_argument("--keep-npy", action="store_true")
     ap.add_argument("--pair", default="")
+    ap.add_argument("--stage", default="")
     a = ap.parse_args()
     insts = [int(x) for x in a.insts.split(",")] if a.insts else None
     if a.step == "build":
@@ -823,6 +882,8 @@ def main():
         print(json.dumps(Lane(a.target, insts, a.keep_npy).summary(), indent=1, default=str))
     elif a.step == "controls-test":
         controls_test(a.pair)
+    elif a.step == "checklist":
+        checklist(a.stage)
 
 
 if __name__ == "__main__":

@@ -10,8 +10,8 @@ x- with its edgeE control (E4, seed 2025), x- written back as the lossless ancho
 while the latents outside the tight free region are held at x- (guided generation), then the feathered blend (G4b):
 x+ = alpha * regenerated + (1 - alpha) * x-. Stored in <root>/pairs/<pair>/: cosmos_{plus,minus}.mp4 and
 carla_{plus,minus}.mp4 (H.264 crf 14), gt.npz (with the blend support, see jevdrive.cosmos_full.load_pair), spec.json,
-done.json (timings). --keep-npy also writes the raw G4b frames in the pilot layout (<root>/eval/out/G4b/) for
-jevdrive/cosmos_eval.py. Exits when <root>/lane/CONTROLS_DONE exists and nothing is left, when <root>/pairs holds
+done.json (timings). --keep-npy also writes the raw G4b frames in the pilot layout (<root>/out/G4b/) and keeps the
+lossless inputs, so jevdrive/cosmos_eval.py and scripts/cosmos_openpilot.py run with COSMOS_ROOT=<root>. Exits when <root>/lane/CONTROLS_DONE exists and nothing is left, when <root>/pairs holds
 --target pairs, or on <root>/lane/DRAIN. A pair that raises is marked FAILED in its clip dir and skipped.
 """
 import argparse
@@ -152,7 +152,7 @@ def main():
             for f in ("gt.npz", "gt_boxes.npz", "spec.json"):
                 shutil.copy2(cd / f, part / f)
             if a.keep_npy:
-                ev = root / "eval" / "out" / "G4b"
+                ev = root / "out" / "G4b"             # COSMOS_ROOT=<root> for cosmos_eval / cosmos_openpilot
                 ev.mkdir(parents=True, exist_ok=True)
                 np.save(ev / f"{pair}_plus_G4b_s{SEED}.npy", plus)
                 np.save(ev / f"{pair}_minus_G4b_s{SEED}.npy", neg)
