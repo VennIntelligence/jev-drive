@@ -288,7 +288,7 @@ class Rewinder:
         if physics:
             a.set_target_velocity(s["v"])
             a.set_target_angular_velocity(s["w"])
-        if "ctl" in s:
+        if "ctl" in s and (self.method != "poc" or s["type"].startswith("walker.")):
             a.apply_control(s["ctl"])
 
     def _spawn(self, s):
