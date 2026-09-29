@@ -53,16 +53,16 @@ def order() -> list[str]:
 
 def cmd_prep(a):
     from jevdrive import navsim_zs as Z
-    toks = order()
-    assert len(toks) == len(set(toks)) == 20000
+    toks = Path(a.tokens).read_text().split() if a.tokens else order()
+    assert len(toks) == len(set(toks)) and (a.tokens or len(toks) == 20000)
     full = Z.load_index("navtrain", slim=True)
     by = {e["token"]: e for e in full}
     idx = [by[t] for t in toks]
     Z.load_index = lambda split, slim=False: idx          # op_lb.cmd_prep reads the index and the subset through Z
     Z.nonav_subset = lambda idx_, per_cmd, seed: set(toks)
-    L.SPLITS[DATA] = "navtrain"
-    L.cmd_prep(argparse.Namespace(data=DATA, per_cmd=0, seed=0, workers=a.workers))
-    mt = L.meta(DATA)
+    L.SPLITS[a.data] = "navtrain"
+    L.cmd_prep(argparse.Namespace(data=a.data, per_cmd=0, seed=0, workers=a.workers))
+    mt = L.meta(a.data)
     assert mt["names"] == toks, "prep did not keep the requested order"
 
 
@@ -158,6 +158,8 @@ if __name__ == "__main__":
     sp = ap.add_subparsers(dest="cmd", required=True)
     p = sp.add_parser("prep")
     p.add_argument("--workers", type=int, default=8)
+    p.add_argument("--data", default=DATA)
+    p.add_argument("--tokens", default="", help="token list (fixed order) for a data dir other than lb_n1train")
     p = sp.add_parser("synth")
     p.add_argument("--data", default=DATA)
     p.add_argument("--gpu", type=int, required=True)

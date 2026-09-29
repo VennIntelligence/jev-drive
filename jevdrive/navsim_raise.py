@@ -9,6 +9,7 @@ native slots, fold 0 of the log split as held-out logs. navtest / navhard are ne
 """
 import argparse
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +25,11 @@ N = 19968
 SUBS, K = N1.SUBS, N1.K
 LAMS = {"n1": (1e-5, 1e-4, 1e-3, 1e-2),
         "n1b": (0, 1e-9, 1e-8, 3e-8, 1e-7, 3e-7, 1e-6, 3e-6, 1e-5, 1e-4, 1e-3, 1e-2)}
+ARMS = {"n1": ("n1", False, 0), "n1b": ("n1b", False, 0), "fam": ("n1b", True, 0),
+        "scale": ("n1b", False, 40000)}         # arm -> (lambda grid, extra FAM slots, scale-up rows)
 TEST = {"navtest": ("lb_navtest_n12146", "navtest"), "navhard": ("lb_navhard_n5912", "navhard_two_stage")}
+# extra native-family slots (stretch s, lateral scale l) on top of N1's four stretches (s, 1.0), s = 1.00 ... 1.15
+FAM = ((0.90, 1.0), (1.20, 1.0), (1.25, 1.0), (1.30, 1.0), (1.40, 1.0), (1.00, 0.8), (1.00, 1.2), (1.15, 0.8), (1.15, 1.2))
 
 
 def run_dir(*sub) -> Path:
@@ -33,12 +38,111 @@ def run_dir(*sub) -> Path:
     return d
 
 
+# ---------------------------------------------------------------- scale-up token set (more navtrain rows)
+
+def tokens2(m: int):
+    """Extra navtrain tokens for the scale-up arm, fixed order (seed 20260930): stage one with a future, a v1_navtrain
+    metric cache, not among E6's 20 000, not in N0's selection set T, and not from a log of N1's held-out fold."""
+    import glob
+    from . import elicit_e6 as E6
+    tr = E6._navtrain(False)
+    e6 = (data_dir() / N1.E6_PREP / "tokens.txt").read_text().split()
+    lane = set((data_dir() / "runs/op_lb/lb_navtrain/tokens.txt").read_text().split())
+    pos = dict(zip(tr["tokens"].tolist(), range(len(tr["tokens"]))))
+    e6_logs = tr["log"][[pos[t] for t in e6]]
+    hold_logs = set(e6_logs[H._group_folds(e6_logs, 5, seed=N1.SEED_HOLD) == 0])
+    cached = {os.path.basename(os.path.dirname(f)) for f in
+              glob.glob(str(data_dir() / "runs/navsim/metric_cache/v1_navtrain/*/*/*/metric_cache.pkl"))}
+    bad = set(e6) | lane
+    pool = [t for t, g in zip(tr["tokens"].tolist(), tr["log"].tolist()) if t not in bad and g not in hold_logs and t in cached]
+    pool = [pool[i] for i in np.random.default_rng(20260930).permutation(len(pool))][:m]
+    out = run_dir("scale") / "tokens.txt"
+    out.write_text("\n".join(pool) + "\n")
+    print(f"{len(pool)} tokens (pool before the cut: see log) -> {out}; held-out logs excluded: {len(hold_logs)}")
+
+
 # ---------------------------------------------------------------- data
 
-def prep(n: int = N, scales=N1.SCALES) -> dict:
-    """Training tensors exactly as skill_pack_n1.cmd_fit builds them (GIMM features, A0)."""
+def lat(p: np.ndarray, l: float) -> np.ndarray:
+    """Lateral scale of a (8, 3) pose sequence: y times l, heading re-derived for the scaled curve."""
+    q = p.copy()
+    q[:, 1] *= l
+    q[:, 2] = np.arctan2(l * np.sin(p[:, 2]), np.cos(p[:, 2]))
+    return q
+
+
+def family(nat: np.ndarray, fam=FAM) -> np.ndarray:
+    from .skill_pack_n0 import stretch
+    return np.stack([[lat(stretch(p, s), l) for s, l in fam] for p in nat]).astype(np.float32)
+
+
+def slots(extra: bool) -> list:
+    return [(s, 1.0) for s in N1.SCALES] + (list(FAM) if extra else [])
+
+
+def cands_fam():
+    z = np.load(data_dir() / N1.FEAT / f"lb_n1train_n{N}.npz")
+    out = run_dir("fam") / "cands_train.npz"
+    np.savez(out, tokens=z["tokens"], cands=family(z["native"]))
+    print(out)
+
+
+def _add_fam(d: dict):
+    ns = {}
+    for f in sorted((run_dir("fam") / "score_train").glob("chunk_*.npz")):
+        z = np.load(f)
+        ns.update({t: (z["sub"][j], z["pdms"][j]) for j, t in enumerate(z["tokens"].tolist())})
+    toks = d["tokens"].tolist()
+    assert all(t in ns for t in toks), "family labels missing"
+    c = np.load(run_dir("fam") / "cands_train.npz")
+    assert (c["tokens"] == d["tokens"]).all()
+    d["cands"] = np.concatenate([d["cands"], c["cands"]], 1)
+    d["sub"] = np.concatenate([d["sub"], np.stack([ns[t][0] for t in toks])], 1)
+    d["pdms"] = np.concatenate([d["pdms"], np.stack([ns[t][1] for t in toks])], 1)
+
+
+def _chunks(dirp: Path) -> dict:
+    ns = {}
+    for f in sorted(dirp.glob("chunk_*.npz")):
+        z = np.load(f)
+        ns.update({t: (z["sub"][j], z["pdms"][j]) for j, t in enumerate(z["tokens"].tolist())})
+    return ns
+
+
+def _add_scale(d: dict, m: int):
+    """Append the scale-up rows (lb_n2train, first m tokens): features, E6-style anchor labels, native labels.
+    None of them comes from a held-out log (tokens2), so fold 0 stays exactly N1's held-out set."""
+    from . import elicit_e6 as E6
+    from .skill_pack_n0 import stretch
+    f = np.load(data_dir() / N1.FEAT / f"lb_n2train_n{m}.npz")
+    toks = f["tokens"].tolist()
+    an, na = _chunks(run_dir("scale") / "anchor_score"), _chunks(run_dir("scale") / "native_score")
+    keep = [i for i, t in enumerate(toks) if t in an and t in na]       # tokens the devkit could score
+    toks = [toks[i] for i in keep]
+    tr = E6._navtrain(True)
+    pos = dict(zip(tr["tokens"].tolist(), range(len(tr["tokens"]))))
+    r = np.array([pos[t] for t in toks])
+    nat = f["native"][keep]
+    c = np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)
+    sub = np.concatenate([np.stack([an[t][0] for t in toks]), np.stack([na[t][0] for t in toks])], 1)
+    pd_ = np.concatenate([np.stack([an[t][1] for t in toks]), np.stack([na[t][1] for t in toks])], 1)
+    new = {"tokens": np.array(toks), "log": tr["log"][r], "ego": tr["ego"][r], "hold_feat": tr["cinque"][r],
+           "gimm": f["temporal"][keep], "native": nat, "cands": c, "sub": sub, "pdms": pd_}
+    for k, v in new.items():
+        d[k] = np.concatenate([d[k], v.astype(d[k].dtype)])
+    log.info(f"scale-up: + {len(toks)} rows ({m - len(toks)} without devkit labels)")
+
+
+def prep(n: int = N, extra: bool = False, scale: int = 0) -> dict:
+    """Training tensors exactly as skill_pack_n1.cmd_fit builds them (GIMM features, A0); extra = + FAM slots;
+    scale = + the first `scale` scale-up tokens (their logs are never held out)."""
     d = N1.load_train(n)
-    hold = H._group_folds(d["log"], 5, seed=N1.SEED_HOLD) == 0
+    if extra:
+        _add_fam(d)
+    if scale:
+        _add_scale(d, scale)
+    hold = np.zeros(len(d["tokens"]), bool)
+    hold[:n] = H._group_folds(d["log"][:n], 5, seed=N1.SEED_HOLD) == 0                # N1's held-out rows, unchanged
     nat = d["native"]
     A = torch.as_tensor(d["anchors"], device=H.DEV)
     C = torch.as_tensor(d["cands"], device=H.DEV)
@@ -53,7 +157,7 @@ def prep(n: int = N, scales=N1.SCALES) -> dict:
             "fit_r": np.flatnonzero(~hold), "hold_r": np.flatnonzero(hold), "logs": d["log"]}
 
 
-def test_inputs(split: str, d: dict, scales=N1.SCALES) -> dict:
+def test_inputs(split: str, d: dict, extra: bool = False) -> dict:
     """Test-split features standardised with the training statistics, candidates, distances."""
     from .skill_pack_n0 import stretch
     feat, hsplit = TEST[split]
@@ -64,7 +168,9 @@ def test_inputs(split: str, d: dict, scales=N1.SCALES) -> dict:
     nat = z["native"]
     X = torch.cat([N1._std(d["ego"], te["ego"][r])[1], N1._std(d["gimm"], z["temporal"])[1],
                    N1._std(d["native"].reshape(len(d["native"]), -1), nat.reshape(len(nat), -1))[1]], 1)
-    c = np.stack([[stretch(p, s) for s in scales] for p in nat]).astype(np.float32)
+    c = np.stack([[stretch(p, s) for s in N1.SCALES] for p in nat]).astype(np.float32)
+    if extra:
+        c = np.concatenate([c, family(nat)], 1)
     A = torch.as_tensor(d["anchors"], device=H.DEV)
     Nt = torch.as_tensor(nat, device=H.DEV)
     Dm = torch.cat([N1._dist(A[None].expand(len(nat), -1, -1, -1), Nt), N1._dist(torch.as_tensor(c, device=H.DEV), Nt)], 1)
@@ -78,8 +184,9 @@ def fit_arm(arm: str, final: bool):
     H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
     rl = RunLog("skill_pack", "raise", f"fit_{arm}" + ("_final" if final else ""))
     out = run_dir(arm)
-    p = prep()
-    N1.LAMS = LAMS[arm]                                   # the only difference between n1 and n1b
+    lg_name, extra, scale = ARMS[arm]
+    p = prep(extra=extra, scale=scale)
+    N1.LAMS = LAMS[lg_name]                               # n1 vs n1b: only the lambda grid differs
     rec = {}
     hd, full = N1.fit_heads(p["X"], p["T"], p["fit_r"], p["hold_r"], "gimm", rec)
     ho = torch.as_tensor(p["hold_r"], device=H.DEV)
@@ -90,20 +197,20 @@ def fit_arm(arm: str, final: bool):
     torch.save({m: {"hold": hd[m].half().cpu()} for m in SUBS}, out / "hold_logits.pt")
     np.savez(out / "heads.npz", **{f"W_{m}": full[m][0].cpu().numpy() for m in SUBS},
              **{f"b_{m}": full[m][1].cpu().numpy() for m in SUBS})
-    sel = {"arm": arm, "n": N, "n_hold": len(p["hold_r"]), "lams": LAMS[arm], "weights": w, "beta": beta, "pdms_hold": v,
+    sel = {"arm": arm, "n": N, "n_hold": len(p["hold_r"]), "lams": LAMS[lg_name], "slots": slots(extra), "weights": w, "beta": beta, "pdms_hold": v,
            "heads": rec}
     if final:
         for split in TEST:
             if not (data_dir() / N1.FEAT / f"{TEST[split][0]}.npz").exists():
                 rl.log.info(f"{split}: features not extracted, skipped")
                 continue
-            t = test_inputs(split, p["d"])
+            t = test_inputs(split, p["d"], extra)
             lg = {m: t["X"] @ full[m][0] + full[m][1] for m in SUBS}
             s = N1.scores(lg, t["Dm"], w, beta, p["mask"]).argmax(1).cpu().numpy()
             pool = np.concatenate([np.broadcast_to(p["d"]["anchors"][None], (len(s), K, 8, 3)), t["cands"]], 1)
             np.savez(out / f"{split}_{arm}.npz", tokens=t["tokens"], poses=pool[np.arange(len(s)), s].astype(np.float32))
             sel[f"{split}_shares"] = {"native": float((s >= K).mean()),
-                                      **{f"slot_{x:.2f}": float((s == K + i).mean()) for i, x in enumerate(N1.SCALES)}}
+                                      **{f"slot_{a:.2f}x{b:.1f}": float((s == K + i).mean()) for i, (a, b) in enumerate(slots(extra))}}
             rl.log.info(f"{split}: poses written, shares {sel[f'{split}_shares']}")
     (out / "select.json").write_text(json.dumps(sel, indent=1, default=float))
     rl.close()
@@ -193,7 +300,7 @@ def explore(what: str):
     from .runlog import RunLog
     H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
     rl = RunLog("skill_pack", "raise", f"explore_{what}")
-    p = prep()
+    p = prep(extra=(what == "fam"))
     lams = _lams()
     ho = torch.as_tensor(p["hold_r"], device=H.DEV)
     res = {}
@@ -232,6 +339,29 @@ def explore(what: str):
             rl.log.info(f"iters {it}: {res[f'iters {it}']:.3f}")
     elif what == "mlp":
         res = _mlp(p, rl)
+    elif what == "feats":                        # extra input views at zero GPU cost: E6's hold-input taps
+        from . import elicit_e6 as E6
+        tr = E6._navtrain(True)
+        pos = dict(zip(tr["tokens"].tolist(), range(len(tr["tokens"]))))
+        r = np.array([pos[t] for t in p["d"]["tokens"].tolist()])
+        views = {"+ Lebowski hold": [tr["lebowski"][r]], "+ Cinque hold": [tr["cinque"][r]],
+                 "+ both hold": [tr["lebowski"][r], tr["cinque"][r]]}
+        res["base (N1b features)"] = _hold_pdms(_fit_on(p, p["fit_r"], lams), p)[0]
+        for nm, vs in views.items():
+            X2 = torch.cat([p["X"], *[N1._std(v)[0] for v in vs]], 1)
+            res[nm] = _hold_pdms(_fit_on(p, p["fit_r"], lams, X=X2), p)[0]
+            rl.log.info(f"{nm}: {res[nm]:.3f}")
+    elif what == "fam":                          # N1b heads over 4 + 9 native-family slots
+        Ph = p["P"][ho]
+        res["oracle native 4 slots"] = 100 * float(Ph[:, K:K + 4].max(1).values.mean())
+        res["oracle native 13 slots"] = 100 * float(Ph[:, K:].max(1).values.mean())
+        res["mean PDMS per extra slot"] = {f"{a:.2f}x{b:.1f}": 100 * float(Ph[:, K + 4 + i].mean()) for i, (a, b) in enumerate(FAM)}
+        lg = _fit_on(p, p["fit_r"], lams)
+        res["N1b heads, 13 native slots"], wb = _hold_pdms(lg, p)
+        s = N1.scores(lg, p["Dm"][ho], *wb, p["mask"]).argmax(1)
+        res["weights"], res["slot shares"] = wb, {f"{a:.2f}x{b:.1f}": float((s == K + i).float().mean())
+                                                  for i, (a, b) in enumerate(slots(True))}
+        res["anchor share"] = float((s < K).float().mean())
     else:
         raise SystemExit(f"unknown {what}")
     rl.log.info(json.dumps(res, indent=1))
@@ -277,11 +407,12 @@ def _mlp(p, rl, hidden=1024, epochs=60, lr=1e-3, wd=1e-4, drop=0.1, bs=512, seed
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
     ap.add_argument("--looks", type=int, default=0)
+    ap.add_argument("--m", type=int, default=40000)
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what)}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m)}[a.cmd]()
