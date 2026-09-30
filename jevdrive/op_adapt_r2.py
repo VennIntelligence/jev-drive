@@ -382,8 +382,9 @@ def index_c(domain: str) -> pd.DataFrame:
     ix = ix.drop(columns=["ctx"])
     if domain.startswith("sim"):
         ix["render"] = domain[-1]
-    if "group" not in ix:
-        ix["group"] = ix.inst.astype(str) if "inst" in ix else ix.key.astype(str)
+    if "group" not in ix:          # bootstrap / fold clusters: sim instance, nuScenes scene, WOD sequence, navtrain log
+        ix["group"] = ix.inst.astype(str) if "inst" in ix else ix.key.astype(str).str.split("_", n=1).str[-1] if domain == "wod" \
+            else ix.key.astype(str)
     return ix
 
 
@@ -965,12 +966,22 @@ def ego_speed(d: Domain, rows, tea) -> np.ndarray:
 
 
 def score_api():
-    """Package S's score_plans(domain, uid, plans) or None while it is not delivered."""
+    """Package S's score_plans(domain, uid, plans) or None while it is not delivered. A failing call returns None
+    (logged by the caller as missing) instead of stopping a training run at its dev eval."""
     try:
         from . import op_adapt_score as S
-        return S.score_plans
+        f = S.score_plans
     except (ImportError, AttributeError):
         return None
+
+    def safe(*a, **k):
+        try:
+            return f(*a, **k)
+        except Exception as e:  # noqa: BLE001
+            import logging
+            logging.getLogger("op_adapt_r2").warning(f"score_plans failed: {type(e).__name__}: {e}")
+            return None
+    return safe
 
 
 def auc(y, s):
@@ -1003,6 +1014,27 @@ def probe_auc_oof(X, y, groups, k=5, seed=0) -> float:
 def _cap(rows, n, seed=0):
     rows = np.asarray(rows)
     return np.sort(np.random.default_rng(seed).choice(rows, n, replace=False)) if len(rows) > n else rows
+
+
+def aux_dev_rows(d: "Domain", cap: int = 6000) -> np.ndarray:
+    """Dev rows of the aux-head readability check: labelled, certain; sim: x- and visible x+."""
+    m = (d.col("split") == "dev") & d.col("labelled", True, bool) & ~d.col("uncertain", False, bool)
+    if d.name.startswith("sim"):
+        m &= (d.col("sign") == -1) | (d.col("px_eq") >= PX_VIS)
+    return _cap(np.flatnonzero(m), cap)
+
+
+def dev_o_probe(doms: dict, teachers: dict, cap: int = 6000) -> dict:
+    """The original model's dev readability per domain (linear probe on its `temporal`, same rows as dev_eval)."""
+    out = {}
+    for dn in ("nus", "wod", "simC", "simK"):
+        if dn in doms and "temporal" in teachers.get(dn, {}):
+            d = doms[dn]
+            rows = aux_dev_rows(d, cap)
+            if len(rows):
+                out[dn] = probe_auc_oof(np.asarray(teachers[dn]["temporal"][rows], np.float32),
+                                        d.col("ped_corr", False, bool)[rows], d.col("group")[rows].astype(str))
+    return out
 
 
 def dev_eval(model: Model, doms: dict, teachers: dict, scores: dict, arm: Arm, dev, det_fn=None, cap: int = 6000,
@@ -1043,10 +1075,7 @@ def dev_eval(model: Model, doms: dict, teachers: dict, scores: dict, arm: Arm, d
         if dn not in doms:
             continue
         d = doms[dn]
-        m = (d.col("split") == "dev") & d.col("labelled", True, bool) & ~d.col("uncertain", False, bool)
-        if dn.startswith("sim"):
-            m &= (d.col("sign") == -1) | (d.col("px_eq") >= PX_VIS)
-        rows = _cap(np.flatnonzero(m), cap)
+        rows = aux_dev_rows(d, cap)
         if not len(rows):
             continue
         o = fw(dn, rows)
@@ -1071,8 +1100,8 @@ def dev_eval(model: Model, doms: dict, teachers: dict, scores: dict, arm: Arm, d
         rows = np.flatnonzero(d.col("split") == "dev")
         if len(rows):
             o = fw("off", rows)
-            if sfn is not None and sc is not None:
-                s_a = sfn("off", d.uid[rows], o["plan"])
+            s_a = sfn("off", d.uid[rows], o["plan"]) if sfn is not None and sc is not None else None
+            if s_a is not None:
                 k = sc["pos"].reindex(d.uid[rows]).to_numpy()
                 ok = ~np.isnan(k)
                 r["off_dev_pass_adapt"] = float((s_a["DAC"][ok] * (np.asarray(s_a["DDC"])[ok] == 1)).mean())
@@ -1125,8 +1154,9 @@ def _dev_sim(r, dn, d, rows, o, t, sc, arm, sfn):
     ki = np.where(has, k, 0).astype(int)
     # S_jev of the native plan where the original plan is not in Top (dev x+)
     xp = np.flatnonzero(has & (d.col("sign")[rows] == 1) & sc["valid"][ki])
-    if sfn is not None and len(xp):
-        s_a = np.asarray(sfn(dn, uid[xp], o["plan"][xp])["S"], float)
+    res_ = sfn(dn, uid[xp], o["plan"][xp]) if sfn is not None and len(xp) else None
+    if res_ is not None:
+        s_a = np.asarray(res_["S"], float)
         s_o = sc["S"][ki[xp], op]
         r[f"sjev_delta_{dn}"] = float(np.mean(s_a - s_o))
         notop = ~sc["top"][ki[xp], op]

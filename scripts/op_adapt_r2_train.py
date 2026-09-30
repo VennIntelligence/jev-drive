@@ -153,6 +153,8 @@ def cmd_teacher(a):
             m = (d.col("split") == "train") & (d.col("sign") == 1)
             dv = R.dv_star(d)[m]
             np.save(root / "teacher" / f"sd_dv_{dn}.npy", np.nanstd(dv, 0).clip(1e-3).astype(np.float32))
+    doms, tea, _ = load_all(("nus", "wod", "simC", "simK"), root)
+    R.save_json(root / "dev_o_probe.json", R.dev_o_probe(doms, tea))
 
 
 # ---------------------------------------------------------------- train
@@ -237,7 +239,8 @@ def train(cfg: R.RunCfg, d: Path, log: Log, a):
         log.event("start", cfg=R.cfg_dict(cfg), mixer=mix.describe())
     log.info(f"{cfg.tag}: {cfg.steps} steps x {cfg.batch} labelled sequences; mixer {mix.describe()}; "
              f"data {time.time() - t0:.0f} s")
-    o_probe = json.loads((R.r2("t") / "dev_o_probe.json").read_text()) if (R.r2("t") / "dev_o_probe.json").exists() else None
+    op_ = (root or R.r2("t")) / "dev_o_probe.json"
+    o_probe = json.loads(op_.read_text()) if op_.exists() else None
 
     def evaluate(tag):
         model.eval()

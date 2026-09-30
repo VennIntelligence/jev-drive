@@ -34,8 +34,9 @@ AT = (0.275, 0.525)
 PLAN_T = 0.25 * np.arange(1, 21)
 P5_CAM_X = 1.519                                   # jevdrive.p5_openpilot.RIG front camera x (rear-axle frame)
 SETS = {  # readout set -> (domain, row filter)
-    "nusval": ("nus", lambda d: (d.col("split") == "val")),
-    "wodval": ("wod", lambda d: (d.col("part", "") == "val") if "part" in d.s else (d.col("split") == "val")),
+    "nusval": ("nus", lambda d: (d.col("split") == "val") & d.col("labelled", False, bool)),            # keyframes
+    "wodval": ("wod", lambda d: ((d.col("part", "") == "val") & d.col("target", True, bool)) if "part" in d.s
+               else (d.col("split") == "val")),                                                     # round-1 readout frames
     "p5": ("p5", lambda d: np.ones(len(d), bool)),
     "cosC": ("simC", lambda d: d.col("split") == "test"),
     "cosK": ("simK", lambda d: d.col("split") == "test"),
@@ -359,8 +360,13 @@ def b_score(model):
         k = sc["pos"].reindex(z["uid"]).to_numpy()
         has = ~np.isnan(k)
         uid = z["uid"][has]
-        so = {q: np.asarray(v, float) for q, v in sfn(dn, uid, z["orig_plan"][has]).items()}
-        sa = {q: np.asarray(v, float) for q, v in sfn(dn, uid, z["adapt_plan"][has]).items()} if model != "O" else so
+        ro = sfn(dn, uid, z["orig_plan"][has])
+        ra = sfn(dn, uid, z["adapt_plan"][has]) if model != "O" else ro
+        if ro is None or ra is None:
+            out[name] = {"error": "score_plans failed (see log)"}
+            continue
+        so = {q: np.asarray(v, float) for q, v in ro.items()}
+        sa = {q: np.asarray(v, float) for q, v in ra.items()}
         g = d.col("group")[r][has].astype(str)
         dS = sa["S"] - so["S"]
         sign = d.col("sign")[r][has] if "sign" in d.s else np.zeros(has.sum())

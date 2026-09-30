@@ -204,6 +204,51 @@ def verdict(items) -> dict:
     return {"pass": not fails and not pend, "failed": fails, "pending": pend, "items": items}
 
 
+# ---------------------------------------------------------------- data preparation (self-advancing, idempotent)
+DOMAINS = ("simC", "simK", "nus", "wod", "nav", "off", "p5")
+
+
+def det_ready(dn) -> bool:
+    """Every cache file of the domain has package D's token file."""
+    try:
+        from jevdrive import op_adapt_det as DT
+    except ImportError:
+        return False
+    import pandas as pd
+    src = R.r2("t") / "trunk" / f"{dn}.src.parquet"
+    return src.exists() and all(DT.tok_path(f).exists() for f in pd.read_parquet(src, columns=["file"]).file.unique())
+
+
+def prep(a, d, log, det=False):
+    """pack (mapped caches) every domain whose package-C index is newer than its sample table, lay D's tokens on
+    them when `det`, and run the teacher on every domain without one (one GPU job)."""
+    t = R.r2("t")
+    todo = []
+    for dn in DOMAINS:
+        ix = R.r2("index") / f"{dn}.parquet"
+        sm = t / "samples" / f"{dn}.parquet"
+        if not ix.exists():
+            log(f"prep: no package-C index for {dn}")
+            continue
+        if not sm.exists() or sm.stat().st_mtime < ix.stat().st_mtime:
+            subprocess.check_call([PY, TRAIN, "pack", "--domains", dn, "--source", "c"])
+            log(f"prep: packed {dn}")
+        if det and dn != "p5" and not (t / "det" / f"{dn}.tok.npy").exists():
+            if not det_ready(dn):
+                raise RuntimeError(f"package D tokens missing for {dn}")
+            subprocess.check_call([PY, "-c", f"from jevdrive import op_adapt_r2 as R; R.pack_det('{dn}')"])
+            log(f"prep: detection tokens laid on {dn}")
+        if not (t / "teacher" / dn / "uid.npy").exists():
+            todo.append(dn)
+    if todo:
+        Packer(a.gpus, a.cap_gb, a.cores, d, log).run(
+            [{"tag": "teacher", "argv": [PY, TRAIN, "teacher", "--domains", *todo], "vram_gb": 14.0}])
+        missing = [dn for dn in todo if not (t / "teacher" / dn / "uid.npy").exists()]
+        if missing:
+            raise RuntimeError(f"teacher failed for {missing} (see logs/teacher.log)")
+        log(f"prep: teacher on {todo}")
+
+
 # ---------------------------------------------------------------- stages
 def lane(stage, a, body):
     d = R.r2("stage", stage)
@@ -240,6 +285,7 @@ def vram_from_stage1(default):
 
 def stage1(a):
     def body(d, log):
+        prep(a, d, log)
         run = d / "runs" / "A-s0-ls1"
         pk = Packer(a.gpus, a.cap_gb, a.cores, d, log)
         pk.run([{"tag": "A-s0-ls1", "argv": train_argv("A", 0, 1.0, a.steps or 2000, run, a.extra), "vram_gb": a.vram_gb or est_vram() + 4}])
@@ -255,6 +301,7 @@ def stage10(a):
     steps = a.steps or int(np.ceil(0.1 * R.RunCfg(arm="A").steps))
 
     def body(d, log):
+        prep(a, d, log, det=any(R.ARMS[x.split("@")[0]].det for x in arms))
         runs, jobs = {}, []
         vr = a.vram_gb or vram_from_stage1(est_vram() + 4)
         for spec in arms:
@@ -271,6 +318,7 @@ def stage10(a):
 
 def full(a):
     def body(d, log):
+        prep(a, d, log, det=True)
         pk = Packer(a.gpus, a.cap_gb, a.cores, d, log)
         vr = a.vram_gb or vram_from_stage1(est_vram() + 4)
         sel = R.r2() / "lambda_s.json"
