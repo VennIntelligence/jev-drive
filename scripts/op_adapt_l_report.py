@@ -9,7 +9,7 @@
 
   python scripts/op_adapt_l_report.py tables
 """
-import argparse, json, sys
+import argparse, json, os, sys
 from pathlib import Path
 
 import numpy as np
@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from jevdrive import op_adapt_l as L  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
-OUT = REPO / "research" / "results" / "op-adapt-L"
+OUT = Path(os.environ.get("OP_L_OUT") or REPO / "research" / "results" / "op-adapt-L")        # on the box: $L/report, pulled to the Mac
 FIG = REPO / "research" / "figs"
 SL = ("start", "stop", "turn_onset")
 CAP = {"start": "cap_start", "stop": "cap_stop", "turn_onset": "cap_turn_onset"}
