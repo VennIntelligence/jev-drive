@@ -516,7 +516,7 @@ def p5_world(rid: str) -> tuple:
              "act_v": W["act"]["v"], "kinds": W["kinds"], "route": pd.read_json(a / "route.json")[["x", "y", "z"]].to_numpy(np.float32),
              "k_trig": int(round(tt / 0.05)) if tt is not None else -1}
         hz = [int(h) for h in W["hazards"]]
-        px = {int(k): P5_PX_EQ * max([float(v) for kk, v in (r.px or {}).items() if int(kk) in hz] + [0.0])
+        px = {int(k): P5_PX_EQ * max([float(v) for kk, v in (r.px or {}).items() if str(kk).isdigit() and int(kk) in hz] + [0.0])
               for k, r in W["frames"].iterrows() if isinstance(r.px, dict)}
         f2k = dict(zip(W["frames"].frame.astype(int), W["frames"].index.astype(int)))
         _P5[rid] = (w, hz, lambda t, px=px: px.get(int(t), 0.0), _town(json.loads((a / "meta.json").read_text())["town"]), f2k)
@@ -1016,6 +1016,8 @@ def score_domain(domain: str, uids=None, workers: int | None = None, chunk: int 
         uids = idx.uid.to_numpy()
         if domain == "nus":
             uids = idx.uid[idx.labeled].to_numpy()
+        if domain == "p5":                                  # only P5 v1 BA streams have a pass-1 world (p4_* do not)
+            uids = idx.uid[idx.key.str.startswith("p5_")].to_numpy()
     tu = set(np.asarray(C.load_teacher(domain)["uid"]).tolist())
     uids = np.array([u for u in uids if int(u) in tu], np.int64)
     jobs = [(domain, uids[i:i + chunk]) for i in range(0, len(uids), chunk)]
