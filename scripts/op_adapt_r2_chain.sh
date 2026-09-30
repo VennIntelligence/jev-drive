@@ -6,7 +6,11 @@
 # same command again (`scripts/tmux_run.sh r2-chain scripts/op_adapt_r2_chain.sh`). A failed gate or checklist writes
 # $R/chain/ERROR (a stop line: report to main, do not continue); the end writes $R/chain/DONE. Logs: $R/chain/log.txt,
 # events.jsonl, STATUS. GPUS and CORES are re-read from $R/chain/GPUS and $R/chain/CORES at every stage (edit them to move the
-# chain; defaults 1,2 and 48-95). Stop processes by exact PID only.
+# chain; defaults 1,2 and 48-95; ids that do not exist any more, e.g. after a resize of the box, are dropped and, if none is left,
+# every card that exists is used; the same for CORES). PAUSE: while $R/chain/PAUSE exists the chain starts no new step; it writes
+# $R/chain/READY_FOR_RESIZE (nothing of ours is running then) and exits. Resume after a restart / resize:
+#   rm $R/chain/PAUSE $R/chain/READY_FOR_RESIZE; echo <gpu ids> > $R/chain/GPUS; scripts/tmux_run.sh r2-chain scripts/op_adapt_r2_chain.sh
+# Stop processes by exact PID only.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 export OPENBLAS_CORETYPE=Haswell
@@ -18,16 +22,30 @@ TR=$DATA_DIR/envs/op-train/bin/python
 [[ -x $TR ]] || TR=$PY
 [[ -f $C/GPUS ]] || echo "1,2" > "$C/GPUS"
 [[ -f $C/CORES ]] || echo "48-95" > "$C/CORES"
-rm -f "$C/ERROR" "$C/DONE"
+rm -f "$C/ERROR" "$C/DONE" "$C/READY_FOR_RESIZE"
 log() { echo "$(date +%F' '%T) $*" | tee -a "$C/log.txt"; }
 ev() { printf '{"t": %s, "kind": "%s", "step": "%s"%s}\n' "$(date +%s)" "$1" "$2" "${3:-}" >> "$C/events.jsonl"; }
 die() { log "ERROR: $*"; echo "$*" > "$C/ERROR"; ev error "$1"; exit 1; }
-gpus() { cat "$C/GPUS"; }
-cores() { cat "$C/CORES"; }
+gpus() {          # GPUS file filtered by the cards that exist now; none left -> all of them
+  local have want out=""
+  have=$(nvidia-smi --query-gpu=index --format=csv,noheader | tr -d ' ')
+  for g in $(tr ',' ' ' < "$C/GPUS"); do grep -qx "$g" <<< "$have" && out+="${out:+,}$g"; done
+  [[ -n $out ]] || out=$(echo "$have" | paste -sd, -)
+  echo "$out"
+}
+cores() {         # CORES file, or every allowed core when the list is not valid on this host
+  if taskset -c "$(cat "$C/CORES")" true 2>/dev/null; then cat "$C/CORES"; else echo "0-$(( $(nproc) - 1 ))"; fi
+}
+pause_check() {
+  [[ -f $C/PAUSE ]] || return 0
+  echo paused > "$C/STATUS"; date +%F' '%T > "$C/READY_FOR_RESIZE"; ev pause "$1"
+  log "PAUSE flag: stopped before $1, nothing of ours is running (READY_FOR_RESIZE written)"; exit 0
+}
 first_gpu() { gpus | cut -d, -f1; }
 step() {          # step <name> <command...>: run once, marker on success
   local n=$1; shift
   [[ -f $C/$n.ok ]] && { log "skip $n (done)"; return 0; }
+  pause_check "$n"
   echo "$n" > "$C/STATUS"; ev start "$n"; log "start $n"
   "$@" >> "$C/$n.log" 2>&1 || die "$n failed (see $C/$n.log)"
   date +%F' '%T > "$C/$n.ok"; ev end "$n"; log "done $n"
@@ -56,6 +74,7 @@ print(g)
 sys.exit(0 if all(g.values()) else 1)
 PYEOF
 log "gate passed"
+pause_check m1_eval
 
 # ---- M1: zero-training baseline of the original model on every readout (before any training)
 step m1_eval  env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_readout.py eval --model O
