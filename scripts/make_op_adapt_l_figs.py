@@ -49,7 +49,7 @@ def dots(ax, df, models, st, sl, metric, scale=1.0, xs=1.0, horizontal=True):
                     color=colour(m))
     ax.set_yticks(range(len(models)), models, fontsize=6)
     ax.invert_yaxis()
-    S.zero_line(ax)
+    ax.axvline(0, color='#999999', linewidth=.5, zorder=0)
 
 
 def main():
@@ -99,7 +99,7 @@ def main():
             if r is not None:
                 axs[2].errorbar(100 * r.delta, i + (k - 1) * 0.2, xerr=[[100 * (r.delta - r.lo)], [100 * (r.hi - r.delta)]], fmt=mk, ms=2.5,
                                 elinewidth=.6, color=colour(mo))
-    S.zero_line(axs[2])
+    axs[2].axvline(0, color='#999999', linewidth=.5, zorder=0)
     axs[2].set_xlabel("nuScenes val capture change (pp)\n(o start, s stop, ^ turn onset)")
     axs[2].set_title("out-of-dataset transfer", fontsize=8)
     S.save(fig, FIGS / "op-adapt-L-rfs")
