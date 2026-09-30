@@ -128,7 +128,7 @@ def fit_homography(src: np.ndarray, dst: np.ndarray) -> tuple[np.ndarray, float]
     b = np.c_[dst, np.ones(len(dst))] @ Td.T
     z = np.zeros((len(a), 3))
     A = np.r_[np.c_[a, z, -a * b[:, :1]], np.c_[z, a, -a * b[:, 1:2]]]
-    Hn = np.linalg.svd(A)[2][-1].reshape(3, 3)
+    Hn = np.linalg.svd(A, full_matrices=False)[2][-1].reshape(3, 3)
     H = np.linalg.inv(Td) @ Hn @ Ts
     H /= H[2, 2]
     return H, float(np.sqrt(((apply_h(H, src) - dst) ** 2).sum(-1).mean()))
