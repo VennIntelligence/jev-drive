@@ -213,10 +213,10 @@ S_jev(τ) = NC(τ) · DAC(τ) · DDC(τ) · [ 5·P(τ) + 5·TTC(τ) + 2·C(τ) ]
 - **NC ∈ {0, 1}（不碰撞，= WL-2 的 cg）**：任一时刻本车框与 A(s) 中任一 actor 框重叠，或本车走廊内（本车当前位姿坐标系下 |y| ≤ 1.75 m、前方）最近 actor 的纵向间距（前保险杠到 actor 参考点，`jevdrive/wl.py::_gap_front` 同一算法）< 2 m，就是 0。两条都只算 at-fault：该时刻本车速度 ≥ 0.5 m/s，碰撞点不在本车后半部。PDM 把撞静物记 0.5，这里一律记 0，与 cg 一致。
 - **DAC ∈ {0, 1}（可行驶区）**：每个时刻 footprint 四角都在可行驶区内。可行驶区 = 任意方向的行车道 + 路口 + 停车道（CARLA：OpenDRIVE 的 Driving / Bidirectional / Parking 与 junction，不含 Sidewalk / Shoulder / Border / Median，按路线两侧 ±40 m、0.2 m 栅格离线生成；nuScenes：map expansion 的 `drivable_area` 层）。所以借对向车道或相邻车道绕行不扣 DAC，那块路上有没有车交给 NC 与 TTC。（v3：借对向车道**逆行**的部分由下面新加的 DDC 处理，DAC 本身不变。）
 - **DDC ∈ {0, 0.5, 1}（逆行合规，v3 新增；与 NAVSIM EPDMS 的 DDC 同定义，乘性，不进加权和）**：
-  - 对候选 τ 的 10 Hz 时刻序列，取本车**中心点**（后轴中心）；oncoming_t = 1 当且仅当该点落在某个行车道（含路口连接段）内，且 t → t+1 的位移在该车道基线（baseline）切向上的投影为负，即在逆着车道方向走。
-  - 每步的逆行位移 d_t = ‖p_{t+1} − p_t‖ · oncoming_t；oncoming progress(t) = 在长度 1.0 s 的滑动窗内 Σ d_t，取全程最大值 D。
-  - 分段：D ≤ 2.0 m → DDC = 1；2.0 < D ≤ 6.0 m → 0.5；D > 6.0 m → 0。窗长 1.0 s、阈值 2 m 与 6 m 是 NAVSIM devkit（沿用 nuPlan 的 driving direction 指标）的默认参数，devkit 中的写法是「中心点在对向车道内的累计位移」，本文的「逆着车道方向」是同一量的切向写法。**实现前**读 devkit 源码逐项核对；核对不了以 devkit 为准，并以第 5 节 V5 的数值一致检验兜底。
-  - 地图来源：CARLA 用 OpenDRIVE 车道（Driving 与 junction，方向由 lane id 符号与道路方向给出）；nuScenes 用 map expansion 的 lane / lane connector 与 arcline path 方向；navtrain 用 nuPlan 地图（同 devkit）。
+  - 严格按 devkit `pdm_scorer.py::_calculate_driving_direction_compliance`（已在本机 devkit 源码核对）：对候选 τ 的 10 Hz 时刻序列，取本车**中心点**；oncoming_t = 1 当且仅当该点**不在任何「在路线上（on-route）」的可行驶多边形内**（on-route = 路线所经 roadblock 的行车道与连接段，即与参考路线同向的车道，所以对向车道、路线之外的路面都算 oncoming），且该点不在路口（INTERSECTION 图层）内（路口内一律不计）。
+  - 每步位移 d_t = ‖p_t − p_{t−1}‖ · oncoming_t（逐步中心点位移，不做切向投影）；oncoming progress(t) = 时刻 t 往前 1.0 s（10 步，含 t）的 Σ d，取全程最大值 D。
+  - 分段（devkit 用严格小于）：D < 2.0 m → DDC = 1；2.0 ≤ D < 6.0 m → 0.5；D ≥ 6.0 m → 0。参数 1.0 s、2 m、6 m 即 devkit `default_scoring_parameters`。
+  - 地图来源：navtrain / navtest 直接用 devkit 与 nuPlan 地图（on-route 多边形集合同 devkit）。CARLA：on-route = 参考路线所经 road / lane 中与行驶方向一致的 Driving 车道（OpenDRIVE lane id 符号），路口按 junction 排除；nuScenes：由 log 未来轨迹之外的**原模型 plan 路径**定参考路线（v2 已用），on-route = 该路线所经 lane / lane connector，路口取 map expansion 的 road_segment 中 is_intersection，同样排除。这两处是对 devkit 的移植，V5 里另核对 CARLA / nuScenes 的移植版在同一批轨迹上给出的 DDC 与「取行车道朝向反向」的直观判法不矛盾（只作 sanity）。
   - 只用地图与本车自己的 τ，与 actor 无关，所以仍是非反应式、可见 actor 集不影响它。
   - 与 v2 的不同：v2 允许长时间借对向车道绕行而不扣分。v3 之后，在对向车道里走超过 2 m（1 s 窗内）开始扣，超过 6 m 记 0；短暂借道（1 s 窗内逆行 ≤ 2 m，例如 `nudge_L` 一类小横移）不扣。这与 NAVSIM 榜一致，是有意的：对向车道上的长距离绕行在榜上就是 DDC 失败。
   - 进度归一（下条 P）里的「安全候选」集合 N(s) 相应取 NC · DAC · DDC = 1 的候选（v2 是 NC · DAC = 1）；Top 集与「max S_jev = 0 的 slot 不进 L_score」不变，DDC = 0.5 的候选只是分数被乘 0.5，不被排除。
@@ -466,7 +466,7 @@ arm 之间的比较（描述，但用来归因，同一套 route / scene 聚类�
    - V2：nuScenes val 上 log 人类轨迹作为一条「候选」，S_jev ≥ 0.8 的帧 ≥ 90%（地图对齐、框与 footprint 没算错）；
    - V3：P5 与 Cosmos 已完成对上，x⁻ 的 `op` 在 Top 集的 slot ≥ 70%（打分器在没有 hazard 时不该大面积否定原模型）；
    - V4：x⁺ 可见 ≥ 500 px 且在走廊内的 slot 里，Top 集至少含一条减速或横移候选的 ≥ 90%，且 `hold` 的 NC 失败率明显高于 x⁻（打分器看得到行人）。
-   - V5（v3，DDC）：navtest 上取 devkit 自己的 PDM 与 CV 等轨迹（有逐 token 的 devkit DDC），用本文的 DDC 实现在同一批轨迹上打分，与 devkit 的 DDC 三档值一致率 ≥ 99%；不过就停，回读 devkit 源码修实现。同时 nuScenes val 的 log 人类轨迹上 DDC = 1 的比例 ≥ 99%（人不逆行；地图方向没弄反）。
+   - V5（v3，DDC）：navtest 上取 devkit 自己的 PDM 与 CV 等轨迹（有逐 token 的 devkit DDC），用本文的 DDC 实现在同一批轨迹上打分，与 devkit 的 DDC 三档值一致率 ≥ 99%（navtest 上就是同一份 devkit 逻辑，预期完全一致，检验的是移植）；不过就停，回读 devkit 源码修实现。同时 nuScenes val 的 log 人类轨迹上 DDC = 1 的比例 ≥ 99%（人不逆行；地图方向没弄反）。
    - V6（v3，偏离起点 slot）：dev 1 000 个样本上，`rej` 的 NC · DAC · DDC = 1 的比例 ≥ 90%（恢复目标存在，Top 集里有可学的东西）；单应变换后的 20 张样张（每个角点 5 张）人工目检，路面与车道线形状合理（写进执行日志，不设数值线）。
 2. **M1 基线（零训练，约 0.5 GPU·h）**：原模型在全部读数上的数，包括 P5 ≥ 500 px_eq 子集的 D0、按大小分档、原生 plan 在 P5 上的翻转与 null false-flip、B-real 的原模型减速率、B-score 的 O 列与 B-ref 参照行、NAVSIM / RFS。不依赖 Cosmos 的部分先跑；S-cos、B-cos 的 O 列等 Cosmos DONE 后在同一份冻结代码上补。全部在任何训练之前提交。
 3. **R0**（第 2.3 节），用当时已完成的 Cosmos 对与 P5；零训练，不受 Q5 限制。
