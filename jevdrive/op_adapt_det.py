@@ -5,8 +5,8 @@ tmp/2026-09-30-op-adapt-r2-build.md, "D").
                 native-resolution front-camera images already on the GPU: letterbox on the GPU, per image the top 8 of
                 {pedestrian, cyclist, vehicle} by score, with the RoIAlign (1 x 1) of the three neck maps (decision 50's
                 1920-d detection appearance)
-  geometry      per camera calibration the homography native pixel -> openpilot road model frame (focal 910, 512 x 256),
-                least-squares fitted on the calibration's own projection (lens distortion absorbed; residual logged)
+  geometry      per camera calibration: undistort (Brown-Conrady, fixed point), then the exact rotation homography ideal
+                pixel -> openpilot road model frame (focal 910, 512 x 256), fitted on the calibration's own projection
   tokens        (n, 8, TOK_D) float16 + validity mask per image / per trunk row, fields in FIELDS
   DetAdapter    one cross-attention layer on the 32 x 512 hidden tokens `view_39` of every context slot (hidden = query,
                 tokens -> MLP -> 512 = key / value, 8 heads), times a scalar gate initialised to 0
@@ -140,22 +140,55 @@ def apply_h(H: np.ndarray, p: np.ndarray) -> np.ndarray:
     return q[..., :2] / q[..., 2:3]
 
 
-def h_wod(calib: dict) -> tuple[np.ndarray, float, float]:
-    """camgeom (WOD-format) calibration of the front camera -> (H native -> road, RMS road px, focal fu)."""
+def undistort(p: np.ndarray, intr: np.ndarray, iters: int = 30) -> np.ndarray:
+    """Native pixels p (..., 2) -> ideal (distortion-free) pixels of the same camera. intr (..., 9) = [fu fv cu cv k1 k2 p1 p2
+    k3], the Brown-Conrady model of camgeom.waymo_project and navsim_zs.project_nuplan (OpenCV's), inverted by fixed point."""
+    fu, fv, cu, cv, k1, k2, p1, p2, k3 = np.moveaxis(np.asarray(intr, np.float64), -1, 0)
+    xd, yd = (p[..., 0] - cu) / fu, (p[..., 1] - cv) / fv
+    x, y = xd.copy(), yd.copy()
+    for _ in range(iters):
+        r2 = x * x + y * y
+        rad = 1 + k1 * r2 + k2 * r2 ** 2 + k3 * r2 ** 3
+        x = (xd - 2 * p1 * x * y - p2 * (r2 + 2 * x * x)) / rad
+        y = (yd - p1 * (r2 + 2 * y * y) - 2 * p2 * x * y) / rad
+    return np.stack([fu * x + cu, fv * y + cv], -1)
+
+
+def distort(p: np.ndarray, intr: np.ndarray) -> np.ndarray:
+    """Inverse of `undistort` (the forward model), for the round-trip check."""
+    fu, fv, cu, cv, k1, k2, p1, p2, k3 = np.moveaxis(np.asarray(intr, np.float64), -1, 0)
+    x, y = (p[..., 0] - cu) / fu, (p[..., 1] - cv) / fv
+    r2 = x * x + y * y
+    rad = 1 + k1 * r2 + k2 * r2 ** 2 + k3 * r2 ** 3
+    return np.stack([fu * (x * rad + 2 * p1 * x * y + p2 * (r2 + 2 * x * x)) + cu,
+                     fv * (y * rad + p1 * (r2 + 2 * y * y) + 2 * p2 * x * y) + cv], -1)
+
+
+def h_wod(calib: dict) -> tuple[np.ndarray, float, np.ndarray]:
+    """camgeom (WOD-format) front-camera calibration -> (H ideal pixel -> road, error, intr (9,)); the fit uses the
+    calibration without its distortion, so it is an exact rotation homography; `undistort` first. error = max(fit RMS, max
+    road-px error of road grid -> distorted native pixel -> undistort -> H) over the grid points the camera sees."""
     from .camgeom import waymo_project
+    intr = np.asarray(calib["intrinsic"], np.float64)
     uv, rays = _road_rays()
-    U, V, ok = waymo_project(np, rays, calib)
+    U, V, ok = waymo_project(np, rays, {**calib, "intrinsic": list(intr[:4]) + [0.0] * 5})
     H, rms = fit_homography(np.stack([U, V], -1)[ok], uv[ok])
-    return H, rms, float(calib["intrinsic"][0])
+    U, V, ok = waymo_project(np, rays, calib)                       # the chain check: road -> native (distorted) -> road
+    back = apply_h(H, undistort(np.stack([U, V], -1)[ok], intr))
+    return H, max(rms, float(np.abs(back - uv[ok]).max())), intr
 
 
-def h_nuplan(cam: dict) -> tuple[np.ndarray, float, float]:
-    """NAVSIM CAM_F0 record -> (H native -> road, RMS, fu), the rays of navsim_zs.OpenpilotMaps (ego x fwd, y left, z up)."""
+def h_nuplan(cam: dict) -> tuple[np.ndarray, float, np.ndarray]:
+    """NAVSIM CAM_F0 record -> (H ideal pixel -> road, RMS, intr (9,)), the rays of navsim_zs.OpenpilotMaps."""
     from .navsim_zs import project_nuplan
+    K, D = np.asarray(cam["K"], np.float64), np.asarray(cam["D"], np.float64)
     uv, rays = _road_rays()
-    p, ok, _ = project_nuplan(rays, cam, 1)
+    p, ok, _ = project_nuplan(rays, {**cam, "D": np.zeros(5)}, 1)
     H, rms = fit_homography(p.astype(np.float64)[ok], uv[ok])
-    return H, rms, float(np.asarray(cam["K"])[0, 0])
+    intr = np.r_[K[0, 0], K[1, 1], K[0, 2], K[1, 2], D]
+    p, ok, _ = project_nuplan(rays, cam, 1)                         # the chain check: road -> native (distorted) -> road
+    back = apply_h(H, undistort(p.astype(np.float64)[ok], intr))
+    return H, max(rms, float(np.abs(back - uv[ok]).max())), intr
 
 
 # ================================================================ tokens
@@ -170,9 +203,10 @@ def fit_pca(feat: np.ndarray, d: int = PCA_D) -> dict:
             "explained": (ev[:d] / ev.sum()).numpy(), "n": len(feat)}
 
 
-def build_tokens(cls, score, box, feat, H, f, pca) -> tuple[np.ndarray, np.ndarray]:
-    """Per image (n rows): cls (n, 8) int8, score (n, 8), box (n, 8, 4) native xyxy, feat (n, 8, 1920), H (n, 3, 3) native ->
-    road, f (n,) native focal -> tok (n, 8, TOK_D) float16, mask (n, 8) bool."""
+def build_tokens(cls, score, box, feat, H, intr, pca) -> tuple[np.ndarray, np.ndarray]:
+    """Per image (n rows): cls (n, 8) int8, score (n, 8), box (n, 8, 4) native xyxy, feat (n, 8, 1920), H (n, 3, 3) ideal pixel ->
+    road, intr (n, 9) native intrinsics + distortion -> tok (n, 8, TOK_D) float16, mask (n, 8) bool. The four box corners are
+    undistorted, mapped to the road frame, and their bounding box taken; height / focal = ideal-pixel height / fv."""
     n = len(cls)
     m = cls >= 0
     tok = np.zeros((n, K_TOK, TOK_D), np.float32)
@@ -180,12 +214,14 @@ def build_tokens(cls, score, box, feat, H, f, pca) -> tuple[np.ndarray, np.ndarr
     tok[..., 3] = score
     x0, y0, x1, y1 = np.moveaxis(box.astype(np.float64), -1, 0)
     corners = np.stack([np.stack([x0, y0], -1), np.stack([x1, y0], -1), np.stack([x0, y1], -1), np.stack([x1, y1], -1)], -2)
-    q = apply_h(np.asarray(H, np.float64)[:, None, None], corners)           # (n, 8, 4, 2) road pixels
+    intr = np.asarray(intr, np.float64)
+    ideal = undistort(corners, intr[:, None, None])
+    q = apply_h(np.asarray(H, np.float64)[:, None, None], ideal)             # (n, 8, 4, 2) road pixels
     lo, hi = q.min(-2), q.max(-2)
     wh = np.array(ROAD_WH, np.float64)
     tok[..., 4:6] = np.clip((lo + hi) / 2 / wh, *BOX_CLIP)
     tok[..., 6:8] = np.clip((hi - lo) / wh, 0, BOX_CLIP[1] - BOX_CLIP[0])
-    tok[..., 8] = (y1 - y0) / np.asarray(f, np.float64)[:, None]
+    tok[..., 8] = (ideal[..., 2:, 1].mean(-1) - ideal[..., :2, 1].mean(-1)) / intr[:, 1, None]
     tok[..., FIELDS["app"]] = ((feat.astype(np.float32) - pca["mu"]) @ pca["V"]) / pca["sd"]
     tok[~m] = 0
     return tok.astype(np.float16), m

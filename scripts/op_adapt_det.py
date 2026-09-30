@@ -36,18 +36,26 @@ ROUND1 = data_dir() / "processed" / "op_adapt"
 
 # ================================================================ lists
 
-def _save(ds, images: pd.DataFrame, rows: pd.DataFrame, cams: dict, rl):
+def _save(ds, images: pd.DataFrame, rows: pd.DataFrame, cams: dict, rl, wh=None):
+    """images / rows parquet and cams.npz (key, H ideal pixel -> road, fit RMS, intr (9,)), each written atomically;
+    also the undistortion round trip over each calibration's image (wh = (W, H), default from the principal point)."""
     d = DT.root(ds)
     d.mkdir(parents=True, exist_ok=True)
-    images.to_parquet(d / "images.parquet", index=False)
-    rows.to_parquet(d / "rows.parquet", index=False)
+    for name, df in (("images", images), ("rows", rows)):
+        df.to_parquet(d / f"{name}.tmp.parquet", index=False)
+        (d / f"{name}.tmp.parquet").replace(d / f"{name}.parquet")
     keys = sorted(cams)
-    np.savez(d / "cams.npz", key=np.array(keys), H=np.stack([cams[k][0] for k in keys]),
-             rms=np.array([cams[k][1] for k in keys]), f=np.array([cams[k][2] for k in keys]))
-    rms = np.array([cams[k][1] for k in keys])
-    rl.info(f"{ds}: {len(rows)} trunk rows over {rows.stem.nunique()} files, {len(images)} unique images, "
-            f"{len(keys)} calibrations (homography RMS median {np.median(rms):.3f}, max {rms.max():.3f} road px)")
-    rl.event("list", ds=ds, rows=len(rows), images=len(images), cams=len(keys), rms_max=float(rms.max()))
+    H, rms, intr = (np.stack([cams[k][i] for k in keys]) for i in range(3))
+    trip = []
+    for k, it in zip(keys, intr):
+        W, Hh = wh or (2 * it[2], 2 * it[3])
+        g = np.stack(np.meshgrid(np.linspace(0, W, 33), np.linspace(0, Hh, 33)), -1)
+        trip.append(np.abs(DT.distort(DT.undistort(g, it), it) - g).max())
+    np.savez(d / "cams.tmp.npz", key=np.array(keys), H=H, rms=rms, intr=intr, roundtrip=np.array(trip))
+    (d / "cams.tmp.npz").replace(d / "cams.npz")
+    rl.info(f"{ds}: {len(rows)} trunk rows over {rows.stem.nunique()} files, {len(images)} unique images, {len(keys)} "
+            f"calibrations (road -> native -> road error max {rms.max():.4f} road px; undistortion round trip max {max(trip):.4f} px)")
+    rl.event("list", ds=ds, rows=len(rows), images=len(images), cams=len(keys), rms_max=float(rms.max()), roundtrip_max=float(max(trip)))
 
 
 def _frame(rows_img: list):
@@ -344,7 +352,7 @@ def tokens(a, rl):
     assert np.array_equal(raw["img_id"], images.img_id.to_numpy()), f"{ds}: detections missing for some images"
     ci = pd.Series(np.arange(len(cams["key"])), index=cams["key"]).reindex(images.cam.astype(str)).to_numpy()
     tok, mask = DT.build_tokens(raw["cls"], raw["score"].astype(np.float32), raw["box"], raw["feat"], cams["H"][ci],
-                                cams["f"][ci], pc)
+                                cams["intr"][ci], pc)
     tok = np.concatenate([tok, np.zeros((1,) + tok.shape[1:], tok.dtype)])          # row -1 = the zero image: no tokens
     mask = np.concatenate([mask, np.zeros((1,) + mask.shape[1:], bool)])
     od = DT.root("tok", ds)
