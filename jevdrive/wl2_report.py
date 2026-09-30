@@ -223,7 +223,8 @@ def readout_c1(store: Store, key, ds: int, exit_pairs: set, arms, n_boot: int, p
     mean = {a: {k: float(np.nanmean([s[k] for s in ss])) for k in keys} for a, ss in seed_stats.items()}
 
     def fn(v):
-        m = {a: {k: np.nanmean([stat_c1(c)[k] for c in cs]) for k in keys} for a, cs in v.items()}
+        st = {a: [stat_c1(c) for c in cs] for a, cs in v.items()}                       # once per frame
+        m = {a: {k: np.nanmean([x[k] for x in ss]) for k in keys} for a, ss in st.items()}
         out = {f"{a}|{k}": x for a, d in m.items() for k, x in d.items()}
         for a, b in pairs:
             if a in m and b in m:
