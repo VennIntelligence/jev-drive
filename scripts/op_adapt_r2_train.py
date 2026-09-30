@@ -25,7 +25,7 @@ from jevdrive import op_adapt as A  # noqa: E402
 from jevdrive import op_adapt_r2 as R  # noqa: E402
 
 AT = (0.275, 0.525)
-TRAIN_DOMAINS = ("simC", "simK", "nus", "wod", "nav", "off")
+TRAIN_DOMAINS = ("simC", "simK", "nus", "wod", "nav")          # v5: the offset slot set is out of r2 (artifacts kept on disk)
 
 
 class Log:

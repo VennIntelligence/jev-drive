@@ -40,7 +40,6 @@ SETS = {  # readout set -> (domain, row filter)
     "p5": ("p5", lambda d: np.ones(len(d), bool)),
     "cosC": ("simC", lambda d: d.col("split") == "test"),
     "cosK": ("simK", lambda d: d.col("split") == "test"),
-    "offdev": ("off", lambda d: d.col("split") == "dev"),
     "rater": ("rater", lambda d: np.ones(len(d), bool)),
     "cosC_swap": ("simC_swap", lambda d: np.ones(len(d), bool)),     # §4.4 pedestrian region swapped to x- (package C)
     "cosK_swap": ("simK_swap", lambda d: np.ones(len(d), bool)),
@@ -348,8 +347,7 @@ def b_score(model):
     if sfn is None:
         return {"pending": "package S score_plans"}
     out = {}
-    for name, dn, kind in (("p5", "p5", "p5"), ("nusval", "nus", "nus"), ("cosC", "simC", "cos"), ("cosK", "simK", "cos"),
-                           ("offdev", "off", "off")):
+    for name, dn, kind in (("p5", "p5", "p5"), ("nusval", "nus", "nus"), ("cosC", "simC", "cos"), ("cosK", "simK", "cos")):     # v5: B-off (offset dev) is out of r2
         z = load_eval(model, name)
         sc = R.load_score(dn)
         if z is None or sc is None:

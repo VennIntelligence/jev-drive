@@ -205,7 +205,7 @@ def verdict(items) -> dict:
 
 
 # ---------------------------------------------------------------- data preparation (self-advancing, idempotent)
-DOMAINS = ("simC", "simK", "nus", "wod", "nav", "off", "p5")
+DOMAINS = ("simC", "simK", "nus", "wod", "nav", "p5")          # v5: no "off"
 
 
 def det_ready(dn) -> bool:

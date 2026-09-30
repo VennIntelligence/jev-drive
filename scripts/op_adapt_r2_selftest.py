@@ -68,7 +68,7 @@ def units():
     s = R.select_lambda({0.3: {"drift_median": 0.2, "null_slow_delta_pp": 1}, 1.0: {"drift_median": 0.15, "null_slow_delta_pp": 5}})
     check("select_lambda fallback smaller drift", s["lam_s"] == 1.0)
     # batch composition per arm at batch 64
-    exp = {"A": (8, 16, 10, 6), "A-real": (0, 35, 23, 6), "A-sim": (16, 0, 0, 0), "A-noC": (16, 16, 10, 6),
+    exp = {"A": (8, 19, 13, 0), "A-real": (0, 38, 26, 0), "A-sim": (16, 0, 0, 0), "A-noC": (16, 19, 13, 0),     # v5: no offset share
            "A-bhv": (8, 19, 13, 0)}
     for arm, (sl, wo, nu, of) in exp.items():
         a = R.ARMS[arm]
@@ -79,8 +79,8 @@ def units():
         n_off = int(round(.1 * B)) if a.offset and n_real else 0
         w, n = R.split_counts(n_real - n_off, (.6, .4)) if n_real else (0, 0)
         check(f"composition {arm}", (n_slot, w, n, n_off) == (sl, wo, nu, of), (n_slot, w, n, n_off))
-    check("score domains", R.ARMS["A-real"].score_domains == {"nus", "off"} and R.ARMS["A-sim"].score_domains == {"simC", "simK"}
-          and R.ARMS["A-bhv"].score_domains == set() and R.ARMS["A-noC"].score_domains == {"simK", "nus", "off"})
+    check("score domains", R.ARMS["A-real"].score_domains == {"nus"} and R.ARMS["A-sim"].score_domains == {"simC", "simK"}
+          and R.ARMS["A-bhv"].score_domains == set() and R.ARMS["A-noC"].score_domains == {"simK", "nus"})
     # pack / gather round trip on tiny caches (npz and npy)
     with tempfile.TemporaryDirectory() as td:
         td = Path(td)
@@ -393,7 +393,7 @@ def real(a):
         print(arm, json.dumps(mx.describe(), default=str))
         check(f"mixer {arm} pools non-empty", all(v > 0 for k, v in mx.describe()["pool_sizes"].items() if k != "off" or R.ARMS[arm].offset))
     if {"simC", "simK", "nus", "wod", "nav"} <= set(D):
-        mx = R.Mixer(R.RunCfg(arm="A" if "off" in D else "A-bhv"), D)
+        mx = R.Mixer(R.RunCfg(arm="A"), D)
         rng = np.random.default_rng(0)
         t0 = time.time()
         n = 0

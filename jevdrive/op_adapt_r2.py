@@ -71,7 +71,7 @@ class Arm:
     det: bool = False                    # detection-token adapter (package D)
     sim: str = "CK"                      # labelled sim renders ("" = sim only in distillation)
     real: bool = True                    # labelled real (WOD, nuScenes); False = real only in distillation
-    offset: bool = True                  # v3 offset slots (+ twins in the distillation stream)
+    offset: bool = False                 # v3 offset slots (+ twins); v5: out of r2, kept for the later recovery line
     losses: tuple = ("aux", "pair", "score", "dir", "distill")
     seeds: int = 1
     note: str = ""
