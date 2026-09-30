@@ -43,7 +43,7 @@ def load():
     calib = json.loads((Z.root() / "op_calib.json").read_text())
     dev_xy = np.stack([np.array(calib[n.rsplit("-", 1)[0]]["1"]["extrinsic"]).reshape(4, 4)[:2, 3] for n in names])
     d = {"names": names, "seg": np.array([n.rsplit("-", 1)[0] for n in names]), "traj": sets["traj"][k].astype(np.float64),
-         "scores": sets["scores"][k].astype(np.float64), "speed": W.init_speed(sets["past"][k]), "cat": sets["cluster"][k].astype(str),
+         "scores": sets["scores"][k].astype(np.float64), "speed": W.init_speed(sets["past"][k]).astype(np.float64), "cat": sets["cluster"][k].astype(str),
          "plan": {m: z[m]["plan"] for m in z}, "dev_xy": dev_xy}
     kin = P.wod_kin(names)
     fl = P.flags(kin)
