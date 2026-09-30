@@ -4,7 +4,7 @@
 主题: [decisions 第 78 条](../research/decisions.md)、[op-adapt L 预登记](2026-10-01-op-adapt-L-prereg.md)、[后续检查](2026-10-01-op-adapt-L-followup.md)。
 约束: 不训练、不动已登记的协议、不碰 test、不碰 r2 的 run 目录、不编辑 decisions。只读 `$DATA_DIR/runs/op_adapt_L/readout/{O,main-s0,main-s1,main-s2}/eval/rater.npz`（每个模型在 479 个 val rater 帧上的 plan，读数管线已存）与 WOD 的 index / past / future / rater 集合。纯 CPU，核 100–160，无 GPU，不登记调度表。
 
-名词（首次使用处各给一句）：**RFS**（Rater Feedback Score）= WOD-E2E 榜单指标，每帧有 3 条 rater 轨迹与 0–10 的打分；plan 在 3 s 与 5 s 处各和每条 rater 轨迹比较，落进该 rater 的 **trust region**（信任区：沿该 rater 轨迹方向的纵向 ±4 m / 横向 ±1 m at 3 s，5 s 处 7.2 / 1.8 m，速度低于 1.4 m/s 时缩到一半）内就取该 rater 的分，区外每超一个阈值乘 0.1，取最好的 rater，两个时刻平均；不在任一 rater 的区内（两时刻同时）则不低于 floor 4。榜单口径 = 先按场景类别取均值再对类别等权平均。**capture**（捕获）= op-adapt L 预登记的定义（start = plan 4 s 位移 ≥ 人类的一半；stop = plan 最后 0.5 s 速度 ≤ 1 m/s；turn onset = plan 4 s 横向偏移与人类同号且 ≥ 人类的一半）。**逻辑帧**：rater 帧 = WOD val 里带 rater 打分的 479 帧（每段一帧，约第 149–150 帧）。`main` = 适配模型三个 seed（s0、s1、s2），`O` = 原模型。**×1.06** = plan 的 x 乘 1.06 的纵向校准（提交 7.92 用的约定）。
+名词（首次使用处各给一句）：**RFS**（Rater Feedback Score）= WOD-E2E 榜单指标，每帧有 3 条 rater 轨迹与 0–10 的打分；plan 在 3 s 与 5 s 处各和每条 rater 轨迹比较，落进该 rater 的 **trust region**（信任区：沿该 rater 轨迹方向的纵向 ±4 m / 横向 ±1 m at 3 s，5 s 处 7.2 / 1.8 m，速度低于 1.4 m/s 时缩到一半）内就取该 rater 的分，区外每超一个阈值乘 0.1，取最好的 rater，两个时刻平均；不在任一 rater 的区内（两时刻同时）则不低于 floor 4。榜单口径 = 先按场景类别取均值再对类别等权平均。**capture**（捕获）= op-adapt L 预登记的定义（start = plan 4 s 位移 ≥ 人类的一半；stop = plan 最后 0.5 s 速度 ≤ 1 m/s；turn onset = plan 4 s 横向偏移与人类同号且 ≥ 人类的一半）。**rater 帧** = WOD val 里带 rater 打分的 479 帧（每段一帧，约第 149–150 帧）。`main` = 适配模型三个 seed（s0、s1、s2），`O` = 原模型。**×1.06** = plan 的 x 乘 1.06 的纵向校准（提交 7.92 用的约定）。
 
 ## 0. 公共定义
 
@@ -66,5 +66,5 @@
 
 ## 6. 产物
 
-- 脚本 `scripts/op_adapt_l_rfs_diagnosis.py`（子命令 `run`、`figure`）；在 box 上 `taskset -c 100-160` 运行（op-train 环境，`CUDA_VISIBLE_DEVICES=""`），总墙钟预计 < 5 min（478 帧 × 4 模型的 RFS 是毫秒级，bootstrap 2 000 次），所以不进 tmux。
+- 脚本 `scripts/op_adapt_l_rfs_diagnosis.py`（子命令 `run`、`figure`）；在 box 上 `taskset -c 100-160` 运行（op-train 环境，`CUDA_VISIBLE_DEVICES=""`），总墙钟预计 < 5 min（479 帧 × 4 模型的 RFS 是毫秒级，bootstrap 2 000 次），所以不进 tmux。
 - 小表 `research/results/op-adapt-L/rfs-diagnosis/*.csv`；图 `research/figs/op-adapt-L-rfs-diagnosis.png`（最多两张）；结果、偏离、已验证与推断都写在本文的「结果」节。
