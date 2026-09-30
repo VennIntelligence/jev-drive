@@ -1,0 +1,30 @@
+{
+ "params": 1190913,
+ "real_tokens": true,
+ "step0_bit_identical": {
+  "outputs": true,
+  "select_4": true,
+  "mean": true,
+  "tokens": true
+ },
+ "gate_grad_step0": 0.23150160908699036,
+ "other_grads_step0_max": 0.0,
+ "gate0.5_output_change": 4.74609375,
+ "gate0.5_all_masked_bit_identical": true,
+ "grads_reach_all_at_gate0.5": {
+  "gate": true,
+  "kv.0.weight": true,
+  "kv.0.bias": true,
+  "kv.2.weight": true,
+  "kv.2.bias": true,
+  "kv.3.weight": true,
+  "kv.3.bias": true,
+  "q_norm.weight": true,
+  "q_norm.bias": true,
+  "attn.in_proj_weight": true,
+  "attn.in_proj_bias": true,
+  "attn.out_proj.weight": true,
+  "attn.out_proj.bias": true
+ },
+ "pass": true
+}
