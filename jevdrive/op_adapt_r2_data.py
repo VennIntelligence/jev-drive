@@ -27,6 +27,7 @@ from .common import data_dir
 
 DOMAINS = ("simC", "simK", "nus", "wod", "nav", "off", "p5")
 UID_BASE = {d: (i + 1) * 10 ** 9 for i, d in enumerate(DOMAINS)}
+UID_BASE |= {d: (i + 8) * 10 ** 9 for i, d in enumerate(("simC_swap", "simK_swap", "p5_swap"))}   # §4.4 swap copies
 CTX = 9
 NSLOT, STEP, MIN_SLOT = 24, 4, 9             # Cosmos window: 93 ticks at 20 Hz -> 24 slots at 5 Hz; slots >= 9 in training
 STREAMS = ("C+", "C-", "K+", "K-")           # row block order of cache-sim/<pair>.npy
