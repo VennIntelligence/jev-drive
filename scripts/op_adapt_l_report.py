@@ -158,7 +158,7 @@ def cmd_compare(a):
             return None
         acc = None
         for m in ms:
-            z = np.load(L.lroot("readout", m, "eval", "wodval.npz"))
+            z = np.load(L.lroot("readout", m, "eval") / "wodval.npz")
             rows_ = z["rows"]
             mt = L.row_metrics(z["plan"], tab, rows_, D.cam["wodval"])
             acc = {k: mt[k].astype(float) for k in mt} if acc is None else {k: acc[k] + mt[k] for k in mt}
