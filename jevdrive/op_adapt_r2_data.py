@@ -58,7 +58,8 @@ def npz_shape(f: Path, key: str = "trunk") -> tuple:
     """Shape of one member of an .npz without reading it."""
     with zipfile.ZipFile(f) as z, z.open(f"{key}.npy") as fh:
         v = np.lib.format.read_magic(fh)
-        return np.lib.format._read_array_header(fh, v)[0]
+        rd = np.lib.format.read_array_header_1_0 if v == (1, 0) else np.lib.format.read_array_header_2_0
+        return rd(fh)[0]
 
 
 def stride_ctx(slots: np.ndarray, stride: int) -> np.ndarray:
