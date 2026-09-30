@@ -59,11 +59,12 @@ def tokens2(m: int, skip: int = 0, tag: str = "scale"):
     bad = set(e6) | lane
     pool = [t for t, g in zip(tr["tokens"].tolist(), tr["log"].tolist()) if t not in bad and g not in hold_logs and t in cached]
     pool = [pool[i] for i in np.random.default_rng(20260930).permutation(len(pool))]
-    if skip:
-        used = (run_dir("scale") / "tokens.txt").read_text().split()
-        assert pool[:skip] == used[:skip], "permutation head differs from arm S's token list"
-        print(f"pool {len(pool)} tokens, arm S used {skip}, {len(pool) - skip} left")
-    pool = pool[skip:skip + m]
+    if skip:                                     # the pool has grown since arm S ran: drop S's tokens instead of slicing
+        used = set((run_dir("scale") / "tokens.txt").read_text().split())
+        assert len(used) == skip and used <= set(pool), "arm S tokens are not all in the current pool"
+        pool = [t for t in pool if t not in used]
+        print(f"arm S used {skip}, {len(pool)} tokens left")
+    pool = pool[:m]
     out = run_dir(tag) / "tokens.txt"
     out.write_text("\n".join(pool) + "\n")
     print(f"{len(pool)} tokens (pool before the cut: see log) -> {out}; held-out logs excluded: {len(hold_logs)}")
