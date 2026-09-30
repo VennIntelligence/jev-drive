@@ -33,7 +33,7 @@ HOR = np.array(W.RFS_HORIZONS) * W.RFS_FREQ - 1                        # waypoin
 # ---------------------------------------------------------------- data
 def load():
     import op_adapt_l_prep as P
-    z = {m: np.load(L.lroot("readout", m, "eval", "rater.npz"), allow_pickle=True) for m in ["O"] + SEEDS}
+    z = {m: np.load(L.lroot("readout", m, "eval") / "rater.npz", allow_pickle=True) for m in ["O"] + SEEDS}
     names = z["O"]["names"].astype(str)
     for m in SEEDS:
         assert (z[m]["names"].astype(str) == names).all()
