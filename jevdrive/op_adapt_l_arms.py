@@ -23,6 +23,7 @@ ABLATIONS = {
     "dw03": dict(dw=0.3),
     "dw3": dict(dw=3.0),
     "nocontrast": dict(contrast=False),
+    "long": dict(steps=8000, eval_every=4000),
 }
 # ablations of the trainable set that are not among the selection candidates
 EXTRA = {
