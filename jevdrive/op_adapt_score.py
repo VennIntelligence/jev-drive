@@ -455,24 +455,37 @@ def plan_at(plan: np.ndarray, t: np.ndarray, cam_x: float) -> np.ndarray:
     return op_to_rear(np.stack([np.interp(t, T_IDXS, plan[:, 0]), np.interp(t, T_IDXS, plan[:, 1])], -1), cam_x, yaw)
 
 
+REJ_EXT, REJ_STAND = 50.0, 0.5
+
+
 def rej_path(op_rear: np.ndarray, centre: np.ndarray) -> np.ndarray:
     """`rej`: from the (offset) start, a 3 s cosine merge onto the centre line, then along it; the arc-length profile is
-    op's. op_rear: (NT, 2) op's rollout; centre: (M, 2) centre line in the same ego frame."""
-    from .wl_traj import _along
+    op's. op_rear: (NT, 2) op's rollout; centre: (M, 2) centre line in the same ego frame.
+    The centre line is extended straight by 50 m at both ends, so the start always projects perpendicularly onto it
+    (NAVSIM's PDM centre line can begin ahead of an offset start); the lateral offset is carried along the centre
+    line's own normal at each arc length (not the normal of the time-sampled path, which is undefined while op
+    stands); a standing op (< 0.5 m in 4 s) gives a standing rej: no merge without moving. Fixes of the r2 v4 code,
+    todos/2026-09-29-op-adapt-r2-prereg.md, v5 section."""
     s_op = np.r_[0.0, np.cumsum(np.hypot(*np.diff(op_rear, axis=0).T))]
-    s0, d0 = project(np.zeros(2), centre)
-    seg = np.diff(centre, axis=0)
-    cs = np.r_[0.0, np.cumsum(np.hypot(*seg.T))]
-    i = int(np.clip(np.searchsorted(cs, s0) - 1, 0, len(seg) - 1))
-    nrm = np.array([-seg[i, 1], seg[i, 0]]) / max(np.hypot(*seg[i]), 1e-9)
-    side = float(np.sign(-(centre[i] @ nrm)) or 1.0)      # which side of the line the start (origin) lies on
-    # centre-line points from the projection on, then extended straight
-    rest = np.vstack([centre[i] + (s0 - cs[i]) * seg[i] / max(np.hypot(*seg[i]), 1e-9), centre[i + 1:]])
-    base = _along(rest - rest[0], s_op) + rest[0]
-    tg = np.gradient(base, axis=0)
-    nn = np.stack([-tg[:, 1], tg[:, 0]], -1) / np.maximum(np.hypot(*tg.T), 1e-9)[:, None]
+    if s_op[-1] < REJ_STAND:
+        return np.zeros_like(op_rear)
+    c = np.asarray(centre, float)
+    c = c[np.r_[True, np.hypot(*np.diff(c, axis=0).T) > 1e-6]]
+    u0, u1 = c[1] - c[0], c[-1] - c[-2]
+    c = np.vstack([c[0] - REJ_EXT * u0 / np.hypot(*u0), c, c[-1] + REJ_EXT * u1 / np.hypot(*u1)])
+    seg = np.diff(c, axis=0)
+    L = np.hypot(*seg.T)
+    cs = np.r_[0.0, np.cumsum(L)]
+    s0, _ = project(np.zeros(2), c)
+    i = int(np.clip(np.searchsorted(cs, s0, side="right") - 1, 0, len(seg) - 1))
+    n0 = np.array([-seg[i, 1], seg[i, 0]]) / L[i]
+    lat0 = float(-(c[i] + (s0 - cs[i]) * seg[i] / L[i]) @ n0)      # signed (left +) offset of the start from the line
+    sq = np.minimum(s0 + s_op, cs[-1])
+    k = np.clip(np.searchsorted(cs, sq, side="right") - 1, 0, len(seg) - 1)
+    base = c[k] + ((sq - cs[k]) / L[k])[:, None] * seg[k]
+    nn = np.stack([-seg[k, 1], seg[k, 0]], -1) / L[k][:, None]
     ramp = 0.5 * (1 - np.cos(np.pi * np.minimum(TS, REJ_S) / REJ_S))
-    return base + (side * d0 * (1 - ramp))[:, None] * nn
+    return base + (lat0 * (1 - ramp))[:, None] * nn
 
 
 def candidates(teacher: dict, v0: float, cam_x: float, route: np.ndarray | None = None, centre: np.ndarray | None = None,

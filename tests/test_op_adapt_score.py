@@ -166,6 +166,12 @@ def test_candidates_op_rows_and_rej():
     P, _ = S.candidates({"op": plan, "op_L": plan, "op_R": plan}, 9.0, 1.2, centre=centre, names=S.CANDS_OFF)
     rej = P[-1]
     assert np.allclose(rej[0], 0, atol=1e-6) and abs(rej[31, 1] + 1.8) < 1e-6 and abs(rej[-1, 1] + 1.8) < 1e-6
+    ahead = centre[centre[:, 0] >= 8.0]                          # PDM centre line that begins 8 m ahead of the start
+    P, _ = S.candidates({"op": plan, "op_L": plan, "op_R": plan}, 9.0, 1.2, centre=ahead, names=S.CANDS_OFF)
+    assert np.allclose(P[-1, 0], 0, atol=1e-6) and abs(P[-1, 31, 1] + 1.8) < 1e-6 and np.all(np.diff(P[-1, :, 1]) <= 1e-9)
+    stand = np.zeros((33, 15))
+    P, _ = S.candidates({"op": stand, "op_L": stand, "op_R": stand}, 0.0, 1.2, centre=centre, names=S.CANDS_OFF)
+    assert np.allclose(P[-1], 0)                                  # no merge without moving
 
 
 def test_nc_gap_matches_wl_gap_front():

@@ -10,6 +10,7 @@ tmp/2026-09-30-op-adapt-r2-build.md).
   v1          NC vs WL cg on WL-1's 2 814 branch runs            -> R/checks/V1.json
   v2          nuScenes val log trajectories, S_jev >= 0.8         -> R/checks/V2.json (+ V5 part b: log DDC = 1)
   v345        V3 / V4 (sim pairs) and V6 (offset dev) from the score tables -> R/checks/V{3,4,6}.json
+  v3-p5       V3 on the P5 pedestrian-scope pairs (x- op in Top >= 70 %)  -> R/checks/V3_p5.json
   score       R/score/<domain>.npz for simC simK nus off p5       (needs C's index + teacher)
   sanity      §4.4 scorer sanity                                   -> R/score/sanity.json
 CARLA geometry is mirrored to a right-handed frame here (y -> -y, yaw -> -yaw); nuScenes / NAVSIM are right-handed.
@@ -1088,6 +1089,25 @@ def check_v346() -> dict:
     return res
 
 
+def check_v3_p5() -> dict:
+    """V3, P5 part: on the P5 pedestrian-scope pairs (index/p5_obs.parquet), op in Top on the valid x- slots >= 70 %
+    (x+ reported as description). Written to R/checks/V3_p5.json; V346.json is left as it was."""
+    z = S.load_scores("p5")
+    obs = pd.read_parquet(R("index", "p5_obs.parquet"))
+    pos = pd.Series(np.arange(len(z["uid"])), index=z["uid"])
+    res = {}
+    for k, col in (("x_minus", "uid_minus"), ("x_plus", "uid_plus")):
+        u = obs[col].dropna().astype(np.int64)
+        u = u[u.isin(pos.index)]
+        i = pos[u.to_numpy()].to_numpy()
+        v = z["valid"][i]
+        res[k] = {"obs": len(obs), "scored": int(len(i)), "valid": int(v.sum()), "op_in_top": float(z["top"][i[v], 0].mean())}
+    res["V3_p5"] = {"op_in_top_x_minus": res["x_minus"]["op_in_top"], "line": 0.70, "pass": res["x_minus"]["op_in_top"] >= 0.70}
+    _save_json(R("checks", "V3_p5.json"), res)
+    log.info("V3 p5 %s", res)
+    return res
+
+
 def sanity() -> dict:
     """§4.4 scorer sanity (descriptive): share of slots whose op is not in Top, per set; visible- vs all-actor Top
     disagreement."""
@@ -1154,7 +1174,7 @@ def main():
     a = ap.parse_args()
     fn = {"points": lambda: route_points(a.workers or cores()), "maps-carla": lambda: maps_carla(a.towns),
           "nus-scenes": lambda: nus_scenes(), "maps-nus": lambda: maps_nus(), "v1": lambda: check_v1(a.workers),
-          "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity, "nav-cam": nav_cam_x,
+          "v2": lambda: check_v2(a.workers), "v346": check_v346, "v3-p5": check_v3_p5, "sanity": sanity, "nav-cam": nav_cam_x,
           "objects-nc": lambda: objects_nc(a.towns), "expert": lambda: expert_poses(a.workers or cores()), "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
     print(json.dumps(fn(), indent=1, default=str)[:4000])
 

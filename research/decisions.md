@@ -3633,6 +3633,8 @@ G4 go，生成 2 000 对（已于 2026-09-30 完成，结果见下；Cosmos 约 
 **状态**：**待定**（设计搁置）。限定：10 条 dev 路线单 seed，同配置重复运行在一条路线上差 47 DS；行人在 CARLA 里是 sim 域差（第 55 条），不是这里能测的。
 **会推翻或推进本条的证据**：220 条 × 3 seed 上 e2e − base 的配对差 CI 下界 > 0（推进）；幽灵停车用 `plan_form` rel 或 brake 门修掉后 e2e 的均速回到 base 的一半以上且配对差不降（推进）；同一位置 shadow 与闭环的 plan 减速配对显示幽灵停车来自画面而不是自我强化（改机制读法）。
 
+**失败模式录像诊断（2026-09-30，用户授权）**：最新 `op-drive` 的 dev 20 次运行平均 DS 68.39、RC 89.26%，闯红灯 7、车辆碰撞 5、静物碰撞 3、严重偏离路线 0。seed 0 中 DS < 100 的 7 条路线已在 GPU 5 用一个 CARLA 串行重跑并录制，全部通过视频检查，完整视频共 626.3 秒。用户明确本次是看失败模式，轨迹和分数差异不判复现失败；本次不改驾驶策略、不判成功线。全部动画和逐路线对照见 [第三人称录像诊断](openpilot-seed0-video-diagnosis.md)，小结果见 [record_seed0](results/op_drive/record_seed0/summary.json)。
+
 ## 58. G lane 的 ghost test 与扰动测试：TFv6、BridgeDrive、BLUE、SimLingo（连 PDM-Lite 参照）都不「位置记忆」，shift / swap 扰动也没有一格过「崩塌」门槛；第 46 条 T3 的 0.2% 收口为开环回放的分布偏移，不是背位置（**待定**）
 
 2026-09-29。登记与判据见 [todos/2026-09-26-night-queue-4.md 的 G 节](../todos/2026-09-26-night-queue-4.md)（「G. ghost test 与扰动崩塌」）；最终表见
