@@ -539,10 +539,50 @@ def check(a, rl):
     assert ok, res
 
 
+def check_off(a, rl):
+    """The native-resolution offset warp against C's OffsetMaps: road / wide model frames rendered from our warped CAM_F0
+    (navsim_zs.OpenpilotMaps, no offset) vs C's frames (OffsetMaps(e, psi) on the original), luma |diff| per sample; the
+    same with e = psi = 0 is the resampling floor. -> det/checks/offset_warp.json"""
+    import pickle
+    import torch
+    from PIL import Image
+    from torchvision.io import ImageReadMode, decode_jpeg
+    from jevdrive import navsim_zs as Z
+    from jevdrive import op_adapt_r2_data as C
+    im = pd.read_parquet(DT.root("off", "images.parquet"))
+    camd = pickle.load(open(DT.root("off", "camdicts.pkl"), "rb"))
+    t = pd.read_parquet(C.root("offset") / "table.parquet")
+    dev = t[t.split == "dev"].head(8).sid.tolist() + t[t.split == "train"].sample(8, random_state=0).sid.tolist()
+    ent = {e["token"]: e for e in Z.load_index("navtrain", slim=True) if e["token"] in set(t[t.sid.isin(dev)].token)}
+    warp, res = None, []
+    for sid in dev:
+        r = im[(im.sid == sid) & (im.k == 3)].iloc[0]
+        tok = t[t.sid == sid].token.iloc[0]
+        cam = ent[tok]["cams"][-1]["CAM_F0"]
+        x = decode_jpeg([torch.frombuffer(bytearray(Path(r.path).read_bytes()), dtype=torch.uint8)], mode=ImageReadMode.RGB,
+                        device="cuda")[0][None]
+        warp = warp or OffsetWarp(camd, *x.shape[-2:])
+        out = {}
+        for tag, e, p in (("offset", r.e, r.psi), ("identity", 0.0, 0.0)):
+            w = warp(x, [r.cam], [e], [p])[0].permute(1, 2, 0).cpu().numpy()
+            ours = Z.OpenpilotMaps(cam)(np.asarray(Image.fromarray(w).convert("YCbCr")))
+            m = C.OffsetMaps(cam, e, p)
+            ref = m(m.decode(r.path))
+            d = np.abs(ours[:, :4].astype(int) - ref[:, :4].astype(int))
+            out[tag] = {"road_mean": float(d[0].mean()), "wide_mean": float(d[1].mean()), "road_p99": float(np.percentile(d[0], 99))}
+        res.append({"sid": int(sid), "e": float(r.e), "psi": float(r.psi), **{f"{k}_{kk}": v for k, o in out.items() for kk, v in o.items()}})
+        rl.info(json.dumps(res[-1]))
+    df = pd.DataFrame(res)
+    summ = {"n": len(df), **{c: float(df[c].median()) for c in df.columns if c.endswith("mean") or c.endswith("p99")}}
+    DT.root("checks").mkdir(parents=True, exist_ok=True)
+    (DT.root("checks") / "offset_warp.json").write_text(json.dumps({"median": summ, "samples": res}, indent=1))
+    rl.info(f"offset warp vs C (median over samples): {summ}")
+
+
 def main():
     from jevdrive.runlog import RunLog
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("list", "detect", "pca", "tokens", "check"))
+    ap.add_argument("cmd", choices=("list", "detect", "pca", "tokens", "check", "check-off"))
     ap.add_argument("ds", nargs="?", default="")
     ap.add_argument("--part", default="0/1")
     ap.add_argument("--batch", type=int, default=32)
@@ -557,7 +597,7 @@ def main():
              "navtest": lambda r: list_navtest("navtest", r), "navhard": lambda r: list_navtest("navhard", r)}
         L[a.ds](rl)
     else:
-        {"detect": detect, "pca": pca, "tokens": tokens, "check": check}[a.cmd](a, rl)
+        {"detect": detect, "pca": pca, "tokens": tokens, "check": check, "check-off": check_off}[a.cmd](a, rl)
 
 
 if __name__ == "__main__":
