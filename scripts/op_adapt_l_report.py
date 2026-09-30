@@ -31,8 +31,18 @@ def arm_of(model: str) -> str:
 
 
 def load_metrics() -> pd.DataFrame:
-    fs = [p for p in sorted((L.lroot() / "readout").glob("*/metrics.csv")) if not p.parent.is_symlink() and not p.parent.name.startswith("pilot")]
-    return pd.concat([pd.read_csv(p) for p in fs], ignore_index=True) if fs else pd.DataFrame()
+    """Every readout/<model>/metrics.csv with the model name taken from the directory (main-s0 is a symlink to the selected
+    selection run; `alias_of` names its target so that a figure can show it once)."""
+    parts = []
+    for p in sorted((L.lroot() / "readout").glob("*/metrics.csv")):
+        d = p.parent
+        if d.name.startswith("pilot"):
+            continue
+        x = pd.read_csv(p)
+        x["model"] = d.name
+        x["alias_of"] = d.resolve().name if d.is_symlink() else ""
+        parts.append(x)
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()
 
 
 def get(df, model, st, sl, metric, xs=1.0):

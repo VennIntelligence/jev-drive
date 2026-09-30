@@ -52,7 +52,9 @@ def dots(ax, df, models, st, sl, metric, scale=1.0, xs=1.0, horizontal=True):
 
 def main():
     df = pd.read_csv(RES / "metrics_all.csv")
-    models = order(sorted(df.model.unique()))
+    df["alias_of"] = df.alias_of.fillna("")
+    hidden = set(df.alias_of[df.alias_of != ""])                       # the selection run behind main-s0 is shown as main-s0
+    models = order(sorted(m for m in df.model.unique() if m not in hidden))
     S.apply()
     h = max(2.6, 0.13 * len(models) + 0.9)
     # capture
