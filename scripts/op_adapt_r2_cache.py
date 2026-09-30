@@ -70,14 +70,14 @@ def trunk(net, prev, cur, batch):
 
 
 @torch.no_grad()
-def hidden(net, T, batch=256):
+def hidden(net, T, batch=64):
     """(n, 1024, 8, 16) trunk rows -> (n, 32, 512) stage-4 hidden states (the round-1 stage4_policy path)."""
     return torch.cat([net.run_batched({A.TRUNK_OUT: T[i:i + batch, None].to(net.dtype)}, ["view_39"])["view_39"].reshape(-1, *A.H_SHAPE)
                       for i in range(0, len(T), batch)])
 
 
 @torch.no_grad()
-def teach(net, Hrows, ctx, tc, batch=256):
+def teach(net, Hrows, ctx, tc, batch=128):
     """Hrows (m, 32, 512), ctx (n, 9) rows into Hrows (-1 = zero), tc (n, 2) -> mu, std (n, 3, 33, 15) numpy."""
     mu, sd = [], []
     for i in range(0, len(ctx), batch):
