@@ -259,15 +259,16 @@ def index_sim() -> dict:
             d["sign"] = sign
             d["row"] = sb * NSLOT + d.slot
             d["ctx"] = [sb * NSLOT + np.arange(j - CTX + 1, j + 1) for j in d.slot]
-            if sign < 0:
+            if sign < 0:                                     # px_eq / vis stay the x+ value (pair-level, for L_dir)
                 d[["ped_corr", "ped_wide", "vru_corr", "vru_wide"]] = False
                 d[["ped_dist", "ped_dist_wide"]] = np.nan
-                d["px_eq"], d["dist_bin"] = 0.0, -1
+                d["dist_bin"] = -1
             d["normal"] = sign < 0
             parts.append(d)
         d = pd.concat(parts).sort_values(["pair", "slot", "sign"], ascending=[True, True, False]).rename(columns={"pair": "key"})
         d["file"] = [rel(root("cache-sim") / f"{k}.npy") for k in d.key]
         d["tc0"], d["tc1"], d["labeled"] = 1.0, 0.0, True
+        d = d.rename(columns={f"dv{t}": f"dv_star_{t}" for t in (1, 2, 3)})
         d["vis"] = d.px_eq >= VIS_PX
         d["pre_trig"] = (d.k_trig >= 0) & (d.tick < d.k_trig)
         out[dom] = _finish(d, dom)
@@ -596,12 +597,163 @@ def offset_frames(entry: dict, e: float, psi: float):
     return F[pk[:, 0]], F[pk[:, 1]], np.array(ctx, np.int32), m.coverage
 
 
+# ---------------------------------------------------------------- extra columns: ego speed, camera position, ped_lat
+CAM_X = {"simC": 1.519, "simK": 1.519, "p5": 1.519, "nus": 1.70, "nav": 1.646, "off": 1.646, "wod": 1.519}
+# camera ahead of the rear axle (m): Cosmos / P5 front camera (cosmos_pair_agent.CAM, Waymo rig), nuScenes CAM_FRONT (M0),
+# navtrain CAM_F0 (sensor2ego t_x), WOD front camera (Waymo rig, as P5)
+
+
+def _speed_nus(tokens) -> np.ndarray:
+    from . import nuscenes_zs as Z
+    idx = Z.load_index("trainval")
+    by = {e["token"]: e for e in idx["samples"]}
+    out = np.full(len(tokens), np.nan)
+    cache = {}
+    for i, t in enumerate(tokens):
+        e = by.get(t)
+        if e is None:
+            continue
+        sc = idx["scenes"][e["scene"]]
+        if e["scene"] not in cache:
+            tt = np.asarray(sc["pose_t"], np.float64) * 1e-6
+            v = np.gradient(np.asarray(sc["pose_xyz"], np.float64)[:, :2], tt, axis=0)
+            cache[e["scene"]] = (tt, np.hypot(*v.T))
+        tt, v = cache[e["scene"]]
+        out[i] = np.interp(e["t0"] * 1e-6, tt, v)
+    return out
+
+
+def _speed_nav(tokens) -> np.ndarray:
+    from . import navsim_zs as Z
+    v = {e["token"]: float(np.hypot(*np.asarray(e["vel"])[-1])) for e in Z.load_index("navtrain", slim=True)}
+    return np.array([v.get(t, np.nan) for t in tokens])
+
+
+def extras(domains=("simC", "simK", "nus", "wod", "nav", "p5", "off")):
+    """Add `ego_speed` (m/s at the slot) and `cam_x` to the index parquets (in place)."""
+    for dom in domains:
+        f = root("index") / f"{dom}.parquet"
+        if not f.exists():
+            continue
+        d = pd.read_parquet(f)
+        if dom in ("simC", "simK"):
+            sp = d.v0.to_numpy()
+        elif dom == "nus":
+            sp = np.full(len(d), np.nan)
+            m = (d.token != "").to_numpy()
+            sp[m] = _speed_nus(d.token[m].tolist())
+        elif dom in ("nav", "off"):
+            sp = _speed_nav(d.token.tolist())
+        elif dom == "wod":
+            from . import waymo as W
+            past = np.load(data_dir() / "processed/waymo_e2e/past.npy", mmap_mode="r")
+            row = pd.Series(np.arange(len(past)), index=W.frame_names(W.load_index()))
+            r = row.reindex(d.name).to_numpy()
+            ok = ~np.isnan(r)
+            sp = np.full(len(d), np.nan)
+            sp[ok] = np.hypot(*np.asarray(past[r[ok].astype(int), -1, 2:4], np.float64).T)
+        else:
+            import os
+            os.environ["P5_SET"] = "carla_p5v1_ba"
+            from . import p5_exam as E
+            t, past, *_ = E.load()
+            sp = pd.Series(np.hypot(*past[:, -1, 2:4].astype(np.float64).T), index=t.frame_name).reindex(d.name).to_numpy()
+        d["ego_speed"] = sp.astype(np.float32)
+        d["cam_x"] = np.float32(CAM_X[dom])
+        d.to_parquet(f, index=False)
+        print(f"extras {dom}: ego_speed NaN {int(np.isnan(sp).sum())} / {len(d)}", flush=True)
+
+
+def _polyline_dist(p: np.ndarray, line: np.ndarray) -> np.ndarray:
+    """(n, 2) points -> distance to the polyline (m, 2)."""
+    if len(line) == 1:
+        return np.linalg.norm(p - line[0], axis=1)
+    a, b = line[:-1], line[1:]
+    ab = b - a
+    t = np.clip(((p[:, None] - a[None]) * ab[None]).sum(-1) / np.maximum((ab ** 2).sum(-1), 1e-9)[None], 0, 1)
+    return np.linalg.norm(p[:, None] - (a[None] + t[..., None] * ab[None]), axis=-1).min(1)
+
+
+def _ped_lat_pair(args) -> list:
+    """ped_lat for one pair: min over the walker hazards' recorded future (tick k .. k + 4 s) of the distance to the
+    teacher `op` path (T_IDXS <= 4 s, camera 1.519 m ahead of the rear axle) and to the `hold` path (the CARLA route from
+    the ego's projection, max(4 v0, 5) m long), in the rear-axle frame at tick k. Per render (C / K: their own op)."""
+    pair, slots, ops = args
+    from .op_adapt import T_IDXS
+    z = np.load(root("sim", "world") / f"{pair}.npz")
+    pose = pd.DataFrame(z["plus_pose"][:, 1:], index=z["plus_pose"][:, 0].astype(int), columns=["x", "y", "z", "yaw", "vx", "vy"])
+    ak, aid, axy = z["plus_act_k"], z["plus_act_id"], z["plus_act_xyz"][:, :2].astype(np.float64)
+    hz = set(z["hz_ids"].tolist())
+    route = z["route"][:, :2].astype(np.float64)
+    t4 = T_IDXS <= 4.0
+    out = []
+    for i, j in enumerate(slots):
+        k = int(z["k0"]) + STEP * int(j)
+        e = pose.loc[k]
+        o = _rear(np.array([e.x, e.y]), np.array(e.yaw))
+        m = np.isin(aid, list(hz)) & (ak >= k - STEP) & (ak <= k + 80)
+        pts = []
+        for h in hz:
+            mh = m & (aid == h)
+            if not mh.any():
+                continue
+            kk = ak[mh].astype(float)
+            srt = np.argsort(kk)
+            v = _interp_actor(kk[srt], axy[mh][srt], np.array([float(k)]))
+            pts.append(np.r_[v[np.isfinite(v).all(1)], axy[mh][(ak[mh] > k)]])
+        if not pts or not len(np.concatenate(pts)):
+            out.append([np.nan] * len(ops))
+            continue
+        P = _to_ego(np.concatenate(pts), o, e.yaw)
+        rt = _to_ego(route, o, e.yaw)
+        seg = np.linalg.norm(np.diff(rt, axis=0), axis=1)
+        s = np.r_[0.0, np.cumsum(seg)]
+        s0 = s[int(np.argmin(np.linalg.norm(rt, axis=1)))]
+        L = max(4.0 * float(np.hypot(e.vx, e.vy)), 5.0)
+        keep = (s >= s0 - 1e-6) & (s <= s0 + L)
+        hold = np.r_[[[0.0, 0.0]], rt[keep]]
+        dh = _polyline_dist(P, hold).min()
+        row = []
+        for op in ops:
+            path = np.r_[[[0.0, 0.0]], np.c_[op[i][t4, 0] + CAM_X["simC"], op[i][t4, 1]]]
+            row.append(float(min(dh, _polyline_dist(P, path).min())))
+        out.append(row)
+    return list(zip([pair] * len(slots), slots, out))
+
+
+def sim_ped_lat(workers: int = 24):
+    """ped_lat (m) on simC / simK rows (both signs carry the x+ value), from the merged teacher."""
+    from multiprocessing import Pool
+    idx = {d: load_index(d) for d in ("simC", "simK")}
+    tch = {d: load_teacher(d) for d in idx}
+    ops = {}
+    for d in idx:
+        u = pd.Series(np.arange(len(tch[d]["uid"])), index=tch[d]["uid"])
+        x = idx[d][idx[d].sign > 0]
+        ops[d] = (x, tch[d]["plan_mu"][u.reindex(x.uid).to_numpy(), 0][..., :2])
+    xc = ops["simC"][0]
+    jobs = []
+    for pair, g in xc.groupby("key", sort=True):
+        ii = g.index.to_numpy()
+        pos = xc.index.get_indexer(ii)
+        jobs.append((pair, g.slot.to_numpy(), [ops["simC"][1][pos], ops["simK"][1][ops["simK"][0].index.get_indexer(ii)]]))
+    with Pool(workers) as p:
+        res = [r for part in p.imap(_ped_lat_pair, jobs, chunksize=4) for r in part]
+    lat = {(a, int(b)): v for a, b, v in res}
+    for n, d in enumerate(("simC", "simK")):
+        x = idx[d]
+        x["ped_lat"] = np.array([lat[(a, int(b))][n] for a, b in zip(x.key, x.slot)], np.float32)
+        x.to_parquet(root("index") / f"{d}.parquet", index=False)
+        print(f"ped_lat {d}: median {np.nanmedian(x.ped_lat):.2f} m, NaN {int(x.ped_lat.isna().sum())}", flush=True)
+
+
 def main():
     """python -m jevdrive.op_adapt_r2_data <step> ... (CPU steps; GPU passes are scripts/op_adapt_r2_cache.py)."""
     import sys
     import time
     steps = {"splits": make_splits, "simlab": sim_labels, "sim": index_sim, "nus": index_nus, "wodval": labels_wod_val,
-             "wod": index_wod, "nav": index_nav, "p5": index_p5, "offtab": offset_table}
+             "wod": index_wod, "nav": index_nav, "p5": index_p5, "offtab": offset_table, "extras": extras,
+             "pedlat": sim_ped_lat}
     for s in sys.argv[1:]:
         t = time.time()
         r = steps[s]()
