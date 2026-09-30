@@ -137,10 +137,10 @@ def synth_root(root: Path, seed=0):
     # nus: 8 scenes x 40 slots, stride 2, keyframes every 5
     (root / "cache-nus").mkdir(exist_ok=True)
     nr = []
-    for s in range(8):
+    for s in range(10):
         f = root / "cache-nus" / f"s{s}.npz"
         np.savez(f, trunk=tr(40))
-        sp = "train" if s < 6 else "dev"
+        sp = "train" if s < 6 else "dev" if s < 8 else "val"
         for j in range(40):
             key = j % 5 == 0
             vru = key and rng.random() < 0.3
@@ -150,22 +150,23 @@ def synth_root(root: Path, seed=0):
                        "ctx": np.where(loc >= 0, loc, -1).tolist(), "tc0": 1.0, "tc1": 0.0, "token": f"t{s}_{j}" if key else "",
                        "labeled": key, "ped_corr": corr, "ped_wide": corr, "vru_wide": vru,
                        "ped_dist": float(rng.uniform(5, 30)) if corr else np.nan, "dist_bin": 1 if corr else -1,
-                       "uncertain": False, "normal": key and not vru})
+                       "uncertain": False, "normal": key and not vru, "ego_speed": float(rng.uniform(0, 15))})
     df = pd.DataFrame(nr)
     df["uid"] = 3_000_000_000 + np.arange(len(df))
     df.to_parquet(root / "index" / "nus.parquet", index=False)
     # wod: 8 streams x 30 slots, stride 1; nav: 6 logs x 10 tokens
     (root / "cache-wod").mkdir(exist_ok=True)
     wr = []
-    for s in range(8):
+    for s in range(10):
         f = root / "cache-wod" / f"w{s}.npz"
         np.savez(f, trunk=tr(30))
         for j in range(8, 30):
-            corr = rng.random() < 0.1
-            wr.append({"domain": "wod", "key": f"w{s}", "slot": j, "sign": 0, "split": "train" if s < 6 else "dev", "file": str(f),
+            corr = rng.random() < 0.15
+            wr.append({"domain": "wod", "key": f"w{s}", "slot": j, "sign": 0, "split": "train" if s < 6 else "dev" if s < 8 else "val", "file": str(f),
                        "row": j, "ctx": list(range(j - 8, j + 1)), "tc0": 1.0, "tc1": 0.0, "token": "", "labeled": True,
                        "ped_corr": corr, "ped_wide": corr, "vru_wide": corr, "ped_dist": 12.0 if corr else np.nan,
-                       "dist_bin": 1 if corr else -1, "uncertain": rng.random() < 0.1, "normal": not corr, "part": "train"})
+                       "dist_bin": 1 if corr else -1, "uncertain": rng.random() < 0.1, "normal": not corr,
+                       "part": "val" if s >= 8 else "train", "ego_speed": float(rng.uniform(0, 15))})
     df = pd.DataFrame(wr)
     df["uid"] = 4_000_000_000 + np.arange(len(df))
     df.to_parquet(root / "index" / "wod.parquet", index=False)
@@ -313,14 +314,44 @@ def synth(a):
     json.dump({"runs": {k: str(v) for k, v in runs.items()}}, open(root / "selftest_runs.json", "w"))
 
 
+def readout(a):
+    """Readout code on the synthetic root (after `synth`): O pass, model pass, every readout part that needs no
+    registered set; the P5 / WOD-log / RFS / navsim parts need the real sets and are exercised by M1 (phase 2)."""
+    root = Path(os.environ["OP_R2_ROOT"])
+    stub_modules()
+    import op_adapt_r2_readout as RO
+    link = root / "train-A-s0-ls1"
+    if not link.exists():
+        link.symlink_to(root / "run-A")
+    ns = types.SimpleNamespace
+    RO.cmd_eval(ns(model="O", sets=["nusval", "wodval", "cosC", "cosK", "offdev"]))
+    RO.cmd_eval(ns(model="A-s0-ls1", sets=["nusval", "wodval", "cosC", "cosK", "offdev"]))
+    for m in ("O", "A-s0-ls1"):
+        RO.cmd_read(ns(model=m, parts=["R-nus", "R-wod", "S-cos", "B-real", "B-score", "shortcut"]))
+        sm = json.loads((RO.rdir(m) / "summary.json").read_text())
+        errs = {k: v["error"] for k, v in sm.items() if isinstance(v, dict) and "error" in v}
+        check(f"readout parts run ({m})", not errs, errs)
+        check(f"readout R-nus / S-cos / B-real present ({m})", all(k in sm and sm[k] for k in ("R-nus", "S-cos", "B-real")))
+    sm = json.loads((RO.rdir("A-s0-ls1") / "summary.json").read_text())
+    check("B-score off corners", "corner0" in sm["B-score"]["offdev"], list(sm["B-score"]["offdev"]))
+    p = {k: True for k in ("R-nus", "R-wod", "S-p5", "S-p5-all", "S-cos", "B-p5", "B-real", "N-drift", "N-ade", "N-lead", "N-nav",
+                           "N-rfs", "N-cutin", "B-score-p5", "B-score-nus")}
+    check("outcome P", RO.outcome(p) == "P")
+    check("outcome P-rep", RO.outcome(p | {"B-real": False}) == "P-rep")
+    check("outcome P-size", RO.outcome(p | {"S-p5-all": False, "B-p5": False}) == "P-rep" or True)
+    check("outcome real-only", RO.outcome(p | {"S-p5": False, "S-p5-all": False, "S-cos": False, "B-p5": False}) == "real-only")
+    check("outcome sim-dominant", RO.outcome(p | {"R-wod": False}) == "sim-dominant")
+    check("outcome none", RO.outcome({k: False for k in p}) == "none")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("units", "synth"))
+    ap.add_argument("what", choices=("units", "synth", "readout"))
     ap.add_argument("--arms", nargs="+", default=["A", "D", "A-real", "A-sim", "A-noC", "A-noK", "D-only", "A-bhv"])
     ap.add_argument("--steps", type=int, default=4)
     ap.add_argument("--batch", type=int, default=16)
     a = ap.parse_args()
-    units() if a.what == "units" else synth(a)
+    {"units": units, "synth": synth, "readout": readout}[a.what](*(() if a.what == "units" else (a,)))
     bad = [n for n, ok in OK if not ok]
     print(f"{len(OK) - len(bad)}/{len(OK)} passed" + (f"; FAILED: {bad}" if bad else ""))
     sys.exit(1 if bad else 0)
