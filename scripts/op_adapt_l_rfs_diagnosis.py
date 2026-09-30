@@ -358,6 +358,20 @@ def run(a):
         hyp.append({"id": "H5", "mechanism": "capture flip does not enter the trust region", "rule": "share out->in among on-rows < 0.5", "supported": r4b,
                     "numbers": f"out->in {k4.out_to_in:.3f}, in->out {k4.in_to_out:.3f}, stay in {k4.stay_in:.3f}, stay out {k4.stay_out:.3f}", "bound_lb_units": float(k4.w_sum_d_total_not_out_to_in)})
     hyp = pd.DataFrame(hyp)
+    # frames with a large headroom (gap >= 2): inside / outside the audit slices, and what the original plan misses there
+    go = raw_geo["O"]
+    bi = go["hv"].argmax(1)
+    rr, hh = np.arange(n)[:, None], np.arange(2)[None]
+    nlb, ntb, slb = go["nl"][rr, bi, hh], go["nt"][rr, bi, hh], go["sl"][rr, bi, hh]
+    big = []
+    for nm, m in (("gap>=2 in S", (gap >= 2) & d["slice"]["S"]), ("gap>=2 outside S", (gap >= 2) & ~d["slice"]["S"]), ("gap>=2 label other", (gap >= 2) & (d["label"] == "other")),
+                  ("gap<2 all", gap < 2), ("gap>=2 all", gap >= 2)):
+        big.append({"set": nm, "frames": int(m.sum()), "share_of_H": float((w[m] * gap[m]).sum() / H_all), "rfs_orig": float(raw_sc["O"][m].mean()), "rfs_logged": float(lg[m].mean()),
+                    "logged_minus_orig": float((lg[m] - raw_sc["O"][m]).mean()), "lng_binding_3s": float((nlb[m, 0] > ntb[m, 0]).mean()), "lng_binding_5s": float((nlb[m, 1] > ntb[m, 1]).mean()),
+                    "lng_signed_3s": float(slb[m, 0].mean()), "lng_signed_5s": float(slb[m, 1].mean()), "nlng_5s": float(nlb[m, 1].mean()), "nlat_5s": float(ntb[m, 1].mean()),
+                    "speed_mean": float(d["speed"][m].mean()), "frac_intent_straight": float((d["kin"]["intent"][m] == 1).mean()), "rater_spread": float((d["scores"][m].max(1) - d["scores"][m].min(1)).mean())})
+    pd.DataFrame(big).to_csv(OUT / "q5_big_gap_frames.csv", index=False)
+    print(pd.DataFrame(big).round(3).T.to_string())
     hyp.to_csv(OUT / "q5_hypotheses.csv", index=False)
     (OUT / "selfcheck.json").write_text(json.dumps(chk, indent=1, default=float))
     pd.set_option("display.width", 250, "display.max_columns", 60)
