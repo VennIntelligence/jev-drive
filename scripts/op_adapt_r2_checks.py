@@ -157,6 +157,36 @@ def check_identity():
     save("identity", {"n": len(rows), "max": max(rows), "median_of_max": float(np.median(rows)), "pass": max(rows) < 0.05})
 
 
+def check_v6img(out="research/results/op-adapt-r2/offset_v6"):
+    """V6 visual check: 5 dev samples per corner (the first 5 dev tokens), current frame. Panel: top = original
+    openpilot road | wide model frame (luma), bottom = the same after the offset homography."""
+    from PIL import Image, ImageDraw
+    from jevdrive import navsim_zs as Z
+    from jevdrive.openpilot.frames import unpack_luma
+    t = pd.read_parquet(C.root("offset") / "table.parquet")
+    d = t[t.split == "dev"]
+    toks = sorted(d.token.unique())[:5]
+    ent = {e["token"]: e for e in Z.load_index("navtrain", slim=True) if e["token"] in set(toks)}
+    o = Path(out)
+    o.mkdir(parents=True, exist_ok=True)
+    files = []
+    for _, r in d[d.token.isin(toks)].iterrows():
+        cam = ent[r.token]["cams"][-1]["CAM_F0"]
+        m0, m1 = C.OffsetMaps(cam, 0.0, 0.0), C.OffsetMaps(cam, r.e, r.psi)
+        ycc = m0.decode(cam["path"])
+        a, b = m0(ycc), m1(ycc)
+        top = np.concatenate([unpack_luma(a[0]), unpack_luma(a[1])], 1)
+        bot = np.concatenate([unpack_luma(b[0]), unpack_luma(b[1])], 1)
+        im = Image.fromarray(np.concatenate([top, np.full((4, top.shape[1]), 255, np.uint8), bot], 0)).convert("RGB")
+        dr = ImageDraw.Draw(im)
+        dr.text((6, 4), "original (road | wide)", fill=(255, 255, 0))
+        dr.text((6, 264), f"offset e={r.e:+.1f} m, psi={r.psi:+.2f} rad (left +)", fill=(255, 255, 0))
+        f = o / f"c{int(r.corner)}_{r.token}.webp"
+        im.save(f, quality=70)
+        files.append(f.name)
+    save("v6img", {"files": files, "out": str(o)})
+
+
 if __name__ == "__main__":
     for w in sys.argv[1:]:
         globals()[f"check_{w}"]()
