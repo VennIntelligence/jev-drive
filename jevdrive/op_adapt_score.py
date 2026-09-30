@@ -385,7 +385,7 @@ def raw_metrics(slot: Slot, p: np.ndarray, actors: dict | None = None) -> dict:
     """Every per-candidate term for rear-axle rollouts p (K, NT, 2) in the slot's ego frame. actors: {"vis": mask, ...}
     extra actor subsets to score NC / TTC with (default: the visible set only under the key "")."""
     n, ego = slot.n, slot.ego
-    st = rollout(p, slot.v0)
+    st = rollout(p)                                        # v, a from the candidate's own arc-length curve (§2.1)
     g = _geom(st, ego, n)
     yaw = slot.pose[2]
     ar = slot.mapq.areas(to_world(g["corners"], slot.pose), to_world(g["c"], slot.pose), to_world(g["p"], slot.pose), g["h"] + yaw)
@@ -496,7 +496,7 @@ def candidates(teacher: dict, v0: float, cam_x: float, route: np.ndarray | None 
             P.append(rej_path(P[names.index("op")], centre))
         else:
             P.append(np.vstack([[0.0, 0.0], wl[k]]))
-        st = rollout(P[-1][None], v0)
+        st = rollout(P[-1][None])
         tq = T_IDXS[:N21]
         xy = rear_to_op(np.stack([np.interp(tq, TS, P[-1][:, 0]), np.interp(tq, TS, P[-1][:, 1])], -1), cam_x,
                         np.interp(tq, TS, st["h"][0]))
