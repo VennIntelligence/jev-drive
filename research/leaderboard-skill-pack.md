@@ -22,7 +22,8 @@
 4. **N0 已跑（2026-09-29 更新，决策第 64 条）**：「原生 plan ⊕ Hydra 选择」的切换器 + 拉长 1.1 倍的速度候选，参数只在 navtrain 子集（2 428 token）上选，navtest 只打一次分：
    **84.94，对原生 plan +0.77 [+0.28, +1.27]**，按登记「成立」，但只有写在分数之前的预期（+2 到 +4）的三分之一；单纯拉长速度在 NAVSIM 上零和（EP 涨、DAC / TTC 跌）。
    **N1 已跑（决策第 68 条）**：在补帧输入下重抽 navtrain `temporal`、重训打分头、把原生 plan 放进独立候选槽，navtest **87.32，对 N0 +2.38 [+1.94, +2.83]**，对原生 +3.15，按登记「成立」，高出预期（85.0–86.5）；增益主要来自独立原生槽（+1.6 到 +1.9），补帧特征本身只有 +0.25。
-   **N2 已跑（决策第 69、70 条，第 6.2 节）**：λ 下扩（N1b）平；换成 MLP 打分头 + 22 个原生族槽 + 第二输入视图，navtest **90.60，对 N1 +3.28 [+2.89, +3.66]**，增益几乎全在 EP、四成 token 快过 human；**navhard 上 N1 / N2 都比原生低约 3 分**，pack 不迁移到偏离起点。
+   **N2、N3 已跑（决策第 69–72 条，第 6.2 节）**：λ 下扩（N1b）平；MLP 打分头 + 22 个原生族槽 + 第二输入视图 → N2 90.60；再把训练行扩到 6 万 → **N3 91.59，对 N1 +4.27 [+3.89, +4.65]**（6 次看 navtest，Bonferroni 后 [+3.77, +4.80]）。
+   增益几乎全在 EP，N3 的平均 EP 已超过 human；navhard 上 N1 / N2 比原生低约 3 分，N3 官方分与原生持平，pack 不迁移到偏离起点。
 5. **诚实的边界**：中期前 NAVSIM 进前 5（≥ 93.5）不现实，现实目标是「零改权重的基座 + 薄 pack 到 DiffusionDriveV2 / GoalFlow 档（88–91）」；WOD 若 test 上也有 +0.1 量级，能进前 10。
    故事应该是「同一个基座，每榜一个 pack 把分拉上去；pack 动分数，配对考卷上的能力不动」，第二半句要真的量。
 
@@ -205,8 +206,8 @@ GPU 步骤（N1）排在 lane 的 navtest / navhard 跑完之后，避免抢卡�
 
 | 榜 | 基座（F0） | + pack（预期，推测） | 位置（对照 [tmp 表](../tmp/2026-09-29-leaderboard-wod.md)） |
 |:--|:--|:--|:--|
-| NAVSIM v1 navtest | 84.2 | N0 84.9（已测）；N1 87.3（已测，[+1.94, +2.83] 对 N0）；**N2 90.6（已测，对 N1 +3.28 [+2.89, +3.66]，第 6.2 节）** | 88–90 约在 DiffusionDriveV2 / GoalFlow / Hydra-MDP++ 档，前 15 左右；前 5（≥ 93.5）够不着 |
-| NAVSIM v2 navhard | 33.3 | 原推测 36–42，**已测：N1 30.2、N2 31.3，比原生低约 3**（第 6.2 节） | SimWAM 37.6 到 GTRS-E 49.4 之间 |
+| NAVSIM v1 navtest | 84.2 | N0 84.9（已测）；N1 87.3（已测，[+1.94, +2.83] 对 N0）；N2 90.6；**N3 91.6（已测，对 N1 +4.27，第 6.2 节）** | 88–90 约在 DiffusionDriveV2 / GoalFlow / Hydra-MDP++ 档，前 15 左右；前 5（≥ 93.5）够不着 |
+| NAVSIM v2 navhard | 33.3 | 原推测 36–42，**已测：N1 30.2、N2 31.3、N3 33.3，没有超过原生**（第 6.2 节） | SimWAM 37.6 到 GTRS-E 49.4 之间 |
 | WOD-E2E | val 8.005 | val 8.119（已测，交叉拟合）；test 未知 | 若 test 同量级，在 8.08–8.17 那一簇，前 10 |
 | Bench2Drive | – | 不在中期范围 | – |
 
@@ -251,16 +252,19 @@ B2 单独在 NAVSIM 上是零（PDMS 的 DAC / TTC 会罚快），只有经打�
 
 ## 6.2 N1 之后的提分：N1b、N2 与候选改动的排序（2026-09-30）
 
-预登记与全部表 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)，决策第 69、70 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 lane 到 N2 为止共看 4 次（N0、N1、N1b、N2）。
+预登记与全部表 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)，决策第 69–72 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 pack 共看 6 次（N0、N1、N1b、N2、S、N3），最好者报 Bonferroni（m = 6）区间。
 
 | 读数 | navtest PDMS | 对 N1（配对，95% CI） | navhard EPDMS | EP 超 human |
 |:--|--:|:--|--:|--:|
 | 原生 Cinque | 84.17 | −3.15 | 33.33 | – |
 | N1 | 87.32 | – | 30.24 | 23.0% |
 | N1b（λ 网格下扩） | 87.26 | −0.06 [−0.26, +0.14] | 31.10 | – |
-| **N2**（MLP 头 5 seed + hold 视图 + 22 个原生族槽） | **90.60** | **+3.28 [+2.89, +3.66]** | 31.29 | 40.8% |
+| N2（MLP 头 5 seed + hold 视图 + 22 个原生族槽） | 90.60 | +3.28 [+2.89, +3.66] | 31.29 | 40.8% |
+| S（N1b 线性配方，训练行 2 万 → 6 万） | 87.74 | +0.42 [+0.15, +0.70] | – | 23.9% |
+| **N3**（N2 配置，6 万行） | **91.59** | **+4.27 [+3.89, +4.65]**（m = 6：[+3.77, +4.80]）；对 N2 +0.99 [+0.71, +1.28] | 33.28 | 43.9% |
 
-读法：N1 的瓶颈是打分头的容量，不是正则（N1b 平，MLP 头 +2.1）；再加开得更快的原生族槽与第二个输入视图，到 90.6，进入 DiffusionDriveV2 / GoalFlow 那一档。
+读法：N1 的瓶颈是打分头的容量，不是正则（N1b 平，MLP 头 +2.1）；再加开得更快的原生族槽与第二个输入视图到 90.6，训练行 3× 到 91.6，进入 DiffusionDriveV2 / GoalFlow / Hydra-MDP++ 那一档之上。
+N3 的平均 EP（87.3）已超过 human（87.0）。navhard 官方分 N3 回到与原生持平（33.28），N1 / N2 低约 3 分；均匀权重口径下都仍为负。
 增益几乎全在 EP，平均 EP 85.8 已接近 human 的 87.0，四成 token 超过 human，所以这是按 PDM scorer 挑轨迹的 trick。**navhard 上所有 pack 都比原生低约 3 分**：打分头在 stage 2 的偏离起点上没有读出能力，还挑出更快、帧间更不一致的轨迹（EC 掉）。
 
 候选改动的排序（按期望增益 / 成本；增益是 navtrain held-out 上的估计，navtest 通常再打七折，navtest 与 held-out 的差在 N0、N1、N2 上是 1.9–2.2 分）：
@@ -270,9 +274,9 @@ B2 单独在 NAVSIM 上是零（PDMS 的 DAC / TTC 会罚快），只有经打�
 | 1 | MLP 打分头（共享主干，5 seed） | +2.1（线性 89.75 → 91.88） | < 0.2 GPU·h，小卡 | trick（更好的 PDM 蒸馏） | N2 已含 |
 | 2 | 原生族槽 4 → 22（拉长 0.9–1.75、横向 0.6–1.2） | +0.7（MLP）/ +1.4（线性） | CPU 10 min 标签 | trick（开得更快） | N2 已含 |
 | 3 | 第二输入视图（E6 hold 输入的 Cinque + Lebowski `temporal`） | +0.1 到 +0.6 | 0（已有特征） | pack（同一冻结基座 + 第二个 openpilot） | N2 已含 |
-| 4 | 训练行 2 万 → 6 万（S / N3） | MLP 学习曲线每翻倍 +0.8 到 +1.3 → +1.3 到 +2.0 | 一张整卡约 5 GPU·h（GIMM），CPU 约 80 core·h 标签 | trick 的规模化 | 在跑 |
-| 5 | 全量 navtrain（约 10 万行） | 在 6 万之上再 +0.6 到 +1.0（外推） | 再约 8 GPU·h 整卡 + 150 GB 盘 | 同上 | 看 N3 的曲线再定 |
-| 6 | openpilot 自己的替代 plan 进候选（强制 laneChange / turn desire） | 待测（臂 A） | 约 2 GPU·h 小卡 + CPU 分钟级 | 候选来自基座的多模态；选择仍是 trick | 在跑 |
+| 4 | 训练行 2 万 → 6 万（S / N3） | 实测：held-out +1.13（MLP），navtest +0.99 | 一张整卡约 7.3 GPU·h（GIMM），CPU 约 80 core·h 标签 | trick 的规模化 | N3 已含 |
+| 5 | 全量 navtrain（约 10 万行，再 +4 万） | +0.5 到 +1.0 held-out（外推），navtest 约 +0.4 到 +0.8 | 再约 7 GPU·h 整卡 + 150 GB 盘 + 80 core·h | 同上 | **下一步首选** |
+| 6 | openpilot 自己的替代 plan 进候选（强制 laneChange / turn desire） | 实测：oracle +0.9，held-out −0.08 | 约 4 GPU·h 小卡（已花） | 候选来自基座的多模态 | 不纳入（臂 A） |
 | 7 | 两段重排（N1b 的 top-8 oracle 94.9，对 top-1 89.5） | 不确定：第二段要有第一段没有的信息 | 约 1 GPU·h | trick | 未做 |
 | 8 | 空间特征的候选条件打分器（Hydra 式 transformer 读 openpilot 的视觉特征图） | +1 到 +3（推测；唯一可能改 DAC 读出的一项） | 新抽空间 tap（6 万 token，数百 GB）+ 5–10 GPU·h 训练 | 仍是 PDM 蒸馏，但读出来自感知特征 | 未做，需整卡 |
 | 9 | 偏离起点的训练行（给 navhard stage 2）：横向 ±2 m / yaw ±0.3 的起点，单应变换画面 + 重算 PDM metric cache | navhard 唯一可信的修法；navtest 约 0 | metric cache 重算（CPU 大）+ GIMM；与 op-adapt r2 的偏离 slot 集重叠，要协调 | pack（数据分布对准 navhard） | 未做 |
