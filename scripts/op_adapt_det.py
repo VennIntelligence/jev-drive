@@ -208,6 +208,59 @@ def list_navtest(ds, rl):
     (DT.root(ds) / "tokens.txt").write_text("\n".join(toks))
 
 
+def list_off(rl):
+    """C's offset-start samples (R2/offset/table.parquet): image (sid, k) = keyframe k of the sample's token, to be warped with
+    the sample's (e, psi) at detection time exactly as op_adapt_r2_data.OffsetMaps (calibration = the last keyframe's
+    CAM_F0). Rows per shard file R2/cache-off/<shard>.npy follow C's offset_frames: per sample in sid order, the unique
+    (prev, cur) keyframe pairs in first-use order; checked against the stored <shard>.ctx.npy where it exists."""
+    import pickle
+    from jevdrive import navsim_zs as Z
+    from jevdrive import op_adapt_r2_data as C
+    t = pd.read_parquet(C.root("offset") / "table.parquet").sort_values("sid")
+    need = set(t.token)
+    ent = {e["token"]: e for e in Z.load_index("navtrain", slim=True) if e["token"] in need}
+    T = np.round(np.arange(-8, 1) * 0.2, 3)
+    slot = lambda x: int(np.searchsorted(Z.T_HIST2, x + 1e-6) - 1) if x >= -1.5 - 1e-6 else -1  # noqa: E731
+    cams, camd, img, stems, rws, rows_img, checked = {}, {}, [], [], [], [], 0
+    for sh, g in t.groupby("shard", sort=True):
+        base, ctx_all, r0 = 0, [], len(rows_img)
+        for r in g.itertuples():
+            e = ent[r.token]
+            cam = e["cams"][-1]["CAM_F0"]
+            k = str(Z.calib_key({"CAM_F0": cam}))
+            if k not in cams:
+                cams[k], camd[k] = DT.h_nuplan(cam), {f: np.asarray(cam[f]) for f in ("R", "t", "K", "D")}
+            ids = {}
+            for kk in range(4):
+                ids[kk] = len(img)
+                img.append((r.sid, kk, e["cams"][kk]["CAM_F0"]["path"], k, r.e, r.psi))
+            pairs, ctx = {}, []
+            for x in T:
+                c = slot(x)
+                if c < 0:
+                    ctx.append(-1)
+                    continue
+                pr = slot(round(x - 0.2, 3))
+                ctx.append(pairs.setdefault((pr, c), len(pairs)))
+            rows_img += [ids[c] for _, c in pairs]
+            ctx_all.append([x + base if x >= 0 else -1 for x in ctx])
+            base += len(pairs)
+        n = len(rows_img) - r0
+        stems += [str(sh)] * n
+        rws += list(range(n))
+        f = C.root("cache-off") / f"{sh}.ctx.npy"
+        if f.exists():
+            assert np.array_equal(np.load(f), np.array(ctx_all, np.int32)), f"shard {sh}: ctx differs from C's"
+            checked += 1
+    images = pd.DataFrame(img, columns=["sid", "k", "path", "cam", "e", "psi"])
+    images.insert(0, "img_id", np.arange(len(images)))
+    DT.root("off").mkdir(parents=True, exist_ok=True)
+    with open(DT.root("off", "camdicts.pkl"), "wb") as fh:
+        pickle.dump(camd, fh)
+    rl.info(f"off: ctx of {checked} shards checked against C's cache")
+    _save("off", images, pd.DataFrame({"stem": stems, "row": rws, "img_id": rows_img}), cams, rl)
+
+
 def list_sim(rl):
     """Every finished Cosmos G4 pair; rows = stream * 24 + slot (C's cache-sim), slot s = 20 Hz frame 4 s of the clip."""
     import cosmos_openpilot as CO
@@ -256,6 +309,52 @@ class _Chunks:
         return rows.img_id.to_numpy(), blobs
 
 
+class OffsetWarp:
+    """GPU version of op_adapt_r2_data.OffsetMaps at native resolution: every native pixel of the virtual (offset) CAM_F0
+    (same intrinsics and distortion) -> undistorted ray -> the same plane-induced map q = d - dc (d_z / oz) -> the real
+    camera's distorted pixel; bilinear sampling, border replicate (C's clip). One map per (calibration, e, psi)."""
+
+    def __init__(self, camd: dict, H: int, W: int):
+        import torch
+        self.cam = {}
+        v, u = np.mgrid[0:H, 0:W].astype(np.float64)
+        for k, c in camd.items():
+            K, D = c["K"], c["D"]
+            intr = np.r_[K[0, 0], K[1, 1], K[0, 2], K[1, 2], D]
+            ideal = DT.undistort(np.stack([u, v], -1), intr)
+            ray = np.stack([(ideal[..., 0] - K[0, 2]) / K[0, 0], (ideal[..., 1] - K[1, 2]) / K[1, 1], np.ones_like(u)], -1)
+            self.cam[k] = {"ray": torch.as_tensor(ray @ c["R"].T, dtype=torch.float32).cuda(),          # ego frame
+                           "R": torch.as_tensor(c["R"], dtype=torch.float32).cuda(), "t": np.asarray(c["t"], np.float64),
+                           "intr": torch.as_tensor(intr, dtype=torch.float32).cuda()}
+        self.H, self.W = H, W
+
+    def grid(self, key: str, e: float, psi: float):
+        import torch
+        c = self.cam[key]
+        cz, sz = np.cos(psi), np.sin(psi)
+        Rz = np.array([[cz, -sz, 0.0], [sz, cz, 0.0], [0.0, 0.0, 1.0]])
+        dc = np.array([0.0, e, 0.0]) + Rz @ c["t"] - c["t"]
+        oz = (Rz @ c["t"])[2]
+        d = c["ray"] @ torch.as_tensor(Rz.T, dtype=torch.float32, device="cuda")
+        q = d - torch.as_tensor(dc, dtype=torch.float32, device="cuda") * (d[..., 2:3] / oz) if (e or psi) else d
+        r = q @ c["R"]
+        zs = torch.where(r[..., 2] > 1e-6, r[..., 2], torch.ones_like(r[..., 2]))
+        x, y = r[..., 0] / zs, r[..., 1] / zs
+        fu, fv, cu, cv, k1, k2, p1, p2, k3 = c["intr"]
+        r2 = x * x + y * y
+        rad = 1 + k1 * r2 + k2 * r2 ** 2 + k3 * r2 ** 3
+        uu = fu * (x * rad + 2 * p1 * x * y + p2 * (r2 + 2 * x * x)) + cu
+        vv = fv * (y * rad + p1 * (r2 + 2 * y * y) + 2 * p2 * x * y) + cv
+        return torch.stack([(uu + 0.5) / self.W * 2 - 1, (vv + 0.5) / self.H * 2 - 1], -1)
+
+    def __call__(self, img, keys, es, psis):
+        """img (B, 3, H, W) uint8 -> the warped (B, 3, H, W) uint8."""
+        import torch
+        g = torch.stack([self.grid(k, float(e), float(p)) for k, e, p in zip(keys, es, psis)])
+        x = torch.nn.functional.grid_sample(img.float(), g, mode="bilinear", padding_mode="border", align_corners=False)
+        return x.round_().clamp_(0, 255).to(torch.uint8)
+
+
 def detect(a, rl):
     import torch
     from torch.utils.data import DataLoader
@@ -277,7 +376,7 @@ def detect(a, rl):
     rl.info(f"{ds} part {i}/{n}: {len(todo)} chunks to do of {len(chunks)}")
     if not todo:
         return
-    det = DT.Yolo()
+    det, warp = DT.Yolo(), None
     batches, owner = [], []
     for k in todo:
         batches += chunks[k]
@@ -296,6 +395,12 @@ def detect(a, rl):
                 shapes[tuple(d.shape)].append(j)
             assert len(shapes) == 1, f"mixed image sizes in one batch: {list(shapes)}"
             parts = [torch.stack(dec)]
+            if ds == "off":
+                if warp is None:
+                    import pickle
+                    warp = OffsetWarp(pickle.load(open(DT.root("off", "camdicts.pkl"), "rb")), *parts[0].shape[-2:])
+                im = images.iloc[idx]
+                parts = [warp(parts[0], im.cam.to_numpy(), im.e.to_numpy(), im.psi.to_numpy())]
         res = [det(p) for p in parts]
         r = {f: np.concatenate([q[f] for q in res]) for f in res[0]}
         k = owner[bi]
@@ -447,7 +552,7 @@ def main():
     rl = RunLog("op_adapt_r2", "det", f"{a.cmd}-{a.ds}" if a.ds else a.cmd)
     rl.event("start", args=vars(a))
     if a.cmd == "list":
-        L = {"nusc": list_nusc, "p5": list_p5, "navtrain": list_navtrain, "sim": list_sim,
+        L = {"nusc": list_nusc, "p5": list_p5, "navtrain": list_navtrain, "sim": list_sim, "off": list_off,
              "wod": lambda r: list_wod("wod", r), "wodtrain": lambda r: list_wod("wodtrain", r),
              "navtest": lambda r: list_navtest("navtest", r), "navhard": lambda r: list_navtest("navhard", r)}
         L[a.ds](rl)
