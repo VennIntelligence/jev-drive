@@ -38,7 +38,9 @@ def main():
         if (out / f"{town}.npz").exists():
             continue
         t0 = time.time()
-        w = c.load_world(town)
+        w = c.get_world()
+        if not w.get_map().name.endswith(town):                  # the wrapper starts the server on the town
+            w = c.load_world(town)
         pts = np.load(f).astype(float)
         objs = {}
         cells = np.unique(np.floor(pts / CELL), axis=0)
