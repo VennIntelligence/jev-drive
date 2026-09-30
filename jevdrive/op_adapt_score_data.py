@@ -570,7 +570,7 @@ def nus_log_path(z, t0, pose) -> np.ndarray:
 
 # ================================================================ NAVSIM (maps / agents extracted in the navsim env)
 
-def nav_slot(token_npz: Path, e: float = 0.0, psi: float = 0.0) -> S.Slot:
+def nav_slot(token_npz: Path, e: float = 0.0, psi: float = 0.0, cam_x: float = 1.5) -> S.Slot:
     """Slot of one NAVSIM token (R/maps/nav/<cache>/<token>.npz from scripts/op_adapt_nav.py), optionally from an
     offset start: the log rear-axle pose moved by (0, e) in its own frame and turned by psi. A(s): actors whose box
     centre is in CAM_F0's field of view and <= 60 m at t = 0 (the cache has no past tracks)."""
@@ -579,18 +579,20 @@ def nav_slot(token_npz: Path, e: float = 0.0, psi: float = 0.0) -> S.Slot:
     x0, y0, yaw0 = z["pose"]
     off = S.to_world(np.array([0.0, e]), (x0, y0, yaw0))
     pose = (float(off[0]), float(off[1]), float(yaw0 + psi))
-    geo = lambda k: list(shapely.from_wkb(z[k])) if z[k].size else []  # noqa: E731
+    def geo(k):
+        b, o = z[f"{k}_wkb"].tobytes(), z[f"{k}_off"]
+        return list(shapely.from_wkb([b[o[i]:o[i + 1]] for i in range(len(o) - 1)])) if len(o) > 1 else []
     mq = PolyMap_cached(str(token_npz), geo("drivable"), geo("lanes"), z["lane_route"].astype(bool), geo("intersection"))
     c = S.to_ego(z["agent_c"], pose)                              # (NT, N, 2)
     N = c.shape[1]
-    d = S.to_ego(z["agent_c"][0], (pose[0] + z["cam_x"] * math.cos(pose[2]), pose[1] + z["cam_x"] * math.sin(pose[2]), pose[2]))
+    d = S.to_ego(z["agent_c"][0], (pose[0] + cam_x * math.cos(pose[2]), pose[1] + cam_x * math.sin(pose[2]), pose[2]))
     vis = (d[:, 0] > 0) & (np.hypot(d[:, 0], d[:, 1]) <= VIS_RANGE) & (np.abs(np.arctan2(d[:, 1], d[:, 0])) <= math.radians(HFOV["nav"] / 2)) \
         & z["agent_valid"][0]
     A = S.Actors(c, z["agent_h"] - pose[2], z["agent_hl"], z["agent_hw"], c.copy(), z["agent_valid"].astype(bool),
                  z["agent_speed"], z["agent_kind"].astype(int), vis) if N else S.Actors.empty()
     centre = S.to_ego(z["centerline"], pose)
     return S.Slot(S.EGO["nav"], pose, float(z["v0"]), S.NT, A, _ahead(centre, 10.0, 300.0), mq,
-                  meta={"cam_x": float(z["cam_x"]), "centre": _ahead(centre, 10.0, 300.0)})
+                  meta={"cam_x": float(cam_x), "centre": _ahead(centre, 10.0, 300.0)})
 
 
 _PM: dict = {}
@@ -760,6 +762,12 @@ class SlotContext:
         if domain == "off":
             self._off = pd.read_parquet(R("offset", "table.parquet")).set_index("uid")
 
+    def cam_x(self, token: str) -> float:
+        """CAM_F0's x ahead of the rear axle (navsim_zs slim index, R/maps/nav/cam_x.parquet)."""
+        if not hasattr(self, "_cam"):
+            self._cam = pd.read_parquet(R("maps", "nav", "cam_x.parquet")).set_index("token").cam_x
+        return float(self._cam.get(token, 1.5))
+
     def scores(self, cols):
         z = S.load_scores(self.domain)
         return tuple(z[c] for c in cols)
@@ -786,7 +794,7 @@ class SlotContext:
             return nus_slot(r.key, r.token)
         if self.domain == "off":
             o = self._off.loc[uid]
-            return nav_slot(R("maps", "nav", "v1_navtrain", f"{o.token}.npz"), float(o.e), float(o.psi))
+            return nav_slot(R("maps", "nav", "v1_navtrain", f"{o.token}.npz"), float(o.e), float(o.psi), self.cam_x(o.token))
         raise KeyError(self.domain)
 
     def candidates(self, uid: int, s: S.Slot):
@@ -928,6 +936,19 @@ def sanity() -> dict:
     return out
 
 
+def nav_cam_x() -> dict:
+    """token -> CAM_F0 x (m ahead of the rear axle) for navtrain / navtest from navsim_zs's slim index."""
+    from . import navsim_zs as Z
+    rows = []
+    for split in ("navtrain", "navtest"):
+        for e in Z.load_index(split, slim=True):
+            rows.append({"token": e["token"], "split": split, "cam_x": float(np.asarray(e["cams"][-1]["CAM_F0"]["t"])[0])})
+    t = pd.DataFrame(rows).drop_duplicates("token")
+    R("maps", "nav").mkdir(parents=True, exist_ok=True)
+    t.to_parquet(R("maps", "nav", "cam_x.parquet"), index=False)
+    return {"tokens": len(t), "cam_x": t.cam_x.describe().to_dict()}
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -938,7 +959,7 @@ def main():
     a = ap.parse_args()
     fn = {"points": lambda: route_points(a.workers or cores()), "maps-carla": lambda: maps_carla(a.towns),
           "nus-scenes": lambda: nus_scenes(), "maps-nus": lambda: maps_nus(), "v1": lambda: check_v1(a.workers),
-          "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity,
+          "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity, "nav-cam": nav_cam_x,
           "score": lambda: score_domain(a.domain, workers=a.workers)}[a.step]
     print(json.dumps(fn(), indent=1, default=str)[:4000])
 

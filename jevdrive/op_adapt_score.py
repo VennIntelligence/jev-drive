@@ -208,8 +208,23 @@ class TileMap:
 
     @classmethod
     def load(cls, path) -> "TileMap":
-        z = np.load(path)
-        return cls(z["ij"], z["flags"], z["lane"], z["head"])
+        """<name>.npz, memory-mapped through an uncompressed sibling dir <name>/ (made on first use) so that pool
+        workers share one copy in the page cache."""
+        import shutil
+        from pathlib import Path
+        path = Path(path)
+        d = path.with_suffix("")
+        if not (d / "head.npy").exists():
+            tmp = d.with_name(d.name + f".tmp{np.random.randint(1 << 30)}")
+            tmp.mkdir(parents=True)
+            with np.load(path) as z:
+                for k in ("ij", "flags", "lane", "head"):
+                    np.save(tmp / f"{k}.npy", z[k])
+            try:
+                tmp.rename(d)
+            except OSError:                                     # another worker won the race
+                shutil.rmtree(tmp, ignore_errors=True)
+        return cls(*(np.load(d / f"{k}.npy", mmap_mode="r") for k in ("ij", "flags", "lane", "head")))
 
     def lookup(self, xy):
         """flags (...), lane ids (..., 2), heading (..., 2) rad (nan none) at world points (..., 2)."""
