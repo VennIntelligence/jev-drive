@@ -157,6 +157,42 @@ def check_identity():
     save("identity", {"n": len(rows), "max": max(rows), "median_of_max": float(np.median(rows)), "pass": max(rows) < 0.05})
 
 
+def check_homography():
+    """Unit test of OffsetMaps: for model pixels below the horizon, intersect the virtual camera's ray with the road plane
+    in the moved ego frame, carry the ground point to the original ego frame and project it into CAM_F0 directly; the
+    map must sample that pixel (<= 1 px, nearest-neighbour rounding)."""
+    from jevdrive import navsim_zs as Z
+    from jevdrive.openpilot.frames import MEDMODEL_K, SBIGMODEL_K, VIEW_FROM_DEVICE
+    t = pd.read_parquet(C.root("offset") / "table.parquet")
+    toks = t[t.split == "dev"].token.unique()[:3].tolist()
+    ent = {e["token"]: e for e in Z.load_index("navtrain", slim=True) if e["token"] in set(toks)}
+    rng = np.random.default_rng(0)
+    rows = []
+    for tok in toks:
+        cam = ent[tok]["cams"][-1]["CAM_F0"]
+        cpos = np.asarray(cam["t"], np.float64)
+        for e, psi in C.CORNERS + ((0.7, 0.0), (0.0, 0.1)):
+            m = C.OffsetMaps(cam, e, psi)
+            c, s = np.cos(psi), np.sin(psi)
+            Rz = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1.0]])
+            for k, Km in enumerate((MEDMODEL_K, SBIGMODEL_K)):
+                uu, vv = rng.integers(0, 512, 400), rng.integers(0, 256, 400)
+                ray = (np.stack([uu, vv, np.ones(400)], -1) @ np.linalg.inv(Km @ VIEW_FROM_DEVICE).T) * np.array([1., -1., -1.])
+                below = ray[:, 2] < -0.02
+                lam = -cpos[2] / ray[below, 2]
+                Xn = cpos + lam[:, None] * ray[below]
+                Xo = np.array([0.0, e, 0.0]) + Xn @ Rz.T
+                uv, ok, _ = Z.project_nuplan(Xo - cpos, cam, 1)
+                ok &= np.linalg.norm(Xn[:, :2], axis=1) < 80
+                got = m.idx[k].reshape(256, 512)[vv[below], uu[below]]
+                gy, gx = np.divmod(got, Z.NUPLAN_WH[0])
+                err = np.hypot(gx - uv[:, 0], gy - uv[:, 1])[ok]
+                rows.append({"token": tok, "e": e, "psi": psi, "frame": ("road", "wide")[k], "n": int(ok.sum()),
+                             "max_px": float(err.max()) if len(err) else np.nan})
+    df = pd.DataFrame(rows)
+    save("homography", {"max_px": float(df.max_px.max()), "pass": bool(df.max_px.max() <= 1.0), "rows": df.to_dict("records")})
+
+
 def check_v6img(out="research/results/op-adapt-r2/offset_v6"):
     """V6 visual check: 5 dev samples per corner (the first 5 dev tokens), current frame. Panel: top = original
     openpilot road | wide model frame (luma), bottom = the same after the offset homography."""
