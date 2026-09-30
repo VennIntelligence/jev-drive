@@ -116,17 +116,39 @@ def dev_eval(model: L.LModel, D: L.Data, rows: dict, dev, extra=None) -> dict:
     return r
 
 
+LINES = {"drift_median": 0.10, "drift_p95": 0.50, "false_start_pp": 2.0, "false_stop_pp": 2.0, "false_turn_control_pp": 2.0,
+         "false_turn_straight_pp": 2.0, "slow_pp": 2.0, "fast_pp": 2.0}
+
+
 def select_score(r: dict) -> dict:
-    """The pre-registered selection rule on one dev dict (prereg 'Auswahl der Konfiguration'): a config qualifies when the
-    dev drift median <= 0.10 m and p95 <= 0.50 m, every false-trigger delta <= +2 pp, and slow / fast deltas <= +2 pp; the
-    score is the mean capture delta of the three slices."""
-    cap = np.mean([r["start/cap_start"], r["stop/cap_stop"], r["turn_onset/cap_turn_onset"]])
-    viol = {"drift_median": r["drift_median"] - 0.10, "drift_p95": r["drift_p95"] - 0.50,
-            "false_start": 100 * r["stay/false_start"] - 2.0, "false_stop": 100 * r["control/false_stop"] - 2.0,
-            "false_turn": 100 * max(r["control/false_turn"], r["straight_int/false_turn"]) - 2.0,
-            "slow_pp": max(r["other/slow/delta_pp"], r["nus/slow/delta_pp"]) - 2.0,
-            "fast_pp": max(r["other/fast/delta_pp"], r["nus/fast/delta_pp"]) - 2.0}
-    return {"cap_gain": float(cap), "violations": {k: float(v) for k, v in viol.items()}, "qualifies": bool(all(v <= 0 for v in viol.values()))}
+    """The registered selection rule on one dev dict (prereg section 4): a config qualifies when every line is met (dev drift
+    median <= 0.10 m and p95 <= 0.50 m; every false-trigger delta <= +2 pp; slow / fast deltas <= +2 pp on both real dev sets);
+    the score is the mean capture delta of the three slices; `ratio` = the largest value / line."""
+    cap = float(np.mean([r["start/cap_start"], r["stop/cap_stop"], r["turn_onset/cap_turn_onset"]]))
+    val = {"drift_median": r["drift_median"], "drift_p95": r["drift_p95"], "false_start_pp": 100 * r["stay/false_start"],
+           "false_stop_pp": 100 * r["control/false_stop"], "false_turn_control_pp": 100 * r["control/false_turn"],
+           "false_turn_straight_pp": 100 * r["straight_int/false_turn"],
+           "slow_pp": max(r["other/slow/delta_pp"], r["nus/slow/delta_pp"]), "fast_pp": max(r["other/fast/delta_pp"], r["nus/fast/delta_pp"])}
+    return {"cap_gain": cap, "values": {k: float(v) for k, v in val.items()},
+            "violations": {k: float(v - LINES[k]) for k, v in val.items()},
+            "qualifies": bool(all(v <= LINES[k] for k, v in val.items())), "ratio": float(max(v / LINES[k] for k, v in val.items()))}
+
+
+def cmd_select(a):
+    """The registered choice among the selection-wave runs (final dev of each) -> $L/selection.json."""
+    rows = []
+    for name in ARMS.SELECTION:
+        p = L.lroot("runs", f"{name}-s0") / "dev.json"
+        if p.exists():
+            rows.append({"config": name, **json.loads(p.read_text())["select"]})
+    ok = [x for x in rows if x["qualifies"]]
+    if ok:
+        pick, rule = max(ok, key=lambda x: x["cap_gain"]), "qualifying config with the highest mean dev capture gain"
+    else:
+        pick, rule = min(rows, key=lambda x: (x["ratio"], -x["cap_gain"])), "none qualifies: smallest max(value / line), ties by capture gain"
+    out = {"config": pick["config"], "rule": rule, "candidates": rows}
+    (L.lroot() / "selection.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
 
 
 # ---------------------------------------------------------------- teacher
@@ -330,5 +352,6 @@ if __name__ == "__main__":
     p.add_argument("--fresh", action="store_true")
     p.add_argument("--no-eval", action="store_true")
     sp.add_parser("selftest")
+    sp.add_parser("select")
     a = ap.parse_args()
-    {"teacher": cmd_teacher, "train": cmd_train, "selftest": cmd_selftest}[a.cmd](a)
+    {"teacher": cmd_teacher, "train": cmd_train, "selftest": cmd_selftest, "select": cmd_select}[a.cmd](a)

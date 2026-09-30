@@ -195,15 +195,16 @@ class IntentAdapter(nn.Module):
         return H + (self.E * self.on)[intent][:, None].to(H.dtype)
 
 
-def desire_from_intent(intent: torch.Tensor, dtype, blocks=8) -> torch.Tensor:
-    """Native desire input carrying the routing intent: turnLeft (1) for WOD intent 2, turnRight (2) for 3, held over the last
-    `blocks` of the 33 desire blocks (1.6 s); straight / unknown = no desire. -> (B, 1, 33, 8)."""
+def desire_from_intent(intent: torch.Tensor, dtype, block=27) -> torch.Tensor:
+    """Native desire input carrying the routing intent: a rising-edge pulse of turnLeft (1) for WOD intent 2 / turnRight (2) for
+    3 in desire block 27 (1.0 s before t0; the 33 blocks are 0.2 s each, block 32 = now; decisions 66's timing); straight /
+    unknown = no desire. -> (B, 1, 33, 8)."""
     B = intent.shape[0]
     x = torch.zeros(B, 1, 33, 8, dtype=dtype, device=intent.device)
     for it, d in ((2, 1), (3, 2)):
         m = intent == it
         if m.any():
-            x[m, :, 33 - blocks:, d] = 1
+            x[m, :, block, d] = 1
     return x
 
 
