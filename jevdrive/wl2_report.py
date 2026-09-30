@@ -574,7 +574,11 @@ def xfit(store: Store, tr: pd.DataFrame, exit_all: set, n_boot: int) -> dict:
     """Cross-fitted read (prereg, descriptive): fold f's predictor (trained on every base route outside fold f, eval routes included)
     and a critic fitted on the labelled fork points outside fold f score the fork points of fold f; pooled over the folds, every
     WL-1 and WL-2 fork point is out of sample. C2 AUC / C-learn - Q, and C3a H on the x+ fork points, per label."""
-    fx = json.loads((M2.R2 / "xfit_folds.json").read_text())
+    f_json = M2.R2 / "xfit_folds.json"
+    if not f_json.exists():                                   # the first Ax runs did not write it: the same deterministic table
+        U = M2.Universe()
+        f_json.write_text(json.dumps(M2.route_folds(U.m, U.ev, seed=20260931, include_eval=True)))
+    fx = json.loads(f_json.read_text())
     tk = tr.set_index(["gid", "action"])
     out = {}
     for arm in ("Ax", "Bx"):
