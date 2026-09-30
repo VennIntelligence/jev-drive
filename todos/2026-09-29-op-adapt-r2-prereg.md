@@ -1,6 +1,6 @@
 # op-adapt 第二轮（B，sim + real）：预登记
 
-状态: **v3（pre-result，reason: navhard breakdown），2026-09-29 用户已批准三处改动** — 执行等 Cosmos DONE 与 main 的 go（v1 写于 2026-09-29，v2 同日按用户决定改写并批准，v3 同日按 navhard 缺口分解加三处；v3 改动清单见下面「v3 改动」节；任何第二轮训练、任何第二轮读数之前。文中唯一的新数字是第 0 节的 M0 行人大小测量，纯 CPU、没有模型，是设计依据，不是结果）
+状态: **v5（pre-result，2026-09-30，main 的最后一次修订：去掉偏离起点 slot 集、按登记原文修让行公式、加静止挡路的 dwell gate；见「v5 修订」节，它覆盖下文与它冲突的各处）；** v3（pre-result，reason: navhard breakdown），2026-09-29 用户已批准三处改动 — 执行等 Cosmos DONE 与 main 的 go（v1 写于 2026-09-29，v2 同日按用户决定改写并批准，v3 同日按 navhard 缺口分解加三处；v3 改动清单见下面「v3 改动」节；任何第二轮训练、任何第二轮读数之前。文中唯一的新数字是第 0 节的 M0 行人大小测量，纯 CPU、没有模型，是设计依据，不是结果）
 用户决定（2026-09-29，已并入下文各节）: Q1 P5 主读数 = 可见帧 ≥ 500 px_eq，全体为副读数（批准）；Q2 行为监督**不模仿 expert 轨迹**，改成规则打分（第 2.1 节，本版的主要改动）；Q3 navtrain 只进蒸馏，不进有监督训练；Q4 Z 由 R0 门控、D 无条件跑（批准）；Q5 Cosmos 全量完全跑完之前不起训（取消 v1 的「10-01 12:00 或 K ≥ 1 000」规则），在那之前卡给别的活；Q6 B-real 进主判格；v2 的两个遗留点（批准时定）：(a) L_dir 在「可见但 < 500 px、靠近路径」一档不强制 plan 相同，(b) 让行豁免只给移动的 actor，静止障碍挡路且有安全绕行候选时干等要扣进度分（第 2.1 节）。
 主题: [research/decisions.md](../research/decisions.md) 第 42、44、45、48、50、53、55、56、62、63、67 条（67 = 本文 v3 的登记）；[research/midterm-gaps.md](../research/midterm-gaps.md) 缺口二；[research/feature-adapter-domain-shift.md](../research/feature-adapter-domain-shift.md)
 v3 的依据: [research/navhard-deficit-breakdown.md](../research/navhard-deficit-breakdown.md)（navhard 主要丢在 DAC）；navhard 的 `none` = 33.33 来自 [op-leaderboard](2026-09-29-op-leaderboard.md) 与 decisions 第 66 条
@@ -85,7 +85,7 @@ v3 的依据: [research/navhard-deficit-breakdown.md](../research/navhard-defici
 
 **main 第二条（dwell gate）会影响多少 slot（描述，当前 score 表）**：只有「`op` 或 `hold` 被静止挡路者 NC 挡住」的 slot 会被 dwell gate 改变。L_score 用的 slot 里：simC 103 / 20 876、simK 102 / 20 862、nuScenes train VRU 帧 105 / 3 442、偏离 train 2 520 / 17 789；被移动 actor 挡住（已豁免）的是 16 101 / 16 058 / 169 / 1 586。navtrain 的 metric cache 没有历史轨迹，按 main 给的默认（历史不够即豁免）偏离 slot 里的车全部豁免。
 
-## v5 草案（未生效；写诊断时的判断是先回 main，不在这时用掉最后一次修订）
+## v5 草案（已被下面的「v5 修订」取代；保留原文作为 main 决定之前的记录）
 
 为什么不现在写 v5 并重跑：v5 是最后一次修订，之后 V4 或 V6 任一不过即停。上面的诊断说明 V6 在任何仍检验 `rej` 的定义下都过不了线，而 main 提的绕行候选与 dwell gate 都不碰 V6；现在用掉 v5 必然以停批结束，并且不再有修订可用。要 main 定的：
 
@@ -93,6 +93,30 @@ v3 的依据: [research/navhard-deficit-breakdown.md](../research/navhard-defici
 2. **P 规则（main 的第二条，附带修上面 V4 暴露的问题）**：让行豁免的意思改为「等待不扣分」：`op` 或 `hold` 被移动 actor 挡住时，所有不离开车道的安全候选 P = 1；被静止挡路者挡住时，挡路时长 < T_w 同样等待不扣分，≥ T_w 才以安全绕行候选为 P 的参照。建议 T_w = 5 s（「先等几秒」，3–8 s 的中间）；车辆「静止够久才算静止障碍」的 T_long 受日志长度限制：nuScenes 一个 scene 20 s，sim 记录从场景开始，navtrain 没有历史，所以 T_long ≥ 20 s 实际上让所有车都豁免；锥桶、护栏、道具等按类别恒为静止。挡路时长 = 挡路者从最后一次速度 ≥ 0.5 m/s 到 slot 的时长（sim：5 Hz actor 记录；nuScenes：2 Hz 标注插值；navtrain：无历史 → 豁免）。
 3. **绕行（先出后回）候选**：上面的证据不支持它是 V4 / V6 的原因；它补的是 P6 类「该绕」的空缺（第 52 条），而 r2 的 L_score slot 里静止挡路者只占 sim 0.5%、nuScenes 3%。若加，只在静止挡路 ≥ T_w 的 slot 上有意义，让行豁免把它挡在行人 slot 之外（第 2 条下行人 slot 里等待已拿满 P，绕行不会独占 Top）。
 4. **V4 的口径**：若 main 认为 slot 级在这种按视界筛过的集合上不合适，可改为按场景实例平均（本诊断里已看到它是 0.966，所以这一条是结果后提出的，必须如实标注）；第 2 条的 P 规则改动本身会让实例 14 / 192 的刹停候选进 Top。
+
+## v5 修订（2026-09-30，pre-result，main 对上面「v5 草案」四点的决定；最后一次修订，之后不再修订）
+
+**时点**：没有训练、没有 M1、没有任何登记读数。V4 的第一次结果（0.830 / 0.835）与 V6（0.471）原样留在 `checks/V346.json` 与 `score/{simC,simK,nus,off}.npz`，本节先写、提交、推送，然后才重跑。下面每一条都是 main 在看到 V4 重跑之前定的；重跑的结果不会反过来改本节。
+
+**依据（都来自上面的诊断节）**：(1) V4 的 175 个未命中里 171 个来自两个 PedestrianCrossing 实例，`hold` 抢在横穿行人前面过去、独占 Top；登记原文写「停下让行拿满 P」，公式却以最好的安全候选（`hold`，进度 27 m）归一，刹停 P ≈ 0.16、S 落后 `hold` 超过 δ。这是登记文字与公式不一致，不是打分器实现错误。(2) V6：dev 起点 31.4% 本身不可行（偏移量对 NAVSIM 可行驶多边形太大），训练集 22–28%；起点可行时 `rej` 也只有 0.678。
+
+**四条决定**
+
+1. **r2 去掉偏离起点 slot 集**。取消：24 000 个训练样本与 1 000 个 dev 样本进训练与读数、`rej` 候选、孪生蒸馏帧、V6、B-off、§6 第 7 条、每个 batch 的 10% 偏离份额（这 10% 回到 real 有标签份额，WOD : nuScenes 仍 60 : 40）、偏离帧 trunk 缓存与 teacher 的成本。理由：31% 的起点不可行；r2 本来就不预期动 navhard（学出来的 DAC 读出不在范围，见 v3「范围声明」）。偏离起点的恢复变成后续独立线，与学出来的 DAC 读出一起登记。**保留**：S_jev 的 DDC 项（V5a、V5b 已过）、navhard EPDMS 描述读数（§4.6，全部读数之后只跑一次）。已经建好的偏离产物（`offset/table.parquet`、25 000 个样本的 trunk 缓存与 teacher、`score/off.npz`、V6 的诊断与样张）**全部留在盘上，一个文件不删**，只是 r2 的训练与判格不再使用。A / D / D-only / A-noC / A-noK / A-real 不再带偏离 slot，v3 表里 `arm.offset` 一律关闭。V6 不再是 r2 的检验，它的 0.471 记为「随偏离 slot 集一并移出 r2，不是通过」。
+2. **让行公式改成与登记原文一致**。当沿车道候选 `op` 或 `hold` 的 NC 失败是由**移动的**行人、骑车人或车辆（速度 ≥ 0.5 m/s）造成时（与 v2 的让行豁免触发条件相同），slot 里所有候选的 P = 1（S 里的 NC · DAC · DDC 乘性项照旧，所以不安全的候选仍是 0）：慢一点、停下让行、不再被拿去和抢在行人前面通过的 `hold` 比进度。v2 / v3 的写法是「N(s) 只取不离开车道的安全候选，再按其中最大进度归一」，被这条替换；那里的「横向偏移 ≤ 1 m」限制随之取消（P 已经是 1，绕行、等待、停下三者在 P 上打平，由 NC · DAC · DDC、TTC、C 分高下）。DDC = 0.5 的候选也取 P = 1（不为它单开一条规则），它们的分数仍被 DDC 乘 0.5。
+3. **静止挡路者加 dwell gate，T_w = 5 s**。「静止挡路者」= `op` 或 `hold` 的 NC 失败里，失败 actor 不是移动的行人 / 骑车人 / 车辆的那些（停着的车、锥桶、道具等）。挡路时长 = 该 actor 在**已记录的历史**里从最后一次速度 ≥ 0.5 m/s 到 slot 时刻的时长；从未动过则取历史长度；历史短于 T_w 或者没有历史，时长就小于 T_w。规则：
+   - 所有失败的静止挡路者时长都 < T_w：等待不扣分，所有候选 P = 1（与第 2 条同）；
+   - 任一失败的静止挡路者时长 ≥ T_w：不豁免，P 的参照仍是最好的安全候选（v2 的原公式：P = min(1, prog / max(5 m, 最大安全候选进度))，N(s) = NC · DAC · DDC = 1 的候选，无横向限制）；
+   - 同一 slot 里既有移动挡路者又有静止挡路者：按第 2 条（豁免）；
+   - 历史怎么读：sim = CARLA 5 Hz actor 记录到 slot tick 为止（窗口从场景开始处记起）；nuScenes = 2 Hz 关键帧标注，取 slot 关键帧及之前，相邻两帧间的平均速度；NAVSIM 的 metric cache 没有历史轨迹，时长记 0（全部豁免）；CARLA 地图自带的静态几何与地图停放车没有历史，时长记 0（豁免）。
+   - **不加绕行（先出后回）候选**：绕行不是 r2 的目标，P6 的障碍物行为读数保持描述；候选集仍是 13 条。
+4. **V4 保持登记原样**：同一条线（Top 集含减速或横移候选的比例 ≥ 0.90，且 `hold` 的 NC 失败率 x⁺ 明显高于 x⁻）、同样的 slot（simC 与 simK 各自）、slot 级口径。第 2、3 条改了以后**重跑一次**，主报数是 slot 级。按场景实例平均另报，**标为描述、事后（post hoc）提出，不能据此判过**。**如果 V4 重跑仍不过，停，带着数字回 main，不再修订。**
+
+**V4 之外要重新确认的登记检验（改公式后必须全部仍过，否则停）**：V1 在 deviation D1 之下（打分器 NC 部分没动，不重算，仍是 0.922 未过的记录在案偏离）；V2（0.980；改的是 P，V2 里 log 轨迹单独成集 P 恒为 1，不受影响，重跑一遍确认）；V3 含 P5 部分（`op` 在 x⁻ Top 的比例：改公式后重新读）；V5a、V5b（DDC，没动）。
+
+**各处文本的覆盖关系**：§2.1 打分器 P 一条与让行豁免一条被第 2、3 条替换；§2.1「v3：偏离起点 slot 集 O_off」整节、§3.1 real-nav 行里的偏离部分、§3.3 里偏离份额、§4.2 B-off、§5 V6 与第 4 项里偏离部分、§6 第 7 条、§7 里偏离部分被第 1 条取消；其余不变。成本：§7 合计 v3 追加的偏离项（0.5 + 0.4 GPU·h）去掉，其余 GPU·h 估计不变（约 28–30 GPU·h，此前写的 32 含 v3 追加）。
+
+**实现范围（写在重跑之前，避免事后争议）**：只改 `jevdrive/op_adapt_score.py` 的 `finalize` / `raw_metrics` / `Actors`（加每个 actor 的静止时长）、`op_adapt_score_data.py` 的 `carla_slot`（sim 与 P5）与 `nus_slot`（挡路时长），训练 / 读数 / lane 里把偏离 slot 集关掉。score 表里存的旧表挪进 `score/run1/`（`sim*.npz`、`nus.npz`、`off.npz`、`p5.npz` 及对应 json），`checks/V346.json` 与 `V3_p5.json` 也挪进 `checks/run1_v346/`，新表与新的检查写回原位置；旧的 `score/` 表不删。
 
 ## 为什么要做
 
