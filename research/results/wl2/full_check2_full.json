@@ -1,0 +1,175 @@
+{
+ "checks": {
+  "runs": {
+   "planned": 8646,
+   "done": 8646,
+   "errors": 0,
+   "harness_fail": 0.0
+  },
+  "retries": {
+   "attempt_gt1": 0.03689567430025445,
+   "mean_attempts": 1.047999074716632,
+   "ended_early": 0.0
+  },
+  "timing": {
+   "wall_s_mean": 110.48043025676614,
+   "wall_s_median": 115.1,
+   "setup_s_median": 95.5026805,
+   "worker_h_per_run": 0.030689008404657263,
+   "worker_h_per_run_incl_retries": 0.032287300485773766,
+   "by_set_wall_s": {
+    "ba": 124.95847308031775,
+    "p6": 94.53135634419057
+   }
+  },
+  "prefix": {
+   "checked": 786,
+   "dropped": 6,
+   "frac": 0.007633587786259542,
+   "per_set": {
+    "ba": {
+     "checked": 412,
+     "dropped": 0,
+     "frac": 0.0
+    },
+    "p6": {
+     "checked": 374,
+     "dropped": 6,
+     "frac": 0.016042780748663103
+    }
+   },
+   "runs_ego_le_1cm": 0.9979181124219292
+  },
+  "render": {
+   "render_checked": 8646,
+   "render_dropped": 304,
+   "render_frac": 0.03516076798519547
+  },
+  "labels_by_action": {
+   "brake_hard": {
+    "unsafe_cg": 0.028,
+    "unsafe": 0.071,
+    "collision": 0.022
+   },
+   "brake_mild": {
+    "unsafe_cg": 0.177,
+    "unsafe": 0.185,
+    "collision": 0.162
+   },
+   "hold": {
+    "unsafe_cg": 0.313,
+    "unsafe": 0.365,
+    "collision": 0.281
+   },
+   "nudge_L": {
+    "unsafe_cg": 0.319,
+    "unsafe": 0.427,
+    "collision": 0.303
+   },
+   "op": {
+    "unsafe_cg": 0.267,
+    "unsafe": 0.305,
+    "collision": 0.238
+   },
+   "op_slow": {
+    "unsafe_cg": 0.037,
+    "unsafe": 0.073,
+    "collision": 0.026
+   },
+   "op_stop": {
+    "unsafe_cg": 0.068,
+    "unsafe": 0.099,
+    "collision": 0.054
+   },
+   "shift_L": {
+    "unsafe_cg": 0.327,
+    "unsafe": 0.469,
+    "collision": 0.285
+   },
+   "shift_L_slow": {
+    "unsafe_cg": 0.294,
+    "unsafe": 0.39,
+    "collision": 0.209
+   },
+   "shift_R": {
+    "unsafe_cg": 0.646,
+    "unsafe": 0.691,
+    "collision": 0.633
+   },
+   "shift_R_slow": {
+    "unsafe_cg": 0.36,
+    "unsafe": 0.395,
+    "collision": 0.355
+   }
+  },
+  "labels_finite": 1.0,
+  "brake_travel_lt_hold": 0.9987179487179487,
+  "brake_mild_between_stop_and_hold": 0.9923076923076923,
+  "brake_mild_le_op": 0.926923076923077,
+  "shift_slow_travel_lt_shift": {
+   "shift_L": 0.9948717948717949,
+   "shift_R": 0.9730769230769231
+  },
+  "offset_nudge_L": {
+   "n": 709,
+   "sign_ok": 0.998589562764457,
+   "ge_2m": 0.0,
+   "in_1_2m": 0.9816643159379408
+  },
+  "offset_shift_L": {
+   "n": 672,
+   "sign_ok": 1.0,
+   "ge_2m": 0.9864864864864865,
+   "in_1_2m": 0.07886904761904762
+  },
+  "offset_shift_L_slow": {
+   "n": 744,
+   "sign_ok": 1.0,
+   "ge_2m": 0.33482810164424515,
+   "in_1_2m": 0.5994623655913979
+  },
+  "offset_shift_R": {
+   "n": 586,
+   "sign_ok": 1.0,
+   "ge_2m": 0.9824561403508771,
+   "in_1_2m": 0.15699658703071673
+  },
+  "offset_shift_R_slow": {
+   "n": 646,
+   "sign_ok": 1.0,
+   "ge_2m": 0.2291296625222025,
+   "in_1_2m": 0.6888544891640866
+  },
+  "headroom": {
+   "x_plus_fork_points": 389,
+   "op_unsafe_cg": 0.41645244215938304,
+   "oracle_unsafe_cg": 0.02313624678663239,
+   "solvable_share": 0.39331619537275064,
+   "solvable_n": 153,
+   "solvable_routes": 63,
+   "projected_solvable_n_eval_full": 97.1491002570694
+  },
+  "c1c_S": {
+   "pairs": 280,
+   "still_occupied": 62,
+   "still_occupied_share": 0.22142857142857142
+  },
+  "p6_tau_forks_per_source": {
+   "sources": 76,
+   "ge2_share": 0.8289473684210527
+  }
+ },
+ "verdict": {
+  "1 pose group drops <= 5%": true,
+  "2 render run drops <= 10%": true,
+  "3 brake_hard < hold": false,
+  "3 shift sign >= 95%, >= 2 m >= 80%": true,
+  "4 harness failure <= 5%": true,
+  "5 brake_mild between op_stop and hold >= 95%": true,
+  "5 slow shifts sign >= 95%, >= 2 m >= 80%, travel < shift >= 95%": false,
+  "5 nudge_L offset in 1-2 m >= 95%": true,
+  "6 P6 sources with >= 2 x+ forks >= 70%": true,
+  "7 solvable share of x+ >= 25%": true,
+  "8 C1c still-occupied share >= 10%": true
+ }
+}
