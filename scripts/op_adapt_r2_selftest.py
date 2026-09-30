@@ -110,7 +110,7 @@ def synth_root(root: Path, seed=0):
     (root / "cache-sim").mkdir(exist_ok=True)
     rows = {"C": [], "K": []}
     uid = {"C": 1_000_000_000, "K": 2_000_000_000}
-    for p in range(12):
+    for p in range(16):
         f = root / "cache-sim" / f"p{p}.npy"
         np.save(f, tr(96))
         sp = "train" if p < 8 else "dev" if p < 10 else "test"
@@ -137,7 +137,7 @@ def synth_root(root: Path, seed=0):
     # nus: 8 scenes x 40 slots, stride 2, keyframes every 5
     (root / "cache-nus").mkdir(exist_ok=True)
     nr = []
-    for s in range(10):
+    for s in range(18):
         f = root / "cache-nus" / f"s{s}.npz"
         np.savez(f, trunk=tr(40))
         sp = "train" if s < 6 else "dev" if s < 8 else "val"
@@ -157,7 +157,7 @@ def synth_root(root: Path, seed=0):
     # wod: 8 streams x 30 slots, stride 1; nav: 6 logs x 10 tokens
     (root / "cache-wod").mkdir(exist_ok=True)
     wr = []
-    for s in range(10):
+    for s in range(18):
         f = root / "cache-wod" / f"w{s}.npz"
         np.savez(f, trunk=tr(30))
         for j in range(8, 30):
@@ -251,12 +251,13 @@ def stub_modules():
             add = self.proj(tok.float().mean(2))[:, :, None]          # (B, 9, 1, 512)
             return H + (self.gate * add).to(H.dtype)
 
-        @staticmethod
-        def tokens(dom, ctx):
-            rng = np.random.default_rng(int(np.abs(ctx).sum()) % 2 ** 31)
-            return rng.standard_normal(ctx.shape + (8, 16)).astype(np.float32), ctx[..., None].repeat(8, -1) >= 0
+    def load_tok(cache_file):
+        p = Path(cache_file)
+        n = len(np.load(p, mmap_mode="r")) if p.suffix == ".npy" else len(np.load(p)["trunk"])
+        rng = np.random.default_rng(abs(hash(p.name)) % 2 ** 31)
+        return rng.standard_normal((n, 8, 16)).astype(np.float16), rng.random((n, 8)) < 0.7
     DD = types.ModuleType("jevdrive.op_adapt_det")
-    DD.make_adapter = lambda: Adapter()
+    DD.DetAdapter, DD.load_tok = Adapter, load_tok
     sys.modules["jevdrive.op_adapt_score"] = S
     sys.modules["jevdrive.op_adapt_det"] = DD
     import jevdrive
@@ -271,10 +272,17 @@ def synth(a):
     if not (root / "t" / "teacher" / "tstd.npy").exists():
         synth_root(root)
         ns = types.SimpleNamespace
-        T.cmd_pack(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], source="c", workers=4, limit=0, root=""))
+        T.cmd_pack(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], source="c", workers=4, limit=0, root="", det=True))
         T.cmd_teacher(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], batch=64, root=""))
         synth_scores(root)
     doms = {dn: R.Domain(dn) for dn in ("simC", "simK", "nus", "off")}
+    ds = R.DetSource()
+    c = doms["simC"].ctx[:5]
+    tk, mk = ds("simC", c)
+    src = pd.read_parquet(root / "t/trunk/simC.src.parquet")
+    f, rr = src.file[c[0, -1]], src.row[c[0, -1]]
+    ref = sys.modules["jevdrive.op_adapt_det"].load_tok(f)
+    check("pack_det: tokens follow the flat trunk rows", np.array_equal(tk[0, -1], ref[0][rr]) and np.array_equal(mk[0, -1], ref[1][rr]))
     check("pack: sim ctx rows point at the same trunk as the C index",
           np.array_equal(doms["simC"].gather(np.array([3]))[0][0, -1],
                          np.load(pd.read_parquet(root / "index/simC.parquet").file[3], mmap_mode="r")[pd.read_parquet(root / "index/simC.parquet").row[3]]))
@@ -342,6 +350,19 @@ def readout(a):
     check("outcome real-only", RO.outcome(p | {"S-p5": False, "S-p5-all": False, "S-cos": False, "B-p5": False}) == "real-only")
     check("outcome sim-dominant", RO.outcome(p | {"R-wod": False}) == "sim-dominant")
     check("outcome none", RO.outcome({k: False for k in p}) == "none")
+    # lane: checklists evaluate on the synthetic runs without raising; the packer runs a job on a card
+    import op_adapt_r2_lane as LN
+    c1 = LN.verdict(LN.check_stage1(root / "run-A"))
+    check("stage-1 checklist evaluates", len(c1["items"]) == 6, [(i["item"][:30], i["pass"]) for i in c1["items"]])
+    runs = {arm: root / f"run-{arm}" for arm in ("A", "D", "A-real", "A-sim", "A-noC", "A-noK", "D-only", "A-bhv")}
+    c10 = LN.verdict(LN.check_stage10(runs))
+    check("stage-10 checklist evaluates", len(c10["items"]) > 40, f"{len(c10['items'])} items, failed {len(c10['failed'])}")
+    gpu = int(os.environ.get("CUDA_VISIBLE_DEVICES", "0").split(",")[0])
+    lane = root / "lane"
+    (lane / "logs").mkdir(parents=True, exist_ok=True)
+    done = LN.Packer([gpu], 78.0, "40-41", lane, print).run(
+        [{"tag": "t1", "argv": [sys.executable, "-c", "print('ok')"], "vram_gb": 1.0}], poll=2)
+    check("packer runs a job", done["t1"]["rc"] == 0, done)
 
 
 def main():

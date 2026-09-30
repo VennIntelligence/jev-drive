@@ -72,7 +72,7 @@ def load_model(model: str, dev):
     det = R.det_adapter() if arm.det else None
     m = R.Model(arm, det=det).to(dev).eval()
     m.load_state(ck["model"])
-    return m, getattr(det, "tokens", None)
+    return m, (R.DetSource() if arm.det else None)
 
 
 def cmd_eval(a):
@@ -321,9 +321,10 @@ def b_real(model):
 
     def delta(x, col):
         w = x[x.ped].groupby("bin").size()
-        s = x.groupby(["bin", "ped"])[col].mean().unstack()
-        s = s.reindex(w.index)
-        return float(((s[True] - s[False]) * w).sum() / w.sum())
+        s = x.groupby(["bin", "ped"])[col].mean().unstack().reindex(index=w.index, columns=[False, True])
+        d_ = (s[True] - s[False]).to_numpy()
+        ok = np.isfinite(d_)                              # strata with both pedestrian and null frames
+        return float((d_[ok] * w.to_numpy()[ok]).sum() / w.to_numpy()[ok].sum()) if ok.any() else np.nan
 
     def stat(sub):
         return delta(sub, "sa") - delta(sub, "so")

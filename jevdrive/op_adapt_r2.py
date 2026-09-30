@@ -204,6 +204,8 @@ def pack(name: str, index: pd.DataFrame, root: Path | None = None, workers: int 
     for k, rows in enumerate(grp):
         loc = lctx[rows]
         g[rows] = np.where(loc >= 0, base[k] + np.searchsorted(need[k], np.maximum(loc, 0)), -1)
+    pd.DataFrame({"file": np.repeat(files, [len(n) for n in need]), "row": np.concatenate(need) if need else []}
+                 ).to_parquet(root / "trunk" / f"{name}.src.parquet", index=False)          # flat row -> (file, file row)
     s = index.drop(columns=["lctx"]).reset_index(drop=True).copy()
     for k in range(CTX):
         s[f"ctx{k}"] = g[:, k]
@@ -467,12 +469,53 @@ class Model(torch.nn.Module):
 
 
 def det_adapter():
-    """Package D's adapter (jevdrive/op_adapt_det.py); None until it is delivered."""
+    """Package D's adapter (jevdrive/op_adapt_det.py DetAdapter: gate 0 -> bit-identical to O at step 0)."""
     try:
         from . import op_adapt_det as DD
     except ImportError:
         return None
-    return DD.make_adapter()
+    return DD.DetAdapter()
+
+
+def pack_det(name: str, root: Path | None = None) -> None:
+    """Package D's per-cache-file detection tokens re-laid onto this domain's flat trunk rows:
+    R2/t/det/<domain>.tok.npy (N, 8, 25) float16, .mask.npy (N, 8) bool."""
+    from . import op_adapt_det as DD
+    root = root or r2("t")
+    src = pd.read_parquet(root / "trunk" / f"{name}.src.parquet")
+    (root / "det").mkdir(parents=True, exist_ok=True)
+    tok = mask = None
+    i = 0
+    for f, g in src.groupby("file", sort=False):
+        p = Path(f)
+        t, m = DD.load_tok(p if p.is_absolute() else data_dir() / p)
+        if tok is None:
+            tok = np.lib.format.open_memmap(root / "det" / f"{name}.tok.tmp.npy", "w+", np.float16, (len(src),) + t.shape[1:])
+            mask = np.lib.format.open_memmap(root / "det" / f"{name}.mask.tmp.npy", "w+", bool, (len(src),) + m.shape[1:])
+        r = g.row.to_numpy()
+        tok[g.index.to_numpy()], mask[g.index.to_numpy()] = t[r], m[r]
+        i += len(g)
+    tok.flush(), mask.flush()
+    for k in ("tok", "mask"):
+        (root / "det" / f"{name}.{k}.tmp.npy").replace(root / "det" / f"{name}.{k}.npy")
+
+
+class DetSource:
+    """(domain, ctx rows (B, 9)) -> detection tokens (B, 9, 8, F) float16 and mask (B, 9, 8) (nothing where ctx = -1)."""
+
+    def __init__(self, root: Path | None = None):
+        self.root, self.m = root or r2("t"), {}
+
+    def __call__(self, dom, ctx):
+        if dom not in self.m:
+            self.m[dom] = tuple(np.load(self.root / "det" / f"{dom}.{k}.npy", mmap_mode="r") for k in ("tok", "mask"))
+        tok, mask = self.m[dom]
+        c = np.asarray(ctx)
+        v = c >= 0
+        t = np.zeros(c.shape + tok.shape[1:], np.float16)
+        mk = np.zeros(c.shape + mask.shape[1:], bool)
+        t[v], mk[v] = tok[c[v]], mask[c[v]]
+        return t, mk
 
 
 def save_json(p: Path, obj):

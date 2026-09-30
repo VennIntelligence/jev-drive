@@ -86,6 +86,8 @@ def cmd_pack(a):
             ix = ix[ix.cache.isin(sorted(ix.cache.unique())[: a.limit])]
         root = Path(a.root) if a.root else None
         R.pack(dn, ix, root, a.workers)
+        if a.det:
+            R.pack_det(dn, root)
         print(f"{dn}: {len(ix)} samples from {ix.cache.nunique()} files in {time.time() - t0:.0f} s")
 
 
@@ -205,7 +207,7 @@ def train(cfg: R.RunCfg, d: Path, log: Log, a):
     det = R.det_adapter() if arm.det else None
     if arm.det and det is None:
         raise SystemExit("arm needs package D's adapter (jevdrive/op_adapt_det.py)")
-    det_fn = getattr(det, "tokens", None)
+    det_fn = R.DetSource(root) if arm.det else None
     model = R.Model(arm, det=det).to(dev)
     s4, new = model.trainable()
     groups = ([{"params": s4, "lr": cfg.lr}] if s4 else []) + [{"params": new, "lr": cfg.lr_new}]
@@ -434,6 +436,7 @@ def main():
     p.add_argument("--source", choices=("c", "round1"), default="c")
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--limit", type=int, default=0, help="first n cache files (tests)")
+    p.add_argument("--det", action="store_true", help="also lay package D's tokens onto the flat rows")
     p.add_argument("--root", default="")
     p = sp.add_parser("teacher")
     p.add_argument("--domains", nargs="+", required=True)
