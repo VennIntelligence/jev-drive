@@ -145,6 +145,12 @@ C6 字段齐全：`plans.jsonl` 里 `lat / lat_why / div / go / intent` 齐。
 - **D1（阶段 1 checklist C5 的 lane 条款，阶段 1 读数后、阶段 2 数据之前改）**：原文「lane 概率不退化（中位 > 0.3）」是我把 op-drive 诊断里「内侧车道线概率均值 0.54」（另一个量、另一批运行）当成了绝对门槛，而且代码里误对 4 条线取小。CARLA 场景里该概率本来就低：同一路线上 `drive` 自己的内侧两线取小的中位数只有 0.048，`lmain` 0.066，字面规则对基础模型同样判 FAIL，所以它区分不了适配模型是否退化。
   改成相对规则「`lmain` 的中位数 ≥ `drive` 的 0.5 倍」。`lmain` 0.066 ≥ 0.024，按新旧两种读法实质结论一致（没有退化）。这是 checklist 的措辞错误，不是放宽任何判定线。
 
+- **D2（阶段 2 checklist 的两处措辞，阶段 2 读数出来后、任何判定读数之前改）**：(a)「agent 崩溃（status 含 Failed / crash）为 0」照抄自 op-drive，字面会把 B2D 的正常驾驶结局 `Failed - TickRuntime`（被施工障碍卡到超时，24497 / 37969，`dbase`、`drive`、`lmain` 三臂同值，与 op-drive 里四臂同被卡一致）与 `Failed - Agent got blocked` 当成崩溃，op-drive 自己的 dev 也会被判 FAIL。
+  改成「崩溃 = status 为 missing / Failed / Simulation crashed / Agent crashed / Agent couldn't be set up」，结局类 status 另列。阶段 2 三个 unit 共 30 次运行，无崩溃，无 CARLA rc 139 重试。
+  (b) intent 一致性检查用日志里的 `ri` 重建期望 intent，而 agent 在 `_plan` 开头算 intent、`ri` 在末尾记，两者之间路线进度索引可能前进 1 格，区边界附近 9 / 12 669 步（27043、27297、27870 各在区边界 0.05 m 内，`ri` 差 1）不一致。
+  改成「日志里的 intent 等于 ri − 1、ri、ri + 1 三者任一处的期望值」；改后 0 / 12 669。这是检查的时序容差，agent 里的映射没有变。
+- **D3（打包，阶段 2 的 profile 之后）**：见下面执行日志。unit 的 wall 与 worker 数、每卡 slot 数是调度参数，不影响任何登记读数。
+
 ## 执行日志
 
 （运行开始后在此追加：时间、做了什么、读数、偏离。）
@@ -153,3 +159,17 @@ C6 字段齐全：`plans.jsonl` 里 `lat / lat_why / div / go / intent` 齐。
   checklist：C1 通过（日志里 `lmain-s0.onnx`、E 载入）；C2 intent 与路线 0 / 1034 步不一致，339 步为左转 intent；C3 延迟 `lmain` 38.0 / 46.2 ms（中位 / p99）对 `drive` 37.4 / 44.3；C4 Completed，无重试；
   C5 自由路况 plan v(5 s) 中位 5.21 对 4.30（比 1.21，过）、\|y@2 s\| 中位 0.135 m、幻觉 lead 步占比 0.017 对 0.041、无 NaN；C6 字段齐。lane 条款的字面规则对 `drive` 自己也 FAIL，按偏离 D1 改成相对规则后通过。**阶段 1 通过，进阶段 2。**
   一条路线上的旁证（不是读数，不作判断）：`lmain` DS 100 / RC 100，锁存 1 次且由 plan 的 `signal` 放行；`drive` DS 70，锁存 1 次且由 timer resume 放行、1 次违规。
+
+- 2026-10-01 07:27–07:41 **阶段 2**（tag `ld` / `lm`，dev 10 条 × TM seed 0，`dbase` 卡 0、`drive` 卡 1、`lmain` 卡 2，每卡 6 worker，no-twin；这三个 unit 就是 dev 的正式 unit，后面不重跑）。
+  unit wall：`dbase` 10.9 min、`lmain` 11.5 min、`drive` 12.9 min（op-drive f：10–13 min，同规格，wall 的预估成立）。三张卡的 before（6 worker / 卡，22 核 / 卡；采样 15 s，阶段 2 稳态段）：
+
+  | 卡（arm） | GPU 利用率均值 | 显存峰值 | 用核均值 / 峰值（共 22 核） |
+  |:--|--:|--:|--:|
+  | 0（`dbase`） | 29% | 47.1 GB | 6.3 / 12.1 |
+  | 1（`drive`） | 49% | 45.1 GB | 10.0 / 12.7 |
+  | 2（`lmain`） | 41% | 46.2 GB | 9.0 / 13.3 |
+
+  利用率不足：每卡 GPU 只用了三到五成、核只用了一半，显存 45–47 GB（每个 CARLA 约 6.5–7 GB）是装载上限的主因（83.6 GB 卡上 6 个以上只能再加 2–3 个）。unit 的 wall 被被障碍卡住的长路线（24497、37969、9196 被卡到超时）拖长，后半段 worker 空闲。
+  **打包改动（after）**：每卡 2 个 slot（各自的 openpilot server + 4 个 CARLA worker，核与 CARLA index 各分一半），一张卡同时装 8 个 worker（显存约 62 GB），一个 slot 被卡住的长路线占着时另一个 slot 继续推进；全批用 `--slots 2 --workers 4`，after 的利用率与 unit wall 在全批日志里记录。
+  checklist（`op_l_b2d_report check stage2`，按偏离 D2 改后）：全过：每 unit 10 行；无崩溃；`dbase` DS 56.6（线 57.7 ± 15）、`drive` 62.5（线 63.2 ± 15）；intent 一致率 100%（0 / 12 669 步）；
+  L-Safe：`lmain` 横向占比 0.486 对 `drive` 0.485、xt_op_med 0.067 m、off_lane + route_dev 2 对 2、blocked 0 对 1；速度比 `lmain` / `drive` = 2.56 / 2.05；C5：自由路况 plan v(5 s) 中位 6.22 对 5.68（比 1.10）、\|y@2 s\| 中位 0.091 m、内侧 lane 概率中位 0.243 对 0.128、幻觉 lead 步占比 0.205 对 0.317、无 NaN。**阶段 2 通过，启动全批。**
