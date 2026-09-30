@@ -114,7 +114,7 @@ def load_tables() -> dict:
 class Data:
     """Domains, teachers and tables of the lane."""
 
-    def __init__(self, names=("wod", "nus"), val=False):
+    def __init__(self, names=("wod", "nus"), hstore=False):
         self.tab = load_tables()
         self.dom, self.tea = {}, {}
         for dn in names:
@@ -124,6 +124,7 @@ class Data:
         self.full = {dn: (d.ctx >= 0).all(1) for dn, d in self.dom.items()}
         self.cam = {"wod": CAM_X["wod"], "wodval": CAM_X["wod"], "nus": CAM_X["nus"]}
         self.tstd = np.load(r2t() / "teacher" / "tstd.npy")
+        self.hs = {dn: HStore(dn) for dn in names if hstore and hpath(dn).exists()}
 
     def rows(self, dn: str, split: str, flag: str | None = None, need_future=False) -> np.ndarray:
         t = self.tab[dn]
@@ -268,7 +269,8 @@ class LModel(nn.Module):
         self.s4 = cfg.s4
         self.pol_names = set(pol_weights()) if cfg.pol else set()
 
-    def forward(self, trunk, valid, tc, intent=None, action_t=AT):
+    def stage4(self, trunk):
+        """(B, 9, 1024, 8, 16) stage-3 outputs -> (B, 9, 32, 512) hidden tokens (stage 4 with autograd only when trainable)."""
         B = trunk.shape[0]
         run = lambda: self.net.run_batched({A.TRUNK_OUT: trunk.reshape(B * CTX, 1, *trunk.shape[2:]).to(self.net.dtype)},  # noqa: E731
                                            ["view_39"])["view_39"]
@@ -277,7 +279,11 @@ class LModel(nn.Module):
         else:
             with torch.no_grad():
                 H = run()
-        H = H.reshape(B, CTX, *A.H_SHAPE)
+        return H.reshape(B, CTX, *A.H_SHAPE)
+
+    def policy(self, H, valid, tc, intent=None, action_t=AT):
+        """(B, 9, 32, 512) hidden tokens -> outputs: intent condition, invalid-frame mask, policy (trainable per cfg)."""
+        B = H.shape[0]
         if self.adapter is not None and intent is not None:
             H = self.adapter(H, intent)
         H = H * valid[:, :, None, None].to(H.dtype)
@@ -286,6 +292,13 @@ class LModel(nn.Module):
             f["_to_copy"] = desire_from_intent(intent, self.net.dtype)
         o = self.net.run_batched(f, A.POLICY_OUT)
         return {"outputs": o["outputs"].reshape(B, -1), "select_4": o["select_4"].reshape(B, -1)}
+
+    def forward(self, trunk, valid, tc, intent=None, action_t=AT):
+        return self.policy(self.stage4(trunk), valid, tc, intent, action_t)
+
+    def forward_h(self, H, valid, tc, intent=None, action_t=AT):
+        """Same as forward from precomputed hidden tokens (only valid when stage 4 is frozen)."""
+        return self.policy(H.to(self.net.dtype), valid, tc, intent, action_t)
 
     def trainable(self):
         w = [(k, p) for k, p in self.net.params.items() if p.requires_grad]
@@ -360,11 +373,15 @@ class Mixer:
         return segs
 
 
-def assemble(D: Data, segs: list[tuple]) -> dict:
+def assemble(D: Data, segs: list[tuple], use_h: bool = False) -> dict:
+    """Segments (dom, rows, role) -> one CPU batch. use_h: hidden tokens of the original stage 4 (key `H`) instead of trunks."""
     xs, vs, tcs, intent, role, tout, tmu, hum, cam = [], [], [], [], [], [], [], [], []
     for dn, rows, r in segs:
         d, t = D.dom[dn], D.tea[dn]
-        x, v = d.gather(rows)
+        if use_h:
+            x, v = D.hs[dn].gather(d.ctx[rows]), d.ctx[rows] >= 0
+        else:
+            x, v = d.gather(rows)
         xs.append(x), vs.append(v), tcs.append(d.tc[rows])
         intent.append(D.intent(dn, rows)), role.append(np.full(len(rows), r, np.int64))
         tout.append(np.asarray(t["out"][rows])), tmu.append(np.asarray(t["mu"][rows], np.float32))
@@ -373,7 +390,7 @@ def assemble(D: Data, segs: list[tuple]) -> dict:
             h = human_targets(np.asarray(D.tab[dn]["fut20"])[rows])
         hum.append(h), cam.append(np.full(len(rows), D.cam[dn], np.float32))
     cat = np.concatenate
-    return {"trunk": cat(xs), "valid": cat(vs), "tc": cat(tcs), "intent": cat(intent), "role": cat(role), "tgt": cat(tout),
+    return {("H" if use_h else "trunk"): cat(xs), "valid": cat(vs), "tc": cat(tcs), "intent": cat(intent), "role": cat(role), "tgt": cat(tout),
             "tmu": cat(tmu), "hum": cat(hum), "cam": cat(cam)}
 
 
@@ -432,35 +449,73 @@ class Losses:
 
 # ---------------------------------------------------------------- forward on rows (dev eval, readouts)
 @torch.no_grad()
-def fwd_rows(model: LModel, D: Data, dn: str, rows, dev, bs=192, threads=3, intent=True) -> dict:
-    """plan (n, 33, 15), lead, lead_prob on sample rows of a domain; the intent of the row is fed unless intent=False."""
+def hidden_of(model: LModel, D: Data, dn: str, uniq: np.ndarray, dev, bs=1024, threads=8) -> torch.Tensor:
+    """(len(uniq), 32, 512) hidden tokens on the GPU of the given flat trunk rows: read from the original-model H cache when the
+    model's stage 4 is frozen (it IS the original's), else computed once per unique frame with the model's own stage 4."""
+    d = D.dom[dn]
+    if not model.s4 and dn in D.hs:
+        H = D.hs[dn].H
+        return torch.cat([torch.from_numpy(np.ascontiguousarray(H[uniq[i:i + 8192]])).to(dev) for i in range(0, len(uniq), 8192)])
+    from concurrent.futures import ThreadPoolExecutor
+    out = torch.empty((len(uniq),) + A.H_SHAPE, dtype=model.net.dtype, device=dev)
+    starts = list(range(0, len(uniq), bs))
+
+    def load(i):
+        return torch.from_numpy(d.rows(uniq[i:i + bs])).pin_memory()
+    with ThreadPoolExecutor(threads) as ex:
+        futs = {}
+        for j, i in enumerate(starts):
+            for jj in range(j, min(j + threads + 1, len(starts))):
+                futs.setdefault(jj, ex.submit(load, starts[jj]))
+            x = futs.pop(j).result().to(dev, non_blocking=True)
+            h = model.net.run_batched({A.TRUNK_OUT: x.reshape(len(x), 1, *x.shape[1:]).to(model.net.dtype)}, ["view_39"])["view_39"]
+            out[i:i + len(x)] = h.reshape(len(x), *A.H_SHAPE)
+    return out
+
+
+@torch.no_grad()
+def fwd_rows(model: LModel, D: Data, dn: str, rows, dev, bs=192, threads=8, intent=True) -> dict:
+    """plan (n, 33, 15), lead, lead_prob on sample rows of a domain; the intent of the row is fed unless intent=False.
+    Every distinct context frame goes through stage 4 once (the frames of neighbouring rows overlap 8 of 9), so the cost is
+    that of the unique frames, not 9 x the rows."""
     d = D.dom[dn]
     sl = model.net.slices
     pi = A.plan_index(sl)
     lead = np.arange(sl["lead"].start, sl["lead"].start + 72)
     lp = np.arange(sl["lead_prob"].start, sl["lead_prob"].stop)
     rows = np.asarray(rows, np.int64)
+    ctx = d.ctx[rows]
+    valid = ctx >= 0
+    uniq = np.unique(ctx[valid])
+    H = hidden_of(model, D, dn, uniq, dev, threads=threads)
+    idx = np.where(valid, np.searchsorted(uniq, np.maximum(ctx, 0)), 0)
     it = D.intent(dn, rows) if intent else np.zeros(len(rows), np.int64)
-    starts = list(range(0, len(rows), bs))
+    acc = {"plan": [], "lead": [], "lead_prob": []}
+    for i in range(0, len(rows), bs):
+        sel = slice(i, i + bs)
+        Hb = H[torch.from_numpy(idx[sel]).to(dev)]
+        o = model.policy(Hb, torch.from_numpy(valid[sel]).to(dev), torch.from_numpy(d.tc[rows[sel]]).to(dev), torch.from_numpy(it[sel]).to(dev))
+        out = o["outputs"].float()
+        acc["plan"].append(out[:, pi].view(-1, 33, 15).cpu().numpy())
+        acc["lead"].append(out[:, lead].cpu().numpy())
+        acc["lead_prob"].append(out[:, lp].cpu().numpy())
+    return {k: np.concatenate(v) for k, v in acc.items()}
 
-    def load(i):
+
+@torch.no_grad()
+def fwd_rows_plain(model: LModel, D: Data, dn: str, rows, dev, bs=64, intent=True) -> dict:
+    """The plain path (9 trunks per row through stage 4): the reference the dedup path is checked against."""
+    d = D.dom[dn]
+    pi = A.plan_index(model.net.slices)
+    rows = np.asarray(rows, np.int64)
+    it = D.intent(dn, rows) if intent else np.zeros(len(rows), np.int64)
+    plans = []
+    for i in range(0, len(rows), bs):
         r = rows[i:i + bs]
         x, v = d.gather(r)
-        return torch.from_numpy(x).pin_memory(), torch.from_numpy(v), torch.from_numpy(d.tc[r]), torch.from_numpy(it[i:i + bs])
-    from concurrent.futures import ThreadPoolExecutor
-    acc = {"plan": [], "lead": [], "lead_prob": []}
-    with ThreadPoolExecutor(threads) as ex:
-        futs = {}
-        for j, i in enumerate(starts):
-            for jj in range(j, min(j + threads + 1, len(starts))):
-                futs.setdefault(jj, ex.submit(load, starts[jj]))
-            x, v, tc, itn = futs.pop(j).result()
-            o = model(x.to(dev, non_blocking=True), v.to(dev), tc.to(dev), itn.to(dev))
-            out = o["outputs"].float()
-            acc["plan"].append(out[:, pi].view(-1, 33, 15).cpu().numpy())
-            acc["lead"].append(out[:, lead].cpu().numpy())
-            acc["lead_prob"].append(out[:, lp].cpu().numpy())
-    return {k: np.concatenate(v) for k, v in acc.items()}
+        o = model(torch.from_numpy(x).to(dev), torch.from_numpy(v).to(dev), torch.from_numpy(d.tc[r]).to(dev), torch.from_numpy(it[i:i + bs]).to(dev))
+        plans.append(o["outputs"].float()[:, pi].view(-1, 33, 15).cpu().numpy())
+    return {"plan": np.concatenate(plans)}
 
 
 # ---------------------------------------------------------------- metrics

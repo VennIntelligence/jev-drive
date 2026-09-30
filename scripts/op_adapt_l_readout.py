@@ -51,7 +51,7 @@ def eval_rows(D: L.Data) -> dict:
 def cmd_eval(a):
     import op_adapt_l_prep as P
     dev = torch.device("cuda")
-    D = L.Data(("wod", "wodval", "nus"))
+    D = L.Data(("wod", "wodval", "nus"), hstore=True)
     m = L.load_model(model_path(a.model), dev)
     out = rdir(a.model, "eval")
     rows = eval_rows(D)

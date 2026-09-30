@@ -186,7 +186,8 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
     torch.manual_seed(cfg.seed)
     dev = torch.device("cuda")
     t0 = time.time()
-    D = L.Data(("wod", "nus"))
+    D = L.Data(("wod", "nus"), hstore=not cfg.s4)
+    use_h = not cfg.s4
     model = L.LModel(cfg).to(dev)
     base, new = model.trainable()
     groups = ([{"params": base, "lr": cfg.lr}] if base else []) + ([{"params": new, "lr": cfg.lr_new}] if new else [])
@@ -236,8 +237,8 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
         rng = np.random.default_rng([cfg.seed, k, step])
         try:
             while not stop.is_set():
-                b = L.assemble(D, mix.draw(rng))
-                for x in ("trunk", "valid", "tc"):
+                b = L.assemble(D, mix.draw(rng), use_h)
+                for x in ("H" if use_h else "trunk", "valid", "tc"):
                     b[x] = torch.from_numpy(b[x]).pin_memory()
                 q.put(b)
         except BaseException as e:                                  # noqa: BLE001
@@ -250,12 +251,15 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
     hist, nonfinite, tstart, s_start = [], 0, time.time(), step
     torch.cuda.reset_peak_memory_stats()
     bar = tqdm(total=cfg.steps, initial=step, desc=cfg.name, mininterval=30)
+    wait = 0.0
     while step < cfg.steps:
+        tw = time.time()
         b = q.get()
+        wait += time.time() - tw
         if isinstance(b, BaseException):
             raise RuntimeError("batch producer failed") from b
         b = L.to_dev(b, dev)
-        o = model(b["trunk"], b["valid"], b["tc"], b["intent"])
+        o = model.forward_h(b["H"], b["valid"], b["tc"], b["intent"]) if use_h else model(b["trunk"], b["valid"], b["tc"], b["intent"])
         total, Ls = lossf(o, b)
         frac = step / cfg.steps
         for g, l0 in zip(opt.param_groups, lr0):
@@ -282,6 +286,7 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
             for k, v in m.items():
                 log.scalar(f"loss/{k}", v, step)
             log.scalar("throughput/seq_per_s", sps, step)
+            log.scalar("throughput/data_wait_frac", wait / el, step)
             vram = torch.cuda.max_memory_reserved() / 2 ** 30
             log.scalar("gpu/peak_reserved_gb", vram, step)
             write_status(d, step=step, steps=cfg.steps, loss=float(m.total), sps=sps, vram_gb=vram,
@@ -298,7 +303,7 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
     stop.set()
     bar.close()
     r = evaluate("final") if not a.no_eval else {}
-    r |= {"steps": step, "train_s": time.time() - tstart, "peak_reserved_gb": torch.cuda.max_memory_reserved() / 2 ** 30,
+    r |= {"steps": step, "train_s": time.time() - tstart, "data_wait_frac": wait / (time.time() - tstart), "peak_reserved_gb": torch.cuda.max_memory_reserved() / 2 ** 30,
           "seq_per_s": (step - s_start) * cfg.batch / (time.time() - tstart), "nonfinite": nonfinite}
     (d / "dev.json").write_text(json.dumps(r, indent=1, default=float))
     torch.save({"model": model.state(), "cfg": cfg.dump(), "dev": r}, d / "ckpt-final.pt")
@@ -338,6 +343,50 @@ def cmd_selftest(a):
     print(json.dumps(res, indent=1))
 
 
+def cmd_equiv(a):
+    """Speed-pass equivalence: (1) the dedup forward (each context frame through stage 4 once, or the H cache when stage 4 is
+    frozen) against the plain 9-trunks-per-row forward; (2) the H-cache training step against the trunk training step on the
+    same batch (loss and policy gradients). Trained pilot checkpoints make the checks non-trivial."""
+    dev = torch.device("cuda")
+    D = L.Data(("wod", "wodval", "nus"), hstore=True)
+    res = {}
+    rng = np.random.default_rng(0)
+    for name, path in (("O", None), ("pilot_polia", L.lroot("pilot", "sel_polia", "ckpt-final.pt")),
+                       ("pilot_s4ia", L.lroot("pilot", "sel_s4ia", "ckpt-final.pt"))):
+        m = L.load_model(path, dev)
+        for dn, sp in (("wodval", "val"), ("wod", "dev"), ("nus", "dev")):
+            rows = np.sort(rng.choice(D.rows(dn, sp), 320, replace=False))
+            rows = np.unique(np.r_[rows, rows + 1, rows + 2].clip(max=len(D.dom[dn]) - 1))     # neighbours: shared frames
+            rows = rows[D.full[dn][rows]]
+            t0 = time.time()
+            a_ = L.fwd_rows(m, D, dn, rows, dev)["plan"]
+            t1 = time.time()
+            b_ = L.fwd_rows_plain(m, D, dn, rows, dev)["plan"]
+            t2 = time.time()
+            res[f"{name}/{dn}"] = {"rows": int(len(rows)), "max_abs_plan_m": float(np.abs(a_ - b_).max()),
+                                   "p99_abs_plan": float(np.percentile(np.abs(a_ - b_), 99)), "dedup_s": t1 - t0, "plain_s": t2 - t1}
+        del m
+    # (2) H-cache training step vs trunk training step (frozen stage 4, policy trainable, same batch)
+    cfg = ARMS.get("sel_polia")
+    mix = L.Mixer(cfg, D)
+    segs = mix.draw(np.random.default_rng(1))
+    outs = {}
+    for use_h in (False, True):
+        torch.manual_seed(0)
+        m = L.LModel(cfg).to(dev).train()
+        lossf = L.Losses(m.net, cfg, D.tstd, dev)
+        b = L.to_dev(L.assemble(D, segs, use_h), dev)
+        o = m.forward_h(b["H"], b["valid"], b["tc"], b["intent"]) if use_h else m(b["trunk"], b["valid"], b["tc"], b["intent"])
+        total, Ls = lossf(o, b)
+        total.backward()
+        g = torch.cat([p.grad.flatten().float() for p in m.trainable()[0] + m.trainable()[1] if p.grad is not None])
+        outs[use_h] = (float(total), g)
+    res["train_step_H_vs_trunk"] = {"loss_trunk": outs[False][0], "loss_H": outs[True][0],
+                                    "grad_rel_diff": float((outs[False][1] - outs[True][1]).norm() / outs[False][1].norm())}
+    print(json.dumps(res, indent=1))
+    (L.lroot() / "equiv.json").write_text(json.dumps(res, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest="cmd", required=True)
@@ -353,5 +402,6 @@ if __name__ == "__main__":
     p.add_argument("--no-eval", action="store_true")
     sp.add_parser("selftest")
     sp.add_parser("select")
+    sp.add_parser("equiv")
     a = ap.parse_args()
-    {"teacher": cmd_teacher, "train": cmd_train, "selftest": cmd_selftest, "select": cmd_select}[a.cmd](a)
+    {"teacher": cmd_teacher, "train": cmd_train, "selftest": cmd_selftest, "select": cmd_select, "equiv": cmd_equiv}[a.cmd](a)
