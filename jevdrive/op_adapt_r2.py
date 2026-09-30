@@ -137,13 +137,52 @@ class RunCfg:
 
 
 # ---------------------------------------------------------------- storage
+def trunk_view(path) -> np.ndarray:
+    """Read-only memmap of a trunk cache: package C's .npy, or the `trunk` member of an uncompressed round-1 .npz
+    (the member's .npy bytes are contiguous in the zip, so it maps like a plain file)."""
+    import zipfile
+    p = Path(path)
+    p = p if p.is_absolute() else data_dir() / p
+    if p.suffix == ".npy":
+        return np.load(p, mmap_mode="r")
+    with zipfile.ZipFile(p) as z:
+        info = z.getinfo("trunk.npy")
+        assert info.compress_type == zipfile.ZIP_STORED, f"{p}: compressed member, cannot map"
+    with open(p, "rb") as f:
+        f.seek(info.header_offset)
+        h = f.read(30)
+        start = info.header_offset + 30 + int.from_bytes(h[26:28], "little") + int.from_bytes(h[28:30], "little")
+        f.seek(start)
+        v = np.lib.format.read_magic(f)
+        shape, fortran, dt = (np.lib.format.read_array_header_1_0 if v == (1, 0) else np.lib.format.read_array_header_2_0)(f)
+        off = f.tell()
+    return np.memmap(p, dtype=dt, mode="r", offset=off, shape=shape, order="F" if fortran else "C")
+
+
+def _raise_nofile():
+    import resource
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft < hard:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+
+
 class Domain:
-    """Flat trunk memmap + sample table of one domain."""
+    """Sample table of one domain + its trunk rows: a flat memmap R2/t/trunk/<name>.npy when packed with copy=True,
+    else a view onto the cache files themselves (R2/t/trunk/<name>.src.parquet: flat row -> (file, file row));
+    both are shared through the page cache by every process that reads them."""
 
     def __init__(self, name: str, root: Path | None = None):
         root = root or r2("t")
         self.name = name
-        self.T = np.load(root / "trunk" / f"{name}.npy", mmap_mode="r")
+        flat = root / "trunk" / f"{name}.npy"
+        if flat.exists():
+            self.T = np.load(flat, mmap_mode="r")
+        else:
+            _raise_nofile()
+            src = pd.read_parquet(root / "trunk" / f"{name}.src.parquet")
+            self.files, self.fid = np.unique(src.file.to_numpy(), return_inverse=True)
+            self.frow = src.row.to_numpy(np.int64)
+            self.T, self.views = None, {}
         self.s = pd.read_parquet(root / "samples" / f"{name}.parquet")
         self.ctx = self.s[[f"ctx{k}" for k in range(CTX)]].to_numpy(np.int64)
         self.tc = self.s[["tc0", "tc1"]].to_numpy(np.float32)
@@ -157,6 +196,25 @@ class Domain:
         v = self.s[c].to_numpy() if c in self.s else np.full(len(self.s), default)
         return v.astype(dtype) if dtype else v
 
+    def rows(self, g: np.ndarray) -> np.ndarray:
+        """Trunk rows by flat index (any order) -> (len(g), 1024, 8, 16) fp16."""
+        if self.T is not None:
+            o = np.argsort(g)
+            out = np.empty((len(g),) + TRUNK_SHAPE, np.float16)
+            out[o] = self.T[g[o]]
+            return out
+        out = np.empty((len(g),) + TRUNK_SHAPE, np.float16)
+        fid, fr = self.fid[g], self.frow[g]
+        o = np.lexsort((fr, fid))
+        bounds = np.flatnonzero(np.diff(fid[o])) + 1
+        for part in np.split(o, bounds):
+            k = fid[part[0]]
+            v = self.views.get(k)
+            if v is None:
+                v = self.views[k] = trunk_view(self.files[k])
+            out[part] = v[fr[part]]
+        return out
+
     def gather(self, rows: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """(B, 9, 1024, 8, 16) fp16 context trunks (zero rows where ctx = -1) and the (B, 9) validity."""
         c = self.ctx[rows]
@@ -164,17 +222,16 @@ class Domain:
         x = np.zeros((len(rows), CTX) + TRUNK_SHAPE, np.float16)
         f = np.flatnonzero(valid.ravel())
         if len(f):
-            g = c.ravel()[f]
-            o = np.argsort(g)                                   # sorted reads from the memmap
-            x.reshape(-1, *TRUNK_SHAPE)[f[o]] = self.T[g[o]]
+            x.reshape(-1, *TRUNK_SHAPE)[f] = self.rows(c.ravel()[f])
         return x, valid
 
 
-def pack(name: str, index: pd.DataFrame, root: Path | None = None, workers: int = 8) -> None:
-    """Build R2/t/trunk/<name>.npy + samples/<name>.parquet from per-stream cache files.
-    index: one row per sample with `cache` (npz path, absolute or relative to $DATA_DIR), `row` (slot in that file),
-    `lctx` (9 file-local rows, oldest first, -1 = zero hidden) and every other column to keep (uid, split, labels...).
-    Only the trunk rows some sample reads are copied."""
+def pack(name: str, index: pd.DataFrame, root: Path | None = None, workers: int = 8, copy: bool = False) -> None:
+    """Sample table R2/t/samples/<name>.parquet (ctx0..8 = flat trunk rows) + the flat-row map trunk/<name>.src.parquet
+    from per-stream cache files; copy=True also writes the rows into one flat memmap trunk/<name>.npy (tests, or
+    caches that cannot be mapped). index: one row per sample with `cache` (path, absolute or relative to $DATA_DIR),
+    `row` (slot in that file), `lctx` (9 file-local rows, oldest first, -1 = zero hidden) and every other column to
+    keep. Only the trunk rows some sample reads get a flat index."""
     from concurrent.futures import ThreadPoolExecutor
     root = root or r2("t")
     (root / "trunk").mkdir(parents=True, exist_ok=True)
@@ -186,20 +243,18 @@ def pack(name: str, index: pd.DataFrame, root: Path | None = None, workers: int 
     grp = np.split(order, np.cumsum(np.bincount(fid, minlength=len(files)))[:-1])      # sample rows per file
     need = [np.unique(lctx[g][lctx[g] >= 0]) for g in grp]
     base = np.r_[0, np.cumsum([len(n) for n in need])]
-    tmp = root / "trunk" / f"{name}.tmp.npy"
-    out = np.lib.format.open_memmap(tmp, "w+", np.float16, (int(base[-1]),) + TRUNK_SHAPE)
+    if copy:
+        tmp = root / "trunk" / f"{name}.tmp.npy"
+        out = np.lib.format.open_memmap(tmp, "w+", np.float16, (int(base[-1]),) + TRUNK_SHAPE)
 
-    def load(k):
-        p = Path(files[k])
-        p = p if p.is_absolute() else data_dir() / p
-        if p.suffix == ".npy":                                  # package C's sim / offset caches
-            out[base[k]:base[k + 1]] = np.load(p, mmap_mode="r")[need[k]]
-        else:
-            with np.load(p) as z:
-                out[base[k]:base[k + 1]] = z["trunk"][need[k]]
-    with ThreadPoolExecutor(workers) as ex:
-        list(ex.map(load, range(len(files))))
-    out.flush()
+        def load(k):
+            out[base[k]:base[k + 1]] = trunk_view(files[k])[need[k]]
+        with ThreadPoolExecutor(workers) as ex:
+            list(ex.map(load, range(len(files))))
+        out.flush()
+        tmp.replace(root / "trunk" / f"{name}.npy")
+    else:
+        (root / "trunk" / f"{name}.npy").unlink(missing_ok=True)
     g = np.full_like(lctx, -1)
     for k, rows in enumerate(grp):
         loc = lctx[rows]
@@ -212,7 +267,6 @@ def pack(name: str, index: pd.DataFrame, root: Path | None = None, workers: int 
     if "uid" not in s:
         s["uid"] = np.arange(len(s), dtype=np.int64)
     s.to_parquet(root / "samples" / f"{name}.parquet", index=False)
-    tmp.replace(root / "trunk" / f"{name}.npy")
 
 
 # ---------------------------------------------------------------- round-1 caches -> pack indices

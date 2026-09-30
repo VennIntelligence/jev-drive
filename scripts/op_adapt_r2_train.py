@@ -85,7 +85,7 @@ def cmd_pack(a):
         if a.limit:
             ix = ix[ix.cache.isin(sorted(ix.cache.unique())[: a.limit])]
         root = Path(a.root) if a.root else None
-        R.pack(dn, ix, root, a.workers)
+        R.pack(dn, ix, root, a.workers, copy=a.copy)
         if a.det:
             R.pack_det(dn, root)
         print(f"{dn}: {len(ix)} samples from {ix.cache.nunique()} files in {time.time() - t0:.0f} s")
@@ -437,6 +437,7 @@ def main():
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--limit", type=int, default=0, help="first n cache files (tests)")
     p.add_argument("--det", action="store_true", help="also lay package D's tokens onto the flat rows")
+    p.add_argument("--copy", action="store_true", help="copy the rows into one flat memmap instead of mapping the caches")
     p.add_argument("--root", default="")
     p = sp.add_parser("teacher")
     p.add_argument("--domains", nargs="+", required=True)

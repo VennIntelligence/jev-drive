@@ -92,12 +92,13 @@ def units():
         ix = pd.DataFrame({"cache": [str(td / "a.npz"), str(td / "a.npz"), str(td / "b.npy")], "row": [6, 3, 4],
                            "lctx": [np.array([-1] * 5 + [0, 2, 4, 6]), np.array([-1] * 8 + [3]), np.arange(-4, 5)],
                            "tc0": 1.0, "tc1": 0.0, "split": "train"})
-        R.pack("x", ix, td)
-        d = R.Domain("x", td)
-        x, v = d.gather(np.array([0, 1, 2]))
-        good = (np.array_equal(x[0, 5:], T1[[0, 2, 4, 6]]) and not x[0, :5].any() and np.array_equal(x[1, 8], T1[3])
-                and np.array_equal(x[2, 4:], T2[:5]) and v.sum() == 4 + 1 + 5)
-        check("pack/gather round trip", good)
+        for nm, cp in (("x", False), ("y", True)):
+            R.pack(nm, ix, td, copy=cp)
+            d = R.Domain(nm, td)
+            x, v = d.gather(np.array([0, 1, 2]))
+            good = (np.array_equal(x[0, 5:], T1[[0, 2, 4, 6]]) and not x[0, :5].any() and np.array_equal(x[1, 8], T1[3])
+                    and np.array_equal(x[2, 4:], T2[:5]) and v.sum() == 4 + 1 + 5)
+            check(f"pack/gather round trip ({'flat copy' if cp else 'mapped caches'})", good)
 
 
 # ---------------------------------------------------------------- synthetic R2 root
@@ -344,12 +345,13 @@ def readout(a):
     check("B-score off corners", "corner0" in sm["B-score"]["offdev"], list(sm["B-score"]["offdev"]))
     p = {k: True for k in ("R-nus", "R-wod", "S-p5", "S-p5-all", "S-cos", "B-p5", "B-real", "N-drift", "N-ade", "N-lead", "N-nav",
                            "N-rfs", "N-cutin", "B-score-p5", "B-score-nus")}
-    check("outcome P", RO.outcome(p) == "P")
-    check("outcome P-rep", RO.outcome(p | {"B-real": False}) == "P-rep")
-    check("outcome P-size", RO.outcome(p | {"S-p5-all": False, "B-p5": False}) == "P-rep" or True)
-    check("outcome real-only", RO.outcome(p | {"S-p5": False, "S-p5-all": False, "S-cos": False, "B-p5": False}) == "real-only")
-    check("outcome sim-dominant", RO.outcome(p | {"R-wod": False}) == "sim-dominant")
-    check("outcome none", RO.outcome({k: False for k in p}) == "none")
+    check("outcome P", RO.outcome(p) == ["P"])
+    check("outcome P-rep", RO.outcome(p | {"B-real": False}) == ["P-rep", "sim-dominant"])
+    check("outcome P-size", RO.outcome(p | {"S-p5-all": False})[0].startswith("P-size") if not RO.outcome(p | {"S-p5-all": False})[0] == "P"
+          else RO.outcome(p | {"S-p5-all": False})[1].startswith("P-size"), RO.outcome(p | {"S-p5-all": False}))
+    check("outcome real-only", RO.outcome(p | {"S-p5": False, "S-p5-all": False, "S-cos": False, "B-p5": False}) == ["real-only"])
+    check("outcome sim-dominant", RO.outcome(p | {"R-wod": False}) == ["sim-dominant"])
+    check("outcome none", RO.outcome({k: False for k in p}) == ["none"])
     # lane: checklists evaluate on the synthetic runs without raising; the packer runs a job on a card
     import op_adapt_r2_lane as LN
     c1 = LN.verdict(LN.check_stage1(root / "run-A"))
@@ -365,14 +367,54 @@ def readout(a):
     check("packer runs a job", done["t1"]["rc"] == 0, done)
 
 
+def real(a):
+    """The real package-C indexes: pack (mapped caches, no copy) into OP_R2_ROOT/t, sampler pools and composition of
+    every arm, and the batch gather throughput (no teacher, no model, no readout set is read)."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from jevdrive import op_adapt_r2 as R
+    import op_adapt_r2_train as T
+    src = Path(os.environ["OP_R2_SRC"])                      # the real R2 root whose index/ is read
+    ns = types.SimpleNamespace
+    os.environ["OP_R2_ROOT"] = str(src)                     # index_c reads <R2>/index
+    doms = [d for d in ("simC", "simK", "nus", "wod", "nav", "off", "p5") if (src / "index" / f"{d}.parquet").exists()]
+    out = Path(a.out)
+    for d in doms:
+        t0 = time.time()
+        T.cmd_pack(ns(domains=[d], source="c", workers=8, limit=0, root=str(out), det=False, copy=False))
+        print(f"pack {d}: {time.time() - t0:.0f} s")
+    D = {d: R.Domain(d, out) for d in doms}
+    for arm in ("A", "D", "A-real", "A-sim", "A-noC", "A-noK", "A-bhv"):
+        need = {"simC", "simK", "nus", "wod", "nav"} | ({"off"} if R.ARMS[arm].offset else set())
+        if not need <= set(D):
+            print(f"{arm}: missing domains {need - set(D)}")
+            continue
+        mx = R.Mixer(R.RunCfg(arm=arm), D)
+        print(arm, json.dumps(mx.describe(), default=str))
+        check(f"mixer {arm} pools non-empty", all(v > 0 for k, v in mx.describe()["pool_sizes"].items() if k != "off" or R.ARMS[arm].offset))
+    if {"simC", "simK", "nus", "wod", "nav"} <= set(D):
+        mx = R.Mixer(R.RunCfg(arm="A"), D)
+        rng = np.random.default_rng(0)
+        t0 = time.time()
+        n = 0
+        with ThreadPoolExecutor(4) as ex:
+            for segs in [mx.draw(rng) for _ in range(20)]:
+                xs = list(ex.map(lambda s: D[s.dom].gather(s.rows)[0], segs))
+                n += sum(len(x) for x in xs)
+        dt = time.time() - t0
+        print(f"gather: {n} sequences in {dt:.1f} s = {n / dt:.0f} seq/s ({20 / dt:.1f} batches/s), cold page cache")
+        check("gather throughput >= 1 batch / s (cold)", 20 / dt >= 1.0, f"{20 / dt:.2f}")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=("units", "synth", "readout"))
+    ap.add_argument("what", choices=("units", "synth", "readout", "real"))
+    ap.add_argument("--out", default="/tmp/r2real")
     ap.add_argument("--arms", nargs="+", default=["A", "D", "A-real", "A-sim", "A-noC", "A-noK", "D-only", "A-bhv"])
     ap.add_argument("--steps", type=int, default=4)
     ap.add_argument("--batch", type=int, default=16)
     a = ap.parse_args()
-    {"units": units, "synth": synth, "readout": readout}[a.what](*(() if a.what == "units" else (a,)))
+    {"units": units, "synth": synth, "readout": readout, "real": real}[a.what](*(() if a.what == "units" else (a,)))
     bad = [n for n, ok in OK if not ok]
     print(f"{len(OK) - len(bad)}/{len(OK)} passed" + (f"; FAILED: {bad}" if bad else ""))
     sys.exit(1 if bad else 0)

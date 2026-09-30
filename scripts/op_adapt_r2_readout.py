@@ -623,22 +623,24 @@ def _get(d, *k):
     return d
 
 
-def outcome(p: dict) -> str:
-    """§4.5 table, first matching row."""
+def outcome(p: dict) -> list:
+    """§4.5 table: every row whose condition holds (the rows are readings and can co-occur, e.g. P-rep and P-size);
+    ["none"] when no row holds."""
     N = all(p[k] for k in ("N-drift", "N-ade", "N-lead", "N-nav", "N-rfs", "N-cutin"))
     Rr = p["R-nus"] and p["R-wod"]
     S = p["S-p5"] and p["S-cos"]
+    rows = []
     if Rr and S and p["B-p5"] and p["B-real"] and N:
-        return "P"
+        rows.append("P")
     if Rr and S and N and not (p["B-p5"] and p["B-real"]):
-        return "P-rep"
+        rows.append("P-rep")
     if Rr and N and p["S-p5"] and not p["S-p5-all"]:
-        return "P-size (check the < 500 px bins by hand)"
+        rows.append("P-size (read the < 500 px_eq bins: they must not move)")
     if Rr and N and not (p["S-p5"] or p["S-p5-all"] or p["S-cos"]) and not p["B-p5"]:
-        return "real-only"
-    if (p["S-p5"] or p["S-cos"] or p["B-p5"]) and (not Rr or not p["B-real"] or not N):
-        return "sim-dominant"
-    return "none"
+        rows.append("real-only")
+    if (p["S-p5"] or p["S-p5-all"] or p["S-cos"] or p["B-p5"]) and (not Rr or not p["B-real"] or not N):
+        rows.append("sim-dominant")
+    return rows or ["none"]
 
 
 def cmd_verdict(a):
