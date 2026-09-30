@@ -358,6 +358,8 @@ def comfort(st: dict, ego: Ego, n: int) -> np.ndarray:
     """navsim ego_is_comfortable on the rollout (rear-axle body frame: vx = v, vy = 0, ax = a, ay = v w; centre-shifted
     x / y accelerations for the longitudinal / lateral bounds, as state_array_to_center_state_array)."""
     v, a, w, al, h = (st[k][..., :n] for k in ("v", "a", "w", "al", "h"))
+    if n < 5:                                              # too short for the filters (such a slot is not valid anyway)
+        return np.ones(v.shape[:-1], bool)
     ay = v * w
     lon, lat = _savgol(a - w ** 2 * ego.rc, 8, 2), _savgol(ay + al * ego.rc, 8, 2)
     mag = _savgol(np.hypot(a, ay), 8, 2)
