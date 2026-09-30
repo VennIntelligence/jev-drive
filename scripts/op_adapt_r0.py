@@ -370,15 +370,43 @@ def probe(a, rl):
     rl.event("verdict", open_Z=verdict["open_Z"])
 
 
+def inside(a, rl):
+    """Descriptive, added after the verdict: the < 500 px Cosmos rows split by whether the pedestrian's GT box centre falls
+    inside the tele frame (the tele view covers the central ~16 deg only); same probes and bootstrap as `probe`."""
+    import cosmos_openpilot as CO
+    z = dict(np.load(OUT / "cosmos.npz", allow_pickle=True))
+    ctr = []
+    for pair, s in zip(z["pair"], z["slot"]):
+        b = np.load(PAIRS / pair / "gt.npz")["box"][::STEP][s].astype(float)
+        ctr.append(((b[0] + b[2]) / 2, (b[1] + b[3]) / 2) if b[0] >= 0 else (np.nan, np.nan))
+    c = np.array(ctr)
+    f = CO.F
+    ut = K_TELE[0, 2] + K_TELE[0, 0] * (c[:, 0] - (CO.W - 1) / 2) / f
+    vt = K_TELE[1, 2] + K_TELE[1, 1] * (c[:, 1] - (CO.H - 1) / 2) / f
+    ins = (ut >= 0) & (ut < 512) & (vt >= 0) & (vt < 256)
+    two = lambda v: np.r_[v, v]  # noqa: E731
+    rows = []
+    for cell, (ip, im) in {"carla": (0, 1), "cosmos": (2, 3)}.items():
+        X = {f"{v}_pool": np.concatenate([z[f"{v}_pool"][:, ip], z[f"{v}_pool"][:, im]]) for v in VIEWS}
+        X |= {f"{v}_box": X[f"{v}_pool"] for v in VIEWS}
+        y = np.r_[np.ones(len(ins)), np.zeros(len(ins))].astype(int)
+        for tag, m in (("inside tele", ins), ("outside tele", ~ins)):
+            px = np.where(two(m), two(z["px"]).astype(float), -1.0)
+            r = _probe_set(rl, f"cosmos-{cell} {tag}", X, y, two(z["inst"]).astype(str), px, np.ones(len(y), bool))
+            rows += [x for x in r if x["probe"] == "pool"]
+    rl.info(f"< 500 px rows inside the tele frame: {float(ins[z['px'] < 500].mean()):.3f} (all rows {float(ins.mean()):.3f})")
+    pd.DataFrame(rows).to_csv(OUT / "r0_inside_tele.csv", index=False)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("cosmos", "p5", "probe"))
+    ap.add_argument("cmd", choices=("cosmos", "p5", "probe", "inside"))
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--limit", type=int, default=0)
     a = ap.parse_args()
     rl = RunLog("op_adapt_r2", "r0", a.cmd)
     rl.event("start", args=vars(a))
-    {"cosmos": cosmos, "p5": p5, "probe": probe}[a.cmd](a, rl)
+    {"cosmos": cosmos, "p5": p5, "probe": probe, "inside": inside}[a.cmd](a, rl)
 
 
 if __name__ == "__main__":
