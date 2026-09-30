@@ -792,12 +792,16 @@ def cmd_rater(a):
     from jevdrive import wod_zeroshot as Z
     names = Z.load_sets()["rater"]["name"].astype(str)
     out = R.r2("t", "cache-rater")
-    sts = []
+    spans = json.loads((Z.root() / "sets.json").read_text())["spans"]        # the rater frames and their history (op_plan.json only holds the WOD subset)
+    sts, cut = [], 0
     for n in names:
         h = Z.history_names(n, 18)
+        while len(h) > 1 and not all(x in spans for x in h):                 # a clip can have a gap: keep the contiguous tail that exists
+            h = h[1:]
+        cut += len(h) < min(19, int(n.rsplit("-", 1)[1]) + 1)
         sts.append({"key": n, "names": h, "targets": [len(h) - 1]})
+    print(f"rater: {cut} of {len(names)} frames have a shortened history (gap in the clip)")
     sts = [s for s in sts if not (out / f"{s['key']}.npz").exists()]
-    spans = json.loads((Z.root() / "sets.json").read_text())["spans"]        # the rater frames and their history (op_plan.json only holds the WOD subset)
     calib = json.loads((Z.root() / "op_calib.json").read_text())
     with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=(spans, calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))) as ex:
         list(ex.map(int, range(a.workers)))
