@@ -1,0 +1,9 @@
+{
+ "noint_invariant": true,
+ "main-s0_a_vs_stored_max_abs": 0.0,
+ "main-s0_unknown_intent_frames_a_vs_e_max_abs": null,
+ "main-s1_a_vs_stored_max_abs": 0.0,
+ "main-s1_unknown_intent_frames_a_vs_e_max_abs": null,
+ "main-s2_a_vs_stored_max_abs": 0.0,
+ "main-s2_unknown_intent_frames_a_vs_e_max_abs": null
+}
