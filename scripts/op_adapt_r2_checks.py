@@ -157,6 +157,35 @@ def check_identity():
     save("identity", {"n": len(rows), "max": max(rows), "median_of_max": float(np.median(rows)), "pass": max(rows) < 0.05})
 
 
+def check_loader():
+    """TrunkStore on a mixed index (random rows of simC, simK, nus keyframes, off) -> op_adapt.stage4_policy (fp16) must
+    give the stored teacher `op` plan (same numeric path, other batch composition)."""
+    rng = np.random.default_rng(0)
+    parts = []
+    for d in ("simC", "simK", "nus", "off"):
+        x = C.load_index(d)
+        x = x[x.labeled] if d == "nus" else x
+        parts.append(x.iloc[np.sort(rng.choice(len(x), 64, replace=False))])
+    idx = pd.concat(parts, ignore_index=True)
+    st = C.TrunkStore(idx)
+    net = A.load("cinque", torch.float16).cuda()
+    pidx = torch.as_tensor(A.plan_index(net.slices)).cuda()
+    out = []
+    with torch.no_grad():
+        for i in range(0, len(idx), 64):
+            x, v, tc = st.batch(np.arange(i, min(i + 64, len(idx))))
+            out.append(A.stage4_policy(net, x, C.AT, tc, v)["outputs"].float()[:, pidx].view(-1, 33, 15).cpu().numpy())
+    got = np.concatenate(out)
+    rows = {}
+    for d in ("simC", "simK", "nus", "off"):
+        t = C.load_teacher(d)
+        m = (idx.domain == d).to_numpy()
+        ref = t["plan_mu"][pd.Series(np.arange(len(t["uid"])), index=t["uid"]).reindex(idx.uid[m]).to_numpy(), 0]
+        dr = A.plan_drift(got[m], ref)
+        rows[d] = {"drift_max": float(dr.max()), "drift_median": float(np.median(dr))}
+    save("loader", {"rows": rows, "pass": all(r["drift_max"] < 0.01 for r in rows.values())})
+
+
 def check_homography():
     """Unit test of OffsetMaps: for model pixels below the horizon, intersect the virtual camera's ray with the road plane
     in the moved ego frame, carry the ground point to the original ego frame and project it into CAM_F0 directly; the
