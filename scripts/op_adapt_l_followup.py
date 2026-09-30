@@ -91,7 +91,7 @@ def cmd_perm(a):
     dev = torch.device("cuda")
     D = L.Data(("wod", "wodval", "nus"), hstore=True)
     rows, tab = wod_rows(D)
-    zo = np.load(L.lroot("readout", "O", "eval", "wodval.npz"))
+    zo = np.load(L.lroot("readout", "O", "eval") / "wodval.npz")
     assert np.array_equal(zo["rows"], rows)
     intents = make_intents(tab, rows)
     lab = strata_of(tab, rows)
@@ -174,7 +174,7 @@ def perm_read(D, rows, tab, zo):
                                        for c in CONDS))}
     for s in (0, 1, 2):
         z = np.load(fdir() / f"plans_main-s{s}.npz")
-        za = np.load(L.lroot("readout", f"main-s{s}", "eval", "wodval.npz"))
+        za = np.load(L.lroot("readout", f"main-s{s}", "eval") / "wodval.npz")
         chk[f"main-s{s}_a_vs_stored_max_abs"] = float(np.abs(z["a_given"] - za["plan"]).max())
         unk = np.asarray(tab["intent"])[rows] == 0
         chk[f"main-s{s}_unknown_intent_frames_a_vs_e_max_abs"] = float(np.abs(z["a_given"] - z["e_none"])[unk].max()) if unk.any() else None
@@ -249,7 +249,7 @@ def cmd_stoplabel(a):
     lab["yolo_vru"] = np.bincount(ri[vru], minlength=len(names)) > 0
     lab["n_det"] = np.bincount(ri, minlength=len(names))
     # O's lead head
-    zo = np.load(L.lroot("readout", "O", "eval", "wodval.npz"))
+    zo = np.load(L.lroot("readout", "O", "eval") / "wodval.npz")
     sel = np.searchsorted(zo["rows"], rows)
     assert np.array_equal(zo["rows"][sel], rows)
     from jevdrive.nq4_k import lead_decode
@@ -277,8 +277,8 @@ def cmd_stopread(a):
         r = np.searchsorted(zz["rows"], rows)
         assert np.array_equal(zz["rows"][r], rows)
         return L.cap_stop(L.rear_np(zz["plan"][r], cam)).astype(float)
-    xo = cap(L.lroot("readout", "O", "eval", "wodval.npz"))
-    xs = [cap(L.lroot("readout", f"main-s{s}", "eval", "wodval.npz")) for s in range(3)]
+    xo = cap(L.lroot("readout", "O", "eval") / "wodval.npz")
+    xs = [cap(L.lroot("readout", f"main-s{s}", "eval") / "wodval.npz") for s in range(3)]
     xm = np.mean(xs, 0)
     groups = lab.seq.to_numpy()
     sets = {"all": np.ones(len(lab), bool)}
