@@ -131,7 +131,7 @@ def cmd_tables(a):
 
 
 # ---------------------------------------------------------------- arm-vs-arm paired comparison
-PAIRS = [("main", "noint"), ("main", "only_start"), ("main", "only_stop"), ("main", "only_turn"), ("main", "nocontrast"),
+PAIRS = [("main", "noint"), ("main", "only_start"), ("main", "only_stop"), ("main", "only_turn"), ("main", "nocontrast"), ("main", "stayheavy"),
          ("main", "tr_ad"), ("main", "dw03"), ("main", "dw1"), ("main", "dw3"), ("main", "dw10"), ("main", "long"),
          ("sel_s4ia", "sel_polia"), ("sel_s4ia", "sel_s4polia"), ("sel_s4ia", "sel_polid"), ("sel_polia", "sel_polid"),
          ("sel_s4ia", "sel_s4ia_dw3"), ("sel_polia", "sel_polia_dw3"), ("sel_s4polia", "sel_s4polia_dw3"), ("sel_polid", "sel_polid_dw3")]

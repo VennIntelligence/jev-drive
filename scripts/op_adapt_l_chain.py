@@ -293,8 +293,8 @@ def main():
     from jevdrive import op_adapt_l_arms as ARMS
     dws = [x for x in ("dw03", "dw1", "dw3", "dw10") if not ARMS.same_as_main(x)]
     wave2 = [J("main", 1), J("main", 2), J("noint", 0), J("only_start"), J("only_stop"), J("only_turn")] + [J(x) for x in dws] + \
-        [J("nocontrast"), J("noint", 1), J("noint", 2)] + \
-        [J(x, 1) for x in ["only_start", "only_stop", "only_turn"] + dws + ["nocontrast"]] + [J("long", 0)]
+        [J("nocontrast"), J("stayheavy"), J("noint", 1), J("noint", 2)] + \
+        [J(x, 1) for x in ["only_start", "only_stop", "only_turn"] + dws + ["nocontrast", "stayheavy"]] + [J("long", 0)]
     run_phase("wave2 (main seeds, intent, per-slice, distillation, contrast)", wave2, slots)
     run_phase("wave3 (navtest PDMS)", [{"fn": navtest("8-40")}], slots[:1])
     STATE["phase"] = "end"

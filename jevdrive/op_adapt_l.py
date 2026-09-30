@@ -198,6 +198,7 @@ class LCfg:
     intent: str = "ia"                    # none | ia (token embedding) | id (native desire input)
     slices: tuple = SLICE3                # imitated slices
     contrast: bool = True                 # stay / control / straight-intent rows in the batch
+    contrast_mix: tuple = (1.0, 1.0, 1.0) # relative share of stay / control / straight_int among the contrast rows
     dw: float = 1.0                       # multiplier on lam_d and lam_c
     steps: int = 4000
     batch: int = 64
@@ -363,8 +364,7 @@ class Mixer:
             p = self.pools[("wod", s)]
             segs.append(("wod", p[rng.integers(len(p), size=n)], 1))
         if c.contrast:
-            cnt = np.full(3, c.n_contrast // 3)
-            cnt[: c.n_contrast - cnt.sum()] += 1
+            cnt = R.split_counts(c.n_contrast, list(c.contrast_mix))
             for s, n in zip(CONTRAST, cnt):
                 p = self.pools[("wod", s)]
                 segs.append(("wod", p[rng.integers(len(p), size=n)], 2))

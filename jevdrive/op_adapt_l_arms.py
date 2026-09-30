@@ -27,6 +27,7 @@ ABLATIONS = {
     "dw3": dict(dw=3.0),
     "dw10": dict(dw=10.0),
     "nocontrast": dict(contrast=False),
+    "stayheavy": dict(contrast_mix=(3.0, 1.0, 1.0)),          # D4: stay : control : straight_int = 3 : 1 : 1 (start : stay closer to the log's 1 : 1.6)
     "long": dict(steps=8000, eval_every=4000),
 }
 # ablations of the trainable set that are not among the selection candidates

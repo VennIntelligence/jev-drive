@@ -17,7 +17,7 @@ import plot_style as S  # noqa: E402
 
 RES, FIGS = REPO / "research/results/op-adapt-L", REPO / "research/figs"
 P = S.PALETTE
-FAMILY = [("main", P["blue"]), ("noint", P["vermillion"]), ("only_", P["green"]), ("dw", P["orange"]), ("nocontrast", P["purple"]),
+FAMILY = [("main", P["blue"]), ("noint", P["vermillion"]), ("only_", P["green"]), ("dw", P["orange"]), ("nocontrast", P["purple"]), ("stayheavy", "#8C564B"),
           ("long", P["sky_blue"]), ("tr_", P["black"]), ("sel_", "#888888")]
 
 
