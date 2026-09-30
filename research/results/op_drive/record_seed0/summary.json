@@ -1,0 +1,96 @@
+[
+  {
+    "route": "27870",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/27870/attempts/27870/1",
+    "DS": 70.0,
+    "RC": 100,
+    "status": "Completed",
+    "video_s": 19.3,
+    "mp4_bytes": 3269863,
+    "gif_bytes": 9918701,
+    "infractions": {
+      "red_light": 1
+    }
+  },
+  {
+    "route": "27043",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/27043/attempts/27043/1",
+    "DS": 60.0,
+    "RC": 100,
+    "status": "Completed",
+    "video_s": 31.4,
+    "mp4_bytes": 6387989,
+    "gif_bytes": 12299551,
+    "infractions": {
+      "collisions_vehicle": 1
+    }
+  },
+  {
+    "route": "27297",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/27297/attempts/27297/1",
+    "DS": 9.072,
+    "RC": 100,
+    "status": "Completed",
+    "video_s": 23.6,
+    "mp4_bytes": 3311308,
+    "gif_bytes": 10550584,
+    "infractions": {
+      "collisions_vehicle": 4,
+      "red_light": 1
+    }
+  },
+  {
+    "route": "9196",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/9196/attempts/9196/1",
+    "DS": 23.8098,
+    "RC": 56.69,
+    "status": "Failed - TickRuntime",
+    "video_s": 200.0,
+    "mp4_bytes": 7569395,
+    "gif_bytes": 12674767,
+    "infractions": {
+      "collisions_vehicle": 1,
+      "red_light": 1
+    }
+  },
+  {
+    "route": "24944",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/24944/attempts/24944/1",
+    "DS": 70.0,
+    "RC": 100,
+    "status": "Completed",
+    "video_s": 90.6,
+    "mp4_bytes": 42500100,
+    "gif_bytes": 9838396,
+    "infractions": {
+      "red_light": 1
+    }
+  },
+  {
+    "route": "37969",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/37969/attempts/37969/1",
+    "DS": 57.610805,
+    "RC": 100,
+    "status": "Completed",
+    "video_s": 61.4,
+    "mp4_bytes": 15463726,
+    "gif_bytes": 14257034,
+    "infractions": {
+      "collisions_vehicle": 1,
+      "outside_route_lanes": 1
+    }
+  },
+  {
+    "route": "24497",
+    "attempt": "/root/autodl-tmp/ujs/runs/op_drive_record_seed0/routes/24497/attempts/24497/2",
+    "DS": 21.71,
+    "RC": 33.4,
+    "status": "Failed - TickRuntime",
+    "video_s": 200.0,
+    "mp4_bytes": 23620403,
+    "gif_bytes": 9500647,
+    "infractions": {
+      "collisions_layout": 1
+    }
+  }
+]

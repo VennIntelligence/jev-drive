@@ -1,0 +1,284 @@
+{
+  "27870/video_qa.json": {
+    "frames": 193,
+    "video_s": 19.3,
+    "sim_s": 19.35000028833747,
+    "pixel_std_samples": [
+      46.32127173024987,
+      45.56448775410011,
+      48.47476408973266,
+      46.94888056026934
+    ],
+    "bytes": 3269863
+  },
+  "27870/video_summary.json": {
+    "frames": 193,
+    "dropped": 0,
+    "error": null
+  },
+  "27870/event_clip.json": {
+    "center_s": 12.35000018402934,
+    "start_s": 0.0,
+    "end_s": 19.35000028833747,
+    "frames": 97,
+    "reason": "red_light: Agent ran a red light 104 at (x=319.85, y=-127.2, z=0.3)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 9918701
+  },
+  "27043/video_qa.json": {
+    "frames": 314,
+    "video_s": 31.4,
+    "sim_s": 31.500000469386578,
+    "pixel_std_samples": [
+      38.151918021266745,
+      41.44849615062068,
+      35.17988768069732,
+      38.74157240302868,
+      38.62498793485516,
+      40.256184847767436,
+      44.66721742766473
+    ],
+    "bytes": 6387989
+  },
+  "27043/video_summary.json": {
+    "frames": 314,
+    "dropped": 0,
+    "error": null
+  },
+  "27043/event_clip.json": {
+    "center_s": 23.400000348687172,
+    "start_s": 9.400000348687172,
+    "end_s": 29.400000348687172,
+    "frames": 100,
+    "reason": "collisions_vehicle: Agent collided against object with type=vehicle.ford.mustang and id=276 at (x=699.244, y=716.736, z=117.995)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 12299551
+  },
+  "27297/video_qa.json": {
+    "frames": 236,
+    "video_s": 23.6,
+    "sim_s": 23.650000352412462,
+    "pixel_std_samples": [
+      36.8585056332199,
+      36.45613751965479,
+      37.77442274145478,
+      35.557494340418465,
+      35.326184839029054
+    ],
+    "bytes": 3311308
+  },
+  "27297/video_summary.json": {
+    "frames": 236,
+    "dropped": 0,
+    "error": null
+  },
+  "27297/event_clip.json": {
+    "center_s": 16.300000242888927,
+    "start_s": 2.3000002428889275,
+    "end_s": 22.300000242888927,
+    "frames": 100,
+    "reason": "collisions_vehicle: Agent collided against object with type=vehicle.dodge.charger_2020 and id=1761 at (x=6893.878, y=-2614.513, z=59.084)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 10550584
+  },
+  "9196/video_qa.json": {
+    "frames": 2000,
+    "video_s": 200.0,
+    "sim_s": 200.00000298023224,
+    "pixel_std_samples": [
+      38.73859415184407,
+      39.40004242249476,
+      39.46635105702535,
+      39.37285007295257,
+      42.18714575438682,
+      42.19397735047757,
+      42.839964268477914,
+      38.539674559491985,
+      38.98150935991374,
+      39.06368534562207,
+      39.18740025655073,
+      39.29522882981753,
+      39.36357912052137,
+      39.393921478246654,
+      39.41325815507373,
+      39.419860860358696,
+      39.43149448084026,
+      39.400130963701606,
+      39.39962056035051,
+      39.40238709235338,
+      39.40217126010294,
+      39.29572154889892,
+      39.75264809394533,
+      39.87509442964748,
+      40.50088762495469,
+      40.63399643482412,
+      41.460939908043414,
+      42.330492257152606,
+      43.283656075237936,
+      43.37027898873182,
+      43.55025676856057,
+      43.5355310263411,
+      43.48688304284359,
+      43.4844140867236,
+      43.48567098358657,
+      43.485438697979056,
+      43.496476415802675,
+      43.46825364487611,
+      43.468878067099006,
+      43.470639781681555
+    ],
+    "bytes": 7569395
+  },
+  "9196/video_summary.json": {
+    "frames": 2000,
+    "dropped": 0,
+    "error": null
+  },
+  "9196/event_clip.json": {
+    "center_s": 30.050000447779894,
+    "start_s": 16.050000447779894,
+    "end_s": 36.050000447779894,
+    "frames": 100,
+    "reason": "collisions_vehicle: Agent collided against object with type=vehicle.carlamotors.firetruck and id=3696 at (x=466.496, y=4513.665, z=370.291)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 12674767
+  },
+  "24944/video_qa.json": {
+    "frames": 906,
+    "video_s": 90.6,
+    "sim_s": 90.70000135153532,
+    "pixel_std_samples": [
+      28.8026303381417,
+      13.357204090494927,
+      11.873825511079144,
+      13.742955166844906,
+      15.850591807891497,
+      28.09322268367992,
+      24.70417129939017,
+      15.35679111695154,
+      20.056485141513477,
+      11.084497410998331,
+      10.753854106844955,
+      10.732812005111798,
+      10.619194803020124,
+      18.908233659062216,
+      18.798549749431103,
+      18.04676549155285,
+      27.85065468476069,
+      12.801814178357853,
+      12.30089376191006
+    ],
+    "bytes": 42500100
+  },
+  "24944/video_summary.json": {
+    "frames": 906,
+    "dropped": 0,
+    "error": null
+  },
+  "24944/event_clip.json": {
+    "center_s": 61.30000091344118,
+    "start_s": 47.30000091344118,
+    "end_s": 67.30000091344118,
+    "frames": 100,
+    "reason": "red_light: Agent ran a red light 39 at (x=196.21, y=250.81, z=0.22)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 9838396
+  },
+  "37969/video_qa.json": {
+    "frames": 614,
+    "video_s": 61.4,
+    "sim_s": 61.450000915676355,
+    "pixel_std_samples": [
+      47.728188323163,
+      45.05884846310174,
+      42.52647199066099,
+      43.504068223959294,
+      40.953396029034764,
+      40.85170292085663,
+      41.11582318790087,
+      44.43661905271422,
+      39.630212612690634,
+      38.151568703575286,
+      40.39194074317327,
+      38.68212553654156,
+      38.9653881980163
+    ],
+    "bytes": 15463726
+  },
+  "37969/video_summary.json": {
+    "frames": 614,
+    "dropped": 0,
+    "error": null
+  },
+  "37969/event_clip.json": {
+    "center_s": 35.6500005312264,
+    "start_s": 21.650000531226397,
+    "end_s": 41.6500005312264,
+    "frames": 100,
+    "reason": "collisions_vehicle: Agent collided against object with type=vehicle.ford.mustang and id=4760 at (x=-5980.219, y=2266.198, z=175.256)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 14257034
+  },
+  "24497/video_qa.json": {
+    "frames": 2000,
+    "video_s": 200.0,
+    "sim_s": 200.00000298023224,
+    "pixel_std_samples": [
+      31.149933171375555,
+      32.16531975169787,
+      33.60881661390398,
+      32.5100091477236,
+      32.68702764904969,
+      33.90511468268549,
+      34.127073944155015,
+      39.071019963706334,
+      33.86203653769569,
+      33.94095666482204,
+      34.314032144469685,
+      34.13399142060131,
+      34.6512603315719,
+      34.57684176492348,
+      36.10714922823324,
+      37.095309487617925,
+      41.78814427227005,
+      36.425162650481774,
+      35.30373817569395,
+      37.48666433986483,
+      34.90562731743875,
+      34.39440097704012,
+      35.46180147568146,
+      34.03022593142322,
+      34.930634015919686,
+      36.48266114346242,
+      35.06852282014128,
+      35.21256278777213,
+      34.56474770993956,
+      35.60048432401902,
+      35.307420960016564,
+      34.82582947652909,
+      37.93186941213615,
+      34.32395071748476,
+      40.164502297549404,
+      34.883759735090884,
+      35.34371617648785,
+      34.32767671825919,
+      42.214446233406825,
+      34.95723615312926
+    ],
+    "bytes": 23620403
+  },
+  "24497/video_summary.json": {
+    "frames": 2000,
+    "dropped": 0,
+    "error": null
+  },
+  "24497/event_clip.json": {
+    "center_s": 57.850000862032175,
+    "start_s": 43.850000862032175,
+    "end_s": 63.850000862032175,
+    "frames": 100,
+    "reason": "collisions_layout: Agent collided against object with type=static.prop.trafficwarning and id=122 at (x=422.855, y=-24.713, z=-0.005)",
+    "timing": "approximate, inferred from infraction position and actual ego trajectory",
+    "bytes": 9500647
+  }
+}
