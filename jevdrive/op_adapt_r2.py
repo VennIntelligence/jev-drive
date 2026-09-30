@@ -746,6 +746,8 @@ def to_dev(b: dict, dev) -> dict:
                     for p in v]
         elif isinstance(v, np.ndarray) and v.dtype.kind in "biuf":
             o[k] = torch.from_numpy(np.ascontiguousarray(v)).to(dev, non_blocking=True)
+        elif torch.is_tensor(v):
+            o[k] = v.to(dev, non_blocking=True)
         else:
             o[k] = v
     return o
