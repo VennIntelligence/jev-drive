@@ -31,7 +31,7 @@ bug 与修复都成立，并且不止 pinv：inv、SVD 一样坏。所以 `navsi
 ## 2. 哪些 run 设了 flag（09-28 之后的全部 NAVSIM 打分与建 cache）
 
 判据有三层：(a) 启动脚本里有没有；(b) 还活着的进程的 `/proc/<pid>/environ`；(c) 结果本身有没有第 1 节的签名（这一层不依赖记忆，覆盖所有 run，包括从 tmux 手敲的）。
-09-28 之后 box 上 `runs/navsim/eval/` 里新出现 96 个 run（`research/results/navsim-openblas-audit/runs_since_0928.csv`，不含审计自己的 4 个复打）：**无一个 DAC 或 PDMS 接近 0**，最低的 46.3 是 hold 输入变体（op-lb 的 hold 插帧对照，DAC 78% 是输入本身差，不是环境）。
+09-28 之后 box 上 `runs/navsim/eval/` 里新出现 85 个 run（`research/results/navsim-openblas-audit/runs_since_0928.csv`，不含审计自己的 4 个复打）：**无一个 DAC 或 PDMS 接近 0**，最低的 46.3 是 hold 输入变体（op-lb 的 hold 插帧对照，DAC 78% 是输入本身差，不是环境）。
 
 | run 组 | 计算了什么 | flag | 证据 |
 |:--|:--|:--:|:--|
