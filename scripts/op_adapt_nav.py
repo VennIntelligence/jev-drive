@@ -170,10 +170,12 @@ def _v5_one(args):
                 s = st[1]
                 hd = s[:, 2]
                 c = s[:, :2] + S.EGO["nav"].rc * np.stack([np.cos(hd), np.sin(hd)], -1)
-                ar = pm.areas(np.zeros((1, len(c), 4, 2)), c[None], s[None, :, :2], hd[None])
+                e = S.EGO["nav"]
+                ar = pm.areas(S.box_corners(c, hd, e.hl, e.hw)[None], c[None], s[None, :, :2], hd[None])
                 ours, D = S.ddc({"c": c[None]}, ar)
                 rows.append({"token": token, "traj": name, "states": how, "devkit": float(res["driving_direction_compliance"].iloc[0]),
-                             "ours": float(ours[0]), "D": float(D[0]), "path_m": float(np.hypot(*np.diff(s[:, :2], axis=0).T).sum())})
+                             "ours": float(ours[0]), "D": float(D[0]), "path_m": float(np.hypot(*np.diff(s[:, :2], axis=0).T).sum()),
+                             "dac_devkit": float(res["drivable_area_compliance"].iloc[0]), "dac_ours": float(~ar["offroad"][0].any())})
         return rows
     except Exception as e:  # noqa: BLE001
         return [{"token": token, "error": repr(e)[:300]}]
@@ -197,7 +199,9 @@ def v5(cache: str, workers: int, limit: int | None = None):
     agree = float((ok[ok.states == "ref"].devkit == ok[ok.states == "ref"].ours).mean())
     res = {"check": "V5a", "line": "our DDC == devkit raw DDC (three levels) on >= 99 % of (token, trajectory)", "cache": cache,
            "tokens": len(jobs), "rows": int(len(ok)), "errors": int(len(t) - len(ok)), "agreement": agree, "pass": agree >= 0.99,
+           "dac_agreement_ref": float((ok[ok.states == "ref"].dac_devkit == ok[ok.states == "ref"].dac_ours).mean()),
            "by_traj": {f"{a}/{b}": {"n": int(len(g)), "agree": float((g.devkit == g.ours).mean()), "devkit_1": float((g.devkit == 1).mean()),
+                                    "dac_agree": float((g.dac_devkit == g.dac_ours).mean()), "dac_devkit_1": float((g.dac_devkit == 1).mean()),
                                     "devkit_05": float((g.devkit == 0.5).mean()), "median_path_m": float(g.path_m.median())}
                        for (a, b), g in ok.groupby(["states", "traj"])},
            "confusion": ok.groupby(["states", "devkit", "ours"]).size().rename("n").reset_index().to_dict("records"), "wall_s": time.time() - t0,
