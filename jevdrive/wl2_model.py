@@ -226,11 +226,12 @@ def route_folds(m: pd.DataFrame, ev: set, k: int = 5, seed: int = 20260930, incl
     each class in a seeded permutation, round-robin into k folds. Eval routes are left out unless include_eval."""
     cls = m.groupby("base_id").cls.agg(lambda s: s.dropna().iloc[0] if s.notna().any() else "other")
     rng = np.random.RandomState(seed)
-    out = {}
-    for c in sorted(cls.unique()):
+    out, n = {}, 0
+    for c in sorted(cls.unique()):                       # the round-robin counter runs on across classes: folds stay balanced
         rs = sorted(b for b in cls.index[cls == c] if include_eval or b not in ev)
-        for i, j in enumerate(rng.permutation(len(rs))):
-            out[rs[j]] = i % k
+        for j in rng.permutation(len(rs)):
+            out[rs[j]] = n % k
+            n += 1
     return out
 
 
