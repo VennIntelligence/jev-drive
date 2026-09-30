@@ -4073,3 +4073,30 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**（一次读数、5 seed、单一 backbone）。**会推翻本条的证据**：规则或候选集改动（另行登记）使 C3a 在同一批分叉上过；或 C3b 与 H 冲突被证明来自选择规则而不是 critic。
 
+
+## 77. Log expert audit：真实 log 里起步、停车、起转的人类轨迹各有上千个独立事件，原生 plan 在这三类上各漏 3–7 成；nudge / 变道只有几百且混有弯道；预登记的「对 control 的 ratio」读数无效（**待定**，WOD train / val + navtrain + nuScenes，只有 Cinque，无训练）
+
+2026-10-01。预登记、全部表与偏离在 [todos/2026-10-01-log-expert-audit.md](../todos/2026-10-01-log-expert-audit.md)，小表 [results/log-expert-audit/](results/log-expert-audit/)，图 [log-expert-audit](figs/log-expert-audit.png)。
+问题来自 op-adapt r2 stage 1 之后的讨论：r2 的监督（CARLA 行人配对 + 对原生 plan 的 13 种扰动做规则打分）表达不了起步、转弯、绕行；真实 log 里的人类未来是不是这些行为的现成专家轨迹、量够不够。
+slice 只按自车运动学切（4 s 未来），独立事件 = 同一 log 内相邻帧间隔 > 1 s 断开；捕获率（capture rate）= 原生 plan 复现了人类机动至少一半的帧占比。
+
+| slice | 独立事件 WOD train / navtrain / nuScenes | 捕获率 WOD train / navtrain（GIMM 补帧）/ nuScenes |
+|:--|:--|:--|
+| start（停 → 走） | 1 096 / 2 994 / 122 | 0.58 / 0.73 / 0.64 |
+| stop（巡航 → 停） | 727 / 1 225 / 80 | **0.29** / 0.87 / 0.38（WOD val 0.07，n = 41） |
+| turn onset（起转前 0.5–3 s） | 912 / 3 665 / 211 | 0.74 / 0.72 / 0.61 |
+| in turn（已在转） | 476 / 1 902 / 149 | 0.97 / 0.94 / 0.87 |
+| nudge（无转弯的 S 形横移） | 715 / 380 / 204 | 0.75 / 0.91 / 0.60（混有弯道，是上界） |
+| lane change | 158 / 134 / 27 | 0.77 / 0.90 / 0.77 |
+
+1. **预登记读数作废，不据它归类**：登记的判据是 slice 对 control（稳态直行）的 ADE ratio。control 按 v0 ≥ 5 m/s、横向 ≤ 0.75 m 选出，纵向误差随速度放大、横向误差按构造接近 0，所以纵向类 ratio 全 < 1、横向类全是 5–17 倍，量到的是速度和选择效应。捕获率与匀速基线是看过第一版表之后加的**后验读数**，下面的读法都建立在它上面，强度按后验算。
+2. **量**：start、stop、turn onset 在 WOD train 与 navtrain 合计各约 2 千到 4.6 千个独立事件，比第 44 条里真实行人配对的上限（WOD 约 230 个事件）高一个量级；nudge 与 lane change 在任何阈值下都只有几百，且没有地图、分不开弯道。
+3. **原生 plan 的缺口**（后验）：stop 在 WOD 上最大（只有 29% 的帧 4 s 末速度降到 1 m/s 以下，纵向偏差 +0.9 m），但 navtrain 上 87%，单数据集；start 三个数据集一致漏 27–42%；turn onset 在没有导航输入（desire 为零）下漏 26–39%，而 98% 的事件带转弯 intent / command，进弯之后不漏。子 agent 的归类把 turn onset 记成「原生已经不差」，按它给 start 用的同一口径应与 start 同列，这里改为候选。
+4. **与闭环的对照**：B2D 里 native 6 / 6 从不起步（第 57 条），真实 log 开环上起步漏的是 3–4 成，不是全部；闭环的「不起步」有 CARLA 与闭环自身的成分，不能只靠 log 模仿预期修好。
+5. **log 自带对照对**：start 对 stay（WOD 639 个 stay 事件，原生在 stay 上纵向误差 0.06 m）、stop 对 control，是同一数据域里「该动 / 不该动」「该停 / 不该停」的成对样本，标签是人类轨迹，不需要仿真、编辑或规则打分。
+6. 副产品：r2 的 `t/teacher/nav`（NAVSIM 2 Hz sample-and-hold）在有速度的帧上 plan 偏长约 20 m（control lonADE@3 12.8 m，GIMM 版 2.6 m），与第 36 条的 off-protocol 一致；r2 里 navtrain 进蒸馏用的就是这份 teacher，恢复 r2 之前要处理。
+
+**对方向的含义**：起步、停车时机、导航起转三类可以直接用真实 log 的人类未来监督（WOD intent / NAVSIM command 作条件，正常帧蒸馏），是 r2 配对监督之外第一条有量的真实域专家来源；绕行类与恢复仍要仿真数据。
+
+**状态**：**待定**。限定：归类依据是后验读数；单条人类未来不是唯一正确答案，「一半」阈值是任意的；nuScenes 的 log = scene，独立性偏乐观；navtrain 基本没有停着不动的 token（stay 8 帧），起步事件是「马上要动」的选择集；navtrain 的误差只在有 GIMM 补帧 plan 的 6 万 token 上；WOD stop 的原因（灯、停车线、行人、前车）没有拆；第 47 条 nudge 规则复现 13 / 15 帧，差 2 未查。
+**会推翻或推进本条的证据**：按原因拆开后 WOD 的 stop 大多是前车跟停而原生捕获率仍低（那是标定或协议问题，不是缺行为）；在这三类 slice 上做 log 模仿的小规模适配后，留出 WOD val 的捕获率不涨或 stay / control 上的误触发上升（log 专家也教不会）；给 turn onset 加 intent 条件后捕获率不动（缺的不是导航输入）。
