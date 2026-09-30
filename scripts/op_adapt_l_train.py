@@ -5,7 +5,7 @@
             checkpoint / resume, dev eval every --eval-every steps; log.txt / events.jsonl / tb/ / STATUS, DONE or ERROR
   selftest  numeric checks: step-0 identity with the original, intent adapter off = original, imitation loss finite
 
-  CUDA_VISIBLE_DEVICES=0 taskset -c 8-19 python scripts/op_adapt_l_train.py train --arm main_s4ia --seed 0
+  CUDA_VISIBLE_DEVICES=0 taskset -c 8-19 python scripts/op_adapt_l_train.py train --arm sel_s4ia --seed 0
 Run dir: $L/runs/<arm>-s<seed>/.
 """
 import argparse, json, queue, sys, threading, time, traceback
@@ -294,14 +294,14 @@ def cmd_selftest(a):
     ref = L.fwd_rows(O, D, "wod", rows, dev)["plan"]
     tea = np.asarray(D.tea["wod"]["mu"][rows], np.float32)
     res = {"orig_vs_teacher_plan_maxabs": float(np.abs(ref - tea).max())}
-    for name in ("main_s4ia", "pol_ia", "pol_id"):
+    for name in ("sel_s4ia", "sel_polia", "sel_polid"):
         cfg = ARMS.get(name)
         m = L.LModel(cfg).to(dev).eval()
         p = L.fwd_rows(m, D, "wod", rows, dev)["plan"]
         res[f"{name}_step0_maxabs"] = float(np.abs(p - ref).max())
         res[f"{name}_trainable_M"] = sum(q.numel() for q in m.trainable()[0] + m.trainable()[1]) / 1e6
     # imitation loss on a batch and gradients reach the intended parameters
-    cfg = ARMS.get("main_s4ia")
+    cfg = ARMS.get("sel_s4ia")
     mix = L.Mixer(cfg, D)
     b = L.to_dev(L.assemble(D, mix.draw(np.random.default_rng(0))), dev)
     m = L.LModel(cfg).to(dev).train()
