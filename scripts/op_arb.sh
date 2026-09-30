@@ -60,7 +60,13 @@ EOF
 
 srv_alive() { local p; p=$(cat "$O/srv/op.pid" 2>/dev/null) && [[ -n $p ]] && kill -0 "$p" 2>/dev/null; }
 srv_start() {
-    srv_alive && return 0
+    local mid="${SRV_ONNX:-base}:$WORKERS:${SRV_NO_TWIN:-0}"      # KEEP_SRV: a live server with the same model and pool is reused across set calls
+    if srv_alive; then
+        [[ $(cat "$O/srv/model_id" 2>/dev/null) == "$mid" ]] && return 0
+        log "openpilot server model / pool changed ($(cat "$O/srv/model_id" 2>/dev/null) -> $mid): restarting"
+        srv_stop; sleep 8
+    fi
+    echo "$mid" > "$O/srv/model_id"
     rm -f "$O/srv/op.ready" "$SOCK"
     (
         CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" scripts/op_arb_server.py cinque \
@@ -174,7 +180,7 @@ run_arm() {  # run_arm <arm> <ids> <out>
 case ${1:-} in
     routes) echo "phase1 $(routes 1)"; echo "phase2 $(routes 2)"; echo "heldout $(routes h)" ;;
     set)
-        trap 'srv_stop' EXIT
+        trap '[[ -n ${KEEP_SRV:-} ]] || srv_stop' EXIT
         ids=${OPL_IDS:-$(routes "$2")}; tag=$3
         for seed in ${SEEDS:-0}; do
             for a in ${ARMS:?}; do
