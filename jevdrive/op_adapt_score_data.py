@@ -226,6 +226,97 @@ def carla_map(town: str) -> S.TileMap:
 
 # ================================================================ CARLA slots (Cosmos pairs, P5 pass-1 worlds)
 
+# ---------------------------------------------------------------- CARLA static scene geometry in NC (prereg v4)
+NC_LABELS = (3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 18, 19, 20, 21, 22, 26, 28)   # buildings ... guardrail (carla.CityObjectLabel)
+VEH_LABELS = (14, 15, 16, 18, 19)                                           # map-baked parked vehicles
+OBJ_MAX_HALF, OBJ_ROAD_M2, BODY_Z = 25.0, 2.0, (0.0, 1.5)
+_OBJ: dict = {}
+
+
+def objects_nc(towns=None) -> dict:
+    """R/maps/carla/objects_nc/<town>.npz: the NC set of each town's scene objects (scripts/op_adapt_carla_objects.py),
+    mirrored to the right-handed frame. Kept: the NC labels; no half extent above 25 m (landscape foliage, water planes,
+    whole-block meshes are containers, not obstacles); non-vehicle boxes covering <= 2 m2 of the drivable raster (a box
+    lying over the road surface is an aggregate or an overhead structure, handled by the height band otherwise)."""
+    out = {}
+    for f in sorted(R("maps", "carla", "objects").glob("*.npz")):
+        town = f.stem
+        if towns and town not in towns:
+            continue
+        z = np.load(f)
+        lab, ext, cen, rot = z["label"], z["extent"], z["centre"], z["rot"]
+        keep = np.isin(lab, NC_LABELS) & (ext[:, :2].max(1) <= OBJ_MAX_HALF) & (ext[:, :2].min(1) > 0)
+        c = np.stack([cen[:, 0], -cen[:, 1]], -1)
+        h = -np.radians(rot[:, 0])
+        m = carla_map(town)
+        road = np.zeros(len(c))
+        for i in np.flatnonzero(keep & ~np.isin(lab, VEH_LABELS)):
+            gx, gy = np.meshgrid(np.arange(-ext[i, 0], ext[i, 0] + 1e-6, 0.4), np.arange(-ext[i, 1], ext[i, 1] + 1e-6, 0.4))
+            u, v = np.array([math.cos(h[i]), math.sin(h[i])]), np.array([-math.sin(h[i]), math.cos(h[i])])
+            q = c[i] + gx.reshape(-1, 1) * u + gy.reshape(-1, 1) * v
+            road[i] = float(((m.lookup(q)[0] & S.F_DRIVE) > 0).sum()) * 0.16
+        keep &= np.isin(lab, VEH_LABELS) | (road <= OBJ_ROAD_M2)
+        o = R("maps", "carla", "objects_nc", f"{town}.npz")
+        o.parent.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(o, c=c[keep], h=h[keep], hl=ext[keep, 0], hw=ext[keep, 1], zlo=cen[keep, 2] - ext[keep, 2],
+                            zhi=cen[keep, 2] + ext[keep, 2], label=lab[keep])
+        out[town] = {"objects": int(len(lab)), "nc": int(keep.sum()),
+                     "by_label": {int(k): int(n) for k, n in zip(*np.unique(lab[keep], return_counts=True))}}
+        log.info("objects_nc %s %s", town, out[town])
+    _save_json(R("maps", "carla", "objects_nc", "summary.json"), out)
+    return out
+
+
+def static_objects(town: str):
+    if town not in _OBJ:
+        from scipy.spatial import cKDTree
+        f = R("maps", "carla", "objects_nc", f"{town}.npz")
+        z = {k: v for k, v in np.load(f).items()} if f.exists() else None
+        _OBJ[town] = (z, cKDTree(z["c"]) if z is not None and len(z["c"]) else None)
+    return _OBJ[town]
+
+
+def add_static(cols: dict, town: str, pose, ground_z: float, fov: float | None, cam_x: float, radius: float = 90.0, nt: int = S.NT):
+    """Append the town's NC scene objects within `radius` of the ego (height band 0-1.5 m above the ego's ground) as
+    standing STATIC actors; they enter the box overlap only (ref = NaN keeps them out of the _gap_front gap term).
+    A(s): map-baked vehicles by the background-vehicle rule (front camera field of view, <= 60 m); other geometry
+    is map knowledge and always scored."""
+    z, tree = static_objects(town)
+    if tree is None:
+        return
+    idx = tree.query_ball_point([pose[0], pose[1]], radius)
+    if not idx:
+        return
+    idx = np.array(idx)
+    band = (z["zhi"][idx] >= ground_z + BODY_Z[0]) & (z["zlo"][idx] <= ground_z + BODY_Z[1])
+    for i in idx[band]:
+        ce = S.to_ego(z["c"][i][None], pose)[0]
+        veh = int(z["label"][i]) in VEH_LABELS
+        if veh and fov is not None:
+            d = ce - (cam_x, 0.0)
+            vis = bool(d[0] > 0 and np.hypot(*d) <= VIS_RANGE and abs(math.atan2(d[1], d[0])) <= math.radians(fov / 2))
+        else:
+            vis = True
+        cols["c"].append(np.tile(ce, (nt, 1)))
+        cols["h"].append(np.full(nt, z["h"][i] - pose[2]))
+        cols["hl"].append(float(z["hl"][i]))
+        cols["hw"].append(float(z["hw"][i]))
+        cols["ref"].append(np.full((nt, 2), np.nan))
+        cols["valid"].append(np.ones(nt, bool))
+        cols["speed"].append(np.zeros(nt))
+        cols["kind"].append(S.STATIC)
+        cols["vis"].append(vis)
+
+
+def _carla_bb(tid: str, bb) -> list:
+    """Actor bbox [loc x, y, z, ext x, y, z]; B2D's parked-vehicle meshes (static.prop.mesh) report the box turned by
+    90 deg against the actor yaw (the parking-slot yaw is the lane's, the long side must lie along it): swap x / y."""
+    bb = list(bb)
+    if tid == "static.prop.mesh":
+        bb[0], bb[1], bb[3], bb[4] = bb[1], bb[0], bb[4], bb[3]
+    return bb
+
+
 def _carla_kind(type_id: str) -> int:
     if type_id.startswith("vehicle.") and any(b in type_id for b in BIKES):
         return S.CYC
@@ -268,6 +359,7 @@ def carla_slot(world: dict, k: int, town: str, hazards, hz_px=None, fov=64.0, ca
         tid, _, bb = kinds[str(int(i))]
         if not tid.startswith(("vehicle.", "walker.", "static.prop.")):
             continue
+        bb = _carla_bb(tid, bb)
         is_hz = int(i) in hz
         q = kk if not (is_hz and freeze) else np.full(S.NT, float(k))
         far = (q < kr[0] - 4) | (q > kr[-1] + 4)
@@ -315,6 +407,7 @@ def carla_slot(world: dict, k: int, town: str, hazards, hz_px=None, fov=64.0, ca
         cols["speed"].append(sp)
         cols["kind"].append(kind)
         cols["vis"].append(vis)
+    add_static(cols, town, pose, float(e[3]), fov, cam_x)
     A = _stack_actors(cols)
     rt = np.asarray(world["route"])[:, :2].astype(float)
     route = to_ego_m(np.stack([rt[:, 0], -rt[:, 1]], -1), pose)
@@ -665,6 +758,7 @@ def _v1_one(args):
             tid, _, bb = kinds[str(int(i))]
             if not tid.startswith(("walker.", "vehicle.", "static.prop.")):
                 continue
+            bb = _carla_bb(tid, bb)
             m = z["id"] == i
             kr = tk[m].astype(float)
             o_ = np.argsort(kr)
@@ -685,6 +779,14 @@ def _v1_one(args):
             cols["speed"].append(np.hypot(np.interp(ticks, kr, vv[:, 0]), np.interp(ticks, kr, vv[:, 1])))
             cols["kind"].append(_carla_kind(tid))
             cols["vis"].append(True)
+        e0 = e.iloc[0]
+        y0 = math.radians(float(e0.yaw))
+        r0 = np.array([e0.x, e0.y]) + meta.get("rear_axle_x", -REAR_TF) * np.array([math.cos(y0), math.sin(y0)])
+        pose0 = (float(r0[0]), float(-r0[1]), -y0)
+        st = {f: [] for f in cols}
+        add_static(st, _town(meta["town"]), pose0, float(e0.z), None, 0.0, radius=120.0, nt=len(ticks))
+        for f in cols:                                           # back to the (mirrored) world frame of this check
+            cols[f] += [S.to_world(x, pose0) if f == "c" else (x + pose0[2] if f == "h" else x) for x in st[f]]
         A = _stack_actors(cols) if cols["c"] else None
         ncv, fail, _ = S.nc(g, S.EGO["carla"], A, len(ticks)) if A is not None else (np.ones(1, bool), None, None)
         # decomposition: the same rule without the at-fault speed / front-half conditions (overlap of the full box)
@@ -695,7 +797,7 @@ def _v1_one(args):
         return {"route_id": rid, "error": repr(ex)[:300]}
 
 
-def check_v1(workers: int | None = None) -> dict:
+def check_v1(workers: int | None = None, tag: str = "_v4") -> dict:
     """V1 (§5 item 1): S_jev's NC on WL-1's branch runs (actual trajectory, recorded actors, 3 s after the fork) against
     WL's cg label (collision or in-lane gap < 2 m); registered line: agreement >= 95 %."""
     from multiprocessing import Pool
@@ -711,7 +813,7 @@ def check_v1(workers: int | None = None) -> dict:
     with Pool(workers or cores()) as p:
         t = pd.DataFrame(p.map(_v1_one, list(zip(runs.route_id, runs.adir, runs.fork_tick)), chunksize=8))
     R("checks").mkdir(parents=True, exist_ok=True)
-    t.to_parquet(R("checks", "V1_runs.parquet"), index=False)
+    t.to_parquet(R("checks", f"V1{tag}_runs.parquet"), index=False)
     ok = t[t.get("error").isna()] if "error" in t else t
     agree = float((ok.cg == ok.nc_fail).mean())
     res = {"check": "V1", "line": ">= 0.95 agreement of NC with WL cg", "runs": int(len(t)), "scored": int(len(ok)),
@@ -723,7 +825,8 @@ def check_v1(workers: int | None = None) -> dict:
     res["disagreements"] = {"cg_only_collision_nonroad": int((dis.cg & dis.collision & ~dis.collision_road & (dis.gap_min_m >= 2)).sum()),
                             "cg_only_standing_ego": int((dis.cg & (dis.v_min < S.V_FAULT)).sum()),
                             "nc_only": int((~dis.cg).sum())}
-    _save_json(R("checks", "V1.json"), res)
+    res["definition"] = "v4: NC boxes = actors (static.prop.mesh true orientation) + CARLA static scene geometry" if tag else "v3"
+    _save_json(R("checks", f"V1{tag}.json"), res)
     log.info("V1 %s", res)
     return res
 
@@ -1008,7 +1111,7 @@ def main():
     fn = {"points": lambda: route_points(a.workers or cores()), "maps-carla": lambda: maps_carla(a.towns),
           "nus-scenes": lambda: nus_scenes(), "maps-nus": lambda: maps_nus(), "v1": lambda: check_v1(a.workers),
           "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity, "nav-cam": nav_cam_x,
-          "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
+          "objects-nc": lambda: objects_nc(a.towns), "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
     print(json.dumps(fn(), indent=1, default=str)[:4000])
 
 

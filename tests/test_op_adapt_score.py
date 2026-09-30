@@ -143,6 +143,17 @@ def test_ttc_and_comfort():
     assert c["op"] and not c["brake_hard"], c
 
 
+def test_static_geometry_in_nc_only_by_overlap():
+    """v4: scene objects enter NC as boxes (ref = NaN keeps them out of the gap term)."""
+    pole = _actor((20.0, 0.0), S.STATIC, hl=0.2, hw=0.2)
+    pole.ref[:] = np.nan
+    beside = _actor((20.0, 1.4), S.STATIC, hl=0.2, hw=0.2)          # 1.4 m left of the path: gap-lane but no overlap
+    beside.ref[:] = np.nan
+    p = np.stack([_const(10.0)])
+    assert not S.raw_metrics(_slot(pole), p)["NC"][0]
+    assert S.raw_metrics(_slot(beside), p)["NC"][0]
+
+
 def test_candidates_op_rows_and_rej():
     plan = np.zeros((33, 15))
     plan[:, 0] = 9.0 * S.T_IDXS
