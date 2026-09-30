@@ -1,0 +1,28 @@
+{
+ "pairs_done": 2004,
+ "variants": 4223,
+ "selected_ok": 2207,
+ "select_reasons": {
+  "ok": 2207,
+  "impure": 1619,
+  "window_too_early": 152,
+  "window_low_vis": 120,
+  "missing_run": 75,
+  "never_100px": 24,
+  "load_error": 17,
+  "never_visible": 5,
+  "expert_before_visible": 4
+ },
+ "controls_reasons": {
+  "ok": 2061,
+  "pass2_failed": 61,
+  "controls_error": 32,
+  "missing_frames": 23,
+  "nondeterministic": 22,
+  "gt_low_vis": 2
+ },
+ "qc_flags_first_render": 19,
+ "cosmos_s_per_pair_median": 220.82482039928436,
+ "instances_used": 162,
+ "wall_h": 0.0
+}

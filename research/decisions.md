@@ -3607,7 +3607,8 @@ navtest PDMS 配对 Δ（Hydra_s + Δ_λ* − Hydra_s）：Cinque +0.02 / −0.0
 3. 冻结的 G4（x⁻ 翻一次；x⁺ 在行人像素 + 24 px 以外每步锚定到 x⁻ 的 latent，再羽化混合；蒸馏采样器的 guided generation 是自己补的）10 对：召回 0.982（CARLA 0.976），区外 LPIPS / openpilot 差按构造为 0，行人外 12 px 环上 MAD 9.9（CARLA 原图配对自己也是 9.9），openpilot lead 一致 95.5%，2 000 对约 118 GPU·h。
    登记的逐对判据只过 1 / 10，全部卡在「环 MAD ≤ ¼ 换 seed」这一条，CARLA 原图自己 9 / 10 对也过不了；去掉后 10 / 10。按字面判 no-go，是否作废这条和如何去掉仪表台（相机上仰约 6°，底部 117 px 本来不进 openpilot）等用户拍板。
 **用户拍板（2026-09-29）**：环判据第二条（≤ ¼ 换 seed）作废，这是事后更正，按偏离记，v2 按登记字面的 no-go 不改写；Cosmos v2 的输出照原样接受，相机不改、不做 6° 上仰（残留的仪表台痕迹在画面最下面约 115 px，openpilot 看不到）；
-G4 go，生成 2 000 对（Cosmos 约 118 GPU·h，CARLA 重渲染约 116 server·h），作下一轮 op-adapt B（sim + real）的训练数据。全量的场景来源（Town12 长路线切片 209 个实例，Town13、小地图和 Bench2Drive 行人路线留给考卷）、选窗与渲染 QC 规则见 [todo 的全量节](../todos/2026-09-28-cosmos-pilot.md)。
+G4 go，生成 2 000 对（已于 2026-09-30 完成，结果见下；Cosmos 约 118 GPU·h，CARLA 重渲染约 116 server·h），作下一轮 op-adapt B（sim + real）的训练数据。全量的场景来源（Town12 长路线切片 209 个实例，Town13、小地图和 Bench2Drive 行人路线留给考卷）、选窗与渲染 QC 规则见 [todo 的全量节](../todos/2026-09-28-cosmos-pilot.md)。
+**全量结果（2026-09-30 12:16 完成）**：2 004 对（目标 2 000）来自 162 个 Town12 实例；CARLA 共排 4 223 个变体，选窗通过 2 207（52%，主要损失是 impure 1 619），第 2 遍与 controls 后 2 061 对可用（丢弃 pass2_failed 61、controls_error 32、missing_frames 23、nondeterministic 22、gt_low_vis 2），首次渲染 QC 标记 19 对（重渲一次）。Cosmos 每对中位 220.8 s（稳态 214–221 s，与 pilot 的 209–219 s 一致），约 123 GPU·h（登记 118），墙钟 24.3 h（12:00 → 次日 12:16，中途加到 6 张卡后又降到 5 张），比登记的 2 000 对总成本略高但都在预期内。表在 [results/cosmos/full/](results/cosmos/full/)（summary.json、variants.csv、ctl.csv、sel.csv）；全量没有重跑逐对的召回 / MAD 检查，「只差行人」的证据仍是 pilot 的 10 对。
 **状态**：G4 作训练数据生成器（用户拍板，2026-09-29）；「翻译后配对只差行人」这一点仍是**待定**，限定：10 对、1 seed、BehaviorAgent 集、只有前视单相机；检查 3 的参照是 CARLA 原图，本身有域差。
 **会推翻或推进本条的证据**：「x⁻ 翻一次 + 行人区局部重画」在同样 10 对上检查 1 过、openpilot 差在行人区外的占比回到 CARLA 原图的量级（< 20%），且成本仍在 250 GPU·h 内（推进为训练数据源）。〔v2 已触发：G4 检查 1 过、区外差为 0、118 GPU·h；未决的是车内痕迹与一条作废的环判据〕
 
