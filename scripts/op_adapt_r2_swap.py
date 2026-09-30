@@ -242,7 +242,8 @@ def main():
         x.to_parquet(C.root("index") / "p5_swap.parquet", index=False)
         log.info(f"index p5_swap: {len(x)} rows")
     if chk:
-        chk["pass"] = all(v["outside_changed_px"] == 0 and v["inside_not_minus_px"] == 0 for v in chk.values() if isinstance(v, dict))
+        chk["pass"] = all(v.get("outside_changed_px", 0) == 0 and v.get("inside_not_minus_px", 0) == 0 and v.get("maxdiff", 0) == 0
+                          for v in chk.values() if isinstance(v, dict))
         (C.root("checks") / "C_swap.json").write_text(json.dumps(chk, indent=1))
         log.info(f"check {chk}")
     log.event("end")
