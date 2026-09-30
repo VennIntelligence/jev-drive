@@ -345,8 +345,9 @@ def check(stage: str):
             y2 = float(np.median([abs(p[1][1]) for p in free["lmain"].op_xy])) if len(free["lmain"]) else np.nan
             res.append(chk("C5 plan v(5 s) ratio to drive in [0.8, 1.25] on free road", 0.8 <= rs["lmain"] / max(rs["drive"], 1e-6) <= 1.25, f"{rs}"))
             res.append(chk("C5 |y@2 s| median <= 0.6 m", y2 <= 0.6, f"{y2:.3f}"))
-            nan = any(np.isnan(np.asarray(v.vp5, float)).any() for v in st.values())
-            res.append(chk("C5 no NaN, lane prob > 0.3", not nan and float(np.median([min(x) for x in st["lmain"].lane])) > 0.3))
+            nan = any(np.isnan(np.asarray(v.vplan.tolist(), float)).any() for v in st.values())
+            ln = {k: float(np.median(np.minimum(*np.array(v.lane.tolist())[:, 1:3].T))) for k, v in st.items()}
+            res.append(chk("C5 no NaN; inner lane prob median >= 0.5x drive's (D1)", not nan and ln["lmain"] >= 0.5 * ln["drive"], f"{ln}"))
             ph = {k: float(((v.lp0 > 0.5) & v.c_lead_gap.isna()).mean()) for k, v in st.items() if len(v)}
             res.append(chk("C5 phantom lead rate <= 2x drive (+0.02)", ph["lmain"] <= 2 * ph["drive"] + 0.02, f"{ph}"))
             need = {"lat", "lat_why", "div", "go", "intent"}

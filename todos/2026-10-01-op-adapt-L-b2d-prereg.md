@@ -102,7 +102,7 @@ C1 服务器日志显示加载的是 `lmain-s0.onnx` 与 `E.npy`（形状 4×32�
 C2 日志里 `intent` 与路线命令一致：LEFT / RIGHT 区内为 2 / 3，区外恒 1，一致率 100%，并至少见到一次 2 或 3（路线有转弯）。
 C3 控制回路延迟：`ms` 中位数 ≤ 同路线 `drive` 的 1.2 倍，p99 ≤ 1.5 倍（不慢于基础模型：图上只多 4 个算子）。
 C4 无崩溃：results.json 存在，`status` 不含 Failed / crash，attempt 数 ≤ 3（CARLA 服务端 rc 139 重试算基础设施，记录次数）。
-C5 plan 合理：自由路况（真值无前车 / 行人 / 红灯）行驶步（v > 2 m/s）上 plan v(5 s) 的中位数与 `drive` 的比 ∈ [0.8, 1.25]，\|y@2 s\| 中位 ≤ 0.6 m，无 NaN，lane 概率不退化（中位 > 0.3），幻觉 lead 步占比 ≤ `drive` 的 2 倍。
+C5 plan 合理：自由路况（真值无前车 / 行人 / 红灯）行驶步（v > 2 m/s）上 plan v(5 s) 的中位数与 `drive` 的比 ∈ [0.8, 1.25]，\|y@2 s\| 中位 ≤ 0.6 m，无 NaN，两条内侧 lane 线概率（取小）的中位数 ≥ `drive` 的 0.5 倍（见偏离 D1），幻觉 lead 步占比 ≤ `drive` 的 2 倍。
 C6 字段齐全：`plans.jsonl` 里 `lat / lat_why / div / go / intent` 齐。
 
 **阶段 2（~10 个 unit = 10 条 dev 路线 × TM seed 0：`lmain`、`drive`、`dbase` 各一张卡同时跑，这也是 CARLA 打包的 profile 点）**：
@@ -140,6 +140,16 @@ C6 字段齐全：`plans.jsonl` 里 `lat / lat_why / div / go / intent` 齐。
 - 不把 dev 读成干净测试：dev 已在 op-drive 里看过；本 lane 的结论是「在 dev 上」的。
 - op-adapt 的训练没有见过 CARLA 帧（训练域是 WOD 与 nuScenes）；闭环读数同时含域迁移，无法拆开；如实写。
 
+## 偏离
+
+- **D1（阶段 1 checklist C5 的 lane 条款，阶段 1 读数后、阶段 2 数据之前改）**：原文「lane 概率不退化（中位 > 0.3）」是我把 op-drive 诊断里「内侧车道线概率均值 0.54」（另一个量、另一批运行）当成了绝对门槛，而且代码里误对 4 条线取小。CARLA 场景里该概率本来就低：同一路线上 `drive` 自己的内侧两线取小的中位数只有 0.048，`lmain` 0.066，字面规则对基础模型同样判 FAIL，所以它区分不了适配模型是否退化。
+  改成相对规则「`lmain` 的中位数 ≥ `drive` 的 0.5 倍」。`lmain` 0.066 ≥ 0.024，按新旧两种读法实质结论一致（没有退化）。这是 checklist 的措辞错误，不是放宽任何判定线。
+
 ## 执行日志
 
 （运行开始后在此追加：时间、做了什么、读数、偏离。）
+
+- 2026-10-01 07:22–07:26 **阶段 1**（tag `s1`，不进 dev 判定；路线 24944 seed 0，`lmain` 在卡 1、`drive` 在卡 0，各 1 个 worker，chain `--plan stage1`）。服务器起服务 3 s（pool 1，ORT cuda-iob，没有 TRT 引擎构建），单 unit wall 2.4 / 3.8 min。
+  checklist：C1 通过（日志里 `lmain-s0.onnx`、E 载入）；C2 intent 与路线 0 / 1034 步不一致，339 步为左转 intent；C3 延迟 `lmain` 38.0 / 46.2 ms（中位 / p99）对 `drive` 37.4 / 44.3；C4 Completed，无重试；
+  C5 自由路况 plan v(5 s) 中位 5.21 对 4.30（比 1.21，过）、\|y@2 s\| 中位 0.135 m、幻觉 lead 步占比 0.017 对 0.041、无 NaN；C6 字段齐。lane 条款的字面规则对 `drive` 自己也 FAIL，按偏离 D1 改成相对规则后通过。**阶段 1 通过，进阶段 2。**
+  一条路线上的旁证（不是读数，不作判断）：`lmain` DS 100 / RC 100，锁存 1 次且由 plan 的 `signal` 放行；`drive` DS 70，锁存 1 次且由 timer resume 放行、1 次违规。
