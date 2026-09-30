@@ -214,7 +214,7 @@ def cmd_navtest(a):
     o = res.get("gimm-cinque_Lport__base")
     for m in a.models:
         x = res.get(f"gimm-cinque_L{m}__base")
-        rdir(m, "navtest.json").write_text(json.dumps({"port_O": o, "model": x, "delta": (x["score"] - o["score"]) if x and o else None,
+        (rdir(m) / "navtest.json").write_text(json.dumps({"port_O": o, "model": x, "delta": (x["score"] - o["score"]) if x and o else None,
                                                        "line": ">= O - 1"}, indent=1, default=str))
     print(json.dumps({k: v["score"] for k, v in res.items()}, indent=1))
 

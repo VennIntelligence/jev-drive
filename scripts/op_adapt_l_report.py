@@ -94,7 +94,7 @@ def lines_for(df: pd.DataFrame, model: str) -> dict:
         if r is not None:
             o[f"nus_cap_{s}"], o[f"nus_cap_{s}_lo"] = r.delta, r.lo
             o[f"L6_{s}"] = bool(r.lo > 0)
-    p = L.lroot("readout", model, "navtest.json")
+    p = L.lroot("readout", model) / "navtest.json"
     if p.exists():
         j = json.loads(p.read_text())
         if j.get("delta") is not None:
