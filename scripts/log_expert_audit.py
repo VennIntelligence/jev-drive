@@ -315,47 +315,61 @@ def events(log: np.ndarray, t: np.ndarray, mask: np.ndarray, gap: float = 1.0):
 
 # ---------------------------------------------------------------- errors and the log-clustered bootstrap
 
-METRICS = [f"{k}{h}" for k in ("ade", "lon", "lat") for h in (1, 2, 3, 4)] + ["bias_lon3"]
+NATIVE = [f"{k}{h}" for k in ("ade", "lon", "lat") for h in (1, 2, 3, 4)] + ["bias_lon3"]
+CV = ["cv_" + m for m in NATIVE[:12]]                 # constant-velocity straight-ahead baseline, same metrics
+CAP = ["cap_disp", "cap_stop", "cap_lat_end", "cap_peak"]
+METRICS = NATIVE + CV + CAP
+CAP_OF = {"start": "cap_disp", "stop": "cap_stop", "turn_onset": "cap_lat_end", "in_turn": "cap_lat_end",
+          "lane_change": "cap_lat_end", "nudge": "cap_peak"}
 
 
-def errors(fut: np.ndarray, plan: np.ndarray) -> np.ndarray:
-    """(n, len(METRICS)): ADE / lon / lat mean abs error up to 1..4 s, and the signed longitudinal error at 3 s (plan - human)."""
+def _err(fut: np.ndarray, plan: np.ndarray) -> list[np.ndarray]:
     e = plan.astype(np.float64) - fut.astype(np.float64)
     nrm, ax, ay = np.linalg.norm(e, axis=-1), np.abs(e[..., 0]), np.abs(e[..., 1])
-    cols = [nrm[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] + [ax[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] \
+    return [nrm[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] + [ax[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] \
         + [ay[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] + [e[:, 5, 0]]
-    return np.stack(cols, 1)
+
+
+def errors(fut: np.ndarray, plan: np.ndarray, v0: np.ndarray) -> np.ndarray:
+    """(n, len(METRICS)): native ADE / lon / lat mean abs error up to 1..4 s and the signed longitudinal error at 3 s
+    (plan - human); the same for a constant-velocity straight-ahead plan; and four capture indicators (did the plan
+    reproduce at least half of the human manoeuvre: displacement at 4 s / stop by 4 s / signed lateral offset at 4 s /
+    signed lateral offset at the human's lateral peak)."""
+    fut, plan = fut.astype(np.float64), plan.astype(np.float64)
+    cv = np.stack([v0[:, None] * T_GRID[None], np.zeros((len(fut), 8))], -1)
+    hp = np.abs(fut[..., 1]).argmax(1)
+    ar = np.arange(len(fut))
+    cap_disp = np.linalg.norm(plan[:, 7], axis=-1) >= 0.5 * np.linalg.norm(fut[:, 7], axis=-1)
+    cap_stop = np.linalg.norm(plan[:, 7] - plan[:, 6], axis=-1) / 0.5 <= 1.0
+    cap_lat_end = (np.sign(plan[:, 7, 1]) == np.sign(fut[:, 7, 1])) & (np.abs(plan[:, 7, 1]) >= 0.5 * np.abs(fut[:, 7, 1]))
+    cap_peak = (np.sign(plan[ar, hp, 1]) == np.sign(fut[ar, hp, 1])) & (np.abs(plan[ar, hp, 1]) >= 0.5 * np.abs(fut[ar, hp, 1]))
+    return np.stack(_err(fut, plan) + _err(fut, cv)[:12] + [cap_disp, cap_stop, cap_lat_end, cap_peak], 1).astype(np.float64)
 
 
 def boot_stats(log: np.ndarray, X: np.ndarray, masks: dict[str, np.ndarray], ctl: str = "control", B: int = 2000, seed: int = 0):
     """Cluster bootstrap over logs (slice and control share each resample). log (n,) int, X (n, m) metrics of the plan frames,
-    masks name -> bool (n,). Returns {name: dict(mean, lo, hi, ratio, rlo, rhi)} with (m,) arrays."""
+    masks name -> bool (n,). Returns {name: dict(mean (m,), draws (B, m), ctl_draws (B, m), ctl_mean (m,))}."""
     ul, li = np.unique(log, return_inverse=True)
     L = len(ul)
     W = np.random.default_rng(seed).multinomial(L, np.full(L, 1.0 / L), size=B).astype(np.float64)
 
-    def per_log(mask):
+    def draw(mask):
         n = np.bincount(li[mask], minlength=L).astype(np.float64)
         s = np.stack([np.bincount(li[mask], weights=X[mask, j], minlength=L) for j in range(X.shape[1])], 1)
-        return s, n
-
-    def draw(mask):
-        s, n = per_log(mask)
         with np.errstate(invalid="ignore", divide="ignore"):
             return (W @ s) / (W @ n)[:, None], s.sum(0) / max(n.sum(), 1)
 
     bc, mc = draw(masks[ctl])
     out = {}
     for name, m in masks.items():
-        if not m.any():
-            continue
-        bs, ms = draw(m)
-        with np.errstate(invalid="ignore", divide="ignore"):
-            r = bs / bc
-        q = lambda a: np.nanpercentile(a, [2.5, 97.5], axis=0)  # noqa: E731
-        (lo, hi), (rlo, rhi) = q(bs), q(r)
-        out[name] = dict(mean=ms, lo=lo, hi=hi, ratio=ms / mc, rlo=rlo, rhi=rhi)
+        if m.any():
+            bs, ms = draw(m)
+            out[name] = dict(mean=ms, draws=bs, ctl_draws=bc, ctl_mean=mc)
     return out
+
+
+def ci(a: np.ndarray) -> tuple:
+    return tuple(np.nanpercentile(a, [2.5, 97.5], axis=0))
 
 
 # ---------------------------------------------------------------- analysis
@@ -428,7 +442,7 @@ def cmd_analyze():
         t = sub(t, has)
         plan = t["plan"].copy()
         plan[..., 0] *= cx
-        X = errors(t["fut"], plan)
+        X = errors(t["fut"], plan, t["v0"])
         sl = slices(t)
         sl["all"] = np.ones(len(X), bool)
         res = boot_stats(t["log"], X, sl)
@@ -436,11 +450,21 @@ def cmd_analyze():
             idx, ev = events(t["log"], t["t"], sl[s])
             row = {"dataset": dsn, "plan_source": src, "calib": cal, "slice": s, "frames_plan": int(sl[s].sum()),
                    "events_plan": int(ev.max() + 1) if len(idx) else 0, "logs_plan": int(len(np.unique(t["log"][sl[s]])))}
-            for j, mn in enumerate(METRICS):
-                row[mn] = r["mean"][j]
-                row[mn + "_lo"], row[mn + "_hi"] = r["lo"][j], r["hi"][j]
-                if mn != "bias_lon3":
-                    row[mn + "_ratio"], row[mn + "_rlo"], row[mn + "_rhi"] = r["ratio"][j], r["rlo"][j], r["rhi"][j]
+            j = {m: i for i, m in enumerate(METRICS)}
+            for mn in NATIVE + CV:
+                row[mn] = r["mean"][j[mn]]
+                row[mn + "_lo"], row[mn + "_hi"] = ci(r["draws"][:, j[mn]])
+            for mn in NATIVE[:12]:                                     # pre-registered: ratio to the control slice
+                rr = r["draws"][:, j[mn]] / r["ctl_draws"][:, j[mn]]
+                row[mn + "_ratio"] = r["mean"][j[mn]] / r["ctl_mean"][j[mn]]
+                row[mn + "_rlo"], row[mn + "_rhi"] = ci(rr)
+                rc = r["draws"][:, j[mn]] / r["draws"][:, j["cv_" + mn]]   # added after the first numbers: native / constant velocity
+                row[mn + "_vs_cv"] = r["mean"][j[mn]] / r["mean"][j["cv_" + mn]]
+                row[mn + "_vs_cv_lo"], row[mn + "_vs_cv_hi"] = ci(rc)
+            if s in CAP_OF:
+                c = CAP_OF[s]
+                row["capture_kind"], row["capture"] = c, r["mean"][j[c]]
+                row["capture_lo"], row["capture_hi"] = ci(r["draws"][:, j[c]])
             erow.append(row)
         print(dsn, src, cal, "done", flush=True)
     pd.DataFrame(erow).round(4).to_csv(RES / "errors.csv", index=False)
