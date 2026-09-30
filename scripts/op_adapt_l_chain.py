@@ -189,6 +189,36 @@ def gpu_monitor(gpus, every=20, window=30):
             time.sleep(every)
 
 
+def selection_checklist() -> dict:
+    """Prereg section 7, 'about 10 units': completion (DONE, no non-finite loss), final dev drift median <= 0.15 m, speed distribution
+    KS < 0.1, at least one qualifying candidate. A missing / crashed / non-finite run is a bug-type failure and stops the chain;
+    the substance items (drift, KS, no qualifying candidate) are logged and the registered ablation queue still runs."""
+    from jevdrive import op_adapt_l_arms as ARMS
+    out = {"runs": {}, "bug": [], "substance": []}
+    for name in list(ARMS.SELECTION) + ["tr_ad"]:
+        run = ROOT / "runs" / f"{name}-s0"
+        dj = run / "dev.json"
+        if not (run / "DONE").exists() or not dj.exists():
+            out["bug"].append(f"{name}: not completed")
+            continue
+        d = json.loads(dj.read_text())
+        row = {"nonfinite": d.get("nonfinite"), "drift_median": d["drift_median"], "drift_p95": d["drift_p95"], "ks_v2": d.get("ks_v2_other"),
+               "qualifies": d["select"]["qualifies"], "cap_gain": d["select"]["cap_gain"], "seq_per_s": d.get("seq_per_s"),
+               "peak_gb": d.get("peak_reserved_gb"), "data_wait_frac": d.get("data_wait_frac")}
+        out["runs"][name] = row
+        if d.get("nonfinite"):
+            out["bug"].append(f"{name}: {d['nonfinite']} non-finite losses")
+        if d["drift_median"] > 0.15:
+            out["substance"].append(f"{name}: drift median {d['drift_median']:.3f} > 0.15")
+        if d.get("ks_v2_other", 0) >= 0.1:
+            out["substance"].append(f"{name}: KS {d['ks_v2_other']:.3f} >= 0.1")
+    if not any(v["qualifies"] for v in out["runs"].values() if v):
+        out["substance"].append("no candidate qualifies under the registered dev lines")
+    out["pass"] = not out["bug"]
+    (C / "selection_checklist.json").write_text(json.dumps(out, indent=1))
+    return out
+
+
 def alias_main(sel: str):
     for sub in ("runs", "readout"):
         src, dst = ROOT / sub / f"{sel}-s0", ROOT / sub / "main-s0"
@@ -240,6 +270,16 @@ def main():
     wave1 = [J(x) for x in ("sel_s4ia", "sel_s4ia_dw3", "sel_s4polia", "sel_s4polia_dw3")] + \
         [J(x) for x in ("sel_polia", "sel_polia_dw3", "sel_polid", "sel_polid_dw3", "tr_ad")]
     run_phase("wave1 (selection candidates + adapter-only + O readout)", wave1, slots)
+    ck = selection_checklist()
+    log(f"selection checklist: bug {ck['bug']}; substance {ck['substance']}")
+    ev("selection_checklist", **{k: ck[k] for k in ("bug", "substance", "pass")})
+    if not ck["pass"]:
+        (C / "ERROR").write_text("selection-wave checklist failed (bug-type): " + "; ".join(ck["bug"]) + "\n")
+        sys.exit(1)
+    while (C / "PAUSE").exists():                        # a manual look before the full queue: touch chain/PAUSE, rm it to go on
+        STATE["phase"] = "paused before wave 2"
+        status()
+        time.sleep(30)
     # the registered selection
     if not (ROOT / "selection.json").exists():
         rc = sh("select", "select", [PY, "scripts/op_adapt_l_train.py", "select"], gpus[0], cores[:4])

@@ -99,7 +99,7 @@ def dev_eval(model: L.LModel, D: L.Data, rows: dict, dev, extra=None) -> dict:
             d = L.paired_delta(ma[k], mo[k], grp(rr), B=300)
             r[f"{s}/{k}"] = d.get("delta", float("nan"))
             r[f"{s}/{k}/adapt"], r[f"{s}/{k}/orig"] = d.get("adapt", float("nan")), d.get("orig", float("nan"))
-    dr = []
+    dr, va, vo = [], [], []
     for k, dn in (("other", "wod"), ("nus", "nus")):
         rr = rows[k]
         d = A.plan_drift(plans[k], tea(dn, rr))
@@ -109,10 +109,13 @@ def dev_eval(model: L.LModel, D: L.Data, rows: dict, dev, extra=None) -> dict:
         for who, pl in (("adapt", plans[k]), ("orig", tea(dn, rr))):
             r[f"{k}/slow/{who}"] = float(R.slow_flag(pl, v0).mean())
             r[f"{k}/fast/{who}"] = float((R.v_at(pl, 2.0) > v0 + np.maximum(1.0, 0.2 * v0)).mean())
+        va.append(R.v_at(plans[k], 2.0)), vo.append(R.v_at(tea(dn, rr), 2.0))
         r[f"{k}/slow/delta_pp"] = 100 * (r[f"{k}/slow/adapt"] - r[f"{k}/slow/orig"])
         r[f"{k}/fast/delta_pp"] = 100 * (r[f"{k}/fast/adapt"] - r[f"{k}/fast/orig"])
     d = np.concatenate(dr)
     r["drift_median"], r["drift_p95"] = float(np.median(d)), float(np.percentile(d, 95))
+    from scipy.stats import ks_2samp
+    r["ks_v2_other"] = float(ks_2samp(np.concatenate(va), np.concatenate(vo)).statistic)      # speed-at-2 s distribution, adapted vs original
     return r
 
 
