@@ -140,6 +140,53 @@ class Data:
         return np.asarray(self.tab[dn]["intent"])[rows].astype(np.int64)
 
 
+# ---------------------------------------------------------------- stage-4 output cache
+def hpath(dn: str) -> Path:
+    return lroot("t", "H") / f"{dn}.npy"
+
+
+class HStore:
+    """The ORIGINAL model's stage-4 output H (view_39, 32 x 512, fp16) of every flat trunk row of a domain, memory-mapped from
+    $L/t/H/<domain>.npy (built by `op_adapt_l_prep.py hcache`). H of a frame does not depend on which sequence it sits in, so an
+    arm whose stage 4 is frozen reads H (295 KB per 9-frame sequence instead of 2.4 MB of trunk, no stage-4 compute)."""
+
+    def __init__(self, dn: str):
+        self.H = np.load(hpath(dn), mmap_mode="r")
+
+    def gather(self, ctx: np.ndarray) -> np.ndarray:
+        """ctx (B, 9) flat rows (-1 = none) -> (B, 9, 32, 512) fp16, zeros where -1."""
+        out = np.zeros(ctx.shape + A.H_SHAPE, np.float16)
+        v = ctx >= 0
+        out[v] = self.H[ctx[v]]
+        return out
+
+
+def build_h(dn: str, root: Path, dev, bs=1024, threads=8) -> None:
+    """H of every flat trunk row of a domain with the original weights (same fp16 path as the model's stage 4)."""
+    from concurrent.futures import ThreadPoolExecutor
+    d = R.Domain(dn, root)
+    N = len(d.frow) if d.T is None else len(d.T)
+    net = A.load("cinque", torch.float16).to(dev).eval()
+    tmp = hpath(dn).with_suffix(".tmp.npy")
+    out = np.lib.format.open_memmap(tmp, "w+", np.float16, (N,) + A.H_SHAPE)
+    starts = list(range(0, N, bs))
+
+    def load(i):
+        return torch.from_numpy(d.rows(np.arange(i, min(i + bs, N)))).pin_memory()
+    from tqdm import tqdm
+    with ThreadPoolExecutor(threads) as ex, torch.no_grad():
+        futs = {}
+        for j, i in enumerate(tqdm(starts, desc=f"H {dn}", mininterval=30)):
+            for jj in range(j, min(j + threads + 1, len(starts))):
+                futs.setdefault(jj, ex.submit(load, starts[jj]))
+            x = futs.pop(j).result().to(dev, non_blocking=True)
+            h = net.run_batched({A.TRUNK_OUT: x.reshape(len(x), 1, *x.shape[1:]).to(net.dtype)}, ["view_39"])["view_39"]
+            out[i:i + len(x)] = h.reshape(len(x), *A.H_SHAPE).cpu().numpy()
+    out.flush()
+    del out
+    tmp.replace(hpath(dn))
+
+
 # ---------------------------------------------------------------- the model
 @dataclass
 class LCfg:

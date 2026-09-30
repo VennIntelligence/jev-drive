@@ -15,6 +15,7 @@ import argparse
 import json
 import pickle
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -157,8 +158,21 @@ def cmd_nustab(a):
     print("nus", len(rows), {k: int(v.sum()) for k, v in fl.items()})
 
 
+def cmd_hcache(a):
+    import torch
+    for dn in a.domains:
+        root = L.lroot("t") if dn == "wodval" else L.r2t()
+        if L.hpath(dn).exists():
+            print(dn, "H cache exists")
+            continue
+        t0 = time.time()
+        L.build_h(dn, root, torch.device("cuda"))
+        print(f"H {dn}: {time.time() - t0:.0f} s", flush=True)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["vstreams", "pack", "wodtab", "nustab"])
+    ap.add_argument("cmd", choices=["vstreams", "pack", "wodtab", "nustab", "hcache"])
+    ap.add_argument("--domains", nargs="+", default=["wod", "nus", "wodval"])
     a = ap.parse_args()
-    {"vstreams": cmd_vstreams, "pack": cmd_pack, "wodtab": cmd_wodtab, "nustab": cmd_nustab}[a.cmd](a)
+    {"vstreams": cmd_vstreams, "pack": cmd_pack, "wodtab": cmd_wodtab, "nustab": cmd_nustab, "hcache": cmd_hcache}[a.cmd](a)
