@@ -102,7 +102,7 @@ def build_wod():
            "t": (ix.frame.to_numpy()[rows] * 0.1),
            "v0": sp(p[:, 15, 2:4]), "vm05": sp(p[:, 13, 2:4]), "vm1": sp(p[:, 11, 2:4]),
            "pm05": p[:, 13, :2], "pm1": p[:, 11, :2],
-           "fut": f[:, 1::2, :2], "intent": np.array([-1, 1, 0, 2])[ix.intent.to_numpy()[rows]].astype(np.int8),
+           "fut": f[:, 1:16:2, :2], "intent": np.array([-1, 1, 0, 2])[ix.intent.to_numpy()[rows]].astype(np.int8),
            "split": ix.split.astype(str).to_numpy()[rows], "count_ok": (ix.frame.to_numpy()[rows] % 2) == 0}
     plan = np.full((len(rows), 8, 2), np.nan, np.float32)
     src = np.zeros(len(rows), np.int8)                                   # 1 r2 teacher, 2 exam preds
@@ -144,7 +144,7 @@ def build_nav():
     vel = np.linalg.norm(np.stack([e["vel"] for e in idx]), axis=-1)
     cmd = np.stack([e["cmd"][-1] for e in idx])
     intent = np.where(cmd[:, :3].sum(1) > 0, cmd[:, :3].argmax(1), -1).astype(np.int8)   # 0 left, 1 straight, 2 right
-    tab = {"log": pd.factorize([e["log_name"] for e in idx])[0].astype(np.int32),
+    tab = {"log": pd.factorize(np.array([e["log_name"] for e in idx]))[0].astype(np.int32),
            "t": np.array([ttab[t] for t in tok]), "v0": vel[:, 3], "vm05": vel[:, 2], "vm1": vel[:, 1],
            "pm05": pose[:, 2], "pm1": pose[:, 1], "fut": fz["poses"][:, :, :2], "intent": intent,
            "split": np.full(len(idx), "train"), "count_ok": np.ones(len(idx), bool)}
