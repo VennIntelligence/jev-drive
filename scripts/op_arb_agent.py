@@ -23,6 +23,10 @@ mode runs the same openpilot session on the same frames; only what reaches P7 di
            rolling), "base" = the set-speed governor alone. "hold": "intent" latches a standstill only when the plan itself
            asked to stop (plan v(5 s) < 0.5 m/s) just before it; released by the plan (x@5 s > release_th for release_s),
            a departing lead (lead head v > lead_go_v) or the driver's resume after latch_max_s of standstill.
+  R3a (todos/2026-09-29-op-drive.md, "registration R3a"; PRIVILEGED simulator state, a ceiling, not an openpilot capability): "tl_stop": true
+           adds a stop constraint on the ground-truth traffic light that controls the ego's route (red or yellow within tl_n m
+           ahead of the bumper; yellow only if the car can stop at 4 m/s^2), stops tl_margin m before the stop line, and while a
+           red / yellow light is ahead no release of a stop latch is taken (no plan / lead / timer); the latch is released at green.
   Any mode: "coast_v" > 0 replaces a brake request by coasting below coast_v m/s while the arbitrated profile still
   asks to move (CARLA's MKZ stops dead on a light brake at 1-2 m/s).
 
@@ -62,7 +66,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
-            "resume": "timer", "resume_tl_m": 40.0, "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 
@@ -223,7 +227,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         ws = self.route.s[max(i0 - 5, 0):i0 + 120]
         s_ego = ws[int(np.argmin(np.linalg.norm(win - rear, axis=1)))]
         out = {"junc": int(CDP.get_map().get_waypoint(tf.location).is_junction)}
-        lead, ped = (None, None), (None, None)
+        lead, ped, near = (None, None), (None, None), []
         for a in CDP.get_all_actors():
             tid = a.type_id
             if not (tid.startswith("vehicle.") or tid.startswith("walker.")) or a.id == hero.id:
@@ -241,10 +245,19 @@ class OpArbAgent(Z.ZeroShotAgent):
                 continue
             vel = a.get_velocity()
             spd = math.hypot(vel.x, vel.y)
+            dx, dy = p - rear
+            if math.hypot(dx, dy) < 15.0:                      # nearby actors in the ego frame (x forward, y left), for collision attribution
+                c_, s_ = math.cos(yaw), math.sin(yaw)
+                ev = hero.get_velocity()
+                near.append((round(math.hypot(dx, dy), 1), tid.split(".")[0][0] + tid.split(".")[-1][:10], round(c_ * dx + s_ * dy, 1),
+                             round(-s_ * dx + c_ * dy, 1), round(c_ * (vel.x - ev.x) + s_ * (vel.y - ev.y), 1),
+                             round(-s_ * (vel.x - ev.x) + c_ * (vel.y - ev.y), 1)))
             if tid.startswith("vehicle.") and d - ext.y < 1.2 and (lead[0] is None or gap < lead[0]):
                 lead = (gap, spd)
             if tid.startswith("walker.") and d < 2.5 and (ped[0] is None or gap < ped[0]):
                 ped = (gap, spd)
+        if near:
+            out["near"] = sorted(near)[:4]                       # (dist, type, x, y, rel vx, rel vy)
         if lead[0] is not None:
             out.update(lead_gap=round(lead[0], 2), lead_v=round(lead[1], 2))
         if ped[0] is not None:
@@ -305,6 +318,13 @@ class OpArbAgent(Z.ZeroShotAgent):
         if lp > A["lead_p"] and op_lon:
             cons["lead"] = idm(speed, float(lead[0, 0]) - CAM_TO_BUMPER, float(lead[0, 2]), float(lead[0, 3]),
                                A["cruise"], A["amax"], A["idm_b"], A["idm_s0"], A["idm_T"])
+        tl_on, tlc = False, {}
+        if mode == "drive" and A["tl_stop"] and not warm:   # R3a: privileged traffic-light stop
+            tlc = self._ctx()
+            d_tl = tlc.get("tl_dist", 1e9)
+            if tlc.get("tl") in (1, 2) and d_tl < A["tl_n"] and (d_tl > max(0.5, speed * speed / 8.0 - 1.0) or (speed < 1.0 and d_tl > -1.0)):
+                tl_on = True
+                cons["tl"] = idm(speed, d_tl + A["idm_s0"] - A["tl_margin"], 0.0, 0.0, A["cruise"], A["amax"], A["idm_b"], A["idm_s0"], A["idm_T"])
         s_plan = plan_arc(op_path, speed, float(v_plan[0]), A["plan_form"])
         if mode == "oshadow":
             cons.pop("lead", None)
@@ -341,10 +361,13 @@ class OpArbAgent(Z.ZeroShotAgent):
                    "none": False}[A["release"]]
             self.rel_t = self.rel_t + dt if rel else 0.0          # the release signal must hold release_s seconds
             lead_go = A["hold"] == "intent" and lp > A["lead_p"] and float(lead[0, 2]) > A["lead_go_v"]
-            c = self._ctx() if A["resume"] == "nored" else {}
-            red_ahead = c.get("tl") in (1, 2) and c.get("tl_dist", 99.0) < A["resume_tl_m"]   # the driver sees the light
+            c = self._ctx() if A["resume"] == "nored" or A["tl_stop"] else {}
+            red_ahead = c.get("tl") in (1, 2) and c.get("tl_dist", 99.0) < (A["tl_n"] if A["tl_stop"] else A["resume_tl_m"])   # the driver sees the light
             self.resume_blocked = red_ahead and self.latch_t > A["latch_max_s"]
-            why = "signal" if rel and self.rel_t >= A["release_s"] else "lead_go" if lead_go else \
+            green = A["tl_stop"] and c.get("tl") == 0 and c.get("tl_dist", 99.0) < A["tl_n"]
+            if A["tl_stop"] and red_ahead:                    # R3a: nothing but green releases a stop in front of a red light
+                rel, lead_go = False, False
+            why = "signal" if rel and self.rel_t >= A["release_s"] else "lead_go" if lead_go else "green" if green else \
                 "timeout" if self.latch_t > A["latch_max_s"] and not red_ahead else "rolling" if speed > 1.0 else None
             if why:
                 self.latch, rel = False, why
@@ -397,7 +420,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         r3 = lambda x: np.round(np.asarray(x, float), 3).tolist()  # noqa: E731
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "src": src,
-               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "ri": int(self.route.i),
+               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
                "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},

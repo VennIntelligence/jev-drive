@@ -99,6 +99,9 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         drive|dlon) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
  \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
  \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
+        # R3a (todos/2026-09-29-op-drive.md): drive + privileged traffic-light stop; a stop latch is released only by plan / lead away from a red light, or at green
+        dtl) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"${LAT_EXEC:-p7}\", \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\",
+ \"release_th\": 2.0, \"release_s\": 1.0, \"latch_max_s\": 1e9, \"coast_v\": 2.5, \"tl_stop\": true, \"tl_n\": ${TL_N:-50}}" ;;
         *) error "unknown arm $arm" ;;
     esac
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
