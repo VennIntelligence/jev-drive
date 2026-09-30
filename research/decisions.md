@@ -4030,7 +4030,7 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**。**会推翻本条的证据**：dev 上重复运行使 drive − dbaseslow2 转正、或 R1 在含红灯前锁存的路线上被证明无效；适配后的模型换进同一个 server 后需按同一 `set` 重跑。
 
-## 73. NAVSIM 提分 N4：N3 配置扩到全部可用 navtrain 行（8.4 万），navtest 91.43，对 N3 −0.17 [−0.42, +0.09]，判「平」；数据量在 6 万行后饱和；navhard 官方分 36.07，首次高于原生（**待定**，navtest 12 146 + navhard 5 912，1 次 5 seed 集成，只有 Cinque；本 lane 第 7 次看 navtest）
+## 75. NAVSIM 提分 N4：N3 配置扩到全部可用 navtrain 行（8.4 万），navtest 91.43，对 N3 −0.17 [−0.42, +0.09]，判「平」；数据量在 6 万行后饱和；navhard 官方分 36.07，首次高于原生（**待定**，navtest 12 146 + navhard 5 912，1 次 5 seed 集成，只有 Cinque；本 lane 第 7 次看 navtest）
 
 2026-09-30。预登记在 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md) N4 节，写于任何 N4 数据与分数之前；代码 `jevdrive/navsim_raise.py`（`n4dev` / `n4final`），链 `scripts/navsim_raise_n4.sh`，小表 [results/skill-pack/n4/](results/skill-pack/n4/)。
 预登记同时纠正了第 72 条的估计：navtrain 共 103 288 个 token，held-out 折的 log 必须留出，可用新行只有 24 064（不是 +4 万），总训练行 84 032。

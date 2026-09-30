@@ -252,7 +252,7 @@ B2 单独在 NAVSIM 上是零（PDMS 的 DAC / TTC 会罚快），只有经打�
 
 ## 6.2 N1 之后的提分：N1b、N2 与候选改动的排序（2026-09-30）
 
-预登记与全部表 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)，决策第 69–72 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 pack 共看 7 次（N0、N1、N1b、N2、S、N3、N4），最好者（N3）报 Bonferroni（m = 7）区间：对 N2 [+0.61, +1.39]，对 N1 [+3.76, +4.80]。
+预登记与全部表 [todos/2026-09-30-navsim-raise.md](../todos/2026-09-30-navsim-raise.md)，决策第 69–72、75 条。所有选择只在 N1 的 navtrain held-out logs（fold 0，4 037 token）上做，fold 1 作重复；navtest 每个配置一次，本 pack 共看 7 次（N0、N1、N1b、N2、S、N3、N4），最好者（N3）报 Bonferroni（m = 7）区间：对 N2 [+0.61, +1.39]，对 N1 [+3.76, +4.80]。
 
 | 读数 | navtest PDMS | 对 N1（配对，95% CI） | navhard EPDMS | EP 超 human |
 |:--|--:|:--|--:|--:|
