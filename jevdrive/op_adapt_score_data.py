@@ -123,6 +123,32 @@ def _town(meta_town: str) -> str:
     return meta_town.rstrip("/").split("/")[-1]
 
 
+def _expert_one(adir: str):
+    a = Path(adir)
+    try:
+        town = _town(json.loads((a / "meta.json").read_text())["town"])
+        p = pd.read_json(a / "pose.jsonl", lines=True)[["x", "y", "z", "yaw"]].to_numpy(float)[::5]
+        return town, p
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def expert_poses(workers: int = 24) -> dict:
+    """Pass-1 driven poses (every 5th tick) per town: R/maps/carla/expert/<town>.npy (x, y, z, yaw_deg; CARLA frame)."""
+    from multiprocessing import Pool
+    dirs = [str(p) for g in ("runs/cosmos_full/gen/attempts", "runs/p5v1/gen-ba/attempts")
+            for p in (data_dir() / g).glob("*/*") if (p / "meta.json").exists()]
+    out: dict = {}
+    with Pool(workers) as pool:
+        for r in pool.imap_unordered(_expert_one, dirs, chunksize=8):
+            if r is not None:
+                out.setdefault(r[0], []).append(r[1])
+    R("maps", "carla", "expert").mkdir(parents=True, exist_ok=True)
+    for town, parts in out.items():
+        np.save(R("maps", "carla", "expert", f"{town}.npy"), np.vstack(parts).astype(np.float32))
+    return {t: int(sum(len(p) for p in v)) for t, v in out.items()}
+
+
 def _route_points_one(adir: str):
     a = Path(adir)
     try:
@@ -227,7 +253,8 @@ def carla_map(town: str) -> S.TileMap:
 # ================================================================ CARLA slots (Cosmos pairs, P5 pass-1 worlds)
 
 # ---------------------------------------------------------------- CARLA static scene geometry in NC (prereg v4)
-NC_LABELS = (3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 18, 19, 20, 21, 22, 26, 28)   # buildings ... guardrail (carla.CityObjectLabel)
+NC_LABELS = (3, 4, 5, 6, 7, 8, 9, 14, 15, 16, 18, 19, 20, 22, 26, 28)       # buildings ... guardrail (carla.CityObjectLabel);
+#   Dynamic (21) left out: movable dressing the recorded experts drive through (Town10HD: 106 of 329 sampled poses)
 VEH_LABELS = (14, 15, 16, 18, 19)                                           # map-baked parked vehicles
 OBJ_MAX_HALF, OBJ_ROAD_M2, BODY_Z = 25.0, 2.0, (0.0, 1.5)
 _OBJ: dict = {}
@@ -256,11 +283,28 @@ def objects_nc(towns=None) -> dict:
             q = c[i] + gx.reshape(-1, 1) * u + gy.reshape(-1, 1) * v
             road[i] = float(((m.lookup(q)[0] & S.F_DRIVE) > 0).sum()) * 0.16
         keep &= np.isin(lab, VEH_LABELS) | (road <= OBJ_ROAD_M2)
+        # boxes a recorded expert drove through (pass-1 Cosmos / P5 runs, no collision needed: the geometry is not at
+        # body height there, e.g. a lamp arm or a canopy inside a pole's or a tree's box) are not obstacles
+        ep = R("maps", "carla", "expert", f"{town}.npy")
+        through = np.zeros(len(c), bool)
+        if ep.exists() and keep.any():
+            from scipy.spatial import cKDTree
+            E = S.EGO["carla"]
+            P = np.load(ep).astype(float)                     # (n, 4) CARLA x, y, z, yaw_deg of the vehicle transform
+            yaw = -np.radians(P[:, 3])
+            ec = np.stack([P[:, 0], -P[:, 1]], -1) + (E.rc - REAR_TF) * np.stack([np.cos(yaw), np.sin(yaw)], -1)
+            tree = cKDTree(ec)
+            for i in np.flatnonzero(keep & ~np.isin(lab, VEH_LABELS)):
+                j = np.array(tree.query_ball_point(c[i], float(np.hypot(ext[i, 0], ext[i, 1])) + 3.0), int)
+                if len(j):
+                    band = (cen[i, 2] + ext[i, 2] >= P[j, 2]) & (cen[i, 2] - ext[i, 2] <= P[j, 2] + BODY_Z[1])
+                    through[i] = bool((S.obb_overlap(ec[j], yaw[j], E.hl, E.hw, c[i], h[i], ext[i, 0], ext[i, 1]) & band).any())
+        keep &= ~through
         o = R("maps", "carla", "objects_nc", f"{town}.npz")
         o.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(o, c=c[keep], h=h[keep], hl=ext[keep, 0], hw=ext[keep, 1], zlo=cen[keep, 2] - ext[keep, 2],
                             zhi=cen[keep, 2] + ext[keep, 2], label=lab[keep])
-        out[town] = {"objects": int(len(lab)), "nc": int(keep.sum()),
+        out[town] = {"objects": int(len(lab)), "nc": int(keep.sum()), "driven_through": int(through.sum()),
                      "by_label": {int(k): int(n) for k, n in zip(*np.unique(lab[keep], return_counts=True))}}
         log.info("objects_nc %s %s", town, out[town])
     _save_json(R("maps", "carla", "objects_nc", "summary.json"), out)
@@ -1111,7 +1155,7 @@ def main():
     fn = {"points": lambda: route_points(a.workers or cores()), "maps-carla": lambda: maps_carla(a.towns),
           "nus-scenes": lambda: nus_scenes(), "maps-nus": lambda: maps_nus(), "v1": lambda: check_v1(a.workers),
           "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity, "nav-cam": nav_cam_x,
-          "objects-nc": lambda: objects_nc(a.towns), "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
+          "objects-nc": lambda: objects_nc(a.towns), "expert": lambda: expert_poses(a.workers or cores()), "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
     print(json.dumps(fn(), indent=1, default=str)[:4000])
 
 
