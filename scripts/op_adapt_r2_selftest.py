@@ -273,7 +273,7 @@ def synth(a):
     if not (root / "t" / "teacher" / "tstd.npy").exists():
         synth_root(root)
         ns = types.SimpleNamespace
-        T.cmd_pack(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], source="c", workers=4, limit=0, root="", det=True))
+        T.cmd_pack(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], source="c", workers=4, limit=0, root="", det=True, copy=False))
         T.cmd_teacher(ns(domains=["simC", "simK", "nus", "wod", "nav", "off"], batch=64, root=""))
         synth_scores(root)
     doms = {dn: R.Domain(dn) for dn in ("simC", "simK", "nus", "off")}
