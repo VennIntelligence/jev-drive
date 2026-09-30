@@ -31,7 +31,7 @@ from .common import data_dir, get_logger
 log = get_logger(__name__)
 REAR_TF = 1.388633220                        # CARLA hero transform ahead of its rear axle (meta.json rear_axle_x)
 CAM_X = {"sim": 1.519, "p5": 1.519}          # openpilot origin (the camera) ahead of the rear axle (cosmos_pair_agent.CAM)
-HFOV = {"sim": 64.0, "p5": 64.0, "nav": 63.7}
+HFOV = {"sim": 64.0, "p5": 52.08, "nav": 63.7}          # Cosmos camera; P5 Waymo front (meta.json fov); CAM_F0
 VIS_PX, VIS_RANGE = 68.0, 60.0
 N_CTX = 9
 CARLA_KIND = (("walker.", S.PED), ("static.", S.STATIC))
@@ -355,6 +355,34 @@ def sim_world(pair: str, sign: int) -> tuple[dict, list, object]:
     k0, px = int(z["k0"]), np.asarray(z["px"], float)
     hz = list(z["hz_ids"]) if sign > 0 else list(z[f"{m}_hazards"]) + list(z["hz_ids"])
     return w, hz, (lambda t: float(px[t - k0]) if 0 <= t - k0 < len(px) and sign > 0 else 0.0)
+
+
+_P5: dict = {}
+P5_PX_EQ = 3.38                               # P5 segmentation-view pixels -> px_eq (M0)
+
+
+def p5_world(rid: str) -> tuple:
+    """(world dict, hazard ids, px_eq by tick, town, frame -> tick) of one P5 v1 BA pass-1 run (world 1 x+, 2 x-, 3 null)."""
+    if rid not in _P5:
+        from . import p5_pairs as PP
+        if len(_P5) > 16:
+            _P5.clear()
+        gen = data_dir() / "runs" / "p5v1" / "gen-ba"
+        a = PP.attempt(gen, rid)
+        W = PP.load_world(a)
+        p = W["pose"]
+        summ = json.loads((a / "p5_summary.json").read_text())
+        tt = summ.get("t_trigger")
+        w = {"pose": np.c_[p.index.to_numpy(), p[["x", "y", "z", "yaw", "vx", "vy"]].to_numpy()].astype(np.float64),
+             "act_k": np.asarray(W["act"]["k"], np.int64), "act_id": W["act"]["id"], "act_xyz": W["act"]["xyz"], "act_yaw": W["act"]["yaw"],
+             "act_v": W["act"]["v"], "kinds": W["kinds"], "route": pd.read_json(a / "route.json")[["x", "y", "z"]].to_numpy(np.float32),
+             "k_trig": int(round(tt / 0.05)) if tt is not None else -1}
+        hz = [int(h) for h in W["hazards"]]
+        px = {int(k): P5_PX_EQ * max([float(v) for kk, v in (r.px or {}).items() if int(kk) in hz] + [0.0])
+              for k, r in W["frames"].iterrows() if isinstance(r.px, dict)}
+        f2k = dict(zip(W["frames"].frame.astype(int), W["frames"].index.astype(int)))
+        _P5[rid] = (w, hz, lambda t, px=px: px.get(int(t), 0.0), _town(json.loads((a / "meta.json").read_text())["town"]), f2k)
+    return _P5[rid]
 
 
 # ================================================================ nuScenes
@@ -792,6 +820,10 @@ class SlotContext:
             return carla_slot(w, int(r.tick), "Town12", hz, px, HFOV["sim"], CAM_X["sim"])
         if self.domain == "nus":
             return nus_slot(r.key, r.token)
+        if self.domain == "p5":
+            rid, frame = str(r["name"]).rsplit("-", 1)
+            w, hz, px, town, f2k = p5_world(rid)
+            return carla_slot(w, f2k[int(frame)], town, hz, px, HFOV["p5"], CAM_X["p5"])
         if self.domain == "off":
             o = self._off.loc[uid]
             return nav_slot(R("maps", "nav", "v1_navtrain", f"{o.token}.npz"), float(o.e), float(o.psi), self.cam_x(o.token))
