@@ -981,6 +981,22 @@ def nav_cam_x() -> dict:
     return {"tokens": len(t), "cam_x": t.cam_x.describe().to_dict()}
 
 
+def score_all(workers: int | None = None) -> dict:
+    """Every domain whose inputs exist (C's teacher; off: extracted NAVSIM geometry), then V3 / V4 / V6 and the sanity."""
+    out = {}
+    for dom in ("simC", "simK", "nus", "off", "p5"):
+        if not R("teacher", f"{dom}.npz").exists():
+            out[dom] = "no teacher"
+            continue
+        if dom == "off" and not any(R("maps", "nav", "v1_navtrain").glob("*.npz")):
+            out[dom] = "no NAVSIM geometry"
+            continue
+        out[dom] = score_domain(dom, workers=workers)
+    out["checks"] = check_v346()
+    out["sanity"] = sanity()
+    return out
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
@@ -992,7 +1008,7 @@ def main():
     fn = {"points": lambda: route_points(a.workers or cores()), "maps-carla": lambda: maps_carla(a.towns),
           "nus-scenes": lambda: nus_scenes(), "maps-nus": lambda: maps_nus(), "v1": lambda: check_v1(a.workers),
           "v2": lambda: check_v2(a.workers), "v346": check_v346, "sanity": sanity, "nav-cam": nav_cam_x,
-          "score": lambda: score_domain(a.domain, workers=a.workers)}[a.step]
+          "score": lambda: score_domain(a.domain, workers=a.workers), "score-all": lambda: score_all(a.workers)}[a.step]
     print(json.dumps(fn(), indent=1, default=str)[:4000])
 
 
