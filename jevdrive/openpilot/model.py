@@ -40,7 +40,10 @@ _preload_libs()
 
 
 def prepare_onnx(name: str) -> Path:
-    """Path of an onnxruntime-loadable copy: tinygrad's custom Contiguous op (a no-op layout hint) -> Identity."""
+    """Path of an onnxruntime-loadable copy: tinygrad's custom Contiguous op (a no-op layout hint) -> Identity.
+    A `name` with a path separator is an already loadable ONNX file (an adapted model, scripts/op_l_onnx.py)."""
+    if os.sep in str(name):
+        return Path(name)
     src = MODELS_DIR / f"{name}.onnx"
     m = onnx.load(str(src), load_external_data=False)
     custom = [n for n in m.graph.node if n.domain]
@@ -118,7 +121,7 @@ class OPModel:
             so.add_session_config_entry("session.intra_op.allow_spinning", "0")
         self.taps = list(taps or [])
         path = tap_onnx(name, self.taps) if self.taps else prepare_onnx(name)
-        cache = cache or MODELS_DIR / "trt_cache" / (f"{name}-{backend}" + (f"-{path.stem.rsplit('.', 1)[-1]}" if self.taps else ""))
+        cache = cache or MODELS_DIR / "trt_cache" / (f"{Path(name).stem}-{backend}" + (f"-{path.stem.rsplit('.', 1)[-1]}" if self.taps else ""))
         self.sess = ort.InferenceSession(str(path), so, providers=providers(backend, cache))
         self.tap_values = {}
         meta = self.sess.get_modelmeta().custom_metadata_map
@@ -126,6 +129,7 @@ class OPModel:
         self.inputs = {i.name: (tuple(i.shape), np.float16 if "float16" in i.type else
                                 np.uint8 if "uint8" in i.type else np.float32) for i in self.sess.get_inputs()}
         self.queued = "new_img" in self.inputs
+        self.extra = {}                                # extra ONNX inputs held between steps (adapted model: intent_bias)
         assert not (context_rate and self.queued), "queued models keep a 20 Hz queue inside the ONNX"
         self.skip = 1 if context_rate else FRAME_SKIP
         self.device = backend not in ("cpu", "cuda")  # inputs/outputs/states bound on the GPU
@@ -184,7 +188,10 @@ class OPModel:
         tc = np.asarray(traffic, np.float32).reshape(1, 2)
         at = np.asarray(action_t, np.float32).reshape(1, 2)
         if self.queued:
-            return {"new_img": img2, "desire": pulse, "traffic_convention": tc, "action_t": at}
+            f = {"new_img": img2, "desire": pulse, "traffic_convention": tc, "action_t": at}
+            if "intent_bias" in self.inputs:           # adapted model with the intent adapter: E[intent], zeros = no intent
+                f["intent_bias"] = np.asarray(self.extra.get("intent_bias", np.zeros(self.inputs["intent_bias"][0])), np.float16)
+            return f
         self.img_q = np.concatenate([self.img_q[:, 1:], img2[:, None]], 1)
         self.desire_q = np.concatenate([self.desire_q[1:], pulse[None]])
         self.feat_q = np.concatenate([self.feat_q[1:], self.prev_feat[None]])

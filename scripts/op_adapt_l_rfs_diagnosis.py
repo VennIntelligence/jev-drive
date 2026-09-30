@@ -202,7 +202,7 @@ def run(a):
             member = np.tile(d["slice"][s], 3)
             on, off = member & ~co3 & ca, member & co3 & ~ca
             on_any |= on; off_any |= off; inS |= member
-            flipinfo[(xs, s)] = dict(on=on, off=off, unch=member & ~on & ~off)
+            flipinfo[(xs, s)] = dict(on=on, off=off, unch=member & ~on & ~off, both=member & co3 & ca, neither=member & ~co3 & ~ca)
         flipinfo[(xs, "S")] = dict(on=on_any, off=off_any & ~on_any, unch=inS & ~on_any & ~off_any)
         for s in SLICES + ["S", "all"]:
             mem = np.tile(d["slice"][s], 3)
@@ -210,8 +210,9 @@ def run(a):
             q2.append({**base, "flip": "all", **br.stat(dR, mem), "seed_means": json.dumps([float(dR[seed_of == k][d["slice"][s]].mean()) if d["slice"][s].any() else None for k in range(3)])})
             if (xs, s) in flipinfo:
                 fl = flipinfo[(xs, s)]
-                for k in ("on", "off", "unch"):
-                    q2.append({**base, "flip": k, **br.stat(dR, fl[k])})
+                for k in ("on", "off", "unch", "both", "neither"):
+                    if k in fl:
+                        q2.append({**base, "flip": k, **br.stat(dR, fl[k])})
                 for k in ("on", "off"):
                     q2.append({**base, "flip": f"{k}_minus_unch", "n": int(fl[k].sum()), "seg": np.nan, **(br.diff(dR, fl[k], dR, fl["unch"]) if fl[k].any() and fl["unch"].any() else dict(mean=np.nan, lo=np.nan, hi=np.nan))})
         dF = np.mean([sc[m] - sc["O"] for m in SEEDS], 0)
@@ -223,6 +224,21 @@ def run(a):
         chk[f"decomp_sum_minus_total_x{xs}"] = float(sum(r["contribution_lb"] for r in contrib[-len(PRIO) - 1:-1]) - contrib[-1]["contribution_lb"])
     q2 = pd.DataFrame(q2)
     q2.to_csv(OUT / "q2_response.csv", index=False)
+    # capture rates of O and main on the rater frames of each imitated slice
+    cr = [{"slice": s, "n": int(d["slice"][s].sum()), "O": float(d["cap"]["O"][CAPS[s]][d["slice"][s]].mean()),
+           **{m: float(d["cap"][m][CAPS[s]][d["slice"][s]].mean()) for m in SEEDS}} for s in CAPS]
+    pd.DataFrame(cr).to_csv(OUT / "q2_capture_rates.csv", index=False)
+    # category x exclusive label: frames, O RFS, gap, seed-mean change (raw and x1.06)
+    dF0 = np.mean([res[1.0][1][m] - res[1.0][1]["O"] for m in SEEDS], 0)
+    dF1 = np.mean([res[1.06][1][m] - res[1.06][1]["O"] for m in SEEDS], 0)
+    cl = []
+    for c in cats:
+        for s in PRIO + ["ALL"]:
+            m = (d["cat"] == c) & ((d["label"] == s) if s != "ALL" else True)
+            if m.any():
+                cl.append({"category": c, "label": s, "frames": int(m.sum()), "rfs_orig": float(raw_sc["O"][m].mean()), "gap_mean": float(gap[m].mean()),
+                           "delta_raw": float(dF0[m].mean()), "delta_x106": float(dF1[m].mean()), "contrib_raw_lb": float((w[m] * dF0[m]).sum()), "contrib_x106_lb": float((w[m] * dF1[m]).sum())})
+    pd.DataFrame(cl).to_csv(OUT / "q2_category_label.csv", index=False)
     pd.DataFrame(contrib).to_csv(OUT / "q2_contribution.csv", index=False)
     # total delta with CI (frame-level, seed-mean, leaderboard-weighted point estimate; CI by category-stratified cluster resample)
     # ================= Q3 logged future vs raters

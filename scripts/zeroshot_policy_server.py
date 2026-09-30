@@ -129,7 +129,7 @@ class OpenpilotModel:
         # serves every connection by swapping the host queues. small / Cinque keep their queues inside the ONNX on the
         # GPU and step at 20 Hz; each connection gets its own session (TensorRT engine from the cache, ~2.3 GB).
         self.context_rate = a.model == "lebowski"
-        self.make = lambda: OPModel(a.model, a.backend, context_rate=self.context_rate)  # noqa: E731
+        self.make = lambda: OPModel(getattr(a, "onnx", "") or a.model, a.backend, context_rate=self.context_rate)  # noqa: E731
         self.model = self.make()
         # small / Cinque: sessions are created once, up front (--pool, one per CARLA worker), and handed out per
         # connection; building one takes ~30 s and doing it per route was where the server twice died (2026-09-25)
@@ -251,6 +251,8 @@ def parse_args():
                    "1.28 m seed noise floor (todos/2026-09-24-alpamayo-smoke)")
     p.add_argument("--pool", type=int, default=1, help="openpilot small / Cinque: sessions built at start-up")
     p.add_argument("--backend", default="trt", help="openpilot: onnxruntime backend (jevdrive/openpilot/model.py)")
+    p.add_argument("--onnx", default="", help="openpilot: serve this (adapted) ONNX file instead of the model's stock one")
+    p.add_argument("--no-twin", action="store_true", help="op_arb_server: no desire-free twin session per connection")
     return p.parse_args()
 
 

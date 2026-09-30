@@ -38,29 +38,37 @@ def softmax(x, axis=-1):
 
 class ArbModel(ZP.OpenpilotModel):
     def __init__(self, a):
-        a.pool = 2 * a.pool                       # a twin session per connection
+        self.twin = not getattr(a, "no_twin", False)
+        a.pool = (2 if self.twin else 1) * a.pool   # a twin session per connection (none with --no-twin)
         self._warm = []
+        self.E = None                             # adapted model: intent adapter table (4, 32, 512), next to the ONNX
+        if getattr(a, "onnx", ""):
+            e = Path(a.onnx).with_suffix(".E.npy")
+            self.E = np.load(e).astype(np.float16) if e.exists() else None
         super().__init__(a)                       # its warm-up takes a state from new_state(None) and drops it
         self.free += self._warm
 
     def new_state(self, state=None):
+        keys = ("model", "twin") if self.twin else ("model",)
         if state and "model" in state:
-            for k in ("model", "twin"):
+            for k in keys:
                 state[k].reset()
             return state
         take = lambda: self.free.pop() if self.free else self.make()  # noqa: E731
-        m, t = take(), take()
-        m.reset()
-        t.reset()
+        ss = {k: take() for k in keys}
+        for m in ss.values():
+            m.reset()
         if state is None:
-            self._warm = [m, t]
-        return {"model": m, "twin": t}
+            self._warm = list(ss.values())
+        return ss
 
     def release(self, state):
         if state:
             self.free += [state[k] for k in ("model", "twin") if k in state]
 
     def plan(self, state, meta, prep):
+        if self.E is not None:                           # intent adapter input of this step: 0 unknown, 1 straight, 2 left, 3 right
+            state["model"].extra = {"intent_bias": self.E[int(meta.get("intent", 0))][None]}
         info, out = super().plan(state, meta, prep)      # steps state["model"] with the route desire
         m = state["model"]
         raw = m.last_raw
