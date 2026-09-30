@@ -593,3 +593,29 @@ def offset_frames(entry: dict, e: float, psi: float):
     F = np.concatenate([np.zeros((1, 2, 6, 128, 256), np.uint8), np.stack(frames)])
     pk = np.array(list(pairs), np.int64) + 1
     return F[pk[:, 0]], F[pk[:, 1]], np.array(ctx, np.int32), m.coverage
+
+
+def main():
+    """python -m jevdrive.op_adapt_r2_data <step> ... (CPU steps; GPU passes are scripts/op_adapt_r2_cache.py)."""
+    import sys
+    import time
+    steps = {"splits": make_splits, "simlab": sim_labels, "sim": index_sim, "nus": index_nus, "wodval": labels_wod_val,
+             "wod": index_wod, "nav": index_nav, "p5": index_p5, "offtab": offset_table}
+    for s in sys.argv[1:]:
+        t = time.time()
+        r = steps[s]()
+        d = r[0] if isinstance(r, tuple) else r
+        if isinstance(d, pd.DataFrame):
+            msg = f"{s}: {len(d)} rows"
+            if "split" in d:
+                msg += f", split {d.split.value_counts().to_dict()}"
+            for c in ("labeled", "ped_corr", "vis", "normal"):
+                if c in d:
+                    msg += f", {c} {int(d[c].sum())}"
+            print(msg, f"({time.time() - t:.0f} s)", flush=True)
+        if isinstance(r, tuple) and len(r) > 1 and isinstance(r[1], pd.DataFrame):
+            print(f"  second table: {len(r[1])} rows", flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -258,7 +258,7 @@ def main():
     ap.add_argument("--pairs", default="", help="sim: comma-separated pair names (pilot)")
     ap.add_argument("--identity", action="store_true", help="off: e = psi = 0 on the first train samples (equivalence check)")
     a = ap.parse_args()
-    log = RunLog("op_adapt_r2", f"cache-{a.what}" + (f"-{a.domain}" if a.what == "teacher" else "") + (f"-s{a.shard}" if a.nshard > 1 else ""))
+    log = RunLog("op_adapt_r2", "logs", f"C-{a.what}" + (f"-{a.domain}" if a.what == "teacher" else "") + (f"-s{a.shard}" if a.nshard > 1 else ""))
     log.event("start", args=vars(a))
     net = lambda: A.load("cinque", torch.float16).cuda()  # noqa: E731  (after the workers fork)
     {"sim": run_sim, "off": run_off, "teacher": run_teacher, "merge": lambda a_, l_, n_: run_merge(a_, l_)}[a.what](a, log, net)
