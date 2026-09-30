@@ -1,0 +1,14 @@
+{
+ "F_COSMOS": 1024.2140985862723,
+ "area_scale_p5": 3.384239171882298,
+ "cosmos_fill_mask_over_box": 0.4729093900643709,
+ "cosmos_mask_over_h2": 0.24256837098692033,
+ "cosmos_pairs": 2004,
+ "wod_mask_over_box_raw_median": 0.5402684499939713,
+ "wod_f_cam_median": 1112.8289148838248,
+ "wod_cams": {
+  "front": 1605
+ },
+ "p5_rows_with_dist": 4252,
+ "p5_rows": 4414
+}
