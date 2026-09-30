@@ -497,7 +497,7 @@ v3 的三处改动用户 2026-09-29 批准，具体参数（24 000 / 1 000 个�
   - GPU：sim 缓存 + teacher 两卡各 13 min、偏离帧两卡各 13 min（其中 3 min 是为控制共卡显存降 batch 后重启前的部分）、nuScenes teacher 2 min、检查约 10 min，合计约 1.0 GPU·h 占卡时间（两个大项都受 CPU 解码限制，GPU 实际算力约 0.3 GPU·h），在第 7 节缓存项 2.8 GPU·h 之内（含 D 包的 YOLO）。
 - 2026-09-30 15:xx（S 包，v4 修订前的记录）：V1 = 0.901 < 0.95，不过；诊断与按类数值见「v4 改动」节（0.954 为事后描述）。main 批准唯一一次修订 (b)：NC 加入 CARLA 静态几何与停放车真实框；实现之后在同样 2 814 个 run、同一 0.95 线、不排除任何 run 上重跑一次，不过就停。
 - 2026-09-30 13:3x C 包，§4.4「行人区换回 null」的输入（lead 追加的任务）：Cosmos test 的 x⁺ slot（C、K 各 4 290 行）按 gt.npz mask 膨胀 24 px 换成 x⁻ 像素；P5 行人 scope 4 414 个观测帧同样处理。执行偏离：P5 的分割视图没有落盘，mask 改用「同 tick 的 x⁺ / x⁻ 帧差 ∩ walker hazard 的 3D 框投影」重建（抽查 px_eq ≥ 500 的帧 100% 非空），9 个 context 帧都换。单元检查：mask 外像素改动 0、mask 内全等于 x⁻（`runs/op_adapt_r2/checks/C_swap.json`）。
-- 2026-09-30 13:52（D 包）**R0 判定：Z 不开**（`runs/op_adapt_r2/r0/verdict.json`，小表 [results/op-adapt-r2/r0/](../research/results/op-adapt-r2/r0/)）。零训练，GPU 约 0.25 GPU·h（与检测共卡），Cosmos 全部 2 004 对（E1 读数行 25 169 个 slot × 4 路）+ P5 行人 scope 4 414 对。
+- 2026-09-30 13:52（D 包）**R0 判定：Z 不开**（`runs/op_adapt_r2/r0/verdict.json`，小表 [results/op-adapt-r2/r0/](../research/results/op-adapt-r2/r0/)）。零训练；GPU 计算约 22 万次 trunk 前向（按第一轮吞吐 < 0.2 GPU·h），wall 约 55 min，由 CPU 上的 mp4 解码限速（与检测共卡 GPU 1），Cosmos 全部 2 004 对（E1 读数行 25 169 个 slot × 4 路）+ P5 行人 scope 4 414 对。
   开 Z 的登记线是「任一集合 < 500 档池化 stage 3 AUC ≥ 0.65 且对 road 帧的配对 Δ CI 下界 > 0」，三个集合都不过，而且 tele 帧在每一档都**更差**：
 
   | 集合 | < 500 档 n / 组 | road 池化 | tele 池化 | Δ [95% CI] | 框内 cell：road → tele |
