@@ -1,0 +1,174 @@
+{
+ "curves": [
+  {
+   "arm": "A",
+   "n_forks": 1047,
+   "eval_forks": 556,
+   "finite": true,
+   "val_first": 0.35726177260119896,
+   "val_best": 0.2732318664202188,
+   "val_last": 0.2732318664202188,
+   "best_step": 8000,
+   "train_last": 0.17894917726516724,
+   "fit_s": 55.21233034133911,
+   "monotone_to_best": true,
+   "n_steps": 8000
+  },
+  {
+   "arm": "B",
+   "n_forks": 1047,
+   "eval_forks": 556,
+   "finite": true,
+   "val_first": 0.29796475274963685,
+   "val_best": 0.2089154135342734,
+   "val_last": 0.2089154135342734,
+   "best_step": 8000,
+   "train_last": 0.14283253252506256,
+   "fit_s": 55.985795736312866,
+   "monotone_to_best": true,
+   "n_steps": 8000
+  },
+  {
+   "arm": "Bh",
+   "n_forks": 1047,
+   "eval_forks": 556,
+   "finite": true,
+   "val_first": 0.2718633967708088,
+   "val_best": 0.1935369305178088,
+   "val_last": 0.1935369305178088,
+   "best_step": 8000,
+   "train_last": 0.12750571966171265,
+   "fit_s": 57.466837882995605,
+   "monotone_to_best": true,
+   "n_steps": 8000
+  },
+  {
+   "arm": "Bhc",
+   "n_forks": 1047,
+   "eval_forks": 556,
+   "finite": true,
+   "val_first": 0.2862151684099661,
+   "val_best": 0.20108235803729527,
+   "val_last": 0.20108235803729527,
+   "best_step": 8000,
+   "train_last": 0.13962821662425995,
+   "fit_s": 74.28545951843262,
+   "monotone_to_best": true,
+   "n_steps": 8000
+  },
+  {
+   "arm": "W",
+   "n_forks": 1047,
+   "eval_forks": 556,
+   "finite": true,
+   "val_first": 0.3166658477088727,
+   "val_best": 0.27709025846708807,
+   "val_last": 0.2807808159250732,
+   "best_step": 4000,
+   "train_last": 0.06812537461519241,
+   "fit_s": 71.08708667755127,
+   "monotone_to_best": true,
+   "n_steps": 8000
+  }
+ ],
+ "c1": [
+  {
+   "arm": "A",
+   "seeds": 1,
+   "n_fork_points": 417,
+   "brake_gt_hold": 0.8081534772182254,
+   "median_abs_err_m": 3.656917956791723,
+   "agree_all": 0.5631768953068592,
+   "agree_S": 0.7835616438356164,
+   "auc_S": 0.7123930067382991,
+   "auc_S_slow": 0.7087612323491657,
+   "auc_S_nudge": 0.5890295358649789,
+   "n_S": 365,
+   "n_still": 76,
+   "n_left": 289,
+   "routes_S": 35,
+   "auc_S_per_seed": [
+    0.712
+   ],
+   "auc_S_minus_W": NaN,
+   "agree_S_minus_W": NaN,
+   "brake_gt_hold_minus_W": NaN
+  },
+  {
+   "arm": "B",
+   "seeds": 1,
+   "n_fork_points": 417,
+   "brake_gt_hold": 0.86810551558753,
+   "median_abs_err_m": 3.3233261108398438,
+   "agree_all": 0.555956678700361,
+   "agree_S": 0.7589041095890411,
+   "auc_S": 0.6780185758513932,
+   "auc_S_slow": 0.6789955070603337,
+   "auc_S_nudge": 0.5625075346594333,
+   "n_S": 365,
+   "n_still": 76,
+   "n_left": 289,
+   "routes_S": 35,
+   "auc_S_per_seed": [
+    0.678
+   ],
+   "auc_S_minus_W": 0.05855035512657081,
+   "agree_S_minus_W": 0.2465753424657534,
+   "brake_gt_hold_minus_W": 0.8081534772182255
+  },
+  {
+   "arm": "W",
+   "seeds": 1,
+   "n_fork_points": 417,
+   "brake_gt_hold": 0.05995203836930456,
+   "median_abs_err_m": 9.87920699002682,
+   "agree_all": 0.6859205776173285,
+   "agree_S": 0.5123287671232877,
+   "auc_S": 0.6194682207248224,
+   "auc_S_slow": 0.568196405648267,
+   "auc_S_nudge": 0.5370705244122966,
+   "n_S": 365,
+   "n_still": 76,
+   "n_left": 289,
+   "routes_S": 35,
+   "auc_S_per_seed": [
+    0.619
+   ],
+   "auc_S_minus_W": NaN,
+   "agree_S_minus_W": NaN,
+   "brake_gt_hold_minus_W": NaN
+  }
+ ],
+ "c2c3_cg": {
+  "B": {
+   "n_rows": 4581,
+   "n_unsafe": 1215,
+   "auc_learn": 0.8559733133807208,
+   "auc_q": 0.8259820426487093,
+   "pairwise": 0.8815303430079156,
+   "H": 0.3417721518987343,
+   "n_solvable": 79,
+   "U_op": 0.4182692307692308,
+   "U_sel": 0.28846153846153844,
+   "U_or": 0.038461538461538464,
+   "n_plus": 208
+  },
+  "A": {
+   "n_rows": 4581,
+   "n_unsafe": 1215,
+   "auc_learn": 0.8642631837620944,
+   "auc_q": 0.8137631458619112,
+   "pairwise": 0.8901055408970976,
+   "H": 0.3037974683544305,
+   "n_solvable": 79,
+   "U_op": 0.4182692307692308,
+   "U_sel": 0.30288461538461536,
+   "U_or": 0.038461538461538464,
+   "n_plus": 208
+  }
+ },
+ "eval_x_plus_forks": {
+  "in_forks_table": 247,
+  "with_anchor_in_preds": 210
+ }
+}

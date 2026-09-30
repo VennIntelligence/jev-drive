@@ -23,7 +23,7 @@ RES, FIGS = REPO / "research/results/wl2/results", REPO / "research/figs"
 P = S.PALETTE
 COLOR = {"vrep": S.BASELINE, "A": P["sky_blue"], "B": P["blue"], "W": P["vermillion"], "Bs": P["green"], "T": P["purple"],
          "Bh": P["orange"], "Bhc": P["yellow"], "Ax": P["sky_blue"], "Bx": P["blue"]}
-NAME = {"vrep": "v1-rep", "A": "A", "B": "B", "W": "worig", "Bs": "B-same", "T": "T", "Bh": "B-holdout", "Bhc": "B-holdout-combo"}
+NAME = {"vrep": "v1-rep", "A": "A", "B": "B", "W": "worig", "Bs": "B-same", "T": "T", "Bh": "B-holdout", "Bhc": "B-holdout-combo", "Ax": "A (xfit)", "Bx": "B (xfit)"}
 
 
 def ci(x):
