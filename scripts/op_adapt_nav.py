@@ -163,17 +163,17 @@ def _v5_one(args):
         pm = S.PolyMap(drv, lanes, lane_route, inter)
         rows = []
         for name, tr in trajs.items():
-            st = np.stack([pdm_states, get_trajectory_as_array(tr, d["ps"], t0)])
-            sim = d["sim"].simulate_proposals(st, ego)
-            res = d["scorer"].score_proposals(sim, mc.observation, mc.centerline, mc.route_lane_ids, mc.drivable_area_map)[1]
-            dev = float(res["driving_direction_compliance"].iloc[0])
-            s = sim[1]
-            hd = s[:, 2]
-            c = s[:, :2] + S.EGO["nav"].rc * np.stack([np.cos(hd), np.sin(hd)], -1)
-            g = {"c": c[None]}
-            ar = pm.areas(np.zeros((1, len(c), 4, 2)), c[None], s[None, :, :2], hd[None])
-            ours, D = S.ddc(g, ar)
-            rows.append({"token": token, "traj": name, "devkit": dev, "ours": float(ours[0]), "D": float(D[0])})
+            ref = get_trajectory_as_array(tr, d["ps"], t0)
+            both = {"ref": np.stack([pdm_states, ref]), "sim": d["sim"].simulate_proposals(np.stack([pdm_states, ref]), ego)}
+            for how, st in both.items():
+                res = d["scorer"].score_proposals(st, mc.observation, mc.centerline, mc.route_lane_ids, mc.drivable_area_map)[1]
+                s = st[1]
+                hd = s[:, 2]
+                c = s[:, :2] + S.EGO["nav"].rc * np.stack([np.cos(hd), np.sin(hd)], -1)
+                ar = pm.areas(np.zeros((1, len(c), 4, 2)), c[None], s[None, :, :2], hd[None])
+                ours, D = S.ddc({"c": c[None]}, ar)
+                rows.append({"token": token, "traj": name, "states": how, "devkit": float(res["driving_direction_compliance"].iloc[0]),
+                             "ours": float(ours[0]), "D": float(D[0]), "path_m": float(np.hypot(*np.diff(s[:, :2], axis=0).T).sum())})
         return rows
     except Exception as e:  # noqa: BLE001
         return [{"token": token, "error": repr(e)[:300]}]
@@ -194,12 +194,15 @@ def v5(cache: str, workers: int, limit: int | None = None):
     (R / "checks").mkdir(parents=True, exist_ok=True)
     t.to_parquet(R / "checks" / "V5a.parquet", index=False)
     ok = t[t["error"].isna()] if "error" in t else t
-    agree = float((ok.devkit == ok.ours).mean())
+    agree = float((ok[ok.states == "ref"].devkit == ok[ok.states == "ref"].ours).mean())
     res = {"check": "V5a", "line": "our DDC == devkit raw DDC (three levels) on >= 99 % of (token, trajectory)", "cache": cache,
            "tokens": len(jobs), "rows": int(len(ok)), "errors": int(len(t) - len(ok)), "agreement": agree, "pass": agree >= 0.99,
-           "by_traj": {k: {"n": int(len(g)), "agree": float((g.devkit == g.ours).mean()), "devkit_lt1": float((g.devkit < 1).mean()),
-                           "ours_lt1": float((g.ours < 1).mean())} for k, g in ok.groupby("traj")},
-           "confusion": ok.groupby(["devkit", "ours"]).size().rename("n").reset_index().to_dict("records"), "wall_s": time.time() - t0}
+           "by_traj": {f"{a}/{b}": {"n": int(len(g)), "agree": float((g.devkit == g.ours).mean()), "devkit_1": float((g.devkit == 1).mean()),
+                                    "devkit_05": float((g.devkit == 0.5).mean()), "median_path_m": float(g.path_m.median())}
+                       for (a, b), g in ok.groupby(["states", "traj"])},
+           "confusion": ok.groupby(["states", "devkit", "ours"]).size().rename("n").reset_index().to_dict("records"), "wall_s": time.time() - t0,
+           "note": "states=ref: the trajectory's own interpolated states (S_jev does no LQR tracking; the registered comparison); "
+                   "states=sim: after the devkit PDMSimulator, which in this devkit build runs away on many tokens (km-long paths)"}
     (R / "checks" / "V5a.json").write_text(json.dumps(res, indent=1))
     print(json.dumps(res, indent=1))
 
