@@ -3998,3 +3998,15 @@ ghost test 本身够不够灵敏，这一轮没有独立验证过，只能说四
 
 **状态**：**待定**（1 次 5 seed 集成、1 个 held-out 选择、只有 Cinque；6 次 navtest）。**会推翻本条的证据**：另一组 4 万 token 或另一 seed 集成下 N3 − N2 的 CI 跨零。
 
+
+## 73. NAVSIM 的 OpenBLAS bug 审计：09-28 之后的所有 NAVSIM 分数与全部 metric cache 都在 `OPENBLAS_CORETYPE=Haswell` 下算出，没有一个数字需要改；两个 navsim env 现在自带该变量（**已确认**，CPU only，全量扫描 + 4 个配置逐位重打分）
+
+细节与全部表格：[navsim-openblas-audit.md](navsim-openblas-audit.md)。
+
+1. **bug 属实但不新**：numpy 1.23.4 的 OpenBLAS 在 Sapphire Rapids 上自动选 Cooperlake，inv / pinv / SVD 都错（pinv 对 lstsq 差 3.5，正确 4.5e-16），Haswell 与 SkylakeX 正确。同一 CPU 型号 09-24 就撞到过并修掉（第 37 条附带发现），不是 09-28 换机引入的；「09-28 之后的分数需要核对」的说法据此改为已核对。
+2. **没有 flag-less 的 run**：85 个 09-28 之后的 eval run 里无一个有坏掉的签名（无 flag 时 300 个 token 上 PDMS = 0.00、DAC = 0.0，对照有 flag 的 85.95 / 96.0）；启动脚本、活进程 `/proc/<pid>/environ` 也都有。
+3. **重打分逐位相同**：`none` 与 N3 在 navtest（84.18、91.59）与 navhard（官方 33.33、33.28，均匀权重 33.43、31.20）上，12 146 与 5 912 个 token 的全部子分列一个都没变。这是 bug 检查，不计入 navsim-raise 的 navtest 次数（仍是 6 次）。
+4. **cache 不用重建**：`v1_navtrain`（106 630）、`v1_navtrain_oplb`、`v1_e6sub`、`v1_navtest`、`v2_navtest`、`v2_navhard_two_stage` 全部 pkl 的 PDM-Closed 参考轨迹最大速度 15–19 m/s，无发散；navtest / navhard / e6sub 建于 09-24、09-25。navtrain 上 4 个不一致 token 不是这个 bug：加 flag 重建，其中 3 个与 `v1_navtrain` 逐位一致而与 `oplb` 不同，另 1 个（差 0.089 m）相反，是建库之间近平局提案的不确定性（推测；0.13%）。
+5. **持久修复**：`envs/navsim1`、`envs/navsim2` 的 site-packages 各加 `sitecustomize.py`（`setdefault` Haswell）与 `etc/conda/activate.d`，干净 shell 验证；`setup_navsim_devkit.sh` 与 `docs/navsim.md` 同步。
+
+**状态**：**已确认**。**会推翻本条的证据**：某个 09-28 之后的 NAVSIM run 在重打分下与存档不同（本次四个配置全部逐位相同，其余 run 只有间接证据：无零分签名）。

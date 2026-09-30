@@ -25,5 +25,12 @@ for t in "${targets[@]}"; do
   VIRTUAL_ENV=$env uv pip install -q -r "$env/requirements.navsim.txt"
   VIRTUAL_ENV=$env uv pip install -q --no-deps -e "$tp/nuplan-devkit"
   VIRTUAL_ENV=$env uv pip install -q --no-deps -e "$src"
+  # numpy 1.23.4's bundled OpenBLAS picks a broken kernel on the Sapphire Rapids CPUs (see docs/navsim.md): force Haswell in
+  # every process of this env, before numpy loads. An explicit OPENBLAS_CORETYPE from the caller still wins.
+  sp=$("$env/bin/python" -c "import site; print(site.getsitepackages()[0])")
+  printf '%s\n' 'import os' 'os.environ.setdefault("OPENBLAS_CORETYPE", "Haswell")' > "$sp/sitecustomize.py"
+  mkdir -p "$env/etc/conda/activate.d" "$env/etc/conda/deactivate.d"
+  echo 'export OPENBLAS_CORETYPE=${OPENBLAS_CORETYPE:-Haswell}' > "$env/etc/conda/activate.d/openblas_coretype.sh"
+  echo 'unset OPENBLAS_CORETYPE' > "$env/etc/conda/deactivate.d/openblas_coretype.sh"
   "$env/bin/python" -c "import navsim, nuplan, torch; print('$t ok', navsim.__file__, torch.__version__)"
 done

@@ -45,6 +45,10 @@ every score comes out plausible-looking but meaningless (constant velocity got E
 run the devkit with `OPENBLAS_CORETYPE=Haswell` (and `OPENBLAS_NUM_THREADS=1` inside ray workers);
 `scripts/navsim_zs_score.sh` sets both and refuses to run if a 40x40 inverse is off by more than 1e-8.
 Newer numpy (1.24+, e.g. `envs/jevdrive`, `envs/carla`, the model venvs) is not affected.
+Since 2026-09-30 `envs/navsim1` and `envs/navsim2` set the variable themselves: a `sitecustomize.py` in each env's
+site-packages does `os.environ.setdefault("OPENBLAS_CORETYPE", "Haswell")` before numpy loads (an explicit value from
+the caller still wins), and `etc/conda/activate.d/openblas_coretype.sh` does the same on `conda activate`.
+`scripts/setup_navsim_devkit.sh` recreates both. Audit of every score and cache: [research/navsim-openblas-audit.md](../research/navsim-openblas-audit.md).
 
 ## How to (re)download
 
