@@ -28,6 +28,15 @@ EST_VRAM_R1 = (8.3, 32)                              # round-1 bench: B fp16 pea
 
 
 # ---------------------------------------------------------------- GPU packer
+def parse_cores(spec: str) -> list:
+    """'48-95,100' -> [48, ..., 95, 100]."""
+    out = []
+    for part in str(spec).split(","):
+        a, _, b = part.partition("-")
+        out += list(range(int(a), int(b or a) + 1))
+    return out
+
+
 def gpu_used(gpus) -> dict:
     out = subprocess.check_output(["nvidia-smi", "--query-gpu=index,memory.used", "--format=csv,noheader,nounits"]).decode()
     u = {int(a): int(b) / 1024 for a, b in (l.split(",") for l in out.strip().splitlines())}
@@ -38,9 +47,16 @@ class Packer:
     """Launch jobs [{tag, argv, vram_gb}] on the cards: a job starts on the card with the most room when
     (card used now) + (reserved by our jobs started < 3 min ago that have not reached their peak) + vram_gb <= cap."""
 
-    def __init__(self, gpus, cap_gb, cores, lane: Path, log):
-        self.gpus, self.cap, self.cores, self.lane, self.log = gpus, cap_gb, cores, lane, log
+    def __init__(self, gpus, cap_gb, cores, lane: Path, log, per_card=2):
+        self.gpus, self.cap, self.lane, self.log = gpus, cap_gb, lane, log
         self.running = {}
+        # every job gets its own core slice: the range is split into per_card x cards slices (a run is GPU-bound, so two
+        # runs per card is the packing that fits 2 x ~32 GB in 84 GB; the CPU side is dev eval bursts and 4 batch threads)
+        allc = sorted(os.sched_getaffinity(0) & set(parse_cores(cores))) or sorted(os.sched_getaffinity(0))
+        n = max(1, min(len(allc) // 8, per_card * len(gpus)))
+        k = len(allc) // n
+        self.slices = [allc[i * k:(i + 1) * k] for i in range(n)]
+        self.free = list(range(n))
 
     def room(self):
         used = gpu_used(self.gpus)
@@ -56,18 +72,24 @@ class Packer:
             for j in list(pending):
                 room = self.room()
                 g = max(room, key=room.get)
-                if room[g] >= j["vram_gb"]:
-                    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), OMP_NUM_THREADS="2")
+                if room[g] >= j["vram_gb"] and self.free:
+                    sl = self.free.pop(0)
+                    cs = ",".join(map(str, self.slices[sl]))
+                    nc = len(self.slices[sl])
+                    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), OMP_NUM_THREADS="2", OPENBLAS_CORETYPE="Haswell",
+                               R2_SCORE_WORKERS=str(max(1, nc // 3)), R2_GATHER_THREADS=str(max(1, nc // 3)))
                     lf = open(self.lane / "logs" / f"{j['tag']}.log", "a")
-                    p = subprocess.Popen(["taskset", "-c", self.cores, *j["argv"]], env=env, stdout=lf, stderr=subprocess.STDOUT)
-                    self.running[j["tag"]] = j | {"p": p, "gpu": g, "t0": time.time()}
+                    p = subprocess.Popen(["taskset", "-c", cs, *j["argv"]], env=env, stdout=lf, stderr=subprocess.STDOUT)
+                    self.running[j["tag"]] = j | {"p": p, "gpu": g, "t0": time.time(), "slice": sl}
                     pending.remove(j)
-                    self.log(f"start {j['tag']} on GPU {g} (room {room[g]:.1f} GB, needs {j['vram_gb']:.1f}), pid {p.pid}")
+                    self.log(f"start {j['tag']} on GPU {g} cores {self.slices[sl][0]}-{self.slices[sl][-1]} "
+                             f"(room {room[g]:.1f} GB, needs {j['vram_gb']:.1f}), pid {p.pid}")
                     time.sleep(20)
             for tag, j in list(self.running.items()):
                 rc = j["p"].poll()
                 if rc is not None:
                     done[tag] = {"rc": rc, "gpu": j["gpu"], "wall_s": time.time() - j["t0"]}
+                    self.free.append(j["slice"])
                     del self.running[tag]
                     self.log(f"end {tag}: rc {rc}, {done[tag]['wall_s'] / 60:.1f} min")
             write(self.lane / "STATUS", {"phase": "training", "pending": [j["tag"] for j in pending],

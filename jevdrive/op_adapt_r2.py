@@ -18,6 +18,8 @@ tmp/2026-09-30-op-adapt-r2-build.md.
 from __future__ import annotations
 
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
@@ -930,11 +932,22 @@ def forward_rows(model: Model, d: Domain, rows, dev, bs: int = 256, det_fn=None,
     ps = np.arange(sl["plan"].start + 495, sl["plan"].start + 990)
     acc = {}
     rows = np.asarray(rows, np.int64)
-    for i in range(0, len(rows), bs):
+
+    def load(i):                                 # CPU side of one batch (memmap gather, detection tokens); pure, so any order
         r = rows[i:i + bs]
         x, v = d.gather(r)
         tok = det_fn(d.name, d.ctx[r]) if det_fn else (None, None)
-        o = model(torch.from_numpy(x).to(dev), torch.from_numpy(v).to(dev), torch.from_numpy(d.tc[r]).to(dev),
+        return r, torch.from_numpy(x).pin_memory(), torch.from_numpy(v), tok
+    nth = int(os.environ.get("R2_GATHER_THREADS", 1))
+    ex = ThreadPoolExecutor(nth) if nth > 1 else None
+    starts = list(range(0, len(rows), bs))
+    futs = {}
+    for j, i in enumerate(starts):
+        if ex is not None:
+            for jj in range(j, min(j + nth + 1, len(starts))):          # keep nth + 1 batches in flight
+                futs.setdefault(jj, ex.submit(load, starts[jj]))
+        r, x, v, tok = futs.pop(j).result() if ex is not None else load(i)
+        o = model(x.to(dev, non_blocking=True), v.to(dev), torch.from_numpy(d.tc[r]).to(dev),
                   *[torch.as_tensor(t).to(dev) if t is not None else None for t in tok])
         out = o["outputs"].float()
         res = {"plan": out[:, pi].view(-1, 33, 15), "plan_logstd": out[:, ps].view(-1, 33, 15), "lead": out[:, lead],
@@ -943,6 +956,8 @@ def forward_rows(model: Model, d: Domain, rows, dev, bs: int = 256, det_fn=None,
             res |= {"temporal": o["select_4"].float(), "vision": o["mean"].float()}
         for k, t in res.items():
             acc.setdefault(k, []).append(t.cpu().numpy())
+    if ex is not None:
+        ex.shutdown()
     return {k: np.concatenate(v) for k, v in acc.items()}
 
 
@@ -976,6 +991,7 @@ def score_api():
 
     def safe(*a, **k):
         try:
+            k.setdefault("workers", int(os.environ.get("R2_SCORE_WORKERS", 1)))
             return f(*a, **k)
         except Exception as e:  # noqa: BLE001
             import logging

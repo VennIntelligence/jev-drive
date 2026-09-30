@@ -547,11 +547,17 @@ def load_scores(domain: str, root=None) -> dict:
         return {k: z[k] for k in z.files}
 
 
+_CTX = {}                                     # (domain, root) -> (SlotContext, prog_norm map), per process
+_POOLS = {}
+
+
 def _score_chunk(args):
     domain, uids, plans, frame, root = args
     from .op_adapt_score_data import SlotContext
-    ctx = SlotContext(domain, root)
-    norm = dict(zip(*ctx.scores(("uid", "prog_norm"))))
+    if (domain, root) not in _CTX:
+        c = SlotContext(domain, root)
+        _CTX[domain, root] = (c, dict(zip(*c.scores(("uid", "prog_norm")))))
+    ctx, norm = _CTX[domain, root]
     rows = {k: [] for k in ("S", "P", "prog", "NC", "DAC", "DDC", "TTC", "C", "NC_all", "TTC_all", "S_all")}
     for uid, pl in zip(np.asarray(uids), plans):
         s = ctx.slot(int(uid))
@@ -578,6 +584,7 @@ def score_plans(domain: str, uids, plans, frame: str = "op", root=None, workers:
         import multiprocessing as mp
         n = min(workers * 4, len(uids) // 50 or 1)
         bounds = np.linspace(0, len(uids), n + 1).astype(int)
-        with mp.get_context("fork").Pool(workers) as pool:
-            parts = pool.map(_score_chunk, [(domain, uids[a:b], plans[a:b], frame, root) for a, b in zip(bounds[:-1], bounds[1:])], chunksize=1)
+        if workers not in _POOLS:                # persistent pool from a clean fork server (the caller may run threads / CUDA)
+            _POOLS[workers] = mp.get_context("forkserver").Pool(workers)
+        parts = _POOLS[workers].map(_score_chunk, [(domain, uids[a:b], plans[a:b], frame, root) for a, b in zip(bounds[:-1], bounds[1:])], chunksize=1)
     return {k: np.asarray([x for p in parts for x in p[k]], np.float32) for k in parts[0]}
