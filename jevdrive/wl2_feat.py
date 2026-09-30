@@ -216,14 +216,14 @@ def _os(a):
     return op_stream(run_rows(rid, adir), src)
 
 
-def op_loop(workers: int, per_cycle: int, limit: int | None):
+def op_loop(workers: int, per_cycle: int, limit: int | None, shard: tuple[int, int] = (0, 1)):
     from multiprocessing import Pool
     from .p5_openpilot import carla_calib
-    scratch = data_dir() / "processed" / f"{WL.NAME}_gen_feat"
-    scratch.mkdir(exist_ok=True)
+    scratch = data_dir() / "processed" / f"{WL.NAME}_gen_feat" / f"shard{shard[0]}of{shard[1]}"
+    scratch.mkdir(parents=True, exist_ok=True)
     link = scratch / "op_streams_vis"
     if not link.exists():
-        link.symlink_to(Path("..") / f"{WL.NAME}_gen" / "op_streams_vis")
+        link.symlink_to(Path("..") / ".." / f"{WL.NAME}_gen" / "op_streams_vis")
     outd = pdir("op_streams_vis", "cinque")
     outd.mkdir(parents=True, exist_ok=True)
     opy = data_dir() / "envs" / "openpilot" / "bin" / "python"
@@ -232,7 +232,8 @@ def op_loop(workers: int, per_cycle: int, limit: int | None):
         end = gen_finished()
         r = D.finished(OUT)
         have = {f.stem for f in outd.glob("wl_*.npz") if not f.name.endswith(".tmp.npz")}
-        r = r[~("wl_" + r.route_id).isin(have)].sort_values("route_id").reset_index(drop=True)
+        r = r[~("wl_" + r.route_id).isin(have)].sort_values("route_id")
+        r = r[r.route_id.astype(np.int64) % shard[1] == shard[0]].reset_index(drop=True)
         if len(r) == 0 and end:
             break
         if len(r) == 0 or (len(r) < 100 and not end):
@@ -246,7 +247,7 @@ def op_loop(workers: int, per_cycle: int, limit: int | None):
         (scratch / "op_plan.json").write_text(json.dumps({"calib": calib, "streams": streams}))
         (scratch / "keys.txt").write_text("\n".join(s["key"] for s in streams))
         t0 = time.time()
-        env = {**os.environ, "P5_SET": f"{WL.NAME}_gen_feat", "OMP_NUM_THREADS": "2"}
+        env = {**os.environ, "P5_SET": f"{WL.NAME}_gen_feat/shard{shard[0]}of{shard[1]}", "OMP_NUM_THREADS": "2"}
         rc = subprocess.call([str(opy), "scripts/p5_openpilot.py", "--models", "cinque", "--arrays", "temporal", "--out-sub",
                               "op_streams_vis", "--workers", str(workers), "--keys", f"@{scratch / 'keys.txt'}"],
                              env=env, cwd=Path(__file__).resolve().parents[1])
@@ -310,7 +311,8 @@ def main():
     ap.add_argument("step", choices=("vjepa", "op", "assemble", "check"))
     ap.add_argument("--batch", type=int, default=64)
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--per-cycle", type=int, default=500)
+    ap.add_argument("--per-cycle", type=int, default=1500)
+    ap.add_argument("--shard", default="0/1", help="op: runs with route_id %% n == i")
     ap.add_argument("--limit-rows", type=int, help="vjepa: one chunk of about this many rows, then stop (staged launch)")
     ap.add_argument("--limit-streams", type=int, help="op: one cycle of this many streams, then stop")
     a = ap.parse_args()
@@ -319,7 +321,7 @@ def main():
         vjepa_loop(a.batch, a.workers, a.limit_rows, rl)
         rl.close()
     elif a.step == "op":
-        op_loop(a.workers, a.per_cycle, a.limit_streams)
+        op_loop(a.workers, a.per_cycle, a.limit_streams, tuple(map(int, a.shard.split('/'))))
     else:
         print(json.dumps({"assemble": assemble, "check": check}[a.step](), indent=1))
 
