@@ -1,0 +1,6 @@
+id,mechanism,rule,supported,numbers,bound_lb_units
+H1,headroom in imitated slices too small,H_S < gap to top or H_S/H_all < 0.15,False,H_S=0.596 (gap to top 0.166); share=0.377,0.5963179076469209
+H3,gains real but flip frames too few,"R2a (pooled S on-rows CI>0, mean>=0.3) and E_on<0.07",False,"R2a per slice {'start': False, 'stop': False, 'turn_onset': False, 'S': False}; E_on=0.0173; realised sum over on-rows=0.0179",0.017257976635110764
+H2,logged future is not rater-preferred,"CI lower bound of (logged - O) on S <= 0, or logged mean < O mean",True,"S: logged 7.156 vs O 7.030; diff +0.126 [-0.417, +0.623]",0.225742493892052
+H4,longitudinal / lateral mismatch,"on-rows d_lng and d_lat of opposite sign, each |mean| >= 0.1",False,"on-rows d_total +0.696, lng-only -0.037, lat-only -0.164, interaction +0.897",0.015329702074813384
+H5,capture flip does not enter the trust region,share out->in among on-rows < 0.5,True,"out->in 0.106, in->out 0.128, stay in 0.489, stay out 0.277",0.011181803108855335
