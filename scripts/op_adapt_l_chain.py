@@ -250,6 +250,7 @@ def main():
     ap.add_argument("--cores", default="8-74")
     ap.add_argument("--per-card", type=int, default=2)
     ap.add_argument("--steps", type=int, default=0, help="override the steps of every job (tests)")
+    ap.add_argument("--seed2", action="store_true", help="also queue seed 2 of the single-seed ablations (a second pass after the queue)")
     a = ap.parse_args()
     (C / "ERROR").unlink(missing_ok=True)
     (C / "DONE").unlink(missing_ok=True)
@@ -295,6 +296,8 @@ def main():
     wave2 = [J("main", 1), J("main", 2), J("tr_ad_dw3"), J("noint", 0), J("only_start"), J("only_stop"), J("only_turn")] + [J(x) for x in dws] + \
         [J("nocontrast"), J("stayheavy"), J("noint", 1), J("noint", 2)] + \
         [J(x, 1) for x in ["only_start", "only_stop", "only_turn"] + dws + ["nocontrast", "stayheavy"]] + [J("long", 0)]
+    if a.seed2:
+        wave2 += [J(x, 2) for x in ["only_start", "only_stop", "only_turn"] + dws + ["nocontrast", "stayheavy"]]
     run_phase("wave2 (main seeds, intent, per-slice, distillation, contrast)", wave2, slots)
     run_phase("wave3 (navtest PDMS)", [{"fn": navtest("8-40")}], slots[:1])
     STATE["phase"] = "end"
