@@ -497,10 +497,12 @@ def main():
     from .runlog import RunLog
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("step", choices=("prep-outcomes", "prep-tok", "train", "vrep"))
-    ap.add_argument("--arms", nargs="+", default=["B"], choices=tuple(SEEDS))
+    ap.add_argument("--arms", nargs="+", default=["B"], choices=tuple(SEEDS) + ("vrep",))
     ap.add_argument("--seeds", nargs="+", type=int, default=[0])
     ap.add_argument("--steps", type=int, default=0, help="smoke run: fewer steps, written under runs/wl2/smoke")
     a = ap.parse_args()
+    if a.arms == ["vrep"]:
+        a.step = "vrep"
     if a.step == "prep-outcomes":
         print(json.dumps(prep_outcomes(min(24, n_cpus())), indent=1))
     elif a.step == "prep-tok":
