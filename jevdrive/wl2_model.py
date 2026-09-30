@@ -488,7 +488,7 @@ def vrep(U: Universe, seed: int, rl) -> dict:
 
 
 def latest(arm: str, seed: int) -> Path | None:
-    fs = sorted((R2 / "model" / arm / f"seed{seed}").glob("*/model.pt"))
+    fs = sorted((R2 / "model" / arm / f"seed{seed}").glob("*/preds.npz" if arm == "vrep" else "*/model.pt"))
     return fs[-1].parent if fs else None
 
 
