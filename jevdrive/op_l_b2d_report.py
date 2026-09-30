@@ -144,7 +144,10 @@ def unit(tag: str, arm: str, seed: int):
             "v_mean": round(u.v_mean.mean(), 2), "viol": int(u[BAD].sum().sum()), "blocked": int(u.blocked.sum()),
             "attempts_note": "", "t": pd.Timestamp.now().strftime("%F %T")}
     q = RES / "units.csv"
-    pd.concat([pd.read_csv(q) if q.exists() else pd.DataFrame(), pd.DataFrame([line])]).to_csv(q, index=False)
+    prev = pd.read_csv(q) if q.exists() else pd.DataFrame()
+    if len(prev):
+        prev = prev[~((prev.tag == tag) & (prev.arm == arm) & (prev.seed == seed))]
+    pd.concat([prev, pd.DataFrame([line])]).to_csv(q, index=False)
     print("unit", line)
 
 
@@ -370,6 +373,20 @@ def check(stage: str):
                        f"{a.off_lane.sum() + a.route_dev.sum()} vs {d.off_lane.sum() + d.route_dev.sum()}"))
         res.append(chk("L-Safe: blocked <= drive + 2", a.blocked.sum() <= d.blocked.sum() + 2, f"{a.blocked.sum()} vs {d.blocked.sum()}"))
         res.append(chk("speed ratio lmain / drive in [0.5, 2]", 0.5 <= a.v_mean.mean() / max(d.v_mean.mean(), 1e-6) <= 2.0, f"{a.v_mean.mean():.2f} / {d.v_mean.mean():.2f}"))
+        pl = {}
+        for k, (t, r) in {"lmain": ("lm", "lmain"), "drive": ("ld", "drive")}.items():
+            parts = [plans(ad) for ad in attempts(ROOT / "arms" / f"{t}-{r}-s0").values()]
+            pl[k] = pd.concat([x for x in parts if len(x)], ignore_index=True)
+        fr = {k: v[(~v.warm) & (v.v > 2) & (v.c_lead_gap.isna() | (v.c_lead_gap > 30)) & (v.c_ped_gap.isna() | (v.c_ped_gap > 30)) & ~(v.c_tl.isin([1, 2]) & (v.c_tl_dist < 40))]
+              for k, v in pl.items()}
+        rs = {k: float(v.vp5.median()) for k, v in fr.items()}
+        res.append(chk("C5 plan v(5 s) ratio to drive in [0.8, 1.25] on free road (all routes)", 0.8 <= rs["lmain"] / max(rs["drive"], 1e-6) <= 1.25, str({k: round(v, 2) for k, v in rs.items()})))
+        y2 = float(np.median([abs(p[1][1]) for p in fr["lmain"].op_xy]))
+        res.append(chk("C5 |y@2 s| median <= 0.6 m (all routes)", y2 <= 0.6, f"{y2:.3f}"))
+        ln = {k: float(np.median(np.minimum(*np.array(v[~v.warm].lane.tolist())[:, 1:3].T))) for k, v in pl.items()}
+        res.append(chk("C5 no NaN; inner lane prob median >= 0.5x drive's (D1)", not any(np.isnan(np.asarray(v.vplan.tolist(), float)).any() for v in pl.values()) and ln["lmain"] >= 0.5 * ln["drive"], str(ln)))
+        ph = {k: float(((v.lp0 > 0.5) & v.c_lead_gap.isna())[~v.warm].mean()) for k, v in pl.items()}
+        res.append(chk("C5 phantom lead rate <= 2x drive (+0.02)", ph["lmain"] <= 2 * ph["drive"] + 0.02, str({k: round(v, 3) for k, v in ph.items()})))
     print("ALL PASS" if all(res) else "CHECKLIST FAILED")
     return all(res)
 

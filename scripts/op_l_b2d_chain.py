@@ -67,13 +67,28 @@ class Chain:
         self.cards = [int(x) for x in a.cards.split(",")]
         self.lock = threading.Lock()
         self.units: dict[str, Unit] = {}
-        self.cur_model = {g: None for g in self.cards}
+        self.slots = [(g, k) for g in self.cards for k in range(a.slots)]      # a slot = one openpilot server + its CARLA workers on a card
+        self.cur_model = {sl: None for sl in self.slots}
         self.stop = False
         self.fatal = None
-        cpus = a.cpus.split(";")
-        self.cpus = dict(zip(self.cards, cpus))
+        self.card_cpus = dict(zip(self.cards, a.cpus.split(";")))
+        self.cpus = {}
+        for g in self.cards:                                  # a card's core list split evenly over its slots
+            cores = self.cores(self.card_cpus[g])
+            n = len(cores) // a.slots
+            for k in range(a.slots):
+                part = cores[k * n:(k + 1) * n if k < a.slots - 1 else len(cores)]
+                self.cpus[(g, k)] = f"{part[0]}-{part[-1]}"
         ROOT.mkdir(parents=True, exist_ok=True)
         AD.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def cores(spec):
+        r = []
+        for part in spec.split(","):
+            lo, _, hi = part.partition("-")
+            r += list(range(int(lo), int(hi or lo) + 1))
+        return r
 
     # ---------------------------------------------------------------- plan
     def add(self, u):
@@ -136,6 +151,7 @@ class Chain:
         self.event("error", reason=why)
 
     def ready(self, card):
+        """card is a slot (gpu, k)."""
         with self.lock:
             cand = [u for u in self.units.values() if u.state == "new" and all(self.units[d].state == "done" for d in u.deps)]
             if not cand:
@@ -146,13 +162,14 @@ class Chain:
             self.cur_model[card] = u.model
             return u
 
-    def env_for(self, u, card):
+    def env_for(self, u, slot):
         model, desire, args = ARMS.get(u.arm, ("base", "true", R1))
         env = dict(os.environ)
-        idx0 = self.a.idx0 + 12 * self.cards.index(card)
-        env.update(GPU=str(card), IDX0=str(idx0), WORKERS=str(1 if u.ids else self.a.workers), CPUS=self.cpus[card], SEEDS=str(u.seed),
+        g, k = slot
+        idx0 = self.a.idx0 + 12 * self.cards.index(g) + (12 // self.a.slots) * k
+        env.update(GPU=str(g), IDX0=str(idx0), WORKERS=str(1 if u.ids else self.a.workers), CPUS=self.cpus[slot], SEEDS=str(u.seed),
                    ARMS=u.arm, LAT_EXEC="curv", RESUME_S="5", KEEP_SRV="1", SRV_NO_TWIN="1", DESIRE=desire, DRIVE_ARGS=args,
-                   OP_ARB_DIR=str(ROOT / f"card{card}"), OP_ARB_ARMS=str(AD), OPENBLAS_CORETYPE="Haswell")
+                   OP_ARB_DIR=str(ROOT / f"card{g}" if self.a.slots == 1 else ROOT / f"card{g}s{k}"), OP_ARB_ARMS=str(AD), OPENBLAS_CORETYPE="Haswell")
         if u.model != "base":
             env["SRV_ONNX"] = str(ONNX / f"{u.model}.onnx")
         else:
@@ -170,9 +187,9 @@ class Chain:
         if u.arm == "dbaseslow":
             self.prep_slow(u)
         t0 = time.time()
-        self.event("unit_start", unit=u.id, card=card, arm=u.arm, seed=u.seed, model=u.model)
-        self.log.info(f"[card {card}] start {u.id} ({u.model}, workers {self.env_for(u, card)['WORKERS']})")
-        self.status(f"running: " + ", ".join(f"{x.id}@{x.card}" for x in self.units.values() if x.state == "run"))
+        self.event("unit_start", unit=u.id, card=list(card), arm=u.arm, seed=u.seed, model=u.model)
+        self.log.info(f"[slot {card}] start {u.id} ({u.model}, workers {self.env_for(u, card)['WORKERS']})")
+        self.status(f"running: " + ", ".join(f"{x.id}@{x.card[0]}.{x.card[1]}" for x in self.units.values() if x.state == "run"))
         for attempt in (1, 2):
             u.tries = attempt
             arm = u.arm
@@ -187,17 +204,17 @@ class Chain:
             n = len(glob.glob(str(d / "done" / "*.json")))
             if rc == 0 and (d / "DONE").exists() and n == self.n_routes(u):
                 break
-            self.log.info(f"[card {card}] {u.id} attempt {attempt}: rc {rc}, DONE {(d / 'DONE').exists()}, routes {n}/{self.n_routes(u)}")
+            self.log.info(f"[slot {card}] {u.id} attempt {attempt}: rc {rc}, DONE {(d / 'DONE').exists()}, routes {n}/{self.n_routes(u)}")
         else:
-            self.fail(f"unit {u.id} failed twice (rc {rc}); see {ROOT}/unit-{u.id}.log and {ROOT}/card{card}/log.txt")
+            self.fail(f"unit {u.id} failed twice (rc {rc}); see {ROOT}/unit-{u.id}.log and the slot's log.txt")
             return
         wall = (time.time() - t0) / 60
         self.report_unit(u, arm)
         with self.lock:
             u.state = "done"
             self.after(u, arm)
-        self.log.info(f"[card {card}] done {u.id} in {wall:.1f} min")
-        self.event("unit_end", unit=u.id, card=card, wall_min=round(wall, 1))
+        self.log.info(f"[slot {card}] done {u.id} in {wall:.1f} min")
+        self.event("unit_end", unit=u.id, card=list(card), wall_min=round(wall, 1))
         self.log.scalar("unit_wall_min", wall, len([x for x in self.units.values() if x.state == "done"]))
 
     # ---------------------------------------------------------------- pace-matched controls
@@ -261,12 +278,7 @@ class Chain:
                     out[int(f[0][3:])] = (sum(v) - v[3] - v[4], sum(v))
             return out
 
-        def cores(spec):
-            r = []
-            for part in spec.split(","):
-                lo, _, hi = part.partition("-")
-                r += list(range(int(lo), int(hi or lo) + 1))
-            return r
+        cores = self.cores
         prev = cpu_busy()
         path = ROOT / "util.csv"
         new = not path.exists()
@@ -285,7 +297,7 @@ class Chain:
                 except Exception:  # noqa: BLE001
                     continue
                 for c in self.cards:
-                    cs = cores(self.cpus[c])
+                    cs = cores(self.card_cpus[c])
                     busy = sum((cur[i][0] - prev[i][0]) / max(cur[i][1] - prev[i][1], 1) for i in cs if i in cur and i in prev)
                     w.writerow([int(time.time()), c, g.get(c, (0, 0))[0], g.get(c, (0, 0))[1], round(busy, 2), ncar])
                 prev = cur
@@ -315,14 +327,14 @@ class Chain:
         except FileNotFoundError:
             pass
         threading.Thread(target=self.sampler, daemon=True).start()
-        ts = [threading.Thread(target=self.card_loop, args=(c,)) for c in self.cards]
+        ts = [threading.Thread(target=self.card_loop, args=(sl,)) for sl in self.slots]
         for t in ts:
             t.start()
         for t in ts:
             t.join()
         self.stop = True
-        for c in self.cards:                                 # stop only the openpilot servers this chain started (recorded PIDs)
-            p = ROOT / f"card{c}" / "srv" / "op.pid"
+        for g, k in self.slots:                              # stop only the openpilot servers this chain started (recorded PIDs)
+            p = ROOT / (f"card{g}" if self.a.slots == 1 else f"card{g}s{k}") / "srv" / "op.pid"
             if p.exists():
                 try:
                     pid = int(p.read_text())
@@ -343,7 +355,8 @@ class Chain:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--plan", required=True, choices=["stage1", "stage2", "full", "heldout"])
-    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--workers", type=int, default=6, help="CARLA workers per slot")
+    ap.add_argument("--slots", type=int, default=1, help="slots (an openpilot server + its workers) per card; each takes an even share of the card's cores and index block")
     ap.add_argument("--cards", default="0,1,2")
     ap.add_argument("--cpus", default="8-29;30-51;52-73", help="core list per card, ';' separated")
     ap.add_argument("--idx0", type=int, default=200)
