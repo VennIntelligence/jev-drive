@@ -9,6 +9,8 @@ j, j - c, .., j - 8c (zero hidden where < 0, like a stream started from a zero s
 
   wodtrain  WOD train streams of processed/op_adapt/wod_train_plan.json (even frame numbers only): slots = those
             frames, pair (f-2, f), c = 1 (labels: wod_train_labels.parquet)
+  wodval    WOD-E2E val, every sequence, even frame numbers, one stream per contiguous run of frames (op-adapt L: the full
+            held-out set; streams from wod_val_plan.json written by scripts/op_adapt_l_prep.py), same protocol as wodtrain
   navtrain  NAVSIM navtrain on its 2 Hz sample-and-hold protocol, one file per log: the unique image pairs of the
             tokens' 9-slot contexts (t = -1.6 .. 0 at 0.2 s, each the latest 2 Hz frame; before -1.5 s a zero hidden
             state / zero image), `ctx` (n_tokens, 9) = slot index per context position (-1 = zero hidden state)
@@ -126,6 +128,14 @@ def items(a):
         calib = json.loads((Z.root() / "op_calib.json").read_text()) | json.loads((DB.root() / "op_calib_trainval.json").read_text())
         sts = json.loads((D.root() / "wod_train_plan.json").read_text())["streams"]
         return sts, wod_train_job, WZ._init, (plan["spans"], calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))
+    if a.dataset == "wodval":
+        import wod_zeroshot_openpilot as WZ
+        from jevdrive import drive_backbones as DB
+        from jevdrive import wod_zeroshot as Z
+        plan = json.loads((DB.root() / DB.plan_name("trainval")).read_text())
+        calib = json.loads((Z.root() / "op_calib.json").read_text()) | json.loads((DB.root() / "op_calib_trainval.json").read_text())
+        sts = json.loads((D.root() / "wod_val_plan.json").read_text())["streams"]
+        return sts, wod_train_job, WZ._init, (plan["spans"], calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))
     if a.dataset == "navtrain":
         from collections import defaultdict
         import pandas as pd
@@ -162,7 +172,7 @@ def items(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("dataset", choices=("nusc", "wod", "p5", "wodtrain", "navtrain"))
+    ap.add_argument("dataset", choices=("nusc", "wod", "p5", "wodtrain", "wodval", "navtrain"))
     ap.add_argument("--workers", type=int, default=24)
     ap.add_argument("--batch", type=int, default=64, help="image pairs per trunk forward (64: ~15 GB)")
     ap.add_argument("--out-sub", default="", help="write under processed/op_adapt/<out-sub> instead of <dataset> (pilots)")
