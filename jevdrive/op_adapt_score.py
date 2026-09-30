@@ -53,6 +53,7 @@ TTC_STEPS, STOP_V, AHEAD, BEHIND = (0, 3, 6, 9), 5e-3, math.radians(30), math.ra
 MAX_LON_ACC, MIN_LON_ACC, MAX_LAT_ACC = 2.40, -4.05, 4.89               # navsim pdm_comfort_metrics
 MAX_JERK, MAX_LON_JERK, MAX_YAW_ACC, MAX_YAW_RATE = 8.37, 4.13, 1.93, 0.95
 REJ_S = 3.0
+HEAD_V = 0.2                                               # heading held below this speed (the devkit LQR's stopping velocity)
 VEH, PED, CYC, STATIC = 0, 1, 2, 3
 RES, TILE = 0.2, 256
 TM = RES * TILE
@@ -142,10 +143,10 @@ def box_corners(c, h, hl, hw) -> np.ndarray:
 
 def rollout(p: np.ndarray, v0: float | np.ndarray | None = None) -> dict:
     """Ego states of rear-axle positions p (..., T, 2) on the 0.1 s grid: heading from the path tangent (held while the
-    car stands), speed from the arc length, acceleration, yaw rate and yaw acceleration."""
+    car moves slower than 0.2 m/s), speed from the arc length, acceleration, yaw rate and yaw acceleration."""
     p = np.asarray(p, float)
     g = np.gradient(p, DT, axis=-2)
-    mv = np.hypot(g[..., 0], g[..., 1]) > 1e-3
+    mv = np.hypot(g[..., 0], g[..., 1]) > HEAD_V         # standing jitter (a logged stop) must not turn the car around
     head = np.arctan2(g[..., 1], g[..., 0])
     idx = np.where(mv, np.arange(p.shape[-2]), 0)
     idx = np.maximum.accumulate(idx, axis=-1)
@@ -210,17 +211,18 @@ class TileMap:
     def load(cls, path) -> "TileMap":
         """<name>.npz, memory-mapped through an uncompressed sibling dir <name>/ (made on first use) so that pool
         workers share one copy in the page cache."""
+        import os
         import shutil
         from pathlib import Path
         path = Path(path)
         d = path.with_suffix("")
         if not (d / "head.npy").exists():
-            tmp = d.with_name(d.name + f".tmp{np.random.randint(1 << 30)}")
-            tmp.mkdir(parents=True)
-            with np.load(path) as z:
-                for k in ("ij", "flags", "lane", "head"):
-                    np.save(tmp / f"{k}.npy", z[k])
+            tmp = d.with_name(f"{d.name}.tmp{os.getpid()}_{np.random.randint(1 << 30)}")
             try:
+                tmp.mkdir(parents=True)
+                with np.load(path) as z:
+                    for k in ("ij", "flags", "lane", "head"):
+                        np.save(tmp / f"{k}.npy", z[k])
                 tmp.rename(d)
             except OSError:                                     # another worker won the race
                 shutil.rmtree(tmp, ignore_errors=True)
