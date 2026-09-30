@@ -38,6 +38,7 @@ cores() {         # CORES file, or every allowed core when the list is not valid
 }
 pause_check() {
   [[ -f $C/PAUSE ]] || return 0
+  [[ -s $C/PAUSE && $(<"$C/PAUSE") != "$1" ]] && return 0          # PAUSE holding a step name pauses only before that step
   echo paused > "$C/STATUS"; date +%F' '%T > "$C/READY_FOR_RESIZE"; ev pause "$1"
   log "PAUSE flag: stopped before $1, nothing of ours is running (READY_FOR_RESIZE written)"; exit 0
 }
