@@ -48,7 +48,7 @@ def main():
             ctr = pts[m].mean(0)
             sp.set_transform(carla.Transform(carla.Location(float(ctr[0]), float(ctr[1]), 50.0)))
             for _ in range(20):
-                w.wait_for_tick(10.0)
+                w.wait_for_tick(60.0)
             for o in w.get_environment_objects(carla.CityObjectLabel.Any):
                 if o.id in objs:
                     continue
