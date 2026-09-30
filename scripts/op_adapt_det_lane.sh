@@ -3,6 +3,7 @@
 # and the token files. One-shot and resumable (finished chunks / token files are skipped). Signals in R2/det/lane/:
 # STATUS (appended), DONE, ERROR.
 #   scripts/tmux_run.sh d-det scripts/op_adapt_det_lane.sh [gpus=1,2,3,4] [cores=108,109] [datasets...]
+#   WORKERS=n: loader processes per detector (default 1; sim decodes mp4 on the CPU and wants more)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 GPUS=(${1:-1,2,3,4}); GPUS=(${GPUS[@]//,/ }); CORES=${2:-108,109}
@@ -18,7 +19,7 @@ for d in "${DS[@]}"; do
   pids=()
   for i in "${!GPUS[@]}"; do
     CUDA_VISIBLE_DEVICES=${GPUS[$i]} taskset -c "$CORES" "$UL" scripts/op_adapt_det.py detect "$d" --part "$i/${#GPUS[@]}" \
-      --workers 1 > "$L/detect-$d-$i.log" 2>&1 &
+      --workers "${WORKERS:-1}" > "$L/detect-$d-$i.log" 2>&1 &
     pids+=($!)
   done
   rc=0; for p in "${pids[@]}"; do wait "$p" || rc=1; done
