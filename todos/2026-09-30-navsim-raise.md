@@ -1,6 +1,6 @@
 # NAVSIM 提分（N1 之后）：N1b 与后续各臂的预登记
 
-状态: done（2026-09-30 开，08:30 N3 完成后收尾；本节「共同规则」与「N1b」写于任何 N1b 拟合与分数之前，后续各臂各自的登记块写于该臂的 navtest 分数之前，块首注明写入时间）
+状态: N4 进行中（2026-09-30 开，08:30 N3 完成后收尾，N4 追加；本节「共同规则」与「N1b」写于任何 N1b 拟合与分数之前，后续各臂各自的登记块写于该臂的 navtest 分数之前，块首注明写入时间）
 主题: [../research/leaderboard-skill-pack.md](../research/leaderboard-skill-pack.md) 第 6.1 节（N1）；N1 预登记 [2026-09-29-n1-scorer.md](2026-09-29-n1-scorer.md)，decisions 第 64、68 条；navhard 缺口 [../research/navhard-deficit-breakdown.md](../research/navhard-deficit-breakdown.md)
 协调: op-adapt r2（[2026-09-29-op-adapt-r2-prereg.md](2026-09-29-op-adapt-r2-prereg.md)，改的是 openpilot 权重；本 lane 不改权重，只在冻结的 Cinque 之上做后端，不与 r2 争数据或读数）；
 导航 lane 的 GIMM 缓存（`runs/op_lb/lb_{navtest,navhard,n1train}`）只读；Cosmos G4（GPU 0–5）不碰；GPU 6 与 WL-2 共卡，本 lane ≤ 25 GB。
@@ -139,6 +139,21 @@ navhard（描述）：N2 = 31.29，仍比原生低（均匀权重 −3.00 [−4.
 更强的头让 navtest 涨 3.3 分，却没让 navhard 变好，与 N1 一样：打分头在偏离起点上没有读出能力，还会挑更快、更不一致的轨迹（EC 掉）。
 
 held-out 上 N2 配置的学习曲线（fold 0，3 个点，每点 5 seed）：拟合行 1/4、1/2、全部 = 90.51 / 91.33 / 92.64，每翻倍 +0.8 到 +1.3，比线性头（+0.4 到 +0.6）陡，且没有变平。N3 的登记预期（held-out +0.3 到 +1.0）按这条曲线看偏保守，不改登记。
+
+## 臂 N4：N3 配置扩到全部可用 navtrain 行（写于任何 N4 的数据与分数之前，09-30 晚）
+
+**这是 trick 臂，先说清楚。** 增益来自「用更多行更好地蒸馏 PDM scorer」，即 metric 对准，不是能力：N3 的平均 EP 已超过 human，navhard 上 N1–N3 从未比原生高。这是本 lane 第 7 次看 navtest，N3 的 +0.99 与 N4 的任何读数都是「7 次里挑出来的」，所以 Bonferroni 的 m 从 6 升到 7：报告里 N4 − N3、N4 − N1 都同时给未校正与 m = 7 的区间，并写明最好者是看过 7 次之后选的。
+
+- **配置（与 N3 完全相同，不重新调任何东西）**：MLP 2 × 2048（N3 选中的 hidden），GELU，dropout 0.1，AdamW lr 1e-3 wd 1e-4，60 epoch OneCycle，batch 512，5 个 seed 的 logit 平均，hold ×2 视图，22 个原生族槽，不带 alt 槽，权重网格 7 000 格，λ 网格（N1b）在 MLP 里不起作用。
+  每个 seed 的 epoch 与 (w, β) 仍在 held-out 上按 N3 同一程序选（属于拟合流程，不算调参）；hidden、槽、视图、alt 都不再比较。
+- **数据**：N3 的 59 968 行 + 新行。新行是 `tokens2` 同一个种子 20260930 的排列里、臂 S 已用的前 40 000 个之后的全部 token：stage one、有未来、在 `v1_navtrain` metric cache 里、不在 E6 的 2 万里、不在 N0 的选参集 T 里、**不来自 held-out 折的 log**。
+  **纠正先前的估计**：「全量 navtrain 约 10 万行、再 +4 万」不成立。navtrain 共 103 288 个 token，held-out 折的 log（约 20% 的 log）必须留出，否则 held-out 与 N3 不可比，所以可用的新行只有 24 120，取 64 的倍数 24 064，总训练行 84 032（fit 行约 80 000，N3 是 55 931）。规则不变：held-out 仍是 N1 的 fold 0，4 037 个 token，一个也不动；fold 1 作描述重复。
+- **管线（复用，不新建 metric cache）**：`v1_navtrain` cache 只读；GIMM 补帧（GPU 0 整卡，5 个 worker）→ Cinque `temporal` 与原生 plan → 1 024 anchor 的逐 anchor 子分（E6 同一 anchor 文件）+ 4 个原生槽子分 + FAM + FAM2 共 18 个槽子分，devkit 打不出分的 token 丢掉并记数。链是 `scripts/navsim_raise_n4.sh`。
+  **pilot 先行**：192 个 token 走完整条链，清单沿用臂 S：C1 两类标签覆盖 ≥ 95%；C2 原生 s = 1.00 平均 PDMS ∈ [75, 92]；C3 `temporal` 无 NaN / Inf，范数中位数对 `lb_n1train` 之比 ∈ [0.8, 1.25]；C4 逐 token 平均 anchor PDMS 与 E6 标签均值差 ≤ 5 分；C5 GIMM 期间峰值显存 ≤ 80 GB。任一不过就停。
+- **navtest 只打一次**（`sp_n4_navtest`）；navhard 一次（描述，`sp_n4_navhard`）。
+- **判读（写死）**：N4 − N3 配对 Δ（12 146 个 token，10 000 次 token bootstrap，`default_rng(1)`）的 95% CI 下界 > 0 →「更多数据有用」；CI 跨零 →「平，数据量在 6 万行后已饱和」；上界 < 0 →「差」。m = 7 的校正区间同时报，若只有未校正下界 > 0，写「未校正成立，校正后不成立」。另报 held-out 与 N3 的差、EP 超 human 的比例、五个子分、按 command、navhard 描述。
+- **预期（写于任何 N4 分数之前）**：训练行 fit 部分 ×1.43（约 0.52 个翻倍），MLP 每翻倍 +0.8 到 +1.3 且会变缓，held-out 对 N3（93.77）+0.3 到 +0.8；navtest 通常再打七折，对 N3 +0.2 到 +0.6，未校正 CI 下界 > 0 的把握约一半，m = 7 校正后下界 > 0 的把握约三成。navhard 不会因此变好。
+- 性质：trick（数据量 × PDM 蒸馏）。
 
 ## navtest 打分记录（每次打分都记，含不成立的）
 

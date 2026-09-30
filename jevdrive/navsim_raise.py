@@ -42,9 +42,10 @@ def run_dir(*sub) -> Path:
 
 # ---------------------------------------------------------------- scale-up token set (more navtrain rows)
 
-def tokens2(m: int):
+def tokens2(m: int, skip: int = 0, tag: str = "scale"):
     """Extra navtrain tokens for the scale-up arm, fixed order (seed 20260930): stage one with a future, a v1_navtrain
-    metric cache, not among E6's 20 000, not in N0's selection set T, and not from a log of N1's held-out fold."""
+    metric cache, not among E6's 20 000, not in N0's selection set T, and not from a log of N1's held-out fold.
+    skip / tag: N4 takes the next rows of the same permutation (skip = 40 000 rows arm S already used) into run dir `tag`."""
     import glob
     from . import elicit_e6 as E6
     tr = E6._navtrain(False)
@@ -57,16 +58,21 @@ def tokens2(m: int):
               glob.glob(str(data_dir() / "runs/navsim/metric_cache/v1_navtrain/*/*/*/metric_cache.pkl"))}
     bad = set(e6) | lane
     pool = [t for t, g in zip(tr["tokens"].tolist(), tr["log"].tolist()) if t not in bad and g not in hold_logs and t in cached]
-    pool = [pool[i] for i in np.random.default_rng(20260930).permutation(len(pool))][:m]
-    out = run_dir("scale") / "tokens.txt"
+    pool = [pool[i] for i in np.random.default_rng(20260930).permutation(len(pool))]
+    if skip:
+        used = (run_dir("scale") / "tokens.txt").read_text().split()
+        assert pool[:skip] == used[:skip], "permutation head differs from arm S's token list"
+        print(f"pool {len(pool)} tokens, arm S used {skip}, {len(pool) - skip} left")
+    pool = pool[skip:skip + m]
+    out = run_dir(tag) / "tokens.txt"
     out.write_text("\n".join(pool) + "\n")
     print(f"{len(pool)} tokens (pool before the cut: see log) -> {out}; held-out logs excluded: {len(hold_logs)}")
 
 
-def pilotcheck():
+def pilotcheck(tag: str = "scale", data: str = "lb_n2train"):
     """Arm S pilot checklist (todos/2026-09-30-navsim-raise.md): exit 1 if any item fails."""
-    R = run_dir("scale")
-    f = np.load(data_dir() / N1.FEAT / "lb_n2train_n192.npz")
+    R = run_dir(tag)
+    f = np.load(data_dir() / N1.FEAT / f"{data}_n192.npz")
     ref = np.load(data_dir() / N1.FEAT / f"lb_n1train_n{N}.npz")["temporal"][:2000]
     an, na = _chunks(R / "anchor_score_pilot"), _chunks(R / "native_score_pilot")
     toks = f["tokens"].tolist()
@@ -155,20 +161,20 @@ def _chunks(dirp: Path) -> dict:
     return ns
 
 
-def _add_scale(d: dict, m: int, extra: int = 0, alt: bool = False):
+def _add_scale(d: dict, m: int, extra: int = 0, alt: bool = False, tag: str = "scale", data: str = "lb_n2train"):
     """Append the scale-up rows (lb_n2train, first m tokens): features, E6-style anchor labels, native labels.
     None of them comes from a held-out log (tokens2), so fold 0 stays exactly N1's held-out set."""
     from . import elicit_e6 as E6
     from .skill_pack_n0 import stretch
-    f = np.load(data_dir() / N1.FEAT / f"lb_n2train_n{m}.npz")
+    f = np.load(data_dir() / N1.FEAT / f"{data}_n{m}.npz")
     toks = f["tokens"].tolist()
-    an, na = _chunks(run_dir("scale") / "anchor_score"), _chunks(run_dir("scale") / "native_score")
+    an, na = _chunks(run_dir(tag) / "anchor_score"), _chunks(run_dir(tag) / "native_score")
     srcs = [an, na]
     if extra:
-        fa = _chunks(run_dir("scale") / "fam_score")                     # FAM + FAM2 labels of the scale rows
+        fa = _chunks(run_dir(tag) / "fam_score")                     # FAM + FAM2 labels of the scale rows
         srcs.append(fa)
     if alt:
-        al = _chunks(run_dir("scale") / "alt_score")
+        al = _chunks(run_dir(tag) / "alt_score")
         srcs.append(al)
     keep = [i for i, t in enumerate(toks) if all(t in q for q in srcs)]   # tokens the devkit could score
     toks = [toks[i] for i in keep]
@@ -183,7 +189,7 @@ def _add_scale(d: dict, m: int, extra: int = 0, alt: bool = False):
         c.append(family(nat, fam_list(extra)))
         parts.append((fa, nf))
     if alt:
-        c.append(alt_cands(f"lb_n2train_n{m}", out="")[keep])
+        c.append(alt_cands(f"{data}_n{m}", out="")[keep])
         parts.append((al, None))
     c = np.concatenate(c, 1)
     sub = np.concatenate([np.stack([q[t][0][:k] for t in toks]) for q, k in parts], 1)
@@ -206,10 +212,10 @@ def _add_alt(d: dict):
     d["pdms"] = np.concatenate([d["pdms"], np.stack([ns[t][1] for t in toks])], 1)
 
 
-def prep(n: int = N, extra: int = 0, scale: int = 0, alt: bool = False) -> dict:
+def prep(n: int = N, extra: int = 0, scale: int = 0, alt: bool = False, scale2: int = 0) -> dict:
     """Training tensors exactly as skill_pack_n1.cmd_fit builds them (GIMM features, A0); extra = + FAM (1) or
     FAM + FAM2 (2) slots; alt = + the 8 forced-desire slots; scale = + the first `scale` scale-up tokens (their logs
-    are never held out, so the held-out rows stay N1's)."""
+    are never held out, so the held-out rows stay N1's); scale2 = + the first `scale2` N4 tokens (lb_n3train, run dir scale2)."""
     d = N1.load_train(n)
     if extra:
         _add_fam(d, extra)
@@ -217,6 +223,8 @@ def prep(n: int = N, extra: int = 0, scale: int = 0, alt: bool = False) -> dict:
         _add_alt(d)
     if scale:
         _add_scale(d, scale, extra, alt)
+    if scale2:
+        _add_scale(d, scale2, extra, alt, tag="scale2", data="lb_n3train")
     hold = np.zeros(len(d["tokens"]), bool)
     hold[:n] = H._group_folds(d["log"][:n], 5, seed=N1.SEED_HOLD) == 0                # N1's held-out rows, unchanged
     nat = d["native"]
@@ -318,7 +326,7 @@ def paired(a, b, rng_seed=1):
 def report(arm: str, looks: int = 0):
     import pandas as pd
     from .skill_pack_n0 import CMD, NAVFULL, V1, per_token
-    vs = ("sp_n1_navtest",) + (("sp_n1b_navtest",) if arm != "n1b" else ()) + ("sp_n0_navtest", "opi_navfull_gimm_g0.2-cinque__base")
+    vs = ("sp_n1_navtest",) + (("sp_n1b_navtest",) if arm != "n1b" else ()) + (("sp_n3_navtest", "sp_n2_navtest") if arm == "n4" else ()) + ("sp_n0_navtest", "opi_navfull_gimm_g0.2-cinque__base")
     me = per_token(f"v1_navtest_sp_{arm}_navtest")
     hum = per_token("v1_navtest_human")
     print(f"share of tokens with EP > human EP: {float((me['EP'] > hum['EP'].reindex(me.index)).mean()):.3f}")
@@ -713,13 +721,35 @@ def n3dev(noalt: bool = False):
     rl.close()
 
 
-def n3final():
+S2_ROWS = 24064          # N4: every navtrain row outside the held-out logs, E6's 20k, N0's set T and arm S's 40k (multiple of 64)
+
+
+def n4dev():
+    """N4 = N3's configuration on all navtrain rows outside the held-out logs. Nothing is re-tuned: MLP 2 x 2048, 5 seeds,
+    hold views, 22 native-family slots, no alt slots. Per-seed epochs and the (w, beta) grid are picked on fold 0 exactly
+    as in N3 (part of the fitting procedure); fold 1 is the description repeat."""
     from .runlog import RunLog
     H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
-    rl = RunLog("skill_pack", "raise", "n3final")
-    dev = json.loads((run_dir("n3") / "n3dev.json").read_text())["chosen"]
+    rl = RunLog("skill_pack", "raise", "n4dev")
+    lams = _lams()
+    p = prep(extra=2, scale=S_ROWS, scale2=S2_ROWS)
+    X = _with_views(p["X"], _views("train", p["d"]["tokens"]))
+    f = _folds_all(p)
+    r = {**_eval_cfg(p, X, ("mlp", 1, 2), np.flatnonzero(f != 0), np.flatnonzero(f == 0), lams, rl, hidden=2048), "alt": 0}
+    out = {"chosen": r, "n_rows": len(f), "n_fit_fold0": int((f != 0).sum())}
+    out["fold1_chosen"] = _eval_cfg(p, X, ("mlp", 1, 2), np.flatnonzero(f != 1), np.flatnonzero(f == 1), lams, rl, hidden=2048)
+    (run_dir("n4") / "n4dev.json").write_text(json.dumps(out, indent=1, default=float))
+    rl.log.info(f"N4 held-out {r['pdms_hold']:.3f} on {len(f)} rows")
+    rl.close()
+
+
+def n3final(arm: str = "n3"):
+    from .runlog import RunLog
+    H.DEV = "cuda" if torch.cuda.is_available() else "cpu"
+    rl = RunLog("skill_pack", "raise", f"{arm}final")
+    dev = json.loads((run_dir(arm) / f"{arm}dev.json").read_text())["chosen"]
     alt, hid, w, beta = bool(dev["alt"]), dev["hidden"], tuple(dev["weights"]), dev["beta"]
-    p = prep(extra=2, scale=S_ROWS, alt=alt)
+    p = prep(extra=2, scale=S_ROWS, alt=alt, scale2=S2_ROWS if arm == "n4" else 0)
     Vtr = _views("train", p["d"]["tokens"])
     X = _with_views(p["X"], Vtr)
     tests = {}
@@ -737,23 +767,26 @@ def n3final():
         t = tests[sp]
         s_ = N1.scores(lg, t["Dm"], w, beta, p["mask"]).argmax(1).cpu().numpy()
         pool = np.concatenate([np.broadcast_to(p["d"]["anchors"][None], (len(s_), K, 8, 3)), t["cands"]], 1)
-        np.savez(run_dir("n3") / f"{sp}_n3.npz", tokens=t["tokens"], poses=pool[np.arange(len(s_)), s_].astype(np.float32))
+        np.savez(run_dir(arm) / f"{sp}_{arm}.npz", tokens=t["tokens"], poses=pool[np.arange(len(s_)), s_].astype(np.float32))
         sel[f"{sp}_shares"] = {"anchor": float((s_ < K).mean()),
                                **{str(x): float((s_ == K + i).mean()) for i, x in enumerate(slots(2, alt))}}
         rl.log.info(f"{sp}: poses written")
-    (run_dir("n3") / "select.json").write_text(json.dumps(sel, indent=1, default=float))
+    (run_dir(arm) / "select.json").write_text(json.dumps(sel, indent=1, default=float))
     rl.close()
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final", "alt_cands", "altdev", "n3dev", "n3final"))
+    ap.add_argument("cmd", choices=("fit", "repro", "report", "explore", "tokens2", "pilotcheck", "n2dev", "n2final", "alt_cands", "altdev", "n3dev", "n3final", "n4dev", "n4final"))
     ap.add_argument("what", nargs="?")
     ap.add_argument("--arm", default="n1b")
     ap.add_argument("--final", action="store_true")
     ap.add_argument("--looks", type=int, default=0)
     ap.add_argument("--m", type=int, default=40000)
     ap.add_argument("--noalt", action="store_true")
+    ap.add_argument("--skip", type=int, default=0)
+    ap.add_argument("--tag", default="scale")
     a = ap.parse_args()
     {"fit": lambda: fit_arm(a.arm, a.final), "repro": repro, "report": lambda: report(a.arm, looks=a.looks),
-     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m), "pilotcheck": pilotcheck, "n2dev": n2dev, "n2final": n2final, "alt_cands": alt_cands, "altdev": altdev, "n3dev": lambda: n3dev(a.noalt), "n3final": n3final}[a.cmd]()
+     "explore": lambda: explore(a.what), "tokens2": lambda: tokens2(a.m, a.skip, a.tag),
+     "pilotcheck": lambda: pilotcheck(a.tag, "lb_n3train" if a.tag == "scale2" else "lb_n2train"), "n2dev": n2dev, "n2final": n2final, "alt_cands": alt_cands, "altdev": altdev, "n3dev": lambda: n3dev(a.noalt), "n3final": n3final, "n4dev": n4dev, "n4final": lambda: n3final("n4")}[a.cmd]()
