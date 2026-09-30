@@ -656,7 +656,7 @@ def run_wl2(a) -> dict:
             for lb in LABELS:
                 hold = {"B": "Bh"}.get(arm)
                 td = (1,) if arm == "vrep" else None
-                r, sel = c2_c3(store, arm, lb, tr, ds, ex, min(a.n_boot, 1000), hold if tag == "main" else None, train_ds=td)
+                r, sel = c2_c3(store, arm, lb, tr, ds, ex, a.n_boot, hold if tag == "main" else None, train_ds=td)
                 r["set"] = tag
                 rows.append(r)
                 if tag == "main" and lb == "cg":
@@ -667,7 +667,7 @@ def run_wl2(a) -> dict:
                     hc = evalset(critic_frame(store, "Bhc", lb, tr, holdout=M2.HOLD["Bhc"]), lb, tr, ds, ex)
                     hc = hc[hc.action.isin(M2.HOLD["Bhc"])]
                     dif = lambda x: M._auc(x.y, x.p_learn) - M._auc(x.y, x.p_q)
-                    res["combo_holdout"] = {"n": len(hc), "diff": dif(hc), "diff_ci": boot_multi(hc, {"d": dif}, 1000)["d"],
+                    res["combo_holdout"] = {"n": len(hc), "diff": dif(hc), "diff_ci": boot_multi(hc, {"d": dif}, a.n_boot)["d"],
                                             "auc_learn": M._auc(hc.y, hc.p_learn), "auc_q": M._auc(hc.y, hc.p_q)}
                 log.info("C2/C3 %s %s %s done %.0f s", tag, arm, lb, time.time() - t0)
                 pd.DataFrame(rows).to_csv(OUT / "c2_c3.csv", index=False, float_format="%.4f")
@@ -678,7 +678,7 @@ def run_wl2(a) -> dict:
     ss = slow_shift(store, key.loc[key.ds == 2], off, ex2, ("B", "A", "vrep", "T", "Bs"))
     ss.to_csv(OUT / "slow_shift.csv", index=False, float_format="%.4f")
     if store.has("Ax") and store.has("Bx"):
-        res["xfit"] = xfit(store, tr, exit_all, min(a.n_boot, 1000))
+        res["xfit"] = xfit(store, tr, exit_all, a.n_boot)
         (OUT / "xfit.json").write_text(json.dumps(res["xfit"], indent=1, default=float))
     if not a.skip_c4:
         fl = c4_flips(store, tuple(x for x in ("B", "A", "W") if store.has(x)), tr)
@@ -711,7 +711,7 @@ def validate_wl1(a) -> dict:
     for arm in ("B", "W1main", "Bi", "T"):
         for lb in LABELS:
             hold = {"B": "Bh", "W1main": "W1holdout"}.get(arm)
-            r, _ = c2_c3(store, arm, lb, tr, 1, ex, min(a.n_boot, 1000), hold)
+            r, _ = c2_c3(store, arm, lb, tr, 1, ex, a.n_boot, hold)
             o = old2[(old2.arm == arm) & (old2.label == lb)].iloc[0]
             for k in ("auc_learn", "auc_q", "pairwise", "diff_learn_q", "H", "n_solvable"):
                 rep.append({"what": f"c2c3 {arm} {lb} {k}", "new": r[k], "old": o[k], "diff": r[k] - o[k]})
