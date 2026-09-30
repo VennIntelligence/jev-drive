@@ -269,6 +269,26 @@ def gather(tok, mask, g, valid) -> tuple[torch.Tensor, torch.Tensor]:
     return t, m
 
 
+T_KEY = np.array([-1.5, -1.0, -0.5, 0.0])                     # NAVSIM keyframes (2 Hz)
+
+
+def nav_tokens(ds: str):
+    """navtest / navhard: (tokens (N,), tok (N, 4, 8, TOK_D) f16, mask (N, 4, 8)) for the 4 keyframes of every leaderboard
+    token, in the order of runs/op_lb/lb_<ds>/tokens.txt."""
+    toks = root(ds, "tokens.txt").read_text().split()
+    z = np.load(root("tok", ds, f"{ds}.npz"))
+    return np.array(toks), z["tok"].reshape(len(toks), 4, K_TOK, TOK_D), z["mask"].reshape(len(toks), 4, K_TOK)
+
+
+def hold_ctx(tok4, mask4, times=np.round(np.arange(-8, 1) * 0.2, 3)):
+    """Keyframe tokens -> context-slot tokens by sample-and-hold: slot at time t takes the latest keyframe <= t; slots before
+    -1.5 s get none (the navtrain cache's 2 Hz rule, also used for the GIMM-filled navtest / navhard contexts)."""
+    k = np.searchsorted(T_KEY, np.asarray(times) + 1e-6) - 1
+    ok = k >= 0
+    t, m = tok4[:, k.clip(0)], mask4[:, k.clip(0)] & ok[None, :, None]
+    return np.where(m[..., None], t, 0).astype(tok4.dtype), m
+
+
 # ================================================================ the adapter (envs/op-train)
 
 class DetAdapter(torch.nn.Module):
