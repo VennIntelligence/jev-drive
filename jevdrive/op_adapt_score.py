@@ -547,10 +547,8 @@ def load_scores(domain: str, root=None) -> dict:
         return {k: z[k] for k in z.files}
 
 
-def score_plans(domain: str, uids, plans, frame: str = "op", root=None) -> dict:
-    """Score arbitrary plans against stored slots: plans (m, 33, >= 2) openpilot plans (frame "op") or (m, NT, 2)
-    rear-axle rollouts (frame "rear"). Same context (actors, map, reference path) and the slot's stored progress
-    normaliser. Returns {S, P, prog, NC, DAC, DDC, TTC, C, NC_all, TTC_all, S_all} each (m,)."""
+def _score_chunk(args):
+    domain, uids, plans, frame, root = args
     from .op_adapt_score_data import SlotContext
     ctx = SlotContext(domain, root)
     norm = dict(zip(*ctx.scores(("uid", "prog_norm"))))
@@ -564,4 +562,22 @@ def score_plans(domain: str, uids, plans, frame: str = "op", root=None) -> dict:
             rows[k].append(float(v[0]))
         for k in ("prog", "NC", "DAC", "DDC", "TTC", "C", "NC_all", "TTC_all"):
             rows[k].append(float(m[k][0]))
-    return {k: np.asarray(v, np.float32) for k, v in rows.items()}
+    return rows
+
+
+def score_plans(domain: str, uids, plans, frame: str = "op", root=None, workers: int = 1) -> dict:
+    """Score arbitrary plans against stored slots: plans (m, 33, >= 2) openpilot plans (frame "op") or (m, NT, 2)
+    rear-axle rollouts (frame "rear"). Same context (actors, map, reference path) and the slot's stored progress
+    normaliser. Returns {S, P, prog, NC, DAC, DDC, TTC, C, NC_all, TTC_all, S_all} each (m,).
+    Rows are independent, so `workers` > 1 shards them over forked processes with identical output (default 1:
+    training dev evals already run several processes per box)."""
+    uids, plans = np.asarray(uids), np.asarray(plans)
+    if workers <= 1 or len(uids) < 4 * workers:
+        parts = [_score_chunk((domain, uids, plans, frame, root))]
+    else:
+        import multiprocessing as mp
+        n = min(workers * 4, len(uids) // 50 or 1)
+        bounds = np.linspace(0, len(uids), n + 1).astype(int)
+        with mp.get_context("fork").Pool(workers) as pool:
+            parts = pool.map(_score_chunk, [(domain, uids[a:b], plans[a:b], frame, root) for a, b in zip(bounds[:-1], bounds[1:])], chunksize=1)
+    return {k: np.asarray([x for p in parts for x in p[k]], np.float32) for k in parts[0]}

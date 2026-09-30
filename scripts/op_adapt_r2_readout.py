@@ -358,8 +358,9 @@ def b_score(model):
         k = sc["pos"].reindex(z["uid"]).to_numpy()
         has = ~np.isnan(k)
         uid = z["uid"][has]
-        ro = sfn(dn, uid, z["orig_plan"][has])
-        ra = sfn(dn, uid, z["adapt_plan"][has]) if model != "O" else ro
+        nw = min(32, len(os.sched_getaffinity(0)))          # rows are independent: shard over the cores of this step
+        ro = sfn(dn, uid, z["orig_plan"][has], workers=nw)
+        ra = sfn(dn, uid, z["adapt_plan"][has], workers=nw) if model != "O" else ro
         if ro is None or ra is None:
             out[name] = {"error": "score_plans failed (see log)"}
             continue
