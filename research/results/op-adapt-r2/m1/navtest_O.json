@@ -1,0 +1,15 @@
+{
+ "port_O": {
+  "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opi_lb_navtest_gimm-cinque_r2port__base/2026.09.30.20.05.17/2026.09.30.20.07.15.csv",
+  "n": 12146,
+  "score": 84.16909167506803
+ },
+ "model": {
+  "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opi_lb_navtest_gimm-cinque_r2O__base/2026.09.30.20.03.08/2026.09.30.20.05.08.csv",
+  "n": 12146,
+  "score": 84.16909167506805
+ },
+ "ref_trt_O": 84.18,
+ "pass": true,
+ "line": ">= O - 1 (O = port O, same run)"
+}

@@ -630,3 +630,26 @@ v3 的三处改动用户 2026-09-29 批准，具体参数（24 000 / 1 000 个�
   - **m1_read 卡住的原因（读数，不是训练）：** `b_score` 对 P5 的 37 174 行逐行 `score_plans`，实测 0.10 s / 行 = 63 min 单线程，cosC / cosK / nus 各约 2 min；m1_read 单核 100% 跑了 43 min 仍在 P5，还要 20+ min，于是按精确 PID（9234）停掉（没有产出、没有 summary.json），提交分片后重跑。每个训练后的 run 也要这一步读数，13 个 arm-seed 各 63 min 串行会成为最后的瓶颈，分片后约 2–3 min。
   - **数据加载 / 核数：** 训练的 batch 线程（4 个）与每个 run 约 1.4 核的实测占用；`Packer` 把 `--cores` 切成「每卡 2 个 × 卡数」个核片（每个 run 一个片，`taskset` 固定，OMP 2 线程，`OPENBLAS_CORETYPE=Haswell`）；`chain/CORES` 从 48-95 改成 8-151（144 核 / 6 片 = 24 核，低于 cgroup 上限 165，留出前 8 核给系统），`chain/GPUS` = 0,1,2，调度表 `op-adapt-r2` 行同步。热数据：所有域的 trunk 缓存已在页缓存（754 GB 内存，`buff/cache` 709 GB），gather 读的就是它，不需要另放进 RAM。
   - **偏离（记录在案）：** 无设计偏离；执行层改动只有上面这些，数值等价已验证。
+- 2026-09-30 21:30（M1：原模型 O 的零训练基线，读数在任何训练之前；`research/results/op-adapt-r2/m1/summary_O.json`、`navtest_O.json`，box `runs/op_adapt_r2/m1/summary.json`）。代码是冻结的读数代码加上 `score_plans` 分片（输出逐位相同，见上一条）；m1_read 第一次单进程跑到 43 min 仍在 B-score-p5，按精确 PID 停掉重跑，重跑 8 min 出完。这一行的所有「Δ」列因为「改后 = O」都是 0，判格列全是 null，这是登记的 M1 形态：只有 O 列有意义。
+
+  | 读数 | O 的数（登记线的参照） |
+  |:--|:--|
+  | R-nus 行人 AUC（nuScenes val，n 6 019，203 正例，150 组） | 0.709 |
+  | R-wod 行人 AUC（WOD val，n 2 433，44 正例，60 组） | 0.381（小样本，CI [0.25, 0.63]） |
+  | S-p5（≥ 500 px_eq，2 092 帧 / 39 路线） | AUC 0.520 [0.508, 0.540] |
+  | S-p5-all（4 414 帧 / 42 路线） | AUC 0.508 [0.501, 0.519] |
+  | S-p5 按大小档 0–500 / 500–1 500 / ≥ 1 500 | 0.499 / 0.501 / 0.561 |
+  | S-cos C 格 / K 格（7 192 行，24 组） | AUC 0.653 / 0.642 |
+  | B-p5 flip 率（reactive ≥ 500 px_eq，282 帧 / 19 路线） | 0.000（null false-flip 样本外 0.049，非 reactive 0.029）；全部 reactive 396 帧同为 0.000 |
+  | N-cutin flip 率（676 帧 / 26 路线） | 0.306 [0.199, 0.414]，无反方向翻转 |
+  | B-real 原模型减速率：行人帧 / null 帧 | 池化 0.022 / 0.116（n 231 / 7 225）；nus 0.016 / 0.065；wod 0.051 / 0.231 |
+  | B-score cosC / cosK：x⁺ 上 NC 失败率 / x⁻ | 0.693 / 0.000（两格相同）；within 0.5 m of Top 0.588 / 0.587；v2 gap（x⁺ − x⁻）−0.119 / −0.123 m/s |
+  | N-rfs（WOD-E2E val rater 帧，479） | 8.004（TensorRT exam 参照 8.005） |
+  | N-nav（NAVSIM navtest，12 146 场景） | 84.169（port O，对 TensorRT 参照 84.18；线 ≥ O − 1，这是同一次运行，过） |
+  | shortcut：C / K 行人区换回 x⁻ 后的 v2 gap | −0.119 → −0.006（C）、−0.123 → 0.000（K）；aux logit gap 本来就 ≈ 0（−0.0007 / −0.0014） |
+  | shortcut：域 AUC（orig temporal / vision）C–K、C–real、K–real | 0.9998 / 1.0，1.0 / 1.0，1.0 / 1.0（域完全可分，描述） |
+  | 打分器自检：x⁺ 训练 slot 上 `op` 不在 Top | simC 0.641、simK 0.649；x⁻ 0.286 / 0.254；nus VRU 0.153，normal 0.075 |
+
+  描述（不改任何登记线）：O 的行人可读性在 P5 上几乎等于随机（0.51–0.52，只有 ≥ 1 500 px 一档到 0.56），nuScenes 上 0.71，Cosmos 上 0.65 / 0.64；O 在 x⁺ 上 69% 的 slot NC 失败、v2 上没有比 x⁻ 更慢，行人被换掉后 v2 gap 基本消失（−0.12 → −0.01），说明 O 的这点差别是靠行人区域像素，不是靠别的。
+  - **执行偏离（记录在案）：** m1_rater 的 479 个 rater 帧中有 1 帧的历史被缩短（clip 里有帧间空缺，保留连续的尾段而不是补帧；commit cf78ffd 的 `rater cache` 修改），这一帧的 O 读数用较短的历史。这只影响 N-rfs 的 O 列（一帧），改后模型读同一份缓存，配对差不受影响。
+  - **读数缺陷（发现于 M1，未改，等 main 决定）：** `b_score` 的 P5 分支要按 `sign` 分 x⁺ / x⁻，而 P5 的 sample 表里 `sign` 全是 0，所以 `B-score.p5` 是空 `{}`（其余三个集合正常）。M1 上无害（O 对 O 的 Δ 恒为 0），但对训练后的模型 `B-score-p5` 会出不了判格（pass = null）。这是副判格（第 4.5 节，B-score 不改结局）；P5 x⁺ / x⁻ 应由 `p5_exam` 的 reactive 帧表定义，需要 main 确认口径后再补，补之前 B-score-p5 记 null。同样，该分支给 P5 逐行打分（37 174 行）在 M1 里白算了；补口径时把打分限制在 reactive 帧。
