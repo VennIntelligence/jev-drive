@@ -31,7 +31,7 @@ def arm_of(model: str) -> str:
 
 
 def load_metrics() -> pd.DataFrame:
-    fs = [p for p in sorted((L.lroot() / "readout").glob("*/metrics.csv")) if not p.parent.is_symlink()]
+    fs = [p for p in sorted((L.lroot() / "readout").glob("*/metrics.csv")) if not p.parent.is_symlink() and not p.parent.name.startswith("pilot")]
     return pd.concat([pd.read_csv(p) for p in fs], ignore_index=True) if fs else pd.DataFrame()
 
 

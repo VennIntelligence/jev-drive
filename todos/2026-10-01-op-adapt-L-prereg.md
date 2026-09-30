@@ -78,7 +78,7 @@ r2 用行人配对与规则打分的监督，训出 dev 漂移 0.40 m、null 减
 
 ## 4. Arms、selection wave 与队列
 
-**selection wave（登记的小集合，seed 0，4 000 步，全部读 dev）**：`sel_s4ia`、`sel_polia`、`sel_s4polia`、`sel_polid`。
+**selection wave（登记的小集合，seed 0，4 000 步，全部读 dev）**：`sel_s4ia`、`sel_polia`、`sel_s4polia`、`sel_polid`，每个再各跑蒸馏权重 dw = 1 与 dw = 3（后者名字带 `_dw3`；D1，见「偏离」，共 8 个候选，写在任何 selection run 之前）。
 
 **选择规则（写死，只看这 4 个 run 的末步 dev）**：一个配置「合格」= dev 上 (i) other 帧（WOD dev ∪ nuScenes dev）对原模型的 plan 漂移中位数 ≤ 0.10 m、p95 ≤ 0.50 m；(ii) 每个误触发率对原模型的差 ≤ +2 pp（stay 上的「假起步」、control 上的「假停」与「假转」、straight_int 上的「假转」）；(iii) other 帧的 slow 率与 fast 率对原模型的差 ≤ +2 pp。合格者里取三个切片捕获增益（配对差，dev）的均值最高者为 `main`；没有一个合格，就取「各条线的 值 / 线 之比的最大值」最小的那个；并列取捕获增益高者。选出的名字写进 `selection.json`，之后的 ablation 都以它为底。
 
@@ -87,7 +87,7 @@ r2 用行人配对与规则打分的监督，训出 dev 漂移 0.40 m、null 减
 1. `main` seed 1、2（连同选择 run 里的 seed 0 = 三个 seed）；
 2. `noint`（main 去掉 intent）seed 0；
 3. 单类：`only_start`、`only_stop`、`only_turn`（各只模仿一类，对照帧与蒸馏不变）；
-4. 蒸馏权重：`dw03`（×0.3）、`dw3`（×3）；`nocontrast`（不放 stay / control / straight_int 对照帧，它们的名额换成 other 帧）；
+4. 蒸馏权重（绝对值 0.3 / 1 / 3 / 10，与 main 自己的 dw 相同的那一个不重跑）：`dw03`、`dw1`、`dw3`、`dw10`；`nocontrast`（不放 stay / control / straight_int 对照帧，它们的名额换成 other 帧）；
 5. `tr_ad`（只训 adapter）；
 6. `noint` seed 1、2；单类与蒸馏权重 ablation 的 seed 1（有余量才跑）；
 7. 若时间还有：`main` 8 000 步（看轻度适配是否随步数继续变化）。
@@ -143,7 +143,7 @@ trainable-set 的归因：`sel_s4ia`、`sel_polia`、`sel_s4polia`、`tr_ad` 四
 5. dev 漂移中位 ≤ 0.15 m、每个误触发差 ≤ +5 pp（短训练，线比终线宽，只用来拦崩坏）；
 6. dev eval 一次不超过 5 min。
 
-**约 10 个单位 = selection wave**（4 个候选全长）：每个 run 的 dev 上看：完成率 100%、无 NaN / OOM；末步 dev 漂移中位 ≤ 0.15 m；plan 2 s 速度分布对原模型的 KS 统计量 < 0.1（非退化）；至少一个候选合格（§4 的规则）。全都不合格不停批（登记的 ablation 队列照跑），但要在状态里如实标出。
+**约 10 个单位 = selection wave**（8 个候选全长）：每个 run 的 dev 上看：完成率 100%、无 NaN / OOM；末步 dev 漂移中位 ≤ 0.15 m；plan 2 s 速度分布对原模型的 KS 统计量 < 0.1（非退化）；至少一个候选合格（§4 的规则）。全都不合格不停批（登记的 ablation 队列照跑），但要在状态里如实标出。
 
 **全量**：队列由一个自推进的链脚本跑，每个 run 结束后自动读数（`eval`、`read`，main 与 noint 另加 `navtest`）。任一 checklist 不过：诊断、修真 bug，不动线。
 
@@ -163,8 +163,17 @@ r2 实测：stage 4 训练、batch 64 单卡约 288 标注序列 / s，峰值约
 
 （按时间追加：每次看 dev / 读数都记一行，写明看了什么。）
 
-- 2026-09-30 22:39–23:0x（准备，无训练）：box 现状 = 3 张 RTX 6000D（0、1、2，空闲）、cgroup 75 核、296 GiB 内存；tmux 里没有 r2 进程（r2 chain 已在 stage 1 checklist 后 ERROR 退出），调度表 `op-adapt-r2` 行按用户决定 finish、登记 `op-adapt-L`（GPU 0,1,2，核 8–74）。WOD val 全量 trunk 缓存（482 个 stream、53 204 个 slot、13 GB）1.7 min 建好，原模型在它上面的输出（teacher，5 min）建好，切片表建好（含 dev 划分）。selftest：原模型的 LModel 前向与 r2 teacher 的 plan 逐位相同（max abs 0.0）；`sel_s4ia`、`sel_polia` 第 0 步与原模型逐位相同；`sel_polid` 第 0 步不同（turn desire 在冻结 policy 上本来就改 plan，selftest 里 max 101 m 是用「保持 8 个 block」的旧写法量的，之后改成登记里写的 t0 前 1.0 s 单脉冲）；batch 组成 16 / 30 / 18（其他 / 模仿 / 对照）；损失与梯度到得了 adapter 与 stage 4。
+- 2026-09-30 22:39–23:0x（准备，无训练）：box 现状 = 3 张 RTX 6000D（0、1、2，空闲）、cgroup 75 核、296 GiB 内存；tmux 里没有 r2 进程（r2 chain 已在 stage 1 checklist 后 ERROR 退出），调度表 `op-adapt-r2` 行按用户决定 finish、登记 `op-adapt-L`（GPU 0,1,2，核 8–74）。WOD val 全量 trunk 缓存（482 个 stream、53 204 个 slot、13 GB）1.7 min 建好，原模型在它上面的输出（teacher，5 min）建好，切片表建好（含 dev 划分）。selftest：原模型的 LModel 前向与 r2 teacher 的 plan 逐位相同（max abs 0.0）；`sel_s4ia`、`sel_polia` 第 0 步与原模型逐位相同；batch 组成 16 / 30 / 18（其他 / 模仿 / 对照）；损失与梯度到得了 adapter 与 stage 4。selftest 里 `sel_polid` 第 0 步不同（当时用「保持 8 个 block」的旧写法，max 101 m），之后改成登记里写的 t0 前 1.0 s 单脉冲。
+- 2026-09-30 23:0x（1 个单位，登记的 checklist；`sel_s4ia`，800 步，dev eval 在第 0 / 400 / 800 步；同时在另一张卡上跑了 `sel_polia` 800 步作吞吐参照）。`sel_s4ia`：(1) loss 有限，L_imit 2.31 → 1.87（前 50 步均值对第 400 步），(2) 第 0 步 dev 漂移 0.000、各差 0（恒等），(3) 纯训练 359 序列 / s（r2 的 288，+25%，在 ±30% 内）、显存峰值 25.3 GB（含 dev eval）≤ 40，(4) dev 捕获（原 → 后）：start 0.562 → 0.674、stop 0.337 → 0.797、turn onset 0.732 → 0.800，三个切片方向都为正、均值增益 +0.213，(5) dev 漂移 0.116 / p95 0.422（线 0.15）、误触发差最大是 stay 假起步 4.3% → 8.1%（+3.75 pp，短训练线 +5）、control 假停 0 → 0、假转 0.3% → 0.25%、straight_int 假转 6.8% → 6.7%、slow / fast 差 +1.2 / +0.36 pp（WOD dev other）、+0.1 / +0.2 pp（nuScenes dev），(6) dev eval 55 s。**六条全过。** `sel_polia`（参照，800 步）：捕获 0.562 → 0.718、0.337 → 0.854、0.732 → 0.812，假起步 4.3% → 9.75%，漂移 0.096 / 0.435。方向与量级和预期一致；**假起步与漂移都贴着登记线**，这是 D1 的起因。
+- 2026-09-30 23:1x（读数管线测试，在 pilot 模型 `sel_s4ia` 800 步上；这不是任何 arm 的读数，选择只看 dev，这里看到的 val 数字不进选择）：`eval` 在 WOD val 4.9 万行 34 s，nuScenes val 7 s；`read` 1 min。原模型的 RFS 在 479 rater 帧上 8.004（TensorRT 官方协议的 8.005），说明 5 Hz 前视 1.6 s 协议对 RFS 没有偏移。pilot 模型在 WOD val：start 0.531 → 0.658（+0.127 [0.108, 0.148]）、stop 0.252 → 0.565（+0.312 [0.258, 0.370]）、turn onset 0.726 → 0.799（+0.073 [0.062, 0.086]）、stay 假起步 4.1% → 8.3%（+4.1 pp [2.8, 5.6]）、RFS −0.057 [−0.171, 0.041]；nuScenes val：+0.092 / +0.261 / +0.020。管线出得了预期的所有量。原模型在 val 上的捕获率（start 0.531、stop 0.252、turn 0.726）与 audit 的（train 0.58 / 0.29 / 0.74；val 官方协议 0.42 / 0.07 / 0.65）同量级。
+- 2026-09-30 23:1x–23:2x（并行化与加速一遍；用户要求在起队列之前做）。**测量与瓶颈**（都在 box 上的实测，每卡单独或并发）：
 
-## 偏离
+  | 项 | 之前 | 之后 | 备注 |
+  |:--|--:|--:|:--|
+  | WOD val 全量读数前向（4.9 万行，9 帧 context） | > 8 min（被停掉，GPU 利用率 0%，CPU 300%：瓶颈是每个 trunk 帧被 9 个相邻 row 各读一遍，共约 116 GB 的 memmap 拷贝） | **21 s**（每个不同的 context 帧只进 stage 4 一次，或直接读 H 缓存） | 数值等价见下 |
+  | nuScenes val 1.05 万行 / rater 479 行 | — | 4 s / 2 s | |
+  | 训练：冻结 stage 4 的 run（`sel_polia`，batch 64） | 494 序列 / s，峰值 22 GB | **986 序列 / s，峰值 10.8 GB**（读原模型 stage 4 输出 H 的缓存 `t/H/*.npy`，不再算 stage 4，读的字节是 trunk 的 1 / 8） | 一个 4 000 步的 run 4.3 min；H 缓存一次性建好：wod 20.7 万帧 1.5 min、nuScenes 12.8 万帧 1.5 min、WOD val 5.3 万帧 27 s |
+  | 训练：stage 4 解冻的 run（`sel_s4ia`） | 349 序列 / s | 349 序列 / s（不变） | GPU 已经是瓶颈：数据等待占 0.9%，GPU 利用率 ≈ 100%；batch 从 32 到 128 吞吐只在 389–425 之间（flat），所以不是 batch 太小；stage 4 前向 + 反向对 9 帧 × 64 序列本来就是这么多算力（估约 47% 的峰值） |
+  | 同一张卡上并发（数据等待 0.2–0.7%） | — | 3 个 `sel_polia` 合计 1 065 序列 / s（单个 986）；2 个 `sel_s4ia` 合计 408（单个 349） | 卡是算力瓶颈，进程之间时间片轮转，并发只多填 8–17% 的空隙；排队时每卡放 2 个 run，用来盖住 dev eval / 读数的 CPU 段 |
 
-（无；此节在预登记提交之后才可能出现内容。）
+  没做的（数值不等价、会改梯度语义）：只对当前帧反传 stage 4（过去 8 帧 no_grad）、bf16、`torch.compile`；也没做「同一 batch 里取相邻帧共享 context」的窗口采样（改变采样分布）。**数值等价检查**（`equiv.json`）：(a) 每个 context 帧只过一次的前向对逐行 9 帧的原写法，原模型、冻结 stage 4 的 pilot、stage 4 解冻的 pilot 各在 WOD val / WOD dev / nuScenes dev 各约 930 行上：plan 的 p99 绝对差 ≤ 4e-6 m，最大 0.03–0.125 m 出现在个别 100 m 量级的远点上（fp16 的 1 ulp 是 0.0625 m）；(b) 冻结 stage 4 的训练步：H 路径与 trunk 路径在同一个 batch 上 loss 逐位相同（2.5807478）、梯度相对差 0.0。所有路径保持 fp16 数值路径、同一份权重与同一个损失。**利用率**：训练期间三张卡的 `nvidia-smi` 利用率采样 5 s 一次，稳态 96–100%；链脚本在每个 run 之外把 GPU 利用率写进 `chain/gpu_util.csv`，某张卡持续 10 min 低于 70% 时写进 STATUS 与日志，并在队列里还有活时由每卡 2 个 slot 自动补上。
