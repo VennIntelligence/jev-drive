@@ -393,7 +393,7 @@ def real(a):
         print(arm, json.dumps(mx.describe(), default=str))
         check(f"mixer {arm} pools non-empty", all(v > 0 for k, v in mx.describe()["pool_sizes"].items() if k != "off" or R.ARMS[arm].offset))
     if {"simC", "simK", "nus", "wod", "nav"} <= set(D):
-        mx = R.Mixer(R.RunCfg(arm="A"), D)
+        mx = R.Mixer(R.RunCfg(arm="A" if "off" in D else "A-bhv"), D)
         rng = np.random.default_rng(0)
         t0 = time.time()
         n = 0
