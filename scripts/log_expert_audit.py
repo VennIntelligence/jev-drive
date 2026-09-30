@@ -77,7 +77,7 @@ def _names_of(f: str) -> np.ndarray:
 
 def build_wod():
     ix = pd.read_parquet(data_dir() / "processed/waymo_e2e/index.parquet",
-                         columns=["sequence", "frame", "split", "intent", "has_future"])
+                         columns=["sequence", "frame", "split", "intent", "has_future", "n_pref"])
     past = np.load(data_dir() / "processed/waymo_e2e/past.npy", mmap_mode="r")
     fut = np.load(data_dir() / "processed/waymo_e2e/future.npy", mmap_mode="r")
     # native plans: r2 teacher (train, val streams) and the WOD exam preds (val frames, official protocol)
@@ -102,7 +102,8 @@ def build_wod():
            "t": (ix.frame.to_numpy()[rows] * 0.1),
            "v0": sp(p[:, 15, 2:4]), "vm05": sp(p[:, 13, 2:4]), "vm1": sp(p[:, 11, 2:4]),
            "pm05": p[:, 13, :2], "pm1": p[:, 11, :2],
-           "fut": f[:, 1:16:2, :2], "intent": np.array([-1, 1, 0, 2])[ix.intent.to_numpy()[rows]].astype(np.int8),
+           "fut": f[:, 1:16:2, :2], "fut20": f[:, :, :2],
+           "rater": (ix.n_pref.to_numpy()[rows] > 0), "intent": np.array([-1, 1, 0, 2])[ix.intent.to_numpy()[rows]].astype(np.int8),
            "split": ix.split.astype(str).to_numpy()[rows], "count_ok": (ix.frame.to_numpy()[rows] % 2) == 0}
     plan = np.full((len(rows), 8, 2), np.nan, np.float32)
     src = np.zeros(len(rows), np.int8)                                   # 1 r2 teacher, 2 exam preds
@@ -233,6 +234,269 @@ def build_nus():
     save("nus", tab)
 
 
+# ---------------------------------------------------------------- slices (definitions: todo "预登记" section)
+
+SEG_VALID = 0.8                                       # m/s, a segment heading counts only above this speed
+BASE = dict(st_v=0.5, st_d=3.0, st_sp=1.5, stay_d=0.5, stop_v0=3.0, stop_sp=0.5, turn=30.0, onset=10.0, t_lo=0.5, t_hi=3.0,
+            past=10.0, nud_v0=3.0, nud_sp=2.0, peak=1.0, lc=2.5, ctl_v0=5.0, ctl_dv=1.5, ctl_psi=5.0, ctl_y=0.75, ctl_past=5.0)
+LOOSE = {**BASE, "st_v": 0.8, "st_d": 1.5, "stop_v0": 2.0, "stop_sp": 0.8, "turn": 20.0, "onset": 7.0, "peak": 0.7, "lc": 2.0}
+STRICT = {**BASE, "st_v": 0.3, "st_d": 6.0, "stop_v0": 5.0, "stop_sp": 0.3, "turn": 45.0, "onset": 15.0, "peak": 1.5}
+VARIANTS = {"base": BASE, "loose": LOOSE, "strict": STRICT}
+SLICES = ["start", "stay", "stop", "turn_onset", "in_turn", "nudge", "lane_change", "control"]
+# slice -> (component read for the "clearly above control" rule, label)
+COMPONENT = {"start": "lon", "stay": "lon", "stop": "lon", "turn_onset": "lat", "in_turn": "lat", "nudge": "lat",
+             "lane_change": "lat"}
+RATE = {"wod": 5.0, "nav": 2.0, "nus": 5.0}
+
+
+def slices(tab: dict, th: dict = BASE) -> dict[str, np.ndarray]:
+    fut = tab["fut"].astype(np.float64)
+    p = np.concatenate([np.zeros_like(fut[:, :1]), fut], 1)
+    seg = np.diff(p, axis=1)
+    sp = np.linalg.norm(seg, axis=-1) / 0.5
+    valid = sp >= SEG_VALID
+    apsi = np.where(valid, np.abs(np.degrees(np.arctan2(seg[..., 1], seg[..., 0]))), -1.0)
+    dp = (tab["pm05"] - tab["pm1"]).astype(np.float64)
+    dpsi_past = np.where(np.linalg.norm(dp, axis=-1) >= 0.4, np.abs(np.degrees(np.arctan2(dp[:, 1], dp[:, 0]))), 0.0)
+    v0 = tab["v0"].astype(np.float64)
+    vmax1 = np.maximum(v0, np.maximum(tab["vm05"], tab["vm1"]))
+    amax, y = apsi.max(1), np.abs(fut[..., 1])
+    turn = amax >= th["turn"]
+    hit = valid & (apsi >= th["onset"])
+    ts = T_GRID[hit.argmax(1)]
+    out = {}
+    out["start"] = (vmax1 <= th["st_v"]) & (np.linalg.norm(fut[:, 7], axis=-1) >= th["st_d"]) & (sp.max(1) >= th["st_sp"])
+    out["stay"] = (vmax1 <= th["st_v"]) & (np.linalg.norm(fut[:, 7], axis=-1) <= th["stay_d"])
+    out["stop"] = (v0 >= th["stop_v0"]) & (sp[:, 6] <= th["stop_sp"]) & (sp[:, 7] <= th["stop_sp"])
+    out["turn_onset"] = turn & hit.any(1) & (dpsi_past < th["past"]) & (ts >= th["t_lo"]) & (ts <= th["t_hi"])
+    out["in_turn"] = turn & (dpsi_past >= th["past"])
+    mov = (v0 >= th["nud_v0"]) & valid.all(1) & (sp >= th["nud_sp"]).all(1) & ~turn
+    peak, yend, hend, hmax = y.max(1), y[:, 7], apsi[:, 7], amax
+    ret = mov & (peak >= th["peak"]) & (yend < 0.5 * peak)
+    hold = mov & (peak >= th["peak"]) & (yend >= 1.0) & (yend < th["lc"]) & (hend < 5) & (hmax > 2 * hend)
+    out["nudge"] = ret | hold
+    out["lane_change"] = mov & (yend >= th["lc"]) & (hend < 10) & (hmax > 2 * hend)
+    steady = (np.abs(sp - v0[:, None]) <= th["ctl_dv"]).all(1)
+    out["control"] = ((v0 >= th["ctl_v0"]) & valid.all(1) & steady & (amax <= th["ctl_psi"]) & (y.max(1) <= th["ctl_y"])
+                      & (dpsi_past < th["ctl_past"]) & ((tab["intent"] == 1) | (tab["intent"] < 0)))
+    return out
+
+
+def mode_47(F: np.ndarray) -> np.ndarray:
+    """decisions 47's rule (jevdrive/p6.mode_21, copied): 5 s futures (n, 20, 2) at 0.25 s -> mode name."""
+    P0 = np.concatenate([np.zeros_like(F[:, :1]), F], 1)
+    st = np.diff(P0, axis=1)
+    hd = np.degrees(np.arctan2(st[..., 1], st[..., 0]))
+    hd = np.stack([np.convolve(h, np.ones(3) / 3, "same") for h in hd])[:, 1:-1]
+    sp = np.linalg.norm(st, axis=-1) / 0.25
+    y = F[:, :, 1]
+    peak, y_end = np.abs(y).max(1), np.abs(y[:, -1])
+    h_end, h_max = np.abs(hd[:, -1]), np.abs(hd).max(1)
+    v0, v_end = sp[:, 0], sp[:, -1]
+    out = np.full(len(F), "keep", object)
+    out[(v_end < 0.5) | ((v0 > 3) & (v_end < 0.3 * v0))] = "stop"
+    out[peak >= 1] = "curve_or_other"
+    out[(y_end >= 2.5) & (h_end < 10) & (h_max > 2 * h_end)] = "lane_change"
+    out[(peak >= 1) & (y_end >= 1) & (y_end < 2.5) & (h_end < 5) & (h_max > 2 * h_end)] = "nudge_hold"
+    out[(peak >= 1) & (y_end < 0.5 * peak)] = "nudge_return"
+    out[h_end > 25] = "turn"
+    return out
+
+
+def events(log: np.ndarray, t: np.ndarray, mask: np.ndarray, gap: float = 1.0):
+    """Independent events: flagged frames of one log whose neighbours in time are <= gap apart form one event.
+    Returns (flagged row indices in (log, t) order, event id per flagged row)."""
+    idx = np.flatnonzero(mask)
+    idx = idx[np.lexsort((t[idx], log[idx]))]
+    l, tt = log[idx], t[idx]
+    new = np.r_[True, (l[1:] != l[:-1]) | (tt[1:] - tt[:-1] > gap)] if len(idx) else np.zeros(0, bool)
+    return idx, np.cumsum(new) - 1
+
+
+# ---------------------------------------------------------------- errors and the log-clustered bootstrap
+
+METRICS = [f"{k}{h}" for k in ("ade", "lon", "lat") for h in (1, 2, 3, 4)] + ["bias_lon3"]
+
+
+def errors(fut: np.ndarray, plan: np.ndarray) -> np.ndarray:
+    """(n, len(METRICS)): ADE / lon / lat mean abs error up to 1..4 s, and the signed longitudinal error at 3 s (plan - human)."""
+    e = plan.astype(np.float64) - fut.astype(np.float64)
+    nrm, ax, ay = np.linalg.norm(e, axis=-1), np.abs(e[..., 0]), np.abs(e[..., 1])
+    cols = [nrm[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] + [ax[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] \
+        + [ay[:, :2 * h].mean(1) for h in (1, 2, 3, 4)] + [e[:, 5, 0]]
+    return np.stack(cols, 1)
+
+
+def boot_stats(log: np.ndarray, X: np.ndarray, masks: dict[str, np.ndarray], ctl: str = "control", B: int = 2000, seed: int = 0):
+    """Cluster bootstrap over logs (slice and control share each resample). log (n,) int, X (n, m) metrics of the plan frames,
+    masks name -> bool (n,). Returns {name: dict(mean, lo, hi, ratio, rlo, rhi)} with (m,) arrays."""
+    ul, li = np.unique(log, return_inverse=True)
+    L = len(ul)
+    W = np.random.default_rng(seed).multinomial(L, np.full(L, 1.0 / L), size=B).astype(np.float64)
+
+    def per_log(mask):
+        n = np.bincount(li[mask], minlength=L).astype(np.float64)
+        s = np.stack([np.bincount(li[mask], weights=X[mask, j], minlength=L) for j in range(X.shape[1])], 1)
+        return s, n
+
+    def draw(mask):
+        s, n = per_log(mask)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            return (W @ s) / (W @ n)[:, None], s.sum(0) / max(n.sum(), 1)
+
+    bc, mc = draw(masks[ctl])
+    out = {}
+    for name, m in masks.items():
+        if not m.any():
+            continue
+        bs, ms = draw(m)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            r = bs / bc
+        q = lambda a: np.nanpercentile(a, [2.5, 97.5], axis=0)  # noqa: E731
+        (lo, hi), (rlo, rhi) = q(bs), q(r)
+        out[name] = dict(mean=ms, lo=lo, hi=hi, ratio=ms / mc, rlo=rlo, rhi=rhi)
+    return out
+
+
+# ---------------------------------------------------------------- analysis
+
+def load(ds: str) -> dict:
+    with np.load(OUT / f"{ds}.npz", allow_pickle=True) as z:
+        return {k: z[k] for k in z.files}
+
+
+def sub(tab: dict, m: np.ndarray) -> dict:
+    return {k: v[m] for k, v in tab.items()}
+
+
+def count_rows(name: str, tab: dict, split: str, ds: str) -> list[dict]:
+    m = (tab["split"] == split) & tab["count_ok"]
+    t = sub(tab, m)
+    rows = []
+    for vn, th in VARIANTS.items():
+        sl = slices(t, th)
+        for s in SLICES:
+            idx, ev = events(t["log"], t["t"], sl[s])
+            n = int(ev.max() + 1) if len(idx) else 0
+            plan_ok = ~np.isnan(t["plan"][idx, 0, 0]) if len(idx) else np.zeros(0, bool)
+            ne_plan = len(np.unique(ev[plan_ok])) if plan_ok.any() else 0
+            extra = {}
+            if s == "turn_onset" and vn == "base":
+                known = t["intent"][idx] >= 0
+                extra["turn_intent_share"] = float(np.isin(t["intent"][idx][known], (0, 2)).mean()) if known.any() else np.nan
+            rows.append({"dataset": name, "split": split, "variant": vn, "slice": s, "frames": int(len(idx)),
+                         "seconds": round(len(idx) / RATE[ds], 1), "events": n, "logs": int(len(np.unique(t["log"][idx]))),
+                         "events_with_plan": ne_plan, "total_frames": int(m.sum()), "total_logs": int(len(np.unique(t["log"]))),
+                         **extra})
+    return rows
+
+
+def cmd_analyze():
+    RES.mkdir(parents=True, exist_ok=True)
+    crow, erow = [], []
+    wod, nav, nus = load("wod"), load("nav"), load("nus")
+    # counts: full train splits (val / nuScenes val for context)
+    crow += count_rows("WOD-E2E", wod, "train", "wod") + count_rows("WOD-E2E", wod, "val", "wod")
+    crow += count_rows("NAVSIM navtrain", nav, "train", "nav")
+    crow += count_rows("nuScenes", nus, "train", "nus") + count_rows("nuScenes", nus, "val", "nus")
+    # decisions-47 rule (5 s, 0.25 s grid) on all WOD frames: reproduces the val rater-frame count, and counts events
+    for split in ("train", "val"):
+        m = (wod["split"] == split) & wod["count_ok"]
+        md = mode_47(wod["fut20"][m].astype(np.float64))
+        t = sub(wod, m)
+        for nm, sel in (("nudge_47", np.isin(md, ("nudge_return", "nudge_hold"))), ("lane_change_47", md == "lane_change")):
+            idx, ev = events(t["log"], t["t"], sel)
+            crow.append({"dataset": "WOD-E2E", "split": split, "variant": "rule47_5s", "slice": nm, "frames": int(len(idx)),
+                         "seconds": round(len(idx) / 5.0, 1), "events": int(ev.max() + 1) if len(idx) else 0,
+                         "logs": int(len(np.unique(t["log"][idx]))), "total_frames": int(m.sum())})
+    pd.DataFrame(crow).to_csv(RES / "counts.csv", index=False)
+    # errors
+    sets = []
+    m = (wod["split"] == "train") & (wod["plan_src"] == 1)
+    sets += [("WOD-E2E train", "r2 teacher, front-only 5 Hz", "raw", sub(wod, m), 1.0), ("WOD-E2E train", "r2 teacher, front-only 5 Hz", "x1.06", sub(wod, m), 1.06)]
+    m = (wod["split"] == "val") & (wod["plan_src"] == 2)
+    sets += [("WOD-E2E val", "exam preds, 3 cam 10 s", "raw", sub(wod, m), 1.0), ("WOD-E2E val", "exam preds, 3 cam 10 s", "x1.06", sub(wod, m), 1.06)]
+    sets += [("NAVSIM navtrain", "r2 teacher, 2 Hz sample-and-hold", "raw", nav, 1.0)]
+    g = ~np.isnan(nav["plan_gimm"][:, 0, 0])
+    sets += [("NAVSIM navtrain", "GIMM-interpolated (skill-pack N1/N2 rows)", "raw", {**sub(nav, g), "plan": nav["plan_gimm"][g]}, 1.0)]
+    m = nus["split"] == "train"
+    sets += [("nuScenes train", "r2 teacher, 20 Hz clock", "raw", sub(nus, m), 1.0)]
+    m = nus["split"] == "val"
+    sets += [("nuScenes val", "r2 teacher, 20 Hz clock", "raw", sub(nus, m), 1.0)]
+    for dsn, src, cal, t, cx in sets:
+        has = ~np.isnan(t["plan"][:, 0, 0])
+        t = sub(t, has)
+        plan = t["plan"].copy()
+        plan[..., 0] *= cx
+        X = errors(t["fut"], plan)
+        sl = slices(t)
+        sl["all"] = np.ones(len(X), bool)
+        res = boot_stats(t["log"], X, sl)
+        for s, r in res.items():
+            idx, ev = events(t["log"], t["t"], sl[s])
+            row = {"dataset": dsn, "plan_source": src, "calib": cal, "slice": s, "frames_plan": int(sl[s].sum()),
+                   "events_plan": int(ev.max() + 1) if len(idx) else 0, "logs_plan": int(len(np.unique(t["log"][sl[s]])))}
+            for j, mn in enumerate(METRICS):
+                row[mn] = r["mean"][j]
+                row[mn + "_lo"], row[mn + "_hi"] = r["lo"][j], r["hi"][j]
+                if mn != "bias_lon3":
+                    row[mn + "_ratio"], row[mn + "_rlo"], row[mn + "_rhi"] = r["ratio"][j], r["rlo"][j], r["rhi"][j]
+            erow.append(row)
+        print(dsn, src, cal, "done", flush=True)
+    pd.DataFrame(erow).round(4).to_csv(RES / "errors.csv", index=False)
+
+
+# ---------------------------------------------------------------- checks
+
+def cmd_check():
+    out = {}
+    wod = load("wod")
+    m = (wod["split"] == "val") & wod["rater"]
+    md = mode_47(wod["fut20"][m].astype(np.float64))
+    out["rule47_val_rater_frames"] = {"n": int(m.sum()), **{k: int((md == k).sum()) for k in np.unique(md)},
+                                      "expected_log_nudge_(decisions_47)": 15}
+    # conversion: exam preds' own `wod` waypoints (0.25 s grid) vs plan_to_rear on plan_pos / plan_yaw
+    pdir = data_dir() / "processed/wod_zeroshot/preds/op_cinque"
+    fs = sorted(pdir.glob("*.npz"))[:300]
+    d = []
+    for f in fs:
+        z = np.load(f)
+        mm = np.zeros((1, 33, 12))
+        mm[0, :, 0], mm[0, :, 1], mm[0, :, 11] = z["plan_pos"][:, 0], z["plan_pos"][:, 1], z["plan_yaw"]
+        mine = plan_to_rear(mm, float(z["dev_xy"][0]))[0]
+        d.append(np.abs(mine - z["wod"][1:16:2]).max())
+    out["conversion_vs_exam_wod_key_max_abs_m"] = {"median": float(np.median(d)), "max": float(np.max(d))}
+    # r2 val teacher vs exam preds on the same frames
+    r2 = pd.read_parquet(R2 / "index/wod.parquet", columns=["uid", "part", "file", "row"])
+    uid, mu = teacher_rows("wod")
+    v = r2[r2.part == "val"]
+    with ThreadPoolExecutor(16) as ex:
+        nm = {f: n for f, n in zip(v.file.unique(), ex.map(_names_of, v.file.unique()))}
+    names = np.array([nm[f][r] for f, r in zip(v.file, v.row)])
+    pm = {f.stem: f for f in pdir.glob("*.npz")}
+    both = [(i, n) for i, n in zip(v.index, names) if n in pm]
+    diffs = []
+    for i, n in both:
+        z = np.load(pm[n])
+        mm = np.zeros((1, 33, 12))
+        mm[0, :, 0], mm[0, :, 1], mm[0, :, 11] = z["plan_pos"][:, 0], z["plan_pos"][:, 1], z["plan_yaw"]
+        a = plan_to_rear(mm, float(z["dev_xy"][0]))[0]
+        b = plan_to_rear(mu[i:i + 1], CAM_X["wod"])[0]
+        diffs.append([np.linalg.norm(a - b, axis=-1).mean(), (b[-1, 0] - a[-1, 0])])
+    dd = np.array(diffs) if diffs else np.zeros((0, 2))
+    out["r2_teacher_vs_exam_preds_same_val_frames"] = {"n": len(diffs), "mean_dist_m": float(dd[:, 0].mean()) if len(dd) else None,
+                                                       "median_dist_m": float(np.median(dd[:, 0])) if len(dd) else None,
+                                                       "mean_dx_at_4s_r2_minus_exam": float(dd[:, 1].mean()) if len(dd) else None}
+    for ds in ("wod", "nav", "nus"):
+        t = load(ds)
+        has = ~np.isnan(t["plan"][:, 0, 0])
+        out[f"{ds}_plan_coverage"] = {"rows": int(len(has)), "with_plan": int(has.sum()),
+                                     "frame_dt_median_s": float(np.median(np.diff(np.sort(t["t"][t["log"] == t["log"][0]]))))}
+    RES.mkdir(parents=True, exist_ok=True)
+    (RES / "checks.json").write_text(json.dumps(out, indent=1))
+    print(json.dumps(out, indent=1))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["build", "check", "analyze", "figure"])
@@ -240,3 +504,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.cmd == "build":
         {"wod": build_wod, "nav": build_nav, "nus": build_nus}[a.ds]()
+    elif a.cmd == "check":
+        cmd_check()
+    elif a.cmd == "analyze":
+        cmd_analyze()
