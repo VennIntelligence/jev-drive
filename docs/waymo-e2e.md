@@ -609,6 +609,13 @@ required, and warns about any frame missing from `test_sequence_frames_for_submi
 per test clip, at the 12 s mark). `read_submission()` parses one back, and `check` asserts that a full
 1 505-frame submission round-trips with every field intact.
 
+Use root-level shard names `mysubmission.binproto-00000-of-00001` (and the matching numbered names if
+sharded). The official tutorial's `MySubmission/part0` archive was rejected by the server with
+`No shards found in submission_key`; a Waymo engineer confirmed the binproto naming in
+[waymo-open-dataset issue #936](https://github.com/waymo-research/waymo-open-dataset/issues/936),
+and a [scored public submission](https://github.com/hansungkim98122/OpenEMMA-for-Waymo-E2E/blob/main/waymo_submission.ipynb)
+uses it. The archive still contains serialized submission protos, not model weights.
+
 The test quota is 6 submissions per 30 days, so nothing here ever uploads: it only writes the file.
 
 ### Checks

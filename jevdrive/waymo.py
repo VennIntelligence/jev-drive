@@ -1163,7 +1163,12 @@ def write_submission(frame_names, trajectories: np.ndarray, path, meta: dict, pe
         raise ValueError("num_model_parameters must be a number with a K/M/B/T suffix (proto comment), e.g. '382M'")
 
     path.parent.mkdir(parents=True, exist_ok=True)
+    if per_file < 1:
+        raise ValueError("per_file must be positive")
+    n_shards = (len(names) + per_file - 1) // per_file
     with tarfile.open(path, "w:gz") as tar:
+        # The tutorial names shards part0, but Waymo staff confirmed in issue #936
+        # that the evaluator discovers binproto-00000-of-00001 style names instead.
         for start in range(0, len(names), per_file):
             sub = pb.E2EDChallengeSubmission(
                 submission_type=pb.E2EDChallengeSubmission.E2ED_SUBMISSION,
@@ -1173,7 +1178,7 @@ def write_submission(frame_names, trajectories: np.ndarray, path, meta: dict, pe
                 sub.predictions.add(frame_name=n,
                                     trajectory=pb.TrajectoryPrediction(pos_x=xy[:, 0], pos_y=xy[:, 1]))
             blob = sub.SerializeToString()
-            info = tarfile.TarInfo(f"{fields['unique_method_name']}_{start // per_file:03d}.bin")
+            info = tarfile.TarInfo(f"mysubmission.binproto-{start // per_file:05d}-of-{n_shards:05d}")
             info.size, info.mtime = len(blob), 0
             tar.addfile(info, io.BytesIO(blob))
     log.info("submission: %d frames, %.2f MB -> %s", len(names), path.stat().st_size / 2**20, path)
@@ -1186,6 +1191,8 @@ def read_submission(path) -> tuple[list[str], np.ndarray, dict]:
     names, traj, meta = [], [], {}
     with tarfile.open(path, "r:gz") as tar:
         for m in sorted(tar.getmembers(), key=lambda m: m.name):
+            if not m.isfile():
+                continue
             sub = pb.E2EDChallengeSubmission.FromString(tar.extractfile(m).read())
             assert sub.submission_type == pb.E2EDChallengeSubmission.E2ED_SUBMISSION, "wrong submission type"
             meta = {f.name: (list(v) if f.is_repeated else v) for f, v in sub.ListFields()

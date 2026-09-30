@@ -158,7 +158,7 @@ def vjepa_loop(batch: int, workers: int, limit_rows: int | None, rl=None):
             n += 27
             if n >= CHUNK or (limit_rows and n >= limit_rows):
                 break
-        if len(take) == 0 or (n < MIN_CHUNK and not end):
+        if len(take) == 0 or (n < MIN_CHUNK and not end and not limit_rows):
             log.info(f"{len(r)} runs waiting, sleeping (generation end: {end})")
             time.sleep(120)
             continue
