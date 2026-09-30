@@ -4100,3 +4100,33 @@ slice 只按自车运动学切（4 s 未来），独立事件 = 同一 log 内�
 
 **状态**：**待定**。限定：归类依据是后验读数；单条人类未来不是唯一正确答案，「一半」阈值是任意的；nuScenes 的 log = scene，独立性偏乐观；navtrain 基本没有停着不动的 token（stay 8 帧），起步事件是「马上要动」的选择集；navtrain 的误差只在有 GIMM 补帧 plan 的 6 万 token 上；WOD stop 的原因（灯、停车线、行人、前车）没有拆；第 47 条 nudge 规则复现 13 / 15 帧，差 2 未查。
 **会推翻或推进本条的证据**：按原因拆开后 WOD 的 stop 大多是前车跟停而原生捕获率仍低（那是标定或协议问题，不是缺行为）；在这三类 slice 上做 log 模仿的小规模适配后，留出 WOD val 的捕获率不涨或 stay / control 上的误触发上升（log 专家也教不会）；给 turn onset 加 intent 条件后捕获率不动（缺的不是导航输入）。
+
+## 78. op-adapt L：用真实 log 的人类未来做模仿，轻度适配 WOD train，起步 / 停车 / 起转的留出捕获率都涨，且没有变保守或变急；唯一不过的线是 stay 上的假起步（+2.7 pp，线 +2 pp），只有提高蒸馏权重能压进线，代价是增益缩到约三分之一（**待定**，WOD val 479 段 + nuScenes val + navtest，40 个训练 run，`main` 3 seed，只有 Cinque）
+2026-10-01。预登记、执行日志、全部表与偏离 D1–D5 在 [todos/2026-10-01-op-adapt-L-prereg.md](../todos/2026-10-01-op-adapt-L-prereg.md)，小表 [results/op-adapt-L/](results/op-adapt-L/)，图 [capture](figs/op-adapt-L-capture.png)、[triggers](figs/op-adapt-L-triggers.png)、[rfs](figs/op-adapt-L-rfs.png)。
+接第 77 条：真实 log 的人类未来在起步、停车、起转上有上千个独立事件，原生 plan 漏 3–7 成。本条做了第一次适配：WOD train 上按这三类切片模仿人类未来，WOD intent 经一个 adapter 进模型，其余帧（stay、control、straight-intent、other）蒸馏到原模型。
+用户 2026-10-01 已同意「在 WOD train 上训练」，所以这条线上的模型一律称「在 WOD train 上轻度适配」，不再是零样本；第 77 条的 7.92 提交不受影响，它没有用这些权重。
+`main` = stage 4 解冻 + intent adapter + 蒸馏权重 3。选择波没有候选满足全部 dev 线（都只差假起步），按登记的回退规则选出；三个 seed。
+
+| 读数（WOD val 留出，Δ 对原模型，`main` 三 seed） | 原模型 → `main` | 线 |
+|:--|:--|:--|
+| 捕获率 start | 0.531 → 0.632（+0.101，CI 下界 0.082） | L1 过 |
+| 捕获率 stop | 0.252 → 0.559（+0.307，下界 0.250） | L1 过 |
+| 捕获率 turn onset | 0.726 → 0.843（+0.117，下界 0.097） | L1 过 |
+| stay 假起步 | +2.7 pp（CI 上界 3.9） | **L2 不过**（线 ≤ +2 pp） |
+| control 假停 / 假转、straight-intent 假转 | 上界 ≤ 0.3 pp | 过 |
+| other 帧漂移中位 / p95 | 0.059 / 0.337 m | L3 过；slow / fast 变化在 +2 pp 内 |
+| RFS（479 帧）原始 / ×1.06 | +0.009 / +0.019，CI 跨 0 | L4「无害」过，「不低于」不过（有 seed 点估计为负） |
+| ADE 对人类未来 | −3.0% | L5 过 |
+| navtest PDMS（原模型 84.169） | 84.44 / 84.50 / 84.47 | L7 过 |
+| nuScenes val（域外，无 intent） | start、stop 迁移；turn onset 不迁移 | L6 |
+
+1. **按登记读法是「靠代价换的捕获」的边缘形态**：增益稳定（三个 seed 差 < 1 pp）、漂移 / 保守 / 急 / RFS / ADE / navtest 都没坏，唯一的代价是 stay 帧上多约 3 pp 的假起步（原模型本身 4–7%）。没有任何 arm 同时「增益大且过 L2」。
+2. **intent 有用，主要买起转**：`main` 对无 intent（`noint`），turn onset +6.8 pp [5.6, 8.1]、start +1.3 pp，假起步无差，RFS 上 `noint` −0.044 对 `main` +0.009。turn onset 原模型没有导航输入时漏 26–39%（第 77 条），这是第一个看得到效果的导航输入接法；第 66 条 turn desire 不动 plan 的结论针对的是原生 desire 通路，这里是学出来的 adapter。
+3. **假起步几乎全来自 start 模仿**：只训 start 的 arm 假起步 +11.7 pp，只训 stop / turn 的 +0.1 / +0.8 pp；只训 start 对 stop、turn 几乎没有增益，`main` 里三类互相不帮忙，start 与 stop 增益都比单训一类小（共享容量与蒸馏）。
+4. **蒸馏权重是增益与假起步之间的单一旋钮**：dw 0.3 / 1 / 3 / 10 下 start 增益 +0.318 / +0.199 / +0.101 / +0.039，假起步 +25.4 / +8.1 / +2.7 / +0.9 pp，dw ≤ 1 还让漂移超线（0.21 / 0.11 m）。dw 10 是唯一过 L1、L2、L3、L4「无害」、L5 的 arm，但 start 增益只剩 +0.039。stay 占对照帧 3/5 的 `stayheavy`：假起步 +1.7 pp（上界 2.7），仍差 0.7 pp；去掉对照帧假起步 +4.4 pp，所以对照帧的作用主要是压假起步。
+5. 可训练部分（stage 4、stage 4 + policy、policy、原生 desire 承载 intent）在同一权重下增益相差 ≤ 0.02，没有哪组明显更好；只训 adapter 增益约一半；8 000 步的长 run 无显著增益。
+6. **与 r2 的对照**：r2 stage 1 的失败形状是「整体更保守」（漂移 0.40 m、null 帧 slow 率 +11.7 pp）。这里同样是轻度解冻，漂移 0.06 m、slow / fast 不动，区别在监督信号：真实域里成对的「该动 / 不该动」「该停 / 不该停」人类轨迹，不是 CARLA 配对加对 13 种扰动的规则打分。这支持第 77 条的判断，但 r2 只跑了 2 000 步的 stage 1，两者不是同一设定下的对照，不能写成 r2 的方法被证伪。
+7. **增益的量级**：start 捕获率 0.53 → 0.63，仍有约三分之一起步没被复现；RFS 没动（+0.009），所以这条不能说 7.92 会涨，捕获率涨在 WOD 的 rater 帧上没有转化成分数。
+
+**状态**：**待定**。限定：`main` 由回退规则选出，不是有候选过了 dev 线；`stayheavy`、`tr_ad_dw3` 是看过 wave 1 留出读数后加的消融（D4），D3 记了读数管线测试时看过 pilot 模型的 val 数；「假起步来自 start 与 stay 的先验失衡」是由只训单类的 arm 推出的，没有单独量化先验；intent adapter 读的是路线意图还是场景线索没有做置换检验；捕获率的「一半」阈值是任意的；只有 WOD 的 intent，nuScenes 没有，所以 turn onset 的域外迁移未检；单一模型 Cinque，闭环（B2D / HUGSIM）完全没测。
+**会推翻或推进本条的证据**：intent 置换（打乱 intent）后 turn onset 增益不消失（adapter 读的是场景，不是导航）；把适配模型放进 B2D 或 HUGSIM 闭环，对同速度配速对照的配对差 CI 下界不 > 0（开环捕获率没转成闭环行为，第 74 条的「开得慢」解释再次成立）；按原因拆开 WOD stop 后增益集中在前车跟停（那是标定或协议问题，不是学到了停车时机）；在 dw 3 与 dw 10 之间加一个权重、或提高 stay 的份额，能同时过 L1 与 L2 且 start 增益保持在 +0.07 以上（旋钮不是单调取舍）。
