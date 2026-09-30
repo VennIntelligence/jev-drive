@@ -6,14 +6,17 @@ on the lane's cards (default 1-4) while each card's total stays under --cap-gb (
   stage10   every §6 ~10-unit arm (A at both lambda_s, D, A-real, A-sim, A-noC, A-noK, D-only, A-bhv) at 10 % of the
             steps, packed on the cards -> the 10-unit checklist (items 1-7), any failure stops the batch
   full      lambda_s selection first (A seed 0 at 0.3 and 1, then `select`), then every arm x seed of §2 with the chosen
-            lambda_s; Z is not run (R0-gated)
+            lambda_s; Z is not run (R0-gated). User decision 2026-09-30 21:40: no separate stage 10; the §6 10-unit checklist
+            (items 1-7) is applied to every run at its own first dev eval at >= 10 % of the steps (early_checklist.json); a
+            failing arm is stopped, the same item failing in two arms stops the batch. Every finished run gets the readouts
+            (scripts/op_adapt_r2_post.sh: eval, read, navsim navtest) on a spare core slice while the next run trains.
   check     re-evaluate a stage checklist from existing run dirs (no training)
 
 Lane dir: R2/stage/<stage>/{STATUS, DONE, ERROR, checklist.json, jobs.json}; the runs are R2/stage/<stage>/runs/<tag>/
 (stage 1 / 10) or R2/train-<tag>/ (full).
   scripts/tmux_run.sh r2-stage1 python scripts/op_adapt_r2_lane.py stage1 --cores 40-47
 """
-import argparse, json, os, subprocess, sys, time, traceback
+import argparse, collections, json, os, subprocess, sys, time, traceback
 from pathlib import Path
 
 import numpy as np
@@ -43,20 +46,32 @@ def gpu_used(gpus) -> dict:
     return {g: u[g] for g in gpus}
 
 
+class BatchStop(RuntimeError):
+    """A systematic early-checklist failure (the same item in two arms): the batch stops and goes back to main."""
+
+
 class Packer:
-    """Launch jobs [{tag, argv, vram_gb}] on the cards: a job starts on the card with the most room when
-    (card used now) + (reserved by our jobs started < 3 min ago that have not reached their peak) + vram_gb <= cap."""
+    """Launch jobs [{tag, argv, vram_gb, run?, early?, arm?, side?}] on the cards: a job starts on the card with the most
+    room when (card used now) + (reserved by our jobs started < 3 min ago that have not reached their peak) + vram_gb <= cap.
+    Every job gets its own core slice (one more slice is kept for the post-run readouts). Extras used by the `full` lane:
+      run    run dir; a job whose run dir has DONE is skipped (restart), and `early` (step count) turns on the §6 10-unit
+             checklist at the run's first periodic dev eval at >= 10 % of the steps (a failing arm is stopped, the same
+             item failing in two arms raises BatchStop)
+      side   argv started on the post core slice after the job ends with rc 0 (readouts, no slot held)
+      after  job put at the FRONT of the queue after this job ends with rc 0 (the readout feature pass needs a card slot)
+    on_done(tag, done) may return more jobs to queue."""
 
     def __init__(self, gpus, cap_gb, cores, lane: Path, log, per_card=2):
         self.gpus, self.cap, self.lane, self.log = gpus, cap_gb, lane, log
-        self.running = {}
-        # every job gets its own core slice: the range is split into per_card x cards slices (a run is GPU-bound, so two
-        # runs per card is the packing that fits 2 x ~32 GB in 84 GB; the CPU side is dev eval bursts and 4 batch threads)
+        self.running, self.side, self.early = {}, {}, {}
+        # every job gets its own core slice: the range is split into per_card x cards slices (+ one for the readouts); a run
+        # is GPU-bound, so two runs per card (2 x ~32 GB in 84 GB) is the packing; its CPU side is dev-eval bursts and 4 batch threads
         allc = sorted(os.sched_getaffinity(0) & set(parse_cores(cores))) or sorted(os.sched_getaffinity(0))
-        n = max(1, min(len(allc) // 8, per_card * len(gpus)))
+        n = max(1, min(len(allc) // 8, per_card * len(gpus) + 1))
         k = len(allc) // n
         self.slices = [allc[i * k:(i + 1) * k] for i in range(n)]
-        self.free = list(range(n))
+        self.post_cores = self.slices.pop() if n > 1 else self.slices[0]
+        self.free = list(range(len(self.slices)))
 
     def room(self):
         used = gpu_used(self.gpus)
@@ -66,35 +81,97 @@ class Packer:
                 used[j["gpu"]] += j["vram_gb"]
         return {g: self.cap - u for g, u in used.items()}
 
-    def run(self, jobs, poll=60):
+    def _launch(self, j, pending):
+        room = self.room()
+        g = max(room, key=room.get)
+        if room[g] < j["vram_gb"] or not self.free:
+            return False
+        sl = self.free.pop(0)
+        cs = ",".join(map(str, self.slices[sl]))
+        nc = len(self.slices[sl])
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), OMP_NUM_THREADS="2", OPENBLAS_CORETYPE="Haswell",
+                   R2_SCORE_WORKERS=str(max(1, nc // 3)))
+        lf = open(self.lane / "logs" / f"{j['tag']}.log", "a")
+        p = subprocess.Popen(["taskset", "-c", cs, *j["argv"]], env=env, stdout=lf, stderr=subprocess.STDOUT)
+        self.running[j["tag"]] = j | {"p": p, "gpu": g, "t0": time.time(), "slice": sl}
+        pending.remove(j)
+        self.log(f"start {j['tag']} on GPU {g} cores {self.slices[sl][0]}-{self.slices[sl][-1]} "
+                 f"(room {room[g]:.1f} GB, needs {j['vram_gb']:.1f}), pid {p.pid}")
+        time.sleep(20)
+        return True
+
+    def _early(self, tag, j):
+        """§6 10-unit checklist at the run's first dev eval at >= 10 % of the steps."""
+        dv, st = early_dev(j["run"], j["early"])
+        if dv is None:
+            return
+        j["early_done"] = True
+        res = verdict(check_stage10({tag: j["run"]}, dev_of=lambda r: dv, early=True, arms={tag: j["arm"]}))
+        write(j["run"] / "early_checklist.json", res | {"step": st})
+        self.early[tag] = res
+        self.log(f"early checklist {tag} @ step {st}: " + ("PASS" if res["pass"] else f"failed {res['failed']} pending {res['pending']}"))
+        if res["failed"]:
+            j["p"].terminate()                                            # exact PID of this run
+            self.log(f"stopped {tag} (early checklist failed)")
+            cnt = collections.Counter(x.split(": ", 1)[1] for r in self.early.values() for x in r["failed"])
+            bad = [k for k, c in cnt.items() if c >= 2]
+            if bad:
+                for t, o in self.running.items():
+                    if o["p"].poll() is None:
+                        o["p"].terminate()
+                raise BatchStop(f"the same early-checklist item failed in two arms: {bad}")
+
+    def run(self, jobs, poll=60, on_done=None):
         pending, done = list(jobs), {}
-        while pending or self.running:
+
+        def finished(tag, info, j):
+            done[tag] = info
+            if tag.startswith("post-") and info["rc"] != 0:
+                (self.lane / "POST_ERROR").write_text(f"{tag}: rc {info['rc']}, see logs/{tag}.log\n")
+            post_done = j.get("post_marker") and Path(j["post_marker"]).exists()
+            if info["rc"] == 0 and j.get("after") and not post_done:
+                pending.insert(0, j["after"])
+            if info["rc"] == 0 and j.get("side"):
+                lf = open(self.lane / "logs" / f"{tag}.side.log", "a")
+                cs = ",".join(map(str, self.post_cores))
+                env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(info["gpu"] if info["gpu"] is not None else self.gpus[0]),
+                           OPENBLAS_CORETYPE="Haswell", R2_SCORE_WORKERS=str(min(32, len(self.post_cores))))
+                p = subprocess.Popen(["taskset", "-c", cs, *j["side"], cs], env=env, stdout=lf, stderr=subprocess.STDOUT)
+                self.side[tag] = {"p": p, "t0": time.time(), "argv": j["side"]}
+                self.log(f"start readouts for {tag} on cores {cs}, pid {p.pid}")
+            for nj in (on_done(tag, done) if on_done else None) or []:
+                pending.append(nj)
+
+        while pending or self.running or self.side:
             for j in list(pending):
-                room = self.room()
-                g = max(room, key=room.get)
-                if room[g] >= j["vram_gb"] and self.free:
-                    sl = self.free.pop(0)
-                    cs = ",".join(map(str, self.slices[sl]))
-                    nc = len(self.slices[sl])
-                    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), OMP_NUM_THREADS="2", OPENBLAS_CORETYPE="Haswell",
-                               R2_SCORE_WORKERS=str(max(1, nc // 3)))
-                    lf = open(self.lane / "logs" / f"{j['tag']}.log", "a")
-                    p = subprocess.Popen(["taskset", "-c", cs, *j["argv"]], env=env, stdout=lf, stderr=subprocess.STDOUT)
-                    self.running[j["tag"]] = j | {"p": p, "gpu": g, "t0": time.time(), "slice": sl}
+                if j.get("run") and (j["run"] / "DONE").exists():                       # already trained (restart)
                     pending.remove(j)
-                    self.log(f"start {j['tag']} on GPU {g} cores {self.slices[sl][0]}-{self.slices[sl][-1]} "
-                             f"(room {room[g]:.1f} GB, needs {j['vram_gb']:.1f}), pid {p.pid}")
-                    time.sleep(20)
+                    self.log(f"skip {j['tag']} (DONE)")
+                    finished(j["tag"], {"rc": 0, "gpu": None, "wall_s": 0, "skipped": True}, j)
+                    continue
+                self._launch(j, pending)
             for tag, j in list(self.running.items()):
                 rc = j["p"].poll()
+                if rc is None and j.get("early") and not j.get("early_done"):
+                    self._early(tag, j)
+                    rc = j["p"].poll()
                 if rc is not None:
-                    done[tag] = {"rc": rc, "gpu": j["gpu"], "wall_s": time.time() - j["t0"]}
                     self.free.append(j["slice"])
                     del self.running[tag]
-                    self.log(f"end {tag}: rc {rc}, {done[tag]['wall_s'] / 60:.1f} min")
+                    self.log(f"end {tag}: rc {rc}, {(time.time() - j['t0']) / 60:.1f} min")
+                    finished(tag, {"rc": rc, "gpu": j["gpu"], "wall_s": time.time() - j["t0"]}, j)
+            for tag, o in list(self.side.items()):
+                rc = o["p"].poll()
+                if rc is not None:
+                    del self.side[tag]
+                    self.log(f"readouts for {tag}: rc {rc}")
+                    done[f"readouts-{tag}"] = {"rc": rc}
+                    if rc != 0:                                                       # training goes on; main gets told
+                        (self.lane / "POST_ERROR").write_text(f"{tag}: rc {rc}, see logs/{tag}.side.log\n")
             write(self.lane / "STATUS", {"phase": "training", "pending": [j["tag"] for j in pending],
-                                         "running": {t: j["gpu"] for t, j in self.running.items()}, "done": done})
-            if pending or self.running:
+                                         "running": {t: j["gpu"] for t, j in self.running.items()},
+                                         "readouts": list(self.side), "done": done})
+            if pending or self.running or self.side:
                 time.sleep(poll)
         return done
 
@@ -172,15 +249,19 @@ def check_stage1(run: Path) -> list:
     return out
 
 
-def check_stage10(runs: dict) -> list:
-    """§6 10-unit checklist, items 1-7, per arm."""
+def check_stage10(runs: dict, dev_of=None, early=False, arms=None) -> list:
+    """§6 10-unit checklist, items 1-7, per arm. Final mode reads dev.json; early mode (dev_of = the run's first periodic
+    dev eval at >= 10 % of the steps) replaces item 1 by 'no NaN / restart so far'. arms maps a run tag to its arm name."""
     out = []
     for tag, run in runs.items():
-        arm = R.ARMS[tag.split("@")[0]]
-        dv, ev = _dev(run), events(run)
+        arm = R.ARMS[(arms or {}).get(tag, tag.split("@")[0])]
+        dv, ev = (dev_of or _dev)(run), events(run)
         A = lambda n, ok, v=None, line=None, note="": out.append(item(f"{tag}: {n}", ok, v, line, note))  # noqa: E731
-        A("1 completed, no NaN / OOM restart", (run / "DONE").exists() and not (run / "ERROR").exists()
-          and dv.get("nonfinite", 1) == 0 and not any(e["kind"] == "resume" for e in ev), dv.get("steps"))
+        if early:
+            A("1 no NaN / OOM restart so far", not (run / "ERROR").exists() and not any(e["kind"] in ("resume", "nonfinite") for e in ev))
+        else:
+            A("1 completed, no NaN / OOM restart", (run / "DONE").exists() and not (run / "ERROR").exists()
+              and dv.get("nonfinite", 1) == 0 and not any(e["kind"] == "resume" for e in ev), dv.get("steps"))
         A("2 dev drift median <= 0.15 m", dv.get("drift_median", np.inf) <= 0.15, dv.get("drift_median"), 0.15)
         if "pair" in arm.losses and arm.sim:
             pa = [dv.get(f"pair_acc_sim{r}") for r in arm.sim]
@@ -224,6 +305,15 @@ def verdict(items) -> dict:
     fails = [i["item"] for i in items if i["pass"] is False]
     pend = [i["item"] for i in items if i["pass"] is None]
     return {"pass": not fails and not pend, "failed": fails, "pending": pend, "items": items}
+
+
+def early_dev(run: Path, steps: int, frac=0.1):
+    """The run's first periodic dev eval at >= frac of its steps (from events.jsonl) -> (dev dict, step) or (None, None)."""
+    need = int(np.ceil(frac * steps))
+    for e in events(run):
+        if e["kind"] == "dev" and e.get("tag") == "periodic" and e["step"] >= need:
+            return {k: v for k, v in e.items() if k not in ("t", "kind", "step", "tag")}, e["step"]
+    return None, None
 
 
 # ---------------------------------------------------------------- data preparation (self-advancing, idempotent)
@@ -347,30 +437,51 @@ def stage10(a):
 
 
 def full(a):
+    """lambda_s selection wave (A seed 0 at both lambda_s + A-bhv, which does not use lambda_s) on one card each, then every
+    other arm x seed with the chosen lambda_s as slots free up, most informative / most at-risk first. Every run: §6
+    10-unit checklist at its first dev eval >= 10 %; every finished run: readouts on the spare core slice."""
+    post_sh = str(Path(__file__).parent / "op_adapt_r2_post.sh")
+    readout = str(Path(__file__).parent / "op_adapt_r2_readout.py")
+
     def body(d, log):
         prep(a, d, log, det=True)
         pk = Packer(a.gpus, a.cap_gb, a.cores, d, log)
         vr = a.vram_gb or vram_from_stage1(est_vram() + 4)
+        extra = ["--eval-every", str(a.eval_every), *a.extra]
+
+        def job(name, seed, lam):
+            cfg = R.RunCfg(arm=name, seed=seed, lam_s=lam)
+            run = R.r2(f"train-{cfg.tag}")
+            ev = {"tag": f"post-{cfg.tag}", "argv": [PY, readout, "eval", "--model", cfg.tag], "vram_gb": vr,
+                  "side": ["bash", post_sh, cfg.tag]}
+            return {"tag": cfg.tag, "arm": name, "argv": train_argv(name, seed, lam, 0, run, extra), "vram_gb": vr, "run": run,
+                    "early": cfg.steps, "after": ev, "post_marker": R.r2("readout", cfg.tag) / "POST_DONE"}
         sel = R.r2() / "lambda_s.json"
-        if not sel.exists():
-            runs = [R.r2(f"train-A-s0-ls{lam:g}") for lam in R.LAM_S_GRID]
-            pk.run([{"tag": f"A-s0-ls{lam:g}", "argv": train_argv("A", 0, lam, 0, r, a.extra), "vram_gb": vr}
-                    for lam, r in zip(R.LAM_S_GRID, runs)])
-            subprocess.check_call([PY, TRAIN, "select", "--runs", *map(str, runs)])
-        lam = json.loads(sel.read_text())["lam_s"]
-        log(f"lambda_s = {lam}")
-        jobs = []
-        for name, arm in R.ARMS.items():
-            if name in ("O", "Z"):
-                continue
-            for s in range(arm.seeds):
-                if name == "A" and s == 0:
-                    continue                                  # the selected A seed-0 run is already trained
-                cfg = R.RunCfg(arm=name, seed=s, lam_s=lam)
-                jobs.append({"tag": cfg.tag, "argv": train_argv(name, s, lam, 0, R.r2(f"train-{cfg.tag}"), a.extra), "vram_gb": vr})
-        done = pk.run(jobs)
-        bad = [t for t, r in done.items() if r["rc"] != 0]
-        return {"pass": not bad, "failed": bad, "pending": [], "lambda_s": lam, "runs": list(done)}
+        first = [job("A", 0, lam) for lam in R.LAM_S_GRID] + [job("A-bhv", 0, 1.0)]
+        sel_tags = [j["tag"] for j in first[:len(R.LAM_S_GRID)]]
+        state = {"added": False}
+
+        def rest(lam):
+            order = [("D", 0), ("A", 1), ("A", 2), ("D", 1), ("D", 2), ("A-real", 0), ("A-sim", 0), ("A-noC", 0), ("A-noK", 0), ("D-only", 0)]
+            assert {n for n, _ in order} | {"A-bhv"} | {"A"} == {n for n in R.ARMS if n not in ("O", "Z")}
+            assert sum(1 for n, _ in order if n == "A") == R.ARMS["A"].seeds - 1 and sum(1 for n, _ in order if n == "D") == R.ARMS["D"].seeds
+            return [job(n, s, lam) for n, s in order]
+
+        def on_done(tag, done):
+            if state["added"] or not all(t in done for t in sel_tags):
+                return None
+            if any(done[t]["rc"] != 0 for t in sel_tags):
+                raise RuntimeError(f"lambda_s selection runs failed: {[t for t in sel_tags if done[t]['rc'] != 0]}")
+            if not sel.exists():
+                subprocess.check_call([PY, TRAIN, "select", "--runs", *[str(R.r2(f"train-{t}")) for t in sel_tags]])
+            lam = json.loads(sel.read_text())["lam_s"]
+            log(f"lambda_s = {lam}")
+            state["added"] = True
+            return rest(lam)
+        done = pk.run(first, on_done=on_done)
+        bad = [t for t, r in done.items() if r["rc"] != 0 and not t.startswith(("post-", "readouts-"))]
+        return {"pass": not bad, "failed": bad, "pending": [], "lambda_s": json.loads(sel.read_text())["lam_s"], "runs": list(done),
+                "early": {t: r["pass"] for t, r in pk.early.items()}}
     lane("full", a, body)
 
 
@@ -391,13 +502,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("stage", choices=("prep", "stage1", "stage10", "full", "check"))
     ap.add_argument("--gpus", type=lambda s: [int(x) for x in s.split(",")], default=[1, 2, 3, 4])
-    ap.add_argument("--cap-gb", type=float, default=76.0, help="card total must stay below 78 GB")
+    ap.add_argument("--cap-gb", type=float, default=80.0, help="card total must stay below 83 GB")
     ap.add_argument("--cores", default="40-47")
     ap.add_argument("--steps", type=int, default=0)
     ap.add_argument("--vram-gb", type=float, default=0.0)
     ap.add_argument("--arms", nargs="*", default=None)
     ap.add_argument("--check-stage", dest="stage_name", default="stage1")
     ap.add_argument("--full-forward", action="store_true")
+    ap.add_argument("--eval-every", type=int, default=2000, help="full lane: dev-eval cadence (the first eval at >= 10 %% is the early checklist)")
     ap.add_argument("--extra", nargs=argparse.REMAINDER, default=[], help="passed through to the train command")
     a = ap.parse_args()
     if a.stage == "check":
