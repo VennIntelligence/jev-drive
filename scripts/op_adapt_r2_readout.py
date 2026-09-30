@@ -797,9 +797,9 @@ def cmd_rater(a):
         h = Z.history_names(n, 18)
         sts.append({"key": n, "names": h, "targets": [len(h) - 1]})
     sts = [s for s in sts if not (out / f"{s['key']}.npz").exists()]
-    plan = json.loads((DB.root() / DB.plan_name("subset")).read_text())
+    spans = json.loads((Z.root() / "sets.json").read_text())["spans"]        # the rater frames and their history (op_plan.json only holds the WOD subset)
     calib = json.loads((Z.root() / "op_calib.json").read_text())
-    with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=(plan["spans"], calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))) as ex:
+    with ProcessPoolExecutor(a.workers, initializer=WZ._init, initargs=(spans, calib, str(data_dir() / "datasets" / "waymo_e2e" / "front3"))) as ex:
         list(ex.map(int, range(a.workers)))
         net = A.load("cinque", torch.float16).cuda()
         for k, prev, cur, meta in bounded_map(ex, C.wod_job, sts, 2 * a.workers):

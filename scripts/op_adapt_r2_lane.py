@@ -283,6 +283,14 @@ def vram_from_stage1(default):
     return json.loads(p.read_text())["peak_reserved_gb"] + 1.5 if p.exists() else default
 
 
+def prep_stage(a):
+    """pack every domain's mapped cache and run the teacher where missing (needed before any readout, M1 included)."""
+    def body(d, log):
+        prep(a, d, log)
+        return {"pass": True, "failed": [], "pending": []}
+    lane("prep", a, body)
+
+
 def stage1(a):
     def body(d, log):
         prep(a, d, log)
@@ -359,7 +367,7 @@ def check(a):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=("stage1", "stage10", "full", "check"))
+    ap.add_argument("stage", choices=("prep", "stage1", "stage10", "full", "check"))
     ap.add_argument("--gpus", type=lambda s: [int(x) for x in s.split(",")], default=[1, 2, 3, 4])
     ap.add_argument("--cap-gb", type=float, default=76.0, help="card total must stay below 78 GB")
     ap.add_argument("--cores", default="40-47")
@@ -373,7 +381,7 @@ def main():
     if a.stage == "check":
         a.stage = a.stage_name
         return check(a)
-    {"stage1": stage1, "stage10": stage10, "full": full}[a.stage](a)
+    {"prep": prep_stage, "stage1": stage1, "stage10": stage10, "full": full}[a.stage](a)
 
 
 if __name__ == "__main__":

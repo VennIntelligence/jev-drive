@@ -78,8 +78,10 @@ log "gate passed"
 pause_check m1_eval
 
 # ---- M1: zero-training baseline of the original model on every readout (before any training)
-step m1_eval  env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_readout.py eval --model O
+step prep    lane_stage prep
 step m1_rater env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_readout.py rater --workers 8
+step m1_swap  env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_train.py pack --domains simC_swap simK_swap p5_swap --source c
+step m1_eval  env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_readout.py eval --model O
 step m1_read  env CUDA_VISIBLE_DEVICES="$(first_gpu)" taskset -c "$(cores)" "$TR" scripts/op_adapt_r2_readout.py read --model O
 step m1_nav   env CUDA_VISIBLE_DEVICES="$(first_gpu)" "$TR" scripts/op_adapt_r2_readout.py navsim --split navtest --models O --cpus "$(cores)"
 
