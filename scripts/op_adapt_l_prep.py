@@ -114,6 +114,11 @@ def cmd_wodtab(a):
             d = R.Domain("wodval", L.lroot("t"))
             names, split = d.col("name").astype(str), d.col("split").astype(str)
         tab = wod_kin(names)
+        if dn == "wod":                                               # dev carved from WOD train by whole sequence; r2's val part is not used
+            seqs = np.array(sorted({n.rsplit("-", 1)[0] for n, p in zip(names, r2.col("part").astype(str)) if p == "train"}))
+            dev = set(np.random.default_rng(20261001).permutation(seqs)[: int(round(0.10 * len(seqs)))])
+            split = np.array(["train" if (p == "train" and n.rsplit("-", 1)[0] not in dev) else "dev" if p == "train" else "r2val"
+                              for n, p in zip(names, r2.col("part").astype(str))])
         fl = flags(tab)
         tab = {k: v for k, v in tab.items()} | {f"s_{k}": v for k, v in fl.items()} | {"split": split, "name": names,
                                                                                        "seq": np.array([n.rsplit("-", 1)[0] for n in names])}
