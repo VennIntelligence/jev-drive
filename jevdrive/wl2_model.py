@@ -445,6 +445,7 @@ def train_arm(U: Universe, arm: str, seed: int, rl, steps: int | None = None, re
         if not hasattr(U, "foldx"):
             U.foldx = route_folds(m, U.ev, seed=20260931, include_eval=True)
         foldx = U.foldx
+        (R2 / "xfit_folds.json").write_text(json.dumps(foldx))
     tr_st, va_st, tr_rows, va_rows = rows_windows(m, arm, seed, U.ev, U.fold5, foldx)
     data = Data2(m, blocks_of(U, arm), tr_rows)
     dz = data.Z.shape[1]

@@ -568,6 +568,50 @@ def c4_flips(store: Store, arms: tuple, tr: pd.DataFrame) -> pd.DataFrame:
     return fl[["cls", "examinee", "flip_rate", "flip_lo", "flip_hi", "false_flip_null_oos", "tau_model", "n_reactive", "margin_ok", "n_obs", "n_null"]]
 
 
+# ================================================================ cross-fit (descriptive)
+
+def xfit(store: Store, tr: pd.DataFrame, exit_all: set, n_boot: int) -> dict:
+    """Cross-fitted read (prereg, descriptive): fold f's predictor (trained on every base route outside fold f, eval routes included)
+    and a critic fitted on the labelled fork points outside fold f score the fork points of fold f; pooled over the folds, every
+    WL-1 and WL-2 fork point is out of sample. C2 AUC / C-learn - Q, and C3a H on the x+ fork points, per label."""
+    fx = json.loads((M2.R2 / "xfit_folds.json").read_text())
+    tk = tr.set_index(["gid", "action"])
+    out = {}
+    for arm in ("Ax", "Bx"):
+        if len(store.seeds(arm)) < 5:
+            continue
+        for label in LABELS:
+            parts = []
+            for f in store.seeds(arm):
+                gid, q, fa, actions, _ = store.load(arm, f)
+                n, A = len(gid), len(actions)
+                base = fa.set_index("gid").base_id.reindex(gid).astype(str).to_numpy()
+                z0 = np.repeat(q["z0"].astype(np.float32)[:, None], A, 1)
+                Xl = np.concatenate([z0, q["z5"].astype(np.float32), q["z10"].astype(np.float32)], -1).reshape(n * A, -1)
+                Xq = np.concatenate([z0, q["cmds"].reshape(n, A, -1).astype(np.float32)], -1).reshape(n * A, -1)
+                lab = pd.DataFrame({"gid": np.repeat(gid, A), "action": np.tile(actions, n)}).join(tk[[label]], on=["gid", "action"])
+                held = np.repeat(np.array([fx.get(b, -1) == f for b in base]), A)
+                trn = ~held & lab[label].notna().to_numpy()
+                y = lab[label].fillna(0).astype(float).to_numpy()
+                pl, pq = M._mlp_fit(Xl[trn], y[trn], f, Xl[held]), M._mlp_fit(Xq[trn], y[trn], f, Xq[held])
+                parts.append(lab[held][["gid", "action"]].assign(p_learn=pl, p_q=pq, prog=(q["p_v"] * W.DT).sum(2).ravel()[held]))
+            cf = pd.concat(parts, ignore_index=True)
+            e = cf.join(tk[[label, "base_id", "cls", "world", "travel_m", "k_name", "ds"]], on=["gid", "action"]).rename(columns={label: "y"})
+            e = e[e.y.notna() & ~e.gid.isin(exit_all)].reset_index(drop=True)
+            for ds in (1, 2, 0):
+                x = e if ds == 0 else e[e.ds == ds]
+                auc = lambda z: M._auc(z.y, z.p_learn)
+                dif = lambda z: M._auc(z.y, z.p_learn) - M._auc(z.y, z.p_q)
+                sel = select(x)
+                plus = sel[sel.world == "plus"]
+                ci = boot_multi(x, {"auc": auc, "diff": dif}, n_boot)
+                hci = boot_multi(plus, {"H": H}, n_boot)["H"]
+                out[f"{arm}|{label}|ds{ds}"] = {"n_rows": len(x), "auc_learn": auc(x), "auc_learn_ci": ci["auc"], "auc_q": M._auc(x.y, x.p_q),
+                                                "diff_learn_q": dif(x), "diff_ci": ci["diff"], "n_plus": len(plus), "H": H(plus), "H_ci": hci,
+                                                "n_solvable": len(_solvable(plus)), "U_op": plus.U_op.mean(), "U_sel": plus.U_pick.mean(), "U_or": plus.U_or.mean()}
+    return out
+
+
 # ================================================================ driver
 
 def _f(x, k=3):
@@ -626,6 +670,9 @@ def run_wl2(a) -> dict:
     off = pd.read_parquet(M2.P2 / "offsets.parquet")
     ss = slow_shift(store, key.loc[key.ds == 2], off, ex2, ("B", "A", "vrep", "T", "Bs"))
     ss.to_csv(OUT / "slow_shift.csv", index=False, float_format="%.4f")
+    if store.has("Ax") and store.has("Bx"):
+        res["xfit"] = xfit(store, tr, exit_all, min(a.n_boot, 1000))
+        (OUT / "xfit.json").write_text(json.dumps(res["xfit"], indent=1, default=float))
     if not a.skip_c4:
         fl = c4_flips(store, tuple(x for x in ("B", "A", "W") if store.has(x)), tr)
         fl.to_csv(OUT / "c4_flips.csv", index=False, float_format="%.4f")
