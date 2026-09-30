@@ -1,0 +1,38 @@
+{
+ "rule47_val_rater_frames": {
+  "n": 479,
+  "curve_or_other": 101,
+  "keep": 215,
+  "lane_change": 3,
+  "nudge_hold": 12,
+  "nudge_return": 1,
+  "stop": 63,
+  "turn": 84,
+  "expected_log_nudge_(decisions_47)": 15
+ },
+ "conversion_vs_exam_wod_key_max_abs_m": {
+  "median": 0.0006451606750488281,
+  "max": 0.025608062744140625
+ },
+ "r2_teacher_vs_exam_preds_same_val_frames": {
+  "n": 179,
+  "mean_dist_m": 0.011498933658003807,
+  "median_dist_m": 0.009162286296486855,
+  "mean_dx_at_4s_r2_minus_exam": 0.005637303926050663
+ },
+ "wod_plan_coverage": {
+  "rows": 261694,
+  "with_plan": 192400,
+  "frame_dt_median_s": 0.1999999999999993
+ },
+ "nav_plan_coverage": {
+  "rows": 103288,
+  "with_plan": 103288,
+  "frame_dt_median_s": 0.49999403953552246
+ },
+ "nus_plan_coverage": {
+  "rows": 59844,
+  "with_plan": 59844,
+  "frame_dt_median_s": 0.1999514102935791
+ }
+}
