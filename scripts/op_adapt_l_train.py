@@ -351,8 +351,8 @@ def cmd_equiv(a):
     D = L.Data(("wod", "wodval", "nus"), hstore=True)
     res = {}
     rng = np.random.default_rng(0)
-    for name, path in (("O", None), ("pilot_polia", L.lroot("pilot", "sel_polia", "ckpt-final.pt")),
-                       ("pilot_s4ia", L.lroot("pilot", "sel_s4ia", "ckpt-final.pt"))):
+    for name, path in (("O", None), ("pilot_polia", L.lroot("pilot", "sel_polia") / "ckpt-final.pt"),
+                       ("pilot_s4ia", L.lroot("pilot", "sel_s4ia") / "ckpt-final.pt")):
         m = L.load_model(path, dev)
         for dn, sp in (("wodval", "val"), ("wod", "dev"), ("nus", "dev")):
             rows = np.sort(rng.choice(D.rows(dn, sp), 320, replace=False))

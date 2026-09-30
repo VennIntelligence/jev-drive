@@ -201,7 +201,9 @@ def main():
     log(f"chain start: slots {[(g, f'{c[0]}-{c[-1]}') for g, c in slots]}")
     J = lambda arm, seed=0, steps=0: {"arm": arm, "seed": seed, "steps": a.steps or steps}  # noqa: E731
 
-    wave1 = [{"fn": o_eval}] + [J(x) for x in ("sel_s4ia", "sel_polia", "sel_s4polia", "sel_polid", "tr_ad")]
+    # longest first (stage-4 runs), so the tail of the wave is the cheap frozen-stage-4 runs
+    wave1 = [J(x) for x in ("sel_s4ia", "sel_s4ia_dw3", "sel_s4polia", "sel_s4polia_dw3")] + [{"fn": o_eval}] + \
+        [J(x) for x in ("sel_polia", "sel_polia_dw3", "sel_polid", "sel_polid_dw3", "tr_ad")]
     run_phase("wave1 (selection candidates + adapter-only + O readout)", wave1, slots)
     # the registered selection
     if not (ROOT / "selection.json").exists():
@@ -213,9 +215,11 @@ def main():
     alias_main(sel)
     log(f"selection: main = {sel} ({json.loads((ROOT / 'selection.json').read_text())['rule']})")
     ev("selection", config=sel)
-    wave2 = [J("main", 1), J("main", 2), J("noint", 0), J("only_start"), J("only_stop"), J("only_turn"), J("dw03"), J("dw3"),
-             J("nocontrast"), J("noint", 1), J("noint", 2)] + \
-        [J(x, 1) for x in ("only_start", "only_stop", "only_turn", "dw03", "dw3", "nocontrast")] + [J("long", 0)]
+    from jevdrive import op_adapt_l_arms as ARMS
+    dws = [x for x in ("dw03", "dw1", "dw3", "dw10") if not ARMS.same_as_main(x)]
+    wave2 = [J("main", 1), J("main", 2), J("noint", 0), J("only_start"), J("only_stop"), J("only_turn")] + [J(x) for x in dws] + \
+        [J("nocontrast"), J("noint", 1), J("noint", 2)] + \
+        [J(x, 1) for x in ["only_start", "only_stop", "only_turn"] + dws + ["nocontrast"]] + [J("long", 0)]
     run_phase("wave2 (main seeds, intent, per-slice, distillation, contrast)", wave2, slots)
     run_phase("wave3 (navtest PDMS)", [{"fn": navtest("8-40")}], slots[:1])
     STATE["phase"] = "end"
