@@ -319,7 +319,7 @@ def cmd_figure(a):
         a_.set_xticks(range(len(CONDS)))
         a_.set_xticklabels([c.split("_", 1)[0] for c in CONDS])
         a_.set_title(ttl)
-        a_.set_xlabel("intent condition (a given, b1/b2 shuffled, c straight, d flipped, e none)")
+        a_.set_xlabel("intent condition")
     ax[0].set_ylabel("paired difference (95% CI)")
     ax[0].legend(frameon=False, loc="best")
     ss = s[s.set.isin(["all", "cause_strict:lead", "cause_strict:vru", "cause_strict:other_strict", "cause_strict:other_head_lead"])]
@@ -330,7 +330,8 @@ def cmd_figure(a):
     ax[2].axvline(0, color="k", lw=0.6)
     ax[2].set_xlabel("stop capture gain, main - original")
     ax[2].set_title("WOD stop gain by cause")
-    fig.tight_layout()
+    fig.text(0.5, 0.005, "a given, b1 shuffled within slice, b2 shuffled globally, c forced straight, d left/right flipped, e none", ha="center", fontsize=8)
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     f = REPO / "research" / "figs" / "op-adapt-L-followup.png"
     fig.savefig(f, dpi=200)
     print(f)
