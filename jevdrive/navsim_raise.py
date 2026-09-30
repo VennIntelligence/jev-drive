@@ -774,6 +774,13 @@ def n3final(arm: str = "n3"):
         rl.log.info(f"{sp}: poses written")
     (run_dir(arm) / "select.json").write_text(json.dumps(sel, indent=1, default=float))
     rl.close()
+    hold = run_dir(arm) / "HOLD_SCORING"       # the chain scores navtest right after this returns: wait while the file exists
+    if hold.exists():
+        import time
+        torch.cuda.empty_cache()
+        log.info(f"poses written; holding until {hold} is removed (devkit audit)")
+        while hold.exists():
+            time.sleep(60)
 
 
 if __name__ == "__main__":
