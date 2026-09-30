@@ -633,6 +633,9 @@ def run_wl2(a) -> dict:
     ex2, ex1 = pair_exit(M2.R2, 2), pair_exit(M2.R1, 1)
     exit_all = ex1 | ex2
     res = {"arms": {arm: store.seeds(arm) for arm in store.dirs}}
+    cur = [dict(arm=arm, seed=sd, **c) for arm in store.dirs for sd in store.seeds(arm) if (store.dirs[arm][sd] / "curve.json").exists()
+           for c in json.loads((store.dirs[arm][sd] / "curve.json").read_text())]
+    pd.DataFrame(cur).to_csv(OUT / "curves.csv", index=False, float_format="%.5f")
     pairs = (("B", "W"), ("B", "A"), ("A", "vrep"), ("Bs", "B"), ("T", "Bs"), ("T", "B"))
     for ds, ex, tag in ((2, ex2, "main"), (1, ex1, "wl1eval")):
         c1 = readout_c1(store, key, ds, ex, MAIN_ARMS, a.n_boot, pairs)
