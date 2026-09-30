@@ -517,6 +517,12 @@ class Seg:
     npair: int = 0                        # sim segments: the first npair rows are x+, the next npair their x-
 
 
+def dv_star(d: "Domain") -> np.ndarray:
+    """(n, 3) A-bhv targets dv*(1, 2, 3 s) = v+ - v- (package C: dv_star_<t>; NaN beyond the record)."""
+    return np.stack([d.col(f"dv_star_{t}", np.nan, float) if f"dv_star_{t}" in d.s else d.col(f"dv{t}", np.nan, float)
+                     for t in (1, 2, 3)], 1).astype(np.float32)
+
+
 def px_weight(px):
     px = np.asarray(px, float)
     return np.where(((px >= 100) & (px < 500)) | ((px >= 500) & (px < 1500)), 2.0, 1.0)
@@ -721,7 +727,7 @@ class Assembler:
                 else:
                     teq = np.zeros(n, bool)
                 g_dir, g_eq = dir_gates(px, lat, teq)
-                dv = np.stack([d.col(f"dv{k}", np.nan, float)[pl] for k in (1, 2, 3)], 1).astype(np.float32)
+                dv = dv_star(d)[pl]
                 pairs.append({"plus": base + np.arange(n), "minus": base + n + np.arange(n), "vis": px >= PX_VIS,
                               "g_dir": g_dir, "g_eq": g_eq, "dv": dv, "sig_v": (np.exp(np.minimum(tlog[-1][:n], 11)) @ self.Wv.T).clip(1e-3),
                               "render": s.dom})
@@ -1010,7 +1016,7 @@ def _dev_sim(r, dn, d, rows, o, t, sc, arm, sfn):
         r[f"dir_violation_{dn}_adapt"], r[f"dir_violation_{dn}_orig"] = float((va[g_dir] > 0).mean()), float((vo[g_dir] > 0).mean())
         r[f"dir_n_{dn}"] = int(g_dir.sum())
     if "dplan" in arm.losses:
-        dv = np.stack([d.col(f"dv{q}", np.nan, float)[rows][ap] for q in (1, 2, 3)], 1)
+        dv = dv_star(d)[rows][ap]
         dh = (o["plan"][ap, :, 3] - o["plan"][am, :, 3]) @ t_weights(DV_T).T
         f = np.isfinite(dv) & (np.abs(dv) > 0)
         r[f"dplan_sign_agree_{dn}"] = float((np.sign(dh[f]) == np.sign(dv[f])).mean()) if f.any() else float("nan")

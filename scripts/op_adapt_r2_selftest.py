@@ -123,10 +123,11 @@ def synth_root(root: Path, seed=0):
                                     "file": str(f), "row": st * 24 + j, "ctx": list(range(st * 24 + j - 8, st * 24 + j + 1)),
                                     "tc0": 1.0, "tc1": 0.0, "token": "", "labeled": True, "ped_corr": corr, "ped_wide": corr,
                                     "vru_wide": sign == 1 and px > 0, "ped_dist": 15.0 if corr else np.nan, "dist_bin": 1 if corr else -1,
-                                    "uncertain": False, "normal": sign == -1, "inst": p, "px_eq": px if sign == 1 else 0.0,
+                                    "uncertain": False, "normal": sign == -1, "inst": p, "px_eq": px,
                                     "vis": sign == 1 and px >= 68, "ped_lat": float(rng.choice([1.0, 5.5, 3.5])),
-                                    "dv1": -rng.random() if sign == 1 else np.nan, "dv2": -rng.random() if sign == 1 else np.nan,
-                                    "dv3": -rng.random() if sign == 1 else np.nan})
+                                    "dv_star_1": -rng.random() if sign == 1 else np.nan,
+                                    "dv_star_2": -rng.random() if sign == 1 else np.nan, "dv_star_3": -rng.random() if sign == 1 else np.nan,
+                                    "ego_speed": float(rng.uniform(0, 12))})
     for r in "CK":
         df = pd.DataFrame(rows[r])
         df["uid"] = uid[r] + np.arange(len(df))

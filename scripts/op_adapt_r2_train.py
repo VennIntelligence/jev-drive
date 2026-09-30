@@ -149,7 +149,7 @@ def cmd_teacher(a):
         if (root / "samples" / f"{dn}.parquet").exists():
             d = R.Domain(dn, root)
             m = (d.col("split") == "train") & (d.col("sign") == 1)
-            dv = np.stack([d.col(f"dv{k}", np.nan, float)[m] for k in (1, 2, 3)], 1)
+            dv = R.dv_star(d)[m]
             np.save(root / "teacher" / f"sd_dv_{dn}.npy", np.nanstd(dv, 0).clip(1e-3).astype(np.float32))
 
 
@@ -254,11 +254,14 @@ def train(cfg: R.RunCfg, d: Path, log: Log, a):
 
     def producer(k):
         rng = np.random.default_rng([cfg.seed, k, step])
-        while not stop.is_set():
-            b = asm(mix.draw(rng))
-            for x in ("trunk", "valid", "tc"):
-                b[x] = torch.from_numpy(b[x]).pin_memory()
-            q.put(b)
+        try:
+            while not stop.is_set():
+                b = asm(mix.draw(rng))
+                for x in ("trunk", "valid", "tc"):
+                    b[x] = torch.from_numpy(b[x]).pin_memory()
+                q.put(b)
+        except BaseException as e:                                  # noqa: BLE001  surfaced in the main loop
+            q.put(e)
     th = [threading.Thread(target=producer, args=(k,), daemon=True) for k in range(a.loaders)]
     for t in th:
         t.start()
@@ -268,7 +271,10 @@ def train(cfg: R.RunCfg, d: Path, log: Log, a):
     torch.cuda.reset_peak_memory_stats()
     bar = tqdm(total=cfg.steps, initial=step, desc=cfg.tag, mininterval=30)
     while step < cfg.steps:
-        b = R.to_dev(q.get(), dev)
+        b = q.get()
+        if isinstance(b, BaseException):
+            raise RuntimeError("batch producer failed") from b
+        b = R.to_dev(b, dev)
         o = model(b["trunk"], b["valid"], b["tc"], b.get("det_tok"), b.get("det_mask"), AT)
         total, L = lossf(o, b)
         if step == 0 and len(b["sc_rows"]):                         # §6: L_score exactly 0 where op is in Top at step 0
