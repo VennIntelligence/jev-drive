@@ -64,7 +64,8 @@ srv_start() {
     rm -f "$O/srv/op.ready" "$SOCK"
     (
         CUDA_VISIBLE_DEVICES=$GPU PYTHONUNBUFFERED=1 setsid taskset -c "$CPUS" "$PY_OP" scripts/op_arb_server.py cinque \
-            --pool "$WORKERS" --backend cuda-iob --socket "$SOCK" --ready-file "$O/srv/op.ready" >> "$O/srv/op.log" 2>&1 &
+            --pool "$WORKERS" --backend cuda-iob --socket "$SOCK" --ready-file "$O/srv/op.ready" \
+            ${SRV_ONNX:+--onnx "$SRV_ONNX"} ${SRV_NO_TWIN:+--no-twin} >> "$O/srv/op.log" 2>&1 &
         echo $! > "$O/srv/op.pid"
         wait $!
         echo "$(date '+%F %T') server exited rc=$?" >> "$O/srv/op.log"
@@ -96,7 +97,9 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         dbase)   arb='{"mode": "base", "coast_v": 2.5}' ;;
         dbaseslow|dbaseslow[0-9]) arb="{\"mode\": \"base\", \"coast_v\": 2.5, \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
         latp7|latk) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"$([[ $arm == latk ]] && echo curv || echo p7)\", \"lon\": \"base\", \"coast_v\": 2.5}" ;;
-        drive|dlon) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
+        # op-adapt L (todos/2026-10-01-op-adapt-L-b2d-prereg.md): the drive arm with another model behind the server (SRV_ONNX), the intent
+        # input (DRIVE_ARGS "intent": "route"), desire on / off ($DESIRE) and, for the turn-handover arms, a zone map without LEFT / RIGHT
+        drive|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
  \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
  \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         # R3a (todos/2026-09-29-op-drive.md): drive + privileged traffic-light stop; a stop latch is released only by plan / lead away from a red light, or at green
@@ -105,7 +108,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         *) error "unknown arm $arm" ;;
     esac
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
- \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": true, \"controller\": \"fixed\", \"controller_preset\": \"pursuit\",
+ \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": ${DESIRE:-true}, \"controller\": \"fixed\", \"controller_preset\": \"pursuit\",
  \"controller_config\": \"$P7\", \"seed\": 0, \"dump_every\": 0, \"arb\": $arb}" > "$O/cfg/$arm.json"
     python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$O/cfg/$arm.json" || error "bad config for $arm"
     echo "$O/cfg/$arm.json"
@@ -172,7 +175,7 @@ case ${1:-} in
     routes) echo "phase1 $(routes 1)"; echo "phase2 $(routes 2)"; echo "heldout $(routes h)" ;;
     set)
         trap 'srv_stop' EXIT
-        ids=$(routes "$2"); tag=$3
+        ids=${OPL_IDS:-$(routes "$2")}; tag=$3
         for seed in ${SEEDS:-0}; do
             for a in ${ARMS:?}; do
                 d=$AD/$tag-$a-s$seed

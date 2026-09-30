@@ -66,6 +66,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
+            "intent": "none", "intent_before_m": 20.0, "intent_after_m": 5.0,
             "resume": "timer", "resume_tl_m": 40.0, "tl_stop": False, "tl_n": 50.0, "tl_margin": 0.5, "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
@@ -191,7 +192,27 @@ class OpArbAgent(Z.ZeroShotAgent):
             else:
                 i += 1
         self.zones = zones if a["zones"] else []
+        self.intent_zones = []                               # op-adapt L: (start, end, WOD intent 2 left / 3 right) of every LEFT / RIGHT run
+        i = 0
+        while i < len(cmd):
+            if cmd[i] in (Z.LEFT, Z.RIGHT):
+                j = i
+                while j + 1 < len(cmd) and cmd[j + 1] == cmd[i]:
+                    j += 1
+                self.intent_zones.append((s[i] - a["intent_before_m"], s[j] + a["intent_after_m"], 2 if cmd[i] == Z.LEFT else 3))
+                i = j + 1
+            else:
+                i += 1
         self.tl_stops = None                                 # ground truth, built lazily (evaluation / oshadow only)
+
+    def route_intent(self):
+        """WOD routing intent (1 straight, 2 left, 3 right) built causally from the route the agent is given: left / right while
+        the ego is within intent_before_m of a LEFT / RIGHT command or inside it (+ intent_after_m past its end), else straight."""
+        s = self.route.s[self.route.i]
+        for a, b, k in self.intent_zones:
+            if a <= s <= b:
+                return k
+        return 1
 
     def in_zone(self):
         s = self.route.s[self.route.i]
@@ -287,8 +308,9 @@ class OpArbAgent(Z.ZeroShotAgent):
         f, t_frame, cams, _ = self.cam_sets[-1]
         now_xy, now_yaw = self.poses[-1][1], self.poses[-1][2]
         desire = self.route.desire() if self.cfg.get("desire", True) else Z.DESIRE_NONE
+        intent = self.route_intent() if A["intent"] == "route" else 0
         meta = {"cmd": "plan", "seed": 0, "dump": "", "speed": speed, "t": t_frame, "desire": desire,
-                "twin": bool(A["twin"])}
+                "twin": bool(A["twin"]), "intent": intent}
         wire.send(self.sock, meta, dict(cams))
         info, out = wire.recv(self.sock)
         op_path = Z.resample(out["t"], rigs.openpilot_plan_to_rig(out["pos"], out["yaw"], self.op_mount), TIMES)
@@ -419,7 +441,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.timings["plan_ms"].append(ms)
         r3 = lambda x: np.round(np.asarray(x, float), 3).tolist()  # noqa: E731
         mt = np.asarray(out["meta"], float)
-        rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "src": src,
+        rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "intent": intent, "src": src,
                "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
                "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
