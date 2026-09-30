@@ -21,6 +21,15 @@ v3 的依据: [research/navhard-deficit-breakdown.md](../research/navhard-defici
 
 **Q3 的例外（用户批准）**：v2 写 navtrain 只进蒸馏。v3 中 navtrain 的 log pose 另外产生偏离起点 slot，进 L_score（只有 DAC / DDC 相关的打分，没有 PDMS）。navtest 仍是完全留出的 log，所以 N-nav 仍是留出读数；但它不再是「navtrain 完全没有过任何打分监督」意义上的独立，这一点在第 2.1 节「真实数据上哪里能用打分监督」与第 4.3 节写明。
 
+## v4 改动（2026-09-30，pre-result for scoring，reason: V1 failed；main 批准的唯一一次修订）
+
+**先记失败（改之前）**：V1（§5 第 1 条）= **0.901**（2 814 个 WL-1 分支 run，登记线 ≥ 0.95）→ 不过。诊断：cg 判不安全而 NC 判安全的 180 个里 **157 个是撞了 CARLA 场景静态几何**（static.pole 74、static.static / sidewalk / guardrail / vegetation 等，它们不是 actor，v3 的 NC 看不到）；NC 判不安全而 cg 安全的 99 个里 **78 个是 static.prop 的框重叠**（`static.prop.mesh` 停放车，actor 记录的框长短轴与车的朝向对不上，见下），其余 21 个是车辆框。按类：cut-in 0.965、行人 0.887、障碍物（P6）0.836。去掉只撞场景几何的 run 后为 0.954 —— **这是事后描述，不是登记线，不据此判过**。当时的输出原样保留（`runs/op_adapt_r2/checks/V1.json`、`V1_runs.parquet` 挪到 `checks/run1_v1/` 之外不改动；`checks/run1`、`run2` 不动）。
+
+**改动（唯一一次；若 V1 仍不过就停，不再修订）**：NC 的「actor 框」扩为「actor 框 ∪ 静态几何框」，其余（at-fault、间距规则、阈值 0.95、同样 2 814 个 run、不排除任何 run）不变。
+- CARLA 静态几何：由 CARLA 服务器 `world.get_environment_objects()` 取每个 town 路线 ±60 m 内的场景物体及其真实包围盒（世界系位置、半长宽高、朝向），类别取会被车撞到的：Poles、TrafficSigns、TrafficLight、Fences、GuardRail、Walls、Buildings、Vegetation、Static、Other、Dynamic 与地图自带的停放车辆（Car / Truck / Bus / Motorcycle / Bicycle）；路面类（Roads、Sidewalks、RoadLines、Ground、Terrain、Water、Sky）不进，它们由 DAC 管。只有竖直范围与本车车身高度带（本车地面 0–1.5 m）相交的框才算（树冠、横跨路面的信号灯臂不算）。
+- `static.prop.mesh`（B2D 的停放车）：用真实朝向。停车位 yaw 与车道方向一致（Town12 / 13 各 400 个车位，中位差 0.004° / 0.008°），而记录的框长轴在 actor 横向（半长宽 ≈ 0.97 × 2.16 m），即框相对 actor 转了 90°；按长轴沿 actor 朝向取框（半长宽互换）。
+- **域间一致（第 3 条条件）**：(i) 有对应物的部分：锥桶、护栏类道具与停放车在 NAVSIM / nuPlan 的场景物体表里（TRAFFIC_CONE、BARRIER、CZONE_SIGN、GENERIC_OBJECT、停着的 VEHICLE），在 nuScenes 标注里（movable_object.*、static_object.bicycle_rack、停着的 vehicle.*），这些在 v3 的实现里本来就进 NC（`scripts/op_adapt_nav.py` 抽取 metric cache observation 的全部 track，非 agent 记为 STATIC；`op_adapt_score_data.nus_slot` 取全部 annotation）；CARLA 这次补上的正是同一类东西。(ii) 只在 CARLA 有的部分：电线杆、墙、建筑、树等场景几何在真实数据里没有物体框，但它们都在可行驶区多边形之外（nuPlan 的 roadblock / intersection / carpark、nuScenes 的 drivable_area 不含路缘外），碰到它们之前 footprint 已经出界，S 已经被 DAC 置 0；CARLA 的可行驶栅格同样只含车道与路口，所以对「出界 + 碰撞」的判定两域结果相同，新增的只是 CARLA 里贴着可行驶区边缘（栅格 0.2 m 误差内）的几何，不会造成域间定义差。
+
 ## 为什么要做
 
 第一轮（第 55 条）说明 openpilot 的 vision 后段可以便宜地改、改了不坏（跨数据集漂移 6 cm），但只用真实 nuScenes 监督，真实行人可读性只涨 +0.08（没过 +0.10），CARLA 完全不动（+0.009）。
@@ -486,3 +495,4 @@ v3 的三处改动用户 2026-09-29 批准，具体参数（24 000 / 1 000 个�
   - **V6 目检（单应变换后的 20 张样张，每个角点 5 张，[results/op-adapt-r2/offset_v6/](../research/results/op-adapt-r2/offset_v6/)，上行原 road / wide 帧、下行偏离后）**：路面与车道线的形状合理（车道线仍是直线、汇聚方向与偏航一致，与上面的单测一致），这一条按登记算过。但路面以上的物体畸变很重：2 m 横移相对 1.53 m 的相机高度很大，车、公交、树、楼在 road 帧里被剪切 20–45°，wide 帧上半部分还有视野外的边缘复制条纹；ψ = ±0.3 rad 与 road 帧半视场（约 0.27 rad）相当，所以角点样本里行车道常在 road 帧边上，画面大半是路边。这是登记的近似（第 2.1 节「路面以上的物体会有视差畸变」），不改；但它比「轻微畸变」重得多，第 6 节第 7 条（`op` 的 DAC / DDC 失败率 > 60% 即「单应变换把画面毁了」）要认真看。
   - M0 在全量上重跑一次（第 0 节限定段；同一脚本，2 004 对，[results/op-adapt-r2/pedsize-full/](../research/results/op-adapt-r2/pedsize-full/)，登记时的 93 对小表不动）：Cosmos E1 读数 slot 25 169 个，px_eq 中位 2 227 [345, 6 923]，< 100 为 0、100–500 30.3%、500–1 500 14.0%、≥ 1 500 55.7%，距离中位 16.5 m，> 30 m 1.0%；全部可见 5 Hz 帧 35 037 个，中位 1 076，< 100 9.8%、100–500 29.8%、500–1 500 15.9%、≥ 1 500 44.5%，距离中位 19.3 m，> 30 m 18.8%（93 对时分别为 1 647 / 17.0 m 与 859 / 20.1 m / 18.4%）。第 0 节的读法不变：Cosmos 训练对比 P5 考卷（中位 487 px、29.9 m、一半 > 30 m）大、近，和真实训练集同一量级。
   - GPU：sim 缓存 + teacher 两卡各 13 min、偏离帧两卡各 13 min（其中 3 min 是为控制共卡显存降 batch 后重启前的部分）、nuScenes teacher 2 min、检查约 10 min，合计约 1.0 GPU·h 占卡时间（两个大项都受 CPU 解码限制，GPU 实际算力约 0.3 GPU·h），在第 7 节缓存项 2.8 GPU·h 之内（含 D 包的 YOLO）。
+- 2026-09-30 15:xx（S 包，v4 修订前的记录）：V1 = 0.901 < 0.95，不过；诊断与按类数值见「v4 改动」节（0.954 为事后描述）。main 批准唯一一次修订 (b)：NC 加入 CARLA 静态几何与停放车真实框；实现之后在同样 2 814 个 run、同一 0.95 线、不排除任何 run 上重跑一次，不过就停。
