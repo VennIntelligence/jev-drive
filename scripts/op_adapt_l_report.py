@@ -120,8 +120,58 @@ def cmd_tables(a):
     print(pd.DataFrame(rows).round(3).T.to_string())
 
 
+# ---------------------------------------------------------------- arm-vs-arm paired comparison
+PAIRS = [("main", "noint"), ("main", "only_start"), ("main", "only_stop"), ("main", "only_turn"), ("main", "nocontrast"),
+         ("main", "tr_ad"), ("main", "dw03"), ("main", "dw1"), ("main", "dw3"), ("main", "dw10"), ("main", "long"),
+         ("sel_s4ia", "sel_polia"), ("sel_s4ia", "sel_s4polia"), ("sel_s4ia", "sel_polid"), ("sel_polia", "sel_polid"),
+         ("sel_s4ia", "sel_s4ia_dw3"), ("sel_polia", "sel_polia_dw3"), ("sel_s4polia", "sel_s4polia_dw3"), ("sel_polid", "sel_polid_dw3")]
+KEYS = (("start", "cap_start"), ("stop", "cap_stop"), ("turn_onset", "cap_turn_onset"), ("stay", "false_start"), ("control", "false_stop"),
+        ("control", "false_turn"), ("straight_int", "false_turn"))
+
+
+def arm_models(arm: str) -> list:
+    return [p.name for p in sorted((L.lroot("readout")).glob(f"{arm}-s*")) if (p / "eval" / "wodval.npz").exists()]
+
+
+def cmd_compare(a):
+    D = L.Data(("wod", "wodval", "nus"))
+    tab = D.tab["wodval"]
+    rows_ = None
+    cache = {}
+
+    def arm_rows(arm):
+        nonlocal rows_
+        if arm in cache:
+            return cache[arm]
+        ms = arm_models(arm)
+        if not ms:
+            return None
+        acc = None
+        for m in ms:
+            z = np.load(L.lroot("readout", m, "eval", "wodval.npz"))
+            rows_ = z["rows"]
+            mt = L.row_metrics(z["plan"], tab, rows_, D.cam["wodval"])
+            acc = {k: mt[k].astype(float) for k in mt} if acc is None else {k: acc[k] + mt[k] for k in mt}
+        cache[arm] = ({k: v / len(ms) for k, v in acc.items()}, len(ms))
+        return cache[arm]
+    out = []
+    for A_, B_ in PAIRS:
+        ra, rb = arm_rows(A_), arm_rows(B_)
+        if ra is None or rb is None:
+            continue
+        fl = {s: np.asarray(tab[f"s_{s}"])[rows_] for s in ("start", "stop", "turn_onset", "stay", "control", "straight_int")}
+        groups = np.asarray(tab["seq"])[rows_]
+        for sl, m in KEYS:
+            d = L.paired_delta(ra[0][m][fl[sl]], rb[0][m][fl[sl]], groups[fl[sl]])
+            out.append({"a": A_, "b": B_, "seeds_a": ra[1], "seeds_b": rb[1], "slice": sl, "metric": m, **{k: v for k, v in d.items() if k in ("n", "adapt", "orig", "delta", "lo", "hi")}})
+    df = pd.DataFrame(out).rename(columns={"adapt": "a_mean", "orig": "b_mean"})
+    OUT.mkdir(parents=True, exist_ok=True)
+    df.to_csv(OUT / "compare.csv", index=False)
+    print(df.round(3).to_string(index=False))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["tables"])
+    ap.add_argument("cmd", choices=["tables", "compare"])
     a = ap.parse_args()
-    {"tables": cmd_tables}[a.cmd](a)
+    {"tables": cmd_tables, "compare": cmd_compare}[a.cmd](a)
