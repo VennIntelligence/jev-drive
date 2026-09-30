@@ -86,11 +86,14 @@ def run_extras(adir: Path) -> dict:
     # intent consistency with the route (causal rule of the agent), only for arms that send one
     if "intent" in live and (live.intent > 0).any():
         zones = [(s[i] - INTENT_BEFORE_M, s[j] + INTENT_AFTER_M, 2 if k == LEFT else 3) for i, j, k in cmd_runs(cmd)]
-        sp = s[np.minimum(live.ri.to_numpy(), len(s) - 1)]
-        exp = np.ones(len(live), int)
-        for a, b, k in zones:
-            exp[(sp >= a) & (sp <= b)] = k
-        out.update(intent_steps=len(live), intent_bad=int((exp != live.intent.to_numpy()).sum()), intent_turn_steps=int((live.intent > 1).sum()))
+        ok = np.zeros(len(live), bool)
+        for dk in (-1, 0, 1):                                  # the progress index may advance by one between the intent and the logging of `ri` (D2)
+            sp = s[np.clip(live.ri.to_numpy() + dk, 0, len(s) - 1)]
+            exp = np.ones(len(live), int)
+            for a, b, k in zones:
+                exp[(sp >= a) & (sp <= b)] = k
+            ok |= exp == live.intent.to_numpy()
+        out.update(intent_steps=len(live), intent_bad=int((~ok).sum()), intent_turn_steps=int((live.intent > 1).sum()))
     # turn passes (per LEFT / RIGHT command run): progress passes the run end and the ground truth stays within TURN_XT_M of the route
     try:
         xt = cross_track(adir)
@@ -355,7 +358,9 @@ def check(stage: str):
     else:
         a, d, b = (df[(df.tag == t) & (df.arm == r) & (df.seed == 0)] for t, r in (("lm", "lmain"), ("ld", "drive"), ("ld", "dbase")))
         res.append(chk("every unit has 10 run rows", len(a) == len(d) == len(b) == 10, f"{len(a)} {len(d)} {len(b)}"))
-        res.append(chk("no agent crash", not any(("Fail" in str(s) or "rash" in str(s) or s == "missing") for x in (a, d, b) for s in x.status), ""))
+        crash = ("missing", "Failed", "Failed - Simulation crashed", "Failed - Agent crashed", "Failed - Agent couldn't be set up")          # D2
+        res.append(chk("no agent / simulation crash (statuses Completed, Failed - TickRuntime, Failed - Agent got blocked are driving outcomes)",
+                       not any(str(s) in crash for x in (a, d, b) for s in x.status), str(sorted({str(s) for x in (a, d, b) for s in x.status}))))
         res.append(chk("dbase DS in 57.7 +- 15", abs(b.DS.mean() - 57.7) <= 15, f"{b.DS.mean():.1f}"))
         res.append(chk("drive DS in 63.2 +- 15", abs(d.DS.mean() - 63.2) <= 15, f"{d.DS.mean():.1f}"))
         res.append(chk("C2 intent 100% on all routes", int(a.intent_bad.sum()) == 0 and a.intent_turn_steps.sum() > 0, f"bad {int(a.intent_bad.sum())} of {int(a.intent_steps.sum())}"))
