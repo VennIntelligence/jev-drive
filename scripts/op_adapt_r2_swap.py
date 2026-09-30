@@ -6,7 +6,7 @@ the frozen trunk again. Every context frame is swapped with its own mask, so the
        -> R2/cache-swap/sim/<pair>.npy fp16 (48, 1024, 8, 16), rows = stream (0 C+swap, 1 K+swap) * 24 + slot
   p5   the P5 v1 BA plus streams holding the pedestrian-scope observation frames (index/p5_obs.parquet fn_plus): the
        segmentation view is not stored, so the walker mask is rebuilt per camera (front, front_left, front_right) as
-       the x+ / x- difference (max |dYCbCr| > 30, 3x3 opening) inside the walker hazards' projected 3D boxes (+ 8 px),
+       the x+ / x- difference (max |dYCbCr| > 10, 3x3 opening) inside the walker hazards' projected 3D boxes (+ 8 px),
        frames matched by tick k (pre-divergence, so the worlds differ only by the hazard)
        -> R2/cache-swap/p5/<stream>.npy fp16 (n, 1024, 8, 16), rows = stream slots
   index  index/{simC,simK,p5}_swap.parquet: one row per swapped x+ readout row, `src_uid` = the unswapped row, plus the
@@ -31,7 +31,7 @@ from jevdrive import op_adapt_r2_data as C  # noqa: E402
 from jevdrive.runlog import RunLog  # noqa: E402
 
 K24 = np.ones((49, 49), np.uint8)
-DIFF, BOX_PAD = 30, 8
+DIFF, BOX_PAD = 10, 8
 _S = {}
 
 
