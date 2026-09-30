@@ -14,9 +14,10 @@ and checked against the slot's scored actor set A(s) (their recorded futures: no
        nuScenes (no roadblock route) = the lanes whose travel direction agrees with the ego's heading (the tangential form
        the prereg wrote); bidirectional lanes agree with both
   P    progress: box-centre projection onto the reference path at the horizon end, over max(5 m, best safe candidate)
-       with PDM's rule "nobody reaches 5 m -> all 1"; safe = NC * DAC * DDC = 1; yield exemption: when op or hold fails NC
-       because of a pedestrian, a cyclist or a moving (>= 0.5 m/s) vehicle, only candidates within 1 m of the reference
-       path are safe candidates
+       with PDM's rule "nobody reaches 5 m -> all 1"; safe = NC * DAC * DDC = 1. v5 (prereg "v5 revision"): waiting is
+       never penalised when op or hold fails NC because of a pedestrian, a cyclist or a moving (>= 0.5 m/s) vehicle, or
+       only because of static blockers that have been still for < T_W = 5 s in the logged history: then P = 1 for
+       every candidate. A static blocker still for >= T_W leaves the reference at the best safe candidate
   TTC  PDM's time-to-collision: the ego box pushed along its heading at its speed for 0 / 0.3 / 0.6 / 0.9 s against the
        actor boxes at that time; counts when the actor is ahead (< 30 deg) or the ego is in several lanes / off-road / in
        an intersection and the actor is not behind (> 150 deg); a track that is hit but not counted is ignored afterwards
@@ -47,7 +48,7 @@ CANDS = ("op", "op_L", "op_R", "op_slow", "op_stop", "hold", "brake_hard", "brak
 CANDS_OFF = CANDS + ("rej",)
 DELTA, H_MIN = 0.1, 3.0
 GAP_MIN, LANE_HALF, SELF_EXCL, V_FAULT = 2.0, 1.75, 2.0, 0.5          # NC (jevdrive.wl._gap_front / cg)
-PROG_MIN, MOVING_V, KEEP_LAT = 5.0, 0.5, 1.0                           # P
+PROG_MIN, MOVING_V, T_W = 5.0, 0.5, 5.0                                # P (T_W: dwell gate, s)
 DDC_WIN, DDC_OK, DDC_BAD = 10, 2.0, 6.0                                # int(1.0 s / 0.1 s) poses back, thresholds (m)
 TTC_STEPS, STOP_V, AHEAD, BEHIND = (0, 3, 6, 9), 5e-3, math.radians(30), math.radians(150)
 MAX_LON_ACC, MIN_LON_ACC, MAX_LAT_ACC = 2.40, -4.05, 4.89               # navsim pdm_comfort_metrics
@@ -80,7 +81,8 @@ EGO = {"carla": Ego(2.446, 0.918, 1.383, 1.389, 2.4),       # lincoln.mkz_2020 (
 class Actors:
     """Scored actors on the slot's 10 Hz grid, ego frame. c: (NT, N, 2) box centres; h: (NT, N) headings; hl / hw: (N,);
     ref: (NT, N, 2) the gap reference point (CARLA: the actor location, else the box centre); valid: (NT, N);
-    speed: (NT, N); kind: (N,) VEH / PED / CYC / STATIC; vis: (N,) in the camera-visible set A(s)."""
+    speed: (NT, N); kind: (N,) VEH / PED / CYC / STATIC; vis: (N,) in the camera-visible set A(s); still: (N,) seconds the actor has been stationary (< 0.5 m/s) up to t = 0 in the
+    logged history (0 = unknown / no history: waiting is fine)."""
     c: np.ndarray
     h: np.ndarray
     hl: np.ndarray
@@ -90,10 +92,15 @@ class Actors:
     speed: np.ndarray
     kind: np.ndarray
     vis: np.ndarray
+    still: np.ndarray | None = None
+
+    def __post_init__(self):
+        if self.still is None:
+            self.still = np.zeros(len(self.hl))
 
     def subset(self, m: np.ndarray) -> "Actors":
         return Actors(self.c[:, m], self.h[:, m], self.hl[m], self.hw[m], self.ref[:, m], self.valid[:, m],
-                      self.speed[:, m], self.kind[m], self.vis[m])
+                      self.speed[:, m], self.kind[m], self.vis[m], self.still[m])
 
     @staticmethod
     def empty() -> "Actors":
@@ -397,23 +404,33 @@ def raw_metrics(slot: Slot, p: np.ndarray, actors: dict | None = None) -> dict:
     for tag, m in (actors or {"": slot.actors.vis}).items():
         A = slot.actors.subset(m)
         out["NC" + tag], out["fail" + tag], out["failmov" + tag] = nc(g, ego, A, n)
+        # longest dwell among the static (non-moving-class) actors a candidate fails NC on; -1 = none
+        out["failstill" + tag] = np.where(out["fail" + tag] & ~out["failmov" + tag], A.still[None], -1.0).max(1, initial=-1.0)
         out["TTC" + tag] = ttc(g, ego, A, n, ar)
     return out
 
 
 def finalize(m: dict, names, tag: str = "", keep=("op", "hold"), prog_norm: float | None = None) -> dict:
-    """P, S, Top, valid from raw metrics of one slot's candidate set. prog_norm given: the stored normaliser (score_plans)."""
+    """P, S, Top, valid from raw metrics of one slot's candidate set. prog_norm given: the stored normaliser (score_plans;
+    0 = every P is 1). gate: 0 none, 1 a moving actor blocks op / hold, 2 only static blockers that have waited < T_W."""
     safe = m["NC" + tag] & m["DAC"] & (m["DDC"] == 1.0)
     idx = [names.index(k) for k in keep if k in names]
-    exempt = bool(m["failmov" + tag][idx].any()) if prog_norm is None else False
+    gate = 0
     if prog_norm is None:
-        cand = safe & (m["lat"] <= KEEP_LAT) if exempt else safe
-        best = float(m["prog"][cand].max()) if cand.any() else 0.0
-        prog_norm = best if best > PROG_MIN else 0.0
+        st = m["failstill" + tag][idx]
+        if m["failmov" + tag][idx].any():
+            gate = 1
+        elif (st >= 0).any() and not (st >= T_W).any():
+            gate = 2
+        if gate:
+            prog_norm = 0.0
+        else:
+            best = float(m["prog"][safe].max()) if safe.any() else 0.0
+            prog_norm = best if best > PROG_MIN else 0.0
     P = np.minimum(1.0, m["prog"] / prog_norm) if prog_norm > 0 else np.ones_like(m["prog"])
     S = m["NC" + tag] * m["DAC"] * m["DDC"] * (5 * P + 5 * m["TTC" + tag] + 2 * m["C"]) / 12
     top = S >= S.max() - DELTA
-    return {"P": P, "S": S, "top": top, "exempt": exempt, "prog_norm": prog_norm, "safe": safe}
+    return {"P": P, "S": S, "top": top, "exempt": gate > 0, "gate": gate, "prog_norm": prog_norm, "safe": safe}
 
 
 def score_slot(slot: Slot, p: np.ndarray, names, all_actors: bool = True) -> dict:

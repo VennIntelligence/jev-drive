@@ -351,6 +351,21 @@ def add_static(cols: dict, town: str, pose, ground_z: float, fov: float | None, 
         cols["speed"].append(np.zeros(nt))
         cols["kind"].append(S.STATIC)
         cols["vis"].append(vis)
+        cols["still"].append(0.0)                                # map geometry: no history, waiting is fine
+
+
+TICK_HZ = 20.0
+
+
+def _still_ticks(kr: np.ndarray, vv: np.ndarray, k: int) -> float:
+    """Seconds an actor has been stationary at tick k in its 5 Hz record: from its last record with speed >= 0.5 m/s at or
+    before k (never moved: from its first record). No record at or before k: 0 (no history)."""
+    j = np.flatnonzero(kr <= k)
+    if len(j) == 0:
+        return 0.0
+    mv = np.flatnonzero(np.hypot(vv[j, 0], vv[j, 1]) >= S.MOVING_V)
+    t_ref = kr[j[mv[-1]]] if len(mv) else kr[j[0]]
+    return float(max(k - t_ref, 0.0) / TICK_HZ)
 
 
 def _carla_bb(tid: str, bb) -> list:
@@ -390,7 +405,7 @@ def carla_slot(world: dict, k: int, town: str, hazards, hz_px=None, fov=64.0, ca
     kinds = world["kinds"]
     freeze = (world["k_trig"] < 0 or k < world["k_trig"]) if freeze is None else freeze
     hz = set(int(h) for h in hazards)
-    cols = {f: [] for f in ("c", "h", "hl", "hw", "ref", "valid", "speed", "kind", "vis")}
+    cols = {f: [] for f in ("c", "h", "hl", "hw", "ref", "valid", "speed", "kind", "vis", "still")}
     ctx = k - 4 * np.arange(N_CTX)
     for i in np.unique(aid):
         m = aid == i
@@ -452,6 +467,7 @@ def carla_slot(world: dict, k: int, town: str, hazards, hz_px=None, fov=64.0, ca
         cols["speed"].append(sp)
         cols["kind"].append(kind)
         cols["vis"].append(vis)
+        cols["still"].append(_still_ticks(kr, vv, k))
     add_static(cols, town, pose, float(e[3]), fov, cam_x)
     A = _stack_actors(cols)
     rt = np.asarray(world["route"])[:, :2].astype(float)
@@ -480,7 +496,7 @@ def _stack_actors(cols: dict) -> S.Actors:
         return S.Actors.empty()
     return S.Actors(np.stack(cols["c"], 1), np.stack(cols["h"], 1), np.array(cols["hl"], float), np.array(cols["hw"], float),
                     np.stack(cols["ref"], 1), np.stack(cols["valid"], 1), np.stack(cols["speed"], 1),
-                    np.array(cols["kind"], int), np.array(cols["vis"], bool))
+                    np.array(cols["kind"], int), np.array(cols["vis"], bool), np.array(cols.get("still") or np.zeros(len(cols["hl"])), float))
 
 
 def sim_world(pair: str, sign: int) -> tuple[dict, list, object]:
@@ -693,7 +709,7 @@ def nus_slot(scene: str, token: str, ref: np.ndarray | None = None) -> S.Slot:
     tq = t0 + S.TS
     A = z["ann"]
     kt = z["kt"]
-    cols = {f: [] for f in ("c", "h", "hl", "hw", "ref", "valid", "speed", "kind", "vis")}
+    cols = {f: [] for f in ("c", "h", "hl", "hw", "ref", "valid", "speed", "kind", "vis", "still")}
     ctx_k = np.flatnonzero((kt >= t0 - 1.6 - 1e-3) & (kt <= t0 + 1e-3))
     for ii in np.unique(A[:, 1]).astype(int):
         a = A[A[:, 1] == ii]
@@ -715,10 +731,26 @@ def nus_slot(scene: str, token: str, ref: np.ndarray | None = None) -> S.Slot:
         cols["speed"].append(sp)
         cols["kind"].append(int(a[0, 7]))
         cols["vis"].append(bool(a[np.isin(a[:, 0].astype(int), ctx_k), 8].astype(bool).any()))
+        cols["still"].append(_still_nus(ta, a[:, 2:4], t0))
     v0 = _nus_speed(z, t0)
     log_path = nus_log_path(z, t0, pose)
     return S.Slot(S.EGO["nus"], pose, v0, n, _stack_actors(cols), log_path if ref is None else ref, nus_map(str(z["location"])),
                   meta={"cam_x": float(z["kcam"][ki]), "t0": t0, "log": log_path})
+
+
+def _still_nus(ta: np.ndarray, xy: np.ndarray, t0: float) -> float:
+    """Seconds an annotated instance has been stationary at t0: from the end of its last keyframe interval (<= t0) whose mean
+    speed was >= 0.5 m/s, else from its first annotation. Not annotated at or before t0: 0."""
+    j = np.flatnonzero(ta <= t0 + 1e-3)
+    if len(j) == 0:
+        return 0.0
+    ta, xy = ta[j], xy[j]
+    if len(ta) > 1:
+        sp = np.hypot(*np.diff(xy, axis=0).T) / np.maximum(np.diff(ta), 1e-3)
+        mv = np.flatnonzero(sp >= S.MOVING_V)
+        if len(mv):
+            return float(max(t0 - ta[mv[-1] + 1], 0.0))
+    return float(max(t0 - ta[0], 0.0))
 
 
 def _nus_speed(z, t0) -> float:
@@ -1037,7 +1069,7 @@ def score_domain(domain: str, uids=None, workers: int | None = None, chunk: int 
     if domain != "off":
         for k, dt in (("S_all", np.float32), ("top_all", bool), ("NC_all", np.uint8)):
             out[k] = np.stack([r[k] for _, _, r in rows]).astype(dt) if rows else np.zeros((0, K), dt)
-    for k, dt in (("valid", bool), ("h", np.float32), ("prog_norm", np.float32), ("exempt", bool), ("vru30", bool)):
+    for k, dt in (("valid", bool), ("h", np.float32), ("prog_norm", np.float32), ("exempt", bool), ("gate", np.int8), ("vru30", bool)):
         out[k] = np.array([r[k] for _, _, r in rows], dt)
     f = R("score", f"{domain}.npz")
     f.parent.mkdir(parents=True, exist_ok=True)

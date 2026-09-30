@@ -35,10 +35,10 @@ def _const(v, y=0.0, n=S.NT):
     return np.column_stack([v * S.TS[:n], np.full(n, y)])
 
 
-def _actor(xy, kind=S.PED, hl=0.3, hw=0.3, speed=0.0, h=0.0, vel=(0.0, 0.0)):
+def _actor(xy, kind=S.PED, hl=0.3, hw=0.3, speed=0.0, h=0.0, vel=(0.0, 0.0), still=0.0):
     c = np.asarray(xy, float)[None] + np.outer(S.TS, vel)
     return S.Actors(c[:, None], np.full((S.NT, 1), h), np.array([hl]), np.array([hw]), c[:, None].copy(),
-                    np.ones((S.NT, 1), bool), np.full((S.NT, 1), speed), np.array([kind]), np.array([True]))
+                    np.ones((S.NT, 1), bool), np.full((S.NT, 1), speed), np.array([kind]), np.array([True]), np.array([still]))
 
 
 def _cat(*a):
@@ -111,10 +111,16 @@ def test_yield_exemption_and_static_obstacle():
     i = {k: S.CANDS.index(k) for k in S.CANDS}
     assert not r["NC"][i["op"]] and not r["NC"][i["hold"]] and r["exempt"]
     assert r["NC"][i["op_stop"]] and r["P"][i["op_stop"]] == 1.0, r["P"]          # stopping for the person: full progress
+    assert r["gate"] == 1 and (r["P"] == 1.0).all()                                 # v5: P = 1 for every candidate
     assert r["NC"][i["shift_L"]] and r["P"][i["shift_L"]] == 1.0                   # the detour is capped at 1 as well
-    car = _actor((25.0, 0.0), S.STATIC, hl=2.3, hw=0.9)
+    car = _actor((25.0, 0.0), S.STATIC, hl=2.3, hw=0.9, still=8.0)
     r2 = S.score_slot(_slot(car, mapq=_map(oneway=True)), P, S.CANDS)      # a free same-direction lane on the left
-    assert not r2["exempt"] and r2["NC"][i["shift_L"]] and r2["P"][i["op_stop"]] < 0.5, r2["P"]   # waiting behind a static car is penalised
+    assert not r2["exempt"] and r2["NC"][i["shift_L"]] and r2["P"][i["op_stop"]] < 0.5, r2["P"]   # waiting behind a car parked >= T_W is penalised
+    for st in (0.0, 4.9):                                                    # dwell gate: a blocker that has waited < T_W is waited for
+        r3 = S.score_slot(_slot(_actor((25.0, 0.0), S.STATIC, hl=2.3, hw=0.9, still=st), mapq=_map(oneway=True)), P, S.CANDS)
+        assert r3["exempt"] and r3["gate"] == 2 and (r3["P"] == 1.0).all(), (st, r3["P"])
+    r4 = S.score_slot(_slot(_cat(car, _actor((25.0, 0.0), S.PED)), mapq=_map(oneway=True)), P, S.CANDS)
+    assert r4["gate"] == 1 and (r4["P"] == 1.0).all()                          # a moving blocker wins over a long-static one
     mv = _actor((25.0, 0.0), S.VEH, hl=2.3, hw=0.9, speed=2.0, vel=(2.0, 0.0))
     assert S.score_slot(_slot(mv), P, S.CANDS)["exempt"]                          # a moving car earns the exemption
 
@@ -220,3 +226,16 @@ if __name__ == "__main__":
         if k.startswith("test_"):
             f()
             print("ok", k)
+
+
+def test_yield_when_hold_passes_ahead():
+    """v5: the moving pedestrian crosses 6 m ahead of a 10 m/s ego; hold gets past it (NC = 1) while op (slower) does not.
+    Stopping to yield must not lose against hold on progress."""
+    P, _ = _cands(10.0)
+    i = {k: S.CANDS.index(k) for k in S.CANDS}
+    ped = _actor((14.0, 4.0), S.PED, vel=(0.0, -1.5))
+    r = S.score_slot(_slot(ped), P, S.CANDS)
+    assert r["NC"][i["hold"]] and r["NC"][i["op_stop"]] and r["gate"] in (0, 1)
+    if r["gate"] == 0:                                   # the person was not on op / hold's path: nothing to test
+        return
+    assert (r["P"] == 1.0).all()
