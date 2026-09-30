@@ -671,14 +671,57 @@ def validate_wl1(a) -> dict:
     return {"max_abs_diff": float(rep["diff"].abs().max())}
 
 
+def stage_sanity(a) -> dict:
+    """Staged launch, stage 2 (one seed of each arm): loss curves, finite preds, fork coverage, and a first C1 / C2 / C3 look at seed 0."""
+    OUT.mkdir(parents=True, exist_ok=True)
+    full = wl2_store()
+    store = Store({arm: {0: d[0]} for arm, d in full.dirs.items() if 0 in d})
+    rows, out = [], {}
+    for arm in store.dirs:
+        gid, q, fa, actions, d = store.load(arm, 0)
+        cur = json.loads((d / "curve.json").read_text()) if (d / "curve.json").exists() else []
+        fin = all(np.isfinite(v).all() for k, v in q.items() if k.startswith(("p_", "z")))
+        r = {"arm": arm, "n_forks": len(gid), "eval_forks": int((fa.split == "eval").sum()), "finite": bool(fin)}
+        if cur:
+            v = [c["val"] for c in cur]
+            r.update({"val_first": v[0], "val_best": min(v), "val_last": v[-1], "best_step": cur[int(np.argmin(v))]["step"],
+                      "train_last": cur[-1]["train"], "fit_s": cur[-1]["wall_s"], "monotone_to_best": bool(all(v[i] >= v[i + 1] - 1e-9 for i in range(int(np.argmin(v))))),
+                      "n_steps": cur[-1]["step"]})
+        rows.append(r)
+    out["curves"] = rows
+    tr = pd.concat([truth(1, M2.P1, M2.R1), truth(2, M2.P2, M2.R2)], ignore_index=True)
+    key = tr.set_index(["gid", "action"])
+    ex2 = pair_exit(M2.R2, 2)
+    c1 = readout_c1(store, key, 2, ex2, MAIN_ARMS, a.n_boot, (("B", "W"),))
+    out["c1"] = c1.drop(columns=[c for c in c1 if c.endswith("_ci")]).to_dict("records")
+    e = {}
+    for arm in ("B", "A", "vrep"):
+        if store.has(arm):
+            r, _ = c2_c3(store, arm, "cg", tr, 2, ex2, a.n_boot, None, train_ds=(1,) if arm == "vrep" else None)
+            e[arm] = {k: r[k] for k in ("n_rows", "n_unsafe", "auc_learn", "auc_q", "pairwise", "H", "n_solvable", "U_op", "U_sel", "U_or", "n_plus")}
+    out["c2c3_cg"] = e
+    ev = tr[(tr.ds == 2) & (tr.split == "eval")]
+    out["eval_x_plus_forks"] = {"in_forks_table": int(ev[ev.world == "plus"].gid.nunique()), "with_anchor_in_preds": int(len(set(full.load("B", 0)[0]) & set(ev[ev.world == "plus"].gid)))}
+    (OUT / "stage2_sanity.json").write_text(json.dumps(out, indent=1, default=float))
+    print(pd.DataFrame(rows).to_string())
+    print(c1[["arm", "brake_gt_hold", "median_abs_err_m", "agree_S", "auc_S", "n_S", "n_still", "n_left", "routes_S"]].to_string())
+    print(json.dumps(e, indent=1, default=float))
+    print(out["eval_x_plus_forks"])
+    return out
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--skip-c4", action="store_true")
     ap.add_argument("--validate-wl1", action="store_true")
+    ap.add_argument("--stage2", action="store_true")
     a = ap.parse_args()
-    print(json.dumps(validate_wl1(a) if a.validate_wl1 else {"done": bool(run_wl2(a))}, default=float))
+    if a.stage2:
+        stage_sanity(a)
+    else:
+        print(json.dumps(validate_wl1(a) if a.validate_wl1 else {"done": bool(run_wl2(a))}, default=float))
 
 
 if __name__ == "__main__":
