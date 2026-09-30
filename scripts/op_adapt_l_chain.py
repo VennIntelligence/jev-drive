@@ -202,7 +202,11 @@ def main():
     J = lambda arm, seed=0, steps=0: {"arm": arm, "seed": seed, "steps": a.steps or steps}  # noqa: E731
 
     # longest first (stage-4 runs), so the tail of the wave is the cheap frozen-stage-4 runs
-    wave1 = [J(x) for x in ("sel_s4ia", "sel_s4ia_dw3", "sel_s4polia", "sel_s4polia_dw3")] + [{"fn": o_eval}] + \
+    o_eval(gpus[0], cores[:12])                          # the original model's readout pass first: every `read` needs it
+    if STATE["failed"]:
+        (C / "ERROR").write_text("O readout pass failed\n")
+        sys.exit(1)
+    wave1 = [J(x) for x in ("sel_s4ia", "sel_s4ia_dw3", "sel_s4polia", "sel_s4polia_dw3")] + \
         [J(x) for x in ("sel_polia", "sel_polia_dw3", "sel_polid", "sel_polid_dw3", "tr_ad")]
     run_phase("wave1 (selection candidates + adapter-only + O readout)", wave1, slots)
     # the registered selection

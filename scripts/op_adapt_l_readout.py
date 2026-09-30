@@ -174,7 +174,7 @@ def cmd_read(a):
     for name, dn in (("wodval", "wodval"), ("nusval", "nus")):
         za, zo = load_eval(a.model, name), load_eval("O", name)
         if za is None or zo is None:
-            continue
+            raise SystemExit(f"missing eval pass for {name}: model {a.model} {'ok' if za is not None else 'missing'}, O {'ok' if zo is not None else 'missing'}")
         assert np.array_equal(za["rows"], zo["rows"])
         r = za["rows"]
         tab = D.tab[dn]
