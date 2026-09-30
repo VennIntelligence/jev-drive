@@ -159,6 +159,36 @@ def o_eval(gpu, cores):
         STATE["failed"].append(t)
 
 
+def gpu_monitor(gpus, every=20, window=30):
+    """Sample nvidia-smi utilisation of the lane's cards into chain/gpu_util.csv; when a card's 10-minute mean drops below 70% while
+    jobs are running, log it (and put it in STATUS) so a stalled slot is visible."""
+    hist = {g: [] for g in gpus}
+    last_warn = {g: 0.0 for g in gpus}
+    with open(C / "gpu_util.csv", "a") as f:
+        while True:
+            try:
+                out = subprocess.check_output(["nvidia-smi", "--query-gpu=index,utilization.gpu,memory.used", "--format=csv,noheader,nounits"],
+                                              text=True)
+                t = time.strftime("%F %T")
+                for line in out.strip().splitlines():
+                    i, u, m = (int(x) for x in line.split(","))
+                    if i in hist:
+                        hist[i] = (hist[i] + [u])[-window:]
+                        f.write(f"{t},{i},{u},{m}\n")
+                f.flush()
+                low = {g: round(sum(h) / len(h)) for g, h in hist.items() if len(h) >= window and sum(h) / len(h) < 70}
+                with LOCK:
+                    STATE["gpu_util_10min"] = {g: round(sum(h) / max(len(h), 1)) for g, h in hist.items()}
+                    STATE["gpu_low"] = low
+                for g, u in low.items():
+                    if STATE["running"] and time.time() - last_warn[g] > 900:
+                        last_warn[g] = time.time()
+                        log(f"GPU {g} 10-min mean utilisation {u}% (< 70%) with {len(STATE['running'])} jobs running")
+            except Exception as e:  # noqa: BLE001
+                log(f"gpu monitor: {e}")
+            time.sleep(every)
+
+
 def alias_main(sel: str):
     for sub in ("runs", "readout"):
         src, dst = ROOT / sub / f"{sel}-s0", ROOT / sub / "main-s0"
@@ -198,6 +228,7 @@ def main():
     n = len(gpus) * a.per_card
     k = len(cores) // n
     slots = [(gpus[i // a.per_card], cores[i * k:(i + 1) * k]) for i in range(n)]
+    threading.Thread(target=gpu_monitor, args=(gpus,), daemon=True).start()
     log(f"chain start: slots {[(g, f'{c[0]}-{c[-1]}') for g, c in slots]}")
     J = lambda arm, seed=0, steps=0: {"arm": arm, "seed": seed, "steps": a.steps or steps}  # noqa: E731
 
