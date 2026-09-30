@@ -1,0 +1,109 @@
+{
+ "runs": {
+  "sel_s4ia": {
+   "nonfinite": 0,
+   "drift_median": 0.1011413037776947,
+   "drift_p95": 0.43698328733444214,
+   "ks_v2": 0.10066666666666667,
+   "qualifies": false,
+   "cap_gain": 0.29380526436223936,
+   "seq_per_s": 202.52073334078116,
+   "peak_gb": 25.130859375,
+   "data_wait_frac": 0.0016801833893439636
+  },
+  "sel_polia": {
+   "nonfinite": 0,
+   "drift_median": 0.09353704005479813,
+   "drift_p95": 0.40223559737205505,
+   "ks_v2": 0.08488888888888889,
+   "qualifies": false,
+   "cap_gain": 0.31141192628034736,
+   "seq_per_s": 517.7142909392362,
+   "peak_gb": 22.296875,
+   "data_wait_frac": 0.0011762978243453114
+  },
+  "sel_s4polia": {
+   "nonfinite": 0,
+   "drift_median": 0.09228213131427765,
+   "drift_p95": 0.4191226065158844,
+   "ks_v2": 0.07666666666666666,
+   "qualifies": false,
+   "cap_gain": 0.3121481722350399,
+   "seq_per_s": 192.43643165121966,
+   "peak_gb": 25.181640625,
+   "data_wait_frac": 0.0015670969563312208
+  },
+  "sel_polid": {
+   "nonfinite": 0,
+   "drift_median": 0.08956419676542282,
+   "drift_p95": 0.3835314214229584,
+   "ks_v2": 0.09044444444444444,
+   "qualifies": false,
+   "cap_gain": 0.3172352248425319,
+   "seq_per_s": 660.9755569962624,
+   "peak_gb": 22.265625,
+   "data_wait_frac": 0.0013069717223104242
+  },
+  "sel_s4ia_dw3": {
+   "nonfinite": 0,
+   "drift_median": 0.0531398206949234,
+   "drift_p95": 0.2686569094657898,
+   "ks_v2": 0.08422222222222223,
+   "qualifies": false,
+   "cap_gain": 0.23071918727386279,
+   "seq_per_s": 203.36049016013823,
+   "peak_gb": 25.130859375,
+   "data_wait_frac": 0.0016195757933908192
+  },
+  "sel_polia_dw3": {
+   "nonfinite": 0,
+   "drift_median": 0.05385100841522217,
+   "drift_p95": 0.26020604372024536,
+   "ks_v2": 0.07311111111111111,
+   "qualifies": false,
+   "cap_gain": 0.2612644456831989,
+   "seq_per_s": 510.58964957534937,
+   "peak_gb": 22.296875,
+   "data_wait_frac": 0.0009858199584028737
+  },
+  "sel_s4polia_dw3": {
+   "nonfinite": 0,
+   "drift_median": 0.054959263652563095,
+   "drift_p95": 0.2692902386188507,
+   "ks_v2": 0.07155555555555555,
+   "qualifies": false,
+   "cap_gain": 0.2658572180672334,
+   "seq_per_s": 193.16351896461748,
+   "peak_gb": 25.181640625,
+   "data_wait_frac": 0.0015148099656894635
+  },
+  "sel_polid_dw3": {
+   "nonfinite": 0,
+   "drift_median": 0.05221468210220337,
+   "drift_p95": 0.24532386660575867,
+   "ks_v2": 0.07755555555555556,
+   "qualifies": false,
+   "cap_gain": 0.2709154309230957,
+   "seq_per_s": 645.1848695196095,
+   "peak_gb": 22.265625,
+   "data_wait_frac": 0.0012504479429890298
+  },
+  "tr_ad": {
+   "nonfinite": 0,
+   "drift_median": 0.030574075877666473,
+   "drift_p95": 0.2755354046821594,
+   "ks_v2": 0.017777777777777778,
+   "qualifies": false,
+   "cap_gain": 0.16644864158533038,
+   "seq_per_s": 1063.9558359137386,
+   "peak_gb": 22.1328125,
+   "data_wait_frac": 0.0073451290599816435
+  }
+ },
+ "bug": [],
+ "substance": [
+  "sel_s4ia: KS 0.101 >= 0.1",
+  "no candidate qualifies under the registered dev lines"
+ ],
+ "pass": true
+}

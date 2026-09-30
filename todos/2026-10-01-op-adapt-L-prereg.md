@@ -1,6 +1,6 @@
 # op-adapt L：用真实 log 的人类未来做模仿的轻度适配（预登记）
 
-状态: 预登记（写于任何训练结果之前；此前只做了数据准备：WOD val 全量 trunk 缓存、原模型在它上面的输出、切片表，以及一次只查数值恒等的 selftest，没有任何训练步、没有任何适配模型的读数）。2026-10-01 夜间跑，三张卡。之后的偏离全部记在文末「偏离」一节。
+状态: 已完成（2026-10-01 02:30）；预登记（写于任何训练结果之前；此前只做了数据准备：WOD val 全量 trunk 缓存、原模型在它上面的输出、切片表，以及一次只查数值恒等的 selftest，没有任何训练步、没有任何适配模型的读数）。2026-10-01 夜间跑，三张卡。之后的偏离全部记在文末「偏离」一节。
 主题: [research/decisions.md](../research/decisions.md) 第 77 条（log expert audit）、第 55 / 57 / 66 条（stage 4 解冻的代价、turn desire 在路口前不改 plan、desire 时机）、第 34 / 36 条（WOD 协议与纵向 ×1.06 校准）；[log expert audit](2026-10-01-log-expert-audit.md)；[op-adapt r2](2026-09-29-op-adapt-r2-prereg.md) 与它的 [交接](../tmp/2026-09-30-op-adapt-r2-state3.md)（基础设施只读复用）。
 协调: r2 的 run 目录与 chain 文件一律不动（只读它的 `t/samples`、`t/teacher/{wod,nus}`、`teacher/tstd.npy`、rater 缓存）；新产物全在 `$DATA_DIR/runs/op_adapt_L/`。三张卡 0、1、2（box 现在只有这三张，cgroup 75 核、296 GiB 内存），核 8–74，调度表登记为 `op-adapt-L`。
 
@@ -193,6 +193,48 @@ r2 实测：stage 4 训练、batch 64 单卡约 288 标注序列 / s，峰值约
 
   **selection checklist**（`chain/selection_checklist.json`）：完成率 100%、无 NaN，bug 类失败为空；实质类：`sel_s4ia` 的速度分布 KS = 0.1007（线 < 0.1，刚好越线，其余 0.07–0.09）；**没有候选合格**（全部只因假起步差 > +2 pp；dw = 3 时漂移与其余线都在线内）。按登记规则（不停批，选「值 / 线」最大比最小者）：`main = sel_s4ia_dw3`（比值 1.29，捕获增益 +0.231）；其余 dw = 3 候选的比值 1.50–1.58，dw = 1 的 3.2–3.6。四个 dw = 3 候选之间的差异（捕获增益 +0.23 … +0.27）小于 dev 上的噪声量级，选到 `sel_s4ia_dw3` 是登记规则的机械结果。**wave 1 的 val 读数**（全部 9 个 run，selection 已定之后才看；WOD val 原始 plan，Δ = 改后 − 原模型，95% 段聚类 CI 见 `research/results/op-adapt-L/`）：L1 三个切片对全部 9 个 run 都过（CI 下界 > 0：start +0.065 … +0.216、stop +0.213 … +0.416、turn onset +0.115 … +0.196）；L2 的假起步对全部 9 个 run 都不过（Δ +1.4 … +9.3 pp，dw = 3 约 +2.3 … +2.9 pp，CI 上界 3.2–4.2）；L3 只有四个 dw = 3 候选过；L4「无害」只有 dw = 3 的四个候选过，其中 `sel_s4ia_dw3` 与 `sel_s4polia_dw3` 连「不低于」（Δ ≥ 0，原始与 ×1.06 都成立）也过；L5（ADE）全部过（−1.5% … −3.4%）；nuScenes val：start、stop 迁移（CI 下界 > 0），turn onset 不迁移（−0.7 … −1.9 pp）。
 - 2026-09-30 23:47（wave 1 之后、wave 2 之前的一次人工检查：看了上面的 wave 1 全表；不改任何线，只往队列里加了两个消融，见 D4）：链在 selection 之后暂停（`chain/PAUSE`），bug 类失败为空，放行；重启链（wave 1 的标记文件让它直接跳过），wave 2 于 23:49 开始，23 个 job。
+
+## 结果（2026-10-01 02:30 队列跑完；全部 run 完成、无失败；`research/results/op-adapt-L/`）
+
+队列：wave 1 的 9 个 run、wave 2 的 23 个、第 2 遍补 seed 2 的 8 个、wave 3 navtest，共 40 个训练 run（`main` = `sel_s4ia_dw3`，seed 0 即选择 run）。表中 Δ = 改后 − 原模型，WOD val（整段聚类 95% CI），原始 plan；`arms.csv` 逐行、`lines_by_model.csv` 逐模型、`compare.csv` 是配对的 arm 对 arm。线的「过」= 该 arm 全部 seed 都过。
+
+![capture](../research/figs/op-adapt-L-capture.png)
+
+图（捕获率变化，每个点一个模型）：看三块里蓝色 `main` 三个 seed 几乎重合（seed 间差 < 1 pp），`only_*` 各自只在自己的切片上涨，`dw03` → `dw1` → `main`（dw 3）→ `dw10` 沿蒸馏权重单调缩小增益。
+
+![triggers](../research/figs/op-adapt-L-triggers.png)
+
+图（对照帧误触发与漂移）：看第一块，假起步随增益同步上升，虚线（+2 pp）只有 dw 10、`only_stop`、`only_turn`、`tr_ad*` 在线内；假停、假转几乎不动。
+
+![rfs](../research/figs/op-adapt-L-rfs.png)
+
+图：RFS 变化的 CI 普遍跨 0；nuScenes 块里 start、stop 为正，turn onset 为零或负。
+
+| arm（seed 数） | start Δ [CI 下界] | stop Δ | turn onset Δ | 假起步 Δ（CI 上界） | 漂移中位 / p95 (m) | RFS Δ 原始 / ×1.06 | L1 | L2 | L3 | L4 无害 / 不低于 | L5 | L6 |
+|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|
+| **main**（3） | +0.101 [0.082] | +0.307 [0.250] | +0.117 [0.097] | +2.7 pp（3.9） | 0.059 / 0.337 | +0.009 / +0.019 | 过 | **假起步不过** | 过 | 过 / 不过 | 过 | start、stop 迁移；turn 不 |
+| noint（3） | +0.088 | +0.299 | +0.049 | +2.6 pp（3.9） | 0.062 / 0.342 | −0.044 / −0.041 | 过 | 假起步不过 | 过 | 不过 / 不过 | 过 | 同上 |
+| dw 1（3） | +0.199 | +0.368 | +0.149 | +8.1 pp（11.9） | 0.110 / 0.568 | −0.002 / −0.005 | 过 | 不过 | **不过** | 不过 | 过 | — |
+| dw 0.3（3） | +0.318 | +0.432 | +0.166 | +25.4 pp | 0.209 / 0.942 | −0.081 / −0.090 | 过 | 不过 | 不过 | 不过 | 过 | — |
+| dw 10（3） | +0.039 | +0.195 | +0.067 | +0.9 pp（1.6） | 0.028 / 0.175 | −0.010 / −0.011 | 过 | **过** | 过 | 过 / 不过 | 过 | — |
+| stayheavy（3） | +0.077 | +0.323 | +0.117 | +1.7 pp（2.7） | 0.065 / 0.359 | −0.012 / +0.001 | 过 | 不过（差 0.7 pp） | 过 | 过 / 不过 | 过 | — |
+| nocontrast（3） | +0.147 | +0.270 | +0.121 | +4.4 pp（6.1） | 0.055 / 0.340 | −0.011 / −0.003 | 过 | 不过 | 过 | 不过 | 过 | — |
+| only_start / only_stop / only_turn（各 3） | +0.221 / −0.003 / +0.030 | −0.006 / +0.385 / +0.005 | +0.054 / −0.007 / +0.147 | +11.7 / +0.1 / +0.8 pp | 0.027–0.055 / 0.25–0.39 | +0.010 / +0.014 / −0.032 | 各只过自己的切片 | only_start 不过，其余过 | 过 | — | 过 | — |
+| tr_ad（1）/ tr_ad_dw3（1） | +0.065 / +0.041 | +0.213 / +0.137 | +0.115 / +0.095 | +1.4 / +1.0 pp | 0.088 / 0.047 | −0.041 / −0.022 | 过 | 过（dw3）；tr_ad 上界 2.2 不过 | tr_ad 不过 | 不过 | 过 | 不迁移 |
+| long，8 000 步（1） | +0.125 | +0.325 | +0.132 | +2.6 pp（3.8） | 0.061 / 0.369 | +0.036 / +0.018 | 过 | 不过 | 过 | 过 / 过 | 过 | — |
+
+（CI 下界与完整的 CI 见 `arms.csv`；L1 的下界都 > 0.03。）**其余 L2 项**（control 假停、假转，straight_int 假转）对所有 arm 都过（上界 ≤ 0.3 pp）。**L5（ADE）** 全部过，相对变化 −1.0% … −3.4%（对人类未来的 ADE 更好）。**L7 navtest PDMS**（原模型 port 84.169）：main seed 0 / 1 / 2 = 84.441 / 84.498 / 84.473（Δ +0.27 / +0.33 / +0.30），noint = 84.118（Δ −0.05）；过线（≥ O − 1）。
+
+**配对比较（`compare.csv`，main 对各 arm，3 seed 平均，同一批行）**：
+- intent 的贡献：main 对 noint，turn onset +6.8 pp [5.6, 8.1]，start +1.3 pp [0.4, 2.3]，stop +0.8 pp；假起步无差；RFS 上 noint −0.044 对 main +0.009。intent 主要买起转，而且不以误触发为代价。
+- 三类互相帮忙还是抢：only_start 的 start 比 main 高 12 pp 但假起步高 9 pp，且 stop / turn 几乎没有增益；only_stop 只涨 stop（+0.385，比 main 高 7.8 pp）、没有假起步；只模仿 turn 的 turn 增益 +0.147 高于 main 的 +0.117。main 里三类的 start 与 stop 增益都小于只训一类，代价是共享容量与蒸馏。**假起步几乎全部来自 start 模仿**（only_stop 与 only_turn 的假起步 +0.1 / +0.8 pp）。
+- 蒸馏权重是 capture 与误触发的单一旋钮：增益与假起步随 dw 同向单调变化；只有 dw 10 把假起步压进线，代价是 start 只剩 +0.039。stayheavy（对照帧里 stay 占 3 / 5）用 start −2.4 pp 换假起步 −1.0 pp，比单调提高 dw 更划算但仍差 0.7 pp；去掉对照帧（nocontrast）假起步 +1.7 pp、start 多 +4.6 pp，对照帧的作用主要是压假起步。
+- 可训练部分：stage 4、stage 4 + policy、policy、native desire 承载 intent 在同一 dw 下捕获增益相差 ≤ 0.02（选择表），没有哪一组明显更好；只训 adapter（tr_ad）增益约为一半，假起步也较小；dw 3 下的 `tr_ad_dw3` 进线但增益只有 +0.04 / +0.14 / +0.10。
+- seed 散布很小：main 三个 seed 的三切片捕获差 < 1 pp；8 000 步的 long 对 main 无显著增益差（start +2.3 pp，假起步不变）。
+
+**登记线的读法**：按 §6，`main` 三个 seed 过 L1（三个切片 CI 下界 > 0）、L3、L4「无害」、L5、L7，**不过 L2 的假起步**（+2.7 pp，CI 上界 3.9 对线 2）与 L4「不低于」（三个 seed 中有 seed 的 RFS Δ < 0，平均 +0.009 / +0.019，CI 跨 0）。所以结果是「**靠代价换的捕获**」的边缘形态：捕获增益真实、稳定、有跨切片的 intent 增益，而且漂移、保守 / 急、RFS、ADE、navtest 都没变坏；唯一的代价是 stay 帧上多了约 3 pp 的假起步（原模型本身 4–7%），这是 start 模仿与 stay 先验的直接取舍，可由 dw 与对照帧比例连续调节，dw 10 时过线但增益缩到 1/3。**没有任何 arm 同时过全部 L1 与 L2**（dw 10 过 L2 与 L1，但 start 增益仅 +0.039，严格按线字面它过 L1 与 L2、L3、L4 无害、L5——是唯一全过的 arm，但增益很小）。域外（nuScenes val，L6）：start、stop 迁移（CI 下界 > 0），turn onset 不迁移（−0.7 pp 上下，CI 含 0 或为负）；nuScenes 上没有 intent，转弯增益主要来自 intent。
+
+**已验证与推断**：上表全部数字由 CSV 直接生成；原模型在本 lane 读数协议（5 Hz 前视 1.6 s）下的 RFS = 8.004（TensorRT 官方 8.005）与 navtest 84.169（参照 84.18）复现。推断的：「假起步来自 start 与 stay 的先验失衡」来自只训 stop / turn 的 arm 没有假起步与 stayheavy 的单调效果，没有单独量化先验；「intent 主要买起转」的机制（adapter 读到的是路线意图而不是场景）没有做 intent 置换检验。
 
 ## 偏离
 

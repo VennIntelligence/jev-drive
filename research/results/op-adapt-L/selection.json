@@ -1,0 +1,214 @@
+{
+ "config": "sel_s4ia_dw3",
+ "rule": "none qualifies: smallest max(value / line), ties by capture gain",
+ "candidates": [
+  {
+   "config": "sel_s4ia",
+   "cap_gain": 0.29380526436223936,
+   "values": {
+    "drift_median": 0.1011413037776947,
+    "drift_p95": 0.43698328733444214,
+    "false_start_pp": 6.583333333333333,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": -0.08333333333333334,
+    "false_turn_straight_pp": -0.4166666666666667,
+    "slow_pp": 1.0800000000000005,
+    "fast_pp": 0.47999999999999987
+   },
+   "violations": {
+    "drift_median": 0.0011413037776946966,
+    "drift_p95": -0.06301671266555786,
+    "false_start_pp": 4.583333333333333,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0833333333333335,
+    "false_turn_straight_pp": -2.4166666666666665,
+    "slow_pp": -0.9199999999999995,
+    "fast_pp": -1.52
+   },
+   "qualifies": false,
+   "ratio": 3.2916666666666665
+  },
+  {
+   "config": "sel_polia",
+   "cap_gain": 0.31141192628034736,
+   "values": {
+    "drift_median": 0.09353704005479813,
+    "drift_p95": 0.40223559737205505,
+    "false_start_pp": 6.416666666666666,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": 0.0,
+    "false_turn_straight_pp": -0.25,
+    "slow_pp": 1.2800000000000007,
+    "fast_pp": 0.7200000000000012
+   },
+   "violations": {
+    "drift_median": -0.006462959945201879,
+    "drift_p95": -0.09776440262794495,
+    "false_start_pp": 4.416666666666666,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0,
+    "false_turn_straight_pp": -2.25,
+    "slow_pp": -0.7199999999999993,
+    "fast_pp": -1.279999999999999
+   },
+   "qualifies": false,
+   "ratio": 3.208333333333333
+  },
+  {
+   "config": "sel_s4polia",
+   "cap_gain": 0.3121481722350399,
+   "values": {
+    "drift_median": 0.09228213131427765,
+    "drift_p95": 0.4191226065158844,
+    "false_start_pp": 6.333333333333334,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": 0.0,
+    "false_turn_straight_pp": -0.25,
+    "slow_pp": 1.16,
+    "fast_pp": 0.7599999999999996
+   },
+   "violations": {
+    "drift_median": -0.007717868685722357,
+    "drift_p95": -0.0808773934841156,
+    "false_start_pp": 4.333333333333334,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0,
+    "false_turn_straight_pp": -2.25,
+    "slow_pp": -0.8400000000000001,
+    "fast_pp": -1.2400000000000004
+   },
+   "qualifies": false,
+   "ratio": 3.166666666666667
+  },
+  {
+   "config": "sel_polid",
+   "cap_gain": 0.3172352248425319,
+   "values": {
+    "drift_median": 0.08956419676542282,
+    "drift_p95": 0.3835314214229584,
+    "false_start_pp": 7.166666666666667,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": -0.08333333333333334,
+    "false_turn_straight_pp": -0.08333333333333334,
+    "slow_pp": 1.36,
+    "fast_pp": 0.6400000000000017
+   },
+   "violations": {
+    "drift_median": -0.010435803234577185,
+    "drift_p95": -0.11646857857704163,
+    "false_start_pp": 5.166666666666667,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0833333333333335,
+    "false_turn_straight_pp": -2.0833333333333335,
+    "slow_pp": -0.6399999999999999,
+    "fast_pp": -1.3599999999999983
+   },
+   "qualifies": false,
+   "ratio": 3.5833333333333335
+  },
+  {
+   "config": "sel_s4ia_dw3",
+   "cap_gain": 0.23071918727386279,
+   "values": {
+    "drift_median": 0.0531398206949234,
+    "drift_p95": 0.2686569094657898,
+    "false_start_pp": 2.5833333333333335,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": -0.08333333333333334,
+    "false_turn_straight_pp": -0.25,
+    "slow_pp": 0.360000000000002,
+    "fast_pp": 0.2500000000000002
+   },
+   "violations": {
+    "drift_median": -0.046860179305076605,
+    "drift_p95": -0.2313430905342102,
+    "false_start_pp": 0.5833333333333335,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0833333333333335,
+    "false_turn_straight_pp": -2.25,
+    "slow_pp": -1.639999999999998,
+    "fast_pp": -1.7499999999999998
+   },
+   "qualifies": false,
+   "ratio": 1.2916666666666667
+  },
+  {
+   "config": "sel_polia_dw3",
+   "cap_gain": 0.2612644456831989,
+   "values": {
+    "drift_median": 0.05385100841522217,
+    "drift_p95": 0.26020604372024536,
+    "false_start_pp": 3.0,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": 0.0,
+    "false_turn_straight_pp": -0.16666666666666669,
+    "slow_pp": 0.8000000000000007,
+    "fast_pp": 0.4400000000000015
+   },
+   "violations": {
+    "drift_median": -0.04614899158477784,
+    "drift_p95": -0.23979395627975464,
+    "false_start_pp": 1.0,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0,
+    "false_turn_straight_pp": -2.1666666666666665,
+    "slow_pp": -1.1999999999999993,
+    "fast_pp": -1.5599999999999985
+   },
+   "qualifies": false,
+   "ratio": 1.5
+  },
+  {
+   "config": "sel_s4polia_dw3",
+   "cap_gain": 0.2658572180672334,
+   "values": {
+    "drift_median": 0.054959263652563095,
+    "drift_p95": 0.2692902386188507,
+    "false_start_pp": 3.166666666666667,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": 0.0,
+    "false_turn_straight_pp": -0.08333333333333334,
+    "slow_pp": 0.7200000000000012,
+    "fast_pp": 0.360000000000002
+   },
+   "violations": {
+    "drift_median": -0.04504073634743691,
+    "drift_p95": -0.2307097613811493,
+    "false_start_pp": 1.166666666666667,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0,
+    "false_turn_straight_pp": -2.0833333333333335,
+    "slow_pp": -1.279999999999999,
+    "fast_pp": -1.639999999999998
+   },
+   "qualifies": false,
+   "ratio": 1.5833333333333335
+  },
+  {
+   "config": "sel_polid_dw3",
+   "cap_gain": 0.2709154309230957,
+   "values": {
+    "drift_median": 0.05221468210220337,
+    "drift_p95": 0.24532386660575867,
+    "false_start_pp": 3.0,
+    "false_stop_pp": 0.0,
+    "false_turn_control_pp": 0.0,
+    "false_turn_straight_pp": -0.16666666666666669,
+    "slow_pp": 0.8800000000000002,
+    "fast_pp": 0.24000000000000132
+   },
+   "violations": {
+    "drift_median": -0.047785317897796636,
+    "drift_p95": -0.25467613339424133,
+    "false_start_pp": 1.0,
+    "false_stop_pp": -2.0,
+    "false_turn_control_pp": -2.0,
+    "false_turn_straight_pp": -2.1666666666666665,
+    "slow_pp": -1.1199999999999997,
+    "fast_pp": -1.7599999999999987
+   },
+   "qualifies": false,
+   "ratio": 1.5
+  }
+ ]
+}

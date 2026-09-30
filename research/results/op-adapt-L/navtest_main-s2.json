@@ -1,0 +1,14 @@
+{
+ "port_O": {
+  "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opi_lb_navtest_gimm-cinque_Lport__base/2026.10.01.01.49.42/2026.10.01.01.51.46.csv",
+  "n": 12146,
+  "score": 84.16909167506803
+ },
+ "model": {
+  "csv": "/root/autodl-tmp/ujs/runs/navsim/eval/v1_navtest_opi_lb_navtest_gimm-cinque_Lmain-s2__base/2026.10.01.01.45.19/2026.10.01.01.47.22.csv",
+  "n": 12146,
+  "score": 84.4732605082443
+ },
+ "delta": 0.30416883317626286,
+ "line": ">= O - 1"
+}
