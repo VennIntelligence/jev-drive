@@ -653,3 +653,17 @@ v3 的三处改动用户 2026-09-29 批准，具体参数（24 000 / 1 000 个�
   描述（不改任何登记线）：O 的行人可读性在 P5 上几乎等于随机（0.51–0.52，只有 ≥ 1 500 px 一档到 0.56），nuScenes 上 0.71，Cosmos 上 0.65 / 0.64；O 在 x⁺ 上 69% 的 slot NC 失败，2 s 速度只比 x⁻ 低 0.12 m/s；行人区换回 x⁻ 后这 0.12 基本消失（−0.12 → −0.01），说明 O 的这点差别来自行人区域的像素。
   - **执行偏离（记录在案）：** m1_rater 的 479 个 rater 帧中有 1 帧的历史被缩短（clip 里有帧间空缺，保留连续的尾段而不是补帧；commit cf78ffd 的 `rater cache` 修改），这一帧的 O 读数用较短的历史。这只影响 N-rfs 的 O 列（一帧），改后模型读同一份缓存，配对差不受影响。
   - **读数缺陷（发现于 M1，未改，等 main 决定）：** `b_score` 的 P5 分支要按 `sign` 分 x⁺ / x⁻，而 P5 的 sample 表里 `sign` 全是 0，所以 `B-score.p5` 是空 `{}`（其余三个集合正常）。M1 上无害（O 对 O 的 Δ 恒为 0），但对训练后的模型 `B-score-p5` 会出不了判格（pass = null）。这是副判格（第 4.5 节，B-score 不改结局）；P5 x⁺ / x⁻ 应由 `p5_exam` 的 reactive 帧表定义，需要 main 确认口径后再补，补之前 B-score-p5 记 null。同样，该分支给 P5 逐行打分（37 174 行）在 M1 里白算了；补口径时把打分限制在 reactive 帧。
+- 2026-09-30 21:40（用户决定，pre-result 偏离 D2）：**不单独跑 stage 10。** stage 1 过关后直接跑 full；stage 10 与 full 是同样的 run，所以 §6「约 10 个单位」的第 1–7 条改成在 full 的每个 run 自己的第一次 dev eval（≥ 10% 步数，即第 2 000 步）上逐 arm 判：一个 arm 不过就停这个 arm，同一条在两个 arm 上都不过就停批回 main。实现：`scripts/op_adapt_r2_lane.py` 的 `full`（选择波：A seed 0 在两个 λ_s 上 + A-bhv，各占一张卡；选定 λ_s 后其余 arm 按 D、A seed 1–2、D seed 1–2、单 run 消融的顺序进同一个队列，每卡 2 个 run；每个 run 完成后在预留的核片上跑读数 `scripts/op_adapt_r2_post.sh`：`eval`、`read`、`navsim navtest`）；判定写在 run 目录的 `early_checklist.json`；dev eval 周期从 1 000 步改成 2 000 步（监控频率，不影响任何登记的读数；第一次 eval 恰好落在 ≥ 10%）。链上 `chain/stage10.ok` 手写为「跳过」标记，`chain/PAUSE` 改成 `full`。此时尚未起任何 full run。
+- 2026-09-30 21:45（stage 1 结果：**checklist 不过 → 按登记停批，回 main**；`runs/op_adapt_r2/stage/stage1/checklist.json`、`runs/A-s0-ls1/`）。A seed 0、λ_s = 1、2 000 步、每卡 1 个 run：训练 14.3 min（GPU 0；含起点、第 1 000 步与终点三次 dev eval，训练步本身 4.4 it/s = 288 标注序列/s），整条 lane 14.6 min，`fullforward` 一并跑了。
+
+  | 条 | 线 | 结果 | 判 |
+  |:--|:--|:--|:--|
+  | 1 loss 有限、total 与 L_aux 下降 | 有限；后 20% < 前 20% | total 9.75 → 4.66，aux 2.18 → 1.45，score 4.20 → 2.23，pair 3.25 → 0.77；distill 0.009 → 0.019（按登记只报不判） | 过 |
+  | 2 dev 漂移中位 | ≤ 0.10 m | **0.397 m**（p95 2.69）；按域：nus 0.159、wod 0.708、nav 0.247（p95 0.75 / 2.87 / 1.09）；起点漂移为 0.000 | **不过** |
+  | 3 dev L_aux AUC 高于 O 的 temporal probe | 四个域全部 | simC 0.919（O 0.863）、simK 0.889（0.785）、nus 0.933（0.763）、wod 0.838（0.434） | 过 |
+  | 4 吞吐与显存在估计 ±30% 内 | ±30% | **标注序列 181 / s（估计 303，−40%）、峰值 31.8 GB（估计 22.4，+42%）** | **不过** |
+  | 5 cache → stage 4 → policy 对全前向的 temporal 相关 | ≥ 0.9999，3 对 | 最小 0.99999 | 过 |
+  | 6 第 0 步 L_score 在 op ∈ Top 的 slot 上 | ≤ 1e-3 | 最大 0.0（13 个 slot） | 过 |
+
+  第 4 条两个数的性质：吞吐一栏是 `dev.json` 的 `labelled_seq_per_s` = 2 000 步 × 64 / 训练循环总时长 707 s，**这个时长里含第 1 000 步那次约 150 s 的 dev eval**；只算训练步是 288 序列 / s（估计 303，−5%，在线内）。显存估计 22.4 GB 是「第一轮 batch 32 的 8.3 GB 按序列数线性放大」（lane 里的规划数，§7 只给 GPU·h、没有显存估计），实测 31.8 GB。所以第 4 条不过是估计器的问题（含 eval 时长、显存不是线性缩放），不是训练比预期慢或占卡异常；但按字面它没过，交 main 判。
+  第 2 条是实质的：漂移 0.40 m、null 帧 slow 率 26.4% 对 O 的 14.7%（+11.7 pp）、KS 0.094（线 < 0.1）。此外 sim dev 上方向是对的：pair 准确率 simC 0.91 / simK 0.94（起点 0.35 / 0.38），L_dir 违例率 0.33 / 0.29（O 0.41 / 0.36），op 不在 Top 的 x⁺ slot 上 S_jev 更好的比例 0.66 / 0.59（>0.5）。注意本 run 的余弦学习率是在 2 000 步内走完的（`frac = step / cfg.steps`），与 full run 第 2 000 步（学习率仍在峰值附近）不是同一个状态，所以「stage 10 线 0.15 m」不能直接套到它上面，也不能据此说 full 的 10% 处会过。**没有改任何东西去让它过**，链按登记停在 stage 1（`chain/ERROR`），没有起 full。
