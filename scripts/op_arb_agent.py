@@ -33,6 +33,8 @@ lateral acceleration <= alat on the path's curvature, accel <= amax, and a stop 
 Config: the b2d_zeroshot_agent keys, plus "arb": {"mode", "cruise", "alat", "amax", "bmax", "twin", "lead_p",
 "plan_vmin", "plan_form" ("abs" | "rel"), "plan_gate" ("always" | "brake": only while meta brake_press > brake_th), "meta_k" (meta time slot: 0 = now, 1 = 2 s),
 "release" ("none" | "gas" | "planx" | "nobrake"), "release_th", "latch_max_s",
+"resume" ("timer" | "nored": the driver's resume after latch_max_s is withheld while a ground-truth red / yellow light is
+within resume_tl_m ahead of the bumper, i.e. the driver sees the light),
 "zone_before_m", "zone_after_m", "cruise_by_route" ({route id: set speed})}. Per plan (every tick) one line in plans.jsonl with openpilot's heads, the base and
 arbitration state, and ground-truth context (evaluation only; only mode oshadow reads it for control).
 """
@@ -60,7 +62,7 @@ DEFAULTS = {"mode": "native", "cruise": 8.0, "alat": 2.0, "amax": 1.5, "bmax": 3
             "plan_gate": "always", "brake_th": 0.5, "meta_k": 0, "zones": True, "release_s": 0.0,
             "zone_before_m": 15.0, "zone_after_m": 5.0, "idm_s0": 2.5, "idm_T": 1.2, "idm_b": 2.0,
             "lat": "route", "lat_exec": "p7", "lon": "op", "hold": "any", "lead_go_v": 1.0, "coast_v": 0.0,
-            "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
+            "resume": "timer", "resume_tl_m": 40.0, "zone_m": None, "div_m": 1.0, "div_back_m": 0.5, "div_arc": 15.0, "div_hold_s": 1.0}
 DRIVE_ZONES = {Z.LEFT: (15.0, 5.0), Z.RIGHT: (15.0, 5.0), Z.STRAIGHT: (5.0, 5.0),
                Z.CHANGE_LEFT: (5.0, 10.0), Z.CHANGE_RIGHT: (5.0, 10.0)}
 
@@ -160,6 +162,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         self.last_src = None
         self.blend_from, self.blend_t = None, -1e9
         self.ctx_frame, self.ctx = None, {}
+        self.resume_blocked = False
         self.div_on, self.agree_t, self.intent_t, self.want_go, self.lat_src = False, 0.0, -1e9, True, "route"
         if self.arb["lat_exec"] == "curv":
             self.lateral = "curvature"                         # the parent's tick loop steers from self.curvature
@@ -329,6 +332,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         caused = t_frame - (self.intent_t if A["hold"] == "intent" else self.binding_t) < (2.0 if A["hold"] == "intent" else 1.5)
         if use_plan and not self.latch and self.moved and self.stop_t > 0 and caused:
             self.latch, self.latch_t, self.rel_t = True, 0.0, 0.0
+        self.resume_blocked = False
         if self.latch:
             self.latch_t += dt
             gas = float(mt0[gi])
@@ -337,8 +341,11 @@ class OpArbAgent(Z.ZeroShotAgent):
                    "none": False}[A["release"]]
             self.rel_t = self.rel_t + dt if rel else 0.0          # the release signal must hold release_s seconds
             lead_go = A["hold"] == "intent" and lp > A["lead_p"] and float(lead[0, 2]) > A["lead_go_v"]
+            c = self._ctx() if A["resume"] == "nored" else {}
+            red_ahead = c.get("tl") in (1, 2) and c.get("tl_dist", 99.0) < A["resume_tl_m"]   # the driver sees the light
+            self.resume_blocked = red_ahead and self.latch_t > A["latch_max_s"]
             why = "signal" if rel and self.rel_t >= A["release_s"] else "lead_go" if lead_go else \
-                "timeout" if self.latch_t > A["latch_max_s"] else "rolling" if speed > 1.0 else None
+                "timeout" if self.latch_t > A["latch_max_s"] and not red_ahead else "rolling" if speed > 1.0 else None
             if why:
                 self.latch, rel = False, why
             else:
@@ -390,7 +397,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         r3 = lambda x: np.round(np.asarray(x, float), 3).tolist()  # noqa: E731
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "src": src,
-               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "ri": int(self.route.i),
+               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "ri": int(self.route.i),
                "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},

@@ -19,7 +19,8 @@ cd "$(dirname "$0")/.."
 REPO=$(pwd)
 O=${OP_ARB_DIR:-$DATA_DIR/runs/op_arb}
 GPU=${GPU:-6} WORKERS=${WORKERS:-2} IDX0=${IDX0:-160} CPUS=${CPUS:-144-167} SEED=${SEED:-0}
-mkdir -p "$O/srv" "$O/cfg" "$O/arms"
+AD=${OP_ARB_ARMS:-$O/arms}      # arm dirs; two cards can run with their own $O (server, config) and one shared $AD
+mkdir -p "$O/srv" "$O/cfg" "$AD"
 export B2D_PIDS_WAIT=${B2D_PIDS_WAIT:-17000} B2D_SENSOR_TICK=1
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMBA_NUM_THREADS=1
 XML=$DATA_DIR/third_party/Bench2Drive/leaderboard/data/bench2drive_0.0.4_val.xml
@@ -93,7 +94,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         oplat)   arb="{\"mode\": \"switch\", \"zones\": false${E2E_ARGS:+, $E2E_ARGS}}" ;;
         # op-drive arms (todos/2026-09-29-op-drive.md); every one coasts instead of light braking below 2.5 m/s
         dbase)   arb='{"mode": "base", "coast_v": 2.5}' ;;
-        dbaseslow) arb="{\"mode\": \"base\", \"coast_v\": 2.5, \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
+        dbaseslow|dbaseslow[0-9]) arb="{\"mode\": \"base\", \"coast_v\": 2.5, \"cruise_by_route\": ${CRUISE_BY_ROUTE:?}}" ;;
         latp7|latk) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"$([[ $arm == latk ]] && echo curv || echo p7)\", \"lon\": \"base\", \"coast_v\": 2.5}" ;;
         drive|dlon) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
  \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
@@ -121,6 +122,23 @@ def speeds(d):
 a, b = speeds(sys.argv[1]), speeds(sys.argv[2])
 print(json.dumps({r: round(min(max(8.0 * a[r] / max(b[r], 1e-3), 0.5), 8.0), 2) for r in a if r in b}))
 EOF
+}
+
+match_iter() {  # match_iter <drive dir> <prev slow dir>: next per-route set speed = prev set speed x v_drive / v_prev_slow, clipped to [0.5, 8]
+    python3 - "$1" "$2" <<'PYEOF'
+import glob, json, os, sys
+def speeds(d):
+    out = {}
+    for f in glob.glob(os.path.join(d, "done", "*.json")):
+        rid = os.path.basename(f)[:-5]
+        p = os.path.join(d, "attempts", rid, str(json.load(open(f))["attempt"]), "plans.jsonl")
+        v = [r["v"] for r in map(json.loads, open(p)) if not r["warm"]]
+        out[rid] = sum(v) / max(len(v), 1)
+    return out
+a, b = speeds(sys.argv[1]), speeds(sys.argv[2])
+c = json.load(open(os.path.join(sys.argv[2], "cruise_by_route.json")))
+print(json.dumps({r: round(min(max(c[r] * a[r] / max(b[r], 0.05), 0.5), 8.0), 2) for r in a if r in b and r in c}))
+PYEOF
 }
 
 run_arm() {  # run_arm <arm> <ids> <out>
@@ -154,11 +172,15 @@ case ${1:-} in
         ids=$(routes "$2"); tag=$3
         for seed in ${SEEDS:-0}; do
             for a in ${ARMS:?}; do
-                d=$O/arms/$tag-$a-s$seed
+                d=$AD/$tag-$a-s$seed
                 [[ -e $d/DONE ]] && continue
-                if [[ $a == dbaseslow ]]; then
-                    CRUISE_BY_ROUTE=$(match "$O/arms/$tag-${MATCH_ARM:-drive}-s$seed" "$O/arms/$tag-dbase-s$seed") || error "speed match failed"
-                    export CRUISE_BY_ROUTE; log "dbaseslow s$seed set speeds $CRUISE_BY_ROUTE"
+                if [[ $a == dbaseslow* ]]; then       # dbaseslow: linear from dbase; dbaseslowN (N >= 2): iterate from the previous one
+                    n=${a#dbaseslow}; prev=dbaseslow$([[ $n == 2 ]] && echo "" || echo $((n - 1)))
+                    if [[ -z $n ]]; then CRUISE_BY_ROUTE=$(match "$AD/$tag-${MATCH_ARM:-drive}-s$seed" "$AD/$tag-dbase-s$seed")
+                    else CRUISE_BY_ROUTE=$(match_iter "$AD/$tag-${MATCH_ARM:-drive}-s$seed" "$AD/$tag-$prev-s$seed"); fi || error "speed match failed"
+                    [[ -n $CRUISE_BY_ROUTE ]] || error "speed match empty"
+                    export CRUISE_BY_ROUTE; log "$a s$seed set speeds $CRUISE_BY_ROUTE"
+                    mkdir -p "$d"; echo "$CRUISE_BY_ROUTE" > "$d/cruise_by_route.json"
                 fi
                 echo "set $2 $tag arm $a seed $seed $(date '+%F %T')" > "$O/STATUS"
                 SEED=$seed run_arm "$a" "$ids" "$d"
@@ -172,10 +194,10 @@ case ${1:-} in
         k=$2; ids=$(routes "$k")
         arms=${ARMS:-$([[ $k == 1 ]] && echo "native oshadow" || echo "base acc e2e switch oplat")}
         for a in $arms; do
-            [[ -e $O/arms/p$k-$a/DONE ]] && continue
+            [[ -e $AD/p$k-$a/DONE ]] && continue
             echo "phase $k arm $a $(date '+%F %T')" > "$O/STATUS"
-            run_arm "$a" "$ids" "$O/arms/p$k-$a"
-            date > "$O/arms/p$k-$a/DONE"
+            run_arm "$a" "$ids" "$AD/p$k-$a"
+            date > "$AD/p$k-$a/DONE"
         done
         date > "$O/DONE-phase$k"; echo "phase $k done $(date '+%F %T')" > "$O/STATUS" ;;
     *) sed -n 2,12p "$0"; exit 2 ;;
