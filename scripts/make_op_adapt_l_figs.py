@@ -4,6 +4,7 @@
   op-adapt-L-triggers.png   false-trigger change on the contrast sets, drift on non-imitated frames, slow / fast change
   op-adapt-L-rfs.png        RFS change on the 479 rater frames (raw and x1.06) and the nuScenes val capture change
 """
+import os
 import sys
 from pathlib import Path
 
@@ -15,7 +16,8 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "research"))
 import plot_style as S  # noqa: E402
 
-RES, FIGS = REPO / "research/results/op-adapt-L", REPO / "research/figs"
+RES = Path(os.environ.get("OP_L_OUT") or REPO / "research/results/op-adapt-L")
+FIGS = Path(os.environ.get("OP_L_FIGS") or REPO / "research/figs")
 P = S.PALETTE
 FAMILY = [("main", P["blue"]), ("noint", P["vermillion"]), ("only_", P["green"]), ("dw", P["orange"]), ("nocontrast", P["purple"]), ("stayheavy", "#8C564B"),
           ("long", P["sky_blue"]), ("tr_", P["black"]), ("sel_", "#888888")]
