@@ -77,7 +77,7 @@ class Packer:
                     cs = ",".join(map(str, self.slices[sl]))
                     nc = len(self.slices[sl])
                     env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(g), OMP_NUM_THREADS="2", OPENBLAS_CORETYPE="Haswell",
-                               R2_SCORE_WORKERS=str(max(1, nc // 3)), R2_GATHER_THREADS=str(max(1, nc // 3)))
+                               R2_SCORE_WORKERS=str(max(1, nc // 3)))
                     lf = open(self.lane / "logs" / f"{j['tag']}.log", "a")
                     p = subprocess.Popen(["taskset", "-c", cs, *j["argv"]], env=env, stdout=lf, stderr=subprocess.STDOUT)
                     self.running[j["tag"]] = j | {"p": p, "gpu": g, "t0": time.time(), "slice": sl}
