@@ -31,7 +31,8 @@ PYEOF
 DRIVE_ARGS='"resume": "nored"' run "drive dlon"
 run "dbase dbaseslow"
 last=dbaseslow
-for n in 2 3; do
+for n in 2 3 4; do        # 3 iterations at most (registration P); resumable: arms already DONE are skipped
+    if [[ -e $A/$TAG-dbaseslow$n-s$SEED/DONE ]]; then last=dbaseslow$n; continue; fi
     r=$(ratio "$last")
     echo "$(date '+%F %T') pacing s$SEED $last: v(drive)/v(slow) = $r" | tee -a "$OP_ARB_DIR/log.txt"
     python3 -c "import sys; sys.exit(0 if 0.9 <= float(sys.argv[1]) <= 1.1 else 1)" "$r" && break
