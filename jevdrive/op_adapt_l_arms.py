@@ -33,6 +33,7 @@ ABLATIONS = {
 # ablations of the trainable set that are not among the selection candidates
 EXTRA = {
     "tr_ad": dict(s4=False, pol=False, intent="ia"),            # adapter only
+    "tr_ad_dw3": dict(s4=False, pol=False, intent="ia", dw=3.0),   # D4: the same at the distillation weight the selection may pick
 }
 
 
