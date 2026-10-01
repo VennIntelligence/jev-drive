@@ -101,3 +101,6 @@ curve一单位800步全部检查通过：第0步对O plan最大差0；末步dev�
 | curve128帧前向 | 370.7帧/s | 952.5帧/s | 使用已有context去重；4s最大与p99位置差均0，所有二值指标逐位相同 |
 
 原始H特征批量gather本身没有加速（样本测量3,999→3,810帧/s），实际有用的是GPU驻留避免每步重取；不把这次小批gather测量写成优化成功。curve计算仍是主要瓶颈，未改训练语义；每卡利用率的5s实测写在`chain/gpu_util.csv`，完成时分阶段汇总。独立检查的整段均值bootstrap对原函数误差6.94e-18；中位/p95的加权实现对显式复制帧重建区间误差0，见[numeric_checks.json](../research/results/op-adapt-L/gate-curve/numeric_checks.json)。这一额外独立梯度/统计复核在gate val读取之后执行，之前已经过输入逐位与预测对齐；没有据复核改变任何结果或规则。
+
+- D3（额外验证顺序）：独立的loss/gradient与统计量显式重建检查在gate val开始后才执行；先前已验证优化输入逐位相同、分类概率与前向指标对齐，后补检查再次给出loss/gradient差0。所有训练、判定线和选出的头/tau保持不变。
+- D4（运行包装）：初始pilot与主chain直接用tmux_run.sh和自有GO边界检查，没有套docs/long-runs.md所述的slot_run.sh；每个run有独立DONE/ERROR、log/events/tb与明确CPU/GPU亲和性，没有碰其他lane。额外frontier及后处理通过slot_run.sh启动。此偏离影响调度哨兵格式，不影响数据或统计判定，完成后会核对所有自有进程退出并finish本lane。

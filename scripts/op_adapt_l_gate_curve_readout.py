@@ -84,7 +84,7 @@ def plan_metrics(tab, rows, plans, po, tag):
     masks["other"] = ~np.logical_or.reduce([masks[s] for s in L.SLICE3])
     masks["all"] = np.ones(len(rows),bool)
     result = []
-    for seed in list(range(len(plans)))+["mean"]:
+    for seed in tqdm(list(range(len(plans)))+["mean"], desc=f"{tag} paired metrics", mininterval=5):
         m = per[seed] if seed != "mean" else {k:np.mean([p[k] for p in per],axis=0) for k in orig}
         for s, mask in masks.items():
             if not mask.any():
@@ -315,19 +315,25 @@ def figures(out,log,args):
     import matplotlib.pyplot as plt
     S.apply()
     df=pd.read_csv(ROOT/"frontier/frontier.csv")
-    fig,ax=plt.subplots(figsize=(S.SINGLE_COLUMN_IN,2.65))
-    for _,p in df.iterrows():
-        color=S.PALETTE["blue"] if p.model=="gate" else S.BASELINE
-        ax.errorbar(100*p.stay,p.start,xerr=[[100*(p.stay-p.stay_lo)],[100*(p.stay_hi-p.stay)]],
-                    yerr=[[p.start-p.start_lo],[p.start_hi-p.start]],fmt="o",color=color,markersize=3,capsize=2)
-        label={"dw03":"dw 0.3","dw1":"dw 1","main":"dw 3","dw10":"dw 10","stayheavy":"Stay-heavy","gate":"Gate"}[p.model]
-        ax.annotate(label,(100*p.stay,p.start),xytext=(4,5),textcoords="offset points",fontsize=7)
+    fig,axes=plt.subplots(1,2,figsize=(S.DOUBLE_COLUMN_IN,2.75))
+    offsets={"gate":(-20,16),"dw10":(4,-15),"stayheavy":(4,9),"main":(4,8),"dw1":(4,0),"dw03":(-38,-15)}
+    labels={"dw03":"dw 0.3","dw1":"dw 1","main":"dw 3","dw10":"dw 10","stayheavy":"Stay-heavy","gate":"Gate"}
     h=np.asarray(json.loads((ROOT/"frontier/frontier.json").read_text())["hull"])
-    ax.plot(100*h[:,0],h[:,1],color=S.BASELINE,linestyle="--")
-    ax.axvline(2,color=S.PALETTE["vermillion"],ls=":",lw=.7)
-    ax.axhline(.07,color=S.PALETTE["vermillion"],ls=":",lw=.7)
-    ax.set(xlabel="False-start increase (pp)",ylabel="Start capture gain")
-    fig.subplots_adjust(left=.19,bottom=.19,right=.95,top=.94)
+    for panel,ax in enumerate(axes):
+        for _,p in df.iterrows():
+            color=S.PALETTE["blue"] if p.model=="gate" else S.BASELINE
+            ax.errorbar(100*p.stay,p.start,xerr=[[100*(p.stay-p.stay_lo)],[100*(p.stay_hi-p.stay)]],
+                        yerr=[[p.start-p.start_lo],[p.start_hi-p.start]],fmt="o",color=color,markersize=3,capsize=2)
+            if (panel==0 and p.model in ("dw03","dw1")) or (panel==1 and p.model not in ("dw03","dw1")):
+                ax.annotate(labels[p.model],(100*p.stay,p.start),xytext=offsets[p.model],textcoords="offset points",
+                            fontsize=7.5,color=color)
+        ax.plot(100*h[:,0],h[:,1],color=S.BASELINE,linestyle="--")
+        ax.axvline(2,color=S.PALETTE["vermillion"],ls=":",lw=.7)
+        ax.axhline(.07,color=S.PALETTE["vermillion"],ls=":",lw=.7)
+        ax.set(xlabel="False-start increase (pp)",ylabel="Start capture gain")
+        S.panel(ax,"Full frontier" if panel==0 else "Near the registered limits")
+    axes[1].set(xlim=(-.1,3.4),ylim=(-.01,.14))
+    fig.subplots_adjust(left=.08,bottom=.20,right=.98,top=.88,wspace=.32)
     S.save(fig,out/"gate-frontier");plt.close(fig)
     frames=[]
     for size in ("25","110","300","all"):
