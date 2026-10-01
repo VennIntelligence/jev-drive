@@ -18,6 +18,11 @@
     }
    }
   },
+  "render_dropped": {
+   "render_checked": 2814,
+   "render_dropped": 171,
+   "render_frac": 0.060767590618336885
+  },
   "ped_nonped_both_fork_points": [
    0,
    1,
