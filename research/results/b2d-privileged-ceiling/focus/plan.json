@@ -1,0 +1,247 @@
+{
+  "cohorts": {
+    "junction": [
+      "27043",
+      "9196",
+      "37969"
+    ],
+    "obstacle": [
+      "24497"
+    ],
+    "red": [
+      "24944",
+      "27870",
+      "27297"
+    ]
+  },
+  "tasks": [
+    [
+      "focus-low-v6-drive",
+      "drive",
+      0,
+      [
+        "27043",
+        "9196",
+        "37969",
+        "24497",
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-drive",
+      "drive",
+      1,
+      [
+        "27043",
+        "9196",
+        "37969",
+        "24497",
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-pall",
+      "pall",
+      0,
+      [
+        "27043",
+        "9196",
+        "37969",
+        "24497",
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-pall",
+      "pall",
+      1,
+      [
+        "27043",
+        "9196",
+        "37969",
+        "24497",
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-pjunc",
+      "pjunc",
+      0,
+      [
+        "27043",
+        "9196",
+        "37969"
+      ]
+    ],
+    [
+      "focus-low-v6-pjunc",
+      "pjunc",
+      1,
+      [
+        "27043",
+        "9196",
+        "37969"
+      ]
+    ],
+    [
+      "focus-low-v6-pred",
+      "pred",
+      0,
+      [
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-pred",
+      "pred",
+      1,
+      [
+        "24944",
+        "27870",
+        "27297"
+      ]
+    ],
+    [
+      "focus-low-v6-pbyp",
+      "pbyp",
+      0,
+      [
+        "24497"
+      ]
+    ],
+    [
+      "focus-low-v6-pbyp",
+      "pbyp",
+      1,
+      [
+        "24497"
+      ]
+    ],
+    [
+      "focus-low-v6-pbypgap",
+      "pbypgap",
+      0,
+      [
+        "24497"
+      ]
+    ],
+    [
+      "focus-low-v6-pbypgap",
+      "pbypgap",
+      1,
+      [
+        "24497"
+      ]
+    ]
+  ],
+  "runs": 44,
+  "source_checks": {
+    "base_commit": "c1ab219",
+    "old_control_sha256": "8e6b2612e6c9a0faab1fa2caa77d7ca9df8034155442bb92fedaa0fd887be069",
+    "new_control_sha256": "823cd2d13daf50703ddcbee226c54b5c2437ef6d710541234f4685ccf13cc73e",
+    "geometry_identical": true,
+    "only_plan_log_serializer_changed": true,
+    "nested_numpy_scalars_checked": true,
+    "native_log_bytes_unchanged": true,
+    "unknown_objects_rejected": true,
+    "actual_log_serializer_checked": true,
+    "prefixed_crash_classifier_checked": true,
+    "model_and_control_computation_unchanged": true
+  },
+  "debug_checks": {
+    "27787-pred": {
+      "checks": {
+        "files": true,
+        "no_crash": true,
+        "finite": true,
+        "median_latency": true,
+        "p99_latency": true
+      },
+      "status": "Completed",
+      "ms_med": 41.5,
+      "ms_p99": 70.60999999999999,
+      "passed": true,
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-27787-pred-s0/attempts/27787/1"
+    },
+    "334-pred": {
+      "checks": {
+        "files": true,
+        "no_crash": true,
+        "finite": true,
+        "median_latency": true,
+        "p99_latency": true,
+        "red_stop": true,
+        "green_go": true
+      },
+      "status": "Completed",
+      "ms_med": 37.6,
+      "ms_p99": 61.432000000000016,
+      "passed": true,
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-334-pred-s0/attempts/334/1"
+    },
+    "26872-pjunc": {
+      "checks": {
+        "files": true,
+        "no_crash": true,
+        "finite": true,
+        "median_latency": true,
+        "p99_latency": true,
+        "conflict_constraint": true,
+        "clear_go": true
+      },
+      "status": "Failed - TickRuntime",
+      "ms_med": 46.1,
+      "ms_p99": 74.50099999999998,
+      "passed": true,
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-26872-pjunc-s0/attempts/26872/1"
+    },
+    "25169-pbyp": {
+      "checks": {
+        "files": true,
+        "no_crash": true,
+        "finite": true,
+        "median_latency": true,
+        "p99_latency": true,
+        "obstacle_detected": true,
+        "path_enabled": true,
+        "valid_shift": true,
+        "passed_and_returned": true
+      },
+      "status": "Completed",
+      "ms_med": 44.6,
+      "ms_p99": 73.76000000000003,
+      "passed": true,
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-25169-pbyp-s0/attempts/25169/1"
+    },
+    "24955-pbyp": {
+      "checks": {
+        "files": true,
+        "no_crash": true,
+        "finite": true,
+        "median_latency": true,
+        "p99_latency": true,
+        "obstacle_detected": true,
+        "path_enabled": true,
+        "valid_shift": true,
+        "passed_and_returned": true
+      },
+      "status": "Completed",
+      "ms_med": 47.0,
+      "ms_p99": 93.88,
+      "passed": true,
+      "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-24955-pbyp-s0/attempts/24955/1"
+    }
+  },
+  "selection": "Prior ld-drive two-seed mean DS < 100; relevant arms only",
+  "inference": "Selected low-score diagnostic; original 696-run confirmation discontinued by user"
+}

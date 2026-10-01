@@ -1,0 +1,21 @@
+{
+  "start": 1790846395.4473007,
+  "end": 1790847687.5979471,
+  "wall_s": 1292.1506464481354,
+  "runs": 44,
+  "routes_per_hour": 122.58632570080744,
+  "gpu": {
+    "0": {
+      "mean_utilization_pct": 39.27160493827161,
+      "peak_memory_mib": 67039
+    },
+    "1": {
+      "mean_utilization_pct": 40.300411522633745,
+      "peak_memory_mib": 65989
+    },
+    "2": {
+      "mean_utilization_pct": 26.123456790123456,
+      "peak_memory_mib": 47512
+    }
+  }
+}

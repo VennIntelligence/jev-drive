@@ -1,0 +1,21 @@
+{
+  "joint": {
+    "label": "Post-hoc selected-route contrast: pall minus the relevant individual arm on each route; not the original 58-route three-arm sum",
+    "individual_weighted_delta": 13.323364142857145,
+    "pall_minus_individual": -14.894515571428572,
+    "ci": [
+      -34.48155621428571,
+      0.2727329285714255
+    ]
+  },
+  "official_red": {
+    "label": "Secondary route-run incidence of at least one official red-light violation; post-hoc, not registered event opportunity rate",
+    "drive_failed_runs": 5,
+    "pred_failed_runs": 1,
+    "delta": -0.6666666666666666,
+    "ci": [
+      -1.0,
+      -0.5
+    ]
+  }
+}

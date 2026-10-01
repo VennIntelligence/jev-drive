@@ -4,7 +4,39 @@
 
 报告只回答：各项技能能挽回多少DS（完成度乘违规罚分的驾驶分数）、执行停在哪一步、冲突对象在相机里能提前多久看到。按既有低分选样，因此属于失败诊断；绕障只有1条路线，不能将它的结果推广到总体。此前扩样批已停止，192条有效记录保留；一次日志错误及其修复已存档，不改科学判定线。
 
-当前44次诊断正在三卡并行运行。最终表格与图放在本目录，视频和原始逐帧记录留在box。
+**44/44次已完成，耗时21.5min。** 当前建议先做红灯停车与绿灯放行；绕障先补安全协同，路口先修预测与停等链。统计区间是95% CI（置信区间），整条路线聚类bootstrap（重抽样）2000次、seed0。
+
+| 对应低分路线／臂 | drive DS → 特权DS | 配对DS增益 [95% CI] | 主要现象 |
+|:--|:--|:--|:--|
+| 路口3条／pjunc | 38.97 → 40.96 | +2.00 [−0.16,+6.15] | 登记的2次机会均接触/卡死，未显示可靠收益。 |
+| 施工1条／pbyp、pbypgap | 20.73 → 48.00 | +27.27，单路线区间退化 | RC（完成百分比）31.89→100，4/4局部机会成功，但每臂仍撞车3次。 |
+| 红灯3条／pred | 75.00 → 95.00 | +20.00 [+15,+30] | 官方闯红灯5→1，绿灯恢复0–0.95s，没有新增碰撞/卡死。 |
+| 全7条／pall | 51.80 → 50.23 | −1.57 [−15.02,+11.62] | 红灯归零，但撞车5→17、出车道3→10。 |
+
+几何union（任一相机视野）提前量中位数为路口10.8s、障碍190.2s；大量对象在记录开始已可见，障碍值也受长时间等待影响。没有做遮挡判断，也没有量模型识别，不能判“普遍缺相机输入”或证明实际感知足够。
+
+原确认登记线没有追认通过：功效不足，且原批程序崩溃记录保留。最终核验发现红灯事件投影代理与官方违规不完全一致；登记代理保留，不能拿它确认红灯执行失败。官方分数/主要违规逐条验证，所有配对区间独立重算；官方红灯运行发生率及选中路线的联合对单项差属于明确标注的事后补充。
+
+完整结果、登记线、偏离、每张图的读法和视频路径见[实验记录](../../../todos/2026-10-01-b2d-privileged-ceiling.md)。
+
+| 文件 | 内容 |
+|:--|:--|
+| [focus/routes.csv](focus/routes.csv)、[arm_means.csv](focus/arm_means.csv) | 44次官方分数、完成度、违规、配速与代数损失分解。 |
+| [paired.csv](focus/paired.csv)、[events.csv](focus/events.csv)、[event_counts.csv](focus/event_counts.csv) | 登记的配对差、事件与机会；红灯事件代理有效性未通过。 |
+| [visibility_summary.csv](focus/visibility_summary.csv)、[visibility.csv](focus/visibility.csv) | road/wide/union几何视野、删失、距离与像素大小，非感知识别率。 |
+| [red_readout_audit.csv](focus/red_readout_audit.csv)、[secondary_contrasts.json](focus/secondary_contrasts.json) | 红灯口径核验与事后补充；不替代登记检验。 |
+| [plan.json](focus/plan.json)、[final_checks.json](focus/final_checks.json)、[timing.json](focus/timing.json)、[videos.json](focus/videos.json) | 官方记录核验、区间独立复算、44段画面检查、耗时与真实视频路径。 |
+
+![配对效果](focus/paired_effects.png)
+DS显示红灯和该施工路线的收益；路口与联合区间跨0。右图包含未通过有效性核验的红灯代理，小样本区间不能确认总体效果。
+
+![丢分分解](focus/loss_decomposition.png)
+绕障与联合仍损失在撞车。不同臂取不同路线，不能横比均值，也不能相加各损失项。
+
+![几何可见性](focus/visibility_upper_bound.png)
+wide补足了部分road视野；多数首见时刻受到左删失。障碍的大提前量包含长时间等待，不能当成模型已识别的证据。
+
+图有同名PDF（矢量文档）供论文使用。原始记录与视频留box，未发布网页产物。
 
 <details>
 <summary>历史检查与执行证据（备查）</summary>
