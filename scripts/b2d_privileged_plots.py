@@ -15,13 +15,13 @@ from research.plot_style import apply, PALETTE, DOUBLE_COLUMN_IN, save
 from b2d_privileged_geometry import ARMS
 
 
-def figures(root):
+def figures(root,diagnostic=False):
     apply();out=root/'summary';r=pd.read_csv(out/'routes.csv');e=pd.read_csv(out/'events.csv');v=pd.read_csv(out/'visibility.csv')
     p=pd.read_csv(out/'paired.csv');colors=list(PALETTE.values())
     fig,axs=plt.subplots(1,2,figsize=(DOUBLE_COLUMN_IN,2.7),layout='constrained')
     y=np.arange(len(p));axs[0].barh(y,p.dDS,color=colors[:len(p)])
     axs[0].errorbar(p.dDS,y,xerr=np.stack([p.dDS-p.DS_lo,p.DS_hi-p.dDS]),fmt='none',ecolor='#222222',lw=.7,capsize=2)
-    axs[0].set(yticks=y,yticklabels=p.arm,xlabel='Paired DS change',title='(a) Registered skill cohorts')
+    axs[0].set(yticks=y,yticklabels=p.arm,xlabel='Paired DS change',title='(a) Low-score diagnostic routes' if diagnostic else '(a) Registered skill cohorts')
     axs[0].axvline(0,color='#777777',lw=.6)
     axs[1].barh(y,100*p.fail_delta,color=colors[:len(p)])
     axs[1].errorbar(100*p.fail_delta,y,xerr=100*np.stack([p.fail_delta-p.fail_lo,p.fail_hi-p.fail_delta]),fmt='none',ecolor='#222222',lw=.7,capsize=2)
