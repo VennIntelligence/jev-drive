@@ -22,7 +22,7 @@ EXP = Path("experiments")
 DRAFTS = Path("restructure/readmes")
 BEGIN, END = "<!-- files:begin -->", "<!-- files:end -->"
 AREAS = [  # INDEX.md order; live topics come first
-    ("openpilot adaptation", ["op_adapt_l", "op_adapt_r2", "op_adapt_r1", "op_closed_loop", "op_openloop", "skill_pack",
+    ("openpilot adaptation", ["vlm_arb", "op_adapt_l", "op_adapt_r2", "op_adapt_r1", "op_closed_loop", "op_openloop", "skill_pack",
                               "log_expert_audit", "feature_adapter"]),
     ("closed-loop harness and controllers", ["b2d_privileged", "cl_infra", "b2d_controller", "b2d_controller_eval", "b2d_tcp",
                                              "b2d_tfv6", "tfv6_rules", "simlingo_catalogue", "carla_rewind"]),
@@ -34,6 +34,7 @@ AREAS = [  # INDEX.md order; live topics come first
     ("real-appearance pairs and world models", ["p3_ped_exam", "cosmos", "controlnet_pair", "world_model"]),
 ]
 ALIASES = {  # names the decision log and old notes use: a grep on INDEX.md finds the topic
+    "vlm_arb": "vlm-arb, vlm_arb",
     "op_adapt_l": "op-adapt L", "op_adapt_r2": "op-adapt r2, S_jev", "op_adapt_r1": "op-adapt r1, op_torch",
     "op_closed_loop": "op-arb, op-drive", "op_openloop": "op-interp, op-lb, navhard", "skill_pack": "N0-N4, navsim raise",
     "feature_adapter": "E0, E1", "cl_infra": "cl-lib, infra", "b2d_controller_eval": "Task 10", "b2d_tfv6": "TFv6 W2, D1-D3",

@@ -6,6 +6,7 @@ One line per topic: name (aliases): status; key finding [d decision entries]. Op
 
 - [b2d_privileged](b2d_privileged/README.md): live; Red light + green release DS 75.0 to 95.0 [d82]
 - [op_adapt_l](op_adapt_l/README.md) (op-adapt L): live; Stop capture 0.252 to 0.559 open loop; B2D no gain [d77-81]
+- [vlm_arb](vlm_arb/README.md) (vlm-arb, vlm_arb): live; VLM slow-channel arbitration for traffic lights and obstacles [d84]
 
 **openpilot adaptation**
 
