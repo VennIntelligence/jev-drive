@@ -1,0 +1,9 @@
+import: baseline 290/351 ok, after 290/351 ok; regressions 0, fixed 0, unchanged non-ok 61, new entries 0
+help: baseline 190/339 ok, after 242/339 ok; regressions 0, fixed 54, unchanged non-ok 95, new entries 0
+tests: baseline 29/46 ok, after 29/46 ok; regressions 0, fixed 0, unchanged non-ok 17, new entries 0
+compile_fail: baseline 0, after 0, new []
+bash_n_fail: baseline 0, after 0, new []
+static_import_missing: baseline 4 files, after 2, new 0
+md_broken: baseline 282, after 192, new 0
+fig_unreferenced: baseline 0, after 0 (new: [])
+files: baseline 3815, after 3869, deleted on purpose 96 (todos/ 73, tmp/ 23), lost 0, binary changed 0
