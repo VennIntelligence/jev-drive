@@ -55,3 +55,5 @@
 - [2026-09-28-cosmos-pilot.md](2026-09-28-cosmos-pilot.md) — Cosmos-Transfer2.5 把 CARLA 行人配对重画成真实感：v1 两段独立翻译在行人外也不同（no-go）；v2 用「x⁻ 翻一次 + 行人像素区锚定重画」，区外逐像素相同、召回 0.98、行人不再发白、118 GPU·h / 2 000 对；剩车内痕迹 1 / 10 明显，一条环判据待用户决定作废（decisions 第 56 条）
 
 - [2026-10-02 op-adapt L gate 与 curve](2026-10-02-op-adapt-L-gate-and-curve.md)：起步开关与整段采样数据量曲线的预登记、执行日志和结果。
+
+- [2026-10-01 B2D特权上限](2026-10-01-b2d-privileged-ceiling.md)：冻结Cinque的路口冲突、绕障与红灯特权仲裁上限，事件级结果与相机几何可见性。
