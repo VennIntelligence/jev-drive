@@ -260,8 +260,8 @@ class LaneRun(unittest.TestCase):
         small = [self.sh("s%d" % i, "echo s $1 >> %s; sleep 0.3" % log, workers=1, gpus=(1,), priority=1) for i in range(2)]
         self.assertEqual(self.lane([ex] + small).run(), 0)
         self.assertEqual(log.read_text().split()[:2], ["ex", "1"])
-        big = self.sh("big", "true", workers=1, vram_gb=200)
-        lane = self.lane([big])
+        big = self.sh("big", "true", workers=1, vram_gb=9)
+        lane = self.lane([big], probe_fn=lambda rows: fake_box(free_mib=10000))     # 9.8 GB free - 8 headroom < 9
         lane.root.mkdir(parents=True, exist_ok=True)
         lane.schedule(self.lease, {})
         self.assertIn("VRAM", " ".join(lane.blocked.values()))
