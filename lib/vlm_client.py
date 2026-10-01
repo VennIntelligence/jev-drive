@@ -13,7 +13,10 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 from PIL import Image
 
-from vlm_protocol import QUESTIONS_SCHEMA, parse_vlm_response
+try:
+    from .vlm_protocol import QUESTIONS_SCHEMA, parse_vlm_response
+except (ImportError, ValueError):
+    from vlm_protocol import QUESTIONS_SCHEMA, parse_vlm_response
 
 
 class VLMClient:

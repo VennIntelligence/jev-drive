@@ -15,7 +15,8 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 
 # Ensure bare imports from lib and scripts work
-REPO = Path(__file__).resolve().parents[1]
+_p = Path(__file__).resolve()
+REPO = _p.parent if (_p.parent / "jevdrive").exists() else (_p.parents[1] if (_p.parents[1] / "jevdrive").exists() else _p.parents[3])
 for _d in (str(REPO / "lib"), str(REPO / "experiments/b2d_privileged/lib"), str(REPO / "experiments/op_closed_loop/lib"), str(REPO / "scripts")):
     if _d not in sys.path:
         sys.path.insert(0, _d)
