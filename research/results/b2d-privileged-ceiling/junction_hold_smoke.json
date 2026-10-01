@@ -1,0 +1,6 @@
+{
+  "real_idm_moving_clearance_profile": true,
+  "owned_stop_observed_before_release": true,
+  "clearance_confirmation_release": true,
+  "unowned_stop_release_blocked": true
+}

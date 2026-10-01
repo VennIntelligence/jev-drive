@@ -1,0 +1,20 @@
+{
+  "original": "failed: 27787 lacked a stoppable red opportunity",
+  "supplement": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "red_stop": true,
+      "green_go": true
+    },
+    "status": "Completed",
+    "ms_med": 44.849999999999994,
+    "ms_p99": 68.3,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/pilot-light-probe-pred-s0/attempts/334/1"
+  },
+  "protocol_deviation": "S1 integration evidence uses registered debug route 334"
+}

@@ -1,0 +1,16 @@
+{
+  "checks": {
+    "files": true,
+    "no_crash": true,
+    "finite": true,
+    "median_latency": true,
+    "p99_latency": true,
+    "red_stop": false,
+    "green_go": false
+  },
+  "status": "Completed",
+  "ms_med": 42.150000000000006,
+  "ms_p99": 65.498,
+  "passed": false,
+  "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/pilot-pred-s0/attempts/27787/1"
+}

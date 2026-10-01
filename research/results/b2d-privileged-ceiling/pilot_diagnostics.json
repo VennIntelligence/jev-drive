@@ -1,0 +1,50 @@
+{
+  "pilot-repeat": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "red_stop": false,
+      "green_go": false
+    },
+    "status": "Completed",
+    "ms_med": 42.2,
+    "ms_p99": 66.68799999999999,
+    "passed": false,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/pilot-repeat-pred-s0/attempts/27787/1"
+  },
+  "pilot-seed1": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "red_stop": false,
+      "green_go": false
+    },
+    "status": "Completed",
+    "ms_med": 43.2,
+    "ms_p99": 67.82,
+    "passed": false,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/pilot-seed1-pred-s1/attempts/27787/1"
+  },
+  "pilot-light-probe": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "red_stop": true,
+      "green_go": true
+    },
+    "status": "Completed",
+    "ms_med": 44.849999999999994,
+    "ms_p99": 68.3,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/pilot-light-probe-pred-s0/attempts/334/1"
+  }
+}

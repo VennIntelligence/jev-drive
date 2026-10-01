@@ -1,12 +1,12 @@
 # B2D 特权上限：路口冲突、绕障与红灯（预登记）
 
-状态：预登记。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
+状态：调试检查已通过，正在做三卡装填profile；正式评测尚未开始。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
 
 ## 问题、共用管线与臂
 
 B2D（Bench2Drive，按路线在CARLA仿真器里闭环驾驶）在这里量特权决策能挽回多少分，以及现有控制器能否执行。原openpilot Cinque保持冻结，不训练，不换模型、相机、desire（原生离散意图输入）或导航信息。特权只进仲裁，当前其他actor（交通参与者与障碍物）的真值位置、朝向、速度以及当前灯色可以用，active_scenarios（场景脚本登记）和脚本未来轨迹不可用。
 
-所有臂复用op_arb_agent.py / op_arb_server.py / op_arb.sh和P7（已固定的路径跟踪控制器）。drive采用原curv横向执行、R1 resume（红/黄灯前不按驾驶员恢复键）、8m/s设定速度、原路线命令区/分歧兜底、lead IDM（前车跟驰减速）、行驶中plan约束、intent停车锁存、5s恢复与低速滑行，原参数不变。特权分支关掉时须保持逐数组恒等，不复制另一套drive代码。
+所有臂复用op_arb_agent.py / op_arb_server.py / op_arb.sh和P7（已固定的路径跟踪控制器）。drive采用原curv（以原生曲率控制转向）横向执行、R1 resume（红/黄灯前不按驾驶员恢复键）、8m/s设定速度、原路线命令区/分歧兜底、lead IDM（前车跟驰减速）、行驶中plan约束、intent停车锁存、5s恢复与低速滑行，原参数不变。特权分支关掉时须保持逐数组恒等，不复制另一套drive代码。
 
 | 臂 | 唯一改动 |
 |:--|:--|
@@ -110,11 +110,11 @@ pbypgap借对向道时，以当前速度/位置外推对向车辆，与借道走
 
 ## 分级检查、profile与自推进链
 
-先pred在27787、seed0、一个worker一个特权臂（非评测、录制）。S1：配置Cinque原模型/R1正确；结果与日志齐、无程序崩溃/非有限数；灯约束至少一次在红灯前触发且到停止线前v<0.2，变绿后至少一次v>1；非灯锁存仍保留5s通路；几何开关关闭逐位恒等，合成SAT/路径参考对齐；时延median≤75ms、p99≤200ms。若该route没有红→绿观测或检查不过，停止诊断，不用另一条更好成绩偷偷替换。
+先pred在27787、seed0、一个worker（独立CARLA评测进程）一个特权臂（非评测、录制）。S1：配置Cinque原模型/R1正确；结果与日志齐、无程序崩溃/非有限数；灯约束至少一次在红灯前触发且到停止线前v<0.2，变绿后至少一次v>1；非灯锁存仍保留5s通路；几何开关关闭逐位恒等，合成SAT/路径参考对齐；时延median≤75ms、p99≤200ms。若该route没有红→绿观测或检查不过，停止诊断，不用另一条更好成绩偷偷替换。
 
 再约10单位：调试drive/pred在27787，drive/pjunc/pall在26872，drive/pbyp/pbypgap/pall在25169，drive/pbyp/pbypgap在24955，共12个路线臂单位、seed0；先前pred保留为调试证据，不进正式。按适用项查：冲突约束至少一次且清空恢复；至少一个障碍被检出、可用邻道、平滑路径最大横移2.5–4.5m、路径有限、绕后回正；全部程序崩溃0、每route最多3次infra启动尝试；可正常终止的Completed/blocked/TickRuntime算驾驶结局。任何执行检查失败则ERROR停链、保留日志、修bug，不进全批。
 
-profile与中间阶段合并：before每卡1slot×2worker，after每卡2slot×4worker，先看显存/PID才加负载；两个路径同合成子集数值对齐，参数不因打包而变。每5s记录GPU利用率/显存与CPU忙核，报告单位墙钟、sim tick/s、计划/真值查询时延、卡尾空闲与瓶颈。全批切成每臂每seed的4条路线小shard（分片），六slot动态取队列，复用各自Cinque服务，完成一个shard即自动读数；每卡最多8 CARLA、2模型server，各slot12核，全部CPU0–74内，实际资源查过后登记自己的lane与index范围。PID软门17000、硬线17500；资源不足就等，不改参数或事件线。WORKERS登录变量不改，自己的并行变量PC_WORKERS/PC_SLOTS，只在子进程接口env传旧脚本需要的WORKERS。
+profile与中间阶段合并：before（优化前装填）每卡1slot（共享一台Cinque推理服务的调度单元）×2worker，after（优化后装填）每卡2slot×4worker，先看显存/PID才加负载；两个路径同合成子集数值对齐，参数不因打包而变。每5s记录GPU（图形处理器）的利用率/显存与CPU（中央处理器）忙核，报告单位墙钟、sim tick/s、计划/真值查询时延、卡尾空闲与瓶颈。全批切成每臂每seed的4条路线小shard（分片），六slot动态取队列，复用各自Cinque服务，完成一个shard即自动读数；每卡最多8 CARLA、2模型server，各slot12核，全部CPU0–74内，实际资源查过后登记自己的lane与index范围。PID软门17000、硬线17500；资源不足就等，不改参数或事件线。WORKERS登录变量不改，自己的并行变量PC_WORKERS/PC_SLOTS，只在子进程接口env传旧脚本需要的WORKERS。
 
 预计正式696route runs、每次2–10min，24worker约2–5h；大地图/卡死尾部与启动预算乘1.5，预计4–8h，加调试/profile约1h，上限计划12h墙钟。不是预算到点就删失败或改线；实际profile后更新估计。队列带DONE/ERROR/STATUS，tmux jev通过tmux_run.sh和slot_run.sh；log.txt/events.jsonl/tb/俱全；每个job边界重查自己的GO。box当前3卡、75核/约276GiB，以实测为准；以前B2D lane已归档且无CARLA进程，才允许登记这些空闲资源，不改别人的记录。
 
@@ -131,7 +131,7 @@ profile与中间阶段合并：before每卡1slot×2worker，after每卡2slot×4w
 
 原登记pilot已实际执行：27787 / pred / seed0，1个worker，墙钟100.76s，Completed，DS=70、RC=100，1次闯红灯。median计划时延42.15ms、p99为65.498ms；合成路径投影最大误差0、200例SAT开关全部一致，disabled几何逐对象恒等。标量投影1497点/s、向量化182282点/s（仅合成几何吞吐，不能当CARLA提速）。这些数字来自实际文件；原始日志和视频保存在`$DATA_DIR/runs/b2d_privileged_ceiling/arms/pilot-pred-s0/attempts/27787/1/`。
 
-S1红灯停车与绿灯恢复两项均失败，ERROR已停止全批，尚无正式评测读数。诊断发现：warmup结束时灯是绿灯，7.80s才变红，此时保险杠到登记停止线仅0.17m、车速3.35m/s，原R3a可停性判断因此没有加停车约束。这是已验证的日志时序；为何灯色时序与历史27787不同尚未证实，不能归因于seed或启动时间。没有修改停止距离、可停性判断、时延线或事件线。
+S1红灯停车与绿灯恢复两项均失败，ERROR已停止全批，尚无正式评测读数。诊断发现：warmup（模型预热阶段）结束时灯是绿灯，7.80s才变红，此时保险杠到登记停止线仅0.17m、车速3.35m/s，原R3a可停性判断因此没有加停车约束。这是已验证的日志时序；为何灯色时序与历史27787不同尚未证实，不能归因于seed或启动时间。没有修改停止距离、可停性判断、时延线或事件线。
 
 偏离：增加3个只诊断、不进入正式统计的固定debug运行：同27787/seed0重跑、27787/seed1、登记debug里的334/seed0，全部pred，分别放GPU0/1/2。这不是用别的好成绩替换原pilot；原失败保留，诊断链不会写DONE-pilot，也不会开启全批。目的是区分未观测到有效红→绿机会与停车/恢复实现错误，保留三个结果的全部日志。未看任何正式结果。
 
@@ -145,7 +145,7 @@ S1红灯停车与绿灯恢复两项均失败，ERROR已停止全批，尚无正�
 
 ### 2026-10-01 12:53 UTC+8：中间批捕获真实bug，暂停并修复
 
-13个中间单位（三卡、每卡2slot，当前每slot只有1条路线）中，26872/pall在首个warmup之后因邻道`borrow`标志是NumPy bool_而无法JSON序列化，agent崩溃。检查立即停止新单元；正在运行的单元保留，失败日志不覆盖。此时没有正式运行。修复是将该几何标志明确转换为Python bool，参数与判定线不变；增加日志序列化合成检查。链同时保留第一个ERROR，避免后续“队列已停止”的异常覆盖根因。
+13个中间单位（三卡、每卡2slot，当前每slot只有1条路线）中，26872/pall在首个warmup之后因邻道`borrow`标志是NumPy bool_（数组库的布尔标量）而无法JSON（机器可读日志格式）序列化，agent崩溃。检查立即停止新单元；正在运行的单元保留，失败日志不覆盖。此时没有正式运行。修复是将该几何标志明确转换为Python bool，参数与判定线不变；增加日志序列化合成检查。链同时保留第一个ERROR，避免后续“队列已停止”的异常覆盖根因。
 
 代码审查还发现两项实现与登记不符，正式之前纠正：静止预测点的朝向不能因atan2(0,0)变成世界0度，改用当前观测yaw；绕障横向几何改变不能暗改原base纵向剖面，保持原路径计算的governor剖面，仅将该时间剖面映射到绕行几何。新增`tl_id`评价日志，不修改灯信号。所有中间单位用新的debug-v2标签重跑，旧日志和视频保留；不能把首批崩溃藏在新结果中。
 
@@ -167,3 +167,14 @@ profile的固定负载明确为已登记debug8条×3份（24次drive运行，see
 
 
 资源监控补充cgroup CPU忙核数与内存读数；17500 PID硬线触发时不只是停新队列，而是按确切PID逐个终止本链wrapper及其子进程，并核对进程启动时刻防PID重用。不会匹配进程名，也不停止其他lane。正式运行之前记录控制源码SHA-256（内容校验），每个单元启动时检查一致性，修复版debug使用独立完成标记，不能复用旧版通过标记。
+
+
+### 2026-10-01 13:36 UTC+8：debug-v3锁定，通过实现检查后开始profile
+
+13个中间单位全部完成，无程序崩溃。适用检查均通过，包括334真实红灯停住→绿灯恢复，25169/24955的障碍检测→几何开启→绕后回正，26872的冲突约束与至少一次清空后恢复。完整逐项检查与控制校验在[debug_v3_checks.json](../research/results/b2d-privileged-ceiling/debug_v3_checks.json)与[debug_v3_lock.json](../research/results/b2d-privileged-ceiling/debug_v3_lock.json)。通过的是触发/执行通路检查；26872的pjunc仍在后续冲突中卡死，不能将该“检查通过”写成路线成功或X1通过。
+
+已核验的调试方向：v2事故路线25169的drive为DS34.81/RC34.81，pbyp为DS36/RC100（撞车2次），pbypgap为DS21.6/RC100（撞车3次）；v2施工路线24955的drive为DS22.5225/RC34.65，pbyp及pbypgap为DS36/RC100（均撞车2次）。v3路口26872的drive为DS60/RC100（撞车1次），pjunc为DS38.8/RC38.8（无撞车、TickRuntime）。这些只有debug、seed0，不能用来判断J1/B1/B2/R1或替代正式CI；它们说明绕障能通过但碰撞仍吞分，路口减少碰撞却可能卡死。
+
+真实代码的保持状态测试已核验：清空确认期仍保持有正位移的IDM剖面；观测到自有停车之后才放行；未观测自有停车时绿灯不能授权清除原锁存。最初测试跳过了停车观测帧，因此正确地没有放行；补齐该帧后上述四项通过，结果见[junction_hold_smoke.json](../research/results/b2d-privileged-ceiling/junction_hold_smoke.json)，并未改实现来迎合测试。
+
+13:36开始三卡before装填：每卡1slot×2worker；完成后自动切after每卡2slot×4worker，再由同链进入696次正式评测。profile只用固定debug8条×3份，不读取正式效果；当前没有正式数字。实际整批估计待profile后更新，暂沿用预登记4–8h加调试/profile预算。
