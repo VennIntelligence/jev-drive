@@ -45,6 +45,8 @@ def jobs(args):
         k, t = args["profile"], args.get("t", "2")
         other = "stock" if k == "reduced" else "reduced"
         runs = [(k, 4, 1), (k, 6, 2), (k, 10, 1), (k, 12, 2), (other, 12, 1)]
+        if args.get("w16"):                # deviation (logged in the todo): W = 8 left the 25-core slice half idle
+            runs.append((k, 16, 2))
         return [pdm("B-%s-t%s-w%d" % (kk, t, w), prof(kk, t), w, c, i) for i, (kk, w, c) in enumerate(runs)]
     card = int(args["card"]) if "card" in args else None     # put stage C / old on one card (e.g. a free card 0)
     if stage == "C":                       # camera stub (front3 1600x900, no model): GPU-bound regime, throughput only
