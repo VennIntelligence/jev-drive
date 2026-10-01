@@ -173,6 +173,10 @@ class OpArbAgent(Z.ZeroShotAgent):
             self.lateral = "curvature"                         # the parent's tick loop steers from self.curvature
         if self.arb["coast_v"] > 0:
             self.rules = "coast"                               # the parent's post-controller hook -> _k_rules below
+        self.pc = None
+        if self.cfg.get("pc"):
+            from b2d_privileged_geometry import Privileged
+            self.pc = Privileged(self, self.cfg["pc"]["arm"])
 
     def _init_route(self):
         super()._init_route()
@@ -296,7 +300,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         if ahead:
             dist, tl = min(ahead, key=lambda x: x[0])
             st = tl.get_state()
-            out.update(tl_dist=round(dist, 2), tl=0 if st == carla.TrafficLightState.Green else
+            out.update(tl_id=int(tl.id), tl_dist=round(dist, 2), tl=0 if st == carla.TrafficLightState.Green else
                        1 if st == carla.TrafficLightState.Yellow else 2 if st == carla.TrafficLightState.Red else -1)
         return out
 
@@ -326,10 +330,15 @@ class OpArbAgent(Z.ZeroShotAgent):
             bpath = world_to_local(world, now_xy, now_yaw)
         except ValueError:
             bpath = np.array([[0.0, 0.0], [1.0, 0.0]])
+            world = np.asarray(now_xy) + np.array([[0., 0.], [math.cos(now_yaw), math.sin(now_yaw)]])
+        if self.pc is not None:
+            world = self.pc.geometry(speed, t_frame, now_xy, now_yaw, world, warm)
+            bpath = world_to_local(world, now_xy, now_yaw)
         ba = arc(bpath)
         bpath = bpath[: max(int(np.searchsorted(ba, 80.0)) + 1, 2)]
         end_stop = ba[-1] < 80.0
         s_base = governor(bpath, speed, A["cruise"], A["alat"], A["amax"], A["bmax"], end_stop)
+        pc_cons, pc_release = self.pc.constraints(s_base, speed, bpath, t_frame, warm) if self.pc else ({}, False)
         # ---- openpilot longitudinal signals
         lead = np.asarray(out["lead"])[0]                    # lead now: (6 times, x y v a)
         lp = float(np.asarray(out["lead_prob"])[0])
@@ -395,6 +404,13 @@ class OpArbAgent(Z.ZeroShotAgent):
                 self.latch, rel = False, why
             else:
                 cons["latch"] = np.zeros(len(TIMES))
+        cons.update(pc_cons)
+        if pc_release:
+            cons.pop("plan", None)
+            cons.pop("latch", None)
+            self.latch = False
+            self.binding_t = self.intent_t = -1e9
+            rel = "privileged_clear"
         src = min(cons, key=lambda k: cons[k][-1] + 1e-3 * (k == "base"))
         s_fin = np.maximum.accumulate(np.maximum(np.min(np.stack(list(cons.values())), 0), 0.0))
         # ---- lateral owner (drive): openpilot on lane-follow segments; the route in command zones and on divergence
@@ -411,6 +427,8 @@ class OpArbAgent(Z.ZeroShotAgent):
             self.div_on = self.agree_t < A["div_hold_s"]
         lat_why = "warm" if warm else "zone" if self.in_zone() else "div" if self.div_on else None
         lat_src = "op" if mode == "drive" and A["lat"] == "op" and lat_why is None else "route"
+        if self.pc is not None and self.pc.meta.get("bypass"):
+            lat_src, lat_why = "route", "privileged_bypass"
         geom = np.r_[[[0.0, 0.0]], op_path] if lat_src == "op" and A["lat_exec"] == "p7" else bpath
         arb_path = place(geom, s_fin)
         self.want_go = bool(s_fin[7] - s_fin[3] > 0.5) and not warm   # the profile moves >= 0.5 m/s at 1-2 s
@@ -457,8 +475,18 @@ class OpArbAgent(Z.ZeroShotAgent):
             tw = Z.resample(out["t"], rigs.openpilot_plan_to_rig(out["twin_pos"], out["twin_yaw"], self.op_mount), TIMES)
             rec.update(tw_xy=r3(tw[[3, 7, 11, 19]]), tw_dp=r3(np.asarray(out["twin_desire_pred"])[:, :3]))
         rec["ctx"] = self._ctx()
+        if self.pc is not None:
+            rec["pc"] = {k: v for k, v in self.pc.meta.items() if k not in ("junctions", "obstacles")}
         self.plan_log.write(json.dumps(rec) + "\n")
         return ms
+
+    def destroy(self):
+        try:
+            if getattr(self, "pc", None) is not None:
+                self.pc.close()
+                self.pc = None
+        finally:
+            super().destroy()
 
     def _k_rules(self, speed, throttle, brake):
         """coast_v: below coast_v m/s a brake request becomes a coast while the arbitrated profile still moves and no

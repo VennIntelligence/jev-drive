@@ -105,7 +105,7 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
         latp7|latk) arb="{\"mode\": \"drive\", \"lat\": \"op\", \"lat_exec\": \"$([[ $arm == latk ]] && echo curv || echo p7)\", \"lon\": \"base\", \"coast_v\": 2.5}" ;;
         # op-adapt L (todos/2026-10-01-op-adapt-L-b2d-prereg.md): the drive arm with another model behind the server (SRV_ONNX), the intent
         # input (DRIVE_ARGS "intent": "route"), desire on / off ($DESIRE) and, for the turn-handover arms, a zone map without LEFT / RIGHT
-        drive|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
+        drive|pjunc|pbyp|pbypgap|pred|pall|dlon|dnod|dtz|lmain*|lnoint*|ldw10*|lkd*|ltz*) arb="{\"mode\": \"drive\", \"lat\": \"$([[ $arm == dlon ]] && echo route || echo op)\", \"lat_exec\": \"${LAT_EXEC:-p7}\",
  \"lon\": \"op\", \"hold\": \"intent\", \"release\": \"planx\", \"release_th\": 2.0, \"release_s\": 1.0,
  \"latch_max_s\": ${RESUME_S:-5}, \"coast_v\": 2.5${DRIVE_ARGS:+, $DRIVE_ARGS}}" ;;
         # R3a (todos/2026-09-29-op-drive.md): drive + privileged traffic-light stop; a stop latch is released only by plan / lead away from a red light, or at green
@@ -113,9 +113,11 @@ arm_cfg() {  # arm_cfg <arm>: the agent config (every arm: CL2's openpilot path 
  \"release_th\": 2.0, \"release_s\": 1.0, \"latch_max_s\": 1e9, \"coast_v\": 2.5, \"tl_stop\": true, \"tl_n\": ${TL_N:-50}}" ;;
         *) error "unknown arm $arm" ;;
     esac
+    local pc=""
+    [[ ${PC_ENABLE:-0} == 1 ]] && pc=", \"pc\": {\"arm\": \"$arm\"}"
     echo "{\"model\": \"cinque\", \"socket\": \"$SOCK\", \"plan_every\": 1, \"ctl_every\": 4, \"op_camera_tick\": 0.05,
  \"plan_origin\": \"rear\", \"warmup_s\": 5.0, \"desire\": ${DESIRE:-true}, \"controller\": \"fixed\", \"controller_preset\": \"pursuit\",
- \"controller_config\": \"$P7\", \"seed\": 0, \"dump_every\": 0, \"arb\": $arb}" > "$O/cfg/$arm.json"
+ \"controller_config\": \"$P7\", \"seed\": 0, \"dump_every\": 0, \"arb\": $arb$pc}" > "$O/cfg/$arm.json"
     python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$O/cfg/$arm.json" || error "bad config for $arm"
     echo "$O/cfg/$arm.json"
 }
@@ -164,7 +166,7 @@ run_arm() {  # run_arm <arm> <ids> <out>
     taskset -c "$CPUS" "$PY_CARLA" scripts/b2d_run.py --routes "$XML" --route-ids "$ids" --workers "$WORKERS" \
         --server-index "$IDX0" --index-span "$WORKERS" --gpu-rank "$GPU" --tm-seed "$SEED" --no-spectator --no-reap \
         --client-threads 8 --max-attempts 3 --stall-s 480 --route-timeout-s 2400 --out "$out" --python "$PY_CARLA" \
-        --agent scripts/op_arb_agent.py --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
+        --agent "${OP_ARB_AGENT:-scripts/op_arb_agent.py}" --agent-config "$cfg" --fast-copy --cache-lights >> "$out/runner.log" 2>&1 &
     pid=$!
     echo "$pid" > "$out/runner.pid"
     while kill -0 "$pid" 2>/dev/null; do
