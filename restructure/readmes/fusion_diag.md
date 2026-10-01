@@ -1,14 +1,15 @@
-# fusion_diag: Qwen x openpilot complementarity and SAM 3.1 perception
+# fusion_diag: Qwen x openpilot complementarity, SAM 3.1
 
 status: concluded
 decisions: 43
-headline: Qwen + openpilot is redundant under imitation, complementary under paired-difference training; SAM rule gate flips 29.2%
+index: Qwen+openpilot complementary under paired-diff; SAM gate flips 29.2%
+key: jevdrive/fusion_q4.py, jevdrive/sam_detect.py, jevdrive/fusion_diag.py, jevdrive/fusion_q1.py, jevdrive/fusion_q2b.py, jevdrive/fusion_q4c.py, jevdrive/fusion_q6sam.py, jevdrive/fusion_q8.py, jevdrive/fusion_q9b.py, jevdrive/fusion_figs.py, scripts/fd_sam_chain.sh
 
-**Question.** Before fusing, are Qwen and openpilot features complementary, and can off-the-shelf SAM 3.1 supply a structured hazard state (Q1-Q9)?
+**Question.** Are Qwen and openpilot complementary, and can SAM 3.1 give a hazard state?
 
-**Conclusion.** Under uniform imitation Qwen + openpilot is redundant, but under paired-difference training it is complementary (decisions 43, corrected in place after P5 v1: the original "drop Qwen" verdict was withdrawn). SAM 3.1 pedestrian recall on P5 hazards is 0.49 overall, 0.88 within 20 m; the geometric rule gate on SAM state flips 29.2% [13.2, 47.0], below the learned head's 43%, so "pedestrians go through the SAM channel" was withdrawn. Reaction-window p25 is 0.05-0.1 s for lights, so those stay in the fast channel.
+**Conclusion.** Redundant under imitation, complementary under paired-difference training (decisions 43). SAM pedestrian recall 0.49 (0.88 within 20 m); rule gate flips 29.2% vs learned 43%.
 
-**Read more.** research/leaderboard-vs-ability.md, research/behavior-layer-instruments.md, `git show bcbdde4:todos/2026-09-25-fusion-diagnostics.md`
+**Read more.** research/results/fusion-diagnostics/, research/behavior-layer-instruments.md, `git show bcbdde4:todos/2026-09-25-fusion-diagnostics.md`
 
 <!-- files:begin -->
 <!-- files:end -->

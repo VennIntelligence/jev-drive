@@ -2,13 +2,14 @@
 
 status: concluded
 decisions: 31
-headline: TFv6 representation effect +14.3 DS [+5.1, +25.9]; controller main effect +1.0 [-12.2, +15.4], not detected
+index: representation +14.3 DS [+5.1, +25.9]; controller +1.0, not detected
+key: scripts/b2d_tfv6_campaign.py, scripts/b2d_tfv6_w2b.py, scripts/b2d_tfv6_w2b_analyze.py, scripts/b2d_tfv6_controller_agent.py, scripts/b2d_tfv6_d3.py, scripts/b2d_tfv6_d3_analyze.py, scripts/b2d_tfv6_plant_diagnosis.py, scripts/test_b2d_tfv6_w2b.py
 
-**Question.** Does the high TFv6 Bench2Drive score come from waypoint tracking or from the route + target-speed representation, and does our controller (C) or its lateral correction (D) change DS.
+**Question.** Does TFv6's B2D score come from waypoint tracking or the route + speed representation, and does our controller change DS?
 
-**Conclusion.** Representation effect A - B = +14.3 DS [+5.1, +25.9] over 48 route-seed pairs (decisions 31). Controller main effect C - B was first reported as -6.1 [-20.8, +9.6], then voided: the tangent rule created phantom targets at standstill. After the W2b rerun (96 cases) it is +1.0 [-12.2, +15.4], still not detected (not equivalent), and D - C is +0.4 [-2.7, +3.5]; the 220-route tier was not run. D3 diagnosis of the remaining failure modes (held-out route deviation, 2091 start stall) is in the same entry.
+**Conclusion.** Representation A - B = +14.3 DS [+5.1, +25.9]; controller C - B -6.1 was voided (tangent phantom targets), W2b rerun +1.0 [-12.2, +15.4], not detected; D - C +0.4 (decisions 31).
 
-**Read more.** research/trajectory-to-control.md, `git show bcbdde4:todos/2026-09-23-tfv6-controller/protocol.md`, todos/2026-09-23-tfv6-controller/report.md, todos/2026-09-23-tfv6-controller/report-w2b.md, todos/2026-09-23-tfv6-controller/diagnosis-tangent.md.
+**Read more.** research/trajectory-to-control.md, todos/2026-09-23-tfv6-controller/report-w2b.md
 
 <!-- files:begin -->
 <!-- files:end -->

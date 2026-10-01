@@ -9,6 +9,7 @@ jevdrive/__init__.py	jevdrive/__init__.py	-	shared	live	shared infrastructure
 jevdrive/alpamayo/__init__.py	jevdrive/alpamayo/__init__.py	-	shared	live	shared infrastructure
 jevdrive/alpamayo/data.py	jevdrive/alpamayo/data.py	-	shared	live	shared infrastructure
 jevdrive/alpamayo/infer.py	jevdrive/alpamayo/infer.py	-	shared	live	shared infrastructure
+jevdrive/cache.py	jevdrive/cache.py	-	shared	live	shared infrastructure
 jevdrive/camgeom.py	jevdrive/camgeom.py	-	shared	live	shared infrastructure
 jevdrive/cl/__init__.py	jevdrive/cl/__init__.py	-	shared	live	shared infrastructure
 jevdrive/cl/__main__.py	jevdrive/cl/__main__.py	-	shared	live	shared infrastructure
@@ -20,6 +21,47 @@ jevdrive/cl/procs.py	jevdrive/cl/procs.py	-	shared	live	shared infrastructure
 jevdrive/cl/profiles.py	jevdrive/cl/profiles.py	-	shared	live	shared infrastructure
 jevdrive/cl/sampler.py	jevdrive/cl/sampler.py	-	shared	live	shared infrastructure
 jevdrive/common.py	jevdrive/common.py	-	shared	live	shared infrastructure
+jevdrive/data/__init__.py	jevdrive/data/__init__.py	-	shared	live	shared infrastructure
+jevdrive/data/splits/__init__.py	jevdrive/data/splits/__init__.py	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/bench2drive-0.0.4-val.v1.json	jevdrive/data/splits/defs/b2d/bench2drive-0.0.4-val.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/bench2drive220.v1.json	jevdrive/data/splits/defs/b2d/bench2drive220.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/controller-development-v1.v1.json	jevdrive/data/splits/defs/b2d/controller-development-v1.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/controller-development-v2.v1.json	jevdrive/data/splits/defs/b2d/controller-development-v2.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/controller-heldout-v1.v1.json	jevdrive/data/splits/defs/b2d/controller-heldout-v1.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/controller-holdout-v1.v1.json	jevdrive/data/splits/defs/b2d/controller-holdout-v1.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/dev10.v1.json	jevdrive/data/splits/defs/b2d/dev10.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/l1-v2-heldout.v1.json	jevdrive/data/splits/defs/b2d/l1-v2-heldout.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/l23-v2-heldout.v1.json	jevdrive/data/splits/defs/b2d/l23-v2-heldout.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/nq4k-R1.v1.json	jevdrive/data/splits/defs/b2d/nq4k-R1.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/nq4k-R2.v1.json	jevdrive/data/splits/defs/b2d/nq4k-R2.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/b2d/wl-eval.v1.json	jevdrive/data/splits/defs/b2d/wl-eval.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/e6-hold-logs.v1.json	jevdrive/data/splits/defs/navsim/e6-hold-logs.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/e6-sub.v1.json	jevdrive/data/splits/defs/navsim/e6-sub.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/e6-sub.v1.txt.gz	jevdrive/data/splits/defs/navsim/e6-sub.v1.txt.gz	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/lane-navtrain.v1.json	jevdrive/data/splits/defs/navsim/lane-navtrain.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/n0-T.v1.json	jevdrive/data/splits/defs/navsim/n0-T.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navhard_two_stage.v1.json	jevdrive/data/splits/defs/navsim/navhard_two_stage.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navhard_two_stage.v1.txt.gz	jevdrive/data/splits/defs/navsim/navhard_two_stage.v1.txt.gz	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navtest.v1.json	jevdrive/data/splits/defs/navsim/navtest.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navtest.v1.txt.gz	jevdrive/data/splits/defs/navsim/navtest.v1.txt.gz	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navtrain.v1.json	jevdrive/data/splits/defs/navsim/navtrain.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/navtrain.v1.txt.gz	jevdrive/data/splits/defs/navsim/navtrain.v1.txt.gz	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/nq3-constraint.v1.json	jevdrive/data/splits/defs/navsim/nq3-constraint.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/nq3-heldout-eval.v1.json	jevdrive/data/splits/defs/navsim/nq3-heldout-eval.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/nq3-hold-logs.v1.json	jevdrive/data/splits/defs/navsim/nq3-hold-logs.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/r2-dev-logs.v1.json	jevdrive/data/splits/defs/navsim/r2-dev-logs.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/navsim/r2-train-logs.v1.json	jevdrive/data/splits/defs/navsim/r2-train-logs.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/nuscenes/op-adapt-dev.v1.json	jevdrive/data/splits/defs/nuscenes/op-adapt-dev.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/nuscenes/op-adapt-train.v1.json	jevdrive/data/splits/defs/nuscenes/op-adapt-train.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/nuscenes/train.v1.json	jevdrive/data/splits/defs/nuscenes/train.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/nuscenes/val.v1.json	jevdrive/data/splits/defs/nuscenes/val.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/r2-dev.v1.json	jevdrive/data/splits/defs/wod/r2-dev.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/r2-train.v1.json	jevdrive/data/splits/defs/wod/r2-train.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/test.v1.json	jevdrive/data/splits/defs/wod/test.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/train.v1.json	jevdrive/data/splits/defs/wod/train.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/val-half0-s0.v1.json	jevdrive/data/splits/defs/wod/val-half0-s0.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/val-half1-s0.v1.json	jevdrive/data/splits/defs/wod/val-half1-s0.v1.json	-	shared	live	shared infrastructure
+jevdrive/data/splits/defs/wod/val.v1.json	jevdrive/data/splits/defs/wod/val.v1.json	-	shared	live	shared infrastructure
 jevdrive/dit_features.py	jevdrive/dit_features.py	-	shared	live	shared by import graph: imported by shared code
 jevdrive/drive_backbones.py	jevdrive/drive_backbones.py	-	shared	live	shared by import graph: imported by cosmos, fusion_diag, night_queue_3, night_queue_4, op_adapt_r1, op_adapt_r2, reactivity, real_transfer, skill_pack, zeroshot_openloop
 jevdrive/elicit_e1.py	jevdrive/elicit_e1.py	-	shared	live	shared by import graph: imported by night_queue_2, night_queue_3, night_queue_4, real_transfer, top10
@@ -68,14 +110,17 @@ jevdrive/p5_openpilot.py	jevdrive/p5_openpilot.py	-	shared	live	shared by import
 jevdrive/p5_pairs.py	jevdrive/p5_pairs.py	-	shared	live	shared by import graph: imported by cosmos, elicitation, fusion_diag, night_queue_2, night_queue_3, night_queue_4, op_adapt_r2, p3_ped_exam, real_transfer, tfv6_rules, top10
 jevdrive/p5_qwen.py	jevdrive/p5_qwen.py	-	shared	live	shared by import graph: imported by fusion_diag, night_queue_3, skill_pack
 jevdrive/p6.py	jevdrive/p6.py	-	shared	live	shared by import graph: imported by night_queue_3, shared code
+jevdrive/par.py	jevdrive/par.py	-	shared	live	shared infrastructure
 jevdrive/planner.py	jevdrive/planner.py	-	shared	live	shared by import graph: imported by driving_backbones, elicitation, fusion_diag, night_queue_2, night_queue_3, night_queue_4, prediag, reactivity, real_transfer, skill_pack
 jevdrive/plots.py	jevdrive/plots.py	-	shared	live	shared infrastructure
 jevdrive/probe.py	jevdrive/probe.py	-	shared	live	shared by import graph: imported by prediag, shared code, skill_pack
 jevdrive/reactivity_mc.py	jevdrive/reactivity_mc.py	-	shared	live	shared by import graph: imported by elicitation, fusion_diag, night_queue_2, night_queue_3, night_queue_4, p3_ped_exam, real_transfer
 jevdrive/real_g0.py	jevdrive/real_g0.py	-	shared	live	shared by import graph: imported by night_queue_3, shared code
 jevdrive/real_g1.py	jevdrive/real_g1.py	-	shared	live	shared by import graph: imported by night_queue_3, shared code
+jevdrive/run/__init__.py	jevdrive/run/__init__.py	-	shared	live	shared infrastructure
 jevdrive/runlog.py	jevdrive/runlog.py	-	shared	live	shared infrastructure
 jevdrive/sam_detect.py	jevdrive/sam_detect.py	-	shared	live	shared by import graph: imported by elicitation, fastperc, night_queue_2, night_queue_3, p3_ped_exam
+jevdrive/stats.py	jevdrive/stats.py	-	shared	live	shared infrastructure
 jevdrive/traj.py	jevdrive/traj.py	-	shared	live	shared infrastructure
 jevdrive/waymo.py	jevdrive/waymo.py	-	shared	live	shared infrastructure
 jevdrive/waymo_heads.py	jevdrive/waymo_heads.py	-	shared	live	shared by import graph: imported by driving_backbones, fusion_diag, night_queue_2, night_queue_3
@@ -117,6 +162,7 @@ scripts/drive_runtime/preview.py	scripts/drive_runtime/preview.py	-	shared	live	
 scripts/drive_runtime/sensors.py	scripts/drive_runtime/sensors.py	-	shared	live	shared infrastructure
 scripts/extract_nuscenes.sh	scripts/extract_nuscenes.sh	-	shared	live	shared infrastructure
 scripts/fetch_openpilot_models.py	scripts/fetch_openpilot_models.py	-	shared	live	shared infrastructure
+scripts/lib_demo.py	scripts/lib_demo.py	-	shared	live	shared infrastructure
 scripts/navsim_zs_openpilot.py	scripts/navsim_zs_openpilot.py	-	shared	live	shared by import graph: imported by night_queue_3, op_adapt_r1, op_openloop
 scripts/nq4_hooks.py	scripts/nq4_hooks.py	-	shared	live	shared by import graph: imported by shared code
 scripts/nusc_zs_openpilot.py	scripts/nusc_zs_openpilot.py	-	shared	live	shared by import graph: imported by driving_backbones, shared code
@@ -138,6 +184,7 @@ scripts/zeroshot_policy_server.py	scripts/zeroshot_policy_server.py	-	shared	liv
 scripts/zeroshot_rigs.py	scripts/zeroshot_rigs.py	-	shared	live	shared infrastructure
 scripts/zeroshot_wire.py	scripts/zeroshot_wire.py	-	shared	live	shared infrastructure
 tests/test_cl.py	tests/test_cl.py	-	shared	live	shared infrastructure
+tests/test_lib.py	tests/test_lib.py	-	shared	live	shared infrastructure
 scripts/b2d_calibrate.py	experiments/b2d_controller/archive/b2d_calibrate.py	b2d_controller	archive	one-off	
 scripts/b2d_controller_compare.py	experiments/b2d_controller/archive/b2d_controller_compare.py	b2d_controller	archive	one-off	
 scripts/b2d_controller_g4.py	experiments/b2d_controller/archive/b2d_controller_g4.py	b2d_controller	archive	one-off	

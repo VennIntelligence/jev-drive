@@ -933,9 +933,19 @@ def load_manual(path, plan):
     return rows
 
 
-NO_REWRITE = ("restructure/summaries/", "restructure/untracked.tsv", "restructure/manifest.tsv", "restructure/acknowledged.tsv", "restructure/manual_edits.tsv", "restructure/report/",
+NO_REWRITE = ("restructure/summaries/", "restructure/overlay", "restructure/append/", "restructure/decisions_index.tsv",
+              "restructure/untracked.tsv", "restructure/manifest.tsv", "restructure/acknowledged.tsv", "restructure/manual_edits.tsv", "restructure/report/",
               "tools/", "docs/restructure-design.md", "docs/path-map.tsv")
-NO_CHECK = ("docs/restructure-design.md",)   # describes old and planned paths on purpose
+NO_CHECK = ("docs/restructure-design.md", "tools/restructure/")   # describes old and planned paths on purpose
+
+
+def overlays():
+    """restructure/overlay.tsv: path -> (expected blob of the file the overlay replaces, overlay file); 'new' = new file."""
+    f = ROOT / "restructure/overlay.tsv"
+    if not f.is_file():
+        return {}
+    rows = [r for r in csv.reader(open(f), delimiter="\t") if r and r[0] != "path" and not r[0].startswith("#")]
+    return {r[0]: (r[1], ROOT / "restructure/overlay" / r[0]) for r in rows}
 
 
 def rewrite_all(plan, read, manual=()):
@@ -956,6 +966,25 @@ def rewrite_all(plan, read, manual=()):
         except UnicodeDecodeError:
             continue
         src, mlog = text, []
+        ov = overlays().get(old)
+        if ov:                          # whole-file replacement, guarded by the blob the overlay was written against
+            want, path = ov
+            have = git("hash-object", "--", old).strip()
+            if path.read_text() == src:
+                pass
+            elif want != have:
+                unresolved.append((old, 0, "overlay", want[:10], f"{old} changed since the overlay was written (blob {have[:10]}); rewrite the overlay"))
+            else:
+                src = path.read_text()
+                mlog.append((new, 0, "overlay", old, str(path)))
+        app = ROOT / "restructure/append" / old
+        if app.is_file() and app.read_text().strip().split("\n")[0] not in src:
+            body = app.read_text().strip()
+            lines = src.rstrip("\n").split("\n")
+            at = next((i for i in range(len(lines) - 1, -1, -1) if lines[i].startswith("Last verified")), len(lines))
+            lines[at:at] = [body, ""] if at < len(lines) else ["", body]
+            src = "\n".join(lines) + "\n"
+            mlog.append((new, at + 1, "append", "", str(app)))
         summ = ROOT / "restructure/summaries" / old
         if summ.is_file() and "**Summary.**" not in src:
             lines = src.split("\n")
@@ -1019,6 +1048,36 @@ def companions(plan):
                 out.append((f, (plan.dirmap[d] + f[len(d):]) if plan.dirmap[d] else ""))
                 break
     return out
+
+
+STAGING_KEEP = ("manifest.tsv", "manual_edits.tsv", "acknowledged.tsv", "untracked.tsv", "decisions_index.tsv", "overlay.tsv")
+
+
+def stash_staging():
+    """Take the restructure machinery off the hot path: records go to tools/restructure/, staging copies are removed."""
+    dst = ROOT / "tools/restructure"
+    dst.mkdir(parents=True, exist_ok=True)
+    st = ROOT / "restructure"
+    if not st.is_dir():
+        return
+    for name in STAGING_KEEP:
+        if (st / name).exists() and git("ls-files", f"restructure/{name}").strip():
+            git("mv", "-k", f"restructure/{name}", f"tools/restructure/{name}")
+    for d in ("readmes", "overlay", "append", "summaries"):
+        if (st / d).is_dir():
+            git("rm", "-r", "-q", "--cached", "--ignore-unmatch", f"restructure/{d}")
+            shutil.rmtree(st / d)
+    if (st / "report").is_dir():
+        (dst / "report").mkdir(parents=True, exist_ok=True)
+        for f in (st / "report").iterdir():
+            shutil.move(str(f), str(dst / "report" / f.name))
+    for f, to in (("docs/restructure-design.md", "tools/restructure/design.md"), ("tools/restructure.py", "tools/restructure/restructure.py"),
+                  ("tools/restructure_plan.py", "tools/restructure/restructure_plan.py"),
+                  ("tools/split_decisions.py", "tools/restructure/split_decisions.py"), ("tools/token_bench.py", "tools/restructure/token_bench.py")):
+        if git("ls-files", f).strip():
+            git("mv", "-k", f, to)
+    shutil.rmtree(st, ignore_errors=True)
+    git("add", "-A", "--", *[p for p in ("restructure", "tools") if (ROOT / p).exists() or git("ls-files", p).strip()])
 
 
 def cmd_check(a):
@@ -1090,12 +1149,15 @@ def cmd_apply(a):
         for r in plan.rows:
             if r["old_path"] != r["new_path"]:
                 fh.write(f"{r['old_path']}\t{r['new_path']}\n")
-    subprocess.run([sys.executable, str(Path(__file__).with_name("restructure_docs.py"))], cwd=ROOT, check=True)
-    if (ROOT / "restructure/readmes").is_dir():   # the drafts now live at experiments/<topic>/README.md
-        git("rm", "-r", "-q", "--cached", "restructure/readmes")
-        shutil.rmtree(ROOT / "restructure/readmes")
+    for path, (want, src) in overlays().items():   # new files from the overlay (replacements were done above)
+        if want == "new" and not (ROOT / path).exists():
+            (ROOT / path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, ROOT / path)
+    ti = next(p for p in (ROOT / "tools/topic_index.py", Path(__file__).with_name("topic_index.py")) if p.exists())
+    subprocess.run([sys.executable, str(ti)], cwd=ROOT, check=True)
     git("add", "-A", "--", *sorted({str(Path(new_location(plan, o)).parts[0]) for o in results}
-                                   | {"docs/path-map.tsv", "experiments", "research"}))
+                                   | {"docs", "experiments", "research"}))
+    stash_staging()
     for d in sorted({a for o in plan.filemap for a in ancestors(o)}, key=lambda d: -d.count("/")):
         try:
             (ROOT / d).rmdir()          # empty leftovers only, deepest first
@@ -1250,7 +1312,8 @@ def static_imports(cwd, files):
                 top = nm.split(".")[0]
                 if top in {"jevdrive", "experiments"}:
                     p = cwd / nm.replace(".", "/")
-                    if not (p.with_suffix(".py").exists() or p.is_dir() or (cwd / nm.rsplit(".", 1)[0].replace(".", "/")).with_suffix(".py").exists()):
+                    par = cwd / nm.rsplit(".", 1)[0].replace(".", "/")
+                    if not (p.with_suffix(".py").exists() or p.is_dir() or par.with_suffix(".py").exists() or (par / "__init__.py").exists()):
                         missing.append(nm)
                 elif top in stems and top not in sys.stdlib_module_names:
                     dirs = stems[top]
@@ -1266,8 +1329,9 @@ def md_check(cwd, files):
     fs = set(files)
     dirs = {a for f in files for a in ancestors(f)}
     broken, referenced = [], set()
+    edges = collections.defaultdict(set)
     for f in files:
-        if not f.endswith(".md") or f in NO_CHECK:
+        if not f.endswith(".md") or f.startswith(NO_CHECK):
             continue
         text = (cwd / f).read_text(errors="replace")
         for m in list(LINK_RE.finditer(text)) + list(HTML_SRC_RE.finditer(text)):
@@ -1278,6 +1342,7 @@ def md_check(cwd, files):
             if not target.split("#")[0]:
                 continue
             referenced.add(path)
+            edges[f].add(path)
             if path not in fs and path not in dirs:
                 broken.append((f, "link", target))
         bare = HTML_SRC_RE.sub("", LINK_RE.sub("", text))
@@ -1290,12 +1355,26 @@ def md_check(cwd, files):
                 continue
             p = norm(tok)
             referenced.add(p)
+            edges[f].add(p)          # a repo-root path in prose is a reference an agent can follow
             if p not in fs and p not in dirs and not any(a in dirs and a.split("/")[0] in ("experiments",) for a in []) and \
                     p.split("/")[0] in REPO_TOPS and not (cwd / p).exists():
                 broken.append((f, "token", tok))
+    under = lambda d: [x for x in files if x.startswith(d + "/")] if d in dirs else []
+    seen, todo = set(), ["README.md"]          # every doc reachable from README.md through links (a dir link covers it)
+    while todo:
+        f = todo.pop()
+        if f in seen:
+            continue
+        seen.add(f)
+        for t in edges.get(f, ()):
+            for x in ([t] if t in fs else under(t)):
+                referenced.add(x)
+                if x.endswith(".md") and x not in seen:
+                    todo.append(x)
     figs = [f for f in files if re.search(r"\.(png|webp|jpg|jpeg|gif|svg)$", f) and ("/figs/" in f or f.startswith("research/figs/"))]
     unref = [f for f in figs if f not in referenced]
-    return broken, unref
+    unreach = sorted(f for f in files if f.endswith(".md") and f not in seen and not f.startswith(NO_CHECK))
+    return broken, unref, unreach
 
 
 def cmd_verify(a):
@@ -1350,16 +1429,17 @@ def cmd_verify(a):
     out["bash_n_fail"] = {f: o for f in files if f.endswith(".sh") and not f.startswith(("todos/", "tmp/"))
                           for rc, o in [sandboxed(["bash", "-n", f], cwd, 10)] if rc != 0}
     # 6 markdown links / paths, figures
-    broken, unref = md_check(cwd, files)
+    broken, unref, unreach = md_check(cwd, files)
     out["md_broken"] = [list(b) for b in broken]
     out["fig_unreferenced"] = unref
+    out["md_unreachable"] = unreach
     tests = res["tests"]
     out["tests"] = tests
     out["file_hashes"] = {l.split("\t", 1)[1]: l.split()[1] for l in git("ls-files", "-s", cwd=cwd).splitlines()}
     Path(a.out).write_text(json.dumps(out, indent=1, ensure_ascii=False))
     print(f"compile_fail {len(comp)}, static_import_missing {len(out['static_import_missing'])}, import {sum(v == 'ok' for v in imp.values())}/{len(imp)} ok, "
           f"help {sum(v == 'ok' for v in hl.values())}/{len(hl)} ok, bash_n_fail {len(out['bash_n_fail'])}, md_broken {len(broken)}, "
-          f"fig_unreferenced {len(unref)}, tests {sum(v == 'ok' for v in tests.values())}/{len(tests)} ok")
+          f"fig_unreferenced {len(unref)}, md_unreachable {len(unreach)}, tests {sum(v == 'ok' for v in tests.values())}/{len(tests)} ok")
     return 0
 
 
@@ -1434,6 +1514,12 @@ def cmd_compare(a):
     rep += [f"   NEW BROKEN {f} [{k}] {t}" for f, k, t in newb[:40]]
     rep.append(f"fig_unreferenced: baseline {len(base['fig_unreferenced'])}, after {len(after['fig_unreferenced'])} "
                f"(new: {sorted(set(after['fig_unreferenced']) - {m(f) for f in base['fig_unreferenced']})[:10]})")
+    ub = {m(f) for f in base.get("md_unreachable", [])}
+    newu = [f for f in after.get("md_unreachable", []) if f not in ub]
+    ok &= not newu
+    rep.append(f"md_unreachable from README.md: baseline {len(base.get('md_unreachable', []))}, after "
+               f"{len(after.get('md_unreachable', []))}, new {len(newu)}")
+    rep += [f"   NEW UNREACHABLE {f}" for f in newu[:30]]
     # conservation: every baseline file is present at its new path (or deleted on purpose); data files byte-identical
     lost, changed_data = [], []
     for f, h in base["file_hashes"].items():
@@ -1454,6 +1540,12 @@ def cmd_compare(a):
     print("\n".join(rep))
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1
+
+
+def staged(path):
+    """restructure/<x> before the apply, tools/restructure/<x> after it."""
+    alt = "tools/restructure/" + path.split("/", 1)[1]
+    return path if Path(path).exists() or not Path(alt).exists() else alt
 
 
 def main():
@@ -1478,6 +1570,9 @@ def main():
     p.add_argument("--out", default="restructure/report/compare.txt")
     p.add_argument("--acks", default="restructure/acknowledged.tsv")
     a = ap.parse_args()
+    for k in ("manifest", "acks", "manual", "report"):
+        if getattr(a, k, None):
+            setattr(a, k, staged(getattr(a, k)))
     return {"check": cmd_check, "apply": cmd_apply, "verify": cmd_verify, "compare": cmd_compare}[a.cmd](a)
 
 

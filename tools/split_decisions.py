@@ -68,6 +68,9 @@ def rebase_links(text, src_dir, dst_dir):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--curated", default=next((p for p in ("restructure/decisions_index.tsv", "tools/restructure/decisions_index.tsv")
+                                               if Path(p).exists()), "restructure/decisions_index.tsv"),
+                    help="hot/archive tiers and short claims")
     ap.add_argument("--topics", default="experiments", help="topic READMEs whose `decisions:` line maps entries to topics")
     a = ap.parse_args()
     lines = LOG.read_text().split("\n")
@@ -98,23 +101,33 @@ def main():
         m = re.match(r"(\d+)([a-z]?)", e[0])
         return int(m.group(1)), m.group(2), e[1]
 
-    keep = "\n".join(head).rstrip().rstrip("-").rstrip()
-    keep = keep.replace("跨 session 的共同决定都记在这里，一条一个小节。",
-                        "跨 session 的共同决定都记在这里：本页是索引，一条一行；每条的全文在 `decisions/NNN.md`。")
-    keep = keep.replace("- 每条决定被推翻时，检查引用它的文档（`research/`、`todos/`）有没有跟着改。",
-                        "- 每条决定被推翻时，检查引用它的文档（`research/`、`experiments/*/README.md`）有没有跟着改。\n"
-                        "- **新条目**：写 `decisions/NNN.md`（编号接着最大的往下排），再在下表加一行；"
-                        "状态或结论变了，两处一起改。表里的结论截断到 50 字，全文以条目文件为准。")
-    out = [keep, "", "## 索引", "",
-           "第 N 条的全文在 `decisions/NNN.md`（三位编号，如 `decisions/083.md`、`decisions/003d.md`）；"
-           "主题 T 的说明在 `../experiments/T/README.md`。同号两条（8、9、10）是早期并存的两版，后写的一版文件名带 `-2`。", "",
-           "| # | 状态 | 主题 | 结论（截断） |", "|---|---|---|---|"]
+    cur = {}   # curated rows: num -> (tier, claim, evidence, status, note)
+    if Path(a.curated).is_file():
+        import csv
+        for r in csv.DictReader(open(a.curated), delimiter="\t"):
+            cur[r["num"]] = (r["tier"], r["claim"], r["evidence"], r["status"], r.get("note", ""))
+    head_txt = ["# 决定记录", "",
+                "跨 session 的共同决定：本页一行一条，只列仍然成立、可以照着做的条目；全文在 [decisions/](decisions/)`<NNN>.md`"
+                "（三位编号，同号的后一版带 `-2`）。撤回、被取代或已关闭的条目在 [decisions/ARCHIVE.md](decisions/ARCHIVE.md)。",
+                "",
+                "维护：有中间结果就落盘；关键测量先预登记（判据写死、结果留空）；写错就地改并写明原来说了什么、为什么变；"
+                "证据变弱就降级。新条目写 `decisions/NNN.md`（编号接最大值）并在下表加一行；条目被推翻时把它移到 ARCHIVE.md，"
+                "并检查引用它的主题 README。证据：强 / 中 / 弱；状态：已确认 / 待定。", "",
+                "| # | 结论 | 证据 | 状态 |", "|---|---|---|---|"]
+    arch = ["# 决定记录：归档", "", "撤回、被取代或已关闭的条目；全文仍在 `<NNN>.md`。主索引：[../decisions.md](../decisions.md)。", "",
+            "| # | 结论 | 状态 | 原因 |", "|---|---|---|---|"]
+    out = list(head_txt)
     for num, name, title, _ in sorted(entries, key=key):
-        tp = ", ".join(topics.get(num, [])) or "—"
-        claim = claim_of(title).replace("|", "\\|")
-        out.append(f"| {num}{'-' + name.split('-')[1] if '-' in name else ''} | {status_of(title)} | {tp} | {claim} |")
+        n = f"{num}{'-' + name.split('-')[1] if '-' in name else ''}"
+        tier, claim, ev, st, note = cur.get(n, ("hot", claim_of(title), "—", status_of(title), ""))
+        claim = claim.replace("|", "\\|")
+        if tier == "archive":
+            arch.append(f"| {n} | {claim} | {st} | {note} |")
+        else:
+            out.append(f"| {n} | {claim} | {ev} | {st} |")
     LOG.write_text("\n".join(out) + "\n")
-    print(f"split {len(entries)} entries into {DIR}/, index {len(out)} lines")
+    (DIR / "ARCHIVE.md").write_text("\n".join(arch) + "\n")
+    print(f"split {len(entries)} entries into {DIR}/, index {len(out) - len(head_txt)} hot, archive {len(arch) - 6}")
 
 
 if __name__ == "__main__":

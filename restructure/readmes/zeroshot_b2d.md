@@ -2,13 +2,14 @@
 
 status: concluded
 decisions: 33
-headline: n = 5 smoke: Alpamayo 1.5 DS 60.8, SR 2/5; openpilot DS 2.7 voided as adapter bug, ability unknown
+index: n=5 smoke: Alpamayo DS 60.8, SR 2/5; openpilot DS 2.7 voided
+key: scripts/zeroshot_b2d_alp.sh, scripts/zeroshot_b2d_op.sh, scripts/b2d_zoo_planner.py, scripts/zeroshot_b2d_alp_speed.py, scripts/zeroshot_b2d_alp_stall.py, scripts/zeroshot_b2d_report.py, scripts/zeroshot_b2d_summary.py, scripts/test_b2d_zoo_pid_wrap.py
 
-**Question.** Can open models (Alpamayo 1.5, openpilot) drive Bench2Drive zero-shot with native-camera inputs and a fixed controller.
+**Question.** Can Alpamayo 1.5 and openpilot drive Bench2Drive zero-shot?
 
-**Conclusion.** n = 5 smoke: Alpamayo 1.5 DS 60.8, RC 70.1, SR 2/5; openpilot DS 2.7 was voided as an adapter bug (plan origin at the camera, 95.6% throttle while the model said stop), so whether openpilot can drive is unknown (decisions 33, corrected in place 2026-09-25). The Alpamayo stall diagnosis found the Zoo PID read standing "reverse" plans as forward speed, with 71 of 80 long stalls starting within 3 s of a collision; fix F1 (forward-only plan) was chosen and the F1 full run was paused at 17/220. openpilot in B2D closed loop continued in openpilot lanes, not here.
+**Conclusion.** n=5: Alpamayo DS 60.8, RC 70.1, SR 2/5; openpilot DS 2.7 voided as adapter bug (decisions 33). Alpamayo stalls = Zoo PID reverse-plan bug; F1 fix run paused at 17/220.
 
-**Read more.** research/openpilot-and-open-driving-models.md, research/trajectory-to-control.md, research/openpilot-closedloop-integration.md, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/bench2drive.md`, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/alpamayo-closed-loop-diagnosis.md`, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/openpilot-migration.md`.
+**Read more.** research/openpilot-and-open-driving-models.md, `git show bcbdde4:todos/2026-09-24-zeroshot-exam/bench2drive.md`
 
 <!-- files:begin -->
 <!-- files:end -->

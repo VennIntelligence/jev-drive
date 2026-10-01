@@ -16,3 +16,4 @@ scripts/make_article_critical_moment_figs.py	py-dynamic	^RES / path	replaced by 
 jevdrive/wl.py	py-chain	research.*results	replaced by a manual edit (restructure/manual_edits.tsv)
 experiments/*/README.md	md-broken	^research/articles/	research/articles/ is untracked on the Mac (exists there, not in git)
 research/decisions/*	md-broken	^research/lit/	research/lit/ is outside git by design (was broken before, in decisions.md)
+docs/web-reader.md	md-broken	^scripts/(start_public_roadmap.sh|serve_research.py)	the user's reader scripts are untracked on the Mac (restructure/untracked.tsv)

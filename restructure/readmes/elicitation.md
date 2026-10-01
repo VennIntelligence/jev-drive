@@ -1,14 +1,15 @@
-# elicitation: carrying the CARLA-elicited reaction to real data (E1-E6, I3)
+# elicitation: Carrying CARLA reaction to real data
 
 status: concluded
 decisions: 42, 44
-headline: Zero-shot elicitation is harmful: WOD RFS -1.02 [-1.21, -0.82], NAVSIM PDMS -8.2; log twin and inpainting pairs fail
+index: Zero-shot elicitation harmful: WOD RFS -1.02, NAVSIM PDMS -8.2
+key: jevdrive/elicit_e1.py, jevdrive/elicit_i3.py, jevdrive/elicit_e2.py, jevdrive/elicit_e3.py, jevdrive/elicit_e4.py, jevdrive/elicit_e5.py, jevdrive/elicit_e6.py, jevdrive/elicit_seeds.py, scripts/elicit_e1_navsim.sh, scripts/elicit_e6_score.py
 
-**Question.** The paired-difference reaction head works in CARLA; does it transfer to real data zero-shot, via log twin pairs, or via real-frame edit pairs?
+**Question.** Does the paired-difference reaction head transfer to real data zero-shot, via log twins or edit pairs?
 
-**Conclusion.** Zero-shot is harmful: WOD RFS -1.02 [-1.21, -0.82] (Cinque) / -1.52 (Lebowski), NAVSIM PDMS -8.2 [-8.9, -7.5]; the Qwen-free 20 Hz student (E5: 52.7% pedestrian flips in CARLA) is harmful by an order of magnitude less (decisions 42, 44). Log twin pairs (E3) and inpainting edit pairs (E2) do not work; later G0-G3 rounds also failed (see real_transfer). Seed check: M-C pedestrian flips 43.3 / 43.6 / 42.4% (Cinque).
+**Conclusion.** No: WOD RFS -1.02 [-1.21, -0.82], NAVSIM PDMS -8.2 [-8.9, -7.5]; log twin (E3) and inpainting (E2) pairs fail (decisions 42, 44).
 
-**Read more.** research/results/elicitation/, `git show bcbdde4:todos/2026-09-26-elicitation-program.md`, `git show bcbdde4:todos/2026-09-26-overnight-queue.md`
+**Read more.** research/results/elicitation/, `git show bcbdde4:todos/2026-09-26-elicitation-program.md`
 
 <!-- files:begin -->
 <!-- files:end -->

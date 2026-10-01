@@ -2,13 +2,14 @@
 
 status: concluded
 decisions: none
-headline: No result recorded; batch of 220 routes x 2 arms has no results section, so SimLingo/BLUE B2D scores are not re-based
+index: no result: 220-route x 2-arm batch never recorded
+key: scripts/simlingo_catalogue_run.sh, scripts/simlingo_catalogue_batch.sh, scripts/simlingo_catalogue_analyze.py, scripts/simlingo_fetch.py
 
-**Question.** simlingo#43 reports DS 75.50 with the official Bench2Drive and 86.53 with SimLingo's bundled copy at an identical SR of 67.12%. Does the same checkpoint reproduce a DS gap, and which code differences (4000-tick cut D1, completion threshold 99 vs 90 D2, crash handling in scoring D3) explain it.
+**Question.** Does one SimLingo checkpoint reproduce the DS gap (75.50 official vs 86.53 bundled), and why?
 
-**Conclusion.** No result was recorded. The code diff and pre-registered criteria were written and smoke runs passed, but the batch (design a': 220 routes x 2 arms x seed 1) has no results section and no decision entry, and no results directory exists. The SimLingo/BLUE B2D scores are therefore not re-based by this experiment (decisions 38 only cites it as an open check).
+**Conclusion.** No result: code diff and smoke done, but the 220-route x 2-arm batch has no results or entry; SimLingo/BLUE scores not re-based.
 
-**Read more.** research/leaderboard-vs-ability.md, `git show bcbdde4:todos/2026-09-25-simlingo-catalogue/README.md`.
+**Read more.** research/leaderboard-vs-ability.md, `git show bcbdde4:todos/2026-09-25-simlingo-catalogue/README.md`
 
 <!-- files:begin -->
 <!-- files:end -->

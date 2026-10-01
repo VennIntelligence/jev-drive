@@ -23,7 +23,6 @@ One line per doc. Add a line here whenever you add a doc.
 | [tokyo-python-optimization.md](tokyo-python-optimization.md) | you need the measured TCP Python optimizations and their switches |
 | [navsim.md](navsim.md) | you need the NAVSIM / OpenScene data on the box, or need to re-download it |
 | [hugsim.md](hugsim.md) | you need the HUGSIM closed-loop benchmark: data, Blackwell install, running a scenario, the agent interface, HD-Score, the controller heading defect, the controller acceptance (official and PR #57 fail, fixed2 passes) |
-| [restructure-design.md](restructure-design.md) | you review or apply the topic restructure, add an experiment topic, or need the `experiments/` layout rules; old -> new paths are in [path-map.tsv](path-map.tsv) |
 | [closed-loop-acceptance.md](closed-loop-acceptance.md) | before scoring any model in closed loop: which parts of the B2D / HUGSIM stack are accepted (controllers, harness layout, box limits, SIGKILL forensics) and what must be fixed first |
 
 Rules:

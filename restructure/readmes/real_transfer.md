@@ -1,14 +1,15 @@
-# real_transfer: real-data transfer gates G0-G3 for the reaction head
+# real_transfer: Real-data transfer gates G0-G3
 
 status: concluded
 decisions: 44
-headline: No transfer to real data: all 12 student zero-shot cells harmful (NAVSIM PDMS -1.1 to -2.7); gating only shrinks harm
+index: No transfer: all 12 student zero-shot cells harmful (PDMS -1.1..-2.7)
+key: jevdrive/real_g0.py, jevdrive/real_g1.py, jevdrive/real_g2.py, jevdrive/real_g3.py, scripts/real_g0_detect.sh, scripts/real_g0_navsim.sh, scripts/real_g1_score.sh, scripts/real_g3_detect.sh, scripts/real_g3_pdm.sh
 
-**Question.** After E1-E3 failed, can a student, real-trained gates, HUGSIM 3DGS vehicle pairs or better edit pairs bring the CARLA reaction to real data?
+**Question.** Can a student, gates, HUGSIM pairs or better edits bring the CARLA reaction to real data?
 
-**Conclusion.** No (decisions 44, corrected in place at G2: "two paths" became "three paths"). G0: all 12 student zero-shot cells harmful (NAVSIM PDMS -1.1 to -2.7). G1: gates only shrink the harm by shrinking the whole delta (WOD gone, NAVSIM main arm still -1.61 [-2.14, -1.08]); the only positive is a lead-TTC gate times a constant brake (+0.53 PDMS), independent of the pairs. G2: retraining on HUGSIM I3 vehicle pairs removes most of the harm on I3 itself but no head exceeds the prior, and the linear head is worse on WOD/NAVSIM. G3: edit quality is not the bottleneck; pedestrian events in WOD train are only about 230.
+**Conclusion.** No (decisions 44): G0 all 12 cells harmful; G1 gates only shrink the harm (NAVSIM -1.61 [-2.14, -1.08]); G2 HUGSIM I3 retraining: no head beats the prior; G3 edit quality is not the bottleneck.
 
-**Read more.** research/results/real-data-transfer/, research/decisions.md (44), `git show bcbdde4:todos/2026-09-26-real-data-transfer.md`
+**Read more.** research/results/real-data-transfer/, `git show bcbdde4:todos/2026-09-26-real-data-transfer.md`
 
 <!-- files:begin -->
 <!-- files:end -->

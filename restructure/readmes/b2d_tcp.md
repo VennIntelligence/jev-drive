@@ -2,13 +2,14 @@
 
 status: concluded
 decisions: 28, 30
-headline: TCP 3 routes: PI cuts jerk p95 84.5 to 45.1 m/s^3, both arms 2/3 complete; supports longitudinal claims only
+index: PI cuts jerk p95 84.5 to 45.1 m/s^3 on 3 routes
+key: scripts/b2d_tcp_campaign.py, scripts/b2d_tcp_control.py, scripts/b2d_tcp_eval_agent.py, scripts/b2d_tcp_comparison_agent.py, scripts/b2d_tcp_visual_agent.py, scripts/b2d_tcp_preprocess.py, scripts/test_b2d_tcp_control.py
 
-**Question.** With the actual TCP network, does the PI longitudinal controller help versus native control, and does a shorter lateral lookahead (.375 s vs .5 s) improve turns.
+**Question.** With real TCP, does PI longitudinal control or shorter lookahead help?
 
-**Conclusion.** Real TCP, 3 routes x native/PI: both arms 2/3 complete, whole-route speed RMS 2.692664 to 2.458681 m/s, jerk p95 84.47 to 45.05 m/s^3, but PI collided earlier on 1773; kept as an option, not a safety or leaderboard claim (decisions 28). The short lookahead failed per-turn acceptance (4 of 126 required conditions failed), default unchanged. The "native lateral" arm was later found to chase the target point on 96% of ticks, so the pairing supports longitudinal claims only (decisions 30).
+**Conclusion.** Both arms 2/3 complete; jerk p95 84.47 -> 45.05 m/s^3 (decisions 28). Short lookahead failed; native lateral chased target 96% of ticks, longitudinal claims only (30).
 
-**Read more.** docs/b2d-tcp-controller.md, todos/2026-09-23-tcp-controller/final-report.md, todos/2026-09-23-controller-next/tcp-trajectory-contract.md.
+**Read more.** docs/b2d-tcp-controller.md, todos/2026-09-23-tcp-controller/final-report.md
 
 <!-- files:begin -->
 <!-- files:end -->
