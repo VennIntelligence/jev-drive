@@ -62,6 +62,8 @@ def annotate(attempt):
     container, stream = output(root / "chase.mp4")
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 22)
     route = root.parent.name
+    run_config = json.loads((root / "route_result.json").read_text()).get("config", {})
+    seed = run_config.get("tm_seed", 0)
     signals = {0: "GREEN", 1: "YELLOW", 2: "RED"}
     count = 0
     pixel_stds = []
@@ -79,7 +81,7 @@ def annotate(attempt):
         why = plan.get("lat_why") or "lane follow"
         context = tick.get("ctx", {})
         light = signals.get(context.get("tl"), "--")
-        title = "Route %s | seed 0 | t=%.1fs | %.1f km/h" % (route, tick["t"], tick["v"] * 3.6)
+        title = "Route %s | seed %s | t=%.1fs | %.1f km/h" % (route, seed, tick["t"], tick["v"] * 3.6)
         status = "Steering: %s (%s) | speed limit: %s | light: %s | release: %s" % (
             owner, why, plan["src"], light, plan.get("rel") or "--")
         draw.text((14, 9), title, font=font, fill="white")

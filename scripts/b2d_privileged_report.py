@@ -103,8 +103,9 @@ def event_rows(path,meta):
         rows=rows[:end+1];first,last=rows[0],rows[-1]
         green=next((r for r in rows if r.get('ctx',{}).get('tl_id')==lid and r['ctx'].get('tl')==0),None)
         go=next((r for r in rows if green is not None and r['t']>=green['t'] and r['v']>1),None)
-        violation=any(r.get('ctx',{}).get('tl_id')==lid and r['ctx'].get('tl')==2 and r['ctx'].get('tl_dist',1)>0 and
-                      r['ctx'].get('tl_dist',1)<.5 and r['v']>1 for r in rows)
+        violation=any(a.get('ctx',{}).get('tl_id')==lid and b.get('ctx',{}).get('tl_id')==lid and
+                      a['ctx'].get('tl_dist',-1)>0 and b['ctx'].get('tl_dist',1)<=0 and b['ctx'].get('tl')==2
+                      for a,b in zip(rows[:-1],rows[1:]))
         # The official violation names provide exact stop-line crossing when the sparse observation misses it.
         result=json.loads((path/'results.json').read_text())['_checkpoint']['records'][0]
         violation=violation or any(re.search(r'\b'+str(lid)+r'\b',s) for s in result['infractions'].get('red_light',[]))
@@ -226,8 +227,9 @@ def summarize(root,log):
         draws=np.random.default_rng(0).integers(0,len(ids),(2000,len(ids)));s=c.to_numpy()[draws].sum(1)
         boot=s[:,0]/np.where(s[:,2]>0,s[:,2],np.nan)
         lo,hi=np.nanquantile(boot,[.025,.975]);n=len(vv)
-        gates['V1_'+group]=bool(n>=30 and lo>.5)
-        vis.append(dict(group=group,objects=n,definite_short=vv.definitely_under_2s.mean(),possible_short=vv.possibly_under_2s.mean(),
+        opps=len(e[(e.arm=='drive')&(e['group']==group)&(e.kind==group)])
+        gates['V1_'+group]=bool(opps>=30 and n>=30 and lo>.5)
+        vis.append(dict(group=group,opportunities=opps,objects=n,definite_short=vv.definitely_under_2s.mean(),possible_short=vv.possibly_under_2s.mean(),
               short_lo=lo,short_hi=hi,left_censored=int(vv.left_censored.sum()),never_seen=int(vv.never_seen.sum()),
               median_observed_upper_lead_s=vv.lead_s.median(),passed=gates['V1_'+group]))
     pd.DataFrame(vis).to_csv(out/'visibility_gates.csv',index=False)

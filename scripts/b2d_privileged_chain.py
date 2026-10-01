@@ -283,7 +283,50 @@ class Chain:
             for f in tqdm(as_completed(fs),total=len(fs),desc="Registered route shards"):f.result()
         from b2d_privileged_report import summarize
         summarize(ROOT,self.log)
+        from b2d_privileged_plots import figures
+        figures(ROOT)
+        self.videos()
         (ROOT/"DONE-full").write_text(time.strftime("%F %T\n"))
+
+    def videos(self):
+        if (ROOT/"DONE-videos").exists():return
+        import pandas as pd
+        from b2d_privileged_report import event_rows
+        events=pd.read_csv(ROOT/"summary/events.csv",dtype={"route":str})
+        routes=pd.read_csv(ROOT/"summary/routes.csv",dtype={"route":str})
+        selected=[];jobs=[]
+        for arm,group,kind in (("pjunc","junction","junction"),("pbyp","obstacle","obstacle"),
+                               ("pbypgap","obstacle","obstacle"),("pred","all","red"),("pall","all","all")):
+            e=events[events.arm==arm]
+            if group!="all":e=e[e["group"]==group]
+            if kind!="all":e=e[e.kind==kind]
+            runs=e.groupby(["route","seed"]).failed.max()
+            for outcome,failed in (("success",0),("failure",1)):
+                choices=[(rid,int(seed)) for (rid,seed),value in runs.items() if value==failed]
+                if not choices:
+                    selected.append(dict(arm=arm,outcome=outcome,available=False));continue
+                rid,seed=sorted(choices,key=lambda v:(int(v[0]),v[1]))[0]
+                tag=f"video-{arm}-{outcome}-{rid}"
+                selected.append(dict(arm=arm,outcome=outcome,available=True,route=rid,seed=seed,tag=tag))
+                jobs.extend([(tag,arm,seed,[rid]),(tag,"drive",seed,[rid])])
+        with ThreadPoolExecutor(max_workers=3*self.args.slots) as pool:
+            fs={pool.submit(self.unit,*job,workers=1,record=True):job for job in jobs}
+            for f in tqdm(as_completed(fs),total=len(fs),desc="Paired diagnostic videos"):f.result()
+        for item in selected:
+            if not item["available"]:continue
+            paths={}
+            for arm in (item["arm"],"drive"):
+                adir=ROOT/"arms"/f"{item['tag']}-{arm}-s{item['seed']}"
+                attempt=self.attempt(adir,item["route"])
+                original=routes[(routes.arm==arm)&(routes.route==item["route"])&(routes.seed==item["seed"])].iloc[0]
+                meta=dict(route=item["route"],seed=item["seed"],arm=arm,group=original['group'])
+                ee,_=event_rows(attempt,meta)
+                paths[arm]=dict(path=str(attempt/"chase.mp4"),qa=json.loads((attempt/"video_qa.json").read_text()),
+                     formal_DS=float(original.DS),rerun_DS=float(json.loads((attempt/"results.json").read_text())["_checkpoint"]["records"][0]["scores"]["score_composed"]),
+                     rerun_events=len(ee),rerun_event_failures=sum(e["failed"] for e in ee))
+            item["paths"]=paths
+        write(ROOT/"summary/videos.json",dict(selection="First numeric route ID and seed per formal outcome; diagnostic reruns never replace formal trajectories",pairs=selected))
+        (ROOT/"DONE-videos").write_text(time.strftime("%F %T\n"))
 
     def cleanup(self):
         for directory in ROOT.glob("card*s*"):
