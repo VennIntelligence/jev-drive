@@ -125,3 +125,12 @@ profile与中间阶段合并：before每卡1slot×2worker，after每卡2slot×4w
 代码在scripts/，所有新的大产物只写$DATA_DIR/runs/b2d_privileged_ceiling/；op_adapt_r2、op_adapt_L、op_l_b2d只读。小结果下载到[research/results/b2d-privileged-ceiling/](../research/results/b2d-privileged-ceiling/README.md)，论文风格PNG由此todo引用，每图后1–3句中文读法，PDF留box；不发布Artifact（网页产物）、不提交密钥，不改decisions。每次变更在main显式stage（暂存）自己的文件，commit/push后box pull；最终按精确PID关闭自己的server/window并finish自己的lane。
 
 执行日志从此处追加；偏离须保留原因、发生时刻、是否已看正式结果及对解释的影响。最终写全每臂表、每条线的判定、verified（已实际核验）数字和inference（推断）边界，回答技能值多少、执行是否可用、相机可见多早。
+
+
+### 2026-10-01 12:36 UTC+8：S1 停链与诊断
+
+原登记pilot已实际执行：27787 / pred / seed0，1个worker，墙钟100.6s，Completed，DS=70、RC=100，1次闯红灯。median计划时延42.15ms、p99为65.498ms；合成路径投影最大误差0、200例SAT开关全部一致，disabled几何逐对象恒等。标量投影1497点/s、向量化182282点/s（仅合成几何吞吐，不能当CARLA提速）。这些数字来自实际文件；原始日志和视频保存在`$DATA_DIR/runs/b2d_privileged_ceiling/arms/pilot-pred-s0/attempts/27787/1/`。
+
+S1红灯停车与绿灯恢复两项均失败，ERROR已停止全批，尚无正式评测读数。诊断发现：warmup结束时灯是绿灯，7.80s才变红，此时保险杠到登记停止线仅0.17m、车速3.35m/s，原R3a可停性判断因此没有加停车约束。这是已验证的日志时序；为何灯色时序与历史27787不同尚未证实，不能归因于seed或启动时间。没有修改停止距离、可停性判断、时延线或事件线。
+
+偏离：增加3个只诊断、不进入正式统计的固定debug运行：同27787/seed0重跑、27787/seed1、登记debug里的334/seed0，全部pred，分别放GPU0/1/2。这不是用别的好成绩替换原pilot；原失败保留，诊断链不会写DONE-pilot，也不会开启全批。目的是区分未观测到有效红→绿机会与停车/恢复实现错误，保留三个结果的全部日志。未看任何正式结果。

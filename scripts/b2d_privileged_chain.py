@@ -172,6 +172,23 @@ class Chain:
         assert check["passed"],"Substantive pilot checklist failed; inspect pilot_checks.json"
         (ROOT/"DONE-pilot").write_text(time.strftime("%F %T\n"))
 
+    def diagnose(self):
+        """Repeated fixed-debug probes; every result is retained and no gate is bypassed."""
+        spec=[("pilot-repeat", "pred", 0, ["27787"]),
+              ("pilot-seed1", "pred", 1, ["27787"]),
+              ("pilot-light-probe", "pred", 0, ["334"])]
+        checks={}
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            fs={pool.submit(self.unit,*task,workers=1,record=True):task for task in spec}
+            for f in tqdm(as_completed(fs),total=len(fs),desc="Fixed pilot diagnostics"):
+                tag,arm,seed,ids=fs[f];d=f.result()
+                checks[tag]=route_checks(self.attempt(d,ids[0]),"pred")
+        write(ROOT/"pilot_diagnostics.json",checks)
+        self.log.info("Pilot diagnostics: "+json.dumps(checks))
+        # The original pilot failure remains authoritative. Diagnosis never opens the full batch.
+        if not all(v["passed"] for v in checks.values()):
+            raise RuntimeError("Pilot diagnostics failed; full batch remains stopped")
+
     def debug(self):
         if (ROOT/"DONE-debug").exists():return
         self.pilot()
@@ -222,6 +239,7 @@ class Chain:
         self.log.event("start",phase=self.args.phase,resources=grant())
         try:
             if self.args.phase=="pilot":self.pilot()
+            elif self.args.phase=="diagnose":self.diagnose()
             elif self.args.phase=="debug":self.debug()
             else:self.full()
             if self.error:raise self.error
@@ -236,7 +254,7 @@ class Chain:
 
 if __name__=="__main__":
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--phase",choices=("pilot","debug","all"),default="pilot")
+    p.add_argument("--phase",choices=("pilot","diagnose","debug","all"),default="pilot")
     p.add_argument("--slots",type=int,choices=(1,2),default=1)
     p.add_argument("--workers",type=int,default=2)
     args=p.parse_args();assert 1<=args.workers<=4
