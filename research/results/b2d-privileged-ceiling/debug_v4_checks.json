@@ -1,0 +1,84 @@
+{
+  "27787-pred": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true
+    },
+    "status": "Completed",
+    "ms_med": 41.5,
+    "ms_p99": 70.60999999999999,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-27787-pred-s0/attempts/27787/1"
+  },
+  "334-pred": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "red_stop": true,
+      "green_go": true
+    },
+    "status": "Completed",
+    "ms_med": 37.6,
+    "ms_p99": 61.432000000000016,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-334-pred-s0/attempts/334/1"
+  },
+  "26872-pjunc": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "conflict_constraint": true,
+      "clear_go": true
+    },
+    "status": "Failed - TickRuntime",
+    "ms_med": 46.1,
+    "ms_p99": 74.50099999999998,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-26872-pjunc-s0/attempts/26872/1"
+  },
+  "25169-pbyp": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "obstacle_detected": true,
+      "path_enabled": true,
+      "valid_shift": true,
+      "passed_and_returned": true
+    },
+    "status": "Completed",
+    "ms_med": 44.6,
+    "ms_p99": 73.76000000000003,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-25169-pbyp-s0/attempts/25169/1"
+  },
+  "24955-pbyp": {
+    "checks": {
+      "files": true,
+      "no_crash": true,
+      "finite": true,
+      "median_latency": true,
+      "p99_latency": true,
+      "obstacle_detected": true,
+      "path_enabled": true,
+      "valid_shift": true,
+      "passed_and_returned": true
+    },
+    "status": "Completed",
+    "ms_med": 47.0,
+    "ms_p99": 93.88,
+    "passed": true,
+    "attempt": "/root/autodl-tmp/ujs/runs/b2d_privileged_ceiling/arms/debug-v4-24955-pbyp-s0/attempts/24955/1"
+  }
+}

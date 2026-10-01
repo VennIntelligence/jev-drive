@@ -1,0 +1,33 @@
+{
+  "params": {
+    "snapshot_s": 0.2,
+    "radius": 100.0,
+    "horizon": 5.0,
+    "margin": 0.5,
+    "clear_s": 0.8,
+    "release_s": 2.0,
+    "static_speed": 0.2,
+    "static_s": 2.0,
+    "obstacle_m": 50.0,
+    "merge_m": 20.0,
+    "enter_before_m": 20.0,
+    "transition_m": 15.0,
+    "return_after_m": 8.0,
+    "gap_margin_s": 2.0,
+    "gap_min_m": 15.0,
+    "tl_m": 50.0,
+    "tl_margin": 0.5
+  },
+  "arms": [
+    "drive",
+    "pjunc",
+    "pbyp",
+    "pbypgap",
+    "pred",
+    "pall"
+  ],
+  "debug_version": "v4",
+  "control_sha256": "8e6b2612e6c9a0faab1fa2caa77d7ca9df8034155442bb92fedaa0fd887be069",
+  "git_commit": "cf791b47b4a9f89081635f388268b776685debc2",
+  "manifest_sha256": "003e45ed913eb1bf42865741cea447f9484dd6f2e1f9f9805f1bd669a55c3d76"
+}

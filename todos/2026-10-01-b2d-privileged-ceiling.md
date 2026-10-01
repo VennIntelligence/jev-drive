@@ -1,6 +1,6 @@
 # B2D 特权上限：路口冲突、绕障与红灯（预登记）
 
-状态：正式尚未开始；在profile阶段的最终代码复核发现未来车身中心坐标错误，已暂停并补做debug-v4。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
+状态：debug-v4全部实现检查通过，正在重做三卡装填profile，正式尚未开始。本文在本任务任何闭环运行或新结果之前提交并push；仅查了XML（路线与场景类型配置格式）场景类型与资源元数据，没有查看这些新路线的旧成绩。任务来自[main提示词](../tmp/2026-10-01-b2d-privileged-ceiling-prompt.md)。背景已读decisions第47/49/52/57/61/74/76/81条、[op-drive](2026-09-29-op-drive.md)、[适配闭环登记](2026-10-01-op-adapt-L-b2d-prereg.md)、[量具](../research/behavior-layer-instruments.md)及[录像诊断](../research/openpilot-seed0-video-diagnosis.md)；decisions只读，由main维护。
 
 ## 问题、共用管线与臂
 
@@ -193,3 +193,15 @@ profile的固定负载明确为已登记debug8条×3份（24次drive运行，see
 14:17评价检查全部通过：[readout_checks.json](../research/results/b2d-privileged-ceiling/readout_checks.json)。构造历史验证两个独立障碍组被后续观测连接后只计一次机会；同一对象1s内重复接触只计一次；完成回正的无接触事件成功、有接触事件失败。已知差值表中4条路线×2seed的DS差固定+5、失败率差固定−1，2000次route bootstrap全部得到对应常数CI；三条真实debug的DS/RC/撞车/闯红灯数与官方记录一致，解析每条0.07–0.93s，没有正式数据进入检查。其中特定v3绕障调试的DS仅12.96、RC100，碰撞罚分依然严重，不能用较早v2的DS36当成稳定效果。已关闭完成的自有tmux窗口，原日志均保留。
 
 评价字段补齐登记的借道开始时gap、门开关次数、已借道后gap关闭，以及单独的黄灯机会表；黄灯不进入任何主事件分母。执行触发归因改为核对当前事件对象ID，避免将附近另一障碍的绕行或另一路口的停车误记成本事件的约束。控制源码未变，正式数据仍为0。
+
+### 2026-10-01 14:30 UTC+8：debug-v4通过，锁定后重做profile
+
+13个单位全部完成，无程序崩溃；全部适用实现检查通过，[逐项检查](../research/results/b2d-privileged-ceiling/debug_v4_checks.json)与[控制锁定](../research/results/b2d-privileged-ceiling/debug_v4_lock.json)已保存。334/pred实测红灯停车与绿灯恢复，median/p99为37.6/61.432ms；26872/pjunc约束与至少一次清空恢复通过，median/p99为46.1/74.501ms，但之后仍TickRuntime；两条pbyp均完成绕后回正，median为44.6/47.0ms、p99为73.76/93.88ms。不能把这些实现检查写成X1已通过。
+
+| debug路线（seed0） | drive DS / RC | pjunc DS / RC | pbyp DS / RC | pbypgap DS / RC | pall DS / RC |
+|:--|--:|--:|--:|--:|--:|
+| 26872 | 60 / 100 | 37.59 / 37.59 | — | — | 18.1246 / 37.59 |
+| 25169 | 34.81 / 34.81 | — | 12.96 / 100 | 12.96 / 100 | 60 / 100 |
+| 24955 | 22.5225 / 34.65 | — | 36 / 100 | 36 / 100 | — |
+
+26872的pjunc/pall没有官方撞车，但仍没通过路线；25169的两个单绕障臂各有4次官方撞车，pall有1次；24955的两个绕障臂各有2次撞车。与先前版本的同seed调试记录有波动，不能把debug差值当可靠技能收益；这里未运行任何正式路线。14:30开始固定24次before装填，三卡各1slot×2worker；之后同链自动测after的2slot×4worker，再进入正式评测。
