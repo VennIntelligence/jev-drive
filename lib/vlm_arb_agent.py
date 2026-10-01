@@ -50,6 +50,32 @@ ARB_PARAMS = {
 }
 
 
+class VlmArbitrationPC:
+    """Adapter wrapping Privileged geometry for VLM arbitration."""
+
+    def __init__(self, agent, priv):
+        self.agent = agent
+        self.priv = priv
+
+    @property
+    def meta(self):
+        return self.priv.meta if self.priv else {}
+
+    def geometry(self, speed, t, xy, yaw, world, warm):
+        if not self.priv:
+            return world
+        self.priv.bypass = bool(self.agent.r4_bypassing)
+        return self.priv.geometry(speed, t, xy, yaw, world, warm)
+
+    def constraints(self, s_base, speed, path, t, warm):
+        return self.agent.pending_vlm_cons, self.agent.pending_vlm_release
+
+    def close(self):
+        if self.priv:
+            self.priv.close()
+            self.priv = None
+
+
 class VlmArbAgent(OpArbAgent):
     """OpArbAgent extended with VLM-based slow-channel arbitration table."""
 
@@ -63,13 +89,11 @@ class VlmArbAgent(OpArbAgent):
         self.frame_save_interval = float(os.environ.get("VLM_FRAME_INTERVAL", "0.5")) # simulation seconds
         
         # Privileged geometry helper for obstacle bypass geometry and ground-truth logging
-        # Privileged object requires an arm in ("drive", "pjunc", "pbyp", "pbypgap", "pred", "pall")
-        priv_arm = "drive"
-        if self.vlm_arm == "vbyp":
-            priv_arm = "pbyp"
-        elif self.vlm_arm == "vall":
-            priv_arm = "pall"
-        self.priv = Privileged(self, priv_arm)
+        # Privileged object initialized with 'drive' arm so privileged truth does not auto-arbitrate
+        self.priv = Privileged(self, "drive")
+        self.pc = VlmArbitrationPC(self, self.priv)
+        self.pending_vlm_cons = {}
+        self.pending_vlm_release = False
         
         # VLM client setup
         endpoint = os.environ.get("VLM_ENDPOINT", "http://127.0.0.1:8080/v1/systemone")
@@ -106,9 +130,7 @@ class VlmArbAgent(OpArbAgent):
 
     def _query_vlm(self, sim_t, rgb_frames):
         """Send camera frames to VLM and enqueue result with simulated delay L."""
-        # Non-blocking / synchronous query
         res = self.vlm_client.query(rgb_frames, state_desc=f"CARLA ego at t={sim_t:.2f}s")
-        # Answer only becomes active in simulation at sim_t + L
         t_effective = sim_t + ARB_PARAMS["sim_delay_L_s"]
         res["sim_t_queried"] = sim_t
         res["sim_t_effective"] = t_effective
@@ -163,6 +185,12 @@ class VlmArbAgent(OpArbAgent):
 
     def _next_junction_info(self, ego_s):
         """Find next junction entrance along the route using map waypoints."""
+        if not getattr(self.priv, "prepared", False):
+            try:
+                self.priv.prepare()
+            except Exception:
+                pass
+
         r = self.route
         if not hasattr(self.priv, "flags") or len(self.priv.flags) == 0:
             return 999.0, None, -1
@@ -205,7 +233,7 @@ class VlmArbAgent(OpArbAgent):
 
         # R5: Fallback if stopped for too long or VLM expired while holding stop
         stopped_duration = (sim_t - self.stop_started_sim_t) if self.stop_started_sim_t is not None else 0.0
-        if (self.r2_holding_red or self.r3_holding_stop) and (stopped_duration > ARB_PARAMS["T_max_stop_s"] or not vlm_valid):
+        if (self.r2_holding_red or self.r3_holding_stop) and (stopped_duration > ARB_PARAMS["T_max_stop_s"] or (not vlm_valid and stopped_duration > 5.0)):
             self.r5_fallback_active = True
             self.r2_holding_red = False
             self.r3_holding_stop = False
@@ -229,9 +257,9 @@ class VlmArbAgent(OpArbAgent):
             # Stop position is entrance to intersection
             dist_to_line = next_junc_dist - REAR_TO_BUMPER - 0.5
             
-            if is_red_k and dist_to_line < 50.0 and dist_to_line > -2.0:
+            if is_red_k and 0.0 < dist_to_line < 50.0:
                 self.r2_holding_red = True
-            elif self.r2_holding_red and is_green_k:
+            elif self.r2_holding_red and (is_green_k or dist_to_line <= -2.0):
                 self.r2_holding_red = False
                 release = True
                 
@@ -264,33 +292,55 @@ class VlmArbAgent(OpArbAgent):
                     out["R3_sign"] = idm_stop(dist_to_line)
                     active_rules.append("R3_sign")
 
+        # R4: Obstacle Bypass (VLM-based decision + geometry generator)
+        enable_r4 = self.vlm_arm in ("vbyp", "vall")
+        if enable_r4 and vlm_valid:
+            is_block_k = len(self.block_history) == K and all(
+                block == "static_block" and side in ("left_free", "right_free")
+                for block, side in self.block_history
+            )
+            is_clear_k = len(self.block_history) == K and all(
+                block == "clear" for block, _ in self.block_history
+            )
+            
+            if is_block_k and not self.r4_bypassing:
+                self.r4_bypassing = True
+                active_rules.append("R4_bypass")
+            elif self.r4_bypassing:
+                if is_clear_k or (self.priv.bypass_state is None and getattr(self.priv, "meta", {}).get("obstacles") == []):
+                    self.r4_bypassing = False
+                else:
+                    active_rules.append("R4_bypass")
+        else:
+            self.r4_bypassing = False
+
         # Reset R5 fallback once moving again
         if self.r5_fallback_active and speed > 1.0:
             self.r5_fallback_active = False
 
         return out, cruise_cap, release, active_rules
 
-    def step(self, input_data):
+    def _plan(self, speed):
         """Main agent tick: collect frames, execute VLM query, apply arbitration table."""
-        # 1. Update simulation time and ego pose
-        sim_t = input_data["timestamp"]
-        
-        # Read cameras: front road and wide
-        # In B2D, camera names follow zeroshot rigs
+        f, t_frame, cams, _ = self.cam_sets[-1]
+        sim_t = t_frame
+
+        # 1. Read camera frames (OP_WIDE, OP_ROAD)
+        # Note: CARLA raw camera frame is BGRA; convert to RGB for VLM
         rgb_frames = []
-        for cam_key in ("rgb_road", "rgb_wide", "rgb_left"):
-            if cam_key in input_data:
-                rgb_frames.append(input_data[cam_key][1][:, :, :3])
-        if not rgb_frames and "rgb" in input_data:
-            rgb_frames.append(input_data["rgb"][1][:, :, :3])
+        for k in ("OP_WIDE", "OP_ROAD"):
+            if k in cams:
+                arr = cams[k]
+                if arr.ndim == 3 and arr.shape[-1] >= 3:
+                    rgb_frames.append(arr[:, :, [2, 1, 0]])
+        if not rgb_frames and cams:
+            first_k = next(iter(cams))
+            arr = cams[first_k]
+            if arr.ndim == 3 and arr.shape[-1] >= 3:
+                rgb_frames.append(arr[:, :, [2, 1, 0]])
 
-        # 2. Geometry & Snapshot update
-        xy, yaw = self.poses[-1][1], self.poses[-1][2] if self.poses else ([0., 0.], 0.)
-        ego_s = float(project([xy], self.route.xy)[0][0])
-        next_junc_dist, next_junc_s, next_jid = self._next_junction_info(ego_s)
-
-        # 3. VLM Query cadence: query every 0.5s of simulation time
-        if rgb_frames and (sim_t - self.last_vlm_query_sim_t >= self.frame_save_interval):
+        # 2. VLM Query cadence: query every 0.5s of simulation time
+        if rgb_frames and (sim_t - self.last_vlm_query_sim_t >= self.frame_save_interval - 1e-4):
             self._query_vlm(sim_t, rgb_frames)
             self.last_vlm_query_sim_t = sim_t
             
@@ -300,25 +350,31 @@ class VlmArbAgent(OpArbAgent):
                 frame_path = self.frame_dir / f"frame_{sim_t:.2f}s_{frame_idx}.npy"
                 np.save(str(frame_path), rgb_frames[0])
 
-        # 4. Consume arrived VLM answers (accounting for delay L)
+        # 3. Consume arrived VLM answers (accounting for delay L)
         self._update_vlm_answer(sim_t)
 
-        # 5. Compute ground-truth context for shadow evaluation
-        gt_ctx = self._extract_ground_truth(sim_t, ego_s, next_junc_dist)
+        # 4. Ego pose & junction info
+        xy, yaw = self.poses[-1][1], self.poses[-1][2] if self.poses else ([0., 0.], 0.)
+        ego_s = float(project([xy], self.route.xy)[0][0])
+        next_junc_dist, next_junc_s, next_jid = self._next_junction_info(ego_s)
 
-        # 6. Apply arbitration rules R1 - R5
-        speed = self.speeds[-1] if self.speeds else 0.0
+        # 5. Apply arbitration rules R1 - R5
         vlm_constraints, cruise_cap, release, active_rules = self._apply_arbitration_table(
             speed, sim_t, ego_s, next_junc_dist, next_junc_s, next_jid
         )
 
-        # 7. Apply speed cap from R1 to base governor
-        if "cruise_by_route" not in self.arb:
-            self.arb["cruise_by_route"] = {}
+        # 6. Apply R1 speed cap to base governor
         original_cruise = self.arb.get("cruise", ARB_PARAMS["cruise_base"])
         self.arb["cruise"] = min(original_cruise, cruise_cap)
 
-        # 8. Log step info
+        # 7. Store constraints and release for self.pc adapter
+        self.pending_vlm_cons = vlm_constraints
+        self.pending_vlm_release = release
+
+        # 8. Compute ground truth context for evaluation & logging
+        gt_ctx = self._extract_ground_truth(sim_t, ego_s, next_junc_dist)
+
+        # 9. Log step info to vlm_decisions.jsonl
         log_entry = {
             "t": sim_t,
             "speed": speed,
@@ -331,18 +387,18 @@ class VlmArbAgent(OpArbAgent):
             "r5_fallback": self.r5_fallback_active
         }
         self.vlm_log.write(json.dumps(log_entry) + "\n")
+        self.vlm_log.flush()
 
-        # 9. Invoke base OpenPilot OpArbAgent step
-        control = super().step(input_data)
-        
-        # Restore cruise setting
-        self.arb["cruise"] = original_cruise
-        return control
+        # 10. Invoke base OpenPilot OpArbAgent _plan
+        try:
+            ms = super()._plan(speed)
+        finally:
+            self.arb["cruise"] = original_cruise
+
+        return ms
 
     def destroy(self):
         """Cleanup resources and close logs."""
         if hasattr(self, "vlm_log") and self.vlm_log and not self.vlm_log.closed:
             self.vlm_log.close()
-        if hasattr(self, "priv") and self.priv:
-            self.priv.close()
         super().destroy()
