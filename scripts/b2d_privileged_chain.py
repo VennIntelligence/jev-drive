@@ -77,10 +77,15 @@ class Chain:
         assert self.log.tb is not None,"TensorBoard writer missing"
         self.lock=threading.Lock();self.active={};self.stop=threading.Event();self.error=None
         self.metadata=manifest();self.slots=queue.Queue()
+        self.pack(args.slots)
+
+    def pack(self,count):
+        assert not self.active
+        self.slots=queue.Queue()
         for g in range(3):
             allcores=list(range(g*25,(g+1)*25))
-            for k in range(args.slots):
-                part=allcores[k*(25//args.slots):(k+1)*(25//args.slots)] if k<args.slots-1 else allcores[k*(25//args.slots):]
+            for k in range(count):
+                part=allcores[k*(25//count):(k+1)*(25//count)] if k<count-1 else allcores[k*(25//count):]
                 self.slots.put((g,k,f"{part[0]}-{part[-1]}"))
 
     def status(self):
@@ -223,8 +228,50 @@ class Chain:
                                    manifest_sha256=hashlib.sha256((ROOT/"manifest.json").read_bytes()).hexdigest()))
         (ROOT/"DONE-debug").write_text(time.strftime("%F %T\n"))
 
+    def profile(self):
+        if (ROOT/"DONE-profile").exists():return
+        rows=[]
+        for label,slots,workers in (("before",1,2),("after",2,4)):
+            self.cleanup();self.pack(slots)
+            start=time.time();tasks=[]
+            for card in range(3):
+                ids=DEBUG if slots==1 else None
+                for k in range(slots):
+                    cohort=DEBUG if slots==1 else DEBUG[4*k:4*(k+1)]
+                    tasks.append((f"profile-{label}-g{card}-k{k}","drive",0,cohort))
+            with ThreadPoolExecutor(max_workers=3*slots) as pool:
+                futures=[pool.submit(self.unit,*task,workers=workers,record=False) for task in tasks]
+                for f in tqdm(as_completed(futures),total=len(futures),desc="Packing profile "+label):f.result()
+            end=time.time();elapsed=end-start
+            import pandas as pd
+            util=pd.read_csv(ROOT/"util.csv");util=util[(util.time>=start)&(util.time<=end)]
+            metrics=dict(label=label,slots_per_gpu=slots,workers_per_slot=workers,routes=24,
+                         start=start,end=end,wall_s=elapsed,routes_per_hour=24*3600/elapsed,
+                         estimated_formal_wall_h=696/(24*3600/elapsed),gpu={})
+            route_profiles=[]
+            for tag,arm,seed,ids in tasks:
+                adir=ROOT/"arms"/f"{tag}-{arm}-s{seed}"
+                for rid in ids:
+                    attempt=self.attempt(adir,rid)
+                    result=json.loads((attempt/"route_result.json").read_text())
+                    route_profiles.append(dict(route=rid,**result.get("profile",{}),wall_s=result.get("wall_s")))
+            pd.DataFrame(route_profiles).to_csv(ROOT/f"profile-{label}-routes.csv",index=False)
+            for g in range(3):
+                gg=util[util.gpu==g]
+                metrics["gpu"][str(g)]=dict(util_mean_pct=float(gg.utilization_pct.mean()),
+                       util_p95_pct=float(gg.utilization_pct.quantile(.95)),peak_memory_mib=int(gg.memory_used_mib.max()),
+                       idle_share=float((gg.utilization_pct<5).mean()))
+            rows.append(metrics);self.log.info("Packing profile: "+json.dumps(metrics));self.log.event("packing_profile",**metrics)
+        write(ROOT/"profile.json",dict(stages=rows,throughput_ratio=rows[1]["routes_per_hour"]/rows[0]["routes_per_hour"],
+                    cohort=DEBUG,bottleneck="Measured agent/world/tree/copy timings in per-route profile tables; startup and blocked tails included"))
+        self.pack(self.args.slots)
+        (ROOT/"DONE-profile").write_text(time.strftime("%F %T\n"))
+
     def full(self):
         self.debug()
+        self.profile()
+        assert self.args.slots==2 and self.args.workers==4,"Full packing requires two slots and four workers"
+        (ROOT/"FULL_STARTED").write_text(time.strftime("%F %T\n"))
         tasks=[]
         for arm in ARMS:
             for seed in (0,1):
@@ -248,6 +295,11 @@ class Chain:
                 if b"scripts/op_arb_server.py" in cmd and str(directory).encode() in cmd:
                     os.kill(pid,signal.SIGTERM)
                     self.log.event("server_stop",pid=pid)
+                    p.unlink()
+                    for _ in range(50):
+                        stat=Path(f"/proc/{pid}/stat")
+                        if not stat.exists() or stat.read_text().split(") ",1)[1].startswith("Z"):break
+                        time.sleep(.1)
             except (ProcessLookupError,FileNotFoundError):pass
 
     def run(self):

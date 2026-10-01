@@ -154,3 +154,6 @@ S1红灯停车与绿灯恢复两项均失败，ERROR已停止全批，尚无正�
 
 
 修复版远端Python 3.8编译与合成检查已通过：路径最大误差0、200例SAT一致、原几何恒等、邻道状态可JSON序列化。334调试结果的自动读数已成功产出（3个事件，仅解析验证、不作正式证据）；另用已知恒定差的合成表验证2000次route bootstrap、两个seed合并与机会数累加。新版复跑会等旧debug slot完全退出与server清理后自动开始，避免两版队列共用server/端口。当前正式样本仍为0。
+
+
+profile的固定负载明确为已登记debug8条×3份（24次drive运行，seed0），before每卡1slot×2worker、after每卡2slot×4worker，使用同一批路线和相同仲裁参数，只改变装填。重复只为吞吐，不进入正式统计；输出每路线world/agent/tree/copy耗时、每卡利用率/显存/尾部空闲及基于全负载墙钟的696次运行估计。profile与正式仍必须先通过完整debug检查；不在ERROR之后盲目装满GPU。
