@@ -4,6 +4,7 @@ Raw trajectories are never deleted. Only failed completion pointers and derived 
 are moved out of the formal estimator after the owned coordinator has drained.
 """
 import ast
+import argparse
 import hashlib
 import json
 import os
@@ -20,8 +21,17 @@ from jevdrive.runlog import RunLog
 from b2d_privileged_checks import is_crash
 
 BASE_COMMIT='c1ab219'
-OLD_FIELD='"rel": rel, "rb": self.resume_blocked'
-NEW_FIELD='"rel": bool(rel) if isinstance(rel, np.bool_) else rel, "rb": self.resume_blocked'
+OLD_WRITE='self.plan_log.write(json.dumps(rec) + "\\n")'
+NEW_WRITE='self.plan_log.write(json.dumps(rec, default=_json_scalar) + "\\n")'
+HELPER='''
+
+def _json_scalar(value):
+    """Normalize NumPy scalars only at the log boundary, including nested flags."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError('Object of type %s is not JSON serializable' % type(value).__name__)
+
+'''
 
 
 def source_check():
@@ -29,17 +39,23 @@ def source_check():
     old=[subprocess.check_output(['git','show',BASE_COMMIT+':'+p],cwd=REPO) for p in paths]
     new=[(REPO/p).read_bytes() for p in paths]
     assert old[1]==new[1], 'Privileged geometry changed during logging repair'
-    assert old[0].decode().count(OLD_FIELD)==1
-    assert new[0]==old[0].decode().replace(OLD_FIELD,NEW_FIELD).encode(), 'Repair changed more than one logging field'
+    assert old[0].decode().count(OLD_WRITE)==1
+    normalized=new[0].decode().replace(HELPER,'').replace(NEW_WRITE,OLD_WRITE)
+    assert normalized.encode()==old[0], 'Repair changed more than the logging serializer'
     tree=ast.parse(new[0])
-    expressions=[value for node in ast.walk(tree) if isinstance(node,ast.Dict)
-                 for key,value in zip(node.keys,node.values) if isinstance(key,ast.Constant) and key.value=='rel']
-    assert len(expressions)==1
-    expression=compile(ast.Expression(expressions[0]),'<actual plan-log field>','eval')
-    for value in (None,False,True,np.bool_(False),np.bool_(True),'timeout','privileged_clear'):
-        normalized=eval(expression,{'rel':value,'np':np})
-        decoded=json.loads(json.dumps({'rel':normalized}))['rel']
-        assert decoded==value and (not isinstance(value,np.bool_) or type(decoded) is bool)
+    helpers=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='_json_scalar']
+    assert len(helpers)==1
+    namespace={'np':np}
+    exec(compile(ast.Module(body=helpers,type_ignores=[]),'<actual plan-log serializer>','exec'),namespace)
+    serializer=namespace['_json_scalar']
+    for value in (None,False,True,np.bool_(False),np.bool_(True),np.int64(3),np.float32(.25),'timeout','privileged_clear'):
+        decoded=json.loads(json.dumps({'rel':value,'ctx':{'flag':value}},default=serializer))
+        assert decoded['rel']==value and decoded['ctx']['flag']==value
+    native={'rel':None,'rb':False,'pc':{'controls':{'pjunc':3.5},'hold':True},'t':.05}
+    assert json.dumps(native)==json.dumps(native,default=serializer)
+    try:json.dumps({'unsupported':object()},default=serializer)
+    except TypeError:pass
+    else:raise AssertionError('Unknown objects must still fail serialization')
     for status in ('Failed - Agent crashed','Failed - Simulation crashed',"Failed - Agent couldn't be set up",
                    "Failed - Agent's sensors were invalid",'Agent crashed','Failed'):
         assert is_crash(status),status
@@ -47,16 +63,29 @@ def source_check():
         assert not is_crash(status),status
     return dict(base_commit=BASE_COMMIT,old_control_sha256=hashlib.sha256(b''.join(old)).hexdigest(),
                 new_control_sha256=hashlib.sha256(b''.join(new)).hexdigest(),
-                geometry_identical=True,only_plan_log_rel_normalized=True,
-                actual_log_expression_checked=True,prefixed_crash_classifier_checked=True,
+                geometry_identical=True,only_plan_log_serializer_changed=True,
+                nested_numpy_scalars_checked=True,native_log_bytes_unchanged=True,unknown_objects_rejected=True,
+                actual_log_serializer_checked=True,prefixed_crash_classifier_checked=True,
                 model_and_control_computation_unchanged=True)
 
 
-def main():
+def main(refresh=False):
     root=Path(os.environ['DATA_DIR'])/'runs/b2d_privileged_ceiling'
     log=RunLog('b2d_privileged_ceiling','crash-repair-prepare')
     try:
         result=source_check()
+        if refresh:
+            previous=json.loads((root/'crash_repair_source_checks.json').read_text())
+            assert previous['old_control_sha256']==result['old_control_sha256']
+            archived=root/'crash_repair_source_checks_v5.json'
+            assert not archived.exists(), 'Source-check refresh already ran'
+            archived.write_text(json.dumps(previous,indent=2)+'\n')
+            previous.update(result)
+            previous['previous_single_field_repair_failed']=True
+            previous['failed_repair_attempt']=str(root/'arms/repair-v5-2667-drive-s0/attempts/2667/1')
+            (root/'crash_repair_source_checks.json').write_text(json.dumps(previous,indent=2)+'\n')
+            log.info('Serializer-only repair checks passed: '+json.dumps(result));log.event('end',status='complete',**result)
+            return
         drain=json.loads((root/'QUEUE_DRAIN_RESULT.json').read_text())
         assert drain['request']['chain_pid']==541722 and drain['reason'].startswith('Stopped after substantive official crash-status audit')
         assert not Path('/proc/541722').exists() or Path('/proc/541722/stat').read_text().split(') ',1)[1].startswith('Z')
@@ -97,4 +126,7 @@ def main():
     finally:log.close()
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--refresh-source-check',action='store_true')
+    main(parser.parse_args().refresh_source_check)

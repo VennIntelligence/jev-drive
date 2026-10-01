@@ -256,7 +256,7 @@ class Chain:
     def debug(self):
         version=self.args.verification_version
         if (ROOT/("DONE-debug-"+version)).exists():return
-        if version=='v5':assert (ROOT/'DONE-repair').exists(), 'Logging repair requires one verified unit before the debug batch'
+        if version!='v4':assert (ROOT/'DONE-repair').exists(), 'Logging repair requires one verified unit before the debug batch'
         self.pilot()
         numeric(self.log,self.log.dir)
         spec=[("27787",a) for a in ("drive","pred")]+[("26872",a) for a in ("drive","pjunc","pall")]+[("25169",a) for a in ("drive","pbyp","pbypgap","pall")]+[("24955",a) for a in ("drive","pbyp","pbypgap")]
@@ -324,7 +324,7 @@ class Chain:
         import pandas as pd
         frozen=json.loads((ROOT/'lock.json').read_text())
         assert frozen['control_sha256']==self.control_hash,'Formal control source differs from the debug lock'
-        if self.args.verification_version=='v5':
+        if self.args.verification_version!='v4':
             from b2d_privileged_crash_repair import source_check
             proof=source_check()
             assert proof['new_control_sha256']==self.control_hash and (ROOT/'DONE-crash-prepare').exists()
@@ -471,7 +471,7 @@ class Chain:
                 assert (ROOT/'DONE-crash-prepare').exists()
                 self.log.event('logging_source_check',**source_check())
                 numeric(self.log,self.log.dir)
-                adir=self.unit('repair-v5-2667','drive',0,['2667'],workers=1,record=False)
+                adir=self.unit('repair-'+self.args.verification_version+'-2667','drive',0,['2667'],workers=1,record=False)
                 checks=route_checks(self.attempt(adir,'2667'),'drive')
                 write(ROOT/'logging_repair_unit_checks.json',checks)
                 assert checks['passed'], 'Logging-repair single-unit checklist failed'
@@ -495,6 +495,6 @@ if __name__=="__main__":
     p.add_argument("--slots",type=int,choices=(1,2),default=1)
     p.add_argument("--workers",type=int,default=2)
     p.add_argument("--chunk-size",type=int,choices=(4,8,12,24),default=4,help="Routes queued per shard; worker and control limits are unchanged")
-    p.add_argument("--verification-version",choices=("v4","v5"),default="v4",help="Separate verification and queue namespaces after the logging-only repair")
+    p.add_argument("--verification-version",choices=("v4","v5","v6"),default="v4",help="Separate verification and queue namespaces after the logging-only repair")
     args=p.parse_args();assert 1<=args.workers<=4
     Chain(args).run()

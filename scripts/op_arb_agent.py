@@ -56,6 +56,14 @@ import zeroshot_rigs as rigs  # noqa: E402
 import zeroshot_wire as wire  # noqa: E402
 from b2d_controller_adapter import RouteAdapter, world_to_local  # noqa: E402
 
+
+def _json_scalar(value):
+    """Normalize NumPy scalars only at the log boundary, including nested flags."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError('Object of type %s is not JSON serializable' % type(value).__name__)
+
+
 TIMES = np.arange(1, 21) * 0.25
 REAR_TO_BUMPER = 1.3886 + 2.4508       # MKZ 2020: rear axle -> centre -> front bumper (m)
 CAM_TO_BUMPER = REAR_TO_BUMPER - rigs.OP_MOUNT_RIG[0]   # openpilot's lead x is measured from the camera
@@ -464,7 +472,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         r3 = lambda x: np.round(np.asarray(x, float), 3).tolist()  # noqa: E731
         mt = np.asarray(out["meta"], float)
         rec = {"frame": f, "t": t_frame, "v": speed, "warm": warm, "acc": accepted, "desire": desire, "intent": intent, "src": src,
-               "zone": self.in_zone(), "latch": self.latch, "rel": bool(rel) if isinstance(rel, np.bool_) else rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
+               "zone": self.in_zone(), "latch": self.latch, "rel": rel, "rb": self.resume_blocked, "tls": tl_on, "ri": int(self.route.i),
                "lat": lat_src, "lat_why": lat_why, "div": round(div, 2), "go": self.want_go,
                "cmd": self.route.next_maneuver([Z.LEFT, Z.RIGHT, Z.STRAIGHT, Z.CHANGE_LEFT, Z.CHANGE_RIGHT]),
                "s": {k: round(float(v[-1]), 2) for k, v in cons.items()}, "s2": {k: round(float(v[7]), 2) for k, v in cons.items()},
@@ -481,7 +489,7 @@ class OpArbAgent(Z.ZeroShotAgent):
         rec["ctx"] = self._ctx()
         if self.pc is not None:
             rec["pc"] = {k: v for k, v in self.pc.meta.items() if k not in ("junctions", "obstacles")}
-        self.plan_log.write(json.dumps(rec) + "\n")
+        self.plan_log.write(json.dumps(rec, default=_json_scalar) + "\n")
         return ms
 
     def destroy(self):
