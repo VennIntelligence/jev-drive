@@ -62,6 +62,11 @@ def main():
             bar.update(1)
         baseline_config = json.loads((L.lroot("runs", "main-s0") / "config.json").read_text())
         original_cfg = {k: v for k, v in baseline_config["cfg"].items() if k not in ("name", "seed")}
+        # Historical main predates contrast_mix; its draw divided 18 rows equally into 6/6/6.
+        historical_uniform_mix = "contrast_mix" not in original_cfg
+        if historical_uniform_mix:
+            assert original_cfg["n_contrast"] == 18
+            original_cfg["contrast_mix"] = [1.0, 1.0, 1.0]
         counts_table = pd.read_csv(PREP / "counts.csv").astype({"size": str})
         timings = []
         for size in ("25", "110", "300", "all"):
@@ -84,6 +89,8 @@ def main():
                                 "peak_reserved_gib": dev["peak_reserved_gb"], "nonfinite": dev["nonfinite"]})
         pd.DataFrame(timings).to_csv(out / "timings.csv", index=False)
         dump(out / "run_audit.json", {"runs": 8, "configuration_matches_main": True,
+             "historical_main_missing_contrast_mix": historical_uniform_mix,
+             "historical_uniform_contrast_counts": [6, 6, 6],
              "contrast_and_other_pools_match_main": True, "imitation_pools_match_manifest": True,
              "all_steps_4000": True, "nonfinite_losses": 0})
         events = [json.loads(line) for line in (ROOT / "curve-unit/events.jsonl").read_text().splitlines()]
