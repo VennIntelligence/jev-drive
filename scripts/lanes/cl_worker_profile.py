@@ -46,13 +46,20 @@ def jobs(args):
         other = "stock" if k == "reduced" else "reduced"
         runs = [(k, 4, 1), (k, 6, 2), (k, 10, 1), (k, 12, 2), (other, 12, 1)]
         return [pdm("B-%s-t%s-w%d" % (kk, t, w), prof(kk, t), w, c, i) for i, (kk, w, c) in enumerate(runs)]
+    card = int(args["card"]) if "card" in args else None     # put stage C / old on one card (e.g. a free card 0)
     if stage == "C":                       # camera stub (front3 1600x900, no model): GPU-bound regime, throughput only
         t = args.get("t", "2")
         return [b2d("C-%s-t%s-w6" % (k, t), data_dir() / "runs" / ROOT / "arms" / ("C-%s-t%s-w6" % (k, t)), ROUTES,
-                    workers=6, max_attempts=2, min_done=0.95, tries=1, profile=prof(k, t), exclusive=True, gpus=(c,),
+                    workers=6, max_attempts=2, min_done=0.95, tries=1, profile=prof(k, t), exclusive=True,
+                    gpus=(card if card is not None else c,), priority=1,
                     meta=dict(kind=k, t=t, w=6, card=c, camera="front3"))
                 for k, c in (("reduced", 1), ("stock", 2))]
     if stage == "old":                     # scripts/carla_threads_routes.sh, 2026-09-27 settings: 5 workers, client 8,
-        return [pdm("old-%s" % k, Profile(k, pools=k, client_threads=8, num_threads=None), 5, c, 0, ids=OLD20.split(","))
-                for k, c in (("reduced", 1), ("stock", 2))]
+        jobs = [pdm("old-%s" % k, Profile(k, pools=k, client_threads=8, num_threads=None), 5,
+                    card if card is not None else c, 0, ids=OLD20.split(",")) for k, c in (("reduced", 1), ("stock", 2))]
+        for j in jobs:
+            j.exclusive = False            # DS reproduction only: two 5-worker runs may share a card
+        return jobs
+    if stage == "extra":                   # old + C together on one card (stage C runs alone once old is done)
+        return jobs(dict(args, stage="old")) + jobs(dict(args, stage="C"))
     raise SystemExit("unknown stage %s" % stage)
