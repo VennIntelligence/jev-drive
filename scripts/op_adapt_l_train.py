@@ -185,7 +185,7 @@ def cmd_train(a):
         raise
 
 
-def train(cfg: L.LCfg, d: Path, log: Log, a):
+def train(cfg: L.LCfg, d: Path, log: Log, a, *, mixer_factory=None):
     torch.manual_seed(cfg.seed)
     dev = torch.device("cuda")
     t0 = time.time()
@@ -197,7 +197,7 @@ def train(cfg: L.LCfg, d: Path, log: Log, a):
     lr0 = [g["lr"] for g in groups]
     opt = torch.optim.AdamW(groups, weight_decay=cfg.wd)
     scaler = torch.amp.GradScaler()
-    mix = L.Mixer(cfg, D)
+    mix = (mixer_factory or L.Mixer)(cfg, D)
     lossf = L.Losses(model.net, cfg, D.tstd, dev)
     drows = dev_rows(D)
     step, ck = 0, d / "ckpt.pt"
