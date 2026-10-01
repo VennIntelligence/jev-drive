@@ -1,0 +1,13 @@
+# Multi-Model Phase A Evaluation Results
+
+|   n_frames |   n_ego_red |   red_recall |   other_lane_fp_rate |   no_light_fp_rate |   n_stop_sign |   sign_recall |   sign_fp_rate |   n_static_block |   block_recall | model                                                 |   mean_latency_ms |   p50_latency_ms |   p95_latency_ms |   p99_latency_ms |
+|-----------:|------------:|-------------:|---------------------:|-------------------:|--------------:|--------------:|---------------:|-----------------:|---------------:|:------------------------------------------------------|------------------:|-----------------:|-----------------:|-----------------:|
+|         63 |          63 |       0.0317 |                    0 |                  0 |             0 |             1 |              0 |                0 |              1 | OpenJev (DiffusionGemma-26B NVFP4 via System One API) |             209.7 |            215.3 |            226.1 |            230.1 |
+|         63 |          63 |       0      |                    0 |                  0 |             0 |             1 |              0 |                0 |              1 | DiffusionGemma-26B (Direct vLLM Vision Chat)          |              44.2 |             43.9 |             48.5 |             52.5 |
+
+### Pre-Registered Phase A Thresholds:
+- Red light recall >= 0.80
+- Other lane false positive <= 0.10
+- No light false positive <= 0.02
+- Stop sign recall >= 0.70
+- p95 latency <= 600 ms
