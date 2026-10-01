@@ -28,7 +28,8 @@ def main():
         for t,s,groups in ((0,10,[[1],[2]]),(1,20,[[1],[2]]),(2,100,[[1,2]])):
             obstacles=[dict(key=ids[0],ids=ids,start_s=30,end_s=60) for ids in groups]
             scenes.append(dict(t=t,ego=dict(v=2,xyz=[s,0,0]),actors=[],
-                          pc=dict(warm=False,ego_s=s,junctions=[],obstacles=obstacles,bypass=True)))
+                          pc=dict(warm=False,ego_s=s,junctions=[],obstacles=obstacles,bypass=True,
+                                  bypass_state=dict(ids=[1,2],borrow=False),gap_open=True)))
         lines(fixture/'privileged.jsonl',scenes);lines(fixture/'plans.jsonl',[])
         lines(fixture/'contacts.jsonl',[dict(t=1.1,id=2,impulse=2),dict(t=1.2,id=2,impulse=2)])
         meta=dict(route='fixture',arm='pbyp',seed=0,group='obstacle')

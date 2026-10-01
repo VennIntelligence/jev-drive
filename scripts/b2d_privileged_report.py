@@ -80,7 +80,9 @@ def event_rows(path,meta):
             lateral=float(project([rows[-1]['ego']['xyz'][:2]],route)[1][0])
             returned=bool(kind=='junction' or ego_s>g['end_s']+23 and abs(lateral)<=.75)
             success=bool(passed and returned and not relevant and wait_max<60)
-            enabled=any(r['pc'].get('bypass') if kind=='obstacle' else 'pjunc' in r['pc'].get('controls',{}) for r in rows)
+            owned=lambda r: bool(set(r['pc'].get('bypass_state',{}).get('ids',[])) & g['ids'])
+            enabled=any(bool(r['pc'].get('bypass')) and owned(r) if kind=='obstacle' else
+                        'pjunc' in r['pc'].get('controls',{}) and bool(set(r['pc'].get('conflict_ids',[])) & g['ids']) for r in rows)
             go=any(r['ego']['v']>1 and not r['pc'].get('hold') for r in rows[1:])
             no_adj=any(r['pc'].get('no_adjacent_lane',False) for r in rows)
             wrong_return=kind=='obstacle' and passed and not returned
@@ -88,10 +90,13 @@ def event_rows(path,meta):
                    'no_constraint_or_geometry' if not enabled and not success else 'return_incomplete' if wrong_return else
                    'passage_incomplete' if not success else 'completed')
             opposing=[]
+            gap_rows=[r for r in rows if owned(r)] if kind=='obstacle' else []
+            gap_states=[bool(r['pc'].get('gap_open')) for r in gap_rows]
+            first_bypass=next((r for r in gap_rows if r['pc'].get('bypass')),None)
             if kind=='obstacle':
                 for r in rows:
                     st=r['pc'].get('bypass_state',{})
-                    if not st.get('borrow'):continue
+                    if not st.get('borrow') or not owned(r):continue
                     for a in r['actors']:
                         if not a['type'].startswith('vehicle.'):continue
                         _,d,tangent=project([a['xyz'][:2]],route)
@@ -103,6 +108,11 @@ def event_rows(path,meta):
                     wait_s=wait_s,wait_max_s=wait_max,blocked=int(wait_max>=60 or not passed),
                     enabled=int(enabled),clear_go=int(go),execution_failed=int(enabled and not success),
                     no_adjacent=int(no_adj),failure_stage=trace,opposing_gap_m=min(opposing) if opposing else np.nan,
+                    gap_at_start=int(first_bypass['pc'].get('gap_open',False)) if first_bypass else np.nan,
+                    gap_open_transitions=sum(not a and b for a,b in zip(gap_states[:-1],gap_states[1:])),
+                    gap_closed_transitions=sum(a and not b for a,b in zip(gap_states[:-1],gap_states[1:])),
+                    gap_closed_while_active=int(any(r['pc'].get('bypass') and r['pc'].get('borrow') and
+                                                   not r['pc'].get('gap_open') for r in gap_rows)),
                     green_latency_s=np.nan,green_censored=0))
     # Red opportunities use logged light identity, not a control trigger or infraction count.
     lights={}
@@ -160,9 +170,25 @@ def event_rows(path,meta):
     return events,visibility
 
 
+def yellow_rows(path,meta):
+    """Secondary yellow-light opportunities; excluded from every primary event denominator."""
+    plans=[r for r in jsonlines(path/'plans.jsonl') if not r['warm']]
+    ids={r['ctx'].get('tl_id') for r in plans if r.get('ctx',{}).get('tl')==1 and
+         0<r['ctx'].get('tl_dist',1e9)<=50 and r['ctx'].get('tl_id') is not None}
+    rows=[]
+    for lid in sorted(ids):
+        relevant=[r for r in plans if r.get('ctx',{}).get('tl_id')==lid]
+        crossed=any(a['ctx'].get('tl_dist',-1)>0 and b['ctx'].get('tl_dist',1)<=0 and
+                    b['ctx'].get('tl')==1 for a,b in zip(relevant[:-1],relevant[1:]))
+        rows.append(dict(**meta,light_id=lid,opportunity=1,
+                         stopped=int(any(r['ctx'].get('tl')==1 and r['v']<.2 for r in relevant)),
+                         observed_yellow_crossing=int(crossed)))
+    return rows
+
+
 def read_unit(adir,tag,arm,seed,log):
     root=adir.parents[1];out=root/'readouts'/adir.name;out.mkdir(parents=True,exist_ok=True)
-    routes=[];events=[];visible=[]
+    routes=[];events=[];visible=[];yellow=[]
     for rid,path in attempts(adir).items():
         meta=dict(unit=adir.name,group=tag.split('-')[1],route=str(rid),arm=arm,seed=seed,attempt=str(path))
         r=drive_row(path);r.update(meta)
@@ -173,9 +199,11 @@ def read_unit(adir,tag,arm,seed,log):
         for k,p in zip(('pedestrian','vehicle','layout','red'),penalties):r['recover_'+k]=reconstructed*(1/p-1)
         r['recover_route_completion']=(100-r['RC'])*product
         routes.append(r);ee,vv=event_rows(path,meta);events.extend(ee);visible.extend(vv)
+        yellow.extend(yellow_rows(path,meta))
     pd.DataFrame(routes).to_csv(out/'routes.csv',index=False)
     pd.DataFrame(events).to_csv(out/'events.csv',index=False)
     pd.DataFrame(visible).to_csv(out/'visibility.csv',index=False)
+    pd.DataFrame(yellow).to_csv(out/'yellow.csv',index=False)
     log.event('readout',unit=adir.name,routes=len(routes),events=len(events),visibility_pairs=len(visible))
     log.info(f'Read {adir.name}: DS={np.mean([r["DS"] for r in routes]):.2f}, events={len(events)}')
 
@@ -234,6 +262,7 @@ def absolute_intervals(routes,events):
 def summarize(root,log):
     out=root/'summary';out.mkdir(exist_ok=True)
     r=concatenate(root,'routes.csv');e=concatenate(root,'events.csv');v=concatenate(root,'visibility.csv')
+    yellow=concatenate(root,'yellow.csv');yellow.to_csv(out/'yellow_opportunities.csv',index=False)
     assert len(r)==696 and not r.duplicated(['route','arm','seed']).any(),'Formal run completeness failed'
     for df,name in ((r,'routes'),(e,'events'),(v,'visibility')):df.to_csv(out/(name+'.csv'),index=False)
     r.groupby('arm').mean(numeric_only=True).reindex(ARMS).to_csv(out/'arm_means.csv')
