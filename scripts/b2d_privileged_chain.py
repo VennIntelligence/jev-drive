@@ -325,7 +325,7 @@ class Chain:
         frozen=json.loads((ROOT/'lock.json').read_text())
         assert frozen['control_sha256']==self.control_hash,'Formal control source differs from the debug lock'
         if self.args.verification_version!='v4':
-            from b2d_privileged_crash_repair import source_check
+            from b2d_privileged_checks import source_check
             proof=source_check()
             assert proof['new_control_sha256']==self.control_hash and (ROOT/'DONE-crash-prepare').exists()
             assert json.loads((ROOT/'pre-logging-v5-lock.json').read_text())['control_sha256']==proof['old_control_sha256']
@@ -467,7 +467,7 @@ class Chain:
             elif self.args.phase=="diagnose":self.diagnose()
             elif self.args.phase=="debug":self.debug()
             elif self.args.phase=="repair":
-                from b2d_privileged_crash_repair import source_check
+                from b2d_privileged_checks import source_check
                 assert (ROOT/'DONE-crash-prepare').exists()
                 self.log.event('logging_source_check',**source_check())
                 numeric(self.log,self.log.dir)

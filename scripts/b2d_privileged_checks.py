@@ -1,5 +1,8 @@
 """Independent synthetic geometry checks and debug route checklists. No score-based tuning."""
 import argparse
+import ast
+import hashlib
+import subprocess
 import json
 from pathlib import Path
 import sys
@@ -8,7 +11,8 @@ import time
 import numpy as np
 from tqdm import tqdm
 
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+REPO=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(REPO))
 from b2d_privileged_geometry import overlap, project, corners, rectangle_gap, visibility, ego_boxes
 
 
@@ -16,6 +20,55 @@ def is_crash(status):
     """Official statuses append the failure message to 'Failed - '."""
     return status == "Failed" or any(message in status for message in
         ("Simulation crashed", "Agent crashed", "Agent couldn't be set up", "Agent's sensors were invalid"))
+
+
+BASE_COMMIT='c1ab219'
+OLD_WRITE='self.plan_log.write(json.dumps(rec) + "\\n")'
+NEW_WRITE='self.plan_log.write(json.dumps(rec, default=_json_scalar) + "\\n")'
+HELPER='''
+
+def _json_scalar(value):
+    """Normalize NumPy scalars only at the log boundary, including nested flags."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError('Object of type %s is not JSON serializable' % type(value).__name__)
+
+'''
+
+
+def source_check():
+    paths=('scripts/op_arb_agent.py','scripts/b2d_privileged_geometry.py')
+    old=[subprocess.check_output(['git','show',BASE_COMMIT+':'+p],cwd=REPO) for p in paths]
+    new=[(REPO/p).read_bytes() for p in paths]
+    assert old[1]==new[1], 'Privileged geometry changed during logging repair'
+    assert old[0].decode().count(OLD_WRITE)==1
+    normalized=new[0].decode().replace(HELPER,'').replace(NEW_WRITE,OLD_WRITE)
+    assert normalized.encode()==old[0], 'Repair changed more than the logging serializer'
+    tree=ast.parse(new[0])
+    helpers=[node for node in tree.body if isinstance(node,ast.FunctionDef) and node.name=='_json_scalar']
+    assert len(helpers)==1
+    namespace={'np':np}
+    exec(compile(ast.Module(body=helpers,type_ignores=[]),'<actual plan-log serializer>','exec'),namespace)
+    serializer=namespace['_json_scalar']
+    for value in (None,False,True,np.bool_(False),np.bool_(True),np.int64(3),np.float32(.25),'timeout','privileged_clear'):
+        decoded=json.loads(json.dumps({'rel':value,'ctx':{'flag':value}},default=serializer))
+        assert decoded['rel']==value and decoded['ctx']['flag']==value
+    native={'rel':None,'rb':False,'pc':{'controls':{'pjunc':3.5},'hold':True},'t':.05}
+    assert json.dumps(native)==json.dumps(native,default=serializer)
+    try:json.dumps({'unsupported':object()},default=serializer)
+    except TypeError:pass
+    else:raise AssertionError('Unknown objects must still fail serialization')
+    for status in ('Failed - Agent crashed','Failed - Simulation crashed',"Failed - Agent couldn't be set up",
+                   "Failed - Agent's sensors were invalid",'Agent crashed','Failed'):
+        assert is_crash(status),status
+    for status in ('Perfect','Completed','Failed - TickRuntime','Failed - Agent got blocked'):
+        assert not is_crash(status),status
+    return dict(base_commit=BASE_COMMIT,old_control_sha256=hashlib.sha256(b''.join(old)).hexdigest(),
+                new_control_sha256=hashlib.sha256(b''.join(new)).hexdigest(),
+                geometry_identical=True,only_plan_log_serializer_changed=True,
+                nested_numpy_scalars_checked=True,native_log_bytes_unchanged=True,unknown_objects_rejected=True,
+                actual_log_serializer_checked=True,prefixed_crash_classifier_checked=True,
+                model_and_control_computation_unchanged=True)
 
 
 def scalar_project(point,path):

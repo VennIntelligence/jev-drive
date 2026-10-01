@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from b2d_privileged_chain import Chain, ROOT, write
 from b2d_privileged_checks import route_checks
-from b2d_privileged_crash_repair import source_check
+from b2d_privileged_checks import source_check
 from b2d_privileged_report import read_unit, bootstrap_delta
 from b2d_privileged_plots import figures
 
