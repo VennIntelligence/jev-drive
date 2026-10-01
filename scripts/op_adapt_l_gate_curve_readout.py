@@ -321,7 +321,7 @@ def figures(out,log,args):
     h=np.asarray(json.loads((ROOT/"frontier/frontier.json").read_text())["hull"])
     for panel,ax in enumerate(axes):
         for _,p in df.iterrows():
-            color=S.PALETTE["blue"] if p.model=="gate" else S.BASELINE
+            color=S.PALETTE[{"gate":"green","main":"blue","stayheavy":"purple"}.get(p.model,"orange")]
             ax.errorbar(100*p.stay,p.start,xerr=[[100*(p.stay-p.stay_lo)],[100*(p.stay_hi-p.stay)]],
                         yerr=[[p.start-p.start_lo],[p.start_hi-p.start]],fmt="o",color=color,markersize=3,capsize=2)
             if (panel==0 and p.model in ("dw03","dw1")) or (panel==1 and p.model not in ("dw03","dw1")):
@@ -343,7 +343,7 @@ def figures(out,log,args):
     counts=pd.read_csv(ROOT/"prep-v3/counts.csv").astype({"size":str})
     for axis in ("segments","events"):
         fig,axs=plt.subplots(1,3,figsize=(S.DOUBLE_COLUMN_IN,2.4))
-        for ax,s,color,line in zip(axs,L.SLICE3,("blue","orange","green"),(.05,.15,.06)):
+        for ax,s,color,line in zip(axs,L.SLICE3,("blue","blue","blue"),(.05,.15,.06)):
             d=metrics[(metrics.seed.astype(str)=="mean")&(metrics["slice"]==s)&(metrics.metric==f"cap_{s}")].copy()
             d["size"]=d.model.str.replace("curve-","",regex=False)
             d=d.merge(counts[counts["slice"]==s],on="size").sort_values(axis)
