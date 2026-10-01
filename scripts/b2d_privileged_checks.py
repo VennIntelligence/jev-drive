@@ -95,7 +95,7 @@ def route_checks(attempt,kind):
     record=json.loads((attempt/"results.json").read_text())["_checkpoint"]["records"][0]
     crash=record["status"] in ("Failed","Simulation crashed","Agent crashed","Agent couldn't be set up")
     ms=np.array([r["ms"] for r in live]);v=np.array([r["v"] for r in live])
-    assert len(live)>0,f"No post-warmup plans: status={record["status"]}, attempt={attempt}; inspect route.log"
+    assert len(live)>0,f"No post-warmup plans: status={record['status']}, attempt={attempt}; inspect route.log"
     checks=dict(files=(attempt/"privileged.jsonl").exists() and (attempt/"contacts.jsonl").exists(),
                 no_crash=not crash,finite=bool(np.isfinite(ms).all() and np.isfinite(v).all()),
                 median_latency=float(np.median(ms))<=75,p99_latency=float(np.quantile(ms,.99))<=200)
