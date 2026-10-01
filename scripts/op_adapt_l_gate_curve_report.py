@@ -53,7 +53,13 @@ def main():
     log=Log(out)
     assert log.tb is not None
     try:
-        grant_check(gpu=False)
+        log.event("start", resources=grant_check(gpu=False))
+        with tqdm(total=1, desc="Waiting for complete curve") as bar:
+            while not (ROOT / "chain/DONE").exists():
+                if (ROOT / "chain/ERROR").exists():
+                    raise RuntimeError("Curve chain failed; report is blocked")
+                time.sleep(5)
+            bar.update(1)
         events = [json.loads(line) for line in (ROOT / "curve-unit/events.jsonl").read_text().splitlines()]
         loss_bins = [e["value"] for e in events if e.get("tag") == "loss/imit"]
         assert len(loss_bins) == 16 and min(loss_bins) >= 0
