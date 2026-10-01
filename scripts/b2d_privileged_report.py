@@ -55,7 +55,15 @@ def event_rows(path,meta):
                 ids=set(candidate['ids'])
                 matching=[g for g in groups if (kind=='junction' and g['key']==candidate['key']) or
                           (kind=='obstacle' and g['ids'] & ids)]
-                if matching:g=matching[0];g['ids']|=ids;g['end_s']=max(g['end_s'],candidate['end_s'])
+                if matching:
+                    g=matching[0]
+                    # One observation can join previously separate obstacle groups. Keep one union event.
+                    for other in matching[1:]:
+                        g['ids']|=other['ids'];g['end_s']=max(g['end_s'],other['end_s'])
+                        g['start_s']=min(g['start_s'],other['start_s']);g['first']=min(g['first'],other['first'])
+                        groups.remove(other)
+                    g['ids']|=ids;g['end_s']=max(g['end_s'],candidate['end_s'])
+                    g['start_s']=min(g['start_s'],candidate['start_s'])
                 else:
                     g=dict(key=candidate['key'],ids=ids,start_s=candidate['start_s'],end_s=candidate['end_s'],first=i)
                     groups.append(g)
