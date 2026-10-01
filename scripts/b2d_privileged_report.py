@@ -41,7 +41,11 @@ def event_rows(path,meta):
     scenes=jsonlines(path/'privileged.jsonl')
     live=[r for r in scenes if not r['pc']['warm']]
     plans=[r for r in jsonlines(path/'plans.jsonl') if not r['warm']]
-    contacts=[r for r in jsonlines(path/'contacts.jsonl') if r['impulse']>=1.]
+    contacts=[];last_contact={}
+    for c in sorted(jsonlines(path/'contacts.jsonl'),key=lambda row:row['t']):
+        if c['impulse']<1.:continue
+        if c['t']-last_contact.get(c['id'],-1e9)>1.:contacts.append(c)
+        last_contact[c['id']]=c['t']
     route=np.asarray(json.loads((path/'route.json').read_text())['xy'])
     events=[]
     for kind,field in [('junction','junctions'),('obstacle','obstacles')]:
@@ -196,12 +200,37 @@ def bootstrap_delta(routes,events,arm,group,kind):
                 bootstrap_undefined=int(np.isnan(effects).sum()),drive_opps=int(counts[0][:,1].sum()),arm_opps=int(counts[1][:,1].sum()))
 
 
+def absolute_intervals(routes,events):
+    route_rows=[];event_rates=[]
+    for group in ('all','junction','obstacle','dev'):
+        rr=routes if group=='all' else routes[routes['group']==group]
+        ee=events if group=='all' else events[events['group']==group]
+        ids=sorted(rr.route.unique());draw=np.random.default_rng(0).integers(0,len(ids),(2000,len(ids)))
+        for arm in ARMS:
+            a=rr[rr.arm==arm].groupby('route')[['DS','RC','v_mean']].mean().reindex(ids)
+            for metric in ('DS','RC','v_mean'):
+                values=a[metric].to_numpy();boot=values[draw].mean(1)
+                route_rows.append(dict(group=group,arm=arm,metric=metric,mean=values.mean(),
+                         lo=np.quantile(boot,.025),hi=np.quantile(boot,.975),routes=len(ids)))
+            for kind in ('junction','obstacle','red'):
+                b=ee[(ee.arm==arm)&(ee.kind==kind)].groupby('route')[['failed','opportunity']].sum().reindex(ids,fill_value=0).to_numpy()
+                sums=b[draw].sum(1);valid=sums[:,1]>0
+                boot=sums[valid,0]/sums[valid,1]
+                event_rates.append(dict(group=group,arm=arm,kind=kind,opportunities=int(b[:,1].sum()),failures=int(b[:,0].sum()),
+                     rate=b[:,0].sum()/b[:,1].sum() if b[:,1].sum()>0 else np.nan,
+                     lo=np.quantile(boot,.025) if len(boot) else np.nan,hi=np.quantile(boot,.975) if len(boot) else np.nan,
+                     bootstrap_undefined=int((~valid).sum())))
+    return pd.DataFrame(route_rows),pd.DataFrame(event_rates)
+
+
 def summarize(root,log):
     out=root/'summary';out.mkdir(exist_ok=True)
     r=concatenate(root,'routes.csv');e=concatenate(root,'events.csv');v=concatenate(root,'visibility.csv')
     assert len(r)==696 and not r.duplicated(['route','arm','seed']).any(),'Formal run completeness failed'
     for df,name in ((r,'routes'),(e,'events'),(v,'visibility')):df.to_csv(out/(name+'.csv'),index=False)
     r.groupby('arm').mean(numeric_only=True).reindex(ARMS).to_csv(out/'arm_means.csv')
+    raw_ci,event_ci=absolute_intervals(r,e)
+    raw_ci.to_csv(out/'absolute_route_intervals.csv',index=False);event_ci.to_csv(out/'event_rate_intervals.csv',index=False)
     e.groupby(['group','arm','kind']).agg(opportunities=('opportunity','sum'),failures=('failed','sum'),
        successes=('success','sum'),contacts=('contact','sum'),blocked=('blocked','sum'),
        wait_s=('wait_s','sum'),enabled=('enabled','sum'),execution_failed=('execution_failed','sum')).to_csv(out/'event_counts.csv')

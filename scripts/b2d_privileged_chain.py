@@ -407,7 +407,9 @@ class Chain:
             self.log.info("Stage completed: "+self.args.phase)
             self.log.event("end",status="complete",phase=self.args.phase)
         except BaseException:
-            (ROOT/"ERROR").write_text(traceback.format_exc());raise
+            if not (ROOT/"ERROR").exists():(ROOT/"ERROR").write_text(traceback.format_exc())
+            else:(self.log.dir/"secondary_ERROR.txt").write_text(traceback.format_exc())
+            raise
         finally:
             self.stop.set();monitor.join(timeout=10);self.cleanup();self.log.close()
 
