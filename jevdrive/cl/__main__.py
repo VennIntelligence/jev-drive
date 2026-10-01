@@ -135,7 +135,8 @@ def cmd_run(a):
     elif row is None:
         sys.exit("lane %s has no table row: lease it first (python -m jevdrive.cl lease %s ...)" % (name, name))
     lane = Lane(name, jobs, root, lease=fixed, profile=prof, workers_per_card=a.workers_per_card or getattr(
-        mod, "WORKERS_PER_CARD", None), poll_s=a.poll_s, fail_fast=a.fail_fast)
+        mod, "WORKERS_PER_CARD", None), poll_s=a.poll_s, fail_fast=a.fail_fast,
+        generate=(lambda lane: mod.more(lane, args)) if hasattr(mod, "more") else None)
     if a.dry_run:
         ls = fixed or row
         print("lane %s -> %s, profile %s, lease %s" % (name, root, prof.describe(), ls.row()))

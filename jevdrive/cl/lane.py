@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import capacity, procs
-from .box import parse_cpus, probe, processes
+from .box import format_cpus, parse_cpus, probe, processes
 from .capacity import Admission, worker_threads
 from .lease import Lease, get as get_lease, load as load_table
 from .profiles import Profile, get as get_profile
@@ -50,7 +50,8 @@ def data_dir() -> Path:
 
 @dataclass
 class Job:
-    """`cmd` may use {gpu} {idx} {span} {workers} {cpus} {out} {server_args} {client_threads} {pids_wait} {job_dir}."""
+    """`cmd` and `env` values may use {gpu} {idx} {span} {workers} {cpus} {out} {server_args} {client_threads}
+    {pids_wait} {job_dir}."""
     name: str
     cmd: list
     workers: int = 1
@@ -63,6 +64,9 @@ class Job:
     exclusive: bool = False                           # alone on its card (measurements)
     gpus: tuple = ()                                  # restrict to these cards
     ok: object = None                                 # callable(job) -> bool, checked after rc == 0
+    retry_check: bool = False                         # re-run when `ok` fails (default: a failed check is final)
+    ready: object = None                              # callable(job) -> bool: stays queued until True (file gates)
+    cores: int = 0                                    # own sub-slice of the card's cores (0: the whole card slice)
     priority: float = 0.0
     out: str = ""                                     # {out}; default <root>/jobs/<name>/out
     agent_threads: int = capacity.AGENT_THREADS
@@ -107,7 +111,7 @@ def _unlink(p: Path) -> None:
 class Lane:
     def __init__(self, name: str, jobs: list, root, lease: Lease = None, profile: Profile = None,
                  workers_per_card: int = None, poll_s: float = 20.0, stagger_s: float = 10.0, fail_fast: bool = False,
-                 sample_s: float = 15.0, table: Path = None, probe_fn=None):
+                 sample_s: float = 15.0, table: Path = None, probe_fn=None, generate=None):
         names = [j.name for j in jobs]
         if len(set(names)) != len(names):
             raise ValueError("job names must be unique")
@@ -120,6 +124,7 @@ class Lane:
         self.wpc, self.poll_s, self.stagger_s, self.fail_fast, self.sample_s = (workers_per_card, poll_s, stagger_s,
                                                                                  fail_fast, sample_s)
         self.probe = probe_fn or (lambda rows: probe(rows=rows))
+        self.generate = generate                    # callable(lane) -> [Job]: new jobs from results (dynamic lanes)
         self.state_path = self.root / "state.json"
         self.st = json.loads(self.state_path.read_text()) if self.state_path.exists() else {"jobs": {}}
         for n in names:
@@ -187,26 +192,52 @@ class Lane:
             if ok:
                 st["state"] = "done"
                 procs.atomic_json(jd / "DONE", dict(rc=rc, tries=k, wall_s=st["wall_s"], gpu=st.get("gpu")))
+            elif rc == 0 and not job.retry_check:          # the output check failed: a verdict, not a crash
+                st["state"] = "failed"
+                self._error(n, k, rc, "output check failed")
             elif drained:
                 st["state"], st["tries"] = "queued", k - 1  # a drained job did not fail
             elif k < job.tries and not draining:
                 st["state"] = "queued"
             else:
                 st["state"] = "failed"
-                tail = ""
-                try:
-                    tail = (jd / ("log.%d.txt" % k)).read_bytes()[-3000:].decode(errors="replace")
-                except OSError:
-                    pass
-                (self.root / ("ERROR." + n)).write_text("# job %s failed after %d tries (rc %s) %s\n\n%s\n" % (
-                    n, k, rc, time.strftime("%F %T %Z"), tail))
-                if self.fail_fast:
-                    self.halt = True
+                self._error(n, k, rc, "")
             self.event("job_end", job=n, rc=rc, ok=ok, state=st["state"], tries=k, wall_s=st["wall_s"],
                        gpu=st.get("gpu"))
             if self.bar is not None and st["state"] in ("done", "failed"):
                 self.bar.update(1)
         self.save()
+
+    def _error(self, n: str, k: int, rc, why: str) -> None:
+        tail = ""
+        try:
+            tail = (self.jdir(n) / ("log.%d.txt" % k)).read_bytes()[-3000:].decode(errors="replace")
+        except OSError:
+            pass
+        (self.root / ("ERROR." + n)).write_text("# job %s failed after %d tries (rc %s%s) %s\n\n%s\n" % (
+            n, k, rc, ", " + why if why else "", time.strftime("%F %T %Z"), tail))
+        if self.fail_fast:
+            self.halt = True
+
+    def add_generated(self) -> None:
+        for j in (self.generate(self) if self.generate else []):
+            if j.name not in self.jobs:
+                self.jobs[j.name] = j
+                self.st["jobs"].setdefault(j.name, {"state": "queued", "tries": 0})
+                self.event("job_added", job=j.name)
+
+    def sub_slice(self, lease: Lease, g: int, j: Job):
+        """The card's core list, or for a job with `cores` its own contiguous-first share not used by running jobs."""
+        spec = lease.cards[g]["cpus"]
+        if not j.cores:
+            return spec
+        taken = set()
+        for n in self.running():
+            s = self.jst(n)
+            if s.get("gpu") == g and self.jobs[n].cores:
+                taken |= set(parse_cpus(s["cpus"]))
+        free = [c for c in parse_cpus(spec) if c not in taken]
+        return format_cpus(free[:j.cores]) if len(free) >= j.cores else None
 
     # ------------------------------------------------------------------ placement
     def schedule(self, lease: Lease, rows: dict) -> None:
@@ -217,7 +248,8 @@ class Lane:
         young = [(n, s) for n, s in run if now - s.get("t0", 0) < YOUNG_S]
         pending = sum(self.jobs[n].workers for n, _ in young)
         done = {n for n in self.jobs if self.jst(n)["state"] == "done"}
-        ready = sorted((j for j in self.jobs.values() if self.jst(j.name)["state"] == "queued" and set(j.deps) <= done),
+        ready = sorted((j for j in self.jobs.values() if self.jst(j.name)["state"] == "queued" and set(j.deps) <= done
+                        and (j.ready is None or j.ready(j))),
                        key=lambda j: j.priority)
         self.blocked = {}
         cap = self.wpc or lease.workers or capacity.GPU_KNEE
@@ -256,12 +288,15 @@ class Lane:
                 block = None if why else self.sub_block(lease, g, j)
                 if why is None and block is None:
                     why = "%s: no free index sub-block" % j.name
+                cpus = None if why else self.sub_slice(lease, g, j)
+                if why is None and cpus is None:
+                    why = "%s: no %d free cores in the card slice" % (j.name, j.cores)
                 if why:
                     self.blocked.setdefault(g, why)
                     continue
                 if launched and self.stagger_s:
                     time.sleep(self.stagger_s)
-                self.launch(j, g, lease, block, adm)
+                self.launch(j, g, lease, block, adm, cpus)
                 launched = True
                 used[g] += j.workers
                 pending += j.workers
@@ -286,27 +321,27 @@ class Lane:
                 return (i, want)
         return None
 
-    def launch(self, j: Job, g: int, lease: Lease, block: tuple, adm: Admission) -> None:
+    def launch(self, j: Job, g: int, lease: Lease, block: tuple, adm: Admission, cpus: str = None) -> None:
         st, jd = self.jst(j.name), self.jdir(j.name)
         jd.mkdir(parents=True, exist_ok=True)
         st["tries"] += 1
         k, (idx, span) = st["tries"], block
         prof = j.profile or self.profile
-        cpus = lease.cards[g]["cpus"]
+        cpus = lease.cards[g]["cpus"] if cpus is None else cpus
         out = j.out or str(jd / "out")
         subs = dict(gpu=g, idx=idx, span=span, workers=j.workers, cpus=cpus, out=out, job_dir=jd,
                     server_args=" ".join(list(prof.server_args()) + list(j.server_args)),
                     client_threads=prof.client_threads, pids_wait=adm.wait_cap)
-        argv = []
-        for a in j.cmd:
+        def fill(a):
             a = str(a)
             for key, v in subs.items():
                 a = a.replace("{%s}" % key, str(v))
-            argv.append(a)
+            return a
+        argv = [fill(a) for a in j.cmd]
         full = (["taskset", "-c", cpus] if cpus else []) + argv
         env = dict(os.environ)
         env.update(prof.environ())
-        env.update({k_: str(v) for k_, v in j.env.items()})
+        env.update({k_: fill(v) for k_, v in j.env.items()})
         env.update(B2D_DRAIN_FILE=str(jd / "DRAIN"), B2D_PIDS_WAIT=str(adm.wait_cap), PYTHONUNBUFFERED="1",
                    CL_LANE=self.name, CL_JOB=j.name, CL_RC=str(jd / ("rc.%d" % k)),
                    CL_TOKEN="%s/%s/%d/%d" % (self.name, j.name, k, time.time_ns()))
@@ -390,6 +425,7 @@ class Lane:
         try:
             while True:
                 try:
+                    self.add_generated()
                     self.lease = lease = self.current_lease()
                     drain = self.draining(lease)
                     self.reap(processes(), drain)

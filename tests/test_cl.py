@@ -266,6 +266,30 @@ class LaneRun(unittest.TestCase):
         lane.schedule(self.lease, {})
         self.assertIn("VRAM", " ".join(lane.blocked.values()))
 
+    def test_ready_gate_env_template_subslice_and_generate(self):
+        gate, rec = self.tmp / "GO", self.tmp / "rec"
+        lease = L.Lease("t", {1: {"cpus": "0-3", "idx0": 160}}, 24, 6, "running")
+        a = Job("a", ["sh", "-c", 'echo "$CL_JOB $X $(taskset -pc $$ | cut -d: -f2)" >> %s; sleep 0.4' % rec], cores=2,
+                env={"X": "g{gpu}c{cpus}"})
+        b = Job("b", ["sh", "-c", 'echo "$CL_JOB $X $(taskset -pc $$ | cut -d: -f2)" >> %s; touch %s; sleep 0.4' % (rec, gate)],
+                cores=2, env={"X": "g{gpu}c{cpus}"})
+        late = Job("late", ["sh", "-c", "echo late >> %s" % rec], ready=lambda j: gate.exists())
+        made = []
+
+        def more(lane):                         # one follow-up job once "a" is done
+            if lane.jst("a")["state"] == "done" and not made:
+                made.append(Job("follow", ["sh", "-c", "echo follow >> %s" % rec]))
+            return made
+        lane = Lane("t", [a, b, late], self.tmp / "root", lease=lease, poll_s=0.1, stagger_s=0, sample_s=0,
+                    probe_fn=lambda rows: fake_box(), generate=more)
+        self.assertEqual(lane.run(), 0)
+        rows = [l.split() for l in rec.read_text().splitlines()]
+        first = {r[0]: r for r in rows if r[0] in "ab"}
+        self.assertEqual({first["a"][1], first["b"][1]}, {"g1c0-1", "g1c2-3"})       # disjoint sub-slices, env filled
+        self.assertEqual({first["a"][2], first["b"][2]}, {"0,1", "2,3"})
+        self.assertIn(["late"], rows)
+        self.assertIn(["follow"], rows)
+
     def test_b2d_job_and_finished(self):
         out = self.tmp / "b2d"
         j = b2d("x", out, ["1", "2"], workers=4, min_done=0.5)
