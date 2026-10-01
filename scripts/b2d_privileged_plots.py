@@ -34,6 +34,7 @@ def figures(root,diagnostic=False):
     for j,(key,label) in enumerate(zip(keys,labels)):
         ax.bar(x+(j-2)*width,means[key],width,label=label,color=colors[j])
     ax.set(xticks=x,xticklabels=ARMS,ylabel='Recoverable DS (algebraic)',title='Penalty removal with other losses held fixed')
+    ax.set_ylim(0, 1.45 * means.to_numpy().max())
     ax.legend(ncol=3,loc='upper left');save(fig,out/'loss_decomposition');plt.close(fig)
     fig,axs=plt.subplots(1,2,figsize=(DOUBLE_COLUMN_IN,2.7),layout='constrained')
     for ax,group in zip(axs,('junction','obstacle')):
